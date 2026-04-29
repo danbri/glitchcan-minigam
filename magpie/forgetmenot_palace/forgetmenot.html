@@ -1,0 +1,989 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<meta name="theme-color" content="#10000a" />
+<title>Forget-Me-Not Palace</title>
+
+<style>
+/* Forget-Me-Not Palace — CRT chassis */
+:root {
+  --phosphor: #2bff7c;
+  --phosphor-dim: #14a050;
+  --backdrop: #1d0008;
+  --ink: #6a0014;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; height: 100%; overflow: hidden;
+  background: var(--backdrop);
+  color: var(--phosphor);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  user-select: none;
+}
+
+#stage {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  background: var(--backdrop);
+}
+
+#hud {
+  position: fixed; inset: 0;
+  pointer-events: none;
+}
+
+#roomname {
+  position: absolute;
+  top: max(env(safe-area-inset-top), 14px);
+  left: 50%;
+  transform: translate(-50%, 0);
+  font-size: clamp(15px, 4.2vw, 22px);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--phosphor);
+  text-shadow: 0 0 8px var(--phosphor), 0 0 18px var(--phosphor-dim);
+  opacity: 0;
+  transition: opacity 0.45s ease-out;
+  white-space: nowrap;
+}
+#roomname.show { opacity: 0.95; }
+
+#exits {
+  position: absolute; inset: 0;
+  pointer-events: none;
+}
+
+.exit-tag {
+  position: absolute;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+  font-size: clamp(10px, 2.6vw, 13px);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 5px 9px 4px;
+  color: var(--phosphor);
+  background: rgba(20, 0, 4, 0.55);
+  border: 1px solid var(--phosphor-dim);
+  text-shadow: 0 0 6px var(--phosphor);
+  box-shadow: 0 0 10px rgba(43, 255, 124, 0.18) inset, 0 0 6px rgba(43, 255, 124, 0.18);
+  white-space: nowrap;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.5s ease-out, transform 0.18s ease-out, background 0.18s;
+  backdrop-filter: blur(1px);
+}
+.exit-tag.show { opacity: 0.92; }
+.exit-tag:active { transform: translate(-50%, -50%) scale(0.94); background: rgba(43, 255, 124, 0.18); }
+.exit-tag .arrow { display: inline-block; margin-right: 6px; opacity: 0.85; }
+
+#compass {
+  position: absolute;
+  bottom: max(env(safe-area-inset-bottom), 16px);
+  right: 16px;
+  width: 56px; height: 56px;
+  border: 1px solid var(--phosphor-dim);
+  border-radius: 50%;
+  opacity: 0.45;
+  background: radial-gradient(circle at center, rgba(43,255,124,0.06), transparent 70%);
+}
+#compass span {
+  position: absolute;
+  font-size: 11px;
+  color: var(--phosphor);
+  text-shadow: 0 0 5px var(--phosphor);
+  font-weight: 700;
+}
+#compass .n { top: 2px;    left: 50%; transform: translateX(-50%); }
+#compass .s { bottom: 2px; left: 50%; transform: translateX(-50%); }
+#compass .e { right: 4px;  top:  50%; transform: translateY(-50%); }
+#compass .w { left:  4px;  top:  50%; transform: translateY(-50%); }
+</style>
+
+<script type="importmap">
+{
+  "imports": {
+    "three":         "https://unpkg.com/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="application/json" id="palace-data">
+{
+  "world": {
+    "id": "forgetmenot_palace",
+    "name": "Forget-Me-Not Palace",
+    "subtitle": "An idealised estate, after the Principal Floor of Westminster",
+    "based_on": {
+      "title": "Houses of Parliament, Westminster; Plan of Principal Floor",
+      "architect": "Sir Charles Barry",
+      "construction": "1836-1868",
+      "source_url": "https://etc.usf.edu/clipart/74200/74281/74281_parli.htm",
+      "source_image": "source/parli_lg.gif",
+      "source_credit": "Florida Center for Instructional Technology, University of South Florida"
+    },
+    "schema": "moo-like-v1",
+    "units": "schematic",
+    "axes": { "x": "east", "z": "south", "y": "up" },
+    "bounds": { "x0": 0, "z0": 0, "x1": 100, "z1": 50 },
+    "start": "central_hall"
+  },
+
+  "kinds": {
+    "chamber":   { "wall_h": 7, "ceiling": "vaulted",  "open_to_sky": false, "hatch": "dense" },
+    "hall":      { "wall_h": 8, "ceiling": "vaulted",  "open_to_sky": false, "hatch": "wide"  },
+    "lobby":     { "wall_h": 5, "ceiling": "flat",     "open_to_sky": false, "hatch": "med"   },
+    "corridor":  { "wall_h": 4, "ceiling": "flat",     "open_to_sky": false, "hatch": "fine"  },
+    "court":     { "wall_h": 3, "ceiling": "open",     "open_to_sky": true,  "hatch": "none"  },
+    "tower":     { "wall_h": 12,"ceiling": "spire",    "open_to_sky": false, "hatch": "tower" },
+    "porch":     { "wall_h": 5, "ceiling": "vaulted",  "open_to_sky": false, "hatch": "med"   },
+    "library":   { "wall_h": 5, "ceiling": "flat",     "open_to_sky": false, "hatch": "books" },
+    "dining":    { "wall_h": 5, "ceiling": "flat",     "open_to_sky": false, "hatch": "med"   },
+    "residence": { "wall_h": 5, "ceiling": "flat",     "open_to_sky": false, "hatch": "fine"  },
+    "gallery":   { "wall_h": 7, "ceiling": "vaulted",  "open_to_sky": false, "hatch": "wide"  },
+    "outdoor":   { "wall_h": 0, "ceiling": "open",     "open_to_sky": true,  "hatch": "none"  }
+  },
+
+  "rooms": [
+    { "id": "victoria_tower",        "name": "Victoria Tower",            "kind": "tower",     "shape": "square",  "bbox": { "x":  3, "z": 18, "w": 5, "d": 5 }, "description": "A vast square tower in pinkish stone. Arrow-slits and quatrefoils. The ceremonial state entrance to the palace." },
+    { "id": "norman_porch",          "name": "Norman Porch",              "kind": "porch",     "shape": "rect",    "bbox": { "x":  9, "z": 19, "w": 3, "d": 3 }, "description": "A short groin-vaulted porch with stub columns. The threshold from tower to palace." },
+    { "id": "kings_robbing_room",    "name": "The King's Robbing Room",   "kind": "chamber",   "shape": "rect",    "bbox": { "x":  9, "z": 23, "w": 5, "d": 5 }, "description": "A solemn chamber for ceremonial vesting. Tall mirrors, a long oak table, and gilt-framed Arthurian frescoes." },
+    { "id": "royal_gallery",         "name": "Royal Gallery",             "kind": "gallery",   "shape": "rect",    "bbox": { "x": 16, "z": 23, "w": 8, "d": 5 }, "description": "A long processional gallery hung with battle pictures. The ceiling is gold-coffered." },
+    { "id": "royal_court",           "name": "Royal Court",               "kind": "court",     "shape": "rect",    "bbox": { "x":  9, "z": 31, "w": 7, "d": 6 }, "description": "An open court of pale stone, reached only by sovereigns and their shadows. Square of sky overhead." },
+    { "id": "chancellors_court",     "name": "Chancellor's Court",        "kind": "court",     "shape": "rect",    "bbox": { "x": 16, "z": 18, "w": 5, "d": 4 }, "description": "A modest open court. Gulls patrol the parapet. A fig tree in a stone tub." },
+    { "id": "princes_chamber",       "name": "Princes Chamber",           "kind": "chamber",   "shape": "rect",    "bbox": { "x": 25, "z": 23, "w": 4, "d": 4 }, "description": "A panelled antechamber where heirs apparent wait. Portraits of Tudors, mostly looking sideways." },
+    { "id": "house_of_peers",        "name": "House of Peers",            "kind": "chamber",   "shape": "rect",    "bbox": { "x": 30, "z": 21, "w": 6, "d": 6 }, "description": "The chamber of the upper house. Crimson benches, a throne under a canopy, and a writ-roll desk." },
+    { "id": "peers_house_lobby",     "name": "Peers House Lobby",         "kind": "lobby",     "shape": "rect",    "bbox": { "x": 30, "z": 27, "w": 4, "d": 3 }, "description": "A vestibule of polished marble where peers gather before debate." },
+    { "id": "state_officers_court",  "name": "State Officers Court",      "kind": "court",     "shape": "rect",    "bbox": { "x": 22, "z": 18, "w": 3, "d": 4 }, "description": "An open service court for state officers. Cobbles. A boot-scraper." },
+    { "id": "peers_corridor",        "name": "Peers Corridor",            "kind": "corridor",  "shape": "rect",    "bbox": { "x": 22, "z": 14, "w": 22, "d": 2 }, "description": "A long varnished corridor lined with leather doors. Carries the murmurs of committees." },
+    { "id": "peers_private_corridor","name": "Peers Private Corridor",    "kind": "corridor",  "shape": "rect",    "bbox": { "x": 22, "z": 11, "w": 22, "d": 2 }, "description": "An inner passage, quieter. Brass plaques with single names." },
+    { "id": "west_division_lobby_p", "name": "West Division Lobby (Peers)","kind": "lobby",    "shape": "rect",    "bbox": { "x": 36, "z": 22, "w": 3, "d": 6 }, "description": "Peers cross here when the question is divided. Tall narrow space, voting clerks at the door." },
+    { "id": "peers_inner_court",     "name": "Peers Inner Court",         "kind": "court",     "shape": "rect",    "bbox": { "x": 36, "z": 30, "w": 4, "d": 5 }, "description": "An open court within the peers' wing. A fountain, dry. Pigeons." },
+    { "id": "peers_court",           "name": "Peers Court",               "kind": "court",     "shape": "rect",    "bbox": { "x": 30, "z": 32, "w": 4, "d": 5 }, "description": "An open quadrangle. A clipped yew. Stone benches no one sits on." },
+    { "id": "peers_smoking_room",    "name": "Peers Smoking Room",        "kind": "lobby",     "shape": "rect",    "bbox": { "x": 30, "z": 38, "w": 4, "d": 4 }, "description": "Leather chairs, the smell of old tobacco, a green-shaded reading lamp." },
+    { "id": "peers_dining_room",     "name": "Peers Dining Room",         "kind": "dining",    "shape": "rect",    "bbox": { "x": 24, "z": 38, "w": 5, "d": 4 }, "description": "Linen, silverware, a window onto the Terrace." },
+    { "id": "peers_library",         "name": "Peers Library",             "kind": "library",   "shape": "rect",    "bbox": { "x": 36, "z": 38, "w": 5, "d": 4 }, "description": "Calf-bound volumes to the ceiling. Brass-railed gallery. Smell of vellum." },
+    { "id": "peers_law_library",     "name": "Peers Law Library",         "kind": "library",   "shape": "rect",    "bbox": { "x": 18, "z": 38, "w": 5, "d": 4 }, "description": "Statute books, regnal years. A long reading table." },
+    { "id": "central_hall",          "name": "Central Hall",              "kind": "hall",      "shape": "octagon", "bbox": { "x": 48, "z": 24, "w": 6, "d": 6 }, "description": "An octagonal hall, the keystone of the plan. A graceful spire above. Public meeting-point of the two houses." },
+    { "id": "st_stephens_hall",      "name": "St Stephen's Hall",         "kind": "hall",      "shape": "rect",    "bbox": { "x": 49, "z": 17, "w": 4, "d": 6 }, "description": "Statues of statesmen in niches. The site of the old commons." },
+    { "id": "st_stephens_porch",     "name": "St Stephen's Porch",        "kind": "porch",     "shape": "rect",    "bbox": { "x": 49, "z": 13, "w": 4, "d": 3 }, "description": "Worn flagstones. A doorway onto Westminster Hall." },
+    { "id": "westminster_hall",      "name": "Westminster Hall",          "kind": "hall",      "shape": "rect",    "bbox": { "x": 55, "z":  6, "w": 14, "d": 7 }, "description": "Vast hammer-beam roof. Footsteps echo. Plaques mark the trials of kings." },
+    { "id": "cloister_court",        "name": "Cloister Court",            "kind": "court",     "shape": "rect",    "bbox": { "x": 54, "z": 17, "w": 4, "d": 4 }, "description": "A tiny medieval cloister, rib-vaulted, surviving fire and time." },
+    { "id": "star_chamber_court",    "name": "Star Chamber Court",        "kind": "court",     "shape": "rect",    "bbox": { "x": 60, "z": 17, "w": 5, "d": 5 }, "description": "An open court, ghosts of an older jurisdiction. A single carved star above an arch." },
+    { "id": "west_division_lobby_c", "name": "West Division Lobby (Commons)","kind": "lobby",  "shape": "rect",    "bbox": { "x": 55, "z": 22, "w": 3, "d": 6 }, "description": "The Aye lobby of the commons. Counting clerks at small desks." },
+    { "id": "east_division_lobby",   "name": "East Division Lobby",       "kind": "lobby",     "shape": "rect",    "bbox": { "x": 71, "z": 22, "w": 3, "d": 6 }, "description": "The No lobby. A tall narrow room, scuffed at chair-rail height." },
+    { "id": "house_of_commons",      "name": "House of Commons",          "kind": "chamber",   "shape": "rect",    "bbox": { "x": 63, "z": 21, "w": 6, "d": 6 }, "description": "Green benches, a Speaker's Chair, a Mace lying across the table." },
+    { "id": "commons_house_lobby",   "name": "Commons House Lobby",       "kind": "lobby",     "shape": "rect",    "bbox": { "x": 63, "z": 27, "w": 4, "d": 3 }, "description": "A polished vestibule. Statues. The post-rack bristling with letters." },
+    { "id": "commons_corridor",      "name": "Commons Corridor",          "kind": "corridor",  "shape": "rect",    "bbox": { "x": 55, "z": 24, "w": 17, "d": 2 }, "description": "A long corridor mirroring the peers'. Tile and varnish." },
+    { "id": "commons_inner_court",   "name": "Commons Inner Court",       "kind": "court",     "shape": "rect",    "bbox": { "x": 60, "z": 30, "w": 4, "d": 5 }, "description": "Open court. A drain in the centre. Sparrows." },
+    { "id": "commons_court",         "name": "Commons Court",             "kind": "court",     "shape": "rect",    "bbox": { "x": 67, "z": 32, "w": 4, "d": 5 }, "description": "A larger open court. Carriage tracks worn into the cobbles." },
+    { "id": "members_smoking_room",  "name": "Members Smoking Room",      "kind": "lobby",     "shape": "rect",    "bbox": { "x": 50, "z": 38, "w": 4, "d": 4 }, "description": "Tobacco-stained ceiling. Card tables. A view of the river." },
+    { "id": "members_dining_room",   "name": "Members Dining Room",       "kind": "dining",    "shape": "rect",    "bbox": { "x": 55, "z": 38, "w": 4, "d": 4 }, "description": "White cloths, the rattle of cutlery, division bells overhead." },
+    { "id": "members_tea_room",      "name": "Members Tea Room",          "kind": "dining",    "shape": "rect",    "bbox": { "x": 60, "z": 38, "w": 4, "d": 4 }, "description": "Cane chairs. A teapot the size of a kettle." },
+    { "id": "members_reading_room",  "name": "Members Reading Room",      "kind": "library",   "shape": "rect",    "bbox": { "x": 64, "z": 38, "w": 4, "d": 4 }, "description": "Newspapers on long sticks. Quiet snoring." },
+    { "id": "members_library",       "name": "Members Library",           "kind": "library",   "shape": "rect",    "bbox": { "x": 68, "z": 38, "w": 5, "d": 4 }, "description": "Hansards, parliamentary papers, a bust of someone half-forgotten." },
+    { "id": "lower_waiting_hall",    "name": "Lower Waiting Hall",        "kind": "hall",      "shape": "rect",    "bbox": { "x": 48, "z": 32, "w": 6, "d": 5 }, "description": "Where petitioners wait. Wooden benches polished by anxiety." },
+    { "id": "ministers_corridor",    "name": "Ministers Corridor",        "kind": "corridor",  "shape": "rect",    "bbox": { "x": 76, "z": 24, "w": 10, "d": 2 }, "description": "Doors with engraved nameplates of departments." },
+    { "id": "ministers_drawing_room","name": "Minister's Drawing Room",   "kind": "lobby",     "shape": "rect",    "bbox": { "x": 78, "z": 21, "w": 4, "d": 3 }, "description": "Chintz, a fireplace, a shelf of unread despatches." },
+    { "id": "ministers_dining_room", "name": "Minister's Dining Room",    "kind": "dining",    "shape": "rect",    "bbox": { "x": 83, "z": 21, "w": 4, "d": 3 }, "description": "Mahogany sideboard, claret decanters, hush." },
+    { "id": "speakers_court",        "name": "Speaker's Court",           "kind": "court",     "shape": "rect",    "bbox": { "x": 80, "z": 32, "w": 5, "d": 5 }, "description": "An open court before the Speaker's house. A laurel in a planter." },
+    { "id": "speakers_residence",    "name": "Speaker's Residence",       "kind": "residence", "shape": "rect",    "bbox": { "x": 87, "z": 33, "w": 6, "d": 6 }, "description": "Plates of silver. A staircase. A discreet sitting room." },
+    { "id": "clerk_residence",       "name": "Clerk of the Commons Residence","kind":"residence","shape":"rect",  "bbox": { "x": 88, "z": 21, "w": 5, "d": 5 }, "description": "A neat private apartment with a sash window onto the Terrace." },
+    { "id": "the_terrace",           "name": "The Terrace",               "kind": "outdoor",   "shape": "rect",    "bbox": { "x":  8, "z": 44, "w": 84, "d": 3 }, "description": "A long flagged terrace facing the river. Strawberries and tea in season." },
+    { "id": "river_thames",          "name": "River Thames",              "kind": "outdoor",   "shape": "rect",    "bbox": { "x":  4, "z": 48, "w": 92, "d": 2 }, "description": "Tidal water, the colour of strong tea. Gulls. Distant bells." }
+  ],
+
+  "exits": [
+    { "id": "x_vt_np_e",     "from": "victoria_tower",        "to": "norman_porch",          "direction": "east",  "name": "tower archway",       "kind": "arch" },
+    { "id": "x_np_vt_w",     "from": "norman_porch",          "to": "victoria_tower",        "direction": "west",  "name": "tower archway" },
+    { "id": "x_np_krr_s",    "from": "norman_porch",          "to": "kings_robbing_room",    "direction": "south", "name": "panelled door" },
+    { "id": "x_krr_np_n",    "from": "kings_robbing_room",    "to": "norman_porch",          "direction": "north", "name": "panelled door" },
+    { "id": "x_krr_rg_e",    "from": "kings_robbing_room",    "to": "royal_gallery",         "direction": "east",  "name": "great doors" },
+    { "id": "x_rg_krr_w",    "from": "royal_gallery",         "to": "kings_robbing_room",    "direction": "west",  "name": "great doors" },
+    { "id": "x_rg_pc_e",     "from": "royal_gallery",         "to": "princes_chamber",       "direction": "east",  "name": "antechamber door" },
+    { "id": "x_pc_rg_w",     "from": "princes_chamber",       "to": "royal_gallery",         "direction": "west",  "name": "antechamber door" },
+    { "id": "x_pc_hop_e",    "from": "princes_chamber",       "to": "house_of_peers",        "direction": "east",  "name": "throne approach" },
+    { "id": "x_hop_pc_w",    "from": "house_of_peers",        "to": "princes_chamber",       "direction": "west",  "name": "throne approach" },
+    { "id": "x_hop_phl_s",   "from": "house_of_peers",        "to": "peers_house_lobby",     "direction": "south", "name": "bar of the house" },
+    { "id": "x_phl_hop_n",   "from": "peers_house_lobby",     "to": "house_of_peers",        "direction": "north", "name": "bar of the house" },
+    { "id": "x_phl_wdlp_e",  "from": "peers_house_lobby",     "to": "west_division_lobby_p", "direction": "east",  "name": "division door" },
+    { "id": "x_wdlp_phl_w",  "from": "west_division_lobby_p", "to": "peers_house_lobby",     "direction": "west",  "name": "division door" },
+    { "id": "x_wdlp_ch_e",   "from": "west_division_lobby_p", "to": "central_hall",          "direction": "east",  "name": "octagon arch" },
+    { "id": "x_ch_wdlp_w",   "from": "central_hall",          "to": "west_division_lobby_p", "direction": "west",  "name": "octagon arch" },
+    { "id": "x_ch_ssh_n",    "from": "central_hall",          "to": "st_stephens_hall",      "direction": "north", "name": "St Stephen's arch" },
+    { "id": "x_ssh_ch_s",    "from": "st_stephens_hall",      "to": "central_hall",          "direction": "south", "name": "St Stephen's arch" },
+    { "id": "x_ssh_ssp_n",   "from": "st_stephens_hall",      "to": "st_stephens_porch",     "direction": "north", "name": "porch door" },
+    { "id": "x_ssp_ssh_s",   "from": "st_stephens_porch",     "to": "st_stephens_hall",      "direction": "south", "name": "porch door" },
+    { "id": "x_ssp_wh_n",    "from": "st_stephens_porch",     "to": "westminster_hall",      "direction": "north", "name": "great oak doors" },
+    { "id": "x_wh_ssp_s",    "from": "westminster_hall",      "to": "st_stephens_porch",     "direction": "south", "name": "great oak doors" },
+    { "id": "x_ch_wdlc_e",   "from": "central_hall",          "to": "west_division_lobby_c", "direction": "east",  "name": "commons arch" },
+    { "id": "x_wdlc_ch_w",   "from": "west_division_lobby_c", "to": "central_hall",          "direction": "west",  "name": "commons arch" },
+    { "id": "x_wdlc_chl_e",  "from": "west_division_lobby_c", "to": "commons_house_lobby",   "direction": "east",  "name": "division door" },
+    { "id": "x_chl_wdlc_w",  "from": "commons_house_lobby",   "to": "west_division_lobby_c", "direction": "west",  "name": "division door" },
+    { "id": "x_chl_hoc_n",   "from": "commons_house_lobby",   "to": "house_of_commons",      "direction": "north", "name": "bar of the house" },
+    { "id": "x_hoc_chl_s",   "from": "house_of_commons",      "to": "commons_house_lobby",   "direction": "south", "name": "bar of the house" },
+    { "id": "x_chl_edl_e",   "from": "commons_house_lobby",   "to": "east_division_lobby",   "direction": "east",  "name": "no-lobby door" },
+    { "id": "x_edl_chl_w",   "from": "east_division_lobby",   "to": "commons_house_lobby",   "direction": "west",  "name": "no-lobby door" },
+    { "id": "x_ch_lwh_s",    "from": "central_hall",          "to": "lower_waiting_hall",    "direction": "south", "name": "stairs down" },
+    { "id": "x_lwh_ch_n",    "from": "lower_waiting_hall",    "to": "central_hall",          "direction": "north", "name": "stairs up" },
+    { "id": "x_lwh_msr_s",   "from": "lower_waiting_hall",    "to": "members_smoking_room",  "direction": "south", "name": "members' door" },
+    { "id": "x_msr_lwh_n",   "from": "members_smoking_room",  "to": "lower_waiting_hall",    "direction": "north", "name": "members' door" },
+    { "id": "x_msr_mdr_e",   "from": "members_smoking_room",  "to": "members_dining_room",   "direction": "east",  "name": "service door" },
+    { "id": "x_mdr_msr_w",   "from": "members_dining_room",   "to": "members_smoking_room",  "direction": "west",  "name": "service door" },
+    { "id": "x_mdr_mtr_e",   "from": "members_dining_room",   "to": "members_tea_room",      "direction": "east",  "name": "passage" },
+    { "id": "x_mtr_mdr_w",   "from": "members_tea_room",      "to": "members_dining_room",   "direction": "west",  "name": "passage" },
+    { "id": "x_mtr_mrr_e",   "from": "members_tea_room",      "to": "members_reading_room",  "direction": "east",  "name": "reading-room door" },
+    { "id": "x_mrr_mtr_w",   "from": "members_reading_room",  "to": "members_tea_room",      "direction": "west",  "name": "reading-room door" },
+    { "id": "x_mrr_ml_e",    "from": "members_reading_room",  "to": "members_library",       "direction": "east",  "name": "library door" },
+    { "id": "x_ml_mrr_w",    "from": "members_library",       "to": "members_reading_room",  "direction": "west",  "name": "library door" },
+    { "id": "x_msr_ter_s",   "from": "members_smoking_room",  "to": "the_terrace",           "direction": "south", "name": "french windows" },
+    { "id": "x_ter_msr_n",   "from": "the_terrace",           "to": "members_smoking_room",  "direction": "north", "name": "french windows" },
+    { "id": "x_ter_riv_s",   "from": "the_terrace",           "to": "river_thames",          "direction": "south", "name": "river-stairs" },
+    { "id": "x_riv_ter_n",   "from": "river_thames",          "to": "the_terrace",           "direction": "north", "name": "river-stairs" },
+    { "id": "x_phl_pc_s",    "from": "peers_house_lobby",     "to": "peers_court",           "direction": "south", "name": "service stair" },
+    { "id": "x_pc_phl_n",    "from": "peers_court",           "to": "peers_house_lobby",     "direction": "north", "name": "service stair" },
+    { "id": "x_pc_psr_s",    "from": "peers_court",           "to": "peers_smoking_room",    "direction": "south", "name": "lower door" },
+    { "id": "x_psr_pc_n",    "from": "peers_smoking_room",    "to": "peers_court",           "direction": "north", "name": "lower door" },
+    { "id": "x_psr_pdr_w",   "from": "peers_smoking_room",    "to": "peers_dining_room",     "direction": "west",  "name": "service passage" },
+    { "id": "x_pdr_psr_e",   "from": "peers_dining_room",     "to": "peers_smoking_room",    "direction": "east",  "name": "service passage" },
+    { "id": "x_pdr_pll_w",   "from": "peers_dining_room",     "to": "peers_law_library",     "direction": "west",  "name": "panelled door" },
+    { "id": "x_pll_pdr_e",   "from": "peers_law_library",     "to": "peers_dining_room",     "direction": "east",  "name": "panelled door" },
+    { "id": "x_psr_pl_e",    "from": "peers_smoking_room",    "to": "peers_library",         "direction": "east",  "name": "library door" },
+    { "id": "x_pl_psr_w",    "from": "peers_library",         "to": "peers_smoking_room",    "direction": "west",  "name": "library door" },
+    { "id": "x_pdr_ter_s",   "from": "peers_dining_room",     "to": "the_terrace",           "direction": "south", "name": "french windows" },
+    { "id": "x_ter_pdr_n",   "from": "the_terrace",           "to": "peers_dining_room",     "direction": "north", "name": "french windows" },
+    { "id": "x_hop_pcorr_n", "from": "house_of_peers",        "to": "peers_corridor",        "direction": "north", "name": "committee passage" },
+    { "id": "x_pcorr_hop_s", "from": "peers_corridor",        "to": "house_of_peers",        "direction": "south", "name": "committee passage" },
+    { "id": "x_pcorr_ppc_n", "from": "peers_corridor",        "to": "peers_private_corridor","direction": "north", "name": "private door" },
+    { "id": "x_ppc_pcorr_s", "from": "peers_private_corridor","to": "peers_corridor",        "direction": "south", "name": "private door" },
+    { "id": "x_pcorr_soc_w", "from": "peers_corridor",        "to": "state_officers_court",  "direction": "west",  "name": "service door" },
+    { "id": "x_soc_pcorr_e", "from": "state_officers_court",  "to": "peers_corridor",        "direction": "east",  "name": "service door" },
+    { "id": "x_wdlp_pic_s",  "from": "west_division_lobby_p", "to": "peers_inner_court",     "direction": "south", "name": "court door" },
+    { "id": "x_pic_wdlp_n",  "from": "peers_inner_court",     "to": "west_division_lobby_p", "direction": "north", "name": "court door" },
+    { "id": "x_pic_pl_s",    "from": "peers_inner_court",     "to": "peers_library",         "direction": "south", "name": "library steps" },
+    { "id": "x_pl_pic_n",    "from": "peers_library",         "to": "peers_inner_court",     "direction": "north", "name": "library steps" },
+    { "id": "x_rg_cc_n",     "from": "royal_gallery",         "to": "chancellors_court",     "direction": "north", "name": "court door" },
+    { "id": "x_cc_rg_s",     "from": "chancellors_court",     "to": "royal_gallery",         "direction": "south", "name": "court door" },
+    { "id": "x_rg_rcrt_s",   "from": "royal_gallery",         "to": "royal_court",           "direction": "south", "name": "private archway" },
+    { "id": "x_rcrt_rg_n",   "from": "royal_court",           "to": "royal_gallery",         "direction": "north", "name": "private archway" },
+    { "id": "x_ssh_cloi_e",  "from": "st_stephens_hall",      "to": "cloister_court",        "direction": "east",  "name": "cloister door" },
+    { "id": "x_cloi_ssh_w",  "from": "cloister_court",        "to": "st_stephens_hall",      "direction": "west",  "name": "cloister door" },
+    { "id": "x_cloi_scc_e",  "from": "cloister_court",        "to": "star_chamber_court",    "direction": "east",  "name": "passage" },
+    { "id": "x_scc_cloi_w",  "from": "star_chamber_court",    "to": "cloister_court",        "direction": "west",  "name": "passage" },
+    { "id": "x_hoc_ccorr_n", "from": "house_of_commons",      "to": "commons_corridor",      "direction": "north", "name": "north door" },
+    { "id": "x_ccorr_hoc_s", "from": "commons_corridor",      "to": "house_of_commons",      "direction": "south", "name": "north door" },
+    { "id": "x_ccorr_scc_n", "from": "commons_corridor",      "to": "star_chamber_court",    "direction": "north", "name": "court door" },
+    { "id": "x_scc_ccorr_s", "from": "star_chamber_court",    "to": "commons_corridor",      "direction": "south", "name": "court door" },
+    { "id": "x_chl_cic_s",   "from": "commons_house_lobby",   "to": "commons_inner_court",   "direction": "south", "name": "service stair" },
+    { "id": "x_cic_chl_n",   "from": "commons_inner_court",   "to": "commons_house_lobby",   "direction": "north", "name": "service stair" },
+    { "id": "x_cic_ccrt_e",  "from": "commons_inner_court",   "to": "commons_court",         "direction": "east",  "name": "court arch" },
+    { "id": "x_ccrt_cic_w",  "from": "commons_court",         "to": "commons_inner_court",   "direction": "west",  "name": "court arch" },
+    { "id": "x_edl_mcorr_e", "from": "east_division_lobby",   "to": "ministers_corridor",    "direction": "east",  "name": "ministers' door" },
+    { "id": "x_mcorr_edl_w", "from": "ministers_corridor",    "to": "east_division_lobby",   "direction": "west",  "name": "ministers' door" },
+    { "id": "x_mcorr_mindr_n","from": "ministers_corridor",   "to": "ministers_drawing_room","direction": "north", "name": "drawing-room door" },
+    { "id": "x_mindr_mcorr_s","from": "ministers_drawing_room","to": "ministers_corridor",   "direction": "south", "name": "drawing-room door" },
+    { "id": "x_mindr_mind_e","from": "ministers_drawing_room","to": "ministers_dining_room", "direction": "east",  "name": "dining-room door" },
+    { "id": "x_mind_mindr_w","from": "ministers_dining_room", "to": "ministers_drawing_room","direction": "west",  "name": "dining-room door" },
+    { "id": "x_mind_clerk_n","from": "ministers_dining_room", "to": "clerk_residence",       "direction": "north", "name": "private door" },
+    { "id": "x_clerk_mind_s","from": "clerk_residence",       "to": "ministers_dining_room", "direction": "south", "name": "private door" },
+    { "id": "x_mcorr_spc_s", "from": "ministers_corridor",    "to": "speakers_court",        "direction": "south", "name": "court arch" },
+    { "id": "x_spc_mcorr_n", "from": "speakers_court",        "to": "ministers_corridor",    "direction": "north", "name": "court arch" },
+    { "id": "x_spc_spr_e",   "from": "speakers_court",        "to": "speakers_residence",    "direction": "east",  "name": "Speaker's door" },
+    { "id": "x_spr_spc_w",   "from": "speakers_residence",    "to": "speakers_court",        "direction": "west",  "name": "Speaker's door" },
+    { "id": "x_spr_ter_s",   "from": "speakers_residence",    "to": "the_terrace",           "direction": "south", "name": "private steps" },
+    { "id": "x_ter_spr_n",   "from": "the_terrace",           "to": "speakers_residence",    "direction": "north", "name": "private steps" }
+  ]
+}
+</script>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+  <div id="hud" aria-hidden="true">
+    <div id="roomname" class="fade"></div>
+    <div id="exits"></div>
+    <div id="compass">
+      <span class="n">N</span><span class="e">E</span>
+      <span class="s">S</span><span class="w">W</span>
+    </div>
+  </div>
+  <noscript>This palace requires JavaScript.</noscript>
+
+<script type="module">
+// Forget-Me-Not Palace — top-down vector CRT viewer
+// Atic Atac × Battlezone, green phosphor on dark crimson.
+
+import * as THREE from 'three';
+import { EffectComposer }   from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass }       from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass }  from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass }       from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass }       from 'three/addons/postprocessing/OutputPass.js';
+import { LineSegments2 }    from 'three/addons/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
+import { LineMaterial }     from 'three/addons/lines/LineMaterial.js';
+
+// ─── palette ────────────────────────────────────────────────────────────────
+const PHOSPHOR     = new THREE.Color('#2bff7c');
+const PHOSPHOR_DIM = new THREE.Color('#14a050');
+const BACKDROP     = new THREE.Color('#1d0008');
+const INK_RED      = new THREE.Color('#6a0014');
+
+// ─── state ─────────────────────────────────────────────────────────────────
+const stage = document.getElementById('stage');
+const ui = {
+  name:  document.getElementById('roomname'),
+  exits: document.getElementById('exits'),
+};
+
+let renderer, scene, camera, composer, bloomPass, crtPass;
+let palace = null;
+let roomsById = new Map();
+let exitsByRoom = new Map();
+let currentRoomId = null;
+let currentRoomGroup = null;
+let exitDoms = [];
+let isTransitioning = false;
+let clock = new THREE.Clock();
+
+// ─── boot ──────────────────────────────────────────────────────────────────
+init().catch(err => {
+  console.error(err);
+  ui.name.textContent = 'BOOT FAILURE';
+  ui.name.classList.add('show');
+});
+
+async function init() {
+  palace = JSON.parse(document.getElementById('palace-data').textContent);
+  for (const r of palace.rooms) roomsById.set(r.id, r);
+  for (const r of palace.rooms) exitsByRoom.set(r.id, []);
+  for (const x of palace.exits) {
+    const list = exitsByRoom.get(x.from);
+    if (list) list.push(x);
+  }
+
+  setupRenderer();
+  setupScene();
+  setupPostFX();
+  bindEvents();
+  enterRoom(palace.world.start || palace.rooms[0].id, true);
+
+  renderer.setAnimationLoop(tick);
+}
+
+function setupRenderer() {
+  renderer = new THREE.WebGLRenderer({
+    canvas: stage,
+    antialias: true,
+    alpha: false,
+    powerPreference: 'high-performance',
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(BACKDROP, 1);
+  resize();
+  window.addEventListener('resize', resize, { passive: true });
+}
+
+function setupScene() {
+  scene = new THREE.Scene();
+  scene.background = BACKDROP;
+  scene.fog = new THREE.Fog(BACKDROP, 22, 70);
+
+  // Orthographic-ish 3/4 angle, like Atic Atac.
+  camera = new THREE.PerspectiveCamera(28, 1, 0.5, 200);
+  camera.position.set(0, 30, 18);
+  camera.lookAt(0, 0, 0);
+}
+
+function setupPostFX() {
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+
+  bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(stage.clientWidth, stage.clientHeight),
+    1.05, 0.85, 0.18
+  );
+  composer.addPass(bloomPass);
+
+  // CRT: subtle scanlines + chromatic offset + vignette + faint phosphor tint
+  crtPass = new ShaderPass({
+    uniforms: {
+      tDiffuse:  { value: null },
+      uTime:     { value: 0 },
+      uResolution: { value: new THREE.Vector2(1, 1) },
+      uScanline:   { value: 0.18 },
+      uVignette:   { value: 0.55 },
+      uChroma:     { value: 0.0015 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+    `,
+    fragmentShader: `
+      precision highp float;
+      uniform sampler2D tDiffuse;
+      uniform float uTime, uScanline, uVignette, uChroma;
+      uniform vec2 uResolution;
+      varying vec2 vUv;
+
+      void main() {
+        vec2 uv = vUv;
+
+        // tiny chromatic offset
+        vec2 d = (uv - 0.5);
+        vec3 col;
+        col.r = texture2D(tDiffuse, uv + d * uChroma).r;
+        col.g = texture2D(tDiffuse, uv).g;
+        col.b = texture2D(tDiffuse, uv - d * uChroma).b;
+
+        // scanlines (per device-px stripe, drifts very slowly)
+        float ln = sin((uv.y * uResolution.y + uTime * 6.0) * 3.14159);
+        col *= 1.0 - uScanline * (0.5 + 0.5 * ln);
+
+        // vignette
+        float v = smoothstep(0.95, 0.35, length(d));
+        col *= mix(1.0 - uVignette, 1.0, v);
+
+        // a faint warm bias so the dark areas read as crimson, not black
+        col = max(col, vec3(0.082, 0.0, 0.018) * (1.0 - v) * 0.7);
+
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `,
+  });
+  composer.addPass(crtPass);
+  composer.addPass(new OutputPass());
+}
+
+// ─── room construction ─────────────────────────────────────────────────────
+function clearRoom() {
+  if (!currentRoomGroup) return;
+  scene.remove(currentRoomGroup);
+  currentRoomGroup.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) {
+      const ms = Array.isArray(o.material) ? o.material : [o.material];
+      ms.forEach(m => m.dispose());
+    }
+  });
+  currentRoomGroup = null;
+}
+
+function buildRoom(roomId) {
+  const room = roomsById.get(roomId);
+  if (!room) throw new Error('unknown room: ' + roomId);
+  const exits = exitsByRoom.get(roomId) || [];
+  const kindCfg = palace.kinds[room.kind] || palace.kinds.lobby;
+
+  const g = new THREE.Group();
+  g.userData.room = room;
+
+  // Centered local geometry; the room's bbox describes its size.
+  const W = Math.max(2, room.bbox.w);
+  const D = Math.max(2, room.bbox.d);
+  const H = Math.max(0.3, kindCfg.wall_h * 0.45);
+  const wallT = 0.15;
+
+  // ── floor: hatched phosphor pattern ───────────────────────────────────────
+  const floorGeom = new THREE.PlaneGeometry(W, D, 1, 1);
+  floorGeom.rotateX(-Math.PI / 2);
+  const floorMat = new THREE.ShaderMaterial({
+    uniforms: {
+      uPhosphor: { value: PHOSPHOR },
+      uDim:      { value: PHOSPHOR_DIM },
+      uInk:      { value: INK_RED },
+      uTime:     { value: 0 },
+      uHatch:    { value: hatchDensity(kindCfg.hatch) },
+      uAngle:    { value: hatchAngle(kindCfg.hatch) },
+      uOpen:     { value: kindCfg.open_to_sky ? 1.0 : 0.0 },
+      uSize:     { value: new THREE.Vector2(W, D) },
+    },
+    vertexShader: `
+      varying vec2 vLocal;
+      void main() {
+        vLocal = position.xz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      precision highp float;
+      varying vec2 vLocal;
+      uniform vec3 uPhosphor, uDim, uInk;
+      uniform float uTime, uHatch, uAngle, uOpen;
+      uniform vec2 uSize;
+
+      // signed line: parallel hatching at angle uAngle, spacing 1/uHatch
+      float hatch(vec2 p, float a, float density) {
+        vec2 dir = vec2(cos(a), sin(a));
+        float v = dot(p, dir) * density;
+        float w = fwidth(v) * 1.4;
+        float s = abs(fract(v) - 0.5);
+        return smoothstep(w, 0.0, s - 0.06);
+      }
+
+      void main() {
+        vec2 p = vLocal;
+        // outer border (room outline at floor level)
+        vec2 q = abs(p) / (uSize * 0.5);
+        float edge = max(q.x, q.y);
+        float border = smoothstep(0.985, 0.998, edge);
+
+        // primary + cross hatch (court rooms get a subtle tile pattern instead)
+        float h1 = hatch(p, uAngle,           uHatch);
+        float h2 = hatch(p, uAngle + 1.5708,  uHatch * 0.5);
+        float pattern = max(h1 * 0.85, h2 * 0.35);
+
+        // courts (open to sky): faint cobble crosshatch, no carpet feel
+        if (uOpen > 0.5) {
+          float c1 = hatch(p, 0.785,  0.55);
+          float c2 = hatch(p, -0.785, 0.55);
+          pattern = max(c1, c2) * 0.55;
+        }
+
+        vec3 col = mix(uInk * 0.35, uDim, pattern * 0.7);
+        col = mix(col, uPhosphor, border);
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `,
+  });
+  const floor = new THREE.Mesh(floorGeom, floorMat);
+  floor.position.y = 0;
+  g.add(floor);
+
+  // ── walls: extruded boxes with hatched inner faces ────────────────────────
+  // Build wall segments along each side; carve gaps for exits.
+  const sides = [
+    { dir: 'north', axis: 'x', sign: -1, len: W, perp: D / 2 }, // top edge (z = -D/2)
+    { dir: 'south', axis: 'x', sign:  1, len: W, perp: D / 2 }, // bottom edge
+    { dir: 'east',  axis: 'z', sign:  1, len: D, perp: W / 2 }, // right edge
+    { dir: 'west',  axis: 'z', sign: -1, len: D, perp: W / 2 }, // left edge
+  ];
+
+  const exitsByDir = {};
+  for (const ex of exits) (exitsByDir[ex.direction] ||= []).push(ex);
+
+  const wallEdges = []; // for thick line overlay
+  for (const side of sides) {
+    const exitList = exitsByDir[side.dir] || [];
+    const half = side.len / 2;
+    // gap descriptors along this side, normalised local -half..half
+    const gaps = exitList.map((ex, i) => {
+      // distribute multiple exits along the wall
+      const t = (i + 1) / (exitList.length + 1);
+      const cx = -half + t * side.len;
+      return { exit: ex, center: cx, width: 1.3 };
+    });
+
+    // emit wall segments: span the side, skipping gaps
+    const stops = [-half];
+    for (const g0 of gaps) {
+      stops.push(g0.center - g0.width / 2);
+      stops.push(g0.center + g0.width / 2);
+    }
+    stops.push(half);
+
+    for (let i = 0; i < stops.length; i += 2) {
+      const a = stops[i], b = stops[i + 1];
+      if (b - a < 0.05) continue;
+      addWallSegment(g, side, a, b, H, wallT, wallEdges);
+    }
+
+    // exit markers + DOM tags placement targets
+    for (const g0 of gaps) {
+      g0.exit.__local = computeDoorAnchor(side, g0.center, H);
+      addDoorMarker(g, side, g0.center, H);
+    }
+  }
+
+  // ── thick phosphor edges ──────────────────────────────────────────────────
+  const segGeom = new LineSegmentsGeometry();
+  segGeom.setPositions(wallEdges.flat());
+  const lineMat = new LineMaterial({
+    color: PHOSPHOR.getHex(),
+    linewidth: 3.0, // px in screen space
+    worldUnits: false,
+    dashed: false,
+    resolution: new THREE.Vector2(stage.clientWidth, stage.clientHeight),
+    transparent: true,
+  });
+  const edges = new LineSegments2(segGeom, lineMat);
+  edges.computeLineDistances();
+  g.add(edges);
+  g.userData.lineMat = lineMat;
+
+  // octagonal hint for Central Hall (corner cuts)
+  if (room.shape === 'octagon') addOctagonOverlay(g, W, D, H);
+
+  // courts: simulate open sky with a fading inner ring of light
+  if (kindCfg.open_to_sky) addSkylight(g, W, D);
+
+  scene.add(g);
+  currentRoomGroup = g;
+
+  // place camera to fit
+  fitCameraToRoom(W, D, H);
+
+  return { exits };
+}
+
+function addWallSegment(group, side, a, b, H, t, edgesOut) {
+  const len = b - a;
+  const cx  = (a + b) / 2;
+  const isNS = side.axis === 'x'; // wall runs along X (north/south sides)
+
+  const w = isNS ? len : t;
+  const d = isNS ? t   : len;
+
+  const geom = new THREE.BoxGeometry(w, H, d);
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      uPhosphor: { value: PHOSPHOR },
+      uDim:      { value: PHOSPHOR_DIM },
+      uInk:      { value: INK_RED },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      varying vec3 vN;
+      void main() {
+        vUv = uv;
+        vN = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      precision highp float;
+      varying vec2 vUv;
+      varying vec3 vN;
+      uniform vec3 uPhosphor, uDim, uInk;
+      void main() {
+        // vertical hatch on walls; density depends on facing
+        float face = abs(vN.y);                // top of wall
+        float v = vUv.x * 18.0;
+        float w = fwidth(v) * 1.2;
+        float s = abs(fract(v) - 0.5);
+        float lines = smoothstep(w, 0.0, s - 0.07);
+        vec3 col = mix(uInk * 0.6, uDim, lines * 0.85);
+        // top cap brighter
+        col = mix(col, uPhosphor, smoothstep(0.95, 1.0, face) * 0.7);
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `,
+    side: THREE.FrontSide,
+  });
+  const wall = new THREE.Mesh(geom, mat);
+
+  // position
+  if (side.dir === 'north') wall.position.set(cx, H / 2, -side.perp);
+  if (side.dir === 'south') wall.position.set(cx, H / 2,  side.perp);
+  if (side.dir === 'east')  wall.position.set( side.perp, H / 2, cx);
+  if (side.dir === 'west')  wall.position.set(-side.perp, H / 2, cx);
+
+  group.add(wall);
+
+  // edge segments along the inner-top of the wall (phosphor outline)
+  const x0 = wall.position.x - w / 2, x1 = wall.position.x + w / 2;
+  const z0 = wall.position.z - d / 2, z1 = wall.position.z + d / 2;
+  const yT = H, yB = 0.02;
+  // top rectangle (visible from above)
+  edgesOut.push([x0, yT, z0,  x1, yT, z0]);
+  edgesOut.push([x1, yT, z0,  x1, yT, z1]);
+  edgesOut.push([x1, yT, z1,  x0, yT, z1]);
+  edgesOut.push([x0, yT, z1,  x0, yT, z0]);
+  // base outline
+  edgesOut.push([x0, yB, z0,  x1, yB, z0]);
+  edgesOut.push([x1, yB, z0,  x1, yB, z1]);
+  edgesOut.push([x1, yB, z1,  x0, yB, z1]);
+  edgesOut.push([x0, yB, z1,  x0, yB, z0]);
+  // verticals at outer corners
+  edgesOut.push([x0, yB, z0,  x0, yT, z0]);
+  edgesOut.push([x1, yB, z0,  x1, yT, z0]);
+  edgesOut.push([x1, yB, z1,  x1, yT, z1]);
+  edgesOut.push([x0, yB, z1,  x0, yT, z1]);
+}
+
+function addDoorMarker(group, side, center, H) {
+  // a glyph drawn at the threshold, plus a directional chevron pointing outward
+  const len = 1.1, thick = 0.06;
+  const geom = new THREE.PlaneGeometry(len, thick);
+  geom.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshBasicMaterial({ color: PHOSPHOR, transparent: true, opacity: 0.85 });
+  const m = new THREE.Mesh(geom, mat);
+
+  if (side.dir === 'north' || side.dir === 'south') {
+    m.position.set(center, 0.04, side.dir === 'north' ? -side.perp : side.perp);
+  } else {
+    m.rotation.y = Math.PI / 2;
+    m.position.set(side.dir === 'east' ? side.perp : -side.perp, 0.04, center);
+  }
+  group.add(m);
+
+  // outward chevron
+  const cgeom = new THREE.BufferGeometry();
+  const s = 0.45;
+  const tri = new Float32Array([
+    -s, 0.05, 0,
+     s, 0.05, 0,
+     0, 0.05, -s,
+  ]);
+  cgeom.setAttribute('position', new THREE.BufferAttribute(tri, 3));
+  cgeom.setIndex([0, 1, 2]);
+  const cMat = new THREE.MeshBasicMaterial({ color: PHOSPHOR, transparent: true, opacity: 0.55, depthWrite: false });
+  const chev = new THREE.Mesh(cgeom, cMat);
+  if (side.dir === 'north') { chev.position.set(center, 0.05, -side.perp - 0.6); chev.rotation.y = Math.PI; }
+  if (side.dir === 'south') { chev.position.set(center, 0.05,  side.perp + 0.6); }
+  if (side.dir === 'east')  { chev.position.set( side.perp + 0.6, 0.05, center); chev.rotation.y = -Math.PI / 2; }
+  if (side.dir === 'west')  { chev.position.set(-side.perp - 0.6, 0.05, center); chev.rotation.y =  Math.PI / 2; }
+  group.add(chev);
+}
+
+function computeDoorAnchor(side, center, H) {
+  // world-local coordinate above the door for placing the DOM label
+  if (side.dir === 'north') return new THREE.Vector3(center, H + 0.4, -side.perp);
+  if (side.dir === 'south') return new THREE.Vector3(center, H + 0.4,  side.perp);
+  if (side.dir === 'east')  return new THREE.Vector3( side.perp, H + 0.4, center);
+  if (side.dir === 'west')  return new THREE.Vector3(-side.perp, H + 0.4, center);
+}
+
+function addOctagonOverlay(group, W, D, H) {
+  // diagonal corner braces to suggest octagon shape inside a rectangular footprint
+  const c = 0.32;
+  const Wp = W / 2, Dp = D / 2;
+  const positions = [];
+  const pairs = [
+    [[-Wp + c * W, 0.03, -Dp], [-Wp, 0.03, -Dp + c * D]],
+    [[ Wp - c * W, 0.03, -Dp], [ Wp, 0.03, -Dp + c * D]],
+    [[ Wp - c * W, 0.03,  Dp], [ Wp, 0.03,  Dp - c * D]],
+    [[-Wp + c * W, 0.03,  Dp], [-Wp, 0.03,  Dp - c * D]],
+  ];
+  for (const [a, b] of pairs) positions.push(...a, ...b);
+  const geom = new LineSegmentsGeometry();
+  geom.setPositions(positions);
+  const mat = new LineMaterial({
+    color: PHOSPHOR.getHex(), linewidth: 2.0,
+    resolution: new THREE.Vector2(stage.clientWidth, stage.clientHeight),
+    transparent: true, opacity: 0.85,
+  });
+  const seg = new LineSegments2(geom, mat);
+  group.add(seg);
+  group.userData.octMat = mat;
+}
+
+function addSkylight(group, W, D) {
+  const r = Math.min(W, D) * 0.32;
+  const geom = new THREE.RingGeometry(r * 0.9, r, 64);
+  geom.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshBasicMaterial({
+    color: PHOSPHOR_DIM, transparent: true, opacity: 0.6, depthWrite: false,
+  });
+  const ring = new THREE.Mesh(geom, mat);
+  ring.position.y = 0.06;
+  group.add(ring);
+}
+
+function hatchDensity(kind) {
+  return ({ fine: 1.4, med: 1.0, wide: 0.65, dense: 1.7, books: 1.2, tower: 0.9, none: 0.0001 })[kind] ?? 1.0;
+}
+function hatchAngle(kind) {
+  return ({ fine: 0.6, med: 0.785, wide: 0.5, dense: 1.05, books: 0.0, tower: 0.785, none: 0.0 })[kind] ?? 0.785;
+}
+
+// ─── camera ────────────────────────────────────────────────────────────────
+function fitCameraToRoom(W, D, H) {
+  const aspect = stage.clientWidth / stage.clientHeight;
+  const span = Math.max(W, D / aspect) * 1.55;
+  // keep that 3/4 angle, scale distance
+  const tilt = THREE.MathUtils.degToRad(58);
+  const r = span;
+  camera.position.set(0, Math.cos(tilt) * r * 0.92, Math.sin(tilt) * r * 0.6 + 1.5);
+  camera.lookAt(0, H * 0.4, 0);
+  camera.updateProjectionMatrix();
+}
+
+// ─── room transitions ──────────────────────────────────────────────────────
+function enterRoom(id, instant = false) {
+  if (isTransitioning) return;
+  if (id === currentRoomId) return;
+  const room = roomsById.get(id);
+  if (!room) return;
+
+  isTransitioning = true;
+
+  const after = () => {
+    clearRoom();
+    buildRoom(id);
+    currentRoomId = id;
+    setRoomName(room.name);
+    layoutExitTags();
+    fadeIn(() => { isTransitioning = false; });
+  };
+
+  if (instant) {
+    after();
+  } else {
+    fadeOut(after);
+  }
+}
+
+function fadeOut(done) {
+  const dur = 280;
+  const t0 = performance.now();
+  const startScan = crtPass.uniforms.uScanline.value;
+  const startBloom = bloomPass.strength;
+  const tween = (t) => {
+    const k = Math.min(1, (t - t0) / dur);
+    crtPass.uniforms.uScanline.value = startScan + (0.9 - startScan) * k;
+    bloomPass.strength = startBloom + (2.4 - startBloom) * k;
+    if (k < 1) requestAnimationFrame(tween); else done();
+  };
+  requestAnimationFrame(tween);
+  hideExitTags();
+  ui.name.classList.remove('show');
+}
+function fadeIn(done) {
+  const dur = 360;
+  const t0 = performance.now();
+  const startScan = crtPass.uniforms.uScanline.value;
+  const startBloom = bloomPass.strength;
+  const tween = (t) => {
+    const k = Math.min(1, (t - t0) / dur);
+    crtPass.uniforms.uScanline.value = startScan + (0.18 - startScan) * k;
+    bloomPass.strength = startBloom + (1.05 - startBloom) * k;
+    if (k < 1) requestAnimationFrame(tween); else done();
+  };
+  requestAnimationFrame(tween);
+  showExitTags();
+}
+
+// ─── HUD ───────────────────────────────────────────────────────────────────
+let nameTimer = null;
+function setRoomName(n) {
+  ui.name.textContent = n;
+  ui.name.classList.add('show');
+  clearTimeout(nameTimer);
+  nameTimer = setTimeout(() => ui.name.classList.remove('show'), 2400);
+}
+
+function clearExitTags() {
+  exitDoms.forEach(d => d.el.remove());
+  exitDoms = [];
+}
+function hideExitTags() { exitDoms.forEach(d => d.el.classList.remove('show')); }
+function showExitTags() { setTimeout(() => exitDoms.forEach(d => d.el.classList.add('show')), 60); }
+
+function layoutExitTags() {
+  clearExitTags();
+  const exits = exitsByRoom.get(currentRoomId) || [];
+  for (const ex of exits) {
+    const dest = roomsById.get(ex.to);
+    if (!dest) continue;
+    const el = document.createElement('div');
+    el.className = 'exit-tag';
+    el.innerHTML = `<span class="arrow">${arrowFor(ex.direction)}</span>${escapeHtml(dest.name)}`;
+    el.addEventListener('click', () => enterRoom(ex.to));
+    el.addEventListener('touchend', (e) => { e.preventDefault(); enterRoom(ex.to); }, { passive: false });
+    ui.exits.appendChild(el);
+    exitDoms.push({ el, exit: ex });
+  }
+}
+
+function arrowFor(dir) {
+  return ({ north: '↑', south: '↓', east: '→', west: '←', up: '⇧', down: '⇩' })[dir] || '·';
+}
+function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function projectAnchor(local) {
+  const v = local.clone().project(camera);
+  const x = (v.x * 0.5 + 0.5) * stage.clientWidth;
+  const y = (-v.y * 0.5 + 0.5) * stage.clientHeight;
+  return { x, y, behind: v.z > 1 };
+}
+
+function updateExitTags() {
+  for (const d of exitDoms) {
+    const local = d.exit.__local;
+    if (!local) continue;
+    const p = projectAnchor(local);
+    d.el.style.left = `${p.x}px`;
+    d.el.style.top  = `${p.y}px`;
+    d.el.style.opacity = p.behind ? '0' : '';
+  }
+}
+
+// ─── input ─────────────────────────────────────────────────────────────────
+function bindEvents() {
+  // swipe → move in cardinal direction if a matching exit exists
+  let sx = 0, sy = 0, t0 = 0, tracking = false;
+  stage.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY; t0 = performance.now(); tracking = true;
+  }, { passive: true });
+  stage.addEventListener('touchend', e => {
+    if (!tracking) return; tracking = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    const dt = performance.now() - t0;
+    if (dt > 600) return;
+    const adx = Math.abs(dx), ady = Math.abs(dy);
+    if (Math.max(adx, ady) < 36) return;
+    let dir;
+    if (adx > ady) dir = dx > 0 ? 'east' : 'west';
+    else            dir = dy > 0 ? 'south' : 'north';
+    const ex = (exitsByRoom.get(currentRoomId) || []).find(e => e.direction === dir);
+    if (ex) enterRoom(ex.to);
+  }, { passive: true });
+
+  // keyboard for desktop
+  window.addEventListener('keydown', e => {
+    const map = { ArrowUp: 'north', ArrowDown: 'south', ArrowLeft: 'west', ArrowRight: 'east',
+                  w: 'north', s: 'south', a: 'west', d: 'east' };
+    const dir = map[e.key];
+    if (!dir) return;
+    const ex = (exitsByRoom.get(currentRoomId) || []).find(x => x.direction === dir);
+    if (ex) enterRoom(ex.to);
+  });
+}
+
+// ─── frame loop ────────────────────────────────────────────────────────────
+function tick() {
+  const dt = clock.getDelta();
+  const t  = clock.getElapsedTime();
+
+  if (currentRoomGroup) {
+    // a faint idle drift on the camera (CRT-table tremor)
+    camera.position.x = Math.sin(t * 0.21) * 0.18;
+    camera.lookAt(0, 0.6, 0);
+  }
+
+  crtPass.uniforms.uTime.value = t;
+  crtPass.uniforms.uResolution.value.set(stage.clientWidth, stage.clientHeight);
+
+  composer.render(dt);
+  updateExitTags();
+}
+
+function resize() {
+  const w = stage.clientWidth = window.innerWidth;
+  const h = stage.clientHeight = window.innerHeight;
+  renderer.setSize(w, h, false);
+  if (composer) composer.setSize(w, h);
+  if (camera) {
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  // line materials need pixel-resolution updates
+  scene?.traverse(obj => {
+    if (obj.material && obj.material.isLineMaterial) {
+      obj.material.resolution.set(w, h);
+    }
+  });
+}
+
+</script>
+</body>
+</html>
