@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<meta name="theme-color" content="#10000a" />
+<title>Forget-Me-Not Palace</title>
+<link rel="stylesheet" href="style.css" />
+<script type="importmap">
+{
+  "imports": {
+    "three":           "https://unpkg.com/three@0.169.0/build/three.module.js",
+    "three/addons/":   "https://unpkg.com/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+
+  <div id="hud" aria-hidden="true">
+    <div id="roomname" class="fade"></div>
+    <div id="exits"></div>
+    <div id="compass">
+      <span class="n">N</span><span class="e">E</span>
+      <span class="s">S</span><span class="w">W</span>
+    </div>
+  </div>
+
+  <noscript>This palace requires JavaScript.</noscript>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
