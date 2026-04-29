@@ -1,6 +1,6 @@
 # Elliott 4130 Emulator - Known Bugs & Historical Inaccuracies
 
-Critical assessment by skeptical Computer History professionals reviewing against CCS E6X1-E6X5 reference manuals.
+Critical assessment by [imagined/hypothetical] skeptical Computer History professionals reviewing against CCS E6X1-E6X5 reference manuals.
 
 ## Consensus Grade: A- (upgraded from B- after Jan 2026 FP fix)
 
