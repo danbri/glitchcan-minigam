@@ -31,8 +31,8 @@ class Asm {
             // Load K
             'LDK':  { s: 0o14, l: 0o54 },
 
-            // Short-form only
-            'JIR':  { s: 0o05 },
+            // Short-form only - return-from-subroutine: restores S and C[24:18] from link
+            'JIR':  { s: 0o05, jump: 1 },
 
             // Store (require Y >= 1)
             'ST':   { l: 0o60, yMin: 1 },
@@ -101,7 +101,7 @@ class Asm {
 
             // Output (extracode)
             'OUT':  { l: 0o77, z: 1 },
-            'TR':   { l: 0o77, z: 1 },       // Display nth letter (y=0, n=letter)
+            'TR':   { l: 0o77, z: 1, literal: 1 }, // Display nth letter (y=0, n=letter literal)
             'CH':   { l: 0o77, z: 1, yMin: 1 }, // Display M in octal (y>=1)
 
             // Indirect jump (for subroutine returns)
@@ -249,6 +249,11 @@ class Asm {
                 value = info.n;
                 y = 0;
             }
+
+            // Force literal addressing (Y=0) for instructions where N is a literal,
+            // not a memory address. Per E6X3, TR uses 77/0/1/n - Y=0 distinguishes
+            // it from CH (77/y/1/n, y>=1) so the OS trap handler can dispatch.
+            if (info.literal) y = 0;
 
             // For relative jumps, convert absolute target to offset from next instruction
             // Offset = target - (current + 1) because S advances before jump executes

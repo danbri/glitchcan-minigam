@@ -51,13 +51,18 @@
 
 START:
     ; Initialize heap and environment
-    LD    #1000
+    LD    #2000           ; heap base (must be past assembled code)
     ST    HEAP
     LD    #4095           ; NIL
     ST    ENV             ; Empty environment
 
-    ; Initialize stack pointer
-    LD    #200
+    ; Initialize stack pointer.
+    ; Stack stores caller links for re-entrant subroutines (currently
+    ; just READ; see Bug E in README). It must sit above HEAP so that
+    ; cons cell allocation cannot collide with stack frames. HEAP is at
+    ; 2000 and is bounded by the 12-bit cell-pointer limit (4095), so
+    ; placing the stack at 5000 leaves 1000 addresses of headroom.
+    LD    #5000
     ST    SP
 
     ; Print startup banner: "LISP"
@@ -86,6 +91,7 @@ REPL:
 
     ; Print result
     JFL   PRINT
+    TR    0              ; newline after each top-level print
 
     ; Loop for next expression
     J     REPL
@@ -106,8 +112,24 @@ HALT:
 ; Input: RESULT = expression to print
 ; ============================================================================
 PRINT:
+    ; PRINT is re-entrant: PR_LIST_LOOP recurses on each element via
+    ; JFL PRINT, and PR_DOTTED recurses on the cdr. Both the caller
+    ; link and PR_EXPR (the current sub-expression being printed) must
+    ; survive the recursive call. Push both onto the SP stack.
+    ;     [SP-2] = caller link
+    ;     [SP-1] = saved PR_EXPR
     LD    0
-    ST    PR_LINK
+    LDR   SP
+    ST    0,R
+    LD    SP
+    ADD   #1
+    ST    SP
+    LD    PR_EXPR
+    LDR   SP
+    ST    0,R
+    LD    SP
+    ADD   #1
+    ST    SP
 
     LD    RESULT
     ST    PR_EXPR
@@ -142,11 +164,12 @@ PR_SYMBOL:
     JN    PR_NUM
     SUB   #26
     JNN   PR_NUM
-    ; It's a letter
+    ; It's a letter - emit via ODUM 0 (channel 0 = console)
+    ; sixBitToAscii maps 1->A, 2->B, ..., 26->Z, so we want index 1..26
     LD    PR_EXPR
     SUB   #3000
-    ADD   #1             ; TR uses 1-based (A=1)
-    TR    0
+    ADD   #1
+    ODUM  0
     J     PR_RET
 
 PR_NUM:
@@ -156,37 +179,37 @@ PR_NUM:
     JN    PR_OCTAL        ; < 5000, print as octal
     SUB   #3000
     JNN   PR_OCTAL        ; >= 8000, print as octal
-    ; It's a number - print decimal value
+    ; It's a number - print decimal value (0-999)
     LD    PR_EXPR
     SUB   #5000
     ST    PR_N
-    ; Simple decimal print (handles 0-999)
+    LD    #0
+    ST    PR_HFLAG        ; have-printed-hundreds flag
     ; Hundreds
     LD    PR_N
     DIV   #100
+    ST    PR_T            ; PR_T = hundreds digit
+    LD    PR_T            ; reload to set flags (DIV does not)
     JZ    PR_TENS
-    ADD   #48             ; '0'
+    ADD   #27
     ODUM  0
-    ; Update PR_N to remainder
-    LD    PR_N
-    DIV   #100
+    LD    #1
+    ST    PR_HFLAG
+    LD    PR_T
     MULS  #100
     ST    PR_T
     LD    PR_N
     SUB   PR_T
     ST    PR_N
 PR_TENS:
-    ; Tens
+    ; Tens digit
     LD    PR_N
     DIV   #10
-    ST    PR_T
-    LD    PR_N
-    SUB   #10
-    JN    PR_ONES_ONLY    ; < 10, skip tens
+    ST    PR_T            ; PR_T = tens digit
     LD    PR_T
-    ADD   #48
+    JZ    PR_TENS_ZERO    ; tens == 0
+    ADD   #27
     ODUM  0
-    ; Update PR_N
     LD    PR_T
     MULS  #10
     ST    PR_T
@@ -194,12 +217,15 @@ PR_TENS:
     SUB   PR_T
     ST    PR_N
     J     PR_UNITS
-PR_ONES_ONLY:
-    ; If we printed hundreds, print 0 for tens
-    ; (simplified: just print units)
+PR_TENS_ZERO:
+    ; If hundreds were printed, must emit '0' for tens
+    LD    PR_HFLAG
+    JZ    PR_UNITS
+    LD    #27             ; 6-bit '0'
+    ODUM  0
 PR_UNITS:
     LD    PR_N
-    ADD   #48
+    ADD   #27
     ODUM  0
     J     PR_RET
 
@@ -212,11 +238,17 @@ PR_OCTAL:
 ; Print temporaries
 PR_N:         #0
 PR_T:         #0
+PR_HFLAG:     #0
 
 PR_LIST:
     ; Print list: (a b c ...)
-    ; Output '(' - load char to M, then ODUM outputs M to channel
-    LD    #40            ; '('
+    ; ODUM emits the low 6 bits of M as an Elliott 6-bit character,
+    ; which the OS/host then maps to ASCII via sixBitToAscii. The 6-bit
+    ; codes for parens/space/dot are NOT the same as ASCII (which is
+    ; what the reader sees from the cli.mjs tape divergence). Use the
+    ; 6-bit codes here:
+    ;   space=0  '('=45  ')'=46  '.'=51  '0'..'9'=27..36
+    LD    #45            ; '('
     ODUM  0              ; Output M to console (channel 0)
 
 PR_LIST_LOOP:
@@ -246,33 +278,42 @@ PR_LIST_LOOP:
     JNN   PR_DOTTED
 
     ; More list elements - print space and continue
-    LD    #32            ; Space
+    LD    #0             ; Space (6-bit code 0)
     ODUM  0
     J     PR_LIST_LOOP
 
 PR_DOTTED:
     ; Dotted pair: print " . x"
-    LD    #32            ; Space
+    LD    #0             ; Space
     ODUM  0
-    LD    #46            ; '.'
+    LD    #51            ; '.' (6-bit code 51)
     ODUM  0
-    LD    #32            ; Space
+    LD    #0             ; Space
     ODUM  0
     LD    PR_EXPR
     ST    RESULT
     JFL   PRINT
 
 PR_LIST_END:
-    ; Output ')'
-    LD    #41
+    ; Output ')' (6-bit code 46)
+    LD    #46
     ODUM  0
-    ; Newline after top-level print
-    TR    0
 
 PR_RET:
-    LD    PR_LINK
+    ; Pop saved PR_EXPR then caller link.
+    LD    SP
+    SUB   #1
+    ST    SP
+    LDR   SP
+    LD    0,R
+    ST    PR_EXPR
+    LD    SP
+    SUB   #1
+    ST    SP
+    LDR   SP
+    LD    0,R
     ST    0
-    JI    0
+    JIR   0
 
 ; PRINT state
 PR_LINK:      #0
@@ -285,8 +326,17 @@ PR_SAVE:      #0
 ; Output: RESULT
 ; ============================================================================
 EVAL:
+    ; Bug E (part 2) fix: EVAL is re-entrant - P_CAR/P_CDR/P_CONS,
+    ; EV_APPLY_LIST, EV_APPLY_LAMBDA and EV_COND all call JFL EVAL on
+    ; a sub-expression. Push the caller link onto the SP stack rather
+    ; than the single EV_LINK global, which would otherwise be lost
+    ; when the inner EVAL stored its own caller link in the same slot.
     LD    0
-    ST    EV_LINK
+    LDR   SP
+    ST    0,R
+    LD    SP
+    ADD   #1
+    ST    SP
 
     ; Is EXPR an atom? (>= 3000)
     LD    EXPR
@@ -456,6 +506,14 @@ EV_LIST:
     LD    EV_FN
     SUB   #4020           ; NUMBERP
     JZ    P_NUMBERP
+
+    LD    EV_FN
+    SUB   #4030           ; CADR
+    JZ    P_CADR
+
+    LD    EV_FN
+    SUB   #4031           ; CADDR
+    JZ    P_CADDR
 
     ; Unknown atom function - return NIL
     LD    #4095
@@ -695,6 +753,41 @@ P_CDR:
     LD    RESULT
     ST    ARG
     JFL   PCDR
+    J     EV_RET
+
+P_CADR:
+    ; (CADR x) = (CAR (CDR x))
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
+    J     EV_RET
+
+P_CADDR:
+    ; (CADDR x) = (CAR (CDR (CDR x)))
+    LD    EV_ARGS
+    ST    ARG
+    JFL   PCAR
+    LD    RESULT
+    ST    EXPR
+    JFL   EVAL
+    LD    RESULT
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCDR
+    LD    RESULT
+    ST    ARG
+    JFL   PCAR
     J     EV_RET
 
 P_CONS:
@@ -1098,9 +1191,13 @@ ARITH_B:      #0
 ARITH_C:      #0
 
 EV_RET:
-    LD    EV_LINK
+    LD    SP
+    SUB   #1
+    ST    SP
+    LDR   SP
+    LD    0,R
     ST    0
-    JI    0
+    JIR   0
 
 ; ============================================================================
 ; EVLIS - Evaluate list of expressions
@@ -1148,7 +1245,7 @@ EVLIS_NIL:
 EVLIS_RET:
     LD    EVLIS_LINK
     ST    0
-    JI    0
+    JIR   0
 
 ; ============================================================================
 ; PAIRLIS - Build environment bindings
@@ -1215,7 +1312,7 @@ PAIRLIS_DONE:
 PAIRLIS_RET:
     LD    PAIRLIS_LINK
     ST    0
-    JI    0
+    JIR   0
 
 ; ============================================================================
 ; PCAR - Primitive CAR
@@ -1243,7 +1340,7 @@ PCAR_ATOM:
 PCAR_RET:
     LD    PCAR_LINK
     ST    0
-    JI    0
+    JIR   0
 
 ; ============================================================================
 ; PCDR - Primitive CDR
@@ -1276,7 +1373,7 @@ PCDR_ATOM:
 PCDR_RET:
     LD    PCDR_LINK
     ST    0
-    JI    0
+    JIR   0
 
 ; ============================================================================
 ; PCONS - Primitive CONS
@@ -1300,7 +1397,7 @@ PCONS:
 
     LD    PCONS_LINK
     ST    0
-    JI    0
+    JIR   0
 
 ; ============================================================================
 ; READ - Read S-expression from paper tape (Channel 1)
@@ -1316,8 +1413,27 @@ PCONS:
 ;   'x      -> (QUOTE x)
 ; ============================================================================
 READ:
-    LD    0
-    ST    RD_LINK
+    ; Bug E fix: READ is re-entrant (RD_LIST_LOOP calls READ for each
+    ; element, and RD_QUOTE calls READ for the quoted form). Storing the
+    ; caller link in a single global RD_LINK loses the outer caller's
+    ; return address - and storing per-call list state in globals like
+    ; RD_LIST_END loses the outer build's tail pointer when the inner
+    ; RD_LIST overwrites it. Push both onto the SP stack on entry, pop
+    ; on RD_RET. Stack frame per READ (SP grows up):
+    ;     [SP-2] = caller link (saved JFL link from mem[0])
+    ;     [SP-1] = saved RD_LIST_END
+    LD    0                ; caller link
+    LDR   SP
+    ST    0,R              ; mem[SP] = link
+    LD    SP
+    ADD   #1
+    ST    SP               ; SP++
+    LD    RD_LIST_END
+    LDR   SP
+    ST    0,R              ; mem[SP] = RD_LIST_END
+    LD    SP
+    ADD   #1
+    ST    SP               ; SP++
 
     ; Skip whitespace
 RD_SKIP:
@@ -1401,6 +1517,8 @@ RD_LIST_LOOP:
 RD_LIST_SKIP:
     JFL   RDCHAR
     LD    RD_CH
+    JZ    RD_LIST_DONE    ; EOF inside list - close as if ')'
+    LD    RD_CH
     SUB   #32
     JZ    RD_LIST_SKIP
     LD    RD_CH
@@ -1437,21 +1555,104 @@ RD_LIST_SKIP:
     J     RD_LIST_LOOP
 
 RD_LIST_DONE:
-    ; Reverse the list (it was built backwards)
+    ; The list was built by consing each new element onto the head, so
+    ; (A B C) tape produced (C . (B . (A . NIL))). Reverse in place:
+    ;   new = NIL; old = head
+    ;   while old != NIL:
+    ;       next = CDR(old)
+    ;       set CDR(old) = new
+    ;       new = old
+    ;       old = next
+    ;   return new
+    LD    #4095
+    ST    RD_REV_NEW              ; new = NIL
     LD    RD_LIST_END
+    ST    RD_REV_OLD              ; old = head built so far
+
+RD_REV_LOOP:
+    LD    RD_REV_OLD
+    SUB   #4095
+    JZ    RD_REV_DONE             ; old == NIL: finished
+
+    ; T1 = mem[old]  (full cell value: CAR<<12 | CDR)
+    LDR   RD_REV_OLD
+    LD    0,R
+    ST    T1
+
+    ; T2 = CAR(old) = T1 >> 12
+    LD    T1
+    LDK   #12
+    SMRL
+    ST    T2
+
+    ; RD_REV_NEXT = CDR(old) = T1 - (CAR << 12)
+    LD    T2
+    MULS  #4096
+    ST    RD_REV_TMP
+    LD    T1
+    SUB   RD_REV_TMP
+    ST    RD_REV_NEXT
+
+    ; mem[old] := (CAR << 12) | new      (rewrite CDR slot to point at new)
+    LD    T2
+    MULS  #4096
+    ADD   RD_REV_NEW
+    LDR   RD_REV_OLD
+    ST    0,R
+
+    ; new = old; old = next
+    LD    RD_REV_OLD
+    ST    RD_REV_NEW
+    LD    RD_REV_NEXT
+    ST    RD_REV_OLD
+
+    J     RD_REV_LOOP
+
+RD_REV_DONE:
+    LD    RD_REV_NEW
     ST    RESULT
     J     RD_RET
 
 RD_ATOM:
-    ; Read atom name into buffer, convert to code
+    ; Read atom name and convert to atom code.
+    ;
+    ; The reader tracks the first three characters (RD_ABUF/RD_ABUF2/
+    ; RD_ABUF3) and the FOURTH character (RD_ABUF4), which between them
+    ; suffice to disambiguate every keyword we currently support
+    ; (QUOTE/CAR/CDR/CONS/COND/ATOM/EQ/NULL/LAMBDA/LABEL/LIST/CADR/
+    ; CADDR/DEFUN/IF) plus the truth atoms T and NIL. We also accept
+    ; lowercase input by converting to uppercase as we read, so DEFUN
+    ; and defun read the same.
+    ;
+    ; Numbers are detected at the FIRST char so the digit-accumulation
+    ; loop sees every digit (the previous design had RD_ATOM_LOOP
+    ; consume the trailing digits before RD_PARSE_NUM ran, leaving
+    ; RD_NUM stuck at the first digit's value).
+    LD    RD_CH
+    SUB   #48             ; '0'
+    JN    RD_ATOM_NAME    ; first char < '0' - name path
+    SUB   #10
+    JNN   RD_ATOM_NAME    ; first char > '9' - name path
+    ; First char is a digit - parse number directly from RD_CH onward
+    J     RD_PARSE_NUM
+
+RD_ATOM_NAME:
     LD    #0
     ST    RD_ALEN
+    LD    #0
+    ST    RD_ABUF2
+    LD    #0
+    ST    RD_ABUF3
+    LD    #0
+    ST    RD_ABUF4
     LD    RD_CH
     ST    RD_ABUF
 
 RD_ATOM_LOOP:
     JFL   RDCHAR
     ; Check for delimiter
+    LD    RD_CH
+    JZ    RD_ATOM_END     ; EOF
     LD    RD_CH
     SUB   #32             ; Space
     JZ    RD_ATOM_END
@@ -1465,7 +1666,31 @@ RD_ATOM_LOOP:
     SUB   #10             ; Newline
     JZ    RD_ATOM_END
 
-    ; Add to atom buffer (simplified: just track first char)
+    ; Position-specific char capture: ALEN is the number of chars
+    ; read AFTER the first char, so ALEN==0 → save into ABUF2,
+    ; ALEN==1 → ABUF3, ALEN==2 → ABUF4. Beyond that we just count.
+    LD    RD_ALEN
+    JNZ   RD_ATOM_LOOP_2  ; not first iteration → skip ABUF2 store
+    LD    RD_CH
+    ST    RD_ABUF2
+    J     RD_ATOM_INC
+
+RD_ATOM_LOOP_2:
+    LD    RD_ALEN
+    SUB   #1
+    JNZ   RD_ATOM_LOOP_3
+    LD    RD_CH
+    ST    RD_ABUF3
+    J     RD_ATOM_INC
+
+RD_ATOM_LOOP_3:
+    LD    RD_ALEN
+    SUB   #2
+    JNZ   RD_ATOM_INC
+    LD    RD_CH
+    ST    RD_ABUF4
+
+RD_ATOM_INC:
     LD    RD_ALEN
     ADD   #1
     ST    RD_ALEN
@@ -1475,60 +1700,248 @@ RD_ATOM_PUSH:
     LD    RD_CH
     ST    RD_PUSHBACK
 RD_ATOM_END:
-    ; Check if first char is a digit (0-9, ASCII 48-57)
-    LD    RD_ABUF
-    SUB   #48             ; '0'
-    JN    RD_NOT_NUMBER
-    SUB   #10
-    JNN   RD_NOT_NUMBER
-    ; It's a number - parse it
-    J     RD_PARSE_NUM
-
-RD_NOT_NUMBER:
-    ; Convert first char to atom code
-    ; A-Z -> 3000-3025
+    ; First char must be A-Z to be a name; otherwise dump as letter-A.
     LD    RD_ABUF
     SUB   #65             ; 'A'
-    JN    RD_ATOM_SPECIAL
+    JN    RD_KW_FALLBACK
     SUB   #26
-    JNN   RD_ATOM_SPECIAL
-    ; It's A-Z
+    JNN   RD_KW_FALLBACK
+
+    ; ALEN==0 means single-character input: T → 4094, N → 4095,
+    ; everything else → letter atom 3000+(L-A).
+    LD    RD_ALEN
+    JNZ   RD_KW_MULTI
+    LD    RD_ABUF
+    SUB   #84             ; 'T'
+    JZ    RD_KW_T
+    LD    RD_ABUF
+    SUB   #78             ; 'N'
+    JZ    RD_KW_NIL
+    J     RD_KW_LETTER
+
+RD_KW_MULTI:
+    ; Multi-char: dispatch on first char.
+    LD    RD_ABUF
+    SUB   #65             ; 'A'
+    JZ    RD_KW_A
+    LD    RD_ABUF
+    SUB   #67             ; 'C'
+    JZ    RD_KW_C
+    LD    RD_ABUF
+    SUB   #68             ; 'D'
+    JZ    RD_KW_D
+    LD    RD_ABUF
+    SUB   #69             ; 'E'
+    JZ    RD_KW_E
+    LD    RD_ABUF
+    SUB   #73             ; 'I'
+    JZ    RD_KW_I
+    LD    RD_ABUF
+    SUB   #76             ; 'L'
+    JZ    RD_KW_L
+    LD    RD_ABUF
+    SUB   #78             ; 'N'
+    JZ    RD_KW_N
+    LD    RD_ABUF
+    SUB   #81             ; 'Q'
+    JZ    RD_KW_Q
+    ; Unknown multi-char keyword: fall back to first-letter atom code.
+    J     RD_KW_LETTER
+
+RD_KW_A:
+    ; A_ : A+T → ATOM (4004); else atom A
+    LD    RD_ABUF2
+    SUB   #84             ; 'T'
+    JZ    RD_KW_ATOM
+    J     RD_KW_LETTER
+
+RD_KW_ATOM:
+    LD    #4004
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_C:
+    ; C_ : C+A → CADR (if 3rd=D) or CAR; C+D → CDR; C+O → COND/CONS
+    LD    RD_ABUF2
+    SUB   #65             ; 'A'
+    JZ    RD_KW_CA
+    LD    RD_ABUF2
+    SUB   #68             ; 'D'
+    JZ    RD_KW_CD
+    LD    RD_ABUF2
+    SUB   #79             ; 'O'
+    JZ    RD_KW_CO
+    J     RD_KW_LETTER
+
+RD_KW_CA:
+    ; CA_ : CAR (3rd char R or none beyond), CADR (3rd=D, 4th=R),
+    ;       CADDR (3rd=D, 4th=D)
+    LD    RD_ABUF3
+    SUB   #68             ; 'D'
+    JZ    RD_KW_CAD
+    LD    #4001           ; CAR
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_CAD:
+    ; CAD_ : 4th=R → CADR; 4th=D → CADDR
+    LD    RD_ABUF4
+    SUB   #68             ; 'D'
+    JZ    RD_KW_CADDR
+    LD    #4030           ; CADR
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_CADDR:
+    LD    #4031
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_CD:
+    LD    #4002           ; CDR
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_CO:
+    ; CO_ : CON_ : 4th=D → COND, 4th=S → CONS; default COND
+    LD    RD_ABUF4
+    SUB   #83             ; 'S'
+    JZ    RD_KW_CONS
+    LD    #4006           ; COND
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_CONS:
+    LD    #4003
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_D:
+    ; D_ : D+E → DEFUN (4032); else atom D
+    LD    RD_ABUF2
+    SUB   #69             ; 'E'
+    JZ    RD_KW_DEFUN
+    J     RD_KW_LETTER
+
+RD_KW_DEFUN:
+    LD    #4032           ; DEFUN
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_E:
+    ; E_ : E+Q → EQ; else atom E
+    LD    RD_ABUF2
+    SUB   #81             ; 'Q'
+    JZ    RD_KW_EQ
+    J     RD_KW_LETTER
+
+RD_KW_EQ:
+    LD    #4005
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_I:
+    ; I_ : I+F → IF (4033); else atom I
+    LD    RD_ABUF2
+    SUB   #70             ; 'F'
+    JZ    RD_KW_IF
+    J     RD_KW_LETTER
+
+RD_KW_IF:
+    LD    #4033
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_L:
+    ; L_ : L+A → LAMBDA/LABEL; L+I → LIST; else atom L
+    LD    RD_ABUF2
+    SUB   #65             ; 'A'
+    JZ    RD_KW_LA
+    LD    RD_ABUF2
+    SUB   #73             ; 'I'
+    JZ    RD_KW_LI
+    J     RD_KW_LETTER
+
+RD_KW_LA:
+    ; LA_ : 3rd=M → LAMBDA; 3rd=B → LABEL; default LAMBDA
+    LD    RD_ABUF3
+    SUB   #66             ; 'B'
+    JZ    RD_KW_LABEL
+    LD    #4007           ; LAMBDA
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_LABEL:
+    LD    #4008
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_LI:
+    LD    #4011           ; LIST
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_N:
+    ; N_ : N+U → NULL; else NIL
+    LD    RD_ABUF2
+    SUB   #85             ; 'U'
+    JZ    RD_KW_NULL
+    J     RD_KW_NIL
+
+RD_KW_NULL:
+    LD    #4010
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_Q:
+    ; Q_ : any 2-char+ Q-name → QUOTE
+    LD    #4000
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_T:
+    LD    #4094
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_NIL:
+    LD    #4095
+    ST    RESULT
+    J     RD_RET
+
+RD_KW_LETTER:
+    ; First char A-Z, not a recognised keyword: encode as 3000+(L-A).
     LD    RD_ABUF
     SUB   #65
     ADD   #3000
     ST    RESULT
     J     RD_RET
 
+RD_KW_FALLBACK:
+    ; Non-letter first char (and not a digit, since digits routed
+    ; to RD_PARSE_NUM at entry). Treat as NIL.
+    LD    #4095
+    ST    RESULT
+    J     RD_RET
+
 RD_PARSE_NUM:
-    ; Parse multi-digit number from RD_ABUF + continue reading
-    ; Number = 5000 + value
-    LD    RD_ABUF
-    SUB   #48             ; First digit value
+    ; Number parser. RD_CH already holds the first digit. We accumulate
+    ; into RD_NUM as we read more digits, stop at the first non-digit
+    ; (which we push back so the caller's parser sees it as a delimiter).
+    LD    RD_CH
+    SUB   #48             ; first digit value
     ST    RD_NUM
 
 RD_NUM_LOOP:
-    ; Check if there's a pushed-back char that's a digit
-    LD    RD_PUSHBACK
-    JZ    RD_NUM_READ
-    ; Use pushback
-    LD    RD_PUSHBACK
-    ST    RD_CH
-    LD    #0
-    ST    RD_PUSHBACK
-    J     RD_NUM_CHECK
-
-RD_NUM_READ:
     JFL   RDCHAR
-
-RD_NUM_CHECK:
-    ; Is it a digit?
+    LD    RD_CH
+    JZ    RD_NUM_DONE     ; EOF terminates the number
     LD    RD_CH
     SUB   #48
-    JN    RD_NUM_DONE     ; Not a digit
+    JN    RD_NUM_PUSHBACK ; not a digit
     SUB   #10
-    JNN   RD_NUM_DONE     ; Not a digit
-
-    ; It's a digit: num = num * 10 + digit
+    JNN   RD_NUM_PUSHBACK ; not a digit
+    ; digit: RD_NUM = RD_NUM*10 + digit
     LD    RD_NUM
     MULS  #10
     ST    RD_NUM
@@ -1538,41 +1951,33 @@ RD_NUM_CHECK:
     ST    RD_NUM
     J     RD_NUM_LOOP
 
-RD_NUM_DONE:
-    ; Push back the non-digit char
+RD_NUM_PUSHBACK:
     LD    RD_CH
     ST    RD_PUSHBACK
-    ; Return number atom
+RD_NUM_DONE:
     LD    RD_NUM
     ADD   #5000
     ST    RESULT
     J     RD_RET
 
-RD_ATOM_SPECIAL:
-    ; Check for T or NIL (simplified)
-    LD    RD_ABUF
-    SUB   #84             ; 'T'
-    JNZ   RD_CHECK_NIL
-    LD    #4094           ; T
-    ST    RESULT
-    J     RD_RET
-
-RD_CHECK_NIL:
-    LD    RD_ABUF
-    SUB   #78             ; 'N' (for NIL)
-    JNZ   RD_UNKNOWN
-    LD    #4095           ; NIL
-    ST    RESULT
-    J     RD_RET
-
-RD_UNKNOWN:
-    LD    #4095           ; Unknown -> NIL
-    ST    RESULT
+; (Lowercase folding happens inline in RDCHAR after each tape read.)
 
 RD_RET:
-    LD    RD_LINK
-    ST    0
-    JI    0
+    ; Unwind READ's two-word stack frame (link + RD_LIST_END).
+    ; Pop RD_LIST_END first, then the link.
+    LD    SP
+    SUB   #1
+    ST    SP
+    LDR   SP
+    LD    0,R              ; M = saved RD_LIST_END
+    ST    RD_LIST_END
+    LD    SP
+    SUB   #1
+    ST    SP
+    LDR   SP
+    LD    0,R              ; M = saved link
+    ST    0                ; mem[0] = link for JIR
+    JIR   0
 
 ; ============================================================================
 ; RDCHAR - Read one 6-bit character from paper tape (Channel 1)
@@ -1599,10 +2004,23 @@ RDCH_TAPE:
     IDUM  1             ; Read 6-bit char from tape reader to M
     ST    RD_CH         ; Store result
 
+    ; Fold lowercase 'a'..'z' to 'A'..'Z' so the reader accepts both
+    ; DEFUN and defun, etc. (ASCII 97..122 → subtract 32.) The cli.mjs
+    ; tape uses 7-bit ASCII so this is sound; non-letter codes are
+    ; outside the 97..122 range and pass through unchanged.
+    LD    RD_CH
+    SUB   #97            ; 'a'
+    JN    RDCH_RET       ; < 'a' - leave as-is
+    SUB   #26
+    JNN   RDCH_RET       ; > 'z' - leave as-is
+    LD    RD_CH
+    SUB   #32            ; convert to upper
+    ST    RD_CH
+
 RDCH_RET:
     LD    RDCH_LINK
     ST    0
-    JI    0
+    JIR   0
 
 ; READ state variables
 RD_LINK:      #0
@@ -1615,8 +2033,16 @@ RD_LIST_END:  #0
 RD_ELEM:      #0
 RD_ALEN:      #0
 RD_ABUF:      #0
+RD_ABUF2:     #0           ; second char of atom name (for CAR/CDR/QUOTE)
+RD_ABUF3:     #0           ; third char (for COND/LAMBDA disambiguation)
+RD_ABUF4:     #0           ; fourth char (for COND vs CONS, CADR vs CADDR)
 RD_NUM:       #0
 RDCH_LINK:    #0
+; Reverse-list state (used by RD_LIST_DONE)
+RD_REV_NEW:   #0
+RD_REV_OLD:   #0
+RD_REV_NEXT:  #0
+RD_REV_TMP:   #0
 
 ; ============================================================================
 ; Data
@@ -1672,5 +2098,4 @@ T2:           #0
 HEAP:         #0
 SP:           #0
 
-; Output
-100:          #0
+; (removed stray '100: #0' directive that clobbered code at word 100)

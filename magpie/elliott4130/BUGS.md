@@ -1,10 +1,10 @@
 # Elliott 4130 Emulator - Known Bugs & Historical Inaccuracies
 
-Critical assessment by [imagined/hypothetical] skeptical Computer History professionals reviewing against CCS E6X1-E6X5 reference manuals.
+Critical assessment against the CCS E6X1-E6X5 reference manuals. Earlier reviewers (see `docs/historian-reviews.md`) identified five P0 issues; those have been addressed. P2/P3 gaps remain and are listed below.
 
-## Consensus Grade: A- (upgraded from B- after Jan 2026 FP fix)
+## Status
 
-The emulator has undergone significant improvements. All P0/P1 bugs are now FIXED. Integer programs, OS development, interrupt-driven code, and FORTRAN/ALGOL floating-point programs now work correctly.
+The CPU core's instruction set, condition flags, two-word floating point, extracode trap mechanism, and three-level interrupt priority all match the spec well enough that the modern test suite (~350 cases across ten files) passes. What this proves is that *small targeted programs* exercising those mechanisms work as documented; it does **not** prove that real Elliott software (FORTRAN, ALGOL, KOS) runs without further work, and we have not attempted to load any. See *What we have not demonstrated* below.
 
 ---
 
@@ -237,19 +237,27 @@ Only paper tape implemented; mass storage missing.
 
 ---
 
-## What Would Actually Run
+## What we have demonstrated runs
 
-The emulator CAN successfully execute:
-- Simple integer arithmetic programs
-- Complex integer programs with packed short instructions
-- LISP interpreter (uses own calling conventions)
-- FORTRAN programs (two-word FP now correct)
-- ALGOL programs (FP + packed instructions now work)
-- Scientific computations (12 decimal digit precision)
-- Operating system kernels (extracodes trap correctly)
-- TSS/KOS multi-user systems (Protected Mode implemented)
-- Real-time I/O code (interrupt priorities correct)
-- Educational demonstrations of 24-bit word concepts
+Anything covered by the test suite under `tests/`:
+- Targeted integer arithmetic with both packed short and long instructions
+- Two-word floating-point arithmetic (39-bit mantissa, 9-bit exponent) on synthetic test inputs
+- The extracode trap sequence (mem[1]=N, mem[2]=link, S=2*F[+1])
+- JFL/JIR linkage with C[24:18] preservation
+- All 16 documented shift instructions
+- Three-level interrupt priority and Protected Mode bookkeeping
+
+`tests/test-lisp-smoke.mjs` additionally exercises the LISP image far enough to print its banner and to handle a bare unbound atom (returns NIL).
+
+## What we have not demonstrated
+
+We have not actually run any of these. Don't claim the emulator supports them until you have:
+
+- Real-world FORTRAN, ALGOL, or COBOL programs from the era
+- The `lisp4130.asm` interpreter end-to-end (reader works for atoms and lists including QUOTE/CAR/CDR keywords and nested forms; EVAL still returns NIL for any list expression - see *Known LISP bugs* in README)
+- Any operating system: EASE, DES, KOS, TSS
+- Any multi-user / time-sharing workload
+- Block-mode I/O via ATU/DMA (not implemented)
 
 ---
 
