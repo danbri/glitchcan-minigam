@@ -631,8 +631,10 @@ class Env {
 function makeSlot(type, value) { return { type, ref: { value } }; }
 function cellFromValue(v) { return { ref: { value: v } }; }
 
-// Default value for a type definition (recursively).
-function defaultValue(typeDef, types) {
+// Default value for a type definition (recursively). `env` is passed through
+// so array ranges can resolve named-CONST endpoints (e.g. `ARRAY[1..MaxAlbum]
+// OF person` — MaxAlbum is a CONST in the surrounding env).
+function defaultValue(typeDef, types, env) {
     if (!typeDef) return 0;
     switch (typeDef.kind) {
         case 'named': {
@@ -643,7 +645,7 @@ function defaultValue(typeDef, types) {
             if (n === 'boolean') return false;
             if (n === 'char') return '\0';
             if (n === 'string') return '';
-            if (types && types[n]) return defaultValue(types[n], types);
+            if (types && types[n]) return defaultValue(types[n], types, env);
             return 0;
         }
         case 'range':  return 0;
@@ -652,17 +654,15 @@ function defaultValue(typeDef, types) {
         case 'set':    return new Set();
         case 'record': {
             const o = {};
-            for (const f of typeDef.fields) o[f.name.toLowerCase()] = defaultValue(f.type, types);
+            for (const f of typeDef.fields) o[f.name.toLowerCase()] = defaultValue(f.type, types, env);
             return o;
         }
         case 'array': {
-            // Multi-dim ranges -> nested arrays. Indices in Pascal are
-            // 1-based by convention but we honour the explicit range bounds.
             const buildOne = (i) => {
-                if (i >= typeDef.ranges.length) return defaultValue(typeDef.elem, types);
+                if (i >= typeDef.ranges.length) return defaultValue(typeDef.elem, types, env);
                 const r = typeDef.ranges[i];
-                const lo = evalConstRange(r, 'low');
-                const hi = evalConstRange(r, 'high');
+                const lo = evalConstRange(r, 'low', env);
+                const hi = evalConstRange(r, 'high', env);
                 const arr = { __isArray: true, lo, hi, items: [] };
                 for (let k = lo; k <= hi; k++) arr.items[k - lo] = buildOne(i + 1);
                 return arr;
@@ -674,13 +674,10 @@ function defaultValue(typeDef, types) {
 }
 
 // Evaluate the literal endpoints of an array range / explicit range type.
-// (Constants would be evaluated against the global env — but in practice the
-// Pascal source uses literal integers or pre-defined CONSTs which the
-// interpreter resolves at runtime, see evalConst below.)
-function evalConstRange(r, end) {
-    if (r.kind === 'range') return end === 'low' ? evalConst(r.low) : evalConst(r.high);
+function evalConstRange(r, end, env) {
+    if (r.kind === 'range') return end === 'low' ? evalConst(r.low, env) : evalConst(r.high, env);
     if (r.kind === 'named') {
-        // Integer subrange or named range type -- caller should resolve before us
+        // Integer subrange or named range type — caller should resolve before us
         return end === 'low' ? 1 : 8;
     }
     return 0;
@@ -816,7 +813,7 @@ class Interpreter {
                     break;
                 }
                 case 'var': {
-                    const v = defaultValue(d.type, this.types);
+                    const v = defaultValue(d.type, this.types, env);
                     env.define(d.name, makeSlot(d.type, v));
                     break;
                 }
@@ -1088,7 +1085,7 @@ class Interpreter {
         if (proc.locals) this.processDecls(proc.locals, callEnv);
         // Function return value: a slot named after the function in callEnv.
         if (proc.returnType) {
-            callEnv.define(proc.name, makeSlot(proc.returnType, defaultValue(proc.returnType, this.types)));
+            callEnv.define(proc.name, makeSlot(proc.returnType, defaultValue(proc.returnType, this.types, callEnv)));
         }
         if (proc.body) this.exec(proc.body, callEnv);
         if (proc.returnType) return callEnv.get(proc.name).ref.value;
@@ -1122,9 +1119,21 @@ export function makeInterpreter(host) {
 }
 
 // Default host: drawing routes to a 2D canvas context, RandInt to Math.random.
+//
+// `opts.margin` is the bbox tracker. If you don't supply one, the default uses
+// +/-Infinity sentinels so the recovered bbox actually reflects the drawn
+// segments rather than the canvas origin. Callers that want to *seed* the
+// bbox at a known starting point (the way the Pascal's `IF zeromargin` block
+// initialises `margin` to the seed point) should pass their own margin object
+// and pre-set its fields.
 export function defaultHost(ctx, opts = {}) {
     const inkStyle = opts.inkStyle ?? '#f6f1d6';
-    const margin = opts.margin ?? { left: 0, right: 0, top: 0, bottom: 0 };
+    const margin = opts.margin ?? {
+        left:    Infinity,
+        right:  -Infinity,
+        top:     Infinity,
+        bottom: -Infinity,
+    };
     const segs = [];
     return {
         randint(n) { return Math.floor(Math.random() * n) + 1; },     // Pascal RandInt: 1..n
@@ -1150,6 +1159,7 @@ export function defaultHost(ctx, opts = {}) {
             margin.bottom = Math.max(margin.bottom, y0, y1);
         },
         toolboxStub(name /*, ...args*/) { /* swallowed */ },
-        getSegs: () => segs,
+        getSegs:   () => segs,
+        getMargin: () => ({ ...margin }),
     };
 }
