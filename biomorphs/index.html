@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Biomorphs (WASM) — glitchcan minigames</title>
+<style>
+  :root {
+    --bg: #111;
+    --fg: #eee;
+    --ink: #f6f1d6;
+    --paper: #1a1a22;
+    --paper-border: #333;
+    --paper-hover: #2a2a35;
+    --accent: #f43f5e;
+    --muted: #888;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #222;
+  }
+  header h1 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.1rem;
+    letter-spacing: 0.02em;
+  }
+  header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  header a { color: var(--accent); text-decoration: none; }
+  header a:hover { text-decoration: underline; }
+
+  main {
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  /* Breeder grid: parent in centre, 9 children around it */
+  .breeder {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 0.5rem;
+    aspect-ratio: 1 / 1;
+  }
+  .cell {
+    background: var(--paper);
+    border: 1px solid var(--paper-border);
+    border-radius: 6px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .cell:hover {
+    background: var(--paper-hover);
+    border-color: #555;
+  }
+  .cell.parent {
+    border-color: var(--accent);
+    cursor: default;
+  }
+  .cell.parent::after {
+    content: "parent";
+    position: absolute;
+    bottom: 4px;
+    right: 6px;
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .cell canvas {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    display: block;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  button {
+    background: #222;
+    color: var(--fg);
+    border: 1px solid #333;
+    padding: 0.5rem 0.85rem;
+    border-radius: 4px;
+    font: inherit;
+    cursor: pointer;
+  }
+  button:hover { background: #2c2c2c; border-color: #555; }
+  button:active { transform: translateY(1px); }
+
+  .genes {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 0.25rem;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.8rem;
+  }
+  .gene {
+    background: #181820;
+    border: 1px solid #2a2a30;
+    border-radius: 4px;
+    padding: 0.25rem;
+    text-align: center;
+  }
+  .gene-label { color: var(--muted); font-size: 0.65rem; }
+  .gene-value { color: var(--fg); }
+  .gene[data-depth] .gene-label { color: var(--accent); }
+
+  .status {
+    color: var(--muted);
+    font-size: 0.8rem;
+    min-height: 1.2em;
+  }
+
+  footer {
+    padding: 1rem 1.25rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    border-top: 1px solid #222;
+    margin-top: 2rem;
+  }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Biomorphs (WebAssembly)</h1>
+  <p>
+    Click any non-parent cell to make it the new parent and breed nine fresh
+    mutants around it. Inspired by Richard Dawkins' <em>The Blind Watchmaker</em>
+    (1986). Original Pascal source preserved under
+    <code>third_party/monochrome_pascal/</code>; this runtime is a clean-room
+    WASM build of the public algorithmic concept.
+  </p>
+</header>
+
+<main>
+  <div class="breeder" id="breeder" aria-label="Biomorph breeder grid"></div>
+
+  <div class="controls">
+    <button id="btn-rebreed">Rebreed</button>
+    <button id="btn-reset">Reset to default genome</button>
+    <button id="btn-random">Randomise parent</button>
+  </div>
+
+  <div class="genes" id="genes" aria-label="Parent genome"></div>
+
+  <div class="status" id="status">Loading WASM…</div>
+</main>
+
+<footer>
+  Source: <a href="src/biomorph.c">src/biomorph.c</a> ·
+  WASM: <a href="dist/biomorph.wasm">dist/biomorph.wasm</a> ·
+  Pascal archive: <a href="third_party/monochrome_pascal/">third_party/monochrome_pascal/</a>
+</footer>
+
+<script type="module">
+  // ---------- WASM bootstrap ----------
+  const statusEl = document.getElementById('status');
+  const breederEl = document.getElementById('breeder');
+  const genesEl = document.getElementById('genes');
+
+  async function loadWasm() {
+    const resp = await fetch('dist/biomorph.wasm');
+    if (!resp.ok) throw new Error(`fetch wasm: ${resp.status}`);
+    const bytes = await resp.arrayBuffer();
+    const { instance } = await WebAssembly.instantiate(bytes, {});
+    return instance.exports;
+  }
+
+  let wasm;
+  try {
+    wasm = await loadWasm();
+  } catch (e) {
+    statusEl.textContent = `Failed to load WASM: ${e.message}`;
+    throw e;
+  }
+
+  const FB_W = wasm.fb_width();
+  const FB_H = wasm.fb_height();
+  const NUM_GENES = wasm.num_genes();
+  const DEPTH_GENE = NUM_GENES - 1;
+
+  // Memory views
+  const mem = wasm.memory;
+  const fbPtr = wasm.framebuffer();
+  const genesPtr = wasm.genes();
+
+  function fbView() {
+    return new Uint8Array(mem.buffer, fbPtr, FB_W * FB_H);
+  }
+  function genesView() {
+    return new Int32Array(mem.buffer, genesPtr, NUM_GENES);
+  }
+
+  // ---------- rendering helpers ----------
+
+  // Take an ImageData snapshot of the current framebuffer. We use a one-byte
+  // mono buffer in WASM and expand to RGBA on the JS side.
+  function snapshot() {
+    const src = fbView();
+    const img = new ImageData(FB_W, FB_H);
+    const dst = img.data;
+    for (let i = 0, j = 0; i < src.length; i++, j += 4) {
+      const v = src[i];
+      // Cream ink on dark paper, matching CSS palette.
+      if (v) {
+        dst[j]   = 0xf6;
+        dst[j+1] = 0xf1;
+        dst[j+2] = 0xd6;
+        dst[j+3] = 0xff;
+      } else {
+        dst[j+3] = 0;  // transparent so cell background shows through
+      }
+    }
+    return img;
+  }
+
+  function setGenome(g) {
+    for (let i = 0; i < NUM_GENES; i++) wasm.set_gene(i, g[i]);
+  }
+
+  function readGenome() {
+    return Array.from(genesView());
+  }
+
+  function renderToImage(g) {
+    setGenome(g);
+    wasm.render();
+    return snapshot();
+  }
+
+  // ---------- breeder grid ----------
+
+  // 3x3 grid; centre is the parent, the other 8 cells are mutants. With 9
+  // genes we want each child to mutate exactly one gene, which gives 9
+  // children — but we only have 8 surrounding cells. We pick the gene index
+  // by cell position (parent is the missing one) so every gene is represented
+  // across the eight children.
+  const CELL_GENE = [
+    0, 1, 2,
+    3, -1, 4,   // -1 marks the parent slot
+    5, 6, 7,
+  ];
+
+  let parentGenome;
+
+  function buildCells() {
+    breederEl.innerHTML = '';
+    for (let i = 0; i < 9; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.idx = String(i);
+      const isParent = CELL_GENE[i] === -1;
+      if (isParent) cell.classList.add('parent');
+      const canvas = document.createElement('canvas');
+      canvas.width = FB_W;
+      canvas.height = FB_H;
+      cell.appendChild(canvas);
+      breederEl.appendChild(cell);
+    }
+  }
+
+  function paint(canvas, img) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.putImageData(img, 0, 0);
+  }
+
+  // Each child mutates one gene by ±1; gene 8 (depth) is included as a
+  // possible mutation only if a non-depth slot wraps over to it via the
+  // grid layout — currently it doesn't, so depth mutates only via the
+  // Randomise / Reset buttons. That mirrors the spirit of the original
+  // breeder: structural mutations are rarer than detail mutations.
+  function childGenome(parent, geneIdx) {
+    const child = parent.slice();
+    const delta = (Math.random() < 0.5) ? -1 : +1;
+    child[geneIdx] += delta;
+    return child;
+  }
+
+  function rebreed() {
+    const cells = breederEl.querySelectorAll('.cell');
+    cells.forEach((cell, i) => {
+      const canvas = cell.querySelector('canvas');
+      const geneIdx = CELL_GENE[i];
+      const genome = (geneIdx === -1)
+        ? parentGenome
+        : childGenome(parentGenome, geneIdx);
+      paint(canvas, renderToImage(genome));
+      cell._genome = genome;
+    });
+    // Re-render parent into wasm state so the gene panel reflects it.
+    setGenome(parentGenome);
+    paintGenePanel();
+    statusEl.textContent =
+      'Click any non-parent cell to breed from it. Click "Rebreed" for a fresh litter from the same parent.';
+  }
+
+  function paintGenePanel() {
+    genesEl.innerHTML = '';
+    const g = readGenome();
+    for (let i = 0; i < NUM_GENES; i++) {
+      const div = document.createElement('div');
+      div.className = 'gene';
+      if (i === DEPTH_GENE) div.dataset.depth = '1';
+      const label = (i === DEPTH_GENE) ? 'depth' : `g${i}`;
+      div.innerHTML =
+        `<div class="gene-label">${label}</div>` +
+        `<div class="gene-value">${g[i]}</div>`;
+      genesEl.appendChild(div);
+    }
+  }
+
+  // ---------- interactions ----------
+
+  breederEl.addEventListener('click', (ev) => {
+    const cell = ev.target.closest('.cell');
+    if (!cell) return;
+    if (cell.classList.contains('parent')) return;
+    parentGenome = cell._genome.slice();
+    rebreed();
+  });
+
+  document.getElementById('btn-rebreed').addEventListener('click', rebreed);
+
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    wasm.reset_genes();
+    parentGenome = readGenome();
+    rebreed();
+  });
+
+  document.getElementById('btn-random').addEventListener('click', () => {
+    const g = new Array(NUM_GENES);
+    for (let i = 0; i < NUM_GENES - 1; i++) {
+      g[i] = Math.floor(Math.random() * 13) - 6;   // -6..+6
+    }
+    g[DEPTH_GENE] = 3 + Math.floor(Math.random() * 5); // 3..7
+    parentGenome = g;
+    rebreed();
+  });
+
+  // ---------- boot ----------
+
+  buildCells();
+  wasm.reset_genes();
+  parentGenome = readGenome();
+  rebreed();
+</script>
+
+</body>
+</html>
