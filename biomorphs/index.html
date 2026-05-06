@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Biomorphs — glitchcan minigames</title>
+<style>
+  :root {
+    --bg: #111;
+    --fg: #eee;
+    --ink: #f6f1d6;
+    --paper: #1a1a22;
+    --paper-border: #333;
+    --paper-hover: #2a2a35;
+    --accent: #f43f5e;
+    --muted: #888;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #222;
+  }
+  header h1 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.1rem;
+    letter-spacing: 0.02em;
+  }
+  header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  header a { color: var(--accent); text-decoration: none; }
+  header a:hover { text-decoration: underline; }
+
+  main {
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  .breeder {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 0.5rem;
+    aspect-ratio: 1 / 1;
+  }
+  .cell {
+    background: var(--paper);
+    border: 1px solid var(--paper-border);
+    border-radius: 6px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .cell:hover {
+    background: var(--paper-hover);
+    border-color: #555;
+  }
+  .cell.parent {
+    border-color: var(--accent);
+    cursor: default;
+  }
+  .cell.parent::after {
+    content: "parent";
+    position: absolute;
+    bottom: 4px;
+    right: 6px;
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .cell .label {
+    position: absolute;
+    top: 4px;
+    left: 6px;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+  .cell canvas {
+    width: 100%;
+    height: 100%;
+    image-rendering: auto;
+    display: block;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  button {
+    background: #222;
+    color: var(--fg);
+    border: 1px solid #333;
+    padding: 0.5rem 0.85rem;
+    border-radius: 4px;
+    font: inherit;
+    cursor: pointer;
+  }
+  button:hover { background: #2c2c2c; border-color: #555; }
+  button:active { transform: translateY(1px); }
+
+  details.genome-pane {
+    background: #181820;
+    border: 1px solid #2a2a30;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+  }
+  details.genome-pane summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  .genome {
+    margin-top: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 0.25rem;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.75rem;
+  }
+  .genome .row {
+    background: #1f1f28;
+    border: 1px solid #2a2a32;
+    border-radius: 4px;
+    padding: 0.25rem 0.4rem;
+  }
+  .genome .row .k { color: var(--muted); font-size: 0.65rem; }
+  .genome .row .v { color: var(--fg); }
+  .genome .row.depth .k { color: var(--accent); }
+
+  .status {
+    color: var(--muted);
+    font-size: 0.8rem;
+    min-height: 1.2em;
+  }
+
+  footer {
+    padding: 1rem 1.25rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    border-top: 1px solid #222;
+    margin-top: 2rem;
+  }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Biomorphs</h1>
+  <p>
+    Faithful JavaScript port of Richard Dawkins' Monochrome WatchMaker
+    biomorph drawing algorithm (<em>The Blind Watchmaker</em>, 1986; v1.1
+    Pascal source 1993). The original Pascal lives at
+    <a href="third_party/monochrome_pascal/">third_party/monochrome_pascal/</a>;
+    the runtime is <a href="biomorph.js">biomorph.js</a>. Click any non-parent
+    cell to make it the new parent and breed a fresh litter of mutants.
+  </p>
+</header>
+
+<main>
+  <div class="breeder" id="breeder" aria-label="Biomorph breeder grid"></div>
+
+  <div class="controls">
+    <button id="btn-rebreed" title="Re-roll the eight mutants from the same parent">Rebreed</button>
+    <button id="btn-reset" title="Restore the default starting genome">Reset</button>
+    <button id="btn-monster" title="Hopeful Monster — randomise everything (rare in originals)">Hopeful Monster</button>
+    <button id="btn-spokes" title="Cycle the SpokesGene: north / nsouth / radial">Spokes</button>
+    <button id="btn-segs" title="Add another segment (more is more)">+ Segment</button>
+    <button id="btn-segs-less" title="Remove a segment">− Segment</button>
+  </div>
+
+  <details class="genome-pane">
+    <summary>Parent genome</summary>
+    <div class="genome" id="genome"></div>
+  </details>
+
+  <div class="status" id="status">Bootstrapping…</div>
+</main>
+
+<footer>
+  Source: <a href="biomorph.js">biomorph.js</a> ·
+  Pascal archive: <a href="third_party/monochrome_pascal/">third_party/monochrome_pascal/</a> ·
+  See <code>third_party/monochrome_pascal/NOTICE.md</code> for provenance.
+</footer>
+
+<script type="module">
+  import {
+      defaultGenome, cloneGenome, renderInto, mutateGene,
+      MUT_TYPE, COMPLETENESS, SPOKES, SWELL, SAME, SHRINK,
+  } from './biomorph.js';
+
+  const breederEl = document.getElementById('breeder');
+  const genomeEl = document.getElementById('genome');
+  const statusEl = document.getElementById('status');
+
+  // 3x3 breeder: middle slot is the parent, the other 8 each apply one
+  // mutation channel to the parent. This roughly mirrors the eight items of
+  // the original Mutations menu (gene 1..8 + dev gene + structural genes).
+  // Each child slot picks (mutationType, geneIndex, sign).
+  const CHILD_SLOTS = [
+      { type: MUT_TYPE.CLASSIC_GENE, idx: 0, sign: +1, label: 'g1+' },
+      { type: MUT_TYPE.CLASSIC_GENE, idx: 1, sign: +1, label: 'g2+' },
+      { type: MUT_TYPE.CLASSIC_GENE, idx: 2, sign: +1, label: 'g3+' },
+      { type: MUT_TYPE.CLASSIC_GENE, idx: 3, sign: -1, label: 'g4-' },
+      null, // parent
+      { type: MUT_TYPE.CLASSIC_GENE, idx: 4, sign: +1, label: 'g5+' },
+      { type: MUT_TYPE.CLASSIC_GENE, idx: 5, sign: -1, label: 'g6-' },
+      { type: MUT_TYPE.ORDER,        idx: 0, sign: +1, label: 'depth+' },
+      { type: MUT_TYPE.DEV_GENE,     idx: 0, sign: +1, label: 'dev1' },
+  ];
+
+  let parentGenome = defaultGenome();
+
+  function buildCells() {
+      breederEl.innerHTML = '';
+      for (let i = 0; i < 9; i++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.idx = String(i);
+          const slot = CHILD_SLOTS[i];
+          if (!slot) cell.classList.add('parent');
+          if (slot) {
+              const lbl = document.createElement('span');
+              lbl.className = 'label';
+              lbl.textContent = slot.label;
+              cell.appendChild(lbl);
+          }
+          const canvas = document.createElement('canvas');
+          // Fixed pixel grid for predictable layout; CSS scales to cell size.
+          canvas.width = 320;
+          canvas.height = 320;
+          cell.appendChild(canvas);
+          breederEl.appendChild(cell);
+      }
+  }
+
+  function paintCell(cell, genome) {
+      const canvas = cell.querySelector('canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#1a1a22';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Render once to a measuring context to learn the figure's bbox, then
+      // re-render scaled to fit the cell.
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      // First pass: measure on a throwaway offscreen context so the on-screen
+      // canvas only shows the final, fitted figure.
+      const measure = document.createElement('canvas');
+      measure.width = canvas.width;
+      measure.height = canvas.height;
+      const mctx = measure.getContext('2d');
+      const bbox = renderInto(genome, mctx, cx, cy, { penSize: 1 });
+      const w = Math.max(1, bbox.right - bbox.left);
+      const h = Math.max(1, bbox.bottom - bbox.top);
+      const pad = 12;
+      const scale = Math.min(
+          (canvas.width  - pad * 2) / w,
+          (canvas.height - pad * 2) / h,
+          2,                                     // never upscale beyond 2x
+      );
+      const fbcx = (bbox.left + bbox.right) / 2;
+      const fbcy = (bbox.top  + bbox.bottom) / 2;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(scale, scale);
+      ctx.translate(-fbcx, -fbcy);
+      renderInto(genome, ctx, fbcx, fbcy, { penSize: 1 });
+      ctx.restore();
+      cell._genome = genome;
+  }
+
+  function rebreed() {
+      const cells = breederEl.querySelectorAll('.cell');
+      cells.forEach((cell, i) => {
+          const slot = CHILD_SLOTS[i];
+          const g = slot
+              ? mutateGene(parentGenome, slot.type, slot.idx, slot.sign)
+              : parentGenome;
+          paintCell(cell, g);
+      });
+      paintGenome();
+      statusEl.textContent =
+          'Click any non-parent cell to breed from it; or use the controls below.';
+  }
+
+  function paintGenome() {
+      const rows = [];
+      const g = parentGenome;
+      for (let i = 0; i < 9; i++) {
+          const cls = (i === 8) ? 'row depth' : 'row';
+          const k = (i === 8) ? 'depth' : `g${i + 1}`;
+          rows.push(`<div class="${cls}"><div class="k">${k}</div><div class="v">${g.classic[i]}</div></div>`);
+      }
+      for (let i = 0; i < 10; i++) {
+          rows.push(`<div class="row"><div class="k">d${i + 1}</div><div class="v">${shortDev(g.dev[i])}</div></div>`);
+      }
+      rows.push(`<div class="row"><div class="k">segs</div><div class="v">${g.segCount}</div></div>`);
+      rows.push(`<div class="row"><div class="k">segDist</div><div class="v">${g.segDist}</div></div>`);
+      rows.push(`<div class="row"><div class="k">spokes</div><div class="v">${shortSpokes(g.spokes)}</div></div>`);
+      rows.push(`<div class="row"><div class="k">trickle</div><div class="v">${g.trickle}</div></div>`);
+      genomeEl.innerHTML = rows.join('');
+  }
+
+  function shortDev(s) {
+      if (s === SWELL)  return 'sw';
+      if (s === SHRINK) return 'sh';
+      return '·';
+  }
+  function shortSpokes(s) {
+      if (s === SPOKES.RADIAL) return 'rad';
+      if (s === SPOKES.NSOUTH) return 'n+s';
+      return 'n';
+  }
+
+  // ---- interactions ----
+
+  breederEl.addEventListener('click', (ev) => {
+      const cell = ev.target.closest('.cell');
+      if (!cell) return;
+      if (cell.classList.contains('parent')) return;
+      parentGenome = cloneGenome(cell._genome);
+      rebreed();
+  });
+
+  document.getElementById('btn-rebreed').addEventListener('click', rebreed);
+
+  document.getElementById('btn-reset').addEventListener('click', () => {
+      parentGenome = defaultGenome();
+      rebreed();
+  });
+
+  document.getElementById('btn-monster').addEventListener('click', () => {
+      parentGenome = mutateGene(parentGenome, MUT_TYPE.HOPEFUL_MONSTER);
+      rebreed();
+  });
+
+  document.getElementById('btn-spokes').addEventListener('click', () => {
+      parentGenome = mutateGene(parentGenome, MUT_TYPE.SPOKES);
+      rebreed();
+  });
+
+  document.getElementById('btn-segs').addEventListener('click', () => {
+      parentGenome = mutateGene(parentGenome, MUT_TYPE.SEG_COUNT, 0, +1);
+      rebreed();
+  });
+
+  document.getElementById('btn-segs-less').addEventListener('click', () => {
+      parentGenome = mutateGene(parentGenome, MUT_TYPE.SEG_COUNT, 0, -1);
+      rebreed();
+  });
+
+  // ---- boot ----
+
+  buildCells();
+  rebreed();
+</script>
+
+</body>
+</html>
