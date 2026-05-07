@@ -172,35 +172,34 @@ ${inlinedInterp}
     return i;
   }
 
-  const CHILD_SLOTS = [
-    { kind:'classic', idx:1, sign:+1, label:'g1+' },
-    { kind:'classic', idx:2, sign:+1, label:'g2+' },
-    { kind:'classic', idx:3, sign:+1, label:'g3+' },
-    { kind:'classic', idx:4, sign:-1, label:'g4-' },
-    null,
-    { kind:'classic', idx:5, sign:+1, label:'g5+' },
-    { kind:'classic', idx:6, sign:-1, label:'g6-' },
-    { kind:'order',   idx:0, sign:+1, label:'depth+' },
-    { kind:'segs',    idx:0, sign:+1, label:'segs+' },
-  ];
-
+  // Centre cell is the parent; the other 8 are random siblings produced by
+  // Dawkins' own Reproduce procedure (from the loaded Pascal source).
   function buildCells() {
     breederEl.innerHTML = '';
     for (let i = 0; i < 9; i++) {
-      const slot = CHILD_SLOTS[i];
+      const isParent = (i === 4);
       const cell = document.createElement('div');
       cell.className = 'cell';
-      if (!slot) { cell.classList.add('parent'); cell.setAttribute('aria-label','Parent'); }
-      else {
-        cell.setAttribute('role','button'); cell.setAttribute('tabindex','0');
-        const lbl = document.createElement('span');
-        lbl.className='label'; lbl.textContent = slot.label;
-        cell.appendChild(lbl);
-      }
+      if (isParent) { cell.classList.add('parent'); cell.setAttribute('aria-label','Parent'); }
+      else { cell.setAttribute('role','button'); cell.setAttribute('tabindex','0'); }
       const canvas = document.createElement('canvas');
       canvas.width = 320; canvas.height = 320;
       cell.appendChild(canvas);
       breederEl.appendChild(cell);
+    }
+  }
+
+  function reproduceInto(parentName, childName) {
+    interp.invoke('reproduce',
+      [{kind:'ident', name:parentName}, {kind:'ident', name:childName}],
+      interp.global);
+  }
+
+  function enableAllMutations() {
+    const mut = interp.global.get('mut').ref.value;
+    for (let k = 1; k <= 9; k++) mut.items[k - mut.lo] = true;
+    for (const name of ['topan', 'leftan', 'rightan']) {
+      interp.global.get(name).ref.value.mutprobgene = 50;
     }
   }
 
@@ -212,24 +211,6 @@ ${inlinedInterp}
       if (v && v.__isArray) dst[k] = { __isArray:true, lo:v.lo, hi:v.hi, items:v.items.slice() };
       else if (v && typeof v === 'object') dst[k] = JSON.parse(JSON.stringify(v));
       else dst[k] = v;
-    }
-  }
-
-  function mutatePerson(name, slot) {
-    const p = interp.global.get(name).ref.value;
-    switch (slot.kind) {
-      case 'classic': {
-        const g = p.gene.items;
-        g[slot.idx - p.gene.lo] += slot.sign * (p.mutsizegene || 1);
-        break;
-      }
-      case 'order': {
-        const g = p.gene.items;
-        const i9 = 9 - p.gene.lo;
-        g[i9] = Math.max(1, Math.min(12, g[i9] + slot.sign));
-        break;
-      }
-      case 'segs': p.segnogene = Math.max(1, p.segnogene + slot.sign); break;
     }
   }
 
@@ -319,7 +300,7 @@ ${inlinedInterp}
 
   function ensureScratchPersons() {
     for (let i = 0; i < 9; i++) {
-      if (!CHILD_SLOTS[i]) continue;
+      if (i === 4) continue;
       const name = '__c' + i;
       if (!interp.global.has(name)) {
         interp.global.define(name, {
@@ -334,15 +315,15 @@ ${inlinedInterp}
     const cells = breederEl.querySelectorAll('.cell');
     let total = 0;
     cells.forEach((cell, i) => {
-      const slot = CHILD_SLOTS[i];
-      const childName = slot ? ('__c' + i) : parentName;
-      if (slot) { copyPerson(parentName, childName); mutatePerson(childName, slot); }
+      const isParent = (i === 4);
+      const childName = isParent ? parentName : ('__c' + i);
+      if (!isParent) reproduceInto(parentName, childName);
       total += renderToCanvas(childName, cell.querySelector('canvas'));
       cell._personName = childName;
     });
     paintParentMeta();
-    statusEl.textContent = 'Rendered 9 biomorphs via Pascal-lite Develop() · ' +
-      total + ' total lines drawn';
+    statusEl.textContent = 'Pascal Reproduce() spawned 8 siblings · Develop() drew ' +
+      total + ' lines';
   }
 
   breederEl.addEventListener('click', (ev) => {
@@ -376,6 +357,7 @@ ${inlinedInterp}
   try {
     interp = bootInterpreter();
     ensureScratchPersons();
+    enableAllMutations();
     rebreed();
   } catch (e) {
     statusEl.textContent = 'Pascal-lite bootstrap failed: ' + e.message;

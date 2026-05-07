@@ -856,7 +856,14 @@ class Interpreter {
             case 'empty': return;
             case 'assign': {
                 const slot = this.evalLvalue(stmt.target, env);
-                slot.set(this.eval(stmt.value, env));
+                let v = this.eval(stmt.value, env);
+                // Pascal records and arrays are value types — `child := parent`
+                // must produce an independent copy, otherwise subsequent
+                // mutation of `child` would silently propagate to `parent`.
+                if (v && typeof v === 'object' && (v.__isArray || !Array.isArray(v))) {
+                    v = cloneValue(v);
+                }
+                slot.set(v);
                 return;
             }
             case 'if': {
@@ -1077,7 +1084,11 @@ class Interpreter {
                 });
             } else {
                 let v = this.eval(a, env);
-                if (v && v.__isArray) v = cloneValue(v);
+                // Same value-type discipline as assignment: by-value parameters
+                // must not alias the caller's record/array.
+                if (v && typeof v === 'object' && (v.__isArray || !Array.isArray(v))) {
+                    v = cloneValue(v);
+                }
                 callEnv.define(p.name, makeSlot(p.type, v));
             }
         }
