@@ -220,6 +220,23 @@ function vectorize(geo, color, edgeOpacity=1){
 }
 
 /* ---------- terrain: dark mass + phosphor grid ---------- */
+let GREENS = null;
+function inAnyPark(x, z){
+  if(!GREENS) return false;
+  const e = x + E0, n = -z + N0;
+  for(const [, ring] of GREENS.greens){
+    let minE=1e9,maxE=-1e9,minN=1e9,maxN=-1e9;
+    for(const [pe,pn] of ring){ if(pe<minE)minE=pe; if(pe>maxE)maxE=pe; if(pn<minN)minN=pn; if(pn>maxN)maxN=pn; }
+    if(e<minE||e>maxE||n<minN||n>maxN) continue;
+    let inside = false;                                     // ray cast
+    for(let i=0, j=ring.length-1; i<ring.length; j=i++){
+      const [xi,yi]=ring[i], [xj,yj]=ring[j];
+      if((yi>n)!==(yj>n) && e < (xj-xi)*(n-yi)/(yj-yi)+xi) inside = !inside;
+    }
+    if(inside) return true;
+  }
+  return false;
+}
 function buildTerrain(){
   const seg = ELEV.cols - 1;
   const g = new THREE.PlaneGeometry(WORLD, WORLD, seg, seg);
@@ -227,8 +244,26 @@ function buildTerrain(){
   const pos = g.attributes.position;
   for(let i=0;i<pos.count;i++) pos.setY(i, heightAt(pos.getX(i), pos.getZ(i)));
   g.computeVertexNormals();
-  scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({color:0x01140a})));   // occluder mass
-  const grid = new THREE.Mesh(g, new THREE.MeshBasicMaterial({wireframe:true, color:PHOS, transparent:true, opacity:0.30}));
+  // base mass: near-black, blue-black under water datum, deep green inside parks
+  const baseCols = [], gridCols = [];
+  const cBase = new THREE.Color(0x01140a), cPark = new THREE.Color(0x06301a), cRiver = new THREE.Color(0x031a2e);
+  const gLow = new THREE.Color(0x0b4f2a), gHigh = new THREE.Color(0x53d97c), gPark = new THREE.Color(0x2fe06e);
+  for(let i=0;i<pos.count;i++){
+    const x = pos.getX(i), z = pos.getZ(i), hm = pos.getY(i)/EXAG;
+    const park = inAnyPark(x, z);
+    let c = hm < 8.7 ? cRiver : (park ? cPark : cBase);
+    baseCols.push(c.r, c.g, c.b);
+    // grid glows brighter with elevation — the hills read at a glance
+    const t = THREE.MathUtils.clamp((hm-5)/110, 0, 1);
+    let gc = gLow.clone().lerp(gHigh, t);
+    if(park) gc.lerp(gPark, 0.5);
+    gridCols.push(gc.r, gc.g, gc.b);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(baseCols, 3));
+  scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({vertexColors:true})));
+  const g2 = g.clone();
+  g2.setAttribute('color', new THREE.Float32BufferAttribute(gridCols, 3));
+  const grid = new THREE.Mesh(g2, new THREE.MeshBasicMaterial({wireframe:true, vertexColors:true, transparent:true, opacity:0.34}));
   grid.position.y = 0.4; scene.add(grid);
   waterMesh = new THREE.Group();
   const wFill = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD),
@@ -338,6 +373,77 @@ function loadForest(){
   }catch(e){}
 }
 
+/* ---------- contour lines from the DEM: the hills, made legible ---------- */
+function buildContours(){
+  const {rows, cols, data} = ELEV;
+  const cell = WORLD/(cols-1);
+  const minor = [], major = [];
+  for(let lvl = 10; lvl <= 150; lvl += 10){
+    const out = (lvl % 50 === 0) ? major : minor;
+    for(let r=0; r<rows-1; r++){
+      for(let c=0; c<cols-1; c++){
+        const h00=data[r*cols+c], h10=data[r*cols+c+1], h01=data[(r+1)*cols+c], h11=data[(r+1)*cols+c+1];
+        const lo = Math.min(h00,h10,h01,h11), hi = Math.max(h00,h10,h01,h11);
+        if(lvl < lo || lvl > hi) continue;
+        const x0 = -WORLD/2 + c*cell, z0 = WORLD/2 - r*cell;          // row 0 = south = +z
+        const pts = [];
+        const edge = (ha, hb, xa, za, xb, zb) => {
+          if((ha < lvl) !== (hb < lvl)){
+            const t = (lvl - ha)/(hb - ha);
+            pts.push([xa + (xb-xa)*t, za + (zb-za)*t]);
+          }
+        };
+        edge(h00,h10, x0,z0,       x0+cell,z0);
+        edge(h10,h11, x0+cell,z0,  x0+cell,z0-cell);
+        edge(h11,h01, x0+cell,z0-cell, x0,z0-cell);
+        edge(h01,h00, x0,z0-cell,  x0,z0);
+        const y = lvl*EXAG + 0.7;
+        if(pts.length >= 2) out.push(pts[0][0],y,pts[0][1], pts[1][0],y,pts[1][1]);
+        if(pts.length === 4) out.push(pts[2][0],y,pts[2][1], pts[3][0],y,pts[3][1]);
+      }
+    }
+  }
+  for(const [arr, op, col] of [[minor, 0.13, 0x2fae62],[major, 0.32, 0x6fdc8f]]){
+    if(!arr.length) continue;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
+    scene.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({color:col, transparent:true, opacity:op})));
+  }
+}
+
+/* ---------- parks: outlines + labels ---------- */
+function buildGreens(){
+  if(!GREENS) return;
+  const seen = new Set();
+  for(const [name, ring] of GREENS.greens){
+    const pts = ring.map(([e,n]) => {
+      const x = e-E0, z = -(n-N0);
+      return new THREE.Vector3(x, heightAt(x,z)+1.0, z);
+    });
+    const loop = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({color:0x23d465, transparent:true, opacity:0.45}));
+    scene.add(loop);
+    const NM = (name||'').toUpperCase();
+    if(NM && !seen.has(NM) && ring.length > 5){
+      seen.add(NM);
+      if(seen.size <= 14){
+        let cx=0, cz=0; for(const p of pts){ cx+=p.x; cz+=p.z; } cx/=pts.length; cz/=pts.length;
+        const sp = textSprite(NM, 0.4, '#23d465');
+        sp.position.set(cx, heightAt(cx,cz)+26, cz); scene.add(sp);
+      }
+    }
+  }
+  // stations: white markers + names
+  for(const [name, e, n] of (GREENS.stations||[])){
+    const x = e-E0, z = -(n-N0), y = heightAt(x,z);
+    const m = new THREE.Mesh(new THREE.BoxGeometry(8,5,8),
+      new THREE.MeshBasicMaterial({color:0xd8e4f0, wireframe:true}));
+    m.position.set(x, y+3, z); scene.add(m);
+    const sp = textSprite((name||'').toUpperCase(), 0.35, '#d8e4f0');
+    sp.position.set(x, y+18, z); scene.add(sp);
+  }
+}
+
 /* ---------- the real roads (OSM, cached in-repo) ---------- */
 let ROADS = null;
 const FAMOUS = ['M32','A4','A38','A370','A4018','A420','A4044','PARK STREET','WHITELADIES ROAD',
@@ -345,12 +451,15 @@ const FAMOUS = ['M32','A4','A38','A370','A4018','A420','A4044','PARK STREET','WH
 function buildRoads(){
   if(!ROADS) return;
   const styles = [
-    {color:AMBER, opacity:0.85},   // motorway/trunk
-    {color:PHOS,  opacity:0.75},   // primary
-    {color:PHOS,  opacity:0.30},   // secondary
-    {color:0x99bbcc, opacity:0.35},// rail
+    {color:AMBER, opacity:0.95},   // motorway/trunk (also ribboned)
+    {color:PHOS,  opacity:0.85},   // primary (also ribboned)
+    {color:PHOS,  opacity:0.32},   // secondary
+    {color:0xd0d8e8, opacity:0.8}, // rail (dashed)
+    {color:PHOS,  opacity:0.14},   // tertiary: the city fabric
   ];
-  const buckets = [[],[],[],[]];
+  const buckets = [[],[],[],[],[]];
+  const ribbons = [[],[]];                       // quad strips for cls 0/1
+  const RIBW = [13, 8];
   const labelBest = new Map();   // label -> {len, mid}
   for(const [cls, label, pts] of ROADS.roads){
     const b = buckets[cls];
@@ -358,8 +467,15 @@ function buildRoads(){
     for(let i=0;i<pts.length-1;i++){
       const [e1,n1] = pts[i], [e2,n2] = pts[i+1];
       const x1=e1-E0, z1=-(n1-N0), x2=e2-E0, z2=-(n2-N0);
-      b.push(x1, heightAt(x1,z1)+1.4, z1, x2, heightAt(x2,z2)+1.4, z2);
+      const y1 = heightAt(x1,z1)+1.4, y2 = heightAt(x2,z2)+1.4;
+      b.push(x1, y1, z1, x2, y2, z2);
       length += Math.hypot(e2-e1, n2-n1);
+      if(cls <= 1){                                          // ribbon quad
+        const dx=x2-x1, dz=z2-z1, L=Math.hypot(dx,dz)||1;
+        const px=-dz/L*RIBW[cls]/2, pz=dx/L*RIBW[cls]/2, R=ribbons[cls];
+        R.push(x1+px,y1-0.35,z1+pz, x2+px,y2-0.35,z2+pz, x2-px,y2-0.35,z2-pz,
+               x1+px,y1-0.35,z1+pz, x2-px,y2-0.35,z2-pz, x1-px,y1-0.35,z1-pz);
+      }
     }
     const L = (label||'').toUpperCase();
     if(L && FAMOUS.some(f => L === f || L.startsWith(f+' ') || L.includes(f))){
@@ -375,8 +491,19 @@ function buildRoads(){
     if(!b.length) return;
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(b, 3));
-    scene.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial(
-      {color:styles[cls].color, transparent:true, opacity:styles[cls].opacity})));
+    const seg = new THREE.LineSegments(g, cls === 3
+      ? new THREE.LineDashedMaterial({color:styles[cls].color, transparent:true, opacity:styles[cls].opacity,
+          dashSize:30, gapSize:20})
+      : new THREE.LineBasicMaterial({color:styles[cls].color, transparent:true, opacity:styles[cls].opacity}));
+    if(cls === 3) seg.computeLineDistances();
+    scene.add(seg);
+  });
+  ribbons.forEach((R, cls)=>{
+    if(!R.length) return;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(R, 3));
+    scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial(
+      {color:styles[cls].color, transparent:true, opacity:0.22, depthWrite:false, side:THREE.DoubleSide})));
   });
   for(const [name, v] of labelBest){
     const x = v.e-E0, z = -(v.n-N0);
@@ -439,7 +566,7 @@ const LANDMARKS = [
   ['CATHEDRAL', 358695, 172694], ['ASHTON COURT', 355560, 172140],
   ['SS GREAT BRITAIN', 358144, 172427], ['WILLS MEMORIAL', 358498, 173150],
   ['ST MARY REDCLIFFE', 360131, 172371], ['CASTLE PARK', 359572, 173073],
-  ['THE DOWNS', 357642, 174308],
+  ['THE DOWNS', 357642, 174308], ['PURDOWN BT TOWER', 361495, 175788],
 ];
 function textSprite(msg, scale=1, col='#00ff66'){
   const c = document.createElement('canvas'); c.width = 512; c.height = 96;
@@ -495,13 +622,69 @@ function updateTransmissions(dt){
     tx.pip.scale.setScalar(1 + Math.sin(tx.t*40)*0.3);
   }
 }
+function landmarkModel(name, x, y, z){
+  const g = new THREE.Group(); g.position.set(x, y, z);
+  const add = (geo, px, py, pz, ry=0) => { const m = vectorize(geo, PHOS); m.position.set(px,py,pz); m.rotation.y = ry; g.add(m); return m; };
+  switch(name){
+    case 'CABOT TOWER':                                   // slim red-stone tower, 32m
+      add(new THREE.BoxGeometry(7,32,7), 0,16,0);
+      add(new THREE.ConeGeometry(4.4,7,4), 0,35,0, Math.PI/4);
+      break;
+    case 'WILLS MEMORIAL':                                // the great gothic tower, 65m
+      add(new THREE.BoxGeometry(14,58,14), 0,29,0);
+      for(const [cx,cz] of [[-6,-6],[6,-6],[-6,6],[6,6]]) add(new THREE.ConeGeometry(2,12,4), cx,64,cz);
+      add(new THREE.BoxGeometry(10,8,10), 0,61,0);
+      break;
+    case 'ST MARY REDCLIFFE':                             // tower + England's-finest spire
+      add(new THREE.BoxGeometry(9,28,9), 0,14,0);
+      add(new THREE.ConeGeometry(5,46,8), 0,51,0);
+      add(new THREE.BoxGeometry(28,12,9), 12,6,0);        // nave
+      break;
+    case 'CATHEDRAL':                                     // twin west towers
+      add(new THREE.BoxGeometry(8,30,8), -7,15,0);
+      add(new THREE.BoxGeometry(8,30,8),  7,15,0);
+      add(new THREE.BoxGeometry(34,14,10), 0,7,14);       // nave
+      break;
+    case 'TEMPLE MEADS':{                                 // Brunel's shed + clock tower
+      const shed = vectorize(new THREE.CylinderGeometry(13,13,52,10,1,true,0,Math.PI), PHOS, 0.8);
+      shed.rotation.z = Math.PI/2; shed.rotation.x = Math.PI/2; shed.position.y = 6; g.add(shed);
+      add(new THREE.BoxGeometry(8,26,8), 30,13,0);
+      add(new THREE.ConeGeometry(5.5,9,4), 30,30,0, Math.PI/4);
+      break;
+    }
+    case 'SS GREAT BRITAIN':{                             // iron hull + six masts
+      add(new THREE.BoxGeometry(7,5,42), 0,3,0);
+      for(let i=0;i<6;i++){
+        const m = vectorize(new THREE.CylinderGeometry(0.25,0.35,22,4), PHOS, 0.8);
+        m.position.set(0, 14, -17+i*7); g.add(m);
+        const yard = vectorize(new THREE.BoxGeometry(8,0.4,0.4), PHOS, 0.6);
+        yard.position.set(0, 18, -17+i*7); g.add(yard);
+      }
+      break;
+    }
+    case 'PURDOWN BT TOWER':                              // the concrete one everyone sees
+      add(new THREE.CylinderGeometry(2.4,3.2,68,6), 0,34,0);
+      add(new THREE.BoxGeometry(9,4,9), 0,52,0);
+      add(new THREE.BoxGeometry(7,3,7), 0,60,0);
+      break;
+    case 'CABOT CIRCUS': break;
+    default:                                              // area landmarks keep a modest beacon
+      add(new THREE.CylinderGeometry(0.8,0.8,40,4), 0,20,0).children?.[0];
+      break;
+  }
+  scene.add(g);
+}
 function buildLandmarks(){
   for(const [name,e,n] of LANDMARKS){
+    if(name === 'CLIFTON SUSPENSION BRIDGE'){             // the bridge IS its own model
+      const x=e-E0, z=-(n-N0);
+      const sp = textSprite(name, 0.9); sp.position.set(x, heightAt(x,z)+96, z); scene.add(sp);
+      continue;
+    }
     const x=e-E0, z=-(n-N0), y=heightAt(x,z);
-    const s = textSprite(name, 0.9); s.position.set(x, y+78, z); scene.add(s);
-    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.8,0.8,64,4,1,true),
-      new THREE.MeshBasicMaterial({color:PHOS, wireframe:true, transparent:true, opacity:0.35}));
-    beam.position.set(x, y+32, z); scene.add(beam);
+    const tall = ['WILLS MEMORIAL','PURDOWN BT TOWER','ST MARY REDCLIFFE'].includes(name) ? 86 : 56;
+    const sp = textSprite(name, 0.8); sp.position.set(x, y+tall, z); scene.add(sp);
+    landmarkModel(name, x, y, z);
   }
 }
 
@@ -1274,8 +1457,9 @@ addEventListener('resize', ()=>{
     TREES = await loadJson('data/trees-bristol.json');
     note.textContent = 'PAINTING THE REAL ROADS (© OSM)…';
     try{ ROADS = await loadJson('data/roads-bristol.json'); }catch(e){ ROADS = null; }
+    try{ GREENS = await loadJson('data/greens-bristol.json'); }catch(e){ GREENS = null; }
     $('ntrees').textContent = TREES.trees.length.toLocaleString();
-    buildTerrain(); buildTrees(); buildRoads(); buildBridge(); buildLandmarks(); buildControl();
+    buildTerrain(); buildContours(); buildGreens(); buildTrees(); buildRoads(); buildBridge(); buildLandmarks(); buildControl();
     TANK_NAMES.forEach((nm,i)=> tanks.push(new Tank(nm, ...TANK_SPAWNS[i])));
     buildFleetHud();
     const T = activeTank();

@@ -19,12 +19,12 @@ const toN = lat => Math.round(172850 + (lat - 51.4534) * 111300);
 
 const QUERY = `[out:json][timeout:90];
 (
-  way["highway"~"^(motorway|trunk|primary|secondary)$"](${BBOX});
+  way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"](${BBOX});
   way["railway"="rail"]["usage"!="industrial"](${BBOX});
 );
 out geom;`;
 
-const CLASSES = { motorway: 0, trunk: 0, primary: 1, secondary: 2 };
+const CLASSES = { motorway: 0, trunk: 0, primary: 1, secondary: 2, tertiary: 4 };
 
 const res = await fetch('https://overpass-api.de/api/interpreter', {
   method: 'POST',
@@ -63,7 +63,7 @@ const out = {
   source: 'OpenStreetMap via Overpass API, fetched ' + new Date().toISOString().slice(0,10) +
           ' — © OpenStreetMap contributors, ODbL',
   crs: 'EPSG:27700 (BNG, linear approximation)',
-  classes: ['motorway/trunk', 'primary', 'secondary', 'rail'],
+  classes: ['motorway/trunk', 'primary', 'secondary', 'rail', 'tertiary'],
   fields: ['classIndex', 'ref_or_name', 'points[easting,northing]'],
   roads,
 };
