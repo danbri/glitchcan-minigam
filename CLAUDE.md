@@ -1,5 +1,6 @@
 # CLAUDE.md - Guide for 🐥 Minigames
 <!-- Rebuild trigger: 2025-10-22 14:30 UTC -->
+<!-- Major revision 2026-06-10: stripped stale 2025 changelogs, corrected facts per docs/fable-audit/, added Data Ethics rule -->
 
 ## 🔐 TRUST THE USER
 The user (danbri) is the project owner. Trust their instructions, corrections, and domain knowledge. When they say something exists or works a certain way, believe them. Don't second-guess or over-explain obvious things.
@@ -9,13 +10,21 @@ The user (danbri) is the project owner. Trust their instructions, corrections, a
 **Safe Permissions:** Issues (Read/Write), PRs, Pages, Workflows, Hooks
 **NOT Granted:** Administration (cannot delete repo, transfer ownership, change visibility)
 
-**Worst-case with current token:**
-- ❌ Cannot delete repository
-- ❌ Cannot transfer ownership
-- ⚠️ Could modify workflows/hooks (monitored)
-- ⚠️ Could spam issues (recoverable)
-
 **Best practice:** Use `gh` only for issue tracking. Code changes go through normal git with branch restrictions (`claude/*` prefix).
+
+## 🚨 CRITICAL RULE: DATA ETHICS — REAL-WORLD DATASETS 🚨
+**This repo uses real open data (Bristol City Council trees, ImageSnippets, OSM). Real data touches real people.**
+
+**ABSOLUTELY FORBIDDEN:**
+- Surfacing personal, memorial, or dedication content from datasets in games or generated content
+- The Bristol tree inventory's `NOTES`, `SPECIES_NOTES`, `PLANTING_NOTES`, `SPONSORSHIP*`, and `PLANTING_FUNDER` fields are **OFF-LIMITS for game content**. Sponsored trees are frequently **memorial trees planted for people who died**. They are not game material, not "flavor", not "weirdness to mine".
+- Any "obituary", memorial, or named-individual framing built on dataset records
+
+**REQUIRED:**
+- Game data payloads ship the minimum: `trees/tools/build-tree-data.mjs` exports ONLY coordinates, species name, and crown dimensions. Keep it that way. Any new field added to a game payload needs explicit owner approval.
+- When in doubt about a dataset field: ask, don't ship.
+
+**INCIDENT (June 2026):** An assistant proposed in-game "death notices"/"obituaries" using per-tree records (site names, planting data, sponsorship). Rejected by the owner. This rule exists so it never comes back.
 
 ## 🚨 CRITICAL RULE: NO HACKPARSING 🚨
 **ABSOLUTELY FORBIDDEN:** Manual parsing, regex parsing, or any string manipulation of INK content
@@ -23,6 +32,7 @@ The user (danbri) is the project owner. Trust their instructions, corrections, a
 **VIOLATION COST:** Real money wasted, development time lost, 2am debugging sessions
 **ENFORCEMENT:** Any hackparsing implementation must be immediately deleted and rebuilt with real INK engine
 **EXCEPTION:** Only if User explicitly demands hackparsing for specific use case
+**SCOPE NOTE (verified June 2026):** This rule is about INK *story structure*. Narrow regex extraction of FINK tags (e.g. the BASEHREF fallback in `fink-ink-engine.js` / `fink-ui.js` / `fink-navigation.js`) is an existing documented exception — do not extend it.
 **REMINDER:** We spent an entire evening until 2am purging hackparsing - NEVER AGAIN
 
 ## 🚨 CRITICAL RULE: DO NOT CASUALLY MODIFY SANDBOX CODE 🚨
@@ -31,10 +41,8 @@ The user (danbri) is the project owner. Trust their instructions, corrections, a
 **INCIDENT REPORT (January 2026):**
 Bagend2 loading got stuck at "Loading..." because sandbox code was "casually" modified:
 - **The bug:** `fink-sandbox.js` line ~49: `uniqueData.join('\\n')` instead of `uniqueData.join('\n')`
-- **What went wrong:** `'\\n'` is an escaped backslash-n (literal 2-char string "\n"), NOT an actual newline character
 - **The effect:** INK content blocks joined with literal "\n" text instead of newlines, breaking INK syntax structure
 - **The symptom:** Stories stuck on "Loading..." - silent failure, no error message
-- **Time wasted:** Debugging session to find a one-character difference
 
 **THE ACTUAL CORRECT CODE:**
 ```javascript
@@ -52,954 +60,133 @@ const finkContent = uniqueData.join('\\n');
 4. **Character literals matter:** `'\n'` is NOT the same as `'\\n'`
 5. **When in doubt, DON'T TOUCH IT**
 
-**WHY THIS EXISTS:** The sandbox uses precise JavaScript string handling to extract FINK content. What looks like "cleanup" can silently corrupt the content structure, causing failures that are extremely hard to diagnose.
-
 ## Project Overview
-Browser-based minigames collection with WebGL fluid dynamics. Mobile/touch-focused interfaces.
+Browser-based minigames collection with WebGL fluid dynamics, interactive fiction (FINK), SDF rendering (Lucid), and research artifacts. Mobile/touch-focused interfaces. GitHub Pages deployment at https://danbri.github.io/glitchcan-minigam/
 
-**Current Issues**: See [shane_todo.md](shane_todo.md) for detailed analysis of Shane Manor FINK story compilation problems.
+**Accuracy ledger:** `docs/fable-audit/` contains a repo-wide audit (June 2026) of plans vs implementation, including `claims-register.md` — an adversarially-verified claims table. When this file and the audit disagree, check the register. When making confident *negative* claims ("X doesn't exist", "nothing links Y"), verify them with a recorded check first — roughly a third of such claims in the first audit pass were wrong.
 
-## FINK Player v5 - MAJOR MILESTONE ACHIEVED ✅
-**Status: Production Ready with Real INK Engine**
+## FINK Player — Current Production Reality (verified June 2026)
+**The production player is `inklet/finkapp/index.html`** (15+ modules: ink engine, sandbox, navigation/deep-linking, breadcrumbs, minigame SDK + embedded chess/gems, procedural foley audio, dev panel).
 
-### What Was Accomplished (June 2025):
-- ✅ **Replaced manual INK parsing with real ink-full.js compiler** 
-- ✅ **Working external FINK story loading via secure iframe sandbox**
-- ✅ **Modular JavaScript architecture** (6 separate modules for maintainability)
-- ✅ **Successful Hampstead adventure playthrough** with score tracking & variables
-- ✅ **Table of contents navigation system** working end-to-end
-- ✅ **Choice text labels visible and functional** (no more emoji-only choices)
-- ✅ **GitHub Pages deployment** at https://danbri.github.io/glitchcan-minigam/inklet/inklet5.html
+- `inklet/app/` is the **older parallel implementation** (8 modules) — kept for reference; finkapp is canonical. Do not mirror changes into app/ unless asked.
+- `inklet5.html` does not exist and never shipped under that name. `inklet6.html` is a 118-byte redirect to `app/`. Historic references to `toc-simple.fink.js`, `hampstead1.fink.js`, `bagend1.fink.js`, `jungle2.fink.js` are phantoms — the real files are the unsuffixed versions.
+- INK runtime `onError` IS wired in `finkapp/fink-ink-engine.js`.
+- Layered media path resolution (global base → story BASEHREF → file-relative fallback) is implemented in FinkUtils; config via `fink-config.js` only (no form fields).
+- Save/load: partial (localStorage bookmarks in `fink-player.js`, nav cache in `fink-navigation.js`). `inklet/demos/fink-namespace-preprocessor.js` exists but is NOT wired into the player.
+- Known-broken content: Ukrainian story (`tml-2025-langlearn.fink.js`) runtime error; Maple Hollow story-load 404; Shane Manor compiles but full gameplay never tested (`shane_todo.md`).
+- Worknotes: a six-review January 2026 campaign (`worknotes/`) is the best statement of open UX/a11y defects (breadcrumb visibility, loading progress, CSP, ARIA). Largely unaddressed.
 
-### Critical Files:
-- `inklet/inklet5.html` - Modular FINK Player (PRODUCTION)
-- `inklet/fink-*.js` - Modular JavaScript components
-- `inklet/toc-simple.fink.js` - Working table of contents
-- `inklet/hampstead1.fink.js` - Full adventure tested with real INK engine
+### FINK engine architecture (DO NOT BREAK)
+- `.fink.js` files contain `oooOO`...`` tagged template literal calls — **JavaScript, not text**. Loaded via script injection into a sandboxed iframe; content captured by the `oooOO` function and returned via postMessage. **Never parse them as text.**
+- Real compiler only: `new inkjs.Compiler(finkContent).Compile()` then `new inkjs.Story(...)`. Vendored at `third_party/ink/ink-full.js` (version unrecorded in-file; tooling pins `inkjs ^2.3.2` in package.json).
+- INK tags (`# IMAGE:`, `# FINK:`, `# BASEHREF:`, `# MENU:`, `# VIDEO:`, `# MINIGAME:`) are legitimate INK extensions used at story or knot level. See `glitchcanary.md` and `docs/glossary.md`.
+- Reference implementation: `inklet/demos/hamfinkdemo.html`.
+- Mandatory test after ANY player change: TOC loads → Episodes → Hampstead plays through, choice text labels visible, no console errors.
 
-### LESSON LEARNED - UI vs Engine Trade-off:
-While achieving perfect INK engine functionality, we lost visual polish from inklet2.html:
-- **Lost**: Vibrant colors, larger emojis, smooth animations, floating restart button
-- **Gained**: Real INK parsing, external loading, modular architecture, debug tools
-
-### Next Steps - UI Enhancement Plan:
-1. **PRIORITY**: Restore visual polish WITHOUT breaking INK engine
-2. **APPROACH**: Incremental changes, test after each modification
-3. **SAFETY**: Keep inklet5.html as backup, create inklet6.html for experiments
-
-## CRITICAL ADMONISHMENTS FOR FUTURE DEVELOPMENT
-
-### ⚠️ NEVER AGAIN:
-1. **DO NOT break the real INK engine** - inklet5.html uses ink-full.js compiler, NOT manual parsing
-2. **DO NOT use regex to parse INK syntax** - let the real compiler handle it
-3. **DO NOT modify the modular JavaScript architecture** without extreme care
-4. **DO NOT change external FINK loading system** - it works via secure iframe sandbox
-5. **DO NOT assume UI changes are "safe"** - test Hampstead playthrough after EVERY change
-6. **DO NOT add complex responsive image JavaScript** - GitHub Pages deployment uses static files only
+### FINK validation
+- `inklet/validation/checkfink.mjs` — unified validator (.ink/.json/.fink.js), Puppeteer-based, `--scan` flag, CI exit codes. There is NO `--report` flag.
+- Supporting: `validate-fink-puppeteer.mjs`, `validate-fink.html`, `unreachable_knots_tester.html`, `play-fink-cli.mjs`.
+- The "fink-audit dashboard" (fink-audit/ folder, GitHub Action, rich metrics) was planned but **never built**. Treat it as an open proposal, not work-in-progress.
+- Legacy problem: some FINK files contain AI-generated "Pseudo-Ink" that doesn't compile with real ink-full.js. Validate before trusting any story file.
+- Finkiverse map: `docs/fink-ring-viz.html` is a working prototype fed by `inklet/tools/fink-graph.mjs` → `docs/fink-crawl-report.json`; linked from the generated crawl report.
 
 ## IMAGE DEPLOYMENT STRATEGY - STATIC FILES ONLY
-**CRITICAL**: Our deployment environment (GitHub Pages) uses static file serving, not dynamic JavaScript image selection.
+GitHub Pages serves static files; no dynamic image selection.
+- ✅ Create optimized images on disk; reference them directly in IMAGE tags; simple BASEHREF + relative paths (the Bagend pattern).
+- ❌ No responsive-image JavaScript, client-side optimization, or device-conditional loading.
+- Shane Manor: optimized JPGs **exist** in `inklet/media/shane/{mobile,tablet,desktop}/`. If touching Shane content, reference the optimized variants, not the large originals.
+- **NEVER DELETE USER FILES WITHOUT EXPLICIT PERMISSION** — even apparent duplicates. User work has value and history that must be preserved.
 
-### ✅ CORRECT APPROACH:
-- **Create optimized images on disk** during development
-- **Reference optimized files directly** in FINK IMAGE tags
-- **Use simple, static paths** like `# IMAGE: manor_optimized.jpg`
-- **Follow working Bagend pattern**: Simple BASEHREF + direct image references
+## Tanks for the Trees (trees/) — June 2026
+`trees/tanks-for-the-trees.html` — mobile-first phosphor-vector tank defence over real Bristol data. Completes the trees/ lineage (Tesla Dragon & MUSK dragon games, bigtrak/3dtanky tank prototypes, Tankoff CodePen).
+- **Data (cached in-repo, reproducible):** `trees/data/elevation-bristol.json(.gz)` — 128×128 EU-DEM 25m grid via `trees/tools/fetch-elevation.mjs`; `trees/data/trees-bristol.json(.gz)` — 35,893 living trees / 115 species via `trees/tools/build-tree-data.mjs` (geometry + species ONLY — see Data Ethics rule above).
+- Coordinates: BNG (EPSG:27700) → world x=E−358500, z=−(N−173500); vertical exaggeration 1.6×.
+- Vendored `trees/vendor/three.module.min.js` (r169) — no CDN dependency.
+- Modes: drive (virtual joystick, auto-aiming turret) and strategic map (tap-select fleet of 3 AI tanks — BRUNEL/CABOT/BANKSY — waypoint orders, tap-again to jack in). `?lite` renders every 4th tree for low-end devices/CI. `window.__tftt` is the headless-playtest hook.
+- Aesthetic is deliberately vector/CRT (hidden-line meshes, wireframe canopies, scanline overlay, monospace glow HUD). Keep it; no pastel regressions.
 
-### ❌ WRONG APPROACH:
-- Dynamic responsive JavaScript image selection
-- Complex path resolution systems
-- Client-side image optimization
-- Conditional image loading based on device detection
+## Development Commands
+- **Local server:** `python -m http.server 8080` — the user usually arranges their own server; don't start servers for them unprompted.
+- **Validate HTML:** `npx html-validate **/*.html` · **Lint:** `npx eslint`
+- **Tests:** `npm test` (Playwright), `npm run test:core` (Vitest). Note: `tests/glsl-codegen.test.js` and `tests/dsl-parser.test.js` are @playwright/test files — don't point vitest at the whole tests/ dir.
+- Useful: imagemagick, libimage-exiftool-perl, webp, ffmpeg
 
-### EXAMPLE - WORKING PATTERN (Bagend):
-```ink
-# BASEHREF: media/bagend/
-# IMAGE: adventure_path.svg  → media/bagend/adventure_path.svg ✅
+### Headless browser in the remote execution environment (verified June 2026)
+A Chromium exists at `/opt/pw-browsers/`. Playwright works with:
+```javascript
+chromium.launch({ headless: true,
+  executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+  args: ['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader'] })
 ```
-
-### PROBLEM PATTERN (Shane Manor):
-```ink
-# BASEHREF: media/shane/
-# IMAGE: manor_with_taxi.png  → 2.1MB file, should use optimized version ❌
-```
-
-### SOLUTION:
-Replace large PNG references with pre-optimized JPG files in the shane-manor.fink.js IMAGE tags.
-6. **NEVER DELETE USER FILES WITHOUT EXPLICIT PERMISSION** - Always ask before removing ANY file, even duplicates. User work has value and history that must be preserved.
-
-## CONTENT-CENTRIC PATH RESOLUTION IMPLEMENTATION (June 2025)
-
-### Problem:
-FINK files were resolving paths relative to the app location (/app/) rather than relative to the story file location (/inklet/). This made stories less portable and required stories to "know" where they'd be loaded from.
-
-### Solution:
-Implement content-centric resolution where BASEHREF and FINK paths resolve relative to the story file's location, similar to ES6 modules.
-
-### Implementation Steps:
-1. **Track story file URLs** - Store the URL of the currently loaded story
-2. **Modify path resolution** - Resolve BASEHREF relative to story location, not app location
-3. **Update FINK loading** - Resolve cross-story FINK paths relative to current story
-4. **Preserve fallbacks** - Keep app-centric defaults when no story context exists
-
-### Risk Assessment: MEDIUM
-- **Risk**: Could break existing stories if they depend on app-centric paths
-- **Mitigation**: Careful testing of TOC → story loading chain
-- **Rollback**: Revert path resolution changes if stories break
-
-### Implementation Progress - PIVOT TO LAYERED BASE RESOLUTION:
-- ❌ **Previous approach**: Content-centric resolution too complex
-- ✅ **New approach**: Layered base resolution for environment flexibility
-
-### Layered Base Resolution Strategy:
-1. **Global Media Base** (environment config) → overrides everything
-2. **Story BASEHREF** (story-specific paths) → relative to global base or story location  
-3. **Fallback** (no config) → resolve relative to FINK file location
-
-### Implementation Steps:
-- ✅ **Step 1**: Created `resolveLayeredMediaUrl()` helper in FinkUtils
-- ✅ **Step 2**: Updated image resolution to use layered approach
-- ✅ **Step 3**: Added global media base configuration support via form
-- ✅ **Step 4**: Successfully tested - TOC, Bagend, Hampstead, Mudslidemines all working
-- ⏳ **Step 5**: Add INK runtime error handling for Ukrainian/Help menu failures
-
-### Bug Fixes Applied:
-- **Issue 1**: Double `media/` in path - was passing processed BASEHREF to layered resolver
-- **Fix 1**: Now pass raw BASEHREF directly to `resolveLayeredMediaUrl()` 
-- **Issue 2**: Raw BASEHREF not being passed correctly to updateImage
-- **Fix 2**: Use `newBasePath` from current processing instead of stored value
-- **Issue 3**: Global media base `../media/` causing "Invalid base URL" error  
-- **Fix 3**: Resolve global media base relative to current page location
-- **Issue 4**: BASEHREF not being detected from story-level tags
-- **Fix 4**: Added fallback to extract BASEHREF directly from raw FINK content using regex
-- **Issue 5**: Dual configuration system (form + config) causing complexity
-- **Fix 5**: **MAJOR SIMPLIFICATION** - Removed form fields entirely, use only fink-config.js
-- **Issue 6**: Absolute BASEHREF paths not handled correctly in layered resolution
-- **Fix 6**: Added proper absolute vs relative path detection in layered resolution
-- **Issue 7**: JavaScript errors from missing form element references
-- **Fix 7**: Removed form element references and event listeners
-- **Issue 8**: Missing null checks causing addEventListener errors on missing elements
-- **Fix 8**: Added null checks for all element references in event listener setup
-- **Issue 9**: Media base URL missing trailing slash causing incorrect path resolution
-- **Fix 9**: Ensure BASEHREF always ends with `/` for proper URL directory resolution
-
-### MAJOR SIMPLIFICATION COMPLETE:
-- ❌ **Removed**: Form fields, dual configuration complexity
-- ✅ **Single source**: fink-config.js only
-- ✅ **Cleaner code**: No form element references
-
-### LAYERED PATH RESOLUTION SUCCESS! ✅
-
-**Status Update:**
-- ✅ **TOC**: Images loading correctly
-- ✅ **Bagend**: Working properly  
-- ✅ **Hampstead**: Text works, needs better default image
-- ✅ **Mudslidemines**: Working correctly
-- ❌ **Ukrainian**: Runtime error - needs investigation
-- ❌ **Help menu**: Runtime error - needs investigation
-
-### TODO - HIGH PRIORITY:
-1. **Add INK Runtime Error Handler** - Implement `story.onError` callback for better error reporting
-2. **Debug Ukrainian story** - Investigate runtime error in language learning content
-3. **Debug Help menu** - Fix runtime error in help/dev guide section
-4. **Improve Hampstead image** - Replace placeholder with appropriate story image
-
-### COMPLETED - NEW FEATURES:
-- ✅ **Return to Main Menu** - Added 🏠 button in dropdown menu to reload TOC without page refresh
-- ✅ **Splash Image Fix** - Fixed IMAGE+FINK tag conflicts by splitting into separate knots
-- ✅ **Menu Placeholder Functions** - Added restart/bookmark stubs for future implementation
-
-### Debug Notes:
-- TOC loaded from: /app/ with URL ../toc.fink.js  
-- Expected currentStoryUrl: http://localhost:8080/inklet/toc.fink.js
-- BASEHREF: media/ should resolve to: http://localhost:8080/inklet/media/
-- Actual result: http://localhost:8080/media/ (missing /inklet/)
-
-### Testing Protocol:
-- ⏳ TOC loads from app correctly
-- ⏳ Stories load from TOC correctly  
-- ⏳ Images display from story-relative paths
-- ⏳ Cross-story navigation works
-- ⏳ Hampstead playthrough completes
-
-### ✅ SAFE UI RESTORATION STRATEGY:
-**Phase 1: Colors & Sizes (Low Risk)**
-- Copy vibrant color scheme from inklet2.html: `--choice-left: #f43f5e` etc.
-- Increase emoji size: `font-size: 4rem` (from 2.5rem)
-- Increase choice height: `--choice-height: 25vh` (from 18vh)
-- **Test**: Full Hampstead playthrough after each change
-
-**Phase 2: Animations (Medium Risk)**  
-- Add floating restart button with `@keyframes float`
-- Enhance loading animation with bouncing dots
-- Improve expanding choice animation
-- **Test**: Choice clicking and navigation after each change
-
-**Phase 3: Polish (Higher Risk)**
-- Add fullscreen CSS support
-- Enhance touch gesture handling
-- Mobile-specific improvements
-- **Test**: Cross-device compatibility
-
-### 🛡️ MANDATORY TESTING PROTOCOL:
-After ANY UI change, verify:
-1. TOC loads and displays properly
-2. "Games" → "Hampstead" → "Begin Urban Adventure" works
-3. Hampstead adventure plays through completion (8/8 score)
-4. Choice text labels are visible (not just emojis)
-5. External FINK loading triggers correctly
-6. Debug console shows no JavaScript errors
-
-### 📋 REGRESSION PREVENTION:
-- **Keep inklet5.html untouched** as known-good baseline
-- **Work incrementally** on inklet6.html
-- **Commit frequently** with detailed descriptions
-- **Test on both local and GitHub Pages** before proceeding
-
-## FINK Validation Strategy
-
-### Command-line Validation Tool
-**Usage:** `node validate-fink.js my-episode.fink.js`
-
-**Features:**
-- Extracts INK content from current version and last committed git version
-- Compiles both versions using real ink-full.js to catch syntax errors
-- Reports diff on key metrics (knot count, choice count, tag usage)
-- Identifies regressions where compilation breaks
-- For new files: reports basic stats only
-- Validates proper FINK structure and INK tag syntax
-
-### Legacy Pseudo-Ink Problem
-**Issue:** Many FINK files contain AI-generated "Pseudo-Ink" that looks like INK but doesn't compile with real ink-full.js
-
-**Solution Path:**
-1. Use validation tool to identify problematic files
-2. Gradually rebuild legacy files with proper INK syntax
-3. Follow "commit if it looks ok" validation workflow
-4. Maintain compatibility with real INK engine throughout
-
-**Priority:** Focus on actively used FINK files first (TOC, Hampstead, Jungle)
-
-## FINK Validation & Audit System - COMPLETE IMPLEMENTATION
-
-### ✅ Phase 1: COMPLETED - Basic Validation
-**Tools:** `checkfink.mjs`, `validate-fink-puppeteer.mjs`, `validate-fink.html`
-- ✅ Unified validator supporting .ink, .json, .fink.js files
-- ✅ Puppeteer-based browser execution (no regex hackery)
-- ✅ Repository scanning with --scan flag
-- ✅ Real ink-full.js compilation and validation
-- ✅ Exit codes for CI/CD integration
-
-### 🚧 Phase 2: IN PROGRESS - Rich Audit Dashboard
-**Mission:** Create non-technical HTML dashboard at https://danbri.github.io/glitchcan-minigam/fink-audit/
-
-#### Step 1: Enhance checkfink.mjs with Rich Metrics
-Add `--report` flag to generate detailed analysis:
-- **Story Structure**: knot count, choice count, external flow references
-- **Content Metrics**: word count, character count, estimated reading time
-- **INK Features**: variables used, tags present, conditional logic complexity
-- **FINK Extensions**: IMAGE tags, MENU tags, BASEHREF usage
-- **Quality Metrics**: unreachable knots, dead ends, branching factor
-- **Output**: Structured JSON data for dashboard consumption
-
-#### Step 2: Create fink-audit/ Folder Structure
-```
-fink-audit/
-├── index.html          ← Main dashboard with summary cards
-├── detailed.html       ← Per-file detailed breakdowns
-├── assets/
-│   ├── dashboard.css   ← Mobile-friendly styling
-│   └── charts.js       ← Visualization library integration
-└── data/
-    └── audit-data.json ← Generated metrics from checkfink.mjs
-```
-
-#### Step 3: HTML Dashboard Features
-- **Summary Cards**: Total files, pass/fail counts, overall health score
-- **File Status Grid**: Visual indicators for each FINK file (✅❌⚠️)
-- **Metrics Tables**: Sortable data with knot counts, word counts, complexity
-- **Trend Tracking**: Historical data comparison if implemented
-- **Mobile-Responsive**: Non-technical audience accessibility
-- **Direct Links**: Jump to problematic files for debugging
-
-#### Step 4: GitHub Action Automation
-```yaml
-name: FINK Audit Dashboard
-on: [push, pull_request, schedule: daily]
-jobs:
-  audit:
-    runs-on: ubuntu-latest
-    steps:
-      - checkout code
-      - run FINK audit with rich metrics
-      - generate HTML dashboard from JSON
-      - commit dashboard to fink-audit/ folder
-      - deploy via GitHub Pages
-```
-
-#### Step 5: Integration & Documentation
-- Add link from main site index.html to audit dashboard
-- Update README with audit system explanation
-- Add CLAUDE.md section on dashboard maintenance
-
-### Known Issues to Address
-- **3 Broken Files Identified**: bagend1.fink.js, test-variables.fink.js, toc.fink.js
-- **Status**: TO BE DISCUSSED (separate from dashboard implementation)
-
-### Technical Requirements (Maintained)
-- **MUST use real ink-full.js** compiler (no regex parsing)
-- **MUST use Puppeteer browser execution** for FINK files
-- **MUST generate mobile-friendly HTML** for non-technical users
-- **MUST integrate with existing GitHub Pages** setup without disruption
-- **MUST provide actionable insights** for content creators
-
-### Success Criteria
-1. Dashboard accessible at https://danbri.github.io/glitchcan-minigam/fink-audit/
-2. Automatic updates via GitHub Actions on repo changes
-3. Clear visual indicators of FINK file health and metrics
-4. Non-technical users can assess content quality at a glance
-5. Zero disruption to existing GitHub Pages site
-
-## FINK Player v6 TODO List
-
-### High Priority Issues
-- **Top menus don't work yet** - Navigation items in story dropdown need implementation
-- **Reset story functionality** - Should provide way back to top-level TOC menus
-- **Default image needs updating** - Replace placeholder village image with appropriate default
-- **Hobbit adventure needs fixing/validating** - Currently fails to load, requires INK syntax fixes
-- **Ukrainian tutorial needs fixing/validating** - Verify proper INK compilation and functionality
-
-### Content Issues
-- **Writing course mention in menus** - Remove or implement actual content (currently vapourware)
-- **Other vapourware in menus** - Audit all menu items and remove non-functional placeholders
-- **Content validation pass** - Use FINK validator on all menu items to identify broken stories
-
-### UI/UX Improvements
-- **Choices section eats vertical space needlessly** - Optimize layout to reclaim screen real estate
-- **Debug button needs redesign** - Should be real tab interface with copy-pastable output
-- **Better responsive design** - Ensure optimal use of available screen space
-
-### Major Features
-- **In-app history system** - Implement navigation history so back/forward buttons work without destructive page reload
-- **State preservation** - Maintain story progress and position across navigation
-- **Deep linking** - Allow URLs to reference specific story positions
-
-### Testing Requirements
-- **Cross-device compatibility** - Test on mobile, tablet, desktop
-- **Performance optimization** - Ensure smooth operation on lower-end devices
-- **Accessibility improvements** - Screen reader support, keyboard navigation
-
-## Development Commands (Suggested)
-These are suggestions - you may prefer to run servers in your own tab/process:
-- **Run local server:** `python -m http.server 8080` (or `npx serve -p 8080`)
-- **Open game in browser:** http://localhost:8080/thumbwar/thumbwar.html
-- **Hard reload (bust cache):** `Ctrl+Shift+R` (Windows/Linux) or `Cmd+Shift+R` (Mac)
-- **Validate HTML:** `npx html-validate **/*.html`
-- **JS Linting:** `npx eslint **/*.html --ext .html`
-- **Spectro-specific commands:** `cd spectro && npm install && npm start` (runs http-server)
-- maybe useful?: imagemagick libimage-exiftool-perl webp ffmpeg
+WebGL renders via SwiftShader at ~2 FPS on heavy scenes — fine for screenshots and functional playtests, useless for performance feel. **WebGPU is NOT available headless** — headless "visual verification" of WGSL/Stinkyfish silently tests the WebGL path instead. Never claim WGSL fixes are verified from headless captures.
 
 ## Code Style
-- **HTML:** Semantic elements, accessibility attributes, responsive viewport meta
-- **CSS:** Mobile-first, clean transitions, em/rem units preferred 
+- **HTML:** semantic elements, accessibility attributes, responsive viewport meta
+- **CSS:** mobile-first, clean transitions, em/rem units preferred
 - **JS:** ES6+, classes for encapsulation, no global variables
-- **Shaders:** Well-commented GLSL with parameters clearly defined
-- **Error handling:** Graceful fallbacks for unsupported features
+- **Shaders:** well-commented GLSL with parameters clearly defined
+- **Error handling:** graceful fallbacks for unsupported features
 - **Naming:** camelCase for variables/functions, descriptive names, consistent prefixes
 
 ## Project Structure
 - Each minigame in its own subdirectory with self-contained assets
-- Common assets/styles shared between games go in root directory
+- Common assets/styles shared between games go in root directory (`media/`)
 
 ## GitHub Workflow
-- Simplified workflow: no automatic file modifications
-- All changes to index.html and game descriptions must be done manually
-- Workflow only deploys to GitHub Pages without modifying content
+- Pages deploys on push to master (`pages.yml`, modern v4 actions); workflow does not modify content
+- All changes to index.html and game descriptions are made manually
+- PR previews DISABLED (`pr-preview.yml.disabled` preserved for later)
+- E2E workflow exists as root `e2e-tests.yml.template` — needs a manual move into `.github/workflows/` (App lacks `workflows` permission; see WORKFLOW-SETUP.md). Until then the Playwright suite has never run in CI.
+- Action versions: checkout@v4, setup-node@v4/Node 20+, configure-pages@v4, upload-pages-artifact@v3, deploy-pages@v4
 
 ## Adding New Games
-- Create a new directory for your game (e.g., `newgame/`)
-- Add your HTML file with game content (e.g., `newgame/newgame.html`)
-- To add to the landing page, manually edit index.html:
-  1. Copy an existing game container div structure
-  2. Update title, description, device info, and play instructions
-  3. Update href links to point to your new game
-  4. Update GitHub source links to point to your new game files
+- Create directory `newgame/` with `newgame/newgame.html`
+- Manually edit root `index.html`: copy an existing game container div; update title, description, device info, links, GitHub source links
 
-## Special Effects
-- Landing page has a duck emoji (🐥) with two animations:
-  1. Continuous heartbeat pulse animation (2.5s cycle)
-  2. Random glitch animation every 10s (brief visual distortion)
-- These are controlled via CSS animations in the index.html header
+## Special Effects (landing page)
+- Duck emoji 🐥: continuous heartbeat pulse (2.5s cycle) + random glitch every 10s — CSS animations in index.html header
 
-## TokiTokiPona App Development Priorities
-1. Identify appropriate emoji for all Toki Pona dictionary entries
-2. Ensure dictionary integration works correctly for all words
-3. Future enhancements (lower priority):
-   - Add filtering by part of speech
-   - Create different learning modes
-   - Implement progress tracking
-   - Add pronunciation guides
-   - Create customizable study lists
+## Minigame status notes (corrected June 2026)
+- **GridLuck:** v1.3.0 is real and committed (`thumbwar/gridluck-game.js:8`); only the HTML `<title>` still says v1.2.0. Features: treasure tiers, key-lock system, synergies, progression, 5×5 zone grid, TV zone.
+- **Spectro:** 42 rooms (`spectro/src/rooms.js`), ES6 modules, Jest tests. Known issues: guardian collision detection, jumping reliability, ESC handling in menus. Debug via console output (`Player transition:`, `Deadly collision with:`, `PLAYER DEATH:`, `Jump key pressed:`).
+- **TokiTokiPona:** emoji-hint flashcards working; future (low priority): filtering by part of speech, learning modes, progress tracking, pronunciation.
+- **magpie/elliott4130:** Elliott 4130 emulator with LISP 1.5; `elliott4130-tests.js` has 122 test invocations (not "133").
+- Underdocumented but substantial: `palace/` (42-room Westminster MOO), `mudslide/` (10-room isometric adventure), `hat/` (WebGPU Hadley attractor), `plenia/` (particle Lenia), `furbacca/` (real Furby protocol tool), `follyfx/` (acoustics research paper + data). See `docs/fable-audit/06-deep-dive-corrections.md`.
 
-## GitHub Workflow Requirements
-- GitHub Actions workflow requires modern action versions
-- Checkout action: v4 (not v3)
-- Setup-node action: v4 with Node 20+ (not v3/Node 16)
-- Configure-pages action: v4 (not v3)
-- Upload-pages-artifact action: v3 (deprecated v1)
-- Deploy-pages action: v4 (not v1)
-
-## PR Preview Deployments
-**DISABLED** - PR previews are currently disabled for faster, simpler deployments.
-The workflow file is preserved at `.github/workflows/pr-preview.yml.disabled` if needed later.
-
-## Spectro Development Notes
-- Retro ZX Spectrum style platformer inspired by Jet Set Willy
-- Currently has 4 rooms to explore
-- **Known issues:**
-  - Collision detection needs improvement for guardians
-  - Jumping functionality not fully reliable
-  - ESC key handling in menus requires fixing
-- When debugging, check browser console for detailed output about:
-  - Room transitions (`Player transition:...`)
-  - Collision detection (`Deadly collision with:...`)
-  - Player deaths (`PLAYER DEATH:...`)
-  - Jumping state (`Jump key pressed:...`)
-
-## GridLuck Development State (v1.3.0)
-### Current Session Progress:
-- **COMPLETED**: Treasure hunting system with rarity tiers and special effects
-- **COMPLETED**: Key-lock system for unlocking special areas with colored keys
-- **COMPLETED**: Collectible synergies that grant powerful temporary abilities
-- **COMPLETED**: Progression system with levels, XP, achievements, persistent upgrades
-- **COMPLETED**: Enhanced UI showing level, XP progress, active effects, synergies
-- **COMPLETED**: 5x5 zone grid world system replacing infinite wraparound
-- **COMPLETED**: TV zone with peaceful ghost behavior and expanded ghost house
-- **COMPLETED**: Systematic zone exit system for proper navigation
-- **COMPLETED**: Increased treasure spawn density (67% more treasures)
-
-### Recent Fixes (v1.3.0):
-- **FIXED**: Speed calculation bug (player moving too fast)
-- **FIXED**: Zone boundary rendering - nothing displays outside 5x5 world grid
-- **FIXED**: Zone navigation bugs (can't go west, broken north-south movement)
-- **FIXED**: Black walls appearing in neighboring zones
-- **FIXED**: Apple explosion effects added (matching cherry behavior)
-- **FIXED**: TV zone ghost house made bigger for better visibility
-- **FIXED**: Complete peaceful ghost behavior in TV zone (including frenzied ghosts)
-
-### Remaining Tasks:
-- **PENDING**: Create special zones requiring keys/items to access
-- **PENDING**: Allow combining items for special effects
-
-### Technical Notes:
-- Game URL: http://localhost:8080/thumbwar/gridluck.html
-- Version display: v1.3.0 in top-left UI
-- 5x5 zone grid system with proper boundary enforcement
-- TV zone (southwest corner) features peaceful ghosts and fruit trails
-- Audio issues fixed: replaced 'noise' oscillator with 'sawtooth'
-- Context binding fixed: gameLoop.bind(this) prevents undefined errors
-
-## FINK Interactive Fiction System - CRITICAL IMPLEMENTATION NOTES
-
-### STOP TRYING TO PARSE oooOO TEMPLATE LITERALS MANUALLY! 
-- **oooOO is a JAVASCRIPT FUNCTION** (tagged template literal)
-- **NEVER parse it with regex** - that breaks the entire JavaScript execution
-- **USE THE SANDBOX APPROACH** - inject script tags into safe iframe to execute the .fink.js files
-
-### FINK Script Injection Technique (JSONP-like with Template Literals)
-- **FINK uses script tags injected into iframe** to fetch content - JSONP-like technique with tagged template literal syntax
-- **DO NOT wrap oooOO in function calls** - script injection makes function wrapping pointless
-- **Direct template literal execution** - oooOO`` calls execute directly when script loads
-- **Content extraction via callback** - sandbox iframe provides oooOO function to capture content
-
-### Working Implementation Reference
-- **hamfinkdemo.html** (or similar in inklet/ folder) shows the CORRECT approach
-- Uses iframe sandbox with script injection to safely execute .fink.js files
-- The oooOO function captures content via JavaScript execution, not text parsing
-- This is the ONLY way to properly extract FINK content from .fink.js files
-
-### CRITICAL UNDERSTANDING: INK Tags Are LEGITIMATE Extensions
-**INK was designed for extensibility via tags** - this is the official mechanism, not a hack:
-- `MENU:`, `IMAGE:`, `BASEHREF:` are proper INK tags, similar to Unity/Unreal integrations
-- Tags can be at story level or knot level to integrate with game engines
-- See /glitchcanary.md for full explanation and /inklet/gamgam-wc.html for 2-engine prototype
-- INK's extensibility via tags is used by Inkle Studios and the broader community
-
-### What Needs to be Done (HIGH PRIORITY)
-1. **Use sandbox execution**: Load .fink.js files via iframe script injection (NOT regex parsing)
-2. **Use real INK compiler**: Compile extracted FINK content with ink-full.js
-3. **Process conditional syntax**: Use INK runtime to handle `{variable: text}` properly
-4. **Keep tag system**: MENU:, IMAGE:, BASEHREF: are legitimate INK extensions, not FINK hacks
-
-### Files Affected
-- Current State: Manual parsing still used despite having working sandbox examples
-- **SYMPTOM**: Conditional INK markup (`{variable: text}`) appears as visible text
-- **IMPACT**: Stories display broken syntax instead of proper conditional content
-
-### Technical Requirements
-- ink-full.js CDN: https://cdn.jsdelivr.net/npm/inkjs@2.2.3/dist/ink-full.js (already loaded)
-- Sandbox iframe execution to extract content from .fink.js files
-- Compile entire FINK content: `new inkjs.Compiler(finkContent).Compile()`
-- Use INK Story runtime: `new inkjs.Story(compiledStory)` for conditional processing
-
-### STOP TRYING TO START HTTP SERVERS
-- User always arranges their own HTTP server setup
-- Don't run `python -m http.server` or similar commands
-- Focus on the code implementation, not server management
+## CodePen prototyping tier
+Eleven pens are part of this project's pipeline (mini-chess, boids, INK+video tests, Rockall mocks, Tankoff, emoji particles, bagend SVGs, mock login). Index + mirror script: `codepen-backups/` (mirroring requires an unrestricted network). The FINK TOC Experiments menu links to them.
 
 ## ABCD Subagent Parliament - Model Evaluation Methodology
-
-### Overview
-Multi-perspective evaluation system for 3D model quality assessment using four specialized subagents.
-
-### 📋 MANDATORY RULES - See `lucid/automodel/parliament-rules.md`
-
-| Agent | SDF Skill | Blanked Geometry | Real Geometry | Goal/Target | Clean Imagery |
-|-------|-----------|------------------|---------------|-------------|---------------|
-| A | ✅ YES | ✅ YES | ❌ NO | ❌ NO | ✅ YES |
-| B | ✅ YES | ✅ YES | ✅ YES | ✅ YES | ✅ YES |
-| C | ✅ YES | ✅ YES | ✅ YES | ✅ YES | ✅ YES |
-| D | ✅ YES | ✅ YES | ✅ YES | ✅ YES | ❌ N/A |
-
-**Clean Imagery**: NO leaky filenames, NO page headers, NO webapp UI, canvas-only screenshots.
-**Blanked Geometry**: Title="Model Under Evaluation", no species names, no revealing comments.
-**Individual Timings**: REQUIRED for A, B, C, D separately.
-
-### 🚨 CRITICAL: SHOWSTOPPER REQUIREMENT 🚨
-
-**Every agent MUST return an explicit `showstoppers` array.**
-
-```json
-{
-  "showstoppers": ["FLIPPERS READ AS AIRPLANE WINGS - 100% body length instead of 30-33%"]
-}
-```
-
-**COMMIT RULE**: If ANY agent's `showstoppers` array is non-empty → **DO NOT COMMIT**.
-**NO EXCEPTIONS**: Even if Agent A achieves 95% identification, showstoppers block commit.
-**Agent D MUST aggregate** all showstoppers from A+B+C into `all_showstoppers`.
-
-**WHY THIS EXISTS**: We had a session where Agent C explicitly said "airplane wings for a tail" but the main process ignored this P0 and committed anyway because Agent A showed 95% confidence. This rule prevents that failure mode.
-
-### 🚨 CRITICAL RULE: NO VIEW SHOPPING 🚨
-**NEVER try different camera angles hoping for better evaluation results.** This is bad faith. Use a single canonical view and evaluate honestly.
-
-**When vision results are unfavorable:**
-- ✅ FIX THE GEOMETRY
-- ❌ NEVER conclude "we need a more flattering angle"
-
-The model must read correctly from a neutral view. Angle optimization is cheating.
-
-### 🚨 CRITICAL RULE: NO AGENT A PROMPT CONTAMINATION 🚨
-**Agent A's prompt must contain ZERO species-specific terminology or hints.**
-
-**FORBIDDEN in Agent A prompts:**
-- ❌ Species-specific terms (e.g., "tubercles", "flukes", "rostrum", "baleen")
-- ❌ Descriptive geometry hints (e.g., "bumpy texture on head", "swept-back pectoral appendages")
-- ❌ Any terminology that implies what the model is supposed to be
-- ❌ Color descriptions that match target species (e.g., "counter-shading")
-- ❌ Proportion hints (e.g., "7:1 ratio", "31% body length")
-
-**ALLOWED in Agent A prompts:**
-- ✅ Generic SDF skill reference (primitives, operations)
-- ✅ Blanked geometry file path (with no revealing comments)
-- ✅ Image file paths only (no descriptive names)
-- ✅ Simple instruction: "What creature/object is this? Give confidence %"
-
-**WHY THIS EXISTS**: We invalidated a v6.10 evaluation by including "tubercles" and geometry descriptions in Agent A's prompt. This leaked the answer and made the "blind" test meaningless. Agent A must identify the model with ZERO context - that's the whole point.
-
-**VALIDATION CHECK**: Before running Agent A, review the prompt and ask: "Could someone guess the target species from this prompt alone?" If yes, the prompt is contaminated.
-
-### The Four Agents
-
-**Agent A - Blanked Evaluator**
-- Has NO context about the target (blanked geometry, no goal)
-- Sees rendered images + blanked geometry + SDF skill
-- Prompt: "What creature/object is this? Confidence %?"
-- Returns: Primary identification + alternatives + **showstoppers array**
-
-**Agent B - Informed Evaluator**
-- Knows the goal (e.g., "this should be a humpback whale")
-- Sees blanked + real geometry + SDF skill + rendered images
-- Prompt: "Given the goal of [X], evaluate how well this model achieves it"
-- Returns: Score, strengths/weaknesses, geometry fixes + **showstoppers array**
-
-**Agent C - Skeptical Slop Detector**
-- Persona: "Visual models editor receiving excruciating amounts of AI slop"
-- Knows the goal, sees everything B sees
-- Enjoys creativity but HATES halfbaked incomplete work
-- Prompt: "Raise a skeptical perspective on weak points"
-- Returns: P0/P1/P2 issues, marine biologist test + **showstoppers array**
-
-**Agent D - Parliament Moderator**
-- Receives full reports from A, B, C
-- **MUST aggregate all showstoppers** into `all_showstoppers`
-- If `all_showstoppers.length > 0` → verdict MUST be DO NOT COMMIT
-- Returns: Clerk's Report with verdict and next fix
-
-### Workflow
-1. Capture model at canonical view (NO view shopping!)
-2. Create blanked geometry (remove identifying info)
-3. Run Agents A, B, C **in parallel** - each returns showstoppers array
-4. Run Agent D - aggregates all showstoppers
-5. **CHECK SHOWSTOPPERS FIRST**: If any exist → DO NOT COMMIT
-6. Only if showstoppers empty → consider commit based on scores
-7. Fix P0 issues before attempting next iteration
-
-### Log Viewer & Review Storage
-
-**View history**: `https://danbri.github.io/glitchcan-minigam/lucid/automodel/`
-**Local**: `lucid/automodel/index.html`
-
-**Adding new reviews**:
-1. Save review JSON to `lucid/automodel/reviews/YYYY-MM-DDTHH-MM-SSZ.json`
-2. Update `lucid/automodel/reviews/index.json` to include new filename
-3. Commit and push
-
-**Review JSON structure**:
-```json
-{
-  "session_id": "2026-01-01T16-05-00Z",
-  "model_version": "5.11",
-  "timestamp": "2026-01-01T16:12:00Z",
-  "note": "Optional context note",
-  "timings": {
-    "abc_parallel_start": "ISO8601",
-    "abc_parallel_end": "ISO8601",
-    "abc_parallel_wall_ms": 118589,
-    "agent_d_start": "ISO8601",
-    "agent_d_end": "ISO8601",
-    "agent_d_ms": 45064
-  },
-  "agents": {
-    "A": { "type": "blanked", "primary": "creature", "confidence": 95, "showstoppers": [] },
-    "B": { "type": "informed", "score": 45, "verdict": "summary", "showstoppers": [] },
-    "C": { "type": "skeptical", "issues": [...], "verdict": "4/10", "showstoppers": ["P0 ISSUE"] },
-    "D": { "type": "moderator", "verdict": "DO NOT COMMIT", "all_showstoppers": ["P0 ISSUE"], "next_fix": "..." }
-  },
-  "status": "commit status and next steps"
-}
-```
-
-**Skills files**:
-- `lucid/automodel/parliament-maker-skill.md` - **AUTHORITATIVE** PMAC methodology (Parliamentary Multi-Agent Chat)
-- `lucid/automodel/sdf-skill.md` - Generic Lucid SDF primitives/operations (ALL agents get this)
-- `lucid/automodel/whale-skills.md` - Humpback-specific proportions (for whale modeling)
-- `lucid/automodel/parliament-rules.md` - Detailed ABCD rules and return formats
-
-### 📸 MANDATORY: Image Capture & Logging
-
-**ALWAYS capture and save rendered images for every model version evaluation.**
-
-**Capture Requirements:**
-- **Minimum 6 angles**: Use `capture-silhouette.mjs` which captures 6 standard views
-- **Systematic naming**: `v{VERSION}-{TIMESTAMP}/1.png` through `6.png`
-- **Permanent storage**: Save to `lucid/automodel/captures/v{VERSION}-{TIMESTAMP}/`
-- **Never delete captures**: They are the permanent record of model evolution
-
-**Standard Camera Angles (capture-silhouette.mjs):**
-1. Front-quarter view (default camera position)
-2. Side-quarter with appendages visible
-3. 3/4 rear showing tail/flukes
-4. Pure side profile
-5. Opposite side-quarter
-6. Wide shot with all features visible
-
-**Capture Command:**
-```bash
-mkdir -p lucid/automodel/captures/v{VERSION}-$(date -u +%Y-%m-%dT%H-%M-%SZ)
-node lucid/capture-silhouette.mjs ablation.whale /tmp/eval-captures
-cp /tmp/eval-captures/*.png lucid/automodel/captures/v{VERSION}-{TIMESTAMP}/
-```
-
-**Why This Matters:**
-- Visual record for comparing iterations
-- Required for ABCD Parliament evaluation
-- Enables retrospective analysis of what changed between versions
-- User can review progress without re-running evaluations
-
-### Lucid Tools for Parliament Workflow
-
-**Capture Tool (Playwright-based):**
-```bash
-node lucid/capture-silhouette.mjs <scene.model> <output-dir>
-```
-- Captures 6 angles to `<output-dir>/1.png` through `6.png`
-- Scene format: `creatures.wolf` loads `lucid/scenes/creatures/wolf.json`
-- Uses Playwright with Chromium for headless browser capture
-
-**⚠️ Playwright Browser Version Fix:**
-If you get `Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-XXXX`:
-- The script uses `executablePath` to point to existing Chromium installation
-- Current working path: `/root/.cache/ms-playwright/chromium-1194/chrome-linux/chrome`
-- If browser version mismatch occurs, update the `executablePath` in `capture-silhouette.mjs`
-
-**Model Files:**
-- Location: `lucid/scenes/creatures/*.json`, `lucid/scenes/ablation/*.json`
-- Format: Lucid SDF JSON (ellipsoids, smoothUnion, subtract, mirror, etc.)
-
-**Capture Storage:**
-- Store captures in: `lucid/automodel/captures/<model>-v<version>/`
-- Example: `lucid/automodel/captures/wolf-v1.7/1.png`
-
-**Full Cycle Commands:**
-```bash
-# 1. Start server if needed
-python3 -m http.server 8080 &
-
-# 2. Create capture directory and run capture
-mkdir -p lucid/automodel/captures/wolf-v1.7
-node lucid/capture-silhouette.mjs creatures.wolf lucid/automodel/captures/wolf-v1.7
-
-# 3. Run Agents A, B, C in parallel (via Task tool)
-# 4. Run Agent D with A, B, C reports
-# 5. If showstoppers → implement fixes, re-capture, repeat
-# 6. If no showstoppers → commit
-```
-
-### Clerk's Report Format
-
-Agent D returns structured report with:
-- **Consensus Findings**: What all agents agree on
-- **P1 Critical Fixes**: Must fix or model fails goal
-- **P2 High Priority**: Required for credibility
-- **P3 Medium Priority**: Polish and character
-- **Recommended Next Steps**: Specific actions
-
-### Iteration Loop
-
-```
-┌─────────────────────────────────────────┐
-│  1. Capture canonical view              │
-│  2. Run ABCD Parliament                 │
-│  3. Receive Clerk's Report              │
-│  4. Implement P1 fixes                  │
-│  5. Re-run Agent A blind test           │
-│  6. If improved → commit, next P level  │
-│     If not → fix geometry, NOT angle    │
-└─────────────────────────────────────────┘
-```
-
-## Lucid TOC & Recent Changes System
-
-### toc.json Structure
-The `lucid/scenes/toc.json` file is the table of contents for the Lucid SDF demo webapp. **Scenes can appear in multiple categories** - this is intentional and useful (e.g., a physics scene can be in both "Physics" and "Recent Changes").
-
-### 🆕 Recent Changes Category
-A special "Recent Changes" category at the top of toc.json shows recently modified scenes with commit notes. This helps users find what's new.
-
-**Auto-update mechanism:**
-1. **Pre-commit hook** automatically updates Recent Changes when scene files are committed
-2. **Manual update**: `node lucid/scripts/update-recent-changes.mjs --days=14 --max=8`
-
-### CLAUDE INSTRUCTIONS for toc.json
-
-**When creating a new scene:**
-1. Add to appropriate category (e.g., "physics", "csg", "creatures")
-2. Run `node lucid/scripts/update-recent-changes.mjs` to update Recent Changes
-3. OR let the pre-commit hook handle it automatically
-
-**When modifying existing scenes:**
-- Pre-commit hook will auto-update Recent Changes with commit message
-- Commit messages become the "[change note]" in the subtitle
-
-**Manual update command:**
-```bash
-node lucid/scripts/update-recent-changes.mjs --days=14 --max=8
-```
-
-**Script location:** `lucid/scripts/update-recent-changes.mjs`
-
-### TOC Category IDs
-- `recent` - 🆕 Recent Changes (auto-generated)
-- `prim` - Primitives
-- `csg` - CSG Operations
-- `transform` - Transforms
-- `creatures` - Creatures & Characters
-- `physics` - ⚛️ Physics
-- `archive` - 📁 Archive
-
-## Lucid Frontend Status (January 2026)
-
-### ✅ Backend-Neutral Architecture COMPLETE
-The Lucid SDF system is now fully backend-neutral with all 117 scenes loadable via either engine:
-
-**Backends:**
-- **Mayfly** (`lucid/mayfly/`) - WebGL raymarcher, works everywhere
-- **Stinkyfish** (`lucid/stinkyfish/`) - WebGPU raymarcher, auto-selected when available
-
-**Web Component:**
-```html
-<lucid-renderer backend="auto" scene="creatures/wolf.json"></lucid-renderer>
-```
-
-### Frontend Entry Points
-
-| Tool | Path | Purpose |
-|------|------|---------|
-| **Main Viewer** | `lucid/index.html` | Full-featured scene browser with params, debug |
-| **Node Editor** | `lucid/node-editor.html` | Visual SDF composition + timeline scrubber |
-| **Scene Catalog** | `lucid/scene-catalog.html` | Grid comparison Mayfly vs Stinkyfish |
-| **Compare** | `lucid/compare.html` | Side-by-side renderer comparison |
-
-### Recent Accomplishments (Session Jan 2026)
-
-1. **Node Editor Refactor** - Uses `<lucid-renderer>` web component
-   - Scene picker loads from TOC by category
-   - Live preview with proper animation/camera
-   - More node types: cone, plane, smoothSubtract, round, displace, shell
-
-2. **Scene Catalog Optimization** - Maximum pixel space layout
-   - Collapsible right sidebar for controls/stats
-   - Compact cards with 8 renders each (4 angles × 2 backends)
-   - Short labels: F/S/↑/↓ for angles, M/S for backends
-
-3. **Timeline Scrubber Widget** - Animation control panel
-   - Play/pause, rewind, loop, speed (0.1x-3x)
-   - Mini sparkline graphs for animated params
-   - Wiggler presets: sin, bounce, noise, pulse
-   - Gait presets: walk, trot, gallop
-   - Physics presets: spring, gravity
-   - Touch-friendly scrubbing
-
-### Integration TODO
-
-- [ ] Catalog → Node Editor: Click card to load scene in editor
-- [ ] Timeline → Rig: Wire wiggler outputs to scene uniforms
-- [ ] Node graph → Timeline: Visual param connections
-- [ ] Physics bridge: Connect XPBD solver to timeline
-
-## Lucid Debugging Techniques
-
-### 🚨 KEY INSIGHT: "Compiling is not enough - what is RENDERED?"
-
-GLSL can compile successfully but produce wrong/empty output. Always verify with actual browser rendering.
-
-### Comparing Against Known-Good Code (Git Worktree)
-
-When scenes stop rendering after changes, compare against a known-good commit:
-
-```bash
-# Create worktree at yesterday's commit
-git worktree add /tmp/lucid-yesterday HEAD~10  # or specific SHA
-
-# Compare generated GLSL
-node -e "
-import { generateGlslFromJson } from './lucid/core/json-codegen.js';
-import { loadJsonScene } from './lucid/core/json-loader.js';
-import { readFileSync } from 'fs';
-const json = JSON.parse(readFileSync('./lucid/scenes/creatures/wolf.json', 'utf8'));
-const scene = loadJsonScene(json);
-const glsl = generateGlslFromJson(scene, {});
-console.log(glsl.slice(-500));  // Check sceneSDF function
-"
-
-# Clean up when done
-git worktree remove /tmp/lucid-yesterday
-```
-
-### Browser Rendering Tests with Playwright
-
-Node.js GLSL generation may succeed while browser rendering fails. Test actual rendering:
-
-```javascript
-// Quick shader compilation test
-import { chromium } from 'playwright';
-const browser = await chromium.launch({
-  headless: true,
-  executablePath: '/root/.cache/ms-playwright/chromium-1194/chrome-linux/chrome',
-  args: ['--headless=new', '--no-sandbox']
-});
-const page = await browser.newPage();
-page.on('console', msg => console.log('BROWSER:', msg.text()));
-await page.goto('http://localhost:8080/lucid/index.html#creatures.wolf');
-await page.waitForTimeout(4000);
-await page.screenshot({ path: '/tmp/test-render.png' });
-await browser.close();
-```
-
-**Common failure modes:**
-- Shader compiles but scene is empty → check camera settings, param values
-- "no matching overloaded function" → type mismatch (e.g., float vs int)
-- Black screen → uniforms not initialized, missing default values
-
-### 🚨 CRITICAL: WebGPU NOT AVAILABLE IN HEADLESS BROWSERS 🚨
-
-**Playwright/Puppeteer headless Chromium does NOT support WebGPU.**
-
-When using `capture-silhouette.mjs` or any headless browser testing:
-- `backend="auto"` falls back to **Mayfly (WebGL/GLSL)** only
-- **Stinkyfish (WebGPU/WGSL) code is NOT tested** by headless captures
-- You can claim to "visually verify" WGSL fixes but you're only seeing GLSL output
-
-**How this causes false confidence:**
-1. You fix a bug in `wgsl-codegen.js`
-2. You run `capture-silhouette.mjs` and see correct output
-3. You claim the WGSL fix is "visually verified"
-4. Reality: You only tested GLSL, WGSL changes are completely untested
-
-**To actually test WebGPU/Stinkyfish:**
-- Use a real browser with WebGPU support (Chrome/Edge with WebGPU enabled)
-- Manually open `compare.html` or `scene-catalog.html`
-- Explicitly check the Stinkyfish column/panel
-- Or use `index.html?backend=stinkyfish` to force WebGPU
-
-**NEVER claim WGSL fixes are "verified" based on headless browser captures alone.**
-
-### Quick GLSL Compilation Check (Node.js)
-
-Fast check that scene generates valid GLSL:
-
-```bash
-node -e "
-import { generateGlslFromJson } from './lucid/core/json-codegen.js';
-import { loadJsonScene } from './lucid/core/json-loader.js';
-import { readFileSync } from 'fs';
-const json = JSON.parse(readFileSync('./lucid/scenes/creatures/wolf.json', 'utf8'));
-const scene = loadJsonScene(json);
-const glsl = generateGlslFromJson(scene, {});
-console.log('GLSL OK, length:', glsl.length);
-// Check for specific uniforms
-const uniforms = glsl.match(/uniform.*u_\w+/g) || [];
-uniforms.forEach(u => console.log(' ', u));
-"
-```
-
-### Visual Verification with capture-silhouette.mjs
-
-For full 6-angle capture of a scene:
-
-```bash
-mkdir -p /tmp/test-captures
-node lucid/capture-silhouette.mjs creatures.wolf /tmp/test-captures
-# Then use Read tool to view /tmp/test-captures/1.png
-```
-
-### Common Lucid Bugs & Fixes
-
-| Symptom | Likely Cause | Fix |
-|---------|--------------|-----|
-| Empty scene, shader OK | Missing camera settings | Add `"camera": { "distance": 8, "phi": 0.4, ... }` |
-| Empty scene, shader OK | Params use `"default"` | Change to `"value"` (loader expects `value`) |
-| `fbm`/`turbulence` error | Float octaves | Emit raw int: `String(Math.floor(octaves))` |
-| Params don't affect model | Not connected | Replace hardcoded values with `{ "var": "paramName" }` |
-| Ref not rendering | Missing def | Check `defs` section has the referenced id |
-
-### Potential Unit Tests (TODO)
-
-These manual checks could become automated tests:
-- [ ] All scenes in `lucid/scenes/` generate valid GLSL
-- [ ] All scenes render non-empty frames in Playwright
-- [ ] Params with `"value"` are properly initialized
-- [ ] Camera settings produce non-empty viewport
-- [ ] Scene params create corresponding uniforms
-
-## FINK JavaScript Structure - READ glitchcanary.md FOR DETAILS
-
-**CRITICAL**: FINK .js files are NOT standard JavaScript modules!
-
-- **Read glitchcanary.md** for full explanation of FINK architecture and syntax
-- .fink.js files contain `oooOO`...`` template literal calls (not wrapped in functions)
-- Sandbox iframe provides the `oooOO` function and executes the .js via script injection
-- Content extraction works via JavaScript execution, NOT text parsing
-- INK tags like `# IMAGE:`, `# FINK:`, `# BASEHREF:` are legitimate extensions
+Multi-perspective evaluation for 3D model quality. **Full rules: `lucid/automodel/parliament-rules.md` (authoritative).** The non-negotiables:
+
+- **Showstoppers:** every agent returns a `showstoppers` array; ANY non-empty array → DO NOT COMMIT, no exceptions. Agent D aggregates into `all_showstoppers`. (Exists because a P0 "airplane wings" finding was once ignored and committed anyway.)
+- **No view shopping:** never hunt for flattering camera angles; when vision results are unfavorable, FIX THE GEOMETRY.
+- **No Agent A contamination:** Agent A's prompt must contain zero species-specific terminology or hints. Validation check: "could someone guess the target from this prompt alone?"
+- Agents: A blanked-blind identifier · B informed evaluator · C skeptical slop detector · D moderator aggregating verdicts. Run A/B/C in parallel, then D.
+- Reviews: `lucid/automodel/reviews/*.json` + `index.json` (commit both); captures: `lucid/automodel/captures/v{VERSION}-{TIMESTAMP}/` — minimum 6 angles, **never delete captures**; viewer: `lucid/automodel/index.html`.
+- Capture: `node lucid/capture-silhouette.mjs <scene.model> <outdir>` (6 angles; uses explicit chromium executablePath — see headless notes; update path on version mismatch).
+- Iteration loop: capture canonical view → ABCD → fix P1s → re-run blind test → commit only when showstoppers empty.
+
+## Lucid — current state (corrected June 2026)
+Backend-neutral SDF rendering: **Mayfly** (WebGL, `lucid/mayfly/`) and **Stinkyfish** (WebGPU, `lucid/stinkyfish/`), shared JSON scene format, `<lucid-renderer backend="auto">` web component (auto falls back to Mayfly without WebGPU).
+
+**Facts that supersede older claims (see docs/fable-audit/02 + claims-register):**
+- Scene corpus: **119 scene JSON files; 79 indexed in `lucid/scenes/toc.json`; 47 orphaned** (e.g. creatures/subag1/*, ablation/old/*). When adding scenes, update toc.json; consider triaging orphans.
+- All 119 scenes pass GLSL **and** WGSL codegen headless (June 2026). Codegen success ≠ browser render: Stinkyfish WGSL output remains **visually unverified** (`lucid/stinkyfish/BUGS.md`); verify in a real WebGPU browser via `compare.html`, `scene-catalog.html`, or `index.html?backend=stinkyfish`.
+- "Recent Changes" TOC category: `node lucid/scripts/update-recent-changes.mjs --days=14 --max=8` is a **manual script — no pre-commit hook is installed**. Run it after scene changes (or actually install a hook).
+- Components defined: lucid-renderer, lucid-scene-picker (has filter bar + search), lucid-scene-params, lucid-orbit-controls, lucid-render-controls, lucid-comparison. `<lucid-timeline>`, `<lucid-node-graph>`, `<lucid-param-editor>` are NOT components — that functionality lives inline in `node-editor.html`.
+- Physics: XPBD (`lucid/core/physics/`) IS integrated in the main viewer (index.html instantiates PhysicsScene when `json.physics.enabled` and steps it in the render loop); also in dedicated demos. Node editor has no physics preview.
+- `yeti/` aspires to independence from lucid, but `yeti/yeti-creature.js` imports 5 lucid/core modules — yeti/CLAUDE.md's "zero dependencies" claim is currently false in code.
+- Entry points: `lucid/index.html` (main viewer), `node-editor.html`, `scene-catalog.html`, `compare.html`. Open integration TODOs: catalog→editor linkage, timeline→rig wiring, node-graph→timeline connections.
+- Scenes may appear in multiple toc categories — intentional. Category ids: recent, prim, csg, transform, creatures, physics, archive.
+
+### Lucid debugging — key insight: "Compiling is not enough — what is RENDERED?"
+- Quick GLSL check (Node): `loadJsonScene` + `generateGlslFromJson`, inspect output length/uniforms.
+- Browser render test: Playwright with the executablePath above; screenshot and actually LOOK at it.
+- Compare against known-good commits: `git worktree add /tmp/lucid-yesterday <sha>`, diff generated GLSL, `git worktree remove` when done.
+- Common bugs: empty scene with valid shader → missing camera settings, or params using `"default"` instead of `"value"`; fbm/turbulence need integer octaves (`String(Math.floor(octaves))`); params not affecting model → replace hardcoded values with `{ "var": "paramName" }`; ref not rendering → check `defs` has the id.
+
+## FINK JavaScript Structure — READ glitchcanary.md FOR DETAILS
+- `.fink.js` files are NOT standard JS modules; `oooOO`...`` template literal calls execute via sandbox script injection (JSONP-like)
+- Content extraction is JavaScript execution, NOT text parsing — never wrap oooOO in function calls, never regex it
+- INK tags (`# IMAGE:`, `# FINK:`, `# BASEHREF:`) are legitimate extensions used by Inkle and the community
