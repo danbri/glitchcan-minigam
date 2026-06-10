@@ -110,9 +110,9 @@
   <button class="bigbtn" onclick="location.reload()">REPLANT &amp; RETRY</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
+<script type="module">
 'use strict';
+import * as THREE from './vendor/three.module.min.js';
 /* ================= TANKS FOR THE TREES =================
    Real data: trees/data/elevation-bristol.json(.gz)  EU-DEM 25m grid
               trees/data/trees-bristol.json(.gz)      Bristol CC inventory
@@ -159,8 +159,8 @@ scene.background = new THREE.Color(0x10243a);
 scene.fog = new THREE.Fog(0x18324a, 700, 2600);
 const camera = new THREE.PerspectiveCamera(62, innerWidth/innerHeight, 0.5, 4000);
 
-scene.add(new THREE.HemisphereLight(0xbfe8ff, 0x1c3a26, 0.85));
-const sun = new THREE.DirectionalLight(0xffd9a0, 1.1);
+scene.add(new THREE.HemisphereLight(0xbfe8ff, 0x1c3a26, 2.7));
+const sun = new THREE.DirectionalLight(0xffd9a0, 3.4);
 sun.position.set(-1200, 900, -600); scene.add(sun);
 
 /* golden-hour sky dome */
@@ -208,7 +208,8 @@ function buildTerrain(){
 let TREES = null, canopyMesh, trunkMesh, treeState = [], aliveTrees = 0, totalTrees = 0;
 const dummy = new THREE.Object3D();
 function buildTrees(){
-  const list = TREES.trees; totalTrees = aliveTrees = list.length;
+  const lite = new URLSearchParams(location.search).has('lite');
+  const list = lite ? TREES.trees.filter((_,i)=>i%4===0) : TREES.trees; totalTrees = aliveTrees = list.length;
   canopyMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),
       new THREE.MeshLambertMaterial({vertexColors:false}), list.length);
   trunkMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.35,0.5,1,5),
@@ -218,7 +219,7 @@ function buildTrees(){
   for(let i=0;i<list.length;i++){
     const [e,n,sp,cw,ch] = list[i];
     const x = e - E0, z = -(n - N0), y = heightAt(x,z);
-    const r = (cw||5)/2, h = Math.max(3, ch||8);
+    const r = Math.min(8,(cw||5)/2), h = Math.min(18, Math.max(3, ch||8));
     treeState.push({x, z, y, r, h, sp, hp:1, alive:true});
     dummy.position.set(x, y + h*0.7, z); dummy.scale.set(r, h*0.45, r);
     dummy.rotation.y = (e*13+n*7)%6.28; dummy.updateMatrix();
@@ -248,6 +249,13 @@ const LANDMARKS = [
   ['Temple Meads', 360060, 172370], ['Queen Square', 358950, 172850],
   ['Bristol Cathedral', 358695, 172694], ['Ashton Court', 355560, 172140],
 ];
+function emojiSprite(emoji, w){
+  const c = document.createElement('canvas'); c.width = 128; c.height = 128;
+  const x = c.getContext('2d'); x.font = '96px system-ui,sans-serif';
+  x.textAlign='center'; x.textBaseline='middle'; x.fillText(emoji, 64, 70);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c), transparent:true, depthWrite:false}));
+  s.scale.set(w, w, 1); return s;
+}
 function textSprite(msg, scale=1, col='#bfffe0'){
   const c = document.createElement('canvas'); c.width = 512; c.height = 128;
   const x = c.getContext('2d'); x.font = '700 44px system-ui,sans-serif';
@@ -285,7 +293,8 @@ function buildTank(){
   barrel.rotation.x = Math.PI/2; barrel.position.set(0,0.25,2.8); turret.add(barrel);
   const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,2.6,4), darkMat);
   mast.position.set(-1.4,2,-2.6); tank.add(mast);
-  flag = textSprite('🌳', 0.32); flag.position.set(-1.4,3.6,-2.6); tank.add(flag);
+  flag = emojiSprite('🌳', 3.2); flag.position.set(-1.4,4.3,-2.6); tank.add(flag);
+  tank.scale.setScalar(2.0);
   scene.add(tank);
 }
 
@@ -317,10 +326,10 @@ function makeDragon(tint){
 function spawnDragon(speedMul){
   const tints = [0xd9486b, 0x8e6bd9, 0x4ba3d9, 0xd98a3a];
   const g = makeDragon(tints[(Math.random()*tints.length)|0]);
-  const ang = Math.random()*Math.PI*2, R = WORLD*0.52;
-  g.position.set(Math.cos(ang)*R, 220, Math.sin(ang)*R);
+  const ang = Math.random()*Math.PI*2, R = 350 + Math.random()*300;
+  g.position.set(state.tank.x + Math.cos(ang)*R, 160, state.tank.z + Math.sin(ang)*R);
   const d = {g, state:'seek', target:-1, munch:0, t:Math.random()*9,
-             speed:(26+Math.random()*10)*speedMul, scare:0, hp:1};
+             speed:(34+Math.random()*12)*speedMul, scare:0, hp:1};
   dragons.push(d); scene.add(g);
   return d;
 }
@@ -424,7 +433,7 @@ const sfx = (()=>{
 const state = {
   running:false, paused:false, score:0, wave:0, lost:0, lostLimit:1000,
   cool:0, waveTimer:3, dragonsToSpawn:0, speedMul:1,
-  tank:{x: 358950-E0, z: -(172850-N0), heading: Math.PI*0.75, speed:0},  // start at Queen Square
+  tank:{x: 357300-E0, z: -(175500-N0), heading: 0.56, speed:0},  // start on Durdham Down, facing the city
 };
 const input = {x:0, y:0, fire:false, honk:false};
 
@@ -548,7 +557,7 @@ function tick(){
     burst(new THREE.Vector3(T.x - Math.sin(T.heading)*3.5, ty+0.6, T.z - Math.cos(T.heading)*3.5), 2, 0x8a7a5a, 4, 3);
 
   /* --- turret auto-aim --- */
-  let aimD = null, bd = 380*380;
+  let aimD = null, bd = 460*460;
   for(const d of dragons){ if(d.state==='dead') continue;
     const dd = d.g.position.distanceToSquared(tank.position);
     if(dd<bd){bd=dd;aimD=d;}
@@ -617,7 +626,9 @@ function tick(){
     }
     if(d.state==='seek'){
       if(d.target<0 || !treeState[d.target] || !treeState[d.target].alive){
-        d.target = nearestAliveTree(d.g.position, true);
+        const bias = { x: d.g.position.x*0.3 + state.tank.x*0.7 + (Math.random()-0.5)*160,
+                       z: d.g.position.z*0.3 + state.tank.z*0.7 + (Math.random()-0.5)*160 };
+        d.target = nearestAliveTree(bias, true);
         if(d.target>=0) treeState[d.target].busy = true;
       }
       if(d.target>=0){
@@ -663,11 +674,11 @@ function tick(){
 
   /* --- camera: smooth chase, portrait-aware --- */
   const portrait = innerHeight > innerWidth;
-  const back = portrait ? 46 : 34, up = portrait ? 26 : 17;
+  const back = portrait ? 30 : 36, up = portrait ? 68 : 48;
   camPos.set(T.x - Math.sin(T.heading)*back, ty + up, T.z - Math.cos(T.heading)*back);
   camPos.y = Math.max(camPos.y, heightAt(camPos.x, camPos.z) + 6);
   camera.position.lerp(camPos, Math.min(1, dt*3.2));
-  camTarget.set(T.x + Math.sin(T.heading)*22, ty + 6, T.z + Math.cos(T.heading)*22);
+  camTarget.set(T.x + Math.sin(T.heading)*16, ty + 2, T.z + Math.cos(T.heading)*16);
   camera.lookAt(camTarget);
   camera.fov += ((62 + Math.abs(T.speed)*0.25) - camera.fov)*dt*3; camera.updateProjectionMatrix();
 
@@ -721,6 +732,7 @@ addEventListener('resize', ()=>{
   });
 })();
 tick();
+window.__tftt = { state, dragons, get aliveTrees(){return aliveTrees;} };  // headless playtest hook
 </script>
 </body>
 </html>

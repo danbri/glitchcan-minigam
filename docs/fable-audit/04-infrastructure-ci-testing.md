@@ -38,8 +38,14 @@ assertion test suite has never run in CI.** Activating it is a one-move fix.
   `test:tier1-3`, `test:precommit`, …); devDeps `@playwright/test` ^1.56.1,
   `playwright` ^1.57.0, `puppeteer-core` ^24.35.0, `inkjs` ^2.3.2
 
-**Environment blocker, well documented:** in restricted sandboxes the Playwright CDN
-returns 403, so browsers can't be installed locally. `ENVIRONMENT-ASSESSMENT.md` and
+**Environment blocker — partially stale:** `ENVIRONMENT-ASSESSMENT.md` documents the
+Playwright CDN returning 403. However (discovered 2026-06-10, the falsification-pass
+spirit applied to infra): a Chromium **is present at `/opt/pw-browsers/`** in the
+remote execution environment — headless Playwright works with
+`executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'` plus
+SwiftShader flags (`--use-angle=swiftshader --enable-unsafe-swiftshader`) for WebGL,
+at software-rendering speeds (~2 FPS on heavy scenes). Good enough for screenshots
+and functional playtests; not for performance work. `ENVIRONMENT-ASSESSMENT.md` and
 `CUSTOM-BINARY-ASSESSMENT.md` analyze this honestly; `setup-chrome.sh` (wired in as
 `pretest`) is ready to pull a Chromium tarball from a GitHub Release — **but that
 release/binary was never published**, so the workaround is also pending.

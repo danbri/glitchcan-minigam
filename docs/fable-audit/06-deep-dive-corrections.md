@@ -111,7 +111,7 @@ What could be tested without a browser was tested:
 | WGSL codegen over all 119 scenes (wgsl-codegen) | **119/119 pass** — first systematic exercise of the WGSL path; codegen doesn't crash on any scene (browser shader-compile/render still unverified, per stinkyfish/BUGS.md) |
 | Vitest unit suites (lucid-core, xpbd-physics, rig-evaluator, splat-physics, sdf-physics-scene, splat-demo-physics, webgpu-availability) | **160 tests pass**, 1 expected-fail |
 | `tests/glsl-codegen.test.js`, `tests/dsl-parser.test.js` under vitest | **Cannot run** — they're written with `@playwright/test` syntax; running vitest across `tests/` collects them and fails 2 files. Framework mixing in one directory; npm scripts route around it, but `npx vitest run tests/` misleads. |
-| Playwright browser suites | Blocked in this environment (CDN 403, no local Chromium) — unchanged from Audit 04. |
+| Playwright browser suites | Initially believed blocked (per ENVIRONMENT-ASSESSMENT.md) — **refuted later in session**: Chromium exists at `/opt/pw-browsers/`; the new trees game was playtested headless with screenshots, full dragon-lifecycle and scoring verification. See Audit 04 §3. |
 
 These results upgrade two Audit 02 findings: the scene corpus is healthy at codegen
 level on **both** backends, and the physics/rig math has genuine passing coverage.
