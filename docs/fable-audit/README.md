@@ -14,6 +14,7 @@ repo as found on branch point `59a2eb3` (master, June 2026).
 | [03-minigames-inventory.md](03-minigames-inventory.md) | Minigames & experiments | All 31 game/experiment directories, landing-page cross-reference |
 | [04-infrastructure-ci-testing.md](04-infrastructure-ci-testing.md) | Infra, CI/CD, testing | `.github/workflows/`, `tests/`, Playwright, governance docs, repo hygiene |
 | [05-docs-worknotes-data.md](05-docs-worknotes-data.md) | Docs, worknotes, data corpora | `worknotes/` (113 files), `docs/`, `doc/`, `data/`, `datasets/`, idea docs |
+| [06-deep-dive-corrections.md](06-deep-dive-corrections.md) | **Second-pass corrections** | Code-level re-read: trees/ Bristol game lab, Finkiverse map prototype, 12 directory re-gradings, headless test results, CodePen tier |
 
 ## Headline Findings
 
@@ -31,7 +32,10 @@ counterparts do. The code is generally *ahead* of the documentation, not behind 
   marked "Phase 2 IN PROGRESS" in CLAUDE.md; 0% implemented.
 - **Peer architecture** (`PEER_ARCHITECTURE_DESIGN.md`, 27 KB) — design only; no
   peer/networking code anywhere in the repo.
-- **3D Finkverse map** (`docs/3dmap-idea.md`) — idea only.
+- ~~3D Finkverse map — idea only~~ **CORRECTED in Audit 06**: `docs/fink-ring-viz.html`
+  is a working 2,154-line prototype (architectural pivot to CSS-3D/SVG rings, with an
+  embedded playable story player), fed by a crawl pipeline
+  (`inklet/tools/fink-graph.mjs` → `fink-crawl-report.json`). Unlinked from anywhere.
 - **Save/load, achievements, IMPORT/EXPORT enforcement** — recommended in
   `worknotes/gamedev-review.md`; not implemented (a namespace preprocessor exists but
   is not wired into the pipeline).
@@ -75,3 +79,10 @@ docs/data), each reading code and docs directly. Load-bearing claims (missing fi
 scene counts, workflow inventory, version strings) were independently re-verified
 against disk before being recorded here. Where a subsidiary doc contradicts CLAUDE.md,
 both are cited.
+
+A **second, code-level pass** (Audit 06) was run after the owner flagged that the
+first pass under-read several directories. It read main source files in full,
+corrected ~12 characterizations (notably `trees/` and the Finkiverse map), indexed
+the CodePen prototyping tier into `codepen-backups/`, and ran every headless-runnable
+check: 119/119 scenes pass GLSL **and** WGSL codegen; 160 unit tests pass. Where 06
+contradicts reports 01–05, **06 is authoritative**.

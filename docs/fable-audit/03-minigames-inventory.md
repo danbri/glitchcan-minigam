@@ -1,5 +1,10 @@
 # Audit 03 — Minigames & Experiments Inventory
 
+> **Revision note:** a second, code-level pass
+> ([06-deep-dive-corrections.md](06-deep-dive-corrections.md)) re-graded several rows
+> below — trees, mudslide, palace, hat, fatnet, furbacca, plenia, blipblop, twinearth,
+> follyfx, demo/. Where this table disagrees with Audit 06, 06 is authoritative.
+
 31 directories, from production-grade games to single-file stubs and serious research
 infrastructure. 17 are showcased on the root `index.html` landing page; 14 are
 unlisted. Everything is static/client-side — no servers, no databases, no auth.
@@ -22,8 +27,8 @@ unlisted. Everything is static/client-side — no servers, no databases, no auth
 | kgx | 10 | no | Oxigraph WASM SPARQL demo over ImageSnippets LIO data | Demo | self-hosted WASM (web_bg.wasm) |
 | lightshow | 2 | yes | LED-strip animation simulators | Playable sketches | Canvas 2D |
 | magpie | 454 | no | Research archive — see below | Mixed, some production-grade | JS, WASM, image corpus |
-| mudslide | 1 | no | Isometric manor crawler with inventory/lives | Playable | Canvas 2D, single file |
-| palace | 1 | no | "Forget-Me-Not Palace" CRT text adventure | Playable sketch | Canvas CRT simulation |
+| mudslide | 1 | no | Three.js isometric adventure: 10 themed rooms, 4 collectible types, 7 enemy archetypes, lives/iframes (Audit 06) | ~90% complete game | Three.js, single file |
+| palace | 1 | no | MOO-style 42-room model of Westminster Palace after Barry's 1836–68 floor plan, literary room prose (Audit 06) | ~95% complete artifact | embedded JSON world + CRT CSS |
 | plenia | 2 | no | Particle Lenia ALife sim | Playable sketch | Canvas + Web Worker |
 | plotgraph | 1 | yes | Strange & Norrell character graph | Demo | vis-network CDN |
 | puppy | 1 | no | ML hand-tracking finger-puppet toy | Playable sketch | webcam + hand-pose ML |
@@ -35,7 +40,7 @@ unlisted. Everything is static/client-side — no servers, no databases, no auth
 | thoughtgraph | 1 | yes | Idea/relationship mapper (Falklands example) | Playable sketch | vanilla JS |
 | thumbwar | 12 | yes | Touch-physics hub + **GridLuck** + battleboids + minichess | Mixed | Canvas, modular ES6 |
 | tokitokipona | 2 | yes | Toki Pona flashcards with emoji hints | Playable | vanilla JS |
-| trees | 8 | no | Bristol open-data tree inventory viewer; `bigtrak-mock-ui.html` side-experiment | Sketch | canvas/static |
+| trees | 8 | no | **CORRECTED — see Audit 06 §1**: five builds over Bristol CC's 53,904-tree dataset (SQL.js, BNG→WGS84) — 2 playable dragon games (Tesla Dragon, MUSK the Dragon ×2) + 3 Three.js tank interfaces (bigtrak, bristol-fps, 3dtanky with LOD + live Overpass OSM) | Playable games + functional 3D demos | Leaflet, SQL.js, Three.js, Overpass API, Web Audio |
 | tritone | 1 | no | "Diabolus in Musica" tritone synth toy | Playable sketch | Tone.js CDN |
 | twinearth | 24 | yes | 3D Earth viewer with texture variants | Playable | Three.js; **54 MB** of textures |
 | yeti | 13 | no | Parametric creature lab: 53-param quadrupeds, 6 species, SDF rendering, JSON export/import | Production sketch | ES6; **zero lucid/ deps by design** |

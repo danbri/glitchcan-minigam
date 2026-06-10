@@ -114,7 +114,19 @@ chromium path) — browser provisioning is environment-fragile either way (see A
 Root specs: `sdf-vrml-strawslop2.md`, `sdf_draft_spec_alt_nodes.md`,
 `vader-sdf-sample.md`.
 
-## 9. Verdict
+## 9. Headless verification (added by Audit 06)
+
+Run in this session via Node (no browser): **all 119 scene files pass GLSL codegen
+and all 119 pass WGSL codegen** (two scenes contain an unimplemented `customExpr`
+node that passes through with a warning), and **160 unit tests pass** across
+lucid-core, xpbd-physics, rig-evaluator, and the splat/physics suites (1
+expected-fail). This upgrades the scene-corpus health finding; the WebGPU
+*render-path* verification gap (§3) still stands, since codegen success ≠ shader
+compilation in a real browser. Also noted: `tests/glsl-codegen.test.js` and
+`tests/dsl-parser.test.js` use `@playwright/test` syntax and fail collection if
+vitest is pointed at the whole `tests/` directory.
+
+## 10. Verdict
 
 Rendering core, scene format, physics solver, and the Parliament evaluation loop are
 real and tested. The gaps are (a) the WebGPU backend's unverified status, (b) ~40

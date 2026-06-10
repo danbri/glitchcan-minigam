@@ -36,9 +36,10 @@ best current statement of FINK Player's open defects.
 | `docs/fink-linking-spec.md` (19 KB) | ⚠️ Partially implemented (cross-domain loading underspecified vs reality; URL truncation bug still open) |
 | `docs/fink-crawl-report.md/.json`, `fink-universe-snapshot.json` | ✅ Current generated inventories |
 | `docs/finkapp-ideas.md` | Archival — catalogs the *old* elegant app/ UI vs new retro finkapp UI; proposes a hybrid that wasn't pursued |
-| `docs/3dmap-idea.md` | ❌ **Idea only** — Three.js + Graphviz-WASM 3D Finkverse map; no code |
+| `docs/3dmap-idea.md` | ⚠️ **Prototyped with an architectural pivot** (corrected by Audit 06): `fink-ring-viz.html` implements the substance as CSS-3D/SVG rings with embedded story player; the Three.js/Graphviz/multi-tier spec itself unbuilt |
 | `docs/gpt_notes_on_ui_from_screenshots_only.md` | Design philosophy ("playable document"); influence visible but no direct artifact |
-| `docs/hampstead-story-graph-analysis.md`, `shane-manor-infographic.html`, `fink-ring-viz.html` | One-off analysis/visualization artifacts |
+| `docs/hampstead-story-graph-analysis.md`, `shane-manor-infographic.html` | One-off analysis/visualization artifacts |
+| `docs/fink-ring-viz.html` | **Working Finkiverse map prototype** (2,154 lines — see Audit 06 §2), fed by `inklet/tools/fink-graph.mjs` → `fink-crawl-report.json`; unlinked from any index |
 | `docs/skills/selfplaytest_browser.md` | Playwright self-playtest guide — matches the worknotes scripts |
 | `docs/wc/yeti-wc-demo.html` | Web-component demo tied to yeti/ |
 
@@ -57,7 +58,7 @@ schemoids' theme) that has never been pulled into a single documented endeavour.
 ## 4. Idea docs vs implementation — the ledger
 
 **Documented, never coded:**
-- 3D Finkverse map (`docs/3dmap-idea.md`)
+- ~~3D Finkverse map~~ — moved to "documented AND coded" per Audit 06 (`fink-ring-viz.html`)
 - Peer/multi-agent collaborative editing (`PEER_ARCHITECTURE_DESIGN.md`, 27 KB)
 - Save/load, achievements (gamedev-review recommendations)
 - evogame LLM game-breeding loop (`evogame/BRIEF.md` — spec only)
