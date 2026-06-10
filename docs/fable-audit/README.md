@@ -35,7 +35,8 @@ counterparts do. The code is generally *ahead* of the documentation, not behind 
 - ~~3D Finkverse map — idea only~~ **CORRECTED in Audit 06**: `docs/fink-ring-viz.html`
   is a working 2,154-line prototype (architectural pivot to CSS-3D/SVG rings, with an
   embedded playable story player), fed by a crawl pipeline
-  (`inklet/tools/fink-graph.mjs` → `fink-crawl-report.json`). Unlinked from anywhere.
+  (`inklet/tools/fink-graph.mjs` → `fink-crawl-report.json`) and linked from the
+  generated crawl report (`fink-crawl.cjs:426`).
 - **Save/load, achievements, IMPORT/EXPORT enforcement** — recommended in
   `worknotes/gamedev-review.md`; not implemented (a namespace preprocessor exists but
   is not wired into the pipeline).

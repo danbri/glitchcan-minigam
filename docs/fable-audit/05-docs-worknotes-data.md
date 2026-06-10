@@ -39,7 +39,7 @@ best current statement of FINK Player's open defects.
 | `docs/3dmap-idea.md` | ⚠️ **Prototyped with an architectural pivot** (corrected by Audit 06): `fink-ring-viz.html` implements the substance as CSS-3D/SVG rings with embedded story player; the Three.js/Graphviz/multi-tier spec itself unbuilt |
 | `docs/gpt_notes_on_ui_from_screenshots_only.md` | Design philosophy ("playable document"); influence visible but no direct artifact |
 | `docs/hampstead-story-graph-analysis.md`, `shane-manor-infographic.html` | One-off analysis/visualization artifacts |
-| `docs/fink-ring-viz.html` | **Working Finkiverse map prototype** (2,154 lines — see Audit 06 §2), fed by `inklet/tools/fink-graph.mjs` → `fink-crawl-report.json`; unlinked from any index |
+| `docs/fink-ring-viz.html` | **Working Finkiverse map prototype** (2,154 lines — see Audit 06 §2), fed by `inklet/tools/fink-graph.mjs` → `fink-crawl-report.json`; linked from `fink-crawl-report.md` (via `fink-crawl.cjs`), though not from the landing page or player UI |
 | `docs/skills/selfplaytest_browser.md` | Playwright self-playtest guide — matches the worknotes scripts |
 | `docs/wc/yeti-wc-demo.html` | Web-component demo tied to yeti/ |
 

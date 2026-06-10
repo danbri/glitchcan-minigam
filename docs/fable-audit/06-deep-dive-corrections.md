@@ -65,8 +65,12 @@ Data pipeline the first audit missed entirely: `inklet/tools/fink-graph.mjs` (11
 CLI) crawls `.fink.js` files → emits `docs/fink-crawl-report.json` (95 KB) and
 `fink-universe-snapshot.json` → ring-viz consumes them. Estimated **60–70%
 feature-complete** against the 3dmap spec, production-quality interaction code.
-Its real problem is discoverability: not linked from CLAUDE.md, README, the landing
-page, or the FINK player.
+
+*Correction to this correction (owner feedback):* the prototype is **not unlinked** —
+`docs/fink-crawl-report.md` links it as "Episode Ring Visualization", and that link is
+emitted by the crawl tool itself (`inklet/tools/fink-crawl.cjs:426`), so it's a
+deliberate part of the crawl-report pipeline. The narrower true claim: it isn't
+reachable from the landing page, CLAUDE.md, or the FINK player UI.
 
 ## 3. Other directories the first pass under-read
 
@@ -112,7 +116,24 @@ What could be tested without a browser was tested:
 These results upgrade two Audit 02 findings: the scene corpus is healthy at codegen
 level on **both** backends, and the physics/rig math has genuine passing coverage.
 
-## 6. Revised cross-cutting picture
+## 6. Addendum: trees/ endeavour completed (June 2026, this session)
+
+Following the owner's direction, the missing pieces were built:
+- **Real elevation cached in-repo**: `trees/data/elevation-bristol.json(.gz)` — a
+  128×128 EU-DEM 25m grid (OpenTopoData) over the 9×9 km BNG box 354000–363000 E /
+  169000–178000 N; min 3.1 m (Avon) to 155.8 m. Reproducible via
+  `trees/tools/fetch-elevation.mjs`. Verified against known landmarks (Queen Square
+  13.6 m, Clifton 86 m, Durdham Down 90.9 m, harbour 9.2 m).
+- **Compact tree payload**: `trees/data/trees-bristol.json(.gz)` — 35,893 living
+  in-bbox trees, 115 species, built by `trees/tools/build-tree-data.mjs`.
+- **Final game**: `trees/tanks-for-the-trees.html` — mobile-first 3D tank defence
+  ("Tanks for the Trees — Bristol's Last Stand") over the real DEM with all 35,893
+  instanced real trees, the dragon antagonists from the earlier 2D games, virtual
+  joystick + auto-aiming turret, synthesized audio, and landmark beacons. Linked from
+  the root landing page. The tank-game thread that began with the Tankoff pen and
+  three prototype interfaces now has a finished entry.
+
+## 7. Revised cross-cutting picture
 
 The second pass strengthens the first audit's central thesis while softening its
 inventory: the repo is even *deeper* than first reported — several "sketches" are
