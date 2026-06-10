@@ -72,6 +72,14 @@
   .btn:active{transform:scale(.93);background:rgba(0,255,102,.25)}
   #fire{right:calc(var(--safe-r) + 18px);bottom:calc(var(--safe-b) + 26px);width:100px;height:100px;font-size:34px}
   #honk{right:calc(var(--safe-r) + 130px);bottom:calc(var(--safe-b) + 32px);width:54px;height:54px;font-size:22px}
+  #radiobtn{right:calc(var(--safe-r) + 196px);bottom:calc(var(--safe-b) + 32px);width:54px;height:54px;font-size:20px}
+  #radio{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--safe-b) + 160px);z-index:7;
+    width:min(78vw,380px);background:var(--panel);border:1px solid rgba(0,255,102,.5);padding:10px 14px;
+    box-shadow:0 0 18px rgba(0,255,102,.25)}
+  #radio .freq{text-align:center;font-size:13px;font-weight:700;color:var(--amber);
+    text-shadow:0 0 8px rgba(255,176,0,.8);letter-spacing:2px;margin-bottom:6px}
+  #radio input[type=range]{width:100%;accent-color:#00ff66}
+  #radio .stations{display:flex;justify-content:space-between;font-size:9px;color:#5fbf8f;letter-spacing:.5px;margin-top:3px}
   #mapbtn{top:calc(var(--safe-t) + 30px);right:calc(var(--safe-r) + 8px);width:46px;height:46px;font-size:19px;position:fixed;border-radius:8px}
   #pausebtn{top:calc(var(--safe-t) + 30px);right:calc(var(--safe-r) + 62px);width:46px;height:46px;font-size:15px;position:fixed;border-radius:8px}
   @media (min-width:900px) and (hover:hover){ #stick,#fire,#honk{opacity:.5} }
@@ -100,7 +108,8 @@
 <div id="ticker"><span id="tickertext">&gt;&gt; BREAKING: DRAGONS RETURN TO BRISTOL — COUNCIL DEPLOYS BIGTRAK FLEET &lt;&lt;</span></div>
 <div id="stats">
   SCORE <b id="score">0</b> WAVE <b id="wave">1</b><br>
-  TREES <b id="treesleft">—</b> <span id="compass" style="float:right">N</span>
+  TREES <b id="treesleft">—</b> <span id="compass" style="float:right">N</span><br>
+  <span style="font-size:10px">TIDE <b id="tide">—</b></span>
   <div id="treebar"><div id="treefill"></div></div>
 </div>
 <div id="fleet"></div>
@@ -111,6 +120,12 @@
 <div id="stick"><div id="knob"></div></div>
 <div id="fire" class="btn">⊕</div>
 <div id="honk" class="btn">♪</div>
+<div id="radiobtn" class="btn">📻</div>
+<div id="radio" class="hidden">
+  <div class="freq" id="freqlabel">— FM</div>
+  <input type="range" id="dial" min="880" max="1080" value="1000">
+  <div class="stations"><span>91.5 COUNCIL</span><span>96.2 ◇◇◇</span><span>103.7 PIRATE</span></div>
+</div>
 <div id="mapbtn" class="btn">▦</div>
 <div id="pausebtn" class="btn">‖</div>
 
@@ -121,8 +136,8 @@
      <b>BRUNEL</b>, <b>CABOT</b> and <b>BANKSY</b> — across <b>real Bristol terrain</b>
      and defend all <b id="ntrees">35,893</b> <b>real council trees</b>.</p>
   <p>▦ MAP: tap tank → tap ground to order · tap again to JACK IN and drive<br>
-     STICK drive · ⊕ hold to fire (turret aims itself) · ♪ honk scares snackers<br>
-     KBD: WASD · SPACE fire · M map · 1/2/3 switch tank · H honk</p>
+     STICK drive · ⊕ hold to fire (missed conkers GROW TREES) · ♪ honk scares snackers · 📻 radio<br>
+     KBD: WASD · SPACE fire · M map · 1/2/3 tanks · H honk · R radio · mind the tide</p>
   <button class="bigbtn" id="startbtn">▶ DEFEND BRISTOL</button>
   <div id="loadnote">BOOTING…</div>
 </div>
@@ -199,10 +214,14 @@ function buildTerrain(){
   scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({color:0x01140a})));   // occluder mass
   const grid = new THREE.Mesh(g, new THREE.MeshBasicMaterial({wireframe:true, color:PHOS, transparent:true, opacity:0.30}));
   grid.position.y = 0.4; scene.add(grid);
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD, 40, 40),
+  waterMesh = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD, 40, 40),
     new THREE.MeshBasicMaterial({wireframe:true, color:CYAN, transparent:true, opacity:0.35}));
-  water.rotation.x = -Math.PI/2; water.position.y = 8.7*EXAG; scene.add(water);  // the Avon, in cyan
+  waterMesh.rotation.x = -Math.PI/2; waterMesh.position.y = waterLevel(); scene.add(waterMesh);  // the tidal Avon
 }
+/* Bristol has one of the world's highest tidal ranges; the game tide cycles ~3 min */
+let waterMesh = null, tideT = 0;
+function waterLevel(){ return (8.7 + 4.2*Math.sin(tideT * Math.PI*2/180)) * EXAG; }
+function tideRising(){ return Math.cos(tideT * Math.PI*2/180) > 0; }
 
 /* ---------- trees: 36k phosphor wireframe canopies ---------- */
 let TREES = null, canopyMesh, treeState = [], aliveTrees = 0, totalTrees = 0;
@@ -211,8 +230,12 @@ function buildTrees(){
   const lite = new URLSearchParams(location.search).has('lite');
   const list = lite ? TREES.trees.filter((_,i)=>i%4===0) : TREES.trees;
   totalTrees = aliveTrees = list.length;
+  const HEADROOM = 2000;   // room for conker-grown trees
   canopyMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),
-      new THREE.MeshBasicMaterial({wireframe:true, transparent:true, opacity:0.8}), list.length);
+      new THREE.MeshBasicMaterial({wireframe:true, transparent:true, opacity:0.8}), list.length + HEADROOM);
+  canopyMesh.count = list.length;
+  treeCapacity = list.length + HEADROOM;
+  persistOk = !lite;
   canopyMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   const col = new THREE.Color();
   for(let i=0;i<list.length;i++){
@@ -231,6 +254,8 @@ function buildTrees(){
     canopyMesh.setColorAt(i, col);
   }
   canopyMesh.instanceColor.needsUpdate = true;
+  chestnutSp = TREES.species.findIndex(n => /horse chestnut/i.test(n));
+  if(chestnutSp < 0){ chestnutSp = TREES.species.length; TREES.species.push('Horse Chestnut'); }
   scene.add(canopyMesh);
 }
 function shrinkTree(i, frac){
@@ -240,6 +265,56 @@ function shrinkTree(i, frac){
   dummy.rotation.y = 0; dummy.updateMatrix();
   canopyMesh.setMatrixAt(i, dummy.matrix);
   canopyMesh.instanceMatrix.needsUpdate = true;
+}
+
+/* ---------- conkers are seeds: misses grow horse chestnuts ---------- */
+const growing = [];
+let chestnutSp = -1, persistOk = false;
+let treeCapacity = 0;
+function plantSapling(x, z){
+  const i = treeState.length;
+  if(i >= treeCapacity) return;
+  const y = heightAt(x, z);
+  if(y < waterLevel()) { burst(new THREE.Vector3(x, waterLevel()+1, z), 6, CYAN, 8, 5); return; }   // splash, no tree
+  const t = {x, z, y, r: 3.2, h: 7, sp: chestnutSp, alive: true, grown: true};
+  treeState.push(t);
+  canopyMesh.count = treeState.length;
+  canopyMesh.setColorAt(i, new THREE.Color(0x39ff9c));
+  canopyMesh.instanceColor.needsUpdate = true;
+  growing.push({i, t: 0});
+  shrinkTree(i, 0.06);
+  aliveTrees++;
+  feed('>> SAPLING TAKING ROOT');
+}
+function updateGrowing(dt){
+  for(let k = growing.length-1; k >= 0; k--){
+    const g = growing[k]; g.t += dt/25;                 // ~25s to full size
+    if(!treeState[g.i].alive){ growing.splice(k,1); continue; }
+    shrinkTree(g.i, Math.min(1, 0.06 + g.t*0.94));
+    if(g.t >= 1) growing.splice(k,1);
+  }
+}
+/* persistent forest: deaths scar, plantings heal (full mode only, lite reindexes) */
+function saveForest(){
+  if(!persistOk) return;
+  try{
+    const dead = []; const grown = [];
+    treeState.forEach((t,i)=>{ if(t.grown){ if(t.alive) grown.push([Math.round(t.x),Math.round(t.z)]); }
+                               else if(!t.alive) dead.push(i); });
+    localStorage.setItem('tftt-forest', JSON.stringify({dead: dead.slice(0,5000), grown: grown.slice(0,1500)}));
+  }catch(e){}
+}
+function loadForest(){
+  if(!persistOk) return;
+  try{
+    const f = JSON.parse(localStorage.getItem('tftt-forest') || 'null');
+    if(!f) return;
+    for(const i of f.dead||[]) if(treeState[i] && !treeState[i].grown){ treeState[i].alive=false; aliveTrees--; shrinkTree(i,0.01); }
+    for(const [x,z] of f.grown||[]) plantSapling(x, z);
+    for(const g of growing) g.t = 1;                     // restored trees arrive full-grown
+    updateGrowing(0.001);
+    if((f.dead||[]).length) feed('>> THE FOREST REMEMBERS: ' + f.dead.length + ' SCARS');
+  }catch(e){}
 }
 
 /* ---------- landmarks: vector beacons ---------- */
@@ -256,6 +331,51 @@ function textSprite(msg, scale=1, col='#00ff66'){
   x.fillText(msg, 256, 60);
   const s = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c), transparent:true, depthWrite:false}));
   s.scale.set(230*scale, 43*scale, 1); return s;
+}
+/* Council Control: the comms mast at Cabot Tower; fleet orders are radioed from here */
+const CONTROL = { x: 358290-E0, z: -(172730-N0) };
+let controlBeacon;
+const transmissions = [];
+function buildControl(){
+  const y = heightAt(CONTROL.x, CONTROL.z);
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 2.2, 110, 4, 6, true),
+    new THREE.MeshBasicMaterial({color:AMBER, wireframe:true, transparent:true, opacity:0.5}));
+  mast.position.set(CONTROL.x, y+55, CONTROL.z); scene.add(mast);
+  controlBeacon = new THREE.Mesh(new THREE.OctahedronGeometry(2.4),
+    new THREE.MeshBasicMaterial({color:AMBER}));
+  controlBeacon.position.set(CONTROL.x, y+112, CONTROL.z); scene.add(controlBeacon);
+  const s2 = textSprite('COUNCIL CONTROL', 0.9, '#ffb000'); s2.position.set(CONTROL.x, y+128, CONTROL.z); scene.add(s2);
+}
+function orderCode(){
+  const hex = () => '0123456789ABCDEF'[(Math.random()*16)|0];
+  return hex()+hex()+' '+hex()+hex();
+}
+function transmit(tank, label){
+  const code = orderCode();
+  feed('>> TX ' + tank.name + ' :: ' + code + ' ' + label);
+  sfx.databurst();
+  const from = new THREE.Vector3(CONTROL.x, heightAt(CONTROL.x,CONTROL.z)+110, CONTROL.z);
+  const pip = new THREE.Mesh(new THREE.OctahedronGeometry(1.6),
+    new THREE.MeshBasicMaterial({color:AMBER, depthTest:false, transparent:true}));
+  pip.renderOrder = 10; pip.position.copy(from); scene.add(pip);
+  transmissions.push({pip, from, tank, t:0});
+}
+function updateTransmissions(dt){
+  for(let i=transmissions.length-1;i>=0;i--){
+    const tx = transmissions[i]; tx.t += dt*1.3;
+    if(tx.t >= 1){
+      scene.remove(tx.pip);
+      burst(new THREE.Vector3(tx.tank.x, heightAt(tx.tank.x,tx.tank.z)+8, tx.tank.z), 10, AMBER, 10, 8);
+      feed('>> ' + tx.tank.name + ' ACK');
+      sfx.ack();
+      transmissions.splice(i,1); continue;
+    }
+    const to = new THREE.Vector3(tx.tank.x, heightAt(tx.tank.x,tx.tank.z)+10, tx.tank.z);
+    tx.pip.position.lerpVectors(tx.from, to, tx.t);
+    tx.pip.position.y += Math.sin(tx.t*Math.PI)*60;   // ballistic radio arc, obviously
+    tx.pip.rotation.y += dt*8;
+    tx.pip.scale.setScalar(1 + Math.sin(tx.t*40)*0.3);
+  }
 }
 function buildLandmarks(){
   for(const [name,e,n] of LANDMARKS){
@@ -276,15 +396,31 @@ class Tank {
     this.name = name; this.x = e-E0; this.z = -(n-N0); this.heading = heading;
     this.speed = 0; this.cool = 0; this.waypoint = null;
     this.g = new THREE.Group();
-    const hull = vectorize(new THREE.BoxGeometry(4.4,1.6,6.4), PHOS); hull.position.y = 1.5; this.g.add(hull);
+    // BigTrak silhouette: low rear deck + long sloped nose wedge + ribbed flanks
+    const deck = vectorize(new THREE.BoxGeometry(4.2,1.7,3.4), PHOS); deck.position.set(0,1.6,-1.6); this.g.add(deck);
+    const nose = vectorize(new THREE.BoxGeometry(3.6,1.1,4.2), PHOS);
+    nose.position.set(0,1.35,1.6); nose.rotation.x = 0.18; this.g.add(nose);
     for(const sx of [-1,1]){
-      const tr = vectorize(new THREE.BoxGeometry(1.1,1.3,7), PHOS, 0.7);
-      tr.position.set(sx*2.4, 0.85, 0); this.g.add(tr);
+      const tr = vectorize(new THREE.BoxGeometry(1.2,1.4,6.6), PHOS, 0.7);
+      tr.position.set(sx*2.5, 0.85, -0.2); this.g.add(tr);
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.22,6,5), new THREE.MeshBasicMaterial({color:0xffffff}));
+      lamp.position.set(sx*1.1, 1.45, 3.7); this.g.add(lamp);   // headlights
     }
-    this.turret = new THREE.Group(); this.turret.position.y = 2.65; this.g.add(this.turret);
-    this.turret.add(vectorize(new THREE.CylinderGeometry(1.5,1.7,1.1,8), PHOS));
+    // the keypad: BigTrak's soul, as a glowing sprite on the rear deck
+    const kp = document.createElement('canvas'); kp.width = 96; kp.height = 128;
+    const kx = kp.getContext('2d'); kx.fillStyle = '#021006'; kx.fillRect(0,0,96,128);
+    for(let r=0;r<4;r++) for(let c=0;c<3;c++){
+      kx.fillStyle = (r===3&&c===1) ? '#ffb000' : '#00ff66';
+      kx.shadowColor = kx.fillStyle; kx.shadowBlur = 6;
+      kx.fillRect(10+c*28, 8+r*30, 20, 22);
+    }
+    const keypad = new THREE.Mesh(new THREE.PlaneGeometry(1.9,2.5),
+      new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(kp)}));
+    keypad.rotation.x = -Math.PI/2 + 0.12; keypad.position.set(0, 2.5, -1.7); this.g.add(keypad);
+    this.turret = new THREE.Group(); this.turret.position.set(0, 2.6, -0.6); this.g.add(this.turret);
+    this.turret.add(vectorize(new THREE.CylinderGeometry(1.2,1.4,0.9,8), PHOS));
     const barrel = vectorize(new THREE.CylinderGeometry(0.22,0.3,5.2,6), PHOS);
-    barrel.rotation.x = Math.PI/2; barrel.position.set(0,0.25,2.8); this.turret.add(barrel);
+    barrel.rotation.x = Math.PI/2; barrel.position.set(0,0.2,2.8); this.turret.add(barrel);
     this.tag = textSprite(name, 0.12); this.tag.position.y = 5.6; this.g.add(this.tag);
     this.g.scale.setScalar(2.0);
     // map blip: flat triangle, always visible, scaled with map zoom
@@ -387,6 +523,8 @@ function burst(p, n, col, spread=14, up=10){
 /* ---------- audio (chip synth) ---------- */
 const sfx = (()=>{
   let ac, engOsc, engGain, engFilt;
+  // exposed for the radio
+  Object.defineProperty(window, '__tfttAC', { get(){ return ac; } });
   function init(){
     ac = new (window.AudioContext||window.webkitAudioContext)();
     engOsc = ac.createOscillator(); engOsc.type='sawtooth'; engOsc.frequency.value=42;
@@ -413,6 +551,95 @@ const sfx = (()=>{
     fanfare(){ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>blip(f,f,0.16,'triangle',0.14), i*110)); },
     lost(){ blip(400,90,0.8,'sawtooth',0.18); },
     select(){ blip(660,990,0.09,'square',0.1); },
+    databurst(){ for(let i=0;i<7;i++) setTimeout(()=>blip(900+Math.random()*900, 700, 0.04, 'square', 0.09), i*45); },
+    ack(){ blip(1200,1200,0.07,'square',0.1); setTimeout(()=>blip(1600,1600,0.1,'square',0.1), 90); },
+  };
+})();
+
+/* ---------- the radio: three stations and a lot of static ---------- */
+const radio = (()=>{
+  const STATIONS = { council: 91.5, numbers: 96.2, pirate: 103.7 };
+  let on = false, freq = 100.0, ac = null;
+  let staticSrc = null, staticGain = null, wubOsc = null, wubLfo = null, wubGain = null;
+  let speakT = 0;
+  function ensureNodes(ctx){
+    ac = ctx;
+    const len = ac.sampleRate * 1.2, buf = ac.createBuffer(1, len, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i] = Math.random()*2-1;
+    staticSrc = ac.createBufferSource(); staticSrc.buffer = buf; staticSrc.loop = true;
+    staticGain = ac.createGain(); staticGain.gain.value = 0;
+    staticSrc.connect(staticGain).connect(ac.destination); staticSrc.start();
+    wubOsc = ac.createOscillator(); wubOsc.type='sawtooth'; wubOsc.frequency.value = 55;
+    wubLfo = ac.createOscillator(); wubLfo.frequency.value = 2.2;
+    const lfoGain = ac.createGain(); lfoGain.gain.value = 600;
+    const wubFilt = ac.createBiquadFilter(); wubFilt.type='lowpass'; wubFilt.frequency.value = 300;
+    wubLfo.connect(lfoGain).connect(wubFilt.frequency);
+    wubGain = ac.createGain(); wubGain.gain.value = 0;
+    wubOsc.connect(wubFilt).connect(wubGain).connect(ac.destination);
+    wubOsc.start(); wubLfo.start();
+  }
+  function voice(){
+    try{
+      const vs = speechSynthesis.getVoices();
+      return vs.find(v=>/en[-_]GB/i.test(v.lang)) || vs.find(v=>/^en/i.test(v.lang)) || null;
+    }catch(e){ return null; }
+  }
+  function say(text, pitch=1, rate=1, vol=0.9){
+    try{
+      if(!('speechSynthesis' in window)) return;
+      const u = new SpeechSynthesisUtterance(text);
+      const v = voice(); if(v) u.voice = v;
+      u.pitch = pitch; u.rate = rate; u.volume = vol;
+      speechSynthesis.speak(u);
+    }catch(e){}
+  }
+  function strength(f0){ return Math.max(0, 1 - Math.abs(freq - f0)/0.8); }
+  function tuned(){
+    let best = null, bs = 0.45;
+    for(const [name, f0] of Object.entries(STATIONS)){
+      const st = strength(f0); if(st > bs){ bs = st; best = name; }
+    }
+    return best;
+  }
+  return {
+    toggle(ctx){
+      on = !on;
+      if(on && ctx && !staticSrc) ensureNodes(ctx);
+      if(!on){ try{ speechSynthesis.cancel(); }catch(e){}
+        if(staticGain) staticGain.gain.value = 0; if(wubGain) wubGain.gain.value = 0; }
+      return on;
+    },
+    setFreq(f){ freq = f; try{ speechSynthesis.cancel(); }catch(e){} speakT = 1.5; },
+    label(){
+      const st = tuned();
+      const names = {council:'COUNCIL FM', numbers:'◇ ◇ ◇', pirate:'DRAGON PIRATE'};
+      return freq.toFixed(1) + ' FM ' + (st ? '· ' + names[st] : '· STATIC');
+    },
+    speakPop(line){ say(line.toLowerCase(), 1.8, 1.15, 0.55); },   // dragons always heckle aloud
+    update(dt, ctx){
+      if(!on || !staticGain) return;
+      const st = tuned();
+      staticGain.gain.value = st ? 0.012 : 0.05;
+      wubGain.gain.value = (st === 'pirate') ? 0.07 * strength(STATIONS.pirate) : 0;
+      speakT -= dt;
+      if(speakT > 0) return;
+      if(st === 'council'){
+        say('Council F M. ' + HEADLINES[(headlineIdx + HEADLINES.length - 1) % HEADLINES.length], 0.9, 1.0);
+        speakT = 13;
+      } else if(st === 'numbers'){
+        const T = activeTank(); let bearing = null, bd = 1e12;
+        for(const d of dragons){ if(d.state==='dead') continue;
+          const dd = (d.g.position.x-T.x)**2 + (d.g.position.z-T.z)**2;
+          if(dd<bd){ bd=dd; bearing = (Math.atan2(d.g.position.x-T.x, d.g.position.z-T.z)*180/Math.PI+360)%360; } }
+        const digits = bearing===null ? '0 0 0' : String(Math.round(bearing)).padStart(3,'0').split('').join('. ');
+        say(digits + '.', 0.7, 0.8);
+        speakT = 8;
+      } else if(st === 'pirate'){
+        say(QUIPS[(Math.random()*QUIPS.length)|0].toLowerCase(), 1.9, 1.1, 0.7);
+        speakT = 9;
+      } else speakT = 2;
+    },
   };
 })();
 
@@ -460,7 +687,7 @@ function buildFleetHud(){
 function jackIn(i){
   state.active = i; state.selected = -1; sfx.select();
   buildFleetHud();
-  feed('>> JACKED INTO ' + tanks[i].name);
+  feed('>> TX ' + tanks[i].name + ' :: MANUAL OVERRIDE 99');
   if(state.view === 'map') setView('drive');
 }
 function updateHud(){
@@ -468,6 +695,7 @@ function updateHud(){
   $('wave').textContent = state.wave;
   $('treesleft').textContent = aliveTrees.toLocaleString();
   $('treefill').style.width = Math.max(0, 100*(1 - state.lost/state.lostLimit)) + '%';
+  $('tide').textContent = (tideRising() ? '▲ RISING ' : '▼ EBBING ') + (waterLevel()/EXAG).toFixed(1) + 'M';
   const dirs = ['N','NE','E','SE','S','SW','W','NW'];
   const T = activeTank();
   const h = ((-T.heading)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
@@ -481,6 +709,8 @@ function setView(v){
   $('stick').style.display = drive ? '' : 'none';
   $('fire').style.display = drive ? '' : 'none';
   $('honk').style.display = drive ? '' : 'none';
+  $('radiobtn').style.display = drive ? '' : 'none';
+  if(!drive) $('radio').classList.add('hidden');
   $('maphint').style.display = drive ? 'none' : '';
   $('mapbtn').textContent = drive ? '▦' : '▶';
   for(const t of tanks) t.blip.visible = !drive;
@@ -521,12 +751,22 @@ $('honk').addEventListener('touchstart', e=>{ doHonk(); e.preventDefault(); }, {
 $('fire').addEventListener('mousedown', ()=>input.fire=true);
 addEventListener('mouseup', ()=>input.fire=false);
 $('honk').addEventListener('mousedown', doHonk);
+function toggleRadio(){
+  const on = radio.toggle(window.__tfttAC);
+  $('radio').classList.toggle('hidden', !on);
+  $('radiobtn').style.color = on ? '#ffb000' : '';
+  if(on){ radio.setFreq($('dial').value/10); $('freqlabel').textContent = radio.label(); }
+}
+$('radiobtn').addEventListener('touchstart', e=>{ toggleRadio(); e.preventDefault(); }, {passive:false});
+$('radiobtn').addEventListener('mousedown', toggleRadio);
+$('dial').addEventListener('input', ()=>{ radio.setFreq($('dial').value/10); $('freqlabel').textContent = radio.label(); });
 
 const keys = {};
 addEventListener('keydown', e=>{
   keys[e.code]=true;
   if(e.code==='Space'){ input.fire=true; e.preventDefault(); }
   if(e.code==='KeyH') doHonk();
+  if(e.code==='KeyR') toggleRadio();
   if(e.code==='KeyM') setView(state.view==='drive' ? 'map' : 'drive');
   if(e.code==='Digit1') jackIn(0);
   if(e.code==='Digit2') jackIn(1);
@@ -567,7 +807,7 @@ function doHonk(){
       const t = tanks[state.selected];
       t.waypoint = {x:THREE.MathUtils.clamp(p.x,-WORLD/2+80,WORLD/2-80),
                     z:THREE.MathUtils.clamp(p.z,-WORLD/2+80,WORLD/2-80)};
-      sfx.select(); feed('>> ' + t.name + ' MOVING OUT');
+      transmit(t, 'GO');
     }
   }
   addEventListener('pointerdown', e=>{
@@ -605,6 +845,7 @@ function doHonk(){
 
 /* ---------- waves ---------- */
 function startWave(){
+  saveForest();
   state.wave++; state.speedMul = 1 + (state.wave-1)*0.09;
   state.dragonsToSpawn = 2 + state.wave;
   banner('// WAVE ' + state.wave + ' //');
@@ -632,7 +873,10 @@ function updateTank(T, dt, isPlayer){
     }
   }
   // snappier drive model: quick spool-up, tight low-speed turns
-  const targetSpeed = fwd * 34;
+  const flooded = heightAt(T.x, T.z) < waterLevel();
+  const targetSpeed = fwd * (flooded ? 11 : 34);
+  if(flooded && Math.abs(T.speed) > 3 && Math.random() < dt*4)
+    burst(new THREE.Vector3(T.x, waterLevel()+0.5, T.z), 3, CYAN, 7, 5);
   T.speed += (targetSpeed - T.speed) * Math.min(1, dt*4.5);
   T.heading += turn * dt * (2.3 - Math.min(1,Math.abs(T.speed)/45)) * (T.speed<-0.5?-1:1);
   const half = WORLD/2 - 60;
@@ -681,6 +925,13 @@ function tick(){
 
   let activeY = 0;
   tanks.forEach((T,i)=>{ const y = updateTank(T, dt, i===state.active); if(i===state.active) activeY = y; });
+  updateTransmissions(dt);
+  updateGrowing(dt);
+  radio.update(dt);
+  tideT += dt;
+  if(waterMesh){ waterMesh.position.y = waterLevel();
+    waterMesh.material.opacity = 0.3 + 0.12*Math.sin(tideT*1.7); }
+  if(controlBeacon) controlBeacon.rotation.y += dt*1.5;
   sfx.engine(state.view==='drive' ? activeTank().speed : 0);
 
   /* conkers */
@@ -693,7 +944,9 @@ function tick(){
       if(d.state!=='dead' && c.m.position.distanceTo(d.g.position) < 9){
         d.state='dead'; d.deadT = 1.4; state.score += 10;
         sfx.pop(); burst(d.g.position, 24, ENEMY, 24, 16); burst(d.g.position, 14, PHOS, 16, 12);
-        dragonSay(d, POPLINES[(Math.random()*POPLINES.length)|0], 1.2);
+        const popline = POPLINES[(Math.random()*POPLINES.length)|0];
+        dragonSay(d, popline, 1.2);
+        radio.speakPop(popline);
         if(d.target>=0 && treeState[d.target]){
           feed('>> SAVED A ' + TREES.species[treeState[d.target].sp].toUpperCase() + ' +10');
           treeState[d.target].busy = false;
@@ -702,7 +955,7 @@ function tick(){
       }
     }
     if(hit || c.life<=0 || c.m.position.y < heightAt(c.m.position.x, c.m.position.z)){
-      if(!hit && c.life>0) burst(c.m.position, 8, PHOS, 8, 6);
+      if(!hit && c.life>0){ burst(c.m.position, 8, PHOS, 8, 6); plantSapling(c.m.position.x, c.m.position.z); }
       scene.remove(c.m); conkers.splice(i,1);
     }
   }
@@ -808,6 +1061,7 @@ function tick(){
 }
 
 function gameOver(){
+  saveForest();
   state.running = false;
   $('finalstats').innerHTML = `SCORE <b style="color:#00ff66">${state.score}</b> · WAVES: ${state.wave}` +
     ` · TREES LOST: ${state.lost.toLocaleString()} OF ${totalTrees.toLocaleString()}`;
@@ -833,13 +1087,14 @@ addEventListener('resize', ()=>{
     note.textContent = 'PLANTING ALL THE REAL TREES…';
     TREES = await loadJson('data/trees-bristol.json');
     $('ntrees').textContent = TREES.trees.length.toLocaleString();
-    buildTerrain(); buildTrees(); buildLandmarks();
+    buildTerrain(); buildTrees(); buildLandmarks(); buildControl();
     TANK_NAMES.forEach((nm,i)=> tanks.push(new Tank(nm, ...TANK_SPAWNS[i])));
     buildFleetHud();
     const T = activeTank();
     T.g.position.set(T.x, heightAt(T.x,T.z), T.z);
     camera.position.set(T.x-60, heightAt(T.x,T.z)+45, T.z-60);
     camera.lookAt(T.g.position);
+    loadForest();
     renderer.render(scene, camera);
     note.textContent = 'ANGERING ' + TREES.species.length + ' SPECIES WORTH OF DRAGONS… READY';
     btn.disabled = false; btn.style.opacity = 1;
@@ -856,7 +1111,7 @@ addEventListener('resize', ()=>{
   });
 })();
 tick();
-window.__tftt = { state, dragons, tanks, get aliveTrees(){return aliveTrees;} };  // headless playtest hook
+window.__tftt = { state, dragons, tanks, plantSapling, heightAt, waterLevel, get aliveTrees(){return aliveTrees;} };  // headless playtest hook
 </script>
 </body>
 </html>
