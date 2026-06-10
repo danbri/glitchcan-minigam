@@ -81,6 +81,9 @@
   #radio input[type=range]{width:100%;accent-color:#00ff66}
   #radio .stations{display:flex;justify-content:space-between;font-size:9px;color:#5fbf8f;letter-spacing:.5px;margin-top:3px}
   #mapbtn{top:calc(var(--safe-t) + 30px);right:calc(var(--safe-r) + 8px);width:46px;height:46px;font-size:19px;position:fixed;border-radius:8px}
+  #rose{position:fixed;top:calc(var(--safe-t) + 84px);right:calc(var(--safe-r) + 8px);width:62px;height:62px;z-index:5;
+    pointer-events:none;opacity:.9}
+  #rose svg{filter:drop-shadow(0 0 5px rgba(0,255,102,.7))}
   #pausebtn{top:calc(var(--safe-t) + 30px);right:calc(var(--safe-r) + 62px);width:46px;height:46px;font-size:15px;position:fixed;border-radius:8px}
   @media (min-width:900px) and (hover:hover){ #stick,#fire,#honk{opacity:.5} }
 
@@ -108,8 +111,9 @@
 <div id="ticker"><span id="tickertext">&gt;&gt; BREAKING: DRAGONS RETURN TO BRISTOL — COUNCIL DEPLOYS BIGTRAK FLEET &lt;&lt;</span></div>
 <div id="stats">
   SCORE <b id="score">0</b> WAVE <b id="wave">1</b><br>
-  TREES <b id="treesleft">—</b> <span id="compass" style="float:right">N</span><br>
-  <span style="font-size:10px">TIDE <b id="tide">—</b></span>
+  TREES <b id="treesleft">—</b><br>
+  <span style="font-size:10px">TIDE <b id="tide">—</b></span><br>
+  <span style="font-size:10px;color:#39c98a" id="loc">—</span>
   <div id="treebar"><div id="treefill"></div></div>
 </div>
 <div id="fleet"></div>
@@ -127,6 +131,18 @@
   <div class="stations"><span>91.5 COUNCIL</span><span>96.2 ◇◇◇</span><span>103.7 PIRATE</span></div>
 </div>
 <div id="mapbtn" class="btn">▦</div>
+<div id="rose"><svg viewBox="0 0 100 100" width="62" height="62">
+  <g id="roseg">
+    <circle cx="50" cy="50" r="44" fill="rgba(1,12,6,.6)" stroke="#00ff66" stroke-width="1.5" opacity="0.9"/>
+    <polygon points="50,12 56,50 50,46 44,50" fill="#00ff66"/>
+    <polygon points="50,88 56,50 50,54 44,50" fill="#0a5c33"/>
+    <line x1="14" y1="50" x2="86" y2="50" stroke="#0a5c33" stroke-width="1.5"/>
+    <text x="50" y="10" text-anchor="middle" font-size="13" font-weight="700" fill="#00ff66" font-family="monospace">N</text>
+    <text x="50" y="99" text-anchor="middle" font-size="10" fill="#39c98a" font-family="monospace">S</text>
+    <text x="3" y="54" font-size="10" fill="#39c98a" font-family="monospace">W</text>
+    <text x="90" y="54" font-size="10" fill="#39c98a" font-family="monospace">E</text>
+  </g>
+</svg></div>
 <div id="pausebtn" class="btn">‖</div>
 
 <div id="splash" class="overlay">
@@ -214,9 +230,14 @@ function buildTerrain(){
   scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({color:0x01140a})));   // occluder mass
   const grid = new THREE.Mesh(g, new THREE.MeshBasicMaterial({wireframe:true, color:PHOS, transparent:true, opacity:0.30}));
   grid.position.y = 0.4; scene.add(grid);
-  waterMesh = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD, 40, 40),
-    new THREE.MeshBasicMaterial({wireframe:true, color:CYAN, transparent:true, opacity:0.35}));
-  waterMesh.rotation.x = -Math.PI/2; waterMesh.position.y = waterLevel(); scene.add(waterMesh);  // the tidal Avon
+  waterMesh = new THREE.Group();
+  const wFill = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD),
+    new THREE.MeshBasicMaterial({color:0x1170d8, transparent:true, opacity:0.55, depthWrite:false}));
+  wFill.rotation.x = -Math.PI/2; waterMesh.add(wFill);   // solid blue: the DEM carves the real Avon/harbour shapes
+  const wWire = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD, 40, 40),
+    new THREE.MeshBasicMaterial({wireframe:true, color:CYAN, transparent:true, opacity:0.3}));
+  wWire.rotation.x = -Math.PI/2; wWire.position.y = 0.6; waterMesh.add(wWire);
+  waterMesh.position.y = waterLevel(); scene.add(waterMesh);  // the tidal Avon
 }
 /* Bristol has one of the world's highest tidal ranges; the game tide cycles ~3 min */
 let waterMesh = null, tideT = 0;
@@ -749,6 +770,7 @@ const state = {
 const input = {x:0, y:0, fire:false};
 const activeTank = () => tanks[state.active];
 
+let locT = 0;
 /* ---------- HUD ---------- */
 const HEADLINES = [
   "DRAGON CLAIMS BRISTOL'S TREES ARE 'BASICALLY FREE SALAD'",
@@ -793,10 +815,22 @@ function updateHud(){
   $('treesleft').textContent = aliveTrees.toLocaleString();
   $('treefill').style.width = Math.max(0, 100*(1 - state.lost/state.lostLimit)) + '%';
   $('tide').textContent = (tideRising() ? '▲ RISING ' : '▼ EBBING ') + (waterLevel()/EXAG).toFixed(1) + 'M';
-  const dirs = ['N','NE','E','SE','S','SW','W','NW'];
   const T = activeTank();
-  const h = ((-T.heading)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
-  $('compass').textContent = dirs[Math.round(h/(Math.PI/4))%8];
+  // rose: keep N pointing at true world north on screen
+  const roseAngle = state.view === 'drive' ? T.heading * 180/Math.PI : 0;
+  document.getElementById('roseg').setAttribute('transform', 'rotate(' + roseAngle.toFixed(1) + ' 50 50)');
+  // discreet location: nearest landmark to the active tank (or map centre)
+  locT -= 1/60;
+  if(locT <= 0){
+    locT = 1;
+    const px = state.view==='drive' ? T.x : state.map.cx, pz = state.view==='drive' ? T.z : state.map.cz;
+    let best = null, bd = 1e12;
+    for(const [name,e,n] of LANDMARKS){
+      const d = Math.hypot(e-E0-px, -(n-N0)-pz);
+      if(d < bd){ bd = d; best = name; }
+    }
+    $('loc').textContent = bd < 250 ? 'AT ' + best : 'NR ' + best + ' ' + (bd/1000).toFixed(1) + 'KM';
+  }
 }
 
 /* ---------- view switching ---------- */
@@ -1030,7 +1064,7 @@ function tick(){
   radio.update(dt);
   tideT += dt;
   if(waterMesh){ waterMesh.position.y = waterLevel();
-    waterMesh.material.opacity = 0.3 + 0.12*Math.sin(tideT*1.7); }
+    waterMesh.children[1].material.opacity = 0.22 + 0.12*Math.sin(tideT*1.7); }
   if(controlBeacon) controlBeacon.rotation.y += dt*1.5;
   sfx.engine(state.view==='drive' ? activeTank().speed : 0);
 
