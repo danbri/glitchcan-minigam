@@ -15,6 +15,8 @@
   html,body{height:100%;overflow:hidden;background:#071610;font-family:ui-rounded,'Segoe UI',system-ui,sans-serif;
     user-select:none;-webkit-user-select:none;touch-action:none;color:var(--ink)}
   canvas#gl{position:fixed;inset:0;display:block}
+  #vignette{position:fixed;inset:0;pointer-events:none;z-index:1;
+    background:radial-gradient(ellipse at 50% 40%, transparent 52%, rgba(6,18,12,.42) 100%)}
 
   /* ---------- HUD ---------- */
   #ticker{position:fixed;top:var(--safe-t);left:0;right:0;height:26px;overflow:hidden;
@@ -75,6 +77,7 @@
 </head>
 <body>
 <canvas id="gl"></canvas>
+<div id="vignette"></div>
 
 <div id="ticker"><span id="tickertext">🚨 BREAKING: DRAGONS RETURN TO BRISTOL — COUNCIL DEPLOYS THE BIGTRAK 🚨</span></div>
 <div id="stats">
@@ -155,12 +158,12 @@ const renderer = new THREE.WebGLRenderer({canvas:$('gl'), antialias:true, powerP
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x10243a);
-scene.fog = new THREE.Fog(0x18324a, 700, 2600);
+scene.background = new THREE.Color(0x142c40);
+scene.fog = new THREE.Fog(0x4a6452, 900, 3000);
 const camera = new THREE.PerspectiveCamera(62, innerWidth/innerHeight, 0.5, 4000);
 
-scene.add(new THREE.HemisphereLight(0xbfe8ff, 0x1c3a26, 2.7));
-const sun = new THREE.DirectionalLight(0xffd9a0, 3.4);
+scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x274a2e, 2.1));
+const sun = new THREE.DirectionalLight(0xffe0b0, 4.4);
 sun.position.set(-1200, 900, -600); scene.add(sun);
 
 /* golden-hour sky dome */
@@ -183,9 +186,9 @@ function buildTerrain(){
   const g = new THREE.PlaneGeometry(WORLD, WORLD, seg, seg);
   g.rotateX(-Math.PI/2);                       // plane (x,y) -> world (x,0,-y)
   const pos = g.attributes.position, cols = [];
-  const cWater = new THREE.Color(0x1d5f86), cQuay = new THREE.Color(0x77705a),
-        cGrass = new THREE.Color(0x2e7d44), cHill = new THREE.Color(0x49975a),
-        cStone = new THREE.Color(0x9aa08a);
+  const cWater = new THREE.Color(0x1f6e9e), cQuay = new THREE.Color(0x8a7f60),
+        cGrass = new THREE.Color(0x3c9a54), cHill = new THREE.Color(0x63b873),
+        cStone = new THREE.Color(0xb0b496);
   for(let i=0;i<pos.count;i++){
     const h = heightAt(pos.getX(i), pos.getZ(i));
     pos.setY(i, h);
@@ -194,7 +197,7 @@ function buildTerrain(){
     else if(hm < 11)  c = cQuay.clone().lerp(cGrass,(hm-8.5)/2.5);
     else if(hm < 45)  c = cGrass.clone().lerp(cHill,(hm-11)/34);
     else              c = cHill.clone().lerp(cStone, Math.min(1,(hm-45)/55));
-    c = c.clone().multiplyScalar(0.92 + 0.08*Math.sin(i*7.13));   // subtle texture
+    c = c.clone().multiplyScalar(0.95 + 0.05*Math.sin(i*7.13));   // subtle texture
     cols.push(c.r,c.g,c.b);
   }
   g.setAttribute('color', new THREE.Float32BufferAttribute(cols,3));
@@ -202,6 +205,10 @@ function buildTerrain(){
   scene.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({vertexColors:true})));
   const wf = new THREE.Mesh(g, new THREE.MeshBasicMaterial({wireframe:true, color:0x39ff9c, transparent:true, opacity:0.05}));
   wf.position.y = 0.25; scene.add(wf);          // vector-heritage glow grid
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD),
+    new THREE.MeshPhongMaterial({color:0x2e8fc4, shininess:160, specular:0xbfe8ff,
+      transparent:true, opacity:0.62, depthWrite:false}));
+  water.rotation.x = -Math.PI/2; water.position.y = 8.7*EXAG; scene.add(water); // Avon & harbour
 }
 
 /* ---------- trees (instanced, all 35k of them) ---------- */
@@ -280,7 +287,8 @@ function buildLandmarks(){
 const tank = new THREE.Group();
 let turret, barrel, flag;
 function buildTank(){
-  const hullMat = new THREE.MeshLambertMaterial({color:0x3e7d4f});
+  const hullMat = new THREE.MeshLambertMaterial({color:0x577d3e});
+  const turretMat = new THREE.MeshLambertMaterial({color:0x40612e});
   const darkMat = new THREE.MeshLambertMaterial({color:0x22322a});
   const hull = new THREE.Mesh(new THREE.BoxGeometry(4.4,1.6,6.4), hullMat); hull.position.y=1.5; tank.add(hull);
   for(const sx of [-1,1]){
@@ -288,7 +296,7 @@ function buildTank(){
     tr.position.set(sx*2.4, 0.85, 0); tank.add(tr);
   }
   turret = new THREE.Group(); turret.position.y = 2.65; tank.add(turret);
-  turret.add(new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.7,1.1,10), hullMat));
+  turret.add(new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.7,1.1,10), turretMat));
   barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.3,5.2,8), darkMat);
   barrel.rotation.x = Math.PI/2; barrel.position.set(0,0.25,2.8); turret.add(barrel);
   const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,2.6,4), darkMat);
@@ -305,21 +313,21 @@ const POPLINES = ['rude!','ouch','I was EATING that','un-be-leaf-able','conkered
 const dragons = [];
 function makeDragon(tint){
   const g = new THREE.Group();
-  const mat = new THREE.MeshLambertMaterial({color:tint});
+  const mat = new THREE.MeshLambertMaterial({color:tint, emissive:tint, emissiveIntensity:0.18});
   const body = new THREE.Mesh(new THREE.ConeGeometry(2.2,7,7), mat);
   body.rotation.x = Math.PI/2; g.add(body);
   const head = new THREE.Mesh(new THREE.SphereGeometry(1.9,8,7), mat); head.position.z = 4; g.add(head);
   for(const sx of [-1,1]){
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.65,8,6), new THREE.MeshBasicMaterial({color:0xffffff}));
     eye.position.set(sx*0.95, 0.9, 4.8); g.add(eye);
-    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.3,6,5), new THREE.MeshBasicMaterial({color:0x111111}));
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.3,6,5), new THREE.MeshBasicMaterial({color:0xff3030}));
     pupil.position.set(sx*0.95, 0.95, 5.35); g.add(pupil);
-    const wing = new THREE.Mesh(new THREE.PlaneGeometry(7,3.4),
+    const wing = new THREE.Mesh(new THREE.PlaneGeometry(9,4.2),
       new THREE.MeshLambertMaterial({color:tint, side:THREE.DoubleSide, transparent:true, opacity:0.9}));
     wing.position.set(sx*4.2, 0.8, 0); wing.rotation.z = sx*0.25; g.add(wing);
     wing.userData.side = sx; g.userData[sx<0?'wingL':'wingR'] = wing;
   }
-  const bubble = textSprite('', 0.9, '#ffe9a8'); bubble.position.set(0,6,2); bubble.visible=false; g.add(bubble);
+  const bubble = textSprite('', 0.11, '#ffe9a8'); bubble.position.set(0,5.5,1.5); bubble.visible=false; g.add(bubble);
   g.userData.bubble = bubble;
   return g;
 }
@@ -577,6 +585,7 @@ function tick(){
   for(let i=conkers.length-1;i>=0;i--){
     const c = conkers[i];
     c.v.y -= 80*dt; c.m.position.addScaledVector(c.v, dt); c.life -= dt;
+    burst(c.m.position, 1, 0xffa850, 1.5, 0.5);   // tracer
     let hit = false;
     for(const d of dragons){
       if(d.state!=='dead' && c.m.position.distanceTo(d.g.position) < 9){
