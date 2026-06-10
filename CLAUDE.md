@@ -99,7 +99,7 @@ GitHub Pages serves static files; no dynamic image selection.
 
 ## Tanks for the Trees (trees/) — June 2026
 `trees/tanks-for-the-trees.html` — mobile-first phosphor-vector tank defence over real Bristol data. Completes the trees/ lineage (Tesla Dragon & MUSK dragon games, bigtrak/3dtanky tank prototypes, Tankoff CodePen).
-- **Data (cached in-repo, reproducible):** `trees/data/elevation-bristol.json(.gz)` — 128×128 EU-DEM 25m grid via `trees/tools/fetch-elevation.mjs`; `trees/data/trees-bristol.json(.gz)` — 35,893 living trees / 115 species via `trees/tools/build-tree-data.mjs` (geometry + species ONLY — see Data Ethics rule above).
+- **Data (cached in-repo, reproducible):** `trees/data/elevation-bristol.json(.gz)` — 128×128 EU-DEM 25m grid via `trees/tools/fetch-elevation.mjs`; `trees/data/trees-bristol.json(.gz)` — 35,893 living trees / 115 species via `trees/tools/build-tree-data.mjs` (geometry + species ONLY — see Data Ethics rule above); `trees/data/roads-bristol.json(.gz)` — 2,493 OSM major-road/rail ways via `trees/tools/fetch-roads.mjs` (© OpenStreetMap contributors, ODbL; overpass-api.de needs a real User-Agent).
 - Coordinates: BNG (EPSG:27700) → world x=E−358500, z=−(N−173500); vertical exaggeration 1.6×.
 - Vendored `trees/vendor/three.module.min.js` (r169) — no CDN dependency.
 - Modes: drive (virtual joystick, auto-aiming turret) and strategic map (tap-select fleet of 3 AI tanks — BRUNEL/CABOT/BANKSY — waypoint orders, tap-again to jack in). `?lite` renders every 4th tree for low-end devices/CI. `window.__tftt` is the headless-playtest hook.

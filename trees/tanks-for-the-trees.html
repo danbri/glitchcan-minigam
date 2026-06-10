@@ -115,7 +115,7 @@
 <div id="fleet"></div>
 <div id="feed"></div>
 <div id="wavebanner"></div>
-<div id="maphint">TAP TANK TO SELECT · TAP GROUND TO ORDER · TAP SELECTED AGAIN TO JACK IN</div>
+<div id="maphint">TAP TANK · TAP GROUND TO ORDER · TAP AGAIN TO JACK IN · ZOOM IN FOR AERIAL</div>
 
 <div id="stick"><div id="knob"></div></div>
 <div id="fire" class="btn">⊕</div>
@@ -317,11 +317,108 @@ function loadForest(){
   }catch(e){}
 }
 
+/* ---------- the real roads (OSM, cached in-repo) ---------- */
+let ROADS = null;
+const FAMOUS = ['M32','A4','A38','A370','A4018','A420','A4044','PARK STREET','WHITELADIES ROAD',
+  'GLOUCESTER ROAD','QUEENS ROAD',"QUEEN'S ROAD",'TEMPLE WAY','HOTWELL ROAD','CORONATION ROAD','PORTWAY'];
+function buildRoads(){
+  if(!ROADS) return;
+  const styles = [
+    {color:AMBER, opacity:0.85},   // motorway/trunk
+    {color:PHOS,  opacity:0.75},   // primary
+    {color:PHOS,  opacity:0.30},   // secondary
+    {color:0x99bbcc, opacity:0.35},// rail
+  ];
+  const buckets = [[],[],[],[]];
+  const labelBest = new Map();   // label -> {len, mid}
+  for(const [cls, label, pts] of ROADS.roads){
+    const b = buckets[cls];
+    let length = 0;
+    for(let i=0;i<pts.length-1;i++){
+      const [e1,n1] = pts[i], [e2,n2] = pts[i+1];
+      const x1=e1-E0, z1=-(n1-N0), x2=e2-E0, z2=-(n2-N0);
+      b.push(x1, heightAt(x1,z1)+1.4, z1, x2, heightAt(x2,z2)+1.4, z2);
+      length += Math.hypot(e2-e1, n2-n1);
+    }
+    const L = (label||'').toUpperCase();
+    if(L && FAMOUS.some(f => L === f || L.startsWith(f+' ') || L.includes(f))){
+      const key = FAMOUS.find(f => L === f || L.startsWith(f+' ') || L.includes(f));
+      const cur = labelBest.get(key);
+      if(!cur || length > cur.len){
+        const mid = pts[(pts.length/2)|0];
+        labelBest.set(key, {len: length, e: mid[0], n: mid[1]});
+      }
+    }
+  }
+  buckets.forEach((b, cls)=>{
+    if(!b.length) return;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(b, 3));
+    scene.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial(
+      {color:styles[cls].color, transparent:true, opacity:styles[cls].opacity})));
+  });
+  for(const [name, v] of labelBest){
+    const x = v.e-E0, z = -(v.n-N0);
+    const sp = textSprite(name, 0.45, name.match(/^[MA][0-9]/) ? '#ffb000' : '#39c98a');
+    sp.position.set(x, heightAt(x,z)+34, z);
+    scene.add(sp);
+  }
+}
+
+/* ---------- Clifton Suspension Bridge: drivable ---------- */
+let bridge = null;
+function buildBridge(){
+  const cx = 356794-E0, cz = -(173017-N0);                 // span centre
+  const ux = Math.sin(1.31), uz = Math.cos(1.31)* -1;      // ~ENE axis in world (x east, z south)
+  const HALF = 107;                                        // tower-to-centre
+  const tE = {x: cx+ux*HALF, z: cz+uz*HALF}, tW = {x: cx-ux*HALF, z: cz-uz*HALF};
+  const deckY = (heightAt(tE.x,tE.z) + heightAt(tW.x,tW.z)) / 2 + 2;
+  const g = new THREE.Group();
+  // deck
+  const deck = vectorize(new THREE.BoxGeometry(9, 2.4, HALF*2+34), PHOS);
+  deck.position.set(cx, deckY-1.2, cz); deck.rotation.y = Math.atan2(ux, uz); g.add(deck);
+  // towers (the twin pierced towers, as wireframe)
+  for(const t of [tE, tW]){
+    const tw = vectorize(new THREE.BoxGeometry(10, 42, 7), PHOS);
+    tw.position.set(t.x, deckY+15, t.z); tw.rotation.y = Math.atan2(ux, uz); g.add(tw);
+  }
+  // chains: two catenaries per side + hangers
+  const chainH = 34, STEPS = 26;
+  for(const side of [-1, 1]){
+    const off = {x: -uz*side*4.2, z: ux*side*4.2};
+    const pts = [], hang = [];
+    for(let i=0;i<=STEPS;i++){
+      const t = i/STEPS, a = (t-0.5)*2;                    // -1..1
+      const x = cx + ux*(a*HALF) + off.x, z = cz + uz*(a*HALF) + off.z;
+      const y = deckY + 36 - (1-a*a)*chainH;               // tower-top to mid-dip
+      pts.push(new THREE.Vector3(x, y, z));
+      if(i%2===0 && y > deckY+1){ hang.push(x, y, z, x, deckY, z); }
+    }
+    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({color:PHOS})));
+    const hg = new THREE.BufferGeometry();
+    hg.setAttribute('position', new THREE.Float32BufferAttribute(hang, 3));
+    g.add(new THREE.LineSegments(hg, new THREE.LineBasicMaterial({color:PHOS, transparent:true, opacity:0.5})));
+  }
+  scene.add(g);
+  bridge = {cx, cz, ux, uz, half: HALF+17, width: 5.5, y: deckY};
+}
+function bridgeDeckY(x, z){
+  if(!bridge) return null;
+  const dx = x-bridge.cx, dz = z-bridge.cz;
+  const along = dx*bridge.ux + dz*bridge.uz;
+  const across = -dx*bridge.uz + dz*bridge.ux;
+  return (Math.abs(along) <= bridge.half && Math.abs(across) <= bridge.width) ? bridge.y : null;
+}
+
 /* ---------- landmarks: vector beacons ---------- */
 const LANDMARKS = [
-  ['CLIFTON BRIDGE', 356790, 173020], ['CABOT TOWER', 358290, 172730],
+  ['CLIFTON SUSPENSION BRIDGE', 356790, 173020], ['CABOT TOWER', 358290, 172730],
   ['TEMPLE MEADS', 360060, 172370], ['QUEEN SQUARE', 358950, 172850],
   ['CATHEDRAL', 358695, 172694], ['ASHTON COURT', 355560, 172140],
+  ['SS GREAT BRITAIN', 358144, 172427], ['WILLS MEMORIAL', 358498, 173150],
+  ['ST MARY REDCLIFFE', 360131, 172371], ['CASTLE PARK', 359572, 173073],
+  ['THE DOWNS', 357642, 174308],
 ];
 function textSprite(msg, scale=1, col='#00ff66'){
   const c = document.createElement('canvas'); c.width = 512; c.height = 96;
@@ -873,7 +970,8 @@ function updateTank(T, dt, isPlayer){
     }
   }
   // snappier drive model: quick spool-up, tight low-speed turns
-  const flooded = heightAt(T.x, T.z) < waterLevel();
+  const deckY = bridgeDeckY(T.x, T.z);
+  const flooded = deckY === null && heightAt(T.x, T.z) < waterLevel();
   const targetSpeed = fwd * (flooded ? 11 : 34);
   if(flooded && Math.abs(T.speed) > 3 && Math.random() < dt*4)
     burst(new THREE.Vector3(T.x, waterLevel()+0.5, T.z), 3, CYAN, 7, 5);
@@ -882,14 +980,16 @@ function updateTank(T, dt, isPlayer){
   const half = WORLD/2 - 60;
   T.x = THREE.MathUtils.clamp(T.x + Math.sin(T.heading)*T.speed*dt, -half, half);
   T.z = THREE.MathUtils.clamp(T.z + Math.cos(T.heading)*T.speed*dt, -half, half);
-  const ty = heightAt(T.x, T.z);
+  const ty = deckY !== null ? deckY : heightAt(T.x, T.z);
   T.g.position.set(T.x, ty, T.z);
   const ahead = heightAt(T.x+Math.sin(T.heading)*3.2, T.z+Math.cos(T.heading)*3.2);
   const behind = heightAt(T.x-Math.sin(T.heading)*3.2, T.z-Math.cos(T.heading)*3.2);
   const right = heightAt(T.x+Math.cos(T.heading)*2.2, T.z-Math.sin(T.heading)*2.2);
   const left  = heightAt(T.x-Math.cos(T.heading)*2.2, T.z+Math.sin(T.heading)*2.2);
-  T.g.quaternion.slerp(new THREE.Quaternion().setFromEuler(new THREE.Euler(
-      Math.atan2(behind-ahead, 6.4), T.heading, Math.atan2(left-right, 4.4), 'YXZ')), Math.min(1, dt*7));
+  T.g.quaternion.slerp(new THREE.Quaternion().setFromEuler(deckY !== null
+      ? new THREE.Euler(0, T.heading, 0, 'YXZ')
+      : new THREE.Euler(Math.atan2(behind-ahead, 6.4), T.heading, Math.atan2(left-right, 4.4), 'YXZ')),
+      Math.min(1, dt*7));
   if(Math.abs(T.speed) > 5 && Math.random()<dt*10)
     burst(new THREE.Vector3(T.x - Math.sin(T.heading)*4, ty+0.8, T.z - Math.cos(T.heading)*4), 2, PHOS, 5, 3);
   // turret: auto-track nearest dragon
@@ -1038,18 +1138,24 @@ function tick(){
 
   /* camera */
   if(state.view === 'drive'){
+    scene.fog.near = 1000; scene.fog.far = 3400;
     const T = activeTank();
     const portrait = innerHeight > innerWidth;
     // wireframe trees are see-through: ride low and close for speed feel
     const back = portrait ? 26 : 24, up = portrait ? 30 : 18;
     camPos.set(T.x - Math.sin(T.heading)*back, activeY + up, T.z - Math.cos(T.heading)*back);
-    camPos.y = Math.max(camPos.y, heightAt(camPos.x, camPos.z) + 5);
+    camPos.y = Math.max(camPos.y, (bridgeDeckY(camPos.x,camPos.z) ?? heightAt(camPos.x, camPos.z)) + 5);
     camera.position.lerp(camPos, Math.min(1, dt*4));
     camTarget.set(T.x + Math.sin(T.heading)*30, activeY + 3, T.z + Math.cos(T.heading)*30);
     camera.lookAt(camTarget);
     camera.fov += ((62 + Math.abs(T.speed)*0.35) - camera.fov)*dt*3;
   } else {
-    camPos.set(state.map.cx, state.map.h, state.map.cz);
+    // fog must follow the camera up, or high zoom fades the city to black
+    scene.fog.near = state.map.h * 0.9; scene.fog.far = state.map.h * 2.6 + 800;
+    // zoom in far enough and the map tips into an oblique aerial view
+    const obl = THREE.MathUtils.clamp((2100 - state.map.h)/1400, 0, 1) * 0.62;
+    camera.up.set(0, obl > 0.04 ? 1 : 0, -1).normalize();
+    camPos.set(state.map.cx, state.map.h, state.map.cz + state.map.h*obl);
     camera.position.lerp(camPos, Math.min(1, dt*5));
     camera.lookAt(state.map.cx, 0, state.map.cz);
     camera.fov += (55 - camera.fov)*dt*4;
@@ -1086,8 +1192,10 @@ addEventListener('resize', ()=>{
     ELEV = await loadJson('data/elevation-bristol.json');
     note.textContent = 'PLANTING ALL THE REAL TREES…';
     TREES = await loadJson('data/trees-bristol.json');
+    note.textContent = 'PAINTING THE REAL ROADS (© OSM)…';
+    try{ ROADS = await loadJson('data/roads-bristol.json'); }catch(e){ ROADS = null; }
     $('ntrees').textContent = TREES.trees.length.toLocaleString();
-    buildTerrain(); buildTrees(); buildLandmarks(); buildControl();
+    buildTerrain(); buildTrees(); buildRoads(); buildBridge(); buildLandmarks(); buildControl();
     TANK_NAMES.forEach((nm,i)=> tanks.push(new Tank(nm, ...TANK_SPAWNS[i])));
     buildFleetHud();
     const T = activeTank();
