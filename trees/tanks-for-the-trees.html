@@ -56,6 +56,12 @@
     text-shadow:0 0 18px rgba(0,255,102,.9), 0 0 60px rgba(0,255,102,.5);opacity:0;transition:opacity .4s}
   #maphint{position:fixed;bottom:calc(var(--safe-b) + 18px);left:0;right:0;text-align:center;z-index:5;
     font-size:11px;letter-spacing:1px;color:var(--ink);opacity:.8;pointer-events:none;display:none}
+  #maptitle{position:fixed;top:calc(var(--safe-t) + 84px);left:50%;transform:translateX(-50%);z-index:5;
+    font:700 14px ui-monospace,monospace;letter-spacing:6px;color:var(--glow);
+    text-shadow:0 0 12px rgba(0,255,102,.8);pointer-events:none;display:none}
+  #scalebar{position:fixed;bottom:calc(var(--safe-b) + 44px);left:calc(var(--safe-l) + 14px);z-index:5;
+    pointer-events:none;display:none;font:700 10px ui-monospace,monospace;color:var(--ink);letter-spacing:1px}
+  #scalebar div{height:4px;border:1px solid var(--glow);border-top:none;box-shadow:0 0 6px rgba(0,255,102,.5);margin-top:2px}
 
   /* ---------- controls ---------- */
   #stick{position:fixed;left:calc(var(--safe-l) + 16px);bottom:calc(var(--safe-b) + 20px);width:124px;height:124px;
@@ -120,6 +126,8 @@
 <div id="feed"></div>
 <div id="wavebanner"></div>
 <div id="maphint">TAP TANK · TAP GROUND TO ORDER · TAP AGAIN TO JACK IN · ZOOM IN FOR AERIAL</div>
+<div id="maptitle">B R I S T O L</div>
+<div id="scalebar">1 KM<div id="scalebarline"></div></div>
 
 <div id="stick"><div id="knob"></div></div>
 <div id="fire" class="btn">⊕</div>
@@ -220,11 +228,10 @@ function vectorize(geo, color, edgeOpacity=1){
 }
 
 /* ---------- terrain: dark mass + phosphor grid ---------- */
-let GREENS = null;
-function inAnyPark(x, z){
-  if(!GREENS) return false;
+let GREENS = null, WATER = null;
+function pointInRings(list, x, z){
   const e = x + E0, n = -z + N0;
-  for(const [, ring] of GREENS.greens){
+  for(const [, ring] of list){
     let minE=1e9,maxE=-1e9,minN=1e9,maxN=-1e9;
     for(const [pe,pn] of ring){ if(pe<minE)minE=pe; if(pe>maxE)maxE=pe; if(pn<minN)minN=pn; if(pn>maxN)maxN=pn; }
     if(e<minE||e>maxE||n<minN||n>maxN) continue;
@@ -237,6 +244,8 @@ function inAnyPark(x, z){
   }
   return false;
 }
+function inAnyPark(x, z){ return GREENS ? pointInRings(GREENS.greens, x, z) : false; }
+function inWater(x, z){ return WATER ? pointInRings(WATER.water, x, z) : false; }
 function buildTerrain(){
   const seg = ELEV.cols - 1;
   const g = new THREE.PlaneGeometry(WORLD, WORLD, seg, seg);
@@ -266,13 +275,27 @@ function buildTerrain(){
   const grid = new THREE.Mesh(g2, new THREE.MeshBasicMaterial({wireframe:true, vertexColors:true, transparent:true, opacity:0.34}));
   grid.position.y = 0.4; scene.add(grid);
   waterMesh = new THREE.Group();
-  const wFill = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD),
-    new THREE.MeshBasicMaterial({color:0x1170d8, transparent:true, opacity:0.55, depthWrite:false}));
-  wFill.rotation.x = -Math.PI/2; waterMesh.add(wFill);   // solid blue: the DEM carves the real Avon/harbour shapes
   const wWire = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD, 40, 40),
-    new THREE.MeshBasicMaterial({wireframe:true, color:CYAN, transparent:true, opacity:0.3}));
-  wWire.rotation.x = -Math.PI/2; wWire.position.y = 0.6; waterMesh.add(wWire);
-  waterMesh.position.y = waterLevel(); scene.add(waterMesh);  // the tidal Avon
+    new THREE.MeshBasicMaterial({wireframe:true, color:CYAN, transparent:true, opacity:0.22}));
+  wWire.rotation.x = -Math.PI/2; waterMesh.add(wWire);
+  waterMesh.position.y = waterLevel(); scene.add(waterMesh);  // tidal sheet: visible in the gorge only
+}
+/* the real water: OSM polygons — Floating Harbour, New Cut, the Avon itself */
+function buildWater(){
+  if(!WATER) return;
+  for(const [name, ring] of WATER.water){
+    const shape = new THREE.Shape(ring.map(([e,n]) => new THREE.Vector2(e-E0, n-N0)));
+    let mean = 0;
+    for(const [e,n] of ring) mean += heightAt(e-E0, -(n-N0));
+    mean /= ring.length;
+    const m = new THREE.Mesh(new THREE.ShapeGeometry(shape),
+      new THREE.MeshBasicMaterial({color:0x1273d8, transparent:true, opacity:0.72, depthWrite:false, side:THREE.DoubleSide}));
+    m.rotation.x = -Math.PI/2; m.position.y = mean + 1.1; scene.add(m);
+    const edge = new THREE.LineLoop(
+      new THREE.BufferGeometry().setFromPoints(ring.map(([e,n]) => new THREE.Vector3(e-E0, mean+1.4, -(n-N0)))),
+      new THREE.LineBasicMaterial({color:CYAN, transparent:true, opacity:0.5}));
+    scene.add(edge);
+  }
 }
 /* Bristol has one of the world's highest tidal ranges; the game tide cycles ~3 min */
 let waterMesh = null, tideT = 0;
@@ -331,7 +354,7 @@ function plantSapling(x, z){
   const i = treeState.length;
   if(i >= treeCapacity) return;
   const y = heightAt(x, z);
-  if(y < waterLevel()) { burst(new THREE.Vector3(x, waterLevel()+1, z), 6, CYAN, 8, 5); return; }   // splash, no tree
+  if(inWater(x, z) || y < waterLevel() - 2) { burst(new THREE.Vector3(x, y+2, z), 6, CYAN, 8, 5); return; }   // splash, no tree
   const t = {x, z, y, r: 3.2, h: 7, sp: chestnutSp, alive: true, grown: true};
   treeState.push(t);
   canopyMesh.count = treeState.length;
@@ -1026,6 +1049,8 @@ function setView(v){
   $('radiobtn').style.display = drive ? '' : 'none';
   if(!drive) $('radio').classList.add('hidden');
   $('maphint').style.display = drive ? 'none' : '';
+  $('maptitle').style.display = drive ? 'none' : '';
+  $('scalebar').style.display = drive ? 'none' : '';
   $('mapbtn').textContent = drive ? '▦' : '▶';
   for(const t of tanks) t.blip.visible = !drive;
   for(const d of dragons) d.blip.visible = !drive;
@@ -1212,7 +1237,7 @@ function updateTank(T, dt, isPlayer){
   }
   // snappier drive model: quick spool-up, tight low-speed turns
   const deckY = bridgeDeckY(T.x, T.z);
-  const flooded = deckY === null && heightAt(T.x, T.z) < waterLevel();
+  const flooded = deckY === null && (inWater(T.x, T.z) || heightAt(T.x, T.z) < waterLevel() - 2);
   const targetSpeed = fwd * (flooded ? 11 : 34);
   if(flooded && Math.abs(T.speed) > 3 && Math.random() < dt*4)
     burst(new THREE.Vector3(T.x, waterLevel()+0.5, T.z), 3, CYAN, 7, 5);
@@ -1293,7 +1318,7 @@ function tick(){
   radio.update(dt);
   tideT += dt;
   if(waterMesh){ waterMesh.position.y = waterLevel();
-    waterMesh.children[1].material.opacity = 0.22 + 0.12*Math.sin(tideT*1.7); }
+    waterMesh.children[0].material.opacity = 0.22 + 0.12*Math.sin(tideT*1.7); }
   if(controlBeacon) controlBeacon.rotation.y += dt*1.5;
   sfx.engine(state.view==='drive' ? activeTank().speed : 0);
 
@@ -1422,6 +1447,8 @@ function tick(){
     camera.position.lerp(camPos, Math.min(1, dt*5));
     camera.lookAt(state.map.cx, 0, state.map.cz);
     camera.fov += (55 - camera.fov)*dt*4;
+    const pxPerKm = innerHeight * 1000 / (2 * state.map.h * Math.tan(camera.fov/2 * Math.PI/180));
+    $('scalebarline').style.width = Math.max(20, Math.min(240, pxPerKm)) + 'px';
   }
   camera.updateProjectionMatrix();
 
@@ -1458,8 +1485,9 @@ addEventListener('resize', ()=>{
     note.textContent = 'PAINTING THE REAL ROADS (© OSM)…';
     try{ ROADS = await loadJson('data/roads-bristol.json'); }catch(e){ ROADS = null; }
     try{ GREENS = await loadJson('data/greens-bristol.json'); }catch(e){ GREENS = null; }
+    try{ WATER = await loadJson('data/water-bristol.json'); }catch(e){ WATER = null; }
     $('ntrees').textContent = TREES.trees.length.toLocaleString();
-    buildTerrain(); buildContours(); buildGreens(); buildTrees(); buildRoads(); buildBridge(); buildLandmarks(); buildControl();
+    buildTerrain(); buildWater(); buildContours(); buildGreens(); buildTrees(); buildRoads(); buildBridge(); buildLandmarks(); buildControl();
     TANK_NAMES.forEach((nm,i)=> tanks.push(new Tank(nm, ...TANK_SPAWNS[i])));
     buildFleetHud();
     const T = activeTank();
