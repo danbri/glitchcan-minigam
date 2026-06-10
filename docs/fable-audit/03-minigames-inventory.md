@@ -43,7 +43,7 @@ unlisted. Everything is static/client-side — no servers, no databases, no auth
 | trees | 8 | no | **CORRECTED — see Audit 06 §1**: five builds over Bristol CC's 53,904-tree dataset (SQL.js, BNG→WGS84) — 2 playable dragon games (Tesla Dragon, MUSK the Dragon ×2) + 3 Three.js tank interfaces (bigtrak, bristol-fps, 3dtanky with LOD + live Overpass OSM) | Playable games + functional 3D demos | Leaflet, SQL.js, Three.js, Overpass API, Web Audio |
 | tritone | 1 | no | "Diabolus in Musica" tritone synth toy | Playable sketch | Tone.js CDN |
 | twinearth | 24 | yes | 3D Earth viewer with texture variants | Playable | Three.js; **54 MB** of textures |
-| yeti | 13 | no | Parametric creature lab: 53-param quadrupeds, 6 species, SDF rendering, JSON export/import | Production sketch | ES6; **zero lucid/ deps by design** |
+| yeti | 13 | no | Parametric creature lab: 53-param quadrupeds, 6 species, SDF rendering, JSON export/import | Production sketch | ES6; imports 5 lucid/core modules (its own "zero lucid deps" doc claim is false — falsification pass) |
 
 Shared assets: `media/` (**277 MB** — photos, MP4s, `3dgs/` gaussian-splat assets,
 `gallery.html` — linked from the landing page). `demo/` holds the standalone
@@ -53,7 +53,7 @@ Shared assets: `media/` (**277 MB** — photos, MP4s, `3dgs/` gaussian-splat ass
 
 | Claim | Verdict |
 |---|---|
-| GridLuck "v1.3.0" with treasure/keys/synergies/progression complete | **Mismatch**: `thumbwar/gridluck.html` displays **v1.2.0**. Either the HTML version string was never bumped or CLAUDE.md describes uncommitted work. Needs reconciliation. |
+| GridLuck "v1.3.0" with treasure/keys/synergies/progression complete | **Resolved by falsification pass**: `gridluck-game.js:8` declares v1.3.0 — the work IS committed; only the HTML `<title>` (v1.2.0) is stale. |
 | Spectro known issues (guardian collisions, jumping, ESC menus) | ✅ Confirmed in `spectro/README.md`; still open. |
 | Spectro "4 rooms" | **Stale** — the implementation has ~42 rooms; the doc was never updated. |
 | TokiTokiPona priority "emoji for all dictionary entries" | Largely achieved — working emoji-hint system with embedded dictionary. |
@@ -64,7 +64,7 @@ Not a game; not on the landing page; barely referenced from top-level docs:
 
 - **elliott4130/** — Elliott 4130 mainframe emulator: 24-bit CPU, NEAT assembly, a
   LISP 1.5 implementation (CAR/CDR/CONS, McCarthy EVAL/APPLY, 3-bit GC with leak
-  demo), **133 passing validation tests**, mobile-friendly UI. The most rigorous
+  demo), **122 test invocations** (the "133 passing tests" figure in magpie docs is not reproducible; corrected by falsification pass), mobile-friendly UI. The most rigorous
   single artifact in the repo.
 - **foafng/** — FOAF/RDF + Kanren logic programming workbench (`kanren-rdf.html`),
   PRD spec, SPARQL test subset.
@@ -82,7 +82,7 @@ Not a game; not on the landing page; barely referenced from top-level docs:
   collection.
 - **puppy ↔ pups**: ML hand-tracking vs pure-touch takes on the same toy.
 - **gencity → ed209-parkbot**: same wireframe aesthetic, new subject.
-- **yeti ← lucid**: data-format sibling, code-independent by explicit design.
+- **yeti ← lucid**: documented as code-independent, but actually imports lucid/core modules (see claims register B14).
 - **cozyverse ↔ inklet**: maple-hollow.fink.js is referenced from the inklet TOC and
   currently 404s media at runtime (see Audit 01).
 

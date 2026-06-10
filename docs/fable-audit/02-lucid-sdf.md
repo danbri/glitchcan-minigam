@@ -26,8 +26,8 @@ Known TODO in loader: param override in refs (json-loader.js:305–307).
 - `lucid/scenes/toc.json` indexes only **79** entries
 - Docs claim "117 scenes" (CLAUDE.md, ZERO_ANNOYANCES_PLAN.md "All (117)")
 
-So the "117" claim roughly matches *files on disk*, but **~40 scenes are orphaned from
-the TOC** and thus invisible to the viewer's scene picker. This also contradicts the
+So the "117" claim roughly matches *files on disk*, but **47 scenes are orphaned from
+the TOC** (verified by falsification pass; zero toc entries point at missing files) and thus invisible to the viewer's scene picker. This also contradicts the
 lucid/CLAUDE.md rule "when adding scenes ALWAYS update toc.json".
 
 **Pre-commit hook claim is false:** `lucid/scripts/update-recent-changes.mjs` (182
@@ -56,7 +56,7 @@ node canvas + timeline scrubber), `scene-catalog.html`, `compare.html`,
 | Component | Plan | Reality |
 |---|---|---|
 | `<lucid-renderer>` | Phase 1 | ✅ Defined & registered |
-| `<lucid-scene-picker>` | Phase 1, with filter bar | ✅ Exists; filter bar missing |
+| `<lucid-scene-picker>` | Phase 1, with filter bar | ✅ Exists **with** filter bar (All/Static/Working/Recent/Broken + search — falsification pass corrected the earlier "missing" claim) |
 | `<lucid-orbit-controls>`, `<lucid-comparison>`, `<lucid-render-controls>`, `<lucid-scene-params>` | — | ✅ Exist |
 | `<lucid-param-editor>` | ZERO_ANNOYANCES_PLAN | ❌ Inline only (scene-params.js), never extracted |
 | `<lucid-timeline>` | CLAUDE.md + plan | ❌ Functional but inline in node-editor.html |
@@ -74,15 +74,16 @@ node canvas + timeline scrubber), `scene-catalog.html`, `compare.html`,
 `index.html` still uses inline code rather than the components (Phase 2 of the plan,
 not done). Node editor has no scene import/export to JSON.
 
-## 5. XPBD physics: real, but demo-only
+## 5. XPBD physics: real, and integrated into the main viewer
 
+*(Corrected by falsification pass — originally published as "demo-only".)*
 `core/physics/`: `xpbd.js`, `xpbd-gpu.js` (compute-shader variant),
 `physics-scene.js`, `physics-bridge.js`, `splat-physics.js`; tests for xpbd, splat,
-physics scenes in `tests/`. Six physics scenes in `scenes/physics/` (walk cycles,
-obstacle navigation, drop tests) consume `"physics": {...}` JSON config. However the
-main viewer and node editor show no physics initialization — physics runs in dedicated
-demo pages (`lucid/demos/sdf-physics.html`, `splat-physics.html`), not in the primary
-pipeline.
+physics scenes in `tests/`. Six physics scenes in `scenes/physics/` consume
+`"physics": {...}` JSON config. **lucid/index.html does initialize physics**: it
+imports PhysicsScene, instantiates it when `json.physics.enabled` is set, steps the
+simulation in the render loop, and syncs body positions back to shader params. The
+node editor has no physics preview; dedicated demo pages also exist.
 
 ## 6. ABCD Parliament (automodel): genuinely operational
 
@@ -101,9 +102,11 @@ chromium path) — browser provisioning is environment-fragile either way (see A
 - `lucid/archive/` — 7 retired prototypes (demos.html, initial_test.html, vader_*,
   webgpu_*) properly quarantined
 - `lucid/ux/`, `lucid/splats/`, `xr-sculptor.html` — parallel experiments, unintegrated
-- **`yeti/`** (13 files, audited in report 03) — a parametric creature lab that shares
-  the JSON SDF data format but deliberately has **zero code dependency on lucid/**;
-  effectively a clean-room spinoff of the creature-modeling thread
+- **`yeti/`** (13 files, audited in report 03) — a parametric creature lab.
+  yeti/CLAUDE.md claims "zero code dependencies on lucid/", **but the code disagrees**:
+  `yeti/yeti-creature.js:18-22` imports five modules from `../lucid/` (json-loader,
+  json-codegen and others). The separation is aspiration, not fact — a repo-doc error
+  the falsification pass caught after this audit initially repeated it
 
 ## 8. Plans corpus inside lucid/
 

@@ -21,8 +21,10 @@ usability at 320/375/768 px), 6 Playwright test scripts (`fink-diamond-explore.m
 `playability-test*.mjs`, …), 2 JSON findings exports, raw console logs, and an
 `index.html` artifact viewer.
 
-**The gap:** the reviews are high-quality audits with **no traceable follow-up** — no
-issues filed, no fix commits linked, test scripts never folded into the CI suite. They
+**The gap:** the reviews are high-quality audits with almost no surviving follow-up —
+one fix was attempted (`cfe87c0` 2026-01-29, "fix(BUG-007)" for FINK loading and
+breadcrumbs) but reverted the same day; otherwise no issues filed, no fixes landed,
+test scripts never folded into CI. (Narrowed by falsification pass.) They
 function as a regression baseline, not a development driver. Their findings remain the
 best current statement of FINK Player's open defects.
 
@@ -48,7 +50,7 @@ best current statement of FINK Player's open defects.
 | Corpus | Contents | Connected to code? |
 |---|---|---|
 | `data/kgx/finkg.nq` | N-Quads RDF export of FINK story structure | Loosely — kgx/ demos SPARQL but doesn't consume this file in any pipeline |
-| `datasets/imagesnippets-*.ttl/.nq` (~17 MB) | ImageSnippets SPARQL dump (Dec 2024), LIO/Schema.org/Getty/Wikidata vocabularies, attribution README | **No** — kgx/ uses its own 10-image sample; these dumps are unreferenced |
+| `datasets/imagesnippets-*.ttl/.nq` (~17 MB) | ImageSnippets SPARQL dump (Dec 2024), LIO/Schema.org/Getty/Wikidata vocabularies, attribution README | **Yes** — `kgx/public/index.html` and `kgx/public/testbed/` load these dumps directly (falsification pass corrected the earlier "unreferenced" claim) |
 | `image_metadata.json` (root) | Schema.org ImageCollection for ~50 inklet/villaged story images | Metadata only; no consumer |
 | `demo/wubwubwub.*` | Standalone Web Audio toy | Standalone |
 
@@ -67,7 +69,7 @@ schemoids' theme) that has never been pulled into a single documented endeavour.
 
 **Coded, never documented (top-level):**
 - `inklet/finkapp/` as the real player (see Audit 01)
-- `magpie/` research archive — 61 MB incl. Elliott 4130 emulator with 133 tests
+- `magpie/` research archive — 61 MB incl. Elliott 4130 emulator (122 test cases)
 - `yeti/` creature lab
 - ~15 minigame directories with no README or glossary entry
 - `follyfx/` (43 files of research/report output)

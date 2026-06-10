@@ -45,9 +45,15 @@ The two CLAUDE.md "critical rules" hold up:
   iframe; the `oooOO` tagged-template function captures content and returns it via
   postMessage. No regex parsing of INK anywhere in the active pipeline.
 - The layered media path resolution described in CLAUDE.md (global base → story
-  BASEHREF → file-relative fallback) is implemented in FinkUtils; its Step 5 (INK
-  runtime error handler) was never done — which is why Ukrainian/Help-menu runtime
-  errors fail silently to this day.
+  BASEHREF → file-relative fallback) is implemented in FinkUtils. ~~Step 5 (INK
+  runtime error handler) was never done~~ **Corrected by falsification pass**: an
+  `story.onError` handler IS wired in `finkapp/fink-ink-engine.js`; CLAUDE.md's TODO
+  is stale in the other direction.
+
+*Nuance from falsification pass:* "no regex parsing of INK anywhere" was too strong —
+BASEHREF **tag extraction** uses regex fallbacks in `fink-ui.js`, `fink-navigation.js`
+and `fink-ink-engine.js` (the documented CLAUDE.md "Fix 4" fallback). The accurate
+claim: no regex parsing of INK *story structure*; story compilation is real ink-full.js.
 
 ## 4. Story files: 14 on disk + satellites
 
@@ -95,8 +101,10 @@ Root-level harnesses: `finkapp-playtest.mjs`, `finkapp-fraud-test.mjs`,
 - Maple Hollow resource 404 (fun-review.md, Jan 2026)
 - FINK URL truncation bug: `https://` → `https:` because INK treats `//` as a comment
   even inside tags (`finkurls.md`; three solutions proposed, none implemented)
-- `inklet/media/shane/` is **73 MB** of unoptimized PNGs; the optimization plan in
-  CLAUDE.md (pre-optimized JPGs, static paths) was never executed
+- ~~`inklet/media/shane/` is 73 MB of unoptimized PNGs; the optimization plan was
+  never executed~~ **Corrected**: optimized JPGs DO exist in
+  `inklet/media/shane/{mobile,tablet,desktop}/`. Whether the story tags reference
+  them (vs the large originals) remains unverified.
 - 12 UX issues from `usability-review.md` (breadcrumb visibility, loading progress,
   no CSP, `user-scalable=no`, missing ARIA) — no follow-up visible
 

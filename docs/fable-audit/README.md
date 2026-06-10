@@ -15,6 +15,7 @@ repo as found on branch point `59a2eb3` (master, June 2026).
 | [04-infrastructure-ci-testing.md](04-infrastructure-ci-testing.md) | Infra, CI/CD, testing | `.github/workflows/`, `tests/`, Playwright, governance docs, repo hygiene |
 | [05-docs-worknotes-data.md](05-docs-worknotes-data.md) | Docs, worknotes, data corpora | `worknotes/` (113 files), `docs/`, `doc/`, `data/`, `datasets/`, idea docs |
 | [06-deep-dive-corrections.md](06-deep-dive-corrections.md) | **Second-pass corrections** | Code-level re-read: trees/ Bristol game lab, Finkiverse map prototype, 12 directory re-gradings, headless test results, CodePen tier |
+| [claims-register.md](claims-register.md) | **Claims register** | 29 negative/universal claims adversarially verified: 14 confirmed, 9 refuted & corrected, 4 partial |
 
 ## Headline Findings
 
@@ -43,17 +44,18 @@ counterparts do. The code is generally *ahead* of the documentation, not behind 
 
 ### Built-but-undocumented (code with no plans)
 - `inklet/finkapp/` itself — the real production player.
-- `yeti/` — a parametric creature lab (53-parameter quadrupeds, SDF rendering,
-  deliberately zero dependencies on `lucid/`).
-- `magpie/` (454 files, 61 MB) — Elliott 4130 mainframe emulator with LISP 1.5 and 133
-  passing tests, FOAF/Kanren RDF logic, and a 128-page digitization of a 1951 Paris
+- `yeti/` — a parametric creature lab (53-parameter quadrupeds, SDF rendering;
+  its docs claim independence from `lucid/` but it imports lucid/core modules).
+- `magpie/` (454 files, 61 MB) — Elliott 4130 mainframe emulator with LISP 1.5 and 122
+  test cases, FOAF/Kanren RDF logic, and a 128-page digitization of a 1951 Paris
   conference. Serious research work, invisible from the landing page and main docs.
 - Roughly 14 playable-but-unlisted experiments (mudslide, palace, plenia, hat, pups…).
 
 ### Count/version mismatches between docs and code
 - Lucid: docs claim "117 scenes"; **119 scene JSON files** exist but only **79 are
-  indexed in `lucid/scenes/toc.json`** — ~40 scenes are orphaned from the TOC.
-- GridLuck: HTML says **v1.2.0**; CLAUDE.md describes completed **v1.3.0** features.
+  indexed in `lucid/scenes/toc.json`** — 47 scenes are orphaned from the TOC.
+- GridLuck: HTML title says **v1.2.0** but `gridluck-game.js` declares **v1.3.0** —
+  the v1.3.0 work is committed; only the title is stale (falsification pass).
 - FINK modules: docs say 6; `finkapp/` has 15+.
 
 ### Verification gaps (claimed-working but untested)
@@ -63,7 +65,8 @@ counterparts do. The code is generally *ahead* of the documentation, not behind 
 - **Shane Manor**: compilation fixed, gameplay never tested (`shane_todo.md`).
 - **Ukrainian story / Help menu**: known runtime errors, still open.
 - The January 2026 review campaign in `worknotes/` (6 structured reviews, 79
-  screenshots) identified issues with no traceable follow-up commits.
+  screenshots) identified issues with almost no surviving follow-up (one fix
+  attempted and reverted same day — see claims register A7).
 
 ### Infra is in good shape, with one pending step
 GitHub Pages deploy uses modern v4 actions; 5 active workflows including a tiered Lucid
