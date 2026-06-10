@@ -152,8 +152,8 @@
      <b>BRUNEL</b>, <b>CABOT</b> and <b>BANKSY</b> — across <b>real Bristol terrain</b>
      and defend all <b id="ntrees">35,893</b> <b>real council trees</b>.</p>
   <p>▦ MAP: tap tank → tap ground to order · tap again to JACK IN and drive<br>
-     STICK drive · ⊕ hold to fire (missed conkers GROW TREES) · ♪ honk scares snackers · 📻 radio<br>
-     KBD: WASD · SPACE fire · M map · 1/2/3 tanks · H honk · R radio · mind the tide</p>
+     STICK drive · ⊕ tap = auto-aim fire, DRAG = aim yourself (missed conkers GROW TREES) · ♪ honk · 📻 radio<br>
+     KBD: WASD · mouse aims · SPACE fire · M map · 1/2/3 tanks · H honk · R radio · mind the tide</p>
   <button class="bigbtn" id="startbtn">▶ DEFEND BRISTOL</button>
   <div id="loadnote">BOOTING…</div>
 </div>
@@ -767,7 +767,7 @@ const state = {
   active:0, selected:-1, waveTimer:3, dragonsToSpawn:0, speedMul:1,
   map:{cx:0, cz:0, h:2600},
 };
-const input = {x:0, y:0, fire:false};
+const input = {x:0, y:0, fire:false, aimAngle:null, manualT:0};
 const activeTank = () => tanks[state.active];
 
 let locT = 0;
@@ -876,10 +876,34 @@ $('pausebtn').addEventListener('click', ()=>{ state.paused = !state.paused; $('p
   }
   for(const ev of ['touchstart','touchmove','touchend','touchcancel']) stick.addEventListener(ev, handle, {passive:false});
 })();
-$('fire').addEventListener('touchstart', e=>{ input.fire=true; e.preventDefault(); }, {passive:false});
-$('fire').addEventListener('touchend', e=>{ input.fire=false; e.preventDefault(); }, {passive:false});
+(function(){
+  const fire = $('fire');
+  let fid = null, sx = 0, sy = 0;
+  fire.addEventListener('touchstart', e=>{
+    const t = e.changedTouches[0]; fid = t.identifier; sx = t.clientX; sy = t.clientY;
+    input.fire = true; e.preventDefault();
+  }, {passive:false});
+  addEventListener('touchmove', e=>{
+    for(const t of e.changedTouches){
+      if(t.identifier !== fid) continue;
+      const dx = t.clientX - sx, dy = t.clientY - sy;
+      if(Math.hypot(dx, dy) > 16){                       // drag past deadzone = aim yourself
+        input.aimAngle = Math.atan2(dx, -dy);            // screen-up = tank-forward
+        input.manualT = 2.0;
+      }
+    }
+  }, {passive:true});
+  addEventListener('touchend', e=>{
+    for(const t of e.changedTouches) if(t.identifier === fid){ fid = null; input.fire = false; }
+  });
+})();
 $('honk').addEventListener('touchstart', e=>{ doHonk(); e.preventDefault(); }, {passive:false});
 $('fire').addEventListener('mousedown', ()=>input.fire=true);
+addEventListener('mousemove', e=>{
+  if(state.view !== 'drive' || !state.running || e.target.closest('.btn,.tankbtn,#radio')) return;
+  const dx = e.clientX - innerWidth/2, dy = e.clientY - innerHeight*0.62;
+  if(Math.hypot(dx, dy) > 30){ input.aimAngle = Math.atan2(dx, -dy); input.manualT = 1.2; }
+});
 addEventListener('mouseup', ()=>input.fire=false);
 $('honk').addEventListener('mousedown', doHonk);
 function toggleRadio(){
@@ -1032,10 +1056,16 @@ function updateTank(T, dt, isPlayer){
     const dd = (d.g.position.x-T.x)**2 + (d.g.position.z-T.z)**2;
     if(dd<bd){bd=dd;aimD=d;}
   }
-  if(aimD){
-    const desired = Math.atan2(aimD.g.position.x-T.x, aimD.g.position.z-T.z) - T.heading;
+  let desired = null;
+  if(isPlayer && input.manualT > 0 && input.aimAngle !== null){
+    input.manualT -= dt;
+    desired = input.aimAngle;                      // relative to tank forward (screen-up)
+  } else if(aimD){
+    desired = Math.atan2(aimD.g.position.x-T.x, aimD.g.position.z-T.z) - T.heading;
+  }
+  if(desired !== null){
     let diff = ((desired - T.turret.rotation.y + Math.PI)%(Math.PI*2)+Math.PI*2)%(Math.PI*2) - Math.PI;
-    T.turret.rotation.y += diff*Math.min(1, dt*6);
+    T.turret.rotation.y += diff*Math.min(1, dt*(input.manualT > 0 && isPlayer ? 11 : 6));
   }
   T.cool -= dt;
   if(isPlayer ? input.fire : (aimD && bd < 340*340)) fireConker(T);
@@ -1045,6 +1075,21 @@ function updateTank(T, dt, isPlayer){
   T.blip.rotation.z = -T.heading;
   T.blip.material.color.setHex(tanks.indexOf(T)===state.selected ? 0xffffff : PHOS);
   return ty;
+}
+
+/* aim reticle: where the active tank's conker will land */
+const reticle = new THREE.Mesh(new THREE.TorusGeometry(7, 0.5, 6, 18),
+  new THREE.MeshBasicMaterial({color:AMBER, transparent:true, opacity:0.5, depthTest:false}));
+reticle.rotation.x = -Math.PI/2; reticle.renderOrder = 8; reticle.visible = false;
+scene.add(reticle);
+function updateReticle(){
+  const T = activeTank();
+  if(state.view !== 'drive'){ reticle.visible = false; return; }
+  const a = T.heading + T.turret.rotation.y, RANGE = 142;
+  const rx = T.x + Math.sin(a)*RANGE, rz = T.z + Math.cos(a)*RANGE;
+  reticle.position.set(rx, (bridgeDeckY(rx,rz) ?? heightAt(rx,rz)) + 1.2, rz);
+  reticle.visible = true;
+  reticle.material.opacity = 0.35 + 0.2*Math.sin(performance.now()/200);
 }
 
 /* ---------- main loop ---------- */
@@ -1061,6 +1106,7 @@ function tick(){
   tanks.forEach((T,i)=>{ const y = updateTank(T, dt, i===state.active); if(i===state.active) activeY = y; });
   updateTransmissions(dt);
   updateGrowing(dt);
+  updateReticle();
   radio.update(dt);
   tideT += dt;
   if(waterMesh){ waterMesh.position.y = waterLevel();
