@@ -467,10 +467,41 @@ function buildGreens(){
   }
 }
 
+/* ---------- city fabric: real building footprints + neighbourhood names ---------- */
+let FABRIC = null;
+function buildFabric(){
+  if(!FABRIC) return;
+  const seg = [];
+  for(const ring of FABRIC.buildings){
+    const x0 = ring[0][0]-E0, z0 = -(ring[0][1]-N0);
+    const y = heightAt(x0, z0) + 0.7;                  // flat per building: cheap, reads fine
+    for(let i=0;i<ring.length;i++){
+      const [e1,n1] = ring[i], [e2,n2] = ring[(i+1)%ring.length];
+      seg.push(e1-E0, y, -(n1-N0), e2-E0, y, -(n2-N0));
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(seg, 3));
+  scene.add(new THREE.LineSegments(g,
+    new THREE.LineBasicMaterial({color:0x1f8a4c, transparent:true, opacity:0.42})));
+  // neighbourhood names: short, dim, everywhere — the labels that say Bristol
+  for(const [name, e, n] of (FABRIC.places||[])){
+    if(!name) continue;
+    const x = e-E0, z = -(n-N0);
+    const sp = textSprite(name.toUpperCase(), 0.34, '#8fe8b0');
+    sp.position.set(x, heightAt(x,z)+30, z);
+    scene.add(sp);
+  }
+}
+
 /* ---------- the real roads (OSM, cached in-repo) ---------- */
 let ROADS = null;
 const FAMOUS = ['M32','A4','A38','A370','A4018','A420','A4044','PARK STREET','WHITELADIES ROAD',
-  'GLOUCESTER ROAD','QUEENS ROAD',"QUEEN'S ROAD",'TEMPLE WAY','HOTWELL ROAD','CORONATION ROAD','PORTWAY'];
+  'GLOUCESTER ROAD','QUEENS ROAD',"QUEEN'S ROAD",'TEMPLE WAY','HOTWELL ROAD','CORONATION ROAD','PORTWAY',
+  'STOKES CROFT','CHELTENHAM ROAD','NORTH STREET','EAST STREET','BALDWIN STREET','VICTORIA STREET',
+  'PARK ROW','COLLEGE GREEN','ANCHOR ROAD','WELLS ROAD','CHURCH ROAD','STAPLETON ROAD','FISHPONDS ROAD'];
+const SHORTEN = [[' STREET',' ST'],[' ROAD',' RD'],[' AVENUE',' AVE'],[' LANE',' LN']];
+const shortName = n => SHORTEN.reduce((a,[f,t]) => a.replace(f,t), n);
 function buildRoads(){
   if(!ROADS) return;
   const styles = [
@@ -530,7 +561,7 @@ function buildRoads(){
   });
   for(const [name, v] of labelBest){
     const x = v.e-E0, z = -(v.n-N0);
-    const sp = textSprite(name, 0.45, name.match(/^[MA][0-9]/) ? '#ffb000' : '#39c98a');
+    const sp = textSprite(shortName(name), 0.42, name.match(/^[MA][0-9]/) ? '#ffb000' : '#39c98a');
     sp.position.set(x, heightAt(x,z)+34, z);
     scene.add(sp);
   }
@@ -1486,8 +1517,9 @@ addEventListener('resize', ()=>{
     try{ ROADS = await loadJson('data/roads-bristol.json'); }catch(e){ ROADS = null; }
     try{ GREENS = await loadJson('data/greens-bristol.json'); }catch(e){ GREENS = null; }
     try{ WATER = await loadJson('data/water-bristol.json'); }catch(e){ WATER = null; }
+    try{ FABRIC = await loadJson('data/fabric-bristol.json'); }catch(e){ FABRIC = null; }
     $('ntrees').textContent = TREES.trees.length.toLocaleString();
-    buildTerrain(); buildWater(); buildContours(); buildGreens(); buildTrees(); buildRoads(); buildBridge(); buildLandmarks(); buildControl();
+    buildTerrain(); buildWater(); buildContours(); buildGreens(); buildFabric(); buildTrees(); buildRoads(); buildBridge(); buildLandmarks(); buildControl();
     TANK_NAMES.forEach((nm,i)=> tanks.push(new Tank(nm, ...TANK_SPAWNS[i])));
     buildFleetHud();
     const T = activeTank();
