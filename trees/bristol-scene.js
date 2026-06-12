@@ -1960,10 +1960,15 @@ function setMode(T, m){
   if(m === 'boat' && !inWater(T.x, T.z)){ feed('>> NEED WATER FOR BOAT MODE'); return; }
   if(m === 'tank' && inWater(T.x, T.z)){ feed('>> CANNOT TRACK ON WATER'); return; }
   T.mode = m; T.modeT = 0; T.nav = null;
+  $('drawer').classList.remove('open');            // never hide the show
   T.heli.visible = m === 'heli';
   T.boat.visible = m === 'boat';
-  T.tag.material.color?.set?.(0xffffff);
-  sfx.databurst();
+  if(m === 'heli') T.heli.scale.setScalar(0.01);
+  if(m === 'boat') T.boat.scale.setScalar(0.01);
+  bloomFlare = 1;                                   // the cheap-transformer flare
+  burst(new THREE.Vector3(T.x, T.g.position.y + 3, T.z), 26, AMBER, 16, 12);
+  burst(new THREE.Vector3(T.x, T.g.position.y + 2, T.z), 18, PHOS, 12, 9);
+  sfx.databurst(); setTimeout(()=>sfx.ack(), 350);
   feed('>> ' + T.name + ' :: ' + m.toUpperCase() + ' CONFIGURATION');
 }
 function cycleMode(){
@@ -2195,7 +2200,7 @@ function updateTank(T, dt, isPlayer){
   const lean = T.mode === 'heli' ? new THREE.Euler(THREE.MathUtils.clamp(T.speed*0.006,-0.3,0.3), T.heading, -turn*0.25, 'YXZ')
     : T.mode === 'boat' ? new THREE.Euler(Math.sin(performance.now()/700)*0.03, T.heading, -turn*0.12 + Math.sin(performance.now()/900)*0.04, 'YXZ')
     : (deckY !== null ? new THREE.Euler(0, T.heading, 0, 'YXZ')
-      : new THREE.Euler(Math.atan2(behind-ahead, 6.4), T.heading, Math.atan2(left-right, 4.4), 'YXZ'));
+      : new THREE.Euler(Math.atan2(behind-ahead, 6.4), T.heading, Math.atan2(right-left, 4.4), 'YXZ'));
   T.g.quaternion.slerp(new THREE.Quaternion().setFromEuler(lean), Math.min(1, dt*7));
   if(Math.abs(T.speed) > 5 && Math.random()<dt*10)
     burst(new THREE.Vector3(T.x - Math.sin(T.heading)*4, ty+0.8, T.z - Math.cos(T.heading)*4), 2, PHOS, 5, 3);
@@ -2242,7 +2247,7 @@ function updateReticle(){
 }
 
 /* ---------- wub: the bass made visible ---------- */
-let wubAmp = 0; const wubSet = [];
+let wubAmp = 0, bloomFlare = 0; const wubSet = [];
 const wubRings = [];
 for(let i=0;i<3;i++){
   const ring = new THREE.Mesh(new THREE.TorusGeometry(1, 0.22, 6, 40),
@@ -2300,6 +2305,8 @@ function tick(){
   updateGrowing(dt);
   updateWeather(dt);
   updateWub(dt);
+  if(bloomFlare > 0.01){ bloom.strength = 0.55 + bloomFlare*1.5; bloomFlare *= Math.exp(-dt*3.2); }
+  else if(bloom.strength !== 0.55) bloom.strength = 0.55;
   updateTraffic(dt);
   updatePeople(dt);
   updateReticle();
