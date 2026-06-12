@@ -1202,14 +1202,15 @@ const CONTROL = { x: 358290-E0, z: -(172730-N0) };
 let controlBeacon;
 const transmissions = [];
 function buildControl(){
+  // Council Control IS Cabot Tower: a small antenna + beacon on the real landmark, no second tower
   const y = heightAt(CONTROL.x, CONTROL.z);
-  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 2.2, 110, 4, 6, true),
-    new THREE.MeshBasicMaterial({color:AMBER, wireframe:true, transparent:true, opacity:0.5}));
-  mast.position.set(CONTROL.x, y+55, CONTROL.z); scene.add(mast);
-  controlBeacon = new THREE.Mesh(new THREE.OctahedronGeometry(2.4),
+  const aerial = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.3, 9, 4),
+    new THREE.MeshBasicMaterial({color:AMBER, wireframe:true, transparent:true, opacity:0.8}));
+  aerial.position.set(CONTROL.x, y+43, CONTROL.z); scene.add(aerial);
+  controlBeacon = new THREE.Mesh(new THREE.OctahedronGeometry(1.2),
     new THREE.MeshBasicMaterial({color:AMBER}));
-  controlBeacon.position.set(CONTROL.x, y+112, CONTROL.z); scene.add(controlBeacon);
-  const s2 = textSprite('COUNCIL CONTROL', 0.9, '#ffb000'); s2.position.set(CONTROL.x, y+128, CONTROL.z); scene.add(s2);
+  controlBeacon.position.set(CONTROL.x, y+49, CONTROL.z); scene.add(controlBeacon);
+  const s2 = textSprite('· CONTROL ·', 0.32, '#ffb000'); s2.position.set(CONTROL.x, y+58, CONTROL.z); scene.add(s2);
 }
 function orderCode(){
   const hex = () => '0123456789ABCDEF'[(Math.random()*16)|0];
@@ -1219,7 +1220,7 @@ function transmit(tank, label){
   const code = orderCode();
   feed('>> TX ' + tank.name + ' :: ' + code + ' ' + label);
   sfx.databurst();
-  const from = new THREE.Vector3(CONTROL.x, heightAt(CONTROL.x,CONTROL.z)+110, CONTROL.z);
+  const from = new THREE.Vector3(CONTROL.x, heightAt(CONTROL.x,CONTROL.z)+48, CONTROL.z);
   const pip = new THREE.Mesh(new THREE.OctahedronGeometry(1.6),
     new THREE.MeshBasicMaterial({color:AMBER, depthTest:false, transparent:true}));
   pip.renderOrder = 10; pip.position.copy(from); scene.add(pip);
