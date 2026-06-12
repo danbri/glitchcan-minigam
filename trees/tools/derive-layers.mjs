@@ -61,7 +61,8 @@ await scan(items => {
 console.log('pass 1:', nodeCoord.size, 'nodes;', pubs.length, 'pub nodes,', places.length, 'places,', stations.length, 'stations');
 
 // ---- pass 2: ways -> layers; keep refs for relation resolution ----
-const ROADCLS = { motorway:0, trunk:0, primary:1, secondary:2, tertiary:4 };
+const ROADCLS = { motorway:0, trunk:0, primary:1, secondary:2, tertiary:4,
+  residential:5, unclassified:5, living_street:5 };
 const roads = [], water = [], greens = [], buildings = [];
 const wayRefs = new Map();   // only for ways we may need in relations
 await scan(items => {
@@ -91,7 +92,14 @@ await scan(items => {
       const r = ring(coords, 4);     // terraced houses are ~8m wide: thin gently
       if(r.length >= 3 && area(r) > 30){
         const h = parseFloat(t.height) || (parseFloat(t['building:levels']) || 0) * 3.2;
-        buildings.push([Math.round(h*10)/10, r]);
+        const bt = t.building;
+        const type = /^(house|terrace|residential|detached|semidetached_house|bungalow)$/.test(bt) ? 1
+                   : /^(apartments|dormitory)$/.test(bt) ? 2
+                   : /^(commercial|retail|office|hotel)$/.test(bt) ? 3
+                   : /^(industrial|warehouse)$/.test(bt) ? 4
+                   : /^(church|cathedral|chapel)$/.test(bt) ? 5
+                   : /^(university|civic|public|school|hospital)$/.test(bt) ? 6 : 0;
+        buildings.push([Math.round(h*10)/10, r, type]);
         if(t.amenity === 'pub' && t.name) pubs.push([t.name, ...centroid(r)]);
       }
     } else if(t.amenity === 'pub' && t.name){
@@ -129,14 +137,14 @@ console.log('pass 3 done:', water.length, 'water,', greens.length, 'greens');
 
 writeFileSync(join(DATA,'roads-bristol.json'), JSON.stringify({ source: SRC('major roads + rail'),
   crs:'EPSG:27700 (BNG, linear approximation)',
-  classes:['motorway/trunk','primary','secondary','rail','tertiary'],
+  classes:['motorway/trunk','primary','secondary','rail','tertiary','residential'],
   fields:['classIndex','ref_or_name','points[easting,northing]'], roads }));
 writeFileSync(join(DATA,'water-bristol.json'), JSON.stringify({ source: SRC('water polygons'),
   crs:'EPSG:27700', fields:'[name, ring]', water: water.slice(0,200) }));
 writeFileSync(join(DATA,'greens-bristol.json'), JSON.stringify({ source: SRC('parks/greens'),
   crs:'EPSG:27700', fields:{greens:'[name, ring]', stations:'[name,e,n]'}, greens, stations }));
 writeFileSync(join(DATA,'fabric-bristol.json'), JSON.stringify({ source: SRC('ALL buildings + places'),
-  crs:'EPSG:27700', fields:{buildings:'[height_or_0, ring]', places:'[name,e,n]'}, buildings, places }));
+  crs:'EPSG:27700', fields:{buildings:'[height_or_0, ring, typeCode]', places:'[name,e,n]'}, buildings, places }));
 writeFileSync(join(DATA,'pubs-bristol.json'), JSON.stringify({ source: SRC('named pubs'),
   crs:'EPSG:27700', fields:'[name, e, n]', pubs }));
 console.log('layers written.');

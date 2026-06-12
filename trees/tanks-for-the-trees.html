@@ -386,6 +386,7 @@ function plantSapling(x, z){
   if(treeMeshes[0].count >= treeCapacity) return;
   const y = heightAt(x, z);
   if(inWater(x, z) || y < waterLevel() - 2) { burst(new THREE.Vector3(x, y+2, z), 6, CYAN, 8, 5); return; }   // splash, no tree
+  if(inBuilding(x, z)) { burst(new THREE.Vector3(x, y+5, z), 5, AMBER, 8, 5); return; }   // bonk, no tree indoors
   const mesh = treeMeshes[0];
   const t = {x, z, y, r: 3.2, h: 7, sp: chestnutSp, f: 0, mi: mesh.count++, alive: true, grown: true};
   treeState.push(t);
@@ -501,14 +502,49 @@ function buildGreens(){
 /* ---------- city fabric: real building footprints + neighbourhood names ---------- */
 let FABRIC = null;
 const CORE = { eMin: 356263, eMax: 361566, nMin: 170802, nMax: 174920 };   // extrusion tier
+/* building collision: 40m hash grid in BNG space over all 104k footprints */
+const bGrid = new Map();
+const BCELL = 40;
+function buildCollisionGrid(){
+  if(!FABRIC) return;
+  FABRIC.buildings.forEach((entry, idx) => {
+    const ring = Array.isArray(entry[1]) ? entry[1] : entry;
+    let eMin=1e9,eMax=-1e9,nMin=1e9,nMax=-1e9;
+    for(const [e,n] of ring){ if(e<eMin)eMin=e; if(e>eMax)eMax=e; if(n<nMin)nMin=n; if(n>nMax)nMax=n; }
+    for(let ce=(eMin/BCELL)|0; ce<=(eMax/BCELL)|0; ce++)
+      for(let cn=(nMin/BCELL)|0; cn<=(nMax/BCELL)|0; cn++){
+        const k = ce*100000+cn;
+        let a = bGrid.get(k); if(!a){ a=[]; bGrid.set(k,a); }
+        a.push(idx);
+      }
+  });
+}
+function inBuilding(x, z){
+  const e = x + E0, n = -z + N0;
+  const a = bGrid.get(((e/BCELL)|0)*100000 + ((n/BCELL)|0));
+  if(!a) return false;
+  for(const idx of a){
+    const entry = FABRIC.buildings[idx];
+    const ring = Array.isArray(entry[1]) ? entry[1] : entry;
+    let inside = false;
+    for(let i=0, j=ring.length-1; i<ring.length; j=i++){
+      const [xi,yi]=ring[i], [xj,yj]=ring[j];
+      if((yi>n)!==(yj>n) && e < (xj-xi)*(n-yi)/(yj-yi)+xi) inside = !inside;
+    }
+    if(inside) return true;
+  }
+  return false;
+}
 function buildFabric(){
   if(!FABRIC) return;
   const lite = new URLSearchParams(location.search).has('lite');
   const walls = [], roofs = [], edges = [], outer = [];
   let bi = 0;
+  const TYPE_H = [0, 7.5, 14, 12, 8.5, 15, 14];     // by derive typeCode; 0 = unknown
   for(const entry of FABRIC.buildings){
     const h0 = Array.isArray(entry[1]) ? entry[0] : 0;
     const ring = Array.isArray(entry[1]) ? entry[1] : entry;
+    const btype = Array.isArray(entry[1]) ? (entry[2]|0) : 0;
     bi++;
     const [e0r, n0r] = ring[0];
     const core = e0r >= CORE.eMin && e0r <= CORE.eMax && n0r >= CORE.nMin && n0r <= CORE.nMax;
@@ -523,7 +559,8 @@ function buildFabric(){
       continue;
     }
     const base = heightAt(x0, z0) + 0.2;
-    const h = Math.min(42, h0 > 0 ? h0 : 5.5 + ((bi*2654435761)>>>0)%40/10);   // OSM height or 5.5-9.5m
+    const guess = TYPE_H[btype] || 6;
+    const h = Math.min(42, h0 > 0 ? h0 : guess + ((bi*2654435761)>>>0)%30/10);  // OSM height, else type heuristic
     const top = base + h;
     const pts2 = ring.map(([e,n]) => new THREE.Vector2(e-E0, n-N0));
     for(let i=0;i<ring.length;i++){
@@ -621,9 +658,10 @@ function buildRoads(){
     {color:PHOS,  opacity:0.85},   // primary (also ribboned)
     {color:PHOS,  opacity:0.32},   // secondary
     {color:0xd0d8e8, opacity:0.8}, // rail (dashed)
-    {color:PHOS,  opacity:0.14},   // tertiary: the city fabric
+    {color:PHOS,  opacity:0.16},   // tertiary
+    {color:PHOS,  opacity:0.07},   // residential: the street grid itself
   ];
-  const buckets = [[],[],[],[],[]];
+  const buckets = [[],[],[],[],[],[]];
   const ribbons = [[],[]];                       // quad strips for cls 0/1
   const RIBW = [13, 8];
   const labelBest = new Map();   // label -> {len, mid}
@@ -1412,8 +1450,20 @@ function updateTank(T, dt, isPlayer){
   T.speed += (targetSpeed - T.speed) * Math.min(1, dt*5.5);
   T.heading += turn * dt * (2.3 - Math.min(1,Math.abs(T.speed)/45)) * (T.speed<-0.5?-1:1);
   const half = WORLD/2 - 60;
-  T.x = THREE.MathUtils.clamp(T.x + Math.sin(T.heading)*T.speed*dt, -half, half);
-  T.z = THREE.MathUtils.clamp(T.z + Math.cos(T.heading)*T.speed*dt, -half, half);
+  const nx = THREE.MathUtils.clamp(T.x + Math.sin(T.heading)*T.speed*dt, -half, half);
+  const nz = THREE.MathUtils.clamp(T.z + Math.cos(T.heading)*T.speed*dt, -half, half);
+  const onDeck = deckY !== null;
+  if(onDeck || !inBuilding(nx, nz)){ T.x = nx; T.z = nz; T.stuckT = 0; }
+  else if(!inBuilding(nx, T.z)){ T.x = nx; T.speed *= 0.8; }        // slide along the wall
+  else if(!inBuilding(T.x, nz)){ T.z = nz; T.speed *= 0.8; }
+  else {
+    if(Math.abs(T.speed) > 14 && isPlayer){ sfx.lost(); burst(new THREE.Vector3(T.x, heightAt(T.x,T.z)+3, T.z), 8, PHOS, 10, 6); }
+    T.speed = 0;
+    if(!isPlayer && T.waypoint){                                     // AI unstick: nudge round the corner
+      T.stuckT = (T.stuckT||0) + dt;
+      if(T.stuckT > 1.6){ T.heading += 0.9; T.stuckT = 0; }
+    }
+  }
   const ty = deckY !== null ? deckY : heightAt(T.x, T.z);
   T.g.position.set(T.x, ty, T.z);
   const ahead = heightAt(T.x+Math.sin(T.heading)*3.2, T.z+Math.cos(T.heading)*3.2);
@@ -1657,7 +1707,7 @@ addEventListener('resize', ()=>{
     try{ FABRIC = await loadJson('data/fabric-bristol.json'); }catch(e){ FABRIC = null; }
     try{ PUBS = await loadJson('data/pubs-bristol.json'); }catch(e){ PUBS = null; }
     $('ntrees').textContent = TREES.trees.length.toLocaleString();
-    buildTerrain(); buildWater(); buildContours(); buildGreens(); buildFabric(); buildPubs(); buildTrees(); buildRoads(); buildBridge(); buildLandmarks(); buildControl();
+    buildTerrain(); buildWater(); buildContours(); buildGreens(); buildFabric(); buildCollisionGrid(); buildPubs(); buildTrees(); buildRoads(); buildBridge(); buildLandmarks(); buildControl();
     TANK_NAMES.forEach((nm,i)=> tanks.push(new Tank(nm, ...TANK_SPAWNS[i])));
     buildFleetHud();
     const T = activeTank();
@@ -1681,7 +1731,7 @@ addEventListener('resize', ()=>{
   });
 })();
 tick();
-window.__tftt = { state, dragons, tanks, plantSapling, heightAt, waterLevel, get aliveTrees(){return aliveTrees;} };  // headless playtest hook
+window.__tftt = { state, dragons, tanks, plantSapling, heightAt, waterLevel, inBuilding, get aliveTrees(){return aliveTrees;} };  // headless playtest hook
 </script>
 </body>
 </html>
