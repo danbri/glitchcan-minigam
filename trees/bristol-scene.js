@@ -177,8 +177,8 @@ const TEMPLATE_HTML = `
   </div>
   <div id="radio" class="hidden" style="margin-top:8px">
   <div class="freq" id="freqlabel">— FM</div>
-  <input type="range" id="dial" min="880" max="1080" value="1000">
-  <div class="stations"><span>91.5 COUNCIL</span><span>96.2 ◇◇◇</span><span>103.7 PIRATE</span></div>
+  <input type="range" id="dial" min="880" max="1080" value="991">
+  <div class="stations"><span>91.5</span><span>96.2 ◇◇◇</span><span style="color:#ffb000">99.1 BRS</span><span>103.7</span></div>
   </div>
   <h3>EXTRAS</h3>
   <div class="row">
@@ -1569,6 +1569,7 @@ const sfx = (()=>{
       };
       schedule();
     },
+    setMusicGain(v){ if(this._mGain) this._mGain.gain.value = this._musicOn ? v : 0; },
     musicToggle(){ this._musicOn = !this._musicOn;
       if(this._mGain) this._mGain.gain.value = this._musicOn ? 1 : 0;
       const np = host.querySelector('#nowplaying'); if(np && !this._musicOn) np.textContent = '';
@@ -1579,7 +1580,7 @@ const sfx = (()=>{
 
 /* ---------- the radio: three stations and a lot of static ---------- */
 const radio = (()=>{
-  const STATIONS = { council: 91.5, numbers: 96.2, pirate: 103.7 };
+  const STATIONS = { council: 91.5, numbers: 96.2, brs: 99.1, pirate: 103.7 };
   let on = false, freq = 100.0, ac = null;
   let staticSrc = null, staticGain = null, wubOsc = null, wubLfo = null, wubGain = null;
   let speakT = 0;
@@ -1634,14 +1635,16 @@ const radio = (()=>{
     setFreq(f){ freq = f; try{ speechSynthesis.cancel(); }catch(e){} speakT = 1.5; },
     label(){
       const st = tuned();
-      const names = {council:'COUNCIL FM', numbers:'◇ ◇ ◇', pirate:'DRAGON PIRATE'};
+      const names = {council:'COUNCIL FM', numbers:'◇ ◇ ◇', brs:'99.1 BRS', pirate:'DRAGON PIRATE'};
       return freq.toFixed(1) + ' FM ' + (st ? '· ' + names[st] : '· STATIC');
     },
     speakPop(line){ say(line.toLowerCase(), 1.8, 1.15, 0.55); },   // dragons always heckle aloud
     update(dt, ctx){
-      if(!on || !staticGain) return;
+      if(!on){ sfx.setMusicGain(1); return; }       // radio off: ambient plays freely
+      if(!staticGain) return;
       const st = tuned();
-      staticGain.gain.value = st ? 0.012 : 0.05;
+      staticGain.gain.value = st ? 0.01 : 0.04;
+      sfx.setMusicGain(st === 'brs' ? strength(STATIONS.brs) : 0);   // tune 99.1 to hear BRS
       wubGain.gain.value = (st === 'pirate') ? 0.07 * strength(STATIONS.pirate) : 0;
       speakT -= dt;
       if(speakT > 0) return;
@@ -1656,6 +1659,7 @@ const radio = (()=>{
         const digits = bearing===null ? '0 0 0' : String(Math.round(bearing)).padStart(3,'0').split('').join('. ');
         say(digits + '.', 0.7, 0.8);
         speakT = 8;
+      } else if(st === 'brs'){ speakT = 4;          // music speaks for itself
       } else if(st === 'pirate'){
         say(QUIPS[(Math.random()*QUIPS.length)|0].toLowerCase(), 1.9, 1.1, 0.7);
         speakT = 9;
@@ -2283,7 +2287,7 @@ function updateWub(dt){
     r.t += dt*1.4;
     const s2 = 4 + r.t*160;
     r.m.scale.set(s2, s2, 1);
-    r.m.material.opacity = Math.max(0, 0.22 - r.t*0.14);
+    r.m.material.opacity = Math.min(r.t*4, 1) * Math.max(0, 0.22 - r.t*0.14);
   }
   if(wubAmp > 0.02){
     wubAmp *= Math.exp(-dt*2.6);
