@@ -37,5 +37,9 @@
     "inkjs": "^2.3.2",
     "playwright": "^1.57.0",
     "puppeteer-core": "^24.35.0"
+  },
+  "dependencies": {
+    "osm-pbf-parser": "^2.3.0",
+    "through2": "^5.0.1"
   }
 }
