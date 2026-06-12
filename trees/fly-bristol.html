@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>FLY BRISTOL — phosphor flight</title>
+<style>
+  :root{ --glow:#00ff66; --hero:#ffb000; --safe-b: env(safe-area-inset-bottom,0px); --safe-t: env(safe-area-inset-top,0px); }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#10171a;font-family:ui-monospace,Menlo,monospace;
+    user-select:none;-webkit-user-select:none;touch-action:none;color:#bfe8d0}
+  canvas{position:fixed;inset:0;display:block}
+  #crt{position:fixed;inset:0;pointer-events:none;z-index:2;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0px, rgba(0,0,0,.16) 1px, transparent 1px, transparent 3px)}
+  #hud{position:fixed;top:calc(var(--safe-t) + 10px);left:12px;z-index:5;font-size:12px;line-height:1.6;
+    text-shadow:0 0 6px rgba(0,255,102,.7);letter-spacing:1px}
+  #hud b{color:var(--glow)}
+  #loc{position:fixed;top:calc(var(--safe-t) + 10px);right:12px;z-index:5;font-size:11px;color:#ffb000;
+    text-shadow:0 0 8px rgba(255,176,0,.7);letter-spacing:1px;text-align:right}
+  #hint{position:fixed;bottom:calc(var(--safe-b) + 10px);left:0;right:0;text-align:center;z-index:5;
+    font-size:10px;letter-spacing:1px;opacity:.75}
+  #stick{position:fixed;left:18px;bottom:calc(var(--safe-b) + 26px);width:120px;height:120px;z-index:6;
+    border-radius:50%;border:1px solid rgba(0,255,102,.5);background:radial-gradient(circle, rgba(0,255,102,.07), transparent 70%)}
+  #knob{position:absolute;left:50%;top:50%;width:48px;height:48px;border-radius:50%;border:2px solid var(--glow);
+    background:rgba(0,255,102,.14);transform:translate(-50%,-50%);box-shadow:0 0 12px rgba(0,255,102,.5)}
+  .fbtn{position:fixed;z-index:6;border-radius:50%;border:2px solid rgba(255,176,0,.6);color:var(--hero);
+    display:flex;align-items:center;justify-content:center;font-weight:700;cursor:pointer;
+    background:rgba(20,14,2,.6);text-shadow:0 0 8px rgba(255,176,0,.8);box-shadow:0 0 14px rgba(255,176,0,.25)}
+  .fbtn:active{transform:scale(.93)}
+  #boost{right:18px;bottom:calc(var(--safe-b) + 26px);width:96px;height:96px;font-size:15px;letter-spacing:2px}
+  #up{right:128px;bottom:calc(var(--safe-b) + 78px);width:54px;height:54px;font-size:20px}
+  #down{right:128px;bottom:calc(var(--safe-b) + 16px);width:54px;height:54px;font-size:20px}
+  #splash{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at 50% 35%, rgba(20,28,24,.95), rgba(6,10,9,.98));text-align:center;padding:24px}
+  #splash h1{font-size:clamp(26px,7vw,50px);color:var(--hero);letter-spacing:4px;
+    text-shadow:0 0 24px rgba(255,176,0,.8), 0 0 70px rgba(255,176,0,.4)}
+  #splash p{font-size:clamp(11px,2.8vw,14px);color:#9fd9b8;max-width:520px;margin:12px 0;line-height:1.6}
+  #go{margin-top:16px;padding:14px 44px;font:700 clamp(16px,4.5vw,22px) ui-monospace,monospace;letter-spacing:3px;
+    color:var(--hero);background:transparent;border:2px solid var(--hero);cursor:pointer;
+    box-shadow:0 0 20px rgba(255,176,0,.4);text-shadow:0 0 10px rgba(255,176,0,.9)}
+  #note{font-size:10px;color:#56906f;margin-top:14px;letter-spacing:1px}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<div id="crt"></div>
+<div id="hud">SPD <b id="spd">0</b> KM/H<br>ALT <b id="alt">0</b> M</div>
+<div id="loc">—</div>
+<div id="hint">DRAG look · STICK fly · ⬆⬇ rise/sink · BOOST · (WASD + mouse + SHIFT on desktop)</div>
+<div id="stick"><div id="knob"></div></div>
+<div id="boost" class="fbtn">BOOST</div>
+<div id="up" class="fbtn">⬆</div>
+<div id="down" class="fbtn">⬇</div>
+<div id="splash">
+  <h1>FLY BRISTOL</h1>
+  <p>Phosphor flight over the real city — EU-DEM terrain, 104,876 OSM buildings,
+     35,893 council trees, the Avon, the bridge, the lot.</p>
+  <p>No engines. No dragons. Just you, the drizzle, and the gorge.</p>
+  <button id="go">▶ TAKE OFF</button>
+  <div id="note">LOADING…</div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/jsm/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { FilmPass } from 'three/addons/postprocessing/FilmPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+/* ============ FLY BRISTOL — superhero flight over the real data ============ */
+const WORLD = 9000, E0 = 358500, N0 = 173500, EXAG = 1.6;
+const $ = id => document.getElementById(id);
+const PHOS = 0x00ff66, HERO = 0xffb000, CYAN = 0x00ddff;
+
+async function loadJson(path){
+  try{
+    const r = await fetch(path + '.gz'); if(!r.ok) throw 0;
+    return JSON.parse(await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text());
+  }catch(e){
+    const r = await fetch(path); if(!r.ok) throw new Error('cannot load ' + path);
+    return r.json();
+  }
+}
+let ELEV = null;
+function heightAt(x, z){
+  if(!ELEV) return 0;
+  const {rows, cols, data} = ELEV;
+  let u = (x + WORLD/2) / WORLD * (cols-1), v = ((-z) + WORLD/2) / WORLD * (rows-1);
+  u = Math.max(0, Math.min(cols-1.001, u)); v = Math.max(0, Math.min(rows-1.001, v));
+  const c0 = u|0, r0 = v|0, fu = u-c0, fv = v-r0;
+  return ((data[r0*cols+c0]*(1-fu)+data[r0*cols+c0+1]*fu)*(1-fv)
+        + (data[(r0+1)*cols+c0]*(1-fu)+data[(r0+1)*cols+c0+1]*fu)*fv) * EXAG;
+}
+
+/* ---------- renderer + post: bloom for the phosphor, grain for the film ---------- */
+const renderer = new THREE.WebGLRenderer({antialias:false, powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+renderer.setSize(innerWidth, innerHeight);
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x131b18);
+scene.fog = new THREE.Fog(0x131b18, 900, 3600);
+const camera = new THREE.PerspectiveCamera(62, innerWidth/innerHeight, 0.5, 6000);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.75, 0.55, 0.18);
+composer.addPass(bloom);
+composer.addPass(new FilmPass(0.28, false));
+composer.addPass(new OutputPass());
+
+function vectorize(geo, color, op=1){
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color:0x0a120e})));
+  g.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),
+    new THREE.LineBasicMaterial({color, transparent:op<1, opacity:op})));
+  return g;
+}
+
+/* ---------- world (compact rebuild from the cached datasets) ---------- */
+let FABRIC=null, WATER=null, ROADS=null, TREES=null;
+const LANDMARKS = [
+  ['CLIFTON SUSPENSION BRIDGE',356790,173020],['CABOT TOWER',358290,172730],['TEMPLE MEADS',360060,172370],
+  ['ST MARY REDCLIFFE',360131,172371],['WILLS MEMORIAL',358498,173150],['PURDOWN BT TOWER',361495,175788],
+  ['THE DOWNS',357642,174308],['SS GREAT BRITAIN',358144,172427],
+];
+function textSprite(msg, scale=1, col='#00ff66'){
+  const c = document.createElement('canvas'); c.width = 512; c.height = 96;
+  const x = c.getContext('2d'); x.font = '700 40px ui-monospace,monospace'; x.textAlign='center';
+  x.shadowColor = col; x.shadowBlur = 14; x.fillStyle = col; x.fillText(msg, 256, 60);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c), transparent:true, depthWrite:false}));
+  s.scale.set(230*scale, 43*scale, 1); return s;
+}
+function buildWorld(){
+  // terrain
+  const seg = ELEV.cols - 1;
+  const g = new THREE.PlaneGeometry(WORLD, WORLD, seg, seg);
+  g.rotateX(-Math.PI/2);
+  const pos = g.attributes.position;
+  for(let i=0;i<pos.count;i++) pos.setY(i, heightAt(pos.getX(i), pos.getZ(i)));
+  scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({color:0x10180f})));
+  const grid = new THREE.Mesh(g.clone(), new THREE.MeshBasicMaterial({wireframe:true, color:PHOS, transparent:true, opacity:0.22}));
+  grid.position.y = 0.4; scene.add(grid);
+  // water
+  for(const [, ring] of WATER.water){
+    const shape = new THREE.Shape(ring.map(([e,n]) => new THREE.Vector2(e-E0, n-N0)));
+    let mean = 0; for(const [e,n] of ring) mean += heightAt(e-E0, -(n-N0)); mean /= ring.length;
+    const m = new THREE.Mesh(new THREE.ShapeGeometry(shape),
+      new THREE.MeshBasicMaterial({color:0x1a6eb8, transparent:true, opacity:0.6, depthWrite:false, side:THREE.DoubleSide}));
+    m.rotation.x = -Math.PI/2; m.position.y = mean + 1.1; scene.add(m);
+  }
+  // roads (majors only, lines)
+  const rl = [];
+  for(const [cls,,pts] of ROADS.roads){
+    if(cls > 2) continue;
+    for(let i=0;i<pts.length-1;i++){
+      const x1=pts[i][0]-E0, z1=-(pts[i][1]-N0), x2=pts[i+1][0]-E0, z2=-(pts[i+1][1]-N0);
+      rl.push(x1, heightAt(x1,z1)+1.4, z1, x2, heightAt(x2,z2)+1.4, z2);
+    }
+  }
+  const rg = new THREE.BufferGeometry();
+  rg.setAttribute('position', new THREE.Float32BufferAttribute(rl, 3));
+  scene.add(new THREE.LineSegments(rg, new THREE.LineBasicMaterial({color:PHOS, transparent:true, opacity:0.45})));
+  // buildings: rooflines everywhere + dark mass walls in the core
+  const TYPE_H = [0, 7.5, 14, 12, 8.5, 15, 14];
+  const CORE = { eMin: 356263, eMax: 361566, nMin: 170802, nMax: 174920 };
+  const walls = [], edges = [];
+  let bi = 0;
+  for(const entry of FABRIC.buildings){
+    const h0 = entry[0], ring = entry[1], btype = entry[2]|0;
+    bi++;
+    const [e0r, n0r] = ring[0];
+    const base = heightAt(e0r-E0, -(n0r-N0)) + 0.2;
+    const h = Math.min(42, h0 > 0 ? h0 : (TYPE_H[btype]||6) + ((bi*2654435761)>>>0)%30/10);
+    const top = base + h;
+    const core = e0r >= CORE.eMin && e0r <= CORE.eMax && n0r >= CORE.nMin && n0r <= CORE.nMax;
+    for(let i=0;i<ring.length;i++){
+      const [e1,n1] = ring[i], [e2,n2] = ring[(i+1)%ring.length];
+      const ax=e1-E0, az=-(n1-N0), bx=e2-E0, bz=-(n2-N0);
+      edges.push(ax,top,az, bx,top,bz);
+      if(core) walls.push(ax,base,az, bx,base,bz, bx,top,bz,  ax,base,az, bx,top,bz, ax,top,az);
+    }
+  }
+  const mk = a => { const gg = new THREE.BufferGeometry();
+    gg.setAttribute('position', new THREE.Float32BufferAttribute(a,3)); return gg; };
+  scene.add(new THREE.Mesh(mk(walls), new THREE.MeshBasicMaterial({color:0x0b1410, side:THREE.DoubleSide})));
+  scene.add(new THREE.LineSegments(mk(edges), new THREE.LineBasicMaterial({color:0x2fae62, transparent:true, opacity:0.4})));
+  // trees (every 2nd, instanced wireframe domes)
+  const list = TREES.trees.filter((_,i)=>i%2===0);
+  const im = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),
+    new THREE.MeshBasicMaterial({wireframe:true, color:0x39c46a, transparent:true, opacity:0.7}), list.length);
+  const dummy = new THREE.Object3D();
+  list.forEach(([e,n,,cw,ch], i) => {
+    const x=e-E0, z=-(n-N0), y=heightAt(x,z);
+    const r=Math.min(8,(cw||5)/2), hh=Math.min(18,Math.max(3,ch||8));
+    dummy.position.set(x, y+hh*0.7, z); dummy.scale.set(r, hh*0.45, r); dummy.updateMatrix();
+    im.setMatrixAt(i, dummy.matrix);
+  });
+  scene.add(im);
+  for(const [name,e,n] of LANDMARKS){
+    const x=e-E0, z=-(n-N0);
+    const sp = textSprite(name, 0.85); sp.position.set(x, heightAt(x,z)+90, z); scene.add(sp);
+  }
+}
+
+/* ---------- the hero: vector flyer, house-built (MetaHumans are Unreal-only by licence) ---------- */
+const hero = new THREE.Group();
+let heroParts = {};
+function buildHero(){
+  const torso = vectorize(new THREE.BoxGeometry(0.9,1.25,0.5), HERO); torso.position.y = 0.2; hero.add(torso);
+  const head = vectorize(new THREE.SphereGeometry(0.32,8,6), HERO); head.position.y = 1.15; hero.add(head);
+  const mkLimb = (w,l) => { const pivot = new THREE.Group();
+    const limb = vectorize(new THREE.BoxGeometry(w,l,w), HERO, 0.9);
+    limb.position.y = -l/2; pivot.add(limb); return pivot; };
+  const armL = mkLimb(0.24,1.0), armR = mkLimb(0.24,1.0);
+  armL.position.set(-0.6,0.78,0); armR.position.set(0.6,0.78,0);
+  const legL = mkLimb(0.3,1.15), legR = mkLimb(0.3,1.15);
+  legL.position.set(-0.25,-0.45,0); legR.position.set(0.25,-0.45,0);
+  hero.add(armL, armR, legL, legR);
+  // the cape: a living ribbon
+  const capeGeo = new THREE.PlaneGeometry(1.15, 2.3, 1, 8);
+  const cape = new THREE.Mesh(capeGeo, new THREE.MeshBasicMaterial({color:0xcc2222, side:THREE.DoubleSide,
+    transparent:true, opacity:0.85}));
+  const capeEdge = new THREE.LineSegments(new THREE.EdgesGeometry(capeGeo),
+    new THREE.LineBasicMaterial({color:HERO}));
+  const capeG = new THREE.Group(); capeG.add(cape, capeEdge);
+  capeG.position.set(0, 0.85, -0.3); hero.add(capeG);
+  hero.scale.setScalar(2.2);
+  heroParts = {armL, armR, legL, legR, capeG, capeGeo, capeEdgeGeo: capeEdge.geometry, torso};
+  scene.add(hero);
+}
+
+/* ---------- flight model ---------- */
+const F = {
+  pos: new THREE.Vector3(356790-E0, 0, -(173020-N0)),  // above the bridge
+  vel: new THREE.Vector3(), yaw: 2.2, pitch: -0.1,
+  boost: false, up: 0, shake: 0,
+};
+F.pos.y = heightAt(F.pos.x, F.pos.z) + 90;
+const input = {x:0, y:0};
+const keys = {};
+addEventListener('keydown', e => { keys[e.code]=true; if(e.code==='ShiftLeft'||e.code==='ShiftRight') F.boost=true; });
+addEventListener('keyup', e => { keys[e.code]=false; if(e.code==='ShiftLeft'||e.code==='ShiftRight') F.boost=false; });
+addEventListener('mousemove', e => {
+  if(document.pointerLockElement || e.buttons & 1){
+    F.yaw -= e.movementX*0.0028; F.pitch = THREE.MathUtils.clamp(F.pitch - e.movementY*0.0022, -1.2, 1.2);
+  }
+});
+/* touch: stick + drag-look + buttons */
+(function(){
+  const stick = $('stick'), knob = $('knob');
+  let sid = null, lid = null, lx=0, ly=0;
+  addEventListener('touchstart', e => {
+    for(const t of e.changedTouches){
+      if(t.target.closest('#stick') && sid===null) sid = t.identifier;
+      else if(!t.target.closest('.fbtn') && lid===null){ lid = t.identifier; lx=t.clientX; ly=t.clientY; }
+    }
+  }, {passive:true});
+  addEventListener('touchmove', e => {
+    for(const t of e.changedTouches){
+      if(t.identifier===sid){
+        const r = stick.getBoundingClientRect();
+        let dx = t.clientX-(r.left+r.width/2), dy = t.clientY-(r.top+r.height/2);
+        const m = Math.hypot(dx,dy), mx = r.width/2-8;
+        if(m>mx){ dx*=mx/m; dy*=mx/m; }
+        input.x = dx/mx; input.y = -dy/mx;
+        knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      } else if(t.identifier===lid){
+        F.yaw -= (t.clientX-lx)*0.005; F.pitch = THREE.MathUtils.clamp(F.pitch-(t.clientY-ly)*0.004, -1.2, 1.2);
+        lx=t.clientX; ly=t.clientY;
+      }
+    }
+  }, {passive:true});
+  addEventListener('touchend', e => {
+    for(const t of e.changedTouches){
+      if(t.identifier===sid){ sid=null; input.x=0; input.y=0; knob.style.transform='translate(-50%,-50%)'; }
+      if(t.identifier===lid) lid=null;
+    }
+  });
+  const hold = (id, on, off) => { const el = $(id);
+    el.addEventListener('touchstart', e=>{ on(); e.preventDefault(); }, {passive:false});
+    el.addEventListener('touchend', e=>{ off(); e.preventDefault(); }, {passive:false});
+    el.addEventListener('mousedown', on); el.addEventListener('mouseup', off);
+  };
+  hold('boost', ()=>F.boost=true, ()=>F.boost=false);
+  hold('up', ()=>F.up=1, ()=>F.up=0);
+  hold('down', ()=>F.up=-1, ()=>F.up=0);
+})();
+
+/* speed lines */
+const SL_N = 90;
+const slGeo = new THREE.BufferGeometry();
+slGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(SL_N*6), 3));
+scene.add(new THREE.LineSegments(slGeo, new THREE.LineBasicMaterial({color:0xbfe8d0, transparent:true, opacity:0.4})));
+const slPts = Array.from({length:SL_N}, () => new THREE.Vector3((Math.random()-0.5)*160,(Math.random()-0.5)*100,(Math.random()-0.5)*220));
+
+/* wind audio */
+let ac=null, windGain=null, windFilt=null;
+function audioStart(){
+  ac = new (window.AudioContext||window.webkitAudioContext)();
+  const len = ac.sampleRate*2, buf = ac.createBuffer(1,len,ac.sampleRate);
+  const d = buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+  const src = ac.createBufferSource(); src.buffer=buf; src.loop=true;
+  windFilt = ac.createBiquadFilter(); windFilt.type='bandpass'; windFilt.frequency.value=300; windFilt.Q.value=0.6;
+  windGain = ac.createGain(); windGain.gain.value=0;
+  src.connect(windFilt).connect(windGain).connect(ac.destination); src.start();
+}
+
+/* ---------- main loop ---------- */
+const clock = new THREE.Clock();
+let running = false, locT = 0;
+function tick(){
+  requestAnimationFrame(tick);
+  const dt = Math.min(0.05, clock.getDelta());
+  if(running){
+    // thrust along look direction + stick
+    const fwd = new THREE.Vector3(Math.sin(F.yaw)*Math.cos(F.pitch), Math.sin(F.pitch), Math.cos(F.yaw)*Math.cos(F.pitch));
+    const right = new THREE.Vector3(Math.cos(F.yaw), 0, -Math.sin(F.yaw));
+    let thrust = new THREE.Vector3();
+    let fIn = input.y + (keys.KeyW?1:0) - (keys.KeyS?1:0);
+    let rIn = input.x + (keys.KeyD?1:0) - (keys.KeyA?1:0);
+    let uIn = F.up + (keys.Space?1:0) - (keys.ControlLeft||keys.KeyC?1:0);
+    thrust.addScaledVector(fwd, fIn).addScaledVector(right, rIn).add(new THREE.Vector3(0, uIn*0.8, 0));
+    const MAX = F.boost ? 210 : 80, ACC = F.boost ? 160 : 70;
+    F.vel.addScaledVector(thrust, ACC*dt);
+    F.vel.multiplyScalar(Math.max(0, 1 - dt*1.1));
+    if(F.vel.length() > MAX) F.vel.setLength(MAX);
+    F.pos.addScaledVector(F.vel, dt);
+    const ground = heightAt(F.pos.x, F.pos.z) + 3;
+    if(F.pos.y < ground){ F.pos.y = ground; F.vel.y = Math.max(0, F.vel.y); }
+    F.pos.x = THREE.MathUtils.clamp(F.pos.x, -WORLD/2+50, WORLD/2-50);
+    F.pos.z = THREE.MathUtils.clamp(F.pos.z, -WORLD/2+50, WORLD/2-50);
+
+    /* hero pose: hover <-> superman cruise, banking on turn */
+    const spd = F.vel.length();
+    const cruise = THREE.MathUtils.clamp(spd/55, 0, 1);
+    hero.position.copy(F.pos);
+    const travelYaw = spd > 4 ? Math.atan2(F.vel.x, F.vel.z) : F.yaw;
+    const bank = THREE.MathUtils.clamp(-rIn*0.7 - (F.vel.dot(right)/(spd+5))*0.5, -1, 1);
+    hero.quaternion.slerp(new THREE.Quaternion().setFromEuler(new THREE.Euler(
+      (Math.PI/2 - 0.18)*cruise * -1 * Math.sign(1) * (F.vel.y < -10 ? 1.15 : 1) * -1 + (-cruise*(Math.PI/2-0.22)) * 0,
+      travelYaw, bank*0.8*cruise, 'YXZ')), Math.min(1, dt*5));
+    // simpler explicit pitch: upright when hovering, prone when cruising
+    hero.rotation.x = THREE.MathUtils.lerp(hero.rotation.x, -cruise*(Math.PI/2-0.2) + F.pitch*-0.3*cruise, Math.min(1,dt*5));
+    const P = heroParts;
+    const t = performance.now()/1000;
+    P.armL.rotation.x = THREE.MathUtils.lerp(P.armL.rotation.x, cruise*(Math.PI-0.2), dt*5);      // fist forward
+    P.armR.rotation.x = THREE.MathUtils.lerp(P.armR.rotation.x, cruise*0.4, dt*5);                // arm trailing
+    P.armL.rotation.z = (1-cruise)*(0.5+Math.sin(t*1.7)*0.08);
+    P.armR.rotation.z = -(1-cruise)*(0.5+Math.sin(t*1.7+1)*0.08);
+    P.legL.rotation.x = P.legR.rotation.x = THREE.MathUtils.lerp(P.legL.rotation.x, cruise*0.12, dt*5);
+    hero.position.y += (1-cruise)*Math.sin(t*1.6)*0.5;                                            // hover bob
+    /* cape ripple */
+    const cp = P.capeGeo.attributes.position;
+    for(let i=0;i<cp.count;i++){
+      const yy = cp.getY(i);
+      const wave = Math.sin(t*6 + yy*2.2)* (0.08 + cruise*0.3) * (1.15-yy/2.3) * ((yy<1) ? 1 : 0.2);
+      cp.setZ(i, wave - cruise*Math.max(0, -yy)*0.55);
+    }
+    cp.needsUpdate = true;
+    P.capeG.rotation.x = 0.25 + cruise*1.15;
+
+    /* camera: chase + zoom + shake */
+    F.shake = THREE.MathUtils.lerp(F.shake, F.boost ? 1 : 0, dt*4);
+    const camBack = 14 + cruise*10, camUp = 4 + (1-cruise)*3;
+    const cx = F.pos.x - Math.sin(F.yaw)*camBack*Math.cos(F.pitch*0.5);
+    const cz = F.pos.z - Math.cos(F.yaw)*camBack*Math.cos(F.pitch*0.5);
+    const cy = F.pos.y + camUp - Math.sin(F.pitch)*camBack*0.6;
+    camera.position.lerp(new THREE.Vector3(cx, Math.max(cy, heightAt(cx,cz)+2.5), cz), Math.min(1, dt*5));
+    camera.position.x += (Math.random()-0.5)*F.shake*1.6;
+    camera.position.y += (Math.random()-0.5)*F.shake*1.6;
+    const look = F.pos.clone().addScaledVector(fwd, 26);
+    camera.lookAt(look);
+    camera.fov += ((62 + cruise*10 + F.shake*10) - camera.fov)*dt*4;
+    camera.updateProjectionMatrix();
+    bloom.strength = 0.75 + F.shake*0.5;
+
+    /* speed lines streak opposite to velocity */
+    const arr = slGeo.attributes.position.array;
+    const stretch = Math.min(22, 2 + spd*0.12);
+    for(let i=0;i<SL_N;i++){
+      const p = slPts[i];
+      p.addScaledVector(F.vel, -dt);
+      if(p.length() > 200) p.set((Math.random()-0.5)*160,(Math.random()-0.5)*100,(Math.random()-0.5)*220);
+      const wx = F.pos.x+p.x, wy = F.pos.y+p.y, wz = F.pos.z+p.z;
+      const vn = F.vel.clone().normalize();
+      arr[i*6]=wx; arr[i*6+1]=wy; arr[i*6+2]=wz;
+      arr[i*6+3]=wx-vn.x*stretch; arr[i*6+4]=wy-vn.y*stretch; arr[i*6+5]=wz-vn.z*stretch;
+    }
+    slGeo.attributes.position.needsUpdate = true;
+    if(windGain){ windGain.gain.value = Math.min(0.16, spd*0.0011 + F.shake*0.07);
+      windFilt.frequency.value = 220 + spd*5; }
+
+    /* HUD */
+    $('spd').textContent = (spd*3.6).toFixed(0);
+    $('alt').textContent = Math.max(0,(F.pos.y - heightAt(F.pos.x,F.pos.z))/EXAG).toFixed(0);
+    locT -= dt;
+    if(locT <= 0){ locT = 1;
+      let best='', bd=1e12;
+      for(const [name,e,n] of LANDMARKS){
+        const d = Math.hypot(e-E0-F.pos.x, -(n-N0)-F.pos.z);
+        if(d<bd){bd=d;best=name;}
+      }
+      $('loc').textContent = (bd<300?'OVER ':'NR ') + best;
+    }
+  }
+  composer.render();
+}
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+});
+
+(async function boot(){
+  const note = $('note'), go = $('go'); go.disabled = true; go.style.opacity = 0.4;
+  try{
+    note.textContent = 'ELEVATION…'; ELEV = await loadJson('data/elevation-bristol.json');
+    note.textContent = 'WATER…';     WATER = await loadJson('data/water-bristol.json');
+    note.textContent = 'ROADS…';     ROADS = await loadJson('data/roads-bristol.json');
+    note.textContent = 'BUILDINGS…'; FABRIC = await loadJson('data/fabric-bristol.json');
+    note.textContent = 'TREES…';     TREES = await loadJson('data/trees-bristol.json');
+    buildWorld(); buildHero();
+    hero.position.copy(F.pos);
+    camera.position.set(F.pos.x-20, F.pos.y+6, F.pos.z-20); camera.lookAt(F.pos);
+    note.textContent = 'CAPE PRESSED. READY.';
+    go.disabled = false; go.style.opacity = 1;
+  }catch(e){ note.textContent = '!! ' + e.message; console.error(e); }
+  go.addEventListener('click', ()=>{
+    $('splash').classList.add('hidden');
+    audioStart(); running = true;
+    renderer.domElement.addEventListener('click', ()=>{ if(matchMedia('(hover:hover)').matches) renderer.domElement.requestPointerLock?.(); });
+  });
+})();
+tick();
+window.__fly = { F, get running(){return running;}, heightAt };  // headless hook
+</script>
+</body>
+</html>

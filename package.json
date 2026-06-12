@@ -40,6 +40,7 @@
   },
   "dependencies": {
     "osm-pbf-parser": "^2.3.0",
+    "three": "^0.169.0",
     "through2": "^5.0.1"
   }
 }
