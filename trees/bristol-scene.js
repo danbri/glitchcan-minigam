@@ -1452,12 +1452,18 @@ function makeDragon(){
     const inner = vect(new THREE.BoxGeometry(5.2, 0.35, 0.6)); inner.position.x = sx*2.6; shoulder.add(inner);
     const elbow = new THREE.Group(); elbow.position.x = sx*5.2; shoulder.add(elbow);
     const outer = vect(new THREE.BoxGeometry(6.4, 0.28, 0.45)); outer.position.x = sx*3.2; elbow.add(outer);
-    const mem = new THREE.Mesh(new THREE.PlaneGeometry(11, 5.5, 4, 2),
-      new THREE.MeshBasicMaterial({color:0x33121e, transparent:true, opacity:0.78, side:THREE.DoubleSide}));
+    const mem = new THREE.Mesh(new THREE.PlaneGeometry(11, 5.5, 5, 3),
+      new THREE.MeshBasicMaterial({color:0x2c0f1c, transparent:true, opacity:0.8, side:THREE.DoubleSide}));
     mem.position.set(sx*4.6, -0.2, -2.6); shoulder.add(mem);
-    const memEdge = new THREE.LineSegments(new THREE.EdgesGeometry(mem.geometry),
-      new THREE.LineBasicMaterial({color:ENEMY, transparent:true, opacity:0.5}));
-    memEdge.position.copy(mem.position); shoulder.add(memEdge);
+    g.userData[sx<0?'memL':'memR'] = mem;
+    for(let r2=0;r2<3;r2++){                                       // membrane finger-ribs
+      const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06, 5.2, 3),
+        new THREE.MeshBasicMaterial({color:ENEMY, transparent:true, opacity:0.55}));
+      rib.rotation.z = Math.PI/2; rib.rotation.y = (r2-1)*0.35;
+      rib.position.set(sx*4.6, -0.1, -1.2 - r2*1.5); shoulder.add(rib);
+    }
+    const claw = vect(new THREE.ConeGeometry(0.22, 1.1, 4));       // elbow claw
+    claw.rotation.z = sx*-1.4; claw.position.set(sx*0.4, 0.4, 0); elbow.add(claw);
     g.userData[sx<0?'wingL':'wingR'] = shoulder;
     g.userData[sx<0?'elbowL':'elbowR'] = elbow;
   }
@@ -1473,6 +1479,40 @@ function makeDragon(){
   }
   const barb = vect(new THREE.ConeGeometry(0.5, 1.6, 4)); barb.rotation.x = Math.PI/2; barb.position.z = -3.4; tp.add(barb);
   g.userData.tail = tail;
+  // accent extremities: amber-edged
+  const vectA = (geo) => { const grp = new THREE.Group();
+    grp.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color:hide})));
+    grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),
+      new THREE.LineBasicMaterial({color:AMBER, transparent:true, opacity:0.9})));
+    return grp; };
+  // spinal ridge: five plates down the back
+  for(let i=0;i<5;i++){
+    const plate = vectA(new THREE.ConeGeometry(0.4, 1.1 - i*0.12, 4));
+    plate.position.set(0, 1.6, 3.0 - i*1.7); g.add(plate);
+  }
+  // chest banding: scale rings
+  for(let i=0;i<3;i++){
+    const band = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.CylinderGeometry(2.1+i*0.15, 2.3+i*0.15, 0.06, 9)),
+      new THREE.LineBasicMaterial({color:ENEMY, transparent:true, opacity:0.35}));
+    band.rotation.x = Math.PI/2; band.position.set(0, -0.2, 1.6 - i*1.5); g.add(band);
+  }
+  // hind legs, tucked for flight
+  for(const sx of [-1,1]){
+    const hip = new THREE.Group(); hip.position.set(sx*1.5, -1.2, -2.4); hip.rotation.x = 0.9; g.add(hip);
+    const thigh = vect(new THREE.BoxGeometry(0.7, 2.2, 0.7)); thigh.position.y = -1.1; hip.add(thigh);
+    const talon = vectA(new THREE.ConeGeometry(0.3, 0.9, 4)); talon.position.y = -2.4; talon.rotation.x = Math.PI; hip.add(talon);
+  }
+  // glowing eye halos
+  const glowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64;
+    const x = c.getContext('2d'); const grd = x.createRadialGradient(32,32,2,32,32,30);
+    grd.addColorStop(0,'rgba(255,60,60,0.9)'); grd.addColorStop(1,'rgba(255,60,60,0)');
+    x.fillStyle = grd; x.fillRect(0,0,64,64); return new THREE.CanvasTexture(c); })();
+  for(const sx of [-1,1]){
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex, transparent:true,
+      blending:THREE.AdditiveBlending, depthWrite:false}));
+    halo.scale.set(1.6,1.6,1); halo.position.set(sx*0.55, 0.25, 1.0); head.add(halo);
+  }
   g.scale.setScalar(2.6);                                         // a lot bigger
   const bubble = textSprite('', 0.11, '#ffb000'); bubble.position.set(0,5.5,1.5); bubble.visible=false; g.add(bubble);
   g.userData.bubble = bubble;
@@ -1492,6 +1532,7 @@ function spawnDragon(speedMul){
   d.blip.visible = state.view==='map';
   dragons.push(d); scene.add(g);
   sfx.roar();
+  actionCam(g.position, 2.0);
 }
 function dragonSay(d, msg, secs=2.2){
   const b = d.g.userData.bubble;
@@ -1828,6 +1869,13 @@ const state = {
   map:{cx:0, cz:0, h:2600}, auto:null,
 };
 const input = {x:0, y:0, fire:false, aimAngle:null, manualT:0, lookYaw:0, looking:false};
+let camCut = 0, camCutPos = null;
+function actionCam(p, secs){
+  if(state.view !== 'drive' || state.auto) return;
+  const T = activeTank();
+  if(Math.hypot(p.x-T.x, p.z-T.z) > 450) return;
+  camCut = secs; camCutPos = p.clone ? p.clone() : new THREE.Vector3(p.x, p.y, p.z);
+}
 const activeTank = () => tanks[state.active];
 
 let locT = 0;
@@ -2529,6 +2577,7 @@ function tick(){
       if(d.state!=='dead' && c.m.position.distanceTo(d.g.position) < 17){
         d.state='dead'; d.deadT = 1.4; state.score += 10;
         sfx.pop(); burst(d.g.position, 24, ENEMY, 24, 16); burst(d.g.position, 14, PHOS, 16, 12);
+        actionCam(d.g.position, 1.0);
         const popline = POPLINES[(Math.random()*POPLINES.length)|0];
         dragonSay(d, popline, 1.2);
         radio.speakPop(popline);
@@ -2558,16 +2607,36 @@ function tick(){
   munchSfxTick -= dt;
   for(let i=dragons.length-1;i>=0;i--){
     const d = dragons[i]; d.t += dt;
-    const flapA = Math.sin(d.t*7)*0.8;
     const U = d.g.userData;
+    // pose: 0 = soaring, 1 = folded (perch/munch); dive = swept-back surge
+    const wantFold = (d.state==='munch' || d.state==='perch') ? 1 : 0;
+    d.fold = THREE.MathUtils.lerp(d.fold ?? 0, wantFold, dt*3);
+    const diving = d.state==='seek' && d.target>=0 && d.g.position.y > (treeState[d.target]?.y ?? 0) + 40;
+    const flapHz = diving ? 11 : 6 - d.fold*4;
+    const flapA = Math.sin(d.t*flapHz) * (0.8 - d.fold*0.65);
     if(U.wingL){
-      U.wingL.rotation.z = 0.18 + flapA*0.55; U.wingR.rotation.z = -0.18 - flapA*0.55;
-      const fold = Math.sin(d.t*7 - 0.7)*0.5;
-      if(U.elbowL){ U.elbowL.rotation.z = -0.25 - fold*0.5; U.elbowR.rotation.z = 0.25 + fold*0.5; }
+      U.wingL.rotation.z =  0.18 + flapA*0.55 + d.fold*1.05;
+      U.wingR.rotation.z = -0.18 - flapA*0.55 - d.fold*1.05;
+      const fold2 = Math.sin(d.t*flapHz - 0.7)*0.5*(1-d.fold);
+      if(U.elbowL){ U.elbowL.rotation.z = -0.25 - fold2*0.5 - d.fold*1.5; U.elbowR.rotation.z = 0.25 + fold2*0.5 + d.fold*1.5; }
+    }
+    for(const mk of ['memL','memR']){                              // living membrane
+      const mem = U[mk]; if(!mem) continue;
+      const mp = mem.geometry.attributes.position;
+      for(let vi=0; vi<mp.count; vi++){
+        const mx = mp.getX(vi);
+        mp.setZ(vi, Math.sin(d.t*flapHz*1.1 + mx*0.5) * 0.28 * (Math.abs(mx)/5.5) * (1-d.fold*0.7));
+      }
+      mp.needsUpdate = true;
     }
     if(U.tail) U.tail.rotation.y = Math.sin(d.t*1.9)*0.35;
     if(U.neck) U.neck.rotation.y = Math.sin(d.t*1.3)*0.18;
     if(U.jaw) U.jaw.rotation.x = d.state==='munch' ? 0.35 + Math.sin(d.t*16)*0.3 : 0.05;
+    d.g.scale.setScalar(2.6 * (1 + d.fold*0.015*Math.sin(d.t*2.4)));   // breathing at rest
+    if(Math.random() < dt*(d.state==='munch'?5:1.5)){                  // nostril embers
+      const hp = new THREE.Vector3(0, 1.4, 12).applyQuaternion(d.g.quaternion).add(d.g.position);
+      burst(hp, 1, 0xff6622, 2.5, 1.2);
+    }
     if(d.bubbleT !== undefined){ d.bubbleT -= dt; if(d.bubbleT<=0){ d.g.userData.bubble.visible=false; d.bubbleT=undefined; } }
     d.blip.position.set(d.g.position.x, 60, d.g.position.z);
     d.blip.scale.setScalar(state.map.h/70);
@@ -2625,7 +2694,8 @@ function tick(){
         d.g.lookAt(goal);
         d.g.position.addScaledVector(dir.normalize(), Math.min(d.speed*dt, dist));
         d.g.position.y += Math.sin(d.t*3)*0.25;
-        if(dist < 4){ d.state='munch'; d.munch=0; d.perched=false; dragonSay(d, QUIPS[(Math.random()*QUIPS.length)|0], 2.6); }
+        if(dist < 4){ d.state='munch'; d.munch=0; d.perched=false; dragonSay(d, QUIPS[(Math.random()*QUIPS.length)|0], 2.6);
+          actionCam(d.g.position, 1.8); }
       }
     } else if(d.state==='munch'){
       const t = treeState[d.target];
