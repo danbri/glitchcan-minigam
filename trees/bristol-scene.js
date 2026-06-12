@@ -1778,10 +1778,10 @@ $('pausebtn2').addEventListener('click', ()=>{ state.paused = !state.paused; $('
 $('tickertgl').addEventListener('click', ()=>{ const t = $('ticker'); t.style.display = t.style.display==='block'?'none':'block'; });
 host.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', ()=> setMode(activeTank(), b.dataset.mode)));
 let tpInstant = false;
-.addEventListener('click', e => {
+$('tpmode').addEventListener('click', e => {
   e.stopPropagation();
   tpInstant = !tpInstant;
-  .textContent = tpInstant ? 'MODE: TELEPORT' : 'MODE: DRIVE';
+  $('tpmode').textContent = tpInstant ? 'MODE: TELEPORT' : 'MODE: DRIVE';
 });
 const PLACES = [['BRIDGE',356790,173020],['CABOT TWR',358290,172730],['QUEEN SQ',358950,172850],
   ['TEMPLE MEADS',360060,172370],['SS GT BRITAIN',358144,172427],['REDCLIFFE',360131,172371],
@@ -1797,10 +1797,10 @@ for(const [nm,e,n] of PLACES){
     else { const pts = routeTo(T, e-E0, -(n-N0));
       if(pts){ T.navRoute = { pts, i: 0 }; T.nav = null; feed('>> EN ROUTE :: ' + nm); }
       else feed('>> NO ROUTE'); }
-    .classList.remove('open');
+    $('drawer').classList.remove('open');
     if(state.view === 'map') setView('drive');
   });
-  .appendChild(b);
+  $('places').appendChild(b);
 }
 host.querySelectorAll('[data-auto]').forEach(b => b.addEventListener('click', ()=>{ setAuto(b.dataset.auto || null); $('drawer').classList.remove('open'); }));
 // tapping the world closes the drawer
