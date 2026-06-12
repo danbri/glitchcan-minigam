@@ -172,7 +172,8 @@ const TEMPLATE_HTML = `
   <h3>SOUND</h3>
   <div class="row">
     <button class="tankbtn" id="honk">♪ HONK</button>
-    <button class="tankbtn" id="ambientbtn">♬ RADIO BRISTOL</button>
+    <button class="tankbtn" id="ambientbtn">♬ 99.1 ON</button>
+    <button class="tankbtn" id="stationsbtn">📻 STATIONS</button>
   </div>
   <div id="radio" class="hidden" style="margin-top:8px">
   <div class="freq" id="freqlabel">— FM</div>
@@ -1470,6 +1471,8 @@ const sfx = (()=>{
   Object.defineProperty(window, '__tfttAC', { get(){ return ac; } });
   function init(){
     ac = new (window.AudioContext||window.webkitAudioContext)();
+    const kick2 = () => { try{ ac.resume(); }catch(e){} };
+    kick2(); addEventListener('touchend', kick2, { once:true });
     engOsc = ac.createOscillator(); engOsc.type='sawtooth'; engOsc.frequency.value=42;
     engFilt = ac.createBiquadFilter(); engFilt.type='lowpass'; engFilt.frequency.value=180;
     engGain = ac.createGain(); engGain.gain.value=0;
@@ -1534,23 +1537,27 @@ const sfx = (()=>{
         g.gain.setValueAtTime(0.09,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.22);
         o.connect(g).connect(mg); o.start(t); o.stop(t+0.25); };
       const schedule = () => {
-        if(!this._musicOn) return;
         const TR = TRACKS[trackIdx];
+        if(!this._musicOn){ this._mNext = setTimeout(schedule, 500); return; }
         const t0 = ac.currentTime + 0.12, BAR = TR.bar;
         const ch = TR.chords[bar % 4];
-        for(const m of ch) note(m + 12, t0, BAR*1.08, TR.padT, 0.016, TR.lp); // pad
-        if(TR.detune) for(const m of ch) note(m + 12 + 0.07, t0, BAR*1.05, TR.padT, 0.010, TR.lp);
-        note(ch[0]-12, t0, BAR*0.42, 'sine', 0.10);                            // THE sub
-        note(ch[0]-12, t0+BAR*0.625, BAR*0.28, 'sine', 0.07);
+        for(const m of ch) note(m + 12, t0, BAR*1.08, TR.padT, 0.045, TR.lp + 400);   // pad, audible on phones
+        if(TR.detune) for(const m of ch) note(m + 12 + 0.07, t0, BAR*1.05, TR.padT, 0.028, TR.lp + 400);
+        note(ch[0]+24, t0+BAR*0.25, 0.5, 'triangle', 0.06);                            // rhodes-ish offbeat stab
+        note(ch[2]+24, t0+BAR*0.75, 0.5, 'triangle', 0.05);
+        note(ch[0]-12, t0, BAR*0.42, 'sine', 0.11);                                    // THE sub (for headphones)
+        note(ch[0],    t0, BAR*0.42, 'triangle', 0.05);                                // bass octave phones can hear
+        note(ch[0]-12, t0+BAR*0.625, BAR*0.28, 'sine', 0.08);
+        note(ch[0],    t0+BAR*0.625, BAR*0.28, 'triangle', 0.04);
         if(TR.wub && this.onBass){ this.onBass(0); setTimeout(()=>this.onBass && this.onBass(1), BAR*625); }
         kick(t0); kick(t0+BAR*0.5);
-        for(let i=1;i<8;i+=2) note(86+(i%3), t0+i*BAR/8, 0.04, 'square', 0.006);
+        for(let i=1;i<8;i+=2) note(86+(i%3), t0+i*BAR/8, 0.04, 'square', 0.014);
         if(TR.theremin && bar % 2 === 0){                                      // mournful lead, vibrato
           const lead = ch[2] + 24;
           const o = ac.createOscillator(), g = ac.createGain(), v = ac.createOscillator(), vg = ac.createGain();
           o.type='sine'; o.frequency.value = f(lead);
           v.frequency.value = 5.2; vg.gain.value = 4; v.connect(vg).connect(o.frequency); v.start();
-          g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(0.03, t0+0.7);
+          g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(0.05, t0+0.7);
           g.gain.exponentialRampToValueAtTime(0.0001, t0+BAR*1.6);
           o.connect(g).connect(mg); o.start(t0); o.stop(t0+BAR*1.7); setTimeout(()=>v.stop(), BAR*1800);
         }
@@ -1838,7 +1845,11 @@ function toggleRadio(){
   if(on){ radio.setFreq($('dial').value/10); $('freqlabel').textContent = radio.label(); }
 }
 $('dial').addEventListener('input', ()=>{ radio.setFreq($('dial').value/10); $('freqlabel').textContent = radio.label(); });
-$('ambientbtn').addEventListener('click', ()=>{ toggleRadio(); });
+$('ambientbtn').addEventListener('click', ()=>{
+  if(!window.__tfttAC){ sfx.init(); sfx.musicStart(); $('ambientbtn').textContent = '♬ 99.1 ON'; return; }
+  $('ambientbtn').textContent = sfx.musicToggle() ? '♬ 99.1 ON' : '♬ 99.1 OFF';
+});
+$('stationsbtn').addEventListener('click', ()=>{ toggleRadio(); });
 
 /* swipe anywhere open to glance around (tank-commander style); springs back */
 (function(){
