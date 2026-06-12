@@ -132,6 +132,10 @@
 <div id="stick"><div id="knob"></div></div>
 <div id="fire" class="btn">⊕</div>
 <div id="honk" class="btn">♪</div>
+<div id="modebtn" class="btn" style="right:calc(var(--safe-r) + 196px);bottom:calc(var(--safe-b) + 96px);width:54px;height:54px;font-size:18px">⛓</div>
+<div id="autobtn" class="btn" style="left:calc(var(--safe-l) + 154px);bottom:calc(var(--safe-b) + 30px);width:54px;height:54px;font-size:17px">▶▶</div>
+<div id="rise" class="btn hidden" style="right:calc(var(--safe-r) + 262px);bottom:calc(var(--safe-b) + 122px);width:48px;height:48px;font-size:18px">⬆</div>
+<div id="sink" class="btn hidden" style="right:calc(var(--safe-r) + 262px);bottom:calc(var(--safe-b) + 64px);width:48px;height:48px;font-size:18px">⬇</div>
 <div id="radiobtn" class="btn">📻</div>
 <div id="radio" class="hidden">
   <div class="freq" id="freqlabel">— FM</div>
@@ -161,7 +165,7 @@
      <b>BRUNEL</b>, <b>CABOT</b> and <b>BANKSY</b> — across <b>real Bristol terrain</b>
      and defend all <b id="ntrees">35,893</b> <b>real council trees</b>.</p>
   <p>▦ MAP: tap tank → tap ground to order · tap again to JACK IN and drive<br>
-     STICK drive · ⊕ tap fire / DRAG aim / DOUBLE-TAP gun forward · swipe screen to glance · ♪ honk · 📻 radio<br>
+     STICK drive · ⊕ fire/aim · ⛓ MODE tank/heli/boat (T) · ▶▶ AUTOPILOT road/air/river (P) · ♪ 📻<br>
      KBD: WASD · mouse aims · SPACE fire · M map · 1/2/3 tanks · H honk · R radio · mind the tide</p>
   <button class="bigbtn" id="startbtn">▶ DEFEND BRISTOL</button>
   <div id="loadnote">BOOTING…</div>
@@ -174,9 +178,17 @@
   <button class="bigbtn" onclick="location.reload()">↻ REPLANT &amp; RETRY</button>
 </div>
 
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/jsm/" } }
+</script>
 <script type="module">
 'use strict';
-import * as THREE from './vendor/three.module.min.js';
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { FilmPass } from 'three/addons/postprocessing/FilmPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 /* ============ TANKS FOR THE TREES — phosphor vector edition ============
    Real data: data/elevation-bristol.json(.gz)  EU-DEM 25m grid
               data/trees-bristol.json(.gz)      Bristol CC inventory
@@ -217,6 +229,13 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x252e29);
 scene.fog = new THREE.Fog(0x252e29, 900, 3200);
 const camera = new THREE.PerspectiveCamera(62, innerWidth/innerHeight, 0.5, 6000);
+/* fly-mode's film look, blended in: bloom for phosphor, grain for the CRT */
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.55, 0.5, 0.22);
+composer.addPass(bloom);
+composer.addPass(new FilmPass(0.22, false));
+composer.addPass(new OutputPass());
 /* vector worlds are unlit: MeshBasicMaterial everywhere, glow via colour */
 
 /* hidden-line helper: black faces + glowing edges */
@@ -1152,6 +1171,29 @@ class Tank {
     const barrel = vectorize(new THREE.CylinderGeometry(0.22,0.3,5.2,6), PHOS);
     barrel.rotation.x = Math.PI/2; barrel.position.set(0,0.2,2.8); this.turret.add(barrel);
     this.tag = textSprite(name, 0.12); this.tag.position.y = 5.6; this.g.add(this.tag);
+    /* HELI conversion kit: mast, main rotor, tail boom + rotor */
+    this.heli = new THREE.Group();
+    const mast = vectorize(new THREE.CylinderGeometry(0.25,0.35,1.6,5), PHOS); mast.position.set(0,3.6,-0.6); this.heli.add(mast);
+    this.rotor = new THREE.Group(); this.rotor.position.set(0,4.5,-0.6);
+    for(const a of [0, Math.PI/2]){
+      const blade = vectorize(new THREE.BoxGeometry(0.4,0.08,11), PHOS, 0.9);
+      blade.rotation.y = a; this.rotor.add(blade);
+    }
+    this.heli.add(this.rotor);
+    const boom = vectorize(new THREE.CylinderGeometry(0.3,0.18,4.6,5), PHOS);
+    boom.rotation.x = Math.PI/2; boom.position.set(0,2.6,-4.6); this.heli.add(boom);
+    this.tailRotor = new THREE.Group(); this.tailRotor.position.set(0.4,2.6,-6.7);
+    const tb = vectorize(new THREE.BoxGeometry(0.06,2.2,0.3), PHOS, 0.9); this.tailRotor.add(tb);
+    this.heli.add(this.tailRotor);
+    this.heli.visible = false; this.g.add(this.heli);
+    /* BOAT conversion kit: vee hull + little mast */
+    this.boat = new THREE.Group();
+    const bow = vectorize(new THREE.ConeGeometry(2.2,3.4,4), CYAN);
+    bow.rotation.x = Math.PI/2; bow.rotation.z = Math.PI/4; bow.position.set(0,0.9,4.6); this.boat.add(bow);
+    const keel = vectorize(new THREE.BoxGeometry(3.6,1.2,6.6), CYAN, 0.8); keel.position.set(0,0.3,0); this.boat.add(keel);
+    const mast2 = vectorize(new THREE.CylinderGeometry(0.1,0.1,3.4,4), CYAN, 0.8); mast2.position.set(0,3.4,-1.4); this.boat.add(mast2);
+    this.boat.visible = false; this.g.add(this.boat);
+    this.mode = 'tank'; this.modeT = 1; this.vy = 0; this.alt = 0;
     this.g.scale.setScalar(2.0);
     // map blip: flat triangle, always visible, scaled with map zoom
     this.blip = new THREE.Mesh(new THREE.ConeGeometry(1, 2.6, 3),
@@ -1422,7 +1464,7 @@ const radio = (()=>{
 const state = {
   running:false, paused:false, view:'drive', score:0, wave:0, lost:0, lostLimit:1000,
   active:0, selected:-1, waveTimer:3, dragonsToSpawn:0, speedMul:1,
-  map:{cx:0, cz:0, h:2600},
+  map:{cx:0, cz:0, h:2600}, auto:null,
 };
 const input = {x:0, y:0, fire:false, aimAngle:null, manualT:0, lookYaw:0, looking:false};
 const activeTank = () => tanks[state.active];
@@ -1498,6 +1540,8 @@ function setView(v){
   $('fire').style.display = drive ? '' : 'none';
   $('honk').style.display = drive ? '' : 'none';
   $('radiobtn').style.display = drive ? '' : 'none';
+  $('modebtn').style.display = drive ? '' : 'none';
+  $('autobtn').style.display = drive ? '' : 'none';
   if(!drive) $('radio').classList.add('hidden');
   $('maphint').style.display = drive ? 'none' : '';
   $('maptitle').style.display = drive ? 'none' : '';
@@ -1569,6 +1613,20 @@ addEventListener('mousemove', e=>{
 });
 addEventListener('mouseup', ()=>input.fire=false);
 $('honk').addEventListener('mousedown', doHonk);
+$('modebtn').addEventListener('touchstart', e=>{ cycleMode(); e.preventDefault(); }, {passive:false});
+$('modebtn').addEventListener('mousedown', cycleMode);
+const holdBtn = (id, on, off) => { const el = $(id);
+  el.addEventListener('touchstart', e=>{ on(); e.preventDefault(); }, {passive:false});
+  el.addEventListener('touchend', e=>{ off(); e.preventDefault(); }, {passive:false});
+  el.addEventListener('mousedown', on); addEventListener('mouseup', off);
+};
+holdBtn('rise', ()=>{ activeTank().altBias = Math.min(280, (activeTank().altBias||0) + 40); }, ()=>{});
+const AUTOSEQ = [null, 'road', 'air', 'river'];
+let autoIdx = 0;
+function cycleAuto(){ autoIdx = (autoIdx+1) % AUTOSEQ.length; setAuto(AUTOSEQ[autoIdx]); if(!AUTOSEQ[autoIdx]) autoIdx = 0; }
+$('autobtn').addEventListener('touchstart', e=>{ cycleAuto(); e.preventDefault(); }, {passive:false});
+$('autobtn').addEventListener('mousedown', cycleAuto);
+holdBtn('sink', ()=>{ activeTank().altBias = Math.max(-18, (activeTank().altBias||0) - 40); }, ()=>{});
 function toggleRadio(){
   const on = radio.toggle(window.__tfttAC);
   $('radio').classList.toggle('hidden', !on);
@@ -1607,6 +1665,10 @@ addEventListener('keydown', e=>{
   if(e.code==='KeyH') doHonk();
   if(e.code==='KeyR') toggleRadio();
   if(e.code==='KeyC'){ input.aimAngle = 0; input.manualT = 1.4; }   // centre the gun
+  if(e.code==='KeyT') cycleMode();
+  if(e.code==='KeyP') cycleAuto();
+  if(e.code==='Space' && activeTank().mode==='heli'){ activeTank().altBias = Math.min(280,(activeTank().altBias||0)+30); }
+  if(e.code==='KeyX'){ activeTank().altBias = Math.max(-18,(activeTank().altBias||0)-30); }
   if(e.code==='KeyM') setView(state.view==='drive' ? 'map' : 'drive');
   if(e.code==='Digit1') jackIn(0);
   if(e.code==='Digit2') jackIn(1);
@@ -1614,6 +1676,104 @@ addEventListener('keydown', e=>{
 });
 addEventListener('keyup', e=>{ keys[e.code]=false; if(e.code==='Space')input.fire=false; });
 
+/* ---------- autopilot: road patrols, air tours, river runs ---------- */
+function chainWays(ways, startNear){            // greedy polyline chaining, world coords
+  const pool = ways.map(w => w.map(([e,n]) => [e-E0, -(n-N0)])).filter(w => w.length > 3);
+  if(!pool.length) return null;
+  let best = 0, bd = 1e12;
+  pool.forEach((w,i) => { const d = Math.hypot(w[0][0]-startNear.x, w[0][1]-startNear.z); if(d<bd){bd=d;best=i;} });
+  const route = [...pool.splice(best,1)[0]];
+  for(let hops=0; hops<14 && pool.length; hops++){
+    const end = route[route.length-1];
+    let bi=-1, bdd=140*140, rev=false;
+    pool.forEach((w,i)=>{
+      const d0 = (w[0][0]-end[0])**2 + (w[0][1]-end[1])**2;
+      const d1 = (w[w.length-1][0]-end[0])**2 + (w[w.length-1][1]-end[1])**2;
+      if(d0 < bdd){ bdd=d0; bi=i; rev=false; }
+      if(d1 < bdd){ bdd=d1; bi=i; rev=true; }
+    });
+    if(bi < 0) break;
+    const w = pool.splice(bi,1)[0];
+    route.push(...(rev ? w.reverse() : w));
+  }
+  return route.length > 8 ? route : null;
+}
+function buildAutoRoute(kind){
+  const T = activeTank();
+  if(kind === 'road'){
+    const majors = ROADS.roads.filter(([c,,p]) => (c===1||c===2) && p.length>6).map(r=>r[2]);
+    const pts = chainWays(majors, T);
+    return pts && { kind, mode:'tank', speed: 20, pts, i:0, t:0 };
+  }
+  if(kind === 'air'){
+    // the postcard run: gorge -> bridge -> Cabot -> harbour -> Redcliffe -> Meads -> Purdown -> Downs
+    const P = [[355900,172300,210],[356790,173020,150],[358290,172730,120],[358144,172427,70],
+               [360131,172371,95],[360060,172370,140],[361495,175788,200],[357642,174308,150]];
+    const curve = new THREE.CatmullRomCurve3(
+      P.map(([e,n,a]) => new THREE.Vector3(e-E0, heightAt(e-E0,-(n-N0)) + a, -(n-N0))), true, 'centripetal');
+    const pts = curve.getSpacedPoints(360).map(v => [v.x, v.z, v.y]);   // [x,z,alt-y]
+    return { kind, mode:'heli', speed: 42, pts, i:0, t:0, air:true };
+  }
+  if(kind === 'river'){
+    const avon = (WATER.rivers||[]).filter(([nm]) => /avon|harbour|cut/i.test(nm||'')).map(r=>r[1]);
+    const pts = chainWays(avon, T);
+    return pts && { kind, mode:'boat', speed: 13, pts, i:0, t:0 };
+  }
+  return null;
+}
+function setAuto(kind){
+  if(!kind){ state.auto = null; feed('>> MANUAL CONTROL'); return; }
+  const route = buildAutoRoute(kind);
+  if(!route){ feed('>> NO ROUTE FOUND'); return; }
+  const T = activeTank();
+  // teleport-cut to route start (cinema allows jump cuts)
+  T.x = route.pts[0][0]; T.z = route.pts[0][1];
+  if(route.mode === 'heli') T.altBias = 60;
+  T.mode = route.mode; T.heli.visible = route.mode==='heli'; T.boat.visible = route.mode==='boat';
+  state.auto = route;
+  sfx.fanfare();
+  feed('>> AUTOPILOT :: ' + kind.toUpperCase() + ' (touch stick to cancel)');
+}
+function updateAuto(dt){
+  const A = state.auto; if(!A) return;
+  if(Math.abs(input.x) > 0.25 || Math.abs(input.y) > 0.25){ setAuto(null); return; }
+  const T = activeTank();
+  const [x1,z1] = A.pts[A.i], [x2,z2] = A.pts[(A.i+1) % A.pts.length];
+  const L = Math.hypot(x2-x1, z2-z1) || 1;
+  A.t += A.speed*dt / L;
+  if(A.t >= 1){ A.t = 0; A.i = (A.i+1) % A.pts.length;
+    if(A.i === 0 && A.kind !== 'air'){ setAuto(null); return; } }   // ground/river routes end; tours loop
+  const x = x1+(x2-x1)*A.t, z = z1+(z2-z1)*A.t;
+  T.x = x; T.z = z; T.speed = A.speed;
+  T.heading = Math.atan2(x2-x1, z2-z1);
+  if(A.air){
+    const y1 = A.pts[A.i][2], y2 = A.pts[(A.i+1)%A.pts.length][2];
+    T.alt = (y1+(y2-y1)*A.t) - heightAt(x,z);
+  }
+}
+const MODES = ['tank','heli','boat'];
+function setMode(T, m){
+  if(T.mode === m) return;
+  // boat only on water; tank not over water
+  if(m === 'boat' && !inWater(T.x, T.z)){ feed('>> NEED WATER FOR BOAT MODE'); return; }
+  if(m === 'tank' && inWater(T.x, T.z)){ feed('>> CANNOT TRACK ON WATER'); return; }
+  T.mode = m; T.modeT = 0;
+  T.heli.visible = m === 'heli';
+  T.boat.visible = m === 'boat';
+  T.tag.material.color?.set?.(0xffffff);
+  sfx.databurst();
+  feed('>> ' + T.name + ' :: ' + m.toUpperCase() + ' CONFIGURATION');
+}
+function cycleMode(){
+  const T = activeTank();
+  const i = MODES.indexOf(T.mode);
+  for(let k=1;k<=2;k++){
+    const m = MODES[(i+k)%3];
+    if(m === 'boat' && !inWater(T.x, T.z)) continue;
+    if(m === 'tank' && inWater(T.x, T.z)) continue;
+    setMode(T, m); return;
+  }
+}
 function doHonk(){
   if(!state.running) return;
   const T = activeTank();
@@ -1725,7 +1885,12 @@ function updateTank(T, dt, isPlayer){
   const nx = THREE.MathUtils.clamp(T.x + Math.sin(T.heading)*T.speed*dt, -half, half);
   const nz = THREE.MathUtils.clamp(T.z + Math.cos(T.heading)*T.speed*dt, -half, half);
   const onDeck = deckY !== null;
-  if(onDeck || !inBuilding(nx, nz)){ T.x = nx; T.z = nz; T.stuckT = 0; }
+  const airborne = T.mode === 'heli' && T.alt > 6;
+  if(T.mode === 'boat'){                                          // boats stay on water
+    if(inWater(nx, nz)){ T.x = nx; T.z = nz; }
+    else { T.speed *= 0.4; burst(new THREE.Vector3(T.x, T.g.position.y+1, T.z), 4, CYAN, 6, 4); }
+  }
+  else if(airborne || onDeck || !inBuilding(nx, nz)){ T.x = nx; T.z = nz; T.stuckT = 0; }
   else if(!inBuilding(nx, T.z)){ T.x = nx; T.speed *= 0.8; }        // slide along the wall
   else if(!inBuilding(T.x, nz)){ T.z = nz; T.speed *= 0.8; }
   else {
@@ -1736,16 +1901,33 @@ function updateTank(T, dt, isPlayer){
       if(T.stuckT > 1.6){ T.heading += 0.9; T.stuckT = 0; }
     }
   }
-  const ty = deckY !== null ? deckY : heightAt(T.x, T.z);
+  let ty = deckY !== null ? deckY : heightAt(T.x, T.z);
+  if(T.mode === 'heli'){
+    const climb = (isPlayer ? ((keys.Space?1:0) + (input.fire?0:0)) : 0) // space climbs
+                + (isPlayer && keys.KeyX ? -1 : 0);
+    // mobile: holding stick fully forward+boost? use honk-free vertical: drag knob Y handled below
+    T.vy += ((isPlayer ? climb : 0) * 30 - 0) * dt;
+    // auto-hover floor: heli wants 26m + terrain; stick-Y full up adds altitude via climbInput set in HUD btns
+    const want = ty + 26 + (T.altBias||0);
+    T.alt += ((want - (ty + T.alt)) * 0.0 + (T.climb||0) * 24) * dt;
+    T.alt = THREE.MathUtils.clamp(T.alt + (26 + (T.altBias||0) - T.alt) * dt * 0.8, 6, 320);
+    ty += T.alt;
+  } else if(T.mode === 'boat'){
+    T.alt = 0;
+    ty = Math.max(waterLevel(), heightAt(T.x,T.z)) + 0.4;
+    if(Math.abs(T.speed) > 3 && Math.random() < dt*14)
+      burst(new THREE.Vector3(T.x - Math.sin(T.heading)*5, ty+0.3, T.z - Math.cos(T.heading)*5), 3, CYAN, 6, 2);
+  } else T.alt = 0;
   T.g.position.set(T.x, ty, T.z);
   const ahead = heightAt(T.x+Math.sin(T.heading)*3.2, T.z+Math.cos(T.heading)*3.2);
   const behind = heightAt(T.x-Math.sin(T.heading)*3.2, T.z-Math.cos(T.heading)*3.2);
   const right = heightAt(T.x+Math.cos(T.heading)*2.2, T.z-Math.sin(T.heading)*2.2);
   const left  = heightAt(T.x-Math.cos(T.heading)*2.2, T.z+Math.sin(T.heading)*2.2);
-  T.g.quaternion.slerp(new THREE.Quaternion().setFromEuler(deckY !== null
-      ? new THREE.Euler(0, T.heading, 0, 'YXZ')
-      : new THREE.Euler(Math.atan2(behind-ahead, 6.4), T.heading, Math.atan2(left-right, 4.4), 'YXZ')),
-      Math.min(1, dt*7));
+  const lean = T.mode === 'heli' ? new THREE.Euler(THREE.MathUtils.clamp(T.speed*0.006,-0.3,0.3), T.heading, -turn*0.25, 'YXZ')
+    : T.mode === 'boat' ? new THREE.Euler(Math.sin(performance.now()/700)*0.03, T.heading, -turn*0.12 + Math.sin(performance.now()/900)*0.04, 'YXZ')
+    : (deckY !== null ? new THREE.Euler(0, T.heading, 0, 'YXZ')
+      : new THREE.Euler(Math.atan2(behind-ahead, 6.4), T.heading, Math.atan2(left-right, 4.4), 'YXZ'));
+  T.g.quaternion.slerp(new THREE.Quaternion().setFromEuler(lean), Math.min(1, dt*7));
   if(Math.abs(T.speed) > 5 && Math.random()<dt*10)
     burst(new THREE.Vector3(T.x - Math.sin(T.heading)*4, ty+0.8, T.z - Math.cos(T.heading)*4), 2, PHOS, 5, 3);
   // turret: auto-track nearest dragon
@@ -1798,10 +1980,11 @@ let spawnTick = 0, munchSfxTick = 0;
 function tick(){
   requestAnimationFrame(tick);
   const dt = Math.min(0.05, clock.getDelta());
-  if(!state.running || state.paused){ renderer.render(scene, camera); return; }
+  if(!state.running || state.paused){ composer.render(); return; }
 
+  updateAuto(dt);
   let activeY = 0;
-  tanks.forEach((T,i)=>{ const y = updateTank(T, dt, i===state.active); if(i===state.active) activeY = y; });
+  tanks.forEach((T,i)=>{ const y = updateTank(T, dt, i===state.active && !state.auto); if(i===state.active) activeY = y; });
   updateTransmissions(dt);
   updateGrowing(dt);
   updateWeather(dt);
@@ -1951,7 +2134,8 @@ function tick(){
     const T = activeTank();
     const portrait = innerHeight > innerWidth;
     // wireframe trees are see-through: ride low and close for speed feel
-    const back = portrait ? 26 : 24, up = portrait ? 30 : 18;
+    const heliCam = T.mode === 'heli';
+    const back = (portrait ? 26 : 24) + (heliCam ? 16 : 0), up = (portrait ? 30 : 18) + (heliCam ? T.alt*0.3 : 0);
     camPos.set(T.x - Math.sin(T.heading)*back, activeY + up, T.z - Math.cos(T.heading)*back);
     camPos.y = Math.max(camPos.y, (bridgeDeckY(camPos.x,camPos.z) ?? heightAt(camPos.x, camPos.z)) + 5);
     camera.position.lerp(camPos, Math.min(1, dt*4));
@@ -1974,7 +2158,7 @@ function tick(){
   camera.updateProjectionMatrix();
 
   updateHud();
-  renderer.render(scene, camera);
+  composer.render();
 }
 
 function gameOver(){
@@ -1992,7 +2176,7 @@ function gameOver(){
 
 addEventListener('resize', ()=>{
   camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
 });
 
 /* ---------- boot ---------- */
@@ -2019,7 +2203,7 @@ addEventListener('resize', ()=>{
     camera.position.set(T.x-60, heightAt(T.x,T.z)+45, T.z-60);
     camera.lookAt(T.g.position);
     loadForest();
-    renderer.render(scene, camera);
+    composer.render();
     note.textContent = 'ANGERING ' + TREES.species.length + ' SPECIES WORTH OF DRAGONS… READY';
     btn.disabled = false; btn.style.opacity = 1;
   }catch(e){
