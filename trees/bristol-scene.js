@@ -144,7 +144,7 @@ const TEMPLATE_HTML = `
 <div id="fleet"></div>
 <div id="feed"></div>
 <div id="wavebanner"></div>
-<div id="maphint">TAP TANK · TAP GROUND TO ORDER · TAP AGAIN TO JACK IN · ZOOM IN FOR AERIAL</div>
+<div id="maphint">TAP TANK=SELECT · TAP GROUND=ORDER · DOUBLE-TAP=TELEPORT · PINCH=AERIAL</div>
 <div id="maptitle">B R I S T O L</div>
 <div id="scalebar">1 KM<div id="scalebarline"></div></div>
 
@@ -155,7 +155,7 @@ const TEMPLATE_HTML = `
 <div id="sink" class="btn hidden" style="right:calc(var(--safe-r) + 128px);bottom:calc(var(--safe-b) + 30px);width:50px;height:50px;font-size:18px">⬇</div>
 <div id="nowplaying"></div>
 <div id="drawer">
-  <h3>FLEET</h3><div id="fleet"></div>
+  <div style='font-size:9px;color:#3f9f6f;letter-spacing:2px'>BUILD 1649</div><h3>FLEET</h3><div id="fleet"></div>
   <h3>VEHICLE</h3>
   <div class="row">
     <button class="tankbtn" data-mode="tank">⛟ TANK</button>
@@ -180,6 +180,8 @@ const TEMPLATE_HTML = `
   <input type="range" id="dial" min="880" max="1080" value="991">
   <div class="stations"><span>91.5</span><span>96.2 ◇◇◇</span><span style="color:#ffb000">99.1 BRS</span><span>103.7</span></div>
   </div>
+  <h3>PLACES <button class="tankbtn" id="tpmode" style="flex:none;padding:4px 8px;font-size:9px">MODE: DRIVE</button></h3>
+  <div class="row" id="places"></div>
   <h3>EXTRAS</h3>
   <div class="row">
     <button class="tankbtn" id="tickertgl">NEWS TICKER</button>
@@ -1569,7 +1571,7 @@ const sfx = (()=>{
       };
       schedule();
     },
-    setMusicGain(v){ if(this._mGain) this._mGain.gain.value = this._musicOn ? v : 0; },
+    setMusicGain(v){ if(this._mGain) this._mGain.gain.value = this._musicOn ? Math.min(1.6, v*1.25) : 0; },
     musicToggle(){ this._musicOn = !this._musicOn;
       if(this._mGain) this._mGain.gain.value = this._musicOn ? 1 : 0;
       const np = host.querySelector('#nowplaying'); if(np && !this._musicOn) np.textContent = '';
@@ -1616,7 +1618,7 @@ const radio = (()=>{
       speechSynthesis.speak(u);
     }catch(e){}
   }
-  function strength(f0){ return Math.max(0, 1 - Math.abs(freq - f0)/0.8); }
+  function strength(f0){ return Math.max(0, 1 - Math.abs(freq - f0)/1.4); }
   function tuned(){
     let best = null, bs = 0.45;
     for(const [name, f0] of Object.entries(STATIONS)){
@@ -1644,7 +1646,7 @@ const radio = (()=>{
       if(!staticGain) return;
       const st = tuned();
       staticGain.gain.value = st ? 0.01 : 0.04;
-      sfx.setMusicGain(st === 'brs' ? strength(STATIONS.brs) : 0);   // tune 99.1 to hear BRS
+      sfx.setMusicGain(st === 'brs' ? Math.min(1.5, strength(STATIONS.brs)*1.6) : 0);   // tune 99.1, properly loud
       wubGain.gain.value = (st === 'pirate') ? 0.07 * strength(STATIONS.pirate) : 0;
       speakT -= dt;
       if(speakT > 0) return;
@@ -1775,6 +1777,31 @@ $('menubtn').addEventListener('click', ()=> $('drawer').classList.toggle('open')
 $('pausebtn2').addEventListener('click', ()=>{ state.paused = !state.paused; $('pausebtn2').textContent = state.paused?'▶ RESUME':'‖ PAUSE'; });
 $('tickertgl').addEventListener('click', ()=>{ const t = $('ticker'); t.style.display = t.style.display==='block'?'none':'block'; });
 host.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', ()=> setMode(activeTank(), b.dataset.mode)));
+let tpInstant = false;
+.addEventListener('click', e => {
+  e.stopPropagation();
+  tpInstant = !tpInstant;
+  .textContent = tpInstant ? 'MODE: TELEPORT' : 'MODE: DRIVE';
+});
+const PLACES = [['BRIDGE',356790,173020],['CABOT TWR',358290,172730],['QUEEN SQ',358950,172850],
+  ['TEMPLE MEADS',360060,172370],['SS GT BRITAIN',358144,172427],['REDCLIFFE',360131,172371],
+  ['WILLS',358498,173150],['STOKES CROFT',359395,173818],['THE DOWNS',357642,174308],['ARNOLFINI',358886,172394]];
+for(const [nm,e,n] of PLACES){
+  const b = document.createElement('button');
+  b.className = 'tankbtn'; b.textContent = nm;
+  b.addEventListener('click', ()=>{
+    const T = activeTank();
+    if(tpInstant){ T.x = e-E0; T.z = -(n-N0); T.nav = null; T.navRoute = null;
+      bloomFlare = 1; burst(new THREE.Vector3(T.x, heightAt(T.x,T.z)+4, T.z), 20, CYAN, 14, 10);
+      feed('>> TELEPORT :: ' + nm); }
+    else { const pts = routeTo(T, e-E0, -(n-N0));
+      if(pts){ T.navRoute = { pts, i: 0 }; T.nav = null; feed('>> EN ROUTE :: ' + nm); }
+      else feed('>> NO ROUTE'); }
+    .classList.remove('open');
+    if(state.view === 'map') setView('drive');
+  });
+  .appendChild(b);
+}
 host.querySelectorAll('[data-auto]').forEach(b => b.addEventListener('click', ()=>{ setAuto(b.dataset.auto || null); $('drawer').classList.remove('open'); }));
 // tapping the world closes the drawer
 addEventListener('pointerdown', e => { if(!e.target.closest('#drawer,#menubtn')) $('drawer').classList.remove('open'); });
@@ -2017,8 +2044,17 @@ function doHonk(){
     const p = new THREE.Vector3();
     return ray.ray.intersectPlane(plane, p) ? p : null;
   }
+  let lastTapT = 0, lastTapP = null;
   function tap(cx, cy){
     const p = mapPoint(cx, cy); if(!p) return;
+    const now = performance.now();
+    if(now - lastTapT < 350 && lastTapP && Math.hypot(p.x-lastTapP.x, p.z-lastTapP.z) < state.map.h*0.08){
+      const T = activeTank();                                    // double-tap: teleport
+      T.x = p.x; T.z = p.z; T.nav = null; T.navRoute = null;
+      bloomFlare = 1; feed('>> TELEPORT'); setView('drive');
+      return;
+    }
+    lastTapT = now; lastTapP = p;
     const r = state.map.h * 0.05;          // tap radius scales with zoom
     let hit = -1;
     tanks.forEach((t,i)=>{ if(Math.hypot(t.x-p.x, t.z-p.z) < r) hit = i; });
@@ -2552,7 +2588,7 @@ addEventListener('resize', ()=>{
     camera.lookAt(T.g.position);
     loadForest();
     renderLayers();
-    note.textContent = 'ANGERING ' + TREES.species.length + ' SPECIES WORTH OF DRAGONS… READY';
+    note.textContent = '[B1649] ANGERING ' + TREES.species.length + ' SPECIES WORTH OF DRAGONS… READY';
     btn.disabled = false; btn.style.opacity = 1;
   }catch(e){
     note.textContent = '!! COULD NOT LOAD DATA: ' + e.message;
