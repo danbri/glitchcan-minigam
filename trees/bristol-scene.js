@@ -1520,7 +1520,11 @@ const sfx = (()=>{
     wake();
     addEventListener('touchend', wake);
     addEventListener('pointerdown', wake);
-    document.addEventListener('visibilitychange', () => { if(!document.hidden) wake(); });
+    document.addEventListener('visibilitychange', () => {
+      if(document.hidden){                       // games go quiet in your pocket
+        try{ ac.suspend(); speechSynthesis?.cancel(); }catch(e){}
+      } else wake();
+    });
     addEventListener('focus', wake);
     addEventListener('pageshow', wake);
   }

@@ -310,7 +310,9 @@ function audioStart(){
   src.connect(windFilt).connect(windGain).connect(ac.destination); src.start();
   const wake = () => { try{ if(ac.state !== 'running') ac.resume(); }catch(e){} };
   addEventListener('touchend', wake);
-  document.addEventListener('visibilitychange', () => { if(!document.hidden) wake(); });
+  document.addEventListener('visibilitychange', () => {
+    if(document.hidden){ try{ ac.suspend(); }catch(e){} } else wake();
+  });
 }
 
 /* ---------- main loop ---------- */
