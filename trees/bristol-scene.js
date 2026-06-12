@@ -1416,11 +1416,11 @@ const POPLINES = ['RUDE!','OUCH','I WAS EATING THAT','UN-BE-LEAF-ABLE','CONKERED
 const dragons = [];
 function makeDragon(){
   const g = new THREE.Group();
-  const hide = 0x140a0e;                                          // near-black hide, blood-edge glow
+  const hide = 0x4a141f;                                          // ember hide: reads at any distance
   const vect = (geo) => { const grp = new THREE.Group();
     grp.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color:hide})));
     grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),
-      new THREE.LineBasicMaterial({color:ENEMY, transparent:true, opacity:0.85})));
+      new THREE.LineBasicMaterial({color:0xff3050, transparent:true, opacity:1.0})));
     return grp; };
   // body: deep keeled chest
   const body = vect(new THREE.CylinderGeometry(1.6, 2.6, 9, 7));
@@ -1453,12 +1453,12 @@ function makeDragon(){
     const elbow = new THREE.Group(); elbow.position.x = sx*5.2; shoulder.add(elbow);
     const outer = vect(new THREE.BoxGeometry(6.4, 0.28, 0.45)); outer.position.x = sx*3.2; elbow.add(outer);
     const mem = new THREE.Mesh(new THREE.PlaneGeometry(11, 5.5, 5, 3),
-      new THREE.MeshBasicMaterial({color:0x2c0f1c, transparent:true, opacity:0.8, side:THREE.DoubleSide}));
+      new THREE.MeshBasicMaterial({color:0x802038, transparent:true, opacity:0.5, side:THREE.DoubleSide}));
     mem.position.set(sx*4.6, -0.2, -2.6); shoulder.add(mem);
     g.userData[sx<0?'memL':'memR'] = mem;
     for(let r2=0;r2<3;r2++){                                       // membrane finger-ribs
-      const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06, 5.2, 3),
-        new THREE.MeshBasicMaterial({color:ENEMY, transparent:true, opacity:0.55}));
+      const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08, 5.2, 3),
+        new THREE.MeshBasicMaterial({color:AMBER, transparent:true, opacity:0.85}));
       rib.rotation.z = Math.PI/2; rib.rotation.y = (r2-1)*0.35;
       rib.position.set(sx*4.6, -0.1, -1.2 - r2*1.5); shoulder.add(rib);
     }
@@ -1511,9 +1511,14 @@ function makeDragon(){
   for(const sx of [-1,1]){
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex, transparent:true,
       blending:THREE.AdditiveBlending, depthWrite:false}));
-    halo.scale.set(1.6,1.6,1); halo.position.set(sx*0.55, 0.25, 1.0); head.add(halo);
+    halo.scale.set(0.8,0.8,1); halo.material.opacity = 0.7; halo.position.set(sx*0.55, 0.25, 1.0); head.add(halo);
   }
-  g.scale.setScalar(2.6);                                         // a lot bigger
+  const aura = new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex, transparent:true,
+    blending:THREE.AdditiveBlending, depthWrite:false, opacity:0.32}));
+  aura.scale.set(26, 18, 1); aura.position.set(0, 0.5, 0); g.add(aura);
+  // stronger anatomy silhouette: bigger skull, longer whip of a tail handled below
+  head.scale.setScalar(1.35);
+  g.scale.setScalar(3.0);                                         // boss presence
   const bubble = textSprite('', 0.11, '#ffb000'); bubble.position.set(0,5.5,1.5); bubble.visible=false; g.add(bubble);
   g.userData.bubble = bubble;
   const blip = new THREE.Mesh(new THREE.OctahedronGeometry(1.4),
@@ -2574,7 +2579,7 @@ function tick(){
     burst(c.m.position, 1, AMBER, 1.2, 0.4);   // tracer
     let hit = false;
     for(const d of dragons){
-      if(d.state!=='dead' && c.m.position.distanceTo(d.g.position) < 17){
+      if(d.state!=='dead' && c.m.position.distanceTo(d.g.position) < 20){
         d.state='dead'; d.deadT = 1.4; state.score += 10;
         sfx.pop(); burst(d.g.position, 24, ENEMY, 24, 16); burst(d.g.position, 14, PHOS, 16, 12);
         actionCam(d.g.position, 1.0);
@@ -2635,7 +2640,7 @@ function tick(){
     d.g.scale.setScalar(2.6 * (1 + d.fold*0.015*Math.sin(d.t*2.4)));   // breathing at rest
     if(Math.random() < dt*(d.state==='munch'?5:1.5)){                  // nostril embers
       const hp = new THREE.Vector3(0, 1.4, 12).applyQuaternion(d.g.quaternion).add(d.g.position);
-      burst(hp, 1, 0xff6622, 2.5, 1.2);
+      burst(hp, 2, 0xff8833, 3.5, 1.6);
     }
     if(d.bubbleT !== undefined){ d.bubbleT -= dt; if(d.bubbleT<=0){ d.g.userData.bubble.visible=false; d.bubbleT=undefined; } }
     d.blip.position.set(d.g.position.x, 60, d.g.position.z);
