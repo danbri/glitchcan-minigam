@@ -1609,15 +1609,29 @@ const radio = (()=>{
       return vs.find(v=>/en[-_]GB/i.test(v.lang)) || vs.find(v=>/^en/i.test(v.lang)) || null;
     }catch(e){ return null; }
   }
+  let spokeCount = 0;
   function say(text, pitch=1, rate=1, vol=0.9){
     try{
       if(!('speechSynthesis' in window)) return;
+      if(speechSynthesis.pending || speechSynthesis.speaking) speechSynthesis.cancel();  // iOS queue jams
       const u = new SpeechSynthesisUtterance(text);
       const v = voice(); if(v) u.voice = v;
+      u.lang = 'en-GB';
       u.pitch = pitch; u.rate = rate; u.volume = vol;
       speechSynthesis.speak(u);
+      spokeCount++;
     }catch(e){}
   }
+  /* iOS: TTS must be unlocked inside a user gesture */
+  const unlockTTS = () => {
+    try{
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0.01; speechSynthesis.speak(u);
+      speechSynthesis.getVoices();
+    }catch(e){}
+  };
+  addEventListener('touchend', unlockTTS, { once:true });
+  addEventListener('click', unlockTTS, { once:true });
   function strength(f0){ return Math.max(0, 1 - Math.abs(freq - f0)/1.4); }
   function tuned(){
     let best = null, bs = 0.45;
@@ -1640,7 +1654,8 @@ const radio = (()=>{
       const names = {council:'COUNCIL FM', numbers:'◇ ◇ ◇', brs:'99.1 BRS', pirate:'DRAGON PIRATE'};
       return freq.toFixed(1) + ' FM ' + (st ? '· ' + names[st] : '· STATIC');
     },
-    speakPop(line){ say(line.toLowerCase(), 1.8, 1.15, 0.55); },   // dragons always heckle aloud
+    speakPop(line){ say(line.toLowerCase(), 1.8, 1.15, 0.55); },
+    get spoke(){ return spokeCount; },   // dragons always heckle aloud
     update(dt, ctx){
       if(!on){ sfx.setMusicGain(1); return; }       // radio off: ambient plays freely
       if(!staticGain) return;
