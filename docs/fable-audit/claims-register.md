@@ -56,11 +56,16 @@ actually *confirmed* the audit claims but they labelled the claim-direction back
 | B14 | yeti/ has zero imports from lucid/ | **REFUTED** | `yeti/yeti-creature.js:18-22` imports json-loader, json-codegen + 3 more from `../lucid/`. yeti/CLAUDE.md's "zero dependencies" claim is false in code. Corrected in 02 §7, 03, README |
 | B15 | All landing-page local hrefs resolve | **CONFIRMED** | 37 local hrefs extracted and stat-checked: all exist |
 
+| C1 | "World Labs has no public API" (stated in FLY BRISTOL work, 2026-06-12) | **REFUTED** (self-caught on owner's question) | World API launched 2026-01-21, after knowledge cutoff: docs.worldlabs.ai/api — WLT-Api-Key auth, SPZ splat output, paid accounts only. Correction: integration script added (`trees/tools/generate-marble-world.mjs`); blocked only on owner's API key, not on existence |
+
 ## Lessons encoded
 
 - Negative claims sourced from *repo documentation* (yeti's "zero deps", magpie's
   "133 tests") are as dangerous as ones from sampled reading — docs lie in both
   directions. Verify doc-sourced numbers against code before repeating them.
+- Time-sensitive negative claims ("X doesn't exist") rot fast when the knowledge
+  cutoff predates today: World Labs' API launched 21 days after cutoff (row C1).
+  Search before asserting absence of anything newer than the cutoff.
 - Falsifier agents themselves err on claim *direction* (A12, A14): the coordinator
   must re-read evidence, not just accept verdict labels.
 - The audit's central theses survived falsification (phantom files, missing
