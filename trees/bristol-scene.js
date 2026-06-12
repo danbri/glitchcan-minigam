@@ -231,7 +231,7 @@ function bootGame(host, opts) {
               data/trees-bristol.json(.gz)      Bristol CC inventory
    World units = metres. BNG -> world: x=E-358500, z=-(N-173500). EXAG 1.6x. */
 
-const WORLD = 9000, E0 = 358500, N0 = 173500, EXAG = 1.6;
+const WORLD = 9000, E0 = 358500, N0 = 173500, EXAG = 2.4;
 const $ = id => host.querySelector('#' + id);
 const PHOS = 0x00ff66, AMBER = 0xffb000, ENEMY = 0xff44aa, CYAN = 0x00ddff;
 
@@ -263,9 +263,22 @@ const renderer = new THREE.WebGLRenderer({canvas:$('gl'), antialias:true, powerP
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x252e29);
-scene.fog = new THREE.Fog(0x252e29, 900, 3200);
+scene.background = new THREE.Color(0x49565c);
+scene.fog = new THREE.Fog(0x6d7268, 900, 3400);
 const camera = new THREE.PerspectiveCamera(62, innerWidth/innerHeight, 0.5, 6000);
+/* overcast sky dome: zenith slate to pale warm horizon */
+{
+  const sg = new THREE.SphereGeometry(4200, 20, 12);
+  const cols = []; const pos = sg.attributes.position;
+  const zen = new THREE.Color(0x37444c), hor = new THREE.Color(0x9b9484);
+  for(let i=0;i<pos.count;i++){
+    const t = THREE.MathUtils.clamp(pos.getY(i)/4200, 0, 1);
+    const c = hor.clone().lerp(zen, Math.pow(t, 0.55));
+    cols.push(c.r, c.g, c.b);
+  }
+  sg.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  scene.add(new THREE.Mesh(sg, new THREE.MeshBasicMaterial({vertexColors:true, side:THREE.BackSide, fog:false})));
+}
 /* fly-mode's film look, blended in: bloom for phosphor, grain for the CRT */
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
@@ -312,16 +325,28 @@ function buildTerrain(){
   g.computeVertexNormals();
   // base mass: near-black, blue-black under water datum, deep green inside parks
   const baseCols = [], gridCols = [];
-  const cBase = new THREE.Color(0x141d17), cPark = new THREE.Color(0x1c3322), cRiver = new THREE.Color(0x14242e);
+  const cBase = new THREE.Color(0x2a3424), cMeadow = new THREE.Color(0x4a4f2e), cScrub = new THREE.Color(0x46392a),
+        cPark = new THREE.Color(0x2e4d2a), cRiver = new THREE.Color(0x1c2c38), cRock = new THREE.Color(0x575b50);
   const gLow = new THREE.Color(0x17854a), gHigh = new THREE.Color(0x7df2a4), gPark = new THREE.Color(0x4dff8e);
+  const nrm = g.attributes.normal;
+  const L = new THREE.Vector3(-0.45, 0.78, -0.42).normalize();   // sun behind the overcast
   for(let i=0;i<pos.count;i++){
     const x = pos.getX(i), z = pos.getZ(i), hm = pos.getY(i)/EXAG;
     const park = inAnyPark(x, z);
-    let c = hm < 8.7 ? cRiver : (park ? cPark : cBase);
+    const slope = 1 - nrm.getY(i);                               // 0 flat .. steep
+    const patch = Math.sin(x*0.0021+z*0.0017)*Math.sin(x*0.0007-z*0.0011);   // big soft landuse-ish patches
+    let c;
+    if(hm < 8.7) c = cRiver.clone();
+    else if(park) c = cPark.clone();
+    else { c = cBase.clone();
+      if(patch > 0.25) c.lerp(cMeadow, Math.min(1,(patch-0.25)*2));
+      else if(patch < -0.3) c.lerp(cScrub, Math.min(1,(-patch-0.3)*2)); }
+    if(slope > 0.22) c.lerp(cRock, Math.min(1,(slope-0.22)*3));  // gorge faces go to stone
+    const shade = 0.45 + 0.65*Math.max(0, nrm.getX(i)*L.x + nrm.getY(i)*L.y + nrm.getZ(i)*L.z);
+    c.multiplyScalar(shade);                                     // baked hillshade: relief reads instantly
     baseCols.push(c.r, c.g, c.b);
-    // grid glows brighter with elevation — the hills read at a glance
     const t = THREE.MathUtils.clamp((hm-5)/110, 0, 1);
-    let gc = gLow.clone().lerp(gHigh, t);
+    let gc = gLow.clone().lerp(gHigh, t).multiplyScalar(0.7 + shade*0.35);
     if(park) gc.lerp(gPark, 0.5);
     gridCols.push(gc.r, gc.g, gc.b);
   }
@@ -364,13 +389,20 @@ const clouds = [];
 let rainGeo = null;
 const RAIN_N = 650, rainOfs = new Float32Array(RAIN_N*3);
 function buildWeather(){
-  for(let i=0;i<7;i++){
-    const c = new THREE.Mesh(new THREE.IcosahedronGeometry(1,1),
-      new THREE.MeshBasicMaterial({wireframe:true, color:0x97a69b, transparent:true, opacity:0.18}));
-    c.scale.set(260+Math.random()*240, 36+Math.random()*22, 150+Math.random()*120);
-    c.position.set((Math.random()-0.5)*WORLD, 430+Math.random()*150, (Math.random()-0.5)*WORLD);
-    c.userData.v = 3.5 + Math.random()*3;
-    scene.add(c); clouds.push(c);
+  const puffMat = new THREE.MeshBasicMaterial({color:0xb9bdb4, transparent:true, opacity:0.5, depthWrite:false});
+  const shadMat = new THREE.MeshBasicMaterial({color:0x6f766f, transparent:true, opacity:0.45, depthWrite:false});
+  for(let i=0;i<13;i++){
+    const cl = new THREE.Group();
+    const puffs = 3 + (Math.random()*3|0);
+    for(let p=0;p<puffs;p++){
+      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(1,1), p===0 ? shadMat : puffMat);
+      m.scale.set(120+Math.random()*150, 26+Math.random()*22, 80+Math.random()*90);
+      m.position.set((Math.random()-0.5)*260, (p===0?-14:Math.random()*26), (Math.random()-0.5)*160);
+      cl.add(m);
+    }
+    cl.position.set((Math.random()-0.5)*WORLD*1.1, 560+Math.random()*220, (Math.random()-0.5)*WORLD*1.1);
+    cl.userData.v = 3 + Math.random()*4;
+    scene.add(cl); clouds.push(cl);
   }
   for(let i=0;i<RAIN_N;i++){
     rainOfs[i*3]   = (Math.random()-0.5)*240;
@@ -1384,17 +1416,64 @@ const POPLINES = ['RUDE!','OUCH','I WAS EATING THAT','UN-BE-LEAF-ABLE','CONKERED
 const dragons = [];
 function makeDragon(){
   const g = new THREE.Group();
-  const body = vectorize(new THREE.ConeGeometry(2.2,7,6), ENEMY);
+  const hide = 0x140a0e;                                          // near-black hide, blood-edge glow
+  const vect = (geo) => { const grp = new THREE.Group();
+    grp.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color:hide})));
+    grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),
+      new THREE.LineBasicMaterial({color:ENEMY, transparent:true, opacity:0.85})));
+    return grp; };
+  // body: deep keeled chest
+  const body = vect(new THREE.CylinderGeometry(1.6, 2.6, 9, 7));
   body.rotation.x = Math.PI/2; g.add(body);
-  const head = vectorize(new THREE.SphereGeometry(1.9,6,5), ENEMY); head.position.z = 4; g.add(head);
-  for(const sx of [-1,1]){
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.5,6,5), new THREE.MeshBasicMaterial({color:0xffffff}));
-    eye.position.set(sx*0.95, 0.9, 5.1); g.add(eye);
-    const wing = new THREE.Mesh(new THREE.PlaneGeometry(9,4.2,3,1),
-      new THREE.MeshBasicMaterial({color:ENEMY, wireframe:true, side:THREE.DoubleSide}));
-    wing.position.set(sx*4.6, 0.8, 0); wing.rotation.z = sx*0.25; g.add(wing);
-    g.userData[sx<0?'wingL':'wingR'] = wing;
+  // serpentine neck: three tapering segments to a horned head
+  const neck = new THREE.Group(); neck.position.set(0, 0.6, 4.2); g.add(neck);
+  let np = neck;
+  for(let i=0;i<3;i++){
+    const seg = new THREE.Group();
+    const bone = vect(new THREE.CylinderGeometry(1.1-i*0.25, 1.35-i*0.25, 2.6, 6));
+    bone.rotation.x = Math.PI/2; bone.position.z = 1.3; seg.add(bone);
+    seg.position.z = i ? 2.5 : 0; seg.rotation.x = -0.18;
+    np.add(seg); np = seg;
   }
+  const head = new THREE.Group(); head.position.z = 2.6; np.add(head);
+  head.add(vect(new THREE.BoxGeometry(1.5, 1.1, 3.2)));           // skull
+  const jaw = vect(new THREE.BoxGeometry(1.2, 0.4, 2.6)); jaw.position.set(0,-0.7,0.5); head.add(jaw);
+  for(const sx of [-1,1]){
+    const horn = vect(new THREE.ConeGeometry(0.28, 1.8, 5));
+    horn.position.set(sx*0.6, 0.8, -1.1); horn.rotation.x = -0.7; head.add(horn);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.3, 6, 5),
+      new THREE.MeshBasicMaterial({color:0xff2222}));
+    eye.position.set(sx*0.55, 0.25, 0.9); head.add(eye);
+  }
+  g.userData.neck = neck; g.userData.jaw = jaw;
+  // two-segment wings with membranes
+  for(const sx of [-1,1]){
+    const shoulder = new THREE.Group(); shoulder.position.set(sx*1.8, 1.1, 1.2); g.add(shoulder);
+    const inner = vect(new THREE.BoxGeometry(5.2, 0.35, 0.6)); inner.position.x = sx*2.6; shoulder.add(inner);
+    const elbow = new THREE.Group(); elbow.position.x = sx*5.2; shoulder.add(elbow);
+    const outer = vect(new THREE.BoxGeometry(6.4, 0.28, 0.45)); outer.position.x = sx*3.2; elbow.add(outer);
+    const mem = new THREE.Mesh(new THREE.PlaneGeometry(11, 5.5, 4, 2),
+      new THREE.MeshBasicMaterial({color:0x33121e, transparent:true, opacity:0.78, side:THREE.DoubleSide}));
+    mem.position.set(sx*4.6, -0.2, -2.6); shoulder.add(mem);
+    const memEdge = new THREE.LineSegments(new THREE.EdgesGeometry(mem.geometry),
+      new THREE.LineBasicMaterial({color:ENEMY, transparent:true, opacity:0.5}));
+    memEdge.position.copy(mem.position); shoulder.add(memEdge);
+    g.userData[sx<0?'wingL':'wingR'] = shoulder;
+    g.userData[sx<0?'elbowL':'elbowR'] = elbow;
+  }
+  // tail: three swaying segments with a barb
+  const tail = new THREE.Group(); tail.position.set(0, 0.2, -4.4); g.add(tail);
+  let tp = tail;
+  for(let i=0;i<3;i++){
+    const seg = new THREE.Group();
+    const bone = vect(new THREE.CylinderGeometry(0.9-i*0.25, 1.1-i*0.25, 3.2, 6));
+    bone.rotation.x = Math.PI/2; bone.position.z = -1.6; seg.add(bone);
+    seg.position.z = i ? -3.1 : 0;
+    tp.add(seg); tp = seg;
+  }
+  const barb = vect(new THREE.ConeGeometry(0.5, 1.6, 4)); barb.rotation.x = Math.PI/2; barb.position.z = -3.4; tp.add(barb);
+  g.userData.tail = tail;
+  g.scale.setScalar(2.6);                                         // a lot bigger
   const bubble = textSprite('', 0.11, '#ffb000'); bubble.position.set(0,5.5,1.5); bubble.visible=false; g.add(bubble);
   g.userData.bubble = bubble;
   const blip = new THREE.Mesh(new THREE.OctahedronGeometry(1.4),
@@ -1412,6 +1491,7 @@ function spawnDragon(speedMul){
              speed:(34+Math.random()*12)*speedMul, scare:0};
   d.blip.visible = state.view==='map';
   dragons.push(d); scene.add(g);
+  sfx.roar();
 }
 function dragonSay(d, msg, secs=2.2){
   const b = d.g.userData.bubble;
@@ -1545,6 +1625,8 @@ const sfx = (()=>{
     pop(){ blip(300, 60, 0.3, 'sawtooth', 0.2); blip(1400, 2400, 0.18, 'sine', 0.08); },
     honk(){ blip(220,220,0.18,'square',0.22); setTimeout(()=>blip(174,174,0.3,'square',0.22),140); },
     munch(){ blip(120, 80, 0.12, 'square', 0.05); },
+    roar(){ blip(82, 26, 1.3, 'sawtooth', 0.16); blip(160, 40, 1.0, 'square', 0.07);
+      setTimeout(()=>blip(60, 22, 0.9, 'sawtooth', 0.1), 320); },
     fanfare(){ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>blip(f,f,0.16,'triangle',0.14), i*110)); },
     lost(){ blip(400,90,0.8,'sawtooth',0.18); },
     select(){ blip(660,990,0.09,'square',0.1); },
@@ -2444,7 +2526,7 @@ function tick(){
     burst(c.m.position, 1, AMBER, 1.2, 0.4);   // tracer
     let hit = false;
     for(const d of dragons){
-      if(d.state!=='dead' && c.m.position.distanceTo(d.g.position) < 9){
+      if(d.state!=='dead' && c.m.position.distanceTo(d.g.position) < 17){
         d.state='dead'; d.deadT = 1.4; state.score += 10;
         sfx.pop(); burst(d.g.position, 24, ENEMY, 24, 16); burst(d.g.position, 14, PHOS, 16, 12);
         const popline = POPLINES[(Math.random()*POPLINES.length)|0];
@@ -2476,8 +2558,16 @@ function tick(){
   munchSfxTick -= dt;
   for(let i=dragons.length-1;i>=0;i--){
     const d = dragons[i]; d.t += dt;
-    const flapA = Math.sin(d.t*9)*0.9;
-    if(d.g.userData.wingL){ d.g.userData.wingL.rotation.z = 0.25+flapA*0.5; d.g.userData.wingR.rotation.z = -0.25-flapA*0.5; }
+    const flapA = Math.sin(d.t*7)*0.8;
+    const U = d.g.userData;
+    if(U.wingL){
+      U.wingL.rotation.z = 0.18 + flapA*0.55; U.wingR.rotation.z = -0.18 - flapA*0.55;
+      const fold = Math.sin(d.t*7 - 0.7)*0.5;
+      if(U.elbowL){ U.elbowL.rotation.z = -0.25 - fold*0.5; U.elbowR.rotation.z = 0.25 + fold*0.5; }
+    }
+    if(U.tail) U.tail.rotation.y = Math.sin(d.t*1.9)*0.35;
+    if(U.neck) U.neck.rotation.y = Math.sin(d.t*1.3)*0.18;
+    if(U.jaw) U.jaw.rotation.x = d.state==='munch' ? 0.35 + Math.sin(d.t*16)*0.3 : 0.05;
     if(d.bubbleT !== undefined){ d.bubbleT -= dt; if(d.bubbleT<=0){ d.g.userData.bubble.visible=false; d.bubbleT=undefined; } }
     d.blip.position.set(d.g.position.x, 60, d.g.position.z);
     d.blip.scale.setScalar(state.map.h/70);
