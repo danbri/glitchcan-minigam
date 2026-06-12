@@ -46,7 +46,8 @@ const centroid = pts => pts.reduce((a,[e,n])=>[a[0]+e/pts.length, a[1]+n/pts.len
 
 // ---- pass 1: node coords + tagged POI nodes ----
 const nodeCoord = new Map();
-const pubs = [], places = [], stations = [];
+const pubs = [], places = [], stations = [], shops = [];
+const SHOPPY = a => /^(cafe|restaurant|fast_food|bakery|pharmacy|bank|cinema|theatre|marketplace)$/.test(a||'');
 await scan(items => {
   for(const it of items){
     if(it.type !== 'node') continue;
@@ -54,6 +55,7 @@ await scan(items => {
     nodeCoord.set(it.id, [e, n]);
     if(!it.tags || !inBB(e, n)) continue;
     if(it.tags.amenity === 'pub' && it.tags.name) pubs.push([it.tags.name, e, n]);
+    if((it.tags.shop || SHOPPY(it.tags.amenity)) && it.tags.name) shops.push([it.tags.name, e, n]);
     if(/^(suburb|neighbourhood|quarter)$/.test(it.tags.place || '')) places.push([it.tags.name || '', e, n]);
     if(it.tags.railway === 'station') stations.push([it.tags.name || 'STATION', e, n]);
   }
@@ -101,6 +103,7 @@ await scan(items => {
                    : /^(university|civic|public|school|hospital)$/.test(bt) ? 6 : 0;
         buildings.push([Math.round(h*10)/10, r, type]);
         if(t.amenity === 'pub' && t.name) pubs.push([t.name, ...centroid(r)]);
+        else if((t.shop || SHOPPY(t.amenity)) && t.name) shops.push([t.name, ...centroid(r)]);
       }
     } else if(t.amenity === 'pub' && t.name){
       pubs.push([t.name, ...centroid(ring(coords, 4))]);
@@ -145,6 +148,8 @@ writeFileSync(join(DATA,'greens-bristol.json'), JSON.stringify({ source: SRC('pa
   crs:'EPSG:27700', fields:{greens:'[name, ring]', stations:'[name,e,n]'}, greens, stations }));
 writeFileSync(join(DATA,'fabric-bristol.json'), JSON.stringify({ source: SRC('ALL buildings + places'),
   crs:'EPSG:27700', fields:{buildings:'[height_or_0, ring, typeCode]', places:'[name,e,n]'}, buildings, places }));
+writeFileSync(join(DATA,'shops-bristol.json'), JSON.stringify({ source: SRC('named shops/cafes'),
+  crs:'EPSG:27700', fields:'[name, e, n]', shops }));
 writeFileSync(join(DATA,'pubs-bristol.json'), JSON.stringify({ source: SRC('named pubs'),
   crs:'EPSG:27700', fields:'[name, e, n]', pubs }));
-console.log('layers written.');
+console.log('layers written.', shops.length, 'shops');

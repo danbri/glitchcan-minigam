@@ -12,7 +12,7 @@
     --ink:#9dffce; --glow:#00ff66; --amber:#ffb000; --bad:#ff44aa; --panel:rgba(1,12,6,.78);
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%;overflow:hidden;background:#010604;
+  html,body{height:100%;overflow:hidden;background:#252e29;
     font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
     user-select:none;-webkit-user-select:none;touch-action:none;color:var(--ink)}
   canvas#gl{position:fixed;inset:0;display:block}
@@ -20,7 +20,7 @@
   /* ---------- CRT layer: scanlines + phosphor flicker + vignette ---------- */
   #crt{position:fixed;inset:0;pointer-events:none;z-index:2;
     background:
-      radial-gradient(ellipse at 50% 42%, transparent 48%, rgba(0,8,3,.55) 100%),
+      radial-gradient(ellipse at 50% 42%, transparent 50%, rgba(8,12,10,.42) 100%),
       repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0px, rgba(0,0,0,.22) 1px, transparent 1px, transparent 3px);
     animation:flicker 4.2s infinite}
   @keyframes flicker{0%,100%{opacity:.92}48%{opacity:.97}50%{opacity:.85}52%{opacity:.97}}
@@ -137,6 +137,7 @@
   <div class="freq" id="freqlabel">— FM</div>
   <input type="range" id="dial" min="880" max="1080" value="1000">
   <div class="stations"><span>91.5 COUNCIL</span><span>96.2 ◇◇◇</span><span>103.7 PIRATE</span></div>
+  <div style="text-align:center;margin-top:6px"><button class="tankbtn" id="ambientbtn">♬ AMBIENT ON</button></div>
 </div>
 <div id="mapbtn" class="btn">▦</div>
 <div id="rose"><svg viewBox="0 0 100 100" width="62" height="62">
@@ -213,8 +214,8 @@ const renderer = new THREE.WebGLRenderer({canvas:$('gl'), antialias:true, powerP
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x010604);
-scene.fog = new THREE.Fog(0x010604, 1000, 3400);
+scene.background = new THREE.Color(0x252e29);
+scene.fog = new THREE.Fog(0x252e29, 900, 3200);
 const camera = new THREE.PerspectiveCamera(62, innerWidth/innerHeight, 0.5, 6000);
 /* vector worlds are unlit: MeshBasicMaterial everywhere, glow via colour */
 
@@ -255,7 +256,7 @@ function buildTerrain(){
   g.computeVertexNormals();
   // base mass: near-black, blue-black under water datum, deep green inside parks
   const baseCols = [], gridCols = [];
-  const cBase = new THREE.Color(0x01140a), cPark = new THREE.Color(0x06301a), cRiver = new THREE.Color(0x031a2e);
+  const cBase = new THREE.Color(0x141d17), cPark = new THREE.Color(0x1c3322), cRiver = new THREE.Color(0x14242e);
   const gLow = new THREE.Color(0x0b4f2a), gHigh = new THREE.Color(0x53d97c), gPark = new THREE.Color(0x2fe06e);
   for(let i=0;i<pos.count;i++){
     const x = pos.getX(i), z = pos.getZ(i), hm = pos.getY(i)/EXAG;
@@ -301,6 +302,47 @@ function buildWater(){
 let waterMesh = null, tideT = 0;
 function waterLevel(){ return (8.7 + 4.2*Math.sin(tideT * Math.PI*2/180)) * EXAG; }
 function tideRising(){ return Math.cos(tideT * Math.PI*2/180) > 0; }
+
+/* ---------- weather: low grey clouds and proper Bristol drizzle ---------- */
+const clouds = [];
+let rainGeo = null;
+const RAIN_N = 650, rainOfs = new Float32Array(RAIN_N*3);
+function buildWeather(){
+  for(let i=0;i<7;i++){
+    const c = new THREE.Mesh(new THREE.IcosahedronGeometry(1,1),
+      new THREE.MeshBasicMaterial({wireframe:true, color:0x97a69b, transparent:true, opacity:0.18}));
+    c.scale.set(260+Math.random()*240, 36+Math.random()*22, 150+Math.random()*120);
+    c.position.set((Math.random()-0.5)*WORLD, 430+Math.random()*150, (Math.random()-0.5)*WORLD);
+    c.userData.v = 3.5 + Math.random()*3;
+    scene.add(c); clouds.push(c);
+  }
+  for(let i=0;i<RAIN_N;i++){
+    rainOfs[i*3]   = (Math.random()-0.5)*240;
+    rainOfs[i*3+1] = Math.random()*150;
+    rainOfs[i*3+2] = (Math.random()-0.5)*240;
+  }
+  rainGeo = new THREE.BufferGeometry();
+  rainGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(RAIN_N*3), 3));
+  scene.add(new THREE.Points(rainGeo, new THREE.PointsMaterial({color:0xa9bdb0, size:1.5,
+    transparent:true, opacity:0.4, sizeAttenuation:true, depthWrite:false})));
+}
+function updateWeather(dt){
+  for(const c of clouds){
+    c.position.x += c.userData.v*dt;
+    if(c.position.x > WORLD/2+300) c.position.x = -WORLD/2-300;
+  }
+  if(!rainGeo) return;
+  const arr = rainGeo.attributes.position.array;
+  for(let i=0;i<RAIN_N;i++){
+    rainOfs[i*3+1] -= (52 + (i%7)*4)*dt;
+    rainOfs[i*3]   += 6*dt;                                   // westerly, naturally
+    if(rainOfs[i*3+1] < -8){ rainOfs[i*3+1] = 140; rainOfs[i*3] = (Math.random()-0.5)*240; rainOfs[i*3+2] = (Math.random()-0.5)*240; }
+    arr[i*3]   = camera.position.x + rainOfs[i*3];
+    arr[i*3+1] = camera.position.y + rainOfs[i*3+1] - 60;
+    arr[i*3+2] = camera.position.z + rainOfs[i*3+2];
+  }
+  rainGeo.attributes.position.needsUpdate = true;
+}
 
 /* ---------- trees: 36k phosphor wireframe canopies ---------- */
 let TREES = null, treeState = [], aliveTrees = 0, totalTrees = 0;
@@ -500,6 +542,136 @@ function buildGreens(){
 }
 
 const rGrid = new Map();   // road segments for steering assist
+/* ---------- traffic: little vector cars commuting on real roads ---------- */
+const CARS_N = 64;
+let carBody = null, carCabin = null;
+const cars = [];
+function buildTraffic(){
+  if(!ROADS) return;
+  const drivable = ROADS.roads.filter(([c,,p]) => (c===1||c===2||c===4||c===5) && p.length >= 5);
+  if(!drivable.length) return;
+  carBody = new THREE.InstancedMesh(new THREE.BoxGeometry(2.0,1.0,4.4),
+    new THREE.MeshBasicMaterial({color:0x0c1812}), CARS_N);
+  carCabin = new THREE.InstancedMesh(new THREE.BoxGeometry(1.7,0.8,2.2),
+    new THREE.MeshBasicMaterial({wireframe:true}), CARS_N);
+  const tint = new THREE.Color();
+  for(let i=0;i<CARS_N;i++){
+    const way = drivable[(Math.random()*drivable.length)|0][2]
+      .map(([e,n]) => [e-E0, -(n-N0)]);
+    cars.push({way, seg:(Math.random()*(way.length-1))|0, t:Math.random(), dir:Math.random()<0.5?1:-1,
+               speed: 7 + Math.random()*6});
+    const k = ((i*2654435761)>>>0)%100;
+    if(k>92) tint.setHex(0xc46a4a); else if(k>84) tint.setHex(0x5a88b8); else tint.setHSL(0.33,0.25,0.45+(k%20)/100);
+    carCabin.setColorAt(i, tint);
+  }
+  carCabin.instanceColor.needsUpdate = true;
+  scene.add(carBody, carCabin);
+}
+function updateTraffic(dt){
+  if(!carBody) return;
+  for(let i=0;i<CARS_N;i++){
+    const c = cars[i];
+    const [x1,z1] = c.way[c.seg], [x2,z2] = c.way[c.seg+1];
+    const L = Math.hypot(x2-x1, z2-z1) || 1;
+    c.t += c.dir * c.speed * dt / L;
+    if(c.t > 1){ c.seg++; c.t = 0; if(c.seg >= c.way.length-1){ c.dir = -1; c.seg = c.way.length-2; c.t = 1; } }
+    if(c.t < 0){ c.seg--; c.t = 1; if(c.seg < 0){ c.dir = 1; c.seg = 0; c.t = 0; } }
+    const x = x1+(x2-x1)*c.t, z = z1+(z2-z1)*c.t;
+    const head = Math.atan2((x2-x1)*c.dir, (z2-z1)*c.dir);
+    dummy.position.set(x, heightAt(x,z)+0.8, z);
+    dummy.rotation.set(0, head, 0); dummy.scale.setScalar(1);
+    dummy.updateMatrix(); carBody.setMatrixAt(i, dummy.matrix);
+    dummy.position.y += 0.85; dummy.position.x -= Math.sin(head)*0.5; dummy.position.z -= Math.cos(head)*0.5;
+    dummy.updateMatrix(); carCabin.setMatrixAt(i, dummy.matrix);
+  }
+  carBody.instanceMatrix.needsUpdate = true;
+  carCabin.instanceMatrix.needsUpdate = true;
+}
+
+/* ---------- people: small wireframe Bristolians going about it ---------- */
+const PEOPLE_N = 140;
+let pplMesh = null;
+const people = [];
+function buildPeople(){
+  const spots = [];
+  if(PUBS) for(const [,e,n] of PUBS.pubs) spots.push([e-E0, -(n-N0)]);
+  if(SHOPS) for(let i=0;i<SHOPS.shops.length;i+=6) spots.push([SHOPS.shops[i][1]-E0, -(SHOPS.shops[i][2]-N0)]);
+  if(!spots.length) return;
+  pplMesh = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.26, 0.95, 2, 5),
+    new THREE.MeshBasicMaterial({wireframe:true, color:0xcfe2d4, transparent:true, opacity:0.85}), PEOPLE_N);
+  for(let i=0;i<PEOPLE_N;i++){
+    const [sx, sz] = spots[(Math.random()*spots.length)|0];
+    let x = sx + (Math.random()-0.5)*60, z = sz + (Math.random()-0.5)*60, tries = 8;
+    while(inBuilding(x, z) && tries--){ x = sx + (Math.random()-0.5)*60; z = sz + (Math.random()-0.5)*60; }
+    people.push({x, z, dir:Math.random()*Math.PI*2, speed:0.7+Math.random()*0.9, retarget:Math.random()*4, flee:0});
+  }
+  scene.add(pplMesh);
+}
+function updatePeople(dt){
+  if(!pplMesh) return;
+  for(let i=0;i<people.length;i++){
+    const p = people[i];
+    p.retarget -= dt;
+    if(p.retarget <= 0){ p.dir += (Math.random()-0.5)*2.2; p.retarget = 2+Math.random()*4; }
+    for(const T of tanks){
+      const d = Math.hypot(T.x-p.x, T.z-p.z);
+      if(d < 16 && Math.abs(T.speed) > 4){ p.dir = Math.atan2(p.x-T.x, p.z-T.z); p.flee = 1.6; break; }
+    }
+    const sp = p.flee > 0 ? 4.2 : p.speed;
+    p.flee -= dt;
+    const nx = p.x + Math.sin(p.dir)*sp*dt, nz = p.z + Math.cos(p.dir)*sp*dt;
+    if(!inBuilding(nx, nz) && !inWater(nx, nz)){ p.x = nx; p.z = nz; } else p.dir += 1.7;
+    dummy.position.set(p.x, heightAt(p.x,p.z)+0.95 + (p.flee>0 ? Math.abs(Math.sin(performance.now()/60))*0.25 : 0), p.z);
+    dummy.rotation.set(0, p.dir, 0); dummy.scale.setScalar(1);
+    dummy.updateMatrix(); pplMesh.setMatrixAt(i, dummy.matrix);
+  }
+  pplMesh.instanceMatrix.needsUpdate = true;
+}
+
+/* ---------- shops: cyan constellation + nearby names ---------- */
+let SHOPS = null;
+const shopLabelPool = [];
+function buildShops(){
+  if(!SHOPS || !SHOPS.shops.length) return;
+  const pos = [];
+  for(const [, e, n] of SHOPS.shops){
+    const x = e-E0, z = -(n-N0);
+    pos.push(x, heightAt(x,z)+4, z);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({color:CYAN, size:2.6, sizeAttenuation:true,
+    transparent:true, opacity:0.5})));
+  for(let i=0;i<6;i++){
+    const sp = textSprite('', 0.22, '#7adcff'); sp.visible = false;
+    scene.add(sp); shopLabelPool.push(sp);
+  }
+  setInterval(updateShopLabels, 2300);
+}
+function updateShopLabels(){
+  if(!SHOPS || !state.running) return;
+  const px = state.view==='drive' ? activeTank().x : state.map.cx;
+  const pz = state.view==='drive' ? activeTank().z : state.map.cz;
+  const near = [];
+  for(const [name, e, n] of SHOPS.shops){
+    const x = e-E0, z = -(n-N0), d = Math.hypot(x-px, z-pz);
+    if(d < 200) near.push([d, name, x, z]);
+  }
+  near.sort((a,b)=>a[0]-b[0]);
+  shopLabelPool.forEach((sp, i) => {
+    if(i < near.length && (state.view==='drive' || state.map.h < 900)){
+      const [, name, x, z] = near[i];
+      const c = document.createElement('canvas'); c.width=512; c.height=96;
+      const cx2 = c.getContext('2d'); cx2.font='700 30px ui-monospace,monospace'; cx2.textAlign='center';
+      cx2.shadowColor='#7adcff'; cx2.shadowBlur=8; cx2.fillStyle='#7adcff';
+      cx2.fillText('▸ ' + name.toUpperCase().slice(0,26), 256, 58);
+      sp.material.map?.dispose(); sp.material.map = new THREE.CanvasTexture(c);
+      sp.material.needsUpdate = true;
+      sp.position.set(x, heightAt(x,z)+11, z);
+      sp.visible = true;
+    } else sp.visible = false;
+  });
+}
 function roadAssist(T, dt){
   const k = (((T.x+WORLD/2)/64)|0)*100000 + (((T.z+WORLD/2)/64)|0);
   const segs = rGrid.get(k); if(!segs) return;
@@ -603,8 +775,8 @@ function buildFabric(){
   }
   const mk = (arr) => { const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); return g; };
-  scene.add(new THREE.Mesh(mk(walls), new THREE.MeshBasicMaterial({color:0x03200f, side:THREE.DoubleSide, transparent:true, opacity:0.82})));
-  scene.add(new THREE.Mesh(mk(roofs), new THREE.MeshBasicMaterial({color:0x06301a})));
+  scene.add(new THREE.Mesh(mk(walls), new THREE.MeshBasicMaterial({color:0x0c1812, side:THREE.DoubleSide, transparent:true, opacity:0.85})));
+  scene.add(new THREE.Mesh(mk(roofs), new THREE.MeshBasicMaterial({color:0x16241b})));
   scene.add(new THREE.LineSegments(mk(edges),
     new THREE.LineBasicMaterial({color:0x2fae62, transparent:true, opacity:0.55})));
   // built-density tint on the terrain grid: urban form survives any zoom level
@@ -1111,6 +1283,50 @@ const sfx = (()=>{
     lost(){ blip(400,90,0.8,'sawtooth',0.18); },
     select(){ blip(660,990,0.09,'square',0.1); },
     databurst(){ for(let i=0;i<7;i++) setTimeout(()=>blip(900+Math.random()*900, 700, 0.04, 'square', 0.09), i*45); },
+    musicStart(){
+      if(!ac || this._music) return;
+      this._music = true; this._musicOn = true;
+      const mg = this._mGain = ac.createGain(); mg.gain.value = 1; mg.connect(ac.destination);
+      // vinyl crackle bed
+      const len = ac.sampleRate*1.5, buf = ac.createBuffer(1, len, ac.sampleRate);
+      const d = buf.getChannelData(0);
+      for(let i=0;i<len;i++) d[i] = Math.random() < 0.0012 ? (Math.random()*2-1)*0.6 : (Math.random()*2-1)*0.02;
+      const cr = ac.createBufferSource(); cr.buffer = buf; cr.loop = true;
+      const cg = ac.createGain(); cg.gain.value = 0.05;
+      cr.connect(cg).connect(mg); cr.start();
+      // 4-bar downtempo loop, ~72bpm halftime
+      const CHORDS = [[57,60,64,67],[53,57,60,65],[48,52,55,59],[55,59,62,66]];   // Am7 F C G-ish
+      const f = m => 440*Math.pow(2,(m-69)/12);
+      let bar = 0;
+      const note = (midi, t, dur, type, vol, filt) => {
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.type = type; o.frequency.value = f(midi);
+        let dest = g;
+        if(filt){ const lp = ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value = filt; o.connect(lp).connect(g); }
+        else o.connect(g);
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t+0.4);
+        g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+        g.connect(mg); o.start(t); o.stop(t+dur+0.05);
+      };
+      const kick = t => { const o=ac.createOscillator(), g=ac.createGain();
+        o.frequency.setValueAtTime(110,t); o.frequency.exponentialRampToValueAtTime(38,t+0.18);
+        g.gain.setValueAtTime(0.09,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.22);
+        o.connect(g).connect(mg); o.start(t); o.stop(t+0.25); };
+      this._mTimer = setInterval(()=>{
+        if(!this._musicOn) return;
+        const t0 = ac.currentTime + 0.1, BAR = 3.33;
+        const ch = CHORDS[bar % 4];
+        for(const m of ch) note(m, t0, BAR*1.05, 'triangle', 0.022, 620);     // pad
+        note(ch[0]-24, t0, 1.4, 'sine', 0.075);                               // bass
+        note(ch[0]-24, t0+BAR*0.625, 0.9, 'sine', 0.05);
+        kick(t0); kick(t0+BAR*0.5);
+        for(let i=1;i<8;i+=2) note(86+(i%3), t0+i*BAR/8, 0.05, 'square', 0.008); // tick-hat
+        bar++;
+      }, 3330);
+    },
+    musicToggle(){ this._musicOn = !this._musicOn;
+      if(this._mGain) this._mGain.gain.value = this._musicOn ? 1 : 0;
+      return this._musicOn; },
     ack(){ blip(1200,1200,0.07,'square',0.1); setTimeout(()=>blip(1600,1600,0.1,'square',0.1), 90); },
   };
 })();
@@ -1362,6 +1578,7 @@ function toggleRadio(){
 $('radiobtn').addEventListener('touchstart', e=>{ toggleRadio(); e.preventDefault(); }, {passive:false});
 $('radiobtn').addEventListener('mousedown', toggleRadio);
 $('dial').addEventListener('input', ()=>{ radio.setFreq($('dial').value/10); $('freqlabel').textContent = radio.label(); });
+$('ambientbtn').addEventListener('click', ()=>{ $('ambientbtn').textContent = sfx.musicToggle() ? '♬ AMBIENT ON' : '♬ AMBIENT OFF'; });
 
 /* swipe anywhere open to glance around (tank-commander style); springs back */
 (function(){
@@ -1587,6 +1804,9 @@ function tick(){
   tanks.forEach((T,i)=>{ const y = updateTank(T, dt, i===state.active); if(i===state.active) activeY = y; });
   updateTransmissions(dt);
   updateGrowing(dt);
+  updateWeather(dt);
+  updateTraffic(dt);
+  updatePeople(dt);
   updateReticle();
   radio.update(dt);
   tideT += dt;
@@ -1789,8 +2009,9 @@ addEventListener('resize', ()=>{
     try{ WATER = await loadJson('data/water-bristol.json'); }catch(e){ WATER = null; }
     try{ FABRIC = await loadJson('data/fabric-bristol.json'); }catch(e){ FABRIC = null; }
     try{ PUBS = await loadJson('data/pubs-bristol.json'); }catch(e){ PUBS = null; }
+    try{ SHOPS = await loadJson('data/shops-bristol.json'); }catch(e){ SHOPS = null; }
     $('ntrees').textContent = TREES.trees.length.toLocaleString();
-    buildTerrain(); buildWater(); buildContours(); buildGreens(); buildFabric(); buildCollisionGrid(); buildPubs(); buildTrees(); buildRoads(); buildBridge(); buildLandmarks(); buildControl();
+    buildTerrain(); buildWater(); buildContours(); buildGreens(); buildFabric(); buildCollisionGrid(); buildPubs(); buildShops(); buildWeather(); buildTraffic(); buildPeople(); buildTrees(); buildRoads(); buildBridge(); buildLandmarks(); buildControl();
     TANK_NAMES.forEach((nm,i)=> tanks.push(new Tank(nm, ...TANK_SPAWNS[i])));
     buildFleetHud();
     const T = activeTank();
@@ -1807,6 +2028,7 @@ addEventListener('resize', ()=>{
   }
   btn.addEventListener('click', ()=>{
     sfx.init();
+    setTimeout(()=>sfx.musicStart(), 1200);
     $('splash').classList.add('hidden');
     state.running = true;
     setView('drive');
