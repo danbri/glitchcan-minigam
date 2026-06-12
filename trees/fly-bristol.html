@@ -308,6 +308,9 @@ function audioStart(){
   windFilt = ac.createBiquadFilter(); windFilt.type='bandpass'; windFilt.frequency.value=300; windFilt.Q.value=0.6;
   windGain = ac.createGain(); windGain.gain.value=0;
   src.connect(windFilt).connect(windGain).connect(ac.destination); src.start();
+  const wake = () => { try{ if(ac.state !== 'running') ac.resume(); }catch(e){} };
+  addEventListener('touchend', wake);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) wake(); });
 }
 
 /* ---------- main loop ---------- */

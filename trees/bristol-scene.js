@@ -1473,8 +1473,15 @@ const sfx = (()=>{
   Object.defineProperty(window, '__tfttAC', { get(){ return ac; } });
   function init(){
     ac = new (window.AudioContext||window.webkitAudioContext)();
-    const kick2 = () => { try{ ac.resume(); }catch(e){} };
-    kick2(); addEventListener('touchend', kick2, { once:true });
+    const wake = () => { try{
+      if(ac.state !== 'running') ac.resume();
+      if('speechSynthesis' in window) speechSynthesis.resume();
+    }catch(e){} };
+    wake();
+    addEventListener('touchend', wake);                       // persistent: every return-tap revives audio
+    addEventListener('pointerdown', wake);
+    document.addEventListener('visibilitychange', () => { if(!document.hidden) wake(); });
+    addEventListener('focus', wake);
     engOsc = ac.createOscillator(); engOsc.type='sawtooth'; engOsc.frequency.value=42;
     engFilt = ac.createBiquadFilter(); engFilt.type='lowpass'; engFilt.frequency.value=180;
     engGain = ac.createGain(); engGain.gain.value=0;
