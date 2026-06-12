@@ -228,7 +228,7 @@ function vectorize(geo, color, edgeOpacity=1){
 }
 
 /* ---------- terrain: dark mass + phosphor grid ---------- */
-let GREENS = null, WATER = null;
+let GREENS = null, WATER = null, gridMesh = null;
 function pointInRings(list, x, z){
   const e = x + E0, n = -z + N0;
   for(const [, ring] of list){
@@ -272,8 +272,8 @@ function buildTerrain(){
   scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({vertexColors:true})));
   const g2 = g.clone();
   g2.setAttribute('color', new THREE.Float32BufferAttribute(gridCols, 3));
-  const grid = new THREE.Mesh(g2, new THREE.MeshBasicMaterial({wireframe:true, vertexColors:true, transparent:true, opacity:0.34}));
-  grid.position.y = 0.4; scene.add(grid);
+  gridMesh = new THREE.Mesh(g2, new THREE.MeshBasicMaterial({wireframe:true, vertexColors:true, transparent:true, opacity:0.34}));
+  gridMesh.position.y = 0.4; scene.add(gridMesh);
   waterMesh = new THREE.Group();
   const wWire = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD, 40, 40),
     new THREE.MeshBasicMaterial({wireframe:true, color:CYAN, transparent:true, opacity:0.22}));
@@ -499,12 +499,30 @@ function buildGreens(){
   }
 }
 
+const rGrid = new Map();   // road segments for steering assist
+function roadAssist(T, dt){
+  const k = (((T.x+WORLD/2)/64)|0)*100000 + (((T.z+WORLD/2)/64)|0);
+  const segs = rGrid.get(k); if(!segs) return;
+  let best = null, bd = 16*16;
+  for(const [x1,z1,x2,z2] of segs){
+    const dx = x2-x1, dz = z2-z1, L2 = dx*dx+dz*dz || 1;
+    const t = THREE.MathUtils.clamp(((T.x-x1)*dx + (T.z-z1)*dz)/L2, 0, 1);
+    const px = x1+dx*t - T.x, pz = z1+dz*t - T.z, d2 = px*px+pz*pz;
+    if(d2 < bd){ bd = d2; best = Math.atan2(dx, dz); }
+  }
+  if(best === null) return;
+  let diff = ((best - T.heading + Math.PI)%(Math.PI*2)+Math.PI*2)%(Math.PI*2) - Math.PI;
+  if(Math.abs(diff) > Math.PI/2) diff = diff > 0 ? diff - Math.PI : diff + Math.PI;   // roads are two-way
+  if(Math.abs(diff) < 0.55) T.heading += diff * Math.min(1, dt*2.0) * 0.5;            // gentle rail
+}
+
 /* ---------- city fabric: real building footprints + neighbourhood names ---------- */
 let FABRIC = null;
 const CORE = { eMin: 356263, eMax: 361566, nMin: 170802, nMax: 174920 };   // extrusion tier
 /* building collision: 40m hash grid in BNG space over all 104k footprints */
 const bGrid = new Map();
 const BCELL = 40;
+let roofTops = null;          // world-y of each building's roof (for perching dragons)
 function buildCollisionGrid(){
   if(!FABRIC) return;
   FABRIC.buildings.forEach((entry, idx) => {
@@ -519,10 +537,10 @@ function buildCollisionGrid(){
       }
   });
 }
-function inBuilding(x, z){
+function inBuildingIdx(x, z){
   const e = x + E0, n = -z + N0;
   const a = bGrid.get(((e/BCELL)|0)*100000 + ((n/BCELL)|0));
-  if(!a) return false;
+  if(!a) return -1;
   for(const idx of a){
     const entry = FABRIC.buildings[idx];
     const ring = Array.isArray(entry[1]) ? entry[1] : entry;
@@ -531,14 +549,16 @@ function inBuilding(x, z){
       const [xi,yi]=ring[i], [xj,yj]=ring[j];
       if((yi>n)!==(yj>n) && e < (xj-xi)*(n-yi)/(yj-yi)+xi) inside = !inside;
     }
-    if(inside) return true;
+    if(inside) return idx;
   }
-  return false;
+  return -1;
 }
+function inBuilding(x, z){ return inBuildingIdx(x, z) >= 0; }
 function buildFabric(){
   if(!FABRIC) return;
   const lite = new URLSearchParams(location.search).has('lite');
   const walls = [], roofs = [], edges = [], outer = [];
+  roofTops = new Float32Array(FABRIC.buildings.length);
   let bi = 0;
   const TYPE_H = [0, 7.5, 14, 12, 8.5, 15, 14];     // by derive typeCode; 0 = unknown
   for(const entry of FABRIC.buildings){
@@ -549,19 +569,19 @@ function buildFabric(){
     const [e0r, n0r] = ring[0];
     const core = e0r >= CORE.eMin && e0r <= CORE.eMax && n0r >= CORE.nMin && n0r <= CORE.nMax;
     const x0 = e0r-E0, z0 = -(n0r-N0);
-    if(!core){                                       // city-wide tier: rooflines only
-      if(lite) continue;
-      const y = heightAt(x0, z0) + 4.5;
-      for(let i=0;i<ring.length;i++){
-        const [e1,n1] = ring[i], [e2,n2] = ring[(i+1)%ring.length];
-        outer.push(e1-E0, y, -(n1-N0), e2-E0, y, -(n2-N0));
-      }
-      continue;
-    }
     const base = heightAt(x0, z0) + 0.2;
     const guess = TYPE_H[btype] || 6;
     const h = Math.min(42, h0 > 0 ? h0 : guess + ((bi*2654435761)>>>0)%30/10);  // OSM height, else type heuristic
     const top = base + h;
+    roofTops[bi-1] = top;
+    if(!core){                                       // city-wide tier: rooflines at true height
+      if(lite) continue;
+      for(let i=0;i<ring.length;i++){
+        const [e1,n1] = ring[i], [e2,n2] = ring[(i+1)%ring.length];
+        outer.push(e1-E0, top, -(n1-N0), e2-E0, top, -(n2-N0));
+      }
+      continue;
+    }
     const pts2 = ring.map(([e,n]) => new THREE.Vector2(e-E0, n-N0));
     for(let i=0;i<ring.length;i++){
       const a = pts2[i], b = pts2[(i+1)%ring.length];
@@ -587,6 +607,29 @@ function buildFabric(){
   scene.add(new THREE.Mesh(mk(roofs), new THREE.MeshBasicMaterial({color:0x06301a})));
   scene.add(new THREE.LineSegments(mk(edges),
     new THREE.LineBasicMaterial({color:0x2fae62, transparent:true, opacity:0.55})));
+  // built-density tint on the terrain grid: urban form survives any zoom level
+  if(gridMesh){
+    const cols = ELEV.cols, cell = WORLD/(cols-1);
+    const density = new Float32Array(cols*cols);
+    for(const entry of FABRIC.buildings){
+      const ring = Array.isArray(entry[1]) ? entry[1] : entry;
+      const c = ((ring[0][0]-E0 + WORLD/2)/cell)|0, r = ((-(ring[0][1]-N0) + WORLD/2)/cell)|0;
+      if(c>=0 && c<cols && r>=0 && r<cols) density[r*cols+c]++;
+    }
+    const colAttr = gridMesh.geometry.attributes.color;
+    const dense = new THREE.Color(0x8fe87f), cur = new THREE.Color();
+    const pos = gridMesh.geometry.attributes.position;
+    for(let i=0;i<colAttr.count;i++){
+      const c = ((pos.getX(i) + WORLD/2)/cell)|0, r = ((pos.getZ(i) + WORLD/2)/cell)|0;
+      const d = density[r*cols+c] || 0;
+      if(d > 1){
+        cur.setRGB(colAttr.getX(i), colAttr.getY(i), colAttr.getZ(i));
+        cur.lerp(dense, Math.min(1, d/16) * 0.6);
+        colAttr.setXYZ(i, cur.r, cur.g, cur.b);
+      }
+    }
+    colAttr.needsUpdate = true;
+  }
   // neighbourhood names: short, dim, everywhere — the labels that say Bristol
   for(const [name, e, n] of (FABRIC.places||[])){
     if(!name) continue;
@@ -702,6 +745,16 @@ function buildRoads(){
     if(cls === 3) seg.computeLineDistances();
     scene.add(seg);
   });
+  // steering-assist grid: drivable segments hashed by 64m cell
+  for(const [cls,,pts] of ROADS.roads){
+    if(cls === 3) continue;                       // not the railway, thanks
+    for(let i=0;i<pts.length-1;i++){
+      const x1=pts[i][0]-E0, z1=-(pts[i][1]-N0), x2=pts[i+1][0]-E0, z2=-(pts[i+1][1]-N0);
+      const k = (((x1+WORLD/2)/64)|0)*100000 + (((z1+WORLD/2)/64)|0);
+      let a = rGrid.get(k); if(!a){ a=[]; rGrid.set(k,a); }
+      a.push([x1,z1,x2,z2]);
+    }
+  }
   ribbons.forEach((R, cls)=>{
     if(!R.length) return;
     const g = new THREE.BufferGeometry();
@@ -938,6 +991,7 @@ class Tank {
 
 /* ---------- dragons ---------- */
 const QUIPS = ['NOM NOM NOM','FREE SALAD','LOCALLY SOURCED','5★ WOULD MUNCH','CRUNCHY 10/10','DO YOU MIND?!','ORGANIC, NICE'];
+const PERCHQUIPS = ['NICE ROOF','GOOD VANTAGE','I CAN SEE MY NEST','OOH, SLATE'];
 const POPLINES = ['RUDE!','OUCH','I WAS EATING THAT','UN-BE-LEAF-ABLE','CONKERED…','BAH!'];
 const dragons = [];
 function makeDragon(){
@@ -1349,7 +1403,7 @@ function doHonk(){
   sfx.honk(); feed('>> HONK!');
   for(const d of dragons){
     if(d.state==='munch' && Math.hypot(d.g.position.x-T.x, d.g.position.z-T.z) < 260){
-      d.state='flee'; d.scare = 3.5; dragonSay(d,'AAAH A HONK');
+      d.state='flee'; d.scare = 3.5; d.perched = false; dragonSay(d,'AAAH A HONK');
     }
   }
 }
@@ -1449,6 +1503,7 @@ function updateTank(T, dt, isPlayer){
     burst(new THREE.Vector3(T.x, waterLevel()+0.5, T.z), 3, CYAN, 7, 5);
   T.speed += (targetSpeed - T.speed) * Math.min(1, dt*5.5);
   T.heading += turn * dt * (2.3 - Math.min(1,Math.abs(T.speed)/45)) * (T.speed<-0.5?-1:1);
+  if(isPlayer && fwd > 0.3 && Math.abs(turn) < 0.25 && deckY === null) roadAssist(T, dt);
   const half = WORLD/2 - 60;
   const nx = THREE.MathUtils.clamp(T.x + Math.sin(T.heading)*T.speed*dt, -half, half);
   const nz = THREE.MathUtils.clamp(T.z + Math.cos(T.heading)*T.speed*dt, -half, half);
@@ -1589,6 +1644,19 @@ function tick(){
       if(d.deadT<=0){ scene.remove(d.g); scene.remove(d.blip); dragons.splice(i,1); }
       continue;
     }
+    if(d.state==='perch'){
+      const dir = d.perchPos.clone().sub(d.g.position), dist = dir.length();
+      if(dist > 3){
+        d.g.lookAt(d.perchPos);
+        d.g.position.addScaledVector(dir.normalize(), Math.min(d.speed*dt, dist));
+      } else {
+        d.g.position.y = d.perchPos.y + Math.sin(d.t*2.2)*0.3;     // settled, scanning
+        d.perchT -= dt;
+        if(d.perchT < 1 && !d.saidPerch){ d.saidPerch = true; dragonSay(d, PERCHQUIPS[(Math.random()*PERCHQUIPS.length)|0], 1.6); }
+        if(d.perchT <= 0){ d.state = 'seek'; d.saidPerch = false; }
+      }
+      continue;
+    }
     if(d.state==='flee'){
       d.scare -= dt; d.g.position.y += 40*dt; d.g.translateZ(d.speed*1.6*dt);
       if(d.scare<=0) d.state='seek';
@@ -1604,12 +1672,27 @@ function tick(){
       }
       if(d.target>=0){
         const t = treeState[d.target];
+        // fancy a rooftop on the way? scope out the target like a proper gargoyle
+        if(!d.perched && roofTops){
+          const dx = d.g.position.x - t.x, dz = d.g.position.z - t.z, dd = Math.hypot(dx, dz);
+          if(dd > 55 && dd < 190){
+            const px = t.x + dx/dd*42, pz = t.z + dz/dd*42;
+            const bIdx = inBuildingIdx(px, pz);
+            if(bIdx >= 0){
+              d.perched = true; d.state = 'perch';
+              d.perchPos = new THREE.Vector3(px, roofTops[bIdx] + 2.5, pz);
+              d.perchT = 1.2 + Math.random()*1.6;
+              continue;
+            }
+            d.perched = true;            // no roof on the approach: don't keep checking
+          }
+        }
         const goal = new THREE.Vector3(t.x, t.y + t.h + 6, t.z);
         const dir = goal.clone().sub(d.g.position), dist = dir.length();
         d.g.lookAt(goal);
         d.g.position.addScaledVector(dir.normalize(), Math.min(d.speed*dt, dist));
         d.g.position.y += Math.sin(d.t*3)*0.25;
-        if(dist < 4){ d.state='munch'; d.munch=0; dragonSay(d, QUIPS[(Math.random()*QUIPS.length)|0], 2.6); }
+        if(dist < 4){ d.state='munch'; d.munch=0; d.perched=false; dragonSay(d, QUIPS[(Math.random()*QUIPS.length)|0], 2.6); }
       }
     } else if(d.state==='munch'){
       const t = treeState[d.target];
@@ -1731,7 +1814,7 @@ addEventListener('resize', ()=>{
   });
 })();
 tick();
-window.__tftt = { state, dragons, tanks, plantSapling, heightAt, waterLevel, inBuilding, get aliveTrees(){return aliveTrees;} };  // headless playtest hook
+window.__tftt = { state, dragons, tanks, plantSapling, heightAt, waterLevel, inBuilding, inBuildingIdx, treeState, rGrid, roadAssist, get aliveTrees(){return aliveTrees;} };  // headless playtest hook
 </script>
 </body>
 </html>
