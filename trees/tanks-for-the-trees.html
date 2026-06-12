@@ -160,7 +160,7 @@
      <b>BRUNEL</b>, <b>CABOT</b> and <b>BANKSY</b> — across <b>real Bristol terrain</b>
      and defend all <b id="ntrees">35,893</b> <b>real council trees</b>.</p>
   <p>▦ MAP: tap tank → tap ground to order · tap again to JACK IN and drive<br>
-     STICK drive · ⊕ tap = auto-aim fire, DRAG = aim yourself (missed conkers GROW TREES) · ♪ honk · 📻 radio<br>
+     STICK drive · ⊕ tap fire / DRAG aim / DOUBLE-TAP gun forward · swipe screen to glance · ♪ honk · 📻 radio<br>
      KBD: WASD · mouse aims · SPACE fire · M map · 1/2/3 tanks · H honk · R radio · mind the tide</p>
   <button class="bigbtn" id="startbtn">▶ DEFEND BRISTOL</button>
   <div id="loadnote">BOOTING…</div>
@@ -303,48 +303,79 @@ function waterLevel(){ return (8.7 + 4.2*Math.sin(tideT * Math.PI*2/180)) * EXAG
 function tideRising(){ return Math.cos(tideT * Math.PI*2/180) > 0; }
 
 /* ---------- trees: 36k phosphor wireframe canopies ---------- */
-let TREES = null, canopyMesh, treeState = [], aliveTrees = 0, totalTrees = 0;
+let TREES = null, treeState = [], aliveTrees = 0, totalTrees = 0;
+let treeMeshes = [];           // [broadleaf, conifer, columnar]
 const dummy = new THREE.Object3D();
+function speciesForm(name){
+  const n = (name||'').toLowerCase();
+  if(/pine|fir|spruce|cedar|cypress|yew|larch|juniper|wellingtonia|redwood|monkey/.test(n)) return 1; // conifer
+  if(/poplar|lombardy/.test(n)) return 2;                                                            // columnar
+  return 0;                                                                                          // broadleaf
+}
+function speciesColour(name, col){
+  const n = (name||'').toLowerCase();
+  if(/copper|purple|purpurea/.test(n))           col.setHex(0xc7813f);   // copper beech & co
+  else if(/cherry|plum|crab|apple|rowan|hawthorn|whitebeam/.test(n)) col.setHex(0x4ad06a);
+  else if(/birch|willow|aspen/.test(n))          col.setHex(0x7be08a);
+  else if(/pine|fir|spruce|cedar|cypress|yew|larch|juniper/.test(n)) col.setHex(0x1f7a55);
+  else if(/oak|plane|beech|chestnut/.test(n))    col.setHex(0x2f9a4f);
+  else col.setHex(0x3cb45e);
+  return col;
+}
 function buildTrees(){
   const lite = new URLSearchParams(location.search).has('lite');
   const list = lite ? TREES.trees.filter((_,i)=>i%4===0) : TREES.trees;
   totalTrees = aliveTrees = list.length;
-  const HEADROOM = 2000;   // room for conker-grown trees
-  canopyMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),
-      new THREE.MeshBasicMaterial({wireframe:true, transparent:true, opacity:0.8}), list.length + HEADROOM);
-  canopyMesh.count = list.length;
-  treeCapacity = list.length + HEADROOM;
+  const HEADROOM = 2000;
   persistOk = !lite;
-  canopyMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  // bucket trees by realistic form
+  const forms = list.map(t => speciesForm(TREES.species[t[2]]));
+  const counts = [0,0,0];
+  for(const f of forms) counts[f]++;
+  const geos = [new THREE.IcosahedronGeometry(1,0),                   // broadleaf dome
+                new THREE.ConeGeometry(0.85, 2.4, 6),                 // conifer spike
+                new THREE.IcosahedronGeometry(1,0)];                  // columnar (stretched at place time)
+  treeMeshes = geos.map((geo, f) => {
+    const cap = counts[f] + (f===0 ? HEADROOM : 0);
+    const m = new THREE.InstancedMesh(geo,
+      new THREE.MeshBasicMaterial({wireframe:true, transparent:true, opacity:0.8}), Math.max(cap,1));
+    m.count = 0; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    scene.add(m); return m;
+  });
+  treeCapacity = counts[0] + HEADROOM;
   const col = new THREE.Color();
   for(let i=0;i<list.length;i++){
     const [e,n,sp,cw,ch] = list[i];
     const x = e - E0, z = -(n - N0), y = heightAt(x,z);
+    const f = forms[i];
     const r = Math.min(8,(cw||5)/2), h = Math.min(18, Math.max(3, ch||8));
-    treeState.push({x, z, y, r, h, sp, alive:true});
-    dummy.position.set(x, y + h*0.7, z); dummy.scale.set(r, h*0.45, r);
-    dummy.rotation.y = (e*13+n*7)%6.28; dummy.updateMatrix();
-    canopyMesh.setMatrixAt(i, dummy.matrix);
-    // phosphor families by species: greens, with cyan + amber rarities
-    const k = ((sp*2654435761)>>>0) % 100;
-    if(k > 93) col.setHex(AMBER).multiplyScalar(0.8);
-    else if(k > 86) col.setHex(CYAN).multiplyScalar(0.7);
-    else col.setHSL(0.36, 1.0, 0.28 + (k%30)/100);
-    canopyMesh.setColorAt(i, col);
+    const mesh = treeMeshes[f], mi = mesh.count++;
+    treeState.push({x, z, y, r, h, sp, f, mi, alive:true});
+    placeCanopy(treeState[i], 1);
+    mesh.setColorAt(mi, speciesColour(TREES.species[sp], col));
   }
-  canopyMesh.instanceColor.needsUpdate = true;
+  for(const m of treeMeshes) if(m.instanceColor) m.instanceColor.needsUpdate = true;
   chestnutSp = TREES.species.findIndex(n => /horse chestnut/i.test(n));
   if(chestnutSp < 0){ chestnutSp = TREES.species.length; TREES.species.push('Horse Chestnut'); }
-  scene.add(canopyMesh);
 }
-function shrinkTree(i, frac){
-  const t = treeState[i];
-  dummy.position.set(t.x, t.y + t.h*0.7*frac, t.z);
-  dummy.scale.set(Math.max(0.01,t.r*frac), Math.max(0.01,t.h*0.45*frac), Math.max(0.01,t.r*frac));
-  dummy.rotation.y = 0; dummy.updateMatrix();
-  canopyMesh.setMatrixAt(i, dummy.matrix);
-  canopyMesh.instanceMatrix.needsUpdate = true;
+function placeCanopy(t, frac){
+  const mesh = treeMeshes[t.f];
+  if(t.f === 1){        // conifer: ground-up spike, tall & narrow
+    dummy.position.set(t.x, t.y + t.h*0.5*frac, t.z);
+    dummy.scale.set(Math.max(0.01,t.r*0.7*frac), Math.max(0.01,t.h*0.42*frac), Math.max(0.01,t.r*0.7*frac));
+  } else if(t.f === 2){ // columnar: poplar exclamation mark
+    dummy.position.set(t.x, t.y + t.h*0.6*frac, t.z);
+    dummy.scale.set(Math.max(0.01,t.r*0.35*frac), Math.max(0.01,t.h*0.55*frac), Math.max(0.01,t.r*0.35*frac));
+  } else {              // broadleaf dome on implied trunk
+    dummy.position.set(t.x, t.y + t.h*0.7*frac, t.z);
+    dummy.scale.set(Math.max(0.01,t.r*frac), Math.max(0.01,t.h*0.45*frac), Math.max(0.01,t.r*frac));
+  }
+  dummy.rotation.y = (t.x*13+t.z*7)%6.28;
+  dummy.updateMatrix();
+  mesh.setMatrixAt(t.mi, dummy.matrix);
+  mesh.instanceMatrix.needsUpdate = true;
 }
+function shrinkTree(i, frac){ placeCanopy(treeState[i], frac); }
 
 /* ---------- conkers are seeds: misses grow horse chestnuts ---------- */
 const growing = [];
@@ -352,14 +383,14 @@ let chestnutSp = -1, persistOk = false;
 let treeCapacity = 0;
 function plantSapling(x, z){
   const i = treeState.length;
-  if(i >= treeCapacity) return;
+  if(treeMeshes[0].count >= treeCapacity) return;
   const y = heightAt(x, z);
   if(inWater(x, z) || y < waterLevel() - 2) { burst(new THREE.Vector3(x, y+2, z), 6, CYAN, 8, 5); return; }   // splash, no tree
-  const t = {x, z, y, r: 3.2, h: 7, sp: chestnutSp, alive: true, grown: true};
+  const mesh = treeMeshes[0];
+  const t = {x, z, y, r: 3.2, h: 7, sp: chestnutSp, f: 0, mi: mesh.count++, alive: true, grown: true};
   treeState.push(t);
-  canopyMesh.count = treeState.length;
-  canopyMesh.setColorAt(i, new THREE.Color(0x39ff9c));
-  canopyMesh.instanceColor.needsUpdate = true;
+  mesh.setColorAt(t.mi, new THREE.Color(0x39ff9c));
+  mesh.instanceColor.needsUpdate = true;
   growing.push({i, t: 0});
   shrinkTree(i, 0.06);
   aliveTrees++;
@@ -447,9 +478,9 @@ function buildGreens(){
       new THREE.LineBasicMaterial({color:0x23d465, transparent:true, opacity:0.45}));
     scene.add(loop);
     const NM = (name||'').toUpperCase();
-    if(NM && !seen.has(NM) && ring.length > 5){
+    if(NM && !seen.has(NM) && NM.length <= 24 && ring.length >= 4){
       seen.add(NM);
-      if(seen.size <= 14){
+      if(seen.size <= 48){
         let cx=0, cz=0; for(const p of pts){ cx+=p.x; cz+=p.z; } cx/=pts.length; cz/=pts.length;
         const sp = textSprite(NM, 0.4, '#23d465');
         sp.position.set(cx, heightAt(cx,cz)+26, cz); scene.add(sp);
@@ -471,19 +502,36 @@ function buildGreens(){
 let FABRIC = null;
 function buildFabric(){
   if(!FABRIC) return;
-  const seg = [];
-  for(const ring of FABRIC.buildings){
+  const walls = [], roofs = [], edges = [];
+  let bi = 0;
+  for(const entry of FABRIC.buildings){
+    const h0 = Array.isArray(entry[1]) ? entry[0] : 0;
+    const ring = Array.isArray(entry[1]) ? entry[1] : entry;
+    bi++;
     const x0 = ring[0][0]-E0, z0 = -(ring[0][1]-N0);
-    const y = heightAt(x0, z0) + 0.7;                  // flat per building: cheap, reads fine
+    const base = heightAt(x0, z0) + 0.2;
+    const h = Math.min(42, h0 > 0 ? h0 : 5.5 + ((bi*2654435761)>>>0)%40/10);   // OSM height or 5.5-9.5m
+    const top = base + h;
+    const pts2 = ring.map(([e,n]) => new THREE.Vector2(e-E0, n-N0));
     for(let i=0;i<ring.length;i++){
-      const [e1,n1] = ring[i], [e2,n2] = ring[(i+1)%ring.length];
-      seg.push(e1-E0, y, -(n1-N0), e2-E0, y, -(n2-N0));
+      const a = pts2[i], b = pts2[(i+1)%ring.length];
+      const ax=a.x, az=-a.y, bx=b.x, bz=-b.y;
+      walls.push(ax,base,az, bx,base,bz, bx,top,bz,  ax,base,az, bx,top,bz, ax,top,az);
+      edges.push(ax,top,az, bx,top,bz);                               // roof outline
     }
+    try{                                                              // roof fill (map view solidity)
+      const tris = THREE.ShapeUtils.triangulateShape(pts2, []);
+      for(const [i1,i2,i3] of tris){
+        roofs.push(pts2[i1].x,top,-pts2[i1].y, pts2[i2].x,top,-pts2[i2].y, pts2[i3].x,top,-pts2[i3].y);
+      }
+    }catch(e){}
   }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(seg, 3));
-  scene.add(new THREE.LineSegments(g,
-    new THREE.LineBasicMaterial({color:0x1f8a4c, transparent:true, opacity:0.42})));
+  const mk = (arr) => { const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); return g; };
+  scene.add(new THREE.Mesh(mk(walls), new THREE.MeshBasicMaterial({color:0x03200f, side:THREE.DoubleSide})));
+  scene.add(new THREE.Mesh(mk(roofs), new THREE.MeshBasicMaterial({color:0x06301a})));
+  scene.add(new THREE.LineSegments(mk(edges),
+    new THREE.LineBasicMaterial({color:0x2fae62, transparent:true, opacity:0.55})));
   // neighbourhood names: short, dim, everywhere — the labels that say Bristol
   for(const [name, e, n] of (FABRIC.places||[])){
     if(!name) continue;
@@ -1004,7 +1052,7 @@ const state = {
   active:0, selected:-1, waveTimer:3, dragonsToSpawn:0, speedMul:1,
   map:{cx:0, cz:0, h:2600},
 };
-const input = {x:0, y:0, fire:false, aimAngle:null, manualT:0};
+const input = {x:0, y:0, fire:false, aimAngle:null, manualT:0, lookYaw:0, looking:false};
 const activeTank = () => tanks[state.active];
 
 let locT = 0;
@@ -1118,8 +1166,12 @@ $('pausebtn').addEventListener('click', ()=>{ state.paused = !state.paused; $('p
 (function(){
   const fire = $('fire');
   let fid = null, sx = 0, sy = 0;
+  let lastTap = 0;
   fire.addEventListener('touchstart', e=>{
     const t = e.changedTouches[0]; fid = t.identifier; sx = t.clientX; sy = t.clientY;
+    const now = performance.now();
+    if(now - lastTap < 320){ input.aimAngle = 0; input.manualT = 1.4; }   // double-tap: gun forward
+    lastTap = now;
     input.fire = true; e.preventDefault();
   }, {passive:false});
   addEventListener('touchmove', e=>{
@@ -1155,12 +1207,33 @@ $('radiobtn').addEventListener('touchstart', e=>{ toggleRadio(); e.preventDefaul
 $('radiobtn').addEventListener('mousedown', toggleRadio);
 $('dial').addEventListener('input', ()=>{ radio.setFreq($('dial').value/10); $('freqlabel').textContent = radio.label(); });
 
+/* swipe anywhere open to glance around (tank-commander style); springs back */
+(function(){
+  let id = null, lastX = 0;
+  addEventListener('touchstart', e=>{
+    if(state.view !== 'drive' || id !== null) return;
+    const t = e.changedTouches[0];
+    if(e.target.closest('#stick,#fire,#honk,#radiobtn,#radio,#mapbtn,#pausebtn,#fleet,.tankbtn')) return;
+    id = t.identifier; lastX = t.clientX; input.looking = true;
+  }, {passive:true});
+  addEventListener('touchmove', e=>{
+    for(const t of e.changedTouches){
+      if(t.identifier !== id) continue;
+      input.lookYaw = THREE.MathUtils.clamp(input.lookYaw + (t.clientX - lastX) * 0.007, -2.9, 2.9);
+      lastX = t.clientX;
+    }
+  }, {passive:true});
+  addEventListener('touchend', e=>{
+    for(const t of e.changedTouches) if(t.identifier === id){ id = null; input.looking = false; }
+  });
+})();
 const keys = {};
 addEventListener('keydown', e=>{
   keys[e.code]=true;
   if(e.code==='Space'){ input.fire=true; e.preventDefault(); }
   if(e.code==='KeyH') doHonk();
   if(e.code==='KeyR') toggleRadio();
+  if(e.code==='KeyC'){ input.aimAngle = 0; input.manualT = 1.4; }   // centre the gun
   if(e.code==='KeyM') setView(state.view==='drive' ? 'map' : 'drive');
   if(e.code==='Digit1') jackIn(0);
   if(e.code==='Digit2') jackIn(1);
@@ -1218,7 +1291,7 @@ function doHonk(){
     touches.set(e.pointerId, {x:e.clientX, y:e.clientY});
     if(Math.hypot(dx,dy) > 3) moved = true;
     if(touches.size===1){
-      const scale = state.map.h / innerHeight * 1.4;
+      const scale = state.map.h / innerHeight * 2.4;
       state.map.cx -= dx*scale; state.map.cz -= dy*scale;
     } else if(touches.size===2){
       const [a,b] = [...touches.values()];
@@ -1269,10 +1342,10 @@ function updateTank(T, dt, isPlayer){
   // snappier drive model: quick spool-up, tight low-speed turns
   const deckY = bridgeDeckY(T.x, T.z);
   const flooded = deckY === null && (inWater(T.x, T.z) || heightAt(T.x, T.z) < waterLevel() - 2);
-  const targetSpeed = fwd * (flooded ? 11 : 34);
+  const targetSpeed = fwd * (flooded ? 13 : 46);
   if(flooded && Math.abs(T.speed) > 3 && Math.random() < dt*4)
     burst(new THREE.Vector3(T.x, waterLevel()+0.5, T.z), 3, CYAN, 7, 5);
-  T.speed += (targetSpeed - T.speed) * Math.min(1, dt*4.5);
+  T.speed += (targetSpeed - T.speed) * Math.min(1, dt*5.5);
   T.heading += turn * dt * (2.3 - Math.min(1,Math.abs(T.speed)/45)) * (T.speed<-0.5?-1:1);
   const half = WORLD/2 - 60;
   T.x = THREE.MathUtils.clamp(T.x + Math.sin(T.heading)*T.speed*dt, -half, half);

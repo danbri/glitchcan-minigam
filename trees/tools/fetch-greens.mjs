@@ -12,7 +12,7 @@ const toN = lat => Math.round(172850 + (lat - 51.4534) * 111300);
 
 const QUERY = `[out:json][timeout:120];
 (
-  way["leisure"~"^(park|nature_reserve|recreation_ground|common)$"](${BBOX});
+  way["leisure"~"^(park|garden|nature_reserve|recreation_ground|common)$"](${BBOX});
   way["landuse"~"^(grass|cemetery|allotments|meadow|forest)$"](${BBOX});
   way["natural"="wood"](${BBOX});
   relation["leisure"~"^(park|nature_reserve|common)$"](${BBOX});
@@ -29,11 +29,11 @@ const res = await fetch('https://overpass-api.de/api/interpreter', {
 if (!res.ok) throw new Error('Overpass HTTP ' + res.status);
 const osm = await res.json();
 
-function ring(geom){           // thin to ~45m, closed
+function ring(geom){           // thin to ~16m, closed (small Georgian squares must survive)
   const pts = []; let last = null;
   for (const g of geom) {
     const e = toE(g.lon), n = toN(g.lat);
-    if (last && Math.hypot(e-last[0], n-last[1]) < 45) continue;
+    if (last && Math.hypot(e-last[0], n-last[1]) < 16) continue;
     pts.push([e, n]); last = [e, n];
   }
   return pts.length >= 3 ? pts : null;
@@ -50,17 +50,17 @@ for (const el of osm.elements) {
     stations.push([el.tags.name || 'STATION', toE(el.lon), toN(el.lat)]);
   } else if (el.type === 'way' && el.geometry) {
     const r = ring(el.geometry);
-    if (r && area(r) > 15000) greens.push([el.tags?.name || '', r]);   // >1.5ha only
+    if (r && area(r) > 1500) greens.push([el.tags?.name || '', r]);   // >1.5ha only
   } else if (el.type === 'relation' && el.members) {
     for (const m of el.members) {
       if (m.role !== 'outer' || !m.geometry) continue;
       const r = ring(m.geometry);
-      if (r && area(r) > 15000) greens.push([el.tags?.name || '', r]);
+      if (r && area(r) > 1500) greens.push([el.tags?.name || '', r]);
     }
   }
 }
 greens.sort((a,b)=>area(b[1])-area(a[1]));
-const top = greens.slice(0, 160);   // biggest 160 polygons cover the identity parks
+const top = greens;   // keep all: the small squares are the point
 
 mkdirSync(OUT, { recursive: true });
 writeFileSync(join(OUT, 'greens-bristol.json'), JSON.stringify({

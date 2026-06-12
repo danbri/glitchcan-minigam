@@ -45,7 +45,10 @@ for (const el of osm.elements) {
     for (let i=0;i<ring.length;i++){ const [x1,y1]=ring[i],[x2,y2]=ring[(i+1)%ring.length]; a += x1*y2-x2*y1; }
     if (Math.abs(a/2) < 60) continue;
     pts += ring.length;
-    buildings.push(ring);
+    const lv = parseFloat(el.tags?.['building:levels']) || 0;
+    const ht = parseFloat(el.tags?.height) || 0;
+    const h = ht || (lv ? lv*3.2 : 0);                 // 0 = let the game pick a default
+    buildings.push([Math.round(h*10)/10, ring]);
   }
 }
 mkdirSync(OUT, { recursive: true });
@@ -53,7 +56,7 @@ writeFileSync(join(OUT, 'fabric-bristol.json'), JSON.stringify({
   source: 'OpenStreetMap via Overpass, fetched ' + new Date().toISOString().slice(0,10) +
           ' — © OpenStreetMap contributors, ODbL',
   crs: 'EPSG:27700 (BNG, linear approximation)',
-  fields: { buildings: 'ring[[e,n],...] (central ~4x5km)', places: '[name, e, n]' },
+  fields: { buildings: '[height_m_or_0, ring[[e,n],...]] (central ~4x5km)', places: '[name, e, n]' },
   buildings, places,
 }));
 console.log(`wrote fabric-bristol.json: ${buildings.length} buildings (${pts} pts), ${places.length} places`);
