@@ -1471,21 +1471,58 @@ const sfx = (()=>{
   let ac, engOsc, engGain, engFilt;
   // exposed for the radio
   Object.defineProperty(window, '__tfttAC', { get(){ return ac; } });
-  function init(){
+  function makeCtx(){
     ac = new (window.AudioContext||window.webkitAudioContext)();
-    const wake = () => { try{
-      if(ac.state !== 'running') ac.resume();
-      if('speechSynthesis' in window) speechSynthesis.resume();
-    }catch(e){} };
-    wake();
-    addEventListener('touchend', wake);                       // persistent: every return-tap revives audio
-    addEventListener('pointerdown', wake);
-    document.addEventListener('visibilitychange', () => { if(!document.hidden) wake(); });
-    addEventListener('focus', wake);
+    try{ if(navigator.audioSession) navigator.audioSession.type = 'playback'; }catch(e){}
+  }
+  function buildEngine(){
     engOsc = ac.createOscillator(); engOsc.type='sawtooth'; engOsc.frequency.value=42;
     engFilt = ac.createBiquadFilter(); engFilt.type='lowpass'; engFilt.frequency.value=180;
     engGain = ac.createGain(); engGain.gain.value=0;
     engOsc.connect(engFilt).connect(engGain).connect(ac.destination); engOsc.start();
+  }
+  let watchT = null;
+  function rebuildAudio(){
+    // iOS zombie context: clock frozen even though state says running. Burn it down.
+    try{ ac.close(); }catch(e){}
+    makeCtx(); buildEngine();
+    const api = sfxApi;
+    if(api._music){                                  // restart the music bed on the new context
+      api._music = false;
+      clearTimeout(api._mNext);
+      try{ api._mGain.disconnect(); }catch(e){}
+      api.musicStart();
+    }
+  }
+  function checkAlive(){
+    if(!ac) return;
+    clearTimeout(watchT);
+    const t1 = ac.currentTime;
+    watchT = setTimeout(() => {
+      if(!ac) return;
+      if(ac.state === 'running' && ac.currentTime === t1) rebuildAudio();   // zombie
+    }, 400);
+  }
+  function wake(){
+    try{
+      if(!ac) return;
+      if(ac.state !== 'running'){
+        // the WebKit interrupted-state dance: suspend first, then resume
+        const p = ac.resume();
+        if(p && p.catch) p.catch(()=>{ try{ ac.suspend().then(()=>ac.resume()); }catch(e){} });
+      }
+      if('speechSynthesis' in window) speechSynthesis.resume();
+      checkAlive();
+    }catch(e){}
+  }
+  function init(){
+    makeCtx(); buildEngine();
+    wake();
+    addEventListener('touchend', wake);
+    addEventListener('pointerdown', wake);
+    document.addEventListener('visibilitychange', () => { if(!document.hidden) wake(); });
+    addEventListener('focus', wake);
+    addEventListener('pageshow', wake);
   }
   function blip(f0,f1,dur,type='square',vol=0.16){
     if(!ac) return;
@@ -1495,7 +1532,7 @@ const sfx = (()=>{
     g.gain.setValueAtTime(vol,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur);
     o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime+dur+0.02);
   }
-  return {
+  const sfxApi = {
     init,
     engine(speed){ if(engGain){ engGain.gain.value = Math.min(0.10, Math.abs(speed)*0.004+0.012);
                    engOsc.frequency.value = 40 + Math.abs(speed)*2.6; engFilt.frequency.value = 160+Math.abs(speed)*14; } },
@@ -1585,6 +1622,7 @@ const sfx = (()=>{
       return this._musicOn; },
     ack(){ blip(1200,1200,0.07,'square',0.1); setTimeout(()=>blip(1600,1600,0.1,'square',0.1), 90); },
   };
+  return sfxApi;
 })();
 
 /* ---------- the radio: three stations and a lot of static ---------- */
@@ -1665,6 +1703,10 @@ const radio = (()=>{
     get spoke(){ return spokeCount; },   // dragons always heckle aloud
     update(dt, ctx){
       if(!on){ sfx.setMusicGain(1); return; }       // radio off: ambient plays freely
+      if(staticGain && staticGain.context.state === 'closed'){   // context was rebuilt under us
+        staticSrc = null; staticGain = null; wubOsc = null;
+        if(window.__tfttAC) ensureNodes(window.__tfttAC);
+      }
       if(!staticGain) return;
       const st = tuned();
       staticGain.gain.value = st ? 0.01 : 0.04;
@@ -1826,7 +1868,7 @@ for(const [nm,e,n] of PLACES){
 }
 host.querySelectorAll('[data-auto]').forEach(b => b.addEventListener('click', ()=>{ setAuto(b.dataset.auto || null); $('drawer').classList.remove('open'); }));
 // tapping the world closes the drawer
-addEventListener('pointerdown', e => { if(!e.target.closest('#drawer,#menubtn')) $('drawer').classList.remove('open'); });
+addEventListener('pointerdown', e => { if(!e.target?.closest?.('#drawer,#menubtn')) $('drawer').classList.remove('open'); });
 
 /* ---------- drive controls ---------- */
 (function(){
