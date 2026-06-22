@@ -17,6 +17,16 @@ export class Editor {
 
     this._changeCb = () => {};
     this._selectionCb = () => {};
+
+    // Force tag-based formatting (<b>/<i>/<u>) instead of CSS-styled spans.
+    // The document sanitizer strips style attributes, so CSS-based output
+    // would lose its formatting on save — this keeps execCommand output in
+    // the sanitizer's allow-list. Also make Enter produce <p>, not <div>.
+    try {
+      document.execCommand('styleWithCSS', false, false);
+      document.execCommand('defaultParagraphSeparator', false, 'p');
+    } catch (_) { /* not all engines support these */ }
+
     this._wire();
     this._updateEmpty();
   }
