@@ -1,8 +1,14 @@
 # edot ↔ git: methodology for diffing and saving back to remote repos
 
-A design study (not yet implemented) for letting edot **edit a file fetched
-from a git host, see a diff, and write it back** — staying true to the
-project's "static files on GitHub Pages, no backend" constraint.
+A design study for letting edot **edit a file fetched from a git host, see a
+diff, and write it back** — staying true to the project's "static files on
+GitHub Pages, no backend" constraint.
+
+> **Status:** the **MVP is implemented** — `File ▸ Save to GitHub` (PAT auth →
+> colour diff → branch + PR via the REST API; `js/git-remote.js`, `js/diff.js`).
+> Verified against a mocked API in the test suite. Remaining items below
+> (Device-Flow auth, non-GitHub hosts, binary save-back, smarter diffing) are
+> the roadmap.
 
 ## 1. What already exists (the foundation)
 

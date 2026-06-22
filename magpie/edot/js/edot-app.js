@@ -9,8 +9,12 @@ import { Library } from './library.js';
 import { FindReplace } from './find-replace.js';
 import { resolveSourceUrl, filenameFromUrl } from './open-url.js';
 import { EXAMPLES } from './examples.js';
+import { GitHubRemote, commitViaPullRequest } from './git-remote.js';
+import { diffLines, diffStats, collapse } from './diff.js';
 import * as IO from './io.js';
 import * as LO from './libreoffice-bridge.js';
+
+const GH_TOKEN_KEY = 'edot.gh.token';
 
 const LAST_DOC_KEY = 'edot.currentDoc';
 
@@ -49,6 +53,7 @@ class App {
     this._wireDialog();
     this._wireUrlDialog();
     this._wireExamplesDialog();
+    this._wireGithubDialog();
     this._wireGlobalKeys();
     this._wireDragDrop();
     this._reflectBackend();
@@ -168,6 +173,7 @@ class App {
     mi('mi-docs', () => this.openLibrary());
     mi('mi-close', () => this.closeDocument());
     mi('mi-find', () => this.findReplace.open(true));
+    mi('mi-github', () => this.openGithubDialog());
 
     this.fileInput.accept = IO.importAccept();
     this.fileInput.addEventListener('change', () => {
@@ -257,6 +263,147 @@ class App {
   }
 
   openExamplesDialog() { showModal(this.examplesDialog); }
+
+  // ---- Save to GitHub (branch + pull request) ----
+  _wireGithubDialog() {
+    this.ghDialog = document.getElementById('github-dialog');
+    this.gh = {}; // { owner, repo, path, branch, sha, newText } after a preview
+    const g = (id) => document.getElementById(id);
+    this.ghEl = {
+      repo: g('gh-repo'), branch: g('gh-branch'), path: g('gh-path'), token: g('gh-token'),
+      message: g('gh-message'), remember: g('gh-remember'), preview: g('gh-preview'),
+      commit: g('gh-commit'), diff: g('gh-diff'), diffstat: g('gh-diffstat'),
+      error: g('gh-error'), result: g('gh-result'),
+    };
+    this.ghEl.preview.addEventListener('click', () => this._githubPreview());
+    this.ghEl.commit.addEventListener('click', () => this._githubCommit());
+  }
+
+  openGithubDialog() {
+    const el = this.ghEl;
+    el.error.hidden = true; el.result.hidden = true; el.diff.hidden = true; el.diff.innerHTML = '';
+    el.diffstat.textContent = '';
+    this.gh = {};
+
+    // Prefill from the document's git source, if it came from one.
+    const s = this.doc && this.doc.source;
+    if (s && s.owner && s.repo) {
+      el.repo.value = `${s.owner}/${s.repo}`;
+      el.branch.value = s.ref && !/^[0-9a-f]{7,40}$/i.test(s.ref) ? s.ref : 'main';
+      el.path.value = s.path || '';
+    }
+    el.message.value = `Update ${el.path.value || 'document'} via edot`;
+    try { el.token.value = sessionStorage.getItem(GH_TOKEN_KEY) || ''; } catch { /* */ }
+    el.remember.checked = !!el.token.value;
+    showModal(this.ghDialog);
+    (el.repo.value ? el.token : el.repo).focus();
+  }
+
+  _ghParse() {
+    const el = this.ghEl;
+    const m = /^([^/\s]+)\/([^/\s]+?)(?:\.git)?$/.exec(el.repo.value.trim());
+    if (!m) throw new Error('Repository must be "owner/repo"');
+    const path = el.path.value.trim().replace(/^\/+/, '');
+    if (!path) throw new Error('Enter the file path to write');
+    const ext = (path.match(/\.([a-z0-9]+)$/i) || [])[1] || '';
+    if (!IO.isTextFormat(ext)) throw new Error(`Save-back supports text files only (.md, .txt, .html, .css) — not .${ext || '?'}`);
+    const token = el.token.value.trim();
+    if (!token) throw new Error('Paste a personal access token');
+    return { owner: m[1], repo: m[2], path, ext, branch: el.branch.value.trim() || 'main', token };
+  }
+
+  _rememberToken(token, on) {
+    try {
+      if (on) sessionStorage.setItem(GH_TOKEN_KEY, token);
+      else sessionStorage.removeItem(GH_TOKEN_KEY);
+    } catch { /* storage blocked */ }
+  }
+
+  async _githubPreview() {
+    const el = this.ghEl;
+    el.error.hidden = true; el.result.hidden = true;
+    let p;
+    try { p = this._ghParse(); } catch (err) { return this._ghErr(err.message); }
+    try {
+      el.diffstat.textContent = 'Fetching…';
+      const newText = await IO.exportText(this.editor.getContent(), this.titleInput.value, p.ext);
+      const remote = new GitHubRemote(p.token);
+      const file = await remote.getFile(p.owner, p.repo, p.path, p.branch);
+      const diff = diffLines(file.text, newText);
+      const stats = diffStats(diff);
+      this.gh = { ...p, sha: file.sha, newText, exists: file.exists };
+      this._renderDiff(collapse(diff));
+      el.diffstat.textContent = file.exists
+        ? `+${stats.add} −${stats.del} vs ${p.branch}`
+        : `new file · ${newText.split('\n').length} lines`;
+      this._rememberToken(p.token, el.remember.checked);
+    } catch (err) {
+      this._ghErr(this._ghMessage(err));
+    }
+  }
+
+  async _githubCommit() {
+    const el = this.ghEl;
+    el.error.hidden = true; el.result.hidden = true;
+    let p;
+    try { p = this._ghParse(); } catch (err) { return this._ghErr(err.message); }
+    try {
+      el.commit.disabled = true;
+      el.diffstat.textContent = 'Committing…';
+      const newText = this.gh.newText && this.gh.path === p.path
+        ? this.gh.newText
+        : await IO.exportText(this.editor.getContent(), this.titleInput.value, p.ext);
+      const remote = new GitHubRemote(p.token);
+      const { pr } = await commitViaPullRequest(remote, {
+        owner: p.owner, repo: p.repo, path: p.path, baseBranch: p.branch,
+        message: el.message.value.trim() || `Update ${p.path} via edot`,
+        contentText: newText,
+        title: el.message.value.trim() || `Update ${p.path}`,
+        body: 'Edited with edot (https://danbri.github.io/glitchcan-minigam/magpie/edot/edot.html).',
+      });
+      this._rememberToken(p.token, el.remember.checked);
+      el.diffstat.textContent = '';
+      el.result.innerHTML = `Pull request opened: <a href="${esc(pr.html_url)}" target="_blank" rel="noopener noreferrer">#${pr.number}</a>`;
+      el.result.hidden = false;
+      this.announce(`Pull request #${pr.number} opened`);
+    } catch (err) {
+      this._ghErr(this._ghMessage(err));
+    } finally {
+      el.commit.disabled = false;
+    }
+  }
+
+  _renderDiff(rows) {
+    const frag = document.createDocumentFragment();
+    for (const r of rows) {
+      const div = document.createElement('div');
+      if (r.type === 'gap') { div.className = 'gap'; div.textContent = `⋯ ${r.count} unchanged line${r.count === 1 ? '' : 's'}`; }
+      else {
+        div.className = 'row ' + r.type;
+        const sign = document.createElement('span');
+        sign.className = 'sign';
+        sign.textContent = r.type === 'add' ? '+' : r.type === 'del' ? '−' : ' ';
+        const txt = document.createElement('span');
+        txt.textContent = r.text;
+        div.append(sign, txt);
+      }
+      frag.appendChild(div);
+    }
+    this.ghEl.diff.innerHTML = '';
+    this.ghEl.diff.appendChild(frag);
+    this.ghEl.diff.hidden = false;
+  }
+
+  _ghErr(msg) { this.ghEl.error.textContent = msg; this.ghEl.error.hidden = false; this.ghEl.diffstat.textContent = ''; }
+
+  _ghMessage(err) {
+    if (err.status === 401) return 'Token rejected (401). Check the token and its scopes.';
+    if (err.status === 403) return 'Forbidden (403) — the token lacks permission, or rate-limited.';
+    if (err.status === 404) return 'Not found (404) — check owner/repo/branch, or the token can’t see this repo.';
+    if (err.status === 422) return `Could not create the change (422): ${err.data?.message || 'validation failed'}.`;
+    if (err instanceof TypeError) return 'Network/CORS error reaching api.github.com.';
+    return err.message || 'GitHub request failed';
+  }
 
   async openExample(ex) {
     if (ex.local) {

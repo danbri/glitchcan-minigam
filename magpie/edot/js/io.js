@@ -137,6 +137,21 @@ function mimeFor(ext) {
   }[ext] || 'application/octet-stream';
 }
 
+// Text formats that can be re-exported to a string (for git save-back / diff).
+export const TEXT_FORMATS = new Set(['txt', 'md', 'markdown', 'html', 'htm', 'css']);
+export function isTextFormat(ext) { return TEXT_FORMATS.has((ext || '').toLowerCase()); }
+
+/**
+ * Re-export document HTML to the given *text* format as a string. Used by the
+ * git save-back path to produce the file content to commit and diff.
+ */
+export async function exportText(html, title, ext) {
+  const e = ext === 'markdown' ? 'md' : ext === 'htm' ? 'html' : ext;
+  if (!isTextFormat(ext)) throw new Error(`.${ext} is a binary format — text save-back only`);
+  const blob = await exportDocument(html, title, e);
+  return blob.text();
+}
+
 /** Trigger a browser download for a Blob. */
 export function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
