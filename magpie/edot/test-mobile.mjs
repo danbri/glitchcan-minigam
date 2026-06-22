@@ -19,13 +19,27 @@ try {
   await page.goto(`http://127.0.0.1:${port}/edot.html`);
   await page.waitForFunction(() => !!window.__edot && !!window.__edot.doc);
 
-  // Start a clean doc, then TAP the empty page area -> editor must take focus.
+  // The toolbar must keep real height + all its buttons (Safari was crushing
+  // it to a sliver under the locked flex shell).
+  const tb = await page.evaluate(() => {
+    const t = document.getElementById('toolbar');
+    return { h: t.getBoundingClientRect().height, btns: t.querySelectorAll('.tbtn').length };
+  });
+  ok('toolbar has its buttons', tb.btns >= 12);
+  ok('toolbar is not crushed (>=36px tall)', tb.h >= 36);
+
+  // Start a clean doc, then TAP the page -> editor must take focus.
   await page.click('#menu-button'); await page.tap('#mi-new'); await page.waitForTimeout(200);
-  // tap low in the page (empty region / margin), not on text
   const box = await page.locator('#editor').boundingBox();
-  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height - 20);
+  await page.touchscreen.tap(box.x + box.width / 2, box.y + 80); // tap on the page body
   await page.waitForTimeout(150);
-  ok('tap empty area focuses the editor', await page.evaluate(() => document.activeElement && document.activeElement.id === 'editor'));
+  ok('tap on page focuses the editor', await page.evaluate(() => document.activeElement && document.activeElement.id === 'editor'));
+
+  // Tapping the grey margin (outside the page) also focuses via JS.
+  await page.evaluate(() => document.activeElement.blur());
+  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height - 6);
+  await page.waitForTimeout(150);
+  ok('tap on margin focuses the editor', await page.evaluate(() => document.activeElement && document.activeElement.id === 'editor'));
 
   // Now typing should land in the editor.
   await page.keyboard.type('typed on mobile');

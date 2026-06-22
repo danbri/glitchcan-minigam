@@ -76,15 +76,14 @@ class App {
   }
 
   _wireEditor() {
-    // Tap anywhere in the page area (margins / empty space) to start typing.
-    // Mobile browsers won't raise the keyboard unless focus happens inside the
-    // tap gesture, and a tap on the grey margin or empty doc otherwise does
-    // nothing — so force-focus the editor when the tap didn't land in it.
+    // Tap the grey margin around the page to start typing there. Taps that
+    // land ON the page are left entirely to the browser — iOS Safari raises
+    // the keyboard from native contenteditable focus, and intervening with a
+    // programmatic focus()/selection here actually suppresses it.
     const main = document.querySelector('.app-main');
-    main.addEventListener('click', () => {
-      if (document.activeElement !== this.editorEl && !this.editorEl.contains(document.activeElement)) {
-        this.editor.focusEnd();
-      }
+    main.addEventListener('click', (e) => {
+      if (e.target.closest('#editor')) return;   // page tap → native focus
+      this.editor.focusEnd();
     });
 
     this.editor.onSelectionCallback(() => this.toolbar.refresh());
@@ -164,9 +163,10 @@ class App {
   }
 
   // ---- Documents library dialog ----
+  _wireDialog() {
+    this.dialog = document.getElementById('docs-dialog');
     document.getElementById('docs-new').addEventListener('click', () => {
-      if (typeof this.dialog.close === 'function') this.dialog.close();
-      else this.dialog.removeAttribute('open');
+      this.dialog.close();
       this.newDocument();
     });
   }
