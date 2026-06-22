@@ -19,6 +19,14 @@ offline, and dependency-free.
 - **Find & replace** — `Ctrl/⌘+F` (find) / `Ctrl/⌘+H` (replace), live match
   count, case sensitivity, replace-one / replace-all. Matches are shown with the
   CSS Custom Highlight API (no DOM mutation), with a select-and-scroll fallback.
+- **Open from URL** — paste any document URL; **GitHub / GitLab / Bitbucket /
+  gist “blob” links are rewritten to their raw file automatically**
+  (`js/open-url.js`). Same-origin and `raw.githubusercontent.com` work in the
+  browser; other hosts may be blocked by CORS (the dialog says so).
+- **Examples** — `File ▸ Examples` opens ready-made documents (incl. the full
+  Adam Morton *Searching for Logic* textbook, mirrored in `examples/`).
+- **Close** (`Ctrl/⌘+W`) — closes the current document; it stays safe in the
+  library.
 - **Local document library** — multiple named documents stored on-device in
   **IndexedDB** (localStorage fallback), with continuous autosave. **File ▸ My
   documents** lists, opens, renames, duplicates, and deletes them. Nothing is
@@ -75,6 +83,8 @@ js/
   a11y.js              live-region announcer + transient toasts
   library.js           local document store (IndexedDB, localStorage fallback)
   find-replace.js      find & replace (CSS Custom Highlight API)
+  open-url.js          URL/git-host link resolution -> raw fetch + metadata
+  examples.js          File ▸ Examples manifest
   io.js                format registry + open/save orchestration
   io-docx.js           native OOXML .docx read/write (incl. alignment via w:jc)
   io-pdf.js            native multi-page PDF export (base-14 fonts)
@@ -142,8 +152,8 @@ replace, the document library persistence across reloads, the sanitizer, and the
 toolbar wiring:
 
 ```bash
-node magpie/edot/test-edot.mjs       # functional smoke test (45 checks)
-node magpie/edot/test-e2e.mjs        # end-to-end UI driving (16 checks)
+node magpie/edot/test-edot.mjs       # functional smoke test (56 checks)
+node magpie/edot/test-e2e.mjs        # end-to-end UI driving (23 checks)
 node magpie/edot/test-mobile.mjs     # mobile: tap-to-focus, touch menu, locked shell (14 checks)
 node magpie/edot/verify-pdf.mjs      # deep PDF structural validation + sample
 ```
@@ -151,6 +161,14 @@ node magpie/edot/verify-pdf.mjs      # deep PDF structural validation + sample
 (Both use the environment's vendored Chromium at `/opt/pw-browsers/` via
 `playwright-core`. `verify-pdf.mjs` writes `/tmp/edot-sample.pdf` and checks the
 xref offsets, trailer→catalog→pages chain, and content-stream lengths.)
+
+## Roadmap: editing files in git
+
+edot already *reads* from git hosts (Open from URL). A design study for the
+next step — **diffing and committing back to a remote repo**, entirely
+client-side (GitHub Device Flow / fine-grained PAT, `jsdiff` preview, PR-based
+writes) — is in [`docs/git-sync-methodology.md`](docs/git-sync-methodology.md).
+The `doc.source` metadata captured on URL-open is the hook it builds on.
 
 ## Limits / honest scope
 

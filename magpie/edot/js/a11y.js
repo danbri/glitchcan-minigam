@@ -42,4 +42,10 @@ export class Announcer {
       this.toastEl.classList.remove('show');
     }, ms);
   }
+
+  // Remove the injected live regions + toast so the instance leaves no DOM.
+  destroy() {
+    clearTimeout(this._toastTimer);
+    [this.polite, this.assertive, this.toastEl].forEach((el) => el && el.remove());
+  }
 }

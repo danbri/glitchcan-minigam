@@ -359,7 +359,13 @@ select.tbtn {
   margin: 0;
 }
 .dialog-head h2 { margin: 0; font-size: 1.1rem; }
-.dialog-note { margin: 0; padding: 0.5rem 1rem; font-size: 0.8rem; color: var(--muted); }
+.dialog-note { margin: 0; padding: 0.5rem 1rem; font-size: 0.8rem; color: var(--muted); display: block; }
+.dialog-body { padding: 0.5rem 1rem 0.25rem; }
+.dialog-body .find-input { width: 100%; margin-top: 0.4rem; }
+.dialog-error { margin: 0.5rem 0 0; color: var(--danger); font-size: 0.85rem; }
+.dialog-error[hidden] { display: none; }
+.doc-row .doc-note { display: block; font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; }
+.doc-credit { padding: 0 1rem 0.75rem; font-size: 0.72rem; color: var(--muted); }
 .dialog-foot { padding: 0.75rem 1rem; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; }
 .tbtn.primary { background: var(--accent); color: var(--accent-fg); min-width: auto; padding: 0 1em; }
 .tbtn.primary:hover { filter: brightness(1.08); }

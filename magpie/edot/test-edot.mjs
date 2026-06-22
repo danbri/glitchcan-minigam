@@ -264,6 +264,58 @@ try {
   ok('sanitizer keeps data:image but drops handlers + data:text/html',
     /<img src="data:image\/png;base64,AAAA">/.test(sanTbl) && !/onclick|onerror|data:text\/html/.test(sanTbl));
 
+  // 9g. URL resolution: git hosting links rewrite to raw, plain URLs pass through.
+  const urls = await page.evaluate(async () => {
+    const { resolveSourceUrl, filenameFromUrl } = await import('./js/open-url.js');
+    const r = {};
+    r.ghBlob = resolveSourceUrl('https://github.com/danbri/glitchcan-minigam/blob/master/magpie/edot/README.md');
+    r.ghRaw = resolveSourceUrl('https://raw.githubusercontent.com/o/r/main/a/b.md');
+    r.gist = resolveSourceUrl('https://gist.github.com/user/abc123');
+    r.gitlab = resolveSourceUrl('https://gitlab.com/o/r/-/blob/main/doc.md');
+    r.bitbucket = resolveSourceUrl('https://bitbucket.org/o/r/src/main/doc.md');
+    r.plain = resolveSourceUrl('https://example.org/a/page.html');
+    let threw = false; try { resolveSourceUrl('not a url'); } catch { threw = true; }
+    r.threw = threw;
+    r.fnPath = filenameFromUrl('https://x/y/report.docx');
+    r.fnCt = filenameFromUrl('https://gist.githubusercontent.com/u/i/raw', 'text/markdown');
+    return r;
+  });
+  ok('github blob -> raw.githubusercontent', urls.ghBlob.url === 'https://raw.githubusercontent.com/danbri/glitchcan-minigam/master/magpie/edot/README.md' && urls.ghBlob.provider === 'github' && urls.ghBlob.corsRisk === false);
+  ok('raw github passes through (no cors risk)', urls.ghRaw.provider === 'github' && urls.ghRaw.corsRisk === false);
+  ok('gist -> gist raw', /gist\.githubusercontent\.com\/user\/abc123\/raw/.test(urls.gist.url));
+  ok('gitlab blob -> raw', urls.gitlab.url.includes('/-/raw/') && urls.gitlab.corsRisk === true);
+  ok('bitbucket src -> raw', urls.bitbucket.url.includes('/raw/'));
+  ok('plain cross-origin url flagged corsRisk', urls.plain.provider === 'web' && urls.plain.corsRisk === true);
+  ok('invalid url throws', urls.threw === true);
+  ok('filename from path keeps extension', urls.fnPath === 'report.docx');
+  ok('filename from content-type when no ext', /\.md$/.test(urls.fnCt));
+
+  // 9h. Examples manifest is wired and includes the Morton book.
+  ok('examples manifest present', await page.evaluate(async () => {
+    const { EXAMPLES } = await import('./js/examples.js');
+    return EXAMPLES.length >= 1 && EXAMPLES.some((e) => e.local && /searching-for-logic\.docx$/.test(e.src));
+  }));
+
+  // 9i. Multi-instance hygiene: destroy() leaves no accumulated global DOM.
+  const teardown = await page.evaluate(async () => {
+    const count = () => ({
+      live: document.querySelectorAll('[aria-live]').length,
+      bars: document.querySelectorAll('.find-bar').length,
+      toasts: document.querySelectorAll('.toast').length,
+    });
+    const before = count();
+    const { App } = await import('./js/edot-app.js');
+    window.__edot.destroy();
+    window.__edot = new App();
+    await new Promise((r) => setTimeout(r, 150));
+    const after = count();
+    return { before, after };
+  });
+  ok('destroy()+reinstantiate does not leak DOM',
+    teardown.after.live === teardown.before.live &&
+    teardown.after.bars === teardown.before.bars &&
+    teardown.after.toasts === teardown.before.toasts);
+
   // 10. LibreOffice bridge reports not-configured gracefully.
   const loState = await page.evaluate(async () => {
     const LO = await import('./js/libreoffice-bridge.js');

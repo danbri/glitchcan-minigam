@@ -80,6 +80,12 @@ export class FindReplace {
     this.editor.focus();
   }
 
+  // Remove highlights and the injected bar.
+  destroy() {
+    this._clearHighlights();
+    this.bar.remove();
+  }
+
   _clearHighlights() {
     if (HAS_HIGHLIGHT) { CSS.highlights.delete('edot-find'); CSS.highlights.delete('edot-find-current'); }
   }

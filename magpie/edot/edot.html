@@ -30,8 +30,17 @@
         <button type="button" id="mi-open" class="menu-item" role="menuitem">
           <span>Open file…</span><span class="hint">Ctrl/⌘O</span>
         </button>
+        <button type="button" id="mi-url" class="menu-item" role="menuitem">
+          <span>Open from URL…</span><span class="hint">git-aware</span>
+        </button>
+        <button type="button" id="mi-examples" class="menu-item" role="menuitem" aria-haspopup="dialog">
+          <span>Examples…</span>
+        </button>
         <button type="button" id="mi-docs" class="menu-item" role="menuitem">
           <span>My documents…</span><span class="hint">Ctrl/⌘⇧O</span>
+        </button>
+        <button type="button" id="mi-close" class="menu-item" role="menuitem">
+          <span>Close document</span><span class="hint">Ctrl/⌘W</span>
         </button>
         <button type="button" id="mi-find" class="menu-item" role="menuitem">
           <span>Find &amp; replace…</span><span class="hint">Ctrl/⌘F</span>
@@ -65,6 +74,31 @@
 
   <!-- Hidden native picker for File ▸ Open -->
   <input id="file-input" type="file" class="visually-hidden" aria-hidden="true" tabindex="-1">
+
+  <!-- Open from URL (git-aware) -->
+  <dialog id="url-dialog" class="dialog" aria-labelledby="url-dialog-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="url-dialog-title">Open from URL</h2>
+      <button type="submit" class="tbtn" aria-label="Close">✕</button>
+    </form>
+    <div class="dialog-body">
+      <label for="url-input" class="dialog-note">Paste a document URL. GitHub / GitLab / Bitbucket / gist “blob” links are rewritten to their raw file automatically.</label>
+      <input id="url-input" type="url" class="find-input" placeholder="https://github.com/owner/repo/blob/main/doc.md" autocomplete="off" inputmode="url">
+      <p id="url-error" class="dialog-error" role="alert" hidden></p>
+    </div>
+    <div class="dialog-foot">
+      <button type="button" id="url-open" class="tbtn primary">Open</button>
+    </div>
+  </dialog>
+
+  <!-- Examples -->
+  <dialog id="examples-dialog" class="dialog" aria-labelledby="examples-dialog-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="examples-dialog-title">Examples</h2>
+      <button type="submit" class="tbtn" aria-label="Close">✕</button>
+    </form>
+    <ul id="examples-list" class="docs-list"></ul>
+  </dialog>
 
   <!-- Local document library -->
   <dialog id="docs-dialog" class="dialog" aria-labelledby="docs-dialog-title">
