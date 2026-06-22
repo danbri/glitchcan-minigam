@@ -153,10 +153,9 @@ class App {
   }
 
   // ---- Documents library dialog ----
-  _wireDialog() {
-    this.dialog = document.getElementById('docs-dialog');
     document.getElementById('docs-new').addEventListener('click', () => {
-      this.dialog.close();
+      if (typeof this.dialog.close === 'function') this.dialog.close();
+      else this.dialog.removeAttribute('open');
       this.newDocument();
     });
   }
