@@ -13,6 +13,8 @@ function inline(text) {
   let s = escapeHtml(text);
   // code spans first so their contents aren't re-processed
   s = s.replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);
+  // Images before links (image syntax embeds the link form).
+  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_, alt, src) => `<img src="${src}" alt="${alt}">`);
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g,
     (_, t, href, title) => `<a href="${href}"${title ? ` title="${title}"` : ''}>${t}</a>`);
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
@@ -103,6 +105,7 @@ export function htmlToMarkdown(html) {
         case 'S': case 'STRIKE': s += `~~${inner}~~`; break;
         case 'CODE': s += `\`${inner}\``; break;
         case 'A': s += `[${inner}](${n.getAttribute('href') || ''})`; break;
+        case 'IMG': s += `![${n.getAttribute('alt') || ''}](${n.getAttribute('src') || ''})`; break;
         case 'BR': s += '  \n'; break;
         default: s += inner;
       }
@@ -134,6 +137,8 @@ export function htmlToMarkdown(html) {
       blocks.push(items.join('\n'));
     } else if (tag === 'HR') {
       blocks.push('---');
+    } else if (tag === 'TABLE') {
+      blocks.push(tableToMarkdown(node, inlineMd));
     } else {
       const t = inlineMd(node).trim();
       if (t) blocks.push(t);
@@ -141,4 +146,15 @@ export function htmlToMarkdown(html) {
   });
 
   return blocks.join('\n\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+}
+
+// GFM table. First row becomes the header; cell pipes/newlines are escaped.
+function tableToMarkdown(table, inlineMd) {
+  const rows = Array.from(table.rows);
+  if (!rows.length) return '';
+  const cell = (c) => inlineMd(c).replace(/\|/g, '\\|').replace(/\n+/g, ' ').trim();
+  const toLine = (tr) => `| ${Array.from(tr.cells).map(cell).join(' | ')} |`;
+  const cols = rows[0].cells.length || 1;
+  const sep = `| ${Array.from({ length: cols }, () => '---').join(' | ')} |`;
+  return [toLine(rows[0]), sep, ...rows.slice(1).map(toLine)].join('\n');
 }

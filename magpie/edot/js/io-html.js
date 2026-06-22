@@ -24,6 +24,12 @@ const DOC_CSS = `
   pre { background: #f4f4f2; padding: 0.8em; border-radius: 6px; overflow: auto; }
   code { font-family: ui-monospace, Menlo, Consolas, monospace; }
   a { color: #1a73e8; }
+  img { max-width: 100%; height: auto; }
+  figure { margin: 0 0 1em; text-align: center; }
+  figcaption { font-size: 0.85em; color: #555; }
+  table { border-collapse: collapse; margin: 0 0 1em; max-width: 100%; }
+  td, th { border: 1px solid #d9d6cf; padding: 0.3em 0.55em; vertical-align: top; text-align: left; }
+  th { background: #f4f4f2; }
   [property], [typeof] { } /* semantic spans render inline, unstyled by default */`;
 
 /**

@@ -205,6 +205,65 @@ try {
   ok('find locates all matches', fr.count === 3);
   ok('replace all replaces every match', !/foo/.test(fr.html) && (fr.html.match(/X/g) || []).length === 3);
 
+  // 9d. DOCX with a table + embedded image: build a real fixture, import it.
+  const docxRich = await page.evaluate(async () => {
+    const { zipSync } = await import('./js/zip.js');
+    const { docxToHtml } = await import('./js/io-docx.js');
+    // 1x1 transparent PNG
+    const pngB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    const bin = atob(pngB64);
+    const png = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) png[i] = bin.charCodeAt(i);
+    const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" ' +
+      'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ' +
+      'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"';
+    const doc = `<?xml version="1.0"?>
+<w:document ${NS}><w:body>
+<w:p><w:r><w:t>Before table</w:t></w:r></w:p>
+<w:tbl>
+  <w:tr><w:tc><w:p><w:r><w:t>A1</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>B1</w:t></w:r></w:p></w:tc></w:tr>
+  <w:tr><w:tc><w:p><w:r><w:t>A2</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>B2</w:t></w:r></w:p></w:tc></w:tr>
+</w:tbl>
+<w:p><w:r><w:drawing><a:graphic><a:graphicData><a:blip r:embed="rId10"/></a:graphicData></a:graphic></w:drawing></w:r></w:p>
+</w:body></w:document>`;
+    const files = {
+      '[Content_Types].xml': '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
+      '_rels/.rels': '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>',
+      'word/document.xml': doc,
+      'word/_rels/document.xml.rels': '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId10" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/></Relationships>',
+      'word/media/image1.png': png,
+    };
+    const blob = await zipSync(files);
+    return docxToHtml(await blob.arrayBuffer());
+  });
+  ok('docx import renders a table', /<table>(?:<tbody>)?<tr><td>A1<\/td><td>B1<\/td><\/tr><tr><td>A2<\/td><td>B2<\/td><\/tr>(?:<\/tbody>)?<\/table>/.test(docxRich));
+  ok('docx import embeds the image as data-URL', /<img src="data:image\/png;base64,iVBOR/.test(docxRich));
+  ok('docx import keeps document order (text, table, image)',
+    docxRich.indexOf('Before table') < docxRich.indexOf('<table>') && docxRich.indexOf('<table>') < docxRich.indexOf('<img'));
+
+  // 9e. Table round-trips: HTML -> DOCX -> HTML, and HTML -> Markdown.
+  const tableTrip = await page.evaluate(async () => {
+    const { htmlToDocx, docxToHtml } = await import('./js/io-docx.js');
+    const { htmlToMarkdown } = await import('./js/io-markdown.js');
+    const src = '<table><tr><th>H1</th><th>H2</th></tr><tr><td>a</td><td>b</td></tr></table>';
+    const docx = await htmlToDocx(src, 'T');
+    const back = await docxToHtml(await docx.arrayBuffer());
+    const md = htmlToMarkdown(src);
+    return { back, md };
+  });
+  ok('docx export+import preserves a table', /<table>.*<td>a<\/td><td>b<\/td>.*<\/table>/s.test(tableTrip.back));
+  ok('markdown export emits a GFM table', /\| H1 \| H2 \|/.test(tableTrip.md) && /\| --- \| --- \|/.test(tableTrip.md) && /\| a \| b \|/.test(tableTrip.md));
+
+  // 9f. Sanitizer keeps tables/images but still strips danger.
+  const sanTbl = await page.evaluate(async () => {
+    const { sanitizeHtml } = await import('./js/document-model.js');
+    return sanitizeHtml('<table onclick="x()"><tr><td colspan="2" style="color:red">c</td></tr></table>' +
+      '<img src="data:image/png;base64,AAAA" onerror="x()"><img src="data:text/html,evil">');
+  });
+  ok('sanitizer keeps table + colspan', /<table>(?:<tbody>)?<tr><td colspan="2">c<\/td><\/tr>(?:<\/tbody>)?<\/table>/.test(sanTbl));
+  ok('sanitizer keeps data:image but drops handlers + data:text/html',
+    /<img src="data:image\/png;base64,AAAA">/.test(sanTbl) && !/onclick|onerror|data:text\/html/.test(sanTbl));
+
   // 10. LibreOffice bridge reports not-configured gracefully.
   const loState = await page.evaluate(async () => {
     const LO = await import('./js/libreoffice-bridge.js');
