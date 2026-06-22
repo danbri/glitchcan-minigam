@@ -7,13 +7,24 @@ import { Toolbar } from './toolbar.js';
 import { Announcer } from './a11y.js';
 import { Library } from './library.js';
 import { FindReplace } from './find-replace.js';
+import { resolveSourceUrl, filenameFromUrl } from './open-url.js';
+import { EXAMPLES } from './examples.js';
 import * as IO from './io.js';
 import * as LO from './libreoffice-bridge.js';
 
 const LAST_DOC_KEY = 'edot.currentDoc';
 
+// The editing components (Editor, Toolbar, FindReplace, Library) are all
+// instance-based and hold no module-global state, so several can coexist.
+// App itself binds to fixed element ids and document-level listeners; those
+// listeners are tracked here so an instance can be torn down cleanly and a new
+// one spun up without leaking — see destroy(). (Full multi-pane notes:
+// docs/git-sync-methodology.md.)
 class App {
-  constructor() {
+  constructor(root = document) {
+    this.root = root;
+    this._cleanup = [];        // teardown callbacks for global listeners/DOM
+
     this.announcer = new Announcer();
     this.announce = (m, o) => this.announcer.toast(m, o);
 
@@ -36,10 +47,29 @@ class App {
     this._wireMenu();
     this._wireTitle();
     this._wireDialog();
+    this._wireUrlDialog();
+    this._wireExamplesDialog();
     this._wireGlobalKeys();
     this._wireDragDrop();
     this._reflectBackend();
     this._boot();
+  }
+
+  // Register a global listener and remember how to remove it (for destroy()).
+  _on(target, type, handler, opts) {
+    target.addEventListener(type, handler, opts);
+    this._cleanup.push(() => target.removeEventListener(type, handler, opts));
+  }
+
+  // Tear down every global listener and injected node so the instance leaves
+  // no trace — re-instantiation is then leak-free.
+  destroy() {
+    this._cleanup.forEach((off) => { try { off(); } catch { /* ignore */ } });
+    this._cleanup = [];
+    clearTimeout(this._saveTimer);
+    this.findReplace?.destroy?.();
+    this.announcer?.destroy?.();
+    this.editor?.destroy?.();
   }
 
   async _boot() {
@@ -81,7 +111,7 @@ class App {
     // the keyboard from native contenteditable focus, and intervening with a
     // programmatic focus()/selection here actually suppresses it.
     const main = document.querySelector('.app-main');
-    main.addEventListener('click', (e) => {
+    this._on(main, 'click', (e) => {
       if (e.target.closest('#editor')) return;   // page tap → native focus
       this.editor.focusEnd();
     });
@@ -130,10 +160,14 @@ class App {
       exportList.appendChild(item);
     }
 
-    document.getElementById('mi-new').addEventListener('click', () => { this._closeMenu(); this.newDocument(); });
-    document.getElementById('mi-open').addEventListener('click', () => { this._closeMenu(); this.fileInput.click(); });
-    document.getElementById('mi-docs').addEventListener('click', () => { this._closeMenu(); this.openLibrary(); });
-    document.getElementById('mi-find').addEventListener('click', () => { this._closeMenu(); this.findReplace.open(true); });
+    const mi = (id, fn) => document.getElementById(id).addEventListener('click', () => { this._closeMenu(); fn(); });
+    mi('mi-new', () => this.newDocument());
+    mi('mi-open', () => this.fileInput.click());
+    mi('mi-url', () => this.openUrlDialog());
+    mi('mi-examples', () => this.openExamplesDialog());
+    mi('mi-docs', () => this.openLibrary());
+    mi('mi-close', () => this.closeDocument());
+    mi('mi-find', () => this.findReplace.open(true));
 
     this.fileInput.accept = IO.importAccept();
     this.fileInput.addEventListener('change', () => {
@@ -148,10 +182,10 @@ class App {
     };
     this._closeMenu = () => toggle(false);
     button.addEventListener('click', () => toggle(panel.hidden));
-    document.addEventListener('click', (e) => {
+    this._on(document, 'click', (e) => {
       if (!panel.hidden && !panel.contains(e.target) && e.target !== button) toggle(false);
     });
-    document.addEventListener('keydown', (e) => {
+    this._on(document, 'keydown', (e) => {
       if (e.key === 'Escape' && !panel.hidden) { toggle(false); button.focus(); }
     });
     panel.addEventListener('keydown', (e) => {
@@ -169,6 +203,78 @@ class App {
       this.dialog.close();
       this.newDocument();
     });
+  }
+
+  // ---- Open-from-URL dialog ----
+  _wireUrlDialog() {
+    this.urlDialog = document.getElementById('url-dialog');
+    this.urlInput = document.getElementById('url-input');
+    this.urlError = document.getElementById('url-error');
+    const submit = () => this._submitUrl();
+    document.getElementById('url-open').addEventListener('click', submit);
+    this.urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); submit(); }
+    });
+  }
+
+  openUrlDialog() {
+    this.urlError.hidden = true;
+    showModal(this.urlDialog);
+    this.urlInput.focus();
+    this.urlInput.select();
+  }
+
+  async _submitUrl() {
+    const value = this.urlInput.value;
+    try {
+      resolveSourceUrl(value); // validate before closing the dialog
+    } catch (err) {
+      this.urlError.textContent = err.message;
+      this.urlError.hidden = false;
+      return;
+    }
+    this.urlDialog.close();
+    await this.openFromUrl(value);
+  }
+
+  // ---- Examples dialog ----
+  _wireExamplesDialog() {
+    this.examplesDialog = document.getElementById('examples-dialog');
+    const list = document.getElementById('examples-list');
+    for (const ex of EXAMPLES) {
+      const li = document.createElement('li');
+      li.className = 'doc-row';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'doc-open';
+      btn.innerHTML = `<span class="doc-name">${esc(ex.title)}</span>` +
+        (ex.note ? `<span class="doc-note">${esc(ex.note)}</span>` : '') +
+        (ex.credit ? `<span class="doc-note">${esc(ex.credit)}</span>` : '');
+      btn.addEventListener('click', () => { this.examplesDialog.close(); this.openExample(ex); });
+      li.appendChild(btn);
+      list.appendChild(li);
+    }
+  }
+
+  openExamplesDialog() { showModal(this.examplesDialog); }
+
+  async openExample(ex) {
+    if (ex.local) {
+      // Same-origin fetch through the normal import pipeline.
+      try {
+        this.announce(`Loading “${ex.title}”…`);
+        const resp = await fetch(ex.src);
+        if (!resp.ok) throw new Error(`Could not load example (${resp.status})`);
+        const blob = await resp.blob();
+        const name = ex.src.split('/').pop();
+        await this.openFile(new File([blob], name, { type: blob.type }), { example: ex.title });
+      } catch (err) {
+        console.error(err);
+        this.announce(err.message || 'Could not load that example', { error: true });
+      }
+    } else {
+      await this.openFromUrl(ex.src);
+    }
   }
 
   async openLibrary() {
@@ -229,13 +335,14 @@ class App {
   }
 
   _wireGlobalKeys() {
-    document.addEventListener('keydown', (e) => {
+    this._on(document, 'keydown', (e) => {
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
       const k = e.key.toLowerCase();
       if (k === 's') { e.preventDefault(); this.exportAs(this.lastExportExt); }
       else if (k === 'o' && e.shiftKey) { e.preventDefault(); this.openLibrary(); }
       else if (k === 'o') { e.preventDefault(); this.fileInput.click(); }
+      else if (k === 'w') { e.preventDefault(); this.closeDocument(); }
       else if (k === 'f') { e.preventDefault(); this.findReplace.open(false); }
       else if (k === 'h') { e.preventDefault(); this.findReplace.open(true); }
     });
@@ -243,8 +350,8 @@ class App {
 
   _wireDragDrop() {
     const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
-    ['dragenter', 'dragover', 'drop'].forEach((ev) => document.addEventListener(ev, stop, false));
-    document.addEventListener('drop', (e) => {
+    ['dragenter', 'dragover', 'drop'].forEach((ev) => this._on(document, ev, stop, false));
+    this._on(document, 'drop', (e) => {
       const file = e.dataTransfer && e.dataTransfer.files[0];
       if (file) this.openFile(file);
     });
@@ -265,12 +372,14 @@ class App {
     this.announce('New document');
   }
 
-  async openFile(file) {
+  async openFile(file, source = null) {
     try {
       this.announce(`Opening ${file.name}…`);
       const html = await IO.importFile(file);
       const title = file.name.replace(/\.[^.]+$/, '') || 'Untitled document';
       const doc = await this.library.createDoc(title, html);
+      // Remember where it came from (enables a future git save-back path).
+      if (source) { doc.source = source; await this.library.saveDoc(doc); }
       this.lastExportExt = IO.extOf(file.name) || this.lastExportExt;
       this._loadDoc(doc);
       this.announce(`Imported ${file.name}`);
@@ -278,6 +387,43 @@ class App {
       console.error(err);
       this.announce(err.message || 'Could not open that file', { error: true });
     }
+  }
+
+  // Fetch a document from a URL (smart-rewriting git hosting links) and import.
+  async openFromUrl(input) {
+    let resolved;
+    try { resolved = resolveSourceUrl(input); }
+    catch (err) { this.announce(err.message, { error: true }); return; }
+    try {
+      this.announce(`Fetching ${resolved.provider === 'web' ? 'URL' : resolved.provider}…`);
+      const resp = await fetch(resolved.url, { redirect: 'follow' });
+      if (!resp.ok) throw new Error(`Fetch failed (${resp.status} ${resp.statusText})`);
+      const blob = await resp.blob();
+      const name = filenameFromUrl(resolved.url, resp.headers.get('content-type') || '');
+      await this.openFile(new File([blob], name, { type: blob.type }), {
+        kind: 'url', ...resolved,
+      });
+    } catch (err) {
+      console.error(err);
+      // fetch() throws a TypeError when the server blocks the cross-origin read.
+      const corsy = err instanceof TypeError || resolved.corsRisk;
+      this.announce(corsy
+        ? 'Could not fetch — the server may block cross-origin requests (CORS). raw.githubusercontent.com works; many other hosts do not.'
+        : (err.message || 'Could not open that URL'), { error: true });
+    }
+  }
+
+  // Close the current document. It stays safe in the library; we open a fresh
+  // blank so there's always an editing surface.
+  async closeDocument() {
+    if (this.doc) {
+      this.doc.html = this.editor.getContent();
+      this.doc.title = this.titleInput.value.trim() || 'Untitled document';
+      await this.library.saveDoc(this.doc);
+    }
+    const doc = await this.library.createDoc('Untitled document', '<p><br></p>');
+    this._loadDoc(doc, { announce: false });
+    this.announce('Closed — find it again in File ▸ My documents');
   }
 
   async exportAs(ext) {
@@ -327,6 +473,10 @@ function iconBtn(glyph, label, onClick) {
 
 function esc(s) { return String(s).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])); }
 function sanitizeFilename(name) { return (name || 'document').replace(/[\/\\:*?"<>|]+/g, '_').slice(0, 80); }
+function showModal(dialog) {
+  if (typeof dialog.showModal === 'function') dialog.showModal();
+  else dialog.setAttribute('open', '');
+}
 
 const WELCOME = `
 <h1>Welcome to edot</h1>
@@ -339,6 +489,8 @@ const WELCOME = `
 <h2>Open &amp; save real files</h2>
 <ul>
 <li>Open <strong>.docx</strong>, Markdown, HTML or text (<strong>Ctrl/⌘+O</strong>) — or drag one onto the page.</li>
+<li>Open straight from a <strong>URL</strong> — including <strong>GitHub/GitLab links</strong>, which are rewritten to the raw file automatically (<strong>File ▸ Open from URL</strong>).</li>
+<li>Browse ready-made docs in <strong>File ▸ Examples</strong> (try the full Adam Morton logic textbook).</li>
 <li>Save as <strong>DOCX, PDF, HTML+RDFa, Markdown, CSS or plain text</strong> from the <strong>File</strong> menu (<strong>Ctrl/⌘+S</strong>).</li>
 </ul>
 <h2>Your documents, stored locally</h2>
@@ -346,4 +498,10 @@ const WELCOME = `
 <blockquote>Richer formats (.odt, .doc, .rtf) light up when a LibreOffice&nbsp;WASM backend is configured — see the project README.</blockquote>
 `;
 
-window.addEventListener('DOMContentLoaded', () => { window.__edot = new App(); });
+window.addEventListener('DOMContentLoaded', () => {
+  // Re-instantiation is leak-free: tear down any prior instance first.
+  if (window.__edot && typeof window.__edot.destroy === 'function') window.__edot.destroy();
+  window.__edot = new App();
+});
+
+export { App };

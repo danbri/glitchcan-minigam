@@ -88,6 +88,27 @@ try {
   await page.keyboard.press('Escape');
   ok('find bar closes on Escape', !(await page.isVisible('.find-bar')));
 
+  // Examples dialog lists and loads the Morton book (same-origin docx import).
+  await page.click('#menu-button'); await page.click('#mi-examples'); await page.waitForTimeout(150);
+  ok('examples dialog lists the Morton book', await page.isVisible('text=Searching for Logic'));
+  await page.click('.doc-open:has-text("Searching for Logic")');
+  await page.waitForFunction(() => /Searching for Logic|searching for logic/i.test(document.getElementById('editor').textContent), null, { timeout: 20000 });
+  ok('example loaded with tables', await page.evaluate(() => document.querySelectorAll('#editor table').length > 5));
+  ok('example title set', /logic/i.test(await page.inputValue('#doc-title')));
+
+  // Close document → fresh blank surface.
+  await page.click('#menu-button'); await page.click('#mi-close'); await page.waitForTimeout(300);
+  ok('close yields an empty document', (await page.textContent('#stat-words')).startsWith('0'));
+  ok('close titles it Untitled', /Untitled/.test(await page.inputValue('#doc-title')));
+
+  // Open-from-URL dialog: opens and validates bad input.
+  await page.click('#menu-button'); await page.click('#mi-url'); await page.waitForTimeout(150);
+  ok('url dialog opens', await page.isVisible('#url-input'));
+  await page.fill('#url-input', 'not a url');
+  await page.click('#url-open'); await page.waitForTimeout(100);
+  ok('url dialog shows a validation error', await page.isVisible('#url-error'));
+  await page.keyboard.press('Escape');
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
 } finally { await b.close(); server.close(); }

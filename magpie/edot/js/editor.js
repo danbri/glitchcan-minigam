@@ -50,6 +50,11 @@ export class Editor {
 
   focus() { this.el.focus(); }
 
+  // Remove the one document-level listener this editor owns.
+  destroy() {
+    if (this._onSelectionChange) document.removeEventListener('selectionchange', this._onSelectionChange);
+  }
+
   // Focus and drop the caret at the very end. Used when a tap lands on the
   // page margin or empty area — on mobile this is what actually raises the
   // on-screen keyboard, since it runs inside the tap gesture.
@@ -77,12 +82,14 @@ export class Editor {
   _wire() {
     this.el.addEventListener('input', () => this.onChange());
 
-    // Selection-driven toolbar state.
-    document.addEventListener('selectionchange', () => {
+    // Selection-driven toolbar state. Stored so destroy() can remove it (the
+    // only listener this instance puts on the shared document).
+    this._onSelectionChange = () => {
       if (document.activeElement === this.el || this.el.contains(document.activeElement)) {
         this._selectionCb();
       }
-    });
+    };
+    document.addEventListener('selectionchange', this._onSelectionChange);
 
     // Keyboard shortcuts (Ctrl/Cmd based).
     this.el.addEventListener('keydown', (e) => {
