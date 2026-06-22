@@ -16,6 +16,35 @@ project's "static files on GitHub Pages, no backend" constraint.
 
 So the **read half is done**. The rest is diff + write.
 
+## 1a. Can "git" itself run in the browser? (protocol & CORS)
+
+Short answer: **not the git protocol — but the GitHub *REST API* can.** The
+distinction matters, so spelled out:
+
+| Transport | In a browser? | Why |
+| --- | --- | --- |
+| `git://` (native protocol, TCP 9418) | ❌ | JS can't open raw TCP sockets. |
+| `ssh://` (`git@github.com`) | ❌ | No raw sockets / SSH in the browser. |
+| **Git "smart HTTP"** (`https://…/info/refs?service=git-upload-pack`, the packfile transport `git clone https` uses) | ⚠️ technically HTTPS, but… | GitHub's git HTTP endpoints **do not send `Access-Control-Allow-Origin`**, so the browser blocks the `fetch`. Same for most hosts. |
+| **GitHub REST API** (`api.github.com` — Contents, Git Data, Pulls) | ✅ | `api.github.com` **does send CORS headers**; with a token, all calls work directly from a page. |
+| `raw.githubusercontent.com` (read one file) | ✅ | CORS-enabled (what edot already uses). |
+
+Consequences:
+
+- **Real `git clone`/`push` in the browser** (e.g. [isomorphic-git](https://isomorphic-git.org), a pure-JS git over packfiles) works **only through a CORS proxy** — isomorphic-git ships and defaults to `cors.isomorphic-git.org` precisely because GitHub's git HTTP endpoints reject cross-origin reads. No proxy ⇒ no protocol-level git.
+- Therefore edot's save-back **does not speak git at all.** It uses the
+  **REST API** (read file + sha, write file, open PR), which *is* CORS-enabled
+  and needs only a token — no proxy, no backend, no packfile plumbing.
+- This is a deliberate trade: REST gives you commit/PR operations on individual
+  files (perfect for an editor) without cloning a repo or shipping a git
+  implementation. You lose true history/branching ergonomics, which an editor
+  doesn't need.
+
+If full repo/offline/history operations were ever wanted, the only browser
+options are isomorphic-git **+ a CORS proxy you run/trust**, or WASM-git
+(libgit2 compiled to WASM) **still behind a CORS proxy** for the network leg —
+both reintroduce an infrastructure dependency the REST path avoids.
+
 ## 2. The hard constraint: auth without a backend
 
 GitHub Pages serves static files and **cannot hold a secret**, which rules out

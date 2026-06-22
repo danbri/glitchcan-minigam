@@ -6,9 +6,12 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-const DIR = path.dirname(fileURLToPath(import.meta.url));
+// Root the static server at the repo root and load the page at its real path,
+// so relative links (incl. the ../../third_party/ example) resolve exactly as
+// they do under GitHub Pages.
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
-const server = http.createServer(async (req, res) => { try { const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\//, '') || 'edot.html'; const buf = await readFile(path.join(DIR, rel)); res.writeHead(200, { 'Content-Type': MIME[path.extname(rel)] || 'application/octet-stream' }); res.end(buf); } catch { res.writeHead(404); res.end(); } });
+const server = http.createServer(async (req, res) => { try { const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\//, '') || 'index.html'; const buf = await readFile(path.join(ROOT, rel)); res.writeHead(200, { 'Content-Type': MIME[path.extname(rel)] || 'application/octet-stream' }); res.end(buf); } catch { res.writeHead(404); res.end(); } });
 await new Promise((r) => server.listen(0, r)); const port = server.address().port;
 const b = await chromium.launch({ headless: true, executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
 let fail = 0; const ok = (n, c) => { console.log(`${c ? '✅' : '❌'} ${n}`); if (!c) fail++; };
@@ -16,7 +19,7 @@ try {
   const ctx = await b.newContext({ acceptDownloads: true });
   const page = await ctx.newPage();
   const errs = []; page.on('pageerror', (e) => errs.push(String(e)));
-  await page.goto(`http://127.0.0.1:${port}/edot.html`);
+  await page.goto(`http://127.0.0.1:${port}/magpie/edot/edot.html`);
   await page.waitForFunction(() => !!window.__edot && !!window.__edot.doc);
 
   // Start a fresh document so we type into a clean <p> block.
