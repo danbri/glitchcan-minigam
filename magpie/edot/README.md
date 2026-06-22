@@ -24,7 +24,8 @@ offline, and dependency-free.
   (`js/open-url.js`). Same-origin and `raw.githubusercontent.com` work in the
   browser; other hosts may be blocked by CORS (the dialog says so).
 - **Examples** — `File ▸ Examples` opens ready-made documents (incl. the full
-  Adam Morton *Searching for Logic* textbook, mirrored in `examples/`).
+  Adam Morton *Searching for Logic* textbook, vendored under
+  `third_party/searching-for-logic/`).
 - **Close** (`Ctrl/⌘+W`) — closes the current document; it stays safe in the
   library.
 - **Local document library** — multiple named documents stored on-device in

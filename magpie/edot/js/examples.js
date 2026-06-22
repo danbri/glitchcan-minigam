@@ -7,7 +7,9 @@
 export const EXAMPLES = [
   {
     title: 'Searching for Logic — Adam Morton',
-    src: 'examples/searching-for-logic.docx',
+    // Vendored under the repo's third_party/. Relative to edot.html so it
+    // resolves correctly under the GitHub Pages project path.
+    src: '../../third_party/searching-for-logic/searching-for-logic.docx',
     local: true,
     note: 'A complete logic textbook (100k+ words, 100+ tables, figures). Big — give it a moment to load.',
     credit: '© Adam Morton, freely distributed for educational use · fernieroad.ca',
