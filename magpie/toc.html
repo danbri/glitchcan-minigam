@@ -32,6 +32,21 @@
 
     <h2>Contents</h2>
     <ul>
+        <li><strong>edot/</strong> - Accessible modular word processor <span class="status status-ok">23/23 checks</span>
+            <ul>
+                <li><a href="edot/edot.html">edot.html</a> - Browser word processor (mobile-first, offline)</li>
+                <li><a href="edot/README.md">README.md</a> - Architecture & LibreOffice WASM bridge</li>
+                <li><strong>Features:</strong>
+                    <ul>
+                        <li>Native <strong>.docx</strong> read/write (OOXML, no deps), Markdown, HTML, text</li>
+                        <li>WAI-ARIA toolbar, screen-reader announcements, full keyboard control</li>
+                        <li>Dependency-free ZIP via native CompressionStream; localStorage autosave</li>
+                        <li>Pluggable LibreOffice WASM bridge for .odt/.doc/.rtf/PDF</li>
+                    </ul>
+                </li>
+                <li><a href="edot/test-edot.mjs">test-edot.mjs</a> - Headless Chromium smoke test</li>
+            </ul>
+        </li>
         <li><strong>elliott4130/</strong> - Elliott 4130 Emulator & LISP 1.5 <span class="status status-ok">133/133 tests</span>
             <ul>
                 <li><a href="elliott4130/elliott4130.html">elliott4130.html</a> - Emulator webapp (mobile-friendly)</li>

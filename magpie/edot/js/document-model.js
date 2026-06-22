@@ -1,0 +1,95 @@
+// document-model.js — the canonical representation is sanitized HTML.
+// All import paths normalize *into* this shape and export paths read *from*
+// it, so formats never talk to each other directly.
+
+// Tags we allow inside the editable surface. Anything else is unwrapped
+// (children kept) or dropped. Keeps pasted Word/web content from injecting
+// scripts, styles, and layout cruft.
+const ALLOWED = new Set([
+  'P', 'BR', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+  'B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'SUB', 'SUP',
+  'UL', 'OL', 'LI', 'BLOCKQUOTE', 'PRE', 'CODE',
+  'A', 'HR', 'SPAN',
+]);
+
+const ALLOWED_ATTR = {
+  A: ['href', 'title'],
+  SPAN: [],   // span kept only as a transparent wrapper; attrs stripped
+};
+
+// Elements whose *contents* are dangerous or meaningless as document text —
+// remove them outright rather than unwrapping (which would leak script/CSS
+// source into the body as visible text).
+const DROP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'IFRAME', 'OBJECT', 'EMBED', 'TEMPLATE', 'LINK', 'META', 'HEAD', 'TITLE']);
+
+function sanitizeNode(node, doc) {
+  const children = Array.from(node.childNodes);
+  for (const child of children) {
+    if (child.nodeType === Node.ELEMENT_NODE) {
+      const tag = child.tagName;
+      if (DROP.has(tag)) {
+        node.removeChild(child);
+        continue;
+      }
+      if (!ALLOWED.has(tag)) {
+        // Unwrap unknown elements, keeping their (sanitized) children.
+        sanitizeNode(child, doc);
+        while (child.firstChild) node.insertBefore(child.firstChild, child);
+        node.removeChild(child);
+        continue;
+      }
+      // Strip every attribute except the explicit allow-list.
+      const keep = ALLOWED_ATTR[tag] || [];
+      for (const attr of Array.from(child.attributes)) {
+        if (!keep.includes(attr.name.toLowerCase())) child.removeAttribute(attr.name);
+      }
+      // Defang links: block javascript: and force safe rel on external.
+      if (tag === 'A') {
+        const href = child.getAttribute('href') || '';
+        if (/^\s*javascript:/i.test(href)) child.removeAttribute('href');
+        if (/^https?:/i.test(href)) {
+          child.setAttribute('rel', 'noopener noreferrer');
+          child.setAttribute('target', '_blank');
+        }
+      }
+      sanitizeNode(child, doc);
+    } else if (child.nodeType === Node.COMMENT_NODE) {
+      node.removeChild(child);
+    }
+  }
+}
+
+/** Sanitize an untrusted HTML string into safe document HTML. */
+export function sanitizeHtml(html) {
+  const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html');
+  sanitizeNode(doc.body, doc);
+  return doc.body.innerHTML;
+}
+
+/** Ensure the editable surface always has at least one block element. */
+export function normalize(html) {
+  const clean = sanitizeHtml(html).trim();
+  if (!clean) return '<p><br></p>';
+  // Bare text/inline content gets wrapped so the caret has a home block.
+  if (!/^<(p|h[1-6]|ul|ol|blockquote|pre|hr)/i.test(clean)) {
+    return `<p>${clean}</p>`;
+  }
+  return clean;
+}
+
+/** Plain-text projection used for word/char counts and .txt export. */
+export function toPlainText(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  // Insert newlines at block boundaries before reading textContent.
+  doc.querySelectorAll('p,h1,h2,h3,h4,h5,h6,li,blockquote,pre,br,hr')
+    .forEach((el) => el.appendChild(doc.createTextNode('\n')));
+  return (doc.body.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+export function stats(html) {
+  const text = toPlainText(html);
+  const words = text ? (text.match(/\S+/g) || []).length : 0;
+  const chars = text.length;
+  const paragraphs = text ? text.split(/\n{2,}/).filter((s) => s.trim()).length : 0;
+  return { words, chars, paragraphs };
+}
