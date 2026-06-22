@@ -142,6 +142,7 @@ toolbar wiring:
 ```bash
 node magpie/edot/test-edot.mjs       # functional smoke test (39 checks)
 node magpie/edot/test-e2e.mjs        # end-to-end UI driving (16 checks)
+node magpie/edot/test-mobile.mjs     # mobile: tap-to-focus, touch menu, locked shell
 node magpie/edot/verify-pdf.mjs      # deep PDF structural validation + sample
 ```
 

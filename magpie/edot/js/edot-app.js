@@ -76,6 +76,17 @@ class App {
   }
 
   _wireEditor() {
+    // Tap anywhere in the page area (margins / empty space) to start typing.
+    // Mobile browsers won't raise the keyboard unless focus happens inside the
+    // tap gesture, and a tap on the grey margin or empty doc otherwise does
+    // nothing — so force-focus the editor when the tap didn't land in it.
+    const main = document.querySelector('.app-main');
+    main.addEventListener('click', () => {
+      if (document.activeElement !== this.editorEl && !this.editorEl.contains(document.activeElement)) {
+        this.editor.focusEnd();
+      }
+    });
+
     this.editor.onSelectionCallback(() => this.toolbar.refresh());
     this.editor.onChangeCallback(() => {
       this._refreshStats();

@@ -34,6 +34,15 @@
 
 * { box-sizing: border-box; }
 
+/* Native-app feel on touch: no double-tap zoom delay, no long-press callout
+   on the chrome, and no rubber-band/overscroll leaking to the browser. */
+html {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+
 html, body {
   margin: 0;
   height: 100%;
@@ -45,7 +54,24 @@ html, body {
 body {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100dvh;            /* dynamic viewport: accounts for mobile chrome */
+  height: 100vh;             /* fallback for browsers without dvh */
+  height: 100dvh;
+  overflow: hidden;          /* only .app-main scrolls */
+  overscroll-behavior: none;
+  /* respect notches / rounded corners */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+}
+
+/* Interactive controls: kill the 300ms tap delay and double-tap zoom, and
+   suppress the iOS long-press selection/callout on UI chrome. */
+.tbtn, .menu-item, button, select, input, label, .find-bar, .doc-row {
+  touch-action: manipulation;
+}
+.app-header, .toolbar, .statusbar, .menu-panel, .find-bar, .dialog-head, .dialog-foot {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Skip link for keyboard/screen-reader users */
@@ -164,10 +190,16 @@ select.tbtn {
 /* ---- Main / page ---- */
 .app-main {
   flex: 1 1 auto;
-  overflow: auto;
-  padding: 1rem 0.75rem 4rem;
+  min-height: 0;                    /* let the flex child shrink & scroll */
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;     /* don't chain scroll to the document */
+  -webkit-overflow-scrolling: touch;
+  padding: 1rem 0.75rem calc(4rem + env(safe-area-inset-bottom));
   display: flex;
   justify-content: center;
+  /* Tapping the margin around the page should still land on the editor. */
+  cursor: text;
 }
 
 .page {
@@ -175,6 +207,10 @@ select.tbtn {
   width: 100%;
   max-width: var(--page-max);
   min-height: 60vh;
+  cursor: text;
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
   padding: clamp(1rem, 4vw, 4rem);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -220,7 +256,7 @@ select.tbtn {
   display: flex;
   gap: 1rem;
   align-items: center;
-  padding: 0.3rem 0.75rem;
+  padding: 0.3rem 0.75rem calc(0.3rem + env(safe-area-inset-bottom));
   background: var(--surface);
   border-top: 1px solid var(--line);
   font-size: 0.8rem;
@@ -264,6 +300,25 @@ select.tbtn {
 .menu-item:hover, .menu-item:focus-visible { background: var(--toolbar-bg); outline: none; }
 .menu-item .hint { margin-left: auto; color: var(--muted); font-size: 0.8em; }
 .menu-sep { height: 1px; background: var(--line); margin: 0.3rem 0; }
+
+/* On phones, the File menu drops as a roomy, finger-sized panel pinned to the
+   left edge so it never overflows off-screen. */
+@media (max-width: 30rem) {
+  .menu-panel {
+    position: fixed;
+    left: 0.5rem;
+    right: 0.5rem;
+    top: auto;
+    min-width: 0;
+    max-height: 70dvh;
+    overflow: auto;
+  }
+  .menu-item { padding: 0.85em 0.7em; font-size: 1.05rem; }
+  .menu-item .hint { display: none; }
+}
+@media (pointer: coarse) {
+  .menu-item { padding: 0.75em 0.7em; }
+}
 
 /* ---- Document library dialog ---- */
 .dialog {

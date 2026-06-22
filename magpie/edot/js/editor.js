@@ -50,6 +50,20 @@ export class Editor {
 
   focus() { this.el.focus(); }
 
+  // Focus and drop the caret at the very end. Used when a tap lands on the
+  // page margin or empty area — on mobile this is what actually raises the
+  // on-screen keyboard, since it runs inside the tap gesture.
+  focusEnd() {
+    this.el.focus();
+    const sel = window.getSelection();
+    if (!sel) return;
+    const range = document.createRange();
+    range.selectNodeContents(this.el);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
   // Called by toolbar after a command runs, and internally on input.
   onChange() {
     this._updateEmpty();
