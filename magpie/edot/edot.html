@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="edot — a small, modular, accessible browser word processor with native DOCX/Markdown/HTML I/O and an optional LibreOffice WASM bridge.">
+  <meta name="color-scheme" content="light dark">
+  <title>edot — accessible word processor</title>
+  <link rel="stylesheet" href="css/edot.css">
+</head>
+<body>
+  <a class="skip-link" href="#editor">Skip to document</a>
+
+  <header class="app-header">
+    <h1><span class="logo">🖊️ edot</span></h1>
+
+    <div class="menu">
+      <button type="button" id="menu-button" class="tbtn" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-panel">
+        File ▾
+      </button>
+      <div id="menu-panel" class="menu-panel" role="menu" aria-label="File" hidden>
+        <button type="button" id="mi-new" class="menu-item" role="menuitem">
+          <span>New document</span><span class="hint">Ctrl/⌘N</span>
+        </button>
+        <button type="button" id="mi-open" class="menu-item" role="menuitem">
+          <span>Open file…</span><span class="hint">Ctrl/⌘O</span>
+        </button>
+        <button type="button" id="mi-docs" class="menu-item" role="menuitem">
+          <span>My documents…</span><span class="hint">Ctrl/⌘⇧O</span>
+        </button>
+        <button type="button" id="mi-find" class="menu-item" role="menuitem">
+          <span>Find &amp; replace…</span><span class="hint">Ctrl/⌘F</span>
+        </button>
+        <div class="menu-sep" role="separator"></div>
+        <div id="export-list" role="group" aria-label="Save as"></div>
+      </div>
+    </div>
+
+    <label class="visually-hidden" for="doc-title">Document title</label>
+    <input id="doc-title" class="doc-title-input" type="text" autocomplete="off"
+           spellcheck="false" placeholder="Untitled document">
+
+    <span id="save-state" class="save-state" role="status" aria-live="polite">Autosaved locally</span>
+  </header>
+
+  <div id="toolbar" class="toolbar"><!-- built by toolbar.js --></div>
+
+  <main class="app-main">
+    <article id="editor" class="page" data-placeholder="Start writing…" aria-label="Document body">
+      <!-- contenteditable; populated by edot-app.js -->
+    </article>
+  </main>
+
+  <footer class="statusbar">
+    <span id="stat-words">0 words</span>
+    <span id="stat-chars">0 chars</span>
+    <span class="spacer"></span>
+    <span id="backend-state" class="visually-hidden"></span>
+  </footer>
+
+  <!-- Hidden native picker for File ▸ Open -->
+  <input id="file-input" type="file" class="visually-hidden" aria-hidden="true" tabindex="-1">
+
+  <!-- Local document library -->
+  <dialog id="docs-dialog" class="dialog" aria-labelledby="docs-dialog-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="docs-dialog-title">My documents</h2>
+      <button type="submit" class="tbtn" aria-label="Close">✕</button>
+    </form>
+    <p id="docs-storage" class="dialog-note"></p>
+    <ul id="docs-list" class="docs-list"></ul>
+    <div class="dialog-foot">
+      <button type="button" id="docs-new" class="tbtn primary">＋ New document</button>
+    </div>
+  </dialog>
+
+  <script type="module" src="js/edot-app.js"></script>
+</body>
+</html>

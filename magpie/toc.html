@@ -32,10 +32,25 @@
 
     <h2>Contents</h2>
     <ul>
-        <li><strong>elliott4130/</strong> - Elliott 4130 Emulator & LISP 1.5 <span class="status status-ok">133/133 tests</span>
+        <li><strong>edot/</strong> - Accessible modular word processor &amp; office-doc tool <span class="status status-ok">39/39 checks</span>
+            <ul>
+                <li><a href="edot/edot.html">edot.html</a> - Browser word processor (mobile-first, offline, private)</li>
+                <li><a href="edot/README.md">README.md</a> - Architecture &amp; LibreOffice WASM bridge</li>
+                <li><strong>Features:</strong>
+                    <ul>
+                        <li>Native <strong>.docx</strong> read/write + native <strong>PDF</strong> export (no deps), <strong>HTML+RDFa</strong>, CSS, Markdown, text</li>
+                        <li>Paragraph alignment, find &amp; replace; local document library (IndexedDB) — multiple docs, continuous autosave</li>
+                        <li>🏷️ RDFa semantic authoring; WAI-ARIA toolbar, screen-reader announcements, full keyboard control</li>
+                        <li>Dependency-free ZIP &amp; PDF via native browser APIs; pluggable LibreOffice WASM bridge for .odt/.doc/.rtf</li>
+                    </ul>
+                </li>
+                <li><a href="edot/test-edot.mjs">test-edot.mjs</a> / <a href="edot/test-e2e.mjs">test-e2e.mjs</a> / <a href="edot/verify-pdf.mjs">verify-pdf.mjs</a> - Headless Chromium tests</li>
+            </ul>
+        </li>
+        <li><strong>elliott4130/</strong> - Elliott 4130 Emulator &amp; LISP 1.5 <span class="status status-ok">133/133 tests</span>
             <ul>
                 <li><a href="elliott4130/elliott4130.html">elliott4130.html</a> - Emulator webapp (mobile-friendly)</li>
-                <li><a href="elliott4130/README.md">README.md</a> - Project overview & test analysis</li>
+                <li><a href="elliott4130/README.md">README.md</a> - Project overview &amp; test analysis</li>
                 <li><strong>Emulator Core:</strong>
                     <ul>
                         <li>elliott4130-core.js - CPU emulation (24-bit)</li>
