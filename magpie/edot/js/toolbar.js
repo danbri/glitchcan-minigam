@@ -4,21 +4,30 @@
 // (roving tabindex), arrow-key navigation between controls, Home/End jumps.
 // Toggle buttons expose aria-pressed reflecting live command state.
 
-import { COMMANDS, BLOCK_FORMATS, setBlockFormat, currentBlockFormat, createLink, createSemantic } from './commands.js';
+import { COMMANDS, BLOCK_FORMATS, setBlockFormat, currentBlockFormat, createLink, createSemantic, setAlign, currentAlign } from './commands.js';
 
 const LAYOUT = [
   { type: 'block-select' },
   { type: 'group', items: ['bold', 'italic', 'underline', 'strike'] },
+  { type: 'group', items: ['alignLeft', 'alignCenter', 'alignRight', 'alignJustify'] },
   { type: 'group', items: ['bulletList', 'numberList', 'outdent', 'indent'] },
   { type: 'group', items: ['blockquote', 'code', 'link', 'semantic'] },
   { type: 'group', items: ['undo', 'redo', 'removeFormat'] },
 ];
+
+// Alignment buttons are not execCommand entries — they map to setAlign(value)
+// and light up to show the current block's alignment.
+const ALIGN = { alignLeft: 'left', alignCenter: 'center', alignRight: 'right', alignJustify: 'justify' };
 
 const ICONS = {
   bold: { glyph: 'B', cls: 'icon' },
   italic: { glyph: 'I', cls: 'icon italic' },
   underline: { glyph: 'U', cls: 'icon underline' },
   strike: { glyph: 'S', cls: 'icon strike' },
+  alignLeft: { glyph: '≡', label: 'Align left' },
+  alignCenter: { glyph: '☰', label: 'Align centre' },
+  alignRight: { glyph: '≣', label: 'Align right' },
+  alignJustify: { glyph: '▤', label: 'Justify' },
   bulletList: { glyph: '•—' },
   numberList: { glyph: '1.' },
   outdent: { glyph: '⇤' },
@@ -107,11 +116,17 @@ export class Toolbar {
       btn.setAttribute('aria-pressed', 'false');
       this.stateButtons.push({ el: btn, cmd });
     }
+    if (id in ALIGN) {
+      btn.setAttribute('aria-pressed', 'false');
+      this.alignButtons = this.alignButtons || [];
+      this.alignButtons.push({ el: btn, value: ALIGN[id] });
+    }
 
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       if (id === 'link') { createLink(this.announce); }
       else if (id === 'semantic') { createSemantic(this.announce); }
+      else if (id in ALIGN) { setAlign(ALIGN[id]); }
       else if (cmd) { cmd.exec(); }
       this.editor.focus();
       this.editor.onChange();
@@ -147,6 +162,12 @@ export class Toolbar {
   refresh() {
     for (const { el, cmd } of this.stateButtons) {
       el.setAttribute('aria-pressed', cmd.state() ? 'true' : 'false');
+    }
+    if (this.alignButtons) {
+      const a = currentAlign();
+      for (const { el, value } of this.alignButtons) {
+        el.setAttribute('aria-pressed', value === a ? 'true' : 'false');
+      }
     }
     if (this.blockSelect) this.blockSelect.value = currentBlockFormat();
   }

@@ -31,6 +31,12 @@ const RDFA_ATTR = new Set([
 // source into the body as visible text).
 const DROP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'IFRAME', 'OBJECT', 'EMBED', 'TEMPLATE', 'LINK', 'META', 'HEAD', 'TITLE']);
 
+// Keep only `text-align: left|right|center|justify` from a style string.
+function filterStyle(value) {
+  const m = /text-align\s*:\s*(left|right|center|justify)/i.exec(value || '');
+  return m ? `text-align: ${m[1].toLowerCase()}` : '';
+}
+
 function sanitizeNode(node, doc) {
   const children = Array.from(node.childNodes);
   for (const child of children) {
@@ -51,7 +57,13 @@ function sanitizeNode(node, doc) {
       const keep = ALLOWED_ATTR[tag] || [];
       for (const attr of Array.from(child.attributes)) {
         const name = attr.name.toLowerCase();
-        if (keep.includes(name) || RDFA_ATTR.has(name)) {
+        if (name === 'style') {
+          // Allow a tightly constrained style: text-align only. Everything
+          // else (colors, positioning, fonts injected by paste) is dropped.
+          const filtered = filterStyle(attr.value);
+          if (filtered) child.setAttribute('style', filtered);
+          else child.removeAttribute('style');
+        } else if (keep.includes(name) || RDFA_ATTR.has(name)) {
           // Defang any URL-bearing attribute carrying javascript:.
           if ((name === 'href' || name === 'src' || name === 'resource' || name === 'about') &&
               /^\s*javascript:/i.test(attr.value)) {

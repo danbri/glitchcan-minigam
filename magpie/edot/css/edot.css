@@ -337,6 +337,43 @@ select.tbtn {
   border-bottom: 1px dotted var(--accent);
 }
 
+/* ---- Find & replace bar ---- */
+.find-bar {
+  position: fixed;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 40;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.22);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-width: min(28rem, 94vw);
+}
+.find-bar[hidden] { display: none; }
+.find-row { display: flex; align-items: center; gap: 0.35rem; }
+.find-replace-row[hidden] { display: none; }
+.find-input {
+  font: inherit;
+  padding: 0.35em 0.5em;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--ink);
+  flex: 1;
+  min-width: 8rem;
+}
+.find-input:focus { outline: 2px solid var(--focus); outline-offset: -1px; }
+.find-count { font-size: 0.8rem; color: var(--muted); min-width: 2.8rem; text-align: center; white-space: nowrap; }
+.find-case { font-size: 0.85rem; color: var(--muted); display: inline-flex; align-items: center; gap: 0.2rem; white-space: nowrap; }
+
+/* Live match highlighting via the CSS Custom Highlight API */
+::highlight(edot-find) { background-color: #fff3a0; color: #1c1c1c; }
+::highlight(edot-find-current) { background-color: #ffb300; color: #1c1c1c; }
+
 /* ---- Toast announcements ---- */
 .toast {
   position: fixed;

@@ -47,6 +47,49 @@ export function currentBlockFormat() {
   return 'p';
 }
 
+// ---- Paragraph alignment ----
+// Applied directly to the block elements that intersect the selection, so the
+// output is a sanitizer-clean `style="text-align:…"` (not a CSS span that
+// would be stripped). Threads through HTML, DOCX (w:jc) and PDF export.
+const ALIGN_BLOCK = 'p,h1,h2,h3,h4,h5,h6,li,blockquote,pre';
+
+function selectedBlocks() {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return [];
+  const root = document.querySelector('[contenteditable="true"]');
+  if (!root) return [];
+  const range = sel.getRangeAt(0);
+  const blocks = new Set();
+  const add = (n) => {
+    const el = (n.nodeType === Node.ELEMENT_NODE ? n : n.parentElement);
+    const b = el && el.closest(ALIGN_BLOCK);
+    if (b && root.contains(b)) blocks.add(b);
+  };
+  add(range.startContainer);
+  add(range.endContainer);
+  // Any blocks fully within the range too.
+  root.querySelectorAll(ALIGN_BLOCK).forEach((b) => {
+    if (range.intersectsNode(b)) blocks.add(b);
+  });
+  return [...blocks];
+}
+
+export function setAlign(value) {
+  const blocks = selectedBlocks();
+  for (const b of blocks) {
+    if (value === 'left') b.style.removeProperty('text-align'); // left = default
+    else b.style.textAlign = value;
+    if (!b.getAttribute('style')) b.removeAttribute('style');
+  }
+}
+
+export function currentAlign() {
+  const b = selectedBlocks()[0];
+  if (!b) return 'left';
+  const a = (b.style.textAlign || '').toLowerCase();
+  return ['center', 'right', 'justify'].includes(a) ? a : 'left';
+}
+
 // Wrap the current selection in a semantic <span property="..."> (RDFa).
 // Distinguishes edot from plain word processors: the document carries
 // machine-readable meaning that survives HTML export.

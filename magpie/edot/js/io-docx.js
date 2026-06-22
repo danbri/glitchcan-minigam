@@ -63,39 +63,50 @@ function inlineRuns(node, marks, rels) {
   return xml;
 }
 
-function paraXml(inner, { style, list, indent } = {}) {
+// Map CSS text-align -> OOXML w:jc value.
+function jcOf(el) {
+  const a = (el && el.style && el.style.textAlign || '').toLowerCase();
+  if (a === 'center') return 'center';
+  if (a === 'right') return 'right';
+  if (a === 'justify') return 'both';
+  return '';
+}
+
+function paraXml(inner, { style, list, indent, align } = {}) {
   const pPr = [];
   if (style) pPr.push(`<w:pStyle w:val="${style}"/>`);
   if (list) pPr.push(`<w:numPr><w:ilvl w:val="0"/><w:numId w:val="${list === 'ol' ? 2 : 1}"/></w:numPr>`);
   if (indent) pPr.push(`<w:ind w:left="720"/>`);
+  if (align) pPr.push(`<w:jc w:val="${align}"/>`);
   const pPrXml = pPr.length ? `<w:pPr>${pPr.join('')}</w:pPr>` : '';
   return `<w:p>${pPrXml}${inner}</w:p>`;
 }
 
 function blockToXml(el, rels, ctx = {}) {
   const tag = el.tagName;
+  const align = jcOf(el);
   if (/^H([1-6])$/.test(tag)) {
     const lvl = Math.min(3, +tag[1]);
-    return paraXml(inlineRuns(el, {}, rels), { style: `Heading${lvl}` });
+    return paraXml(inlineRuns(el, {}, rels), { style: `Heading${lvl}`, align });
   }
-  if (tag === 'P') return paraXml(inlineRuns(el, {}, rels), ctx);
+  if (tag === 'P') return paraXml(inlineRuns(el, {}, rels), { ...ctx, align });
   if (tag === 'BLOCKQUOTE') {
     return Array.from(el.children).length
       ? Array.from(el.children).map((c) => blockToXml(c, rels, { indent: true })).join('')
-      : paraXml(inlineRuns(el, {}, rels), { indent: true });
+      : paraXml(inlineRuns(el, {}, rels), { indent: true, align });
   }
   if (tag === 'PRE') {
-    return paraXml(runXml(el.textContent || '', { code: true }), { style: 'Code' });
+    return paraXml(runXml(el.textContent || '', { code: true }), { style: 'Code', align });
   }
   if (tag === 'UL' || tag === 'OL') {
     const kind = tag === 'OL' ? 'ol' : 'ul';
     return Array.from(el.children)
-      .map((li) => paraXml(inlineRuns(li, {}, rels), { list: kind }))
+      .map((li) => paraXml(inlineRuns(li, {}, rels), { list: kind, align: jcOf(li) }))
       .join('');
   }
   if (tag === 'HR') return paraXml('', {});
   // Fallback: treat as paragraph.
-  return paraXml(inlineRuns(el, {}, rels), {});
+  return paraXml(inlineRuns(el, {}, rels), { align });
 }
 
 function makeRels() {
@@ -198,11 +209,20 @@ export async function docxToHtml(arrayBuffer) {
     return html;
   };
 
+  // OOXML w:jc value -> CSS text-align (left is the default; omit it).
+  const alignAttr = (pPr) => {
+    const jc = pPr && pPr.getElementsByTagNameNS(W, 'jc')[0];
+    const v = jc ? jc.getAttributeNS(W, 'val') : '';
+    const css = { center: 'center', right: 'right', both: 'justify', end: 'right' }[v];
+    return css ? ` style="text-align: ${css}"` : '';
+  };
+
   for (const p of paras) {
     const pPr = p.getElementsByTagNameNS(W, 'pPr')[0];
     const styleEl = pPr && pPr.getElementsByTagNameNS(W, 'pStyle')[0];
     const style = styleEl ? styleEl.getAttributeNS(W, 'val') : '';
     const numPr = pPr && pPr.getElementsByTagNameNS(W, 'numPr')[0];
+    const al = alignAttr(pPr);
     const inner = inlineHtml(p);
 
     if (numPr) {
@@ -210,15 +230,16 @@ export async function docxToHtml(arrayBuffer) {
       const numId = numIdEl ? numIdEl.getAttributeNS(W, 'val') : '1';
       const tag = numId === '2' ? 'ol' : 'ul';
       if (!listBuffer || listBuffer.tag !== tag) { flushList(); listBuffer = { tag, items: [] }; }
-      listBuffer.items.push(`<li>${inner || '<br>'}</li>`);
+      listBuffer.items.push(`<li${al}>${inner || '<br>'}</li>`);
       continue;
     }
     flushList();
 
     const hMatch = /^Heading(\d)$/i.exec(style || '');
-    if (hMatch) out.push(`<h${Math.min(3, +hMatch[1])}>${inner || '<br>'}</h${Math.min(3, +hMatch[1])}>`);
+    const h = hMatch && Math.min(3, +hMatch[1]);
+    if (hMatch) out.push(`<h${h}${al}>${inner || '<br>'}</h${h}>`);
     else if (/^Code$/i.test(style)) out.push(`<pre><code>${p.textContent ? xmlEscapeText(p.textContent) : ''}</code></pre>`);
-    else out.push(`<p>${inner || '<br>'}</p>`);
+    else out.push(`<p${al}>${inner || '<br>'}</p>`);
   }
   flushList();
 

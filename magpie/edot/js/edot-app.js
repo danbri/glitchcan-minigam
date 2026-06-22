@@ -6,6 +6,7 @@ import { Editor } from './editor.js';
 import { Toolbar } from './toolbar.js';
 import { Announcer } from './a11y.js';
 import { Library } from './library.js';
+import { FindReplace } from './find-replace.js';
 import * as IO from './io.js';
 import * as LO from './libreoffice-bridge.js';
 
@@ -19,6 +20,7 @@ class App {
     this.editorEl = document.getElementById('editor');
     this.editor = new Editor(this.editorEl);
     this.toolbar = new Toolbar(document.getElementById('toolbar'), this.editor, this.announce);
+    this.findReplace = new FindReplace(this.editor, this.announce);
 
     this.titleInput = document.getElementById('doc-title');
     this.saveState = document.getElementById('save-state');
@@ -121,6 +123,7 @@ class App {
     document.getElementById('mi-new').addEventListener('click', () => { this._closeMenu(); this.newDocument(); });
     document.getElementById('mi-open').addEventListener('click', () => { this._closeMenu(); this.fileInput.click(); });
     document.getElementById('mi-docs').addEventListener('click', () => { this._closeMenu(); this.openLibrary(); });
+    document.getElementById('mi-find').addEventListener('click', () => { this._closeMenu(); this.findReplace.open(true); });
 
     this.fileInput.accept = IO.importAccept();
     this.fileInput.addEventListener('change', () => {
@@ -223,6 +226,8 @@ class App {
       if (k === 's') { e.preventDefault(); this.exportAs(this.lastExportExt); }
       else if (k === 'o' && e.shiftKey) { e.preventDefault(); this.openLibrary(); }
       else if (k === 'o') { e.preventDefault(); this.fileInput.click(); }
+      else if (k === 'f') { e.preventDefault(); this.findReplace.open(false); }
+      else if (k === 'h') { e.preventDefault(); this.findReplace.open(true); }
     });
   }
 

@@ -160,6 +160,51 @@ try {
   ok('rdfa sanitize still drops handlers', !/onclick/.test(rdfa.clean));
   ok('html export declares vocab + prefixes', /vocab="https:\/\/schema.org\/"/.test(rdfa.full) && /prefix="schema:/.test(rdfa.full));
 
+  // 9b. Paragraph alignment: sanitizer keeps only text-align; round-trips docx.
+  const alignSan = await page.evaluate(async () => {
+    const { sanitizeHtml } = await import('./js/document-model.js');
+    return sanitizeHtml('<p style="text-align:center;color:red;position:fixed" onclick="x()">Hi</p>');
+  });
+  ok('sanitize keeps text-align only', /text-align: center/.test(alignSan) && !/color/.test(alignSan) && !/position/.test(alignSan) && !/onclick/.test(alignSan));
+
+  const alignDocx = await page.evaluate(async () => {
+    const { htmlToDocx, docxToHtml } = await import('./js/io-docx.js');
+    const src = '<p style="text-align: center">Centered</p><h2 style="text-align: right">Righty</h2><p style="text-align: justify">Just</p>';
+    const blob = await htmlToDocx(src, 'Align');
+    const ab = await blob.arrayBuffer();
+    // peek at document.xml for w:jc
+    const { unzip, utf8 } = await import('./js/zip.js');
+    const entries = await unzip(ab);
+    const xml = utf8.decode(entries['word/document.xml']);
+    const html = await docxToHtml(ab);
+    return { xml, html };
+  });
+  ok('docx emits w:jc center+right+both', /w:jc w:val="center"/.test(alignDocx.xml) && /w:jc w:val="right"/.test(alignDocx.xml) && /w:jc w:val="both"/.test(alignDocx.xml));
+  ok('docx import restores alignment', /text-align: center/.test(alignDocx.html) && /text-align: right/.test(alignDocx.html) && /text-align: justify/.test(alignDocx.html));
+
+  const alignPdf = await page.evaluate(async () => {
+    const { htmlToPdf } = await import('./js/io-pdf.js');
+    const blob = await htmlToPdf('<p style="text-align:center">Centered line of text</p><p style="text-align:right">Right line</p>', 'AP');
+    return (await blob.arrayBuffer()).byteLength;
+  });
+  ok('pdf with alignment renders', alignPdf > 800);
+
+  // 9c. Find & replace over the live editor.
+  const fr = await page.evaluate(async () => {
+    document.getElementById('editor').innerHTML = '<p>foo bar foo baz foo</p>';
+    window.__edot.editor.onChange();
+    const f = window.__edot.findReplace;
+    f.open(true);
+    f.findInput.value = 'foo'; f.search();
+    const count = f.matches.length;
+    f.replaceInput.value = 'X'; f.replaceAll();
+    const html = document.getElementById('editor').innerHTML;
+    f.close();
+    return { count, html };
+  });
+  ok('find locates all matches', fr.count === 3);
+  ok('replace all replaces every match', !/foo/.test(fr.html) && (fr.html.match(/X/g) || []).length === 3);
+
   // 10. LibreOffice bridge reports not-configured gracefully.
   const loState = await page.evaluate(async () => {
     const LO = await import('./js/libreoffice-bridge.js');

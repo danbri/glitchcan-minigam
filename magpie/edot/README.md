@@ -13,8 +13,12 @@ offline, and dependency-free.
 ## What it does
 
 - **Rich text editing** — headings (H1–H3), bold/italic/underline/strikethrough,
-  bulleted & numbered lists, block quotes, code blocks, links, indent/outdent,
-  undo/redo, clear-formatting.
+  paragraph **alignment** (left/centre/right/justify), bulleted & numbered
+  lists, block quotes, code blocks, links, indent/outdent, undo/redo,
+  clear-formatting.
+- **Find & replace** — `Ctrl/⌘+F` (find) / `Ctrl/⌘+H` (replace), live match
+  count, case sensitivity, replace-one / replace-all. Matches are shown with the
+  CSS Custom Highlight API (no DOM mutation), with a select-and-scroll fallback.
 - **Local document library** — multiple named documents stored on-device in
   **IndexedDB** (localStorage fallback), with continuous autosave. **File ▸ My
   documents** lists, opens, renames, duplicates, and deletes them. Nothing is
@@ -44,6 +48,7 @@ offline, and dependency-free.
 | --- | --- |
 | Bold / Italic / Underline | `Ctrl/⌘ + B / I / U` |
 | Undo / Redo | `Ctrl/⌘ + Z` / `Ctrl/⌘ + Shift + Z` (or `Ctrl/⌘ + Y`) |
+| Find / Find & replace | `Ctrl/⌘ + F` / `Ctrl/⌘ + H` |
 | New document | `Ctrl/⌘ + N` (via menu) |
 | Open file from disk | `Ctrl/⌘ + O` (or drag a file onto the page) |
 | My documents (library) | `Ctrl/⌘ + Shift + O` |
@@ -67,8 +72,9 @@ js/
   document-model.js    canonical = sanitized HTML; normalize, plain-text, stats
   a11y.js              live-region announcer + transient toasts
   library.js           local document store (IndexedDB, localStorage fallback)
+  find-replace.js      find & replace (CSS Custom Highlight API)
   io.js                format registry + open/save orchestration
-  io-docx.js           native OOXML .docx read/write
+  io-docx.js           native OOXML .docx read/write (incl. alignment via w:jc)
   io-pdf.js            native multi-page PDF export (base-14 fonts)
   io-markdown.js       Markdown <-> document HTML
   io-html.js           standalone HTML+RDFa document I/O + CSS export
@@ -128,12 +134,14 @@ native reader if conversion fails.
 
 ## Testing
 
-A headless smoke test boots the real app in Chromium and exercises every format
-round-trip (docx, markdown, zip, RDFa), the PDF structure, the document library
-persistence across reloads, the sanitizer, and the toolbar wiring (33 checks):
+Headless tests boot the real app in Chromium and exercise every format
+round-trip (docx, markdown, zip, RDFa, alignment), the PDF structure, find &
+replace, the document library persistence across reloads, the sanitizer, and the
+toolbar wiring:
 
 ```bash
-node magpie/edot/test-edot.mjs       # functional smoke test (33 checks)
+node magpie/edot/test-edot.mjs       # functional smoke test (39 checks)
+node magpie/edot/test-e2e.mjs        # end-to-end UI driving (16 checks)
 node magpie/edot/verify-pdf.mjs      # deep PDF structural validation + sample
 ```
 
@@ -151,5 +159,7 @@ xref offsets, trailer→catalog→pages chain, and content-stream lengths.)
   that range (e.g. CJK, emoji) are exported as `?`. Inline styling is per-run
   (bold/italic/links); it does not embed images or tables.
 - Markdown is a CommonMark *subset* (no tables/footnotes/nested lists yet).
+  Paragraph alignment round-trips through HTML, DOCX and PDF but not Markdown or
+  plain text, which have no concept of it.
 - Editing is single-document at a time, but the library holds as many documents
   as you like; switch via **File ▸ My documents**.

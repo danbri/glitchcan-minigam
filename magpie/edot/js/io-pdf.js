@@ -211,6 +211,8 @@ export function htmlToPdf(bodyHtml, title = 'Document') {
   }
 
   function drawLines(lines, st, indent, b) {
+    const align = (b.el && b.el.style && b.el.style.textAlign || '').toLowerCase();
+    const avail = CONTENT_W - indent;
     lines.forEach((segs, li) => {
       ensure(st.leading);
       const baseline = y - st.size * 0.8;
@@ -219,7 +221,27 @@ export function htmlToPdf(bodyHtml, title = 'Document') {
         stream.text({ text: b.marker, font: 'Times-Roman', size: st.size, color: [0, 0, 0], underline: false, w: 0 }, MARGIN + indent - 16, baseline);
       }
       if (st.bar) stream.rect(MARGIN + 6, baseline - 2, 2.5, st.size, [0.55, 0.27, 0.07]);
-      for (const s of segs) stream.text(s, x0 + (s.x || 0), baseline);
+
+      // Compute the rendered line width to support alignment.
+      const last = segs[segs.length - 1];
+      const lineW = last ? (last.x || 0) + (last.w || measure(last.text, last.font, last.size)) : 0;
+      let shift = 0;
+      if (align === 'center') shift = Math.max(0, (avail - lineW) / 2);
+      else if (align === 'right') shift = Math.max(0, avail - lineW);
+
+      const isLast = li === lines.length - 1;
+      if (align === 'justify' && !isLast && segs.length > 1) {
+        // Stretch inter-word gaps to fill the line.
+        const gaps = segs.filter((s) => s.ws).length;
+        const extra = gaps > 0 ? Math.max(0, avail - lineW) / gaps : 0;
+        let add = 0;
+        for (const s of segs) {
+          stream.text(s, x0 + (s.x || 0) + add, baseline);
+          if (s.ws) add += extra;
+        }
+      } else {
+        for (const s of segs) stream.text(s, x0 + shift + (s.x || 0), baseline);
+      }
       y -= st.leading;
     });
   }

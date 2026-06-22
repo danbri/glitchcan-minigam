@@ -66,6 +66,28 @@ try {
   ok('reopened doc kept bold tag', await page.evaluate(() => /<(b|strong)>/i.test(document.getElementById('editor').innerHTML)));
   ok('title field shows reopened name', (await page.inputValue('#doc-title')) === 'Hello Doc');
 
+  // Alignment button applies text-align and reflects pressed state.
+  await page.click('#editor');
+  await page.keyboard.press('Control+a');
+  await page.click('button[data-cmd="alignCenter"]');
+  ok('align-center button pressed', await page.getAttribute('button[data-cmd="alignCenter"]', 'aria-pressed') === 'true');
+  ok('editor block is centered', await page.evaluate(() => {
+    const b = document.querySelector('#editor p, #editor h1, #editor h2, #editor h3');
+    return b && /center/.test(b.style.textAlign);
+  }));
+
+  // Find bar opens with Ctrl+F and counts matches.
+  await page.evaluate(() => { document.getElementById('editor').innerHTML = '<p>alpha beta alpha</p>'; window.__edot.editor.onChange(); });
+  await page.click('#editor');
+  await page.keyboard.press('Control+f');
+  await page.waitForTimeout(150);
+  ok('find bar is visible', await page.isVisible('.find-bar'));
+  await page.fill('#find-input', 'alpha');
+  await page.waitForTimeout(150);
+  ok('find shows 1/2 count', /\/2/.test(await page.textContent('#find-count')));
+  await page.keyboard.press('Escape');
+  ok('find bar closes on Escape', !(await page.isVisible('.find-bar')));
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
 } finally { await b.close(); server.close(); }
