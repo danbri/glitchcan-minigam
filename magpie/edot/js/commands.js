@@ -23,7 +23,8 @@ export const COMMANDS = {
   indent: { exec: () => doExec('indent'), label: 'Increase indent' },
 
   undo: { exec: () => doExec('undo'), key: 'z', label: 'Undo' },
-  redo: { exec: () => doExec('redo'), key: 'y', label: 'Redo' },
+  redo: { exec: () => doExec('redo'), key: 'y', shift: true, label: 'Redo' },
+
   removeFormat: { exec: () => { doExec('removeFormat'); formatBlock('p'); }, label: 'Clear formatting' },
 };
 

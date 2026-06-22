@@ -99,6 +99,7 @@ body {
 /* ---- App header ---- */
 .app-header {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.75rem;
@@ -137,13 +138,12 @@ body {
 /* ---- Toolbar ---- */
 .toolbar {
   display: flex;
+  flex: 0 0 auto;            /* never let Safari crush the wrapping toolbar */
   flex-wrap: wrap;
   gap: 0.15rem;
   padding: 0.35rem 0.5rem;
   background: var(--toolbar-bg);
   border-bottom: 1px solid var(--line);
-  position: sticky;
-  top: 0;
   z-index: 10;
 }
 .toolbar .group {
@@ -254,6 +254,7 @@ select.tbtn {
 /* ---- Status bar ---- */
 .statusbar {
   display: flex;
+  flex: 0 0 auto;
   gap: 1rem;
   align-items: center;
   padding: 0.3rem 0.75rem calc(0.3rem + env(safe-area-inset-bottom));
