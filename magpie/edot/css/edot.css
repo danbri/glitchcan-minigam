@@ -236,6 +236,23 @@ select.tbtn {
   color: var(--muted);
 }
 .page a { color: var(--focus); }
+.page img { max-width: 100%; height: auto; }
+.page figure { margin: 0 0 0.8em; text-align: center; }
+.page figcaption { font-size: 0.85em; color: var(--muted); margin-top: 0.3em; }
+.page table {
+  border-collapse: collapse;
+  margin: 0 0 0.8em;
+  max-width: 100%;
+  font-size: 0.95em;
+}
+.page td, .page th {
+  border: 1px solid var(--line);
+  padding: 0.3em 0.55em;
+  vertical-align: top;
+  text-align: left;
+}
+.page th { background: var(--toolbar-bg); font-weight: 700; }
+.page caption { caption-side: top; font-size: 0.85em; color: var(--muted); margin-bottom: 0.3em; }
 .page pre {
   background: var(--bg);
   padding: 0.8em;

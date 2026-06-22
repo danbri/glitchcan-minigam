@@ -24,7 +24,9 @@ offline, and dependency-free.
   documents** lists, opens, renames, duplicates, and deletes them. Nothing is
   ever uploaded.
 - **Real file I/O, offline & dependency-free:**
-  - **Word `.docx`** — native OOXML read *and* write.
+  - **Word `.docx`** — native OOXML read *and* write, including **tables**,
+    **embedded images** (imported as data-URLs), headings, lists, alignment,
+    and hyperlinks.
   - **PDF** — native multi-page export (A4, base-14 fonts, wrapped text flow,
     inline bold/italic/links, lists, quotes, code, page breaks). No backend.
   - **HTML + RDFa** — standalone self-styled documents that declare common
@@ -140,9 +142,9 @@ replace, the document library persistence across reloads, the sanitizer, and the
 toolbar wiring:
 
 ```bash
-node magpie/edot/test-edot.mjs       # functional smoke test (39 checks)
+node magpie/edot/test-edot.mjs       # functional smoke test (45 checks)
 node magpie/edot/test-e2e.mjs        # end-to-end UI driving (16 checks)
-node magpie/edot/test-mobile.mjs     # mobile: tap-to-focus, touch menu, locked shell
+node magpie/edot/test-mobile.mjs     # mobile: tap-to-focus, touch menu, locked shell (14 checks)
 node magpie/edot/verify-pdf.mjs      # deep PDF structural validation + sample
 ```
 
@@ -152,10 +154,16 @@ xref offsets, trailer→catalog→pages chain, and content-stream lengths.)
 
 ## Limits / honest scope
 
-- The native `.docx` writer covers paragraphs, Heading 1–3, bold/italic/
-  underline/strike runs, ordered & unordered lists, block quotes, code, and
-  hyperlinks. **Tables, images, footnotes, and complex styles need the
+- The native `.docx` path covers paragraphs, Heading 1–3, bold/italic/
+  underline/strike runs, ordered & unordered lists, block quotes, code,
+  hyperlinks, alignment, **tables**, and **images**. Import brings tables and
+  embedded images in (images become data-URLs); export writes tables back.
+  **Image *export* to .docx, footnotes, and complex styles still need the
   LibreOffice WASM backend.**
+- **PDF export** currently renders text, lists, quotes and code; tables are
+  flattened to text and images are omitted (both are on the roadmap).
+- Tables and images that can't be represented in **Markdown/plain text** are
+  exported as a GFM table / `![alt](src)` where possible, else dropped.
 - PDF export uses the base-14 fonts and WinAnsi/Latin-1 text; characters outside
   that range (e.g. CJK, emoji) are exported as `?`. Inline styling is per-run
   (bold/italic/links); it does not embed images or tables.

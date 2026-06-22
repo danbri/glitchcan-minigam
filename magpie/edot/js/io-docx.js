@@ -104,9 +104,41 @@ function blockToXml(el, rels, ctx = {}) {
       .map((li) => paraXml(inlineRuns(li, {}, rels), { list: kind, align: jcOf(li) }))
       .join('');
   }
+  if (tag === 'TABLE') return tableXml(el, rels);
   if (tag === 'HR') return paraXml('', {});
   // Fallback: treat as paragraph.
   return paraXml(inlineRuns(el, {}, rels), { align });
+}
+
+// <table> -> w:tbl with single borders. Each cell holds at least one w:p.
+function tableXml(table, rels) {
+  const rows = Array.from(table.rows);
+  let cols = 0;
+  if (rows[0]) Array.from(rows[0].cells).forEach((c) => { cols += c.colSpan || 1; });
+  cols = cols || 1;
+  const grid = `<w:tblGrid>${Array.from({ length: cols }, () =>
+    `<w:gridCol w:w="${Math.floor(9000 / cols)}"/>`).join('')}</w:tblGrid>`;
+  const borders = '<w:tblBorders>' +
+    ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']
+      .map((s) => `<w:${s} w:val="single" w:sz="4" w:color="999999"/>`).join('') +
+    '</w:tblBorders>';
+  let xml = `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>${borders}</w:tblPr>${grid}`;
+  for (const tr of rows) {
+    xml += '<w:tr>';
+    for (const cell of Array.from(tr.cells)) {
+      const span = cell.colSpan || 1;
+      const spanXml = span > 1 ? `<w:gridSpan w:val="${span}"/>` : '';
+      const blocks = Array.from(cell.children).filter((c) =>
+        /^(P|H[1-6]|UL|OL|BLOCKQUOTE|PRE|TABLE)$/.test(c.tagName));
+      let content = blocks.length
+        ? blocks.map((b) => blockToXml(b, rels)).join('')
+        : paraXml(inlineRuns(cell, cell.tagName === 'TH' ? { b: true } : {}, rels));
+      if (!/<w:p[ />]/.test(content)) content += '<w:p/>'; // a tc needs >=1 w:p
+      xml += `<w:tc><w:tcPr>${spanXml}</w:tcPr>${content}</w:tc>`;
+    }
+    xml += '</w:tr>';
+  }
+  return xml + '</w:tbl>';
 }
 
 function makeRels() {
@@ -171,7 +203,8 @@ export async function docxToHtml(arrayBuffer) {
   const xml = new DOMParser().parseFromString(utf8.decode(docXml), 'application/xml');
   const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
   const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
-  const paras = xml.getElementsByTagNameNS(W, 'p');
+  const A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+  const VML = 'urn:schemas-microsoft-com:vml';
   const out = [];
   let listBuffer = null; // { tag, items: [] }
 
@@ -179,18 +212,58 @@ export async function docxToHtml(arrayBuffer) {
     if (listBuffer) { out.push(`<${listBuffer.tag}>${listBuffer.items.join('')}</${listBuffer.tag}>`); listBuffer = null; }
   };
 
+  const bytesToBase64 = (bytes) => {
+    let bin = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    }
+    return btoa(bin);
+  };
+
+  // Embedded images: relationship id -> data-URL <img>.
+  const imgFor = (id) => {
+    if (!id) return '';
+    const target = relMap[id];
+    if (!target) return '';
+    const rel = target.replace(/^\//, '');
+    const bytes = entries['word/' + rel] || entries[rel];
+    if (!bytes) return '';
+    const ext = (rel.split('.').pop() || '').toLowerCase();
+    const mime = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
+      bmp: 'image/bmp', webp: 'image/webp', svg: 'image/svg+xml' }[ext];
+    if (!mime) return ''; // skip EMF/WMF and other non-browser image formats
+    return `<img src="data:${mime};base64,${bytesToBase64(bytes)}" alt="">`;
+  };
+
+  const runImages = (run) => {
+    let html = '';
+    Array.from(run.getElementsByTagNameNS(A, 'blip')).forEach((blip) => {
+      html += imgFor(blip.getAttributeNS(R, 'embed') || blip.getAttributeNS(R, 'link'));
+    });
+    Array.from(run.getElementsByTagNameNS(VML, 'imagedata')).forEach((im) => {
+      html += imgFor(im.getAttributeNS(R, 'id'));
+    });
+    return html;
+  };
+
+  // Build a run's HTML by walking its children in order (text, <br>, tab,
+  // image) — no text sentinel, so line breaks survive cleanly.
   const runHtml = (run) => {
     const rPr = run.getElementsByTagNameNS(W, 'rPr')[0];
-    let text = '';
-    Array.from(run.getElementsByTagNameNS(W, 't')).forEach((t) => { text += t.textContent; });
-    if (run.getElementsByTagNameNS(W, 'br').length) text += ' BR ';
-    let html = xmlEscapeText(text).replace(/ BR /g, '<br>');
-    if (!rPr) return html;
-    if (rPr.getElementsByTagNameNS(W, 'b').length) html = `<strong>${html}</strong>`;
-    if (rPr.getElementsByTagNameNS(W, 'i').length) html = `<em>${html}</em>`;
-    if (rPr.getElementsByTagNameNS(W, 'u').length) html = `<u>${html}</u>`;
-    if (rPr.getElementsByTagNameNS(W, 'strike').length) html = `<s>${html}</s>`;
-    return html;
+    let html = '';
+    Array.from(run.childNodes).forEach((n) => {
+      if (n.localName === 't') html += xmlEscapeText(n.textContent);
+      else if (n.localName === 'br' || n.localName === 'cr') html += '<br>';
+      else if (n.localName === 'tab') html += ' ';
+    });
+    if (rPr) {
+      if (rPr.getElementsByTagNameNS(W, 'b').length) html = `<strong>${html}</strong>`;
+      if (rPr.getElementsByTagNameNS(W, 'i').length) html = `<em>${html}</em>`;
+      if (rPr.getElementsByTagNameNS(W, 'u').length) html = `<u>${html}</u>`;
+      if (rPr.getElementsByTagNameNS(W, 'strike').length) html = `<s>${html}</s>`;
+    }
+    return html + runImages(run);
   };
 
   const inlineHtml = (p) => {
@@ -217,7 +290,28 @@ export async function docxToHtml(arrayBuffer) {
     return css ? ` style="text-align: ${css}"` : '';
   };
 
-  for (const p of paras) {
+  // w:tbl -> <table> (recursive for nested tables; honours gridSpan).
+  const renderTable = (tbl) => {
+    const rows = Array.from(tbl.childNodes).filter((n) => n.localName === 'tr');
+    let html = '<table>';
+    for (const tr of rows) {
+      html += '<tr>';
+      const cells = Array.from(tr.childNodes).filter((n) => n.localName === 'tc');
+      for (const tc of cells) {
+        const tcPr = Array.from(tc.childNodes).find((n) => n.localName === 'tcPr');
+        const gridSpan = tcPr && tcPr.getElementsByTagNameNS(W, 'gridSpan')[0];
+        const span = gridSpan ? parseInt(gridSpan.getAttributeNS(W, 'val'), 10) : 1;
+        const parts = Array.from(tc.childNodes)
+          .filter((n) => n.localName === 'p' || n.localName === 'tbl')
+          .map((n) => (n.localName === 'tbl' ? renderTable(n) : (inlineHtml(n) || '')));
+        html += `<td${span > 1 ? ` colspan="${span}"` : ''}>${parts.join('<br>')}</td>`;
+      }
+      html += '</tr>';
+    }
+    return html + '</table>';
+  };
+
+  const handleParagraph = (p) => {
     const pPr = p.getElementsByTagNameNS(W, 'pPr')[0];
     const styleEl = pPr && pPr.getElementsByTagNameNS(W, 'pStyle')[0];
     const style = styleEl ? styleEl.getAttributeNS(W, 'val') : '';
@@ -231,7 +325,7 @@ export async function docxToHtml(arrayBuffer) {
       const tag = numId === '2' ? 'ol' : 'ul';
       if (!listBuffer || listBuffer.tag !== tag) { flushList(); listBuffer = { tag, items: [] }; }
       listBuffer.items.push(`<li${al}>${inner || '<br>'}</li>`);
-      continue;
+      return;
     }
     flushList();
 
@@ -240,6 +334,15 @@ export async function docxToHtml(arrayBuffer) {
     if (hMatch) out.push(`<h${h}${al}>${inner || '<br>'}</h${h}>`);
     else if (/^Code$/i.test(style)) out.push(`<pre><code>${p.textContent ? xmlEscapeText(p.textContent) : ''}</code></pre>`);
     else out.push(`<p${al}>${inner || '<br>'}</p>`);
+  };
+
+  // Walk the body in document order so tables keep their place and aren't
+  // flattened into the surrounding paragraph stream.
+  const bodyEl = xml.getElementsByTagNameNS(W, 'body')[0];
+  const topNodes = bodyEl ? Array.from(bodyEl.childNodes).filter((n) => n.nodeType === Node.ELEMENT_NODE) : [];
+  for (const el of topNodes) {
+    if (el.localName === 'p') handleParagraph(el);
+    else if (el.localName === 'tbl') { flushList(); out.push(renderTable(el)); }
   }
   flushList();
 

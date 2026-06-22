@@ -10,11 +10,18 @@ const ALLOWED = new Set([
   'B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'SUB', 'SUP',
   'UL', 'OL', 'LI', 'BLOCKQUOTE', 'PRE', 'CODE',
   'A', 'HR', 'SPAN',
+  // Tables, images and figures (imported from .docx / pasted from the web).
+  'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TD', 'TH', 'CAPTION',
+  'COLGROUP', 'COL', 'IMG', 'FIGURE', 'FIGCAPTION',
 ]);
 
 const ALLOWED_ATTR = {
   A: ['href', 'title'],
   SPAN: [],   // span kept only as a transparent wrapper; attrs stripped
+  IMG: ['src', 'alt', 'width', 'height'],
+  TD: ['colspan', 'rowspan'],
+  TH: ['colspan', 'rowspan', 'scope'],
+  COL: ['span', 'width'],
 };
 
 // RDFa Lite + Core attributes are preserved on *any* allowed element so
@@ -67,6 +74,11 @@ function sanitizeNode(node, doc) {
           // Defang any URL-bearing attribute carrying javascript:.
           if ((name === 'href' || name === 'src' || name === 'resource' || name === 'about') &&
               /^\s*javascript:/i.test(attr.value)) {
+            child.removeAttribute(attr.name);
+          }
+          // img/src: permit only image data URLs, http(s), and relative paths.
+          if (name === 'src' && /^\s*data:/i.test(attr.value) &&
+              !/^\s*data:image\//i.test(attr.value)) {
             child.removeAttribute(attr.name);
           }
         } else {
