@@ -112,6 +112,40 @@ try {
   ok('url dialog shows a validation error', await page.isVisible('#url-error'));
   await page.keyboard.press('Escape');
 
+  // Save to GitHub dialog, driven against a mocked api.github.com.
+  await page.evaluate(() => {
+    const orig = window.fetch;
+    window.fetch = async (url, opts = {}) => {
+      if (String(url).startsWith('https://api.github.com')) {
+        const m = opts.method || 'GET';
+        const j = (o) => new Response(JSON.stringify(o), { status: 200, headers: { 'content-type': 'application/json' } });
+        if (/\/contents\//.test(url) && m === 'GET') return j({ sha: 'S', encoding: 'base64', content: btoa('# old heading\n') });
+        if (/\/git\/ref\/heads\//.test(url)) return j({ object: { sha: 'B' } });
+        if (/\/git\/refs$/.test(url)) return j({});
+        if (/\/contents\//.test(url) && m === 'PUT') return j({ commit: { sha: 'C' } });
+        if (/\/pulls$/.test(url)) return j({ number: 7, html_url: 'https://github.com/o/r/pull/7' });
+        return j({});
+      }
+      return orig(url, opts);
+    };
+  });
+  await page.evaluate(() => { document.getElementById('editor').innerHTML = '<h1>New heading</h1><p>edited body</p>'; window.__edot.editor.onChange(); });
+  await page.click('#menu-button'); await page.click('#mi-github'); await page.waitForTimeout(150);
+  ok('github dialog opens', await page.isVisible('#gh-repo'));
+  await page.fill('#gh-repo', 'o/r'); await page.fill('#gh-branch', 'main');
+  await page.fill('#gh-path', 'docs/x.md'); await page.fill('#gh-token', 'tok');
+  await page.click('#gh-preview'); await page.waitForTimeout(250);
+  ok('github preview renders a diff', (await page.$$('#gh-diff .row')).length > 0);
+  ok('github diffstat shows counts', /[+−]\d/.test(await page.textContent('#gh-diffstat')));
+  await page.click('#gh-commit'); await page.waitForTimeout(300);
+  ok('github commit opens a PR link', /#7/.test(await page.textContent('#gh-result')));
+
+  // Non-text path is rejected with a clear error.
+  await page.fill('#gh-path', 'image.docx');
+  await page.click('#gh-preview'); await page.waitForTimeout(120);
+  ok('github rejects binary save-back', await page.isVisible('#gh-error'));
+  await page.keyboard.press('Escape');
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
 } finally { await b.close(); server.close(); }

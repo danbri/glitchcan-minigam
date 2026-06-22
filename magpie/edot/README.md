@@ -28,6 +28,11 @@ offline, and dependency-free.
   `third_party/searching-for-logic/`).
 - **Close** (`Ctrl/⌘+W`) — closes the current document; it stays safe in the
   library.
+- **Save to GitHub** — `File ▸ Save to GitHub` commits your edits to a **new
+  branch and opens a pull request**, entirely client-side via the GitHub REST
+  API (paste a fine-grained token). Shows a **colour diff** of your changes
+  first. Text files only (`.md`/`.txt`/`.html`/`.css`). Prefilled from the
+  document's source when it was opened from a GitHub URL.
 - **Local document library** — multiple named documents stored on-device in
   **IndexedDB** (localStorage fallback), with continuous autosave. **File ▸ My
   documents** lists, opens, renames, duplicates, and deletes them. Nothing is
@@ -86,6 +91,8 @@ js/
   find-replace.js      find & replace (CSS Custom Highlight API)
   open-url.js          URL/git-host link resolution -> raw fetch + metadata
   examples.js          File ▸ Examples manifest
+  git-remote.js        GitHub REST client: read file+sha, branch, commit, PR
+  diff.js              dependency-free LCS line diff (save-back preview)
   io.js                format registry + open/save orchestration
   io-docx.js           native OOXML .docx read/write (incl. alignment via w:jc)
   io-pdf.js            native multi-page PDF export (base-14 fonts)
@@ -153,8 +160,8 @@ replace, the document library persistence across reloads, the sanitizer, and the
 toolbar wiring:
 
 ```bash
-node magpie/edot/test-edot.mjs       # functional smoke test (56 checks)
-node magpie/edot/test-e2e.mjs        # end-to-end UI driving (23 checks)
+node magpie/edot/test-edot.mjs       # functional smoke test (68 checks)
+node magpie/edot/test-e2e.mjs        # end-to-end UI driving (30 checks)
 node magpie/edot/test-mobile.mjs     # mobile: tap-to-focus, touch menu, locked shell (14 checks)
 node magpie/edot/verify-pdf.mjs      # deep PDF structural validation + sample
 ```
@@ -163,13 +170,18 @@ node magpie/edot/verify-pdf.mjs      # deep PDF structural validation + sample
 `playwright-core`. `verify-pdf.mjs` writes `/tmp/edot-sample.pdf` and checks the
 xref offsets, trailer→catalog→pages chain, and content-stream lengths.)
 
-## Roadmap: editing files in git
+## Editing files in git
 
-edot already *reads* from git hosts (Open from URL). A design study for the
-next step — **diffing and committing back to a remote repo**, entirely
-client-side (GitHub Device Flow / fine-grained PAT, `jsdiff` preview, PR-based
-writes) — is in [`docs/git-sync-methodology.md`](docs/git-sync-methodology.md).
-The `doc.source` metadata captured on URL-open is the hook it builds on.
+edot reads from git hosts (Open from URL) **and writes back**: `File ▸ Save to
+GitHub` re-exports to the source text format, fetches the current file + blob
+sha, shows a client-side colour diff (`js/diff.js`), then creates a branch and
+opens a pull request through the GitHub REST API (`js/git-remote.js`). No git
+protocol, no backend — `api.github.com` is CORS-enabled (the why, and the
+roadmap: Device-Flow auth, other hosts, binary save-back, are in
+[`docs/git-sync-methodology.md`](docs/git-sync-methodology.md)).
+
+> **Note:** the GitHub write path is verified against a mocked API in the test
+> suite; give it a real-token dry run on a throwaway repo before trusting it.
 
 ## Limits / honest scope
 

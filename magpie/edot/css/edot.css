@@ -366,6 +366,38 @@ select.tbtn {
 .dialog-error[hidden] { display: none; }
 .doc-row .doc-note { display: block; font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; }
 .doc-credit { padding: 0 1rem 0.75rem; font-size: 0.72rem; color: var(--muted); }
+
+/* ---- Save to GitHub dialog ---- */
+.dialog-ok { margin: 0.5rem 0 0; color: var(--ok); font-size: 0.85rem; }
+.dialog-ok[hidden] { display: none; }
+.gh-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem 0.6rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+.gh-grid label { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+.gh-grid .find-input { width: 100%; }
+.gh-remember { display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: var(--muted); margin-top: 0.5rem; }
+.gh-actions { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.6rem; }
+.gh-diff {
+  margin-top: 0.5rem;
+  max-height: 40vh;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+.gh-diff[hidden] { display: none; }
+.gh-diff .row { display: flex; white-space: pre-wrap; word-break: break-word; padding: 0 0.5em; }
+.gh-diff .row .sign { width: 1.1em; flex: 0 0 1.1em; color: var(--muted); user-select: none; }
+.gh-diff .add { background: rgba(46,160,67,0.16); }
+.gh-diff .del { background: rgba(248,81,73,0.16); }
+.gh-diff .gap { color: var(--muted); background: var(--surface); font-style: italic; padding: 0.1em 0.5em; }
 .dialog-foot { padding: 0.75rem 1rem; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; }
 .tbtn.primary { background: var(--accent); color: var(--accent-fg); min-width: auto; padding: 0 1em; }
 .tbtn.primary:hover { filter: brightness(1.08); }

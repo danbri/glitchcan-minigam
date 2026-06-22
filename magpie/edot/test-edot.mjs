@@ -316,6 +316,65 @@ try {
     teardown.after.bars === teardown.before.bars &&
     teardown.after.toasts === teardown.before.toasts);
 
+  // 9j. Diff engine: detects edits/additions and collapses context to gaps.
+  const diff = await page.evaluate(async () => {
+    const { diffLines, diffStats, collapse } = await import('./js/diff.js');
+    const d = diffLines('a\nb\nc\nd', 'a\nB\nc\nd\ne');
+    const s = diffStats(d);
+    const big = collapse(diffLines(
+      Array.from({ length: 50 }, (_, i) => 'L' + i).join('\n'),
+      Array.from({ length: 50 }, (_, i) => (i === 25 ? 'CHANGED' : 'L' + i)).join('\n')), 2);
+    return { add: s.add, del: s.del, hasGap: big.some((r) => r.type === 'gap') };
+  });
+  ok('diff counts edits + additions', diff.add === 2 && diff.del === 1);
+  ok('diff collapses unchanged runs into gaps', diff.hasGap);
+
+  // 9k. git-remote: unicode base64 + mocked commit-via-PR sequence/payloads.
+  const git = await page.evaluate(async () => {
+    const { GitHubRemote, commitViaPullRequest, utf8ToB64, b64ToUtf8 } = await import('./js/git-remote.js');
+    const round = b64ToUtf8(utf8ToB64('héllo — wörld\n€ 𝄞')) === 'héllo — wörld\n€ 𝄞';
+    const calls = [];
+    const fake = async (url, opts) => {
+      const body = opts.body ? JSON.parse(opts.body) : null;
+      calls.push({ url, method: opts.method, body, auth: opts.headers.Authorization });
+      const j = (o) => ({ ok: true, status: 200, text: async () => JSON.stringify(o) });
+      if (/\/contents\//.test(url) && opts.method === 'GET') return j({ sha: 'OLDSHA', encoding: 'base64', content: btoa('old') });
+      if (/\/git\/ref\/heads\//.test(url)) return j({ object: { sha: 'BASESHA' } });
+      if (/\/git\/refs$/.test(url)) return j({});
+      if (/\/contents\//.test(url) && opts.method === 'PUT') return j({ commit: { sha: 'C' } });
+      if (/\/pulls$/.test(url)) return j({ number: 42, html_url: 'https://github.com/o/r/pull/42' });
+      return j({});
+    };
+    const { branch, pr } = await commitViaPullRequest(new GitHubRemote('TKN', fake),
+      { owner: 'o', repo: 'r', path: 'docs/a.md', baseBranch: 'main', message: 'msg', contentText: 'new text', title: 't', body: 'b' });
+    const put = calls.find((c) => c.method === 'PUT');
+    const ref = calls.find((c) => c.method === 'POST' && /git\/refs$/.test(c.url));
+    const pull = calls.find((c) => /pulls$/.test(c.url));
+    return {
+      round, prNumber: pr.number, branch,
+      putContent: put && atob(put.body.content), putSha: put && put.body.sha, putBranch: put && put.body.branch,
+      refOk: ref && ref.body.ref === `refs/heads/${branch}`,
+      prHead: pull && pull.body.head, prBase: pull && pull.body.base, auth: put && put.auth,
+    };
+  });
+  ok('git base64 round-trips unicode (incl. astral)', git.round);
+  ok('git PUT commits decoded content', git.putContent === 'new text');
+  ok('git PUT uses existing sha + new branch', git.putSha === 'OLDSHA' && git.putBranch === git.branch);
+  ok('git creates branch ref off base', git.refOk);
+  ok('git PR head=branch, base=main', git.prHead === git.branch && git.prBase === 'main');
+  ok('git authorizes with bearer token', git.auth === 'Bearer TKN');
+  ok('git returns the PR number', git.prNumber === 42);
+
+  // 9l. exportText: source-format string; binary formats blocked.
+  const ex = await page.evaluate(async () => {
+    const IO = await import('./js/io.js');
+    const md = await IO.exportText('<h1>T</h1><p><strong>b</strong></p>', 'Doc', 'md');
+    let blocked = false; try { await IO.exportText('<p>x</p>', 'D', 'docx'); } catch { blocked = true; }
+    return { md, blocked, isText: IO.isTextFormat('md') && !IO.isTextFormat('docx') };
+  });
+  ok('exportText returns source-format markdown', /^# T/m.test(ex.md) && /\*\*b\*\*/.test(ex.md));
+  ok('exportText blocks binary formats', ex.blocked && ex.isText);
+
   // 10. LibreOffice bridge reports not-configured gracefully.
   const loState = await page.evaluate(async () => {
     const LO = await import('./js/libreoffice-bridge.js');

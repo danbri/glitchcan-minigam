@@ -45,6 +45,9 @@
         <button type="button" id="mi-find" class="menu-item" role="menuitem">
           <span>Find &amp; replace…</span><span class="hint">Ctrl/⌘F</span>
         </button>
+        <button type="button" id="mi-github" class="menu-item" role="menuitem">
+          <span>Save to GitHub…</span><span class="hint">PR</span>
+        </button>
         <div class="menu-sep" role="separator"></div>
         <div id="export-list" role="group" aria-label="Save as"></div>
       </div>
@@ -98,6 +101,40 @@
       <button type="submit" class="tbtn" aria-label="Close">✕</button>
     </form>
     <ul id="examples-list" class="docs-list"></ul>
+  </dialog>
+
+  <!-- Save to GitHub (branch + pull request) -->
+  <dialog id="github-dialog" class="dialog" aria-labelledby="github-dialog-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="github-dialog-title">Save to GitHub</h2>
+      <button type="submit" class="tbtn" aria-label="Close">✕</button>
+    </form>
+    <div class="dialog-body">
+      <p class="dialog-note">Commits your edits to a new branch and opens a pull request — entirely from your browser via the GitHub API. Needs a fine-grained token with <strong>Contents</strong> and <strong>Pull requests</strong> read &amp; write on the repo. <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener noreferrer">Create one →</a></p>
+      <div class="gh-grid">
+        <label for="gh-repo">Repository</label>
+        <input id="gh-repo" type="text" class="find-input" placeholder="owner/repo" autocomplete="off">
+        <label for="gh-branch">Base branch</label>
+        <input id="gh-branch" type="text" class="find-input" placeholder="main" autocomplete="off">
+        <label for="gh-path">File path</label>
+        <input id="gh-path" type="text" class="find-input" placeholder="docs/file.md" autocomplete="off">
+        <label for="gh-token">Token</label>
+        <input id="gh-token" type="password" class="find-input" placeholder="github_pat_…" autocomplete="new-password">
+        <label for="gh-message">Commit message</label>
+        <input id="gh-message" type="text" class="find-input" autocomplete="off">
+      </div>
+      <label class="gh-remember"><input id="gh-remember" type="checkbox"> Remember token for this tab only</label>
+      <div class="gh-actions">
+        <button type="button" id="gh-preview" class="tbtn">Preview diff</button>
+        <span id="gh-diffstat" class="dialog-note"></span>
+      </div>
+      <div id="gh-diff" class="gh-diff" hidden></div>
+      <p id="gh-error" class="dialog-error" role="alert" hidden></p>
+      <p id="gh-result" class="dialog-ok" role="status" hidden></p>
+    </div>
+    <div class="dialog-foot">
+      <button type="button" id="gh-commit" class="tbtn primary">Open pull request</button>
+    </div>
   </dialog>
 
   <!-- Local document library -->
