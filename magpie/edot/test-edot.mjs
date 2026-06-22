@@ -115,7 +115,52 @@ try {
   await page.waitForTimeout(50);
   ok('word count reflects content', /5 words/.test(await page.textContent('#stat-words')));
 
-  // 7. LibreOffice bridge reports not-configured gracefully.
+  // 7. PDF export produces a valid, multi-object PDF.
+  const pdf = await page.evaluate(async () => {
+    const { htmlToPdf } = await import('./js/io-pdf.js');
+    const long = Array.from({ length: 80 }, (_, i) => `<p>Paragraph number ${i} with some <strong>bold</strong> and <em>italic</em> words to force wrapping and page breaks across the document body.</p>`).join('');
+    const blob = await htmlToPdf('<h1>Title</h1>' + long + '<ul><li>item</li></ul>', 'PDFTest');
+    const buf = new Uint8Array(await blob.arrayBuffer());
+    let s = ''; for (let i = 0; i < buf.length; i++) s += String.fromCharCode(buf[i]);
+    return { size: buf.length, head: s.slice(0, 8), hasEOF: s.includes('%%EOF'), pages: (s.match(/\/Type \/Page[^s]/g) || []).length, hasXref: s.includes('\nxref\n') };
+  });
+  ok('pdf starts with %PDF-', pdf.head.startsWith('%PDF-'));
+  ok('pdf ends with EOF', pdf.hasEOF);
+  ok('pdf has xref + multiple pages', pdf.hasXref && pdf.pages >= 2);
+  ok('pdf is substantial', pdf.size > 3000);
+
+  // 8. Local document library persists across reloads (IndexedDB).
+  const docId = await page.evaluate(async () => {
+    const { Library } = await import('./js/library.js');
+    const lib = await Library.create();
+    const d = await lib.createDoc('Persisted Doc', '<p>library content</p>');
+    return d.id;
+  });
+  await page.reload();
+  await page.waitForFunction(() => !!window.__edot);
+  const persisted = await page.evaluate(async (id) => {
+    const { Library } = await import('./js/library.js');
+    const lib = await Library.create();
+    const d = await lib.getDoc(id);
+    return d && d.title === 'Persisted Doc' && /library content/.test(d.html);
+  }, docId);
+  ok('library persists docs across reload', persisted);
+  ok('library reports a backend kind', await page.evaluate(() => /IndexedDB|localStorage/.test(window.__edot.library.kind)));
+
+  // 9. RDFa attributes survive sanitize + HTML export.
+  const rdfa = await page.evaluate(async () => {
+    const { sanitizeHtml } = await import('./js/document-model.js');
+    const { documentToHtml } = await import('./js/io-html.js');
+    const dirty = '<p typeof="schema:Person"><span property="schema:name" onclick="x()">Ada</span></p>';
+    const clean = sanitizeHtml(dirty);
+    const full = documentToHtml(clean, 'Semantic');
+    return { clean, full };
+  });
+  ok('rdfa property survives sanitize', /property="schema:name"/.test(rdfa.clean) && /typeof="schema:Person"/.test(rdfa.clean));
+  ok('rdfa sanitize still drops handlers', !/onclick/.test(rdfa.clean));
+  ok('html export declares vocab + prefixes', /vocab="https:\/\/schema.org\/"/.test(rdfa.full) && /prefix="schema:/.test(rdfa.full));
+
+  // 10. LibreOffice bridge reports not-configured gracefully.
   const loState = await page.evaluate(async () => {
     const LO = await import('./js/libreoffice-bridge.js');
     let code = null;

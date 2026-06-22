@@ -265,6 +265,78 @@ select.tbtn {
 .menu-item .hint { margin-left: auto; color: var(--muted); font-size: 0.8em; }
 .menu-sep { height: 1px; background: var(--line); margin: 0.3rem 0; }
 
+/* ---- Document library dialog ---- */
+.dialog {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0;
+  width: min(34rem, 92vw);
+  max-height: 80vh;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+}
+.dialog::backdrop { background: rgba(0,0,0,0.45); }
+.dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+  margin: 0;
+}
+.dialog-head h2 { margin: 0; font-size: 1.1rem; }
+.dialog-note { margin: 0; padding: 0.5rem 1rem; font-size: 0.8rem; color: var(--muted); }
+.dialog-foot { padding: 0.75rem 1rem; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; }
+.tbtn.primary { background: var(--accent); color: var(--accent-fg); min-width: auto; padding: 0 1em; }
+.tbtn.primary:hover { filter: brightness(1.08); }
+
+.docs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  overflow: auto;
+  max-height: 50vh;
+}
+.docs-list:empty::after { content: 'No saved documents yet.'; color: var(--muted); padding: 1rem; display: block; }
+.doc-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+}
+.doc-row:hover, .doc-row:focus-within { background: var(--toolbar-bg); }
+.doc-row.current { outline: 2px solid var(--focus); outline-offset: -2px; }
+.doc-open {
+  flex: 1;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  padding: 0.2em;
+  min-width: 0;
+}
+.doc-open .doc-name { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-open .doc-meta { display: block; font-size: 0.75rem; color: var(--muted); }
+.doc-row .icon-btn {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  border-radius: var(--radius);
+  width: 2rem; height: 2rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.doc-row .icon-btn:hover { background: var(--surface); border-color: var(--line); color: var(--ink); }
+
+/* RDFa semantic spans get a subtle dotted underline in the editor only */
+.page [property], .page [typeof] {
+  border-bottom: 1px dotted var(--accent);
+}
+
 /* ---- Toast announcements ---- */
 .toast {
   position: fixed;

@@ -1,8 +1,12 @@
-# edot — a small, modular, accessible word processor
+# edot — a small, modular, accessible word processor & office-doc tool
 
 A browser word processor that runs entirely client-side. No server, no upload,
 no build step — open `edot.html` from a static host (it lives on GitHub Pages
-with the rest of this repo) and write. Your text never leaves the page.
+with the rest of this repo) and write. Your text never leaves your device.
+
+It aims at the job Google Docs / Office 365 do, minus the cloud: rich editing,
+real Office-format import/export, and a local document library — but private,
+offline, and dependency-free.
 
 **Live:** `magpie/edot/edot.html`
 
@@ -11,17 +15,27 @@ with the rest of this repo) and write. Your text never leaves the page.
 - **Rich text editing** — headings (H1–H3), bold/italic/underline/strikethrough,
   bulleted & numbered lists, block quotes, code blocks, links, indent/outdent,
   undo/redo, clear-formatting.
-- **Real file I/O, offline:**
-  - **Word `.docx`** — native OOXML read *and* write (no dependency).
-  - **Markdown** — bidirectional, CommonMark subset.
-  - **HTML** — standalone self-styled documents.
+- **Local document library** — multiple named documents stored on-device in
+  **IndexedDB** (localStorage fallback), with continuous autosave. **File ▸ My
+  documents** lists, opens, renames, duplicates, and deletes them. Nothing is
+  ever uploaded.
+- **Real file I/O, offline & dependency-free:**
+  - **Word `.docx`** — native OOXML read *and* write.
+  - **PDF** — native multi-page export (A4, base-14 fonts, wrapped text flow,
+    inline bold/italic/links, lists, quotes, code, page breaks). No backend.
+  - **HTML + RDFa** — standalone self-styled documents that declare common
+    RDFa prefixes/vocab and preserve any semantic markup you author.
+  - **CSS** — export the document stylesheet on its own.
+  - **Markdown** — bidirectional (CommonMark subset).
   - **Plain text.**
-- **High-fidelity I/O (optional)** — `.odt`, `.doc`, `.rtf` import and PDF/ODT/RTF
+- **Semantic authoring (RDFa)** — select text and tag it 🏷️ with a `property`
+  (and optional `typeof`); the meaning is preserved through editing and HTML
+  export. Distinguishes edot from a plain word processor.
+- **High-fidelity I/O (optional)** — `.odt`, `.doc`, `.rtf` import and ODT/RTF
   export via a pluggable **LibreOffice WASM** backend (see below).
-- **Autosave** to `localStorage` so a refresh never loses work.
 - **Accessibility first** — ARIA toolbar with roving tabindex, screen-reader
-  live announcements, full keyboard operation, skip link, honours
-  `prefers-color-scheme` and `prefers-reduced-motion`.
+  live announcements, full keyboard operation, native `<dialog>` modal, skip
+  link, honours `prefers-color-scheme` and `prefers-reduced-motion`.
 - **Mobile-first**, touch-friendly targets, responsive page.
 
 ## Keyboard
@@ -30,7 +44,9 @@ with the rest of this repo) and write. Your text never leaves the page.
 | --- | --- |
 | Bold / Italic / Underline | `Ctrl/⌘ + B / I / U` |
 | Undo / Redo | `Ctrl/⌘ + Z` / `Ctrl/⌘ + Shift + Z` (or `Ctrl/⌘ + Y`) |
-| Open file | `Ctrl/⌘ + O` (or drag a file onto the page) |
+| New document | `Ctrl/⌘ + N` (via menu) |
+| Open file from disk | `Ctrl/⌘ + O` (or drag a file onto the page) |
+| My documents (library) | `Ctrl/⌘ + Shift + O` |
 | Save / export | `Ctrl/⌘ + S` (last-used format) — pick a format in **File ▸ Save as** |
 | Move within toolbar | Arrow keys / `Home` / `End` |
 
@@ -50,11 +66,12 @@ js/
   commands.js          editing command registry (the only execCommand caller)
   document-model.js    canonical = sanitized HTML; normalize, plain-text, stats
   a11y.js              live-region announcer + transient toasts
-  storage.js           debounced localStorage autosave
+  library.js           local document store (IndexedDB, localStorage fallback)
   io.js                format registry + open/save orchestration
   io-docx.js           native OOXML .docx read/write
+  io-pdf.js            native multi-page PDF export (base-14 fonts)
   io-markdown.js       Markdown <-> document HTML
-  io-html.js           standalone HTML document import/export
+  io-html.js           standalone HTML+RDFa document I/O + CSS export
   zip.js               dependency-free ZIP (native CompressionStream)
   libreoffice-bridge.js  pluggable LibreOffice-WASM conversion bridge
 ```
@@ -72,12 +89,17 @@ js/
 - **`execCommand` is confined to `commands.js`.** It is deprecated but remains
   the only cross-browser contenteditable mutator with native undo integration.
   Isolating it there makes a future Selection/Range rewrite a one-file change.
+- **PDF without a renderer.** `io-pdf.js` emits PDF 1.4 directly using the 14
+  standard fonts (no embedding) and measures text with an offscreen `<canvas>`
+  for line breaking — so there is no PDF library and it works offline.
+- **Storage is real, not a slot.** `library.js` keeps every document in
+  IndexedDB; the current document autosaves continuously and survives reloads.
 
 ## LibreOffice WASM bridge
 
-The native path covers the structural core of `.docx`/Markdown/HTML/text
+The native path covers the structural core of `.docx`/PDF/Markdown/HTML/text
 offline. For **full fidelity** — tables, images, complex styles, and the
-`.doc`/`.odt`/`.rtf`/PDF formats — edot defers to real LibreOffice compiled to
+`.doc`/`.odt`/`.rtf` formats — edot defers to real LibreOffice compiled to
 WebAssembly (the [ZetaOffice / zetajs](https://zetaoffice.net) project).
 
 A full LibreOffice WASM build is hundreds of megabytes, so it is **not bundled**
@@ -106,15 +128,18 @@ native reader if conversion fails.
 
 ## Testing
 
-A headless smoke test boots the real app in Chromium and exercises the format
-round-trips, the ZIP layer, the sanitizer, and the toolbar wiring:
+A headless smoke test boots the real app in Chromium and exercises every format
+round-trip (docx, markdown, zip, RDFa), the PDF structure, the document library
+persistence across reloads, the sanitizer, and the toolbar wiring (33 checks):
 
 ```bash
-node magpie/edot/test-edot.mjs
+node magpie/edot/test-edot.mjs       # functional smoke test (33 checks)
+node magpie/edot/verify-pdf.mjs      # deep PDF structural validation + sample
 ```
 
-(Uses the environment's vendored Chromium at `/opt/pw-browsers/` via
-`playwright-core`.)
+(Both use the environment's vendored Chromium at `/opt/pw-browsers/` via
+`playwright-core`. `verify-pdf.mjs` writes `/tmp/edot-sample.pdf` and checks the
+xref offsets, trailer→catalog→pages chain, and content-stream lengths.)
 
 ## Limits / honest scope
 
@@ -122,6 +147,9 @@ node magpie/edot/test-edot.mjs
   underline/strike runs, ordered & unordered lists, block quotes, code, and
   hyperlinks. **Tables, images, footnotes, and complex styles need the
   LibreOffice WASM backend.**
+- PDF export uses the base-14 fonts and WinAnsi/Latin-1 text; characters outside
+  that range (e.g. CJK, emoji) are exported as `?`. Inline styling is per-run
+  (bold/italic/links); it does not embed images or tables.
 - Markdown is a CommonMark *subset* (no tables/footnotes/nested lists yet).
-- One document at a time; autosave keeps a single working slot. Use
-  **Save as** for durable copies.
+- Editing is single-document at a time, but the library holds as many documents
+  as you like; switch via **File ▸ My documents**.

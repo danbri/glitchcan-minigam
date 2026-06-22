@@ -17,6 +17,15 @@ const ALLOWED_ATTR = {
   SPAN: [],   // span kept only as a transparent wrapper; attrs stripped
 };
 
+// RDFa Lite + Core attributes are preserved on *any* allowed element so
+// semantic markup survives editing, paste, and round-trips. (This is a
+// deliberate, document-meaningful exception to the otherwise strict
+// attribute allow-list — the wider project is RDF-centric.)
+const RDFA_ATTR = new Set([
+  'vocab', 'typeof', 'property', 'resource', 'about', 'prefix',
+  'content', 'datatype', 'rel', 'rev', 'inlist', 'src', 'href', 'lang',
+]);
+
 // Elements whose *contents* are dangerous or meaningless as document text —
 // remove them outright rather than unwrapping (which would leak script/CSS
 // source into the body as visible text).
@@ -38,10 +47,19 @@ function sanitizeNode(node, doc) {
         node.removeChild(child);
         continue;
       }
-      // Strip every attribute except the explicit allow-list.
+      // Strip every attribute except the explicit allow-list + RDFa.
       const keep = ALLOWED_ATTR[tag] || [];
       for (const attr of Array.from(child.attributes)) {
-        if (!keep.includes(attr.name.toLowerCase())) child.removeAttribute(attr.name);
+        const name = attr.name.toLowerCase();
+        if (keep.includes(name) || RDFA_ATTR.has(name)) {
+          // Defang any URL-bearing attribute carrying javascript:.
+          if ((name === 'href' || name === 'src' || name === 'resource' || name === 'about') &&
+              /^\s*javascript:/i.test(attr.value)) {
+            child.removeAttribute(attr.name);
+          }
+        } else {
+          child.removeAttribute(attr.name);
+        }
       }
       // Defang links: block javascript: and force safe rel on external.
       if (tag === 'A') {

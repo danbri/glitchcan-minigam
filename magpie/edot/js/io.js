@@ -5,8 +5,9 @@
 
 import { toPlainText, normalize } from './document-model.js';
 import { markdownToHtml, htmlToMarkdown } from './io-markdown.js';
-import { htmlToDocument, documentToHtml } from './io-html.js';
+import { htmlToDocument, documentToHtml, documentCss } from './io-html.js';
 import { htmlToDocx, docxToHtml } from './io-docx.js';
+import { htmlToPdf } from './io-pdf.js';
 import * as LO from './libreoffice-bridge.js';
 
 // Native handlers keyed by extension.
@@ -35,6 +36,18 @@ const NATIVE = {
     import: async (file) => docxToHtml(await file.arrayBuffer()),
     export: (html, title) => htmlToDocx(html, title), // returns Promise<Blob>
   },
+  pdf: {
+    label: 'PDF',
+    accept: '.pdf,application/pdf',
+    exportOnly: true,
+    export: (html, title) => htmlToPdf(html, title),
+  },
+  css: {
+    label: 'Stylesheet (.css)',
+    accept: '.css,text/css',
+    exportOnly: true,
+    export: () => new Blob([documentCss()], { type: 'text/css' }),
+  },
 };
 
 // Extensions handled only by LibreOffice WASM. Listed so the UI can offer
@@ -43,7 +56,6 @@ const WASM_FORMATS = {
   odt: { label: 'OpenDocument (.odt)', accept: '.odt' },
   doc: { label: 'Word 97–2003 (.doc)', accept: '.doc' },
   rtf: { label: 'Rich Text (.rtf)', accept: '.rtf' },
-  pdf: { label: 'PDF (export only)', accept: '.pdf' },
 };
 
 function escapeToHtml(text) {
@@ -57,7 +69,10 @@ export function extOf(filename) {
 }
 
 export function importAccept() {
-  const exts = [...Object.values(NATIVE), ...Object.values(WASM_FORMATS)].map((f) => f.accept);
+  const exts = [
+    ...Object.values(NATIVE).filter((f) => !f.exportOnly),
+    ...Object.values(WASM_FORMATS),
+  ].map((f) => f.accept);
   return exts.join(',');
 }
 
@@ -66,7 +81,6 @@ export function exportFormats() {
     ...Object.entries(NATIVE).map(([ext, f]) => ({ ext, label: f.label })),
     { ext: 'odt', label: WASM_FORMATS.odt.label, wasm: true },
     { ext: 'rtf', label: WASM_FORMATS.rtf.label, wasm: true },
-    { ext: 'pdf', label: WASM_FORMATS.pdf.label, wasm: true },
   ];
 }
 

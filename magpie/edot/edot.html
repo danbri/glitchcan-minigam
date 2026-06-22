@@ -23,7 +23,10 @@
           <span>New document</span><span class="hint">Ctrl/⌘N</span>
         </button>
         <button type="button" id="mi-open" class="menu-item" role="menuitem">
-          <span>Open…</span><span class="hint">Ctrl/⌘O</span>
+          <span>Open file…</span><span class="hint">Ctrl/⌘O</span>
+        </button>
+        <button type="button" id="mi-docs" class="menu-item" role="menuitem">
+          <span>My documents…</span><span class="hint">Ctrl/⌘⇧O</span>
         </button>
         <div class="menu-sep" role="separator"></div>
         <div id="export-list" role="group" aria-label="Save as"></div>
@@ -54,6 +57,19 @@
 
   <!-- Hidden native picker for File ▸ Open -->
   <input id="file-input" type="file" class="visually-hidden" aria-hidden="true" tabindex="-1">
+
+  <!-- Local document library -->
+  <dialog id="docs-dialog" class="dialog" aria-labelledby="docs-dialog-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="docs-dialog-title">My documents</h2>
+      <button type="submit" class="tbtn" aria-label="Close">✕</button>
+    </form>
+    <p id="docs-storage" class="dialog-note"></p>
+    <ul id="docs-list" class="docs-list"></ul>
+    <div class="dialog-foot">
+      <button type="button" id="docs-new" class="tbtn primary">＋ New document</button>
+    </div>
+  </dialog>
 
   <script type="module" src="js/edot-app.js"></script>
 </body>

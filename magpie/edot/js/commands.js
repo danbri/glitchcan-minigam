@@ -47,6 +47,34 @@ export function currentBlockFormat() {
   return 'p';
 }
 
+// Wrap the current selection in a semantic <span property="..."> (RDFa).
+// Distinguishes edot from plain word processors: the document carries
+// machine-readable meaning that survives HTML export.
+export function createSemantic(announce) {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+    announce && announce('Select text first, then tag it', { error: true });
+    return;
+  }
+  const prop = window.prompt('Semantic property (e.g. schema:name, foaf:nick, dc:date):', 'schema:name');
+  if (!prop) return;
+  const typeName = window.prompt('Optional type for this value (typeof, e.g. schema:Person) — leave blank for none:', '');
+  const range = sel.getRangeAt(0);
+  const span = document.createElement('span');
+  span.setAttribute('property', prop.trim());
+  if (typeName && typeName.trim()) span.setAttribute('typeof', typeName.trim());
+  try {
+    range.surroundContents(span);
+  } catch (_) {
+    // Selection crossed element boundaries: fall back to extract+wrap.
+    const frag = range.extractContents();
+    span.appendChild(frag);
+    range.insertNode(span);
+  }
+  sel.removeAllRanges();
+  announce && announce(`Tagged as ${prop.trim()}`);
+}
+
 export function createLink(announce) {
   const sel = window.getSelection();
   if (!sel || sel.isCollapsed) {

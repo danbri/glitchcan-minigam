@@ -4,13 +4,13 @@
 // (roving tabindex), arrow-key navigation between controls, Home/End jumps.
 // Toggle buttons expose aria-pressed reflecting live command state.
 
-import { COMMANDS, BLOCK_FORMATS, setBlockFormat, currentBlockFormat, createLink } from './commands.js';
+import { COMMANDS, BLOCK_FORMATS, setBlockFormat, currentBlockFormat, createLink, createSemantic } from './commands.js';
 
 const LAYOUT = [
   { type: 'block-select' },
   { type: 'group', items: ['bold', 'italic', 'underline', 'strike'] },
   { type: 'group', items: ['bulletList', 'numberList', 'outdent', 'indent'] },
-  { type: 'group', items: ['blockquote', 'code', 'link'] },
+  { type: 'group', items: ['blockquote', 'code', 'link', 'semantic'] },
   { type: 'group', items: ['undo', 'redo', 'removeFormat'] },
 ];
 
@@ -26,6 +26,7 @@ const ICONS = {
   blockquote: { glyph: '❝' },
   code: { glyph: '</>' },
   link: { glyph: '🔗', label: 'Insert link' },
+  semantic: { glyph: '🏷️', label: 'Tag with RDFa property' },
   undo: { glyph: '↶' },
   redo: { glyph: '↷' },
   removeFormat: { glyph: '⌫×' },
@@ -110,6 +111,7 @@ export class Toolbar {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       if (id === 'link') { createLink(this.announce); }
+      else if (id === 'semantic') { createSemantic(this.announce); }
       else if (cmd) { cmd.exec(); }
       this.editor.focus();
       this.editor.onChange();
