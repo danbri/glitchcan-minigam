@@ -419,9 +419,10 @@ class App {
   _ghErr(msg) { this.ghEl.error.textContent = msg; this.ghEl.error.hidden = false; this.ghEl.diffstat.textContent = ''; }
 
   _ghMessage(err) {
-    if (err.status === 401) return 'Token rejected (401). Check the token and its scopes.';
-    if (err.status === 403) return 'Forbidden (403) — the token lacks permission, or rate-limited.';
-    if (err.status === 404) return 'Not found (404) — check owner/repo/branch, or the token can’t see this repo.';
+    const gh = err.data && err.data.message ? ` — “${err.data.message}”` : '';
+    if (err.status === 401) return `Token rejected (401)${gh}. Check the token value.`;
+    if (err.status === 403) return `Forbidden (403): the token needs Repository permissions → Contents and Pull requests = “Read and write” on this repo${gh}`;
+    if (err.status === 404) return `Not found (404): check owner/repo/branch, or grant the token access to this repo${gh}`;
     if (err.status === 422) return `Could not create the change (422): ${err.data?.message || 'validation failed'}.`;
     if (err instanceof TypeError) return 'Network/CORS error reaching api.github.com.';
     return err.message || 'GitHub request failed';
