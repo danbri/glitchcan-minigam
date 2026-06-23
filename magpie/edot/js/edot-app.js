@@ -174,6 +174,7 @@ class App {
     mi('mi-close', () => this.closeDocument());
     mi('mi-find', () => this.findReplace.open(true));
     mi('mi-github', () => this.openGithubDialog());
+    mi('mi-data', () => { const w = window.open('data/data.html', '_blank', 'noopener'); if (!w) location.href = 'data/data.html'; });
 
     this.fileInput.accept = IO.importAccept();
     this.fileInput.addEventListener('change', () => {

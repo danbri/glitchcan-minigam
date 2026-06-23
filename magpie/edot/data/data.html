@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="edot data — a SQLite-WASM data layer with an Excel-like formula spreadsheet and Access-like SQL queries/views, all in the browser.">
+  <meta name="color-scheme" content="light dark">
+  <title>edot data — spreadsheet + database</title>
+  <link rel="stylesheet" href="data.css">
+  <style>
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    body { display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--d-bg); color: var(--d-ink); }
+    .app-header { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.75rem; background: var(--d-surface); border-bottom: 1px solid var(--d-line); flex: 0 0 auto; }
+    .app-header h1 { font-size: 1.05rem; margin: 0; }
+    .app-header .logo { color: var(--d-accent); }
+    .app-header a { color: var(--d-focus); font-size: 0.85rem; text-decoration: none; }
+    .app-header .spacer { flex: 1; }
+    main { flex: 1 1 auto; min-height: 0; }
+    edot-data { height: 100%; }
+    .boot { padding: 2rem; color: var(--d-muted); }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <h1><span class="logo">▦ edot data</span></h1>
+    <span class="spacer"></span>
+    <a href="../edot.html">← back to editor</a>
+  </header>
+  <main>
+    <edot-data><div class="boot">Loading SQLite…</div></edot-data>
+  </main>
+  <script type="module" src="data-workspace.js"></script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+/* data.css — styles for the edot data-layer web components.
+   Light-DOM custom elements share this sheet. */
+
+:root {
+  --d-bg: #f4f4f2; --d-surface: #fff; --d-ink: #1c1c1c; --d-muted: #5a5a5a;
+  --d-line: #d9d6cf; --d-accent: #8b4513; --d-accent-fg: #fff; --d-focus: #1a73e8;
+  --d-head: #efece6; --d-sel: rgba(26,115,232,0.14); --d-err: #b00020; --d-ok: #155724;
+  --d-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --d-bg: #1a1a1a; --d-surface: #242424; --d-ink: #ececec; --d-muted: #a8a8a8;
+    --d-line: #3a3a3a; --d-accent: #d2935a; --d-accent-fg: #1a1a1a; --d-head: #2c2c2c;
+    --d-sel: rgba(120,170,255,0.22);
+  }
+}
+
+edot-data, edot-grid, edot-sheet, edot-query { display: block; }
+
+/* ---- workspace shell ---- */
+.dw {
+  display: grid;
+  grid-template-columns: 15rem 1fr;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  min-height: 0;
+  background: var(--d-bg);
+  color: var(--d-ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.dw-toolbar {
+  grid-column: 1 / 3;
+  display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center;
+  padding: 0.4rem 0.6rem; background: var(--d-surface); border-bottom: 1px solid var(--d-line);
+}
+.dw-side {
+  border-right: 1px solid var(--d-line); background: var(--d-surface);
+  overflow: auto; padding: 0.4rem; min-height: 0;
+}
+.dw-main { overflow: auto; min-height: 0; padding: 0.5rem; display: flex; flex-direction: column; }
+.dw-side h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--d-muted); margin: 0.6rem 0 0.2rem; }
+.dw-item {
+  display: flex; align-items: center; gap: 0.35rem; width: 100%;
+  padding: 0.32em 0.4em; border: 1px solid transparent; border-radius: 5px;
+  background: transparent; color: var(--d-ink); font: inherit; text-align: left; cursor: pointer;
+}
+.dw-item:hover { background: var(--d-head); }
+.dw-item.active { background: var(--d-sel); border-color: var(--d-focus); }
+.dw-item .ic { width: 1.1em; text-align: center; }
+.dw-item .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dw-empty { color: var(--d-muted); font-size: 0.85rem; padding: 0.4rem; }
+
+.dbtn {
+  font: inherit; font-size: 0.85rem; padding: 0.35em 0.7em; border: 1px solid var(--d-line);
+  border-radius: 6px; background: var(--d-surface); color: var(--d-ink); cursor: pointer; white-space: nowrap;
+}
+.dbtn:hover { border-color: var(--d-focus); }
+.dbtn.primary { background: var(--d-accent); color: var(--d-accent-fg); border-color: var(--d-accent); }
+.dbtn:disabled { opacity: 0.5; cursor: not-allowed; }
+.dw-spacer { flex: 1; }
+.dw-status { font-size: 0.8rem; color: var(--d-muted); }
+.dw-status.err { color: var(--d-err); }
+
+/* ---- grid ---- */
+.grid-wrap { overflow: auto; border: 1px solid var(--d-line); border-radius: 6px; background: var(--d-surface); flex: 1; min-height: 8rem; }
+table.grid { border-collapse: collapse; font-size: 0.85rem; width: max-content; min-width: 100%; }
+table.grid th, table.grid td {
+  border: 1px solid var(--d-line); padding: 0.2em 0.45em; text-align: left;
+  white-space: nowrap; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; height: 1.7em;
+}
+table.grid thead th, table.grid .rowhead {
+  background: var(--d-head); position: sticky; top: 0; z-index: 1; font-weight: 600; color: var(--d-muted);
+}
+table.grid .rowhead { left: 0; z-index: 2; text-align: right; user-select: none; }
+table.grid thead th.corner { left: 0; z-index: 3; }
+table.grid td.active { outline: 2px solid var(--d-focus); outline-offset: -2px; }
+table.grid td.sel { background: var(--d-sel); }
+table.grid td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.grid td.err { color: var(--d-err); }
+table.grid td.formula-cell { background: rgba(139,69,19,0.05); }
+table.grid input.cell-input {
+  width: 100%; box-sizing: border-box; border: none; outline: none; font: inherit;
+  background: var(--d-surface); color: var(--d-ink); padding: 0;
+}
+
+/* ---- sheet ---- */
+.sheet-bar { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.35rem; }
+.sheet-bar .addr { font-family: var(--d-mono); min-width: 3rem; text-align: center; border: 1px solid var(--d-line); border-radius: 5px; padding: 0.25em 0.4em; background: var(--d-head); }
+.sheet-bar .fx { font-family: var(--d-mono); color: var(--d-muted); }
+.sheet-bar input.formula {
+  flex: 1; font-family: var(--d-mono); font-size: 0.85rem; padding: 0.3em 0.5em;
+  border: 1px solid var(--d-line); border-radius: 6px; background: var(--d-surface); color: var(--d-ink);
+}
+
+/* ---- query ---- */
+.q-editor {
+  width: 100%; box-sizing: border-box; min-height: 5rem; resize: vertical;
+  font-family: var(--d-mono); font-size: 0.85rem; padding: 0.5em; border: 1px solid var(--d-line);
+  border-radius: 6px; background: var(--d-surface); color: var(--d-ink); margin-bottom: 0.4rem;
+}
+.q-bar { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.4rem; }
+
+.hint { color: var(--d-muted); font-size: 0.8rem; }
