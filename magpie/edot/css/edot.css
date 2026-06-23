@@ -214,6 +214,15 @@ body {
 }
 .hold-tip.show { opacity: 0.97; }
 @media (prefers-reduced-motion: reduce) { .hold-tip { transition: none; } }
+
+/* The held control grows and lifts so it's obvious which one you're peeking
+   (the label floats clear, above and clamped on-screen — see longpress.js). */
+.holding {
+  transform: scale(1.45); position: relative; z-index: 60;
+  background: var(--surface); border-color: var(--accent);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.32); transition: transform 0.1s ease;
+}
+@media (prefers-reduced-motion: reduce) { .holding { transition: none; } }
 @media (pointer: coarse) { .tbtn .tglyph { font-size: 1.2rem; } }
 
 select.tbtn {

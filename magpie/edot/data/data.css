@@ -71,6 +71,10 @@ table.grid th, table.grid td {
 table.grid thead th, table.grid .rowhead {
   background: var(--d-head); position: sticky; top: 0; z-index: 1; font-weight: 600; color: var(--d-muted);
 }
+table.grid thead th.sortable { cursor: pointer; user-select: none; }
+table.grid thead th.sortable:hover { background: var(--d-sel); color: var(--d-ink); }
+table.grid thead th.sorted { color: var(--d-accent); }
+table.grid thead th .th-sort { font-size: 0.8em; }
 table.grid .rowhead { left: 0; z-index: 2; text-align: right; user-select: none; }
 table.grid thead th.corner { left: 0; z-index: 3; }
 table.grid td.active { outline: 2px solid var(--d-focus); outline-offset: -2px; }
@@ -113,6 +117,14 @@ table.grid input.cell-input {
 }
 .hold-tip.show { opacity: 0.97; }
 @media (prefers-reduced-motion: reduce) { .hold-tip { transition: none; } }
+
+/* Held control grows and lifts (label floats clear, above + on-screen). */
+.holding {
+  transform: scale(1.35); position: relative; z-index: 60;
+  border-color: var(--d-accent); box-shadow: 0 6px 18px rgba(0,0,0,0.32);
+  transition: transform 0.1s ease;
+}
+@media (prefers-reduced-motion: reduce) { .holding { transition: none; } }
 
 /* Touch + convergence with the editor: bigger tap targets, no zoom delay. */
 .dbtn, .dw-item, .q-editor, .find-input, input, select, button { touch-action: manipulation; }

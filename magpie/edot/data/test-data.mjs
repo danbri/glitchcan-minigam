@@ -160,6 +160,31 @@ try {
     return fp === 'b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9' && captured === 'probe.nq';
   }));
 
+  // 4g. Datasheet sort: click a header to sort (asc/desc); edits after sorting
+  // still write back to the right underlying row (order map, not raw index).
+  const sort = await page.evaluate(async () => {
+    const d = document.querySelector('edot-data');
+    d.engine.createTableFromColumns('rt_sort', ['city', 'pop'], [['Bristol', 460], ['Bath', 94], ['Wells', 12]]);
+    d.openTable('rt_sort');
+    await new Promise((r) => setTimeout(r, 30));
+    const grid = d._main.querySelector('edot-grid');
+    const popHeader = () => grid.querySelector('thead th[data-c="1"]');
+    const firstCity = () => grid.querySelector('tbody tr td[data-c="0"]').textContent;
+    popHeader().click();                         // sort by pop ascending
+    const asc = firstCity();
+    popHeader().click();                         // sort by pop descending
+    const desc = firstCity();
+    // Top visible row is now Bristol (pop 460). Edit it to 999 and confirm the
+    // write lands on Bristol — not on whatever row index 0 used to be.
+    const topPop = grid.querySelector('tbody tr td[data-c="1"]');
+    grid._setActive(+topPop.dataset.r, 1); grid._startEdit('999'); grid._commit();
+    await new Promise((r) => setTimeout(r, 30));
+    return { asc, desc, bristol: d.engine.query("SELECT pop FROM rt_sort WHERE city='Bristol'").rows[0][0] };
+  });
+  ok('grid sorts ascending on header click', sort.asc === 'Wells');
+  ok('grid sorts descending on second click', sort.desc === 'Bristol');
+  ok('edit after sort writes back to the correct row', sort.bristol === 999);
+
   // 5. Persistence: DB exports to bytes.
   ok('database exports to bytes', await page.evaluate(() => document.querySelector('edot-data').engine.exportDb().length > 0));
 

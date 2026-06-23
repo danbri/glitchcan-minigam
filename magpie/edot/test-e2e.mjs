@@ -172,7 +172,15 @@ try {
     const t = document.querySelector('.hold-tip.show');
     return !!t && /Bold/.test(t.textContent);
   }));
+  ok('held control grows (holding class)', await page.evaluate(() =>
+    document.querySelector('button[data-cmd="bold"]').classList.contains('holding')));
+  ok('label bubble stays on-screen', await page.evaluate(() => {
+    const r = document.querySelector('.hold-tip.show').getBoundingClientRect();
+    return r.left >= 0 && r.right <= window.innerWidth && r.top >= 0;
+  }));
   await page.evaluate(() => document.querySelector('button[data-cmd="bold"]').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })));
+  ok('grow clears on release', await page.evaluate(() =>
+    !document.querySelector('button[data-cmd="bold"]').classList.contains('holding')));
   await page.click('.labels-toggle');
   ok('Labels mode shows text under icons', await page.evaluate(() => {
     const tl = document.querySelector('button[data-cmd="bold"] .tlabel');
