@@ -16,7 +16,10 @@
   --radius: 6px;
   --page-max: 46rem;
   --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-doc: Georgia, 'Times New Roman', serif;
+  /* Document face + math/symbol fallbacks so logic glyphs (∀ ∃ ⊃ ¬ ∧ ∨ → ↔)
+     render even when the primary serif lacks them. */
+  --font-doc: Georgia, 'Times New Roman', 'Cambria Math', 'STIX Two Math',
+    'Segoe UI Symbol', 'Noto Sans Math', 'Noto Sans Symbols2', serif;
 }
 
 @media (prefers-color-scheme: dark) {
