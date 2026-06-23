@@ -17,7 +17,7 @@ import * as LO from './libreoffice-bridge.js';
 
 // Bump on each meaningful deploy. Shown in the footer so a stale cached build
 // is obvious (the stamp reflects the JS your browser actually loaded).
-const BUILD = '2026-06-23.f';
+const BUILD = '2026-06-23.g';
 
 const GH_TOKEN_KEY = 'edot.gh.token';
 const GH_LOGIN_KEY = 'edot.gh.login';     // cached @login for the connected token
@@ -221,7 +221,16 @@ class App {
     mi('mi-find', () => this.findReplace.open(true));
     mi('mi-source', () => this.openSourceDialog());
     mi('mi-github', () => this.openGithubDialog());
-    const openApp = (path) => { const w = window.open(path, '_blank', 'noopener'); if (!w) location.href = path; else this.attention.arm('Back to edot', { once: true }); };
+    // Open a sibling suite app. Use a real anchor click (target=_blank) — NOT
+    // window.open(...,'noopener'), which returns null and made the old fallback
+    // also navigate THIS tab via location.href; a Back could then reload a stale
+    // edot and drop the Calendar/Maps menu items. An anchor leaves this tab put.
+    const openApp = (path) => {
+      const a = document.createElement('a');
+      a.href = path; a.target = '_blank'; a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); a.remove();
+      this.attention.arm('Back to edot', { once: true });
+    };
     mi('mi-data', () => openApp('data/data.html'));
     mi('mi-calendar', () => openApp('calendar/calendar.html'));
     mi('mi-maps', () => openApp('maps/maps.html'));
