@@ -101,3 +101,12 @@ table.grid input.cell-input {
 .q-bar { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.4rem; }
 
 .hint { color: var(--d-muted); font-size: 0.8rem; }
+
+/* ---- cross-tab "sent to editor" toast ---- */
+.dw-toast {
+  position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%);
+  background: var(--d-ink); color: var(--d-bg); padding: 0.6em 1em; border-radius: 6px;
+  font-size: 0.85rem; max-width: 90vw; opacity: 0; pointer-events: none; transition: opacity 0.25s; z-index: 50;
+}
+.dw-toast.show { opacity: 0.96; }
+@media (prefers-reduced-motion: reduce) { .dw-toast { transition: none; } }

@@ -38,6 +38,7 @@ This is the point — the two halves talk to each other:
 | **sheet → table** | **Save as table** — the computed values become a SQLite table, now queryable in SQL. |
 | query → sheet | **Send to sheet** — drop a result set into a new spreadsheet. |
 | **cell → SQL** | `=SQL("SELECT …")` in any formula pulls a scalar straight from the relational layer. |
+| **table/result → document** | **→ Editor** sends a table, sheet, or query result into an open edot document (as an HTML table) — live via a BroadcastChannel, or picked up on next open via localStorage. |
 
 Sheets live *inside* the same database (a `__edot_sheets` meta table), so they
 persist and round-trip with everything else. Export/import the whole workspace

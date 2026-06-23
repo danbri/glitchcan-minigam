@@ -150,6 +150,18 @@ try {
   ok('github rejects binary save-back', await page.isVisible('#gh-error'));
   await page.keyboard.press('Escape');
 
+  // Data workspace handoff: a table sent from the data app lands in the doc.
+  await page.evaluate(() => localStorage.setItem('edot.handoff', JSON.stringify({
+    type: 'insert', title: 'Imported data', at: Date.now(),
+    html: '<table><tr><th>a</th><th>b</th></tr><tr><td>1</td><td>2</td></tr></table>',
+  })));
+  await page.reload();
+  await page.waitForFunction(() => !!window.__edot && !!window.__edot.doc);
+  await page.waitForTimeout(200);
+  ok('data handoff inserts a table into the doc', await page.evaluate(() =>
+    /<table>/.test(document.getElementById('editor').innerHTML) && /Imported data/.test(document.getElementById('editor').textContent)));
+  ok('handoff is consumed (cleared)', await page.evaluate(() => !localStorage.getItem('edot.handoff')));
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
 } finally { await b.close(); server.close(); }

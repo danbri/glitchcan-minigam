@@ -73,6 +73,7 @@ export class EdotData extends HTMLElement {
     dbfile.addEventListener('change', () => { if (dbfile.files[0]) this.importDbFile(dbfile.files[0]); dbfile.value = ''; });
     this.addEventListener('views-changed', () => this.refresh());
     this.addEventListener('to-sheet', (e) => this.sheetFromResult(e.detail));
+    this.addEventListener('to-editor', (e) => this.sendToEditor(e.detail.columns, e.detail.rows, 'Query result'));
   }
 
   _btn(label, fn, cls) { const b = document.createElement('button'); b.type = 'button'; b.className = 'dbtn' + (cls ? ` ${cls}` : ''); b.textContent = label; b.addEventListener('click', fn); return b; }
@@ -119,12 +120,16 @@ export class EdotData extends HTMLElement {
     this.active = { kind: 'table', name };
     const data = this.engine.tableRows(name, { limit: 2000 });
     this._main.innerHTML = '';
+    const common = [
+      this._btn('▦ƒ Open as sheet', () => this.tableToSheet(name)),
+      this._btn('→ Editor', () => this.sendToEditor(data.columns, data.rows, name)),
+      this._btn('⬇ CSV', () => this.downloadCsv(name)),
+    ];
     this._main.appendChild(this._head(name, data.editable ? [
       this._btn('＋ Row', () => { this.engine.insertEmptyRow(name); this.openTable(name); }),
       this._btn('✕ Row', () => this._deleteActiveRow(name)),
-      this._btn('▦ƒ Open as sheet', () => this.tableToSheet(name)),
-      this._btn('⬇ CSV', () => this.downloadCsv(name)),
-    ] : [this._btn('▦ƒ Open as sheet', () => this.tableToSheet(name)), this._btn('⬇ CSV', () => this.downloadCsv(name))]));
+      ...common,
+    ] : common));
     const grid = document.createElement('edot-grid');
     this._main.appendChild(grid);
     grid.setData({ columns: data.columns, rows: data.rows, editable: data.editable });
@@ -152,6 +157,7 @@ export class EdotData extends HTMLElement {
     this._main.innerHTML = '';
     this._main.appendChild(this._head(name, [
       this._btn('▤ Save as table', () => this.sheetToTable(name)),
+      this._btn('→ Editor', () => { const t = this._activeSheet.toTable({ headerRow: true }); this.sendToEditor(t.columns, t.rows, name); }),
     ], 'Spreadsheet — type values or =formulas (try =SUM(A1:A3) or =SQL("SELECT count(*) FROM …"))'));
     const sheet = document.createElement('edot-sheet');
     this._main.appendChild(sheet);
@@ -254,6 +260,24 @@ export class EdotData extends HTMLElement {
     if (q) { q.setSql(CHINOOK_DEMO); q.run(); }
   }
 
+  // ---- send to the edot editor (cross-tab) ----
+  sendToEditor(columns, rows, title) {
+    const html = toHtmlTable(columns, rows);
+    const payload = { type: 'insert', title, html, at: Date.now() };
+    try { localStorage.setItem('edot.handoff', JSON.stringify(payload)); } catch { /* quota */ }
+    let live = false;
+    try { const bc = new BroadcastChannel('edot'); bc.postMessage(payload); bc.close(); live = true; } catch { /* */ }
+    this._toast(live ? 'Sent to the editor — switch to (or open) the editor tab to see it.' : 'Saved for the editor.');
+  }
+
+  _toast(msg) {
+    let t = this.querySelector('.dw-toast');
+    if (!t) { t = document.createElement('div'); t.className = 'dw-toast'; this.appendChild(t); }
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
   // ---- export/import db ----
   exportDb() { download(new Blob([this.engine.exportDb()], { type: 'application/octet-stream' }), 'edot-data.sqlite'); }
   async importDbFile(file) { await this.engine.importDb(await file.arrayBuffer()); this.refresh(); this.openQuery(); }
@@ -274,6 +298,12 @@ export class EdotData extends HTMLElement {
 
 function dedupe(cols) {
   const seen = new Map(); return cols.map((c) => { let n = c; while (seen.has(n)) n = `${c}_${seen.get(c) + 1}`; seen.set(c, (seen.get(c) || 1) + 1); seen.set(n, 1); return n; });
+}
+function toHtmlTable(columns, rows) {
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  let h = '<table><tr>' + columns.map((c) => `<th>${esc(c)}</th>`).join('') + '</tr>';
+  for (const r of rows) h += '<tr>' + r.map((v) => `<td>${esc(v)}</td>`).join('') + '</tr>';
+  return h + '</table>';
 }
 function spacer() { const s = document.createElement('span'); s.className = 'dw-spacer'; return s; }
 function download(blob, filename) {

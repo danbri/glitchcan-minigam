@@ -22,8 +22,9 @@ export class EdotQuery extends HTMLElement {
     const run = btn('▶ Run', 'primary');
     const saveView = btn('Save as view');
     const toSheet = btn('Send to sheet');
+    const toEditor = btn('→ Editor');
     const status = document.createElement('span'); status.className = 'dw-status';
-    bar.append(run, saveView, toSheet, status);
+    bar.append(run, saveView, toSheet, toEditor, status);
     const grid = document.createElement('edot-grid');
     this.append(ed, bar, grid);
     this._editor = ed; this._grid = grid; this._status = status;
@@ -32,6 +33,7 @@ export class EdotQuery extends HTMLElement {
     ed.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); this.run(); } });
     saveView.addEventListener('click', () => this._saveView());
     toSheet.addEventListener('click', () => this._toSheet());
+    toEditor.addEventListener('click', () => { if (!this._last) this.run(); if (this._last) this.dispatchEvent(new CustomEvent('to-editor', { bubbles: true, detail: this._last })); });
   }
 
   run() {
