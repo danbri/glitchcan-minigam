@@ -1,0 +1,10 @@
+{
+  "_comment": "Manifest of research documents shown under File ▸ Open ▸ Research. Add an entry (title, file, note) and drop the .md alongside — nothing else to change.",
+  "docs": [
+    {
+      "title": "UI Extensibility, Complexity & Modularity — a deep-dive",
+      "file": "ui-architecture-deepdive.md",
+      "note": "How office suites, OS & component architectures handle extensibility — applied to edot. Cited."
+    }
+  ]
+}

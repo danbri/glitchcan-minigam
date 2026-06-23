@@ -116,10 +116,19 @@ try {
   }));
   await page.keyboard.press('Escape');
 
-  // Examples dialog lists and loads the Morton book (same-origin docx import).
-  await page.click('#menu-button'); await page.click('#mi-examples'); await page.waitForTimeout(150);
-  ok('examples dialog lists the Morton book', await page.isVisible('text=Searching for Logic'));
-  await page.click('.doc-open:has-text("Searching for Logic")');
+  // Open dialog: a tree of Examples + Research. Examples is expanded by default.
+  await page.click('#menu-button'); await page.click('#mi-open'); await page.waitForTimeout(200);
+  ok('Open dialog lists the Morton example under Examples', await page.isVisible('.tree-leaf:has-text("Searching for Logic")'));
+  ok('Open dialog has a Research folder', await page.isVisible('.tree-folder:has-text("Research")'));
+  // The Research folder is collapsed; clicking it reveals the deep-dive report.
+  ok('Research folder is collapsed initially', await page.evaluate(() => {
+    const f = [...document.querySelectorAll('.tree-folder')].find((b) => /Research/.test(b.textContent));
+    return f && f.getAttribute('aria-expanded') === 'false';
+  }));
+  await page.click('.tree-folder:has-text("Research")'); await page.waitForTimeout(120);
+  ok('Research folder expands to the deep-dive report', await page.isVisible('.tree-leaf:has-text("deep-dive")'));
+  // Load the Morton example from the Examples folder.
+  await page.click('.tree-leaf:has-text("Searching for Logic")');
   await page.waitForFunction(() => /Searching for Logic|searching for logic/i.test(document.getElementById('editor').textContent), null, { timeout: 20000 });
   ok('example loaded with tables', await page.evaluate(() => document.querySelectorAll('#editor table').length > 5));
   ok('example title set', /logic/i.test(await page.inputValue('#doc-title')));
@@ -129,8 +138,9 @@ try {
   ok('close yields an empty document', (await page.textContent('#stat-words')).startsWith('0'));
   ok('close titles it Untitled', /Untitled/.test(await page.inputValue('#doc-title')));
 
-  // Open-from-URL dialog: opens and validates bad input.
-  await page.click('#menu-button'); await page.click('#mi-url'); await page.waitForTimeout(150);
+  // Open-from-URL: reached via Open… ▸ "From a URL…"; validates bad input.
+  await page.click('#menu-button'); await page.click('#mi-open'); await page.waitForTimeout(150);
+  await page.click('#open-from-url'); await page.waitForTimeout(150);
   ok('url dialog opens', await page.isVisible('#url-input'));
   await page.fill('#url-input', 'not a url');
   await page.click('#url-open'); await page.waitForTimeout(100);
