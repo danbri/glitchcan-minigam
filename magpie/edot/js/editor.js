@@ -55,6 +55,21 @@ export class Editor {
     if (this._onSelectionChange) document.removeEventListener('selectionchange', this._onSelectionChange);
   }
 
+  // Insert sanitized HTML at the caret (if it's inside the editor) or append
+  // to the end. Used to drop tables/query results in from the data workspace.
+  insertHtml(html) {
+    const clean = sanitizeHtml(html);
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount && this.el.contains(sel.anchorNode)) {
+      this.el.focus();
+      document.execCommand('insertHTML', false, clean);
+    } else {
+      this.el.insertAdjacentHTML('beforeend', clean);
+    }
+    this._updateEmpty();
+    this.onChange();
+  }
+
   // Focus and drop the caret at the very end. Used when a tap lands on the
   // page margin or empty area — on mobile this is what actually raises the
   // on-screen keyboard, since it runs inside the tap gesture.

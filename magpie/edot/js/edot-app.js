@@ -57,7 +57,34 @@ class App {
     this._wireGlobalKeys();
     this._wireDragDrop();
     this._reflectBackend();
+    this._wireDataHandoff();
     this._boot();
+  }
+
+  // Receive tables / query results sent from the data workspace. A live editor
+  // tab gets them over a BroadcastChannel; a cold start picks them up from
+  // localStorage on boot (see _consumeHandoff).
+  _wireDataHandoff() {
+    try {
+      this._bc = new BroadcastChannel('edot');
+      this._on(this._bc, 'message', (e) => {
+        if (e && e.data && e.data.type === 'insert' && e.data.html) {
+          this._insertHandoff(e.data);
+          try { localStorage.removeItem('edot.handoff'); } catch { /* */ }
+        }
+      });
+    } catch { /* no BroadcastChannel */ }
+  }
+
+  _consumeHandoff() {
+    let h = null;
+    try { h = JSON.parse(localStorage.getItem('edot.handoff') || 'null'); localStorage.removeItem('edot.handoff'); } catch { /* */ }
+    if (h && h.html && (!h.at || Date.now() - h.at < 30 * 60000)) this._insertHandoff(h);
+  }
+
+  _insertHandoff({ title, html }) {
+    this.editor.insertHtml((title ? `<h3>${esc(title)}</h3>` : '') + html);
+    this.announce('Inserted from the data workspace');
   }
 
   // Register a global listener and remember how to remove it (for destroy()).
@@ -72,6 +99,7 @@ class App {
     this._cleanup.forEach((off) => { try { off(); } catch { /* ignore */ } });
     this._cleanup = [];
     clearTimeout(this._saveTimer);
+    try { this._bc?.close(); } catch { /* */ }
     this.findReplace?.destroy?.();
     this.announcer?.destroy?.();
     this.editor?.destroy?.();
@@ -93,6 +121,7 @@ class App {
     if (!doc) doc = await this.library.createDoc('Welcome to edot', WELCOME);
 
     this._loadDoc(doc, { announce: false });
+    this._consumeHandoff();
     this.announce('Document ready');
   }
 

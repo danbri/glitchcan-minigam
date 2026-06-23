@@ -105,6 +105,14 @@ try {
   ok('Chinook sidebar shows the tables', await page.evaluate(() =>
     !![...document.querySelectorAll('.dw-item .nm')].find((e) => e.textContent === 'Track')));
 
+  // 4c. Send to editor writes an HTML-table handoff for the editor to pick up.
+  const handoff = await page.evaluate(() => {
+    const d = document.querySelector('edot-data');
+    d.sendToEditor(['x', 'y'], [[1, 2], [3, 4]], 'My table');
+    return JSON.parse(localStorage.getItem('edot.handoff'));
+  });
+  ok('sendToEditor writes an HTML-table handoff', handoff && handoff.type === 'insert' && handoff.title === 'My table' && /<table>.*<td>1<\/td>/.test(handoff.html));
+
   // 5. Persistence: DB exports to bytes.
   ok('database exports to bytes', await page.evaluate(() => document.querySelector('edot-data').engine.exportDb().length > 0));
 
