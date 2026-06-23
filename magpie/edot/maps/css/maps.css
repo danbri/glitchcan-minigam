@@ -1,0 +1,154 @@
+/* maps.css — styles for the edot maps viewer web component.
+   Light-DOM custom element shares this sheet (the edot convention). Mobile-first,
+   coarse-pointer sized, dark-mode aware, prefers-reduced-motion respected.
+   Mirrors the token palette of ../../data/data.css (m- prefix). */
+
+:root {
+  --m-bg: #f4f4f2; --m-surface: #fff; --m-ink: #1c1c1c; --m-muted: #5a5a5a;
+  --m-line: #d9d6cf; --m-accent: #8b4513; --m-accent-fg: #fff; --m-focus: #1a73e8;
+  --m-head: #efece6; --m-sel: rgba(26,115,232,0.14); --m-err: #b00020;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --m-bg: #1a1a1a; --m-surface: #242424; --m-ink: #ececec; --m-muted: #a8a8a8;
+    --m-line: #3a3a3a; --m-accent: #d2935a; --m-accent-fg: #1a1a1a; --m-head: #2c2c2c;
+    --m-sel: rgba(120,170,255,0.22);
+  }
+}
+
+edot-maps { display: block; height: 100%; }
+
+/* ---- shell: toolbar on top, sidebar + map below ---- */
+.mp {
+  display: grid;
+  grid-template-columns: 18rem 1fr;
+  grid-template-rows: auto 1fr;
+  height: 100%; min-height: 0;
+  background: var(--m-bg); color: var(--m-ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.mp-toolbar {
+  grid-column: 1 / -1;
+  display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center;
+  padding: 0.4rem 0.6rem; background: var(--m-surface); border-bottom: 1px solid var(--m-line);
+}
+.mp-side {
+  grid-row: 2; grid-column: 1;
+  border-right: 1px solid var(--m-line); background: var(--m-surface);
+  overflow: auto; padding: 0.5rem; min-height: 0; display: flex; flex-direction: column; gap: 0.5rem;
+}
+.mp-main { grid-row: 2; grid-column: 2; position: relative; min-height: 0; display: flex; flex-direction: column; }
+.mp-map { position: relative; flex: 1; min-height: 0; }
+.mp-map .maplibregl-map { position: absolute; inset: 0; }
+
+/* ---- buttons / inputs (shared with the edot look) ---- */
+.mbtn {
+  font: inherit; font-size: 0.85rem; padding: 0.4em 0.7em; border: 1px solid var(--m-line);
+  border-radius: 6px; background: var(--m-surface); color: var(--m-ink); cursor: pointer; white-space: nowrap;
+}
+.mbtn:hover { border-color: var(--m-focus); }
+.mbtn:focus-visible { outline: 2px solid var(--m-focus); outline-offset: 1px; }
+.mbtn.primary { background: var(--m-accent); color: var(--m-accent-fg); border-color: var(--m-accent); }
+.mbtn[aria-pressed="false"] { opacity: 0.7; }
+
+.mp-select {
+  font: inherit; font-size: 0.85rem; padding: 0.4em 0.5em; border: 1px solid var(--m-line);
+  border-radius: 6px; background: var(--m-surface); color: var(--m-ink);
+}
+
+/* ---- search ---- */
+.mp-search { display: flex; gap: 0.25rem; align-items: center; flex: 1 1 12rem; min-width: 8rem; }
+.mp-search-input {
+  flex: 1; min-width: 0; font: inherit; font-size: 0.9rem; padding: 0.4em 0.6em;
+  border: 1px solid var(--m-line); border-radius: 6px; background: var(--m-surface); color: var(--m-ink);
+}
+.mp-search-input:focus-visible { outline: 2px solid var(--m-focus); outline-offset: 1px; }
+
+.mp-results {
+  list-style: none; margin: 0; padding: 0.25rem; position: absolute; z-index: 30;
+  top: 0.25rem; left: 0.5rem; right: 0.5rem; max-width: 30rem;
+  background: var(--m-surface); border: 1px solid var(--m-line); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25); max-height: 50vh; overflow: auto;
+}
+.mp-result, .mp-result-msg {
+  padding: 0.5em 0.6em; border-radius: 6px; cursor: pointer; font-size: 0.88rem; line-height: 1.3;
+}
+.mp-result:hover, .mp-result:focus-visible { background: var(--m-sel); outline: none; }
+.mp-result-msg { color: var(--m-muted); cursor: default; }
+
+/* ---- directions ---- */
+.mp-directions {
+  display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center;
+  padding: 0.4rem 0.5rem; background: var(--m-head); border-bottom: 1px solid var(--m-line);
+}
+.mp-directions input {
+  font: inherit; font-size: 0.85rem; padding: 0.4em 0.6em; flex: 1 1 9rem; min-width: 7rem;
+  border: 1px solid var(--m-line); border-radius: 6px; background: var(--m-surface); color: var(--m-ink);
+}
+.mp-dir-summary { font-size: 0.85rem; color: var(--m-muted); font-variant-numeric: tabular-nums; }
+
+/* ---- saved-places sidebar ---- */
+.mp-side-head h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--m-muted); margin: 0.2rem 0; }
+.mp-io { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.mp-place-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+.mp-place { display: flex; align-items: center; gap: 0.4rem; }
+.mp-dot { width: 0.8em; height: 0.8em; border-radius: 50%; flex: 0 0 auto; box-shadow: 0 0 0 1px rgba(0,0,0,0.2); }
+.mp-place-go {
+  flex: 1; text-align: left; font: inherit; background: transparent; border: 1px solid transparent;
+  border-radius: 6px; padding: 0.4em 0.5em; color: var(--m-ink); cursor: pointer; display: flex; flex-direction: column; min-width: 0;
+}
+.mp-place-go:hover { background: var(--m-head); }
+.mp-place-go:focus-visible { outline: 2px solid var(--m-focus); outline-offset: -2px; }
+.mp-place-name { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-place-note { font-size: 0.78rem; color: var(--m-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-place-del { border-color: transparent; background: transparent; padding: 0.3em 0.45em; }
+.mp-place-del:hover { border-color: var(--m-err); color: var(--m-err); }
+.mp-empty { color: var(--m-muted); font-size: 0.85rem; padding: 0.4rem; line-height: 1.4; }
+
+/* ---- map markers + popups (HTML markers, themable) ---- */
+.mp-pin {
+  width: 1.1rem; height: 1.1rem; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  background: var(--m-accent); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.4); cursor: pointer;
+}
+.mp-pin-search { background: var(--m-focus); }
+.mp-pop { font: inherit; min-width: 9rem; }
+.mp-pop strong { display: block; margin-bottom: 0.2rem; }
+.mp-pop-note { font-size: 0.85rem; color: var(--m-muted); margin-bottom: 0.2rem; }
+.mp-pop-coord { font-size: 0.78rem; color: var(--m-muted); font-variant-numeric: tabular-nums; margin-bottom: 0.4rem; }
+.mp-pop-save { width: 100%; }
+
+/* ---- notice overlay (GL unavailable, geolocation denied, etc.) ---- */
+.mp-notice {
+  position: absolute; z-index: 20; left: 50%; top: 1rem; transform: translateX(-50%);
+  background: var(--m-ink); color: var(--m-bg); padding: 0.6em 1em; border-radius: 8px;
+  font-size: 0.85rem; max-width: 90%; text-align: center; box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+
+/* ---- touch + reduced motion ---- */
+.mbtn, .mp-place-go, input, select, button { touch-action: manipulation; }
+@media (pointer: coarse) {
+  .mbtn { padding: 0.6em 0.85em; font-size: 0.92rem; }
+  .mp-place-go { padding: 0.6em 0.55em; }
+  .mp-place-del { padding: 0.5em 0.6em; }
+}
+
+/* ---- mobile: sidebar becomes a slide-in drawer (matches data.css) ---- */
+.mp-menu-btn { display: none; }
+@media (max-width: 44rem) {
+  .mp { grid-template-columns: 1fr; }
+  .mp-main { grid-column: 1; }
+  .mp-menu-btn { display: inline-flex; }
+  .mp-side {
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 40;
+    width: min(82vw, 20rem); grid-column: 1; grid-row: 1 / -1;
+    transform: translateX(-100%); transition: transform 0.2s ease;
+    box-shadow: 2px 0 18px rgba(0,0,0,0.3);
+  }
+  .mp.side-open .mp-side { transform: none; }
+  .mp.side-open::after { content: ''; position: fixed; inset: 0; background: rgba(0,0,0,0.38); z-index: 39; }
+  .mp-toolbar { position: sticky; top: 0; z-index: 5; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mp-side { transition: none; }
+  .maplibregl-map * { transition: none !important; }
+}
