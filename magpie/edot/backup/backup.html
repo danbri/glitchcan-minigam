@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="edot encrypted backup — client-side, passphrase-encrypted backup &amp; restore of your local data to GitHub, S3, WebDAV, or a Solid Pod. ALPHA.">
+  <meta name="color-scheme" content="light dark">
+  <title>edot — encrypted backup (ALPHA)</title>
+  <!-- Shared edot variables/components (dark mode, focus rings, etc.) -->
+  <link rel="stylesheet" href="../css/edot.css">
+  <link rel="stylesheet" href="css/backup.css">
+  <style>
+    html, body { height: auto; overflow: auto; }
+    body { display: block; }
+    .app-header { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.9rem; }
+    .app-header h1 { font-size: 1.05rem; margin: 0; }
+    .app-header .logo { color: var(--accent); }
+    .app-header .spacer { flex: 1; }
+    .app-header a { color: var(--focus); font-size: 0.85rem; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to backup</a>
+  <header class="app-header">
+    <h1><span class="logo">🔐 edot backup</span></h1>
+    <span class="spacer"></span>
+    <a href="../edot.html">← back to editor</a>
+  </header>
+
+  <main id="main">
+    <edot-backup></edot-backup>
+  </main>
+
+  <script type="module">
+    import { EdotBackup } from './js/backup-ui.js';
+    import * as crypto from './js/crypto.js';
+    import * as snapshot from './js/snapshot.js';
+    import { STORES, getStore, listStores } from './js/stores/index.js';
+
+    // Headless-test hook: exposes the crypto core, snapshot fns, adapters, and a
+    // handle to the live component so test-backup.mjs can drive everything
+    // (incl. injecting a mocked fetch via component._fetchImpl).
+    window.__backup = {
+      crypto, snapshot,
+      stores: STORES, getStore, listStores,
+      component: () => document.querySelector('edot-backup'),
+    };
+  </script>
+</body>
+</html>

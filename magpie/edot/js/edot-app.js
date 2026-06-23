@@ -220,6 +220,7 @@ class App {
     mi('mi-calendar', () => openApp('calendar/calendar.html'));
     mi('mi-maps', () => openApp('maps/maps.html'));
     mi('mi-login', () => openApp('auth/login.html'));
+    mi('mi-backup', () => openApp('backup/backup.html'));
 
     this.fileInput.accept = IO.importAccept();
     this.fileInput.addEventListener('change', () => {
