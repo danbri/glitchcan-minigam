@@ -17,6 +17,7 @@ const b = await chromium.launch({ headless: true, executablePath: '/opt/pw-brows
 let fail = 0; const ok = (n, c) => { console.log(`${c ? '✅' : '❌'} ${n}`); if (!c) fail++; };
 try {
   const ctx = await b.newContext({ acceptDownloads: true });
+  await ctx.grantPermissions(['clipboard-read', 'clipboard-write']);
   const page = await ctx.newPage();
   const errs = []; page.on('pageerror', (e) => errs.push(String(e)));
   await page.goto(`http://127.0.0.1:${port}/magpie/edot/edot.html`);
@@ -130,8 +131,11 @@ try {
     };
   });
   await page.evaluate(() => { document.getElementById('editor').innerHTML = '<h1>New heading</h1><p>edited body</p>'; window.__edot.editor.onChange(); });
-  await page.click('#menu-button'); await page.click('#mi-github'); await page.waitForTimeout(150);
+  // Seed a GitHub token on the clipboard — the dialog should auto-harvest it.
+  await page.evaluate(() => navigator.clipboard.writeText('github_pat_11ABCDEFG0123456789_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGH'));
+  await page.click('#menu-button'); await page.click('#mi-github'); await page.waitForTimeout(250);
   ok('github dialog opens', await page.isVisible('#gh-repo'));
+  ok('token auto-harvested from clipboard', /^github_pat_/.test(await page.inputValue('#gh-token')));
   await page.fill('#gh-repo', 'o/r'); await page.fill('#gh-branch', 'main');
   await page.fill('#gh-path', 'docs/x.md'); await page.fill('#gh-token', 'tok');
   await page.click('#gh-preview'); await page.waitForTimeout(250);

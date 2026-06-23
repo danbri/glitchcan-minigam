@@ -32,7 +32,8 @@ offline, and dependency-free.
   branch and opens a pull request**, entirely client-side via the GitHub REST
   API (paste a fine-grained token). Shows a **colour diff** of your changes
   first. Text files only (`.md`/`.txt`/`.html`/`.css`). Prefilled from the
-  document's source when it was opened from a GitHub URL.
+  document's source when it was opened from a GitHub URL, and the **token is
+  auto-filled from your clipboard** when you return from creating it on GitHub.
 - **Local document library** — multiple named documents stored on-device in
   **IndexedDB** (localStorage fallback), with continuous autosave. **File ▸ My
   documents** lists, opens, renames, duplicates, and deletes them. Nothing is
@@ -40,7 +41,9 @@ offline, and dependency-free.
 - **Real file I/O, offline & dependency-free:**
   - **Word `.docx`** — native OOXML read *and* write, including **tables**,
     **embedded images** (imported as data-URLs), headings, lists, alignment,
-    and hyperlinks.
+    and hyperlinks. **Symbol-font** logic/maths glyphs (∀ ∃ ⊃ ¬ ∧ ∨ → ↔, stored
+    as Symbol/PUA code points) are decoded to real Unicode on import instead of
+    showing as tofu squares (`js/symbol-font.js`).
   - **PDF** — native multi-page export (A4, base-14 fonts, wrapped text flow,
     inline bold/italic/links, lists, quotes, code, page breaks). No backend.
   - **HTML + RDFa** — standalone self-styled documents that declare common
@@ -95,6 +98,7 @@ js/
   diff.js              dependency-free LCS line diff (save-back preview)
   io.js                format registry + open/save orchestration
   io-docx.js           native OOXML .docx read/write (incl. alignment via w:jc)
+  symbol-font.js       Adobe Symbol-font encoding -> Unicode (logic/maths glyphs)
   io-pdf.js            native multi-page PDF export (base-14 fonts)
   io-markdown.js       Markdown <-> document HTML
   io-html.js           standalone HTML+RDFa document I/O + CSS export
@@ -160,8 +164,8 @@ replace, the document library persistence across reloads, the sanitizer, and the
 toolbar wiring:
 
 ```bash
-node magpie/edot/test-edot.mjs       # functional smoke test (68 checks)
-node magpie/edot/test-e2e.mjs        # end-to-end UI driving (30 checks)
+node magpie/edot/test-edot.mjs       # functional smoke test (74 checks)
+node magpie/edot/test-e2e.mjs        # end-to-end UI driving (31 checks)
 node magpie/edot/test-mobile.mjs     # mobile: tap-to-focus, touch menu, locked shell (14 checks)
 node magpie/edot/verify-pdf.mjs      # deep PDF structural validation + sample
 ```

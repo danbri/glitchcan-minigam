@@ -277,6 +277,27 @@ class App {
     };
     this.ghEl.preview.addEventListener('click', () => this._githubPreview());
     this.ghEl.commit.addEventListener('click', () => this._githubCommit());
+    // Returning from the GitHub token page (token freshly copied) refocuses
+    // this tab — grab it from the clipboard if the field is still empty.
+    this._on(window, 'focus', () => { if (this.ghDialog.open) this._harvestToken(); });
+  }
+
+  // Best-effort: if the clipboard holds a GitHub token and the field is empty,
+  // fill it. Requires the clipboard-read permission (HTTPS); silently no-ops
+  // where blocked (the user can always paste manually).
+  async _harvestToken() {
+    const el = this.ghEl;
+    if (!el || el.token.value.trim()) return;
+    if (!navigator.clipboard || !navigator.clipboard.readText) return;
+    try {
+      const text = (await navigator.clipboard.readText() || '').trim();
+      const m = text.match(/^(github_pat_[A-Za-z0-9_]{20,}|gh[posru]_[A-Za-z0-9]{20,})$/);
+      if (m && !el.token.value.trim()) {
+        el.token.value = m[0];
+        el.remember.checked = true;
+        this.announce('Token pulled from clipboard');
+      }
+    } catch { /* clipboard blocked — manual paste still works */ }
   }
 
   openGithubDialog() {
@@ -297,6 +318,7 @@ class App {
     el.remember.checked = !!el.token.value;
     showModal(this.ghDialog);
     (el.repo.value ? el.token : el.repo).focus();
+    this._harvestToken(); // pick up a freshly-copied token from the clipboard
   }
 
   _ghParse() {

@@ -11,6 +11,7 @@
 
 import { zipSync, unzip, utf8 } from './zip.js';
 import { sanitizeHtml } from './document-model.js';
+import { isSymbolFont, decodeSymbolText } from './symbol-font.js';
 
 const XMLNS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" ' +
   'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
@@ -251,9 +252,13 @@ export async function docxToHtml(arrayBuffer) {
   // image) — no text sentinel, so line breaks survive cleanly.
   const runHtml = (run) => {
     const rPr = run.getElementsByTagNameNS(W, 'rPr')[0];
+    // Runs set in the Symbol font store logic/maths glyphs as ASCII / U+F0xx
+    // code points — decode them to real Unicode so they don't show as squares.
+    const rFonts = rPr && rPr.getElementsByTagNameNS(W, 'rFonts')[0];
+    const symbol = rFonts && isSymbolFont(rFonts.getAttributeNS(W, 'ascii') || rFonts.getAttributeNS(W, 'hAnsi') || '');
     let html = '';
     Array.from(run.childNodes).forEach((n) => {
-      if (n.localName === 't') html += xmlEscapeText(n.textContent);
+      if (n.localName === 't') html += xmlEscapeText(decodeSymbolText(n.textContent, { full: symbol }));
       else if (n.localName === 'br' || n.localName === 'cr') html += '<br>';
       else if (n.localName === 'tab') html += ' ';
     });

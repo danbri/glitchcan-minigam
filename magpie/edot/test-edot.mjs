@@ -375,6 +375,37 @@ try {
   ok('exportText returns source-format markdown', /^# T/m.test(ex.md) && /\*\*b\*\*/.test(ex.md));
   ok('exportText blocks binary formats', ex.blocked && ex.isText);
 
+  // 9m. Symbol-font logic glyphs decode to Unicode (not tofu squares).
+  const sym = await page.evaluate(async () => {
+    const { decodeSymbolText, decodeSymbolFont, isSymbolFont } = await import('./js/symbol-font.js');
+    return {
+      pua: decodeSymbolText('\uF022x \uF0C9 \uF024y'), // PUA decoded regardless of font
+      full: decodeSymbolFont('"$É'),                   // Symbol-font byte range -> ∀ ∃ ⊃
+      ascii: decodeSymbolText('Cat', { full: false }),      // non-symbol ASCII untouched
+      isSym: isSymbolFont('SymbolMT') && isSymbolFont('Symbol') && !isSymbolFont('Georgia'),
+    };
+  });
+  ok('symbol PUA decodes to logic glyphs', /^∀x ⊃ ∃y$/.test(sym.pua));
+  ok('symbol-font byte range decodes ∀∃⊃', sym.full === '∀∃⊃');
+  ok('non-symbol ASCII is left intact', sym.ascii === 'Cat');
+  ok('isSymbolFont matches Symbol/SymbolMT only', sym.isSym);
+
+  const symDoc = await page.evaluate(async () => {
+    const { zipSync } = await import('./js/zip.js');
+    const { docxToHtml } = await import('./js/io-docx.js');
+    const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+    const doc = `<?xml version="1.0"?><w:document ${NS}><w:body>` +
+      '<w:p><w:r><w:rPr><w:rFonts w:ascii="Symbol"/></w:rPr><w:t>"</w:t></w:r>' +
+      '<w:r><w:t>x is happy</w:t></w:r></w:p></w:body></w:document>';
+    const files = {
+      '[Content_Types].xml': '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
+      '_rels/.rels': '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>',
+      'word/document.xml': doc,
+    };
+    return docxToHtml(await (await zipSync(files)).arrayBuffer());
+  });
+  ok('docx Symbol-font run imports ∀ (not a square)', /∀x is happy/.test(symDoc));
+
   // 10. LibreOffice bridge reports not-configured gracefully.
   const loState = await page.evaluate(async () => {
     const LO = await import('./js/libreoffice-bridge.js');
