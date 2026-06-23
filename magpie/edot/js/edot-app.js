@@ -154,6 +154,10 @@ class App {
       if (e.target.closest('#editor')) return;   // page tap → native focus
       this.editor.focusEnd();
     });
+    // The status bar sits flush under the page on mobile; a tap there caught a
+    // dead zone (outside .app-main). Treat it like a margin tap → start typing.
+    const status = document.querySelector('.statusbar');
+    if (status) this._on(status, 'click', () => this.editor.focusEnd());
 
     this.editor.onSelectionCallback(() => this.toolbar.refresh());
     this.editor.onChangeCallback(() => {

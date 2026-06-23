@@ -132,21 +132,48 @@ export class EdotData extends HTMLElement {
     this.refresh();
   }
 
-  // ---- table / view view ----
-  openTable(name) {
-    this.active = { kind: 'table', name };
-    const data = this.engine.tableRows(name, { limit: 2000 });
+  // ---- table / view view: one object, interchangeable task-contextual faces
+  // (OpenDoc spirit). The same table is shown as a datasheet (database face), a
+  // spreadsheet (compute lens), or RDF (the durable N-Quads form). ----
+  openTable(name, face = 'grid') {
+    this._face = face;
+    this.active = { kind: 'table', name, face };
     this._main.innerHTML = '';
+    if (face === 'sheet') return this._tableSheetFace(name);
+    if (face === 'rdf') return this._tableRdfFace(name);
+    this._tableGridFace(name);
+  }
+
+  // A segmented "view as" control shared by every face.
+  _faceSwitcher(name) {
+    const wrap = document.createElement('span'); wrap.className = 'dw-faces';
+    wrap.setAttribute('role', 'group'); wrap.setAttribute('aria-label', 'View as');
+    for (const [id, glyph, label] of [['grid', '▦', 'Datasheet'], ['sheet', '▦ƒ', 'Spreadsheet'], ['rdf', '⌗', 'RDF']]) {
+      const b = document.createElement('button'); b.type = 'button';
+      b.className = 'dw-face' + (this._face === id ? ' active' : '');
+      if (this._face === id) b.setAttribute('aria-current', 'true');
+      b.textContent = `${glyph} ${label}`;
+      b.addEventListener('click', () => { if (consumedPeek(b)) return; this.openTable(name, id); });
+      holdLabel(b, `View this object as a ${label.toLowerCase()}`);
+      wrap.appendChild(b);
+    }
+    return wrap;
+  }
+
+  _tableGridFace(name) {
+    const data = this.engine.tableRows(name, { limit: 2000 });
     const common = [
-      this._btn('▦ƒ Open as sheet', () => this.tableToSheet(name)),
       this._btn('→ Editor', () => this.sendToEditor(data.columns, data.rows, name)),
       this._btn('⬇ CSV', () => this.downloadCsv(name)),
     ];
-    this._main.appendChild(this._head(name, data.editable ? [
-      this._btn('＋ Row', () => { this.engine.insertEmptyRow(name); this.openTable(name); }),
-      this._btn('✕ Row', () => this._deleteActiveRow(name)),
+    this._main.appendChild(this._head(name, [
+      this._faceSwitcher(name),
+      ...(data.editable ? [
+        this._btn('＋ Row', () => { this.engine.insertEmptyRow(name); this.openTable(name, 'grid'); }),
+        this._btn('✕ Row', () => this._deleteActiveRow(name)),
+      ] : []),
       ...common,
-    ] : common));
+    ], 'Datasheet — click a column header to sort; double-tap a cell to edit.'));
     const grid = document.createElement('edot-grid');
     this._main.appendChild(grid);
     grid.setData({ columns: data.columns, rows: data.rows, editable: data.editable });
@@ -156,6 +183,47 @@ export class EdotData extends HTMLElement {
       const rowid = data.rowids[e.detail.row];
       this.engine.updateCell(name, rowid, e.detail.columnName, coerce(e.detail.value));
     });
+    this.refresh();
+  }
+
+  // Spreadsheet face: a compute lens over the table. It's a scratch surface —
+  // edits aren't written back (use "Save as table" to materialise).
+  _tableSheetFace(name) {
+    const data = this.engine.tableRows(name, { limit: 2000 });
+    this._main.appendChild(this._head(name, [
+      this._faceSwitcher(name),
+      this._btn('▤ Save as table', () => this._materializeActiveSheet(name)),
+      this._btn('→ Editor', () => { const t = this._activeSheet.toTable({ headerRow: true }); this.sendToEditor(t.columns, t.rows, name); }),
+    ], 'Spreadsheet lens — add =formulas in spare cells (e.g. =SUM(B2:B9)). Scratch view; edits aren’t written back — use “Save as table”.'));
+    const sheet = document.createElement('edot-sheet');
+    this._main.appendChild(sheet);
+    sheet.engine = this.engine;
+    sheet.setGrid({ rows: [data.columns, ...data.rows.map((r) => r.map((v) => (v == null ? '' : v)))] });
+    sheet.recompute(); sheet._paint();
+    this._activeSheet = sheet;
+    this.refresh();
+  }
+
+  _materializeActiveSheet(srcName) {
+    const sheet = this._activeSheet; if (!sheet) return;
+    const { columns, rows } = sheet.toTable({ headerRow: true });
+    const tableName = this._unique(safeIdent(srcName) + '_edit');
+    this.engine.createTableFromColumns(tableName, dedupe(columns.map((c) => safeIdent(c))), rows.map((r) => r.map(coerce)));
+    this.refresh(); this.openTable(tableName, 'grid');
+  }
+
+  // RDF face: the durable N-Quads form of this one table, viewable in place.
+  _tableRdfFace(name) {
+    const text = tablesToNquads(this.engine, [name]);
+    this._main.appendChild(this._head(name, [
+      this._faceSwitcher(name),
+      this._btn('⬇ N-Quads', () => this._emit(utf8.encode(text), `${name}.nq`, 'application/n-quads')),
+      this._btn('⎘ Copy', () => { try { navigator.clipboard.writeText(text); this._toast('N-Quads copied to clipboard'); } catch { this._toast('Clipboard unavailable'); } }),
+    ], 'RDF face — the durable N-Quads form: named graph = table, predicate = column, subject = row.'));
+    const pre = document.createElement('textarea');
+    pre.className = 'dw-rdf'; pre.readOnly = true; pre.spellcheck = false;
+    pre.value = text || '(no rows yet)';
+    this._main.appendChild(pre);
     this.refresh();
   }
 

@@ -106,6 +106,22 @@ table.grid input.cell-input {
 
 .hint { color: var(--d-muted); font-size: 0.8rem; }
 
+/* "View as" faces (OpenDoc): one object, datasheet / spreadsheet / RDF. */
+.dw-faces { display: inline-flex; border: 1px solid var(--d-line); border-radius: 6px; overflow: hidden; }
+.dw-face {
+  font: inherit; font-size: 0.82rem; padding: 0.35em 0.6em; cursor: pointer; white-space: nowrap;
+  border: none; border-right: 1px solid var(--d-line); background: var(--d-surface); color: var(--d-ink);
+}
+.dw-face:last-child { border-right: none; }
+.dw-face:hover { background: var(--d-head); }
+.dw-face.active { background: var(--d-accent); color: var(--d-accent-fg); }
+.dw-rdf {
+  flex: 1; width: 100%; box-sizing: border-box; min-height: 12rem;
+  font-family: var(--d-mono); font-size: 0.78rem; line-height: 1.5; padding: 0.6em;
+  border: 1px solid var(--d-line); border-radius: 6px; background: var(--d-surface); color: var(--d-ink); resize: vertical;
+}
+@media (pointer: coarse) { .dw-face { padding: 0.5em 0.7em; } }
+
 /* Shared hold-to-reveal label bubble (js/longpress.js) — same as the editor. */
 .hold-tip {
   position: fixed; transform: translateX(-50%);

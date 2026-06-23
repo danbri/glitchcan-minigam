@@ -185,6 +185,26 @@ try {
   ok('grid sorts descending on second click', sort.desc === 'Bristol');
   ok('edit after sort writes back to the correct row', sort.bristol === 999);
 
+  // 4h. "View as" faces: one object shown as datasheet / spreadsheet / RDF.
+  const faces = await page.evaluate(async () => {
+    const d = document.querySelector('edot-data');
+    d.engine.createTableFromColumns('rt_face', ['city', 'pop'], [['Bristol', 460], ['Bath', 94]]);
+    d.openTable('rt_face', 'grid');
+    await new Promise((r) => setTimeout(r, 20));
+    const hasGrid = !!d._main.querySelector('edot-grid');
+    const switcher = d._main.querySelectorAll('.dw-face').length;
+    d.openTable('rt_face', 'sheet');
+    await new Promise((r) => setTimeout(r, 20));
+    const hasSheet = !!d._main.querySelector('edot-sheet');
+    d.openTable('rt_face', 'rdf');
+    await new Promise((r) => setTimeout(r, 20));
+    const rdf = d._main.querySelector('.dw-rdf');
+    return { hasGrid, switcher, hasSheet, rdfHasQuad: !!rdf && /urn:edot:prop:rt_face:pop/.test(rdf.value) };
+  });
+  ok('datasheet face renders a grid with a 3-way switcher', faces.hasGrid && faces.switcher === 3);
+  ok('spreadsheet face renders a sheet', faces.hasSheet);
+  ok('RDF face shows the N-Quads form of the object', faces.rdfHasQuad);
+
   // 5. Persistence: DB exports to bytes.
   ok('database exports to bytes', await page.evaluate(() => document.querySelector('edot-data').engine.exportDb().length > 0));
 
