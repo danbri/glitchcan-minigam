@@ -12,6 +12,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>edot — accessible word processor</title>
   <link rel="stylesheet" href="css/edot.css">
+  <link rel="stylesheet" href="auth/css/auth.css">
 </head>
 <body>
   <a class="skip-link" href="#editor">Skip to document</a>
@@ -63,6 +64,9 @@
         <button type="button" id="mi-login" class="menu-item" role="menuitem">
           <span>Sign in ↗</span><span class="hint">OIDC</span>
         </button>
+        <button type="button" id="mi-backup" class="menu-item" role="menuitem">
+          <span>Encrypted backup ↗</span><span class="hint">alpha</span>
+        </button>
         <div class="menu-sep" role="separator"></div>
         <div id="export-list" role="group" aria-label="Save as"></div>
       </div>
@@ -73,6 +77,12 @@
            spellcheck="false" placeholder="Untitled document">
 
     <span id="save-state" class="save-state" role="status" aria-live="polite">Autosaved locally</span>
+
+    <!-- System-wide sign-in (ALPHA) — shared session across the edot suite. -->
+    <span class="login-slot">
+      <edot-login-button login-href="auth/login.html"></edot-login-button>
+      <span class="alpha-badge" title="Experimental — sign-in is in alpha">alpha</span>
+    </span>
   </header>
 
   <div id="toolbar" class="toolbar"><!-- built by toolbar.js --></div>
@@ -206,5 +216,7 @@
   </dialog>
 
   <script type="module" src="js/edot-app.js"></script>
+  <!-- System-wide sign-in chip (self-registers; standalone shared session). -->
+  <script type="module" src="auth/js/login-ui.js"></script>
 </body>
 </html>
