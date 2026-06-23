@@ -45,11 +45,23 @@
         <button type="button" id="mi-find" class="menu-item" role="menuitem">
           <span>Find &amp; replace…</span><span class="hint">Ctrl/⌘F</span>
         </button>
+        <button type="button" id="mi-source" class="menu-item" role="menuitem">
+          <span>View source…</span><span class="hint">HTML · MD · TXT</span>
+        </button>
         <button type="button" id="mi-github" class="menu-item" role="menuitem">
           <span>Save to GitHub…</span><span class="hint">PR</span>
         </button>
         <button type="button" id="mi-data" class="menu-item" role="menuitem">
           <span>Data workspace ↗</span><span class="hint">SQLite</span>
+        </button>
+        <button type="button" id="mi-calendar" class="menu-item" role="menuitem">
+          <span>Calendar ↗</span><span class="hint">ICS</span>
+        </button>
+        <button type="button" id="mi-maps" class="menu-item" role="menuitem">
+          <span>Maps ↗</span><span class="hint">MapLibre</span>
+        </button>
+        <button type="button" id="mi-login" class="menu-item" role="menuitem">
+          <span>Sign in ↗</span><span class="hint">OIDC</span>
         </button>
         <div class="menu-sep" role="separator"></div>
         <div id="export-list" role="group" aria-label="Save as"></div>
@@ -106,6 +118,28 @@
     <ul id="examples-list" class="docs-list"></ul>
   </dialog>
 
+  <!-- View source: the underlying file in each text format -->
+  <dialog id="source-dialog" class="dialog" aria-labelledby="source-dialog-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="source-dialog-title">Document source</h2>
+      <button type="submit" class="tbtn" aria-label="Close">✕</button>
+    </form>
+    <div class="dialog-body">
+      <p class="dialog-note">The file edot would write depends on the extension you save to. Switch format to see exactly what each produces — RDFa survives <strong>.html</strong> only.</p>
+      <div class="src-bar">
+        <label for="src-format">Format</label>
+        <select id="src-format" class="find-input">
+          <option value="html">HTML — keeps RDFa, links &amp; structure</option>
+          <option value="md">Markdown — keeps links &amp; structure, drops RDFa</option>
+          <option value="txt">Plain text — strips all markup</option>
+        </select>
+        <button type="button" id="src-copy" class="tbtn">Copy</button>
+      </div>
+      <p id="src-note" class="dialog-note"></p>
+      <textarea id="src-text" class="src-text" readonly spellcheck="false" aria-label="Document source"></textarea>
+    </div>
+  </dialog>
+
   <!-- Save to GitHub (branch + pull request) -->
   <dialog id="github-dialog" class="dialog" aria-labelledby="github-dialog-title">
     <form method="dialog" class="dialog-head">
@@ -125,19 +159,25 @@
         </ol>
         <p class="gh-tip">Scope it to the one repo and <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">revoke it</a> when you're done. It stays in this browser only.</p>
       </details>
+      <div id="gh-recents" class="gh-recents" hidden></div>
       <div class="gh-grid">
         <label for="gh-repo">Repository</label>
         <input id="gh-repo" type="text" class="find-input" placeholder="owner/repo" autocomplete="off">
         <label for="gh-branch">Base branch</label>
-        <input id="gh-branch" type="text" class="find-input" placeholder="main" autocomplete="off">
+        <input id="gh-branch" type="text" class="find-input" placeholder="auto-detected" autocomplete="off">
         <label for="gh-path">File path</label>
-        <input id="gh-path" type="text" class="find-input" placeholder="docs/file.md" autocomplete="off">
+        <input id="gh-path" type="text" class="find-input" placeholder="folder/file.md" autocomplete="off">
         <label for="gh-token">Token</label>
         <input id="gh-token" type="password" class="find-input" placeholder="github_pat_…" autocomplete="new-password">
         <label for="gh-message">Commit message</label>
         <input id="gh-message" type="text" class="find-input" autocomplete="off">
       </div>
-      <label class="gh-remember"><input id="gh-remember" type="checkbox"> Remember token for this tab only</label>
+      <div class="gh-conn-row">
+        <span id="gh-conn" class="gh-conn" role="status" hidden></span>
+        <button type="button" id="gh-connect" class="tbtn">Connect</button>
+      </div>
+      <p id="gh-branch-note" class="dialog-note" hidden></p>
+      <label class="gh-remember"><input id="gh-remember" type="checkbox"> Stay signed in to GitHub on this device</label>
       <div class="gh-actions">
         <button type="button" id="gh-preview" class="tbtn">Preview diff</button>
         <span id="gh-diffstat" class="dialog-note"></span>
@@ -148,6 +188,7 @@
     </div>
     <div class="dialog-foot">
       <button type="button" id="gh-commit" class="tbtn primary">Open pull request</button>
+      <button type="button" id="gh-merge" class="tbtn" hidden>Merge if no conflicts</button>
     </div>
   </dialog>
 

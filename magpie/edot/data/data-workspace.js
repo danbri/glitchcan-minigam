@@ -11,6 +11,9 @@
 
 import { DataEngine, safeIdent, quoteId } from './data-engine.js';
 import { parseCsv, coerce, toCsv } from './csv.js';
+import { tablesToNquads, nquadsToTables } from './nquads.js';
+import { zipSync, unzip, utf8 } from '../js/zip.js';
+import { holdLabel, consumedPeek } from '../js/longpress.js';
 import './grid-component.js';
 import './sheet-component.js';
 import './query-component.js';
@@ -49,20 +52,25 @@ export class EdotData extends HTMLElement {
     const root = document.createElement('div'); root.className = 'dw';
 
     const tb = document.createElement('div'); tb.className = 'dw-toolbar';
-    const file = document.createElement('input'); file.type = 'file'; file.accept = '.csv,text/csv'; file.style.display = 'none';
-    const dbfile = document.createElement('input'); dbfile.type = 'file'; dbfile.accept = '.sqlite,.db,application/octet-stream'; dbfile.style.display = 'none';
+    // One file input opens any durable upstream form; the workspace routes by
+    // extension (.csv / .zip-of-csvs / .sqlite / .nq / .nquads).
+    const file = document.createElement('input'); file.type = 'file';
+    file.accept = '.csv,.txt,.zip,.sqlite,.db,.nq,.nquads,text/csv,application/zip,application/octet-stream';
+    file.style.display = 'none';
     const menu = this._btn('☰', () => root.classList.toggle('side-open')); menu.classList.add('dw-menu-btn'); menu.setAttribute('aria-label', 'Show objects');
     tb.append(
       menu,
-      this._btn('⬆ Import CSV', () => file.click(), 'primary'),
+      this._btn('⬆ Open…', () => file.click(), 'primary'),
       this._btn('🎵 Sample (Chinook)', () => this.loadChinook()),
       this._btn('＋ Sheet', () => this.newSheet()),
       this._btn('＋ Table', () => this.newTable()),
       this._btn('▤ SQL', () => this.openQuery()),
       spacer(),
-      this._btn('⬇ Export .sqlite', () => this.exportDb()),
-      this._btn('Import .sqlite', () => dbfile.click()),
-      file, dbfile,
+      // Durable export forms — data outlives the editor (see OPENDOC.md).
+      this._btn('⬇ SQLite', () => this.exportDb()),
+      this._btn('⬇ CSVs', () => this.exportCsvsZip()),
+      this._btn('⬇ N-Quads', () => this.exportNquads()),
+      file,
     );
 
     const side = document.createElement('div'); side.className = 'dw-side';
@@ -73,14 +81,19 @@ export class EdotData extends HTMLElement {
     // Tap the scrim (or pick an item) closes the mobile drawer.
     root.addEventListener('click', (e) => { if (e.target === root) root.classList.remove('side-open'); });
 
-    file.addEventListener('change', () => { if (file.files[0]) this.importCsv(file.files[0]); file.value = ''; });
-    dbfile.addEventListener('change', () => { if (dbfile.files[0]) this.importDbFile(dbfile.files[0]); dbfile.value = ''; });
+    file.addEventListener('change', () => { if (file.files[0]) this.openAnyFile(file.files[0]); file.value = ''; });
     this.addEventListener('views-changed', () => this.refresh());
     this.addEventListener('to-sheet', (e) => this.sheetFromResult(e.detail));
     this.addEventListener('to-editor', (e) => this.sendToEditor(e.detail.columns, e.detail.rows, 'Query result'));
   }
 
-  _btn(label, fn, cls) { const b = document.createElement('button'); b.type = 'button'; b.className = 'dbtn' + (cls ? ` ${cls}` : ''); b.textContent = label; b.addEventListener('click', fn); return b; }
+  _btn(label, fn, cls) {
+    const b = document.createElement('button'); b.type = 'button';
+    b.className = 'dbtn' + (cls ? ` ${cls}` : ''); b.textContent = label;
+    b.addEventListener('click', () => { if (consumedPeek(b)) return; fn(); });
+    holdLabel(b, label); // same press-and-hold reveal as the editor toolbar
+    return b;
+  }
 
   // ---- sidebar ----
   refresh() {
@@ -119,21 +132,48 @@ export class EdotData extends HTMLElement {
     this.refresh();
   }
 
-  // ---- table / view view ----
-  openTable(name) {
-    this.active = { kind: 'table', name };
-    const data = this.engine.tableRows(name, { limit: 2000 });
+  // ---- table / view view: one object, interchangeable task-contextual faces
+  // (OpenDoc spirit). The same table is shown as a datasheet (database face), a
+  // spreadsheet (compute lens), or RDF (the durable N-Quads form). ----
+  openTable(name, face = 'grid') {
+    this._face = face;
+    this.active = { kind: 'table', name, face };
     this._main.innerHTML = '';
+    if (face === 'sheet') return this._tableSheetFace(name);
+    if (face === 'rdf') return this._tableRdfFace(name);
+    this._tableGridFace(name);
+  }
+
+  // A segmented "view as" control shared by every face.
+  _faceSwitcher(name) {
+    const wrap = document.createElement('span'); wrap.className = 'dw-faces';
+    wrap.setAttribute('role', 'group'); wrap.setAttribute('aria-label', 'View as');
+    for (const [id, glyph, label] of [['grid', '▦', 'Datasheet'], ['sheet', '▦ƒ', 'Spreadsheet'], ['rdf', '⌗', 'RDF']]) {
+      const b = document.createElement('button'); b.type = 'button';
+      b.className = 'dw-face' + (this._face === id ? ' active' : '');
+      if (this._face === id) b.setAttribute('aria-current', 'true');
+      b.textContent = `${glyph} ${label}`;
+      b.addEventListener('click', () => { if (consumedPeek(b)) return; this.openTable(name, id); });
+      holdLabel(b, `View this object as a ${label.toLowerCase()}`);
+      wrap.appendChild(b);
+    }
+    return wrap;
+  }
+
+  _tableGridFace(name) {
+    const data = this.engine.tableRows(name, { limit: 2000 });
     const common = [
-      this._btn('▦ƒ Open as sheet', () => this.tableToSheet(name)),
       this._btn('→ Editor', () => this.sendToEditor(data.columns, data.rows, name)),
       this._btn('⬇ CSV', () => this.downloadCsv(name)),
     ];
-    this._main.appendChild(this._head(name, data.editable ? [
-      this._btn('＋ Row', () => { this.engine.insertEmptyRow(name); this.openTable(name); }),
-      this._btn('✕ Row', () => this._deleteActiveRow(name)),
+    this._main.appendChild(this._head(name, [
+      this._faceSwitcher(name),
+      ...(data.editable ? [
+        this._btn('＋ Row', () => { this.engine.insertEmptyRow(name); this.openTable(name, 'grid'); }),
+        this._btn('✕ Row', () => this._deleteActiveRow(name)),
+      ] : []),
       ...common,
-    ] : common));
+    ], 'Datasheet — click a column header to sort; double-tap a cell to edit.'));
     const grid = document.createElement('edot-grid');
     this._main.appendChild(grid);
     grid.setData({ columns: data.columns, rows: data.rows, editable: data.editable });
@@ -143,6 +183,47 @@ export class EdotData extends HTMLElement {
       const rowid = data.rowids[e.detail.row];
       this.engine.updateCell(name, rowid, e.detail.columnName, coerce(e.detail.value));
     });
+    this.refresh();
+  }
+
+  // Spreadsheet face: a compute lens over the table. It's a scratch surface —
+  // edits aren't written back (use "Save as table" to materialise).
+  _tableSheetFace(name) {
+    const data = this.engine.tableRows(name, { limit: 2000 });
+    this._main.appendChild(this._head(name, [
+      this._faceSwitcher(name),
+      this._btn('▤ Save as table', () => this._materializeActiveSheet(name)),
+      this._btn('→ Editor', () => { const t = this._activeSheet.toTable({ headerRow: true }); this.sendToEditor(t.columns, t.rows, name); }),
+    ], 'Spreadsheet lens — add =formulas in spare cells (e.g. =SUM(B2:B9)). Scratch view; edits aren’t written back — use “Save as table”.'));
+    const sheet = document.createElement('edot-sheet');
+    this._main.appendChild(sheet);
+    sheet.engine = this.engine;
+    sheet.setGrid({ rows: [data.columns, ...data.rows.map((r) => r.map((v) => (v == null ? '' : v)))] });
+    sheet.recompute(); sheet._paint();
+    this._activeSheet = sheet;
+    this.refresh();
+  }
+
+  _materializeActiveSheet(srcName) {
+    const sheet = this._activeSheet; if (!sheet) return;
+    const { columns, rows } = sheet.toTable({ headerRow: true });
+    const tableName = this._unique(safeIdent(srcName) + '_edit');
+    this.engine.createTableFromColumns(tableName, dedupe(columns.map((c) => safeIdent(c))), rows.map((r) => r.map(coerce)));
+    this.refresh(); this.openTable(tableName, 'grid');
+  }
+
+  // RDF face: the durable N-Quads form of this one table, viewable in place.
+  _tableRdfFace(name) {
+    const text = tablesToNquads(this.engine, [name]);
+    this._main.appendChild(this._head(name, [
+      this._faceSwitcher(name),
+      this._btn('⬇ N-Quads', () => this._emit(utf8.encode(text), `${name}.nq`, 'application/n-quads')),
+      this._btn('⎘ Copy', () => { try { navigator.clipboard.writeText(text); this._toast('N-Quads copied to clipboard'); } catch { this._toast('Clipboard unavailable'); } }),
+    ], 'RDF face — the durable N-Quads form: named graph = table, predicate = column, subject = row.'));
+    const pre = document.createElement('textarea');
+    pre.className = 'dw-rdf'; pre.readOnly = true; pre.spellcheck = false;
+    pre.value = text || '(no rows yet)';
+    this._main.appendChild(pre);
     this.refresh();
   }
 
@@ -282,9 +363,100 @@ export class EdotData extends HTMLElement {
     this._toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
   }
 
-  // ---- export/import db ----
-  exportDb() { download(new Blob([this.engine.exportDb()], { type: 'application/octet-stream' }), 'edot-data.sqlite'); }
-  async importDbFile(file) { await this.engine.importDb(await file.arrayBuffer()); this.refresh(); this.openQuery(); }
+  // ---- durable export forms (OPENDOC.md) ----
+  // Each is a complete, software-independent upstream form of the same data
+  // object: SQLite file, a zip of CSVs, or RDF N-Quads. Every export is
+  // fingerprinted (SHA-256) so a version can be committed and verified later.
+  async exportDb() { await this._emit(this.engine.exportDb(), 'edot-data.sqlite', 'application/octet-stream'); }
+
+  async exportCsvsZip() {
+    const files = {};
+    const tables = this._userTableNames();
+    for (const t of tables) {
+      const d = this.engine.tableRows(t, { limit: 1000000 });
+      files[`${t}.csv`] = toCsv(d.columns, d.rows);
+    }
+    files['MANIFEST.txt'] = `edot data object — ${tables.length} table(s)\n` +
+      tables.map((t) => `  ${t}.csv`).join('\n') + `\nexported ${new Date().toISOString()}\n`;
+    const blob = await zipSync(files);
+    await this._emit(new Uint8Array(await blob.arrayBuffer()), 'edot-data.csv.zip', 'application/zip');
+  }
+
+  async exportNquads() {
+    const text = tablesToNquads(this.engine);
+    await this._emit(utf8.encode(text), 'edot-data.nq', 'application/n-quads');
+  }
+
+  // ---- unified import: route by extension (sniff as a fallback) ----
+  async openAnyFile(file) {
+    const n = (file.name || '').toLowerCase();
+    try {
+      if (n.endsWith('.sqlite') || n.endsWith('.db')) return await this.importDbFile(file);
+      if (n.endsWith('.zip')) return await this.importCsvsZip(file);
+      if (n.endsWith('.nq') || n.endsWith('.nquads')) return await this.importNquadsFile(file);
+      if (n.endsWith('.csv') || n.endsWith('.txt')) return await this.importCsv(file);
+      // Unknown extension: sniff the leading bytes.
+      const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+      if (head[0] === 0x50 && head[1] === 0x4b) return await this.importCsvsZip(file);     // 'PK'
+      if (utf8.decode(head).startsWith('SQLite format')) return await this.importDbFile(file);
+      return await this.importCsv(file);
+    } catch (e) { this._toast(`Could not open ${file.name}: ${e.message}`); }
+  }
+
+  async importDbFile(file) { await this.engine.importDb(await file.arrayBuffer()); this.refresh(); this.openQuery(); this._toast(`Loaded ${file.name}`); }
+
+  async importCsvsZip(file) {
+    const map = await unzip(await file.arrayBuffer());
+    let count = 0, last = null;
+    for (const [fname, bytes] of Object.entries(map)) {
+      if (!/\.csv$/i.test(fname)) continue;
+      const rows = parseCsv(utf8.decode(bytes));
+      if (!rows.length) continue;
+      const name = this._unique(safeIdent(fname.replace(/.*\//, '').replace(/\.[^.]+$/, ''), 'imported'));
+      const header = dedupe(rows[0].map((h, i) => safeIdent(h || `col${i + 1}`, `col${i + 1}`)));
+      this.engine.createTableFromColumns(name, header, rows.slice(1).map((r) => r.map(coerce)));
+      count++; last = name;
+    }
+    this.refresh();
+    if (last) this.openTable(last);
+    this._toast(`Imported ${count} table(s) from ${file.name}`);
+  }
+
+  async importNquadsFile(file) {
+    const tables = nquadsToTables(await file.text());
+    let last = null;
+    for (const t of tables) {
+      const name = this._unique(safeIdent(t.name, 'graph'));
+      // N-Quads literals are already typed by the parser — don't re-coerce.
+      this.engine.createTableFromColumns(name, dedupe(t.columns.map((c) => safeIdent(c))), t.rows);
+      last = name;
+    }
+    this.refresh();
+    if (last) this.openTable(last);
+    this._toast(`Imported ${tables.length} table(s) from N-Quads`);
+  }
+
+  _userTableNames() {
+    return this.engine.listObjects()
+      .filter((o) => o.type === 'table' && o.name !== META && !o.name.startsWith('__edot'))
+      .map((o) => o.name);
+  }
+
+  // Download + content fingerprint. SHA-256 is the "older versions committed,
+  // maybe even digitally signed" gesture: the hash identifies this exact bytes.
+  async _emit(bytes, filename, mime) {
+    download(new Blob([bytes], { type: mime }), filename);
+    let fp = '';
+    try {
+      const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+      const digest = await crypto.subtle.digest('SHA-256', view);
+      fp = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch { /* crypto.subtle needs a secure context */ }
+    this._lastFingerprint = fp;
+    this._toast(`Exported ${filename}${fp ? ` · sha256 ${fp.slice(0, 12)}…` : ''}`);
+    return fp;
+  }
+
   downloadCsv(name) {
     const d = this.engine.tableRows(name, { limit: 100000 });
     download(new Blob([toCsv(d.columns, d.rows)], { type: 'text/csv' }), `${name}.csv`);

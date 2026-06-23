@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="edot maps — a mobile-first, accessible maps viewer: search, saved places, directions, layers and shareable permalinks over OpenStreetMap. Saved places stay local in the browser.">
+  <meta name="color-scheme" content="light dark">
+  <title>edot maps</title>
+  <!-- Vendored MapLibre GL JS (BSD-3-Clause) and its CSS — no runtime CDN. -->
+  <link rel="stylesheet" href="vendor/maplibre-gl.css">
+  <link rel="stylesheet" href="css/maps.css">
+  <style>
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    body { display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--m-bg); color: var(--m-ink); }
+    .app-header { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.75rem; background: var(--m-surface); border-bottom: 1px solid var(--m-line); flex: 0 0 auto; }
+    .app-header h1 { font-size: 1.05rem; margin: 0; }
+    .app-header .logo { color: var(--m-accent); }
+    .app-header a { color: var(--m-focus); font-size: 0.85rem; text-decoration: none; }
+    .app-header .spacer { flex: 1; }
+    main { flex: 1 1 auto; min-height: 0; }
+    edot-maps { height: 100%; }
+    .boot { padding: 2rem; color: var(--m-muted); }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <h1><span class="logo">🗺 edot maps</span></h1>
+    <span class="spacer"></span>
+    <a href="../calendar/calendar.html">calendar 📅</a>
+    <a href="../data/data.html">data ▦</a>
+    <a href="../edot.html">← back to editor</a>
+  </header>
+  <main>
+    <edot-maps><div class="boot">Loading map…</div></edot-maps>
+  </main>
+
+  <!-- MapLibre is a UMD bundle: it defines window.maplibregl synchronously, so
+       it must load (and be present) before the component initialises the map.
+       If this file is missing (vendoring TODO), the component still boots and
+       runs all non-GL features; see vendor/VENDOR-TODO.md. -->
+  <script src="vendor/maplibre-gl.js"></script>
+  <script type="module">
+    // Boot the component and expose a headless-test hook (mirrors window.__edot /
+    // window.__cal): the live instance plus the pure helpers and the store.
+    import { EdotMaps } from './js/maps-app.js';
+    const el = document.querySelector('edot-maps');
+    await el.init();
+    el.applyHash(); // restore a shared view, if the URL carried one
+    window.__maps = {
+      app: el,
+      store: el.store,
+      geo: await import('./js/geo.js'),
+      basemap: await import('./js/basemap.js'),
+      config: (await import('./js/maps-config.js')).MAPS_CONFIG,
+      glAvailable: el.glAvailable,
+    };
+    // Keep the map in sync if the hash changes after load (deep-link nav).
+    window.addEventListener('hashchange', () => el.applyHash());
+  </script>
+</body>
+</html>

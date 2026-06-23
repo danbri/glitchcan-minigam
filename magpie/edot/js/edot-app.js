@@ -16,6 +16,8 @@ import * as IO from './io.js';
 import * as LO from './libreoffice-bridge.js';
 
 const GH_TOKEN_KEY = 'edot.gh.token';
+const GH_LOGIN_KEY = 'edot.gh.login';     // cached @login for the connected token
+const GH_RECENTS_KEY = 'edot.gh.recents'; // remembered save locations (zappable)
 
 const LAST_DOC_KEY = 'edot.currentDoc';
 
@@ -56,6 +58,7 @@ class App {
     this._wireUrlDialog();
     this._wireExamplesDialog();
     this._wireGithubDialog();
+    this._wireSourceDialog();
     this._wireGlobalKeys();
     this._wireDragDrop();
     this._reflectBackend();
@@ -153,6 +156,10 @@ class App {
       if (e.target.closest('#editor')) return;   // page tap → native focus
       this.editor.focusEnd();
     });
+    // The status bar sits flush under the page on mobile; a tap there caught a
+    // dead zone (outside .app-main). Treat it like a margin tap → start typing.
+    const status = document.querySelector('.statusbar');
+    if (status) this._on(status, 'click', () => this.editor.focusEnd());
 
     this.editor.onSelectionCallback(() => this.toolbar.refresh());
     this.editor.onChangeCallback(() => {
@@ -206,8 +213,13 @@ class App {
     mi('mi-docs', () => this.openLibrary());
     mi('mi-close', () => this.closeDocument());
     mi('mi-find', () => this.findReplace.open(true));
+    mi('mi-source', () => this.openSourceDialog());
     mi('mi-github', () => this.openGithubDialog());
-    mi('mi-data', () => { const w = window.open('data/data.html', '_blank', 'noopener'); if (!w) location.href = 'data/data.html'; else this.attention.arm('Back to edot', { once: true }); });
+    const openApp = (path) => { const w = window.open(path, '_blank', 'noopener'); if (!w) location.href = path; else this.attention.arm('Back to edot', { once: true }); };
+    mi('mi-data', () => openApp('data/data.html'));
+    mi('mi-calendar', () => openApp('calendar/calendar.html'));
+    mi('mi-maps', () => openApp('maps/maps.html'));
+    mi('mi-login', () => openApp('auth/login.html'));
 
     this.fileInput.accept = IO.importAccept();
     this.fileInput.addEventListener('change', () => {
@@ -306,11 +318,16 @@ class App {
     this.ghEl = {
       repo: g('gh-repo'), branch: g('gh-branch'), path: g('gh-path'), token: g('gh-token'),
       message: g('gh-message'), remember: g('gh-remember'), preview: g('gh-preview'),
-      commit: g('gh-commit'), diff: g('gh-diff'), diffstat: g('gh-diffstat'),
-      error: g('gh-error'), result: g('gh-result'),
+      commit: g('gh-commit'), merge: g('gh-merge'), diff: g('gh-diff'), diffstat: g('gh-diffstat'),
+      error: g('gh-error'), result: g('gh-result'), recents: g('gh-recents'), branchNote: g('gh-branch-note'),
+      conn: g('gh-conn'), connect: g('gh-connect'),
     };
     this.ghEl.preview.addEventListener('click', () => this._githubPreview());
     this.ghEl.commit.addEventListener('click', () => this._githubCommit());
+    this.ghEl.merge.addEventListener('click', () => this._githubMerge());
+    this.ghEl.connect.addEventListener('click', () => this._ghConnect());
+    // Detect the repo's real default branch (main/master/…) once it's named.
+    this.ghEl.repo.addEventListener('blur', () => this._ghDetectBranch());
     // While the dialog is open and you flip to GitHub to make a token, nudge
     // the edot tab so it's easy to find your way back; stop when it closes.
     this.ghDialog.addEventListener('close', () => this.attention.disarm());
@@ -340,43 +357,184 @@ class App {
   openGithubDialog() {
     const el = this.ghEl;
     el.error.hidden = true; el.result.hidden = true; el.diff.hidden = true; el.diff.innerHTML = '';
-    el.diffstat.textContent = '';
-    this.gh = {};
+    el.diffstat.textContent = ''; el.merge.hidden = true;
+    if (el.branchNote) el.branchNote.hidden = true;
+    this.gh = {}; this._branchDetectedFor = null;
 
-    // Prefill from the document's git source, if it came from one.
+    // Prefill from the document's git source, if it came from one; otherwise a
+    // folder-encapsulated default (a document is its own folder — see OPENDOC).
     const s = this.doc && this.doc.source;
     if (s && s.owner && s.repo) {
       el.repo.value = `${s.owner}/${s.repo}`;
-      el.branch.value = s.ref && !/^[0-9a-f]{7,40}$/i.test(s.ref) ? s.ref : 'main';
-      el.path.value = s.path || '';
+      el.branch.value = s.ref && !/^[0-9a-f]{7,40}$/i.test(s.ref) ? s.ref : '';
+      el.path.value = s.path || this._defaultGhPath();
+    } else {
+      el.path.value = this._defaultGhPath();
     }
     el.message.value = `Update ${el.path.value || 'document'} via edot`;
-    try { el.token.value = sessionStorage.getItem(GH_TOKEN_KEY) || ''; } catch { /* */ }
-    el.remember.checked = !!el.token.value;
+    el.token.value = this._ghStoredToken();
+    el.remember.checked = this._ghPersisted();      // checked = saved on this device
+    this._ghRenderConnection(this._ghStoredLogin()); // optimistic: show cached identity
+    this._renderGhRecents();
     showModal(this.ghDialog);
-    (el.repo.value ? el.token : el.repo).focus();
-    this._harvestToken(); // pick up a freshly-copied token from the clipboard
-    this.attention.arm('Paste your GitHub token'); // nudge the tab on return
+    (el.token.value ? el.repo : el.token).focus();
+    if (!el.token.value) this._harvestToken();       // pick up a freshly-copied token
+    if (el.repo.value) this._ghDetectBranch();
+    if (!el.token.value) this.attention.arm('Paste your GitHub token'); // nudge on return
+  }
+
+  // ---- GitHub connection (saved token + identity) ----
+  _ghStoredToken() { try { return localStorage.getItem(GH_TOKEN_KEY) || sessionStorage.getItem(GH_TOKEN_KEY) || ''; } catch { return ''; } }
+  _ghStoredLogin() { try { return localStorage.getItem(GH_LOGIN_KEY) || sessionStorage.getItem(GH_LOGIN_KEY) || ''; } catch { return ''; } }
+  _ghPersisted() { try { return !!localStorage.getItem(GH_TOKEN_KEY); } catch { return false; } }
+  _ghStore(key, value, persist) {
+    try {
+      sessionStorage.removeItem(key); localStorage.removeItem(key);
+      if (value) (persist ? localStorage : sessionStorage).setItem(key, value);
+    } catch { /* storage blocked */ }
+  }
+  _ghForget() { try { [localStorage, sessionStorage].forEach((s) => { s.removeItem(GH_TOKEN_KEY); s.removeItem(GH_LOGIN_KEY); }); } catch { /* */ } }
+
+  // Validate the pasted token, fetch @login, and switch the UI to "connected".
+  async _ghConnect() {
+    const el = this.ghEl;
+    const token = el.token.value.trim();
+    el.error.hidden = true;
+    if (!token) return this._ghErr('Paste a token to connect');
+    try {
+      el.connect.disabled = true; el.conn.hidden = false; el.conn.textContent = 'Connecting…';
+      const user = await new GitHubRemote(token).me();
+      this._ghPersistConnection(token, user.login, el.remember.checked);
+      this.announce(`Connected to GitHub as @${user.login}`);
+    } catch (err) {
+      this._ghRenderConnection('');
+      this._ghErr(this._ghMessage(err));
+    } finally { el.connect.disabled = false; }
+  }
+
+  _ghPersistConnection(token, login, persist) {
+    this._ghStore(GH_TOKEN_KEY, token, persist);
+    this._ghStore(GH_LOGIN_KEY, login || '', persist);
+    this._ghRenderConnection(login || '');
+  }
+
+  _ghDisconnect() {
+    this._ghForget();
+    this.ghEl.token.value = '';
+    this._ghRenderConnection('');
+    this.announce('Disconnected from GitHub');
+  }
+
+  // Reflect connection state in the dialog and the File-menu hint ("attached").
+  _ghRenderConnection(login) {
+    const el = this.ghEl;
+    this._ghLogin = login || '';
+    if (login) {
+      el.conn.hidden = false; el.conn.textContent = '';
+      const span = document.createElement('span');
+      span.innerHTML = `✓ Signed in as <strong>@${esc(login)}</strong> · `;
+      const dc = document.createElement('button'); dc.type = 'button'; dc.className = 'gh-link'; dc.textContent = 'Disconnect';
+      dc.addEventListener('click', () => this._ghDisconnect());
+      el.conn.append(span, dc);
+      el.connect.hidden = true;
+    } else {
+      el.conn.hidden = true; el.conn.textContent = '';
+      el.connect.hidden = false;
+    }
+    const hint = document.querySelector('#mi-github .hint');
+    if (hint) hint.textContent = login ? `@${login}` : 'PR';
+  }
+
+  // After a token is known to work (preview/commit), record it and, if we don't
+  // yet know who it is, fetch @login quietly so the UI shows "Signed in as…".
+  async _ghNoteWorkingToken(token, persist) {
+    this._ghStore(GH_TOKEN_KEY, token, persist);
+    if (this._ghLogin) { this._ghStore(GH_LOGIN_KEY, this._ghLogin, persist); return; }
+    try { const user = await new GitHubRemote(token).me(); this._ghPersistConnection(token, user.login, persist); }
+    catch { /* identity is optional; the commit already worked */ }
+  }
+
+  // A document is encapsulated in its own folder: "<slug>/<slug>.md".
+  _defaultGhPath() {
+    const slug = ghSlug(this.titleInput && this.titleInput.value);
+    return `${slug}/${slug}.md`;
+  }
+
+  // Detect the repo's actual default branch over the API and fill it in (only
+  // when the field is empty or still holds a previously-detected value, so a
+  // branch the user typed is never clobbered).
+  async _ghDetectBranch() {
+    const el = this.ghEl;
+    const m = /^([^/\s]+)\/([^/\s]+?)(?:\.git)?$/.exec(el.repo.value.trim());
+    if (!m) return;
+    const key = `${m[1]}/${m[2]}`;
+    if (this._branchDetectedFor === key) return;
+    try {
+      const def = await new GitHubRemote(el.token.value.trim()).defaultBranch(m[1], m[2]);
+      if (!def) return;
+      this._branchDetectedFor = key;
+      el.branch.placeholder = def;
+      const cur = el.branch.value.trim();
+      if (!cur || cur === this._lastDetectedBranch) el.branch.value = def;
+      this._lastDetectedBranch = def;
+      if (el.branchNote) { el.branchNote.textContent = `Default branch on ${key}: ${def}`; el.branchNote.hidden = false; }
+    } catch { /* private without a token, or offline — the field is still editable */ }
+  }
+
+  // ---- remembered save locations (cached, easily zapped) ----
+  _ghRecents() { try { return JSON.parse(localStorage.getItem(GH_RECENTS_KEY)) || []; } catch { return []; } }
+  _ghWriteRecents(list) { try { localStorage.setItem(GH_RECENTS_KEY, JSON.stringify(list)); } catch { /* quota */ } this._renderGhRecents(); }
+  _ghSaveRecent(loc) {
+    const list = this._ghRecents().filter((r) => !(r.repo === loc.repo && r.path === loc.path && r.branch === loc.branch));
+    list.unshift(loc);
+    this._ghWriteRecents(list.slice(0, 8));
+  }
+  _renderGhRecents() {
+    const wrap = this.ghEl.recents; if (!wrap) return;
+    const list = this._ghRecents();
+    wrap.innerHTML = '';
+    if (!list.length) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+    const head = document.createElement('div'); head.className = 'gh-recents-head';
+    const title = document.createElement('span'); title.textContent = 'Recent save locations';
+    const clear = document.createElement('button'); clear.type = 'button'; clear.className = 'gh-link'; clear.textContent = 'Clear history';
+    clear.addEventListener('click', () => this._ghWriteRecents([]));
+    head.append(title, clear); wrap.appendChild(head);
+    list.forEach((r, i) => {
+      const row = document.createElement('div'); row.className = 'gh-recent';
+      const use = document.createElement('button'); use.type = 'button'; use.className = 'gh-recent-use';
+      use.textContent = `${r.repo} · ${r.path}${r.branch ? ` (${r.branch})` : ''}`;
+      use.addEventListener('click', () => this._ghUseRecent(r));
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'gh-recent-del'; del.setAttribute('aria-label', `Forget ${r.repo} ${r.path}`); del.textContent = '✕';
+      del.addEventListener('click', () => { const l = this._ghRecents(); l.splice(i, 1); this._ghWriteRecents(l); });
+      row.append(use, del); wrap.appendChild(row);
+    });
+  }
+  _ghUseRecent(r) {
+    const el = this.ghEl;
+    el.repo.value = r.repo; el.branch.value = r.branch || ''; el.path.value = r.path;
+    el.message.value = `Update ${r.path} via edot`;
+    this._branchDetectedFor = null;
+    this._ghDetectBranch();
+    el.token.focus();
   }
 
   _ghParse() {
     const el = this.ghEl;
     const m = /^([^/\s]+)\/([^/\s]+?)(?:\.git)?$/.exec(el.repo.value.trim());
     if (!m) throw new Error('Repository must be "owner/repo"');
-    const path = el.path.value.trim().replace(/^\/+/, '');
+    let path = el.path.value.trim().replace(/^\/+/, '');
     if (!path) throw new Error('Enter the file path to write');
+    // Files are always encapsulated in a folder: a bare "notes.md" becomes
+    // "notes/notes.md" (a document is its own folder — OPENDOC package idea).
+    if (!path.includes('/')) { const stem = path.replace(/\.[^.]+$/, '') || 'document'; path = `${stem}/${path}`; }
+    el.path.value = path; // reflect the foldered path back to the user
     const ext = (path.match(/\.([a-z0-9]+)$/i) || [])[1] || '';
     if (!IO.isTextFormat(ext)) throw new Error(`Save-back supports text files only (.md, .txt, .html, .css) — not .${ext || '?'}`);
     const token = el.token.value.trim();
     if (!token) throw new Error('Paste a personal access token');
-    return { owner: m[1], repo: m[2], path, ext, branch: el.branch.value.trim() || 'main', token };
-  }
-
-  _rememberToken(token, on) {
-    try {
-      if (on) sessionStorage.setItem(GH_TOKEN_KEY, token);
-      else sessionStorage.removeItem(GH_TOKEN_KEY);
-    } catch { /* storage blocked */ }
+    const branch = el.branch.value.trim() || el.branch.placeholder || 'main';
+    return { owner: m[1], repo: m[2], path, ext, branch, token };
   }
 
   async _githubPreview() {
@@ -396,7 +554,7 @@ class App {
       el.diffstat.textContent = file.exists
         ? `+${stats.add} −${stats.del} vs ${p.branch}`
         : `new file · ${newText.split('\n').length} lines`;
-      this._rememberToken(p.token, el.remember.checked);
+      this._ghNoteWorkingToken(p.token, el.remember.checked);
     } catch (err) {
       this._ghErr(this._ghMessage(err));
     }
@@ -421,15 +579,92 @@ class App {
         title: el.message.value.trim() || `Update ${p.path}`,
         body: 'Edited with edot (https://danbri.github.io/glitchcan-minigam/magpie/edot/edot.html).',
       });
-      this._rememberToken(p.token, el.remember.checked);
+      this._ghNoteWorkingToken(p.token, el.remember.checked);
+      this._ghSaveRecent({ repo: `${p.owner}/${p.repo}`, branch: p.branch, path: p.path });
+      // Keep enough state to offer a one-click merge next.
+      this.gh = { ...this.gh, ...p, pr, baseBranch: p.branch };
       el.diffstat.textContent = '';
       el.result.innerHTML = `Pull request opened: <a href="${esc(pr.html_url)}" target="_blank" rel="noopener noreferrer">#${pr.number}</a>`;
       el.result.hidden = false;
+      el.merge.hidden = false; // offer to merge it straight away
       this.announce(`Pull request #${pr.number} opened`);
     } catch (err) {
       this._ghErr(this._ghMessage(err));
     } finally {
       el.commit.disabled = false;
+    }
+  }
+
+  // Merge the PR we just opened — but only when GitHub reports it conflict-free.
+  async _githubMerge() {
+    const el = this.ghEl;
+    if (!this.gh || !this.gh.pr) return;
+    const { owner, repo, pr } = this.gh;
+    const token = el.token.value.trim();
+    el.error.hidden = true;
+    try {
+      el.merge.disabled = true;
+      el.diffstat.textContent = 'Checking for conflicts…';
+      const remote = new GitHubRemote(token);
+      // `mergeable` is null until GitHub computes it — poll briefly.
+      let pull = await remote.getPull(owner, repo, pr.number);
+      for (let i = 0; i < 5 && pull.mergeable == null; i++) { await sleep(800); pull = await remote.getPull(owner, repo, pr.number); }
+      if (pull.mergeable === false) {
+        el.diffstat.textContent = '';
+        return this._ghErr('Can’t merge automatically — the pull request has conflicts. Resolve them on GitHub.');
+      }
+      el.diffstat.textContent = 'Merging…';
+      await remote.mergePull(owner, repo, pr.number, { method: 'squash', title: el.message.value.trim() || undefined });
+      el.diffstat.textContent = '';
+      el.result.innerHTML = `Merged ✓ <a href="${esc(pr.html_url)}" target="_blank" rel="noopener noreferrer">#${pr.number}</a> into ${esc(this.gh.baseBranch || '')}.`;
+      el.result.hidden = false; el.merge.hidden = true;
+      this.announce(`Pull request #${pr.number} merged`);
+    } catch (err) {
+      this._ghErr(this._ghMessage(err));
+    } finally {
+      el.merge.disabled = false;
+    }
+  }
+
+  // ---- View source: see the underlying file the editor would write ----
+  _wireSourceDialog() {
+    this.srcDialog = document.getElementById('source-dialog');
+    if (!this.srcDialog) return;
+    this.srcEl = {
+      format: document.getElementById('src-format'),
+      text: document.getElementById('src-text'),
+      note: document.getElementById('src-note'),
+      copy: document.getElementById('src-copy'),
+    };
+    this.srcEl.format.addEventListener('change', () => this._renderSource());
+    this.srcEl.copy.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(this.srcEl.text.value); this.announce('Source copied'); }
+      catch { this.srcEl.text.select(); }
+    });
+  }
+
+  openSourceDialog() {
+    if (!this.srcDialog) return;
+    showModal(this.srcDialog);
+    this._renderSource();
+  }
+
+  async _renderSource() {
+    const el = this.srcEl;
+    const ext = el.format.value;
+    el.note.textContent = 'Rendering…';
+    try {
+      const text = await IO.exportText(this.editor.getContent(), this.titleInput.value, ext);
+      el.text.value = text;
+      const hasRdfa = /\b(property|typeof|vocab|resource)=/.test(this.editor.getContent());
+      const kept = ext === 'html'
+        ? (hasRdfa ? 'HTML keeps your RDFa semantics, links and structure.' : 'HTML keeps links and structure.')
+        : ext === 'md'
+          ? (hasRdfa ? 'Markdown keeps links and structure but drops RDFa — save as .html to keep semantics.' : 'Markdown keeps links and structure.')
+          : 'Plain text strips all markup, links and structure.';
+      el.note.textContent = `${text.split('\n').length} lines · ${text.length} chars — ${kept}`;
+    } catch (err) {
+      el.text.value = ''; el.note.textContent = err.message;
     }
   }
 
@@ -681,6 +916,12 @@ function iconBtn(glyph, label, onClick) {
 
 function esc(s) { return String(s).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])); }
 function sanitizeFilename(name) { return (name || 'document').replace(/[\/\\:*?"<>|]+/g, '_').slice(0, 80); }
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+// URL/path-safe slug for the "document is its own folder" default path.
+function ghSlug(s) {
+  const v = String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+  return v || 'document';
+}
 function showModal(dialog) {
   if (typeof dialog.showModal === 'function') dialog.showModal();
   else dialog.setAttribute('open', '');

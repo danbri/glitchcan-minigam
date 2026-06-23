@@ -71,6 +71,10 @@ table.grid th, table.grid td {
 table.grid thead th, table.grid .rowhead {
   background: var(--d-head); position: sticky; top: 0; z-index: 1; font-weight: 600; color: var(--d-muted);
 }
+table.grid thead th.sortable { cursor: pointer; user-select: none; }
+table.grid thead th.sortable:hover { background: var(--d-sel); color: var(--d-ink); }
+table.grid thead th.sorted { color: var(--d-accent); }
+table.grid thead th .th-sort { font-size: 0.8em; }
 table.grid .rowhead { left: 0; z-index: 2; text-align: right; user-select: none; }
 table.grid thead th.corner { left: 0; z-index: 3; }
 table.grid td.active { outline: 2px solid var(--d-focus); outline-offset: -2px; }
@@ -101,6 +105,42 @@ table.grid input.cell-input {
 .q-bar { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.4rem; }
 
 .hint { color: var(--d-muted); font-size: 0.8rem; }
+
+/* "View as" faces (OpenDoc): one object, datasheet / spreadsheet / RDF. */
+.dw-faces { display: inline-flex; border: 1px solid var(--d-line); border-radius: 6px; overflow: hidden; }
+.dw-face {
+  font: inherit; font-size: 0.82rem; padding: 0.35em 0.6em; cursor: pointer; white-space: nowrap;
+  border: none; border-right: 1px solid var(--d-line); background: var(--d-surface); color: var(--d-ink);
+}
+.dw-face:last-child { border-right: none; }
+.dw-face:hover { background: var(--d-head); }
+.dw-face.active { background: var(--d-accent); color: var(--d-accent-fg); }
+.dw-rdf {
+  flex: 1; width: 100%; box-sizing: border-box; min-height: 12rem;
+  font-family: var(--d-mono); font-size: 0.78rem; line-height: 1.5; padding: 0.6em;
+  border: 1px solid var(--d-line); border-radius: 6px; background: var(--d-surface); color: var(--d-ink); resize: vertical;
+}
+@media (pointer: coarse) { .dw-face { padding: 0.5em 0.7em; } }
+
+/* Shared hold-to-reveal label bubble (js/longpress.js) — same as the editor. */
+.hold-tip {
+  position: fixed; transform: translateX(-50%);
+  background: var(--d-ink); color: var(--d-bg);
+  padding: 0.45em 0.8em; border-radius: 7px;
+  font-size: 1rem; font-weight: 600; white-space: nowrap;
+  z-index: 200; pointer-events: none; opacity: 0; transition: opacity 0.12s;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+.hold-tip.show { opacity: 0.97; }
+@media (prefers-reduced-motion: reduce) { .hold-tip { transition: none; } }
+
+/* Held control grows and lifts (label floats clear, above + on-screen). */
+.holding {
+  transform: scale(1.35); position: relative; z-index: 60;
+  border-color: var(--d-accent); box-shadow: 0 6px 18px rgba(0,0,0,0.32);
+  transition: transform 0.1s ease;
+}
+@media (prefers-reduced-motion: reduce) { .holding { transition: none; } }
 
 /* Touch + convergence with the editor: bigger tap targets, no zoom delay. */
 .dbtn, .dw-item, .q-editor, .find-input, input, select, button { touch-action: manipulation; }

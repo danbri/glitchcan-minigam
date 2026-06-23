@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>edot · Sign in</title>
+  <meta name="description" content="Sign-in and account management for the edot suite (office editor, calendar, maps).">
+  <link rel="stylesheet" href="./css/auth.css">
+  <style>
+    /* Page chrome only — the components bring their own styling (auth.css). */
+    body {
+      margin: 0; min-height: 100dvh; min-height: 100vh;
+      background: var(--auth-bg); color: var(--auth-ink);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex; flex-direction: column; align-items: center;
+      padding: env(safe-area-inset-top) 1rem 2rem;
+    }
+    header.page { width: 100%; max-width: 26rem; margin: 1.25rem auto 0.75rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    header.page h1 { font-size: 1.15rem; margin: 0; }
+    header.page .home { color: var(--auth-accent); text-decoration: none; font-size: 0.9rem; }
+    .status { width: 100%; max-width: 26rem; margin: 0.5rem auto; min-height: 1.2rem; font-size: 0.9rem; color: var(--auth-muted); }
+    .status[data-kind="busy"] { color: var(--auth-accent); }
+    .status[data-kind="error"] { color: var(--auth-danger); }
+    .visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+    .chip-preview { margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <header class="page">
+    <h1>edot accounts</h1>
+    <a class="home" href="../edot.html">← Back to editor</a>
+  </header>
+
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <!-- Full sign-in / account-management panel. -->
+  <edot-login></edot-login>
+
+  <!-- A header-style chip, shown here so deployers can see both components. -->
+  <p class="visually-hidden">Compact status chip preview:</p>
+  <div class="chip-preview"><edot-login-button></edot-login-button></div>
+
+  <script type="module">
+    // login.html serves two jobs:
+    //   1. Standalone account-management UI (the components above).
+    //   2. The OAuth redirect CALLBACK target. When the IdP redirects back here
+    //      with ?code=…&state=…, we complete the PKCE token exchange, store the
+    //      identity in the shared session, and (if we were opened in a popup)
+    //      notify the opener before closing.
+    import { OidcClient } from './js/oidc.js';
+    import { getProvider } from './js/providers.js';
+    import { getAuthSession } from './js/session.js';
+    import { resolveProvider } from './js/login-ui.js';
+    import { resolveRedirectUri } from './auth-config.js';
+    import './js/login-ui.js'; // registers the components
+
+    const statusEl = document.getElementById('status');
+    const setStatus = (msg, kind = '') => { statusEl.textContent = msg; statusEl.dataset.kind = kind; };
+
+    const session = getAuthSession();
+
+    // Headless / programmatic test hook (mirrors window.__edot, window.__tftt).
+    // Exposes the pieces a test needs to drive the flow without a real IdP.
+    window.__auth = {
+      session,
+      OidcClient,
+      getProvider,
+      resolveProvider,
+      // Complete a callback against an explicit URL + (optionally) an injected
+      // fetch — used by test-auth.mjs with a mocked token endpoint.
+      async completeCallback(urlString, { fetchImpl, provider } = {}) {
+        return completeCallback(urlString, { fetchImpl, provider });
+      },
+      ready: false,
+    };
+
+    // Run the token exchange for a returned authorization code.
+    async function completeCallback(urlString, { fetchImpl, provider } = {}) {
+      const url = new URL(urlString || location.href);
+      const state = url.searchParams.get('state') || (url.hash && new URLSearchParams(url.hash.slice(1)).get('state'));
+      // Recover the transaction to know which provider issued this code.
+      const txnRaw = (() => { try { return sessionStorage.getItem('edot.auth.txn.' + state); } catch { return null; } })();
+      const txn = txnRaw ? JSON.parse(txnRaw) : null;
+      const prov = provider || resolveProvider((txn && txn.providerId) || 'google');
+      if (!prov) throw new Error('Cannot resolve provider for callback');
+
+      const client = new OidcClient(prov, fetchImpl ? { fetchImpl } : undefined);
+      const { tokens, txn: usedTxn } = await client.handleRedirectCallback(url.href);
+
+      let claims = {};
+      if (tokens.id_token) {
+        const eps = await client.endpoints();
+        ({ payload: claims } = client.decodeIdToken(tokens.id_token, {
+          nonce: usedTxn.nonce, clientId: usedTxn.clientId, issuer: eps.issuer,
+        }));
+      }
+      // Fetch userinfo for OAuth2-only providers (no id_token) or to enrich.
+      let userinfo = {};
+      if (!tokens.id_token && tokens.access_token) {
+        try { userinfo = await client.fetchUserInfo(tokens.access_token) || {}; } catch { /* */ }
+      }
+      const account = session.upsertAccount({
+        providerId: prov.id, providerName: prov.name, claims, tokens, userinfo,
+      });
+      // If opened as a popup, hand the result back to the opener.
+      try {
+        if (window.opener && window.opener !== window) {
+          window.opener.postMessage({ type: 'edot-auth:signed-in', key: account.key }, location.origin);
+        }
+      } catch { /* cross-origin opener */ }
+      return account;
+    }
+
+    // On normal page load: if this is a live callback, finish it; else just
+    // show the management UI.
+    (async () => {
+      const params = new URLSearchParams(location.search);
+      if (params.get('code') || params.get('error')) {
+        if (params.get('error')) {
+          setStatus(`Sign-in failed: ${params.get('error_description') || params.get('error')}`, 'error');
+        } else {
+          setStatus('Completing sign-in…', 'busy');
+          try {
+            const account = await completeCallback(location.href);
+            setStatus(`Signed in as ${account.name}.`, '');
+            // Clean the code/state out of the address bar.
+            history.replaceState(null, '', location.pathname);
+          } catch (err) {
+            setStatus(`Sign-in failed: ${err.message}`, 'error');
+          }
+        }
+      }
+      window.__auth.ready = true;
+    })();
+  </script>
+</body>
+</html>

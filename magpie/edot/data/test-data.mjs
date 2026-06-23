@@ -122,6 +122,89 @@ try {
     return open;
   }));
 
+  // 4e. Durable upstream forms round-trip (OPENDOC): N-Quads and zip-of-CSVs.
+  const nq = await page.evaluate(async () => {
+    const { tablesToNquads, nquadsToTables } = await import('./nquads.js');
+    const d = document.querySelector('edot-data');
+    d.engine.createTableFromColumns('rt_people', ['name', 'age'], [['Ada', 36], ['Bo', 9]]);
+    const text = tablesToNquads(d.engine, ['rt_people']);
+    const back = nquadsToTables(text);
+    const t = back.find((x) => x.name === 'rt_people');
+    return { hasQuad: /urn:edot:prop:rt_people:age/.test(text), name: t && t.name, cols: t && t.columns.slice().sort().join(','), rows: t && t.rows.length, age: t && t.rows.map((r) => r[t.columns.indexOf('age')]).sort((a, b) => a - b) };
+  });
+  ok('N-Quads export emits typed quads', nq.hasQuad);
+  ok('N-Quads round-trips a table (name/cols/rows)', nq.name === 'rt_people' && nq.cols === 'age,name' && nq.rows === 2);
+  ok('N-Quads preserves numeric typing', Array.isArray(nq.age) && nq.age[0] === 9 && nq.age[1] === 36);
+
+  const zip = await page.evaluate(async () => {
+    const { zipSync, unzip, utf8 } = await import('../js/zip.js');
+    const { parseCsv, toCsv } = await import('./csv.js');
+    const d = document.querySelector('edot-data');
+    const data = d.engine.tableRows('rt_people');
+    const blob = await zipSync({ 'rt_people.csv': toCsv(data.columns, data.rows) });
+    const map = await unzip(await blob.arrayBuffer());
+    const rows = parseCsv(utf8.decode(map['rt_people.csv']));
+    return { entries: Object.keys(map), header: rows[0].join(','), body: rows.length - 1 };
+  });
+  ok('zip-of-CSVs round-trips entry + content', zip.entries.includes('rt_people.csv') && zip.header === 'name,age' && zip.body === 2);
+
+  // 4f. Export fingerprint (SHA-256): committed/signable provenance.
+  ok('export fingerprints content (sha256)', await page.evaluate(async () => {
+    const d = document.querySelector('edot-data');
+    let fn = '', captured = null;
+    const orig = document.createElement.bind(document);
+    document.createElement = (t) => { const el = orig(t); if (t === 'a') { Object.defineProperty(el, 'click', { value: () => { captured = el.download; }, configurable: true }); } return el; };
+    const fp = await d._emit(new TextEncoder().encode('hello world'), 'probe.nq', 'application/n-quads');
+    document.createElement = orig;
+    // SHA-256("hello world") = b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9
+    return fp === 'b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9' && captured === 'probe.nq';
+  }));
+
+  // 4g. Datasheet sort: click a header to sort (asc/desc); edits after sorting
+  // still write back to the right underlying row (order map, not raw index).
+  const sort = await page.evaluate(async () => {
+    const d = document.querySelector('edot-data');
+    d.engine.createTableFromColumns('rt_sort', ['city', 'pop'], [['Bristol', 460], ['Bath', 94], ['Wells', 12]]);
+    d.openTable('rt_sort');
+    await new Promise((r) => setTimeout(r, 30));
+    const grid = d._main.querySelector('edot-grid');
+    const popHeader = () => grid.querySelector('thead th[data-c="1"]');
+    const firstCity = () => grid.querySelector('tbody tr td[data-c="0"]').textContent;
+    popHeader().click();                         // sort by pop ascending
+    const asc = firstCity();
+    popHeader().click();                         // sort by pop descending
+    const desc = firstCity();
+    // Top visible row is now Bristol (pop 460). Edit it to 999 and confirm the
+    // write lands on Bristol — not on whatever row index 0 used to be.
+    const topPop = grid.querySelector('tbody tr td[data-c="1"]');
+    grid._setActive(+topPop.dataset.r, 1); grid._startEdit('999'); grid._commit();
+    await new Promise((r) => setTimeout(r, 30));
+    return { asc, desc, bristol: d.engine.query("SELECT pop FROM rt_sort WHERE city='Bristol'").rows[0][0] };
+  });
+  ok('grid sorts ascending on header click', sort.asc === 'Wells');
+  ok('grid sorts descending on second click', sort.desc === 'Bristol');
+  ok('edit after sort writes back to the correct row', sort.bristol === 999);
+
+  // 4h. "View as" faces: one object shown as datasheet / spreadsheet / RDF.
+  const faces = await page.evaluate(async () => {
+    const d = document.querySelector('edot-data');
+    d.engine.createTableFromColumns('rt_face', ['city', 'pop'], [['Bristol', 460], ['Bath', 94]]);
+    d.openTable('rt_face', 'grid');
+    await new Promise((r) => setTimeout(r, 20));
+    const hasGrid = !!d._main.querySelector('edot-grid');
+    const switcher = d._main.querySelectorAll('.dw-face').length;
+    d.openTable('rt_face', 'sheet');
+    await new Promise((r) => setTimeout(r, 20));
+    const hasSheet = !!d._main.querySelector('edot-sheet');
+    d.openTable('rt_face', 'rdf');
+    await new Promise((r) => setTimeout(r, 20));
+    const rdf = d._main.querySelector('.dw-rdf');
+    return { hasGrid, switcher, hasSheet, rdfHasQuad: !!rdf && /urn:edot:prop:rt_face:pop/.test(rdf.value) };
+  });
+  ok('datasheet face renders a grid with a 3-way switcher', faces.hasGrid && faces.switcher === 3);
+  ok('spreadsheet face renders a sheet', faces.hasSheet);
+  ok('RDF face shows the N-Quads form of the object', faces.rdfHasQuad);
+
   // 5. Persistence: DB exports to bytes.
   ok('database exports to bytes', await page.evaluate(() => document.querySelector('edot-data').engine.exportDb().length > 0));
 

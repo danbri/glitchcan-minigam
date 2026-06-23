@@ -15,9 +15,11 @@ export class GitHubRemote {
     const res = await this.fetch(`${API}${path}`, {
       method,
       headers: {
-        Authorization: `Bearer ${this.token}`,
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28',
+        // Anonymous when there's no token, so public-repo reads (e.g. detecting
+        // the default branch) work before a token is pasted.
+        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
         ...(body ? { 'Content-Type': 'application/json' } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
@@ -35,6 +37,19 @@ export class GitHubRemote {
 
   me() { return this._req('GET', '/user'); }
   getRepo(owner, repo) { return this._req('GET', `/repos/${owner}/${repo}`); }
+
+  // The repo's default branch ("main", "master", or whatever it actually is),
+  // detected over the API instead of guessed.
+  async defaultBranch(owner, repo) { return (await this.getRepo(owner, repo)).default_branch; }
+
+  getPull(owner, repo, number) { return this._req('GET', `/repos/${owner}/${repo}/pulls/${number}`); }
+
+  // Merge a PR. `mergeable` on the pull tells us whether it's conflict-free.
+  mergePull(owner, repo, number, { method = 'squash', title } = {}) {
+    return this._req('PUT', `/repos/${owner}/${repo}/pulls/${number}/merge`, {
+      merge_method: method, ...(title ? { commit_title: title } : {}),
+    });
+  }
 
   // File text + blob sha. Returns { sha:null } if the file does not exist yet.
   async getFile(owner, repo, path, ref) {

@@ -1,0 +1,222 @@
+/* auth.css — styling for the edot auth components (<edot-login>,
+   <edot-login-button>). Light DOM, so these selectors target the elements the
+   components render. Mirrors edot.css conventions: CSS custom properties,
+   mobile-first, em/rem units, prefers-color-scheme dark mode, visible focus. */
+
+:root {
+  --auth-bg: #f4f4f2;
+  --auth-surface: #ffffff;
+  --auth-ink: #1c1c1c;
+  --auth-muted: #5a5a5a;
+  --auth-line: #d9d6cf;
+  --auth-accent: #8b4513;
+  --auth-accent-fg: #ffffff;
+  --auth-focus: #1a73e8;
+  --auth-danger: #b00020;
+  --auth-radius: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --auth-bg: #1a1a1a;
+    --auth-surface: #242424;
+    --auth-ink: #ececec;
+    --auth-muted: #a8a8a8;
+    --auth-line: #3a3a3a;
+    --auth-accent: #d2935a;
+    --auth-accent-fg: #1a1a1a;
+  }
+}
+
+edot-login, edot-login-button { display: block; box-sizing: border-box; }
+edot-login *, edot-login-button * { box-sizing: border-box; }
+
+/* ---- Full panel ---- */
+.auth-panel {
+  max-width: 26rem;
+  margin: 0 auto;
+  padding: 1rem;
+  background: var(--auth-surface);
+  border: 1px solid var(--auth-line);
+  border-radius: var(--auth-radius);
+  color: var(--auth-ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.auth-h { font-size: 1.1rem; margin: 0 0 0.25rem; }
+.auth-h--add { margin-top: 1.25rem; }
+.auth-sub, .auth-note { color: var(--auth-muted); font-size: 0.9rem; margin: 0 0 0.75rem; }
+.auth-note code { background: var(--auth-bg); padding: 0.05em 0.35em; border-radius: 4px; }
+
+.auth-accounts, .auth-providers { list-style: none; margin: 0 0 0.5rem; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+
+/* ---- Provider buttons (mobile-first: full-width tap targets) ---- */
+.auth-provider {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.7rem;
+  min-height: 3rem;                 /* comfortable touch target */
+  border: 1px solid var(--auth-line);
+  border-radius: var(--auth-radius);
+  background: var(--auth-surface);
+  color: var(--auth-ink);
+  font: inherit;
+  font-size: 0.98rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s, border-color 0.12s;
+}
+.auth-provider:hover:not([disabled]) { background: var(--auth-bg); border-color: var(--auth-accent); }
+.auth-provider:focus-visible { outline: 3px solid var(--auth-focus); outline-offset: 1px; }
+.auth-provider[disabled] { opacity: 0.5; cursor: not-allowed; }
+.auth-provider-name { flex: 1 1 auto; }
+.auth-provider-go { color: var(--auth-muted); font-weight: 700; }
+.auth-warn { color: var(--auth-danger); font-weight: 700; }
+
+/* ---- Account rows + switcher ---- */
+.auth-account {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+  border: 1px solid var(--auth-line);
+  border-radius: var(--auth-radius);
+  overflow: hidden;
+}
+.auth-account.is-active { border-color: var(--auth-accent); }
+.auth-account-main {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  min-height: 3rem;
+  border: none;
+  background: var(--auth-surface);
+  color: var(--auth-ink);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.auth-account-main:hover { background: var(--auth-bg); }
+.auth-account-main:focus-visible { outline: 3px solid var(--auth-focus); outline-offset: -2px; }
+.auth-account-text { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.auth-account-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.auth-account-meta { font-size: 0.8rem; color: var(--auth-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.auth-active-dot { color: var(--auth-accent); margin-left: auto; font-size: 0.7rem; }
+
+.auth-icon-btn {
+  flex: 0 0 auto;
+  width: 2.6rem;
+  border: none;
+  border-left: 1px solid var(--auth-line);
+  background: var(--auth-surface);
+  color: var(--auth-muted);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.auth-icon-btn:hover { background: var(--auth-bg); color: var(--auth-danger); }
+.auth-icon-btn:focus-visible { outline: 3px solid var(--auth-focus); outline-offset: -2px; }
+
+/* ---- Avatars ---- */
+.auth-avatar {
+  flex: 0 0 auto;
+  width: 2rem; height: 2rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: cover;
+}
+.auth-avatar--initials { color: #fff; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em; }
+
+/* ---- Buttons ---- */
+.auth-btn {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  min-height: 2.75rem;
+  border-radius: var(--auth-radius);
+  border: 1px solid var(--auth-line);
+  background: var(--auth-accent);
+  color: var(--auth-accent-fg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.auth-btn--ghost { background: transparent; color: var(--auth-ink); }
+.auth-btn:hover { filter: brightness(1.05); }
+.auth-btn:focus-visible { outline: 3px solid var(--auth-focus); outline-offset: 1px; }
+
+/* ---- Toast (errors, e.g. CORS-blocked token endpoint) ---- */
+.auth-toast {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--auth-radius);
+  background: var(--auth-danger);
+  color: #fff;
+  font-size: 0.85rem;
+  display: none;
+}
+.auth-toast.show { display: block; }
+
+/* ---- Compact header chip ---- */
+edot-login-button { position: relative; display: inline-block; }
+.auth-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  min-height: 2.2rem;
+  border: 1px solid var(--auth-line);
+  border-radius: 999px;
+  background: var(--auth-surface);
+  color: var(--auth-ink);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+.auth-chip:hover { background: var(--auth-bg); }
+.auth-chip:focus-visible { outline: 3px solid var(--auth-focus); outline-offset: 1px; }
+.auth-chip .auth-avatar { width: 1.5rem; height: 1.5rem; font-size: 0.6rem; }
+.auth-chip-label { max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.auth-chip-caret { color: var(--auth-muted); }
+
+.auth-chip-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.3rem);
+  min-width: 12rem;
+  z-index: 50;
+  background: var(--auth-surface);
+  border: 1px solid var(--auth-line);
+  border-radius: var(--auth-radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: column;
+}
+.auth-chip-section { display: flex; flex-direction: column; border-bottom: 1px solid var(--auth-line); padding-bottom: 0.25rem; margin-bottom: 0.25rem; }
+.auth-chip-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  min-height: 2.5rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--auth-ink);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.auth-chip-item:hover { background: var(--auth-bg); }
+.auth-chip-item:focus-visible { outline: 3px solid var(--auth-focus); outline-offset: -2px; }
+.auth-chip-item.is-active { font-weight: 600; }
+.auth-chip-item-text { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-provider, .auth-chip, .auth-account-main { transition: none; }
+}

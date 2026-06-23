@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="edot calendar — a mobile-first, accessible calendar with month/week/day/agenda views, layered calendars, ICS import/export/subscribe, recurrence and reminders. All local, in the browser.">
+  <meta name="color-scheme" content="light dark">
+  <title>edot calendar</title>
+  <link rel="stylesheet" href="css/calendar.css">
+  <style>
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    body { display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--c-bg); color: var(--c-ink); }
+    .app-header { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.75rem; background: var(--c-surface); border-bottom: 1px solid var(--c-line); flex: 0 0 auto; }
+    .app-header h1 { font-size: 1.05rem; margin: 0; }
+    .app-header .logo { color: var(--c-accent); }
+    .app-header a { color: var(--c-focus); font-size: 0.85rem; text-decoration: none; }
+    .app-header .spacer { flex: 1; }
+    main { flex: 1 1 auto; min-height: 0; }
+    edot-calendar { height: 100%; }
+    .boot { padding: 2rem; color: var(--c-muted); }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <h1><span class="logo">📅 edot calendar</span></h1>
+    <span class="spacer"></span>
+    <a href="../data/data.html">data ▦</a>
+    <a href="../edot.html">← back to editor</a>
+  </header>
+  <main>
+    <edot-calendar><div class="boot">Loading calendar…</div></edot-calendar>
+  </main>
+  <script type="module">
+    // Boot the component and expose a headless-test hook (mirrors window.__edot
+    // / window.__cal conventions): the live instance plus a couple of helpers.
+    import { EdotCalendar } from './js/calendar-app.js';
+    const cal = document.querySelector('edot-calendar');
+    await cal.init();
+    window.__cal = {
+      app: cal,
+      store: cal.store,
+      alarms: cal.alarms,
+      ics: await import('./js/ics.js'),
+      recurrence: await import('./js/recurrence.js'),
+    };
+  </script>
+</body>
+</html>
