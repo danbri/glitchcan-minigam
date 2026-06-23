@@ -10,6 +10,7 @@ import { FindReplace } from './find-replace.js';
 import { Attention } from './attention.js';
 import { resolveSourceUrl, filenameFromUrl } from './open-url.js';
 import { EXAMPLES } from './examples.js';
+import './tree.js';
 import { GitHubRemote, commitViaPullRequest } from './git-remote.js';
 import { diffLines, diffStats, collapse } from './diff.js';
 import * as IO from './io.js';
@@ -17,7 +18,7 @@ import * as LO from './libreoffice-bridge.js';
 
 // Bump on each meaningful deploy. Shown in the footer so a stale cached build
 // is obvious (the stamp reflects the JS your browser actually loaded).
-const BUILD = '2026-06-23.g';
+const BUILD = '2026-06-23.h';
 
 const GH_TOKEN_KEY = 'edot.gh.token';
 const GH_LOGIN_KEY = 'edot.gh.login';     // cached @login for the connected token
@@ -62,7 +63,7 @@ class App {
     this._wireTitle();
     this._wireDialog();
     this._wireUrlDialog();
-    this._wireExamplesDialog();
+    this._wireOpenDialog();
     this._wireGithubDialog();
     this._wireSourceDialog();
     this._wireGlobalKeys();
@@ -213,9 +214,7 @@ class App {
 
     const mi = (id, fn) => document.getElementById(id).addEventListener('click', () => { this._closeMenu(); fn(); });
     mi('mi-new', () => this.newDocument());
-    mi('mi-open', () => this.fileInput.click());
-    mi('mi-url', () => this.openUrlDialog());
-    mi('mi-examples', () => this.openExamplesDialog());
+    mi('mi-open', () => this.openOpenDialog());
     mi('mi-docs', () => this.openLibrary());
     mi('mi-close', () => this.closeDocument());
     mi('mi-find', () => this.findReplace.open(true));
@@ -305,26 +304,44 @@ class App {
     await this.openFromUrl(value);
   }
 
-  // ---- Examples dialog ----
-  _wireExamplesDialog() {
-    this.examplesDialog = document.getElementById('examples-dialog');
-    const list = document.getElementById('examples-list');
-    for (const ex of EXAMPLES) {
-      const li = document.createElement('li');
-      li.className = 'doc-row';
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'doc-open';
-      btn.innerHTML = `<span class="doc-name">${esc(ex.title)}</span>` +
-        (ex.note ? `<span class="doc-note">${esc(ex.note)}</span>` : '') +
-        (ex.credit ? `<span class="doc-note">${esc(ex.credit)}</span>` : '');
-      btn.addEventListener('click', () => { this.examplesDialog.close(); this.openExample(ex); });
-      li.appendChild(btn);
-      list.appendChild(li);
-    }
+  // ---- Open dialog: Examples / Research hierarchy + file/URL openers ----
+  _wireOpenDialog() {
+    this.openDialog = document.getElementById('open-dialog');
+    this.openTree = document.getElementById('open-tree');
+    document.getElementById('open-from-file').addEventListener('click', () => { this.openDialog.close(); this.fileInput.click(); });
+    document.getElementById('open-from-url').addEventListener('click', () => { this.openDialog.close(); this.openUrlDialog(); });
   }
 
-  openExamplesDialog() { showModal(this.examplesDialog); }
+  async openOpenDialog() {
+    const close = () => this.openDialog.close();
+    const exNodes = EXAMPLES.map((ex) => ({
+      label: ex.title, note: ex.note,
+      onActivate: () => { close(); this.openExample(ex); },
+    }));
+    const research = await this._loadResearch();
+    const reNodes = research.length
+      ? research.map((r) => ({
+        label: r.title, note: r.note,
+        onActivate: () => { close(); this.openExample({ title: r.title, src: `docs/research/${r.file}`, local: true }); },
+      }))
+      : [{ label: '(no research documents yet)', note: 'Add markdown to docs/research/ and list it in index.json' }];
+    this.openTree.setData([
+      { label: 'Examples', icon: '📚', expanded: true, children: exNodes },
+      { label: 'Research', icon: '🔬', expanded: false, children: reNodes },
+    ]);
+    showModal(this.openDialog);
+  }
+
+  // Load the research manifest (docs/research/index.json) once, best-effort.
+  async _loadResearch() {
+    if (this._research) return this._research;
+    try {
+      const resp = await fetch('docs/research/index.json');
+      const json = await resp.json();
+      this._research = Array.isArray(json.docs) ? json.docs : [];
+    } catch { this._research = []; }
+    return this._research;
+  }
 
   // ---- Save to GitHub (branch + pull request) ----
   _wireGithubDialog() {

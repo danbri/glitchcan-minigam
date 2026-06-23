@@ -28,14 +28,8 @@
         <button type="button" id="mi-new" class="menu-item" role="menuitem">
           <span>New document</span><span class="hint">Ctrl/⌘N</span>
         </button>
-        <button type="button" id="mi-open" class="menu-item" role="menuitem">
-          <span>Open file…</span><span class="hint">Ctrl/⌘O</span>
-        </button>
-        <button type="button" id="mi-url" class="menu-item" role="menuitem">
-          <span>Open from URL…</span><span class="hint">git-aware</span>
-        </button>
-        <button type="button" id="mi-examples" class="menu-item" role="menuitem" aria-haspopup="dialog">
-          <span>Examples…</span>
+        <button type="button" id="mi-open" class="menu-item" role="menuitem" aria-haspopup="dialog">
+          <span>Open…</span><span class="hint">Examples · Research · file · URL</span>
         </button>
         <button type="button" id="mi-docs" class="menu-item" role="menuitem">
           <span>My documents…</span><span class="hint">Ctrl/⌘⇧O</span>
@@ -122,13 +116,19 @@
     </div>
   </dialog>
 
-  <!-- Examples -->
-  <dialog id="examples-dialog" class="dialog" aria-labelledby="examples-dialog-title">
+  <!-- Open: a hierarchy of Examples, Research, plus file / URL openers -->
+  <dialog id="open-dialog" class="dialog" aria-labelledby="open-dialog-title">
     <form method="dialog" class="dialog-head">
-      <h2 id="examples-dialog-title">Examples</h2>
+      <h2 id="open-dialog-title">Open</h2>
       <button type="submit" class="tbtn" aria-label="Close">✕</button>
     </form>
-    <ul id="examples-list" class="docs-list"></ul>
+    <div class="dialog-body">
+      <div class="open-actions">
+        <button type="button" id="open-from-file" class="tbtn">📄 From a file…</button>
+        <button type="button" id="open-from-url" class="tbtn">🔗 From a URL…</button>
+      </div>
+      <edot-tree id="open-tree" aria-label="Examples and research"></edot-tree>
+    </div>
   </dialog>
 
   <!-- View source: the underlying file in each text format -->

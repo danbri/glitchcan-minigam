@@ -444,6 +444,25 @@ select.tbtn {
 }
 @media (max-width: 30rem) { .alpha-badge { display: none; } }
 
+/* Reusable disclosure tree (js/tree.js) — the clicky open/closey hierarchy. */
+edot-tree { display: block; }
+.tree, .tree-group { list-style: none; margin: 0; padding: 0; }
+.tree-group { margin-left: 0.85rem; padding-left: 0.4rem; border-left: 1px solid var(--line); }
+.tree-row {
+  display: flex; align-items: baseline; gap: 0.4rem; width: 100%; text-align: left;
+  background: none; border: 1px solid transparent; border-radius: var(--radius);
+  padding: 0.4em 0.5em; font: inherit; color: var(--ink); cursor: pointer;
+}
+.tree-row:hover { background: var(--surface); }
+.tree-row:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+.tree-twisty { width: 1em; flex: 0 0 auto; color: var(--muted); }
+.tree-icon { flex: 0 0 auto; }
+.tree-folder .tree-label { font-weight: 600; }
+.tree-label { flex: 0 0 auto; }
+.tree-note { color: var(--muted); font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.open-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+@media (pointer: coarse) { .tree-row { padding: 0.55em 0.6em; } }
+
 /* View source */
 .src-bar { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin: 0.4rem 0; }
 .src-bar label { font-size: 0.85rem; color: var(--muted); }
