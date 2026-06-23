@@ -28,6 +28,11 @@ offline, and dependency-free.
   `third_party/searching-for-logic/`).
 - **Close** (`Ctrl/⌘+W`) — closes the current document; it stays safe in the
   library.
+- **Return indicator** — when you flip to another tab/window from an open
+  dialog (e.g. off to GitHub to make a token, or to the Data workspace), the
+  edot tab gently blinks its **title + favicon** so it's easy to find your way
+  back, and soft-flashes the page on return. Auto-stops after a few minutes
+  (`js/attention.js`).
 - **Save to GitHub** — `File ▸ Save to GitHub` commits your edits to a **new
   branch and opens a pull request**, entirely client-side via the GitHub REST
   API (paste a fine-grained token). Shows a **colour diff** of your changes

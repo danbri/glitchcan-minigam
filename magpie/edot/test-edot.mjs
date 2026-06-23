@@ -406,6 +406,26 @@ try {
   });
   ok('docx Symbol-font run imports ∀ (not a square)', /∀x is happy/.test(symDoc));
 
+  // 9n. Attention: nudge title + favicon while the tab is hidden, restore on return.
+  const att = await page.evaluate(async () => {
+    const { Attention } = await import('./js/attention.js');
+    const orig = document.title;
+    let hidden = false;
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
+    const a = new Attention({ timeoutMs: 60000 });
+    a.arm('Come back', { once: true });
+    hidden = true; document.dispatchEvent(new Event('visibilitychange'));
+    const iconAway = (document.querySelector('link[rel~="icon"]') || {}).href || '';
+    await new Promise((r) => setTimeout(r, 1250));
+    const titleAway = document.title;
+    hidden = false; document.dispatchEvent(new Event('visibilitychange'));
+    await new Promise((r) => setTimeout(r, 30));
+    return { orig, iconAway, titleAway, titleBack: document.title, blinking: a._blinking, armed: a._armed };
+  });
+  ok('attention swaps favicon while away', /svg/.test(att.iconAway));
+  ok('attention nudges the title while away', /Come back|🔔/.test(att.titleAway));
+  ok('attention restores title + disarms on return (once)', att.titleBack === att.orig && !att.blinking && !att.armed);
+
   // 10. LibreOffice bridge reports not-configured gracefully.
   const loState = await page.evaluate(async () => {
     const LO = await import('./js/libreoffice-bridge.js');

@@ -7,6 +7,7 @@ import { Toolbar } from './toolbar.js';
 import { Announcer } from './a11y.js';
 import { Library } from './library.js';
 import { FindReplace } from './find-replace.js';
+import { Attention } from './attention.js';
 import { resolveSourceUrl, filenameFromUrl } from './open-url.js';
 import { EXAMPLES } from './examples.js';
 import { GitHubRemote, commitViaPullRequest } from './git-remote.js';
@@ -31,6 +32,7 @@ class App {
 
     this.announcer = new Announcer();
     this.announce = (m, o) => this.announcer.toast(m, o);
+    this.attention = new Attention({ message: 'Back to edot' });
 
     this.editorEl = document.getElementById('editor');
     this.editor = new Editor(this.editorEl);
@@ -100,6 +102,7 @@ class App {
     this._cleanup = [];
     clearTimeout(this._saveTimer);
     try { this._bc?.close(); } catch { /* */ }
+    this.attention?.disarm();
     this.findReplace?.destroy?.();
     this.announcer?.destroy?.();
     this.editor?.destroy?.();
@@ -203,7 +206,7 @@ class App {
     mi('mi-close', () => this.closeDocument());
     mi('mi-find', () => this.findReplace.open(true));
     mi('mi-github', () => this.openGithubDialog());
-    mi('mi-data', () => { const w = window.open('data/data.html', '_blank', 'noopener'); if (!w) location.href = 'data/data.html'; });
+    mi('mi-data', () => { const w = window.open('data/data.html', '_blank', 'noopener'); if (!w) location.href = 'data/data.html'; else this.attention.arm('Back to edot', { once: true }); });
 
     this.fileInput.accept = IO.importAccept();
     this.fileInput.addEventListener('change', () => {
@@ -307,6 +310,9 @@ class App {
     };
     this.ghEl.preview.addEventListener('click', () => this._githubPreview());
     this.ghEl.commit.addEventListener('click', () => this._githubCommit());
+    // While the dialog is open and you flip to GitHub to make a token, nudge
+    // the edot tab so it's easy to find your way back; stop when it closes.
+    this.ghDialog.addEventListener('close', () => this.attention.disarm());
     // Returning from the GitHub token page (token freshly copied) refocuses
     // this tab — grab it from the clipboard if the field is still empty.
     this._on(window, 'focus', () => { if (this.ghDialog.open) this._harvestToken(); });
@@ -349,6 +355,7 @@ class App {
     showModal(this.ghDialog);
     (el.repo.value ? el.token : el.repo).focus();
     this._harvestToken(); // pick up a freshly-copied token from the clipboard
+    this.attention.arm('Paste your GitHub token'); // nudge the tab on return
   }
 
   _ghParse() {
