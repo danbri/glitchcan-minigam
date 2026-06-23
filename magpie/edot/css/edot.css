@@ -421,6 +421,26 @@ select.tbtn {
 .gh-steps li { margin: 0.25rem 0; }
 .gh-steps code { background: var(--bg); padding: 0 0.3em; border-radius: 3px; }
 .gh-tip { color: var(--muted); margin: 0.4rem 0 0; }
+/* Remembered save locations — cached, and each easily zapped. */
+.gh-recents { margin: 0.5rem 1rem 0; }
+.gh-recents[hidden] { display: none; }
+.gh-recents-head { display: flex; align-items: baseline; justify-content: space-between; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.25rem; }
+.gh-link { background: none; border: none; color: var(--focus); cursor: pointer; font: inherit; font-size: 0.78rem; padding: 0; }
+.gh-link:hover { text-decoration: underline; }
+.gh-recent { display: flex; align-items: center; gap: 0.3rem; margin: 0.15rem 0; }
+.gh-recent-use {
+  flex: 1; text-align: left; font: inherit; font-size: 0.82rem; cursor: pointer;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 0.35em 0.6em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gh-recent-use:hover { border-color: var(--focus); }
+.gh-recent-del {
+  flex: 0 0 auto; width: 2rem; height: 2rem; cursor: pointer;
+  background: none; border: 1px solid transparent; border-radius: var(--radius); color: var(--muted);
+}
+.gh-recent-del:hover { color: var(--accent-fg); background: var(--accent); }
+
 .gh-grid {
   display: grid;
   grid-template-columns: auto 1fr;

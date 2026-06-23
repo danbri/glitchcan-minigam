@@ -124,7 +124,10 @@ try {
         if (/\/git\/ref\/heads\//.test(url)) return j({ object: { sha: 'B' } });
         if (/\/git\/refs$/.test(url)) return j({});
         if (/\/contents\//.test(url) && m === 'PUT') return j({ commit: { sha: 'C' } });
+        if (/\/pulls\/\d+\/merge$/.test(url) && m === 'PUT') return j({ merged: true, message: 'Pull Request successfully merged' });
+        if (/\/pulls\/\d+$/.test(url) && m === 'GET') return j({ number: 7, mergeable: true, html_url: 'https://github.com/o/r/pull/7' });
         if (/\/pulls$/.test(url)) return j({ number: 7, html_url: 'https://github.com/o/r/pull/7' });
+        if (/\/repos\/[^/]+\/[^/]+$/.test(url) && m === 'GET') return j({ default_branch: 'main' });
         return j({});
       }
       return orig(url, opts);
@@ -136,13 +139,40 @@ try {
   await page.click('#menu-button'); await page.click('#mi-github'); await page.waitForTimeout(250);
   ok('github dialog opens', await page.isVisible('#gh-repo'));
   ok('token auto-harvested from clipboard', /^github_pat_/.test(await page.inputValue('#gh-token')));
-  await page.fill('#gh-repo', 'o/r'); await page.fill('#gh-branch', 'main');
-  await page.fill('#gh-path', 'docs/x.md'); await page.fill('#gh-token', 'tok');
+  ok('default path is folder-encapsulated', /^[^/]+\/[^/]+\.\w+$/.test(await page.inputValue('#gh-path')));
+
+  // Default branch is auto-detected (main/master/…) once the repo is named.
+  await page.fill('#gh-token', 'tok');
+  await page.fill('#gh-branch', '');
+  await page.fill('#gh-repo', 'o/r');
+  await page.dispatchEvent('#gh-repo', 'blur');
+  await page.waitForTimeout(200);
+  ok('default branch auto-detected from repo', (await page.inputValue('#gh-branch')) === 'main');
+
+  // A bare filename is wrapped into its own folder on parse.
+  await page.fill('#gh-path', 'bare.md');
+  await page.click('#gh-preview'); await page.waitForTimeout(250);
+  ok('bare filename wrapped into a folder', (await page.inputValue('#gh-path')) === 'bare/bare.md');
+
+  await page.fill('#gh-path', 'docs/x.md');
   await page.click('#gh-preview'); await page.waitForTimeout(250);
   ok('github preview renders a diff', (await page.$$('#gh-diff .row')).length > 0);
   ok('github diffstat shows counts', /[+−]\d/.test(await page.textContent('#gh-diffstat')));
   await page.click('#gh-commit'); await page.waitForTimeout(300);
   ok('github commit opens a PR link', /#7/.test(await page.textContent('#gh-result')));
+
+  // Merge option appears and merges cleanly when there are no conflicts.
+  ok('merge button appears after PR', await page.isVisible('#gh-merge'));
+  await page.click('#gh-merge'); await page.waitForTimeout(400);
+  ok('PR merges when conflict-free', /Merged/.test(await page.textContent('#gh-result')));
+
+  // The save location is cached and is individually zappable.
+  ok('save location cached', await page.evaluate(() =>
+    (JSON.parse(localStorage.getItem('edot.gh.recents') || '[]')).some((r) => r.repo === 'o/r' && r.path === 'docs/x.md')));
+  ok('recents render in the dialog', (await page.$$('#gh-recents .gh-recent')).length > 0);
+  await page.click('#gh-recents .gh-recent-del'); await page.waitForTimeout(120);
+  ok('a cached location can be zapped', await page.evaluate(() =>
+    !(JSON.parse(localStorage.getItem('edot.gh.recents') || '[]')).some((r) => r.repo === 'o/r' && r.path === 'docs/x.md')));
 
   // Non-text path is rejected with a clear error.
   await page.fill('#gh-path', 'image.docx');
