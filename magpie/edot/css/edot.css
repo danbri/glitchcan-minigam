@@ -421,6 +421,15 @@ select.tbtn {
 .gh-steps li { margin: 0.25rem 0; }
 .gh-steps code { background: var(--bg); padding: 0 0.3em; border-radius: 3px; }
 .gh-tip { color: var(--muted); margin: 0.4rem 0 0; }
+/* System-wide sign-in chip (alpha) in the header */
+.login-slot { display: inline-flex; align-items: center; gap: 0.25rem; }
+.alpha-badge {
+  font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--accent-fg); background: var(--accent); padding: 0.05em 0.4em; border-radius: 999px;
+  line-height: 1.4;
+}
+@media (max-width: 30rem) { .alpha-badge { display: none; } }
+
 /* View source */
 .src-bar { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin: 0.4rem 0; }
 .src-bar label { font-size: 0.85rem; color: var(--muted); }

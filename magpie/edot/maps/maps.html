@@ -9,8 +9,11 @@
   <!-- Vendored MapLibre GL JS (BSD-3-Clause) and its CSS — no runtime CDN. -->
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
   <link rel="stylesheet" href="css/maps.css">
+  <link rel="stylesheet" href="../auth/css/auth.css">
   <style>
     html, body { height: 100%; margin: 0; overflow: hidden; }
+    .login-slot { display: inline-flex; align-items: center; gap: 0.25rem; }
+    .alpha-badge { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #fff; background: var(--m-accent); padding: 0.05em 0.4em; border-radius: 999px; }
     body { display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--m-bg); color: var(--m-ink); }
     .app-header { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.75rem; background: var(--m-surface); border-bottom: 1px solid var(--m-line); flex: 0 0 auto; }
     .app-header h1 { font-size: 1.05rem; margin: 0; }
@@ -29,10 +32,12 @@
     <a href="../calendar/calendar.html">calendar 📅</a>
     <a href="../data/data.html">data ▦</a>
     <a href="../edot.html">← back to editor</a>
+    <span class="login-slot"><edot-login-button login-href="../auth/login.html"></edot-login-button><span class="alpha-badge" title="Experimental — sign-in is in alpha">alpha</span></span>
   </header>
   <main>
     <edot-maps><div class="boot">Loading map…</div></edot-maps>
   </main>
+  <script type="module" src="../auth/js/login-ui.js"></script>
 
   <!-- MapLibre is a UMD bundle: it defines window.maplibregl synchronously, so
        it must load (and be present) before the component initialises the map.
