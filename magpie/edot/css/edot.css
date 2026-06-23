@@ -203,7 +203,8 @@ body {
   max-width: 5rem; overflow: hidden; text-overflow: ellipsis;
 }
 
-.tbtip {
+/* Shared hold-to-reveal label bubble (see js/longpress.js) */
+.hold-tip {
   position: fixed; transform: translateX(-50%);
   background: var(--ink); color: var(--bg);
   padding: 0.45em 0.8em; border-radius: 7px;
@@ -211,8 +212,8 @@ body {
   z-index: 200; pointer-events: none; opacity: 0; transition: opacity 0.12s;
   box-shadow: 0 6px 18px rgba(0,0,0,0.35);
 }
-.tbtip.show { opacity: 0.97; }
-@media (prefers-reduced-motion: reduce) { .tbtip { transition: none; } }
+.hold-tip.show { opacity: 0.97; }
+@media (prefers-reduced-motion: reduce) { .hold-tip { transition: none; } }
 @media (pointer: coarse) { .tbtn .tglyph { font-size: 1.2rem; } }
 
 select.tbtn {

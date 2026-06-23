@@ -169,7 +169,7 @@ try {
   });
   await page.waitForTimeout(550);
   ok('long-press shows a readable label bubble', await page.evaluate(() => {
-    const t = document.querySelector('.tbtip.show');
+    const t = document.querySelector('.hold-tip.show');
     return !!t && /Bold/.test(t.textContent);
   }));
   await page.evaluate(() => document.querySelector('button[data-cmd="bold"]').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })));

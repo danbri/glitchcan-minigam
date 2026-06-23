@@ -102,6 +102,18 @@ table.grid input.cell-input {
 
 .hint { color: var(--d-muted); font-size: 0.8rem; }
 
+/* Shared hold-to-reveal label bubble (js/longpress.js) — same as the editor. */
+.hold-tip {
+  position: fixed; transform: translateX(-50%);
+  background: var(--d-ink); color: var(--d-bg);
+  padding: 0.45em 0.8em; border-radius: 7px;
+  font-size: 1rem; font-weight: 600; white-space: nowrap;
+  z-index: 200; pointer-events: none; opacity: 0; transition: opacity 0.12s;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+.hold-tip.show { opacity: 0.97; }
+@media (prefers-reduced-motion: reduce) { .hold-tip { transition: none; } }
+
 /* Touch + convergence with the editor: bigger tap targets, no zoom delay. */
 .dbtn, .dw-item, .q-editor, .find-input, input, select, button { touch-action: manipulation; }
 .dw-main { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }

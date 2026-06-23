@@ -5,6 +5,7 @@
 // Toggle buttons expose aria-pressed reflecting live command state.
 
 import { COMMANDS, BLOCK_FORMATS, setBlockFormat, currentBlockFormat, createLink, createSemantic, setAlign, currentAlign } from './commands.js';
+import { holdLabel, consumedPeek } from './longpress.js';
 
 const LAYOUT = [
   { type: 'block-select' },
@@ -128,7 +129,7 @@ export class Toolbar {
 
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (btn._peek) { btn._peek = false; return; } // a long-press peeked the label; don't act
+      if (consumedPeek(btn)) return; // a long-press peeked the label; don't act
       if (id === 'link') { createLink(this.announce); }
       else if (id === 'semantic') { createSemantic(this.announce); }
       else if (id in ALIGN) { setAlign(ALIGN[id]); }
@@ -139,38 +140,11 @@ export class Toolbar {
     });
     // Keep selection while pressing toolbar (don't steal focus on mousedown).
     btn.addEventListener('mousedown', (e) => e.preventDefault());
-    this._wireLongPress(btn, tip);
+    holdLabel(btn, tip);
 
     this.controls.push(btn);
     return btn;
   }
-
-  // Press-and-hold any control to reveal a big, readable label bubble (the icon
-  // alone is hard to read). The hold suppresses the action so it's a safe peek.
-  _wireLongPress(el, text) {
-    let timer = null;
-    const start = () => { el._peek = false; timer = setTimeout(() => { timer = null; el._peek = true; this._showTip(el, text); }, 420); };
-    const cancel = () => {
-      if (timer) { clearTimeout(timer); timer = null; }
-      this._hideTip();
-      // Self-heal: if a peek didn't get consumed by a click, clear it next tick.
-      if (el._peek) setTimeout(() => { el._peek = false; }, 0);
-    };
-    el.addEventListener('pointerdown', start);
-    el.addEventListener('pointerup', cancel);
-    el.addEventListener('pointerleave', cancel);
-    el.addEventListener('pointercancel', cancel);
-  }
-
-  _showTip(el, text) {
-    if (!this._tip) { this._tip = document.createElement('div'); this._tip.className = 'tbtip'; document.body.appendChild(this._tip); }
-    this._tip.textContent = text;
-    const r = el.getBoundingClientRect();
-    this._tip.style.left = `${Math.round(r.left + r.width / 2)}px`;
-    this._tip.style.top = `${Math.round(r.bottom + 8)}px`;
-    this._tip.classList.add('show');
-  }
-  _hideTip() { if (this._tip) this._tip.classList.remove('show'); }
 
   _labelsOn() { try { return localStorage.getItem('edot.toolbarLabels') === '1'; } catch { return false; } }
 
@@ -192,18 +166,18 @@ export class Toolbar {
     apply(this._labelsOn());
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (btn._peek) { btn._peek = false; return; }
+      if (consumedPeek(btn)) return;
       apply(!this.root.classList.contains('labels'));
       this.editor.focus();
     });
     btn.addEventListener('mousedown', (e) => e.preventDefault());
-    this._wireLongPress(btn, 'Show button labels — bigger, with text');
+    holdLabel(btn, 'Show button labels — bigger, with text');
     this.controls.push(btn);
     wrap.appendChild(btn);
     return wrap;
   }
 
-  destroy() { if (this._tip) { this._tip.remove(); this._tip = null; } }
+  destroy() {}
 
   _wireRovingFocus() {
     this.root.addEventListener('keydown', (e) => {

@@ -122,6 +122,44 @@ try {
     return open;
   }));
 
+  // 4e. Durable upstream forms round-trip (OPENDOC): N-Quads and zip-of-CSVs.
+  const nq = await page.evaluate(async () => {
+    const { tablesToNquads, nquadsToTables } = await import('./nquads.js');
+    const d = document.querySelector('edot-data');
+    d.engine.createTableFromColumns('rt_people', ['name', 'age'], [['Ada', 36], ['Bo', 9]]);
+    const text = tablesToNquads(d.engine, ['rt_people']);
+    const back = nquadsToTables(text);
+    const t = back.find((x) => x.name === 'rt_people');
+    return { hasQuad: /urn:edot:prop:rt_people:age/.test(text), name: t && t.name, cols: t && t.columns.slice().sort().join(','), rows: t && t.rows.length, age: t && t.rows.map((r) => r[t.columns.indexOf('age')]).sort((a, b) => a - b) };
+  });
+  ok('N-Quads export emits typed quads', nq.hasQuad);
+  ok('N-Quads round-trips a table (name/cols/rows)', nq.name === 'rt_people' && nq.cols === 'age,name' && nq.rows === 2);
+  ok('N-Quads preserves numeric typing', Array.isArray(nq.age) && nq.age[0] === 9 && nq.age[1] === 36);
+
+  const zip = await page.evaluate(async () => {
+    const { zipSync, unzip, utf8 } = await import('../js/zip.js');
+    const { parseCsv, toCsv } = await import('./csv.js');
+    const d = document.querySelector('edot-data');
+    const data = d.engine.tableRows('rt_people');
+    const blob = await zipSync({ 'rt_people.csv': toCsv(data.columns, data.rows) });
+    const map = await unzip(await blob.arrayBuffer());
+    const rows = parseCsv(utf8.decode(map['rt_people.csv']));
+    return { entries: Object.keys(map), header: rows[0].join(','), body: rows.length - 1 };
+  });
+  ok('zip-of-CSVs round-trips entry + content', zip.entries.includes('rt_people.csv') && zip.header === 'name,age' && zip.body === 2);
+
+  // 4f. Export fingerprint (SHA-256): committed/signable provenance.
+  ok('export fingerprints content (sha256)', await page.evaluate(async () => {
+    const d = document.querySelector('edot-data');
+    let fn = '', captured = null;
+    const orig = document.createElement.bind(document);
+    document.createElement = (t) => { const el = orig(t); if (t === 'a') { Object.defineProperty(el, 'click', { value: () => { captured = el.download; }, configurable: true }); } return el; };
+    const fp = await d._emit(new TextEncoder().encode('hello world'), 'probe.nq', 'application/n-quads');
+    document.createElement = orig;
+    // SHA-256("hello world") = b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9
+    return fp === 'b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9' && captured === 'probe.nq';
+  }));
+
   // 5. Persistence: DB exports to bytes.
   ok('database exports to bytes', await page.evaluate(() => document.querySelector('edot-data').engine.exportDb().length > 0));
 
