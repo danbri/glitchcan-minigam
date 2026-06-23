@@ -17,7 +17,7 @@ import * as LO from './libreoffice-bridge.js';
 
 // Bump on each meaningful deploy. Shown in the footer so a stale cached build
 // is obvious (the stamp reflects the JS your browser actually loaded).
-const BUILD = '2026-06-23.e';
+const BUILD = '2026-06-23.f';
 
 const GH_TOKEN_KEY = 'edot.gh.token';
 const GH_LOGIN_KEY = 'edot.gh.login';     // cached @login for the connected token
