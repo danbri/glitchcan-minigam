@@ -57,6 +57,7 @@ class App {
     this._wireUrlDialog();
     this._wireExamplesDialog();
     this._wireGithubDialog();
+    this._wireSourceDialog();
     this._wireGlobalKeys();
     this._wireDragDrop();
     this._reflectBackend();
@@ -211,6 +212,7 @@ class App {
     mi('mi-docs', () => this.openLibrary());
     mi('mi-close', () => this.closeDocument());
     mi('mi-find', () => this.findReplace.open(true));
+    mi('mi-source', () => this.openSourceDialog());
     mi('mi-github', () => this.openGithubDialog());
     mi('mi-data', () => { const w = window.open('data/data.html', '_blank', 'noopener'); if (!w) location.href = 'data/data.html'; else this.attention.arm('Back to edot', { once: true }); });
 
@@ -549,6 +551,48 @@ class App {
       this._ghErr(this._ghMessage(err));
     } finally {
       el.merge.disabled = false;
+    }
+  }
+
+  // ---- View source: see the underlying file the editor would write ----
+  _wireSourceDialog() {
+    this.srcDialog = document.getElementById('source-dialog');
+    if (!this.srcDialog) return;
+    this.srcEl = {
+      format: document.getElementById('src-format'),
+      text: document.getElementById('src-text'),
+      note: document.getElementById('src-note'),
+      copy: document.getElementById('src-copy'),
+    };
+    this.srcEl.format.addEventListener('change', () => this._renderSource());
+    this.srcEl.copy.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(this.srcEl.text.value); this.announce('Source copied'); }
+      catch { this.srcEl.text.select(); }
+    });
+  }
+
+  openSourceDialog() {
+    if (!this.srcDialog) return;
+    showModal(this.srcDialog);
+    this._renderSource();
+  }
+
+  async _renderSource() {
+    const el = this.srcEl;
+    const ext = el.format.value;
+    el.note.textContent = 'Rendering…';
+    try {
+      const text = await IO.exportText(this.editor.getContent(), this.titleInput.value, ext);
+      el.text.value = text;
+      const hasRdfa = /\b(property|typeof|vocab|resource)=/.test(this.editor.getContent());
+      const kept = ext === 'html'
+        ? (hasRdfa ? 'HTML keeps your RDFa semantics, links and structure.' : 'HTML keeps links and structure.')
+        : ext === 'md'
+          ? (hasRdfa ? 'Markdown keeps links and structure but drops RDFa — save as .html to keep semantics.' : 'Markdown keeps links and structure.')
+          : 'Plain text strips all markup, links and structure.';
+      el.note.textContent = `${text.split('\n').length} lines · ${text.length} chars — ${kept}`;
+    } catch (err) {
+      el.text.value = ''; el.note.textContent = err.message;
     }
   }
 

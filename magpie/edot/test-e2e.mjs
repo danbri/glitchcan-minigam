@@ -92,6 +92,30 @@ try {
   await page.keyboard.press('Escape');
   ok('find bar closes on Escape', !(await page.isVisible('.find-bar')));
 
+  // View source: the underlying file is suffix-driven (HTML keeps RDFa + links;
+  // Markdown keeps links, drops RDFa; plain text strips everything).
+  await page.evaluate(() => {
+    document.getElementById('editor').innerHTML = '<p>See <a href="https://x.test">link</a> and <span property="schema:name">Ada</span>.</p>';
+    window.__edot.editor.onChange();
+  });
+  await page.click('#menu-button'); await page.click('#mi-source'); await page.waitForTimeout(150);
+  ok('source dialog opens', await page.isVisible('#src-text'));
+  ok('HTML source keeps RDFa + link', await page.evaluate(() => {
+    const v = document.getElementById('src-text').value;
+    return /property=/.test(v) && /https:\/\/x\.test/.test(v);
+  }));
+  await page.selectOption('#src-format', 'md'); await page.waitForTimeout(150);
+  ok('Markdown source keeps the link but drops RDFa', await page.evaluate(() => {
+    const v = document.getElementById('src-text').value;
+    return /\]\(https:\/\/x\.test\)/.test(v) && !/property=/.test(v);
+  }));
+  await page.selectOption('#src-format', 'txt'); await page.waitForTimeout(150);
+  ok('Plain text strips markup and links', await page.evaluate(() => {
+    const v = document.getElementById('src-text').value;
+    return !/property=/.test(v) && !/x\.test/.test(v) && /Ada/.test(v);
+  }));
+  await page.keyboard.press('Escape');
+
   // Examples dialog lists and loads the Morton book (same-origin docx import).
   await page.click('#menu-button'); await page.click('#mi-examples'); await page.waitForTimeout(150);
   ok('examples dialog lists the Morton book', await page.isVisible('text=Searching for Logic'));

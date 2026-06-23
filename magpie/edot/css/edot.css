@@ -421,6 +421,17 @@ select.tbtn {
 .gh-steps li { margin: 0.25rem 0; }
 .gh-steps code { background: var(--bg); padding: 0 0.3em; border-radius: 3px; }
 .gh-tip { color: var(--muted); margin: 0.4rem 0 0; }
+/* View source */
+.src-bar { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin: 0.4rem 0; }
+.src-bar label { font-size: 0.85rem; color: var(--muted); }
+.src-bar select { flex: 1; min-width: 12rem; }
+.src-text {
+  width: 100%; box-sizing: border-box; min-height: 16rem; resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8rem; line-height: 1.5;
+  padding: 0.6em; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--bg); color: var(--ink); white-space: pre; overflow: auto;
+}
+
 /* Remembered save locations — cached, and each easily zapped. */
 .gh-recents { margin: 0.5rem 1rem 0; }
 .gh-recents[hidden] { display: none; }

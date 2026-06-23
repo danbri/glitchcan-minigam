@@ -45,6 +45,9 @@
         <button type="button" id="mi-find" class="menu-item" role="menuitem">
           <span>Find &amp; replace…</span><span class="hint">Ctrl/⌘F</span>
         </button>
+        <button type="button" id="mi-source" class="menu-item" role="menuitem">
+          <span>View source…</span><span class="hint">HTML · MD · TXT</span>
+        </button>
         <button type="button" id="mi-github" class="menu-item" role="menuitem">
           <span>Save to GitHub…</span><span class="hint">PR</span>
         </button>
@@ -104,6 +107,28 @@
       <button type="submit" class="tbtn" aria-label="Close">✕</button>
     </form>
     <ul id="examples-list" class="docs-list"></ul>
+  </dialog>
+
+  <!-- View source: the underlying file in each text format -->
+  <dialog id="source-dialog" class="dialog" aria-labelledby="source-dialog-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="source-dialog-title">Document source</h2>
+      <button type="submit" class="tbtn" aria-label="Close">✕</button>
+    </form>
+    <div class="dialog-body">
+      <p class="dialog-note">The file edot would write depends on the extension you save to. Switch format to see exactly what each produces — RDFa survives <strong>.html</strong> only.</p>
+      <div class="src-bar">
+        <label for="src-format">Format</label>
+        <select id="src-format" class="find-input">
+          <option value="html">HTML — keeps RDFa, links &amp; structure</option>
+          <option value="md">Markdown — keeps links &amp; structure, drops RDFa</option>
+          <option value="txt">Plain text — strips all markup</option>
+        </select>
+        <button type="button" id="src-copy" class="tbtn">Copy</button>
+      </div>
+      <p id="src-note" class="dialog-note"></p>
+      <textarea id="src-text" class="src-text" readonly spellcheck="false" aria-label="Document source"></textarea>
+    </div>
   </dialog>
 
   <!-- Save to GitHub (branch + pull request) -->
