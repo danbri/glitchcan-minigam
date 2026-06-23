@@ -159,45 +159,61 @@
       <h2 id="github-dialog-title">Save to GitHub</h2>
       <button type="submit" class="tbtn" aria-label="Close">✕</button>
     </form>
-    <div class="dialog-body">
-      <p class="dialog-note">Commits your edits to a new branch and opens a pull request — entirely from your browser via the GitHub API. Nothing leaves your device except the commit.</p>
-      <details class="gh-help">
-        <summary>Need a token? How to create one ▾</summary>
-        <ol class="gh-steps">
-          <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub ▸ Fine-grained tokens ▸ Generate new →</a></li>
-          <li><strong>Repository access</strong> → <em>Only select repositories</em> → pick your repo.</li>
-          <li>Scroll to <strong>Repository permissions</strong> (NOT “Account permissions”) → <strong>Contents</strong> → <em>Read and write</em>.</li>
-          <li>Still under <strong>Repository permissions</strong> → <strong>Pull requests</strong> → <em>Read and write</em>.</li>
-          <li><strong>Generate token</strong> and <strong>copy</strong> it — when you switch back to this tab, edot fills it in from your clipboard automatically (or paste it below).</li>
-        </ol>
-        <p class="gh-tip">Scope it to the one repo and <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">revoke it</a> when you're done. It stays in this browser only.</p>
-      </details>
+    <div class="dialog-body gh-body">
+      <p class="dialog-note gh-intro">Commits to a new branch and opens a pull request — straight from your browser. Nothing leaves your device but the commit.</p>
+
       <div id="gh-recents" class="gh-recents" hidden></div>
-      <div class="gh-grid">
-        <label for="gh-repo">Repository</label>
-        <input id="gh-repo" type="text" class="find-input" placeholder="owner/repo" autocomplete="off">
-        <label for="gh-branch">Base branch</label>
-        <input id="gh-branch" type="text" class="find-input" placeholder="auto-detected" autocomplete="off">
-        <label for="gh-path">File path</label>
-        <input id="gh-path" type="text" class="find-input" placeholder="folder/file.md" autocomplete="off">
-        <label for="gh-token">Token</label>
-        <input id="gh-token" type="password" class="find-input" placeholder="github_pat_…" autocomplete="new-password">
-        <label for="gh-message">Commit message</label>
-        <input id="gh-message" type="text" class="find-input" autocomplete="off">
-      </div>
-      <div class="gh-conn-row">
+
+      <section class="gh-card">
+        <h3 class="gh-card-h">Account</h3>
+        <div class="gh-connect-row">
+          <input id="gh-token" type="password" class="find-input" placeholder="Paste a token (github_pat_…)" aria-label="GitHub token" autocomplete="new-password">
+          <button type="button" id="gh-connect" class="tbtn">Connect</button>
+        </div>
         <span id="gh-conn" class="gh-conn" role="status" hidden></span>
-        <button type="button" id="gh-connect" class="tbtn">Connect</button>
-      </div>
-      <p id="gh-branch-note" class="dialog-note" hidden></p>
-      <label class="gh-remember"><input id="gh-remember" type="checkbox"> Stay signed in to GitHub on this device</label>
-      <div class="gh-actions">
-        <button type="button" id="gh-preview" class="tbtn">Preview diff</button>
-        <span id="gh-diffstat" class="dialog-note"></span>
-      </div>
-      <div id="gh-diff" class="gh-diff" hidden></div>
-      <p id="gh-error" class="dialog-error" role="alert" hidden></p>
-      <p id="gh-result" class="dialog-ok" role="status" hidden></p>
+        <label class="gh-remember"><input id="gh-remember" type="checkbox"> Stay signed in on this device</label>
+        <details class="gh-help">
+          <summary>Need a token?</summary>
+          <ol class="gh-steps">
+            <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub ▸ Fine-grained tokens ▸ Generate new →</a></li>
+            <li><strong>Repository access</strong> → <em>Only select repositories</em> → pick your repo.</li>
+            <li><strong>Repository permissions</strong> (not “Account”) → <strong>Contents</strong> and <strong>Pull requests</strong> → <em>Read and write</em>.</li>
+            <li><strong>Generate</strong> &amp; <strong>copy</strong> — edot grabs it from your clipboard when you switch back (or paste above).</li>
+          </ol>
+          <p class="gh-tip">Scope it to one repo and <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">revoke it</a> when done. Stays in this browser only.</p>
+        </details>
+      </section>
+
+      <section class="gh-card">
+        <h3 class="gh-card-h">Where to save</h3>
+        <div class="gh-grid">
+          <label for="gh-repo">Repository</label>
+          <input id="gh-repo" type="text" class="find-input" placeholder="owner/repo" autocomplete="off">
+          <label for="gh-branch">Base branch</label>
+          <input id="gh-branch" type="text" class="find-input" placeholder="auto-detected" autocomplete="off">
+          <label for="gh-path">File path</label>
+          <input id="gh-path" type="text" class="find-input" placeholder="folder/file.md" autocomplete="off">
+        </div>
+        <p id="gh-branch-note" class="dialog-note" hidden></p>
+        <details class="gh-opts">
+          <summary>Options</summary>
+          <div class="gh-grid">
+            <label for="gh-message">Commit message</label>
+            <input id="gh-message" type="text" class="find-input" autocomplete="off">
+          </div>
+        </details>
+      </section>
+
+      <section class="gh-card">
+        <h3 class="gh-card-h">Review &amp; save</h3>
+        <div class="gh-actions">
+          <button type="button" id="gh-preview" class="tbtn">Preview diff</button>
+          <span id="gh-diffstat" class="dialog-note"></span>
+        </div>
+        <div id="gh-diff" class="gh-diff" hidden></div>
+        <p id="gh-error" class="dialog-error" role="alert" hidden></p>
+        <p id="gh-result" class="dialog-ok" role="status" hidden></p>
+      </section>
     </div>
     <div class="dialog-foot">
       <button type="button" id="gh-commit" class="tbtn primary">Open pull request</button>

@@ -414,9 +414,20 @@ select.tbtn {
 /* ---- Save to GitHub dialog ---- */
 .dialog-ok { margin: 0.5rem 0 0; color: var(--ok); font-size: 0.85rem; }
 .dialog-ok[hidden] { display: none; }
-.gh-help { margin: 0.25rem 1rem 0; font-size: 0.82rem; }
+.gh-help { margin: 0.4rem 0 0; font-size: 0.82rem; }
 .gh-help summary { cursor: pointer; color: var(--focus); padding: 0.3rem 0; list-style-position: inside; }
 .gh-help summary:focus-visible { outline: 2px solid var(--focus); border-radius: var(--radius); }
+
+/* Save-to-GitHub dialog laid out as calm cards: Account / Where / Review. */
+.gh-body { display: flex; flex-direction: column; gap: 0.7rem; }
+.gh-intro { margin: 0; }
+.gh-card { border: 1px solid var(--line); border-radius: 10px; padding: 0.7rem 0.8rem; background: var(--bg); }
+.gh-card-h { margin: 0 0 0.5rem; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700; }
+.gh-card .gh-grid { margin-top: 0; }
+.gh-connect-row { display: flex; gap: 0.4rem; align-items: center; }
+.gh-connect-row .find-input { flex: 1; min-width: 0; }
+.gh-opts { margin-top: 0.5rem; }
+.gh-opts > summary { cursor: pointer; color: var(--focus); font-size: 0.82rem; padding: 0.25rem 0; }
 .gh-steps { margin: 0.25rem 0 0.25rem 1.2rem; padding: 0; color: var(--ink); }
 .gh-steps li { margin: 0.25rem 0; }
 .gh-steps code { background: var(--bg); padding: 0 0.3em; border-radius: 3px; }
