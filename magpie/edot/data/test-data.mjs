@@ -87,6 +87,24 @@ try {
   });
   ok('sheet -> SQL table (materialised, queryable)', materialized);
 
+  // 4b. Chinook sample (open-source Northwind successor): 11 tables + joins.
+  await page.evaluate(async () => { await document.querySelector('edot-data').loadChinook(); });
+  await page.waitForTimeout(100);
+  ok('Chinook core tables loaded', await page.evaluate(() =>
+    document.querySelector('edot-data').engine.query(
+      "SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('Artist','Album','Track','Invoice','InvoiceLine')").rows[0][0] === 5));
+  ok('Chinook has ~3500 tracks', await page.evaluate(() =>
+    document.querySelector('edot-data').engine.query('SELECT count(*) FROM Track').rows[0][0] > 3000));
+  ok('Chinook 4-table join runs', await page.evaluate(() => {
+    const rows = document.querySelector('edot-data').engine.query(
+      'SELECT ar.Name FROM Artist ar JOIN Album al ON al.ArtistId=ar.ArtistId ' +
+      'JOIN Track t ON t.AlbumId=al.AlbumId JOIN InvoiceLine il ON il.TrackId=t.TrackId ' +
+      'GROUP BY ar.ArtistId ORDER BY SUM(il.UnitPrice*il.Quantity) DESC LIMIT 1').rows;
+    return rows.length === 1 && typeof rows[0][0] === 'string';
+  }));
+  ok('Chinook sidebar shows the tables', await page.evaluate(() =>
+    !![...document.querySelectorAll('.dw-item .nm')].find((e) => e.textContent === 'Track')));
+
   // 5. Persistence: DB exports to bytes.
   ok('database exports to bytes', await page.evaluate(() => document.querySelector('edot-data').engine.exportDb().length > 0));
 

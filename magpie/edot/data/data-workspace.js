@@ -16,6 +16,18 @@ import './sheet-component.js';
 import './query-component.js';
 
 const META = '__edot_sheets';
+const CHINOOK_TABLES = ['Album', 'Artist', 'Customer', 'Employee', 'Genre', 'Invoice', 'InvoiceLine', 'MediaType', 'Playlist', 'PlaylistTrack', 'Track'];
+const CHINOOK_DEMO = `-- Chinook sample — top-selling artists (a 4-table join)
+SELECT ar.Name AS artist,
+       ROUND(SUM(il.UnitPrice * il.Quantity), 2) AS revenue,
+       COUNT(*) AS lines_sold
+FROM Artist ar
+JOIN Album al ON al.ArtistId = ar.ArtistId
+JOIN Track t  ON t.AlbumId  = al.AlbumId
+JOIN InvoiceLine il ON il.TrackId = t.TrackId
+GROUP BY ar.ArtistId
+ORDER BY revenue DESC
+LIMIT 12;`;
 
 export class EdotData extends HTMLElement {
   constructor() { super(); this.engine = new DataEngine(); this.active = null; }
@@ -41,6 +53,7 @@ export class EdotData extends HTMLElement {
     const dbfile = document.createElement('input'); dbfile.type = 'file'; dbfile.accept = '.sqlite,.db,application/octet-stream'; dbfile.style.display = 'none';
     tb.append(
       this._btn('⬆ Import CSV', () => file.click(), 'primary'),
+      this._btn('🎵 Sample (Chinook)', () => this.loadChinook()),
       this._btn('＋ Sheet', () => this.newSheet()),
       this._btn('＋ Table', () => this.newTable()),
       this._btn('▤ SQL', () => this.openQuery()),
@@ -225,6 +238,20 @@ export class EdotData extends HTMLElement {
     const sheet = document.createElement('edot-sheet'); sheet.setGrid({ rows: grid });
     this._saveSheet(name, sheet.serialize());
     this.refresh(); this.openSheet(name);
+  }
+
+  // ---- Chinook sample (the open-source Northwind successor) ----
+  async loadChinook() {
+    const present = this.engine.query("SELECT name FROM sqlite_master WHERE type='table' AND name='Track'").rows.length;
+    if (present && !confirm('Reload the Chinook sample? Its tables will be replaced.')) return;
+    for (const t of CHINOOK_TABLES) this.engine.run(`DROP TABLE IF EXISTS ${quoteId(t)}`);
+    const url = new URL('../../../third_party/chinook/Chinook_Sqlite.sql', import.meta.url);
+    const sql = await (await fetch(url)).text();
+    this.engine.run(sql);
+    this.refresh();
+    this.openQuery();
+    const q = this._main.querySelector('edot-query');
+    if (q) { q.setSql(CHINOOK_DEMO); q.run(); }
   }
 
   // ---- export/import db ----
