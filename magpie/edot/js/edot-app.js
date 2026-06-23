@@ -215,7 +215,11 @@ class App {
     mi('mi-find', () => this.findReplace.open(true));
     mi('mi-source', () => this.openSourceDialog());
     mi('mi-github', () => this.openGithubDialog());
-    mi('mi-data', () => { const w = window.open('data/data.html', '_blank', 'noopener'); if (!w) location.href = 'data/data.html'; else this.attention.arm('Back to edot', { once: true }); });
+    const openApp = (path) => { const w = window.open(path, '_blank', 'noopener'); if (!w) location.href = path; else this.attention.arm('Back to edot', { once: true }); };
+    mi('mi-data', () => openApp('data/data.html'));
+    mi('mi-calendar', () => openApp('calendar/calendar.html'));
+    mi('mi-maps', () => openApp('maps/maps.html'));
+    mi('mi-login', () => openApp('auth/login.html'));
 
     this.fileInput.accept = IO.importAccept();
     this.fileInput.addEventListener('change', () => {
