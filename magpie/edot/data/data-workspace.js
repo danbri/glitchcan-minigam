@@ -51,7 +51,9 @@ export class EdotData extends HTMLElement {
     const tb = document.createElement('div'); tb.className = 'dw-toolbar';
     const file = document.createElement('input'); file.type = 'file'; file.accept = '.csv,text/csv'; file.style.display = 'none';
     const dbfile = document.createElement('input'); dbfile.type = 'file'; dbfile.accept = '.sqlite,.db,application/octet-stream'; dbfile.style.display = 'none';
+    const menu = this._btn('☰', () => root.classList.toggle('side-open')); menu.classList.add('dw-menu-btn'); menu.setAttribute('aria-label', 'Show objects');
     tb.append(
+      menu,
       this._btn('⬆ Import CSV', () => file.click(), 'primary'),
       this._btn('🎵 Sample (Chinook)', () => this.loadChinook()),
       this._btn('＋ Sheet', () => this.newSheet()),
@@ -67,7 +69,9 @@ export class EdotData extends HTMLElement {
     const main = document.createElement('div'); main.className = 'dw-main';
     root.append(tb, side, main);
     this.innerHTML = ''; this.appendChild(root);
-    this._side = side; this._main = main;
+    this._side = side; this._main = main; this._root = root;
+    // Tap the scrim (or pick an item) closes the mobile drawer.
+    root.addEventListener('click', (e) => { if (e.target === root) root.classList.remove('side-open'); });
 
     file.addEventListener('change', () => { if (file.files[0]) this.importCsv(file.files[0]); file.value = ''; });
     dbfile.addEventListener('change', () => { if (dbfile.files[0]) this.importDbFile(dbfile.files[0]); dbfile.value = ''; });
@@ -101,7 +105,7 @@ export class EdotData extends HTMLElement {
       const del = document.createElement('span'); del.textContent = '✕'; del.title = 'Delete'; del.className = 'hint';
       del.addEventListener('click', (e) => { e.stopPropagation(); this._delete(title, name); });
       it.append(ic, nm, del);
-      it.addEventListener('click', () => onOpen(name));
+      it.addEventListener('click', () => { onOpen(name); this._root.classList.remove('side-open'); });
       this._side.appendChild(it);
     }
   }

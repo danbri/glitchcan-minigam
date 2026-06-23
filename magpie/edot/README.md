@@ -61,6 +61,9 @@ offline, and dependency-free.
   export. Distinguishes edot from a plain word processor.
 - **High-fidelity I/O (optional)** — `.odt`, `.doc`, `.rtf` import and ODT/RTF
   export via a pluggable **LibreOffice WASM** backend (see below).
+- **Readable toolbar** — **long-press** any toolbar button for a big label
+  bubble, or tap **Aa** to grow the toolbar into a larger, **text-labelled**
+  layout (persisted) — for when the icons alone are hard to read.
 - **Accessibility first** — ARIA toolbar with roving tabindex, screen-reader
   live announcements, full keyboard operation, native `<dialog>` modal, skip
   link, honours `prefers-color-scheme` and `prefers-reduced-motion`.

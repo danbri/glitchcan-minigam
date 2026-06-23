@@ -29,7 +29,7 @@ edot-data, edot-grid, edot-sheet, edot-query { display: block; }
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 .dw-toolbar {
-  grid-column: 1 / 3;
+  grid-column: 1 / -1;
   display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center;
   padding: 0.4rem 0.6rem; background: var(--d-surface); border-bottom: 1px solid var(--d-line);
 }
@@ -101,6 +101,39 @@ table.grid input.cell-input {
 .q-bar { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.4rem; }
 
 .hint { color: var(--d-muted); font-size: 0.8rem; }
+
+/* Touch + convergence with the editor: bigger tap targets, no zoom delay. */
+.dbtn, .dw-item, .q-editor, .find-input, input, select, button { touch-action: manipulation; }
+.dw-main { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+
+@media (pointer: coarse) {
+  .dbtn { padding: 0.55em 0.85em; font-size: 0.9rem; }
+  .dw-item { padding: 0.55em 0.5em; }
+  table.grid th, table.grid td { padding: 0.4em 0.55em; height: 2em; }
+}
+
+/* The ☰ objects button only shows on mobile, where the sidebar is a drawer. */
+.dw-menu-btn { display: none; }
+
+/* Mobile: the object list (tables/views/sheets) becomes a slide-in drawer with
+   a scrim — discoverable via the ☰ button — so the main area stays full-width. */
+@media (max-width: 44rem) {
+  .dw { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .dw-main { grid-column: 1; }
+  .dw-menu-btn { display: inline-flex; }
+  .dw-side {
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 40;
+    width: min(80vw, 18rem); max-height: none;
+    transform: translateX(-100%); transition: transform 0.2s ease;
+    box-shadow: 2px 0 18px rgba(0,0,0,0.3);
+  }
+  .dw.side-open .dw-side { transform: none; }
+  .dw.side-open::after { content: ''; position: fixed; inset: 0; background: rgba(0,0,0,0.38); z-index: 39; }
+  .dw-toolbar { gap: 0.25rem; position: sticky; top: 0; z-index: 5; }
+  .sheet-bar { flex-wrap: wrap; }
+  .sheet-bar input.formula { min-width: 8rem; }
+}
+@media (prefers-reduced-motion: reduce) { .dw-side { transition: none; } }
 
 /* ---- cross-tab "sent to editor" toast ---- */
 .dw-toast {

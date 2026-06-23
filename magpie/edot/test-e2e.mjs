@@ -162,6 +162,25 @@ try {
     /<table>/.test(document.getElementById('editor').innerHTML) && /Imported data/.test(document.getElementById('editor').textContent)));
   ok('handoff is consumed (cleared)', await page.evaluate(() => !localStorage.getItem('edot.handoff')));
 
+  // Toolbar readability: long-press reveals a big label; Labels mode adds text.
+  await page.evaluate(() => {
+    const btn = document.querySelector('button[data-cmd="bold"]');
+    btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+  });
+  await page.waitForTimeout(550);
+  ok('long-press shows a readable label bubble', await page.evaluate(() => {
+    const t = document.querySelector('.tbtip.show');
+    return !!t && /Bold/.test(t.textContent);
+  }));
+  await page.evaluate(() => document.querySelector('button[data-cmd="bold"]').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })));
+  await page.click('.labels-toggle');
+  ok('Labels mode shows text under icons', await page.evaluate(() => {
+    const tl = document.querySelector('button[data-cmd="bold"] .tlabel');
+    return document.getElementById('toolbar').classList.contains('labels') && tl && getComputedStyle(tl).display !== 'none' && /Bold/.test(tl.textContent);
+  }));
+  ok('Labels preference persists', await page.evaluate(() => localStorage.getItem('edot.toolbarLabels') === '1'));
+  await page.click('.labels-toggle'); // back off
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
 } finally { await b.close(); server.close(); }
