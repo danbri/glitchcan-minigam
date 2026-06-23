@@ -61,6 +61,10 @@ data/
 All four are real custom elements (`customElements.define`) using light DOM +
 the shared `data.css`, so they can be embedded individually.
 
+**Mobile:** the object list (tables/views/sheets) collapses into a slide-in
+**☰ drawer** with a scrim, the toolbar stays sticky, and tap targets grow on
+coarse pointers — sharing the editor's design tokens for a consistent feel.
+
 ## Testing
 
 ```bash

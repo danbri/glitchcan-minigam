@@ -113,6 +113,15 @@ try {
   });
   ok('sendToEditor writes an HTML-table handoff', handoff && handoff.type === 'insert' && handoff.title === 'My table' && /<table>.*<td>1<\/td>/.test(handoff.html));
 
+  // 4d. Mobile object-drawer toggle.
+  ok('mobile drawer toggles via ☰', await page.evaluate(() => {
+    const d = document.querySelector('edot-data');
+    d.querySelector('.dw-menu-btn').click();
+    const open = d._root.classList.contains('side-open');
+    d._root.classList.remove('side-open');
+    return open;
+  }));
+
   // 5. Persistence: DB exports to bytes.
   ok('database exports to bytes', await page.evaluate(() => document.querySelector('edot-data').engine.exportDb().length > 0));
 

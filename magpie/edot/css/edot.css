@@ -184,6 +184,37 @@ body {
 .tbtn.underline { text-decoration: underline; }
 .tbtn.strike { text-decoration: line-through; }
 
+.tbtn .tglyph { display: inline-flex; align-items: center; justify-content: center; font-size: 1.06rem; line-height: 1; }
+.tbtn .tlabel { display: none; }
+
+/* "Labels" mode: a bigger, text-labelled toolbar for easier reading.
+   Toggle with the Aa button (persisted); long-press any control for a big
+   readable label bubble even when off. */
+.toolbar.labels .tbtn:not(select) {
+  flex-direction: column;
+  height: auto;
+  min-height: 2.9rem;
+  gap: 0.08rem;
+  padding: 0.3em 0.45em;
+}
+.toolbar.labels .tbtn .tglyph { font-size: 1.2rem; }
+.toolbar.labels .tbtn .tlabel {
+  display: block; font-size: 0.62rem; line-height: 1.05; color: var(--ink);
+  max-width: 5rem; overflow: hidden; text-overflow: ellipsis;
+}
+
+.tbtip {
+  position: fixed; transform: translateX(-50%);
+  background: var(--ink); color: var(--bg);
+  padding: 0.45em 0.8em; border-radius: 7px;
+  font-size: 1rem; font-weight: 600; white-space: nowrap;
+  z-index: 200; pointer-events: none; opacity: 0; transition: opacity 0.12s;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+.tbtip.show { opacity: 0.97; }
+@media (prefers-reduced-motion: reduce) { .tbtip { transition: none; } }
+@media (pointer: coarse) { .tbtn .tglyph { font-size: 1.2rem; } }
+
 select.tbtn {
   min-width: 7rem;
   text-align: left;

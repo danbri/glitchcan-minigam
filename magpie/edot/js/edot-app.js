@@ -103,6 +103,7 @@ class App {
     clearTimeout(this._saveTimer);
     try { this._bc?.close(); } catch { /* */ }
     this.attention?.disarm();
+    this.toolbar?.destroy?.();
     this.findReplace?.destroy?.();
     this.announcer?.destroy?.();
     this.editor?.destroy?.();
