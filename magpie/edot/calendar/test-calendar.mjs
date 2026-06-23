@@ -213,6 +213,28 @@ try {
 
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
+
+  // 10. Mobile drawer regression: the calendars sidebar opens via ☰ and CLOSES
+  //     on a scrim tap. It previously had no way to close — the scrim covered
+  //     the toggle and nothing closed on an outside tap.
+  {
+    const mctx = await browser.newContext({ viewport: { width: 390, height: 820 }, hasTouch: true, isMobile: true });
+    const mp = await mctx.newPage();
+    const merrs = []; mp.on('pageerror', (e) => merrs.push(String(e)));
+    await mp.goto(`http://127.0.0.1:${port}/magpie/edot/calendar/calendar.html`);
+    await mp.waitForFunction(() => window.__cal && window.__cal.app, null, { timeout: 20000 });
+    const isOpen = () => mp.evaluate(() => document.querySelector('.cal').classList.contains('side-open'));
+    ok('mobile: ☰ toggle is shown', await mp.isVisible('.cal-menu-btn'));
+    await mp.click('.cal-menu-btn'); await mp.waitForTimeout(200);
+    ok('mobile: ☰ opens the calendars drawer', await isOpen());
+    await mp.mouse.click(365, 60); await mp.waitForTimeout(250); // tap the scrim
+    ok('mobile: tapping the scrim closes the drawer', !(await isOpen()));
+    await mp.click('.cal-menu-btn'); await mp.waitForTimeout(200);
+    await mp.mouse.click(365, 60); await mp.waitForTimeout(250);
+    ok('mobile: drawer reopens and recloses', !(await isOpen()));
+    ok('mobile: no page errors', merrs.length === 0);
+    await mctx.close();
+  }
 } finally { await browser.close(); server.close(); }
 console.log(fail ? `\n${fail} FAILURE(S)` : '\nCALENDAR OK');
 process.exit(fail ? 1 : 0);

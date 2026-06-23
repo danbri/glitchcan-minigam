@@ -134,6 +134,12 @@ export class EdotCalendar extends HTMLElement {
     this._built = true;
     this.innerHTML = '';
     const root = document.createElement('div'); root.className = 'cal'; this._root = root;
+    // Tapping the scrim (anywhere outside the drawer) closes the mobile sidebar.
+    // The scrim is .cal.side-open::after, so its clicks land on the root itself;
+    // without this the drawer had no way to close (the scrim covers the ☰).
+    root.addEventListener('click', (e) => {
+      if (e.target === root && root.classList.contains('side-open')) root.classList.remove('side-open');
+    });
 
     root.appendChild(this._buildToolbar());
     root.appendChild(this._buildSidebar());
