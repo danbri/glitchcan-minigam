@@ -293,9 +293,12 @@ export class EdotMaps extends HTMLElement {
     this._setSearchMarker([r.lng, r.lat], r.name);
     if (!this.map) return;
     if (r.bbox && r.bbox.every(Number.isFinite)) {
-      this.map.fitBounds([[r.bbox[0], r.bbox[1]], [r.bbox[2], r.bbox[3]]], { padding: 40, maxZoom: 16 });
+      // Keep neighbourhood context: cap the zoom and pad generously so a large
+      // feature that is mostly one colour (a dock or lake — all water/blue, a
+      // park — all green) doesn't fill the screen edge-to-edge with no streets.
+      this.map.fitBounds([[r.bbox[0], r.bbox[1]], [r.bbox[2], r.bbox[3]]], { padding: 64, maxZoom: 15 });
     } else {
-      this.map.flyTo({ center: [r.lng, r.lat], zoom: Math.max(this.map.getZoom(), 14) });
+      this.map.flyTo({ center: [r.lng, r.lat], zoom: Math.max(this.map.getZoom(), 15) });
     }
   }
 
