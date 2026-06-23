@@ -110,7 +110,18 @@
       <button type="submit" class="tbtn" aria-label="Close">✕</button>
     </form>
     <div class="dialog-body">
-      <p class="dialog-note">Commits your edits to a new branch and opens a pull request — entirely from your browser via the GitHub API. Needs a fine-grained token with <strong>Contents</strong> and <strong>Pull requests</strong> read &amp; write on the repo. <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener noreferrer">Create one →</a></p>
+      <p class="dialog-note">Commits your edits to a new branch and opens a pull request — entirely from your browser via the GitHub API. Nothing leaves your device except the commit.</p>
+      <details class="gh-help">
+        <summary>Need a token? How to create one ▾</summary>
+        <ol class="gh-steps">
+          <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub ▸ Fine-grained tokens ▸ Generate new →</a></li>
+          <li><strong>Repository access</strong> → <em>Only select repositories</em> → pick your repo.</li>
+          <li><strong>Permissions ▸ Contents</strong> → <em>Read and write</em>.</li>
+          <li><strong>Permissions ▸ Pull requests</strong> → <em>Read and write</em>.</li>
+          <li><strong>Generate token</strong>, copy the <code>github_pat_…</code> value, and paste it below.</li>
+        </ol>
+        <p class="gh-tip">Scope it to the one repo and <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">revoke it</a> when you're done. It stays in this browser only.</p>
+      </details>
       <div class="gh-grid">
         <label for="gh-repo">Repository</label>
         <input id="gh-repo" type="text" class="find-input" placeholder="owner/repo" autocomplete="off">
