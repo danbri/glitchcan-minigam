@@ -19,6 +19,10 @@ Data workspace**).
   live recompute, circular-reference detection.
 - **Access-like queries** (`<edot-query>`) — write SQL over your tables, run it,
   see results in a grid, and **save a SELECT as a view**.
+- **Sample database** — **🎵 Sample (Chinook)** loads the open-source
+  [Chinook](../../../third_party/chinook/) database (the multi-engine successor
+  to Northwind: 11 related tables / ~3,500 tracks) and opens a demo 4-table
+  join, so the relational features have real data to play with.
 - **Editable grid** (`<edot-grid>`) — reusable, keyboard-navigable; cell edits
   on a table write straight back via SQL `UPDATE`.
 
