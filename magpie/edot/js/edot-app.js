@@ -16,6 +16,7 @@ import * as IO from './io.js';
 import * as LO from './libreoffice-bridge.js';
 
 const GH_TOKEN_KEY = 'edot.gh.token';
+const GH_LOGIN_KEY = 'edot.gh.login';     // cached @login for the connected token
 const GH_RECENTS_KEY = 'edot.gh.recents'; // remembered save locations (zappable)
 
 const LAST_DOC_KEY = 'edot.currentDoc';
@@ -315,10 +316,12 @@ class App {
       message: g('gh-message'), remember: g('gh-remember'), preview: g('gh-preview'),
       commit: g('gh-commit'), merge: g('gh-merge'), diff: g('gh-diff'), diffstat: g('gh-diffstat'),
       error: g('gh-error'), result: g('gh-result'), recents: g('gh-recents'), branchNote: g('gh-branch-note'),
+      conn: g('gh-conn'), connect: g('gh-connect'),
     };
     this.ghEl.preview.addEventListener('click', () => this._githubPreview());
     this.ghEl.commit.addEventListener('click', () => this._githubCommit());
     this.ghEl.merge.addEventListener('click', () => this._githubMerge());
+    this.ghEl.connect.addEventListener('click', () => this._ghConnect());
     // Detect the repo's real default branch (main/master/…) once it's named.
     this.ghEl.repo.addEventListener('blur', () => this._ghDetectBranch());
     // While the dialog is open and you flip to GitHub to make a token, nudge
@@ -365,14 +368,86 @@ class App {
       el.path.value = this._defaultGhPath();
     }
     el.message.value = `Update ${el.path.value || 'document'} via edot`;
-    try { el.token.value = sessionStorage.getItem(GH_TOKEN_KEY) || ''; } catch { /* */ }
-    el.remember.checked = !!el.token.value;
+    el.token.value = this._ghStoredToken();
+    el.remember.checked = this._ghPersisted();      // checked = saved on this device
+    this._ghRenderConnection(this._ghStoredLogin()); // optimistic: show cached identity
     this._renderGhRecents();
     showModal(this.ghDialog);
-    (el.repo.value ? el.token : el.repo).focus();
-    this._harvestToken(); // pick up a freshly-copied token from the clipboard
+    (el.token.value ? el.repo : el.token).focus();
+    if (!el.token.value) this._harvestToken();       // pick up a freshly-copied token
     if (el.repo.value) this._ghDetectBranch();
-    this.attention.arm('Paste your GitHub token'); // nudge the tab on return
+    if (!el.token.value) this.attention.arm('Paste your GitHub token'); // nudge on return
+  }
+
+  // ---- GitHub connection (saved token + identity) ----
+  _ghStoredToken() { try { return localStorage.getItem(GH_TOKEN_KEY) || sessionStorage.getItem(GH_TOKEN_KEY) || ''; } catch { return ''; } }
+  _ghStoredLogin() { try { return localStorage.getItem(GH_LOGIN_KEY) || sessionStorage.getItem(GH_LOGIN_KEY) || ''; } catch { return ''; } }
+  _ghPersisted() { try { return !!localStorage.getItem(GH_TOKEN_KEY); } catch { return false; } }
+  _ghStore(key, value, persist) {
+    try {
+      sessionStorage.removeItem(key); localStorage.removeItem(key);
+      if (value) (persist ? localStorage : sessionStorage).setItem(key, value);
+    } catch { /* storage blocked */ }
+  }
+  _ghForget() { try { [localStorage, sessionStorage].forEach((s) => { s.removeItem(GH_TOKEN_KEY); s.removeItem(GH_LOGIN_KEY); }); } catch { /* */ } }
+
+  // Validate the pasted token, fetch @login, and switch the UI to "connected".
+  async _ghConnect() {
+    const el = this.ghEl;
+    const token = el.token.value.trim();
+    el.error.hidden = true;
+    if (!token) return this._ghErr('Paste a token to connect');
+    try {
+      el.connect.disabled = true; el.conn.hidden = false; el.conn.textContent = 'Connecting…';
+      const user = await new GitHubRemote(token).me();
+      this._ghPersistConnection(token, user.login, el.remember.checked);
+      this.announce(`Connected to GitHub as @${user.login}`);
+    } catch (err) {
+      this._ghRenderConnection('');
+      this._ghErr(this._ghMessage(err));
+    } finally { el.connect.disabled = false; }
+  }
+
+  _ghPersistConnection(token, login, persist) {
+    this._ghStore(GH_TOKEN_KEY, token, persist);
+    this._ghStore(GH_LOGIN_KEY, login || '', persist);
+    this._ghRenderConnection(login || '');
+  }
+
+  _ghDisconnect() {
+    this._ghForget();
+    this.ghEl.token.value = '';
+    this._ghRenderConnection('');
+    this.announce('Disconnected from GitHub');
+  }
+
+  // Reflect connection state in the dialog and the File-menu hint ("attached").
+  _ghRenderConnection(login) {
+    const el = this.ghEl;
+    this._ghLogin = login || '';
+    if (login) {
+      el.conn.hidden = false; el.conn.textContent = '';
+      const span = document.createElement('span');
+      span.innerHTML = `✓ Signed in as <strong>@${esc(login)}</strong> · `;
+      const dc = document.createElement('button'); dc.type = 'button'; dc.className = 'gh-link'; dc.textContent = 'Disconnect';
+      dc.addEventListener('click', () => this._ghDisconnect());
+      el.conn.append(span, dc);
+      el.connect.hidden = true;
+    } else {
+      el.conn.hidden = true; el.conn.textContent = '';
+      el.connect.hidden = false;
+    }
+    const hint = document.querySelector('#mi-github .hint');
+    if (hint) hint.textContent = login ? `@${login}` : 'PR';
+  }
+
+  // After a token is known to work (preview/commit), record it and, if we don't
+  // yet know who it is, fetch @login quietly so the UI shows "Signed in as…".
+  async _ghNoteWorkingToken(token, persist) {
+    this._ghStore(GH_TOKEN_KEY, token, persist);
+    if (this._ghLogin) { this._ghStore(GH_LOGIN_KEY, this._ghLogin, persist); return; }
+    try { const user = await new GitHubRemote(token).me(); this._ghPersistConnection(token, user.login, persist); }
+    catch { /* identity is optional; the commit already worked */ }
   }
 
   // A document is encapsulated in its own folder: "<slug>/<slug>.md".
@@ -458,13 +533,6 @@ class App {
     return { owner: m[1], repo: m[2], path, ext, branch, token };
   }
 
-  _rememberToken(token, on) {
-    try {
-      if (on) sessionStorage.setItem(GH_TOKEN_KEY, token);
-      else sessionStorage.removeItem(GH_TOKEN_KEY);
-    } catch { /* storage blocked */ }
-  }
-
   async _githubPreview() {
     const el = this.ghEl;
     el.error.hidden = true; el.result.hidden = true;
@@ -482,7 +550,7 @@ class App {
       el.diffstat.textContent = file.exists
         ? `+${stats.add} −${stats.del} vs ${p.branch}`
         : `new file · ${newText.split('\n').length} lines`;
-      this._rememberToken(p.token, el.remember.checked);
+      this._ghNoteWorkingToken(p.token, el.remember.checked);
     } catch (err) {
       this._ghErr(this._ghMessage(err));
     }
@@ -507,7 +575,7 @@ class App {
         title: el.message.value.trim() || `Update ${p.path}`,
         body: 'Edited with edot (https://danbri.github.io/glitchcan-minigam/magpie/edot/edot.html).',
       });
-      this._rememberToken(p.token, el.remember.checked);
+      this._ghNoteWorkingToken(p.token, el.remember.checked);
       this._ghSaveRecent({ repo: `${p.owner}/${p.repo}`, branch: p.branch, path: p.path });
       // Keep enough state to offer a one-click merge next.
       this.gh = { ...this.gh, ...p, pr, baseBranch: p.branch };

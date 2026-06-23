@@ -163,8 +163,12 @@
         <label for="gh-message">Commit message</label>
         <input id="gh-message" type="text" class="find-input" autocomplete="off">
       </div>
+      <div class="gh-conn-row">
+        <span id="gh-conn" class="gh-conn" role="status" hidden></span>
+        <button type="button" id="gh-connect" class="tbtn">Connect</button>
+      </div>
       <p id="gh-branch-note" class="dialog-note" hidden></p>
-      <label class="gh-remember"><input id="gh-remember" type="checkbox"> Remember token for this tab only</label>
+      <label class="gh-remember"><input id="gh-remember" type="checkbox"> Stay signed in to GitHub on this device</label>
       <div class="gh-actions">
         <button type="button" id="gh-preview" class="tbtn">Preview diff</button>
         <span id="gh-diffstat" class="dialog-note"></span>

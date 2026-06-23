@@ -432,6 +432,12 @@ select.tbtn {
   background: var(--bg); color: var(--ink); white-space: pre; overflow: auto;
 }
 
+/* GitHub connection status ("signed in as @user") */
+.gh-conn-row { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem; flex-wrap: wrap; }
+.gh-conn { font-size: 0.85rem; color: #1a7f37; }
+.gh-conn[hidden] { display: none; }
+@media (prefers-color-scheme: dark) { .gh-conn { color: #3fb950; } }
+
 /* Remembered save locations — cached, and each easily zapped. */
 .gh-recents { margin: 0.5rem 1rem 0; }
 .gh-recents[hidden] { display: none; }

@@ -152,6 +152,7 @@ try {
         if (/\/pulls\/\d+$/.test(url) && m === 'GET') return j({ number: 7, mergeable: true, html_url: 'https://github.com/o/r/pull/7' });
         if (/\/pulls$/.test(url)) return j({ number: 7, html_url: 'https://github.com/o/r/pull/7' });
         if (/\/repos\/[^/]+\/[^/]+$/.test(url) && m === 'GET') return j({ default_branch: 'main' });
+        if (/\/user$/.test(url) && m === 'GET') return j({ login: 'octocat' });
         return j({});
       }
       return orig(url, opts);
@@ -197,6 +198,22 @@ try {
   await page.click('#gh-recents .gh-recent-del'); await page.waitForTimeout(120);
   ok('a cached location can be zapped', await page.evaluate(() =>
     !(JSON.parse(localStorage.getItem('edot.gh.recents') || '[]')).some((r) => r.repo === 'o/r' && r.path === 'docs/x.md')));
+
+  // GitHub connection: using a working token surfaces the signed-in identity,
+  // saves the token on the device, and is reflected in the File menu.
+  await page.waitForTimeout(250);
+  ok('connected identity shows @login', await page.evaluate(() => {
+    const c = document.getElementById('gh-conn');
+    return !c.hidden && /@octocat/.test(c.textContent);
+  }));
+  ok('File menu shows the attached account', await page.evaluate(() => /@octocat/.test(document.querySelector('#mi-github .hint').textContent)));
+  ok('token saved on device', await page.evaluate(() => localStorage.getItem('edot.gh.token') === 'tok'));
+  // Disconnect zaps the saved token + identity.
+  await page.click('#gh-conn .gh-link'); await page.waitForTimeout(120);
+  ok('disconnect clears the saved token', await page.evaluate(() =>
+    !localStorage.getItem('edot.gh.token') && !sessionStorage.getItem('edot.gh.token')));
+  ok('disconnect resets the menu hint', await page.evaluate(() =>
+    document.querySelector('#mi-github .hint').textContent === 'PR'));
 
   // Non-text path is rejected with a clear error.
   await page.fill('#gh-path', 'image.docx');
