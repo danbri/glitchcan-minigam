@@ -421,6 +421,9 @@ select.tbtn {
 .gh-steps li { margin: 0.25rem 0; }
 .gh-steps code { background: var(--bg); padding: 0 0.3em; border-radius: 3px; }
 .gh-tip { color: var(--muted); margin: 0.4rem 0 0; }
+/* Build stamp in the status bar — a quick "am I on the latest deploy?" check. */
+.build-stamp { color: var(--muted); font-size: 0.7rem; opacity: 0.75; font-variant-numeric: tabular-nums; }
+
 /* System-wide sign-in chip (alpha) in the header */
 .login-slot { display: inline-flex; align-items: center; gap: 0.25rem; }
 .alpha-badge {

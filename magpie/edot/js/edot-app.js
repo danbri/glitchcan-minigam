@@ -15,6 +15,10 @@ import { diffLines, diffStats, collapse } from './diff.js';
 import * as IO from './io.js';
 import * as LO from './libreoffice-bridge.js';
 
+// Bump on each meaningful deploy. Shown in the footer so a stale cached build
+// is obvious (the stamp reflects the JS your browser actually loaded).
+const BUILD = '2026-06-23.e';
+
 const GH_TOKEN_KEY = 'edot.gh.token';
 const GH_LOGIN_KEY = 'edot.gh.login';     // cached @login for the connected token
 const GH_RECENTS_KEY = 'edot.gh.recents'; // remembered save locations (zappable)
@@ -46,6 +50,8 @@ class App {
     this.statWords = document.getElementById('stat-words');
     this.statChars = document.getElementById('stat-chars');
     this.fileInput = document.getElementById('file-input');
+    const stamp = document.getElementById('build-stamp');
+    if (stamp) stamp.textContent = `build ${BUILD}`;
 
     this.doc = null;           // current library record { id, title, html, ... }
     this.lastExportExt = 'docx';
