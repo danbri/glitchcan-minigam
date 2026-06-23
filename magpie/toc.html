@@ -35,13 +35,14 @@
         <li><strong>edot/</strong> - Accessible modular word processor &amp; office-doc tool <span class="status status-ok">39/39 checks</span>
             <ul>
                 <li><a href="edot/edot.html">edot.html</a> - Browser word processor (mobile-first, offline, private)</li>
+                <li><a href="edot/data/data.html">data/data.html</a> - 🗃️ Data workspace: SQLite-WASM spreadsheet + database (Excel-like formulas, Access-like SQL/views)</li>
                 <li><a href="edot/README.md">README.md</a> - Architecture &amp; LibreOffice WASM bridge</li>
                 <li><strong>Features:</strong>
                     <ul>
-                        <li>Native <strong>.docx</strong> read/write + native <strong>PDF</strong> export (no deps), <strong>HTML+RDFa</strong>, CSS, Markdown, text</li>
-                        <li>Paragraph alignment, find &amp; replace; local document library (IndexedDB) — multiple docs, continuous autosave</li>
+                        <li>Native <strong>.docx</strong> read/write (incl. tables, images, Symbol-font logic glyphs) + native <strong>PDF</strong> export, <strong>HTML+RDFa</strong>, CSS, Markdown, text</li>
+                        <li>Open from URL (git-aware), Examples, find &amp; replace; local document library (IndexedDB); <strong>Save to GitHub</strong> (diff + PR)</li>
                         <li>🏷️ RDFa semantic authoring; WAI-ARIA toolbar, screen-reader announcements, full keyboard control</li>
-                        <li>Dependency-free ZIP &amp; PDF via native browser APIs; pluggable LibreOffice WASM bridge for .odt/.doc/.rtf</li>
+                        <li><strong>Data layer</strong> (web components, SQLite via sql.js): editable grid, =formula spreadsheet with <code>=SQL()</code> bridge, SQL queries/views, CSV ⇄ table ⇄ sheet</li>
                     </ul>
                 </li>
                 <li><a href="edot/test-edot.mjs">test-edot.mjs</a> / <a href="edot/test-e2e.mjs">test-e2e.mjs</a> / <a href="edot/verify-pdf.mjs">verify-pdf.mjs</a> - Headless Chromium tests</li>
