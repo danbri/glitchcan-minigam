@@ -156,8 +156,9 @@ governance: reserve the slots, ignore them losslessly until they're implemented.
 
 - 🟡 **Consistency pass** — ✅ one export+fingerprint convention (shared
   `data-object.js`/`fingerprint()` across editor/slides/data), ✅ slides `.edeck` /
-  editor `.edoc`. Still ⬜: login chip on every app (mail lacks it), full shared-widget
-  reuse (tree/longpress/toolbar). The apps drifted because parallel agents built them.
+  editor `.edoc`, ✅ the alpha sign-in chip now on **every** app (mail/data/backup
+  added). Still ⬜: full shared-widget reuse (tree/longpress/toolbar). The apps
+  drifted because parallel agents built them.
 - 🟡 **CI** — `run-tests.mjs` now runs all 12 suites with one command.
   Still ⬜: a CI **workflow** to run it on push — blocked by the App's missing
   `workflows` permission (per CLAUDE.md the E2E template needs a manual move into

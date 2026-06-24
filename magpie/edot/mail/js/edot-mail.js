@@ -71,6 +71,7 @@ export class EdotMail extends HTMLElement {
           </form>
           <button class="btn compose-btn" aria-label="Compose">✏ Compose</button>
           <button class="icon-btn help-btn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">?</button>
+          <span class="login-slot"><edot-login-button login-href="../auth/login.html"></edot-login-button><span class="alpha-badge" title="Experimental — sign-in is in alpha">alpha</span></span>
         </header>
         <div class="mail-body">
           <nav class="pane pane-folders" aria-label="Mailboxes">

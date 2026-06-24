@@ -30,6 +30,13 @@ try {
   await page.waitForFunction(() => { const d = document.querySelector('edot-data'); return d && d.engine && d.engine.db; }, null, { timeout: 20000 });
   ok('engine (sqlite wasm) booted', true);
 
+  // Sign-in chip (consistency with the other suite apps).
+  ok('header shows the alpha sign-in chip', await page.evaluate(() => {
+    const c = document.querySelector('.app-header .login-slot edot-login-button');
+    const badge = document.querySelector('.app-header .login-slot .alpha-badge');
+    return !!c && /alpha/i.test(badge?.textContent || '');
+  }));
+
   // 1. CSV -> table.
   await page.evaluate(async () => {
     const d = document.querySelector('edot-data');
