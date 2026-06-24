@@ -15,7 +15,11 @@
   }
 }
 
-edot-data, edot-grid, edot-sheet, edot-query { display: block; }
+edot-data { display: block; }
+/* The result faces fill their column, so the grid uses the available height
+   instead of sitting in an 8rem box with a grey void beneath it. (In a non-flex
+   context these flex hints are inert, so the faces degrade gracefully.) */
+edot-grid, edot-sheet, edot-query { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 
 /* ---- workspace shell ---- */
 .dw {

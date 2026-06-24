@@ -189,5 +189,12 @@ edot-slides { display: block; height: 100%; }
   .sl-toolbar > *, .sl-slidebar > * { flex-shrink: 0; }
   .sl-spacer { display: none; }            /* don't reserve scroll-row space */
   .sl-title { flex: 0 0 10rem; min-width: 8rem; }
+
+  /* The slide canvas is aspect-locked, so below it sat a tall grey void. Let the
+     speaker-notes box grow to claim that space — a roomier notes surface is
+     genuinely useful on a phone — while the canvas keeps its 16:9 ratio. */
+  .sl-stage { flex: 0 0 auto; }
+  .sl-notes { flex: 1 1 auto; min-height: 0; }
+  .sl-notes-area { flex: 1 1 auto; min-height: 4rem; resize: none; }
 }
 .sl-inspector { display: none; }
