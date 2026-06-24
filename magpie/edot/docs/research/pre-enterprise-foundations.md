@@ -169,10 +169,10 @@ governance: reserve the slots, ignore them losslessly until they're implemented.
   later), SBOM of the vendored libs.
 - ⬜ **A11y/i18n** — a WCAG-AA + screen-reader pass; **RTL chrome** (the new decks
   test bidi *content*; verify the *UI* mirrors), locale formats.
-- 🟡 **Determinism** — the codecs embed no dates/random and zip mod-times are
-  zeroed; re-export byte-equality is now a **regression guard** for `.edoc`/`.docx`/
-  `.pdf` (editor e2e) and `.pptx` (slides). ⬜ Still extend the guard to `.odp`/PDF
-  metadata edge cases and the data N-Quads/CSV forms.
+- ✅ **Determinism** — the codecs embed no dates/random and zip mod-times are
+  zeroed; re-export byte-equality is now a **regression guard** across every
+  durable form: `.edoc`/`.docx`/`.pdf` (editor e2e), `.pptx`/`.odp` (slides), and
+  N-Quads/CSV (data). Content fingerprints are therefore reproducible.
 
 ---
 

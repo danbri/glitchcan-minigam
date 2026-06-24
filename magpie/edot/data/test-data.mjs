@@ -143,6 +143,22 @@ try {
   ok('N-Quads round-trips a table (name/cols/rows)', nq.name === 'rt_people' && nq.cols === 'age,name' && nq.rows === 2);
   ok('N-Quads preserves numeric typing', Array.isArray(nq.age) && nq.age[0] === 9 && nq.age[1] === 36);
 
+  // Determinism (foundations §5): the durable export forms are byte-stable, so a
+  // committed version's SHA-256 fingerprint is reproducible.
+  const det = await page.evaluate(async () => {
+    const { tablesToNquads } = await import('./nquads.js');
+    const { toCsv } = await import('./csv.js');
+    const d = document.querySelector('edot-data');
+    const nq1 = tablesToNquads(d.engine, ['rt_people']);
+    const nq2 = tablesToNquads(d.engine, ['rt_people']);
+    const data = d.engine.tableRows('rt_people');
+    const c1 = toCsv(data.columns, data.rows);
+    const c2 = toCsv(data.columns, data.rows);
+    return { nq: nq1 === nq2, csv: c1 === c2 };
+  });
+  ok('N-Quads export is deterministic (byte-identical)', det.nq === true);
+  ok('CSV export is deterministic (byte-identical)', det.csv === true);
+
   const zip = await page.evaluate(async () => {
     const { zipSync, unzip, utf8 } = await import('../js/zip.js');
     const { parseCsv, toCsv } = await import('./csv.js');

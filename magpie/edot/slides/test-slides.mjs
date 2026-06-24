@@ -288,17 +288,22 @@ try {
   ok('HTML export is keyboard-navigable', html.navigable);
   ok('HTML export has one section per slide', html.sections === 2);
 
-  // 9. Determinism: two PPTX exports of the same deck are byte-identical.
+  // 9. Determinism: two exports of the same deck are byte-identical (stable
+  // fingerprints; foundations §5) — for both PPTX and ODP.
   const det = await page.evaluate(async () => {
     const S = window.__slides;
+    const same = async (make) => {
+      const a = new Uint8Array(await (await make()).arrayBuffer());
+      const b = new Uint8Array(await (await make()).arrayBuffer());
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+      return true;
+    };
     const deck = S.model.normalizeDeck(S.model.newDeck('Det'));
-    const a = new Uint8Array(await (await S.formats.deckToPptx(deck)).arrayBuffer());
-    const b = new Uint8Array(await (await S.formats.deckToPptx(deck)).arrayBuffer());
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
-    return true;
+    return { pptx: await same(() => S.formats.deckToPptx(deck)), odp: await same(() => S.formats.deckToOdp(deck)) };
   });
-  ok('PPTX export is deterministic (byte-identical)', det === true);
+  ok('PPTX export is deterministic (byte-identical)', det.pptx === true);
+  ok('ODP export is deterministic (byte-identical)', det.odp === true);
 
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
