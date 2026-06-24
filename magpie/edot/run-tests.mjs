@@ -26,6 +26,7 @@ const SUITES = [
   ['mail', 'mail/test-mail.mjs'],
   ['calendar', 'calendar/test-calendar.mjs'],
   ['maps', 'maps/test-maps.mjs'],
+  ['maps-3d', 'maps/test-maps3d.mjs'],
   ['auth', 'auth/test-auth.mjs'],
   ['backup', 'backup/test-backup.mjs'],
 ];

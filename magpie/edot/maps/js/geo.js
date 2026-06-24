@@ -148,6 +148,30 @@ export function decodeHash(hash) {
   return out;
 }
 
+// ---- GeoJSON bounds --------------------------------------------------------
+// Walk every coordinate of a FeatureCollection / Feature / geometry and return
+// [[west,south],[east,north]] (MapLibre fitBounds shape), or null if empty.
+// Pure + recursive over nested coordinate arrays, so it handles Point /
+// LineString / Polygon / Multi* uniformly.
+export function featureCollectionBounds(json) {
+  let w = Infinity; let s = Infinity; let e = -Infinity; let n = -Infinity;
+  const eat = (lng, lat) => {
+    if (!isValidLngLat(lng, lat)) return;
+    if (lng < w) w = lng; if (lng > e) e = lng;
+    if (lat < s) s = lat; if (lat > n) n = lat;
+  };
+  const walk = (c) => {
+    if (!Array.isArray(c)) return;
+    if (typeof c[0] === 'number' && typeof c[1] === 'number') eat(c[0], c[1]);
+    else for (const x of c) walk(x);
+  };
+  const feats = json && json.type === 'FeatureCollection' ? json.features
+    : json && json.type === 'Feature' ? [json] : [];
+  for (const f of feats || []) { if (f && f.geometry) walk(f.geometry.coordinates); }
+  if (!Number.isFinite(w)) return null;
+  return [[w, s], [e, n]];
+}
+
 // ---- GeoJSON import/export of saved places ---------------------------------
 // Saved place: { id, name, note, lng, lat, color, created }.
 export function placesToGeoJson(places) {

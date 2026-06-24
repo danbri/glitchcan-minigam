@@ -20,11 +20,18 @@ import { resolveBasemapStyle } from './basemap.js';
 import {
   buildGeocodeUrl, parseGeocodeResults, buildRouteUrl, parseRoute, routeToGeoJson,
   encodeHash, decodeHash, placesToGeoJson, geoJsonToPlaces, formatDistance, formatDuration,
-  isValidLngLat,
+  isValidLngLat, featureCollectionBounds,
 } from './geo.js';
+import {
+  TERRAIN_SRC, BUILDINGS_LAYER, buildDemSource, buildTerrainSpec, buildSkySpec,
+  buildBuildingsLayer, detectBuildingSource,
+} from './terrain.js';
+import { kmlToGeoJson } from './kml.js';
+import { kmzToKml } from './kmz.js';
 
 const PLACES_SRC = 'saved-places';
 const ROUTE_SRC = 'route';
+const IMPORT_SRC = 'imported-kml';   // GeoJSON source for opened KML/KMZ overlays
 
 export class EdotMaps extends HTMLElement {
   constructor() {
@@ -40,6 +47,9 @@ export class EdotMaps extends HTMLElement {
     this._searchMarker = null;  // transient marker for the last search/drop
     this._routePts = { from: null, to: null }; // [lng,lat] each
     this._suppressHash = false;
+    this.is3D = false;          // terrain/tilt mode on?
+    this.buildings3D = false;   // 3D buildings extrusion on?
+    this._importedFC = null;    // last opened KML/KMZ as a GeoJSON FeatureCollection
   }
 
   async init() {
@@ -99,11 +109,29 @@ export class EdotMaps extends HTMLElement {
     placesToggle.addEventListener('click', () => this.togglePlacesLayer());
     this._placesToggle = placesToggle;
 
+    // 3D terrain/tilt toggle (MapLibre-native: raster-DEM + setTerrain + sky).
+    const d3 = document.createElement('button');
+    d3.type = 'button'; d3.className = 'mbtn mp-3d-toggle';
+    d3.setAttribute('aria-pressed', 'false');
+    d3.textContent = '⛰ 3D';
+    d3.title = 'Toggle 3D terrain (tilt the map)';
+    d3.addEventListener('click', () => this.toggle3D());
+    this._d3Toggle = d3;
+
+    // 3D buildings toggle (fill-extrusion of footprints from a vector basemap).
+    const bld = document.createElement('button');
+    bld.type = 'button'; bld.className = 'mbtn mp-bld-toggle';
+    bld.setAttribute('aria-pressed', 'false');
+    bld.textContent = '🏙 Buildings';
+    bld.title = 'Toggle 3D buildings (needs a vector basemap with footprints)';
+    bld.addEventListener('click', () => this.toggleBuildings());
+    this._bldToggle = bld;
+
     tb.append(
       menuBtn, search,
       this._btn('🧭', 'My location', () => this.locate(), 'mp-locate'),
       this._btn('🛣', 'Directions', () => this.toggleDirections(), 'mp-dir-btn'),
-      layerSel, placesToggle,
+      layerSel, placesToggle, d3, bld,
     );
 
     // Directions panel (hidden until toggled).
@@ -124,10 +152,15 @@ export class EdotMaps extends HTMLElement {
     const ioBar = document.createElement('div'); ioBar.className = 'mp-io';
     const importInput = document.createElement('input'); importInput.type = 'file'; importInput.accept = '.geojson,.json,application/geo+json,application/json'; importInput.style.display = 'none';
     importInput.addEventListener('change', () => { const f = importInput.files[0]; if (f) this.importGeoJsonFile(f); importInput.value = ''; });
+    // KML/KMZ overlay import (rendered as map layers, not saved places).
+    const kmlInput = document.createElement('input'); kmlInput.type = 'file'; kmlInput.accept = '.kml,.kmz,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz'; kmlInput.style.display = 'none';
+    kmlInput.addEventListener('change', () => { const f = kmlInput.files[0]; if (f) this.importKmlFile(f); kmlInput.value = ''; });
+    this._kmlInput = kmlInput;
     ioBar.append(
       this._btn('⬆ Import', 'Import places (GeoJSON)', () => importInput.click()),
       this._btn('⬇ Export', 'Export places (GeoJSON)', () => this.exportGeoJson()),
-      importInput,
+      this._btn('🌍 KML', 'Open a KML or KMZ overlay', () => kmlInput.click(), 'mp-kml-btn'),
+      importInput, kmlInput,
     );
     const list = document.createElement('ul'); list.className = 'mp-place-list'; this._list = list;
     side.append(sideHead, ioBar, list);
@@ -219,7 +252,12 @@ export class EdotMaps extends HTMLElement {
         paint: { 'circle-radius': 6, 'circle-color': ['coalesce', ['get', 'color'], '#8b4513'], 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' },
       });
     }
+    // Re-apply any opened KML/KMZ overlay (style switches wipe sources/layers).
+    if (this._importedFC) this._addImportLayers(this._importedFC);
     this._refreshPlaceMarkers();
+    // Re-apply 3D state after a (re)style — terrain/buildings live on the style.
+    if (this.is3D) this._enableTerrain();
+    if (this.buildings3D) { this.buildings3D = false; this.setBuildings(true); }
     void gl;
   }
 
@@ -248,6 +286,89 @@ export class EdotMaps extends HTMLElement {
       const el = m.getElement(); if (el) el.style.display = this.placesVisible ? '' : 'none';
     }
     return this.placesVisible;
+  }
+
+  // ---- 3D terrain ----------------------------------------------------------
+  // Toggle MapLibre-native 3D: a raster-DEM source + setTerrain + sky + a tilt.
+  // No new dependency — this is built into MapLibre. Terrain tiles are network-
+  // gated; if they fail the map stays usable (flat) and a notice is shown.
+  toggle3D(force) { return this.set3D(force === undefined ? !this.is3D : !!force); }
+
+  set3D(on) {
+    this.is3D = !!on;
+    if (this._d3Toggle) this._d3Toggle.setAttribute('aria-pressed', String(this.is3D));
+    if (!this.map) return this.is3D;
+    if (this.is3D) this._enableTerrain(); else this._disableTerrain();
+    return this.is3D;
+  }
+
+  _enableTerrain() {
+    const t = this.cfg.terrain; if (!t) return;
+    try {
+      const demSpec = buildDemSource(t);
+      if (demSpec && !this.map.getSource(TERRAIN_SRC)) this.map.addSource(TERRAIN_SRC, demSpec);
+      if (this.map.getSource(TERRAIN_SRC)) this.map.setTerrain(buildTerrainSpec(t));
+      if (typeof this.map.setSky === 'function') this.map.setSky(buildSkySpec(t));
+      // Tilt into 3D so the relief is visible.
+      const pitch = Number.isFinite(t.pitch) ? t.pitch : 60;
+      this.map.easeTo({ pitch, duration: 600 });
+      // If the DEM tiles 404 / error, fall back to flat with a notice.
+      this.map.once('error', (e) => {
+        if (this.is3D && e && e.sourceId === TERRAIN_SRC) {
+          this._showNotice('3D terrain tiles could not be loaded — staying flat.');
+          this.set3D(false);
+        }
+      });
+    } catch (e) {
+      this._showNotice('3D terrain is unavailable here.');
+      this.is3D = false;
+      if (this._d3Toggle) this._d3Toggle.setAttribute('aria-pressed', 'false');
+    }
+  }
+
+  _disableTerrain() {
+    try {
+      this.map.setTerrain(null);
+      if (typeof this.map.setSky === 'function') this.map.setSky(null);
+      this.map.easeTo({ pitch: 0, bearing: 0, duration: 600 });
+    } catch (_) { /* */ }
+  }
+
+  // ---- 3D buildings --------------------------------------------------------
+  // Extrude building footprints from the active vector style (auto-detected).
+  // No-op (with a notice) when the basemap is raster / exposes no footprints.
+  toggleBuildings(force) { return this.setBuildings(force === undefined ? !this.buildings3D : !!force); }
+
+  setBuildings(on) {
+    this.buildings3D = !!on;
+    if (this._bldToggle) this._bldToggle.setAttribute('aria-pressed', String(this.buildings3D));
+    if (!this.map) return this.buildings3D;
+    if (this.buildings3D) this._addBuildings(); else this._removeBuildings();
+    return this.buildings3D;
+  }
+
+  _addBuildings() {
+    if (this.map.getLayer(BUILDINGS_LAYER)) return;
+    let style; try { style = this.map.getStyle(); } catch (_) { style = null; }
+    const found = detectBuildingSource(style);
+    if (!found) {
+      this._showNotice('This basemap has no 3D building data — switch to a vector basemap.');
+      this.buildings3D = false;
+      if (this._bldToggle) this._bldToggle.setAttribute('aria-pressed', 'false');
+      return;
+    }
+    const layer = buildBuildingsLayer({
+      source: found.source, sourceLayer: found.sourceLayer,
+      color: this.cfg.buildings?.color, opacity: this.cfg.buildings?.opacity,
+      minZoom: this.cfg.buildings?.minZoom,
+    });
+    if (layer) { try { this.map.addLayer(layer); } catch (e) { /* style mismatch */ } }
+  }
+
+  _removeBuildings() {
+    if (this.map.getLayer && this.map.getLayer(BUILDINGS_LAYER)) {
+      try { this.map.removeLayer(BUILDINGS_LAYER); } catch (_) { /* */ }
+    }
   }
 
   // ---- search / geocoding --------------------------------------------------
@@ -435,6 +556,91 @@ export class EdotMaps extends HTMLElement {
       this._afterPlacesChanged();
       return places.length;
     } catch (e) { this._showNotice('Could not read that file as GeoJSON.'); return 0; }
+  }
+
+  // ---- KML / KMZ overlay import --------------------------------------------
+  // Open a .kml or .kmz file, convert to GeoJSON (pure, in kml.js), and render
+  // it as MapLibre sources/layers (points, lines, polygons). Returns the feature
+  // count. Unlike GeoJSON import (which adds *saved places*), this adds a map
+  // overlay only — KML overlays are transient and not persisted.
+  async importKmlFile(file) {
+    try {
+      const name = (file.name || '').toLowerCase();
+      let kmlText;
+      if (name.endsWith('.kmz')) {
+        kmlText = await kmzToKml(await file.arrayBuffer());
+      } else {
+        kmlText = await file.text();
+      }
+      const fc = kmlToGeoJson(kmlText);
+      if (!fc.features.length) { this._showNotice('No placemarks found in that KML.'); return 0; }
+      this.addKmlGeoJson(fc);
+      return fc.features.length;
+    } catch (e) {
+      this._showNotice('Could not read that file as KML/KMZ.');
+      return 0;
+    }
+  }
+
+  // Apply a (already-parsed) GeoJSON FeatureCollection as the KML overlay and
+  // fit the map to it. Split out so tests can drive it without a File.
+  addKmlGeoJson(fc) {
+    this._importedFC = fc;
+    if (this.map && this.map.isStyleLoaded && this.map.isStyleLoaded()) {
+      this._addImportLayers(fc);
+    } else if (this.map) {
+      this.map.once('idle', () => this._addImportLayers(fc));
+    }
+    return fc.features.length;
+  }
+
+  _addImportLayers(fc) {
+    if (!this.map) return;
+    if (this.map.getSource(IMPORT_SRC)) {
+      this.map.getSource(IMPORT_SRC).setData(fc);
+    } else {
+      this.map.addSource(IMPORT_SRC, { type: 'geojson', data: fc });
+      // Polygons (fill), then lines, then points — drawn bottom-up.
+      this.map.addLayer({
+        id: IMPORT_SRC + '-fill', type: 'fill', source: IMPORT_SRC,
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: { 'fill-color': '#188038', 'fill-opacity': 0.25 },
+      });
+      this.map.addLayer({
+        id: IMPORT_SRC + '-line', type: 'line', source: IMPORT_SRC,
+        filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#b5126b', 'line-width': 3 },
+      });
+      this.map.addLayer({
+        id: IMPORT_SRC + '-pt', type: 'circle', source: IMPORT_SRC,
+        filter: ['==', ['geometry-type'], 'Point'],
+        paint: { 'circle-radius': 5, 'circle-color': '#e37400', 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' },
+      });
+    }
+    this._fitToFeatures(fc);
+  }
+
+  // Remove the KML overlay (source + its three layers).
+  clearKml() {
+    this._importedFC = null;
+    if (!this.map) return;
+    for (const suf of ['-fill', '-line', '-pt']) {
+      const id = IMPORT_SRC + suf;
+      if (this.map.getLayer && this.map.getLayer(id)) { try { this.map.removeLayer(id); } catch (_) { /* */ } }
+    }
+    if (this.map.getSource && this.map.getSource(IMPORT_SRC)) { try { this.map.removeSource(IMPORT_SRC); } catch (_) { /* */ } }
+  }
+
+  // Fit the map to the bbox of a FeatureCollection's coordinates.
+  _fitToFeatures(fc) {
+    const b = featureCollectionBounds(fc);
+    if (!b || !this.map) return;
+    if (b[0][0] === b[1][0] && b[0][1] === b[1][1]) {
+      this.map.flyTo({ center: b[0], zoom: Math.max(this.map.getZoom(), 13) });
+    } else {
+      this.map.fitBounds(b, { padding: 60, maxZoom: 16 });
+    }
   }
 
   exportGeoJson() {

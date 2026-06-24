@@ -50,6 +50,32 @@ export const MAPS_CONFIG = {
   },
   defaultBasemap: 'osm',
 
+  // 3D terrain — a raster-DEM source for MapLibre's setTerrain(). DEM tiles must
+  // be elevation-encoded (Terrarium or Mapbox Terrain-RGB). The default is AWS
+  // Open Data Terrain Tiles (Terrarium encoding, public, NO API KEY), the one
+  // widely-usable keyless DEM. Re-point `tiles`/`encoding` for a self-hosted DEM.
+  // If the tiles fail to load the component falls back to flat 2D (no crash).
+  terrain: {
+    tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+    encoding: 'terrarium',
+    tileSize: 256,
+    minzoom: 0,
+    maxzoom: 15,
+    exaggeration: 1.4, // vertical exaggeration (cf. trees/ uses 1.6×)
+    attribution: 'Elevation: Mapzen/AWS Terrain Tiles',
+    // Pitch applied when the 3D view is enabled (degrees).
+    pitch: 60,
+  },
+
+  // 3D buildings (fill-extrusion). Auto-detected from the active vector style's
+  // building source-layer where possible (detectBuildingSource). These are the
+  // fallback hints used when a style declares no extrusion of its own.
+  buildings: {
+    color: '#b9a88f',
+    opacity: 0.85,
+    minZoom: 14,
+  },
+
   // Geocoding (place name -> coords). Nominatim demo endpoint; network-gated.
   // The response parser (parseGeocodeResults) is pure and unit-tested.
   geocoder: {
