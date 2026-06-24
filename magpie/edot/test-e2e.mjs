@@ -127,7 +127,13 @@ try {
   }));
   await page.click('.tree-folder:has-text("Research")'); await page.waitForTimeout(120);
   ok('Research folder expands to the deep-dive report', await page.isVisible('.tree-leaf:has-text("deep-dive")'));
-  // Load the Morton example from the Examples folder.
+  // Load the research markdown — its GFM tables must now render as real tables.
+  await page.click('.tree-leaf:has-text("deep-dive")');
+  await page.waitForFunction(() => /Extensibility|Executive summary/i.test(document.getElementById('editor').textContent), null, { timeout: 20000 });
+  ok('research markdown loads into the editor', /Extensibility|complexity/i.test(await page.textContent('#editor')));
+  ok('GFM tables render as real tables', await page.evaluate(() => document.querySelectorAll('#editor table').length >= 2));
+  // Reopen the Open dialog and load the Morton example from the Examples folder.
+  await page.click('#menu-button'); await page.click('#mi-open'); await page.waitForTimeout(200);
   await page.click('.tree-leaf:has-text("Searching for Logic")');
   await page.waitForFunction(() => /Searching for Logic|searching for logic/i.test(document.getElementById('editor').textContent), null, { timeout: 20000 });
   ok('example loaded with tables', await page.evaluate(() => document.querySelectorAll('#editor table').length > 5));
