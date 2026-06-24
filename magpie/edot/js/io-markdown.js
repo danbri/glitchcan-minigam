@@ -77,11 +77,26 @@ export function markdownToHtml(md) {
       continue;
     }
 
+    // GFM table: a header row followed by a delimiter row (|---|:--:|). Must
+    // contain a pipe so a bare "text" line above "---" stays a paragraph/hr.
+    if (line.includes('|') && i + 1 < lines.length && isDelimiterRow(lines[i + 1])) {
+      const header = splitRow(line);
+      const aligns = splitRow(lines[i + 1]).map(alignOf);
+      i += 2;
+      const body = [];
+      while (i < lines.length && lines[i].includes('|') && lines[i].trim() !== '') {
+        body.push(splitRow(lines[i])); i++;
+      }
+      out.push(renderTable(header, aligns, body));
+      continue;
+    }
+
     // Paragraph: gather until blank line
     const buf = [line];
     i++;
     while (i < lines.length && !/^\s*$/.test(lines[i]) &&
-           !/^(#{1,6}\s|```|\s*>|\s*([-*+]|\d+\.)\s)/.test(lines[i])) {
+           !/^(#{1,6}\s|```|\s*>|\s*([-*+]|\d+\.)\s)/.test(lines[i]) &&
+           !(lines[i].includes('|') && i + 1 < lines.length && isDelimiterRow(lines[i + 1]))) {
       buf.push(lines[i]); i++;
     }
     out.push(`<p>${inline(buf.join(' '))}</p>`);
@@ -89,6 +104,47 @@ export function markdownToHtml(md) {
 
   return sanitizeHtml(out.join('\n'));
 }
+
+// ---- GFM tables ----
+// Split a pipe row into trimmed cells, honouring escaped \| and optional outer pipes.
+function splitRow(line) {
+  const cells = []; let cur = '';
+  const s = line.trim();
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '\\' && s[i + 1] === '|') { cur += '|'; i++; continue; }
+    if (s[i] === '|') { cells.push(cur); cur = ''; continue; }
+    cur += s[i];
+  }
+  cells.push(cur);
+  if (cells.length && cells[0].trim() === '') cells.shift();
+  if (cells.length && cells[cells.length - 1].trim() === '') cells.pop();
+  return cells.map((c) => c.trim());
+}
+
+// A delimiter row's cells are each like ---, :--, --:, :-:.
+function isDelimiterRow(line) {
+  if (!/[|-]/.test(line)) return false;
+  const cells = splitRow(line);
+  return cells.length > 0 && cells.every((c) => /^:?-+:?$/.test(c));
+}
+
+function alignOf(cell) {
+  const l = cell.startsWith(':'), r = cell.endsWith(':');
+  return l && r ? 'center' : r ? 'right' : l ? 'left' : '';
+}
+
+function renderTable(header, aligns, body) {
+  const sty = (a) => (a ? ` style="text-align:${a}"` : '');
+  const head = header.map((h, c) => `<th${sty(aligns[c])}>${inline(h)}</th>`).join('');
+  let html = `<table><thead><tr>${head}</tr></thead><tbody>`;
+  for (const row of body) {
+    let tds = '';
+    for (let c = 0; c < header.length; c++) tds += `<td${sty(aligns[c])}>${inline(row[c] || '')}</td>`;
+    html += `<tr>${tds}</tr>`;
+  }
+  return `${html}</tbody></table>`;
+}
+
 
 export function htmlToMarkdown(html) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
