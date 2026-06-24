@@ -37,13 +37,18 @@ function extractUrl(spec) {
 }
 
 export async function searchPlaces(query, opts = {}) {
-  const { sources, limit = 8, signal, fetch, config = {} } = opts;
+  const { sources, limit = 8, signal, fetch, config = {}, onUpdate } = opts;
   const cat = opts.catalogue || await catalogue(undefined, fetch);
   const active = new Set(['api', 'extract']); // 'planned'/'disabled' entries are catalogue docs, not queried
   const enabled = cat.sources.filter((s) =>
     active.has(s.runtime) && (!sources || sources.includes(s.id)));
 
-  const settled = await Promise.allSettled(enabled.map(async (s) => {
+  // Accumulate across sources, emitting a merged snapshot as each one resolves —
+  // so a fast/offline source (the cached extract) paints immediately instead of
+  // waiting on a slow or unreachable API. The awaited return is the final set.
+  const acc = [];
+  const snapshot = () => rank(merge(acc), query).slice(0, limit);
+  await Promise.allSettled(enabled.map(async (s) => {
     const mod = await providerModule(s.provider || s.id);
     const o = {
       limit, signal, fetch,
@@ -51,11 +56,12 @@ export async function searchPlaces(query, opts = {}) {
       ...(s.extract ? { url: extractUrl(s) } : {}),
       ...(config[s.id] || {}),
     };
-    return mod.search(query, o);
+    const r = await mod.search(query, o);
+    if (Array.isArray(r) && r.length) { acc.push(...r); if (onUpdate) onUpdate(snapshot()); }
+    return r;
   }));
 
-  const all = settled.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
-  return rank(merge(all), query).slice(0, limit);
+  return snapshot();
 }
 
 // Re-export the Wikidata coordinate lookup so a UI can fill coords on selection

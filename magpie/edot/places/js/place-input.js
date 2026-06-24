@@ -43,6 +43,7 @@ export class EdotPlaceInput extends HTMLElement {
       <ul class="pl-list" id="${listId}" role="listbox" hidden></ul>`;
     this.input = this.querySelector('.pl-input');
     this.list = this.querySelector('.pl-list');
+    if (this._pendingValue != null) { this.input.value = this._pendingValue; this._pendingValue = null; }
 
     this.input.addEventListener('input', () => this._onInput());
     this.input.addEventListener('keydown', (e) => this._onKeydown(e));
@@ -56,6 +57,11 @@ export class EdotPlaceInput extends HTMLElement {
   get selectedPlace() { return this._selected; }
   set config(c) { this._config = c || {}; }
   get config() { return this._config; }
+
+  // Proxy the inner field's text, so a host can read/seed it like a plain input
+  // (the calendar reads location.value). Tolerates being set before upgrade.
+  get value() { return this.input ? this.input.value : (this._pendingValue || ''); }
+  set value(v) { if (this.input) this.input.value = v == null ? '' : v; else this._pendingValue = v; }
 
   _facade() { return (this.__facade ||= import('./places.js')); }
 
@@ -73,7 +79,10 @@ export class EdotPlaceInput extends HTMLElement {
     let results;
     try {
       const { searchPlaces } = await this._facade();
-      results = await searchPlaces(q, { sources: this._sources, limit: this._limit, signal: ac.signal, config: this._config });
+      // Paint each source's results as they arrive (offline/cached first), so the
+      // dropdown never waits on a slow API; ignore updates from a superseded call.
+      const onUpdate = (partial) => { if (!ac.signal.aborted) { this._results = partial; this._render(partial); } };
+      results = await searchPlaces(q, { sources: this._sources, limit: this._limit, signal: ac.signal, config: this._config, onUpdate });
     } catch (_) { this._close(); return; }
     if (ac.signal.aborted) return; // a newer keystroke superseded this one
     this._results = results;

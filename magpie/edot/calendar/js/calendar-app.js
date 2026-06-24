@@ -320,7 +320,20 @@ export class EdotCalendar extends HTMLElement {
     };
 
     const summary = this._field(box, 'Title', el('input', { type: 'text', value: ev.summary || '', className: 'cal-input' }));
-    const location = this._field(box, 'Location', el('input', { type: 'text', value: ev.location || '', className: 'cal-input' }));
+
+    // Location autocomplete (names + Wikidata QIDs). Lazy: the places component is
+    // imported only when an event dialog is opened, and it loads its data
+    // providers only once the user starts typing.
+    const locInput = document.createElement('edot-place-input');
+    locInput.setAttribute('sources', 'wikidata,local-seed');
+    locInput.setAttribute('placeholder', 'Search for a place…');
+    const location = this._field(box, 'Location', locInput);
+    let pickedPlace = null;
+    locInput.addEventListener('place-selected', (e) => { pickedPlace = e.detail; });
+    import('../../places/js/place-input.js').then(() => {
+      customElements.upgrade(locInput);
+      locInput.value = ev.location || '';
+    });
 
     const calSel = el('select', { className: 'cal-input' });
     for (const c of this.calendars) { const o = el('option', { value: c.id, textContent: c.name }); if (c.subscribed) o.disabled = true; calSel.appendChild(o); }
@@ -378,7 +391,16 @@ export class EdotCalendar extends HTMLElement {
     const actions = document.createElement('div'); actions.className = 'cal-modal-actions';
     const save = this._btn('Save', async () => {
       ev.summary = summary.value.trim();
-      ev.location = location.value.trim();
+      ev.location = (location.value || '').trim();
+      // Persist the QID + coordinates when the location came from a picked place
+      // (so the maps backdrop can resolve it). Free-typed text clears them.
+      if (pickedPlace && pickedPlace.name === ev.location) {
+        ev.locationWikidata = pickedPlace.wikidataId || null;
+        ev.locationGeo = pickedPlace.lat != null ? { lat: pickedPlace.lat, lon: pickedPlace.lon } : null;
+      } else if (ev.location !== ((existing && existing.location) || '')) {
+        ev.locationWikidata = null;
+        ev.locationGeo = null;
+      }
       ev.description = desc.value;
       ev.calendarId = calSel.value;
       ev.allDay = allDay.checked;
