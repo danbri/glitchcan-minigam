@@ -61,6 +61,12 @@
     };
     // Keep the map in sync if the hash changes after load (deep-link nav).
     window.addEventListener('hashchange', () => el.applyHash());
+    // Opt-in backdrop: ?events overlays located calendar events (events-layer.js).
+    if (new URLSearchParams(location.search).has('events')) {
+      const evl = await import('./js/events-layer.js');
+      window.__maps.events = evl;
+      await evl.mountEventOverlay(el);
+    }
   </script>
 </body>
 </html>

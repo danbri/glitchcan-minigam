@@ -32,6 +32,7 @@ const SUITES = [
   ['mail', 'mail/test-mail.mjs'],
   ['calendar', 'calendar/test-calendar.mjs'],
   ['maps', 'maps/test-maps.mjs'],
+  ['events-layer', 'maps/test-events-layer.mjs'],
   ['auth', 'auth/test-auth.mjs'],
   ['backup', 'backup/test-backup.mjs'],
 ];

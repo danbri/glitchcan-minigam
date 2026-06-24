@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>edot maps — events backdrop demo</title>
+  <link rel="stylesheet" href="../css/edot-tokens.css">
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { display: flex; flex-direction: column; font-family: var(--font-ui); background: var(--bg); color: var(--ink); }
+    header { padding: 0.5rem 0.85rem; border-bottom: 1px solid var(--line); background: var(--surface); }
+    h1 { font-size: 1rem; margin: 0; color: var(--accent); }
+    p { margin: 0.2rem 0 0; font-size: 0.8rem; color: var(--muted); }
+    code { background: var(--bg); padding: 0.05em 0.3em; border-radius: 4px; }
+    main { flex: 1 1 auto; min-height: 0; }
+    edot-maps { height: 100%; display: block; }
+    .boot { padding: 1rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📍 Events on the map</h1>
+    <p>Located calendar events drawn as a backdrop layer (click a point for details + its Wikidata link).
+       In the suite, open <code>maps.html?events</code> to overlay your own.</p>
+  </header>
+  <main><edot-maps><div class="boot">Loading map…</div></edot-maps></main>
+
+  <script src="vendor/maplibre-gl.js"></script>
+  <script type="module">
+    import { EdotMaps } from './js/maps-app.js';
+    const el = document.querySelector('edot-maps');
+    await el.init();
+    const { mountEventOverlay } = await import('./js/events-layer.js');
+    // Sample located events (the calendar persists exactly this shape).
+    await mountEventOverlay(el, { features: [
+      { type: 'Feature', geometry: { type: 'Point', coordinates: [-2.5879, 51.4545] }, properties: { title: 'Bristol meetup', location: 'Bristol', wikidata: 'Q23154', start: '2026-06-25T10:00:00Z' } },
+      { type: 'Feature', geometry: { type: 'Point', coordinates: [-0.1278, 51.5074] }, properties: { title: 'London review', location: 'London', wikidata: 'Q84', start: '2026-06-26T09:00:00Z' } },
+      { type: 'Feature', geometry: { type: 'Point', coordinates: [2.3522, 48.8566] }, properties: { title: 'Paris sync', location: 'Paris', wikidata: 'Q90', start: '2026-06-27T09:00:00Z' } },
+    ] });
+  </script>
+</body>
+</html>
