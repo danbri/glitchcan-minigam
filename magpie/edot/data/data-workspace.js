@@ -13,6 +13,7 @@ import { DataEngine, safeIdent, quoteId } from './data-engine.js';
 import { parseCsv, coerce, toCsv } from './csv.js';
 import { tablesToNquads, nquadsToTables } from './nquads.js';
 import { zipSync, unzip, utf8 } from '../js/zip.js';
+import { fingerprint } from '../js/data-object.js';
 import { holdLabel, consumedPeek } from '../js/longpress.js';
 import './grid-component.js';
 import './sheet-component.js';
@@ -447,11 +448,10 @@ export class EdotData extends HTMLElement {
   async _emit(bytes, filename, mime) {
     download(new Blob([bytes], { type: mime }), filename);
     let fp = '';
-    try {
-      const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-      const digest = await crypto.subtle.digest('SHA-256', view);
-      fp = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-    } catch { /* crypto.subtle needs a secure context */ }
+    // Shared SHA-256 helper — one fingerprint implementation across the suite
+    // (editor .edoc, slides .edeck, and these durable data forms). See js/data-object.js.
+    try { fp = await fingerprint(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)); }
+    catch { /* crypto.subtle needs a secure context */ }
     this._lastFingerprint = fp;
     this._toast(`Exported ${filename}${fp ? ` · sha256 ${fp.slice(0, 12)}…` : ''}`);
     return fp;

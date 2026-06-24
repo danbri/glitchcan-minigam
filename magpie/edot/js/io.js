@@ -9,9 +9,42 @@ import { htmlToDocument, documentToHtml, documentCss } from './io-html.js';
 import { htmlToDocx, docxToHtml } from './io-docx.js';
 import { htmlToPdf } from './io-pdf.js';
 import * as LO from './libreoffice-bridge.js';
+import { wrap, finalize, canonicalize, typeInfo } from './data-object.js';
+
+// The .edoc is the editor's CANONICAL representation: a self-contained DataObject
+// envelope around the document HTML. Every OTHER export (pdf/docx/md/html/txt) is
+// a view DERIVED from this same content — so the core form is explicit and all
+// reps follow from it (see docs/research/pre-enterprise-foundations.md §2). The
+// bytes are deterministic (sorted keys) and carry an embedded SHA-256 content
+// fingerprint, so a committed .edoc verifies and round-trips. Listed first below
+// so it leads the export menu.
+async function wrapEdoc(html, title, opts = {}) {
+  const obj = wrap({
+    type: 'doc',
+    body: { html: normalize(html) },
+    meta: { title: title || '' },
+    ...(opts.id ? { id: opts.id } : {}),
+  });
+  return canonicalize(await finalize(obj)); // includes fingerprint; stable bytes
+}
+
+function unwrapEdoc(text) {
+  let obj;
+  try { obj = JSON.parse(text); } catch { throw new Error('.edoc is not valid JSON'); }
+  if (!obj || obj.type !== 'doc' || !obj.body || typeof obj.body.html !== 'string') {
+    throw new Error('Not an edot document (.edoc): missing a doc body');
+  }
+  return obj.body.html;
+}
 
 // Native handlers keyed by extension.
 const NATIVE = {
+  edoc: {
+    label: 'edot document (.edoc)',
+    accept: '.edoc,application/edot-doc+json',
+    import: async (file) => unwrapEdoc(await file.text()),
+    export: async (html, title, opts) => new Blob([await wrapEdoc(html, title, opts)], { type: typeInfo('doc').media }),
+  },
   txt: {
     label: 'Plain text',
     accept: '.txt,text/plain',
@@ -111,10 +144,10 @@ export async function importFile(file) {
 }
 
 /** Produce a downloadable Blob in the requested format. */
-export async function exportDocument(html, title, ext) {
+export async function exportDocument(html, title, ext, opts = {}) {
   const native = NATIVE[ext];
   if (native) {
-    const blob = await native.export(normalize(html), title);
+    const blob = await native.export(normalize(html), title, opts);
     return blob;
   }
   // WASM-only export: build a docx natively, then convert it.
