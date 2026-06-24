@@ -49,9 +49,9 @@ is a *replayed stream of operations*. If every mutation already flows through
 for **CRDT/OT sync**, push it to the **undo stack**, and emit an **audit event**.
 Build the spine before you must serialize it.
 
-- ⬜ `js/commands.js` — the registry (register/get/run/contributions, `when`, shortcuts).
-- ⬜ **Command palette** (`Mod+K`) — additive surface that lists+runs all commands. *Do this first*: it's low-risk (touches no existing wiring), it's a real Enterprise-grade UX feature, and authoring it forces enumerating the suite's **operation vocabulary** — which is exactly the alphabet collaboration will sync.
-- 🟡 Migrate existing actions: file-menu and suite-launcher commands first (stable ids → tests stay green), formatting toolbar later (it's the most test-heavy; migrate last, carefully).
+- ✅ `js/command-registry.js` — the registry (register/get/run/contributions, `when`, shortcuts) with no-op `onAudit`/`onPolicy` seams at `run()`.
+- ✅ **Command palette** (`Mod+K`) — additive surface that lists+runs all commands. Did this first: low-risk, a real Enterprise-grade UX feature, and authoring it forced enumerating the suite's **operation vocabulary** — exactly the alphabet collaboration will sync.
+- ✅ Migrate existing actions: the **File menu and suite-launcher items now run through `commands.run(id)`** (the audit/policy choke point), and **export commands are generated from the io format table** so the registry is the single source of truth for every export. ⬜ Formatting toolbar still renders independently (commands exist; rendering-*from-contributions* is the remaining, most test-heavy migration — do it last, carefully).
 
 ---
 
@@ -79,15 +79,21 @@ identity** — your own "storage ≠ format" point, made structural.
   object round-trips byte-identically anywhere.
 
 State:
-- ✅ Data object (SQLite/CSV-zip/N-Quads + SHA-256), slides deck (versioned,
-  self-contained JSON).
-- 🟡 Doc model (HTML core; no explicit id/version/fingerprint wrapper yet).
-- ⬜ A shared `js/data-object.js` (id/type/version/fingerprint/serialize) adopted
-  by every app; **slides `.edeck` extension + media type + fingerprint** (the
-  outstanding consistency item) is the template.
+- ✅ A shared `js/data-object.js` (id/type/schemaVersion/meta/body + deterministic
+  canonicalization + SHA-256 content fingerprint), unit-tested pure-Node.
+- ✅ Adopted across the flagships: **editor → `.edoc`** (canonical envelope around
+  the doc HTML, carrying the live doc's stable id, deterministic bytes, embedded
+  fingerprint; every other export — pdf/docx/md/html/txt — is now an explicit view
+  *derived from* it); **slides → `.edeck`** (the template) + media type +
+  fingerprint; **data** durable forms (SQLite/CSV-zip/N-Quads) route through the
+  **same shared `fingerprint()`** so there is one SHA-256 implementation suite-wide.
+- ✅ Calendar keeps **iCalendar (RFC 5545)** as its canonical/interop form (per-event
+  UIDs already self-identify); a JSON `.ecal` envelope would *reduce* interop, so
+  it's intentionally not wrapped.
 - ⬜ A tiny **object/metadata index** (id → type, title, version, fingerprint,
   timestamps) separate from each app's body store. This is the table ACLs, sync
   state, search, and retention will hang off. Local now; server-mirrored later.
+  **This is the next foundations build.**
 
 ---
 
@@ -148,10 +154,11 @@ governance: reserve the slots, ignore them losslessly until they're implemented.
 
 ## 5. Hygiene to clear in this phase (cheap; prevents carrying debt)
 
-- 🟡 **Consistency pass** — login chip on every app (mail lacks it), shared widgets
-  (tree/longpress/toolbar), one export+fingerprint convention, slides `.edeck`.
-  The apps drifted because parallel agents built them.
-- 🟡 **CI** — `run-tests.mjs` now runs all 11 suites with one command (this commit).
+- 🟡 **Consistency pass** — ✅ one export+fingerprint convention (shared
+  `data-object.js`/`fingerprint()` across editor/slides/data), ✅ slides `.edeck` /
+  editor `.edoc`. Still ⬜: login chip on every app (mail lacks it), full shared-widget
+  reuse (tree/longpress/toolbar). The apps drifted because parallel agents built them.
+- 🟡 **CI** — `run-tests.mjs` now runs all 12 suites with one command.
   Still ⬜: a CI **workflow** to run it on push — blocked by the App's missing
   `workflows` permission (per CLAUDE.md the E2E template needs a manual move into
   `.github/workflows/`). Hand-off item for danbri.
@@ -168,12 +175,12 @@ governance: reserve the slots, ignore them losslessly until they're implemented.
 
 ## 6. Sequencing (this phase)
 
-1. **`run-tests.mjs`** ✅ (green baseline; this commit).
-2. **Command registry + command palette** — the keystone; additive, low-risk first.
-3. **`data-object.js` + slides `.edeck`/fingerprint** — finish the object model on a template app.
-4. **Object/metadata index** + adopt `data-object` across apps.
-5. **Consistency + CSP + a11y/i18n** hygiene, in parallel.
-6. **Backend stub + capability API design** (no live services yet) — the bridge to the Enterprise phase.
+1. **`run-tests.mjs`** ✅ (green baseline; 12 suites).
+2. **Command registry + command palette** ✅, with the File menu + exports now routed through `run()`.
+3. **`data-object.js` + slides `.edeck`/editor `.edoc`/unified fingerprint** ✅ — object model adopted across the flagships.
+4. **Object/metadata index** ⬜ (next) + the remaining toolbar-from-contributions migration.
+5. **Consistency + CSP + a11y/i18n** hygiene, in parallel (consistency: fingerprint convention ✅; CSP/a11y ⬜).
+6. **Backend stub + capability API design** (no live services yet) — the bridge to the Enterprise phase. *Designed* in `backend-and-capabilities.md`.
 
 When these hold, "full OIDC, email, groups, groupware, governance" become
 *additions to a sound architecture* rather than rewrites. That is "pre-Enterprise-ready."
