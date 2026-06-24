@@ -1,38 +1,10 @@
 /* edot — accessible modular word processor
    Mobile-first. em/rem units. High-contrast aware. */
 
+/* Palette + type tokens come from the shared css/edot-tokens.css (linked first
+   in edot.html); only editor-specific tokens live here. */
 :root {
-  --bg: #f4f4f2;
-  --surface: #ffffff;
-  --ink: #1c1c1c;
-  --muted: #5a5a5a;
-  --line: #d9d6cf;
-  --accent: #8b4513;
-  --accent-fg: #ffffff;
-  --focus: #1a73e8;
-  --danger: #b00020;
-  --ok: #155724;
-  --toolbar-bg: #efece6;
-  --radius: 6px;
   --page-max: 46rem;
-  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  /* Document face + math/symbol fallbacks so logic glyphs (∀ ∃ ⊃ ¬ ∧ ∨ → ↔)
-     render even when the primary serif lacks them. */
-  --font-doc: Georgia, 'Times New Roman', 'Cambria Math', 'STIX Two Math',
-    'Segoe UI Symbol', 'Noto Sans Math', 'Noto Sans Symbols2', serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1a1a1a;
-    --surface: #242424;
-    --ink: #ececec;
-    --muted: #a8a8a8;
-    --line: #3a3a3a;
-    --accent: #d2935a;
-    --accent-fg: #1a1a1a;
-    --toolbar-bg: #2c2c2c;
-  }
 }
 
 * { box-sizing: border-box; }

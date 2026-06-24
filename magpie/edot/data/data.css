@@ -1,18 +1,23 @@
 /* data.css — styles for the edot data-layer web components.
    Light-DOM custom elements share this sheet. */
 
+/* Local names alias the shared tokens (css/edot-tokens.css, linked first in
+   data.html), which flip in dark mode — so no dark block needed here. Fallbacks
+   preserve the old values if the tokens file is ever absent. */
 :root {
-  --d-bg: #f4f4f2; --d-surface: #fff; --d-ink: #1c1c1c; --d-muted: #5a5a5a;
-  --d-line: #d9d6cf; --d-accent: #8b4513; --d-accent-fg: #fff; --d-focus: #1a73e8;
-  --d-head: #efece6; --d-sel: rgba(26,115,232,0.14); --d-err: #b00020; --d-ok: #155724;
-  --d-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --d-bg: #1a1a1a; --d-surface: #242424; --d-ink: #ececec; --d-muted: #a8a8a8;
-    --d-line: #3a3a3a; --d-accent: #d2935a; --d-accent-fg: #1a1a1a; --d-head: #2c2c2c;
-    --d-sel: rgba(120,170,255,0.22);
-  }
+  --d-bg: var(--bg, #f4f4f2);
+  --d-surface: var(--surface, #fff);
+  --d-ink: var(--ink, #1c1c1c);
+  --d-muted: var(--muted, #5a5a5a);
+  --d-line: var(--line, #d9d6cf);
+  --d-accent: var(--accent, #8b4513);
+  --d-accent-fg: var(--accent-fg, #fff);
+  --d-focus: var(--focus, #1a73e8);
+  --d-head: var(--head, #efece6);
+  --d-sel: var(--sel, rgba(26, 115, 232, 0.14));
+  --d-err: var(--danger, #b00020);
+  --d-ok: var(--ok, #155724);
+  --d-mono: var(--font-mono, ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace);
 }
 
 edot-data { display: block; }

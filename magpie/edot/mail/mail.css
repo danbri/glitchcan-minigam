@@ -2,26 +2,32 @@
    dark-mode aware (prefers-color-scheme), mobile drawer for the folder pane.
    Follows edot's data.css / edot.css conventions (CSS vars, --m-* namespace). */
 
+/* Structural tokens alias the shared set (css/edot-tokens.css, linked first in
+   mail.html) — same neutrals, focus, radius, type, and dark-mode as the rest of
+   the suite. Mail keeps a distinct BLUE accent (and unread colour) as a
+   deliberate per-app brand; flip these to the canonical --accent to fully match. */
 :root {
-  --m-bg: #f4f4f2;
-  --m-surface: #ffffff;
-  --m-surface2: #fbfaf8;
-  --m-ink: #1c1c1c;
-  --m-muted: #5a5a5a;
-  --m-line: #d9d6cf;
+  --m-bg: var(--bg, #f4f4f2);
+  --m-surface: var(--surface, #ffffff);
+  --m-surface2: var(--surface-2, #fbfaf8);
+  --m-ink: var(--ink, #1c1c1c);
+  --m-muted: var(--muted, #5a5a5a);
+  --m-line: var(--line, #d9d6cf);
+  --m-focus: var(--focus, #1a73e8);
+  --m-danger: var(--danger, #b00020);
+  --m-radius: var(--radius, 6px);
+  --m-font: var(--font-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+
+  /* Mail brand accent (intentionally distinct) */
   --m-accent: #1a5e8b;
   --m-accent-fg: #ffffff;
-  --m-focus: #1a73e8;
-  --m-danger: #b00020;
   --m-unread: #0b3d5c;
-  --m-radius: 8px;
-  --m-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --m-bg: #161616; --m-surface: #1f1f1f; --m-surface2: #262626;
-    --m-ink: #ececec; --m-muted: #a8a8a8; --m-line: #353535;
-    --m-accent: #4aa3d8; --m-accent-fg: #08222f; --m-unread: #cfe8f6;
+    --m-accent: #4aa3d8;
+    --m-accent-fg: #08222f;
+    --m-unread: #cfe8f6;
   }
 }
 

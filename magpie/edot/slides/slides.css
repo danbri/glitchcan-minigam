@@ -2,17 +2,21 @@
    Mobile-first, em/rem units, dark-mode aware. Mirrors edot's palette
    conventions (data.css / edot.css). */
 
+/* Local names alias the shared tokens (css/edot-tokens.css, linked first in
+   slides.html); the canonical tokens flip in dark mode, so no dark block needed
+   here. Fallbacks preserve the old values if the tokens file is ever absent. */
 :root {
-  --s-bg: #f4f4f2; --s-surface: #fff; --s-ink: #1c1c1c; --s-muted: #5a5a5a;
-  --s-line: #d9d6cf; --s-accent: #8b4513; --s-accent-fg: #fff; --s-focus: #1a73e8;
-  --s-head: #efece6; --s-sel: rgba(26,115,232,0.14); --s-danger: #b00020;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --s-bg: #1a1a1a; --s-surface: #242424; --s-ink: #ececec; --s-muted: #a8a8a8;
-    --s-line: #3a3a3a; --s-accent: #d2935a; --s-accent-fg: #1a1a1a; --s-head: #2c2c2c;
-    --s-sel: rgba(120,170,255,0.22);
-  }
+  --s-bg: var(--bg, #f4f4f2);
+  --s-surface: var(--surface, #fff);
+  --s-ink: var(--ink, #1c1c1c);
+  --s-muted: var(--muted, #5a5a5a);
+  --s-line: var(--line, #d9d6cf);
+  --s-accent: var(--accent, #8b4513);
+  --s-accent-fg: var(--accent-fg, #fff);
+  --s-focus: var(--focus, #1a73e8);
+  --s-head: var(--head, #efece6);
+  --s-sel: var(--sel, rgba(26, 115, 232, 0.14));
+  --s-danger: var(--danger, #b00020);
 }
 
 * { box-sizing: border-box; }

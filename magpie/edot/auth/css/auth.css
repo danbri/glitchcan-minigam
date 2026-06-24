@@ -3,29 +3,21 @@
    components render. Mirrors edot.css conventions: CSS custom properties,
    mobile-first, em/rem units, prefers-color-scheme dark mode, visible focus. */
 
+/* Local names alias the shared tokens (css/edot-tokens.css). Fallbacks matter
+   here: auth.css is linked by pages that may NOT load the tokens file (e.g.
+   maps) — those keep their previous values; pages that do load it unify. The
+   canonical tokens flip in dark mode, so no dark block is needed. */
 :root {
-  --auth-bg: #f4f4f2;
-  --auth-surface: #ffffff;
-  --auth-ink: #1c1c1c;
-  --auth-muted: #5a5a5a;
-  --auth-line: #d9d6cf;
-  --auth-accent: #8b4513;
-  --auth-accent-fg: #ffffff;
-  --auth-focus: #1a73e8;
-  --auth-danger: #b00020;
-  --auth-radius: 8px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --auth-bg: #1a1a1a;
-    --auth-surface: #242424;
-    --auth-ink: #ececec;
-    --auth-muted: #a8a8a8;
-    --auth-line: #3a3a3a;
-    --auth-accent: #d2935a;
-    --auth-accent-fg: #1a1a1a;
-  }
+  --auth-bg: var(--bg, #f4f4f2);
+  --auth-surface: var(--surface, #ffffff);
+  --auth-ink: var(--ink, #1c1c1c);
+  --auth-muted: var(--muted, #5a5a5a);
+  --auth-line: var(--line, #d9d6cf);
+  --auth-accent: var(--accent, #8b4513);
+  --auth-accent-fg: var(--accent-fg, #ffffff);
+  --auth-focus: var(--focus, #1a73e8);
+  --auth-danger: var(--danger, #b00020);
+  --auth-radius: var(--radius, 6px);
 }
 
 edot-login, edot-login-button { display: block; box-sizing: border-box; }

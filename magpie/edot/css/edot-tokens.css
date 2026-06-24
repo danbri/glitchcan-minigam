@@ -1,0 +1,60 @@
+/* edot-tokens.css — the suite's single source of truth for design tokens.
+ *
+ * Every app used to redefine the SAME palette under its own prefix (--bg vs
+ * --s-bg vs --d-bg vs --m-bg vs --auth-bg), which had already drifted (mail's
+ * accent went blue; radius was 6px in some apps, 8px in others). This file
+ * defines the canonical tokens ONCE — light + dark — and each app's stylesheet
+ * aliases its local names to these (with a hardcoded fallback, so a page that
+ * forgets to link this file still renders its previous values).
+ *
+ * Link this BEFORE the app's own stylesheet in every app's HTML.
+ */
+:root {
+  /* Neutrals */
+  --bg: #f4f4f2;
+  --surface: #ffffff;
+  --surface-2: #fbfaf8;
+  --ink: #1c1c1c;
+  --muted: #5a5a5a;
+  --line: #d9d6cf;
+
+  /* Brand + state */
+  --accent: #8b4513;
+  --accent-fg: #ffffff;
+  --focus: #1a73e8;
+  --danger: #b00020;
+  --ok: #155724;
+  --sel: rgba(26, 115, 232, 0.14);
+
+  /* Header / toolbar surface (editor historically called this --toolbar-bg) */
+  --head: #efece6;
+  --toolbar-bg: #efece6;
+
+  /* Shape */
+  --radius: 6px;
+  --radius-lg: 10px;
+
+  /* Type */
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-doc: Georgia, 'Times New Roman', 'Cambria Math', 'STIX Two Math',
+    'Segoe UI Symbol', 'Noto Sans Math', 'Noto Sans Symbols2', serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a1a;
+    --surface: #242424;
+    --surface-2: #262626;
+    --ink: #ececec;
+    --muted: #a8a8a8;
+    --line: #3a3a3a;
+
+    --accent: #d2935a;
+    --accent-fg: #1a1a1a;
+    --sel: rgba(120, 170, 255, 0.22);
+
+    --head: #2c2c2c;
+    --toolbar-bg: #2c2c2c;
+  }
+}

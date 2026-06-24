@@ -3,18 +3,26 @@
    Mobile-first, dark-mode via prefers-color-scheme, coarse-pointer sizing,
    reduced-motion respected. */
 
+/* Local names alias the shared tokens (css/edot-tokens.css, linked first in
+   calendar.html); they flip in dark mode automatically. Only --c-today (a
+   tinted-accent "today" highlight) needs its own light/dark values. */
 :root {
-  --c-bg: #f4f4f2; --c-surface: #fff; --c-ink: #1c1c1c; --c-muted: #5a5a5a;
-  --c-line: #d9d6cf; --c-accent: #8b4513; --c-accent-fg: #fff; --c-focus: #1a73e8;
-  --c-head: #efece6; --c-sel: rgba(26,115,232,0.14); --c-err: #b00020; --c-today: rgba(139,69,19,0.10);
-  --c-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --c-bg: var(--bg, #f4f4f2);
+  --c-surface: var(--surface, #fff);
+  --c-ink: var(--ink, #1c1c1c);
+  --c-muted: var(--muted, #5a5a5a);
+  --c-line: var(--line, #d9d6cf);
+  --c-accent: var(--accent, #8b4513);
+  --c-accent-fg: var(--accent-fg, #fff);
+  --c-focus: var(--focus, #1a73e8);
+  --c-head: var(--head, #efece6);
+  --c-sel: var(--sel, rgba(26, 115, 232, 0.14));
+  --c-err: var(--danger, #b00020);
+  --c-mono: var(--font-mono, ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace);
+  --c-today: rgba(139, 69, 19, 0.10);
 }
 @media (prefers-color-scheme: dark) {
-  :root {
-    --c-bg: #1a1a1a; --c-surface: #242424; --c-ink: #ececec; --c-muted: #a8a8a8;
-    --c-line: #3a3a3a; --c-accent: #d2935a; --c-accent-fg: #1a1a1a; --c-head: #2c2c2c;
-    --c-sel: rgba(120,170,255,0.22); --c-today: rgba(210,147,90,0.16);
-  }
+  :root { --c-today: rgba(210, 147, 90, 0.16); }
 }
 
 edot-calendar { display: block; height: 100%; }
