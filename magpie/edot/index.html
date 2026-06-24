@@ -3,87 +3,194 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="description" content="edot — a browser office suite: editor, data/sheets, slides, calendar, mail and maps, composable over one kernel, with a places/geo layer wired across them.">
+  <meta name="description" content="edot — one browser office suite: editor, data, slides, calendar, mail and maps in a single shell over one shared kernel.">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#efece6" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#2c2c2c" media="(prefers-color-scheme: dark)">
-  <title>edot — office suite</title>
+  <title>edot</title>
+  <!-- Global, collision-free stylesheets: design tokens, the sign-in chip, the
+       place autocomplete (element-scoped), and MapLibre (.maplibregl-* prefixed).
+       Each APP's stylesheet is scoped under its mount at runtime (see scopeCss). -->
   <link rel="stylesheet" href="css/edot-tokens.css">
+  <link rel="stylesheet" href="auth/css/auth.css">
+  <link rel="stylesheet" href="places/css/place-input.css">
+  <link rel="stylesheet" href="maps/vendor/maplibre-gl.css">
+  <script src="maps/vendor/maplibre-gl.js"></script>
   <style>
-    html, body { margin: 0; }
+    html, body { height: 100%; margin: 0; overflow: hidden; }
     body {
       font-family: var(--font-ui); background: var(--bg); color: var(--ink);
-      padding: env(safe-area-inset-top) env(safe-area-inset-right) 3rem env(safe-area-inset-left);
-      line-height: 1.5;
+      display: flex; height: 100dvh; height: 100vh; height: 100dvh;
     }
-    header { padding: 1.4rem 1rem 0.6rem; max-width: 64rem; margin: 0 auto; }
-    h1 { font-size: 1.5rem; margin: 0; color: var(--accent); }
-    header p { margin: 0.3rem 0 0; color: var(--muted); font-size: 0.9rem; max-width: 60ch; }
-    main { max-width: 64rem; margin: 0 auto; padding: 0 1rem; }
-    section { margin-top: 1.6rem; }
-    h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 0.6rem; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.6rem; }
-    a.card {
-      display: flex; gap: 0.7rem; align-items: flex-start; text-decoration: none; color: inherit;
-      background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
-      padding: 0.7rem 0.8rem; transition: border-color 0.12s, transform 0.12s;
+    .rail {
+      flex: 0 0 auto; width: 6.4rem; display: flex; flex-direction: column; gap: 0.15rem;
+      background: var(--surface); border-right: 1px solid var(--line);
+      padding: 0.4rem 0.35rem calc(0.4rem + env(safe-area-inset-bottom)); overflow-y: auto;
     }
-    a.card:hover { border-color: var(--accent); transform: translateY(-1px); }
-    a.card:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-    .ic { font-size: 1.4rem; line-height: 1.1; flex: 0 0 auto; }
-    .tx { min-width: 0; }
-    .tt { font-weight: 600; }
-    .ds { font-size: 0.82rem; color: var(--muted); }
-    .badge { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
-      color: #fff; background: var(--accent); padding: 0.05em 0.45em; border-radius: 999px; margin-left: 0.35em; vertical-align: 0.12em; }
-    footer { max-width: 64rem; margin: 2rem auto 0; padding: 0 1rem; color: var(--muted); font-size: 0.78rem; }
-    footer a { color: var(--focus); }
+    .brand { font-size: 1.5rem; text-align: center; padding: 0.4rem 0 0.6rem; color: var(--accent); }
+    .nav { display: flex; flex-direction: column; gap: 0.15rem; }
+    .nav button {
+      display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+      font: inherit; font-size: 0.66rem; color: var(--muted);
+      background: transparent; border: 1px solid transparent; border-radius: var(--radius);
+      padding: 0.45rem 0.2rem; cursor: pointer; text-align: center;
+    }
+    .nav button .ic { font-size: 1.25rem; line-height: 1; }
+    .nav button:hover { background: var(--bg); color: var(--ink); }
+    .nav button[aria-current="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+    .nav .badge { font-size: 0.5rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; opacity: 0.85; }
+    .spacer { flex: 1; }
+    .rail-login { display: flex; justify-content: center; padding: 0.3rem 0; }
+    .rail .ext { color: var(--focus); text-decoration: none; font-size: 0.6rem; text-align: center; padding: 0.4rem 0; }
+
+    .stage { flex: 1 1 auto; min-width: 0; position: relative; background: var(--bg); }
+    /* Each app view stacks in the same box; the scoped app CSS styles its inside. */
+    .view { position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .view[hidden] { display: none; }
+    .view > * { flex: 1 1 auto; min-height: 0; }
+    .view.row { flex-direction: row; }
+    .view.row > * { flex: 1 1 0; min-width: 0; border-right: 1px solid var(--line); }
+    .view.row > *:last-child { border-right: none; }
+    .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 0.9rem; }
+
+    @media (max-width: 640px) {
+      body { flex-direction: column-reverse; }
+      .rail { width: auto; flex-direction: row; gap: 0.1rem; overflow-x: auto; overflow-y: hidden;
+        border-right: none; border-top: 1px solid var(--line); padding: 0.2rem 0.2rem calc(0.2rem + env(safe-area-inset-bottom)); }
+      .brand, .rail .ext, .spacer { display: none; }
+      .nav { flex-direction: row; }
+      .nav button { min-width: 4rem; }
+      .view.row { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>🟫 edot</h1>
-    <p>A browser office suite — editor, data, slides, calendar, mail and maps — composable over one shared kernel, with a places/geo layer (Wikidata-linked) wired across them.</p>
-  </header>
+  <nav class="rail" aria-label="Apps">
+    <div class="brand" title="edot">🟫</div>
+    <div class="nav" id="nav"></div>
+    <span class="spacer"></span>
+    <edot-login-button class="rail-login" login-href="auth/login.html"></edot-login-button>
+    <a class="ext" href="https://github.com/danbri/glitchcan-minigam/tree/master/magpie/edot" target="_blank" rel="noopener">source ↗</a>
+  </nav>
+  <main class="stage" id="stage"><div class="loading" id="loading">Loading…</div></main>
 
-  <main>
-    <section>
-      <h2>Composed</h2>
-      <div class="grid">
-        <a class="card" href="workspace.html">
-          <span class="ic">🧩</span>
-          <div class="tx"><div class="tt">Workspace</div><span class="badge">live</span>
-            <div class="ds">Data, Slides and Editor in one page over one kernel — a query result flows into a deck and a document with no file. Geo functions in the Data pane.</div></div>
-        </a>
-      </div>
-    </section>
+  <script type="module">
+    import './auth/js/login-ui.js';                 // shell sign-in chip
+    import { getKernel } from './js/edot-kernel.js'; // one in-process kernel for all apps
 
-    <section>
-      <h2>Apps</h2>
-      <div class="grid">
-        <a class="card" href="edot.html"><span class="ic">✍️</span><div class="tx"><div class="tt">Editor</div><div class="ds">Rich-text document editor — formatting, find/replace, import/export (DOCX, Markdown, PDF, HTML), GitHub save.</div></div></a>
-        <a class="card" href="data/data.html"><span class="ic">▦</span><div class="tx"><div class="tt">Data</div><div class="ds">SQLite engine, editable grid, Excel-like sheets with formulas (incl. <code>=SQL()</code> and geo functions), N-Quads.</div></div></a>
-        <a class="card" href="slides/slides.html"><span class="ic">▤</span><div class="tx"><div class="tt">Slides</div><div class="ds">Deck editor with templates, SVG render, present mode.</div></div></a>
-        <a class="card" href="calendar/calendar.html"><span class="ic">📅</span><div class="tx"><div class="tt">Calendar</div><div class="ds">Month/week/day/agenda, recurrence, reminders, ICS import/export — event location autocomplete with QIDs.</div></div></a>
-        <a class="card" href="mail/mail.html"><span class="ic">✉️</span><div class="tx"><div class="tt">Mail</div><div class="ds">Composer and mailbox UI.</div></div></a>
-        <a class="card" href="maps/maps.html"><span class="ic">🗺️</span><div class="tx"><div class="tt">Maps</div><span class="badge">3D</span><div class="ds">MapLibre map with geocode, routing, saved places — plus 3D terrain, 3D buildings and KML/KMZ import.</div></div></a>
-        <a class="card" href="backup/backup.html"><span class="ic">⤓</span><div class="tx"><div class="tt">Backup</div><div class="ds">Export/restore the suite's local data.</div></div></a>
-        <a class="card" href="auth/login.html"><span class="ic">🔐</span><div class="tx"><div class="tt">Sign in</div><span class="badge">alpha</span><div class="ds">The shared sign-in flow (experimental).</div></div></a>
-      </div>
-    </section>
+    // ---- disciplined CSS scoping ------------------------------------------
+    // Every app stylesheet is rewritten so each rule applies ONLY under the app's
+    // mount ([data-app="id"]) — using the browser's own CSS parser (CSSOM), so no
+    // hand-editing and the standalone pages keep their original unscoped CSS.
+    // html/body/:root map to the mount root; @keyframes/@font-face pass through.
+    function scopeSelector(sel, scope) {
+      const s = sel.trim();
+      if (s === ':root' || s === 'html' || s === 'body' || s === 'html body' || s === 'html, body') return scope;
+      if (s === '*') return `${scope}, ${scope} *`;
+      const stripped = s.replace(/^(html|body)\b\s*/, '');
+      return stripped ? `${scope} ${stripped}` : scope;
+    }
+    function scopeRule(rule, scope) {
+      if (rule.type === CSSRule.STYLE_RULE) {
+        const sel = rule.selectorText.split(',').map((p) => scopeSelector(p, scope)).join(', ');
+        return `${sel} { ${rule.style.cssText} }`;
+      }
+      if (rule.type === CSSRule.MEDIA_RULE || rule.type === CSSRule.SUPPORTS_RULE) {
+        const at = rule.type === CSSRule.MEDIA_RULE ? `@media ${rule.media.mediaText}` : `@supports ${rule.conditionText}`;
+        return `${at} { ${[...rule.cssRules].map((r) => scopeRule(r, scope)).join('\n')} }`;
+      }
+      return rule.cssText; // keyframes, font-face, page, property…
+    }
+    const _scoped = new Set();
+    async function injectScoped(href, scope, key) {
+      if (_scoped.has(key + href)) return;
+      _scoped.add(key + href);
+      const css = await (await fetch(href)).text();
+      const probe = document.createElement('style'); probe.textContent = css; document.head.appendChild(probe);
+      const out = [...probe.sheet.cssRules].map((r) => scopeRule(r, scope)).join('\n');
+      probe.remove();
+      const style = document.createElement('style'); style.dataset.scope = key; style.textContent = out;
+      document.head.appendChild(style);
+    }
 
-    <section>
-      <h2>Demos — places &amp; geo</h2>
-      <div class="grid">
-        <a class="card" href="places/demo.html"><span class="ic">📍</span><div class="tx"><div class="tt">Place autocomplete</div><div class="ds">Type a place → name + Wikidata QID + coordinates, from cached + live sources.</div></div></a>
-        <a class="card" href="data/geo-sheet-demo.html"><span class="ic">▦ƒ</span><div class="tx"><div class="tt">Geo spreadsheet functions</div><div class="ds"><code>=QID</code>, <code>=LAT</code>, <code>=LON</code>, <code>=GEODISTANCE</code>, <code>=PLACEKIND</code> over a cached gazetteer.</div></div></a>
-        <a class="card" href="maps/events-demo.html"><span class="ic">🗺️</span><div class="tx"><div class="tt">Events on the map</div><div class="ds">Located calendar events drawn as a backdrop layer (also <code>maps.html?events</code>).</div></div></a>
-      </div>
-    </section>
-  </main>
+    // ---- app registry ------------------------------------------------------
+    const kernel = getKernel();
+    const APPS = [
+      { id: 'workspace', label: 'Workspace', icon: '🧩', badge: 'live' }, // special 3-pane view
+      { id: 'editor',   label: 'Editor',   icon: '✍️', tag: 'edot-editor', css: ['css/edot-editor.css'], load: () => import('./js/edot-editor.js') },
+      { id: 'data',     label: 'Data',     icon: '▦',  tag: 'edot-data', attrs: { 'geo-src': 'places/data/geo-demo.ndjson' }, css: ['data/data.css'], load: () => import('./data/data-workspace.js') },
+      { id: 'slides',   label: 'Slides',   icon: '▤',  tag: 'edot-slides', css: ['slides/slides.css'], load: () => import('./slides/slides-app.js') },
+      { id: 'calendar', label: 'Calendar', icon: '📅', tag: 'edot-calendar', css: ['calendar/css/calendar.css'], load: () => import('./calendar/js/calendar-app.js'), init: (el) => el.init() },
+      { id: 'mail',     label: 'Mail',     icon: '✉️', tag: 'edot-mail', css: ['mail/mail.css'], load: () => import('./mail/js/edot-mail.js') },
+      { id: 'maps',     label: 'Maps',     icon: '🗺️', badge: '3D', tag: 'edot-maps', css: ['maps/css/maps.css'], load: () => import('./maps/js/maps-app.js'), init: (el) => el.init() },
+      { id: 'backup',   label: 'Backup',   icon: '⤓',  tag: 'edot-backup', css: ['css/edot.css', 'backup/css/backup.css'], load: () => import('./backup/js/backup-ui.js') },
+    ];
+    const byId = Object.fromEntries(APPS.map((a) => [a.id, a]));
 
-  <footer>
-    Static, client-side, no backend. Source: <a href="https://github.com/danbri/glitchcan-minigam/tree/master/magpie/edot">danbri/glitchcan-minigam</a>.
-  </footer>
+    // Cross-app flow, in-process: a Data result fans out to Slides + Editor (when
+    // they're mounted) over the one shared kernel — no file, no postMessage.
+    kernel.bus.subscribe('data:share', (p) => {
+      try { kernel.capabilities.invoke('slides.addData', p); } catch (_) {}
+      try { kernel.capabilities.invoke('editor.addData', p); } catch (_) {}
+    });
+
+    const nav = document.getElementById('nav');
+    const stage = document.getElementById('stage');
+    const loading = document.getElementById('loading');
+    const views = new Map();
+
+    for (const a of APPS) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.dataset.nav = a.id; // NOT data-app: that's the scope key, which would self-match
+
+      b.innerHTML = `<span class="ic">${a.icon}</span><span>${a.label}</span>` + (a.badge ? `<span class="badge">${a.badge}</span>` : '');
+      b.addEventListener('click', () => go(a.id));
+      nav.appendChild(b);
+    }
+
+    async function mountComponent(app, host, scopeKey) {
+      for (const href of (app.css || [])) await injectScoped(href, `[data-app="${scopeKey}"]`, scopeKey);
+      await app.load();
+      const el = document.createElement(app.tag);
+      for (const [k, v] of Object.entries(app.attrs || {})) el.setAttribute(k, v);
+      host.appendChild(el);
+      if (app.init) { try { await app.init(el); } catch (e) { console.error(app.id, 'init', e); } }
+      return el;
+    }
+
+    async function ensureView(id) {
+      if (views.has(id)) return views.get(id);
+      const section = document.createElement('section');
+      section.className = 'view'; section.dataset.app = id; section.hidden = true;
+      stage.appendChild(section);
+      views.set(id, section);
+      if (id === 'workspace') {
+        // The live combo: Data + Slides + Editor side by side over one kernel.
+        section.classList.add('row');
+        await mountComponent(byId.data, section, 'data');
+        await mountComponent(byId.slides, section, 'slides');
+        await mountComponent(byId.editor, section, 'editor');
+      } else {
+        await mountComponent(byId[id], section, id);
+      }
+      return section;
+    }
+
+    let switching = false;
+    async function go(id) {
+      if (!byId[id]) id = 'workspace';
+      if (switching) return;
+      switching = true;
+      loading.hidden = false;
+      try { await ensureView(id); } finally { loading.hidden = true; switching = false; }
+      for (const [vid, v] of views) v.hidden = vid !== id;
+      for (const b of nav.children) b.setAttribute('aria-current', String(b.dataset.nav === id));
+      if (location.hash.slice(1) !== id) history.replaceState(null, '', '#' + id);
+      document.title = `edot — ${byId[id].label}`;
+    }
+
+    window.addEventListener('hashchange', () => go(location.hash.slice(1)));
+    go(location.hash.slice(1) || 'workspace');
+  </script>
 </body>
 </html>
