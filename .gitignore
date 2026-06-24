@@ -1,5 +1,8 @@
 .aider*
 
+# Claude Code local state (settings, agent worktrees) — never commit
+.claude/
+
 # Python virtual environments
 .venv/
 */.venv/
