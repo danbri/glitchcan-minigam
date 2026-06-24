@@ -15,6 +15,7 @@ import {
 } from './slides-model.js';
 import { saveDeck, loadDeck, listDecks, deleteDeck } from './slides-store.js';
 import * as fmt from './slides-formats.js';
+import { fingerprint, typeInfo } from '../js/data-object.js';
 
 const LAYOUT_LABELS = {
   title: 'Title', 'title-content': 'Title + Content', 'two-column': 'Two-Column',
@@ -131,9 +132,9 @@ export class EdotSlides extends HTMLElement {
       item('Open deck…', () => this.openLibrary()),
       item('Samples…', () => this.openSamples()),
       hr(),
-      item('Import file… (.json/.pptx/.odp)', () => this._fileInput.click()),
+      item('Import file… (.edeck/.json/.pptx/.odp)', () => this._fileInput.click()),
       hr(),
-      item('Export JSON', () => this.exportJson()),
+      item('Export deck (.edeck)', () => this.exportJson()),
       item('Export PPTX', () => this.exportPptx()),
       item('Export ODP', () => this.exportOdp()),
       item('Export PDF', () => this.exportPdf()),
@@ -143,7 +144,7 @@ export class EdotSlides extends HTMLElement {
     // shared hidden file input for imports.
     const file = document.createElement('input');
     file.type = 'file';
-    file.accept = '.json,.pptx,.odp,application/json';
+    file.accept = '.edeck,.json,.pptx,.odp,application/json';
     file.style.display = 'none';
     file.addEventListener('change', () => { if (file.files[0]) this.importFile(file.files[0]); file.value = ''; });
     this._fileInput = file;
@@ -664,7 +665,7 @@ export class EdotSlides extends HTMLElement {
   async importFile(file) {
     const name = (file.name || '').toLowerCase();
     try {
-      if (name.endsWith('.json')) {
+      if (name.endsWith('.json') || name.endsWith('.edeck')) {
         this.deck = fmt.jsonToDeck(await file.text());
       } else if (name.endsWith('.pptx')) {
         this.deck = await fmt.pptxToDeck(await file.arrayBuffer());
@@ -685,7 +686,14 @@ export class EdotSlides extends HTMLElement {
     }
   }
 
-  exportJson() { this._download(new Blob([fmt.deckToJson(this.deck)], { type: 'application/json' }), this._fname('json')); }
+  // The native deck is a portable, self-contained .edeck (JSON) — the canonical
+  // representation. Emit a SHA-256 content fingerprint like the other durable
+  // forms (storage-independent identity; see js/data-object.js).
+  async exportJson() {
+    const json = fmt.deckToJson(this.deck);
+    this._download(new Blob([json], { type: typeInfo('deck').media }), this._fname('edeck'));
+    try { const fp = await fingerprint(json); this._alert(`Exported .edeck · sha256 ${fp.slice(0, 12)}…`); } catch { /* crypto unavailable */ }
+  }
   async exportPptx() { this._download(await fmt.deckToPptx(this.deck), this._fname('pptx')); }
   async exportOdp() { this._download(await fmt.deckToOdp(this.deck), this._fname('odp')); }
   exportPdf() { this._download(fmt.deckToPdf(this.deck, this.deck.title), this._fname('pdf')); }
