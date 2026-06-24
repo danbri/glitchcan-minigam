@@ -18,7 +18,7 @@ import * as LO from './libreoffice-bridge.js';
 
 // Bump on each meaningful deploy. Shown in the footer so a stale cached build
 // is obvious (the stamp reflects the JS your browser actually loaded).
-const BUILD = '2026-06-23.j';
+const BUILD = '2026-06-23.k';
 
 const GH_TOKEN_KEY = 'edot.gh.token';
 const GH_LOGIN_KEY = 'edot.gh.login';     // cached @login for the connected token
@@ -232,6 +232,7 @@ class App {
     };
     mi('mi-data', () => openApp('data/data.html'));
     mi('mi-slides', () => openApp('slides/slides.html'));
+    mi('mi-mail', () => openApp('mail/mail.html'));
     mi('mi-calendar', () => openApp('calendar/calendar.html'));
     mi('mi-maps', () => openApp('maps/maps.html'));
     mi('mi-login', () => openApp('auth/login.html'));

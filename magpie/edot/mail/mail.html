@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="edot mail — a fast, accessible, mobile-first webmail client with a pluggable backend-adapter architecture (Gmail, Microsoft Graph, JMAP, IMAP-via-proxy).">
+  <meta name="color-scheme" content="light dark">
+  <title>edot mail</title>
+  <link rel="stylesheet" href="mail.css">
+  <style>
+    .skip-link { position: absolute; left: -999px; top: 0; z-index: 100; background: var(--m-accent); color: var(--m-accent-fg); padding: 0.5em 1em; border-radius: 0 0 var(--m-radius) 0; }
+    .skip-link:focus { left: 0; }
+    #main { height: 100%; }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <main id="main">
+    <edot-mail></edot-mail>
+  </main>
+
+  <script type="module">
+    // Boot the mail UI. The headless test harness (test-mail.mjs) and any
+    // real deployment both go through this: it exposes window.__mail with the
+    // component plus the adapter registry, MIME parser and sanitizer, so tests
+    // can drive everything against MOCKED fetch with no real mail servers.
+    import { EdotMail } from './js/edot-mail.js';
+    import * as adapters from './js/adapters/index.js';
+    import * as mime from './js/mime.js';
+    import * as sanitize from './js/sanitize.js';
+    import { MAIL_CONFIG } from './mail-config.js';
+    import { MailCache } from './js/cache.js';
+
+    const component = document.querySelector('edot-mail');
+
+    // Headless / app hook.
+    window.__mail = { component, adapters, mime, sanitize, config: MAIL_CONFIG, cache: MailCache };
+
+    // In a real deployment you would here:
+    //   1. obtain an OAuth token from the edot auth module (auth/js/oidc.js)
+    //      for the chosen provider, with the mail scopes documented in
+    //      mail-config.js, and
+    //   2. createAdapter(backend, { ...config, token }) and component.setAdapter().
+    // We DON'T auto-connect to a live provider on load (no client IDs shipped);
+    // tests inject a mocked adapter via __mail. If a backend is fully
+    // configured, wire it up:
+    const cfg = MAIL_CONFIG;
+    const id = cfg.defaultBackend;
+    const backendCfg = cfg[id] || {};
+    const configured =
+      (id === 'gmail' && backendCfg.token) ||
+      (id === 'graph' && backendCfg.token) ||
+      (id === 'jmap' && backendCfg.sessionUrl) ||
+      (id === 'imap' && backendCfg.proxyUrl);
+    if (configured) {
+      try {
+        const adapter = adapters.createAdapter(id, backendCfg);
+        component.setAdapter(adapter);
+        await component.load();
+      } catch (e) { console.error('mail: backend init failed', e); }
+    }
+  </script>
+</body>
+</html>
