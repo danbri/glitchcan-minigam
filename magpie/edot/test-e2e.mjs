@@ -276,6 +276,26 @@ try {
   ok('Labels preference persists', await page.evaluate(() => localStorage.getItem('edot.toolbarLabels') === '1'));
   await page.click('.labels-toggle'); // back off
 
+  // Command palette (Mod+K): opens, filters, runs a command, closes on Escape.
+  await page.click('#editor');
+  await page.evaluate(() => { document.getElementById('editor').innerHTML = '<p>palette test body</p>'; window.__edot.editor.onChange(); });
+  await page.keyboard.press('Control+k');
+  await page.waitForTimeout(150);
+  ok('palette opens on Mod+K', await page.isVisible('#palette-input'));
+  ok('palette lists commands', (await page.$$('#palette-list .palette-item')).length > 5);
+  await page.fill('#palette-input', 'new document');
+  await page.waitForTimeout(100);
+  ok('palette filters to a match', (await page.$$('#palette-list .palette-item')).length >= 1 &&
+    /New document/i.test(await page.textContent('#palette-list')));
+  await page.keyboard.press('Enter'); // runs "New document"
+  await page.waitForTimeout(200);
+  ok('palette runs the command (new doc)', (await page.textContent('#stat-words')).startsWith('0'));
+  ok('palette closed after running', !(await page.isVisible('#palette-input')));
+  // Reopen and Escape closes it.
+  await page.keyboard.press('Control+k'); await page.waitForTimeout(120);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(120);
+  ok('palette closes on Escape', !(await page.isVisible('#palette-input')));
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
 } finally { await b.close(); server.close(); }
