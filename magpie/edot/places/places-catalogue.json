@@ -1,0 +1,94 @@
+{
+  "$schema": "./catalogue.schema.json",
+  "version": 1,
+  "description": "Catalogue of place/POI data sources for the edot suite. Each entry carries enough to pull the data when/where needed: how it is reached (live api or an in-repo extract), its licence and attribution, what it returns, and — for extracts — where the file lives and how big it is. The provider code that uses a source is in js/providers/<provider>.js and is lazy-loaded by js/places.js only when that source is queried.",
+  "place_shape": ["name", "wikidataId", "lat", "lon", "kind", "description", "source"],
+  "sources": [
+    {
+      "id": "wikidata",
+      "name": "Wikidata entity search",
+      "provider": "wikidata",
+      "runtime": "api",
+      "endpoint": "https://www.wikidata.org/w/api.php",
+      "license": "CC0-1.0",
+      "attribution": "Wikidata",
+      "coverage": "global",
+      "returns": ["name", "wikidataId", "description"],
+      "capabilities": ["search", "wikidataId", "coords-on-select"],
+      "notes": "wbsearchentities gives name + QID + description, no coordinates; coordsFor(qid) pulls P625 lazily on selection. CORS via origin=*, no key."
+    },
+    {
+      "id": "geonames",
+      "name": "GeoNames gazetteer",
+      "provider": "geonames",
+      "runtime": "api",
+      "endpoint": "https://secure.geonames.org/searchJSON",
+      "license": "CC-BY-4.0",
+      "attribution": "GeoNames",
+      "coverage": "global",
+      "returns": ["name", "lat", "lon", "kind", "description"],
+      "capabilities": ["search", "coords", "timezone"],
+      "options": {},
+      "config": { "username": "required — free account at geonames.org; without it this source is a no-op" },
+      "notes": "Coordinates + admin context + timezones, but no QIDs — the facade fuses these with a Wikidata QID hit for the same place."
+    },
+    {
+      "id": "local-seed",
+      "name": "In-repo seed extract (UK sample)",
+      "provider": "local",
+      "runtime": "extract",
+      "license": "CC0-1.0",
+      "attribution": "derived sample (Wikidata QIDs)",
+      "coverage": "uk-sample",
+      "returns": ["name", "wikidataId", "lat", "lon", "kind", "description"],
+      "capabilities": ["search", "wikidataId", "coords", "offline"],
+      "extract": {
+        "path": "data/seed-places.ndjson",
+        "format": "ndjson",
+        "lfs": false,
+        "bytes": 720,
+        "count": 7
+      },
+      "notes": "Tiny baseline so the stack works offline / when APIs are blocked. Larger regional extracts ship gzipped via LFS (see the planned sources)."
+    },
+    {
+      "id": "overture-places",
+      "name": "Overture Maps — Places",
+      "provider": "local",
+      "runtime": "planned",
+      "source_url": "https://overturemaps.org/ (GeoParquet via Source Cooperative)",
+      "license": "CDLA-Permissive-2.0",
+      "attribution": "Overture Maps Foundation",
+      "coverage": "global (~60M POIs)",
+      "returns": ["name", "wikidataId", "lat", "lon", "kind", "description"],
+      "capabilities": ["search", "wikidataId", "coords"],
+      "extract": {
+        "path": "data/overture-places-<bbox>.ndjson.gz",
+        "format": "ndjson.gz",
+        "lfs": true,
+        "build": "tools/derive-places.mjs --source overture --bbox <bbox>",
+        "fields_kept": ["names.primary -> name", "sources[].wikidata -> wikidataId", "geometry -> lat/lon", "categories.primary -> kind"]
+      },
+      "notes": "The headline 'beyond OSM/Wikidata' source: POIs with names, categories, coordinates AND Wikidata QIDs. Clip a bbox offline to an LFS-cached extract; the same local provider then serves it."
+    },
+    {
+      "id": "foursquare-places",
+      "name": "Foursquare Open Source Places",
+      "provider": "local",
+      "runtime": "planned",
+      "source_url": "https://opensource.foursquare.com/os-places/",
+      "license": "Apache-2.0",
+      "attribution": "Foursquare",
+      "coverage": "global (~100M POIs)",
+      "returns": ["name", "lat", "lon", "kind", "description"],
+      "capabilities": ["search", "coords"],
+      "extract": {
+        "path": "data/fsq-places-<region>.ndjson.gz",
+        "format": "ndjson.gz",
+        "lfs": true,
+        "build": "tools/derive-places.mjs --source foursquare --region <region>"
+      },
+      "notes": "Dense venue coverage (no QIDs). Pair with Wikidata for QIDs where they exist."
+    }
+  ]
+}

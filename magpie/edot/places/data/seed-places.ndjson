@@ -1,0 +1,7 @@
+{"name":"London","wikidataId":"Q84","lat":51.5074,"lon":-0.1278,"kind":"city","description":"England, United Kingdom"}
+{"name":"Bristol","wikidataId":"Q23154","lat":51.4545,"lon":-2.5879,"kind":"city","description":"England, United Kingdom"}
+{"name":"Edinburgh","wikidataId":"Q23436","lat":55.9533,"lon":-3.1883,"kind":"city","description":"Scotland, United Kingdom"}
+{"name":"England","wikidataId":"Q21","lat":52.5,"lon":-1.5,"kind":"country","description":"United Kingdom"}
+{"name":"Scotland","wikidataId":"Q22","lat":56.8,"lon":-4.2,"kind":"country","description":"United Kingdom"}
+{"name":"Wales","wikidataId":"Q25","lat":52.1,"lon":-3.8,"kind":"country","description":"United Kingdom"}
+{"name":"United Kingdom","wikidataId":"Q145","lat":54.0,"lon":-2.0,"kind":"country","description":"sovereign state in Europe"}

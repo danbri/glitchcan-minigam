@@ -1,0 +1,6 @@
+# Cached place extracts: the larger gzipped regional/global extracts (Overture,
+# Foursquare, …) are binary blobs — track them with Git LFS so the repo stays
+# lean. The small plain-text seed (seed-places.ndjson) is intentionally NOT LFS:
+# it must be readable in a diff and usable with zero LFS setup.
+*.ndjson.gz   filter=lfs diff=lfs merge=lfs -text
+*.parquet     filter=lfs diff=lfs merge=lfs -text
