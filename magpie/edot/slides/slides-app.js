@@ -419,6 +419,20 @@ export class EdotSlides extends HTMLElement {
     this._touch(); this._renderRail(); this._renderEditor();
   }
 
+  // Public capability: build a content slide from tabular data (columns + rows of
+  // cells). Used by the workspace host to push a live query result into a deck
+  // with no file round-trip. Returns the new slide's id.
+  addDataSlide(columns = [], rows = [], title = 'Data') {
+    const cols = (columns || []).map((c) => String(c));
+    const line = (r) => cols.map((_, i) => (Array.isArray(r) ? r[i] : r?.[cols[i]]) ?? '').join(' · ');
+    const body = (rows || []).slice(0, 12).map(line).join('\n');
+    const s = newSlide('title-content', { title: String(title || 'Data'), body });
+    this.deck.slides.splice(this.current + 1, 0, s);
+    this.current += 1;
+    this._touch(); this._renderRail(); this._renderEditor();
+    return s.id;
+  }
+
   duplicateSlide(i = this.current) {
     const copy = cloneSlide(this.deck.slides[i]);
     this.deck.slides.splice(i + 1, 0, copy);

@@ -15,6 +15,7 @@ import { tablesToNquads, nquadsToTables } from './nquads.js';
 import { zipSync, unzip, utf8 } from '../js/zip.js';
 import { fingerprint } from '../js/data-object.js';
 import { holdLabel, consumedPeek } from '../js/longpress.js';
+import { getKernel } from '../js/edot-kernel.js';
 import './grid-component.js';
 import './sheet-component.js';
 import './query-component.js';
@@ -353,6 +354,10 @@ export class EdotData extends HTMLElement {
     try { localStorage.setItem('edot.handoff', JSON.stringify(payload)); } catch { /* quota */ }
     let live = false;
     try { const bc = new BroadcastChannel('edot'); bc.postMessage(payload); bc.close(); live = true; } catch { /* */ }
+    // Also offer the raw table on the shared kernel bus, so a co-located host (the
+    // workspace) can route it live into another pane (e.g. Slides) with no
+    // serialize. Harmless on the standalone page — nothing subscribes there.
+    try { getKernel().bus.publish('data:share', { columns, rows, title }); } catch { /* */ }
     this._toast(live ? 'Sent to the editor — switch to (or open) the editor tab to see it.' : 'Saved for the editor.');
   }
 

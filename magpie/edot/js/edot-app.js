@@ -233,6 +233,7 @@ class App {
     // could then reload a stale edot and drop the Calendar/Maps menu items.
     mi('mi-data', 'app.data');
     mi('mi-slides', 'app.slides');
+    mi('mi-workspace', 'app.workspace');
     mi('mi-mail', 'app.mail');
     mi('mi-calendar', 'app.calendar');
     mi('mi-maps', 'app.maps');
@@ -838,6 +839,7 @@ class App {
       { id: 'insert.semantic', title: 'Tag semantic property (RDFa)…', icon: '🏷️', group: '4insert', run: () => createSemantic(app.announce) },
       { id: 'app.data', title: 'Open Data workspace', icon: '▦', group: '5apps', run: () => app._launchApp('data/data.html') },
       { id: 'app.slides', title: 'Open Slides', icon: '▤', group: '5apps', run: () => app._launchApp('slides/slides.html') },
+      { id: 'app.workspace', title: 'Open Workspace (Data + Slides, live)', icon: '🧩', group: '5apps', run: () => app._launchApp('workspace.html') },
       { id: 'app.mail', title: 'Open Mail', icon: '✉', group: '5apps', run: () => app._launchApp('mail/mail.html') },
       { id: 'app.calendar', title: 'Open Calendar', icon: '📅', group: '5apps', run: () => app._launchApp('calendar/calendar.html') },
       { id: 'app.maps', title: 'Open Maps', icon: '🗺', group: '5apps', run: () => app._launchApp('maps/maps.html') },

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="edot workspace — the suite's apps composed in one page over a shared kernel: live, co-located Data ↔ Slides with no file round-trip.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#efece6" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#2c2c2c" media="(prefers-color-scheme: dark)">
+  <title>edot workspace</title>
+  <!-- Shared tokens first, then each mounted component's stylesheet. -->
+  <link rel="stylesheet" href="css/edot-tokens.css">
+  <link rel="stylesheet" href="data/data.css">
+  <link rel="stylesheet" href="slides/slides.css">
+  <link rel="stylesheet" href="auth/css/auth.css">
+  <style>
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    body {
+      display: flex; flex-direction: column; height: 100dvh; height: 100vh; height: 100dvh;
+      background: var(--bg); color: var(--ink);
+      font-family: var(--font-ui);
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+    }
+    .ws-header {
+      display: flex; align-items: center; gap: 0.6rem; flex: 0 0 auto;
+      padding: 0.4rem 0.75rem; background: var(--surface); border-bottom: 1px solid var(--line);
+    }
+    .ws-header h1 { font-size: 1.05rem; margin: 0; white-space: nowrap; color: var(--accent); }
+    .ws-header .sub { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+    .ws-spacer { flex: 1; }
+    .ws-back { font-size: 0.85rem; color: var(--focus); text-decoration: none; white-space: nowrap; }
+    .ws-back:hover { text-decoration: underline; }
+
+    /* Mobile tabs — one pane at a time. Hidden on wide screens (panes sit side by side). */
+    .ws-tabs { display: none; gap: 0.25rem; }
+    .ws-tab {
+      font: inherit; font-size: 0.85rem; padding: 0.3em 0.7em; cursor: pointer;
+      border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--bg); color: var(--ink);
+    }
+    .ws-tab[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+
+    .ws-panes { flex: 1 1 auto; min-height: 0; display: flex; }
+    .ws-pane {
+      flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column;
+      border-right: 1px solid var(--line); overflow: hidden;
+    }
+    .ws-pane:last-child { border-right: none; }
+    .ws-pane-head {
+      flex: 0 0 auto; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em;
+      text-transform: uppercase; color: var(--muted);
+      padding: 0.3rem 0.6rem; background: var(--head); border-bottom: 1px solid var(--line);
+    }
+    /* The mounted component fills the rest of its pane. */
+    .ws-pane > edot-data, .ws-pane > edot-slides { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+    .ws-pane > edot-data > .dw, .ws-pane > edot-slides > .sl-app { flex: 1 1 auto; min-height: 0; }
+
+    .ws-toast {
+      position: fixed; left: 50%; bottom: calc(1rem + env(safe-area-inset-bottom)); transform: translateX(-50%);
+      background: var(--ink); color: var(--bg); padding: 0.5em 0.9em; border-radius: var(--radius);
+      font-size: 0.85rem; box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+      opacity: 0; pointer-events: none; transition: opacity 0.15s; z-index: 200; max-width: 90vw; text-align: center;
+    }
+    .ws-toast.show { opacity: 0.97; }
+    @media (prefers-reduced-motion: reduce) { .ws-toast { transition: none; } }
+
+    @media (max-width: 900px) {
+      .ws-tabs { display: inline-flex; }
+      .ws-pane { border-right: none; }
+      .ws-pane:not(.active) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="ws-header">
+    <h1>🧩 edot workspace</h1>
+    <span class="sub" id="ws-sub">Data ↔ Slides, one kernel</span>
+    <nav class="ws-tabs" aria-label="Panes">
+      <button type="button" class="ws-tab" data-tab="data" aria-selected="true">Data</button>
+      <button type="button" class="ws-tab" data-tab="slides" aria-selected="false">Slides</button>
+    </nav>
+    <span class="ws-spacer"></span>
+    <a class="ws-back" href="edot.html">← editor</a>
+    <edot-login-button login-href="auth/login.html"></edot-login-button>
+  </header>
+
+  <main class="ws-panes">
+    <section class="ws-pane active" data-pane="data">
+      <div class="ws-pane-head">Data — run a query, then “→ Editor” to push it into Slides live</div>
+      <edot-data></edot-data>
+    </section>
+    <section class="ws-pane" data-pane="slides">
+      <div class="ws-pane-head">Slides</div>
+      <edot-slides></edot-slides>
+    </section>
+  </main>
+
+  <div id="ws-toast" class="ws-toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/workspace.js"></script>
+  <script type="module" src="auth/js/login-ui.js"></script>
+</body>
+</html>
