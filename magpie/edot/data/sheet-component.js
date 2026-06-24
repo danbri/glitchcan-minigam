@@ -13,6 +13,36 @@ export class EdotSheet extends HTMLElement {
     this.values = new Map();  // "r,c" -> computed value (or {error})
     this.active = { r: 1, c: 1 };
     this.engine = null;       // optional DataEngine for =SQL()
+    this.geoIndex = null;     // optional gazetteer (Map) for the GEO functions
+  }
+
+  // Enable the geo extension functions (QID/LAT/LON/GEOCODE/GEODISTANCE/…) by
+  // loading a gazetteer: an array of normalized Place objects, or a URL to an
+  // in-repo NDJSON extract. Indexed by lowercased name AND by QID, so a cell can
+  // look a place up either way. Synchronous at eval time (cf. =SQL over the db).
+  async loadGeo(src) {
+    let places = src;
+    if (typeof src === 'string') {
+      const { parseNdjson } = await import('../places/js/providers/local.js');
+      const res = await fetch(src);
+      if (!res.ok) throw new Error(`gazetteer ${res.status}`);
+      places = parseNdjson(await res.text());
+    }
+    const idx = new Map();
+    for (const p of places || []) {
+      if (p.name) idx.set(String(p.name).toLowerCase(), p);
+      if (p.wikidataId) idx.set(String(p.wikidataId).toUpperCase(), p);
+    }
+    this.geoIndex = idx;
+    if (this._built) { this.recompute(); this._paint?.(); }
+    return idx.size;
+  }
+
+  _geo(key) {
+    if (!this.geoIndex) return null;
+    const s = String(key == null ? '' : key).trim();
+    if (!s) return null;
+    return this.geoIndex.get(s.toLowerCase()) || (/^Q\d+$/i.test(s) ? this.geoIndex.get(s.toUpperCase()) : null) || null;
   }
 
   connectedCallback() { if (!this._built) this._render(); }
@@ -83,7 +113,8 @@ export class EdotSheet extends HTMLElement {
     this._table = table; this._addr = addr; this._fInput = fInput;
     this._wire();
     this.recompute();
-    this._selectActive();
+    this._paint();          // paint computed values now, so a seeded sheet
+    this._selectActive();   // (setGrid/deserialize) shows them without an edit
   }
 
   _wire() {
@@ -174,6 +205,7 @@ export class EdotSheet extends HTMLElement {
       cell: (col, row) => this._valueAt(row, col, new Set()),
       range: (c1, r1, c2, r2) => { const a = []; for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) a.push(this._valueAt(r, c, new Set())); return a; },
       sql: (q) => { if (!this.engine) throw new FormulaError('#NAME?'); const res = this.engine.query(q); return res.rows[0] ? res.rows[0][0] : null; },
+      geo: (k) => this._geo(k),
     };
     this._ctx = ctx;
     for (const key of this.cells.keys()) {
@@ -200,6 +232,7 @@ export class EdotSheet extends HTMLElement {
         cell: (col, row) => { const v = this._valueAt(row, col, stack); return v && v.error ? 0 : v; },
         range: (c1, r1, c2, r2) => { const a = []; for (let rr = r1; rr <= r2; rr++) for (let cc = c1; cc <= c2; cc++) { const v = this._valueAt(rr, cc, stack); a.push(v && v.error ? 0 : v); } return a; },
         sql: this._ctx.sql,
+        geo: this._ctx.geo,
       };
       result = evaluate(raw, ctx);
     } catch (err) { result = { error: err.code || '#ERROR!' }; }

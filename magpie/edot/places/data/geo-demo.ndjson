@@ -1,0 +1,16 @@
+{"name":"London","wikidataId":"Q84","lat":51.5074,"lon":-0.1278,"kind":"city","description":"England, United Kingdom"}
+{"name":"Paris","wikidataId":"Q90","lat":48.8566,"lon":2.3522,"kind":"city","description":"France"}
+{"name":"Berlin","wikidataId":"Q64","lat":52.5200,"lon":13.4050,"kind":"city","description":"Germany"}
+{"name":"Rome","wikidataId":"Q220","lat":41.9028,"lon":12.4964,"kind":"city","description":"Italy"}
+{"name":"Madrid","wikidataId":"Q2807","lat":40.4168,"lon":-3.7038,"kind":"city","description":"Spain"}
+{"name":"Amsterdam","wikidataId":"Q727","lat":52.3676,"lon":4.9041,"kind":"city","description":"Netherlands"}
+{"name":"Vienna","wikidataId":"Q1741","lat":48.2082,"lon":16.3738,"kind":"city","description":"Austria"}
+{"name":"Dublin","wikidataId":"Q1761","lat":53.3498,"lon":-6.2603,"kind":"city","description":"Ireland"}
+{"name":"Lisbon","wikidataId":"Q597","lat":38.7223,"lon":-9.1393,"kind":"city","description":"Portugal"}
+{"name":"Brussels","wikidataId":"Q239","lat":50.8503,"lon":4.3517,"kind":"city","description":"Belgium"}
+{"name":"Edinburgh","wikidataId":"Q23436","lat":55.9533,"lon":-3.1883,"kind":"city","description":"Scotland, United Kingdom"}
+{"name":"Bristol","wikidataId":"Q23154","lat":51.4545,"lon":-2.5879,"kind":"city","description":"England, United Kingdom"}
+{"name":"New York City","wikidataId":"Q60","lat":40.7128,"lon":-74.0060,"kind":"city","description":"United States"}
+{"name":"San Francisco","wikidataId":"Q62","lat":37.7749,"lon":-122.4194,"kind":"city","description":"United States"}
+{"name":"Tokyo","wikidataId":"Q1490","lat":35.6762,"lon":139.6503,"kind":"city","description":"Japan"}
+{"name":"Sydney","wikidataId":"Q3130","lat":-33.8688,"lon":151.2093,"kind":"city","description":"Australia"}

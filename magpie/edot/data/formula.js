@@ -148,6 +148,24 @@ function toStr(v) { return v == null ? '' : (typeof v === 'boolean' ? (v ? 'TRUE
 function flat(args) { const out = []; for (const a of args) Array.isArray(a) ? out.push(...a) : out.push(a); return out; }
 function nums(args) { return flat(args).filter((v) => v !== null && v !== '' && v !== undefined).map(toNum); }
 
+// ---- geo helpers (used by the GEO extension functions below) ----
+// Resolve a place by name or QID via ctx.geo — a synchronous lookup into a
+// gazetteer the host preloaded (cf. how SQL() reads the in-memory db). No network
+// in the formula path: the spreadsheet works over the cached place extract.
+function geoPlace(ctx, key) {
+  if (!ctx || typeof ctx.geo !== 'function') throw new FormulaError('#NAME?');
+  const p = ctx.geo(toStr(key));
+  if (!p) throw new FormulaError('#N/A');
+  return p;
+}
+function geoNum(v) { if (v == null) throw new FormulaError('#N/A'); return v; }
+function haversineKm(aLat, aLon, bLat, bLon) {
+  const R = 6371, rad = (d) => (d * Math.PI) / 180;
+  const dLat = rad(bLat - aLat), dLon = rad(bLon - aLon);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(rad(aLat)) * Math.cos(rad(bLat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
+}
+
 const FUNCS = {
   SUM: (a) => nums(a).reduce((x, y) => x + y, 0),
   AVERAGE: (a) => { const n = nums(a); if (!n.length) throw new FormulaError('#DIV/0!'); return n.reduce((x, y) => x + y, 0) / n.length; },
@@ -181,6 +199,26 @@ const FUNCS = {
   ROUNDDOWN: (a) => { const f = 10 ** (a[1] == null ? 0 : toNum(a[1])); return Math.trunc(toNum(a[0]) * f) / f; },
   TODAY: () => new Date().toISOString().slice(0, 10),
   NOW: () => new Date().toISOString().slice(0, 19).replace('T', ' '),
+
+  // ---- GEO extension functions ----
+  // Take a place name (or a Wikidata QID) and read the cached gazetteer via
+  // ctx.geo. QID gives the stable Wikidata id; LAT/LON/GEOCODE the coordinates;
+  // GEODISTANCE the great-circle km between two places; PLACEKIND/PLACEDESC the
+  // metadata. Unknown place -> #N/A; geo not loaded -> #NAME? (wrap in IFERROR).
+  QID: (a, ctx) => geoNum(geoPlace(ctx, a[0]).wikidataId),
+  WIKIDATA: (a, ctx) => geoNum(geoPlace(ctx, a[0]).wikidataId),
+  LAT: (a, ctx) => geoNum(geoPlace(ctx, a[0]).lat),
+  LATITUDE: (a, ctx) => geoNum(geoPlace(ctx, a[0]).lat),
+  LON: (a, ctx) => geoNum(geoPlace(ctx, a[0]).lon),
+  LONGITUDE: (a, ctx) => geoNum(geoPlace(ctx, a[0]).lon),
+  GEOCODE: (a, ctx) => { const p = geoPlace(ctx, a[0]); return `${geoNum(p.lat)}, ${geoNum(p.lon)}`; },
+  PLACEKIND: (a, ctx) => geoPlace(ctx, a[0]).kind || '',
+  PLACEDESC: (a, ctx) => geoPlace(ctx, a[0]).description || '',
+  GEODISTANCE: (a, ctx) => {
+    const p = geoPlace(ctx, a[0]), q = geoPlace(ctx, a[1]);
+    const km = haversineKm(geoNum(p.lat), geoNum(p.lon), geoNum(q.lat), geoNum(q.lon));
+    return Math.round(km * 10) / 10;
+  },
 };
 
 function truthy(v) {

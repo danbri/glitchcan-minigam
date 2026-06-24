@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>edot data — geo functions in the spreadsheet</title>
+  <link rel="stylesheet" href="../css/edot-tokens.css">
+  <link rel="stylesheet" href="data.css">
+  <style>
+    body { font-family: var(--font-ui); background: var(--d-bg); color: var(--d-ink); margin: 0; }
+    header { padding: 0.5rem 0.85rem; border-bottom: 1px solid var(--line); background: var(--surface); }
+    h1 { font-size: 1rem; margin: 0; color: var(--accent); }
+    p.hint { margin: 0.3rem 0 0; font-size: 0.8rem; color: var(--muted); max-width: 60ch; }
+    code { background: var(--bg); padding: 0.05em 0.3em; border-radius: 4px; }
+    main { padding: 0.5rem; }
+    edot-sheet { display: block; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>▦ Geo functions in the spreadsheet</h1>
+    <p class="hint">Extension functions <code>QID</code> · <code>LAT</code> · <code>LON</code> ·
+      <code>GEOCODE</code> · <code>GEODISTANCE</code> · <code>PLACEKIND</code> resolve against the
+      cached gazetteer — no network, just like <code>=SQL()</code> reads the in-memory db. Edit any
+      cell to try your own, e.g. <code>=GEODISTANCE("Paris","Tokyo")</code> or <code>=WIKIDATA("Berlin")</code>.</p>
+  </header>
+  <main>
+    <edot-sheet id="sheet"></edot-sheet>
+  </main>
+
+  <script type="module">
+    import './sheet-component.js';
+    const sheet = document.getElementById('sheet');
+    const cities = ['London', 'Paris', 'Berlin', 'Rome', 'Madrid', 'Amsterdam', 'Dublin', 'Edinburgh', 'Bristol', 'New York City', 'Tokyo', 'Sydney'];
+    const rows = [['Place', 'Wikidata QID', 'Latitude', 'Longitude', 'Km from London', 'Kind']];
+    cities.forEach((c, i) => {
+      const r = i + 2; // sheet row this maps to
+      rows.push([c, `=QID(A${r})`, `=LAT(A${r})`, `=LON(A${r})`, `=GEODISTANCE("London",A${r})`, `=PLACEKIND(A${r})`]);
+    });
+    await sheet.loadGeo('../places/data/geo-demo.ndjson');
+    sheet.setGrid({ rows });
+    window.__geoSheet = sheet; // test/debug hook
+  </script>
+</body>
+</html>
