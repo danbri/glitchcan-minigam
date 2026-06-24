@@ -5,6 +5,16 @@
       "title": "UI Extensibility, Complexity & Modularity — a deep-dive",
       "file": "ui-architecture-deepdive.md",
       "note": "How office suites, OS & component architectures handle extensibility — applied to edot. Cited."
+    },
+    {
+      "title": "Pre-Enterprise foundations — the decided architecture",
+      "file": "pre-enterprise-foundations.md",
+      "note": "The three foundations (command registry, data-object model, collaboration + thin backend) to lay before OIDC/email/groupware/governance."
+    },
+    {
+      "title": "The thin backend & capability model — the Enterprise bridge",
+      "file": "backend-and-capabilities.md",
+      "note": "The one small trusted service those features depend on: capability tokens, the five jobs, CRDT-relay sync, host options."
     }
   ]
 }
