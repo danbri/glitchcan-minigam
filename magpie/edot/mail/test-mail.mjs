@@ -30,6 +30,17 @@ try {
   await page.goto(`http://127.0.0.1:${port}/magpie/edot/mail/mail.html`);
   await page.waitForFunction(() => window.__mail && window.__mail.mime && window.__mail.adapters);
 
+  // ===== 0. Sign-in chip (consistency with the other suite apps) ============
+  await page.waitForFunction(() => !!document.querySelector('edot-mail .mail-head .login-slot edot-login-button'));
+  ok('mail header shows the sign-in chip', await page.evaluate(() =>
+    !!document.querySelector('edot-mail .mail-head .login-slot edot-login-button')));
+  ok('sign-in chip upgraded (custom element rendered)', await page.evaluate(() => {
+    const c = document.querySelector('edot-mail .login-slot edot-login-button');
+    return !!c && (c.shadowRoot || c.children.length > 0); // login-ui.js defined + rendered
+  }));
+  ok('chip is flagged alpha', await page.evaluate(() =>
+    /alpha/i.test(document.querySelector('edot-mail .login-slot .alpha-badge')?.textContent || '')));
+
   // ===== 1. MIME parser =====================================================
   const mimeRes = await page.evaluate(() => {
     const { parseMessage, quotedPrintableToBytes, base64ToBytes } = window.__mail.mime;

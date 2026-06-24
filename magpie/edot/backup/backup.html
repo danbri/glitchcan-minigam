@@ -17,6 +17,9 @@
     .app-header .logo { color: var(--accent); }
     .app-header .spacer { flex: 1; }
     .app-header a { color: var(--focus); font-size: 0.85rem; text-decoration: none; }
+    .login-slot { display: inline-flex; align-items: center; gap: 0.25rem; }
+    .alpha-badge { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #fff; background: var(--accent); padding: 0.05em 0.4em; border-radius: 999px; }
+    @media (max-width: 30rem) { .alpha-badge { display: none; } }
   </style>
 </head>
 <body>
@@ -24,6 +27,7 @@
   <header class="app-header">
     <h1><span class="logo">🔐 edot backup</span></h1>
     <span class="spacer"></span>
+    <span class="login-slot"><edot-login-button login-href="../auth/login.html"></edot-login-button><span class="alpha-badge" title="Experimental — sign-in is in alpha">alpha</span></span>
     <a href="../edot.html">← back to editor</a>
   </header>
 
@@ -33,6 +37,7 @@
 
   <script type="module">
     import { EdotBackup } from './js/backup-ui.js';
+    import '../auth/js/login-ui.js'; // defines <edot-login-button> (sign-in chip)
     import * as crypto from './js/crypto.js';
     import * as snapshot from './js/snapshot.js';
     import { STORES, getStore, listStores } from './js/stores/index.js';
