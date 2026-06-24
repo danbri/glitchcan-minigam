@@ -20,7 +20,7 @@ import * as LO from './libreoffice-bridge.js';
 
 // Bump on each meaningful deploy. Shown in the footer so a stale cached build
 // is obvious (the stamp reflects the JS your browser actually loaded).
-const BUILD = '2026-06-24.m';
+const BUILD = '2026-06-24.n';
 
 const GH_TOKEN_KEY = 'edot.gh.token';
 const GH_LOGIN_KEY = 'edot.gh.login';     // cached @login for the connected token
@@ -212,30 +212,32 @@ class App {
       item.setAttribute('role', 'menuitem');
       item.innerHTML = `<span>Save as ${esc(fmt.label)}</span>` +
         (fmt.wasm ? '<span class="hint">WASM</span>' : `<span class="hint">.${fmt.ext}</span>`);
-      item.addEventListener('click', () => { this._closeMenu(); this.exportAs(fmt.ext); });
+      item.addEventListener('click', () => { this._closeMenu(); this._runCmd(`export.${fmt.ext}`); });
       exportList.appendChild(item);
     }
 
-    const mi = (id, fn) => document.getElementById(id).addEventListener('click', () => { this._closeMenu(); fn(); });
-    mi('mi-new', () => this.newDocument());
-    mi('mi-open', () => this.openOpenDialog());
-    mi('mi-docs', () => this.openLibrary());
-    mi('mi-close', () => this.closeDocument());
-    mi('mi-find', () => this.findReplace.open(true));
-    mi('mi-source', () => this.openSourceDialog());
-    mi('mi-github', () => this.openGithubDialog());
-    // Open a sibling suite app. Use a real anchor click (target=_blank) — NOT
-    // window.open(...,'noopener'), which returns null and made the old fallback
-    // also navigate THIS tab via location.href; a Back could then reload a stale
-    // edot and drop the Calendar/Maps menu items. An anchor leaves this tab put.
-    const openApp = (path) => this._launchApp(path);
-    mi('mi-data', () => openApp('data/data.html'));
-    mi('mi-slides', () => openApp('slides/slides.html'));
-    mi('mi-mail', () => openApp('mail/mail.html'));
-    mi('mi-calendar', () => openApp('calendar/calendar.html'));
-    mi('mi-maps', () => openApp('maps/maps.html'));
-    mi('mi-login', () => openApp('auth/login.html'));
-    mi('mi-backup', () => openApp('backup/backup.html'));
+    // Menu items run THROUGH the command registry (run() = the audit/policy choke
+    // point), so the File menu, the palette and shortcuts share one path. Each id
+    // maps to a registered command (see _wireCommands).
+    const mi = (elId, cmdId) => document.getElementById(elId).addEventListener('click', () => { this._closeMenu(); this._runCmd(cmdId); });
+    mi('mi-new', 'doc.new');
+    mi('mi-open', 'doc.open');
+    mi('mi-docs', 'doc.mydocs');
+    mi('mi-close', 'doc.close');
+    mi('mi-find', 'doc.replace');
+    mi('mi-source', 'doc.viewsource');
+    mi('mi-github', 'doc.github');
+    // Sibling suite apps open via app.* commands — which call _launchApp (a real
+    // anchor click, target=_blank). NOT window.open(...,'noopener'), which returns
+    // null and made the old fallback navigate THIS tab via location.href; a Back
+    // could then reload a stale edot and drop the Calendar/Maps menu items.
+    mi('mi-data', 'app.data');
+    mi('mi-slides', 'app.slides');
+    mi('mi-mail', 'app.mail');
+    mi('mi-calendar', 'app.calendar');
+    mi('mi-maps', 'app.maps');
+    mi('mi-login', 'app.login');
+    mi('mi-backup', 'app.backup');
 
     this.fileInput.accept = IO.importAccept();
     this.fileInput.addEventListener('change', () => {
@@ -832,11 +834,6 @@ class App {
       { id: 'doc.close', title: 'Close document', icon: '✕', group: '1file', order: 6, shortcut: 'Mod+W', run: () => app.closeDocument() },
       { id: 'doc.find', title: 'Find…', icon: '🔍', group: '1file', order: 7, shortcut: 'Mod+F', run: () => app.findReplace.open(false) },
       { id: 'doc.replace', title: 'Find & replace…', icon: '🔁', group: '1file', order: 8, shortcut: 'Mod+H', run: () => app.findReplace.open(true) },
-      { id: 'export.edoc', title: 'Export as edot document (.edoc)', icon: '⬇', group: '2export', order: 0, keywords: 'canonical native data object', run: () => app.exportAs('edoc') },
-      { id: 'export.pdf', title: 'Export as PDF', icon: '⬇', group: '2export', order: 1, run: () => app.exportAs('pdf') },
-      { id: 'export.docx', title: 'Export as Word (.docx)', icon: '⬇', group: '2export', order: 2, run: () => app.exportAs('docx') },
-      { id: 'export.md', title: 'Export as Markdown', icon: '⬇', group: '2export', order: 3, run: () => app.exportAs('md') },
-      { id: 'export.html', title: 'Export as HTML', icon: '⬇', group: '2export', order: 4, run: () => app.exportAs('html') },
       { id: 'insert.link', title: 'Insert link…', icon: '🔗', group: '4insert', run: () => createLink(app.announce) },
       { id: 'insert.semantic', title: 'Tag semantic property (RDFa)…', icon: '🏷️', group: '4insert', run: () => createSemantic(app.announce) },
       { id: 'app.data', title: 'Open Data workspace', icon: '▦', group: '5apps', run: () => app._launchApp('data/data.html') },
@@ -847,6 +844,18 @@ class App {
       { id: 'app.login', title: 'Sign in (OIDC)', icon: '👤', group: '5apps', run: () => app._launchApp('auth/login.html') },
       { id: 'app.backup', title: 'Encrypted backup', icon: '🔒', group: '5apps', run: () => app._launchApp('backup/backup.html') },
     ]);
+    // Export formats — the registry is the single source of truth, generated
+    // from the io format table so the menu, palette and every export route
+    // through run() (.edoc, the canonical form, leads the group).
+    const EXPORT_ORDER = { edoc: 0, pdf: 1, docx: 2, md: 3, html: 4 };
+    for (const f of IO.exportFormats()) {
+      reg.register({
+        id: `export.${f.ext}`, title: `Export as ${f.label}`, icon: '⬇', group: '2export',
+        order: EXPORT_ORDER[f.ext] ?? 5,
+        keywords: f.ext === 'edoc' ? 'canonical native data object download save' : 'download save',
+        run: () => app.exportAs(f.ext),
+      });
+    }
     // Formatting + block styles, sourced from the editing command module.
     for (const [id, c] of Object.entries(COMMANDS)) {
       reg.register({ id: `format.${id}`, title: c.label, group: '3format', order: 10, keywords: 'format', run: () => c.exec(), shortcut: c.key ? `Mod+${c.shift ? 'Shift+' : ''}${c.key.toUpperCase()}` : '' });
@@ -905,7 +914,14 @@ class App {
 
   _runPalette(id) {
     this.palette.close();
-    try { this.commands.run(id, { app: this, surface: 'editor' }); }
+    this._runCmd(id, 'palette');
+  }
+
+  // Route a UI action through the registry's run() — THE choke point that carries
+  // the audit/policy seams (command-registry.js). Menu items, the palette and
+  // shortcuts all go through here so no surface bypasses governance.
+  _runCmd(id, surface = 'menu') {
+    try { return this.commands.run(id, { app: this, surface }); }
     catch (err) { this.announce(err.message || 'Command failed', { error: true }); }
   }
 
