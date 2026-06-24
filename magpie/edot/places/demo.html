@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>edot places — autocomplete demo</title>
+  <link rel="stylesheet" href="../css/edot-tokens.css">
+  <link rel="stylesheet" href="css/place-input.css">
+  <style>
+    body { font-family: var(--font-ui); background: var(--bg); color: var(--ink); max-width: 34rem; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.2rem; }
+    p.hint { color: var(--muted); font-size: 0.9rem; }
+    label { display: block; font-weight: 600; margin: 1rem 0 0.4rem; }
+    #out { margin-top: 1rem; font-size: 0.85rem; white-space: pre-wrap; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.75rem; }
+  </style>
+</head>
+<body>
+  <h1>Place autocomplete</h1>
+  <p class="hint">Returns a name plus a Wikidata QID (and coordinates). This demo
+    uses the in-repo seed only (<code>sources="local-seed"</code>), so it works
+    fully offline; add <code>wikidata</code> for live global search.</p>
+
+  <label for="loc">Event location</label>
+  <edot-place-input id="loc" sources="local-seed" placeholder="Search for a place…"></edot-place-input>
+
+  <div id="out" role="status" aria-live="polite">No selection yet.</div>
+
+  <script type="module">
+    import './js/place-input.js';
+    const out = document.getElementById('out');
+    document.getElementById('loc').addEventListener('place-selected', (e) => {
+      const p = e.detail;
+      window.__lastPlace = p;
+      out.textContent = JSON.stringify({ name: p.name, wikidataId: p.wikidataId, lat: p.lat, lon: p.lon, sources: p.sources }, null, 2);
+    });
+  </script>
+</body>
+</html>

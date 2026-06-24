@@ -1,0 +1,46 @@
+/* place-input.css — scoped styling for <edot-place-input>. Token-driven so it
+ * matches whichever app mounts it. Scoped under the element so the listbox can't
+ * bleed onto a host page. */
+edot-place-input { position: relative; display: block; }
+
+edot-place-input .pl-input {
+  width: 100%; box-sizing: border-box;
+  padding: 0.4em 0.6em; font: inherit;
+  color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius);
+}
+edot-place-input .pl-input:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+
+edot-place-input .pl-list {
+  position: absolute; left: 0; right: 0; top: calc(100% + 2px); z-index: 50;
+  margin: 0; padding: 0.25rem; list-style: none;
+  max-height: 16rem; overflow-y: auto;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+edot-place-input .pl-list[hidden] { display: none; }
+
+edot-place-input [role="option"] {
+  display: flex; align-items: baseline; gap: 0.5em;
+  padding: 0.35em 0.5em; border-radius: calc(var(--radius) - 1px);
+  cursor: pointer;
+}
+edot-place-input [role="option"].active,
+edot-place-input [role="option"]:hover { background: var(--accent); color: var(--accent-fg); }
+
+edot-place-input .pl-name { font-weight: 600; white-space: nowrap; }
+edot-place-input .pl-desc {
+  flex: 1 1 auto; min-width: 0; font-size: 0.85em; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+edot-place-input [role="option"].active .pl-desc,
+edot-place-input [role="option"]:hover .pl-desc { color: var(--accent-fg); opacity: 0.85; }
+
+edot-place-input .pl-qid {
+  flex: 0 0 auto; font-size: 0.7em; font-weight: 700; letter-spacing: 0.02em;
+  padding: 0.1em 0.4em; border-radius: 999px;
+  background: var(--bg); color: var(--muted); border: 1px solid var(--line);
+}
+edot-place-input [role="option"].active .pl-qid,
+edot-place-input [role="option"]:hover .pl-qid { background: var(--accent-fg); color: var(--accent); border-color: var(--accent-fg); }

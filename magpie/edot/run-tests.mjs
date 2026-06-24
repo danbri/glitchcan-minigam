@@ -23,6 +23,7 @@ const SUITES = [
   ['kernel', 'test-kernel.mjs'],
   ['workspace', 'test-workspace.mjs'],
   ['places', 'places/test-places.mjs'],
+  ['place-input', 'places/test-place-input.mjs'],
   ['data', 'data/test-data.mjs'],
   ['slides', 'slides/test-slides.mjs'],
   ['slides (samples)', 'slides/test-samples.mjs'],
