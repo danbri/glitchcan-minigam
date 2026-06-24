@@ -315,6 +315,16 @@ try {
   await page.keyboard.press('Escape'); await page.waitForTimeout(120);
   ok('palette closes on Escape', !(await page.isVisible('#palette-input')));
 
+  // The registry is the single choke point: ALL export formats are registered,
+  // and a File-menu action flows through run() (which carries the audit seam) —
+  // not a direct method call that would bypass governance.
+  ok('registry owns every export format', await page.evaluate(() =>
+    ['edoc', 'pdf', 'docx', 'md', 'html', 'txt', 'css'].every((x) => window.__edot.commands.has('export.' + x))));
+  await page.evaluate(() => { window.__audit = []; window.__edot.commands.onAudit((e) => window.__audit.push(e.id)); });
+  await page.click('#menu-button'); await page.click('#mi-docs'); await page.waitForTimeout(150);
+  ok('File-menu action flows through run() (audit fired)', await page.evaluate(() => (window.__audit || []).includes('doc.mydocs')));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(100);
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
 } finally { await b.close(); server.close(); }
