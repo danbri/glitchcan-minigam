@@ -7,22 +7,18 @@
   <meta name="color-scheme" content="light dark">
   <title>edot slides — present + edit</title>
   <link rel="stylesheet" href="../css/edot-tokens.css">
+  <link rel="stylesheet" href="../css/edot-chrome.css">
   <link rel="stylesheet" href="slides.css">
   <link rel="stylesheet" href="../auth/css/auth.css">
   <style>
+    /* App-shell chrome (.app-header/.login-slot/.alpha-badge) is shared in
+       edot-chrome.css; only page-specific layout remains here. */
     html, body { height: 100%; margin: 0; overflow: hidden; }
-    .login-slot { display: inline-flex; align-items: center; gap: 0.25rem; }
-    .alpha-badge { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #fff; background: var(--s-accent); padding: 0.05em 0.4em; border-radius: 999px; }
     body {
       display: flex; flex-direction: column;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: var(--font-ui);
       background: var(--s-bg); color: var(--s-ink);
     }
-    .app-header { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.75rem; background: var(--s-surface); border-bottom: 1px solid var(--s-line); flex: 0 0 auto; }
-    .app-header h1 { font-size: 1.05rem; margin: 0; }
-    .app-header .logo { color: var(--s-accent); }
-    .app-header a { color: var(--s-focus); font-size: 0.85rem; text-decoration: none; }
-    .app-header .spacer { flex: 1; }
     main { flex: 1 1 auto; min-height: 0; }
     .boot { padding: 2rem; color: var(--s-muted); }
   </style>

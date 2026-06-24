@@ -7,18 +7,13 @@
   <meta name="color-scheme" content="light dark">
   <title>edot data — spreadsheet + database</title>
   <link rel="stylesheet" href="../css/edot-tokens.css">
+  <link rel="stylesheet" href="../css/edot-chrome.css">
   <link rel="stylesheet" href="data.css">
   <style>
+    /* App-shell chrome (.app-header/.login-slot/.alpha-badge) is shared in
+       edot-chrome.css; only page-specific layout remains here. */
     html, body { height: 100%; margin: 0; overflow: hidden; }
-    body { display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--d-bg); color: var(--d-ink); }
-    .app-header { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.75rem; background: var(--d-surface); border-bottom: 1px solid var(--d-line); flex: 0 0 auto; }
-    .app-header h1 { font-size: 1.05rem; margin: 0; }
-    .app-header .logo { color: var(--d-accent); }
-    .app-header a { color: var(--d-focus); font-size: 0.85rem; text-decoration: none; }
-    .app-header .spacer { flex: 1; }
-    .login-slot { display: inline-flex; align-items: center; gap: 0.25rem; }
-    .alpha-badge { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #fff; background: var(--d-accent); padding: 0.05em 0.4em; border-radius: 999px; }
-    @media (max-width: 30rem) { .alpha-badge { display: none; } }
+    body { display: flex; flex-direction: column; font-family: var(--font-ui); background: var(--d-bg); color: var(--d-ink); }
     main { flex: 1 1 auto; min-height: 0; }
     edot-data { height: 100%; }
     .boot { padding: 2rem; color: var(--d-muted); }
@@ -28,8 +23,8 @@
   <header class="app-header">
     <h1><span class="logo">▦ edot data</span></h1>
     <span class="spacer"></span>
-    <span class="login-slot"><edot-login-button login-href="../auth/login.html"></edot-login-button><span class="alpha-badge" title="Experimental — sign-in is in alpha">alpha</span></span>
     <a href="../edot.html">← back to editor</a>
+    <span class="login-slot"><edot-login-button login-href="../auth/login.html"></edot-login-button><span class="alpha-badge" title="Experimental — sign-in is in alpha">alpha</span></span>
   </header>
   <main>
     <edot-data><div class="boot">Loading SQLite…</div></edot-data>

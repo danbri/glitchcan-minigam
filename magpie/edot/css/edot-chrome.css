@@ -1,0 +1,26 @@
+/* edot-chrome.css — the shared app-shell chrome: the top header bar, logo, back
+ * link, sign-in slot, and ALPHA badge. These rules were duplicated inline in
+ * every app's <style> (and had drifted — e.g. the badge hid on mobile in some
+ * apps but not others). One token-driven copy now. Link AFTER edot-tokens.css.
+ *
+ * Canonical header element order (left→right): logo · spacer · back-to-editor ·
+ * sign-in slot. Keep new apps consistent with that.
+ */
+.app-header {
+  display: flex; align-items: center; gap: 0.6rem; flex: 0 0 auto;
+  padding: 0.4rem 0.75rem;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.app-header h1 { font-size: 1.05rem; margin: 0; white-space: nowrap; }
+.app-header .logo { color: var(--accent); }
+.app-header a { color: var(--focus); font-size: 0.85rem; text-decoration: none; white-space: nowrap; }
+.app-header a:hover { text-decoration: underline; }
+.app-header .spacer { flex: 1; }
+
+.login-slot { display: inline-flex; align-items: center; gap: 0.25rem; }
+.alpha-badge {
+  font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: #fff; background: var(--accent); padding: 0.05em 0.4em; border-radius: 999px;
+}
+/* The badge is decorative; reclaim the space on narrow screens (was inconsistent). */
+@media (max-width: 30rem) { .alpha-badge { display: none; } }
