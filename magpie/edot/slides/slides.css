@@ -177,5 +177,17 @@ edot-slides { display: block; height: 100%; }
     transform: translateX(-100%); transition: transform 0.2s ease; box-shadow: 4px 0 16px rgba(0,0,0,0.2);
   }
   .sl-app.rail-open .sl-rail { transform: translateX(0); }
+
+  /* Phones: the deck and per-slide toolbars become single horizontally-scrollable
+     rows instead of wrapping to four rows of chrome, so the slide canvas gets the
+     space. A half-clipped control at the edge hints there's more. */
+  .sl-toolbar, .sl-slidebar {
+    flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .sl-toolbar::-webkit-scrollbar, .sl-slidebar::-webkit-scrollbar { display: none; }
+  .sl-toolbar > *, .sl-slidebar > * { flex-shrink: 0; }
+  .sl-spacer { display: none; }            /* don't reserve scroll-row space */
+  .sl-title { flex: 0 0 10rem; min-width: 8rem; }
 }
 .sl-inspector { display: none; }

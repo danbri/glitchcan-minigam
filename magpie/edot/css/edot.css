@@ -387,6 +387,35 @@ select.tbtn {
   .menu-item { padding: 0.75em 0.7em; }
 }
 
+/* Phones: reclaim vertical space for the document. The toolbar becomes a single
+   horizontally-scrollable row — a half-clipped control at the edge hints there's
+   more — instead of wrapping to two or three rows. Buttons stay full size and
+   scroll into view on focus, so keyboard/AT use is unaffected. */
+@media (max-width: 30rem) {
+  .toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;            /* Firefox: no scrollbar gutter */
+  }
+  .toolbar::-webkit-scrollbar { display: none; }   /* WebKit/Blink */
+  .toolbar .group { flex: 0 0 auto; }              /* groups keep their width */
+
+  /* The verbose autosave text ("Saved · IndexedDB") collapses to a sync dot, so
+     it stops stealing a header row. The text node stays in the a11y tree and the
+     role="status" live region still announces every change to screen readers. */
+  .save-state {
+    flex: 0 0 auto;
+    width: 0.7rem; height: 0.7rem; padding: 0;
+    border-radius: 50%;
+    background: var(--muted);         /* unknown / autosave unavailable */
+    color: transparent; overflow: hidden; white-space: nowrap;
+  }
+  .save-state[data-dirty="true"] { background: var(--accent); }          /* editing */
+  .save-state[data-saved="true"][data-dirty="false"] { background: var(--ok); } /* saved */
+}
+
 /* ---- Document library dialog ---- */
 .dialog {
   border: 1px solid var(--line);

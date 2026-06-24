@@ -1049,6 +1049,8 @@ class App {
       ? `Saved · ${this.library.kind}`
       : 'Autosave unavailable';
     this.saveState.dataset.dirty = 'false';
+    // Drives the phone-sized sync dot: green only when truly persisted.
+    this.saveState.dataset.saved = this.library ? 'true' : 'false';
   }
 }
 
