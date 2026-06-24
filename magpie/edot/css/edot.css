@@ -432,6 +432,22 @@ select.tbtn {
 .gh-steps li { margin: 0.25rem 0; }
 .gh-steps code { background: var(--bg); padding: 0 0.3em; border-radius: 3px; }
 .gh-tip { color: var(--muted); margin: 0.4rem 0 0; }
+/* Command palette (Mod+K) */
+.dialog.palette { width: min(36rem, 92vw); padding: 0; overflow: hidden; }
+.palette-input {
+  width: 100%; box-sizing: border-box; font: inherit; font-size: 1.05rem;
+  padding: 0.8em 1em; border: none; border-bottom: 1px solid var(--line);
+  background: var(--surface); color: var(--ink);
+}
+.palette-input:focus { outline: none; }
+.palette-list { list-style: none; margin: 0; padding: 0.3rem; max-height: 50vh; overflow: auto; }
+.palette-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.5em 0.7em; border-radius: var(--radius); cursor: pointer; }
+.palette-item.active, .palette-item:hover { background: var(--accent); color: var(--accent-fg); }
+.palette-icon { width: 1.4em; flex: 0 0 auto; text-align: center; }
+.palette-title { flex: 1; }
+.palette-shortcut { font-size: 0.78rem; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.palette-empty { padding: 0.8em 1em; color: var(--muted); }
+
 /* Build stamp in the status bar — a quick "am I on the latest deploy?" check. */
 .build-stamp { color: var(--muted); font-size: 0.7rem; opacity: 0.75; font-variant-numeric: tabular-nums; }
 

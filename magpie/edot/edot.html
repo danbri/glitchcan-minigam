@@ -159,6 +159,13 @@
     </div>
   </dialog>
 
+  <!-- Command palette (Mod+K) — runs any registered command -->
+  <dialog id="palette-dialog" class="dialog palette" aria-label="Command palette">
+    <input id="palette-input" class="palette-input" type="text" placeholder="Type a command…"
+           autocomplete="off" spellcheck="false" aria-label="Command palette">
+    <ul id="palette-list" class="palette-list"></ul>
+  </dialog>
+
   <!-- Save to GitHub (branch + pull request) -->
   <dialog id="github-dialog" class="dialog" aria-labelledby="github-dialog-title">
     <form method="dialog" class="dialog-head">

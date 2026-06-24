@@ -11,6 +11,8 @@ import { Attention } from './attention.js';
 import { resolveSourceUrl, filenameFromUrl } from './open-url.js';
 import { EXAMPLES } from './examples.js';
 import './tree.js';
+import { CommandRegistry } from './command-registry.js';
+import { COMMANDS, BLOCK_FORMATS, setBlockFormat, createLink, createSemantic } from './commands.js';
 import { GitHubRemote, commitViaPullRequest } from './git-remote.js';
 import { diffLines, diffStats, collapse } from './diff.js';
 import * as IO from './io.js';
@@ -18,7 +20,7 @@ import * as LO from './libreoffice-bridge.js';
 
 // Bump on each meaningful deploy. Shown in the footer so a stale cached build
 // is obvious (the stamp reflects the JS your browser actually loaded).
-const BUILD = '2026-06-23.k';
+const BUILD = '2026-06-23.l';
 
 const GH_TOKEN_KEY = 'edot.gh.token';
 const GH_LOGIN_KEY = 'edot.gh.login';     // cached @login for the connected token
@@ -66,6 +68,8 @@ class App {
     this._wireOpenDialog();
     this._wireGithubDialog();
     this._wireSourceDialog();
+    this._wireCommands();
+    this._wirePalette();
     this._wireGlobalKeys();
     this._wireDragDrop();
     this._reflectBackend();
@@ -224,12 +228,7 @@ class App {
     // window.open(...,'noopener'), which returns null and made the old fallback
     // also navigate THIS tab via location.href; a Back could then reload a stale
     // edot and drop the Calendar/Maps menu items. An anchor leaves this tab put.
-    const openApp = (path) => {
-      const a = document.createElement('a');
-      a.href = path; a.target = '_blank'; a.rel = 'noopener';
-      document.body.appendChild(a); a.click(); a.remove();
-      this.attention.arm('Back to edot', { once: true });
-    };
+    const openApp = (path) => this._launchApp(path);
     mi('mi-data', () => openApp('data/data.html'));
     mi('mi-slides', () => openApp('slides/slides.html'));
     mi('mi-mail', () => openApp('mail/mail.html'));
@@ -812,12 +811,110 @@ class App {
     return li;
   }
 
+  // Open a sibling suite app in a new tab without navigating this one.
+  _launchApp(path) {
+    const a = document.createElement('a');
+    a.href = path; a.target = '_blank'; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+    this.attention.arm('Back to edot', { once: true });
+  }
+
+  // ---- command registry (the action vocabulary; see command-registry.js) ----
+  _wireCommands() {
+    const app = this;
+    const reg = new CommandRegistry();
+    reg.registerAll([
+      { id: 'doc.new', title: 'New document', icon: '📄', group: '1file', order: 1, shortcut: 'Mod+N', run: () => app.newDocument() },
+      { id: 'doc.open', title: 'Open…', icon: '📂', group: '1file', order: 2, keywords: 'examples research file url', run: () => app.openOpenDialog() },
+      { id: 'doc.mydocs', title: 'My documents', icon: '🗂', group: '1file', order: 3, shortcut: 'Mod+Shift+O', run: () => app.openLibrary() },
+      { id: 'doc.viewsource', title: 'View source', icon: '⟨⟩', group: '1file', order: 4, keywords: 'html markdown', run: () => app.openSourceDialog() },
+      { id: 'doc.github', title: 'Save to GitHub…', icon: '⎇', group: '1file', order: 5, keywords: 'commit pull request push', run: () => app.openGithubDialog() },
+      { id: 'doc.close', title: 'Close document', icon: '✕', group: '1file', order: 6, shortcut: 'Mod+W', run: () => app.closeDocument() },
+      { id: 'doc.find', title: 'Find…', icon: '🔍', group: '1file', order: 7, shortcut: 'Mod+F', run: () => app.findReplace.open(false) },
+      { id: 'doc.replace', title: 'Find & replace…', icon: '🔁', group: '1file', order: 8, shortcut: 'Mod+H', run: () => app.findReplace.open(true) },
+      { id: 'export.pdf', title: 'Export as PDF', icon: '⬇', group: '2export', order: 1, run: () => app.exportAs('pdf') },
+      { id: 'export.docx', title: 'Export as Word (.docx)', icon: '⬇', group: '2export', order: 2, run: () => app.exportAs('docx') },
+      { id: 'export.md', title: 'Export as Markdown', icon: '⬇', group: '2export', order: 3, run: () => app.exportAs('md') },
+      { id: 'export.html', title: 'Export as HTML', icon: '⬇', group: '2export', order: 4, run: () => app.exportAs('html') },
+      { id: 'insert.link', title: 'Insert link…', icon: '🔗', group: '4insert', run: () => createLink(app.announce) },
+      { id: 'insert.semantic', title: 'Tag semantic property (RDFa)…', icon: '🏷️', group: '4insert', run: () => createSemantic(app.announce) },
+      { id: 'app.data', title: 'Open Data workspace', icon: '▦', group: '5apps', run: () => app._launchApp('data/data.html') },
+      { id: 'app.slides', title: 'Open Slides', icon: '▤', group: '5apps', run: () => app._launchApp('slides/slides.html') },
+      { id: 'app.mail', title: 'Open Mail', icon: '✉', group: '5apps', run: () => app._launchApp('mail/mail.html') },
+      { id: 'app.calendar', title: 'Open Calendar', icon: '📅', group: '5apps', run: () => app._launchApp('calendar/calendar.html') },
+      { id: 'app.maps', title: 'Open Maps', icon: '🗺', group: '5apps', run: () => app._launchApp('maps/maps.html') },
+      { id: 'app.login', title: 'Sign in (OIDC)', icon: '👤', group: '5apps', run: () => app._launchApp('auth/login.html') },
+      { id: 'app.backup', title: 'Encrypted backup', icon: '🔒', group: '5apps', run: () => app._launchApp('backup/backup.html') },
+    ]);
+    // Formatting + block styles, sourced from the editing command module.
+    for (const [id, c] of Object.entries(COMMANDS)) {
+      reg.register({ id: `format.${id}`, title: c.label, group: '3format', order: 10, keywords: 'format', run: () => c.exec(), shortcut: c.key ? `Mod+${c.shift ? 'Shift+' : ''}${c.key.toUpperCase()}` : '' });
+    }
+    for (const b of BLOCK_FORMATS) {
+      reg.register({ id: `block.${b.value}`, title: b.label, group: '3format', order: 20, keywords: 'heading paragraph style', run: () => setBlockFormat(b.value) });
+    }
+    this.commands = reg;
+  }
+
+  // ---- command palette (Mod+K) — additive surface over the registry ----
+  _wirePalette() {
+    this.palette = document.getElementById('palette-dialog');
+    this.paletteInput = document.getElementById('palette-input');
+    this.paletteList = document.getElementById('palette-list');
+    if (!this.palette) return;
+    this.paletteInput.addEventListener('input', () => { this._paletteActive = 0; this._renderPalette(); });
+    this.paletteInput.addEventListener('keydown', (e) => this._paletteKey(e));
+    this.paletteList.addEventListener('click', (e) => { const li = e.target.closest('.palette-item'); if (li) this._runPalette(li.dataset.id); });
+  }
+
+  openPalette() {
+    if (!this.palette) return;
+    this.paletteInput.value = ''; this._paletteActive = 0;
+    this._renderPalette();
+    showModal(this.palette);
+    this.paletteInput.focus();
+  }
+
+  _renderPalette() {
+    const items = this.commands.search(this.paletteInput.value, { app: this, surface: 'editor' });
+    this._paletteItems = items;
+    if (this._paletteActive >= items.length) this._paletteActive = Math.max(0, items.length - 1);
+    this.paletteList.innerHTML = '';
+    if (!items.length) {
+      const li = document.createElement('li'); li.className = 'palette-empty'; li.textContent = 'No matching commands';
+      this.paletteList.appendChild(li); return;
+    }
+    items.forEach((c, i) => {
+      const li = document.createElement('li');
+      li.className = 'palette-item' + (i === this._paletteActive ? ' active' : '');
+      li.dataset.id = c.id; li.setAttribute('role', 'option');
+      li.innerHTML = `<span class="palette-icon">${esc(c.icon || '•')}</span><span class="palette-title">${esc(c.title)}</span>` +
+        (c.shortcut ? `<span class="palette-shortcut">${esc(c.shortcut)}</span>` : '');
+      this.paletteList.appendChild(li);
+    });
+  }
+
+  _paletteKey(e) {
+    const n = (this._paletteItems || []).length;
+    if (e.key === 'ArrowDown') { e.preventDefault(); this._paletteActive = n ? (this._paletteActive + 1) % n : 0; this._renderPalette(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); this._paletteActive = n ? (this._paletteActive - 1 + n) % n : 0; this._renderPalette(); }
+    else if (e.key === 'Enter') { e.preventDefault(); const c = (this._paletteItems || [])[this._paletteActive]; if (c) this._runPalette(c.id); }
+    else if (e.key === 'Escape') { e.preventDefault(); this.palette.close(); }
+  }
+
+  _runPalette(id) {
+    this.palette.close();
+    try { this.commands.run(id, { app: this, surface: 'editor' }); }
+    catch (err) { this.announce(err.message || 'Command failed', { error: true }); }
+  }
+
   _wireGlobalKeys() {
     this._on(document, 'keydown', (e) => {
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
       const k = e.key.toLowerCase();
-      if (k === 's') { e.preventDefault(); this.exportAs(this.lastExportExt); }
+      if (k === 'k' || (k === 'p' && e.shiftKey)) { e.preventDefault(); this.openPalette(); }
+      else if (k === 's') { e.preventDefault(); this.exportAs(this.lastExportExt); }
       else if (k === 'o' && e.shiftKey) { e.preventDefault(); this.openLibrary(); }
       else if (k === 'o') { e.preventDefault(); this.fileInput.click(); }
       else if (k === 'w') { e.preventDefault(); this.closeDocument(); }
