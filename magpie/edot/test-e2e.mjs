@@ -356,6 +356,20 @@ try {
     ok(`${label} export is deterministic (byte-identical re-export)`, a1.length === a2.length && Buffer.compare(a1, a2) === 0);
   }
 
+  // Bidi: blocks detect their own base direction so a document can mix LTR/RTL
+  // paragraphs. An all-RTL doc resolves the surface to rtl; blocks use plaintext.
+  await page.evaluate(() => window.__edot.newDocument());
+  await page.waitForTimeout(150);
+  await page.evaluate(() => {
+    document.getElementById('editor').innerHTML = '<p>مرحبا بالعالم</p><p>שלום עולם</p>';
+    window.__edot.editor.onChange();
+  });
+  await page.waitForTimeout(120);
+  ok('editor blocks use per-paragraph bidi (unicode-bidi: plaintext)', await page.evaluate(() =>
+    getComputedStyle(document.querySelector('#editor p')).unicodeBidi === 'plaintext'));
+  ok('an all-RTL document resolves the surface to rtl', await page.evaluate(() =>
+    getComputedStyle(document.getElementById('editor')).direction === 'rtl'));
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
 } finally { await b.close(); server.close(); }

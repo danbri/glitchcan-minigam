@@ -19,6 +19,9 @@ const DOC_CSS = `
   :root { color-scheme: light dark; }
   body { font-family: Georgia, 'Times New Roman', serif; max-width: 46rem;
          margin: 2rem auto; padding: 0 1rem; line-height: 1.6; color: #1c1c1c; }
+  /* Per-paragraph bidi: each block detects its own base direction so mixed
+     LTR/RTL documents render and align correctly (matches the editor). */
+  body > * { unicode-bidi: plaintext; text-align: start; }
   h1,h2,h3 { line-height: 1.25; }
   blockquote { border-left: 4px solid #8b4513; margin: 0 0 1em; padding: 0.2em 1em; color: #555; }
   pre { background: #f4f4f2; padding: 0.8em; border-radius: 6px; overflow: auto; }
