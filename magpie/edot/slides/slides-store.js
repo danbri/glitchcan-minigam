@@ -9,8 +9,15 @@
 // "core" (see slides-model.js) — everything else (PPTX / PDF / HTML / PNG) is
 // derived from it on demand.
 
+import { ObjectIndex } from '../js/object-index.js';
+
 const IDB_DB = 'edot-slides';
 const IDB_STORE = 'decks';
+
+// The suite-wide metadata index (same-origin localStorage, shared with the editor
+// and other apps). Decks register here so a future cross-app search/recents sees
+// them; the deck body stays in IndexedDB. See js/object-index.js.
+const index = new ObjectIndex();
 
 function idbOpen() {
   return new Promise((resolve, reject) => {
@@ -35,6 +42,7 @@ export async function saveDeck(deck) {
     tx.oncomplete = res;
     tx.onerror = () => rej(tx.error);
   });
+  index.upsert({ id: deck.id, type: 'deck', title: deck.title || 'Untitled deck', modifiedAt: deck.mtime || null });
   return deck.id;
 }
 
@@ -71,4 +79,5 @@ export async function deleteDeck(id) {
     tx.oncomplete = res;
     tx.onerror = () => rej(tx.error);
   });
+  index.remove(id);
 }

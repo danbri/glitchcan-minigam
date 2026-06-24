@@ -77,6 +77,14 @@ try {
   ok('bullet bold flag persisted', built.bodyBold === true);
   ok('speaker notes persisted', built.notes === 'speak slowly');
 
+  // The deck registers in the suite-wide object index (same-origin localStorage,
+  // shared with the editor) — metadata only, never the slide body.
+  ok('saved deck is recorded in the shared object index', await page.evaluate((id) => {
+    const ix = JSON.parse(localStorage.getItem('edot.objectIndex.v1') || '{}');
+    const r = ix[id];
+    return !!r && r.type === 'deck' && r.title === 'Test Deck' && !('slides' in r) && !('body' in r);
+  }, built.id));
+
   // 1b. Edit a slide via the DOM editor (contenteditable) and confirm sync.
   const edited = await page.evaluate(() => {
     const el = window.__slides.el;
