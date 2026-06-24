@@ -1,0 +1,18 @@
+{
+  "type": "FeatureCollection",
+  "comment": "Synthetic fixture for derive-places tests. QIDs (Q1/Q2) are placeholders, not real-world claims. Bristol-ish coordinates; one feature is outside the test bbox and one has no name.",
+  "features": [
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-2.60, 51.45] },
+      "properties": { "names": { "primary": "Cafe Alpha" }, "categories": { "primary": "cafe" }, "sources": [ { "dataset": "wikidata", "record_id": "Q1" } ] } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-2.59, 51.46] },
+      "properties": { "name": "Bravo Books", "wikidata": "Q2", "category": "bookshop" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-2.62, 51.44] },
+      "properties": { "names": { "primary": "Charlie Park" }, "categories": { "primary": "park" } } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-0.10, 51.50] },
+      "properties": { "name": "Delta Tower (outside bbox)", "wikidata": "Q3" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-2.60, 51.45] },
+      "properties": { "categories": { "primary": "unnamed" } } },
+    { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-2.61, 51.45], [-2.60, 51.46]] },
+      "properties": { "name": "Echo Line", "kind": "footway" } }
+  ]
+}
