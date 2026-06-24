@@ -5,6 +5,7 @@
 // handoff can't take. The same components still run standalone on their own pages.
 import '../data/data-workspace.js'; // defines <edot-data>
 import '../slides/slides-app.js';   // defines <edot-slides>
+import './edot-editor.js';          // defines <edot-editor>
 import { getKernel } from './edot-kernel.js';
 
 const kernel = getKernel();
@@ -31,8 +32,14 @@ kernel.capabilities.provide('slides.addData', ({ columns, rows, title } = {}) =>
   return false;
 });
 
-// Data publishes its result on the shared bus; route it to the capability.
-kernel.bus.subscribe('data:share', (p) => kernel.capabilities.invoke('slides.addData', p));
+// Data publishes its result on the shared bus; fan it out to every pane that can
+// hold a table. Both providers run in-process, so one publish populates Slides
+// AND the Editor live — the kernel's capability registry doing the routing, no
+// file, no second tab. (editor.addData is provided by <edot-editor>.)
+kernel.bus.subscribe('data:share', (p) => {
+  kernel.capabilities.invoke('slides.addData', p);
+  try { kernel.capabilities.invoke('editor.addData', p); } catch (_) { /* editor pane optional */ }
+});
 
 // Mobile: a tab shows one pane at a time (wide screens show both side by side).
 function setPane(name) {
@@ -40,3 +47,6 @@ function setPane(name) {
   document.querySelectorAll('.ws-tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
 }
 document.querySelectorAll('.ws-tab').forEach((b) => b.addEventListener('click', () => setPane(b.dataset.tab)));
+
+// Debug/headless-test hook (cf. window.__slides / window.__tftt elsewhere).
+window.__ws = { kernel, setPane };

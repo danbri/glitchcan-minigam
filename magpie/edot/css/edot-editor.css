@@ -1,0 +1,68 @@
+/* edot-editor.css — styling for the embeddable <edot-editor> surface (toolbar +
+ * contenteditable page). Deliberately SCOPED under the element so it can be
+ * dropped into a host page (the workspace) without the full editor-page CSS —
+ * notably edot.css's broad `button, select, input` reset — bleeding onto other
+ * panes. These rules mirror the .toolbar / .tbtn / .page blocks in edot.css; the
+ * standalone editor page keeps using those. Token-driven, so the two stay in
+ * visual lockstep even though the selectors differ.
+ */
+edot-editor { display: flex; flex-direction: column; min-height: 0; }
+
+edot-editor .toolbar {
+  display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 0.15rem;
+  padding: 0.35rem 0.5rem;
+  background: var(--toolbar-bg); border-bottom: 1px solid var(--line);
+}
+edot-editor .toolbar .group {
+  display: flex; gap: 0.1rem;
+  padding-right: 0.4rem; margin-right: 0.2rem; border-right: 1px solid var(--line);
+}
+edot-editor .toolbar .group:last-child { border-right: none; }
+
+edot-editor .tbtn {
+  min-width: 2.2rem; height: 2.2rem; padding: 0 0.5em;
+  border: 1px solid transparent; border-radius: var(--radius);
+  background: transparent; color: var(--ink); font: inherit; font-size: 1rem;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center; line-height: 1;
+}
+edot-editor .tbtn:hover { background: var(--surface); border-color: var(--line); }
+edot-editor .tbtn:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+edot-editor .tbtn[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+edot-editor .tbtn[disabled] { opacity: 0.4; cursor: not-allowed; }
+edot-editor .tbtn.icon { font-weight: 700; }
+edot-editor .tbtn.italic { font-style: italic; }
+edot-editor .tbtn.underline { text-decoration: underline; }
+edot-editor .tbtn.strike { text-decoration: line-through; }
+edot-editor .tbtn .tglyph { display: inline-flex; align-items: center; justify-content: center; font-size: 1.06rem; line-height: 1; }
+edot-editor .tbtn .tlabel { display: none; }
+
+edot-editor .app-main {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  padding: 1rem 0.75rem 2rem; display: flex; justify-content: center; cursor: text;
+}
+edot-editor .page {
+  background: var(--surface); width: 100%; max-width: var(--page-max); min-height: 40vh;
+  cursor: text; -webkit-user-select: text; user-select: text;
+  padding: clamp(0.75rem, 3vw, 2rem); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  font-family: var(--font-doc); font-size: 1.05rem; line-height: 1.6; color: var(--ink);
+}
+edot-editor .page:focus { outline: none; }
+edot-editor .app-main:focus-within .page { box-shadow: 0 0 0 2px var(--focus), 0 1px 4px rgba(0,0,0,0.08); }
+edot-editor .page > * { unicode-bidi: plaintext; text-align: start; }
+edot-editor .page[data-empty="true"]::before {
+  content: attr(data-placeholder); color: var(--muted); pointer-events: none;
+}
+
+/* Document content (mirrors edot.css; only what a pane is likely to show). */
+edot-editor .page h1 { font-size: 1.8rem; line-height: 1.25; margin: 0.6em 0 0.3em; }
+edot-editor .page h2 { font-size: 1.4rem; line-height: 1.3; margin: 0.6em 0 0.3em; }
+edot-editor .page h3 { font-size: 1.2rem; margin: 0.6em 0 0.3em; }
+edot-editor .page p { margin: 0 0 0.8em; }
+edot-editor .page ul, edot-editor .page ol { margin: 0 0 0.8em 1.5em; }
+edot-editor .page blockquote { margin: 0 0 0.8em; padding: 0.2em 1em; border-left: 4px solid var(--accent); color: var(--muted); }
+edot-editor .page a { color: var(--focus); }
+edot-editor .page table { border-collapse: collapse; margin: 0 0 0.8em; max-width: 100%; font-size: 0.95em; }
+edot-editor .page td, edot-editor .page th { border: 1px solid var(--line); padding: 0.3em 0.55em; vertical-align: top; text-align: left; }
+edot-editor .page th { background: var(--toolbar-bg); font-weight: 700; }

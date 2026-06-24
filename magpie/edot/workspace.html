@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="css/edot-tokens.css">
   <link rel="stylesheet" href="data/data.css">
   <link rel="stylesheet" href="slides/slides.css">
+  <link rel="stylesheet" href="css/edot-editor.css">
   <link rel="stylesheet" href="auth/css/auth.css">
   <style>
     html, body { height: 100%; margin: 0; overflow: hidden; }
@@ -52,7 +53,7 @@
       padding: 0.3rem 0.6rem; background: var(--head); border-bottom: 1px solid var(--line);
     }
     /* The mounted component fills the rest of its pane. */
-    .ws-pane > edot-data, .ws-pane > edot-slides { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+    .ws-pane > edot-data, .ws-pane > edot-slides, .ws-pane > edot-editor { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
     .ws-pane > edot-data > .dw, .ws-pane > edot-slides > .sl-app { flex: 1 1 auto; min-height: 0; }
 
     .ws-toast {
@@ -78,6 +79,7 @@
     <nav class="ws-tabs" aria-label="Panes">
       <button type="button" class="ws-tab" data-tab="data" aria-selected="true">Data</button>
       <button type="button" class="ws-tab" data-tab="slides" aria-selected="false">Slides</button>
+      <button type="button" class="ws-tab" data-tab="editor" aria-selected="false">Editor</button>
     </nav>
     <span class="ws-spacer"></span>
     <a class="ws-back" href="edot.html">← editor</a>
@@ -92,6 +94,10 @@
     <section class="ws-pane" data-pane="slides">
       <div class="ws-pane-head">Slides</div>
       <edot-slides></edot-slides>
+    </section>
+    <section class="ws-pane" data-pane="editor">
+      <div class="ws-pane-head">Editor — a data share lands here as a live table too</div>
+      <edot-editor></edot-editor>
     </section>
   </main>
 
