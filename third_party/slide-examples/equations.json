@@ -1,0 +1,251 @@
+{
+  "version": 1,
+  "id": "deck-ex-a-tour-of-famous-equations",
+  "title": "A Tour of Famous Equations",
+  "theme": "paper",
+  "mtime": 0,
+  "slides": [
+    {
+      "id": "s-ex-12",
+      "layout": "title",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.1,
+          "y": 0.34,
+          "w": 0.8,
+          "h": 0.18,
+          "runs": [
+            {
+              "text": "A Tour of Famous Equations"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "subtitle",
+          "x": 0.1,
+          "y": 0.54,
+          "w": 0.8,
+          "h": 0.12,
+          "runs": [
+            {
+              "text": "rendered as Unicode mathematics"
+            }
+          ]
+        }
+      ],
+      "notes": "Equations — a sample deck authored for edot slides. CC0 1.0 / public domain dedication (see third_party/slide-examples/LICENSE). Doubles as an import-fidelity test fixture.\n\nNOTE ON FIDELITY: real PowerPoint equations use OMML (Office Math Markup Language) inside a:txBody. The edot PPTX exporter does NOT emit OMML — it has no math run support. This deck therefore represents every formula as plain Unicode text (∑ ∫ √ ∂ ∇, Greek letters, super/subscripts, unicode fractions), which round-trips losslessly as text but will not become a native equation object in PowerPoint."
+    },
+    {
+      "id": "s-ex-13",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Euler’s identity"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "e^(iπ) + 1 = 0",
+              "bold": true
+            },
+            {
+              "text": "relating e, i, π, 1 and 0",
+              "italic": true,
+              "level": 1
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-14",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Mass–energy equivalence"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "E = mc²",
+              "bold": true
+            },
+            {
+              "text": "E = energy, m = mass, c = speed of light",
+              "level": 1
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-15",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "The Gaussian integral"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "∫₋∞^∞ e^(−x²) dx = √π",
+              "bold": true
+            },
+            {
+              "text": "a definite integral over the whole real line",
+              "level": 1
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-16",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Maxwell — Gauss’s law"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "∇ · E = ρ / ε₀",
+              "bold": true
+            },
+            {
+              "text": "divergence of the electric field",
+              "level": 1
+            },
+            {
+              "text": "∇ × B − μ₀ε₀ ∂E/∂t = μ₀J",
+              "bold": true
+            },
+            {
+              "text": "Ampère’s law with Maxwell’s correction",
+              "level": 1
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-17",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "The basics, in symbols"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "Summation:  ∑ᵢ₌₁ⁿ i = n(n+1) / 2"
+            },
+            {
+              "text": "Limit:  lim_(x→0) (sin x) / x = 1"
+            },
+            {
+              "text": "Fraction (unicode):  ½ + ⅓ + ¼ = 13⁄12"
+            },
+            {
+              "text": "Greek:  α β γ δ θ λ μ π σ φ ω  Δ Σ Ω ∂ ∇ ∞"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    }
+  ]
+}

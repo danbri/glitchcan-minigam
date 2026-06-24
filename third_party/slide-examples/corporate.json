@@ -1,0 +1,226 @@
+{
+  "version": 1,
+  "id": "deck-ex-quarterly-business-review",
+  "title": "Quarterly Business Review",
+  "theme": "ink",
+  "mtime": 0,
+  "slides": [
+    {
+      "id": "s-ex-1",
+      "layout": "title",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.1,
+          "y": 0.34,
+          "w": 0.8,
+          "h": 0.18,
+          "runs": [
+            {
+              "text": "Quarterly Business Review"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "subtitle",
+          "x": 0.1,
+          "y": 0.54,
+          "w": 0.8,
+          "h": 0.12,
+          "runs": [
+            {
+              "text": "Acme Corporation — Q3 FY26"
+            }
+          ]
+        }
+      ],
+      "notes": "Corporate — a sample deck authored for edot slides. CC0 1.0 / public domain dedication (see third_party/slide-examples/LICENSE). Doubles as an import-fidelity test fixture."
+    },
+    {
+      "id": "s-ex-2",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Agenda"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "Executive summary"
+            },
+            {
+              "text": "Financial highlights"
+            },
+            {
+              "text": "Operational metrics"
+            },
+            {
+              "text": "Strategic initiatives"
+            },
+            {
+              "text": "Q&A"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-3",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Executive Summary"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "Revenue grew 12% year over year",
+              "bold": true
+            },
+            {
+              "text": "Driven by enterprise segment expansion",
+              "level": 1
+            },
+            {
+              "text": "And improved customer retention",
+              "level": 1
+            },
+            {
+              "text": "Operating margin held steady at 18%"
+            },
+            {
+              "text": "Headcount up 4% with focus on engineering"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-4",
+      "layout": "two-column",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.14,
+          "runs": [
+            {
+              "text": "Strengths vs. Risks"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.24,
+          "w": 0.43,
+          "h": 0.68,
+          "runs": [
+            {
+              "text": "Strengths",
+              "bold": true
+            },
+            {
+              "text": "Strong recurring revenue base"
+            },
+            {
+              "text": "Healthy pipeline coverage"
+            },
+            {
+              "text": "Low customer concentration"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body2",
+          "x": 0.51,
+          "y": 0.24,
+          "w": 0.43,
+          "h": 0.68,
+          "runs": [
+            {
+              "text": "Risks",
+              "bold": true
+            },
+            {
+              "text": "FX headwinds in EMEA"
+            },
+            {
+              "text": "Hiring competition for senior roles"
+            },
+            {
+              "text": "Supply lead-time variability"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-5",
+      "layout": "section",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.08,
+          "y": 0.42,
+          "w": 0.84,
+          "h": 0.18,
+          "runs": [
+            {
+              "text": "Thank you"
+            }
+          ]
+        }
+      ],
+      "notes": "Close with contact details and next review date."
+    }
+  ]
+}

@@ -129,6 +129,7 @@ export class EdotSlides extends HTMLElement {
     panel.append(
       item('New deck', () => this.newDeckPrompt()),
       item('Open deck…', () => this.openLibrary()),
+      item('Samples…', () => this.openSamples()),
       hr(),
       item('Import file… (.json/.pptx/.odp)', () => this._fileInput.click()),
       hr(),
@@ -606,6 +607,55 @@ export class EdotSlides extends HTMLElement {
     const close = () => dlg.remove();
     dlg.addEventListener('click', (e) => { if (e.target === dlg) close(); });
     box.append(h, list, foot); dlg.append(box); document.body.append(dlg);
+  }
+
+  // Sample decks shipped under third_party/slide-examples/. The manifest +
+  // decks are fetched same-origin; the base is relative to slides.html, which
+  // lives at magpie/edot/slides/ — three levels below the repo root, hence
+  // ../../../ (one deeper than edot.html's ../../third_party/ in examples.js).
+  // Chosen decks load through the native-JSON import path (fmt.jsonToDeck) just
+  // like a user-supplied .json, so this is one more exercise of that codec.
+  async openSamples() {
+    const base = '../../../third_party/slide-examples/';
+    const dlg = document.createElement('div');
+    dlg.className = 'sl-dialog-bg';
+    const box = document.createElement('div'); box.className = 'sl-dialog'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'Sample decks');
+    const h = document.createElement('h2'); h.textContent = 'Sample decks'; h.className = 'sl-dialog-h';
+    const list = document.createElement('div'); list.className = 'sl-dialog-list';
+    const close = () => dlg.remove();
+
+    box.append(h, list);
+    try {
+      const manifest = await fetch(base + 'index.json').then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+      const samples = (manifest && manifest.samples) || [];
+      if (!samples.length) { const e = document.createElement('p'); e.textContent = 'No samples available.'; list.append(e); }
+      for (const s of samples) {
+        const row = document.createElement('div'); row.className = 'sl-deck-row';
+        const open = document.createElement('button'); open.type = 'button'; open.className = 'sl-deck-open';
+        open.textContent = s.title;
+        if (s.note) open.title = s.note;
+        open.addEventListener('click', async () => {
+          try {
+            const text = await fetch(base + s.file).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); });
+            await this._saveNow();
+            // Same path a user-imported .json takes — normalizes + validates.
+            this.deck = fmt.jsonToDeck(text);
+            if (!this.deck.id) this.deck.id = newDeck().id;
+            await saveDeck(this.deck);
+            this.current = 0; close(); this._render();
+          } catch (err) { this._alert('Could not load sample: ' + err.message); }
+        });
+        row.append(open); list.append(row);
+      }
+    } catch (err) {
+      const e = document.createElement('p'); e.textContent = 'Could not load samples manifest: ' + err.message; list.append(e);
+    }
+
+    const foot = document.createElement('div'); foot.className = 'sl-dialog-foot';
+    foot.append(this._btn('Close', () => close()));
+    box.append(foot);
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) close(); });
+    dlg.append(box); document.body.append(dlg);
   }
 
   // ===================================================================

@@ -1,0 +1,572 @@
+{
+  "version": 1,
+  "id": "deck-ex-torture-test",
+  "title": "Torture Test",
+  "theme": "midnight",
+  "mtime": 0,
+  "slides": [
+    {
+      "id": "s-ex-23",
+      "layout": "title",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.1,
+          "y": 0.34,
+          "w": 0.8,
+          "h": 0.18,
+          "runs": [
+            {
+              "text": "Torture Test 🔥"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "subtitle",
+          "x": 0.1,
+          "y": 0.54,
+          "w": 0.8,
+          "h": 0.12,
+          "runs": [
+            {
+              "text": "edge cases & navigation stress"
+            }
+          ]
+        }
+      ],
+      "notes": "Torture — a sample deck authored for edot slides. CC0 1.0 / public domain dedication (see third_party/slide-examples/LICENSE). Doubles as an import-fidelity test fixture."
+    },
+    {
+      "id": "s-ex-24",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Very long bullets"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "This is a deliberately very long bullet point intended to overflow the body text box and test wrapping, clipping, and layout robustness when an author pastes a whole paragraph into a single bullet instead of breaking it into digestible lines, which of course never happens in real presentations."
+            },
+            {
+              "text": "This is a deliberately very long bullet point intended to overflow the body text box and test wrapping, clipping, and layout robustness when an author pastes a whole paragraph into a single bullet instead of breaking it into digestible lines, which of course never happens in real presentations. This is a deliberately very long bullet point intended to overflow the body text box and test wrapping, clipping, and layout robustness when an author pastes a whole paragraph into a single bullet instead of breaking it into digestible lines, which of course never happens in real presentations."
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-25",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Five indent levels"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "Level 0",
+              "level": 0
+            },
+            {
+              "text": "Level 1",
+              "level": 1
+            },
+            {
+              "text": "Level 2",
+              "level": 2
+            },
+            {
+              "text": "Level 3",
+              "level": 3
+            },
+            {
+              "text": "Level 4",
+              "level": 4
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-26",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Special characters & emoji"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "XML-hostile: < > & \" ' </a:t> <script>"
+            },
+            {
+              "text": "Emoji: 🐥🔥🎉🦄🌍🧪✅❌📊🚀"
+            },
+            {
+              "text": "Combining/marks: café · naïve · Zürich · señor"
+            },
+            {
+              "text": "Whitespace   gaps   and\ttabs\tpreserved"
+            },
+            {
+              "text": "Zero-width & quotes: “smart” ‘quotes’ — em–dash …"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-27",
+      "layout": "blank",
+      "background": null,
+      "elements": [],
+      "notes": "This slide is intentionally empty."
+    },
+    {
+      "id": "s-ex-28",
+      "layout": "blank",
+      "background": null,
+      "elements": [
+        {
+          "type": "image",
+          "x": 0.25,
+          "y": 0.2,
+          "w": 0.5,
+          "h": 0.6,
+          "dataUrl": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221600%22%20height%3D%22900%22%20viewBox%3D%220%200%201600%20900%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%231a1a2e%22%2F%3E%3Cstop%20offset%3D%2233%25%22%20stop-color%3D%22%2316213e%22%2F%3E%3Cstop%20offset%3D%2267%25%22%20stop-color%3D%22%230f3460%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%23533483%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%221600%22%20height%3D%22900%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%221280%22%20cy%3D%22220%22%20r%3D%22260%22%20fill%3D%22%23e94560%22%20opacity%3D%220.55%22%2F%3E%3Ccircle%20cx%3D%221340%22%20cy%3D%22160%22%20r%3D%22120%22%20fill%3D%22%23ffd460%22%20opacity%3D%220.7%22%2F%3E%3C%2Fsvg%3E",
+          "alt": "Image-only slide"
+        }
+      ],
+      "notes": "This slide has only an image, no text."
+    },
+    {
+      "id": "s-ex-29",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Bold + italic mix"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "Plain line"
+            },
+            {
+              "text": "Bold line",
+              "bold": true
+            },
+            {
+              "text": "Italic line",
+              "italic": true
+            },
+            {
+              "text": "Bold AND italic",
+              "bold": true,
+              "italic": true
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-30",
+      "layout": "two-column",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.14,
+          "runs": [
+            {
+              "text": "Two columns, uneven"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.24,
+          "w": 0.43,
+          "h": 0.68,
+          "runs": [
+            {
+              "text": "Just one point on the left."
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body2",
+          "x": 0.51,
+          "y": 0.24,
+          "w": 0.43,
+          "h": 0.68,
+          "runs": [
+            {
+              "text": "Many"
+            },
+            {
+              "text": "points"
+            },
+            {
+              "text": "on"
+            },
+            {
+              "text": "the"
+            },
+            {
+              "text": "right"
+            },
+            {
+              "text": "side"
+            },
+            {
+              "text": "here"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-31",
+      "layout": "section",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.08,
+          "y": 0.42,
+          "w": 0.84,
+          "h": 0.18,
+          "runs": [
+            {
+              "text": "— Section break —"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-32",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Filler slide 10"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "Navigation stress slide number 10."
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-33",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Filler slide 11"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "Navigation stress slide number 11."
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-34",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Filler slide 12"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "Navigation stress slide number 12."
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-35",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Filler slide 13"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "Navigation stress slide number 13."
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-36",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Filler slide 14"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "Navigation stress slide number 14."
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-37",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Filler slide 15"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "Navigation stress slide number 15."
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-38",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Filler slide 16"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "Navigation stress slide number 16."
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    }
+  ]
+}
