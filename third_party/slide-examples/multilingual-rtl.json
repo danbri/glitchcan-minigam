@@ -1,0 +1,278 @@
+{
+  "version": 1,
+  "id": "deck-ex-multilingual-bidirectional",
+  "title": "Multilingual & Bidirectional",
+  "theme": "classic",
+  "mtime": 0,
+  "slides": [
+    {
+      "id": "s-ex-18",
+      "layout": "title",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.1,
+          "y": 0.34,
+          "w": 0.8,
+          "h": 0.18,
+          "runs": [
+            {
+              "text": "Hello · مرحبا · שלום · 你好"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "subtitle",
+          "x": 0.1,
+          "y": 0.54,
+          "w": 0.8,
+          "h": 0.12,
+          "runs": [
+            {
+              "text": "a left-to-right and right-to-left mix"
+            }
+          ]
+        }
+      ],
+      "notes": "Multilingual-RTL — a sample deck authored for edot slides. CC0 1.0 / public domain dedication (see third_party/slide-examples/LICENSE). Doubles as an import-fidelity test fixture. A real bidi rendering test fixture."
+    },
+    {
+      "id": "s-ex-19",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "Greetings around the world"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "English: Welcome to the presentation"
+            },
+            {
+              "text": "العربية: مرحبًا بكم في العرض التقديمي"
+            },
+            {
+              "text": "עברית: ברוכים הבאים למצגת"
+            },
+            {
+              "text": "中文: 欢迎来到演示文稿"
+            },
+            {
+              "text": "Mixed in one line: total = المجموع = סך הכול = 42"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-20",
+      "layout": "two-column",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.14,
+          "runs": [
+            {
+              "text": "English ⇄ Arabic"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.24,
+          "w": 0.43,
+          "h": 0.68,
+          "runs": [
+            {
+              "text": "English",
+              "bold": true
+            },
+            {
+              "text": "Book"
+            },
+            {
+              "text": "Peace"
+            },
+            {
+              "text": "Knowledge"
+            },
+            {
+              "text": "Water"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body2",
+          "x": 0.51,
+          "y": 0.24,
+          "w": 0.43,
+          "h": 0.68,
+          "runs": [
+            {
+              "text": "العربية",
+              "bold": true
+            },
+            {
+              "text": "كتاب"
+            },
+            {
+              "text": "سلام"
+            },
+            {
+              "text": "معرفة"
+            },
+            {
+              "text": "ماء"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-21",
+      "layout": "two-column",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.14,
+          "runs": [
+            {
+              "text": "English ⇄ Hebrew"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.24,
+          "w": 0.43,
+          "h": 0.68,
+          "runs": [
+            {
+              "text": "English",
+              "bold": true
+            },
+            {
+              "text": "Book"
+            },
+            {
+              "text": "Peace"
+            },
+            {
+              "text": "Friend"
+            },
+            {
+              "text": "Light"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body2",
+          "x": 0.51,
+          "y": 0.24,
+          "w": 0.43,
+          "h": 0.68,
+          "runs": [
+            {
+              "text": "עברית",
+              "bold": true
+            },
+            {
+              "text": "ספר"
+            },
+            {
+              "text": "שלום"
+            },
+            {
+              "text": "חבר"
+            },
+            {
+              "text": "אור"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-22",
+      "layout": "title-content",
+      "background": null,
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.06,
+          "y": 0.06,
+          "w": 0.88,
+          "h": 0.16,
+          "runs": [
+            {
+              "text": "CJK: 中文 · 日本語 · 한국어"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "body",
+          "x": 0.06,
+          "y": 0.26,
+          "w": 0.88,
+          "h": 0.66,
+          "runs": [
+            {
+              "text": "中文 (Chinese): 这是一个多语言的幻灯片演示。"
+            },
+            {
+              "text": "日本語 (Japanese): これは多言語のスライドです。"
+            },
+            {
+              "text": "한국어 (Korean): 이것은 다국어 슬라이드입니다."
+            },
+            {
+              "text": "Bidi punctuation test: (سلام) [שלום] {你好}"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    }
+  ]
+}

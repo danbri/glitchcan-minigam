@@ -1,0 +1,219 @@
+{
+  "version": 1,
+  "id": "deck-ex-design-as-atmosphere",
+  "title": "Design as Atmosphere",
+  "theme": "midnight",
+  "mtime": 0,
+  "slides": [
+    {
+      "id": "s-ex-6",
+      "layout": "blank",
+      "background": "#0f0f1a",
+      "elements": [
+        {
+          "type": "image",
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1,
+          "dataUrl": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221600%22%20height%3D%22900%22%20viewBox%3D%220%200%201600%20900%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%231a1a2e%22%2F%3E%3Cstop%20offset%3D%2233%25%22%20stop-color%3D%22%2316213e%22%2F%3E%3Cstop%20offset%3D%2267%25%22%20stop-color%3D%22%230f3460%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%23533483%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%221600%22%20height%3D%22900%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%221280%22%20cy%3D%22220%22%20r%3D%22260%22%20fill%3D%22%23e94560%22%20opacity%3D%220.55%22%2F%3E%3Ccircle%20cx%3D%221340%22%20cy%3D%22160%22%20r%3D%22120%22%20fill%3D%22%23ffd460%22%20opacity%3D%220.7%22%2F%3E%3C%2Fsvg%3E",
+          "alt": "Abstract gradient with glowing circles"
+        },
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.08,
+          "y": 0.4,
+          "w": 0.84,
+          "h": 0.22,
+          "runs": [
+            {
+              "text": "DESIGN AS ATMOSPHERE"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "subtitle",
+          "x": 0.08,
+          "y": 0.64,
+          "w": 0.7,
+          "h": 0.1,
+          "runs": [
+            {
+              "text": "a visual essay"
+            }
+          ]
+        }
+      ],
+      "notes": "Arty — a sample deck authored for edot slides. CC0 1.0 / public domain dedication (see third_party/slide-examples/LICENSE). Doubles as an import-fidelity test fixture. All backgrounds are generated SVG (CC0)."
+    },
+    {
+      "id": "s-ex-7",
+      "layout": "blank",
+      "background": "#0b486b",
+      "elements": [
+        {
+          "type": "image",
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1,
+          "dataUrl": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221600%22%20height%3D%22900%22%20viewBox%3D%220%200%201600%20900%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%230b486b%22%2F%3E%3Cstop%20offset%3D%2233%25%22%20stop-color%3D%22%233b8686%22%2F%3E%3Cstop%20offset%3D%2267%25%22%20stop-color%3D%22%2379bd9a%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%23cff09e%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%221600%22%20height%3D%22900%22%20fill%3D%22url(%23g)%22%2F%3E%3Cpath%20d%3D%22M0%20600%20Q400%20480%20800%20600%20T1600%20600%20V900%20H0%20Z%22%20fill%3D%22%230b486b%22%20opacity%3D%220.45%22%2F%3E%3Cpath%20d%3D%22M0%20700%20Q400%20580%20800%20700%20T1600%20700%20V900%20H0%20Z%22%20fill%3D%22%230b486b%22%20opacity%3D%220.65%22%2F%3E%3C%2Fsvg%3E",
+          "alt": "Layered wave forms in teal and green"
+        },
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.08,
+          "y": 0.12,
+          "w": 0.84,
+          "h": 0.2,
+          "runs": [
+            {
+              "text": "FLOW"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-8",
+      "layout": "blank",
+      "background": "#3a0ca3",
+      "elements": [
+        {
+          "type": "image",
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1,
+          "dataUrl": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221600%22%20height%3D%22900%22%20viewBox%3D%220%200%201600%20900%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23f72585%22%2F%3E%3Cstop%20offset%3D%2250%25%22%20stop-color%3D%22%237209b7%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%233a0ca3%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%221600%22%20height%3D%22900%22%20fill%3D%22url(%23g)%22%2F%3E%3Cpolygon%20points%3D%220%2C0%20700%2C0%200%2C900%22%20fill%3D%22%23fff%22%20opacity%3D%220.06%22%2F%3E%3Cpolygon%20points%3D%221600%2C900%20900%2C900%201600%2C0%22%20fill%3D%22%23000%22%20opacity%3D%220.12%22%2F%3E%3Cpolygon%20points%3D%22800%2C250%201050%2C720%20550%2C720%22%20fill%3D%22%23ffd460%22%20opacity%3D%220.85%22%2F%3E%3C%2Fsvg%3E",
+          "alt": "Magenta-to-indigo gradient with a gold triangle"
+        },
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.5,
+          "y": 0.66,
+          "w": 0.44,
+          "h": 0.22,
+          "runs": [
+            {
+              "text": "TENSION"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-9",
+      "layout": "blank",
+      "background": "#1d1f30",
+      "elements": [
+        {
+          "type": "image",
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1,
+          "dataUrl": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221600%22%20height%3D%22900%22%20viewBox%3D%220%200%201600%20900%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%232b2d42%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%231d1f30%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%221600%22%20height%3D%22900%22%20fill%3D%22url(%23g)%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%220%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22500%22%20y%3D%220%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%221000%22%20y%3D%220%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%221500%22%20y%3D%220%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22100%22%20y%3D%22100%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22600%22%20y%3D%22100%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%221100%22%20y%3D%22100%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22200%22%20y%3D%22200%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22700%22%20y%3D%22200%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%221200%22%20y%3D%22200%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22300%22%20y%3D%22300%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22800%22%20y%3D%22300%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%221300%22%20y%3D%22300%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22400%22%20y%3D%22400%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22900%22%20y%3D%22400%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%221400%22%20y%3D%22400%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%22500%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22500%22%20y%3D%22500%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%221000%22%20y%3D%22500%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%221500%22%20y%3D%22500%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22100%22%20y%3D%22600%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22600%22%20y%3D%22600%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%221100%22%20y%3D%22600%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22200%22%20y%3D%22700%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22700%22%20y%3D%22700%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%221200%22%20y%3D%22700%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22300%22%20y%3D%22800%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%22800%22%20y%3D%22800%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3Crect%20x%3D%221300%22%20y%3D%22800%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%238d99ae%22%20opacity%3D%220.18%22%2F%3E%3C%2Fsvg%3E",
+          "alt": "Scattered translucent squares on a dark grid"
+        },
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.08,
+          "y": 0.4,
+          "w": 0.84,
+          "h": 0.2,
+          "runs": [
+            {
+              "text": "SYSTEM"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "subtitle",
+          "x": 0.08,
+          "y": 0.62,
+          "w": 0.6,
+          "h": 0.1,
+          "runs": [
+            {
+              "text": "order from repetition"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-10",
+      "layout": "blank",
+      "background": "#7a1f3d",
+      "elements": [
+        {
+          "type": "image",
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1,
+          "dataUrl": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221600%22%20height%3D%22900%22%20viewBox%3D%220%200%201600%20900%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23ff9a00%22%2F%3E%3Cstop%20offset%3D%2250%25%22%20stop-color%3D%22%23ff5400%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%237a1f3d%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%221600%22%20height%3D%22900%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22800%22%20cy%3D%22520%22%20r%3D%22220%22%20fill%3D%22%23ffd460%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%22560%22%20width%3D%221600%22%20height%3D%2218%22%20fill%3D%22%237a1f3d%22%20opacity%3D%220.55%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%22600%22%20width%3D%221600%22%20height%3D%2218%22%20fill%3D%22%237a1f3d%22%20opacity%3D%220.55%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%22640%22%20width%3D%221600%22%20height%3D%2218%22%20fill%3D%22%237a1f3d%22%20opacity%3D%220.55%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%22680%22%20width%3D%221600%22%20height%3D%2218%22%20fill%3D%22%237a1f3d%22%20opacity%3D%220.55%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%22720%22%20width%3D%221600%22%20height%3D%2218%22%20fill%3D%22%237a1f3d%22%20opacity%3D%220.55%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%22760%22%20width%3D%221600%22%20height%3D%2218%22%20fill%3D%22%237a1f3d%22%20opacity%3D%220.55%22%2F%3E%3C%2Fsvg%3E",
+          "alt": "A gold sun over horizontal bands at dusk"
+        },
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.08,
+          "y": 0.1,
+          "w": 0.84,
+          "h": 0.2,
+          "runs": [
+            {
+              "text": "WARMTH"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "s-ex-11",
+      "layout": "title",
+      "background": "#13151c",
+      "elements": [
+        {
+          "type": "text",
+          "role": "title",
+          "x": 0.1,
+          "y": 0.36,
+          "w": 0.8,
+          "h": 0.2,
+          "runs": [
+            {
+              "text": "Thank you."
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "role": "subtitle",
+          "x": 0.1,
+          "y": 0.58,
+          "w": 0.8,
+          "h": 0.1,
+          "runs": [
+            {
+              "text": "— made with edot slides"
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    }
+  ]
+}

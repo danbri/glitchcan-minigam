@@ -1,0 +1,30 @@
+{
+  "_comment": "Loadable sample decks for edot slides (File ▸ Samples). 'file' is resolved by the app relative to this folder; slides.html lives at magpie/edot/slides/ so the app uses ../../../third_party/slide-examples/ as the base. Add an entry + drop the .json alongside — nothing else to change. All decks here are authored-for-edot, CC0. See README.md for provenance.",
+  "samples": [
+    {
+      "title": "Corporate (boring QBR)",
+      "file": "corporate.json",
+      "note": "Title, agenda, bulleted content, two-column, thank-you. Neutral theme. CC0."
+    },
+    {
+      "title": "Arty (Keynote-style)",
+      "file": "arty.json",
+      "note": "Big type, full-bleed abstract SVG art backgrounds (generated, CC0). Image-forward."
+    },
+    {
+      "title": "Equations (Unicode math)",
+      "file": "equations.json",
+      "note": "Famous formulas as Unicode math. Note: our PPTX export emits text, not OMML. CC0."
+    },
+    {
+      "title": "Multilingual & RTL",
+      "file": "multilingual-rtl.json",
+      "note": "English + Arabic + Hebrew + CJK mixed in the same slides. A bidi test. CC0."
+    },
+    {
+      "title": "Torture test (edge cases)",
+      "file": "torture.json",
+      "note": "Long bullets, deep indents, emoji/specials, empty slide, image-only, 16 slides. CC0."
+    }
+  ]
+}
