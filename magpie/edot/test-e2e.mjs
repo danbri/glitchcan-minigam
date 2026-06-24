@@ -344,6 +344,18 @@ try {
     !('body' in window.__edot.library.index.get(window.__edot.doc.id)) &&
     !('html' in window.__edot.library.index.get(window.__edot.doc.id))));
 
+  // Determinism (foundations §5): exporting the SAME document twice yields
+  // byte-identical output, so content fingerprints are stable. The codecs embed
+  // no dates/random and zip mod-times are zeroed; this is the regression guard.
+  for (const [label, menu] of [['edoc', 'Save as edot document'], ['docx', 'Save as Word'], ['pdf', 'Save as PDF']]) {
+    await page.click('#menu-button');
+    const [x1] = await Promise.all([page.waitForEvent('download'), page.click(`text=${menu}`)]);
+    await page.click('#menu-button');
+    const [x2] = await Promise.all([page.waitForEvent('download'), page.click(`text=${menu}`)]);
+    const [a1, a2] = [await readFile(await x1.path()), await readFile(await x2.path())];
+    ok(`${label} export is deterministic (byte-identical re-export)`, a1.length === a2.length && Buffer.compare(a1, a2) === 0);
+  }
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
 } finally { await b.close(); server.close(); }
