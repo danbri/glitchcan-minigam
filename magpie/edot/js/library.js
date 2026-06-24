@@ -6,6 +6,8 @@
 // (e.g. some private-mode browsers). Documents are { id, title, html,
 // createdAt, updatedAt }.
 
+import { ObjectIndex } from './object-index.js';
+
 const DB = 'edot';
 const STORE = 'documents';
 const LS_KEY = 'edot.library.v1';
@@ -56,25 +58,34 @@ class LocalLibrary {
 }
 
 export class Library {
-  constructor(backend, kind) { this.backend = backend; this.kind = kind; }
+  // index: the suite-wide metadata index (object-index.js). The body store holds
+  // the document; the index records that it exists (id/type/title/timestamps) for
+  // future cross-app search, ACLs and sync. Keeping them in lockstep here means no
+  // app forgets to register what it persists.
+  constructor(backend, kind) { this.backend = backend; this.kind = kind; this.index = new ObjectIndex(); }
 
   static async create() {
     try { return new Library(await IdbLibrary.open(), 'IndexedDB'); }
     catch { return new Library(new LocalLibrary(), 'localStorage'); }
   }
 
+  _record(doc) {
+    this.index.upsert({ id: doc.id, type: 'doc', title: doc.title, createdAt: doc.createdAt, modifiedAt: doc.updatedAt });
+    return doc;
+  }
+
   async listDocs() { return this.backend.list(); }
   async getDoc(id) { return this.backend.get(id); }
-  async deleteDoc(id) { return this.backend.remove(id); }
+  async deleteDoc(id) { await this.backend.remove(id); this.index.remove(id); }
 
   // Create a new document record and return it.
   async createDoc(title, html) {
     const now = Date.now();
-    return this.backend.put({ id: uid(), title: title || 'Untitled document', html: html || '<p><br></p>', createdAt: now, updatedAt: now });
+    return this._record(await this.backend.put({ id: uid(), title: title || 'Untitled document', html: html || '<p><br></p>', createdAt: now, updatedAt: now }));
   }
 
   // Upsert an existing document (used by autosave).
   async saveDoc(doc) {
-    return this.backend.put({ ...doc, updatedAt: Date.now() });
+    return this._record(await this.backend.put({ ...doc, updatedAt: Date.now() }));
   }
 }

@@ -325,6 +325,25 @@ try {
   ok('File-menu action flows through run() (audit fired)', await page.evaluate(() => (window.__audit || []).includes('doc.mydocs')));
   await page.keyboard.press('Escape'); await page.waitForTimeout(100);
 
+  // Object/metadata index: saving a document registers it in the suite-wide index
+  // (id/type/title) — the body store and the index stay in lockstep.
+  await page.evaluate(() => window.__edot.newDocument());
+  await page.waitForTimeout(150);
+  await page.fill('#doc-title', 'Indexed Doc');
+  await page.click('#editor');
+  await page.keyboard.type('content for the index');
+  await page.waitForTimeout(800); // autosave -> saveDoc -> index.upsert
+  ok('saved doc is recorded in the object index', await page.evaluate(() => {
+    const id = window.__edot.doc.id;
+    const rec = window.__edot.library.index.get(id);
+    return !!rec && rec.type === 'doc' && rec.title === 'Indexed Doc';
+  }));
+  ok('index search finds the doc by title', await page.evaluate(() =>
+    window.__edot.library.index.search('indexed').some((r) => r.title === 'Indexed Doc')));
+  ok('index never stores the document body', await page.evaluate(() =>
+    !('body' in window.__edot.library.index.get(window.__edot.doc.id)) &&
+    !('html' in window.__edot.library.index.get(window.__edot.doc.id))));
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
 } finally { await b.close(); server.close(); }
