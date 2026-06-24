@@ -55,6 +55,25 @@ try {
   const [dl2] = await Promise.all([page.waitForEvent('download'), page.click('text=Save as Word')]);
   ok('DOCX download filename ends .docx', /\.docx$/.test(dl2.suggestedFilename()));
 
+  // .edoc — the canonical DataObject form: a self-contained envelope with a
+  // SHA-256 content fingerprint, carrying the live doc's stable id, that
+  // round-trips back into the editor losslessly.
+  await page.click('#menu-button');
+  const [dl3] = await Promise.all([page.waitForEvent('download'), page.click('text=Save as edot document')]);
+  ok('edoc download filename ends .edoc', /\.edoc$/.test(dl3.suggestedFilename()));
+  const edocText = await readFile(await dl3.path(), 'utf8');
+  const edoc = JSON.parse(edocText);
+  ok('edoc envelope is a doc with body.html', edoc.type === 'doc' && typeof edoc.body?.html === 'string');
+  ok('edoc carries a 64-hex content fingerprint', /^[0-9a-f]{64}$/.test(edoc.fingerprint || ''));
+  ok('edoc id matches the live document id', edoc.id === await page.evaluate(() => window.__edot.doc.id));
+  ok('edoc bytes are deterministic (sorted keys)', edocText.startsWith('{"body":'));
+  // Re-import the exact bytes through the file input and confirm content returns.
+  await page.evaluate(() => window.__edot.newDocument());
+  await page.waitForTimeout(150);
+  await page.setInputFiles('#file-input', { name: dl3.suggestedFilename(), mimeType: 'application/edot-doc+json', buffer: Buffer.from(edocText) });
+  await page.waitForTimeout(300);
+  ok('reimported .edoc restores the document text', /Hello office world/.test(await page.textContent('#editor')));
+
   // New document via menu, then switch back via library dialog.
   await page.click('#menu-button'); await page.click('#mi-new'); await page.waitForTimeout(300);
   ok('new doc resets word count', (await page.textContent('#stat-words')).startsWith('0'));

@@ -20,7 +20,7 @@ import * as LO from './libreoffice-bridge.js';
 
 // Bump on each meaningful deploy. Shown in the footer so a stale cached build
 // is obvious (the stamp reflects the JS your browser actually loaded).
-const BUILD = '2026-06-23.l';
+const BUILD = '2026-06-24.m';
 
 const GH_TOKEN_KEY = 'edot.gh.token';
 const GH_LOGIN_KEY = 'edot.gh.login';     // cached @login for the connected token
@@ -832,6 +832,7 @@ class App {
       { id: 'doc.close', title: 'Close document', icon: '✕', group: '1file', order: 6, shortcut: 'Mod+W', run: () => app.closeDocument() },
       { id: 'doc.find', title: 'Find…', icon: '🔍', group: '1file', order: 7, shortcut: 'Mod+F', run: () => app.findReplace.open(false) },
       { id: 'doc.replace', title: 'Find & replace…', icon: '🔁', group: '1file', order: 8, shortcut: 'Mod+H', run: () => app.findReplace.open(true) },
+      { id: 'export.edoc', title: 'Export as edot document (.edoc)', icon: '⬇', group: '2export', order: 0, keywords: 'canonical native data object', run: () => app.exportAs('edoc') },
       { id: 'export.pdf', title: 'Export as PDF', icon: '⬇', group: '2export', order: 1, run: () => app.exportAs('pdf') },
       { id: 'export.docx', title: 'Export as Word (.docx)', icon: '⬇', group: '2export', order: 2, run: () => app.exportAs('docx') },
       { id: 'export.md', title: 'Export as Markdown', icon: '⬇', group: '2export', order: 3, run: () => app.exportAs('md') },
@@ -1005,7 +1006,7 @@ class App {
     try {
       const html = this.editor.getContent();
       const title = this.titleInput.value.trim() || 'Untitled document';
-      const blob = await IO.exportDocument(html, title, ext);
+      const blob = await IO.exportDocument(html, title, ext, { id: this.doc?.id });
       IO.downloadBlob(blob, `${sanitizeFilename(title)}.${ext}`);
       this.lastExportExt = ext;
       this.announce(`Saved as .${ext}`);
