@@ -14,6 +14,7 @@
     "test:lucid": "playwright test tests/lucid-sdf.spec.js tests/dsl-parser.test.js tests/glsl-codegen.test.js",
     "test:lucid:unit": "playwright test tests/dsl-parser.test.js tests/glsl-codegen.test.js",
     "test:lucid:smoke": "playwright test tests/lucid-sdf.spec.js",
+    "test:edot": "node magpie/edot/run-tests.mjs",
     "test:debug": "playwright test --debug",
     "test:report": "playwright show-report",
     "server": "python -m http.server 8080",
