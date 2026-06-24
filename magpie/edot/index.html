@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="edot — a browser office suite: editor, data/sheets, slides, calendar, mail and maps, composable over one kernel, with a places/geo layer wired across them.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#efece6" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#2c2c2c" media="(prefers-color-scheme: dark)">
+  <title>edot — office suite</title>
+  <link rel="stylesheet" href="css/edot-tokens.css">
+  <style>
+    html, body { margin: 0; }
+    body {
+      font-family: var(--font-ui); background: var(--bg); color: var(--ink);
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) 3rem env(safe-area-inset-left);
+      line-height: 1.5;
+    }
+    header { padding: 1.4rem 1rem 0.6rem; max-width: 64rem; margin: 0 auto; }
+    h1 { font-size: 1.5rem; margin: 0; color: var(--accent); }
+    header p { margin: 0.3rem 0 0; color: var(--muted); font-size: 0.9rem; max-width: 60ch; }
+    main { max-width: 64rem; margin: 0 auto; padding: 0 1rem; }
+    section { margin-top: 1.6rem; }
+    h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 0.6rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.6rem; }
+    a.card {
+      display: flex; gap: 0.7rem; align-items: flex-start; text-decoration: none; color: inherit;
+      background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 0.7rem 0.8rem; transition: border-color 0.12s, transform 0.12s;
+    }
+    a.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+    a.card:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+    .ic { font-size: 1.4rem; line-height: 1.1; flex: 0 0 auto; }
+    .tx { min-width: 0; }
+    .tt { font-weight: 600; }
+    .ds { font-size: 0.82rem; color: var(--muted); }
+    .badge { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+      color: #fff; background: var(--accent); padding: 0.05em 0.45em; border-radius: 999px; margin-left: 0.35em; vertical-align: 0.12em; }
+    footer { max-width: 64rem; margin: 2rem auto 0; padding: 0 1rem; color: var(--muted); font-size: 0.78rem; }
+    footer a { color: var(--focus); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🟫 edot</h1>
+    <p>A browser office suite — editor, data, slides, calendar, mail and maps — composable over one shared kernel, with a places/geo layer (Wikidata-linked) wired across them.</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Composed</h2>
+      <div class="grid">
+        <a class="card" href="workspace.html">
+          <span class="ic">🧩</span>
+          <div class="tx"><div class="tt">Workspace</div><span class="badge">live</span>
+            <div class="ds">Data, Slides and Editor in one page over one kernel — a query result flows into a deck and a document with no file. Geo functions in the Data pane.</div></div>
+        </a>
+      </div>
+    </section>
+
+    <section>
+      <h2>Apps</h2>
+      <div class="grid">
+        <a class="card" href="edot.html"><span class="ic">✍️</span><div class="tx"><div class="tt">Editor</div><div class="ds">Rich-text document editor — formatting, find/replace, import/export (DOCX, Markdown, PDF, HTML), GitHub save.</div></div></a>
+        <a class="card" href="data/data.html"><span class="ic">▦</span><div class="tx"><div class="tt">Data</div><div class="ds">SQLite engine, editable grid, Excel-like sheets with formulas (incl. <code>=SQL()</code> and geo functions), N-Quads.</div></div></a>
+        <a class="card" href="slides/slides.html"><span class="ic">▤</span><div class="tx"><div class="tt">Slides</div><div class="ds">Deck editor with templates, SVG render, present mode.</div></div></a>
+        <a class="card" href="calendar/calendar.html"><span class="ic">📅</span><div class="tx"><div class="tt">Calendar</div><div class="ds">Month/week/day/agenda, recurrence, reminders, ICS import/export — event location autocomplete with QIDs.</div></div></a>
+        <a class="card" href="mail/mail.html"><span class="ic">✉️</span><div class="tx"><div class="tt">Mail</div><div class="ds">Composer and mailbox UI.</div></div></a>
+        <a class="card" href="maps/maps.html"><span class="ic">🗺️</span><div class="tx"><div class="tt">Maps</div><span class="badge">3D</span><div class="ds">MapLibre map with geocode, routing, saved places — plus 3D terrain, 3D buildings and KML/KMZ import.</div></div></a>
+        <a class="card" href="backup/backup.html"><span class="ic">⤓</span><div class="tx"><div class="tt">Backup</div><div class="ds">Export/restore the suite's local data.</div></div></a>
+        <a class="card" href="auth/login.html"><span class="ic">🔐</span><div class="tx"><div class="tt">Sign in</div><span class="badge">alpha</span><div class="ds">The shared sign-in flow (experimental).</div></div></a>
+      </div>
+    </section>
+
+    <section>
+      <h2>Demos — places &amp; geo</h2>
+      <div class="grid">
+        <a class="card" href="places/demo.html"><span class="ic">📍</span><div class="tx"><div class="tt">Place autocomplete</div><div class="ds">Type a place → name + Wikidata QID + coordinates, from cached + live sources.</div></div></a>
+        <a class="card" href="data/geo-sheet-demo.html"><span class="ic">▦ƒ</span><div class="tx"><div class="tt">Geo spreadsheet functions</div><div class="ds"><code>=QID</code>, <code>=LAT</code>, <code>=LON</code>, <code>=GEODISTANCE</code>, <code>=PLACEKIND</code> over a cached gazetteer.</div></div></a>
+        <a class="card" href="maps/events-demo.html"><span class="ic">🗺️</span><div class="tx"><div class="tt">Events on the map</div><div class="ds">Located calendar events drawn as a backdrop layer (also <code>maps.html?events</code>).</div></div></a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Static, client-side, no backend. Source: <a href="https://github.com/danbri/glitchcan-minigam/tree/master/magpie/edot">danbri/glitchcan-minigam</a>.
+  </footer>
+</body>
+</html>
