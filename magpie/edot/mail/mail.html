@@ -11,6 +11,10 @@
     .skip-link { position: absolute; left: -999px; top: 0; z-index: 100; background: var(--m-accent); color: var(--m-accent-fg); padding: 0.5em 1em; border-radius: 0 0 var(--m-radius) 0; }
     .skip-link:focus { left: 0; }
     #main { height: 100%; }
+    /* Sign-in status chip — consistent with the other suite apps. */
+    .login-slot { display: inline-flex; align-items: center; gap: 0.25rem; }
+    .alpha-badge { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--m-accent-fg); background: var(--m-accent); padding: 0.05em 0.4em; border-radius: 999px; }
+    @media (max-width: 30rem) { .alpha-badge { display: none; } }
   </style>
 </head>
 <body>
@@ -25,6 +29,7 @@
     // component plus the adapter registry, MIME parser and sanitizer, so tests
     // can drive everything against MOCKED fetch with no real mail servers.
     import { EdotMail } from './js/edot-mail.js';
+    import '../auth/js/login-ui.js'; // defines <edot-login-button> (sign-in chip)
     import * as adapters from './js/adapters/index.js';
     import * as mime from './js/mime.js';
     import * as sanitize from './js/sanitize.js';

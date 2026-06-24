@@ -31,6 +31,13 @@ try {
   await page.waitForFunction(() => !!window.__backup && !!window.__backup.component());
   ok('page + __backup hook ready', true);
 
+  // Sign-in chip (consistency with the other suite apps).
+  ok('header shows the alpha sign-in chip', await page.evaluate(() => {
+    const c = document.querySelector('.app-header .login-slot edot-login-button');
+    const badge = document.querySelector('.app-header .login-slot .alpha-badge');
+    return !!c && /alpha/i.test(badge?.textContent || '');
+  }));
+
   // Install a shared in-page mock fetch over an in-memory blob store. Each
   // adapter speaks a different protocol; the mock answers all four.
   await page.evaluate(() => {
