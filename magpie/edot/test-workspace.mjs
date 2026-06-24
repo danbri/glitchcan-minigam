@@ -50,6 +50,21 @@ try {
   const slideCount = await page.evaluate(() => document.querySelector('edot-slides')?.deck?.slides?.length ?? -1);
   ok('the SAME share also reached the slides pane', slideCount >= 2);
 
+  // The Data pane has the geo extension functions (geo-src gazetteer loaded).
+  await page.waitForFunction(() => { const d = document.querySelector('edot-data'); return d && d.geoIndex && d.geoIndex.size > 0; }, null, { timeout: 10000 });
+  const geo = await page.evaluate(() => {
+    const d = document.querySelector('edot-data');
+    const s = document.createElement('edot-sheet');
+    s.geoIndex = d.geoIndex;            // a sheet created in this pane gets the index
+    document.body.appendChild(s);
+    s.setGrid({ rows: [['=QID("London")', '=GEODISTANCE("London","Edinburgh")']] });
+    const out = { qid: s._display(1, 1, true), dist: s._display(1, 2, true) };
+    s.remove();
+    return out;
+  });
+  ok('data pane has geo functions (=QID -> Q84)', geo.qid === 'Q84');
+  ok('data pane =GEODISTANCE computes (~534 km)', geo.dist > 525 && geo.dist < 545);
+
   // The editor exposes its document content like the other components expose theirs.
   const content = await page.evaluate(() => document.querySelector('edot-editor').getContent());
   ok('editor.getContent() returns the inserted document', content.includes('<table'));

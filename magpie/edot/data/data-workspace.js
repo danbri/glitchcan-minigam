@@ -35,7 +35,7 @@ ORDER BY revenue DESC
 LIMIT 12;`;
 
 export class EdotData extends HTMLElement {
-  constructor() { super(); this.engine = new DataEngine(); this.active = null; }
+  constructor() { super(); this.engine = new DataEngine(); this.active = null; this.geoIndex = null; }
 
   async init() {
     await this.engine.init();
@@ -43,7 +43,33 @@ export class EdotData extends HTMLElement {
     this._render();
     this.refresh();
     this.openQuery();
+    const gs = this.getAttribute('geo-src');
+    if (gs) this.enableGeo(gs).catch(() => {});
     return this;
+  }
+
+  // Enable the geo spreadsheet functions (QID/LAT/LON/GEODISTANCE/…) for this
+  // data pane's sheets by loading a gazetteer once (an array of Places or a URL
+  // to an in-repo NDJSON extract) and sharing the index with every sheet.
+  async enableGeo(src) {
+    let places = src;
+    if (typeof src === 'string') {
+      const { parseNdjson } = await import('../places/js/providers/local.js');
+      const res = await fetch(src);
+      if (!res.ok) throw new Error(`gazetteer ${res.status}`);
+      places = parseNdjson(await res.text());
+    }
+    const idx = new Map();
+    for (const p of places || []) {
+      if (p.name) idx.set(String(p.name).toLowerCase(), p);
+      if (p.wikidataId) idx.set(String(p.wikidataId).toUpperCase(), p);
+    }
+    this.geoIndex = idx;
+    for (const sheet of this.querySelectorAll('edot-sheet')) {
+      sheet.geoIndex = idx;
+      if (sheet._built) { sheet.recompute(); sheet._paint?.(); }
+    }
+    return idx.size;
   }
 
   connectedCallback() { if (!this._built) this.init(); }
@@ -200,6 +226,7 @@ export class EdotData extends HTMLElement {
     const sheet = document.createElement('edot-sheet');
     this._main.appendChild(sheet);
     sheet.engine = this.engine;
+    if (this.geoIndex) sheet.geoIndex = this.geoIndex;
     sheet.setGrid({ rows: [data.columns, ...data.rows.map((r) => r.map((v) => (v == null ? '' : v)))] });
     sheet.recompute(); sheet._paint();
     this._activeSheet = sheet;
@@ -249,6 +276,7 @@ export class EdotData extends HTMLElement {
     const sheet = document.createElement('edot-sheet');
     this._main.appendChild(sheet);
     sheet.engine = this.engine;
+    if (this.geoIndex) sheet.geoIndex = this.geoIndex;
     sheet.deserialize(def);
     sheet.recompute(); sheet._paint();
     sheet.addEventListener('change', () => this._saveSheet(name, sheet.serialize()));
