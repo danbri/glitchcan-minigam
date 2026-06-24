@@ -56,6 +56,8 @@
       store: el.store,
       geo: await import('./js/geo.js'),
       basemap: await import('./js/basemap.js'),
+      terrain: await import('./js/terrain.js'),
+      kml: await import('./js/kml.js'),
       config: (await import('./js/maps-config.js')).MAPS_CONFIG,
       glAvailable: el.glAvailable,
     };
