@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>edot automations</title>
+  <link rel="stylesheet" href="../css/edot-tokens.css">
+  <link rel="stylesheet" href="../css/edot-chrome.css">
+  <link rel="stylesheet" href="automations.css">
+  <link rel="stylesheet" href="../auth/css/auth.css">
+  <style>
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    body { display: flex; flex-direction: column; font-family: var(--font-ui); background: var(--bg); color: var(--ink); }
+    main { flex: 1 1 auto; min-height: 0; }
+    edot-automations { height: 100%; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <h1><span class="logo">⚙ edot automations</span></h1>
+    <span class="spacer"></span>
+    <a href="../edot.html">← back to editor</a>
+    <span class="login-slot"><edot-login-button login-href="../auth/login.html"></edot-login-button><span class="alpha-badge" title="Experimental">alpha</span></span>
+  </header>
+  <main><edot-automations></edot-automations></main>
+
+  <script type="module">
+    import '../js/edot-editor.js';      // so 'editor.addData' capability exists if used
+    import '../slides/slides-app.js';   // so 'slides.addData' capability exists if used
+    import './js/automations-app.js';
+    import '../auth/js/login-ui.js';
+  </script>
+</body>
+</html>

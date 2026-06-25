@@ -38,6 +38,7 @@ const SUITES = [
   ['events-layer', 'maps/test-events-layer.mjs'],
   ['auth', 'auth/test-auth.mjs'],
   ['backup', 'backup/test-backup.mjs'],
+  ['automations', 'automations/test-automations.mjs'],
 ];
 
 const filter = process.argv.slice(2);
