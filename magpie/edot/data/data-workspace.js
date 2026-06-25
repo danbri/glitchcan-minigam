@@ -386,7 +386,7 @@ export class EdotData extends HTMLElement {
     // workspace) can route it live into another pane (e.g. Slides) with no
     // serialize. Harmless on the standalone page — nothing subscribes there.
     try { getKernel().bus.publish('data:share', { columns, rows, title }); } catch { /* */ }
-    this._toast(live ? 'Sent to the editor — switch to (or open) the editor tab to see it.' : 'Saved for the editor.');
+    this._toast(live ? 'Sent to the Editor — open the Editor app to see it.' : 'Saved for the Editor.');
   }
 
   _toast(msg) {

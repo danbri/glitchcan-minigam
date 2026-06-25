@@ -39,13 +39,17 @@ export const MAPS_CONFIG = {
       maxzoom: 19,
       attribution: '© OpenStreetMap contributors © CARTO',
     },
-    // A vector style: a full MapLibre style JSON served remotely. Only usable
-    // online; falls back to a raster basemap if it fails to load.
-    vector_demo: {
-      label: 'Vector (demo)',
+    // A vector basemap with REAL building footprints — OpenFreeMap (OpenMapTiles
+    // schema: a `building` source-layer carrying render_height/render_min_height).
+    // Free, keyless, no rate limit. This is what the 3D-buildings toggle extrudes
+    // from; the older demotiles style had only country outlines (no buildings),
+    // which is why buildings never appeared. Online only; falls back to raster.
+    openfreemap: {
+      label: 'Streets (vector · 3D buildings)',
       type: 'vector',
-      styleUrl: 'https://demotiles.maplibre.org/style.json',
-      attribution: '© OpenStreetMap contributors',
+      styleUrl: 'https://tiles.openfreemap.org/styles/liberty',
+      buildings: true,
+      attribution: '© OpenStreetMap contributors · © OpenFreeMap',
     },
   },
   defaultBasemap: 'osm',

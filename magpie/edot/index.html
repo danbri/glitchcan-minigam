@@ -243,7 +243,7 @@
         return {
           File: [
             { label: 'New', accel: 'Ctrl+N', action: () => el.setContent('') },
-            { label: 'Open…', action: async () => { const f = await pickFile(IO.importAccept?.()); if (f) try { el.setContent(await IO.importFile(f)); } catch (e) { alert(e.message); } } },
+            { label: 'Open file… (.docx · .md · .html · .odt · .rtf)', action: async () => { const f = await pickFile(IO.importAccept?.()); if (f) try { el.setContent(await IO.importFile(f)); } catch (e) { alert(e.message); } } },
             { sep: true },
             { label: 'Export', submenu: IO.exportFormats().map((fmt) => ({ label: fmt.label, action: async () => { try { IO.downloadBlob(await IO.exportDocument(el.getContent(), 'document', fmt.ext), `document.${fmt.ext}`); } catch (e) { alert(e.message); } } })) },
           ],
@@ -297,6 +297,28 @@
             { label: 'Load sample database (Chinook)', action: () => el.loadChinook?.() },
             { sep: true }, sw(id),
           ],
+          Help: help,
+        };
+      }
+      if (id === 'slides' && el) {
+        return {
+          File: [
+            { label: 'New deck', action: () => el.newDeckPrompt?.() },
+            { label: 'Open deck…', action: () => el.openLibrary?.() },
+            { label: 'Sample decks…', action: () => el.openSamples?.() },
+            { sep: true },
+            { label: 'Import… (.edeck · .pptx · .odp)', action: () => el._fileInput?.click() },
+            { sep: true },
+            { label: 'Export', submenu: [
+              { label: 'edeck (JSON)', action: () => el.exportJson?.() },
+              { label: 'PowerPoint (.pptx)', action: () => el.exportPptx?.() },
+              { label: 'OpenDocument (.odp)', action: () => el.exportOdp?.() },
+              { label: 'PDF', action: () => el.exportPdf?.() },
+              { label: 'HTML', action: () => el.exportHtml?.() },
+              { label: 'PNG (current slide)', action: () => el.exportPng?.() },
+            ] },
+          ],
+          View: [sw(id)],
           Help: help,
         };
       }

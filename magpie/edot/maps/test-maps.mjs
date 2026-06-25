@@ -198,13 +198,14 @@ try {
     const cfg = window.__maps.config;
     const raster = buildRasterStyle(cfg.basemaps.osm);
     const carto = resolveBasemapStyle(cfg.basemaps.carto_light);
-    const vec = resolveBasemapStyle(cfg.basemaps.vector_demo);
+    const vec = resolveBasemapStyle(cfg.basemaps.openfreemap);
     const subs = expandSubdomains('https://{s}.x/{z}/{x}/{y}.png', ['a', 'b']);
     return {
       rasterOk: raster.version === 8 && raster.layers[0].type === 'raster' && /tile\.openstreetmap/.test(raster.sources.basemap.tiles[0]),
       attribution: raster.sources.basemap.attribution,
       cartoSubdomains: carto.style.sources.basemap.tiles.length, // {s} expanded
       vectorIsUrl: vec.vector === true && typeof vec.style === 'string',
+      hasBuildingsBasemap: Object.values(cfg.basemaps).some((b) => b.buildings),
       subs: subs.length,
     };
   });
@@ -212,6 +213,7 @@ try {
   ok('raster basemap carries attribution', /OpenStreetMap/.test(bm.attribution));
   ok('{s} subdomains expand to multiple tile URLs', bm.cartoSubdomains === 4 && bm.subs === 2);
   ok('vector basemap resolves to a style URL', bm.vectorIsUrl);
+  ok('a building-capable vector basemap is configured (3D buildings have a source)', bm.hasBuildingsBasemap);
 
   // 8. setBasemap updates the select + state (no network needed for the switch).
   ok('setBasemap switches the active basemap + select', await page.evaluate(() => {

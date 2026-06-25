@@ -42,6 +42,9 @@ export class EdotMaps extends HTMLElement {
     this.map = null;            // MapLibre map (null when GL unavailable)
     this.glAvailable = false;
     this.basemap = MAPS_CONFIG.defaultBasemap;
+    // The basemap that actually carries building footprints (for the one-click
+    // 3D-buildings flow). Picked from the config's `buildings: true` flag.
+    this._buildingsBasemapId = Object.keys(MAPS_CONFIG.basemaps).find((id) => MAPS_CONFIG.basemaps[id].buildings) || null;
     this.placesVisible = true;  // saved-places overlay toggle
     this._markers = new Map();  // place id -> maplibregl.Marker
     this._searchMarker = null;  // transient marker for the last search/drop
@@ -122,8 +125,8 @@ export class EdotMaps extends HTMLElement {
     const bld = document.createElement('button');
     bld.type = 'button'; bld.className = 'mbtn mp-bld-toggle';
     bld.setAttribute('aria-pressed', 'false');
-    bld.textContent = '🏙 Buildings';
-    bld.title = 'Toggle 3D buildings (needs a vector basemap with footprints)';
+    bld.textContent = '🏙 3D buildings';
+    bld.title = 'Show 3D buildings — one click switches to the vector basemap and tilts the view';
     bld.addEventListener('click', () => this.toggleBuildings());
     this._bldToggle = bld;
 
@@ -352,9 +355,19 @@ export class EdotMaps extends HTMLElement {
     let style; try { style = this.map.getStyle(); } catch (_) { style = null; }
     const found = detectBuildingSource(style);
     if (!found) {
-      this._showNotice('This basemap has no 3D building data — switch to a vector basemap.');
-      this.buildings3D = false;
-      if (this._bldToggle) this._bldToggle.setAttribute('aria-pressed', 'false');
+      // No footprints in the current basemap. Rather than dead-end the user,
+      // switch to the building-capable vector basemap (and tilt) in one step —
+      // _onMapLoad re-applies buildings once that style loads.
+      if (this._buildingsBasemapId && this._buildingsBasemapId !== this.basemap) {
+        this._showNotice('Switching to the vector basemap to show 3D buildings…');
+        this.buildings3D = true;
+        if (this._bldToggle) this._bldToggle.setAttribute('aria-pressed', 'true');
+        this.setBasemap(this._buildingsBasemapId);
+      } else {
+        this._showNotice('This basemap has no 3D building data.');
+        this.buildings3D = false;
+        if (this._bldToggle) this._bldToggle.setAttribute('aria-pressed', 'false');
+      }
       return;
     }
     const layer = buildBuildingsLayer({
@@ -362,7 +375,11 @@ export class EdotMaps extends HTMLElement {
       color: this.cfg.buildings?.color, opacity: this.cfg.buildings?.opacity,
       minZoom: this.cfg.buildings?.minZoom,
     });
-    if (layer) { try { this.map.addLayer(layer); } catch (e) { /* style mismatch */ } }
+    if (layer) {
+      try { this.map.addLayer(layer); } catch (e) { /* style mismatch */ }
+      // Tilt so the extrusion is actually visible (buildings look flat from straight down).
+      try { if ((this.map.getPitch() || 0) < 20) this.map.easeTo({ pitch: 55, duration: 600 }); } catch (_) { /* */ }
+    }
   }
 
   _removeBuildings() {
