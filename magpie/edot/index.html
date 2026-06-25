@@ -71,6 +71,9 @@
       .rail { width: auto; flex-direction: row; overflow-x: auto; border-right: none; border-top: 1px solid var(--line); order: 2; }
       .bodyrow { flex-direction: column; }
       .stage { order: 1; }
+      /* On a phone the Workspace can only show one pane, so it's redundant with
+         the rail's per-app icons — hide it; the rail is the sole mobile nav. */
+      .rail button[data-nav="workspace"] { display: none; }
       .ws-subtabs { display: flex; }
       .ws-panes { flex-direction: column; }
       .ws-pane { border-right: none; }
@@ -378,8 +381,11 @@
     document.addEventListener('click', (e) => { if (!e.target.closest('.menu') && !e.target.closest('.menubar')) closeMenu(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
 
+    // Desktop opens the side-by-side Workspace; a phone opens a single app (the
+    // Workspace's multi-pane is a wide-screen feature — see the mobile CSS).
+    const mobile = matchMedia('(max-width: 700px)').matches;
     window.addEventListener('hashchange', () => go(location.hash.slice(1)));
-    go(location.hash.slice(1) || 'workspace');
+    go(location.hash.slice(1) || (mobile ? 'editor' : 'workspace'));
   </script>
 </body>
 </html>

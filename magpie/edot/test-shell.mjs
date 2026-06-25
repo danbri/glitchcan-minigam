@@ -68,15 +68,16 @@ try {
   await page.click('.menu .mi:has-text("Calendar")'); await page.waitForTimeout(800);
   ok('View → Open app switches the active app', await page.evaluate(() => location.hash === '#calendar' && !document.querySelector('.view[data-app="calendar"]').hidden));
 
-  // Mobile: the Workspace must show ONE pane at a time (sub-tabs), not three
-  // stacked apps — the cluttered phone layout this fixes.
+  // Mobile: the Workspace (side-by-side, desktop-only) is hidden from the rail so
+  // Data/Slides/Editor aren't duplicated as both sub-tabs AND rail icons; the
+  // phone opens a single app and the rail is the sole navigation.
   const mob = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await mob.goto(`http://127.0.0.1:${port}/magpie/edot/index.html`);
-  await mob.waitForSelector('.ws-subtabs');
-  await mob.waitForTimeout(800);
-  const visible = await mob.$$eval('.ws-pane', (els) => els.filter((e) => e.offsetParent !== null).map((e) => e.dataset.ws));
-  const tabsShown = await mob.$eval('.ws-subtabs', (el) => getComputedStyle(el).display !== 'none');
-  ok('mobile: workspace shows one pane with sub-tabs (not three stacked)', visible.length === 1 && tabsShown);
+  await mob.waitForSelector('.rail button[data-nav="editor"]');
+  await mob.waitForTimeout(1000);
+  const railVisible = await mob.$$eval('.rail button', (els) => els.filter((e) => e.offsetParent !== null).map((e) => e.dataset.nav));
+  ok('mobile: Workspace hidden from the rail (no duplicate Data/Slides/Editor nav)', !railVisible.includes('workspace') && railVisible.includes('editor'));
+  ok('mobile: opens a single app, not the multi-pane Workspace', mob.url().includes('#editor'));
   await mob.close();
 
   ok('no page errors', errs.length === 0);
