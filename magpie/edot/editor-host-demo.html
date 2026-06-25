@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>edot editor — host demo (component-built page)</title>
+  <link rel="stylesheet" href="css/edot-tokens.css">
+  <link rel="stylesheet" href="css/edot-editor.css">
+  <style>
+    body { font-family: var(--font-ui); background: var(--bg); color: var(--ink); margin: 0; padding: 1rem; }
+    h1 { font-size: 1.1rem; margin: 0 0 0.2rem; }
+    p.hint { margin: 0 0 0.8rem; color: var(--muted); font-size: 0.85rem; max-width: 80ch; }
+    .cols { display: flex; gap: 1rem; align-items: stretch; }
+    .col { flex: 1; min-width: 0; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+    .host { display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; padding: 0.4rem 0.5rem; background: var(--surface); border-bottom: 1px solid var(--line); }
+    .host button, .host input, .host select { font: inherit; padding: 0.25em 0.5em; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--ink); cursor: pointer; }
+    .host input[type=text] { cursor: text; }
+    .dirty { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--muted); display: inline-block; }
+    .dirty.on { background: var(--accent); }
+    edot-editor { flex: 1 1 auto; min-height: 52vh; display: flex; flex-direction: column; }
+    #out { display: block; margin-top: 0.8rem; font-size: 0.8rem; color: var(--muted); white-space: pre-wrap; }
+    .note { color: var(--muted); font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <h1>Host-built editor — on &lt;edot-editor&gt;</h1>
+  <p class="hint">Every control below is the HOST's, not the component's — they drive
+    <code>&lt;edot-editor&gt;</code> through its API (<code>exec</code>, <code>setBlock</code>,
+    <code>align</code>, <code>getContent/setContent</code>, the <code>edot-change</code> event,
+    and <code>.core</code> for find/replace). That's the proof the component is enough to rebuild
+    the full edit page. Two instances share one kernel; a data share lands in whichever editor is focused.</p>
+
+  <div class="cols">
+    <div class="col">
+      <div class="host" id="hostA">
+        <input type="text" id="titleA" value="Doc A" aria-label="Title">
+        <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
+        <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
+        <select id="blockA" aria-label="Block format"><option value="p">Body</option><option value="h1">H1</option><option value="h2">H2</option></select>
+        <button type="button" data-align="center">Center</button>
+        <button type="button" id="linkA">Link</button>
+        <button type="button" id="saveA">Save</button>
+        <label><input type="checkbox" id="roA"> read-only</label>
+        <span class="dirty" id="dotA" title="unsaved changes"></span>
+      </div>
+      <edot-editor id="edA" placeholder="Write in A…"></edot-editor>
+    </div>
+    <div class="col">
+      <div class="host">
+        <strong>Editor B</strong>
+        <button type="button" id="shareB">Simulate Data → Editor share</button>
+        <span class="note">(lands in the focused editor)</span>
+      </div>
+      <edot-editor id="edB" placeholder="Write in B…"></edot-editor>
+    </div>
+  </div>
+  <output id="out">No save yet.</output>
+
+  <script type="module">
+    import { getKernel } from './js/edot-kernel.js';
+    import { FindReplace } from './js/find-replace.js';
+    import './js/edot-editor.js';
+
+    const kernel = getKernel();
+    const edA = document.getElementById('edA');
+    const edB = document.getElementById('edB');
+    const out = document.getElementById('out');
+    const dotA = document.getElementById('dotA');
+
+    // Host chrome wired entirely on the component's public API:
+    document.querySelectorAll('#hostA [data-cmd]').forEach((b) => b.addEventListener('click', () => edA.exec(b.dataset.cmd)));
+    document.querySelectorAll('#hostA [data-align]').forEach((b) => b.addEventListener('click', () => edA.align(b.dataset.align)));
+    document.getElementById('blockA').addEventListener('change', (e) => edA.setBlock(e.target.value));
+    document.getElementById('linkA').addEventListener('click', () => edA.createLink());
+    document.getElementById('roA').addEventListener('change', (e) => { edA.readOnly = e.target.checked; });
+    document.getElementById('saveA').addEventListener('click', () => {
+      out.textContent = `Saved “${document.getElementById('titleA').value}” (${edA.stats().words} words):\n` + edA.getContent();
+      edA.markClean(); dotA.classList.remove('on');
+    });
+    edA.addEventListener('edot-change', () => dotA.classList.add('on'));
+
+    // A host-built find/replace, using the component's .core — exactly how the
+    // full page constructs it.
+    const find = new FindReplace(edA.core, edA.announce);
+    window.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'f' && edA.contains(document.activeElement)) { e.preventDefault(); find.open(); } });
+
+    // One kernel: a data share routes to the focused editor (multi-instance).
+    kernel.bus.subscribe('data:share', (p) => kernel.capabilities.invoke('editor.addData', p));
+    document.getElementById('shareB').addEventListener('click', () =>
+      kernel.bus.publish('data:share', { columns: ['city', 'qid'], rows: [['Bristol', 'Q23154']], title: 'Shared table' }));
+
+    window.__hostdemo = { kernel, edA, edB, find };
+  </script>
+</body>
+</html>

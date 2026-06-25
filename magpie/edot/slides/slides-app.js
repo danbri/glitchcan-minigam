@@ -16,6 +16,26 @@ import {
 import { saveDeck, loadDeck, listDecks, deleteDeck } from './slides-store.js';
 import * as fmt from './slides-formats.js';
 import { fingerprint, typeInfo } from '../js/data-object.js';
+import { getKernel } from '../js/edot-kernel.js';
+
+// Multi-instance: one kernel capability `slides.addData`, registered once and
+// routed to the most-recently-focused deck — so several <edot-slides> on a page
+// (e.g. a Slides view and the Workspace view) don't clobber each other's provider.
+const slidesInstances = new Set();
+let activeSlides = null;
+let slidesCapabilityWired = false;
+function wireSlidesCapability() {
+  if (slidesCapabilityWired) return;
+  try {
+    getKernel().capabilities.provide('slides.addData', ({ columns, rows, title } = {}) => {
+      const t = (activeSlides && slidesInstances.has(activeSlides)) ? activeSlides : [...slidesInstances].pop();
+      if (!t || typeof t.addDataSlide !== 'function') return false;
+      t.addDataSlide(columns, rows, title);
+      return true;
+    });
+    slidesCapabilityWired = true;
+  } catch (_) { /* kernel optional */ }
+}
 
 const LAYOUT_LABELS = {
   title: 'Title', 'title-content': 'Title + Content', 'two-column': 'Two-Column',
@@ -36,12 +56,24 @@ export class EdotSlides extends HTMLElement {
   async connectedCallback() {
     if (this._built) return;
     this._built = true;
+    // Multi-instance registry + focus tracking + the shared capability.
+    slidesInstances.add(this);
+    if (!activeSlides) activeSlides = this;
+    this._onFocusIn = () => { activeSlides = this; };
+    this.addEventListener('focusin', this._onFocusIn);
+    wireSlidesCapability();
     // Resume the most recent deck if one exists; else start fresh.
     const list = await listDecks().catch(() => []);
     this.deck = list.length ? await loadDeck(list[0].id) : null;
     if (!this.deck) { this.deck = newDeck(); await saveDeck(this.deck); }
     this.deck = normalizeDeck(this.deck);
     this._render();
+  }
+
+  disconnectedCallback() {
+    if (this._onFocusIn) this.removeEventListener('focusin', this._onFocusIn);
+    slidesInstances.delete(this);
+    if (activeSlides === this) activeSlides = [...slidesInstances].pop() || null;
   }
 
   // ---- persistence (debounced, mirrors data-engine._touch) ----

@@ -42,13 +42,19 @@ const ICONS = {
   removeFormat: { glyph: '⌫×' },
 };
 
+let toolbarSeq = 0;
+
 export class Toolbar {
   constructor(root, editor, announce) {
     this.root = root;
     this.editor = editor;
     this.announce = announce;
+    this._uid = ++toolbarSeq; // unique per instance, for collision-free control ids
     this.controls = [];        // focusable elements, in DOM order
     this.stateButtons = [];    // [{el, cmd}]
+    // The editor element needs a stable id so aria-controls points at THIS
+    // editor (not a global "editor") when several instances coexist.
+    if (this.editor.el && !this.editor.el.id) this.editor.el.id = `edot-editor-${this._uid}`;
     this._build();
     this._wireRovingFocus();
   }
@@ -56,7 +62,7 @@ export class Toolbar {
   _build() {
     this.root.setAttribute('role', 'toolbar');
     this.root.setAttribute('aria-label', 'Text formatting');
-    this.root.setAttribute('aria-controls', 'editor');
+    this.root.setAttribute('aria-controls', this.editor.el && this.editor.el.id ? this.editor.el.id : 'editor');
 
     for (const section of LAYOUT) {
       if (section.type === 'block-select') {
@@ -79,10 +85,11 @@ export class Toolbar {
     wrap.className = 'group';
     const label = document.createElement('label');
     label.className = 'visually-hidden';
-    label.setAttribute('for', 'block-format');
+    const selId = `block-format-${this._uid}`;
+    label.setAttribute('for', selId);
     label.textContent = 'Paragraph style';
     const sel = document.createElement('select');
-    sel.id = 'block-format';
+    sel.id = selId;
     sel.className = 'tbtn';
     for (const f of BLOCK_FORMATS) {
       const opt = document.createElement('option');

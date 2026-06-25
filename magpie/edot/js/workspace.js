@@ -9,7 +9,6 @@ import './edot-editor.js';          // defines <edot-editor>
 import { getKernel } from './edot-kernel.js';
 
 const kernel = getKernel();
-const slidesEl = document.querySelector('edot-slides');
 const toast = document.getElementById('ws-toast');
 
 let toastTimer = null;
@@ -21,24 +20,14 @@ function showToast(msg) {
   toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
 }
 
-// The Slides pane PROVIDES a capability; the Data pane's share INVOKEs it. Because
-// both live in this page, invoke() runs the provider directly (no bus hop).
-kernel.capabilities.provide('slides.addData', ({ columns, rows, title } = {}) => {
-  if (slidesEl && typeof slidesEl.addDataSlide === 'function') {
-    slidesEl.addDataSlide(columns, rows, title);
-    showToast(`Added “${title || 'Data'}” to Slides (${(rows || []).length} rows) — live, no file`);
-    return true;
-  }
-  return false;
-});
-
 // Data publishes its result on the shared bus; fan it out to every pane that can
-// hold a table. Both providers run in-process, so one publish populates Slides
-// AND the Editor live — the kernel's capability registry doing the routing, no
-// file, no second tab. (editor.addData is provided by <edot-editor>.)
+// hold a table. The capabilities are PROVIDED by the components themselves
+// (<edot-slides>, <edot-editor>), each routed to its active instance — so the
+// host just invokes; one publish populates Slides AND the Editor live, in-process.
 kernel.bus.subscribe('data:share', (p) => {
-  kernel.capabilities.invoke('slides.addData', p);
+  const toSlides = kernel.capabilities.invoke('slides.addData', p);
   try { kernel.capabilities.invoke('editor.addData', p); } catch (_) { /* editor pane optional */ }
+  if (toSlides) showToast(`Added “${p.title || 'Data'}” to Slides & Editor (${(p.rows || []).length} rows) — live, no file`);
 });
 
 // Mobile: a tab shows one pane at a time (wide screens show both side by side).

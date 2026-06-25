@@ -56,7 +56,12 @@ const ALIGN_BLOCK = 'p,h1,h2,h3,h4,h5,h6,li,blockquote,pre';
 function selectedBlocks() {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return [];
-  const root = document.querySelector('[contenteditable="true"]');
+  // Target the editor that actually holds the selection — NOT the first
+  // contenteditable on the page — so alignment works with multiple
+  // <edot-editor> instances (the first-match would silently no-op the others).
+  const anchor = sel.getRangeAt(0).startContainer;
+  const anchorEl = anchor.nodeType === Node.ELEMENT_NODE ? anchor : anchor.parentElement;
+  const root = anchorEl && anchorEl.closest('[contenteditable="true"]');
   if (!root) return [];
   const range = sel.getRangeAt(0);
   const blocks = new Set();
