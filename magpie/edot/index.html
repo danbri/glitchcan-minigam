@@ -3,14 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="description" content="edot — one browser office suite: editor, data, slides, calendar, mail and maps in a single shell over one shared kernel.">
+  <meta name="description" content="edot — one browser office suite with a menu-driven shell: editor, data, slides, calendar, mail and maps over one shared kernel.">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#efece6" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#2c2c2c" media="(prefers-color-scheme: dark)">
   <title>edot</title>
-  <!-- Global, collision-free stylesheets: design tokens, the sign-in chip, the
-       place autocomplete (element-scoped), and MapLibre (.maplibregl-* prefixed).
-       Each APP's stylesheet is scoped under its mount at runtime (see scopeCss). -->
   <link rel="stylesheet" href="css/edot-tokens.css">
   <link rel="stylesheet" href="auth/css/auth.css">
   <link rel="stylesheet" href="places/css/place-input.css">
@@ -18,71 +15,81 @@
   <script src="maps/vendor/maplibre-gl.js"></script>
   <style>
     html, body { height: 100%; margin: 0; overflow: hidden; }
-    body {
-      font-family: var(--font-ui); background: var(--bg); color: var(--ink);
-      display: flex; height: 100dvh; height: 100vh; height: 100dvh;
-    }
-    .rail {
-      flex: 0 0 auto; width: 6.4rem; display: flex; flex-direction: column; gap: 0.15rem;
-      background: var(--surface); border-right: 1px solid var(--line);
-      padding: 0.4rem 0.35rem calc(0.4rem + env(safe-area-inset-bottom)); overflow-y: auto;
-    }
-    .brand { font-size: 1.5rem; text-align: center; padding: 0.4rem 0 0.6rem; color: var(--accent); }
-    .nav { display: flex; flex-direction: column; gap: 0.15rem; }
-    .nav button {
-      display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
-      font: inherit; font-size: 0.66rem; color: var(--muted);
-      background: transparent; border: 1px solid transparent; border-radius: var(--radius);
-      padding: 0.45rem 0.2rem; cursor: pointer; text-align: center;
-    }
-    .nav button .ic { font-size: 1.25rem; line-height: 1; }
-    .nav button:hover { background: var(--bg); color: var(--ink); }
-    .nav button[aria-current="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
-    .nav .badge { font-size: 0.5rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; opacity: 0.85; }
-    .spacer { flex: 1; }
-    .rail-login { display: flex; justify-content: center; padding: 0.3rem 0; }
-    .rail .ext { color: var(--focus); text-decoration: none; font-size: 0.6rem; text-align: center; padding: 0.4rem 0; }
+    body { font-family: var(--font-ui); background: var(--bg); color: var(--ink); display: flex; flex-direction: column; height: 100dvh; height: 100vh; height: 100dvh; }
+
+    /* ---- application top bar: brand + menu bar + identity ---- */
+    .topbar { flex: 0 0 auto; display: flex; align-items: stretch; background: var(--surface); border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 0.4rem; padding: 0 0.7rem; font-weight: 600; color: var(--accent); white-space: nowrap; }
+    .brand .dot { font-size: 1.1rem; }
+    .doc-name { font-size: 0.8rem; color: var(--muted); margin-left: 0.2rem; }
+    .menubar { display: flex; align-items: stretch; }
+    .menubar > button { font: inherit; font-size: 0.85rem; background: transparent; border: 0; color: var(--ink); padding: 0 0.7rem; cursor: pointer; }
+    .menubar > button:hover, .menubar > button[aria-expanded="true"] { background: var(--accent); color: var(--accent-fg); }
+    .topbar .spacer { flex: 1; }
+    .topbar .login { display: flex; align-items: center; padding: 0 0.5rem; }
+
+    /* ---- dropdown menus ---- */
+    .menu { position: fixed; z-index: 1000; min-width: 12rem; padding: 0.25rem; background: var(--surface);
+      border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,0.22); }
+    .menu[hidden] { display: none; }
+    .mi { display: flex; align-items: center; gap: 1rem; width: 100%; box-sizing: border-box; font: inherit; font-size: 0.85rem;
+      text-align: left; background: transparent; border: 0; color: var(--ink); padding: 0.35rem 0.6rem; border-radius: calc(var(--radius) - 1px); cursor: pointer; }
+    .mi:hover, .mi[aria-expanded="true"] { background: var(--accent); color: var(--accent-fg); }
+    .mi[disabled] { opacity: 0.4; cursor: default; }
+    .mi .lbl { flex: 1 1 auto; }
+    .mi .accel { font-size: 0.72rem; opacity: 0.7; }
+    .mi .arrow { font-size: 0.7rem; opacity: 0.7; }
+    .mi .check { width: 1em; }
+    .sep { height: 1px; background: var(--line); margin: 0.25rem 0.3rem; }
+
+    /* ---- body: nav rail + stage ---- */
+    .bodyrow { flex: 1 1 auto; min-height: 0; display: flex; }
+    .rail { flex: 0 0 auto; width: 5.4rem; display: flex; flex-direction: column; gap: 0.1rem; background: var(--surface);
+      border-right: 1px solid var(--line); padding: 0.35rem 0.3rem; overflow-y: auto; }
+    .rail button { display: flex; flex-direction: column; align-items: center; gap: 0.1rem; font: inherit; font-size: 0.6rem;
+      color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: var(--radius); padding: 0.4rem 0.15rem; cursor: pointer; }
+    .rail button .ic { font-size: 1.15rem; line-height: 1; }
+    .rail button:hover { background: var(--bg); color: var(--ink); }
+    .rail button[aria-current="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
 
     .stage { flex: 1 1 auto; min-width: 0; position: relative; background: var(--bg); }
-    /* Each app view stacks in the same box; the scoped app CSS styles its inside. */
     .view { position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden; }
     .view[hidden] { display: none; }
     .view > * { flex: 1 1 auto; min-height: 0; }
     .view.row { flex-direction: row; }
     .view.row > * { flex: 1 1 0; min-width: 0; border-right: 1px solid var(--line); }
     .view.row > *:last-child { border-right: none; }
-    .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 0.9rem; }
+    .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
 
-    @media (max-width: 640px) {
-      body { flex-direction: column-reverse; }
-      .rail { width: auto; flex-direction: row; gap: 0.1rem; overflow-x: auto; overflow-y: hidden;
-        border-right: none; border-top: 1px solid var(--line); padding: 0.2rem 0.2rem calc(0.2rem + env(safe-area-inset-bottom)); }
-      .brand, .rail .ext, .spacer { display: none; }
-      .nav { flex-direction: row; }
-      .nav button { min-width: 4rem; }
+    @media (max-width: 700px) {
+      .doc-name { display: none; }
+      .rail { width: auto; flex-direction: row; overflow-x: auto; border-right: none; border-top: 1px solid var(--line); order: 2; }
+      .bodyrow { flex-direction: column; }
+      .stage { order: 1; }
       .view.row { flex-direction: column; }
+      .menubar > button { padding: 0 0.5rem; }
     }
   </style>
 </head>
 <body>
-  <nav class="rail" aria-label="Apps">
-    <div class="brand" title="edot">🟫</div>
-    <div class="nav" id="nav"></div>
+  <header class="topbar">
+    <div class="brand"><span class="dot">🟫</span> edot <span class="doc-name" id="doc-name"></span></div>
+    <nav class="menubar" id="menubar" role="menubar" aria-label="Application"></nav>
     <span class="spacer"></span>
-    <edot-login-button class="rail-login" login-href="auth/login.html"></edot-login-button>
-    <a class="ext" href="https://github.com/danbri/glitchcan-minigam/tree/master/magpie/edot" target="_blank" rel="noopener">source ↗</a>
-  </nav>
-  <main class="stage" id="stage"><div class="loading" id="loading">Loading…</div></main>
+    <span class="login"><edot-login-button login-href="auth/login.html"></edot-login-button></span>
+  </header>
+  <div class="bodyrow">
+    <nav class="rail" id="rail" aria-label="Apps"></nav>
+    <main class="stage" id="stage"><div class="loading" id="loading">Loading…</div></main>
+  </div>
 
   <script type="module">
-    import './auth/js/login-ui.js';                 // shell sign-in chip
-    import { getKernel } from './js/edot-kernel.js'; // one in-process kernel for all apps
+    import './auth/js/login-ui.js';
+    import { getKernel } from './js/edot-kernel.js';
+    import { FindReplace } from './js/find-replace.js';
+    import * as IO from './js/io.js';
 
-    // ---- disciplined CSS scoping ------------------------------------------
-    // Every app stylesheet is rewritten so each rule applies ONLY under the app's
-    // mount ([data-app="id"]) — using the browser's own CSS parser (CSSOM), so no
-    // hand-editing and the standalone pages keep their original unscoped CSS.
-    // html/body/:root map to the mount root; @keyframes/@font-face pass through.
+    // ---- CSS scoping (CSSOM) — each app stylesheet confined to its mount -----
     function scopeSelector(sel, scope) {
       const s = sel.trim();
       if (s === ':root' || s === 'html' || s === 'body' || s === 'html body' || s === 'html, body') return scope;
@@ -91,61 +98,53 @@
       return stripped ? `${scope} ${stripped}` : scope;
     }
     function scopeRule(rule, scope) {
-      if (rule.type === CSSRule.STYLE_RULE) {
-        const sel = rule.selectorText.split(',').map((p) => scopeSelector(p, scope)).join(', ');
-        return `${sel} { ${rule.style.cssText} }`;
-      }
+      if (rule.type === CSSRule.STYLE_RULE) return `${rule.selectorText.split(',').map((p) => scopeSelector(p, scope)).join(', ')} { ${rule.style.cssText} }`;
       if (rule.type === CSSRule.MEDIA_RULE || rule.type === CSSRule.SUPPORTS_RULE) {
         const at = rule.type === CSSRule.MEDIA_RULE ? `@media ${rule.media.mediaText}` : `@supports ${rule.conditionText}`;
         return `${at} { ${[...rule.cssRules].map((r) => scopeRule(r, scope)).join('\n')} }`;
       }
-      return rule.cssText; // keyframes, font-face, page, property…
+      return rule.cssText;
     }
     const _scoped = new Set();
     async function injectScoped(href, scope, key) {
-      if (_scoped.has(key + href)) return;
-      _scoped.add(key + href);
+      if (_scoped.has(key + href)) return; _scoped.add(key + href);
       const css = await (await fetch(href)).text();
       const probe = document.createElement('style'); probe.textContent = css; document.head.appendChild(probe);
-      const out = [...probe.sheet.cssRules].map((r) => scopeRule(r, scope)).join('\n');
-      probe.remove();
-      const style = document.createElement('style'); style.dataset.scope = key; style.textContent = out;
-      document.head.appendChild(style);
+      const out = [...probe.sheet.cssRules].map((r) => scopeRule(r, scope)).join('\n'); probe.remove();
+      const style = document.createElement('style'); style.dataset.scope = key; style.textContent = out; document.head.appendChild(style);
     }
 
-    // ---- app registry ------------------------------------------------------
+    // ---- app registry -------------------------------------------------------
     const kernel = getKernel();
     const APPS = [
-      { id: 'workspace', label: 'Workspace', icon: '🧩', badge: 'live' }, // special 3-pane view
+      { id: 'workspace', label: 'Workspace', icon: '🧩' },
       { id: 'editor',   label: 'Editor',   icon: '✍️', tag: 'edot-editor', css: ['css/edot-editor.css'], load: () => import('./js/edot-editor.js') },
       { id: 'data',     label: 'Data',     icon: '▦',  tag: 'edot-data', attrs: { 'geo-src': 'places/data/geo-demo.ndjson' }, css: ['data/data.css'], load: () => import('./data/data-workspace.js') },
       { id: 'slides',   label: 'Slides',   icon: '▤',  tag: 'edot-slides', css: ['slides/slides.css'], load: () => import('./slides/slides-app.js') },
       { id: 'calendar', label: 'Calendar', icon: '📅', tag: 'edot-calendar', css: ['calendar/css/calendar.css'], load: () => import('./calendar/js/calendar-app.js'), init: (el) => el.init() },
       { id: 'mail',     label: 'Mail',     icon: '✉️', tag: 'edot-mail', css: ['mail/mail.css'], load: () => import('./mail/js/edot-mail.js') },
-      { id: 'maps',     label: 'Maps',     icon: '🗺️', badge: '3D', tag: 'edot-maps', css: ['maps/css/maps.css'], load: () => import('./maps/js/maps-app.js'), init: (el) => el.init() },
+      { id: 'maps',     label: 'Maps',     icon: '🗺️', tag: 'edot-maps', css: ['maps/css/maps.css'], load: () => import('./maps/js/maps-app.js'), init: (el) => el.init() },
       { id: 'backup',   label: 'Backup',   icon: '⤓',  tag: 'edot-backup', css: ['css/edot.css', 'backup/css/backup.css'], load: () => import('./backup/js/backup-ui.js') },
     ];
     const byId = Object.fromEntries(APPS.map((a) => [a.id, a]));
 
-    // Cross-app flow, in-process: a Data result fans out to Slides + Editor (when
-    // they're mounted) over the one shared kernel — no file, no postMessage.
     kernel.bus.subscribe('data:share', (p) => {
       try { kernel.capabilities.invoke('slides.addData', p); } catch (_) {}
       try { kernel.capabilities.invoke('editor.addData', p); } catch (_) {}
     });
 
-    const nav = document.getElementById('nav');
+    const rail = document.getElementById('rail');
     const stage = document.getElementById('stage');
     const loading = document.getElementById('loading');
+    const docName = document.getElementById('doc-name');
     const views = new Map();
 
     for (const a of APPS) {
       const b = document.createElement('button');
-      b.type = 'button'; b.dataset.nav = a.id; // NOT data-app: that's the scope key, which would self-match
-
-      b.innerHTML = `<span class="ic">${a.icon}</span><span>${a.label}</span>` + (a.badge ? `<span class="badge">${a.badge}</span>` : '');
+      b.type = 'button'; b.dataset.nav = a.id; b.title = a.label;
+      b.innerHTML = `<span class="ic">${a.icon}</span><span>${a.label}</span>`;
       b.addEventListener('click', () => go(a.id));
-      nav.appendChild(b);
+      rail.appendChild(b);
     }
 
     async function mountComponent(app, host, scopeKey) {
@@ -157,15 +156,12 @@
       if (app.init) { try { await app.init(el); } catch (e) { console.error(app.id, 'init', e); } }
       return el;
     }
-
     async function ensureView(id) {
       if (views.has(id)) return views.get(id);
       const section = document.createElement('section');
       section.className = 'view'; section.dataset.app = id; section.hidden = true;
-      stage.appendChild(section);
-      views.set(id, section);
+      stage.appendChild(section); views.set(id, section);
       if (id === 'workspace') {
-        // The live combo: Data + Slides + Editor side by side over one kernel.
         section.classList.add('row');
         await mountComponent(byId.data, section, 'data');
         await mountComponent(byId.slides, section, 'slides');
@@ -175,19 +171,166 @@
       }
       return section;
     }
+    // The primary mounted component for an app (for menu actions).
+    function primaryEl(id) {
+      const v = views.get(id); if (!v) return null;
+      const a = byId[id];
+      return a.tag ? v.querySelector(a.tag) : null;
+    }
 
-    let switching = false;
+    let switching = false, pending = null;
     async function go(id) {
       if (!byId[id]) id = 'workspace';
-      if (switching) return;
-      switching = true;
-      loading.hidden = false;
+      // Don't drop a switch requested while another is still mounting — remember
+      // the latest and honour it once free (mounts like SQLite-WASM take a moment).
+      if (switching) { pending = id; return; }
+      switching = true; loading.hidden = false;
       try { await ensureView(id); } finally { loading.hidden = true; switching = false; }
       for (const [vid, v] of views) v.hidden = vid !== id;
-      for (const b of nav.children) b.setAttribute('aria-current', String(b.dataset.nav === id));
+      for (const b of rail.children) b.setAttribute('aria-current', String(b.dataset.nav === id));
       if (location.hash.slice(1) !== id) history.replaceState(null, '', '#' + id);
       document.title = `edot — ${byId[id].label}`;
+      docName.textContent = byId[id].label;
+      renderMenubar(id);
+      if (pending && pending !== id) { const p = pending; pending = null; go(p); }
     }
+
+    // ===================== MENU BAR (File / Edit / View / …) ==================
+    const TOP_ORDER = ['File', 'Edit', 'Insert', 'View', 'Help'];
+    const menubar = document.getElementById('menubar');
+    let openName = null, openEl = null;
+
+    function pickFile(accept) {
+      return new Promise((res) => {
+        const i = document.createElement('input'); i.type = 'file'; if (accept) i.accept = accept;
+        i.addEventListener('change', () => res(i.files[0] || null), { once: true });
+        i.click();
+      });
+    }
+    function editorFind(el) { el._find = el._find || new FindReplace(el.core, el.announce); el._find.open(); }
+    const sw = (appId) => ({ label: 'Open app', submenu: APPS.map((a) => ({ label: a.label, checked: a.id === appId, action: () => go(a.id) })) });
+    const help = [
+      { label: 'About edot', action: () => alert('edot — a browser office suite, composable over one kernel. All client-side, no backend.') },
+      { label: 'Source on GitHub', action: () => window.open('https://github.com/danbri/glitchcan-minigam/tree/master/magpie/edot', '_blank', 'noopener') },
+    ];
+
+    function buildMenus(id, el) {
+      if (id === 'editor' && el) {
+        return {
+          File: [
+            { label: 'New', accel: 'Ctrl+N', action: () => el.setContent('') },
+            { label: 'Open…', action: async () => { const f = await pickFile(IO.importAccept?.()); if (f) try { el.setContent(await IO.importFile(f)); } catch (e) { alert(e.message); } } },
+            { sep: true },
+            { label: 'Export', submenu: IO.exportFormats().map((fmt) => ({ label: fmt.label, action: async () => { try { IO.downloadBlob(await IO.exportDocument(el.getContent(), 'document', fmt.ext), `document.${fmt.ext}`); } catch (e) { alert(e.message); } } })) },
+          ],
+          Edit: [
+            { label: 'Undo', accel: 'Ctrl+Z', action: () => el.exec('undo') },
+            { label: 'Redo', accel: 'Ctrl+Y', action: () => el.exec('redo') },
+            { sep: true },
+            { label: 'Bold', accel: 'Ctrl+B', action: () => el.exec('bold') },
+            { label: 'Italic', accel: 'Ctrl+I', action: () => el.exec('italic') },
+            { label: 'Underline', accel: 'Ctrl+U', action: () => el.exec('underline') },
+            { label: 'Clear formatting', action: () => el.exec('removeFormat') },
+            { sep: true },
+            { label: 'Find & replace…', accel: 'Ctrl+F', action: () => editorFind(el) },
+          ],
+          Insert: [
+            { label: 'Link…', action: () => el.createLink() },
+            { label: 'Bulleted list', action: () => el.exec('bulletList') },
+            { label: 'Numbered list', action: () => el.exec('numberList') },
+            { label: 'Block quote', action: () => el.exec('blockquote') },
+            { label: 'Code block', action: () => el.exec('code') },
+          ],
+          View: [
+            { label: 'Body text', action: () => el.setBlock('p') },
+            { label: 'Heading 1', action: () => el.setBlock('h1') },
+            { label: 'Heading 2', action: () => el.setBlock('h2') },
+            { sep: true },
+            { label: 'Align left', action: () => el.align('left') },
+            { label: 'Align centre', action: () => el.align('center') },
+            { label: 'Align right', action: () => el.align('right') },
+            { sep: true }, sw(id),
+          ],
+          Help: help,
+        };
+      }
+      if (id === 'data' && el) {
+        return {
+          File: [
+            { label: 'Import file… (CSV / SQLite / N-Quads)', action: async () => { const f = await pickFile('.csv,.txt,.zip,.sqlite,.db,.nq,.nquads'); if (f) el.openAnyFile(f); } },
+            { sep: true },
+            { label: 'Export SQLite database', action: () => el.exportDb?.() },
+            { label: 'Export CSVs (zip)', action: () => el.exportCsvsZip?.() },
+            { label: 'Export N-Quads', action: () => el.exportNquads?.() },
+          ],
+          // The data "views" — datasheet (grid), spreadsheet, and the SQL query
+          // workbench — the way Access exposes Datasheet / Form / Design.
+          View: [
+            { label: 'SQL query workbench', action: () => el.openQuery?.() },
+            { label: 'New spreadsheet (formulas)', action: () => el.newSheet?.() },
+            { label: 'New table (datasheet)', action: () => el.newTable?.() },
+            { sep: true },
+            { label: 'Load sample database (Chinook)', action: () => el.loadChinook?.() },
+            { sep: true }, sw(id),
+          ],
+          Help: help,
+        };
+      }
+      // Generic apps: switch + help (their own toolbars provide app actions).
+      return { View: [sw(id)], Help: help };
+    }
+
+    function closeMenu() { document.querySelectorAll('.menu').forEach((m) => m.remove()); openEl = null; if (openName) { const b = menubar.querySelector(`[data-top="${openName}"]`); b?.setAttribute('aria-expanded', 'false'); openName = null; } }
+
+    function renderItems(items, container, parentMenu) {
+      for (const it of items) {
+        if (it.sep) { const s = document.createElement('div'); s.className = 'sep'; container.appendChild(s); continue; }
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'mi';
+        const check = it.checked ? '✓' : '';
+        b.innerHTML = `<span class="check">${check}</span><span class="lbl"></span>` + (it.submenu ? '<span class="arrow">▸</span>' : `<span class="accel">${it.accel || ''}</span>`);
+        b.querySelector('.lbl').textContent = it.label;
+        if (it.disabled) b.disabled = true;
+        if (it.submenu) {
+          b.setAttribute('aria-haspopup', 'true');
+          let fly = null;
+          const openFly = () => { if (fly) return; fly = document.createElement('div'); fly.className = 'menu'; renderItems(it.submenu, fly, parentMenu); document.body.appendChild(fly); const r = b.getBoundingClientRect(); fly.style.left = r.right + 'px'; fly.style.top = r.top + 'px'; b.setAttribute('aria-expanded', 'true'); };
+          const closeFly = () => { if (fly) { fly.remove(); fly = null; } b.setAttribute('aria-expanded', 'false'); };
+          b.addEventListener('mouseenter', openFly);
+          b.addEventListener('click', (e) => { e.stopPropagation(); openFly(); }); // ensure-open (hover may have opened it already)
+        } else if (it.action) {
+          b.addEventListener('click', () => { closeMenu(); try { it.action(); } catch (e) { console.error(e); } });
+        }
+        container.appendChild(b);
+      }
+    }
+
+    function openTop(name, btn) {
+      closeMenu();
+      const menus = buildMenus(currentApp, primaryEl(currentApp));
+      const items = menus[name]; if (!items) return;
+      const menu = document.createElement('div'); menu.className = 'menu'; menu.setAttribute('role', 'menu');
+      renderItems(items, menu, menu);
+      document.body.appendChild(menu);
+      const r = btn.getBoundingClientRect(); menu.style.left = r.left + 'px'; menu.style.top = r.bottom + 'px';
+      openEl = menu; openName = name; btn.setAttribute('aria-expanded', 'true');
+    }
+
+    let currentApp = 'workspace';
+    function renderMenubar(id) {
+      currentApp = id;
+      const menus = buildMenus(id, primaryEl(id));
+      menubar.innerHTML = '';
+      for (const name of TOP_ORDER) {
+        if (!menus[name]) continue;
+        const b = document.createElement('button'); b.type = 'button'; b.dataset.top = name; b.textContent = name;
+        b.setAttribute('aria-haspopup', 'true'); b.setAttribute('aria-expanded', 'false');
+        b.addEventListener('click', (e) => { e.stopPropagation(); openName === name ? closeMenu() : openTop(name, b); });
+        b.addEventListener('mouseenter', () => { if (openName && openName !== name) openTop(name, b); });
+        menubar.appendChild(b);
+      }
+    }
+    document.addEventListener('click', (e) => { if (!e.target.closest('.menu') && !e.target.closest('.menubar')) closeMenu(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
 
     window.addEventListener('hashchange', () => go(location.hash.slice(1)));
     go(location.hash.slice(1) || 'workspace');

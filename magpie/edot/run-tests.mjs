@@ -22,6 +22,7 @@ const SUITES = [
   ['data-object', 'test-data-object.mjs'],
   ['object-index', 'test-object-index.mjs'],
   ['kernel', 'test-kernel.mjs'],
+  ['shell', 'test-shell.mjs'],
   ['workspace', 'test-workspace.mjs'],
   ['places', 'places/test-places.mjs'],
   ['place-input', 'places/test-place-input.mjs'],
