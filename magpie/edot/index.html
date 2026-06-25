@@ -56,9 +56,14 @@
     .view { position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden; }
     .view[hidden] { display: none; }
     .view > * { flex: 1 1 auto; min-height: 0; }
-    .view.row { flex-direction: row; }
-    .view.row > * { flex: 1 1 0; min-width: 0; border-right: 1px solid var(--line); }
-    .view.row > *:last-child { border-right: none; }
+    .wsview { flex-direction: column; }
+    .ws-subtabs { display: none; flex: 0 0 auto; gap: 0.25rem; padding: 0.3rem 0.4rem; background: var(--surface); border-bottom: 1px solid var(--line); }
+    .ws-subtab { font: inherit; font-size: 0.8rem; padding: 0.3em 0.9em; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--ink); cursor: pointer; }
+    .ws-subtab[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+    .ws-panes { flex: 1 1 auto; min-height: 0; display: flex; }
+    .ws-pane { flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--line); overflow: hidden; }
+    .ws-pane:last-child { border-right: none; }
+    .ws-pane > * { flex: 1 1 auto; min-height: 0; }
     .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
 
     @media (max-width: 700px) {
@@ -66,7 +71,10 @@
       .rail { width: auto; flex-direction: row; overflow-x: auto; border-right: none; border-top: 1px solid var(--line); order: 2; }
       .bodyrow { flex-direction: column; }
       .stage { order: 1; }
-      .view.row { flex-direction: column; }
+      .ws-subtabs { display: flex; }
+      .ws-panes { flex-direction: column; }
+      .ws-pane { border-right: none; }
+      .ws-pane:not(.active) { display: none; }
       .menubar > button { padding: 0 0.5rem; }
     }
   </style>
@@ -162,14 +170,30 @@
       section.className = 'view'; section.dataset.app = id; section.hidden = true;
       stage.appendChild(section); views.set(id, section);
       if (id === 'workspace') {
-        section.classList.add('row');
-        await mountComponent(byId.data, section, 'data');
-        await mountComponent(byId.slides, section, 'slides');
-        await mountComponent(byId.editor, section, 'editor');
+        // Data + Slides + Editor over one kernel. Side by side on wide screens;
+        // on a phone, ONE pane at a time via sub-tabs (stacking three apps is the
+        // cluttered mess this avoids).
+        section.classList.add('wsview');
+        const tabs = document.createElement('div'); tabs.className = 'ws-subtabs'; tabs.setAttribute('role', 'tablist');
+        const panes = document.createElement('div'); panes.className = 'ws-panes';
+        section.append(tabs, panes);
+        for (const [key, app, label] of [['data', byId.data, 'Data'], ['slides', byId.slides, 'Slides'], ['editor', byId.editor, 'Editor']]) {
+          const pane = document.createElement('div'); pane.className = 'ws-pane'; pane.dataset.ws = key; pane.dataset.app = key;
+          panes.appendChild(pane);
+          await mountComponent(app, pane, key);
+          const t = document.createElement('button'); t.type = 'button'; t.className = 'ws-subtab'; t.textContent = label; t.dataset.ws = key;
+          t.addEventListener('click', () => setWsPane(section, key));
+          tabs.appendChild(t);
+        }
+        setWsPane(section, 'data');
       } else {
         await mountComponent(byId[id], section, id);
       }
       return section;
+    }
+    function setWsPane(section, key) {
+      section.querySelectorAll('.ws-pane').forEach((p) => p.classList.toggle('active', p.dataset.ws === key));
+      section.querySelectorAll('.ws-subtab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.ws === key)));
     }
     // The primary mounted component for an app (for menu actions).
     function primaryEl(id) {
