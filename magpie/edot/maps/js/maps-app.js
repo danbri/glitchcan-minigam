@@ -107,8 +107,8 @@ export class EdotMaps extends HTMLElement {
     const placesToggle = document.createElement('button');
     placesToggle.type = 'button'; placesToggle.className = 'mbtn mp-overlay-toggle';
     placesToggle.setAttribute('aria-pressed', 'true');
-    placesToggle.textContent = '📍 Places';
-    placesToggle.title = 'Show/hide saved places overlay';
+    placesToggle.textContent = '📍 Pins';
+    placesToggle.title = 'Show or hide your saved-place pins on the map';
     placesToggle.addEventListener('click', () => this.togglePlacesLayer());
     this._placesToggle = placesToggle;
 
@@ -171,6 +171,8 @@ export class EdotMaps extends HTMLElement {
     // Map host.
     const mapHost = document.createElement('div'); mapHost.className = 'mp-map'; this._mapHost = mapHost;
     const notice = document.createElement('div'); notice.className = 'mp-notice'; notice.hidden = true; this._notice = notice;
+    notice.title = 'Tap to dismiss';
+    notice.addEventListener('click', () => { notice.hidden = true; clearTimeout(this._noticeTimer); });
     mapHost.appendChild(notice);
 
     const main = document.createElement('div'); main.className = 'mp-main';
@@ -264,7 +266,14 @@ export class EdotMaps extends HTMLElement {
     void gl;
   }
 
-  _showNotice(msg) { if (this._notice) { this._notice.textContent = msg; this._notice.hidden = false; } }
+  _showNotice(msg, ms = 4000) {
+    if (!this._notice) return;
+    this._notice.textContent = msg;
+    this._notice.hidden = false;
+    clearTimeout(this._noticeTimer);
+    // Auto-dismiss (it's a transient status, not a modal). Also tap-to-dismiss.
+    if (ms) this._noticeTimer = setTimeout(() => { if (this._notice) this._notice.hidden = true; }, ms);
+  }
 
   // ---- basemap / layers ----------------------------------------------------
   setBasemap(id) {

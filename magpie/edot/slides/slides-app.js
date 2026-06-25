@@ -94,6 +94,11 @@ export class EdotSlides extends HTMLElement {
     const root = document.createElement('div');
     root.className = 'sl-app';
     root.append(this._toolbar(), this._rail(), this._editorPanel(), this._inspector());
+    // Scrim behind the slide rail when it's a mobile overlay — tap to close it
+    // (otherwise the rail covers the ☰ and can't be dismissed).
+    const scrim = document.createElement('div'); scrim.className = 'sl-rail-scrim';
+    scrim.addEventListener('click', () => root.classList.remove('rail-open'));
+    root.append(scrim);
     this.append(root);
     this._root = root;
     this._renderRail();
@@ -203,7 +208,7 @@ export class EdotSlides extends HTMLElement {
       item.tabIndex = 0;
       item.setAttribute('role', 'button');
       item.setAttribute('aria-label', `Slide ${i + 1}: ${slideTitle(slide) || 'untitled'}`);
-      const select = () => { this.current = i; this._renderRail(); this._renderEditor(); };
+      const select = () => { this.current = i; this._renderRail(); this._renderEditor(); this._root.classList.remove('rail-open'); };
       item.addEventListener('click', select);
       item.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { select(); e.preventDefault(); } });
 

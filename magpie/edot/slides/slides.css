@@ -81,6 +81,7 @@ edot-slides { display: block; height: 100%; }
 .sl-menu-hr { border: 0; border-top: 1px solid var(--s-line); margin: 0.3rem 0; }
 
 /* ---- slide rail ---- */
+.sl-rail-scrim { display: none; }
 .sl-rail {
   grid-area: rail;
   overflow-y: auto; min-height: 0; padding: 0.4rem;
@@ -181,6 +182,7 @@ edot-slides { display: block; height: 100%; }
     transform: translateX(-100%); transition: transform 0.2s ease; box-shadow: 4px 0 16px rgba(0,0,0,0.2);
   }
   .sl-app.rail-open .sl-rail { transform: translateX(0); }
+  .sl-app.rail-open .sl-rail-scrim { display: block; position: fixed; inset: 0; z-index: 49; background: rgba(0, 0, 0, 0.32); }
 
   /* Phones: the deck and per-slide toolbars become single horizontally-scrollable
      rows instead of wrapping to four rows of chrome, so the slide canvas gets the
