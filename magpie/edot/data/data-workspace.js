@@ -42,7 +42,7 @@ export class EdotData extends HTMLElement {
     this.engine.run(`CREATE TABLE IF NOT EXISTS ${META} (name TEXT PRIMARY KEY, def TEXT)`);
     this._render();
     this.refresh();
-    this.openQuery();
+    this._showWelcome();
     const gs = this.getAttribute('geo-src');
     if (gs) this.enableGeo(gs).catch(() => {});
     return this;
@@ -85,6 +85,7 @@ export class EdotData extends HTMLElement {
     const file = document.createElement('input'); file.type = 'file';
     file.accept = '.csv,.txt,.zip,.sqlite,.db,.nq,.nquads,text/csv,application/zip,application/octet-stream';
     file.style.display = 'none';
+    this._openFileInput = file; // reused by the welcome panel's "Open a file"
     const menu = this._btn('☰', () => root.classList.toggle('side-open')); menu.classList.add('dw-menu-btn'); menu.setAttribute('aria-label', 'Show objects');
     tb.append(
       menu,
@@ -133,6 +134,9 @@ export class EdotData extends HTMLElement {
     this._section('Tables', '▦', tables.map((t) => t.name), (n) => this.openTable(n));
     this._section('Views', '◫', views.map((v) => v.name), (n) => this.openTable(n));
     this._section('Sheets', '▦ƒ', sheets, (n) => this.openSheet(n));
+    // Hide the (empty) objects sidebar until there's something in it, so the
+    // start panel gets the full width — important in the narrow Workspace pane.
+    this._root?.classList.toggle('dw-empty-objects', !tables.length && !views.length && !sheets.length);
   }
 
   _section(title, icon, names, onOpen) {
@@ -282,6 +286,33 @@ export class EdotData extends HTMLElement {
     sheet.addEventListener('change', () => this._saveSheet(name, sheet.serialize()));
     this._activeSheet = sheet;
     this.refresh();
+  }
+
+  // A friendly start panel instead of dropping users into a raw SQL prompt.
+  // SQL is one card here, not the front door.
+  _showWelcome() {
+    this.active = null;
+    this._main.innerHTML = '';
+    const w = document.createElement('div'); w.className = 'dw-welcome';
+    const h = document.createElement('h2'); h.textContent = 'Data';
+    const p = document.createElement('p'); p.textContent = 'Spreadsheets, tables and queries over a database that runs in your browser. Start with:';
+    const grid = document.createElement('div'); grid.className = 'dw-welcome-grid';
+    const card = (icon, title, desc, fn) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'dw-card';
+      const i = document.createElement('span'); i.className = 'dw-card-ic'; i.textContent = icon;
+      const t = document.createElement('span'); t.className = 'dw-card-t'; t.textContent = title;
+      const d = document.createElement('span'); d.className = 'dw-card-d'; d.textContent = desc;
+      b.append(i, t, d); b.addEventListener('click', fn); return b;
+    };
+    grid.append(
+      card('📂', 'Open a file', 'CSV · SQLite · N-Quads', () => this._openFileInput?.click()),
+      card('🎵', 'Sample database', 'Explore the Chinook demo', () => this.loadChinook()),
+      card('▦ƒ', 'New spreadsheet', 'Cells & formulas (incl. geo)', () => this.newSheet()),
+      card('▦', 'New table', 'An editable datasheet', () => this.newTable()),
+      card('▤', 'Write SQL', 'Query workbench (advanced)', () => this.openQuery()),
+    );
+    w.append(h, p, grid);
+    this._main.appendChild(w);
   }
 
   // ---- query view ----

@@ -30,6 +30,13 @@ try {
   await page.waitForFunction(() => { const d = document.querySelector('edot-data'); return d && d.engine && d.engine.db; }, null, { timeout: 20000 });
   ok('engine (sqlite wasm) booted', true);
 
+  // Opens to a friendly start panel (Open file / Sample / New sheet / SQL) —
+  // NOT straight into a raw SQL prompt.
+  ok('opens to the welcome start panel, not SQL', await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('.dw-welcome .dw-card-t')].map((e) => e.textContent);
+    return cards.includes('Open a file') && cards.includes('Write SQL') && !document.querySelector('.q-editor');
+  }));
+
   // Sign-in chip (consistency with the other suite apps).
   ok('header shows the alpha sign-in chip', await page.evaluate(() => {
     const c = document.querySelector('.app-header .login-slot edot-login-button');

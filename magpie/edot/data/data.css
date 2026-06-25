@@ -201,3 +201,26 @@ table.grid input.cell-input {
 }
 .dw-toast.show { opacity: 0.96; }
 @media (prefers-reduced-motion: reduce) { .dw-toast { transition: none; } }
+
+/* Welcome / start panel (the data app's friendly default, replacing SQL-first).
+   A vertical action list so it reads cleanly at ANY width — including the narrow
+   Data pane inside the 3-pane Workspace. */
+.dw-welcome { padding: 1.1rem 1.25rem; max-width: 40rem; overflow-y: auto; }
+.dw-welcome h2 { margin: 0 0 0.15rem; font-size: 1.25rem; color: var(--d-accent); }
+.dw-welcome p { margin: 0 0 1rem; color: var(--d-muted); font-size: 0.9rem; }
+.dw-welcome-grid { display: flex; flex-direction: column; gap: 0.5rem; }
+.dw-card {
+  display: grid; grid-template-columns: auto 1fr; grid-template-areas: "ic t" "ic d";
+  column-gap: 0.7rem; align-items: center; text-align: left;
+  padding: 0.65rem 0.85rem; font: inherit; cursor: pointer;
+  background: var(--d-surface); color: var(--d-ink);
+  border: 1px solid var(--d-line); border-radius: var(--d-radius, 8px);
+  transition: border-color 0.12s, transform 0.12s;
+}
+.dw-card:hover { border-color: var(--d-accent); transform: translateY(-1px); }
+.dw-card:focus-visible { outline: 3px solid var(--d-focus); outline-offset: 2px; }
+.dw-card-ic { grid-area: ic; font-size: 1.5rem; line-height: 1; }
+.dw-card-t { grid-area: t; font-weight: 600; }
+.dw-card-d { grid-area: d; font-size: 0.8rem; color: var(--d-muted); }
+.dw.dw-empty-objects { grid-template-columns: 1fr; }
+.dw.dw-empty-objects .dw-side { display: none; }
