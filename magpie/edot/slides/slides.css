@@ -24,9 +24,9 @@ edot-slides { display: block; height: 100%; }
 
 .sl-app {
   display: grid;
-  grid-template-columns: 11rem 1fr;
+  grid-template-columns: 11rem 1fr auto;
   grid-template-rows: auto 1fr;
-  grid-template-areas: "toolbar toolbar" "rail editor";
+  grid-template-areas: "toolbar toolbar toolbar" "rail editor inspector";
   height: 100%;
   min-height: 0;
   background: var(--s-bg);
@@ -177,6 +177,9 @@ edot-slides { display: block; height: 100%; }
 /* ---- mobile: rail collapses to a drawer ---- */
 @media (max-width: 640px) {
   .sl-app { grid-template-columns: 1fr; grid-template-areas: "toolbar" "editor"; }
+  /* The element inspector becomes a bottom sheet on phones. */
+  .sl-inspector { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; width: auto; max-height: 42vh;
+    border-left: none; border-top: 1px solid var(--s-line); box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2); }
   .sl-rail {
     position: fixed; left: 0; top: 0; bottom: 0; z-index: 50; width: 12rem;
     transform: translateX(-100%); transition: transform 0.2s ease; box-shadow: 4px 0 16px rgba(0,0,0,0.2);
@@ -203,4 +206,31 @@ edot-slides { display: block; height: 100%; }
   .sl-notes { flex: 1 1 auto; min-height: 0; }
   .sl-notes-area { flex: 1 1 auto; min-height: 4rem; resize: none; }
 }
-.sl-inspector { display: none; }
+/* ---- element selection / resize / inspector ---- */
+.sl-inspector {
+  grid-area: inspector; width: 13rem; box-sizing: border-box;
+  border-left: 1px solid var(--s-line); background: var(--s-surface);
+  padding: 0.6rem; overflow-y: auto;
+}
+.sl-ins-h { font-size: 0.85rem; margin: 0 0 0.4rem; color: var(--s-accent); }
+.sl-ins-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--s-muted); margin: 0.6rem 0 0.25rem; }
+.sl-ins-row { display: flex; gap: 0.25rem; flex-wrap: wrap; align-items: center; }
+.sl-ins-pos { font-size: 0.72rem; color: var(--s-muted); margin: 0.6rem 0; }
+.sl-ins-mini { font-size: 0.72rem; color: var(--s-muted); }
+
+.sl-el.selected { outline: 2px solid var(--s-focus, #1a73e8); outline-offset: 0; z-index: 5; }
+.sl-el-image.selected, .sl-el-shape.selected { touch-action: none; cursor: move; }
+.sl-handle {
+  position: absolute; width: 12px; height: 12px; z-index: 6; touch-action: none;
+  background: #fff; border: 2px solid var(--s-focus, #1a73e8); border-radius: 2px;
+}
+.sl-handle-nw { left: -6px; top: -6px; cursor: nwse-resize; }
+.sl-handle-ne { right: -6px; top: -6px; cursor: nesw-resize; }
+.sl-handle-sw { left: -6px; bottom: -6px; cursor: nesw-resize; }
+.sl-handle-se { right: -6px; bottom: -6px; cursor: nwse-resize; }
+.sl-move {
+  position: absolute; left: 50%; top: -1.7rem; transform: translateX(-50%); z-index: 6;
+  width: 1.5rem; height: 1.5rem; border-radius: 50%; touch-action: none; cursor: move;
+  border: 1px solid var(--s-line); background: var(--s-surface); color: var(--s-ink);
+  font-size: 0.8rem; line-height: 1; display: flex; align-items: center; justify-content: center;
+}

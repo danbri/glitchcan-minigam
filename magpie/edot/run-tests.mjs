@@ -31,6 +31,7 @@ const SUITES = [
   ['data', 'data/test-data.mjs'],
   ['slides', 'slides/test-slides.mjs'],
   ['slides (samples)', 'slides/test-samples.mjs'],
+  ['slides (edit)', 'slides/test-slides-edit.mjs'],
   ['mail', 'mail/test-mail.mjs'],
   ['calendar', 'calendar/test-calendar.mjs'],
   ['maps', 'maps/test-maps.mjs'],

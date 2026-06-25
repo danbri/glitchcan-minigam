@@ -290,6 +290,8 @@ export class EdotSlides extends HTMLElement {
     canvas.style.setProperty('--font', th.font);
 
     slide.elements.forEach((el, idx) => canvas.append(this._renderElement(el, idx)));
+    // Click bare canvas to deselect.
+    canvas.addEventListener('pointerdown', (e) => { if (e.target === canvas) this._deselect(); });
     stage.append(canvas);
 
     // Notes.
@@ -313,13 +315,15 @@ export class EdotSlides extends HTMLElement {
     this._imgInput = imgInput;
 
     main.append(bar, stage, notesWrap, imgInput);
+    this._renderInspector();
   }
 
   _renderElement(el, idx) {
     const box = document.createElement('div');
-    box.className = 'sl-el sl-el-' + el.type;
+    box.className = 'sl-el sl-el-' + el.type + (idx === this._activeEl ? ' selected' : '');
     box.style.left = pct(el.x); box.style.top = pct(el.y);
     box.style.width = pct(el.w); box.style.height = pct(el.h);
+    box.dataset.idx = idx;
 
     if (el.type === 'text') {
       const isTitle = el.role === 'title' || el.role === 'section';
@@ -332,22 +336,45 @@ export class EdotSlides extends HTMLElement {
       // Render runs as <div> lines (one per run) so caret + bullet levels map.
       ed.innerHTML = this._runsToHtml(el);
       ed.addEventListener('input', () => this._syncTextFromDom(idx, ed));
-      ed.addEventListener('focus', () => { this._activeEl = idx; });
+      ed.addEventListener('focus', () => this._selectEl(idx));
       box.append(ed);
     } else if (el.type === 'image') {
       const img = document.createElement('img');
       img.className = 'sl-img'; img.src = el.dataUrl; img.alt = el.alt || '';
+      img.draggable = false;
       box.append(img);
-      box.append(this._delHandle(idx));
     } else if (el.type === 'shape') {
       const s = document.createElement('div');
       s.className = 'sl-shape sl-shape-' + el.shape;
       s.style.background = el.shape === 'line' ? 'transparent' : el.fill;
       s.style.borderColor = el.stroke;
       box.append(s);
-      box.append(this._delHandle(idx));
     }
+
+    // Select on press; for non-text elements the body is also a move grip
+    // (text bodies are for editing, so they move via the explicit handle).
+    box.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.sl-handle, .sl-move, .sl-el-del')) return;
+      this._selectEl(idx);
+      if (el.type !== 'text') this._startMove(idx, e, box);
+    });
+
+    if (idx === this._activeEl) this._addElControls(box, el, idx);
     return box;
+  }
+
+  // Selection chrome: a move grip, four corner resize handles, and delete.
+  _addElControls(box, el, idx) {
+    const move = document.createElement('button');
+    move.type = 'button'; move.className = 'sl-move'; move.textContent = '✥'; move.title = 'Move'; move.setAttribute('aria-label', 'Move element');
+    move.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); this._startMove(idx, e, box); });
+    box.append(move);
+    for (const corner of ['nw', 'ne', 'sw', 'se']) {
+      const h = document.createElement('div'); h.className = 'sl-handle sl-handle-' + corner; h.setAttribute('aria-hidden', 'true');
+      h.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); this._startResize(idx, corner, e, box); });
+      box.append(h);
+    }
+    box.append(this._delHandle(idx));
   }
 
   _delHandle(idx) {
@@ -356,6 +383,110 @@ export class EdotSlides extends HTMLElement {
     b.setAttribute('aria-label', 'Delete element');
     b.addEventListener('click', (e) => { e.stopPropagation(); this.deleteElement(idx); });
     return b;
+  }
+
+  // ---- sub-object selection / move / resize / re-layer ----
+  // Select without a full re-render (so text editing keeps its caret); just swap
+  // the selection chrome and refresh the inspector.
+  _selectEl(idx) {
+    if (this._activeEl === idx) { this._renderInspector(); return; }
+    this._clearSelectionChrome();
+    this._activeEl = idx;
+    const box = this._editorEl && this._editorEl.querySelector(`.sl-el[data-idx="${idx}"]`);
+    const el = this.slide && this.slide.elements[idx];
+    if (box && el) { box.classList.add('selected'); this._addElControls(box, el, idx); }
+    this._renderInspector();
+  }
+  _deselect() {
+    if (this._activeEl == null) return;
+    this._clearSelectionChrome();
+    this._activeEl = null;
+    this._renderInspector();
+  }
+  _clearSelectionChrome() {
+    const prev = this._editorEl && this._editorEl.querySelector('.sl-el.selected');
+    if (prev) { prev.classList.remove('selected'); prev.querySelectorAll('.sl-handle, .sl-move, .sl-el-del').forEach((n) => n.remove()); }
+  }
+
+  _startMove(idx, e, box) {
+    const el = this.slide.elements[idx];
+    const rect = box.parentElement.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY, ox = el.x, oy = el.y;
+    try { box.setPointerCapture(e.pointerId); } catch (_) { /* */ }
+    const move = (ev) => {
+      el.x = clamp(ox + (ev.clientX - sx) / rect.width, 0, 1 - el.w);
+      el.y = clamp(oy + (ev.clientY - sy) / rect.height, 0, 1 - el.h);
+      box.style.left = pct(el.x); box.style.top = pct(el.y);
+    };
+    const up = () => {
+      box.removeEventListener('pointermove', move); box.removeEventListener('pointerup', up); box.removeEventListener('pointercancel', up);
+      this._touch(); this._renderRailThumb(this.current); this._renderInspector();
+    };
+    box.addEventListener('pointermove', move); box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
+  }
+
+  _startResize(idx, corner, e, box) {
+    const el = this.slide.elements[idx];
+    const rect = box.parentElement.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY, o = { x: el.x, y: el.y, w: el.w, h: el.h };
+    const west = corner.includes('w'), north = corner.includes('n'); const MIN = 0.04;
+    try { box.setPointerCapture(e.pointerId); } catch (_) { /* */ }
+    const move = (ev) => {
+      const dx = (ev.clientX - sx) / rect.width, dy = (ev.clientY - sy) / rect.height;
+      if (west) { const nx = clamp(o.x + dx, 0, o.x + o.w - MIN); el.x = nx; el.w = o.x + o.w - nx; }
+      else { el.w = clamp(o.w + dx, MIN, 1 - o.x); }
+      if (north) { const ny = clamp(o.y + dy, 0, o.y + o.h - MIN); el.y = ny; el.h = o.y + o.h - ny; }
+      else { el.h = clamp(o.h + dy, MIN, 1 - o.y); }
+      box.style.left = pct(el.x); box.style.top = pct(el.y); box.style.width = pct(el.w); box.style.height = pct(el.h);
+    };
+    const up = () => {
+      box.removeEventListener('pointermove', move); box.removeEventListener('pointerup', up); box.removeEventListener('pointercancel', up);
+      this._touch(); this._renderRailThumb(this.current); this._renderInspector();
+    };
+    box.addEventListener('pointermove', move); box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
+  }
+
+  // z-order is array order (later = on top).
+  _reorder(dir) {
+    const i = this._activeEl, arr = this.slide && this.slide.elements;
+    if (i == null || !arr || !arr[i]) return;
+    let j;
+    if (dir === 'front') j = arr.length - 1;
+    else if (dir === 'back') j = 0;
+    else j = clamp(i + dir, 0, arr.length - 1);
+    if (j === i) return;
+    const [el] = arr.splice(i, 1); arr.splice(j, 0, el);
+    this._activeEl = j;
+    this._touch(); this._renderEditor(); this._renderRailThumb(this.current);
+  }
+
+  _renderInspector() {
+    const ins = this._inspectorEl; if (!ins) return;
+    const i = this._activeEl, el = (i != null && this.slide) ? this.slide.elements[i] : null;
+    ins.innerHTML = '';
+    if (!el) { ins.hidden = true; return; }
+    ins.hidden = false;
+    ins.append(tag('h3', 'sl-ins-h', `${el.type[0].toUpperCase()}${el.type.slice(1)}${el.role ? ' · ' + el.role : ''}`));
+    ins.append(tag('div', 'sl-ins-label', 'Arrange'));
+    const arrange = tag('div', 'sl-ins-row');
+    arrange.append(
+      this._btn('⤒ Front', () => this._reorder('front'), { title: 'Bring to front' }),
+      this._btn('↑', () => this._reorder(+1), { title: 'Bring forward' }),
+      this._btn('↓', () => this._reorder(-1), { title: 'Send backward' }),
+      this._btn('⤓ Back', () => this._reorder('back'), { title: 'Send to back' }),
+    );
+    ins.append(arrange);
+    if (el.type === 'shape') {
+      const colors = tag('div', 'sl-ins-row');
+      const fill = document.createElement('input'); fill.type = 'color'; fill.value = el.fill || '#888888'; fill.title = 'Fill';
+      fill.addEventListener('input', () => { el.fill = fill.value; this._touch(); this._renderEditor(); this._renderRailThumb(this.current); });
+      const stroke = document.createElement('input'); stroke.type = 'color'; stroke.value = el.stroke || '#333333'; stroke.title = 'Stroke';
+      stroke.addEventListener('input', () => { el.stroke = stroke.value; this._touch(); this._renderEditor(); this._renderRailThumb(this.current); });
+      colors.append(tag('span', 'sl-ins-mini', 'Fill'), fill, tag('span', 'sl-ins-mini', 'Stroke'), stroke);
+      ins.append(tag('div', 'sl-ins-label', 'Colour'), colors);
+    }
+    ins.append(tag('div', 'sl-ins-pos', `x ${Math.round(el.x * 100)}% · y ${Math.round(el.y * 100)}% · ${Math.round(el.w * 100)}×${Math.round(el.h * 100)}`));
+    ins.append(this._btn('🗑 Delete element', () => this.deleteElement(i), { title: 'Delete' }));
   }
 
   _runsToHtml(el) {
@@ -438,11 +569,10 @@ export class EdotSlides extends HTMLElement {
   }
 
   _inspector() {
-    // Reserved column for future element inspector; kept minimal for now so the
-    // editor stays the focus (per the brief: prioritise a working editor).
     const el = document.createElement('div');
     el.className = 'sl-inspector';
     el.hidden = true;
+    this._inspectorEl = el;
     return el;
   }
 
@@ -778,6 +908,7 @@ function spacer() { const s = document.createElement('span'); s.className = 'sl-
 function hr() { const h = document.createElement('hr'); h.className = 'sl-menu-hr'; return h; }
 function tag(name, cls, text) { const e = document.createElement(name); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 function pct(v) { return (v * 100).toFixed(3) + '%'; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function escapeHtml(s) { return String(s == null ? '' : s).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])); }
 function fileToDataUrl(file) {
   return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => rej(fr.error); fr.readAsDataURL(file); });
