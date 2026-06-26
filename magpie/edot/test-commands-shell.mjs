@@ -98,6 +98,27 @@ try {
   });
   ok('Automations can run a command by id (command.run capability)', viaKernel.after === viaKernel.before + 1);
 
+  // ---- Data pilot (Phase 2): commands contributed; loadSample runs ----
+  await page.evaluate(() => window.__cmdk.registry.run('nav.data', { app: 'slides' }));
+  await page.waitForFunction(() => location.hash === '#data', null, { timeout: 8000 });
+  await page.waitForFunction(() => { const d = document.querySelector('.view[data-app="data"] edot-data'); return d && d.engine && d.engine.db; }, null, { timeout: 20000 });
+  await page.evaluate(() => document.querySelector('.view[data-app="data"] edot-data').dispatchEvent(new FocusEvent('focusin', { bubbles: true })));
+  const dataCmds = await page.evaluate(() => window.__cmdk.registry.contributions({ app: 'data' }).map((c) => c.id));
+  ok('Data contributes commands when active', dataCmds.includes('data.loadSample') && dataCmds.includes('data.newTable') && dataCmds.includes('data.exportNquads'));
+  await page.evaluate(() => window.__cmdk.registry.run('data.loadSample', { app: 'data' }));
+  await page.waitForFunction(() => { const d = document.querySelector('.view[data-app="data"] edot-data'); try { return d.engine.query("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='Track'").rows[0][0] === 1; } catch { return false; } }, null, { timeout: 15000 });
+  ok('data.loadSample via the registry loads the sample database', true);
+
+  // ---- Calendar pilot (Phase 2): commands contributed; view switch runs ----
+  await page.evaluate(() => window.__cmdk.registry.run('nav.calendar', { app: 'data' }));
+  await page.waitForFunction(() => location.hash === '#calendar', null, { timeout: 8000 });
+  await page.waitForFunction(() => window.__cmdk.registry.contributions({ app: 'calendar' }).some((c) => c.id === 'calendar.viewWeek'), null, { timeout: 10000 });
+  await page.evaluate(() => document.querySelector('.view[data-app="calendar"] edot-calendar').dispatchEvent(new FocusEvent('focusin', { bubbles: true })));
+  const calCmds = await page.evaluate(() => window.__cmdk.registry.contributions({ app: 'calendar' }).map((c) => c.id));
+  ok('Calendar contributes commands when active', calCmds.includes('calendar.newEvent') && calCmds.includes('calendar.browse') && calCmds.includes('calendar.viewWeek'));
+  const cview = await page.evaluate(() => { const c = document.querySelector('.view[data-app="calendar"] edot-calendar'); window.__cmdk.registry.run('calendar.viewWeek', { app: 'calendar' }); return c.view; });
+  ok('calendar.viewWeek via the registry switches the view', cview === 'week');
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs.slice(0, 4));
 } finally {

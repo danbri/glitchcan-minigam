@@ -16,6 +16,31 @@ import { expandRecurrence, describeRRule } from './recurrence.js';
 import { AlarmScheduler, alarmFireTime } from './alarms.js';
 import { renderMonth, renderWeek, renderDay, renderAgenda, MONTHS, startOfDay } from './views.js';
 import { getKernel } from '../../js/edot-kernel.js';
+import { getRegistry } from '../../js/command-registry.js';
+
+// Active-instance tracking + command-registry contributions (Phase 2).
+let activeCalendar = null;
+let calendarCommandsWired = false;
+function registerCalendarCommands() {
+  if (calendarCommandsWired) return;
+  const inCal = (ctx) => ctx && ctx.app === 'calendar' && !!activeCalendar;
+  const setView = (v) => () => activeCalendar.setView(v);
+  try {
+    getRegistry().registerAll([
+      { id: 'calendar.newEvent', title: 'New event', icon: '＋', group: '0event', keywords: 'new event create', appliesTo: 'Event', when: inCal, run: () => activeCalendar.openEventDialog(null, activeCalendar.date) },
+      { id: 'calendar.today', title: 'Go to today', icon: '•', group: '1nav', keywords: 'today now', when: inCal, run: () => { activeCalendar.date = startOfDay(new Date()); activeCalendar._renderMain(); } },
+      { id: 'calendar.viewMonth', title: 'Month view', group: '2view', keywords: 'view month', when: inCal, run: setView('month') },
+      { id: 'calendar.viewWeek', title: 'Week view', group: '2view', keywords: 'view week', when: inCal, run: setView('week') },
+      { id: 'calendar.viewDay', title: 'Day view', group: '2view', keywords: 'view day', when: inCal, run: setView('day') },
+      { id: 'calendar.viewAgenda', title: 'Agenda view', group: '2view', keywords: 'view agenda list', when: inCal, run: setView('agenda') },
+      { id: 'calendar.newCalendar', title: 'New calendar', icon: '📅', group: '3manage', keywords: 'new calendar layer', appliesTo: 'Calendar', when: inCal, run: () => activeCalendar.openCalendarDialog() },
+      { id: 'calendar.browse', title: 'Browse calendars…', icon: '🔎', group: '3manage', keywords: 'browse catalogue subscribe add', when: inCal, run: () => activeCalendar.openBrowseCalendars() },
+      { id: 'calendar.subscribe', title: 'Subscribe (ICS URL)…', group: '3manage', keywords: 'subscribe ics url feed', when: inCal, run: () => activeCalendar.openSubscribeDialog() },
+      { id: 'calendar.import', title: 'Import .ics file…', group: '3manage', keywords: 'import ics file', when: inCal, run: () => activeCalendar._importFilePicker() },
+    ]);
+    calendarCommandsWired = true;
+  } catch (_) { /* registry optional */ }
+}
 
 const PALETTE = ['#8b4513', '#1a73e8', '#188038', '#b5126b', '#7b1fa2', '#e37400', '#0b8043', '#c5221f'];
 const DAYS_ABBR = [['SU', 'S'], ['MO', 'M'], ['TU', 'T'], ['WE', 'W'], ['TH', 'T'], ['FR', 'F'], ['SA', 'S']];
@@ -54,6 +79,10 @@ export class EdotCalendar extends HTMLElement {
     this.events = await this.store.getEvents();
     this._render();
     this._wireAlarms();
+    // Command registry: track the active instance + contribute Calendar's commands.
+    if (!activeCalendar) activeCalendar = this;
+    this.addEventListener('focusin', () => { activeCalendar = this; });
+    registerCalendarCommands();
     return this;
   }
 

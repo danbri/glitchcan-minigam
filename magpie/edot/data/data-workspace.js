@@ -16,6 +16,7 @@ import { zipSync, unzip, utf8 } from '../js/zip.js';
 import { fingerprint } from '../js/data-object.js';
 import { holdLabel, consumedPeek } from '../js/longpress.js';
 import { getKernel } from '../js/edot-kernel.js';
+import { getRegistry } from '../js/command-registry.js';
 import './grid-component.js';
 import './sheet-component.js';
 import './query-component.js';
@@ -37,6 +38,29 @@ GROUP BY ar.ArtistId
 ORDER BY revenue DESC
 LIMIT 12;`;
 
+// Active-instance tracking + command-registry contributions (Phase 2). Commands
+// target the focused <edot-data> and are gated to when the Data app is active.
+let activeData = null;
+let dataCommandsWired = false;
+function registerDataCommands() {
+  if (dataCommandsWired) return;
+  const inData = (ctx) => ctx && ctx.app === 'data' && !!activeData;
+  try {
+    getRegistry().registerAll([
+      { id: 'data.openFile', title: 'Open a file…', icon: '⬆', group: '0file', keywords: 'open import csv sqlite', when: inData, run: () => activeData._openFileInput && activeData._openFileInput.click() },
+      { id: 'data.loadSample', title: 'Load sample database', icon: '🎵', group: '0file', keywords: 'sample chinook demo', when: inData, run: () => activeData.loadChinook() },
+      { id: 'data.newSheet', title: 'New spreadsheet', icon: '▦ƒ', group: '1new', keywords: 'sheet spreadsheet formula', appliesTo: 'Spreadsheet', when: inData, run: () => activeData.newSheet() },
+      { id: 'data.newTable', title: 'New table', icon: '▦', group: '1new', keywords: 'table datasheet', appliesTo: 'Table', when: inData, run: () => activeData.newTable() },
+      { id: 'data.writeSQL', title: 'Write SQL', icon: '▤', group: '1new', keywords: 'sql query workbench', when: inData, run: () => activeData.openQuery() },
+      { id: 'data.newFolder', title: 'New folder', icon: '📁', group: '1new', keywords: 'folder organise group', appliesTo: 'Folder', when: inData, run: () => activeData._newFolder() },
+      { id: 'data.exportSqlite', title: 'Export SQLite', icon: '⬇', group: '3export', keywords: 'export download sqlite database', when: inData, run: () => activeData.exportDb() },
+      { id: 'data.exportCsvs', title: 'Export CSVs (zip)', icon: '⬇', group: '3export', keywords: 'export download csv zip', when: inData, run: () => activeData.exportCsvsZip() },
+      { id: 'data.exportNquads', title: 'Export N-Quads', icon: '⬇', group: '3export', keywords: 'export download rdf nquads', when: inData, run: () => activeData.exportNquads() },
+    ]);
+    dataCommandsWired = true;
+  } catch (_) { /* registry optional */ }
+}
+
 export class EdotData extends HTMLElement {
   constructor() { super(); this.engine = new DataEngine(); this.active = null; this.geoIndex = null; }
 
@@ -51,6 +75,10 @@ export class EdotData extends HTMLElement {
     this._showWelcome();
     // Let other apps (geo, events, feeds) surface data here as a table.
     try { getKernel().capabilities.provide('data.addTable', ({ title, columns, rows } = {}) => this.addTable(title, columns, rows)); } catch (_) { /* kernel optional */ }
+    // Command registry: track the active instance + contribute Data's commands.
+    if (!activeData) activeData = this;
+    this.addEventListener('focusin', () => { activeData = this; });
+    registerDataCommands();
     const gs = this.getAttribute('geo-src');
     if (gs) this.enableGeo(gs).catch(() => {});
     return this;
