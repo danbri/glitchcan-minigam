@@ -178,16 +178,15 @@ table.grid input.cell-input {
   }
   .dw.side-open .dw-side { transform: none; }
   .dw.side-open::after { content: ''; position: fixed; inset: 0; background: rgba(0,0,0,0.38); z-index: 39; }
-  /* Phones: one horizontally-scrollable toolbar row, not three wrapped rows —
-     the workspace below gets the reclaimed height. */
+  /* Phones: wrap the toolbar so every action stays visible. A single
+     horizontally-scrolling row hid +Sheet/+Table/SQL/exports off the right edge
+     with no affordance — core actions must be discoverable, so we trade a little
+     vertical height for full visibility. */
   .dw-toolbar {
     gap: 0.25rem; position: sticky; top: 0; z-index: 5;
-    flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
-    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    flex-wrap: wrap;
   }
-  .dw-toolbar::-webkit-scrollbar { display: none; }
-  .dw-toolbar > * { flex-shrink: 0; }
-  .dw-toolbar .dw-spacer { display: none; }   /* don't reserve scroll-row space */
+  .dw-toolbar .dw-spacer { display: none; }   /* pack actions left, no gap */
   .sheet-bar { flex-wrap: wrap; }
   .sheet-bar input.formula { min-width: 8rem; }
 }

@@ -177,6 +177,11 @@ button, input, select { font: inherit; color: inherit; }
   /* when a message is open, the reader takes the screen */
   .mail-root:has(.reader) .pane-list { display: none; }
   .compose, .help-card { width: 100%; }
+  /* The header actions (logo, compose, help, sign-in) crowded search down to a
+     few pixels. Wrap the header and drop search onto its own full-width row so
+     it stays usable on a phone. */
+  .mail-head { flex-wrap: wrap; }
+  .mail-head .search { order: 10; flex-basis: 100%; min-width: 100%; }
 }
 
 @media (min-width: 52.01rem) { .scrim { display: none !important; } }
