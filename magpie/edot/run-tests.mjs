@@ -45,6 +45,8 @@ const SUITES = [
   ['projects (shell)', 'projects/test-projects-shell.mjs'],
   ['ics', 'feeds/test-ics.mjs'],
   ['feed', 'feeds/test-feed.mjs'],
+  ['xmpp-stanzas', 'groups/test-xmpp-stanzas.mjs'],
+  ['groups', 'groups/test-groups.mjs'],
 ];
 
 const filter = process.argv.slice(2);
