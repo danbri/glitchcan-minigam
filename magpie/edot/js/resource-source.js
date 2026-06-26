@@ -117,6 +117,43 @@ export class OpfsResourceSource {
   }
 }
 
+// Bridge: present a flat blob store (the backup `stores/*` interface —
+// put(key,bytes,cfg) / get(key,cfg) / list(cfg)->[{id,size,modified}] /
+// remove(key,cfg)) as a ResourceSource. This is the unification — every backup
+// backend (github/webdav/s3/solid) becomes a mount usable by Projects, a file
+// dialog, anything — and lands in Connections. Folders are derived from '/' in
+// keys (the store stays flat underneath).
+export function storeResourceSource(store, cfg, { id = store.id, provider = store.id, locality = 'remote', account = null } = {}) {
+  const keyOf = (path) => norm(path).replace(/^\//, '');
+  return {
+    id, provider, account, capability: 'storage', locality,
+    async _keys() { return (await store.list(cfg)).map((it) => ({ key: it.id, size: it.size || 0, mtime: it.modified || 0 })); },
+    async read(path) { return store.get(keyOf(path), cfg); },
+    async write(path, bytes) { await store.put(keyOf(path), bytes, cfg); },
+    async remove(path) { await store.remove(keyOf(path), cfg); },
+    async mkdir() { /* flat store: directories are implicit in keys */ },
+    async stat(path) {
+      const k = keyOf(path); const items = await this._keys(); const f = items.find((i) => i.key === k);
+      return f ? { name: baseName(path), path: norm(path), kind: 'file', size: f.size, mtime: f.mtime, locality } : null;
+    },
+    async list(dirPath, { offset = 0, limit = 100 } = {}) {
+      const dir = norm(dirPath); const prefix = dir === '/' ? '' : dir.replace(/^\//, '') + '/';
+      const items = await this._keys(); const folders = new Set(), files = [];
+      for (const it of items) {
+        if (prefix && !it.key.startsWith(prefix)) continue;
+        const rest = it.key.slice(prefix.length); if (!rest) continue;
+        if (rest.includes('/')) folders.add(rest.split('/')[0]);
+        else files.push({ name: rest, path: norm('/' + prefix + rest), kind: 'file', size: it.size, mtime: it.mtime, locality });
+      }
+      const entries = [
+        ...[...folders].sort().map((name) => ({ name, path: norm('/' + prefix + name), kind: 'folder', locality })),
+        ...files.sort((a, b) => a.name.localeCompare(b.name)),
+      ];
+      return entries.slice(offset, offset + limit);
+    },
+  };
+}
+
 // An Account binds an Identity to a Provider and surfaces the capabilities it
 // offers. capability('storage') returns a ResourceSource; other capabilities
 // (mail/calendar/chat/people/vcs) return the matching service adapter.

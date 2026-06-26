@@ -1,7 +1,7 @@
 // test-resource-source.mjs — the unified storage mount: lazy folder listing,
 // read/write/remove/stat/mkdir, and the Account model (provider → capabilities,
 // OS vs platform, auth requirement). Pure Node.
-import { MemoryResourceSource, makeAccount } from './js/resource-source.js';
+import { MemoryResourceSource, makeAccount, storeResourceSource } from './js/resource-source.js';
 import { providersOffering, PROVIDERS } from './js/ontology.js';
 
 let fail = 0;
@@ -43,6 +43,25 @@ ok('local files are an OS provider with no login (capability-granted)', local.is
 ok('providersOffering(storage) spans local + platforms', ['local-fs', 'opfs', 'github', 's3', 'webdav', 'solid'].every((p) => providersOffering('storage').includes(p)));
 ok('providersOffering(mail) is the mail platforms', providersOffering('mail').sort().join(',') === 'gmail,graph');
 ok('every provider declares kind/auth/offers/locality', Object.values(PROVIDERS).every((p) => p.kind && p.auth && Array.isArray(p.offers) && p.locality));
+
+// The unification: a flat blob store (the backup stores/* interface) presented
+// as a ResourceSource — so every backup backend becomes a mount.
+const blobs = new Map();
+const fakeStore = {
+  id: 'fake', label: 'Fake',
+  async put(k, bytes) { blobs.set(k, bytes); },
+  async get(k) { if (!blobs.has(k)) throw new Error('404'); return blobs.get(k); },
+  async list() { return [...blobs.entries()].map(([id, b]) => ({ id, size: b.length, modified: 0 })); },
+  async remove(k) { blobs.delete(k); },
+};
+const rs = storeResourceSource(fakeStore, { /* cfg */ }, { id: 'work-github', provider: 'github' });
+await rs.write('/edot-backups/2026.enc', enc('cipher'));
+await rs.write('/edot-backups/old/2025.enc', enc('older'));
+ok('a backup store, wrapped, reads back what it wrote', dec(await rs.read('/edot-backups/2026.enc')) === 'cipher');
+ok('the wrapped store derives folders from flat keys', (await rs.list('/edot-backups')).map((e) => `${e.kind}:${e.name}`).sort().join(',') === 'file:2026.enc,folder:old');
+ok('the wrapped store windows its listing', (await rs.list('/edot-backups', { offset: 0, limit: 1 })).length === 1);
+ok('the wrapped store stats + removes', (await rs.stat('/edot-backups/2026.enc')).kind === 'file' && (await rs.remove('/edot-backups/2026.enc'), (await rs.stat('/edot-backups/2026.enc')) === null));
+ok('the wrapped backend is a remote storage mount (provider github)', rs.provider === 'github' && rs.capability === 'storage' && rs.locality === 'remote');
 
 console.log(fail ? `\n${fail} RESOURCE-SOURCE FAILURE(S)` : '\nRESOURCE-SOURCE OK');
 process.exit(fail ? 1 : 0);

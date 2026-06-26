@@ -146,10 +146,22 @@ export class EdotBackup extends HTMLElement {
     } catch (e) { this.status(`Backup failed: ${e.message}`, 'error'); }
   }
 
+  // A configured backend that successfully lists is a working storage mount —
+  // register it in Connections so Projects / a file dialog can use it too.
+  async _registerConnection() {
+    try {
+      const { getConnections } = await import('../../js/connections.js');
+      const { storeResourceSource } = await import('../../js/resource-source.js');
+      getConnections().add({ id: `backup-${this.backend}`, provider: this.backend, label: `Backup · ${this.backend}`,
+        sources: { storage: storeResourceSource(getStore(this.backend), this.storeCfg()) } });
+    } catch (_) { /* connections optional */ }
+  }
+
   async refreshList() {
     const ul = this.$('#bk-list');
     try {
       const items = await getStore(this.backend).list(this.storeCfg());
+      this._registerConnection();
       if (!items.length) { ul.innerHTML = '<li class="bk-empty">No snapshots yet.</li>'; return; }
       ul.innerHTML = items.map((it) => `
         <li class="bk-item">

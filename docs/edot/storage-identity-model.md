@@ -74,10 +74,21 @@ differs is the mount, not the folder.
   device**, writing the project `.zip` into OPFS at `/projects/…` through the
   `device` mount. Persists across reload (tested).
 
-Remaining (incremental, per the approved plan): port `backup`'s four remote
-backends (github/webdav/s3/solid) onto `ResourceSource`; add File System Access
-as the `local-fs` tier; a Connections management UI; route `backup` + a generic
-file open/save dialog through `connections`.
+- **Backup backends unified** — `backup`'s `stores/*` (github/webdav/s3/solid)
+  already shared one `put/get/list/remove` blob interface; `storeResourceSource()`
+  (in `resource-source.js`) bridges any such store to the `ResourceSource`
+  interface (deriving folders from `/` in keys). A configured backend that
+  successfully lists registers itself in Connections (`backup-<id>`), so the same
+  GitHub/WebDAV/S3/Solid storage Projects-or-a-file-dialog can now reach is the
+  backup target — one storage layer, not two.
+
+Remaining (incremental): add **File System Access** as the `local-fs` tier
+(real user-chosen folders); a **Connections management UI**; route a generic file
+open/save dialog through `connections`; wrap the mail/calendar/chat services as
+`Account.capability(name)` so the same Connections surface manages services too.
+(Live round-trips for the remote storage backends need credentials, so they're
+verified at the request-shaping level — the bridge is proven with a fake store;
+real network round-trips are not CI-checked, by the standing headless rule.)
 
 ## Open design choices (for decision before the big build)
 
