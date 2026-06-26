@@ -17,6 +17,7 @@ import { AlarmScheduler, alarmFireTime } from './alarms.js';
 import { renderMonth, renderWeek, renderDay, renderAgenda, MONTHS, startOfDay } from './views.js';
 import { getKernel } from '../../js/edot-kernel.js';
 import { getRegistry } from '../../js/command-registry.js';
+import { getConnections } from '../../js/connections.js';
 
 // Active-instance tracking + command-registry contributions (Phase 2).
 let activeCalendar = null;
@@ -83,6 +84,18 @@ export class EdotCalendar extends HTMLElement {
     if (!activeCalendar) activeCalendar = this;
     this.addEventListener('focusin', () => { activeCalendar = this; });
     registerCalendarCommands();
+    // Register the local calendar as a Connections account (the OS-tier
+    // calendar capability), so the suite can answer "where are my calendars?"
+    // uniformly and other apps (Groups sharing, Maps event layers) can find it.
+    try {
+      const adapter = {
+        kind: 'calendar',
+        calendars: () => this.calendars.slice(),
+        events: () => this.events.slice(),
+        share: (calId) => this._shareCalendar && this._shareCalendar(calId),
+      };
+      getConnections().add({ id: 'calendar:local', provider: 'local-calendar', label: 'My Calendar', sources: { calendar: adapter } });
+    } catch (_) { /* Connections optional */ }
     return this;
   }
 

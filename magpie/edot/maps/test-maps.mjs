@@ -244,6 +244,7 @@ try {
   });
   ok('Maps registers its commands (3d/buildings/pins/directions)', reg.ids.includes('maps.toggle3d') && reg.ids.includes('maps.toggleBuildings') && reg.ids.includes('maps.togglePins') && reg.ids.includes('maps.directions'));
   ok('maps.directions runs through the registry (toggles the panel)', reg.toggled);
+  ok('Maps contributes cross-app sharing commands (group + data table)', reg.ids.includes('maps.shareToGroup') && reg.ids.includes('maps.placesToTable'));
 
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);

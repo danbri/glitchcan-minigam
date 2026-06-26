@@ -30,6 +30,7 @@ import { kmlToGeoJson } from './kml.js';
 import { kmzToKml } from './kmz.js';
 import { xrSupport, enterXr as xrEnter } from './webxr.js';
 import { getRegistry } from '../../js/command-registry.js';
+import { getKernel } from '../../js/edot-kernel.js';
 
 const PLACES_SRC = 'saved-places';
 
@@ -46,6 +47,8 @@ function registerMapsCommands() {
       { id: 'maps.togglePins', title: 'Toggle saved-place pins', icon: '📍', group: '1view', keywords: 'pins places markers overlay', appliesTo: 'Place', when: inMaps, run: () => activeMaps.togglePlacesLayer() },
       { id: 'maps.directions', title: 'Directions', icon: '🛣', group: '2tool', keywords: 'directions route', when: inMaps, run: () => activeMaps.toggleDirections() },
       { id: 'maps.enterXr', title: 'Enter XR (AR/VR)', icon: '🥽', group: '2tool', keywords: 'xr ar vr immersive', when: inMaps, run: () => activeMaps.enterXr() },
+      { id: 'maps.shareToGroup', title: 'Share places to group', icon: '💬', group: '3share', keywords: 'share group chat places mix xmpp', appliesTo: 'Place', when: inMaps, run: () => activeMaps.sharePlacesToGroup() },
+      { id: 'maps.placesToTable', title: 'Open places as data table', icon: '🗃', group: '3share', keywords: 'data table places export', appliesTo: 'Place', when: inMaps, run: () => activeMaps.placesToTable() },
     ]);
     mapsCommandsWired = true;
   } catch (_) { /* registry optional */ }
@@ -321,6 +324,32 @@ export class EdotMaps extends HTMLElement {
         this._xrSession.addEventListener('end', () => { this._xrSession = null; });
       }
     } catch (e) { this._showNotice('Could not start XR: ' + (e.message || e)); }
+  }
+
+  // ---- cross-app sharing (the unified capability graph) --------------------
+  // Share saved places into the active Groups channel (groups.share capability),
+  // mirroring how Calendar shares an .ics. Places ship coordinates + name only.
+  sharePlacesToGroup() {
+    const pts = this.places.map((p) => ({ name: p.name || 'Place', lng: p.lng, lat: p.lat }));
+    if (!pts.length) { this._showNotice('No saved places to share yet.'); return; }
+    try {
+      const shared = getKernel().capabilities.invoke('groups.share', {
+        title: 'Saved places', kind: 'places',
+        body: `📍 Shared ${pts.length} saved place${pts.length === 1 ? '' : 's'}`,
+        payload: { places: pts.slice(0, 100) },
+      });
+      this._showNotice(shared === false ? 'Open a Groups channel first to share.' : `Shared ${pts.length} places to your group.`);
+    } catch (_) { this._showNotice('Groups app is not available.'); }
+  }
+  // Surface saved places as a Data table (data.addTable capability).
+  placesToTable() {
+    if (!this.places.length) { this._showNotice('No saved places to tabulate yet.'); return; }
+    const columns = ['Name', 'Longitude', 'Latitude'];
+    const rows = this.places.map((p) => [p.name || '', p.lng, p.lat]);
+    try {
+      const name = getKernel().capabilities.invoke('data.addTable', { title: 'Saved places', columns, rows });
+      this._showNotice(name ? 'Opened saved places as a data table.' : 'Open the Data app first.');
+    } catch (_) { this._showNotice('Data app is not available.'); }
   }
 
   _showNotice(msg, ms = 4000) {

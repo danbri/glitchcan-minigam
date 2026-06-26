@@ -349,6 +349,18 @@ try {
   });
   await page.waitForTimeout(100);
 
+  // Integration: setting a mail adapter registers it into Connections so the
+  // suite knows "where mail comes from" (discoverable via connections.list).
+  const mailConn = await page.evaluate(async () => {
+    const { getKernel } = await import('../js/edot-kernel.js');
+    const k = getKernel();
+    const mail = k.capabilities.invoke('connections.list', { capability: 'mail' });
+    const adapter = mail.length && k.capabilities.invoke('connections.capability', { id: mail[0].id, capability: 'mail' });
+    return { count: mail.length, hasAdapter: !!(adapter && typeof adapter.listMailboxes === 'function') };
+  });
+  ok('setting a mail adapter registers a mail account in Connections', mailConn.count >= 1);
+  ok('the mail account yields its live adapter as the mail capability', mailConn.hasAdapter);
+
   ok('UI renders the mailbox tree', (await page.$$('edot-mail .folder-tree .tree-row')).length >= 2);
   ok('UI renders the message list', (await page.$$('edot-mail .msg-row')).length === 2);
   ok('UI marks unread messages bold', await page.evaluate(() => document.querySelector('.msg-row').classList.contains('unread')));

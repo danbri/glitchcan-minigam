@@ -188,11 +188,17 @@ export function storeResourceSource(store, cfg, { id = store.id, provider = stor
 // (mail/calendar/chat/people/vcs) return the matching service adapter.
 export function makeAccount({ provider, identity = null, sources = {} } = {}) {
   const meta = PROVIDERS[provider] || { offers: [], auth: 'none', kind: 'platform', locality: 'remote' };
+  // An account offers a capability if the provider DECLARES it (catalogue
+  // metadata) OR a live adapter is WIRED for it (sources). This lets a generic
+  // adapter (a JMAP/IMAP mailbox, a custom backend) offer its capability even
+  // when the provider isn't in the catalogue, while still listing declared-but-
+  // unwired capabilities (e.g. a MIX channel's calendar node before it's built).
+  const offers = [...new Set([...meta.offers, ...Object.keys(sources)])];
   return {
     provider, identity, meta,
-    offers: meta.offers.slice(),
+    offers,
     requiresAuth: meta.auth !== 'none' && meta.auth !== 'grant',
     isLocal: meta.kind === 'os',
-    capability(name) { return meta.offers.includes(name) ? (sources[name] || null) : null; },
+    capability(name) { return offers.includes(name) ? (sources[name] || null) : null; },
   };
 }

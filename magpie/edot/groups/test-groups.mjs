@@ -58,6 +58,28 @@ try {
   await page.waitForFunction(() => !!document.querySelector('edot-groups .gr-share-card'), null, { timeout: 3000 });
   ok('groups.share posts a shared card into the channel', /calendar: UK Bank Holidays/.test(await page.textContent('edot-groups .gr-share-card')));
 
+  // Integration: the MIX connection registers into Connections as a
+  // multi-capability groupware account (chat + people + calendar + storage),
+  // and its live chat/people adapters are reachable over the kernel.
+  const conn = await page.evaluate(async () => {
+    const { getKernel } = await import('../js/edot-kernel.js');
+    const k = getKernel();
+    const list = k.capabilities.invoke('connections.list', {});
+    const xmpp = list.find((a) => a.provider === 'xmpp');
+    const chat = xmpp && k.capabilities.invoke('connections.capability', { id: xmpp.id, capability: 'chat' });
+    return {
+      hasXmpp: !!xmpp,
+      offers: xmpp ? xmpp.offers : [],
+      chatChannels: chat && typeof chat.channels === 'function' ? chat.channels().length : -1,
+      inChatList: k.capabilities.invoke('connections.list', { capability: 'chat' }).some((a) => a.provider === 'xmpp'),
+      inCalendarList: k.capabilities.invoke('connections.list', { capability: 'calendar' }).some((a) => a.provider === 'xmpp'),
+    };
+  });
+  ok('Groups registers an XMPP/MIX account into Connections', conn.hasXmpp);
+  ok('the MIX account is groupware (chat+people+calendar+storage)', ['chat', 'people', 'calendar', 'storage'].every((c) => conn.offers.includes(c)));
+  ok('its live chat adapter exposes the joined channels', conn.chatChannels >= 2);
+  ok('it appears under both the chat and calendar capabilities', conn.inChatList && conn.inCalendarList);
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
 } finally {

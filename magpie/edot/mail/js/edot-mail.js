@@ -23,6 +23,7 @@ import { EdotTree } from '../../js/tree.js';
 import { sanitizeHtml, textToSafeHtml, escapeText } from './sanitize.js';
 import { formatAddress, parseAddress } from './adapters/base.js';
 import { getRegistry } from '../../js/command-registry.js';
+import { getConnections } from '../../js/connections.js';
 
 // Active-instance tracking + command-registry contributions (Phase 2).
 let activeMail = null;
@@ -64,6 +65,18 @@ export class EdotMail extends HTMLElement {
   setAdapter(adapter, { account } = {}) {
     this.adapter = adapter;
     if (account) this.account = account;
+    // Register the live mail backend as a Connections account, so the suite's
+    // one account registry knows "where mail comes from" and other apps can
+    // discover it via connections.list({capability:'mail'}).
+    try {
+      const provider = adapter && /graph|outlook|microsoft/i.test(adapter.id || '') ? 'graph'
+        : adapter && /gmail|google/i.test(adapter.id || '') ? 'gmail' : (adapter && adapter.id) || 'gmail';
+      getConnections().add({
+        id: 'mail:' + (this.account || provider), provider,
+        label: (adapter && adapter.label) || `Mail — ${this.account || provider}`,
+        identity: this.account || null, sources: { mail: adapter },
+      });
+    } catch (_) { /* Connections optional */ }
     return this;
   }
 

@@ -74,6 +74,40 @@ differs is the mount, not the folder.
   device**, writing the project `.zip` into OPFS at `/projects/…` through the
   `device` mount. Persists across reload (tested).
 
+- **Identity axis wired (OIDC → Connections)** — `auth/js/session.js`'s
+  `AuthSession` (the multi-account OIDC/PKCE sign-in store) is the concrete
+  **Identity** axis. `getConnections()` lazily attaches it in a browser
+  (`attachIdentities`), so signed-in identities surface via
+  `connections.identities` / `connections.activeIdentity` over the kernel, and
+  AuthSession's `change` events bridge onto the `connections:changed` bus topic.
+  The Connections manager shows a **"Signed in"** section listing identities with
+  the current user marked. Identities *back* platform accounts (an identity at a
+  provider); they are not themselves capability-bearing, so they're modelled
+  distinctly. Guarded/lazy: the pure-Node tests never attach a session and
+  `identities()` returns `[]`.
+
+- **Services register as Accounts** — apps now register their live backend into
+  Connections so the one registry answers "where's my mail / chat / calendar?":
+  - **Mail** (`setAdapter`) → a `mail:<account>` account (provider gmail/graph)
+    whose `mail` capability is the live `MailAdapter`.
+  - **Groups** (on connect/demo) → an `xmpp` account that is **groupware, not just
+    chat**: it offers `chat + people + calendar + storage` (a MIX channel's pubsub
+    nodes — "the future of MUCs"). Live `chat`/`people` adapters are wired;
+    `calendar`/`storage` are declared-but-unwired until their nodes exist
+    (`capabilityFor` returns `null`, honestly).
+  - **Calendar** (on init) → a local `local-calendar` account (OS-tier `calendar`
+    capability) exposing the live calendar/events adapter.
+  An account now **offers a capability if the provider declares it OR a live
+  adapter is wired for it** (`makeAccount` unions `PROVIDERS[p].offers` with the
+  `sources` keys) — so a generic JMAP/IMAP/custom adapter offers its capability
+  even when the provider isn't in the catalogue.
+
+- **Cross-app sharing graph completed** — Maps and Slides join the same unified
+  share graph Calendar uses: **Maps** contributes *Share places to group*
+  (`groups.share`) and *Open places as data table* (`data.addTable`); **Slides**
+  contributes *Share deck to group*. Every app that produces shareable content now
+  reaches Groups and Data through kernel capabilities, not bespoke wiring.
+
 - **Backup backends unified** — `backup`'s `stores/*` (github/webdav/s3/solid)
   already shared one `put/get/list/remove` blob interface; `storeResourceSource()`
   (in `resource-source.js`) bridges any such store to the `ResourceSource`
@@ -82,13 +116,20 @@ differs is the mount, not the folder.
   GitHub/WebDAV/S3/Solid storage Projects-or-a-file-dialog can now reach is the
   backup target — one storage layer, not two.
 
-Remaining (incremental): add **File System Access** as the `local-fs` tier
-(real user-chosen folders); a **Connections management UI**; route a generic file
-open/save dialog through `connections`; wrap the mail/calendar/chat services as
-`Account.capability(name)` so the same Connections surface manages services too.
-(Live round-trips for the remote storage backends need credentials, so they're
-verified at the request-shaping level — the bridge is proven with a fake store;
-real network round-trips are not CI-checked, by the standing headless rule.)
+Done since: **File System Access** `local-fs` tier (real user-chosen folders);
+the **Connections management UI** (`connections/`, now also showing signed-in
+identities); the **mail/calendar/chat services wrapped as `Account.capability(name)`**
+so the one Connections surface manages GitHub-as-storage, Gmail-as-mail and
+XMPP-as-groupware uniformly; and the **OIDC identity axis** feeding Connections.
+
+Remaining (incremental): route a generic file open/save dialog through
+`connections` (the Files app is the browser; a modal picker is the next step);
+implement the MIX `calendar`/`storage` pubsub nodes so the Groups account's
+declared capabilities become live adapters. (Live round-trips for the remote
+storage backends and live XMPP federation need credentials/a server, so they're
+verified at the request-shaping/crypto level — the store bridge is proven with a
+fake store, SCRAM against the RFC 5802 vector; real network round-trips are not
+CI-checked, by the standing headless rule.)
 
 ## Open design choices (for decision before the big build)
 

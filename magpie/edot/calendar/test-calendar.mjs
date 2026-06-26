@@ -37,6 +37,18 @@ try {
   await page.waitForFunction(() => window.__cal && window.__cal.app && window.__cal.app._built, null, { timeout: 20000 });
   ok('calendar app booted with a default layer', await page.evaluate(() => window.__cal.app.calendars.length >= 1));
 
+  // Integration: the local calendar registers into Connections as the OS-tier
+  // calendar capability, so the suite can discover "my calendars" uniformly.
+  const calConn = await page.evaluate(async () => {
+    const { getKernel } = await import('../js/edot-kernel.js');
+    const k = getKernel();
+    const cal = k.capabilities.invoke('connections.list', { capability: 'calendar' }).find((a) => a.provider === 'local-calendar');
+    const adapter = cal && k.capabilities.invoke('connections.capability', { id: cal.id, capability: 'calendar' });
+    return { present: !!cal, isLocal: cal && cal.isLocal, hasAdapter: !!(adapter && typeof adapter.calendars === 'function') };
+  });
+  ok('Calendar registers a local calendar account into Connections', calConn.present && calConn.isLocal);
+  ok('the calendar account exposes a live calendar adapter', calConn.hasAdapter);
+
   // 1. ICS parse -> serialize round-trip of a VEVENT incl. an alarm.
   const rt = await page.evaluate(() => {
     const { parseICS, serializeICS, parseRRule } = window.__cal.ics;

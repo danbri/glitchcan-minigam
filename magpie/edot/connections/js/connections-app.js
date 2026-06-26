@@ -52,11 +52,17 @@ class EdotConnections extends HTMLElement {
   _accounts() {
     try { const r = this.kernel.capabilities.invoke('connections.list', {}); return Array.isArray(r) ? r : []; } catch (_) { return []; }
   }
+  // The Identity axis: signed-in OIDC identities (from AuthSession via Connections).
+  _identities() {
+    try { const r = this.kernel.capabilities.invoke('connections.identities', {}); return Array.isArray(r) ? r : []; } catch (_) { return []; }
+  }
 
   refresh() {
     const accts = this._accounts();
+    const idents = this._identities();
     const list = this.querySelector('.cx-list'); if (!list) return;
     list.innerHTML = '';
+    if (idents.length) list.appendChild(this._identitySection(idents));
     const local = accts.filter((a) => a.isLocal);
     const remote = accts.filter((a) => !a.isLocal);
     if (local.length) list.appendChild(this._section('On this device', local));
@@ -65,7 +71,30 @@ class EdotConnections extends HTMLElement {
       const e = document.createElement('li'); e.className = 'cx-empty'; e.textContent = 'No connections yet.';
       list.appendChild(e);
     }
-    this._setStatus(`${accts.length} connection${accts.length === 1 ? '' : 's'} — ${local.length} on this device, ${remote.length} platform${remote.length === 1 ? '' : 's'}.`);
+    const who = idents.length ? ` — signed in as ${idents.find((i) => i.active)?.name || idents[0].name}` : '';
+    this._setStatus(`${accts.length} connection${accts.length === 1 ? '' : 's'} — ${local.length} on this device, ${remote.length} platform${remote.length === 1 ? '' : 's'}${who}.`);
+  }
+
+  // Who is signed in (OIDC). These identities BACK platform accounts; they are
+  // shown distinctly because an identity is not itself a capability provider.
+  _identitySection(idents) {
+    const li = document.createElement('li'); li.className = 'cx-group cx-group-identity'; li.setAttribute('role', 'presentation');
+    const h = document.createElement('h2'); h.className = 'cx-group-h'; h.textContent = 'Signed in';
+    const ul = document.createElement('ul'); ul.className = 'cx-group-list'; ul.setAttribute('role', 'list'); ul.setAttribute('aria-label', 'Signed-in identities');
+    for (const id of idents) {
+      const row = document.createElement('li'); row.className = 'cx-identity' + (id.active ? ' cx-identity-active' : ''); row.setAttribute('role', 'listitem');
+      const pic = id.picture ? `<img class="cx-id-pic" src="${esc(id.picture)}" alt="" width="28" height="28">` : '<span class="cx-id-pic cx-id-pic-ph" aria-hidden="true">👤</span>';
+      row.innerHTML = `
+        ${pic}
+        <span class="cx-id-main">
+          <span class="cx-id-name">${esc(id.name || id.sub)}</span>
+          <span class="cx-id-meta">${esc(id.email || id.sub || '')}${id.providerName ? ' · ' + esc(id.providerName) : ''}</span>
+        </span>
+        ${id.active ? '<span class="cx-badge cx-badge-local">CURRENT</span>' : ''}`;
+      ul.appendChild(row);
+    }
+    li.appendChild(h); li.appendChild(ul);
+    return li;
   }
 
   _section(title, accts) {

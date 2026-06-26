@@ -120,6 +120,39 @@ try {
   ok('new platform account shows a PLATFORM badge', work && work.remoteBadge);
   ok('new platform account shows "sign-in needed"', work && work.authNeeded);
 
+  // 5) The Identity axis: attaching signed-in OIDC identities surfaces a
+  //    "Signed in" section listing them, with the active one marked CURRENT.
+  await page.evaluate(async (b) => {
+    const { getConnections } = await import(`${b}/js/connections.js`);
+    const conn = getConnections();
+    const accts = [
+      { key: 'google:111', sub: '111', provider: 'google', providerName: 'Google', name: 'Ada Lovelace', email: 'ada@example.com', picture: null },
+    ];
+    conn.attachIdentities({
+      activeSub: 'google:111',
+      list: () => accts.slice(),
+      active: () => accts[0],
+      addEventListener() {},
+    });
+    // attachIdentities publishes 'connections:changed' → refresh().
+  }, base);
+  await page.waitForSelector('edot-connections .cx-group-identity .cx-identity', { timeout: 4000 });
+  const ident = await page.evaluate(() => {
+    const sec = document.querySelector('edot-connections .cx-group-identity');
+    const row = sec?.querySelector('.cx-identity');
+    return {
+      heading: sec?.querySelector('.cx-group-h')?.textContent || '',
+      name: row?.querySelector('.cx-id-name')?.textContent || '',
+      meta: row?.querySelector('.cx-id-meta')?.textContent || '',
+      active: !!row?.classList.contains('cx-identity-active'),
+      currentBadge: !!row?.querySelector('.cx-badge'),
+    };
+  });
+  ok('signed-in identities render under a "Signed in" heading', /signed in/i.test(ident.heading));
+  ok('the identity shows its name', /ada lovelace/i.test(ident.name));
+  ok('the identity shows email + provider', /ada@example\.com/i.test(ident.meta) && /google/i.test(ident.meta));
+  ok('the active identity is marked CURRENT', ident.active && ident.currentBadge);
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs.slice(0, 4));
 } finally {

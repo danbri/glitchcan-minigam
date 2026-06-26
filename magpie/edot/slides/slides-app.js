@@ -52,6 +52,7 @@ function registerSlidesCommands() {
     getRegistry().registerAll([
       { id: 'slides.addSlide', title: 'Add slide', icon: '＋', group: '1slide', keywords: 'new slide', appliesTo: 'SlideDeck', when: inSlides, run: () => activeSlides.addSlide() },
       { id: 'slides.present', title: 'Present', icon: '▶', group: '1slide', keywords: 'present play fullscreen', appliesTo: 'SlideDeck', when: inSlides, run: () => activeSlides.startPresent() },
+      { id: 'slides.shareToGroup', title: 'Share deck to group', icon: '💬', group: '1slide', keywords: 'share group chat deck mix xmpp', appliesTo: 'SlideDeck', when: inSlides, run: () => activeSlides.shareDeckToGroup() },
       { id: 'slides.insertRect', title: 'Insert rectangle', icon: '▭', group: '2insert', keywords: 'shape rectangle', appliesTo: 'Slide', when: inSlides, run: () => activeSlides.insertShape('rect') },
       { id: 'slides.insertEllipse', title: 'Insert ellipse', icon: '◯', group: '2insert', keywords: 'shape ellipse circle', appliesTo: 'Slide', when: inSlides, run: () => activeSlides.insertShape('ellipse') },
       { id: 'slides.insertImage', title: 'Insert image', icon: '🖼', group: '2insert', keywords: 'image picture photo svg', appliesTo: 'Slide', when: inSlides, run: () => activeSlides._imgInput && activeSlides._imgInput.click() },
@@ -1006,6 +1007,22 @@ export class EdotSlides extends HTMLElement {
   _alert(msg) {
     const t = document.createElement('div'); t.className = 'sl-toast'; t.textContent = msg; t.setAttribute('role', 'status');
     document.body.append(t); setTimeout(() => t.remove(), 4000);
+  }
+
+  // Cross-app sharing: post the current deck (title + slide outline) into the
+  // active Groups channel via the groups.share capability — the same unified
+  // sharing graph Calendar, Maps and the rest use.
+  shareDeckToGroup() {
+    if (!this.deck || !this.deck.slides.length) { this._alert('Nothing to share yet.'); return; }
+    const outline = this.deck.slides.map((s, i) => (s.title || s.elements?.find((e) => e.type === 'text')?.text || `Slide ${i + 1}`));
+    try {
+      const shared = getKernel().capabilities.invoke('groups.share', {
+        title: this.deck.title || 'Deck', kind: 'slides',
+        body: `🖼 Shared deck “${this.deck.title || 'Untitled'}” (${this.deck.slides.length} slides)`,
+        payload: { title: this.deck.title, slides: outline.slice(0, 100) },
+      });
+      this._alert(shared === false ? 'Open a Groups channel first to share.' : 'Shared deck to your group.');
+    } catch (_) { this._alert('Groups app is not available.'); }
   }
 }
 

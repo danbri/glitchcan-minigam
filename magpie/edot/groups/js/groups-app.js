@@ -5,6 +5,7 @@
 // via the `groups.share` capability (used by Calendar to share .ics calendars).
 import { getKernel } from '../../js/edot-kernel.js';
 import { getRegistry } from '../../js/command-registry.js';
+import { getConnections } from '../../js/connections.js';
 import { LoopbackTransport, WebSocketTransport } from './transport.js';
 import { joinChannel, leaveChannel, groupMessage, NS } from './xmpp-stanzas.js';
 
@@ -50,6 +51,7 @@ class EdotGroups extends HTMLElement {
     this._setStatus('Demo mode — messages stay on this device. Connect a server in Settings.');
     for (const c of ['general@groups.edot.local', 'random@groups.edot.local']) this.joinChannel(c);
     this.selectChannel('general@groups.edot.local');
+    this._registerConnection({ label: 'MIX — demo (this device)', locality: 'local' });
   }
 
   // ---- protocol ----
@@ -75,6 +77,33 @@ class EdotGroups extends HTMLElement {
     const payloadXml = payload ? `<edot-share xmlns='urn:edot:share' kind='${esc(kind || '')}' title='${esc(title || '')}'>${esc(JSON.stringify(payload))}</edot-share>` : '';
     this.sendMessage(summary, payloadXml);
     return true;
+  }
+
+  // Register this XMPP/MIX connection as an Account in Connections. A MIX channel
+  // is groupware, not just chat: its pubsub nodes carry messages (chat),
+  // participants (people), shared events (calendar) and arbitrary data
+  // (storage) — "the future of MUCs". We surface live adapters for the nodes we
+  // actually serve (chat + people); calendar/storage stay declared-but-unwired
+  // until their nodes are implemented (capabilityFor returns null, honestly).
+  _registerConnection({ label, locality } = {}) {
+    try {
+      const chat = {
+        kind: 'chat',
+        channels: () => [...this.channels.keys()].map((jid) => ({ jid, name: shortJid(jid) })),
+        active: () => this.active,
+        send: (channel, body) => { if (channel) this.selectChannel(channel); return this.sendMessage(body); },
+        share: (p) => this.shareIntoActive(p),
+      };
+      const people = {
+        kind: 'people',
+        participants: (channel) => { const ch = this.channels.get(channel || this.active); return ch ? [...ch.participants] : []; },
+      };
+      getConnections().add({
+        id: 'groups:' + shortJid(this.jid), provider: 'xmpp',
+        label: label || `MIX — ${shortJid(this.jid)}`,
+        identity: this.jid, sources: { chat, people },
+      });
+    } catch (_) { /* Connections optional */ }
   }
 
   _onStanza(xml) {
@@ -228,6 +257,7 @@ class EdotGroups extends HTMLElement {
         this._unsub = this.transport.onStanza((xml) => this._onStanza(xml));
         await this.transport.connect();
         this._setStatus(`Connected to ${url} (handshake experimental).`);
+        this._registerConnection({ label: `MIX — ${jid}`, locality: 'remote' });
         p.hidden = true;
       } catch (e) { this._setStatus(`Could not connect: ${e.message}`); }
     });

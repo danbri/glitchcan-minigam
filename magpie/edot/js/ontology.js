@@ -80,6 +80,7 @@ export const CAPABILITIES = ['storage', 'mail', 'calendar', 'chat', 'people', 'v
 export const PROVIDERS = {
   'local-fs': { label: 'This device', kind: 'os', auth: 'grant', offers: ['storage'], locality: 'local' },
   opfs: { label: 'App private storage', kind: 'os', auth: 'none', offers: ['storage'], locality: 'local' },
+  'local-calendar': { label: 'On this device', kind: 'os', auth: 'none', offers: ['calendar'], locality: 'local' },
   github: { label: 'GitHub', kind: 'platform', auth: 'oauth', offers: ['storage', 'vcs'], locality: 'remote' },
   s3: { label: 'S3-compatible', kind: 'platform', auth: 'keys', offers: ['storage'], locality: 'remote' },
   webdav: { label: 'WebDAV', kind: 'platform', auth: 'password', offers: ['storage'], locality: 'remote' },
@@ -87,7 +88,11 @@ export const PROVIDERS = {
   gmail: { label: 'Gmail', kind: 'platform', auth: 'oauth', offers: ['mail'], locality: 'remote' },
   graph: { label: 'Microsoft 365', kind: 'platform', auth: 'oauth', offers: ['mail', 'calendar', 'people'], locality: 'remote' },
   caldav: { label: 'CalDAV', kind: 'platform', auth: 'password', offers: ['calendar'], locality: 'remote' },
-  xmpp: { label: 'XMPP', kind: 'platform', auth: 'password', offers: ['chat'], locality: 'remote' },
+  // XMPP/MIX is a groupware PLATFORM, not just chat: a MIX channel carries many
+  // pubsub nodes (messages, participants, info, and arbitrary data), so an account
+  // offers chat + people (roster/participants) + calendar (shared events) +
+  // storage (pubsub nodes / shared files). The "future of MUCs".
+  xmpp: { label: 'XMPP / MIX', kind: 'platform', auth: 'password', offers: ['chat', 'people', 'calendar', 'storage'], locality: 'remote' },
 };
 
 // Providers offering a given capability (e.g. all the places you could save a file).
