@@ -1,12 +1,20 @@
-// sw.js — offline robustness for the edot suite (scope: this directory).
+// sw.js — offline robustness + caching for the edot suite (scope: this directory).
 //
-// Strategy: network-first with a cache fallback, plus runtime caching of every
-// successful same-origin GET. Online users always get fresh files; on a flaky or
-// absent network the last-seen version is served, and navigations fall back to
-// the app shell. No staleness when online, real resilience when not.
+// Two strategies, by asset kind:
+//   • IMMUTABLE heavy assets (vendored libs, *.wasm, third_party) → CACHE-FIRST:
+//     served instantly from cache on repeat loads with no network round-trip,
+//     fetched + cached on first miss. These rarely change, so the round-trip is
+//     pure waste — this is the perf win.
+//   • Everything else (app code, content) → NETWORK-FIRST with cache fallback:
+//     fresh when online, resilient when offline; navigations fall back to the
+//     app shell.
+// Runtime-caches every successful same-origin GET either way.
 
-const CACHE = 'edot-v1';
+const CACHE = 'edot-v2';
 const CORE = ['./', './index.html', './css/edot-tokens.css'];
+
+// Big, content-stable assets where a network round-trip on every load is waste.
+const IMMUTABLE = /\.wasm$|\/vendor\/|\/third_party\/|ink-full|sql-wasm|three\.module/i;
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).catch(() => {}).then(() => self.skipWaiting()));
@@ -27,6 +35,18 @@ self.addEventListener('fetch', (e) => {
   try { url = new URL(req.url); } catch (_) { return; }
   if (url.origin !== self.location.origin) return; // leave cross-origin (tiles, APIs) to the network
 
+  // Cache-first for immutable heavy assets: instant on repeat, fetch+cache on miss.
+  if (IMMUTABLE.test(url.pathname)) {
+    e.respondWith(
+      caches.match(req).then((cached) => cached || fetch(req).then((res) => {
+        if (res && res.ok && res.type === 'basic') { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); }
+        return res;
+      }).catch(() => Response.error())),
+    );
+    return;
+  }
+
+  // Network-first for everything else (fresh online, resilient offline).
   e.respondWith(
     fetch(req)
       .then((res) => {
