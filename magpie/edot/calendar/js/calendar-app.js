@@ -15,6 +15,7 @@ import { parseICS, serializeICS, serializeInvite, cryptoUid, formatRRule, parseR
 import { expandRecurrence, describeRRule } from './recurrence.js';
 import { AlarmScheduler, alarmFireTime } from './alarms.js';
 import { renderMonth, renderWeek, renderDay, renderAgenda, MONTHS, startOfDay } from './views.js';
+import { getKernel } from '../../js/edot-kernel.js';
 
 const PALETTE = ['#8b4513', '#1a73e8', '#188038', '#b5126b', '#7b1fa2', '#e37400', '#0b8043', '#c5221f'];
 const DAYS_ABBR = [['SU', 'S'], ['MO', 'M'], ['TU', 'T'], ['WE', 'W'], ['TH', 'T'], ['FR', 'F'], ['SA', 'S']];
@@ -207,6 +208,7 @@ export class EdotCalendar extends HTMLElement {
     this._calList = document.createElement('div'); this._calList.className = 'cal-list'; side.appendChild(this._calList);
 
     side.appendChild(this._btn('+ New calendar', () => this.openCalendarDialog(), 'cal-btn cal-side-btn'));
+    side.appendChild(this._btn('Browse calendars…', () => this.openBrowseCalendars(), 'cal-btn cal-side-btn'));
     side.appendChild(this._btn('Subscribe (ICS URL)…', () => this.openSubscribeDialog(), 'cal-btn cal-side-btn'));
     side.appendChild(this._btn('Import .ics file…', () => this._importFilePicker(), 'cal-btn cal-side-btn'));
 
@@ -469,6 +471,10 @@ export class EdotCalendar extends HTMLElement {
       actions.appendChild(this._btn('Refresh feed', async () => { await this.refreshSubscription(cal); back.remove(); }, 'cal-btn'));
     }
     actions.appendChild(this._btn('Export .ics', () => this.exportCalendar(cal), 'cal-btn'));
+    if (existing) {
+      actions.appendChild(this._btn('Share to group', () => { this.shareCalendarToGroup(cal); back.remove(); }, 'cal-btn'));
+      actions.appendChild(this._btn('Open as table', () => { this.calendarEventsToTable(cal); back.remove(); }, 'cal-btn'));
+    }
     if (existing && this.calendars.length > 1) {
       actions.appendChild(this._btn('Delete', async () => {
         await this.store.deleteCalendar(cal.id); this.calendars = await this.store.getCalendars(); this.events = await this.store.getEvents();
@@ -513,6 +519,66 @@ export class EdotCalendar extends HTMLElement {
     this.calendars = await this.store.getCalendars();
     this.events = await this.store.getEvents();
     return cal;
+  }
+
+  // ---- catalogue browse (modelled on the Places/geo flow) + group sharing -----
+  // Pick from the hoarded .ics catalogue (feeds layer), like saving a place from
+  // the geo gazetteer. Adds it as a toggleable calendar layer.
+  async openBrowseCalendars() {
+    const { back, box } = this._modal('Add a calendar');
+    const note = document.createElement('p'); note.className = 'cal-note';
+    note.textContent = 'Public calendars from the catalogue. Like saving a place from the map, adding one brings its events in as a layer. (Some feeds are not CORS-enabled and may need importing instead.)';
+    box.appendChild(note);
+    const list = document.createElement('div'); list.className = 'cal-browse-list'; box.appendChild(list);
+    const status = document.createElement('div'); status.className = 'cal-note'; box.appendChild(status);
+    try {
+      const { allSources } = await import('../../feeds/js/feeds.js');
+      const { calendars } = await allSources();
+      for (const c of calendars) {
+        const row = document.createElement('div'); row.className = 'cal-browse-row';
+        const meta = document.createElement('div'); meta.className = 'cal-browse-meta';
+        meta.innerHTML = `<div class="cal-browse-name"></div><div class="cal-browse-sub"></div>`;
+        meta.querySelector('.cal-browse-name').textContent = c.title;
+        meta.querySelector('.cal-browse-sub').textContent = `${c.place ? c.place.name + ' · ' : ''}${c.source || ''}`;
+        const add = this._btn('Add', async () => {
+          status.textContent = `Adding ${c.title}…`;
+          try { await this.subscribe(c.url, c.title); status.textContent = `Added ${c.title}.`; this._renderCalList(); this._renderMain(); }
+          catch (err) { status.textContent = `Couldn't fetch (likely CORS): ${err.message}. Try Import .ics.`; }
+        }, 'cal-btn');
+        row.append(meta, add); list.appendChild(row);
+      }
+      if (!calendars.length) status.textContent = 'No calendars in the catalogue yet.';
+    } catch (e) { status.textContent = `Catalogue unavailable: ${e.message}`; }
+  }
+
+  eventsForCalendar(cal) { return this.events.filter((e) => e.calendarId === cal.id); }
+
+  // Share a calendar into the active group channel (groups.share capability).
+  shareCalendarToGroup(cal) {
+    const evs = this.eventsForCalendar(cal);
+    const payload = { name: cal.name, sourceUrl: cal.sourceUrl || '', events: evs.slice(0, 50).map((e) => ({ title: e.summary, start: e.start, end: e.end, location: e.location || '' })) };
+    try {
+      const okShared = getKernel().capabilities.invoke('groups.share', { title: cal.name, kind: 'calendar', body: `📅 Shared calendar “${cal.name}” (${evs.length} events)`, payload });
+      this._flash(okShared === false ? 'Open a Groups channel first to share.' : `Shared “${cal.name}” to your group.`);
+    } catch (_) { this._flash('Groups app is not available.'); }
+  }
+
+  // Surface a calendar's events as a Data table (data.addTable capability).
+  calendarEventsToTable(cal) {
+    const evs = this.eventsForCalendar(cal);
+    const columns = ['Summary', 'Start', 'End', 'Location'];
+    const rows = evs.map((e) => [e.summary || '', e.start || '', e.end || '', e.location || '']);
+    try {
+      const name = getKernel().capabilities.invoke('data.addTable', { title: cal.name || 'Calendar', columns, rows });
+      this._flash(name ? `Opened “${cal.name}” as a data table.` : 'Open the Data app first.');
+    } catch (_) { this._flash('Data app is not available.'); }
+  }
+
+  _flash(msg) {
+    let n = this.querySelector('.cal-flash');
+    if (!n) { n = el('div', { className: 'cal-flash' }); this.appendChild(n); }
+    n.textContent = msg; n.classList.add('show');
+    clearTimeout(this._flashT); this._flashT = setTimeout(() => n.classList.remove('show'), 3500);
   }
 
   async refreshSubscription(cal) {

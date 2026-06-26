@@ -156,6 +156,17 @@ edot-calendar { display: block; height: 100%; }
 .cal-field textarea { resize: vertical; }
 .cal-modal-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.8rem; }
 .cal-note { font-size: 0.8rem; color: var(--c-muted); margin: 0.3rem 0; }
+.cal-browse-list { display: flex; flex-direction: column; gap: 0.4rem; max-height: 50vh; overflow: auto; margin: 0.4rem 0; }
+.cal-browse-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--c-line); border-radius: 8px; }
+.cal-browse-meta { flex: 1 1 auto; min-width: 0; }
+.cal-browse-name { font-weight: 600; }
+.cal-browse-sub { font-size: 0.78rem; color: var(--c-muted); }
+.cal-flash {
+  position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%) translateY(1rem);
+  background: var(--c-ink, #222); color: var(--c-bg, #fff); padding: 0.55rem 0.9rem; border-radius: 8px;
+  font-size: 0.85rem; max-width: 90vw; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; z-index: 60;
+}
+.cal-flash.show { opacity: 0.97; transform: translateX(-50%) translateY(0); }
 
 /* recurrence byday chips + color picker */
 .cal-byday { display: flex; gap: 0.25rem; margin-bottom: 0.6rem; flex-wrap: wrap; }

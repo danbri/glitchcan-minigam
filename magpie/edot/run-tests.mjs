@@ -47,6 +47,7 @@ const SUITES = [
   ['feed', 'feeds/test-feed.mjs'],
   ['xmpp-stanzas', 'groups/test-xmpp-stanzas.mjs'],
   ['groups', 'groups/test-groups.mjs'],
+  ['calendar-share', 'calendar/test-calendar-share.mjs'],
 ];
 
 const filter = process.argv.slice(2);
