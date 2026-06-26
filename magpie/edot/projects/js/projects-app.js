@@ -54,9 +54,16 @@ class EdotProjects extends HTMLElement {
           <div class="pj-actions">
             <label class="pj-btn pj-open">⬆ Open project (.zip)<input type="file" accept=".zip,application/zip" hidden></label>
             <button class="pj-btn pj-save" type="button" title="Save the current workspace as a .zip">⬇ Save current as .zip</button>
+            <button class="pj-btn pj-save-device" type="button" title="Save to this device's storage (no download)">💾 Save to device</button>
+            <button class="pj-btn pj-open-device" type="button" title="Open a project saved on this device">📂 Open from device</button>
           </div>
           <p class="pj-status" role="status" aria-live="polite"></p>
         </header>
+
+        <section class="pj-section pj-device" hidden>
+          <h2>On this device</h2>
+          <div class="pj-device-list"></div>
+        </section>
 
         <section class="pj-section">
           <h2>Start from a template</h2>
@@ -90,6 +97,8 @@ class EdotProjects extends HTMLElement {
 
     this.querySelector('.pj-open input').addEventListener('change', (e) => this._onFile(e.target.files[0]));
     this.querySelector('.pj-save').addEventListener('click', () => this._save());
+    this.querySelector('.pj-save-device').addEventListener('click', () => this._saveToDevice());
+    this.querySelector('.pj-open-device').addEventListener('click', () => this._openFromDevice());
   }
 
   status(msg) { const s = this.querySelector('.pj-status'); if (s) s.textContent = msg || ''; }
@@ -142,19 +151,67 @@ class EdotProjects extends HTMLElement {
     this.status(msg || `Loaded "${payload.manifest.name}".`);
   }
 
-  // Ask the shell for a live snapshot, zip it, download it.
-  async _save() {
+  // The project to save: a live workspace snapshot, else the open project.
+  async _projectForSave() {
     let snap = null;
     try { snap = this.kernel.capabilities.invoke('project.snapshot'); } catch (_) { snap = null; }
     if (snap && typeof snap.then === 'function') snap = await snap;
-    if (!snap) {
-      // Standalone / nothing to snapshot: fall back to re-zipping the open project.
-      if (this.current) { download(`${slug(this.current.manifest.name)}.edot.zip`, buildProjectZip(this.current)); this.status('Saved the open project as a .zip.'); }
-      else this.status('Open a project or start from a template first.');
-      return;
+    return snap || this.current || null;
+  }
+
+  // Ask the shell for a live snapshot, zip it, download it.
+  async _save() {
+    const proj = await this._projectForSave();
+    if (!proj) { this.status('Open a project or start from a template first.'); return; }
+    download(`${slug(proj.manifest && proj.manifest.name)}.edot.zip`, buildProjectZip(proj));
+    this.status(`Saved "${proj.manifest && proj.manifest.name}" as a .zip.`);
+  }
+
+  // ---- device storage via the unified ResourceSource (OPFS) ----
+  async _deviceStorage() {
+    const { getConnections } = await import('../../js/connections.js');
+    return getConnections().storageFor('device');
+  }
+  // Save the current project into this device's storage — no download, no login.
+  async _saveToDevice() {
+    const proj = await this._projectForSave();
+    if (!proj) { this.status('Open a project or start from a template first.'); return; }
+    try {
+      const storage = await this._deviceStorage();
+      const name = `${slug(proj.manifest && proj.manifest.name)}.edot.zip`;
+      await storage.write(`/projects/${name}`, buildProjectZip(proj));
+      this.status(`Saved “${proj.manifest && proj.manifest.name}” to this device.`);
+      await this._refreshDeviceList();
+    } catch (e) { this.status(`Could not save to device: ${e.message}`); }
+  }
+  // List + open projects saved on this device.
+  async _openFromDevice() { await this._refreshDeviceList(true); }
+  async _refreshDeviceList(reveal) {
+    const wrap = this.querySelector('.pj-device'); const list = this.querySelector('.pj-device-list');
+    let entries = [];
+    try { const storage = await this._deviceStorage(); entries = (await storage.list('/projects')).filter((e) => e.kind === 'file'); } catch (_) { entries = []; }
+    if (reveal) wrap.hidden = false;
+    if (wrap.hidden && !entries.length) return;
+    wrap.hidden = false;
+    list.innerHTML = '';
+    if (!entries.length) { list.innerHTML = '<p class="pj-sub">No projects saved on this device yet.</p>'; return; }
+    for (const e of entries) {
+      const row = document.createElement('div'); row.className = 'pj-device-row';
+      const open = document.createElement('button'); open.type = 'button'; open.className = 'pj-btn'; open.textContent = `📦 ${e.name}`;
+      open.addEventListener('click', () => this._openDeviceFile(e.path, e.name));
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'pj-btn pj-ghost'; del.textContent = '✕'; del.title = 'Delete';
+      del.addEventListener('click', async () => { try { (await this._deviceStorage()).remove(e.path); } catch (_) {} this._refreshDeviceList(); });
+      row.append(open, del); list.appendChild(row);
     }
-    download(`${slug(snap.manifest && snap.manifest.name)}.edot.zip`, buildProjectZip(snap));
-    this.status(`Saved "${snap.manifest && snap.manifest.name}" as a .zip.`);
+  }
+  async _openDeviceFile(path, name) {
+    try {
+      const storage = await this._deviceStorage();
+      const bytes = await storage.read(path);
+      const project = await readProjectZip(bytes);
+      const files = {}; for (const n of Object.keys(project.files)) { const t = project.text(n); if (t != null) files[n] = t; }
+      this.openProject({ manifest: project.manifest, files }, `Loaded "${project.manifest.name}" from this device`);
+    } catch (e) { this.status(`Could not open ${name}: ${e.message}`); }
   }
 }
 

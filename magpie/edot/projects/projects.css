@@ -44,6 +44,9 @@ edot-projects { display: block; height: 100%; overflow: auto; }
 .pj-chip { background: var(--pj-chip); color: var(--pj-muted); border-radius: 999px; padding: 0.1rem 0.55rem; font-size: 0.72rem; }
 .pj-card-actions { display: flex; gap: 0.4rem; margin-top: 0.3rem; }
 .pj-card-actions .pj-use { flex: 1 1 auto; justify-content: center; }
+.pj-device-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.pj-device-row { display: flex; gap: 0.4rem; align-items: center; }
+.pj-device-row .pj-btn:first-child { flex: 1 1 auto; justify-content: flex-start; }
 
 .pj-detail { background: var(--pj-surface); border: 1px solid var(--pj-line); border-radius: var(--pj-radius); padding: 1rem; }
 .pj-detail-head { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.7rem; }

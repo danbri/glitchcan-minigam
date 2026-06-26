@@ -60,6 +60,25 @@ differs is the mount, not the folder.
 | `projects` (.zip) | serialization | a bundle that can live in ANY storage mount |
 | Data `folders` | resource org | Folders within a storage mount |
 
+## Built so far (decisions approved)
+
+- **OPFS is the working local backend** — `OpfsResourceSource` (in
+  `resource-source.js`) implements the interface over the Origin Private File
+  System: zero-prompt, persistent, no login. Real CRUD + listing, tested headless.
+  (File System Access for *user-chosen* folders is the next local tier; OPFS is
+  the private store.)
+- **One Connections surface** — `js/connections.js` (`getConnections()`) manages
+  Accounts and seeds a real local **`device`** account by default. Exposed over
+  the kernel: `connections.list({capability})` and `storage.source({id})`.
+- **Demonstrated end-to-end** — Projects now has **Save to device** / **Open from
+  device**, writing the project `.zip` into OPFS at `/projects/…` through the
+  `device` mount. Persists across reload (tested).
+
+Remaining (incremental, per the approved plan): port `backup`'s four remote
+backends (github/webdav/s3/solid) onto `ResourceSource`; add File System Access
+as the `local-fs` tier; a Connections management UI; route `backup` + a generic
+file open/save dialog through `connections`.
+
 ## Open design choices (for decision before the big build)
 
 These are the calls to make before unifying the real backends onto `ResourceSource`:
