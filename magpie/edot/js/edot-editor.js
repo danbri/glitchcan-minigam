@@ -27,6 +27,7 @@ import { Toolbar } from './toolbar.js';
 import { Announcer } from './a11y.js';
 import { COMMANDS, setBlockFormat, currentBlockFormat, setAlign, currentAlign, createLink as cmdCreateLink } from './commands.js';
 import { getKernel } from './edot-kernel.js';
+import { getRegistry } from './command-registry.js';
 import { prepareImage } from './image-util.js';
 
 let seq = 0;
@@ -35,6 +36,36 @@ let seq = 0;
 const instances = new Set();
 let active = null;                 // most-recently-focused editor
 let capabilityWired = false;
+
+// Command-registry contributions (Phase 2): the editor's formatting actions, run
+// against the focused instance, gated to when the Editor app is active. They
+// operate on a Document, so appliesTo ties them to the ontology.
+let editorCommandsWired = false;
+function registerEditorCommands() {
+  if (editorCommandsWired) return;
+  const inEditor = (ctx) => ctx && ctx.app === 'editor' && !!active;
+  const exec = (id) => () => active.exec(id);
+  try {
+    getRegistry().registerAll([
+      { id: 'editor.bold', title: 'Bold', icon: 'B', group: '1format', keywords: 'bold strong', appliesTo: 'Document', where: ['palette'], when: inEditor, run: exec('bold') },
+      { id: 'editor.italic', title: 'Italic', icon: 'I', group: '1format', keywords: 'italic emphasis', appliesTo: 'Document', when: inEditor, run: exec('italic') },
+      { id: 'editor.underline', title: 'Underline', group: '1format', keywords: 'underline', appliesTo: 'Document', when: inEditor, run: exec('underline') },
+      { id: 'editor.h1', title: 'Heading 1', group: '2block', keywords: 'heading title h1', appliesTo: 'Document', when: inEditor, run: () => active.setBlock('h1') },
+      { id: 'editor.h2', title: 'Heading 2', group: '2block', keywords: 'heading subtitle h2', appliesTo: 'Document', when: inEditor, run: () => active.setBlock('h2') },
+      { id: 'editor.body', title: 'Body text', group: '2block', keywords: 'body paragraph normal', appliesTo: 'Document', when: inEditor, run: () => active.setBlock('p') },
+      { id: 'editor.bulletList', title: 'Bulleted list', group: '2block', keywords: 'bullet list unordered', appliesTo: 'Document', when: inEditor, run: exec('bulletList') },
+      { id: 'editor.numberList', title: 'Numbered list', group: '2block', keywords: 'number list ordered', appliesTo: 'Document', when: inEditor, run: exec('numberList') },
+      { id: 'editor.alignLeft', title: 'Align left', group: '3align', keywords: 'align left', appliesTo: 'Document', when: inEditor, run: () => active.align('left') },
+      { id: 'editor.alignCenter', title: 'Align centre', group: '3align', keywords: 'align centre center', appliesTo: 'Document', when: inEditor, run: () => active.align('center') },
+      { id: 'editor.alignRight', title: 'Align right', group: '3align', keywords: 'align right', appliesTo: 'Document', when: inEditor, run: () => active.align('right') },
+      { id: 'editor.insertImage', title: 'Insert image', icon: '🖼', group: '4insert', keywords: 'image picture photo svg', appliesTo: 'Document', when: inEditor, run: () => active.pickImage() },
+      { id: 'editor.insertLink', title: 'Insert link', icon: '🔗', group: '4insert', keywords: 'link hyperlink url', appliesTo: 'Document', when: inEditor, run: () => active.createLink() },
+      { id: 'editor.undo', title: 'Undo', group: '5history', keywords: 'undo', appliesTo: 'Document', when: inEditor, run: exec('undo') },
+      { id: 'editor.redo', title: 'Redo', group: '5history', keywords: 'redo', appliesTo: 'Document', when: inEditor, run: exec('redo') },
+    ]);
+    editorCommandsWired = true;
+  } catch (_) { /* registry optional */ }
+}
 
 function wireCapabilityOnce() {
   if (capabilityWired) return;
@@ -120,6 +151,7 @@ export class EdotEditor extends HTMLElement {
     this.appendChild(this._imgInput);
     this.addEventListener('edot-pick-image', () => this.pickImage());
     wireCapabilityOnce();
+    registerEditorCommands();
 
     this.dispatchEvent(new CustomEvent('edot-ready', { bubbles: true, detail: { editor: this } }));
   }

@@ -31,6 +31,7 @@ export class CommandRegistry extends EventTarget {
     if (!cmd || !cmd.id || typeof cmd.run !== 'function') throw new Error('command needs an id and a run()');
     if (cmd.appliesTo && !isType(cmd.appliesTo)) console.warn(`command "${cmd.id}": appliesTo "${cmd.appliesTo}" is not an ontology type`);
     this._cmds.set(cmd.id, { group: '', order: 100, keywords: '', where: ['palette'], ...cmd });
+    this.dispatchEvent(new CustomEvent('register', { detail: { id: cmd.id } }));
     return this;
   }
   registerAll(list) { (list || []).forEach((c) => this.register(c)); return this; }

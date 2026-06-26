@@ -280,7 +280,7 @@
     }
 
     // ===================== MENU BAR (File / Edit / View / …) ==================
-    const TOP_ORDER = ['File', 'Edit', 'Insert', 'View', 'Help'];
+    const TOP_ORDER = ['File', 'Edit', 'Insert', 'View', 'Actions', 'Help'];
     const menubar = document.getElementById('menubar');
     let openName = null, openEl = null;
 
@@ -386,6 +386,28 @@
       return { View: [sw(id)], Help: help };
     }
 
+    // Build an "Actions" menu from the active app's command-registry contributions
+    // (grouped with separators). The menu and the ⌘K palette thus share one source.
+    function registryActions(id) {
+      // Only app-contextual commands (those with a when-gate) belong in an app's
+      // Actions menu — global commands like nav.* live in the palette / Open app.
+      const cmds = getRegistry().contributions({ app: id }).filter((c) => c.when && (c.where || ['palette']).includes('palette'));
+      const items = []; let last = null;
+      for (const c of cmds) {
+        if (last !== null && c.group !== last) items.push({ sep: true });
+        last = c.group;
+        items.push({ label: c.title, action: () => getRegistry().run(c.id, { app: id }) });
+      }
+      return items;
+    }
+    // Apps with bespoke menus (they have a File menu) keep them; apps that only
+    // had View+Help gain a registry-driven Actions menu.
+    function appMenus(id, el) {
+      const m = buildMenus(id, el);
+      if (!m.File) { const acts = registryActions(id); if (acts.length) m.Actions = acts; }
+      return m;
+    }
+
     function closeMenu() { document.querySelectorAll('.menu').forEach((m) => m.remove()); openEl = null; if (openName) { const b = menubar.querySelector(`[data-top="${openName}"]`); b?.setAttribute('aria-expanded', 'false'); openName = null; } }
 
     function renderItems(items, container, parentMenu) {
@@ -412,7 +434,7 @@
 
     function openTop(name, btn) {
       closeMenu();
-      const menus = buildMenus(currentApp, primaryEl(currentApp));
+      const menus = appMenus(currentApp, primaryEl(currentApp));
       const items = menus[name]; if (!items) return;
       const menu = document.createElement('div'); menu.className = 'menu'; menu.setAttribute('role', 'menu');
       renderItems(items, menu, menu);
@@ -424,7 +446,7 @@
     let currentApp = 'workspace';
     function renderMenubar(id) {
       currentApp = id;
-      const menus = buildMenus(id, primaryEl(id));
+      const menus = appMenus(id, primaryEl(id));
       menubar.innerHTML = '';
       for (const name of TOP_ORDER) {
         if (!menus[name]) continue;
@@ -488,6 +510,11 @@
       if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); cmdk.hidden ? openCmdk() : closeCmdk(); }
     });
     window.__cmdk = { open: openCmdk, registry }; // headless-test hook
+
+    // Apps register commands asynchronously on mount; refresh the menubar (so the
+    // Actions menu appears) when new commands arrive. Debounced to coalesce bursts.
+    let _menubarTimer = null;
+    registry.addEventListener('register', () => { clearTimeout(_menubarTimer); _menubarTimer = setTimeout(() => renderMenubar(currentApp), 0); });
 
     // Desktop opens the side-by-side Workspace; a phone opens a single app (the
     // Workspace's multi-pane is a wide-screen feature — see the mobile CSS).

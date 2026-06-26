@@ -156,6 +156,40 @@ try {
     ok(`${app} contributes ${expect} when active`, has);
   }
 
+  // ---- Editor migration: commands contributed; bold runs through the registry ----
+  await page.evaluate(() => window.__cmdk.registry.run('nav.editor', { app: 'backup' }));
+  await page.waitForFunction(() => location.hash === '#editor', null, { timeout: 8000 });
+  await page.waitForSelector('.view[data-app="editor"] edot-editor');
+  await page.evaluate(() => document.querySelector('.view[data-app="editor"] edot-editor').dispatchEvent(new FocusEvent('focusin', { bubbles: true })));
+  const edCmds = await page.evaluate(() => window.__cmdk.registry.contributions({ app: 'editor' }).map((c) => c.id));
+  ok('Editor contributes formatting commands when active', edCmds.includes('editor.bold') && edCmds.includes('editor.h1') && edCmds.includes('editor.insertImage'));
+  const bolded = await page.evaluate(() => {
+    const el = document.querySelector('.view[data-app="editor"] edot-editor');
+    el.setContent('<p>hello</p>'); el.focus();
+    const sel = window.getSelection(); const r = document.createRange();
+    r.selectNodeContents(el.querySelector('[contenteditable]')); sel.removeAllRanges(); sel.addRange(r);
+    window.__cmdk.registry.run('editor.bold', { app: 'editor' });
+    return /<(b|strong)>/i.test(el.getContent());
+  });
+  ok('editor.bold via the registry bolds the selection', bolded);
+
+  // ---- Menu bar renders registry contributions (Actions menu) for generic apps ----
+  await page.evaluate(() => window.__cmdk.registry.run('nav.maps', { app: 'editor' }));
+  await page.waitForFunction(() => location.hash === '#maps', null, { timeout: 8000 });
+  await page.waitForFunction(() => !!document.querySelector('#menubar [data-top="Actions"]'), null, { timeout: 8000 });
+  ok('generic app (Maps) gets a registry-driven Actions menu', true);
+  await page.click('#menubar [data-top="Actions"]');
+  await page.waitForSelector('.menu .mi', { timeout: 3000 });
+  const actionLabels = await page.$$eval('.menu .mi .lbl', (els) => els.map((e) => e.textContent));
+  ok('Actions menu lists the app commands', actionLabels.some((t) => /3D buildings/i.test(t)) && actionLabels.some((t) => /Directions/i.test(t)));
+  ok('Actions menu excludes global nav commands', !actionLabels.some((t) => /^Go to /.test(t)));
+  await page.keyboard.press('Escape');
+  // Rich apps keep their bespoke menus (no Actions menu).
+  await page.evaluate(() => window.__cmdk.registry.run('nav.editor', { app: 'maps' }));
+  await page.waitForFunction(() => location.hash === '#editor', null, { timeout: 8000 });
+  await page.waitForTimeout(150);
+  ok('rich app (Editor) keeps File menu, no Actions menu', await page.evaluate(() => !!document.querySelector('#menubar [data-top="File"]') && !document.querySelector('#menubar [data-top="Actions"]')));
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs.slice(0, 4));
 } finally {
