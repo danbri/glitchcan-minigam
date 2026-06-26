@@ -59,6 +59,27 @@ edot-grid, edot-sheet, edot-query { display: flex; flex-direction: column; flex:
 .dw-item .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dw-empty { color: var(--d-muted); font-size: 0.85rem; padding: 0.4rem; }
 
+/* ---- folders: every object lives in a (collapsible) folder ---- */
+.dw-side-head { display: flex; justify-content: flex-end; margin-bottom: 0.3rem; }
+.dw-newfolder {
+  font: inherit; font-size: 0.78rem; cursor: pointer; color: var(--d-ink);
+  background: var(--d-surface); border: 1px solid var(--d-line); border-radius: 6px; padding: 0.25em 0.6em;
+}
+.dw-newfolder:hover { background: var(--d-head); }
+.dw-folder { margin-bottom: 0.3rem; }
+.dw-folder-h {
+  display: flex; align-items: center; gap: 0.35rem; cursor: pointer; list-style: none;
+  padding: 0.3em 0.3em; border-radius: 5px; font-size: 0.78rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.03em; color: var(--d-muted); user-select: none;
+}
+.dw-folder-h::-webkit-details-marker { display: none; }
+.dw-folder-h::before { content: '▸'; font-size: 0.7em; transition: transform 0.15s; }
+.dw-folder[open] > .dw-folder-h::before { transform: rotate(90deg); }
+.dw-folder-h:hover { background: var(--d-head); }
+.dw-folder-nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dw-folder-n { color: var(--d-muted); font-weight: 400; }
+.dw-folder .dw-item { margin-left: 0.5rem; width: calc(100% - 0.5rem); }
+
 .dbtn {
   font: inherit; font-size: 0.85rem; padding: 0.35em 0.7em; border: 1px solid var(--d-line);
   border-radius: 6px; background: var(--d-surface); color: var(--d-ink); cursor: pointer; white-space: nowrap;

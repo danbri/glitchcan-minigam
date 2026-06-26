@@ -21,6 +21,9 @@ import './sheet-component.js';
 import './query-component.js';
 
 const META = '__edot_sheets';
+const FOLDERS = '__edot_folders';
+const SETTINGS = '__edot_settings';
+const DEFAULT_FOLDER = 'General';
 const CHINOOK_TABLES = ['Album', 'Artist', 'Customer', 'Employee', 'Genre', 'Invoice', 'InvoiceLine', 'MediaType', 'Playlist', 'PlaylistTrack', 'Track'];
 const CHINOOK_DEMO = `-- Chinook sample — top-selling artists (a 4-table join)
 SELECT ar.Name AS artist,
@@ -41,6 +44,8 @@ export class EdotData extends HTMLElement {
     this._ready = this.engine.init();
     await this._ready;
     this.engine.run(`CREATE TABLE IF NOT EXISTS ${META} (name TEXT PRIMARY KEY, def TEXT)`);
+    this.engine.run(`CREATE TABLE IF NOT EXISTS ${FOLDERS} (obj TEXT PRIMARY KEY, folder TEXT)`);
+    this.engine.run(`CREATE TABLE IF NOT EXISTS ${SETTINGS} (k TEXT PRIMARY KEY, v TEXT)`);
     this._render();
     this.refresh();
     this._showWelcome();
@@ -133,35 +138,111 @@ export class EdotData extends HTMLElement {
     const tables = objs.filter((o) => o.type === 'table');
     const views = objs.filter((o) => o.type === 'view');
     const sheets = this._sheetNames();
+    // One unified object list so a folder can hold tables, views and sheets
+    // together — "everything in a folder", regardless of kind.
+    const items = [
+      ...tables.map((t) => ({ name: t.name, kind: 'Tables', icon: '▦', open: () => this.openTable(t.name) })),
+      ...views.map((v) => ({ name: v.name, kind: 'Views', icon: '◫', open: () => this.openTable(v.name) })),
+      ...sheets.map((n) => ({ name: n, kind: 'Sheets', icon: '▦ƒ', open: () => this.openSheet(n) })),
+    ];
     this._side.innerHTML = '';
-    this._section('Tables', '▦', tables.map((t) => t.name), (n) => this.openTable(n));
-    this._section('Views', '◫', views.map((v) => v.name), (n) => this.openTable(n));
-    this._section('Sheets', '▦ƒ', sheets, (n) => this.openSheet(n));
-    // Hide the (empty) objects sidebar until there's something in it, so the
-    // start panel gets the full width — important in the narrow Workspace pane.
-    this._root?.classList.toggle('dw-empty-objects', !tables.length && !views.length && !sheets.length);
+    this._root?.classList.toggle('dw-empty-objects', items.length === 0);
+
+    // Group every object under its folder (defaulting to the active project /
+    // General). Folders with no objects still show so they can be filled.
+    const byFolder = new Map();
+    for (const f of this._allFolders()) byFolder.set(f, []);
+    for (const it of items) {
+      const f = this._objFolder(it.name);
+      if (!byFolder.has(f)) byFolder.set(f, []);
+      byFolder.get(f).push(it);
+    }
+
+    const head = document.createElement('div'); head.className = 'dw-side-head';
+    const add = document.createElement('button'); add.type = 'button'; add.className = 'dw-newfolder'; add.textContent = '＋ Folder';
+    add.title = 'New folder'; add.addEventListener('click', () => this._newFolder());
+    head.appendChild(add); this._side.appendChild(head);
+
+    const folders = [...byFolder.keys()].sort((a, b) => (a === this._defaultFolder() ? -1 : b === this._defaultFolder() ? 1 : a.localeCompare(b)));
+    for (const folder of folders) this._renderFolder(folder, byFolder.get(folder));
   }
 
-  _section(title, icon, names, onOpen) {
-    const h = document.createElement('h3'); h.textContent = title; this._side.appendChild(h);
-    if (!names.length) { const e = document.createElement('div'); e.className = 'dw-empty'; e.textContent = '—'; this._side.appendChild(e); return; }
-    for (const name of names) {
-      const it = document.createElement('button'); it.type = 'button'; it.className = 'dw-item';
-      if (this.active && this.active.name === name) it.classList.add('active');
-      const ic = document.createElement('span'); ic.className = 'ic'; ic.textContent = icon;
-      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = name;
-      const del = document.createElement('span'); del.textContent = '✕'; del.title = 'Delete'; del.className = 'hint';
-      del.addEventListener('click', (e) => { e.stopPropagation(); this._delete(title, name); });
-      it.append(ic, nm, del);
-      it.addEventListener('click', () => { onOpen(name); this._root.classList.remove('side-open'); });
-      this._side.appendChild(it);
+  _renderFolder(folder, items) {
+    const det = document.createElement('details'); det.className = 'dw-folder'; det.open = true;
+    const sum = document.createElement('summary'); sum.className = 'dw-folder-h';
+    sum.innerHTML = `<span class="dw-folder-ic">📁</span><span class="dw-folder-nm"></span><span class="dw-folder-n">${items.length}</span>`;
+    sum.querySelector('.dw-folder-nm').textContent = folder;
+    det.appendChild(sum);
+    if (!items.length) {
+      const e = document.createElement('div'); e.className = 'dw-empty'; e.textContent = 'Empty — move items here.'; det.appendChild(e);
     }
+    for (const item of items) {
+      const it = document.createElement('button'); it.type = 'button'; it.className = 'dw-item';
+      if (this.active && this.active.name === item.name) it.classList.add('active');
+      const ic = document.createElement('span'); ic.className = 'ic'; ic.textContent = item.icon; ic.title = item.kind;
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = item.name;
+      const mv = document.createElement('span'); mv.textContent = '⤴'; mv.title = 'Move to folder'; mv.className = 'hint';
+      mv.addEventListener('click', (e) => { e.stopPropagation(); this._moveToFolder(item.name); });
+      const del = document.createElement('span'); del.textContent = '✕'; del.title = 'Delete'; del.className = 'hint';
+      del.addEventListener('click', (e) => { e.stopPropagation(); this._delete(item.kind, item.name); });
+      it.append(ic, nm, mv, del);
+      it.addEventListener('click', () => { item.open(); this._root.classList.remove('side-open'); });
+      det.appendChild(it);
+    }
+    this._side.appendChild(det);
+  }
+
+  // ---- folders ----
+  _defaultFolder() { return this._projectFolder || DEFAULT_FOLDER; }
+  // The folder an object belongs to (its stored folder, or the default).
+  _objFolder(name) {
+    try { const r = this.engine.query(`SELECT folder FROM ${FOLDERS} WHERE obj=?`, [name]).rows; if (r.length && r[0][0]) return r[0][0]; } catch (_) {}
+    return this._defaultFolder();
+  }
+  _setObjFolder(name, folder) {
+    this.engine.run(`INSERT INTO ${FOLDERS}(obj, folder) VALUES(?,?) ON CONFLICT(obj) DO UPDATE SET folder=excluded.folder`, [name, folder]);
+  }
+  // Known folder names: the default, any referenced by an object, plus explicitly
+  // created (possibly empty) folders persisted in settings.
+  _allFolders() {
+    const set = new Set([this._defaultFolder()]);
+    try { for (const r of this.engine.query(`SELECT DISTINCT folder FROM ${FOLDERS}`).rows) if (r[0]) set.add(r[0]); } catch (_) {}
+    for (const f of this._extraFolders()) set.add(f);
+    return [...set];
+  }
+  _extraFolders() {
+    try { const r = this.engine.query(`SELECT v FROM ${SETTINGS} WHERE k='folders'`).rows; return r.length ? JSON.parse(r[0][0]) : []; } catch (_) { return []; }
+  }
+  _saveExtraFolders(list) {
+    this.engine.run(`INSERT INTO ${SETTINGS}(k,v) VALUES('folders',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v`, [JSON.stringify([...new Set(list)])]);
+  }
+  _newFolder() {
+    const name = (prompt('New folder name:', '') || '').trim();
+    if (!name) return;
+    this._saveExtraFolders([...this._extraFolders(), name]);
+    this.refresh();
+  }
+  _moveToFolder(name) {
+    const folders = this._allFolders();
+    const to = (prompt(`Move "${name}" to folder (existing: ${folders.join(', ')}):`, this._objFolder(name)) || '').trim();
+    if (!to) return;
+    this._setObjFolder(name, to);
+    this._saveExtraFolders([...this._extraFolders(), to]);
+    this.refresh();
+  }
+  // Set the current project's folder; new/surfaced objects land here. Called by
+  // the shell when a project opens, mirroring how the project scopes the workspace.
+  setProjectFolder(name) {
+    this._projectFolder = (name || '').trim() || null;
+    if (this._projectFolder) this._saveExtraFolders([...this._extraFolders(), this._projectFolder]);
+    if (this._side) this.refresh();
   }
 
   _delete(section, name) {
     if (!confirm(`Delete ${name}?`)) return;
     if (section === 'Sheets') this.engine.run(`DELETE FROM ${META} WHERE name=?`, [name]);
     else this.engine.dropObject(name);
+    try { this.engine.run(`DELETE FROM ${FOLDERS} WHERE obj=?`, [name]); } catch (_) {}
     if (this.active && this.active.name === name) this._main.innerHTML = '';
     this.active = null;
     this.refresh();

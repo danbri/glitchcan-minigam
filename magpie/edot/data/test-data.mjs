@@ -235,6 +235,27 @@ try {
   ok('spreadsheet face renders a sheet', faces.hasSheet);
   ok('RDF face shows the N-Quads form of the object', faces.rdfHasQuad);
 
+  // 4f. Folders: every object lives in a folder; objects move; a project folder
+  //     collects new objects; nothing is loose at the top level.
+  const folders = await page.evaluate(async () => {
+    const d = document.querySelector('edot-data');
+    await d.addTable('Alpha', ['a', 'b'], [[1, 2]]);
+    await d.addTable('Beta', ['a', 'b'], [[3, 4]]);
+    const defFolder = d._objFolder('Alpha');
+    d._setObjFolder('Beta', 'Reports'); d._saveExtraFolders(['Reports']); d.refresh();
+    const folderNames = [...d.querySelectorAll('.dw-folder-nm')].map((e) => e.textContent);
+    const betaFolder = d._objFolder('Beta');
+    d.setProjectFolder('My Project');
+    await d.addTable('Gamma', ['x'], [[9]]);
+    const gammaFolder = d._objFolder('Gamma');
+    const looseItems = [...d.querySelectorAll('.dw-side > .dw-item')].length;
+    return { defFolder, folderNames, betaFolder, gammaFolder, looseItems };
+  });
+  ok('new objects default into a folder (General)', folders.defFolder === 'General');
+  ok('an object can be moved to another folder', folders.betaFolder === 'Reports' && folders.folderNames.includes('Reports'));
+  ok('a project folder collects newly created objects', folders.gammaFolder === 'My Project');
+  ok('no object is loose outside a folder', folders.looseItems === 0);
+
   // 5. Persistence: DB exports to bytes.
   ok('database exports to bytes', await page.evaluate(() => document.querySelector('edot-data').engine.exportDb().length > 0));
 

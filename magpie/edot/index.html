@@ -162,10 +162,11 @@
       const deckText = fileOf((manifest.slides || [])[0]);
       const sl = ws && ws.querySelector('edot-slides');
       if (deckText != null && sl && sl.applyDeckData) { try { await sl.applyDeckData(JSON.parse(deckText)); } catch (_) {} }
-      // Table → Data pane.
+      // Table → Data pane (under a folder named for the project).
       const dataEntry = (manifest.data || [])[0];
       const csvText = fileOf(dataEntry);
       const dt = ws && ws.querySelector('edot-data');
+      if (dt && dt.setProjectFolder && manifest.name) { try { dt.setProjectFolder(manifest.name); } catch (_) {} }
       if (csvText != null && dt && dt.addCsvTable) { try { await dt.addCsvTable(dataEntry.title || dataEntry.id, csvText); } catch (_) {} }
       go('workspace');
     }
