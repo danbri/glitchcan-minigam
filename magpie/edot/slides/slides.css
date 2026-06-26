@@ -161,6 +161,28 @@ edot-slides { display: block; height: 100%; }
   padding: 0.25rem 0.7rem; border-radius: 6px; font-weight: 600; font-size: 0.9rem; cursor: default;
 }
 
+/* Presenter view (toggle with the button or P): current slide left, next + notes
+   + timer right. Audience still only ever sees .sl-present-stage. */
+.sl-pv { display: none; }
+.sl-pv-toggle {
+  position: fixed; top: 0.8rem; right: 1rem; z-index: 1001; cursor: pointer;
+  color: #fff; background: rgba(0,0,0,0.55); border: 1px solid #444; border-radius: 6px;
+  padding: 0.3rem 0.7rem; font-size: 0.85rem;
+}
+.sl-present.presenter {
+  place-items: stretch; align-items: center; grid-template-columns: minmax(0, 1fr) 22rem;
+  gap: 1.2rem; padding: 1.5rem 1.5rem 3rem; cursor: default;
+}
+.sl-present.presenter .sl-present-stage { width: 100%; max-width: 100%; height: auto; align-self: center; justify-self: center; }
+.sl-present.presenter .sl-pv { display: flex; flex-direction: column; gap: 0.45rem; color: #fff; min-height: 0; overflow: auto; }
+.sl-pv-timer { font-size: 1.25rem; font-weight: 700; }
+.sl-pv-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9aa; }
+.sl-pv-next { background: #111; border: 1px solid #333; aspect-ratio: 16 / 9; line-height: 0; flex: 0 0 auto; }
+.sl-pv-next svg { width: 100%; height: 100%; }
+.sl-pv-end { color: #888; font: 600 1rem var(--font-ui, sans-serif); display: grid; place-items: center; height: 100%; line-height: 1; }
+.sl-pv-notes { flex: 1 1 auto; min-height: 4rem; overflow: auto; font-size: 1.05rem; line-height: 1.55; white-space: pre-wrap; }
+@media (max-width: 640px) { .sl-present.presenter { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } }
+
 /* ---- dialogs ---- */
 .sl-dialog-bg { position: fixed; inset: 0; z-index: 900; background: rgba(0,0,0,0.45); display: grid; place-items: center; padding: 1rem; }
 .sl-dialog { background: var(--s-surface); color: var(--s-ink); border-radius: 10px; width: min(32rem, 100%); max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.3); }

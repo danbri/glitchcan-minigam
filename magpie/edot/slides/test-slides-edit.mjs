@@ -79,6 +79,21 @@ try {
   await page.click('.sl-canvas', { position: { x: 4, y: 4 } });
   ok('clicking bare canvas deselects (inspector hidden)', await page.$eval('.sl-inspector', (e) => e.hidden) && !(await page.$('.sl-el.selected')));
 
+  // Presenter view: Present, then P toggles notes + next preview + timer.
+  await page.evaluate(() => { document.querySelector('edot-slides').slide.notes = 'Thank the sponsors.'; });
+  await page.click('button:has-text("Present")');
+  await page.waitForSelector('.sl-present');
+  await page.keyboard.press('p');
+  await page.waitForTimeout(200);
+  const pv = await page.evaluate(() => ({
+    on: document.querySelector('.sl-present').classList.contains('presenter'),
+    notes: document.querySelector('.sl-pv-notes')?.textContent,
+    next: !!document.querySelector('.sl-pv-next svg, .sl-pv-end'),
+    timer: /\d\d:\d\d/.test(document.querySelector('.sl-pv-timer')?.textContent || ''),
+  }));
+  ok('presenter view shows notes, next-slide preview and a timer', pv.on && /sponsors/.test(pv.notes) && pv.next && pv.timer);
+  await page.keyboard.press('Escape');
+
   ok('no page errors', errs.length === 0);
 } finally {
   await browser.close();

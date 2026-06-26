@@ -708,10 +708,28 @@ export class EdotSlides extends HTMLElement {
     const stage = document.createElement('div'); stage.className = 'sl-present-stage';
     const counter = document.createElement('div'); counter.className = 'sl-present-counter'; counter.setAttribute('aria-live', 'polite');
     overlay.append(stage, counter);
+
+    // Presenter view: next-slide preview + speaker notes + a running timer/clock,
+    // toggled with the button or 'P'. Hidden until toggled (audience sees only the
+    // slide); useful even on one screen for glancing at notes.
+    const pv = document.createElement('div'); pv.className = 'sl-pv';
+    const pvTimer = tag('div', 'sl-pv-timer');
+    const pvNext = tag('div', 'sl-pv-next');
+    const pvNotes = tag('div', 'sl-pv-notes');
+    pv.append(pvTimer, tag('div', 'sl-pv-label', 'Next slide'), pvNext, tag('div', 'sl-pv-label', 'Speaker notes'), pvNotes);
+    const pvToggle = document.createElement('button'); pvToggle.type = 'button'; pvToggle.className = 'sl-pv-toggle';
+    pvToggle.textContent = '👁 Presenter'; pvToggle.title = 'Presenter view (P): notes, next slide, timer';
+    pvToggle.addEventListener('click', (e) => { e.stopPropagation(); overlay.classList.toggle('presenter'); this._renderPresent(); });
+    overlay.append(pv, pvToggle);
+    this._pvNext = pvNext; this._pvNotes = pvNotes; this._pvTimer = pvTimer;
+
     this._presentOverlay = overlay;
     this._presentStage = stage;
     this._presentCounter = counter;
     document.body.append(overlay);
+    this._timerStart = Date.now();
+    this._pvTick = setInterval(() => this._updateTimer(), 1000);
+    this._updateTimer();
     this._renderPresent();
 
     this._keyHandler = (e) => {
@@ -721,6 +739,7 @@ export class EdotSlides extends HTMLElement {
       else if (e.key === 'Escape') { this.exitPresent(); }
       else if (e.key === 'Home') { this.presentIndex = 0; this._renderPresent(); }
       else if (e.key === 'End') { this.presentIndex = this.deck.slides.length - 1; this._renderPresent(); }
+      else if (e.key === 'p' || e.key === 'P') { this._presentOverlay.classList.toggle('presenter'); this._renderPresent(); }
     };
     document.addEventListener('keydown', this._keyHandler);
 
@@ -747,6 +766,19 @@ export class EdotSlides extends HTMLElement {
     const i = this.presentIndex;
     this._presentStage.innerHTML = fmt.slideToSvg(this.deck, i, { width: 1600 });
     this._presentCounter.textContent = `${i + 1} / ${this.deck.slides.length}`;
+    if (this._presentOverlay && this._presentOverlay.classList.contains('presenter')) {
+      if (this._pvNext) this._pvNext.innerHTML = i + 1 < this.deck.slides.length
+        ? fmt.slideToSvg(this.deck, i + 1, { width: 800 })
+        : '<div class="sl-pv-end">End of deck</div>';
+      if (this._pvNotes) this._pvNotes.textContent = (this.deck.slides[i].notes || '').trim() || '(no notes for this slide)';
+    }
+  }
+  _updateTimer() {
+    if (!this._pvTimer) return;
+    const s = Math.max(0, Math.floor((Date.now() - this._timerStart) / 1000));
+    const mm = String(Math.floor(s / 60)).padStart(2, '0'), ss = String(s % 60).padStart(2, '0');
+    const clock = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    this._pvTimer.textContent = `⏱ ${mm}:${ss}    🕐 ${clock}`;
   }
 
   presentNext() { if (this.presentIndex < this.deck.slides.length - 1) { this.presentIndex++; this._renderPresent(); } }
@@ -754,6 +786,7 @@ export class EdotSlides extends HTMLElement {
 
   exitPresent() {
     this.presenting = false;
+    clearInterval(this._pvTick);
     document.removeEventListener('keydown', this._keyHandler);
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     if (this._presentOverlay) this._presentOverlay.remove();
