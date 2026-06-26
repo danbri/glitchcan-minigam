@@ -1,6 +1,6 @@
 // test-ontology.mjs — the explicit entity/format/action ontology: class hierarchy,
 // inherited formats, RDF (Turtle) emission, widget bindings, and integrity.
-import { TYPES, FORMATS, WIDGETS, COLLECTIONS, LOCALITY, NS, isA, isType, formatsFor, ancestorsOf, toTurtle } from './js/ontology.js';
+import { TYPES, FORMATS, WIDGETS, COLLECTIONS, LOCALITY, PROVIDERS, CAPABILITIES, providersOffering, NS, isA, isType, formatsFor, ancestorsOf, toTurtle } from './js/ontology.js';
 
 let fail = 0;
 const ok = (n, c) => { console.log(`${c ? '✅' : '❌'} ${n}`); if (!c) fail++; };
@@ -42,6 +42,16 @@ ok('collection windows present known item types', Object.values(COLLECTIONS).eve
 const ttl2 = toTurtle({ collections: COLLECTIONS });
 ok('Turtle emits relation properties (locality, presentsItemsOf)', /edot:locality a rdf:Property/.test(ttl2) && /edot:presentsItemsOf a rdf:Property/.test(ttl2));
 ok('Turtle emits collection→item bindings', /edot:edot-people a edot:CollectionView ; edot:presentsItemsOf edot:Person/.test(ttl2));
+
+// Storage & identity (where data lives, how you reach it).
+ok('storage/identity types exist and subclass Entity', ['Provider', 'Account', 'Identity', 'Storage'].every((t) => isType(t) && isA(t, 'Entity')));
+ok('a Storage mount contains Folders and Files', (TYPES.Storage.contains || []).includes('Folder') && TYPES.Storage.contains.includes('File'));
+ok('capabilities vocabulary covers storage + services', ['storage', 'mail', 'calendar', 'chat', 'people', 'vcs'].every((c) => CAPABILITIES.includes(c)));
+ok('providers distinguish OS (local, no remote identity) from platforms', PROVIDERS['local-fs'].kind === 'os' && PROVIDERS.github.kind === 'platform' && PROVIDERS.github.auth === 'oauth');
+ok('providersOffering(storage) spans local + remote backends', ['local-fs', 'github', 's3', 'webdav', 'solid'].every((p) => providersOffering('storage').includes(p)));
+const ttl3 = toTurtle({ providers: PROVIDERS });
+ok('Turtle emits provider individuals with kind/auth/offers', /edot:github a edot:Provider[\s\S]*edot:kind "platform"[\s\S]*edot:auth "oauth"[\s\S]*edot:offers edot:storage, edot:vcs/.test(ttl3));
+ok('Turtle declares the storage/identity relations', /edot:storedIn a rdf:Property/.test(ttl3) && /edot:authenticatedBy a rdf:Property/.test(ttl3) && /edot:offers a rdf:Property/.test(ttl3));
 
 console.log(fail ? `\n${fail} ONTOLOGY FAILURE(S)` : '\nONTOLOGY OK');
 process.exit(fail ? 1 : 0);

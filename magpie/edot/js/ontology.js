@@ -47,6 +47,11 @@ export const TYPES = {
   Audio: { parent: 'File', label: 'Audio', formats: ['mp3', 'wav'], locatable: true },
   // A window that presents a SET of items of one type (gallery, list, picker).
   Collection: { parent: 'Entity', label: 'Collection' },
+  // ---- storage & identity (where data lives, how you reach it) ----
+  Provider: { parent: 'Entity', label: 'Provider' },      // a kind of backend (github, s3, local-fs…)
+  Account: { parent: 'Entity', label: 'Account' },        // an (authenticated) connection to a provider
+  Identity: { parent: 'Entity', label: 'Identity' },      // who you are (OAuth session, WebID, or local)
+  Storage: { parent: 'Entity', label: 'Storage', contains: ['Folder', 'File'] }, // a mount: a namespace of folders/files
 };
 
 // Where an item can live (the local/remote dimension for File/Image/Video/…).
@@ -61,6 +66,34 @@ export const COLLECTIONS = {
   'edot-video-library': 'Video',
   'edot-people': 'Person',
 };
+
+// The capabilities a provider/account can offer (same notion as the kernel's
+// capabilities, one level up): storage of blobs, or a typed service.
+export const CAPABILITIES = ['storage', 'mail', 'calendar', 'chat', 'people', 'vcs'];
+
+// The provider catalogue — the explicit model of WHERE data lives and HOW you
+// reach it. `kind` distinguishes OS (local, capability-granted by the OS, no
+// remote identity) from platforms (their own identity/login). `auth` is how you
+// authenticate; `offers` are the capabilities unlocked; `locality` is local/remote.
+// This unifies the four scattered registries: backup BACKENDS, mail adapters,
+// auth providers, and (read-only) places gazetteers.
+export const PROVIDERS = {
+  'local-fs': { label: 'This device', kind: 'os', auth: 'grant', offers: ['storage'], locality: 'local' },
+  opfs: { label: 'App private storage', kind: 'os', auth: 'none', offers: ['storage'], locality: 'local' },
+  github: { label: 'GitHub', kind: 'platform', auth: 'oauth', offers: ['storage', 'vcs'], locality: 'remote' },
+  s3: { label: 'S3-compatible', kind: 'platform', auth: 'keys', offers: ['storage'], locality: 'remote' },
+  webdav: { label: 'WebDAV', kind: 'platform', auth: 'password', offers: ['storage'], locality: 'remote' },
+  solid: { label: 'Solid pod', kind: 'platform', auth: 'webid', offers: ['storage', 'people'], locality: 'remote' },
+  gmail: { label: 'Gmail', kind: 'platform', auth: 'oauth', offers: ['mail'], locality: 'remote' },
+  graph: { label: 'Microsoft 365', kind: 'platform', auth: 'oauth', offers: ['mail', 'calendar', 'people'], locality: 'remote' },
+  caldav: { label: 'CalDAV', kind: 'platform', auth: 'password', offers: ['calendar'], locality: 'remote' },
+  xmpp: { label: 'XMPP', kind: 'platform', auth: 'password', offers: ['chat'], locality: 'remote' },
+};
+
+// Providers offering a given capability (e.g. all the places you could save a file).
+export function providersOffering(capability) {
+  return Object.entries(PROVIDERS).filter(([, p]) => p.offers.includes(capability)).map(([id]) => id);
+}
 
 // Serialization formats (edot:Format individuals).
 export const FORMATS = {
@@ -118,7 +151,7 @@ export function isType(type) { return Object.prototype.hasOwnProperty.call(TYPES
 
 // ---- RDF (Turtle) emission ----
 const esc = (s) => String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-export function toTurtle({ widgets = {}, commands = [], collections = {} } = {}) {
+export function toTurtle({ widgets = {}, commands = [], collections = {}, providers = {} } = {}) {
   const L = [];
   L.push('@prefix edot: <' + NS + '> .');
   L.push('@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .');
@@ -131,6 +164,10 @@ export function toTurtle({ widgets = {}, commands = [], collections = {} } = {})
   L.push('edot:appliesTo a rdf:Property ; rdfs:comment "a command operates on entities of a type" .');
   L.push('edot:presentsItemsOf a rdf:Property ; rdfs:comment "a collection window shows a set of items of a type" .');
   L.push('edot:locality a rdf:Property ; rdfs:comment "where an item lives: local or remote" .');
+  L.push('edot:offers a rdf:Property ; rdfs:comment "a provider/account offers a capability (storage/mail/…)" .');
+  L.push('edot:storedIn a rdf:Property ; rdfs:comment "a resource is stored in a Storage mount" .');
+  L.push('edot:authenticatedBy a rdf:Property ; rdfs:comment "a Storage uses an Account for access" .');
+  L.push('edot:hasIdentity a rdf:Property ; rdfs:comment "an Account carries an Identity" .');
   L.push('');
   L.push('# Entity classes');
   for (const [id, t] of Object.entries(TYPES)) {
@@ -158,6 +195,14 @@ export function toTurtle({ widgets = {}, commands = [], collections = {} } = {})
     L.push('# Collection windows ↔ the item type each presents');
     for (const [tag, type] of Object.entries(collections)) {
       L.push(`edot:${tag} a edot:CollectionView ; edot:presentsItemsOf edot:${type} .`);
+    }
+  }
+  if (Object.keys(providers).length) {
+    L.push('');
+    L.push('# Providers ↔ how you reach them and what they offer (OS vs platform)');
+    for (const [id, p] of Object.entries(providers)) {
+      const offers = (p.offers || []).map((c) => `edot:${c}`).join(', ');
+      L.push(`edot:${id} a edot:Provider ; rdfs:label "${esc(p.label)}" ; edot:kind "${esc(p.kind)}" ; edot:auth "${esc(p.auth)}" ; edot:locality "${esc(p.locality)}"${offers ? ` ; edot:offers ${offers}` : ''} .`);
     }
   }
   if (commands.length) {

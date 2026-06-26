@@ -13,6 +13,10 @@ edot:editsType a rdf:Property ; rdfs:comment "a widget edits entities of a type"
 edot:appliesTo a rdf:Property ; rdfs:comment "a command operates on entities of a type" .
 edot:presentsItemsOf a rdf:Property ; rdfs:comment "a collection window shows a set of items of a type" .
 edot:locality a rdf:Property ; rdfs:comment "where an item lives: local or remote" .
+edot:offers a rdf:Property ; rdfs:comment "a provider/account offers a capability (storage/mail/…)" .
+edot:storedIn a rdf:Property ; rdfs:comment "a resource is stored in a Storage mount" .
+edot:authenticatedBy a rdf:Property ; rdfs:comment "a Storage uses an Account for access" .
+edot:hasIdentity a rdf:Property ; rdfs:comment "an Account carries an Identity" .
 
 # Entity classes
 edot:Entity a rdfs:Class ;
@@ -141,6 +145,20 @@ edot:Audio a rdfs:Class ;
 edot:Collection a rdfs:Class ;
   rdfs:label "Collection" ;
   rdfs:subClassOf edot:Entity .
+edot:Provider a rdfs:Class ;
+  rdfs:label "Provider" ;
+  rdfs:subClassOf edot:Entity .
+edot:Account a rdfs:Class ;
+  rdfs:label "Account" ;
+  rdfs:subClassOf edot:Entity .
+edot:Identity a rdfs:Class ;
+  rdfs:label "Identity" ;
+  rdfs:subClassOf edot:Entity .
+edot:Storage a rdfs:Class ;
+  rdfs:label "Storage" ;
+  rdfs:subClassOf edot:Entity ;
+  edot:contains edot:Folder ;
+  edot:contains edot:File .
 
 # Formats
 edot:docx a edot:Format ; rdfs:label "Word" ; edot:mime "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ; edot:ext "docx" .
@@ -185,3 +203,15 @@ edot:edot-file-browser a edot:CollectionView ; edot:presentsItemsOf edot:File .
 edot:edot-gallery a edot:CollectionView ; edot:presentsItemsOf edot:Image .
 edot:edot-video-library a edot:CollectionView ; edot:presentsItemsOf edot:Video .
 edot:edot-people a edot:CollectionView ; edot:presentsItemsOf edot:Person .
+
+# Providers ↔ how you reach them and what they offer (OS vs platform)
+edot:local-fs a edot:Provider ; rdfs:label "This device" ; edot:kind "os" ; edot:auth "grant" ; edot:locality "local" ; edot:offers edot:storage .
+edot:opfs a edot:Provider ; rdfs:label "App private storage" ; edot:kind "os" ; edot:auth "none" ; edot:locality "local" ; edot:offers edot:storage .
+edot:github a edot:Provider ; rdfs:label "GitHub" ; edot:kind "platform" ; edot:auth "oauth" ; edot:locality "remote" ; edot:offers edot:storage, edot:vcs .
+edot:s3 a edot:Provider ; rdfs:label "S3-compatible" ; edot:kind "platform" ; edot:auth "keys" ; edot:locality "remote" ; edot:offers edot:storage .
+edot:webdav a edot:Provider ; rdfs:label "WebDAV" ; edot:kind "platform" ; edot:auth "password" ; edot:locality "remote" ; edot:offers edot:storage .
+edot:solid a edot:Provider ; rdfs:label "Solid pod" ; edot:kind "platform" ; edot:auth "webid" ; edot:locality "remote" ; edot:offers edot:storage, edot:people .
+edot:gmail a edot:Provider ; rdfs:label "Gmail" ; edot:kind "platform" ; edot:auth "oauth" ; edot:locality "remote" ; edot:offers edot:mail .
+edot:graph a edot:Provider ; rdfs:label "Microsoft 365" ; edot:kind "platform" ; edot:auth "oauth" ; edot:locality "remote" ; edot:offers edot:mail, edot:calendar, edot:people .
+edot:caldav a edot:Provider ; rdfs:label "CalDAV" ; edot:kind "platform" ; edot:auth "password" ; edot:locality "remote" ; edot:offers edot:calendar .
+edot:xmpp a edot:Provider ; rdfs:label "XMPP" ; edot:kind "platform" ; edot:auth "password" ; edot:locality "remote" ; edot:offers edot:chat .
