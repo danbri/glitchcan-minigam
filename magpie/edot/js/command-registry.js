@@ -8,14 +8,23 @@
 // retrofit. See docs/research/pre-enterprise-foundations.md §1 and §4.
 //
 // A command is data:
-//   { id, title, icon?, group?, order?, shortcut?, keywords?,
+//   { id, title, icon?, group?, order?, shortcut?, keywords?, appliesTo?,
 //     when?: (ctx) => boolean, run: (ctx, args) => any }
+//
+// `appliesTo` (optional) is an entity type from the ontology (ontology.js). It
+// makes the implicit "this action is for that kind of thing" relationship
+// explicit: a command for SlideElement is offered for any SlideElement subtype,
+// a command with no appliesTo is global. Surfaces can filter by the entity in
+// focus (ctx.forType) and the whole vocabulary can be emitted as RDF.
+
+import { isType, isA } from './ontology.js';
 
 export class CommandRegistry extends EventTarget {
   constructor() { super(); this._cmds = new Map(); this._audit = null; this._policy = null; }
 
   register(cmd) {
     if (!cmd || !cmd.id || typeof cmd.run !== 'function') throw new Error('command needs an id and a run()');
+    if (cmd.appliesTo && !isType(cmd.appliesTo)) console.warn(`command "${cmd.id}": appliesTo "${cmd.appliesTo}" is not an ontology type`);
     this._cmds.set(cmd.id, { group: '', order: 100, keywords: '', ...cmd });
     return this;
   }
@@ -25,12 +34,18 @@ export class CommandRegistry extends EventTarget {
   all() { return [...this._cmds.values()]; }
   has(id) { return this._cmds.has(id); }
 
-  // Commands available in a context, honouring `when(ctx)`, sorted by group/order.
+  // Commands available in a context, honouring `when(ctx)` and (if ctx.forType is
+  // set) the ontology applies-to relation. Sorted by group/order.
   contributions(ctx = {}) {
     return this.all()
       .filter((c) => !c.when || c.when(ctx))
+      .filter((c) => !ctx.forType || !c.appliesTo || isA(ctx.forType, c.appliesTo))
       .sort((a, b) => (a.group || '').localeCompare(b.group || '') || (a.order - b.order) || a.title.localeCompare(b.title));
   }
+
+  // Commands relevant to a given entity type (global + applies-to this type or a
+  // supertype). The ontology link, used directly.
+  forType(type, ctx = {}) { return this.contributions({ ...ctx, forType: type }); }
 
   // Filter over title/keywords/id for a palette.
   search(query, ctx = {}) {
@@ -55,3 +70,10 @@ export class CommandRegistry extends EventTarget {
   onAudit(fn) { this._audit = fn; return this; }   // Enterprise: audit log
   onPolicy(fn) { this._policy = fn; return this; } // Enterprise: policy/DLP/RBAC gate
 }
+
+// The shared, suite-wide registry (the shell, every app, the palette and
+// Automations register into and read from this one). The standalone editor
+// (edot-app.js) still constructs its own CommandRegistry; both are valid.
+let _registry = null;
+export function getRegistry() { if (!_registry) _registry = new CommandRegistry(); return _registry; }
+

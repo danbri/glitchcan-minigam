@@ -22,6 +22,8 @@ const SUITES = [
   ['data-object', 'test-data-object.mjs'],
   ['object-index', 'test-object-index.mjs'],
   ['kernel', 'test-kernel.mjs'],
+  ['ontology', 'test-ontology.mjs'],
+  ['command-registry', 'test-command-registry.mjs'],
   ['shell', 'test-shell.mjs'],
   ['workspace', 'test-workspace.mjs'],
   ['places', 'places/test-places.mjs'],
