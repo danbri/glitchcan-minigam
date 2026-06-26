@@ -71,9 +71,8 @@
       .rail { width: auto; flex-direction: row; overflow-x: auto; border-right: none; border-top: 1px solid var(--line); order: 2; }
       .bodyrow { flex-direction: column; }
       .stage { order: 1; }
-      /* On a phone the Workspace can only show one pane, so it's redundant with
-         the rail's per-app icons — hide it; the rail is the sole mobile nav. */
-      .rail button[data-nav="workspace"] { display: none; }
+      /* Workspace is a core surface — it must stay reachable on every device.
+         On a phone it shows one pane at a time via its own sub-tabs (below). */
       .ws-subtabs { display: flex; }
       .ws-panes { flex-direction: column; }
       .ws-pane { border-right: none; }

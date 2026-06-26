@@ -68,16 +68,26 @@ try {
   await page.click('.menu .mi:has-text("Calendar")'); await page.waitForTimeout(800);
   ok('View → Open app switches the active app', await page.evaluate(() => location.hash === '#calendar' && !document.querySelector('.view[data-app="calendar"]').hidden));
 
-  // Mobile: the Workspace (side-by-side, desktop-only) is hidden from the rail so
-  // Data/Slides/Editor aren't duplicated as both sub-tabs AND rail icons; the
-  // phone opens a single app and the rail is the sole navigation.
+  // Mobile: Workspace is a core surface and must stay reachable on every device.
+  // It appears in the rail and, when opened on a phone, shows one pane at a time
+  // via its own sub-tabs (not the desktop side-by-side multi-pane).
   const mob = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await mob.goto(`http://127.0.0.1:${port}/magpie/edot/index.html`);
   await mob.waitForSelector('.rail button[data-nav="editor"]');
   await mob.waitForTimeout(1000);
   const railVisible = await mob.$$eval('.rail button', (els) => els.filter((e) => e.offsetParent !== null).map((e) => e.dataset.nav));
-  ok('mobile: Workspace hidden from the rail (no duplicate Data/Slides/Editor nav)', !railVisible.includes('workspace') && railVisible.includes('editor'));
-  ok('mobile: opens a single app, not the multi-pane Workspace', mob.url().includes('#editor'));
+  ok('mobile: Workspace is reachable in the rail (core surface, not hidden)', railVisible.includes('workspace') && railVisible.includes('editor'));
+  // Open Workspace on the phone and confirm it shows a single pane via sub-tabs.
+  await mob.click('.rail button[data-nav="workspace"]'); await mob.waitForTimeout(800);
+  const ws = await mob.evaluate(() => {
+    const v = document.querySelector('.view[data-app="workspace"]');
+    if (!v || v.hidden) return null;
+    const subtabs = v.querySelector('.ws-subtabs');
+    const panes = [...v.querySelectorAll('.ws-pane')];
+    const visible = panes.filter((p) => p.offsetParent !== null);
+    return { hasSubtabs: !!subtabs && subtabs.offsetParent !== null, panes: panes.length, visible: visible.length };
+  });
+  ok('mobile: Workspace opens with sub-tabs and shows one pane at a time', !!ws && ws.hasSubtabs && ws.panes === 3 && ws.visible === 1);
   await mob.close();
 
   ok('no page errors', errs.length === 0);
