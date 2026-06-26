@@ -136,12 +136,56 @@
       { id: 'maps',     label: 'Maps',     icon: '🗺️', tag: 'edot-maps', css: ['maps/css/maps.css'], load: () => import('./maps/js/maps-app.js'), init: (el) => el.init() },
       { id: 'backup',   label: 'Backup',   icon: '⤓',  tag: 'edot-backup', css: ['css/edot.css', 'backup/css/backup.css'], load: () => import('./backup/js/backup-ui.js') },
       { id: 'automations', label: 'Automations', icon: '⚙', tag: 'edot-automations', css: ['automations/automations.css'], load: () => import('./automations/js/automations-app.js') },
+      { id: 'projects', label: 'Projects', icon: '📦', tag: 'edot-projects', css: ['projects/projects.css'], load: () => import('./projects/js/projects-app.js') },
     ];
     const byId = Object.fromEntries(APPS.map((a) => [a.id, a]));
 
     kernel.bus.subscribe('data:share', (p) => {
       try { kernel.capabilities.invoke('slides.addData', p); } catch (_) {}
       try { kernel.capabilities.invoke('editor.addData', p); } catch (_) {}
+    });
+
+    // ---- Projects: a .zip bundle hydrates the workspace (doc + data + deck) ----
+    let activeProject = null;
+    async function hydrateProject(project) {
+      if (!project || !project.manifest) return;
+      const { manifest, files } = project;
+      activeProject = manifest;
+      await ensureView('workspace');
+      const ws = views.get('workspace');
+      const fileOf = (entry) => entry && files && files[entry.file];
+      // Document → Editor pane.
+      const docHtml = fileOf((manifest.docs || [])[0]);
+      const ed = ws && ws.querySelector('edot-editor');
+      if (docHtml != null && ed && ed.setContent) { try { ed.setContent(docHtml); } catch (_) {} }
+      // Deck → Slides pane.
+      const deckText = fileOf((manifest.slides || [])[0]);
+      const sl = ws && ws.querySelector('edot-slides');
+      if (deckText != null && sl && sl.applyDeckData) { try { await sl.applyDeckData(JSON.parse(deckText)); } catch (_) {} }
+      // Table → Data pane.
+      const dataEntry = (manifest.data || [])[0];
+      const csvText = fileOf(dataEntry);
+      const dt = ws && ws.querySelector('edot-data');
+      if (csvText != null && dt && dt.addCsvTable) { try { await dt.addCsvTable(dataEntry.title || dataEntry.id, csvText); } catch (_) {} }
+      go('workspace');
+    }
+    kernel.bus.subscribe('project:open', (p) => { hydrateProject(p).catch((e) => console.error('project:open', e)); });
+
+    // Snapshot the live workspace into a project { manifest, files } for saving.
+    kernel.capabilities.provide('project.snapshot', async () => {
+      await ensureView('workspace');
+      const ws = views.get('workspace');
+      const name = (activeProject && activeProject.name) || 'My Project';
+      const manifest = { name, description: (activeProject && activeProject.description) || 'Saved from edot.', problemSpace: (activeProject && activeProject.problemSpace) || 'custom', apps: ['editor', 'data', 'slides'], docs: [], data: [], slides: [] };
+      const files = {};
+      const ed = ws && ws.querySelector('edot-editor');
+      if (ed && ed.getContent) { files['docs/document.html'] = ed.getContent(); manifest.docs.push({ id: 'document', title: 'Document', file: 'docs/document.html' }); }
+      const sl = ws && ws.querySelector('edot-slides');
+      if (sl && sl.deck) { files['slides/deck.json'] = JSON.stringify(sl.deck, null, 2); manifest.slides.push({ id: 'deck', title: sl.deck.title || 'Deck', file: 'slides/deck.json' }); }
+      const dt = ws && ws.querySelector('edot-data');
+      const tbl = dt && dt.activeTableCsv && dt.activeTableCsv();
+      if (tbl) { files['data/table.csv'] = tbl.csv; manifest.data.push({ id: 'table', title: tbl.title, file: 'data/table.csv', format: 'csv' }); }
+      return { manifest, files };
     });
 
     const rail = document.getElementById('rail');

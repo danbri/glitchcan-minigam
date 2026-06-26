@@ -38,7 +38,8 @@ export class EdotData extends HTMLElement {
   constructor() { super(); this.engine = new DataEngine(); this.active = null; this.geoIndex = null; }
 
   async init() {
-    await this.engine.init();
+    this._ready = this.engine.init();
+    await this._ready;
     this.engine.run(`CREATE TABLE IF NOT EXISTS ${META} (name TEXT PRIMARY KEY, def TEXT)`);
     this._render();
     this.refresh();
@@ -348,6 +349,28 @@ export class EdotData extends HTMLElement {
     this.engine.createTableFromColumns(name, dedupe(header), body);
     this.refresh();
     this.openTable(name);
+  }
+
+  // Hydrate from a project bundle: create a table named `title` from CSV text.
+  // Waits for the SQLite engine so it's safe to call right after mount.
+  async addCsvTable(title, text) {
+    if (this._ready) { try { await this._ready; } catch (_) { /* engine error surfaces below */ } }
+    const rows = parseCsv(String(text || ''));
+    if (!rows.length) return null;
+    const name = this._unique(safeIdent(title || 'table', 'imported'));
+    const header = rows[0].map((h, i) => safeIdent(h || `col${i + 1}`, `col${i + 1}`));
+    const body = rows.slice(1).map((r) => r.map(coerce));
+    this.engine.createTableFromColumns(name, dedupe(header), body);
+    this.refresh();
+    this.openTable(name);
+    return name;
+  }
+
+  // For project snapshot: the active table as { title, csv }, or null.
+  activeTableCsv() {
+    if (!this.active || this.active.kind !== 'table' || !this.active.name) return null;
+    try { const d = this.engine.tableRows(this.active.name, { limit: 100000 }); return { title: this.active.name, csv: toCsv(d.columns, d.rows) }; }
+    catch (_) { return null; }
   }
 
   newTable() {

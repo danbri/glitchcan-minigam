@@ -41,6 +41,8 @@ const SUITES = [
   ['auth', 'auth/test-auth.mjs'],
   ['backup', 'backup/test-backup.mjs'],
   ['automations', 'automations/test-automations.mjs'],
+  ['project (codec)', 'projects/test-project.mjs'],
+  ['projects (shell)', 'projects/test-projects-shell.mjs'],
 ];
 
 const filter = process.argv.slice(2);

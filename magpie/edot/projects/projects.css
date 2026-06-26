@@ -1,0 +1,58 @@
+/* projects.css — <edot-projects>. Mobile-first; cards reflow to one column on
+   a phone so every action stays reachable. */
+:root {
+  --pj-bg: #faf8f4; --pj-surface: #fff; --pj-ink: #1c1c1c; --pj-muted: #6b6258;
+  --pj-line: #e2dcd2; --pj-accent: #8b4513; --pj-chip: #efe9df; --pj-radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --pj-bg: #15140f; --pj-surface: #1d1b16; --pj-ink: #ece8e0; --pj-muted: #a59c8f;
+    --pj-line: #322e26; --pj-accent: #c8915a; --pj-chip: #272318; }
+}
+edot-projects { display: block; height: 100%; overflow: auto; }
+.pj-app {
+  min-height: 100%; box-sizing: border-box; padding: 1rem 1rem 3rem;
+  background: var(--pj-bg); color: var(--pj-ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.pj-head { max-width: 60rem; margin: 0 auto 1rem; }
+.pj-title { margin: 0.2rem 0; font-size: 1.5rem; color: var(--pj-accent); }
+.pj-sub { margin: 0 0 0.8rem; color: var(--pj-muted); line-height: 1.45; }
+.pj-sub code, .pj-files code { background: var(--pj-chip); padding: 0.05em 0.35em; border-radius: 4px; font-size: 0.85em; }
+.pj-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.pj-status { margin: 0.6rem 0 0; color: var(--pj-accent); min-height: 1.2em; font-size: 0.9rem; }
+
+.pj-btn {
+  display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer;
+  padding: 0.55rem 0.9rem; border: 1px solid var(--pj-line); border-radius: 8px;
+  background: var(--pj-accent); color: #fff; font: inherit; font-weight: 600;
+  min-height: 2.6rem;
+}
+.pj-btn.pj-ghost, .pj-btn.pj-open, .pj-btn.pj-save { background: var(--pj-surface); color: var(--pj-ink); }
+.pj-btn:hover { filter: brightness(1.05); }
+
+.pj-section { max-width: 60rem; margin: 1.4rem auto 0; }
+.pj-section h2 { font-size: 1rem; margin: 0 0 0.7rem; }
+.pj-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.8rem; }
+.pj-card {
+  background: var(--pj-surface); border: 1px solid var(--pj-line); border-radius: var(--pj-radius);
+  padding: 0.9rem; display: flex; flex-direction: column; gap: 0.4rem;
+}
+.pj-card-icon { font-size: 1.6rem; }
+.pj-card-name { font-weight: 700; }
+.pj-card-desc { color: var(--pj-muted); font-size: 0.88rem; line-height: 1.4; flex: 1 1 auto; }
+.pj-card-apps { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.pj-chip { background: var(--pj-chip); color: var(--pj-muted); border-radius: 999px; padding: 0.1rem 0.55rem; font-size: 0.72rem; }
+.pj-card-actions { display: flex; gap: 0.4rem; margin-top: 0.3rem; }
+.pj-card-actions .pj-use { flex: 1 1 auto; justify-content: center; }
+
+.pj-detail { background: var(--pj-surface); border: 1px solid var(--pj-line); border-radius: var(--pj-radius); padding: 1rem; }
+.pj-detail-head { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.7rem; }
+.pj-files { list-style: none; margin: 0 0 0.9rem; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.pj-files li { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; font-size: 0.9rem; }
+.pj-k { background: var(--pj-chip); color: var(--pj-muted); border-radius: 5px; padding: 0.05rem 0.45rem; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.pj-load { justify-content: center; }
+
+@media (max-width: 40rem) {
+  .pj-gallery { grid-template-columns: 1fr; }
+  .pj-actions .pj-btn { flex: 1 1 auto; justify-content: center; }
+}

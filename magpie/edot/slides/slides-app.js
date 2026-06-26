@@ -62,12 +62,18 @@ export class EdotSlides extends HTMLElement {
     this._onFocusIn = () => { activeSlides = this; };
     this.addEventListener('focusin', this._onFocusIn);
     wireSlidesCapability();
-    // Resume the most recent deck if one exists; else start fresh.
-    const list = await listDecks().catch(() => []);
-    this.deck = list.length ? await loadDeck(list[0].id) : null;
-    if (!this.deck) { this.deck = newDeck(); await saveDeck(this.deck); }
-    this.deck = normalizeDeck(this.deck);
-    this._render();
+    // Expose readiness so callers (e.g. project hydration) can wait for the
+    // initial deck load before replacing it — otherwise the async resume below
+    // could overwrite a freshly applied deck.
+    let done; this._ready = new Promise((r) => { done = r; });
+    try {
+      // Resume the most recent deck if one exists; else start fresh.
+      const list = await listDecks().catch(() => []);
+      this.deck = list.length ? await loadDeck(list[0].id) : null;
+      if (!this.deck) { this.deck = newDeck(); await saveDeck(this.deck); }
+      this.deck = normalizeDeck(this.deck);
+      this._render();
+    } finally { done(); }
   }
 
   disconnectedCallback() {
@@ -691,6 +697,19 @@ export class EdotSlides extends HTMLElement {
     await saveDeck(this.deck);
     this.current = 0;
     this._render();
+  }
+
+  // Hydrate from a project bundle: replace the working deck with deckObj
+  // (raw parsed JSON), normalize it, show slide 1, persist. Used when a project
+  // is opened so its deck becomes the live deck.
+  async applyDeckData(deckObj) {
+    if (this._ready) { try { await this._ready; } catch (_) { /* initial load failed; proceed */ } }
+    this.deck = normalizeDeck(deckObj);
+    this.current = 0;
+    try { this._deselect && this._deselect(); } catch (_) { /* none selected */ }
+    this._render();
+    try { await this._saveNow(); } catch (_) { /* persistence is best-effort */ }
+    return true;
   }
 
   // ===================================================================
