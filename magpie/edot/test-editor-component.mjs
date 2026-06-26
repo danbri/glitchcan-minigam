@@ -82,6 +82,23 @@ try {
   await page.waitForTimeout(150);
   ok('after focusing A, the next share routes to A', await page.evaluate(() => window.__hostdemo.edA.getContent().includes('Q23154')));
 
+  // --- image import: bitmap downscaled, SVG kept vector, survives sanitizer ---
+  const img = await page.evaluate(async () => {
+    const ed = window.__hostdemo.edA; ed.content = '<p>doc</p>';
+    const c = document.createElement('canvas'); c.width = 2400; c.height = 1200;
+    c.getContext('2d').fillRect(0, 0, 2400, 1200);
+    const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
+    await ed.insertImageFile(new File([blob], 'big.jpg', { type: 'image/jpeg' }));
+    const html = ed.getContent();
+    const m = /<img[^>]+src="([^"]+)"/i.exec(html);
+    const dim = m ? await new Promise((res) => { const i = new Image(); i.onload = () => res({ w: i.naturalWidth }); i.src = m[1]; }) : { w: 0 };
+    await ed.insertImageFile(new File(['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50"></svg>'], 'v.svg', { type: 'image/svg+xml' }));
+    return { hasImg: /<img/i.test(html), isData: m && /^data:image\//.test(m[1]), bitmapW: dim.w, svgVector: /data:image\/svg\+xml/.test(ed.getContent()) };
+  });
+  ok('editor inserts an image as a data URL (survives the sanitizer)', img.hasImg && img.isData);
+  ok('editor downscales a large bitmap on import', img.bitmapW <= 1600 && img.bitmapW >= 1500);
+  ok('editor keeps an imported SVG as vector', img.svgVector);
+
   ok('no page errors', errs.length === 0);
 } finally {
   await browser.close();

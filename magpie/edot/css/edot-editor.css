@@ -7,6 +7,8 @@
  * visual lockstep even though the selectors differ.
  */
 edot-editor { display: flex; flex-direction: column; min-height: 0; }
+/* Imported images never overflow the page (they may carry a width attribute). */
+edot-editor [contenteditable] img { max-width: 100%; height: auto; }
 
 edot-editor .toolbar {
   display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 0.15rem;

@@ -15,6 +15,7 @@ import {
 } from './slides-model.js';
 import { saveDeck, loadDeck, listDecks, deleteDeck } from './slides-store.js';
 import * as fmt from './slides-formats.js';
+import { prepareImage, fitImage } from '../js/image-util.js';
 import { fingerprint, typeInfo } from '../js/data-object.js';
 import { getKernel } from '../js/edot-kernel.js';
 
@@ -329,6 +330,7 @@ export class EdotSlides extends HTMLElement {
     box.className = 'sl-el sl-el-' + el.type + (idx === this._activeEl ? ' selected' : '');
     box.style.left = pct(el.x); box.style.top = pct(el.y);
     box.style.width = pct(el.w); box.style.height = pct(el.h);
+    if (el.rotation) box.style.transform = `rotate(${el.rotation}deg)`;
     box.dataset.idx = idx;
 
     if (el.type === 'text') {
@@ -491,7 +493,16 @@ export class EdotSlides extends HTMLElement {
       colors.append(tag('span', 'sl-ins-mini', 'Fill'), fill, tag('span', 'sl-ins-mini', 'Stroke'), stroke);
       ins.append(tag('div', 'sl-ins-label', 'Colour'), colors);
     }
-    ins.append(tag('div', 'sl-ins-pos', `x ${Math.round(el.x * 100)}% · y ${Math.round(el.y * 100)}% · ${Math.round(el.w * 100)}×${Math.round(el.h * 100)}`));
+    // Orientability: rotate any element. A number field + quick 90° step.
+    const orient = tag('div', 'sl-ins-row');
+    const rot = document.createElement('input'); rot.type = 'number'; rot.min = '0'; rot.max = '359'; rot.step = '1';
+    rot.className = 'sl-ins-rot'; rot.value = String(Math.round(el.rotation || 0)); rot.title = 'Rotation (degrees)';
+    const applyRot = (deg) => { el.rotation = ((Math.round(deg) % 360) + 360) % 360; rot.value = String(el.rotation); this._touch(); this._renderEditor(); this._renderRailThumb(this.current); };
+    rot.addEventListener('change', () => applyRot(Number(rot.value) || 0));
+    orient.append(tag('span', 'sl-ins-mini', '∠'), rot, tag('span', 'sl-ins-mini', '°'),
+      this._btn('⟳ 90°', () => applyRot((el.rotation || 0) + 90), { title: 'Rotate 90°' }));
+    ins.append(tag('div', 'sl-ins-label', 'Orient'), orient);
+    ins.append(tag('div', 'sl-ins-pos', `x ${Math.round(el.x * 100)}% · y ${Math.round(el.y * 100)}% · ${Math.round(el.w * 100)}×${Math.round(el.h * 100)} · ${Math.round(el.rotation || 0)}°`));
     ins.append(this._btn('🗑 Delete element', () => this.deleteElement(i), { title: 'Delete' }));
   }
 
@@ -675,8 +686,11 @@ export class EdotSlides extends HTMLElement {
   }
 
   async insertImage(file) {
-    const dataUrl = await fileToDataUrl(file);
-    this.slide.elements.push({ type: 'image', x: 0.25, y: 0.25, w: 0.5, h: 0.45, dataUrl, alt: file.name || '' });
+    const { dataUrl, aspect } = await prepareImage(file);
+    const { w, h } = fitImage(aspect);
+    // Centre it on the slide.
+    this.slide.elements.push({ type: 'image', x: clamp(0.5 - w / 2, 0, 1 - w), y: clamp(0.5 - h / 2, 0, 1 - h), w, h, rotation: 0, dataUrl, alt: file.name || '' });
+    this._selectEl(this.slide.elements.length - 1);
     this._touch(); this._renderEditor(); this._renderRailThumb(this.current);
   }
 
@@ -970,6 +984,7 @@ function escapeHtml(s) { return String(s == null ? '' : s).replace(/[<>&]/g, (c)
 function fileToDataUrl(file) {
   return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => rej(fr.error); fr.readAsDataURL(file); });
 }
+
 
 customElements.define('edot-slides', EdotSlides);
 

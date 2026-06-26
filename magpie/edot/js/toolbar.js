@@ -12,7 +12,7 @@ const LAYOUT = [
   { type: 'group', items: ['bold', 'italic', 'underline', 'strike'] },
   { type: 'group', items: ['alignLeft', 'alignCenter', 'alignRight', 'alignJustify'] },
   { type: 'group', items: ['bulletList', 'numberList', 'outdent', 'indent'] },
-  { type: 'group', items: ['blockquote', 'code', 'link', 'semantic'] },
+  { type: 'group', items: ['blockquote', 'code', 'link', 'image', 'semantic'] },
   { type: 'group', items: ['undo', 'redo', 'removeFormat'] },
 ];
 
@@ -36,6 +36,7 @@ const ICONS = {
   blockquote: { glyph: '❝' },
   code: { glyph: '</>' },
   link: { glyph: '🔗', label: 'Insert link' },
+  image: { glyph: '🖼', label: 'Insert image' },
   semantic: { glyph: '🏷️', label: 'Tag with RDFa property' },
   undo: { glyph: '↶' },
   redo: { glyph: '↷' },
@@ -138,6 +139,7 @@ export class Toolbar {
       e.preventDefault();
       if (consumedPeek(btn)) return; // a long-press peeked the label; don't act
       if (id === 'link') { createLink(this.announce); }
+      else if (id === 'image') { (this.editor.el || this.editor).dispatchEvent(new CustomEvent('edot-pick-image', { bubbles: true })); return; }
       else if (id === 'semantic') { createSemantic(this.announce); }
       else if (id in ALIGN) { setAlign(ALIGN[id]); }
       else if (cmd) { cmd.exec(); }

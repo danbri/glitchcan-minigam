@@ -147,7 +147,8 @@ function num(v, d) { const n = Number(v); return Number.isFinite(n) ? n : d; }
 
 function normalizeElement(e) {
   if (!e || typeof e !== 'object') return null;
-  const base = { x: num(e.x, 0.1), y: num(e.y, 0.1), w: num(e.w, 0.8), h: num(e.h, 0.2) };
+  // rotation: degrees clockwise, normalized to [0,360). Orientability for any element.
+  const base = { x: num(e.x, 0.1), y: num(e.y, 0.1), w: num(e.w, 0.8), h: num(e.h, 0.2), rotation: ((num(e.rotation, 0) % 360) + 360) % 360 };
   if (e.type === 'text') {
     const runs = (Array.isArray(e.runs) ? e.runs : [{ text: '' }]).map((r) => ({
       text: typeof r.text === 'string' ? r.text : '',

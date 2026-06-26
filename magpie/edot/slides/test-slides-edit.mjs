@@ -103,6 +103,41 @@ try {
   await page.waitForTimeout(150);
   ok('clicking the exit button leaves present mode', !(await page.$('.sl-present')));
 
+  // ---- media: bitmap downsizing, SVG kept as vector, aspect-correct, rotation ----
+  const media = await page.evaluate(async () => {
+    const el = document.querySelector('edot-slides');
+    // A 2400x1200 bitmap (2:1) — larger than the 1600px cap → must downscale.
+    const c = document.createElement('canvas'); c.width = 2400; c.height = 1200;
+    const g = c.getContext('2d'); g.fillStyle = '#c33'; g.fillRect(0, 0, 2400, 1200);
+    const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
+    const bmp = new File([blob], 'big.jpg', { type: 'image/jpeg' });
+    await el.insertImage(bmp);
+    const imgEl = el.slide.elements[el.slide.elements.length - 1];
+    // Decode the stored dataUrl to check it was actually downscaled.
+    const dim = await new Promise((res) => { const i = new Image(); i.onload = () => res({ w: i.naturalWidth, h: i.naturalHeight }); i.src = imgEl.dataUrl; });
+
+    // An SVG file — must be embedded as vector, not rasterized.
+    const svg = new File(['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50"><rect width="100" height="50" fill="blue"/></svg>'], 'v.svg', { type: 'image/svg+xml' });
+    await el.insertImage(svg);
+    const svgEl = el.slide.elements[el.slide.elements.length - 1];
+
+    // Rotate the SVG element 90°.
+    svgEl.rotation = 90; el._renderEditor();
+    const box = el.querySelector('.sl-el-image:last-of-type') || [...el.querySelectorAll('.sl-el-image')].pop();
+    const transform = box ? getComputedStyle(box).transform : 'none';
+    return {
+      bmpLongest: Math.max(dim.w, dim.h), bmpAspect: +(dim.w / dim.h).toFixed(2),
+      bmpElAspectish: imgEl.w > 0 && imgEl.h > 0,
+      svgIsVector: /^data:image\/svg\+xml/.test(svgEl.dataUrl),
+      rotation: svgEl.rotation, hasTransform: transform !== 'none' && transform !== '',
+    };
+  });
+  ok('large bitmap is downscaled to the 1600px cap', media.bmpLongest <= 1600 && media.bmpLongest >= 1500);
+  ok('downscale preserves aspect ratio (2:1)', media.bmpAspect === 2);
+  ok('image element is sized (positioned within page)', media.bmpElAspectish);
+  ok('SVG is embedded as vector (not rasterized)', media.svgIsVector);
+  ok('an element can be rotated (orientability)', media.rotation === 90 && media.hasTransform);
+
   ok('no page errors', errs.length === 0);
 } finally {
   await browser.close();

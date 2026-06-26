@@ -247,6 +247,7 @@ edot-slides { display: block; height: 100%; }
 .sl-ins-row { display: flex; gap: 0.25rem; flex-wrap: wrap; align-items: center; }
 .sl-ins-pos { font-size: 0.72rem; color: var(--s-muted); margin: 0.6rem 0; }
 .sl-ins-mini { font-size: 0.72rem; color: var(--s-muted); }
+.sl-ins-rot { width: 4rem; font: inherit; padding: 0.2em 0.3em; border: 1px solid var(--s-line); border-radius: 5px; background: var(--s-surface); color: var(--s-ink); }
 
 .sl-el.selected { outline: 2px solid var(--s-focus, #1a73e8); outline-offset: 0; z-index: 5; }
 .sl-el-image.selected, .sl-el-shape.selected { touch-action: none; cursor: move; }

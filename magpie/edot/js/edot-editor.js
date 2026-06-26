@@ -27,6 +27,7 @@ import { Toolbar } from './toolbar.js';
 import { Announcer } from './a11y.js';
 import { COMMANDS, setBlockFormat, currentBlockFormat, setAlign, currentAlign, createLink as cmdCreateLink } from './commands.js';
 import { getKernel } from './edot-kernel.js';
+import { prepareImage } from './image-util.js';
 
 let seq = 0;
 
@@ -111,6 +112,13 @@ export class EdotEditor extends HTMLElement {
     if (!active) active = this;
     this._onFocusIn = () => { active = this; };
     this.addEventListener('focusin', this._onFocusIn);
+    // Image import: the toolbar's 🖼 button asks us to pick a file; we downscale
+    // bitmaps / keep SVG vector and insert it sized to fit the page width.
+    this._imgInput = document.createElement('input');
+    this._imgInput.type = 'file'; this._imgInput.accept = 'image/*,.svg'; this._imgInput.hidden = true;
+    this._imgInput.addEventListener('change', () => { const f = this._imgInput.files[0]; if (f) this.insertImageFile(f); this._imgInput.value = ''; });
+    this.appendChild(this._imgInput);
+    this.addEventListener('edot-pick-image', () => this.pickImage());
     wireCapabilityOnce();
 
     this.dispatchEvent(new CustomEvent('edot-ready', { bubbles: true, detail: { editor: this } }));
@@ -149,6 +157,20 @@ export class EdotEditor extends HTMLElement {
   insertHtml(html) { this.editor.insertHtml(html); }
   insertData(columns = [], rows = [], title = '') {
     this.editor.insertHtml((title ? `<h3>${esc(title)}</h3>` : '') + tableHtml(columns, rows));
+  }
+  pickImage() { this._imgInput && this._imgInput.click(); }
+  // Import an image: SVG kept as vector, large bitmaps downscaled. Inserted sized
+  // to the page (max-width:100%) so it's positioned within the document flow.
+  async insertImageFile(file) {
+    if (!file) return;
+    const { dataUrl, width } = await prepareImage(file);
+    // The sanitizer strips inline style, so size via the width attribute; editor
+    // CSS (img{max-width:100%}) keeps it from overflowing the page.
+    const w = width ? Math.min(Math.round(width), 640) : 0;
+    this.editor.focus();
+    this.editor.insertHtml(`<img src="${dataUrl}" alt="${esc(file.name || '')}"${w ? ` width="${w}"` : ''}>`);
+    this._dirty = true;
+    this.dispatchEvent(new CustomEvent('edot-change', { bubbles: true, detail: { editor: this } }));
   }
   focus() { this.editor.focus(); }
   focusEnd() { this.editor.focusEnd(); }
