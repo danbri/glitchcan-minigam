@@ -720,7 +720,12 @@ export class EdotSlides extends HTMLElement {
     const pvToggle = document.createElement('button'); pvToggle.type = 'button'; pvToggle.className = 'sl-pv-toggle';
     pvToggle.textContent = '👁 Presenter'; pvToggle.title = 'Presenter view (P): notes, next slide, timer';
     pvToggle.addEventListener('click', (e) => { e.stopPropagation(); overlay.classList.toggle('presenter'); this._renderPresent(); });
-    overlay.append(pv, pvToggle);
+    // Always-visible exit affordance. Escape works on desktop, but a phone has no
+    // Esc key and swipes only navigate — without this, present mode is a trap.
+    const exit = document.createElement('button'); exit.type = 'button'; exit.className = 'sl-present-exit';
+    exit.textContent = '✕'; exit.title = 'Exit presentation (Esc)'; exit.setAttribute('aria-label', 'Exit presentation');
+    exit.addEventListener('click', (e) => { e.stopPropagation(); this.exitPresent(); });
+    overlay.append(pv, pvToggle, exit);
     this._pvNext = pvNext; this._pvNotes = pvNotes; this._pvTimer = pvTimer;
 
     this._presentOverlay = overlay;

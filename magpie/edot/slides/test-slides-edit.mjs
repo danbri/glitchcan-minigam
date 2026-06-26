@@ -92,7 +92,16 @@ try {
     timer: /\d\d:\d\d/.test(document.querySelector('.sl-pv-timer')?.textContent || ''),
   }));
   ok('presenter view shows notes, next-slide preview and a timer', pv.on && /sponsors/.test(pv.notes) && pv.next && pv.timer);
-  await page.keyboard.press('Escape');
+  // A visible exit button is the only reliable way out on touch (no Esc key).
+  // Note: offsetParent is null for position:fixed elements, so measure the rect.
+  const exitVisible = await page.$eval('.sl-present-exit', (e) => {
+    const r = e.getBoundingClientRect(); const s = getComputedStyle(e);
+    return r.width >= 40 && r.height >= 40 && s.visibility !== 'hidden' && s.display !== 'none';
+  }).catch(() => false);
+  ok('present mode has a visible exit button (touch-reachable)', exitVisible);
+  await page.click('.sl-present-exit');
+  await page.waitForTimeout(150);
+  ok('clicking the exit button leaves present mode', !(await page.$('.sl-present')));
 
   ok('no page errors', errs.length === 0);
 } finally {

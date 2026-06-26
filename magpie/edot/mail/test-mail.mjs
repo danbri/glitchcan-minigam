@@ -388,6 +388,17 @@ try {
   await page.waitForTimeout(80);
   ok('search filters the message list', (await page.$$('edot-mail .msg-row')).length === 1);
 
+  // No account configured → send must explain itself, not throw a null-ref crash.
+  const guard = await page.evaluate(async () => {
+    const c = window.__mail.component; c.adapter = null;
+    document.querySelector('edot-mail .compose-btn').click();
+    const wrap = document.querySelector('.compose-overlay');
+    wrap.querySelector('.cf-to').value = 'z@x.com';
+    await c._send(wrap, () => {});
+    return wrap.querySelector('.cf-status').textContent;
+  });
+  ok('send with no account shows a sign-in hint, not a crash', /sign in/i.test(guard));
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
 } finally { await browser.close(); server.close(); }

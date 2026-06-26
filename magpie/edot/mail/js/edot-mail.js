@@ -367,6 +367,7 @@ export class EdotMail extends HTMLElement {
 
   async _send(wrap, close) {
     const status = wrap.querySelector('.cf-status');
+    if (!this.adapter) { status.textContent = 'Sign in to a mail account first to send.'; return; }
     const draft = this.draftFrom(wrap);
     if (!draft.to.length) { status.textContent = 'Add a recipient.'; return; }
     status.textContent = 'Sending…';
@@ -376,6 +377,7 @@ export class EdotMail extends HTMLElement {
 
   async _draft(wrap) {
     const status = wrap.querySelector('.cf-status');
+    if (!this.adapter) { status.textContent = 'Sign in to a mail account first to save drafts.'; return; }
     status.textContent = 'Saving…';
     try { await this.adapter.saveDraft(this.draftFrom(wrap)); status.textContent = 'Draft saved ✓'; }
     catch (e) { status.textContent = `Save failed: ${e.message}`; }
