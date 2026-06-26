@@ -28,6 +28,7 @@ import {
 } from './terrain.js';
 import { kmlToGeoJson } from './kml.js';
 import { kmzToKml } from './kmz.js';
+import { xrSupport, enterXr as xrEnter } from './webxr.js';
 
 const PLACES_SRC = 'saved-places';
 const ROUTE_SRC = 'route';
@@ -130,11 +131,20 @@ export class EdotMaps extends HTMLElement {
     bld.addEventListener('click', () => this.toggleBuildings());
     this._bldToggle = bld;
 
+    // WebXR (experimental): only revealed when the device actually supports an
+    // immersive session — so it never shows on iOS / desktops without a headset.
+    const xr = document.createElement('button');
+    xr.type = 'button'; xr.className = 'mbtn mp-xr-toggle'; xr.hidden = true;
+    xr.textContent = '🥽 XR'; xr.title = 'View in AR/VR (experimental; needs a WebXR device)';
+    xr.addEventListener('click', () => this.enterXr());
+    this._xrBtn = xr;
+    this._detectXr();
+
     tb.append(
       menuBtn, search,
       this._btn('🧭', 'My location', () => this.locate(), 'mp-locate'),
       this._btn('🛣', 'Directions', () => this.toggleDirections(), 'mp-dir-btn'),
-      layerSel, placesToggle, d3, bld,
+      layerSel, placesToggle, d3, bld, xr,
     );
 
     // Directions panel (hidden until toggled).
@@ -264,6 +274,28 @@ export class EdotMaps extends HTMLElement {
     if (this.is3D) this._enableTerrain();
     if (this.buildings3D) { this.buildings3D = false; this.setBuildings(true); }
     void gl;
+  }
+
+  // ---- WebXR (experimental, capability-gated) ----
+  async _detectXr() {
+    try {
+      const mode = await xrSupport();
+      if (mode && this._xrBtn) {
+        this._xrMode = mode;
+        this._xrBtn.hidden = false;
+        this._xrBtn.textContent = mode === 'immersive-ar' ? '🥽 AR' : '🥽 VR';
+      }
+    } catch (_) { /* no XR — button stays hidden */ }
+  }
+  async enterXr() {
+    if (!this._xrMode) { this._showNotice('WebXR is not available on this device.'); return; }
+    try {
+      this._xrSession = await xrEnter(this._xrMode);
+      this._showNotice('Entered XR (experimental).');
+      if (this._xrSession && this._xrSession.addEventListener) {
+        this._xrSession.addEventListener('end', () => { this._xrSession = null; });
+      }
+    } catch (e) { this._showNotice('Could not start XR: ' + (e.message || e)); }
   }
 
   _showNotice(msg, ms = 4000) {
