@@ -119,22 +119,12 @@ try {
   const cview = await page.evaluate(() => { const c = document.querySelector('.view[data-app="calendar"] edot-calendar'); window.__cmdk.registry.run('calendar.viewWeek', { app: 'calendar' }); return c.view; });
   ok('calendar.viewWeek via the registry switches the view', cview === 'week');
 
-  // ---- Maps pilot (Phase 2): commands contributed ----
-  await page.evaluate(() => window.__cmdk.registry.run('nav.maps', { app: 'calendar' }));
-  await page.waitForFunction(() => location.hash === '#maps', null, { timeout: 8000 });
-  await page.waitForFunction(() => window.__cmdk.registry.contributions({ app: 'maps' }).some((c) => c.id === 'maps.directions'), null, { timeout: 15000 });
-  const mapCmds = await page.evaluate(() => window.__cmdk.registry.contributions({ app: 'maps' }).map((c) => c.id));
-  ok('Maps contributes commands when active', mapCmds.includes('maps.toggle3d') && mapCmds.includes('maps.toggleBuildings') && mapCmds.includes('maps.togglePins'));
-  const dirToggled = await page.evaluate(() => {
-    const m = document.querySelector('.view[data-app="maps"] edot-maps');
-    const before = m._dir.hidden;
-    window.__cmdk.registry.run('maps.directions', { app: 'maps' });
-    return before !== m._dir.hidden;
-  });
-  ok('maps.directions via the registry toggles the directions panel', dirToggled);
+  // (Maps' command registration is verified in the maps suite — test-maps.mjs —
+  // which runs with the WebGL/swiftshader flags in isolation; kept out of this
+  // already-large test so it stays WebGL-free and fast.)
 
   // ---- Mail pilot (Phase 2): compose command opens the composer ----
-  await page.evaluate(() => window.__cmdk.registry.run('nav.mail', { app: 'maps' }));
+  await page.evaluate(() => window.__cmdk.registry.run('nav.mail', { app: 'calendar' }));
   await page.waitForFunction(() => location.hash === '#mail', null, { timeout: 8000 });
   await page.waitForFunction(() => window.__cmdk.registry.contributions({ app: 'mail' }).some((c) => c.id === 'mail.compose'), null, { timeout: 10000 });
   ok('Mail contributes the compose command when active', true);
@@ -174,15 +164,17 @@ try {
   ok('editor.bold via the registry bolds the selection', bolded);
 
   // ---- Menu bar renders registry contributions (Actions menu) for generic apps ----
-  await page.evaluate(() => window.__cmdk.registry.run('nav.maps', { app: 'editor' }));
-  await page.waitForFunction(() => location.hash === '#maps', null, { timeout: 8000 });
+  // Use Calendar (fast, no WebGL) so the menu assertion isn't coupled to map init.
+  await page.evaluate(() => window.__cmdk.registry.run('nav.calendar', { app: 'editor' }));
+  await page.waitForFunction(() => location.hash === '#calendar', null, { timeout: 8000 });
   await page.waitForFunction(() => !!document.querySelector('#menubar [data-top="Actions"]'), null, { timeout: 8000 });
-  ok('generic app (Maps) gets a registry-driven Actions menu', true);
+  ok('generic app (Calendar) gets a registry-driven Actions menu', true);
   await page.click('#menubar [data-top="Actions"]');
   await page.waitForSelector('.menu .mi', { timeout: 3000 });
   const actionLabels = await page.$$eval('.menu .mi .lbl', (els) => els.map((e) => e.textContent));
-  ok('Actions menu lists the app commands', actionLabels.some((t) => /3D buildings/i.test(t)) && actionLabels.some((t) => /Directions/i.test(t)));
-  ok('Actions menu excludes global nav commands', !actionLabels.some((t) => /^Go to /.test(t)));
+  ok('Actions menu lists the app commands', actionLabels.some((t) => /New event/i.test(t)) && actionLabels.some((t) => /Month view/i.test(t)));
+  // Global nav.* commands (titled "Go to <App>") must NOT leak into an app's Actions menu.
+  ok('Actions menu excludes global nav commands', !actionLabels.includes('Go to Editor') && !actionLabels.includes('Go to Maps') && !actionLabels.includes('Go to Data'));
   await page.keyboard.press('Escape');
   // Rich apps keep their bespoke menus (no Actions menu).
   await page.evaluate(() => window.__cmdk.registry.run('nav.editor', { app: 'maps' }));

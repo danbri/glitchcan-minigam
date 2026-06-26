@@ -408,23 +408,40 @@
       return m;
     }
 
-    function closeMenu() { document.querySelectorAll('.menu').forEach((m) => m.remove()); openEl = null; if (openName) { const b = menubar.querySelector(`[data-top="${openName}"]`); b?.setAttribute('aria-expanded', 'false'); openName = null; } }
+    function closeMenu(restoreFocus) { document.querySelectorAll('.menu').forEach((m) => m.remove()); openEl = null; if (openName) { const b = menubar.querySelector(`[data-top="${openName}"]`); b?.setAttribute('aria-expanded', 'false'); if (restoreFocus && b) b.focus(); openName = null; } }
+
+    // Keyboard navigation within an open menu (ARIA menu pattern): Up/Down move,
+    // Home/End jump, Enter/Space activate (handled by the button), Esc closes and
+    // returns focus to the menubar, Right/Left open/close submenus.
+    function menuItemsOf(menu) { return [...menu.querySelectorAll(':scope > .mi:not([disabled])')]; }
+    function focusItem(menu, i) { const items = menuItemsOf(menu); if (!items.length) return; const n = (i + items.length) % items.length; items.forEach((b, k) => b.tabIndex = k === n ? 0 : -1); items[n].focus(); }
+    function onMenuKeydown(menu, e) {
+      const items = menuItemsOf(menu); const i = items.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { focusItem(menu, i + 1); e.preventDefault(); }
+      else if (e.key === 'ArrowUp') { focusItem(menu, i - 1); e.preventDefault(); }
+      else if (e.key === 'Home') { focusItem(menu, 0); e.preventDefault(); }
+      else if (e.key === 'End') { focusItem(menu, items.length - 1); e.preventDefault(); }
+      else if (e.key === 'Escape') { closeMenu(true); e.preventDefault(); }
+    }
 
     function renderItems(items, container, parentMenu) {
       for (const it of items) {
-        if (it.sep) { const s = document.createElement('div'); s.className = 'sep'; container.appendChild(s); continue; }
+        if (it.sep) { const s = document.createElement('div'); s.className = 'sep'; s.setAttribute('role', 'separator'); container.appendChild(s); continue; }
         const b = document.createElement('button'); b.type = 'button'; b.className = 'mi';
+        b.setAttribute('role', 'menuitem'); b.tabIndex = -1;
+        if (it.checked != null) b.setAttribute('aria-checked', String(!!it.checked));
         const check = it.checked ? '✓' : '';
         b.innerHTML = `<span class="check">${check}</span><span class="lbl"></span>` + (it.submenu ? '<span class="arrow">▸</span>' : `<span class="accel">${it.accel || ''}</span>`);
         b.querySelector('.lbl').textContent = it.label;
         if (it.disabled) b.disabled = true;
         if (it.submenu) {
-          b.setAttribute('aria-haspopup', 'true');
+          b.setAttribute('aria-haspopup', 'menu'); b.setAttribute('aria-expanded', 'false');
           let fly = null;
-          const openFly = () => { if (fly) return; fly = document.createElement('div'); fly.className = 'menu'; renderItems(it.submenu, fly, parentMenu); document.body.appendChild(fly); const r = b.getBoundingClientRect(); fly.style.left = r.right + 'px'; fly.style.top = r.top + 'px'; b.setAttribute('aria-expanded', 'true'); };
+          const openFly = () => { if (fly) return; fly = document.createElement('div'); fly.className = 'menu'; fly.setAttribute('role', 'menu'); renderItems(it.submenu, fly, parentMenu); fly.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') { closeFly(); b.focus(); e.preventDefault(); } else onMenuKeydown(fly, e); }); document.body.appendChild(fly); const r = b.getBoundingClientRect(); fly.style.left = r.right + 'px'; fly.style.top = r.top + 'px'; b.setAttribute('aria-expanded', 'true'); };
           const closeFly = () => { if (fly) { fly.remove(); fly = null; } b.setAttribute('aria-expanded', 'false'); };
           b.addEventListener('mouseenter', openFly);
-          b.addEventListener('click', (e) => { e.stopPropagation(); openFly(); }); // ensure-open (hover may have opened it already)
+          b.addEventListener('click', (e) => { e.stopPropagation(); openFly(); focusItem(fly, 0); }); // ensure-open
+          b.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === 'Enter' || e.key === ' ') { openFly(); focusItem(fly, 0); e.preventDefault(); } });
         } else if (it.action) {
           b.addEventListener('click', () => { closeMenu(); try { it.action(); } catch (e) { console.error(e); } });
         }
@@ -436,11 +453,13 @@
       closeMenu();
       const menus = appMenus(currentApp, primaryEl(currentApp));
       const items = menus[name]; if (!items) return;
-      const menu = document.createElement('div'); menu.className = 'menu'; menu.setAttribute('role', 'menu');
+      const menu = document.createElement('div'); menu.className = 'menu'; menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', name);
       renderItems(items, menu, menu);
       document.body.appendChild(menu);
       const r = btn.getBoundingClientRect(); menu.style.left = r.left + 'px'; menu.style.top = r.bottom + 'px';
       openEl = menu; openName = name; btn.setAttribute('aria-expanded', 'true');
+      menu.addEventListener('keydown', (e) => onMenuKeydown(menu, e));
+      focusItem(menu, 0); // ARIA: move focus into the opened menu
     }
 
     let currentApp = 'workspace';
@@ -448,17 +467,26 @@
       currentApp = id;
       const menus = appMenus(id, primaryEl(id));
       menubar.innerHTML = '';
-      for (const name of TOP_ORDER) {
-        if (!menus[name]) continue;
+      const names = TOP_ORDER.filter((n) => menus[n]);
+      names.forEach((name, idx) => {
         const b = document.createElement('button'); b.type = 'button'; b.dataset.top = name; b.textContent = name;
-        b.setAttribute('aria-haspopup', 'true'); b.setAttribute('aria-expanded', 'false');
-        b.addEventListener('click', (e) => { e.stopPropagation(); openName === name ? closeMenu() : openTop(name, b); });
+        b.setAttribute('role', 'menuitem'); b.setAttribute('aria-haspopup', 'menu'); b.setAttribute('aria-expanded', 'false');
+        b.tabIndex = idx === 0 ? 0 : -1; // roving tabindex: one tab stop for the whole menubar
+        b.addEventListener('click', (e) => { e.stopPropagation(); openName === name ? closeMenu(true) : openTop(name, b); });
         b.addEventListener('mouseenter', () => { if (openName && openName !== name) openTop(name, b); });
+        b.addEventListener('keydown', (e) => {
+          const tops = [...menubar.children]; const i = tops.indexOf(b);
+          if (e.key === 'ArrowRight') { const n = tops[(i + 1) % tops.length]; n.tabIndex = 0; b.tabIndex = -1; n.focus(); if (openName) openTop(n.dataset.top, n); e.preventDefault(); }
+          else if (e.key === 'ArrowLeft') { const n = tops[(i - 1 + tops.length) % tops.length]; n.tabIndex = 0; b.tabIndex = -1; n.focus(); if (openName) openTop(n.dataset.top, n); e.preventDefault(); }
+          else if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { openTop(name, b); e.preventDefault(); }
+          else if (e.key === 'Home') { tops[0].tabIndex = 0; b.tabIndex = -1; tops[0].focus(); e.preventDefault(); }
+          else if (e.key === 'End') { const last = tops[tops.length - 1]; last.tabIndex = 0; b.tabIndex = -1; last.focus(); e.preventDefault(); }
+        });
         menubar.appendChild(b);
-      }
+      });
     }
     document.addEventListener('click', (e) => { if (!e.target.closest('.menu') && !e.target.closest('.menubar')) closeMenu(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(true); });
 
     // ---- command registry (Phase 1): navigation commands, ⌘K palette, and an
     // Automations bridge so scripts can invoke any command by id. Apps (e.g.
@@ -475,25 +503,32 @@
 
     // ⌘K / Ctrl-K command palette — an additive surface over the registry.
     const cmdk = document.createElement('div'); cmdk.className = 'cmdk'; cmdk.hidden = true;
-    cmdk.innerHTML = `<div class="cmdk-box" role="dialog" aria-label="Command palette">
-      <input class="cmdk-input" type="text" placeholder="Type a command…" aria-label="Command" autocomplete="off">
-      <ul class="cmdk-list" role="listbox"></ul></div>`;
+    cmdk.innerHTML = `<div class="cmdk-box" role="dialog" aria-modal="true" aria-label="Command palette">
+      <input class="cmdk-input" type="text" placeholder="Type a command…" aria-label="Search commands"
+        role="combobox" aria-expanded="true" aria-controls="cmdk-listbox" aria-autocomplete="list" autocomplete="off">
+      <ul class="cmdk-list" id="cmdk-listbox" role="listbox" aria-label="Commands"></ul>
+      <p class="cmdk-status" role="status" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></p></div>`;
     document.body.appendChild(cmdk);
     const cmdkInput = cmdk.querySelector('.cmdk-input');
     const cmdkList = cmdk.querySelector('.cmdk-list');
+    const cmdkStatus = cmdk.querySelector('.cmdk-status');
     let cmdkItems = [], cmdkActive = 0;
     function renderCmdk() {
       cmdkItems = registry.search(cmdkInput.value, { app: activeApp() });
       if (cmdkActive >= cmdkItems.length) cmdkActive = Math.max(0, cmdkItems.length - 1);
       cmdkList.innerHTML = '';
-      if (!cmdkItems.length) { const li = document.createElement('li'); li.className = 'cmdk-empty'; li.textContent = 'No matching commands'; cmdkList.appendChild(li); return; }
+      cmdkStatus.textContent = `${cmdkItems.length} command${cmdkItems.length === 1 ? '' : 's'}`;
+      if (!cmdkItems.length) { const li = document.createElement('li'); li.className = 'cmdk-empty'; li.textContent = 'No matching commands'; cmdkList.appendChild(li); cmdkInput.removeAttribute('aria-activedescendant'); return; }
       cmdkItems.forEach((c, i) => {
-        const li = document.createElement('li'); li.className = 'cmdk-item' + (i === cmdkActive ? ' active' : ''); li.dataset.id = c.id; li.setAttribute('role', 'option');
-        li.innerHTML = `<span class="cmdk-ic">${c.icon || '▸'}</span><span class="cmdk-t"></span>`;
+        const li = document.createElement('li'); li.id = `cmdk-opt-${i}`; li.className = 'cmdk-item' + (i === cmdkActive ? ' active' : ''); li.dataset.id = c.id;
+        li.setAttribute('role', 'option'); li.setAttribute('aria-selected', String(i === cmdkActive));
+        li.innerHTML = `<span class="cmdk-ic" aria-hidden="true">${c.icon || '▸'}</span><span class="cmdk-t"></span>`;
         li.querySelector('.cmdk-t').textContent = c.title;
         li.addEventListener('click', () => runCmdk(c.id));
         cmdkList.appendChild(li);
       });
+      const active = cmdkList.children[cmdkActive];
+      if (active) { cmdkInput.setAttribute('aria-activedescendant', active.id); active.scrollIntoView({ block: 'nearest' }); }
     }
     function openCmdk() { cmdk.hidden = false; cmdkInput.value = ''; cmdkActive = 0; renderCmdk(); cmdkInput.focus(); }
     function closeCmdk() { cmdk.hidden = true; }

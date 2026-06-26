@@ -233,6 +233,18 @@ try {
   ok('directions panel opens', dir.open);
   ok('"lat,lng" input resolves to [lng,lat] without network', dir.pt && dir.pt[0] === -2.59 && dir.pt[1] === 51.45);
 
+  // Command registry (Phase 2): Maps registers its commands; one runs end-to-end.
+  const reg = await page.evaluate(async () => {
+    const { getRegistry } = await import('../js/command-registry.js');
+    const r = getRegistry();
+    const ids = r.contributions({ app: 'maps' }).map((c) => c.id);
+    const app = window.__maps.app; const before = app._dir.hidden;
+    r.run('maps.directions', { app: 'maps' });
+    return { ids, toggled: before !== app._dir.hidden };
+  });
+  ok('Maps registers its commands (3d/buildings/pins/directions)', reg.ids.includes('maps.toggle3d') && reg.ids.includes('maps.toggleBuildings') && reg.ids.includes('maps.togglePins') && reg.ids.includes('maps.directions'));
+  ok('maps.directions runs through the registry (toggles the panel)', reg.toggled);
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
 } finally { await browser.close(); server.close(); }

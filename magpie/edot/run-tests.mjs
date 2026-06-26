@@ -26,6 +26,7 @@ const SUITES = [
   ['command-registry', 'test-command-registry.mjs'],
   ['collection-source', 'test-collection-source.mjs'],
   ['commands-shell', 'test-commands-shell.mjs'],
+  ['a11y-commands', 'test-a11y-commands.mjs'],
   ['shell', 'test-shell.mjs'],
   ['workspace', 'test-workspace.mjs'],
   ['places', 'places/test-places.mjs'],

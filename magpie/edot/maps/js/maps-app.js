@@ -84,12 +84,14 @@ export class EdotMaps extends HTMLElement {
     await this.store.init();
     this.places = await this.store.getAll();
     this._render();
-    this._initMap();
-    this._built = true;
-    // Command registry: track the active instance + contribute Maps' commands.
+    // Register commands BEFORE the (slow, WebGL) map init — they act on toolbar
+    // state (built in _render), so they're available immediately and don't depend
+    // on the canvas being ready.
     if (!activeMaps) activeMaps = this;
     this.addEventListener('focusin', () => { activeMaps = this; });
     registerMapsCommands();
+    this._initMap();
+    this._built = true;
     return this;
   }
 
