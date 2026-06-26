@@ -29,6 +29,8 @@ const SUITES = [
   ['resource-source', 'test-resource-source.mjs'],
   ['connections', 'test-connections.mjs'],
   ['storage-opfs', 'test-storage-opfs.mjs'],
+  ['files (ui)', 'files/test-files.mjs'],
+  ['connections (ui)', 'connections/test-connections-ui.mjs'],
   ['commands-shell', 'test-commands-shell.mjs'],
   ['a11y-commands', 'test-a11y-commands.mjs'],
   ['shell', 'test-shell.mjs'],

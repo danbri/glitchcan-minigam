@@ -74,14 +74,14 @@ export class MemoryResourceSource {
   count(dirPath) { return this.list(dirPath, { offset: 0, limit: Infinity }).length; }
 }
 
-// A REAL local backend: the Origin Private File System (OPFS). Zero-prompt,
-// browser-native, persistent. Same ResourceSource interface as everything else,
-// so Projects/Backup/file-open can save here with no account or login. (OPFS has
-// no random-access pagination, so list() collects a directory's entries then
-// windows them — fine for app storage; remote paged sources handle the huge case.)
-export class OpfsResourceSource {
-  constructor({ id = 'opfs' } = {}) { this.id = id; this.provider = 'opfs'; this.account = null; this.capability = 'storage'; this.locality = 'local'; }
-  async _root() { return navigator.storage.getDirectory(); }
+// Shared base for backends that are a tree of Web File System directory handles:
+// OPFS (the app's private store) and a user-picked local folder (File System
+// Access). Subclasses only supply _root(). Same ResourceSource interface as every
+// other mount. (Directory handles have no random-access pagination, so list()
+// reads a directory's entries then windows them — fine for local folders.)
+class DirectoryResourceSource {
+  constructor({ id, provider, locality = 'local' }) { this.id = id; this.provider = provider; this.account = null; this.capability = 'storage'; this.locality = locality; }
+  async _root() { throw new Error('abstract: subclass provides the root directory handle'); }
   async _dir(path, create = false) {
     let h = await this._root();
     for (const seg of norm(path).split('/').filter(Boolean)) h = await h.getDirectoryHandle(seg, { create });
@@ -101,19 +101,48 @@ export class OpfsResourceSource {
   async remove(path) { const p = norm(path); const dir = await this._dir(parentOf(p)); await dir.removeEntry(baseName(p), { recursive: true }); }
   async stat(path) {
     const p = norm(path); const dir = await this._dir(parentOf(p)).catch(() => null); if (!dir) return null;
-    try { const f = await (await dir.getFileHandle(baseName(p))).getFile(); return { name: baseName(p), path: p, kind: 'file', size: f.size, mtime: f.lastModified, locality: 'local' }; } catch (_) {}
-    try { await dir.getDirectoryHandle(baseName(p)); return { name: baseName(p) || '/', path: p, kind: 'folder', locality: 'local' }; } catch (_) {}
-    return p === '/' ? { name: '/', path: '/', kind: 'folder', locality: 'local' } : null;
+    try { const f = await (await dir.getFileHandle(baseName(p))).getFile(); return { name: baseName(p), path: p, kind: 'file', size: f.size, mtime: f.lastModified, locality: this.locality }; } catch (_) {}
+    try { await dir.getDirectoryHandle(baseName(p)); return { name: baseName(p) || '/', path: p, kind: 'folder', locality: this.locality }; } catch (_) {}
+    return p === '/' ? { name: '/', path: '/', kind: 'folder', locality: this.locality } : null;
   }
   async list(dirPath, { offset = 0, limit = 100 } = {}) {
     const dir = await this._dir(dirPath); const folders = [], files = [];
     const base = norm(dirPath) === '/' ? '' : norm(dirPath);
     for await (const [name, h] of dir.entries()) {
-      if (h.kind === 'directory') folders.push({ name, path: `${base}/${name}`, kind: 'folder', locality: 'local' });
-      else { const f = await h.getFile(); files.push({ name, path: `${base}/${name}`, kind: 'file', size: f.size, mtime: f.lastModified, locality: 'local' }); }
+      if (h.kind === 'directory') folders.push({ name, path: `${base}/${name}`, kind: 'folder', locality: this.locality });
+      else { const f = await h.getFile(); files.push({ name, path: `${base}/${name}`, kind: 'file', size: f.size, mtime: f.lastModified, locality: this.locality }); }
     }
     folders.sort((a, b) => a.name.localeCompare(b.name)); files.sort((a, b) => a.name.localeCompare(b.name));
     return [...folders, ...files].slice(offset, offset + limit);
+  }
+}
+
+// OPFS — the app's private store. Zero-prompt, persistent, no login.
+export class OpfsResourceSource extends DirectoryResourceSource {
+  constructor({ id = 'opfs' } = {}) { super({ id, provider: 'opfs', locality: 'local' }); }
+  async _root() { return navigator.storage.getDirectory(); }
+}
+
+// A user-chosen LOCAL FOLDER via the File System Access API — the OS tier: access
+// is capability-granted by the OS (a folder-picker prompt), no remote identity.
+// pick() must be called from a user gesture. (Not exercisable headless — there is
+// no real folder picker in CI — but it's the same DirectoryResourceSource code
+// path proven by OPFS.)
+export class LocalFsResourceSource extends DirectoryResourceSource {
+  constructor({ id = 'local-fs', handle = null } = {}) { super({ id, provider: 'local-fs', locality: 'local' }); this._handle = handle; }
+  async _root() { if (!this._handle) throw new Error('No folder chosen — call pick() first'); return this._handle; }
+  get ready() { return !!this._handle; }
+  // Prompt the user to grant a folder (read/write). Resolves true on grant.
+  async pick() {
+    if (typeof showDirectoryPicker !== 'function') throw new Error('File System Access API unavailable in this browser');
+    this._handle = await showDirectoryPicker({ mode: 'readwrite' });
+    return true;
+  }
+  // Re-confirm permission on a remembered handle (handles can be persisted via IDB).
+  async ensurePermission() {
+    if (!this._handle) return false;
+    if ((await this._handle.queryPermission({ mode: 'readwrite' })) === 'granted') return true;
+    return (await this._handle.requestPermission({ mode: 'readwrite' })) === 'granted';
   }
 }
 

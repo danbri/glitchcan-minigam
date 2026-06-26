@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>edot — Files</title>
+  <link rel="stylesheet" href="files.css">
+  <style> html, body { margin: 0; height: 100%; } </style>
+</head>
+<body>
+  <edot-files></edot-files>
+  <script type="module">
+    // Seed the always-available local "device" account (OPFS) so the kernel
+    // can resolve storage.source({id:'device'}); then load the component.
+    import { getConnections } from '../js/connections.js';
+    getConnections();
+    await import('./js/files-app.js');
+  </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>edot — Connections</title>
+  <link rel="stylesheet" href="connections.css">
+  <style> html, body { margin: 0; height: 100%; } </style>
+</head>
+<body>
+  <edot-connections></edot-connections>
+  <script type="module">
+    // Initialise the Connections registry first (seeds the local OPFS "device"
+    // account + wires the kernel capability), then mount the component.
+    import { getConnections } from '../js/connections.js';
+    getConnections();
+    await import('./js/connections-app.js');
+  </script>
+</body>
+</html>

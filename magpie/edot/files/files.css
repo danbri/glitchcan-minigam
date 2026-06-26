@@ -1,0 +1,70 @@
+/* files.css — <edot-files>. A mobile-first file browser over the unified
+   storage layer: a breadcrumb header, a single scrolling list of entries
+   (folders first, then files), and a slide-up viewer for opened files. */
+:root {
+  --fl-bg: #f7f7fb; --fl-surface: #fff; --fl-ink: #1b1b20; --fl-muted: #6a6a76;
+  --fl-line: #e4e4ec; --fl-accent: #4f46e5; --fl-hover: #f0f0f4; --fl-radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --fl-bg: #15151b; --fl-surface: #1d1d25; --fl-ink: #ececf2; --fl-muted: #9a9aa8;
+    --fl-line: #2c2c38; --fl-accent: #8b85f0; --fl-hover: #24242e; }
+}
+edot-files { display: block; height: 100%; }
+.fl-app {
+  height: 100%; display: flex; flex-direction: column; min-height: 0; position: relative;
+  background: var(--fl-bg); color: var(--fl-ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.fl-head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem;
+  padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--fl-line); background: var(--fl-surface);
+}
+.fl-mounts { display: flex; align-items: center; gap: 0.35rem; }
+.fl-mount-lbl { font-size: 1rem; }
+.fl-mount-select { font: inherit; padding: 0.35rem 0.5rem; border: 1px solid var(--fl-line); border-radius: 6px; background: var(--fl-bg); color: var(--fl-ink); min-height: 2.4rem; }
+
+.fl-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 0.15rem; flex: 1 1 12rem; min-width: 0; }
+.fl-crumb { font: inherit; background: none; border: none; cursor: pointer; color: var(--fl-accent); padding: 0.3rem 0.45rem; border-radius: 6px; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-crumb:hover { background: var(--fl-hover); }
+.fl-crumb[aria-current="location"] { color: var(--fl-ink); font-weight: 600; cursor: default; }
+.fl-sep { color: var(--fl-muted); padding: 0 0.1rem; }
+
+.fl-actions { display: flex; gap: 0.4rem; margin-left: auto; }
+.fl-btn { font: inherit; cursor: pointer; background: var(--fl-surface); color: var(--fl-ink); border: 1px solid var(--fl-line); border-radius: 8px; padding: 0.45rem 0.7rem; min-height: 2.4rem; display: inline-flex; align-items: center; gap: 0.25rem; }
+.fl-btn:hover { border-color: var(--fl-accent); color: var(--fl-accent); }
+.fl-upload-label { position: relative; }
+
+.fl-status { font-size: 0.78rem; color: var(--fl-muted); padding: 0.3rem 0.8rem; min-height: 1.1em; }
+
+.fl-list { list-style: none; margin: 0; padding: 0.2rem 0.4rem; flex: 1 1 auto; overflow: auto; min-height: 0; }
+.fl-empty { color: var(--fl-muted); text-align: center; padding: 2rem 0.5rem; }
+.fl-row { display: flex; align-items: center; gap: 0.25rem; border-radius: 8px; }
+.fl-row:hover { background: var(--fl-hover); }
+.fl-open { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 0.6rem; text-align: left; font: inherit; color: var(--fl-ink); background: none; border: none; cursor: pointer; padding: 0.6rem 0.5rem; border-radius: 8px; }
+.fl-icon { font-size: 1.2rem; flex: 0 0 auto; }
+.fl-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-open.is-folder .fl-name { font-weight: 600; }
+.fl-meta { flex: 0 0 auto; font-size: 0.75rem; color: var(--fl-muted); }
+.fl-del { flex: 0 0 auto; font: inherit; font-size: 1rem; background: none; border: none; cursor: pointer; color: var(--fl-muted); min-width: 2.4rem; min-height: 2.4rem; border-radius: 6px; }
+.fl-del:hover { background: var(--fl-line); color: #c0392b; }
+
+.fl-more { padding: 0.3rem 0.6rem 0.8rem; }
+.fl-load-more { width: 100%; font: inherit; cursor: pointer; background: none; border: 1px dashed var(--fl-line); border-radius: 8px; padding: 0.6rem; color: var(--fl-muted); }
+.fl-load-more:hover { color: var(--fl-accent); border-color: var(--fl-accent); }
+
+.fl-viewer { position: absolute; left: 0; right: 0; bottom: 0; max-height: 70%; display: flex; flex-direction: column; background: var(--fl-surface); border-top: 1px solid var(--fl-line); box-shadow: 0 -8px 30px rgba(0,0,0,0.25); z-index: 10; border-top-left-radius: var(--fl-radius); border-top-right-radius: var(--fl-radius); }
+.fl-viewer[hidden] { display: none; }
+.fl-viewer-head { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--fl-line); }
+.fl-viewer-title { flex: 1 1 auto; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-viewer-close { font: inherit; font-size: 1rem; background: none; border: none; cursor: pointer; color: var(--fl-muted); min-width: 2.4rem; min-height: 2.4rem; border-radius: 6px; }
+.fl-viewer-close:hover { background: var(--fl-hover); }
+.fl-viewer-body { margin: 0; padding: 0.7rem 0.8rem; overflow: auto; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; color: var(--fl-ink); }
+.fl-viewer-binary { padding: 0.9rem; color: var(--fl-muted); }
+.fl-viewer-binary p { margin: 0 0 0.6rem; }
+.fl-download { display: inline-block; font-weight: 600; text-decoration: none; background: var(--fl-accent); color: #fff; padding: 0.55rem 0.9rem; border-radius: 8px; }
+
+@media (max-width: 36rem) {
+  .fl-actions { width: 100%; margin-left: 0; }
+  .fl-btn { flex: 1 1 auto; justify-content: center; }
+}

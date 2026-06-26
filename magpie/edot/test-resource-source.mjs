@@ -1,7 +1,7 @@
 // test-resource-source.mjs — the unified storage mount: lazy folder listing,
 // read/write/remove/stat/mkdir, and the Account model (provider → capabilities,
 // OS vs platform, auth requirement). Pure Node.
-import { MemoryResourceSource, makeAccount, storeResourceSource } from './js/resource-source.js';
+import { MemoryResourceSource, makeAccount, storeResourceSource, LocalFsResourceSource } from './js/resource-source.js';
 import { providersOffering, PROVIDERS } from './js/ontology.js';
 
 let fail = 0;
@@ -62,6 +62,13 @@ ok('the wrapped store derives folders from flat keys', (await rs.list('/edot-bac
 ok('the wrapped store windows its listing', (await rs.list('/edot-backups', { offset: 0, limit: 1 })).length === 1);
 ok('the wrapped store stats + removes', (await rs.stat('/edot-backups/2026.enc')).kind === 'file' && (await rs.remove('/edot-backups/2026.enc'), (await rs.stat('/edot-backups/2026.enc')) === null));
 ok('the wrapped backend is a remote storage mount (provider github)', rs.provider === 'github' && rs.capability === 'storage' && rs.locality === 'remote');
+
+// File System Access local tier (the OS tier). Live folder-picking needs a user
+// gesture (not headless), but the not-ready/guard behavior is checkable.
+const lf = new LocalFsResourceSource();
+ok('LocalFs is a local OS-tier storage mount', lf.provider === 'local-fs' && lf.capability === 'storage' && lf.locality === 'local');
+ok('LocalFs starts not-ready and refuses ops before a folder is chosen', lf.ready === false && await lf._root().then(() => false).catch(() => true));
+ok('LocalFs.pick fails clearly where the File System Access API is absent', await lf.pick().then(() => false).catch((e) => /unavailable/i.test(e.message)));
 
 console.log(fail ? `\n${fail} RESOURCE-SOURCE FAILURE(S)` : '\nRESOURCE-SOURCE OK');
 process.exit(fail ? 1 : 0);

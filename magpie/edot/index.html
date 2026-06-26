@@ -149,6 +149,8 @@
       { id: 'automations', label: 'Automations', icon: '⚙', tag: 'edot-automations', css: ['automations/automations.css'], load: () => import('./automations/js/automations-app.js') },
       { id: 'projects', label: 'Projects', icon: '📦', tag: 'edot-projects', css: ['projects/projects.css'], load: () => import('./projects/js/projects-app.js') },
       { id: 'groups', label: 'Groups', icon: '💬', tag: 'edot-groups', css: ['groups/groups.css'], load: () => import('./groups/js/groups-app.js') },
+      { id: 'files', label: 'Files', icon: '🗂', tag: 'edot-files', css: ['files/files.css'], load: () => import('./files/js/files-app.js') },
+      { id: 'connections', label: 'Connections', icon: '🔌', tag: 'edot-connections', css: ['connections/connections.css'], load: () => import('./connections/js/connections-app.js') },
     ];
     const byId = Object.fromEntries(APPS.map((a) => [a.id, a]));
 
