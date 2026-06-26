@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+  <title>Example City News</title>
+  <link>https://example.org/</link>
+  <item><title>Road closure on High St</title><link>https://example.org/1</link><pubDate>Mon, 23 Jun 2026 09:00:00 GMT</pubDate><description>Works until Friday.</description><guid>https://example.org/1</guid></item>
+  <item><title>New park opens</title><link>https://example.org/2</link><pubDate>Tue, 24 Jun 2026 12:00:00 GMT</pubDate><description>Ribbon cut today.</description><guid>https://example.org/2</guid></item>
+</channel></rss>

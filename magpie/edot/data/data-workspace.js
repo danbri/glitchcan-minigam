@@ -44,6 +44,8 @@ export class EdotData extends HTMLElement {
     this._render();
     this.refresh();
     this._showWelcome();
+    // Let other apps (geo, events, feeds) surface data here as a table.
+    try { getKernel().capabilities.provide('data.addTable', ({ title, columns, rows } = {}) => this.addTable(title, columns, rows)); } catch (_) { /* kernel optional */ }
     const gs = this.getAttribute('geo-src');
     if (gs) this.enableGeo(gs).catch(() => {});
     return this;
@@ -361,6 +363,18 @@ export class EdotData extends HTMLElement {
     const header = rows[0].map((h, i) => safeIdent(h || `col${i + 1}`, `col${i + 1}`));
     const body = rows.slice(1).map((r) => r.map(coerce));
     this.engine.createTableFromColumns(name, dedupe(header), body);
+    this.refresh();
+    this.openTable(name);
+    return name;
+  }
+
+  // Surface structured data (from geo / events / feeds) as a table. Waits for the
+  // engine, dedupes the name, opens it. Returns the created table name.
+  async addTable(title, columns, rows) {
+    if (this._ready) { try { await this._ready; } catch (_) { /* engine error surfaces below */ } }
+    const cols = dedupe((columns || []).map((c, i) => safeIdent(c || `col${i + 1}`, `col${i + 1}`)));
+    const name = this._unique(safeIdent(title || 'table', 'imported'));
+    this.engine.createTableFromColumns(name, cols, (rows || []).map((r) => r.map(coerce)));
     this.refresh();
     this.openTable(name);
     return name;

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Example Hazards</title>
+  <entry><title>M5.2 earthquake</title><link rel="alternate" href="https://example.org/q1"/><updated>2026-06-25T08:00:00Z</updated><summary>Offshore.</summary><id>q1</id></entry>
+  <entry><title>Flood warning lifted</title><link href="https://example.org/q2"/><updated>2026-06-25T10:00:00Z</updated><summary>River receding.</summary><id>q2</id></entry>
+</feed>

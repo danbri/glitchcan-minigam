@@ -1,0 +1,14 @@
+{
+  "_about": "Curated seed catalogue of public RSS/Atom feeds and iCalendar (.ics) calendars, each tied to a geographic place (Wikidata QID + coords) so the suite can offer 'feeds near here' and 'events near here'. Real public endpoints; fetching at runtime may require a CORS proxy for cross-origin feeds. Extend freely — this is a starter set, not exhaustive. Respect each source's licence.",
+  "feeds": [
+    { "id": "bbc-bristol", "title": "BBC News — Bristol", "kind": "rss", "url": "https://feeds.bbci.co.uk/news/england/bristol/rss.xml", "topic": "news", "source": "BBC", "license": "© BBC — personal use", "place": { "name": "Bristol", "wikidataId": "Q23154", "lat": 51.4545, "lon": -2.5879 } },
+    { "id": "bbc-london", "title": "BBC News — London", "kind": "rss", "url": "https://feeds.bbci.co.uk/news/england/london/rss.xml", "topic": "news", "source": "BBC", "license": "© BBC — personal use", "place": { "name": "London", "wikidataId": "Q84", "lat": 51.5074, "lon": -0.1278 } },
+    { "id": "bbc-manchester", "title": "BBC News — Manchester", "kind": "rss", "url": "https://feeds.bbci.co.uk/news/england/manchester/rss.xml", "topic": "news", "source": "BBC", "license": "© BBC — personal use", "place": { "name": "Manchester", "wikidataId": "Q18125", "lat": 53.4808, "lon": -2.2426 } },
+    { "id": "bbc-scotland", "title": "BBC News — Scotland", "kind": "rss", "url": "https://feeds.bbci.co.uk/news/scotland/rss.xml", "topic": "news", "source": "BBC", "license": "© BBC — personal use", "place": { "name": "Edinburgh", "wikidataId": "Q23436", "lat": 55.9533, "lon": -3.1883 } },
+    { "id": "usgs-quakes-day", "title": "USGS — Significant Earthquakes (past day)", "kind": "atom", "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_day.atom", "topic": "hazards", "source": "USGS", "license": "Public domain", "place": { "name": "Global", "wikidataId": "Q2", "lat": 0, "lon": 0 } }
+  ],
+  "calendars": [
+    { "id": "uk-bank-holidays-ew", "title": "UK Bank Holidays — England & Wales", "kind": "ics", "url": "https://www.gov.uk/bank-holidays/england-and-wales.ics", "topic": "public-holidays", "source": "GOV.UK", "license": "Open Government Licence v3.0", "place": { "name": "England & Wales", "wikidataId": "Q21", "lat": 52.3555, "lon": -1.1743 } },
+    { "id": "uk-bank-holidays-scotland", "title": "UK Bank Holidays — Scotland", "kind": "ics", "url": "https://www.gov.uk/bank-holidays/scotland.ics", "topic": "public-holidays", "source": "GOV.UK", "license": "Open Government Licence v3.0", "place": { "name": "Scotland", "wikidataId": "Q22", "lat": 56.4907, "lon": -4.2026 } }
+  ]
+}
