@@ -43,9 +43,21 @@ registry.register({
 
 ## Migration status
 
-- ✅ Shell navigation (`nav.*`), palette, automations bridge.
-- ✅ Slides pilot (`slides.addSlide/present/insertRect/insertEllipse/insertImage/rotate/bringToFront/sendToBack/deleteElement`).
-- ⏳ Phase 2 — migrate the remaining apps' menu/toolbar actions using the `Side-effecting actions (command-registry inventory)` tables in each `docs/apps/<app>.md`. Promote kernel capabilities (`data.addTable`, `groups.share`, `calendar.shareToGroup`, …) into commands with `appliesTo` so they show in the palette and `forType` results. Replace the shell's `buildMenus` closures with registry contributions.
+- ✅ Shell navigation (`nav.*`), ⌘K palette, Automations bridge (`command.run`).
+- ✅ **All 11 apps migrated** — each registers its actions on mount (active
+  instance via focusin, gated by `ctx.app`), so they appear in the palette,
+  are invocable by Automations, and queryable by `forType`:
+  - Slides, Data, Calendar, Maps, Mail, Projects, Groups, Automations, Backup, Editor.
+  - Element/item actions declare `appliesTo` (e.g. `slides.rotate` → SlideElement,
+    `maps.togglePins` → Place, `editor.bold` → Document) and are gated by selection.
+- ✅ **Menus render from the registry** — apps that only had View+Help now get a
+  registry-driven **Actions** menu (app-contextual commands only; `nav.*` stay in
+  the palette / Open app). Apps with bespoke menus (Editor/Data/Slides) keep them.
+- ⏳ Remaining (Phase 3): convert the bespoke Editor/Data/Slides `buildMenus`
+  closures to registry contributions too (so every menu is a contribution), add
+  keyboard-shortcut binding from `shortcut`, and wire `menusFor('toolbar')` so
+  toolbars render from the registry. Promote the cross-app capabilities
+  (`data.addTable`, `groups.share`, `calendar.shareToGroup`) to typed commands.
 
 ## Design influences (and one recorded anti-pattern)
 
