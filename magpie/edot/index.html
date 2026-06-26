@@ -79,6 +79,16 @@
       .ws-pane:not(.active) { display: none; }
       .menubar > button { padding: 0 0.5rem; }
     }
+    /* Command palette (⌘K) — shell chrome, not an app stylesheet. */
+    .cmdk { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: flex; align-items: flex-start; justify-content: center; }
+    .cmdk[hidden] { display: none; }
+    .cmdk-box { margin-top: 12vh; width: min(92vw, 36rem); background: var(--bg, #fff); color: var(--ink, #1c1c1c); border: 1px solid var(--line, #ddd); border-radius: 12px; box-shadow: 0 24px 60px rgba(0,0,0,0.35); overflow: hidden; }
+    .cmdk-input { width: 100%; box-sizing: border-box; font: inherit; font-size: 1.05rem; padding: 0.9rem 1rem; border: none; border-bottom: 1px solid var(--line, #eee); background: transparent; color: inherit; outline: none; }
+    .cmdk-list { list-style: none; margin: 0; padding: 0.3rem; max-height: 50vh; overflow: auto; }
+    .cmdk-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.7rem; border-radius: 8px; cursor: pointer; }
+    .cmdk-item.active, .cmdk-item:hover { background: var(--sel, #ece6da); }
+    .cmdk-ic { width: 1.4rem; text-align: center; opacity: 0.8; }
+    .cmdk-empty { padding: 0.8rem; color: var(--muted, #888); }
   </style>
 </head>
 <body>
@@ -96,6 +106,7 @@
   <script type="module">
     import './auth/js/login-ui.js';
     import { getKernel } from './js/edot-kernel.js';
+    import { getRegistry } from './js/command-registry.js';
     import { FindReplace } from './js/find-replace.js';
     import * as IO from './js/io.js';
 
@@ -426,6 +437,57 @@
     }
     document.addEventListener('click', (e) => { if (!e.target.closest('.menu') && !e.target.closest('.menubar')) closeMenu(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+
+    // ---- command registry (Phase 1): navigation commands, ⌘K palette, and an
+    // Automations bridge so scripts can invoke any command by id. Apps (e.g.
+    // Slides) register their own commands into this same shared registry. ----
+    const registry = getRegistry();
+    const activeApp = () => location.hash.slice(1) || (matchMedia('(max-width: 700px)').matches ? 'editor' : 'workspace');
+    registry.registerAll(APPS.map((a) => ({
+      id: `nav.${a.id}`, title: `Go to ${a.label}`, icon: a.icon, group: '0nav', keywords: 'navigate open switch app',
+      run: () => go(a.id),
+    })));
+    // Automations / other apps can run any command by id through the kernel.
+    kernel.capabilities.provide('command.run', ({ id, args } = {}) => registry.run(id, { app: activeApp() }, args));
+    kernel.capabilities.provide('command.list', () => registry.contributions({ app: activeApp() }).map((c) => ({ id: c.id, title: c.title })));
+
+    // ⌘K / Ctrl-K command palette — an additive surface over the registry.
+    const cmdk = document.createElement('div'); cmdk.className = 'cmdk'; cmdk.hidden = true;
+    cmdk.innerHTML = `<div class="cmdk-box" role="dialog" aria-label="Command palette">
+      <input class="cmdk-input" type="text" placeholder="Type a command…" aria-label="Command" autocomplete="off">
+      <ul class="cmdk-list" role="listbox"></ul></div>`;
+    document.body.appendChild(cmdk);
+    const cmdkInput = cmdk.querySelector('.cmdk-input');
+    const cmdkList = cmdk.querySelector('.cmdk-list');
+    let cmdkItems = [], cmdkActive = 0;
+    function renderCmdk() {
+      cmdkItems = registry.search(cmdkInput.value, { app: activeApp() });
+      if (cmdkActive >= cmdkItems.length) cmdkActive = Math.max(0, cmdkItems.length - 1);
+      cmdkList.innerHTML = '';
+      if (!cmdkItems.length) { const li = document.createElement('li'); li.className = 'cmdk-empty'; li.textContent = 'No matching commands'; cmdkList.appendChild(li); return; }
+      cmdkItems.forEach((c, i) => {
+        const li = document.createElement('li'); li.className = 'cmdk-item' + (i === cmdkActive ? ' active' : ''); li.dataset.id = c.id; li.setAttribute('role', 'option');
+        li.innerHTML = `<span class="cmdk-ic">${c.icon || '▸'}</span><span class="cmdk-t"></span>`;
+        li.querySelector('.cmdk-t').textContent = c.title;
+        li.addEventListener('click', () => runCmdk(c.id));
+        cmdkList.appendChild(li);
+      });
+    }
+    function openCmdk() { cmdk.hidden = false; cmdkInput.value = ''; cmdkActive = 0; renderCmdk(); cmdkInput.focus(); }
+    function closeCmdk() { cmdk.hidden = true; }
+    function runCmdk(id) { closeCmdk(); try { registry.run(id, { app: activeApp() }); } catch (e) { console.error('command', id, e); } }
+    cmdkInput.addEventListener('input', () => { cmdkActive = 0; renderCmdk(); });
+    cmdkInput.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') { cmdkActive = Math.min(cmdkActive + 1, cmdkItems.length - 1); renderCmdk(); e.preventDefault(); }
+      else if (e.key === 'ArrowUp') { cmdkActive = Math.max(cmdkActive - 1, 0); renderCmdk(); e.preventDefault(); }
+      else if (e.key === 'Enter') { const c = cmdkItems[cmdkActive]; if (c) runCmdk(c.id); e.preventDefault(); }
+      else if (e.key === 'Escape') { closeCmdk(); }
+    });
+    cmdk.addEventListener('click', (e) => { if (e.target === cmdk) closeCmdk(); });
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); cmdk.hidden ? openCmdk() : closeCmdk(); }
+    });
+    window.__cmdk = { open: openCmdk, registry }; // headless-test hook
 
     // Desktop opens the side-by-side Workspace; a phone opens a single app (the
     // Workspace's multi-pane is a wide-screen feature — see the mobile CSS).

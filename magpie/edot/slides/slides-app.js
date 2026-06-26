@@ -16,6 +16,7 @@ import {
 import { saveDeck, loadDeck, listDecks, deleteDeck } from './slides-store.js';
 import * as fmt from './slides-formats.js';
 import { prepareImage, fitImage } from '../js/image-util.js';
+import { getRegistry } from '../js/command-registry.js';
 import { fingerprint, typeInfo } from '../js/data-object.js';
 import { getKernel } from '../js/edot-kernel.js';
 
@@ -36,6 +37,31 @@ function wireSlidesCapability() {
     });
     slidesCapabilityWired = true;
   } catch (_) { /* kernel optional */ }
+}
+
+// Slides pilot for the command registry: register Slides' side-effecting actions
+// as typed commands (once), targeting the active instance. `appliesTo` ties the
+// element actions to the ontology's SlideElement so they only surface for a
+// selected element. The toolbar/inspector still call the same methods directly.
+let slidesCommandsWired = false;
+function registerSlidesCommands() {
+  if (slidesCommandsWired) return;
+  const inSlides = (ctx) => ctx && ctx.app === 'slides' && !!activeSlides;
+  const hasSel = (ctx) => inSlides(ctx) && activeSlides._activeEl != null;
+  try {
+    getRegistry().registerAll([
+      { id: 'slides.addSlide', title: 'Add slide', icon: '＋', group: '1slide', keywords: 'new slide', appliesTo: 'SlideDeck', when: inSlides, run: () => activeSlides.addSlide() },
+      { id: 'slides.present', title: 'Present', icon: '▶', group: '1slide', keywords: 'present play fullscreen', appliesTo: 'SlideDeck', when: inSlides, run: () => activeSlides.startPresent() },
+      { id: 'slides.insertRect', title: 'Insert rectangle', icon: '▭', group: '2insert', keywords: 'shape rectangle', appliesTo: 'Slide', when: inSlides, run: () => activeSlides.insertShape('rect') },
+      { id: 'slides.insertEllipse', title: 'Insert ellipse', icon: '◯', group: '2insert', keywords: 'shape ellipse circle', appliesTo: 'Slide', when: inSlides, run: () => activeSlides.insertShape('ellipse') },
+      { id: 'slides.insertImage', title: 'Insert image', icon: '🖼', group: '2insert', keywords: 'image picture photo svg', appliesTo: 'Slide', when: inSlides, run: () => activeSlides._imgInput && activeSlides._imgInput.click() },
+      { id: 'slides.rotate', title: 'Rotate element 90°', icon: '⟳', group: '3arrange', keywords: 'rotate orient turn', appliesTo: 'SlideElement', when: hasSel, run: () => activeSlides.rotateActive(90) },
+      { id: 'slides.bringToFront', title: 'Bring to front', icon: '⤒', group: '3arrange', keywords: 'arrange front layer', appliesTo: 'SlideElement', when: hasSel, run: () => activeSlides._reorder('front') },
+      { id: 'slides.sendToBack', title: 'Send to back', icon: '⤓', group: '3arrange', keywords: 'arrange back layer', appliesTo: 'SlideElement', when: hasSel, run: () => activeSlides._reorder('back') },
+      { id: 'slides.deleteElement', title: 'Delete element', icon: '🗑', group: '3arrange', keywords: 'delete remove element', appliesTo: 'SlideElement', when: hasSel, run: () => activeSlides.deleteElement(activeSlides._activeEl) },
+    ]);
+    slidesCommandsWired = true;
+  } catch (_) { /* registry optional */ }
 }
 
 const LAYOUT_LABELS = {
@@ -63,6 +89,7 @@ export class EdotSlides extends HTMLElement {
     this._onFocusIn = () => { activeSlides = this; };
     this.addEventListener('focusin', this._onFocusIn);
     wireSlidesCapability();
+    registerSlidesCommands();
     // Expose readiness so callers (e.g. project hydration) can wait for the
     // initial deck load before replacing it — otherwise the async resume below
     // could overwrite a freshly applied deck.
@@ -702,6 +729,14 @@ export class EdotSlides extends HTMLElement {
 
   deleteElement(idx) {
     this.slide.elements.splice(idx, 1);
+    this._touch(); this._renderEditor(); this._renderRailThumb(this.current);
+  }
+
+  // Rotate the selected element (orientability) — also a registry command.
+  rotateActive(deg = 90) {
+    const el = this.slide && this.slide.elements[this._activeEl];
+    if (!el) return;
+    el.rotation = ((Math.round((el.rotation || 0) + deg) % 360) + 360) % 360;
     this._touch(); this._renderEditor(); this._renderRailThumb(this.current);
   }
 
