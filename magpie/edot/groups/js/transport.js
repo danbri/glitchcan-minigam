@@ -12,6 +12,7 @@
 // Both expose: connect(), send(xml), onStanza(cb), close().
 
 import { groupMessage, NS } from './xmpp-stanzas.js';
+import { XmppHandshake } from './xmpp-handshake.js';
 
 let _seq = 0;
 const nextId = () => `lb-${Date.now().toString(36)}-${++_seq}`;
@@ -85,17 +86,24 @@ export class WebSocketTransport {
   onStanza(cb) { this._handlers.push(cb); return () => { this._handlers = this._handlers.filter((h) => h !== cb); }; }
   _emit(xml) { for (const h of this._handlers) h(xml); }
   async connect() {
+    // Drive the real RFC 7395 + SASL (SCRAM-SHA-1) + bind login. The handshake is
+    // the unit-tested state machine; here we just pump bytes through the socket.
+    this._hs = new XmppHandshake({ jid: this.jid, password: this.password, domain: this.domain });
+    this._ready = false;
     await new Promise((res, rej) => {
       this.ws = new WebSocket(this.url, 'xmpp');
-      this.ws.onopen = () => {
-        // RFC 7395: open the stream. (Full SASL/bind handshake is the remaining
-        // work to talk to a real server — see the file header.)
-        this.ws.send(`<open xmlns='urn:ietf:params:xml:ns:xmpp-framing' to='${this.domain}' version='1.0'/>`);
-        this.connected = true; res(true);
-      };
-      this.ws.onerror = (e) => rej(new Error('WebSocket error'));
-      this.ws.onmessage = (ev) => this._emit(typeof ev.data === 'string' ? ev.data : '');
+      const sendAll = (arr) => { for (const x of arr || []) this.ws.send(x); };
+      this.ws.onopen = () => { this.connected = true; sendAll(this._hs.start()); };
+      this.ws.onerror = () => rej(new Error('WebSocket error'));
       this.ws.onclose = () => { this.connected = false; };
+      this.ws.onmessage = async (ev) => {
+        const data = typeof ev.data === 'string' ? ev.data : '';
+        if (this._ready) { this._emit(data); return; }
+        const r = await this._hs.receive(data);
+        sendAll(r.out);
+        if (r.event === 'ready') { this._ready = true; this.boundJid = r.jid; res(true); }
+        else if (r.event === 'failure') { rej(new Error(`login failed: ${r.error}`)); }
+      };
     });
   }
   send(xml) { if (this.ws && this.ws.readyState === 1) this.ws.send(xml); }

@@ -46,6 +46,8 @@ const SUITES = [
   ['ics', 'feeds/test-ics.mjs'],
   ['feed', 'feeds/test-feed.mjs'],
   ['xmpp-stanzas', 'groups/test-xmpp-stanzas.mjs'],
+  ['sasl', 'groups/test-sasl.mjs'],
+  ['xmpp-handshake', 'groups/test-xmpp-handshake.mjs'],
   ['groups', 'groups/test-groups.mjs'],
   ['calendar-share', 'calendar/test-calendar-share.mjs'],
 ];

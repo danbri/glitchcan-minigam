@@ -187,7 +187,7 @@ class EdotGroups extends HTMLElement {
     p.innerHTML = `
       <div class="gr-settings-card">
         <h3>Connect an XMPP server</h3>
-        <p class="gr-note">MIX over WebSocket (RFC 7395). The SASL handshake is experimental — demo mode stays on this device.</p>
+        <p class="gr-note">MIX over WebSocket (RFC 7395) with a real SCRAM-SHA-1 login (unit-tested). Live federation isn't verified in this build — demo mode stays on this device.</p>
         <label>WebSocket URL<input class="gr-f-url" placeholder="wss://example.org/xmpp-websocket"></label>
         <label>JID<input class="gr-f-jid" placeholder="you@example.org"></label>
         <label>Password<input class="gr-f-pw" type="password"></label>
