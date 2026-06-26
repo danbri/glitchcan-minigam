@@ -21,7 +21,7 @@ const server = http.createServer(async (req, res) => {
 await new Promise((r) => server.listen(0, r));
 const port = server.address().port;
 
-const browser = await chromium.launch({ headless: true, executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
+const browser = await chromium.launch({ headless: true, executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 let fail = 0; const ok = (n, c) => { console.log(`${c ? '✅' : '❌'} ${n}`); if (!c) fail++; };
 
 try {
@@ -118,6 +118,29 @@ try {
   ok('Calendar contributes commands when active', calCmds.includes('calendar.newEvent') && calCmds.includes('calendar.browse') && calCmds.includes('calendar.viewWeek'));
   const cview = await page.evaluate(() => { const c = document.querySelector('.view[data-app="calendar"] edot-calendar'); window.__cmdk.registry.run('calendar.viewWeek', { app: 'calendar' }); return c.view; });
   ok('calendar.viewWeek via the registry switches the view', cview === 'week');
+
+  // ---- Maps pilot (Phase 2): commands contributed ----
+  await page.evaluate(() => window.__cmdk.registry.run('nav.maps', { app: 'calendar' }));
+  await page.waitForFunction(() => location.hash === '#maps', null, { timeout: 8000 });
+  await page.waitForFunction(() => window.__cmdk.registry.contributions({ app: 'maps' }).some((c) => c.id === 'maps.directions'), null, { timeout: 15000 });
+  const mapCmds = await page.evaluate(() => window.__cmdk.registry.contributions({ app: 'maps' }).map((c) => c.id));
+  ok('Maps contributes commands when active', mapCmds.includes('maps.toggle3d') && mapCmds.includes('maps.toggleBuildings') && mapCmds.includes('maps.togglePins'));
+  const dirToggled = await page.evaluate(() => {
+    const m = document.querySelector('.view[data-app="maps"] edot-maps');
+    const before = m._dir.hidden;
+    window.__cmdk.registry.run('maps.directions', { app: 'maps' });
+    return before !== m._dir.hidden;
+  });
+  ok('maps.directions via the registry toggles the directions panel', dirToggled);
+
+  // ---- Mail pilot (Phase 2): compose command opens the composer ----
+  await page.evaluate(() => window.__cmdk.registry.run('nav.mail', { app: 'maps' }));
+  await page.waitForFunction(() => location.hash === '#mail', null, { timeout: 8000 });
+  await page.waitForFunction(() => window.__cmdk.registry.contributions({ app: 'mail' }).some((c) => c.id === 'mail.compose'), null, { timeout: 10000 });
+  ok('Mail contributes the compose command when active', true);
+  await page.evaluate(() => window.__cmdk.registry.run('mail.compose', { app: 'mail' }));
+  await page.waitForSelector('.view[data-app="mail"] .compose-overlay', { timeout: 5000 });
+  ok('mail.compose via the registry opens the composer', true);
 
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs.slice(0, 4));

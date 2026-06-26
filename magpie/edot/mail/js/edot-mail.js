@@ -22,6 +22,21 @@
 import { EdotTree } from '../../js/tree.js';
 import { sanitizeHtml, textToSafeHtml, escapeText } from './sanitize.js';
 import { formatAddress, parseAddress } from './adapters/base.js';
+import { getRegistry } from '../../js/command-registry.js';
+
+// Active-instance tracking + command-registry contributions (Phase 2).
+let activeMail = null;
+let mailCommandsWired = false;
+function registerMailCommands() {
+  if (mailCommandsWired) return;
+  const inMail = (ctx) => ctx && ctx.app === 'mail' && !!activeMail;
+  try {
+    getRegistry().registerAll([
+      { id: 'mail.compose', title: 'Compose message', icon: '✏', group: '0mail', keywords: 'compose new write email message', appliesTo: 'MailMessage', when: inMail, run: () => activeMail.compose() },
+    ]);
+    mailCommandsWired = true;
+  } catch (_) { /* registry optional */ }
+}
 
 // Ensure <edot-tree> is registered even if loaded first.
 if (typeof customElements !== 'undefined' && !customElements.get('edot-tree')) {
@@ -57,6 +72,10 @@ export class EdotMail extends HTMLElement {
     this._built = true;
     this._render();
     this._bindKeys();
+    // Command registry: track the active instance + contribute Mail's commands.
+    if (!activeMail) activeMail = this;
+    this.addEventListener('focusin', () => { activeMail = this; });
+    registerMailCommands();
   }
 
   // ---- top-level layout ----

@@ -29,8 +29,27 @@ import {
 import { kmlToGeoJson } from './kml.js';
 import { kmzToKml } from './kmz.js';
 import { xrSupport, enterXr as xrEnter } from './webxr.js';
+import { getRegistry } from '../../js/command-registry.js';
 
 const PLACES_SRC = 'saved-places';
+
+// Active-instance tracking + command-registry contributions (Phase 2).
+let activeMaps = null;
+let mapsCommandsWired = false;
+function registerMapsCommands() {
+  if (mapsCommandsWired) return;
+  const inMaps = (ctx) => ctx && ctx.app === 'maps' && !!activeMaps;
+  try {
+    getRegistry().registerAll([
+      { id: 'maps.toggle3d', title: 'Toggle 3D terrain', icon: '⛰', group: '1view', keywords: '3d terrain tilt', when: inMaps, run: () => activeMaps.toggle3D() },
+      { id: 'maps.toggleBuildings', title: 'Toggle 3D buildings', icon: '🏙', group: '1view', keywords: '3d buildings extrusion', when: inMaps, run: () => activeMaps.toggleBuildings() },
+      { id: 'maps.togglePins', title: 'Toggle saved-place pins', icon: '📍', group: '1view', keywords: 'pins places markers overlay', appliesTo: 'Place', when: inMaps, run: () => activeMaps.togglePlacesLayer() },
+      { id: 'maps.directions', title: 'Directions', icon: '🛣', group: '2tool', keywords: 'directions route', when: inMaps, run: () => activeMaps.toggleDirections() },
+      { id: 'maps.enterXr', title: 'Enter XR (AR/VR)', icon: '🥽', group: '2tool', keywords: 'xr ar vr immersive', when: inMaps, run: () => activeMaps.enterXr() },
+    ]);
+    mapsCommandsWired = true;
+  } catch (_) { /* registry optional */ }
+}
 const ROUTE_SRC = 'route';
 const IMPORT_SRC = 'imported-kml';   // GeoJSON source for opened KML/KMZ overlays
 
@@ -67,6 +86,10 @@ export class EdotMaps extends HTMLElement {
     this._render();
     this._initMap();
     this._built = true;
+    // Command registry: track the active instance + contribute Maps' commands.
+    if (!activeMaps) activeMaps = this;
+    this.addEventListener('focusin', () => { activeMaps = this; });
+    registerMapsCommands();
     return this;
   }
 
