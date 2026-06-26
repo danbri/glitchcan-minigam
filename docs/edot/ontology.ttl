@@ -6,6 +6,14 @@
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
+# Relations
+edot:hasFormat a rdf:Property ; rdfs:comment "an entity serializes to a format" .
+edot:contains a rdf:Property ; rdfs:comment "composition: a parent holds child entities" .
+edot:editsType a rdf:Property ; rdfs:comment "a widget edits entities of a type" .
+edot:appliesTo a rdf:Property ; rdfs:comment "a command operates on entities of a type" .
+edot:presentsItemsOf a rdf:Property ; rdfs:comment "a collection window shows a set of items of a type" .
+edot:locality a rdf:Property ; rdfs:comment "where an item lives: local or remote" .
+
 # Entity classes
 edot:Entity a rdfs:Class ;
   rdfs:label "Entity" .
@@ -108,6 +116,31 @@ edot:ChatMessage a rdfs:Class ;
 edot:Automation a rdfs:Class ;
   rdfs:label "Automation" ;
   rdfs:subClassOf edot:Entity .
+edot:Person a rdfs:Class ;
+  rdfs:label "Person" ;
+  rdfs:subClassOf edot:Entity .
+edot:File a rdfs:Class ;
+  rdfs:label "File" ;
+  rdfs:subClassOf edot:Entity .
+edot:Image a rdfs:Class ;
+  rdfs:label "Image" ;
+  rdfs:subClassOf edot:File ;
+  edot:hasFormat edot:png ;
+  edot:hasFormat edot:jpeg ;
+  edot:hasFormat edot:svg .
+edot:Video a rdfs:Class ;
+  rdfs:label "Video" ;
+  rdfs:subClassOf edot:File ;
+  edot:hasFormat edot:mp4 ;
+  edot:hasFormat edot:webm .
+edot:Audio a rdfs:Class ;
+  rdfs:label "Audio" ;
+  rdfs:subClassOf edot:File ;
+  edot:hasFormat edot:mp3 ;
+  edot:hasFormat edot:wav .
+edot:Collection a rdfs:Class ;
+  rdfs:label "Collection" ;
+  rdfs:subClassOf edot:Entity .
 
 # Formats
 edot:docx a edot:Format ; rdfs:label "Word" ; edot:mime "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ; edot:ext "docx" .
@@ -131,6 +164,10 @@ edot:edotzip a edot:Format ; rdfs:label "edot project" ; edot:mime "application/
 edot:png a edot:Format ; rdfs:label "PNG" ; edot:mime "image/png" ; edot:ext "png" .
 edot:jpeg a edot:Format ; rdfs:label "JPEG" ; edot:mime "image/jpeg" ; edot:ext "jpg" .
 edot:svg a edot:Format ; rdfs:label "SVG" ; edot:mime "image/svg+xml" ; edot:ext "svg" .
+edot:mp4 a edot:Format ; rdfs:label "MP4" ; edot:mime "video/mp4" ; edot:ext "mp4" .
+edot:webm a edot:Format ; rdfs:label "WebM" ; edot:mime "video/webm" ; edot:ext "webm" .
+edot:mp3 a edot:Format ; rdfs:label "MP3" ; edot:mime "audio/mpeg" ; edot:ext "mp3" .
+edot:wav a edot:Format ; rdfs:label "WAV" ; edot:mime "audio/wav" ; edot:ext "wav" .
 
 # Widgets ↔ the entity types they edit
 edot:edot-editor a edot:Widget ; edot:editsType edot:Document .
@@ -142,3 +179,9 @@ edot:edot-calendar a edot:Widget ; edot:editsType edot:Calendar .
 edot:edot-maps a edot:Widget ; edot:editsType edot:Place .
 edot:edot-groups a edot:Widget ; edot:editsType edot:Channel .
 edot:edot-projects a edot:Widget ; edot:editsType edot:Project .
+
+# Collection windows ↔ the item type each presents
+edot:edot-file-browser a edot:CollectionView ; edot:presentsItemsOf edot:File .
+edot:edot-gallery a edot:CollectionView ; edot:presentsItemsOf edot:Image .
+edot:edot-video-library a edot:CollectionView ; edot:presentsItemsOf edot:Video .
+edot:edot-people a edot:CollectionView ; edot:presentsItemsOf edot:Person .

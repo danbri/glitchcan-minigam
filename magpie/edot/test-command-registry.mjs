@@ -33,6 +33,17 @@ ok('forType always includes global (no appliesTo) commands', forText.includes('g
 const forShape = reg.forType('ShapeElement').map((c) => c.id);
 ok('a ShapeElement gets both element-level and shape-level commands', forShape.includes('el.rotate') && forShape.includes('el.fill'));
 
+// ---- menu locations (VSCode-style contribution points) ----
+reg.register({ id: 'item.open', title: 'Open', appliesTo: 'File', where: ['item', 'palette'], run: () => 'open' });
+reg.register({ id: 'tb.only', title: 'Toolbar only', where: ['toolbar'], run: () => 'tb' });
+ok('commands default to the palette location', reg.menusFor('palette').some((c) => c.id === 'a.do'));
+ok('menusFor("item") returns only item-surfaced commands', reg.menusFor('item').some((c) => c.id === 'item.open') && !reg.menusFor('item').some((c) => c.id === 'a.do'));
+ok('a toolbar-only command is absent from the palette', !reg.menusFor('palette').some((c) => c.id === 'tb.only'));
+
+// ---- passive vs active is emergent (type-specific commands only) ----
+ok('a type with a type-specific command is actionable', reg.actionable('File') && reg.actionable('TextElement'));
+ok('a type with only global commands is passive (not actionable)', !reg.actionable('Calendar'));
+
 // audit hook fires on run.
 const audited = []; reg.onAudit((e) => audited.push(e.id));
 reg.run('a.do');

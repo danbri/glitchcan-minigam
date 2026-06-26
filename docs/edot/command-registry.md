@@ -47,8 +47,53 @@ registry.register({
 - ✅ Slides pilot (`slides.addSlide/present/insertRect/insertEllipse/insertImage/rotate/bringToFront/sendToBack/deleteElement`).
 - ⏳ Phase 2 — migrate the remaining apps' menu/toolbar actions using the `Side-effecting actions (command-registry inventory)` tables in each `docs/apps/<app>.md`. Promote kernel capabilities (`data.addTable`, `groups.share`, `calendar.shareToGroup`, …) into commands with `appliesTo` so they show in the palette and `forType` results. Replace the shell's `buildMenus` closures with registry contributions.
 
+## Design influences (and one recorded anti-pattern)
+
+The registry/ontology are shaped by three deliberate references:
+
+- **VSCode** — commands + *menu contribution points* + `when`-clauses. We mirror
+  this: a command's `where` lists the surfaces it appears on
+  (`palette` | `item` | `toolbar` | `view-title` | `context`), and
+  `registry.menusFor(location, ctx)` renders each surface. `when(ctx)` is our
+  context gate.
+- **XForms** — *model / bind / relevance*. The ontology is the model; a widget's
+  `editsType` is the bind; `when(ctx)` is `relevant`. This keeps widget↔data
+  declarative rather than hand-wired.
+- **Mozilla's original RDF datasource architecture — what NOT to do.** It modelled
+  UI lists/trees as RDF graphs read through an assertion/graph API (template
+  builder walking the graph per row). It scaled catastrophically — a 100k-message
+  inbox became a giant in-memory graph and scrolling meant per-row graph
+  traversal; it was replaced by `nsITreeView`.
+
+### The rule that follows (load-bearing)
+
+**The ontology/RDF is a SCHEMA layer only — never the runtime path for
+enumerating or scrolling items.** Collections are accessed through a lazy,
+**windowed** `CollectionSource` (`js/collection-source.js`):
+
+- `getRange(offset, limit)` fetches only the visible window — `VirtualCollectionSource`
+  over a 1,000,000-item inbox builds only the ~50 rows on screen (proven in the
+  test: a 5-row window calls the item factory exactly 5 times, never 1e6).
+- Item **actions resolve once per item *type*** via `registry.forType(itemType)`
+  (O(commands)) — shared across every row, never per item, never via a graph walk
+  (the test proves resolving a 1000-item collection costs ONE type lookup).
+- **Passive vs active is emergent**: `registry.actionable(type)` is true iff some
+  *type-specific* (`appliesTo`) command exists. A File has actions; a plain data
+  item with none is passive. (Subtypes inherit: Audio is a File, so it inherits
+  File actions.)
+
+### Collections & items in the ontology
+
+`File` (→ `Image`/`Video`/`Audio`), `Person`, and `Collection` are first-class
+types; `LOCALITY` (`local`|`remote`) is the dimension for where an item lives;
+`COLLECTIONS` binds a (planned) collection window to the item type it presents
+(`edot-gallery → Image`, `edot-people → Person`, …) and emits as
+`edot:presentsItemsOf` in the Turtle. So a "window of items" is describable in the
+model without the model ever touching the items themselves.
+
 ## Tests
 
 - `test-ontology.mjs` — hierarchy, inherited formats, integrity, Turtle emission.
 - `test-command-registry.mjs` — run choke point, `when` gating, `appliesTo` typing, singleton, audit hook.
-- `test-commands-shell.mjs` — palette renders/filters, nav command switches app, Slides contributes commands, element commands gated by selection, registry runs mutate state, Automations `command.run` works.
+- `test-commands-shell.mjs` — palette renders/filters, nav command switches app, Slides contributes commands, element commands gated by selection, registry runs mutate state, Automations `command.run` works; Data/Calendar/Maps/Mail/Projects/Groups/Automations/Backup all contribute their commands when active (Phase 2).
+- `test-collection-source.mjs` — windowed access (virtual 1e6-item source builds only the visible window), and item actions resolved once per type (1000-item collection ⇒ one type lookup), passive vs active.

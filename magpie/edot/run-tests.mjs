@@ -24,6 +24,7 @@ const SUITES = [
   ['kernel', 'test-kernel.mjs'],
   ['ontology', 'test-ontology.mjs'],
   ['command-registry', 'test-command-registry.mjs'],
+  ['collection-source', 'test-collection-source.mjs'],
   ['commands-shell', 'test-commands-shell.mjs'],
   ['shell', 'test-shell.mjs'],
   ['workspace', 'test-workspace.mjs'],

@@ -19,13 +19,18 @@
 
 import { isType, isA } from './ontology.js';
 
+// Where a command can surface (VSCode-style menu contribution points). A command
+// with no `where` defaults to the palette only; collection-item actions opt into
+// 'item', toolbar buttons into 'toolbar', etc.
+export const MENU_LOCATIONS = ['palette', 'item', 'toolbar', 'view-title', 'context'];
+
 export class CommandRegistry extends EventTarget {
   constructor() { super(); this._cmds = new Map(); this._audit = null; this._policy = null; }
 
   register(cmd) {
     if (!cmd || !cmd.id || typeof cmd.run !== 'function') throw new Error('command needs an id and a run()');
     if (cmd.appliesTo && !isType(cmd.appliesTo)) console.warn(`command "${cmd.id}": appliesTo "${cmd.appliesTo}" is not an ontology type`);
-    this._cmds.set(cmd.id, { group: '', order: 100, keywords: '', ...cmd });
+    this._cmds.set(cmd.id, { group: '', order: 100, keywords: '', where: ['palette'], ...cmd });
     return this;
   }
   registerAll(list) { (list || []).forEach((c) => this.register(c)); return this; }
@@ -46,6 +51,15 @@ export class CommandRegistry extends EventTarget {
   // Commands relevant to a given entity type (global + applies-to this type or a
   // supertype). The ontology link, used directly.
   forType(type, ctx = {}) { return this.contributions({ ...ctx, forType: type }); }
+
+  // Commands contributed to a given surface (VSCode-style menu location), e.g.
+  // 'item' for a collection item's actions, 'toolbar', 'view-title', 'palette'.
+  menusFor(location, ctx = {}) { return this.contributions(ctx).filter((c) => (c.where || ['palette']).includes(location)); }
+
+  // Is an entity type "active" — does any TYPE-SPECIFIC command apply to it?
+  // (Global/palette-wide commands don't count; an item with no appliesTo command
+  // is purely passive data. This is emergent from the registry, not declared.)
+  actionable(type, ctx = {}) { return this.forType(type, ctx).some((c) => !!c.appliesTo); }
 
   // Filter over title/keywords/id for a palette.
   search(query, ctx = {}) {

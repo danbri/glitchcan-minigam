@@ -37,6 +37,29 @@ export const TYPES = {
   Channel: { parent: 'Entity', label: 'Group channel', contains: ['ChatMessage'] },
   ChatMessage: { parent: 'Entity', label: 'Chat message' },
   Automation: { parent: 'Entity', label: 'Automation' },
+  Person: { parent: 'Entity', label: 'Person' },              // a contact / participant
+  // Items that live in collection windows (file browsers, galleries, libraries).
+  // Each may be local or remote (edot:locality). A File-ish item is "passive"
+  // (data only) unless commands declare appliesTo it — passivity is emergent.
+  File: { parent: 'Entity', label: 'File', locatable: true },
+  Image: { parent: 'File', label: 'Image', formats: ['png', 'jpeg', 'svg'], locatable: true },
+  Video: { parent: 'File', label: 'Video', formats: ['mp4', 'webm'], locatable: true },
+  Audio: { parent: 'File', label: 'Audio', formats: ['mp3', 'wav'], locatable: true },
+  // A window that presents a SET of items of one type (gallery, list, picker).
+  Collection: { parent: 'Entity', label: 'Collection' },
+};
+
+// Where an item can live (the local/remote dimension for File/Image/Video/…).
+export const LOCALITY = ['local', 'remote'];
+
+// Collection windows ↔ the item type each presents. These are the "windows
+// offering sets of items" — a gallery of Images, a browser of Files, a people
+// picker, a video library. (Planned surfaces; declared so the model is ready.)
+export const COLLECTIONS = {
+  'edot-file-browser': 'File',
+  'edot-gallery': 'Image',
+  'edot-video-library': 'Video',
+  'edot-people': 'Person',
 };
 
 // Serialization formats (edot:Format individuals).
@@ -62,6 +85,10 @@ export const FORMATS = {
   png: { label: 'PNG', mime: 'image/png', ext: 'png' },
   jpeg: { label: 'JPEG', mime: 'image/jpeg', ext: 'jpg' },
   svg: { label: 'SVG', mime: 'image/svg+xml', ext: 'svg' },
+  mp4: { label: 'MP4', mime: 'video/mp4', ext: 'mp4' },
+  webm: { label: 'WebM', mime: 'video/webm', ext: 'webm' },
+  mp3: { label: 'MP3', mime: 'audio/mpeg', ext: 'mp3' },
+  wav: { label: 'WAV', mime: 'audio/wav', ext: 'wav' },
 };
 
 // Action categories (edot:ActionCategory) — the menu/palette grouping.
@@ -91,11 +118,19 @@ export function isType(type) { return Object.prototype.hasOwnProperty.call(TYPES
 
 // ---- RDF (Turtle) emission ----
 const esc = (s) => String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-export function toTurtle({ widgets = {}, commands = [] } = {}) {
+export function toTurtle({ widgets = {}, commands = [], collections = {} } = {}) {
   const L = [];
   L.push('@prefix edot: <' + NS + '> .');
   L.push('@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .');
   L.push('@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .');
+  L.push('');
+  L.push('# Relations');
+  L.push('edot:hasFormat a rdf:Property ; rdfs:comment "an entity serializes to a format" .');
+  L.push('edot:contains a rdf:Property ; rdfs:comment "composition: a parent holds child entities" .');
+  L.push('edot:editsType a rdf:Property ; rdfs:comment "a widget edits entities of a type" .');
+  L.push('edot:appliesTo a rdf:Property ; rdfs:comment "a command operates on entities of a type" .');
+  L.push('edot:presentsItemsOf a rdf:Property ; rdfs:comment "a collection window shows a set of items of a type" .');
+  L.push('edot:locality a rdf:Property ; rdfs:comment "where an item lives: local or remote" .');
   L.push('');
   L.push('# Entity classes');
   for (const [id, t] of Object.entries(TYPES)) {
@@ -116,6 +151,13 @@ export function toTurtle({ widgets = {}, commands = [] } = {}) {
     L.push('# Widgets ↔ the entity types they edit');
     for (const [tag, types] of Object.entries(widgets)) {
       for (const ty of [].concat(types)) L.push(`edot:${tag} a edot:Widget ; edot:editsType edot:${ty} .`);
+    }
+  }
+  if (Object.keys(collections).length) {
+    L.push('');
+    L.push('# Collection windows ↔ the item type each presents');
+    for (const [tag, type] of Object.entries(collections)) {
+      L.push(`edot:${tag} a edot:CollectionView ; edot:presentsItemsOf edot:${type} .`);
     }
   }
   if (commands.length) {

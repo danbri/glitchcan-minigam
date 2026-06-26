@@ -1,6 +1,6 @@
 // test-ontology.mjs — the explicit entity/format/action ontology: class hierarchy,
 // inherited formats, RDF (Turtle) emission, widget bindings, and integrity.
-import { TYPES, FORMATS, WIDGETS, NS, isA, isType, formatsFor, ancestorsOf, toTurtle } from './js/ontology.js';
+import { TYPES, FORMATS, WIDGETS, COLLECTIONS, LOCALITY, NS, isA, isType, formatsFor, ancestorsOf, toTurtle } from './js/ontology.js';
 
 let fail = 0;
 const ok = (n, c) => { console.log(`${c ? '✅' : '❌'} ${n}`); if (!c) fail++; };
@@ -33,6 +33,15 @@ ok('Turtle emits hasFormat triples', /edot:Calendar a rdfs:Class[\s\S]*edot:hasF
 ok('Turtle emits Format individuals with mime', /edot:ics a edot:Format ;[\s\S]*edot:mime "text\/calendar"/.test(ttl));
 ok('Turtle emits widget→type bindings', /edot:edot-place-input a edot:Widget ; edot:editsType edot:Place/.test(ttl));
 ok('Turtle emits command→appliesTo bindings', /edot:cmd_slides_rotate a edot:Command[\s\S]*edot:appliesTo edot:SlideElement/.test(ttl));
+
+// Collection/item types (the "windows of items" — files, images, videos, people).
+ok('item types subclass File / Entity', isA('Image', 'File') && isA('Video', 'File') && isA('Image', 'Entity') && isA('Person', 'Entity'));
+ok('media item types carry formats', formatsFor('Image').includes('png') && formatsFor('Video').includes('mp4') && formatsFor('Audio').includes('mp3'));
+ok('locality vocabulary is local|remote', LOCALITY.join(',') === 'local,remote');
+ok('collection windows present known item types', Object.values(COLLECTIONS).every((t) => isType(t)) && COLLECTIONS['edot-people'] === 'Person');
+const ttl2 = toTurtle({ collections: COLLECTIONS });
+ok('Turtle emits relation properties (locality, presentsItemsOf)', /edot:locality a rdf:Property/.test(ttl2) && /edot:presentsItemsOf a rdf:Property/.test(ttl2));
+ok('Turtle emits collection→item bindings', /edot:edot-people a edot:CollectionView ; edot:presentsItemsOf edot:Person/.test(ttl2));
 
 console.log(fail ? `\n${fail} ONTOLOGY FAILURE(S)` : '\nONTOLOGY OK');
 process.exit(fail ? 1 : 0);
