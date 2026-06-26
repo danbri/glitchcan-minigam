@@ -4,8 +4,24 @@
 // Editor / Slides / Data panes from it. Saving asks the shell for a snapshot via
 // the `project.snapshot` capability and zips it.
 import { getKernel } from '../../js/edot-kernel.js';
+import { getRegistry } from '../../js/command-registry.js';
 import { buildProjectZip, readProjectZip } from './edot-project.js';
 import { TEMPLATES, buildTemplate } from './templates.js';
+
+// Active-instance tracking + command-registry contributions (Phase 2).
+let activeProjects = null;
+let projectsCommandsWired = false;
+function registerProjectsCommands() {
+  if (projectsCommandsWired) return;
+  const inProjects = (ctx) => ctx && ctx.app === 'projects' && !!activeProjects;
+  try {
+    getRegistry().registerAll([
+      { id: 'projects.save', title: 'Save current as .zip', icon: '⬇', group: '0project', keywords: 'save export zip project', appliesTo: 'Project', when: inProjects, run: () => activeProjects._save() },
+      { id: 'projects.open', title: 'Open project (.zip)', icon: '⬆', group: '0project', keywords: 'open import zip project', appliesTo: 'Project', when: inProjects, run: () => { const i = activeProjects.querySelector('.pj-open input'); if (i) i.click(); } },
+    ]);
+    projectsCommandsWired = true;
+  } catch (_) { /* registry optional */ }
+}
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -24,6 +40,9 @@ class EdotProjects extends HTMLElement {
     this.kernel = getKernel();
     this.current = null; // { manifest, files }
     this.render();
+    if (!activeProjects) activeProjects = this;
+    this.addEventListener('focusin', () => { activeProjects = this; });
+    registerProjectsCommands();
   }
 
   render() {

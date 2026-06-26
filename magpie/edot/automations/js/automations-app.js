@@ -11,8 +11,24 @@
 // features web apps don't have on iOS — see README/automations notes.
 
 import { getKernel } from '../../js/edot-kernel.js';
+import { getRegistry } from '../../js/command-registry.js';
 import { AutomationRuntime } from './automation-runtime.js';
 import { loadAll, saveAll, seeds, newId } from './automations-store.js';
+
+// Active-instance tracking + command-registry contributions (Phase 2).
+let activeAutomations = null;
+let automationsCommandsWired = false;
+function registerAutomationsCommands() {
+  if (automationsCommandsWired) return;
+  const inAuto = (ctx) => ctx && ctx.app === 'automations' && !!activeAutomations;
+  try {
+    getRegistry().registerAll([
+      { id: 'automations.new', title: 'New automation', icon: '＋', group: '0auto', keywords: 'new automation script', appliesTo: 'Automation', when: inAuto, run: () => activeAutomations._newItem() },
+      { id: 'automations.runSelected', title: 'Run selected automation', icon: '▶', group: '0auto', keywords: 'run execute automation', appliesTo: 'Automation', when: (ctx) => inAuto(ctx) && !!activeAutomations.selected, run: () => activeAutomations._run(activeAutomations.selected) },
+    ]);
+    automationsCommandsWired = true;
+  } catch (_) { /* registry optional */ }
+}
 
 const TRIGGERS = [
   { id: 'manual', label: 'Manual — Run button' },
@@ -33,6 +49,9 @@ export class EdotAutomations extends HTMLElement {
     this._runtime = new AutomationRuntime((op, p) => this._api(op, p));
     this._render();
     this._wireTriggers();
+    if (!activeAutomations) activeAutomations = this;
+    this.addEventListener('focusin', () => { activeAutomations = this; });
+    registerAutomationsCommands();
   }
   disconnectedCallback() { this._unwireTriggers(); }
 

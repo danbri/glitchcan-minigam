@@ -4,10 +4,26 @@
 // point it at a real XMPP-over-WebSocket server. Other apps post into a channel
 // via the `groups.share` capability (used by Calendar to share .ics calendars).
 import { getKernel } from '../../js/edot-kernel.js';
+import { getRegistry } from '../../js/command-registry.js';
 import { LoopbackTransport, WebSocketTransport } from './transport.js';
 import { joinChannel, leaveChannel, groupMessage, NS } from './xmpp-stanzas.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// Active-instance tracking + command-registry contributions (Phase 2).
+let activeGroups = null;
+let groupsCommandsWired = false;
+function registerGroupsCommands() {
+  if (groupsCommandsWired) return;
+  const inGroups = (ctx) => ctx && ctx.app === 'groups' && !!activeGroups;
+  try {
+    getRegistry().registerAll([
+      { id: 'groups.joinChannel', title: 'Join channel', icon: '＋', group: '0groups', keywords: 'join channel room mix', appliesTo: 'Channel', when: inGroups, run: () => activeGroups._joinPrompt() },
+      { id: 'groups.connect', title: 'Connect a server…', icon: '⚙', group: '1groups', keywords: 'connect server xmpp settings', when: inGroups, run: () => activeGroups._toggleSettings() },
+    ]);
+    groupsCommandsWired = true;
+  } catch (_) { /* registry optional */ }
+}
 let _id = 0; const mkId = () => `g-${Date.now().toString(36)}-${++_id}`;
 const shortJid = (j) => String(j || '').split('/')[0].split('@')[0];
 
@@ -22,6 +38,9 @@ class EdotGroups extends HTMLElement {
     this.render();
     this.connectDemo();
     try { this.kernel.capabilities.provide('groups.share', (p) => this.shareIntoActive(p)); } catch (_) {}
+    if (!activeGroups) activeGroups = this;
+    this.addEventListener('focusin', () => { activeGroups = this; });
+    registerGroupsCommands();
   }
 
   async connectDemo() {

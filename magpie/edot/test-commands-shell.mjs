@@ -142,6 +142,20 @@ try {
   await page.waitForSelector('.view[data-app="mail"] .compose-overlay', { timeout: 5000 });
   ok('mail.compose via the registry opens the composer', true);
 
+  // ---- Remaining apps (Phase 2): each contributes its commands on mount ----
+  for (const [app, expect] of [
+    ['projects', 'projects.save'],
+    ['groups', 'groups.joinChannel'],
+    ['automations', 'automations.new'],
+    ['backup', 'backup.backupNow'],
+  ]) {
+    await page.evaluate((a) => window.__cmdk.registry.run(`nav.${a}`, { app: 'shell' }), app);
+    await page.waitForFunction((a) => location.hash === `#${a}`, app, { timeout: 8000 });
+    await page.waitForSelector(`.view[data-app="${app}"] edot-${app}`, { timeout: 12000 });
+    const has = await page.waitForFunction((e) => window.__cmdk.registry.contributions({ app: location.hash.slice(1) }).some((c) => c.id === e), expect, { timeout: 10000 }).then(() => true).catch(() => false);
+    ok(`${app} contributes ${expect} when active`, has);
+  }
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs.slice(0, 4));
 } finally {

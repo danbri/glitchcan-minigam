@@ -13,6 +13,22 @@ import { encryptSnapshot, decryptSnapshot, readEnvelopeHeader } from './crypto.j
 import { createSnapshot, restoreSnapshot, readSnapshotManifest } from './snapshot.js';
 import { getStore, listStores } from './stores/index.js';
 import { BACKENDS, defaultFields } from './backup-config.js';
+import { getRegistry } from '../../js/command-registry.js';
+
+// Active-instance tracking + command-registry contributions (Phase 2).
+let activeBackup = null;
+let backupCommandsWired = false;
+function registerBackupCommands() {
+  if (backupCommandsWired) return;
+  const inBackup = (ctx) => ctx && ctx.app === 'backup' && !!activeBackup;
+  try {
+    getRegistry().registerAll([
+      { id: 'backup.backupNow', title: 'Back up now', icon: '⤓', group: '0backup', keywords: 'backup save encrypt now', when: inBackup, run: () => activeBackup.doBackup() },
+      { id: 'backup.refresh', title: 'Refresh backup list', icon: '↻', group: '0backup', keywords: 'refresh list snapshots', when: inBackup, run: () => activeBackup.refreshList() },
+    ]);
+    backupCommandsWired = true;
+  } catch (_) { /* registry optional */ }
+}
 
 const FIELD_LABELS = {
   repo: 'Repo (owner/name)', token: 'Token', dir: 'Folder', branch: 'Branch (optional)',
@@ -29,6 +45,9 @@ export class EdotBackup extends HTMLElement {
     this.backend = 'github';
     this.cfg = defaultFields(this.backend);
     this.render();
+    if (!activeBackup) activeBackup = this;
+    this.addEventListener('focusin', () => { activeBackup = this; });
+    registerBackupCommands();
   }
 
   render() {
