@@ -25,6 +25,15 @@ self.onmessage = async (e) => {
   }
   if (m.type !== 'run' || started) return;
   started = true;
+  // Harden the sandbox: remove every network + nested-execution escape hatch so a
+  // script can ONLY reach the outside through the curated edot API. (A
+  // QuickJS-in-WASM backend would isolate even the language runtime; this is the
+  // zero-dependency hardening — note the Function constructor still resolves these
+  // names to the same neutered globals, so the indirect path is closed too.)
+  for (const n of ['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'importScripts', 'Worker', 'SharedWorker', 'caches', 'indexedDB']) {
+    try { self[n] = undefined; } catch (_) {}
+  }
+  try { if (self.navigator) self.navigator.sendBeacon = undefined; } catch (_) {}
   const call = (op, payload) => new Promise((resolve, reject) => { const id = ++seq; pending.set(id, { resolve, reject }); self.postMessage({ type: 'call', id, op, payload }); });
   const edot = {
     log: (...args) => self.postMessage({ type: 'log', args: args.map(clone) }),

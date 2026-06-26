@@ -47,12 +47,14 @@ try {
       "edot.log('hi', 42); const x = await edot.invoke('test.echo', { a: 1 }); edot.log('got', x); return x.got.a + event.n;",
       { onLog: (a) => logs.push(a), event: { n: 5 } });
     const sandbox = await rt.run('return [typeof document, typeof window, typeof self];');
-    return { result, logs, cap, sandbox };
+    const net = await rt.run('return [typeof fetch, typeof XMLHttpRequest, typeof importScripts, typeof WebSocket, typeof Worker];');
+    return { result, logs, cap, sandbox, net };
   });
   ok('script result uses the event payload (1 + 5)', r.result === 6);
   ok('edot.log reaches the host', r.logs.some((a) => a[0] === 'hi' && a[1] === 42));
   ok('edot.invoke round-trips to a kernel capability', r.cap.length === 1 && r.cap[0].a === 1);
   ok('sandbox has NO DOM (document & window undefined, self is the worker)', r.sandbox[0] === 'undefined' && r.sandbox[1] === 'undefined' && r.sandbox[2] === 'object');
+  ok('sandbox has NO network (fetch/XHR/importScripts/WebSocket/Worker all undefined)', r.net.every((t) => t === 'undefined'));
 
   // --- runaway scripts are terminated by the timeout ---
   const timedOut = await page.evaluate(async () => {
