@@ -183,6 +183,81 @@ export function storeResourceSource(store, cfg, { id = store.id, provider = stor
   };
 }
 
+// A REAL remote storage mount over the GitHub Contents API — arbitrary paths and
+// directories (unlike the backup github store, which flattens keys into opaque
+// `edot-backups/<id>.enc` blobs). api.github.com is CORS-enabled, so the browser
+// reaches it directly with a token. Writes commit straight to a branch; the
+// editor's "open a pull request" flow stays a separate, GitHub-specific action.
+// `fetchImpl` is injectable so the request shaping is unit-testable offline.
+const ghB64 = (bytes) => { const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); let bin = ''; for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(bin); };
+const ghBytes = (b64) => { const bin = atob(String(b64).replace(/\s/g, '')); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; };
+
+export class GitHubResourceSource {
+  constructor({ id, repo, token, branch = '', fetchImpl } = {}) {
+    const [owner, name] = String(repo || '').split('/');
+    if (!owner || !name) throw new Error('GitHub: repo must be "owner/name"');
+    this.id = id || `github-${owner}-${name}`;
+    this.provider = 'github'; this.capability = 'storage'; this.locality = 'remote';
+    this.account = null; this.repo = `${owner}/${name}`;
+    this._owner = owner; this._name = name; this._token = token; this._branch = branch;
+    this._fetch = fetchImpl || ((...a) => fetch(...a));
+  }
+  async _req(method, path, body) {
+    const res = await this._fetch(`https://api.github.com${path}`, {
+      method,
+      headers: {
+        Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28',
+        ...(this._token ? { Authorization: `Bearer ${this._token}` } : {}),
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const text = await res.text();
+    let json; try { json = text ? JSON.parse(text) : {}; } catch { json = { message: text }; }
+    if (!res.ok) { const e = new Error(json.message || `GitHub ${res.status}`); e.status = res.status; e.data = json; throw e; }
+    return json;
+  }
+  _enc(p) { return norm(p).split('/').filter(Boolean).map(encodeURIComponent).join('/'); }
+  _ref() { return this._branch ? `?ref=${encodeURIComponent(this._branch)}` : ''; }
+  async _sha(path) { try { return (await this._req('GET', `/repos/${this._owner}/${this._name}/contents/${this._enc(path)}${this._ref()}`)).sha; } catch (e) { if (e.status === 404) return null; throw e; } }
+
+  async read(path) {
+    const j = await this._req('GET', `/repos/${this._owner}/${this._name}/contents/${this._enc(path)}${this._ref()}`);
+    if (Array.isArray(j)) throw new Error(`Not a file: ${path}`);
+    if (j.encoding !== 'base64') throw new Error('GitHub: unexpected file encoding');
+    return ghBytes(j.content);
+  }
+  async write(path, bytes, { message } = {}) {
+    const sha = await this._sha(path);
+    return this._req('PUT', `/repos/${this._owner}/${this._name}/contents/${this._enc(path)}`, {
+      message: message || `edot: update ${norm(path)}`, content: ghB64(bytes),
+      ...(this._branch ? { branch: this._branch } : {}), ...(sha ? { sha } : {}),
+    });
+  }
+  async remove(path) {
+    const sha = await this._sha(path);
+    if (!sha) return;
+    return this._req('DELETE', `/repos/${this._owner}/${this._name}/contents/${this._enc(path)}`, {
+      message: `edot: remove ${norm(path)}`, sha, ...(this._branch ? { branch: this._branch } : {}),
+    });
+  }
+  async mkdir() { /* git has no empty directories — folders exist only via files */ }
+  async stat(path) {
+    let j; try { j = await this._req('GET', `/repos/${this._owner}/${this._name}/contents/${this._enc(path)}${this._ref()}`); } catch (e) { if (e.status === 404) return null; throw e; }
+    if (Array.isArray(j)) return { name: baseName(path) || '/', path: norm(path), kind: 'folder', locality: 'remote' };
+    return { name: baseName(path), path: norm(path), kind: 'file', size: j.size, locality: 'remote' };
+  }
+  async list(dirPath, { offset = 0, limit = 100 } = {}) {
+    let items; try { items = await this._req('GET', `/repos/${this._owner}/${this._name}/contents/${this._enc(dirPath)}${this._ref()}`); } catch (e) { if (e.status === 404) return []; throw e; }
+    if (!Array.isArray(items)) return []; // a file path, not a directory
+    const entries = items.map((it) => ({ name: it.name, path: norm('/' + it.path), kind: it.type === 'dir' ? 'folder' : 'file', size: it.size, locality: 'remote' }))
+      .sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === 'folder' ? -1 : 1));
+    return entries.slice(offset, offset + limit);
+  }
+  // Cheap reachability/auth probe used by the Connections "Connect" flow.
+  async verify() { await this._req('GET', `/repos/${this._owner}/${this._name}`); return true; }
+}
+
 // An Account binds an Identity to a Provider and surfaces the capabilities it
 // offers. capability('storage') returns a ResourceSource; other capabilities
 // (mail/calendar/chat/people/vcs) return the matching service adapter.

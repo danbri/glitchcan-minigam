@@ -70,8 +70,8 @@ try {
   ok('Platforms group lists GitHub and Gmail', picker.platforms && picker.platforms.providers.includes('github') && picker.platforms.providers.includes('gmail'));
   ok('On-this-device group lists the OPFS/local providers', picker.onDevice && picker.onDevice.providers.includes('opfs') && picker.onDevice.providers.includes('local-fs'));
 
-  // 3) Selecting GitHub shows it offers storage + vcs and needs oauth (with an
-  //    honest "not wired up" TODO note — no fake successful connection).
+  // 3) Selecting GitHub shows it offers storage + vcs and a real connect form
+  //    (repo/branch/token), not a disabled TODO.
   await page.click('edot-connections .cx-prov-pick[data-provider="github"]');
   await page.waitForSelector('edot-connections .cx-detail-card');
   const gh = await page.evaluate(() => {
@@ -81,16 +81,23 @@ try {
       title: card.querySelector('.cx-detail-title')?.textContent || '',
       offersStorage: offers.some((t) => /storage/i.test(t)),
       offersVcs: offers.some((t) => /version control|vcs/i.test(t)),
-      mentionsOauth: /oauth|sign in/i.test(card.textContent),
-      hasTodo: !!card.querySelector('.cx-todo'),
-      connectDisabled: !!card.querySelector('.cx-connect[disabled]'),
+      hasRepoField: !!card.querySelector('[name="gh-repo"]'),
+      hasTokenField: !!card.querySelector('[name="gh-token"]'),
+      connectEnabled: !!card.querySelector('.cx-connect:not([disabled])'),
     };
   });
   ok('selecting GitHub shows its provider detail', /github/i.test(gh.title));
   ok('GitHub detail shows it offers storage', gh.offersStorage);
   ok('GitHub detail shows it offers version control (vcs)', gh.offersVcs);
-  ok('GitHub detail shows it needs OAuth sign-in', gh.mentionsOauth);
-  ok('GitHub (remote) shows an honest TODO + disabled Connect (no fake success)', gh.hasTodo && gh.connectDisabled);
+  ok('GitHub offers a real connect form (repo + token), connect enabled', gh.hasRepoField && gh.hasTokenField && gh.connectEnabled);
+
+  // 3b) A still-unwired remote (S3) keeps the honest TODO + disabled Connect.
+  await page.click('edot-connections .cx-prov-pick[data-provider="s3"]');
+  await page.waitForSelector('edot-connections .cx-detail-card .cx-todo');
+  ok('an unwired remote (S3) shows an honest TODO + disabled Connect', await page.evaluate(() => {
+    const card = document.querySelector('edot-connections .cx-detail-card');
+    return !!card.querySelector('.cx-todo') && !!card.querySelector('.cx-connect[disabled]');
+  }));
 
   // 4) Adding a second account via getConnections().add(...) and publishing
   //    'connections:changed' makes the list re-render to include it.
@@ -152,6 +159,56 @@ try {
   ok('the identity shows its name', /ada lovelace/i.test(ident.name));
   ok('the identity shows email + provider', /ada@example\.com/i.test(ident.meta) && /google/i.test(ident.meta));
   ok('the active identity is marked CURRENT', ident.active && ident.currentBadge);
+
+  // 6) Connect a REAL GitHub mount: stub api.github.com, fill the form, Connect,
+  //    then write+read a document through the registered storage source. Proves
+  //    the remote mount is wired end-to-end (request shaping; no live network).
+  await page.evaluate(() => {
+    const files = new Map(); window.__ghfiles = files; let sha = 0;
+    const res = (s, j) => ({ ok: s >= 200 && s < 300, status: s, async text() { return JSON.stringify(j); } });
+    window.fetch = (url, opts = {}) => {
+      const u = new URL(url, location.href);
+      if (!/api\.github\.com$/.test(u.host)) return Promise.resolve(res(404, { message: 'nf' }));
+      const m = u.pathname.match(/^\/repos\/([^/]+)\/([^/]+)(?:\/contents\/(.*))?$/);
+      const method = opts.method || 'GET';
+      if (!m) return Promise.resolve(res(404, { message: 'nf' }));
+      if (m[3] == null) return Promise.resolve(res(200, { full_name: `${m[1]}/${m[2]}`, default_branch: 'main' }));
+      const key = decodeURIComponent(m[3]).replace(/^\/+/, '');
+      if (method === 'GET') {
+        if (files.has(key)) { const f = files.get(key); return Promise.resolve(res(200, { type: 'file', encoding: 'base64', content: f.b64, sha: f.sha, size: atob(f.b64).length, path: key, name: key.split('/').pop() })); }
+        const prefix = key === '' ? '' : key + '/'; const ch = new Map();
+        for (const k of files.keys()) { if (prefix && !k.startsWith(prefix)) continue; const rest = k.slice(prefix.length); if (!rest) continue; const seg = rest.split('/')[0]; ch.set(seg, rest.includes('/') ? { type: 'dir' } : { type: 'file', sha: files.get(k).sha }); }
+        if (ch.size) return Promise.resolve(res(200, [...ch.entries()].map(([nm, info]) => ({ name: nm, path: prefix + nm, type: info.type, sha: info.sha, size: 0 }))));
+        return Promise.resolve(res(404, { message: 'nf' }));
+      }
+      if (method === 'PUT') { const b = JSON.parse(opts.body); files.set(key, { b64: b.content, sha: 's' + (++sha) }); return Promise.resolve(res(b.sha ? 200 : 201, { content: { path: key, sha: files.get(key).sha } })); }
+      if (method === 'DELETE') { files.delete(key); return Promise.resolve(res(200, {})); }
+      return Promise.resolve(res(400, { message: 'bad' }));
+    };
+  });
+  const addOpen = await page.evaluate(() => !document.querySelector('edot-connections .cx-add').hidden);
+  if (!addOpen) await page.click('edot-connections .cx-add-btn');
+  await page.click('edot-connections .cx-prov-pick[data-provider="github"]');
+  await page.waitForSelector('edot-connections [name="gh-repo"]');
+  await page.fill('edot-connections [name="gh-repo"]', 'danbri/glitchcan-minigam');
+  await page.fill('edot-connections [name="gh-token"]', 'ghp_testtoken');
+  await page.click('edot-connections .cx-connect');
+  await page.waitForSelector('edot-connections .cx-acct[data-id^="github-"]', { timeout: 5000 });
+  const ghAcct = await page.evaluate(() => {
+    const row = document.querySelector('edot-connections .cx-acct[data-id^="github-"]');
+    return { label: row?.querySelector('.cx-acct-label')?.textContent || '', remote: !!row?.querySelector('.cx-badge-remote'), hasStorageChip: [...row.querySelectorAll('.cx-chip')].some((c) => /storage/i.test(c.textContent)) };
+  });
+  ok('connecting GitHub registers it as a platform account', /github · danbri/i.test(ghAcct.label) && ghAcct.remote);
+  ok('the GitHub account offers a storage capability', ghAcct.hasStorageChip);
+  const rt = await page.evaluate(async () => {
+    const { getKernel } = await import('../js/edot-kernel.js');
+    const k = getKernel();
+    const acct = k.capabilities.invoke('connections.list', { capability: 'storage' }).find((a) => a.provider === 'github');
+    const src = k.capabilities.invoke('storage.source', { id: acct.id });
+    await src.write('/docs/hello.md', new TextEncoder().encode('# hi from connections'));
+    return new TextDecoder().decode(await src.read('/docs/hello.md'));
+  });
+  ok('the connected GitHub mount writes + reads through the storage interface', /hi from connections/.test(rt));
 
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs.slice(0, 4));

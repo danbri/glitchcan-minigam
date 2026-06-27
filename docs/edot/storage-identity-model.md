@@ -122,14 +122,29 @@ identities); the **mail/calendar/chat services wrapped as `Account.capability(na
 so the one Connections surface manages GitHub-as-storage, Gmail-as-mail and
 XMPP-as-groupware uniformly; and the **OIDC identity axis** feeding Connections.
 
+- **GitHub is a real remote mount** — `GitHubResourceSource` (in
+  `resource-source.js`) implements the full `ResourceSource` interface over the
+  CORS-enabled GitHub Contents API: arbitrary paths and directories (not the
+  backup store's flattened `edot-backups/<id>.enc` blobs), base64 content,
+  sha-on-overwrite, branch refs, `verify()` probe. The Connections "Add" picker
+  connects it for real (repo + token, live-verified) and registers it, so the
+  editor's **Save to… → GitHub** and the Files browser write through the same one
+  interface. `test-github-source.mjs` proves write/read/list/stat/remove +
+  request shaping against a fake Contents API; `test-connections-ui.mjs` proves
+  the connect-then-write-then-read path end to end. (A document's "open a pull
+  request" remains a separate, GitHub-specific editor action — a PR is richer
+  than a blob write.)
+
 Remaining (incremental): route a generic file open/save dialog through
-`connections` (the Files app is the browser; a modal picker is the next step);
-implement the MIX `calendar`/`storage` pubsub nodes so the Groups account's
-declared capabilities become live adapters. (Live round-trips for the remote
-storage backends and live XMPP federation need credentials/a server, so they're
-verified at the request-shaping/crypto level — the store bridge is proven with a
-fake store, SCRAM against the RFC 5802 vector; real network round-trips are not
-CI-checked, by the standing headless rule.)
+`connections` for the *other* apps (the editor's Save to… already does; the Files
+app is the browser); wire the remaining remotes (S3/WebDAV/Solid/oauth) the way
+GitHub is now wired; implement the MIX `calendar`/`storage` pubsub nodes so the
+Groups account's declared capabilities become live adapters. (Live round-trips
+for the remote backends and live XMPP federation need real credentials/a server,
+so they're verified at the request-shaping/crypto level — GitHub against a fake
+Contents API, the store bridge with a fake store, SCRAM against the RFC 5802
+vector; real network round-trips are not CI-checked, by the standing headless
+rule.)
 
 ## Open design choices (for decision before the big build)
 

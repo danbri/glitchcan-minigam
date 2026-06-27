@@ -28,6 +28,7 @@ const SUITES = [
   ['collection-source', 'test-collection-source.mjs'],
   ['gpu', 'test-gpu.mjs'],
   ['resource-source', 'test-resource-source.mjs'],
+  ['github-source', 'test-github-source.mjs'],
   ['connections', 'test-connections.mjs'],
   ['storage-opfs', 'test-storage-opfs.mjs'],
   ['files (ui)', 'files/test-files.mjs'],

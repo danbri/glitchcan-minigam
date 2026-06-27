@@ -3,10 +3,10 @@
 //
 // Reads the live Connections registry over the kernel (capabilities.invoke
 // 'connections.list') and lets you ADD a connection from the PROVIDERS catalogue
-// (ontology.js). It is HONEST: the local OPFS "device" account is real and
-// always present; wiring real REMOTE auth (oauth/keys/password/webid) is a TODO,
-// so adding a remote provider shows its credential fields and a clear note
-// instead of faking a successful connection.
+// (ontology.js). It is HONEST: the local OPFS "device" account and a GitHub repo
+// (a real token over the CORS-enabled Contents API) connect for real; the other
+// remotes (S3/WebDAV/Solid/oauth) still show their credential fields with a clear
+// "not wired yet" note instead of faking a connection.
 //
 // Light-DOM custom element (house style), mobile-first, accessible. Subscribes
 // to the kernel bus topic 'connections:changed' so it re-renders when accounts
@@ -205,12 +205,22 @@ class EdotConnections extends HTMLElement {
         <input class="cx-input" type="${esc(f.type)}" name="${esc(f.name)}" autocomplete="off">
       </label>`).join('');
 
-    // Honesty: only the local OPFS provider can actually connect here. Everything
-    // else is a real provider whose remote auth is a documented TODO.
-    const canConnectLocally = (providerId === 'opfs');
-    let actionHtml;
-    if (canConnectLocally) {
+    // What can actually connect here: OPFS (local, no login) and GitHub (a real
+    // token over the CORS-enabled Contents API). The other remotes still show
+    // what a connection needs but are an honest TODO until their auth is wired.
+    let actionHtml, customFields = '';
+    if (providerId === 'opfs') {
       actionHtml = `<button class="cx-connect" type="button" data-provider="${esc(providerId)}">Add this device’s storage</button>`;
+    } else if (providerId === 'github') {
+      customFields = `
+        <div class="cx-fields">
+          <label class="cx-field">Repository (owner/name)<input class="cx-input" type="text" name="gh-repo" placeholder="danbri/glitchcan-minigam" autocomplete="off"></label>
+          <label class="cx-field">Branch (optional)<input class="cx-input" type="text" name="gh-branch" placeholder="default branch" autocomplete="off"></label>
+          <label class="cx-field">Personal access token<input class="cx-input" type="password" name="gh-token" autocomplete="off"></label>
+        </div>
+        <p class="cx-detail-note">Token needs Repository → Contents = “Read and write” on this repo. Kept in memory for this session only.</p>`;
+      actionHtml = `<button class="cx-connect" type="button" data-provider="github">Connect GitHub</button>
+        <div class="cx-connect-err eh-error" role="alert" hidden></div>`;
     } else {
       actionHtml = `
         <p class="cx-todo" role="note">⚠ Real ${esc(authLabel(p.auth))} for ${esc(p.label)} isn’t wired up yet — this is a known TODO.
@@ -225,11 +235,11 @@ class EdotConnections extends HTMLElement {
           <span class="cx-detail-auth">${esc(authLabel(p.auth))}${requiresAuthKind(p.auth) ? ' · sign-in needed' : ' · no login'}</span></p>
         <div class="cx-detail-offers"><span class="cx-detail-offers-h">Offers</span> ${chips}</div>
         ${auth.note ? `<p class="cx-detail-note">${esc(auth.note)}</p>` : ''}
-        ${fields ? `<div class="cx-fields">${fields}</div>` : ''}
+        ${customFields || (fields ? `<div class="cx-fields">${fields}</div>` : '')}
         ${actionHtml}
       </div>`;
     const connectBtn = detail.querySelector('.cx-connect:not([disabled])');
-    if (connectBtn) connectBtn.addEventListener('click', () => this._connectLocal(providerId));
+    if (connectBtn) connectBtn.addEventListener('click', () => providerId === 'github' ? this._connectGithub() : this._connectLocal(providerId));
   }
 
   // Only honest local connect: add another OPFS-backed device storage account.
@@ -244,6 +254,38 @@ class EdotConnections extends HTMLElement {
       this._toggleAdd();
       this._setStatus('Added local app-private storage.');
     } catch (e) { this._setStatus('Could not add local storage: ' + e.message); }
+  }
+
+  // Real remote connect: a GitHub repo over the Contents API. Verifies the
+  // token/repo with a live probe, then registers a GitHubResourceSource so every
+  // app's "Save to…" / Files can write to it through the one storage interface.
+  async _connectGithub() {
+    const detail = this.querySelector('.cx-detail'); if (!detail) return;
+    const val = (n) => (detail.querySelector(`[name="${n}"]`)?.value || '').trim();
+    const repo = val('gh-repo'), branch = val('gh-branch'), token = val('gh-token');
+    const errEl = detail.querySelector('.cx-connect-err');
+    const btn = detail.querySelector('.cx-connect');
+    const showErr = (m) => { if (errEl) { errEl.textContent = m; errEl.hidden = false; } this._setStatus(m); };
+    if (errEl) errEl.hidden = true;
+    if (!repo || !token) return showErr('Enter a repository (owner/name) and a token.');
+    try {
+      if (btn) btn.disabled = true;
+      this._setStatus('Connecting to GitHub…');
+      const { GitHubResourceSource } = await import('../../js/resource-source.js');
+      const src = new GitHubResourceSource({ id: 'github-' + repo.replace(/[^a-z0-9]+/gi, '-').toLowerCase(), repo, token, branch });
+      await src.verify();   // live probe — throws on a bad token/repo
+      getConnections().add({ id: src.id, provider: 'github', label: `GitHub · ${repo}`, identity: repo, sources: { storage: src } });
+      this._toggleAdd();
+      this._setStatus(`Connected GitHub · ${repo}.`);
+    } catch (e) { showErr(this._ghMsg(e)); }
+    finally { if (btn) btn.disabled = false; }
+  }
+  _ghMsg(e) {
+    if (e && e.status === 401) return 'Token rejected (401). Check the token value.';
+    if (e && e.status === 403) return 'Forbidden (403): the token needs Contents = Read and write on this repo.';
+    if (e && e.status === 404) return 'Repository not found (404), or the token can’t access it.';
+    if (e instanceof TypeError) return 'Network/CORS error reaching api.github.com.';
+    return (e && e.message) || 'Could not connect.';
   }
 }
 
