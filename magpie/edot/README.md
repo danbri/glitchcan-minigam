@@ -1,14 +1,24 @@
-# edot — a small, modular, accessible word processor & office-doc tool
+# edot — a small, modular, accessible browser office suite
 
-A browser word processor that runs entirely client-side. No server, no upload,
-no build step — open `edot.html` from a static host (it lives on GitHub Pages
-with the rest of this repo) and write. Your text never leaves your device.
+A browser office suite that runs entirely client-side. No server, no upload,
+no build step — open it from a static host (it lives on GitHub Pages with the
+rest of this repo). Your data never leaves your device.
 
-It aims at the job Google Docs / Office 365 do, minus the cloud: rich editing,
-real Office-format import/export, and a local document library — but private,
+It aims at the job Google Workspace / Office 365 do, minus the cloud: rich
+editing, real Office-format import/export, plus slides, data tables, calendar,
+mail, maps, groups (XMPP/MIX) and a unified Connections layer — all private,
 offline, and dependency-free.
 
-**Live:** `magpie/edot/edot.html`
+**Two entry points:**
+
+- **The suite (canonical):** `magpie/edot/index.html` — one shell with an app
+  rail (Editor · Data · Slides · Calendar · Mail · Maps · Groups · Files ·
+  Connections), a ⌘K command palette, and cross-app sharing over one kernel.
+  This is the current experience.
+- **The standalone word processor:** `magpie/edot/edot.html` — the original
+  editor-only page (richer document features today: My documents library,
+  Open Examples/Research/URL, Save-to-GitHub-via-PR). It links to the suite via
+  "Open the full edot suite →". Kept as a focused, single-purpose editor.
 
 ## What it does
 
