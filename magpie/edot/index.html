@@ -249,7 +249,17 @@
         }
         setWsPane(section, 'data');
       } else {
-        await mountComponent(byId[id], section, id);
+        const el = await mountComponent(byId[id], section, id);
+        // The dedicated Editor app gets the full document host (My documents +
+        // autosave, Open Examples/Research/URL, View source, Save to GitHub) —
+        // the same features as the standalone page, sharing the same library.
+        if (id === 'editor' && el) {
+          try {
+            const { EditorHost } = await import('./js/editor-host.js');
+            section._host = new EditorHost(el, { section });
+            await section._host.boot();
+          } catch (e) { console.error('editor host', e); }
+        }
       }
       return section;
     }
@@ -302,12 +312,20 @@
 
     function buildMenus(id, el) {
       if (id === 'editor' && el) {
+        const host = views.get('editor')?._host;
+        const titleOf = () => `${(host && host.titleEl && host.titleEl.value.trim()) || 'document'}`;
         return {
           File: [
-            { label: 'New', accel: 'Ctrl+N', action: () => el.setContent('') },
-            { label: 'Open file… (.docx · .md · .html · .odt · .rtf)', action: async () => { const f = await pickFile(IO.importAccept?.()); if (f) try { el.setContent(await IO.importFile(f)); } catch (e) { alert(e.message); } } },
+            { label: 'New document', accel: 'Ctrl+N', action: () => host ? host.newDocument() : el.setContent('') },
+            { label: 'Open…', action: () => host ? host.openDialog() : pickFile(IO.importAccept?.()).then((f) => f && IO.importFile(f).then((h) => el.setContent(h)).catch((e) => alert(e.message))) },
+            { label: 'My documents…', accel: 'Ctrl+Shift+O', action: () => host && host.myDocuments(), disabled: !host },
             { sep: true },
-            { label: 'Export', submenu: IO.exportFormats().map((fmt) => ({ label: fmt.label, action: async () => { try { IO.downloadBlob(await IO.exportDocument(el.getContent(), 'document', fmt.ext), `document.${fmt.ext}`); } catch (e) { alert(e.message); } } })) },
+            { label: 'Save to GitHub…', action: () => host && host.saveToGitHub(), disabled: !host },
+            { label: 'View source…', action: () => host && host.viewSource(), disabled: !host },
+            { sep: true },
+            { label: 'Export', submenu: IO.exportFormats().map((fmt) => ({ label: fmt.label, action: async () => { try { IO.downloadBlob(await IO.exportDocument(el.getContent(), titleOf(), fmt.ext), `${titleOf()}.${fmt.ext}`); } catch (e) { alert(e.message); } } })) },
+            { sep: true },
+            { label: 'Close document', action: () => host && host.closeDocument(), disabled: !host },
           ],
           Edit: [
             { label: 'Undo', accel: 'Ctrl+Z', action: () => el.exec('undo') },

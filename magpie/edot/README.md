@@ -16,9 +16,17 @@ offline, and dependency-free.
   Connections), a ⌘K command palette, and cross-app sharing over one kernel.
   This is the current experience.
 - **The standalone word processor:** `magpie/edot/edot.html` — the original
-  editor-only page (richer document features today: My documents library,
-  Open Examples/Research/URL, Save-to-GitHub-via-PR). It links to the suite via
-  "Open the full edot suite →". Kept as a focused, single-purpose editor.
+  editor-only page, kept as a focused single-purpose editor. It links to the
+  suite via "Open the full edot suite →".
+
+The suite's Editor app now has **full parity** with the standalone: the same
+writing core plus the host-level document features — **My documents** library +
+autosave, **Open** (Examples / Research / file / URL), **View source**, and
+**Save to GitHub** (commit-via-pull-request with a diff preview). These live in
+`js/editor-host.js`, which reuses the same logic modules as the standalone
+(`library.js`, `examples.js`, `open-url.js`, `git-remote.js`, `diff.js`, `io.js`)
+and **shares the same local document library**, so a document written in either
+front door appears in the other.
 
 ## What it does
 

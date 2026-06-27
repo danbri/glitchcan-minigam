@@ -19,6 +19,7 @@ const SUITES = [
   ['editor (e2e)', 'test-e2e.mjs'],
   ['editor (mobile)', 'test-mobile.mjs'],
   ['editor (component)', 'test-editor-component.mjs'],
+  ['editor (host)', 'test-editor-host.mjs'],
   ['data-object', 'test-data-object.mjs'],
   ['object-index', 'test-object-index.mjs'],
   ['kernel', 'test-kernel.mjs'],
