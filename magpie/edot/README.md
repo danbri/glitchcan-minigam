@@ -21,12 +21,18 @@ offline, and dependency-free.
 
 The suite's Editor app now has **full parity** with the standalone: the same
 writing core plus the host-level document features — **My documents** library +
-autosave, **Open** (Examples / Research / file / URL), **View source**, and
-**Save to GitHub** (commit-via-pull-request with a diff preview). These live in
-`js/editor-host.js`, which reuses the same logic modules as the standalone
-(`library.js`, `examples.js`, `open-url.js`, `git-remote.js`, `diff.js`, `io.js`)
-and **shares the same local document library**, so a document written in either
-front door appears in the other.
+autosave, **Open** (Examples / Research / file / URL), **View source**, and a
+unified **Save to…**. These live in `js/editor-host.js`, which reuses the same
+logic modules as the standalone (`library.js`, `examples.js`, `open-url.js`,
+`git-remote.js`, `diff.js`, `io.js`) and **shares the same local document
+library**, so a document written in either front door appears in the other.
+
+**Save to… is folded into the Connections storage layer.** Instead of a
+GitHub-only save, the editor exports the document and writes it through the
+`ResourceSource` interface to any connected storage mount — the local **device
+(OPFS)** today (real, tested), any platform mount once its auth is wired — with
+**GitHub-as-a-pull-request** offered as one destination in the same picker (a PR
+with a diff is GitHub's meaningful "save", so picking it opens that flow).
 
 ## What it does
 

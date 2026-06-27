@@ -25,6 +25,8 @@ import { resolveSourceUrl, filenameFromUrl } from './open-url.js';
 import { GitHubRemote, commitViaPullRequest } from './git-remote.js';
 import { diffLines, diffStats, collapse } from './diff.js';
 import * as IO from './io.js';
+import { getKernel } from './edot-kernel.js';
+import { getConnections } from './connections.js';
 
 const LAST_DOC_KEY = 'edot.currentDoc';
 const GH_TOKEN_KEY = 'edot.gh.token';
@@ -395,6 +397,82 @@ export class EditorHost {
     sel.addEventListener('change', render);
     body.append(fmt, ta, note); dlg.appendChild(foot);
     showModal(dlg); render();
+    dlg.addEventListener('close', () => dlg.remove(), { once: true });
+  }
+
+  // ---- Save to… (the unified Connections storage layer) ----------------------
+  // One "Save to…" over every connected storage mount (the ResourceSource
+  // interface): the local device (OPFS) today, plus any platform mount once its
+  // auth is wired. GitHub is folded in as one destination — picking it opens the
+  // pull-request flow (commit + diff), since a PR is GitHub's meaningful "save",
+  // not a blob overwrite. The document is exported to the chosen format and
+  // written through `storage.source({id}).write(path, bytes)`.
+  saveToStorage() {
+    const { dlg, body } = makeDialog('Save to…');
+    let mounts = [];
+    try { getConnections(); mounts = getKernel().capabilities.invoke('connections.list', { capability: 'storage' }) || []; } catch (_) { mounts = []; }
+    const choices = [
+      ...mounts.map((m) => ({ kind: 'storage', id: m.id, label: m.label, local: m.isLocal, auth: m.requiresAuth })),
+      { kind: 'github', id: '__gh__', label: 'GitHub — as a pull request', local: false, auth: true },
+    ];
+    let selected = choices[0];
+
+    const intro = document.createElement('p'); intro.className = 'eh-note'; intro.textContent = 'Choose where to save this document.';
+    const destWrap = document.createElement('div'); destWrap.className = 'eh-list';
+    choices.forEach((c, i) => {
+      const row = document.createElement('label'); row.className = 'eh-item';
+      const r = document.createElement('input'); r.type = 'radio'; r.name = 'eh-dest'; r.checked = i === 0; r.style.flex = '0 0 auto';
+      r.addEventListener('change', () => { if (r.checked) { selected = c; syncPath(); } });
+      const span = document.createElement('span'); span.className = 'eh-item-main';
+      span.innerHTML = `<span class="nm"></span><span class="mt"></span>`;
+      span.querySelector('.nm').textContent = c.label;
+      span.querySelector('.mt').textContent = c.kind === 'github'
+        ? 'opens a pull request with a diff'
+        : `${c.local ? 'on this device' : 'platform'}${c.auth ? ' · sign-in needed' : ' · no login'}`;
+      row.append(r, span); destWrap.appendChild(row);
+    });
+
+    const fmtField = document.createElement('label'); fmtField.className = 'eh-field'; fmtField.textContent = 'Format';
+    const fmt = document.createElement('select');
+    for (const f of IO.exportFormats()) { const o = document.createElement('option'); o.value = f.ext; o.textContent = f.label; fmt.appendChild(o); }
+    fmtField.appendChild(fmt);
+    const pathField = document.createElement('label'); pathField.className = 'eh-field'; pathField.textContent = 'Path';
+    const path = document.createElement('input'); path.type = 'text'; pathField.appendChild(path);
+    const syncPath = () => {
+      pathField.style.display = selected.kind === 'github' ? 'none' : '';
+      fmtField.style.display = selected.kind === 'github' ? 'none' : '';
+      if (selected.kind !== 'github') path.value = `${ghSlug(this.titleEl && this.titleEl.value)}.${fmt.value}`;
+    };
+    fmt.addEventListener('change', syncPath);
+
+    const error = document.createElement('div'); error.className = 'eh-error'; error.hidden = true;
+    const result = document.createElement('div'); result.className = 'eh-result'; result.hidden = true;
+    body.append(intro, destWrap, fmtField, pathField, error, result);
+
+    const foot = document.createElement('div'); foot.className = 'eh-dlg-foot';
+    const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'eh-btn'; cancel.textContent = 'Cancel'; cancel.addEventListener('click', () => dlg.close());
+    const save = document.createElement('button'); save.type = 'button'; save.className = 'eh-btn eh-btn-primary'; save.textContent = 'Save';
+    save.addEventListener('click', async () => {
+      error.hidden = true; result.hidden = true;
+      if (selected.kind === 'github') { dlg.close(); this.saveToGitHub(); return; }
+      const source = (() => { try { return getKernel().capabilities.invoke('storage.source', { id: selected.id }); } catch (_) { return null; } })();
+      if (!source) { error.textContent = 'That storage isn’t connected yet — add it in Connections first.'; error.hidden = false; return; }
+      let p = (path.value || '').trim() || `${ghSlug(this.titleEl && this.titleEl.value)}.${fmt.value}`;
+      if (!p.startsWith('/')) p = '/' + p;
+      try {
+        save.disabled = true; result.hidden = true;
+        const title = (this.titleEl && this.titleEl.value) || 'document';
+        const blob = await IO.exportDocument(this.el.getContent(), title, fmt.value);
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        await source.write(p, bytes);
+        result.textContent = `Saved to ${selected.label} · ${p}`; result.hidden = false;
+        this.announce(`Saved to ${selected.label}`);
+      } catch (err) { error.textContent = err.message || 'Could not save there.'; error.hidden = false; }
+      finally { save.disabled = false; }
+    });
+    foot.append(cancel, save); dlg.appendChild(foot);
+    syncPath();
+    showModal(dlg);
     dlg.addEventListener('close', () => dlg.remove(), { once: true });
   }
 

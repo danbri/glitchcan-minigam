@@ -320,7 +320,7 @@
             { label: 'Open…', action: () => host ? host.openDialog() : pickFile(IO.importAccept?.()).then((f) => f && IO.importFile(f).then((h) => el.setContent(h)).catch((e) => alert(e.message))) },
             { label: 'My documents…', accel: 'Ctrl+Shift+O', action: () => host && host.myDocuments(), disabled: !host },
             { sep: true },
-            { label: 'Save to GitHub…', action: () => host && host.saveToGitHub(), disabled: !host },
+            { label: 'Save to…', action: () => host && host.saveToStorage(), disabled: !host },
             { label: 'View source…', action: () => host && host.viewSource(), disabled: !host },
             { sep: true },
             { label: 'Export', submenu: IO.exportFormats().map((fmt) => ({ label: fmt.label, action: async () => { try { IO.downloadBlob(await IO.exportDocument(el.getContent(), titleOf(), fmt.ext), `${titleOf()}.${fmt.ext}`); } catch (e) { alert(e.message); } } })) },

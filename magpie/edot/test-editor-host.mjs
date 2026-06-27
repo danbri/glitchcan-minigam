@@ -112,6 +112,40 @@ try {
   ok('parser extracts owner/repo and branch', gh.parsed && gh.parsed.owner === 'danbri' && gh.parsed.repo === 'glitchcan-minigam' && !!gh.parsed.branch);
   await page.evaluate(() => document.querySelector('dialog.eh-dialog[open]').close());
 
+  // 5b) Save to… — the unified Connections storage layer. Lists every storage
+  //     mount (the real OPFS device today) plus GitHub-as-a-PR, and actually
+  //     writes the document through the ResourceSource interface.
+  await page.evaluate(() => {
+    const host = document.querySelector('.view[data-app="editor"]')._host;
+    host.el.setContent('<p>STORAGEMARK body</p>');
+    host.titleEl.value = 'Storage Doc';
+    host.saveToStorage();
+  });
+  await page.waitForSelector('dialog.eh-dialog[open] .eh-list .eh-item');
+  const dest = await page.evaluate(() => {
+    const dlg = document.querySelector('dialog.eh-dialog[open]');
+    const labels = [...dlg.querySelectorAll('.eh-item-main .nm')].map((n) => n.textContent);
+    return { hasDevice: labels.some((l) => /storage|device/i.test(l)), hasGithub: labels.some((l) => /github/i.test(l)) };
+  });
+  ok('Save to… lists the local device storage mount', dest.hasDevice);
+  ok('Save to… folds GitHub (pull request) in as a destination', dest.hasGithub);
+  await page.evaluate(() => {
+    const dlg = document.querySelector('dialog.eh-dialog[open]');
+    const radios = dlg.querySelectorAll('input[type=radio]'); radios[0].checked = true; radios[0].dispatchEvent(new Event('change'));
+    const sel = dlg.querySelector('select'); sel.value = 'html'; sel.dispatchEvent(new Event('change'));
+    dlg.querySelector('.eh-field input[type=text]').value = '/eh-test/storage-doc.html';
+    dlg.querySelector('.eh-btn-primary').click();
+  });
+  await page.waitForFunction(() => { const r = document.querySelector('dialog.eh-dialog[open] .eh-result'); return r && !r.hidden; }, null, { timeout: 5000 });
+  const back = await page.evaluate(async () => {
+    const { getKernel } = await import('./js/edot-kernel.js');
+    const src = getKernel().capabilities.invoke('storage.source', { id: 'device' });
+    const bytes = await src.read('/eh-test/storage-doc.html');
+    return new TextDecoder().decode(bytes);
+  });
+  ok('Save to… writes the document to the device (OPFS) mount, read back via ResourceSource', /STORAGEMARK/.test(back));
+  await page.evaluate(() => document.querySelector('dialog.eh-dialog[open]')?.close());
+
   // 6) New document resets the surface.
   await page.evaluate(() => document.querySelector('.view[data-app="editor"]')._host.newDocument());
   await page.waitForFunction(() => document.querySelector('.view[data-app="editor"]')._host.titleEl.value === 'Untitled document');
