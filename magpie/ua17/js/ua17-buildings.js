@@ -114,7 +114,9 @@ function footprintMetrics(footprint) {
 
 function buildOneBuilding(b, index, isLandmark) {
   const group = new THREE.Group();
-  const H = b.height;
+  // CRITICAL: scale height by the SAME factor as the footprint, or towers come
+  // out ~3x too thin and read as needles/cones instead of buildings.
+  const H = b.height * SKYLINE_SCALE;
   const { cx, cz, w, d } = footprintMetrics(b.footprint);
   const span = Math.max(w, d);
 
@@ -135,69 +137,39 @@ function buildOneBuilding(b, index, isLandmark) {
     emissive: color,
     emissiveIntensity: fam.emissive,
   });
-  // Tile the facade: ~1 texture tile per storey vertically, a couple across.
+  // Tile the facade: rows of windows up the height, a couple of bays across.
   mat.map.needsUpdate = true;
-  mat.map.repeat.set(Math.max(1, Math.round(span / 12)), Math.max(2, Math.round(H / 24)));
+  mat.map.repeat.set(Math.max(1, Math.round(span / 9)), Math.max(2, Math.round(H / 9)));
 
   const roofMat = new THREE.MeshStandardMaterial({ color: 0x6c7075, roughness: 0.85 });
   const base = scaledPoints(b.footprint, 1, cx, cz);
 
-  if (H > 95 || isLandmark) {
-    // Tall tower: two setbacks + a slender tapered crown.
-    group.add(tierMesh(base, 0, H * 0.6, mat));
-    group.add(tierMesh(scaledPoints(b.footprint, 0.8, cx, cz), H * 0.6, H * 0.85, mat));
-    group.add(tierMesh(scaledPoints(b.footprint, 0.58, cx, cz), H * 0.85, H, mat));
-    // Spire (square tapered) + antenna mast + red aircraft-warning light.
-    const spireLen = THREE.MathUtils.clamp(H * 0.18, 12, 60);
-    const spire = new THREE.Mesh(new THREE.ConeGeometry(span * 0.16, spireLen, 4), mat);
-    spire.rotation.y = Math.PI / 4;
-    spire.position.set(cx, H + spireLen / 2, cz);
-    group.add(spire);
-    const mastLen = spireLen * 0.9;
-    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, mastLen, 6), roofMat);
-    mast.position.set(cx, H + spireLen + mastLen / 2, cz);
-    group.add(mast);
-    const redLight = new THREE.Mesh(new THREE.SphereGeometry(1.1, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff3b3b }));
-    redLight.position.set(cx, H + spireLen + mastLen, cz);
-    group.add(redLight);
-    if (isLandmark) group.add(beacon(H + spireLen + mastLen));
-  } else if (H > 45) {
-    // Mid-rise: a single setback + rooftop mechanical penthouse.
-    group.add(tierMesh(base, 0, H * 0.9, mat));
-    group.add(tierMesh(scaledPoints(b.footprint, 0.82, cx, cz), H * 0.9, H, mat));
-    const box = new THREE.Mesh(new THREE.BoxGeometry(span * 0.4, 6, span * 0.34), roofMat);
-    box.position.set(cx, H + 3, cz);
+  // Clean box massing with setbacks — NO cone spires, antenna masts or red
+  // warning-light spheres (those made the towers read as needles/cones with
+  // floating red dots, and the tall masts looked like "cones hanging on
+  // strings"). A flat roof cap + a small mechanical box is all a tower needs.
+  if (H > 55 || isLandmark) {
+    // Tall tower: two gentle setbacks (kept wide so it stays a tower, not a spike).
+    group.add(tierMesh(base, 0, H * 0.55, mat));
+    group.add(tierMesh(scaledPoints(b.footprint, 0.86, cx, cz), H * 0.55, H * 0.82, mat));
+    group.add(tierMesh(scaledPoints(b.footprint, 0.72, cx, cz), H * 0.82, H, mat));
+    const capMat = new THREE.MeshStandardMaterial({ color: 0x555a60, roughness: 0.8 });
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(span * 0.5, Math.max(2, H * 0.03), span * 0.42), capMat);
+    cap.position.set(cx, H + Math.max(1, H * 0.015), cz);
+    group.add(cap);
+  } else if (H > 22) {
+    // Mid-rise: single slight setback + a low rooftop mechanical penthouse.
+    group.add(tierMesh(base, 0, H * 0.92, mat));
+    group.add(tierMesh(scaledPoints(b.footprint, 0.9, cx, cz), H * 0.92, H, mat));
+    const box = new THREE.Mesh(new THREE.BoxGeometry(span * 0.42, Math.max(1.5, H * 0.06), span * 0.36), roofMat);
+    box.position.set(cx, H + Math.max(0.8, H * 0.03), cz);
     group.add(box);
-    // A rooftop antenna on some.
-    if (hash(index, 11) > 0.6) {
-      const a = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 16, 6), roofMat);
-      a.position.set(cx, H + 8 + 8, cz);
-      group.add(a);
-    }
   } else {
-    // Low-rise: flat roof + parapet, and sometimes a classic water tower.
+    // Low-rise: flat roof + a thin parapet lip.
     group.add(tierMesh(base, 0, H, mat));
-    const parapet = new THREE.Mesh(new THREE.BoxGeometry(span * 0.5, 2.5, span * 0.42), roofMat);
-    parapet.position.set(cx, H + 1, cz);
+    const parapet = new THREE.Mesh(new THREE.BoxGeometry(span * 0.62, 1.2, span * 0.54), roofMat);
+    parapet.position.set(cx, H + 0.6, cz);
     group.add(parapet);
-    if (hash(index, 5) > 0.55) {
-      const tank = new THREE.Group();
-      const legMat = new THREE.MeshStandardMaterial({ color: 0x4a4640, roughness: 0.8 });
-      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 6, 10), new THREE.MeshStandardMaterial({ color: 0x8a6a4a, roughness: 0.85 }));
-      barrel.position.y = 9;
-      tank.add(barrel);
-      const cap = new THREE.Mesh(new THREE.ConeGeometry(3.3, 2.4, 10), new THREE.MeshStandardMaterial({ color: 0x6f5238, roughness: 0.85 }));
-      cap.position.y = 13.2;
-      tank.add(cap);
-      for (let l = 0; l < 4; l++) {
-        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 6, 4), legMat);
-        const ang = (l / 4) * Math.PI * 2;
-        leg.position.set(Math.cos(ang) * 2.2, 3, Math.sin(ang) * 2.2);
-        tank.add(leg);
-      }
-      tank.position.set(cx + (hash(index, 9) - 0.5) * span * 0.3, H, cz + (hash(index, 13) - 0.5) * span * 0.3);
-      group.add(tank);
-    }
   }
 
   group.traverse((o) => { if (o.isMesh) o.name = b.name || 'building'; });

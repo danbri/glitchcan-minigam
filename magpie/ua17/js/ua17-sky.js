@@ -53,11 +53,17 @@ export function buildSun() {
   g.addColorStop(1, 'rgba(255,240,180,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 256, 256);
+  // A bright solid core so it reads as the sun, wrapped in a big soft halo —
+  // otherwise the small sprite looked like a stray floating white ball.
+  ctx.fillStyle = 'rgba(255,252,235,1)';
+  ctx.beginPath();
+  ctx.arc(128, 128, 34, 0, Math.PI * 2);
+  ctx.fill();
   const tex = new THREE.CanvasTexture(c);
   const mat = new THREE.SpriteMaterial({ map: tex, color: 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(1400, 1400, 1);
-  sprite.position.set(-4000, 3200, -3000);
+  sprite.scale.set(2600, 2600, 1);
+  sprite.position.set(-3200, 5200, -5200); // high in the sky, clearly the sun
   return sprite;
 }
 

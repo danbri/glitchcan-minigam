@@ -263,7 +263,14 @@ async function main() {
     const pos = flightCurve.getPointAt(t);
     aircraft.position.copy(pos);
 
+    // Orient from a PITCH-DAMPENED heading: the flight path climbs/descends
+    // steeply at toy scale, and a nose-up airliner reads as a launching
+    // rocket. Flatten the vertical component of the heading used for
+    // orientation (position still follows the true path) so the plane keeps a
+    // gentle, airliner-like attitude.
     forward.copy(flightCurve.getTangentAt(t)).normalize();
+    forward.y *= 0.32;
+    forward.normalize();
     right.crossVectors(worldUp, forward).normalize();
     if (right.lengthSq() < 1e-6) right.set(1, 0, 0);
     up.crossVectors(forward, right).normalize();
@@ -301,7 +308,7 @@ async function main() {
     const remMi = Math.round(TOTAL_MI * rem);
     const remKm = Math.round(TOTAL_KM * rem);
     ttdEl.textContent = fmtHM(TOTAL_MIN * rem);
-    dtdEl.textContent = `· ${remMi.toLocaleString()} mi`;
+    dtdEl.textContent = ''; // distance shown in the bottom row; keep top ribbon short so it never clips
 
     const altFt = Math.max(0, Math.round((aircraft.position.y / CRUISE_ALT) * CRUISE_FT / 100) * 100);
     altEl.textContent = altFt.toLocaleString();
