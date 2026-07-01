@@ -11,18 +11,25 @@ import { LONDON_WORLD_Z, NYC_WORLD_Z } from './ua17-route.js';
 
 // Real footprints span a whole ~2km downtown; compress toward the centre so
 // they read as a skyline beside the path rather than a field it flies through.
-const SKYLINE_SCALE = 0.32;
+const SKYLINE_SCALE = 0.36;
 
-// Facade families. Glass towers are cool + a touch reflective; stone/concrete
-// are warmer/matte. A mild self-colour emissive stops any face going black on
-// the shadow side (a distant building is only a few px, so a dark-average
-// material minifies to a silhouette).
+// Facade families, weighted so GLASS towers dominate (a modern skyline reads
+// as blue/teal glass, not tan stone boxes). A mild self-colour emissive stops
+// any face going black on the shadow side (a distant building is only a few
+// px, so a dark-average material minifies to a silhouette). `w` is the pick
+// weight.
 const FAMILIES = [
-  { name: 'glass', colors: [0x6f97b5, 0x5f8fb0, 0x7fa9c0, 0x88b7c9, 0x6aa0a8], roughness: 0.25, metalness: 0.5, emissive: 0.16 },
-  { name: 'steel', colors: [0x9fb0bb, 0x8ea1ad, 0xaab6bd], roughness: 0.4, metalness: 0.4, emissive: 0.14 },
-  { name: 'concrete', colors: [0xb7b9b4, 0xa7aaa4, 0xc3c2ba], roughness: 0.75, metalness: 0.05, emissive: 0.16 },
-  { name: 'stone', colors: [0xcabaa0, 0xbfae93, 0xd3c4a8], roughness: 0.8, metalness: 0.04, emissive: 0.18 },
+  { name: 'glass', w: 5, colors: [0x5b8fc9, 0x4f86c6, 0x6fa6d6, 0x3f9fb0, 0x5fb0c4, 0x7fbfe0], roughness: 0.16, metalness: 0.55, emissive: 0.22 },
+  { name: 'glass-teal', w: 3, colors: [0x3fa0a0, 0x4fb0aa, 0x5fbfc0, 0x6ec9c0], roughness: 0.18, metalness: 0.5, emissive: 0.22 },
+  { name: 'steel', w: 2, colors: [0x9fb2c0, 0x8ea6b6, 0xafc0cc], roughness: 0.35, metalness: 0.5, emissive: 0.18 },
+  { name: 'stone', w: 1, colors: [0xcabaa0, 0xbfae93, 0xd3c4a8], roughness: 0.75, metalness: 0.05, emissive: 0.2 },
 ];
+const FAMILY_TOTAL_W = FAMILIES.reduce((s, f) => s + f.w, 0);
+function pickFamily(r) {
+  let acc = 0;
+  for (const f of FAMILIES) { acc += f.w / FAMILY_TOTAL_W; if (r <= acc) return f; }
+  return FAMILIES[0];
+}
 
 let sharedFacade = null;
 function facadeTexture() {
@@ -109,7 +116,7 @@ function buildOneBuilding(b, index, isLandmark) {
   const { cx, cz, w, d } = footprintMetrics(b.footprint);
   const span = Math.max(w, d);
 
-  const fam = isLandmark ? FAMILIES[0] : FAMILIES[Math.floor(hash(index, 3) * FAMILIES.length)];
+  const fam = isLandmark ? FAMILIES[0] : pickFamily(hash(index, 3));
   const color = isLandmark ? 0xdcc487 : fam.colors[Math.floor(hash(index, 7) * fam.colors.length)];
   const mat = new THREE.MeshStandardMaterial({
     map: facadeTexture().clone(),
@@ -203,26 +210,55 @@ function groundPad(data) {
   return mesh;
 }
 
+// Radius (scaled units) of the dense downtown core we keep around the
+// centroid. Real footprints include sparse far-flung outliers that would
+// splay the "city" into a 900-wide band; trimming to the core lets us place
+// a compact, recognisable skyline as a close flyby beside the path.
+const CORE_RADIUS = 260;
+
 export function buildSkyline(data, worldZ, worldX = 0) {
-  const group = new THREE.Group();
+  // Centroid of the whole set.
+  let cx0 = 0, cz0 = 0;
+  const metrics = data.buildings.map((b) => footprintMetrics(b.footprint));
+  for (const m of metrics) { cx0 += m.cx; cz0 += m.cz; }
+  cx0 /= metrics.length; cz0 /= metrics.length;
+
+  // Keep the core + always the three tallest (the landmarks).
   const sorted = [...data.buildings].sort((a, b) => b.height - a.height);
   const landmarkNames = new Set(sorted.slice(0, 3).map((b) => b.name).filter(Boolean));
-
-  group.add(groundPad(data));
-  data.buildings.forEach((b, i) => {
-    const isLandmark = b.name && landmarkNames.has(b.name);
-    group.add(buildOneBuilding(b, i, isLandmark));
+  const kept = data.buildings.filter((b, i) => {
+    const m = metrics[i];
+    const near = Math.hypot(m.cx - cx0, m.cz - cz0) < CORE_RADIUS;
+    return near || (b.name && landmarkNames.has(b.name));
   });
 
-  group.position.set(worldX, 0, worldZ);
-  return group;
+  // Recentre the kept core on its own centroid so it sits neatly at the flyby.
+  let cx = 0, cz = 0;
+  for (const b of kept) { const m = footprintMetrics(b.footprint); cx += m.cx; cz += m.cz; }
+  cx /= kept.length; cz /= kept.length;
+
+  const inner = new THREE.Group();
+  inner.add(groundPad({ buildings: kept }));
+  kept.forEach((b, i) => {
+    const isLandmark = b.name && landmarkNames.has(b.name);
+    inner.add(buildOneBuilding(b, i, isLandmark));
+  });
+  inner.position.set(-cx, 0, -cz);
+
+  const shifted = new THREE.Group();
+  shifted.add(inner);
+  shifted.position.set(worldX, 0, worldZ);
+  return shifted;
 }
 
 // Landmarks sit at their footprint origin, roughly under the flight path;
 // offset each skyline sideways so the plane flies PAST the city (sightseeing)
 // rather than through the tallest tower.
-const LONDON_WORLD_X = -420;
-const NYC_WORLD_X = 450;
+// Close flyby: core spread is ~±CORE_RADIUS, so an offset of ~330 keeps the
+// nearest tower ~70 units off the path — a dramatic wall of towers beside the
+// wing without ever crossing the flight path.
+const LONDON_WORLD_X = -330;
+const NYC_WORLD_X = 330;
 
 export function buildLondonSkyline(londonData) {
   return buildSkyline(londonData, LONDON_WORLD_Z, LONDON_WORLD_X);
