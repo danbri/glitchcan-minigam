@@ -15,13 +15,19 @@ export function createScene(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  // Filmic tone mapping + a directional key light give real highlights/shadow
+  // falloff instead of the flat pastel "programmer art" look.
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
 
-  const hemi = new THREE.HemisphereLight(0xbfe3ff, 0x8fa6c9, 1.1);
+  const hemi = new THREE.HemisphereLight(0xbfe3ff, 0x5a6b58, 0.75);
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xfff3d6, 1.3);
-  sun.position.set(-400, 600, -200);
+  // Warm key light aligned with the sun sprite direction, strong enough to
+  // model form (buildings, terrain relief) with clear light/shadow sides.
+  const sun = new THREE.DirectionalLight(0xfff1cf, 2.6);
+  sun.position.set(-3200, 5200, -5200);
   scene.add(sun);
-  const fill = new THREE.AmbientLight(0xffffff, 0.4);
+  const fill = new THREE.AmbientLight(0x0e1b2a, 0.35); // cool, low — keeps contrast
   scene.add(fill);
 
   function resize() {
