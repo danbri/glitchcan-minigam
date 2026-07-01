@@ -98,6 +98,23 @@ async function main() {
   const aircraft = buildAircraft();
   scene.add(aircraft);
 
+  // Soft contact shadow that tracks the plane on the ground (take-off/landing)
+  // and fades out with altitude — grounds it so it doesn't look like it floats.
+  const planeShadow = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d').createRadialGradient(32, 32, 2, 32, 32, 32);
+    g.addColorStop(0, 'rgba(0,0,0,0.5)'); g.addColorStop(0.6, 'rgba(0,0,0,0.25)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    const ctx = c.getContext('2d'); ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64);
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(46, 46),
+      new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }),
+    );
+    m.rotation.x = -Math.PI / 2;
+    m.renderOrder = 2;
+    scene.add(m);
+    return m;
+  })();
+
   const audio = createAudio();
 
   // --- UI wiring ---
@@ -313,6 +330,16 @@ async function main() {
     // gear up once safely climbed away — both ends get a "real airport" feel.
     aircraft.userData.landingGear.visible = pos.y < 70;
     aircraft.userData.beacon.visible = Math.floor(clock.elapsedTime * 2) % 2 === 0;
+
+    // Contact shadow: on the ground below the plane, fading out as it climbs.
+    const groundY = CITY_GROUND_Y + 0.5;
+    planeShadow.position.set(pos.x, groundY, pos.z);
+    const alt = Math.max(0, pos.y - groundY);
+    const vis = THREE.MathUtils.clamp(1 - alt / 130, 0, 1);
+    planeShadow.visible = vis > 0.02;
+    planeShadow.material.opacity = vis * 0.7;
+    const sc = 1 + alt / 90; // shadow spreads slightly as it lifts
+    planeShadow.scale.set(sc, sc, 1);
 
     updateCamera(pos, forward, dt);
   }

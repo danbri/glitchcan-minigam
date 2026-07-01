@@ -8,17 +8,18 @@ function runwayTexture() {
   const c = document.createElement('canvas');
   c.width = 128; c.height = 2048;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#34373a';
+  // Mid-grey asphalt (not near-black) so the runway doesn't visually dominate
+  // the whole scene, with softer off-white markings.
+  ctx.fillStyle = '#565a5f';
   ctx.fillRect(0, 0, c.width, c.height);
-  // edge lines
-  ctx.fillStyle = '#e7e9ec';
-  ctx.fillRect(6, 0, 5, c.height);
-  ctx.fillRect(c.width - 11, 0, 5, c.height);
+  ctx.fillStyle = '#c6cace';
+  ctx.fillRect(7, 0, 4, c.height);
+  ctx.fillRect(c.width - 11, 0, 4, c.height);
   // dashed centreline
-  for (let y = 40; y < c.height - 40; y += 60) ctx.fillRect(c.width / 2 - 3, y, 6, 32);
+  for (let y = 40; y < c.height - 40; y += 60) ctx.fillRect(c.width / 2 - 2, y, 5, 30);
   // threshold "piano key" bars at both ends
   const threshold = (y0) => {
-    for (let i = 0; i < 5; i++) ctx.fillRect(16 + i * 20, y0, 12, 44);
+    for (let i = 0; i < 5; i++) ctx.fillRect(16 + i * 20, y0, 12, 40);
   };
   threshold(26);
   threshold(c.height - 70);

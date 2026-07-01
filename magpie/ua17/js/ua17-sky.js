@@ -13,14 +13,20 @@ void main() {
 
 const skyFrag = `
 uniform vec3 topColor;
+uniform vec3 midColor;
 uniform vec3 horizonColor;
 uniform vec3 hazeColor;
 uniform float haze; // 0..1, driven by real cloud cover along the route
 varying vec3 vWorldPos;
 void main() {
-  float h = clamp(normalize(vWorldPos).y * 1.4 + 0.15, 0.0, 1.0);
-  vec3 col = mix(horizonColor, topColor, pow(h, 0.55));
-  col = mix(col, hazeColor, haze * (1.0 - h) * 0.85);
+  float h = clamp(normalize(vWorldPos).y * 1.25 + 0.06, 0.0, 1.0);
+  // Two-stop vertical gradient (deep zenith -> mid -> bright horizon) reads
+  // richer than a single lerp, and a soft warm band right at the horizon adds
+  // atmosphere for almost no cost.
+  vec3 col = mix(midColor, topColor, pow(h, 0.7));
+  col = mix(horizonColor, col, smoothstep(0.0, 0.42, h));
+  float band = exp(-h * 9.0);            // concentrated near the horizon
+  col = mix(col, hazeColor, clamp(band * (0.35 + 0.5 * haze), 0.0, 0.85));
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -32,9 +38,10 @@ export function buildSky() {
     side: THREE.BackSide,
     depthWrite: false,
     uniforms: {
-      topColor: { value: new THREE.Color(0x2a7be0) },
-      horizonColor: { value: new THREE.Color(0xdff2ff) },
-      hazeColor: { value: new THREE.Color(0xc9d8e0) },
+      topColor: { value: new THREE.Color(0x1657c8) },
+      midColor: { value: new THREE.Color(0x3f8ce0) },
+      horizonColor: { value: new THREE.Color(0xdfeeff) },
+      hazeColor: { value: new THREE.Color(0xf2ead9) }, // warm horizon haze
       haze: { value: 0.2 },
     },
   });
@@ -109,7 +116,9 @@ export function updateSky(sky, fog, cloudTotalPct) {
   const haze = THREE.MathUtils.clamp(cloudTotalPct / 100, 0, 1);
   sky.material.uniforms.haze.value = haze;
   if (fog) {
-    fog.color.setHSL(0.58, 0.35, THREE.MathUtils.lerp(0.75, 0.88, haze));
+    // Hazy light blue matching the horizon so distant terrain/city/sea melt
+    // into the sky instead of ending at a hard edge.
+    fog.color.setHSL(0.58, 0.32, THREE.MathUtils.lerp(0.86, 0.92, haze));
     // Keep a healthy near/far gap at all times — letting `far` drop below (or
     // too close to) `near` degenerates three.js's linear fog into "no fog",
     // which let the destination skyline stay perfectly crisp from mid-ocean.

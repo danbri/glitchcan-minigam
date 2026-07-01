@@ -83,6 +83,32 @@ function beacon(height, color = 0xffe0a0) {
 // Deterministic-ish hash so a given building always looks the same.
 function hash(i, salt) { return Math.abs(Math.sin((i + 1) * 12.9898 + salt * 78.233)) % 1; }
 
+// Soft contact-shadow texture (radial dark blob) shared by all buildings —
+// grounds them so they read as sitting IN the world, not placed on a plane.
+let sharedShadowTex = null;
+function shadowTexture() {
+  if (sharedShadowTex) return sharedShadowTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(32, 32, 2, 32, 32, 32);
+  g.addColorStop(0, 'rgba(0,0,0,0.5)');
+  g.addColorStop(0.6, 'rgba(0,0,0,0.28)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 64);
+  sharedShadowTex = new THREE.CanvasTexture(c);
+  return sharedShadowTex;
+}
+function contactShadow(span) {
+  const mat = new THREE.MeshBasicMaterial({ map: shadowTexture(), transparent: true, depthWrite: false });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(span * 1.7, span * 1.7), mat);
+  m.rotation.x = -Math.PI / 2;
+  m.position.y = 0.12; // just above the ground pad, avoids z-fighting
+  m.renderOrder = 2;
+  return m;
+}
+
 function scaledPoints(footprint, factor, cx, cz) {
   return footprint.map(([x, z]) => {
     const sx = x * SKYLINE_SCALE, sz = -z * SKYLINE_SCALE;
@@ -132,6 +158,7 @@ function buildOneBuilding(b, index, isLandmark) {
   const icon = landmarkModel(b.name, cx, cz, span, H);
   if (icon) {
     icon.traverse((o) => { if (o.isMesh) o.name = b.name; });
+    const sh = contactShadow(span); sh.position.set(cx, 0.12, cz); icon.add(sh);
     return icon;
   }
 
@@ -163,7 +190,9 @@ function buildOneBuilding(b, index, isLandmark) {
     group.add(crown);
   }
 
-  group.traverse((o) => { if (o.isMesh) o.name = b.name || 'building'; });
+  const sh = contactShadow(span); sh.position.set(cx, 0.12, cz); group.add(sh);
+
+  group.traverse((o) => { if (o.isMesh && !o.name) o.name = b.name || 'building'; });
   return group;
 }
 
