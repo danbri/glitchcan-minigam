@@ -62,12 +62,21 @@ export function createScene(canvas) {
   let dragging = false;
   const last = { x: 0, y: 0 };
 
+  // Auto-framing: the app can request the camera gently aim toward a point of
+  // interest (a city) via setAutoFrame(yaw). It only takes effect when the
+  // user hasn't touched the view recently, so dragging always wins.
+  let autoYaw = null;
+  let lastInteract = -1e9;
+  function nowMs() { return (typeof performance !== 'undefined' ? performance.now() : 0); }
+  function setAutoFrame(yaw) { autoYaw = yaw; }
+
   canvas.style.touchAction = 'none';
 
   const DRAG_SPEED = 0.0038;
 
   function onPointerDown(e) {
     dragging = true;
+    lastInteract = nowMs();
     last.x = e.clientX;
     last.y = e.clientY;
     velocity.yaw = 0;
@@ -77,6 +86,7 @@ export function createScene(canvas) {
   }
   function onPointerMove(e) {
     if (!dragging) return;
+    lastInteract = nowMs();
     const dx = e.clientX - last.x;
     const dy = e.clientY - last.y;
     last.x = e.clientX;
@@ -129,6 +139,12 @@ export function createScene(canvas) {
       if (Math.abs(velocity.pitch) < 0.00004) velocity.pitch = 0;
     }
 
+    // Auto-frame toward a city when the user has been hands-off for a moment,
+    // so the skyline swings into view during climb-out/approach on its own.
+    if (!dragging && velocity.yaw === 0 && autoYaw !== null && (nowMs() - lastInteract) > 2500) {
+      orbit.yaw += (autoYaw - orbit.yaw) * (1 - Math.pow(0.06, dt));
+    }
+
     // Follow only the HORIZONTAL heading, smoothed hard — climb/descent pitch
     // and path wiggles never tilt or swing the frame.
     tmpFwd.set(tangent.x, 0, tangent.z);
@@ -174,5 +190,5 @@ export function createScene(canvas) {
     if (o.distance != null) orbit.distance = o.distance;
   }
 
-  return { scene, camera, renderer, updateCamera, resize, resumeIdleDriftAfter, setOrbit };
+  return { scene, camera, renderer, updateCamera, resize, resumeIdleDriftAfter, setOrbit, setAutoFrame };
 }

@@ -10,7 +10,7 @@
 // network-first with cache fallback for anything unexpected, so a live
 // update during development is still picked up when online.
 
-const CACHE = 'ua17-v7';
+const CACHE = 'ua17-v8';
 const CORE = [
   './',
   './index.html',

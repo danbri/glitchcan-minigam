@@ -51,7 +51,7 @@ function compass(deg) {
 
 async function main() {
   const canvas = document.getElementById('ua17-canvas');
-  const { scene, camera, renderer, updateCamera, resumeIdleDriftAfter, setOrbit } = createScene(canvas);
+  const { scene, camera, renderer, updateCamera, resumeIdleDriftAfter, setOrbit, setAutoFrame } = createScene(canvas);
   scene.fog = new THREE.Fog(0xdff2ff, 3200, 9200);
 
   const [weather, flightInfo, londonData, nycData, flightsSnapshot, elevation] = await Promise.all([
@@ -245,6 +245,19 @@ async function main() {
     }
 
     const t = state.t;
+    // Auto-frame the skyline: aim the camera at the actual city bearing during
+    // climb-out (London) and approach (New York), so the skyline swings into
+    // view whether it's ahead (far) or beside (close). Hands off in cruise.
+    const cf = t < 0.18 ? cities[0] : (t > 0.8 ? cities[1] : null);
+    if (cf) {
+      const p = flightCurve.getPointAt(t);
+      const fwd = flightCurve.getTangentAt(t);
+      let rel = Math.atan2(cf.x - p.x, cf.z - p.z) - Math.atan2(fwd.x, fwd.z);
+      rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+      // Negated: in this camera convention a city on +x frames with negative yaw.
+      setAutoFrame(THREE.MathUtils.clamp(-rel, -0.95, 0.95));
+    } else setAutoFrame(null);
+
     updateAircraftPose(t, dt);
     updateClouds(dt);
     particles.update(dt);

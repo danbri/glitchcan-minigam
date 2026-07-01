@@ -141,7 +141,7 @@ function buildOneBuilding(b, index, isLandmark) {
   mat.map.needsUpdate = true;
   mat.map.repeat.set(Math.max(1, Math.round(span / 9)), Math.max(2, Math.round(H / 9)));
 
-  const roofMat = new THREE.MeshStandardMaterial({ color: 0x6c7075, roughness: 0.85 });
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0x93999f, roughness: 0.85 });
   const base = scaledPoints(b.footprint, 1, cx, cz);
 
   // Clean box massing with setbacks — NO cone spires, antenna masts or red
@@ -153,7 +153,7 @@ function buildOneBuilding(b, index, isLandmark) {
     group.add(tierMesh(base, 0, H * 0.55, mat));
     group.add(tierMesh(scaledPoints(b.footprint, 0.86, cx, cz), H * 0.55, H * 0.82, mat));
     group.add(tierMesh(scaledPoints(b.footprint, 0.72, cx, cz), H * 0.82, H, mat));
-    const capMat = new THREE.MeshStandardMaterial({ color: 0x555a60, roughness: 0.8 });
+    const capMat = new THREE.MeshStandardMaterial({ color: 0x868d94, roughness: 0.8 });
     const cap = new THREE.Mesh(new THREE.BoxGeometry(span * 0.5, Math.max(2, H * 0.03), span * 0.42), capMat);
     cap.position.set(cx, H + Math.max(1, H * 0.015), cz);
     group.add(cap);
@@ -180,7 +180,7 @@ function buildOneBuilding(b, index, isLandmark) {
 // centroid. Real footprints include sparse far-flung outliers that would
 // splay the "city" into a 900-wide band; trimming to the core lets us place
 // a compact, recognisable skyline as a close flyby beside the path.
-const CORE_RADIUS = 260;
+const CORE_RADIUS = 170;
 
 export function buildSkyline(data, worldZ, worldX = 0) {
   // Centroid of the whole set.
@@ -223,8 +223,8 @@ export function buildSkyline(data, worldZ, worldX = 0) {
 // Close flyby: core spread is ~±CORE_RADIUS, so an offset of ~330 keeps the
 // nearest tower ~70 units off the path — a dramatic wall of towers beside the
 // wing without ever crossing the flight path.
-export const LONDON_WORLD_X = -330;
-export const NYC_WORLD_X = 330;
+export const LONDON_WORLD_X = -235;
+export const NYC_WORLD_X = 235;
 
 export function buildLondonSkyline(londonData) {
   return buildSkyline(londonData, LONDON_WORLD_Z, LONDON_WORLD_X);
