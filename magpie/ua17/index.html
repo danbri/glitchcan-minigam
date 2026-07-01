@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>UA17: London to New York! 🐥✈️</title>
+<meta name="description" content="A lush, toddler-friendly 3D flight adventure from London Heathrow to Newark, with real weather and real skylines — works fully offline.">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a5fd8">
+<link rel="stylesheet" href="css/ua17.css">
+</head>
+<body>
+
+<canvas id="ua17-canvas"></canvas>
+
+<div id="ua17-start">
+  <h1>🐥 UA17: London to New York!</h1>
+  <p>Watch our big plane fly over real clouds, real cities, and the big blue ocean. Drag the sky to look around!</p>
+  <button id="ua17-start-btn">✈️ Tap to Take Off!</button>
+</div>
+
+<div id="ua17-hud" class="ua17-hidden">
+  <div id="ua17-topbar">
+    <div id="ua17-route-label">UA17</div>
+    <div id="ua17-caption">Ready for take-off!</div>
+  </div>
+
+  <div id="ua17-bottombar">
+    <div id="ua17-progress-track">
+      <div id="ua17-progress-fill"></div>
+      <div id="ua17-progress-plane">✈️</div>
+    </div>
+    <div id="ua17-controls">
+      <button id="ua17-playpause" class="ua17-btn" aria-label="Pause">⏸</button>
+      <button id="ua17-replay" class="ua17-btn ua17-hidden">🔁 Fly again!</button>
+    </div>
+  </div>
+</div>
+
+<div id="ua17-hint" class="ua17-hidden">👉 Drag the sky to look around!</div>
+
+<script type="module" src="js/ua17-app.js"></script>
+</body>
+</html>

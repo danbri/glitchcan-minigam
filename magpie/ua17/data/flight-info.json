@@ -1,0 +1,18 @@
+{
+  "flightNumber": "UA17",
+  "airline": "United Airlines",
+  "date": "2026-07-01",
+  "departure": {
+    "airport": "London Heathrow",
+    "iata": "LHR",
+    "time": "10:25",
+    "timezone": "BST"
+  },
+  "arrival": {
+    "airport": "Newark Liberty",
+    "iata": "EWR",
+    "time": "13:45",
+    "timezone": "EDT"
+  },
+  "aircraft": "Boeing 767/787-style widebody twinjet (stylised for this scene, not a scanned model)"
+}
