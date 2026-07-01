@@ -1,0 +1,15 @@
+{
+  "name": "Skyport WebGPU PWA",
+  "short_name": "Skyport",
+  "description": "Offline-first mobile WebGPU airport scene with procedural shaders.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#081b25",
+  "theme_color": "#092638",
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
