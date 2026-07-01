@@ -51,7 +51,7 @@ function compass(deg) {
 
 async function main() {
   const canvas = document.getElementById('ua17-canvas');
-  const { scene, camera, renderer, updateCamera, resumeIdleDriftAfter, setOrbit, setAutoFrame } = createScene(canvas);
+  const { scene, camera, renderer, renderFrame, updateCamera, resumeIdleDriftAfter, setOrbit, setAutoFrame } = createScene(canvas);
   scene.fog = new THREE.Fog(0xdff2ff, 3200, 9200);
 
   const [weather, flightInfo, londonData, nycData, flightsSnapshot, elevation] = await Promise.all([
@@ -294,7 +294,7 @@ async function main() {
     progressPlane.style.left = `${t * 100}%`;
     if (!state.scrubbing) scrubber.value = String(Math.round(t * 1000));
 
-    renderer.render(scene, camera);
+    renderFrame(scene, camera);
   }
 
   function updateAircraftPose(t, dt) {
