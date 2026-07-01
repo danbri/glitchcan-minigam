@@ -149,35 +149,18 @@ function buildOneBuilding(b, index, isLandmark) {
   mat.map.needsUpdate = true;
   mat.map.repeat.set(Math.max(1, Math.round(span / 9)), Math.max(2, Math.round(H / 9)));
 
-  const roofMat = new THREE.MeshStandardMaterial({ color: 0xb2b7bd, roughness: 0.8 });
   const base = scaledPoints(b.footprint, 1, cx, cz);
 
-  // Clean box massing with setbacks — NO cone spires, antenna masts or red
-  // warning-light spheres (those made the towers read as needles/cones with
-  // floating red dots, and the tall masts looked like "cones hanging on
-  // strings"). A flat roof cap + a small mechanical box is all a tower needs.
-  if (H > 55 || isLandmark) {
-    // Tall tower: two gentle setbacks (kept wide so it stays a tower, not a spike).
-    group.add(tierMesh(base, 0, H * 0.55, mat));
-    group.add(tierMesh(scaledPoints(b.footprint, 0.86, cx, cz), H * 0.55, H * 0.82, mat));
-    group.add(tierMesh(scaledPoints(b.footprint, 0.72, cx, cz), H * 0.82, H, mat));
-    const capMat = new THREE.MeshStandardMaterial({ color: 0xa7adb4, roughness: 0.75 });
-    const cap = new THREE.Mesh(new THREE.BoxGeometry(span * 0.5, Math.max(2, H * 0.03), span * 0.42), capMat);
-    cap.position.set(cx, H + Math.max(1, H * 0.015), cz);
-    group.add(cap);
-  } else if (H > 22) {
-    // Mid-rise: single slight setback + a low rooftop mechanical penthouse.
-    group.add(tierMesh(base, 0, H * 0.92, mat));
-    group.add(tierMesh(scaledPoints(b.footprint, 0.9, cx, cz), H * 0.92, H, mat));
-    const box = new THREE.Mesh(new THREE.BoxGeometry(span * 0.42, Math.max(1.5, H * 0.06), span * 0.36), roofMat);
-    box.position.set(cx, H + Math.max(0.8, H * 0.03), cz);
-    group.add(box);
-  } else {
-    // Low-rise: flat roof + a thin parapet lip.
-    group.add(tierMesh(base, 0, H, mat));
-    const parapet = new THREE.Mesh(new THREE.BoxGeometry(span * 0.62, 1.2, span * 0.54), roofMat);
-    parapet.position.set(cx, H + 0.6, cz);
-    group.add(parapet);
+  // ONE clean extrusion of the REAL footprint to full height. No scaled
+  // setback tiers (they self-intersect on concave footprints and leave flat
+  // floating slabs) and no detached roof boxes/caps (those became the
+  // "floating slabs"). Tall towers get a single centred crown BOX — box
+  // geometry can't self-intersect, so it never produces stray slabs.
+  group.add(tierMesh(base, 0, H, mat));
+  if (H > 60) {
+    const crown = new THREE.Mesh(new THREE.BoxGeometry(span * 0.46, H * 0.14, span * 0.4), mat);
+    crown.position.set(cx, H + H * 0.07, cz);
+    group.add(crown);
   }
 
   group.traverse((o) => { if (o.isMesh) o.name = b.name || 'building'; });
