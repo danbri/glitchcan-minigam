@@ -376,7 +376,29 @@ async function main() {
   // listener added after the fact would silently never run, and the app
   // would never actually become offline-capable.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register(new URL('../sw.js', import.meta.url)).catch(() => {});
+    navigator.serviceWorker.register(new URL('../sw.js', import.meta.url)).then((reg) => {
+      // When a new version is found, activate it immediately and reload once so
+      // the user always ends up on the latest build (no more stale cache).
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            nw.postMessage('skipWaiting');
+          }
+        });
+      });
+      reg.update?.();
+    }).catch(() => {});
+    // Reload only on a genuine UPDATE (we already had a controller), never on
+    // the initial claim of a first visit — otherwise the first load flickers.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloaded || !hadController) return;
+      reloaded = true;
+      window.location.reload();
+    });
   }
 }
 

@@ -1,16 +1,16 @@
-// sw.js — full offline caching for the UA17 flight scene (scope: this directory).
+// sw.js — offline caching for the UA17 flight scene (scope: this directory).
 //
-// Everything the app needs (HTML/CSS/JS modules, the vendored three.js build,
-// and every fetched data snapshot) is explicitly precached on install, so a
-// single online visit is enough for the whole experience to work forever
-// after in airplane mode — or from a zip copied straight onto a device with
-// no network at all. See README.md for the zip-and-go instructions.
-//
-// Strategy: cache-first for everything precached (instant, no round-trip);
-// network-first with cache fallback for anything unexpected, so a live
-// update during development is still picked up when online.
+// STRATEGY (revised): the previous version was cache-first for the app code,
+// which meant returning visitors could be stuck on a STALE build even after a
+// new deploy (you'd never see the latest fixes without clearing data). Now:
+//   • App code (HTML/CSS/JS) and data JSON  → NETWORK-FIRST: always fresh when
+//     online, fall back to cache when offline. Fixes the stale-version problem.
+//   • The big vendored three.js build         → CACHE-FIRST: it's large and
+//     effectively immutable, so serve instantly and skip the round-trip.
+// Everything is still precached on install, so the whole experience works
+// fully offline (airplane mode, or from a zip) after one online visit.
 
-const CACHE = 'ua17-v8';
+const CACHE = 'ua17-v9';
 const CORE = [
   './',
   './index.html',
@@ -38,10 +38,23 @@ const CORE = [
   './data/elevation-london.json',
   './data/elevation-nyc.json',
   './icons/icon.svg',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-180.png',
+  './icons/icon-maskable-512.png',
 ];
 
+// Large, effectively-immutable assets served cache-first for speed.
+const CACHE_FIRST = /\/vendor\/|\.png$|\.svg$/i;
+
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      // addAll fails atomically if any single file 404s; add individually so a
+      // missing optional asset can't block the whole install.
+      .then((c) => Promise.all(CORE.map((u) => c.add(u).catch(() => {}))))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -52,6 +65,9 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+// Let the page trigger an immediate takeover after an update.
+self.addEventListener('message', (e) => { if (e.data === 'skipWaiting') self.skipWaiting(); });
+
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
@@ -59,18 +75,31 @@ self.addEventListener('fetch', (e) => {
   try { url = new URL(req.url); } catch (_) { return; }
   if (url.origin !== self.location.origin) return;
 
+  // Cache-first for the big immutable assets.
+  if (CACHE_FIRST.test(url.pathname)) {
+    e.respondWith(
+      caches.match(req).then((cached) => cached || fetch(req).then((res) => {
+        if (res && res.ok && res.type === 'basic') {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        }
+        return res;
+      })),
+    );
+    return;
+  }
+
+  // Network-first for app code + data: fresh online, cached offline.
   e.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req)
-        .then((res) => {
-          if (res && res.ok && res.type === 'basic') {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-          }
-          return res;
-        })
-        .catch(() => (req.mode === 'navigate' ? caches.match('./index.html') : Response.error()));
-    }),
+    fetch(req)
+      .then((res) => {
+        if (res && res.ok && res.type === 'basic') {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        }
+        return res;
+      })
+      .catch(() => caches.match(req).then((cached) => cached
+        || (req.mode === 'navigate' ? caches.match('./index.html') : Response.error()))),
   );
 });
