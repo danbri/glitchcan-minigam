@@ -2,8 +2,11 @@
 
 A lush, toddler-friendly 3D flight scene for **United 17, LHR → EWR**, built
 with three.js. Auto-plays a full climb → cruise → descent along a stylised
-flight path; drag anywhere to look around. Designed to work entirely offline
-after one load.
+flight path, complete with runways, a terminal + control tower, and landing
+gear that deploys/retracts near the ground at both ends. Drag anywhere to
+look around, drag the scrubber to jump to any point in the flight, or tap
+another aircraft to see its real altitude/heading/callsign. Designed to work
+entirely offline after one load.
 
 ## What's real in here
 
@@ -19,10 +22,15 @@ after one load.
   height and public landmark names are kept (see data-ethics note below).
 - **Other flights**: a real one-off ADS-B snapshot of North Atlantic traffic
   from [OpenSky Network](https://opensky-network.org) —
-  `tools/fetch-flights-snapshot.mjs` → `data/flights-snapshot.json`.
-  Anonymised: no callsign/tail number is kept, only position/altitude/heading.
+  `tools/fetch-flights-snapshot.mjs` → `data/flights-snapshot.json`. Tap one
+  in the sky to see its real altitude/heading/callsign. The 24-bit icao24
+  address (identifies one specific physical aircraft/owner) is dropped;
+  callsign is kept since it's the publicly-broadcast flight number shown on
+  any consumer flight tracker, not personal data.
 - **Aircraft**: procedural (not a scan of a real airframe) — see
   `data/flight-info.json`.
+- **Runways**: decorative (no real airport layout data), auto-aligned to the
+  route's own heading at each end — see `js/ua17-airport.js`.
 
 All three fetch scripts are one-shot snapshots you re-run by hand
 (`node tools/fetch-weather.mjs`, etc.) — the app itself never calls these
@@ -54,6 +62,6 @@ node tools/fetch-buildings.mjs         # London + NYC skyline footprints (rarely
 ## Data ethics
 
 Per the project's data-ethics rules: building data is geometry + height only
-(no addresses/owners), and the flight snapshot deliberately drops
-callsign/icao24 so no specific aircraft or owner is identifiable — just
-anonymous "other plane" blips.
+(no addresses/owners), and the flight snapshot drops icao24 (the identifier
+tied to one specific physical aircraft/owner) while keeping the public
+callsign — the same flight-number label any consumer flight tracker shows.

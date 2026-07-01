@@ -29,6 +29,7 @@
     <div id="ua17-progress-track">
       <div id="ua17-progress-fill"></div>
       <div id="ua17-progress-plane">✈️</div>
+      <input id="ua17-scrubber" type="range" min="0" max="1000" value="0" step="1" aria-label="Flight progress">
     </div>
     <div id="ua17-controls">
       <button id="ua17-playpause" class="ua17-btn" aria-label="Pause">⏸</button>
@@ -37,7 +38,9 @@
   </div>
 </div>
 
-<div id="ua17-hint" class="ua17-hidden">👉 Drag the sky to look around!</div>
+<div id="ua17-hint" class="ua17-hidden">👉 Drag the sky to look around, or tap a plane!</div>
+
+<div id="ua17-flightinfo" class="ua17-hidden"></div>
 
 <script type="module" src="js/ua17-app.js"></script>
 </body>
