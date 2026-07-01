@@ -1,6 +1,6 @@
 {
-  "source": "OpenSky Network public REST API (opensky-network.org), anonymized: no callsign/icao24 kept",
-  "fetchedAt": "2026-07-01T06:55:42.289Z",
+  "source": "OpenSky Network public REST API (opensky-network.org); icao24 (aircraft/owner address) dropped, public callsign kept",
+  "fetchedAt": "2026-07-01T07:49:37.034Z",
   "bbox": {
     "lamin": 38,
     "lomin": -80,
@@ -9,364 +9,424 @@
   },
   "flights": [
     {
-      "lon": -3.83,
-      "lat": 45.43,
-      "altitude_m": 11887,
-      "heading": 221
+      "lon": -8.65,
+      "lat": 41.12,
+      "altitude_m": 678,
+      "heading": 349,
+      "callsign": "TVF46LE"
     },
     {
-      "lon": -3.94,
-      "lat": 39.97,
-      "altitude_m": 11887,
-      "heading": 212
+      "lon": -77.06,
+      "lat": 40.59,
+      "altitude_m": 9784,
+      "heading": 277,
+      "callsign": "UPS610"
     },
     {
-      "lon": -5.76,
-      "lat": 54.31,
-      "altitude_m": 5044,
-      "heading": 135
+      "lon": -1.59,
+      "lat": 47.52,
+      "altitude_m": 11270,
+      "heading": 154,
+      "callsign": "EZY61HY"
     },
     {
-      "lon": -6.99,
-      "lat": 41.34,
-      "altitude_m": 11887,
-      "heading": 217
+      "lon": -73.9,
+      "lat": 40.29,
+      "altitude_m": 9373,
+      "heading": 52,
+      "callsign": "UPS1018"
     },
     {
-      "lon": -4.79,
-      "lat": 38.64,
-      "altitude_m": 10058,
-      "heading": 218
-    },
-    {
-      "lon": -7.24,
-      "lat": 39.37,
-      "altitude_m": 10660,
-      "heading": 226
-    },
-    {
-      "lon": -0.05,
-      "lat": 52.05,
-      "altitude_m": 2507,
-      "heading": 84
-    },
-    {
-      "lon": -3.45,
-      "lat": 40.67,
-      "altitude_m": 2469,
-      "heading": 40
-    },
-    {
-      "lon": -12.34,
-      "lat": 41.91,
-      "altitude_m": 12497,
-      "heading": 93
-    },
-    {
-      "lon": -1.27,
-      "lat": 43.27,
-      "altitude_m": 11880,
-      "heading": 211
-    },
-    {
-      "lon": -7.51,
-      "lat": 51.93,
-      "altitude_m": 10973,
-      "heading": 127
-    },
-    {
-      "lon": -7.87,
-      "lat": 49.84,
-      "altitude_m": 11285,
-      "heading": 95
-    },
-    {
-      "lon": -2.06,
-      "lat": 46.86,
-      "altitude_m": 396,
-      "heading": 297
-    },
-    {
-      "lon": -6.75,
-      "lat": 41.46,
-      "altitude_m": 8534,
-      "heading": 87
-    },
-    {
-      "lon": -1.51,
-      "lat": 42.96,
-      "altitude_m": 10668,
-      "heading": 212
-    },
-    {
-      "lon": -1.48,
-      "lat": 43.15,
-      "altitude_m": 9479,
-      "heading": 201
-    },
-    {
-      "lon": -1.88,
-      "lat": 42.47,
-      "altitude_m": 10676,
-      "heading": 206
-    },
-    {
-      "lon": -0.79,
-      "lat": 38.31,
-      "altitude_m": 1006,
-      "heading": 100
-    },
-    {
-      "lon": -2.75,
-      "lat": 41.96,
-      "altitude_m": 9190,
-      "heading": 20
-    },
-    {
-      "lon": -0.89,
-      "lat": 44.06,
-      "altitude_m": 10676,
-      "heading": 204
-    },
-    {
-      "lon": -0.25,
-      "lat": 39.46,
-      "altitude_m": 1006,
-      "heading": 194
-    },
-    {
-      "lon": -75.62,
-      "lat": 40.83,
-      "altitude_m": 1036,
-      "heading": 160
-    },
-    {
-      "lon": -7.85,
-      "lat": 40.89,
-      "altitude_m": 1318,
-      "heading": 197
-    },
-    {
-      "lon": -1.67,
-      "lat": 47.48,
-      "altitude_m": 12192,
-      "heading": 131
-    },
-    {
-      "lon": -6.5,
-      "lat": 44.01,
-      "altitude_m": 10973,
-      "heading": 36
-    },
-    {
-      "lon": -5.64,
-      "lat": 55.73,
+      "lon": -3.52,
+      "lat": 48.2,
       "altitude_m": 11278,
-      "heading": 119
+      "heading": 205,
+      "callsign": "NSZ4279"
     },
     {
-      "lon": -3.9,
-      "lat": 44.36,
-      "altitude_m": 10973,
-      "heading": 41
+      "lon": -1.63,
+      "lat": 47.13,
+      "altitude_m": 15,
+      "heading": 28,
+      "callsign": "VOE2UR"
     },
     {
-      "lon": -78.56,
-      "lat": 48.49,
-      "altitude_m": 10058,
-      "heading": 60
+      "lon": -4.11,
+      "lat": 40.33,
+      "altitude_m": 3520,
+      "heading": 107,
+      "callsign": "IBE03KE"
     },
     {
-      "lon": -3.04,
-      "lat": 54.85,
-      "altitude_m": 10668,
-      "heading": 122
+      "lon": -0.14,
+      "lat": 51.15,
+      "altitude_m": 91,
+      "heading": 257,
+      "callsign": "NSZ3510"
     },
     {
-      "lon": -0.15,
-      "lat": 42.18,
-      "altitude_m": 9144,
-      "heading": 116
-    },
-    {
-      "lon": -2.13,
-      "lat": 48.14,
-      "altitude_m": 10965,
-      "heading": 10
-    },
-    {
-      "lon": -12.06,
-      "lat": 53.7,
-      "altitude_m": 11887,
-      "heading": 101
-    },
-    {
-      "lon": -7.04,
-      "lat": 43.83,
-      "altitude_m": 14935,
-      "heading": 110
-    },
-    {
-      "lon": -1.23,
-      "lat": 48.74,
-      "altitude_m": 11582,
-      "heading": 352
-    },
-    {
-      "lon": -3.07,
-      "lat": 53.77,
-      "altitude_m": 206,
-      "heading": 219
+      "lon": -4.44,
+      "lat": 38.87,
+      "altitude_m": 11110,
+      "heading": 194,
+      "callsign": "NSZ6PY"
     },
     {
       "lon": -0.83,
-      "lat": 39.41,
-      "altitude_m": 11575,
-      "heading": 120
+      "lat": 39.73,
+      "altitude_m": 9441,
+      "heading": 284,
+      "callsign": "IBS16QY"
     },
     {
-      "lon": -3.77,
+      "lon": -2.52,
+      "lat": 40.22,
+      "altitude_m": 8778,
+      "heading": 131,
+      "callsign": "AEA57YM"
+    },
+    {
+      "lon": -3.02,
+      "lat": 40.28,
+      "altitude_m": 2743,
+      "heading": 263,
+      "callsign": "IBS16SZ"
+    },
+    {
+      "lon": -7.48,
+      "lat": 38.94,
+      "altitude_m": 10668,
+      "heading": 215,
+      "callsign": "IBS15SG"
+    },
+    {
+      "lon": -7.13,
+      "lat": 41.46,
+      "altitude_m": 8428,
+      "heading": 88,
+      "callsign": "IBE05MR"
+    },
+    {
+      "lon": -75.22,
+      "lat": 40.08,
+      "altitude_m": 419,
+      "heading": 352,
+      "callsign": "N602MM"
+    },
+    {
+      "lon": -9.39,
+      "lat": 38.85,
+      "altitude_m": 1113,
+      "heading": 182,
+      "callsign": "RVP951"
+    },
+    {
+      "lon": -2.27,
       "lat": 49.39,
-      "altitude_m": 9144,
-      "heading": 0
-    },
-    {
-      "lon": -12.86,
-      "lat": 42,
       "altitude_m": 11278,
-      "heading": 271
+      "heading": 198,
+      "callsign": "WUK2DF"
     },
     {
-      "lon": -10.31,
-      "lat": 52.6,
-      "altitude_m": 10668,
-      "heading": 100
+      "lon": -1.49,
+      "lat": 50.78,
+      "altitude_m": 7010,
+      "heading": 207,
+      "callsign": "SHT14L"
     },
     {
-      "lon": -9.2,
-      "lat": 38.54,
-      "altitude_m": 1196,
-      "heading": 298
+      "lon": -3.06,
+      "lat": 49.2,
+      "altitude_m": 10660,
+      "heading": 213,
+      "callsign": "VLG6227"
     },
     {
-      "lon": -12.78,
-      "lat": 53.96,
-      "altitude_m": 10668,
-      "heading": 93
+      "lon": -2.03,
+      "lat": 46.52,
+      "altitude_m": 12192,
+      "heading": 11,
+      "callsign": "XACOE"
     },
     {
-      "lon": -9.6,
-      "lat": 38.59,
-      "altitude_m": 3360,
-      "heading": 227
+      "lon": -1.98,
+      "lat": 54.31,
+      "altitude_m": 6027,
+      "heading": 199,
+      "callsign": "SAS67C"
+    },
+    {
+      "lon": -3.04,
+      "lat": 53.77,
+      "altitude_m": -69,
+      "heading": 309,
+      "callsign": "NHZ31"
+    },
+    {
+      "lon": -0.22,
+      "lat": 51.77,
+      "altitude_m": 1615,
+      "heading": 104,
+      "callsign": "WZZ219"
+    },
+    {
+      "lon": -75.13,
+      "lat": 38.43,
+      "altitude_m": 10363,
+      "heading": 219,
+      "callsign": "LRC643"
+    },
+    {
+      "lon": -75.44,
+      "lat": 38.86,
+      "altitude_m": 7216,
+      "heading": 188,
+      "callsign": "UPS1324"
+    },
+    {
+      "lon": -14.09,
+      "lat": 50.93,
+      "altitude_m": 10538,
+      "heading": 98,
+      "callsign": "TSC188"
+    },
+    {
+      "lon": -0.4,
+      "lat": 51.26,
+      "altitude_m": 2682,
+      "heading": 326,
+      "callsign": "JBU7"
+    },
+    {
+      "lon": -4.02,
+      "lat": 47.91,
+      "altitude_m": 9754,
+      "heading": 303,
+      "callsign": "TSC513"
+    },
+    {
+      "lon": -0.19,
+      "lat": 51.15,
+      "altitude_m": -23,
+      "heading": 258,
+      "callsign": "EJU65KJ"
+    },
+    {
+      "lon": -3.68,
+      "lat": 40.78,
+      "altitude_m": 11582,
+      "heading": 26,
+      "callsign": "EJU16KF"
+    },
+    {
+      "lon": -7.6,
+      "lat": 51.2,
+      "altitude_m": 10973,
+      "heading": 91,
+      "callsign": "UAL46"
     },
     {
       "lon": -4.94,
-      "lat": 48.25,
-      "altitude_m": 11887,
-      "heading": 115
+      "lat": 55.99,
+      "altitude_m": 3322,
+      "heading": 292,
+      "callsign": "TSC245"
     },
     {
-      "lon": -4.18,
-      "lat": 40.23,
-      "altitude_m": 10980,
-      "heading": 25
+      "lon": -5.63,
+      "lat": 53.32,
+      "altitude_m": 10676,
+      "heading": 103,
+      "callsign": "TSC728"
     },
     {
-      "lon": -2.73,
-      "lat": 43.41,
-      "altitude_m": 3917,
-      "heading": 92
+      "lon": -1.07,
+      "lat": 46.29,
+      "altitude_m": 5677,
+      "heading": 323,
+      "callsign": "EJU695G"
     },
     {
-      "lon": -77.98,
-      "lat": 38.09,
-      "altitude_m": 4831,
-      "heading": 211
+      "lon": -8.97,
+      "lat": 41.48,
+      "altitude_m": 3002,
+      "heading": 287,
+      "callsign": "TSC175"
     },
     {
-      "lon": -0.34,
-      "lat": 51.88,
-      "altitude_m": 122,
-      "heading": 254
+      "lon": -0.3,
+      "lat": 45.87,
+      "altitude_m": 10973,
+      "heading": 23,
+      "callsign": "AFR74NQ"
     },
     {
-      "lon": -7.35,
-      "lat": 53.69,
-      "altitude_m": 12497,
-      "heading": 97
+      "lon": -6.01,
+      "lat": 41.54,
+      "altitude_m": 11262,
+      "heading": 253,
+      "callsign": "AUA491"
     },
     {
-      "lon": -3.76,
-      "lat": 55.11,
-      "altitude_m": 11278,
-      "heading": 121
-    },
-    {
-      "lon": -1.26,
-      "lat": 49.93,
-      "altitude_m": 11582,
-      "heading": 13
-    },
-    {
-      "lon": -3.53,
-      "lat": 48.42,
+      "lon": -4.28,
+      "lat": 41.67,
       "altitude_m": 10058,
-      "heading": 185
+      "heading": 185,
+      "callsign": "EXS201"
     },
     {
-      "lon": -6.7,
-      "lat": 52.96,
-      "altitude_m": 10668,
-      "heading": 105
+      "lon": -12.64,
+      "lat": 53.94,
+      "altitude_m": 11887,
+      "heading": 93,
+      "callsign": "ACA808"
     },
     {
-      "lon": -2.86,
-      "lat": 40.33,
-      "altitude_m": 3277,
-      "heading": 251
+      "lon": -10.17,
+      "lat": 55,
+      "altitude_m": 12192,
+      "heading": 92,
+      "callsign": "ACA846"
     },
     {
-      "lon": -0.86,
-      "lat": 39.48,
-      "altitude_m": 3475,
-      "heading": 111
+      "lon": -10.49,
+      "lat": 54.2,
+      "altitude_m": 11880,
+      "heading": 109,
+      "callsign": "ACA842"
+    },
+    {
+      "lon": -0.32,
+      "lat": 44.94,
+      "altitude_m": 1821,
+      "heading": 293,
+      "callsign": "EJU567E"
+    },
+    {
+      "lon": -77.08,
+      "lat": 38.67,
+      "altitude_m": 2408,
+      "heading": 191,
+      "callsign": "PAT322"
+    },
+    {
+      "lon": -0.63,
+      "lat": 53.82,
+      "altitude_m": 11278,
+      "heading": 142,
+      "callsign": "DLH493"
+    },
+    {
+      "lon": -10.61,
+      "lat": 38.69,
+      "altitude_m": 11278,
+      "heading": 260,
+      "callsign": "AVA027"
+    },
+    {
+      "lon": -3.99,
+      "lat": 40.32,
+      "altitude_m": 838,
+      "heading": 230,
+      "callsign": "ECCZO"
+    },
+    {
+      "lon": -71.9,
+      "lat": 41.96,
+      "altitude_m": 9205,
+      "heading": 214,
+      "callsign": "ELY003"
+    },
+    {
+      "lon": -1.98,
+      "lat": 49.33,
+      "altitude_m": 11887,
+      "heading": 102,
+      "callsign": "TSC212"
+    },
+    {
+      "lon": -6.01,
+      "lat": 52.84,
+      "altitude_m": 11887,
+      "heading": 106,
+      "callsign": "TSC214"
+    },
+    {
+      "lon": -11.99,
+      "lat": 54.59,
+      "altitude_m": 12497,
+      "heading": 105,
+      "callsign": "DAL292"
     },
     {
       "lon": -2.65,
-      "lat": 40.26,
-      "altitude_m": 7125,
-      "heading": 126
+      "lat": 51.39,
+      "altitude_m": 320,
+      "heading": 266,
+      "callsign": "EJU42HR"
     },
     {
-      "lon": -4.04,
-      "lat": 45.81,
-      "altitude_m": 10356,
-      "heading": 48
+      "lon": -0.53,
+      "lat": 50.84,
+      "altitude_m": 3520,
+      "heading": 80,
+      "callsign": "EJU18AV"
     },
     {
-      "lon": -1.81,
-      "lat": 42.71,
-      "altitude_m": 11278,
-      "heading": 252
+      "lon": -3.03,
+      "lat": 51.94,
+      "altitude_m": 11887,
+      "heading": 119,
+      "callsign": "ITY6KC"
     },
     {
-      "lon": -3.47,
-      "lat": 40.41,
-      "altitude_m": 998,
-      "heading": 322
+      "lon": -4.54,
+      "lat": 54.63,
+      "altitude_m": 11598,
+      "heading": 315,
+      "callsign": "VTHMA"
     },
     {
-      "lon": -3.61,
-      "lat": 41.31,
-      "altitude_m": 5890,
-      "heading": 357
+      "lon": -8.09,
+      "lat": 40.22,
+      "altitude_m": 10157,
+      "heading": 216,
+      "callsign": "A6FLH"
     },
     {
-      "lon": -66.01,
-      "lat": 47.88,
+      "lon": -3.35,
+      "lat": 40.31,
+      "altitude_m": 1455,
+      "heading": 281,
+      "callsign": "THY8GY"
+    },
+    {
+      "lon": -6.02,
+      "lat": 53.1,
+      "altitude_m": 2568,
+      "heading": 36,
+      "callsign": "IBS1881"
+    },
+    {
+      "lon": -5.38,
+      "lat": 41.25,
+      "altitude_m": 8512,
+      "heading": 135,
+      "callsign": "ANE1112"
+    },
+    {
+      "lon": -0.41,
+      "lat": 45.34,
+      "altitude_m": 10973,
+      "heading": 24,
+      "callsign": "ANE1319"
+    },
+    {
+      "lon": -69.52,
+      "lat": 45.71,
       "altitude_m": 12184,
-      "heading": 216
+      "heading": 222,
+      "callsign": "ELY027"
     }
   ]
 }

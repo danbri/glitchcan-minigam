@@ -4,6 +4,7 @@ import { buildAircraft } from './ua17-aircraft.js';
 import { buildSky, buildSun, buildOcean, updateSky } from './ua17-sky.js';
 import { buildClouds } from './ua17-clouds.js';
 import { buildLondonSkyline, buildNycSkyline } from './ua17-buildings.js';
+import { buildRunway } from './ua17-airport.js';
 import { buildOtherFlights } from './ua17-flights.js';
 import { createAudio } from './ua17-audio.js';
 import { flightCurve, loadWeather, loadFlightInfo, cloudAt, stageCaption } from './ua17-route.js';
@@ -13,6 +14,11 @@ const FLIGHT_DURATION = 95; // seconds for one full LHR -> EWR playthrough
 async function fetchJson(rel) {
   const res = await fetch(new URL(rel, import.meta.url));
   return res.json();
+}
+
+function compass(deg) {
+  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  return dirs[Math.round(((deg % 360) + 360) % 360 / 45) % 8];
 }
 
 async function main() {
@@ -35,7 +41,16 @@ async function main() {
   scene.add(buildClouds(weather));
   scene.add(buildLondonSkyline(londonData));
   scene.add(buildNycSkyline(nycData));
-  scene.add(buildOtherFlights(flightsSnapshot));
+
+  const otherFlights = buildOtherFlights(flightsSnapshot);
+  scene.add(otherFlights.group);
+
+  // Runways aligned with the path's own heading at each end, so climb-out
+  // and final approach both line up with a real strip of tarmac.
+  const startHeading = Math.atan2(-flightCurve.getTangentAt(0.01).x, -flightCurve.getTangentAt(0.01).z);
+  const endHeading = Math.atan2(-flightCurve.getTangentAt(0.99).x, -flightCurve.getTangentAt(0.99).z);
+  scene.add(buildRunway(flightCurve.getPointAt(0.002).z, startHeading));
+  scene.add(buildRunway(flightCurve.getPointAt(0.998).z, endHeading));
 
   const aircraft = buildAircraft();
   scene.add(aircraft);
@@ -49,17 +64,30 @@ async function main() {
   const caption = document.getElementById('ua17-caption');
   const progressFill = document.getElementById('ua17-progress-fill');
   const progressPlane = document.getElementById('ua17-progress-plane');
+  const scrubber = document.getElementById('ua17-scrubber');
   const playPauseBtn = document.getElementById('ua17-playpause');
   const replayBtn = document.getElementById('ua17-replay');
   const routeLabel = document.getElementById('ua17-route-label');
   const hint = document.getElementById('ua17-hint');
+  const flightInfoEl = document.getElementById('ua17-flightinfo');
 
   routeLabel.textContent = `${flightInfo.flightNumber} · ${flightInfo.departure.iata} → ${flightInfo.arrival.iata}`;
 
-  const state = { t: 0, playing: false, started: false };
+  const state = { t: 0, playing: false, started: false, scrubbing: false };
   // Headless-playtest hook, matching the trees/tanks-for-the-trees.html
-  // convention of exposing a window.__<name> debug surface.
-  window.__ua17 = { state, jumpTo: (t) => { state.t = THREE.MathUtils.clamp(t, 0, 1); } };
+  // convention of exposing a window.__<name> debug surface. screenPosFor()
+  // projects an other-flights instance to CSS pixel coords for tap testing.
+  window.__ua17 = {
+    state,
+    jumpTo: (t) => { state.t = THREE.MathUtils.clamp(t, 0, 1); },
+    screenPosFor: (instanceId) => {
+      const f = otherFlights.flightsByInstance[instanceId];
+      if (!f) return null;
+      const v = f.pos.clone().project(camera);
+      const rect = canvas.getBoundingClientRect();
+      return { x: rect.left + (v.x * 0.5 + 0.5) * rect.width, y: rect.top + (-v.y * 0.5 + 0.5) * rect.height, behindCamera: v.z > 1 };
+    },
+  };
 
   function setPlaying(playing) {
     state.playing = playing;
@@ -87,8 +115,49 @@ async function main() {
     audio.chime(880);
   });
 
-  // Prevent any stray drag on the UI chrome itself from scrolling the page.
-  document.body.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+  // Adjustable progress: dragging the scrubber jumps the flight to that
+  // point and pauses autoplay (like scrubbing a video) until Play is tapped.
+  scrubber.addEventListener('pointerdown', () => { state.scrubbing = true; setPlaying(false); });
+  scrubber.addEventListener('input', () => {
+    state.t = Number(scrubber.value) / 1000;
+    if (state.t < 1) replayBtn.classList.add('ua17-hidden');
+  });
+  ['pointerup', 'pointercancel'].forEach((ev) => scrubber.addEventListener(ev, () => { state.scrubbing = false; }));
+
+  // Prevent any stray drag on the UI chrome itself from scrolling the page —
+  // except the scrubber, which needs its own touchmove to actually drag.
+  document.body.addEventListener('touchmove', (e) => {
+    if (e.target.closest('#ua17-scrubber')) return;
+    e.preventDefault();
+  }, { passive: false });
+
+  // Tap-to-inspect: raycast against the other-flights InstancedMesh on a
+  // clean tap (not a drag) to show that flight's real altitude/heading/callsign.
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  let downPos = null;
+  let infoTimer = null;
+  canvas.addEventListener('pointerdown', (e) => { downPos = { x: e.clientX, y: e.clientY }; });
+  canvas.addEventListener('pointerup', (e) => {
+    if (!downPos) return;
+    const moved = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y);
+    downPos = null;
+    if (moved > 8) return; // was a drag, not a tap
+    const rect = canvas.getBoundingClientRect();
+    ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObject(otherFlights.mesh, false);
+    if (!hits.length || hits[0].instanceId == null) return;
+    const f = otherFlights.flightsByInstance[hits[0].instanceId];
+    if (!f) return;
+    const altFt = Math.round(f.altitude_m * 3.281 / 100) * 100;
+    flightInfoEl.innerHTML = `<strong>${f.callsign || 'Unknown flight'}</strong><br>${altFt.toLocaleString()} ft · heading ${compass(f.heading)}`;
+    flightInfoEl.classList.remove('ua17-hidden');
+    audio.chime(520);
+    clearTimeout(infoTimer);
+    infoTimer = setTimeout(() => flightInfoEl.classList.add('ua17-hidden'), 4000);
+  });
 
   // --- Animation loop ---
   const clock = new THREE.Clock();
@@ -106,7 +175,7 @@ async function main() {
     requestAnimationFrame(tick);
     const dt = Math.min(0.05, clock.getDelta());
 
-    if (state.started && state.playing) {
+    if (state.started && state.playing && !state.scrubbing) {
       state.t = Math.min(1, state.t + dt / FLIGHT_DURATION);
       if (state.t >= 1 && state.playing) {
         setPlaying(false);
@@ -116,7 +185,7 @@ async function main() {
     }
 
     const t = state.t;
-    updateAircraftPoseWithDt(t, dt);
+    updateAircraftPose(t, dt);
 
     const cloud = cloudAt(weather, t);
     updateSky(sky, scene.fog, cloud.total);
@@ -129,11 +198,12 @@ async function main() {
     }
     progressFill.style.width = `${t * 100}%`;
     progressPlane.style.left = `${t * 100}%`;
+    if (!state.scrubbing) scrubber.value = String(Math.round(t * 1000));
 
     renderer.render(scene, camera);
   }
 
-  function updateAircraftPoseWithDt(t, dt) {
+  function updateAircraftPose(t, dt) {
     const pos = flightCurve.getPointAt(t);
     aircraft.position.copy(pos);
 
@@ -152,6 +222,12 @@ async function main() {
     targetQuat.multiply(bankQuat);
 
     aircraft.quaternion.slerp(targetQuat, 0.06);
+
+    // Gear down near the ground (taxi/climb-out and final approach/touchdown),
+    // gear up once safely climbed away — both ends get a "real airport" feel.
+    aircraft.userData.landingGear.visible = pos.y < 70;
+    aircraft.userData.beacon.visible = Math.floor(clock.elapsedTime * 2) % 2 === 0;
+
     updateCamera(pos, forward, dt);
   }
 

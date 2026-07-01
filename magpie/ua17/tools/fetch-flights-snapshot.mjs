@@ -6,9 +6,10 @@
 //
 // Re-run: node tools/fetch-flights-snapshot.mjs
 //
-// Privacy note: we deliberately drop callsigns/icao24 (which can identify a
-// specific aircraft/owner) and keep only position, altitude and heading —
-// enough to draw anonymous "another plane!" blips for a toddler audience.
+// Privacy note: we deliberately drop icao24 (the 24-bit address that
+// identifies one specific physical aircraft/owner) but keep callsign — the
+// publicly-broadcast flight number shown on any consumer flight tracker
+// (FlightRadar24, seatback maps, etc.), not personal data about a person.
 
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -50,11 +51,12 @@ const flights = (json.states || [])
     lat: Number(s[6].toFixed(2)),
     altitude_m: Math.round(s[7]),
     heading: s[10] != null ? Math.round(s[10]) : 0,
+    callsign: (s[1] || '').trim() || null,
   }))
   .slice(0, 60); // plenty for a sky full of distant blips, keeps the file tiny
 
 const out = {
-  source: 'OpenSky Network public REST API (opensky-network.org), anonymized: no callsign/icao24 kept',
+  source: 'OpenSky Network public REST API (opensky-network.org); icao24 (aircraft/owner address) dropped, public callsign kept',
   fetchedAt: new Date().toISOString(),
   bbox: BBOX,
   flights,
