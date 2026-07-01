@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#092638" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Skyport" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <title>Skyport WebGPU PWA</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --panel: rgba(5, 24, 34, .68);
+      --panel2: rgba(11, 41, 59, .82);
+      --stroke: rgba(255,255,255,.22);
+      --text: rgba(255,255,255,.94);
+      --muted: rgba(255,255,255,.68);
+    }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #081b25;
+      font-family: ui-rounded, -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Inter, Segoe UI, sans-serif;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none;
+    }
+    #app {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 20%, #21435b 0, #081b25 72%);
+    }
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      touch-action: none;
+    }
+    .hud {
+      position: absolute;
+      inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      pointer-events: none;
+    }
+    .prompt {
+      position: absolute;
+      left: 50%;
+      bottom: max(7vh, 42px);
+      transform: translateX(-50%);
+      display: flex;
+      gap: .55rem;
+      align-items: center;
+      padding: .78rem 1.02rem;
+      max-width: min(86vw, 760px);
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(21, 61, 96, .86), rgba(8, 34, 57, .86));
+      color: var(--text);
+      box-shadow: 0 14px 38px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.16);
+      border: 1px solid rgba(255,255,255,.12);
+      font-weight: 600;
+      letter-spacing: .01em;
+      backdrop-filter: blur(10px) saturate(120%);
+      -webkit-backdrop-filter: blur(10px) saturate(120%);
+      transition: opacity .5s ease, transform .5s ease;
+    }
+    .prompt.hidden {
+      opacity: 0;
+      transform: translateX(-50%) translateY(8px);
+    }
+    .emoji { font-size: 1.35em; line-height: 1; filter: drop-shadow(0 1px 0 rgba(0,0,0,.2)); }
+    .topbar {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .chip {
+      max-width: 72vw;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 16px;
+      color: var(--muted);
+      background: rgba(5, 22, 32, .34);
+      padding: 8px 10px;
+      font-size: 12px;
+      line-height: 1.25;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .chip strong { color: var(--text); font-weight: 700; }
+    .plane-card {
+      position: absolute;
+      transform: translate(-50%, -125%);
+      min-width: 122px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(6, 26, 36, .76);
+      color: white;
+      box-shadow: 0 16px 40px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.12);
+      backdrop-filter: blur(12px) saturate(125%);
+      -webkit-backdrop-filter: blur(12px) saturate(125%);
+      opacity: 0;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .plane-card.visible {
+      opacity: 1;
+      transform: translate(-50%, -135%);
+    }
+    .plane-card .id { font-size: 13px; font-weight: 800; letter-spacing: .08em; }
+    .plane-card .meta { margin-top: 3px; color: rgba(255,255,255,.7); font-size: 12px; }
+    .nosupport {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: linear-gradient(180deg, #0d3145, #06141c);
+      color: white;
+      z-index: 10;
+    }
+    .nosupport > div {
+      max-width: 520px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 24px;
+      padding: 22px;
+      background: rgba(0,0,0,.22);
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    }
+    .nosupport h1 { margin: 0 0 10px; font-size: 24px; }
+    .nosupport p { margin: 8px 0; color: rgba(255,255,255,.78); line-height: 1.45; }
+    @media (max-width: 520px) {
+      .prompt {
+        bottom: max(6.5vh, 36px);
+        font-size: 15px;
+        padding: .7rem .9rem;
+      }
+      .topbar { top: 8px; left: 8px; right: 8px; }
+      .chip { font-size: 11px; border-radius: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <canvas id="scene" aria-label="Interactive stylized airport scene"></canvas>
+    <div class="hud">
+      <div class="topbar">
+        <div class="chip"><strong>Skyport</strong><br>WebGPU · offline PWA · procedural shaders</div>
+        <div id="fps" class="chip">—</div>
+      </div>
+      <div id="planeCard" class="plane-card"><div class="id">CG‑17</div><div class="meta">tap target acquired</div></div>
+      <div id="prompt" class="prompt"><span class="emoji">👉</span><span>Drag the sky to look around, or tap a plane.</span></div>
+    </div>
+  </div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

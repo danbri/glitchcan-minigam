@@ -184,10 +184,36 @@ function buildOneBuilding(b, index, isLandmark) {
   // "floating slabs"). Tall towers get a single centred crown BOX — box
   // geometry can't self-intersect, so it never produces stray slabs.
   group.add(tierMesh(base, 0, H, mat));
-  if (H > 60) {
-    const crown = new THREE.Mesh(new THREE.BoxGeometry(span * 0.46, H * 0.14, span * 0.4), mat);
-    crown.position.set(cx, H + H * 0.07, cz);
-    group.add(crown);
+
+  // Roof-cap variety for silhouette rhythm along the skyline top edge. All caps
+  // are CENTRED boxes/cylinders/cones — geometry that can't self-intersect, so
+  // this never reproduces the old concave-footprint "floating slab" bug.
+  if (H > 40) {
+    const style = hash(index, 11);
+    const w0 = span * 0.5, d0 = span * 0.44;
+    if (style < 0.42) {
+      // simple mechanical crown box
+      const crown = new THREE.Mesh(new THREE.BoxGeometry(w0, H * 0.13, d0), mat);
+      crown.position.set(cx, H + H * 0.065, cz);
+      group.add(crown);
+    } else if (style < 0.78) {
+      // stepped double crown — two shrinking boxes for a tiered top
+      const c1h = H * 0.11, c2h = H * 0.09;
+      const c1 = new THREE.Mesh(new THREE.BoxGeometry(w0, c1h, d0), mat);
+      c1.position.set(cx, H + c1h / 2, cz);
+      const c2 = new THREE.Mesh(new THREE.BoxGeometry(w0 * 0.62, c2h, d0 * 0.62), mat);
+      c2.position.set(cx, H + c1h + c2h / 2, cz);
+      group.add(c1, c2);
+    } else {
+      // slender spire/mast on a low base — punctuates the tallest towers
+      const baseh = H * 0.08;
+      const capBase = new THREE.Mesh(new THREE.BoxGeometry(w0 * 0.7, baseh, d0 * 0.7), mat);
+      capBase.position.set(cx, H + baseh / 2, cz);
+      const spireH = H * (0.24 + hash(index, 13) * 0.2);
+      const spire = new THREE.Mesh(new THREE.ConeGeometry(span * 0.12, spireH, 8), mat);
+      spire.position.set(cx, H + baseh + spireH / 2, cz);
+      group.add(capBase, spire);
+    }
   }
 
   const sh = contactShadow(span); sh.position.set(cx, 0.12, cz); group.add(sh);
