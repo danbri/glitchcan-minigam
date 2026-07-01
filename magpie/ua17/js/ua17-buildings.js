@@ -109,7 +109,11 @@ function footprintMetrics(footprint) {
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
   for (const [x, z] of pts) { cx += x; cz += z; minX = Math.min(minX, x); maxX = Math.max(maxX, x); minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z); }
   cx /= pts.length; cz /= pts.length;
-  return { cx, cz, w: maxX - minX, d: maxZ - minZ };
+  // Shoelace area (scaled units) — used to reject degenerate footprints that
+  // extrude to nothing and leave only a floating roof-cap slab.
+  let a = 0;
+  for (let i = 0; i < pts.length; i++) { const j = (i + 1) % pts.length; a += pts[i][0] * pts[j][1] - pts[j][0] * pts[i][1]; }
+  return { cx, cz, w: maxX - minX, d: maxZ - minZ, area: Math.abs(a) / 2 };
 }
 
 function buildOneBuilding(b, index, isLandmark) {
@@ -117,8 +121,12 @@ function buildOneBuilding(b, index, isLandmark) {
   // CRITICAL: scale height by the SAME factor as the footprint, or towers come
   // out ~3x too thin and read as needles/cones instead of buildings.
   const H = b.height * SKYLINE_SCALE;
-  const { cx, cz, w, d } = footprintMetrics(b.footprint);
+  const { cx, cz, w, d, area } = footprintMetrics(b.footprint);
   const span = Math.max(w, d);
+
+  // Reject degenerate/tiny footprints — they extrude to nothing and would
+  // otherwise leave a floating roof-cap slab hovering over the ground.
+  if (!isLandmark && (area < 12 || span < 4)) return group;
 
   // Iconic named landmarks get a bespoke recognisable model.
   const icon = landmarkModel(b.name, cx, cz, span, H);
@@ -141,7 +149,7 @@ function buildOneBuilding(b, index, isLandmark) {
   mat.map.needsUpdate = true;
   mat.map.repeat.set(Math.max(1, Math.round(span / 9)), Math.max(2, Math.round(H / 9)));
 
-  const roofMat = new THREE.MeshStandardMaterial({ color: 0x93999f, roughness: 0.85 });
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0xb2b7bd, roughness: 0.8 });
   const base = scaledPoints(b.footprint, 1, cx, cz);
 
   // Clean box massing with setbacks — NO cone spires, antenna masts or red
@@ -153,7 +161,7 @@ function buildOneBuilding(b, index, isLandmark) {
     group.add(tierMesh(base, 0, H * 0.55, mat));
     group.add(tierMesh(scaledPoints(b.footprint, 0.86, cx, cz), H * 0.55, H * 0.82, mat));
     group.add(tierMesh(scaledPoints(b.footprint, 0.72, cx, cz), H * 0.82, H, mat));
-    const capMat = new THREE.MeshStandardMaterial({ color: 0x868d94, roughness: 0.8 });
+    const capMat = new THREE.MeshStandardMaterial({ color: 0xa7adb4, roughness: 0.75 });
     const cap = new THREE.Mesh(new THREE.BoxGeometry(span * 0.5, Math.max(2, H * 0.03), span * 0.42), capMat);
     cap.position.set(cx, H + Math.max(1, H * 0.015), cz);
     group.add(cap);
