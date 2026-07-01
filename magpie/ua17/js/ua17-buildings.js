@@ -8,6 +8,7 @@
 
 import * as THREE from '../vendor/three.module.min.js';
 import { LONDON_WORLD_Z, NYC_WORLD_Z } from './ua17-route.js';
+import { landmarkModel } from './ua17-landmarks.js';
 
 // Real footprints span a whole ~2km downtown; compress toward the centre so
 // they read as a skyline beside the path rather than a field it flies through.
@@ -115,6 +116,13 @@ function buildOneBuilding(b, index, isLandmark) {
   const H = b.height;
   const { cx, cz, w, d } = footprintMetrics(b.footprint);
   const span = Math.max(w, d);
+
+  // Iconic named landmarks get a bespoke recognisable model.
+  const icon = landmarkModel(b.name, cx, cz, span, H);
+  if (icon) {
+    icon.traverse((o) => { if (o.isMesh) o.name = b.name; });
+    return icon;
+  }
 
   const fam = isLandmark ? FAMILIES[0] : pickFamily(hash(index, 3));
   const color = isLandmark ? 0xdcc487 : fam.colors[Math.floor(hash(index, 7) * fam.colors.length)];
