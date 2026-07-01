@@ -6,24 +6,28 @@ import * as THREE from '../vendor/three.module.min.js';
 
 function runwayTexture() {
   const c = document.createElement('canvas');
-  c.width = 128; c.height = 1024;
+  c.width = 128; c.height = 2048;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#3a3d40';
+  ctx.fillStyle = '#34373a';
   ctx.fillRect(0, 0, c.width, c.height);
   // edge lines
   ctx.fillStyle = '#e7e9ec';
   ctx.fillRect(6, 0, 5, c.height);
   ctx.fillRect(c.width - 11, 0, 5, c.height);
   // dashed centreline
-  for (let y = 20; y < c.height - 20; y += 46) ctx.fillRect(c.width / 2 - 3, y, 6, 26);
-  // threshold bars at both ends (a runway is approached/departed from either end)
+  for (let y = 40; y < c.height - 40; y += 60) ctx.fillRect(c.width / 2 - 3, y, 6, 32);
+  // threshold "piano key" bars at both ends
   const threshold = (y0) => {
-    for (let i = 0; i < 5; i++) ctx.fillRect(16 + i * 20, y0, 12, 34);
+    for (let i = 0; i < 5; i++) ctx.fillRect(16 + i * 20, y0, 12, 44);
   };
-  threshold(18);
-  threshold(c.height - 52);
+  threshold(26);
+  threshold(c.height - 70);
+  // touchdown-zone aiming markers a little in from each threshold
+  const aim = (y0) => { ctx.fillRect(30, y0, 14, 60); ctx.fillRect(c.width - 44, y0, 14, 60); };
+  aim(120); aim(c.height - 180);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
   return tex;
 }
 
@@ -72,16 +76,16 @@ function edgeLights(length, width) {
   return group;
 }
 
-export function buildRunway(worldZ, headingRad, worldX = 0) {
+export function buildRunway(worldZ, headingRad, worldX = 0, length = 900) {
   const group = new THREE.Group();
-  const length = 260, width = 34;
+  const width = 40;
 
   const apron = new THREE.Mesh(
-    new THREE.PlaneGeometry(width * 5, length * 1.6),
-    new THREE.MeshStandardMaterial({ color: 0x7a8066, roughness: 0.95 }),
+    new THREE.PlaneGeometry(width * 6, length * 1.25),
+    new THREE.MeshStandardMaterial({ color: 0x6f7560, roughness: 0.96 }),
   );
   apron.rotation.x = -Math.PI / 2;
-  apron.position.y = -0.3;
+  apron.position.y = -0.35;
   group.add(apron);
 
   const strip = new THREE.Mesh(
@@ -89,13 +93,22 @@ export function buildRunway(worldZ, headingRad, worldX = 0) {
     new THREE.MeshStandardMaterial({ map: runwayTexture(), roughness: 0.9 }),
   );
   strip.rotation.x = -Math.PI / 2;
-  strip.position.y = -0.15;
+  strip.position.y = -0.12;
   group.add(strip);
+
+  // A parallel taxiway alongside, for that "real airport" read.
+  const taxiway = new THREE.Mesh(
+    new THREE.PlaneGeometry(width * 0.55, length * 0.9),
+    new THREE.MeshStandardMaterial({ color: 0x40474b, roughness: 0.95 }),
+  );
+  taxiway.rotation.x = -Math.PI / 2;
+  taxiway.position.set(width * 1.5, -0.14, 0);
+  group.add(taxiway);
 
   group.add(edgeLights(length, width));
 
   const term = terminal();
-  term.position.set(width * 1.8, 0, -length * 0.15);
+  term.position.set(width * 2.6, 0, -length * 0.12);
   group.add(term);
 
   group.rotation.y = headingRad;

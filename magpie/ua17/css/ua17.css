@@ -76,37 +76,100 @@ html, body {
   justify-content: space-between;
 }
 
+/* Seatback-IFE royal-blue ribbon (FlightPath 3D aesthetic) */
 #ua17-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: max(0.75rem, env(safe-area-inset-top)) 1rem 0.5rem;
-  background: linear-gradient(180deg, rgba(0,20,60,0.55), rgba(0,20,60,0));
+  padding: max(0.6rem, env(safe-area-inset-top)) 1rem 0.5rem;
+  padding-top: max(0.6rem, env(safe-area-inset-top));
+  background: linear-gradient(180deg, rgba(11,40,120,0.92) 0%, rgba(11,40,120,0.82) 70%, rgba(11,40,120,0));
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  letter-spacing: 0.01em;
 }
 
-#ua17-route-label {
+#ua17-flight { display: flex; align-items: baseline; gap: 0.5rem; }
+#ua17-flight .fnum {
   color: #fff;
   font-weight: 800;
-  font-size: clamp(0.95rem, 3.6vw, 1.2rem);
-  text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  font-size: clamp(1rem, 4vw, 1.35rem);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.35);
 }
+#ua17-flight .route {
+  color: #bcd4ff;
+  font-weight: 700;
+  font-size: clamp(0.75rem, 2.8vw, 0.95rem);
+}
+#ua17-todest {
+  color: #fff;
+  font-size: clamp(0.8rem, 3vw, 1rem);
+  font-weight: 700;
+  text-align: right;
+}
+#ua17-todest #ua17-ttd { font-size: clamp(1rem, 4vw, 1.3rem); }
+.dim { color: #a8c2ee; font-weight: 600; }
 
 #ua17-caption {
+  position: absolute;
+  top: 4.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
   color: #fff;
   font-size: clamp(0.85rem, 3.2vw, 1.05rem);
-  text-shadow: 0 2px 4px rgba(0,0,0,0.4);
-  text-align: right;
+  font-weight: 700;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  background: rgba(11,40,120,0.5);
+  padding: 0.25rem 0.9rem;
+  border-radius: 999px;
 }
 
 #ua17-bottombar {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.5rem 1rem max(0.9rem, env(safe-area-inset-bottom));
-  background: linear-gradient(0deg, rgba(0,20,60,0.55), rgba(0,20,60,0));
+  gap: 0.55rem;
+  padding: 0.6rem 1rem max(0.9rem, env(safe-area-inset-bottom));
+  background: linear-gradient(0deg, rgba(11,40,120,0.9) 0%, rgba(11,40,120,0.8) 55%, rgba(11,40,120,0));
   pointer-events: auto;
 }
+
+#ua17-gauges {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.ua17-gauge {
+  flex: 1;
+  text-align: center;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(188,212,255,0.25);
+  border-radius: 0.7rem;
+  padding: 0.35rem 0.2rem;
+}
+.ua17-gauge .g-val {
+  color: #fff;
+  font-weight: 800;
+  font-size: clamp(1rem, 4.4vw, 1.5rem);
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.ua17-gauge .g-lbl {
+  color: #a8c2ee;
+  font-size: clamp(0.55rem, 2.2vw, 0.72rem);
+  font-weight: 600;
+  margin-top: 0.1rem;
+}
+
+#ua17-routerow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #dce7ff;
+  font-size: clamp(0.7rem, 2.7vw, 0.9rem);
+  font-variant-numeric: tabular-nums;
+}
+#ua17-routerow b { color: #fff; }
 
 #ua17-progress-track {
   position: relative;
@@ -209,15 +272,16 @@ html, body {
 #ua17-hint {
   position: fixed;
   left: 50%;
-  bottom: 7.5rem;
+  top: 45%;
   transform: translateX(-50%);
   color: #fff;
   font-size: 0.9rem;
-  background: rgba(0,0,0,0.35);
-  padding: 0.4rem 0.9rem;
+  background: rgba(11,40,120,0.6);
+  padding: 0.45rem 1rem;
   border-radius: 999px;
   pointer-events: none;
-  animation: ua17-fade 5s ease forwards;
+  white-space: nowrap;
+  animation: ua17-fade 6s ease forwards;
 }
 @keyframes ua17-fade {
   0%, 55% { opacity: 1; }

@@ -20,17 +20,38 @@
 </div>
 
 <div id="ua17-hud" class="ua17-hidden">
+  <!-- Seatback-style royal-blue status ribbon (à la FlightPath 3D) -->
   <div id="ua17-topbar">
-    <div id="ua17-route-label">UA17</div>
-    <div id="ua17-caption">Ready for take-off!</div>
+    <div id="ua17-flight">
+      <span class="fnum">UA 17</span>
+      <span id="ua17-route-label" class="route">LHR → EWR</span>
+    </div>
+    <div id="ua17-todest">
+      <span id="ua17-ttd">–:––</span> to go
+      <span id="ua17-dtd" class="dim"></span>
+    </div>
   </div>
 
+  <div id="ua17-caption">Ready for take-off!</div>
+
   <div id="ua17-bottombar">
+    <div id="ua17-gauges">
+      <div class="ua17-gauge"><div class="g-val" id="ua17-alt">0</div><div class="g-lbl">Altitude · ft</div></div>
+      <div class="ua17-gauge"><div class="g-val" id="ua17-gs">0</div><div class="g-lbl">Ground speed · mph</div></div>
+      <div class="ua17-gauge"><div class="g-val" id="ua17-temp">–</div><div class="g-lbl">Outside temp</div></div>
+    </div>
+
     <div id="ua17-progress-track">
       <div id="ua17-progress-fill"></div>
       <div id="ua17-progress-plane">✈️</div>
       <input id="ua17-scrubber" type="range" min="0" max="1000" value="0" step="1" aria-label="Flight progress">
     </div>
+    <div id="ua17-routerow">
+      <span><b>LHR</b> <span id="ua17-clock-o">10:25</span></span>
+      <span id="ua17-dist" class="dim"></span>
+      <span><span id="ua17-clock-d">13:45</span> <b>EWR</b></span>
+    </div>
+
     <div id="ua17-controls">
       <button id="ua17-playpause" class="ua17-btn" aria-label="Pause">⏸</button>
       <button id="ua17-replay" class="ua17-btn ua17-hidden">🔁 Fly again!</button>
