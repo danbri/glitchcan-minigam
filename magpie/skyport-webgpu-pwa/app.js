@@ -550,7 +550,14 @@ async function main() {
     layout: pipelineLayout,
     vertex: { module: device.createShaderModule({ code: skyWGSL }), entryPoint: 'vs' },
     fragment: { module: device.createShaderModule({ code: skyWGSL }), entryPoint: 'fs', targets: [{ format: 'rgba8unorm' }] },
-    primitive: { topology:'triangle-list' }
+    primitive: { topology:'triangle-list' },
+    // MUST declare a depth state: this pipeline is used in a pass that has a
+    // depth-stencil attachment, and WebGPU requires the pipeline's depth format
+    // to match. Chrome/Dawn tolerates omitting it; Safari/WebKit rejects the
+    // draw, which invalidates the whole command buffer and leaves the canvas
+    // black (the "black on black except overlay" bug). The sky is the
+    // background, so never write depth and always pass.
+    depthStencil: { format:'depth32float', depthWriteEnabled:false, depthCompare:'always' }
   });
   const mainPipeline = device.createRenderPipeline({
     layout: pipelineLayout,
