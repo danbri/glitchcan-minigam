@@ -9,6 +9,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { LONDON_WORLD_Z, NYC_WORLD_Z } from './ua17-route.js';
 import { landmarkModel } from './ua17-landmarks.js';
+import { CITY_GROUND_Y } from './ua17-terrain.js';
 
 // Real footprints span a whole ~2km downtown; compress toward the centre so
 // they read as a skyline beside the path rather than a field it flies through.
@@ -203,21 +204,6 @@ function buildOneBuilding(b, index, isLandmark) {
   return group;
 }
 
-// A grounded pad under each skyline so it stands on land, not floating over sea.
-function groundPad(data) {
-  const xs = data.buildings.flatMap((b) => b.footprint.map((p) => p[0] * SKYLINE_SCALE));
-  const zs = data.buildings.flatMap((b) => b.footprint.map((p) => -p[1] * SKYLINE_SCALE));
-  const pad = 220;
-  const minX = Math.min(...xs) - pad, maxX = Math.max(...xs) + pad;
-  const minZ = Math.min(...zs) - pad, maxZ = Math.max(...zs) + pad;
-  const geo = new THREE.PlaneGeometry(maxX - minX, maxZ - minZ, 1, 1);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x6a6f64, roughness: 0.95 });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.position.set((minX + maxX) / 2, -0.4, (minZ + maxZ) / 2);
-  return mesh;
-}
-
 // Radius (scaled units) of the dense downtown core we keep around the
 // centroid. Real footprints include sparse far-flung outliers that would
 // splay the "city" into a 900-wide band; trimming to the core lets us place
@@ -246,7 +232,6 @@ export function buildSkyline(data, worldZ, worldX = 0) {
   cx /= kept.length; cz /= kept.length;
 
   const inner = new THREE.Group();
-  inner.add(groundPad({ buildings: kept }));
   kept.forEach((b, i) => {
     const isLandmark = b.name && landmarkNames.has(b.name);
     inner.add(buildOneBuilding(b, i, isLandmark));
@@ -255,7 +240,8 @@ export function buildSkyline(data, worldZ, worldX = 0) {
 
   const shifted = new THREE.Group();
   shifted.add(inner);
-  shifted.position.set(worldX, 0, worldZ);
+  // Sit the city on the terrain's coastal land plateau (no floating grey slab).
+  shifted.position.set(worldX, CITY_GROUND_Y, worldZ);
   return shifted;
 }
 

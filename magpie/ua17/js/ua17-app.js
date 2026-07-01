@@ -1,7 +1,8 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { createScene } from './ua17-scene.js';
 import { buildAircraft } from './ua17-aircraft.js';
-import { buildSky, buildSun, buildOcean, updateSky } from './ua17-sky.js';
+import { buildSky, buildSun, updateSky } from './ua17-sky.js';
+import { buildTerrain, buildWater, CITY_GROUND_Y } from './ua17-terrain.js';
 import { buildClouds } from './ua17-clouds.js';
 import { buildLondonSkyline, buildNycSkyline } from './ua17-buildings.js';
 import { buildRunway } from './ua17-airport.js';
@@ -64,7 +65,9 @@ async function main() {
   const sky = buildSky();
   scene.add(sky);
   scene.add(buildSun());
-  scene.add(buildOcean());
+  scene.add(buildTerrain());
+  const water = buildWater();
+  scene.add(water);
   const clouds = buildClouds(weather);
   scene.add(clouds.mesh);
   scene.add(buildLondonSkyline(londonData));
@@ -76,10 +79,13 @@ async function main() {
   const particles = createParticles(scene);
 
   // Long runways centred on each ground-roll, aligned to the (straight) path
-  // heading there, so climb-out and final approach line up with the tarmac
-  // and there's room to accelerate away / roll out to a full stop.
-  scene.add(buildRunway(LONDON_RUNWAY_Z, 0, 0, 900));
-  scene.add(buildRunway(NYC_RUNWAY_Z, 0, 0, 900));
+  // heading there, on the cities' flat coastal land plateau.
+  const lhrRunway = buildRunway(LONDON_RUNWAY_Z, 0, 0, 900);
+  lhrRunway.position.y = CITY_GROUND_Y + 0.6; // sit just proud of the land plateau
+  scene.add(lhrRunway);
+  const ewrRunway = buildRunway(NYC_RUNWAY_Z, 0, 0, 900);
+  ewrRunway.position.y = CITY_GROUND_Y + 0.6;
+  scene.add(ewrRunway);
 
   const aircraft = buildAircraft();
   scene.add(aircraft);
@@ -238,6 +244,7 @@ async function main() {
 
     const cloud = cloudAt(weather, t);
     updateSky(sky, scene.fog, cloud.total);
+    water.material.uniforms.time.value = clock.elapsedTime * 0.6;
     audio.setEngineIntensity(t);
 
     const newCaption = stageCaption(t);
