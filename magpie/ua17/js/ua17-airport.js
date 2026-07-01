@@ -62,15 +62,17 @@ function terminal() {
 }
 
 function edgeLights(length, width) {
-  const geo = new THREE.SphereGeometry(0.45, 6, 6);
-  const mat = new THREE.MeshBasicMaterial({ color: 0xfff2b0 });
+  // Flat inset fixtures flush with the asphalt, evenly spaced — reads as
+  // "embedded runway lights", not floating sprite dots hovering in mid-air.
+  const geo = new THREE.CylinderGeometry(0.55, 0.55, 0.12, 10);
+  const mat = new THREE.MeshBasicMaterial({ color: 0xffe9a0 });
   const group = new THREE.Group();
-  const count = Math.round(length / 24);
+  const count = Math.round(length / 22);
   for (let i = 0; i <= count; i++) {
     const z = -length / 2 + (i / count) * length;
-    [-width / 2 - 1.5, width / 2 + 1.5].forEach((x) => {
+    [-width / 2 - 1.2, width / 2 + 1.2].forEach((x) => {
       const light = new THREE.Mesh(geo, mat);
-      light.position.set(x, 0.4, z);
+      light.position.set(x, 0.06, z); // seated in the ground, top just proud
       group.add(light);
     });
   }

@@ -23,8 +23,17 @@ const BANDS = [
 const PUFFS_PER_CLUSTER = 5;
 
 export function buildClouds(weather) {
+  // Flatten each puff into a wide, low dome so clusters read as cloud masses
+  // with a defined base, not a heap of spheres. A faint blue in the diffuse
+  // lets the sky/hemisphere light give the undersides a cool tint.
   const puffGeo = new THREE.IcosahedronGeometry(1, 2);
-  const puffMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: 0, transparent: true, opacity: 0.9 });
+  puffGeo.scale(1.2, 0.6, 1.2);
+  const puffMat = new THREE.MeshStandardMaterial({
+    color: 0xf4f8ff, roughness: 1, metalness: 0, transparent: true, opacity: 0.94, flatShading: true,
+    // A faint cool self-illumination keeps shadowed/underside faces a soft
+    // blue-grey instead of picking up the murky green hemisphere-ground tint.
+    emissive: 0x37475f, emissiveIntensity: 0.5,
+  });
 
   const worldUp = new THREE.Vector3(0, 1, 0);
   const tangent = new THREE.Vector3();
@@ -80,16 +89,19 @@ export function buildClouds(weather) {
   for (const spec of clusterSpecs) {
     const ids = [];
     for (let p = 0; p < PUFFS_PER_CLUSTER; p++) {
+      // Spread wide and flat: big horizontal footprint, little vertical stack,
+      // so the puffs merge into one broad mass instead of a knobbly ball.
       const off = new THREE.Vector3(
-        (Math.random() * 2 - 1) * spec.scale * 0.8,
-        (Math.random() * 0.6) * spec.scale * 0.4,
-        (Math.random() * 2 - 1) * spec.scale * 0.8,
+        (Math.random() * 2 - 1) * spec.scale * 1.05,
+        (Math.random() * 0.4) * spec.scale * 0.28,
+        (Math.random() * 2 - 1) * spec.scale * 1.05,
       );
       ids.push(instances.length);
       instances.push({
         pos: spec.center.clone().add(off),
-        scale: spec.scale * THREE.MathUtils.lerp(0.5, 1.0, Math.random()),
-        rot: new THREE.Euler(Math.random() * Math.PI, Math.random() * Math.PI, 0),
+        // Tighter, larger puffs read as a cohesive cloud, not scattered lumps.
+        scale: spec.scale * THREE.MathUtils.lerp(0.72, 1.05, Math.random()),
+        rot: new THREE.Euler(0, Math.random() * Math.PI, 0), // keep the flat base level
       });
     }
     clusters.push({ center: spec.center.clone(), radius: spec.scale * 1.25, gate: spec.gate, popped: false, dissolve: 1, instanceIds: ids });

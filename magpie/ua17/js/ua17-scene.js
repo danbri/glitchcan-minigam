@@ -133,7 +133,7 @@ export function createScene(canvas) {
   //    wiggles don't swing the camera.
   //  • Drag maps intuitively: drag right → look right. Gentle speed, strong
   //    damping, and NO idle auto-drift (auto-motion reads as un-chill).
-  const orbit = { yaw: 0, pitch: 0.22, distance: 110 };
+  const orbit = { yaw: 0, pitch: 0.30, distance: 110 };
   const velocity = { yaw: 0, pitch: 0 };
   let dragging = false;
   const last = { x: 0, y: 0 };
@@ -239,7 +239,7 @@ export function createScene(canvas) {
     const dist = orbit.distance;
     localOffset.set(
       dist * Math.sin(orbit.yaw) * Math.cos(orbit.pitch),
-      dist * Math.sin(orbit.pitch) + 12,
+      dist * Math.sin(orbit.pitch) + 22, // higher eye-line: more sky, less runway
       -dist * Math.cos(orbit.yaw) * Math.cos(orbit.pitch),
     );
     localOffset.applyMatrix4(basis);
@@ -250,7 +250,7 @@ export function createScene(canvas) {
 
     // Look a little ahead of and above the plane, also smoothed.
     tmpFwd.copy(aircraftPos).addScaledVector(smoothedHeading, 8);
-    tmpFwd.y += 4;
+    tmpFwd.y += 8; // aim a touch higher so the horizon sits lower in frame
     lookTarget.lerp(tmpFwd, 1 - Math.pow(0.02, dt));
     camera.lookAt(lookTarget);
   }
