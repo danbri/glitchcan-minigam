@@ -506,6 +506,19 @@ async function main() {
   const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
   context.configure({ device, format: presentationFormat, alphaMode: 'opaque' });
 
+  // --- Diagnostics ---------------------------------------------------------
+  // Safari's WebGPU validation is stricter than Chrome's; when it rejects a
+  // pipeline the draw is silently dropped and the canvas stays on its black
+  // clear colour while the HTML overlay still shows. Surface any such error
+  // on-screen (into the fps chip / no-support card) instead of failing black.
+  device.addEventListener('uncapturederror', (e) => {
+    console.error('WebGPU uncaptured error:', e.error?.message || e.error);
+    if (fpsEl) { fpsEl.textContent = 'GPU error'; fpsEl.title = String(e.error?.message || e.error); }
+  });
+  device.lost.then((info) => { showNoSupport('WebGPU device lost: ' + info.message); });
+  // Catch validation errors thrown while building pipelines/resources below.
+  device.pushErrorScope('validation');
+
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
@@ -764,6 +777,13 @@ async function main() {
     device.queue.submit([encoder.finish()]);
     requestAnimationFrame(frame);
   }
+
+  // Report any validation error accumulated while creating the pipelines and
+  // GPU resources above — this is what turns the "silent black canvas" on iOS
+  // into a readable message.
+  device.popErrorScope().then((err) => {
+    if (err) showNoSupport('WebGPU validation error:\n' + err.message);
+  });
 
   resize();
   requestAnimationFrame(frame);
