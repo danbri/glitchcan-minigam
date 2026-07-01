@@ -23,7 +23,7 @@ const SKYLINE_SCALE = 0.36;
 const FAMILIES = [
   { name: 'glass', w: 5, colors: [0x5b8fc9, 0x4f86c6, 0x6fa6d6, 0x3f9fb0, 0x5fb0c4, 0x7fbfe0], roughness: 0.16, metalness: 0.55, emissive: 0.22 },
   { name: 'glass-teal', w: 3, colors: [0x3fa0a0, 0x4fb0aa, 0x5fbfc0, 0x6ec9c0], roughness: 0.18, metalness: 0.5, emissive: 0.22 },
-  { name: 'steel', w: 2, colors: [0x9fb2c0, 0x8ea6b6, 0xafc0cc], roughness: 0.35, metalness: 0.5, emissive: 0.18 },
+  { name: 'steel', w: 1, colors: [0xb9c3ca, 0xc4ccce, 0xadb9c0], roughness: 0.4, metalness: 0.45, emissive: 0.2 },
   { name: 'stone', w: 1, colors: [0xcabaa0, 0xbfae93, 0xd3c4a8], roughness: 0.75, metalness: 0.05, emissive: 0.2 },
 ];
 const FAMILY_TOTAL_W = FAMILIES.reduce((s, f) => s + f.w, 0);
@@ -146,13 +146,16 @@ function buildOneBuilding(b, index, isLandmark) {
   const group = new THREE.Group();
   // CRITICAL: scale height by the SAME factor as the footprint, or towers come
   // out ~3x too thin and read as needles/cones instead of buildings.
-  const H = b.height * SKYLINE_SCALE;
   const { cx, cz, w, d, area } = footprintMetrics(b.footprint);
   const span = Math.max(w, d);
 
   // Reject degenerate/tiny footprints — they extrude to nothing and would
   // otherwise leave a floating roof-cap slab hovering over the ground.
   if (!isLandmark && (area < 12 || span < 4)) return group;
+
+  // Floor the height so genuinely low-rise footprints read as small BOXES
+  // rather than flat grey pancake slabs strewn across the ground like debris.
+  const H = Math.max(b.height * SKYLINE_SCALE, isLandmark ? 0 : 13);
 
   // Iconic named landmarks get a bespoke recognisable model.
   const icon = landmarkModel(b.name, cx, cz, span, H);
@@ -226,7 +229,7 @@ function buildOneBuilding(b, index, isLandmark) {
 // centroid. Real footprints include sparse far-flung outliers that would
 // splay the "city" into a 900-wide band; trimming to the core lets us place
 // a compact, recognisable skyline as a close flyby beside the path.
-const CORE_RADIUS = 170;
+const CORE_RADIUS = 150;
 
 export function buildSkyline(data, worldZ, worldX = 0) {
   // Centroid of the whole set.

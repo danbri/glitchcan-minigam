@@ -148,6 +148,9 @@ async function main() {
   // projects an other-flights instance to CSS pixel coords for tap testing.
   window.__ua17 = {
     state,
+    scene,
+    THREE,
+    elev: terrain.elevation, // debug: ground height at (x,z)
     jumpTo: (t) => { state.t = THREE.MathUtils.clamp(t, 0, 1); },
     setOrbit,
     activeParticles: () => particles.group.children.filter((c) => c.visible).length,
@@ -265,14 +268,21 @@ async function main() {
     // Auto-frame the skyline: aim the camera at the actual city bearing during
     // climb-out (London) and approach (New York), so the skyline swings into
     // view whether it's ahead (far) or beside (close). Hands off in cruise.
-    const cf = t < 0.18 ? cities[0] : (t > 0.8 ? cities[1] : null);
+    const cf = t < 0.2 ? cities[0] : (t > 0.8 ? cities[1] : null);
     if (cf) {
       const p = flightCurve.getPointAt(t);
       const fwd = flightCurve.getTangentAt(t);
       let rel = Math.atan2(cf.x - p.x, cf.z - p.z) - Math.atan2(fwd.x, fwd.z);
       rel = Math.atan2(Math.sin(rel), Math.cos(rel));
-      // Negated: in this camera convention a city on +x frames with negative yaw.
-      setAutoFrame(THREE.MathUtils.clamp(-rel, -0.95, 0.95));
+      // Only frame the city while it's still AHEAD-ish (within ~66° of straight
+      // ahead). Once the plane has passed it, the bearing swings past 90° and we
+      // release to the calm straight-behind chase — otherwise the camera yanks
+      // backward to stare at the receding skyline, which made the climb-out read
+      // as a chaotic near-crash with the (grounded) city looking detached.
+      if (Math.abs(rel) < 1.15) {
+        // Negated: in this camera convention a city on +x frames with negative yaw.
+        setAutoFrame(THREE.MathUtils.clamp(-rel, -0.95, 0.95));
+      } else setAutoFrame(null);
     } else setAutoFrame(null);
 
     updateAircraftPose(t, dt);

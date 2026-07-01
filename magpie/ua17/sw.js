@@ -10,7 +10,7 @@
 // Everything is still precached on install, so the whole experience works
 // fully offline (airplane mode, or from a zip) after one online visit.
 
-const CACHE = 'ua17-v13';
+const CACHE = 'ua17-v14';
 const CORE = [
   './',
   './index.html',
