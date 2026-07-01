@@ -1,0 +1,14 @@
+{
+  "name": "UA17: London to New York!",
+  "short_name": "UA17 Flight",
+  "description": "A lush, toddler-friendly 3D flight adventure from London Heathrow to Newark.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1a5fd8",
+  "theme_color": "#1a5fd8",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

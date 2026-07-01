@@ -1,0 +1,192 @@
+{
+  "source": "Open-Meteo (api.open-meteo.com), free forecast API, no key required",
+  "fetchedAt": "2026-07-01T06:52:30.789Z",
+  "route": {
+    "from": "London Heathrow (LHR)",
+    "to": "Newark Liberty (EWR)"
+  },
+  "waypoints": [
+    {
+      "t": 0,
+      "lat": 51.47,
+      "lon": -0.454,
+      "cloud": {
+        "total": 87,
+        "low": 63,
+        "mid": 0,
+        "high": 0,
+        "temperature": 16.7,
+        "weathercode": 3
+      }
+    },
+    {
+      "t": 0.07692307692307693,
+      "lat": 52.523,
+      "lon": -6.468,
+      "cloud": {
+        "total": 99,
+        "low": 98,
+        "mid": 0,
+        "high": 0,
+        "temperature": 14,
+        "weathercode": 3
+      }
+    },
+    {
+      "t": 0.15384615384615385,
+      "lat": 53.259,
+      "lon": -12.731,
+      "cloud": {
+        "total": 100,
+        "low": 100,
+        "mid": 100,
+        "high": 99,
+        "temperature": 13.7,
+        "weathercode": 51
+      }
+    },
+    {
+      "t": 0.23076923076923078,
+      "lat": 53.656,
+      "lon": -19.162,
+      "cloud": {
+        "total": 100,
+        "low": 100,
+        "mid": 100,
+        "high": 100,
+        "temperature": 13.8,
+        "weathercode": 53
+      }
+    },
+    {
+      "t": 0.3076923076923077,
+      "lat": 53.704,
+      "lon": -25.661,
+      "cloud": {
+        "total": 100,
+        "low": 100,
+        "mid": 0,
+        "high": 100,
+        "temperature": 10.8,
+        "weathercode": 45
+      }
+    },
+    {
+      "t": 0.38461538461538464,
+      "lat": 53.401,
+      "lon": -32.12,
+      "cloud": {
+        "total": 100,
+        "low": 100,
+        "mid": 0,
+        "high": 0,
+        "temperature": 9.2,
+        "weathercode": 3
+      }
+    },
+    {
+      "t": 0.46153846153846156,
+      "lat": 52.756,
+      "lon": -38.438,
+      "cloud": {
+        "total": 100,
+        "low": 100,
+        "mid": 0,
+        "high": 0,
+        "temperature": 8.7,
+        "weathercode": 3
+      }
+    },
+    {
+      "t": 0.5384615384615384,
+      "lat": 51.788,
+      "lon": -44.527,
+      "cloud": {
+        "total": 100,
+        "low": 100,
+        "mid": 0,
+        "high": 0,
+        "temperature": 9.1,
+        "weathercode": 3
+      }
+    },
+    {
+      "t": 0.6153846153846154,
+      "lat": 50.519,
+      "lon": -50.321,
+      "cloud": {
+        "total": 100,
+        "low": 100,
+        "mid": 0,
+        "high": 6,
+        "temperature": 5.5,
+        "weathercode": 3
+      }
+    },
+    {
+      "t": 0.6923076923076923,
+      "lat": 48.978,
+      "lon": -55.781,
+      "cloud": {
+        "total": 85,
+        "low": 85,
+        "mid": 0,
+        "high": 0,
+        "temperature": 12,
+        "weathercode": 3
+      }
+    },
+    {
+      "t": 0.7692307692307693,
+      "lat": 47.196,
+      "lon": -60.889,
+      "cloud": {
+        "total": 100,
+        "low": 34,
+        "mid": 0,
+        "high": 100,
+        "temperature": 12.4,
+        "weathercode": 3
+      }
+    },
+    {
+      "t": 0.8461538461538461,
+      "lat": 45.202,
+      "lon": -65.646,
+      "cloud": {
+        "total": 100,
+        "low": 100,
+        "mid": 0,
+        "high": 0,
+        "temperature": 10,
+        "weathercode": 45
+      }
+    },
+    {
+      "t": 0.9230769230769231,
+      "lat": 43.025,
+      "lon": -70.067,
+      "cloud": {
+        "total": 0,
+        "low": 0,
+        "mid": 0,
+        "high": 0,
+        "temperature": 18.2,
+        "weathercode": 0
+      }
+    },
+    {
+      "t": 1,
+      "lat": 40.69,
+      "lon": -74.174,
+      "cloud": {
+        "total": 1,
+        "low": 1,
+        "mid": 0,
+        "high": 0,
+        "temperature": 23.1,
+        "weathercode": 0
+      }
+    }
+  ]
+}
