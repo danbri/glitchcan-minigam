@@ -10,7 +10,7 @@
 // network-first with cache fallback for anything unexpected, so a live
 // update during development is still picked up when online.
 
-const CACHE = 'ua17-v6';
+const CACHE = 'ua17-v7';
 const CORE = [
   './',
   './index.html',
@@ -35,6 +35,8 @@ const CORE = [
   './data/buildings-london.json',
   './data/buildings-nyc.json',
   './data/flights-snapshot.json',
+  './data/elevation-london.json',
+  './data/elevation-nyc.json',
   './icons/icon.svg',
 ];
 

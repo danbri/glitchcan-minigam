@@ -223,8 +223,8 @@ export function buildSkyline(data, worldZ, worldX = 0) {
 // Close flyby: core spread is ~±CORE_RADIUS, so an offset of ~330 keeps the
 // nearest tower ~70 units off the path — a dramatic wall of towers beside the
 // wing without ever crossing the flight path.
-const LONDON_WORLD_X = -330;
-const NYC_WORLD_X = 330;
+export const LONDON_WORLD_X = -330;
+export const NYC_WORLD_X = 330;
 
 export function buildLondonSkyline(londonData) {
   return buildSkyline(londonData, LONDON_WORLD_Z, LONDON_WORLD_X);

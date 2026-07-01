@@ -2,9 +2,9 @@ import * as THREE from '../vendor/three.module.min.js';
 import { createScene } from './ua17-scene.js';
 import { buildAircraft } from './ua17-aircraft.js';
 import { buildSky, buildSun, updateSky } from './ua17-sky.js';
-import { buildTerrain, buildWater, CITY_GROUND_Y } from './ua17-terrain.js';
+import { buildTerrain, buildWater, loadElevation, CITY_GROUND_Y } from './ua17-terrain.js';
 import { buildClouds } from './ua17-clouds.js';
-import { buildLondonSkyline, buildNycSkyline } from './ua17-buildings.js';
+import { buildLondonSkyline, buildNycSkyline, LONDON_WORLD_X, NYC_WORLD_X } from './ua17-buildings.js';
 import { buildRunway } from './ua17-airport.js';
 import { buildOtherFlights } from './ua17-flights.js';
 import { createParticles } from './ua17-particles.js';
@@ -54,18 +54,26 @@ async function main() {
   const { scene, camera, renderer, updateCamera, resumeIdleDriftAfter, setOrbit } = createScene(canvas);
   scene.fog = new THREE.Fog(0xdff2ff, 3200, 9200);
 
-  const [weather, flightInfo, londonData, nycData, flightsSnapshot] = await Promise.all([
+  const [weather, flightInfo, londonData, nycData, flightsSnapshot, elevation] = await Promise.all([
     loadWeather(),
     loadFlightInfo(),
     fetchJson('../data/buildings-london.json'),
     fetchJson('../data/buildings-nyc.json'),
     fetchJson('../data/flights-snapshot.json'),
+    loadElevation(),
   ]);
 
   const sky = buildSky();
   scene.add(sky);
   scene.add(buildSun());
-  scene.add(buildTerrain());
+  // Real-elevation terrain around each city (real coastlines/relief), procedural
+  // deep ocean between. City DEM centres match the skyline placements.
+  const cities = [
+    { x: LONDON_WORLD_X, z: LONDON_RUNWAY_Z + 210, dem: elevation.london },
+    { x: NYC_WORLD_X, z: NYC_RUNWAY_Z - 130, dem: elevation.nyc },
+  ];
+  const terrain = buildTerrain(cities);
+  scene.add(terrain.mesh);
   const water = buildWater();
   scene.add(water);
   const clouds = buildClouds(weather);
