@@ -90,16 +90,22 @@ function wingPrism(span, rootChord, tipChord, sweep, thickness) {
 // of the previous cylinder-with-sphere-caps "pill" silhouette.
 function fuselageGeometry(length, radius) {
   const half = length / 2;
+  const r = radius;
+  // y runs along the fuselage axis; the +half end is the NOSE. The nose is
+  // BLUNT/rounded (stays near full radius close to the tip) — a pointed nose
+  // is exactly what made this read as a rocket. The tail tapers to a normal
+  // cone.
   const profile = [
-    [0.0, -half - 3.4],
-    [radius * 0.25, -half - 1.6],
-    [radius * 0.85, -half],
-    [radius, -half + 5],
-    [radius, half - 12],
-    [radius * 0.94, half - 6],
-    [radius * 0.7, half - 2],
-    [radius * 0.32, half + 0.6],
-    [0.0, half + 2.4],
+    [0.0, -half - 3.0],       // tail cone tip
+    [r * 0.34, -half - 1.3],
+    [r * 0.72, -half + 0.8],
+    [r, -half + 4.5],         // reach full radius
+    [r, half - 5.5],          // constant cabin
+    [r * 0.99, half - 3.4],
+    [r * 0.92, half - 1.8],   // still 92% radius near the tip = blunt nose
+    [r * 0.7, half - 0.4],
+    [r * 0.36, half + 0.9],
+    [0.0, half + 1.6],        // short rounded nose tip
   ].map(([x, y]) => new THREE.Vector2(x, y));
   const geo = new THREE.LatheGeometry(profile, 28);
   geo.rotateX(Math.PI / 2);
@@ -179,7 +185,8 @@ export function buildAircraft() {
   const glassMat = new THREE.MeshStandardMaterial({ color: 0x17222e, roughness: 0.1, metalness: 0.7 });
   const tailMat = new THREE.MeshStandardMaterial({ map: tailTexture(), roughness: 0.4, metalness: 0.15, side: THREE.DoubleSide });
 
-  const fuseLen = 34, fuseR = 2.5;
+  // Chunkier, shorter proportions read as a friendly airliner, not a needle.
+  const fuseLen = 30, fuseR = 3.1;
   const fuse = new THREE.Mesh(fuselageGeometry(fuseLen, fuseR), bodyMat);
   group.add(fuse);
 
@@ -190,10 +197,11 @@ export function buildAircraft() {
   cockpit.position.set(0, fuseR * 0.5, fuseLen / 2 - 1.4);
   group.add(cockpit);
 
-  // Main wings: swept, tapered, gentle dihedral, with upturned winglets —
-  // the single biggest cue that separates "toy silhouette" from "airliner".
-  const wingGeo = wingPrism(16, 7.5, 2.6, 3.6, 0.45);
-  const { group: wings, right: wingR, left: wingL } = mirroredPair(wingGeo, wingMat, fuseR * 0.85, -0.6, 0.5, 0.06);
+  // Main wings: large chord + moderate sweep so they're clearly visible from
+  // the side (small swept-back wings were invisible edge-on, leaving a
+  // rocket-like tube). Gentle dihedral + upturned winglets.
+  const wingGeo = wingPrism(17.5, 10, 3.4, 2.6, 0.55);
+  const { group: wings, right: wingR, left: wingL } = mirroredPair(wingGeo, wingMat, fuseR * 0.8, -0.8, 1.5, 0.06);
   group.add(wings);
 
   const wingletGeo = wingPrism(2.6, 2.3, 0.7, 1.3, 0.28);
