@@ -42,17 +42,26 @@ export function createScene(canvas) {
   resize();
 
   // --- Drag-to-orbit chase camera (pointer events, page-gesture-safe) ---
-  const orbit = { yaw: 0, pitch: 0.2, distance: 105, height: 0 };
+  //
+  // Design goals after playtest feedback ("lurching is bad, make it chill"):
+  //  • The orbit frame is LEVEL (built from world-up + the plane's *horizontal*
+  //    heading), never from the plane's banked/pitched body axes — so the
+  //    horizon stays put and banking the plane doesn't roll the whole view.
+  //  • The heading the camera follows is heavily smoothed, so small path
+  //    wiggles don't swing the camera.
+  //  • Drag maps intuitively: drag right → look right. Gentle speed, strong
+  //    damping, and NO idle auto-drift (auto-motion reads as un-chill).
+  const orbit = { yaw: 0, pitch: 0.22, distance: 110 };
   const velocity = { yaw: 0, pitch: 0 };
   let dragging = false;
-  let last = { x: 0, y: 0 };
-  let idleDrift = true;
+  const last = { x: 0, y: 0 };
 
   canvas.style.touchAction = 'none';
 
+  const DRAG_SPEED = 0.0038;
+
   function onPointerDown(e) {
     dragging = true;
-    idleDrift = false;
     last.x = e.clientX;
     last.y = e.clientY;
     velocity.yaw = 0;
@@ -66,11 +75,11 @@ export function createScene(canvas) {
     const dy = e.clientY - last.y;
     last.x = e.clientX;
     last.y = e.clientY;
-    const s = 0.006;
-    orbit.yaw -= dx * s;
-    orbit.pitch = THREE.MathUtils.clamp(orbit.pitch + dy * s, -0.05, 0.6);
-    velocity.yaw = -dx * s;
-    velocity.pitch = dy * s;
+    // drag right → view swings right; drag down → look down toward the plane.
+    orbit.yaw += dx * DRAG_SPEED;
+    orbit.pitch = THREE.MathUtils.clamp(orbit.pitch - dy * DRAG_SPEED, -0.05, 0.75);
+    velocity.yaw = dx * DRAG_SPEED;
+    velocity.pitch = -dy * DRAG_SPEED;
     e.preventDefault();
   }
   function onPointerUp(e) {
@@ -94,52 +103,70 @@ export function createScene(canvas) {
 
   const tmpFwd = new THREE.Vector3();
   const tmpRight = new THREE.Vector3();
-  const tmpUp = new THREE.Vector3();
   const worldUp = new THREE.Vector3(0, 1, 0);
   const basis = new THREE.Matrix4();
   const localOffset = new THREE.Vector3();
   const camPos = new THREE.Vector3();
-  const lookTarget = new THREE.Vector3();
+  const lookTarget = new THREE.Vector3(0, 0, 1);
+  const smoothedHeading = new THREE.Vector3(0, 0, 1); // horizontal, heavily damped
 
   function updateCamera(aircraftPos, tangent, dt) {
-    if (!dragging) {
-      if (velocity.yaw !== 0 || velocity.pitch !== 0) {
-        orbit.yaw += velocity.yaw;
-        orbit.pitch = THREE.MathUtils.clamp(orbit.pitch + velocity.pitch, -0.05, 0.6);
-        velocity.yaw *= 0.92;
-        velocity.pitch *= 0.92;
-        if (Math.abs(velocity.yaw) < 0.00005) velocity.yaw = 0;
-        if (Math.abs(velocity.pitch) < 0.00005) velocity.pitch = 0;
-      } else if (idleDrift) {
-        orbit.yaw += dt * 0.03; // gentle ambient orbit so the view stays alive if nobody touches it
-      }
+    // Coast the released-drag momentum, with strong damping so it settles
+    // quickly and calmly (no long spins). No idle auto-drift.
+    if (!dragging && (velocity.yaw !== 0 || velocity.pitch !== 0)) {
+      orbit.yaw += velocity.yaw;
+      orbit.pitch = THREE.MathUtils.clamp(orbit.pitch + velocity.pitch, -0.05, 0.75);
+      const damp = Math.pow(0.86, dt * 60);
+      velocity.yaw *= damp;
+      velocity.pitch *= damp;
+      if (Math.abs(velocity.yaw) < 0.00004) velocity.yaw = 0;
+      if (Math.abs(velocity.pitch) < 0.00004) velocity.pitch = 0;
     }
 
-    tmpFwd.copy(tangent).normalize();
-    tmpRight.crossVectors(worldUp, tmpFwd).normalize();
+    // Follow only the HORIZONTAL heading, smoothed hard — climb/descent pitch
+    // and path wiggles never tilt or swing the frame.
+    tmpFwd.set(tangent.x, 0, tangent.z);
+    if (tmpFwd.lengthSq() < 1e-6) tmpFwd.set(0, 0, 1);
+    tmpFwd.normalize();
+    smoothedHeading.lerp(tmpFwd, 1 - Math.pow(0.05, dt)); // ~slow catch-up
+    smoothedHeading.y = 0;
+    if (smoothedHeading.lengthSq() < 1e-6) smoothedHeading.set(0, 0, 1);
+    smoothedHeading.normalize();
+
+    // Level orbit basis: right = up × forward, up = world up (no roll ever).
+    tmpRight.crossVectors(worldUp, smoothedHeading).normalize();
     if (tmpRight.lengthSq() < 1e-6) tmpRight.set(1, 0, 0);
-    tmpUp.crossVectors(tmpFwd, tmpRight).normalize();
-    basis.makeBasis(tmpRight, tmpUp, tmpFwd);
+    basis.makeBasis(tmpRight, worldUp, smoothedHeading);
 
     const dist = orbit.distance;
     localOffset.set(
       dist * Math.sin(orbit.yaw) * Math.cos(orbit.pitch),
-      dist * Math.sin(orbit.pitch) + 8,
+      dist * Math.sin(orbit.pitch) + 12,
       -dist * Math.cos(orbit.yaw) * Math.cos(orbit.pitch),
     );
     localOffset.applyMatrix4(basis);
 
     camPos.copy(aircraftPos).add(localOffset);
-    camera.position.lerp(camPos, 1 - Math.pow(0.001, dt));
+    // Gentle position follow — smooth, never snappy.
+    camera.position.lerp(camPos, 1 - Math.pow(0.03, dt));
 
-    lookTarget.copy(aircraftPos).addScaledVector(tmpFwd, 6);
-    const currentLook = lookTarget.clone();
-    camera.lookAt(currentLook);
+    // Look a little ahead of and above the plane, also smoothed.
+    tmpFwd.copy(aircraftPos).addScaledVector(smoothedHeading, 8);
+    tmpFwd.y += 4;
+    lookTarget.lerp(tmpFwd, 1 - Math.pow(0.02, dt));
+    camera.lookAt(lookTarget);
   }
 
-  function resumeIdleDriftAfter(seconds) {
-    setTimeout(() => { idleDrift = true; }, seconds * 1000);
+  // Kept for API compatibility with the app bootstrap; idle auto-drift was
+  // removed (it read as un-chill), so this is now a no-op.
+  function resumeIdleDriftAfter() {}
+
+  // Debug/testing: nudge the look-around orbit directly.
+  function setOrbit(o) {
+    if (o.yaw != null) orbit.yaw = o.yaw;
+    if (o.pitch != null) orbit.pitch = THREE.MathUtils.clamp(o.pitch, -0.05, 0.75);
+    if (o.distance != null) orbit.distance = o.distance;
   }
 
-  return { scene, camera, renderer, updateCamera, resize, resumeIdleDriftAfter };
+  return { scene, camera, renderer, updateCamera, resize, resumeIdleDriftAfter, setOrbit };
 }

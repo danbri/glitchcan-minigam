@@ -6,10 +6,37 @@ import { buildClouds } from './ua17-clouds.js';
 import { buildLondonSkyline, buildNycSkyline } from './ua17-buildings.js';
 import { buildRunway } from './ua17-airport.js';
 import { buildOtherFlights } from './ua17-flights.js';
+import { createParticles } from './ua17-particles.js';
 import { createAudio } from './ua17-audio.js';
-import { flightCurve, loadWeather, loadFlightInfo, cloudAt, stageCaption } from './ua17-route.js';
+import { flightCurve, loadWeather, loadFlightInfo, cloudAt, stageCaption, LONDON_RUNWAY_Z, NYC_RUNWAY_Z, CRUISE_ALT } from './ua17-route.js';
 
-const FLIGHT_DURATION = 95; // seconds for one full LHR -> EWR playthrough
+const FLIGHT_DURATION = 100; // seconds for one full LHR -> EWR playthrough
+
+// Speed profile along the journey fraction t: slow on the runway at both ends
+// (accelerate from a stop / decelerate to a stop) and quick at cruise. Its
+// value is a multiplier on the base rate; it never hits zero mid-flight so
+// the plane always keeps rolling, then clamps to a full stop exactly at t=1.
+function flightSpeed(t) {
+  return 0.32 + 1.15 * Math.sin(Math.PI * THREE.MathUtils.clamp(t, 0, 1));
+}
+
+// Real-world figures for the seatback-IFE data panel. LHR 10:25 BST -> EWR
+// 13:45 EDT is 8h20 gate-to-gate; great-circle ~3452 mi / 5556 km.
+const TOTAL_MIN = 500;
+const TOTAL_MI = 3452;
+const TOTAL_KM = 5556;
+const DEP_LOCAL_MIN = 10 * 60 + 25; // BST clock at the departure gate
+const TZ_DIFF_MIN = 5 * 60;         // BST is 5h ahead of EDT
+const CRUISE_FT = 38000;            // FL380 at the path's cruise altitude
+
+function fmtHM(totalMin) {
+  const m = Math.max(0, Math.round(totalMin));
+  return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+}
+function fmtClock(minsOfDay) {
+  const m = ((Math.round(minsOfDay) % 1440) + 1440) % 1440;
+  return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+}
 
 async function fetchJson(rel) {
   const res = await fetch(new URL(rel, import.meta.url));
@@ -23,7 +50,7 @@ function compass(deg) {
 
 async function main() {
   const canvas = document.getElementById('ua17-canvas');
-  const { scene, camera, renderer, updateCamera, resumeIdleDriftAfter } = createScene(canvas);
+  const { scene, camera, renderer, updateCamera, resumeIdleDriftAfter, setOrbit } = createScene(canvas);
   scene.fog = new THREE.Fog(0xdff2ff, 3200, 9200);
 
   const [weather, flightInfo, londonData, nycData, flightsSnapshot] = await Promise.all([
@@ -38,19 +65,21 @@ async function main() {
   scene.add(sky);
   scene.add(buildSun());
   scene.add(buildOcean());
-  scene.add(buildClouds(weather));
+  const clouds = buildClouds(weather);
+  scene.add(clouds.mesh);
   scene.add(buildLondonSkyline(londonData));
   scene.add(buildNycSkyline(nycData));
 
   const otherFlights = buildOtherFlights(flightsSnapshot);
   scene.add(otherFlights.group);
 
-  // Runways aligned with the path's own heading at each end, so climb-out
-  // and final approach both line up with a real strip of tarmac.
-  const startHeading = Math.atan2(-flightCurve.getTangentAt(0.01).x, -flightCurve.getTangentAt(0.01).z);
-  const endHeading = Math.atan2(-flightCurve.getTangentAt(0.99).x, -flightCurve.getTangentAt(0.99).z);
-  scene.add(buildRunway(flightCurve.getPointAt(0.002).z, startHeading));
-  scene.add(buildRunway(flightCurve.getPointAt(0.998).z, endHeading));
+  const particles = createParticles(scene);
+
+  // Long runways centred on each ground-roll, aligned to the (straight) path
+  // heading there, so climb-out and final approach line up with the tarmac
+  // and there's room to accelerate away / roll out to a full stop.
+  scene.add(buildRunway(LONDON_RUNWAY_Z, 0, 0, 900));
+  scene.add(buildRunway(NYC_RUNWAY_Z, 0, 0, 900));
 
   const aircraft = buildAircraft();
   scene.add(aircraft);
@@ -70,8 +99,17 @@ async function main() {
   const routeLabel = document.getElementById('ua17-route-label');
   const hint = document.getElementById('ua17-hint');
   const flightInfoEl = document.getElementById('ua17-flightinfo');
+  // Seatback data-panel elements.
+  const ttdEl = document.getElementById('ua17-ttd');
+  const dtdEl = document.getElementById('ua17-dtd');
+  const altEl = document.getElementById('ua17-alt');
+  const gsEl = document.getElementById('ua17-gs');
+  const tempEl = document.getElementById('ua17-temp');
+  const distEl = document.getElementById('ua17-dist');
+  const clockOEl = document.getElementById('ua17-clock-o');
+  const clockDEl = document.getElementById('ua17-clock-d');
 
-  routeLabel.textContent = `${flightInfo.flightNumber} · ${flightInfo.departure.iata} → ${flightInfo.arrival.iata}`;
+  routeLabel.textContent = `${flightInfo.departure.iata} → ${flightInfo.arrival.iata}`;
 
   const state = { t: 0, playing: false, started: false, scrubbing: false };
   // Headless-playtest hook, matching the trees/tanks-for-the-trees.html
@@ -80,6 +118,9 @@ async function main() {
   window.__ua17 = {
     state,
     jumpTo: (t) => { state.t = THREE.MathUtils.clamp(t, 0, 1); },
+    setOrbit,
+    activeParticles: () => particles.group.children.filter((c) => c.visible).length,
+    poppedClusters: () => clouds.clusters.filter((c) => c.popped).length,
     screenPosFor: (instanceId) => {
       const f = otherFlights.flightsByInstance[instanceId];
       if (!f) return null;
@@ -111,6 +152,11 @@ async function main() {
   replayBtn.addEventListener('click', () => {
     state.t = 0;
     replayBtn.classList.add('ua17-hidden');
+    // Restore any clouds we popped last time round so there's something to
+    // fly through again.
+    for (const cluster of clouds.clusters) {
+      if (cluster.popped) { cluster.popped = false; cluster.dissolve = 1; clouds.setClusterScale(cluster, 1); }
+    }
     setPlaying(true);
     audio.chime(880);
   });
@@ -147,9 +193,9 @@ async function main() {
     ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(ndc, camera);
-    const hits = raycaster.intersectObject(otherFlights.mesh, false);
-    if (!hits.length || hits[0].instanceId == null) return;
-    const f = otherFlights.flightsByInstance[hits[0].instanceId];
+    const hits = raycaster.intersectObjects(otherFlights.sprites, false);
+    if (!hits.length) return;
+    const f = hits[0].object.userData.info;
     if (!f) return;
     const altFt = Math.round(f.altitude_m * 3.281 / 100) * 100;
     flightInfoEl.innerHTML = `<strong>${f.callsign || 'Unknown flight'}</strong><br>${altFt.toLocaleString()} ft · heading ${compass(f.heading)}`;
@@ -176,7 +222,7 @@ async function main() {
     const dt = Math.min(0.05, clock.getDelta());
 
     if (state.started && state.playing && !state.scrubbing) {
-      state.t = Math.min(1, state.t + dt / FLIGHT_DURATION);
+      state.t = Math.min(1, state.t + (dt / FLIGHT_DURATION) * flightSpeed(state.t));
       if (state.t >= 1 && state.playing) {
         setPlaying(false);
         replayBtn.classList.remove('ua17-hidden');
@@ -186,6 +232,9 @@ async function main() {
 
     const t = state.t;
     updateAircraftPose(t, dt);
+    updateClouds(dt);
+    particles.update(dt);
+    updateFlightData(t, dt);
 
     const cloud = cloudAt(weather, t);
     updateSky(sky, scene.fog, cloud.total);
@@ -214,14 +263,16 @@ async function main() {
     basisMat.makeBasis(right, up, forward);
     targetQuat.setFromRotationMatrix(basisMat);
 
-    const t2 = THREE.MathUtils.clamp(t + 0.003, 0, 1);
+    // Very gentle bank into turns — the path is nearly straight, and heavy
+    // banking read as "lurching". Keep it subtle and smoothed.
+    const t2 = THREE.MathUtils.clamp(t + 0.004, 0, 1);
     const forward2 = flightCurve.getTangentAt(t2).normalize();
     const turn = right.dot(forward2.clone().sub(forward));
-    const targetBank = THREE.MathUtils.clamp(-turn * 55, -0.5, 0.5);
+    const targetBank = THREE.MathUtils.clamp(-turn * 16, -0.14, 0.14);
     bankQuat.setFromAxisAngle(localZ, targetBank);
     targetQuat.multiply(bankQuat);
 
-    aircraft.quaternion.slerp(targetQuat, 0.06);
+    aircraft.quaternion.slerp(targetQuat, 0.05);
 
     // Gear down near the ground (taxi/climb-out and final approach/touchdown),
     // gear up once safely climbed away — both ends get a "real airport" feel.
@@ -229,6 +280,57 @@ async function main() {
     aircraft.userData.beacon.visible = Math.floor(clock.elapsedTime * 2) % 2 === 0;
 
     updateCamera(pos, forward, dt);
+  }
+
+  // Live seatback flight-data readout, derived from the plane's state and the
+  // real schedule/distance. Throttled to a few updates a second (it's data,
+  // it doesn't need to tick every frame) and formatted like FlightPath 3D.
+  let dataAccum = 1;
+  function updateFlightData(t, dt) {
+    dataAccum += dt;
+    if (dataAccum < 0.2) return;
+    dataAccum = 0;
+    const rem = 1 - t;
+    const remMi = Math.round(TOTAL_MI * rem);
+    const remKm = Math.round(TOTAL_KM * rem);
+    ttdEl.textContent = fmtHM(TOTAL_MIN * rem);
+    dtdEl.textContent = `· ${remMi.toLocaleString()} mi`;
+
+    const altFt = Math.max(0, Math.round((aircraft.position.y / CRUISE_ALT) * CRUISE_FT / 100) * 100);
+    altEl.textContent = altFt.toLocaleString();
+
+    let gs = Math.round(flightSpeed(t) * 380); // ~560 mph at cruise, less on the roll
+    if (t <= 0.002 || t >= 0.999) gs = 0;      // stopped on the runway
+    gsEl.textContent = gs;
+
+    const c = Math.max(-60, Math.round(15 - 6.5 * (altFt / 3281))); // ISA lapse from altitude
+    tempEl.textContent = `${c}°C`;
+
+    distEl.textContent = `${remMi.toLocaleString()} mi · ${remKm.toLocaleString()} km`;
+    const originMin = DEP_LOCAL_MIN + t * TOTAL_MIN;
+    clockOEl.textContent = fmtClock(originMin);
+    clockDEl.textContent = fmtClock(originMin - TZ_DIFF_MIN);
+  }
+
+  // Pop any cloud cluster the plane flies into: spawn a glittering burst and
+  // shrink that cluster's puffs away over a fraction of a second.
+  const planePos = new THREE.Vector3();
+  function updateClouds(dt) {
+    planePos.copy(aircraft.position);
+    for (const cluster of clouds.clusters) {
+      if (cluster.popped) {
+        if (cluster.dissolve > 0) {
+          cluster.dissolve = Math.max(0, cluster.dissolve - dt * 4);
+          clouds.setClusterScale(cluster, cluster.dissolve);
+        }
+        continue;
+      }
+      if (planePos.distanceTo(cluster.center) < cluster.radius + 14) {
+        cluster.popped = true;
+        particles.burst(cluster.center, cluster.gate ? 1.15 : 0.9);
+        audio.chime(cluster.gate ? 784 : 660);
+      }
+    }
   }
 
   tick();

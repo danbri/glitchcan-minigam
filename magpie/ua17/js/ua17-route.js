@@ -14,24 +14,45 @@ export const CRUISE_ALT = 420;
 export const LONDON_WORLD_Z = -260;
 export const NYC_WORLD_Z = 6300;
 
+// Runway centres (z) and the fixed heading of each strip. The path's ground
+// segments run straight along +z at these z ranges, so the runways line up.
+export const LONDON_RUNWAY_Z = -470;
+export const NYC_RUNWAY_Z = 6430;
+
+// The path is deliberately almost dead-straight in x (only a whisper of lateral
+// drift) so cruise feels calm and never lurches side-to-side. Both ends have a
+// long, level GROUND ROLL along the runway: the plane accelerates from a stop,
+// rotates and climbs; then on arrival it flares, touches down and rolls out to
+// a full stop (see the speed profile in ua17-app.js). y is height, z is along-track.
 const CONTROL_POINTS = [
-  [0, 4, -420],
-  [6, 10, -340],
-  [-16, 130, -120],
-  [30, 300, 320],
-  [-40, 380, 950],
-  [70, 415, 1800],
-  [-60, 430, 2650],
-  [50, 410, 3500],
-  [-30, 420, 4350],
-  [40, 395, 5100],
-  [-10, 260, 5650],
-  [10, 120, 6050],
-  [0, 28, 6250],
-  [0, 4, 6360],
+  // London: stopped at the runway threshold, then ground roll + rotate + climb
+  [0, 3, -690],
+  [0, 3, -600],
+  [0, 3, -500],
+  [0, 4, -410],
+  [0, 12, -350],
+  [0, 90, -270],
+  [0, 250, -110],
+  [0, 370, 150],
+  // Cruise — barely-there lateral drift keeps it alive without weaving
+  [5, 415, 720],
+  [-5, 424, 1500],
+  [5, 420, 2300],
+  [-5, 423, 3100],
+  [5, 420, 3900],
+  [-5, 423, 4700],
+  [3, 418, 5300],
+  // Descent, flare, touchdown, long roll-out to a full stop at Newark
+  [0, 330, 5760],
+  [0, 180, 6050],
+  [0, 55, 6250],
+  [0, 5, 6360],
+  [0, 3, 6470],
+  [0, 3, 6580],
+  [0, 3, 6690],
 ].map((p) => new THREE.Vector3(...p));
 
-export const flightCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, false, 'catmullrom', 0.4);
+export const flightCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, false, 'catmullrom', 0.3);
 
 export async function loadWeather() {
   const res = await fetch(new URL('../data/weather.json', import.meta.url));
