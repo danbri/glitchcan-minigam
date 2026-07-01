@@ -183,9 +183,11 @@ export function buildAircraft() {
   const fuse = new THREE.Mesh(fuselageGeometry(fuseLen, fuseR), bodyMat);
   group.add(fuse);
 
-  const cockpit = new THREE.Mesh(new THREE.SphereGeometry(fuseR * 0.6, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), glassMat);
-  cockpit.scale.set(1, 0.7, 1.5);
-  cockpit.position.set(0, fuseR * 0.3, fuseLen / 2 + 1.2);
+  // Cockpit windows: a small dark band set back from the nose (not a big black
+  // sphere at the very tip, which read as a "black blob nose").
+  const cockpit = new THREE.Mesh(new THREE.SphereGeometry(fuseR * 0.42, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), glassMat);
+  cockpit.scale.set(0.85, 0.55, 1.1);
+  cockpit.position.set(0, fuseR * 0.5, fuseLen / 2 - 1.4);
   group.add(cockpit);
 
   // Main wings: swept, tapered, gentle dihedral, with upturned winglets —
@@ -242,18 +244,19 @@ export function buildAircraft() {
   const landingGear = makeLandingGear(fuseR);
   group.add(landingGear);
 
-  // Nav lights: red/green wingtip beacons (static) + a blinking white tail
-  // strobe (toggled from the animation loop via userData.beacon).
+  // Nav lights: tiny red/green wingtip beacons + a small blinking tail beacon.
+  // Kept very small so they don't read as stray floating dots at distance.
   const navMat = (color) => new THREE.MeshBasicMaterial({ color });
-  const navGeo = new THREE.SphereGeometry(0.22, 8, 6);
+  const navGeo = new THREE.SphereGeometry(0.11, 6, 5);
   const redLight = new THREE.Mesh(navGeo, navMat(0xff2a2a));
-  redLight.position.set(18.6, 0, -3.6);
+  redLight.position.set(18.4, 0, -3.6);
   wingL.add(redLight);
   const greenLight = new THREE.Mesh(navGeo, navMat(0x2aff6a));
-  greenLight.position.set(18.6, 0, -3.6);
+  greenLight.position.set(18.4, 0, -3.6);
   wingR.add(greenLight);
-  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), navMat(0xffffff));
-  beacon.position.set(0, fuseR * 1.05 + 6.6, -fuseLen / 2 + 1.4);
+  // Small tail-fin beacon (blinks via userData.beacon in the loop).
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 5), navMat(0xff5555));
+  beacon.position.set(0, fuseR * 0.65 + 6.6, -fuseLen / 2 + 1.4);
   group.add(beacon);
 
   group.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
