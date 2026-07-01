@@ -446,7 +446,11 @@ const postWGSL = shaderCommon + /* wgsl */`
 struct VOut { @builtin(position) pos: vec4<f32>, @location(0) uv: vec2<f32> };
 @vertex fn vs(@builtin(vertex_index) vi:u32) -> VOut {
   var p = array<vec2<f32>,3>(vec2<f32>(-1.0,-1.0), vec2<f32>(3.0,-1.0), vec2<f32>(-1.0,3.0));
-  var out:VOut; out.pos = vec4<f32>(p[vi],0.0,1.0); out.uv = p[vi]*.5+.5; return out;
+  var out:VOut; out.pos = vec4<f32>(p[vi],0.0,1.0);
+  // Flip V: WebGPU's framebuffer origin is top-left while clip-space Y points
+  // up, so sampling the offscreen texture with a raw (p*.5+.5) UV mirrors the
+  // whole scene vertically. Map screen-top (clip y=+1) -> uv.y=0 (texture top).
+  out.uv = vec2<f32>(p[vi].x*.5+.5, .5 - p[vi].y*.5); return out;
 }
 fn sampleCol(uv:vec2<f32>) -> vec3<f32> { return textureSampleLevel(colorTex, samp, clamp(uv,vec2<f32>(0.0),vec2<f32>(1.0)), 0.0).rgb; }
 @fragment fn fs(in:VOut) -> @location(0) vec4<f32> {
@@ -602,11 +606,13 @@ async function main() {
   ]);
   const planeBuffer = device.createBuffer({ size: planeVerts.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
   device.queue.writeBuffer(planeBuffer, 0, planeVerts);
+  // Bigger + a little nearer so the planes actually read as planes (and their
+  // drift is visible as motion) rather than sub-pixel specks lost in the sky.
   const planeInstances = new Float32Array([
-    -24, 39, -86, 2.5,   0, 0,  .72, -0.18,
-      7, 36, -92, 2.1,   0, 1,  .52,  0.22,
-     37, 44, -76, 2.6,   0, 2,  .64,  0.08,
-     78, 25, -68, 1.9,   0, 3,  .48, -0.35,
+    -22, 36, -72, 5.4,   0, 0,  .72, -0.18,
+      6, 33, -80, 4.6,   0, 1,  .52,  0.22,
+     34, 40, -64, 5.6,   0, 2,  .64,  0.08,
+     60, 24, -58, 4.2,   0, 3,  .48, -0.35,
   ]);
   const planeInstanceBuffer = device.createBuffer({ size: planeInstances.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
   device.queue.writeBuffer(planeInstanceBuffer, 0, planeInstances);
@@ -738,7 +744,7 @@ async function main() {
     globals.set(viewProj, 0);
     globals.set([camera.eye[0],camera.eye[1],camera.eye[2],t], 16);
     globals.set(norm([-0.52,0.78,0.44]).concat([1.05]), 20); // sun dir + exposure
-    globals.set([0.70,0.84,0.90,0.012], 24); // fog color + density
+    globals.set([0.70,0.84,0.90,0.006], 24); // fog color + density (halved: was washing the compact scene out)
     globals.set([width,height,0.54,0.82], 28); // resolution + focus line + DOF strength
     globals.set([camera.right[0],camera.right[1],camera.right[2],0], 32);
     globals.set([camera.up[0],camera.up[1],camera.up[2],0], 36);
