@@ -49,6 +49,7 @@ try {
     };
   });
   ok('local "device" account is listed', device && device.present);
+  ok('account rows show a provider glyph', await page.evaluate(() => !!document.querySelector('edot-connections .cx-acct[data-id="device"] .cx-acct-ic')));
   ok('device account is grouped under "On this device"', device && /on this device/i.test(device.groupTitle));
   ok('device account shows a LOCAL badge', device && device.hasLocalBadge);
   ok('device account shows "no login"', device && device.noLogin);

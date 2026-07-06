@@ -207,7 +207,7 @@ edot:edot-people a edot:CollectionView ; edot:presentsItemsOf edot:Person .
 # Providers ↔ how you reach them and what they offer (OS vs platform)
 edot:local-fs a edot:Provider ; rdfs:label "This device" ; edot:kind "os" ; edot:auth "grant" ; edot:locality "local" ; edot:offers edot:storage .
 edot:opfs a edot:Provider ; rdfs:label "App private storage" ; edot:kind "os" ; edot:auth "none" ; edot:locality "local" ; edot:offers edot:storage .
-edot:local-calendar a edot:Provider ; rdfs:label "On this device" ; edot:kind "os" ; edot:auth "none" ; edot:locality "local" ; edot:offers edot:calendar .
+edot:local-calendar a edot:Provider ; rdfs:label "Device calendar" ; edot:kind "os" ; edot:auth "none" ; edot:locality "local" ; edot:offers edot:calendar .
 edot:github a edot:Provider ; rdfs:label "GitHub" ; edot:kind "platform" ; edot:auth "oauth" ; edot:locality "remote" ; edot:offers edot:storage, edot:vcs .
 edot:s3 a edot:Provider ; rdfs:label "S3-compatible" ; edot:kind "platform" ; edot:auth "keys" ; edot:locality "remote" ; edot:offers edot:storage .
 edot:webdav a edot:Provider ; rdfs:label "WebDAV" ; edot:kind "platform" ; edot:auth "password" ; edot:locality "remote" ; edot:offers edot:storage .

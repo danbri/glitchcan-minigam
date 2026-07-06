@@ -22,6 +22,14 @@ const CAP_LABEL = { storage: 'Storage', mail: 'Mail', calendar: 'Calendar', chat
 const CAP_ICON = { storage: '🗄', mail: '✉', calendar: '📅', chat: '💬', people: '👥', vcs: '⎇' };
 const capLabel = (c) => CAP_LABEL[c] || c;
 
+// A glyph per provider, for scannable picker/detail/account rows (decorative;
+// the text label carries the meaning for a11y).
+const PROV_ICON = {
+  opfs: '📦', 'local-fs': '💻', 'local-calendar': '📅', github: '🐙', s3: '🪣',
+  webdav: '🗄', solid: '🪪', gmail: '✉️', graph: '✉️', caldav: '📅', xmpp: '💬',
+};
+const provIcon = (id) => PROV_ICON[id] || '🔌';
+
 // What each auth kind needs, so we can render honest credential fields.
 const AUTH = {
   none: { label: 'No login', fields: [], note: '' },
@@ -122,6 +130,7 @@ class EdotConnections extends HTMLElement {
       `<li class="cx-chip" role="listitem"><span class="cx-chip-ic" aria-hidden="true">${CAP_ICON[c] || '•'}</span>${esc(capLabel(c))}</li>`).join('');
     li.innerHTML = `
       <div class="cx-acct-top">
+        <span class="cx-acct-ic" aria-hidden="true">${provIcon(a.provider)}</span>
         <span class="cx-acct-label">${esc(a.label || a.id)}</span>
         ${localBadge}
       </div>
@@ -170,6 +179,7 @@ class EdotConnections extends HTMLElement {
         <div class="cx-picker-grid">
           ${items.map(([id, p]) => `
             <button class="cx-prov-pick" type="button" data-provider="${esc(id)}" aria-pressed="false">
+              <span class="cx-prov-pick-ic" aria-hidden="true">${provIcon(id)}</span>
               <span class="cx-prov-pick-label">${esc(p.label)}</span>
               <span class="cx-prov-pick-offers">${(p.offers || []).map((c) => esc(capLabel(c))).join(' · ')}</span>
               <span class="cx-prov-pick-auth">${esc(authLabel(p.auth))}</span>
@@ -261,7 +271,7 @@ class EdotConnections extends HTMLElement {
 
     detail.innerHTML = `
       <div class="cx-detail-card">
-        <h3 class="cx-detail-title">${esc(p.label)}</h3>
+        <h3 class="cx-detail-title"><span aria-hidden="true">${provIcon(providerId)}</span> ${esc(p.label)}</h3>
         <p class="cx-detail-line"><span class="cx-badge ${p.locality === 'local' ? 'cx-badge-local' : 'cx-badge-remote'}">${p.locality === 'local' ? 'LOCAL' : 'PLATFORM'}</span>
           <span class="cx-detail-auth">${esc(authLabel(p.auth))}${requiresAuthKind(p.auth) ? ' · sign-in needed' : ' · no login'}</span></p>
         <div class="cx-detail-offers"><span class="cx-detail-offers-h">Offers</span> ${chips}</div>

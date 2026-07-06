@@ -94,9 +94,11 @@ edot-connections { display: block; height: 100%; }
 }
 .cx-prov-pick:hover { border-color: var(--cx-accent); }
 .cx-prov-pick[aria-pressed="true"] { border-color: var(--cx-accent); background: var(--cx-remote-bg); }
+.cx-prov-pick-ic { font-size: 1.3rem; line-height: 1; margin-bottom: 0.15rem; }
 .cx-prov-pick-label { font-weight: 600; }
 .cx-prov-pick-offers { font-size: 0.76rem; color: var(--cx-muted); }
 .cx-prov-pick-auth { font-size: 0.72rem; color: var(--cx-muted); }
+.cx-acct-ic { font-size: 1.15rem; line-height: 1; flex: 0 0 auto; }
 
 .cx-detail { margin-top: 0.6rem; }
 .cx-detail-card { background: var(--cx-bg); border: 1px solid var(--cx-line); border-radius: var(--cx-radius); padding: 0.8rem; display: flex; flex-direction: column; gap: 0.5rem; }

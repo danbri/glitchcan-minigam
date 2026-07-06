@@ -80,7 +80,7 @@ export const CAPABILITIES = ['storage', 'mail', 'calendar', 'chat', 'people', 'v
 export const PROVIDERS = {
   'local-fs': { label: 'This device', kind: 'os', auth: 'grant', offers: ['storage'], locality: 'local' },
   opfs: { label: 'App private storage', kind: 'os', auth: 'none', offers: ['storage'], locality: 'local' },
-  'local-calendar': { label: 'On this device', kind: 'os', auth: 'none', offers: ['calendar'], locality: 'local' },
+  'local-calendar': { label: 'Device calendar', kind: 'os', auth: 'none', offers: ['calendar'], locality: 'local' },
   github: { label: 'GitHub', kind: 'platform', auth: 'oauth', offers: ['storage', 'vcs'], locality: 'remote' },
   s3: { label: 'S3-compatible', kind: 'platform', auth: 'keys', offers: ['storage'], locality: 'remote' },
   webdav: { label: 'WebDAV', kind: 'platform', auth: 'password', offers: ['storage'], locality: 'remote' },
