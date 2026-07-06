@@ -94,6 +94,19 @@ try {
     return { hasSubtabs: !!subtabs && subtabs.offsetParent !== null, panes: panes.length, visible: visible.length };
   });
   ok('mobile: Workspace opens with sub-tabs and shows one pane at a time', !!ws && ws.hasSubtabs && ws.panes === 3 && ws.visible === 1);
+
+  // Mobile: a right-anchored dropdown must stay inside the viewport (clamped),
+  // not spill off-screen — the Format menu opens near the right edge.
+  await mob.click('.rail button[data-nav="editor"]'); await mob.waitForTimeout(300);
+  await mob.click('.menubar > button[data-top="Format"]'); await mob.waitForTimeout(150);
+  const clamp = await mob.evaluate(() => {
+    const m = document.querySelector('.menu'); if (!m) return null;
+    const r = m.getBoundingClientRect();
+    return { left: r.left, right: r.right, bottom: r.bottom, w: window.innerWidth, h: window.innerHeight };
+  });
+  ok('mobile: an open menu is clamped within the viewport (no off-screen spill)',
+    !!clamp && clamp.left >= -1 && clamp.right <= clamp.w + 1 && clamp.bottom <= clamp.h + 1);
+  await mob.keyboard.press('Escape');
   await mob.close();
 
   ok('no page errors', errs.length === 0);

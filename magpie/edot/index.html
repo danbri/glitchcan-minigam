@@ -467,7 +467,7 @@
         if (it.submenu) {
           b.setAttribute('aria-haspopup', 'menu'); b.setAttribute('aria-expanded', 'false');
           let fly = null;
-          const openFly = () => { if (fly) return; fly = document.createElement('div'); fly.className = 'menu'; fly.setAttribute('role', 'menu'); renderItems(it.submenu, fly, parentMenu); fly.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') { closeFly(); b.focus(); e.preventDefault(); } else onMenuKeydown(fly, e); }); document.body.appendChild(fly); const r = b.getBoundingClientRect(); fly.style.left = r.right + 'px'; fly.style.top = r.top + 'px'; b.setAttribute('aria-expanded', 'true'); };
+          const openFly = () => { if (fly) return; fly = document.createElement('div'); fly.className = 'menu'; fly.setAttribute('role', 'menu'); renderItems(it.submenu, fly, parentMenu); fly.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') { closeFly(); b.focus(); e.preventDefault(); } else onMenuKeydown(fly, e); }); document.body.appendChild(fly); const r = b.getBoundingClientRect(); const fw = fly.offsetWidth; fly.style.left = (r.right + fw > window.innerWidth - 6 ? Math.max(6, r.left - fw) : r.right) + 'px'; fly.style.top = r.top + 'px'; clampMenu(fly); b.setAttribute('aria-expanded', 'true'); };
           const closeFly = () => { if (fly) { fly.remove(); fly = null; } b.setAttribute('aria-expanded', 'false'); };
           b.addEventListener('mouseenter', openFly);
           b.addEventListener('click', (e) => { e.stopPropagation(); openFly(); focusItem(fly, 0); }); // ensure-open
@@ -479,6 +479,22 @@
       }
     }
 
+    // Keep a floating menu inside the viewport — essential on a phone, where a
+    // right-anchored dropdown would otherwise spill off-screen (and a long menu
+    // off the bottom). Reads the laid-out rect, nudges left/top in, and lets a
+    // taller-than-viewport menu scroll.
+    function clampMenu(menu) {
+      const pad = 6, rect = menu.getBoundingClientRect();
+      let left = rect.left, top = rect.top;
+      if (rect.right > window.innerWidth - pad) left = window.innerWidth - rect.width - pad;
+      if (left < pad) left = pad;
+      if (rect.bottom > window.innerHeight - pad) top = window.innerHeight - rect.height - pad;
+      if (top < pad) top = pad;
+      menu.style.left = left + 'px'; menu.style.top = top + 'px';
+      const avail = window.innerHeight - top - pad;
+      if (rect.height > avail) { menu.style.maxHeight = avail + 'px'; menu.style.overflowY = 'auto'; }
+    }
+
     function openTop(name, btn) {
       closeMenu();
       const menus = appMenus(currentApp, primaryEl(currentApp));
@@ -487,6 +503,7 @@
       renderItems(items, menu, menu);
       document.body.appendChild(menu);
       const r = btn.getBoundingClientRect(); menu.style.left = r.left + 'px'; menu.style.top = r.bottom + 'px';
+      clampMenu(menu);
       openEl = menu; openName = name; btn.setAttribute('aria-expanded', 'true');
       menu.addEventListener('keydown', (e) => onMenuKeydown(menu, e));
       focusItem(menu, 0); // ARIA: move focus into the opened menu
