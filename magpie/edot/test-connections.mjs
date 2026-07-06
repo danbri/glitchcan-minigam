@@ -17,10 +17,10 @@ c.remove('work');
 ok('remove drops the account', c.get('work') === null && c.list().length === 0);
 
 // Multi-capability service accounts (the "future of MUCs" XMPP/MIX shape): one
-// account offering chat + people + calendar + storage, each a live adapter.
+// account offering chat + people + calendar, each a live adapter.
 const chatAdapter = { kind: 'chat' }, rosterAdapter = { kind: 'people' };
 const grp = c.add({ id: 'team', provider: 'xmpp', label: 'Team MIX', sources: { chat: chatAdapter, people: rosterAdapter } });
-ok('a groupware account offers many capabilities at once', grp.offers.includes('chat') && grp.offers.includes('people') && grp.offers.includes('calendar') && grp.offers.includes('storage'));
+ok('a groupware account offers many capabilities at once', grp.offers.includes('chat') && grp.offers.includes('people') && grp.offers.includes('calendar'));
 ok('capabilityFor returns the live adapter for a capability', c.capabilityFor('team', 'chat') === chatAdapter && c.capabilityFor('team', 'people') === rosterAdapter);
 ok('capabilityFor is null for a capability with no adapter wired', c.capabilityFor('team', 'calendar') === null);
 ok('withCapability finds the account under each capability', c.withCapability('chat')[0] === grp && c.withCapability('people')[0] === grp);

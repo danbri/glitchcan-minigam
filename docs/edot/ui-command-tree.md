@@ -91,7 +91,7 @@ edot
 │   │     ├── menus: View · Help + Actions
 │   │     ├── commands: groups.joinChannel · connect(server)
 │   │     ├── provides: groups.share
-│   │     └── registers: xmpp account → Connections (chat+people+calendar+storage)
+│   │     └── registers: xmpp account → Connections (chat+people+calendar, each live)
 │   │
 │   ├── 🗂 Files  (<edot-files>)
 │   │     ├── menus: View · Help

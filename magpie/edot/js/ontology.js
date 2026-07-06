@@ -88,11 +88,13 @@ export const PROVIDERS = {
   gmail: { label: 'Gmail', kind: 'platform', auth: 'oauth', offers: ['mail'], locality: 'remote' },
   graph: { label: 'Microsoft 365', kind: 'platform', auth: 'oauth', offers: ['mail', 'calendar', 'people'], locality: 'remote' },
   caldav: { label: 'CalDAV', kind: 'platform', auth: 'password', offers: ['calendar'], locality: 'remote' },
-  // XMPP/MIX is a groupware PLATFORM, not just chat: a MIX channel carries many
-  // pubsub nodes (messages, participants, info, and arbitrary data), so an account
-  // offers chat + people (roster/participants) + calendar (shared events) +
-  // storage (pubsub nodes / shared files). The "future of MUCs".
-  xmpp: { label: 'XMPP / MIX', kind: 'platform', auth: 'password', offers: ['chat', 'people', 'calendar', 'storage'], locality: 'remote' },
+  // XMPP/MIX is a groupware PLATFORM, not just chat: a MIX channel carries
+  // several pubsub nodes — messages (chat), participants (people) and shared
+  // events (calendar), each a LIVE adapter. The "future of MUCs". (We do NOT
+  // claim `storage`: a pubsub node is not a read/write filesystem — shared-file
+  // references could be a future capability, but over-claiming storage would be
+  // dishonest.)
+  xmpp: { label: 'XMPP / MIX', kind: 'platform', auth: 'password', offers: ['chat', 'people', 'calendar'], locality: 'remote' },
 };
 
 // Providers offering a given capability (e.g. all the places you could save a file).

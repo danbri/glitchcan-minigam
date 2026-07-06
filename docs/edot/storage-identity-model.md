@@ -91,10 +91,10 @@ differs is the mount, not the folder.
   - **Mail** (`setAdapter`) → a `mail:<account>` account (provider gmail/graph)
     whose `mail` capability is the live `MailAdapter`.
   - **Groups** (on connect/demo) → an `xmpp` account that is **groupware, not just
-    chat**: it offers `chat + people + calendar + storage` (a MIX channel's pubsub
-    nodes — "the future of MUCs"). Live `chat`/`people` adapters are wired;
-    `calendar`/`storage` are declared-but-unwired until their nodes exist
-    (`capabilityFor` returns `null`, honestly).
+    chat**: it offers `chat + people + calendar` — each a **live** adapter over a
+    MIX pubsub node (messages / participants / events — "the future of MUCs").
+    We deliberately do **not** claim `storage`: a pubsub node is not a read/write
+    filesystem, so over-claiming it would be dishonest.
   - **Calendar** (on init) → a local `local-calendar` account (OS-tier `calendar`
     capability) exposing the live calendar/events adapter.
   An account now **offers a capability if the provider declares it OR a live
