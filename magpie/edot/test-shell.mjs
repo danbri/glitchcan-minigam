@@ -37,18 +37,24 @@ try {
   await page.waitForSelector('.view[data-app="editor"] edot-editor .page');
   await page.waitForFunction(() => [...document.querySelectorAll('.menubar > button')].some((b) => b.textContent === 'Insert'));
   const editorTops = await page.$$eval('.menubar > button', (e) => e.map((b) => b.textContent));
-  ok('Editor shows File / Edit / Insert / View / Help', ['File', 'Edit', 'Insert', 'View', 'Help'].every((t) => editorTops.includes(t)));
+  ok('Editor shows File / Edit / Insert / Format / View / Help', ['File', 'Edit', 'Insert', 'Format', 'View', 'Help'].every((t) => editorTops.includes(t)));
 
-  // A menu action runs (View → Heading 1 applies <h1> to the selection).
+  // A menu action runs (Format → Heading 1 applies <h1> to the selection).
   await page.evaluate(() => {
     const ed = document.querySelector('.view[data-app="editor"] edot-editor');
     ed.setContent('<p>hello</p>');
     const el = ed.querySelector('.page'); const r = document.createRange(); r.selectNodeContents(el);
     const s = getSelection(); s.removeAllRanges(); s.addRange(r); el.focus();
   });
-  await page.click('.menubar > button[data-top="View"]'); await page.waitForTimeout(120);
+  await page.click('.menubar > button[data-top="Format"]'); await page.waitForTimeout(120);
   await page.click('.menu .mi:has-text("Heading 1")'); await page.waitForTimeout(150);
-  ok('Editor menu action works (View → Heading 1)', /<h1/i.test(await page.evaluate(() => document.querySelector('.view[data-app="editor"] edot-editor').getContent())));
+  ok('Editor menu action works (Format → Heading 1)', /<h1/i.test(await page.evaluate(() => document.querySelector('.view[data-app="editor"] edot-editor').getContent())));
+  // Format menu carries the full formatting surface (parity with the toolbar).
+  await page.click('.menubar > button[data-top="Format"]'); await page.waitForTimeout(120);
+  const fmtItems = await page.$$eval('.menu .mi .lbl', (e) => e.map((x) => x.textContent));
+  ok('Format menu has strikethrough / justify / indent (toolbar parity)',
+    ['Strikethrough', 'Justify', 'Increase indent', 'Decrease indent'].every((t) => fmtItems.includes(t)));
+  await page.keyboard.press('Escape');
 
   // Data app: MS-Access-style data views in the View menu, and an action works.
   await page.click('.rail button[data-nav="data"]');

@@ -25,7 +25,7 @@
 import { Editor } from './editor.js';
 import { Toolbar } from './toolbar.js';
 import { Announcer } from './a11y.js';
-import { COMMANDS, setBlockFormat, currentBlockFormat, setAlign, currentAlign, createLink as cmdCreateLink } from './commands.js';
+import { COMMANDS, setBlockFormat, currentBlockFormat, setAlign, currentAlign, createLink as cmdCreateLink, createSemantic as cmdCreateSemantic } from './commands.js';
 import { getKernel } from './edot-kernel.js';
 import { getRegistry } from './command-registry.js';
 import { prepareImage } from './image-util.js';
@@ -50,16 +50,25 @@ function registerEditorCommands() {
       { id: 'editor.bold', title: 'Bold', icon: 'B', group: '1format', keywords: 'bold strong', appliesTo: 'Document', where: ['palette'], when: inEditor, run: exec('bold') },
       { id: 'editor.italic', title: 'Italic', icon: 'I', group: '1format', keywords: 'italic emphasis', appliesTo: 'Document', when: inEditor, run: exec('italic') },
       { id: 'editor.underline', title: 'Underline', group: '1format', keywords: 'underline', appliesTo: 'Document', when: inEditor, run: exec('underline') },
+      { id: 'editor.strike', title: 'Strikethrough', group: '1format', keywords: 'strike strikethrough cross out', appliesTo: 'Document', when: inEditor, run: exec('strike') },
+      { id: 'editor.clearFormat', title: 'Clear formatting', group: '1format', keywords: 'clear remove formatting plain', appliesTo: 'Document', when: inEditor, run: exec('removeFormat') },
       { id: 'editor.h1', title: 'Heading 1', group: '2block', keywords: 'heading title h1', appliesTo: 'Document', when: inEditor, run: () => active.setBlock('h1') },
       { id: 'editor.h2', title: 'Heading 2', group: '2block', keywords: 'heading subtitle h2', appliesTo: 'Document', when: inEditor, run: () => active.setBlock('h2') },
+      { id: 'editor.h3', title: 'Heading 3', group: '2block', keywords: 'heading h3', appliesTo: 'Document', when: inEditor, run: () => active.setBlock('h3') },
       { id: 'editor.body', title: 'Body text', group: '2block', keywords: 'body paragraph normal', appliesTo: 'Document', when: inEditor, run: () => active.setBlock('p') },
       { id: 'editor.bulletList', title: 'Bulleted list', group: '2block', keywords: 'bullet list unordered', appliesTo: 'Document', when: inEditor, run: exec('bulletList') },
       { id: 'editor.numberList', title: 'Numbered list', group: '2block', keywords: 'number list ordered', appliesTo: 'Document', when: inEditor, run: exec('numberList') },
+      { id: 'editor.blockquote', title: 'Block quote', icon: '❝', group: '2block', keywords: 'quote blockquote', appliesTo: 'Document', when: inEditor, run: exec('blockquote') },
+      { id: 'editor.code', title: 'Code block', group: '2block', keywords: 'code monospace pre preformatted', appliesTo: 'Document', when: inEditor, run: exec('code') },
+      { id: 'editor.indent', title: 'Increase indent', group: '2block', keywords: 'indent increase', appliesTo: 'Document', when: inEditor, run: exec('indent') },
+      { id: 'editor.outdent', title: 'Decrease indent', group: '2block', keywords: 'outdent unindent decrease', appliesTo: 'Document', when: inEditor, run: exec('outdent') },
       { id: 'editor.alignLeft', title: 'Align left', group: '3align', keywords: 'align left', appliesTo: 'Document', when: inEditor, run: () => active.align('left') },
       { id: 'editor.alignCenter', title: 'Align centre', group: '3align', keywords: 'align centre center', appliesTo: 'Document', when: inEditor, run: () => active.align('center') },
       { id: 'editor.alignRight', title: 'Align right', group: '3align', keywords: 'align right', appliesTo: 'Document', when: inEditor, run: () => active.align('right') },
+      { id: 'editor.alignJustify', title: 'Justify', group: '3align', keywords: 'align justify justified', appliesTo: 'Document', when: inEditor, run: () => active.align('justify') },
       { id: 'editor.insertImage', title: 'Insert image', icon: '🖼', group: '4insert', keywords: 'image picture photo svg', appliesTo: 'Document', when: inEditor, run: () => active.pickImage() },
       { id: 'editor.insertLink', title: 'Insert link', icon: '🔗', group: '4insert', keywords: 'link hyperlink url', appliesTo: 'Document', when: inEditor, run: () => active.createLink() },
+      { id: 'editor.tagSemantic', title: 'Tag semantic property (RDFa)…', icon: '🏷️', group: '4insert', keywords: 'semantic rdfa property tag meaning', appliesTo: 'Document', when: inEditor, run: () => active.tagSemantic() },
       { id: 'editor.undo', title: 'Undo', group: '5history', keywords: 'undo', appliesTo: 'Document', when: inEditor, run: exec('undo') },
       { id: 'editor.redo', title: 'Redo', group: '5history', keywords: 'redo', appliesTo: 'Document', when: inEditor, run: exec('redo') },
     ]);
@@ -230,6 +239,7 @@ export class EdotEditor extends HTMLElement {
   setBlock(tag) { this.editor.focus(); setBlockFormat(tag); this.editor.onChange(); this.toolbar?.refresh(); }
   align(value) { this.editor.focus(); setAlign(value); this.editor.onChange(); this.toolbar?.refresh(); }
   createLink() { this.editor.focus(); cmdCreateLink(this._announce); this.editor.onChange(); }
+  tagSemantic() { this.editor.focus(); cmdCreateSemantic(this._announce); this.editor.onChange(); this.toolbar?.refresh(); }
   currentBlock() { return currentBlockFormat(); }
   currentAlign() { return currentAlign(); }
 

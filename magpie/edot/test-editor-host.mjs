@@ -154,6 +154,27 @@ try {
     return host.titleEl.value === 'Untitled document' && /<p>(<br>)?<\/p>/.test(host.el.getContent());
   }));
 
+  // 7) Command-registry parity: the toolbar's full formatting surface is now
+  //    discoverable as editor.* commands (⌘K palette + Actions), and they run.
+  const parity = await page.evaluate(async () => {
+    const { getRegistry } = await import('./js/command-registry.js');
+    const ids = getRegistry().contributions({ app: 'editor' }).map((c) => c.id);
+    const want = ['editor.strike', 'editor.clearFormat', 'editor.h3', 'editor.blockquote',
+      'editor.code', 'editor.indent', 'editor.outdent', 'editor.alignJustify', 'editor.tagSemantic'];
+    return { present: want.every((id) => ids.includes(id)), count: ids.length };
+  });
+  ok('formatting commands (strike/indent/justify/quote/code/…) are in the registry', parity.present);
+  const ran = await page.evaluate(async () => {
+    const { getRegistry } = await import('./js/command-registry.js');
+    const host = document.querySelector('.view[data-app="editor"]')._host;
+    host.el.setContent('<p>parity</p>');
+    const el = host.el.querySelector('.page'); const r = document.createRange(); r.selectNodeContents(el);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r); el.focus();
+    getRegistry().run('editor.strike', { app: 'editor' });
+    return host.el.getContent();
+  });
+  ok('running editor.strike via the registry strikes the selection', /<(s|strike|del)\b|text-decoration/i.test(ran));
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs.slice(0, 4));
 } finally {

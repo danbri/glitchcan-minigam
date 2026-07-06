@@ -32,15 +32,21 @@ edot
 │   │
 │   ├── ✍️ Editor  (<edot-editor> + EditorHost)
 │   │     ├── Title bar (document title)  ·  Formatting toolbar (WAI-ARIA)
-│   │     ├── menus
+│   │     │     └── toolbar groups: Bold/Italic/Underline/Strikethrough ·
+│   │     │         Align L/C/R/Justify · Bullet/Number/Outdent/Indent ·
+│   │     │         Quote/Code/Link/Image/RDFa · Undo/Redo/Clear · block-format ▾
+│   │     ├── menus  (toolbar-parity)
 │   │     │     ├── File: New document · Open… · My documents… · Save to… ·
 │   │     │     │         View source… · Export ▸(docx/pdf/html/md/css/txt) · Close
-│   │     │     ├── Edit: Undo · Redo · Bold · Italic · Underline · Clear · Find & replace…
-│   │     │     ├── Insert: Link · Bulleted/Numbered list · Block quote · Code block
-│   │     │     └── View: Body/H1/H2 · Align L/C/R · Open app
-│   │     ├── commands: editor.bold/italic/underline · h1/h2/body ·
-│   │     │             bulletList/numberList · alignLeft/Center/Right ·
-│   │     │             insertImage/insertLink · undo/redo
+│   │     │     ├── Edit: Undo · Redo · Find & replace… · Clear formatting
+│   │     │     ├── Insert: Link · Image · RDFa tag · Bullet/Number list · Quote · Code
+│   │     │     ├── Format: Bold/Italic/Underline/Strikethrough · Body/H1/H2/H3 ·
+│   │     │     │           Align L/C/R/Justify · Increase/Decrease indent
+│   │     │     └── View: Open app
+│   │     ├── commands (all in ⌘K + Actions): editor.bold/italic/underline/strike/
+│   │     │             clearFormat · h1/h2/h3/body · bulletList/numberList/blockquote/
+│   │     │             code/indent/outdent · alignLeft/Center/Right/Justify ·
+│   │     │             insertImage/insertLink/tagSemantic · undo/redo
 │   │     ├── host dialogs: My documents (library+autosave) · Open(Examples/
 │   │     │             Research/file/URL) · View source · Save to…(storage) · GitHub PR
 │   │     ├── provides: editor.addData

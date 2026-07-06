@@ -292,7 +292,7 @@
     }
 
     // ===================== MENU BAR (File / Edit / View / …) ==================
-    const TOP_ORDER = ['File', 'Edit', 'Insert', 'View', 'Actions', 'Help'];
+    const TOP_ORDER = ['File', 'Edit', 'Insert', 'Format', 'View', 'Actions', 'Help'];
     const menubar = document.getElementById('menubar');
     let openName = null, openEl = null;
 
@@ -331,30 +331,40 @@
             { label: 'Undo', accel: 'Ctrl+Z', action: () => el.exec('undo') },
             { label: 'Redo', accel: 'Ctrl+Y', action: () => el.exec('redo') },
             { sep: true },
-            { label: 'Bold', accel: 'Ctrl+B', action: () => el.exec('bold') },
-            { label: 'Italic', accel: 'Ctrl+I', action: () => el.exec('italic') },
-            { label: 'Underline', accel: 'Ctrl+U', action: () => el.exec('underline') },
-            { label: 'Clear formatting', action: () => el.exec('removeFormat') },
-            { sep: true },
             { label: 'Find & replace…', accel: 'Ctrl+F', action: () => editorFind(el) },
+            { sep: true },
+            { label: 'Clear formatting', action: () => el.exec('removeFormat') },
           ],
           Insert: [
             { label: 'Link…', action: () => el.createLink() },
+            { label: 'Image…', action: () => el.pickImage() },
+            { label: 'Tag semantic property (RDFa)…', action: () => el.tagSemantic() },
+            { sep: true },
             { label: 'Bulleted list', action: () => el.exec('bulletList') },
             { label: 'Numbered list', action: () => el.exec('numberList') },
             { label: 'Block quote', action: () => el.exec('blockquote') },
             { label: 'Code block', action: () => el.exec('code') },
           ],
-          View: [
+          Format: [
+            { label: 'Bold', accel: 'Ctrl+B', action: () => el.exec('bold') },
+            { label: 'Italic', accel: 'Ctrl+I', action: () => el.exec('italic') },
+            { label: 'Underline', accel: 'Ctrl+U', action: () => el.exec('underline') },
+            { label: 'Strikethrough', action: () => el.exec('strike') },
+            { sep: true },
             { label: 'Body text', action: () => el.setBlock('p') },
             { label: 'Heading 1', action: () => el.setBlock('h1') },
             { label: 'Heading 2', action: () => el.setBlock('h2') },
+            { label: 'Heading 3', action: () => el.setBlock('h3') },
             { sep: true },
             { label: 'Align left', action: () => el.align('left') },
             { label: 'Align centre', action: () => el.align('center') },
             { label: 'Align right', action: () => el.align('right') },
-            { sep: true }, sw(id),
+            { label: 'Justify', action: () => el.align('justify') },
+            { sep: true },
+            { label: 'Increase indent', action: () => el.exec('indent') },
+            { label: 'Decrease indent', action: () => el.exec('outdent') },
           ],
+          View: [sw(id)],
           Help: help,
         };
       }
