@@ -99,6 +99,18 @@
     .cmdk-item.active, .cmdk-item:hover { background: var(--sel, #ece6da); }
     .cmdk-ic { width: 1.4rem; text-align: center; opacity: 0.8; }
     .cmdk-empty { padding: 0.8rem; color: var(--muted, #888); }
+    /* First-run onboarding overlay. */
+    .onb { position: fixed; inset: 0; z-index: 1200; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .onb[hidden] { display: none; }
+    .onb-card { width: min(94vw, 30rem); max-height: 90vh; overflow: auto; background: var(--bg, #fff); color: var(--ink, #1c1c1c); border: 1px solid var(--line, #ddd); border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,0.4); padding: 1.3rem 1.4rem; }
+    .onb-card h2 { margin: 0 0 0.3rem; font-size: 1.25rem; }
+    .onb-sub { margin: 0 0 0.9rem; color: var(--muted, #666); }
+    .onb-list { list-style: none; margin: 0 0 1rem; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+    .onb-list li { display: flex; gap: 0.6rem; align-items: flex-start; }
+    .onb-ic { flex: 0 0 auto; font-size: 1.1rem; width: 1.6rem; text-align: center; }
+    .onb-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+    .onb-btn { font: inherit; padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--line, #ccc); background: var(--surface, #fff); color: inherit; cursor: pointer; }
+    .onb-btn--primary { background: var(--accent, #2962ff); color: var(--accent-fg, #fff); border-color: transparent; font-weight: 600; }
     /* Find & replace bar — the FindReplace subsystem appends .find-bar to <body>,
        so it is shell chrome here (its styles live in edot.css, which the standalone
        page loads but the suite doesn't). Keep it styled + on-screen in both. */
@@ -330,6 +342,7 @@
     function editorFind(el) { el._find = el._find || new FindReplace(el.core, el.announce); el._find.open(); }
     const sw = (appId) => ({ label: 'Open app', submenu: APPS.map((a) => ({ label: a.label, checked: a.id === appId, action: () => go(a.id) })) });
     const help = [
+      { label: 'Take the tour', action: () => showOnboarding() },
       { label: 'About edot', action: () => alert('edot — a browser office suite, composable over one kernel. All client-side, no backend.') },
       { label: 'Source on GitHub', action: () => window.open('https://github.com/danbri/glitchcan-minigam/tree/master/magpie/edot', '_blank', 'noopener') },
     ];
@@ -623,6 +636,40 @@
     window.__cmdk = { open: openCmdk, registry }; // headless-test hook
     // Visible palette entry point — essential on touch (no ⌘K keyboard there).
     document.getElementById('cmdk-btn').addEventListener('click', () => cmdk.hidden ? openCmdk() : closeCmdk());
+
+    // ---- First-run onboarding (shown once; re-openable via Help ▸ Take the tour) ----
+    const ONB_KEY = 'edot.onboarded';
+    let onb = null;
+    function showOnboarding() {
+      if (onb) { onb.hidden = false; onb.querySelector('.onb-btn--primary').focus(); return; }
+      onb = document.createElement('div'); onb.className = 'onb'; onb.setAttribute('role', 'dialog'); onb.setAttribute('aria-modal', 'true'); onb.setAttribute('aria-label', 'Welcome to edot');
+      onb.innerHTML = `
+        <div class="onb-card">
+          <h2>Welcome to edot</h2>
+          <p class="onb-sub">A private, offline office suite — everything runs in your browser.</p>
+          <ul class="onb-list">
+            <li><span class="onb-ic" aria-hidden="true">🧩</span><span><strong>${APPS.length} apps, one place.</strong> Switch with the rail (icons on the ${matchMedia('(max-width: 700px)').matches ? 'bottom' : 'left'}): docs, data, slides, calendar, mail, maps, groups & more.</span></li>
+            <li><span class="onb-ic" aria-hidden="true">🔍</span><span><strong>Find anything fast.</strong> Press <kbd>⌘/Ctrl-K</kbd> or tap 🔍 to search every command.</span></li>
+            <li><span class="onb-ic" aria-hidden="true">🗄</span><span><strong>Save anywhere.</strong> Your device, a GitHub repo, or a WebDAV cloud — all through one “Save to…”.</span></li>
+            <li><span class="onb-ic" aria-hidden="true">🔒</span><span><strong>Yours, private.</strong> No server, no upload — your data never leaves your device unless you connect one.</span></li>
+          </ul>
+          <div class="onb-actions">
+            <button type="button" class="onb-btn" data-onb="later">Skip</button>
+            <button type="button" class="onb-btn onb-btn--primary" data-onb="start">Get started</button>
+          </div>
+        </div>`;
+      document.body.appendChild(onb);
+      const done = () => { onb.hidden = true; try { localStorage.setItem(ONB_KEY, '1'); } catch (_) {} };
+      onb.querySelector('[data-onb="start"]').addEventListener('click', done);
+      onb.querySelector('[data-onb="later"]').addEventListener('click', done);
+      onb.addEventListener('click', (e) => { if (e.target === onb) done(); });
+      onb.addEventListener('keydown', (e) => { if (e.key === 'Escape') done(); });
+      onb.querySelector('.onb-btn--primary').focus();
+    }
+    window.__onboard = showOnboarding; // headless-test hook
+    // Auto-show on a real first run only. Automation (navigator.webdriver) never
+    // sees it, so the headless UI suites aren't blocked by a modal overlay.
+    try { if (!navigator.webdriver && !localStorage.getItem(ONB_KEY)) showOnboarding(); } catch (_) {}
 
     // Apps register commands asynchronously on mount; refresh the menubar (so the
     // Actions menu appears) when new commands arrive. Debounced to coalesce bursts.

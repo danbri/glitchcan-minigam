@@ -50,6 +50,15 @@ try {
   await page.click('.menu .mi:has-text("Heading 1")'); await page.waitForTimeout(150);
   ok('Editor menu action works (Format → Heading 1)', /<h1/i.test(await page.evaluate(() => document.querySelector('.view[data-app="editor"] edot-editor').getContent())));
 
+  // Onboarding: does NOT auto-block automation, is re-openable via Help ▸ Take
+  // the tour, and dismissing it sets the "onboarded" flag.
+  ok('onboarding does not auto-block automation (no overlay on load)', await page.evaluate(() => { const o = document.querySelector('.onb'); return !o || o.hidden; }));
+  await page.evaluate(() => window.__onboard());
+  await page.waitForSelector('.onb:not([hidden]) .onb-card', { timeout: 3000 });
+  ok('the tour overlay opens (welcome + get-started)', await page.evaluate(() => /Welcome to edot/.test(document.querySelector('.onb-card')?.textContent || '') && !!document.querySelector('.onb [data-onb="start"]')));
+  await page.click('.onb [data-onb="start"]'); await page.waitForTimeout(80);
+  ok('dismissing the tour hides it and records onboarded', await page.evaluate(() => { const o = document.querySelector('.onb'); return o.hidden && localStorage.getItem('edot.onboarded') === '1'; }));
+
   // Ctrl+F opens the editor's Find & replace (not browser find), and the bar is
   // styled shell chrome (fixed-positioned), not an unstyled body dump.
   await page.keyboard.press('Control+f'); await page.waitForTimeout(150);
