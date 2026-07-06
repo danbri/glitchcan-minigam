@@ -128,6 +128,12 @@ try {
     return { loginVisible: login.right <= window.innerWidth + 1 && login.left >= 0, btns: mb.querySelectorAll('button').length };
   });
   ok('mobile: login stays fully visible + all menus present (top bar not clipped)', bar.loginVisible && bar.btns === 6);
+
+  // Mobile: the command palette has a visible touch entry point (no ⌘K on touch).
+  await mob.click('#cmdk-btn'); await mob.waitForTimeout(150);
+  ok('mobile: the 🔍 button opens the command palette (touch-reachable commands)',
+    await mob.evaluate(() => { const c = document.querySelector('.cmdk'); return !!c && !c.hidden && !!document.querySelector('.cmdk-input'); }));
+  await mob.keyboard.press('Escape');
   await mob.close();
 
   ok('no page errors', errs.length === 0);
