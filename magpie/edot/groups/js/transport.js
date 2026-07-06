@@ -48,6 +48,18 @@ export class LoopbackTransport {
       this._announceParticipants(channel);
       return;
     }
+    // A pubsub PUBLISH to a MIX node (shared calendar event / file). Reflect it
+    // back to subscribers as a pubsub #event items stanza, as a real MIX service
+    // would broadcast the new item to the channel.
+    const publish = el.querySelector('publish');
+    if (publish) {
+      const channel = el.getAttribute('to');
+      const node = publish.getAttribute('node');
+      const item = publish.querySelector('item');
+      const itemXml = item ? new XMLSerializer().serializeToString(item) : '';
+      this._later(() => this._emit(`<message from='${channel}' type='groupchat'><event xmlns='${NS.PUBSUB_EVENT}'><items node='${node}'>${itemXml}</items></event></message>`));
+      return;
+    }
     if (el.nodeName === 'message' && el.getAttribute('type') === 'groupchat') {
       const channel = el.getAttribute('to');
       const body = el.querySelector('body')?.textContent || '';

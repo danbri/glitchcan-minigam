@@ -7,7 +7,7 @@ import { getKernel } from '../../js/edot-kernel.js';
 import { getRegistry } from '../../js/command-registry.js';
 import { getConnections } from '../../js/connections.js';
 import { LoopbackTransport, WebSocketTransport } from './transport.js';
-import { joinChannel, leaveChannel, groupMessage, NS } from './xmpp-stanzas.js';
+import { joinChannel, leaveChannel, groupMessage, publishItem, NS } from './xmpp-stanzas.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -56,10 +56,21 @@ class EdotGroups extends HTMLElement {
 
   // ---- protocol ----
   joinChannel(channel, nick) {
-    if (!this.channels.has(channel)) this.channels.set(channel, { name: shortJid(channel), messages: [], participants: new Set() });
-    this.transport.send(joinChannel({ id: mkId(), channel, nick: nick || shortJid(this.jid) }));
+    if (!this.channels.has(channel)) this.channels.set(channel, { name: shortJid(channel), messages: [], participants: new Set(), events: [] });
+    // Subscribe to the groupware nodes too: messages + participants (chat/people)
+    // AND the shared events node (calendar) — a MIX channel is more than chat.
+    this.transport.send(joinChannel({ id: mkId(), channel, nick: nick || shortJid(this.jid), nodes: [NS.NODE_MESSAGES, NS.NODE_PARTICIPANTS, NS.NODE_EVENTS] }));
     this._renderChannels();
   }
+  // Publish a shared calendar event onto the channel's MIX events node. Every
+  // subscriber (incl. us) receives it back as a pubsub #event — real groupware.
+  publishEvent(evt, channel = this.active) {
+    if (!channel) return false;
+    const payloadXml = `<event xmlns='urn:edot:mix:event'>${esc(JSON.stringify(evt))}</event>`;
+    this.transport.send(publishItem({ id: mkId(), channel, node: NS.NODE_EVENTS, itemId: evt.id || mkId(), payloadXml }));
+    return true;
+  }
+  eventsFor(channel = this.active) { const ch = this.channels.get(channel); return ch ? ch.events.slice() : []; }
   leaveChannel(channel) {
     this.transport.send(leaveChannel({ id: mkId(), channel }));
     this.channels.delete(channel);
@@ -81,10 +92,10 @@ class EdotGroups extends HTMLElement {
 
   // Register this XMPP/MIX connection as an Account in Connections. A MIX channel
   // is groupware, not just chat: its pubsub nodes carry messages (chat),
-  // participants (people), shared events (calendar) and arbitrary data
-  // (storage) — "the future of MUCs". We surface live adapters for the nodes we
-  // actually serve (chat + people); calendar/storage stay declared-but-unwired
-  // until their nodes are implemented (capabilityFor returns null, honestly).
+  // participants (people) and shared events (calendar) — "the future of MUCs".
+  // We surface LIVE adapters for the nodes we serve: chat + people + calendar
+  // (the events node). Storage (a shared-files node) stays declared-but-unwired
+  // for now (capabilityFor('storage') returns null, honestly).
   _registerConnection({ label, locality } = {}) {
     try {
       const chat = {
@@ -98,10 +109,16 @@ class EdotGroups extends HTMLElement {
         kind: 'people',
         participants: (channel) => { const ch = this.channels.get(channel || this.active); return ch ? [...ch.participants] : []; },
       };
+      // Live calendar over the MIX events pubsub node: publish + read shared events.
+      const calendar = {
+        kind: 'calendar',
+        publishEvent: (evt, channel) => this.publishEvent(evt, channel),
+        events: (channel) => this.eventsFor(channel),
+      };
       getConnections().add({
         id: 'groups:' + shortJid(this.jid), provider: 'xmpp',
         label: label || `MIX — ${shortJid(this.jid)}`,
-        identity: this.jid, sources: { chat, people },
+        identity: this.jid, sources: { chat, people, calendar },
       });
     } catch (_) { /* Connections optional */ }
   }
@@ -115,6 +132,16 @@ class EdotGroups extends HTMLElement {
       const ch = this.channels.get(channel); if (!ch) return;
       ch.participants = new Set([...items.querySelectorAll('participant > jid, jid')].map((n) => n.textContent));
       if (this.active === channel) this._renderParticipants();
+      return;
+    }
+    // shared calendar events (pubsub event on the MIX events node) — groupware.
+    const evItems = el.querySelector(`items[node='${NS.NODE_EVENTS}']`);
+    if (evItems) {
+      const channel = el.getAttribute('from');
+      const ch = this.channels.get(channel); if (!ch) return;
+      for (const ev of evItems.querySelectorAll('event')) {
+        try { const evt = JSON.parse(ev.textContent); if (!ch.events.some((e) => e.id && e.id === evt.id)) ch.events.push(evt); } catch (_) {}
+      }
       return;
     }
     if (el.nodeName === 'message' && el.getAttribute('type') === 'groupchat') {

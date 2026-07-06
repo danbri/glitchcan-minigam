@@ -2,7 +2,7 @@
 // the wire XML is spec-correct (namespaces, elements, escaping). This is the part
 // that MUST be right to talk to a real server, so it's tested independently of
 // the (unverifiable-here) live connection.
-import { joinChannel, leaveChannel, createChannel, groupMessage, requestParticipants, NS } from './js/xmpp-stanzas.js';
+import { joinChannel, leaveChannel, createChannel, groupMessage, requestParticipants, publishItem, NS } from './js/xmpp-stanzas.js';
 
 let fail = 0;
 const ok = (n, c) => { console.log(`${c ? '✅' : '❌'} ${n}`); if (!c) fail++; };
@@ -28,6 +28,11 @@ ok('message carries an optional structured payload', /<edot-share xmlns='urn:edo
 
 const parts = requestParticipants({ id: 'p1', channel: 'coven@mix.example' });
 ok('participant request is a pubsub items query on the participants node', /<pubsub xmlns='http:\/\/jabber.org\/protocol\/pubsub'><items node='urn:xmpp:mix:nodes:participants'\/>/.test(parts));
+
+// Publish a shared calendar event to the MIX events node (XEP-0060 publish).
+const pub = publishItem({ id: 'pub1', channel: 'coven@mix.example', node: NS.NODE_EVENTS, itemId: 'ev-1', payloadXml: "<event xmlns='urn:edot:mix:event'>{}</event>" });
+ok('publishItem is a pubsub publish IQ to the channel', /type='set'/.test(pub) && /to='coven@mix.example'/.test(pub));
+ok('publishItem targets the events node with an item id + payload', /<publish node='urn:edot:mix:nodes:events'><item id='ev-1'><event xmlns='urn:edot:mix:event'>\{\}<\/event><\/item>/.test(pub));
 
 console.log(fail ? `\n${fail} STANZA FAILURE(S)` : '\nXMPP-STANZAS OK');
 process.exit(fail ? 1 : 0);

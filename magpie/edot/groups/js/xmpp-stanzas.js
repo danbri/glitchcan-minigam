@@ -17,6 +17,12 @@ export const NS = {
   NODE_MESSAGES: 'urn:xmpp:mix:nodes:messages',
   NODE_PARTICIPANTS: 'urn:xmpp:mix:nodes:participants',
   NODE_INFO: 'urn:xmpp:mix:nodes:info',
+  // edot MIX groupware nodes — a channel is more than chat: shared calendar
+  // events and shared files ride their own pubsub nodes ("the future of MUCs").
+  NODE_EVENTS: 'urn:edot:mix:nodes:events',
+  NODE_FILES: 'urn:edot:mix:nodes:files',
+  PUBSUB: 'http://jabber.org/protocol/pubsub',
+  PUBSUB_EVENT: 'http://jabber.org/protocol/pubsub#event',
   CLIENT: 'jabber:client',
 };
 
@@ -55,6 +61,15 @@ export function createChannel({ id, service, channel }) {
 export function groupMessage({ id, channel, body, from, payloadXml = '' }) {
   return `<message${attr('to', channel)}${attr('from', from)} type='groupchat'${attr('id', id)} xmlns='${NS.CLIENT}'>`
     + `<body>${xmlEscape(body)}</body>${payloadXml}</message>`;
+}
+
+// Publish an item to a MIX pubsub node (XEP-0060 publish) — e.g. a shared
+// calendar event on the events node, or a shared file reference on the files
+// node. `payloadXml` is the item's child element.
+export function publishItem({ id, channel, node, itemId, payloadXml = '' }) {
+  return `<iq type='set'${attr('to', channel)}${attr('id', id)} xmlns='${NS.CLIENT}'>`
+    + `<pubsub xmlns='${NS.PUBSUB}'><publish node='${xmlEscape(node)}'>`
+    + `<item${attr('id', itemId)}>${payloadXml}</item></publish></pubsub></iq>`;
 }
 
 // Request the participant list (a pubsub items request on the participants node).

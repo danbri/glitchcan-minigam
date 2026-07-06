@@ -80,6 +80,22 @@ try {
   ok('its live chat adapter exposes the joined channels', conn.chatChannels >= 2);
   ok('it appears under both the chat and calendar capabilities', conn.inChatList && conn.inCalendarList);
 
+  // MIX calendar is a LIVE node now: publishing a shared event round-trips over
+  // the events pubsub node and surfaces via the account's calendar adapter.
+  const cal = await page.evaluate(async () => {
+    const { getKernel } = await import('../js/edot-kernel.js');
+    const k = getKernel();
+    const xmpp = k.capabilities.invoke('connections.list', {}).find((a) => a.provider === 'xmpp');
+    const calAdapter = k.capabilities.invoke('connections.capability', { id: xmpp.id, capability: 'calendar' });
+    const live = !!(calAdapter && typeof calAdapter.publishEvent === 'function');
+    if (live) calAdapter.publishEvent({ id: 'ev-test', title: 'Standup', start: '2026-07-10T09:00' });
+    await new Promise((r) => setTimeout(r, 250)); // loopback reflects the pubsub #event
+    const events = live ? calAdapter.events() : [];
+    return { live, count: events.length, has: events.some((e) => e.id === 'ev-test' && e.title === 'Standup') };
+  });
+  ok('the MIX calendar capability is a LIVE adapter (not null)', cal.live);
+  ok('publishing a shared event round-trips over the MIX events node', cal.has);
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
 } finally {
