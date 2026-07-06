@@ -52,7 +52,7 @@ class EdotFiles extends HTMLElement {
     if (kernel) {
       try {
         const listed = kernel.capabilities.invoke('connections.list', { capability: 'storage' });
-        if (Array.isArray(listed)) this.mounts = listed.map((a) => ({ id: a.id, label: a.label || a.id }));
+        if (Array.isArray(listed)) this.mounts = listed.map((a) => ({ id: a.id, label: a.label || a.id, provider: a.provider }));
       } catch (_) { /* connections optional */ }
     }
     // Resolve the device mount via the kernel; fall back to a fresh OPFS source.
@@ -60,7 +60,7 @@ class EdotFiles extends HTMLElement {
     if (kernel) { try { mount = kernel.capabilities.invoke('storage.source', { id: 'device' }); } catch (_) {} }
     if (!mount) { mount = new OpfsResourceSource({ id: 'device' }); }
     if (!this.mounts.some((m) => m.id === (mount.id || 'device'))) {
-      this.mounts.unshift({ id: mount.id || 'device', label: 'This device' });
+      this.mounts.unshift({ id: mount.id || 'device', label: 'This device', provider: mount.provider || 'opfs' });
     }
     this.mount = mount;
     this._renderMountPicker();
@@ -180,9 +180,10 @@ class EdotFiles extends HTMLElement {
     const sel = document.createElement('select');
     sel.className = 'fl-mount-select';
     sel.setAttribute('aria-label', 'Storage location');
+    const GLYPH = { opfs: '📦', 'local-fs': '💻', github: '🐙', s3: '🪣', webdav: '🗄', solid: '🪪' };
     for (const m of this.mounts) {
       const opt = document.createElement('option');
-      opt.value = m.id; opt.textContent = m.label;
+      opt.value = m.id; opt.textContent = `${GLYPH[m.provider] || '💾'} ${m.label}`;
       if (this.mount && m.id === (this.mount.id || 'device')) opt.selected = true;
       sel.appendChild(opt);
     }
