@@ -229,7 +229,7 @@ function bootGame(host, opts) {
 /* ============ TANKS FOR THE TREES — phosphor vector edition ============
    Real data: data/elevation-bristol.json(.gz)  EU-DEM 25m grid
               data/trees-bristol.json(.gz)      Bristol CC inventory
-   World units = metres. BNG -> world: x=E-358500, z=-(N-173500). EXAG 1.6x. */
+   World units = metres. BNG -> world: x=E-358500, z=-(N-173500). EXAG 2.4x (see const below). */
 
 const WORLD = 9000, E0 = 358500, N0 = 173500, EXAG = 2.4;
 const $ = id => host.querySelector('#' + id);

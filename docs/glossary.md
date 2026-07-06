@@ -5,7 +5,7 @@ A reference guide to key concepts in the FINK interactive fiction system.
 ## Core Concepts
 
 ### FINK
-**F**un **INK** - A JavaScript wrapper format for INK content that enables modular story distribution.
+**FOAFy INK** - A JavaScript wrapper format for INK content that enables modular, cross-site story distribution. (The authoritative expansion is "FOAFy Ink" per [`glitchcanary.md`](../glitchcanary.md); an earlier "Fun INK" gloss here was informal.)
 
 - **File format:** `.fink.js` files containing `oooOO` template literals
 - **Example:** [`inklet/bagend.fink.js`](../inklet/bagend.fink.js)
@@ -22,8 +22,7 @@ Story content here...
 ### INK
 The narrative scripting language created by Inkle Studios for interactive fiction.
 
-- **Runtime:** inkjs (JavaScript port) loaded via CDN
-- **CDN:** `https://cdn.jsdelivr.net/npm/inkjs@2.2.3/dist/ink-full.js`
+- **Runtime:** inkjs (JavaScript port), **vendored in-repo** at `third_party/ink/ink-full.js` and loaded locally by `inklet/finkapp/index.html` (NOT from a CDN — an earlier jsdelivr reference here was stale; some engine error strings still mention "jsdelivr" vestigially). Tooling pins `inkjs ^2.3.2` in `package.json`.
 - **Key objects:** `inkjs.Compiler`, `inkjs.Story`
 - **Documentation:** [`inklet/ink-language-details.md`](../inklet/ink-language-details.md)
 

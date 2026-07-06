@@ -132,7 +132,7 @@ Run individual files directly with `node tests/<file>.js`. As of the last run, t
 | test-interrupts.js | 19/19 ✓ |
 | test-io-e6x5.js | 51/52 (1 failing: 6-bit vs 7-bit tape input) |
 | test-os-e6x4.js | 38/38 ✓ |
-| test-lisp-smoke.mjs | 30/30 ✓ (banner, EOF, atom eval, cons-cell layout, keyword recognition, recursive READ/EVAL/PRINT, end-to-end QUOTE/CAR/CDR, plausibility limits) |
+| test-lisp-smoke.mjs | 43/43 ✓ (banner, EOF, atom eval, cons-cell layout, keyword recognition, recursive READ/EVAL/PRINT, end-to-end QUOTE/CAR/CDR/CONS/COND, plausibility limits) |
 
 The one io-e6x5 failure is a deliberate divergence: core uses 7-bit ASCII for tape input so the LISP reader can compare against ASCII codes directly. The test was written for the historically-correct 6-bit masking; reconciling these is a TODO.
 
@@ -165,8 +165,8 @@ See `tests/lisp-integrity-tests.md` for:
 ### LISP (4130 Assembly, in progress)
 - `lisp4130.asm` - In-progress LISP interpreter, JFL/JIR linkage
   - Recursive EVAL is *intended* to run on the 4130, not in JavaScript
-  - Currently: assembles cleanly, prints banner, reads atoms and lists (including nested lists), reverses list reader output, recognises QUOTE/CAR/CDR keywords, returns NIL for an unbound atom
-  - Not currently working: real EVAL/APPLY for list expressions (everything currently evaluates to NIL); symbol-name printing (see *Known LISP bugs* above)
+  - Currently working (verified 2026-07-06 via `node cli.mjs --repl`): assembles cleanly, prints banner, reads atoms/lists/nested lists, and **EVAL genuinely evaluates** `QUOTE`, `CAR`, `CDR`, `CONS`, `ATOM`, `EQ`, `NULL`, `COND`, and integer literals — e.g. `(CAR (QUOTE (A B C)))` → `A`, `(CONS (QUOTE A) (QUOTE (B C)))` → `(A B C)`, `(COND ((ATOM (QUOTE A)) (QUOTE Y)) (T ...))` → `Y`
+  - Not currently working: **LAMBDA/LABEL application** (infinite loop → max-steps), `(QUOTE n)` for numeric n, `;`-comment skipping in the reader, and multi-char user atom names (they truncate to the first letter; only built-in keywords are recognised). The earlier claim that "everything evaluates to NIL" was stale.
 - `cli.mjs` - CLI runner used by `tests/test-lisp-smoke.mjs`. Provides JS-side handlers for the `TR`/`CH` software-trap extracodes
 
 ### Pure LISP Tests
