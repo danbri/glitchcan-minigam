@@ -258,6 +258,97 @@ export class GitHubResourceSource {
   async verify() { await this._req('GET', `/repos/${this._owner}/${this._name}`); return true; }
 }
 
+// A REAL remote storage mount over WebDAV — the standards-native networked
+// filesystem (Nextcloud, ownCloud, Apache mod_dav, …). WebDAV is hierarchical,
+// so it maps straight onto ResourceSource: PROPFIND=list/stat, GET=read,
+// PUT=write, DELETE=remove, MKCOL=mkdir. Namespace-agnostic XML parsing (the
+// same regex approach as backup/js/stores/webdav.js — works without DOMParser,
+// so it's unit-testable in Node). Basic auth; `fetchImpl` injectable.
+// (CORS: a browser needs the server to allow the origin + PROPFIND/MKCOL — a
+// deployment concern; the protocol is fully implemented here.)
+function davResponses(xml) {
+  const out = [], re = /<(?:\w+:)?response[\s>]([\s\S]*?)<\/(?:\w+:)?response>/g;
+  const pick = (b, t) => { const m = new RegExp(`<(?:\\w+:)?${t}[^>]*>([\\s\\S]*?)<\\/(?:\\w+:)?${t}>`).exec(b); return m ? m[1].trim() : ''; };
+  let m;
+  while ((m = re.exec(xml))) {
+    const b = m[1], href = decodeURIComponent(pick(b, 'href'));
+    if (!href) continue;
+    out.push({
+      href,
+      isCollection: /<(?:\w+:)?resourcetype[^>]*>[\s\S]*?<(?:\w+:)?collection/.test(b),
+      size: Number(pick(b, 'getcontentlength')) || 0,
+      mtime: pick(b, 'getlastmodified') || null,
+    });
+  }
+  return out;
+}
+
+export class WebDavResourceSource {
+  constructor({ id, baseUrl, user, password, fetchImpl } = {}) {
+    if (!baseUrl) throw new Error('WebDAV: baseUrl is required');
+    this.provider = 'webdav'; this.capability = 'storage'; this.locality = 'remote'; this.account = null;
+    this._base = String(baseUrl).replace(/\/+$/, '');
+    this.id = id || 'webdav-' + this._base.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    this._basePath = (() => { try { return new URL(this._base + '/').pathname; } catch { return '/'; } })();
+    this._headers = {};
+    if (user != null) this._headers.Authorization = 'Basic ' + btoa(unescape(encodeURIComponent(`${user}:${password || ''}`)));
+    this._fetch = fetchImpl || ((...a) => fetch(...a));
+  }
+  _url(p, dir = false) { const segs = norm(p).split('/').filter(Boolean).map(encodeURIComponent); return this._base + '/' + segs.join('/') + (dir && segs.length ? '/' : ''); }
+  _relPath(href) { let hp; try { hp = new URL(href, this._base).pathname; } catch { hp = href; } const rel = hp.slice(this._basePath.length).replace(/\/+$/, ''); return rel; }
+
+  async read(path) {
+    const res = await this._fetch(this._url(path), { method: 'GET', headers: this._headers });
+    if (!res.ok) { const e = new Error(`WebDAV GET ${res.status}`); e.status = res.status; throw e; }
+    return new Uint8Array(await res.arrayBuffer());
+  }
+  async mkdir(path) {
+    // Create each missing ancestor collection (MKCOL is non-recursive).
+    const segs = norm(path).split('/').filter(Boolean); let cur = '';
+    for (const s of segs) {
+      cur += '/' + s;
+      const res = await this._fetch(this._url(cur, true), { method: 'MKCOL', headers: this._headers });
+      if (!res.ok && res.status !== 405 && res.status !== 301) { const e = new Error(`WebDAV MKCOL ${res.status}`); e.status = res.status; throw e; } // 405 = exists
+    }
+  }
+  async write(path, bytes) {
+    const parent = parentOf(path);
+    if (parent !== '/') await this.mkdir(parent);
+    const res = await this._fetch(this._url(path), { method: 'PUT', headers: { ...this._headers, 'Content-Type': 'application/octet-stream' }, body: bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes) });
+    if (!res.ok && res.status !== 201 && res.status !== 204) { const e = new Error(`WebDAV PUT ${res.status}`); e.status = res.status; throw e; }
+  }
+  async remove(path) {
+    const res = await this._fetch(this._url(path), { method: 'DELETE', headers: this._headers });
+    if (!res.ok && res.status !== 204 && res.status !== 404) { const e = new Error(`WebDAV DELETE ${res.status}`); e.status = res.status; throw e; }
+  }
+  async stat(path) {
+    const res = await this._fetch(this._url(path), { method: 'PROPFIND', headers: { ...this._headers, Depth: '0', 'Content-Type': 'application/xml' } });
+    if (res.status === 404) return null;
+    if (!res.ok && res.status !== 207) { const e = new Error(`WebDAV PROPFIND ${res.status}`); e.status = res.status; throw e; }
+    const r = davResponses(await res.text())[0]; if (!r) return null;
+    return r.isCollection
+      ? { name: baseName(path) || '/', path: norm(path), kind: 'folder', locality: 'remote' }
+      : { name: baseName(path), path: norm(path), kind: 'file', size: r.size, locality: 'remote' };
+  }
+  async list(dirPath, { offset = 0, limit = 100 } = {}) {
+    const res = await this._fetch(this._url(dirPath, true), { method: 'PROPFIND', headers: { ...this._headers, Depth: '1', 'Content-Type': 'application/xml' } });
+    if (res.status === 404) return [];
+    if (!res.ok && res.status !== 207) { const e = new Error(`WebDAV PROPFIND ${res.status}`); e.status = res.status; throw e; }
+    const selfRel = norm(dirPath).replace(/^\//, '');
+    const entries = [];
+    for (const r of davResponses(await res.text())) {
+      const rel = this._relPath(r.href);
+      if (rel === '' || rel === selfRel) continue;             // the collection itself
+      const name = rel.split('/').pop();
+      entries.push({ name, path: norm('/' + rel), kind: r.isCollection ? 'folder' : 'file', size: r.size, locality: 'remote' });
+    }
+    entries.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === 'folder' ? -1 : 1));
+    return entries.slice(offset, offset + limit);
+  }
+  // Reachability/auth probe for the Connections "Connect" flow.
+  async verify() { const res = await this._fetch(this._url('/', true), { method: 'PROPFIND', headers: { ...this._headers, Depth: '0' } }); if (!res.ok && res.status !== 207) { const e = new Error(`WebDAV ${res.status}`); e.status = res.status; throw e; } return true; }
+}
+
 // An Account binds an Identity to a Provider and surfaces the capabilities it
 // offers. capability('storage') returns a ResourceSource; other capabilities
 // (mail/calendar/chat/people/vcs) return the matching service adapter.

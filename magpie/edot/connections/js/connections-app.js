@@ -221,6 +221,16 @@ class EdotConnections extends HTMLElement {
         <p class="cx-detail-note">Token needs Repository → Contents = “Read and write” on this repo. Kept in memory for this session only.</p>`;
       actionHtml = `<button class="cx-connect" type="button" data-provider="github">Connect GitHub</button>
         <div class="cx-connect-err eh-error" role="alert" hidden></div>`;
+    } else if (providerId === 'webdav') {
+      customFields = `
+        <div class="cx-fields">
+          <label class="cx-field">Server URL (a WebDAV collection)<input class="cx-input" type="url" name="dav-url" placeholder="https://cloud.example.com/remote.php/dav/files/you/" autocomplete="off"></label>
+          <label class="cx-field">Username<input class="cx-input" type="text" name="dav-user" autocomplete="off"></label>
+          <label class="cx-field">Password / app-password<input class="cx-input" type="password" name="dav-pass" autocomplete="off"></label>
+        </div>
+        <p class="cx-detail-note">Works with Nextcloud, ownCloud, Apache mod_dav… The server must allow this origin (CORS) + PROPFIND/MKCOL. Credentials kept in memory for this session only.</p>`;
+      actionHtml = `<button class="cx-connect" type="button" data-provider="webdav">Connect WebDAV</button>
+        <div class="cx-connect-err eh-error" role="alert" hidden></div>`;
     } else {
       actionHtml = `
         <p class="cx-todo" role="note">⚠ Real ${esc(authLabel(p.auth))} for ${esc(p.label)} isn’t wired up yet — this is a known TODO.
@@ -239,7 +249,11 @@ class EdotConnections extends HTMLElement {
         ${actionHtml}
       </div>`;
     const connectBtn = detail.querySelector('.cx-connect:not([disabled])');
-    if (connectBtn) connectBtn.addEventListener('click', () => providerId === 'github' ? this._connectGithub() : this._connectLocal(providerId));
+    if (connectBtn) connectBtn.addEventListener('click', () => {
+      if (providerId === 'github') return this._connectGithub();
+      if (providerId === 'webdav') return this._connectWebdav();
+      return this._connectLocal(providerId);
+    });
   }
 
   // Only honest local connect: add another OPFS-backed device storage account.
@@ -285,6 +299,37 @@ class EdotConnections extends HTMLElement {
     if (e && e.status === 403) return 'Forbidden (403): the token needs Contents = Read and write on this repo.';
     if (e && e.status === 404) return 'Repository not found (404), or the token can’t access it.';
     if (e instanceof TypeError) return 'Network/CORS error reaching api.github.com.';
+    return (e && e.message) || 'Could not connect.';
+  }
+
+  // Real remote connect: a WebDAV collection (Nextcloud/ownCloud/mod_dav).
+  async _connectWebdav() {
+    const detail = this.querySelector('.cx-detail'); if (!detail) return;
+    const val = (n) => (detail.querySelector(`[name="${n}"]`)?.value || '').trim();
+    const baseUrl = val('dav-url'), user = val('dav-user'), password = detail.querySelector('[name="dav-pass"]')?.value || '';
+    const errEl = detail.querySelector('.cx-connect-err');
+    const btn = detail.querySelector('.cx-connect');
+    const showErr = (m) => { if (errEl) { errEl.textContent = m; errEl.hidden = false; } this._setStatus(m); };
+    if (errEl) errEl.hidden = true;
+    if (!baseUrl) return showErr('Enter your WebDAV server URL.');
+    try {
+      if (btn) btn.disabled = true;
+      this._setStatus('Connecting to WebDAV…');
+      const { WebDavResourceSource } = await import('../../js/resource-source.js');
+      const src = new WebDavResourceSource({ baseUrl, user: user || undefined, password });
+      await src.verify();   // live PROPFIND probe — throws on bad URL/credentials
+      const host = (() => { try { return new URL(baseUrl).host; } catch { return baseUrl; } })();
+      getConnections().add({ id: src.id, provider: 'webdav', label: `WebDAV · ${host}`, identity: user || host, sources: { storage: src } });
+      this._toggleAdd();
+      this._setStatus(`Connected WebDAV · ${host}.`);
+    } catch (e) { showErr(this._davMsg(e)); }
+    finally { if (btn) btn.disabled = false; }
+  }
+  _davMsg(e) {
+    if (e && e.status === 401) return 'Credentials rejected (401). Check username/password.';
+    if (e && e.status === 403) return 'Forbidden (403) on that collection.';
+    if (e && e.status === 404) return 'Collection not found (404). Check the server URL.';
+    if (e instanceof TypeError) return 'Network/CORS error — the server must allow this origin + PROPFIND.';
     return (e && e.message) || 'Could not connect.';
   }
 }

@@ -91,7 +91,16 @@ try {
   ok('GitHub detail shows it offers version control (vcs)', gh.offersVcs);
   ok('GitHub offers a real connect form (repo + token), connect enabled', gh.hasRepoField && gh.hasTokenField && gh.connectEnabled);
 
-  // 3b) A still-unwired remote (S3) keeps the honest TODO + disabled Connect.
+  // 3b) WebDAV is also wired for real: it shows a connect form (URL + user +
+  //     password), not a TODO.
+  await page.click('edot-connections .cx-prov-pick[data-provider="webdav"]');
+  await page.waitForSelector('edot-connections [name="dav-url"]');
+  ok('WebDAV offers a real connect form (URL + credentials), connect enabled', await page.evaluate(() => {
+    const card = document.querySelector('edot-connections .cx-detail-card');
+    return !!card.querySelector('[name="dav-url"]') && !!card.querySelector('[name="dav-pass"]') && !!card.querySelector('.cx-connect:not([disabled])');
+  }));
+
+  // 3c) A still-unwired remote (S3) keeps the honest TODO + disabled Connect.
   await page.click('edot-connections .cx-prov-pick[data-provider="s3"]');
   await page.waitForSelector('edot-connections .cx-detail-card .cx-todo');
   ok('an unwired remote (S3) shows an honest TODO + disabled Connect', await page.evaluate(() => {
