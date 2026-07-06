@@ -59,8 +59,11 @@ flowchart LR
   AS[(AuthSession · OIDC)]:::ids
   CXR[(Connections registry)]:::ids
   mOPFS[/OPFS device/]:::ids
-  mGH[/GitHub Contents API/]:::ids
   mLFS[/Local folder · FS-Access/]:::ids
+  mGH[/GitHub Contents API/]:::ids
+  mWDAV[/WebDAV/]:::ids
+  mSOL[/Solid pod · LDP/]:::ids
+  mS3[/S3 · SigV4/]:::ids
   mBR[/backup-store bridge/]:::ids
 
   %% provides (dashed)
@@ -116,8 +119,11 @@ flowchart LR
   %% identity + storage backing
   AS -->|feeds| capCI
   capSS --> mOPFS
-  capSS --> mGH
   capSS --> mLFS
+  capSS --> mGH
+  capSS --> mWDAV
+  capSS --> mSOL
+  capSS --> mS3
   capSS --> mBR
   CXR --- mOPFS
 ```
