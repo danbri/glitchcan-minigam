@@ -65,6 +65,8 @@ Browser-based minigames collection with WebGL fluid dynamics, interactive fictio
 
 **Accuracy ledger:** `docs/fable-audit/` contains a repo-wide audit (June 2026) of plans vs implementation, including `claims-register.md` — an adversarially-verified claims table. When this file and the audit disagree, check the register. When making confident *negative* claims ("X doesn't exist", "nothing links Y"), verify them with a recorded check first — roughly a third of such claims in the first audit pass were wrong.
 
+**New model? Start here:** `docs/fable-audit/fable-notes-handoff-20260706.md` — a handoff written for models continuing this collaboration: how danbri works, the engineering norms, the edot architecture + current frontier, hard-won honesty/verification lessons, and a ranked roadmap. Read it once before your first change.
+
 ## FINK Player — Current Production Reality (verified June 2026)
 **The production player is `inklet/finkapp/index.html`** (15+ modules: ink engine, sandbox, navigation/deep-linking, breadcrumbs, minigame SDK + embedded chess/gems, procedural foley audio, dev panel).
 
