@@ -254,7 +254,7 @@ Anything covered by the test suite under `tests/`:
 We have not actually run any of these. Don't claim the emulator supports them until you have:
 
 - Real-world FORTRAN, ALGOL, or COBOL programs from the era
-- The `lisp4130.asm` interpreter end-to-end (reader works for atoms and lists including QUOTE/CAR/CDR keywords and nested forms; EVAL still returns NIL for any list expression - see *Known LISP bugs* in README)
+- The `lisp4130.asm` interpreter's remaining EVAL gaps. **Correction (verified 2026-07-06 via `node cli.mjs --repl`):** EVAL does NOT "return NIL for any list expression" — `CAR`/`CDR`/`CONS`/`ATOM`/`EQ`/`NULL`/`COND` and integer literals all evaluate correctly today. The genuinely-broken cases are **LAMBDA/LABEL application** (infinite loop → max-steps), `(QUOTE n)` for numeric n, and the reader's inability to skip `;` comments (so the comment-laden `tapes/*.lisp` files produce garbage as-is). Multi-char user atoms also truncate to their first letter (only built-in keywords are recognised).
 - Any operating system: EASE, DES, KOS, TSS
 - Any multi-user / time-sharing workload
 - Block-mode I/O via ATU/DMA (not implemented)

@@ -48,7 +48,7 @@ The 2026-07-06 pass confirmed the drift continues — including inside the corre
 | glossary: "FINK = Fun Ink" | `glitchcanary.md` (authoritative) says **FOAFy Ink**. Cosmetic, but pick one. | — |
 | `magpie/toc.html`: edot "39/39 checks" | There are **49** `test-*.mjs`; README cites 74+31+14 sub-checks. toc badge is stale. | `magpie/edot/` |
 
-None of these are urgent bugs, but a successor who "trusts the docs" will be misled by every row. Fixing them at source is cheap, high-value hygiene.
+None of these are urgent bugs, but a successor who "trusts the docs" will be misled by every row. **Update — all rows above were fixed at source on 2026-07-06** (CLAUDE.md, the trees code comment, `docs/glossary.md`, `magpie/parisconf/README.md`, and the Elliott `README.md`/`BUGS.md`), each re-verified firsthand by running the code first. The table is retained as a record of what *was* wrong and how the drift is caught. This is exactly "fable's work": audit → verify → correct at source.
 
 ---
 
@@ -165,7 +165,7 @@ Active branch **`claude/ua17-3d-flight-sim-760w8h`**; everything merged to maste
 6. **danbri is the owner;** trust his domain knowledge, ask before shipping anything touching dataset ethics or a payload schema.
 
 **Concrete near-term plan (roughly ordered by value/effort):**
-- **Hygiene (cheap, high-trust):** fix the doc corrections in §2 at source (Elliott 133 + "EVAL works"; trees `EXAG=2.4`; parisconf README → 1951; glossary CDN/acronym; edot toc badge).
+- **Hygiene (cheap, high-trust):** ✅ *done 2026-07-06* — the §2 doc corrections were fixed at source (Elliott 133 + "EVAL works"; trees `EXAG=2.4`; parisconf README → 1951; glossary CDN/acronym). Remaining minor: the `magpie/toc.html` edot "39/39" badge (→ 49 test files) is still stale.
 - **Wire up CI:** move `e2e-tests.yml.template` into `.github/workflows/` once the `workflows` permission exists; add a `trees` `?lite` headless smoke test via `window.__tftt`; add a FINK TOC→Hampstead smoke test.
 - **FINK:** BUG-007 external-load recovery (P0); fix the two broken stories; playtest Shane Manor; land the `worknotes/` a11y items; resolve the two-minigame-systems ambiguity.
 - **Elliott/LISP:** make LAMBDA/LABEL terminate; add `;`-comment skipping to the reader — unlocks the meta-circular evaluator end-to-end.
