@@ -30,6 +30,8 @@ const SUITES = [
   ['resource-source', 'test-resource-source.mjs'],
   ['github-source', 'test-github-source.mjs'],
   ['webdav-source', 'test-webdav-source.mjs'],
+  ['solid-source', 'test-solid-source.mjs'],
+  ['s3-source', 'test-s3-source.mjs'],
   ['connections', 'test-connections.mjs'],
   ['storage-opfs', 'test-storage-opfs.mjs'],
   ['files (ui)', 'files/test-files.mjs'],

@@ -100,10 +100,26 @@ try {
     return !!card.querySelector('[name="dav-url"]') && !!card.querySelector('[name="dav-pass"]') && !!card.querySelector('.cx-connect:not([disabled])');
   }));
 
-  // 3c) A still-unwired remote (S3) keeps the honest TODO + disabled Connect.
+  // 3c) Every STORAGE remote now connects for real: Solid + S3 show connect
+  //     forms (not TODOs).
+  await page.click('edot-connections .cx-prov-pick[data-provider="solid"]');
+  await page.waitForSelector('edot-connections [name="sol-url"]');
+  ok('Solid offers a real connect form (pod URL + token)', await page.evaluate(() => {
+    const c = document.querySelector('edot-connections .cx-detail-card');
+    return !!c.querySelector('[name="sol-url"]') && !!c.querySelector('.cx-connect:not([disabled])');
+  }));
   await page.click('edot-connections .cx-prov-pick[data-provider="s3"]');
+  await page.waitForSelector('edot-connections [name="s3-bucket"]');
+  ok('S3 offers a real connect form (bucket + keys, SigV4)', await page.evaluate(() => {
+    const c = document.querySelector('edot-connections .cx-detail-card');
+    return !!c.querySelector('[name="s3-bucket"]') && !!c.querySelector('[name="s3-secret"]') && !!c.querySelector('.cx-connect:not([disabled])');
+  }));
+
+  // 3d) A provider whose auth isn't wired (Gmail — OAuth mail) keeps the honest
+  //     TODO + disabled Connect.
+  await page.click('edot-connections .cx-prov-pick[data-provider="gmail"]');
   await page.waitForSelector('edot-connections .cx-detail-card .cx-todo');
-  ok('an unwired remote (S3) shows an honest TODO + disabled Connect', await page.evaluate(() => {
+  ok('an unwired provider (Gmail/OAuth) shows an honest TODO + disabled Connect', await page.evaluate(() => {
     const card = document.querySelector('edot-connections .cx-detail-card');
     return !!card.querySelector('.cx-todo') && !!card.querySelector('.cx-connect[disabled]');
   }));

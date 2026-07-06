@@ -231,6 +231,27 @@ class EdotConnections extends HTMLElement {
         <p class="cx-detail-note">Works with Nextcloud, ownCloud, Apache mod_dav… The server must allow this origin (CORS) + PROPFIND/MKCOL. Credentials kept in memory for this session only.</p>`;
       actionHtml = `<button class="cx-connect" type="button" data-provider="webdav">Connect WebDAV</button>
         <div class="cx-connect-err eh-error" role="alert" hidden></div>`;
+    } else if (providerId === 'solid') {
+      customFields = `
+        <div class="cx-fields">
+          <label class="cx-field">Pod storage URL (a container)<input class="cx-input" type="url" name="sol-url" placeholder="https://you.solidcommunity.net/edot/" autocomplete="off"></label>
+          <label class="cx-field">Access token (Solid-OIDC)<input class="cx-input" type="password" name="sol-token" autocomplete="off"></label>
+        </div>
+        <p class="cx-detail-note">A Solid pod (LDP): identity + storage + access-control you own. Paste a Solid-OIDC access token. Kept in memory for this session only.</p>`;
+      actionHtml = `<button class="cx-connect" type="button" data-provider="solid">Connect Solid pod</button>
+        <div class="cx-connect-err eh-error" role="alert" hidden></div>`;
+    } else if (providerId === 's3') {
+      customFields = `
+        <div class="cx-fields">
+          <label class="cx-field">Bucket<input class="cx-input" type="text" name="s3-bucket" placeholder="my-bucket" autocomplete="off"></label>
+          <label class="cx-field">Region<input class="cx-input" type="text" name="s3-region" placeholder="us-east-1" autocomplete="off"></label>
+          <label class="cx-field">Endpoint (optional — for MinIO/R2/B2)<input class="cx-input" type="url" name="s3-endpoint" placeholder="https://s3.us-east-1.amazonaws.com" autocomplete="off"></label>
+          <label class="cx-field">Access key ID<input class="cx-input" type="text" name="s3-akid" autocomplete="off"></label>
+          <label class="cx-field">Secret access key<input class="cx-input" type="password" name="s3-secret" autocomplete="off"></label>
+        </div>
+        <p class="cx-detail-note">AWS S3 or S3-compatible (MinIO, Cloudflare R2, Backblaze B2). Signed client-side with SigV4; keys kept in memory for this session only. The bucket must allow this origin (CORS).</p>`;
+      actionHtml = `<button class="cx-connect" type="button" data-provider="s3">Connect S3</button>
+        <div class="cx-connect-err eh-error" role="alert" hidden></div>`;
     } else {
       actionHtml = `
         <p class="cx-todo" role="note">⚠ Real ${esc(authLabel(p.auth))} for ${esc(p.label)} isn’t wired up yet — this is a known TODO.
@@ -252,6 +273,8 @@ class EdotConnections extends HTMLElement {
     if (connectBtn) connectBtn.addEventListener('click', () => {
       if (providerId === 'github') return this._connectGithub();
       if (providerId === 'webdav') return this._connectWebdav();
+      if (providerId === 'solid') return this._connectSolid();
+      if (providerId === 's3') return this._connectS3();
       return this._connectLocal(providerId);
     });
   }
@@ -330,6 +353,67 @@ class EdotConnections extends HTMLElement {
     if (e && e.status === 403) return 'Forbidden (403) on that collection.';
     if (e && e.status === 404) return 'Collection not found (404). Check the server URL.';
     if (e instanceof TypeError) return 'Network/CORS error — the server must allow this origin + PROPFIND.';
+    return (e && e.message) || 'Could not connect.';
+  }
+
+  // Real remote connect: a Solid pod (LDP) with a Solid-OIDC access token.
+  async _connectSolid() {
+    const detail = this.querySelector('.cx-detail'); if (!detail) return;
+    const val = (n) => (detail.querySelector(`[name="${n}"]`)?.value || '').trim();
+    const baseUrl = val('sol-url'), token = detail.querySelector('[name="sol-token"]')?.value.trim() || '';
+    const errEl = detail.querySelector('.cx-connect-err');
+    const btn = detail.querySelector('.cx-connect');
+    const showErr = (m) => { if (errEl) { errEl.textContent = m; errEl.hidden = false; } this._setStatus(m); };
+    if (errEl) errEl.hidden = true;
+    if (!baseUrl) return showErr('Enter your pod storage URL.');
+    try {
+      if (btn) btn.disabled = true;
+      this._setStatus('Connecting to your Solid pod…');
+      const { SolidResourceSource } = await import('../../js/resource-source.js');
+      const src = new SolidResourceSource({ baseUrl, token: token || undefined });
+      await src.verify();
+      const host = (() => { try { return new URL(baseUrl).host; } catch { return baseUrl; } })();
+      getConnections().add({ id: src.id, provider: 'solid', label: `Solid · ${host}`, identity: host, sources: { storage: src } });
+      this._toggleAdd();
+      this._setStatus(`Connected Solid pod · ${host}.`);
+    } catch (e) { showErr(this._solidMsg(e)); }
+    finally { if (btn) btn.disabled = false; }
+  }
+  _solidMsg(e) {
+    if (e && e.status === 401) return 'Not authorised (401). Paste a valid Solid-OIDC access token.';
+    if (e && e.status === 403) return 'Forbidden (403): the token lacks access to that container.';
+    if (e && e.status === 404) return 'Container not found (404). Check the pod URL.';
+    if (e instanceof TypeError) return 'Network/CORS error reaching the pod.';
+    return (e && e.message) || 'Could not connect.';
+  }
+
+  // Real remote connect: an S3 (or S3-compatible) bucket, signed with SigV4.
+  async _connectS3() {
+    const detail = this.querySelector('.cx-detail'); if (!detail) return;
+    const val = (n) => (detail.querySelector(`[name="${n}"]`)?.value || '').trim();
+    const bucket = val('s3-bucket'), region = val('s3-region') || 'us-east-1', endpoint = val('s3-endpoint');
+    const accessKeyId = val('s3-akid'), secretAccessKey = detail.querySelector('[name="s3-secret"]')?.value || '';
+    const errEl = detail.querySelector('.cx-connect-err');
+    const btn = detail.querySelector('.cx-connect');
+    const showErr = (m) => { if (errEl) { errEl.textContent = m; errEl.hidden = false; } this._setStatus(m); };
+    if (errEl) errEl.hidden = true;
+    if (!bucket || !accessKeyId || !secretAccessKey) return showErr('Enter a bucket and access keys.');
+    try {
+      if (btn) btn.disabled = true;
+      this._setStatus('Connecting to S3…');
+      const { S3ResourceSource } = await import('../../js/resource-source.js');
+      const src = new S3ResourceSource({ bucket, region, endpoint: endpoint || undefined, accessKeyId, secretAccessKey });
+      await src.verify();
+      getConnections().add({ id: src.id, provider: 's3', label: `S3 · ${bucket}`, identity: bucket, sources: { storage: src } });
+      this._toggleAdd();
+      this._setStatus(`Connected S3 · ${bucket}.`);
+    } catch (e) { showErr(this._s3Msg(e)); }
+    finally { if (btn) btn.disabled = false; }
+  }
+  _s3Msg(e) {
+    if (e && (e.status === 401 || e.status === 403)) return 'Access denied (403). Check the keys and the bucket policy.';
+    if (e && e.status === 404) return 'Bucket not found (404). Check the bucket + region/endpoint.';
+    if (e instanceof TypeError) return 'Network/CORS error — the bucket must allow this origin (CORS).';
     return (e && e.message) || 'Could not connect.';
   }
 }

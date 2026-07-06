@@ -349,6 +349,204 @@ export class WebDavResourceSource {
   async verify() { const res = await this._fetch(this._url('/', true), { method: 'PROPFIND', headers: { ...this._headers, Depth: '0' } }); if (!res.ok && res.status !== 207) { const e = new Error(`WebDAV ${res.status}`); e.status = res.status; throw e; } return true; }
 }
 
+// A REAL remote storage mount over a Solid pod (LDP — the W3C Linked Data
+// Platform). Containers are folders, resources are files: GET=read, PUT=write,
+// DELETE=remove, GET-container(Turtle)+ldp:contains=list, PUT-container=mkdir.
+// Auth is a bearer access token (a Solid-OIDC session; DPoP-bound tokens can be
+// supplied via `dpopHeaders`). Container listing is parsed with a narrow regex
+// over ldp:contains member IRIs — no RDF library (same pragmatic approach as
+// backup/js/stores/solid.js), so it's Node-testable. `fetchImpl` injectable.
+function solidMembers(turtle, container) {
+  const seen = new Map(), re = /<([^>]*)>/g; let m;
+  while ((m = re.exec(turtle))) {
+    let iri = m[1];
+    let rel;
+    if (iri.startsWith(container)) rel = iri.slice(container.length);
+    else if (!/^[a-z][a-z0-9+.-]*:/i.test(iri) && !iri.startsWith('/') && !iri.startsWith('#')) rel = iri; // container-relative
+    else continue;
+    rel = rel.replace(/^\.?\//, '');
+    if (!rel || rel.startsWith('#')) continue;
+    const isContainer = rel.endsWith('/');
+    const childRel = rel.replace(/\/$/, '');
+    if (!childRel || childRel.includes('/')) continue;         // only direct children
+    const name = decodeURIComponent(childRel);
+    if (name.startsWith('.')) continue;                        // .acl / .meta sidecars
+    if (!seen.has(name)) seen.set(name, isContainer);
+  }
+  return [...seen].map(([name, isContainer]) => ({ name, isContainer }));
+}
+
+export class SolidResourceSource {
+  constructor({ id, baseUrl, token, dpopHeaders, fetchImpl } = {}) {
+    if (!baseUrl) throw new Error('Solid: baseUrl (pod container) is required');
+    this.provider = 'solid'; this.capability = 'storage'; this.locality = 'remote'; this.account = null;
+    this._base = String(baseUrl).replace(/\/+$/, '');
+    this.id = id || 'solid-' + this._base.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    this._token = token; this._dpop = dpopHeaders;
+    this._fetch = fetchImpl || ((...a) => fetch(...a));
+  }
+  async _auth(method, url) { if (this._dpop) return (await this._dpop(method, url)) || {}; return this._token ? { Authorization: `Bearer ${this._token}` } : {}; }
+  _url(p, dir = false) { const segs = norm(p).split('/').filter(Boolean).map(encodeURIComponent); return this._base + '/' + segs.join('/') + (dir && segs.length ? '/' : ''); }
+
+  async read(path) {
+    const url = this._url(path);
+    const res = await this._fetch(url, { method: 'GET', headers: await this._auth('GET', url) });
+    if (!res.ok) { const e = new Error(`Solid GET ${res.status}`); e.status = res.status; throw e; }
+    return new Uint8Array(await res.arrayBuffer());
+  }
+  async mkdir(path) {
+    const segs = norm(path).split('/').filter(Boolean); let cur = '';
+    for (const s of segs) {
+      cur += '/' + s; const url = this._url(cur, true);
+      const res = await this._fetch(url, { method: 'PUT', headers: { ...(await this._auth('PUT', url)), 'Content-Type': 'text/turtle', Link: '<http://www.w3.org/ns/ldp#BasicContainer>; rel="type"' } });
+      if (!res.ok && res.status !== 201 && res.status !== 204 && res.status !== 205 && res.status !== 409) { const e = new Error(`Solid MKCOL ${res.status}`); e.status = res.status; throw e; }
+    }
+  }
+  async write(path, bytes, { contentType = 'application/octet-stream' } = {}) {
+    const parent = parentOf(path); if (parent !== '/') await this.mkdir(parent);
+    const url = this._url(path);
+    const res = await this._fetch(url, { method: 'PUT', headers: { ...(await this._auth('PUT', url)), 'Content-Type': contentType }, body: bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes) });
+    if (!res.ok && res.status !== 201 && res.status !== 204 && res.status !== 205) { const e = new Error(`Solid PUT ${res.status}`); e.status = res.status; throw e; }
+  }
+  async remove(path) {
+    const url = this._url(path);
+    const res = await this._fetch(url, { method: 'DELETE', headers: await this._auth('DELETE', url) });
+    if (!res.ok && res.status !== 204 && res.status !== 404) { const e = new Error(`Solid DELETE ${res.status}`); e.status = res.status; throw e; }
+  }
+  async stat(path) {
+    const url = this._url(path);
+    const res = await this._fetch(url, { method: 'HEAD', headers: await this._auth('HEAD', url) });
+    if (res.status === 404) return null;
+    if (!res.ok) { const e = new Error(`Solid HEAD ${res.status}`); e.status = res.status; throw e; }
+    // LDP signals a container via a Link: <…#Container>/<…#BasicContainer> rel=type.
+    const link = (res.headers && res.headers.get && res.headers.get('Link')) || '';
+    const isContainer = /ldp#(Basic)?Container/.test(link);
+    return isContainer
+      ? { name: baseName(path) || '/', path: norm(path), kind: 'folder', locality: 'remote' }
+      : { name: baseName(path), path: norm(path), kind: 'file', size: Number((res.headers && res.headers.get && res.headers.get('Content-Length')) || 0) || undefined, locality: 'remote' };
+  }
+  async list(dirPath, { offset = 0, limit = 100 } = {}) {
+    const container = this._url(dirPath, true) + (norm(dirPath) === '/' ? '/' : '');
+    const url = this._url(dirPath, true);
+    const res = await this._fetch(url, { method: 'GET', headers: { ...(await this._auth('GET', url)), Accept: 'text/turtle' } });
+    if (res.status === 404) return [];
+    if (!res.ok) { const e = new Error(`Solid GET ${res.status}`); e.status = res.status; throw e; }
+    const base = url.endsWith('/') ? url : url + '/';
+    const entries = solidMembers(await res.text(), base).map((mem) => ({
+      name: mem.name, path: norm('/' + norm(dirPath) + '/' + mem.name), kind: mem.isContainer ? 'folder' : 'file', locality: 'remote',
+    }));
+    entries.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === 'folder' ? -1 : 1));
+    return entries.slice(offset, offset + limit);
+  }
+  async verify() { const url = this._url('/', true); const res = await this._fetch(url, { method: 'GET', headers: { ...(await this._auth('GET', url)), Accept: 'text/turtle' } }); if (!res.ok) { const e = new Error(`Solid ${res.status}`); e.status = res.status; throw e; } return true; }
+}
+
+// A REAL remote storage mount over the S3 REST API (AWS S3 and S3-compatible:
+// MinIO, Cloudflare R2, Backblaze B2, …). Path-style addressing. Requests are
+// signed with AWS Signature Version 4 (HMAC-SHA256 chain via SubtleCrypto —
+// works in the browser and in Node). Keys are held in memory only. GET=read,
+// PUT=write, DELETE=remove, HEAD=stat, GET?list-type=2&delimiter=/ =list.
+// (A browser needs the bucket's CORS to allow this origin.) fetchImpl injectable.
+const _hex = (u8) => [...u8].map((b) => b.toString(16).padStart(2, '0')).join('');
+const _subtle = () => (globalThis.crypto && globalThis.crypto.subtle) || null;
+async function _sha256hex(bytes) { const b = bytes instanceof Uint8Array ? bytes : new TextEncoder().encode(String(bytes)); return _hex(new Uint8Array(await _subtle().digest('SHA-256', b))); }
+async function _hmac(keyBytes, msg) {
+  const raw = keyBytes instanceof Uint8Array ? keyBytes : new TextEncoder().encode(keyBytes);
+  const key = await _subtle().importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return new Uint8Array(await _subtle().sign('HMAC', key, typeof msg === 'string' ? new TextEncoder().encode(msg) : msg));
+}
+// RFC 3986 encoding as AWS expects (UTF-8, unreserved unencoded; '/' optional).
+function awsUriEncode(str, encodeSlash = true) {
+  let out = '';
+  for (const b of new TextEncoder().encode(String(str))) {
+    const c = String.fromCharCode(b);
+    if (/[A-Za-z0-9\-_.~]/.test(c)) out += c;
+    else if (c === '/' && !encodeSlash) out += '/';
+    else out += '%' + b.toString(16).toUpperCase().padStart(2, '0');
+  }
+  return out;
+}
+export const S3_EMPTY_HASH = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+// Compute the SigV4 Authorization header for a request. Exported so it can be
+// verified against AWS's published test vectors.
+export async function sigv4({ method, url, headers = {}, payloadHash, accessKeyId, secretAccessKey, region, service = 's3', amzdate }) {
+  const u = new URL(url);
+  const datestamp = amzdate.slice(0, 8);
+  const lower = { host: u.host };
+  for (const k of Object.keys(headers)) lower[k.toLowerCase()] = String(headers[k]).trim();
+  const names = Object.keys(lower).sort();
+  const canonicalHeaders = names.map((k) => `${k}:${lower[k]}\n`).join('');
+  const signedHeaders = names.join(';');
+  const params = [...u.searchParams.entries()].map(([k, v]) => [awsUriEncode(k), awsUriEncode(v)]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  const canonicalQuery = params.map(([k, v]) => `${k}=${v}`).join('&');
+  const canonicalUri = awsUriEncode(decodeURIComponent(u.pathname), false);
+  const canonicalRequest = [method, canonicalUri, canonicalQuery, canonicalHeaders, signedHeaders, payloadHash].join('\n');
+  const scope = `${datestamp}/${region}/${service}/aws4_request`;
+  const stringToSign = ['AWS4-HMAC-SHA256', amzdate, scope, await _sha256hex(canonicalRequest)].join('\n');
+  let k = await _hmac('AWS4' + secretAccessKey, datestamp);
+  k = await _hmac(k, region); k = await _hmac(k, service); k = await _hmac(k, 'aws4_request');
+  const signature = _hex(await _hmac(k, stringToSign));
+  return { Authorization: `AWS4-HMAC-SHA256 Credential=${accessKeyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`, signedHeaders, signature };
+}
+function s3ListParse(xml, prefix) {
+  const folders = [], files = [];
+  for (const m of xml.matchAll(/<CommonPrefixes>[\s\S]*?<Prefix>([^<]*)<\/Prefix>[\s\S]*?<\/CommonPrefixes>/g)) {
+    const rel = m[1].slice(prefix.length).replace(/\/$/, ''); if (rel && !rel.includes('/')) folders.push(rel);
+  }
+  for (const m of xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)) {
+    const key = (/<Key>([^<]*)<\/Key>/.exec(m[1]) || [])[1] || ''; if (!key || key === prefix) continue;
+    const rel = key.slice(prefix.length); if (!rel || rel.includes('/')) continue;
+    files.push({ name: rel, size: Number((/<Size>(\d+)<\/Size>/.exec(m[1]) || [])[1]) || 0 });
+  }
+  return { folders: [...new Set(folders)], files };
+}
+
+export class S3ResourceSource {
+  constructor({ id, endpoint, bucket, region = 'us-east-1', accessKeyId, secretAccessKey, fetchImpl } = {}) {
+    if (!bucket) throw new Error('S3: bucket is required');
+    if (!accessKeyId || !secretAccessKey) throw new Error('S3: accessKeyId + secretAccessKey are required');
+    this.provider = 's3'; this.capability = 'storage'; this.locality = 'remote'; this.account = null;
+    this._bucket = bucket; this._region = region; this._ak = accessKeyId; this._sk = secretAccessKey;
+    this._endpoint = String(endpoint || `https://s3.${region}.amazonaws.com`).replace(/\/+$/, '');
+    this.id = id || `s3-${bucket}`;
+    this._fetch = fetchImpl || ((...a) => fetch(...a));
+  }
+  _keyOf(path) { return norm(path).split('/').filter(Boolean).join('/'); }
+  _now() { return new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }  // YYYYMMDDTHHMMSSZ
+  async _send(method, { key = '', query = '', body } = {}) {
+    const encKey = key ? '/' + key.split('/').map((s) => awsUriEncode(s, true)).join('/') : '';
+    const url = `${this._endpoint}/${this._bucket}${encKey}${query ? '?' + query : ''}`;
+    const amzdate = this._now();
+    const payloadHash = body ? await _sha256hex(body) : S3_EMPTY_HASH;
+    const headers = { 'x-amz-content-sha256': payloadHash, 'x-amz-date': amzdate };
+    const { Authorization } = await sigv4({ method, url, headers, payloadHash, accessKeyId: this._ak, secretAccessKey: this._sk, region: this._region, service: 's3', amzdate });
+    return this._fetch(url, { method, headers: { ...headers, Authorization, ...(body ? { 'Content-Type': 'application/octet-stream' } : {}) }, body });
+  }
+  async read(path) { const res = await this._send('GET', { key: this._keyOf(path) }); if (!res.ok) { const e = new Error(`S3 GET ${res.status}`); e.status = res.status; throw e; } return new Uint8Array(await res.arrayBuffer()); }
+  async write(path, bytes) { const res = await this._send('PUT', { key: this._keyOf(path), body: bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes) }); if (!res.ok && res.status !== 200) { const e = new Error(`S3 PUT ${res.status}`); e.status = res.status; throw e; } }
+  async remove(path) { const res = await this._send('DELETE', { key: this._keyOf(path) }); if (!res.ok && res.status !== 204) { const e = new Error(`S3 DELETE ${res.status}`); e.status = res.status; throw e; } }
+  async mkdir() { /* S3 has no directories — folders are key prefixes, implicit */ }
+  async stat(path) {
+    const res = await this._send('HEAD', { key: this._keyOf(path) });
+    if (res.status === 404) return null;
+    if (!res.ok) { const e = new Error(`S3 HEAD ${res.status}`); e.status = res.status; throw e; }
+    return { name: baseName(path), path: norm(path), kind: 'file', size: Number((res.headers && res.headers.get && res.headers.get('Content-Length')) || 0) || undefined, locality: 'remote' };
+  }
+  async list(dirPath, { offset = 0, limit = 100 } = {}) {
+    const prefix = this._keyOf(dirPath) ? this._keyOf(dirPath) + '/' : '';
+    const query = `delimiter=%2F&list-type=2&prefix=${awsUriEncode(prefix)}`;
+    const res = await this._send('GET', { query });
+    if (!res.ok && res.status !== 200) { const e = new Error(`S3 LIST ${res.status}`); e.status = res.status; throw e; }
+    const { folders, files } = s3ListParse(await res.text(), prefix);
+    const entries = [
+      ...folders.sort().map((name) => ({ name, path: norm('/' + prefix + name), kind: 'folder', locality: 'remote' })),
+      ...files.sort((a, b) => a.name.localeCompare(b.name)).map((f) => ({ name: f.name, path: norm('/' + prefix + f.name), kind: 'file', size: f.size, locality: 'remote' })),
+    ];
+    return entries.slice(offset, offset + limit);
+  }
+  async verify() { const res = await this._send('GET', { query: 'list-type=2&max-keys=1' }); if (!res.ok && res.status !== 200) { const e = new Error(`S3 ${res.status}`); e.status = res.status; throw e; } return true; }
+}
+
 // An Account binds an Identity to a Provider and surfaces the capabilities it
 // offers. capability('storage') returns a ResourceSource; other capabilities
 // (mail/calendar/chat/people/vcs) return the matching service adapter.
