@@ -49,6 +49,17 @@ try {
   await page.click('.menubar > button[data-top="Format"]'); await page.waitForTimeout(120);
   await page.click('.menu .mi:has-text("Heading 1")'); await page.waitForTimeout(150);
   ok('Editor menu action works (Format → Heading 1)', /<h1/i.test(await page.evaluate(() => document.querySelector('.view[data-app="editor"] edot-editor').getContent())));
+
+  // Ctrl+F opens the editor's Find & replace (not browser find), and the bar is
+  // styled shell chrome (fixed-positioned), not an unstyled body dump.
+  await page.keyboard.press('Control+f'); await page.waitForTimeout(150);
+  const find = await page.evaluate(() => {
+    const bar = document.querySelector('.find-bar'); if (!bar || bar.hidden) return null;
+    const cs = getComputedStyle(bar);
+    return { present: true, styled: cs.position === 'fixed', hasInput: !!bar.querySelector('.find-input') };
+  });
+  ok('Ctrl+F opens a styled Find & replace bar in the suite', !!find && find.present && find.styled && find.hasInput);
+  await page.keyboard.press('Escape');
   // Format menu carries the full formatting surface (parity with the toolbar).
   await page.click('.menubar > button[data-top="Format"]'); await page.waitForTimeout(120);
   const fmtItems = await page.$$eval('.menu .mi .lbl', (e) => e.map((x) => x.textContent));
@@ -107,6 +118,16 @@ try {
   ok('mobile: an open menu is clamped within the viewport (no off-screen spill)',
     !!clamp && clamp.left >= -1 && clamp.right <= clamp.w + 1 && clamp.bottom <= clamp.h + 1);
   await mob.keyboard.press('Escape');
+
+  // Mobile: the top bar keeps the login chip fully visible (menu bar scrolls
+  // instead of pushing chrome off-screen) even at a very narrow width.
+  await mob.setViewportSize({ width: 340, height: 720 }); await mob.waitForTimeout(200);
+  const bar = await mob.evaluate(() => {
+    const login = document.querySelector('.topbar .login').getBoundingClientRect();
+    const mb = document.querySelector('.menubar');
+    return { loginVisible: login.right <= window.innerWidth + 1 && login.left >= 0, btns: mb.querySelectorAll('button').length };
+  });
+  ok('mobile: login stays fully visible + all menus present (top bar not clipped)', bar.loginVisible && bar.btns === 6);
   await mob.close();
 
   ok('no page errors', errs.length === 0);

@@ -77,7 +77,15 @@
       .ws-panes { flex-direction: column; }
       .ws-pane { border-right: none; }
       .ws-pane:not(.active) { display: none; }
-      .menubar > button { padding: 0 0.5rem; }
+      /* The top bar can't fit brand + every menu + login on a phone. Let the
+         menu bar take the middle and scroll horizontally (all menus stay
+         reachable), drop the growing spacer, and keep the login pinned + whole. */
+      .menubar { flex: 1 1 auto; min-width: 0; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+      .menubar::-webkit-scrollbar { display: none; }
+      .menubar > button { padding: 0 0.55rem; flex: 0 0 auto; }
+      .topbar .spacer { display: none; }
+      .topbar .login { flex: 0 0 auto; }
+      .brand { padding: 0 0.5rem; }
     }
     /* Command palette (⌘K) — shell chrome, not an app stylesheet. */
     .cmdk { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: flex; align-items: flex-start; justify-content: center; }
@@ -89,6 +97,19 @@
     .cmdk-item.active, .cmdk-item:hover { background: var(--sel, #ece6da); }
     .cmdk-ic { width: 1.4rem; text-align: center; opacity: 0.8; }
     .cmdk-empty { padding: 0.8rem; color: var(--muted, #888); }
+    /* Find & replace bar — the FindReplace subsystem appends .find-bar to <body>,
+       so it is shell chrome here (its styles live in edot.css, which the standalone
+       page loads but the suite doesn't). Keep it styled + on-screen in both. */
+    .find-bar { position: fixed; top: 0.5rem; right: 0.5rem; z-index: 1100; background: var(--surface, #fff); color: var(--ink, #1c1c1c); border: 1px solid var(--line, #ddd); border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,0.28); padding: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; max-width: min(28rem, 94vw); }
+    .find-bar[hidden] { display: none; }
+    .find-row { display: flex; align-items: center; gap: 0.35rem; }
+    .find-replace-row[hidden] { display: none; }
+    .find-bar .find-input { font: inherit; padding: 0.35em 0.5em; border: 1px solid var(--line, #ddd); border-radius: 7px; background: var(--bg, #fff); color: var(--ink, #1c1c1c); flex: 1; min-width: 7rem; }
+    .find-bar .find-input:focus { outline: 2px solid var(--accent, #2962ff); outline-offset: -1px; }
+    .find-bar .find-count { font-size: 0.8rem; color: var(--muted, #888); min-width: 2.8rem; text-align: center; white-space: nowrap; }
+    .find-bar .find-case { font-size: 0.85rem; color: var(--muted, #888); display: inline-flex; align-items: center; gap: 0.2rem; white-space: nowrap; }
+    .find-bar .icon-btn, .find-bar .tbtn { font: inherit; cursor: pointer; background: var(--surface, #fff); color: inherit; border: 1px solid var(--line, #ddd); border-radius: 7px; padding: 0.3rem 0.5rem; }
+    .find-bar .icon-btn:hover, .find-bar .tbtn:hover { border-color: var(--accent, #2962ff); }
   </style>
 </head>
 <body>
@@ -590,6 +611,11 @@
     cmdk.addEventListener('click', (e) => { if (e.target === cmdk) closeCmdk(); });
     document.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); cmdk.hidden ? openCmdk() : closeCmdk(); }
+      // Ctrl/⌘+F opens the editor's Find & replace (as the menu advertises),
+      // instead of the browser's page find, when the Editor app is active.
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'f' || e.key === 'F') && currentApp === 'editor') {
+        const el = primaryEl('editor'); if (el && el.core) { e.preventDefault(); editorFind(el); }
+      }
     });
     window.__cmdk = { open: openCmdk, registry }; // headless-test hook
 
