@@ -122,9 +122,13 @@ export class EdotLogin extends HTMLElement {
         </ul>
         ${anyConfigured ? '' : `
           <p class="auth-note" role="note">
-            No providers configured yet. Set client IDs in
-            <code>auth/auth-config.js</code> to enable sign-in.
+            No real providers configured yet. Set a client ID in
+            <code>auth/auth-config.js</code> (e.g. Google/Microsoft) to enable real sign-in.
           </p>`}
+        <div class="auth-demo">
+          <button type="button" class="auth-btn auth-btn--ghost" data-act="demo">Try a demo identity (local only)</button>
+          <p class="auth-note auth-note--demo" role="note">Creates a fake, on-device identity so you can explore the suite and watch it flow into <strong>Connections</strong>. Not a real sign-in — nothing leaves your device.</p>
+        </div>
       </section>`;
   }
 
@@ -180,6 +184,14 @@ export class EdotLogin extends HTMLElement {
         this.session.signOut(btn.dataset.key);
       } else if (act === 'signout-all') {
         this.session.signOutAll();
+      } else if (act === 'demo') {
+        // A clearly-labelled, on-device only identity: no network, no real IdP.
+        // Lets the identity → Connections story work before a client-id is set.
+        this.session.upsertAccount({
+          providerId: 'demo', providerName: 'Demo (local only)',
+          claims: { sub: 'demo-user', name: 'You (demo)', email: 'demo@edot.local' },
+        });
+        this._toast('Demo identity created — signed in locally (not a real account).');
       }
     } catch (err) {
       this._toast(err.message || String(err));

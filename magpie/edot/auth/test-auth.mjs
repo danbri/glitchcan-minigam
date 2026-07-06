@@ -254,6 +254,22 @@ try {
   ok('all required providers present', provs.hasAll);
   ok('GitHub flagged as non-OIDC (no id_token)', provs.githubOidc === false);
 
+  // Demo identity: a clearly-labelled, on-device sign-in so the identity flow is
+  // usable before any provider client-id is configured.
+  await page.evaluate(() => window.__auth.session.signOutAll());
+  await page.waitForTimeout(50);
+  const demoBtn = await page.$('edot-login [data-act="demo"]');
+  ok('login panel offers a "demo identity (local only)" option', !!demoBtn);
+  await demoBtn.click();
+  await page.waitForTimeout(100);
+  const demo = await page.evaluate(() => {
+    const s = window.__auth.session; const a = s.active();
+    return { signedIn: s.isSignedIn(), provider: a && a.provider, name: a && a.name, rows: document.querySelectorAll('edot-login .auth-account').length };
+  });
+  ok('clicking demo signs in a local-only identity', demo.signedIn && demo.provider === 'demo');
+  ok('the demo identity renders as an account', demo.rows >= 1 && /demo/i.test(demo.name || ''));
+  await page.evaluate(() => window.__auth.session.signOutAll());
+
   ok('no page errors', errs.length === 0);
   if (errs.length) console.log(errs);
 } finally { await browser.close(); server.close(); }
