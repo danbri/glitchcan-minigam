@@ -321,7 +321,7 @@
     function setImages(renders, imgs) {
       renders.forEach((r, i) => {
         const lbl = r.querySelector('.lbl').textContent;
-        r.innerHTML = `<img src="${imgs[i]}"><span class="lbl">${lbl}</span>`;
+        r.innerHTML = `<img src="${imgs[i]}" alt="${lbl} render" loading="lazy"><span class="lbl">${lbl}</span>`;
       });
     }
 

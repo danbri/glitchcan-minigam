@@ -156,18 +156,18 @@ export class LucidRenderControls extends HTMLElement {
         <div class="section-title">Quality</div>
         <div class="row">
           <span class="label">Steps</span>
-          <input type="range" id="maxSteps" min="20" max="200" value="${s.maxSteps}">
+          <input type="range" id="maxSteps" min="20" max="200" value="${s.maxSteps}" aria-label="Maximum ray-march steps" title="Maximum ray-march steps per pixel">
           <span class="value">${s.maxSteps}</span>
         </div>
         <div class="row">
           <span class="label">Threshold</span>
-          <input type="range" id="hitThreshold" min="-4" max="-1" step="0.1" value="${Math.log10(s.hitThreshold)}">
-          <span class="value">${s.hitThreshold.toFixed(4)}</span>
+          <input type="range" id="hitThreshold" min="-4" max="-1" step="0.1" value="${Math.log10(s.hitThreshold)}" aria-label="Surface hit threshold in metres" title="Surface hit threshold (metres) — smaller is sharper but slower">
+          <span class="value">${s.hitThreshold.toFixed(4)} m</span>
         </div>
         <div class="row">
-          <span class="label">Max Dist</span>
-          <input type="range" id="maxDistance" min="10" max="200" value="${s.maxDistance}">
-          <span class="value">${s.maxDistance}</span>
+          <span class="label">Max dist.</span>
+          <input type="range" id="maxDistance" min="10" max="200" value="${s.maxDistance}" aria-label="Maximum ray distance in metres" title="Maximum ray distance (metres)">
+          <span class="value">${s.maxDistance} m</span>
         </div>
       </div>
 
@@ -175,22 +175,22 @@ export class LucidRenderControls extends HTMLElement {
         <div class="section-title">Lighting</div>
         <div class="row">
           <span class="label">Key</span>
-          <input type="range" id="keyIntensity" min="0" max="1" step="0.05" value="${s.keyIntensity}">
+          <input type="range" id="keyIntensity" min="0" max="1" step="0.05" value="${s.keyIntensity}" aria-label="Key light intensity" title="Key light intensity (0–1)">
           <span class="value">${s.keyIntensity.toFixed(2)}</span>
         </div>
         <div class="row">
           <span class="label">Fill</span>
-          <input type="range" id="fillIntensity" min="0" max="1" step="0.05" value="${s.fillIntensity}">
+          <input type="range" id="fillIntensity" min="0" max="1" step="0.05" value="${s.fillIntensity}" aria-label="Fill light intensity" title="Fill light intensity (0–1)">
           <span class="value">${s.fillIntensity.toFixed(2)}</span>
         </div>
         <div class="row">
           <span class="label">Rim</span>
-          <input type="range" id="rimIntensity" min="0" max="0.5" step="0.01" value="${s.rimIntensity}">
+          <input type="range" id="rimIntensity" min="0" max="0.5" step="0.01" value="${s.rimIntensity}" aria-label="Rim light intensity" title="Rim light intensity (0–0.5)">
           <span class="value">${s.rimIntensity.toFixed(2)}</span>
         </div>
         <div class="row">
           <span class="label">Ambient</span>
-          <input type="range" id="ambient" min="0" max="0.5" step="0.01" value="${s.ambient}">
+          <input type="range" id="ambient" min="0" max="0.5" step="0.01" value="${s.ambient}" aria-label="Ambient light intensity" title="Ambient light intensity (0–0.5)">
           <span class="value">${s.ambient.toFixed(2)}</span>
         </div>
       </div>
@@ -225,10 +225,14 @@ export class LucidRenderControls extends HTMLElement {
           // Update display value
           const valueEl = e.target.parentElement.querySelector('.value');
           if (valueEl) {
-            if (id === 'maxSteps' || id === 'maxDistance') {
+            if (id === 'maxSteps') {
               valueEl.textContent = Math.round(this.settings[id]);
+            } else if (id === 'maxDistance') {
+              valueEl.textContent = Math.round(this.settings[id]) + ' m';
+            } else if (id === 'hitThreshold') {
+              valueEl.textContent = this.settings[id].toFixed(4) + ' m';
             } else {
-              valueEl.textContent = this.settings[id].toFixed(id === 'hitThreshold' ? 4 : 2);
+              valueEl.textContent = this.settings[id].toFixed(2);
             }
           }
 

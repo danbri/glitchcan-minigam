@@ -240,7 +240,7 @@
       <div class="palette-item" draggable="true" data-type="group">📦 Group</div>
     </div>
   </div>
-  <button class="edge-toggle toggle-left" id="toggleLeft">▶</button>
+  <button class="edge-toggle toggle-left" id="toggleLeft" title="Toggle node palette" aria-label="Toggle node palette">▶</button>
 
   <!-- Right panel - Preview & Properties -->
   <div class="panel panel-right" id="panelRight">
@@ -252,14 +252,14 @@
     <div class="panel-header">Properties</div>
     <div class="props-area" id="propsArea"><p class="no-selection">Select a node</p></div>
   </div>
-  <button class="edge-toggle toggle-right" id="toggleRight">◀</button>
+  <button class="edge-toggle toggle-right" id="toggleRight" title="Toggle preview &amp; properties panel" aria-label="Toggle preview and properties panel">◀</button>
 
   <!-- Bottom panel - Timeline -->
   <div class="panel panel-bottom" id="panelBottom">
     <div class="tl-controls">
-      <button class="tl-btn" id="btnRewind">⏮</button>
-      <button class="tl-btn" id="btnPlay">▶</button>
-      <button class="tl-btn active" id="btnLoop">🔁</button>
+      <button class="tl-btn" id="btnRewind" title="Rewind to start" aria-label="Rewind to start">⏮</button>
+      <button class="tl-btn" id="btnPlay" title="Play" aria-label="Play or pause">▶</button>
+      <button class="tl-btn active" id="btnLoop" title="Loop" aria-label="Toggle loop" aria-pressed="true">🔁</button>
       <span class="time-display" id="timeDisplay">0.00s</span>
     </div>
     <div class="scrubber" id="scrubber">
@@ -267,13 +267,13 @@
       <div class="scrubber-handle" id="scrubberHandle"></div>
     </div>
     <div class="wiggler-row">
-      <span class="wiggler-chip" data-fn="sin">∿ sin</span>
-      <span class="wiggler-chip" data-fn="bounce">⌢ bounce</span>
-      <span class="wiggler-chip" data-fn="pulse">⎍ pulse</span>
-      <span class="wiggler-chip" data-fn="spring">🌀 spring</span>
+      <span class="wiggler-chip" data-fn="sin" role="button" tabindex="0" aria-label="Sine wiggler">∿ sin</span>
+      <span class="wiggler-chip" data-fn="bounce" role="button" tabindex="0" aria-label="Bounce wiggler">⌢ bounce</span>
+      <span class="wiggler-chip" data-fn="pulse" role="button" tabindex="0" aria-label="Pulse wiggler">⎍ pulse</span>
+      <span class="wiggler-chip" data-fn="spring" role="button" tabindex="0" aria-label="Spring wiggler">🌀 spring</span>
     </div>
   </div>
-  <button class="edge-toggle toggle-bottom" id="toggleBottom">▲</button>
+  <button class="edge-toggle toggle-bottom" id="toggleBottom" title="Toggle timeline" aria-label="Toggle timeline">▲</button>
 
   <script type="module">
     import './components/lucid-renderer.js';
@@ -1374,6 +1374,12 @@
       scrubberFill.style.width = pct + '%';
       scrubberHandle.style.left = pct + '%';
       timeDisplay.textContent = timeline.time.toFixed(2) + 's';
+      // Drive the preview: the scrubber is authoritative over the render clock.
+      // (Previously the timeline only moved the visual handle and never reached
+      // the renderer, so play/pause/loop/scrub were cosmetic.)
+      if (previewEl && typeof previewEl.setTime === 'function') {
+        previewEl.setTime(timeline.time);
+      }
     }
 
     let lastFrame = 0;
@@ -1393,12 +1399,14 @@
     document.getElementById('btnPlay').addEventListener('click', function() {
       timeline.playing = !timeline.playing;
       this.textContent = timeline.playing ? '⏸' : '▶';
+      this.title = timeline.playing ? 'Pause' : 'Play';
       this.classList.toggle('active', timeline.playing);
     });
     document.getElementById('btnRewind').addEventListener('click', () => { timeline.time = 0; updateScrubber(); });
     document.getElementById('btnLoop').addEventListener('click', function() {
       timeline.loop = !timeline.loop;
       this.classList.toggle('active', timeline.loop);
+      this.setAttribute('aria-pressed', timeline.loop ? 'true' : 'false');
     });
 
     let scrubbing = false;

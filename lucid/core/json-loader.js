@@ -75,7 +75,13 @@ function processSceneParams(params) {
         type: param.type || 'scalar',
         min: param.min,
         max: param.max,
-        step: param.step
+        step: param.step,
+        // UI presentation metadata. `label` is the human-readable name shown in
+        // param panels; `unit` (e.g. "m", "°", "x", "%", "rad") is rendered next
+        // to the value. Both were previously dropped here, so a scene's `label`
+        // silently never reached the panels.
+        label: param.label,
+        unit: param.unit
       };
     }
   }
