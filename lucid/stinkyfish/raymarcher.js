@@ -357,6 +357,12 @@ export class StinkyfishRenderer {
     ];
   }
 
+  // Alias for cross-backend parity: Mayfly and <lucid-orbit-controls> expose
+  // getCameraPosition().
+  getCameraPosition() {
+    return this.getCameraPos();
+  }
+
   setCamera(distance, target = [0, 0.5, 0], theta = 0.3, phi = 0.4) {
     this.cameraDistance = distance;
     this.cameraTarget = target;

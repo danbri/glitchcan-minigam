@@ -1009,8 +1009,25 @@ ${repeatCode}  return ${childFuncName}(rp);
 }
 
 function generateSelect(node, ctx) {
-  // TODO: Implement select (conditional based on param)
-  return walkNode(node.children?.[0] || { type: 'sphere', params: {} }, ctx);
+  // Branchless conditional selection, matching the GLSL codegen:
+  //   cond < 0.5  -> a,   cond >= 0.5 -> b
+  // (Previously a stub that always rendered a unit sphere and read the wrong
+  //  field — select nodes carry `cond`/`a`/`b`, not `children`.)
+  const aNode = node.a || node.children?.[0] || { type: 'sphere', params: {} };
+  const bNode = node.b || node.children?.[1] || { type: 'sphere', params: {} };
+  const condExpr = node.cond !== undefined ? valueToWgsl(node.cond, ctx) : '0.0';
+  const aExpr = walkNode(aNode, ctx);
+  const bExpr = walkNode(bNode, ctx);
+
+  const funcName = `select_${ctx.helperCounter++}`;
+  ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {
+  let sel = step(0.5, ${condExpr});
+  let va = ${aExpr};
+  let vb = ${bExpr};
+  return mix(va, vb, sel);
+}`);
+
+  return `${funcName}(${ctx.currentP || 'p'})`;
 }
 
 function generateRound(node, ctx) {
@@ -1329,7 +1346,10 @@ function exprToWgsl(expr, ctx) {
     case 'div':
       return `(${a[0]} / ${a[1]})`;
     case 'mod':
-      return `(${a[0]} % ${a[1]})`;
+      // Floored modulo to match GLSL's mod() semantics (WGSL '%' is truncated,
+      // which diverges from Mayfly/GLSL for negative operands). Keeps SDF domain
+      // repetition identical across backends.
+      return `(${a[0]} - ${a[1]} * floor(${a[0]} / ${a[1]}))`;
     case 'neg':
       return `(-${a[0]})`;
 

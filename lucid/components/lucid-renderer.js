@@ -227,11 +227,29 @@ export class LucidRenderer extends HTMLElement {
   updateParam(name, value) {
     if (!this._renderer) return;
 
-    if (this._backend === BACKENDS.STINKYFISH) {
-      this._renderer.updateSceneParam?.(name, value);
-    } else {
-      this._renderer.updateUniform?.(`u_${name}`, value);
+    // Both backends expose setParam(name, value) (Stinkyfish's is an alias for
+    // setSceneParam). This previously called updateSceneParam/updateUniform,
+    // which exist on neither renderer, so the component's public param-update
+    // API silently did nothing. Route to the real, shared method instead.
+    if (typeof this._renderer.setParam === 'function') {
+      this._renderer.setParam(name, value);
     }
+  }
+
+  // Animation time API.
+  // Pin the render clock to an explicit time in seconds (e.g. a timeline
+  // scrubber). Both backends read `overrideTime` in their render loop, so this
+  // works identically on Mayfly and Stinkyfish. Pass null to resume the
+  // renderer's own wall clock.
+  setTime(seconds) {
+    if (!this._renderer) return;
+    this._renderer.overrideTime = (seconds === null || seconds === undefined)
+      ? null
+      : seconds;
+  }
+
+  clearTime() {
+    this.setTime(null);
   }
 
   // Private methods
