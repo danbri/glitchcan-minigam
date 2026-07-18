@@ -165,10 +165,40 @@ export class SimpleRaymarcher {
     this.isPaused = false;
   }
 
-  resize() {
-    const dpr = window.devicePixelRatio || 1;
-    this.canvas.width = window.innerWidth * dpr;
-    this.canvas.height = window.innerHeight * dpr;
+  /**
+   * Resize the drawing buffer.
+   *
+   * @param {number} [width]  backing-store width in device pixels
+   * @param {number} [height] backing-store height in device pixels
+   *
+   * When a caller passes explicit dimensions (e.g. the <lucid-renderer>
+   * ResizeObserver, which already accounts for devicePixelRatio) they are
+   * honoured directly. Otherwise the buffer is sized to the canvas's OWN
+   * displayed box — never the window.
+   *
+   * Sizing to window.innerWidth/Height was a bug: whenever the canvas wasn't
+   * full-window (e.g. a square frame in the verify/compare pages) the buffer
+   * took the viewport's aspect and got stretched into the element's box — a
+   * sphere rendered as an ellipse. On mobile it also meant every address-bar
+   * show/hide on scroll fired 'resize' and visibly distorted the render.
+   */
+  resize(width, height) {
+    let w, h;
+    if (typeof width === 'number' && typeof height === 'number' && width > 0 && height > 0) {
+      w = Math.floor(width);
+      h = Math.floor(height);
+    } else {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = this.canvas.getBoundingClientRect();
+      const cw = rect.width || this.canvas.clientWidth || window.innerWidth;
+      const ch = rect.height || this.canvas.clientHeight || window.innerHeight;
+      w = Math.max(1, Math.floor(cw * dpr));
+      h = Math.max(1, Math.floor(ch * dpr));
+    }
+    if (this.canvas.width !== w || this.canvas.height !== h) {
+      this.canvas.width = w;
+      this.canvas.height = h;
+    }
     if (this.gl) {
       this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     }

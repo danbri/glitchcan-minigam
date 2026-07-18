@@ -231,7 +231,9 @@
     function renderQuestions(s) {
       const a = state.answers[s.id] || (state.answers[s.id] = {});
       const html = CFG.perSceneQuestions.map(q => {
-        if (q.type === 'match') {
+        // Single-choice: any question with options that isn't a multi-select.
+        // Covers 'match' and 'aspect' (and any future single-choice type).
+        if (q.options && q.type !== 'checks') {
           return `<fieldset><legend>${q.label}</legend>${q.options.map(o => `
             <label class="opt"><input type="radio" name="${s.id}-${q.id}" value="${o.value}" ${a[q.id] === o.value ? 'checked' : ''}>
             <span>${o.label}</span></label>`).join('')}</fieldset>`;
@@ -256,7 +258,7 @@
       const a = state.answers[s.id] || (state.answers[s.id] = {});
       CFG.perSceneQuestions.forEach(q => {
         const els = $('questions').querySelectorAll(`[name="${s.id}-${q.id}"]`);
-        if (q.type === 'match') {
+        if (q.options && q.type !== 'checks') {
           const chosen = [...els].find(e => e.checked);
           a[q.id] = chosen ? chosen.value : '';
         } else if (q.type === 'checks') {
@@ -313,19 +315,29 @@
       lines.push(`- Browser: \`${e.ua}\``);
       lines.push(`- Viewport: ${e.viewport} @ ${e.dpr}×`);
       lines.push('');
-      const labelFor = (qid, val) => {
-        const q = CFG.perSceneQuestions.find(x => x.id === qid);
+      const optLabel = (q, val) => {
         if (!q || !q.options) return val;
         const o = q.options.find(x => x.value === val);
         return o ? o.label : val;
       };
+      const isEmpty = (v) => v === undefined || v === '' || (Array.isArray(v) && v.length === 0);
       CFG.scenes.forEach(s => {
         const a = state.answers[s.id] || {};
         lines.push(`### ${s.title} — \`${s.path}\``);
         lines.push(`_Focus: ${s.focus}_`);
-        lines.push(`- **Match:** ${a.match ? labelFor('match', a.match) : '_(not answered)_'}`);
-        if (a.discrepancies && a.discrepancies.length) lines.push(`- **Differs:** ${a.discrepancies.map(v => labelFor('discrepancies', v)).join(', ')}`);
-        if (a.notes) lines.push(`- **Notes:** ${a.notes}`);
+        // Emit every configured question generically so new response types
+        // (e.g. aspect ratio) flow through without touching this builder.
+        CFG.perSceneQuestions.forEach(q => {
+          const val = a[q.id];
+          const lbl = q.reportLabel || q.label;
+          if (q.type === 'checks') {
+            if (!isEmpty(val)) lines.push(`- **${lbl}:** ${val.map(v => optLabel(q, v)).join(', ')}`);
+          } else if (q.options) {
+            lines.push(`- **${lbl}:** ${isEmpty(val) ? '_(not answered)_' : optLabel(q, val)}`);
+          } else if (!isEmpty(val)) {
+            lines.push(`- **${lbl}:** ${val}`);
+          }
+        });
         const shots = state.shots[s.id] || {};
         const want = [];
         if (shots.mayfly) want.push(`verify-${s.id}-mayfly.png`);
