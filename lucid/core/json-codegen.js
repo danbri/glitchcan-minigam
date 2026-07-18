@@ -1942,7 +1942,19 @@ function exprToGlsl(expr, ctx) {
     case 'clamp': return `clamp(${args[0]}, ${args[1]}, ${args[2]})`;
     case 'step': return `step(${args[0]}, ${args[1]})`;
     case 'smoothstep': return `smoothstep(${args[0]}, ${args[1]}, ${args[2]})`;
-    case 'mix': return `mix(${args[0]}, ${args[1]}, ${args[2]})`;
+    case 'mix':
+    case 'lerp': return `mix(${args[0]}, ${args[1]}, ${args[2]})`;
+    // Rounding (parity with WGSL codegen)
+    case 'round': return `floor(${args[0]} + 0.5)`;
+    // Inverse trig / atan2 (parity with WGSL codegen)
+    case 'asin': return `asin(${args[0]})`;
+    case 'acos': return `acos(${args[0]})`;
+    case 'atan': return args.length > 1 ? `atan(${args[0]}, ${args[1]})` : `atan(${args[0]})`;
+    // Powers / exponentials (parity with WGSL codegen)
+    case 'pow': return `pow(${args[0]}, ${args[1]})`;
+    case 'sqrt': return `sqrt(${args[0]})`;
+    case 'exp': return `exp(${args[0]})`;
+    case 'log': return `log(${args[0]})`;
     // Noise functions - demoscene effects
     case 'noise': return `noise3(vec3(${args.join(', ')}))`;
     case 'fbm': return `fbm(vec3(${args[0]}, ${args[1]}, ${args[2]}), ${args[3] || '4'})`;

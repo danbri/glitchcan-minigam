@@ -672,6 +672,11 @@ export class SimpleRaymarcher {
     ];
   }
 
+  // Alias for cross-backend parity: Stinkyfish exposes getCameraPos().
+  getCameraPos() {
+    return this.getCameraPosition();
+  }
+
   render() {
     if (!this.program) return;
 

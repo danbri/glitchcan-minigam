@@ -179,9 +179,9 @@ export class LucidSceneParams extends HTMLElement {
       <div class="section">
         <div class="section-title">Time Control</div>
         <div class="time-controls">
-          <button id="playPause" class="${this.paused ? '' : 'active'}">${this.paused ? '▶' : '⏸'}</button>
-          <button id="reset">⏹</button>
-          <input type="range" id="timeScale" min="0" max="3" step="0.1" value="${this.timeScale}">
+          <button id="playPause" class="${this.paused ? '' : 'active'}" aria-label="${this.paused ? 'Play' : 'Pause'}" title="${this.paused ? 'Play' : 'Pause'}">${this.paused ? '▶' : '⏸'}</button>
+          <button id="reset" aria-label="Reset time" title="Reset time">⏹</button>
+          <input type="range" id="timeScale" min="0" max="3" step="0.1" value="${this.timeScale}" aria-label="Time scale (playback speed multiplier)">
           <span class="value">${this.timeScale.toFixed(1)}x</span>
         </div>
       </div>
@@ -199,6 +199,14 @@ export class LucidSceneParams extends HTMLElement {
     this.setupListeners();
   }
 
+  // Format a unit suffix for display. A leading "°" sits tight against the
+  // number (120°); word/letter units get a hair space so they read cleanly
+  // (0.50 m, 1.0 x). Returns '' when no unit is declared.
+  unitSuffix(param) {
+    if (!param || !param.unit) return '';
+    return param.unit === '°' ? '°' : ' ' + param.unit;
+  }
+
   renderParam(name, param) {
     const value = this.paramValues[name];
     const displayName = param.label || name;
@@ -208,8 +216,22 @@ export class LucidSceneParams extends HTMLElement {
       return `
         <div class="row">
           <span class="label">${displayName}</span>
-          <input type="color" class="color-input" data-name="${name}" value="${hex}">
+          <input type="color" class="color-input" data-name="${name}" value="${hex}" aria-label="${displayName} colour">
           <span class="value">${hex}</span>
+        </div>
+      `;
+    }
+
+    // Vector parameters (position/radii/direction) — read-only triplet display.
+    // A single range slider cannot represent three components, so show the
+    // formatted vector instead of feeding an array into a scalar slider.
+    if (Array.isArray(value)) {
+      const unit = this.unitSuffix(param);
+      const text = value.map(v => (typeof v === 'number' ? v.toFixed(2) : v)).join(', ');
+      return `
+        <div class="row">
+          <span class="label">${displayName}</span>
+          <span class="value" style="width:auto">${text}${unit}</span>
         </div>
       `;
     }
@@ -218,12 +240,13 @@ export class LucidSceneParams extends HTMLElement {
     const min = param.min !== undefined ? param.min : 0;
     const max = param.max !== undefined ? param.max : 1;
     const step = param.step !== undefined ? param.step : (max - min) / 100;
+    const unit = this.unitSuffix(param);
 
     return `
       <div class="row">
         <span class="label">${displayName}</span>
-        <input type="range" data-name="${name}" min="${min}" max="${max}" step="${step}" value="${value}">
-        <span class="value">${typeof value === 'number' ? value.toFixed(2) : value}</span>
+        <input type="range" data-name="${name}" min="${min}" max="${max}" step="${step}" value="${value}" aria-label="${displayName}">
+        <span class="value">${typeof value === 'number' ? value.toFixed(2) : value}${unit}</span>
       </div>
     `;
   }
@@ -266,7 +289,7 @@ export class LucidSceneParams extends HTMLElement {
         this.paramValues[name] = value;
 
         const valueEl = e.target.parentElement.querySelector('.value');
-        if (valueEl) valueEl.textContent = value.toFixed(2);
+        if (valueEl) valueEl.textContent = value.toFixed(2) + this.unitSuffix(this.sceneParams[name]);
 
         this.emitParamChange(name, value);
       });

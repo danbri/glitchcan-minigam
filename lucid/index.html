@@ -1304,28 +1304,28 @@
     <header class="header">
       <div class="header-left">
         <div class="header-icons">
-          <button class="icon-btn" id="btn-menu" title="Menu (M)">☰</button>
-          <button class="icon-btn" id="btn-perf" title="Performance Stats">📊</button>
-          <button class="icon-btn" id="btn-debug" title="Debug (D)">🔧</button>
-          <button class="icon-btn" id="btn-params" title="Scene Params (P)">🎛️</button>
-          <button class="icon-btn" id="btn-editor" title="Editor (E)">{ }</button>
-          <button class="icon-btn" id="btn-auto-rotate" title="Auto-rotate (R)">🚁</button>
-          <button class="icon-btn" id="btn-anim" title="Animation: Playing (A)" style="position:relative;">
+          <button class="icon-btn" id="btn-menu" title="Menu (M)" aria-label="Menu">☰</button>
+          <button class="icon-btn" id="btn-perf" title="Performance Stats" aria-label="Performance stats">📊</button>
+          <button class="icon-btn" id="btn-debug" title="Settings (D)" aria-label="Settings">🔧</button>
+          <button class="icon-btn" id="btn-params" title="Scene Parameters (P)" aria-label="Scene parameters">🎛️</button>
+          <button class="icon-btn" id="btn-editor" title="Scene Editor (E)" aria-label="Scene editor">{ }</button>
+          <button class="icon-btn" id="btn-auto-rotate" title="Auto-rotate (R)" aria-label="Auto-rotate camera">🚁</button>
+          <button class="icon-btn" id="btn-anim" title="Animation: Playing (A)" aria-label="Toggle animation" style="position:relative;">
             <span id="anim-icon" style="display:inline-block;">▶</span>
           </button>
-          <button class="icon-btn" id="btn-tree" title="Scene Tree (T)">▹</button>
-          <button class="icon-btn" id="btn-display-mode" title="Display: None (G)">⬚</button>
+          <button class="icon-btn" id="btn-tree" title="Scene Tree (T)" aria-label="Scene tree">▹</button>
+          <button class="icon-btn" id="btn-display-mode" title="Display: None (G)" aria-label="Display mode">⬚</button>
           <div style="position:relative;display:inline-block;">
-            <button class="icon-btn" id="btn-backend" title="Backend: Mayfly (click=cycle, hold=menu)">🦋</button>
+            <button class="icon-btn" id="btn-backend" title="Backend: Mayfly / WebGL (click to cycle, hold for menu)" aria-label="Renderer backend: Mayfly">🦋</button>
             <div id="backend-menu" style="display:none;position:absolute;top:100%;left:0;background:#21262d;border:1px solid #30363d;border-radius:4px;z-index:1000;min-width:100px;box-shadow:0 4px 12px rgba(0,0,0,0.4);">
-              <div class="backend-option" data-backend="mayfly" style="padding:8px 12px;cursor:pointer;color:#c9d1d9;border-bottom:1px solid #30363d;">🦋 Mayfly</div>
-              <div class="backend-option" data-backend="stinkyfish" style="padding:8px 12px;cursor:pointer;color:#c9d1d9;">🐟 Stinkyfish</div>
+              <div class="backend-option" data-backend="mayfly" style="padding:8px 12px;cursor:pointer;color:#c9d1d9;border-bottom:1px solid #30363d;">🦋 Mayfly · WebGL</div>
+              <div class="backend-option" data-backend="stinkyfish" style="padding:8px 12px;cursor:pointer;color:#c9d1d9;">🐟 Stinkyfish · WebGPU</div>
             </div>
           </div>
         </div>
         <div class="demo-info">
-          <h1 id="title">Loading...</h1>
-          <p id="subtitle">JSON SDF Demo</p>
+          <h1 id="title">Loading…</h1>
+          <p id="subtitle">SDF scene viewer</p>
           <div class="scene-path" id="scene-path"></div>
         </div>
       </div>
@@ -1383,13 +1383,13 @@
         <!-- Source Tab Content -->
         <div class="tab-content active" id="content-source">
           <div class="editor-header">
-            <button class="btn primary" id="btn-apply" title="Apply Changes (Ctrl+Enter)">Save</button>
+            <button class="btn primary" id="btn-apply" title="Apply changes to the scene (Ctrl+Enter)">Apply</button>
             <div style="display: flex; gap: 0.25rem;">
-              <button class="btn" id="btn-select-all" title="Select All">All</button>
+              <button class="btn" id="btn-select-all" title="Select all" aria-label="Select all">All</button>
               <button class="btn" id="btn-cut" title="Cut">Cut</button>
               <button class="btn" id="btn-copy-sel" title="Copy">Copy</button>
               <button class="btn" id="btn-paste" title="Paste">Paste</button>
-              <button class="btn" id="btn-format">Fmt</button>
+              <button class="btn" id="btn-format" title="Format JSON" aria-label="Format JSON">Fmt</button>
             </div>
           </div>
           <!-- Scalar Scrubber Panel -->
@@ -1487,7 +1487,7 @@
   <!-- Main Menu -->
   <div class="main-menu" id="main-menu">
     <div class="menu-item" id="menu-debug">
-      <span>🔧 Debug Panel</span>
+      <span>🔧 Settings</span>
     </div>
     <div class="menu-item" id="menu-editor">
       <span>{ } Editor</span>
@@ -1503,14 +1503,14 @@
     </div>
     <div class="menu-divider"></div>
     <div class="menu-item has-submenu" id="menu-demos">
-      <span>📦 Demos</span>
+      <span>📦 Scenes</span>
       <div class="submenu" id="demos-submenu">
         <!-- Populated by JS -->
       </div>
     </div>
     <div class="menu-divider"></div>
     <div class="menu-item" id="menu-new-demo">
-      <span>✨ New Demo</span>
+      <span>✨ New Scene</span>
     </div>
     <div class="menu-item" id="menu-load-url">
       <span>🔗 Load from URL</span>
@@ -1615,31 +1615,31 @@
     <div class="debug-content">
       <div class="debug-row">
         <span class="debug-label">Volume Render Mode</span>
-        <div class="toggle" id="toggle-volume"></div>
+        <div class="toggle" id="toggle-volume" role="switch" tabindex="0" aria-checked="false" aria-label="Volume render mode"></div>
       </div>
       <div class="debug-row">
         <span class="debug-label">Show Ground Plane</span>
-        <div class="toggle active" id="toggle-ground"></div>
+        <div class="toggle active" id="toggle-ground" role="switch" tabindex="0" aria-checked="true" aria-label="Show ground plane"></div>
       </div>
       <div class="debug-row">
         <span class="debug-label">Show Edges</span>
-        <div class="toggle active" id="toggle-edges"></div>
+        <div class="toggle active" id="toggle-edges" role="switch" tabindex="0" aria-checked="true" aria-label="Show edges"></div>
       </div>
       <div class="debug-row">
         <span class="debug-label">Show CSG Cutters</span>
-        <div class="toggle" id="toggle-cutters" title="Debug: Show subtract cutters as visible shapes"></div>
+        <div class="toggle" id="toggle-cutters" role="switch" tabindex="0" aria-checked="false" aria-label="Show CSG cutters" title="Show subtract cutters as visible shapes"></div>
       </div>
       <div class="debug-row">
         <span class="debug-label">Show Axes (RGB)</span>
-        <div class="toggle active" id="toggle-axes" title="Show Blender-style XYZ axes: Red=X, Green=Y, Blue=Z"></div>
+        <div class="toggle active" id="toggle-axes" role="switch" tabindex="0" aria-checked="true" aria-label="Show XYZ axes" title="Show Blender-style XYZ axes: Red=X, Green=Y, Blue=Z"></div>
       </div>
       <div class="debug-row">
         <span class="debug-label">Show Perf Stats</span>
-        <div class="toggle" id="toggle-perf" title="Show FPS, frame time, scene complexity"></div>
+        <div class="toggle" id="toggle-perf" role="switch" tabindex="0" aria-checked="false" aria-label="Show performance stats" title="Show FPS, frame time, scene complexity"></div>
       </div>
       <div class="debug-row">
         <span class="debug-label">Camera Distance</span>
-        <input type="range" min="1" max="15" step="0.5" value="4" id="slider-distance" style="width: 120px;">
+        <input type="range" min="1" max="15" step="0.5" value="4" id="slider-distance" style="width: 120px;" aria-label="Camera distance in metres" title="Camera distance (metres)">
       </div>
       <div class="debug-row" id="volume-controls" style="display: none; flex-direction: column; gap: 0.5rem;">
         <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
@@ -2244,6 +2244,25 @@
       if (el) el.addEventListener(event, handler);
       else console.warn(`Element #${id} not found for ${event}`);
     };
+
+    // Accessibility: make the custom `.toggle` switches keyboard-operable and
+    // keep aria-checked in sync with the `active` class. Delegated on document
+    // so it works regardless of when each toggle's own click handler is wired;
+    // the bubble-phase click listener runs after the element toggles `active`.
+    document.addEventListener('keydown', (e) => {
+      const t = e.target;
+      if (t && t.classList && t.classList.contains('toggle') &&
+          (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar')) {
+        e.preventDefault();
+        t.click();
+      }
+    });
+    document.addEventListener('click', (e) => {
+      const t = e.target;
+      if (t && t.classList && t.classList.contains('toggle') && t.hasAttribute('role')) {
+        t.setAttribute('aria-checked', t.classList.contains('active') ? 'true' : 'false');
+      }
+    });
     const loadingEl = $('loading');
     const appEl = $('app');
     const titleEl = $('title');
@@ -4758,30 +4777,35 @@
           badges += '<span class="param-badge expr" title="Expression-driven">ƒ expr</span>';
         }
 
+        // UI presentation: human label + unit suffix (°/m/x/…). Both are
+        // backward-compatible — a scene that declares neither renders as before.
+        const displayName = param.label || name;
+        const unitSfx = param.unit ? (param.unit === '°' ? '°' : ' ' + param.unit) : '';
+
         if (type === 'scalar' && typeof value === 'number') {
           html += `<div class="${rowClass}" style="flex-direction: column; gap: 0.25rem;">
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-              <span class="debug-label" style="font-size: 0.75rem;">${name}${badges}</span>
-              <span id="param-val-${name}" style="font-size: 0.7rem; min-width: 3rem; text-align: right; font-family: monospace;">${value.toFixed(2)}</span>
+              <span class="debug-label" style="font-size: 0.75rem;">${displayName}${badges}</span>
+              <span id="param-val-${name}" style="font-size: 0.7rem; min-width: 3rem; text-align: right; font-family: monospace;">${value.toFixed(2)}${unitSfx}</span>
             </div>
             <input type="range" min="${min}" max="${max}" step="${step}" value="${value}"
-                   id="param-slider-${name}" data-param="${name}" style="width: 100%;">
+                   id="param-slider-${name}" data-param="${name}" aria-label="${displayName}" style="width: 100%;">
           </div>`;
         } else if (type === 'color3' && Array.isArray(value)) {
           const hex = rgbToHex(value);
           const hsl = rgbToHsl(value);
           html += `<div class="${rowClass}" style="flex-direction: column; gap: 0.25rem;">
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-              <span class="debug-label" style="font-size: 0.75rem;">${name}${badges}</span>
-              <input type="color" value="${hex}" id="param-color-${name}" data-param="${name}" style="width: 40px; height: 24px; border: none; padding: 0; cursor: pointer;">
+              <span class="debug-label" style="font-size: 0.75rem;">${displayName}${badges}</span>
+              <input type="color" value="${hex}" id="param-color-${name}" data-param="${name}" aria-label="${displayName} colour" style="width: 40px; height: 24px; border: none; padding: 0; cursor: pointer;">
             </div>
             <input type="range" min="0" max="360" step="1" value="${Math.round(hsl.h * 360)}"
-                   id="param-hue-${name}" data-param="${name}" style="width: 100%; accent-color: hsl(${hsl.h * 360}, 100%, 50%);">
+                   id="param-hue-${name}" data-param="${name}" aria-label="${displayName} hue" style="width: 100%; accent-color: hsl(${hsl.h * 360}, 100%, 50%);">
           </div>`;
         } else if (Array.isArray(value) && value.length === 3) {
           // position3, radii3, direction3 - show as 3 sliders
           html += `<div class="${rowClass}" style="flex-direction: column; gap: 0.25rem;">
-            <span class="debug-label" style="font-size: 0.75rem;">${name} [x,y,z]${badges}</span>
+            <span class="debug-label" style="font-size: 0.75rem;">${displayName} [x,y,z]${unitSfx ? ' (' + param.unit + ')' : ''}${badges}</span>
             <div style="display: flex; gap: 0.25rem; width: 100%;">
               <input type="number" value="${value[0].toFixed(2)}" step="0.1" id="param-vec-${name}-0" data-param="${name}" data-index="0" style="width: 33%; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 3px; font-size: 0.7rem;">
               <input type="number" value="${value[1].toFixed(2)}" step="0.1" id="param-vec-${name}-1" data-param="${name}" data-index="1" style="width: 33%; padding: 0.2rem; background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); border-radius: 3px; font-size: 0.7rem;">
@@ -4871,7 +4895,8 @@
               const val = parseFloat(this.value);
               param.value = val;
               const valEl = $(`param-val-${name}`);
-              if (valEl) valEl.textContent = val.toFixed(2);
+              const unitSfx = param.unit ? (param.unit === '°' ? '°' : ' ' + param.unit) : '';
+              if (valEl) valEl.textContent = val.toFixed(2) + unitSfx;
               renderer.setParam(name, val);
 
               // Check and enforce any coupled constraints
@@ -5544,11 +5569,15 @@
       const LONG_PRESS_MS = 400;
       const backends = ['mayfly', 'stinkyfish'];
       const backendIcons = { mayfly: '🦋', stinkyfish: '🐟' };
+      const backendTech = { mayfly: 'WebGL', stinkyfish: 'WebGPU' };
 
       function updateBackendButton() {
         if (btnBackend) {
           btnBackend.textContent = backendIcons[currentBackend] || '🦋';
-          btnBackend.title = `Backend: ${currentBackend} (click=cycle, hold=menu)`;
+          const label = `${currentBackend.charAt(0).toUpperCase()}${currentBackend.slice(1)}`;
+          const tech = backendTech[currentBackend] || '';
+          btnBackend.title = `Backend: ${label} / ${tech} (click to cycle, hold for menu)`;
+          btnBackend.setAttribute('aria-label', `Renderer backend: ${label}`);
         }
       }
 
