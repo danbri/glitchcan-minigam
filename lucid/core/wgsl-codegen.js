@@ -31,7 +31,11 @@ export function generateWgslFromJson(scene, options = {}) {
     ancestorRotation: null,
     nodeIdCounter: 0,
     nodeIdMap: new Map(),
-    pickingMode: options.pickingMode || false
+    pickingMode: options.pickingMode || false,
+    // Ellipsoid distance fidelity (parity with GLSL codegen): 'fast' (default),
+    // 'exact', 'auto' (steps by eccentricity), or an explicit step count.
+    ellipsoidFidelity: options.ellipsoidFidelity != null ? options.ellipsoidFidelity : 'fast',
+    ellipsoidHelpersEmitted: new Set()
   };
 
   // Register ALL params as uniforms (unless inlining defaults)
@@ -246,7 +250,64 @@ function generateEllipsoid(node, ctx) {
   const radii = valueToWgsl(params.radii || { type: 'array', values: [1, 0.5, 0.5].map(v => ({ type: 'const', value: v })) }, ctx);
   const p = applyTransform('p', node.transform, ctx);
   const color = valueToWgsl(params.color || { type: 'array', values: [0.8, 0.8, 0.8].map(v => ({ type: 'const', value: v })) }, ctx);
-  return `vec4f(sdEllipsoid(${p}, ${radii}), ${color})`;
+  const steps = resolveEllipsoidSteps(node, ctx);
+  const fn = steps > 0 ? emitEllipsoidHelperWgsl(steps, ctx) : 'sdEllipsoid';
+  return `vec4f(${fn}(${p}, ${radii}), ${color})`;
+}
+
+// Read constant ellipsoid radii for compile-time eccentricity (or null).
+function constEllipsoidRadii(node) {
+  const r = node.params && node.params.radii;
+  if (!r) return [1, 0.5, 0.5];
+  if (r.type === 'array' && r.values && r.values.every(v => v && v.type === 'const')) {
+    return r.values.map(v => v.value);
+  }
+  return null;
+}
+
+// Newton-step count for an ellipsoid (parity with the GLSL resolver).
+function resolveEllipsoidSteps(node, ctx) {
+  const fidelity = node.fidelity !== undefined ? node.fidelity : ctx.ellipsoidFidelity;
+  if (typeof fidelity === 'number') return Math.max(0, Math.min(8, Math.floor(fidelity)));
+  if (fidelity === 'exact') return 6;
+  if (fidelity === 'auto') {
+    const radii = constEllipsoidRadii(node);
+    if (!radii) return 3;
+    const pos = radii.filter(v => v > 0);
+    const ecc = pos.length ? Math.max(...pos) / Math.min(...pos) : 1;
+    if (ecc <= 1.15) return 0;
+    if (ecc <= 2.5) return 2;
+    if (ecc <= 5) return 3;
+    if (ecc <= 8) return 4;
+    return 6;
+  }
+  return 0;
+}
+
+// Emit a Newton-refined ellipsoid helper (WGSL) once per step-count.
+function emitEllipsoidHelperWgsl(steps, ctx) {
+  const name = `sdEllipsoidF${steps}`;
+  if (ctx.ellipsoidHelpersEmitted.has(steps)) return name;
+  ctx.ellipsoidHelpersEmitted.add(steps);
+  ctx.helpers.push(`fn ${name}(p: vec3f, r: vec3f) -> f32 {
+  let k0 = length(p / r);
+  let k1 = length(p / (r * r));
+  let dFast = k0 * (k0 - 1.0) / k1;
+  if (k0 < 1.0) { return dFast; }
+  let r2 = r * r;
+  let pp = p * p;
+  var mu = min(min(r.x, r.y), r.z) * dFast;
+  for (var i = 0; i < ${steps}; i = i + 1) {
+    let den = r2 + mu;
+    let G = dot(r2 * pp / (den * den), vec3f(1.0)) - 1.0;
+    let Gp = dot(-2.0 * r2 * pp / (den * den * den), vec3f(1.0));
+    if (abs(Gp) < 1e-20) { break; }
+    mu = max(mu - G / Gp, 0.0);
+  }
+  let c = r2 * p / (r2 + mu);
+  return length(p - c);
+}`);
+  return name;
 }
 
 function generateCone(node, ctx) {

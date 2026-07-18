@@ -27,7 +27,7 @@ const BACKENDS = {
 
 export class LucidRenderer extends HTMLElement {
   static get observedAttributes() {
-    return ['backend', 'scene', 'quality', 'disable-controls', 'ground-plane', 'axes'];
+    return ['backend', 'scene', 'quality', 'disable-controls', 'ground-plane', 'axes', 'ellipsoid-fidelity'];
   }
 
   constructor() {
@@ -128,6 +128,10 @@ export class LucidRenderer extends HTMLElement {
         break;
       case 'axes':
         this.setAxes(newValue !== 'false');
+        break;
+      case 'ellipsoid-fidelity':
+        // Fidelity is baked into the shader, so recompile the current scene.
+        if (this._scene && this._renderer) this.loadSceneJson(this._scene);
         break;
     }
   }
@@ -374,13 +378,27 @@ export class LucidRenderer extends HTMLElement {
     this._setStatus('Stinkyfish ready', 'ok');
   }
 
+  // Codegen options assembled from (in priority order) the `ellipsoid-fidelity`
+  // attribute, then the scene JSON's own `ellipsoidFidelity`. This is the entry
+  // point for env/task hints — e.g. an app can set the attribute to 'fast' on
+  // low-end devices and 'auto'/'exact' on capable ones. Omitted => 'fast'.
+  _codegenOptions(json) {
+    const attr = this.getAttribute('ellipsoid-fidelity');
+    const fidelity = attr != null ? attr : (json && json.ellipsoidFidelity);
+    const opts = {};
+    if (fidelity != null && fidelity !== '') {
+      opts.ellipsoidFidelity = /^\d+$/.test(fidelity) ? parseInt(fidelity, 10) : fidelity;
+    }
+    return opts;
+  }
+
   async _loadSceneMayfly(json) {
     const basePath = this._getBasePath();
     const { loadJsonScene } = await import(`${basePath}/core/json-loader.js`);
     const { generateGlslFromJson } = await import(`${basePath}/core/json-codegen.js`);
 
     const scene = loadJsonScene(json);
-    const glsl = generateGlslFromJson(scene, {});
+    const glsl = generateGlslFromJson(scene, this._codegenOptions(json));
 
     // Mayfly uses updateScene(glsl, params, rig, json)
     this._renderer.updateScene(glsl, scene.params || {}, scene.rig || null, json);
@@ -404,7 +422,7 @@ export class LucidRenderer extends HTMLElement {
     const { getAllParamNames } = await import(`${basePath}/core/rig-evaluator.js`);
 
     const scene = loadJsonScene(json);
-    const wgsl = generateWgslFromJson(scene, {});
+    const wgsl = generateWgslFromJson(scene, this._codegenOptions(json));
 
     // Build uniform layout from all params (including rig-derived)
     // This maps param names to WGSL types for the SceneUniforms struct

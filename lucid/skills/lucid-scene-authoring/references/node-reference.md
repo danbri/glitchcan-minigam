@@ -48,7 +48,7 @@ below are what codegen uses when a param is omitted. All carry an optional
 | `torus` | `major` (1.0), `minor` (0.3) | ring & tube radii |
 | `cylinder` | `h` (1.0), `r` (0.5) | half-height, radius |
 | `capsule` | `h` (1.0), `r` (0.25) | cylinder with hemispherical caps |
-| `ellipsoid` | `radii` ([1,0.5,0.5]) | per-axis radii |
+| `ellipsoid` | `radii` ([1,0.5,0.5]) | per-axis radii; optional `fidelity` (`"fast"`/`"auto"`/`"exact"`/N) picks distance accuracy — see `lucid/docs/ellipsoid-fidelity.md` |
 | `cone` | `h` (1.0), `r` (0.5) | simple cone (tip up) |
 | `cone`/`roundCone` | `h`, `r1` (0.5, bottom), `r2` (0.0, top) | truncated/rounded cone when `r1`/`r2` present |
 | `plane` | `normal` ([0,1,0]), `h` (0) | infinite plane, `h` = offset along normal |

@@ -108,6 +108,10 @@ function processNode(node, registry, depth = 0) {
     id: node.id || null
   };
 
+  // Per-node render-fidelity hint (currently used by the ellipsoid primitive to
+  // pick exact vs approximate distance). Preserved verbatim for codegen.
+  if (node.fidelity !== undefined) processed.fidelity = node.fidelity;
+
   // Handle different node types
   switch (node.type) {
     // Primitives
