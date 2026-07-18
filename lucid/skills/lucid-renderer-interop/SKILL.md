@@ -54,6 +54,11 @@ you expect is present in **both** strings. "Compiles" ≠ "renders correctly" fo
 WGSL — confirm anything visual in a real WebGPU browser via `compare.html`,
 `scene-catalog.html`, or `index.html?backend=stinkyfish`.
 
+**Can't see WGSL headless?** That's the whole point of `lucid/verify/` — a public
+page that has a human on a real GPU device compare both backends and file the
+result as a `visual-verification` GitHub issue you can read back. Reach for it
+whenever a WGSL change needs human eyes; see `lucid/verify/README.md`.
+
 ## Renderer public API (what both expose)
 
 Shared: `setParam(name, value)`, camera props (`cameraDistance/Theta/Phi/Target`)

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Lucid · Human Visual Verification</title>
+  <style>
+    :root {
+      --bg: #0d1117; --panel: #161b22; --border: #30363d; --text: #c9d1d9;
+      --muted: #8b949e; --accent: #4a9eff; --ok: #3fb950; --warn: #d29922; --err: #f85149;
+      --mayfly: #4af; --stinkyfish: #f4a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.5;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+    header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+    h1 { font-size: 1.15rem; margin: 0; }
+    h1 .sub { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
+    main { max-width: 1000px; margin: 0 auto; padding: 1rem 1.25rem 4rem; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+    .muted { color: var(--muted); }
+    .small { font-size: 0.85rem; }
+    code, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.85em; }
+
+    /* Environment probe */
+    .env-grid { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; font-size: 0.85rem; }
+    .env-grid dt { color: var(--muted); }
+    .env-grid dd { margin: 0; }
+    .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .pill.ok { background: rgba(63,185,80,.18); color: var(--ok); }
+    .pill.err { background: rgba(248,81,73,.18); color: var(--err); }
+    .pill.warn { background: rgba(210,153,34,.18); color: var(--warn); }
+
+    /* Renders */
+    .renders { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    @media (max-width: 640px) { .renders { grid-template-columns: 1fr; } }
+    .render-col h3 { margin: 0 0 0.35rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .05em; }
+    .render-col.mayfly h3 { color: var(--mayfly); }
+    .render-col.stinkyfish h3 { color: var(--stinkyfish); }
+    .render-frame { aspect-ratio: 1 / 1; background: #000; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; position: relative; }
+    lucid-renderer { width: 100%; height: 100%; display: block; }
+
+    /* Questions */
+    fieldset { border: 1px solid var(--border); border-radius: 8px; margin: 0 0 0.75rem; padding: 0.75rem 1rem; }
+    legend { padding: 0 0.4rem; color: var(--text); font-size: 0.9rem; font-weight: 600; }
+    .opt { display: flex; gap: 0.5rem; align-items: flex-start; padding: 0.25rem 0; cursor: pointer; }
+    .opt input { margin-top: 0.2rem; }
+    textarea { width: 100%; min-height: 3rem; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem; font: inherit; resize: vertical; }
+
+    .focus { border-left: 3px solid var(--accent); padding-left: 0.75rem; margin: 0.25rem 0 1rem; color: var(--muted); font-size: 0.9rem; }
+
+    button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--border); background: #21262d; color: var(--text); padding: 0.5rem 1rem; }
+    button:hover { background: #2d333b; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #04101f; font-weight: 600; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .spacer { flex: 1; }
+    .progress { color: var(--muted); font-size: 0.85rem; }
+
+    .thumbs { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+    .thumb { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; width: 96px; }
+    .thumb img { display: block; width: 96px; height: 96px; object-fit: cover; background: #000; }
+    .thumb .cap { font-size: 0.65rem; padding: 2px 4px; color: var(--muted); text-align: center; }
+    .thumb.blank img { outline: 2px solid var(--warn); outline-offset: -2px; }
+
+    pre.report { white-space: pre-wrap; word-break: break-word; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; max-height: 320px; overflow: auto; font-size: 0.8rem; }
+    .hidden { display: none; }
+    a.link { color: var(--accent); }
+    ol.steps { padding-left: 1.2rem; }
+    ol.steps li { margin: 0.35rem 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🔬 Lucid Visual Verification <span class="sub">— what does it really look like on your device?</span></h1>
+  </header>
+  <main>
+    <div class="card" id="intro">
+      <p class="small muted" style="margin-top:0">
+        Headless test machines can't render WebGPU and barely render WebGL, so an
+        automated agent never actually <em>sees</em> Lucid on real hardware. This page
+        turns your real browser into its eyes: it shows each scene in both backends,
+        asks you what you see, and packages your answers (plus screenshots) into a
+        GitHub issue the agent can read back.
+      </p>
+      <div class="env-grid" id="env"></div>
+      <div class="row" style="margin-top:1rem">
+        <button class="primary" id="btn-start">Start verification</button>
+        <span class="progress" id="scene-count"></span>
+      </div>
+    </div>
+
+    <div class="card hidden" id="session">
+      <div class="row">
+        <strong id="scene-title"></strong>
+        <span class="spacer"></span>
+        <span class="progress" id="progress"></span>
+      </div>
+      <p class="focus" id="scene-focus"></p>
+      <div class="renders">
+        <div class="render-col mayfly">
+          <h3>🦋 Mayfly · WebGL</h3>
+          <div class="render-frame"><lucid-renderer id="r-mayfly" backend="mayfly" quality="medium"></lucid-renderer></div>
+        </div>
+        <div class="render-col stinkyfish">
+          <h3>🐟 Stinkyfish · WebGPU</h3>
+          <div class="render-frame"><lucid-renderer id="r-stinkyfish" backend="stinkyfish" quality="medium"></lucid-renderer></div>
+        </div>
+      </div>
+      <div class="row" style="margin:0.75rem 0">
+        <button id="btn-capture">📸 Capture screenshots</button>
+        <span class="small muted">Tip: if a thumbnail is blank (outlined orange), use your device's own screenshot instead and drag it into the issue later.</span>
+      </div>
+      <div class="thumbs" id="thumbs"></div>
+
+      <div id="questions" style="margin-top:1rem"></div>
+
+      <div class="row">
+        <button id="btn-prev">← Previous</button>
+        <span class="spacer"></span>
+        <button class="primary" id="btn-next">Next →</button>
+      </div>
+    </div>
+
+    <div class="card hidden" id="review">
+      <h2 style="margin-top:0;font-size:1.05rem">Review &amp; submit</h2>
+      <p class="small muted">
+        Your report is below. It includes a machine-readable block the agent parses
+        automatically — your typed answers are the real signal, screenshots are a
+        corroborating record.
+      </p>
+      <div class="row" style="margin-bottom:0.75rem">
+        <button class="primary" id="btn-issue">📮 Open pre-filled GitHub issue</button>
+        <button id="btn-copy">📋 Copy full report</button>
+        <button id="btn-download">⬇︎ Download screenshots</button>
+      </div>
+      <p class="small">How to finish:</p>
+      <ol class="steps small">
+        <li>Click <strong>Open pre-filled GitHub issue</strong> — title, labels and your answers are filled in.</li>
+        <li>Click <strong>Download screenshots</strong>, then drag those PNG files into the issue body where each scene is marked (GitHub uploads and links them automatically).</li>
+        <li>Submit the issue. That's it — the agent reads it from there.</li>
+      </ol>
+      <details style="margin-top:0.5rem"><summary class="small muted">Preview report</summary>
+        <pre class="report" id="report-preview"></pre>
+      </details>
+    </div>
+  </main>
+
+  <script type="module">
+    import '../components/lucid-renderer.js';
+    import { VERIFY_CONFIG as CFG } from './verify-config.js';
+
+    // ---- state ----
+    const state = { i: 0, env: {}, answers: {}, shots: {} };
+    const $ = id => document.getElementById(id);
+    const rMayfly = $('r-mayfly'), rStinky = $('r-stinkyfish');
+
+    // ---- environment probe ----
+    async function probeEnv() {
+      const env = {
+        timestamp: new Date().toISOString(),
+        ua: navigator.userAgent,
+        platform: navigator.platform || '',
+        viewport: `${window.innerWidth}×${window.innerHeight}`,
+        dpr: window.devicePixelRatio || 1,
+        webgpu: false, webgpuAdapter: '',
+        webglRenderer: '', webglVendor: '',
+      };
+      // WebGL renderer string (objective GPU identity)
+      try {
+        const c = document.createElement('canvas');
+        const gl = c.getContext('webgl2') || c.getContext('webgl');
+        if (gl) {
+          const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+          if (dbg) {
+            env.webglRenderer = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || '';
+            env.webglVendor = gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) || '';
+          }
+        }
+      } catch (e) {}
+      // WebGPU availability + adapter
+      try {
+        if ('gpu' in navigator) {
+          const adapter = await navigator.gpu.requestAdapter();
+          if (adapter) {
+            env.webgpu = true;
+            const info = adapter.info || (adapter.requestAdapterInfo ? await adapter.requestAdapterInfo() : null);
+            if (info) env.webgpuAdapter = [info.vendor, info.architecture, info.description].filter(Boolean).join(' ');
+          }
+        }
+      } catch (e) {}
+      state.env = env;
+      renderEnv();
+    }
+
+    function pill(ok, textOk, textNo, cls) {
+      return `<span class="pill ${ok ? 'ok' : (cls || 'err')}">${ok ? textOk : textNo}</span>`;
+    }
+    function renderEnv() {
+      const e = state.env;
+      $('env').innerHTML = `
+        <dt>WebGPU (Stinkyfish)</dt><dd>${pill(e.webgpu, 'available', 'not available', 'warn')} <span class="small muted mono">${e.webgpuAdapter || ''}</span></dd>
+        <dt>WebGL (Mayfly)</dt><dd><span class="mono small">${e.webglRenderer || 'unknown'}</span></dd>
+        <dt>Browser</dt><dd class="small mono">${e.ua}</dd>
+        <dt>Viewport</dt><dd class="small">${e.viewport} @ ${e.dpr}×</dd>`;
+      $('scene-count').textContent = `${CFG.scenes.length} scenes to review`;
+      if (!e.webgpu) {
+        $('env').insertAdjacentHTML('beforeend',
+          `<dt></dt><dd class="small" style="color:var(--warn)">This device has no WebGPU — you can still record the WebGL side, but the most valuable pass is on a WebGPU-capable device/browser.</dd>`);
+      }
+    }
+
+    // ---- session ----
+    function loadScene(idx) {
+      const s = CFG.scenes[idx];
+      $('scene-title').textContent = s.title;
+      $('scene-focus').textContent = 'Focus: ' + s.focus;
+      $('progress').textContent = `Scene ${idx + 1} of ${CFG.scenes.length}`;
+      // (Re)load in both backends. Setting the attribute triggers loadScene().
+      rMayfly.setAttribute('scene', s.path);
+      rStinky.setAttribute('scene', s.path);
+      renderQuestions(s);
+      renderThumbs(s);
+      $('btn-prev').disabled = idx === 0;
+      $('btn-next').textContent = idx === CFG.scenes.length - 1 ? 'Finish →' : 'Next →';
+    }
+
+    function renderQuestions(s) {
+      const a = state.answers[s.id] || (state.answers[s.id] = {});
+      const html = CFG.perSceneQuestions.map(q => {
+        if (q.type === 'match') {
+          return `<fieldset><legend>${q.label}</legend>${q.options.map(o => `
+            <label class="opt"><input type="radio" name="${s.id}-${q.id}" value="${o.value}" ${a[q.id] === o.value ? 'checked' : ''}>
+            <span>${o.label}</span></label>`).join('')}</fieldset>`;
+        }
+        if (q.type === 'checks') {
+          const set = new Set(a[q.id] || []);
+          return `<fieldset><legend>${q.label}</legend>${q.options.map(o => `
+            <label class="opt"><input type="checkbox" name="${s.id}-${q.id}" value="${o.value}" ${set.has(o.value) ? 'checked' : ''}>
+            <span>${o.label}</span></label>`).join('')}</fieldset>`;
+        }
+        return `<fieldset><legend>${q.label}</legend>
+          <textarea name="${s.id}-${q.id}" placeholder="${q.placeholder || ''}">${a[q.id] || ''}</textarea></fieldset>`;
+      }).join('');
+      $('questions').innerHTML = html;
+      // wire inputs -> state
+      $('questions').querySelectorAll('input,textarea').forEach(el => {
+        el.addEventListener('input', () => saveAnswers(s));
+      });
+    }
+
+    function saveAnswers(s) {
+      const a = state.answers[s.id] || (state.answers[s.id] = {});
+      CFG.perSceneQuestions.forEach(q => {
+        const els = $('questions').querySelectorAll(`[name="${s.id}-${q.id}"]`);
+        if (q.type === 'match') {
+          const chosen = [...els].find(e => e.checked);
+          a[q.id] = chosen ? chosen.value : '';
+        } else if (q.type === 'checks') {
+          a[q.id] = [...els].filter(e => e.checked).map(e => e.value);
+        } else {
+          a[q.id] = els[0] ? els[0].value.trim() : '';
+        }
+      });
+    }
+
+    // ---- screenshots ----
+    function grabCanvas(el) {
+      try {
+        const canvas = el.shadowRoot && el.shadowRoot.querySelector('canvas');
+        if (!canvas) return null;
+        // Force one synchronous draw so the drawing buffer is valid this tick
+        // (avoids blank captures when preserveDrawingBuffer is off).
+        if (el.renderer && typeof el.renderer.render === 'function') {
+          try { el.renderer.render(); } catch (e) {}
+        }
+        const url = canvas.toDataURL('image/png');
+        const blank = !url || url.length < 2000; // rough blank heuristic
+        return { url, blank };
+      } catch (e) { return null; }
+    }
+
+    function captureCurrent() {
+      const s = CFG.scenes[state.i];
+      const shots = state.shots[s.id] || (state.shots[s.id] = {});
+      shots.mayfly = grabCanvas(rMayfly);
+      shots.stinkyfish = grabCanvas(rStinky);
+      renderThumbs(s);
+    }
+
+    function renderThumbs(s) {
+      const shots = state.shots[s.id] || {};
+      const cell = (backend, label) => {
+        const shot = shots[backend];
+        if (!shot || !shot.url) return '';
+        return `<div class="thumb ${shot.blank ? 'blank' : ''}"><img src="${shot.url}" alt="${s.id} ${backend}"><div class="cap">${label}${shot.blank ? ' ⚠' : ''}</div></div>`;
+      };
+      $('thumbs').innerHTML = cell('mayfly', '🦋 WebGL') + cell('stinkyfish', '🐟 WebGPU');
+    }
+
+    // ---- report ----
+    function buildReport() {
+      const e = state.env;
+      const lines = [];
+      lines.push(`## ${CFG.issueTitlePrefix} — ${e.timestamp.slice(0, 10)}`);
+      lines.push('');
+      lines.push('**Environment**');
+      lines.push(`- WebGPU: ${e.webgpu ? '✅ available' : '❌ not available'}${e.webgpuAdapter ? ' (' + e.webgpuAdapter + ')' : ''}`);
+      lines.push(`- WebGL renderer: \`${e.webglRenderer || 'unknown'}\``);
+      lines.push(`- Browser: \`${e.ua}\``);
+      lines.push(`- Viewport: ${e.viewport} @ ${e.dpr}×`);
+      lines.push('');
+      const labelFor = (qid, val) => {
+        const q = CFG.perSceneQuestions.find(x => x.id === qid);
+        if (!q || !q.options) return val;
+        const o = q.options.find(x => x.value === val);
+        return o ? o.label : val;
+      };
+      CFG.scenes.forEach(s => {
+        const a = state.answers[s.id] || {};
+        lines.push(`### ${s.title} — \`${s.path}\``);
+        lines.push(`_Focus: ${s.focus}_`);
+        lines.push(`- **Match:** ${a.match ? labelFor('match', a.match) : '_(not answered)_'}`);
+        if (a.discrepancies && a.discrepancies.length) lines.push(`- **Differs:** ${a.discrepancies.map(v => labelFor('discrepancies', v)).join(', ')}`);
+        if (a.notes) lines.push(`- **Notes:** ${a.notes}`);
+        const shots = state.shots[s.id] || {};
+        const want = [];
+        if (shots.mayfly) want.push(`verify-${s.id}-mayfly.png`);
+        if (shots.stinkyfish) want.push(`verify-${s.id}-stinkyfish.png`);
+        lines.push(`- _Screenshots — drag here:_ ${want.length ? want.map(f => '`' + f + '`').join(', ') : '(use your device screenshot)'}`);
+        lines.push('');
+      });
+      // machine-readable block for the agent
+      const machine = {
+        reportVersion: CFG.reportVersion,
+        env: e,
+        answers: state.answers,
+        scenes: CFG.scenes.map(s => ({ id: s.id, path: s.path })),
+      };
+      lines.push('<details><summary>machine-readable (agent parses this)</summary>');
+      lines.push('');
+      lines.push('```json');
+      lines.push(JSON.stringify(machine, null, 2));
+      lines.push('```');
+      lines.push('</details>');
+      return lines.join('\n');
+    }
+
+    function issueUrl(body) {
+      const e = state.env;
+      const gpu = e.webgpuAdapter || e.webglRenderer || 'device';
+      const title = `${CFG.issueTitlePrefix}: ${gpu} (${e.timestamp.slice(0, 10)})`;
+      const base = `https://github.com/${CFG.repo}/issues/new`;
+      // Keep the URL under practical limits; fall back to a compact body.
+      let b = body;
+      const build = (bd) => `${base}?title=${encodeURIComponent(title)}&labels=${encodeURIComponent(CFG.issueLabel)}&body=${encodeURIComponent(bd)}`;
+      let url = build(b);
+      if (url.length > 7500) {
+        b = body.split('<details>')[0] + '\n> Full machine-readable report was too long for the URL — click **Copy full report** on the page and paste it here.';
+        url = build(b);
+      }
+      return url;
+    }
+
+    function downloadShots() {
+      let n = 0;
+      CFG.scenes.forEach(s => {
+        const shots = state.shots[s.id] || {};
+        ['mayfly', 'stinkyfish'].forEach(backend => {
+          const shot = shots[backend];
+          if (shot && shot.url && !shot.blank) {
+            const a = document.createElement('a');
+            a.href = shot.url; a.download = `verify-${s.id}-${backend}.png`;
+            document.body.appendChild(a); a.click(); a.remove(); n++;
+          }
+        });
+      });
+      if (!n) alert('No screenshots captured yet (or all were blank). Use your device screenshot tool and drag those into the issue instead.');
+    }
+
+    function showReview() {
+      const report = buildReport();
+      $('report-preview').textContent = report;
+      $('btn-issue').onclick = () => window.open(issueUrl(report), '_blank', 'noopener');
+      $('btn-copy').onclick = async () => {
+        try { await navigator.clipboard.writeText(report); $('btn-copy').textContent = '✓ Copied'; setTimeout(() => $('btn-copy').textContent = '📋 Copy full report', 1500); }
+        catch (e) { alert('Copy failed — select the text in the preview instead.'); }
+      };
+      $('btn-download').onclick = downloadShots;
+      $('session').classList.add('hidden');
+      $('review').classList.remove('hidden');
+      $('review').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ---- navigation ----
+    $('btn-start').onclick = () => {
+      $('intro').classList.add('hidden');
+      $('session').classList.remove('hidden');
+      state.i = 0; loadScene(0);
+    };
+    $('btn-prev').onclick = () => { saveAnswers(CFG.scenes[state.i]); if (state.i > 0) { state.i--; loadScene(state.i); } };
+    $('btn-next').onclick = () => {
+      saveAnswers(CFG.scenes[state.i]);
+      if (state.i < CFG.scenes.length - 1) { state.i++; loadScene(state.i); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+      else showReview();
+    };
+    $('btn-capture').onclick = captureCurrent;
+
+    // surface backend load errors to the human
+    [rMayfly, rStinky].forEach(el => el.addEventListener('render-error', ev => {
+      console.warn('render-error', el.id, ev.detail);
+    }));
+
+    probeEnv();
+  </script>
+</body>
+</html>
