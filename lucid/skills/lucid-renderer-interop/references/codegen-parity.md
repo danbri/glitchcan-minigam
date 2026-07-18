@@ -70,6 +70,7 @@ adding an op.
 | Feature | GLSL/Mayfly | WGSL/Stinkyfish |
 |---------|-------------|-----------------|
 | Surface raymarch | ✅ | ✅ (visually unverified headless) |
+| Silhouette edge darkening | ✅ (default on) | ✅ (added July 2026 to match — Stinkyfish previously read brighter/flatter) |
 | Volume render (jelly/xray/heatmap) | ✅ | ❌ |
 | Physics integration in renderer | ✅ (Stack A) | ❌ |
 | Ground plane default | on | off |

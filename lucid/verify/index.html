@@ -110,16 +110,16 @@
       <div class="renders">
         <div class="render-col mayfly">
           <h3>🦋 Mayfly · WebGL</h3>
-          <div class="render-frame"><lucid-renderer id="r-mayfly" backend="mayfly" quality="medium" ground-plane="false" axes="false"></lucid-renderer></div>
+          <div class="render-frame"><lucid-renderer id="r-mayfly" backend="mayfly" quality="medium" ground-plane="false" axes="false" disable-controls></lucid-renderer></div>
         </div>
         <div class="render-col stinkyfish">
           <h3>🐟 Stinkyfish · WebGPU</h3>
-          <div class="render-frame"><lucid-renderer id="r-stinkyfish" backend="stinkyfish" quality="medium" ground-plane="false" axes="false"></lucid-renderer></div>
+          <div class="render-frame"><lucid-renderer id="r-stinkyfish" backend="stinkyfish" quality="medium" ground-plane="false" axes="false" disable-controls></lucid-renderer></div>
         </div>
       </div>
       <div class="row" style="margin:0.75rem 0">
-        <button id="btn-capture">📸 Capture screenshots</button>
-        <span class="small muted">Tip: if a thumbnail is blank (outlined orange), use your device's own screenshot instead and drag it into the issue later.</span>
+        <button id="btn-capture">📸 Capture / refresh</button>
+        <span class="small muted">Captured automatically a moment after each scene loads — the 🧅 onion overlay appears just below. Tap to re-capture; if a thumbnail is blank (outlined orange), use your device screenshot instead.</span>
       </div>
       <div class="thumbs" id="thumbs"></div>
 
@@ -248,6 +248,14 @@
       renderQuestions(s);
       renderThumbs(s);
       renderOverlay(s);
+      // Auto-capture once both renders have had time to draw, so the onion
+      // overlay populates on its own (it stays hidden until both are captured).
+      clearTimeout(state.autoCapTimer);
+      if (!(state.shots[s.id] && state.shots[s.id].mayfly)) {
+        state.autoCapTimer = setTimeout(() => {
+          if (CFG.scenes[state.i] && CFG.scenes[state.i].id === s.id) captureCurrent();
+        }, 2800);
+      }
       $('btn-prev').disabled = idx === 0;
       $('btn-next').textContent = idx === CFG.scenes.length - 1 ? 'Finish →' : 'Next →';
     }

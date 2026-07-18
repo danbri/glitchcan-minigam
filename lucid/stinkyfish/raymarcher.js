@@ -877,6 +877,10 @@ fn raymarch(ro: vec3f, rd: vec3f, uv: vec2f) -> vec4f {
       let diff = max(dot(sceneHitNormal, light), 0.0);
       let spec = pow(max(dot(reflect(-light, sceneHitNormal), -rd), 0.0), u.shininess);
       color = sceneHitColor * (u.ambient + diff * u.diffuse) + vec3f(spec * u.specular);
+      // Silhouette edge darkening — mirrors Mayfly (u_showEdges, default on).
+      // Without this Stinkyfish read noticeably brighter/flatter than Mayfly.
+      let edge = pow(1.0 - abs(dot(sceneHitNormal, -rd)), 2.0);
+      color = mix(color, vec3f(0.0), edge * 0.7);
     }
     return vec4f(color, sceneHitT);
   }
