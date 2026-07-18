@@ -54,11 +54,17 @@ URL you complete yourself, not an API token.
 
 ## For the human (danbri)
 
+It's **browse-first** — filing a report is optional, not the default path:
+
 1. Open the page on the device/browser you want to test (ideally WebGPU-capable).
-2. Click **Start**, walk the scenes, answer, hit **Capture** on each.
-3. On the review screen: **Open pre-filled GitHub issue** → **Download
-   screenshots** → drag the PNGs into the issue where each scene is marked →
-   **Submit**.
+2. The full scene library (dozens, from `toc.json`) lists on load — search or
+   filter by category and **skim**. Open any scene to compare the two backends:
+   onion overlay, deviation lab, rotate & animate.
+3. Only if something looks wrong: expand **🚩 Flag / report an issue** on that
+   scene and note what you saw. Flagged scenes get a 🚩 in the list.
+4. When you're ready (and only if you flagged anything), hit **📋 Report** →
+   **Open pre-filled GitHub issue** → **Download screenshots** → drag the PNGs in
+   → **Submit**. The report contains only the scenes you flagged.
 
 ## For the agent (reading it back)
 

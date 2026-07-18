@@ -85,6 +85,16 @@
     .renders.linked .render-frame { cursor: grab; }
     .renders.linked.dragging .render-frame { cursor: grabbing; }
 
+    /* Scene browser */
+    .chip { background: #21262d; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); cursor: pointer; }
+    .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #04101f; font-weight: 600; }
+    .scene-item { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "title cat" "sub cat"; gap: 0 0.5rem; width: 100%; text-align: left; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 0.4rem; cursor: pointer; color: var(--text); }
+    .scene-item:hover { background: #1c2230; border-color: var(--accent); }
+    .si-title { grid-area: title; font-weight: 600; }
+    .si-sub { grid-area: sub; }
+    .si-cat { grid-area: cat; align-self: center; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+    #scene-list { max-height: 60vh; overflow-y: auto; }
+
     pre.report { white-space: pre-wrap; word-break: break-word; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; max-height: 320px; overflow: auto; font-size: 0.8rem; }
     .hidden { display: none; }
     a.link { color: var(--accent); }
@@ -107,18 +117,36 @@
       </p>
       <div class="env-grid" id="env"></div>
       <div class="row" style="margin-top:1rem">
-        <button class="primary" id="btn-start">Start verification</button>
+        <button class="primary" id="btn-start">Browse scenes ▸</button>
         <span class="progress" id="scene-count"></span>
+        <span class="spacer"></span>
+        <button id="btn-report" class="hidden" title="Assemble a report from the scenes you flagged">📋 Report (<span id="flag-count">0</span>)</button>
       </div>
+      <p class="small muted" style="margin:0.5rem 0 0">
+        Skim the library, open any scene to compare the two backends (onion overlay,
+        deviation lab, rotate &amp; animate). Filing a report is optional — only flag
+        the ones where something looks off.
+      </p>
+    </div>
+
+    <!-- Scene browser -->
+    <div class="card hidden" id="browser">
+      <div class="row" style="gap:0.5rem">
+        <input type="search" id="scene-search" placeholder="Search scenes…" style="flex:1;min-width:8rem;padding:0.5rem;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;font:inherit" aria-label="Search scenes">
+        <span class="progress" id="browse-count"></span>
+      </div>
+      <div class="row" id="cat-chips" style="gap:0.35rem;margin-top:0.5rem;flex-wrap:wrap"></div>
+      <div id="scene-list" style="margin-top:0.75rem"></div>
     </div>
 
     <div class="card hidden" id="session">
       <div class="row">
+        <button id="btn-back">← All scenes</button>
         <strong id="scene-title"></strong>
         <span class="spacer"></span>
         <span class="progress" id="progress"></span>
       </div>
-      <p class="focus" id="scene-focus"></p>
+      <p class="focus hidden" id="scene-focus"></p>
       <div class="renders">
         <div class="render-col mayfly">
           <h3>🦋 Mayfly · WebGL</h3>
@@ -178,12 +206,16 @@
         </div>
       </div>
 
-      <div id="questions" style="margin-top:1rem"></div>
+      <details id="flag-details" style="margin-top:1rem">
+        <summary style="cursor:pointer"><strong class="small">🚩 Flag / report an issue with this scene</strong> <span class="small muted">— optional; only if something looks wrong</span></summary>
+        <div id="questions" style="margin-top:0.75rem"></div>
+      </details>
 
-      <div class="row">
-        <button id="btn-prev">← Previous</button>
+      <div class="row" style="margin-top:1rem">
+        <button id="btn-prev">← Prev</button>
+        <button id="btn-next">Next →</button>
         <span class="spacer"></span>
-        <button class="primary" id="btn-next">Next →</button>
+        <span class="small muted" id="flag-hint"></span>
       </div>
     </div>
 
@@ -195,6 +227,7 @@
         corroborating record.
       </p>
       <div class="row" style="margin-bottom:0.75rem">
+        <button id="btn-review-back">← Back to scenes</button>
         <button class="primary" id="btn-issue">📮 Open pre-filled GitHub issue</button>
         <button id="btn-copy">📋 Copy full report</button>
         <button id="btn-download">⬇︎ Download screenshots</button>
@@ -216,7 +249,9 @@
     import { VERIFY_CONFIG as CFG } from './verify-config.js';
 
     // ---- state ----
-    const state = { i: 0, env: {}, answers: {}, shots: {} };
+    // scenes: full library (from toc.json); list: current filtered view;
+    // i: index into `list`. answers/shots keyed by scene path.
+    const state = { i: 0, env: {}, answers: {}, shots: {}, scenes: [], list: [], cat: 'all', search: '' };
     const $ = id => document.getElementById(id);
     const rMayfly = $('r-mayfly'), rStinky = $('r-stinkyfish');
 
@@ -268,31 +303,114 @@
         <dt>WebGL (Mayfly)</dt><dd><span class="mono small">${e.webglRenderer || 'unknown'}</span></dd>
         <dt>Browser</dt><dd class="small mono">${e.ua}</dd>
         <dt>Viewport</dt><dd class="small">${e.viewport} @ ${e.dpr}×</dd>`;
-      $('scene-count').textContent = `${CFG.scenes.length} scenes to review`;
       if (!e.webgpu) {
         $('env').insertAdjacentHTML('beforeend',
           `<dt></dt><dd class="small" style="color:var(--warn)">This device has no WebGPU — you can still record the WebGL side, but the most valuable pass is on a WebGPU-capable device/browser.</dd>`);
       }
     }
 
+    // ---- scene library + browser ----
+    // Load the full library from toc.json so the user can skim dozens of scenes.
+    // Merge any curated `focus` notes from verify-config by path. Fall back to
+    // the config's curated list if toc can't be fetched.
+    async function loadLibrary() {
+      let scenes = [];
+      try {
+        const res = await fetch('../scenes/toc.json');
+        const toc = await res.json();
+        const focusByPath = {};
+        (CFG.scenes || []).forEach(s => { focusByPath[s.path] = s.focus; });
+        const seen = new Set();
+        for (const cat of (toc.categories || [])) {
+          for (const sc of (cat.scenes || [])) {
+            if (!sc.path || seen.has(sc.path)) continue;
+            seen.add(sc.path);
+            scenes.push({
+              id: sc.path, path: sc.path, title: sc.title || sc.path,
+              subtitle: (sc.subtitle || '').replace(/\s*\[[^\]]*\]\s*$/, ''), // strip trailing [commit] noise
+              category: cat.id || 'other', focus: focusByPath[sc.path] || ''
+            });
+          }
+        }
+      } catch (e) { /* fall through to config */ }
+      if (!scenes.length) {
+        scenes = (CFG.scenes || []).map(s => ({ id: s.path, path: s.path, title: s.title, subtitle: s.focus, category: 'focus', focus: s.focus }));
+      }
+      state.scenes = scenes;
+      buildCatChips();
+      applyFilter();
+      $('scene-count').textContent = `${scenes.length} scenes`;
+      // Show the browser immediately so the user can start skimming.
+      if ($('session').classList.contains('hidden')) showBrowser();
+    }
+
+    function buildCatChips() {
+      const cats = ['all', ...Array.from(new Set(state.scenes.map(s => s.category)))];
+      $('cat-chips').innerHTML = cats.map(c =>
+        `<button class="chip small" data-cat="${c}" ${c === state.cat ? 'aria-pressed="true"' : ''} style="padding:2px 10px">${c}</button>`).join('');
+      $('cat-chips').querySelectorAll('button').forEach(b => b.onclick = () => { state.cat = b.dataset.cat; applyFilter(); buildCatChips(); });
+    }
+
+    function applyFilter() {
+      const q = state.search.toLowerCase();
+      state.list = state.scenes.filter(s =>
+        (state.cat === 'all' || s.category === state.cat) &&
+        (!q || (s.title + ' ' + s.subtitle + ' ' + s.path).toLowerCase().includes(q)));
+      renderList();
+    }
+
+    function renderList() {
+      $('browse-count').textContent = `${state.list.length} shown`;
+      $('scene-list').innerHTML = state.list.map((s, i) => {
+        const flagged = hasAnswers(s.id);
+        return `<button class="scene-item" data-i="${i}">
+          <span class="si-title">${flagged ? '🚩 ' : ''}${s.title}</span>
+          <span class="si-sub small muted">${s.subtitle || ''}</span>
+          <span class="si-cat small">${s.category}</span>
+        </button>`;
+      }).join('') || '<p class="small muted">No scenes match.</p>';
+      $('scene-list').querySelectorAll('.scene-item').forEach(b => b.onclick = () => openScene(+b.dataset.i));
+    }
+
+    function openScene(idx) {
+      state.i = idx;
+      $('intro').classList.add('hidden');
+      $('browser').classList.add('hidden');
+      $('review').classList.add('hidden');
+      $('session').classList.remove('hidden');
+      loadScene(idx);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showBrowser() {
+      $('intro').classList.remove('hidden');
+      $('browser').classList.remove('hidden');
+      $('session').classList.add('hidden');
+      $('review').classList.add('hidden');
+      renderList();
+      updateFlagCount();
+    }
+
     // ---- session ----
     function loadScene(idx) {
-      const s = CFG.scenes[idx];
+      const s = state.list[idx];
+      if (!s) return;
       $('scene-title').textContent = s.title;
-      $('scene-focus').textContent = 'Focus: ' + s.focus;
-      $('progress').textContent = `Scene ${idx + 1} of ${CFG.scenes.length}`;
-      // (Re)load in both backends. Setting the attribute triggers loadScene().
+      const focusEl = $('scene-focus');
+      if (s.focus) { focusEl.textContent = 'Focus: ' + s.focus; focusEl.classList.remove('hidden'); }
+      else focusEl.classList.add('hidden');
+      $('progress').textContent = `${idx + 1} / ${state.list.length}`;
+      // (Re)load in both backends. Setting the attribute triggers a scene load.
       rMayfly.setAttribute('scene', s.path);
       rStinky.setAttribute('scene', s.path);
       renderQuestions(s);
       renderThumbs(s);
       renderOverlay(s);
-      // Auto-capture once both renders have had time to draw, so the onion
-      // overlay populates on its own (it stays hidden until both are captured).
+      // Auto-capture once both renders have drawn, so the onion overlay populates.
       clearTimeout(state.autoCapTimer);
       if (!(state.shots[s.id] && state.shots[s.id].mayfly)) {
         state.autoCapTimer = setTimeout(() => {
-          if (CFG.scenes[state.i] && CFG.scenes[state.i].id === s.id) captureCurrent();
+          if (state.list[state.i] && state.list[state.i].id === s.id) captureCurrent();
         }, 2800);
       }
       // Reset the shared animation clock so a new scene runs fresh.
@@ -301,7 +419,20 @@
       rMayfly.setTime && rMayfly.setTime(null);
       rStinky.setTime && rStinky.setTime(null);
       $('btn-prev').disabled = idx === 0;
-      $('btn-next').textContent = idx === CFG.scenes.length - 1 ? 'Finish →' : 'Next →';
+      $('btn-next').disabled = idx === state.list.length - 1;
+    }
+
+    function hasAnswers(id) {
+      const a = state.answers[id];
+      if (!a) return false;
+      return Object.values(a).some(v => v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0));
+    }
+    function flaggedScenes() { return state.scenes.filter(s => hasAnswers(s.id)); }
+    function updateFlagCount() {
+      const n = flaggedScenes().length;
+      $('flag-count').textContent = n;
+      $('btn-report').classList.toggle('hidden', n === 0);
+      if ($('flag-hint')) $('flag-hint').textContent = n ? `${n} scene${n > 1 ? 's' : ''} flagged` : '';
     }
 
     function renderQuestions(s) {
@@ -343,6 +474,7 @@
           a[q.id] = els[0] ? els[0].value.trim() : '';
         }
       });
+      updateFlagCount();
     }
 
     // ---- screenshots ----
@@ -534,10 +666,13 @@
         return o ? o.label : val;
       };
       const isEmpty = (v) => v === undefined || v === '' || (Array.isArray(v) && v.length === 0);
-      CFG.scenes.forEach(s => {
+      const scenes = flaggedScenes();
+      lines.push(`_${scenes.length} scene(s) flagged out of ${state.scenes.length} browsed._`);
+      lines.push('');
+      scenes.forEach(s => {
         const a = state.answers[s.id] || {};
         lines.push(`### ${s.title} — \`${s.path}\``);
-        lines.push(`_Focus: ${s.focus}_`);
+        if (s.focus) lines.push(`_Focus: ${s.focus}_`);
         // Emit every configured question generically so new response types
         // (e.g. aspect ratio) flow through without touching this builder.
         CFG.perSceneQuestions.forEach(q => {
@@ -552,9 +687,10 @@
           }
         });
         const shots = state.shots[s.id] || {};
+        const fid = s.id.replace(/[^a-z0-9]+/gi, '-');
         const want = [];
-        if (shots.mayfly) want.push(`verify-${s.id}-mayfly.png`);
-        if (shots.stinkyfish) want.push(`verify-${s.id}-stinkyfish.png`);
+        if (shots.mayfly) want.push(`verify-${fid}-mayfly.png`);
+        if (shots.stinkyfish) want.push(`verify-${fid}-stinkyfish.png`);
         lines.push(`- _Screenshots — drag here:_ ${want.length ? want.map(f => '`' + f + '`').join(', ') : '(use your device screenshot)'}`);
         lines.push('');
       });
@@ -562,8 +698,8 @@
       const machine = {
         reportVersion: CFG.reportVersion,
         env: e,
-        answers: state.answers,
-        scenes: CFG.scenes.map(s => ({ id: s.id, path: s.path })),
+        flagged: scenes.map(s => ({ path: s.path, answers: state.answers[s.id] })),
+        browsedCount: state.scenes.length,
       };
       lines.push('<details><summary>machine-readable (agent parses this)</summary>');
       lines.push('');
@@ -592,13 +728,13 @@
 
     function downloadShots() {
       let n = 0;
-      CFG.scenes.forEach(s => {
+      flaggedScenes().forEach(s => {
         const shots = state.shots[s.id] || {};
         ['mayfly', 'stinkyfish'].forEach(backend => {
           const shot = shots[backend];
           if (shot && shot.url && !shot.blank) {
             const a = document.createElement('a');
-            a.href = shot.url; a.download = `verify-${s.id}-${backend}.png`;
+            a.href = shot.url; a.download = `verify-${s.id.replace(/[^a-z0-9]+/gi, '-')}-${backend}.png`;
             document.body.appendChild(a); a.click(); a.remove(); n++;
           }
         });
@@ -615,23 +751,21 @@
         catch (e) { alert('Copy failed — select the text in the preview instead.'); }
       };
       $('btn-download').onclick = downloadShots;
+      $('intro').classList.add('hidden');
+      $('browser').classList.add('hidden');
       $('session').classList.add('hidden');
       $('review').classList.remove('hidden');
       $('review').scrollIntoView({ behavior: 'smooth' });
     }
 
-    // ---- navigation ----
-    $('btn-start').onclick = () => {
-      $('intro').classList.add('hidden');
-      $('session').classList.remove('hidden');
-      state.i = 0; loadScene(0);
-    };
-    $('btn-prev').onclick = () => { saveAnswers(CFG.scenes[state.i]); if (state.i > 0) { state.i--; loadScene(state.i); } };
-    $('btn-next').onclick = () => {
-      saveAnswers(CFG.scenes[state.i]);
-      if (state.i < CFG.scenes.length - 1) { state.i++; loadScene(state.i); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-      else showReview();
-    };
+    // ---- navigation (browse-first) ----
+    $('btn-start').onclick = showBrowser;
+    $('btn-back').onclick = showBrowser;
+    $('btn-report').onclick = () => { if (flaggedScenes().length) showReview(); };
+    $('btn-review-back').onclick = showBrowser;
+    $('btn-prev').onclick = () => { if (state.i > 0) openScene(state.i - 1); };
+    $('btn-next').onclick = () => { if (state.i < state.list.length - 1) openScene(state.i + 1); };
+    $('scene-search').oninput = (e) => { state.search = e.target.value; applyFilter(); };
     $('btn-capture').onclick = captureCurrent;
 
     // surface backend load errors to the human
@@ -641,6 +775,7 @@
 
     setupDeviationLab();
     probeEnv();
+    loadLibrary();
   </script>
 </body>
 </html>
