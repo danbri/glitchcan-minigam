@@ -105,6 +105,20 @@ The full, current matrix with file:line anchors is in
 **`references/codegen-parity.md`** — consult it before assuming a feature is
 cross-backend.
 
+## How much can move to WebGPU?
+
+Stinkyfish is the only backend that can become fully GPU-resident (compute
+physics + rig + raymarch on one device). WebGL/Mayfly has no compute and can't
+share a WebGPU device, so it's a render-only fallback that must read GPU results
+back to CPU. The full subsystem-by-subsystem analysis (templating, rig, physics,
+inputs) with a ranked migration sequence is in
+`lucid/docs/webgpu-migration-analysis.md`. Headlines: templating is build-time JS
+(never moves); the rig doesn't run on Stinkyfish at all (a parity gap, best fixed
+by codegen-inlining, not compute); physics has a real but currently-broken WGSL
+compute engine (`xpbd-gpu.js`) that is the one true GPU win; Stinkyfish already
+leads on inputs (iMouse/iFrame/iTimeDelta/live quality) and only lacks volume
+rendering and a showEdges toggle.
+
 ## Uniform layout: the fragile part
 
 - **GLSL** binds params by name (`u_<name>`) at draw time — order-independent and
