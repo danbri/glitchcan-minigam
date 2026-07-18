@@ -66,6 +66,13 @@
     .thumb .cap { font-size: 0.65rem; padding: 2px 4px; color: var(--muted); text-align: center; }
     .thumb.blank img { outline: 2px solid var(--warn); outline-offset: -2px; }
 
+    /* Onion overlay */
+    .overlay-frame { position: relative; width: 100%; max-width: 360px; aspect-ratio: 1 / 1; margin: 0.5rem auto; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #000; }
+    .overlay-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+    .overlay-frame.diff { background: #000; }
+    .overlay-frame.diff #ov-top { mix-blend-mode: difference; opacity: 1 !important; }
+    .fade-labels { display: flex; align-items: center; gap: 0.5rem; }
+
     pre.report { white-space: pre-wrap; word-break: break-word; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; max-height: 320px; overflow: auto; font-size: 0.8rem; }
     .hidden { display: none; }
     a.link { color: var(--accent); }
@@ -103,11 +110,11 @@
       <div class="renders">
         <div class="render-col mayfly">
           <h3>🦋 Mayfly · WebGL</h3>
-          <div class="render-frame"><lucid-renderer id="r-mayfly" backend="mayfly" quality="medium"></lucid-renderer></div>
+          <div class="render-frame"><lucid-renderer id="r-mayfly" backend="mayfly" quality="medium" ground-plane="false" axes="false"></lucid-renderer></div>
         </div>
         <div class="render-col stinkyfish">
           <h3>🐟 Stinkyfish · WebGPU</h3>
-          <div class="render-frame"><lucid-renderer id="r-stinkyfish" backend="stinkyfish" quality="medium"></lucid-renderer></div>
+          <div class="render-frame"><lucid-renderer id="r-stinkyfish" backend="stinkyfish" quality="medium" ground-plane="false" axes="false"></lucid-renderer></div>
         </div>
       </div>
       <div class="row" style="margin:0.75rem 0">
@@ -115,6 +122,22 @@
         <span class="small muted">Tip: if a thumbnail is blank (outlined orange), use your device's own screenshot instead and drag it into the issue later.</span>
       </div>
       <div class="thumbs" id="thumbs"></div>
+
+      <div id="overlay-wrap" class="hidden">
+        <div class="row" style="margin-top:0.75rem">
+          <strong class="small">🧅 Onion overlay</strong>
+          <span class="small muted">Both renders superimposed — drag to cross-fade, or tick Difference to make any mismatch glow (identical pixels go black).</span>
+        </div>
+        <div class="overlay-frame" id="overlay-frame">
+          <img id="ov-base" alt="WebGL render"><img id="ov-top" alt="WebGPU render">
+        </div>
+        <div class="row fade-labels">
+          <span class="small mayfly-label" style="color:var(--mayfly)">🦋 WebGL</span>
+          <input type="range" id="ov-fade" min="0" max="1" step="0.01" value="0.5" style="flex:1" aria-label="Cross-fade WebGL to WebGPU">
+          <span class="small" style="color:var(--stinkyfish)">🐟 WebGPU</span>
+          <label class="opt" style="margin-left:0.5rem;align-items:center"><input type="checkbox" id="ov-diff"> <span class="small">Difference</span></label>
+        </div>
+      </div>
 
       <div id="questions" style="margin-top:1rem"></div>
 
@@ -224,6 +247,7 @@
       rStinky.setAttribute('scene', s.path);
       renderQuestions(s);
       renderThumbs(s);
+      renderOverlay(s);
       $('btn-prev').disabled = idx === 0;
       $('btn-next').textContent = idx === CFG.scenes.length - 1 ? 'Finish →' : 'Next →';
     }
@@ -291,6 +315,29 @@
       shots.mayfly = grabCanvas(rMayfly);
       shots.stinkyfish = grabCanvas(rStinky);
       renderThumbs(s);
+      renderOverlay(s);
+    }
+
+    // Onion overlay: superimpose the two captured renders. The cross-fade slider
+    // dissolves WebGL→WebGPU; Difference mode blends them so identical pixels go
+    // black and any discrepancy (aspect stretch, geometry, colour) lights up.
+    function renderOverlay(s) {
+      const shots = state.shots[s.id] || {};
+      const wrap = $('overlay-wrap');
+      const both = shots.mayfly && shots.mayfly.url && shots.stinkyfish && shots.stinkyfish.url;
+      if (!both) { wrap.classList.add('hidden'); return; }
+      wrap.classList.remove('hidden');
+      const base = $('ov-base'), top = $('ov-top'), frame = $('overlay-frame');
+      base.src = shots.mayfly.url;
+      top.src = shots.stinkyfish.url;
+      const fade = $('ov-fade'), diff = $('ov-diff');
+      const apply = () => {
+        if (diff.checked) { frame.classList.add('diff'); }
+        else { frame.classList.remove('diff'); top.style.opacity = String(fade.value); }
+      };
+      fade.oninput = apply;
+      diff.onchange = apply;
+      apply();
     }
 
     function renderThumbs(s) {

@@ -184,6 +184,19 @@ export class StinkyfishRenderer {
     if (settings.shininess !== undefined) this.lighting.shininess = settings.shininess;
   }
 
+  // --- Unified display-helper API (identical on Mayfly and Stinkyfish) ---
+  // These scene-overlay helpers (ground plane, axis gizmo) default differently
+  // per backend, so drive them explicitly for consistent output. Each just
+  // sets a property the render loop reads into a uniform every frame.
+  setGroundPlane(visible) { this.showGroundPlane = !!visible; }
+  setAxes(visible) { this.showAxes = !!visible; }
+  setGroundOpacity(v) { this.groundOpacity = v; this.groundOpacityTarget = v; }
+  setDisplayOptions(opts = {}) {
+    if (opts.groundPlane !== undefined) this.setGroundPlane(opts.groundPlane);
+    if (opts.axes !== undefined) this.setAxes(opts.axes);
+    if (opts.groundOpacity !== undefined) this.setGroundOpacity(opts.groundOpacity);
+  }
+
   /**
    * Set quality preset (Mayfly API parity)
    * @param {string} quality - 'low', 'medium', or 'high'

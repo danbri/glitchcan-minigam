@@ -27,7 +27,7 @@ const BACKENDS = {
 
 export class LucidRenderer extends HTMLElement {
   static get observedAttributes() {
-    return ['backend', 'scene', 'quality', 'disable-controls'];
+    return ['backend', 'scene', 'quality', 'disable-controls', 'ground-plane', 'axes'];
   }
 
   constructor() {
@@ -122,6 +122,12 @@ export class LucidRenderer extends HTMLElement {
         break;
       case 'quality':
         this._applyQuality(newValue);
+        break;
+      case 'ground-plane':
+        this.setGroundPlane(newValue !== 'false');
+        break;
+      case 'axes':
+        this.setAxes(newValue !== 'false');
         break;
     }
   }
@@ -252,6 +258,24 @@ export class LucidRenderer extends HTMLElement {
     this.setTime(null);
   }
 
+  // --- Unified display-helper API (forwards to whichever backend is active) ---
+  // Both renderers expose setGroundPlane/setAxes/setDisplayOptions, so these work
+  // identically regardless of backend. Also driven declaratively by the
+  // `ground-plane` / `axes` attributes (e.g. <lucid-renderer ground-plane="false">).
+  setGroundPlane(visible) { this._renderer?.setGroundPlane?.(visible); }
+  setAxes(visible) { this._renderer?.setAxes?.(visible); }
+  setDisplayOptions(opts) { this._renderer?.setDisplayOptions?.(opts); }
+
+  _applyDisplayAttributes() {
+    if (!this._renderer) return;
+    if (this.hasAttribute('ground-plane')) {
+      this.setGroundPlane(this.getAttribute('ground-plane') !== 'false');
+    }
+    if (this.hasAttribute('axes')) {
+      this.setAxes(this.getAttribute('axes') !== 'false');
+    }
+  }
+
   // Private methods
 
   _getBasePath() {
@@ -295,6 +319,10 @@ export class LucidRenderer extends HTMLElement {
       this.dispatchEvent(new CustomEvent('renderer-ready', {
         detail: { backend: selectedBackend }
       }));
+
+      // Apply declarative display attributes now the renderer exists
+      // (they may have been set in HTML before init).
+      this._applyDisplayAttributes();
 
       // Load scene if specified
       const scenePath = this.scene;
