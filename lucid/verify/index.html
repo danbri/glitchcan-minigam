@@ -73,6 +73,18 @@
     .overlay-frame.diff #ov-top { mix-blend-mode: difference; opacity: 1 !important; }
     .fade-labels { display: flex; align-items: center; gap: 0.5rem; }
 
+    /* Deviation lab */
+    .dev-grid { display: grid; grid-template-columns: 200px 1fr; gap: 0.75rem; align-items: start; margin-top: 0.5rem; }
+    @media (max-width: 560px) { .dev-grid { grid-template-columns: 1fr; } }
+    #diff-canvas { width: 100%; max-width: 200px; aspect-ratio: 1 / 1; border: 1px solid var(--border); border-radius: 8px; background: #000; display: block; image-rendering: pixelated; }
+    .meter { height: 10px; border-radius: 999px; background: #22272e; overflow: hidden; margin: 0.25rem 0; }
+    .meter > span { display: block; height: 100%; background: linear-gradient(90deg, var(--ok), var(--warn), var(--err)); width: 0%; transition: width 0.1s linear; }
+    .dev-stat { font-family: ui-monospace, monospace; font-size: 0.85rem; }
+    .dev-stat b { color: var(--text); }
+    .peak { color: var(--warn); }
+    .renders.linked .render-frame { cursor: grab; }
+    .renders.linked.dragging .render-frame { cursor: grabbing; }
+
     pre.report { white-space: pre-wrap; word-break: break-word; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; max-height: 320px; overflow: auto; font-size: 0.8rem; }
     .hidden { display: none; }
     a.link { color: var(--accent); }
@@ -136,6 +148,33 @@
           <input type="range" id="ov-fade" min="0" max="1" step="0.01" value="0.5" style="flex:1" aria-label="Cross-fade WebGL to WebGPU">
           <span class="small" style="color:var(--stinkyfish)">🐟 WebGPU</span>
           <label class="opt" style="margin-left:0.5rem;align-items:center"><input type="checkbox" id="ov-diff"> <span class="small">Difference</span></label>
+        </div>
+
+        <div class="row" style="margin-top:0.75rem">
+          <strong class="small">📐 Deviation lab</strong>
+          <span class="small muted">Measures how far the two backends actually diverge. Drag either render to orbit both in lockstep, or play the animation, and watch where they disagree.</span>
+        </div>
+        <div class="dev-grid">
+          <div>
+            <canvas id="diff-canvas" width="200" height="200" aria-label="Per-pixel deviation heatmap"></canvas>
+            <div class="small muted" style="text-align:center">amplified |WebGL − WebGPU|</div>
+          </div>
+          <div>
+            <div class="row" style="gap:0.4rem">
+              <button id="btn-live" aria-pressed="false">🔬 Live compare</button>
+              <button id="btn-diff-once">Measure once</button>
+              <button id="btn-spin" title="Orbit 360° and record the worst view">↻ Rotate scan</button>
+            </div>
+            <div class="dev-stat" style="margin-top:0.5rem">current max Δ <b id="dev-cur">—</b> / 255</div>
+            <div class="meter"><span id="dev-bar"></span></div>
+            <div class="dev-stat">mean Δ <b id="dev-mean">—</b> · pixels &gt;8: <b id="dev-pct">—</b></div>
+            <div class="dev-stat peak" style="margin-top:0.25rem">peak max Δ <b id="dev-peak">—</b> <span id="dev-peak-at" class="muted"></span> <button id="btn-peak-reset" style="padding:1px 6px;font-size:0.7rem">reset</button></div>
+            <div class="row" style="margin-top:0.5rem;gap:0.4rem">
+              <button id="btn-anim" aria-pressed="false" title="Drive time on both backends">▶ Animate</button>
+              <input type="range" id="dev-time" min="0" max="10" step="0.01" value="0" style="flex:1" aria-label="Scrub animation time on both backends">
+              <span class="small mono" id="dev-time-val">0.00s</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -256,6 +295,11 @@
           if (CFG.scenes[state.i] && CFG.scenes[state.i].id === s.id) captureCurrent();
         }, 2800);
       }
+      // Reset the shared animation clock so a new scene runs fresh.
+      animTime = 0;
+      if ($('dev-time')) { $('dev-time').value = '0'; $('dev-time-val').textContent = '0.00s'; }
+      rMayfly.setTime && rMayfly.setTime(null);
+      rStinky.setTime && rStinky.setTime(null);
       $('btn-prev').disabled = idx === 0;
       $('btn-next').textContent = idx === CFG.scenes.length - 1 ? 'Finish →' : 'Next →';
     }
@@ -356,6 +400,120 @@
         return `<div class="thumb ${shot.blank ? 'blank' : ''}"><img src="${shot.url}" alt="${s.id} ${backend}"><div class="cap">${label}${shot.blank ? ' ⚠' : ''}</div></div>`;
       };
       $('thumbs').innerHTML = cell('mayfly', '🦋 WebGL') + cell('stinkyfish', '🐟 WebGPU');
+    }
+
+    // ---- deviation lab: synchronized drive + quantified pixel diff ----
+    const sharedCam = { theta: 0.5, phi: 0.6, distance: 4 };
+    const DIFF = 200;
+    const aCanvas = document.createElement('canvas'); aCanvas.width = aCanvas.height = DIFF;
+    const bCanvas = document.createElement('canvas'); bCanvas.width = bCanvas.height = DIFF;
+    const aCtx = aCanvas.getContext('2d', { willReadFrequently: true });
+    const bCtx = bCanvas.getContext('2d', { willReadFrequently: true });
+    let liveOn = false, animOn = false, animTime = 0, peak = 0, peakAt = '';
+
+    function backendCanvas(el) {
+      return el && el.shadowRoot ? el.shadowRoot.querySelector('canvas') : null;
+    }
+    function pushCam() {
+      rMayfly.setCamera && rMayfly.setCamera(sharedCam);
+      rStinky.setCamera && rStinky.setCamera(sharedCam);
+    }
+
+    // Compute per-pixel |WebGL − WebGPU|, draw an amplified heatmap, return
+    // deviation stats (0–255). Forces a synchronous draw on both first so the
+    // WebGL/WebGPU buffers are valid this tick.
+    function measureDiff() {
+      const ca = backendCanvas(rMayfly), cb = backendCanvas(rStinky);
+      if (!ca || !cb) return null;
+      try { rMayfly.renderer && rMayfly.renderer.render && rMayfly.renderer.render(); } catch (e) {}
+      try { rStinky.renderer && rStinky.renderer.render && rStinky.renderer.render(); } catch (e) {}
+      try { aCtx.drawImage(ca, 0, 0, DIFF, DIFF); bCtx.drawImage(cb, 0, 0, DIFF, DIFF); }
+      catch (e) { return null; }
+      const A = aCtx.getImageData(0, 0, DIFF, DIFF).data;
+      const B = bCtx.getImageData(0, 0, DIFF, DIFF).data;
+      const out = aCtx.createImageData(DIFF, DIFF);
+      let sum = 0, max = 0, over = 0, n = DIFF * DIFF;
+      for (let i = 0; i < A.length; i += 4) {
+        const dr = Math.abs(A[i] - B[i]), dg = Math.abs(A[i+1] - B[i+1]), db = Math.abs(A[i+2] - B[i+2]);
+        const d = Math.max(dr, dg, db);
+        sum += (dr + dg + db) / 3;
+        if (d > max) max = d;
+        if (d > 8) over++;
+        const v = Math.min(255, d * 6); // heatmap amplification
+        out.data[i] = v; out.data[i+1] = Math.min(255, v * 0.6); out.data[i+2] = 255 - v; out.data[i+3] = 255;
+      }
+      const diffCanvas = $('diff-canvas');
+      diffCanvas.width = DIFF; diffCanvas.height = DIFF;
+      diffCanvas.getContext('2d').putImageData(out, 0, 0);
+      return { mean: sum / n, max, pct: 100 * over / n };
+    }
+
+    function showStats(m) {
+      if (!m) return;
+      $('dev-cur').textContent = m.max.toFixed(0);
+      $('dev-bar').style.width = Math.min(100, m.max / 255 * 100) + '%';
+      $('dev-mean').textContent = m.mean.toFixed(1);
+      $('dev-pct').textContent = m.pct.toFixed(1) + '%';
+      if (m.max > peak) { peak = m.max; peakAt = `@θ${sharedCam.theta.toFixed(2)} t${animTime.toFixed(1)}s`; }
+      $('dev-peak').textContent = peak.toFixed(0);
+      $('dev-peak-at').textContent = peakAt;
+    }
+
+    function liveLoop() {
+      if (!liveOn) return;
+      showStats(measureDiff());
+      requestAnimationFrame(liveLoop);
+    }
+
+    async function rotateScan() {
+      const steps = 36, saved = sharedCam.theta;
+      for (let i = 0; i < steps; i++) {
+        sharedCam.theta = saved + (i / steps) * Math.PI * 2;
+        pushCam();
+        await new Promise(r => setTimeout(r, 120));
+        showStats(measureDiff());
+      }
+      sharedCam.theta = saved; pushCam();
+    }
+
+    function animLoop() {
+      if (!animOn) return;
+      animTime = (animTime + 1 / 60) % 10;
+      $('dev-time').value = String(animTime);
+      $('dev-time-val').textContent = animTime.toFixed(2) + 's';
+      rMayfly.setTime && rMayfly.setTime(animTime);
+      rStinky.setTime && rStinky.setTime(animTime);
+      if (liveOn) showStats(measureDiff());
+      requestAnimationFrame(animLoop);
+    }
+
+    function setupDeviationLab() {
+      const renders = document.querySelector('.renders');
+      renders.classList.add('linked');
+      // Shared orbit: drag either render to rotate BOTH in lockstep.
+      let drag = false, lx = 0, ly = 0;
+      renders.addEventListener('pointerdown', e => {
+        drag = true; lx = e.clientX; ly = e.clientY; renders.classList.add('dragging');
+        // Seed the shared camera from the current WebGL view so the first drag
+        // continues smoothly instead of jumping to a default.
+        const r = rMayfly.renderer;
+        if (r) { sharedCam.theta = r.cameraTheta; sharedCam.phi = r.cameraPhi; sharedCam.distance = r.cameraDistance; }
+      });
+      window.addEventListener('pointermove', e => {
+        if (!drag) return;
+        sharedCam.theta += (e.clientX - lx) * 0.01;
+        sharedCam.phi = Math.max(0.05, Math.min(Math.PI - 0.05, sharedCam.phi - (e.clientY - ly) * 0.01));
+        lx = e.clientX; ly = e.clientY; pushCam();
+        if (!liveOn) showStats(measureDiff());
+      });
+      window.addEventListener('pointerup', () => { drag = false; renders.classList.remove('dragging'); });
+
+      $('btn-live').onclick = function () { liveOn = !liveOn; this.setAttribute('aria-pressed', liveOn); this.classList.toggle('active', liveOn); this.textContent = liveOn ? '⏸ Live compare' : '🔬 Live compare'; if (liveOn) liveLoop(); };
+      $('btn-diff-once').onclick = () => showStats(measureDiff());
+      $('btn-spin').onclick = rotateScan;
+      $('btn-peak-reset').onclick = () => { peak = 0; peakAt = ''; $('dev-peak').textContent = '0'; $('dev-peak-at').textContent = ''; };
+      $('btn-anim').onclick = function () { animOn = !animOn; this.setAttribute('aria-pressed', animOn); this.classList.toggle('active', animOn); this.textContent = animOn ? '⏸ Animate' : '▶ Animate'; if (animOn) animLoop(); };
+      $('dev-time').oninput = (e) => { animTime = parseFloat(e.target.value); $('dev-time-val').textContent = animTime.toFixed(2) + 's'; rMayfly.setTime && rMayfly.setTime(animTime); rStinky.setTime && rStinky.setTime(animTime); if (!liveOn) showStats(measureDiff()); };
     }
 
     // ---- report ----
@@ -481,6 +639,7 @@
       console.warn('render-error', el.id, ev.detail);
     }));
 
+    setupDeviationLab();
     probeEnv();
   </script>
 </body>

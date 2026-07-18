@@ -38,7 +38,14 @@ agent reads the issue (GitHub API) → gets objective env data + human verdicts
    backend (forcing a synchronous draw so the buffer is valid). If a capture
    comes back blank it's flagged orange and the page tells you to use your
    device's own screenshot instead.
-4. **Assembles a submission** — a Markdown report plus a `machine-readable` JSON
+4. **Deviation lab** — beyond the visual onion overlay (cross-fade + difference
+   blend), a quantified comparison: drag either render to **orbit both backends
+   in lockstep**, play/scrub a **shared animation clock** (drives `setTime` on
+   both), and a live per-pixel **|WebGL − WebGPU| heatmap** with mean/max Δ, a
+   deviation meter, and a **peak-tracker** (with a "Rotate scan" that sweeps 360°
+   and records the worst view). This is how you push the two backends to the
+   limits of identical output and see exactly where/when they part.
+5. **Assembles a submission** — a Markdown report plus a `machine-readable` JSON
    block, a pre-filled GitHub-issue link, a copy button, and a screenshot
    download button.
 
