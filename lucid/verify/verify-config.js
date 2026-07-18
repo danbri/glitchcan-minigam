@@ -76,6 +76,7 @@ export const VERIFY_CONFIG = {
       id: 'match',
       type: 'match',
       label: 'Do the WebGL (Mayfly) and WebGPU (Stinkyfish) renders match?',
+      reportLabel: 'Match',
       options: [
         { value: 'match', label: 'Match — visually equivalent' },
         { value: 'minor', label: 'Minor differences (shading/tone)' },
@@ -86,11 +87,30 @@ export const VERIFY_CONFIG = {
       ],
     },
     {
+      // Aspect ratio / shape distortion — a round shape must read as round. A
+      // squashed/stretched sphere (ellipse) means the canvas backing-store
+      // aspect doesn't match its displayed box. Ask per-backend because the
+      // two size their canvases differently.
+      id: 'aspect',
+      type: 'aspect',
+      label: 'Aspect ratio — is a round shape actually round (not a stretched ellipse)?',
+      reportLabel: 'Aspect ratio',
+      options: [
+        { value: 'both-correct', label: 'Correct in both' },
+        { value: 'webgl-stretched', label: 'WebGL (Mayfly) is stretched / squashed' },
+        { value: 'webgpu-stretched', label: 'WebGPU (Stinkyfish) is stretched / squashed' },
+        { value: 'both-stretched', label: 'Both are stretched / squashed' },
+        { value: 'changes-on-scroll', label: 'Distortion appears or changes when I scroll / rotate the device' },
+      ],
+    },
+    {
       id: 'discrepancies',
       type: 'checks',
       label: 'If they differ, what differs? (tick all that apply)',
+      reportLabel: 'Differs',
       options: [
         { value: 'geometry', label: 'Shape / geometry' },
+        { value: 'aspect', label: 'Aspect ratio / stretch' },
         { value: 'position', label: 'Position / symmetry / count' },
         { value: 'colour', label: 'Colour / material' },
         { value: 'lighting', label: 'Lighting / shading / tone' },
@@ -103,6 +123,7 @@ export const VERIFY_CONFIG = {
       id: 'notes',
       type: 'text',
       label: 'Anything else you notice (optional)',
+      reportLabel: 'Notes',
       placeholder: 'e.g. "WebGPU petals rotated ~15° vs WebGL"',
     },
   ],
