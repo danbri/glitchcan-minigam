@@ -401,6 +401,9 @@ export class LucidRenderer extends HTMLElement {
     const scene = loadJsonScene(json);
     const glsl = generateGlslFromJson(scene, this._codegenOptions(json));
 
+    // Mayfly evaluates the rig internally in its own render loop.
+    this._rig = null;
+
     // Mayfly uses updateScene(glsl, params, rig, json)
     this._renderer.updateScene(glsl, scene.params || {}, scene.rig || null, json);
 
@@ -420,7 +423,7 @@ export class LucidRenderer extends HTMLElement {
     const basePath = this._getBasePath();
     const { loadJsonScene } = await import(`${basePath}/core/json-loader.js`);
     const { generateWgslFromJson } = await import(`${basePath}/core/wgsl-codegen.js`);
-    const { getAllParamNames } = await import(`${basePath}/core/rig-evaluator.js`);
+    const { getAllParamNames, evaluateRig } = await import(`${basePath}/core/rig-evaluator.js`);
 
     const scene = loadJsonScene(json);
     const wgsl = generateWgslFromJson(scene, this._codegenOptions(json));
@@ -433,10 +436,22 @@ export class LucidRenderer extends HTMLElement {
     // Stinkyfish uses compileScene(wgsl, uniformLayout)
     await this._renderer.compileScene(wgsl, uniformLayout);
 
-    // Initialize scene parameters (must be called after compileScene)
-    if (scene.params) {
-      this._renderer.setSceneParams(scene.params);
+    // Initialize scene parameters (must be called after compileScene).
+    // Include rig-derived/phase names as stubs so the per-frame rig evaluation
+    // (below) can push their values via setParam — the WGSL renderer only
+    // updates params it already knows about.
+    const initParams = { ...(scene.params || {}) };
+    for (const [name, info] of Object.entries(allParams)) {
+      if (!initParams[name]) initParams[name] = { type: info.type || 'scalar', value: 0 };
     }
+    this._renderer.setSceneParams(initParams);
+
+    // Close the rig gap on WebGPU: unlike Mayfly, the Stinkyfish renderer does
+    // not evaluate the rig itself, so derived/phase params would be frozen.
+    // Stash the rig so the render loop can evaluate it each frame.
+    this._rig = scene.rig || null;
+    this._rigBaseParams = scene.params || {};
+    this._evaluateRig = evaluateRig;
 
     // Apply camera settings - use same defaults as Mayfly for consistency
     if (json.camera) {
@@ -483,6 +498,29 @@ export class LucidRenderer extends HTMLElement {
     }
   }
 
+  // Per-frame rig evaluation for the WebGPU path only (Mayfly does its own).
+  // Mirrors Mayfly's binding: base params use rig-evaluated values, plus derived
+  // and phase-coupled params — all pushed through setParam.
+  _evaluateRigForStinkyfish() {
+    if (this._backend !== BACKENDS.STINKYFISH || !this._rig || !this._evaluateRig) return;
+    const r = this._renderer;
+    if (!r || !r.setParam) return;
+    try {
+      const t = r.overrideTime != null
+        ? r.overrideTime
+        : (performance.now() - (r.startTime || performance.now())) / 1000;
+      const rig = this._evaluateRig(this._rigBaseParams, this._rig, t);
+      if (!rig) return;
+      for (const [name, param] of Object.entries(this._rigBaseParams)) {
+        if (typeof param === 'object' && param !== null && rig.values[name] !== undefined) {
+          r.setParam(name, rig.values[name]);
+        }
+      }
+      for (const [name, value] of Object.entries(rig.derived || {})) r.setParam(name, value);
+      for (const [name, value] of Object.entries(rig.phaseValues || {})) r.setParam(name, value);
+    } catch (e) { /* rig eval must never break the render loop */ }
+  }
+
   _startRenderLoop() {
     if (this._isRendering) return;
     this._isRendering = true;
@@ -493,6 +531,7 @@ export class LucidRenderer extends HTMLElement {
 
       if (this._renderer?.render) {
         const time = (timestamp - this._startTime) * 0.001; // Convert to seconds
+        this._evaluateRigForStinkyfish();
         this._renderer.render(time);
       }
 
