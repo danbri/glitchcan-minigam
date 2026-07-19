@@ -12,7 +12,7 @@
 <body>
 <h1>ROBBIN — vector bird proofs</h1>
 <p>Each bird at 150px in stand / walk / flit / airup / airdown / climb / peck poses, both facings, plus grain pile &amp; milk bottles.</p>
-<canvas id="sheet" width="1350" height="900"></canvas>
+<canvas id="sheet" width="1350" height="1080"></canvas>
 <script type="module">
 import { BIRDS, drawBird, drawGrain, drawBottle } from './robbin-sprites.js';
 const ctx = document.getElementById('sheet').getContext('2d');
@@ -33,6 +33,12 @@ ctx.save(); ctx.translate(100, 860); ctx.scale(2.4, 2.4); ctx.translate(-100, -8
 ctx.save(); ctx.translate(220, 860); ctx.scale(2.4, 2.4); ctx.translate(-220, -860); drawBottle(ctx, 220, 860, true); ctx.restore();
 ctx.save(); ctx.translate(320, 860); ctx.scale(2.4, 2.4); ctx.translate(-320, -860); drawBottle(ctx, 320, 860, false); ctx.restore();
 ctx.fillText("grain / full bottle / cream pinched", 60, 885);
+import('./robbin-sprites.js').then(({ drawCommuter }) => {
+  for (let v = 0; v < 20; v++) {
+    drawCommuter(ctx, { x: 60 + v * 64, y: 1020, size: 110, facing: 1, phase: 1.2, pose: v % 4 ? 'stand' : 'walk', variant: v });
+  }
+  ctx.fillText('commuters, variants 0–19', 60, 1050);
+});
 </script>
 </body>
 </html>

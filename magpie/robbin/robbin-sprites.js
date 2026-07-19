@@ -383,17 +383,34 @@ export function drawBottle(ctx, x, y, cream = true) {
 }
 
 // ------------------------------------------------------------ commuters
-// Ordinary human commuters: blobby coat, small blank head, deliberately
-// bland next to the big-eyed birds. Feet baseline y=92 in a 100-box, faces
-// right. pose: 'walk' | 'stand' | 'ride' (escalators: feet together, still).
-const COATS = ['#4a5064', '#6b5a46', '#7c7a74', '#5a6652'];
+// Ordinary human commuters: blobby coats, small blank heads — everyone is
+// silhouette and cloth, nobody is a face, nobody upstages a bird. The
+// variant seed deterministically mixes age, build, skin tone, hair and
+// head-covering (caps, headscarves, turbans, buns, afros, silver hair),
+// and what they carry — so the crowd reads like an actual London platform.
+// pose: 'walk' | 'stand' | 'ride' (escalators: feet together, still).
+const SKIN = ['#8d5524', '#a3714a', '#c68642', '#d9a577', '#e8c39a', '#f0d5b8'];
+const COATS = ['#4a5064', '#6b5a46', '#7c7a74', '#5a6652', '#7d5a68', '#4f6b74', '#877852', '#5b5b6e'];
+const HAIRS = ['#2c2c30', '#4a3a28', '#6e4a33', '#23252c', '#d8d3c8'];
+const CLOTHS = ['#a3573f', '#4f6b74', '#877852', '#7d5a68', '#5f7d6a', '#b0894a'];
 export function drawCommuter(ctx, { x, y, size = 48, facing = 1, phase = 0, pose = 'walk', variant = 0 }) {
+  const v = Math.abs(Math.floor(variant));
+  const skin = SKIN[v % SKIN.length];
+  const coat = COATS[(v * 5 + 1) % COATS.length];
+  const cloth = CLOTHS[(v * 9 + 2) % CLOTHS.length];
+  const child = v % 7 === 3;
+  const elder = !child && v % 5 === 4;
+  const hair = elder ? HAIRS[4] : HAIRS[(v * 3 + 2) % 4];
+  const build = 0.88 + ((v * 13) % 5) * 0.08;          // slight..broad
+  const height = child ? 0.68 : 0.9 + ((v * 11) % 4) * 0.06;
+  const headgear = child ? (v % 2 ? 5 : 0) : (v * 7 + (v >> 3)) % 8;
+  const item = elder ? 6 : child ? 7 : (v * 3 + 1) % 6;
   const s = size / 100;
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(facing < 0 ? -s : s, s);
+  ctx.scale((facing < 0 ? -s : s) * build, s * height);
   ctx.translate(-50, -92);
-  const coat = COATS[((variant % COATS.length) + COATS.length) % COATS.length];
+  if (elder) { ctx.translate(50, 92); ctx.rotate(0.08); ctx.translate(-50, -92); }
   // legs
   const swing = pose === 'walk' ? Math.sin(phase) * 0.42 : 0.05;
   ctx.strokeStyle = '#2c2c30';
@@ -409,6 +426,19 @@ export function drawCommuter(ctx, { x, y, size = 48, facing = 1, phase = 0, pose
   // gentle idle sway
   if (pose === 'stand') ctx.translate(Math.sin(phase * 0.7) * 1.2, 0);
   if (pose === 'walk') ctx.translate(0, Math.sin(phase * 2) * 1.1);
+  // school backpack rides behind small shoulders
+  if (item === 7) {
+    ctx.fillStyle = cloth;
+    ctx.beginPath(); ctx.roundRect(24, 36, 15, 22, 6); ctx.fill();
+  }
+  // long hair drapes behind the coat collar
+  if (headgear === 7) {
+    ctx.fillStyle = hair;
+    ctx.beginPath();
+    ctx.moveTo(44, 12); ctx.quadraticCurveTo(38, 24, 41, 40);
+    ctx.lineTo(48, 38); ctx.quadraticCurveTo(45, 26, 48, 12);
+    ctx.closePath(); ctx.fill();
+  }
   // coat
   ctx.fillStyle = coat;
   ctx.beginPath();
@@ -417,29 +447,85 @@ export function drawCommuter(ctx, { x, y, size = 48, facing = 1, phase = 0, pose
   ctx.quadraticCurveTo(71, 32, 66, 68);
   ctx.quadraticCurveTo(50, 75, 34, 68);
   ctx.closePath(); ctx.fill();
-  // blank head + hair smudge — no face, no fuss
-  ctx.fillStyle = '#d9c6ab';
+  // blank head — never a face
+  ctx.fillStyle = skin;
   ctx.beginPath(); ctx.arc(52, 17, 9, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = 'rgba(44,44,48,0.85)';
-  ctx.beginPath(); ctx.arc(50.5, 13.5, 8.2, Math.PI * 0.95, Math.PI * 2.05); ctx.fill();
-  // accessory
+  switch (headgear) {
+    case 2: {   // flat cap
+      ctx.fillStyle = '#33363d';
+      ctx.beginPath(); ctx.arc(50.5, 13, 8.4, Math.PI * 0.95, Math.PI * 2.02); ctx.fill();
+      ctx.fillRect(50, 9.5, 13, 2.6);
+      break;
+    }
+    case 3: {   // headscarf, wrapped soft around the head
+      ctx.fillStyle = cloth;
+      ctx.beginPath(); ctx.arc(51, 16, 11.4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(56, 24); ctx.quadraticCurveTo(60, 30, 57, 34); ctx.lineTo(50, 30); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = skin;
+      ctx.beginPath(); ctx.arc(56, 18, 6.2, 0, Math.PI * 2); ctx.fill();
+      break;
+    }
+    case 4: {   // turban, neatly stacked
+      ctx.fillStyle = cloth;
+      ctx.beginPath(); ctx.arc(52, 12, 8.6, Math.PI * 0.9, Math.PI * 2.1); ctx.fill();
+      ctx.beginPath(); ctx.arc(52, 9, 6, Math.PI * 0.85, Math.PI * 2.15); ctx.fill();
+      ctx.strokeStyle = 'rgba(38,34,30,0.35)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(44.5, 12); ctx.lineTo(59.5, 10); ctx.stroke();
+      break;
+    }
+    case 5: {   // beanie with a fold
+      ctx.fillStyle = cloth;
+      ctx.beginPath(); ctx.arc(52, 13, 8.6, Math.PI * 0.9, Math.PI * 2.1); ctx.fill();
+      ctx.fillRect(43.5, 13, 17, 3.4);
+      break;
+    }
+    case 6: {   // hair in a bun
+      ctx.fillStyle = hair;
+      ctx.beginPath(); ctx.arc(50.5, 13.5, 8.2, Math.PI * 0.95, Math.PI * 2.05); ctx.fill();
+      ctx.beginPath(); ctx.arc(42, 12, 3.8, 0, Math.PI * 2); ctx.fill();
+      break;
+    }
+    case 7:     // long hair (drape drawn earlier) — crown smudge
+    default: {  // 0/1: plain hair smudge (afro-round on some heads)
+      ctx.fillStyle = hair;
+      const r = headgear === 0 && v % 3 === 0 ? 10 : 8.2;   // fuller crowns too
+      ctx.beginPath(); ctx.arc(50.5, 13.5 - (r - 8.2) * 0.6, r, Math.PI * 0.92, Math.PI * 2.08); ctx.fill();
+    }
+  }
+  // what they carry
   ctx.strokeStyle = coat;
   ctx.lineWidth = 4.5;
-  const kind = variant % 3;
-  if (kind === 0) {          // phone
+  if (item === 0) {          // phone
     ctx.beginPath(); ctx.moveTo(63, 46); ctx.lineTo(72, 34); ctx.stroke();
     ctx.fillStyle = '#2c2c30';
     ctx.save(); ctx.translate(73, 31); ctx.rotate(0.5); ctx.fillRect(-2.5, -5, 5, 10); ctx.restore();
-  } else if (kind === 1) {   // briefcase
+  } else if (item === 1) {   // briefcase
     ctx.beginPath(); ctx.moveTo(64, 48); ctx.lineTo(67, 60); ctx.stroke();
     ctx.fillStyle = '#3d3428';
     ctx.fillRect(60, 60, 15, 11);
-  } else {                   // brolly
+  } else if (item === 2) {   // brolly
     ctx.beginPath(); ctx.moveTo(63, 50); ctx.lineTo(71, 26); ctx.stroke();
     ctx.strokeStyle = '#2c2c30';
     ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(71, 26, 7, Math.PI * 0.9, Math.PI * 1.9); ctx.stroke();
-  }
+  } else if (item === 3) {   // tote bag
+    ctx.beginPath(); ctx.moveTo(63, 44); ctx.lineTo(66, 58); ctx.stroke();
+    ctx.fillStyle = cloth;
+    ctx.fillRect(58, 57, 16, 15);
+    ctx.strokeStyle = '#2c2c30'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(66, 57, 5, Math.PI, 0); ctx.stroke();
+  } else if (item === 4) {   // coffee
+    ctx.beginPath(); ctx.moveTo(63, 46); ctx.lineTo(71, 40); ctx.stroke();
+    ctx.fillStyle = '#f7f2e6';
+    ctx.fillRect(69, 33, 6.5, 8);
+    ctx.fillStyle = cloth; ctx.fillRect(69, 36, 6.5, 2.4);
+  } else if (item === 6) {   // walking stick
+    ctx.strokeStyle = '#4a3a28';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(66, 48); ctx.lineTo(72, 90); ctx.stroke();
+    ctx.beginPath(); ctx.arc(63, 48, 3.5, Math.PI * 1.4, Math.PI * 0.4, true); ctx.stroke();
+  }                          // 5: hands in pockets
   ctx.restore();
 }
 

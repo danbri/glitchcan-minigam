@@ -89,10 +89,10 @@ const LAYOUTS = {
     ],
     commuters: [
       { t: 'commuter', c: 10, floor: 6, d: 1, v: 0 },
-      { t: 'commuter', c: 5, floor: 10, d: -1, v: 1 },
-      { t: 'commuter', c: 16, floor: 2, d: -1, v: 2 },
+      { t: 'commuter', c: 5, floor: 10, d: -1, v: 9 },
+      { t: 'commuter', c: 16, floor: 2, d: -1, v: 14 },
     ],
-    bystanders: [[3, 13, 1], [15, 13, 2], [9, 2, 0]],
+    bystanders: [[3, 13, 7], [15, 13, 12], [9, 2, 17]],
     ads: [[2, 10], [6, 10], [15, 6], [10, 10]],
     signs: [[4, 6], [14, 10]],
   },
@@ -118,10 +118,10 @@ const LAYOUTS = {
     ],
     commuters: [
       { t: 'commuter', c: 12, floor: 9, d: -1, v: 2 },
-      { t: 'commuter', c: 14, floor: 4, d: 1, v: 0 },
-      { t: 'commuter', c: 7, floor: 14, d: 1, v: 1 },
+      { t: 'commuter', c: 14, floor: 4, d: 1, v: 10 },
+      { t: 'commuter', c: 7, floor: 14, d: 1, v: 5 },
     ],
-    bystanders: [[6, 13, 0], [14, 13, 1], [12, 4, 2]],
+    bystanders: [[6, 13, 3], [14, 13, 8], [12, 4, 15]],
     ads: [[6, 9], [12, 9], [14, 4], [3, 9]],
     signs: [[10, 4], [7, 9]],
   },
@@ -147,10 +147,10 @@ const LAYOUTS = {
       '####################',
     ],
     commuters: [
-      { t: 'commuter', c: 9, floor: 6, d: 1, v: 1 },
-      { t: 'commuter', c: 12, floor: 14, d: -1, v: 2 },
+      { t: 'commuter', c: 9, floor: 6, d: 1, v: 6 },
+      { t: 'commuter', c: 12, floor: 14, d: -1, v: 11 },
     ],
-    bystanders: [[7, 13, 0], [11, 6, 2]],
+    bystanders: [[7, 13, 4], [11, 6, 18]],
     ads: [[6, 6], [10, 6], [13, 6]],
     signs: [[8, 6]],
   },
@@ -175,10 +175,10 @@ const LAYOUTS = {
       '####################',
     ],
     commuters: [
-      { t: 'commuter', c: 12, floor: 9, d: 1, v: 0 },
-      { t: 'commuter', c: 16, floor: 4, d: -1, v: 1 },
+      { t: 'commuter', c: 12, floor: 9, d: 1, v: 8 },
+      { t: 'commuter', c: 16, floor: 4, d: -1, v: 13 },
     ],
-    bystanders: [[6, 13, 2], [16, 13, 0], [11, 9, 1]],
+    bystanders: [[6, 13, 16], [16, 13, 1], [11, 9, 19]],
     ads: [[2, 9], [11, 4], [16, 9], [6, 4]],
     signs: [[12, 9], [2, 4]],
   },
@@ -191,6 +191,43 @@ const STATION_LAYOUT = {
   'CANADA WATER': 'modern3', 'BERMONDSEY': 'modern3', 'SOUTHWARK': 'modern3',
   'MOORGATE': 'modern3', 'WATERLOO': 'modern3', 'CANARY WHARF': 'modern3',
 };
+
+// a stylised carriage. doorX/baseY locate the doorway; door 0..1 is how
+// open; dx slides the whole train; moving adds rush lines.
+function drawTrain(ctx, doorX, baseY, color, { door = 1, dx = 0, moving = false } = {}) {
+  const bx = doorX - 128 + dx, by = baseY - 46, bw = 176, bh = 44;
+  ctx.save();
+  if (moving) {
+    ctx.strokeStyle = 'rgba(38,34,30,0.35)';
+    ctx.lineWidth = 2.5;
+    for (const ly of [by + 8, by + 22, by + 36]) {
+      ctx.beginPath(); ctx.moveTo(bx - 14, ly); ctx.lineTo(bx - 54, ly); ctx.stroke();
+    }
+  }
+  ctx.fillStyle = color;
+  ctx.strokeStyle = PALETTE.ink;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 9);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#dfe6ea';
+  for (let wx = bx + 10; wx < doorX + dx - 26; wx += 26) ctx.fillRect(wx, by + 8, 18, 14);
+  ctx.fillRect(doorX + dx + 16, by + 8, 18, 14);
+  // the doorway: dark aperture, two sliding panels
+  const dw = 22;
+  ctx.fillStyle = 'rgba(38,34,30,0.8)';
+  ctx.fillRect(doorX + dx - dw / 2, by + 6, dw, bh - 8);
+  ctx.fillStyle = color;
+  const panel = (dw / 2) * (1 - door);
+  ctx.fillRect(doorX + dx - dw / 2, by + 6, panel, bh - 8);
+  ctx.fillRect(doorX + dx + dw / 2 - panel, by + 6, panel, bh - 8);
+  ctx.strokeStyle = 'rgba(38,34,30,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(doorX + dx - dw / 2, by + 6, dw, bh - 8);
+  ctx.fillStyle = '#f6d34c';
+  ctx.beginPath(); ctx.arc(bx + 5, by + bh - 10, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
 
 // gentle boids: the flock swirls after its anchor — cohesion, separation,
 // a breath of wander. Satisfying, never anxious.
@@ -234,10 +271,17 @@ export class TubeFlock {
     this.lostIdx = 0;
     this.cur = 'LIVERPOOL STREET';
     this.line = null;
+    this.gather = null;
+    this.scene = null;
     this.shuffleLifts();
     const [x, y] = this.toXY(this.cur);
     this.flock = [{ sp: 'robin', x, y, ph: 0 }];
-    this.g.music.setIntensity(0.2);
+    this.updateMusic();
+  }
+  // the band assembles as the flock does: washes for one bird, full song
+  // for the whole family
+  updateMusic() {
+    this.g.music.setIntensity(0.15 + 0.85 * ((this.roster.length - 1) / LOST.length));
   }
   get objective() { return this.lostIdx < LOST.length ? LOST[this.lostIdx] : null; }
   shuffleLifts() {
@@ -265,7 +309,7 @@ export class TubeFlock {
   }
   // ---------------------------------------------------------- input
   handleDir(dx, dy) {
-    if (this.over || this.travel || this.interior || Math.hypot(dx, dy) < 0.3) return;
+    if (this.over || this.travel || this.interior || this.gather || Math.hypot(dx, dy) < 0.3) return;
     const [cx, cy] = this.toXY(this.cur);
     let best = null;
     for (const e of EDGES.get(this.cur)) {
@@ -287,7 +331,7 @@ export class TubeFlock {
     this.freeChange = null;
     const [ax, ay] = this.toXY(this.cur);
     const [bx, by] = this.toXY(edge.to);
-    this.travel = { edge, ax, ay, bx, by, t: 0, dur: Math.max(0.55, Math.hypot(bx - ax, by - ay) / 260) };
+    this.travel = { edge, ax, ay, bx, by, t: 0, dur: Math.max(0.7, Math.hypot(bx - ax, by - ay) / 210) };
     this.g.foley.whoosh();
   }
   handleJump() {
@@ -299,7 +343,7 @@ export class TubeFlock {
     document.getElementById('title').classList.remove('hidden');
   }
   // ---------------------------------------------------------- interiors
-  enterInterior(pendingEdge, rescue) {
+  enterInterior(pendingEdge, rescue, { arrival = false } = {}) {
     const g = this.g;
     const def = LAYOUTS[STATION_LAYOUT[this.cur]] || LAYOUTS.shallow2;
     const level = new Level({ name: this.cur, map: def.map, time: 0, enemies: [] }, 0);
@@ -339,11 +383,64 @@ export class TubeFlock {
     g.player = player;
     g.screen = { def: { name: this.cur }, enemies: this.interior.enemies, cleared: false };
     g.fx = []; g.parts = [];
+    if (arrival) {
+      // the train brings you: everyone starts tucked inside the carriage
+      this.scene = { kind: 'arrive', t: 0, doorX: level.spawn.x + 36, baseY: H - TILE };
+      player.x = -90; player.y = H - TILE;
+      for (const b of this.interior.buddies) { b.x = -90; b.y = H - TILE - 26; b.vx = 0; b.vy = 0; }
+    }
     g.updateCamera(0, true);
     g.foley.whoosh();
   }
+  // scripted train moments: arrivals disembark, boardings get whisked away
+  updateScene(dt) {
+    const g = this.g, it = this.interior, sc = this.scene;
+    sc.t += dt;
+    const t = performance.now() / 1000;
+    for (const e of it.enemies) e.update(dt);   // the station stays alive
+    if (sc.kind === 'arrive') {
+      const A = 1.0, B = 0.4, C = 1.1, D = 0.9;
+      if (sc.t >= A + B && !sc.out) {
+        sc.out = true;
+        g.player.x = sc.doorX; g.player.y = sc.baseY;
+        g.puff(sc.doorX, sc.baseY - 12, 4);
+        g.foley.egg();
+      }
+      if (sc.out) {
+        const k = Math.min(1, (sc.t - A - B) / C);
+        const n = Math.ceil(k * it.buddies.length);
+        it.buddies.forEach((b, i) => {
+          if (i < n && b.x < -20) { b.x = sc.doorX; b.y = sc.baseY - 24; g.puff(b.x, b.y, 2); }
+        });
+        g.player.x += (it.level.spawn.x - g.player.x) * (1 - Math.exp(-dt * 4));
+        flockStep(it.buddies.filter(b => b.x > -20), dt, g.player.x, g.player.y - 34, t);
+      }
+      if (sc.t >= A + B + C + D) { this.scene = null; it.invulnT = 0.9; }
+    } else {   // board
+      const A = 0.85, B = 0.5, C = 1.0;
+      if (sc.t < A) {
+        g.player.x += (sc.doorX - g.player.x) * (1 - Math.exp(-dt * 6));
+        g.player.y += (sc.baseY - g.player.y) * (1 - Math.exp(-dt * 6));
+        flockStep(it.buddies, dt, sc.doorX, sc.baseY - 26, t);
+      } else if (sc.t < A + B) {
+        const k = (sc.t - A) / B;
+        if (g.player.x > -20) { g.puff(g.player.x, g.player.y - 12, 3); g.player.x = -200; }
+        const n = Math.ceil(k * it.buddies.length);
+        it.buddies.forEach((b, i) => {
+          if (i < n && b.x > -20) { g.puff(b.x, b.y, 2); b.x = -200; }
+        });
+      }
+      if (sc.t >= A + B + C) {
+        const edge = it.pendingEdge;
+        this.scene = null;
+        this.interior = null;
+        this.depart(edge);
+      }
+    }
+  }
   updateInterior(dt) {
     const g = this.g, it = this.interior, lv = it.level;
+    if (this.scene) { this.updateScene(dt); return; }
     if (it.invulnT > 0) it.invulnT -= dt;
     if (lv.lift && !lv.lift.out) {
       for (const p of lv.lift.paddles) {
@@ -388,7 +485,7 @@ export class TubeFlock {
         g.fx.push({ x: px, y: py - 60, txt: `♥ ${it.rescue.name}! ♥`, t: 2.2 });
         g.hearts(px, py - 20, 10);
         g.foley.clear();
-        g.music.setIntensity(0.2 + 0.75 * (this.roster.length / (LOST.length + 1)));
+        this.updateMusic();
         g.music.swell();
         this.saveHi();
       }
@@ -418,11 +515,15 @@ export class TubeFlock {
     if (!locked) {
       const gx = it.gate.c * TILE + 16, gy = (it.gate.r + 1) * TILE;
       if (Math.abs(px - gx) < 22 && Math.abs(py - gy) < 36) {
-        const edge = it.pendingEdge;
-        this.interior = null;
-        g.foley.clear();
-        if (edge) this.depart(edge);
-        else this.freeChange = this.cur;   // rescued and out — no second toll
+        if (it.pendingEdge) {
+          // all aboard: the flock files into the open door
+          this.scene = { kind: 'board', t: 0, doorX: gx, baseY: gy };
+          g.foley.whoosh();
+        } else {
+          this.interior = null;
+          g.foley.clear();
+          this.freeChange = this.cur;   // rescued and out — no second toll
+        }
       }
     }
   }
@@ -430,6 +531,14 @@ export class TubeFlock {
   update(dt) {
     if (this.arriveT > 0) this.arriveT -= dt;
     if (this.interior) { this.updateInterior(dt); return; }
+    if (this.gather) {
+      this.gather.t += dt;
+      if (this.gather.t >= this.gather.dur) {
+        this.gather = null;
+        this.enterInterior(null, this.objective, { arrival: true });
+        return;
+      }
+    }
     if (this.travel) {
       this.travel.t += dt / this.travel.dur;
       if (this.travel.t >= 1) {
@@ -438,7 +547,8 @@ export class TubeFlock {
         this.travel = null;
         this.g.foley.step();
         if (this.objective && this.cur === this.objective.at) {
-          this.enterInterior(null, this.objective);
+          // don't whisk straight inside: let the flock settle in first
+          this.gather = { t: 0, dur: 1.7 };
           return;
         }
       }
@@ -551,6 +661,13 @@ export class TubeFlock {
       ctx.font = `bold ${fs * 1.2}px Georgia, serif`;
       ctx.fillText(this.arriveMsg, w / 2, h * 0.66);
     }
+    if (this.gather) {
+      ctx.fillStyle = PALETTE.ink;
+      ctx.globalAlpha = 0.75;
+      ctx.font = `italic ${fs * 0.95}px Georgia, serif`;
+      ctx.fillText(`the flock gathers at ${this.cur}…`, w / 2, h * 0.66);
+      ctx.globalAlpha = 1;
+    }
     ctx.globalAlpha = 0.6;
     ctx.font = `${fs * 0.72}px Georgia, serif`;
     ctx.fillStyle = PALETTE.ink;
@@ -596,6 +713,36 @@ export class TubeFlock {
       ctx.font = 'bold 11px Georgia, serif';
       ctx.textAlign = 'center';
       ctx.fillText(r.name, r.x, r.y - 52);
+    }
+    // the cutscene trains: sliding in with the flock, or whisking it away
+    if (this.scene) {
+      const sc = this.scene;
+      const col = it.pendingEdge ? LINES[it.pendingEdge.line].color
+        : (this.line ? LINES[this.line].color : PALETTE.platform);
+      const ease = x => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+      let door = 0, dx = 0, moving = false;
+      if (sc.kind === 'arrive') {
+        const A = 1.0, B = 0.4, C = 1.1, D = 0.9;
+        if (sc.t < A) { dx = -460 * (1 - ease(sc.t / A)); moving = sc.t < A * 0.85; }
+        else if (sc.t < A + B) { door = (sc.t - A) / B; }
+        else if (sc.t < A + B + C) { door = 1; }
+        else {
+          const k = (sc.t - A - B - C) / D;
+          door = Math.max(0, 1 - k * 2.5);
+          dx = k > 0.35 ? Math.pow((k - 0.35) / 0.65, 2) * 580 : 0;
+          moving = dx > 4;
+        }
+      } else {
+        const A = 0.85, B = 0.5, C = 1.0;
+        if (sc.t < A + B) door = 1;
+        else {
+          const k = (sc.t - A - B) / C;
+          door = Math.max(0, 1 - k * 2.8);
+          dx = k > 0.3 ? Math.pow((k - 0.3) / 0.7, 2) * 580 : 0;
+          moving = dx > 4;
+        }
+      }
+      drawTrain(ctx, sc.doorX, sc.baseY, col, { door, dx, moving });
     }
     ctx.restore();
     // HUD strip
@@ -669,24 +816,14 @@ export class TubeFlock {
     const gx = it.gate.c * TILE + 16, gy = (it.gate.r + 1) * TILE;
     const locked = it.rescue && !it.rescue.found;
     if (it.pendingEdge) {
-      // a stylised carriage waiting at the platform
-      ctx.save();
-      ctx.globalAlpha = locked ? 0.5 : 1;
-      ctx.fillStyle = lineColor;
-      ctx.strokeStyle = PALETTE.ink;
-      ctx.lineWidth = 2.5;
-      const bx = gx - 128, by = gy - 46, bw = 152, bh = 44;
-      ctx.beginPath();
-      ctx.roundRect(bx, by, bw, bh, 9);
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#dfe6ea';
-      for (let wx = bx + 10; wx < gx - 26; wx += 26) ctx.fillRect(wx, by + 8, 18, 14);
-      // open doorway aligned with the gate
-      ctx.fillStyle = 'rgba(38,34,30,0.8)';
-      ctx.fillRect(gx - 11, by + 6, 22, bh - 8);
-      ctx.fillStyle = '#f6d34c';
-      ctx.beginPath(); ctx.arc(bx + 4, by + bh - 10, 3, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
+      // a stylised carriage waiting at the platform (hidden while a
+      // boarding scene animates its own)
+      if (!(this.scene && this.scene.kind === 'board')) {
+        ctx.save();
+        ctx.globalAlpha = locked ? 0.5 : 1;
+        drawTrain(ctx, gx, gy, lineColor, { door: 1 });
+        ctx.restore();
+      }
     } else {
       ctx.fillStyle = locked ? 'rgba(38,34,30,0.35)' : PALETTE.platform;
       ctx.fillRect(gx - 14, gy - 42, 28, 42);

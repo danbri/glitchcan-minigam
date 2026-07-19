@@ -101,8 +101,12 @@ blackbirds, blue tits and wrens, everything the four lino-print
 drawings can be — are scattered around a curated, real-geography slice of the Underground
 (Central / Northern / Jubilee around Bank and London Bridge, schematic
 lino style, no TfL branding). Fly line-to-line on the map toward the
-current lost bird; arriving at their station — or changing lines at an
-interchange — drops you **inside the station**: a full-screen
+current lost bird; on arrival the flock gathers at the station mouth,
+then a little cutscene plays: the train slides in, doors open, and the
+whole flock hops out onto the platform. Boarding is its mirror — the
+birds file into the open door, doors close, and the carriage whisks
+them away. Arriving at a lost bird's station — or changing lines at an
+interchange — puts you **inside the station**: a full-screen
 platformer cut with the depths London stations really have, in four
 layout families (Bank's four levels down; big three-level halls;
 old Central-line street + deep platforms; modern twin-escalator
@@ -115,8 +119,11 @@ rescue, the fuller the screens get. Rescued birds join for +400 and
 Stations are dressed: name boards with line-colour bars, framed lino
 adverts, WAY OUT signage, a waiting carriage with open doors at the
 departure platform, and idle bystanders. The adversaries are ordinary
-**commuters** — bland blobby coat-people with phones, briefcases and
-brollies who trudge about, ride escalators standing, and never fly.
+**commuters** — bland blobby coat-people, deliberately faceless and
+background, but as varied as a real London platform: every age, build
+and skin tone, headscarves and turbans and flat caps and silver hair,
+phones, totes, coffees, canes and school backpacks. They trudge about,
+ride escalators standing, and never fly.
 Brushing one just flutters you gently aside — no harm done. Quest
 cards read like little stories ("lonely down at the platforms",
 "lost on level −2"), rescues bloom with hearts and a musical swell,
