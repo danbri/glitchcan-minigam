@@ -125,6 +125,18 @@ const LEVELS = [
   },
 ];
 
+// Stations on the Flight Line: each is a row of screens joined by edge
+// tunnels (walk off the side of one screen into the next), loosely modelled
+// on step-free navigation — tunnels along, lifts up. Grain is pooled per
+// station; clear the lot to move down the line.
+const STATIONS = [
+  { name: 'GARDEN GREEN', time: 1000, screens: [LEVELS[0], LEVELS[1]] },
+  { name: 'WRENWICH PARK', time: 1100, screens: [LEVELS[2], LEVELS[3]] },
+];
+for (const st of STATIONS) {
+  st.hasLift = st.screens.some(s => s.map.some(row => row.includes('L')));
+}
+
 // ---------------------------------------------------------------- audio
 class Foley {
   constructor() { this.ctx = null; }
@@ -148,6 +160,7 @@ class Foley {
     o.start(t0); o.stop(t0 + dur + 0.02);
   }
   jump()  { this.chirp(300, 620, 0.14, 'triangle', 0.1); }
+  whoosh(){ this.chirp(900, 220, 0.16, 'triangle', 0.08); }
   egg()   { this.chirp(880, 880, 0.06, 'sine', 0.12); this.chirp(1320, 1320, 0.09, 'sine', 0.12, 0.06); }
   grain() { this.chirp(220, 180, 0.1, 'triangle', 0.12); }
   cream() { // a creamy little glug-and-trill
@@ -208,6 +221,25 @@ class Level {
     while (this.ladder(c, top - 1)) top--;
     while (this.ladder(c, bot + 1)) bot++;
     return { minY: top * TILE, maxY: (bot + 1) * TILE };
+  }
+}
+
+class Station {
+  constructor(def, loop) {
+    this.def = def;
+    this.loop = loop;
+    this.time = Math.max(400, def.time - loop * 100);
+    this.screens = def.screens.map(sd => ({
+      def: sd,
+      level: new Level(sd, loop),
+      enemies: null,       // built below (needs the level)
+      cleared: false,
+    }));
+    for (const s of this.screens) s.enemies = s.def.enemies.map(e => new Enemy(s.level, e));
+    this.spawnScreen = Math.max(0, this.screens.findIndex(s => s.def.map.some(row => row.includes('P'))));
+  }
+  get treasureLeft() {
+    return this.screens.reduce((n, s) => n + s.level.treasure.size, 0);
   }
 }
 
@@ -575,24 +607,47 @@ class Game {
 
   // ------------------------------------------------ state transitions
   newGame() {
-    this.score = 0; this.lives = 5; this.levelIndex = 0; this.nextLifeAt = EXTRA_LIFE_EVERY;
+    this.score = 0; this.lives = 5; this.stationIndex = 0; this.nextLifeAt = EXTRA_LIFE_EVERY;
     this.foley.ensure(); this.foley.start();
     this.music.start();
-    this.loadLevel();
+    this.loadStation(0);
     document.getElementById('title').classList.add('hidden');
     document.getElementById('gameover').classList.add('hidden');
   }
-  loadLevel() {
-    const loop = Math.floor(this.levelIndex / LEVELS.length);
-    this.level = new Level(LEVELS[this.levelIndex % LEVELS.length], loop);
-    this.player = new Player(this.level);
-    this.enemies = this.level.def.enemies.map(e => new Enemy(this.level, e));
-    this.time = this.level.time;
+  loadStation(idx) {
+    this.stationIndex = idx;
+    const loop = Math.floor(idx / STATIONS.length);
+    this.station = new Station(STATIONS[idx % STATIONS.length], loop);
+    this.time = this.station.time;
     this.timeAcc = 0;
+    this.enterScreen(this.station.spawnScreen);
+    this.player = new Player(this.level);
+    this.state = 'intro'; this.stateT = 1.2;
+    this.updateCamera(0, true);
+  }
+  enterScreen(sx) {
+    this.screenX = sx;
+    this.screen = this.station.screens[sx];
+    this.level = this.screen.level;
+    if (this.player) this.player.lv = this.level;
     this.fx = [];
     this.parts = [];
-    this.state = 'intro'; this.stateT = 1.1;
+  }
+  get enemies() { return this.screen ? this.screen.enemies : []; }
+  set enemies(v) { if (this.screen) this.screen.enemies = v; }
+  // walk (or fly) off the side of a screen into its neighbour — the tunnels
+  slideScreen(d) {
+    this.enterScreen(this.screenX + d);
+    const pl = this.player;
+    pl.x = d > 0 ? 12 : W - 12;
+    pl.onLift = null;
+    if (pl.mode === 'walk' && !pl.supported(pl.x, pl.y)) { pl.mode = 'fall'; pl.vy = 0; }
+    this.foley.whoosh();
+    this.fx.push({ x: pl.x + d * 60, y: pl.y - 46, txt: this.screen.def.name.toUpperCase(), t: 1.4 });
     this.updateCamera(0, true);
+  }
+  continueFromMap() {
+    this.loadStation(this.stationIndex + 1);
   }
   puff(x, y, n) {
     for (let i = 0; i < n; i++) {
@@ -675,6 +730,9 @@ class Game {
     document.getElementById('mute').addEventListener('pointerdown', e => {
       e.stopPropagation(); this.toggleMute();
     });
+    this.canvas.addEventListener('pointerdown', () => {
+      if (this.state === 'map') this.continueFromMap();
+    });
   }
   toggleMute() {
     const m = !this.music.muted;
@@ -691,6 +749,7 @@ class Game {
   }
   pressStart() {
     if (this.state === 'title' || this.state === 'gameover') this.newGame();
+    else if (this.state === 'map') this.continueFromMap();
   }
   togglePause() {
     if (this.state === 'play') this.state = 'paused';
@@ -725,12 +784,14 @@ class Game {
         this.lives--;
         if (this.lives <= 0) this.gameOver();
         else {
+          this.enterScreen(this.station.spawnScreen);
           this.player.reset();
           // no camping the respawn point: hostiles loitering nearby go
           // back to their own start positions (all far from the spawn)
           for (const e of this.enemies) {
             if (Math.hypot(e.x - this.player.x, e.y - this.player.y) < 150) e.respawn();
           }
+          this.updateCamera(0, true);
           this.time = Math.max(this.time, 120); this.state = 'intro'; this.stateT = 0.7;
         }
       }
@@ -742,9 +803,14 @@ class Game {
       const drain = Math.min(this.time, Math.ceil(200 * dt));
       if (drain > 0) { this.time -= drain; this.addScore(drain); }
       if (this.stateT <= 0 && this.time <= 0) {
-        this.levelIndex++;
-        this.loadLevel();
+        this.state = 'map'; this.mapT = 0;
       }
+      return;
+    }
+    if (this.state === 'map') {
+      this.mapT += dt;
+      if (this.jumpTap) { this.jumpTap = false; this.continueFromMap(); }
+      else if (this.mapT > 8) this.continueFromMap();   // idle demo rolls on
       return;
     }
     if (this.state !== 'play') return;
@@ -761,6 +827,12 @@ class Game {
     this.player.update(dt, { ...this.input, jump: this.input.jump || this.jumpTap }, this);
     this.jumpTap = false;
     if (this.state !== 'play') return;   // killed during update
+
+    // edge tunnels between the station's screens
+    if (this.player.mode !== 'climb') {
+      if (this.player.x <= 9 && this.screenX > 0) this.slideScreen(-1);
+      else if (this.player.x >= W - 9 && this.screenX < this.station.screens.length - 1) this.slideScreen(1);
+    }
 
     for (const e of this.enemies) e.update(dt, this);
 
@@ -798,7 +870,17 @@ class Game {
         this.foley.cream();
       }
     }
-    if (lv.treasure.size === 0) {
+    if (lv.treasure.size === 0 && !this.screen.cleared) {
+      this.screen.cleared = true;
+      if (this.station.treasureLeft > 0) {
+        // point toward the grain that's left
+        const rest = this.station.screens.findIndex(s => s.level.treasure.size > 0);
+        const arrow = rest > this.screenX ? '→' : '←';
+        this.fx.push({ x: px, y: py - 64, txt: `SCREEN CLEAR ${arrow}`, t: 2.2 });
+        this.foley.clear();
+      }
+    }
+    if (this.station.treasureLeft === 0) {
       this.state = 'leveldone'; this.stateT = 1.4;
       this.foley.clear();
       return;
@@ -838,6 +920,11 @@ class Game {
       this.drawHUDBar();
       return;
     }
+    if (this.state === 'map') {
+      this.drawMapScreen(ctx);
+      this.drawHUDBar();
+      return;
+    }
 
     // world pass: camera-zoomed, fills the whole screen
     ctx.save();
@@ -872,8 +959,8 @@ class Game {
     ctx.globalAlpha = 1;
     ctx.restore();
 
-    if (this.state === 'intro') this.banner(ctx, this.level.def.name, `LEVEL ${this.levelIndex + 1}`);
-    if (this.state === 'leveldone') this.banner(ctx, 'ALL GRAIN GOBBLED!', `BONUS ${this.time}`);
+    if (this.state === 'intro') this.banner(ctx, this.station.def.name, `${this.station.screens.length} screens · step-free · alight for grain`);
+    if (this.state === 'leveldone') this.banner(ctx, 'STATION CLEARED!', `BONUS ${this.time}`);
     if (this.state === 'paused') this.banner(ctx, 'PAUSED', 'press P');
     this.drawHUDBar();
   }
@@ -890,6 +977,76 @@ class Game {
     ctx.fillText(big, this.cssW / 2, cy - 4);
     ctx.font = `${fs * 0.62}px Georgia, serif`;
     ctx.fillText(small, this.cssW / 2, cy + fs);
+    ctx.restore();
+  }
+  // schematic line map between stations — step-free journey, no roundels
+  drawMapScreen(ctx) {
+    const t = this.last / 1000;
+    const n = STATIONS.length;
+    const nextIndex = this.stationIndex + 1;
+    const round = Math.floor(nextIndex / n);
+    const within = nextIndex % n;
+    const cy = this.cssH * 0.46;
+    const xA = this.cssW * 0.16, xB = this.cssW * 0.84;
+    const fs = Math.max(15, Math.min(24, this.cssW / 26));
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PALETTE.ink;
+    ctx.font = `bold ${fs * 1.6}px Georgia, serif`;
+    ctx.fillText('THE FLIGHT LINE', this.cssW / 2, this.cssH * 0.2);
+    ctx.font = `italic ${fs * 0.75}px Georgia, serif`;
+    ctx.globalAlpha = 0.75;
+    ctx.fillText('step-free route — tunnels between screens, lifts where marked', this.cssW / 2, this.cssH * 0.2 + fs * 1.5);
+    ctx.globalAlpha = 1;
+
+    // the line
+    ctx.strokeStyle = PALETTE.platform;
+    ctx.lineWidth = 9;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(xA, cy); ctx.lineTo(xB, cy); ctx.stroke();
+
+    // stations
+    for (let i = 0; i < n; i++) {
+      const x = n === 1 ? (xA + xB) / 2 : xA + (xB - xA) * (i / (n - 1));
+      const done = i < within || (within === 0 && round > 0 && false);
+      const isNext = i === within;
+      ctx.beginPath(); ctx.arc(x, cy, 13, 0, Math.PI * 2);
+      ctx.fillStyle = done ? PALETTE.platform : PALETTE.paper;
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = PALETTE.ink;
+      ctx.stroke();
+      if (isNext) {
+        ctx.beginPath(); ctx.arc(x, cy, 20 + Math.sin(t * 5) * 2.5, 0, Math.PI * 2);
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = PALETTE.danger;
+        ctx.stroke();
+      }
+      ctx.fillStyle = PALETTE.ink;
+      ctx.font = `bold ${fs * 0.72}px Georgia, serif`;
+      ctx.fillText(STATIONS[i].name, x, cy + (i % 2 ? -34 : 46));
+      if (STATIONS[i].hasLift) {
+        // little lift glyph: box with up/down arrows
+        const ly = cy + (i % 2 ? -66 : 62);
+        ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2;
+        ctx.strokeRect(x - 10, ly - 9, 20, 18);
+        ctx.font = `bold ${fs * 0.6}px Georgia, serif`;
+        ctx.fillText('↕', x, ly + 5);
+      }
+    }
+    // a robin commutes along the line
+    const rx = xA + ((t * 46) % (xB - xA));
+    drawBird(ctx, 'robin', { x: rx, y: cy - 4, size: 44, facing: 1, phase: t * 12, pose: 'walk' });
+
+    ctx.fillStyle = PALETTE.ink;
+    ctx.font = `bold ${fs}px Georgia, serif`;
+    const nextName = STATIONS[within].name + (round > 0 ? `  ·  ROUND ${round + 1}` : '');
+    ctx.fillText(`NEXT STATION: ${nextName}`, this.cssW / 2, this.cssH * 0.72);
+    ctx.globalAlpha = 0.35 + 0.65 * (Math.sin(t * 6) > 0 ? 1 : 0.2);
+    ctx.font = `${fs * 0.8}px Georgia, serif`;
+    ctx.fillStyle = PALETTE.platform;
+    ctx.fillText('PRESS JUMP / ENTER / TAP TO BOARD', this.cssW / 2, this.cssH * 0.8);
     ctx.restore();
   }
   drawBackdrop(ctx) {
@@ -953,6 +1110,23 @@ class Game {
         }
       }
     }
+    // tunnel mouths where a neighbouring screen connects
+    const arch = (xEdge, dir) => {
+      const gy = H - TILE;   // ground top
+      ctx.fillStyle = 'rgba(38,34,30,0.85)';
+      ctx.beginPath();
+      ctx.moveTo(xEdge, gy);
+      ctx.lineTo(xEdge, gy - 30);
+      ctx.quadraticCurveTo(xEdge + dir * 18, gy - 44, xEdge + dir * 20, gy);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = PALETTE.paper;
+      ctx.beginPath();
+      const ax = xEdge + dir * 9;
+      ctx.moveTo(ax - dir * 3, gy - 24); ctx.lineTo(ax + dir * 4, gy - 19); ctx.lineTo(ax - dir * 3, gy - 14);
+      ctx.closePath(); ctx.fill();
+    };
+    if (this.screenX > 0) arch(0, 1);
+    if (this.screenX < this.station.screens.length - 1) arch(W, -1);
     // lift
     if (lv.lift) {
       const { x0, x1 } = lv.lift;
@@ -973,7 +1147,7 @@ class Game {
   }
   drawHUDBar() {
     const ctx = this.ctx;
-    const inGame = this.state !== 'title' && this.state !== 'gameover';
+    const inGame = !['title', 'gameover', 'map'].includes(this.state);
     const hudH = Math.max(38, Math.min(52, this.cssH * 0.07));
     const fs = Math.max(13, Math.min(19, this.cssW / 34));
     const ty = hudH * 0.62;
@@ -999,7 +1173,11 @@ class Game {
       ctx.fillText(`TIME ${String(Math.max(0, time)).padStart(3, '0')}`, x, ty);
       x += fs * 6;
       ctx.fillStyle = PALETTE.hudText;
-      ctx.fillText(`L${this.levelIndex + 1}`, x, ty);
+      // station·screen plus grain still to gobble across the station
+      ctx.fillText(`S${this.stationIndex + 1}·${this.screenX + 1}`, x, ty);
+      x += fs * 3.2;
+      drawGrain(ctx, x + 6, ty + 2);
+      ctx.fillText(`×${this.station.treasureLeft}`, x + 18, ty);
       // lives roost on the right, leaving room for the mute button
       const liveSize = fs * 1.7;
       for (let i = 0; i < Math.min(6, this.lives - 1); i++) {
@@ -1029,6 +1207,12 @@ window.__robbin = {
   game,
   get state() { return game.state; },
   start: () => game.newGame(),
-  warp: n => { game.levelIndex = n; game.loadLevel(); },
+  // legacy semantics: 0..3 map onto station 0-1 × screen 0-1
+  warp: n => {
+    game.loadStation(Math.floor(n / 2));
+    game.enterScreen(n % 2);
+    game.player = new Player(game.level);
+    game.updateCamera(0, true);
+  },
   press: (k, v = 1) => { game.input[k] = v; },
 };

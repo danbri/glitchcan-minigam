@@ -36,7 +36,13 @@ screen. No image assets: everything is vector.
 
 Classic collect-em-up rules (no egg thieving — these are honest birds):
 
-- 12 grain piles per level (100 pts each); gobble them all to advance.
+- The game runs along **the Flight Line** — stations loosely modelled on
+  step-free tube navigation. Each station is a set of flip-screens joined
+  by edge tunnels (walk off the side of one screen into the next; arched
+  tunnel mouths mark the way). Grain is pooled across the whole station:
+  clear every screen to ride on. Between stations a schematic line map
+  shows the journey — stations done, next stop pulsing, lifts marked.
+- Grain piles are worth 100 pts each; gobble the station's lot to advance.
 - Doorstep milk bottles are the bonus: peck the yellower creamy top off
   for 250 pts — real blue-tit behaviour — but the rival birds pinch the
   cream in passing if they reach a bottle first, leaving the empty
@@ -47,9 +53,10 @@ Classic collect-em-up rules (no egg thieving — these are honest birds):
 - Countdown timer; remaining time becomes bonus points on completion,
   and running out costs a life.
 - 5 lives, extra life every 10,000 pts, hi-score in localStorage.
-- 4 levels: The Garden, The Rooftops, The Wren House, and The Lift —
-  with an up-only lift (ride past the top and you're done for).
-  Levels then loop, faster each time.
+- 2 stations of 2 screens each: GARDEN GREEN (The Garden · The Rooftops)
+  and WRENWICH PARK (The Wren House · The Lift — an up-only lift; ride
+  past the top and you're done for). The line then loops, faster each
+  round.
 
 ## Mobile-first presentation
 
