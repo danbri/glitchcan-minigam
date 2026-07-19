@@ -11,19 +11,25 @@ platforms (and eat the grain if you don't get there first).
 
 The four birds — robin, blackbird, blue tit, wren — are hand-vectorized from a
 set of lino-print bird cards (photographed, then traced by eye as layered flat
-ink shapes). Sprites live in `robbin-sprites.js` as SVG path data in a 100×100
-box, drawn to canvas via `Path2D`, with procedurally animated twig legs so the
-same artwork covers stand / walk / air / climb / peck poses and both facings.
-`birdSVG()` emits the same shapes as inline SVG for the title screen. No image
-assets: everything is vector.
+ink shapes). Each bird is a **cutout rig**, South Park paper-doll style: tail,
+body, wing and head are separate masks that rotate around their own pivots,
+with the lower beak hinged inside the head so the birds chirp and peck. One
+tiny skeleton (`partRot`) drives all poses — stand / walk / air / climb /
+peck — plus procedurally animated twig legs and both facings. Sprites live in
+`robbin-sprites.js` as SVG path data in a 100×100 box, drawn to canvas via
+`Path2D`; `birdSVG()` emits the same rig as static inline SVG for the title
+screen. No image assets: everything is vector.
 
 ## The game
 
 Classic egg-run rules:
 
 - 12 eggs per level (100 pts each); collect them all to advance.
-- Grain is worth 50 pts — but patrolling birds peck it away.
-- Birds walk platforms and make random choices at ladders. Touch = death.
+- Grain is worth 50 pts — but patrolling birds peck it away (in passing —
+  they never stop for it).
+- Birds flow through the level Pac-Man style: constant speed, always moving,
+  picking randomly among the ways onward at each junction and reversing only
+  at true dead ends. Touch = death.
 - Countdown timer; remaining time becomes bonus points on completion,
   and running out costs a life.
 - 5 lives, extra life every 10,000 pts, hi-score in localStorage.

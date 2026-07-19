@@ -9,6 +9,7 @@ const TILE = 32, COLS = 20, ROWS = 15;
 const W = COLS * TILE, H = ROWS * TILE, HUD = 40;
 const GRAV = 780, JUMP_V = 268, WALK_V = 112, CLIMB_V = 84;
 const ENEMY_V = { bluetit: 56, blackbird: 66, wren: 82 };
+const BIRD_SIZE = { robin: 46, blackbird: 46, bluetit: 45, wren: 38 };
 const LIFT_V = 52;
 const TIME_TICK = 0.2;           // seconds per timer unit
 const EXTRA_LIFE_EVERY = 10000;
@@ -282,6 +283,7 @@ class Player extends Walker {
         if (this.supported(this.x, this.y)) this.mode = 'walk';
       }
     } else { // jump / fall
+      this.phase += dt * 16;   // wings flap while airborne
       this.vx = this.vx * 0.9 + (input.right - input.left) * WALK_V * 0.35;
       if (input.right - input.left) this.facing = input.right ? 1 : -1;
       const prevY = this.y;
@@ -326,10 +328,13 @@ class Player extends Walker {
     const pose = dead ? 'dead' : this.mode === 'climb' ? 'climb'
       : this.mode !== 'walk' ? 'air'
       : Math.abs(this.vx) > 1 ? 'walk' : 'stand';
-    drawBird(ctx, 'robin', { x: this.x, y: this.y, size: 36, facing: this.facing, phase: this.phase, pose });
+    drawBird(ctx, 'robin', { x: this.x, y: this.y, size: BIRD_SIZE.robin, facing: this.facing, phase: this.phase, pose });
   }
 }
 
+// Enemies flow like Pac-Man ghosts: constant speed, never stopping, and at
+// every junction they pick randomly among the ways ONWARD — reversing only at
+// true dead ends. Grain is gobbled in passing (a head-dip, not a pause).
 class Enemy extends Walker {
   constructor(level, def, rng = Math.random) {
     super(level);
@@ -340,86 +345,100 @@ class Enemy extends Walker {
     this.mode = 'walk';
     this.speed = ENEMY_V[def.t] * level.speedMul;
     this.phase = 0;
-    this.peckT = 0;
-    this.lastCol = colOf(this.x);
+    this.peckT = 0;      // purely visual — movement never stops
     this.rng = rng;
   }
-  update(dt, game) {
+  update(dt) {
     const lv = this.lv;
     this.phase += dt * 11;
-    if (this.peckT > 0) { this.peckT -= dt; return; }
+    if (this.peckT > 0) this.peckT -= dt;
     if (this.mode === 'walk') {
       const nx = this.x + this.dir * this.speed * dt;
-      // turn at platform edges and level bounds
-      const aheadX = nx + this.dir * 10;
-      if (aheadX < 4 || aheadX > W - 4 || !this.supported0(aheadX, this.y)) {
-        this.dir = -this.dir;
-        return;
-      }
-      // crossing a tile centre: maybe take a ladder, maybe peck grain
       const c = colOf(nx);
       const cx = c * TILE + 16;
-      const crossed = (this.x - cx) * (nx - cx) <= 0;
+      // strict crossing: sitting exactly ON the centre (fresh off a ladder)
+      // is not a crossing, else birds re-decide the junction they just left
+      const crossed = (this.x - cx) * (nx - cx) < 0;
       this.x = nx;
       if (crossed) {
         const r = this.y / TILE;
         const gKey = `${c},${r - 1}`;
-        if (lv.grain.has(gKey)) {
-          lv.grain.delete(gKey);
-          this.peckT = 1.0;
-          return;
-        }
-        const canUp = lv.ladder(c, r - 1), canDown = lv.ladder(c, r);
-        if ((canUp || canDown) && this.rng() < 0.45) {
-          const up = canUp && (!canDown || this.rng() < 0.5);
-          this.mode = 'climb';
-          this.x = cx;
-          this.vdir = up ? -1 : 1;
-          this.range = lv.ladderRange(c, up ? r - 1 : r);
-        }
+        if (lv.grain.has(gKey)) { lv.grain.delete(gKey); this.peckT = 0.45; }
+        this.decideWalking(c, r, cx);
+      } else if (this.x + this.dir * 10 < 4 || this.x + this.dir * 10 > W - 4) {
+        this.dir = -this.dir;   // level bounds between centres
       }
     } else { // climb
       const prevY = this.y;
-      let ny = this.y + this.vdir * this.speed * 0.8 * dt;
+      let ny = this.y + this.vdir * this.speed * 0.85 * dt;
       const c = colOf(this.x);
-      // check floor junctions crossed on the way
+      // visit every tile boundary crossed this step (endpoints included)
       const step = this.vdir;
-      for (let rb = Math.round(prevY / TILE) + (step > 0 ? 1 : -1);
+      for (let rb = step > 0 ? Math.floor(prevY / TILE) + 1 : Math.ceil(prevY / TILE) - 1;
            step > 0 ? rb * TILE <= ny : rb * TILE >= ny; rb += step) {
         const yb = rb * TILE;
         if (yb < this.range.minY || yb > this.range.maxY) break;
-        if (lv.solid(c, rb) || this.supported0(this.x - 20, yb) || this.supported0(this.x + 20, yb)) {
-          if (this.rng() < 0.55 || yb === this.range.minY || yb === this.range.maxY) {
-            ny = yb;
-            this.exitLadder(yb);
-            break;
-          }
-        }
+        if (this.decideClimbing(c, rb, yb)) { ny = yb; break; }
       }
       if (this.mode === 'climb') {
-        if (ny <= this.range.minY) { ny = this.range.minY; this.exitLadder(ny); }
-        else if (ny >= this.range.maxY) { ny = this.range.maxY; this.exitLadder(ny); }
+        // safety clamp at ladder ends: force an exit
+        if (ny <= this.range.minY) { ny = this.range.minY; this.forceExit(c, ny); }
+        else if (ny >= this.range.maxY) { ny = this.range.maxY; this.forceExit(c, ny); }
       }
       this.y = ny;
     }
   }
-  supported0(x, y) {
-    const r = Math.round(y / TILE);
-    return this.lv.solid(colOf(x), r);
+  // at a tile centre while walking: ways onward = ahead / up / down (no reverse)
+  decideWalking(c, r, cx) {
+    const lv = this.lv;
+    const opts = [];
+    if (lv.solid(c + this.dir, r) && (this.dir > 0 ? c + 1 < COLS : c > 0)) opts.push('fwd', 'fwd'); // mild straight-on bias
+    if (lv.ladder(c, r - 1)) opts.push('up');
+    if (lv.ladder(c, r)) opts.push('down');
+    if (!opts.length) { this.dir = -this.dir; return; }
+    const pick = opts[Math.floor(this.rng() * opts.length)];
+    if (pick === 'fwd') return;
+    this.mode = 'climb';
+    this.x = cx;
+    this.vdir = pick === 'up' ? -1 : 1;
+    this.range = lv.ladderRange(c, pick === 'up' ? r - 1 : r);
   }
-  exitLadder(yb) {
+  // crossing a floor junction while climbing: onward = continue / step off L / R
+  decideClimbing(c, rb, yb) {
+    const lv = this.lv;
+    const opts = [];
+    const contLadder = this.vdir < 0 ? lv.ladder(c, rb - 1) : lv.ladder(c, rb);
+    if (contLadder && yb > this.range.minY - 1 && yb < this.range.maxY + 1) opts.push('cont', 'cont');
+    if (lv.solid(c, rb)) {   // a floor pierces the ladder here — stepping off is possible
+      if (lv.solid(c - 1, rb)) opts.push('left');
+      if (lv.solid(c + 1, rb)) opts.push('right');
+    }
+    if (!opts.length) return false;
+    const pick = opts[Math.floor(this.rng() * opts.length)];
+    if (pick === 'cont') return false;
     this.mode = 'walk';
     this.y = yb;
-    const leftOK = this.supported0(this.x - 18, yb), rightOK = this.supported0(this.x + 18, yb);
-    if (leftOK && rightOK) this.dir = this.rng() < 0.5 ? -1 : 1;
-    else if (leftOK) this.dir = -1;
-    else if (rightOK) this.dir = 1;
+    this.dir = pick === 'left' ? -1 : 1;
+    return true;
+  }
+  forceExit(c, yb) {
+    const lv = this.lv;
+    const rb = Math.round(yb / TILE);
+    const opts = [];
+    if (lv.solid(c - 1, rb)) opts.push(-1);
+    if (lv.solid(c + 1, rb)) opts.push(1);
+    if (opts.length) {
+      this.mode = 'walk';
+      this.dir = opts[Math.floor(this.rng() * opts.length)];
+    } else {
+      this.vdir = -this.vdir;   // blind shaft — head back
+    }
   }
   hitbox() { return { x0: this.x - 8, x1: this.x + 8, y0: this.y - 24, y1: this.y - 2 }; }
   draw(ctx) {
     const pose = this.peckT > 0 ? 'peck' : this.mode === 'climb' ? 'climb' : 'walk';
     drawBird(ctx, this.t, {
-      x: this.x, y: this.y, size: this.t === 'wren' ? 30 : 36,
+      x: this.x, y: this.y, size: BIRD_SIZE[this.t],
       facing: this.dir, phase: this.phase, pose,
     });
   }
@@ -687,7 +706,7 @@ class Game {
     const names = ['blackbird', 'bluetit', 'wren', 'robin'];
     names.forEach((n, i) => {
       const x = ((t * 34 + i * 170) % (W + 140)) - 70;
-      drawBird(ctx, n, { x, y: H - 8, size: n === 'wren' ? 34 : 42, facing: 1, phase: t * 12, pose: 'walk' });
+      drawBird(ctx, n, { x, y: H - 8, size: n === 'wren' ? 40 : 48, facing: 1, phase: t * 12, pose: 'walk' });
     });
     ctx.fillStyle = PALETTE.platform;
     ctx.fillRect(0, H - 8, W, 8);
