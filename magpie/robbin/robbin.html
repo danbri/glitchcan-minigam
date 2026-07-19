@@ -72,8 +72,8 @@
   @keyframes blink { 50% { opacity: 0.25; } }
   .finalscore { font-size: clamp(1.1rem, 3.5vmin, 1.5rem); font-weight: bold; }
 
-  #menu { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 0.9rem; align-items: center; }
-  #menu button {
+  #menu, #menu2 { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 0.9rem; align-items: center; }
+  #menu button, #menu2 button {
     font-family: inherit;
     font-size: clamp(0.82rem, 2.4vmin, 1rem);
     padding: 0.5em 1.1em;
@@ -84,7 +84,7 @@
     cursor: pointer;
     letter-spacing: 0.04em;
   }
-  #menu button:hover { background: var(--green); color: var(--paper); }
+  #menu button:hover, #menu2 button:hover { background: var(--green); color: var(--paper); }
 
   #mute {
     position: absolute;
@@ -179,6 +179,9 @@
     <h1>PLUCKED!</h1>
     <div class="finalscore"></div>
     <div class="go">PRESS ENTER / TAP TO PLAY AGAIN</div>
+    <div id="menu2">
+      <button type="button" id="tomenu">&larr; BACK TO MENU &nbsp;(ESC)</button>
+    </div>
   </div>
 
   <div id="touch">

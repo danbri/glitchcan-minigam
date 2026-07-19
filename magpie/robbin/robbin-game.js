@@ -7,12 +7,13 @@ import { PALETTE, BIRDS, drawBird, drawGrain, drawBottle, birdSVG } from './robb
 import { Chiptune } from './robbin-music.js';
 import { TubeFlock } from './robbin-tube.js';
 
-const TILE = 32, COLS = 20, ROWS = 15;
-const W = COLS * TILE, H = ROWS * TILE, HUD = 40;
+export const TILE = 32, COLS = 20, ROWS = 15;
+export const W = COLS * TILE, H = ROWS * TILE;
+const HUD = 40;
 const GRAV = 780, JUMP_V = 268, WALK_V = 112, CLIMB_V = 84;
 const ENEMY_V = { bluetit: 56, blackbird: 66, wren: 82 };
 const BIRD_SIZE = { robin: 46, blackbird: 46, bluetit: 45, wren: 38 };
-const LIFT_V = 52;
+export const LIFT_V = 52;
 const TIME_TICK = 0.2;           // seconds per timer unit
 const EXTRA_LIFE_EVERY = 10000;
 
@@ -177,7 +178,7 @@ class Foley {
 }
 
 // ---------------------------------------------------------------- level model
-class Level {
+export class Level {
   constructor(def, loop) {
     this.def = def; this.loop = loop;
     this.speedMul = Math.pow(1.13, loop);
@@ -188,6 +189,7 @@ class Level {
     }
     this.treasure = new Map();   // "c,r" -> {c,r}: grain piles, all required
     this.bottles = new Map();    // "c,r" -> {c,r,cream}: milk bottle bonuses
+    this.escCols = new Map();    // col -> -1 up / +1 down: escalator runs ('S')
     this.spawn = { x: TILE + 16, y: H - TILE };
     let liftCols = [];
     let liftTop = ROWS, liftBot = 0;
@@ -197,6 +199,7 @@ class Level {
         if (ch === 'E') this.treasure.set(`${c},${r}`, { c, r });
         else if (ch === 'G') this.bottles.set(`${c},${r}`, { c, r, cream: true });
         else if (ch === 'P') this.spawn = { x: c * TILE + 16, y: (r + 1) * TILE };
+        else if (ch === 'S') this.escCols.set(c, -1);   // escalators run up by default
         if (ch === 'L') { liftCols.push(c); liftTop = Math.min(liftTop, r); liftBot = Math.max(liftBot, r); }
       }
     }
@@ -215,7 +218,7 @@ class Level {
     return this.grid[r][c];
   }
   solid(c, r)  { const ch = this.at(c, r); return ch === '#' || ch === '+'; }
-  ladder(c, r) { const ch = this.at(c, r); return ch === 'H' || ch === '+'; }
+  ladder(c, r) { const ch = this.at(c, r); return ch === 'H' || ch === '+' || ch === 'S'; }
   // vertical extent of the ladder run through (c, r): feet-y clamp range
   ladderRange(c, r) {
     let top = r, bot = r;
@@ -257,7 +260,7 @@ class Walker {
   }
 }
 
-class Player extends Walker {
+export class Player extends Walker {
   constructor(level) {
     super(level);
     this.reset();
@@ -325,7 +328,11 @@ class Player extends Walker {
       this.walkT = 0;
       const dir = (input.down - input.up);
       if (dir) this.phase += dt * 20;   // flutters up the ladder
-      this.y += dir * CLIMB_V * dt;
+      // escalators help when ridden their way, resist when ridden against
+      const esc = lv.escCols.get(colOf(this.x));
+      const climbV = esc === undefined || !dir ? CLIMB_V
+        : CLIMB_V * (dir === esc ? 1.6 : 0.55);
+      this.y += dir * climbV * dt;
       this.y = Math.max(this.range.minY, Math.min(this.range.maxY, this.y));
       if (input.jump) {
         this.mode = 'jump'; this.vy = -JUMP_V * 0.9; game.foley.jump();
@@ -420,7 +427,7 @@ class Player extends Walker {
 // Enemies flow like Pac-Man ghosts: constant speed, never stopping, and at
 // every junction they pick randomly among the ways ONWARD — reversing only at
 // true dead ends. Grain is gobbled in passing (a head-dip, not a pause).
-class Enemy extends Walker {
+export class Enemy extends Walker {
   constructor(level, def, rng = Math.random) {
     super(level);
     this.t = def.t;
@@ -720,7 +727,11 @@ class Game {
     const DIRVEC = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
     addEventListener('keydown', e => {
       if (e.key === 'Enter') { this.pressStart(); return; }
-      if (e.key === 'Escape' && this.state === 'tube') { this.tube.exit(); return; }
+      if (e.key === 'Escape') {
+        if (this.state === 'tube') { this.tube.exit(); return; }
+        if (this.state === 'gameover') { this.backToMenu(); return; }
+        return;
+      }
       if (e.key === 'p' || e.key === 'P') { this.togglePause(); return; }
       if (e.key === 'm' || e.key === 'M') { this.toggleMute(); return; }
       const k = keymap[e.key];
@@ -731,7 +742,7 @@ class Game {
           if (this.state === 'tube') this.tube.handleJump();
         }
         if (DIRVEC[k]) {
-          if (this.state === 'tube') this.tube.handleDir(...DIRVEC[k]);
+          if (this.state === 'tube') { if (!this.tube.interior) this.tube.handleDir(...DIRVEC[k]); }
           else if (this.controlMode === 'glide') this.setHeading(...DIRVEC[k]);
         }
         e.preventDefault(); this.foley.ensure();
@@ -791,8 +802,9 @@ class Game {
       const show = d => cells.forEach(c =>
         c.classList.toggle('lit', !!d && c.dataset.d === `${d.x},${d.y}`));
       const apply = d => {
-        if (this.state === 'tube') { if (d) this.tube.handleDir(d.x, d.y); return; }
-        if (this.controlMode === 'glide') { if (d) this.setHeading(d.x, d.y); return; }
+        if (this.state === 'tube' && !this.tube.interior) { if (d) this.tube.handleDir(d.x, d.y); return; }
+        if (this.state !== 'tube' && this.controlMode === 'glide') { if (d) this.setHeading(d.x, d.y); return; }
+        // hold semantics: flight-line HOLD mode and station interiors
         this.input.left = d && d.x < 0 ? 1 : 0;
         this.input.right = d && d.x > 0 ? 1 : 0;
         this.input.up = d && d.y < 0 ? 1 : 0;
@@ -811,12 +823,16 @@ class Game {
         dpad.addEventListener(ev, () => {
           if (!padActive) return;
           padActive = false; show(null);
-          if (this.controlMode !== 'glide' && this.state !== 'tube') apply(null);
+          if ((this.state === 'tube' && this.tube.interior) ||
+              (this.state !== 'tube' && this.controlMode !== 'glide')) apply(null);
         });
       }
     }
     document.getElementById('playtube')?.addEventListener('pointerdown', e => {
       e.stopPropagation(); this.startTube();
+    });
+    document.getElementById('tomenu')?.addEventListener('pointerdown', e => {
+      e.stopPropagation(); this.backToMenu();
     });
     document.getElementById('ctrlmode')?.addEventListener('pointerdown', e => {
       e.stopPropagation();
@@ -835,8 +851,13 @@ class Game {
     const ax = Math.abs(dx), ay = Math.abs(dy);
     const x = ax > ay * 0.45 ? Math.sign(dx) : 0;
     const y = ay > ax * 0.45 ? Math.sign(dy) : 0;
-    if (this.state === 'tube') this.tube.handleDir(dx, dy);
+    if (this.state === 'tube') { if (!this.tube.interior) this.tube.handleDir(dx, dy); }
     else if (this.controlMode === 'glide' && (x || y)) this.setHeading(x, y);
+  }
+  backToMenu() {
+    this.state = 'title';
+    document.getElementById('gameover').classList.add('hidden');
+    document.getElementById('title').classList.remove('hidden');
   }
   startTube() {
     this.foley.ensure();
@@ -1060,7 +1081,17 @@ class Game {
       return;
     }
 
-    // world pass: camera-zoomed, fills the whole screen
+    this.drawWorldPass(ctx);
+    this.drawNeighbourHints(ctx);
+
+    if (this.state === 'intro') this.banner(ctx, this.station.def.name, `${this.station.screens.length} screens · step-free · alight for grain`);
+    if (this.state === 'leveldone') this.banner(ctx, 'STATION CLEARED!', `BONUS ${this.time}`);
+    if (this.state === 'paused') this.banner(ctx, 'PAUSED', 'press P');
+    this.drawHUDBar();
+  }
+  // the camera-transformed world: tiles, items, birds, particles, fx text.
+  // Reused by TUBE FLOCK's station interiors.
+  drawWorldPass(ctx) {
     ctx.save();
     ctx.translate(this.offX, this.offY);
     ctx.scale(this.scale, this.scale);
@@ -1092,11 +1123,36 @@ class Game {
     }
     ctx.globalAlpha = 1;
     ctx.restore();
-
-    if (this.state === 'intro') this.banner(ctx, this.station.def.name, `${this.station.screens.length} screens · step-free · alight for grain`);
-    if (this.state === 'leveldone') this.banner(ctx, 'STATION CLEARED!', `BONUS ${this.time}`);
-    if (this.state === 'paused') this.banner(ctx, 'PAUSED', 'press P');
-    this.drawHUDBar();
+  }
+  // pulsing edge chevrons + counts: what's still to gobble next door
+  drawNeighbourHints(ctx) {
+    if (!this.station) return;
+    const t = this.last / 1000;
+    const fs = Math.max(14, Math.min(20, this.cssW / 32));
+    for (const side of [-1, 1]) {
+      const nx = this.screenX + side;
+      if (nx < 0 || nx >= this.station.screens.length) continue;
+      const n = this.station.screens[nx].level.treasure.size;
+      if (!n) continue;
+      // shout louder once this screen is finished
+      const urgent = this.level.treasure.size === 0;
+      const pulse = 0.45 + 0.4 * Math.sin(t * (urgent ? 7 : 3));
+      const x = side < 0 ? 30 : this.cssW - 30;
+      const y = this.cssH * 0.5;
+      ctx.save();
+      ctx.globalAlpha = urgent ? Math.max(0.5, pulse) : 0.55;
+      ctx.fillStyle = urgent ? PALETTE.danger : PALETTE.ink;
+      ctx.beginPath();
+      ctx.moveTo(x + side * 10, y);
+      ctx.lineTo(x - side * 4, y - 11);
+      ctx.lineTo(x - side * 4, y + 11);
+      ctx.closePath(); ctx.fill();
+      ctx.font = `bold ${fs}px Georgia, serif`;
+      ctx.textAlign = 'center';
+      drawGrain(ctx, x - side * 2, y + fs * 2.1);
+      ctx.fillText(`×${n}`, x - side * 2, y + fs * 3.4);
+      ctx.restore();
+    }
   }
   banner(ctx, big, small) {
     ctx.save();
@@ -1230,15 +1286,39 @@ class Game {
           if (isL && run < 0) run = r;
           if (!isL && run >= 0) {
             const x = c * TILE + 16, y0 = run * TILE, y1 = r * TILE;
+            const esc = lv.escCols.get(c);
             ctx.strokeStyle = ink ? PALETTE.ladder : PALETTE.platformShadow;
             ctx.lineWidth = 3.6;
             ctx.beginPath();
             ctx.moveTo(x - 8 + dx, y0 + dy); ctx.lineTo(x - 8 + dx, y1 + dy);
             ctx.moveTo(x + 8 + dx, y0 + dy); ctx.lineTo(x + 8 + dx, y1 + dy);
-            for (let ry = y0 + 8; ry < y1; ry += 11) {
-              ctx.moveTo(x - 8 + dx, ry + dy); ctx.lineTo(x + 8 + dx, ry + dy);
+            if (esc === undefined) {
+              for (let ry = y0 + 8; ry < y1; ry += 11) {
+                ctx.moveTo(x - 8 + dx, ry + dy); ctx.lineTo(x + 8 + dx, ry + dy);
+              }
+              ctx.stroke();
+            } else {
+              ctx.stroke();
+              if (ink) {
+                // escalator: treads glide with the direction of travel
+                const slide = ((this.last / 1000) * 26 * esc % 11 + 11) % 11;
+                ctx.strokeStyle = PALETTE.ink;
+                ctx.lineWidth = 2.4;
+                ctx.beginPath();
+                for (let ry = y0 + 3 + slide; ry < y1 - 2; ry += 11) {
+                  ctx.moveTo(x - 7, ry + 3); ctx.lineTo(x + 7, ry - 3);
+                }
+                ctx.stroke();
+                // direction chevron beside the top
+                ctx.fillStyle = esc < 0 ? PALETTE.platform : PALETTE.danger;
+                ctx.beginPath();
+                const ay = y0 + 10, flip = esc < 0 ? 1 : -1;
+                ctx.moveTo(x + 14, ay + 4 * flip);
+                ctx.lineTo(x + 18, ay - 4 * flip);
+                ctx.lineTo(x + 22, ay + 4 * flip);
+                ctx.closePath(); ctx.fill();
+              }
             }
-            ctx.stroke();
             run = -1;
           }
         }
@@ -1259,8 +1339,10 @@ class Game {
       ctx.moveTo(ax - dir * 3, gy - 24); ctx.lineTo(ax + dir * 4, gy - 19); ctx.lineTo(ax - dir * 3, gy - 14);
       ctx.closePath(); ctx.fill();
     };
-    if (this.screenX > 0) arch(0, 1);
-    if (this.screenX < this.station.screens.length - 1) arch(W, -1);
+    if (this.state !== 'tube' && this.station) {
+      if (this.screenX > 0) arch(0, 1);
+      if (this.screenX < this.station.screens.length - 1) arch(W, -1);
+    }
     // lift
     if (lv.lift) {
       const { x0, x1 } = lv.lift;
@@ -1271,6 +1353,17 @@ class Game {
       ctx.moveTo((x0 + x1) / 2, 8); ctx.lineTo((x0 + x1) / 2, lv.lift.botY);
       ctx.stroke();
       ctx.setLineDash([]);
+      if (lv.lift.out) {
+        // lift out of order: crossed sign at the shaft head
+        const cx2 = (x0 + x1) / 2, sy = lv.lift.topY + 20;
+        ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5;
+        ctx.strokeRect(cx2 - 14, sy - 14, 28, 28);
+        ctx.strokeStyle = PALETTE.danger; ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(cx2 - 10, sy - 10); ctx.lineTo(cx2 + 10, sy + 10);
+        ctx.moveTo(cx2 + 10, sy - 10); ctx.lineTo(cx2 - 10, sy + 10);
+        ctx.stroke();
+      }
       for (const p of lv.lift.paddles) {
         ctx.fillStyle = PALETTE.platformShadow;
         ctx.fillRect(x0 + 2, p.y + 2, x1 - x0 - 4, 9);

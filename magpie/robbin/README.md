@@ -40,8 +40,10 @@ Classic collect-em-up rules (no egg thieving — these are honest birds):
   step-free tube navigation. Each station is a set of flip-screens joined
   by edge tunnels (walk off the side of one screen into the next; arched
   tunnel mouths mark the way). Grain is pooled across the whole station:
-  clear every screen to ride on. Between stations a schematic line map
-  shows the journey — stations done, next stop pulsing, lifts marked.
+  clear every screen to ride on — pulsing edge chevrons show how much
+  grain remains next door, and shout in red once your screen is done.
+  Between stations a schematic line map shows the journey — stations
+  done, next stop pulsing, lifts marked.
 - Grain piles are worth 100 pts each; gobble the station's lot to advance.
 - Doorstep milk bottles are the bonus: peck the yellower creamy top off
   for 250 pts — real blue-tit behaviour — but the rival birds pinch the
@@ -98,11 +100,17 @@ real-geography slice of the Underground (Central / Northern / Jubilee
 around Bank and London Bridge, drawn schematically in the lino style;
 no TfL branding). The flock roosts at a station with a journey in mind
 — the opening trip is Liverpool Street → Bermondsey — and you swipe or
-arrow along lines to travel, changing lines at interchanges. Hazard:
-stations with their **lift out** (crossed-box glyph) force you onto the
-ESCALATOR when changing lines — it carries you down while you mash jump
-to flutter up. Journeys score 500 + remaining time and top the clock
-up; the service terminates when time runs out. Separate hi-score.
+arrow along lines to travel. **Changing lines at an interchange drops
+you inside the station**: a full-screen platformer cut with the depths
+London stations really have (Bank: street · ticket hall · concourse ·
+platforms; London Bridge: three levels), joined by fallible verticals —
+the lift is out whenever the map says so, one escalator is usually
+running against you (climb it at half speed; ride the right way at
+1.6×), stairs never fail, and commuter birds knock you back to the
+entrance. Reach the TO TRAINS gate on the destination line's level to
+board. Grain inside is worth 50. Journeys score 500 + remaining time
+and top the clock up; the service terminates when time runs out.
+Separate hi-score.
 
 ## Implementation notes
 

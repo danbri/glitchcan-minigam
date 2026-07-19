@@ -6,6 +6,65 @@
 // the ESCALATOR: flutter up faster than it carries you down.
 
 import { PALETTE, drawBird, drawGrain } from './robbin-sprites.js';
+import { Level, Player, Enemy, TILE, W, H, LIFT_V } from './robbin-game.js';
+
+// ------------------------------------------------------- station interiors
+// Changing lines at an interchange drops you INTO the station: a full-screen
+// platformer cut, with the depths London stations really have — street,
+// ticket hall, (concourse,) platforms — joined by fallible lifts and
+// escalators. 'S' = escalator (helps one way, resists the other; one is
+// usually running against you), 'L' = lift (out of order when the map says
+// the station's lift is out), 'H' = stairs, 'X' = the departure platform.
+const INTERIORS = {
+  'BANK': {
+    depths: 'street · ticket hall · concourse · platforms',
+    map: [
+      '....................',
+      '.E..................',
+      '######+#####LL####+#',
+      '......S.....LL....H.',
+      '......S.....LL....H.',
+      '......S..E..LL....HX',
+      '###+########LL######',
+      '...S........LL......',
+      '...S........LL......',
+      '...S....E...LL......',
+      '########+###LL##+###',
+      '........S...LL..H...',
+      '........S...LL..H...',
+      'P.......S...LL..H...',
+      '####################',
+    ],
+    enemies: [
+      { t: 'blackbird', c: 10, floor: 6, d: 1 },
+      { t: 'bluetit', c: 5, floor: 10, d: -1 },
+    ],
+  },
+  'LONDON BRIDGE': {
+    depths: 'street · concourse · platforms',
+    map: [
+      '....................',
+      '....................',
+      '....................',
+      '..E.....E...........',
+      '##+#####LL########+#',
+      '..S.....LL........H.',
+      '..S.....LL........H.',
+      '..S.....LL........H.',
+      '..S..E..LL........HX',
+      '####+###LL######+###',
+      '....S...LL......H...',
+      '....S...LL......H...',
+      '....S...LL......H...',
+      'P...S...LL..E...H...',
+      '####################',
+    ],
+    enemies: [
+      { t: 'wren', c: 12, floor: 9, d: -1 },
+      { t: 'blackbird', c: 14, floor: 4, d: 1 },
+    ],
+  },
+};
 
 const LINES = {
   central:  { color: '#c0392b', stations: ['HOLBORN', 'CHANCERY LANE', "ST PAUL'S", 'BANK', 'LIVERPOOL STREET'] },
@@ -55,6 +114,7 @@ export class TubeFlock {
     this.over = false;
     this.travel = null;
     this.escalator = null;
+    this.interior = null;
     this.arriveT = 0;
     this.journey = [...JOURNEYS[0]];        // the canonical first trip
     this.cur = this.journey[0];
@@ -98,13 +158,95 @@ export class TubeFlock {
       if (dot > 0.45 && (!best || dot > best.dot)) best = { ...e, dot };
     }
     if (!best) return;
-    // changing lines at a lift-out interchange? the escalator awaits
+    // changing lines at an interchange? into the station itself
+    if (this.line && best.line !== this.line && INTERIORS[this.cur]) {
+      this.enterInterior(best);
+      return;
+    }
+    // (fallback for interchanges without a built interior: the mash-up bar)
     if (this.line && best.line !== this.line && this.liftOut.has(this.cur)) {
       this.escalator = { p: 0.4, pending: best };
       this.g.foley.grain();
       return;
     }
     this.depart(best);
+  }
+  // ------------------------------------------------- station interior
+  enterInterior(pendingEdge) {
+    const g = this.g;
+    const def = INTERIORS[this.cur];
+    const level = new Level({ name: this.cur, map: def.map, time: 0, enemies: [] }, 0);
+    // fallibility: the station's lift state comes from the map layer;
+    // one random escalator runs against you
+    if (level.lift) {
+      level.lift.out = this.liftOut.has(this.cur);
+      if (level.lift.out) level.lift.paddles = [];
+    }
+    const escCols = [...level.escCols.keys()];
+    if (escCols.length) {
+      const against = escCols[Math.floor(Math.random() * escCols.length)];
+      level.escCols.set(against, 1);   // running down — flutter hard
+    }
+    let gate = { c: 19, r: 13 };
+    def.map.forEach((row, r) => {
+      const c = row.indexOf('X');
+      if (c >= 0) gate = { c, r };
+    });
+    this.interior = {
+      def, level, pendingEdge, gate,
+      enemies: def.enemies.map(e => new Enemy(level, e)),
+    };
+    // hand the world to the shared engine: camera + renderer follow these
+    g.level = level;
+    g.player = new Player(level);
+    g.screen = { def: { name: this.cur }, enemies: this.interior.enemies, cleared: false };
+    g.fx = []; g.parts = [];
+    g.updateCamera(0, true);
+    g.foley.whoosh();
+  }
+  updateInterior(dt) {
+    const g = this.g, it = this.interior, lv = it.level;
+    // lift paddles run unless the lift is out
+    if (lv.lift && !lv.lift.out) {
+      for (const p of lv.lift.paddles) {
+        p.prevY = p.y;
+        p.y -= LIFT_V * dt;
+        if (p.y < 16) { p.y = lv.lift.botY; p.prevY = p.y; }
+      }
+    }
+    g.player.update(dt, { ...g.input, jump: g.input.jump || g.jumpTap }, g);
+    g.jumpTap = false;
+    for (const e of it.enemies) e.update(dt);
+    // grain snacks
+    const px = g.player.x, py = g.player.y;
+    for (const [key, itn] of lv.treasure) {
+      const ix = itn.c * TILE + 16, iy = (itn.r + 1) * TILE;
+      if (Math.abs(px - ix) < 15 && Math.abs(py - iy) < 22) {
+        lv.treasure.delete(key);
+        this.score += 50;
+        g.fx.push({ x: ix, y: iy - 20, txt: '+50', t: 0.9 });
+        g.foley.egg();
+      }
+    }
+    // bumped by a commuter bird: feathers, lost time, back to the entrance
+    for (const e of it.enemies) {
+      if (Math.abs(px - e.x) < 15 && py - 26 < e.y - 2 && e.y - 24 < py - 2) {
+        this.time = Math.max(1, this.time - 12);
+        g.puff(px, py - 10, 7);
+        g.foley.death();
+        g.player.reset();
+        g.updateCamera(0, true);
+        break;
+      }
+    }
+    // reached the departure platform
+    const gx = it.gate.c * TILE + 16, gy = (it.gate.r + 1) * TILE;
+    if (Math.abs(px - gx) < 22 && Math.abs(py - gy) < 36) {
+      const edge = it.pendingEdge;
+      this.interior = null;
+      g.foley.clear();
+      this.depart(edge);
+    }
   }
   depart(edge) {
     const [ax, ay] = this.toXY(this.cur);
@@ -114,6 +256,7 @@ export class TubeFlock {
   }
   handleJump() {
     if (this.over) { this.exit(); return; }
+    if (this.interior) return;   // jumping in the interior goes through play input
     if (this.escalator) {
       this.escalator.p += 0.14;
       this.g.foley.step();
@@ -147,6 +290,7 @@ export class TubeFlock {
       }
     }
     if (this.arriveT > 0) this.arriveT -= dt;
+    if (this.interior) { this.updateInterior(dt); return; }
     if (this.escalator) {
       this.escalator.p -= dt * 0.3;
       if (this.escalator.p <= 0) {          // carried back down — tumble, try again
@@ -196,6 +340,7 @@ export class TubeFlock {
     const g = this.g, w = g.cssW, h = g.cssH;
     const t = performance.now() / 1000;
     const fs = Math.max(13, Math.min(20, w / 34));
+    if (this.interior) { this.drawInterior(ctx, fs); return; }
     ctx.save();
     ctx.textAlign = 'center';
     ctx.fillStyle = PALETTE.ink;
@@ -296,6 +441,54 @@ export class TubeFlock {
       ctx.fillText('swipe / arrows: ride a line · ESC: leave the network', w / 2, h - fs);
       ctx.globalAlpha = 1;
     }
+    ctx.restore();
+  }
+  drawInterior(ctx, fs) {
+    const g = this.g, w = g.cssW;
+    const it = this.interior;
+    // gate sign, drawn in world space beneath the renderer's transform
+    ctx.save();
+    ctx.translate(g.offX, g.offY);
+    ctx.scale(g.scale, g.scale);
+    ctx.translate(-g.camX, -g.camY);
+    const gx = it.gate.c * TILE + 16, gy = (it.gate.r + 1) * TILE;
+    const lineColor = LINES[it.pendingEdge.line].color;
+    ctx.fillStyle = lineColor;
+    ctx.fillRect(gx - 15, gy - 46, 30, 8);
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(gx - 15, gy - 46, 30, 8);
+    ctx.fillStyle = PALETTE.ink;
+    ctx.font = 'bold 9px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('TO TRAINS', gx, gy - 52);
+    // chevron bouncing over the gate
+    ctx.beginPath();
+    const by = gy - 26 + Math.sin(performance.now() / 180) * 3;
+    ctx.moveTo(gx - 6, by); ctx.lineTo(gx + 6, by); ctx.lineTo(gx, by + 7);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+    g.drawWorldPass(ctx);
+    // interior HUD strip
+    ctx.save();
+    ctx.fillStyle = 'rgba(247,242,230,0.9)';
+    ctx.fillRect(0, 0, w, fs * 3);
+    ctx.strokeStyle = 'rgba(38,34,30,0.35)';
+    ctx.beginPath(); ctx.moveTo(0, fs * 3); ctx.lineTo(w, fs * 3); ctx.stroke();
+    ctx.fillStyle = PALETTE.ink;
+    ctx.textAlign = 'center';
+    ctx.font = `bold ${fs}px Georgia, serif`;
+    ctx.fillText(`${this.cur} — change to the ${it.pendingEdge.line.toUpperCase()} line`, w / 2, fs * 1.25);
+    ctx.font = `italic ${fs * 0.72}px Georgia, serif`;
+    ctx.globalAlpha = 0.75;
+    ctx.fillText(`${it.def.depths} · find the way to TO TRAINS`, w / 2, fs * 2.3);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+    ctx.font = `bold ${fs * 0.85}px Georgia, serif`;
+    ctx.fillStyle = this.time <= 60 ? PALETTE.danger : PALETTE.ink;
+    ctx.fillText(`TIME ${this.time}`, 10, fs * 1.25);
+    ctx.fillStyle = PALETTE.ink;
+    ctx.fillText(`SCORE ${this.score}`, 10, fs * 2.3);
     ctx.restore();
   }
   drawEscalator(ctx, fs) {
