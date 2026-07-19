@@ -35,6 +35,7 @@
   .overlay {
     position: absolute;
     inset: 0;
+    z-index: 10;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -71,6 +72,20 @@
   @keyframes blink { 50% { opacity: 0.25; } }
   .finalscore { font-size: clamp(1.1rem, 3.5vmin, 1.5rem); font-weight: bold; }
 
+  #menu { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 0.9rem; align-items: center; }
+  #menu button {
+    font-family: inherit;
+    font-size: clamp(0.82rem, 2.4vmin, 1rem);
+    padding: 0.5em 1.1em;
+    border: 2px solid var(--ink);
+    border-radius: 8px;
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+    letter-spacing: 0.04em;
+  }
+  #menu button:hover { background: var(--green); color: var(--paper); }
+
   #mute {
     position: absolute;
     top: calc(4px + env(safe-area-inset-top));
@@ -99,10 +114,26 @@
     }
     #dpad {
       display: grid;
-      grid-template-columns: repeat(3, clamp(52px, 15vw, 66px));
-      grid-template-rows: repeat(2, clamp(52px, 15vw, 66px));
-      gap: 7px;
+      grid-template-columns: repeat(3, clamp(44px, 13vw, 58px));
+      grid-template-rows: repeat(3, clamp(44px, 13vw, 58px));
+      gap: 5px;
+      pointer-events: auto;
+      touch-action: none;
+      border-radius: 16px;
     }
+    #dpad span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid rgba(242, 236, 221, 0.7);
+      border-radius: 10px;
+      background: rgba(38, 34, 30, 0.30);
+      color: var(--paper);
+      font-size: 1.25rem;
+      pointer-events: none;      /* the pad itself is the joystick surface */
+    }
+    #dpad span.dc { opacity: 0.4; border-style: dotted; }
+    #dpad span.lit { background: rgba(46, 94, 69, 0.75); }
     #touch button {
       pointer-events: auto;
       border: 2px solid rgba(242, 236, 221, 0.85);
@@ -113,10 +144,6 @@
       touch-action: none;
     }
     #touch button:active { background: rgba(38, 34, 30, 0.55); }
-    #btn-up   { grid-column: 2; grid-row: 1; }
-    #btn-left { grid-column: 1; grid-row: 2; }
-    #btn-down { grid-column: 2; grid-row: 2; }
-    #btn-right{ grid-column: 3; grid-row: 2; }
     #btn-jump {
       width: clamp(88px, 26vw, 116px);
       height: clamp(88px, 26vw, 116px);
@@ -142,6 +169,10 @@
       <b>&larr;&rarr;</b> run &nbsp; <b>&uarr;&darr;</b> ladders &nbsp; <b>space</b> jump &nbsp; <b>P</b> pause &nbsp; <b>M</b> music
     </div>
     <div class="go">PRESS ENTER / TAP TO START</div>
+    <div id="menu">
+      <button type="button" id="playtube">&#128038; TUBE FLOCK &mdash; the libbirds ride the Underground</button>
+      <button type="button" id="ctrlmode">CONTROLS: HOLD</button>
+    </div>
   </div>
 
   <div id="gameover" class="overlay hidden">
@@ -151,11 +182,10 @@
   </div>
 
   <div id="touch">
-    <div id="dpad">
-      <button type="button" id="btn-up" data-k="up" aria-label="Climb up">&uarr;</button>
-      <button type="button" id="btn-left" data-k="left" aria-label="Run left">&larr;</button>
-      <button type="button" id="btn-down" data-k="down" aria-label="Climb down">&darr;</button>
-      <button type="button" id="btn-right" data-k="right" aria-label="Run right">&rarr;</button>
+    <div id="dpad" role="application" aria-label="Eight-way direction pad — tap or swipe">
+      <span data-d="-1,-1">&#8598;</span><span data-d="0,-1">&uarr;</span><span data-d="1,-1">&#8599;</span>
+      <span data-d="-1,0">&larr;</span><span class="dc">&middot;</span><span data-d="1,0">&rarr;</span>
+      <span data-d="-1,1">&#8601;</span><span data-d="0,1">&darr;</span><span data-d="1,1">&#8600;</span>
     </div>
     <button type="button" id="btn-jump" data-k="jump" aria-label="Jump">JUMP</button>
   </div>

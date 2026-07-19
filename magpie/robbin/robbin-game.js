@@ -5,6 +5,7 @@
 
 import { PALETTE, BIRDS, drawBird, drawGrain, drawBottle, birdSVG } from './robbin-sprites.js';
 import { Chiptune } from './robbin-music.js';
+import { TubeFlock } from './robbin-tube.js';
 
 const TILE = 32, COLS = 20, ROWS = 15;
 const W = COLS * TILE, H = ROWS * TILE, HUD = 40;
@@ -316,7 +317,7 @@ class Player extends Walker {
           const range = lv.ladderRange(g.c, g.r);
           if (!(input.down && !input.up && this.y >= range.maxY)) {
             this.x = g.cx; this.mode = 'climb'; this.onLift = null; this.vy = 0;
-            this.range = range;
+            this.range = range; this.grabY = this.y;
           }
         }
       }
@@ -328,13 +329,22 @@ class Player extends Walker {
       this.y = Math.max(this.range.minY, Math.min(this.range.maxY, this.y));
       if (input.jump) {
         this.mode = 'jump'; this.vy = -JUMP_V * 0.9; game.foley.jump();
-      } else if ((input.left || input.right) && !dir) {
-        const rb = Math.round(this.y / TILE);
-        if (Math.abs(this.y - rb * TILE) < 7 && lv.solid(colOf(this.x), rb)) {
-          this.y = rb * TILE; this.mode = 'walk';
+      } else {
+        const dirH = input.right - input.left;
+        if (dirH) {
+          // step off at a junction; a held diagonal exits where floor
+          // actually continues that way (the "downstream" of SE/NE etc),
+          // but only once it has climbed clear of the junction it boarded at
+          const rb = Math.round(this.y / TILE);
+          const c = colOf(this.x);
+          if (Math.abs(this.y - rb * TILE) < 7 && lv.solid(c, rb)
+              && (!dir || (lv.solid(c + dirH, rb) && Math.abs(this.y - (this.grabY ?? this.y)) > 8))) {
+            this.y = rb * TILE; this.mode = 'walk';
+          }
         }
-      } else if (dir && (this.y === this.range.minY || this.y === this.range.maxY)) {
-        if (this.supported(this.x, this.y)) this.mode = 'walk';
+        if (this.mode === 'climb' && dir && (this.y === this.range.minY || this.y === this.range.maxY)) {
+          if (this.supported(this.x, this.y)) this.mode = 'walk';
+        }
       }
     } else { // jump / fall
       this.walkT = 0;
@@ -381,7 +391,10 @@ class Player extends Walker {
       // rising or falling, and climbing continues in the held direction
       if (this.mode !== 'walk' && (input.up || input.down)) {
         const g = this.ladderGrab(input.down && !input.up, 16);
-        if (g) { this.x = g.cx; this.mode = 'climb'; this.vy = 0; this.range = lv.ladderRange(g.c, g.r); }
+        if (g) {
+          this.x = g.cx; this.mode = 'climb'; this.vy = 0;
+          this.range = lv.ladderRange(g.c, g.r); this.grabY = this.y;
+        }
       }
       if (this.y > H + 60) game.kill('fall');
     }
@@ -571,6 +584,11 @@ class Game {
     this.music = new Chiptune(() => { this.foley.ensure(); return this.foley.ctx; });
     this.music.setMuted(localStorage.getItem('robbin.mute') === '1');
     this.input = { left: 0, right: 0, up: 0, down: 0, jump: 0 };
+    // glide mode: a swipe sets a persistent heading; diagonals keep both
+    // intents live, so SE runs east and takes the first southbound ladder
+    this.controlMode = localStorage.getItem('robbin.ctrl') === 'glide' ? 'glide' : 'hold';
+    this.heading = { x: 0, y: 0 };
+    this.tube = new TubeFlock(this);
     this.state = 'title';
     this.hiscore = Number(localStorage.getItem('robbin.hiscore') || 0);
     this.fx = [];
@@ -622,6 +640,7 @@ class Game {
     this.timeAcc = 0;
     this.enterScreen(this.station.spawnScreen);
     this.player = new Player(this.level);
+    this.heading = { x: 0, y: 0 };
     this.state = 'intro'; this.stateT = 1.2;
     this.updateCamera(0, true);
   }
@@ -698,14 +717,23 @@ class Game {
       ArrowDown: 'down', s: 'down', S: 'down',
       ' ': 'jump', z: 'jump', Z: 'jump',
     };
+    const DIRVEC = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
     addEventListener('keydown', e => {
       if (e.key === 'Enter') { this.pressStart(); return; }
+      if (e.key === 'Escape' && this.state === 'tube') { this.tube.exit(); return; }
       if (e.key === 'p' || e.key === 'P') { this.togglePause(); return; }
       if (e.key === 'm' || e.key === 'M') { this.toggleMute(); return; }
       const k = keymap[e.key];
       if (k) {
         this.input[k] = 1;
-        if (k === 'jump' && !e.repeat) this.jumpTap = true;  // don't let sub-frame taps vanish
+        if (k === 'jump' && !e.repeat) {
+          this.jumpTap = true;  // don't let sub-frame taps vanish
+          if (this.state === 'tube') this.tube.handleJump();
+        }
+        if (DIRVEC[k]) {
+          if (this.state === 'tube') this.tube.handleDir(...DIRVEC[k]);
+          else if (this.controlMode === 'glide') this.setHeading(...DIRVEC[k]);
+        }
         e.preventDefault(); this.foley.ensure();
       }
     });
@@ -730,9 +758,93 @@ class Game {
     document.getElementById('mute').addEventListener('pointerdown', e => {
       e.stopPropagation(); this.toggleMute();
     });
-    this.canvas.addEventListener('pointerdown', () => {
-      if (this.state === 'map') this.continueFromMap();
+    this.canvas.addEventListener('pointerdown', e => {
+      if (this.state === 'map') { this.continueFromMap(); return; }
+      if (this.state === 'tube' && this.tube.over) { this.tube.handleJump(); return; }
+      // flick gestures on the play field (glide mode + tube travel)
+      this.gesture = { x: e.clientX, y: e.clientY, used: false };
     });
+    this.canvas.addEventListener('pointermove', e => {
+      if (!this.gesture || this.gesture.used) return;
+      const dx = e.clientX - this.gesture.x, dy = e.clientY - this.gesture.y;
+      if (Math.hypot(dx, dy) > 26) {
+        this.gesture.used = true;
+        this.applySwipe(dx, dy);
+      }
+    });
+    this.canvas.addEventListener('pointerup', () => { this.gesture = null; });
+
+    // the 8-way pad is one joystick surface: touch position (or drag)
+    // relative to its centre picks among the 8 directions
+    const dpad = document.getElementById('dpad');
+    if (dpad) {
+      const cells = [...dpad.querySelectorAll('span[data-d]')];
+      const padDir = e => {
+        const r = dpad.getBoundingClientRect();
+        const dx = e.clientX - (r.left + r.width / 2);
+        const dy = e.clientY - (r.top + r.height / 2);
+        if (Math.hypot(dx, dy) < 10) return null;
+        const oct = Math.round(Math.atan2(dy, dx) / (Math.PI / 4));
+        const v = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]][(oct + 8) % 8];
+        return { x: v[0], y: v[1] };
+      };
+      const show = d => cells.forEach(c =>
+        c.classList.toggle('lit', !!d && c.dataset.d === `${d.x},${d.y}`));
+      const apply = d => {
+        if (this.state === 'tube') { if (d) this.tube.handleDir(d.x, d.y); return; }
+        if (this.controlMode === 'glide') { if (d) this.setHeading(d.x, d.y); return; }
+        this.input.left = d && d.x < 0 ? 1 : 0;
+        this.input.right = d && d.x > 0 ? 1 : 0;
+        this.input.up = d && d.y < 0 ? 1 : 0;
+        this.input.down = d && d.y > 0 ? 1 : 0;
+      };
+      let padActive = false;
+      dpad.addEventListener('pointerdown', e => {
+        e.preventDefault(); padActive = true; this.foley.ensure();
+        const d = padDir(e); show(d); apply(d);
+      });
+      dpad.addEventListener('pointermove', e => {
+        if (!padActive) return;
+        const d = padDir(e); show(d); apply(d);
+      });
+      for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) {
+        dpad.addEventListener(ev, () => {
+          if (!padActive) return;
+          padActive = false; show(null);
+          if (this.controlMode !== 'glide' && this.state !== 'tube') apply(null);
+        });
+      }
+    }
+    document.getElementById('playtube')?.addEventListener('pointerdown', e => {
+      e.stopPropagation(); this.startTube();
+    });
+    document.getElementById('ctrlmode')?.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      this.controlMode = this.controlMode === 'hold' ? 'glide' : 'hold';
+      localStorage.setItem('robbin.ctrl', this.controlMode);
+      e.currentTarget.textContent = `CONTROLS: ${this.controlMode.toUpperCase()}`;
+    });
+    const cbtn = document.getElementById('ctrlmode');
+    if (cbtn) cbtn.textContent = `CONTROLS: ${this.controlMode.toUpperCase()}`;
+  }
+  setHeading(x, y) {
+    // a cardinal swipe commits to that axis; a diagonal keeps both intents
+    this.heading = { x, y };
+  }
+  applySwipe(dx, dy) {
+    const ax = Math.abs(dx), ay = Math.abs(dy);
+    const x = ax > ay * 0.45 ? Math.sign(dx) : 0;
+    const y = ay > ax * 0.45 ? Math.sign(dy) : 0;
+    if (this.state === 'tube') this.tube.handleDir(dx, dy);
+    else if (this.controlMode === 'glide' && (x || y)) this.setHeading(x, y);
+  }
+  startTube() {
+    this.foley.ensure();
+    this.music.start();
+    document.getElementById('title').classList.add('hidden');
+    document.getElementById('gameover').classList.add('hidden');
+    this.state = 'tube';
+    this.tube.start();
   }
   toggleMute() {
     const m = !this.music.muted;
@@ -771,6 +883,7 @@ class Game {
       q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 90 * dt; q.t -= dt;
     }
     this.parts = this.parts.filter(q => q.t > 0);
+    if (this.state === 'tube') { this.tube.update(dt); return; }
     if (this.state === 'intro') {
       this.stateT -= dt;
       if (this.stateT <= 0) this.state = 'play';
@@ -786,6 +899,7 @@ class Game {
         else {
           this.enterScreen(this.station.spawnScreen);
           this.player.reset();
+          this.heading = { x: 0, y: 0 };   // glide mode: stand until told
           // no camping the respawn point: hostiles loitering nearby go
           // back to their own start positions (all far from the spawn)
           for (const e of this.enemies) {
@@ -824,7 +938,12 @@ class Game {
         if (p.y < 16) { p.y = lv.lift.botY; p.prevY = p.y; }
       }
     }
-    this.player.update(dt, { ...this.input, jump: this.input.jump || this.jumpTap }, this);
+    // in glide mode the persistent heading plays the direction keys for you
+    const dirIn = this.controlMode === 'glide'
+      ? { left: this.heading.x < 0 ? 1 : 0, right: this.heading.x > 0 ? 1 : 0,
+          up: this.heading.y < 0 ? 1 : 0, down: this.heading.y > 0 ? 1 : 0 }
+      : this.input;
+    this.player.update(dt, { ...dirIn, jump: this.input.jump || this.jumpTap }, this);
     this.jumpTap = false;
     if (this.state !== 'play') return;   // killed during update
 
@@ -923,6 +1042,21 @@ class Game {
     if (this.state === 'map') {
       this.drawMapScreen(ctx);
       this.drawHUDBar();
+      return;
+    }
+    if (this.state === 'tube') {
+      this.tube.draw(ctx);
+      // feather puffs live in screen space here
+      ctx.strokeStyle = PALETTE.ink;
+      ctx.lineWidth = 1.6;
+      for (const q of this.parts) {
+        ctx.globalAlpha = Math.min(0.5, q.t * 1.5);
+        ctx.beginPath();
+        ctx.moveTo(q.x - 3, q.y);
+        ctx.quadraticCurveTo(q.x, q.y - 3, q.x + 3, q.y);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
       return;
     }
 

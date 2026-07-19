@@ -81,8 +81,28 @@ stops on game over, and toggles with **M** or the speaker button
 
 - **Keyboard:** ←→ / AD run · ↑↓ / WS ladders · Space / Z jump ·
   P pause · M music · Enter start
-- **Touch:** translucent d-pad + jump button floating over the game
-  (shown on coarse-pointer devices).
+- **Touch:** a symmetric 3×3 eight-way pad — one joystick surface, so
+  tap a cell, drag around it, or swipe across it — plus a jump button,
+  floating translucently over the game.
+- **Two movement modes** (toggle on the title screen, persisted):
+  - **HOLD** — classic: move while a direction is held.
+  - **GLIDE** — a swipe/tap sets a persistent heading, Pac-Man style.
+    Diagonals keep both intents live: SE runs east and boards the first
+    southbound ladder it passes (or, if already climbing, steps off at
+    the first junction where floor continues east) — "downstream" moves.
+
+## TUBE FLOCK (second game, from the title menu)
+
+The libbirds — the four animated vector birds — flit around a curated,
+real-geography slice of the Underground (Central / Northern / Jubilee
+around Bank and London Bridge, drawn schematically in the lino style;
+no TfL branding). The flock roosts at a station with a journey in mind
+— the opening trip is Liverpool Street → Bermondsey — and you swipe or
+arrow along lines to travel, changing lines at interchanges. Hazard:
+stations with their **lift out** (crossed-box glyph) force you onto the
+ESCALATOR when changing lines — it carries you down while you mash jump
+to flutter up. Journeys score 500 + remaining time and top the clock
+up; the service terminates when time runs out. Separate hi-score.
 
 ## Implementation notes
 
