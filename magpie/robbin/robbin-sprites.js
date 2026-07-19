@@ -144,7 +144,7 @@ function partRot(id, pose, phase) {
       if (pose === 'climb') return 0.16;
       return s(phase * 0.6) * 0.06;
     case 'wing':
-      if (pose === 'air')   return -0.25 + s(phase * 3) * 0.55;
+      if (pose === 'air')   return -0.15 + s(phase * 2.4) * 0.45;   // rapid flutter
       if (pose === 'walk' || pose === 'peck') return s(phase * 2) * 0.16;
       if (pose === 'climb') return -0.15 + s(phase * 2) * 0.3;
       return 0;

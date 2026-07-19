@@ -230,16 +230,22 @@ class Player extends Walker {
     this.onLift = null;
     this.squashT = 0;
   }
-  ladderGrab(dirDown) {
-    // find a ladder cell around body (or under feet when climbing down)
-    const c = colOf(this.x);
+  // find a ladder cell around the body (or under the feet when climbing
+  // down), checking this column and its neighbours so a bird standing or
+  // flying NEAR a ladder — not pixel-aligned with it — can still take it
+  ladderGrab(dirDown, tol = 14) {
     const bodyRow = Math.floor((this.y - 14) / TILE);
     const feetRow = Math.floor(this.y / TILE);
-    const r = dirDown && !this.lv.ladder(c, bodyRow) ? feetRow : bodyRow;
-    if (!this.lv.ladder(c, r)) return null;
-    const cx = c * TILE + 16;
-    if (Math.abs(this.x - cx) > 11) return null;
-    return { c, r, cx };
+    const c0 = colOf(this.x);
+    let best = null;
+    for (const c of [c0, c0 - 1, c0 + 1]) {
+      const r = dirDown && !this.lv.ladder(c, bodyRow) ? feetRow : bodyRow;
+      if (!this.lv.ladder(c, r)) continue;
+      const cx = c * TILE + 16;
+      const d = Math.abs(this.x - cx);
+      if (d <= tol && (!best || d < best.d)) best = { c, r, cx, d };
+    }
+    return best;
   }
   update(dt, input, game) {
     const lv = this.lv;
@@ -260,7 +266,8 @@ class Player extends Walker {
         this.mode = 'jump'; this.vy = -JUMP_V; this.onLift = null;
         game.foley.jump();
       } else if (input.up || input.down) {
-        const g = this.ladderGrab(input.down);
+        // standing near a ladder foot or head counts — snap on and go
+        const g = this.ladderGrab(input.down, 24);
         if (g) {
           // don't re-grab downward at a ladder bottom standing on ground
           const range = lv.ladderRange(g.c, g.r);
@@ -286,9 +293,13 @@ class Player extends Walker {
         if (this.supported(this.x, this.y)) this.mode = 'walk';
       }
     } else { // jump / fall
-      this.phase += dt * 16;   // wings flap while airborne
-      this.vx = this.vx * 0.9 + (input.right - input.left) * WALK_V * 0.35;
-      if (input.right - input.left) this.facing = input.right ? 1 : -1;
+      this.phase += dt * 26;   // wing flutter
+      // gentle, dt-correct air steering — capped well below run speed
+      // (the old per-frame form accelerated to ~3.5× run speed)
+      const steer = input.right - input.left;
+      const target = steer * WALK_V * 0.8;
+      this.vx += (target - this.vx) * (1 - Math.exp(-dt * 5));
+      if (steer) this.facing = steer;
       const prevY = this.y;
       this.vy = Math.min(this.vy + GRAV * dt, 460);
       this.x = Math.max(9, Math.min(W - 9, this.x + this.vx * dt));
@@ -319,11 +330,12 @@ class Player extends Walker {
             }
           }
         }
-        // mid-air ladder grab
-        if (this.mode !== 'walk' && (input.up || input.down)) {
-          const g = this.ladderGrab(false);
-          if (g) { this.x = g.cx; this.mode = 'climb'; this.vy = 0; this.range = lv.ladderRange(g.c, g.r); }
-        }
+      }
+      // holding up/down mid-flight latches onto any ladder flown through,
+      // rising or falling, and climbing continues in the held direction
+      if (this.mode !== 'walk' && (input.up || input.down)) {
+        const g = this.ladderGrab(input.down && !input.up, 16);
+        if (g) { this.x = g.cx; this.mode = 'climb'; this.vy = 0; this.range = lv.ladderRange(g.c, g.r); }
       }
       if (this.y > H + 60) game.kill('fall');
     }
@@ -352,14 +364,18 @@ class Enemy extends Walker {
   constructor(level, def, rng = Math.random) {
     super(level);
     this.t = def.t;
-    this.x = def.c * TILE + 16;
-    this.y = def.floor * TILE;
-    this.dir = def.d || 1;
-    this.mode = 'walk';
+    this.def = def;
     this.speed = ENEMY_V[def.t] * level.speedMul;
     this.phase = 0;
-    this.peckT = 0;      // purely visual — movement never stops
     this.rng = rng;
+    this.respawn();
+  }
+  respawn() {
+    this.x = this.def.c * TILE + 16;
+    this.y = this.def.floor * TILE;
+    this.dir = this.def.d || 1;
+    this.mode = 'walk';
+    this.peckT = 0;      // purely visual — movement never stops
   }
   update(dt) {
     const lv = this.lv;
@@ -638,7 +654,15 @@ class Game {
       if (this.stateT <= 0) {
         this.lives--;
         if (this.lives <= 0) this.gameOver();
-        else { this.player.reset(); this.time = Math.max(this.time, 120); this.state = 'intro'; this.stateT = 0.7; }
+        else {
+          this.player.reset();
+          // no camping the respawn point: hostiles loitering nearby go
+          // back to their own start positions (all far from the spawn)
+          for (const e of this.enemies) {
+            if (Math.hypot(e.x - this.player.x, e.y - this.player.y) < 150) e.respawn();
+          }
+          this.time = Math.max(this.time, 120); this.state = 'intro'; this.stateT = 0.7;
+        }
       }
       return;
     }
