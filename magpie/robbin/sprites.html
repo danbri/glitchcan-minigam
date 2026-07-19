@@ -12,7 +12,7 @@
 <body>
 <h1>ROBBIN — vector bird proofs</h1>
 <p>Each bird at 150px in stand / walk / flit / airup / airdown / climb / peck poses, both facings, plus grain pile &amp; milk bottles.</p>
-<canvas id="sheet" width="1350" height="1360"></canvas>
+<canvas id="sheet" width="1350" height="900"></canvas>
 <script type="module">
 import { BIRDS, drawBird, drawGrain, drawBottle } from './robbin-sprites.js';
 const ctx = document.getElementById('sheet').getContext('2d');
@@ -29,10 +29,10 @@ names.forEach((n, row) => {
   drawBird(ctx, n, { x: 120 + poses.length * 150, y, size: 150, facing: -1, phase: 1.2, pose: 'walk' });
   ctx.fillText('flipped', 90 + poses.length * 150, y + 16);
 });
-ctx.save(); ctx.translate(100, 1310); ctx.scale(2.4, 2.4); ctx.translate(-100, -1310); drawGrain(ctx, 100, 1310); ctx.restore();
-ctx.save(); ctx.translate(220, 1310); ctx.scale(2.4, 2.4); ctx.translate(-220, -1310); drawBottle(ctx, 220, 1310, true); ctx.restore();
-ctx.save(); ctx.translate(320, 1310); ctx.scale(2.4, 2.4); ctx.translate(-320, -1310); drawBottle(ctx, 320, 1310, false); ctx.restore();
-ctx.fillText("grain / full bottle / cream pinched", 60, 1340);
+ctx.save(); ctx.translate(100, 860); ctx.scale(2.4, 2.4); ctx.translate(-100, -860); drawGrain(ctx, 100, 860); ctx.restore();
+ctx.save(); ctx.translate(220, 860); ctx.scale(2.4, 2.4); ctx.translate(-220, -860); drawBottle(ctx, 220, 860, true); ctx.restore();
+ctx.save(); ctx.translate(320, 860); ctx.scale(2.4, 2.4); ctx.translate(-320, -860); drawBottle(ctx, 320, 860, false); ctx.restore();
+ctx.fillText("grain / full bottle / cream pinched", 60, 885);
 </script>
 </body>
 </html>

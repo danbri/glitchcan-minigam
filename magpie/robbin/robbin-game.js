@@ -12,7 +12,7 @@ export const W = COLS * TILE, H = ROWS * TILE;
 const HUD = 40;
 const GRAV = 780, JUMP_V = 268, WALK_V = 112, CLIMB_V = 84;
 const ENEMY_V = { bluetit: 56, blackbird: 66, wren: 82, commuter: 46 };
-const BIRD_SIZE = { robin: 46, blackbird: 46, bluetit: 45, wren: 38, crow: 54, pigeon: 47 };
+const BIRD_SIZE = { robin: 46, blackbird: 46, bluetit: 45, wren: 38 };
 export const LIFT_V = 52;
 const TIME_TICK = 0.2;           // seconds per timer unit
 const EXTRA_LIFE_EVERY = 10000;

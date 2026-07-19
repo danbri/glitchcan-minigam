@@ -96,9 +96,9 @@ stops on game over, and toggles with **M** or the speaker button
 ## TUBE FLOCK (second game, from the title menu)
 
 A cosy, heartwarming journey — no clock, no lives, no fail state. The
-main dynamic is **growing the flock**: twelve lost libbirds (robins,
-blackbirds, blue tits, wrens, and now crows and proper London pigeons)
-are scattered around a curated, real-geography slice of the Underground
+main dynamic is **growing the flock**: twelve lost libbirds — robins,
+blackbirds, blue tits and wrens, everything the four lino-print
+drawings can be — are scattered around a curated, real-geography slice of the Underground
 (Central / Northern / Jubilee around Bank and London Bridge, schematic
 lino style, no TfL branding). Fly line-to-line on the map toward the
 current lost bird; arriving at their station — or changing lines at an

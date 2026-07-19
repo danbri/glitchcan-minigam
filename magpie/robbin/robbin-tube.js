@@ -37,18 +37,18 @@ const STEP_FREE = new Set([
 const LOST = [
   { sp: 'bluetit', name: 'TITCH', at: "ST PAUL'S", note: 'lost near the ticket gates' },
   { sp: 'wren', name: 'JENNY', at: 'BOROUGH', note: 'lonely down at the platforms' },
-  { sp: 'pigeon', name: 'MAUD', at: 'LONDON BRIDGE', note: 'going round in circles on level −1' },
+  { sp: 'blackbird', name: 'MAUD', at: 'LONDON BRIDGE', note: 'going round in circles on level −1' },
   { sp: 'blackbird', name: 'BRAM', at: 'CANADA WATER', note: 'singing to nobody at level −2' },
-  { sp: 'crow', name: 'CORVUS', at: 'CANARY WHARF', note: 'feeling small in the big station' },
+  { sp: 'bluetit', name: 'SKY', at: 'CANARY WHARF', note: 'feeling small in the big station' },
   { sp: 'robin', name: 'PECK', at: 'HOLBORN', note: 'waiting where the lifts never came' },
   { sp: 'bluetit', name: 'PIP', at: 'ELEPHANT & CASTLE', note: 'napping by the deep stairs' },
-  { sp: 'pigeon', name: 'ARTHUR', at: 'WATERLOO', note: 'lost on level −2' },
+  { sp: 'wren', name: 'MOSS', at: 'WATERLOO', note: 'lost on level −2' },
   { sp: 'wren', name: 'WINK', at: 'MOORGATE', note: 'hiding behind the adverts' },
-  { sp: 'crow', name: 'NOX', at: 'CHANCERY LANE', note: 'moping on the middle level' },
+  { sp: 'robin', name: 'RUSTY', at: 'CHANCERY LANE', note: 'moping on the middle level' },
   { sp: 'blackbird', name: 'COCO', at: 'SOUTHWARK', note: 'humming along with the escalators' },
   { sp: 'robin', name: 'ROBERTA', at: 'BERMONDSEY', note: 'watching the trains go by' },
 ];
-const BIRD_PX = { wren: 26, bluetit: 32, robin: 32, blackbird: 32, pigeon: 34, crow: 40 };
+const BIRD_PX = { wren: 26, bluetit: 32, robin: 32, blackbird: 32 };
 
 // build the graph: station -> [{to, line}]
 const EDGES = new Map(Object.keys(POS).map(s => [s, []]));

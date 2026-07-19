@@ -104,62 +104,6 @@ export const BIRDS = {
     leg: { color: '#1b1713', width: 3.2, len: 18 },
   },
 
-  crow: {
-    name: 'Crow',
-    parts: [
-      { id: 'tail', pivot: [28, 46], layers: [
-        { d: 'M2,30 L30,40 L26,54 L6,46 Z', fill: '#16181c' },
-      ]},
-      { id: 'body', layers: [
-        { d: 'M18,52 C18,34 34,21 54,21 C72,21 84,31 85,44 C86,56 78,66 64,72 C48,79 28,74 20,62 Z', fill: '#1c1f24' },
-      ]},
-      { id: 'wing', pivot: [38, 44], layers: [
-        { d: 'M30,42 C44,35 60,38 64,48 C62,59 48,67 36,63 C26,59 25,48 30,42 Z', fill: '#2e3440' },
-      ]},
-      { id: 'head', pivot: [62, 34], layers: [
-        { d: 'M48,32 C49,19 60,11 70,13 C80,15 86,23 86,31 C85,40 77,46 66,46 C56,46 48,41 48,32 Z', fill: '#1c1f24' },
-        { circle: [72, 26, 2.7], fill: '#0c0d10' },
-        { circle: [72.9, 25.1, 0.9], fill: '#cfd4da' },
-      ], children: [
-        { id: 'beakTop', layers: [{ d: 'M84,23 L100,30 L84,36 Z', fill: '#22252b' }] },
-        { id: 'beakLower', pivot: [84, 34], layers: [{ d: 'M84,33 L98,35 L84,40 Z', fill: '#181b1f' }] },
-      ]},
-    ],
-    hips: [[42, 74], [58, 72]],
-    leg: { color: '#15171a', width: 3.8, len: 19 },
-  },
-
-  pigeon: {
-    name: 'Pigeon',
-    parts: [
-      { id: 'tail', pivot: [30, 50], layers: [
-        { d: 'M4,48 L32,46 L30,58 L8,58 Z', fill: '#6d7280' },
-      ]},
-      { id: 'body', layers: [
-        { d: 'M22,50 C22,34 38,23 55,23 C71,23 82,32 83,44 C84,55 76,65 62,71 C46,77 28,72 22,60 Z', fill: '#9298a3' },
-        { d: 'M50,26 C60,24 70,30 72,38 C70,46 62,52 52,52 C58,44 56,32 50,26 Z', fill: '#5f7d6a' },
-      ]},
-      { id: 'wing', pivot: [38, 45], layers: [
-        { d: 'M31,43 C43,37 57,39 61,48 C59,58 47,64 37,61 C28,57 27,49 31,43 Z', fill: '#b9bec7' },
-        { line: [38, 50, 52, 53], stroke: '#4b505b', width: 2.4 },
-        { line: [35, 56, 49, 59], stroke: '#4b505b', width: 2.4 },
-      ]},
-      { id: 'head', pivot: [60, 34], layers: [
-        { d: 'M48,33 C48,22 57,15 66,16 C75,17 80,24 80,31 C80,39 73,44 63,44 C54,44 48,41 48,33 Z', fill: '#5d6470' },
-        { circle: [68, 27, 2.6], fill: '#d97b2e' },
-        { circle: [68.8, 26.2, 0.8], fill: '#f7f2e6' },
-      ], children: [
-        { id: 'beakTop', layers: [
-          { d: 'M79,26 L91,30 L79,34 Z', fill: '#3c3f46' },
-          { d: 'M79,26 L84,27.5 L79,29 Z', fill: '#d8d3c8' },
-        ]},
-        { id: 'beakLower', pivot: [79, 32], layers: [{ d: 'M79,31 L89,33 L79,37 Z', fill: '#33363c' }] },
-      ]},
-    ],
-    hips: [[44, 73], [57, 71]],
-    leg: { color: '#a34f3c', width: 3.2, len: 17 },
-  },
-
   wren: {
     name: 'Wren',
     parts: [
