@@ -14,19 +14,23 @@ set of lino-print bird cards (photographed, then traced by eye as layered flat
 ink shapes). Each bird is a **cutout rig**, South Park paper-doll style: tail,
 body, wing and head are separate masks that rotate around their own pivots,
 with the lower beak hinged inside the head so the birds chirp and peck. One
-tiny skeleton (`partRot`) drives all poses — stand / walk / air / climb /
-peck — plus procedurally animated twig legs and both facings. Sprites live in
+tiny skeleton (`partRot`) drives all poses — stand / walk / flit / air /
+climb / peck — plus procedurally animated twig legs and both facings.
+Birds don't trudge: sustained walking lifts into a low wing-flutter flit
+with feet off the floor, and ladder climbs are fluttered too. Sprites live in
 `robbin-sprites.js` as SVG path data in a 100×100 box, drawn to canvas via
 `Path2D`; `birdSVG()` emits the same rig as static inline SVG for the title
 screen. No image assets: everything is vector.
 
 ## The game
 
-Classic egg-run rules:
+Classic collect-em-up rules (no egg thieving — these are honest birds):
 
-- 12 eggs per level (100 pts each); collect them all to advance.
-- Grain is worth 50 pts — but patrolling birds peck it away (in passing —
-  they never stop for it).
+- 12 grain piles per level (100 pts each); gobble them all to advance.
+- Doorstep milk bottles are the bonus: peck the yellower creamy top off
+  for 250 pts — real blue-tit behaviour — but the rival birds pinch the
+  cream in passing if they reach a bottle first, leaving the empty
+  bottle behind.
 - Birds flow through the level Pac-Man style: constant speed, always moving,
   picking randomly among the ways onward at each junction and reversing only
   at true dead ends. Touch = death.

@@ -140,17 +140,19 @@ function partRot(id, pose, phase) {
   switch (id) {
     case 'tail':
       if (pose === 'air')   return -0.35;
+      if (pose === 'flit')  return -0.12 + s(phase * 2) * 0.08;
       if (pose === 'walk' || pose === 'peck') return s(phase * 2) * 0.12;
       if (pose === 'climb') return 0.16;
       return s(phase * 0.6) * 0.06;
     case 'wing':
       if (pose === 'air')   return -0.15 + s(phase * 2.4) * 0.45;   // rapid flutter
+      if (pose === 'flit')  return -0.12 + s(phase * 2.6) * 0.5;    // low hover-flit
+      if (pose === 'climb') return -0.18 + s(phase * 2.4) * 0.45;   // flutters up the ladder
       if (pose === 'walk' || pose === 'peck') return s(phase * 2) * 0.16;
-      if (pose === 'climb') return -0.15 + s(phase * 2) * 0.3;
       return 0;
     case 'head':
       if (pose === 'peck')  return 0.6;
-      if (pose === 'walk')  return s(phase * 2 + 0.9) * 0.1;
+      if (pose === 'walk' || pose === 'flit') return s(phase * 2 + 0.9) * 0.1;
       if (pose === 'climb') return -0.18;
       if (pose === 'air')   return -0.12;
       return s(phase * 0.6 + 1) * 0.04;
@@ -231,17 +233,21 @@ export function drawBird(ctx, name, { x, y, size = 44, facing = 1, phase = 0, po
   if (dead) { ctx.rotate(Math.PI); ctx.translate(-100, -60); pose = 'stand'; }
   ctx.translate(-50, -92);
 
+  // flit and climb hover with feet off the ground — more birdy than trudging
+  if (pose === 'flit') ctx.translate(0, -9 + Math.sin(phase * 2.6) * 2);
+  if (pose === 'climb') ctx.translate(0, -4);
+
   // legs (under the body)
   const [h0, h1] = spec.hips;
   if (pose === 'walk' || pose === 'peck') {
     drawLeg(ctx, h0[0], h0[1], Math.sin(phase) * 0.55, spec.leg);
     drawLeg(ctx, h1[0], h1[1], -Math.sin(phase) * 0.55, spec.leg);
-  } else if (pose === 'air') {
+  } else if (pose === 'air' || pose === 'flit') {
     drawLeg(ctx, h0[0], h0[1], -0.9, spec.leg, 0.5);
     drawLeg(ctx, h1[0], h1[1], -0.6, spec.leg, 0.5);
   } else if (pose === 'climb') {
-    drawLeg(ctx, h0[0], h0[1], Math.sin(phase) * 0.35, spec.leg, 0.2);
-    drawLeg(ctx, h1[0], h1[1], -Math.sin(phase) * 0.35, spec.leg, 0.2);
+    drawLeg(ctx, h0[0], h0[1], -0.7, spec.leg, 0.5);
+    drawLeg(ctx, h1[0], h1[1], -0.45, spec.leg, 0.5);
   } else {
     drawLeg(ctx, h0[0], h0[1], 0.08, spec.leg);
     drawLeg(ctx, h1[0], h1[1], -0.08, spec.leg);
@@ -254,35 +260,76 @@ export function drawBird(ctx, name, { x, y, size = 44, facing = 1, phase = 0, po
   ctx.restore();
 }
 
-/** Speckled egg. x,y = baseline centre (sits on a platform top). */
-export function drawEgg(ctx, x, y, r = 9) {
+/** Hearty pile of grain — the treasure. x,y = baseline centre. */
+export function drawGrain(ctx, x, y) {
   ctx.save();
-  ctx.translate(x, y - r * 1.15);
-  ctx.fillStyle = '#fbf6e6';
-  ctx.strokeStyle = PALETTE.ink;
-  ctx.lineWidth = 2.2;
-  ctx.beginPath(); ctx.ellipse(0, 0, r * 0.86, r * 1.08, 0, 0, Math.PI * 2);
-  ctx.fill(); ctx.stroke();
-  ctx.fillStyle = 'rgba(38,34,30,0.55)';
-  for (const [dx, dy] of [[-2, -3], [3, 1], [-1, 4], [2, -5]]) {
-    ctx.beginPath(); ctx.arc(dx, dy, 0.9, 0, Math.PI * 2); ctx.fill();
+  ctx.translate(x, y);
+  // mound
+  ctx.fillStyle = PALETTE.grain;
+  ctx.beginPath();
+  ctx.moveTo(-11, 0);
+  ctx.quadraticCurveTo(-7, -9, 0, -10);
+  ctx.quadraticCurveTo(7, -9, 11, 0);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(38,34,30,0.6)';
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  // scattered seeds
+  ctx.fillStyle = '#e0b055';
+  for (const [dx, dy, rot] of [[-6, -3, 0.5], [0, -6, -0.4], [5, -3, 0.9], [-1, -2, 1.2], [8, -1, 0.2], [-9, -1, -0.7]]) {
+    ctx.save(); ctx.translate(dx, dy); ctx.rotate(rot);
+    ctx.beginPath(); ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
   ctx.restore();
 }
 
-/** Little pile of grain. x,y = baseline centre. */
-export function drawGrain(ctx, x, y) {
+/**
+ * Doorstep milk bottle. x,y = baseline centre. With `cream`, the top fifth
+ * is the yellower cream layer under a gold foil cap — that's what the birds
+ * are after. Without, the picked-open bottle stays behind as scenery.
+ */
+export function drawBottle(ctx, x, y, cream = true) {
   ctx.save();
   ctx.translate(x, y);
-  ctx.fillStyle = PALETTE.grain;
-  const seeds = [[-6, -2, 0.5], [0, -4, -0.4], [6, -2, 0.9], [-2, -1, 1.2], [3, -1, 0.1]];
-  for (const [dx, dy, rot] of seeds) {
-    ctx.save(); ctx.translate(dx, dy); ctx.rotate(rot);
-    ctx.beginPath(); ctx.ellipse(0, 0, 3.4, 1.9, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+  const w = 13, h = 27, neck = 8;
+  // bottle silhouette (shoulders + neck)
+  const outline = () => {
+    ctx.beginPath();
+    ctx.moveTo(-w / 2, 0);
+    ctx.lineTo(-w / 2, -h + neck + 5);
+    ctx.quadraticCurveTo(-w / 2, -h + neck, -neck / 2 - 0.5, -h + neck - 2);
+    ctx.lineTo(-neck / 2 - 0.5, -h);
+    ctx.lineTo(neck / 2 + 0.5, -h);
+    ctx.lineTo(neck / 2 + 0.5, -h + neck - 2);
+    ctx.quadraticCurveTo(w / 2, -h + neck, w / 2, -h + neck + 5);
+    ctx.lineTo(w / 2, 0);
+    ctx.closePath();
+  };
+  // milk (lower when the cream's been had)
+  outline(); ctx.save(); ctx.clip();
+  ctx.fillStyle = '#efe9db';                       // glass
+  ctx.fillRect(-w / 2, -h, w, h);
+  ctx.fillStyle = '#fbf8ef';                       // milk
+  const milkTop = cream ? -h + 6 : -h * 0.62;
+  ctx.fillRect(-w / 2, milkTop, w, h + milkTop + h);
+  if (cream) {
+    ctx.fillStyle = '#f0dfa8';                     // the creamy top
+    ctx.fillRect(-w / 2, -h + 4, w, 7);
   }
-  ctx.fillStyle = 'rgba(38,34,30,0.35)';
-  ctx.beginPath(); ctx.arc(-4, -3, 0.8, 0, Math.PI * 2); ctx.arc(4, -3, 0.8, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = PALETTE.ink;
+  ctx.lineWidth = 1.8;
+  outline(); ctx.stroke();
+  if (cream) {
+    // gold foil cap
+    ctx.fillStyle = '#d9a92c';
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.ellipse(0, -h + 0.5, neck / 2 + 1.6, 2.4, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+  }
   ctx.restore();
 }
 

@@ -3,7 +3,7 @@
 // level, grain the rival birds will happily eat, a countdown timer and — on
 // level four — the dreaded lift. Keyboard + touch.
 
-import { PALETTE, BIRDS, drawBird, drawEgg, drawGrain, birdSVG } from './robbin-sprites.js';
+import { PALETTE, BIRDS, drawBird, drawGrain, drawBottle, birdSVG } from './robbin-sprites.js';
 import { Chiptune } from './robbin-music.js';
 
 const TILE = 32, COLS = 20, ROWS = 15;
@@ -17,7 +17,8 @@ const EXTRA_LIFE_EVERY = 10000;
 
 // ---------------------------------------------------------------- levels
 // map legend: '#' platform · 'H' ladder · '+' platform pierced by ladder
-// 'E' egg · 'G' grain · 'P' player start · 'L' lift shaft · '.' air
+// 'E' grain pile (treasure) · 'G' milk bottle (cream bonus) · 'P' player
+// start · 'L' lift shaft · '.' air
 // Items/spawns at row r stand on the platform in row r+1.
 const LEVELS = [
   {
@@ -149,6 +150,11 @@ class Foley {
   jump()  { this.chirp(300, 620, 0.14, 'triangle', 0.1); }
   egg()   { this.chirp(880, 880, 0.06, 'sine', 0.12); this.chirp(1320, 1320, 0.09, 'sine', 0.12, 0.06); }
   grain() { this.chirp(220, 180, 0.1, 'triangle', 0.12); }
+  cream() { // a creamy little glug-and-trill
+    this.chirp(220, 320, 0.12, 'sine', 0.14);
+    this.chirp(660, 990, 0.1, 'triangle', 0.1, 0.1);
+    this.chirp(1320, 1760, 0.12, 'sine', 0.08, 0.18);
+  }
   step()  { this.chirp(140, 120, 0.03, 'square', 0.02); }
   death() { this.chirp(500, 60, 0.7, 'sawtooth', 0.14); }
   tick()  { this.chirp(1600, 1600, 0.03, 'square', 0.05); }
@@ -166,16 +172,16 @@ class Level {
     if (this.grid.length !== ROWS || this.grid.some(r => r.length !== COLS)) {
       console.error(`ROBBIN level "${def.name}" map is ${this.grid.length} rows; expected ${ROWS}×${COLS}`);
     }
-    this.eggs = new Map();      // "c,r" -> {c,r}
-    this.grain = new Map();
+    this.treasure = new Map();   // "c,r" -> {c,r}: grain piles, all required
+    this.bottles = new Map();    // "c,r" -> {c,r,cream}: milk bottle bonuses
     this.spawn = { x: TILE + 16, y: H - TILE };
     let liftCols = [];
     let liftTop = ROWS, liftBot = 0;
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const ch = this.grid[r][c];
-        if (ch === 'E') this.eggs.set(`${c},${r}`, { c, r });
-        else if (ch === 'G') this.grain.set(`${c},${r}`, { c, r });
+        if (ch === 'E') this.treasure.set(`${c},${r}`, { c, r });
+        else if (ch === 'G') this.bottles.set(`${c},${r}`, { c, r, cream: true });
         else if (ch === 'P') this.spawn = { x: c * TILE + 16, y: (r + 1) * TILE };
         if (ch === 'L') { liftCols.push(c); liftTop = Math.min(liftTop, r); liftBot = Math.max(liftBot, r); }
       }
@@ -229,6 +235,7 @@ class Player extends Walker {
     this.mode = 'walk'; this.facing = 1; this.phase = 0;
     this.onLift = null;
     this.squashT = 0;
+    this.walkT = 0;      // continuous walking time — long walks become a flit
   }
   // find a ladder cell around the body (or under the feet when climbing
   // down), checking this column and its neighbours so a bird standing or
@@ -252,7 +259,11 @@ class Player extends Walker {
     this.squashT = Math.max(0, this.squashT - dt);
     if (this.mode === 'walk') {
       this.vx = (input.right - input.left) * WALK_V;
-      if (this.vx) { this.facing = Math.sign(this.vx); this.phase += dt * 14; }
+      if (this.vx) {
+        this.facing = Math.sign(this.vx);
+        this.walkT += dt;
+        this.phase += dt * (this.walkT > 0.7 ? 22 : 14);
+      } else this.walkT = 0;
       this.x = Math.max(9, Math.min(W - 9, this.x + this.vx * dt));
       if (this.onLift) {
         const p = this.onLift;
@@ -278,8 +289,9 @@ class Player extends Walker {
         }
       }
     } else if (this.mode === 'climb') {
+      this.walkT = 0;
       const dir = (input.down - input.up);
-      if (dir) this.phase += dt * 10;
+      if (dir) this.phase += dt * 20;   // flutters up the ladder
       this.y += dir * CLIMB_V * dt;
       this.y = Math.max(this.range.minY, Math.min(this.range.maxY, this.y));
       if (input.jump) {
@@ -293,6 +305,7 @@ class Player extends Walker {
         if (this.supported(this.x, this.y)) this.mode = 'walk';
       }
     } else { // jump / fall
+      this.walkT = 0;
       this.phase += dt * 26;   // wing flutter
       // gentle, dt-correct air steering — capped well below run speed
       // (the old per-frame form accelerated to ~3.5× run speed)
@@ -344,7 +357,7 @@ class Player extends Walker {
   draw(ctx, dead) {
     const pose = dead ? 'dead' : this.mode === 'climb' ? 'climb'
       : this.mode !== 'walk' ? 'air'
-      : Math.abs(this.vx) > 1 ? 'walk' : 'stand';
+      : Math.abs(this.vx) > 1 ? (this.walkT > 0.7 ? 'flit' : 'walk') : 'stand';
     // cartoon squash & stretch: flatten on landing, lengthen in flight
     let squash = null;
     if (this.squashT > 0) {
@@ -376,6 +389,7 @@ class Enemy extends Walker {
     this.dir = this.def.d || 1;
     this.mode = 'walk';
     this.peckT = 0;      // purely visual — movement never stops
+    this.straightT = 0;  // long uninterrupted walks become a flit
   }
   update(dt) {
     const lv = this.lv;
@@ -389,13 +403,16 @@ class Enemy extends Walker {
       // is not a crossing, else birds re-decide the junction they just left
       const crossed = (this.x - cx) * (nx - cx) < 0;
       this.x = nx;
+      this.straightT += dt;
       if (crossed) {
         const r = this.y / TILE;
-        const gKey = `${c},${r - 1}`;
-        if (lv.grain.has(gKey)) { lv.grain.delete(gKey); this.peckT = 0.45; }
+        // a rival bird pinches the cream off any bottle it passes
+        const bottle = lv.bottles.get(`${c},${r - 1}`);
+        if (bottle && bottle.cream) { bottle.cream = false; this.peckT = 0.45; }
         this.decideWalking(c, r, cx);
       } else if (this.x + this.dir * 10 < 4 || this.x + this.dir * 10 > W - 4) {
         this.dir = -this.dir;   // level bounds between centres
+        this.straightT = 0;
       }
     } else { // climb
       const prevY = this.y;
@@ -424,9 +441,10 @@ class Enemy extends Walker {
     if (lv.solid(c + this.dir, r) && (this.dir > 0 ? c + 1 < COLS : c > 0)) opts.push('fwd', 'fwd'); // mild straight-on bias
     if (lv.ladder(c, r - 1)) opts.push('up');
     if (lv.ladder(c, r)) opts.push('down');
-    if (!opts.length) { this.dir = -this.dir; return; }
+    if (!opts.length) { this.dir = -this.dir; this.straightT = 0; return; }
     const pick = opts[Math.floor(this.rng() * opts.length)];
     if (pick === 'fwd') return;
+    this.straightT = 0;
     this.mode = 'climb';
     this.x = cx;
     this.vdir = pick === 'up' ? -1 : 1;
@@ -448,6 +466,7 @@ class Enemy extends Walker {
     this.mode = 'walk';
     this.y = yb;
     this.dir = pick === 'left' ? -1 : 1;
+    this.straightT = 0;
     return true;
   }
   forceExit(c, yb) {
@@ -459,13 +478,15 @@ class Enemy extends Walker {
     if (opts.length) {
       this.mode = 'walk';
       this.dir = opts[Math.floor(this.rng() * opts.length)];
+      this.straightT = 0;
     } else {
       this.vdir = -this.vdir;   // blind shaft — head back
     }
   }
   hitbox() { return { x0: this.x - 8, x1: this.x + 8, y0: this.y - 24, y1: this.y - 2 }; }
   draw(ctx) {
-    const pose = this.peckT > 0 ? 'peck' : this.mode === 'climb' ? 'climb' : 'walk';
+    const pose = this.peckT > 0 ? 'peck' : this.mode === 'climb' ? 'climb'
+      : this.straightT > 1.1 ? 'flit' : 'walk';
     drawBird(ctx, this.t, {
       x: this.x, y: this.y, size: BIRD_SIZE[this.t],
       facing: this.dir, phase: this.phase, pose,
@@ -694,19 +715,25 @@ class Game {
 
     for (const e of this.enemies) e.update(dt, this);
 
-    // collect eggs & grain (check body + feet cells)
+    // gobble grain piles; pinch the cream off milk bottles
     const px = this.player.x, py = this.player.y;
-    for (const map of [lv.eggs, lv.grain]) {
-      for (const [key, it] of map) {
-        const ix = it.c * TILE + 16, iy = (it.r + 1) * TILE;
-        if (Math.abs(px - ix) < 15 && Math.abs(py - iy) < 22) {
-          map.delete(key);
-          if (map === lv.eggs) { this.addScore(100, ix, iy - 20); this.foley.egg(); }
-          else { this.addScore(50, ix, iy - 20); this.foley.grain(); }
-        }
+    for (const [key, it] of lv.treasure) {
+      const ix = it.c * TILE + 16, iy = (it.r + 1) * TILE;
+      if (Math.abs(px - ix) < 15 && Math.abs(py - iy) < 22) {
+        lv.treasure.delete(key);
+        this.addScore(100, ix, iy - 20);
+        this.foley.egg();
       }
     }
-    if (lv.eggs.size === 0) {
+    for (const it of lv.bottles.values()) {
+      const ix = it.c * TILE + 16, iy = (it.r + 1) * TILE;
+      if (it.cream && Math.abs(px - ix) < 15 && Math.abs(py - iy) < 26) {
+        it.cream = false;
+        this.addScore(250, ix, iy - 34);
+        this.foley.cream();
+      }
+    }
+    if (lv.treasure.size === 0) {
       this.state = 'leveldone'; this.stateT = 1.4;
       this.foley.clear();
       return;
@@ -754,8 +781,8 @@ class Game {
     ctx.translate(-this.camX, -this.camY);
     this.drawLevel(ctx);
     const lv = this.level;
-    for (const it of lv.eggs.values()) drawEgg(ctx, it.c * TILE + 16, (it.r + 1) * TILE);
-    for (const it of lv.grain.values()) drawGrain(ctx, it.c * TILE + 16, (it.r + 1) * TILE);
+    for (const it of lv.treasure.values()) drawGrain(ctx, it.c * TILE + 16, (it.r + 1) * TILE);
+    for (const it of lv.bottles.values()) drawBottle(ctx, it.c * TILE + 16, (it.r + 1) * TILE, it.cream);
     for (const e of this.enemies) e.draw(ctx);
     this.player.draw(ctx, this.state === 'dying');
     ctx.font = 'bold 13px Georgia, serif';
@@ -769,7 +796,7 @@ class Game {
     ctx.restore();
 
     if (this.state === 'intro') this.banner(ctx, this.level.def.name, `LEVEL ${this.levelIndex + 1}`);
-    if (this.state === 'leveldone') this.banner(ctx, 'EGGS COLLECTED!', `BONUS ${this.time}`);
+    if (this.state === 'leveldone') this.banner(ctx, 'ALL GRAIN GOBBLED!', `BONUS ${this.time}`);
     if (this.state === 'paused') this.banner(ctx, 'PAUSED', 'press P');
     this.drawHUDBar();
   }

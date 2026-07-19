@@ -11,28 +11,28 @@
 </head>
 <body>
 <h1>ROBBIN — vector bird proofs</h1>
-<p>Each bird at 160px in stand / walk / air / climb / peck poses, both facings, plus egg &amp; grain.</p>
+<p>Each bird at 150px in stand / walk / flit / air / climb / peck poses, both facings, plus grain pile &amp; milk bottles.</p>
 <canvas id="sheet" width="1100" height="900"></canvas>
 <script type="module">
-import { BIRDS, drawBird, drawEgg, drawGrain } from './robbin-sprites.js';
+import { BIRDS, drawBird, drawGrain, drawBottle } from './robbin-sprites.js';
 const ctx = document.getElementById('sheet').getContext('2d');
-const poses = ['stand', 'walk', 'air', 'climb', 'peck'];
+const poses = ['stand', 'walk', 'flit', 'air', 'climb', 'peck'];
 const names = Object.keys(BIRDS);
 ctx.font = '14px Georgia';
 names.forEach((n, row) => {
   const y = 180 + row * 190;
   ctx.fillText(BIRDS[n].name, 10, y - 150);
   poses.forEach((pose, i) => {
-    drawBird(ctx, n, { x: 130 + i * 160, y, size: 150, facing: 1, phase: 1.2, pose });
-    ctx.fillText(pose, 100 + i * 160, y + 16);
+    drawBird(ctx, n, { x: 120 + i * 150, y, size: 150, facing: 1, phase: 1.2, pose });
+    ctx.fillText(pose, 90 + i * 150, y + 16);
   });
-  drawBird(ctx, n, { x: 130 + poses.length * 160, y, size: 150, facing: -1, phase: 1.2, pose: 'walk' });
-  ctx.fillText('flipped', 100 + poses.length * 160, y + 16);
+  drawBird(ctx, n, { x: 120 + poses.length * 150, y, size: 150, facing: -1, phase: 1.2, pose: 'walk' });
+  ctx.fillText('flipped', 90 + poses.length * 150, y + 16);
 });
-drawEgg(ctx, 100, 860, 22);
-drawGrain(ctx, 200, 860);
-ctx.save(); ctx.translate(200, 860); ctx.scale(2.4, 2.4); ctx.translate(-200, -860); drawGrain(ctx, 200, 860); ctx.restore();
-ctx.fillText('egg / grain', 70, 885);
+ctx.save(); ctx.translate(100, 860); ctx.scale(2.4, 2.4); ctx.translate(-100, -860); drawGrain(ctx, 100, 860); ctx.restore();
+ctx.save(); ctx.translate(220, 860); ctx.scale(2.4, 2.4); ctx.translate(-220, -860); drawBottle(ctx, 220, 860, true); ctx.restore();
+ctx.save(); ctx.translate(320, 860); ctx.scale(2.4, 2.4); ctx.translate(-320, -860); drawBottle(ctx, 320, 860, false); ctx.restore();
+ctx.fillText('grain / full bottle / cream pinched', 60, 885);
 </script>
 </body>
 </html>
