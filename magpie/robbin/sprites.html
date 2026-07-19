@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROBBIN sprite sheet (dev)</title>
+<style>
+  body { background: #f2ecdd; font-family: Georgia, serif; color: #26221e; padding: 1rem; }
+  canvas { display: block; border: 1px solid #26221e; background: #f7f2e6; }
+</style>
+</head>
+<body>
+<h1>ROBBIN — vector bird proofs</h1>
+<p>Each bird at 160px in stand / walk / air / climb / peck poses, both facings, plus egg &amp; grain.</p>
+<canvas id="sheet" width="1100" height="900"></canvas>
+<script type="module">
+import { BIRDS, drawBird, drawEgg, drawGrain } from './robbin-sprites.js';
+const ctx = document.getElementById('sheet').getContext('2d');
+const poses = ['stand', 'walk', 'air', 'climb', 'peck'];
+const names = Object.keys(BIRDS);
+ctx.font = '14px Georgia';
+names.forEach((n, row) => {
+  const y = 180 + row * 190;
+  ctx.fillText(BIRDS[n].name, 10, y - 150);
+  poses.forEach((pose, i) => {
+    drawBird(ctx, n, { x: 130 + i * 160, y, size: 150, facing: 1, phase: 1.2, pose });
+    ctx.fillText(pose, 100 + i * 160, y + 16);
+  });
+  drawBird(ctx, n, { x: 130 + poses.length * 160, y, size: 150, facing: -1, phase: 1.2, pose: 'walk' });
+  ctx.fillText('flipped', 100 + poses.length * 160, y + 16);
+});
+drawEgg(ctx, 100, 860, 22);
+drawGrain(ctx, 200, 860);
+ctx.save(); ctx.translate(200, 860); ctx.scale(2.4, 2.4); ctx.translate(-200, -860); drawGrain(ctx, 200, 860); ctx.restore();
+ctx.fillText('egg / grain', 70, 885);
+</script>
+</body>
+</html>

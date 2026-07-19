@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>ROBBIN — an egg-and-ladders platformer</title>
+<style>
+  :root {
+    --paper: #f2ecdd;
+    --ink: #26221e;
+    --red: #d94327;
+    --green: #2e5e45;
+    --ochre: #b98a2e;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    background: var(--ink);
+    font-family: Georgia, 'Times New Roman', serif;
+    color: var(--ink);
+    overflow: hidden;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  #stage {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.4rem;
+  }
+  #frame {
+    position: relative;
+    aspect-ratio: 640 / 520;
+    max-width: 100%;
+    max-height: 100%;
+    flex: 0 1 auto;
+    min-height: 0;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    border-radius: 4px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+  }
+  .overlay {
+    position: absolute;
+    inset: 3px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    text-align: center;
+    background: var(--paper);
+    cursor: pointer;
+    padding: 1rem;
+  }
+  .overlay.hidden { display: none; }
+  .overlay h1 {
+    font-size: clamp(2.4rem, 9vmin, 4.2rem);
+    letter-spacing: 0.12em;
+    color: var(--ink);
+  }
+  .overlay h1 .r { color: var(--red); }
+  .overlay .sub { font-style: italic; opacity: 0.75; }
+  #cast { display: flex; align-items: flex-end; gap: 0.8rem; margin: 0.4rem 0; }
+  .overlay .keys {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    opacity: 0.8;
+  }
+  .overlay .go {
+    margin-top: 0.4rem;
+    font-weight: bold;
+    letter-spacing: 0.08em;
+    color: var(--green);
+    animation: blink 1.2s steps(2) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0.25; } }
+  .finalscore { font-size: 1.2rem; font-weight: bold; }
+
+  /* touch controls — only shown on coarse pointers */
+  #touch { display: none; }
+  @media (pointer: coarse) {
+    #touch {
+      display: flex;
+      width: 100%;
+      max-width: 640px;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 0.6rem;
+      flex: 0 0 auto;
+    }
+    #dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 54px);
+      grid-template-rows: repeat(2, 54px);
+      gap: 6px;
+    }
+    #touch button {
+      border: 2px solid var(--paper);
+      border-radius: 10px;
+      background: rgba(242, 236, 221, 0.12);
+      color: var(--paper);
+      font-size: 1.3rem;
+      touch-action: none;
+    }
+    #touch button:active { background: rgba(242, 236, 221, 0.35); }
+    #btn-up   { grid-column: 2; grid-row: 1; }
+    #btn-left { grid-column: 1; grid-row: 2; }
+    #btn-down { grid-column: 2; grid-row: 2; }
+    #btn-right{ grid-column: 3; grid-row: 2; }
+    #btn-jump {
+      width: 84px; height: 84px;
+      border-radius: 50%;
+      font-size: 1rem;
+      letter-spacing: 0.05em;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="frame">
+    <canvas id="game" width="640" height="520" role="img" aria-label="Robbin game screen"></canvas>
+
+    <div id="title" class="overlay">
+      <h1>R<span class="r">O</span>BBIN</h1>
+      <div class="sub">an egg-and-ladders platformer</div>
+      <div id="cast" aria-hidden="true"></div>
+      <div class="keys">
+        Grab every egg. Mind the birds — they bite.<br>
+        <b>&larr;&rarr;</b> run &nbsp; <b>&uarr;&darr;</b> ladders &nbsp; <b>space</b> jump &nbsp; <b>P</b> pause
+      </div>
+      <div class="go">PRESS ENTER / TAP TO START</div>
+    </div>
+
+    <div id="gameover" class="overlay hidden">
+      <h1>CRACKED!</h1>
+      <div class="finalscore"></div>
+      <div class="go">PRESS ENTER / TAP TO PLAY AGAIN</div>
+    </div>
+  </div>
+
+  <div id="touch">
+    <div id="dpad">
+      <button type="button" id="btn-up" data-k="up" aria-label="Climb up">&uarr;</button>
+      <button type="button" id="btn-left" data-k="left" aria-label="Run left">&larr;</button>
+      <button type="button" id="btn-down" data-k="down" aria-label="Climb down">&darr;</button>
+      <button type="button" id="btn-right" data-k="right" aria-label="Run right">&rarr;</button>
+    </div>
+    <button type="button" id="btn-jump" data-k="jump" aria-label="Jump">JUMP</button>
+  </div>
+</div>
+<script type="module" src="robbin-game.js"></script>
+</body>
+</html>
