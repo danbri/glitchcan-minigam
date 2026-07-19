@@ -1270,6 +1270,16 @@ function valueToWgsl(value, ctx, expectedType = null) {
     if (value.name === 'cameraPos') {
       return 'u.cameraPos';
     }
+    // Shadertoy inputs (parity with Mayfly's u_frame / u_timeDelta / u_mouse).
+    if (value.name === 'frame') {
+      return 'u.frame';
+    }
+    if (value.name === 'timeDelta') {
+      return 'u.timeDelta';
+    }
+    if (value.name === 'mouse') {
+      return 'u.mouse';  // vec4; use .xy / .zw
+    }
 
     // If inlineDefaults is set, use the default value from sceneParams instead of uniform
     if (ctx.inlineDefaults && ctx.sceneParams[value.name]) {

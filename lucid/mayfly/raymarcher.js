@@ -81,6 +81,12 @@ export class SimpleRaymarcher {
     this.showEdges = true;
     this.showAxes = false;
     this.overrideTime = null; // When set, use this instead of elapsed time
+    // Shadertoy-style inputs (parity with Stinkyfish): iMouse (vec4 xy=pos,
+    // zw=click, GL pixel coords), iFrame, iTimeDelta.
+    this.mouse = { x: 0, y: 0, clickX: 0, clickY: 0, isDown: false };
+    this.frameCount = 0;
+    this.lastFrameTime = 0;
+    this.timeDelta = 0;
     this.volumeStepSize = 0.05;
     this.volumeDensity = 8.0;
 
@@ -121,8 +127,39 @@ export class SimpleRaymarcher {
     this.resize();
     window.addEventListener('resize', () => this.resize());
 
+    // Passive iMouse tracking (position only — camera control is left to the
+    // host, unlike Stinkyfish which also orbits, so this never conflicts with
+    // index.html's own handlers).
+    this._setupMouseTracking();
+
     // Self-visibility management: pause when hidden/blurred
     this._setupVisibilityHandlers();
+  }
+
+  _setupMouseTracking() {
+    const toPixels = (clientX, clientY) => {
+      const rect = this.canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      return { x: (clientX - rect.left) * dpr, y: (rect.height - (clientY - rect.top)) * dpr };
+    };
+    this.canvas.addEventListener('mousemove', (e) => {
+      const p = toPixels(e.clientX, e.clientY); this.mouse.x = p.x; this.mouse.y = p.y;
+    }, { passive: true });
+    this.canvas.addEventListener('mousedown', (e) => {
+      const p = toPixels(e.clientX, e.clientY);
+      this.mouse.clickX = p.x; this.mouse.clickY = p.y; this.mouse.isDown = true;
+    }, { passive: true });
+    window.addEventListener('mouseup', () => { this.mouse.isDown = false; });
+    this.canvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length) { const p = toPixels(e.touches[0].clientX, e.touches[0].clientY); this.mouse.x = p.x; this.mouse.y = p.y; }
+    }, { passive: true });
+  }
+
+  // Update iMouse externally (Shadertoy convention: xy=current, zw=click origin).
+  updateMouse(x, y, isDown = false, clickX = null, clickY = null) {
+    this.mouse.x = x; this.mouse.y = y; this.mouse.isDown = isDown;
+    if (clickX !== null) this.mouse.clickX = clickX;
+    if (clickY !== null) this.mouse.clickY = clickY;
   }
 
   /**
@@ -350,6 +387,9 @@ export class SimpleRaymarcher {
       precision highp float;
       uniform vec2 u_resolution;
       uniform float u_time;
+      uniform vec4 u_mouse;      // Shadertoy iMouse: xy=current, zw=click (GL pixels)
+      uniform float u_frame;     // Shadertoy iFrame
+      uniform float u_timeDelta; // Shadertoy iTimeDelta (seconds)
       uniform vec3 u_cameraPos;
       uniform vec3 u_cameraTarget;
       uniform float u_showGroundPlane;
@@ -737,6 +777,19 @@ export class SimpleRaymarcher {
       ? this.overrideTime
       : (performance.now() - this.startTime) / 1000.0;
     gl.uniform1f(timeLocation, time);
+
+    // Shadertoy inputs: iTimeDelta, iFrame, iMouse (parity with Stinkyfish)
+    const nowMs = performance.now();
+    this.timeDelta = this.lastFrameTime > 0 ? (nowMs - this.lastFrameTime) / 1000.0 : 0;
+    this.lastFrameTime = nowMs;
+    this.frameCount++;
+    const dl = gl.getUniformLocation(this.program, 'u_timeDelta');
+    if (dl !== null) gl.uniform1f(dl, this.timeDelta);
+    const fl = gl.getUniformLocation(this.program, 'u_frame');
+    if (fl !== null) gl.uniform1f(fl, this.frameCount);
+    const ml = gl.getUniformLocation(this.program, 'u_mouse');
+    if (ml !== null) gl.uniform4f(ml, this.mouse.x, this.mouse.y,
+      this.mouse.isDown ? this.mouse.clickX : 0, this.mouse.isDown ? this.mouse.clickY : 0);
 
     // Camera uniforms
     const cameraPos = this.getCameraPosition();

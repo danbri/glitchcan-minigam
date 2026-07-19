@@ -65,7 +65,8 @@ export function generateGlslFromJson(scene, options = {}) {
 
   // Note: u_time, u_resolution, u_cameraPos etc. are already declared
   // by raymarcher.js - we only declare additional custom uniforms here
-  const builtinUniforms = new Set(['u_time', 'u_resolution', 'u_cameraPos', 'u_cameraTarget', 'u_showGroundPlane', 'u_volumeRender']);
+  const builtinUniforms = new Set(['u_time', 'u_resolution', 'u_cameraPos', 'u_cameraTarget', 'u_showGroundPlane', 'u_volumeRender',
+    'u_mouse', 'u_frame', 'u_timeDelta']);  // Shadertoy inputs declared in the raymarcher prelude
   const customUniforms = [...ctx.uniforms].filter(u => {
     const baseName = u.split(':')[0];
     return !builtinUniforms.has(baseName);
