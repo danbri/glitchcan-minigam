@@ -330,6 +330,7 @@ class Player extends Walker {
           if (this.lv.solid(colOf(this.x - 6), rb) || this.lv.solid(colOf(this.x + 6), rb)) {
             this.y = yb; this.vy = 0; this.vx = 0; this.mode = 'walk'; this.onLift = null;
             this.squashT = 0.16;
+            game.puff(this.x, this.y, 4);
             break;
           }
         }
@@ -356,17 +357,18 @@ class Player extends Walker {
   hitbox() { return { x0: this.x - 8, x1: this.x + 8, y0: this.y - 26, y1: this.y - 2 }; }
   draw(ctx, dead) {
     const pose = dead ? 'dead' : this.mode === 'climb' ? 'climb'
-      : this.mode !== 'walk' ? 'air'
+      : this.mode !== 'walk' ? (this.vy < 0 ? 'airup' : 'airdown')
       : Math.abs(this.vx) > 1 ? (this.walkT > 0.7 ? 'flit' : 'walk') : 'stand';
     // cartoon squash & stretch: flatten on landing, lengthen in flight
     let squash = null;
     if (this.squashT > 0) {
       const k = this.squashT / 0.16;
       squash = [1 + 0.18 * k, 1 - 0.22 * k];
-    } else if (pose === 'air' && Math.abs(this.vy) > 90) {
+    } else if (pose === 'airup' && Math.abs(this.vy) > 90) {
       squash = [0.94, 1.08];
     }
-    drawBird(ctx, 'robin', { x: this.x, y: this.y, size: BIRD_SIZE.robin, facing: this.facing, phase: this.phase, pose, squash });
+    const blend = Math.min(1, Math.max(0, (this.walkT - 0.7) / 0.3));
+    drawBird(ctx, 'robin', { x: this.x, y: this.y, size: BIRD_SIZE.robin, facing: this.facing, phase: this.phase, pose, squash, blend });
   }
 }
 
@@ -388,13 +390,33 @@ class Enemy extends Walker {
     this.y = this.def.floor * TILE;
     this.dir = this.def.d || 1;
     this.mode = 'walk';
+    this.vy = 0;
     this.peckT = 0;      // purely visual — movement never stops
     this.straightT = 0;  // long uninterrupted walks become a flit
   }
   update(dt) {
     const lv = this.lv;
-    this.phase += dt * 11;
+    this.phase += dt * (this.mode === 'fly' ? 26 : 11);
     if (this.peckT > 0) this.peckT -= dt;
+    if (this.mode === 'fly') {
+      // a fluttering glide: forward at walking pace, floaty gravity,
+      // landing on the first platform crossed
+      const prevY = this.y;
+      this.vy = Math.min(this.vy + GRAV * 0.45 * dt, 250);
+      this.y += this.vy * dt;
+      let nx = this.x + this.dir * this.speed * 0.9 * dt;
+      if (nx < 10 || nx > W - 10) { this.dir = -this.dir; nx = this.x; }
+      this.x = nx;
+      if (this.vy > 0) {
+        for (let rb = Math.floor(prevY / TILE) + 1; rb * TILE <= this.y; rb++) {
+          if (lv.solid(colOf(this.x - 6), rb) || lv.solid(colOf(this.x + 6), rb)) {
+            this.y = rb * TILE; this.vy = 0; this.mode = 'walk'; this.straightT = 0;
+            break;
+          }
+        }
+      }
+      return;
+    }
     if (this.mode === 'walk') {
       const nx = this.x + this.dir * this.speed * dt;
       const c = colOf(nx);
@@ -434,17 +456,25 @@ class Enemy extends Walker {
       this.y = ny;
     }
   }
-  // at a tile centre while walking: ways onward = ahead / up / down (no reverse)
+  // at a tile centre while walking: ways onward = ahead / up / down / airborne
   decideWalking(c, r, cx) {
     const lv = this.lv;
+    const fwdOK = lv.solid(c + this.dir, r) && (this.dir > 0 ? c + 1 < COLS : c > 0);
+    const roomToFly = this.dir > 0 ? c < COLS - 2 : c > 1;
     const opts = [];
-    if (lv.solid(c + this.dir, r) && (this.dir > 0 ? c + 1 < COLS : c > 0)) opts.push('fwd', 'fwd'); // mild straight-on bias
+    if (fwdOK) opts.push('fwd', 'fwd'); // mild straight-on bias
     if (lv.ladder(c, r - 1)) opts.push('up');
     if (lv.ladder(c, r)) opts.push('down');
+    if (!fwdOK && roomToFly) opts.push('fly');   // glide off the edge
     if (!opts.length) { this.dir = -this.dir; this.straightT = 0; return; }
     const pick = opts[Math.floor(this.rng() * opts.length)];
-    if (pick === 'fwd') return;
+    if (pick === 'fwd') {
+      // once in a while, a little flutter-hop along the way
+      if (this.rng() < 0.04) { this.mode = 'fly'; this.vy = -170; this.straightT = 0; }
+      return;
+    }
     this.straightT = 0;
+    if (pick === 'fly') { this.mode = 'fly'; this.vy = -70; return; }
     this.mode = 'climb';
     this.x = cx;
     this.vdir = pick === 'up' ? -1 : 1;
@@ -485,11 +515,13 @@ class Enemy extends Walker {
   }
   hitbox() { return { x0: this.x - 8, x1: this.x + 8, y0: this.y - 24, y1: this.y - 2 }; }
   draw(ctx) {
-    const pose = this.peckT > 0 ? 'peck' : this.mode === 'climb' ? 'climb'
+    const pose = this.mode === 'fly' ? (this.vy < 0 ? 'airup' : 'airdown')
+      : this.peckT > 0 ? 'peck' : this.mode === 'climb' ? 'climb'
       : this.straightT > 1.1 ? 'flit' : 'walk';
+    const blend = Math.min(1, Math.max(0, (this.straightT - 1.1) / 0.3));
     drawBird(ctx, this.t, {
       x: this.x, y: this.y, size: BIRD_SIZE[this.t],
-      facing: this.dir, phase: this.phase, pose,
+      facing: this.dir, phase: this.phase, pose, blend,
     });
   }
 }
@@ -510,6 +542,7 @@ class Game {
     this.state = 'title';
     this.hiscore = Number(localStorage.getItem('robbin.hiscore') || 0);
     this.fx = [];
+    this.parts = [];     // air-ticks and feather puffs (secondary action)
     this.bindInput();
     this.updateMuteButton();
     this.last = performance.now();
@@ -557,8 +590,18 @@ class Game {
     this.time = this.level.time;
     this.timeAcc = 0;
     this.fx = [];
+    this.parts = [];
     this.state = 'intro'; this.stateT = 1.1;
     this.updateCamera(0, true);
+  }
+  puff(x, y, n) {
+    for (let i = 0; i < n; i++) {
+      this.parts.push({
+        x: x + Math.random() * 14 - 7, y: y - Math.random() * 10,
+        vx: (Math.random() - 0.5) * 80, vy: -20 - Math.random() * 50,
+        t: 0.4 + Math.random() * 0.25,
+      });
+    }
   }
   addScore(n, x, y) {
     this.score += n;
@@ -578,6 +621,7 @@ class Game {
     this.state = 'dying'; this.stateT = 1.3;
     this.foley.death();
     this.music.duck(1.6);
+    this.puff(this.player.x, this.player.y - 12, 9);
     this.player.vy = -180;
     this.deathWhy = why;
   }
@@ -663,6 +707,11 @@ class Game {
   }
   update(dt) {
     if (this.level && this.player) this.updateCamera(dt);
+    // feather puffs and air-ticks animate in every state
+    for (const q of this.parts) {
+      q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 90 * dt; q.t -= dt;
+    }
+    this.parts = this.parts.filter(q => q.t > 0);
     if (this.state === 'intro') {
       this.stateT -= dt;
       if (this.stateT <= 0) this.state = 'play';
@@ -714,6 +763,22 @@ class Game {
     if (this.state !== 'play') return;   // killed during update
 
     for (const e of this.enemies) e.update(dt, this);
+
+    // wing-beat air-ticks trail off anyone fluttering
+    const emit = (b, facing) => {
+      if (Math.random() < dt * 10 && this.parts.length < 90) {
+        this.parts.push({
+          x: b.x - facing * 9 + Math.random() * 8 - 4,
+          y: b.y - 6 - Math.random() * 10,
+          vx: -facing * 30, vy: 24, t: 0.35,
+        });
+      }
+    };
+    const pl = this.player;
+    if (pl.mode === 'jump' || pl.mode === 'fall' || (pl.mode === 'walk' && pl.walkT > 0.7)) emit(pl, pl.facing);
+    for (const e of this.enemies) {
+      if (e.mode === 'fly' || (e.mode === 'walk' && e.straightT > 1.1)) emit(e, e.dir);
+    }
 
     // gobble grain piles; pinch the cream off milk bottles
     const px = this.player.x, py = this.player.y;
@@ -785,6 +850,18 @@ class Game {
     for (const it of lv.bottles.values()) drawBottle(ctx, it.c * TILE + 16, (it.r + 1) * TILE, it.cream);
     for (const e of this.enemies) e.draw(ctx);
     this.player.draw(ctx, this.state === 'dying');
+    // little ink air-ticks — the visible whoosh of wings
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = 'round';
+    for (const q of this.parts) {
+      ctx.globalAlpha = Math.min(0.5, q.t * 1.5);
+      ctx.beginPath();
+      ctx.moveTo(q.x - 3, q.y);
+      ctx.quadraticCurveTo(q.x, q.y - 3, q.x + 3, q.y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
     ctx.font = 'bold 13px Georgia, serif';
     ctx.textAlign = 'center';
     for (const f of this.fx) {

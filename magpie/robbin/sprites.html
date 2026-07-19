@@ -11,12 +11,12 @@
 </head>
 <body>
 <h1>ROBBIN — vector bird proofs</h1>
-<p>Each bird at 150px in stand / walk / flit / air / climb / peck poses, both facings, plus grain pile &amp; milk bottles.</p>
-<canvas id="sheet" width="1100" height="900"></canvas>
+<p>Each bird at 150px in stand / walk / flit / airup / airdown / climb / peck poses, both facings, plus grain pile &amp; milk bottles.</p>
+<canvas id="sheet" width="1350" height="900"></canvas>
 <script type="module">
 import { BIRDS, drawBird, drawGrain, drawBottle } from './robbin-sprites.js';
 const ctx = document.getElementById('sheet').getContext('2d');
-const poses = ['stand', 'walk', 'flit', 'air', 'climb', 'peck'];
+const poses = ['stand', 'walk', 'flit', 'airup', 'airdown', 'climb', 'peck'];
 const names = Object.keys(BIRDS);
 ctx.font = '14px Georgia';
 names.forEach((n, row) => {

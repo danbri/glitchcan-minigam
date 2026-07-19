@@ -135,26 +135,41 @@ export const BIRDS = {
 // ------------------------------------------------------------ cutout rig
 // Per-part rotation by pose+phase. This is the whole "skeleton": tails sway,
 // wings flap (hard in the air), heads bob and dip to peck, lower beaks chirp.
+// Flutter poses get the full animation-principles treatment: smear ghosts
+// (timing), a far wing above the back (staging — flying reads at a glance),
+// stretch by mode (exaggeration: spread brake vs tight buzz), lagged tail
+// (follow-through) and a stabilised counter-bobbing head (overlap).
+const FLUTTER = {
+  flit:    { stretch: 1.25 },
+  airup:   { stretch: 1.12 },   // rising: tight fast buzz
+  airdown: { stretch: 1.45 },   // falling: wings spread, braking
+  climb:   { stretch: 1.18 },
+};
+
 function partRot(id, pose, phase) {
   const s = Math.sin;
   switch (id) {
     case 'tail':
-      if (pose === 'air')   return -0.35;
-      if (pose === 'flit')  return -0.12 + s(phase * 2) * 0.08;
+      if (pose === 'airup')   return -0.3;
+      if (pose === 'airdown') return -0.5 + s(phase * 1.6 - 0.7) * 0.08;
+      if (pose === 'flit')    return -0.1 + s(phase * 2.6 - 0.9) * 0.1;  // lags the beat
       if (pose === 'walk' || pose === 'peck') return s(phase * 2) * 0.12;
-      if (pose === 'climb') return 0.16;
+      if (pose === 'climb')   return 0.12 + s(phase * 2.2 - 0.8) * 0.06;
       return s(phase * 0.6) * 0.06;
     case 'wing':
-      if (pose === 'air')   return -0.15 + s(phase * 2.4) * 0.45;   // rapid flutter
-      if (pose === 'flit')  return -0.12 + s(phase * 2.6) * 0.5;    // low hover-flit
-      if (pose === 'climb') return -0.18 + s(phase * 2.4) * 0.45;   // flutters up the ladder
+      if (pose === 'airup')   return -0.35 + s(phase * 3) * 0.5;
+      if (pose === 'airdown') return -0.8 + s(phase * 1.6) * 0.55;
+      if (pose === 'flit')    return -0.3 + s(phase * 2.6) * 0.55;
+      if (pose === 'climb')   return -0.3 + s(phase * 2.2) * 0.45;
       if (pose === 'walk' || pose === 'peck') return s(phase * 2) * 0.16;
       return 0;
     case 'head':
-      if (pose === 'peck')  return 0.6;
-      if (pose === 'walk' || pose === 'flit') return s(phase * 2 + 0.9) * 0.1;
-      if (pose === 'climb') return -0.18;
-      if (pose === 'air')   return -0.12;
+      if (pose === 'peck')    return 0.6;
+      if (pose === 'flit')    return -s(phase * 2.6 - 1.2) * 0.07;  // head stays level
+      if (pose === 'walk')    return s(phase * 2 + 0.9) * 0.1;
+      if (pose === 'climb')   return -0.18;
+      if (pose === 'airup')   return -0.15;
+      if (pose === 'airdown') return 0.1;
       return s(phase * 0.6 + 1) * 0.04;
     case 'beakLower':
       if (pose === 'peck')  return 0.5;
@@ -162,6 +177,23 @@ function partRot(id, pose, phase) {
       return Math.max(0, s(phase * 0.9)) ** 6 * 0.45 + 0.03;
   }
   return 0;
+}
+
+// near wing with motion-blur smear passes; far wing offset above the back
+function drawWing(ctx, part, pose, phase, far) {
+  const spread = FLUTTER[pose].stretch * (far ? 0.85 : 1);
+  const passes = far ? [[0.22, 0.8]] : [[0.5, 0.2], [0.25, 0.42], [0, 1]];
+  for (const [dp, a] of passes) {
+    const rot = partRot('wing', pose, phase - dp) * (far ? 0.85 : 1) + (far ? -0.5 : 0);
+    ctx.save();
+    ctx.globalAlpha *= a;
+    ctx.translate(part.pivot[0] - (far ? 5 : 0), part.pivot[1] - (far ? 9 : 0));
+    ctx.rotate(rot);
+    ctx.scale(spread, 1);
+    ctx.translate(-part.pivot[0], -part.pivot[1]);
+    renderLayers(ctx, part.layers);
+    ctx.restore();
+  }
 }
 
 function renderLayers(ctx, layers) {
@@ -216,33 +248,40 @@ function drawLeg(ctx, hx, hy, swing, leg, lift = 0) {
 /**
  * Draw a bird on a canvas context.
  * x,y = feet baseline centre in canvas px. size = height of the 100-box in px.
- * pose: 'stand' | 'walk' | 'air' | 'climb' | 'peck' | 'dead'
+ * pose: 'stand' | 'walk' | 'flit' | 'airup' | 'airdown' | 'climb' | 'peck' | 'dead'
+ * ('air' is accepted as an alias of 'airup'.)
  * ('peck' keeps the legs walking — the head dips in passing, Pac-Man style.)
  * squash: [sx, sy] cartoon squash & stretch, anchored at the feet.
+ * blend: 0..1 ease into the flit hover (slow-in on the lift, no pop).
  */
-export function drawBird(ctx, name, { x, y, size = 44, facing = 1, phase = 0, pose = 'stand', alpha = 1, squash = null }) {
+export function drawBird(ctx, name, { x, y, size = 44, facing = 1, phase = 0, pose = 'stand', alpha = 1, squash = null, blend = 1 }) {
   const spec = BIRDS[name];
   if (!spec) return;
+  if (pose === 'air') pose = 'airup';
   const s = size / 100;
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(x, y);
   ctx.scale(facing < 0 ? -s : s, s);
   if (squash) ctx.scale(squash[0], squash[1]);
+  // a breath of squash on every flit beat, anchored at the feet
+  if (pose === 'flit') ctx.scale(1, 1 + Math.sin(phase * 2.6 - 0.6) * 0.05 * blend);
   const dead = pose === 'dead';
   if (dead) { ctx.rotate(Math.PI); ctx.translate(-100, -60); pose = 'stand'; }
   ctx.translate(-50, -92);
 
-  // flit and climb hover with feet off the ground — more birdy than trudging
-  if (pose === 'flit') ctx.translate(0, -9 + Math.sin(phase * 2.6) * 2);
+  // flit and climb hover with feet off the ground — more birdy than trudging;
+  // the body rises on an arc after the downstroke (overlapping action)
+  if (pose === 'flit') ctx.translate(0, (-9 + Math.sin(phase * 2.6 - 1.2) * 2.6) * blend);
   if (pose === 'climb') ctx.translate(0, -4);
 
+  const flutter = FLUTTER[pose];
   // legs (under the body)
   const [h0, h1] = spec.hips;
   if (pose === 'walk' || pose === 'peck') {
     drawLeg(ctx, h0[0], h0[1], Math.sin(phase) * 0.55, spec.leg);
     drawLeg(ctx, h1[0], h1[1], -Math.sin(phase) * 0.55, spec.leg);
-  } else if (pose === 'air' || pose === 'flit') {
+  } else if (pose === 'airup' || pose === 'airdown' || pose === 'flit') {
     drawLeg(ctx, h0[0], h0[1], -0.9, spec.leg, 0.5);
     drawLeg(ctx, h1[0], h1[1], -0.6, spec.leg, 0.5);
   } else if (pose === 'climb') {
@@ -256,7 +295,17 @@ export function drawBird(ctx, name, { x, y, size = 44, facing = 1, phase = 0, po
   // whole-rig bob while on the move
   if (pose === 'walk' || pose === 'peck') ctx.translate(0, Math.sin(phase * 2) * 1.6);
 
-  for (const part of spec.parts) drawPart(ctx, part, pose, phase);
+  for (const part of spec.parts) {
+    if (flutter && part.id === 'wing') {
+      drawWing(ctx, part, pose, phase, false);      // near wing + smear ghosts
+    } else {
+      if (flutter && part.id === 'body') {
+        const wing = spec.parts.find(p => p.id === 'wing');
+        if (wing) drawWing(ctx, wing, pose, phase, true);   // far wing over the back
+      }
+      drawPart(ctx, part, pose, phase);
+    }
+  }
   ctx.restore();
 }
 

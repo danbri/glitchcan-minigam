@@ -17,7 +17,17 @@ with the lower beak hinged inside the head so the birds chirp and peck. One
 tiny skeleton (`partRot`) drives all poses — stand / walk / flit / air /
 climb / peck — plus procedurally animated twig legs and both facings.
 Birds don't trudge: sustained walking lifts into a low wing-flutter flit
-with feet off the floor, and ladder climbs are fluttered too. Sprites live in
+with feet off the floor, and ladder climbs are fluttered too.
+
+Flight is staged by the classic animation principles: wing smear-frames
+for the fast beats (timing), a second far wing over the back so a flying
+silhouette reads instantly (staging), wings spread wide when falling and
+buzzing tight when rising (exaggeration), a lagged tail and a stabilised
+counter-bobbing head (follow-through and overlap), an eased lift into
+the flit (slow-in, arcs), per-beat body squash, and ink air-ticks plus
+landing feather-puffs (secondary action). The rival birds properly fly
+too: they glide off platform edges and pull the odd flutter-hop
+mid-patrol. Sprites live in
 `robbin-sprites.js` as SVG path data in a 100×100 box, drawn to canvas via
 `Path2D`; `birdSVG()` emits the same rig as static inline SVG for the title
 screen. No image assets: everything is vector.
