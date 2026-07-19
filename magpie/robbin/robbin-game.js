@@ -12,7 +12,7 @@ export const W = COLS * TILE, H = ROWS * TILE;
 const HUD = 40;
 const GRAV = 780, JUMP_V = 268, WALK_V = 112, CLIMB_V = 84;
 const ENEMY_V = { bluetit: 56, blackbird: 66, wren: 82, commuter: 46 };
-const BIRD_SIZE = { robin: 46, blackbird: 46, bluetit: 45, wren: 38 };
+const BIRD_SIZE = { robin: 46, blackbird: 46, bluetit: 45, wren: 38, crow: 54, pigeon: 47 };
 export const LIFT_V = 52;
 const TIME_TICK = 0.2;           // seconds per timer unit
 const EXTRA_LIFE_EVERY = 10000;
@@ -658,6 +658,7 @@ class Game {
     this.enterScreen(this.station.spawnScreen);
     this.player = new Player(this.level);
     this.heading = { x: 0, y: 0 };
+    this.music.setIntensity(0.8);   // the arcade side keeps the full band
     this.state = 'intro'; this.stateT = 1.2;
     this.updateCamera(0, true);
   }
@@ -691,6 +692,15 @@ class Game {
         x: x + Math.random() * 14 - 7, y: y - Math.random() * 10,
         vx: (Math.random() - 0.5) * 80, vy: -20 - Math.random() * 50,
         t: 0.4 + Math.random() * 0.25,
+      });
+    }
+  }
+  hearts(x, y, n) {
+    for (let i = 0; i < n; i++) {
+      this.parts.push({
+        x: x + Math.random() * 30 - 15, y: y - Math.random() * 14,
+        vx: (Math.random() - 0.5) * 40, vy: -34 - Math.random() * 40,
+        t: 1 + Math.random() * 0.5, heart: true,
       });
     }
   }
@@ -1117,16 +1127,26 @@ class Game {
     for (const it of lv.bottles.values()) drawBottle(ctx, it.c * TILE + 16, (it.r + 1) * TILE, it.cream);
     for (const e of this.enemies) e.draw(ctx);
     this.player.draw(ctx, this.state === 'dying');
-    // little ink air-ticks — the visible whoosh of wings
-    ctx.strokeStyle = PALETTE.ink;
+    // little ink air-ticks — the visible whoosh of wings — and drifting hearts
     ctx.lineWidth = 1.6;
     ctx.lineCap = 'round';
     for (const q of this.parts) {
-      ctx.globalAlpha = Math.min(0.5, q.t * 1.5);
-      ctx.beginPath();
-      ctx.moveTo(q.x - 3, q.y);
-      ctx.quadraticCurveTo(q.x, q.y - 3, q.x + 3, q.y);
-      ctx.stroke();
+      if (q.heart) {
+        ctx.globalAlpha = Math.min(0.9, q.t * 1.4);
+        ctx.fillStyle = '#d94327';
+        ctx.beginPath();
+        ctx.arc(q.x - 2.2, q.y - 2, 2.6, Math.PI, 0);
+        ctx.arc(q.x + 2.2, q.y - 2, 2.6, Math.PI, 0);
+        ctx.lineTo(q.x, q.y + 4.5);
+        ctx.closePath(); ctx.fill();
+      } else {
+        ctx.globalAlpha = Math.min(0.5, q.t * 1.5);
+        ctx.strokeStyle = PALETTE.ink;
+        ctx.beginPath();
+        ctx.moveTo(q.x - 3, q.y);
+        ctx.quadraticCurveTo(q.x, q.y - 3, q.x + 3, q.y);
+        ctx.stroke();
+      }
     }
     ctx.globalAlpha = 1;
     ctx.font = 'bold 13px Georgia, serif';

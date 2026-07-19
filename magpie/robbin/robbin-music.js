@@ -44,7 +44,19 @@ export class Chiptune {
     this.bus.gain.value = this.muted ? 0 : 1;
     this.level = ctx.createGain();                  // duck/fade control
     this.level.gain.value = 0.5;
-    this.level.connect(this.bus).connect(ctx.destination);
+    // a warm master lowpass: closed = distant hum, open = full band
+    this.filter = ctx.createBiquadFilter();
+    this.filter.type = 'lowpass';
+    this.filter.frequency.value = 5200;
+    this.filter.Q.value = 0.4;
+    this.level.connect(this.filter).connect(this.bus).connect(ctx.destination);
+    // instrument families for gradual buildups
+    this.fam = {};
+    for (const name of ['pad', 'bass', 'perc', 'arp', 'lead']) {
+      this.fam[name] = ctx.createGain();
+      this.fam[name].connect(this.level);
+    }
+    this.applyIntensity(this.intensity ?? 0.85, 0.05);
     // the "lush": a dotted-eighth feedback echo the lead sings into
     this.echo = ctx.createDelay(1.0);
     this.echo.delayTime.value = S16 * 3;
@@ -93,6 +105,44 @@ export class Chiptune {
     this.muted = m;
     if (this.bus) this.bus.gain.value = m ? 0 : 1;
   }
+  /**
+   * 0..1: how much of the band is playing. Low = warm washes and a
+   * heartbeat; layers fade in gradually as it rises. Ramped, never abrupt.
+   */
+  setIntensity(v) {
+    this.intensity = Math.max(0, Math.min(1, v));
+    if (this.fam) this.applyIntensity(this.intensity, 1.8);
+  }
+  applyIntensity(v, ramp) {
+    const t = this.ctx.currentTime;
+    const seg = (from, span) => Math.max(0, Math.min(1, (v - from) / span));
+    const set = (g, val) => {
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(g.gain.value, t);
+      g.gain.linearRampToValueAtTime(val, t + ramp);
+    };
+    set(this.fam.pad, 0.95);
+    set(this.fam.bass, 0.55 + 0.35 * v);
+    set(this.fam.perc, seg(0.12, 0.3));
+    set(this.fam.arp, seg(0.32, 0.3) * 0.9);
+    set(this.fam.lead, seg(0.52, 0.32));
+    this.filter.frequency.cancelScheduledValues(t);
+    this.filter.frequency.setValueAtTime(this.filter.frequency.value, t);
+    this.filter.frequency.linearRampToValueAtTime(800 + 5200 * v, t + ramp);
+  }
+  /** a warm momentary bloom — rescues, reunions */
+  swell() {
+    if (!this.fam) return;
+    const t = this.ctx.currentTime;
+    this.level.gain.cancelScheduledValues(t);
+    this.level.gain.setValueAtTime(this.level.gain.value, t);
+    this.level.gain.linearRampToValueAtTime(0.62, t + 0.25);
+    this.level.gain.linearRampToValueAtTime(0.5, t + 2.2);
+    this.filter.frequency.cancelScheduledValues(t);
+    this.filter.frequency.setValueAtTime(this.filter.frequency.value, t);
+    this.filter.frequency.linearRampToValueAtTime(6400, t + 0.3);
+    this.filter.frequency.linearRampToValueAtTime(800 + 5200 * (this.intensity ?? 0.85), t + 2.5);
+  }
   sched() {
     while (this.next < this.ctx.currentTime + 0.15) {
       this.playStep(this.step % STEPS, this.next);
@@ -100,7 +150,7 @@ export class Chiptune {
       this.step++;
     }
   }
-  tone({ freq, t, dur, gain, type = 'square', detune = 0, attack = 0.005, echo = 0, vibrato = 0 }) {
+  tone({ freq, t, dur, gain, type = 'square', detune = 0, attack = 0.005, echo = 0, vibrato = 0, fam = 'lead' }) {
     const ctx = this.ctx;
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = type; o.frequency.value = freq; o.detune.value = detune;
@@ -114,12 +164,28 @@ export class Chiptune {
     g.gain.exponentialRampToValueAtTime(gain, t + attack);
     g.gain.setValueAtTime(gain, Math.max(t + attack, t + dur - 0.04));
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(this.level);
+    o.connect(g).connect(this.fam[fam] || this.level);
     if (echo) {
       const s = this.ctx.createGain(); s.gain.value = echo;
       g.connect(s).connect(this.send);
     }
     o.start(t); o.stop(t + dur + 0.05);
+  }
+  // slow warm chord wash under everything — the lush floor of the mix
+  pad(t, root, triad) {
+    const dur = 16 * S16 * 1.04;
+    for (const iv of triad) {
+      for (const det of [-6, 6]) {
+        this.tone({
+          freq: f(root + 12 + iv), t, dur, gain: 0.017, type: 'sawtooth',
+          detune: det, attack: dur * 0.35, echo: 0.15, fam: 'pad',
+        });
+      }
+      this.tone({
+        freq: f(root + iv), t, dur, gain: 0.02, type: 'triangle',
+        attack: dur * 0.3, fam: 'pad',
+      });
+    }
   }
   hat(t, gain = 0.03) {
     const ctx = this.ctx;
@@ -128,7 +194,7 @@ export class Chiptune {
     const g = ctx.createGain();
     g.gain.setValueAtTime(gain, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
-    src.connect(hp).connect(g).connect(this.level);
+    src.connect(hp).connect(g).connect(this.fam.perc);
     src.start(t); src.stop(t + 0.05);
   }
   kick(t, gain = 0.1) {
@@ -139,29 +205,29 @@ export class Chiptune {
     o.frequency.exponentialRampToValueAtTime(46, t + 0.09);
     g.gain.setValueAtTime(gain, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
-    o.connect(g).connect(this.level);
+    o.connect(g).connect(this.fam.perc);
     o.start(t); o.stop(t + 0.12);
   }
   playStep(st, t) {
     const bar = st >> 4, pos = st & 15;
     const [root, triad] = CHORDS[bar % 4];
-    if (pos === 0) this.kick(t, 0.1);
+    if (pos === 0) { this.kick(t, 0.1); this.pad(t, root, triad); }
     if (pos === 8) this.kick(t, 0.05);
     if (pos % 4 === 2) this.hat(t);
     const bOff = BASS_AT.get(pos);
     if (bOff !== undefined) {
-      this.tone({ freq: f(root - 12 + bOff), t, dur: S16 * 1.8, gain: 0.085, type: 'triangle' });
-      this.tone({ freq: f(root - 24 + bOff), t, dur: S16 * 1.8, gain: 0.05, type: 'sine' });
+      this.tone({ freq: f(root - 12 + bOff), t, dur: S16 * 1.8, gain: 0.085, type: 'triangle', fam: 'bass' });
+      this.tone({ freq: f(root - 24 + bOff), t, dur: S16 * 1.8, gain: 0.05, type: 'sine', fam: 'bass' });
     }
     // 16th-note arpeggio shimmer, up an octave
     const arpNote = triad[[0, 1, 2, 1][pos % 4]];
-    this.tone({ freq: f(root + 12 + arpNote), t, dur: S16 * 0.9, gain: 0.028, echo: 0.25 });
+    this.tone({ freq: f(root + 12 + arpNote), t, dur: S16 * 0.9, gain: 0.028, echo: 0.25, fam: 'arp' });
     const hit = MELODY_AT.get(st);
     if (hit) {
       const [m, len] = hit;
       const dur = len * S16 * 0.95;
-      this.tone({ freq: f(m), t, dur, gain: 0.065, echo: 0.5, vibrato: 7 });
-      this.tone({ freq: f(m), t, dur, gain: 0.04, detune: 6 });   // lush double
+      this.tone({ freq: f(m), t, dur, gain: 0.065, echo: 0.5, vibrato: 7, fam: 'lead' });
+      this.tone({ freq: f(m), t, dur, gain: 0.04, detune: 6, fam: 'lead' });   // lush double
     }
   }
 }

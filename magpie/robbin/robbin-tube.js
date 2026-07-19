@@ -15,7 +15,7 @@ import { Level, Player, Enemy, TILE, W, H, LIFT_V } from './robbin-game.js';
 const LINES = {
   central:  { color: '#c0392b', stations: ['HOLBORN', 'CHANCERY LANE', "ST PAUL'S", 'BANK', 'LIVERPOOL STREET'] },
   northern: { color: '#26221e', stations: ['MOORGATE', 'BANK', 'LONDON BRIDGE', 'BOROUGH', 'ELEPHANT & CASTLE'] },
-  jubilee:  { color: '#7b868c', stations: ['WATERLOO', 'SOUTHWARK', 'LONDON BRIDGE', 'BERMONDSEY', 'CANADA WATER'] },
+  jubilee:  { color: '#7b868c', stations: ['WATERLOO', 'SOUTHWARK', 'LONDON BRIDGE', 'BERMONDSEY', 'CANADA WATER', 'CANARY WHARF'] },
 };
 // design space 0..100 × 0..60, loosely geographic
 const POS = {
@@ -23,25 +23,32 @@ const POS = {
   'BANK': [52, 12], 'LIVERPOOL STREET': [68, 6], 'MOORGATE': [50, 2],
   'LONDON BRIDGE': [56, 32], 'BOROUGH': [46, 43], 'ELEPHANT & CASTLE': [32, 52],
   'WATERLOO': [8, 42], 'SOUTHWARK': [26, 38], 'BERMONDSEY': [74, 40], 'CANADA WATER': [90, 46],
+  'CANARY WHARF': [99, 34],
 };
 // stations with genuine step-free access (roughly true to life):
 // their lifts never break and their escalators all run your way
 const STEP_FREE = new Set([
   'LONDON BRIDGE', 'BERMONDSEY', 'CANADA WATER', 'SOUTHWARK',
-  'LIVERPOOL STREET', 'MOORGATE', 'WATERLOO', 'BOROUGH',
+  'LIVERPOOL STREET', 'MOORGATE', 'WATERLOO', 'BOROUGH', 'CANARY WHARF',
 ]);
 
-// the scattered flock, in rescue order (first hop is a gentle same-line trip)
+// the scattered flock, in rescue order (first hop is a gentle same-line
+// trip). Every bird has a little story; every rescue is a small reunion.
 const LOST = [
-  { sp: 'bluetit', name: 'TITCH', at: "ST PAUL'S" },
-  { sp: 'wren', name: 'JENNY', at: 'BOROUGH' },
-  { sp: 'blackbird', name: 'BRAM', at: 'CANADA WATER' },
-  { sp: 'robin', name: 'PECK', at: 'HOLBORN' },
-  { sp: 'bluetit', name: 'PIP', at: 'ELEPHANT & CASTLE' },
-  { sp: 'wren', name: 'WINK', at: 'MOORGATE' },
-  { sp: 'blackbird', name: 'COCO', at: 'WATERLOO' },
-  { sp: 'robin', name: 'ROBERTA', at: 'CHANCERY LANE' },
+  { sp: 'bluetit', name: 'TITCH', at: "ST PAUL'S", note: 'lost near the ticket gates' },
+  { sp: 'wren', name: 'JENNY', at: 'BOROUGH', note: 'lonely down at the platforms' },
+  { sp: 'pigeon', name: 'MAUD', at: 'LONDON BRIDGE', note: 'going round in circles on level −1' },
+  { sp: 'blackbird', name: 'BRAM', at: 'CANADA WATER', note: 'singing to nobody at level −2' },
+  { sp: 'crow', name: 'CORVUS', at: 'CANARY WHARF', note: 'feeling small in the big station' },
+  { sp: 'robin', name: 'PECK', at: 'HOLBORN', note: 'waiting where the lifts never came' },
+  { sp: 'bluetit', name: 'PIP', at: 'ELEPHANT & CASTLE', note: 'napping by the deep stairs' },
+  { sp: 'pigeon', name: 'ARTHUR', at: 'WATERLOO', note: 'lost on level −2' },
+  { sp: 'wren', name: 'WINK', at: 'MOORGATE', note: 'hiding behind the adverts' },
+  { sp: 'crow', name: 'NOX', at: 'CHANCERY LANE', note: 'moping on the middle level' },
+  { sp: 'blackbird', name: 'COCO', at: 'SOUTHWARK', note: 'humming along with the escalators' },
+  { sp: 'robin', name: 'ROBERTA', at: 'BERMONDSEY', note: 'watching the trains go by' },
 ];
+const BIRD_PX = { wren: 26, bluetit: 32, robin: 32, blackbird: 32, pigeon: 34, crow: 40 };
 
 // build the graph: station -> [{to, line}]
 const EDGES = new Map(Object.keys(POS).map(s => [s, []]));
@@ -182,8 +189,33 @@ const STATION_LAYOUT = {
   'HOLBORN': 'shallow2', 'CHANCERY LANE': 'shallow2', "ST PAUL'S": 'shallow2',
   'BOROUGH': 'shallow2', 'ELEPHANT & CASTLE': 'shallow2',
   'CANADA WATER': 'modern3', 'BERMONDSEY': 'modern3', 'SOUTHWARK': 'modern3',
-  'MOORGATE': 'modern3', 'WATERLOO': 'modern3',
+  'MOORGATE': 'modern3', 'WATERLOO': 'modern3', 'CANARY WHARF': 'modern3',
 };
+
+// gentle boids: the flock swirls after its anchor — cohesion, separation,
+// a breath of wander. Satisfying, never anxious.
+function flockStep(list, dt, tx, ty, t, spread = 1) {
+  for (let i = 0; i < list.length; i++) {
+    const b = list[i];
+    b.vx = b.vx || 0; b.vy = b.vy || 0;
+    let ax = (tx - b.x) * 2.2, ay = (ty - b.y) * 2.2;
+    for (let j = 0; j < list.length; j++) {
+      if (j === i) continue;
+      const o = list[j];
+      const dx = b.x - o.x, dy = b.y - o.y;
+      const d = Math.hypot(dx, dy) || 1;
+      if (d < 26 * spread) { ax += (dx / d) * (26 * spread - d) * 9; ay += (dy / d) * (26 * spread - d) * 9; }
+    }
+    ax += Math.sin(t * 1.6 + b.ph) * 46;
+    ay += Math.cos(t * 1.25 + b.ph * 1.3) * 34;
+    b.vx = (b.vx + ax * dt) * (1 - dt * 1.4);
+    b.vy = (b.vy + ay * dt) * (1 - dt * 1.4);
+    const sp = Math.hypot(b.vx, b.vy), cap = 170;
+    if (sp > cap) { b.vx *= cap / sp; b.vy *= cap / sp; }
+    b.x += b.vx * dt;
+    b.y += b.vy * dt;
+  }
+}
 
 export class TubeFlock {
   constructor(game) {
@@ -192,9 +224,7 @@ export class TubeFlock {
   }
   start() {
     this.score = 0;
-    this.time = 450;
-    this.timeAcc = 0;
-    this.over = false;
+    this.over = false;          // no clock, no fail — the flock waits for you
     this.travel = null;
     this.interior = null;
     this.arriveT = 0;
@@ -207,8 +237,9 @@ export class TubeFlock {
     this.shuffleLifts();
     const [x, y] = this.toXY(this.cur);
     this.flock = [{ sp: 'robin', x, y, ph: 0 }];
+    this.g.music.setIntensity(0.2);
   }
-  get objective() { return LOST[this.lostIdx % LOST.length]; }
+  get objective() { return this.lostIdx < LOST.length ? LOST[this.lostIdx] : null; }
   shuffleLifts() {
     // step-free stations keep their lifts, honest — everywhere else, luck
     this.liftOut = new Set(Object.keys(POS)
@@ -260,7 +291,6 @@ export class TubeFlock {
     this.g.foley.whoosh();
   }
   handleJump() {
-    if (this.over) { this.exit(); return; }
     // in an interior, jumping goes through the play input, not here
   }
   exit() {
@@ -325,15 +355,10 @@ export class TubeFlock {
     g.player.update(dt, { ...g.input, jump: g.input.jump || g.jumpTap }, g);
     g.jumpTap = false;
     for (const e of it.enemies) e.update(dt);
-    // buddies flutter after their playing friend
+    // buddies flock boids-fashion around their friend (or the reunion)
     const t = performance.now() / 1000;
-    it.buddies.forEach((b, i) => {
-      const ox = Math.sin(t * 1.4 + b.ph) * (12 + i * 5) - 24 - i * 10;
-      const oy = Math.cos(t * 1.8 + b.ph) * 8 - 26 - i * 4;
-      const k = 1 - Math.exp(-dt * (5 - i * 0.5));
-      b.x += (g.player.x + ox * (g.player.facing || 1) - b.x) * k;
-      b.y += (g.player.y + oy - b.y) * k;
-    });
+    const anchor = it.celebrate || { x: g.player.x - (g.player.facing || 1) * 26, y: g.player.y - 34 };
+    flockStep(it.buddies, dt, anchor.x, anchor.y, t);
     // grain snacks
     const px = g.player.x, py = g.player.y;
     for (const [key, itn] of lv.treasure) {
@@ -345,7 +370,7 @@ export class TubeFlock {
         g.foley.egg();
       }
     }
-    // the lost bird: reach it and it joins the flock
+    // the lost bird: reach it and it joins the flock — a little reunion
     if (it.rescue && !it.rescue.found) {
       if (Math.abs(px - it.rescue.x) < 24 && Math.abs(py - it.rescue.y) < 34) {
         it.rescue.found = true;
@@ -354,29 +379,36 @@ export class TubeFlock {
         const [fx, fy] = this.toXY(this.cur);
         this.flock.push({ sp: it.rescue.sp, x: fx, y: fy, ph: this.flock.length * 1.7 });
         this.score += 400;
-        this.time += 150;
         this.lostIdx++;
-        this.arriveT = 2.4;
-        this.arriveMsg = `${it.rescue.name} JOINS THE FLOCK! +400`;
-        g.fx.push({ x: px, y: py - 60, txt: `${it.rescue.name}!`, t: 2 });
+        this.arriveT = 3;
+        this.arriveMsg = this.objective
+          ? `♥ ${it.rescue.name} joins the flock ♥`
+          : '♥ THE FLOCK IS WHOLE ♥';
+        it.celebrate = { x: px, y: py - 30, t: 2.2 };
+        g.fx.push({ x: px, y: py - 60, txt: `♥ ${it.rescue.name}! ♥`, t: 2.2 });
+        g.hearts(px, py - 20, 10);
         g.foley.clear();
+        g.music.setIntensity(0.2 + 0.75 * (this.roster.length / (LOST.length + 1)));
+        g.music.swell();
         this.saveHi();
       }
     }
-    // bumped by a commuter: feathers, lost time, back to the entrance —
-    // with a grace period and a shooed-away camper so it can't loop
+    if (it.celebrate) {
+      it.celebrate.t -= dt;
+      if (it.celebrate.t <= 0) it.celebrate = null;
+    }
+    // brushed by a commuter: just a gentle flutter aside — no harm done
     if (it.invulnT <= 0) {
       for (const e of it.enemies) {
         if (Math.abs(px - e.x) < 15 && py - 26 < e.y - 2 && e.y - 24 < py - 2) {
-          this.time = Math.max(1, this.time - 12);
-          g.puff(px, py - 10, 7);
-          g.foley.death();
-          g.player.reset();
-          for (const e2 of it.enemies) {
-            if (Math.hypot(e2.x - g.player.x, e2.y - g.player.y) < 140) e2.respawn();
+          const away = px < e.x ? -1 : 1;
+          g.player.x = Math.max(12, Math.min(W - 12, px + away * 30));
+          if (g.player.mode === 'walk' && !g.player.supported(g.player.x, g.player.y)) {
+            g.player.mode = 'fall'; g.player.vy = 0;
           }
-          g.updateCamera(0, true);
-          it.invulnT = 1.1;
+          g.puff(px, py - 10, 4);
+          g.foley.grain();
+          it.invulnT = 0.9;
           break;
         }
       }
@@ -396,17 +428,6 @@ export class TubeFlock {
   }
   // ---------------------------------------------------------- sim
   update(dt) {
-    if (this.over) return;
-    this.timeAcc += dt;
-    while (this.timeAcc >= 0.25) {
-      this.timeAcc -= 0.25;
-      if (--this.time <= 0) {
-        this.over = true;
-        this.g.foley.death();
-        this.saveHi();
-        return;
-      }
-    }
     if (this.arriveT > 0) this.arriveT -= dt;
     if (this.interior) { this.updateInterior(dt); return; }
     if (this.travel) {
@@ -416,25 +437,19 @@ export class TubeFlock {
         this.line = this.travel.edge.line;
         this.travel = null;
         this.g.foley.step();
-        if (this.cur === this.objective.at) {
+        if (this.objective && this.cur === this.objective.at) {
           this.enterInterior(null, this.objective);
           return;
         }
       }
     }
-    // the flock trails the map cursor
+    // the flock swirls around the map cursor
     const t = performance.now() / 1000;
-    let [lx, ly] = this.travel
+    const [lx, ly] = this.travel
       ? [this.travel.ax + (this.travel.bx - this.travel.ax) * this.travel.t,
          this.travel.ay + (this.travel.by - this.travel.ay) * this.travel.t]
       : this.toXY(this.cur);
-    this.flock.forEach((b, i) => {
-      const ox = Math.sin(t * 1.3 + b.ph) * (10 + i * 5) - i * 7;
-      const oy = Math.cos(t * 1.7 + b.ph) * 7 - 14 - i * 3;
-      const k = 1 - Math.exp(-dt * Math.max(2, 6 - i));
-      b.x += (lx + ox - b.x) * k;
-      b.y += (ly + oy - b.y) * k;
-    });
+    flockStep(this.flock, dt, lx, ly - 14, t, 0.85);
   }
   // ---------------------------------------------------------- draw
   draw(ctx) {
@@ -452,18 +467,30 @@ export class TubeFlock {
     ctx.fillText('grow the flock — every lost libbird is out there somewhere', w / 2, fs * 3.1);
     ctx.globalAlpha = 1;
 
-    // objective card + meters
+    // the quest card: who's waiting, and where
     const ob = this.objective;
     ctx.font = `bold ${fs}px Georgia, serif`;
-    ctx.fillText(`FIND ${ob.name} THE ${ob.sp.toUpperCase()}  ·  ${ob.at}`, w / 2, fs * 4.6);
+    if (ob) {
+      ctx.fillText(`${ob.name} the ${ob.sp} is waiting at ${ob.at}`, w / 2, fs * 4.6);
+      ctx.font = `italic ${fs * 0.78}px Georgia, serif`;
+      ctx.globalAlpha = 0.75;
+      ctx.fillText(`…${ob.note}`, w / 2, fs * 5.7);
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.fillStyle = PALETTE.platform;
+      ctx.fillText('♥ the flock is whole — fly together as long as you like ♥', w / 2, fs * 4.6);
+      ctx.fillStyle = PALETTE.ink;
+    }
     ctx.textAlign = 'left';
     ctx.fillText(`SCORE ${this.score}`, 12, fs * 1.6);
     ctx.fillText(`HI ${this.hiscore}`, 12, fs * 2.8);
-    ctx.fillStyle = this.time <= 60 ? PALETTE.danger : PALETTE.ink;
-    ctx.textAlign = 'right';
-    ctx.fillText(`TIME ${this.time}`, w - 52, fs * 1.6);
-    ctx.fillStyle = PALETTE.ink;
-    ctx.fillText(`FLOCK ${this.roster.length}`, w - 52, fs * 2.8);
+    // the roster, roosting in the corner
+    this.roster.slice(0, 12).forEach((b, i) => {
+      drawBird(ctx, b.sp, {
+        x: w - 30 - i * 20, y: fs * 2.6, size: 20,
+        facing: -1, phase: t * 3 + i, pose: 'stand',
+      });
+    });
     ctx.textAlign = 'center';
 
     // lines
@@ -488,9 +515,11 @@ export class TubeFlock {
       ctx.fillStyle = PALETTE.paper; ctx.fill();
       ctx.lineWidth = inter ? 3.5 : 2.5;
       ctx.strokeStyle = PALETTE.ink; ctx.stroke();
-      if (name === ob.at) {
-        ctx.beginPath(); ctx.arc(x, y, 16 + Math.sin(t * 5) * 2.5, 0, Math.PI * 2);
+      if (ob && name === ob.at) {
+        ctx.beginPath(); ctx.arc(x, y, 16 + Math.sin(t * 4) * 2.5, 0, Math.PI * 2);
         ctx.strokeStyle = PALETTE.danger; ctx.lineWidth = 2.5; ctx.stroke();
+        // the waiting bird perches beside its station ring
+        drawBird(ctx, ob.sp, { x: x + 26, y: y - 12, size: 24, facing: -1, phase: t * 8, pose: 'stand' });
       }
       ctx.fillStyle = PALETTE.ink;
       const above = POS[name][1] < 30;
@@ -506,15 +535,15 @@ export class TubeFlock {
         ctx.stroke();
       }
     }
-    // the flock
+    // the flock, swirling boids-fashion
     for (let i = this.flock.length - 1; i >= 0; i--) {
       const b = this.flock[i];
       const moving = !!this.travel;
-      const facing = moving && this.travel.bx < this.travel.ax ? -1 : 1;
+      const facing = (b.vx || 0) < -8 ? -1 : 1;
       drawBird(ctx, b.sp, {
-        x: b.x, y: b.y, size: b.sp === 'wren' ? 26 : 32, facing,
+        x: b.x, y: b.y, size: BIRD_PX[b.sp] || 32, facing,
         phase: t * 14 + b.ph,
-        pose: moving ? (this.travel.by < this.travel.ay - 4 ? 'airup' : 'airdown') : 'flit',
+        pose: moving ? ((b.vy || 0) < -6 ? 'airup' : 'airdown') : 'flit',
       });
     }
     if (this.arriveT > 0) {
@@ -522,30 +551,11 @@ export class TubeFlock {
       ctx.font = `bold ${fs * 1.2}px Georgia, serif`;
       ctx.fillText(this.arriveMsg, w / 2, h * 0.66);
     }
-    if (this.over) this.drawOverPanel(ctx, fs);
-    else {
-      ctx.globalAlpha = 0.6;
-      ctx.font = `${fs * 0.72}px Georgia, serif`;
-      ctx.fillStyle = PALETTE.ink;
-      ctx.fillText('swipe / arrows: ride a line · crossed box: lift out · ESC: leave', w / 2, h - fs);
-      ctx.globalAlpha = 1;
-    }
-    ctx.restore();
-  }
-  drawOverPanel(ctx, fs) {
-    const w = this.g.cssW, h = this.g.cssH;
-    const t = performance.now() / 1000;
-    ctx.save();
-    ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(38,34,30,0.87)';
-    ctx.fillRect(0, h * 0.34, w, h * 0.32);
-    ctx.fillStyle = PALETTE.paper;
-    ctx.font = `bold ${fs * 1.6}px Georgia, serif`;
-    ctx.fillText('SERVICE TERMINATES HERE', w / 2, h * 0.45);
-    ctx.font = `${fs}px Georgia, serif`;
-    ctx.fillText(`flock of ${this.roster.length} · SCORE ${this.score} · HI ${this.hiscore}`, w / 2, h * 0.52);
-    ctx.globalAlpha = 0.4 + 0.6 * (Math.sin(t * 6) > 0 ? 1 : 0.2);
-    ctx.fillText('PRESS JUMP / TAP TO FLY HOME', w / 2, h * 0.6);
+    ctx.globalAlpha = 0.6;
+    ctx.font = `${fs * 0.72}px Georgia, serif`;
+    ctx.fillStyle = PALETTE.ink;
+    ctx.fillText('swipe or arrows to fly a line · no rush — the flock waits · ESC: home to roost', w / 2, h - fs);
+    ctx.globalAlpha = 1;
     ctx.restore();
   }
   // ------------------------------------------------ interior rendering
@@ -568,8 +578,9 @@ export class TubeFlock {
     ctx.translate(-g.camX, -g.camY);
     for (const b of it.buddies) {
       drawBird(ctx, b.sp, {
-        x: b.x, y: b.y, size: b.sp === 'wren' ? 26 : 32,
-        facing: g.player.facing || 1, phase: t * 14 + b.ph, pose: 'flit',
+        x: b.x, y: b.y, size: BIRD_PX[b.sp] || 32,
+        facing: (b.vx || 0) < -8 ? -1 : 1, phase: t * 14 + b.ph,
+        pose: Math.abs(b.vy || 0) > 30 ? ((b.vy || 0) < 0 ? 'airup' : 'airdown') : 'flit',
       });
     }
     if (it.rescue && !it.rescue.found) {
@@ -597,8 +608,8 @@ export class TubeFlock {
     ctx.textAlign = 'center';
     ctx.font = `bold ${fs}px Georgia, serif`;
     const doing = it.rescue
-      ? (it.rescue.found ? `${it.rescue.name} aboard — find the WAY OUT` : `find ${it.rescue.name} the ${it.rescue.sp}`)
-      : `change to the ${it.pendingEdge.line.toUpperCase()} line`;
+      ? (it.rescue.found ? `${it.rescue.name} is aboard — amble to the WAY OUT` : `${it.rescue.name} the ${it.rescue.sp} is here, ${it.rescue.note}`)
+      : `change to the ${it.pendingEdge.line.toUpperCase()} line — no rush`;
     ctx.fillText(`${this.cur} — ${doing}`, w / 2, fs * 1.25);
     ctx.font = `italic ${fs * 0.72}px Georgia, serif`;
     ctx.globalAlpha = 0.75;
@@ -606,12 +617,9 @@ export class TubeFlock {
     ctx.globalAlpha = 1;
     ctx.textAlign = 'left';
     ctx.font = `bold ${fs * 0.85}px Georgia, serif`;
-    ctx.fillStyle = this.time <= 60 ? PALETTE.danger : PALETTE.ink;
-    ctx.fillText(`TIME ${this.time}`, 10, fs * 1.25);
-    ctx.fillStyle = PALETTE.ink;
-    ctx.fillText(`FLOCK ${this.roster.length}`, 10, fs * 2.3);
+    ctx.fillText(`FLOCK ${this.roster.length}`, 10, fs * 1.25);
+    ctx.fillText(`SCORE ${this.score}`, 10, fs * 2.3);
     ctx.restore();
-    if (this.over) this.drawOverPanel(ctx, fs);
   }
   drawDressing(ctx, it, t) {
     const lv = it.level;

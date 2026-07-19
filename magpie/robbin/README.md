@@ -95,8 +95,10 @@ stops on game over, and toggles with **M** or the speaker button
 
 ## TUBE FLOCK (second game, from the title menu)
 
-The main dynamic is **growing the flock**: eight lost libbirds are
-scattered around a curated, real-geography slice of the Underground
+A cosy, heartwarming journey — no clock, no lives, no fail state. The
+main dynamic is **growing the flock**: twelve lost libbirds (robins,
+blackbirds, blue tits, wrens, and now crows and proper London pigeons)
+are scattered around a curated, real-geography slice of the Underground
 (Central / Northern / Jubilee around Bank and London Bridge, schematic
 lino style, no TfL branding). Fly line-to-line on the map toward the
 current lost bird; arriving at their station — or changing lines at an
@@ -114,8 +116,15 @@ Stations are dressed: name boards with line-colour bars, framed lino
 adverts, WAY OUT signage, a waiting carriage with open doors at the
 departure platform, and idle bystanders. The adversaries are ordinary
 **commuters** — bland blobby coat-people with phones, briefcases and
-brollies who trudge about, ride escalators standing, never fly, and
-knock you back to the entrance (−12 time; brief grace period after).
+brollies who trudge about, ride escalators standing, and never fly.
+Brushing one just flutters you gently aside — no harm done. Quest
+cards read like little stories ("lonely down at the platforms",
+"lost on level −2"), rescues bloom with hearts and a musical swell,
+and the flock swirls boids-fashion around you, fuller every reunion.
+The soundtrack builds with the flock: warm detuned pad washes and a
+heartbeat at first, hats, arpeggio shimmer and finally the lead
+melody fading in as intensity rises (a master lowpass opens with it;
+`Chiptune.setIntensity(0..1)` / `swell()`).
 
 Step-free access is real-ish: genuinely step-free stations (London
 Bridge, Bermondsey, Canada Water, Southwark, Liverpool Street,
