@@ -3,7 +3,7 @@
 // level, grain the rival birds will happily eat, a countdown timer and — on
 // level four — the dreaded lift. Keyboard + touch.
 
-import { PALETTE, BIRDS, drawBird, drawGrain, drawBottle, birdSVG } from './robbin-sprites.js';
+import { PALETTE, BIRDS, drawBird, drawGrain, drawBottle, drawCommuter, birdSVG } from './robbin-sprites.js';
 import { Chiptune } from './robbin-music.js';
 import { TubeFlock } from './robbin-tube.js';
 
@@ -11,7 +11,7 @@ export const TILE = 32, COLS = 20, ROWS = 15;
 export const W = COLS * TILE, H = ROWS * TILE;
 const HUD = 40;
 const GRAV = 780, JUMP_V = 268, WALK_V = 112, CLIMB_V = 84;
-const ENEMY_V = { bluetit: 56, blackbird: 66, wren: 82 };
+const ENEMY_V = { bluetit: 56, blackbird: 66, wren: 82, commuter: 46 };
 const BIRD_SIZE = { robin: 46, blackbird: 46, bluetit: 45, wren: 38 };
 export const LIFT_V = 52;
 const TIME_TICK = 0.2;           // seconds per timer unit
@@ -266,6 +266,7 @@ export class Player extends Walker {
     this.reset();
   }
   reset() {
+    this.species = this.species || 'robin';
     this.x = this.lv.spawn.x; this.y = this.lv.spawn.y;
     this.vx = 0; this.vy = 0;
     this.mode = 'walk'; this.facing = 1; this.phase = 0;
@@ -420,7 +421,7 @@ export class Player extends Walker {
       squash = [0.94, 1.08];
     }
     const blend = Math.min(1, Math.max(0, (this.walkT - 0.7) / 0.3));
-    drawBird(ctx, 'robin', { x: this.x, y: this.y, size: BIRD_SIZE.robin, facing: this.facing, phase: this.phase, pose, squash, blend });
+    drawBird(ctx, this.species, { x: this.x, y: this.y, size: BIRD_SIZE[this.species] ?? 46, facing: this.facing, phase: this.phase, pose, squash, blend });
   }
 }
 
@@ -514,15 +515,16 @@ export class Enemy extends Walker {
     const fwdOK = lv.solid(c + this.dir, r) && (this.dir > 0 ? c + 1 < COLS : c > 0);
     const roomToFly = this.dir > 0 ? c < COLS - 2 : c > 1;
     const opts = [];
+    const flier = this.t !== 'commuter';   // commuters stay firmly grounded
     if (fwdOK) opts.push('fwd', 'fwd'); // mild straight-on bias
     if (lv.ladder(c, r - 1)) opts.push('up');
     if (lv.ladder(c, r)) opts.push('down');
-    if (!fwdOK && roomToFly) opts.push('fly');   // glide off the edge
+    if (!fwdOK && roomToFly && flier) opts.push('fly');   // glide off the edge
     if (!opts.length) { this.dir = -this.dir; this.straightT = 0; return; }
     const pick = opts[Math.floor(this.rng() * opts.length)];
     if (pick === 'fwd') {
       // once in a while, a little flutter-hop along the way
-      if (this.rng() < 0.04) { this.mode = 'fly'; this.vy = -170; this.straightT = 0; }
+      if (flier && this.rng() < 0.04) { this.mode = 'fly'; this.vy = -170; this.straightT = 0; }
       return;
     }
     this.straightT = 0;
@@ -567,6 +569,14 @@ export class Enemy extends Walker {
   }
   hitbox() { return { x0: this.x - 8, x1: this.x + 8, y0: this.y - 24, y1: this.y - 2 }; }
   draw(ctx) {
+    if (this.t === 'commuter') {
+      // commuters trudge; on an escalator they stand and ride
+      drawCommuter(ctx, {
+        x: this.x, y: this.y, size: 52, facing: this.dir, phase: this.phase,
+        pose: this.mode === 'climb' ? 'ride' : 'walk', variant: this.def.v ?? 0,
+      });
+      return;
+    }
     const pose = this.mode === 'fly' ? (this.vy < 0 ? 'airup' : 'airdown')
       : this.peckT > 0 ? 'peck' : this.mode === 'climb' ? 'climb'
       : this.straightT > 1.1 ? 'flit' : 'walk';
@@ -754,7 +764,12 @@ class Game {
       const k = btn.dataset.k;
       const on = e => {
         e.preventDefault(); this.input[k] = 1;
-        if (k === 'jump') this.jumpTap = true;
+        if (k === 'jump') {
+          this.jumpTap = true;
+          // the tube's own jump handling (game-over dismiss etc) must hear
+          // the TOUCH button too, not just the keyboard
+          if (this.state === 'tube') this.tube.handleJump();
+        }
         this.foley.ensure();
       };
       const off = e => { e.preventDefault(); this.input[k] = 0; };

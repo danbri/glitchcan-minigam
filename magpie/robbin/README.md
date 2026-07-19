@@ -95,22 +95,36 @@ stops on game over, and toggles with **M** or the speaker button
 
 ## TUBE FLOCK (second game, from the title menu)
 
-The libbirds — the four animated vector birds — flit around a curated,
-real-geography slice of the Underground (Central / Northern / Jubilee
-around Bank and London Bridge, drawn schematically in the lino style;
-no TfL branding). The flock roosts at a station with a journey in mind
-— the opening trip is Liverpool Street → Bermondsey — and you swipe or
-arrow along lines to travel. **Changing lines at an interchange drops
-you inside the station**: a full-screen platformer cut with the depths
-London stations really have (Bank: street · ticket hall · concourse ·
-platforms; London Bridge: three levels), joined by fallible verticals —
-the lift is out whenever the map says so, one escalator is usually
-running against you (climb it at half speed; ride the right way at
-1.6×), stairs never fail, and commuter birds knock you back to the
-entrance. Reach the TO TRAINS gate on the destination line's level to
-board. Grain inside is worth 50. Journeys score 500 + remaining time
-and top the clock up; the service terminates when time runs out.
-Separate hi-score.
+The main dynamic is **growing the flock**: eight lost libbirds are
+scattered around a curated, real-geography slice of the Underground
+(Central / Northern / Jubilee around Bank and London Bridge, schematic
+lino style, no TfL branding). Fly line-to-line on the map toward the
+current lost bird; arriving at their station — or changing lines at an
+interchange — drops you **inside the station**: a full-screen
+platformer cut with the depths London stations really have, in four
+layout families (Bank's four levels down; big three-level halls;
+old Central-line street + deep platforms; modern twin-escalator
+step-free boxes). Each interior you play a randomly chosen flock
+member while the rest flutter along as AI buddies — the more you
+rescue, the fuller the screens get. Rescued birds join for +400 and
++150 time; reach the waiting train (line changes) or the WAY OUT
+(rescues, locked until the bird is found) to move on.
+
+Stations are dressed: name boards with line-colour bars, framed lino
+adverts, WAY OUT signage, a waiting carriage with open doors at the
+departure platform, and idle bystanders. The adversaries are ordinary
+**commuters** — bland blobby coat-people with phones, briefcases and
+brollies who trudge about, ride escalators standing, never fly, and
+knock you back to the entrance (−12 time; brief grace period after).
+
+Step-free access is real-ish: genuinely step-free stations (London
+Bridge, Bermondsey, Canada Water, Southwark, Liverpool Street,
+Moorgate, Waterloo, Borough) never lose their lifts and all their
+escalators run your way; elsewhere lifts go out (crossed box on the
+map) and one escalator runs against you — climb it at half speed,
+ride the right way at 1.6×, stairs never fail (Holborn, true to
+life, has no lift at all). The service terminates when time runs
+out. Separate hi-score.
 
 ## Implementation notes
 

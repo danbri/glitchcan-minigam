@@ -382,6 +382,67 @@ export function drawBottle(ctx, x, y, cream = true) {
   ctx.restore();
 }
 
+// ------------------------------------------------------------ commuters
+// Ordinary human commuters: blobby coat, small blank head, deliberately
+// bland next to the big-eyed birds. Feet baseline y=92 in a 100-box, faces
+// right. pose: 'walk' | 'stand' | 'ride' (escalators: feet together, still).
+const COATS = ['#4a5064', '#6b5a46', '#7c7a74', '#5a6652'];
+export function drawCommuter(ctx, { x, y, size = 48, facing = 1, phase = 0, pose = 'walk', variant = 0 }) {
+  const s = size / 100;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(facing < 0 ? -s : s, s);
+  ctx.translate(-50, -92);
+  const coat = COATS[((variant % COATS.length) + COATS.length) % COATS.length];
+  // legs
+  const swing = pose === 'walk' ? Math.sin(phase) * 0.42 : 0.05;
+  ctx.strokeStyle = '#2c2c30';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  for (const [hx, sgn] of [[44, 1], [57, -1]]) {
+    const a = pose === 'ride' ? 0 : swing * sgn;
+    ctx.beginPath();
+    ctx.moveTo(hx, 64);
+    ctx.lineTo(hx + Math.sin(a) * 27, 64 + Math.cos(a) * 27);
+    ctx.stroke();
+  }
+  // gentle idle sway
+  if (pose === 'stand') ctx.translate(Math.sin(phase * 0.7) * 1.2, 0);
+  if (pose === 'walk') ctx.translate(0, Math.sin(phase * 2) * 1.1);
+  // coat
+  ctx.fillStyle = coat;
+  ctx.beginPath();
+  ctx.moveTo(34, 68);
+  ctx.quadraticCurveTo(29, 32, 50, 25);
+  ctx.quadraticCurveTo(71, 32, 66, 68);
+  ctx.quadraticCurveTo(50, 75, 34, 68);
+  ctx.closePath(); ctx.fill();
+  // blank head + hair smudge — no face, no fuss
+  ctx.fillStyle = '#d9c6ab';
+  ctx.beginPath(); ctx.arc(52, 17, 9, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(44,44,48,0.85)';
+  ctx.beginPath(); ctx.arc(50.5, 13.5, 8.2, Math.PI * 0.95, Math.PI * 2.05); ctx.fill();
+  // accessory
+  ctx.strokeStyle = coat;
+  ctx.lineWidth = 4.5;
+  const kind = variant % 3;
+  if (kind === 0) {          // phone
+    ctx.beginPath(); ctx.moveTo(63, 46); ctx.lineTo(72, 34); ctx.stroke();
+    ctx.fillStyle = '#2c2c30';
+    ctx.save(); ctx.translate(73, 31); ctx.rotate(0.5); ctx.fillRect(-2.5, -5, 5, 10); ctx.restore();
+  } else if (kind === 1) {   // briefcase
+    ctx.beginPath(); ctx.moveTo(64, 48); ctx.lineTo(67, 60); ctx.stroke();
+    ctx.fillStyle = '#3d3428';
+    ctx.fillRect(60, 60, 15, 11);
+  } else {                   // brolly
+    ctx.beginPath(); ctx.moveTo(63, 50); ctx.lineTo(71, 26); ctx.stroke();
+    ctx.strokeStyle = '#2c2c30';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(71, 26, 7, Math.PI * 0.9, Math.PI * 1.9); ctx.stroke();
+  }
+  ctx.restore();
+}
+
 // ------------------------------------------------------------ static SVG
 function svgLayers(layers) {
   const parts = [];
