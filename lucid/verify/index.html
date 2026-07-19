@@ -356,7 +356,10 @@
       const q = state.search.toLowerCase();
       state.list = state.scenes.filter(s =>
         (state.cat === 'all' || s.category === state.cat) &&
-        (!q || (s.title + ' ' + s.subtitle + ' ' + s.path).toLowerCase().includes(q)));
+        (!q || (s.title + ' ' + s.subtitle + ' ' + s.path).toLowerCase().includes(q)))
+        // Curated scenes (those with a focus note — the interop stress tests)
+        // sort to the top so the highest-signal comparisons are one tap away.
+        .sort((a, b) => (b.focus ? 1 : 0) - (a.focus ? 1 : 0));
       renderList();
     }
 
@@ -365,8 +368,8 @@
       $('scene-list').innerHTML = state.list.map((s, i) => {
         const flagged = hasAnswers(s.id);
         return `<button class="scene-item" data-i="${i}">
-          <span class="si-title">${flagged ? '🚩 ' : ''}${s.title}</span>
-          <span class="si-sub small muted">${s.subtitle || ''}</span>
+          <span class="si-title">${flagged ? '🚩 ' : ''}${s.focus ? '★ ' : ''}${s.title}</span>
+          <span class="si-sub small muted">${s.focus || s.subtitle || ''}</span>
           <span class="si-cat small">${s.category}</span>
         </button>`;
       }).join('') || '<p class="small muted">No scenes match.</p>';

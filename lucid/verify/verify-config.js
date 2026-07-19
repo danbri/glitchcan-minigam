@@ -30,6 +30,12 @@ export const VERIFY_CONFIG = {
   // `paths` are relative to lucid/scenes/.
   scenes: [
     {
+      id: 'walk-rig',
+      path: 'animation/walk-rig.json',
+      title: 'Walk cycle (rig)',
+      focus: 'WebGPU rig animation test — hit Animate. The Stinkyfish legs should now move in step with Mayfly (rig eval was recently wired into the WebGPU path). If the WebGPU side is frozen while Mayfly walks, the rig gap is not fully closed.',
+    },
+    {
       id: 'sphere',
       path: 'primitives/sphere.json',
       title: 'Single sphere',
