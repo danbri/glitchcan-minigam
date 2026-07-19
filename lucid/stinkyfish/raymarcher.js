@@ -94,6 +94,7 @@ export class StinkyfishRenderer {
     // Display settings (Mayfly parity)
     this.showGroundPlane = false;
     this.showAxes = false;
+    this.showEdges = true;           // Silhouette edge darkening (parity with Mayfly)
     this.groundOpacity = 0.6;        // Base ground opacity (0-1)
     this.groundOpacityTarget = 0.6;  // Target for animation
 
@@ -190,10 +191,12 @@ export class StinkyfishRenderer {
   // sets a property the render loop reads into a uniform every frame.
   setGroundPlane(visible) { this.showGroundPlane = !!visible; }
   setAxes(visible) { this.showAxes = !!visible; }
+  setEdges(visible) { this.showEdges = !!visible; }
   setGroundOpacity(v) { this.groundOpacity = v; this.groundOpacityTarget = v; }
   setDisplayOptions(opts = {}) {
     if (opts.groundPlane !== undefined) this.setGroundPlane(opts.groundPlane);
     if (opts.axes !== undefined) this.setAxes(opts.axes);
+    if (opts.edges !== undefined) this.setEdges(opts.edges);
     if (opts.groundOpacity !== undefined) this.setGroundOpacity(opts.groundOpacity);
   }
 
@@ -640,7 +643,7 @@ struct Uniforms {
   showGroundPlane: f32,
   showAxes: f32,
   groundOpacity: f32,
-  _pad4b: f32,
+  showEdges: f32,       // reused from a former pad slot (parity with Mayfly)
   _pad4c: f32,
   bgColor: vec3f,
   frame: f32,           // iFrame (frame count since start)
@@ -877,10 +880,12 @@ fn raymarch(ro: vec3f, rd: vec3f, uv: vec2f) -> vec4f {
       let diff = max(dot(sceneHitNormal, light), 0.0);
       let spec = pow(max(dot(reflect(-light, sceneHitNormal), -rd), 0.0), u.shininess);
       color = sceneHitColor * (u.ambient + diff * u.diffuse) + vec3f(spec * u.specular);
-      // Silhouette edge darkening — mirrors Mayfly (u_showEdges, default on).
+      // Silhouette edge darkening — mirrors Mayfly (showEdges, default on).
       // Without this Stinkyfish read noticeably brighter/flatter than Mayfly.
-      let edge = pow(1.0 - abs(dot(sceneHitNormal, -rd)), 2.0);
-      color = mix(color, vec3f(0.0), edge * 0.7);
+      if (u.showEdges > 0.5) {
+        let edge = pow(1.0 - abs(dot(sceneHitNormal, -rd)), 2.0);
+        color = mix(color, vec3f(0.0), edge * 0.7);
+      }
     }
     return vec4f(color, sceneHitT);
   }
@@ -1007,7 +1012,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
       lt.lightDir[0], lt.lightDir[1], lt.lightDir[2], lt.ambient,
       lt.diffuse, lt.specular, lt.shininess, this.showGroundPlane ? 1.0 : 0.0,
       // Display settings
-      this.showAxes ? 1.0 : 0.0, this.groundOpacity, 0, 0,  // showAxes + groundOpacity + 2 pads
+      this.showAxes ? 1.0 : 0.0, this.groundOpacity, this.showEdges ? 1.0 : 0.0, 0,  // showAxes + groundOpacity + showEdges + pad
       rs.bgColor[0], rs.bgColor[1], rs.bgColor[2], this.frameCount, // bgColor + frame
       m.x, m.y, m.clickX, m.clickY,  // mouse (iMouse style: xy=current, zw=click)
     ]);

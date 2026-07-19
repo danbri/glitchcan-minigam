@@ -268,6 +268,7 @@ export class LucidRenderer extends HTMLElement {
   // `ground-plane` / `axes` attributes (e.g. <lucid-renderer ground-plane="false">).
   setGroundPlane(visible) { this._renderer?.setGroundPlane?.(visible); }
   setAxes(visible) { this._renderer?.setAxes?.(visible); }
+  setEdges(visible) { this._renderer?.setEdges?.(visible); }
   setDisplayOptions(opts) { this._renderer?.setDisplayOptions?.(opts); }
 
   _applyDisplayAttributes() {

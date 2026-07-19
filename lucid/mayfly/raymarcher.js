@@ -359,10 +359,12 @@ export class SimpleRaymarcher {
   // sets a property the render loop reads into a uniform every frame.
   setGroundPlane(visible) { this.showGroundPlane = !!visible; }
   setAxes(visible) { this.showAxes = !!visible; }
+  setEdges(visible) { this.showEdges = !!visible; }
   setGroundOpacity(v) { this.groundOpacity = v; this.groundOpacityTarget = v; }
   setDisplayOptions(opts = {}) {
     if (opts.groundPlane !== undefined) this.setGroundPlane(opts.groundPlane);
     if (opts.axes !== undefined) this.setAxes(opts.axes);
+    if (opts.edges !== undefined) this.setEdges(opts.edges);
     if (opts.groundOpacity !== undefined) this.setGroundOpacity(opts.groundOpacity);
   }
 
