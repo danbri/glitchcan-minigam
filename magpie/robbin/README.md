@@ -37,11 +37,31 @@ Classic egg-run rules:
   with an up-only lift (ride past the top and you're done for).
   Levels then loop, faster each time.
 
+## Mobile-first presentation
+
+The canvas fills the whole viewport and a camera follows Robbin, zoomed so
+characters stay big and cartoony (~8.5 tiles across the short screen edge,
+clamped between fit-whole-level and full-bleed). On phones that means huge
+birds and a panning view; on wide desktops most of the level fits. The HUD
+floats as a translucent band, touch controls float over the play area, and
+cartoon touches — eye glints, squash-and-stretch on jumps and landings —
+keep it lively.
+
+## Soundtrack
+
+`robbin-music.js` is a procedural chiptune: an 8-bar C–Am–F–G loop at
+112 BPM with square lead (detuned double, vibrato, dotted-eighth echo),
+16th-note arpeggio shimmer, triangle bass over a sine sub-octave, noise
+hats and a sine kick. Pure WebAudio, no samples. It ducks when you die,
+stops on game over, and toggles with **M** or the speaker button
+(persisted in localStorage).
+
 ## Controls
 
 - **Keyboard:** ←→ / AD run · ↑↓ / WS ladders · Space / Z jump ·
-  P pause · Enter start
-- **Touch:** on-screen d-pad + jump button (shown on coarse-pointer devices).
+  P pause · M music · Enter start
+- **Touch:** translucent d-pad + jump button floating over the game
+  (shown on coarse-pointer devices).
 
 ## Implementation notes
 

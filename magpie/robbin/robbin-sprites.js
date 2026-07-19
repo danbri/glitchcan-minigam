@@ -39,7 +39,8 @@ export const BIRDS = {
       { id: 'head', pivot: [58, 38], layers: [
         { d: 'M45,34 C45,22 55,13 66,14 C76,15 82,23 82,31 C82,40 74,46 64,46 C53,46 45,43 45,34 Z', fill: '#26221e' },
         { d: 'M61,23 C71,20 79,28 79,35 C78,41 71,46 63,45 C55,43 52,37 53,30 C55,26 58,24 61,23 Z', fill: '#d94327' },
-        { circle: [68, 27, 3], fill: '#1b1713' },
+        { circle: [68, 27, 3.4], fill: '#1b1713' },
+        { circle: [69.2, 25.9, 1.1], fill: '#f7f2e6' },
       ], children: [
         { id: 'beakTop', layers: [{ d: 'M79,25 L95,30 L79,35 Z', fill: '#1b1713' }] },
         { id: 'beakLower', pivot: [80, 33], layers: [{ d: 'M79,32 L93,34 L79,39 Z', fill: '#1b1713' }] },
@@ -64,7 +65,8 @@ export const BIRDS = {
       { id: 'head', pivot: [60, 34], layers: [
         { d: 'M47,32 C48,20 58,12 68,13 C78,15 84,23 84,31 C83,40 75,46 65,46 C55,46 47,41 47,32 Z', fill: '#191919' },
         { ring: [71, 27, 3.6], stroke: '#a4b455', width: 1.8 },
-        { circle: [71, 27, 1.7], fill: '#0c0c0c' },
+        { circle: [71, 27, 2.2], fill: '#0c0c0c' },
+        { circle: [71.9, 26.1, 0.9], fill: '#f7f2e6' },
       ], children: [
         { id: 'beakTop', layers: [{ d: 'M81,24 L97,30 L81,35 Z', fill: '#eebc1e' }] },
         { id: 'beakLower', pivot: [82, 33], layers: [{ d: 'M81,32 L95,34 L81,39 Z', fill: '#d8a41a' }] },
@@ -118,7 +120,8 @@ export const BIRDS = {
       ]},
       { id: 'head', pivot: [58, 38], layers: [
         { d: 'M48,36 C48,26 56,19 65,20 C73,21 78,28 78,34 C78,42 71,47 62,47 C54,46 48,43 48,36 Z', fill: '#a07a63' },
-        { circle: [66, 31, 2.4], fill: '#241a12' },
+        { circle: [66, 31, 2.8], fill: '#241a12' },
+        { circle: [66.9, 30.1, 0.9], fill: '#f7f2e6' },
       ], children: [
         { id: 'beakTop', layers: [{ d: 'M77,29 L91,33 L77,37 Z', fill: '#3d2b20' }] },
         { id: 'beakLower', pivot: [77, 35], layers: [{ d: 'M77,34 L89,36 L77,40 Z', fill: '#3d2b20' }] },
@@ -213,8 +216,9 @@ function drawLeg(ctx, hx, hy, swing, leg, lift = 0) {
  * x,y = feet baseline centre in canvas px. size = height of the 100-box in px.
  * pose: 'stand' | 'walk' | 'air' | 'climb' | 'peck' | 'dead'
  * ('peck' keeps the legs walking — the head dips in passing, Pac-Man style.)
+ * squash: [sx, sy] cartoon squash & stretch, anchored at the feet.
  */
-export function drawBird(ctx, name, { x, y, size = 44, facing = 1, phase = 0, pose = 'stand', alpha = 1 }) {
+export function drawBird(ctx, name, { x, y, size = 44, facing = 1, phase = 0, pose = 'stand', alpha = 1, squash = null }) {
   const spec = BIRDS[name];
   if (!spec) return;
   const s = size / 100;
@@ -222,6 +226,7 @@ export function drawBird(ctx, name, { x, y, size = 44, facing = 1, phase = 0, po
   ctx.globalAlpha = alpha;
   ctx.translate(x, y);
   ctx.scale(facing < 0 ? -s : s, s);
+  if (squash) ctx.scale(squash[0], squash[1]);
   const dead = pose === 'dead';
   if (dead) { ctx.rotate(Math.PI); ctx.translate(-100, -60); pose = 'stand'; }
   ctx.translate(-50, -92);

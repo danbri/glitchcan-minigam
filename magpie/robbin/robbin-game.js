@@ -4,6 +4,7 @@
 // level four — the dreaded lift. Keyboard + touch.
 
 import { PALETTE, BIRDS, drawBird, drawEgg, drawGrain, birdSVG } from './robbin-sprites.js';
+import { Chiptune } from './robbin-music.js';
 
 const TILE = 32, COLS = 20, ROWS = 15;
 const W = COLS * TILE, H = ROWS * TILE, HUD = 40;
@@ -227,6 +228,7 @@ class Player extends Walker {
     this.vx = 0; this.vy = 0;
     this.mode = 'walk'; this.facing = 1; this.phase = 0;
     this.onLift = null;
+    this.squashT = 0;
   }
   ladderGrab(dirDown) {
     // find a ladder cell around body (or under feet when climbing down)
@@ -241,6 +243,7 @@ class Player extends Walker {
   }
   update(dt, input, game) {
     const lv = this.lv;
+    this.squashT = Math.max(0, this.squashT - dt);
     if (this.mode === 'walk') {
       this.vx = (input.right - input.left) * WALK_V;
       if (this.vx) { this.facing = Math.sign(this.vx); this.phase += dt * 14; }
@@ -302,6 +305,7 @@ class Player extends Walker {
           if (yb < prevY) continue;
           if (this.lv.solid(colOf(this.x - 6), rb) || this.lv.solid(colOf(this.x + 6), rb)) {
             this.y = yb; this.vy = 0; this.vx = 0; this.mode = 'walk'; this.onLift = null;
+            this.squashT = 0.16;
             break;
           }
         }
@@ -310,6 +314,7 @@ class Player extends Walker {
           for (const p of lv.lift.paddles) {
             if (prevY <= p.prevY + 2 && this.y >= p.y) {
               this.y = p.y; this.vy = 0; this.vx = 0; this.mode = 'walk'; this.onLift = p;
+              this.squashT = 0.16;
               break;
             }
           }
@@ -328,7 +333,15 @@ class Player extends Walker {
     const pose = dead ? 'dead' : this.mode === 'climb' ? 'climb'
       : this.mode !== 'walk' ? 'air'
       : Math.abs(this.vx) > 1 ? 'walk' : 'stand';
-    drawBird(ctx, 'robin', { x: this.x, y: this.y, size: BIRD_SIZE.robin, facing: this.facing, phase: this.phase, pose });
+    // cartoon squash & stretch: flatten on landing, lengthen in flight
+    let squash = null;
+    if (this.squashT > 0) {
+      const k = this.squashT / 0.16;
+      squash = [1 + 0.18 * k, 1 - 0.22 * k];
+    } else if (pose === 'air' && Math.abs(this.vy) > 90) {
+      squash = [0.94, 1.08];
+    }
+    drawBird(ctx, 'robin', { x: this.x, y: this.y, size: BIRD_SIZE.robin, facing: this.facing, phase: this.phase, pose, squash });
   }
 }
 
@@ -449,23 +462,52 @@ class Game {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    const ss = Math.min(2, window.devicePixelRatio || 1);
-    canvas.width = W * ss; canvas.height = (H + HUD) * ss;
-    this.ctx.scale(ss, ss);
+    this.dpr = Math.min(2, window.devicePixelRatio || 1);
+    this.camX = 0; this.camY = 0;
+    addEventListener('resize', () => this.resize());
+    this.resize();
     this.foley = new Foley();
+    this.music = new Chiptune(() => { this.foley.ensure(); return this.foley.ctx; });
+    this.music.setMuted(localStorage.getItem('robbin.mute') === '1');
     this.input = { left: 0, right: 0, up: 0, down: 0, jump: 0 };
     this.state = 'title';
     this.hiscore = Number(localStorage.getItem('robbin.hiscore') || 0);
     this.fx = [];
     this.bindInput();
+    this.updateMuteButton();
     this.last = performance.now();
     requestAnimationFrame(t => this.frame(t));
+  }
+  // full-viewport canvas + a camera zoomed for chunky cartoon characters:
+  // never wider than the level needs (contain), never past full-bleed (cover),
+  // aiming for ~8.5 tiles across the short side of the screen
+  resize() {
+    this.cssW = window.innerWidth; this.cssH = window.innerHeight;
+    this.canvas.width = Math.round(this.cssW * this.dpr);
+    this.canvas.height = Math.round(this.cssH * this.dpr);
+    const contain = Math.min(this.cssW / W, this.cssH / H);
+    const cover = Math.max(this.cssW / W, this.cssH / H);
+    const tileTarget = (Math.min(this.cssW, this.cssH) / 8.5) / TILE;
+    this.scale = Math.min(Math.max(contain, tileTarget), cover);
+    this.viewW = this.cssW / this.scale;
+    this.viewH = this.cssH / this.scale;
+    this.offX = Math.max(0, (this.cssW - W * this.scale) / 2);
+    this.offY = Math.max(0, (this.cssH - H * this.scale) / 2);
+  }
+  updateCamera(dt, snap = false) {
+    if (!this.player) return;
+    const tx = Math.max(0, Math.min(this.player.x - this.viewW / 2, W - this.viewW));
+    const ty = Math.max(0, Math.min(this.player.y - 24 - this.viewH / 2, H - this.viewH));
+    const k = snap ? 1 : 1 - Math.exp(-dt * 6);
+    this.camX += (tx - this.camX) * k;
+    this.camY += (ty - this.camY) * k;
   }
 
   // ------------------------------------------------ state transitions
   newGame() {
     this.score = 0; this.lives = 5; this.levelIndex = 0; this.nextLifeAt = EXTRA_LIFE_EVERY;
     this.foley.ensure(); this.foley.start();
+    this.music.start();
     this.loadLevel();
     document.getElementById('title').classList.add('hidden');
     document.getElementById('gameover').classList.add('hidden');
@@ -479,6 +521,7 @@ class Game {
     this.timeAcc = 0;
     this.fx = [];
     this.state = 'intro'; this.stateT = 1.1;
+    this.updateCamera(0, true);
   }
   addScore(n, x, y) {
     this.score += n;
@@ -497,11 +540,13 @@ class Game {
     if (this.state !== 'play') return;
     this.state = 'dying'; this.stateT = 1.3;
     this.foley.death();
+    this.music.duck(1.6);
     this.player.vy = -180;
     this.deathWhy = why;
   }
   gameOver() {
     this.state = 'gameover';
+    this.music.stop();
     const el = document.getElementById('gameover');
     el.querySelector('.finalscore').textContent =
       `SCORE ${this.score}   ·   HI ${this.hiscore}`;
@@ -520,6 +565,7 @@ class Game {
     addEventListener('keydown', e => {
       if (e.key === 'Enter') { this.pressStart(); return; }
       if (e.key === 'p' || e.key === 'P') { this.togglePause(); return; }
+      if (e.key === 'm' || e.key === 'M') { this.toggleMute(); return; }
       const k = keymap[e.key];
       if (k) {
         this.input[k] = 1;
@@ -545,6 +591,22 @@ class Game {
     for (const id of ['title', 'gameover']) {
       document.getElementById(id).addEventListener('pointerdown', () => this.pressStart());
     }
+    document.getElementById('mute').addEventListener('pointerdown', e => {
+      e.stopPropagation(); this.toggleMute();
+    });
+  }
+  toggleMute() {
+    const m = !this.music.muted;
+    this.music.setMuted(m);
+    localStorage.setItem('robbin.mute', m ? '1' : '0');
+    this.updateMuteButton();
+  }
+  updateMuteButton() {
+    const b = document.getElementById('mute');
+    if (b) {
+      b.textContent = this.music.muted ? '\u{1F507}' : '\u{1F50A}';
+      b.setAttribute('aria-label', this.music.muted ? 'Unmute music' : 'Mute music');
+    }
   }
   pressStart() {
     if (this.state === 'title' || this.state === 'gameover') this.newGame();
@@ -563,6 +625,7 @@ class Game {
     requestAnimationFrame(tt => this.frame(tt));
   }
   update(dt) {
+    if (this.level && this.player) this.updateCamera(dt);
     if (this.state === 'intro') {
       this.stateT -= dt;
       if (this.stateT <= 0) this.state = 'play';
@@ -650,28 +713,27 @@ class Game {
   // ------------------------------------------------ drawing
   draw() {
     const ctx = this.ctx;
-    ctx.fillStyle = PALETTE.paperHi;
-    ctx.fillRect(0, 0, W, HUD);
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.fillStyle = PALETTE.paper;
-    ctx.fillRect(0, HUD, W, H);
-    ctx.save();
-    ctx.translate(0, HUD);
+    ctx.fillRect(0, 0, this.cssW, this.cssH);
 
     if (this.state === 'title' || this.state === 'gameover') {
       this.drawBackdrop(ctx);
-      ctx.restore();
       this.drawHUDBar();
       return;
     }
 
+    // world pass: camera-zoomed, fills the whole screen
+    ctx.save();
+    ctx.translate(this.offX, this.offY);
+    ctx.scale(this.scale, this.scale);
+    ctx.translate(-this.camX, -this.camY);
     this.drawLevel(ctx);
     const lv = this.level;
     for (const it of lv.eggs.values()) drawEgg(ctx, it.c * TILE + 16, (it.r + 1) * TILE);
     for (const it of lv.grain.values()) drawGrain(ctx, it.c * TILE + 16, (it.r + 1) * TILE);
     for (const e of this.enemies) e.draw(ctx);
     this.player.draw(ctx, this.state === 'dying');
-
-    // floating score text
     ctx.font = 'bold 13px Georgia, serif';
     ctx.textAlign = 'center';
     for (const f of this.fx) {
@@ -680,36 +742,40 @@ class Game {
       ctx.fillText(f.txt, f.x, f.y - (0.9 - f.t) * 24);
     }
     ctx.globalAlpha = 1;
+    ctx.restore();
 
     if (this.state === 'intro') this.banner(ctx, this.level.def.name, `LEVEL ${this.levelIndex + 1}`);
     if (this.state === 'leveldone') this.banner(ctx, 'EGGS COLLECTED!', `BONUS ${this.time}`);
     if (this.state === 'paused') this.banner(ctx, 'PAUSED', 'press P');
-    ctx.restore();
     this.drawHUDBar();
   }
   banner(ctx, big, small) {
     ctx.save();
-    ctx.fillStyle = 'rgba(38,34,30,0.82)';
-    const bw = 320, bh = 84;
-    ctx.fillRect((W - bw) / 2, H / 2 - bh / 2, bw, bh);
+    const bw = Math.min(400, this.cssW - 32), bh = 100;
+    const cy = this.cssH * 0.44;
+    const fs = Math.min(30, bw / 12);
+    ctx.fillStyle = 'rgba(38,34,30,0.85)';
+    ctx.fillRect((this.cssW - bw) / 2, cy - bh / 2, bw, bh);
     ctx.fillStyle = PALETTE.paper;
     ctx.textAlign = 'center';
-    ctx.font = 'bold 26px Georgia, serif';
-    ctx.fillText(big, W / 2, H / 2 - 4);
-    ctx.font = '16px Georgia, serif';
-    ctx.fillText(small, W / 2, H / 2 + 24);
+    ctx.font = `bold ${fs}px Georgia, serif`;
+    ctx.fillText(big, this.cssW / 2, cy - 4);
+    ctx.font = `${fs * 0.62}px Georgia, serif`;
+    ctx.fillText(small, this.cssW / 2, cy + fs);
     ctx.restore();
   }
   drawBackdrop(ctx) {
     // quiet parade of the cast along the bottom while overlays are up
     const t = this.last / 1000;
     const names = ['blackbird', 'bluetit', 'wren', 'robin'];
+    const size = Math.max(60, Math.min(96, this.cssH * 0.12));
+    const span = this.cssW + size * 3;
     names.forEach((n, i) => {
-      const x = ((t * 34 + i * 170) % (W + 140)) - 70;
-      drawBird(ctx, n, { x, y: H - 8, size: n === 'wren' ? 40 : 48, facing: 1, phase: t * 12, pose: 'walk' });
+      const x = ((t * 60 + i * span / 4) % span) - size * 1.5;
+      drawBird(ctx, n, { x, y: this.cssH - 14, size: n === 'wren' ? size * 0.85 : size, facing: 1, phase: t * 12, pose: 'walk' });
     });
     ctx.fillStyle = PALETTE.platform;
-    ctx.fillRect(0, H - 8, W, 8);
+    ctx.fillRect(0, this.cssH - 12, this.cssW, 12);
   }
   drawLevel(ctx) {
     const lv = this.level;
@@ -779,25 +845,42 @@ class Game {
   }
   drawHUDBar() {
     const ctx = this.ctx;
+    const inGame = this.state !== 'title' && this.state !== 'gameover';
+    const hudH = Math.max(38, Math.min(52, this.cssH * 0.07));
+    const fs = Math.max(13, Math.min(19, this.cssW / 34));
+    const ty = hudH * 0.62;
     ctx.save();
+    ctx.fillStyle = 'rgba(247,242,230,0.9)';
+    ctx.fillRect(0, 0, this.cssW, hudH);
+    ctx.strokeStyle = 'rgba(38,34,30,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, hudH - 0.5); ctx.lineTo(this.cssW, hudH - 0.5); ctx.stroke();
     ctx.fillStyle = PALETTE.hudText;
-    ctx.font = 'bold 15px Georgia, serif';
+    ctx.font = `bold ${fs}px Georgia, serif`;
     ctx.textAlign = 'left';
     const score = this.score ?? 0, time = this.time ?? 0;
-    ctx.fillText(`SCORE ${String(score).padStart(6, '0')}`, 10, 25);
-    ctx.fillText(`HI ${String(this.hiscore).padStart(6, '0')}`, 160, 25);
-    if (this.state !== 'title' && this.state !== 'gameover') {
+    let x = 12;
+    ctx.fillText(`SCORE ${String(score).padStart(6, '0')}`, x, ty);
+    x += fs * 9;
+    if (this.cssW >= 620) {
+      ctx.fillText(`HI ${String(this.hiscore).padStart(6, '0')}`, x, ty);
+      x += fs * 7;
+    }
+    if (inGame) {
       ctx.fillStyle = time <= 100 ? PALETTE.danger : PALETTE.hudText;
-      ctx.fillText(`TIME ${String(Math.max(0, time)).padStart(3, '0')}`, 292, 25);
+      ctx.fillText(`TIME ${String(Math.max(0, time)).padStart(3, '0')}`, x, ty);
+      x += fs * 6;
       ctx.fillStyle = PALETTE.hudText;
-      ctx.fillText(`L${this.levelIndex + 1}`, 396, 25);
+      ctx.fillText(`L${this.levelIndex + 1}`, x, ty);
+      // lives roost on the right, leaving room for the mute button
+      const liveSize = fs * 1.7;
       for (let i = 0; i < Math.min(6, this.lives - 1); i++) {
-        drawBird(ctx, 'robin', { x: 448 + i * 30, y: 33, size: 26, facing: 1, pose: 'stand' });
+        drawBird(ctx, 'robin', {
+          x: this.cssW - 56 - i * liveSize * 0.72, y: hudH * 0.82,
+          size: liveSize, facing: -1, pose: 'stand',
+        });
       }
     }
-    ctx.strokeStyle = 'rgba(38,34,30,0.4)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(0, HUD - 0.5); ctx.lineTo(W, HUD - 0.5); ctx.stroke();
     ctx.restore();
   }
 }

@@ -15,112 +15,113 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
     height: 100%;
-    background: var(--ink);
+    background: var(--paper);
     font-family: Georgia, 'Times New Roman', serif;
     color: var(--ink);
     overflow: hidden;
     touch-action: none;
     -webkit-user-select: none;
     user-select: none;
+    overscroll-behavior: none;
   }
-  #stage {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    padding: 0.4rem;
-  }
-  #frame {
-    position: relative;
-    aspect-ratio: 640 / 520;
-    max-width: 100%;
-    max-height: 100%;
-    flex: 0 1 auto;
-    min-height: 0;
-  }
+  #stage { position: fixed; inset: 0; }
   canvas {
-    display: block;
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
-    background: var(--paper);
-    border: 3px solid var(--ink);
-    border-radius: 4px;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+    display: block;
   }
   .overlay {
     position: absolute;
-    inset: 3px;
+    inset: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.6rem;
+    gap: 0.7rem;
     text-align: center;
-    background: var(--paper);
+    background: rgba(242, 236, 221, 0.94);
     cursor: pointer;
-    padding: 1rem;
+    padding: 1.2rem;
   }
   .overlay.hidden { display: none; }
   .overlay h1 {
-    font-size: clamp(2.4rem, 9vmin, 4.2rem);
+    font-size: clamp(3rem, 13vmin, 5.5rem);
     letter-spacing: 0.12em;
     color: var(--ink);
   }
   .overlay h1 .r { color: var(--red); }
-  .overlay .sub { font-style: italic; opacity: 0.75; }
-  #cast { display: flex; align-items: flex-end; gap: 0.8rem; margin: 0.4rem 0; }
+  .overlay .sub { font-style: italic; opacity: 0.75; font-size: clamp(0.95rem, 2.6vmin, 1.2rem); }
+  #cast { display: flex; align-items: flex-end; gap: clamp(0.5rem, 3vmin, 1.4rem); margin: 0.5rem 0; }
+  #cast svg { width: clamp(64px, 14vmin, 120px); height: auto; }
   .overlay .keys {
-    font-size: 0.85rem;
-    line-height: 1.5;
+    font-size: clamp(0.8rem, 2.3vmin, 1rem);
+    line-height: 1.55;
     opacity: 0.8;
   }
   .overlay .go {
-    margin-top: 0.4rem;
+    margin-top: 0.5rem;
     font-weight: bold;
+    font-size: clamp(0.95rem, 2.8vmin, 1.2rem);
     letter-spacing: 0.08em;
     color: var(--green);
     animation: blink 1.2s steps(2) infinite;
   }
   @keyframes blink { 50% { opacity: 0.25; } }
-  .finalscore { font-size: 1.2rem; font-weight: bold; }
+  .finalscore { font-size: clamp(1.1rem, 3.5vmin, 1.5rem); font-weight: bold; }
 
-  /* touch controls — only shown on coarse pointers */
+  #mute {
+    position: absolute;
+    top: calc(4px + env(safe-area-inset-top));
+    right: calc(8px + env(safe-area-inset-right));
+    width: 40px; height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    font-size: 1.3rem;
+    cursor: pointer;
+    z-index: 5;
+  }
+
+  /* touch controls float over the play area — only on coarse pointers */
   #touch { display: none; }
   @media (pointer: coarse) {
     #touch {
       display: flex;
-      width: 100%;
-      max-width: 640px;
+      position: absolute;
+      left: 0; right: 0;
+      bottom: calc(10px + env(safe-area-inset-bottom));
       justify-content: space-between;
-      align-items: center;
-      padding: 0 0.6rem;
-      flex: 0 0 auto;
+      align-items: flex-end;
+      padding: 0 clamp(8px, 3vw, 24px);
+      pointer-events: none;
     }
     #dpad {
       display: grid;
-      grid-template-columns: repeat(3, 54px);
-      grid-template-rows: repeat(2, 54px);
-      gap: 6px;
+      grid-template-columns: repeat(3, clamp(52px, 15vw, 66px));
+      grid-template-rows: repeat(2, clamp(52px, 15vw, 66px));
+      gap: 7px;
     }
     #touch button {
-      border: 2px solid var(--paper);
-      border-radius: 10px;
-      background: rgba(242, 236, 221, 0.12);
+      pointer-events: auto;
+      border: 2px solid rgba(242, 236, 221, 0.85);
+      border-radius: 12px;
+      background: rgba(38, 34, 30, 0.30);
       color: var(--paper);
-      font-size: 1.3rem;
+      font-size: 1.5rem;
       touch-action: none;
     }
-    #touch button:active { background: rgba(242, 236, 221, 0.35); }
+    #touch button:active { background: rgba(38, 34, 30, 0.55); }
     #btn-up   { grid-column: 2; grid-row: 1; }
     #btn-left { grid-column: 1; grid-row: 2; }
     #btn-down { grid-column: 2; grid-row: 2; }
     #btn-right{ grid-column: 3; grid-row: 2; }
     #btn-jump {
-      width: 84px; height: 84px;
+      width: clamp(88px, 26vw, 116px);
+      height: clamp(88px, 26vw, 116px);
       border-radius: 50%;
-      font-size: 1rem;
+      font-size: 1.1rem;
       letter-spacing: 0.05em;
     }
   }
@@ -128,25 +129,25 @@
 </head>
 <body>
 <div id="stage">
-  <div id="frame">
-    <canvas id="game" width="640" height="520" role="img" aria-label="Robbin game screen"></canvas>
+  <canvas id="game" role="img" aria-label="Robbin game screen"></canvas>
 
-    <div id="title" class="overlay">
-      <h1>R<span class="r">O</span>BBIN</h1>
-      <div class="sub">an egg-and-ladders platformer</div>
-      <div id="cast" aria-hidden="true"></div>
-      <div class="keys">
-        Grab every egg. Mind the birds — they bite.<br>
-        <b>&larr;&rarr;</b> run &nbsp; <b>&uarr;&darr;</b> ladders &nbsp; <b>space</b> jump &nbsp; <b>P</b> pause
-      </div>
-      <div class="go">PRESS ENTER / TAP TO START</div>
-    </div>
+  <button type="button" id="mute" aria-label="Mute music">&#128266;</button>
 
-    <div id="gameover" class="overlay hidden">
-      <h1>CRACKED!</h1>
-      <div class="finalscore"></div>
-      <div class="go">PRESS ENTER / TAP TO PLAY AGAIN</div>
+  <div id="title" class="overlay">
+    <h1>R<span class="r">O</span>BBIN</h1>
+    <div class="sub">an egg-and-ladders platformer</div>
+    <div id="cast" aria-hidden="true"></div>
+    <div class="keys">
+      Grab every egg. Mind the birds — they never stop.<br>
+      <b>&larr;&rarr;</b> run &nbsp; <b>&uarr;&darr;</b> ladders &nbsp; <b>space</b> jump &nbsp; <b>P</b> pause &nbsp; <b>M</b> music
     </div>
+    <div class="go">PRESS ENTER / TAP TO START</div>
+  </div>
+
+  <div id="gameover" class="overlay hidden">
+    <h1>CRACKED!</h1>
+    <div class="finalscore"></div>
+    <div class="go">PRESS ENTER / TAP TO PLAY AGAIN</div>
   </div>
 
   <div id="touch">
