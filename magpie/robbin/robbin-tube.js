@@ -16,6 +16,7 @@ const LINES = {
   central:  { color: '#c0392b', stations: ['HOLBORN', 'CHANCERY LANE', "ST PAUL'S", 'BANK', 'LIVERPOOL STREET'] },
   northern: { color: '#26221e', stations: ['MOORGATE', 'BANK', 'LONDON BRIDGE', 'BOROUGH', 'ELEPHANT & CASTLE'] },
   jubilee:  { color: '#7b868c', stations: ['WATERLOO', 'SOUTHWARK', 'LONDON BRIDGE', 'BERMONDSEY', 'CANADA WATER', 'CANARY WHARF'] },
+  windrush: { color: '#c77b2f', hollow: true, stations: ['ROTHERHITHE', 'CANADA WATER', 'SURREY QUAYS'] },
 };
 // design space 0..100 × 0..60, loosely geographic
 const POS = {
@@ -24,6 +25,7 @@ const POS = {
   'LONDON BRIDGE': [56, 32], 'BOROUGH': [46, 43], 'ELEPHANT & CASTLE': [32, 52],
   'WATERLOO': [8, 42], 'SOUTHWARK': [26, 38], 'BERMONDSEY': [74, 40], 'CANADA WATER': [90, 46],
   'CANARY WHARF': [99, 34],
+  'ROTHERHITHE': [84, 33], 'SURREY QUAYS': [94, 57],
 };
 // stations with genuine step-free access (roughly true to life):
 // their lifts never break and their escalators all run your way
@@ -39,6 +41,7 @@ const LOST = [
   { sp: 'wren', name: 'JENNY', at: 'BOROUGH', note: 'lonely down at the platforms' },
   { sp: 'blackbird', name: 'MAUD', at: 'LONDON BRIDGE', note: 'going round in circles on level −1' },
   { sp: 'blackbird', name: 'BRAM', at: 'CANADA WATER', note: 'singing to nobody at level −2' },
+  { sp: 'wren', name: 'PERCH', at: 'ROTHERHITHE', note: 'listening to the river through the wall' },
   { sp: 'bluetit', name: 'SKY', at: 'CANARY WHARF', note: 'feeling small in the big station' },
   { sp: 'robin', name: 'PECK', at: 'HOLBORN', note: 'waiting where the lifts never came' },
   { sp: 'bluetit', name: 'PIP', at: 'ELEPHANT & CASTLE', note: 'napping by the deep stairs' },
@@ -46,6 +49,7 @@ const LOST = [
   { sp: 'wren', name: 'WINK', at: 'MOORGATE', note: 'hiding behind the adverts' },
   { sp: 'robin', name: 'RUSTY', at: 'CHANCERY LANE', note: 'moping on the middle level' },
   { sp: 'blackbird', name: 'COCO', at: 'SOUTHWARK', note: 'humming along with the escalators' },
+  { sp: 'bluetit', name: 'QUAY', at: 'SURREY QUAYS', note: 'singing along with the tannoy' },
   { sp: 'robin', name: 'ROBERTA', at: 'BERMONDSEY', note: 'watching the trains go by' },
 ];
 const BIRD_PX = { wren: 26, bluetit: 32, robin: 32, blackbird: 32 };
@@ -95,6 +99,10 @@ const LAYOUTS = {
     bystanders: [[3, 13, 7], [15, 13, 12], [9, 2, 17]],
     ads: [[2, 10], [6, 10], [15, 6], [10, 10]],
     signs: [[4, 6], [14, 10]],
+    levels: ['street', '0 · ticket hall', '−1 · concourse', '−2 · platforms'],
+    guides: [[2, 6], [6, 14]],
+    helps: [[18, 14]],
+    board: [15, 14],
   },
   // London Bridge / Liverpool Street: big three-level halls
   big3: {
@@ -124,6 +132,10 @@ const LAYOUTS = {
     bystanders: [[6, 13, 3], [14, 13, 8], [12, 4, 15]],
     ads: [[6, 9], [12, 9], [14, 4], [3, 9]],
     signs: [[10, 4], [7, 9]],
+    levels: ['street', '−1 · concourse', '−2 · platforms'],
+    guides: [[6, 4], [12, 14]],
+    helps: [[17, 14]],
+    board: [11, 14],
   },
   // old Central-line stations: street + deep platforms, one long escalator,
   // stairs the long way round, no lift at all (Holborn has none in truth)
@@ -153,6 +165,10 @@ const LAYOUTS = {
     bystanders: [[7, 13, 4], [11, 6, 18]],
     ads: [[6, 6], [10, 6], [13, 6]],
     signs: [[8, 6]],
+    levels: ['street', '−2 · platforms'],
+    guides: [[5, 6], [9, 14]],
+    helps: [[18, 6]],
+    board: [12, 14],
   },
   // modern step-free stations: twin escalator banks, big central lifts
   modern3: {
@@ -181,6 +197,10 @@ const LAYOUTS = {
     bystanders: [[6, 13, 16], [16, 13, 1], [11, 9, 19]],
     ads: [[2, 9], [11, 4], [16, 9], [6, 4]],
     signs: [[12, 9], [2, 4]],
+    levels: ['street', '−1 · concourse', '−2 · platforms'],
+    guides: [[2, 4], [12, 14]],
+    helps: [[17, 14]],
+    board: [6, 14],
   },
 };
 const STATION_LAYOUT = {
@@ -190,7 +210,23 @@ const STATION_LAYOUT = {
   'BOROUGH': 'shallow2', 'ELEPHANT & CASTLE': 'shallow2',
   'CANADA WATER': 'modern3', 'BERMONDSEY': 'modern3', 'SOUTHWARK': 'modern3',
   'MOORGATE': 'modern3', 'WATERLOO': 'modern3', 'CANARY WHARF': 'modern3',
+  'ROTHERHITHE': 'shallow2', 'SURREY QUAYS': 'shallow2',
 };
+
+// the flock's unanswered everyday questions (see the Artist's Statement)
+const PONDERS = [
+  'who apologised — the whiteboard? the loudspeaker?',
+  'magnets? cardboard? vibrating air molecules?',
+  'if nobody is named, is nobody to blame?',
+  'is “step free” a promise or a shape?',
+  'whither The Platform?',
+];
+const TANNOY = [
+  '“we apologise for the inconvenience” — but who is “we”?',
+  '“this is due to an earlier incident” — earlier than what?',
+  '“see it, say it” — the flock has seen a lot',
+  '“mind the gap” — the gap minds nobody',
+];
 
 // a stylised carriage. doorX/baseY locate the doorway; door 0..1 is how
 // open; dx slides the whole train; moving adds rush lines.
@@ -368,8 +404,21 @@ export class TubeFlock {
     const playing = this.roster[Math.floor(Math.random() * this.roster.length)];
     const player = new Player(level);
     player.species = playing.sp;
+    const floorRows = [];
+    def.map.forEach((row, r) => { if (row.includes('#')) floorRows.push(r); });
+    const vertRuns = [];   // escalator/stair runs for the Lift guide diagram
+    for (let c = 0; c < 20; c++) {
+      for (const kind of ['S', 'H']) {
+        let top = 99, bot = -1;
+        def.map.forEach((row, r) => { if (row[c] === kind) { top = Math.min(top, r); bot = Math.max(bot, r); } });
+        if (bot >= 0) vertRuns.push({ c, kind, top, bot });
+      }
+    }
     this.interior = {
-      def, level, pendingEdge, gate,
+      def, level, pendingEdge, gate, floorRows, vertRuns,
+      droppings: [], decals: [],
+      tannoyT: 10 + Math.random() * 10,
+      ponderT: 0,
       playing,
       rescue: rescue && perch ? {
         ...rescue, x: perch.c * TILE + 16, y: (perch.r + 1) * TILE, found: false,
@@ -456,6 +505,49 @@ export class TubeFlock {
     const t = performance.now() / 1000;
     const anchor = it.celebrate || { x: g.player.x - (g.player.facing || 1) * 26, y: g.player.y - 34 };
     flockStep(it.buddies, dt, anchor.x, anchor.y, t);
+    // the awesome power of poop: press down mid-air (away from any ladder)
+    if (g.input.down && (g.player.mode === 'jump' || g.player.mode === 'fall') && !g.player._pooped) {
+      g.player._pooped = true;
+      it.droppings.push({ x: g.player.x, y: g.player.y - 4, vy: 30 });
+    }
+    if (g.player.mode === 'walk' || g.player.mode === 'climb') g.player._pooped = false;
+    for (const dr of it.droppings) {
+      dr.vy += 320 * dt;
+      dr.y += dr.vy * dt;
+      // a commuter beneath: they stop and look around, mystified
+      for (const e of it.enemies) {
+        if (Math.abs(dr.x - e.x) < 10 && Math.abs(dr.y - (e.y - 34)) < 12) {
+          e.peckT = 1.4; dr.landed = true;
+          g.puff(dr.x, dr.y, 2);
+        }
+      }
+      const rr = Math.ceil(dr.y / TILE);
+      if (!dr.landed && lv.solid(Math.floor(dr.x / TILE), rr) && dr.y >= rr * TILE - 2) {
+        dr.landed = true;
+        it.decals.push({ x: dr.x, y: rr * TILE });
+        if (it.decals.length > 24) it.decals.shift();
+      }
+      if (dr.y > H + 40) dr.landed = true;
+    }
+    it.droppings = it.droppings.filter(d => !d.landed);
+    // the tannoy apologises, namelessly
+    it.tannoyT -= dt;
+    if (it.tannoyT <= 0) {
+      it.tannoyT = 20 + Math.random() * 14;
+      g.fx.push({ x: Math.max(90, Math.min(W - 90, g.player.x)), y: 54, txt: TANNOY[Math.floor(Math.random() * TANNOY.length)], t: 3.2 });
+      g.foley.grain();
+    }
+    // pondering by the whiteboard or a help point
+    const near = pt => pt && Math.abs(g.player.x - (pt[0] * TILE + 16)) < 44 && Math.abs(g.player.y - pt[1] * TILE) < 40;
+    const boardOut = (lv.lift && lv.lift.out) || [...lv.escCols.values()].some(d => d === 1);
+    if ((boardOut && near(it.def.board)) || (it.def.helps || []).some(near)) {
+      it.ponderT -= dt;
+      if (it.ponderT <= 0 && Math.abs(g.player.vx) < 5) {
+        it.ponderT = 3.2;
+        it.ponderIdx = ((it.ponderIdx ?? -1) + 1) % PONDERS.length;
+        g.fx.push({ x: g.player.x, y: g.player.y - 66, txt: PONDERS[it.ponderIdx], t: 2.8 });
+      }
+    } else it.ponderT = 0;
     // grain snacks
     const px = g.player.x, py = g.player.y;
     for (const [key, itn] of lv.treasure) {
@@ -607,14 +699,22 @@ export class TubeFlock {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     for (const def of Object.values(LINES)) {
+      const trace = () => {
+        ctx.beginPath();
+        def.stations.forEach((s, i) => {
+          const [x, y] = this.toXY(s);
+          i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        });
+        ctx.stroke();
+      };
       ctx.strokeStyle = def.color;
       ctx.lineWidth = 7;
-      ctx.beginPath();
-      def.stations.forEach((s, i) => {
-        const [x, y] = this.toXY(s);
-        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
-      });
-      ctx.stroke();
+      trace();
+      if (def.hollow) {   // Overground-style hollow stripe
+        ctx.strokeStyle = PALETTE.paper;
+        ctx.lineWidth = 2.6;
+        trace();
+      }
     }
     // stations
     ctx.font = `bold ${Math.max(10, fs * 0.56)}px Georgia, serif`;
@@ -846,5 +946,182 @@ export class TubeFlock {
         facing: v % 2 ? -1 : 1, phase: t * 2 + c, pose: 'stand', variant: v,
       });
     }
+    // level tags at the left edge of each depth
+    it.floorRows.forEach((fr, i) => {
+      const label = it.def.levels?.[i];
+      if (!label) return;
+      const y = fr * TILE;
+      const wch = 10 + label.length * 4.6;
+      ctx.fillStyle = 'rgba(247,242,230,0.95)';
+      ctx.strokeStyle = PALETTE.ink;
+      ctx.lineWidth = 1.2;
+      ctx.fillRect(2, y - 17, wch, 13);
+      ctx.strokeRect(2, y - 17, wch, 13);
+      ctx.fillStyle = PALETTE.ink;
+      ctx.font = 'bold 8px Georgia, serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(label, 7, y - 7);
+    });
+    // Lift guide boards — the station's own diagram of itself
+    for (const [c, r] of it.def.guides || []) this.drawLiftGuide(ctx, it, c * TILE, r * TILE);
+    // Help points
+    for (const [c, r] of it.def.helps || []) {
+      const hx = c * TILE + 10, hy = r * TILE;
+      ctx.fillStyle = '#23406e';
+      ctx.beginPath(); ctx.roundRect(hx, hy - 27, 13, 27, 3); ctx.fill();
+      ctx.fillStyle = '#4a90d9';
+      ctx.beginPath(); ctx.arc(hx + 6.5, hy - 20, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#7dc383';
+      ctx.beginPath(); ctx.arc(hx + 6.5, hy - 11, 1.8, 0, Math.PI * 2); ctx.fill();
+    }
+    // the whiteboard, when something is out and nobody is named
+    const liftIsOut = !!(lv.lift && lv.lift.out);
+    const escAgainst = [...lv.escCols.values()].some(d => d === 1);
+    if ((liftIsOut || escAgainst) && it.def.board) {
+      this.drawServiceBoard(ctx, it.def.board[0] * TILE, it.def.board[1] * TILE, liftIsOut);
+    }
+    // the awesome power, memorialised
+    for (const dcl of it.decals) {
+      ctx.fillStyle = '#f6f3ea';
+      ctx.beginPath();
+      ctx.ellipse(dcl.x, dcl.y - 1, 4, 1.8, 0, 0, Math.PI * 2);
+      ctx.ellipse(dcl.x - 3, dcl.y - 1, 2, 1.2, 0, 0, Math.PI * 2);
+      ctx.ellipse(dcl.x + 3.4, dcl.y - 0.8, 1.6, 1, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(38,34,30,0.3)';
+      ctx.beginPath(); ctx.arc(dcl.x + 1, dcl.y - 1.5, 0.7, 0, Math.PI * 2); ctx.fill();
+    }
+    for (const dr of it.droppings) {
+      ctx.fillStyle = '#f6f3ea';
+      ctx.beginPath(); ctx.ellipse(dr.x, dr.y, 1.8, 2.4, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  playerFloorIdx(it) {
+    const y = this.g.player.y / TILE;
+    let best = 0, bd = 1e9;
+    it.floorRows.forEach((fr, i) => {
+      const d = Math.abs(fr - y);
+      if (d < bd) { bd = d; best = i; }
+    });
+    return best;
+  }
+  // the real boards from inside the lifts: the station drawn as levels and
+  // lift columns — a platform game's map, mounted inside the platform game
+  drawLiftGuide(ctx, it, cx, floorY) {
+    const g = this.g, lv = it.level;
+    const w = 88, h = 56;
+    const x0 = cx + 16 - w / 2, y0 = floorY - h - 8;
+    ctx.save();
+    ctx.fillStyle = '#fbf9f2';
+    ctx.strokeStyle = '#2a4a7a';
+    ctx.lineWidth = 2;
+    ctx.fillRect(x0, y0, w, h);
+    ctx.strokeRect(x0, y0, w, h);
+    ctx.fillStyle = '#2a4a7a';
+    ctx.font = 'bold 8px Georgia, serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Lift guide', x0 + 4, y0 + 10);
+    ctx.fillStyle = '#3d6cb2';
+    ctx.fillRect(x0 + w - 13, y0 + 3, 9, 9);
+    ctx.fillStyle = '#fbf9f2';
+    ctx.beginPath(); ctx.arc(x0 + w - 8.5, y0 + 7, 2.4, 0, Math.PI * 2); ctx.fill();
+    const dx0 = x0 + 6, dx1 = x0 + w - 6, dy0 = y0 + 16, dy1 = y0 + h - 6;
+    const n = it.floorRows.length;
+    const fy = i => dy0 + (i / Math.max(1, n - 1)) * (dy1 - dy0);
+    const mapX = colc => dx0 + (colc / 20) * (dx1 - dx0);
+    ctx.strokeStyle = 'rgba(38,34,30,0.55)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < n; i++) {
+      ctx.beginPath(); ctx.moveTo(dx0, fy(i)); ctx.lineTo(dx1, fy(i)); ctx.stroke();
+    }
+    // escalator and stair runs
+    for (const run of it.vertRuns) {
+      const i0 = Math.max(0, it.floorRows.indexOf(run.top - 1));
+      const i1i = it.floorRows.indexOf(run.bot + 1);
+      const i1 = i1i < 0 ? n - 1 : i1i;
+      const exx = mapX(run.c + 0.5);
+      if (run.kind === 'S') {
+        const against = lv.escCols.get(run.c) === 1;
+        ctx.strokeStyle = against ? PALETTE.danger : PALETTE.ladder;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(exx - 3, fy(i1)); ctx.lineTo(exx + 3, fy(i0)); ctx.stroke();
+      } else {
+        ctx.strokeStyle = 'rgba(38,34,30,0.45)';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(exx, fy(i1)); ctx.lineTo(exx, fy(i0)); ctx.stroke();
+      }
+    }
+    // the lift column, proud or crossed out
+    if (lv.lift) {
+      const lx = mapX((lv.lift.x0 + lv.lift.x1) / 2 / TILE);
+      ctx.fillStyle = lv.lift.out ? 'rgba(192,57,43,0.3)' : '#c0392b';
+      ctx.fillRect(lx - 4, fy(0), 8, fy(n - 1) - fy(0));
+      if (lv.lift.out) {
+        ctx.strokeStyle = PALETTE.danger;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(lx - 5, fy(0)); ctx.lineTo(lx + 5, fy(n - 1));
+        ctx.moveTo(lx + 5, fy(0)); ctx.lineTo(lx - 5, fy(n - 1));
+        ctx.stroke();
+      }
+    }
+    // you are here — live
+    const pi = this.playerFloorIdx(it);
+    const pxx = Math.max(dx0 + 2, Math.min(dx1 - 2, mapX(g.player.x / TILE)));
+    ctx.fillStyle = PALETTE.danger;
+    ctx.beginPath();
+    ctx.arc(pxx, fy(pi), 2.6 + Math.sin(performance.now() / 280) * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = 'bold 5.5px Georgia, serif';
+    ctx.fillText('you are here', Math.min(pxx + 4, dx1 - 32), fy(pi) - 3);
+    ctx.restore();
+  }
+  // the Service information A-board: dated, handwritten, signed by nobody
+  drawServiceBoard(ctx, cx, floorY, liftIsOut) {
+    const w = 46, h = 60;
+    const x0 = cx + 16 - w / 2, y0 = floorY - h;
+    ctx.save();
+    // A-board legs
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x0 + 5, y0 + h - 4); ctx.lineTo(x0 - 2, floorY);
+    ctx.moveTo(x0 + w - 5, y0 + h - 4); ctx.lineTo(x0 + w + 2, floorY);
+    ctx.stroke();
+    ctx.fillStyle = '#fcfaf4';
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 2;
+    ctx.fillRect(x0, y0, w, h - 4);
+    ctx.strokeRect(x0, y0, w, h - 4);
+    ctx.fillStyle = '#2a4a7a';
+    ctx.font = 'bold 5px Georgia, serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Service information', x0 + 3, y0 + 7);
+    const d = new Date();
+    ctx.font = '4.5px Georgia, serif';
+    ctx.fillText(`Date ${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getFullYear()).slice(2)}`, x0 + 3, y0 + 13);
+    ctx.fillText(`Time ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`, x0 + 3, y0 + 18);
+    // ghosts of apologies past, never quite wiped away
+    ctx.globalAlpha = 0.09;
+    ctx.fillStyle = '#26221e';
+    ctx.font = 'italic 6px Georgia, serif';
+    ctx.save(); ctx.translate(x0 + 8, y0 + 40); ctx.rotate(-0.06); ctx.fillText('we apologise', 0, 0); ctx.restore();
+    ctx.save(); ctx.translate(x0 + 12, y0 + 48); ctx.rotate(0.05); ctx.fillText('sorry', 0, 0); ctx.restore();
+    ctx.globalAlpha = 1;
+    // today's message, in marker, signed by no one
+    ctx.fillStyle = '#3a72b5';
+    ctx.font = 'bold 7px Georgia, serif';
+    ctx.save();
+    ctx.translate(x0 + 4, y0 + 28);
+    ctx.rotate(-0.035);
+    if (liftIsOut) { ctx.fillText('LIFT OUT', 0, 0); ctx.fillText('OF SERVICE', 0, 9); }
+    else { ctx.fillText('ESCALATOR', 0, 0); ctx.fillText('WE APOLOGISE', 0, 9); }
+    ctx.beginPath();
+    ctx.moveTo(0, 13); ctx.quadraticCurveTo(14, 15, 34, 13.5);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#3a72b5';
+    ctx.stroke();
+    ctx.restore();
+    ctx.restore();
   }
 }

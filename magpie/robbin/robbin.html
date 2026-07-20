@@ -86,6 +86,36 @@
   }
   #menu button:hover, #menu2 button:hover { background: var(--green); color: var(--paper); }
 
+  #statement { z-index: 20; cursor: pointer; }
+  #plaque {
+    max-width: min(560px, 88vw);
+    max-height: 84vh;
+    overflow-y: auto;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 3px;
+    box-shadow: 0 8px 30px rgba(38, 34, 30, 0.25);
+    padding: clamp(1rem, 4vmin, 2rem);
+    text-align: left;
+  }
+  #plaque h2 {
+    font-size: clamp(1.1rem, 3.4vmin, 1.5rem);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.8em;
+    text-transform: uppercase;
+  }
+  #plaque p {
+    font-size: clamp(0.82rem, 2.4vmin, 0.98rem);
+    line-height: 1.65;
+    margin-bottom: 0.9em;
+  }
+  #plaque .colophon {
+    font-style: italic;
+    opacity: 0.65;
+    font-size: clamp(0.72rem, 2vmin, 0.85rem);
+  }
+  #plaque .go { text-align: center; margin-top: 0.4rem; }
+
   #mute {
     position: absolute;
     top: calc(4px + env(safe-area-inset-top));
@@ -172,6 +202,30 @@
     <div id="menu">
       <button type="button" id="playtube">&#128038; TUBE FLOCK &mdash; the libbirds ride the Underground</button>
       <button type="button" id="ctrlmode">CONTROLS: HOLD</button>
+      <button type="button" id="stmtbtn">ARTIST&rsquo;S STATEMENT</button>
+    </div>
+  </div>
+
+  <div id="statement" class="overlay hidden">
+    <div id="plaque">
+      <h2>Artist&rsquo;s Statement</h2>
+      <p>This work is a loving tribute to the 80s platform games which
+      informed and challenged the (d)evolution of post-colonial London(s),
+      and a Cosy Puzzler, gently seeking answers to everyday unanswered
+      questions from life on the gritty realworld platforms of today&rsquo;s
+      subterranean liminality network. Is &ldquo;step free&rdquo; oxymoronic
+      for those who can&rsquo;t step? If &ldquo;we apologise&rdquo; but no
+      human is named, who apologised? The whiteboard, the loudspeaker?
+      Magnets, cardboard, vibrating air molecules? If nobody named takes
+      responsibility does that mean nobody is to blame? Experiencing the
+      Tube afresh through the eyes and ears of a bird flock finally
+      realizing the awesome power of poop and claw, a community able to fly
+      but trapped in a system where step-free access is essential, we can
+      finally ask: whither The Platform in an age of Mechanical
+      Retrofuturism?</p>
+      <p class="colophon">ROBBIN &middot; TUBE FLOCK &mdash; lino, JavaScript,
+      vibrating air molecules. Field research: the lifts of Canada Water.</p>
+      <div class="go">TAP / ESC TO RETURN</div>
     </div>
   </div>
 

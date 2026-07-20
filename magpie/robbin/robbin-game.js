@@ -748,6 +748,8 @@ class Game {
     addEventListener('keydown', e => {
       if (e.key === 'Enter') { this.pressStart(); return; }
       if (e.key === 'Escape') {
+        const stmt = document.getElementById('statement');
+        if (stmt && !stmt.classList.contains('hidden')) { stmt.classList.add('hidden'); return; }
         if (this.state === 'tube') { this.tube.exit(); return; }
         if (this.state === 'gameover') { this.backToMenu(); return; }
         return;
@@ -858,6 +860,13 @@ class Game {
     });
     document.getElementById('tomenu')?.addEventListener('pointerdown', e => {
       e.stopPropagation(); this.backToMenu();
+    });
+    document.getElementById('stmtbtn')?.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      document.getElementById('statement')?.classList.remove('hidden');
+    });
+    document.getElementById('statement')?.addEventListener('pointerdown', () => {
+      document.getElementById('statement').classList.add('hidden');
     });
     document.getElementById('ctrlmode')?.addEventListener('pointerdown', e => {
       e.stopPropagation();
