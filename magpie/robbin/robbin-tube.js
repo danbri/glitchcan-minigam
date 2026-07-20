@@ -389,12 +389,21 @@ export class TubeFlock {
   }
   // map camera: design units → screen. ~26 units across the short edge
   // keeps neighbouring stations a comfortable flap apart; the camera
-  // glides after the flock across the whole city
+  // glides after the flock across the whole city. The view centres in
+  // the band between the masthead and the touch controls, so the map
+  // owns the space the thumbs and words don't.
   mapScale() { return Math.min(this.g.cssW, this.g.cssH) / 26; }
+  viewBand() {
+    const g = this.g, w = g.cssW, h = g.cssH;
+    const fs = Math.max(17, Math.min(24, w / 22));
+    const top = fs * (this.roster.length === 1 ? 6 : 3.9);
+    const bot = g.touchUI ? Math.min(h * 0.3, 215) : fs * 1.9;
+    return { top, bot, cy: top + (h - top - bot) / 2 };
+  }
   toScreen(p) {
     const s = this.mapScale();
-    return [this.g.cssW / 2 + (p[0] - this.cam[0]) * s,
-            this.g.cssH * 0.56 + (p[1] - this.cam[1]) * s];
+    const { cy } = this.viewBand();
+    return [this.g.cssW / 2 + (p[0] - this.cam[0]) * s, cy + (p[1] - this.cam[1]) * s];
   }
   toXY(name) { return this.toScreen(POS[name]); }
   // ---------------------------------------------------------- input
@@ -885,13 +894,15 @@ export class TubeFlock {
         ctx.stroke();
       }
     }
-    // the lost bird may be way across the city: an edge arrow points the way
+    // the lost bird may be way across the city: an edge arrow points the
+    // way, hugging the band between masthead and thumbs
     if (ob) {
       const [ox, oy] = this.toXY(ob.at);
       if (!onScreen(ox, oy, -20)) {
-        const cx = w / 2, cy = h * 0.56;
+        const band = this.viewBand();
+        const cx = w / 2, cy = band.cy;
         const dx = ox - cx, dy = oy - cy;
-        const kk = 1 / Math.max(Math.abs(dx) / (w / 2 - 46), Math.abs(dy) / (h / 2 - 80));
+        const kk = 1 / Math.max(Math.abs(dx) / (w / 2 - 46), Math.abs(dy) / ((h - band.top - band.bot) / 2 - 34));
         const ex = cx + dx * kk, ey = cy + dy * kk;
         const ang = Math.atan2(dy, dx);
         const pulse = 1 + Math.sin(t * 5) * 0.12;
@@ -917,68 +928,66 @@ export class TubeFlock {
         pose: moving ? ((b.vy || 0) < -6 ? 'airup' : 'airdown') : 'flit',
       });
     }
-    // header on a paper wash so the city never runs through the words;
-    // first-time flyers get a two-line primer until the first rescue
+    // a slim masthead — tiny title row, one big quest line, one note —
+    // so the city keeps the screen; primer rows appear until the first
+    // rescue, and the touch band below stays honest map-free space
     const primer = this.roster.length === 1;
-    const headH = primer ? fs * 8.5 : fs * 6.3;
+    const { top: headH, bot: botInset } = this.viewBand();
     ctx.fillStyle = 'rgba(242,236,221,0.88)';
     ctx.fillRect(0, 0, w, headH);
-    ctx.fillRect(0, h - fs * 1.9, w, fs * 1.9);
+    if (!g.touchUI) ctx.fillRect(0, h - fs * 1.9, w, fs * 1.9);
     ctx.strokeStyle = 'rgba(38,34,30,0.25)';
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, headH); ctx.lineTo(w, headH); ctx.stroke();
     ctx.fillStyle = PALETTE.ink;
-    ctx.font = `bold ${fs * 1.5}px Georgia, serif`;
-    ctx.fillText('TUBULAR SMELLS', w / 2, fs * 2);
-    ctx.globalAlpha = 0.7;
-    this.fitText(ctx, 'grow the flock — every lost libbird is out there somewhere', w / 2, fs * 3.1, w - 24, fs * 0.72, 'italic');
-    ctx.globalAlpha = 1;
-    // the quest card: who's waiting, and where
-    if (ob) {
-      this.fitText(ctx, `${ob.name} the ${ob.sp} is waiting at ${ob.at}`, w / 2, fs * 4.6, w - 20, fs);
-      ctx.globalAlpha = 0.75;
-      this.fitText(ctx, `…${ob.note}`, w / 2, fs * 5.7, w - 24, fs * 0.78, 'italic');
-      ctx.globalAlpha = 1;
-    } else {
-      ctx.fillStyle = PALETTE.platform;
-      this.fitText(ctx, '♥ the flock is whole — fly together as long as you like ♥', w / 2, fs * 4.6, w - 20, fs);
-      ctx.fillStyle = PALETTE.ink;
-    }
-    if (primer) {
-      ctx.globalAlpha = 0.65;
-      this.fitText(ctx, 'fly stop by stop toward them — changing lines (or arriving) takes you inside the station', w / 2, fs * 6.8, w - 24, fs * 0.68, 'italic');
-      this.fitText(ctx, 'found your bird? head up to street level and out the WAY OUT', w / 2, fs * 7.7, w - 24, fs * 0.68, 'italic');
-      ctx.globalAlpha = 1;
-    }
     ctx.textAlign = 'left';
-    ctx.font = `bold ${fs * 0.72}px Georgia, serif`;
-    ctx.fillText(`SCORE ${this.score}`, 12, fs * 1.2);
-    ctx.fillText(`HI ${this.hiscore}`, 12, fs * 2.2);
-    // the roster, roosting in the corner (under the speaker button)
+    ctx.globalAlpha = 0.7;
+    ctx.font = `bold ${fs * 0.6}px Georgia, serif`;
+    ctx.fillText(`TUBULAR SMELLS · SCORE ${this.score} · HI ${this.hiscore}`, 12, fs * 0.95);
+    ctx.globalAlpha = 1;
+    // the roster roosts along the top right, under the speaker
     this.roster.slice(0, 12).forEach((b, i) => {
       drawBird(ctx, b.sp, {
-        x: w - 56 - i * 20, y: fs * 2.4, size: 20,
+        x: w - 56 - i * 18, y: fs * 0.95, size: 17,
         facing: -1, phase: t * 3 + i, pose: 'stand',
       });
     });
     ctx.textAlign = 'center';
+    if (ob) {
+      this.fitText(ctx, `${ob.name} the ${ob.sp} waits at ${ob.at}`, w / 2, fs * 2.15, w - 20, fs);
+      ctx.globalAlpha = 0.75;
+      this.fitText(ctx, `…${ob.note}`, w / 2, fs * 3.15, w - 24, fs * 0.75, 'italic');
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.fillStyle = PALETTE.platform;
+      this.fitText(ctx, '♥ the flock is whole — fly together as long as you like ♥', w / 2, fs * 2.3, w - 20, fs);
+      ctx.fillStyle = PALETTE.ink;
+    }
+    if (primer) {
+      ctx.globalAlpha = 0.65;
+      this.fitText(ctx, 'fly stop by stop toward them — changing lines (or arriving) takes you inside the station', w / 2, fs * 4.3, w - 24, fs * 0.68, 'italic');
+      this.fitText(ctx, 'found your bird? head up to street level and out the WAY OUT', w / 2, fs * 5.2, w - 24, fs * 0.68, 'italic');
+      ctx.globalAlpha = 1;
+    }
+    const msgY = headH + (h - botInset - headH) * 0.3;
     if (this.arriveT > 0) {
       ctx.fillStyle = PALETTE.platform;
       ctx.font = `bold ${fs * 1.2}px Georgia, serif`;
-      ctx.fillText(this.arriveMsg, w / 2, h * 0.66);
+      ctx.fillText(this.arriveMsg, w / 2, msgY);
     }
     if (this.gather) {
       ctx.fillStyle = PALETTE.ink;
       ctx.globalAlpha = 0.75;
       ctx.font = `italic ${fs * 0.95}px Georgia, serif`;
-      ctx.fillText(`the flock gathers at ${this.cur}…`, w / 2, h * 0.66);
+      ctx.fillText(`the flock gathers at ${this.cur}…`, w / 2, msgY);
       ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 0.6;
-    ctx.font = `${fs * 0.72}px Georgia, serif`;
-    ctx.fillStyle = PALETTE.ink;
-    this.fitText(ctx, 'swipe or arrows to fly a line · no rush — the flock waits · ESC: home to roost', w / 2, h - fs * 0.7, w - 16, fs * 0.72, 'normal');
-    ctx.globalAlpha = 1;
+    if (!g.touchUI) {
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = PALETTE.ink;
+      this.fitText(ctx, 'swipe or arrows to fly a line · no rush — the flock waits · ESC: home to roost', w / 2, h - fs * 0.7, w - 16, fs * 0.72, 'normal');
+      ctx.globalAlpha = 1;
+    }
     ctx.restore();
   }
   // ------------------------------------------------ interior rendering

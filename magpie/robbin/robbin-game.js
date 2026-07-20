@@ -645,6 +645,7 @@ class Game {
   // never wider than the level needs (contain), never past full-bleed (cover),
   // aiming for ~8.5 tiles across the short side of the screen
   resize() {
+    this.touchUI = window.matchMedia('(pointer: coarse)').matches;
     this.cssW = window.innerWidth; this.cssH = window.innerHeight;
     this.canvas.width = Math.round(this.cssW * this.dpr);
     this.canvas.height = Math.round(this.cssH * this.dpr);
@@ -662,8 +663,11 @@ class Game {
     // cutscenes anchor the view on their doorway, not on a player who has
     // been whisked offstage (which used to pan the camera to the entrance)
     const f = this.camFocus || this.player;
+    // on touch screens the pad floats over the lower band — bias the view
+    // down a touch so the action rides above the thumbs
+    const bias = this.touchUI ? this.viewH * 0.08 : 0;
     const tx = Math.max(0, Math.min(f.x - this.viewW / 2, W - this.viewW));
-    const ty = Math.max(0, Math.min(f.y - 24 - this.viewH / 2, H - this.viewH));
+    const ty = Math.max(0, Math.min(f.y - 24 - this.viewH / 2 + bias, H - this.viewH));
     const k = snap ? 1 : 1 - Math.exp(-dt * 6);
     this.camX += (tx - this.camX) * k;
     this.camY += (ty - this.camY) * k;
@@ -949,6 +953,12 @@ class Game {
   frame(t) {
     const dt = Math.min(0.05, (t - this.last) / 1000);
     this.last = t;
+    // the JUMP button means nothing on the tube map — free the corner
+    const mapMode = this.state === 'tube' && !this.tube.interior;
+    if (mapMode !== this._mapMode) {
+      this._mapMode = mapMode;
+      document.body.classList.toggle('mapmode', mapMode);
+    }
     this.update(dt);
     this.draw();
     requestAnimationFrame(tt => this.frame(tt));
