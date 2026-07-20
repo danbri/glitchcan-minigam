@@ -95,6 +95,23 @@ Other notes: Stack B steps **after** `render()` using the frame's
 before draw. `splat-physics.js` is a separate rigid/soft stack for Gaussian
 splats (open TODOs: torque on offset impulse, object-object collisions).
 
+## Shared SimulationDriver (July 2026)
+
+`core/simulation-driver.js` is a backend-neutral per-frame simulation used by the
+`<lucid-renderer>` component: each frame it evaluates the rig (base/derived/phase)
+and steps physics (`PhysicsScene`), pushing every result into whichever renderer
+through the shared contract — `setParam(name)` for rig params, `setParam('phys_'+name)`
+for body positions. So one simulation feeds **both** engines; the shader language
+is the only backend difference.
+
+To avoid two stacks fighting, the renderers expose opt-out flags the component
+sets: **`externalRig`** (Mayfly skips its internal `evaluateRig`) and
+**`externalPhysics`** (Mayfly skips its internal `PhysicsBridge`/Stack A). Both
+default **false**, so direct users like `index.html` keep the built-in behaviour;
+only the component turns them on. This is the clean resolution of the
+double-physics rough edge below (for the component path). `index.html` still uses
+its own `PhysicsScene` directly and is unchanged.
+
 ## Integration points (the API surface)
 
 - **rig → shader:** `evaluateRig` output → `u_<name>` uniforms (raymarcher binds

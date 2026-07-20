@@ -86,6 +86,10 @@ export class SimpleRaymarcher {
     // both backends on one shared simulation). Default false — index.html and
     // other direct users keep the built-in behaviour.
     this.externalRig = false;
+    // When true, an external SimulationDriver owns physics and pushes phys_<name>
+    // positions via setParam, so skip Mayfly's own physics stack (avoids two
+    // stacks fighting). Default false — direct users keep the built-in physics.
+    this.externalPhysics = false;
     // Shadertoy-style inputs (parity with Stinkyfish): iMouse (vec4 xy=pos,
     // zw=click, GL pixel coords), iFrame, iTimeDelta.
     this.mouse = { x: 0, y: 0, clickX: 0, clickY: 0, isDown: false };
@@ -252,8 +256,9 @@ export class SimpleRaymarcher {
     this.rig = rig;
     this.sceneJson = sceneJson;
 
-    // Initialize physics if scene has physics config
-    if (sceneJson?.physics?.enabled) {
+    // Initialize physics if scene has physics config (unless an external
+    // SimulationDriver owns physics — see externalPhysics).
+    if (sceneJson?.physics?.enabled && !this.externalPhysics) {
       this.initPhysics(sceneJson);
     } else {
       this.physicsEnabled = false;

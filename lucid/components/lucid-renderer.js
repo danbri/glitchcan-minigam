@@ -404,9 +404,12 @@ export class LucidRenderer extends HTMLElement {
     // Shared per-frame simulation for both backends (rig + physics).
     const { SimulationDriver } = await import(`${basePath}/core/simulation-driver.js`);
     this._sim = new SimulationDriver(scene);
-    // The driver owns the rig, so tell Mayfly to skip its internal rig eval —
-    // one source of animation feeds both engines.
+    // The driver owns rig AND physics, so tell Mayfly to skip its internal
+    // versions — one simulation feeds both engines (set before updateScene,
+    // which would otherwise spin up Mayfly's own physics stack).
     this._renderer.externalRig = true;
+    this._renderer.externalPhysics = true;
+    await this._sim.initPhysics(basePath, json);
 
     // Mayfly uses updateScene(glsl, params, rig, json)
     this._renderer.updateScene(glsl, scene.params || {}, scene.rig || null, json);
@@ -433,9 +436,15 @@ export class LucidRenderer extends HTMLElement {
     const scene = loadJsonScene(json);
     const wgsl = generateWgslFromJson(scene, this._codegenOptions(json));
 
-    // Build uniform layout from all params (including rig-derived)
-    // This maps param names to WGSL types for the SceneUniforms struct
+    // Build uniform layout from all params (including rig-derived + physics
+    // body positions, so the driver's setParam('phys_<name>') lands in the
+    // SceneUniforms struct — the WGSL renderer only writes params it knows).
     const allParams = getAllParamNames(scene.params || {}, scene.rig);
+    if (scene.physics?.enabled && Array.isArray(scene.physics.bodies)) {
+      for (const body of scene.physics.bodies) {
+        if (body.name) allParams[`phys_${body.name}`] = { type: 'position3' };
+      }
+    }
     const uniformLayout = this._buildUniformLayout(allParams);
 
     // Stinkyfish uses compileScene(wgsl, uniformLayout)
@@ -451,11 +460,12 @@ export class LucidRenderer extends HTMLElement {
     }
     this._renderer.setSceneParams(initParams);
 
-    // Shared per-frame simulation (rig now; physics in a later step). The WGSL
-    // renderer never evaluated the rig itself, so without this derived/phase
-    // params would be frozen — the driver closes that gap the same way it drives
-    // Mayfly, from one code path.
+    // Shared per-frame simulation (rig + physics). The WGSL renderer never
+    // evaluated the rig or stepped physics itself, so without this its
+    // derived/phase params and physics bodies would be frozen — the driver
+    // closes that gap the same way it drives Mayfly, from one code path.
     this._sim = new SimulationDriver(scene);
+    await this._sim.initPhysics(basePath, json);
 
     // Apply camera settings - use same defaults as Mayfly for consistency
     if (json.camera) {
