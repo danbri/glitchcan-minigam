@@ -70,191 +70,192 @@ for (const [line, def] of Object.entries(LINES)) {
 const LINES_AT = new Map(Object.keys(POS).map(s => [s, new Set(EDGES.get(s).map(e => e.line))]));
 const INTERCHANGES = Object.keys(POS).filter(s => LINES_AT.get(s).size > 1);
 const INTER_SET = new Set(INTERCHANGES);
+// which lines share each stretch of track — parallel lines draw offset
+// side by side, tube-map fashion, instead of on top of each other
+const EDGE_LINES = new Map();
+for (const [line, def] of Object.entries(LINES)) {
+  for (const chain of def.chains) {
+    for (let i = 0; i + 1 < chain.length; i++) {
+      const a = chain[i], b = chain[i + 1];
+      if (a === b) continue;
+      const k = a < b ? `${a}|${b}` : `${b}|${a}`;
+      const list = EDGE_LINES.get(k) || [];
+      if (!list.includes(line)) { list.push(line); EDGE_LINES.set(k, list); }
+    }
+  }
+}
+for (const list of EDGE_LINES.values()) list.sort();
 
 // ------------------------------------------------------- station interiors
-// Four layout families modelled on real station shapes; every station maps
-// to one. 'S' escalator · 'H' stairs · 'L' lift · '+' pierced floor ·
-// 'P' arrival · 'X' departure gate · 'B' where a lost bird perches ·
-// 'E' grain snacks.
-const LAYOUTS = {
-  // Bank: four levels down, long escalator flights, a shaft you can fall in
-  deep4: {
-    depths: 'street · ticket hall · concourse · platforms',
-    map: [
-      '....................',
-      '.E...............B..',
-      '######+#LL##LL####+#',
-      '......S.LL..LL....H.',
-      '......S.LL..LL....H.',
-      '......S.LLE.LL....HX',
-      '###+########LL######',
-      '...S........LL......',
-      '...S........LL......',
-      '...S....E...LL......',
-      '########+###LL##+###',
-      '........S...LL..H...',
-      '........S...LL..H...',
-      'P.......S...LL..H...',
-      '####################',
-    ],
-    commuters: [
-      { t: 'commuter', c: 10, floor: 6, d: 1, v: 0 },
-      { t: 'commuter', c: 5, floor: 10, d: -1, v: 9 },
-      { t: 'commuter', c: 16, floor: 2, d: -1, v: 14 },
-    ],
-    bystanders: [[3, 13, 7], [15, 13, 12], [9, 2, 17]],
-    ads: [[2, 10], [6, 10], [15, 6], [10, 10]],
-    signs: [[4, 6], [14, 10]],
-    levels: ['street', '0 · ticket hall', '−1 · concourse', '−2 · platforms'],
-    guides: [[2, 6], [6, 14]],
-    helps: [[18, 14]],
-    board: [15, 14],
-  },
-  // London Bridge / Liverpool Street: big three-level halls
-  big3: {
-    depths: 'street · concourse · platforms',
-    map: [
-      '....................',
-      '....................',
-      '....................',
-      '..E.....E........B..',
-      '##+#####LL########+#',
-      '..S.....LL........H.',
-      '..S.....LL........H.',
-      '..S.....LL........H.',
-      '..S..E..LL........HX',
-      '####+###LL######+###',
-      '....S...LL......H...',
-      '....S...LL......H...',
-      '....S...LL......H...',
-      'P...S...LL..E...H...',
-      '####################',
-    ],
-    commuters: [
-      { t: 'commuter', c: 12, floor: 9, d: -1, v: 2 },
-      { t: 'commuter', c: 14, floor: 4, d: 1, v: 10 },
-      { t: 'commuter', c: 7, floor: 14, d: 1, v: 5 },
-    ],
-    bystanders: [[6, 13, 3], [14, 13, 8], [12, 4, 15]],
-    ads: [[6, 9], [12, 9], [14, 4], [3, 9]],
-    signs: [[10, 4], [7, 9]],
-    levels: ['street', '−1 · concourse', '−2 · platforms'],
-    guides: [[6, 4], [12, 14]],
-    helps: [[17, 14]],
-    board: [11, 14],
-  },
-  // old Central-line stations: street + deep platforms, one long escalator,
-  // stairs the long way round, no lift at all (Holborn has none in truth)
-  shallow2: {
-    depths: 'street · deep platforms',
-    map: [
-      '....................',
-      '....................',
-      '....................',
-      '....................',
-      '....................',
-      '..E.......B.........',
-      '###+############+###',
-      '...S............H...',
-      '...S............H...',
-      '...S............H...',
-      '...S............H...',
-      '...S............H...',
-      '...S............H...',
-      'P..S......E.....H..X',
-      '####################',
-    ],
-    commuters: [
-      { t: 'commuter', c: 9, floor: 6, d: 1, v: 6 },
-      { t: 'commuter', c: 12, floor: 14, d: -1, v: 11 },
-    ],
-    bystanders: [[7, 13, 4], [11, 6, 18]],
-    ads: [[6, 6], [10, 6], [13, 6]],
-    signs: [[8, 6]],
-    levels: ['street', '−2 · platforms'],
-    guides: [[5, 6], [9, 14]],
-    helps: [[18, 6]],
-    board: [12, 14],
-  },
-  // modern step-free stations: twin escalator banks, big central lifts
-  modern3: {
-    depths: 'street · concourse · platforms',
-    map: [
-      '....................',
-      '....................',
-      '....................',
-      '.E................B.',
-      '####+###LL####+#LL##',
-      '....S...LL....S.LL..',
-      '....S...LL....S.LL..',
-      '....S...LL....S.LL..',
-      '....S.E.LL....S.LL..',
-      '####+###LL####+#####',
-      '....S...LL....S.....',
-      '....S...LL....S.....',
-      '....S...LL....S.....',
-      'P...S...LL.E..S....X',
-      '####################',
-    ],
-    commuters: [
-      { t: 'commuter', c: 12, floor: 9, d: 1, v: 8 },
-      { t: 'commuter', c: 16, floor: 4, d: -1, v: 13 },
-    ],
-    bystanders: [[6, 13, 16], [16, 13, 1], [11, 9, 19]],
-    ads: [[2, 9], [11, 4], [18, 9], [6, 4]],
-    signs: [[12, 9], [2, 4]],
-    levels: ['street', '−1 · concourse', '−2 · platforms'],
-    guides: [[2, 4], [12, 14]],
-    helps: [[17, 14]],
-    board: [6, 14],
-  },
-};
-// curated layouts for the old core; every other station in the network
-// gets one by heuristic — step-free reads modern, interchanges run deep,
-// the rest are old-style street + platforms (with a name-hashed shuffle)
-const STATION_LAYOUT = {
-  'BANK': 'deep4', "KING'S CROSS ST PANCRAS": 'deep4',
-  'LONDON BRIDGE': 'big3', 'LIVERPOOL STREET': 'big3', 'STRATFORD': 'big3',
-  'HOLBORN': 'shallow2', 'CHANCERY LANE': 'shallow2', "ST PAUL'S": 'shallow2',
-  'BOROUGH': 'shallow2', 'ELEPHANT & CASTLE': 'shallow2',
-  'CANADA WATER': 'modern3', 'BERMONDSEY': 'modern3', 'SOUTHWARK': 'modern3',
-  'MOORGATE': 'modern3', 'WATERLOO': 'modern3', 'CANARY WHARF': 'modern3',
-  'NORTH GREENWICH': 'modern3', 'HEATHROW TERMINAL 5': 'modern3',
-  'ROTHERHITHE': 'shallow2', 'SURREY QUAYS': 'shallow2',
+// Every interior is GENERATED from the station's real facts baked into
+// tube-network.js: which lines serve it (deep tube vs cut-and-cover vs
+// open-air, weighted by fare zone) and TfL's own lift and escalator
+// counts. Levels, platforms, stairs, escalator banks and lift shafts all
+// follow from that — a reality-grounded model, playability-clamped.
+// Legend: '#' floor · '+' floor pierced by a run · 'S' escalator ·
+// 'H' stairs · 'L' lift shaft · 'E' grain · 'P' spawn.
+const DEEP_LINES = new Set(['bakerloo', 'central', 'jubilee', 'northern', 'piccadilly', 'victoria', 'waterloo-city']);
+const SUB_LINES = new Set(['circle', 'district', 'hammersmith-city', 'metropolitan', 'windrush']);
+const LINE_SHORT = {
+  bakerloo: 'Bakerloo', central: 'Central', circle: 'Circle', district: 'District',
+  'hammersmith-city': 'H&C', jubilee: 'Jubilee', metropolitan: 'Met', northern: 'Northern',
+  piccadilly: 'Piccadilly', victoria: 'Victoria', 'waterloo-city': 'W&C', windrush: 'Windrush',
 };
 const hashName = s => {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
   return h;
 };
-function layoutFor(name) {
-  if (STATION_LAYOUT[name]) return STATION_LAYOUT[name];
-  const lineCount = LINES_AT.get(name)?.size || 1;
-  const h = hashName(name);
-  if (STEP_FREE.has(name)) return lineCount >= 2 && h % 2 ? 'big3' : 'modern3';
-  if (lineCount >= 2) return h % 2 ? 'deep4' : 'big3';
-  return h % 3 ? 'shallow2' : 'big3';
-}
-// half the network runs mirrored, so the four families read differently
-// from station to station (platforms left, exits right, and vice versa)
-function mirrorDef(def) {
-  return {
-    ...def,
-    map: def.map.map(r => [...r].reverse().join('')),
-    commuters: def.commuters.map(e => ({ ...e, c: 19 - e.c, d: -e.d })),
-    bystanders: def.bystanders.map(([c, f, v]) => [19 - c, f, v]),
-    ads: def.ads.map(([c, r]) => [19 - c, r]),
-    signs: def.signs.map(([c, r]) => [19 - c, r]),
-    guides: (def.guides || []).map(([c, r]) => [19 - c, r]),
-    helps: (def.helps || []).map(([c, r]) => [19 - c, r]),
-    board: def.board ? [19 - def.board[0], def.board[1]] : null,
+const GEN_CACHE = new Map();
+function genStation(name) {
+  if (GEN_CACHE.has(name)) return GEN_CACHE.get(name);
+  const facts = NETWORK.stations?.[name] || { zone: 2, lifts: 1, escalators: 2, lines: [], deep: 1, sub: 0 };
+  let rng = hashName(name) || 1;
+  const rnd = n => { rng = (rng * 1103515245 + 12345) >>> 0; return (rng >>> 8) % n; };
+  const lineList = facts.lines || [];
+  const deepL = lineList.filter(l => DEEP_LINES.has(l));
+  const subL = lineList.filter(l => SUB_LINES.has(l));
+  const short = ls => ls.map(l => LINE_SHORT[l] || l).join(' & ');
+
+  // ---- the cross-section: which levels exist here, really
+  let floors, levels, plats;   // plats: platform levels, each with its lines
+  if (facts.deep && facts.sub) {
+    floors = [2, 6, 10, 14];
+    levels = ['street', '0 \u00b7 ticket hall', `\u22121 \u00b7 ${short(subL)}`, `\u22122 \u00b7 ${short(deepL)}`];
+    plats = [{ row: 10, lines: subL }, { row: 14, lines: deepL }];
+  } else if (facts.deep && deepL.length >= 2 && facts.zone === 1) {
+    // two deep lines really do run at different depths (Bank, Oxford Circus)
+    const g0 = [deepL[0]], g1 = deepL.slice(1);
+    floors = [2, 6, 10, 14];
+    levels = ['street', '0 \u00b7 ticket hall', `\u22121 \u00b7 ${short(g0)}`, `\u22122 \u00b7 ${short(g1)}`];
+    plats = [{ row: 10, lines: g0 }, { row: 14, lines: g1 }];
+  } else if (facts.deep) {
+    floors = [4, 9, 14];
+    levels = ['street', '\u22121 \u00b7 ticket hall', `\u22122 \u00b7 ${short(deepL) || 'platforms'}`];
+    plats = [{ row: 14, lines: deepL }];
+  } else if (facts.sub) {
+    floors = [4, 9, 14];
+    levels = ['street', '0 \u00b7 ticket hall', `\u22121 \u00b7 ${short(subL) || 'platforms'}`];
+    plats = [{ row: 14, lines: subL }];
+  } else {
+    // open-air suburbia: platforms at ground, a footbridge over the tracks
+    floors = [8, 14];
+    levels = ['footbridge', `${short(lineList) || 'the'} platforms`];
+    plats = [{ row: 14, lines: lineList }];
+  }
+  const surface = !facts.deep && !facts.sub;
+  const streetRow = surface ? 14 : floors[0];
+  const bottom = 14;
+
+  // ---- the grid
+  const grid = Array.from({ length: 15 }, () => new Array(20).fill('.'));
+  for (const fr of floors) for (let c = 0; c < 20; c++) grid[fr][c] = '#';
+  const used = new Array(20).fill(false);
+  // gate margins stay clear — including a buffer column, so nobody steps
+  // off a lift straight out of the station
+  used[0] = used[1] = used[2] = used[17] = used[18] = used[19] = true;
+  const alloc = (w, pad = 0) => {
+    const startC = 2 + rnd(16 - w);
+    for (let k = 0; k <= 16 - w; k++) {
+      const c = 2 + ((startC - 2 + k) % (16 - w + 1));
+      let ok = true;
+      for (let i = c - pad; i < c + w + pad; i++) if (i >= 2 && i <= 17 && used[i]) ok = false;
+      if (ok) { for (let i = c; i < c + w; i++) used[i] = true; return c; }
+    }
+    return null;
   };
-}
-const MIRRORED = {};
-function defFor(name) {
-  const key = layoutFor(name);
-  const def = LAYOUTS[key] || LAYOUTS.shallow2;
-  if (hashName(name) & 4) return MIRRORED[key] ||= mirrorDef(def);
+  // lift shafts from TfL's count: one full-depth shaft, or a chained pair
+  // handing you down level by level, the way Canary Wharf's lettered
+  // lifts really work. Allocated first — lifts are the scarce resource.
+  const nShaft = !facts.lifts || floors.length < 2 ? 0
+    : facts.lifts >= 3 && floors.length >= 3 ? 2 : 1;
+  const shafts = nShaft === 2
+    ? [[floors[0], floors[1]], [floors[1], bottom]]
+    : nShaft === 1 ? [[floors[0], bottom]] : [];
+  const liftCols = [];
+  for (const [top, bot] of shafts) {
+    const c = alloc(2, 1);
+    if (c === null) continue;
+    liftCols.push(c);
+    for (let r = top; r < bot; r++) { grid[r][c] = 'L'; grid[r][c + 1] = 'L'; }
+  }
+  // one honest staircase runs the whole way down — stairs never fail
+  const stairC = alloc(1) ?? 16;
+  for (let r = floors[0]; r < bottom; r++) grid[r][stairC] = floors.includes(r) ? '+' : 'H';
+  // escalator banks from TfL's own count, deepest gaps first
+  const gaps = floors.slice(0, -1).map((fr, i) => [fr, floors[i + 1]]);
+  let escBudget = Math.min(Math.ceil((facts.escalators || 0) / 2), gaps.length * 2);
+  const gapOrder = [...gaps].reverse();
+  for (let round = 0; round < 2 && escBudget > 0; round++) {
+    for (const [top, bot] of gapOrder) {
+      if (escBudget <= 0) break;
+      const c = alloc(1);
+      if (c === null) { escBudget = 0; break; }
+      grid[top][c] = '+';
+      for (let r = top + 1; r < bot; r++) grid[r][c] = 'S';
+      escBudget--;
+    }
+  }
+  // gates: WAY OUT on the street, a train door on each platform level
+  const sideL = rnd(2) === 0;
+  const gateOut = { c: sideL ? 1 : 18, r: streetRow - 1 };
+  const platGates = {};
+  let flip = !sideL;
+  const platDefs = [];
+  for (const p of plats) {
+    const g = { c: flip ? 1 : 18, r: p.row - 1 };
+    platDefs.push({ ...p, gate: g });
+    for (const l of p.lines) platGates[l] = g;
+    flip = !flip;
+  }
+  const defaultPlatGate = platDefs[platDefs.length - 1].gate;
+  // spawn: you walk in from the street (arrivals override at the platform)
+  const spawnStreet = { c: sideL ? 3 : 16, r: streetRow - 1 };
+  if (grid[spawnStreet.r][spawnStreet.c] === '.') grid[spawnStreet.r][spawnStreet.c] = 'P';
+  // the lost bird perches somewhere below street level
+  const perchFloors = floors.length > 2 ? floors.slice(1) : floors;
+  const perchRow = perchFloors[rnd(perchFloors.length)];
+  let perchC = 2 + rnd(16);
+  for (let k = 0; k < 24 && grid[perchRow - 1][perchC] !== '.'; k++) perchC = 2 + rnd(16);
+  const perch = { c: perchC, r: perchRow - 1 };
+  // grain
+  for (let n = 3 + rnd(3), k = 0; n > 0 && k < 40; k++) {
+    const fr = floors[rnd(floors.length)], c = 2 + rnd(16);
+    if (grid[fr - 1][c] === '.') { grid[fr - 1][c] = 'E'; n--; }
+  }
+  // ---- dressing, seeded per station
+  const freeCol = fr => {
+    for (let k = 0; k < 30; k++) {
+      const c = 2 + rnd(16);
+      const ch = grid[fr - 1][c];
+      if (ch === '.' || ch === 'E') return c;
+    }
+    return 2 + rnd(16);
+  };
+  const ads = [], bystanders = [], signs = [], helps = [];
+  for (let i = 0, n = 3 + rnd(2); i < n; i++) {
+    const fr = floors[rnd(floors.length)];
+    ads.push([freeCol(fr), fr]);
+  }
+  for (const p of platDefs) signs.push([4 + rnd(12), p.row]);
+  for (let i = 0, n = 2 + rnd(2); i < n; i++) {
+    const fr = floors[rnd(floors.length)];
+    bystanders.push([freeCol(fr), fr, rnd(20)]);
+  }
+  helps.push([freeCol(bottom), bottom]);
+  const guides = liftCols.map((c, i) => [Math.max(2, Math.min(17, c + (i ? 3 : -3))), shafts[i][1]]);
+  if (!guides.length) guides.push([freeCol(floors[Math.min(1, floors.length - 1)]), floors[Math.min(1, floors.length - 1)]]);
+  const board = [freeCol(bottom), bottom];
+  const commuters = [];
+  for (let i = 0, n = 2 + (floors.length > 2 ? 1 : 0); i < n; i++) {
+    commuters.push({ t: 'commuter', c: 2 + rnd(16), floor: floors[rnd(floors.length)], d: rnd(2) ? 1 : -1, v: rnd(20) });
+  }
+  const def = {
+    map: grid.map(r => r.join('')),
+    commuters, bystanders, ads, signs, levels, guides, helps, board,
+    streetRow, gateOut, platGates, defaultPlatGate, spawnStreet, perch,
+  };
+  GEN_CACHE.set(name, def);
   return def;
 }
 
@@ -362,12 +363,9 @@ export class TubeFlock {
   }
   get objective() { return this.lostIdx < LOST.length ? LOST[this.lostIdx] : null; }
   shuffleLifts() {
-    // step-free stations keep their lifts, honest — everywhere else, luck…
-    this.liftOut = new Set(Object.keys(POS)
-      .filter(s => !STEP_FREE.has(s) && Math.random() < 0.5));
-    // …except reality outranks luck: stations TfL's lift feed reported
-    // broken on bake day are broken here too, step-free or not
-    for (const s of NETWORK.liftsOutSnapshot) if (POS[s]) this.liftOut.add(s);
+    // reality only, for now: the stations TfL's lift feed reported broken
+    // on bake day. Random outages can return later, playability-tuned.
+    this.liftOut = new Set(NETWORK.liftsOutSnapshot.filter(s => POS[s]));
   }
   saveHi() {
     if (this.score > this.hiscore) {
@@ -424,7 +422,7 @@ export class TubeFlock {
   // ---------------------------------------------------------- interiors
   enterInterior(pendingEdge, rescue, { arrival = false } = {}) {
     const g = this.g;
-    const def = defFor(this.cur);
+    const def = genStation(this.cur);
     const seed = hashName(this.cur) % 20;
     const level = new Level({ name: this.cur, map: def.map, time: 0, enemies: [] }, 0);
     const stepFree = STEP_FREE.has(this.cur);
@@ -448,13 +446,19 @@ export class TubeFlock {
     if (!stepFree && escCols.length) {
       level.escCols.set(escCols[Math.floor(Math.random() * escCols.length)], 1);
     }
-    let gate = { c: 19, r: 13 }, perch = null;
-    def.map.forEach((row, r) => {
-      const xc = row.indexOf('X');
-      if (xc >= 0) gate = { c: xc, r };
-      const bc = row.indexOf('B');
-      if (bc >= 0) perch = { c: bc, r };
-    });
+    // where you're headed decides the door: line changes go DOWN to that
+    // line's own platform; rescues and wanders leave by the street WAY OUT
+    const gate = pendingEdge
+      ? (def.platGates[pendingEdge.line] || def.defaultPlatGate)
+      : def.gateOut;
+    const perch = def.perch;
+    // map entry is on foot from the street; train arrivals respawn below
+    const arrivalGate = def.platGates[this.line] || def.defaultPlatGate;
+    if (arrival) {
+      level.spawn = { x: arrivalGate.c * TILE + 16, y: (arrivalGate.r + 1) * TILE };
+    } else {
+      level.spawn = { x: def.spawnStreet.c * TILE + 16, y: (def.spawnStreet.r + 1) * TILE };
+    }
     // you play a random member of the flock; the rest fly with you
     const playing = this.roster[Math.floor(Math.random() * this.roster.length)];
     const player = new Player(level);
@@ -487,12 +491,12 @@ export class TubeFlock {
     g.screen = { def: { name: this.cur }, enemies: this.interior.enemies, cleared: false };
     g.fx = []; g.parts = [];
     if (arrival) {
-      // the train brings you: everyone starts tucked inside the carriage
-      // (door on the inward side, so mirrored stations keep it on screen)
+      // the train brings you in at the platform your line really uses
+      // (door on the inward side so it stays on screen either way round)
       const doorX = level.spawn.x + (level.spawn.x < W / 2 ? 36 : -36);
-      this.scene = { kind: 'arrive', t: 0, doorX, baseY: H - TILE };
-      player.x = -90; player.y = H - TILE;
-      for (const b of this.interior.buddies) { b.x = -90; b.y = H - TILE - 26; b.vx = 0; b.vy = 0; }
+      this.scene = { kind: 'arrive', t: 0, doorX, baseY: level.spawn.y };
+      player.x = -90; player.y = level.spawn.y;
+      for (const b of this.interior.buddies) { b.x = -90; b.y = level.spawn.y - 26; b.vx = 0; b.vy = 0; }
       g.camFocus = { x: this.scene.doorX, y: this.scene.baseY };
     } else {
       g.camFocus = null;
@@ -653,7 +657,9 @@ export class TubeFlock {
     const locked = it.rescue && !it.rescue.found;
     if (!locked) {
       const gx = it.gate.c * TILE + 16, gy = (it.gate.r + 1) * TILE;
-      if (Math.abs(px - gx) < 22 && Math.abs(py - gy) < 36) {
+      // a deliberate walk into the doorway — not a brush past it (lift
+      // landings can live near the exit, and alighting shouldn't eject you)
+      if (Math.abs(px - gx) < 15 && Math.abs(py - gy) < 36 && !g.player.onLift) {
         if (it.pendingEdge) {
           // all aboard: the flock files into the open door — the camera
           // stays on the doorway while the birds are whisked offstage
@@ -725,29 +731,49 @@ export class TubeFlock {
     const ob = this.objective;
     ctx.textAlign = 'center';
 
-    // lines — every chain of every line, through the map camera
+    // track — drawn segment by segment through the map camera; where
+    // lines share a corridor they ride offset side by side, and the
+    // octolinear bake keeps everything on the 45° grid. The diagram
+    // LANGUAGE of a transit map, in our own lino ink.
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     const onScreen = (x, y, m = 60) => x > -m && x < w + m && y > -m && y < h + m;
-    for (const def of Object.values(LINES)) {
-      const trace = (width, style) => {
-        ctx.strokeStyle = style;
-        ctx.lineWidth = width;
-        for (const chain of def.chains) {
-          ctx.beginPath();
-          chain.forEach((s, i) => {
-            const [x, y] = this.toXY(s);
-            i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
-          });
-          ctx.stroke();
+    const segOffset = (lineId, a, b) => {
+      const k = a < b ? `${a}|${b}` : `${b}|${a}`;
+      const sharers = EDGE_LINES.get(k) || [lineId];
+      const off = (sharers.indexOf(lineId) - (sharers.length - 1) / 2) * 3.6;
+      // perpendicular in the canonical (alphabetical) direction so both
+      // draw orders agree which side is which
+      const [ca, cb] = a < b ? [a, b] : [b, a];
+      const [ax, ay] = this.toXY(ca), [bx, by] = this.toXY(cb);
+      const len = Math.hypot(bx - ax, by - ay) || 1;
+      return [(-(by - ay) / len) * off, ((bx - ax) / len) * off];
+    };
+    const traceSegs = (lineId, def, width, style) => {
+      ctx.strokeStyle = style;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      for (const chain of def.chains) {
+        for (let i = 0; i + 1 < chain.length; i++) {
+          const a = chain[i], b = chain[i + 1];
+          if (a === b) continue;
+          const [ax, ay] = this.toXY(a), [bx, by] = this.toXY(b);
+          if (!onScreen(ax, ay, 140) && !onScreen(bx, by, 140)) continue;
+          const [ox, oy] = segOffset(lineId, a, b);
+          ctx.moveTo(ax + ox, ay + oy);
+          ctx.lineTo(bx + ox, by + oy);
         }
-      };
-      if (def.pale) trace(9, 'rgba(38,34,30,0.5)');   // ink underlay keeps pale inks legible
-      trace(7, def.color);
-      if (def.hollow) trace(2.6, PALETTE.paper);      // Overground-style hollow stripe
+      }
+      ctx.stroke();
+    };
+    for (const [lineId, def] of Object.entries(LINES)) {
+      if (def.pale) traceSegs(lineId, def, 8.6, 'rgba(38,34,30,0.5)');   // ink underlay keeps pale inks legible
+      traceSegs(lineId, def, 6.4, def.color);
+      if (def.hollow) traceSegs(lineId, def, 2.4, PALETTE.paper);        // Overground-style hollow stripe
     }
-    // stations — dots everywhere, but names only where they matter:
-    // where you are, where you can fly next, and who you're looking for
+    // stations — interchanges wear rings, ordinary stops wear tick marks
+    // off the side of their line; names only where they matter: where you
+    // are, where you can fly next, and who you're looking for
     const nbrs = new Set(EDGES.get(this.cur).map(e => e.to));
     ctx.font = `bold ${Math.max(11, fs * 0.56)}px Georgia, serif`;
     for (const name of Object.keys(POS)) {
@@ -755,10 +781,27 @@ export class TubeFlock {
       if (!onScreen(x, y)) continue;
       const inter = INTER_SET.has(name);
       const here = name === this.cur;
-      ctx.beginPath(); ctx.arc(x, y, inter ? 9 : 6, 0, Math.PI * 2);
-      ctx.fillStyle = PALETTE.paper; ctx.fill();
-      ctx.lineWidth = inter ? 3.5 : 2.5;
-      ctx.strokeStyle = PALETTE.ink; ctx.stroke();
+      if (inter || here) {
+        ctx.beginPath(); ctx.arc(x, y, inter ? 8 : 6.5, 0, Math.PI * 2);
+        ctx.fillStyle = PALETTE.paper; ctx.fill();
+        ctx.lineWidth = 3.2;
+        ctx.strokeStyle = PALETTE.ink; ctx.stroke();
+      } else {
+        // a tick perpendicular to the line, sticking out one side
+        const e0 = EDGES.get(name)[0];
+        let tx = 0, ty = -1;
+        if (e0) {
+          const [nx, ny] = this.toXY(e0.to);
+          const len = Math.hypot(nx - x, ny - y) || 1;
+          tx = -(ny - y) / len; ty = (nx - x) / len;
+        }
+        ctx.strokeStyle = PALETTE.ink;
+        ctx.lineWidth = 3.2;
+        ctx.beginPath();
+        ctx.moveTo(x + tx * 4, y + ty * 4);
+        ctx.lineTo(x + tx * 11, y + ty * 11);
+        ctx.stroke();
+      }
       if (ob && name === ob.at) {
         ctx.beginPath(); ctx.arc(x, y, 16 + Math.sin(t * 4) * 2.5, 0, Math.PI * 2);
         ctx.strokeStyle = PALETTE.danger; ctx.lineWidth = 2.5; ctx.stroke();
@@ -1013,7 +1056,7 @@ export class TubeFlock {
     ctx.fillStyle = PALETTE.ladder;
     ctx.font = 'bold 10px Georgia, serif';
     ctx.textAlign = 'center';
-    const streetRow = lv.grid.findIndex(row => row.some(ch => ch === '#' || ch === '+'));
+    const streetRow = it.def.streetRow ?? lv.grid.findIndex(row => row.some(ch => ch === '#' || ch === '+'));
     ctx.fillText('WAY OUT ↑', W / 2, streetRow * TILE - 6);
     // the gate: a waiting train (line changes) or the way-out doors (rescues)
     const gx = it.gate.c * TILE + 16, gy = (it.gate.r + 1) * TILE;

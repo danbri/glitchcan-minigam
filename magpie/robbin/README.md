@@ -102,23 +102,34 @@ lino-print drawings can be — are scattered across the **entire London
 Underground**: all eleven lines and 271 stations, baked from TfL's
 open data by `tools/fetch-tube.mjs` into `tube-network.js` (real
 geography drawn in the schematic lino style, no TfL branding), plus
-the hollow-striped Windrush segment. The map wears a camera that
-glides along with the flock; station names appear where they matter —
-where you are, where you can fly next, and who you're looking for —
-and when the lost bird is halfway across the city a pulsing arrow at
-the screen edge points the way. Fly line-to-line on the map toward the
+the hollow-striped Windrush segment. The map is drawn as a proper
+**transit diagram**: at bake time the real geography relaxes onto the
+45° grid (near-uniform stop spacing, straightened runs — the design
+language of a schematic map, in our own lino ink, no TfL artwork);
+parallel lines sharing a corridor ride offset side by side, ordinary
+stops wear tick marks, interchanges wear rings. A camera glides along
+with the flock; station names appear where they matter — where you
+are, where you can fly next, and who you're looking for — and when
+the lost bird is halfway across the city a pulsing arrow at the
+screen edge points the way. Fly line-to-line on the map toward the
 current lost bird; on arrival the flock gathers at the station mouth,
 then a little cutscene plays: the train slides in, doors open, and the
 whole flock hops out onto the platform. Boarding is its mirror — the
 birds file into the open door, doors close, and the carriage whisks
 them away. Arriving at a lost bird's station — or changing lines at an
 interchange — puts you **inside the station**: a full-screen
-platformer cut with the depths London stations really have, in four
-layout families (Bank's four levels down; big three-level halls;
-old Central-line street + deep platforms; modern twin-escalator
-step-free boxes). Half the network runs mirrored, and every station
-seeds its own crowd and advert hoardings, so the families read
-differently from stop to stop. Each interior you play a randomly chosen flock
+platformer cut **generated from the station's real cross-section**.
+Deep-tube lines put platforms at −2, the cut-and-cover lines at −1
+(King's Cross gets both; at Bank the Central and Northern really do
+run at different depths, so each gets its own level, labelled with
+its line); outer-zone stations are open-air platforms with a
+footbridge. Lift shafts and escalator banks follow **TfL's own
+per-station counts** — Hampstead is lift-only with zero escalators,
+Holborn has no lifts at all, Bank runs six escalator banks and a
+chained pair of lettered lifts — and one honest staircase always runs
+the whole way down. You enter on foot at street level; trains arrive
+and depart at the platform their line really uses; the WAY OUT is
+back up at the street. Each interior you play a randomly chosen flock
 member while the rest flutter along as AI buddies — the more you
 rescue, the fuller the screens get. Rescued birds join for +400 and
 +150 time; reach the waiting train (line changes) or the WAY OUT
@@ -160,14 +171,14 @@ melody fading in as intensity rises (a master lowpass opens with it;
 `Chiptune.setIntensity(0..1)` / `swell()`).
 
 Step-free access is real-ish: a curated list of genuinely step-free
-stations (Canada Water to Amersham, some eighty of them) never lose
-their lifts and all their escalators run your way; elsewhere lifts go
-out (crossed box on the map, shown for the stations around you) and
-one escalator runs against you — climb it at half speed, ride the
-right way at 1.6×, stairs never fail (Holborn, true to life, has no
-lift at all). And reality outranks luck: stations that TfL's own
-lift-disruption feed reported broken on the day the network was baked
-are broken in the game too, step-free or not. Separate hi-score.
+stations (Canada Water to Amersham, some eighty of them) keeps all
+their escalators running your way; elsewhere one escalator runs
+against you — climb it at half speed, ride the right way at 1.6×,
+stairs never fail. Lift outages are **reality only, for now**: the
+sole broken lifts are the stations TfL's own lift-disruption feed
+reported out on the day the network was baked (crossed box on the
+map). Random outages can return later, tuned for playability.
+Separate hi-score.
 
 ## Implementation notes
 

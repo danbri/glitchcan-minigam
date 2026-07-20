@@ -7,1089 +7,3916 @@ export const NETWORK = {
  "generated": "2026-07-20",
  "pos": {
   "HARROW & WEALDSTONE": [
-   83.24,
-   54.71
+   56.06,
+   35.15
   ],
   "KENTON": [
-   88.77,
-   59.81
+   61.17,
+   40.15
   ],
   "SOUTH KENTON": [
-   91.32,
-   65.39
+   66.21,
+   45.02
   ],
   "NORTH WEMBLEY": [
-   92.66,
-   69.11
+   67.26,
+   49.68
   ],
   "WEMBLEY CENTRAL": [
-   94.81,
-   74.07
+   72.11,
+   54.23
   ],
   "STONEBRIDGE PARK": [
-   101.14,
-   78.12
+   75.17,
+   57.86
   ],
   "HARLESDEN": [
-   106.57,
-   81.82
+   78.24,
+   61.26
   ],
   "WILLESDEN JUNCTION": [
-   110.67,
-   83.79
+   81.31,
+   64.58
   ],
   "KENSAL GREEN": [
-   116.48,
-   84.62
+   85.48,
+   65.17
   ],
   "QUEEN'S PARK": [
-   122.64,
-   82.87
-  ],
-  "KILBURN PARK": [
-   125.76,
-   82.47
-  ],
-  "MAIDA VALE": [
-   128.32,
-   84.99
-  ],
-  "WARWICK AVENUE": [
-   128.91,
-   88.14
-  ],
-  "PADDINGTON": [
-   131.04,
-   91.07
-  ],
-  "EDGWARE ROAD": [
-   133.61,
-   89.76
-  ],
-  "MARYLEBONE": [
-   135.12,
-   88.6
-  ],
-  "BAKER STREET": [
-   136.95,
-   88.33
-  ],
-  "REGENT'S PARK": [
-   140.17,
-   88.1
-  ],
-  "OXFORD CIRCUS": [
-   141.54,
-   92.04
-  ],
-  "PICCADILLY CIRCUS": [
-   143.99,
-   94.54
-  ],
-  "CHARING CROSS": [
-   145.96,
-   95.82
-  ],
-  "EMBANKMENT": [
-   147.35,
-   95.99
-  ],
-  "WATERLOO": [
-   149.72,
-   97.82
-  ],
-  "LAMBETH NORTH": [
-   150.47,
-   99.99
-  ],
-  "ELEPHANT & CASTLE": [
-   154,
-   102.06
-  ],
-  "EPPING": [
-   218.65,
-   5.58
-  ],
-  "THEYDON BOIS": [
-   215.43,
-   16.2
-  ],
-  "DEBDEN": [
-   209.61,
-   28.98
-  ],
-  "LOUGHTON": [
-   201.07,
-   30.89
-  ],
-  "BUCKHURST HILL": [
-   198.44,
-   38.08
-  ],
-  "WOODFORD": [
-   194.58,
-   47.63
-  ],
-  "SOUTH WOODFORD": [
-   192.58,
-   54.89
-  ],
-  "SNARESBROOK": [
-   190.81,
-   60.33
-  ],
-  "LEYTONSTONE": [
-   186.81,
-   66.31
-  ],
-  "LEYTON": [
-   182.67,
-   72
-  ],
-  "STRATFORD": [
-   183.3,
-   79.16
-  ],
-  "MILE END": [
-   174.19,
-   87.24
-  ],
-  "BETHNAL GREEN": [
-   167.6,
-   86.23
-  ],
-  "LIVERPOOL STREET": [
-   159.25,
-   91
-  ],
-  "BANK": [
-   157.53,
-   92.94
-  ],
-  "ST PAUL'S": [
-   154.92,
-   92.18
-  ],
-  "CHANCERY LANE": [
-   150.69,
-   90.57
-  ],
-  "HOLBORN": [
-   148.01,
-   90.9
-  ],
-  "TOTTENHAM COURT ROAD": [
-   145.01,
-   91.46
-  ],
-  "BOND STREET": [
-   139.19,
-   92.48
-  ],
-  "MARBLE ARCH": [
-   136.4,
-   92.91
-  ],
-  "LANCASTER GATE": [
-   131.41,
-   93.73
-  ],
-  "QUEENSWAY": [
-   127.9,
-   94.42
-  ],
-  "NOTTING HILL GATE": [
-   125.2,
-   94.99
-  ],
-  "HOLLAND PARK": [
-   122.31,
-   95.95
-  ],
-  "SHEPHERD'S BUSH": [
-   118.35,
-   97.29
-  ],
-  "WHITE CITY": [
-   116.7,
-   93.62
-  ],
-  "EAST ACTON": [
-   109.77,
-   91.37
-  ],
-  "NORTH ACTON": [
-   106,
-   88.02
-  ],
-  "HANGER LANE": [
-   96.07,
-   84.79
-  ],
-  "PERIVALE": [
-   86.79,
-   81.63
-  ],
-  "GREENFORD": [
-   79.98,
-   78.86
-  ],
-  "NORTHOLT": [
-   73.15,
-   76.05
-  ],
-  "SOUTH RUISLIP": [
-   64.03,
-   71.87
-  ],
-  "RUISLIP GARDENS": [
-   60.48,
-   69.99
-  ],
-  "WEST RUISLIP": [
-   52.28,
+   89.68,
    65.65
   ],
+  "KILBURN PARK": [
+   93.85,
+   66.13
+  ],
+  "MAIDA VALE": [
+   97.12,
+   68.88
+  ],
+  "WARWICK AVENUE": [
+   100.34,
+   71.55
+  ],
+  "PADDINGTON": [
+   103.43,
+   74.66
+  ],
+  "EDGWARE ROAD": [
+   105.98,
+   72.83
+  ],
+  "MARYLEBONE": [
+   108.6,
+   70.92
+  ],
+  "BAKER STREET": [
+   106.06,
+   68.95
+  ],
+  "REGENT'S PARK": [
+   111,
+   73.09
+  ],
+  "OXFORD CIRCUS": [
+   115.41,
+   76.93
+  ],
+  "PICCADILLY CIRCUS": [
+   117.73,
+   80.06
+  ],
+  "CHARING CROSS": [
+   120.69,
+   83.68
+  ],
+  "EMBANKMENT": [
+   124.01,
+   84.46
+  ],
+  "WATERLOO": [
+   127.08,
+   86.74
+  ],
+  "LAMBETH NORTH": [
+   127.3,
+   90.14
+  ],
+  "ELEPHANT & CASTLE": [
+   130.06,
+   92.5
+  ],
+  "EPPING": [
+   180.1,
+   0
+  ],
+  "THEYDON BOIS": [
+   179.94,
+   8.17
+  ],
+  "DEBDEN": [
+   175.3,
+   14.14
+  ],
+  "LOUGHTON": [
+   170.14,
+   20.41
+  ],
+  "BUCKHURST HILL": [
+   169.51,
+   28.65
+  ],
+  "WOODFORD": [
+   164.22,
+   35.04
+  ],
+  "SOUTH WOODFORD": [
+   164.3,
+   42.75
+  ],
+  "SNARESBROOK": [
+   164.25,
+   50.63
+  ],
+  "LEYTONSTONE": [
+   159.69,
+   56.65
+  ],
+  "LEYTON": [
+   157.02,
+   60.44
+  ],
+  "STRATFORD": [
+   156.93,
+   66.93
+  ],
+  "MILE END": [
+   151.96,
+   72.32
+  ],
+  "BETHNAL GREEN": [
+   143.81,
+   72.25
+  ],
+  "LIVERPOOL STREET": [
+   138.46,
+   76.06
+  ],
+  "BANK": [
+   134.48,
+   79.69
+  ],
+  "ST PAUL'S": [
+   131.03,
+   78.89
+  ],
+  "CHANCERY LANE": [
+   127.38,
+   78.14
+  ],
+  "HOLBORN": [
+   123.69,
+   77.37
+  ],
+  "TOTTENHAM COURT ROAD": [
+   120.22,
+   77.16
+  ],
+  "BOND STREET": [
+   111.42,
+   76.33
+  ],
+  "MARBLE ARCH": [
+   109.12,
+   79.65
+  ],
+  "LANCASTER GATE": [
+   105.65,
+   80.21
+  ],
+  "QUEENSWAY": [
+   102.14,
+   80.69
+  ],
+  "NOTTING HILL GATE": [
+   98.53,
+   80.92
+  ],
+  "HOLLAND PARK": [
+   94.37,
+   80.68
+  ],
+  "SHEPHERD'S BUSH": [
+   90.3,
+   80.49
+  ],
+  "WHITE CITY": [
+   84.36,
+   74.35
+  ],
+  "EAST ACTON": [
+   77.28,
+   72.89
+  ],
+  "NORTH ACTON": [
+   71.38,
+   66.85
+  ],
+  "HANGER LANE": [
+   65.14,
+   66.43
+  ],
+  "PERIVALE": [
+   58.71,
+   65.94
+  ],
+  "GREENFORD": [
+   53.44,
+   61.43
+  ],
+  "NORTHOLT": [
+   45.55,
+   61.05
+  ],
+  "SOUTH RUISLIP": [
+   40.31,
+   55.9
+  ],
+  "RUISLIP GARDENS": [
+   34.92,
+   50.57
+  ],
+  "WEST RUISLIP": [
+   29.44,
+   45.1
+  ],
   "HAINAULT": [
-   212.53,
-   49.2
+   175.35,
+   39.64
   ],
   "FAIRLOP": [
-   211.78,
-   53.09
+   175.51,
+   43.73
   ],
   "BARKINGSIDE": [
-   211.05,
-   57.9
+   175.54,
+   47.93
   ],
   "NEWBURY PARK": [
-   211.48,
-   62.73
+   175.43,
+   52.16
   ],
   "GANTS HILL": [
-   204.3,
-   62.33
+   171.43,
+   52.65
   ],
   "REDBRIDGE": [
-   198.02,
-   62.48
+   167.23,
+   53.08
   ],
   "WANSTEAD": [
-   192.94,
-   62.84
+   162.92,
+   53.58
   ],
   "GRANGE HILL": [
-   212.1,
-   44.49
+   175.05,
+   35.53
   ],
   "CHIGWELL": [
-   206.97,
-   42.29
+   171.96,
+   32.58
   ],
   "RODING VALLEY": [
-   197.5,
-   42.64
+   167.59,
+   32.38
   ],
   "WEST ACTON": [
-   99.6,
-   90.69
+   65.48,
+   72.53
   ],
   "EALING BROADWAY": [
-   93.43,
-   92.14
+   58.34,
+   73.52
   ],
   "BAYSWATER": [
-   127.66,
-   93.46
+   100.93,
+   77.72
   ],
   "HIGH STREET KENSINGTON": [
-   126.2,
-   98.9
+   98.66,
+   85.3
   ],
   "GLOUCESTER ROAD": [
-   129.25,
-   102.17
+   102.31,
+   89.05
   ],
   "SOUTH KENSINGTON": [
-   131.82,
-   102.27
+   106.26,
+   88.77
   ],
   "SLOANE SQUARE": [
-   137.18,
-   103.16
+   110.87,
+   88.84
   ],
   "VICTORIA": [
-   141.18,
-   101.18
+   115.43,
+   88.81
   ],
   "ST JAMES'S PARK": [
-   144.05,
-   99.63
+   117.9,
+   86.69
   ],
   "WESTMINSTER": [
-   146.68,
-   98.77
+   121.31,
+   86.67
   ],
   "TEMPLE": [
-   149.88,
-   94.08
+   126.38,
+   82.35
   ],
   "BLACKFRIARS": [
-   153.08,
-   93.8
+   129.33,
+   82.35
   ],
   "MANSION HOUSE": [
-   155.99,
-   93.54
+   132.36,
+   82.51
   ],
   "CANNON STREET": [
-   157.07,
-   93.84
+   135.37,
+   82.69
   ],
   "MONUMENT": [
-   158.41,
-   94.23
+   138.31,
+   82.37
   ],
   "TOWER HILL": [
-   161.25,
-   94.58
+   141.34,
+   82.08
   ],
   "ALDGATE": [
-   161.51,
-   92.51
+   140.84,
+   78.5
   ],
   "MOORGATE": [
-   157.7,
-   90.61
+   134.09,
+   75.5
   ],
   "BARBICAN": [
-   154.79,
-   89.59
+   129.77,
+   75.1
   ],
   "FARRINGDON": [
-   152.7,
-   89.6
+   126.24,
+   72.62
   ],
   "KING'S CROSS ST PANCRAS": [
-   147.19,
-   84.56
+   122.63,
+   69.94
   ],
   "EUSTON SQUARE": [
-   143.38,
-   87.01
+   116.13,
+   69.47
   ],
   "GREAT PORTLAND STREET": [
-   140.83,
-   87.86
+   111.3,
+   69.17
   ],
   "ROYAL OAK": [
-   127.42,
-   90.15
+   99.74,
+   74.62
   ],
   "WESTBOURNE PARK": [
-   123.7,
-   89.19
+   95.99,
+   74.1
   ],
   "LADBROKE GROVE": [
-   120.89,
-   90.96
+   93.13,
+   75.85
   ],
   "LATIMER ROAD": [
-   118.66,
-   92.93
+   90.31,
+   77.64
   ],
   "WOOD LANE": [
-   116.63,
-   94.73
+   87.35,
+   80.59
   ],
   "SHEPHERD'S BUSH MARKET": [
-   116.07,
-   96.71
+   85.34,
+   83.33
   ],
   "GOLDHAWK ROAD": [
-   115.97,
-   98.44
+   85.4,
+   86.98
   ],
   "HAMMERSMITH": [
-   116.69,
-   102.88
+   85.54,
+   90.64
   ],
   "UPMINSTER": [
    260,
-   70.8
+   65.06
   ],
   "UPMINSTER BRIDGE": [
-   255.45,
-   71.04
+   251.82,
+   65.06
   ],
   "HORNCHURCH": [
-   250.42,
-   73.21
+   246.35,
+   68.87
   ],
   "ELM PARK": [
-   244.24,
-   75.3
+   238.15,
+   68.94
   ],
   "DAGENHAM EAST": [
-   234.41,
-   78.05
+   229.82,
+   68.91
   ],
   "DAGENHAM HEATHWAY": [
-   228.83,
-   79.24
+   221.45,
+   68.88
   ],
   "BECONTREE": [
-   222.64,
-   79.88
+   213.04,
+   68.84
   ],
   "UPNEY": [
-   214.96,
-   80.82
-  ],
-  "BARKING": [
-   208.78,
-   80.36
-  ],
-  "EAST HAM": [
-   199.78,
-   80.55
-  ],
-  "UPTON PARK": [
-   194.97,
-   82.29
-  ],
-  "PLAISTOW": [
-   189.6,
-   84.23
-  ],
-  "WEST HAM": [
-   185.86,
-   85.78
-  ],
-  "BROMLEY-BY-BOW": [
-   180.86,
-   87.38
-  ],
-  "BOW ROAD": [
-   176.76,
-   86.36
-  ],
-  "STEPNEY GREEN": [
-   170.29,
-   88.82
-  ],
-  "WHITECHAPEL": [
-   166.25,
-   89.96
-  ],
-  "ALDGATE EAST": [
-   162.51,
-   92.13
-  ],
-  "EARL'S COURT": [
-   126.02,
-   103.26
-  ],
-  "WEST KENSINGTON": [
-   122.02,
-   104.04
-  ],
-  "BARONS COURT": [
-   119.97,
-   104.11
-  ],
-  "RAVENSCOURT PARK": [
-   113.2,
-   102.26
-  ],
-  "STAMFORD BROOK": [
-   110.24,
-   101.88
-  ],
-  "TURNHAM GREEN": [
-   107.57,
-   101.76
-  ],
-  "CHISWICK PARK": [
-   103.52,
-   102.02
-  ],
-  "ACTON TOWN": [
-   99.76,
-   97.93
-  ],
-  "EALING COMMON": [
-   97.4,
-   94.5
-  ],
-  "GUNNERSBURY": [
-   101.32,
-   103.38
-  ],
-  "KEW GARDENS": [
-   98.32,
-   110.53
-  ],
-  "RICHMOND": [
-   93.46,
-   117.22
-  ],
-  "WEST BROMPTON": [
-   125.35,
-   105.58
-  ],
-  "FULHAM BROADWAY": [
-   125.4,
-   109.06
-  ],
-  "PARSONS GREEN": [
-   123.67,
-   111.39
-  ],
-  "PUTNEY BRIDGE": [
-   121.39,
-   114.79
-  ],
-  "EAST PUTNEY": [
-   120.71,
-   119.18
-  ],
-  "SOUTHFIELDS": [
-   122.03,
-   126.02
-  ],
-  "WIMBLEDON PARK": [
-   124.11,
-   131.11
-  ],
-  "WIMBLEDON": [
-   122.04,
-   137.59
-  ],
-  "KENSINGTON (OLYMPIA)": [
-   121,
-   100.56
-  ],
-  "CANNING TOWN": [
-   186.85,
-   92.83
-  ],
-  "NORTH GREENWICH": [
-   185.63,
-   99.19
-  ],
-  "CANARY WHARF": [
-   178.84,
-   97.72
-  ],
-  "CANADA WATER": [
-   169.44,
-   100.42
-  ],
-  "BERMONDSEY": [
-   165.04,
-   100.5
-  ],
-  "LONDON BRIDGE": [
-   157.54,
-   96.64
-  ],
-  "SOUTHWARK": [
-   152.57,
-   97.34
-  ],
-  "GREEN PARK": [
-   141.28,
-   96.05
-  ],
-  "ST JOHN'S WOOD": [
-   131.88,
-   82.69
-  ],
-  "SWISS COTTAGE": [
-   131.59,
-   78.25
-  ],
-  "FINCHLEY ROAD": [
-   130.1,
-   76.73
-  ],
-  "WEST HAMPSTEAD": [
-   126.72,
-   76.82
-  ],
-  "KILBURN": [
-   122.74,
-   76.56
-  ],
-  "WILLESDEN GREEN": [
-   117.53,
-   75.6
-  ],
-  "DOLLIS HILL": [
-   112.24,
-   74.24
-  ],
-  "NEASDEN": [
-   108.99,
-   73.26
-  ],
-  "WEMBLEY PARK": [
-   100.12,
+   204.57,
    68.8
   ],
-  "KINGSBURY": [
-   100.26,
-   58.31
+  "BARKING": [
+   196.06,
+   68.75
   ],
-  "QUEENSBURY": [
-   98.02,
-   53.78
+  "EAST HAM": [
+   187.5,
+   68.71
   ],
-  "CANONS PARK": [
-   95.47,
-   47.24
+  "UPTON PARK": [
+   178.9,
+   68.65
   ],
-  "STANMORE": [
-   92.88,
-   41.36
+  "PLAISTOW": [
+   170.28,
+   68.66
   ],
-  "AMERSHAM": [
-   1.07,
-   15.06
+  "WEST HAM": [
+   163.2,
+   72.52
   ],
-  "CHALFONT & LATIMER": [
-   15.25,
-   18.03
+  "BROMLEY-BY-BOW": [
+   159.67,
+   72.55
   ],
-  "CHORLEYWOOD": [
-   27.98,
-   24.63
+  "BOW ROAD": [
+   155.82,
+   72.4
   ],
-  "RICKMANSWORTH": [
-   41.48,
-   31.49
+  "STEPNEY GREEN": [
+   149.54,
+   75.35
   ],
-  "MOOR PARK": [
-   53.92,
-   36.51
+  "WHITECHAPEL": [
+   146.2,
+   76.23
   ],
-  "NORTHWOOD": [
-   56.52,
-   45.61
+  "ALDGATE EAST": [
+   143.72,
+   79.16
   ],
-  "NORTHWOOD HILLS": [
-   60.85,
-   50.69
+  "EARL'S COURT": [
+   98.18,
+   89.88
   ],
-  "PINNER": [
-   69.39,
-   54.41
+  "WEST KENSINGTON": [
+   94.24,
+   90.03
   ],
-  "NORTH HARROW": [
-   75.04,
-   58.3
+  "BARONS COURT": [
+   90.24,
+   90.23
   ],
-  "HARROW-ON-THE-HILL": [
-   82.64,
-   61.05
+  "RAVENSCOURT PARK": [
+   82.5,
+   90.65
   ],
-  "NORTHWICK PARK": [
-   88.42,
-   61.39
+  "STAMFORD BROOK": [
+   79.41,
+   90.56
   ],
-  "PRESTON ROAD": [
-   95.34,
-   64.55
+  "TURNHAM GREEN": [
+   76.26,
+   90.4
   ],
-  "CHESHAM": [
-   0,
-   0
+  "CHISWICK PARK": [
+   72.5,
+   89.18
   ],
-  "WEST HARROW": [
-   77.76,
+  "ACTON TOWN": [
+   69.68,
+   85.28
+  ],
+  "EALING COMMON": [
+   64.59,
+   79.93
+  ],
+  "GUNNERSBURY": [
+   70.28,
+   91.56
+  ],
+  "KEW GARDENS": [
+   69.29,
+   98.01
+  ],
+  "RICHMOND": [
+   63.72,
+   103.81
+  ],
+  "WEST BROMPTON": [
+   98.53,
+   97.43
+  ],
+  "FULHAM BROADWAY": [
+   98.76,
+   104.74
+  ],
+  "PARSONS GREEN": [
+   96.17,
+   108.86
+  ],
+  "PUTNEY BRIDGE": [
+   93.44,
+   112.95
+  ],
+  "EAST PUTNEY": [
+   93.52,
+   120.04
+  ],
+  "SOUTHFIELDS": [
+   93.65,
+   127
+  ],
+  "WIMBLEDON PARK": [
+   97,
+   131.56
+  ],
+  "WIMBLEDON": [
+   97.14,
+   138.52
+  ],
+  "KENSINGTON (OLYMPIA)": [
+   95.06,
+   86.57
+  ],
+  "CANNING TOWN": [
+   162.08,
+   79.56
+  ],
+  "NORTH GREENWICH": [
+   160.84,
+   86.44
+  ],
+  "CANARY WHARF": [
+   152.94,
+   87.6
+  ],
+  "CANADA WATER": [
+   144.81,
+   88.62
+  ],
+  "BERMONDSEY": [
+   139.17,
+   88.55
+  ],
+  "LONDON BRIDGE": [
+   135.38,
+   85.95
+  ],
+  "SOUTHWARK": [
+   131.37,
+   86.3
+  ],
+  "GREEN PARK": [
+   115.57,
+   82.34
+  ],
+  "ST JOHN'S WOOD": [
+   103.31,
+   66.68
+  ],
+  "SWISS COTTAGE": [
+   100.52,
+   64.18
+  ],
+  "FINCHLEY ROAD": [
+   97.63,
+   61.79
+  ],
+  "WEST HAMPSTEAD": [
+   97.69,
+   65.73
+  ],
+  "KILBURN": [
+   95.24,
+   63.48
+  ],
+  "WILLESDEN GREEN": [
+   93.38,
    60.8
   ],
+  "DOLLIS HILL": [
+   90.36,
+   60.37
+  ],
+  "NEASDEN": [
+   87.26,
+   60.02
+  ],
+  "WEMBLEY PARK": [
+   88.42,
+   55.99
+  ],
+  "KINGSBURY": [
+   82.59,
+   50.19
+  ],
+  "QUEENSBURY": [
+   76.98,
+   44.53
+  ],
+  "CANONS PARK": [
+   75.93,
+   38.39
+  ],
+  "STANMORE": [
+   70.34,
+   32.63
+  ],
+  "AMERSHAM": [
+   0,
+   6.14
+  ],
+  "CHALFONT & LATIMER": [
+   8.26,
+   6.21
+  ],
+  "CHORLEYWOOD": [
+   14.39,
+   12.17
+  ],
+  "RICKMANSWORTH": [
+   20.62,
+   18.14
+  ],
+  "MOOR PARK": [
+   28.86,
+   19.49
+  ],
+  "NORTHWOOD": [
+   35.12,
+   26.62
+  ],
+  "NORTHWOOD HILLS": [
+   41.41,
+   33.79
+  ],
+  "PINNER": [
+   47.78,
+   41
+  ],
+  "NORTH HARROW": [
+   54.2,
+   48.26
+  ],
+  "HARROW-ON-THE-HILL": [
+   60.68,
+   55.56
+  ],
+  "NORTHWICK PARK": [
+   69.48,
+   55.76
+  ],
+  "PRESTON ROAD": [
+   78.92,
+   55.79
+  ],
+  "CHESHAM": [
+   2.42,
+   0.42
+  ],
+  "WEST HARROW": [
+   52.81,
+   56.78
+  ],
   "RAYNERS LANE": [
-   72.42,
-   63.01
+   45.02,
+   58.02
   ],
   "EASTCOTE": [
-   64.5,
-   62.35
+   39.03,
+   59.32
   ],
   "RUISLIP MANOR": [
-   59.8,
-   63.95
+   33.04,
+   60.62
   ],
   "RUISLIP": [
-   57.1,
-   64.85
+   27.12,
+   61.98
   ],
   "ICKENHAM": [
-   51.04,
-   69.38
+   21.85,
+   66.89
   ],
   "HILLINGDON": [
-   48.68,
-   73.39
+   16.69,
+   71.94
   ],
   "UXBRIDGE": [
-   40.2,
-   76.86
+   11.56,
+   77.01
   ],
   "CROXLEY": [
-   51.13,
-   28.18
+   31.97,
+   16.11
   ],
   "WATFORD": [
-   58.47,
-   23.14
+   35.17,
+   12.77
   ],
   "HIGH BARNET": [
-   125.74,
-   26.48
+   87.56,
+   18.35
   ],
   "TOTTERIDGE & WHETSTONE": [
-   130.29,
-   36.15
+   90.78,
+   21.62
   ],
   "WOODSIDE PARK": [
-   128.42,
-   42.24
+   91.29,
+   25.98
   ],
   "WEST FINCHLEY": [
-   127.53,
-   46.4
+   91.69,
+   30.37
   ],
   "FINCHLEY CENTRAL": [
-   126.28,
-   50.52
+   91.97,
+   34.77
   ],
   "EAST FINCHLEY": [
-   134.58,
-   57.2
+   97.91,
+   40.12
   ],
   "HIGHGATE": [
-   140.35,
-   61.85
+   103.67,
+   45.34
   ],
   "ARCHWAY": [
-   143.68,
-   67.69
+   109.19,
+   50.36
   ],
   "TUFNELL PARK": [
-   142.59,
-   71.89
+   110.38,
+   54.85
   ],
   "KENTISH TOWN": [
-   141.9,
-   75.04
+   111.43,
+   59.31
   ],
   "CAMDEN TOWN": [
-   141.29,
-   80.38
+   112.35,
+   63.77
   ],
   "MORNINGTON CRESCENT": [
-   142.48,
-   82.61
+   115.49,
+   66.55
   ],
   "EUSTON": [
-   143.99,
-   85.85
+   118.96,
+   69.87
   ],
   "WARREN STREET": [
-   142.62,
-   87.33
+   115.79,
+   72.55
   ],
   "GOODGE STREET": [
-   143.82,
-   89.43
+   117.96,
+   74.89
   ],
   "LEICESTER SQUARE": [
-   145.61,
-   93.9
+   120.78,
+   80.43
   ],
   "KENNINGTON": [
-   152.38,
-   105.06
+   126.94,
+   95.08
   ],
   "OVAL": [
-   150.43,
-   108.21
+   127.21,
+   102.64
   ],
   "STOCKWELL": [
-   147.35,
-   112.89
+   127.27,
+   107.54
   ],
   "CLAPHAM NORTH": [
-   145.13,
-   116.3
+   124.5,
+   111.71
   ],
   "CLAPHAM COMMON": [
-   142.63,
-   117.95
+   121.69,
+   115.74
   ],
   "CLAPHAM SOUTH": [
-   139.83,
-   122.35
+   118.86,
+   119.81
   ],
   "BALHAM": [
-   138.2,
-   126.89
+   118.85,
+   126.57
   ],
   "TOOTING BEC": [
-   136.17,
-   130.57
+   116.02,
+   130.69
   ],
   "TOOTING BROADWAY": [
-   133.56,
-   134.47
+   113.09,
+   134.76
   ],
   "COLLIERS WOOD": [
-   130.63,
-   139.06
+   110.12,
+   138.84
   ],
   "SOUTH WIMBLEDON": [
-   126.43,
-   140.44
+   107.12,
+   142.96
   ],
   "MORDEN": [
-   125.58,
-   146.82
+   107.04,
+   149.66
   ],
   "ANGEL": [
-   152.27,
-   83.99
+   127.44,
+   69.64
   ],
   "OLD STREET": [
-   157.87,
-   86.88
+   130.93,
+   72.25
   ],
   "BOROUGH": [
-   156.18,
-   98.83
+   132.81,
+   89.29
   ],
   "EDGWARE": [
-   101.43,
-   44.35
+   72.82,
+   27.65
   ],
   "BURNT OAK": [
-   104.71,
-   49.62
+   77.5,
+   32.35
   ],
   "COLINDALE": [
-   108.97,
-   53.19
+   82.14,
+   37.02
   ],
   "HENDON CENTRAL": [
-   116.05,
-   59.06
+   86.72,
+   41.64
   ],
   "BRENT CROSS": [
-   119.92,
-   62.28
+   91.18,
+   46.12
   ],
   "GOLDERS GREEN": [
-   125.82,
-   64.41
+   95.75,
+   46.97
   ],
   "HAMPSTEAD": [
-   130.82,
-   72.17
+   100.07,
+   51.27
   ],
   "BELSIZE PARK": [
-   134.68,
-   75.04
+   104.2,
+   55.5
   ],
   "CHALK FARM": [
-   138.08,
-   78.04
+   108.19,
+   59.6
   ],
   "MILL HILL EAST": [
-   121.01,
-   46.98
+   88.65,
+   31.53
   ],
   "NINE ELMS": [
-   145.59,
-   109.15
+   123.48,
+   97.86
   ],
   "BATTERSEA POWER STATION": [
-   141.47,
-   109.14
+   118.9,
+   97.96
   ],
   "COCKFOSTERS": [
-   139.35,
-   26.01
+   112.56,
+   34.91
   ],
   "OAKWOOD": [
-   144.48,
-   27.85
+   117.17,
+   34.95
   ],
   "SOUTHGATE": [
-   145.79,
-   35.31
+   117.98,
+   38.79
   ],
   "ARNOS GROVE": [
-   144.21,
-   43
+   118.68,
+   42.75
   ],
   "BOUNDS GREEN": [
-   146.87,
-   47.56
+   122.02,
+   45.63
   ],
   "WOOD GREEN": [
-   151.2,
-   52.19
+   125.41,
+   48.5
   ],
   "TURNPIKE LANE": [
-   153.29,
-   55.68
+   128.76,
+   51.39
   ],
   "MANOR HOUSE": [
-   155.35,
-   65.14
+   129.41,
+   55.39
   ],
   "FINSBURY PARK": [
-   152.12,
-   68.33
+   129.97,
+   59.43
   ],
   "ARSENAL": [
-   151.93,
-   71
+   127.5,
+   61.6
   ],
   "HOLLOWAY ROAD": [
-   150.19,
-   73.88
+   125.05,
+   63.99
   ],
   "CALEDONIAN ROAD": [
-   148.6,
-   75.91
+   122.58,
+   66.36
   ],
   "RUSSELL SQUARE": [
-   146.86,
-   88.24
+   123.18,
+   73.69
   ],
   "COVENT GARDEN": [
-   146.81,
-   93.07
+   123.95,
+   80.59
   ],
   "HYDE PARK CORNER": [
-   138.37,
-   97.94
+   112.95,
+   85.39
   ],
   "KNIGHTSBRIDGE": [
-   135.93,
-   98.61
+   109.12,
+   85.81
   ],
   "NORTH EALING": [
-   97.22,
-   90.93
+   64.28,
+   75.77
   ],
   "PARK ROYAL": [
-   98.59,
-   86.27
+   61.41,
+   72.72
   ],
   "ALPERTON": [
-   93.98,
-   79.73
+   58.11,
+   69.82
   ],
   "SUDBURY TOWN": [
-   89.12,
-   74.8
+   54.89,
+   66.94
   ],
   "SUDBURY HILL": [
-   82.88,
-   71.83
+   51.67,
+   64.09
   ],
   "SOUTH HARROW": [
-   78.04,
-   67.98
+   48.65,
+   61.03
   ],
   "SOUTH EALING": [
-   91.63,
-   98.93
+   62.39,
+   85.74
   ],
   "NORTHFIELDS": [
-   89.43,
-   99.74
+   55.09,
+   86.18
   ],
   "BOSTON MANOR": [
-   86.34,
-   101.53
+   49.54,
+   89.79
   ],
   "OSTERLEY": [
-   78.12,
-   108.49
+   44.1,
+   93.53
   ],
   "HOUNSLOW EAST": [
-   76.83,
-   112.39
+   38.63,
+   97.2
   ],
   "HOUNSLOW CENTRAL": [
-   73.79,
-   113.32
+   31.16,
+   97.65
   ],
   "HOUNSLOW WEST": [
-   67.77,
-   112.27
+   23.6,
+   97.89
   ],
   "HATTON CROSS": [
-   56.71,
-   115.52
+   16.05,
+   98.09
   ],
   "HEATHROW TERMINALS 2 & 3": [
-   47.95,
-   113.35
+   9.76,
+   98.17
   ],
   "HEATHROW TERMINAL 5": [
-   36.4,
-   113.92
+   2.19,
+   98.23
   ],
   "HEATHROW TERMINAL 4": [
-   49.9,
-   119.51
+   10.06,
+   103.89
   ],
   "WALTHAMSTOW CENTRAL": [
-   178.34,
-   59.22
+   157.5,
+   51.15
   ],
   "BLACKHORSE ROAD": [
-   171.93,
-   57.31
+   149.33,
+   51.16
   ],
   "TOTTENHAM HALE": [
-   166.17,
-   56.73
+   141.14,
+   51.21
   ],
   "SEVEN SISTERS": [
-   162.45,
-   59.04
+   135.54,
+   55.23
   ],
   "HIGHBURY & ISLINGTON": [
-   153.18,
-   76.96
+   128.7,
+   64.61
   ],
   "PIMLICO": [
-   144,
-   104.7
+   120.89,
+   94.37
   ],
   "VAUXHALL": [
-   146.88,
-   106.32
+   126.21,
+   99.67
   ],
   "BRIXTON": [
-   149.69,
-   117.52
+   132.74,
+   113.15
   ],
   "ROTHERHITHE": [
-   168.67,
-   99.01
+   141.61,
+   85.32
   ],
   "SURREY QUAYS": [
-   170,
-   102.62
+   144.89,
+   96.63
   ]
+ },
+ "stations": {
+  "HARROW & WEALDSTONE": {
+   "zone": 5,
+   "lifts": 4,
+   "escalators": 0,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "KENTON": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "SOUTH KENTON": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "NORTH WEMBLEY": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WEMBLEY CENTRAL": {
+   "zone": 4,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "STONEBRIDGE PARK": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "HARLESDEN": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "WILLESDEN JUNCTION": {
+   "zone": 2,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "KENSAL GREEN": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "QUEEN'S PARK": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "KILBURN PARK": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "MAIDA VALE": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "WARWICK AVENUE": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "PADDINGTON": {
+   "zone": 1,
+   "lifts": 2,
+   "escalators": 4,
+   "lines": [
+    "bakerloo",
+    "circle",
+    "district",
+    "hammersmith-city"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "EDGWARE ROAD": {
+   "zone": 1,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "bakerloo",
+    "circle",
+    "district",
+    "hammersmith-city"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "MARYLEBONE": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "BAKER STREET": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 6,
+   "lines": [
+    "bakerloo",
+    "circle",
+    "hammersmith-city",
+    "jubilee",
+    "metropolitan"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "REGENT'S PARK": {
+   "zone": 1,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "OXFORD CIRCUS": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 14,
+   "lines": [
+    "bakerloo",
+    "central",
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "PICCADILLY CIRCUS": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 11,
+   "lines": [
+    "bakerloo",
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "CHARING CROSS": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 10,
+   "lines": [
+    "bakerloo",
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "EMBANKMENT": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 10,
+   "lines": [
+    "bakerloo",
+    "circle",
+    "district",
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "WATERLOO": {
+   "zone": 1,
+   "lifts": 1,
+   "escalators": 23,
+   "lines": [
+    "bakerloo",
+    "jubilee",
+    "northern",
+    "waterloo-city"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "LAMBETH NORTH": {
+   "zone": 1,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "bakerloo"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "ELEPHANT & CASTLE": {
+   "zone": 1,
+   "lifts": 5,
+   "escalators": 0,
+   "lines": [
+    "bakerloo",
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "EPPING": {
+   "zone": 6,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "THEYDON BOIS": {
+   "zone": 6,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "DEBDEN": {
+   "zone": 6,
+   "lifts": 1,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "LOUGHTON": {
+   "zone": 6,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "BUCKHURST HILL": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WOODFORD": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "SOUTH WOODFORD": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "SNARESBROOK": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "LEYTONSTONE": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "LEYTON": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "STRATFORD": {
+   "zone": 2,
+   "lifts": 5,
+   "escalators": 2,
+   "lines": [
+    "central",
+    "jubilee"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "MILE END": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central",
+    "district",
+    "hammersmith-city"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "BETHNAL GREEN": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 3,
+   "lines": [
+    "central"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "LIVERPOOL STREET": {
+   "zone": 1,
+   "lifts": 1,
+   "escalators": 9,
+   "lines": [
+    "central",
+    "circle",
+    "hammersmith-city",
+    "metropolitan"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "BANK": {
+   "zone": 1,
+   "lifts": 5,
+   "escalators": 15,
+   "lines": [
+    "central",
+    "northern",
+    "waterloo-city"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "ST PAUL'S": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 4,
+   "lines": [
+    "central"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "CHANCERY LANE": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 5,
+   "lines": [
+    "central"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "HOLBORN": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 7,
+   "lines": [
+    "central",
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "TOTTENHAM COURT ROAD": {
+   "zone": 1,
+   "lifts": 1,
+   "escalators": 6,
+   "lines": [
+    "central",
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "BOND STREET": {
+   "zone": 1,
+   "lifts": 1,
+   "escalators": 8,
+   "lines": [
+    "central",
+    "jubilee"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "MARBLE ARCH": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "central"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "LANCASTER GATE": {
+   "zone": 1,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "QUEENSWAY": {
+   "zone": 1,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "NOTTING HILL GATE": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 6,
+   "lines": [
+    "central",
+    "circle",
+    "district"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "HOLLAND PARK": {
+   "zone": 2,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "SHEPHERD'S BUSH": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "central"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "WHITE CITY": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "EAST ACTON": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "NORTH ACTON": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "HANGER LANE": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "PERIVALE": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "GREENFORD": {
+   "zone": 4,
+   "lifts": 1,
+   "escalators": 1,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "NORTHOLT": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "SOUTH RUISLIP": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "RUISLIP GARDENS": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WEST RUISLIP": {
+   "zone": 6,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HAINAULT": {
+   "zone": 4,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "FAIRLOP": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "BARKINGSIDE": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "NEWBURY PARK": {
+   "zone": 4,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "GANTS HILL": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 3,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "REDBRIDGE": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WANSTEAD": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "GRANGE HILL": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "CHIGWELL": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "RODING VALLEY": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WEST ACTON": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "central"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "EALING BROADWAY": {
+   "zone": 3,
+   "lifts": 4,
+   "escalators": 0,
+   "lines": [
+    "central",
+    "district"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "BAYSWATER": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "HIGH STREET KENSINGTON": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "GLOUCESTER ROAD": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "district",
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "SOUTH KENSINGTON": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 5,
+   "lines": [
+    "circle",
+    "district",
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "SLOANE SQUARE": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "circle",
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "VICTORIA": {
+   "zone": 1,
+   "lifts": 1,
+   "escalators": 6,
+   "lines": [
+    "circle",
+    "district",
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "ST JAMES'S PARK": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "WESTMINSTER": {
+   "zone": 1,
+   "lifts": 5,
+   "escalators": 17,
+   "lines": [
+    "circle",
+    "district",
+    "jubilee"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "TEMPLE": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "BLACKFRIARS": {
+   "zone": 1,
+   "lifts": 2,
+   "escalators": 4,
+   "lines": [
+    "circle",
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "MANSION HOUSE": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "CANNON STREET": {
+   "zone": 1,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "MONUMENT": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "TOWER HILL": {
+   "zone": 1,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "ALDGATE": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "MOORGATE": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 6,
+   "lines": [
+    "circle",
+    "hammersmith-city",
+    "metropolitan",
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "BARBICAN": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "hammersmith-city",
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "FARRINGDON": {
+   "zone": 1,
+   "lifts": 4,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "hammersmith-city",
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "KING'S CROSS ST PANCRAS": {
+   "zone": 1,
+   "lifts": 10,
+   "escalators": 19,
+   "lines": [
+    "circle",
+    "hammersmith-city",
+    "metropolitan",
+    "northern",
+    "piccadilly",
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "EUSTON SQUARE": {
+   "zone": 1,
+   "lifts": 1,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "hammersmith-city",
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "GREAT PORTLAND STREET": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "hammersmith-city",
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "ROYAL OAK": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "WESTBOURNE PARK": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "LADBROKE GROVE": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "LATIMER ROAD": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "WOOD LANE": {
+   "zone": 2,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "SHEPHERD'S BUSH MARKET": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "GOLDHAWK ROAD": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "HAMMERSMITH": {
+   "zone": 2,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "circle",
+    "district",
+    "hammersmith-city",
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "UPMINSTER": {
+   "zone": 6,
+   "lifts": 1,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "UPMINSTER BRIDGE": {
+   "zone": 6,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HORNCHURCH": {
+   "zone": 6,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "ELM PARK": {
+   "zone": 6,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "DAGENHAM EAST": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "DAGENHAM HEATHWAY": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "BECONTREE": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "UPNEY": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "BARKING": {
+   "zone": 4,
+   "lifts": 1,
+   "escalators": 0,
+   "lines": [
+    "district",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "EAST HAM": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "UPTON PARK": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "PLAISTOW": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WEST HAM": {
+   "zone": 2,
+   "lifts": 5,
+   "escalators": 6,
+   "lines": [
+    "district",
+    "hammersmith-city",
+    "jubilee"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "BROMLEY-BY-BOW": {
+   "zone": 2,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "district",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "BOW ROAD": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "STEPNEY GREEN": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "WHITECHAPEL": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "ALDGATE EAST": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district",
+    "hammersmith-city"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "EARL'S COURT": {
+   "zone": 1,
+   "lifts": 4,
+   "escalators": 4,
+   "lines": [
+    "district",
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "WEST KENSINGTON": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "BARONS COURT": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district",
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "RAVENSCOURT PARK": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "STAMFORD BROOK": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "TURNHAM GREEN": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district",
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "CHISWICK PARK": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "ACTON TOWN": {
+   "zone": 3,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "district",
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "EALING COMMON": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district",
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "GUNNERSBURY": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "KEW GARDENS": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "RICHMOND": {
+   "zone": 4,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WEST BROMPTON": {
+   "zone": 2,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "FULHAM BROADWAY": {
+   "zone": 2,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "PARSONS GREEN": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "PUTNEY BRIDGE": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "EAST PUTNEY": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "SOUTHFIELDS": {
+   "zone": 3,
+   "lifts": 1,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WIMBLEDON PARK": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WIMBLEDON": {
+   "zone": 3,
+   "lifts": 1,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "KENSINGTON (OLYMPIA)": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "district"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "CANNING TOWN": {
+   "zone": 2,
+   "lifts": 3,
+   "escalators": 10,
+   "lines": [
+    "jubilee"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "NORTH GREENWICH": {
+   "zone": 2,
+   "lifts": 4,
+   "escalators": 9,
+   "lines": [
+    "jubilee"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "CANARY WHARF": {
+   "zone": 2,
+   "lifts": 3,
+   "escalators": 20,
+   "lines": [
+    "jubilee"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "CANADA WATER": {
+   "zone": 2,
+   "lifts": 4,
+   "escalators": 8,
+   "lines": [
+    "jubilee",
+    "windrush"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "BERMONDSEY": {
+   "zone": 2,
+   "lifts": 1,
+   "escalators": 3,
+   "lines": [
+    "jubilee"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "LONDON BRIDGE": {
+   "zone": 1,
+   "lifts": 3,
+   "escalators": 17,
+   "lines": [
+    "jubilee",
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "SOUTHWARK": {
+   "zone": 1,
+   "lifts": 2,
+   "escalators": 8,
+   "lines": [
+    "jubilee"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "GREEN PARK": {
+   "zone": 1,
+   "lifts": 5,
+   "escalators": 11,
+   "lines": [
+    "jubilee",
+    "piccadilly",
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "ST JOHN'S WOOD": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "jubilee"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "SWISS COTTAGE": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "jubilee"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "FINCHLEY ROAD": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "jubilee",
+    "metropolitan"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "WEST HAMPSTEAD": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "jubilee"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "KILBURN": {
+   "zone": 2,
+   "lifts": 1,
+   "escalators": 0,
+   "lines": [
+    "jubilee"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "WILLESDEN GREEN": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "jubilee",
+    "metropolitan"
+   ],
+   "deep": 1,
+   "sub": 1
+  },
+  "DOLLIS HILL": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "jubilee"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "NEASDEN": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "jubilee"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "WEMBLEY PARK": {
+   "zone": 4,
+   "lifts": 5,
+   "escalators": 0,
+   "lines": [
+    "jubilee",
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "KINGSBURY": {
+   "zone": 4,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "jubilee"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "QUEENSBURY": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "jubilee"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "CANONS PARK": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "jubilee"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "STANMORE": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "jubilee"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "AMERSHAM": {
+   "zone": 9,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "CHALFONT & LATIMER": {
+   "zone": 8,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "CHORLEYWOOD": {
+   "zone": 7,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "RICKMANSWORTH": {
+   "zone": 7,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "MOOR PARK": {
+   "zone": 6,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "NORTHWOOD": {
+   "zone": 6,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "NORTHWOOD HILLS": {
+   "zone": 6,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "PINNER": {
+   "zone": 5,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "NORTH HARROW": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HARROW-ON-THE-HILL": {
+   "zone": 5,
+   "lifts": 5,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "NORTHWICK PARK": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "PRESTON ROAD": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "CHESHAM": {
+   "zone": 9,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WEST HARROW": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "RAYNERS LANE": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan",
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "EASTCOTE": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan",
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "RUISLIP MANOR": {
+   "zone": 6,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan",
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "RUISLIP": {
+   "zone": 6,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan",
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "ICKENHAM": {
+   "zone": 6,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan",
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HILLINGDON": {
+   "zone": 6,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "metropolitan",
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "UXBRIDGE": {
+   "zone": 6,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan",
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "CROXLEY": {
+   "zone": 7,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WATFORD": {
+   "zone": 7,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "metropolitan"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HIGH BARNET": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "TOTTERIDGE & WHETSTONE": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WOODSIDE PARK": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WEST FINCHLEY": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "FINCHLEY CENTRAL": {
+   "zone": 4,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "EAST FINCHLEY": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "HIGHGATE": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 3,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "ARCHWAY": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "TUFNELL PARK": {
+   "zone": 2,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "KENTISH TOWN": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "CAMDEN TOWN": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "MORNINGTON CRESCENT": {
+   "zone": 2,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "EUSTON": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 10,
+   "lines": [
+    "northern",
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "WARREN STREET": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 7,
+   "lines": [
+    "northern",
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "GOODGE STREET": {
+   "zone": 1,
+   "lifts": 4,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "LEICESTER SQUARE": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 6,
+   "lines": [
+    "northern",
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "KENNINGTON": {
+   "zone": 1,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "OVAL": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "STOCKWELL": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 3,
+   "lines": [
+    "northern",
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "CLAPHAM NORTH": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "CLAPHAM COMMON": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "CLAPHAM SOUTH": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "BALHAM": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "TOOTING BEC": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "TOOTING BROADWAY": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 3,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "COLLIERS WOOD": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "SOUTH WIMBLEDON": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "MORDEN": {
+   "zone": 4,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "ANGEL": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 6,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "OLD STREET": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 3,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "BOROUGH": {
+   "zone": 1,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "EDGWARE": {
+   "zone": 5,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "BURNT OAK": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "COLINDALE": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HENDON CENTRAL": {
+   "zone": 3,
+   "lifts": 1,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "BRENT CROSS": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "GOLDERS GREEN": {
+   "zone": 3,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "HAMPSTEAD": {
+   "zone": 2,
+   "lifts": 4,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "BELSIZE PARK": {
+   "zone": 2,
+   "lifts": 3,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "CHALK FARM": {
+   "zone": 2,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "MILL HILL EAST": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "NINE ELMS": {
+   "zone": 1,
+   "lifts": 2,
+   "escalators": 2,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "BATTERSEA POWER STATION": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "northern"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "COCKFOSTERS": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "OAKWOOD": {
+   "zone": 5,
+   "lifts": 1,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "SOUTHGATE": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "ARNOS GROVE": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "BOUNDS GREEN": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "WOOD GREEN": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 3,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "TURNPIKE LANE": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 3,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "MANOR HOUSE": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 3,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "FINSBURY PARK": {
+   "zone": 2,
+   "lifts": 1,
+   "escalators": 0,
+   "lines": [
+    "piccadilly",
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "ARSENAL": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "HOLLOWAY ROAD": {
+   "zone": 2,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "CALEDONIAN ROAD": {
+   "zone": 2,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "RUSSELL SQUARE": {
+   "zone": 1,
+   "lifts": 3,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "COVENT GARDEN": {
+   "zone": 1,
+   "lifts": 4,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "HYDE PARK CORNER": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "KNIGHTSBRIDGE": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 5,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "NORTH EALING": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "PARK ROYAL": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "ALPERTON": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "SUDBURY TOWN": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "SUDBURY HILL": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "SOUTH HARROW": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "SOUTH EALING": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "NORTHFIELDS": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "BOSTON MANOR": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "OSTERLEY": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HOUNSLOW EAST": {
+   "zone": 4,
+   "lifts": 2,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HOUNSLOW CENTRAL": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HOUNSLOW WEST": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HATTON CROSS": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HEATHROW TERMINALS 2 & 3": {
+   "zone": 6,
+   "lifts": 1,
+   "escalators": 6,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HEATHROW TERMINAL 5": {
+   "zone": 6,
+   "lifts": 2,
+   "escalators": 2,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HEATHROW TERMINAL 4": {
+   "zone": 6,
+   "lifts": 1,
+   "escalators": 0,
+   "lines": [
+    "piccadilly"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WALTHAMSTOW CENTRAL": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "BLACKHORSE ROAD": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "TOTTENHAM HALE": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "SEVEN SISTERS": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 4,
+   "lines": [
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "HIGHBURY & ISLINGTON": {
+   "zone": 2,
+   "lifts": 3,
+   "escalators": 2,
+   "lines": [
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "PIMLICO": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 2,
+   "lines": [
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "VAUXHALL": {
+   "zone": 1,
+   "lifts": 2,
+   "escalators": 2,
+   "lines": [
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "BRIXTON": {
+   "zone": 2,
+   "lifts": 2,
+   "escalators": 2,
+   "lines": [
+    "victoria"
+   ],
+   "deep": 1,
+   "sub": 0
+  },
+  "ROTHERHITHE": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "SURREY QUAYS": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 1
+  }
  },
  "lines": {
   "bakerloo": {
@@ -1812,7 +4639,6 @@ export const NETWORK = {
   "WOODSIDE PARK"
  ],
  "liftsOutSnapshot": [
-  "ICKENHAM",
   "KILBURN",
   "WEMBLEY PARK"
  ]
