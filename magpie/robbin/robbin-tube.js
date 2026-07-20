@@ -213,20 +213,6 @@ const STATION_LAYOUT = {
   'ROTHERHITHE': 'shallow2', 'SURREY QUAYS': 'shallow2',
 };
 
-// the flock's unanswered everyday questions (see the Artist's Statement)
-const PONDERS = [
-  'who apologised — the whiteboard? the loudspeaker?',
-  'magnets? cardboard? vibrating air molecules?',
-  'if nobody is named, is nobody to blame?',
-  'is “step free” a promise or a shape?',
-  'whither The Platform?',
-];
-const TANNOY = [
-  '“we apologise for the inconvenience” — but who is “we”?',
-  '“this is due to an earlier incident” — earlier than what?',
-  '“see it, say it” — the flock has seen a lot',
-  '“mind the gap” — the gap minds nobody',
-];
 
 // a stylised carriage. doorX/baseY locate the doorway; door 0..1 is how
 // open; dx slides the whole train; moving adds rush lines.
@@ -417,8 +403,6 @@ export class TubeFlock {
     this.interior = {
       def, level, pendingEdge, gate, floorRows, vertRuns,
       droppings: [], decals: [],
-      tannoyT: 10 + Math.random() * 10,
-      ponderT: 0,
       playing,
       rescue: rescue && perch ? {
         ...rescue, x: perch.c * TILE + 16, y: (perch.r + 1) * TILE, found: false,
@@ -530,24 +514,6 @@ export class TubeFlock {
       if (dr.y > H + 40) dr.landed = true;
     }
     it.droppings = it.droppings.filter(d => !d.landed);
-    // the tannoy apologises, namelessly
-    it.tannoyT -= dt;
-    if (it.tannoyT <= 0) {
-      it.tannoyT = 20 + Math.random() * 14;
-      g.fx.push({ x: Math.max(90, Math.min(W - 90, g.player.x)), y: 54, txt: TANNOY[Math.floor(Math.random() * TANNOY.length)], t: 3.2 });
-      g.foley.grain();
-    }
-    // pondering by the whiteboard or a help point
-    const near = pt => pt && Math.abs(g.player.x - (pt[0] * TILE + 16)) < 44 && Math.abs(g.player.y - pt[1] * TILE) < 40;
-    const boardOut = (lv.lift && lv.lift.out) || [...lv.escCols.values()].some(d => d === 1);
-    if ((boardOut && near(it.def.board)) || (it.def.helps || []).some(near)) {
-      it.ponderT -= dt;
-      if (it.ponderT <= 0 && Math.abs(g.player.vx) < 5) {
-        it.ponderT = 3.2;
-        it.ponderIdx = ((it.ponderIdx ?? -1) + 1) % PONDERS.length;
-        g.fx.push({ x: g.player.x, y: g.player.y - 66, txt: PONDERS[it.ponderIdx], t: 2.8 });
-      }
-    } else it.ponderT = 0;
     // grain snacks
     const px = g.player.x, py = g.player.y;
     for (const [key, itn] of lv.treasure) {
@@ -1101,21 +1067,20 @@ export class TubeFlock {
     ctx.font = '4.5px Georgia, serif';
     ctx.fillText(`Date ${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getFullYear()).slice(2)}`, x0 + 3, y0 + 13);
     ctx.fillText(`Time ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`, x0 + 3, y0 + 18);
-    // ghosts of apologies past, never quite wiped away
+    // faint ghost of an older half-wiped notice
     ctx.globalAlpha = 0.09;
     ctx.fillStyle = '#26221e';
     ctx.font = 'italic 6px Georgia, serif';
-    ctx.save(); ctx.translate(x0 + 8, y0 + 40); ctx.rotate(-0.06); ctx.fillText('we apologise', 0, 0); ctx.restore();
-    ctx.save(); ctx.translate(x0 + 12, y0 + 48); ctx.rotate(0.05); ctx.fillText('sorry', 0, 0); ctx.restore();
+    ctx.save(); ctx.translate(x0 + 8, y0 + 40); ctx.rotate(-0.06); ctx.fillText('out of service', 0, 0); ctx.restore();
     ctx.globalAlpha = 1;
-    // today's message, in marker, signed by no one
+    // today's message, in marker
     ctx.fillStyle = '#3a72b5';
     ctx.font = 'bold 7px Georgia, serif';
     ctx.save();
     ctx.translate(x0 + 4, y0 + 28);
     ctx.rotate(-0.035);
     if (liftIsOut) { ctx.fillText('LIFT OUT', 0, 0); ctx.fillText('OF SERVICE', 0, 9); }
-    else { ctx.fillText('ESCALATOR', 0, 0); ctx.fillText('WE APOLOGISE', 0, 9); }
+    else { ctx.fillText('ESCALATOR', 0, 0); ctx.fillText('UNDER REPAIR', 0, 9); }
     ctx.beginPath();
     ctx.moveTo(0, 13); ctx.quadraticCurveTo(14, 15, 34, 13.5);
     ctx.lineWidth = 1;

@@ -116,23 +116,18 @@ rescue, the fuller the screens get. Rescued birds join for +400 and
 +150 time; reach the waiting train (line changes) or the WAY OUT
 (rescues, locked until the bird is found) to move on.
 
-Stations are dressed from field research in the lifts of Canada Water:
-procedural **Lift guide** boards drawn from each station's own layout —
-floor lines, escalator diagonals, the lift column crossed red when out,
-and a live "you are here" dot that follows you; the **Service
-information** whiteboard on A-frame legs whenever something's broken,
-dated and timed and hand-scrawled ("LIFT OUT OF SERVICE") over the
-ghosts of past apologies, signed by nobody — stand near it and your
-bird ponders the unanswerable ("who apologised — the whiteboard? the
-loudspeaker?"); level tags at the left edge of every depth (street ·
-0 · −1 · −2); blue Help Points; the tannoy's nameless apologies
-drifting by; plus name boards with line-colour bars, framed lino
-adverts, WAY OUT signage, a waiting carriage with open doors at the
-departure platform, and idle bystanders. And yes: press down mid-air
-to deploy the awesome power of poop (harmless, persistent, mystifies
-commuters). The network now includes the hollow-striped **Windrush
-line** (Rotherhithe · Canada Water · Surrey Quays), and the title menu
-carries the ARTIST'S STATEMENT on a gallery plaque. The adversaries are ordinary
+Stations are dressed with real Underground furniture: procedural
+**Lift guide** boards drawn from each station's own layout — floor
+lines, escalator diagonals, the lift column crossed red when out, and
+a live "you are here" dot that follows you; a dated, hand-scrawled
+**Service information** whiteboard on A-frame legs whenever something
+is broken; level tags at the left edge of every depth (street · 0 ·
+−1 · −2); blue Help Points; plus name boards with line-colour bars,
+framed lino adverts, WAY OUT signage, a waiting carriage with open
+doors at the departure platform, and idle bystanders. Press down
+mid-air for a harmless dropping (a struck commuter stops, mystified).
+The network includes the hollow-striped **Windrush line** (Rotherhithe
+· Canada Water · Surrey Quays). The adversaries are ordinary
 **commuters** — bland blobby coat-people, deliberately faceless and
 background, but as varied as a real London platform: every age, build
 and skin tone, headscarves and turbans and flat caps and silver hair,
