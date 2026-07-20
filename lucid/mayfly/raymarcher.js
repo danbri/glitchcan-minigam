@@ -81,6 +81,11 @@ export class SimpleRaymarcher {
     this.showEdges = true;
     this.showAxes = false;
     this.overrideTime = null; // When set, use this instead of elapsed time
+    // When true, an external SimulationDriver evaluates the rig and pushes
+    // derived/phase params via setParam, so skip the internal rig eval (keeps
+    // both backends on one shared simulation). Default false — index.html and
+    // other direct users keep the built-in behaviour.
+    this.externalRig = false;
     // Shadertoy-style inputs (parity with Stinkyfish): iMouse (vec4 xy=pos,
     // zw=click, GL pixel coords), iFrame, iTimeDelta.
     this.mouse = { x: 0, y: 0, clickX: 0, clickY: 0, isDown: false };
@@ -855,9 +860,12 @@ export class SimpleRaymarcher {
     const shininessLocation = gl.getUniformLocation(this.program, 'u_shininess');
     gl.uniform1f(shininessLocation, this.lighting.shininess);
 
-    // Evaluate rig layer if present (computes derived params, checks constraints, evaluates phase)
+    // Evaluate rig layer if present (computes derived params, checks constraints, evaluates phase).
+    // Skipped when an external SimulationDriver owns the rig (externalRig): the
+    // driver has already pushed base/derived/phase values via setParam, and the
+    // base-param loop below binds them.
     let rigResult = null;
-    if (this.rig) {
+    if (this.rig && !this.externalRig) {
       rigResult = evaluateRig(this.sceneParams, this.rig, time);
 
       // Store for external access (physics integration)

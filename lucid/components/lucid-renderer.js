@@ -401,8 +401,12 @@ export class LucidRenderer extends HTMLElement {
     const scene = loadJsonScene(json);
     const glsl = generateGlslFromJson(scene, this._codegenOptions(json));
 
-    // Mayfly evaluates the rig internally in its own render loop.
-    this._rig = null;
+    // Shared per-frame simulation for both backends (rig + physics).
+    const { SimulationDriver } = await import(`${basePath}/core/simulation-driver.js`);
+    this._sim = new SimulationDriver(scene);
+    // The driver owns the rig, so tell Mayfly to skip its internal rig eval —
+    // one source of animation feeds both engines.
+    this._renderer.externalRig = true;
 
     // Mayfly uses updateScene(glsl, params, rig, json)
     this._renderer.updateScene(glsl, scene.params || {}, scene.rig || null, json);
@@ -423,7 +427,8 @@ export class LucidRenderer extends HTMLElement {
     const basePath = this._getBasePath();
     const { loadJsonScene } = await import(`${basePath}/core/json-loader.js`);
     const { generateWgslFromJson } = await import(`${basePath}/core/wgsl-codegen.js`);
-    const { getAllParamNames, evaluateRig } = await import(`${basePath}/core/rig-evaluator.js`);
+    const { getAllParamNames } = await import(`${basePath}/core/rig-evaluator.js`);
+    const { SimulationDriver } = await import(`${basePath}/core/simulation-driver.js`);
 
     const scene = loadJsonScene(json);
     const wgsl = generateWgslFromJson(scene, this._codegenOptions(json));
@@ -446,12 +451,11 @@ export class LucidRenderer extends HTMLElement {
     }
     this._renderer.setSceneParams(initParams);
 
-    // Close the rig gap on WebGPU: unlike Mayfly, the Stinkyfish renderer does
-    // not evaluate the rig itself, so derived/phase params would be frozen.
-    // Stash the rig so the render loop can evaluate it each frame.
-    this._rig = scene.rig || null;
-    this._rigBaseParams = scene.params || {};
-    this._evaluateRig = evaluateRig;
+    // Shared per-frame simulation (rig now; physics in a later step). The WGSL
+    // renderer never evaluated the rig itself, so without this derived/phase
+    // params would be frozen — the driver closes that gap the same way it drives
+    // Mayfly, from one code path.
+    this._sim = new SimulationDriver(scene);
 
     // Apply camera settings - use same defaults as Mayfly for consistency
     if (json.camera) {
@@ -498,27 +502,18 @@ export class LucidRenderer extends HTMLElement {
     }
   }
 
-  // Per-frame rig evaluation for the WebGPU path only (Mayfly does its own).
-  // Mirrors Mayfly's binding: base params use rig-evaluated values, plus derived
-  // and phase-coupled params — all pushed through setParam.
-  _evaluateRigForStinkyfish() {
-    if (this._backend !== BACKENDS.STINKYFISH || !this._rig || !this._evaluateRig) return;
+  // Backend-neutral per-frame simulation: the shared SimulationDriver evaluates
+  // the rig (and, later, steps physics) and pushes results into whichever
+  // renderer via setParam. Used for BOTH backends — Mayfly runs with
+  // externalRig=true so this is its single source of animation.
+  _stepSimulation() {
     const r = this._renderer;
-    if (!r || !r.setParam) return;
-    try {
-      const t = r.overrideTime != null
-        ? r.overrideTime
-        : (performance.now() - (r.startTime || performance.now())) / 1000;
-      const rig = this._evaluateRig(this._rigBaseParams, this._rig, t);
-      if (!rig) return;
-      for (const [name, param] of Object.entries(this._rigBaseParams)) {
-        if (typeof param === 'object' && param !== null && rig.values[name] !== undefined) {
-          r.setParam(name, rig.values[name]);
-        }
-      }
-      for (const [name, value] of Object.entries(rig.derived || {})) r.setParam(name, value);
-      for (const [name, value] of Object.entries(rig.phaseValues || {})) r.setParam(name, value);
-    } catch (e) { /* rig eval must never break the render loop */ }
+    if (!this._sim || !r || typeof r.setParam !== 'function') return;
+    const t = r.overrideTime != null
+      ? r.overrideTime
+      : (performance.now() - (r.startTime || performance.now())) / 1000;
+    const dt = Math.min(r.timeDelta || 0.016, 0.05);
+    this._sim.step(t, dt, r);
   }
 
   _startRenderLoop() {
@@ -531,7 +526,7 @@ export class LucidRenderer extends HTMLElement {
 
       if (this._renderer?.render) {
         const time = (timestamp - this._startTime) * 0.001; // Convert to seconds
-        this._evaluateRigForStinkyfish();
+        this._stepSimulation();
         this._renderer.render(time);
       }
 
