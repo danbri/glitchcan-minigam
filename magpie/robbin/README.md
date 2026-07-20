@@ -7,6 +7,10 @@ platforms (and eat the grain if you don't get there first).
 
 **Play:** `robbin.html` · **Sprite proofs (dev):** `sprites.html`
 
+Two episodes from the title screen: **ROBBIN: PILOT EPISODE** — the
+Flight Line arcade below — and **ROBBIN: TUBULAR SMELLS** — the
+flock-growing Underground journey (the most developed of the two).
+
 ## The graphics
 
 The four birds — robin, blackbird, blue tit, wren — are hand-vectorized from a
@@ -93,7 +97,16 @@ stops on game over, and toggles with **M** or the speaker button
     southbound ladder it passes (or, if already climbing, steps off at
     the first junction where floor continues east) — "downstream" moves.
 
-## TUBE FLOCK (second game, from the title menu)
+## ROBBIN: TUBULAR SMELLS (TUBE FLOCK)
+
+**The loop, in one breath:** the map names a lost bird and its
+station; fly your line stop by stop toward it; changing lines at an
+interchange (or arriving at the bird's station) takes you inside a
+full-screen station platformer; changes end at your new line's
+train, rescues end back up at the street through the WAY OUT — then
+it's the map again, one bird richer. Riding straight through
+interchanges on your own line never drops you inside. A short primer
+sits on the map until the first rescue.
 
 A cosy, heartwarming journey — no clock, no lives, no fail state. The
 main dynamic is **growing the flock**: twenty-two lost libbirds —

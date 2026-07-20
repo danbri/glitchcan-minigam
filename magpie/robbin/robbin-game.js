@@ -817,9 +817,8 @@ class Game {
       btn.addEventListener('pointercancel', off);
       btn.addEventListener('pointerleave', off);
     }
-    for (const id of ['title', 'gameover']) {
-      document.getElementById(id).addEventListener('pointerdown', () => this.pressStart());
-    }
+    // title taps go through the episode buttons; game-over taps restart
+    document.getElementById('gameover').addEventListener('pointerdown', () => this.pressStart());
     document.getElementById('mute').addEventListener('pointerdown', e => {
       e.stopPropagation(); this.toggleMute();
     });
@@ -882,6 +881,9 @@ class Game {
         });
       }
     }
+    document.getElementById('playpilot')?.addEventListener('pointerdown', e => {
+      e.stopPropagation(); this.newGame();
+    });
     document.getElementById('playtube')?.addEventListener('pointerdown', e => {
       e.stopPropagation(); this.startTube();
     });

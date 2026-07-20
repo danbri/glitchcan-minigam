@@ -402,6 +402,12 @@ export class TubeFlock {
       if (dot > 0.45 && (!best || dot > best.dot)) best = { ...e, dot };
     }
     if (!best) return;
+    // parallel lines share track: if your own line also serves the chosen
+    // next stop, riding straight on is NOT a change — stay aboard
+    if (this.line && best.line !== this.line) {
+      const same = EDGES.get(this.cur).find(e => e.to === best.to && e.line === this.line);
+      if (same) best = { ...same, dot: best.dot };
+    }
     // changing lines at an interchange means crossing the station itself —
     // unless you just fought your way through it
     if (this.line && best.line !== this.line && this.freeChange !== this.cur) {
@@ -816,7 +822,8 @@ export class TubeFlock {
         drawBird(ctx, ob.sp, { x: x + 26, y: y - 12, size: 24, facing: -1, phase: t * 8, pose: 'stand' });
       }
       const labelled = here || nbrs.has(name) || (ob && name === ob.at);
-      if (labelled || inter) {
+      // faint names only for the BIG interchanges — zone 1 gets crowded
+      if (labelled || (inter && LINES_AT.get(name).size >= 3)) {
         ctx.fillStyle = PALETTE.ink;
         ctx.globalAlpha = labelled ? 1 : 0.4;
         const above = y < h * 0.56;
@@ -868,16 +875,19 @@ export class TubeFlock {
         pose: moving ? ((b.vy || 0) < -6 ? 'airup' : 'airdown') : 'flit',
       });
     }
-    // header on a paper wash so the city never runs through the words
+    // header on a paper wash so the city never runs through the words;
+    // first-time flyers get a two-line primer until the first rescue
+    const primer = this.roster.length === 1;
+    const headH = primer ? fs * 8.5 : fs * 6.3;
     ctx.fillStyle = 'rgba(242,236,221,0.88)';
-    ctx.fillRect(0, 0, w, fs * 6.3);
+    ctx.fillRect(0, 0, w, headH);
     ctx.fillRect(0, h - fs * 1.9, w, fs * 1.9);
     ctx.strokeStyle = 'rgba(38,34,30,0.25)';
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(0, fs * 6.3); ctx.lineTo(w, fs * 6.3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, headH); ctx.lineTo(w, headH); ctx.stroke();
     ctx.fillStyle = PALETTE.ink;
     ctx.font = `bold ${fs * 1.5}px Georgia, serif`;
-    ctx.fillText('TUBE FLOCK', w / 2, fs * 2);
+    ctx.fillText('TUBULAR SMELLS', w / 2, fs * 2);
     ctx.globalAlpha = 0.7;
     this.fitText(ctx, 'grow the flock — every lost libbird is out there somewhere', w / 2, fs * 3.1, w - 24, fs * 0.72, 'italic');
     ctx.globalAlpha = 1;
@@ -891,6 +901,12 @@ export class TubeFlock {
       ctx.fillStyle = PALETTE.platform;
       this.fitText(ctx, '♥ the flock is whole — fly together as long as you like ♥', w / 2, fs * 4.6, w - 20, fs);
       ctx.fillStyle = PALETTE.ink;
+    }
+    if (primer) {
+      ctx.globalAlpha = 0.65;
+      this.fitText(ctx, 'fly stop by stop toward them — changing lines (or arriving) takes you inside the station', w / 2, fs * 6.8, w - 24, fs * 0.68, 'italic');
+      this.fitText(ctx, 'found your bird? head up to street level and out the WAY OUT', w / 2, fs * 7.7, w - 24, fs * 0.68, 'italic');
+      ctx.globalAlpha = 1;
     }
     ctx.textAlign = 'left';
     ctx.font = `bold ${fs * 0.72}px Georgia, serif`;
@@ -1012,8 +1028,9 @@ export class TubeFlock {
     const line1 = it.rescue
       ? (it.rescue.found ? `${it.rescue.name} is aboard — WAY OUT` : `find ${it.rescue.name} the ${it.rescue.sp}`)
       : it.pendingEdge ? `change: ${it.pendingEdge.line.toUpperCase()} line` : 'just passing through';
-    const line2 = it.rescue && !it.rescue.found
-      ? `…${it.rescue.note}`
+    const line2 = it.rescue
+      ? (it.rescue.found ? 'up to the street — follow the WAY OUT sign'
+        : `…${it.rescue.note}`)
       : `no rush · you are ${it.playing.name} the ${it.playing.sp}`;
     this.fitText(ctx, `${this.cur} · ${line1}`, w / 2, fs * 1.25, cw, fs);
     ctx.globalAlpha = 0.75;
