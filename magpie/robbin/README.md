@@ -96,11 +96,17 @@ stops on game over, and toggles with **M** or the speaker button
 ## TUBE FLOCK (second game, from the title menu)
 
 A cosy, heartwarming journey — no clock, no lives, no fail state. The
-main dynamic is **growing the flock**: twelve lost libbirds — robins,
-blackbirds, blue tits and wrens, everything the four lino-print
-drawings can be — are scattered around a curated, real-geography slice of the Underground
-(Central / Northern / Jubilee around Bank and London Bridge, schematic
-lino style, no TfL branding). Fly line-to-line on the map toward the
+main dynamic is **growing the flock**: twenty-two lost libbirds —
+robins, blackbirds, blue tits and wrens, everything the four
+lino-print drawings can be — are scattered across the **entire London
+Underground**: all eleven lines and 271 stations, baked from TfL's
+open data by `tools/fetch-tube.mjs` into `tube-network.js` (real
+geography drawn in the schematic lino style, no TfL branding), plus
+the hollow-striped Windrush segment. The map wears a camera that
+glides along with the flock; station names appear where they matter —
+where you are, where you can fly next, and who you're looking for —
+and when the lost bird is halfway across the city a pulsing arrow at
+the screen edge points the way. Fly line-to-line on the map toward the
 current lost bird; on arrival the flock gathers at the station mouth,
 then a little cutscene plays: the train slides in, doors open, and the
 whole flock hops out onto the platform. Boarding is its mirror — the
@@ -110,7 +116,9 @@ interchange — puts you **inside the station**: a full-screen
 platformer cut with the depths London stations really have, in four
 layout families (Bank's four levels down; big three-level halls;
 old Central-line street + deep platforms; modern twin-escalator
-step-free boxes). Each interior you play a randomly chosen flock
+step-free boxes). Half the network runs mirrored, and every station
+seeds its own crowd and advert hoardings, so the families read
+differently from stop to stop. Each interior you play a randomly chosen flock
 member while the rest flutter along as AI buddies — the more you
 rescue, the fuller the screens get. Rescued birds join for +400 and
 +150 time; reach the waiting train (line changes) or the WAY OUT
@@ -151,19 +159,26 @@ heartbeat at first, hats, arpeggio shimmer and finally the lead
 melody fading in as intensity rises (a master lowpass opens with it;
 `Chiptune.setIntensity(0..1)` / `swell()`).
 
-Step-free access is real-ish: genuinely step-free stations (London
-Bridge, Bermondsey, Canada Water, Southwark, Liverpool Street,
-Moorgate, Waterloo, Borough) never lose their lifts and all their
-escalators run your way; elsewhere lifts go out (crossed box on the
-map) and one escalator runs against you — climb it at half speed,
-ride the right way at 1.6×, stairs never fail (Holborn, true to
-life, has no lift at all). The service terminates when time runs
-out. Separate hi-score.
+Step-free access is real-ish: a curated list of genuinely step-free
+stations (Canada Water to Amersham, some eighty of them) never lose
+their lifts and all their escalators run your way; elsewhere lifts go
+out (crossed box on the map, shown for the stations around you) and
+one escalator runs against you — climb it at half speed, ride the
+right way at 1.6×, stairs never fail (Holborn, true to life, has no
+lift at all). And reality outranks luck: stations that TfL's own
+lift-disruption feed reported broken on the day the network was baked
+are broken in the game too, step-free or not. Separate hi-score.
 
 ## Implementation notes
 
 - Plain ES modules, no dependencies: `robbin.html` + `robbin-game.js`
-  (engine, levels, foley) + `robbin-sprites.js` (vector art).
+  (engine, levels, foley) + `robbin-sprites.js` (vector art) +
+  `robbin-tube.js` (TUBE FLOCK) + `robbin-music.js` (chiptune).
+- `tube-network.js` is GENERATED from the TfL Unified API by
+  `tools/fetch-tube.mjs` (station chains incl. branches, projected
+  coords, curated step-free list, lift-outage snapshot). Re-run the
+  tool to refresh; commit the output. Cached in-repo, reproducible —
+  the same pattern as `trees/`.
 - Levels are 20×15 ASCII tile maps: `#` platform, `H` ladder, `+` platform
   pierced by ladder, `E` egg, `G` grain, `P` spawn, `L` lift shaft.
 - Fixed-feel physics tuned to 8-bit platformer conventions: fixed jump arc with head-bump,

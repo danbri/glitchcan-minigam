@@ -11,28 +11,17 @@
 
 import { PALETTE, drawBird, drawGrain, drawCommuter } from './robbin-sprites.js';
 import { Level, Player, Enemy, TILE, W, H, LIFT_V } from './robbin-game.js';
+import { NETWORK } from './tube-network.js';
 
-const LINES = {
-  central:  { color: '#c0392b', stations: ['HOLBORN', 'CHANCERY LANE', "ST PAUL'S", 'BANK', 'LIVERPOOL STREET'] },
-  northern: { color: '#26221e', stations: ['MOORGATE', 'BANK', 'LONDON BRIDGE', 'BOROUGH', 'ELEPHANT & CASTLE'] },
-  jubilee:  { color: '#7b868c', stations: ['WATERLOO', 'SOUTHWARK', 'LONDON BRIDGE', 'BERMONDSEY', 'CANADA WATER', 'CANARY WHARF'] },
-  windrush: { color: '#c77b2f', hollow: true, stations: ['ROTHERHITHE', 'CANADA WATER', 'SURREY QUAYS'] },
-};
-// design space 0..100 × 0..60, loosely geographic
-const POS = {
-  'HOLBORN': [6, 16], 'CHANCERY LANE': [20, 13], "ST PAUL'S": [36, 11],
-  'BANK': [52, 12], 'LIVERPOOL STREET': [68, 6], 'MOORGATE': [50, 2],
-  'LONDON BRIDGE': [56, 32], 'BOROUGH': [46, 43], 'ELEPHANT & CASTLE': [32, 52],
-  'WATERLOO': [8, 42], 'SOUTHWARK': [26, 38], 'BERMONDSEY': [74, 40], 'CANADA WATER': [90, 46],
-  'CANARY WHARF': [99, 34],
-  'ROTHERHITHE': [84, 33], 'SURREY QUAYS': [94, 57],
-};
-// stations with genuine step-free access (roughly true to life):
-// their lifts never break and their escalators all run your way
-const STEP_FREE = new Set([
-  'LONDON BRIDGE', 'BERMONDSEY', 'CANADA WATER', 'SOUTHWARK',
-  'LIVERPOOL STREET', 'MOORGATE', 'WATERLOO', 'BOROUGH', 'CANARY WHARF',
-]);
+// the whole London Underground, baked from the TfL Unified API by
+// tools/fetch-tube.mjs (plus the Windrush segment) — real geography,
+// projected; the map wears a camera now instead of fitting one screen
+const LINES = NETWORK.lines;
+const POS = NETWORK.pos;
+// stations with genuine step-free access (curated, roughly true to life):
+// their lifts never break and their escalators all run your way — unless
+// TfL's own lift-disruption feed said otherwise on the day of the bake
+const STEP_FREE = new Set(NETWORK.stepFree);
 
 // the scattered flock, in rescue order (first hop is a gentle same-line
 // trip). Every bird has a little story; every rescue is a small reunion.
@@ -51,19 +40,36 @@ const LOST = [
   { sp: 'blackbird', name: 'COCO', at: 'SOUTHWARK', note: 'humming along with the escalators' },
   { sp: 'bluetit', name: 'QUAY', at: 'SURREY QUAYS', note: 'singing along with the tannoy' },
   { sp: 'robin', name: 'ROBERTA', at: 'BERMONDSEY', note: 'watching the trains go by' },
+  // …and then the grand tour: the flock ranges out across the whole map
+  { sp: 'blackbird', name: 'SOOT', at: "KING'S CROSS ST PANCRAS", note: 'dodging feet in the great hall' },
+  { sp: 'robin', name: 'BERRY', at: 'WALTHAMSTOW CENTRAL', note: 'up the Victoria line, far from home' },
+  { sp: 'bluetit', name: 'SPECK', at: 'NORTH GREENWICH', note: 'small and blue under the big dome' },
+  { sp: 'blackbird', name: 'FLINT', at: 'STRATFORD', note: 'singing over the announcements' },
+  { sp: 'wren', name: 'TWIG', at: 'EALING BROADWAY', note: 'watching the District trains turn back' },
+  { sp: 'robin', name: 'HOLLY', at: 'HEATHROW TERMINAL 5', note: 'watching the big silver birds take off' },
+  { sp: 'blackbird', name: 'JET', at: 'MORDEN', note: 'at the very end of the Northern line' },
+  { sp: 'bluetit', name: 'DOT', at: 'AMERSHAM', note: 'right out where the Metropolitan gets leafy' },
 ];
 const BIRD_PX = { wren: 26, bluetit: 32, robin: 32, blackbird: 32 };
 
-// build the graph: station -> [{to, line}]
+// build the graph: station -> [{to, line}] from every line's chains
+// (branches are separate chains; duplicate edges collapse to one)
 const EDGES = new Map(Object.keys(POS).map(s => [s, []]));
 for (const [line, def] of Object.entries(LINES)) {
-  for (let i = 0; i + 1 < def.stations.length; i++) {
-    const a = def.stations[i], b = def.stations[i + 1];
-    EDGES.get(a).push({ to: b, line });
-    EDGES.get(b).push({ to: a, line });
+  for (const chain of def.chains) {
+    for (let i = 0; i + 1 < chain.length; i++) {
+      const a = chain[i], b = chain[i + 1];
+      if (a === b) continue;
+      if (!EDGES.get(a).some(e => e.to === b && e.line === line)) {
+        EDGES.get(a).push({ to: b, line });
+        EDGES.get(b).push({ to: a, line });
+      }
+    }
   }
 }
-const INTERCHANGES = Object.keys(POS).filter(s => new Set(EDGES.get(s).map(e => e.line)).size > 1);
+const LINES_AT = new Map(Object.keys(POS).map(s => [s, new Set(EDGES.get(s).map(e => e.line))]));
+const INTERCHANGES = Object.keys(POS).filter(s => LINES_AT.get(s).size > 1);
+const INTER_SET = new Set(INTERCHANGES);
 
 // ------------------------------------------------------- station interiors
 // Four layout families modelled on real station shapes; every station maps
@@ -203,27 +209,69 @@ const LAYOUTS = {
     board: [6, 14],
   },
 };
+// curated layouts for the old core; every other station in the network
+// gets one by heuristic — step-free reads modern, interchanges run deep,
+// the rest are old-style street + platforms (with a name-hashed shuffle)
 const STATION_LAYOUT = {
-  'BANK': 'deep4',
-  'LONDON BRIDGE': 'big3', 'LIVERPOOL STREET': 'big3',
+  'BANK': 'deep4', "KING'S CROSS ST PANCRAS": 'deep4',
+  'LONDON BRIDGE': 'big3', 'LIVERPOOL STREET': 'big3', 'STRATFORD': 'big3',
   'HOLBORN': 'shallow2', 'CHANCERY LANE': 'shallow2', "ST PAUL'S": 'shallow2',
   'BOROUGH': 'shallow2', 'ELEPHANT & CASTLE': 'shallow2',
   'CANADA WATER': 'modern3', 'BERMONDSEY': 'modern3', 'SOUTHWARK': 'modern3',
   'MOORGATE': 'modern3', 'WATERLOO': 'modern3', 'CANARY WHARF': 'modern3',
+  'NORTH GREENWICH': 'modern3', 'HEATHROW TERMINAL 5': 'modern3',
   'ROTHERHITHE': 'shallow2', 'SURREY QUAYS': 'shallow2',
 };
+const hashName = s => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+};
+function layoutFor(name) {
+  if (STATION_LAYOUT[name]) return STATION_LAYOUT[name];
+  const lineCount = LINES_AT.get(name)?.size || 1;
+  const h = hashName(name);
+  if (STEP_FREE.has(name)) return lineCount >= 2 && h % 2 ? 'big3' : 'modern3';
+  if (lineCount >= 2) return h % 2 ? 'deep4' : 'big3';
+  return h % 3 ? 'shallow2' : 'big3';
+}
+// half the network runs mirrored, so the four families read differently
+// from station to station (platforms left, exits right, and vice versa)
+function mirrorDef(def) {
+  return {
+    ...def,
+    map: def.map.map(r => [...r].reverse().join('')),
+    commuters: def.commuters.map(e => ({ ...e, c: 19 - e.c, d: -e.d })),
+    bystanders: def.bystanders.map(([c, f, v]) => [19 - c, f, v]),
+    ads: def.ads.map(([c, r]) => [19 - c, r]),
+    signs: def.signs.map(([c, r]) => [19 - c, r]),
+    guides: (def.guides || []).map(([c, r]) => [19 - c, r]),
+    helps: (def.helps || []).map(([c, r]) => [19 - c, r]),
+    board: def.board ? [19 - def.board[0], def.board[1]] : null,
+  };
+}
+const MIRRORED = {};
+function defFor(name) {
+  const key = layoutFor(name);
+  const def = LAYOUTS[key] || LAYOUTS.shallow2;
+  if (hashName(name) & 4) return MIRRORED[key] ||= mirrorDef(def);
+  return def;
+}
 
 
 // a stylised carriage. doorX/baseY locate the doorway; door 0..1 is how
-// open; dx slides the whole train; moving adds rush lines.
-function drawTrain(ctx, doorX, baseY, color, { door = 1, dx = 0, moving = false } = {}) {
-  const bx = doorX - 128 + dx, by = baseY - 46, bw = 176, bh = 44;
+// open; dx slides the whole train; moving adds rush lines; dir mirrors
+// the carriage for platforms on the left side of a station.
+function drawTrain(ctx, doorX, baseY, color, { door = 1, dx = 0, moving = false, dir = 1 } = {}) {
+  const bw = 176, bh = 44;
+  const bx = (dir > 0 ? doorX - 128 : doorX - 48) + dx, by = baseY - 46;
   ctx.save();
   if (moving) {
     ctx.strokeStyle = 'rgba(38,34,30,0.35)';
     ctx.lineWidth = 2.5;
+    const tail = dir > 0 ? bx : bx + bw;
     for (const ly of [by + 8, by + 22, by + 36]) {
-      ctx.beginPath(); ctx.moveTo(bx - 14, ly); ctx.lineTo(bx - 54, ly); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(tail - dir * 14, ly); ctx.lineTo(tail - dir * 54, ly); ctx.stroke();
     }
   }
   ctx.fillStyle = color;
@@ -233,8 +281,13 @@ function drawTrain(ctx, doorX, baseY, color, { door = 1, dx = 0, moving = false 
   ctx.roundRect(bx, by, bw, bh, 9);
   ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#dfe6ea';
-  for (let wx = bx + 10; wx < doorX + dx - 26; wx += 26) ctx.fillRect(wx, by + 8, 18, 14);
-  ctx.fillRect(doorX + dx + 16, by + 8, 18, 14);
+  if (dir > 0) {
+    for (let wx = bx + 10; wx < doorX + dx - 26; wx += 26) ctx.fillRect(wx, by + 8, 18, 14);
+    ctx.fillRect(doorX + dx + 16, by + 8, 18, 14);
+  } else {
+    for (let wx = bx + bw - 28; wx > doorX + dx + 22; wx -= 26) ctx.fillRect(wx, by + 8, 18, 14);
+    ctx.fillRect(doorX + dx - 34, by + 8, 18, 14);
+  }
   // the doorway: dark aperture, two sliding panels
   const dw = 22;
   ctx.fillStyle = 'rgba(38,34,30,0.8)';
@@ -247,7 +300,7 @@ function drawTrain(ctx, doorX, baseY, color, { door = 1, dx = 0, moving = false 
   ctx.lineWidth = 1.5;
   ctx.strokeRect(doorX + dx - dw / 2, by + 6, dw, bh - 8);
   ctx.fillStyle = '#f6d34c';
-  ctx.beginPath(); ctx.arc(bx + 5, by + bh - 10, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(dir > 0 ? bx + 5 : bx + bw - 5, by + bh - 10, 3, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
 
@@ -284,6 +337,7 @@ export class TubeFlock {
   start() {
     this.score = 0;
     this.over = false;          // no clock, no fail — the flock waits for you
+    this.g.camFocus = null;
     this.travel = null;
     this.interior = null;
     this.arriveT = 0;
@@ -296,6 +350,7 @@ export class TubeFlock {
     this.gather = null;
     this.scene = null;
     this.shuffleLifts();
+    this.cam = [...POS[this.cur]];
     const [x, y] = this.toXY(this.cur);
     this.flock = [{ sp: 'robin', x, y, ph: 0 }];
     this.updateMusic();
@@ -307,9 +362,12 @@ export class TubeFlock {
   }
   get objective() { return this.lostIdx < LOST.length ? LOST[this.lostIdx] : null; }
   shuffleLifts() {
-    // step-free stations keep their lifts, honest — everywhere else, luck
+    // step-free stations keep their lifts, honest — everywhere else, luck…
     this.liftOut = new Set(Object.keys(POS)
-      .filter(s => !STEP_FREE.has(s) && Math.random() < 0.6));
+      .filter(s => !STEP_FREE.has(s) && Math.random() < 0.5));
+    // …except reality outranks luck: stations TfL's lift feed reported
+    // broken on bake day are broken here too, step-free or not
+    for (const s of NETWORK.liftsOutSnapshot) if (POS[s]) this.liftOut.add(s);
   }
   saveHi() {
     if (this.score > this.hiscore) {
@@ -317,18 +375,16 @@ export class TubeFlock {
       localStorage.setItem('robbin.tube.hiscore', String(this.hiscore));
     }
   }
-  // design coords → screen
-  layout() {
-    const w = this.g.cssW, h = this.g.cssH;
-    const mx = Math.max(30, w * 0.07), myTop = h * 0.2, myBot = h * 0.2;
-    const sx = (w - 2 * mx) / 100, sy = (h - myTop - myBot) / 60;
-    return { mx, myTop, sx, sy };
+  // map camera: design units → screen. ~26 units across the short edge
+  // keeps neighbouring stations a comfortable flap apart; the camera
+  // glides after the flock across the whole city
+  mapScale() { return Math.min(this.g.cssW, this.g.cssH) / 26; }
+  toScreen(p) {
+    const s = this.mapScale();
+    return [this.g.cssW / 2 + (p[0] - this.cam[0]) * s,
+            this.g.cssH * 0.56 + (p[1] - this.cam[1]) * s];
   }
-  toXY(name) {
-    const { mx, myTop, sx, sy } = this.layout();
-    const [px, py] = POS[name];
-    return [mx + px * sx, myTop + py * sy];
-  }
+  toXY(name) { return this.toScreen(POS[name]); }
   // ---------------------------------------------------------- input
   handleDir(dx, dy) {
     if (this.over || this.travel || this.interior || this.gather || Math.hypot(dx, dy) < 0.3) return;
@@ -351,9 +407,9 @@ export class TubeFlock {
   }
   depart(edge) {
     this.freeChange = null;
-    const [ax, ay] = this.toXY(this.cur);
-    const [bx, by] = this.toXY(edge.to);
-    this.travel = { edge, ax, ay, bx, by, t: 0, dur: Math.max(0.7, Math.hypot(bx - ax, by - ay) / 210) };
+    const a = POS[this.cur], b = POS[edge.to];
+    const units = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    this.travel = { edge, a, b, t: 0, dur: Math.max(0.7, units * 0.16) };
     this.g.foley.whoosh();
   }
   handleJump() {
@@ -361,13 +417,15 @@ export class TubeFlock {
   }
   exit() {
     this.saveHi();
+    this.g.camFocus = null;
     this.g.state = 'title';
     document.getElementById('title').classList.remove('hidden');
   }
   // ---------------------------------------------------------- interiors
   enterInterior(pendingEdge, rescue, { arrival = false } = {}) {
     const g = this.g;
-    const def = LAYOUTS[STATION_LAYOUT[this.cur]] || LAYOUTS.shallow2;
+    const def = defFor(this.cur);
+    const seed = hashName(this.cur) % 20;
     const level = new Level({ name: this.cur, map: def.map, time: 0, enemies: [] }, 0);
     const stepFree = STEP_FREE.has(this.cur);
     // letter the lifts A/B/C left-to-right, the way the real lift guides do;
@@ -412,13 +470,14 @@ export class TubeFlock {
       }
     }
     this.interior = {
-      def, level, pendingEdge, gate, floorRows, vertRuns,
+      def, level, pendingEdge, gate, floorRows, vertRuns, seed,
       droppings: [], decals: [],
       playing,
       rescue: rescue && perch ? {
         ...rescue, x: perch.c * TILE + 16, y: (perch.r + 1) * TILE, found: false,
       } : null,
-      enemies: def.commuters.map(e => new Enemy(level, e)),
+      // every station draws its crowd from a different corner of London
+      enemies: def.commuters.map(e => new Enemy(level, { ...e, v: (e.v + seed) % 20 })),
       buddies: this.roster.filter(b => b !== playing).slice(0, 6)
         .map((b, i) => ({ sp: b.sp, x: player.x - 20 - i * 12, y: player.y - 30, ph: i * 1.9 })),
       invulnT: 1,
@@ -429,9 +488,14 @@ export class TubeFlock {
     g.fx = []; g.parts = [];
     if (arrival) {
       // the train brings you: everyone starts tucked inside the carriage
-      this.scene = { kind: 'arrive', t: 0, doorX: level.spawn.x + 36, baseY: H - TILE };
+      // (door on the inward side, so mirrored stations keep it on screen)
+      const doorX = level.spawn.x + (level.spawn.x < W / 2 ? 36 : -36);
+      this.scene = { kind: 'arrive', t: 0, doorX, baseY: H - TILE };
       player.x = -90; player.y = H - TILE;
       for (const b of this.interior.buddies) { b.x = -90; b.y = H - TILE - 26; b.vx = 0; b.vy = 0; }
+      g.camFocus = { x: this.scene.doorX, y: this.scene.baseY };
+    } else {
+      g.camFocus = null;
     }
     g.updateCamera(0, true);
     g.foley.whoosh();
@@ -459,7 +523,7 @@ export class TubeFlock {
         g.player.x += (it.level.spawn.x - g.player.x) * (1 - Math.exp(-dt * 4));
         flockStep(it.buddies.filter(b => b.x > -20), dt, g.player.x, g.player.y - 34, t);
       }
-      if (sc.t >= A + B + C + D) { this.scene = null; it.invulnT = 0.9; }
+      if (sc.t >= A + B + C + D) { this.scene = null; it.invulnT = 0.9; g.camFocus = null; }
     } else {   // board
       const A = 0.85, B = 0.5, C = 1.0;
       if (sc.t < A) {
@@ -478,6 +542,7 @@ export class TubeFlock {
         const edge = it.pendingEdge;
         this.scene = null;
         this.interior = null;
+        g.camFocus = null;
         this.depart(edge);
       }
     }
@@ -590,8 +655,10 @@ export class TubeFlock {
       const gx = it.gate.c * TILE + 16, gy = (it.gate.r + 1) * TILE;
       if (Math.abs(px - gx) < 22 && Math.abs(py - gy) < 36) {
         if (it.pendingEdge) {
-          // all aboard: the flock files into the open door
+          // all aboard: the flock files into the open door — the camera
+          // stays on the doorway while the birds are whisked offstage
           this.scene = { kind: 'board', t: 0, doorX: gx, baseY: gy };
+          g.camFocus = { x: gx, y: gy };
           g.foley.whoosh();
         } else {
           this.interior = null;
@@ -627,83 +694,68 @@ export class TubeFlock {
         }
       }
     }
-    // the flock swirls around the map cursor
+    // the flock swirls around the map cursor; the camera glides after it
     const t = performance.now() / 1000;
-    const [lx, ly] = this.travel
-      ? [this.travel.ax + (this.travel.bx - this.travel.ax) * this.travel.t,
-         this.travel.ay + (this.travel.by - this.travel.ay) * this.travel.t]
-      : this.toXY(this.cur);
+    const k = Math.min(1, this.travel ? this.travel.t : 0);
+    const p = this.travel
+      ? [this.travel.a[0] + (this.travel.b[0] - this.travel.a[0]) * k,
+         this.travel.a[1] + (this.travel.b[1] - this.travel.a[1]) * k]
+      : POS[this.cur];
+    const ease = 1 - Math.exp(-dt * 3);
+    this.cam[0] += (p[0] - this.cam[0]) * ease;
+    this.cam[1] += (p[1] - this.cam[1]) * ease;
+    const [lx, ly] = this.toScreen(p);
     flockStep(this.flock, dt, lx, ly - 14, t, 0.85);
+  }
+  // draw one line, shrinking the font just enough to fit maxW
+  fitText(ctx, text, x, y, maxW, px, weight = 'bold', family = 'Georgia, serif') {
+    ctx.font = `${weight} ${px}px ${family}`;
+    const tw = ctx.measureText(text).width;
+    if (tw > maxW) ctx.font = `${weight} ${Math.max(10, px * maxW / tw)}px ${family}`;
+    ctx.fillText(text, x, y);
   }
   // ---------------------------------------------------------- draw
   draw(ctx) {
     const g = this.g, w = g.cssW, h = g.cssH;
     const t = performance.now() / 1000;
-    const fs = Math.max(13, Math.min(20, w / 34));
+    // phone-first type: readable at arm's length, shrink-to-fit when long
+    const fs = Math.max(17, Math.min(24, w / 22));
     if (this.interior) { this.drawInterior(ctx, fs); return; }
     ctx.save();
-    ctx.textAlign = 'center';
-    ctx.fillStyle = PALETTE.ink;
-    ctx.font = `bold ${fs * 1.5}px Georgia, serif`;
-    ctx.fillText('TUBE FLOCK', w / 2, fs * 2);
-    ctx.font = `italic ${fs * 0.72}px Georgia, serif`;
-    ctx.globalAlpha = 0.7;
-    ctx.fillText('grow the flock — every lost libbird is out there somewhere', w / 2, fs * 3.1);
-    ctx.globalAlpha = 1;
-
-    // the quest card: who's waiting, and where
     const ob = this.objective;
-    ctx.font = `bold ${fs}px Georgia, serif`;
-    if (ob) {
-      ctx.fillText(`${ob.name} the ${ob.sp} is waiting at ${ob.at}`, w / 2, fs * 4.6);
-      ctx.font = `italic ${fs * 0.78}px Georgia, serif`;
-      ctx.globalAlpha = 0.75;
-      ctx.fillText(`…${ob.note}`, w / 2, fs * 5.7);
-      ctx.globalAlpha = 1;
-    } else {
-      ctx.fillStyle = PALETTE.platform;
-      ctx.fillText('♥ the flock is whole — fly together as long as you like ♥', w / 2, fs * 4.6);
-      ctx.fillStyle = PALETTE.ink;
-    }
-    ctx.textAlign = 'left';
-    ctx.fillText(`SCORE ${this.score}`, 12, fs * 1.6);
-    ctx.fillText(`HI ${this.hiscore}`, 12, fs * 2.8);
-    // the roster, roosting in the corner
-    this.roster.slice(0, 12).forEach((b, i) => {
-      drawBird(ctx, b.sp, {
-        x: w - 30 - i * 20, y: fs * 2.6, size: 20,
-        facing: -1, phase: t * 3 + i, pose: 'stand',
-      });
-    });
     ctx.textAlign = 'center';
 
-    // lines
+    // lines — every chain of every line, through the map camera
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    const onScreen = (x, y, m = 60) => x > -m && x < w + m && y > -m && y < h + m;
     for (const def of Object.values(LINES)) {
-      const trace = () => {
-        ctx.beginPath();
-        def.stations.forEach((s, i) => {
-          const [x, y] = this.toXY(s);
-          i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
-        });
-        ctx.stroke();
+      const trace = (width, style) => {
+        ctx.strokeStyle = style;
+        ctx.lineWidth = width;
+        for (const chain of def.chains) {
+          ctx.beginPath();
+          chain.forEach((s, i) => {
+            const [x, y] = this.toXY(s);
+            i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+          });
+          ctx.stroke();
+        }
       };
-      ctx.strokeStyle = def.color;
-      ctx.lineWidth = 7;
-      trace();
-      if (def.hollow) {   // Overground-style hollow stripe
-        ctx.strokeStyle = PALETTE.paper;
-        ctx.lineWidth = 2.6;
-        trace();
-      }
+      if (def.pale) trace(9, 'rgba(38,34,30,0.5)');   // ink underlay keeps pale inks legible
+      trace(7, def.color);
+      if (def.hollow) trace(2.6, PALETTE.paper);      // Overground-style hollow stripe
     }
-    // stations
-    ctx.font = `bold ${Math.max(10, fs * 0.56)}px Georgia, serif`;
+    // stations — dots everywhere, but names only where they matter:
+    // where you are, where you can fly next, and who you're looking for
+    const nbrs = new Set(EDGES.get(this.cur).map(e => e.to));
+    ctx.font = `bold ${Math.max(11, fs * 0.56)}px Georgia, serif`;
     for (const name of Object.keys(POS)) {
       const [x, y] = this.toXY(name);
-      const inter = INTERCHANGES.includes(name);
-      ctx.beginPath(); ctx.arc(x, y, inter ? 10 : 6.5, 0, Math.PI * 2);
+      if (!onScreen(x, y)) continue;
+      const inter = INTER_SET.has(name);
+      const here = name === this.cur;
+      ctx.beginPath(); ctx.arc(x, y, inter ? 9 : 6, 0, Math.PI * 2);
       ctx.fillStyle = PALETTE.paper; ctx.fill();
       ctx.lineWidth = inter ? 3.5 : 2.5;
       ctx.strokeStyle = PALETTE.ink; ctx.stroke();
@@ -713,18 +765,46 @@ export class TubeFlock {
         // the waiting bird perches beside its station ring
         drawBird(ctx, ob.sp, { x: x + 26, y: y - 12, size: 24, facing: -1, phase: t * 8, pose: 'stand' });
       }
-      ctx.fillStyle = PALETTE.ink;
-      const above = POS[name][1] < 30;
-      ctx.fillText(name, x, y + (above ? -16 : 26));
-      if (this.liftOut.has(name)) {
-        const ly = y + (above ? -40 : 44);
+      const labelled = here || nbrs.has(name) || (ob && name === ob.at);
+      if (labelled || inter) {
+        ctx.fillStyle = PALETTE.ink;
+        ctx.globalAlpha = labelled ? 1 : 0.4;
+        const above = y < h * 0.56;
+        ctx.fillText(name, x, y + (above ? -15 : 25));
+        ctx.globalAlpha = 1;
+      }
+      // step-free intel just where the next decision lives
+      if (labelled && this.liftOut.has(name)) {
+        const above = y < h * 0.56;
+        const my = y + (above ? -37 : 42);
         ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 1.8;
-        ctx.strokeRect(x - 8, ly - 8, 16, 16);
+        ctx.strokeRect(x - 8, my - 8, 16, 16);
         ctx.strokeStyle = PALETTE.danger; ctx.lineWidth = 2.4;
         ctx.beginPath();
-        ctx.moveTo(x - 6, ly - 6); ctx.lineTo(x + 6, ly + 6);
-        ctx.moveTo(x + 6, ly - 6); ctx.lineTo(x - 6, ly + 6);
+        ctx.moveTo(x - 6, my - 6); ctx.lineTo(x + 6, my + 6);
+        ctx.moveTo(x + 6, my - 6); ctx.lineTo(x - 6, my + 6);
         ctx.stroke();
+      }
+    }
+    // the lost bird may be way across the city: an edge arrow points the way
+    if (ob) {
+      const [ox, oy] = this.toXY(ob.at);
+      if (!onScreen(ox, oy, -20)) {
+        const cx = w / 2, cy = h * 0.56;
+        const dx = ox - cx, dy = oy - cy;
+        const kk = 1 / Math.max(Math.abs(dx) / (w / 2 - 46), Math.abs(dy) / (h / 2 - 80));
+        const ex = cx + dx * kk, ey = cy + dy * kk;
+        const ang = Math.atan2(dy, dx);
+        const pulse = 1 + Math.sin(t * 5) * 0.12;
+        ctx.save();
+        ctx.translate(ex, ey);
+        drawBird(ctx, ob.sp, { x: 0, y: 12, size: 26, facing: dx < 0 ? -1 : 1, phase: t * 8, pose: 'flit' });
+        ctx.rotate(ang);
+        ctx.fillStyle = PALETTE.danger;
+        ctx.beginPath();
+        ctx.moveTo(20 * pulse, 0); ctx.lineTo(6, -8); ctx.lineTo(6, 8);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
       }
     }
     // the flock, swirling boids-fashion
@@ -738,6 +818,42 @@ export class TubeFlock {
         pose: moving ? ((b.vy || 0) < -6 ? 'airup' : 'airdown') : 'flit',
       });
     }
+    // header on a paper wash so the city never runs through the words
+    ctx.fillStyle = 'rgba(242,236,221,0.88)';
+    ctx.fillRect(0, 0, w, fs * 6.3);
+    ctx.fillRect(0, h - fs * 1.9, w, fs * 1.9);
+    ctx.strokeStyle = 'rgba(38,34,30,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, fs * 6.3); ctx.lineTo(w, fs * 6.3); ctx.stroke();
+    ctx.fillStyle = PALETTE.ink;
+    ctx.font = `bold ${fs * 1.5}px Georgia, serif`;
+    ctx.fillText('TUBE FLOCK', w / 2, fs * 2);
+    ctx.globalAlpha = 0.7;
+    this.fitText(ctx, 'grow the flock — every lost libbird is out there somewhere', w / 2, fs * 3.1, w - 24, fs * 0.72, 'italic');
+    ctx.globalAlpha = 1;
+    // the quest card: who's waiting, and where
+    if (ob) {
+      this.fitText(ctx, `${ob.name} the ${ob.sp} is waiting at ${ob.at}`, w / 2, fs * 4.6, w - 20, fs);
+      ctx.globalAlpha = 0.75;
+      this.fitText(ctx, `…${ob.note}`, w / 2, fs * 5.7, w - 24, fs * 0.78, 'italic');
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.fillStyle = PALETTE.platform;
+      this.fitText(ctx, '♥ the flock is whole — fly together as long as you like ♥', w / 2, fs * 4.6, w - 20, fs);
+      ctx.fillStyle = PALETTE.ink;
+    }
+    ctx.textAlign = 'left';
+    ctx.font = `bold ${fs * 0.72}px Georgia, serif`;
+    ctx.fillText(`SCORE ${this.score}`, 12, fs * 1.2);
+    ctx.fillText(`HI ${this.hiscore}`, 12, fs * 2.2);
+    // the roster, roosting in the corner (under the speaker button)
+    this.roster.slice(0, 12).forEach((b, i) => {
+      drawBird(ctx, b.sp, {
+        x: w - 56 - i * 20, y: fs * 2.4, size: 20,
+        facing: -1, phase: t * 3 + i, pose: 'stand',
+      });
+    });
+    ctx.textAlign = 'center';
     if (this.arriveT > 0) {
       ctx.fillStyle = PALETTE.platform;
       ctx.font = `bold ${fs * 1.2}px Georgia, serif`;
@@ -753,7 +869,7 @@ export class TubeFlock {
     ctx.globalAlpha = 0.6;
     ctx.font = `${fs * 0.72}px Georgia, serif`;
     ctx.fillStyle = PALETTE.ink;
-    ctx.fillText('swipe or arrows to fly a line · no rush — the flock waits · ESC: home to roost', w / 2, h - fs);
+    this.fitText(ctx, 'swipe or arrows to fly a line · no rush — the flock waits · ESC: home to roost', w / 2, h - fs * 0.7, w - 16, fs * 0.72, 'normal');
     ctx.globalAlpha = 1;
     ctx.restore();
   }
@@ -802,17 +918,18 @@ export class TubeFlock {
       const col = it.pendingEdge ? LINES[it.pendingEdge.line].color
         : (this.line ? LINES[this.line].color : PALETTE.platform);
       const ease = x => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+      const dir = sc.doorX < W / 2 ? -1 : 1;   // left platforms run the other way
       let door = 0, dx = 0, moving = false;
       if (sc.kind === 'arrive') {
         const A = 1.0, B = 0.4, C = 1.1, D = 0.9;
-        if (sc.t < A) { dx = -460 * (1 - ease(sc.t / A)); moving = sc.t < A * 0.85; }
+        if (sc.t < A) { dx = -dir * 460 * (1 - ease(sc.t / A)); moving = sc.t < A * 0.85; }
         else if (sc.t < A + B) { door = (sc.t - A) / B; }
         else if (sc.t < A + B + C) { door = 1; }
         else {
           const k = (sc.t - A - B - C) / D;
           door = Math.max(0, 1 - k * 2.5);
-          dx = k > 0.35 ? Math.pow((k - 0.35) / 0.65, 2) * 580 : 0;
-          moving = dx > 4;
+          dx = k > 0.35 ? Math.pow((k - 0.35) / 0.65, 2) * dir * 580 : 0;
+          moving = Math.abs(dx) > 4;
         }
       } else {
         const A = 0.85, B = 0.5, C = 1.0;
@@ -820,11 +937,11 @@ export class TubeFlock {
         else {
           const k = (sc.t - A - B) / C;
           door = Math.max(0, 1 - k * 2.8);
-          dx = k > 0.3 ? Math.pow((k - 0.3) / 0.7, 2) * 580 : 0;
-          moving = dx > 4;
+          dx = k > 0.3 ? Math.pow((k - 0.3) / 0.7, 2) * dir * 580 : 0;
+          moving = Math.abs(dx) > 4;
         }
       }
-      drawTrain(ctx, sc.doorX, sc.baseY, col, { door, dx, moving });
+      drawTrain(ctx, sc.doorX, sc.baseY, col, { door, dx, moving, dir });
     }
     ctx.restore();
     // HUD strip
@@ -834,21 +951,25 @@ export class TubeFlock {
     ctx.strokeStyle = 'rgba(38,34,30,0.35)';
     ctx.beginPath(); ctx.moveTo(0, fs * 3); ctx.lineTo(w, fs * 3); ctx.stroke();
     ctx.fillStyle = PALETTE.ink;
+    // compact tallies at the left; big readable lines in the rest
+    ctx.textAlign = 'left';
+    ctx.font = `bold ${fs * 0.62}px Georgia, serif`;
+    ctx.fillText(`FLOCK ${this.roster.length}`, 10, fs * 1.1);
+    ctx.fillText(`SCORE ${this.score}`, 10, fs * 2.1);
+    const lx = 20 + ctx.measureText(`SCORE ${this.score}`).width;
+    const cw = w - lx * 2;   // symmetric so centred text clears the tallies
     ctx.textAlign = 'center';
-    ctx.font = `bold ${fs}px Georgia, serif`;
-    const doing = it.rescue
-      ? (it.rescue.found ? `${it.rescue.name} is aboard — amble to the WAY OUT` : `${it.rescue.name} the ${it.rescue.sp} is here, ${it.rescue.note}`)
-      : it.pendingEdge ? `change to the ${it.pendingEdge.line.toUpperCase()} line — no rush`
-      : 'just passing through — no rush';
-    ctx.fillText(`${this.cur} — ${doing}`, w / 2, fs * 1.25);
-    ctx.font = `italic ${fs * 0.72}px Georgia, serif`;
+    const line1 = it.rescue
+      ? (it.rescue.found ? `${it.rescue.name} is aboard — WAY OUT` : `find ${it.rescue.name} the ${it.rescue.sp}`)
+      : it.pendingEdge ? `change: ${it.pendingEdge.line.toUpperCase()} line` : 'just passing through';
+    const line2 = it.rescue && !it.rescue.found
+      ? `…${it.rescue.note}`
+      : `no rush · you are ${it.playing.name} the ${it.playing.sp}`;
+    this.fitText(ctx, `${this.cur} · ${line1}`, w / 2, fs * 1.25, cw, fs);
     ctx.globalAlpha = 0.75;
-    ctx.fillText(`${it.def.depths} · you are ${it.playing.name} the ${it.playing.sp}`, w / 2, fs * 2.3);
+    this.fitText(ctx, line2, w / 2, fs * 2.35, cw, fs * 0.72, 'italic');
     ctx.globalAlpha = 1;
     ctx.textAlign = 'left';
-    ctx.font = `bold ${fs * 0.85}px Georgia, serif`;
-    ctx.fillText(`FLOCK ${this.roster.length}`, 10, fs * 1.25);
-    ctx.fillText(`SCORE ${this.score}`, 10, fs * 2.3);
     ctx.restore();
   }
   drawDressing(ctx, it, t) {
@@ -863,7 +984,7 @@ export class TubeFlock {
       ctx.lineWidth = 2;
       ctx.fillRect(x - 17, y - 24, 34, 26);
       ctx.strokeRect(x - 17, y - 24, 34, 26);
-      const kind = (c + r + i) % 3;
+      const kind = (c + r + i + (it.seed || 0)) % 3;
       if (kind === 0) drawBird(ctx, ['robin', 'bluetit', 'blackbird'][i % 3], { x, y: y - 2, size: 17, facing: 1, pose: 'stand' });
       else if (kind === 1) { drawGrain(ctx, x, y - 4); }
       else {
@@ -885,9 +1006,8 @@ export class TubeFlock {
       ctx.fillStyle = lineColor;
       ctx.fillRect(x - 40, y + 2, 80, 4);
       ctx.fillStyle = PALETTE.ink;
-      ctx.font = 'bold 9px Georgia, serif';
       ctx.textAlign = 'center';
-      ctx.fillText(this.cur, x, y + 1);
+      this.fitText(ctx, this.cur, x, y + 1, 74, 9);   // long names shrink to the board
     }
     // WAY OUT up top
     ctx.fillStyle = PALETTE.ladder;
@@ -904,7 +1024,7 @@ export class TubeFlock {
       if (!(this.scene && this.scene.kind === 'board')) {
         ctx.save();
         ctx.globalAlpha = locked ? 0.5 : 1;
-        drawTrain(ctx, gx, gy, lineColor, { door: 1 });
+        drawTrain(ctx, gx, gy, lineColor, { door: 1, dir: gx < W / 2 ? -1 : 1 });
         ctx.restore();
       }
     } else {
@@ -922,11 +1042,12 @@ export class TubeFlock {
       ctx.moveTo(gx - 6, cy2); ctx.lineTo(gx + 6, cy2); ctx.lineTo(gx, cy2 + 7);
       ctx.closePath(); ctx.fill();
     }
-    // waiting bystanders
+    // waiting bystanders, drawn from the station's own corner of the crowd
     for (const [c, floor, v] of it.def.bystanders) {
+      const vv = (v + (it.seed || 0)) % 20;
       drawCommuter(ctx, {
         x: c * TILE + 16, y: floor * TILE, size: 48,
-        facing: v % 2 ? -1 : 1, phase: t * 2 + c, pose: 'stand', variant: v,
+        facing: vv % 2 ? -1 : 1, phase: t * 2 + c, pose: 'stand', variant: vv,
       });
     }
     // level tags at the left edge of each depth

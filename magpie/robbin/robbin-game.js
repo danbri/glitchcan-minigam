@@ -319,7 +319,15 @@ export class Player extends Walker {
       if (this.onLift) {
         const p = this.onLift, sh = p.shaft;
         this.y = p.y;
-        if (this.x < sh.x0 - 4 || this.x > sh.x1 + 4) { this.onLift = null; this.mode = 'fall'; this.vy = 0; }
+        if (this.x < sh.x0 - 4 || this.x > sh.x1 + 4) {
+          // stepping off within a wing-flap of a landing snaps neatly onto
+          // it (walking off a few px shy used to drop you down the shaft)
+          this.onLift = null;
+          const rb = Math.round(this.y / TILE);
+          if (Math.abs(this.y - rb * TILE) <= 8 && this.supported(this.x, rb * TILE)) {
+            this.y = rb * TILE;
+          } else { this.mode = 'fall'; this.vy = 0; }
+        }
         else if (this.y - 30 < 6) { game.kill('lift'); return; }
       } else if (!this.supported(this.x, this.y)) {
         this.mode = 'fall'; this.vy = 0;
@@ -651,8 +659,11 @@ class Game {
   }
   updateCamera(dt, snap = false) {
     if (!this.player) return;
-    const tx = Math.max(0, Math.min(this.player.x - this.viewW / 2, W - this.viewW));
-    const ty = Math.max(0, Math.min(this.player.y - 24 - this.viewH / 2, H - this.viewH));
+    // cutscenes anchor the view on their doorway, not on a player who has
+    // been whisked offstage (which used to pan the camera to the entrance)
+    const f = this.camFocus || this.player;
+    const tx = Math.max(0, Math.min(f.x - this.viewW / 2, W - this.viewW));
+    const ty = Math.max(0, Math.min(f.y - 24 - this.viewH / 2, H - this.viewH));
     const k = snap ? 1 : 1 - Math.exp(-dt * 6);
     this.camX += (tx - this.camX) * k;
     this.camY += (ty - this.camY) * k;
@@ -1443,7 +1454,7 @@ class Game {
     const ctx = this.ctx;
     const inGame = !['title', 'gameover', 'map'].includes(this.state);
     const hudH = Math.max(38, Math.min(52, this.cssH * 0.07));
-    const fs = Math.max(13, Math.min(19, this.cssW / 34));
+    const fs = Math.max(14, Math.min(19, this.cssW / 30));
     const ty = hudH * 0.62;
     ctx.save();
     ctx.fillStyle = 'rgba(247,242,230,0.9)';
