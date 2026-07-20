@@ -4321,6 +4321,16 @@ export const NETWORK = {
      "CROXLEY",
      "WATFORD"
     ]
+   ],
+   "oneWay": [
+    [
+     "WEMBLEY PARK",
+     "WILLESDEN GREEN"
+    ],
+    [
+     "WILLESDEN GREEN",
+     "FINCHLEY ROAD"
+    ]
    ]
   },
   "northern": {
@@ -4497,6 +4507,16 @@ export const NETWORK = {
     ],
     [
      "HEATHROW TERMINAL 5",
+     "HEATHROW TERMINALS 2 & 3"
+    ],
+    [
+     "HATTON CROSS",
+     "HEATHROW TERMINAL 4"
+    ]
+   ],
+   "oneWay": [
+    [
+     "HEATHROW TERMINAL 4",
      "HEATHROW TERMINALS 2 & 3"
     ],
     [

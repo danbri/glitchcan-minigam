@@ -112,6 +112,7 @@ for (const [id, def] of Object.entries(LINES)) {
   const seq = await get(`/Line/${id}/Route/Sequence/all?serviceTypes=Regular`);
   const chains = [];
   const seen = new Set();
+  const dirSet = new Set();   // every direction actually served, pre-dedupe
   for (const sps of seq.stopPointSequences) {
     const chain = sps.stopPoint.map(p => {
       const name = norm(p.name);
@@ -124,14 +125,25 @@ for (const [id, def] of Object.entries(LINES)) {
       if (z) st.zones.push(z);
       return name;
     });
+    for (let i = 0; i + 1 < chain.length; i++) dirSet.add(`${chain[i]}>${chain[i + 1]}`);
     // each branch appears once per direction; keep one of each
     const key = chain.join('|'), rkey = [...chain].reverse().join('|');
     if (seen.has(key) || seen.has(rkey)) continue;
     seen.add(key);
     chains.push(chain);
   }
-  lines[id] = { name: def.name, color: def.color, ...(def.pale && { pale: true }), chains };
-  console.log(`${def.name}: ${chains.length} chains, ${new Set(chains.flat()).size} stations`);
+  // not every line is a pair of tracks in opposite directions: the
+  // Heathrow T4 loop, for one, only ever runs one way round. A chain
+  // pair whose reverse is never served is one-way.
+  const oneWay = [];
+  for (const chain of chains)
+    for (let i = 0; i + 1 < chain.length; i++) {
+      const a = chain[i], b = chain[i + 1];
+      if (dirSet.has(`${a}>${b}`) && !dirSet.has(`${b}>${a}`)) oneWay.push([a, b]);
+      else if (!dirSet.has(`${a}>${b}`) && dirSet.has(`${b}>${a}`)) oneWay.push([b, a]);
+    }
+  lines[id] = { name: def.name, color: def.color, ...(def.pale && { pale: true }), chains, ...(oneWay.length && { oneWay }) };
+  console.log(`${def.name}: ${chains.length} chains, ${new Set(chains.flat()).size} stations${oneWay.length ? `, ${oneWay.length} one-way stretches` : ''}`);
 }
 
 for (const [name, { lat, lon }] of Object.entries(EXTRA_STATIONS)) {

@@ -174,7 +174,10 @@ framed lino adverts, WAY OUT signage, a waiting carriage with open
 doors at the departure platform, and idle bystanders. Press down
 mid-air for a harmless dropping (a struck commuter stops, mystified).
 The network includes the hollow-striped **Windrush line** (Rotherhithe
-· Canada Water · Surrey Quays). The adversaries are ordinary
+· Canada Water · Surrey Quays). And not every line is a pair of
+tracks running in opposite directions: one-way stretches — the
+Heathrow Terminal 4 loop only ever runs one way round — are one-way
+in the game too, marked with a little arrow on the map. The adversaries are ordinary
 **commuters** — bland blobby coat-people, deliberately faceless and
 background, but as varied as a real London platform: every age, build
 and skin tone, headscarves and turbans and flat caps and silver hair,

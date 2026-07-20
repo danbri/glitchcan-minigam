@@ -53,16 +53,23 @@ const LOST = [
 const BIRD_PX = { wren: 26, bluetit: 32, robin: 32, blackbird: 32 };
 
 // build the graph: station -> [{to, line}] from every line's chains
-// (branches are separate chains; duplicate edges collapse to one)
+// (branches are separate chains; duplicate edges collapse to one).
+// Not every line is a pair of tracks in opposite directions — one-way
+// stretches (the Heathrow T4 loop) only get their served direction.
 const EDGES = new Map(Object.keys(POS).map(s => [s, []]));
 for (const [line, def] of Object.entries(LINES)) {
+  const ow = new Map((def.oneWay || []).map(([f, t]) => [`${f}|${t}`, true]));
+  const oneWayOnly = (a, b) => ow.has(`${a}|${b}`) || ow.has(`${b}|${a}`);
+  const allowed = (a, b) => !oneWayOnly(a, b) || ow.has(`${a}|${b}`);
   for (const chain of def.chains) {
     for (let i = 0; i + 1 < chain.length; i++) {
       const a = chain[i], b = chain[i + 1];
       if (a === b) continue;
-      if (!EDGES.get(a).some(e => e.to === b && e.line === line)) {
-        EDGES.get(a).push({ to: b, line });
-        EDGES.get(b).push({ to: a, line });
+      for (const [f, t] of [[a, b], [b, a]]) {
+        if (!allowed(f, t)) continue;
+        if (!EDGES.get(f).some(e => e.to === t && e.line === line)) {
+          EDGES.get(f).push({ to: t, line });
+        }
       }
     }
   }
@@ -800,6 +807,24 @@ export class TubeFlock {
       if (def.pale) traceSegs(lineId, def, 8.6, 'rgba(38,34,30,0.5)');   // ink underlay keeps pale inks legible
       traceSegs(lineId, def, 6.4, def.color);
       if (def.hollow) traceSegs(lineId, def, 2.4, PALETTE.paper);        // Overground-style hollow stripe
+      // one-way stretches wear a little arrow in their served direction
+      for (const [f, t2] of def.oneWay || []) {
+        const [ax, ay] = this.toXY(f), [bx, by] = this.toXY(t2);
+        const mx = (ax + bx) / 2, my = (ay + by) / 2;
+        if (!onScreen(mx, my)) continue;
+        const ang = Math.atan2(by - ay, bx - ax);
+        ctx.save();
+        ctx.translate(mx, my);
+        ctx.rotate(ang);
+        ctx.fillStyle = PALETTE.paper;
+        ctx.beginPath();
+        ctx.moveTo(6.5, 0); ctx.lineTo(-3.5, -5); ctx.lineTo(-3.5, 5);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = PALETTE.ink;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        ctx.restore();
+      }
     }
     // stations — interchanges wear rings, ordinary stops wear tick marks
     // off the side of their line; names only where they matter: where you
