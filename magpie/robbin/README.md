@@ -102,11 +102,16 @@ stops on game over, and toggles with **M** or the speaker button
 **The loop, in one breath:** the map names a lost bird and its
 station; fly your line stop by stop toward it; changing lines at an
 interchange (or arriving at the bird's station) takes you inside a
-full-screen station platformer; changes end at your new line's
-train, rescues end back up at the street through the WAY OUT — then
-it's the map again, one bird richer. Riding straight through
-interchanges on your own line never drops you inside. A short primer
-sits on the map until the first rescue.
+full-screen station platformer; changes cross the station
+underground, from your line's platform to the new line's waiting
+train; rescues arrive by train and end by **surfacing** — up to
+street level and out the WAY OUT — then it's the map again, one bird
+richer. The WAY OUT is always there: a bird can surface out of any
+station mid-change and simply fly on (fresh start, no line to stay
+loyal to). Lines that share a platform swap trains without the trek —
+a real cross-platform change. Riding straight through interchanges on
+your own line never drops you inside. A short primer sits on the map
+until the first rescue.
 
 A cosy, heartwarming journey — no clock, no lives, no fail state. The
 main dynamic is **growing the flock**: twenty-two lost libbirds —
@@ -140,9 +145,10 @@ footbridge. Lift shafts and escalator banks follow **TfL's own
 per-station counts** — Hampstead is lift-only with zero escalators,
 Holborn has no lifts at all, Bank runs six escalator banks and a
 chained pair of lettered lifts — and one honest staircase always runs
-the whole way down. You enter on foot at street level; trains arrive
-and depart at the platform their line really uses; the WAY OUT is
-back up at the street. Each interior you play a randomly chosen flock
+the whole way down. Trains arrive and depart at the platform their
+line really uses, so a change starts on your own platform and crosses
+the station to the other line's; the WAY OUT at street level is how
+you surface. Each interior you play a randomly chosen flock
 member while the rest flutter along as AI buddies — the more you
 rescue, the fuller the screens get. Rescued birds join for +400 and
 +150 time; reach the waiting train (line changes) or the WAY OUT

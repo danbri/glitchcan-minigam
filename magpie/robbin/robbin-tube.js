@@ -409,8 +409,13 @@ export class TubeFlock {
       if (same) best = { ...same, dot: best.dot };
     }
     // changing lines at an interchange means crossing the station itself —
-    // unless you just fought your way through it
+    // unless the two lines share a platform (a real cross-platform change:
+    // you just stay put as the other train rolls in), or you just fought
+    // your way through
     if (this.line && best.line !== this.line && this.freeChange !== this.cur) {
+      const def = genStation(this.cur);
+      const gFrom = def.platGates[this.line], gTo = def.platGates[best.line];
+      if (gFrom && gTo && gFrom === gTo) { this.depart(best); return; }
       this.enterInterior(best, null);
       return;
     }
@@ -459,16 +464,20 @@ export class TubeFlock {
     if (!stepFree && escCols.length) {
       level.escCols.set(escCols[Math.floor(Math.random() * escCols.length)], 1);
     }
-    // where you're headed decides the door: line changes go DOWN to that
-    // line's own platform; rescues and wanders leave by the street WAY OUT
+    // where you're headed decides the door: line changes cross the station
+    // underground to the new line's own platform; rescues and wanders
+    // leave by surfacing — the street WAY OUT
     const gate = pendingEdge
       ? (def.platGates[pendingEdge.line] || def.defaultPlatGate)
       : def.gateOut;
     const perch = def.perch;
-    // map entry is on foot from the street; train arrivals respawn below
-    const arrivalGate = def.platGates[this.line] || def.defaultPlatGate;
+    // you start where you really would: train arrivals and line changes
+    // at the platform your line uses; on-foot visits at the street
+    const inGate = def.platGates[this.line] || def.defaultPlatGate;
     if (arrival) {
-      level.spawn = { x: arrivalGate.c * TILE + 16, y: (arrivalGate.r + 1) * TILE };
+      level.spawn = { x: inGate.c * TILE + 16, y: (inGate.r + 1) * TILE };
+    } else if (pendingEdge && this.line) {
+      level.spawn = { x: (inGate.c === 1 ? 3 : 16) * TILE + 16, y: (inGate.r + 1) * TILE };
     } else {
       level.spawn = { x: def.spawnStreet.c * TILE + 16, y: (def.spawnStreet.r + 1) * TILE };
     }
@@ -666,24 +675,32 @@ export class TubeFlock {
         }
       }
     }
-    // the way out / onto the train
+    // the exits. Walking in deliberately — not brushing past (lift
+    // landings can live near a doorway, and alighting shouldn't eject you)
     const locked = it.rescue && !it.rescue.found;
+    const atDoor = (c, r) => {
+      const gx = c * TILE + 16, gy = (r + 1) * TILE;
+      return Math.abs(px - gx) < 15 && Math.abs(py - gy) < 36 && !g.player.onLift;
+    };
     if (!locked) {
-      const gx = it.gate.c * TILE + 16, gy = (it.gate.r + 1) * TILE;
-      // a deliberate walk into the doorway — not a brush past it (lift
-      // landings can live near the exit, and alighting shouldn't eject you)
-      if (Math.abs(px - gx) < 15 && Math.abs(py - gy) < 36 && !g.player.onLift) {
-        if (it.pendingEdge) {
-          // all aboard: the flock files into the open door — the camera
-          // stays on the doorway while the birds are whisked offstage
-          this.scene = { kind: 'board', t: 0, doorX: gx, baseY: gy };
-          g.camFocus = { x: gx, y: gy };
-          g.foley.whoosh();
-        } else {
-          this.interior = null;
-          g.foley.clear();
-          this.freeChange = this.cur;   // rescued and out — no second toll
-        }
+      // the WAY OUT is always there: surfacing ends the visit, wherever
+      // you were headed (a bird can always just fly out of a station)
+      const o = it.def.gateOut;
+      if (o && atDoor(o.c, o.r)) {
+        this.interior = null;
+        g.foley.clear();
+        if (it.rescue) this.freeChange = this.cur;   // rescued and out — no second toll
+        else if (it.pendingEdge) this.line = null;   // surfaced on foot instead: fresh start
+        return;
+      }
+      // …or the waiting train, when a change is on
+      if (it.pendingEdge && atDoor(it.gate.c, it.gate.r)) {
+        // all aboard: the flock files into the open door — the camera
+        // stays on the doorway while the birds are whisked offstage
+        const gx = it.gate.c * TILE + 16, gy = (it.gate.r + 1) * TILE;
+        this.scene = { kind: 'board', t: 0, doorX: gx, baseY: gy };
+        g.camFocus = { x: gx, y: gy };
+        g.foley.whoosh();
       }
     }
   }
@@ -1082,10 +1099,21 @@ export class TubeFlock {
     ctx.textAlign = 'center';
     const streetRow = it.def.streetRow ?? lv.grid.findIndex(row => row.some(ch => ch === '#' || ch === '+'));
     ctx.fillText('WAY OUT ↑', W / 2, streetRow * TILE - 6);
-    // the gate: a waiting train (line changes) or the way-out doors (rescues)
-    const gx = it.gate.c * TILE + 16, gy = (it.gate.r + 1) * TILE;
+    // the exits: the street WAY OUT is always there (surfacing ends any
+    // visit); a waiting train stands at the platform when a change is on
     const locked = it.rescue && !it.rescue.found;
+    const og = it.def.gateOut || it.gate;
+    const ox = og.c * TILE + 16, oy = (og.r + 1) * TILE;
+    ctx.fillStyle = locked ? 'rgba(38,34,30,0.35)' : PALETTE.platform;
+    ctx.fillRect(ox - 14, oy - 42, 28, 42);
+    ctx.fillStyle = PALETTE.paper;
+    ctx.fillRect(ox - 9, oy - 36, 18, 36);
+    ctx.fillStyle = PALETTE.ink;
+    ctx.font = 'bold 9px Georgia, serif';
+    ctx.fillText(locked ? `FIND ${it.rescue.name} FIRST` : 'WAY OUT', ox, oy - 52);
+    let chevX = ox, chevY = oy;
     if (it.pendingEdge) {
+      const gx = it.gate.c * TILE + 16, gy = (it.gate.r + 1) * TILE;
       // a stylised carriage waiting at the platform (hidden while a
       // boarding scene animates its own)
       if (!(this.scene && this.scene.kind === 'board')) {
@@ -1094,19 +1122,16 @@ export class TubeFlock {
         drawTrain(ctx, gx, gy, lineColor, { door: 1, dir: gx < W / 2 ? -1 : 1 });
         ctx.restore();
       }
-    } else {
-      ctx.fillStyle = locked ? 'rgba(38,34,30,0.35)' : PALETTE.platform;
-      ctx.fillRect(gx - 14, gy - 42, 28, 42);
-      ctx.fillStyle = PALETTE.paper;
-      ctx.fillRect(gx - 9, gy - 36, 18, 36);
+      ctx.fillStyle = PALETTE.ink;
+      ctx.fillText('TO TRAINS', gx, gy - 52);
+      chevX = gx; chevY = gy;
     }
-    ctx.fillStyle = PALETTE.ink;
-    ctx.font = 'bold 9px Georgia, serif';
-    ctx.fillText(locked ? `FIND ${it.rescue.name} FIRST` : it.pendingEdge ? 'TO TRAINS' : 'WAY OUT', gx, gy - 52);
     if (!locked) {
+      // the pulsing chevron marks the journey's own exit
+      ctx.fillStyle = PALETTE.ink;
       ctx.beginPath();
-      const cy2 = gy - 26 + Math.sin(t * 5.5) * 3;
-      ctx.moveTo(gx - 6, cy2); ctx.lineTo(gx + 6, cy2); ctx.lineTo(gx, cy2 + 7);
+      const cy2 = chevY - 26 + Math.sin(t * 5.5) * 3;
+      ctx.moveTo(chevX - 6, cy2); ctx.lineTo(chevX + 6, cy2); ctx.lineTo(chevX, cy2 + 7);
       ctx.closePath(); ctx.fill();
     }
     // waiting bystanders, drawn from the station's own corner of the crowd
