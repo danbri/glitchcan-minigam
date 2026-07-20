@@ -116,12 +116,21 @@ rescue, the fuller the screens get. Rescued birds join for +400 and
 +150 time; reach the waiting train (line changes) or the WAY OUT
 (rescues, locked until the bird is found) to move on.
 
-Stations are dressed with real Underground furniture: procedural
+Each station's lifts form a little graph: shafts are **lettered A/B/C
+left-to-right** with coloured plates at the shaft head, and each one
+serves only its own span of levels — Bank runs a short Lift A
+(street ↔ ticket hall) beside the full-depth Lift B; the modern
+step-free boxes pair a full-height lift with a short street ↔
+concourse one. When a lift fails it is always **one lift, never the
+bank** — the rest, and the stairs, still serve. Stations are dressed
+with real Underground furniture: procedural
 **Lift guide** boards drawn from each station's own layout — floor
-lines, escalator diagonals, the lift column crossed red when out, and
+lines, escalator diagonals, each lettered lift column drawn over just
+the levels it serves and crossed red when out, and
 a live "you are here" dot that follows you; a dated, hand-scrawled
 **Service information** whiteboard on A-frame legs whenever something
-is broken; level tags at the left edge of every depth (street · 0 ·
+is broken (naming the out lift by letter); level tags at the left
+edge of every depth (street · 0 ·
 −1 · −2); blue Help Points; plus name boards with line-colour bars,
 framed lino adverts, WAY OUT signage, a waiting carriage with open
 doors at the departure platform, and idle bystanders. Press down

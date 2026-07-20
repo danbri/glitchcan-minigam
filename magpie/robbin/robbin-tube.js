@@ -77,10 +77,10 @@ const LAYOUTS = {
     map: [
       '....................',
       '.E...............B..',
-      '######+#####LL####+#',
-      '......S.....LL....H.',
-      '......S.....LL....H.',
-      '......S..E..LL....HX',
+      '######+#LL##LL####+#',
+      '......S.LL..LL....H.',
+      '......S.LL..LL....H.',
+      '......S.LLE.LL....HX',
       '###+########LL######',
       '...S........LL......',
       '...S........LL......',
@@ -178,11 +178,11 @@ const LAYOUTS = {
       '....................',
       '....................',
       '.E................B.',
-      '####+###LL####+#####',
-      '....S...LL....S.....',
-      '....S...LL....S.....',
-      '....S...LL....S.....',
-      '....S.E.LL....S.....',
+      '####+###LL####+#LL##',
+      '....S...LL....S.LL..',
+      '....S...LL....S.LL..',
+      '....S...LL....S.LL..',
+      '....S.E.LL....S.LL..',
       '####+###LL####+#####',
       '....S...LL....S.....',
       '....S...LL....S.....',
@@ -195,7 +195,7 @@ const LAYOUTS = {
       { t: 'commuter', c: 16, floor: 4, d: -1, v: 13 },
     ],
     bystanders: [[6, 13, 16], [16, 13, 1], [11, 9, 19]],
-    ads: [[2, 9], [11, 4], [16, 9], [6, 4]],
+    ads: [[2, 9], [11, 4], [18, 9], [6, 4]],
     signs: [[12, 9], [2, 4]],
     levels: ['street', '−1 · concourse', '−2 · platforms'],
     guides: [[2, 4], [12, 14]],
@@ -370,9 +370,20 @@ export class TubeFlock {
     const def = LAYOUTS[STATION_LAYOUT[this.cur]] || LAYOUTS.shallow2;
     const level = new Level({ name: this.cur, map: def.map, time: 0, enemies: [] }, 0);
     const stepFree = STEP_FREE.has(this.cur);
-    if (level.lift) {
-      level.lift.out = this.liftOut.has(this.cur);
-      if (level.lift.out) level.lift.paddles = [];
+    // letter the lifts A/B/C left-to-right, the way the real lift guides do;
+    // each shaft serves only its own span of levels, so its paddles wrap at
+    // its own top landing rather than sailing on through the ceiling
+    const LIFT_INK = ['#4f4a76', '#b23b2b', '#716b93'];
+    level.lifts.forEach((sh, i) => {
+      sh.id = String.fromCharCode(65 + i);
+      sh.color = LIFT_INK[i % LIFT_INK.length];
+      sh.wrapY = sh.topY - 12;
+    });
+    if (level.lifts.length && this.liftOut.has(this.cur)) {
+      // one lift goes out — never the whole bank; stairs and the rest still serve
+      const sh = level.lifts[Math.floor(Math.random() * level.lifts.length)];
+      sh.out = true;
+      sh.paddles = [];
     }
     // in scruffier stations one escalator runs against you
     const escCols = [...level.escCols.keys()];
@@ -475,11 +486,16 @@ export class TubeFlock {
     const g = this.g, it = this.interior, lv = it.level;
     if (this.scene) { this.updateScene(dt); return; }
     if (it.invulnT > 0) it.invulnT -= dt;
-    if (lv.lift && !lv.lift.out) {
-      for (const p of lv.lift.paddles) {
+    for (const sh of lv.lifts) {
+      if (sh.out) continue;
+      for (const p of sh.paddles) {
         p.prevY = p.y;
         p.y -= LIFT_V * dt;
-        if (p.y < 16) { p.y = lv.lift.botY; p.prevY = p.y; }
+        if (p.y < sh.wrapY) {
+          // a rider still aboard at the top just flutters off, no drama
+          if (g.player.onLift === p) { g.player.onLift = null; g.player.mode = 'fall'; g.player.vy = 0; }
+          p.y = sh.botY; p.prevY = p.y;
+        }
       }
     }
     g.player.update(dt, { ...g.input, jump: g.input.jump || g.jumpTap }, g);
@@ -822,7 +838,8 @@ export class TubeFlock {
     ctx.font = `bold ${fs}px Georgia, serif`;
     const doing = it.rescue
       ? (it.rescue.found ? `${it.rescue.name} is aboard — amble to the WAY OUT` : `${it.rescue.name} the ${it.rescue.sp} is here, ${it.rescue.note}`)
-      : `change to the ${it.pendingEdge.line.toUpperCase()} line — no rush`;
+      : it.pendingEdge ? `change to the ${it.pendingEdge.line.toUpperCase()} line — no rush`
+      : 'just passing through — no rush';
     ctx.fillText(`${this.cur} — ${doing}`, w / 2, fs * 1.25);
     ctx.font = `italic ${fs * 0.72}px Georgia, serif`;
     ctx.globalAlpha = 0.75;
@@ -941,10 +958,10 @@ export class TubeFlock {
       ctx.beginPath(); ctx.arc(hx + 6.5, hy - 11, 1.8, 0, Math.PI * 2); ctx.fill();
     }
     // the whiteboard, when something is out and nobody is named
-    const liftIsOut = !!(lv.lift && lv.lift.out);
+    const outLift = lv.lifts.find(sh => sh.out);
     const escAgainst = [...lv.escCols.values()].some(d => d === 1);
-    if ((liftIsOut || escAgainst) && it.def.board) {
-      this.drawServiceBoard(ctx, it.def.board[0] * TILE, it.def.board[1] * TILE, liftIsOut);
+    if ((outLift || escAgainst) && it.def.board) {
+      this.drawServiceBoard(ctx, it.def.board[0] * TILE, it.def.board[1] * TILE, outLift);
     }
     // the awesome power, memorialised
     for (const dcl of it.decals) {
@@ -1017,17 +1034,30 @@ export class TubeFlock {
         ctx.beginPath(); ctx.moveTo(exx, fy(i1)); ctx.lineTo(exx, fy(i0)); ctx.stroke();
       }
     }
-    // the lift column, proud or crossed out
-    if (lv.lift) {
-      const lx = mapX((lv.lift.x0 + lv.lift.x1) / 2 / TILE);
-      ctx.fillStyle = lv.lift.out ? 'rgba(192,57,43,0.3)' : '#c0392b';
-      ctx.fillRect(lx - 4, fy(0), 8, fy(n - 1) - fy(0));
-      if (lv.lift.out) {
+    // the lift columns, lettered, proud or crossed out — each drawn only
+    // over the levels it actually serves, like the boards in the real lifts
+    for (const sh of lv.lifts) {
+      const lx = mapX((sh.x0 + sh.x1) / 2 / TILE);
+      let i0 = it.floorRows.indexOf(sh.topY / TILE);
+      let i1 = it.floorRows.indexOf(sh.botY / TILE);
+      if (i0 < 0) i0 = 0;
+      if (i1 < 0) i1 = n - 1;
+      const col = sh.color || '#c0392b';
+      ctx.fillStyle = sh.out ? 'rgba(192,57,43,0.3)' : col;
+      ctx.fillRect(lx - 4, fy(i0), 8, fy(i1) - fy(i0));
+      if (sh.id) {
+        ctx.fillStyle = col;
+        ctx.font = 'bold 6px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(sh.id, lx, fy(i0) - 2);
+        ctx.textAlign = 'left';
+      }
+      if (sh.out) {
         ctx.strokeStyle = PALETTE.danger;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(lx - 5, fy(0)); ctx.lineTo(lx + 5, fy(n - 1));
-        ctx.moveTo(lx + 5, fy(0)); ctx.lineTo(lx - 5, fy(n - 1));
+        ctx.moveTo(lx - 5, fy(i0)); ctx.lineTo(lx + 5, fy(i1));
+        ctx.moveTo(lx + 5, fy(i0)); ctx.lineTo(lx - 5, fy(i1));
         ctx.stroke();
       }
     }
@@ -1043,7 +1073,7 @@ export class TubeFlock {
     ctx.restore();
   }
   // the Service information A-board: dated, handwritten, signed by nobody
-  drawServiceBoard(ctx, cx, floorY, liftIsOut) {
+  drawServiceBoard(ctx, cx, floorY, outLift) {
     const w = 46, h = 60;
     const x0 = cx + 16 - w / 2, y0 = floorY - h;
     ctx.save();
@@ -1079,8 +1109,10 @@ export class TubeFlock {
     ctx.save();
     ctx.translate(x0 + 4, y0 + 28);
     ctx.rotate(-0.035);
-    if (liftIsOut) { ctx.fillText('LIFT OUT', 0, 0); ctx.fillText('OF SERVICE', 0, 9); }
-    else { ctx.fillText('ESCALATOR', 0, 0); ctx.fillText('UNDER REPAIR', 0, 9); }
+    if (outLift) {
+      ctx.fillText(outLift.id ? `LIFT ${outLift.id} OUT` : 'LIFT OUT', 0, 0);
+      ctx.fillText('OF SERVICE', 0, 9);
+    } else { ctx.fillText('ESCALATOR', 0, 0); ctx.fillText('UNDER REPAIR', 0, 9); }
     ctx.beginPath();
     ctx.moveTo(0, 13); ctx.quadraticCurveTo(14, 15, 34, 13.5);
     ctx.lineWidth = 1;

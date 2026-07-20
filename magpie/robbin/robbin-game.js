@@ -191,8 +191,7 @@ export class Level {
     this.bottles = new Map();    // "c,r" -> {c,r,cream}: milk bottle bonuses
     this.escCols = new Map();    // col -> -1 up / +1 down: escalator runs ('S')
     this.spawn = { x: TILE + 16, y: H - TILE };
-    let liftCols = [];
-    let liftTop = ROWS, liftBot = 0;
+    const liftCells = [];
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const ch = this.grid[r][c];
@@ -200,18 +199,33 @@ export class Level {
         else if (ch === 'G') this.bottles.set(`${c},${r}`, { c, r, cream: true });
         else if (ch === 'P') this.spawn = { x: c * TILE + 16, y: (r + 1) * TILE };
         else if (ch === 'S') this.escCols.set(c, -1);   // escalators run up by default
-        if (ch === 'L') { liftCols.push(c); liftTop = Math.min(liftTop, r); liftBot = Math.max(liftBot, r); }
+        if (ch === 'L') liftCells.push({ c, r });
       }
     }
-    this.lift = null;
-    if (liftCols.length) {
-      const c0 = Math.min(...liftCols), c1 = Math.max(...liftCols);
-      this.lift = {
-        x0: c0 * TILE, x1: (c1 + 1) * TILE,
-        topY: liftTop * TILE, botY: (liftBot + 1) * TILE,
-        paddles: [{ y: (liftBot + 1) * TILE }, { y: (liftTop + liftBot + 1) * TILE / 2 }],
+    // contiguous L columns form one shaft; a gap starts another — a station
+    // can run several lifts, each serving its own span of levels
+    this.lifts = [];
+    const cols = [...new Set(liftCells.map(l => l.c))].sort((a, b) => a - b);
+    let group = [];
+    const flush = () => {
+      if (!group.length) return;
+      const rows = liftCells.filter(l => group.includes(l.c)).map(l => l.r);
+      const top = Math.min(...rows), bot = Math.max(...rows);
+      const sh = {
+        x0: group[0] * TILE, x1: (group[group.length - 1] + 1) * TILE,
+        topY: top * TILE, botY: (bot + 1) * TILE,
+        wrapY: 16,
       };
+      sh.paddles = [{ y: sh.botY, shaft: sh }, { y: (top + bot + 1) * TILE / 2, shaft: sh }];
+      this.lifts.push(sh);
+      group = [];
+    };
+    for (const c of cols) {
+      if (group.length && c > group[group.length - 1] + 1) flush();
+      group.push(c);
     }
+    flush();
+    this.lift = this.lifts[0] || null;   // main shaft (Flight Line has at most one)
   }
   at(c, r) {
     if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return ' ';
@@ -303,9 +317,9 @@ export class Player extends Walker {
       } else this.walkT = 0;
       this.x = Math.max(9, Math.min(W - 9, this.x + this.vx * dt));
       if (this.onLift) {
-        const p = this.onLift;
+        const p = this.onLift, sh = p.shaft;
         this.y = p.y;
-        if (this.x < lv.lift.x0 - 4 || this.x > lv.lift.x1 + 4) { this.onLift = null; this.mode = 'fall'; this.vy = 0; }
+        if (this.x < sh.x0 - 4 || this.x > sh.x1 + 4) { this.onLift = null; this.mode = 'fall'; this.vy = 0; }
         else if (this.y - 30 < 6) { game.kill('lift'); return; }
       } else if (!this.supported(this.x, this.y)) {
         this.mode = 'fall'; this.vy = 0;
@@ -384,14 +398,18 @@ export class Player extends Walker {
             break;
           }
         }
-        // lift paddles (moving platforms)
-        if (this.mode !== 'walk' && lv.lift && this.x > lv.lift.x0 - 6 && this.x < lv.lift.x1 + 6) {
-          for (const p of lv.lift.paddles) {
-            if (prevY <= p.prevY + 2 && this.y >= p.y) {
-              this.y = p.y; this.vy = 0; this.vx = 0; this.mode = 'walk'; this.onLift = p;
-              this.squashT = 0.16;
-              break;
+        // lift paddles (moving platforms) — any shaft the fall passes through
+        if (this.mode !== 'walk') {
+          for (const sh of lv.lifts) {
+            if (this.x <= sh.x0 - 6 || this.x >= sh.x1 + 6) continue;
+            for (const p of sh.paddles) {
+              if (prevY <= p.prevY + 2 && this.y >= p.y) {
+                this.y = p.y; this.vy = 0; this.vx = 0; this.mode = 'walk'; this.onLift = p;
+                this.squashT = 0.16;
+                break;
+              }
             }
+            if (this.onLift) break;
           }
         }
       }
@@ -977,11 +995,11 @@ class Game {
 
     const lv = this.level;
     // lift paddles
-    if (lv.lift) {
-      for (const p of lv.lift.paddles) {
+    for (const sh of lv.lifts) {
+      for (const p of sh.paddles) {
         p.prevY = p.y;
         p.y -= LIFT_V * lv.speedMul * dt;
-        if (p.y < 16) { p.y = lv.lift.botY; p.prevY = p.y; }
+        if (p.y < sh.wrapY) { p.y = sh.botY; p.prevY = p.y; }
       }
     }
     // in glide mode the persistent heading plays the direction keys for you
@@ -1378,19 +1396,33 @@ class Game {
       if (this.screenX > 0) arch(0, 1);
       if (this.screenX < this.station.screens.length - 1) arch(W, -1);
     }
-    // lift
-    if (lv.lift) {
-      const { x0, x1 } = lv.lift;
+    // lifts
+    for (const sh of lv.lifts) {
+      const { x0, x1 } = sh;
+      const cx2 = (x0 + x1) / 2;
       ctx.strokeStyle = 'rgba(38,34,30,0.25)';
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 8]);
       ctx.beginPath();
-      ctx.moveTo((x0 + x1) / 2, 8); ctx.lineTo((x0 + x1) / 2, lv.lift.botY);
+      ctx.moveTo(cx2, Math.max(8, sh.topY - 24)); ctx.lineTo(cx2, sh.botY);
       ctx.stroke();
       ctx.setLineDash([]);
-      if (lv.lift.out) {
+      if (sh.id) {
+        // lettered lift plate at the shaft head, guide-book style
+        ctx.fillStyle = sh.color || PALETTE.platform;
+        ctx.strokeStyle = PALETTE.ink;
+        ctx.lineWidth = 1.5;
+        const py2 = Math.max(6, sh.topY - 30);
+        ctx.fillRect(cx2 - 8, py2, 16, 14);
+        ctx.strokeRect(cx2 - 8, py2, 16, 14);
+        ctx.fillStyle = PALETTE.paper;
+        ctx.font = 'bold 10px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(sh.id, cx2, py2 + 11);
+      }
+      if (sh.out) {
         // lift out of order: crossed sign at the shaft head
-        const cx2 = (x0 + x1) / 2, sy = lv.lift.topY + 20;
+        const sy = sh.topY + 20;
         ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5;
         ctx.strokeRect(cx2 - 14, sy - 14, 28, 28);
         ctx.strokeStyle = PALETTE.danger; ctx.lineWidth = 4;
@@ -1399,7 +1431,7 @@ class Game {
         ctx.moveTo(cx2 + 10, sy - 10); ctx.lineTo(cx2 - 10, sy + 10);
         ctx.stroke();
       }
-      for (const p of lv.lift.paddles) {
+      for (const p of sh.paddles) {
         ctx.fillStyle = PALETTE.platformShadow;
         ctx.fillRect(x0 + 2, p.y + 2, x1 - x0 - 4, 9);
         ctx.fillStyle = PALETTE.ladder;
