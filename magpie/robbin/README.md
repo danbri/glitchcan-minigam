@@ -174,11 +174,11 @@ Step-free access is real-ish: a curated list of genuinely step-free
 stations (Canada Water to Amersham, some eighty of them) keeps all
 their escalators running your way; elsewhere one escalator runs
 against you — climb it at half speed, ride the right way at 1.6×,
-stairs never fail. Lift outages are **reality only, for now**: the
-sole broken lifts are the stations TfL's own lift-disruption feed
-reported out on the day the network was baked (crossed box on the
-map). Random outages can return later, tuned for playability.
-Separate hi-score.
+stairs never fail. Lift outages are a **playability dial, not a news
+feed**: each run sprinkles a few broken lifts (crossed box on the
+map) across stations that really have lifts — never at step-free
+stations, never more than one lift of a bank, purely for routing
+texture. Separate hi-score.
 
 ## Implementation notes
 

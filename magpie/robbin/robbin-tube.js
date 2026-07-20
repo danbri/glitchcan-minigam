@@ -363,9 +363,16 @@ export class TubeFlock {
   }
   get objective() { return this.lostIdx < LOST.length ? LOST[this.lostIdx] : null; }
   shuffleLifts() {
-    // reality only, for now: the stations TfL's lift feed reported broken
-    // on bake day. Random outages can return later, playability-tuned.
-    this.liftOut = new Set(NETWORK.liftsOutSnapshot.filter(s => POS[s]));
+    // outages are a gameplay dial, not a news feed: a light sprinkle of
+    // broken lifts for routing texture, reshuffled each run. Only
+    // stations that really have lifts can lose one (so the map's crossed
+    // boxes never lie), step-free stations stay honest, and inside a
+    // station it's only ever one lift of the bank.
+    const LIFT_OUT_RATE = 0.3;   // the playability dial
+    this.liftOut = new Set(Object.keys(POS).filter(s =>
+      !STEP_FREE.has(s)
+      && (NETWORK.stations?.[s]?.lifts || 0) > 0
+      && Math.random() < LIFT_OUT_RATE));
   }
   saveHi() {
     if (this.score > this.hiscore) {

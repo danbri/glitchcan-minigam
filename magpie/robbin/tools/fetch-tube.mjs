@@ -286,8 +286,9 @@ for (const [name, st] of Object.entries(stations)) {
   };
 }
 
-// today's real lift outages, snapshotted (station ids -> our names where
-// they are tube stations we know)
+// today's real lift outages, snapshotted for provenance/curiosity only —
+// the game does NOT consume this: in-game outages are gameplay-tuned
+// randomness, not sociology
 let liftsOutSnapshot = [];
 try {
   const lifts = await get('/Disruptions/Lifts/v2/');
