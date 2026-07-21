@@ -140,14 +140,16 @@ whole flock hops out onto the platform. Boarding is its mirror — the
 birds file into the open door, doors close, and the carriage whisks
 them away. Arriving at a lost bird's station — or changing lines at an
 interchange — puts you **inside the station**: a full-screen
-platformer cut **generated from the station's real cross-section**.
-Levels are numbered the way TfL numbers its own buildings — the
-street is **level 0** and each storey below counts down −1, −2, −3
-— so deep-tube platforms sit at −2 (or −3 under a cut-and-cover
-level: King's Cross gets both; at Bank the Central and Northern
-really do run at different depths, so each gets its own level,
-labelled with its line); outer-zone stations are open-air platforms
-clearly at ground level 0, with a +1 footbridge over the tracks. Lift shafts and escalator banks follow **TfL's own
+platformer cut **generated from the station's real cross-section**,
+with **TfL's own storey numbers and measured depths** on the level
+tags: street is level 0 and the storeys count down exactly as TfL's
+station topology feed numbers them — Hampstead's platforms at
+**−4 · 59 m**, Bank's W&C & Central at −3 with the Northern at
+**−5 · 30 m**, Covent Garden's lift-only depths at −6, Westminster's
+Jubilee box at −5 under the District at −2; outer-zone stations are
+open-air platforms clearly at ground level 0 with a +1 footbridge —
+unless TfL's figures say the platforms ride a viaduct, in which case
+the whole station honestly steps up (+1 · 10 m up at Greenford). Lift shafts and escalator banks follow **TfL's own
 per-station counts** — Hampstead is lift-only with zero escalators,
 Holborn has no lifts at all, Bank runs six escalator banks and a
 chained pair of lettered lifts — and one honest staircase always runs
@@ -268,15 +270,26 @@ Separate hi-score.
   coords, curated step-free list, lift-outage snapshot). Re-run the
   tool to refresh; commit the output. Cached in-repo, reproducible —
   the same pattern as `trees/`.
-- What the open data can and can't say: **per-direction service is
-  real** — the platform doors' departures come from TfL's per-direction
-  route sequences (which is also how the one-way Heathrow T4 loop is
-  known), and lift/escalator counts are TfL's own. **Per-platform
-  depth is not machine-readable** — the Unified API doesn't publish
-  which level each platform sits at (that lives in TfL's step-free
-  guide PDFs and a 2015 FOI station-depth spreadsheet), so the level
-  assignments are a principled synthesis from each station's line
-  types and fare zone, numbered street-down per TfL convention.
+- What the open data says (all of it now ingested): **per-direction
+  service is real** — the platform doors' departures come from TfL's
+  per-direction route sequences (also how the one-way Heathrow T4 loop
+  is known), and lift/escalator counts are TfL's own. **Per-platform
+  depth and storey numbers are real too**, from two further sources
+  baked by `tools/ingest-levels.mjs` into `tube-levels.js`:
+  - `data/station-depths-foi-0493-2223.csv` — TfL FOI-0493-2223, per
+    station and line, ground level and platform levels referred to
+    London Underground Datum (100 m below Ordnance Datum, per the
+    file's own notes): Hampstead 58.5 m down, Bank's Northern 29.6 m,
+    Greenford 10 m **up** on its viaduct.
+  - `data/tfl-stationdata/` — TfL's step-free station topology feed
+    (`tfl-stationdata-detailed.zip`): every area of every station
+    carries TfL's own storey number (street 0, down negative), with
+    lines decodable from area names (CenEB −3, NorSB −5 at Bank;
+    Epping's footbridge is literally +1 in the feed).
+  Where both sources are silent (a handful of stations), the level
+  assignment falls back to a principled synthesis from line types and
+  fare zone; measured depths also override the line-type guess, so
+  embankment stations like East Acton read +2, not −2.
 - Levels are 20×15 ASCII tile maps: `#` platform, `H` ladder, `+` platform
   pierced by ladder, `E` egg, `G` grain, `P` spawn, `L` lift shaft.
 - Fixed-feel physics tuned to 8-bit platformer conventions: fixed jump arc with head-bump,

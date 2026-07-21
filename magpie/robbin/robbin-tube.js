@@ -13,6 +13,7 @@ import { PALETTE, drawBird, drawGrain, drawCommuter } from './robbin-sprites.js'
 import { Level, Player, Enemy, TILE, W, H, LIFT_V } from './robbin-game.js';
 import { NETWORK } from './tube-network.js';
 import { STATION_FACTS } from './robbin-facts.js';
+import { STATION_LEVELS } from './tube-levels.js';
 
 // the whole London Underground, baked from the TfL Unified API by
 // tools/fetch-tube.mjs (plus the Windrush segment) — real geography,
@@ -127,34 +128,80 @@ function genStation(name) {
 
   // ---- the cross-section: which levels exist here, really
   let floors, levels, plats;   // plats: platform levels, each with its lines
-  // Levels are numbered the way TfL numbers its own buildings: the
-  // street is level 0 and each storey below counts down \u22121, \u22122, \u22123.
-  // Ground level is always CLEARLY level 0.
-  if (facts.deep && facts.sub) {
+  // Levels are numbered the way TfL numbers its own stations \u2014 street
+  // is 0, storeys count down \u2014 and where TfL's own data speaks, we use
+  // its REAL numbers and depths: FOI-0493-2223 platform depths and the
+  // step-free topology feed's storey numbers, baked into tube-levels.js
+  // (Hampstead platforms \u22124 and 58 m down; Bank's Northern at \u22125).
+  // Stations the data misses fall back to a principled synthesis.
+  const real = STATION_LEVELS[name] || { lines: {} };
+  const groupLevel = (ls, fb) => {
+    const vals = ls.map(l => real.lines[l]?.level).filter(v => v !== undefined);
+    return vals.length ? Math.min(...vals) : fb;
+  };
+  const groupDepth = (ls) => {
+    const vals = ls.map(l => real.lines[l]?.depth).filter(v => v !== undefined);
+    return vals.length ? Math.max(...vals) : null;
+  };
+  const lvlTag = n => (n > 0 ? `+${n}` : n === 0 ? '0' : `−${-n}`);
+  const platLabel = (ls, fb) => {
+    const lv = groupLevel(ls, fb), dp = groupDepth(ls);
+    const dpTxt = dp !== null && dp >= 1.5 ? ` \u00b7 ${Math.round(dp)} m`
+      : dp !== null && dp <= -1.5 ? ` \u00b7 ${Math.round(-dp)} m up` : '';
+    return { lv, label: `${lvlTag(lv)} \u00b7 ${short(ls) || 'platforms'}${dpTxt}` };
+  };
+  const ticketLv = real.ticket ?? -1;
+  // a deep station's middle landing is a concourse when it sits well
+  // below the street-level ticket hall (Hampstead's is at \u22123)
+  const midLabel = lv => `${lvlTag(lv)} \u00b7 ${lv <= -2 ? 'concourse' : 'ticket hall'}`;
+  // TfL's measured depths override the line-type guess: a "deep-line"
+  // station whose platforms sit at or above the street (East Acton on
+  // its embankment, Stratford) is really an open-air station
+  const maxDepth = groupDepth(lineList);
+  const atGrade = maxDepth !== null && maxDepth <= 1.5;
+  if (!atGrade && facts.deep && facts.sub) {
+    const pSub = platLabel(subL, -2), pDeep = platLabel(deepL, Math.min(pSub.lv - 1, -3));
     floors = [2, 6, 10, 14];
-    levels = ['0 \u00b7 street', '\u22121 \u00b7 ticket hall', `\u22122 \u00b7 ${short(subL)}`, `\u22123 \u00b7 ${short(deepL)}`];
+    levels = ['0 \u00b7 street', midLabel(ticketLv), pSub.label, pDeep.label];
     plats = [{ row: 10, lines: subL }, { row: 14, lines: deepL }];
-  } else if (facts.deep && deepL.length >= 2 && facts.zone === 1) {
-    // two deep lines really do run at different depths (Bank, Oxford Circus)
-    const g0 = [deepL[0]], g1 = deepL.slice(1);
+  } else if (!atGrade && facts.deep && deepL.length >= 2 && facts.zone === 1) {
+    // two deep lines really do run at different depths (Bank, Oxford
+    // Circus) \u2014 the deeper one, by TfL's figures, takes the lower floor
+    const byDepth = [...deepL].sort((a, b) =>
+      (real.lines[a]?.depth ?? 12) - (real.lines[b]?.depth ?? 12));
+    const g0 = byDepth.slice(0, -1), g1 = [byDepth[byDepth.length - 1]];
+    const p0 = platLabel(g0, -2), p1 = platLabel(g1, Math.min(p0.lv - 1, -3));
     floors = [2, 6, 10, 14];
-    levels = ['0 \u00b7 street', '\u22121 \u00b7 ticket hall', `\u22122 \u00b7 ${short(g0)}`, `\u22123 \u00b7 ${short(g1)}`];
+    levels = ['0 \u00b7 street', midLabel(ticketLv), p0.label, p1.label];
     plats = [{ row: 10, lines: g0 }, { row: 14, lines: g1 }];
-  } else if (facts.deep) {
+  } else if (!atGrade && facts.deep) {
+    const mid = real.concourse ?? ticketLv;
+    const p = platLabel(deepL, Math.min(mid - 1, -2));
     floors = [4, 9, 14];
-    levels = ['0 \u00b7 street', '\u22121 \u00b7 ticket hall', `\u22122 \u00b7 ${short(deepL) || 'platforms'}`];
+    levels = ['0 \u00b7 street', midLabel(mid), p.label];
     plats = [{ row: 14, lines: deepL }];
-  } else if (facts.sub) {
+  } else if (!atGrade && facts.sub) {
+    const p = platLabel(subL, -2);
     floors = [4, 9, 14];
-    levels = ['0 \u00b7 street', '\u22121 \u00b7 ticket hall', `\u22122 \u00b7 ${short(subL) || 'platforms'}`];
+    levels = ['0 \u00b7 street', midLabel(ticketLv), p.label];
     plats = [{ row: 14, lines: subL }];
   } else {
-    // open-air suburbia: platforms at ground, a footbridge over the tracks
+    // open-air suburbia: platforms at ground with a footbridge over the
+    // tracks \u2014 unless TfL says they ride a viaduct, in which case the
+    // whole station steps UP (Greenford's platforms are 10 m in the air)
+    const dp = groupDepth(lineList);
+    const up = groupLevel(lineList, 0) >= 1 || (dp ?? 0) <= -1.5;
+    const platLv = up ? Math.max(1, groupLevel(lineList, 1)) : 0;
+    const upTxt = up && dp !== null && dp <= -1.5 ? ` \u00b7 ${Math.round(-dp)} m up` : '';
     floors = [8, 14];
-    levels = ['+1 \u00b7 footbridge', `0 \u00b7 street \u00b7 ${short(lineList) || 'the'} platforms`];
+    levels = [
+      `${lvlTag(platLv + 1)} \u00b7 footbridge`,
+      up ? `${lvlTag(platLv)} \u00b7 ${short(lineList) || 'the'} platforms${upTxt}`
+         : `0 \u00b7 street \u00b7 ${short(lineList) || 'the'} platforms`,
+    ];
     plats = [{ row: 14, lines: lineList }];
   }
-  const surface = !facts.deep && !facts.sub;
+  const surface = atGrade || (!facts.deep && !facts.sub);
   const streetRow = surface ? 14 : floors[0];
   const bottom = 14;
 
