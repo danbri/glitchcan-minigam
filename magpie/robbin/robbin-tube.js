@@ -1155,13 +1155,14 @@ export class TubeFlock {
       ctx.fillStyle = '#d8c8a4';
       ctx.lineWidth = 2.4;
       ctx.lineCap = 'round';
-      const kind = rnd(6);
+      const kind = rnd(7);
       if (kind === 0) this.buriedBones(ctx, -52, cy, rnd);
       else if (kind === 1) this.buriedMammothUfo(ctx, -68, cy - 20);
       else if (kind === 2) this.buriedLongship(ctx, -58, cy);
       else if (kind === 3) this.buriedRing(ctx, -44, cy);
       else if (kind === 4) this.buriedRiver(ctx, topY, t);
-      else this.buriedAmmonite(ctx, -40, cy);
+      else if (kind === 5) this.buriedAmmonite(ctx, -40, cy);
+      else this.buriedPteroBike(ctx, -62, cy);
       ctx.globalAlpha = 1;
     }
     ctx.restore();
@@ -1294,6 +1295,79 @@ export class TubeFlock {
       ctx.beginPath(); ctx.moveTo(x - 5, y); ctx.quadraticCurveTo(x, y + 5, x + 5, y); ctx.stroke();
     }
     ctx.restore();
+  }
+  buriedPteroBike(ctx, cx, cy) {
+    // a fossilised pterodactyl, forever mid-commute
+    // the bicycle
+    for (const wx of [cx - 24, cx + 24]) {
+      ctx.beginPath(); ctx.arc(wx, cy + 38, 13, 0, Math.PI * 2); ctx.stroke();
+      for (let i = 0; i < 3; i++) {
+        const a = i * Math.PI / 3 + 0.4;
+        ctx.beginPath();
+        ctx.moveTo(wx - Math.cos(a) * 13, cy + 38 - Math.sin(a) * 13);
+        ctx.lineTo(wx + Math.cos(a) * 13, cy + 38 + Math.sin(a) * 13);
+        ctx.stroke();
+      }
+    }
+    ctx.beginPath();                       // frame
+    ctx.moveTo(cx - 24, cy + 38); ctx.lineTo(cx - 10, cy + 12);
+    ctx.lineTo(cx - 2, cy + 34); ctx.lineTo(cx - 24, cy + 38);
+    ctx.moveTo(cx - 2, cy + 34); ctx.lineTo(cx + 24, cy + 38);
+    ctx.moveTo(cx + 24, cy + 38); ctx.lineTo(cx + 30, cy + 10);
+    ctx.stroke();
+    ctx.beginPath();                       // saddle + bars
+    ctx.moveTo(cx - 17, cy + 11); ctx.lineTo(cx - 4, cy + 12);
+    ctx.moveTo(cx + 26, cy + 8); ctx.quadraticCurveTo(cx + 34, cy + 6, cx + 36, cy + 12);
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx - 2, cy + 34, 4, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath();                       // pedals
+    ctx.moveTo(cx - 8, cy + 40); ctx.lineTo(cx - 1, cy + 42);
+    ctx.moveTo(cx + 4, cy + 27); ctx.lineTo(cx - 1, cy + 26);
+    ctx.stroke();
+    // the rider: hips on the saddle, spine, long crested skull, and the
+    // famous single flight-finger sweeping back over the rear wheel
+    ctx.beginPath();                       // femur to the pedal
+    ctx.moveTo(cx - 10, cy + 10); ctx.lineTo(cx - 7, cy + 27); ctx.lineTo(cx - 6, cy + 41);
+    ctx.stroke();
+    ctx.beginPath();                       // spine, arched keen
+    ctx.moveTo(cx - 10, cy + 8);
+    ctx.quadraticCurveTo(cx - 4, cy - 8, cx + 6, cy - 14);
+    ctx.stroke();
+    for (let i = 0; i < 3; i++) {          // ribs
+      ctx.beginPath();
+      ctx.arc(cx - 6 + i * 5, cy - 2 + i * -3, 6, Math.PI * 0.2, Math.PI * 0.95);
+      ctx.stroke();
+    }
+    ctx.beginPath();                       // neck vertebrae
+    ctx.moveTo(cx + 6, cy - 14); ctx.lineTo(cx + 14, cy - 26);
+    ctx.stroke();
+    for (let i = 0; i < 3; i++) {
+      const nx = cx + 8 + i * 3, ny = cy - 17 - i * 4;
+      ctx.beginPath(); ctx.moveTo(nx - 2, ny - 1); ctx.lineTo(nx + 2, ny + 1); ctx.stroke();
+    }
+    ctx.beginPath();                       // crest sweeping back
+    ctx.moveTo(cx + 15, cy - 28); ctx.lineTo(cx + 3, cy - 37);
+    ctx.stroke();
+    ctx.beginPath();                       // long beak, slightly open
+    ctx.moveTo(cx + 15, cy - 30); ctx.lineTo(cx + 45, cy - 24);
+    ctx.moveTo(cx + 15, cy - 25); ctx.lineTo(cx + 42, cy - 21);
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx + 17, cy - 28, 1.6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath();                       // bony arm to the handlebars
+    ctx.moveTo(cx + 6, cy - 12); ctx.lineTo(cx + 20, cy - 2); ctx.lineTo(cx + 29, cy + 8);
+    ctx.stroke();
+    ctx.beginPath();                       // the wing-finger, trailing glory
+    ctx.moveTo(cx + 6, cy - 14);
+    ctx.quadraticCurveTo(cx - 16, cy - 34, cx - 34, cy - 26);
+    ctx.quadraticCurveTo(cx - 52, cy - 16, cx - 62, cy + 2);
+    ctx.stroke();
+    ctx.beginPath();                       // a hint of membrane
+    ctx.moveTo(cx - 30, cy - 22); ctx.lineTo(cx - 14, cy - 6);
+    ctx.moveTo(cx - 46, cy - 12); ctx.lineTo(cx - 30, cy + 4);
+    ctx.stroke();
+    ctx.beginPath();                       // tail
+    ctx.moveTo(cx - 10, cy + 8); ctx.lineTo(cx - 30, cy + 14);
+    ctx.stroke();
   }
   buriedAmmonite(ctx, cx, cy) {
     ctx.beginPath();

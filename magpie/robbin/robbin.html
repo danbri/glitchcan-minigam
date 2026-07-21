@@ -87,21 +87,22 @@
   #menu button:hover, #menu2 button:hover { background: var(--green); color: var(--paper); }
 
   #credits { background: var(--paper); }
-  #creditlist {
-    display: grid;
-    grid-template-columns: auto auto;
-    gap: 0.55rem 1.2rem;
-    align-items: baseline;
-    margin: 0.6rem 0;
-    font-size: clamp(0.95rem, 2.8vmin, 1.2rem);
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
-  #creditlist dt {
-    text-align: right;
-    font-variant: small-caps;
-    letter-spacing: 0.06em;
-    color: var(--green);
+  #creditroll {
+    position: static;
+    width: min(92vw, 540px);
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 68vh;
+    border: 2px solid var(--ink);
+    border-radius: 12px;
   }
-  #creditlist dd { text-align: left; font-weight: bold; }
 
 
   #mute {
@@ -206,12 +207,13 @@
 
   <div id="credits" class="overlay hidden">
     <h1>CREDITS</h1>
-    <dl id="creditlist">
+    <dl id="creditlist" class="sr-only">
       <dt>Bird Art</dt><dd>Libby</dd>
       <dt>Game Concept</dt><dd>Dan</dd>
       <dt>Inspirational</dt><dd>Chuckie Egg &middot; Gathering Sky</dd>
       <dt>Software &amp; Additional A/V</dt><dd>Computers</dd>
     </dl>
+    <canvas id="creditroll" aria-hidden="true"></canvas>
     <div class="go">TAP / ESC TO CLOSE</div>
   </div>
 

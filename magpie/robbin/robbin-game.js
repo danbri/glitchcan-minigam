@@ -981,6 +981,7 @@ class Game {
     this.foley.ensure();
     this.foley.clear();                          // a little fanfare
     if (this.state === 'play') this.state = 'paused';   // the arcade waits politely
+    this.creditScroll = 0;
     document.getElementById('credits').classList.remove('hidden');
   }
   hideCredits() {
@@ -1004,7 +1005,96 @@ class Game {
     }
     this.update(dt);
     this.draw();
+    if (this.creditsOpen()) this.drawCreditRoll(dt);
     requestAnimationFrame(tt => this.frame(tt));
+  }
+  // the credits roll: names and every buried wonder scrolling up through
+  // the clay like a museum case on a conveyor
+  drawCreditRoll(dt) {
+    const cv = document.getElementById('creditroll');
+    const cw = cv.clientWidth, ch = cv.clientHeight;
+    if (!cw || !ch) return;
+    if (cv.width !== Math.round(cw * this.dpr)) {
+      cv.width = Math.round(cw * this.dpr);
+      cv.height = Math.round(ch * this.dpr);
+    }
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    // the clay case
+    ctx.fillStyle = '#4d3d2c';
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.strokeStyle = 'rgba(30,24,18,0.5)';
+    ctx.lineWidth = 2;
+    for (let y = 18; y < ch; y += 52) {
+      ctx.beginPath();
+      for (let x = 0; x <= cw; x += 20) {
+        const yy = y + Math.sin(x * 0.05) * 5;
+        x === 0 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
+      }
+      ctx.stroke();
+    }
+    const ROLL = [
+      { role: 'BIRD ART', name: 'Libby' },
+      { role: 'GAME CONCEPT', name: 'Dan' },
+      { role: 'INSPIRATIONAL', name: 'Chuckie Egg · Gathering Sky' },
+      { role: 'SOFTWARE & ADDITIONAL A/V', name: 'Computers' },
+      { role: '', name: '· found in the clay ·' },
+      { wonder: 'bones', cap: 'great bones' },
+      { wonder: 'mammoth', cap: 'mammoth & visitor' },
+      { wonder: 'longship', cap: 'longship' },
+      { wonder: 'ring', cap: 'the curious ring' },
+      { wonder: 'river', cap: 'a lost river' },
+      { wonder: 'ammonite', cap: 'ammonite' },
+      { wonder: 'ptero', cap: 'pterodactyl, commuting' },
+    ];
+    const hOf = it => it.wonder ? (it.wonder === 'mammoth' || it.wonder === 'ptero' ? 190 : 160) : 74;
+    const total = ROLL.reduce((a, it) => a + hOf(it), 0);
+    this.creditScroll = (this.creditScroll || 0) + dt * 30;
+    let y = ch + 20 - (this.creditScroll % (total + ch + 40));
+    const tube = this.tube, t = this.last / 1000;
+    for (const it of ROLL) {
+      const hh = hOf(it);
+      const cy = y + hh / 2;
+      y += hh;
+      if (cy < -hh || cy > ch + hh) continue;
+      ctx.textAlign = 'center';
+      if (it.role !== undefined) {
+        if (it.role) {
+          ctx.fillStyle = '#b9a67f';
+          ctx.font = 'bold 12px Georgia, serif';
+          ctx.fillText(it.role, cw / 2, cy - 12);
+        }
+        ctx.fillStyle = '#ecdfc2';
+        ctx.font = 'bold 19px Georgia, serif';
+        ctx.fillText(it.name, cw / 2, cy + 12);
+      } else {
+        ctx.save();
+        ctx.strokeStyle = '#d8c8a4';
+        ctx.fillStyle = '#d8c8a4';
+        ctx.lineWidth = 2.4;
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = 0.85;
+        const wx = cw / 2, wy = cy - 14;
+        if (it.wonder === 'bones') tube.buriedBones(ctx, wx, wy, n => (n * 7) % n || 0);
+        else if (it.wonder === 'mammoth') tube.buriedMammothUfo(ctx, wx - 14, wy);
+        else if (it.wonder === 'longship') tube.buriedLongship(ctx, wx, wy);
+        else if (it.wonder === 'ring') tube.buriedRing(ctx, wx, wy);
+        else if (it.wonder === 'river') {
+          ctx.save();
+          ctx.beginPath(); ctx.rect(wx - 60, cy - 68, 120, 108); ctx.clip();
+          ctx.translate(wx + 46, cy - 68 - (cy - 68));
+          tube.buriedRiver(ctx, cy - 68, t);
+          ctx.restore();
+        } else if (it.wonder === 'ammonite') tube.buriedAmmonite(ctx, wx, wy);
+        else tube.buriedPteroBike(ctx, wx, wy - 8);
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = '#b9a67f';
+        ctx.font = 'italic 12px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(it.cap, cw / 2, cy + hh / 2 - 16);
+        ctx.restore();
+      }
+    }
   }
   update(dt) {
     if (this.level && this.player) this.updateCamera(dt);
