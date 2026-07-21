@@ -893,11 +893,15 @@ class Game {
       if (!e.repeat && KONA_KEYS[e.key]) this.feedKonami(KONA_KEYS[e.key]);
       if (e.key === 'Enter') {
         if (this.creditsOpen()) { this.hideCredits(); return; }
+        if (this.state === 'tube' && this.tube.dismissFact()) return;
         this.pressStart(); return;
       }
       if (e.key === 'Escape') {
         if (this.creditsOpen()) { this.hideCredits(); return; }
-        if (this.state === 'tube') { this.tube.exit(); return; }
+        if (this.state === 'tube') {
+          if (this.tube.dismissFact()) return;   // the postcard goes first
+          this.tube.exit(); return;
+        }
         if (this.state === 'gameover') { this.backToMenu(); return; }
         return;
       }
@@ -949,6 +953,7 @@ class Game {
     });
     this.canvas.addEventListener('pointerdown', e => {
       if (this.state === 'map') { this.continueFromMap(); return; }
+      if (this.state === 'tube' && this.tube.dismissFact()) return;   // postcard: tap anywhere
       if (this.state === 'tube' && this.tube.over) { this.tube.handleJump(); return; }
       // flick gestures on the play field (glide mode + tube travel)
       this.gesture = { x: e.clientX, y: e.clientY, used: false };

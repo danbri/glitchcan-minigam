@@ -209,7 +209,12 @@ phones, totes, coffees, canes and school backpacks. They trudge about,
 ride escalators standing, and never fly.
 Brushing one just flutters you gently aside — no harm done. Quest
 cards read like little stories ("lonely down at the platforms",
-"lost on level −2"), rescues bloom with hearts and a musical swell,
+"lost on level −2"). Arriving at a storied station raises a
+**full-screen DID YOU KNOW postcard** — the station name unmissable,
+every line's exact colour swatch and hex code beside it, and one true
+thing about the place in big readable type; the world holds still
+until you dismiss it (tap, JUMP, Enter or Esc). Rescues bloom with
+hearts and a musical swell,
 and the flock swirls boids-fashion around you, fuller every reunion.
 The soundtrack builds with the flock: warm detuned pad washes and a
 heartbeat at first, hats, arpeggio shimmer and finally the lead

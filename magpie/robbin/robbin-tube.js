@@ -581,7 +581,16 @@ export class TubeFlock {
   }
   toXY(name) { return this.toScreen(POS[name]); }
   // ---------------------------------------------------------- input
+  // the full-screen postcard reads until dismissed — any press moves on
+  dismissFact() {
+    if (!this.factCard) return false;
+    this.factCard = null;
+    this.g.haptics.tick();
+    this.g.foley.step();
+    return true;
+  }
   handleDir(dx, dy) {
+    if (this.dismissFact()) return;
     if (this.over || this.travel || this.interior || this.gather || this.finale || Math.hypot(dx, dy) < 0.3) return;
     const [cx, cy] = this.toXY(this.cur);
     let best = null;
@@ -620,6 +629,7 @@ export class TubeFlock {
     this.g.foley.whoosh();
   }
   handleJump() {
+    if (this.dismissFact()) return;
     // in an interior, jumping goes through the play input — but on the
     // map, GO steps into the station you're standing at (bringing the
     // lost bird's quest with it if this is their station)
@@ -1040,6 +1050,8 @@ export class TubeFlock {
   // ---------------------------------------------------------- sim
   update(dt) {
     if (this.arriveT > 0) this.arriveT -= dt;
+    // a full-screen station postcard holds the world still until read
+    if (this.factCard) { this.factCard.t += dt; return; }
     if (this.interior) { this.updateInterior(dt); return; }
     if (this.finale) {
       // the long flight home: camera glides across the city, the whole
@@ -1080,10 +1092,12 @@ export class TubeFlock {
         this.g.foley.step();
         if (this.objective && this.cur === this.objective.at) {
           // don't whisk straight inside: let the flock settle in first —
-          // and if the station has a story, time to read it
+          // and if the station has a story, it takes the whole screen
+          // and waits to be read (dismiss to continue)
           const fact = STATION_FACTS[this.cur];
-          this.gather = { t: 0, dur: fact ? 4.6 : 1.7, fact };
-          this.g.say(`${this.cur} — this is the place. ${fact ? fact + ' ' : ''}The flock gathers…`);
+          this.gather = { t: 0, dur: 1.7 };
+          if (fact) this.factCard = { fact, station: this.cur, t: 0 };
+          this.g.say(`${this.cur} — this is the place. ${fact ? fact + ' Tap or jump to continue. ' : ''}The flock gathers…`);
           return;
         }
         this.g.say(`${this.cur}. ${this.describeStation()}`);
@@ -1117,33 +1131,97 @@ export class TubeFlock {
     if (line) ctx.fillText(line, cx, yy);
     return yy + lineH;
   }
-  // a little postcard: the station's one true thing, on paper
-  drawFactCard(ctx, fact, cx, cy, w) {
-    const fs = Math.max(15, Math.min(19, w / 26));
-    const cw = Math.min(w - 36, 470);
+  // the station's one true thing, FULL SCREEN on paper: big station
+  // name, every line's exact colour with its hex code, the story in
+  // readable type — and it waits until dismissed. No squinting.
+  drawFactOverlay(ctx) {
+    const g = this.g, w = g.cssW, h = g.cssH;
+    const fc = this.factCard;
+    const fs = Math.max(19, Math.min(30, w / 15));
+    const cw = Math.min(w - 20, 600);
+    const cx = w / 2;
     ctx.save();
-    ctx.textAlign = 'center';
-    // measure by dry-running the wrap
-    ctx.font = `${fs * 0.82}px Georgia, serif`;
-    const words = fact.split(' ');
-    let lines = 1, line = '';
-    for (const word of words) {
-      const probe = line ? `${line} ${word}` : word;
-      if (line && ctx.measureText(probe).width > cw - 40) { lines++; line = word; }
-      else line = probe;
+    // the map dims to paper behind the postcard
+    ctx.fillStyle = 'rgba(242,236,221,0.93)';
+    ctx.fillRect(0, 0, w, h);
+    // gentle arrival: the card settles into place
+    const ease = 1 - Math.pow(1 - Math.min(1, fc.t / 0.35), 3);
+    ctx.translate(0, (1 - ease) * 26);
+    // measure the pieces before drawing the case around them
+    const lineIds = (NETWORK.stations[fc.station]?.lines || []).filter(l => LINES[l]);
+    const chipFs = fs * 0.6;
+    ctx.font = `bold ${chipFs}px Georgia, serif`;
+    const chips = lineIds.map(l => {
+      const label = `${(LINE_SHORT[l] || l).toUpperCase()}  ${LINES[l].color.toUpperCase()}`;
+      return { l, label, w: chipFs * 1.7 + 8 + ctx.measureText(label).width + 14 };
+    });
+    const chipRows = [];
+    let row = [], rw = 0;
+    for (const c of chips) {
+      if (row.length && rw + c.w > cw - 30) { chipRows.push(row); row = []; rw = 0; }
+      row.push(c); rw += c.w;
     }
-    const ch = fs * 1.6 + lines * fs * 1.02 + fs * 0.9;
-    ctx.fillStyle = 'rgba(247,242,230,0.96)';
+    if (row.length) chipRows.push(row);
+    const bodyFs = fs * 0.92, bodyLh = fs * 1.18;
+    ctx.font = `italic ${bodyFs}px Georgia, serif`;
+    const words = fc.fact.split(' ');
+    let nLines = 1, probe = '';
+    for (const word of words) {
+      const test = probe ? `${probe} ${word}` : word;
+      if (probe && ctx.measureText(test).width > cw - 56) { nLines++; probe = word; }
+      else probe = test;
+    }
+    const chipH = fs * 1.3;
+    const ch = fs * 1.5 + fs * 1.9 + chipRows.length * chipH + fs * 0.8
+      + nLines * bodyLh + fs * 2.1;
+    const cy = Math.max(10, (h - ch) / 2 - fs);
+    // the postcard case
+    ctx.fillStyle = 'rgba(247,242,230,0.99)';
     ctx.strokeStyle = PALETTE.ink;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.roundRect(cx - cw / 2, cy, cw, ch, 10);
+    ctx.roundRect(cx - cw / 2, cy, cw, ch, 14);
     ctx.fill(); ctx.stroke();
+    ctx.textAlign = 'center';
+    let yy = cy + fs * 1.15;
     ctx.fillStyle = PALETTE.platform;
-    ctx.font = `bold ${fs * 0.62}px Georgia, serif`;
-    ctx.fillText('DID YOU KNOW', cx, cy + fs * 1.05);
+    ctx.font = `bold ${fs * 0.55}px Georgia, serif`;
+    ctx.fillText('D I D   Y O U   K N O W', cx, yy);
+    // the station, unmissable
+    yy += fs * 1.5;
     ctx.fillStyle = PALETTE.ink;
-    this.wrapText(ctx, fact, cx, cy + fs * 2.1, cw - 40, fs * 0.82, fs * 1.02, 'italic');
+    this.fitText(ctx, fc.station, cx, yy, cw - 36, fs * 1.35);
+    // its lines: exact colour swatch + exact colour code, always shown
+    yy += fs * 0.75;
+    for (const cr of chipRows) {
+      const total = cr.reduce((a, c) => a + c.w, 0);
+      let xx = cx - total / 2;
+      for (const c of cr) {
+        const sw = chipFs * 1.7;
+        ctx.fillStyle = LINES[c.l].color;
+        ctx.strokeStyle = PALETTE.ink;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.roundRect(xx, yy - chipFs * 0.05, sw, chipFs * 1.05, 3);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = PALETTE.ink;
+        ctx.font = `bold ${chipFs}px Georgia, serif`;
+        ctx.textAlign = 'left';
+        ctx.fillText(c.label, xx + sw + 8, yy + chipFs * 0.82);
+        xx += c.w;
+      }
+      yy += chipH;
+    }
+    ctx.textAlign = 'center';
+    // the story itself, big enough to read on a phone
+    yy += fs * 0.8;
+    ctx.fillStyle = PALETTE.ink;
+    yy = this.wrapText(ctx, fc.fact, cx, yy + bodyFs * 0.4, cw - 56, bodyFs, bodyLh, 'italic');
+    // dismiss hint, breathing
+    ctx.globalAlpha = 0.55 + 0.35 * Math.sin(fc.t * 3.2);
+    ctx.fillStyle = PALETTE.green || PALETTE.platform;
+    ctx.font = `bold ${fs * 0.55}px Georgia, serif`;
+    ctx.fillText(g.touchUI ? 'TAP TO CONTINUE' : 'TAP · JUMP · ENTER TO CONTINUE', cx, cy + ch - fs * 0.75);
     ctx.restore();
   }
   // draw one line, shrinking the font just enough to fit maxW
@@ -1415,7 +1493,6 @@ export class TubeFlock {
         ctx.fillText(`the flock gathers at ${this.cur}…`, w / 2, msgY);
         ctx.globalAlpha = 1;
       }
-      if (this.gather.fact) this.drawFactCard(ctx, this.gather.fact, w / 2, msgY + fs * 0.9, w);
     }
     if (!g.touchUI) {
       ctx.globalAlpha = 0.6;
@@ -1423,6 +1500,8 @@ export class TubeFlock {
       this.fitText(ctx, 'swipe or arrows to fly a line · no rush — the flock waits · ESC: home to roost', w / 2, h - fs * 0.7, w - 16, fs * 0.72, 'normal');
       ctx.globalAlpha = 1;
     }
+    // the postcard covers everything, and waits
+    if (this.factCard) this.drawFactOverlay(ctx);
     ctx.restore();
   }
   // ------------------------------------------------ interior rendering
@@ -1602,9 +1681,6 @@ export class TubeFlock {
     this.fitText(ctx, `${arrow} ${task}`, w / 2, fs * 2.42, cw, fs * 0.92);
     ctx.fillStyle = PALETTE.ink;
     ctx.textAlign = 'left';
-    if (this.scene && this.scene.kind === 'arrive' && it.fact) {
-      this.drawFactCard(ctx, it.fact, w / 2, fs * 3.4, w);
-    }
     ctx.restore();
   }
   // ------------------------------------------------ the earth beyond
