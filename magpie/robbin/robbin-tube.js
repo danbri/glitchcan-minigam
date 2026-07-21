@@ -1458,7 +1458,7 @@ export class TubeFlock {
     this.drawEarthStrip(ctx, it, t, false, topY, seed ^ 0x9e3779b9);
   }
   drawEarthStrip(ctx, it, t, left, topY, seed) {
-    const wpx = 280;
+    const wpx = 460;   // deep enough for a two-thirds-screen dig
     let rng = seed >>> 0 || 1;
     const rnd = n => { rng = (rng * 1103515245 + 12345) >>> 0; return (rng >>> 8) % n; };
     ctx.save();
@@ -1495,7 +1495,7 @@ export class TubeFlock {
         ctx.stroke();
       }
       ctx.fillStyle = 'rgba(30,24,18,0.4)';
-      for (let i = 0; i < 26; i++) {
+      for (let i = 0; i < 44; i++) {
         const sx = -wpx + 8 + rnd(wpx - 16), sy = topY + 12 + rnd(H + 90 - topY);
         ctx.beginPath();
         ctx.ellipse(sx, sy, 3 + rnd(4), 2 + rnd(3), rnd(6), 0, Math.PI * 2);

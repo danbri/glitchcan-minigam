@@ -731,9 +731,35 @@ class Game {
     const bias = this.touchUI ? this.viewH * 0.08 : 0;
     // station interiors give the camera a little slack past the walls, so
     // at the edges you can SEE the world end (in a slab of London clay)
-    const edge = this.viewW < W && this.state === 'tube' && this.tube?.interior ? 80 : 0;
-    const tx = Math.max(-edge, Math.min(f.x - this.viewW / 2, W - this.viewW + edge));
+    const inStation = this.state === 'tube' && this.tube?.interior;
+    const edge = this.viewW < W && inStation ? 80 : 0;
+    let tx = Math.max(-edge, Math.min(f.x - this.viewW / 2, W - this.viewW + edge));
     const ty = Math.max(0, Math.min(f.y - 24 - this.viewH / 2 + bias, H - this.viewH));
+    // …and LEANING into a wall is an archaeology peek: keep pressing and
+    // the camera drifts on until the dig site fills two-thirds of the
+    // screen, then eases home when you turn away
+    if (inStation && edge && !this.camFocus) {
+      const pk = (this.peek ||= { side: 0, p: 0 });
+      const glide = this.controlMode === 'glide';
+      const effL = this.input.left || (glide && this.heading?.x < 0);
+      const effR = this.input.right || (glide && this.heading?.x > 0);
+      const leanL = effL && !effR && this.player.x <= 12;
+      const leanR = effR && !effL && this.player.x >= W - 12;
+      if (leanL || leanR) {
+        pk.side = leanL ? -1 : 1;
+        pk.p = Math.min(1, pk.p + dt / 1.1);
+      } else {
+        pk.p = Math.max(0, pk.p - dt / 0.3);
+        if (pk.p === 0) pk.side = 0;
+      }
+      if (pk.p > 0 && pk.side) {
+        const target = pk.side < 0 ? -this.viewW * (2 / 3) : W - this.viewW / 3;
+        const e2 = pk.p * pk.p * (3 - 2 * pk.p);
+        tx = tx + (target - tx) * e2;
+      }
+    } else if (this.peek) {
+      this.peek.p = 0; this.peek.side = 0;
+    }
     const k = snap ? 1 : 1 - Math.exp(-dt * 6);
     this.camX += (tx - this.camX) * k;
     this.camY += (ty - this.camY) * k;
