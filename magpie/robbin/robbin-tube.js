@@ -500,6 +500,7 @@ export class TubeFlock {
     this.depart(best);
   }
   depart(edge) {
+    this.g.haptics.tick();     // the swipe took: we're flying
     this.freeChange = null;
     const a = POS[this.cur], b = POS[edge.to];
     const units = Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -612,6 +613,7 @@ export class TubeFlock {
     }
     g.updateCamera(0, true);
     g.foley.whoosh();
+    g.haptics.thud();
     g.say(this.describeInterior(this.interior));
   }
   // scripted train moments: arrivals disembark, boardings get whisked away
@@ -760,6 +762,7 @@ export class TubeFlock {
           };
           g.player.mode = 'fall'; g.player.vy = 0; g.player.onLift = null;
           g.foley.zap();
+          g.haptics.buzz();
           g.say(`A broken ${gl.kind === 'lift' ? 'lift' : 'escalator'} crackles and flings the flock away.`);
           break;
         }
@@ -829,6 +832,7 @@ export class TubeFlock {
         g.fx.push({ x: px, y: py - 60, txt: `♥ ${it.rescue.name}! ♥`, t: 2.2 });
         g.hearts(px, py - 20, 10);
         g.foley.clear();
+        g.haptics.chord();
         this.updateMusic();
         g.music.swell();
         this.saveHi();
@@ -884,6 +888,7 @@ export class TubeFlock {
           this.arriveT = 6;
           this.arriveMsg = '♥ THE FLOCK IS WHOLE ♥';
           g.music.swell();
+          g.haptics.chord();
           g.say(`${it.rescue.name} was the last of them. The flock is whole — ${this.roster.length} birds wheel home together across London.`);
         } else {
           g.say(`Surfaced at ${this.cur} — back on the map. ${this.describeStation()}`);
@@ -898,6 +903,7 @@ export class TubeFlock {
         this.scene = { kind: 'board', t: 0, doorX: gx, baseY: gy };
         g.camFocus = { x: gx, y: gy };
         g.foley.whoosh();
+        g.haptics.thud();
         g.say(`All aboard the ${LINE_SHORT[it.pendingEdge.line] || it.pendingEdge.line} line to ${it.pendingEdge.to}.`);
       }
     }

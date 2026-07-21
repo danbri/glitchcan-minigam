@@ -181,6 +181,56 @@ class Foley {
   }
 }
 
+// ------------------------------------------------------------ haptics
+// Standard path: the W3C Vibration API (Android browsers). iOS WebKit
+// exposes no vibration API at all, but since iOS 18 a switch control
+// clicks with a system haptic — so there we toggle a hidden switch,
+// which only works inside a real user gesture (fine for input ticks).
+// Per XAG 110 / Game Accessibility Guidelines: always toggleable, never
+// the sole channel (every haptic moment also has audio + visuals), and
+// default OFF under prefers-reduced-motion.
+class Haptics {
+  constructor() {
+    this.vib = typeof navigator !== 'undefined' && 'vibrate' in navigator;
+    this.ios = !this.vib && /iP(hone|ad|od)|Macintosh.*Mobile/.test(navigator.userAgent || '');
+    const saved = localStorage.getItem('robbin.haptics');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.enabled = saved !== null ? saved === '1' : !reduced;
+    this.switchEl = null;
+  }
+  get available() { return this.vib || this.ios; }
+  ensureSwitch() {
+    if (this.switchEl || !this.ios) return;
+    const label = document.createElement('label');
+    label.setAttribute('aria-hidden', 'true');
+    label.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.setAttribute('switch', '');
+    input.tabIndex = -1;
+    label.appendChild(input);
+    document.body.appendChild(label);
+    this.switchEl = input;
+  }
+  fire(pattern) {
+    if (!this.enabled) return;
+    if (this.vib) { try { navigator.vibrate(pattern); } catch { /* shrug */ } }
+    else if (this.ios) {
+      this.ensureSwitch();
+      try { this.switchEl.click(); } catch { /* shrug */ }
+    }
+  }
+  tick()  { this.fire(10); }                 // accepted tap / heading change
+  thud()  { this.fire(24); }                 // doors, landings, entries
+  buzz()  { this.fire([34, 30, 34]); }       // the glitch-grab
+  chord() { this.fire([18, 40, 18, 40, 46]); }   // reunions, finales
+  setEnabled(on) {
+    this.enabled = on;
+    localStorage.setItem('robbin.haptics', on ? '1' : '0');
+    if (on) this.tick();   // confirm in the medium itself
+  }
+}
+
 // ---------------------------------------------------------------- level model
 export class Level {
   constructor(def, loop) {
@@ -636,6 +686,7 @@ class Game {
     this.controlMode = localStorage.getItem('robbin.ctrl') === 'glide' ? 'glide' : 'hold';
     this.heading = { x: 0, y: 0 };
     this.tube = new TubeFlock(this);
+    this.haptics = new Haptics();
     this.state = 'title';
     this.hiscore = Number(localStorage.getItem('robbin.hiscore') || 0);
     this.fx = [];
@@ -771,6 +822,7 @@ class Game {
     if (this.state !== 'play') return;
     this.say(`Ouch — ${why === 'bird' ? 'a rival bird' : why === 'time' ? 'out of time' : why === 'lift' ? 'the lift' : 'a long fall'}. ${Math.max(0, this.lives - 1)} lives left.`);
     this.state = 'dying'; this.stateT = 1.3;
+    this.haptics.thud();
     this.foley.death();
     this.music.duck(1.6);
     this.puff(this.player.x, this.player.y - 12, 9);
@@ -846,6 +898,7 @@ class Game {
       const on = e => {
         e.preventDefault(); this.input[k] = 1;
         if (k === 'jump') {
+          this.haptics.tick();
           this.feedKonami('jump');
           this.jumpTap = true;
           // the tube's own jump handling (game-over dismiss etc) must hear
@@ -911,9 +964,15 @@ class Game {
         this.input.down = d && d.y > 0 ? 1 : 0;
       };
       let padActive = false;
+      let lastPad = null;
+      const padHaptic = d => {
+        const key = d ? `${d.x},${d.y}` : '';
+        if (d && key !== lastPad) this.haptics.tick();
+        lastPad = key;
+      };
       dpad.addEventListener('pointerdown', e => {
         e.preventDefault(); padActive = true; this.foley.ensure();
-        const d = padDir(e); show(d); apply(d);
+        const d = padDir(e); show(d); apply(d); padHaptic(d);
         // cardinal taps sing the old song too; a fat-fingered diagonal is
         // simply not part of the tune (ignored, never a reset)
         if (d && !(d.x && d.y)) {
@@ -922,12 +981,12 @@ class Game {
       });
       dpad.addEventListener('pointermove', e => {
         if (!padActive) return;
-        const d = padDir(e); show(d); apply(d);
+        const d = padDir(e); show(d); apply(d); padHaptic(d);
       });
       for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) {
         dpad.addEventListener(ev, () => {
           if (!padActive) return;
-          padActive = false; show(null);
+          padActive = false; show(null); lastPad = null;
           if ((this.state === 'tube' && this.tube.interior) ||
               (this.state !== 'tube' && this.controlMode !== 'glide')) apply(null);
         });
@@ -950,9 +1009,21 @@ class Game {
     });
     const cbtn = document.getElementById('ctrlmode');
     if (cbtn) cbtn.textContent = `CONTROLS: ${this.controlMode.toUpperCase()}`;
+    // haptics toggle appears only where the device can actually buzz
+    const hbtn = document.getElementById('hapticmode');
+    if (hbtn && this.haptics.available) {
+      hbtn.hidden = false;
+      hbtn.textContent = `HAPTICS: ${this.haptics.enabled ? 'ON' : 'OFF'}`;
+      hbtn.addEventListener('pointerdown', e => {
+        e.stopPropagation();
+        this.haptics.setEnabled(!this.haptics.enabled);
+        hbtn.textContent = `HAPTICS: ${this.haptics.enabled ? 'ON' : 'OFF'}`;
+      });
+    }
   }
   setHeading(x, y) {
     // a cardinal swipe commits to that axis; a diagonal keeps both intents
+    if (this.heading && (this.heading.x !== x || this.heading.y !== y)) this.haptics.tick();
     this.heading = { x, y };
   }
   applySwipe(dx, dy) {
@@ -998,6 +1069,7 @@ class Game {
   showCredits() {
     this.foley.ensure();
     this.foley.clear();                          // a little fanfare
+    this.haptics.chord();
     if (this.state === 'play') this.state = 'paused';   // the arcade waits politely
     this.creditScroll = 0;
     document.getElementById('credits').classList.remove('hidden');

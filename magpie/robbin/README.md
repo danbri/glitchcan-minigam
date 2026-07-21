@@ -232,6 +232,16 @@ Separate hi-score.
   with labels.
 - **`prefers-reduced-motion`** swaps the glitch strobe for a calm
   static cross and the flock-grab shake for a firm set-down.
+- **Haptics** (per XAG 110 and the Game Accessibility Guidelines:
+  always toggleable, never the sole channel): accepted map hops,
+  heading changes and pad taps tick; station entries, boardings and
+  deaths thud; reunions and the finale play a little chord; the
+  glitch-grab buzzes. Standard Vibration API where it exists
+  (Android); on iOS — which has no vibration API — a hidden switch
+  control provides the system tick from iOS 18. HAPTICS ON/OFF on the
+  title screen (shown only on capable devices), default off under
+  `prefers-reduced-motion`, and every haptic moment also has audio
+  and visuals.
 - The credits keep a visually-hidden text list behind the canvas
   roll; touch targets are ≥44px; colour is never the only signal
   (lift letters, crossed boxes, text labels throughout).
