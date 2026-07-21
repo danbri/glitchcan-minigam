@@ -470,7 +470,7 @@ export class TubeFlock {
   toXY(name) { return this.toScreen(POS[name]); }
   // ---------------------------------------------------------- input
   handleDir(dx, dy) {
-    if (this.over || this.travel || this.interior || this.gather || Math.hypot(dx, dy) < 0.3) return;
+    if (this.over || this.travel || this.interior || this.gather || this.finale || Math.hypot(dx, dy) < 0.3) return;
     const [cx, cy] = this.toXY(this.cur);
     let best = null;
     for (const e of EDGES.get(this.cur)) {
@@ -596,6 +596,7 @@ export class TubeFlock {
     };
     g.level = level;
     g.player = player;
+    g.heading = { x: 0, y: 0 };   // glide mode: stand until told
     g.screen = { def: { name: this.cur }, enemies: this.interior.enemies, cleared: false };
     g.fx = []; g.parts = [];
     if (arrival) {
@@ -734,7 +735,12 @@ export class TubeFlock {
         }
       }
     }
-    g.player.update(dt, { ...g.input, jump: g.input.jump || g.jumpTap }, g);
+    // glide mode glides here too: the persistent heading plays the keys
+    const dirIn = g.controlMode === 'glide'
+      ? { left: g.heading.x < 0 ? 1 : 0, right: g.heading.x > 0 ? 1 : 0,
+          up: g.heading.y < 0 ? 1 : 0, down: g.heading.y > 0 ? 1 : 0 }
+      : g.input;
+    g.player.update(dt, { ...dirIn, jump: g.input.jump || g.jumpTap }, g);
     g.jumpTap = false;
     for (const e of it.enemies) e.update(dt);
     // touch a broken thing and it takes the whole flock personally
@@ -865,7 +871,23 @@ export class TubeFlock {
         g.foley.clear();
         if (it.rescue) this.freeChange = this.cur;   // rescued and out — no second toll
         else if (it.pendingEdge) this.line = null;   // surfaced on foot instead: fresh start
-        g.say(`Surfaced at ${this.cur} — back on the map. ${this.describeStation()}`);
+        if (it.rescue && !this.objective && !this.finaleDone) {
+          // the last bird is aboard: the ending gets to LAND. A long
+          // murmuration wheels the whole family home across London.
+          this.finaleDone = true;
+          this.finale = {
+            t: 0, dur: 14, swells: 0,
+            from: [...POS[this.cur]],
+            to: [...POS['LIVERPOOL STREET']],
+            home: 'LIVERPOOL STREET',
+          };
+          this.arriveT = 6;
+          this.arriveMsg = '♥ THE FLOCK IS WHOLE ♥';
+          g.music.swell();
+          g.say(`${it.rescue.name} was the last of them. The flock is whole — ${this.roster.length} birds wheel home together across London.`);
+        } else {
+          g.say(`Surfaced at ${this.cur} — back on the map. ${this.describeStation()}`);
+        }
         return;
       }
       // …or the waiting train, when a change is on
@@ -884,6 +906,28 @@ export class TubeFlock {
   update(dt) {
     if (this.arriveT > 0) this.arriveT -= dt;
     if (this.interior) { this.updateInterior(dt); return; }
+    if (this.finale) {
+      // the long flight home: camera glides across the city, the whole
+      // family swirling in one wide murmuration around it
+      const f = this.finale;
+      f.t += dt;
+      const k = Math.min(1, f.t / f.dur);
+      const e2 = k * k * (3 - 2 * k);
+      this.cam[0] = f.from[0] + (f.to[0] - f.from[0]) * e2;
+      this.cam[1] = f.from[1] + (f.to[1] - f.from[1]) * e2;
+      const t = performance.now() / 1000;
+      const [cx2, cy2] = this.toScreen(this.cam);
+      flockStep(this.flock, dt,
+        cx2 + Math.sin(t * 0.7) * 70,
+        cy2 - 14 + Math.cos(t * 0.5) * 44, t, 2.4);
+      if (f.t > f.swells * 5 + 4) { f.swells++; this.g.music.swell(); }
+      if (f.t >= f.dur + 3) {
+        this.finale = null;
+        this.cur = f.home;   // home to roost
+        this.g.say('Home to roost at Liverpool Street. Fly together as long as you like.');
+      }
+      return;
+    }
     if (this.gather) {
       this.gather.t += dt;
       if (this.gather.t >= this.gather.dur) {

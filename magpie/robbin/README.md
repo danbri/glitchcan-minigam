@@ -10,6 +10,10 @@ platforms (and eat the grain if you don't get there first).
 Two episodes from the title screen: **ROBBIN: PILOT EPISODE** — the
 Flight Line arcade below — and **ROBBIN: TUBULAR SMELLS** — the
 flock-growing Underground journey (the most developed of the two).
+The mood Tubular Smells aims for is distilled from the reception of
+*Gathering Sky* — see **`MOOD.md`** for the north star and the
+standing tuning principles (no fail state, music first, sparse
+surface, the flock is the protagonist, the ending must land).
 
 ## The graphics
 

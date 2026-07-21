@@ -833,7 +833,7 @@ class Game {
           if (this.state === 'tube') this.tube.handleJump();
         }
         if (DIRVEC[k]) {
-          if (this.state === 'tube') { if (!this.tube.interior) this.tube.handleDir(...DIRVEC[k]); }
+          if (this.state === 'tube' && !this.tube.interior) this.tube.handleDir(...DIRVEC[k]);
           else if (this.controlMode === 'glide') this.setHeading(...DIRVEC[k]);
         }
         e.preventDefault(); this.foley.ensure();
@@ -902,7 +902,8 @@ class Game {
         c.classList.toggle('lit', !!d && c.dataset.d === `${d.x},${d.y}`));
       const apply = d => {
         if (this.state === 'tube' && !this.tube.interior) { if (d) this.tube.handleDir(d.x, d.y); return; }
-        if (this.state !== 'tube' && this.controlMode === 'glide') { if (d) this.setHeading(d.x, d.y); return; }
+        // glide mode glides everywhere a bird flits — arcade AND interiors
+        if (this.controlMode === 'glide') { if (d) this.setHeading(d.x, d.y); return; }
         // hold semantics: flight-line HOLD mode and station interiors
         this.input.left = d && d.x < 0 ? 1 : 0;
         this.input.right = d && d.x > 0 ? 1 : 0;
@@ -958,7 +959,7 @@ class Game {
     const ax = Math.abs(dx), ay = Math.abs(dy);
     const x = ax > ay * 0.45 ? Math.sign(dx) : 0;
     const y = ay > ax * 0.45 ? Math.sign(dy) : 0;
-    if (this.state === 'tube') { if (!this.tube.interior) this.tube.handleDir(dx, dy); }
+    if (this.state === 'tube' && !this.tube.interior) this.tube.handleDir(dx, dy);
     else if (this.controlMode === 'glide' && (x || y)) this.setHeading(x, y);
   }
   backToMenu() {
