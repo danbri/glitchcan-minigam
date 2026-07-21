@@ -1120,11 +1120,11 @@ class Game {
     if (mapMode !== this._mapMode) {
       this._mapMode = mapMode;
       document.body.classList.toggle('mapmode', mapMode);
-    }
-    const konarm = (this._kona || 0) >= 8;
-    if (konarm !== this._konarm) {
-      this._konarm = konarm;
-      document.body.classList.toggle('konarm', konarm);
+      const jb = document.getElementById('btn-jump');
+      if (jb) {
+        jb.textContent = mapMode ? 'GO' : 'JUMP';
+        jb.setAttribute('aria-label', mapMode ? 'Go — step into this station' : 'Jump');
+      }
     }
     this.update(dt);
     this.draw();

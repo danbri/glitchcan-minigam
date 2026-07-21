@@ -12,6 +12,7 @@
 import { PALETTE, drawBird, drawGrain, drawCommuter } from './robbin-sprites.js';
 import { Level, Player, Enemy, TILE, W, H, LIFT_V } from './robbin-game.js';
 import { NETWORK } from './tube-network.js';
+import { STATION_FACTS } from './robbin-facts.js';
 
 // the whole London Underground, baked from the TfL Unified API by
 // tools/fetch-tube.mjs (plus the Windrush segment) — real geography,
@@ -534,13 +535,34 @@ export class TubeFlock {
     this.g.foley.whoosh();
   }
   handleJump() {
-    // in an interior, jumping goes through the play input, not here
+    // in an interior, jumping goes through the play input — but on the
+    // map, GO steps into the station you're standing at (bringing the
+    // lost bird's quest with it if this is their station)
+    if (!this.interior && !this.travel && !this.gather && !this.finale && !this.over) {
+      const rescue = this.objective && this.objective.at === this.cur ? this.objective : null;
+      this.enterInterior(null, rescue);
+    }
   }
   exit() {
     this.saveHi();
     this.g.camFocus = null;
     this.g.state = 'title';
     document.getElementById('title').classList.remove('hidden');
+  }
+  // which way should this platform's train go? toward the waiting bird
+  bestEdgeOnPlatform(pg) {
+    const lines = Object.entries(this.interior.def.platGates)
+      .filter(([, g2]) => g2 === pg).map(([l]) => l);
+    const cands = EDGES.get(this.cur).filter(e => lines.includes(e.line));
+    if (!cands.length) return null;
+    const ob = this.objective;
+    if (!ob) return cands[0];
+    let best = null, bestD = Infinity;
+    for (const e of cands) {
+      const d = e.to === ob.at ? 0 : (this.stopsTo(e.to, ob.at) ?? 1e8) + 1;
+      if (d < bestD) { bestD = d; best = e; }
+    }
+    return best;
   }
   // ---------------------------------------------------------- interiors
   enterInterior(pendingEdge, rescue, { arrival = false } = {}) {
@@ -610,6 +632,7 @@ export class TubeFlock {
     this.interior = {
       def, level, pendingEdge, gate, floorRows, vertRuns, seed,
       glitches, brokenEsc, grab: null, grabCool: 0,
+      fact: arrival ? STATION_FACTS[this.cur] : null,
       droppings: [], decals: [],
       playing,
       rescue: rescue && perch ? {
@@ -921,8 +944,31 @@ export class TubeFlock {
         }
         return;
       }
-      // …or the waiting train, when a change is on
-      if (it.pendingEdge && atDoor(it.gate.c, it.gate.r)) {
+      // …or any platform's waiting train: after a rescue (or a wander)
+      // you can ride on by tube instead of surfacing — each platform's
+      // train departs toward the next lost bird
+      if (!it.pendingEdge) {
+        const seenG = new Set();
+        for (const pg of Object.values(it.def.platGates)) {
+          const key = `${pg.c},${pg.r}`;
+          if (seenG.has(key)) continue;
+          seenG.add(key);
+          if (!atDoor(pg.c, pg.r)) continue;
+          const edge = this.bestEdgeOnPlatform(pg);
+          if (!edge) continue;
+          it.pendingEdge = edge;
+          it.gate = pg;
+          const bgx = pg.c * TILE + 16, bgy = (pg.r + 1) * TILE;
+          this.scene = { kind: 'board', t: 0, doorX: bgx, baseY: bgy };
+          g.camFocus = { x: bgx, y: bgy };
+          g.foley.whoosh();
+          g.haptics.thud();
+          g.say(`All aboard the ${LINE_SHORT[edge.line] || edge.line} line to ${edge.to}.`);
+          break;
+        }
+      }
+      // …or the one waiting train, when a change is on
+      if (it.pendingEdge && !this.scene && atDoor(it.gate.c, it.gate.r)) {
         // all aboard: the flock files into the open door — the camera
         // stays on the doorway while the birds are whisked offstage
         const gx = it.gate.c * TILE + 16, gy = (it.gate.r + 1) * TILE;
@@ -976,9 +1022,11 @@ export class TubeFlock {
         this.travel = null;
         this.g.foley.step();
         if (this.objective && this.cur === this.objective.at) {
-          // don't whisk straight inside: let the flock settle in first
-          this.gather = { t: 0, dur: 1.7 };
-          this.g.say(`${this.cur} — this is the place. The flock gathers…`);
+          // don't whisk straight inside: let the flock settle in first —
+          // and if the station has a story, time to read it
+          const fact = STATION_FACTS[this.cur];
+          this.gather = { t: 0, dur: fact ? 4.6 : 1.7, fact };
+          this.g.say(`${this.cur} — this is the place. ${fact ? fact + ' ' : ''}The flock gathers…`);
           return;
         }
         this.g.say(`${this.cur}. ${this.describeStation()}`);
@@ -996,6 +1044,50 @@ export class TubeFlock {
     this.cam[1] += (p[1] - this.cam[1]) * ease;
     const [lx, ly] = this.toScreen(p);
     flockStep(this.flock, dt, lx, ly - 14, t, 0.85);
+  }
+  // word-wrap into centred lines; returns the lines it drew
+  wrapText(ctx, text, cx, y, maxW, px, lineH, weight = '', family = 'Georgia, serif') {
+    ctx.font = `${weight} ${px}px ${family}`.trim();
+    const words = String(text).split(' ');
+    let line = '', yy = y;
+    for (const word of words) {
+      const probe = line ? `${line} ${word}` : word;
+      if (line && ctx.measureText(probe).width > maxW) {
+        ctx.fillText(line, cx, yy);
+        line = word; yy += lineH;
+      } else line = probe;
+    }
+    if (line) ctx.fillText(line, cx, yy);
+    return yy + lineH;
+  }
+  // a little postcard: the station's one true thing, on paper
+  drawFactCard(ctx, fact, cx, cy, w) {
+    const fs = Math.max(15, Math.min(19, w / 26));
+    const cw = Math.min(w - 36, 470);
+    ctx.save();
+    ctx.textAlign = 'center';
+    // measure by dry-running the wrap
+    ctx.font = `${fs * 0.82}px Georgia, serif`;
+    const words = fact.split(' ');
+    let lines = 1, line = '';
+    for (const word of words) {
+      const probe = line ? `${line} ${word}` : word;
+      if (line && ctx.measureText(probe).width > cw - 40) { lines++; line = word; }
+      else line = probe;
+    }
+    const ch = fs * 1.6 + lines * fs * 1.02 + fs * 0.9;
+    ctx.fillStyle = 'rgba(247,242,230,0.96)';
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(cx - cw / 2, cy, cw, ch, 10);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = PALETTE.platform;
+    ctx.font = `bold ${fs * 0.62}px Georgia, serif`;
+    ctx.fillText('DID YOU KNOW', cx, cy + fs * 1.05);
+    ctx.fillStyle = PALETTE.ink;
+    this.wrapText(ctx, fact, cx, cy + fs * 2.1, cw - 40, fs * 0.82, fs * 1.02, 'italic');
+    ctx.restore();
   }
   // draw one line, shrinking the font just enough to fit maxW
   fitText(ctx, text, x, y, maxW, px, weight = 'bold', family = 'Georgia, serif') {
@@ -1259,11 +1351,14 @@ export class TubeFlock {
       ctx.fillText(this.arriveMsg, w / 2, msgY);
     }
     if (this.gather) {
-      ctx.fillStyle = PALETTE.ink;
-      ctx.globalAlpha = 0.75;
-      ctx.font = `italic ${fs * 0.95}px Georgia, serif`;
-      ctx.fillText(`the flock gathers at ${this.cur}…`, w / 2, msgY);
-      ctx.globalAlpha = 1;
+      if (this.arriveT <= 0) {   // a reunion banner outranks the gather line
+        ctx.fillStyle = PALETTE.ink;
+        ctx.globalAlpha = 0.75;
+        ctx.font = `italic ${fs * 0.95}px Georgia, serif`;
+        ctx.fillText(`the flock gathers at ${this.cur}…`, w / 2, msgY);
+        ctx.globalAlpha = 1;
+      }
+      if (this.gather.fact) this.drawFactCard(ctx, this.gather.fact, w / 2, msgY + fs * 0.9, w);
     }
     if (!g.touchUI) {
       ctx.globalAlpha = 0.6;
@@ -1421,8 +1516,15 @@ export class TubeFlock {
       targetRow = it.rescue.y / TILE;
       task = `find ${it.rescue.name} the ${it.rescue.sp}`;
     } else if (it.rescue) {
-      targetRow = it.def.gateOut.r + 1;
-      task = `${it.rescue.name} aboard — the WAY OUT`;
+      const hop = this.objective ? this.nextHopTo(this.objective.at) : null;
+      const pg = hop && it.def.platGates[hop.edge.line];
+      if (pg) {
+        targetRow = pg.r + 1;
+        task = `${it.rescue.name} aboard — the ${LINE_SHORT[hop.edge.line] || hop.edge.line} train on`;
+      } else {
+        targetRow = it.def.gateOut.r + 1;
+        task = `${it.rescue.name} aboard — the WAY OUT`;
+      }
     } else if (it.pendingEdge) {
       targetRow = it.gate.r + 1;
       task = `the ${LINE_SHORT[it.pendingEdge.line] || it.pendingEdge.line} line train`;
@@ -1442,6 +1544,9 @@ export class TubeFlock {
     this.fitText(ctx, `${arrow} ${task}`, w / 2, fs * 2.42, cw, fs * 0.92);
     ctx.fillStyle = PALETTE.ink;
     ctx.textAlign = 'left';
+    if (this.scene && this.scene.kind === 'arrive' && it.fact) {
+      this.drawFactCard(ctx, it.fact, w / 2, fs * 3.4, w);
+    }
     ctx.restore();
   }
   // ------------------------------------------------ the earth beyond
@@ -1777,12 +1882,19 @@ export class TubeFlock {
       ctx.textAlign = 'center';
       this.fitText(ctx, this.cur, x, y + 1, 74, 9);   // long names shrink to the board
     }
-    // WAY OUT up top
-    ctx.fillStyle = PALETTE.ladder;
+    // WAY OUT signage on every level, chevrons pointing the way it lies
     ctx.font = 'bold 10px Georgia, serif';
     ctx.textAlign = 'center';
     const streetRow = it.def.streetRow ?? lv.grid.findIndex(row => row.some(ch => ch === '#' || ch === '+'));
-    ctx.fillText('WAY OUT ↑', W / 2, streetRow * TILE - 6);
+    const outLeft = (it.def.gateOut?.c ?? 1) < 10;
+    for (const fr2 of it.floorRows) {
+      const isStreet = fr2 === streetRow;
+      const label = isStreet
+        ? (outLeft ? '\u00ab\u00ab WAY OUT' : 'WAY OUT \u00bb\u00bb')
+        : (outLeft ? '\u00ab\u00ab WAY OUT \u2191' : '\u2191 WAY OUT \u00bb\u00bb');
+      ctx.fillStyle = isStreet ? PALETTE.ladder : 'rgba(38,34,30,0.55)';
+      ctx.fillText(label, W / 2, fr2 * TILE - 6);
+    }
     // the exits: the street WAY OUT is always there (surfacing ends any
     // visit); a waiting train stands at the platform when a change is on
     const locked = it.rescue && !it.rescue.found;
@@ -1796,6 +1908,20 @@ export class TubeFlock {
     ctx.font = 'bold 9px Georgia, serif';
     ctx.fillText(locked ? `FIND ${it.rescue.name} FIRST` : 'WAY OUT', ox, oy - 52);
     let chevX = ox, chevY = oy;
+    if (!it.pendingEdge && !locked) {
+      // every platform keeps a train waiting — ride on, or surface, your call
+      const seenPG = new Set();
+      for (const [lineId, pg] of Object.entries(it.def.platGates)) {
+        const key = `${pg.c},${pg.r}`;
+        if (seenPG.has(key)) continue;
+        seenPG.add(key);
+        const pgx = pg.c * TILE + 16, pgy = (pg.r + 1) * TILE;
+        drawTrain(ctx, pgx, pgy, LINES[lineId]?.color || PALETTE.platform, { door: 1, dir: pgx < W / 2 ? -1 : 1 });
+        ctx.fillStyle = PALETTE.ink;
+        ctx.font = 'bold 9px Georgia, serif';
+        ctx.fillText('TO TRAINS', pgx, pgy - 52);
+      }
+    }
     if (it.pendingEdge) {
       const gx = it.gate.c * TILE + 16, gy = (it.gate.r + 1) * TILE;
       // a stylised carriage waiting at the platform (hidden while a
