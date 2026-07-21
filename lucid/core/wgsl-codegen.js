@@ -947,14 +947,18 @@ function generateMirror(node, ctx) {
   return ${childExpr};
 }`);
 
+  // Apply the node's own transform before folding (GLSL does this; WGSL used to
+  // fold raw p, so a transform on a mirror node was silently dropped).
+  const pt = applyTransform('p', node.transform, ctx);
+
   // Handle single and compound mirror axes (matching GLSL codegen)
-  // Build mirror expression by checking which axes are included
-  const mirrorX = axis.includes('x') ? `abs(p.x) - ${offset}` : 'p.x';
-  const mirrorY = axis.includes('y') ? `abs(p.y) - ${offset}` : 'p.y';
-  const mirrorZ = axis.includes('z') ? `abs(p.z) - ${offset}` : 'p.z';
+  const mirrorX = axis.includes('x') ? `abs(pt.x) - ${offset}` : 'pt.x';
+  const mirrorY = axis.includes('y') ? `abs(pt.y) - ${offset}` : 'pt.y';
+  const mirrorZ = axis.includes('z') ? `abs(pt.z) - ${offset}` : 'pt.z';
   const mirrorExpr = `vec3f(${mirrorX}, ${mirrorY}, ${mirrorZ})`;
 
   ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {
+  let pt = ${pt};
   let mp = ${mirrorExpr};
   return ${childFuncName}(mp);
 }`);
@@ -978,6 +982,9 @@ function generateRadial(node, ctx) {
   ctx.helpers.push(`fn ${childFuncName}(p: vec3f) -> vec4f {
   return ${childExpr};
 }`);
+
+  // Apply the node's own transform before folding (was dropped in WGSL).
+  const pt = applyTransform('p', node.transform, ctx);
 
   // Generate radial folding based on axis
   // Uses modulo-based angle folding (matching GLSL behavior) and polar coordinate reconstruction
@@ -1014,7 +1021,8 @@ function generateRadial(node, ctx) {
     break;
   }
 
-  ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {${radialCode}
+  ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {
+  let pt = ${pt};${radialCode.replace(/\bp\./g, 'pt.')}
   return ${childFuncName}(rp);
 }`);
 
@@ -1049,16 +1057,19 @@ function generateRepeat(node, ctx) {
   return ${childExpr};
 }`);
 
+  // Apply the node's own transform before folding (was dropped in WGSL).
+  const pt = applyTransform('p', node.transform, ctx);
+
   // Build per-axis repeat code, skipping axes with zero period
   // This avoids division by zero when period is 0 for an axis
-  let repeatCode = '  var rp = p;\n';
+  let repeatCode = `  let pt = ${pt};\n  var rp = pt;\n`;
   const axes = ['x', 'y', 'z'];
 
   for (let i = 0; i < 3; i++) {
     if (!isStaticZero(spacingArr[i])) {
       const sp = valueToWgsl(spacingArr[i], ctx);
       // Use fract-based modulo: maps to [-spacing/2, spacing/2]
-      repeatCode += `  rp.${axes[i]} = (fract(p.${axes[i]} / ${sp} + 0.5) - 0.5) * ${sp};\n`;
+      repeatCode += `  rp.${axes[i]} = (fract(pt.${axes[i]} / ${sp} + 0.5) - 0.5) * ${sp};\n`;
     }
   }
 
@@ -1148,13 +1159,28 @@ function generateDisplace(node, ctx) {
   return ${childExpr};
 }`);
 
-  // Default displacement: fbm noise
+  // Match the GLSL reference: honour noiseType, octaves, animate, and the
+  // node's own transform (previously WGSL hardcoded fbm/4 and dropped all three).
   const scale = valueToWgsl(node.scale || { type: 'const', value: 1.0 }, ctx);
   const amount = valueToWgsl(node.amount || { type: 'const', value: 0.1 }, ctx);
+  const octaves = node.octaves !== undefined
+    ? (typeof node.octaves === 'number' ? String(Math.floor(node.octaves)) : `i32(${valueToWgsl(node.octaves, ctx)})`)
+    : '4';
+  const noiseType = node.noiseType || 'fbm';
+  ctx.needsNoise = true;
+  const timeOffset = node.animate ? ' + u.time * 0.5' : '';
+  const pt = applyTransform('p', node.transform, ctx);
+
+  let noiseCall;
+  if (noiseType === 'noise') noiseCall = `noise3(np)`;
+  else if (noiseType === 'turbulence') noiseCall = `turbulence(np, ${octaves})`;
+  else noiseCall = `fbm(np, ${octaves})`;
 
   ctx.helpers.push(`fn ${funcName}(p: vec3f) -> vec4f {
-  let c = ${childFuncName}(p);
-  let disp = (fbm(p * ${scale}, 4) - 0.5) * 2.0 * ${amount};
+  let pt = ${pt};
+  let np = pt * ${scale}${timeOffset};
+  let c = ${childFuncName}(pt);
+  let disp = (${noiseCall} - 0.5) * 2.0 * ${amount};
   return vec4f(c.x + disp, c.yzw);
 }`);
 

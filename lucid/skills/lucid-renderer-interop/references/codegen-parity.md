@@ -19,10 +19,10 @@ differences:
 | `ref` / `defs` (+ overrides) | ✅ | ✅ | `applyOverrides`/`substituteVars`, json-loader.js |
 | `round`, `shell` | ✅ | ✅ | aligned |
 | `select` | ✅ | ✅ | **fixed July 2026** — WGSL was a sphere-returning stub; now branchless `mix(a,b,step(0.5,cond))` in both |
-| `radial` | ✅ | ⚠️ | WGSL drops `node.transform` on the modifier |
-| `mirror` | ✅ | ⚠️ | WGSL drops `node.transform`; lacks LCD-003 ancestor-rotation fix (json-codegen.js ~1238) |
-| `repeat` | ✅ | ⚠️ | WGSL drops `node.transform` and ignores `exposeId` per-instance variation |
-| `displace` | ✅ | ⚠️ | WGSL hardcodes `fbm(p*scale,4)`; ignores `noiseType`/`octaves`/`animate` |
+| `radial` | ✅ | ✅ | WGSL now applies `node.transform` (fixed July 2026) |
+| `mirror` | ✅ | ⚠️ | WGSL now applies `node.transform` (fixed July 2026); still lacks LCD-003 ancestor-rotation fix (json-codegen.js ~1238) |
+| `repeat` | ✅ | ⚠️ | WGSL now applies `node.transform` (fixed July 2026); still ignores `exposeId` per-instance variation |
+| `displace` | ✅ | ✅ | WGSL now honours `noiseType`/`octaves`/`animate`/`transform` (fixed July 2026), matching GLSL |
 | `customExpr` | ⚠️ | ⚠️ | GLSL reads `node.glsl` (base64 → `atob`); WGSL reads `node.expr` (raw). Backend-specific shader text — not shareable |
 
 ## Expression operators (`expr`)
