@@ -198,15 +198,39 @@ heartbeat at first, hats, arpeggio shimmer and finally the lead
 melody fading in as intensity rises (a master lowpass opens with it;
 `Chiptune.setIntensity(0..1)` / `swell()`).
 
-Step-free access is real-ish: a curated list of genuinely step-free
-stations (Canada Water to Amersham, some eighty of them) keeps all
-their escalators running your way; elsewhere one escalator runs
-against you — climb it at half speed, ride the right way at 1.6×,
-stairs never fail. Lift outages are a **playability dial, not a news
-feed**: each run sprinkles a few broken lifts (crossed box on the
-map) across stations that really have lifts — never at step-free
-stations, never more than one lift of a bank, purely for routing
-texture. Separate hi-score.
+Outages are a **playability dial, not a news feed**: each run, one
+facility in ten — per lift shaft, per escalator run, rolled once per
+run — is out of order (step-free stations keep their lifts honest;
+stations with a dead lift wear a crossed box on the map, shown near
+you). A broken thing doesn't just sit there: every four to eight
+seconds it **glitches** for a third of a second — flipping upside
+down, or rolling through every colour it owns like a Jet Set Willy
+treasure — and it rebuffs all touch: brush it and it yanks the whole
+flock in, holds them while the jiggle and the feather-flap ramp up,
+then hurls everybody back out into the station. Harmless, indignant,
+memorable. Stairs never fail, so every station stays climbable.
+Separate hi-score.
+
+## Accessibility
+
+- **Screen-reader narration** via a polite `aria-live` region: the
+  map narrates every station on arrival (each line's direction and
+  next stop by compass, how many stops to the waiting bird, lift
+  outages); interiors announce their levels, broken facilities and
+  exits on entry, then each level as you land on it, plus rescues,
+  boardings, surfacings and glitch-grabs. The Pilot announces
+  screens, deaths, clears and game over. TUBULAR SMELLS — turn-based
+  map navigation, no clock, no fail state — is genuinely playable
+  this way; the interiors are navigable with patience; the arcade
+  Pilot remains reflex-driven and is narrated but not equivalent.
+- **Keyboard-complete**: everything is reachable and playable with
+  arrows, space, Enter, Escape, P and M; controls are native buttons
+  with labels.
+- **`prefers-reduced-motion`** swaps the glitch strobe for a calm
+  static cross and the flock-grab shake for a firm set-down.
+- The credits keep a visually-hidden text list behind the canvas
+  roll; touch targets are ≥44px; colour is never the only signal
+  (lift letters, crossed boxes, text labels throughout).
 
 ## Implementation notes
 

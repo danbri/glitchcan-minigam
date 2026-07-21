@@ -262,6 +262,7 @@ function genStation(name) {
     commuters, bystanders, ads, signs, levels, guides, helps, board,
     streetRow, gateOut, platGates, defaultPlatGate, spawnStreet, perch,
     underground: !surface,
+    nLifts: liftCols.length,
   };
   GEN_CACHE.set(name, def);
   return def;
@@ -358,11 +359,13 @@ export class TubeFlock {
     this.line = null;
     this.gather = null;
     this.scene = null;
-    this.shuffleLifts();
+    this.outSeed = (Math.random() * 0xffffffff) >>> 0;
+    this._outMemo = new Map();
     this.cam = [...POS[this.cur]];
     const [x, y] = this.toXY(this.cur);
     this.flock = [{ sp: 'robin', x, y, ph: 0 }];
     this.updateMusic();
+    this.g.say(`Tubular Smells — a cosy journey, no clock, no fail state. You are at ${this.cur}. ${this.describeStation()}`);
   }
   // the band assembles as the flock does: washes for one bird, full song
   // for the whole family
@@ -370,17 +373,75 @@ export class TubeFlock {
     this.g.music.setIntensity(0.15 + 0.85 * ((this.roster.length - 1) / LOST.length));
   }
   get objective() { return this.lostIdx < LOST.length ? LOST[this.lostIdx] : null; }
-  shuffleLifts() {
-    // outages are a gameplay dial, not a news feed: a light sprinkle of
-    // broken lifts for routing texture, reshuffled each run. Only
-    // stations that really have lifts can lose one (so the map's crossed
-    // boxes never lie), step-free stations stay honest, and inside a
-    // station it's only ever one lift of the bank.
-    const LIFT_OUT_RATE = 0.3;   // the playability dial
-    this.liftOut = new Set(Object.keys(POS).filter(s =>
-      !STEP_FREE.has(s)
-      && (NETWORK.stations?.[s]?.lifts || 0) > 0
-      && Math.random() < LIFT_OUT_RATE));
+  // one facility in ten is having a day off — per lift shaft, per
+  // escalator run, rolled once per run (step-free stations keep their
+  // lifts honest). Broken things GLITCH, and rebuff all touch.
+  facilityOut(name, kind, idx) {
+    const key = `${name}|${kind}|${idx}`;
+    if (this.forceOut) return !!this.forceOut[key];   // test seam
+    if (STEP_FREE.has(name)) return false;
+    return ((hashName(key) ^ this.outSeed) >>> 0) % 10 === 0;
+  }
+  stationLiftOut(name) {   // the map's crossed boxes
+    if (this._outMemo.has(name)) return this._outMemo.get(name);
+    const def = genStation(name);
+    let out = false;
+    for (let i = 0; i < (def.nLifts || 0); i++) if (this.facilityOut(name, 'lift', i)) out = true;
+    this._outMemo.set(name, out);
+    return out;
+  }
+  // ------------------------------------------------ narration (a11y)
+  compass(dx, dy) {
+    const oct = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) & 7;
+    return ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'][oct];
+  }
+  stopsTo(from, to) {
+    if (from === to) return 0;
+    const seen = new Set([from]);
+    let ring = [from];
+    for (let d = 1; d < 40 && ring.length; d++) {
+      const next = [];
+      for (const s of ring) {
+        for (const e of EDGES.get(s)) {
+          if (e.to === to) return d;
+          if (!seen.has(e.to)) { seen.add(e.to); next.push(e.to); }
+        }
+      }
+      ring = next;
+    }
+    return null;
+  }
+  describeStation() {
+    const seenDir = new Set();
+    const parts = [];
+    for (const e of EDGES.get(this.cur)) {
+      const k = `${e.line}|${e.to}`;
+      if (seenDir.has(k)) continue;
+      seenDir.add(k);
+      const dx = POS[e.to][0] - POS[this.cur][0], dy = POS[e.to][1] - POS[this.cur][1];
+      parts.push(`${LINE_SHORT[e.line] || e.line} ${this.compass(dx, dy)} to ${e.to}`);
+    }
+    const ob = this.objective;
+    let quest = '';
+    if (ob) {
+      const n = this.stopsTo(this.cur, ob.at);
+      quest = ` ${ob.name} the ${ob.sp} waits at ${ob.at}${n ? `, ${n} stop${n === 1 ? '' : 's'} away` : ' — this is the place'}.`;
+    }
+    const lift = this.stationLiftOut(this.cur) ? ' A lift is out here.' : '';
+    return `Routes: ${parts.join('; ')}.${quest}${lift}`;
+  }
+  describeInterior(it) {
+    const side = c => (c < 10 ? 'left' : 'right');
+    const d = it.def;
+    const levelName = r => d.levels[it.floorRows.indexOf(r + 1)] || 'a platform';
+    const bits = [`Inside ${this.cur}.`];
+    if (it.rescue) bits.push(`${it.rescue.name} the ${it.rescue.sp} is on ${levelName(it.rescue.y / TILE - 1)}.`);
+    else if (it.pendingEdge) bits.push(`Change to the ${LINE_SHORT[it.pendingEdge.line] || it.pendingEdge.line} line — its train waits at ${levelName(it.gate.r)}, ${side(it.gate.c)} side.`);
+    bits.push(`Levels, top to bottom: ${d.levels.join('; ')}.`);
+    const broken = it.glitches.map(gl => gl.kind === 'lift' ? 'a lift' : 'an escalator');
+    if (broken.length) bits.push(`Broken and glitching — do not touch: ${broken.join(', ')}.`);
+    bits.push(`The WAY OUT is at street level, ${side(d.gateOut.c)} side. Stairs always work.`);
+    return bits.join(' ');
   }
   saveHi() {
     if (this.score > this.hiscore) {
@@ -460,27 +521,34 @@ export class TubeFlock {
     const def = genStation(this.cur);
     const seed = hashName(this.cur) % 20;
     const level = new Level({ name: this.cur, map: def.map, time: 0, enemies: [] }, 0);
-    const stepFree = STEP_FREE.has(this.cur);
     // letter the lifts A/B/C left-to-right, the way the real lift guides do;
     // each shaft serves only its own span of levels, so its paddles wrap at
-    // its own top landing rather than sailing on through the ceiling
+    // its own top landing rather than sailing on through the ceiling.
+    // One facility in ten is out — and broken things GLITCH.
     const LIFT_INK = ['#4f4a76', '#b23b2b', '#716b93'];
+    const glitches = [];
     level.lifts.forEach((sh, i) => {
       sh.id = String.fromCharCode(65 + i);
       sh.color = LIFT_INK[i % LIFT_INK.length];
       sh.wrapY = sh.topY - 12;
+      if (this.facilityOut(this.cur, 'lift', i)) {
+        sh.out = true;
+        sh.paddles = [];
+        glitches.push({ kind: 'lift', x0: sh.x0, x1: sh.x1, y0: sh.topY, y1: sh.botY,
+          next: 1.5 + Math.random() * 4, until: 0, flip: false });
+      }
     });
-    if (level.lifts.length && this.liftOut.has(this.cur)) {
-      // one lift goes out — never the whole bank; stairs and the rest still serve
-      const sh = level.lifts[Math.floor(Math.random() * level.lifts.length)];
-      sh.out = true;
-      sh.paddles = [];
-    }
-    // in scruffier stations one escalator runs against you
-    const escCols = [...level.escCols.keys()];
-    if (!stepFree && escCols.length) {
-      level.escCols.set(escCols[Math.floor(Math.random() * escCols.length)], 1);
-    }
+    const brokenEsc = new Set();
+    [...level.escCols.keys()].sort((a, b) => a - b).forEach((c, i) => {
+      if (this.facilityOut(this.cur, 'esc', i)) {
+        brokenEsc.add(c);
+        level.escCols.delete(c);   // it doesn't run at all — or suffer riders
+        let top = 99, bot = -1;
+        def.map.forEach((row, r) => { if (row[c] === 'S') { top = Math.min(top, r); bot = Math.max(bot, r); } });
+        glitches.push({ kind: 'esc', c, x0: c * TILE, x1: (c + 1) * TILE, y0: top * TILE, y1: (bot + 1) * TILE,
+          next: 1.5 + Math.random() * 4, until: 0, flip: false });
+      }
+    });
     // where you're headed decides the door: line changes cross the station
     // underground to the new line's own platform; rescues and wanders
     // leave by surfacing — the street WAY OUT
@@ -514,6 +582,7 @@ export class TubeFlock {
     }
     this.interior = {
       def, level, pendingEdge, gate, floorRows, vertRuns, seed,
+      glitches, brokenEsc, grab: null, grabCool: 0,
       droppings: [], decals: [],
       playing,
       rescue: rescue && perch ? {
@@ -542,6 +611,7 @@ export class TubeFlock {
     }
     g.updateCamera(0, true);
     g.foley.whoosh();
+    g.say(this.describeInterior(this.interior));
   }
   // scripted train moments: arrivals disembark, boardings get whisked away
   updateScene(dt) {
@@ -590,10 +660,68 @@ export class TubeFlock {
       }
     }
   }
+  // the rebuff: a broken facility pulls the whole flock in, holds them
+  // while the jiggle and the feather-flap ramp up, then hurls the lot
+  // back out into the scene. Harmless, indignant, memorable.
+  updateGrab(dt) {
+    const g = this.g, it = this.interior, gb = it.grab, p = g.player;
+    gb.t += dt;
+    for (const e of it.enemies) e.update(dt);
+    const PULL = 0.2, HOLD = 0.7;
+    if (g.reducedMotion) {
+      // no strobe, no shake: a firm calm set-down away from the thing
+      p.x = Math.max(20, Math.min(W - 20, gb.x + gb.side * 80));
+      p.y = gb.ry; p.mode = 'fall'; p.vy = 0;
+      for (const b of it.buddies) { b.x = p.x - 20; b.y = p.y - 30; b.vx = b.vy = 0; }
+      it.grab = null; it.grabCool = 1.2; it.invulnT = 1;
+      return;
+    }
+    if (gb.t < PULL) {
+      const k = 1 - Math.exp(-dt * 18);
+      p.x += (gb.x - p.x) * k; p.y += (gb.y - p.y) * k;
+      for (const b of it.buddies) { b.x += (gb.x - b.x) * k; b.y += (gb.y - b.y) * k; b.vx = b.vy = 0; }
+    } else if (gb.t < PULL + HOLD) {
+      const ramp = (gb.t - PULL) / HOLD;
+      const j = 2 + ramp * 10;
+      p.x = gb.x + (Math.random() - 0.5) * j * 2;
+      p.y = gb.y + (Math.random() - 0.5) * j * 2;
+      p.phase += dt * (24 + ramp * 70);          // feathers going frantic
+      it.buddies.forEach((b, i) => {
+        b.x = gb.x + Math.sin(i * 2.1 + gb.t * 30) * j * 1.6;
+        b.y = gb.y + Math.cos(i * 1.7 + gb.t * 26) * j * 1.4;
+        b.ph += dt * (24 + ramp * 70);
+      });
+    } else {
+      // and OUT you all go
+      p.mode = 'fall';
+      p.vx = gb.side * (170 + Math.random() * 120);
+      p.vy = -180 - Math.random() * 140;
+      p.x = Math.max(20, Math.min(W - 20, gb.x + gb.side * 24));
+      for (const b of it.buddies) {
+        const a = Math.random() * Math.PI * 2;
+        b.x = gb.x + Math.cos(a) * 26;
+        b.y = gb.y + Math.sin(a) * 18;
+        b.vx = Math.cos(a) * 170;
+        b.vy = -Math.abs(Math.sin(a)) * 170 - 40;
+      }
+      g.puff(gb.x, gb.y, 9);
+      it.grab = null;
+      it.grabCool = 1.4;
+      it.invulnT = 1;
+    }
+  }
   updateInterior(dt) {
     const g = this.g, it = this.interior, lv = it.level;
     if (this.scene) { this.updateScene(dt); return; }
     if (it.invulnT > 0) it.invulnT -= dt;
+    if (it.grabCool > 0) it.grabCool -= dt;
+    // broken facilities glitch every few seconds — a 0.3s wrongness
+    for (const gl of it.glitches) {
+      if (gl.until > 0) gl.until -= dt;
+      gl.next -= dt;
+      if (gl.next <= 0) { gl.until = 0.3; gl.flip = !gl.flip; gl.next = 4 + Math.random() * 4; }
+    }
+    if (it.grab) { this.updateGrab(dt); return; }
     for (const sh of lv.lifts) {
       if (sh.out) continue;
       for (const p of sh.paddles) {
@@ -609,6 +737,34 @@ export class TubeFlock {
     g.player.update(dt, { ...g.input, jump: g.input.jump || g.jumpTap }, g);
     g.jumpTap = false;
     for (const e of it.enemies) e.update(dt);
+    // touch a broken thing and it takes the whole flock personally
+    if (!it.grab && it.grabCool <= 0) {
+      const gpx = g.player.x, gpy = g.player.y;
+      for (const gl of it.glitches) {
+        const touching = gl.kind === 'lift'
+          ? g.player.mode !== 'walk' && gpx > gl.x0 - 6 && gpx < gl.x1 + 6 && gpy > gl.y0 && gpy < gl.y1 + 30
+          : g.player.mode === 'climb' && Math.floor(gpx / TILE) === gl.c;
+        if (touching) {
+          it.grab = {
+            x: (gl.x0 + gl.x1) / 2,
+            y: Math.max(gl.y0 + 30, Math.min(gl.y1 - 10, gpy - 16)),
+            ry: gpy,
+            side: gpx < (gl.x0 + gl.x1) / 2 ? -1 : 1,
+            t: 0,
+          };
+          g.player.mode = 'fall'; g.player.vy = 0; g.player.onLift = null;
+          g.foley.zap();
+          g.say(`A broken ${gl.kind === 'lift' ? 'lift' : 'escalator'} crackles and flings the flock away.`);
+          break;
+        }
+      }
+    }
+    // narrate the level you land on
+    const fi = this.playerFloorIdx(it);
+    if (g.player.mode === 'walk' && fi !== it._saidFloor) {
+      if (it._saidFloor !== undefined) g.say(it.def.levels[fi] || '');
+      it._saidFloor = fi;
+    }
     // buddies flock boids-fashion around their friend (or the reunion)
     const t = performance.now() / 1000;
     const anchor = it.celebrate || { x: g.player.x - (g.player.facing || 1) * 26, y: g.player.y - 34 };
@@ -670,6 +826,7 @@ export class TubeFlock {
         this.updateMusic();
         g.music.swell();
         this.saveHi();
+        g.say(`${it.rescue.name} joins the flock! ${this.roster.length} birds now. Head up to the street and out the WAY OUT.`);
       }
     }
     if (it.celebrate) {
@@ -708,6 +865,7 @@ export class TubeFlock {
         g.foley.clear();
         if (it.rescue) this.freeChange = this.cur;   // rescued and out — no second toll
         else if (it.pendingEdge) this.line = null;   // surfaced on foot instead: fresh start
+        g.say(`Surfaced at ${this.cur} — back on the map. ${this.describeStation()}`);
         return;
       }
       // …or the waiting train, when a change is on
@@ -718,6 +876,7 @@ export class TubeFlock {
         this.scene = { kind: 'board', t: 0, doorX: gx, baseY: gy };
         g.camFocus = { x: gx, y: gy };
         g.foley.whoosh();
+        g.say(`All aboard the ${LINE_SHORT[it.pendingEdge.line] || it.pendingEdge.line} line to ${it.pendingEdge.to}.`);
       }
     }
   }
@@ -743,8 +902,10 @@ export class TubeFlock {
         if (this.objective && this.cur === this.objective.at) {
           // don't whisk straight inside: let the flock settle in first
           this.gather = { t: 0, dur: 1.7 };
+          this.g.say(`${this.cur} — this is the place. The flock gathers…`);
           return;
         }
+        this.g.say(`${this.cur}. ${this.describeStation()}`);
       }
     }
     // the flock swirls around the map cursor; the camera glides after it
@@ -883,7 +1044,7 @@ export class TubeFlock {
         ctx.globalAlpha = 1;
       }
       // step-free intel just where the next decision lives
-      if (labelled && this.liftOut.has(name)) {
+      if (labelled && this.stationLiftOut(name)) {
         const above = y < h * 0.56;
         const my = y + (above ? -37 : 42);
         ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 1.8;
@@ -1009,6 +1170,58 @@ export class TubeFlock {
     ctx.translate(g.offX, g.offY);
     ctx.scale(g.scale, g.scale);
     ctx.translate(-g.camX, -g.camY);
+    // broken facilities glitching: a 0.3s orientation flip, or a Jet Set
+    // Willy colour roll. Under prefers-reduced-motion, a calm static X.
+    for (const gl of it.glitches) {
+      const gx0 = gl.x0, gw = gl.x1 - gl.x0, gy0 = gl.y0, gh = gl.y1 - gl.y0;
+      if (g.reducedMotion) {
+        if (gl.kind === 'esc') {   // (broken lifts already wear the engine's crossed sign)
+          const cx2 = gx0 + gw / 2, sy = gy0 + gh / 2;
+          ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5;
+          ctx.strokeRect(cx2 - 12, sy - 12, 24, 24);
+          ctx.strokeStyle = PALETTE.danger; ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.moveTo(cx2 - 8, sy - 8); ctx.lineTo(cx2 + 8, sy + 8);
+          ctx.moveTo(cx2 + 8, sy - 8); ctx.lineTo(cx2 - 8, sy + 8);
+          ctx.stroke();
+        }
+        continue;
+      }
+      if (gl.until <= 0) continue;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(gx0, gy0, gw, gh); ctx.clip();
+      if (gl.flip) {
+        // upside-down and wrong: blank it, redraw the works inverted
+        ctx.fillStyle = PALETTE.paper;
+        ctx.fillRect(gx0, gy0, gw, gh);
+        ctx.translate(gx0 + gw / 2, gy0 + gh / 2);
+        ctx.scale(-1, -1);
+        ctx.translate(-(gx0 + gw / 2), -(gy0 + gh / 2));
+        ctx.strokeStyle = PALETTE.ladder;
+        ctx.lineWidth = 3;
+        if (gl.kind === 'esc') {
+          for (let y = gy0 + 8; y < gy0 + gh; y += 11) {
+            ctx.beginPath(); ctx.moveTo(gx0 + 3, y + 6); ctx.lineTo(gx0 + gw - 3, y); ctx.stroke();
+          }
+        } else {
+          ctx.setLineDash([4, 8]);
+          ctx.beginPath();
+          ctx.moveTo(gx0 + gw / 2, gy0); ctx.lineTo(gx0 + gw / 2, gy0 + gh);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = PALETTE.ladder;
+          ctx.fillRect(gx0 + 2, gy0 + gh * 0.4, gw - 4, 9);
+        }
+      } else {
+        // every colour it owns, smoothly, like a Jet Set Willy treasure
+        const hue = (performance.now() / 2.5) % 360;
+        ctx.fillStyle = `hsla(${hue}, 85%, 55%, 0.5)`;
+        ctx.fillRect(gx0, gy0, gw, gh);
+        ctx.fillStyle = `hsla(${(hue + 120) % 360}, 85%, 60%, 0.35)`;
+        ctx.fillRect(gx0, gy0 + gh / 3, gw, gh / 3);
+      }
+      ctx.restore();
+    }
     for (const b of it.buddies) {
       drawBird(ctx, b.sp, {
         x: b.x, y: b.y, size: BIRD_PX[b.sp] || 32,
@@ -1503,8 +1716,8 @@ export class TubeFlock {
     }
     // the whiteboard, when something is out and nobody is named
     const outLift = lv.lifts.find(sh => sh.out);
-    const escAgainst = [...lv.escCols.values()].some(d => d === 1);
-    if ((outLift || escAgainst) && it.def.board) {
+    const escBroken = it.brokenEsc && it.brokenEsc.size > 0;
+    if ((outLift || escBroken) && it.def.board) {
       this.drawServiceBoard(ctx, it.def.board[0] * TILE, it.def.board[1] * TILE, outLift);
     }
     // the awesome power, memorialised
@@ -1568,8 +1781,8 @@ export class TubeFlock {
       const i1 = i1i < 0 ? n - 1 : i1i;
       const exx = mapX(run.c + 0.5);
       if (run.kind === 'S') {
-        const against = lv.escCols.get(run.c) === 1;
-        ctx.strokeStyle = against ? PALETTE.danger : PALETTE.ladder;
+        const broken = it.brokenEsc && it.brokenEsc.has(run.c);
+        ctx.strokeStyle = broken ? PALETTE.danger : PALETTE.ladder;
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(exx - 3, fy(i1)); ctx.lineTo(exx + 3, fy(i0)); ctx.stroke();
       } else {

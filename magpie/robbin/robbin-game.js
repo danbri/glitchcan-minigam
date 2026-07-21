@@ -175,6 +175,10 @@ class Foley {
   tick()  { this.chirp(1600, 1600, 0.03, 'square', 0.05); }
   clear() { [523, 659, 784, 1047].forEach((f, i) => this.chirp(f, f, 0.12, 'triangle', 0.12, i * 0.1)); }
   start() { this.chirp(392, 784, 0.25, 'triangle', 0.12); }
+  zap() {   // a broken thing crackling and having none of it
+    this.chirp(1200, 90, 0.3, 'square', 0.09);
+    this.chirp(90, 700, 0.22, 'sawtooth', 0.05, 0.12);
+  }
 }
 
 // ---------------------------------------------------------------- level model
@@ -644,8 +648,16 @@ class Game {
   // full-viewport canvas + a camera zoomed for chunky cartoon characters:
   // never wider than the level needs (contain), never past full-bleed (cover),
   // aiming for ~8.5 tiles across the short side of the screen
+  // narration for screen readers: one polite live region, latest wins
+  say(text) {
+    const el = document.getElementById('announcer');
+    if (!el) return;
+    this._sayFlip = !this._sayFlip;
+    el.textContent = text + (this._sayFlip ? '' : ' ');
+  }
   resize() {
     this.touchUI = window.matchMedia('(pointer: coarse)').matches;
+    this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.cssW = window.innerWidth; this.cssH = window.innerHeight;
     this.canvas.width = Math.round(this.cssW * this.dpr);
     this.canvas.height = Math.round(this.cssH * this.dpr);
@@ -684,6 +696,7 @@ class Game {
     this.loadStation(0);
     document.getElementById('title').classList.add('hidden');
     document.getElementById('gameover').classList.add('hidden');
+    this.say(`Pilot Episode. ${this.screen.def.name}. Gobble every grain pile; rival birds are deadly. Arrows run and climb, space jumps.`);
   }
   loadStation(idx) {
     this.stationIndex = idx;
@@ -717,6 +730,7 @@ class Game {
     if (pl.mode === 'walk' && !pl.supported(pl.x, pl.y)) { pl.mode = 'fall'; pl.vy = 0; }
     this.foley.whoosh();
     this.fx.push({ x: pl.x + d * 60, y: pl.y - 46, txt: this.screen.def.name.toUpperCase(), t: 1.4 });
+    this.say(this.screen.def.name);
     this.updateCamera(0, true);
   }
   continueFromMap() {
@@ -755,6 +769,7 @@ class Game {
   }
   kill(why) {
     if (this.state !== 'play') return;
+    this.say(`Ouch — ${why === 'bird' ? 'a rival bird' : why === 'time' ? 'out of time' : why === 'lift' ? 'the lift' : 'a long fall'}. ${Math.max(0, this.lives - 1)} lives left.`);
     this.state = 'dying'; this.stateT = 1.3;
     this.foley.death();
     this.music.duck(1.6);
@@ -763,6 +778,7 @@ class Game {
     this.deathWhy = why;
   }
   gameOver() {
+    this.say(`Game over. Final score ${this.score}.`);
     this.state = 'gameover';
     this.music.stop();
     const el = document.getElementById('gameover');
@@ -1229,6 +1245,7 @@ class Game {
     }
     if (this.station.treasureLeft === 0) {
       this.state = 'leveldone'; this.stateT = 1.4;
+      this.say(`Station cleared! Time bonus ${this.time}.`);
       this.foley.clear();
       return;
     }
