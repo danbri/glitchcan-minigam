@@ -29,13 +29,13 @@ const STEP_FREE = new Set(NETWORK.stepFree);
 const LOST = [
   { sp: 'bluetit', name: 'TITCH', at: "ST PAUL'S", note: 'lost near the ticket gates' },
   { sp: 'wren', name: 'JENNY', at: 'BOROUGH', note: 'lonely down at the platforms' },
-  { sp: 'blackbird', name: 'MAUD', at: 'LONDON BRIDGE', note: 'going round in circles on level −1' },
+  { sp: 'blackbird', name: 'MAUD', at: 'LONDON BRIDGE', note: 'going round in circles on level −2' },
   { sp: 'blackbird', name: 'BRAM', at: 'CANADA WATER', note: 'singing to nobody at level −2' },
   { sp: 'wren', name: 'PERCH', at: 'ROTHERHITHE', note: 'listening to the river through the wall' },
   { sp: 'bluetit', name: 'SKY', at: 'CANARY WHARF', note: 'feeling small in the big station' },
   { sp: 'robin', name: 'PECK', at: 'HOLBORN', note: 'waiting where the lifts never came' },
   { sp: 'bluetit', name: 'PIP', at: 'ELEPHANT & CASTLE', note: 'napping by the deep stairs' },
-  { sp: 'wren', name: 'MOSS', at: 'WATERLOO', note: 'lost on level −2' },
+  { sp: 'wren', name: 'MOSS', at: 'WATERLOO', note: 'lost on level −3' },
   { sp: 'wren', name: 'WINK', at: 'MOORGATE', note: 'hiding behind the adverts' },
   { sp: 'robin', name: 'RUSTY', at: 'CHANCERY LANE', note: 'moping on the middle level' },
   { sp: 'blackbird', name: 'COCO', at: 'SOUTHWARK', note: 'humming along with the escalators' },
@@ -127,28 +127,31 @@ function genStation(name) {
 
   // ---- the cross-section: which levels exist here, really
   let floors, levels, plats;   // plats: platform levels, each with its lines
+  // Levels are numbered the way TfL numbers its own buildings: the
+  // street is level 0 and each storey below counts down \u22121, \u22122, \u22123.
+  // Ground level is always CLEARLY level 0.
   if (facts.deep && facts.sub) {
     floors = [2, 6, 10, 14];
-    levels = ['street', '0 \u00b7 ticket hall', `\u22121 \u00b7 ${short(subL)}`, `\u22122 \u00b7 ${short(deepL)}`];
+    levels = ['0 \u00b7 street', '\u22121 \u00b7 ticket hall', `\u22122 \u00b7 ${short(subL)}`, `\u22123 \u00b7 ${short(deepL)}`];
     plats = [{ row: 10, lines: subL }, { row: 14, lines: deepL }];
   } else if (facts.deep && deepL.length >= 2 && facts.zone === 1) {
     // two deep lines really do run at different depths (Bank, Oxford Circus)
     const g0 = [deepL[0]], g1 = deepL.slice(1);
     floors = [2, 6, 10, 14];
-    levels = ['street', '0 \u00b7 ticket hall', `\u22121 \u00b7 ${short(g0)}`, `\u22122 \u00b7 ${short(g1)}`];
+    levels = ['0 \u00b7 street', '\u22121 \u00b7 ticket hall', `\u22122 \u00b7 ${short(g0)}`, `\u22123 \u00b7 ${short(g1)}`];
     plats = [{ row: 10, lines: g0 }, { row: 14, lines: g1 }];
   } else if (facts.deep) {
     floors = [4, 9, 14];
-    levels = ['street', '\u22121 \u00b7 ticket hall', `\u22122 \u00b7 ${short(deepL) || 'platforms'}`];
+    levels = ['0 \u00b7 street', '\u22121 \u00b7 ticket hall', `\u22122 \u00b7 ${short(deepL) || 'platforms'}`];
     plats = [{ row: 14, lines: deepL }];
   } else if (facts.sub) {
     floors = [4, 9, 14];
-    levels = ['street', '0 \u00b7 ticket hall', `\u22121 \u00b7 ${short(subL) || 'platforms'}`];
+    levels = ['0 \u00b7 street', '\u22121 \u00b7 ticket hall', `\u22122 \u00b7 ${short(subL) || 'platforms'}`];
     plats = [{ row: 14, lines: subL }];
   } else {
     // open-air suburbia: platforms at ground, a footbridge over the tracks
     floors = [8, 14];
-    levels = ['footbridge', `${short(lineList) || 'the'} platforms`];
+    levels = ['+1 \u00b7 footbridge', `0 \u00b7 street \u00b7 ${short(lineList) || 'the'} platforms`];
     plats = [{ row: 14, lines: lineList }];
   }
   const surface = !facts.deep && !facts.sub;
@@ -204,19 +207,30 @@ function genStation(name) {
       escBudget--;
     }
   }
-  // gates: WAY OUT on the street, a train door on each platform level
+  // gates: a WAY OUT to daylight, and a door at EACH END of every
+  // platform level. The doors ARE the network: the west end of a
+  // platform holds the westbound track's real departures, the east end
+  // the eastbound — fixed by London's geometry, never by whatever
+  // errand the flock happens to be on. Learn the doors, learn London.
+  // (Open-air stations exit over the footbridge, clear of the tracks.)
   const sideL = rnd(2) === 0;
-  const gateOut = { c: sideL ? 1 : 18, r: streetRow - 1 };
-  const platGates = {};
-  let flip = !sideL;
+  const gateOut = { c: sideL ? 1 : 18, r: (surface ? floors[0] : streetRow) - 1 };
+  const platLevel = {};
   const platDefs = [];
   for (const p of plats) {
-    const g = { c: flip ? 1 : 18, r: p.row - 1 };
-    platDefs.push({ ...p, gate: g });
-    for (const l of p.lines) platGates[l] = g;
-    flip = !flip;
+    const doors = { L: { c: 1, r: p.row - 1, edges: [] }, R: { c: 18, r: p.row - 1, edges: [] } };
+    for (const e of EDGES.get(name) || []) {
+      if (!p.lines.includes(e.line)) continue;
+      const dx = POS[e.to][0] - POS[name][0], dy = POS[e.to][1] - POS[name][1];
+      const west = dx < 0 || (dx === 0 && dy < 0);
+      doors[west ? 'L' : 'R'].edges.push(e);
+    }
+    for (const d of Object.values(doors)) d.edges.sort((a, b) => (a.to < b.to ? -1 : 1));
+    if (!doors.L.edges.length) delete doors.L;   // a terminus keeps one door
+    if (!doors.R.edges.length) delete doors.R;
+    platDefs.push({ row: p.row, lines: p.lines, doors });
+    for (const l of p.lines) platLevel[l] = p.row;
   }
-  const defaultPlatGate = platDefs[platDefs.length - 1].gate;
   // spawn: you walk in from the street (arrivals override at the platform)
   const spawnStreet = { c: sideL ? 3 : 16, r: streetRow - 1 };
   if (grid[spawnStreet.r][spawnStreet.c] === '.') grid[spawnStreet.r][spawnStreet.c] = 'P';
@@ -261,12 +275,31 @@ function genStation(name) {
   const def = {
     map: grid.map(r => r.join('')),
     commuters, bystanders, ads, signs, levels, guides, helps, board,
-    streetRow, gateOut, platGates, defaultPlatGate, spawnStreet, perch,
+    streetRow, gateOut, platDefs, platLevel, spawnStreet, perch,
     underground: !surface,
     nLifts: liftCols.length,
   };
   GEN_CACHE.set(name, def);
   return def;
+}
+
+// the word on the platform: which way a door's train is FACING, in
+// tube-map terms — the dominant axis of its next hop across the
+// schematic. A statement about London, not route-planner advice.
+function boundWord(from, to) {
+  const dx = POS[to][0] - POS[from][0], dy = POS[to][1] - POS[from][1];
+  return Math.abs(dx) >= Math.abs(dy)
+    ? (dx < 0 ? 'WESTBOUND' : 'EASTBOUND')
+    : (dy < 0 ? 'NORTHBOUND' : 'SOUTHBOUND');
+}
+// which door a given real edge departs from
+function doorForEdge(def, edge) {
+  for (const p of def.platDefs) {
+    for (const d of Object.values(p.doors)) {
+      if (d.edges.some(e => e.line === edge.line && e.to === edge.to)) return d;
+    }
+  }
+  return null;
 }
 
 
@@ -463,11 +496,16 @@ export class TubeFlock {
     const levelName = r => d.levels[it.floorRows.indexOf(r + 1)] || 'a platform';
     const bits = [`Inside ${this.cur}.`];
     if (it.rescue) bits.push(`${it.rescue.name} the ${it.rescue.sp} is on ${levelName(it.rescue.y / TILE - 1)}.`);
-    else if (it.pendingEdge) bits.push(`Change to the ${LINE_SHORT[it.pendingEdge.line] || it.pendingEdge.line} line — its train waits at ${levelName(it.gate.r)}, ${side(it.gate.c)} side.`);
+    else if (it.pendingEdge) bits.push(`Change to the ${LINE_SHORT[it.pendingEdge.line] || it.pendingEdge.line} line — its ${boundWord(this.cur, it.pendingEdge.to).toLowerCase()} train leaves from ${levelName(it.gate.r)}, ${side(it.gate.c)} end.`);
     bits.push(`Levels, top to bottom: ${d.levels.join('; ')}.`);
+    for (const p of d.platDefs) {
+      const doors = Object.values(p.doors).map(dr =>
+        `${boundWord(this.cur, dr.edges[0].to).toLowerCase()} to ${dr.edges[0].to} at the ${side(dr.c)} end`);
+      if (doors.length) bits.push(`Trains on ${levelName(p.row - 1)}: ${doors.join('; ')}.`);
+    }
     const broken = it.glitches.map(gl => gl.kind === 'lift' ? 'a lift' : 'an escalator');
     if (broken.length) bits.push(`Broken and glitching — do not touch: ${broken.join(', ')}.`);
-    bits.push(`The WAY OUT is at street level, ${side(d.gateOut.c)} side. Stairs always work.`);
+    bits.push(`The WAY OUT is on ${levelName(d.gateOut.r)}, ${side(d.gateOut.c)} side. Stairs always work.`);
     return bits.join(' ');
   }
   saveHi() {
@@ -519,8 +557,8 @@ export class TubeFlock {
     // your way through
     if (this.line && best.line !== this.line && this.freeChange !== this.cur) {
       const def = genStation(this.cur);
-      const gFrom = def.platGates[this.line], gTo = def.platGates[best.line];
-      if (gFrom && gTo && gFrom === gTo) { this.depart(best); return; }
+      const shared = def.platLevel[this.line] && def.platLevel[this.line] === def.platLevel[best.line];
+      if (shared) { this.depart(best); return; }
       this.enterInterior(best, null);
       return;
     }
@@ -548,21 +586,6 @@ export class TubeFlock {
     this.g.camFocus = null;
     this.g.state = 'title';
     document.getElementById('title').classList.remove('hidden');
-  }
-  // which way should this platform's train go? toward the waiting bird
-  bestEdgeOnPlatform(pg) {
-    const lines = Object.entries(this.interior.def.platGates)
-      .filter(([, g2]) => g2 === pg).map(([l]) => l);
-    const cands = EDGES.get(this.cur).filter(e => lines.includes(e.line));
-    if (!cands.length) return null;
-    const ob = this.objective;
-    if (!ob) return cands[0];
-    let best = null, bestD = Infinity;
-    for (const e of cands) {
-      const d = e.to === ob.at ? 0 : (this.stopsTo(e.to, ob.at) ?? 1e8) + 1;
-      if (d < bestD) { bestD = d; best = e; }
-    }
-    return best;
   }
   // ---------------------------------------------------------- interiors
   enterInterior(pendingEdge, rescue, { arrival = false } = {}) {
@@ -598,20 +621,16 @@ export class TubeFlock {
           next: 1.5 + Math.random() * 4, until: 0, flip: false });
       }
     });
-    // where you're headed decides the door: line changes cross the station
-    // underground to the new line's own platform; rescues and wanders
-    // leave by surfacing — the street WAY OUT
-    const gate = pendingEdge
-      ? (def.platGates[pendingEdge.line] || def.defaultPlatGate)
-      : def.gateOut;
+    // where you're headed decides the door: a line change crosses the
+    // station underground to the door the new train really leaves from;
+    // rescues and wanders default to surfacing — the WAY OUT
+    const gate = (pendingEdge && doorForEdge(def, pendingEdge)) || def.gateOut;
     const perch = def.perch;
     // you start where you really would: train arrivals and line changes
-    // at the platform your line uses; on-foot visits at the street
-    const inGate = def.platGates[this.line] || def.defaultPlatGate;
-    if (arrival) {
-      level.spawn = { x: inGate.c * TILE + 16, y: (inGate.r + 1) * TILE };
-    } else if (pendingEdge && this.line) {
-      level.spawn = { x: (inGate.c === 1 ? 3 : 16) * TILE + 16, y: (inGate.r + 1) * TILE };
+    // step off mid-platform on the level your line runs at
+    const inRow = def.platLevel[this.line] || def.platDefs[def.platDefs.length - 1].row;
+    if (arrival || (pendingEdge && this.line)) {
+      level.spawn = { x: 9 * TILE + 16, y: inRow * TILE };
     } else {
       level.spawn = { x: def.spawnStreet.c * TILE + 16, y: (def.spawnStreet.r + 1) * TILE };
     }
@@ -944,39 +963,30 @@ export class TubeFlock {
         }
         return;
       }
-      // …or any platform's waiting train: after a rescue (or a wander)
-      // you can ride on by tube instead of surfacing — each platform's
-      // train departs toward the next lost bird
-      if (!it.pendingEdge) {
-        const seenG = new Set();
-        for (const pg of Object.values(it.def.platGates)) {
-          const key = `${pg.c},${pg.r}`;
-          if (seenG.has(key)) continue;
-          seenG.add(key);
-          if (!atDoor(pg.c, pg.r)) continue;
-          const edge = this.bestEdgeOnPlatform(pg);
-          if (!edge) continue;
-          it.pendingEdge = edge;
-          it.gate = pg;
-          const bgx = pg.c * TILE + 16, bgy = (pg.r + 1) * TILE;
-          this.scene = { kind: 'board', t: 0, doorX: bgx, baseY: bgy };
-          g.camFocus = { x: bgx, y: bgy };
-          g.foley.whoosh();
-          g.haptics.thud();
-          g.say(`All aboard the ${LINE_SHORT[edge.line] || edge.line} line to ${edge.to}.`);
-          break;
+      // …or any platform door. Every door is a real departure — the
+      // west end of a platform holds the westbound train, the east end
+      // the eastbound, exactly as the network runs, whatever the errand.
+      // Board a door and you go where its track goes. (Your own line's
+      // train wins the tie where lines share a platform.)
+      if (!this.scene) {
+        for (const pd of it.def.platDefs) {
+          for (const d of Object.values(pd.doors)) {
+            if (!atDoor(d.c, d.r)) continue;
+            const edge = (it.pendingEdge && it.gate === d) ? it.pendingEdge
+              : (d.edges.find(e => e.line === this.line) || d.edges[0]);
+            if (!edge) continue;
+            it.pendingEdge = edge;
+            it.gate = d;
+            const bgx = d.c * TILE + 16, bgy = (d.r + 1) * TILE;
+            this.scene = { kind: 'board', t: 0, doorX: bgx, baseY: bgy };
+            g.camFocus = { x: bgx, y: bgy };
+            g.foley.whoosh();
+            g.haptics.thud();
+            g.say(`All aboard: ${boundWord(this.cur, edge.to).toLowerCase()} ${LINE_SHORT[edge.line] || edge.line} line to ${edge.to}.`);
+            break;
+          }
+          if (this.scene) break;
         }
-      }
-      // …or the one waiting train, when a change is on
-      if (it.pendingEdge && !this.scene && atDoor(it.gate.c, it.gate.r)) {
-        // all aboard: the flock files into the open door — the camera
-        // stays on the doorway while the birds are whisked offstage
-        const gx = it.gate.c * TILE + 16, gy = (it.gate.r + 1) * TILE;
-        this.scene = { kind: 'board', t: 0, doorX: gx, baseY: gy };
-        g.camFocus = { x: gx, y: gy };
-        g.foley.whoosh();
-        g.haptics.thud();
-        g.say(`All aboard the ${LINE_SHORT[it.pendingEdge.line] || it.pendingEdge.line} line to ${it.pendingEdge.to}.`);
       }
     }
   }
@@ -1516,11 +1526,12 @@ export class TubeFlock {
       targetRow = it.rescue.y / TILE;
       task = `find ${it.rescue.name} the ${it.rescue.sp}`;
     } else if (it.rescue) {
+      // advice only: the doors themselves never bend to the errand
       const hop = this.objective ? this.nextHopTo(this.objective.at) : null;
-      const pg = hop && it.def.platGates[hop.edge.line];
-      if (pg) {
-        targetRow = pg.r + 1;
-        task = `${it.rescue.name} aboard — the ${LINE_SHORT[hop.edge.line] || hop.edge.line} train on`;
+      const door = hop && doorForEdge(it.def, hop.edge);
+      if (door) {
+        targetRow = door.r + 1;
+        task = `${it.rescue.name} aboard — ${boundWord(this.cur, hop.edge.to).toLowerCase()} ${LINE_SHORT[hop.edge.line] || hop.edge.line} train`;
       } else {
         targetRow = it.def.gateOut.r + 1;
         task = `${it.rescue.name} aboard — the WAY OUT`;
@@ -1885,14 +1896,16 @@ export class TubeFlock {
     // WAY OUT signage on every level, chevrons pointing the way it lies
     ctx.font = 'bold 10px Georgia, serif';
     ctx.textAlign = 'center';
-    const streetRow = it.def.streetRow ?? lv.grid.findIndex(row => row.some(ch => ch === '#' || ch === '+'));
+    const outRow = it.def.gateOut ? it.def.gateOut.r + 1
+      : it.def.streetRow ?? lv.grid.findIndex(row => row.some(ch => ch === '#' || ch === '+'));
     const outLeft = (it.def.gateOut?.c ?? 1) < 10;
     for (const fr2 of it.floorRows) {
-      const isStreet = fr2 === streetRow;
-      const label = isStreet
+      const isHere = fr2 === outRow;
+      const vert = isHere ? '' : fr2 > outRow ? '\u2191' : '\u2193';
+      const label = isHere
         ? (outLeft ? '\u00ab\u00ab WAY OUT' : 'WAY OUT \u00bb\u00bb')
-        : (outLeft ? '\u00ab\u00ab WAY OUT \u2191' : '\u2191 WAY OUT \u00bb\u00bb');
-      ctx.fillStyle = isStreet ? PALETTE.ladder : 'rgba(38,34,30,0.55)';
+        : (outLeft ? `\u00ab\u00ab WAY OUT ${vert}` : `${vert} WAY OUT \u00bb\u00bb`);
+      ctx.fillStyle = isHere ? PALETTE.ladder : 'rgba(38,34,30,0.55)';
       ctx.fillText(label, W / 2, fr2 * TILE - 6);
     }
     // the exits: the street WAY OUT is always there (surfacing ends any
@@ -1908,33 +1921,33 @@ export class TubeFlock {
     ctx.font = 'bold 9px Georgia, serif';
     ctx.fillText(locked ? `FIND ${it.rescue.name} FIRST` : 'WAY OUT', ox, oy - 52);
     let chevX = ox, chevY = oy;
-    if (!it.pendingEdge && !locked) {
-      // every platform keeps a train waiting — ride on, or surface, your call
-      const seenPG = new Set();
-      for (const [lineId, pg] of Object.entries(it.def.platGates)) {
-        const key = `${pg.c},${pg.r}`;
-        if (seenPG.has(key)) continue;
-        seenPG.add(key);
-        const pgx = pg.c * TILE + 16, pgy = (pg.r + 1) * TILE;
-        drawTrain(ctx, pgx, pgy, LINES[lineId]?.color || PALETTE.platform, { door: 1, dir: pgx < W / 2 ? -1 : 1 });
+    // every platform door keeps its own train: the west end's departs
+    // west, the east end's east — the doors are the network itself, and
+    // the boards above them say the direction and the next station
+    for (const pd of it.def.platDefs) {
+      for (const d of Object.values(pd.doors)) {
+        const e0 = d.edges[0];
+        if (!e0) continue;
+        const pgx = d.c * TILE + 16, pgy = (d.r + 1) * TILE;
+        const dirOut = d.c < 10 ? -1 : 1;
+        const boarding = this.scene && this.scene.kind === 'board' && it.gate === d;
+        if (!boarding) {
+          ctx.save();
+          if (locked) ctx.globalAlpha = 0.45;
+          drawTrain(ctx, pgx, pgy, LINES[e0.line]?.color || PALETTE.platform, { door: 1, dir: dirOut });
+          ctx.restore();
+        }
         ctx.fillStyle = PALETTE.ink;
+        ctx.textAlign = dirOut < 0 ? 'left' : 'right';
+        const lx2 = dirOut < 0 ? pgx - 12 : pgx + 12;
         ctx.font = 'bold 9px Georgia, serif';
-        ctx.fillText('TO TRAINS', pgx, pgy - 52);
+        ctx.fillText(boundWord(this.cur, e0.to) + (d.edges.length > 1 ? ' +' : ''), lx2, pgy - 62);
+        ctx.fillText(e0.to, lx2, pgy - 52);
+        ctx.textAlign = 'center';
       }
     }
-    if (it.pendingEdge) {
-      const gx = it.gate.c * TILE + 16, gy = (it.gate.r + 1) * TILE;
-      // a stylised carriage waiting at the platform (hidden while a
-      // boarding scene animates its own)
-      if (!(this.scene && this.scene.kind === 'board')) {
-        ctx.save();
-        ctx.globalAlpha = locked ? 0.5 : 1;
-        drawTrain(ctx, gx, gy, lineColor, { door: 1, dir: gx < W / 2 ? -1 : 1 });
-        ctx.restore();
-      }
-      ctx.fillStyle = PALETTE.ink;
-      ctx.fillText('TO TRAINS', gx, gy - 52);
-      chevX = gx; chevY = gy;
+    if (it.pendingEdge && it.gate !== it.def.gateOut) {
+      chevX = it.gate.c * TILE + 16; chevY = (it.gate.r + 1) * TILE;
     }
     if (!locked) {
       // the pulsing chevron marks the journey's own exit

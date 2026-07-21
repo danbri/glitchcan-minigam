@@ -141,22 +141,35 @@ birds file into the open door, doors close, and the carriage whisks
 them away. Arriving at a lost bird's station — or changing lines at an
 interchange — puts you **inside the station**: a full-screen
 platformer cut **generated from the station's real cross-section**.
-Deep-tube lines put platforms at −2, the cut-and-cover lines at −1
-(King's Cross gets both; at Bank the Central and Northern really do
-run at different depths, so each gets its own level, labelled with
-its line); outer-zone stations are open-air platforms with a
-footbridge. Lift shafts and escalator banks follow **TfL's own
+Levels are numbered the way TfL numbers its own buildings — the
+street is **level 0** and each storey below counts down −1, −2, −3
+— so deep-tube platforms sit at −2 (or −3 under a cut-and-cover
+level: King's Cross gets both; at Bank the Central and Northern
+really do run at different depths, so each gets its own level,
+labelled with its line); outer-zone stations are open-air platforms
+clearly at ground level 0, with a +1 footbridge over the tracks. Lift shafts and escalator banks follow **TfL's own
 per-station counts** — Hampstead is lift-only with zero escalators,
 Holborn has no lifts at all, Bank runs six escalator banks and a
 chained pair of lettered lifts — and one honest staircase always runs
-the whole way down. Trains arrive and depart at the platform their
-line really uses, so a change starts on your own platform and crosses
-the station to the other line's; the WAY OUT at street level is how
-you surface. Each interior you play a randomly chosen flock
+the whole way down. **The platforms are a model of London, not of
+your errand**: every platform level carries a door at each end, and
+each door holds that track's real departures — the west end of the
+Central platform at Liverpool Street is the westbound to Bank, the
+east end the eastbound to Bethnal Green, always, whatever bird you
+happen to be chasing. Board a door and you go where its track goes;
+direction boards over each door name the bound (NORTHBOUND ·
+LONDON BRIDGE) so learning the game map is learning London, and
+vice versa. Termini keep one door; shared sub-surface platforms
+share their end doors like real shared platforms, your own line's
+train winning the tie. The header's NEXT line still *advises* (it
+points at the door a route-planner would pick), but the doors never
+bend to the quest. A change starts mid-platform on your own line's
+level and crosses the station to the new line's door; the WAY OUT
+is how you surface. Each interior you play a randomly chosen flock
 member while the rest flutter along as AI buddies — the more you
 rescue, the fuller the screens get. Rescued birds join for +400 and
-+150 time; reach the waiting train (line changes) or the WAY OUT
-(rescues, locked until the bird is found) to move on.
++150 time; leave by any platform door (ride on by tube) or the WAY
+OUT (locked until the bird is found) to move on.
 
 Each station's lifts form a little graph: shafts are **lettered A/B/C
 left-to-right** with coloured plates at the shaft head, and each one
@@ -172,8 +185,7 @@ the levels it serves and crossed red when out, and
 a live "you are here" dot that follows you; a dated, hand-scrawled
 **Service information** whiteboard on A-frame legs whenever something
 is broken (naming the out lift by letter); level tags at the left
-edge of every depth (street · 0 ·
-−1 · −2); blue Help Points; plus name boards with line-colour bars,
+edge of every depth (0 · street, −1, −2, −3); blue Help Points; plus name boards with line-colour bars,
 **and the world visibly ends**: the camera leans a little past each
 wall to show a slab of London clay (open-air stations get a stout
 brick wall), seeded per station with one cosily-drawn, resolutely
@@ -256,6 +268,15 @@ Separate hi-score.
   coords, curated step-free list, lift-outage snapshot). Re-run the
   tool to refresh; commit the output. Cached in-repo, reproducible —
   the same pattern as `trees/`.
+- What the open data can and can't say: **per-direction service is
+  real** — the platform doors' departures come from TfL's per-direction
+  route sequences (which is also how the one-way Heathrow T4 loop is
+  known), and lift/escalator counts are TfL's own. **Per-platform
+  depth is not machine-readable** — the Unified API doesn't publish
+  which level each platform sits at (that lives in TfL's step-free
+  guide PDFs and a 2015 FOI station-depth spreadsheet), so the level
+  assignments are a principled synthesis from each station's line
+  types and fare zone, numbered street-down per TfL convention.
 - Levels are 20×15 ASCII tile maps: `#` platform, `H` ladder, `+` platform
   pierced by ladder, `E` egg, `G` grain, `P` spawn, `L` lift shaft.
 - Fixed-feel physics tuned to 8-bit platformer conventions: fixed jump arc with head-bump,
