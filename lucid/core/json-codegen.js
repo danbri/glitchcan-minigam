@@ -796,11 +796,6 @@ function generateSmoothUnion(node, ctx) {
   const transformedP = applyTransform('p', node.transform, ctx);
   const hasParentTransform = node.transform && transformedP !== 'p';
 
-  // Debug: log when smoothUnion has a physics-related transform
-  if (node.transform?.translate?.type === 'var' && node.transform.translate.name?.startsWith('phys_')) {
-    console.log(`[generateSmoothUnion] Physics transform: ${node.transform.translate.name}, transformedP=${transformedP}, hasParentTransform=${hasParentTransform}`);
-  }
-
   if (children.length === 1) {
     if (hasParentTransform) {
       const funcName = `smoothUnion_${ctx.helperCounter++}`;

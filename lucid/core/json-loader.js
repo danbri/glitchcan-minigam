@@ -242,6 +242,15 @@ function processNode(node, registry, depth = 0) {
       }
       break;
 
+    case 'customExpr':
+      // Backend-specific raw shader source — preserved verbatim for codegen
+      // (GLSL reads node.glsl, WGSL reads node.expr). A legitimate node type,
+      // not an "unknown" one, so no warning.
+      if (node.glsl !== undefined) processed.glsl = node.glsl;
+      if (node.expr !== undefined) processed.expr = node.expr;
+      processed.raw = node;
+      break;
+
     default:
       console.warn(`Unknown node type: ${node.type}, passing through`);
       processed.raw = node;
