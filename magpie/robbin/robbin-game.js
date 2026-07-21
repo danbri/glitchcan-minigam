@@ -781,9 +781,28 @@ class Game {
       ' ': 'jump', z: 'jump', Z: 'jump',
     };
     const DIRVEC = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
+    // ↑↑↓↓←→←→BA — the old song opens the credits. On touch, the JUMP
+    // button hums both the B and the A.
+    const KONAMI = ['up', 'up', 'down', 'down', 'left', 'right', 'left', 'right', 'b', 'a'];
+    const KONA_KEYS = {
+      ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+      b: 'b', B: 'b', a: 'a', A: 'a', ' ': 'jump', z: 'jump', Z: 'jump',
+    };
+    this._kona = 0;
+    this.feedKonami = tok => {
+      const want = KONAMI[this._kona];
+      const hit = tok === want || (tok === 'jump' && (want === 'b' || want === 'a'));
+      this._kona = hit ? this._kona + 1 : (tok === KONAMI[0] ? 1 : 0);
+      if (this._kona >= KONAMI.length) { this._kona = 0; this.showCredits(); }
+    };
     addEventListener('keydown', e => {
-      if (e.key === 'Enter') { this.pressStart(); return; }
+      if (!e.repeat && KONA_KEYS[e.key]) this.feedKonami(KONA_KEYS[e.key]);
+      if (e.key === 'Enter') {
+        if (this.creditsOpen()) { this.hideCredits(); return; }
+        this.pressStart(); return;
+      }
       if (e.key === 'Escape') {
+        if (this.creditsOpen()) { this.hideCredits(); return; }
         if (this.state === 'tube') { this.tube.exit(); return; }
         if (this.state === 'gameover') { this.backToMenu(); return; }
         return;
@@ -811,6 +830,7 @@ class Game {
       const on = e => {
         e.preventDefault(); this.input[k] = 1;
         if (k === 'jump') {
+          this.feedKonami('jump');
           this.jumpTap = true;
           // the tube's own jump handling (game-over dismiss etc) must hear
           // the TOUCH button too, not just the keyboard
@@ -826,6 +846,9 @@ class Game {
     }
     // title taps go through the episode buttons; game-over taps restart
     document.getElementById('gameover').addEventListener('pointerdown', () => this.pressStart());
+    document.getElementById('credits')?.addEventListener('pointerdown', e => {
+      e.stopPropagation(); this.hideCredits();
+    });
     document.getElementById('mute').addEventListener('pointerdown', e => {
       e.stopPropagation(); this.toggleMute();
     });
@@ -874,6 +897,10 @@ class Game {
       dpad.addEventListener('pointerdown', e => {
         e.preventDefault(); padActive = true; this.foley.ensure();
         const d = padDir(e); show(d); apply(d);
+        // cardinal taps sing the old song too; diagonals break the spell
+        if (d && !(d.x && d.y)) {
+          this.feedKonami(d.y < 0 ? 'up' : d.y > 0 ? 'down' : d.x < 0 ? 'left' : 'right');
+        } else if (d) this._kona = 0;
       });
       dpad.addEventListener('pointermove', e => {
         if (!padActive) return;
@@ -946,6 +973,19 @@ class Game {
   pressStart() {
     if (this.state === 'title' || this.state === 'gameover') this.newGame();
     else if (this.state === 'map') this.continueFromMap();
+  }
+  creditsOpen() {
+    return !document.getElementById('credits').classList.contains('hidden');
+  }
+  showCredits() {
+    this.foley.ensure();
+    this.foley.clear();                          // a little fanfare
+    if (this.state === 'play') this.state = 'paused';   // the arcade waits politely
+    document.getElementById('credits').classList.remove('hidden');
+  }
+  hideCredits() {
+    document.getElementById('credits').classList.add('hidden');
+    if (this.state === 'paused') this.state = 'play';
   }
   togglePause() {
     if (this.state === 'play') this.state = 'paused';
