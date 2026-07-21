@@ -440,6 +440,8 @@ export class TubeFlock {
     this.line = null;
     this.gather = null;
     this.scene = null;
+    this.changeHint = null;
+    this.stats = { stops: 0, visited: new Set([this.cur]) };
     this.outSeed = (Math.random() * 0xffffffff) >>> 0;
     this._outMemo = new Map();
     this.cam = [...POS[this.cur]];
@@ -615,7 +617,11 @@ export class TubeFlock {
       const def = genStation(this.cur);
       const shared = def.platLevel[this.line] && def.platLevel[this.line] === def.platLevel[best.line];
       if (shared) { this.depart(best); return; }
-      this.enterInterior(best, null);
+      // never a surprise: changing lines means heading inside, and
+      // heading inside is always YOUR act — arm the change, ask for GO
+      this.changeHint = { edge: best };
+      this.g.haptics.tick();
+      this.g.say(`Changing to the ${LINE_SHORT[best.line] || best.line} line toward ${best.to} means heading inside ${this.cur}. Press GO to go in, or fly your own line on.`);
       return;
     }
     this.depart(best);
@@ -623,6 +629,7 @@ export class TubeFlock {
   depart(edge) {
     this.g.haptics.tick();     // the swipe took: we're flying
     this.freeChange = null;
+    this.changeHint = null;
     const a = POS[this.cur], b = POS[edge.to];
     const units = Math.hypot(b[0] - a[0], b[1] - a[1]);
     this.travel = { edge, a, b, t: 0, dur: Math.max(0.7, units * 0.16) };
@@ -631,11 +638,15 @@ export class TubeFlock {
   handleJump() {
     if (this.dismissFact()) return;
     // in an interior, jumping goes through the play input — but on the
-    // map, GO steps into the station you're standing at (bringing the
-    // lost bird's quest with it if this is their station)
+    // map, GO is THE way in: it drops into the bird's station (with the
+    // train-arrival scene), carries an armed line change inside, or
+    // just wanders in on foot. Never automatic, always yours.
     if (!this.interior && !this.travel && !this.gather && !this.finale && !this.over) {
       const rescue = this.objective && this.objective.at === this.cur ? this.objective : null;
-      this.enterInterior(null, rescue);
+      if (rescue) { this.enterInterior(null, rescue, { arrival: true }); return; }
+      const edge = this.changeHint?.edge ?? null;
+      this.changeHint = null;
+      this.enterInterior(edge, null);
     }
   }
   exit() {
@@ -705,6 +716,7 @@ export class TubeFlock {
         if (bot >= 0) vertRuns.push({ c, kind, top, bot });
       }
     }
+    this.stats?.visited.add(this.cur);
     this.interior = {
       def, level, pendingEdge, gate, floorRows, vertRuns, seed,
       glitches, brokenEsc, grab: null, grabCool: 0,
@@ -837,6 +849,45 @@ export class TubeFlock {
       it.grabCool = 1.4;
       it.invulnT = 1;
     }
+  }
+  // surfacing: the visit ends, the map returns — and if the LAST bird
+  // just came aboard, the ending gets to LAND
+  surface() {
+    const g = this.g, it = this.interior;
+    this.interior = null;
+    g.camFocus = null;
+    g.foley.clear();
+    if (it.rescue) this.freeChange = this.cur;   // rescued and out — no second toll
+    else if (it.pendingEdge) this.line = null;   // surfaced on foot instead: fresh start
+    if (it.rescue && !this.objective && !this.finaleDone) {
+      // a long murmuration wheels the whole family home across London
+      this.finaleDone = true;
+      this.finale = {
+        t: 0, dur: 14, swells: 0,
+        from: [...POS[this.cur]],
+        to: [...POS['LIVERPOOL STREET']],
+        home: 'LIVERPOOL STREET',
+      };
+      this.arriveT = 6;
+      this.arriveMsg = '♥ THE FLOCK IS WHOLE ♥';
+      g.music.swell();
+      g.haptics.chord();
+      g.say(`${it.rescue.name} was the last of them. The flock is whole — ${this.roster.length} birds wheel home together across London.`);
+    } else {
+      g.say(`Surfaced at ${this.cur} — back on the map. ${this.describeStation()}`);
+    }
+  }
+  // wandered in by mistake? One press pops the flock straight back out
+  // to the map — no trek to the WAY OUT, nothing lost, no judgement
+  popOut() {
+    const it = this.interior;
+    if (!it || this.scene) return false;
+    if (!it.rescue || it.rescue.found) { this.surface(); return true; }
+    this.interior = null;
+    this.g.camFocus = null;
+    this.g.foley.step();
+    this.g.say(`Back on the map at ${this.cur}. ${it.rescue.name} still waits inside.`);
+    return true;
   }
   updateInterior(dt) {
     const g = this.g, it = this.interior, lv = it.level;
@@ -995,31 +1046,7 @@ export class TubeFlock {
       // the WAY OUT is always there: surfacing ends the visit, wherever
       // you were headed (a bird can always just fly out of a station)
       const o = it.def.gateOut;
-      if (o && atDoor(o.c, o.r)) {
-        this.interior = null;
-        g.foley.clear();
-        if (it.rescue) this.freeChange = this.cur;   // rescued and out — no second toll
-        else if (it.pendingEdge) this.line = null;   // surfaced on foot instead: fresh start
-        if (it.rescue && !this.objective && !this.finaleDone) {
-          // the last bird is aboard: the ending gets to LAND. A long
-          // murmuration wheels the whole family home across London.
-          this.finaleDone = true;
-          this.finale = {
-            t: 0, dur: 14, swells: 0,
-            from: [...POS[this.cur]],
-            to: [...POS['LIVERPOOL STREET']],
-            home: 'LIVERPOOL STREET',
-          };
-          this.arriveT = 6;
-          this.arriveMsg = '♥ THE FLOCK IS WHOLE ♥';
-          g.music.swell();
-          g.haptics.chord();
-          g.say(`${it.rescue.name} was the last of them. The flock is whole — ${this.roster.length} birds wheel home together across London.`);
-        } else {
-          g.say(`Surfaced at ${this.cur} — back on the map. ${this.describeStation()}`);
-        }
-        return;
-      }
+      if (o && atDoor(o.c, o.r)) { this.surface(); return; }
       // …or any platform door. Every door is a real departure — the
       // west end of a platform holds the westbound train, the east end
       // the eastbound, exactly as the network runs, whatever the errand.
@@ -1071,15 +1098,25 @@ export class TubeFlock {
       if (f.t >= f.dur + 3) {
         this.finale = null;
         this.cur = f.home;   // home to roost
-        this.g.say('Home to roost at Liverpool Street. Fly together as long as you like.');
+        // the journey's own postcard: what this flock actually did
+        this.factCard = {
+          title: 'HOME TO ROOST',
+          station: 'THE FLOCK IS WHOLE',
+          fact: `All ${this.roster.length} birds together — ${this.stats.stops} stops flown, `
+            + `${this.stats.visited.size} stations seen, ${this.score} points. `
+            + 'London is yours now: fly on together as long as you like.',
+          t: 0,
+        };
+        this.g.say(`Home to roost at Liverpool Street. All ${this.roster.length} birds together — ${this.stats.stops} stops flown, ${this.stats.visited.size} stations seen. Fly together as long as you like.`);
       }
       return;
     }
     if (this.gather) {
       this.gather.t += dt;
       if (this.gather.t >= this.gather.dur) {
+        // the flock has settled; going inside is YOUR act — press GO
         this.gather = null;
-        this.enterInterior(null, this.objective, { arrival: true });
+        this.g.say(`The flock is gathered at ${this.cur}. Press GO to head inside for ${this.objective?.name || 'a look around'}.`);
         return;
       }
     }
@@ -1089,6 +1126,8 @@ export class TubeFlock {
         this.cur = this.travel.edge.to;
         this.line = this.travel.edge.line;
         this.travel = null;
+        this.stats.stops++;
+        this.stats.visited.add(this.cur);
         this.g.foley.step();
         if (this.objective && this.cur === this.objective.at) {
           // don't whisk straight inside: let the flock settle in first —
@@ -1186,7 +1225,7 @@ export class TubeFlock {
     let yy = cy + fs * 1.15;
     ctx.fillStyle = PALETTE.platform;
     ctx.font = `bold ${fs * 0.55}px Georgia, serif`;
-    ctx.fillText('D I D   Y O U   K N O W', cx, yy);
+    ctx.fillText((fc.title || 'DID YOU KNOW').split('').join(' '), cx, yy);
     // the station, unmissable
     yy += fs * 1.5;
     ctx.fillStyle = PALETTE.ink;
@@ -1241,6 +1280,24 @@ export class TubeFlock {
     ctx.save();
     const ob = this.objective;
     ctx.textAlign = 'center';
+
+    // the Thames first, under everything: the one landmark even the
+    // schematic map never dared drop. A soft ribbon in map-water blue.
+    if (NETWORK.thames) {
+      const s = this.mapScale();
+      ctx.strokeStyle = 'rgba(146,183,205,0.55)';
+      ctx.lineWidth = Math.max(6, s * 0.85);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      let started = false;
+      for (const p of NETWORK.thames) {
+        const [x, y] = this.toScreen(p);
+        if (!started) { ctx.moveTo(x, y); started = true; }
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
 
     // track — drawn segment by segment through the map camera; where
     // lines share a corridor they ride offset side by side, and the
@@ -1408,7 +1465,7 @@ export class TubeFlock {
     ctx.textAlign = 'left';
     ctx.globalAlpha = 0.7;
     ctx.font = `bold ${fs * 0.6}px Georgia, serif`;
-    ctx.fillText(`TUBULAR SMELLS · SCORE ${this.score} · HI ${this.hiscore}`, 12, fs * 0.95);
+    ctx.fillText(`TUBULAR SMELLS · FLOCK ${this.roster.length}/${LOST.length + 1} · SCORE ${this.score} · HI ${this.hiscore}`, 12, fs * 0.95);
     ctx.globalAlpha = 1;
     // the roster roosts along the top right, under the speaker
     this.roster.slice(0, 12).forEach((b, i) => {
@@ -1428,7 +1485,13 @@ export class TubeFlock {
     const valX = labX + ctx.measureText('NEXT').width + 12;
     ctx.fillStyle = PALETTE.ink;
     this.fitText(ctx, this.cur, valX, fs * 2.2, w - valX - 12, fs * 1.05);
-    if (ob) {
+    if (this.changeHint) {
+      // an armed line change owns the NEXT line until GO (or a new swipe)
+      const che = this.changeHint.edge;
+      ctx.fillStyle = LINES[che.line]?.pale ? PALETTE.ink : (LINES[che.line]?.color || PALETTE.ink);
+      this.fitText(ctx, `GO: change to the ${LINE_SHORT[che.line] || che.line} line toward ${che.to}`, valX, fs * 3.55, w - valX - 12, fs * 0.95);
+      ctx.fillStyle = PALETTE.ink;
+    } else if (ob) {
       const hop = this.nextHopTo(ob.at);
       let nx = valX;
       if (hop) {
@@ -1457,7 +1520,7 @@ export class TubeFlock {
       } else {
         // we're standing on it
         ctx.fillStyle = PALETTE.danger;
-        this.fitText(ctx, `${ob.name} is HERE — drop in!`, nx, fs * 3.55, w - nx - fs * 2.2, fs * 0.95);
+        this.fitText(ctx, `${ob.name} is HERE — press GO to drop in!`, nx, fs * 3.55, w - nx - fs * 2.2, fs * 0.95);
         ctx.fillStyle = PALETTE.ink;
       }
       // the bird in question perches on the end of the line
@@ -1473,8 +1536,8 @@ export class TubeFlock {
     if (primer) {
       ctx.textAlign = 'center';
       ctx.globalAlpha = 0.65;
-      this.fitText(ctx, 'fly stop by stop toward them — changing lines (or arriving) takes you inside the station', w / 2, fs * 5.4, w - 24, fs * 0.68, 'italic');
-      this.fitText(ctx, 'found your bird? head up to street level and out the WAY OUT', w / 2, fs * 6.3, w - 24, fs * 0.68, 'italic');
+      this.fitText(ctx, `find all ${LOST.length + 1} birds and lead the flock home — fly stop by stop, GO enters a station`, w / 2, fs * 5.4, w - 24, fs * 0.68, 'italic');
+      this.fitText(ctx, 'found your bird? ride on from any platform, or take the WAY OUT', w / 2, fs * 6.3, w - 24, fs * 0.68, 'italic');
       ctx.globalAlpha = 1;
       ctx.textAlign = 'left';
     }
@@ -1637,7 +1700,7 @@ export class TubeFlock {
     // compact tallies at the left; big readable lines in the rest
     ctx.textAlign = 'left';
     ctx.font = `bold ${fs * 0.62}px Georgia, serif`;
-    ctx.fillText(`FLOCK ${this.roster.length}`, 10, fs * 1.1);
+    ctx.fillText(`FLOCK ${this.roster.length}/${LOST.length + 1}`, 10, fs * 1.1);
     ctx.fillText(`SCORE ${this.score}`, 10, fs * 2.1);
     const lx = 20 + ctx.measureText(`SCORE ${this.score}`).width;
     const cw = w - lx * 2;   // symmetric so centred text clears the tallies
@@ -1681,7 +1744,27 @@ export class TubeFlock {
     this.fitText(ctx, `${arrow} ${task}`, w / 2, fs * 2.42, cw, fs * 0.92);
     ctx.fillStyle = PALETTE.ink;
     ctx.textAlign = 'left';
+    // ⌂ MAP: one tap straight back out (ESC does the same)
+    const mb = this.mapButtonRect();
+    ctx.fillStyle = 'rgba(247,242,230,0.92)';
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(mb.x, mb.y, mb.w, mb.h, 6); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = PALETTE.ink;
+    ctx.font = `bold ${fs * 0.52}px Georgia, serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('⌂ MAP', mb.x + mb.w / 2, mb.y + mb.h * 0.66);
+    ctx.textAlign = 'left';
     ctx.restore();
+  }
+  mapButtonRect() {
+    const w = this.g.cssW;
+    const fs = Math.max(17, Math.min(24, w / 22));
+    return { x: w - fs * 3.3 - 6, y: fs * 3.2, w: fs * 3.3, h: fs * 1.1 };
+  }
+  mapButtonHit(x, y) {
+    const r = this.mapButtonRect();
+    return x >= r.x - 8 && x <= r.x + r.w + 8 && y >= r.y - 8 && y <= r.y + r.h + 8;
   }
   // ------------------------------------------------ the earth beyond
   // The play area ends at the station walls, and the presentation says

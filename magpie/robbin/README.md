@@ -104,18 +104,26 @@ stops on game over, and toggles with **M** or the speaker button
 ## ROBBIN: TUBULAR SMELLS (TUBE FLOCK)
 
 **The loop, in one breath:** the map names a lost bird and its
-station; fly your line stop by stop toward it; changing lines at an
-interchange (or arriving at the bird's station) takes you inside a
-full-screen station platformer; changes cross the station
-underground, from your line's platform to the new line's waiting
-train; rescues arrive by train and end by **surfacing** — up to
-street level and out the WAY OUT — then it's the map again, one bird
-richer. The WAY OUT is always there: a bird can surface out of any
-station mid-change and simply fly on (fresh start, no line to stay
-loyal to). Lines that share a platform swap trains without the trek —
-a real cross-platform change. Riding straight through interchanges on
-your own line never drops you inside. A short primer sits on the map
-until the first rescue.
+station; fly your line stop by stop toward it; **GO is the only way
+inside** — swiping toward another line at an interchange *arms* the
+change (the header says so in the line's colour) and GO carries it in;
+arriving at the bird's station gathers the flock at the mouth and GO
+drops in with the train-arrival scene. Nothing ever pulls you inside
+by surprise — and if you wander in anyway, **ESC or the ⌂ MAP button
+pops the flock straight back out**, no trek to the exit, nothing
+lost. Inside, changes cross the station underground to the new
+line's own directional door; rescues end by **surfacing** — the WAY
+OUT — or by riding on from any platform. Lines that share a platform
+swap trains without the trek — a real cross-platform change. Riding
+straight through interchanges on your own line never drops you
+inside. A short primer sits on the map until the first rescue.
+
+**The journey has a shape:** twenty-three birds — ROBBIN and the
+twenty-two lost — and the header always says how far along you are
+(FLOCK 7/23). Find the last one and the whole family wheels home to
+Liverpool Street in a long murmuration; a HOME TO ROOST postcard
+closes the story with your own numbers (stops flown, stations seen,
+score), and then London is yours to fly for as long as you like.
 
 A cosy, heartwarming journey — no clock, no lives, no fail state. The
 main dynamic is **growing the flock**: twenty-two lost libbirds —
@@ -124,12 +132,21 @@ lino-print drawings can be — are scattered across the **entire London
 Underground**: all eleven lines and 271 stations, baked from TfL's
 open data by `tools/fetch-tube.mjs` into `tube-network.js` (real
 geography drawn in the schematic lino style, no TfL branding), plus
-the hollow-striped Windrush segment. The map is drawn as a proper
-**transit diagram**: at bake time the real geography relaxes onto the
-45° grid (near-uniform stop spacing, straightened runs — the design
-language of a schematic map, in our own lino ink, no TfL artwork);
-parallel lines sharing a corridor ride offset side by side, ordinary
-stops wear tick marks, interchanges wear rings. A camera glides along
+the hollow-striped Windrush segment. The map is a deliberate
+**HYBRID of London's two famous self-portraits** — the octolinear
+transit diagram and the real geography — rebuilt by
+`tools/relayout-map.mjs`: stations start from their true coordinates
+(cached in `data/station-geo.json`), take the classic tube-map radial
+zoom (centre enlarged, suburbs gently compressed), then relax toward
+the 45° grid while a geographic anchor keeps every station honest
+about where it really is — relative distances survive, so Chesham
+stays far and Leicester Square–Covent Garden stays a hop. **The
+Thames runs through it**, a soft blue ribbon warped along with the
+city and bank-checked against thirty riverside stations (Waterloo
+south, Embankment north, Canary Wharf inside the Isle of Dogs
+meander). Parallel lines sharing a corridor ride offset side by
+side, ordinary stops wear tick marks, interchanges wear rings — the
+design language of a transit map in our own lino ink, no TfL artwork. A camera glides along
 with the flock; station names appear where they matter — where you
 are, where you can fly next, and who you're looking for — and when
 the lost bird is halfway across the city a pulsing arrow at the
