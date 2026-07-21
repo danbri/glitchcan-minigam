@@ -411,6 +411,32 @@ export class TubeFlock {
     }
     return null;
   }
+  // first hop of a shortest path toward a target (same-line hops win ties)
+  nextHopTo(target) {
+    if (!target || this.cur === target || !POS[target]) return null;
+    const prev = new Map([[this.cur, null]]);
+    let ring = [this.cur];
+    while (ring.length) {
+      const next = [];
+      for (const s of ring) {
+        for (const e of EDGES.get(s)) {
+          if (!prev.has(e.to)) { prev.set(e.to, { from: s, edge: e }); next.push(e.to); }
+        }
+      }
+      if (prev.has(target)) break;
+      ring = next;
+    }
+    if (!prev.has(target)) return null;
+    let n = target, hop = null, stops = 0;
+    while (prev.get(n)) { hop = prev.get(n); n = hop.from; stops++; }
+    // if a same-line edge reaches the same first stop, prefer it
+    let edge = hop.edge;
+    if (this.line && edge.line !== this.line) {
+      const same = EDGES.get(this.cur).find(e => e.to === edge.to && e.line === this.line);
+      if (same) edge = same;
+    }
+    return { edge, stops };
+  }
   describeStation() {
     const seenDir = new Set();
     const parts = [];
@@ -458,7 +484,7 @@ export class TubeFlock {
   viewBand() {
     const g = this.g, w = g.cssW, h = g.cssH;
     const fs = Math.max(17, Math.min(24, w / 22));
-    const top = fs * (this.roster.length === 1 ? 6 : 3.9);
+    const top = fs * (this.roster.length === 1 ? 7.1 : 5.2);
     const bot = g.touchUI ? Math.min(h * 0.3, 215) : fs * 1.9;
     return { top, bot, cy: top + (h - top - bot) / 2 };
   }
@@ -975,7 +1001,7 @@ export class TubeFlock {
   fitText(ctx, text, x, y, maxW, px, weight = 'bold', family = 'Georgia, serif') {
     ctx.font = `${weight} ${px}px ${family}`;
     const tw = ctx.measureText(text).width;
-    if (tw > maxW) ctx.font = `${weight} ${Math.max(10, px * maxW / tw)}px ${family}`;
+    if (tw > maxW) ctx.font = `${weight} ${Math.max(12, px * maxW / tw)}px ${family}`;
     ctx.fillText(text, x, y);
   }
   // ---------------------------------------------------------- draw
@@ -1164,23 +1190,68 @@ export class TubeFlock {
         facing: -1, phase: t * 3 + i, pose: 'stand',
       });
     });
-    ctx.textAlign = 'center';
+    // the two questions the header must answer at a glance:
+    // HERE (where am I) and NEXT (what do I do about it)
+    ctx.textAlign = 'left';
+    const labX = 12;
+    ctx.font = `bold ${fs * 0.55}px Georgia, serif`;
+    ctx.fillStyle = PALETTE.platform;
+    ctx.fillText('HERE', labX, fs * 2.15);
+    ctx.fillText('NEXT', labX, fs * 3.55);
+    const valX = labX + ctx.measureText('NEXT').width + 12;
+    ctx.fillStyle = PALETTE.ink;
+    this.fitText(ctx, this.cur, valX, fs * 2.2, w - valX - 12, fs * 1.05);
     if (ob) {
-      this.fitText(ctx, `${ob.name} the ${ob.sp} waits at ${ob.at}`, w / 2, fs * 2.15, w - 20, fs);
-      ctx.globalAlpha = 0.75;
-      this.fitText(ctx, `…${ob.note}`, w / 2, fs * 3.15, w - 24, fs * 0.75, 'italic');
+      const hop = this.nextHopTo(ob.at);
+      let nx = valX;
+      if (hop) {
+        // the actual move, drawn: an arrow in the line's colour
+        const dx = POS[hop.edge.to][0] - POS[this.cur][0];
+        const dy = POS[hop.edge.to][1] - POS[this.cur][1];
+        const ang = Math.atan2(dy, dx);
+        const ay = fs * 3.25;
+        ctx.save();
+        ctx.translate(nx + fs * 0.55, ay);
+        ctx.rotate(ang);
+        ctx.fillStyle = LINES[hop.edge.line]?.color || PALETTE.ink;
+        ctx.strokeStyle = PALETTE.ink;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(fs * 0.62, 0);
+        ctx.lineTo(-fs * 0.4, -fs * 0.42);
+        ctx.lineTo(-fs * 0.4, fs * 0.42);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+        nx += fs * 1.35;
+        ctx.fillStyle = PALETTE.ink;
+        const hopTxt = `${LINE_SHORT[hop.edge.line] || hop.edge.line} ${this.compass(dx, dy)} · ${hop.stops} stop${hop.stops === 1 ? '' : 's'} to ${ob.name}`;
+        this.fitText(ctx, hopTxt, nx, fs * 3.55, w - nx - fs * 2.2, fs * 0.95);
+      } else {
+        // we're standing on it
+        ctx.fillStyle = PALETTE.danger;
+        this.fitText(ctx, `${ob.name} is HERE — drop in!`, nx, fs * 3.55, w - nx - fs * 2.2, fs * 0.95);
+        ctx.fillStyle = PALETTE.ink;
+      }
+      // the bird in question perches on the end of the line
+      drawBird(ctx, ob.sp, { x: w - fs * 1.1, y: fs * 3.7, size: fs * 1.15, facing: -1, phase: t * 6, pose: 'stand' });
+      ctx.globalAlpha = 0.6;
+      this.fitText(ctx, `${ob.name} the ${ob.sp}: ${ob.note}`, labX, fs * 4.5, w - 24, fs * 0.62, 'italic');
       ctx.globalAlpha = 1;
     } else {
       ctx.fillStyle = PALETTE.platform;
-      this.fitText(ctx, '♥ the flock is whole — fly together as long as you like ♥', w / 2, fs * 2.3, w - 20, fs);
+      this.fitText(ctx, '♥ fly together as long as you like — the flock is whole ♥', valX, fs * 3.55, w - valX - 12, fs * 0.95);
       ctx.fillStyle = PALETTE.ink;
     }
     if (primer) {
+      ctx.textAlign = 'center';
       ctx.globalAlpha = 0.65;
-      this.fitText(ctx, 'fly stop by stop toward them — changing lines (or arriving) takes you inside the station', w / 2, fs * 4.3, w - 24, fs * 0.68, 'italic');
-      this.fitText(ctx, 'found your bird? head up to street level and out the WAY OUT', w / 2, fs * 5.2, w - 24, fs * 0.68, 'italic');
+      this.fitText(ctx, 'fly stop by stop toward them — changing lines (or arriving) takes you inside the station', w / 2, fs * 5.4, w - 24, fs * 0.68, 'italic');
+      this.fitText(ctx, 'found your bird? head up to street level and out the WAY OUT', w / 2, fs * 6.3, w - 24, fs * 0.68, 'italic');
       ctx.globalAlpha = 1;
+      ctx.textAlign = 'left';
     }
+    ctx.textAlign = 'center';
     const msgY = headH + (h - botInset - headH) * 0.3;
     if (this.arriveT > 0) {
       ctx.fillStyle = PALETTE.platform;
@@ -1340,17 +1411,36 @@ export class TubeFlock {
     const lx = 20 + ctx.measureText(`SCORE ${this.score}`).width;
     const cw = w - lx * 2;   // symmetric so centred text clears the tallies
     ctx.textAlign = 'center';
-    const line1 = it.rescue
-      ? (it.rescue.found ? `${it.rescue.name} is aboard — WAY OUT` : `find ${it.rescue.name} the ${it.rescue.sp}`)
-      : it.pendingEdge ? `change: ${it.pendingEdge.line.toUpperCase()} line` : 'just passing through';
-    const line2 = it.rescue
-      ? (it.rescue.found ? 'up to the street — follow the WAY OUT sign'
-        : `…${it.rescue.note}`)
-      : `no rush · you are ${it.playing.name} the ${it.playing.sp}`;
-    this.fitText(ctx, `${this.cur} · ${line1}`, w / 2, fs * 1.25, cw, fs);
-    ctx.globalAlpha = 0.75;
-    this.fitText(ctx, line2, w / 2, fs * 2.35, cw, fs * 0.72, 'italic');
-    ctx.globalAlpha = 1;
+    // HERE: station and the level you're standing on, live
+    const fi = this.playerFloorIdx(it);
+    const lvl = it.def.levels[fi] || '';
+    this.fitText(ctx, `${this.cur} · ${lvl}`, w / 2, fs * 1.25, cw, fs);
+    // NEXT: the task, with an arrow pointing at its floor
+    let targetRow, task;
+    if (it.rescue && !it.rescue.found) {
+      targetRow = it.rescue.y / TILE;
+      task = `find ${it.rescue.name} the ${it.rescue.sp}`;
+    } else if (it.rescue) {
+      targetRow = it.def.gateOut.r + 1;
+      task = `${it.rescue.name} aboard — the WAY OUT`;
+    } else if (it.pendingEdge) {
+      targetRow = it.gate.r + 1;
+      task = `the ${LINE_SHORT[it.pendingEdge.line] || it.pendingEdge.line} line train`;
+    } else {
+      targetRow = it.def.gateOut.r + 1;
+      task = 'wander — the WAY OUT when ready';
+    }
+    const ti = it.floorRows.indexOf(targetRow);
+    let arrow;
+    if (ti >= 0 && ti < fi) arrow = '↑';
+    else if (ti >= 0 && ti > fi) arrow = '↓';
+    else {
+      const txx = it.rescue && !it.rescue.found ? it.rescue.x : (it.pendingEdge ? it.gate.c : it.def.gateOut.c) * TILE + 16;
+      arrow = txx < this.g.player.x ? '←' : '→';
+    }
+    ctx.fillStyle = PALETTE.platform;
+    this.fitText(ctx, `${arrow} ${task}`, w / 2, fs * 2.42, cw, fs * 0.92);
+    ctx.fillStyle = PALETTE.ink;
     ctx.textAlign = 'left';
     ctx.restore();
   }
