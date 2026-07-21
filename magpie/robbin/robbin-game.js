@@ -897,10 +897,11 @@ class Game {
       dpad.addEventListener('pointerdown', e => {
         e.preventDefault(); padActive = true; this.foley.ensure();
         const d = padDir(e); show(d); apply(d);
-        // cardinal taps sing the old song too; diagonals break the spell
+        // cardinal taps sing the old song too; a fat-fingered diagonal is
+        // simply not part of the tune (ignored, never a reset)
         if (d && !(d.x && d.y)) {
           this.feedKonami(d.y < 0 ? 'up' : d.y > 0 ? 'down' : d.x < 0 ? 'left' : 'right');
-        } else if (d) this._kona = 0;
+        }
       });
       dpad.addEventListener('pointermove', e => {
         if (!padActive) return;
@@ -997,11 +998,18 @@ class Game {
   frame(t) {
     const dt = Math.min(0.05, (t - this.last) / 1000);
     this.last = t;
-    // the JUMP button means nothing on the tube map — free the corner
+    // the JUMP button means nothing on the tube map — free the corner.
+    // Unless the old song is eight notes in: then it materialises,
+    // because somebody needs a B and an A.
     const mapMode = this.state === 'tube' && !this.tube.interior;
     if (mapMode !== this._mapMode) {
       this._mapMode = mapMode;
       document.body.classList.toggle('mapmode', mapMode);
+    }
+    const konarm = (this._kona || 0) >= 8;
+    if (konarm !== this._konarm) {
+      this._konarm = konarm;
+      document.body.classList.toggle('konarm', konarm);
     }
     this.update(dt);
     this.draw();
