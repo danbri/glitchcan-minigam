@@ -666,7 +666,10 @@ class Game {
     // on touch screens the pad floats over the lower band — bias the view
     // down a touch so the action rides above the thumbs
     const bias = this.touchUI ? this.viewH * 0.08 : 0;
-    const tx = Math.max(0, Math.min(f.x - this.viewW / 2, W - this.viewW));
+    // station interiors give the camera a little slack past the walls, so
+    // at the edges you can SEE the world end (in a slab of London clay)
+    const edge = this.viewW < W && this.state === 'tube' && this.tube?.interior ? 80 : 0;
+    const tx = Math.max(-edge, Math.min(f.x - this.viewW / 2, W - this.viewW + edge));
     const ty = Math.max(0, Math.min(f.y - 24 - this.viewH / 2 + bias, H - this.viewH));
     const k = snap ? 1 : 1 - Math.exp(-dt * 6);
     this.camX += (tx - this.camX) * k;

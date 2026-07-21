@@ -261,6 +261,7 @@ function genStation(name) {
     map: grid.map(r => r.join('')),
     commuters, bystanders, ads, signs, levels, guides, helps, board,
     streetRow, gateOut, platGates, defaultPlatGate, spawnStreet, perch,
+    underground: !surface,
   };
   GEN_CACHE.set(name, def);
   return def;
@@ -1090,8 +1091,230 @@ export class TubeFlock {
     ctx.textAlign = 'left';
     ctx.restore();
   }
+  // ------------------------------------------------ the earth beyond
+  // The play area ends at the station walls, and the presentation says
+  // so: a slab of London clay past each edge, seeded per station with
+  // one cosily-drawn UNPLAYABLE wonder — big bones, a mammoth skull
+  // with a dent-nosed saucer in it, a longship, a curious ring, an
+  // underground river, an ammonite. Open-air stations get a thick
+  // brick wall instead. Strictly dressing: muted, behind everything.
+  drawEarthEdges(ctx, it, t) {
+    const topY = (it.def.underground ? it.def.streetRow : it.floorRows[0]) * TILE;
+    const seed = hashName(this.cur);
+    this.drawEarthStrip(ctx, it, t, true, topY, seed * 2654435761 >>> 0);
+    this.drawEarthStrip(ctx, it, t, false, topY, seed ^ 0x9e3779b9);
+  }
+  drawEarthStrip(ctx, it, t, left, topY, seed) {
+    const wpx = 280;
+    let rng = seed >>> 0 || 1;
+    const rnd = n => { rng = (rng * 1103515245 + 12345) >>> 0; return (rng >>> 8) % n; };
+    ctx.save();
+    // everything is composed in left-wall space; the right strip is the
+    // same drawing mirrored about the level's midline, so buried scenes
+    // always disappear INTO the wall, whichever side they're on
+    if (!left) { ctx.translate(W, 0); ctx.scale(-1, 1); }
+    ctx.beginPath(); ctx.rect(-wpx, topY, wpx, H + 120 - topY); ctx.clip();
+    if (!it.def.underground) {
+      // open air: a stout brick wall says "no further"
+      ctx.fillStyle = '#8a5a44';
+      ctx.fillRect(-wpx, topY, wpx, H + 120 - topY);
+      ctx.strokeStyle = 'rgba(38,34,30,0.45)';
+      ctx.lineWidth = 2;
+      for (let y = topY; y < H + 100; y += 14) {
+        ctx.beginPath(); ctx.moveTo(-wpx, y); ctx.lineTo(0, y); ctx.stroke();
+        const off = ((y - topY) / 14) % 2 ? 10 : 24;
+        for (let x = -wpx + off; x < 0; x += 28) {
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 14); ctx.stroke();
+        }
+      }
+    } else {
+      // London clay, in lino: soil wash, wavy strata, seeded stones
+      ctx.fillStyle = '#4d3d2c';
+      ctx.fillRect(-wpx, topY, wpx, H + 120 - topY);
+      ctx.strokeStyle = 'rgba(30,24,18,0.5)';
+      ctx.lineWidth = 2;
+      for (let y = topY + 28; y < H + 100; y += 46) {
+        ctx.beginPath();
+        for (let x = -wpx; x <= 0; x += 20) {
+          const yy = y + Math.sin((x + seed % 97) * 0.06) * 5;
+          x === -wpx ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
+        }
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(30,24,18,0.4)';
+      for (let i = 0; i < 26; i++) {
+        const sx = -wpx + 8 + rnd(wpx - 16), sy = topY + 12 + rnd(H + 90 - topY);
+        ctx.beginPath();
+        ctx.ellipse(sx, sy, 3 + rnd(4), 2 + rnd(3), rnd(6), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // one buried wonder, hugging the wall so it half-shows in play
+      const cy = topY + (H - topY) * 0.55 + rnd(60) - 30;
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = '#d8c8a4';
+      ctx.fillStyle = '#d8c8a4';
+      ctx.lineWidth = 2.4;
+      ctx.lineCap = 'round';
+      const kind = rnd(6);
+      if (kind === 0) this.buriedBones(ctx, -52, cy, rnd);
+      else if (kind === 1) this.buriedMammothUfo(ctx, -68, cy - 20);
+      else if (kind === 2) this.buriedLongship(ctx, -58, cy);
+      else if (kind === 3) this.buriedRing(ctx, -44, cy);
+      else if (kind === 4) this.buriedRiver(ctx, topY, t);
+      else this.buriedAmmonite(ctx, -40, cy);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+    // the wall face itself: a firm ink edge with mortar ticks
+    const wx = left ? 0 : W;
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(wx, topY); ctx.lineTo(wx, H + 60); ctx.stroke();
+    ctx.lineWidth = 2;
+    for (let y = topY + 10; y < H + 50; y += 26) {
+      ctx.beginPath();
+      ctx.moveTo(wx, y); ctx.lineTo(wx + (left ? -8 : 8), y);
+      ctx.stroke();
+    }
+  }
+  buriedBones(ctx, cx, cy, rnd) {
+    const bone = (x, y, len, ang) => {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+      ctx.beginPath(); ctx.moveTo(-len / 2, 0); ctx.lineTo(len / 2, 0); ctx.stroke();
+      for (const e of [-len / 2, len / 2]) {
+        ctx.beginPath(); ctx.arc(e, -4, 4.5, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(e, 4, 4.5, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.restore();
+    };
+    bone(cx - 8, cy - 6, 52, 0.5);
+    bone(cx + 10, cy + 2, 52, -0.6);
+    bone(cx - 4, cy + 34, 40, 0.12);
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(cx - 30 + i * 9, cy - 34, 13 + i * 3, 0.7, 2.2);
+      ctx.stroke();
+    }
+  }
+  buriedMammothUfo(ctx, cx, cy) {
+    // the great skull, tusks curling
+    ctx.beginPath(); ctx.arc(cx, cy, 24, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx - 7, cy - 3, 3.4, 0, Math.PI * 2); ctx.fill();
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(cx + s * 12, cy + 18);
+      ctx.bezierCurveTo(cx + s * 34, cy + 42, cx + s * 62, cy + 34, cx + s * 58, cy + 8);
+      ctx.stroke();
+    }
+    // spine and ribs marching away
+    ctx.beginPath();
+    ctx.moveTo(cx + 22, cy + 4);
+    ctx.quadraticCurveTo(cx + 64, cy - 10, cx + 96, cy + 2);
+    ctx.stroke();
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.arc(cx + 40 + i * 16, cy + 12, 14, Math.PI * 1.15, Math.PI * 1.95);
+      ctx.stroke();
+    }
+    // the saucer, nose-first into the skull, rim dented — case closed
+    ctx.save();
+    ctx.translate(cx - 14, cy - 34);
+    ctx.rotate(0.7);
+    ctx.beginPath(); ctx.ellipse(0, 0, 26, 8, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, -5, 10, Math.PI, 0); ctx.stroke();
+    ctx.beginPath();                     // the dent
+    ctx.moveTo(14, 4); ctx.lineTo(19, 8); ctx.lineTo(15, 10);
+    ctx.stroke();
+    for (let i = -1; i <= 1; i++) {      // impact shivers
+      ctx.beginPath();
+      ctx.moveTo(24 + i * 3, 12 + i * 5); ctx.lineTo(31 + i * 3, 16 + i * 5);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  buriedLongship(ctx, cx, cy) {
+    ctx.beginPath();
+    ctx.moveTo(cx - 56, cy - 18);
+    ctx.quadraticCurveTo(cx, cy + 26, cx + 52, cy - 22);
+    ctx.quadraticCurveTo(cx + 30, cy + 4, cx - 34, cy + 2);
+    ctx.stroke();
+    ctx.beginPath();                     // plank line
+    ctx.moveTo(cx - 44, cy - 8);
+    ctx.quadraticCurveTo(cx, cy + 14, cx + 42, cy - 12);
+    ctx.stroke();
+    ctx.beginPath();                     // proud prow curl
+    ctx.moveTo(cx - 56, cy - 18);
+    ctx.bezierCurveTo(cx - 66, cy - 34, cx - 52, cy - 44, cx - 46, cy - 34);
+    ctx.stroke();
+    for (let i = 0; i < 4; i++) {        // shields along the gunwale
+      ctx.beginPath();
+      ctx.arc(cx - 24 + i * 16, cy - 4 - Math.abs(i - 1.5) * 3, 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.beginPath();                     // stump of mast
+    ctx.moveTo(cx + 2, cy - 2); ctx.lineTo(cx + 8, cy - 30);
+    ctx.stroke();
+  }
+  buriedRing(ctx, cx, cy) {
+    ctx.save();
+    ctx.rotate?.call(ctx, 0);
+    ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.arc(cx, cy, 21, 0, Math.PI * 2); ctx.stroke();
+    for (let i = 0; i < 7; i++) {        // chevrons, none of them lit
+      const a = (i / 7) * Math.PI * 2 + 0.4;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * 27, cy + Math.sin(a) * 27 - 4);
+      ctx.lineTo(cx + Math.cos(a) * 33, cy + Math.sin(a) * 33);
+      ctx.lineTo(cx + Math.cos(a) * 27, cy + Math.sin(a) * 27 + 4);
+      ctx.closePath(); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  buriedRiver(ctx, topY, t) {
+    // a lost river slides by in the dark, minding its own business
+    const rx = -46;
+    ctx.save();
+    ctx.strokeStyle = '#5a748c';
+    ctx.lineWidth = 16;
+    ctx.globalAlpha = 0.4;
+    ctx.beginPath();
+    for (let y = topY; y <= H + 100; y += 12) {
+      const x = rx + Math.sin(y * 0.035 + 1.3) * 12;
+      y === topY ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#9fb4c4';
+    const flow = (t * 30) % 24;
+    for (let y = topY + flow; y <= H + 100; y += 24) {
+      const x = rx + Math.sin(y * 0.035 + 1.3) * 12;
+      ctx.beginPath(); ctx.moveTo(x - 5, y); ctx.quadraticCurveTo(x, y + 5, x + 5, y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  buriedAmmonite(ctx, cx, cy) {
+    ctx.beginPath();
+    let r = 3;
+    for (let a = 0; a < Math.PI * 5; a += 0.25) {
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      a === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      r += 0.85;
+    }
+    ctx.stroke();
+    for (let a = Math.PI * 3; a < Math.PI * 5; a += 0.55) {
+      const r1 = 3 + (a / 0.25) * 0.85;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * (r1 * 0.72), cy + Math.sin(a) * (r1 * 0.72));
+      ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+      ctx.stroke();
+    }
+  }
   drawDressing(ctx, it, t) {
     const lv = it.level;
+    this.drawEarthEdges(ctx, it, t);
     const lineColor = it.pendingEdge ? LINES[it.pendingEdge.line].color
       : (this.line ? LINES[this.line].color : PALETTE.platform);
     // framed lino adverts on the back walls

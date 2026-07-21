@@ -170,6 +170,12 @@ a live "you are here" dot that follows you; a dated, hand-scrawled
 is broken (naming the out lift by letter); level tags at the left
 edge of every depth (street · 0 ·
 −1 · −2); blue Help Points; plus name boards with line-colour bars,
+**and the world visibly ends**: the camera leans a little past each
+wall to show a slab of London clay (open-air stations get a stout
+brick wall), seeded per station with one cosily-drawn, resolutely
+unplayable buried wonder — great bones, a mammoth skull with a
+dent-nosed saucer lodged in it, a longship, a curious chevroned ring
+that never lights, a lost underground river, an ammonite —
 framed lino adverts, WAY OUT signage, a waiting carriage with open
 doors at the departure platform, and idle bystanders. Press down
 mid-air for a harmless dropping (a struck commuter stops, mystified).
