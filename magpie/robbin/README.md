@@ -140,7 +140,10 @@ it never quits outright: a LEAVE THE JOURNEY? dialog warns that the
 flock, stops flown and lost things found will be gone (only the high
 score stays). KEEP FLYING is the big warm default; GO and ESC also
 answer "keep flying", Enter or tapping QUIT leaves. ESC on the map
-goes through the same question. Inside, changes cross the station underground to the new
+goes through the same question. Station interiors rebuild fresh each
+visit but the crumbs do not: grain already eaten there this journey
+stays eaten, so popping out and back in farms nothing.
+Inside, changes cross the station underground to the new
 line's own directional door; rescues end by **surfacing** — the WAY
 OUT — or by riding on from any platform. Lines that share a platform
 swap trains without the trek — a real cross-platform change. Riding
@@ -305,6 +308,12 @@ hall"). Never required, always worth the detour.
 Tubular Smells' score comes in two forms, toggled from the menu
 (SCORE: TAPE / MIDI). **TAPE (the default) is the recordings
 themselves**, decoded into buffers, looped and crossfaded by mood.
+The files are lean 64 kbps MP3s (~6.8 MB the set) and each is only
+fetched when its mood first plays — but decoded PCM is ~0.38 MB/s,
+so at most TWO tracks stay decoded at once (LRU; the compressed
+bytes are kept and simply re-decoded after an eviction — never
+re-downloaded). A `MONO_DOWNMIX` switch in `robbin-music.js` can
+halve that again; it ships OFF to keep the recordings as made.
 **MIDI is a live, parameterized performance**: `tools/analyze-tracks.mjs` listened to the three
 recordings with WebAudio (onset autocorrelation for tempo, per-bar
 chroma vs triad templates for harmony, chroma self-similarity for

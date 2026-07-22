@@ -241,6 +241,19 @@ export class Chiptune {
 //   passacaglia — THE INEXORABLE PASSACAGLIA · the homecoming finale
 // If fetch or decode fails (offline, odd codec), `failed` flips and the
 // procedural Chiptune keeps the whole stage, exactly as before.
+// Decoded audio is the hidden cost of TAPE mode: the MP3s are a cheap
+// 64 kbps download, but decodeAudioData expands to float32 PCM at the
+// context rate — ~0.38 MB/s stereo, ~330 MB if all three tracks sat in
+// RAM at once. So at most KEEP_DECODED tracks stay decoded (the active
+// one plus the most recent other — engines/gears swap constantly at
+// station doors, the passacaglia only arrives for the flight home);
+// anything older is dropped and simply re-decoded from the fetched
+// bytes next time. MONO_DOWNMIX would halve memory again by folding
+// stereo to one channel after decode — left OFF to keep the recordings
+// exactly as made.
+const KEEP_DECODED = 2;
+const MONO_DOWNMIX = false;
+
 export class Soundtrack {
   constructor(getCtx, base = 'audio/') {
     this.getCtx = getCtx;
@@ -250,6 +263,8 @@ export class Soundtrack {
       passacaglia: `${base}the-inexorable-passacaglia.mp3`,
     };
     this.buffers = {};
+    this.raw = {};       // fetched compressed bytes, kept — refetch never needed
+    this.recent = [];    // decode LRU, newest last
     this.loading = {};
     this.playing = null;
     this.want = null;
@@ -269,14 +284,28 @@ export class Soundtrack {
     return true;
   }
   load(name) {
-    if (this.buffers[name] || this.failed) return Promise.resolve();
+    if (this.failed) return Promise.resolve();
+    if (this.buffers[name]) { this.touch(name); return Promise.resolve(); }
     if (this.loading[name]) return this.loading[name];
     this.loading[name] = (async () => {
       try {
-        const res = await fetch(this.urls[name]);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const raw = await res.arrayBuffer();
-        this.buffers[name] = await this.ctx.decodeAudioData(raw);
+        if (!this.raw[name]) {
+          const res = await fetch(this.urls[name]);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          this.raw[name] = await res.arrayBuffer();
+        }
+        // decodeAudioData detaches its input — hand it a copy so the
+        // kept bytes survive for the next decode after an eviction
+        let buf = await this.ctx.decodeAudioData(this.raw[name].slice(0));
+        if (MONO_DOWNMIX && buf.numberOfChannels > 1) {
+          const mono = this.ctx.createBuffer(1, buf.length, buf.sampleRate);
+          const o = mono.getChannelData(0);
+          const a = buf.getChannelData(0), b = buf.getChannelData(1);
+          for (let i = 0; i < o.length; i++) o[i] = (a[i] + b[i]) * 0.5;
+          buf = mono;
+        }
+        this.buffers[name] = buf;
+        this.touch(name);
       } catch {
         this.failed = true;                      // the band plays on instead
       } finally {
@@ -284,6 +313,18 @@ export class Soundtrack {
       }
     })();
     return this.loading[name];
+  }
+  touch(name) {
+    this.recent = this.recent.filter(n => n !== name);
+    this.recent.push(name);
+    // drop the oldest decoded PCM beyond the keep — never the track
+    // that's sounding (or about to)
+    while (this.recent.length > KEEP_DECODED) {
+      const evict = this.recent.find(n => n !== name && n !== this.playing?.name && n !== this.want);
+      if (!evict) break;
+      this.recent = this.recent.filter(n => n !== evict);
+      delete this.buffers[evict];
+    }
   }
   /** crossfade to a named mood (null = fade to silence) */
   async play(name, fade = 1.8) {

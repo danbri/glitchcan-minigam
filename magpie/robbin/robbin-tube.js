@@ -502,6 +502,7 @@ export class TubeFlock {
     this.changeHint = null;
     this.stats = { stops: 0, visited: new Set([this.cur]), objects: 0 };
     this.foundObjects = new Set();   // stations whose lost thing is handed in
+    this.eatenGrain = new Map();     // station -> Set("c,r"): crumbs stay eaten
     this.quitConfirm = false;
     // the clock: always daytime, ten times reality — the rat race spins
     this.clock = 7 * 60 + Math.floor(Math.random() * 11 * 60);
@@ -780,6 +781,9 @@ export class TubeFlock {
     const def = genStation(this.cur);
     const seed = hashName(this.cur) % 20;
     const level = new Level({ name: this.cur, map: def.map, time: 0, enemies: [] }, 0);
+    // the level is rebuilt fresh each visit, but the crumbs are not:
+    // grain already eaten here this journey stays gone
+    for (const k of this.eatenGrain?.get(this.cur) ?? []) level.treasure.delete(k);
     // ONE CAR PER SHAFT, cycling its real stops with sliding doors —
     // you can see who's aboard as glowing skeletons through the glass.
     // Letters follow the Lift guide's street-first order (Canada Water:
@@ -1358,12 +1362,16 @@ export class TubeFlock {
       if (dr.y > H + 40) dr.landed = true;
     }
     it.droppings = it.droppings.filter(d => !d.landed);
-    // grain snacks
+    // grain snacks — eaten is eaten: popping out and back in doesn't
+    // regrow the crumbs (no +50 farming through the WAY OUT)
     const px = g.player.x, py = g.player.y;
     for (const [key, itn] of lv.treasure) {
       const ix = itn.c * TILE + 16, iy = (itn.r + 1) * TILE;
       if (Math.abs(px - ix) < 15 && Math.abs(py - iy) < 22) {
         lv.treasure.delete(key);
+        let eaten = this.eatenGrain.get(this.cur);
+        if (!eaten) this.eatenGrain.set(this.cur, eaten = new Set());
+        eaten.add(key);
         this.score += 50;
         g.fx.push({ x: ix, y: iy - 20, txt: '+50', t: 0.9 });
         g.foley.egg();
