@@ -583,12 +583,22 @@ export function drawCommuter(ctx, { x, y, size = 48, facing = 1, phase = 0, pose
 
 // ---------------------------------------------------- X-ray passengers
 // Glowing bones behind the lift glass: you always know who's aboard.
-function boneStyle(ctx) {
-  // x-ray, not radioactive: pale ivory-blue bones with a soft cool glow,
-  // meant to sit behind dark scanner glass
-  ctx.strokeStyle = 'rgba(230,242,255,0.95)';
-  ctx.fillStyle = 'rgba(230,242,255,0.95)';
-  ctx.shadowColor = 'rgba(150,195,255,0.75)';
+let REDUCED = false;
+try { REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { /* headless */ }
+function boneStyle(ctx, cyc = 0) {
+  // Jet Set Willy attribute-cycling: the bones roll through the whole
+  // palette behind the scanner glass, treasure-style. Under
+  // prefers-reduced-motion they hold a calm pale ivory instead.
+  if (REDUCED) {
+    ctx.strokeStyle = 'rgba(230,242,255,0.95)';
+    ctx.fillStyle = 'rgba(230,242,255,0.95)';
+    ctx.shadowColor = 'rgba(150,195,255,0.75)';
+  } else {
+    const hue = ((cyc * 160) % 360 + 360) % 360;
+    ctx.strokeStyle = `hsla(${hue}, 95%, 72%, 0.95)`;
+    ctx.fillStyle = `hsla(${hue}, 95%, 72%, 0.95)`;
+    ctx.shadowColor = `hsla(${hue}, 100%, 62%, 0.8)`;
+  }
   ctx.shadowBlur = 5;
   ctx.lineWidth = 1.6;
   ctx.lineCap = 'round';
@@ -596,7 +606,7 @@ function boneStyle(ctx) {
 export function drawCommuterSkeleton(ctx, x, y, aid = null, t = 0) {
   ctx.save();
   ctx.translate(x, y + Math.sin(t * 2.2 + x) * 0.8);
-  boneStyle(ctx);
+  boneStyle(ctx, t + x * 0.04);   // each rider a beat apart in the rainbow
   ctx.beginPath(); ctx.arc(0, -34, 4.2, 0, Math.PI * 2); ctx.stroke();     // skull
   ctx.beginPath(); ctx.moveTo(0, -29); ctx.lineTo(0, -12); ctx.stroke();   // spine
   for (let i = 0; i < 3; i++) {                                             // ribs
@@ -621,7 +631,7 @@ export function drawBirdSkeleton(ctx, x, y, t = 0, scale = 1) {
   ctx.save();
   ctx.translate(x, y + Math.sin(t * 3 + x) * 1);
   ctx.scale(scale, scale);
-  boneStyle(ctx);
+  boneStyle(ctx, t + x * 0.04);
   ctx.beginPath(); ctx.arc(5, -10, 3, 0, Math.PI * 2); ctx.stroke();       // skull
   ctx.beginPath(); ctx.moveTo(8, -10); ctx.lineTo(11.5, -9); ctx.stroke(); // beak
   ctx.beginPath(); ctx.moveTo(2.5, -8); ctx.quadraticCurveTo(-2, -7, -6, -4); ctx.stroke();
