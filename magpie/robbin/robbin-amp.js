@@ -1289,10 +1289,8 @@ export class RobbAmp {
     const ROLL = [
       { role: 'BIRD ART', name: 'Libby' },
       { role: 'GAME CONCEPT', name: 'Dan' },
-      { role: 'INSPIRATIONAL', name: 'Chuckie Egg · Gathering Sky' },
+      { role: 'INSPIRATIONAL', name: 'Chuckie Egg · Gathering Sky · Jet Set Willy · Wanted: Monty Mole · Hampstead' },
       { role: 'SOUNDTRACK', name: 'The Quiet Engines · Gears and Birdcalls · The Inexorable Passacaglia' },
-      { role: 'STATION SONGS', name: 'eight songs for eight stations' },
-      { role: 'JUKEBOX', name: 'ROBBAMP · Buried Frequencies' },
       { role: 'SOFTWARE & ADDITIONAL A/V', name: 'Computers' },
       { role: '', name: '· found in the clay ·' },
       { wonder: 0, cap: 'great bones' },
