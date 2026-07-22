@@ -35,14 +35,15 @@ six sections:
 | `derived` | ✅ implemented | computed params, topologically sorted (cycle-detected). **Drives geometry.** |
 | `bounds` | ✅ implemented | min/max validity → `violations[]` (reports only; does **not** clamp) |
 | `phase` | ✅ implemented | phase-coupled animation: a `driver` expr feeds `followers` with phase/amplitude/offset/waveform. Emits `${cycle}_${follower}` params |
-| `chains` | ❌ stub | only registers `${chain}_joint${i}` defaults; `maxBend/taper/sequential` are unimplemented |
-| `conserved` | ❌ stub | no-op (volume/mass preservation not implemented) |
+| `chains` | ✅ implemented (July 2026) | per-joint `${chain}_joint${i}` angles from an optional `bend` driver, `constraints.taper` (taper^i falloff) and `constraints.maxBend` (clamp → violation) |
+| `conserved` | ✅ implemented (July 2026) | product of `params` held to `target`: `adjust` one param to preserve it, or `warn` (violation) when it deviates beyond `tolerance` |
 | `constraints` | ⚠️ UI-only | see below |
 
-⚠️ **Expression gap:** the CPU rig evaluator implements arithmetic/trig/`pow`/
-`sqrt` etc. but **not** `noise/fbm/turbulence/hash` (which the GLSL shader path
-has). A rig `derived`/`phase` expression using noise evaluates differently on the
-CPU than the same expression in-shader. Avoid noise in rig expressions.
+**Expression parity (July 2026):** the CPU rig evaluator now matches the shader op
+vocabulary — arithmetic/trig, `exp/log/asin/acos/atan/round/lerp`, and
+`noise/fbm/turbulence/hash` **ported 1:1 from the GLSL noise functions**, so a rig
+expression using noise evaluates the same on CPU as in-shader (previously it
+returned 0 — a silent divergence). Locked in by `tests/lucid-codegen-parity.test.js`.
 
 ## Two "constraint" concepts — don't confuse them
 

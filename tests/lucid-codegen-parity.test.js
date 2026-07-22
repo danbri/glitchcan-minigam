@@ -17,6 +17,7 @@ globalThis.document = { createElement: () => ({}) };
 const { loadJsonScene } = await import('../lucid/core/json-loader.js');
 const { generateGlslFromJson } = await import('../lucid/core/json-codegen.js');
 const { generateWgslFromJson } = await import('../lucid/core/wgsl-codegen.js');
+const { evaluateExpr, evaluateRig } = await import('../lucid/core/rig-evaluator.js');
 
 const glsl = (json, opts) => generateGlslFromJson(loadJsonScene(json), opts || {});
 const wgsl = (json, opts) => generateWgslFromJson(loadJsonScene(json), opts || {});
@@ -144,6 +145,62 @@ describe('WGSL domain modifiers apply node.transform', () => {
       expect(/pt\.[xyz]/.test(w)).toBe(true);
     });
   }
+});
+
+describe('CPU rig-evaluator op parity with the shader', () => {
+  const fract = (x) => x - Math.floor(x);
+  it('supports the scalar ops the shaders have (no Unknown-op warning)', () => {
+    const warns = withWarnCapture(() => {
+      for (const [op, args] of [['exp', [1]], ['log', [2]], ['asin', [0.5]], ['acos', [0.5]],
+        ['atan', [1, 1]], ['round', [2.6]], ['lerp', [0, 10, 0.3]]]) {
+        evaluateExpr({ expr: op, args }, {}, 0);
+      }
+    });
+    expect(warns.some(w => w.includes('Unknown rig expression op'))).toBe(false);
+    expect(evaluateExpr({ expr: 'atan', args: [1, 1] }, {}, 0)).toBeCloseTo(Math.PI / 4, 9);
+    expect(evaluateExpr({ expr: 'lerp', args: [0, 10, 0.3] }, {}, 0)).toBe(3);
+    expect(evaluateExpr({ expr: 'round', args: [2.6] }, {}, 0)).toBe(3);
+  });
+  it('hash matches the GLSL formula exactly', () => {
+    const h = evaluateExpr({ expr: 'hash', args: [5] }, {}, 0);
+    expect(h).toBeCloseTo(fract(Math.sin(5) * 43758.5453123), 12);
+  });
+  it('noise is deterministic and in [0,1]', () => {
+    const a = evaluateExpr({ expr: 'noise', args: [1.5, 2.5, 0.5] }, {}, 0);
+    const b = evaluateExpr({ expr: 'noise', args: [1.5, 2.5, 0.5] }, {}, 0);
+    expect(a).toBe(b);
+    expect(a).toBeGreaterThanOrEqual(0);
+    expect(a).toBeLessThanOrEqual(1);
+  });
+  it('fbm/turbulence evaluate without warnings', () => {
+    const warns = withWarnCapture(() => {
+      evaluateExpr({ expr: 'fbm', args: [1, 2, 3, 4] }, {}, 0);
+      evaluateExpr({ expr: 'turbulence', args: [1, 2, 3, 4] }, {}, 0);
+    });
+    expect(warns.length).toBe(0);
+  });
+});
+
+describe('rig chains + conserved', () => {
+  it('chain applies taper and clamps to maxBend with a violation', () => {
+    const rig = { chains: { spine: { joints: ['h', 't', 'f'], bend: 30, constraints: { taper: 0.5, maxBend: 15 } } } };
+    const r = evaluateRig({}, rig, 0);
+    expect(r.values.spine_joint0).toBe(15); // 30, clamped
+    expect(r.values.spine_joint1).toBe(15); // 30*0.5
+    expect(r.values.spine_joint2).toBe(7.5); // 30*0.25
+    expect(r.violations.some(v => v.severity === 'clamped')).toBe(true);
+  });
+  it('conserved auto-adjusts one param to hold the product', () => {
+    const rig = { conserved: { volume: { params: ['sx', 'sy', 'sz'], adjust: 'sz', target: 1 } } };
+    const r = evaluateRig({ sx: { value: 2 }, sy: { value: 2 }, sz: { value: 9 } }, rig, 0);
+    expect(r.values.sz).toBeCloseTo(0.25, 9);
+    expect(r.values.sx * r.values.sy * r.values.sz).toBeCloseTo(1, 9);
+  });
+  it('conserved warns when the product deviates beyond tolerance', () => {
+    const rig = { conserved: { volume: { params: ['sx', 'sy'], target: 1, tolerance: 0.05, warn: true } } };
+    const r = evaluateRig({ sx: { value: 1.5 }, sy: { value: 1 } }, rig, 0);
+    expect(r.violations.some(v => v.severity === 'warning')).toBe(true);
+  });
 });
 
 describe('whole library still codegens on both backends', () => {

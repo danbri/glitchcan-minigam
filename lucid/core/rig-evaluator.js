@@ -12,6 +12,34 @@
  * creature can use with different topology.
  */
 
+// --- Value noise, ported 1:1 from the GLSL shader (json-codegen.js) so a rig
+// expression using noise/fbm/turbulence/hash matches the in-shader functions
+// exactly (previously these ops returned 0 on the CPU — a silent divergence).
+const _fract = (x) => x - Math.floor(x);
+const _mix = (a, b, t) => a * (1 - t) + b * t;
+function _hash(n) { return _fract(Math.sin(n) * 43758.5453123); }
+function _noise3(px, py, pz) {
+  const ix = Math.floor(px), iy = Math.floor(py), iz = Math.floor(pz);
+  let fx = _fract(px), fy = _fract(py), fz = _fract(pz);
+  fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy); fz = fz * fz * (3 - 2 * fz);
+  const n = ix + iy * 57 + iz * 113;
+  return _mix(
+    _mix(_mix(_hash(n), _hash(n + 1), fx), _mix(_hash(n + 57), _hash(n + 58), fx), fy),
+    _mix(_mix(_hash(n + 113), _hash(n + 114), fx), _mix(_hash(n + 170), _hash(n + 171), fx), fy),
+    fz);
+}
+function _octaveNoise(px, py, pz, octaves, turb) {
+  let value = 0, amplitude = 0.5, frequency = 1;
+  const oc = Math.min(6, Math.max(0, Math.floor(octaves ?? 4)));
+  for (let i = 0; i < 6; i++) {
+    if (i >= oc) break;
+    const s = _noise3(px * frequency, py * frequency, pz * frequency);
+    value += amplitude * (turb ? Math.abs(s * 2 - 1) : s);
+    frequency *= 2; amplitude *= 0.5;
+  }
+  return value;
+}
+
 /**
  * Evaluate a single expression in the context of current values
  * Supports the same expression format as json-codegen.js
@@ -65,6 +93,18 @@ export function evaluateExpr(expr, values, time = 0) {
       case 'max': return Math.max(...args);
       case 'pow': return Math.pow(args[0], args[1] ?? 1);
       case 'sqrt': return Math.sqrt(Math.max(0, args[0]));
+      // Scalar math ops — parity with the GLSL/WGSL codegen vocabulary.
+      case 'exp': return Math.exp(args[0]);
+      case 'log': return Math.log(args[0]);
+      case 'asin': return Math.asin(args[0]);
+      case 'acos': return Math.acos(args[0]);
+      case 'atan': return args.length > 1 ? Math.atan2(args[0], args[1]) : Math.atan(args[0]);
+      case 'round': return Math.floor(args[0] + 0.5);
+      // Noise ops — ported 1:1 from the shader so CPU rig values match in-shader.
+      case 'hash': return _hash(args[0]);
+      case 'noise': return _noise3(args[0], args[1] ?? 0, args[2] ?? 0);
+      case 'fbm': return _octaveNoise(args[0], args[1] ?? 0, args[2] ?? 0, args[3], false);
+      case 'turbulence': return _octaveNoise(args[0], args[1] ?? 0, args[2] ?? 0, args[3], true);
       case 'clamp': return Math.max(args[1] ?? 0, Math.min(args[2] ?? 1, args[0]));
       case 'step': return args[1] >= args[0] ? 1 : 0;
       case 'smoothstep': {
@@ -72,7 +112,8 @@ export function evaluateExpr(expr, values, time = 0) {
         const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
         return t * t * (3 - 2 * t);
       }
-      case 'mix': return args[0] * (1 - args[2]) + args[1] * args[2];
+      case 'mix':
+      case 'lerp': return args[0] * (1 - args[2]) + args[1] * args[2];
       default:
         console.warn(`Unknown rig expression op: ${op}`);
         return 0;
@@ -283,30 +324,68 @@ export function evaluateRig(params, rig, time = 0) {
     }
   }
 
-  // 5. Chain constraints (skeletal coherence) - future implementation
-  // Chains define sequential relationships between joints
-  // For now, just validate that referenced joints exist
+  // 5. Chain constraints (skeletal coherence).
+  // A chain produces per-joint angle params `${chain}_joint${i}`. Semantics:
+  //  - `bend` (optional expression): total bend seeded into every joint; if
+  //    absent, each joint keeps whatever value derived/phase already set (or 0).
+  //  - `constraints.taper` (default 1): distal joints scale by taper^i, so bend
+  //    tapers along the chain (a stiffer base, floppier tip).
+  //  - `constraints.maxBend` (degrees): each joint angle is clamped to
+  //    [-maxBend, maxBend]; a clamp records a bounds-style violation.
   if (rig.chains) {
     for (const [chainName, chain] of Object.entries(rig.chains)) {
       const joints = chain.joints || [];
-      // Future: enforce maxBend, taper, sequential constraints
-      // For now, register chain joints as available params
+      const c = chain.constraints || {};
+      const taper = c.taper !== undefined ? c.taper : 1;
+      const maxBend = c.maxBend;
+      const seed = chain.bend !== undefined ? evaluateExpr(chain.bend, values, time) : null;
       for (let i = 0; i < joints.length; i++) {
         const jointParam = `${chainName}_joint${i}`;
-        if (values[jointParam] === undefined) {
-          values[jointParam] = 0; // Default joint angle
+        let a = seed !== null ? seed : (values[jointParam] ?? 0);
+        a *= Math.pow(taper, i);
+        if (maxBend !== undefined && Math.abs(a) > maxBend) {
+          violations.push({
+            param: jointParam, value: a, severity: 'clamped',
+            reason: `chain '${chainName}' joint ${i} exceeds maxBend ${maxBend}`,
+          });
+          a = Math.max(-maxBend, Math.min(maxBend, a));
         }
+        values[jointParam] = a;
+        derived[jointParam] = a;
       }
     }
   }
 
-  // 6. Conserved quantities (volume, mass preservation) - future implementation
+  // 6. Conserved quantities. A conserved quantity is the PRODUCT of a set of
+  // params (a proxy for volume/mass under axis scaling). Config:
+  //  - `params` (array of names) whose product should equal `target` (default 1).
+  //  - `adjust` (optional name, must be in `params`): solved so the product hits
+  //    the target exactly (auto-preserve volume when other axes change).
+  //  - `tolerance` (default 0): relative deviation before a `warn` violation.
   if (rig.conserved) {
-    // Future: compute actual volume from SDF and check tolerance
-    // For now, just note that conservation is requested
     for (const [quantity, config] of Object.entries(rig.conserved)) {
-      if (config.warn) {
-        // Would add violation if volume changed beyond tolerance
+      const names = config.params || [];
+      if (names.length < 2) continue; // nothing to conserve
+      const target = config.target !== undefined ? config.target : 1;
+      const tol = config.tolerance !== undefined ? config.tolerance : 0;
+      if (config.adjust && names.includes(config.adjust)) {
+        let othersProduct = 1;
+        for (const n of names) if (n !== config.adjust) othersProduct *= (values[n] ?? 1);
+        if (othersProduct !== 0) {
+          const solved = target / othersProduct;
+          values[config.adjust] = solved;
+          derived[config.adjust] = solved;
+        }
+      } else {
+        let product = 1;
+        for (const n of names) product *= (values[n] ?? 1);
+        const dev = target !== 0 ? Math.abs(product - target) / Math.abs(target) : Math.abs(product);
+        if (config.warn && dev > tol) {
+          violations.push({
+            param: quantity, value: product, severity: 'warning',
+            reason: `conserved '${quantity}' = ${product.toFixed(4)} deviates ${(dev * 100).toFixed(1)}% from target ${target}`,
+          });
+        }
       }
     }
   }
