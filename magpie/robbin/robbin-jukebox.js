@@ -67,6 +67,42 @@ export class RobbinJukebox extends HTMLElement {
   emit(type, detail) {
     this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true }));
   }
+  /*
+    Browser autoplay rules: our whole UI fires on pointerDOWN, but
+    Safari and Chromium only honour audio.play() (and sometimes
+    AudioContext.resume()) from a gesture-COMPLETING event — pointerup,
+    click, keydown. Cold-started (no game audio unlocked yet), the
+    first play() is rejected and the deck would spin silently. So every
+    play remembers the intent and, on rejection or a suspended context,
+    arms a one-shot retry on the next pointerup/keydown — normally the
+    very same finger lifting off the button.
+  */
+  kickAudio() {
+    const ctx = this.game.foley.ctx;
+    const settle = () => {
+      if (this.wantPlaying && this.audio?.src && this.audio.paused) {
+        this.audio.play().catch(() => this.armRetry());
+      }
+    };
+    const p = ctx?.resume?.();
+    if (p?.then) p.then(settle, () => this.armRetry());
+    this.audio.play().then(undefined, () => this.armRetry());
+    if (ctx && ctx.state === 'suspended') this.armRetry();
+  }
+  armRetry() {
+    if (this.retryArmed || !this.wantPlaying) return;
+    this.retryArmed = true;
+    const kick = () => {
+      removeEventListener('pointerup', kick);
+      removeEventListener('keydown', kick);
+      this.retryArmed = false;
+      if (!this.wantPlaying || !this.audio?.src) return;
+      this.game.foley.ctx?.resume?.();
+      if (this.audio.paused) this.audio.play().catch(() => {});
+    };
+    addEventListener('pointerup', kick, { once: true });
+    addEventListener('keydown', kick, { once: true });
+  }
   /** a user-chosen track is actually sounding — the game's music yields */
   get engaged() { return !!this.audio && !!this.audio.src && !this.audio.paused; }
   get current() { return this.list[this.i]; }
@@ -91,9 +127,9 @@ export class RobbinJukebox extends HTMLElement {
     if (k < 0 || k >= this.list.length) return false;
     this.i = k;
     const tr = this.list[k];
-    this.game.foley.ctx?.resume?.();
     this.audio.src = tr.url;
-    this.audio.play().catch(() => {});
+    this.wantPlaying = true;
+    this.kickAudio();
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: tr.label, artist: 'ROBBIN · TUBULAR SMELLS', album: 'ROBBAMP',
@@ -105,13 +141,19 @@ export class RobbinJukebox extends HTMLElement {
   }
   togglePlay() {
     this.ensureAudio();
-    this.game.foley.ctx?.resume?.();
     if (!this.audio.src) return this.play(0);
-    this.audio.paused ? this.audio.play().catch(() => {}) : this.audio.pause();
+    if (this.audio.paused) {
+      this.wantPlaying = true;
+      this.kickAudio();
+    } else {
+      this.wantPlaying = false;
+      this.audio.pause();
+    }
   }
   /** full stop: the jukebox lets go of the stage entirely */
   stop() {
     if (!this.audio) return;
+    this.wantPlaying = false;
     this.audio.pause();
     try { this.audio.currentTime = 0; } catch { /* not seekable yet */ }
     this.emit('jukebox-state', { engaged: false });
