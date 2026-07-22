@@ -362,9 +362,21 @@ spectrogram laid down as sediment on ONE clay→bone lightness ramp —
 never a rainbow — with a fossil buried on every kick, scrolling into
 history), ROUNDABOUT (a radial spectrum in the network's line
 colours around a slowly turning skeleton bird, peak dots orbiting),
-and THE WIRE (the classic oscilloscope as an ink wire with eggs that
-hop on the kick and a wren pecking along). Reduced motion keeps the
-still dig. ESC folds fullscreen first, then buries the player.
+THE WIRE (the classic oscilloscope as an ink wire with eggs that
+hop on the kick and a wren pecking along), **GOLDFEATHER** (the Bond
+title sequence our story deserves: a rifled gun-barrel iris gliding
+across black with a strutting robin silhouette inside, gold quills
+orbiting, the red curtain falling on the big kick — Robbin will
+return), **ATTIC 1984** (the Jet Set Willy nod: tape-loading border
+stripes, red-brick towers that ARE the spectrum, colour-cycling
+treasures over the peak-holds, a palette-cycling guardian on patrol,
+and a blue tit hopping tower to tower on the kick), and **NIGHT
+TRAIN** (the whole journey 100×: parallax London silhouettes — domes,
+a clock tower keeping real time — rolling under treble-twinkled
+stars while a cut-paper train runs the viaduct, every carriage
+window lit by its own slice of the spectrum, steam on the kick, the
+flock flying the same line home). Reduced motion keeps the still
+dig. ESC folds fullscreen first, then buries the player.
 It has its own address too: **`#robbamp`** opens it from the URL,
 and **`#robbamp=<what>`** opens on a song — `<what>` is a track
 NUMBER as printed in the playlist (`#robbamp=3`), any name substring

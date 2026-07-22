@@ -5,9 +5,9 @@
 // the Soundtrack's bus so the master mute rules it like everything
 // else.
 //
-// FIVE visualizer looks, all in the game's own lino language — tap the
-// visuals to change, ⛶ for fullscreen (a fixed overlay, so it works on
-// iPhones where the Fullscreen API doesn't):
+// EIGHT visualizer looks, all in the game's own lino language — tap
+// the visuals to change, ⛶ for fullscreen (a fixed overlay, so it
+// works on iPhones where the Fullscreen API doesn't):
 //   THE DIG      the buried wonders breathing bass under a fence of
 //                bone bars with falling peak-hold knuckles
 //   MURMURATION  a flock of ink birds swirling boids-fashion; the
@@ -22,11 +22,21 @@
 //   THE WIRE     the classic oscilloscope as a wobbling ink wire with
 //                eggs riding it (they hop on the kick) and a wren
 //                pecking along at the end
+//   GOLDFEATHER  the Bond title sequence: a rifled gun-barrel iris, a
+//                strutting robin silhouette, orbiting quills, and the
+//                red curtain falling on the big kick
+//   ATTIC 1984   the Jet Set Willy nod: tape-loading border, brick
+//                towers that ARE the spectrum, colour-cycling
+//                treasures, a guardian on patrol, a bird hopping the
+//                platforms on the kick
+//   NIGHT TRAIN  the whole journey 100×: parallax London under the
+//                stars, a cut-paper train on the viaduct, every
+//                carriage window lit by its own slice of the spectrum
 //
 // Deep link: #robbamp opens the player; #robbamp=<track-slug> opens on
 // that song (the hash follows along as tracks change, so the URL in
 // the bar is always shareable).
-import { drawBird, drawBirdSkeleton } from './robbin-sprites.js';
+import { drawBird, drawBirdSkeleton, drawCommuter } from './robbin-sprites.js';
 import { TubeFlock } from './robbin-tube.js';
 import { NETWORK } from './tube-network.js';
 import { RobbinJukebox } from './robbin-jukebox.js';
@@ -96,8 +106,9 @@ export class RobbAmp {
     this.seeking = false;
     this.full = false;
     this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.MODES = ['THE DIG', 'MURMURATION', 'STRATA CORE', 'ROUNDABOUT', 'THE WIRE'];
-    this.mode = Math.min(4, +(localStorage.getItem('robbin.ampviz') || 0));
+    this.MODES = ['THE DIG', 'MURMURATION', 'STRATA CORE', 'ROUNDABOUT', 'THE WIRE',
+      'GOLDFEATHER', 'ATTIC 1984', 'NIGHT TRAIN'];
+    this.mode = Math.min(this.MODES.length - 1, +(localStorage.getItem('robbin.ampviz') || 0));
     this.modeFlash = 3;
     this.hold = [];
     this.lastBass = 0;
@@ -298,7 +309,10 @@ export class RobbAmp {
     else if (mode === 1) this.vMurmuration(ctx, W2, H2, au);
     else if (mode === 2) this.vStrata(ctx, W2, H2, au);
     else if (mode === 3) this.vRoundabout(ctx, W2, H2, au);
-    else this.vWire(ctx, W2, H2, au);
+    else if (mode === 4) this.vWire(ctx, W2, H2, au);
+    else if (mode === 5) this.vGoldfeather(ctx, W2, H2, au);
+    else if (mode === 6) this.vAttic(ctx, W2, H2, au);
+    else this.vNightTrain(ctx, W2, H2, au);
     if (this.modeFlash > 0) {
       this.modeFlash -= 1 / 60;
       ctx.save();
@@ -603,5 +617,297 @@ export class RobbAmp {
       x: bx, y: wy(bx) - 2, size: 34, facing: 1, phase: t * 5,
       pose: bass > 0.42 && !this.reduced ? 'peck' : 'stand',
     });
+  }
+/*
+    A shape drawn by the game's own sprite code, refilled as a flat
+    silhouette — how Bond titles and Spectrum guardians both want their
+    figures. One shared offscreen; draw, tint, blit.
+  */
+  silhouette(draw, colour, size = 200) {
+    const S = this._sil ??= document.createElement('canvas');
+    if (S.width !== size) { S.width = size; S.height = size; }
+    const sc = S.getContext('2d');
+    sc.setTransform(1, 0, 0, 1, 0, 0);
+    sc.clearRect(0, 0, size, size);
+    draw(sc, size);
+    sc.globalCompositeOperation = 'source-in';
+    sc.fillStyle = colour;
+    sc.fillRect(0, 0, size, size);
+    sc.globalCompositeOperation = 'source-over';
+    return S;
+  }
+  // GOLDFEATHER — the Bond title sequence our story deserves: rifled
+  // gun-barrel iris gliding across black, a robin strutting inside it,
+  // gold quills orbiting, and on the big kick the red curtain descends.
+  // Robbin will return.
+  vGoldfeather(ctx, W2, H2, au) {
+    const { bass, mids, treble, kick, t } = au;
+    ctx.fillStyle = '#0b0a08';
+    ctx.fillRect(0, 0, W2, H2);
+    // orbiting quills: gold feather strokes on lissajous paths
+    for (let i = 0; i < 12; i++) {
+      const a = t * (0.4 + (i % 3) * 0.13) + i * 1.7;
+      const qx = W2 / 2 + Math.sin(a) * W2 * 0.42;
+      const qy = H2 / 2 + Math.sin(a * 1.7 + i) * H2 * 0.4;
+      const qr = a * 1.3;
+      const ql = 14 + treble * 26 + (i % 4) * 4;
+      ctx.save();
+      ctx.translate(qx, qy);
+      ctx.rotate(qr);
+      ctx.strokeStyle = 'rgba(185,138,46,0.75)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-ql, 0); ctx.lineTo(ql, 0); ctx.stroke();
+      ctx.lineWidth = 1.2;
+      for (let b = -ql + 3; b < ql - 2; b += 4) {
+        const bl = 5 * (1 - Math.abs(b) / ql);
+        ctx.beginPath();
+        ctx.moveTo(b, 0); ctx.lineTo(b - 3, -bl);
+        ctx.moveTo(b, 0); ctx.lineTo(b - 3, bl);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    // the barrel glides; its rifling turns with the mids
+    const bx = W2 / 2 + Math.sin(t * 0.35) * W2 * 0.28;
+    const by = H2 * 0.5, R = Math.min(W2, H2) * 0.34 * (1 + bass * 0.06);
+    ctx.save();
+    ctx.translate(bx, by);
+    ctx.fillStyle = '#f2ecdd';
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
+    ctx.rotate(t * (0.3 + mids * 1.6));
+    ctx.strokeStyle = '#0b0a08';
+    for (let r = R * 0.42; r < R; r += R * 0.12) {   // rifling grooves
+      ctx.lineWidth = R * 0.045;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+    }
+    for (let i = 0; i < 9; i++) {                     // the spiral lands
+      const a = (i / 9) * Math.PI * 2;
+      ctx.lineWidth = R * 0.05;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * R * 0.42, Math.sin(a) * R * 0.42);
+      ctx.lineTo(Math.cos(a + 0.5) * R, Math.sin(a + 0.5) * R);
+      ctx.stroke();
+    }
+    ctx.rotate(-t * (0.3 + mids * 1.6));
+    // gold iris, and the bird who walked into the wrong title sequence
+    ctx.fillStyle = '#b98a2e';
+    ctx.beginPath(); ctx.arc(0, 0, R * 0.36, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, R * 0.36, 0, Math.PI * 2); ctx.clip();
+    const walk = this.silhouette(sc =>
+      drawBird(sc, 'robin', { x: 100, y: 138, size: 96, facing: -1, phase: t * 9, pose: 'walk' }),
+      '#0b0a08');
+    const bw = R * 0.66;
+    ctx.drawImage(walk, -bw / 2, -bw * 0.62, bw, bw);
+    ctx.restore();
+    // the blood curtain: a kick starts it, and it always falls to the floor
+    if (kick) this.blood = Math.max(this.blood || 0, 0.001);
+    if (this.blood) {
+      this.blood = Math.min(1, this.blood + 0.03);
+      ctx.fillStyle = `rgba(217,67,39,${0.82 - this.blood * 0.3})`;
+      ctx.fillRect(0, 0, W2, H2 * this.blood);
+      if (this.blood >= 1 && bass < 0.3) this.blood = 0;   // lights up for the verse
+    }
+    // spectrum: a thin gold halo of arcs around the barrel
+    for (let i = 0; i < 36; i++) {
+      const v = this.bins[4 + Math.floor((i / 36) * 300)] / 255;
+      const a = (i / 36) * Math.PI * 2 - Math.PI / 2;
+      ctx.strokeStyle = `rgba(216,200,164,${0.25 + v * 0.7})`;
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(bx + Math.cos(a) * (R + 6), by + Math.sin(a) * (R + 6));
+      ctx.lineTo(bx + Math.cos(a) * (R + 6 + v * 22), by + Math.sin(a) * (R + 6 + v * 22));
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(216,200,164,0.5)';
+    ctx.font = `italic ${Math.max(11, H2 * 0.055)}px Georgia, serif`;
+    ctx.textAlign = 'right';
+    ctx.fillText('ROBBIN WILL RETURN', W2 - 10, H2 - 10);
+    ctx.textAlign = 'left';
+  }
+  // ATTIC 1984 — the Jet Set Willy nod: tape-loading border, brick
+  // towers that ARE the spectrum, colour-cycling treasures, a guardian
+  // on patrol, and our bird hopping the platforms on the kick
+  vAttic(ctx, W2, H2, au) {
+    const { mids, kick, t } = au;
+    const ZX = ['#01FFFF', '#FF01FF', '#FFFF01', '#01FF01', '#FF6B6B', '#7B7BFF', '#FFFFFF'];
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W2, H2);
+    // the loading border, forever loading
+    const BW = Math.max(6, H2 * 0.045);
+    const stripePhase = (t * (60 + mids * 260));
+    for (const [x0, y0, w, h, vert] of [
+      [0, 0, W2, BW, false], [0, H2 - BW, W2, BW, false],
+      [0, 0, BW, H2, true], [W2 - BW, 0, BW, H2, true],
+    ]) {
+      for (let k2 = 0; k2 < (vert ? h : w); k2 += 5) {
+        ctx.fillStyle = Math.floor((k2 + stripePhase) / 5) % 2 ? '#D70000' : '#01D7D7';
+        if (vert) ctx.fillRect(x0, y0 + k2, w, 5);
+        else ctx.fillRect(x0 + k2, y0, 5, h);
+      }
+    }
+    // brick towers: the spectrum as Manic Miner masonry with peak-holds
+    const N = 11, span = W2 - BW * 2, bw = span / N;
+    if (!this.atticHold || this.atticHold.length !== N) this.atticHold = new Array(N).fill(0);
+    const floors = [];
+    for (let i = 0; i < N; i++) {
+      const v = this.bins[4 + Math.floor((i / N) * 260)] / 255;
+      const h = 8 + v * (H2 * 0.52);
+      this.atticHold[i] = Math.max(this.atticHold[i] - H2 * 0.004, h);
+      const x = BW + i * bw, y = H2 - BW - h;
+      floors.push({ cx: x + bw / 2, y });
+      ctx.fillStyle = '#B22222';
+      ctx.fillRect(x + 1, y, bw - 2, h);
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      for (let yy = y; yy < H2 - BW; yy += 6) {       // mortar courses
+        ctx.beginPath(); ctx.moveTo(x + 1, yy); ctx.lineTo(x + bw - 1, yy); ctx.stroke();
+        const off = ((yy - y) / 6) % 2 ? bw * 0.25 : bw * 0.6;
+        ctx.beginPath(); ctx.moveTo(x + off, yy); ctx.lineTo(x + off, yy + 6); ctx.stroke();
+      }
+      // the treasure twinkles JSW-style above the peak-hold
+      const ty = H2 - BW - this.atticHold[i] - 12;
+      ctx.fillStyle = ZX[Math.floor(t * 12 + i) % ZX.length];
+      ctx.save();
+      ctx.translate(BW + i * bw + bw / 2, ty);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillRect(-4, -4, 8, 8);
+      ctx.restore();
+    }
+    // the guardian walks its eternal patrol, cycling through the palette
+    const gx = W2 / 2 + Math.sin(t * 0.9) * (W2 / 2 - BW - 30);
+    const guard = this.silhouette(sc =>
+      drawCommuter(sc, { x: 100, y: 150, size: 92, facing: Math.cos(t * 0.9) > 0 ? 1 : -1, phase: t * 8, pose: 'walk', variant: 2 }),
+      ZX[Math.floor(t * 6) % ZX.length]);
+    ctx.drawImage(guard, gx - 34, H2 * 0.18, 68, 68);
+    // our bird hops tower to tower on the kick — collecting as it goes
+    if (this.atticBird == null) this.atticBird = { i: 0, x: floors[0].cx, y: floors[0].y, hop: 0 };
+    const ab = this.atticBird;
+    if (kick && ab.hop <= 0) { ab.from = ab.i; ab.i = (ab.i + 1) % N; ab.hop = 1; }
+    if (ab.hop > 0) {
+      ab.hop = Math.max(0, ab.hop - 0.07);
+      const u = 1 - ab.hop;
+      const fx = floors[ab.from ?? 0], fx2 = floors[ab.i];
+      ab.x = fx.cx + (fx2.cx - fx.cx) * u;
+      ab.y = Math.min(fx.y, fx2.y) - Math.sin(u * Math.PI) * 34
+        + (u > 0.5 ? (fx2.y - Math.min(fx.y, fx2.y)) * (u - 0.5) * 2 : 0);
+    } else {
+      ab.x = floors[ab.i].cx; ab.y = floors[ab.i].y;
+    }
+    drawBird(ctx, 'bluetit', { x: ab.x, y: ab.y, size: 28, facing: 1, phase: t * 10, pose: ab.hop > 0 ? 'airup' : 'stand' });
+  }
+  // NIGHT TRAIN — the whole journey 100×: parallax London rolling by
+  // under the stars while a cut-paper train runs the viaduct, every
+  // carriage window lit by its own slice of the spectrum
+  vNightTrain(ctx, W2, H2, au) {
+    const { bass, mids, treble, kick, t } = au;
+    this.trainOff = (this.trainOff || 0) + (0.4 + mids * 2.6);
+    ctx.fillStyle = '#14120e';
+    ctx.fillRect(0, 0, W2, H2);
+    // stars twinkle with the treble; the moon is paper
+    for (let i = 0; i < 26; i++) {
+      const sx2 = ((i * 149 + 31) % W2), sy = ((i * 83 + 11) % Math.round(H2 * 0.5));
+      const tw = 0.25 + 0.6 * Math.abs(Math.sin(t * (1 + (i % 5) * 0.6) + i)) * (0.4 + treble);
+      ctx.fillStyle = `rgba(242,236,221,${Math.min(0.9, tw)})`;
+      ctx.fillRect(sx2, sy, 2, 2);
+    }
+    ctx.fillStyle = 'rgba(242,236,221,0.85)';
+    ctx.beginPath(); ctx.arc(W2 * 0.78, H2 * 0.2, H2 * 0.1, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#14120e';
+    ctx.beginPath(); ctx.arc(W2 * 0.81, H2 * 0.185, H2 * 0.085, 0, Math.PI * 2); ctx.fill();
+    // two skylines in parallax — domes and towers of the whole journey
+    const skyline = (speed, base, colour, seedMul) => {
+      ctx.fillStyle = colour;
+      const off = this.trainOff * speed;
+      const seg = 46;
+      for (let x = -seg; x < W2 + seg; x += seg) {
+        const idx = Math.floor((x + off) / seg);
+        const r = ((idx * 2654435761 * seedMul) >>> 8) % 100;
+        const h = 18 + (r % 55);
+        const bx = x - (off % seg);
+        if (idx % 13 === 0) {              // a dome on the skyline
+          ctx.beginPath();
+          ctx.arc(bx + seg / 2, base - h * 0.7, seg * 0.42, Math.PI, 0);
+          ctx.rect(bx + seg * 0.08, base - h * 0.7, seg * 0.84, h * 0.7);
+          ctx.fill();
+        } else if (idx % 19 === 0) {       // a clock tower keeps its own time
+          ctx.fillRect(bx + seg * 0.3, base - h - 26, seg * 0.4, h + 26);
+          ctx.fillStyle = '#e9d8a6';
+          ctx.beginPath(); ctx.arc(bx + seg / 2, base - h - 16, 6, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = colour; ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(bx + seg / 2, base - h - 16);
+          ctx.lineTo(bx + seg / 2 + Math.cos(t) * 4, base - h - 16 + Math.sin(t) * 4);
+          ctx.stroke();
+          ctx.fillStyle = colour;
+        } else {
+          ctx.fillRect(bx, base - h, seg - 3, h);
+        }
+      }
+    };
+    skyline(0.35, H2 * 0.62, '#241f19', 1);
+    skyline(0.7, H2 * 0.74, '#2f2820', 7);
+    // the viaduct the night train runs on
+    const vy = H2 * 0.86;
+    ctx.fillStyle = '#3a2f24';
+    ctx.fillRect(0, vy, W2, H2 - vy);
+    ctx.fillStyle = '#14120e';
+    const aoff = this.trainOff % 44;
+    for (let x = -44; x < W2 + 44; x += 44) {
+      ctx.beginPath();
+      ctx.arc(x - aoff + 22, H2 + 2, 16, Math.PI, 0);
+      ctx.fill();
+    }
+    // the train itself: engine + three carriages, windows ARE the bands
+    const ty = vy - 20 + Math.sin(t * 7) * bass * 2.5;
+    const cars = 3, cw = Math.min(96, W2 / 4.6), gap = 7;
+    const trainX = W2 * 0.5 - ((cars + 1) * (cw + gap)) / 2;
+    for (let c = 0; c <= cars; c++) {
+      const x = trainX + c * (cw + gap);
+      ctx.fillStyle = c === cars ? '#4f4a76' : '#5a3d33';
+      ctx.beginPath(); ctx.roundRect(x, ty - 22, cw, 24, 4); ctx.fill();
+      ctx.strokeStyle = '#0e0c09'; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.roundRect(x, ty - 22, cw, 24, 4); ctx.stroke();
+      if (c === cars) {                     // the engine leads: stack, lamp, steam
+        ctx.fillStyle = '#26221e';
+        ctx.fillRect(x + cw - 16, ty - 34, 9, 12);
+        ctx.fillStyle = 'rgba(233,196,106,0.9)';
+        ctx.beginPath(); ctx.arc(x + cw + 2, ty - 10, 3.4, 0, Math.PI * 2); ctx.fill();
+        if (kick) {
+          this.steam = this.steam || [];
+          this.steam.push({ x: x + cw - 11, y: ty - 36, vx: -0.6 - Math.random(), vy: -1.4, a: 0.8 });
+        }
+      } else {                              // carriage windows lit by the spectrum
+        const wins = 5;
+        for (let w3 = 0; w3 < wins; w3++) {
+          const bin = 6 + (c * wins + w3) * 18;
+          const v = this.bins[Math.min(bin, this.bins.length - 1)] / 255;
+          ctx.fillStyle = `rgba(233,196,106,${0.12 + v * 0.85})`;
+          ctx.fillRect(x + 5 + w3 * ((cw - 10) / wins), ty - 17, (cw - 10) / wins - 3, 10);
+        }
+      }
+      for (const wx of [x + 12, x + cw - 12]) {   // wheels, spokes turning
+        ctx.strokeStyle = '#d8c8a4'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(wx, ty + 4, 6, 0, Math.PI * 2); ctx.stroke();
+        const wa = -this.trainOff * 0.12 + wx;
+        ctx.beginPath();
+        ctx.moveTo(wx - Math.cos(wa) * 6, ty + 4 - Math.sin(wa) * 6);
+        ctx.lineTo(wx + Math.cos(wa) * 6, ty + 4 + Math.sin(wa) * 6);
+        ctx.stroke();
+      }
+    }
+    (this.steam || []).forEach(p2 => {
+      p2.x += p2.vx; p2.y += p2.vy; p2.a -= 0.015;
+      ctx.fillStyle = `rgba(242,236,221,${Math.max(0, p2.a)})`;
+      ctx.beginPath(); ctx.arc(p2.x, p2.y, 4 + (0.8 - p2.a) * 6, 0, Math.PI * 2); ctx.fill();
+    });
+    this.steam = (this.steam || []).filter(p2 => p2.a > 0).slice(-24);
+    // and above it all, the flock flies the same line home
+    for (let k2 = 0; k2 < 4; k2++) {
+      drawBird(ctx, ['robin', 'bluetit', 'wren', 'blackbird'][k2], {
+        x: (W2 * 0.2 + k2 * 40 + this.trainOff * 0.9) % (W2 + 60) - 30,
+        y: H2 * (0.3 + (k2 % 2) * 0.08) + Math.sin(t * 3 + k2) * 6,
+        size: 22, facing: 1, phase: t * 12 + k2, pose: 'airup',
+      });
+    }
   }
 }
