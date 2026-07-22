@@ -322,11 +322,22 @@ Separate hi-score.
   heading changes and pad taps tick; station entries, boardings and
   deaths thud; reunions and the finale play a little chord; the
   glitch-grab buzzes. Standard Vibration API where it exists
-  (Android); on iOS — which has no vibration API — a hidden switch
-  control provides the system tick from iOS 18. HAPTICS ON/OFF on the
-  title screen (shown only on capable devices), default off under
-  `prefers-reduced-motion`, and every haptic moment also has audio
-  and visuals.
+  (Android); on iOS — which has no vibration API — a rendered-but-
+  imperceptible `switch` checkbox provides the system tick from
+  Safari 18 (created at boot, never sr-only-clipped: WebKit stays
+  silent for both). Device detection keys off Apple + touchscreen,
+  because modern iPads claim to be "Macintosh" with no Mobile token
+  — the original detection missed them entirely, which is why
+  haptics "never worked" for a long while. Honest limits: WebKit
+  only grants the tick during a real user gesture, so input-time
+  buzzes (taps, swipes, GO) work on iOS but event-time ones
+  (rescues mid-flight) stay silent there; and in-app browsers
+  (WKWebView — e.g. links opened inside chat apps) provide no
+  haptics at all — open the game in Safari proper. HAPTICS ON/OFF
+  on the title screen (shown only on capable devices; toggling ON
+  fires a confirmation tick you should FEEL — if you don't, your
+  browser can't), default off under `prefers-reduced-motion`, and
+  every haptic moment also has audio and visuals.
 - The credits keep a visually-hidden text list behind the canvas
   roll; touch targets are ≥44px; colour is never the only signal
   (lift letters, crossed boxes, text labels throughout).

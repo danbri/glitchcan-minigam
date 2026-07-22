@@ -192,32 +192,52 @@ class Foley {
 class Haptics {
   constructor() {
     this.vib = typeof navigator !== 'undefined' && 'vibrate' in navigator;
-    this.ios = !this.vib && /iP(hone|ad|od)|Macintosh.*Mobile/.test(navigator.userAgent || '');
+    // Apple never shipped navigator.vibrate; the checkbox-switch haptic
+    // needs Safari 18+. Detect "Apple thing with a touchscreen" broadly:
+    // iPhones say iPhone, but modern iPads say Macintosh with NO Mobile
+    // token — key off touch points, not user-agent folklore. (This was
+    // the original sin: iPads never qualified, so the button never even
+    // appeared and every buzz was a silent no-op.)
+    const ua = navigator.userAgent || '';
+    const appleTouch = /iP(hone|ad|od)/.test(ua)
+      || (/Mac/.test(navigator.platform || '') && (navigator.maxTouchPoints || 0) > 1);
+    this.ios = !this.vib && appleTouch;
     const saved = localStorage.getItem('robbin.haptics');
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.enabled = saved !== null ? saved === '1' : !reduced;
     this.switchEl = null;
+    this.fired = 0;              // diagnostics: how many buzzes we asked for
+    // the switch must exist and be LAID OUT well before the first tap —
+    // conjuring it mid-gesture is one of the ways WebKit stays silent
+    if (this.ios) this.ensureSwitch();
   }
   get available() { return this.vib || this.ios; }
   ensureSwitch() {
     if (this.switchEl || !this.ios) return;
-    const label = document.createElement('label');
-    label.setAttribute('aria-hidden', 'true');
-    label.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);';
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.setAttribute('switch', '');
-    input.tabIndex = -1;
-    label.appendChild(input);
-    document.body.appendChild(label);
-    this.switchEl = input;
+    const attach = () => {
+      if (this.switchEl) return;
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.setAttribute('switch', '');
+      input.tabIndex = -1;
+      input.setAttribute('aria-hidden', 'true');
+      // rendered-but-imperceptible: sr-only clipping (the old way) is
+      // another way WebKit decides no haptic is deserved
+      input.style.cssText = 'position:fixed;left:2px;bottom:2px;width:24px;height:16px;'
+        + 'opacity:0.02;pointer-events:none;border:0;margin:0;';
+      document.body.appendChild(input);
+      this.switchEl = input;
+    };
+    if (document.body) attach();
+    else addEventListener('DOMContentLoaded', attach, { once: true });
   }
   fire(pattern) {
     if (!this.enabled) return;
+    this.fired++;
     if (this.vib) { try { navigator.vibrate(pattern); } catch { /* shrug */ } }
     else if (this.ios) {
       this.ensureSwitch();
-      try { this.switchEl.click(); } catch { /* shrug */ }
+      try { this.switchEl?.click(); } catch { /* shrug */ }
     }
   }
   tick()  { this.fire(10); }                 // accepted tap / heading change
