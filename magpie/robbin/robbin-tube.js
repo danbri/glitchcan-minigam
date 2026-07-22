@@ -351,9 +351,17 @@ function genStation(name) {
     bystanders.push([freeCol(fr), fr, rnd(20)]);
   }
   helps.push([freeCol(bottom), bottom]);
-  const guides = shaftDefs.map((sd, i) => [Math.max(2, Math.min(17, sd.c + (i ? 3 : -3))), sd.stops[sd.stops.length - 1]]);
+  // Lift guides and notice boards live on circulation floors, never on
+  // platforms — a board over a waiting train helps nobody
+  const platRows = plats.map(p => p.row);
+  const guides = shaftDefs.map((sd, i) => {
+    const rows = sd.stops.filter(r => !platRows.includes(r));
+    const row = rows.length ? rows[rows.length - 1] : sd.stops[0];
+    return [Math.max(2, Math.min(17, sd.c + (i ? 3 : -3))), row];
+  });
   if (!guides.length) guides.push([freeCol(floors[Math.min(1, floors.length - 1)]), floors[Math.min(1, floors.length - 1)]]);
-  const board = [freeCol(bottom), bottom];
+  const boardRow = [...floors].reverse().find(r => !platRows.includes(r)) ?? floors[0];
+  const board = [freeCol(boardRow), boardRow];
   const commuters = [];
   for (let i = 0, n = 2 + (floors.length > 2 ? 1 : 0); i < n; i++) {
     commuters.push({ t: 'commuter', c: 2 + rnd(16), floor: floors[rnd(floors.length)], d: rnd(2) ? 1 : -1, v: rnd(20) });
@@ -1977,12 +1985,16 @@ export class TubeFlock {
       }
       ctx.restore();
     }
-    for (const b of it.buddies) {
-      drawBird(ctx, b.sp, {
-        x: b.x, y: b.y, size: BIRD_PX[b.sp] || 32,
-        facing: (b.vx || 0) < -8 ? -1 : 1, phase: t * 14 + b.ph,
-        pose: Math.abs(b.vy || 0) > 30 ? ((b.vy || 0) < 0 ? 'airup' : 'airdown') : 'flit',
-      });
+    // buddies fly feathered — unless the flock is in the lift, where
+    // everyone is bones behind the glass instead
+    if (!it.playerCar) {
+      for (const b of it.buddies) {
+        drawBird(ctx, b.sp, {
+          x: b.x, y: b.y, size: BIRD_PX[b.sp] || 32,
+          facing: (b.vx || 0) < -8 ? -1 : 1, phase: t * 14 + b.ph,
+          pose: Math.abs(b.vy || 0) > 30 ? ((b.vy || 0) < 0 ? 'airup' : 'airdown') : 'flit',
+        });
+      }
     }
     if (it.rescue && !it.rescue.found) {
       const r = it.rescue;
@@ -2486,21 +2498,27 @@ export class TubeFlock {
       const w2 = (sh.x1 - sh.x0) - 10;
       const hh = 46;
       const cy = car.y;
-      // the box (dead cars park dark)
-      ctx.fillStyle = sh.out ? '#413c34' : '#efe9d8';
+      // the box: dark scanner glass — the x-ray view is the point
+      ctx.fillStyle = sh.out ? '#241f1c' : '#2c333d';
       ctx.strokeStyle = sh.color || PALETTE.ink;
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.roundRect(cx - w2 / 2, cy - hh, w2, hh, 3); ctx.fill(); ctx.stroke();
-      // who's aboard, X-ray style
+      // who's aboard, X-ray style — the whole flock rides together
       if (!sh.out) {
+        ctx.save();
+        ctx.beginPath(); ctx.roundRect(cx - w2 / 2 + 1, cy - hh + 1, w2 - 2, hh - 2, 3); ctx.clip();
         const seats = [];
-        if (it.playerCar === sh) seats.push({ bird: true });
+        if (it.playerCar === sh) {
+          seats.push({ bird: true, s: 1 });
+          it.buddies.slice(0, 5).forEach((b, i) => seats.push({ bird: true, s: 0.62, dy: -14 - (i % 2) * 9 }));
+        }
         for (const oc of car.occupants) seats.push({ aid: oc.aid });
         seats.forEach((s, i) => {
-          const px = cx + (i - (seats.length - 1) / 2) * 15;
-          if (s.bird) drawBirdSkeleton(ctx, px, cy - 10, t);
+          const px = cx + (i - (seats.length - 1) / 2) * (seats.length > 3 ? 9 : 14);
+          if (s.bird) drawBirdSkeleton(ctx, px, cy - 8 + (s.dy || 0), t + i, s.s || 1);
           else drawCommuterSkeleton(ctx, px, cy - 2, s.aid, t);
         });
+        ctx.restore();
       }
       // sliding doors at each landing (+ an amber call light)
       sh.stops.forEach((row, ri) => {

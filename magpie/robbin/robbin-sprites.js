@@ -584,10 +584,12 @@ export function drawCommuter(ctx, { x, y, size = 48, facing = 1, phase = 0, pose
 // ---------------------------------------------------- X-ray passengers
 // Glowing bones behind the lift glass: you always know who's aboard.
 function boneStyle(ctx) {
-  ctx.strokeStyle = 'rgba(196,255,210,0.95)';
-  ctx.fillStyle = 'rgba(196,255,210,0.95)';
-  ctx.shadowColor = 'rgba(140,255,170,0.9)';
-  ctx.shadowBlur = 7;
+  // x-ray, not radioactive: pale ivory-blue bones with a soft cool glow,
+  // meant to sit behind dark scanner glass
+  ctx.strokeStyle = 'rgba(230,242,255,0.95)';
+  ctx.fillStyle = 'rgba(230,242,255,0.95)';
+  ctx.shadowColor = 'rgba(150,195,255,0.75)';
+  ctx.shadowBlur = 5;
   ctx.lineWidth = 1.6;
   ctx.lineCap = 'round';
 }
@@ -615,9 +617,10 @@ export function drawCommuterSkeleton(ctx, x, y, aid = null, t = 0) {
   }
   ctx.restore();
 }
-export function drawBirdSkeleton(ctx, x, y, t = 0) {
+export function drawBirdSkeleton(ctx, x, y, t = 0, scale = 1) {
   ctx.save();
-  ctx.translate(x, y + Math.sin(t * 3) * 1);
+  ctx.translate(x, y + Math.sin(t * 3 + x) * 1);
+  ctx.scale(scale, scale);
   boneStyle(ctx);
   ctx.beginPath(); ctx.arc(5, -10, 3, 0, Math.PI * 2); ctx.stroke();       // skull
   ctx.beginPath(); ctx.moveTo(8, -10); ctx.lineTo(11.5, -9); ctx.stroke(); // beak
