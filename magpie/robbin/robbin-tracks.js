@@ -29,6 +29,7 @@ export const TRACKS = {
     "generic/aching-evocative-space-waltz.mp3",
     "generic/gears-and-birdcalls.mp3",
     "generic/hypnotic-sleepy-loops.mp3",
+    "generic/the-alchemists-ball.mp3",
     "generic/the-stone-ostinato.mp3",
     "generic/the-weight-of-motion.mp3"
   ]
