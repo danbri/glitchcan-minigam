@@ -15,13 +15,15 @@ export const TRACKS = {
     "LEICESTER SQUARE": "per-station/leicester-square-subjunction-fn.mp3",
     "LONDON BRIDGE": "per-station/london-bridge-gogogo-remastered.mp3",
     MOORGATE: "per-station/moorgate-backlot-2.mp3",
+    "NORTH GREENWICH": "per-station/north-greenwich-paper-plane.mp3",
     PADDINGTON: "per-station/paddington-night-mail-remastered.mp3",
     "PICCADILLY CIRCUS": "per-station/piccadilly-circus-wiggly-wiggle-remastered.mp3",
     "SOUTH KENSINGTON": "per-station/south-kensington-muntelo-remastered.mp3",
     "ST PAUL'S": "per-station/st-pauls-gregorians.mp3",
     STRATFORD: "per-station/stratford-candied-waters-remastered.mp3",
     TEMPLE: "per-station/temple-claudes-lament-redux-guest-vocal.mp3",
-    WESTMINSTER: "per-station/westminster-spring.mp3"
+    WESTMINSTER: "per-station/westminster-spring.mp3",
+    WHITECHAPEL: "per-station/whitechapel-candy-code-waiting.mp3"
   },
   generic: [
     "generic/aching-evocative-space-waltz.mp3",
