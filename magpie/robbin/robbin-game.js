@@ -1185,17 +1185,17 @@ class Game {
     document.getElementById('play3d')?.addEventListener('pointerdown', e => {
       e.stopPropagation(); location.href = 'robbin3d.html';
     });
-    // CUSTOM AUDIO: song-stations light up on the map and tap to play
+    // ♪ MAP JUKEBOX: song-stations light up on the map and tap to play
     const cab = document.getElementById('custaudio');
-    if (cab) cab.textContent = `CUSTOM AUDIO: ${this.showCustomAudio ? 'ON' : 'OFF'}`;
+    if (cab) cab.textContent = `♪ MAP JUKEBOX: ${this.showCustomAudio ? 'ON' : 'OFF'}`;
     cab?.addEventListener('pointerdown', e => {
       e.stopPropagation();
       this.showCustomAudio = !this.showCustomAudio;
       localStorage.setItem('robbin.custaudio', this.showCustomAudio ? 'on' : 'off');
-      cab.textContent = `CUSTOM AUDIO: ${this.showCustomAudio ? 'ON' : 'OFF'}`;
+      cab.textContent = `♪ MAP JUKEBOX: ${this.showCustomAudio ? 'ON' : 'OFF'}`;
       this.say(this.showCustomAudio
-        ? 'Custom audio on. Stations with their own song glow gold on the map — tap one to play it, then fly on with the music.'
-        : 'Custom audio off.');
+        ? 'Map jukebox on. Stations with their own song glow gold on the map — tap one to play it, then fly on with the music.'
+        : 'Map jukebox off.');
     });
     // 🐣 the curious egg: a little buried jukebox
     document.getElementById('egg')?.addEventListener('pointerdown', e => {

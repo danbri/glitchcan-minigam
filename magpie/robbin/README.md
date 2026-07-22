@@ -422,7 +422,7 @@ LCD/playlist/visualizer read out; the game's music brain yields the
 stage whenever the jukebox is ENGAGED and takes it back on the state
 event. So **closing the player keeps the song playing — walk back
 into the game with your track on**; only ⏹ (or ⏸) hands the music
-back to the scene. And with **CUSTOM AUDIO: ON** (⚙ SETTINGS),
+back to the scene. And with **♪ MAP JUKEBOX: ON** (⚙ SETTINGS),
 stations that own a song wear a tappable **gold record ♪** on the
 map — tap one to play it in ROBBAMP, close, fly on.
 **MIDI is a live, parameterized performance**: `tools/analyze-tracks.mjs` listened to the three
