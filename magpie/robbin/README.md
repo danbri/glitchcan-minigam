@@ -366,8 +366,10 @@ and THE WIRE (the classic oscilloscope as an ink wire with eggs that
 hop on the kick and a wren pecking along). Reduced motion keeps the
 still dig. ESC folds fullscreen first, then buries the player.
 It has its own address too: **`#robbamp`** opens it from the URL,
-**`#robbamp=<track-slug>`** opens on that song, and the hash follows
-the playing track so the bar is always shareable.
+and **`#robbamp=<what>`** opens on a song — `<what>` is a track
+NUMBER as printed in the playlist (`#robbamp=3`), any name substring
+(`#robbamp=gregorian`), or the exact slug. The hash follows the
+playing track as the full slug, so the bar is always shareable.
 **MIDI is a live, parameterized performance**: `tools/analyze-tracks.mjs` listened to the three
 recordings with WebAudio (onset autocorrelation for tempo, per-bar
 chroma vs triad templates for harmony, chroma self-similarity for

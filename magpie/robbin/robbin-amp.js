@@ -214,7 +214,22 @@ export class RobbAmp {
   }
   isOpen() { return this.open_; }
   toggle() { this.open_ ? this.close() : this.open(); }
-  open(slug) {
+  // #robbamp=<what> takes a track NUMBER (1-based, as printed in the
+  // playlist), an exact slug, or any name substring — "#robbamp=3",
+  // "#robbamp=gregorian" and "#robbamp=st-pauls-gregorians" all land
+  // on the same song. The hash we WRITE stays the full slug.
+  findTrack(q) {
+    if (!q) return -1;
+    const n = Number(q);
+    if (Number.isInteger(n) && n >= 1 && n <= this.list.length) return n - 1;
+    let k = this.list.findIndex(tr => tr.slug === q);
+    if (k >= 0) return k;
+    const squash = s => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const needle = squash(q);
+    if (!needle) return -1;
+    return this.list.findIndex(tr => squash(`${tr.slug} ${tr.label}`).includes(needle));
+  }
+  open(query) {
     this.build();
     this.ensureAudio();
     this.open_ = true;
@@ -224,7 +239,7 @@ export class RobbAmp {
     this.g.soundtrack?.stop(0.8);
     this.g.midiScore?.stop(0.8);
     this.g.foley.ctx?.resume?.();
-    const want = slug ? this.list.findIndex(tr => tr.slug === slug) : -1;
+    const want = this.findTrack(query);
     if (want >= 0) this.playAt(want);
     else if (!this.audio.src) this.playAt(0);
     else { this.audio.play().catch(() => {}); this.setHash(); }
