@@ -8,13 +8,16 @@
 // (GEARS AND BIRDCALLS lives here too — it is not special).
 export const TRACKS = {
   perStation: {
+    "CAMDEN TOWN": "per-station/camden-town-canary-2.mp3",
     "CANARY WHARF": "per-station/canary-wharf-whisper-choir-remastered-x2.mp3",
     "GLOUCESTER ROAD": "per-station/gloucester-road-americana-d-remastered.mp3",
     "LEICESTER SQUARE": "per-station/leicester-square-subjunction-fn.mp3",
     "LONDON BRIDGE": "per-station/london-bridge-gogogo-remastered.mp3",
+    PADDINGTON: "per-station/paddington-night-mail-remastered.mp3",
     "PICCADILLY CIRCUS": "per-station/piccadilly-circus-wiggly-wiggle-remastered.mp3",
     "SOUTH KENSINGTON": "per-station/south-kensington-muntelo-remastered.mp3",
     "ST PAUL'S": "per-station/st-pauls-gregorians.mp3",
+    TEMPLE: "per-station/temple-claudes-lament-redux-guest-vocal.mp3",
     WESTMINSTER: "per-station/westminster-spring.mp3"
   },
   generic: [
