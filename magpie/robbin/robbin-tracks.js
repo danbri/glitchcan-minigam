@@ -8,15 +8,19 @@
 // (GEARS AND BIRDCALLS lives here too — it is not special).
 export const TRACKS = {
   perStation: {
+    "CANARY WHARF": "per-station/canary-wharf-whisper-choir-remastered-x2.mp3",
     "GLOUCESTER ROAD": "per-station/gloucester-road-americana-d-remastered.mp3",
     "LEICESTER SQUARE": "per-station/leicester-square-subjunction-fn.mp3",
     "LONDON BRIDGE": "per-station/london-bridge-gogogo-remastered.mp3",
     "SOUTH KENSINGTON": "per-station/south-kensington-muntelo-remastered.mp3",
-    "ST PAUL'S": "per-station/st-pauls-gregorians.mp3"
+    "ST PAUL'S": "per-station/st-pauls-gregorians.mp3",
+    WESTMINSTER: "per-station/westminster-spring.mp3"
   },
   generic: [
     "generic/aching-evocative-space-waltz.mp3",
     "generic/gears-and-birdcalls.mp3",
-    "generic/hypnotic-sleepy-loops.mp3"
+    "generic/hypnotic-sleepy-loops.mp3",
+    "generic/the-stone-ostinato.mp3",
+    "generic/the-weight-of-motion.mp3"
   ]
 };
