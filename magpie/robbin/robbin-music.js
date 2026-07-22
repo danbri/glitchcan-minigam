@@ -277,6 +277,7 @@ export class Soundtrack {
     this.recent = [];    // decode LRU, newest last
     this.loading = {};
     this.bad = new Set();   // individual tracks that failed to load
+    this.pos = {};       // where each tape stood when it faded out — resume, don't rewind
     this.playing = null;
     this.want = null;
     this.muted = false;
@@ -373,6 +374,10 @@ export class Soundtrack {
     const t = this.ctx.currentTime;
     if (this.playing) {
       const old = this.playing;
+      // bookmark the reel: coming back fades this tape up from HERE,
+      // it never rewinds to the top (the map's engines especially —
+      // every return to the map used to restart the song)
+      this.pos[old.name] = (old.off + (t - old.t0)) % old.dur;
       old.gain.gain.cancelScheduledValues(t);
       old.gain.gain.setValueAtTime(old.gain.gain.value, t);
       old.gain.gain.linearRampToValueAtTime(0, t + fade);
@@ -387,8 +392,10 @@ export class Soundtrack {
     gain.gain.setValueAtTime(0.0001, t);
     gain.gain.linearRampToValueAtTime(1, t + fade);
     src.connect(gain).connect(this.level);
-    src.start(t);
-    this.playing = { name, src, gain };
+    const dur = src.buffer.duration;
+    const off = (this.pos[name] || 0) % dur;
+    src.start(t, off);
+    this.playing = { name, src, gain, t0: t, off, dur };
   }
   stop(fade = 1.2) { this.play(null, fade); }
   get active() { return !this.failed && !!(this.playing || this.want); }

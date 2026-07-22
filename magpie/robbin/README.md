@@ -329,6 +329,9 @@ so at most TWO tracks stay decoded at once (LRU; the compressed
 bytes are kept and simply re-decoded after an eviction — never
 re-downloaded). A `MONO_DOWNMIX` switch in `robbin-music.js` can
 halve that again; it ships OFF to keep the recordings as made.
+The tapes RESUME: each track remembers where it stood when it faded
+out and fades back up from there — returning to the map never rewinds
+THE QUIET ENGINES to the top, and every reel loops.
 The library grows: `audio/per-station/` holds a station's OWN song
 (played inside it two visits in three — the third takes a generic
 turn, against monotony) and `audio/generic/` the interior rotation
@@ -343,7 +346,7 @@ rotation with another generic covering; only a broken CORE track
 `audio/README.md`.
 And — quietly, in the corner of ⚙ SETTINGS, behind a small 🐣 —
 **ROBBAMP · BURIED FREQUENCIES** (`robbin-amp.js`), a Winamp-classic
-tribute jukebox for the whole library: striped title bar, green LCD
+tribute jukebox for every track in the library: striped title bar, green LCD
 marquee, transport + seek + volume, playlist, lock-screen metadata.
 It streams through an `<audio>` element (no decoded-PCM cost) into
 the Soundtrack's bus so the master mute rules it, and its visualizer
