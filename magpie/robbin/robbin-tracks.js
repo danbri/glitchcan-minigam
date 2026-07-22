@@ -4,8 +4,8 @@
 //
 // perStation: a station's own song, played when the flock is inside it
 // (two visits in three — a generic track takes the third turn, against
-// monotony). generic: the rotation for every other station, alongside
-// GEARS AND BIRDCALLS.
+// monotony). generic: the interior rotation for every other station
+// (GEARS AND BIRDCALLS lives here too — it is not special).
 export const TRACKS = {
   perStation: {
     "GLOUCESTER ROAD": "per-station/gloucester-road-americana-d-remastered.mp3",
@@ -16,6 +16,7 @@ export const TRACKS = {
   },
   generic: [
     "generic/aching-evocative-space-waltz.mp3",
+    "generic/gears-and-birdcalls.mp3",
     "generic/hypnotic-sleepy-loops.mp3"
   ]
 };

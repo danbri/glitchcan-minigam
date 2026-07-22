@@ -5,16 +5,16 @@
 ```
 audio/
   the-quiet-engines.mp3            core: the map
-  gears-and-birdcalls.mp3          core: default station interior
   the-inexorable-passacaglia.mp3   core: the flight home
   per-station/                     a station's own song (file named after it)
-  generic/                         the interior rotation for everywhere else
+  generic/                         the interior rotation (gears-and-birdcalls
+                                   lives here — it is not special)
   HASHES.sha256                    every track's hash — the duplicate check
 ```
 
-The three core tracks stay where they are — the game falls back to the
-MIDI band only if a CORE track can't load; a missing side track just
-drops out of rotation.
+The two core tracks stay at the top — the game falls back to the MIDI
+band only if a CORE track can't load; a missing library track just
+drops out of rotation with another generic covering.
 
 ## Adding tracks
 
@@ -39,7 +39,7 @@ drops out of rotation.
 - Inside a station WITH its own song: the song, two visits in three;
   the third visit takes a generic track so long sessions don't wear a
   groove.
-- Inside any other station: rotation through `generic/` plus GEARS AND
-  BIRDCALLS, varied per station and visit.
+- Inside any other station: rotation through `generic/`, varied per
+  station and visit.
 - At most two decoded tracks stay in RAM (LRU); compressed bytes are
   cached so nothing is ever re-downloaded.

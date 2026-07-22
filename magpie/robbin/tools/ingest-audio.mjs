@@ -82,7 +82,7 @@ const listAudio = dir => existsSync(dir)
   : [];
 
 const files = [
-  ...['the-quiet-engines.mp3', 'gears-and-birdcalls.mp3', 'the-inexorable-passacaglia.mp3']
+  ...['the-quiet-engines.mp3', 'the-inexorable-passacaglia.mp3']
     .filter(f => existsSync(join(AUDIO, f))).map(f => ({ rel: f, kind: 'core' })),
   ...listAudio(join(AUDIO, 'per-station')).map(f => ({ rel: `per-station/${f}`, kind: 'station' })),
   ...listAudio(join(AUDIO, 'generic')).map(f => ({ rel: `generic/${f}`, kind: 'generic' })),
@@ -124,8 +124,8 @@ if (!CHECK) {
 //
 // perStation: a station's own song, played when the flock is inside it
 // (two visits in three — a generic track takes the third turn, against
-// monotony). generic: the rotation for every other station, alongside
-// GEARS AND BIRDCALLS.
+// monotony). generic: the interior rotation for every other station
+// (GEARS AND BIRDCALLS lives here too — it is not special).
 export const TRACKS = ${JSON.stringify({ perStation, generic }, null, 2).replace(/"([a-zA-Z]+)":/g, '$1:')};
 `;
   writeFileSync(join(ROOT, 'robbin-tracks.js'), manifest);

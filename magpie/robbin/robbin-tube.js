@@ -559,15 +559,16 @@ export class TubeFlock {
   // which tape plays inside the current station: its own song leads
   // (two visits in three — a generic track takes the third turn so long
   // sessions don't wear a groove); everywhere else, the generic
-  // rotation varied by station and visit. Chosen once per visit.
+  // rotation (the gears among them) varied by station and visit.
+  // Chosen once per visit.
   pickInteriorTrack() {
     const st = this.g.soundtrack;
     this.musicVisit = (this.musicVisit || 0) + 1;
-    if (!st) return 'gears';
+    if (!st) return 'engines';
     const own = st.stationTrack(this.cur);
     if (own && this.musicVisit % 3 !== 0) return own;
     const pool = st.genericPool();
-    if (!pool.length) return 'gears';
+    if (!pool.length) return own ?? 'engines';
     return pool[(hashName(this.cur) + this.musicVisit) % pool.length];
   }
   get objective() { return this.lostIdx < LOST.length ? LOST[this.lostIdx] : null; }

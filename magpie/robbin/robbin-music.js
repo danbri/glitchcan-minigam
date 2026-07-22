@@ -259,13 +259,14 @@ const MONO_DOWNMIX = false;
 export class Soundtrack {
   constructor(getCtx, base = 'audio/') {
     this.getCtx = getCtx;
+    // core = the two tracks with a scene of their own (map, finale);
+    // everything the flock hears INSIDE stations comes from the library
     this.urls = {
       engines: `${base}the-quiet-engines.mp3`,
-      gears: `${base}gears-and-birdcalls.mp3`,
       passacaglia: `${base}the-inexorable-passacaglia.mp3`,
     };
-    // the wider tape library: a station's own song plays inside it,
-    // generic tracks rotate everywhere else (see audio/README.md)
+    // the tape library: a station's own song plays inside it, generic
+    // tracks (the gears among them) rotate everywhere else
     this.tracks = TRACKS;
     for (const [station, file] of Object.entries(TRACKS.perStation)) {
       this.urls[`st:${station}`] = base + file;
@@ -286,10 +287,14 @@ export class Soundtrack {
     const name = `st:${station}`;
     return this.urls[name] && !this.bad.has(name) ? name : null;
   }
-  /** the interior rotation: every healthy generic track, plus the gears */
+  /** the interior rotation: every generic track still standing */
   genericPool() {
-    return ['gears', ...this.tracks.generic.map((_, i) => `gen:${i}`)]
-      .filter(n => !this.bad.has(n));
+    return this.tracks.generic.map((_, i) => `gen:${i}`).filter(n => !this.bad.has(n));
+  }
+  /** a healthy stand-in when a track won't load: another generic, else the map's wash */
+  cover(forName) {
+    return this.genericPool().find(n => n !== forName)
+      ?? (this.bad.has('engines') ? null : 'engines');
   }
   ensureGraph() {
     const ctx = this.getCtx();
@@ -305,6 +310,7 @@ export class Soundtrack {
   }
   load(name) {
     if (this.failed) return Promise.resolve();
+    if (!this.urls[name]) { this.bad.add(name); return Promise.resolve(); }
     if (this.buffers[name]) { this.touch(name); return Promise.resolve(); }
     if (this.loading[name]) return this.loading[name];
     this.loading[name] = (async () => {
@@ -327,10 +333,10 @@ export class Soundtrack {
         this.buffers[name] = buf;
         this.touch(name);
       } catch {
-        // a side track (per-station / generic) just drops out of the
-        // rotation; only a broken CORE track hands tape mode to the band
+        // a library track just drops out of the rotation; only a broken
+        // CORE track (map / finale) hands tape mode to the band
         this.bad.add(name);
-        if (name === 'engines' || name === 'gears' || name === 'passacaglia') this.failed = true;
+        if (name === 'engines' || name === 'passacaglia') this.failed = true;
       } finally {
         delete this.loading[name];
       }
@@ -356,9 +362,9 @@ export class Soundtrack {
     if (!this.ensureGraph()) return;
     if (name) {
       await this.load(name);
-      if (this.bad.has(name) && !this.failed) {   // side track fell over: the gears cover the set
-        name = 'gears';
-        await this.load(name);
+      if (this.bad.has(name) && !this.failed) {   // track fell over: a stand-in covers the set
+        name = this.cover(name);
+        if (name) await this.load(name);
       }
     }
     if (this.failed || this.want !== requested) return;   // superseded mid-decode
