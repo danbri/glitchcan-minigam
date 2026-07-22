@@ -29,7 +29,7 @@ file after checking the profile.
 | `YPPBjdw` | Rock Paper Boids | `thumbwar/battleboids.html` |
 | `NPqGjLP` | Emoji particles | front-page animation idea (`inklet/media/shane/minigames.md:17`) |
 | `PwwEVMZ` | Hobbit/Bagend SVG visuals | `inklet/media/bagend/` SVGs, `inklet/bagend.fink.js` |
-| `QwdBKbE` | 3D versions (ROBBIN-related; owner asked to work these into magpie/robbin — unfetchable from this egress, mirror needed) | `magpie/robbin/` |
+| `QwdBKbE` | ROBBIN cut-paper birds in 3D | mirrored in `pens/QwdBKbE/` (owner pasted the source); ported to `magpie/robbin/robbin3d.html` (vendored three, no CDN) |
 | `QwbbaaY` | Mock login (Steam/Discord/Mastodon) | infra prototype — relates to `PEER_ARCHITECTURE_DESIGN.md` service-layer Auth ideas |
 
 ## Why this matters to the repo

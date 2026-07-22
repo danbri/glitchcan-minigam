@@ -1119,6 +1119,9 @@ class Game {
     document.getElementById('playtube')?.addEventListener('pointerdown', e => {
       e.stopPropagation(); this.startTube();
     });
+    document.getElementById('play3d')?.addEventListener('pointerdown', e => {
+      e.stopPropagation(); location.href = 'robbin3d.html';
+    });
     document.getElementById('tomenu')?.addEventListener('pointerdown', e => {
       e.stopPropagation(); this.backToMenu();
     });

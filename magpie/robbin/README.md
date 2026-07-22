@@ -40,6 +40,20 @@ mid-patrol. Sprites live in
 `Path2D`; `birdSVG()` emits the same rig as static inline SVG for the title
 screen. No image assets: everything is vector.
 
+The same cutout idea steps off the page in **`robbin3d.html`** — the
+robin and blue tit paths mounted as hinged paper layers in three.js
+(ported from a CodePen prototype, mirrored in
+`codepen-backups/pens/QwdBKbE/`): each part drawn to a transparent
+canvas texture on a slightly bowed plane under its own pivot, so a
+deliberately flat lino cutout catches real light, flaps, and casts
+shadows. Deliberately NOT a rounded 3D bird — a toy-theatre prop.
+Drag to orbit, pinch or wheel to zoom, toggle each bird / flying /
+spread; an ENTER VR button appears when a headset offers immersive
+VR. Self-contained: three r169 is vendored at `vendor/` (same build
+as trees/), and the CDN-only OrbitControls/VRButton addons are
+replaced by a pocket orbit class and a pocket XR button inline.
+Linked from the title menu (✂️ ROBBIN IN 3D).
+
 ## The game
 
 Classic collect-em-up rules (no egg thieving — these are honest birds):
