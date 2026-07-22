@@ -231,3 +231,100 @@ export class Chiptune {
     }
   }
 }
+
+// ------------------------------------------------------------ soundtrack
+// Three recorded tracks, ported to WebAudio: fetched once, decoded into
+// buffers, looped, and crossfaded by the game's mood — all through a
+// mute-aware gain chain so the speaker button rules them too.
+//   engines     — THE QUIET ENGINES         · the map: flying the city
+//   gears       — GEARS AND BIRDCALLS       · station interiors
+//   passacaglia — THE INEXORABLE PASSACAGLIA · the homecoming finale
+// If fetch or decode fails (offline, odd codec), `failed` flips and the
+// procedural Chiptune keeps the whole stage, exactly as before.
+export class Soundtrack {
+  constructor(getCtx, base = 'audio/') {
+    this.getCtx = getCtx;
+    this.urls = {
+      engines: `${base}the-quiet-engines.mp3`,
+      gears: `${base}gears-and-birdcalls.mp3`,
+      passacaglia: `${base}the-inexorable-passacaglia.mp3`,
+    };
+    this.buffers = {};
+    this.loading = {};
+    this.playing = null;
+    this.want = null;
+    this.muted = false;
+    this.failed = false;
+  }
+  ensureGraph() {
+    const ctx = this.getCtx();
+    if (!ctx) return false;
+    this.ctx = ctx;
+    if (this.bus) return true;
+    this.bus = ctx.createGain();                 // the mute switch
+    this.bus.gain.value = this.muted ? 0 : 1;
+    this.level = ctx.createGain();               // soundtrack level / blooms
+    this.level.gain.value = 0.75;
+    this.level.connect(this.bus).connect(ctx.destination);
+    return true;
+  }
+  load(name) {
+    if (this.buffers[name] || this.failed) return Promise.resolve();
+    if (this.loading[name]) return this.loading[name];
+    this.loading[name] = (async () => {
+      try {
+        const res = await fetch(this.urls[name]);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const raw = await res.arrayBuffer();
+        this.buffers[name] = await this.ctx.decodeAudioData(raw);
+      } catch {
+        this.failed = true;                      // the band plays on instead
+      } finally {
+        delete this.loading[name];
+      }
+    })();
+    return this.loading[name];
+  }
+  /** crossfade to a named mood (null = fade to silence) */
+  async play(name, fade = 1.8) {
+    this.want = name;
+    if (!this.ensureGraph()) return;
+    if (name) await this.load(name);
+    if (this.failed || this.want !== name) return;   // superseded mid-decode
+    if (this.playing?.name === name) return;
+    const t = this.ctx.currentTime;
+    if (this.playing) {
+      const old = this.playing;
+      old.gain.gain.cancelScheduledValues(t);
+      old.gain.gain.setValueAtTime(old.gain.gain.value, t);
+      old.gain.gain.linearRampToValueAtTime(0, t + fade);
+      try { old.src.stop(t + fade + 0.1); } catch { /* already stopped */ }
+      this.playing = null;
+    }
+    if (!name || !this.buffers[name]) return;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.buffers[name];
+    src.loop = true;
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(1, t + fade);
+    src.connect(gain).connect(this.level);
+    src.start(t);
+    this.playing = { name, src, gain };
+  }
+  stop(fade = 1.2) { this.play(null, fade); }
+  get active() { return !this.failed && !!(this.playing || this.want); }
+  setMuted(m) {
+    this.muted = m;
+    if (this.bus) this.bus.gain.value = m ? 0 : 1;
+  }
+  /** a warm momentary bloom — rescues, reunions (mirrors Chiptune.swell) */
+  swell() {
+    if (!this.level) return;
+    const t = this.ctx.currentTime;
+    this.level.gain.cancelScheduledValues(t);
+    this.level.gain.setValueAtTime(this.level.gain.value, t);
+    this.level.gain.linearRampToValueAtTime(0.98, t + 0.25);
+    this.level.gain.linearRampToValueAtTime(0.75, t + 2.4);
+  }
+}

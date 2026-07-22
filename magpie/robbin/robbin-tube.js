@@ -495,8 +495,28 @@ export class TubeFlock {
   }
   // the band assembles as the flock does: washes for one bird, full song
   // for the whole family
+  // the recorded score rules Tubular Smells when it can load: THE QUIET
+  // ENGINES on the map, GEARS AND BIRDCALLS inside the stations, THE
+  // INEXORABLE PASSACAGLIA for the flight home. The chiptune band steps
+  // back — and steps straight back in if the tracks can't be fetched
+  // (offline never silences the game).
   updateMusic() {
-    this.g.music.setIntensity(0.15 + 0.85 * ((this.roster.length - 1) / LOST.length));
+    const g = this.g;
+    if (g.soundtrack && !g.soundtrack.failed) {
+      const mood = this.finale ? 'passacaglia' : this.interior ? 'gears' : 'engines';
+      g.music.stop(0.9);
+      g.soundtrack.play(mood).then(() => {
+        if (g.soundtrack.failed) this.updateMusic();   // fell over: band returns
+      });
+      return;
+    }
+    g.music.start();
+    g.music.setIntensity(0.15 + 0.85 * ((this.roster.length - 1) / LOST.length));
+  }
+  swellMusic() {
+    const g = this.g;
+    if (g.soundtrack?.active) g.soundtrack.swell();
+    else g.music.swell();
   }
   get objective() { return this.lostIdx < LOST.length ? LOST[this.lostIdx] : null; }
   // one facility in ten is having a day off — per lift shaft, per
@@ -699,6 +719,9 @@ export class TubeFlock {
   }
   exit() {
     this.saveHi();
+    this.g.soundtrack?.stop(1.2);
+    this.g.music.start();
+    this.g.music.setIntensity(0.4);   // the menu keeps a gentle band
     this.g.camFocus = null;
     this.g.state = 'title';
     document.getElementById('title').classList.remove('hidden');
@@ -819,6 +842,7 @@ export class TubeFlock {
     g.updateCamera(0, true);
     g.foley.whoosh();
     g.haptics.thud();
+    this.updateMusic();   // gears and birdcalls: we're inside
     g.say(this.describeInterior(this.interior));
   }
   // scripted train moments: arrivals disembark, boardings get whisked away
@@ -864,6 +888,7 @@ export class TubeFlock {
         this.scene = null;
         this.interior = null;
         g.camFocus = null;
+        this.updateMusic();
         this.depart(edge);
       }
     }
@@ -938,12 +963,13 @@ export class TubeFlock {
       };
       this.arriveT = 6;
       this.arriveMsg = '♥ THE FLOCK IS WHOLE ♥';
-      g.music.swell();
+      this.swellMusic();
       g.haptics.chord();
       g.say(`${it.rescue.name} was the last of them. The flock is whole — ${this.roster.length} birds wheel home together across London.`);
     } else {
       g.say(`Surfaced at ${this.cur} — back on the map. ${this.describeStation()}`);
     }
+    this.updateMusic();   // quiet engines again (or the passacaglia home)
   }
   // wandered in by mistake? One press pops the flock straight back out
   // to the map — no trek to the WAY OUT, nothing lost, no judgement
@@ -954,6 +980,7 @@ export class TubeFlock {
     this.interior = null;
     this.g.camFocus = null;
     this.g.foley.step();
+    this.updateMusic();
     this.g.say(`Back on the map at ${this.cur}. ${it.rescue.name} still waits inside.`);
     return true;
   }
@@ -1114,10 +1141,13 @@ export class TubeFlock {
         }
       }
       // …open doors welcome you aboard: the car floor catches your very
-      // first step through the doorway (the shaft is a hole otherwise)
+      // first step through the doorway (the shaft is a hole otherwise).
+      // The step-out cooldown guards only the revolving door, never the
+      // escalators beyond it.
       if (it.carCool > 0) it.carCool -= dt;
-      if ((g.player.mode === 'walk' || g.player.mode === 'fall') && it.grabCool <= 0 && !(it.carCool > 0)) {
+      if ((g.player.mode === 'walk' || g.player.mode === 'fall') && it.grabCool <= 0) {
         for (const sh of lv.lifts) {
+          if (it.carCool > 0) break;
           const car = sh.car;
           if (!car || sh.out || car.state !== 'dwell' || car.door < 0.6) continue;
           const cx = (sh.x0 + sh.x1) / 2;
@@ -1253,7 +1283,7 @@ export class TubeFlock {
         g.foley.clear();
         g.haptics.chord();
         this.updateMusic();
-        g.music.swell();
+        this.swellMusic();
         this.saveHi();
         g.say(`${it.rescue.name} joins the flock! ${this.roster.length} birds now. Head up to the street and out the WAY OUT.`);
       }
@@ -1341,7 +1371,7 @@ export class TubeFlock {
       flockStep(this.flock, dt,
         cx2 + Math.sin(t * 0.7) * 70,
         cy2 - 14 + Math.cos(t * 0.5) * 44, t, 2.4);
-      if (f.t > f.swells * 5 + 4) { f.swells++; this.g.music.swell(); }
+      if (f.t > f.swells * 5 + 4) { f.swells++; this.swellMusic(); }
       if (f.t >= f.dur + 3) {
         this.finale = null;
         this.cur = f.home;   // home to roost
@@ -1354,6 +1384,7 @@ export class TubeFlock {
             + 'London is yours now: fly on together as long as you like.',
           t: 0,
         };
+        this.updateMusic();
         this.g.say(`Home to roost at Liverpool Street. All ${this.roster.length} birds together — ${this.stats.stops} stops flown, ${this.stats.visited.size} stations seen. Fly together as long as you like.`);
       }
       return;

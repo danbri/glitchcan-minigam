@@ -260,10 +260,18 @@ thing about the place in big readable type; the world holds still
 until you dismiss it (tap, JUMP, Enter or Esc). Rescues bloom with
 hearts and a musical swell,
 and the flock swirls boids-fashion around you, fuller every reunion.
-The soundtrack builds with the flock: warm detuned pad washes and a
-heartbeat at first, hats, arpeggio shimmer and finally the lead
-melody fading in as intensity rises (a master lowpass opens with it;
-`Chiptune.setIntensity(0..1)` / `swell()`).
+Tubular Smells has a **recorded score, ported to WebAudio**: three
+tracks in `audio/`, fetched once, decoded into buffers, looped and
+crossfaded by mood — **THE QUIET ENGINES** while you fly the map,
+**GEARS AND BIRDCALLS** inside the stations, **THE INEXORABLE
+PASSACAGLIA** for the homecoming finale. Rescue swells bloom the
+track's level; the mute button rules the record and the band alike.
+If the tracks can't load (offline, odd codec) the procedural
+chiptune steps straight back in, exactly as before — and the Flight
+Line arcade stays the chiptune's own stage: warm detuned pad washes
+and a heartbeat at first, hats, arpeggio shimmer and finally the
+lead melody fading in as intensity rises (a master lowpass opens
+with it; `Chiptune.setIntensity(0..1)` / `swell()`).
 
 Outages are a **playability dial, not a news feed**: each run, one
 facility in ten — per lift shaft, per escalator run, rolled once per
