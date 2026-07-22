@@ -107,8 +107,10 @@ export class RobbAmp {
     this.full = false;
     this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.MODES = ['THE DIG', 'MURMURATION', 'STRATA CORE', 'ROUNDABOUT', 'THE WIRE',
-      'GOLDFEATHER', 'ATTIC 1984', 'NIGHT TRAIN'];
-    this.mode = Math.min(this.MODES.length - 1, +(localStorage.getItem('robbin.ampviz') || 0));
+      'GOLDFEATHER', 'ATTIC 1984', 'NIGHT TRAIN', 'A SERIES OF TUBES'];
+    // fresh eyes land on the dark neon network; a saved choice is kept
+    const savedMode = localStorage.getItem('robbin.ampviz');
+    this.mode = savedMode == null ? 8 : Math.min(this.MODES.length - 1, +savedMode);
     this.modeFlash = 3;
     this.hold = [];
     this.lastBass = 0;
@@ -312,7 +314,8 @@ export class RobbAmp {
     else if (mode === 4) this.vWire(ctx, W2, H2, au);
     else if (mode === 5) this.vGoldfeather(ctx, W2, H2, au);
     else if (mode === 6) this.vAttic(ctx, W2, H2, au);
-    else this.vNightTrain(ctx, W2, H2, au);
+    else if (mode === 7) this.vNightTrain(ctx, W2, H2, au);
+    else this.vPipes(ctx, W2, H2, au);
     if (this.modeFlash > 0) {
       this.modeFlash -= 1 / 60;
       ctx.save();
@@ -908,6 +911,132 @@ export class RobbAmp {
         y: H2 * (0.3 + (k2 % 2) * 0.08) + Math.sin(t * 3 + k2) * 6,
         size: 22, facing: 1, phase: t * 12 + k2, pose: 'airup',
       });
+    }
+  }
+// A SERIES OF TUBES — the default: dark mode, neons gone pastel.
+  // The REAL network (tube-network.js geometry) drawn as glowing
+  // snaking pipes, each line breathing with its own frequency band,
+  // blobs of light travelling the tunnels at the music's pace, and a
+  // kick ringing a random interchange. The Thames glows past below.
+  buildPipes(W2, H2) {
+    const key = `${W2}x${H2}`;
+    if (this.pipes?.key === key) return this.pipes;
+    const pos = NETWORK.pos ?? {};
+    let minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
+    for (const [x, y] of Object.values(pos)) {
+      minx = Math.min(minx, x); maxx = Math.max(maxx, x);
+      miny = Math.min(miny, y); maxy = Math.max(maxy, y);
+    }
+    const sc = Math.min((W2 - 30) / (maxx - minx), (H2 - 24) / (maxy - miny));
+    const ox = (W2 - (maxx - minx) * sc) / 2, oy = (H2 - (maxy - miny) * sc) / 2;
+    const proj = ([x, y]) => [(x - minx) * sc + ox, (y - miny) * sc + oy];
+    const pastel = hex => {
+      const n = parseInt(hex.slice(1), 16);
+      const r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      let h = 0;
+      if (mx !== mn) {
+        if (mx === r) h = ((g - b) / (mx - mn)) % 6;
+        else if (mx === g) h = (b - r) / (mx - mn) + 2;
+        else h = (r - g) / (mx - mn) + 4;
+      }
+      return `hsl(${Math.round(h * 60 + 360) % 360}, 85%, 72%)`;
+    };
+    const chains = [];
+    Object.values(NETWORK.lines ?? {}).forEach((def, li) => {
+      const colour = pastel(def.color || '#d94327');
+      for (const chain of def.chains ?? []) {
+        const pts = chain.filter(n => pos[n]).map(n => proj(pos[n]));
+        if (pts.length < 2) continue;
+        const cum = [0];
+        for (let i = 1; i < pts.length; i++) {
+          cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+        }
+        const total = cum[cum.length - 1];
+        if (total < 8) continue;
+        const blobs = Array.from({ length: Math.max(1, Math.min(4, Math.round(total / 130))) },
+          (_, b) => ({ p: (b * 197.3) % total, dir: b % 2 ? 1 : -1, hue: (b * 47) % 100 }));
+        chains.push({ colour, li, pts, cum, total, blobs });
+      }
+    });
+    const thames = (NETWORK.thames ?? []).map(proj);
+    this.pipes = { key, chains, thames, nLines: Object.keys(NETWORK.lines ?? {}).length };
+    return this.pipes;
+  }
+  vPipes(ctx, W2, H2, au) {
+    const { bass, mids, treble, kick, t } = au;
+    const P = this.buildPipes(W2, H2);
+    ctx.fillStyle = '#0d0e12';
+    ctx.fillRect(0, 0, W2, H2);
+    // faint neon dust so the dark breathes too
+    for (let i = 0; i < 40; i++) {
+      const dx = ((i * 167 + 43) % W2), dy = ((i * 211 + 17) % H2);
+      const tw = 0.05 + 0.14 * Math.abs(Math.sin(t * (0.6 + (i % 7) * 0.3) + i)) * (0.5 + treble);
+      ctx.fillStyle = `hsla(${(i * 37) % 360}, 70%, 78%, ${tw})`;
+      ctx.fillRect(dx, dy, 2, 2);
+    }
+    // the river first, a slow pastel glow under everything
+    if (P.thames.length > 1) {
+      ctx.strokeStyle = 'rgba(148,190,220,0.16)';
+      ctx.lineWidth = 8;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      P.thames.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(170,214,240,0.35)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    const at = (ch, d) => {          // point at arc-length d along a chain
+      let i = 1;
+      while (i < ch.cum.length - 1 && ch.cum[i] < d) i++;
+      const seg = ch.cum[i] - ch.cum[i - 1] || 1;
+      const u = (d - ch.cum[i - 1]) / seg;
+      return [ch.pts[i - 1][0] + (ch.pts[i][0] - ch.pts[i - 1][0]) * u,
+        ch.pts[i - 1][1] + (ch.pts[i][1] - ch.pts[i - 1][1]) * u];
+    };
+    const speed = (26 + mids * 190) / 60;
+    for (const ch of P.chains) {
+      // each line breathes with its own slice of the spectrum
+      const v = this.bins[6 + Math.floor((ch.li / Math.max(1, P.nLines)) * 320)] / 255;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ch.pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+      ctx.strokeStyle = ch.colour.replace(')', `, ${0.08 + v * 0.3})`).replace('hsl', 'hsla');
+      ctx.lineWidth = 6 + v * 5;     // the soft neon halo
+      ctx.stroke();
+      ctx.strokeStyle = ch.colour.replace(')', `, ${0.35 + v * 0.55})`).replace('hsl', 'hsla');
+      ctx.lineWidth = 1.8;           // the bright core
+      ctx.stroke();
+      for (const b of ch.blobs) {    // light travelling the tunnels
+        b.p = (b.p + b.dir * speed * (0.7 + (b.hue % 7) / 10) + ch.total) % ch.total;
+        const [x, y] = at(ch, b.p);
+        const r2 = 2.2 + bass * 3.4;
+        ctx.fillStyle = ch.colour.replace('72%)', '85%, 0.9)').replace('hsl', 'hsla');
+        ctx.beginPath(); ctx.arc(x, y, r2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = ch.colour.replace('72%)', '80%, 0.25)').replace('hsl', 'hsla');
+        ctx.beginPath(); ctx.arc(x, y, r2 * 2.4, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    // a kick rings a junction — an expanding pastel circle of arrival
+    if (kick) {
+      const ch = P.chains[Math.floor(Math.random() * P.chains.length)];
+      const [x, y] = at(ch, Math.random() * ch.total);
+      (this.rings ??= []).push({ x, y, r: 3, a: 0.8, colour: ch.colour });
+    }
+    (this.rings ?? []).forEach(rg => {
+      rg.r += 1.6; rg.a -= 0.02;
+      ctx.strokeStyle = rg.colour.replace(')', `, ${Math.max(0, rg.a)})`).replace('hsl', 'hsla');
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(rg.x, rg.y, rg.r, 0, Math.PI * 2); ctx.stroke();
+    });
+    this.rings = (this.rings ?? []).filter(rg => rg.a > 0).slice(-14);
+    // one pastel bird rides the whole network home
+    const ch0 = P.chains[Math.floor(t / 9) % P.chains.length];
+    if (ch0) {
+      this.ridep = ((this.ridep ?? 0) + speed * 1.3) % ch0.total;
+      const [x, y] = at(ch0, this.ridep);
+      drawBird(ctx, 'robin', { x, y: y - 4, size: 20, facing: 1, phase: t * 12, pose: 'airup' });
     }
   }
 }

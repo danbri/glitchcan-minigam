@@ -375,7 +375,15 @@ TRAIN** (the whole journey 100×: parallax London silhouettes — domes,
 a clock tower keeping real time — rolling under treble-twinkled
 stars while a cut-paper train runs the viaduct, every carriage
 window lit by its own slice of the spectrum, steam on the kick, the
-flock flying the same line home). Reduced motion keeps the still
+flock flying the same line home), and — the DEFAULT for fresh eyes —
+**A SERIES OF TUBES**: dark mode with the neons gone pastel. The
+REAL network geometry from `tube-network.js`, every line drawn as a
+glowing snaking pipe in a pastelized version of its own colour, each
+one breathing with its own slice of the spectrum, blobs of light
+travelling the tunnels at the music's pace, a kick ringing a random
+junction, the Thames glowing past beneath, faint neon dust in the
+dark — and one pastel robin riding the whole network home. A saved
+mode choice is respected. Reduced motion keeps the still
 dig. ESC folds fullscreen first, then buries the player.
 It has its own address too: **`#robbamp`** opens it from the URL,
 and **`#robbamp=<what>`** opens on a song — `<what>` is a track
