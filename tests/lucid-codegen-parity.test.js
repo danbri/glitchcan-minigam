@@ -203,6 +203,40 @@ describe('rig chains + conserved', () => {
   });
 });
 
+describe('Stinkyfish group(0) uniform layout consistency', () => {
+  // The WGSL Uniforms struct and the hand-packed Float32Array must stay in sync
+  // (std140-ish: vec3f/vec4f align to 16 bytes, vec2f to 8, f32 to 4; total 160).
+  // This catches the "edit three places in sync" hazard without a GPU.
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const src = readFileSync(path.join(here, '..', 'lucid', 'stinkyfish', 'raymarcher.js'), 'utf8');
+
+  const structBody = (src.match(/struct Uniforms \{([\s\S]*?)\}/) || [])[1] || '';
+  const fields = structBody.split('\n')
+    .map(l => l.replace(/\/\/.*$/, '').trim())
+    .filter(Boolean)
+    .map(l => (l.match(/^\w+\s*:\s*(f32|vec2f|vec3f|vec4f)/) || [])[1])
+    .filter(Boolean);
+
+  const SIZE = { f32: 4, vec2f: 8, vec3f: 12, vec4f: 16 };
+  const ALIGN = { f32: 4, vec2f: 8, vec3f: 16, vec4f: 16 };
+
+  it('every struct field is std140-aligned and the struct is 160 bytes', () => {
+    expect(fields.length).toBeGreaterThan(0);
+    let offset = 0;
+    for (const t of fields) {
+      expect(offset % ALIGN[t]).toBe(0); // fails if a pad slot is missing/wrong
+      offset += SIZE[t];
+    }
+    expect(offset).toBe(160);
+  });
+
+  it('the packed Float32Array has 40 elements (160 bytes)', () => {
+    const arr = (src.match(/const uniformData = new Float32Array\(\[([\s\S]*?)\]\);/) || [])[1] || '';
+    const count = arr.replace(/\/\/[^\n]*/g, '').split(',').map(s => s.trim()).filter(Boolean).length;
+    expect(count).toBe(40);
+  });
+});
+
 describe('whole library still codegens on both backends', () => {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const scenesDir = path.join(here, '..', 'lucid', 'scenes');
