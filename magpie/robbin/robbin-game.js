@@ -6,6 +6,7 @@
 import { PALETTE, BIRDS, drawBird, drawGrain, drawBottle, drawCommuter, birdSVG } from './robbin-sprites.js';
 import { Chiptune, Soundtrack, ScorePlayer } from './robbin-music.js';
 import { TubeFlock } from './robbin-tube.js';
+import { FlockWipe } from './robbin-wipe3d.js';
 
 export const TILE = 32, COLS = 20, ROWS = 15;
 export const W = COLS * TILE, H = ROWS * TILE;
@@ -756,6 +757,10 @@ class Game {
     this.controlMode = localStorage.getItem('robbin.ctrl') === 'glide' ? 'glide' : 'hold';
     this.heading = { x: 0, y: 0 };
     this.tube = new TubeFlock(this);
+    // the 3D flock wipe warms up in the background; if three.js hasn't
+    // landed by the time PLAY is pressed, the transition just skips it
+    this.wipe = new FlockWipe();
+    setTimeout(() => this.wipe.preload(), 1200);
     this.haptics = new Haptics();
     if (this.haptics.enabled) this.haptics.mountTouchSwitches();
     // iOS suspends the AudioContext when the tab naps; wake it with the tab
@@ -972,12 +977,14 @@ class Game {
       if (!e.repeat && KONA_KEYS[e.key]) this.feedKonami(KONA_KEYS[e.key]);
       if (e.key === 'Enter') {
         if (this.creditsOpen()) { this.hideCredits(); return; }
+        if (this.optionsOpen()) { this.hideOptions(); return; }
         if (this.state === 'tube' && this.tube.quitConfirm) { this.tube.exit(); return; }   // Enter answers QUIT
         if (this.state === 'tube' && this.tube.dismissFact()) return;
         this.pressStart(); return;
       }
       if (e.key === 'Escape') {
         if (this.creditsOpen()) { this.hideCredits(); return; }
+        if (this.optionsOpen()) { this.hideOptions(); return; }
         if (this.state === 'tube') {
           if (this.tube.cancelQuit()) return;    // Escape answers KEEP FLYING
           if (this.tube.dismissFact()) return;   // the postcard goes first
@@ -1117,10 +1124,16 @@ class Game {
       }
     }
     document.getElementById('playpilot')?.addEventListener('pointerdown', e => {
-      e.stopPropagation(); this.newGame();
+      e.stopPropagation(); this.enterWith(() => this.newGame());
     });
     document.getElementById('playtube')?.addEventListener('pointerdown', e => {
-      e.stopPropagation(); this.startTube();
+      e.stopPropagation(); this.enterWith(() => this.startTube());
+    });
+    document.getElementById('settings')?.addEventListener('pointerdown', e => {
+      e.stopPropagation(); this.showOptions();
+    });
+    document.getElementById('optback')?.addEventListener('pointerdown', e => {
+      e.stopPropagation(); this.hideOptions();
     });
     document.getElementById('play3d')?.addEventListener('pointerdown', e => {
       e.stopPropagation(); location.href = 'robbin3d.html';
@@ -1237,8 +1250,27 @@ class Game {
     }
   }
   pressStart() {
-    if (this.state === 'title' || this.state === 'gameover') this.newGame();
+    if (this.state === 'title' || this.state === 'gameover') this.enterWith(() => this.newGame());
     else if (this.state === 'map') this.continueFromMap();
+  }
+  // the 3D flock sweeps the old screen away and the swap lands under
+  // cover of birds; without the wipe (loading / reduced motion / no
+  // WebGL) the transition is simply immediate
+  enterWith(go) {
+    if (this.wipe.active) return;   // one flock at a time
+    this.foley.ensure();            // audio must wake INSIDE the tap gesture
+    if (!this.wipe.run({ onCovered: go })) go();
+  }
+  optionsOpen() {
+    return !document.getElementById('options').classList.contains('hidden');
+  }
+  showOptions() {
+    document.getElementById('title').classList.add('hidden');
+    document.getElementById('options').classList.remove('hidden');
+  }
+  hideOptions() {
+    document.getElementById('options').classList.add('hidden');
+    if (this.state === 'title') document.getElementById('title').classList.remove('hidden');
   }
   creditsOpen() {
     return !document.getElementById('credits').classList.contains('hidden');

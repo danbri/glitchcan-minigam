@@ -52,7 +52,22 @@ spread; an ENTER VR button appears when a headset offers immersive
 VR. Self-contained: three r169 is vendored at `vendor/` (same build
 as trees/), and the CDN-only OrbitControls/VRButton addons are
 replaced by a pocket orbit class and a pocket XR button inline.
-Linked from the title menu (✂️ ROBBIN IN 3D).
+Linked from ⚙ SETTINGS (✂️ ROBBIN IN 3D).
+
+The same 3D birds ARE the scene change: pressing an episode (or
+replaying from PLUCKED!) sends **up to fifty cut-paper birds
+sweeping across the screen, huge and close and flapping — a flock
+screen-wipe** — and the new screen is swapped in under peak cover.
+The bird builder is shared (`robbin-birds3d.js` feeds both
+`robbin3d.html` and `robbin-wipe3d.js`), textures/materials/geometry
+are cached so fifty birds cost the same GPU memory as two, three.js
+is dynamically imported in the background after boot (pressing PLAY
+before it lands just skips the wipe), the choreography is wall-clock
+based so slow GPUs still keep the beat, the flock alternates
+direction each time, and `prefers-reduced-motion` skips it entirely.
+The title menu itself now holds only the two episodes and
+**⚙ SETTINGS**, which gathers CONTROLS, SCORE, HAPTICS and the 3D
+gallery in one place (ESC or ← BACK returns).
 
 ## The game
 
