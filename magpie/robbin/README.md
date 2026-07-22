@@ -370,6 +370,20 @@ and **`#robbamp=<what>`** opens on a song — `<what>` is a track
 NUMBER as printed in the playlist (`#robbamp=3`), any name substring
 (`#robbamp=gregorian`), or the exact slug. The hash follows the
 playing track as the full slug, so the bar is always shareable.
+**Architecture: the top level of the screen owns the playlist.** One
+`<robbin-jukebox>` custom element (`robbin-jukebox.js`, appended to
+`<body>` at boot) is the single owner of custom audio — the track
+list, the `<audio>` element, the WebAudio wiring into the
+Soundtrack's bus, Media Session metadata, and the playing/paused
+truth — emitting `jukebox-track` / `jukebox-state` DOM events.
+Everything else is a view: ROBBAMP's transport calls in and its
+LCD/playlist/visualizer read out; the game's music brain yields the
+stage whenever the jukebox is ENGAGED and takes it back on the state
+event. So **closing the player keeps the song playing — walk back
+into the game with your track on**; only ⏹ (or ⏸) hands the music
+back to the scene. And with **CUSTOM AUDIO: ON** (⚙ SETTINGS),
+stations that own a song wear a tappable **gold record ♪** on the
+map — tap one to play it in ROBBAMP, close, fly on.
 **MIDI is a live, parameterized performance**: `tools/analyze-tracks.mjs` listened to the three
 recordings with WebAudio (onset autocorrelation for tempo, per-bar
 chroma vs triad templates for harmony, chroma self-similarity for

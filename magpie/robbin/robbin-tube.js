@@ -524,6 +524,13 @@ export class TubeFlock {
   // (offline never silences the game).
   updateMusic() {
     const g = this.g;
+    // a jukebox track the player chose owns the stage — every band waits
+    if (g.jukebox?.engaged) {
+      g.music.stop(0.6);
+      g.soundtrack?.stop(0.8);
+      g.midiScore?.stop(0.8);
+      return;
+    }
     const mood = this.finale ? 'passacaglia' : this.interior ? 'gears' : 'engines';
     // TAPE mode: the recordings themselves, crossfaded — inside a
     // station the tape may be that station's OWN song (see audio/)
@@ -552,6 +559,7 @@ export class TubeFlock {
   }
   swellMusic() {
     const g = this.g;
+    if (g.jukebox?.engaged) return;   // the chosen song is not to be swollen
     if (g.midiScore?.timer) g.midiScore.swell();
     else if (g.soundtrack?.active) g.soundtrack.swell();
     else g.music.swell();
@@ -788,8 +796,10 @@ export class TubeFlock {
     this.saveHi();
     this.g.soundtrack?.stop(1.2);
     this.g.midiScore?.stop(1.2);
-    this.g.music.start();
-    this.g.music.setIntensity(0.4);   // the menu keeps a gentle band
+    if (!this.g.jukebox?.engaged) {
+      this.g.music.start();
+      this.g.music.setIntensity(0.4);   // the menu keeps a gentle band
+    }
     this.g.camFocus = null;
     this.g.state = 'title';
     document.getElementById('title').classList.remove('hidden');
@@ -1814,6 +1824,20 @@ export class TubeFlock {
         ctx.lineTo(x + tx * 11, y + ty * 11);
         ctx.stroke();
       }
+      if (g.showCustomAudio && g.soundtrack?.tracks?.perStation[name]) {
+        // CUSTOM AUDIO: this station owns a song — a gold record, tappable
+        ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2);
+        ctx.fillStyle = '#b98a2e'; ctx.fill();
+        ctx.lineWidth = 2.6; ctx.strokeStyle = PALETTE.ink; ctx.stroke();
+        ctx.fillStyle = PALETTE.ink;
+        const keepFont = ctx.font;
+        ctx.font = `bold ${fs * 0.62}px Georgia, serif`;
+        const keepAlign = ctx.textAlign;
+        ctx.textAlign = 'center';
+        ctx.fillText('♪', x, y + fs * 0.22);
+        ctx.font = keepFont;
+        ctx.textAlign = keepAlign;
+      }
       if (ob && name === ob.at) {
         ctx.beginPath(); ctx.arc(x, y, 16 + Math.sin(t * 4) * 2.5, 0, Math.PI * 2);
         ctx.strokeStyle = PALETTE.danger; ctx.lineWidth = 2.5; ctx.stroke();
@@ -2257,6 +2281,20 @@ export class TubeFlock {
   menuButtonHit(x, y) {
     const r = this.menuButtonRect();
     return x >= r.x - 8 && x <= r.x + r.w + 8 && y >= r.y - 8 && y <= r.y + r.h + 8;
+  }
+  // with CUSTOM AUDIO on, stations that own a song are tappable on the
+  // map — this answers "which one is under that finger?"
+  songStationAt(px, py) {
+    if (this.interior || this.travel) return null;
+    const per = this.g.soundtrack?.tracks?.perStation ?? {};
+    let best = null, bd = 20;
+    for (const name of Object.keys(per)) {
+      if (!POS[name]) continue;
+      const [x, y] = this.toXY(name);
+      const d = Math.hypot(px - x, py - y);
+      if (d < bd) { bd = d; best = name; }
+    }
+    return best;
   }
   requestQuit() {
     if (this.interior || this.travel || this.finale || this.over || this.quitConfirm) return false;

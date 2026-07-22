@@ -29,6 +29,7 @@
 import { drawBird, drawBirdSkeleton } from './robbin-sprites.js';
 import { TubeFlock } from './robbin-tube.js';
 import { NETWORK } from './tube-network.js';
+import { RobbinJukebox } from './robbin-jukebox.js';
 
 const fmt = s => `${Math.floor((s || 0) / 60)}:${String(Math.floor((s || 0) % 60)).padStart(2, '0')}`;
 const pretty = stem => stem.replace(/-/g, ' ').toUpperCase();
@@ -90,7 +91,6 @@ canvas.ramp-full { position: fixed; inset: 0; width: 100vw; height: 100vh;
 export class RobbAmp {
   constructor(game) {
     this.g = game;
-    this.i = 0;
     this.open_ = false;
     this.raf = 0;
     this.seeking = false;
@@ -102,17 +102,12 @@ export class RobbAmp {
     this.hold = [];
     this.lastBass = 0;
     this.fossilCool = 0;
-    // the record crate: everything the tape library owns
-    const st = game.soundtrack;
-    this.list = Object.entries(st.urls).map(([name, url]) => {
-      const stem = url.split('/').pop().replace(/\.mp3$/, '');
-      let label = pretty(stem);
-      if (name === 'engines') label += ' · THE MAP';
-      if (name === 'passacaglia') label += ' · THE FLIGHT HOME';
-      if (name.startsWith('st:')) label = `${name.slice(3)} · ${pretty(stem).split(' ').slice(name.slice(3).split(' ').length).join(' ')}`;
-      return { name, url, label, slug: stem };
-    });
+    // the record crate lives at the top of the screen — this window is
+    // only a view over the <robbin-jukebox> element
+    this.jb = RobbinJukebox.ensure(game);
+    this.list = this.jb.list;
   }
+  get i() { return this.jb.i; }
   build() {
     if (this.root) return;
     const style = document.createElement('style');
@@ -128,6 +123,7 @@ export class RobbAmp {
       <div class="rrow">
         <button data-prev aria-label="Previous">⏮</button>
         <button data-play aria-label="Play or pause">▶</button>
+        <button data-stop aria-label="Stop — hand the music back to the game">⏹</button>
         <button data-next aria-label="Next">⏭</button>
         <input data-seek type="range" min="0" max="1000" value="0" aria-label="Seek">
         <input data-vol class="rvol" type="range" min="0" max="100" value="80" aria-label="Volume">
@@ -139,25 +135,28 @@ export class RobbAmp {
       const row = document.createElement('div');
       row.textContent = `${String(k + 1).padStart(2, '0')}. ${tr.label}`;
       row.setAttribute('role', 'option');
-      row.addEventListener('pointerdown', e => { e.stopPropagation(); this.playAt(k); });
+      row.addEventListener('pointerdown', e => { e.stopPropagation(); this.jb.play(k); });
       listEl.appendChild(row);
     });
     el.querySelector('[data-x]').addEventListener('pointerdown', e => { e.stopPropagation(); this.close(); });
     el.querySelector('[data-full]').addEventListener('pointerdown', e => { e.stopPropagation(); this.toggleFull(); });
     this.fx = el.querySelector('.ramp-fx');
     this.fx.addEventListener('pointerdown', e => { e.stopPropagation(); this.toggleFull(); });
-    el.querySelector('[data-play]').addEventListener('pointerdown', e => { e.stopPropagation(); this.togglePlay(); });
-    el.querySelector('[data-prev]').addEventListener('pointerdown', e => { e.stopPropagation(); this.playAt((this.i + this.list.length - 1) % this.list.length); });
-    el.querySelector('[data-next]').addEventListener('pointerdown', e => { e.stopPropagation(); this.playAt((this.i + 1) % this.list.length); });
+    el.querySelector('[data-play]').addEventListener('pointerdown', e => { e.stopPropagation(); this.jb.togglePlay(); });
+    el.querySelector('[data-stop]').addEventListener('pointerdown', e => { e.stopPropagation(); this.jb.stop(); });
+    el.querySelector('[data-prev]').addEventListener('pointerdown', e => { e.stopPropagation(); this.jb.prev(); });
+    el.querySelector('[data-next]').addEventListener('pointerdown', e => { e.stopPropagation(); this.jb.next(); });
     const seek = el.querySelector('[data-seek]');
     seek.addEventListener('input', () => { this.seeking = true; });
     seek.addEventListener('change', () => {
-      if (this.audio.duration) this.audio.currentTime = (seek.value / 1000) * this.audio.duration;
+      this.jb.seekTo(seek.value / 1000);
       this.seeking = false;
     });
     el.querySelector('[data-vol]').addEventListener('input', e => {
-      if (this.gain) this.gain.gain.value = e.target.value / 100;
+      this.jb.setVolume(e.target.value / 100);
     });
+    // the jukebox is the truth; the window just reflects it
+    addEventListener('jukebox-track', e => this.onTrack(e.detail));
     el.addEventListener('pointerdown', e => e.stopPropagation());   // taps stay in the player
     this.canvas = el.querySelector('canvas');
     this.canvas.addEventListener('pointerdown', e => {
@@ -194,23 +193,22 @@ export class RobbAmp {
     this.modeFlash = 2;
   }
   ensureAudio() {
-    if (this.audio) return;
-    const g = this.g;
-    g.foley.ensure();
-    g.soundtrack.ensureGraph();
-    this.audio = new Audio();
-    this.audio.loop = false;
-    this.audio.addEventListener('ended', () => this.playAt((this.i + 1) % this.list.length));
-    const ctx = g.foley.ctx;
-    this.gain = ctx.createGain();
-    this.gain.gain.value = 0.8;
-    this.analyser = ctx.createAnalyser();
-    this.analyser.fftSize = 1024;
-    this.bins = new Uint8Array(this.analyser.frequencyBinCount);
-    this.wave = new Uint8Array(this.analyser.fftSize);
-    // in at the Soundtrack's bus: the master mute rules the amp too
-    ctx.createMediaElementSource(this.audio).connect(this.gain);
-    this.gain.connect(this.analyser).connect(g.soundtrack.bus);
+    this.jb.ensureAudio();
+    this.audio = this.jb.audio;
+    this.analyser = this.jb.analyser;
+    if (!this.bins) {
+      this.bins = new Uint8Array(this.analyser.frequencyBinCount);
+      this.wave = new Uint8Array(this.analyser.fftSize);
+    }
+  }
+  /** the jukebox changed track (any view may have asked) — reflect it */
+  onTrack({ index, track }) {
+    this.wonderIdx = ((this.wonderIdx ?? 0) + 1) % 7;   // a new song digs up a new wonder
+    this.marq = 0;
+    if (!this.root) return;
+    [...this.root.querySelectorAll('.rlist div')].forEach((d, j) => d.classList.toggle('on', j === index));
+    this.root.querySelector('.rname i').textContent = ` ${track.label} · `.repeat(3);
+    if (this.open_) this.setHash();
   }
   isOpen() { return this.open_; }
   toggle() { this.open_ ? this.close() : this.open(); }
@@ -218,75 +216,40 @@ export class RobbAmp {
   // playlist), an exact slug, or any name substring — "#robbamp=3",
   // "#robbamp=gregorian" and "#robbamp=st-pauls-gregorians" all land
   // on the same song. The hash we WRITE stays the full slug.
-  findTrack(q) {
-    if (!q) return -1;
-    const n = Number(q);
-    if (Number.isInteger(n) && n >= 1 && n <= this.list.length) return n - 1;
-    let k = this.list.findIndex(tr => tr.slug === q);
-    if (k >= 0) return k;
-    const squash = s => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-    const needle = squash(q);
-    if (!needle) return -1;
-    return this.list.findIndex(tr => squash(`${tr.slug} ${tr.label}`).includes(needle));
-  }
+  findTrack(q) { return this.jb.findTrack(q); }
   open(query) {
     this.build();
     this.ensureAudio();
     this.open_ = true;
     this.root.style.display = 'block';
-    // the amp takes the stage from the menu band
-    this.g.music.stop(0.5);
-    this.g.soundtrack?.stop(0.8);
-    this.g.midiScore?.stop(0.8);
-    this.g.foley.ctx?.resume?.();
-    const want = this.findTrack(query);
-    if (want >= 0) this.playAt(want);
-    else if (!this.audio.src) this.playAt(0);
-    else { this.audio.play().catch(() => {}); this.setHash(); }
+    const want = this.jb.findTrack(query);
+    if (want >= 0 && !(this.jb.engaged && this.jb.i === want)) this.jb.play(want);
+    else if (!this.jb.engaged) this.jb.togglePlay();          // resume or start
+    else this.onTrack({ index: this.jb.i, track: this.jb.current });
+    this.setHash();
     this.tick();
-    this.g.say?.('Robbamp. Every song in the game. Tap the visuals to change the look, the square button for fullscreen; Escape closes.');
+    this.g.say?.('Robbamp. Every song in the game. Tap the visuals to change the look, the square button for fullscreen. Closing keeps the song playing — stop hands the music back to the game.');
   }
   close() {
     if (!this.open_) return false;
     if (this.full) { this.toggleFull(); return true; }   // first ESC folds the big screen
     this.open_ = false;
-    this.audio?.pause();
     cancelAnimationFrame(this.raf);
     if (this.root) this.root.style.display = 'none';
     if (location.hash.startsWith('#robbamp')) {
       history.replaceState(null, '', location.pathname + location.search);
     }
-    if (this.g.state === 'title') {   // hand the stage back to the band
+    // the WINDOW closes; the SONG plays on (that's the point — walk
+    // back into the game with your track). Only if nothing is sounding
+    // does the menu band take the stage back here.
+    if (this.g.state === 'title' && !this.jb.engaged) {
       this.g.music.start();
       this.g.music.setIntensity(0.4);
     }
     return true;
   }
   setHash() {
-    history.replaceState(null, '', `#robbamp=${encodeURIComponent(this.list[this.i].slug)}`);
-  }
-  playAt(k) {
-    this.ensureAudio();
-    this.i = k;
-    const tr = this.list[k];
-    this.audio.src = tr.url;
-    this.audio.play().catch(() => {});
-    this.wonderIdx = (this.wonderIdx + 1) % 7;   // each song digs up a new wonder
-    this.marq = 0;
-    if (this.open_) this.setHash();
-    [...this.root.querySelectorAll('.rlist div')].forEach((d, j) => d.classList.toggle('on', j === k));
-    this.root.querySelector('.rname i').textContent = ` ${tr.label} · `.repeat(3);
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: tr.label, artist: 'ROBBIN · TUBULAR SMELLS', album: 'ROBBAMP',
-      });
-    }
-  }
-  togglePlay() {
-    this.ensureAudio();
-    this.g.foley.ctx?.resume?.();
-    if (!this.audio.src) return this.playAt(0);
-    this.audio.paused ? this.audio.play().catch(() => {}) : this.audio.pause();
+    history.replaceState(null, '', `#robbamp=${encodeURIComponent(this.jb.current.slug)}`);
   }
   tick() {
     if (!this.open_) return;

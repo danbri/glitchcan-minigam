@@ -8,6 +8,7 @@ import { Chiptune, Soundtrack, ScorePlayer } from './robbin-music.js';
 import { TubeFlock } from './robbin-tube.js';
 import { FlockWipe } from './robbin-wipe3d.js';
 import { RobbAmp } from './robbin-amp.js';
+import { RobbinJukebox } from './robbin-jukebox.js';
 
 export const TILE = 32, COLS = 20, ROWS = 15;
 export const W = COLS * TILE, H = ROWS * TILE;
@@ -758,6 +759,13 @@ class Game {
     this.controlMode = localStorage.getItem('robbin.ctrl') === 'glide' ? 'glide' : 'hold';
     this.heading = { x: 0, y: 0 };
     this.tube = new TubeFlock(this);
+    // the top level of the screen owns the playlist: one <robbin-jukebox>
+    // element holds the tracks, the <audio> and the analyser; ROBBAMP and
+    // the map's song-stations are views over it. While it's ENGAGED (a
+    // user-chosen track is sounding) every game band yields the stage.
+    this.jukebox = RobbinJukebox.ensure(this);
+    addEventListener('jukebox-state', e => this.onJukeboxState(e.detail.engaged));
+    this.showCustomAudio = localStorage.getItem('robbin.custaudio') === 'on';
     // the 3D flock wipe warms up in the background; if three.js hasn't
     // landed by the time PLAY is pressed, the transition just skips it
     this.wipe = new FlockWipe();
@@ -854,7 +862,7 @@ class Game {
     this.foley.ensure(); this.foley.start();
     this.soundtrack.stop(1);       // the Flight Line is the chiptune's stage
     this.midiScore.stop(1);
-    this.music.start();
+    if (!this.jukebox?.engaged) this.music.start();
     this.loadStation(0);
     document.getElementById('title').classList.add('hidden');
     document.getElementById('gameover').classList.add('hidden');
@@ -1054,6 +1062,12 @@ class Game {
       if (this.state === 'tube' && !this.tube.interior && !this.tube.travel
         && !this.tube.finale && !this.tube.over
         && this.tube.menuButtonHit(e.clientX, e.clientY)) { this.tube.requestQuit(); return; }
+      if (this.state === 'tube' && this.showCustomAudio && !this.tube.interior
+        && !this.tube.travel && !this.tube.finale && !this.tube.quitConfirm) {
+        const stn = this.tube.songStationAt(e.clientX, e.clientY);
+        const k = stn ? this.jukebox.indexForStation(stn) : -1;
+        if (k >= 0) { (this.amp ??= new RobbAmp(this)).open(this.jukebox.list[k].slug); return; }
+      }
       if (this.state === 'tube' && this.tube.over) { this.tube.handleJump(); return; }
       // flick gestures on the play field (glide mode + tube travel)
       this.gesture = { x: e.clientX, y: e.clientY, used: false };
@@ -1139,6 +1153,18 @@ class Game {
     });
     document.getElementById('play3d')?.addEventListener('pointerdown', e => {
       e.stopPropagation(); location.href = 'robbin3d.html';
+    });
+    // CUSTOM AUDIO: song-stations light up on the map and tap to play
+    const cab = document.getElementById('custaudio');
+    if (cab) cab.textContent = `CUSTOM AUDIO: ${this.showCustomAudio ? 'ON' : 'OFF'}`;
+    cab?.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      this.showCustomAudio = !this.showCustomAudio;
+      localStorage.setItem('robbin.custaudio', this.showCustomAudio ? 'on' : 'off');
+      cab.textContent = `CUSTOM AUDIO: ${this.showCustomAudio ? 'ON' : 'OFF'}`;
+      this.say(this.showCustomAudio
+        ? 'Custom audio on. Stations with their own song glow gold on the map — tap one to play it, then fly on with the music.'
+        : 'Custom audio off.');
     });
     // 🐣 the curious egg: a little buried jukebox
     document.getElementById('egg')?.addEventListener('pointerdown', e => {
@@ -1233,7 +1259,7 @@ class Game {
   }
   startTube() {
     this.foley.ensure();
-    this.music.start();
+    if (!this.jukebox?.engaged) this.music.start();
     document.getElementById('title').classList.add('hidden');
     document.getElementById('gameover').classList.add('hidden');
     this.state = 'tube';
@@ -1272,6 +1298,20 @@ class Game {
     if (this.wipe.active) return;   // one flock at a time
     this.foley.ensure();            // audio must wake INSIDE the tap gesture
     if (!this.wipe.run({ onCovered: go })) go();
+  }
+  onJukeboxState(engaged) {
+    if (engaged) {                    // the jukebox takes the stage
+      this.music.stop(0.6);
+      this.soundtrack?.stop(0.8);
+      this.midiScore?.stop(0.8);
+    } else if (this.state === 'tube') {   // handed back: the scene resumes
+      this.tube.updateMusic();
+    } else if (this.state === 'title' || this.state === 'gameover') {
+      this.music.start();
+      this.music.setIntensity(0.4);
+    } else {
+      this.music.start();
+    }
   }
   handleAmpHash() {
     const m = location.hash.match(/^#robbamp(?:=([^&]+))?$/);
