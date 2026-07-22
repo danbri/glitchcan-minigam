@@ -1053,7 +1053,18 @@ class Game {
     document.getElementById('mute').addEventListener('pointerdown', e => {
       e.stopPropagation(); this.toggleMute();
     });
+    this.touches = new Map();
     this.canvas.addEventListener('pointerdown', e => {
+      this.touches.set(e.pointerId, [e.clientX, e.clientY]);
+      if (this.touches.size === 2 && this.state === 'tube' && !this.tube.interior
+        && !this.tube.travel && !this.tube.finale) {
+        // a second finger means ZOOM, not a swipe
+        this.gesture = null;
+        const [a, b] = [...this.touches.values()];
+        this.pinch = { d0: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, z0: this.tube.mapZoom || 1 };
+        return;
+      }
+      if (this.pinch) return;
       if (this.state === 'map') { this.continueFromMap(); return; }
       if (this.state === 'tube' && this.tube.quitTap(e.clientX, e.clientY)) return;   // the quit question is modal
       if (this.state === 'tube' && this.tube.dismissFact()) return;   // postcard: tap anywhere
@@ -1073,6 +1084,13 @@ class Game {
       this.gesture = { x: e.clientX, y: e.clientY, used: false };
     });
     this.canvas.addEventListener('pointermove', e => {
+      if (this.touches.has(e.pointerId)) this.touches.set(e.pointerId, [e.clientX, e.clientY]);
+      if (this.pinch && this.touches.size >= 2) {
+        const [a, b] = [...this.touches.values()];
+        const d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1;
+        this.tube.mapZoom = Math.max(0.55, Math.min(2.8, this.pinch.z0 * (d / this.pinch.d0)));
+        return;
+      }
       if (!this.gesture || this.gesture.used) return;
       const dx = e.clientX - this.gesture.x, dy = e.clientY - this.gesture.y;
       if (Math.hypot(dx, dy) > 26) {
@@ -1080,7 +1098,20 @@ class Game {
         this.applySwipe(dx, dy);
       }
     });
-    this.canvas.addEventListener('pointerup', () => { this.gesture = null; });
+    for (const ev of ['pointerup', 'pointercancel']) {
+      this.canvas.addEventListener(ev, e => {
+        this.touches.delete(e.pointerId);
+        if (this.touches.size === 0) this.pinch = null;
+        this.gesture = null;
+      });
+    }
+    // desktop leans in with the wheel
+    this.canvas.addEventListener('wheel', e => {
+      if (this.state !== 'tube' || this.tube.interior || this.tube.travel) return;
+      e.preventDefault();
+      this.tube.mapZoom = Math.max(0.55, Math.min(2.8,
+        (this.tube.mapZoom || 1) * Math.exp(-e.deltaY * 0.0012)));
+    }, { passive: false });
 
     // the 8-way pad is one joystick surface: touch position (or drag)
     // relative to its centre picks among the 8 directions

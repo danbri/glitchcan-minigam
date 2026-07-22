@@ -500,6 +500,7 @@ export class TubeFlock {
     this.gather = null;
     this.scene = null;
     this.changeHint = null;
+    this.mapZoom = 1;   // pinch (or wheel) to lean in and out of London
     this.stats = { stops: 0, visited: new Set([this.cur]), objects: 0 };
     this.foundObjects = new Set();   // stations whose lost thing is handed in
     this.eatenGrain = new Map();     // station -> Set("c,r"): crumbs stay eaten
@@ -699,7 +700,7 @@ export class TubeFlock {
   // glides after the flock across the whole city. The view centres in
   // the band between the masthead and the touch controls, so the map
   // owns the space the thumbs and words don't.
-  mapScale() { return Math.min(this.g.cssW, this.g.cssH) / 26; }
+  mapScale() { return (Math.min(this.g.cssW, this.g.cssH) / 26) * (this.mapZoom || 1); }
   viewBand() {
     const g = this.g, w = g.cssW, h = g.cssH;
     const fs = Math.max(17, Math.min(24, w / 22));
@@ -1627,7 +1628,7 @@ export class TubeFlock {
     const chipFs = fs * 0.6;
     ctx.font = `bold ${chipFs}px Georgia, serif`;
     const chips = lineIds.map(l => {
-      const label = `${(LINE_SHORT[l] || l).toUpperCase()}  ${LINES[l].color.toUpperCase()}`;
+      const label = (LINE_SHORT[l] || l).toUpperCase();   // the swatch IS the colour — no hex in play
       return { l, label, w: chipFs * 1.7 + 8 + ctx.measureText(label).width + 14 };
     });
     const chipRows = [];

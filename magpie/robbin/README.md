@@ -183,7 +183,9 @@ open data by `tools/fetch-tube.mjs` into `tube-network.js` (real
 geography drawn in the schematic lino style, no TfL branding), plus
 the hollow-striped Windrush segment. The map is a deliberate
 **HYBRID of London's two famous self-portraits** — the octolinear
-transit diagram and the real geography — rebuilt by
+transit diagram and the real geography — **pinch to zoom in and out
+of it on touch (mouse wheel on desktop), 0.55×–2.8×; a second finger
+always means zoom, never a swipe** — rebuilt by
 `tools/relayout-map.mjs`: stations start from their true coordinates
 (cached in `data/station-geo.json`), take the classic tube-map radial
 zoom (centre enlarged, suburbs gently compressed), then relax toward
@@ -307,7 +309,8 @@ Brushing one just flutters you gently aside — no harm done. Quest
 cards read like little stories ("lonely down at the platforms",
 "lost on level −2"). Arriving at a storied station raises a
 **full-screen DID YOU KNOW postcard** — the station name unmissable,
-every line's exact colour swatch and hex code beside it, and one true
+every line as a coloured swatch chip (the swatch IS the colour — no
+hex codes in play), and one true
 thing about the place in big readable type; the world holds still
 until you dismiss it (tap, JUMP, Enter or Esc). Rescues bloom with
 hearts and a musical swell,
