@@ -9,7 +9,7 @@
 // Step-free access is real-ish: step-free stations' lifts never fail;
 // elsewhere lifts go out and escalators run against you.
 
-import { PALETTE, drawBird, drawGrain, drawCommuter } from './robbin-sprites.js';
+import { PALETTE, drawBird, drawGrain, drawCommuter, drawBirdSkeleton, drawCommuterSkeleton } from './robbin-sprites.js';
 import { Level, Player, Enemy, TILE, W, H, LIFT_V } from './robbin-game.js';
 import { NETWORK } from './tube-network.js';
 import { STATION_FACTS } from './robbin-facts.js';
@@ -222,38 +222,77 @@ function genStation(name) {
     }
     return null;
   };
-  // lift shafts from TfL's count: one full-depth shaft, or a chained pair
-  // handing you down level by level, the way Canary Wharf's lettered
-  // lifts really work. Allocated first — lifts are the scarce resource.
-  const nShaft = !facts.lifts || floors.length < 2 ? 0
-    : facts.lifts >= 3 && floors.length >= 3 ? 2 : 1;
-  const shafts = nShaft === 2
-    ? [[floors[0], floors[1]], [floors[1], bottom]]
-    : nShaft === 1 ? [[floors[0], bottom]] : [];
-  const liftCols = [];
-  for (const [top, bot] of shafts) {
+  // lift shafts from TfL's REAL lift graph where the feed knows it
+  // (Canada Water: A street↔ticket hall, B down to the Jubilee calling
+  // at the Windrush level, C to the Windrush level only — the on-site
+  // Lift guide as data; letters follow the boards' street-first order).
+  // The count heuristic covers stations the feed is silent about.
+  const levelNums = levels.map(s => parseInt(s.replace('−', '-'), 10));
+  const rowOfLevel = {};
+  levelNums.forEach((lv, i) => { if (!(lv in rowOfLevel)) rowOfLevel[lv] = floors[i]; });
+  let shaftPlans = [];
+  if (real.liftGraph) {
+    const seen = new Set();
+    for (const lg of real.liftGraph) {
+      const stops = [...new Set(lg.map(lv => rowOfLevel[lv]).filter(r => r !== undefined))].sort((a, b) => a - b);
+      if (stops.length < 2) continue;
+      const k = stops.join(',');
+      if (seen.has(k)) continue;
+      seen.add(k);
+      shaftPlans.push(stops);
+      if (shaftPlans.length >= 3) break;
+    }
+  }
+  if (!shaftPlans.length && facts.lifts && floors.length >= 2) {
+    shaftPlans = facts.lifts >= 3 && floors.length >= 3
+      ? [[floors[0], floors[1]], floors.slice(1)]
+      : [[...floors]];
+  }
+  const shaftDefs = [];   // in LETTER order: A, B, C…
+  for (const stops of shaftPlans) {
     const c = alloc(2, 1);
     if (c === null) continue;
-    liftCols.push(c);
-    for (let r = top; r < bot; r++) { grid[r][c] = 'L'; grid[r][c + 1] = 'L'; }
+    for (let r = stops[0]; r < stops[stops.length - 1]; r++) { grid[r][c] = 'L'; grid[r][c + 1] = 'L'; }
+    shaftDefs.push({ c, stops });
+  }
+  // escalator banks are SLOPED runs now — 45° diagonals zigzagging down
+  // the cross-section the way deep stations really stack them. Travel
+  // direction is fixed per run: an up escalator boards at its bottom
+  // end, a down escalator at its top. TfL's count still sets how many.
+  const escRuns = [];
+  {
+    const gaps = floors.slice(0, -1).map((fr, i) => [fr, floors[i + 1]]);
+    let escBudget = Math.min(Math.ceil((facts.escalators || 0) / 2), gaps.length * 2);
+    const gapOrder = [...gaps].reverse();
+    let zig = rnd(2) === 0;
+    for (let round = 0; round < 2 && escBudget > 0; round++) {
+      let placed = 0;
+      for (const [top, bot] of gapOrder) {
+        if (escBudget <= 0) break;
+        const span = bot - top;              // rows of drop
+        // 45° when there's room, steeper (real escalators are) when not
+        let c = null, reach = span;
+        for (const w of [span, Math.ceil(span / 2)]) {
+          c = alloc(w + 1, 0);
+          if (c !== null) { reach = w; break; }
+        }
+        if (c === null) continue;            // this gap is full; try the next
+        const leftTop = zig;                 // slopes alternate: the zigzag
+        zig = !zig;
+        escRuns.push({
+          xTop: (leftTop ? c : c + reach) * TILE + 16, yTop: top * TILE,
+          xBot: (leftTop ? c + reach : c) * TILE + 16, yBot: bot * TILE,
+          up: round === 0,                   // first bank rises, second descends
+        });
+        escBudget--;
+        placed++;
+      }
+      if (!placed) break;
+    }
   }
   // one honest staircase runs the whole way down — stairs never fail
   const stairC = alloc(1) ?? 16;
   for (let r = floors[0]; r < bottom; r++) grid[r][stairC] = floors.includes(r) ? '+' : 'H';
-  // escalator banks from TfL's own count, deepest gaps first
-  const gaps = floors.slice(0, -1).map((fr, i) => [fr, floors[i + 1]]);
-  let escBudget = Math.min(Math.ceil((facts.escalators || 0) / 2), gaps.length * 2);
-  const gapOrder = [...gaps].reverse();
-  for (let round = 0; round < 2 && escBudget > 0; round++) {
-    for (const [top, bot] of gapOrder) {
-      if (escBudget <= 0) break;
-      const c = alloc(1);
-      if (c === null) { escBudget = 0; break; }
-      grid[top][c] = '+';
-      for (let r = top + 1; r < bot; r++) grid[r][c] = 'S';
-      escBudget--;
-    }
-  }
   // gates: a WAY OUT to daylight, and a door at EACH END of every
   // platform level. The doors ARE the network: the west end of a
   // platform holds the westbound track's real departures, the east end
@@ -312,7 +351,7 @@ function genStation(name) {
     bystanders.push([freeCol(fr), fr, rnd(20)]);
   }
   helps.push([freeCol(bottom), bottom]);
-  const guides = liftCols.map((c, i) => [Math.max(2, Math.min(17, c + (i ? 3 : -3))), shafts[i][1]]);
+  const guides = shaftDefs.map((sd, i) => [Math.max(2, Math.min(17, sd.c + (i ? 3 : -3))), sd.stops[sd.stops.length - 1]]);
   if (!guides.length) guides.push([freeCol(floors[Math.min(1, floors.length - 1)]), floors[Math.min(1, floors.length - 1)]]);
   const board = [freeCol(bottom), bottom];
   const commuters = [];
@@ -321,10 +360,11 @@ function genStation(name) {
   }
   const def = {
     map: grid.map(r => r.join('')),
-    commuters, bystanders, ads, signs, levels, guides, helps, board,
+    commuters, bystanders, ads, signs, levels, levelNums, guides, helps, board,
     streetRow, gateOut, platDefs, platLevel, spawnStreet, perch,
+    shaftDefs, escRuns,
     underground: !surface,
-    nLifts: liftCols.length,
+    nLifts: shaftDefs.length,
   };
   GEN_CACHE.set(name, def);
   return def;
@@ -442,6 +482,9 @@ export class TubeFlock {
     this.scene = null;
     this.changeHint = null;
     this.stats = { stops: 0, visited: new Set([this.cur]) };
+    // the clock: always daytime, ten times reality — the rat race spins
+    this.clock = 7 * 60 + Math.floor(Math.random() * 11 * 60);
+    this.day = 1;
     this.outSeed = (Math.random() * 0xffffffff) >>> 0;
     this._outMemo = new Map();
     this.cam = [...POS[this.cur]];
@@ -546,7 +589,12 @@ export class TubeFlock {
     const bits = [`Inside ${this.cur}.`];
     if (it.rescue) bits.push(`${it.rescue.name} the ${it.rescue.sp} is on ${levelName(it.rescue.y / TILE - 1)}.`);
     else if (it.pendingEdge) bits.push(`Change to the ${LINE_SHORT[it.pendingEdge.line] || it.pendingEdge.line} line — its ${boundWord(this.cur, it.pendingEdge.to).toLowerCase()} train leaves from ${levelName(it.gate.r)}, ${side(it.gate.c)} end.`);
+    bits.push(`It's ${this.clockText()}.`);
     bits.push(`Levels, top to bottom: ${d.levels.join('; ')}.`);
+    const rowName = r => d.levels[it.floorRows.indexOf(r)] || 'a level';
+    d.shaftDefs.forEach((sd, i) => {
+      bits.push(`Lift ${String.fromCharCode(65 + i)} serves ${sd.stops.map(rowName).join(', ')}.`);
+    });
     for (const p of d.platDefs) {
       const doors = Object.values(p.doors).map(dr =>
         `${boundWord(this.cur, dr.edges[0].to).toLowerCase()} to ${dr.edges[0].to} at the ${side(dr.c)} end`);
@@ -661,33 +709,42 @@ export class TubeFlock {
     const def = genStation(this.cur);
     const seed = hashName(this.cur) % 20;
     const level = new Level({ name: this.cur, map: def.map, time: 0, enemies: [] }, 0);
-    // letter the lifts A/B/C left-to-right, the way the real lift guides do;
-    // each shaft serves only its own span of levels, so its paddles wrap at
-    // its own top landing rather than sailing on through the ceiling.
-    // One facility in ten is out — and broken things GLITCH.
+    // ONE CAR PER SHAFT, cycling its real stops with sliding doors —
+    // you can see who's aboard as glowing skeletons through the glass.
+    // Letters follow the Lift guide's street-first order (Canada Water:
+    // A to street, B the deep through-lift, C the short hop) — the
+    // board on the wall and the game agree. Broken lift = dead car
+    // parked mid-shaft in the dark. One facility in ten is out.
     const LIFT_INK = ['#4f4a76', '#b23b2b', '#716b93'];
     const glitches = [];
-    level.lifts.forEach((sh, i) => {
+    for (const sh of level.lifts) sh.paddles = [];   // paddles are the arcade's; the tube runs cars
+    def.shaftDefs.forEach((sd, i) => {
+      const sh = level.lifts.find(s => Math.round(s.x0 / TILE) === sd.c);
+      if (!sh) return;
       sh.id = String.fromCharCode(65 + i);
       sh.color = LIFT_INK[i % LIFT_INK.length];
-      sh.wrapY = sh.topY - 12;
+      sh.stops = sd.stops;
       if (this.facilityOut(this.cur, 'lift', i)) {
         sh.out = true;
-        sh.paddles = [];
+        sh.car = { y: ((sd.stops[0] + sd.stops[sd.stops.length - 1]) / 2) * TILE,
+          stop: -1, dir: 1, state: 'dead', t: 0, door: 0, occupants: [] };
         glitches.push({ kind: 'lift', x0: sh.x0, x1: sh.x1, y0: sh.topY, y1: sh.botY,
           next: 1.5 + Math.random() * 4, until: 0, flip: false });
+      } else {
+        sh.car = { y: sd.stops[0] * TILE, stop: 0, dir: 1, state: 'dwell',
+          t: Math.random() * 1.5, door: 1, occupants: [] };
       }
     });
+    // sloped escalator runs, with per-run outages
+    const escRuns = def.escRuns.map((r0, i) => ({ ...r0, broken: this.facilityOut(this.cur, 'esc', i) }));
     const brokenEsc = new Set();
-    [...level.escCols.keys()].sort((a, b) => a - b).forEach((c, i) => {
-      if (this.facilityOut(this.cur, 'esc', i)) {
-        brokenEsc.add(c);
-        level.escCols.delete(c);   // it doesn't run at all — or suffer riders
-        let top = 99, bot = -1;
-        def.map.forEach((row, r) => { if (row[c] === 'S') { top = Math.min(top, r); bot = Math.max(bot, r); } });
-        glitches.push({ kind: 'esc', c, x0: c * TILE, x1: (c + 1) * TILE, y0: top * TILE, y1: (bot + 1) * TILE,
-          next: 1.5 + Math.random() * 4, until: 0, flip: false });
-      }
+    escRuns.forEach((run, i) => {
+      if (!run.broken) return;
+      brokenEsc.add(i);
+      glitches.push({ kind: 'esc', run,
+        x0: Math.min(run.xTop, run.xBot) - 8, x1: Math.max(run.xTop, run.xBot) + 8,
+        y0: run.yTop, y1: run.yBot,
+        next: 1.5 + Math.random() * 4, until: 0, flip: false });
     });
     // where you're headed decides the door: a line change crosses the
     // station underground to the door the new train really leaves from;
@@ -719,6 +776,7 @@ export class TubeFlock {
     this.stats?.visited.add(this.cur);
     this.interior = {
       def, level, pendingEdge, gate, floorRows, vertRuns, seed,
+      escRuns, escRide: null, playerCar: null,
       glitches, brokenEsc, grab: null, grabCool: 0,
       fact: arrival ? STATION_FACTS[this.cur] : null,
       droppings: [], decals: [],
@@ -726,8 +784,17 @@ export class TubeFlock {
       rescue: rescue && perch ? {
         ...rescue, x: perch.c * TILE + 16, y: (perch.r + 1) * TILE, found: false,
       } : null,
-      // every station draws its crowd from a different corner of London
-      enemies: def.commuters.map(e => new Enemy(level, { ...e, v: (e.v + seed) % 20 })),
+      // every station draws its crowd from a different corner of London —
+      // and some of that crowd moves slowly, with a stick, a case, a
+      // pram or a wheelchair; steps and escalators are not for everyone
+      enemies: def.commuters.map((e, i) => {
+        const en = new Enemy(level, { ...e, v: (e.v + seed) % 20 });
+        const roll = (seed * 7 + i * 13) % 100;
+        en.aid = roll < 8 ? 'stick' : roll < 18 ? 'case' : roll < 24 ? 'pram' : roll < 30 ? 'wheelchair' : null;
+        en.aidMul = { stick: 0.55, case: 0.75, pram: 0.6, wheelchair: 0.5 }[en.aid] || 1;
+        en.liftOnly = en.aid === 'pram' || en.aid === 'wheelchair';
+        return en;
+      }),
       buddies: this.roster.filter(b => b !== playing).slice(0, 6)
         .map((b, i) => ({ sp: b.sp, x: player.x - 20 - i * 12, y: player.y - 30, ph: i * 1.9 })),
       invulnT: 1,
@@ -758,7 +825,7 @@ export class TubeFlock {
     const g = this.g, it = this.interior, sc = this.scene;
     sc.t += dt;
     const t = performance.now() / 1000;
-    for (const e of it.enemies) e.update(dt);   // the station stays alive
+    for (const e of it.enemies) if (!e.inCar && !e.riding) e.update(dt);   // the station stays alive
     if (sc.kind === 'arrive') {
       const A = 1.0, B = 0.4, C = 1.1, D = 0.9;
       if (sc.t >= A + B && !sc.out) {
@@ -806,7 +873,7 @@ export class TubeFlock {
   updateGrab(dt) {
     const g = this.g, it = this.interior, gb = it.grab, p = g.player;
     gb.t += dt;
-    for (const e of it.enemies) e.update(dt);
+    for (const e of it.enemies) if (!e.inCar && !e.riding) e.update(dt);
     const PULL = 0.2, HOLD = 0.7;
     if (g.reducedMotion) {
       // no strobe, no shake: a firm calm set-down away from the thing
@@ -889,6 +956,58 @@ export class TubeFlock {
     this.g.say(`Back on the map at ${this.cur}. ${it.rescue.name} still waits inside.`);
     return true;
   }
+  // prams and wheelchairs can't do steps or escalators: they make for
+  // the lift, stand patiently by the doors, and ride — you'll see their
+  // glowing skeletons glide past through the glass. Sticks and cases
+  // manage the escalators, slowly and after a steadying pause.
+  updateCommuterMobility(dt, it) {
+    const lv = it.level;
+    for (const e of it.enemies) {
+      if (e.inCar) continue;
+      if (e.riding) {
+        const run = e.riding.run;
+        const [sx, sy, ex, ey] = run.up ? [run.xBot, run.yBot, run.xTop, run.yTop]
+          : [run.xTop, run.yTop, run.xBot, run.yBot];
+        const len = Math.hypot(ex - sx, ey - sy) || 1;
+        e.riding.s += (52 / len) * dt;
+        e.x = sx + (ex - sx) * Math.min(1, e.riding.s);
+        e.y = sy + (ey - sy) * Math.min(1, e.riding.s);
+        if (e.riding.s >= 1) { e.x = ex + Math.sign(ex - sx) * 8; e.y = ey; e.riding = null; }
+        continue;
+      }
+      if (e.liftOnly) {
+        for (const sh of lv.lifts) {
+          if (!sh.car || sh.out) continue;
+          const row = Math.round(e.y / TILE);
+          if (!sh.stops.includes(row)) continue;
+          const cx = (sh.x0 + sh.x1) / 2;
+          if (Math.abs(e.x - cx) < 34) {
+            e.waitT = 0.4;                    // stood by the doors
+            const car = sh.car;
+            if (car.state === 'dwell' && car.door > 0.7 && sh.stops[car.stop] === row
+              && car.occupants.length < 2 && Math.random() < dt * 0.8) {
+              const others = sh.stops.filter(r => r !== row);
+              const off = others[Math.floor(Math.random() * others.length)];
+              car.occupants.push({ e, aid: e.aid, off });
+              e.inCar = true; e.waitT = 0; e.x = -500;   // aboard: only the skeleton shows
+            }
+            break;
+          }
+        }
+      } else if (Math.random() < dt * 2) {
+        for (const run of it.escRuns) {
+          if (run.broken) continue;
+          const [bx, by] = run.up ? [run.xBot, run.yBot] : [run.xTop, run.yTop];
+          if (Math.abs(e.x - bx) < 12 && Math.abs(e.y - by) < 8) {
+            if (e.aid && !e.hesitated) { e.waitT = 1.0; e.hesitated = true; break; }
+            e.riding = { run, s: 0 };
+            e.hesitated = false;
+            break;
+          }
+        }
+      }
+    }
+  }
   updateInterior(dt) {
     const g = this.g, it = this.interior, lv = it.level;
     if (this.scene) { this.updateScene(dt); return; }
@@ -901,16 +1020,36 @@ export class TubeFlock {
       if (gl.next <= 0) { gl.until = 0.3; gl.flip = !gl.flip; gl.next = 4 + Math.random() * 4; }
     }
     if (it.grab) { this.updateGrab(dt); return; }
+    // ONE CAR PER SHAFT: dwell with sliding doors, glide to the next
+    // real stop, bounce at the ends. The rat race rides in glass boxes.
+    const DWELL = 2.4, DOOR_T = 0.35, CAR_V = 58;
     for (const sh of lv.lifts) {
-      if (sh.out) continue;
-      for (const p of sh.paddles) {
-        p.prevY = p.y;
-        p.y -= LIFT_V * dt;
-        if (p.y < sh.wrapY) {
-          // a rider still aboard at the top just flutters off, no drama
-          if (g.player.onLift === p) { g.player.onLift = null; g.player.mode = 'fall'; g.player.vy = 0; }
-          p.y = sh.botY; p.prevY = p.y;
+      const car = sh.car;
+      if (!car || car.state === 'dead') continue;
+      car.t += dt;
+      if (car.state === 'dwell') {
+        car.door = car.t < DWELL - DOOR_T ? Math.min(1, car.t / DOOR_T) : Math.max(0, (DWELL - car.t) / DOOR_T);
+        if (car.t >= DWELL) {
+          car.state = 'move'; car.t = 0; car.door = 0;
+          if (car.stop + car.dir < 0 || car.stop + car.dir >= sh.stops.length) car.dir *= -1;
+          car.next = car.stop + car.dir;
         }
+      } else {
+        const ty = sh.stops[car.next] * TILE;
+        const step = Math.sign(ty - car.y) * CAR_V * dt;
+        if (Math.abs(ty - car.y) <= Math.abs(step)) {
+          car.y = ty; car.stop = car.next; car.state = 'dwell'; car.t = 0;
+          // passengers bound for this floor step off
+          car.occupants = car.occupants.filter(oc => {
+            if (oc.off !== sh.stops[car.stop]) return true;
+            if (oc.e) {
+              oc.e.inCar = false;
+              oc.e.x = (sh.x0 + sh.x1) / 2 + (Math.random() < 0.5 ? -24 : 24);
+              oc.e.y = sh.stops[car.stop] * TILE;
+            }
+            return false;
+          });
+        } else car.y += step;
       }
     }
     // glide mode glides here too: the persistent heading plays the keys
@@ -918,16 +1057,108 @@ export class TubeFlock {
       ? { left: g.heading.x < 0 ? 1 : 0, right: g.heading.x > 0 ? 1 : 0,
           up: g.heading.y < 0 ? 1 : 0, down: g.heading.y > 0 ? 1 : 0 }
       : g.input;
-    g.player.update(dt, { ...dirIn, jump: g.input.jump || g.jumpTap }, g);
-    g.jumpTap = false;
-    for (const e of it.enemies) e.update(dt);
+    if (it.playerCar) {
+      // the bird in the box: ride until the doors open somewhere you like
+      const sh = it.playerCar, car = sh.car;
+      g.player.x = (sh.x0 + sh.x1) / 2;
+      g.player.y = car.y;
+      g.player.vx = 0; g.player.vy = 0; g.player.mode = 'walk';
+      for (const b of it.buddies) { b.x = g.player.x - 6; b.y = car.y - 24; b.vx = b.vy = 0; }
+      const side = dirIn.left ? -1 : dirIn.right ? 1 : 0;
+      if (car.state === 'dwell' && car.door > 0.6 && (side || g.jumpTap)) {
+        g.player.x += (side || 1) * 26;
+        it.playerCar = null;
+        g.jumpTap = false;
+        g.haptics.tick();
+        g.say(`Off at ${it.def.levels[it.floorRows.indexOf(sh.stops[car.stop])] || 'a level'}.`);
+      }
+    } else if (it.escRide) {
+      // a sloped escalator carries you; hop off early with a jump
+      const ride = it.escRide, run = ride.run;
+      const [sx, sy, ex, ey] = run.up ? [run.xBot, run.yBot, run.xTop, run.yTop]
+        : [run.xTop, run.yTop, run.xBot, run.yBot];
+      const len = Math.hypot(ex - sx, ey - sy) || 1;
+      ride.s += (64 / len) * dt;
+      g.player.x = sx + (ex - sx) * Math.min(1, ride.s);
+      g.player.y = sy + (ey - sy) * Math.min(1, ride.s);
+      g.player.vx = 0; g.player.vy = 0; g.player.mode = 'walk';
+      if (g.input.jump || g.jumpTap) {
+        it.escRide = null; g.player.mode = 'jump'; g.player.vy = -230; g.jumpTap = false;
+      } else if (ride.s >= 1) {
+        g.player.x = ex + Math.sign(ex - sx) * 10;
+        g.player.y = ey;
+        it.escRide = null;
+        g.haptics.tick();
+      }
+    } else {
+      g.player.update(dt, { ...dirIn, jump: g.input.jump || g.jumpTap }, g);
+      g.jumpTap = false;
+      // closed lift doors are walls — no wandering into the shaft…
+      // (only on the floors the shaft actually passes through)
+      for (const sh of lv.lifts) {
+        if (!sh.car || !sh.stops) continue;
+        if (g.player.y < sh.stops[0] * TILE - 6 || g.player.y > sh.stops[sh.stops.length - 1] * TILE + 6) continue;
+        const cx = (sh.x0 + sh.x1) / 2;
+        const canEnter = !sh.out && sh.car.state === 'dwell' && sh.car.door > 0.6
+          && Math.abs(g.player.y - sh.stops[sh.car.stop] * TILE) < 8;
+        if (canEnter || g.player.mode !== 'walk') continue;
+        if (g.player.x > sh.x0 - 6 && g.player.x < sh.x1 + 6) {
+          g.player.x = g.player.x < cx ? sh.x0 - 6 : sh.x1 + 6;
+        }
+      }
+      // …open doors welcome you aboard
+      if (g.player.mode === 'walk' && it.grabCool <= 0) {
+        for (const sh of lv.lifts) {
+          const car = sh.car;
+          if (!car || sh.out || car.state !== 'dwell' || car.door < 0.6) continue;
+          const cx = (sh.x0 + sh.x1) / 2;
+          if (Math.abs(g.player.x - cx) < 12 && Math.abs(g.player.y - sh.stops[car.stop] * TILE) < 8) {
+            it.playerCar = sh;
+            g.foley.whoosh();
+            g.haptics.tick();
+            g.say(`Aboard Lift ${sh.id}.`);
+            break;
+          }
+        }
+        // stepping onto a working escalator's boarding end takes you
+        if (!it.playerCar) {
+          for (const run of it.escRuns) {
+            if (run.broken) continue;
+            const [bx, by] = run.up ? [run.xBot, run.yBot] : [run.xTop, run.yTop];
+            const toward = Math.sign((run.up ? run.xTop : run.xBot) - bx);
+            const moving = dirIn.left ? -1 : dirIn.right ? 1 : 0;
+            if (Math.abs(g.player.x - bx) < 10 && Math.abs(g.player.y - by) < 8 && moving === toward) {
+              it.escRide = { run, s: 0 };
+              g.foley.step();
+              break;
+            }
+          }
+        }
+      }
+    }
+    // the rat race has a pace: rush hours hurry, aids slow you down
+    const hr = (this.clock / 60) % 24;
+    const pace = (hr >= 7.5 && hr < 9.5) || (hr >= 16.5 && hr < 18.5) ? 1.35 : 1;
+    for (const e of it.enemies) {
+      if (e.inCar || e.riding) continue;
+      if (e.waitT > 0) { e.waitT -= dt; continue; }
+      e.update(dt * pace * (e.aidMul || 1));
+    }
+    this.updateCommuterMobility(dt, it);
     // touch a broken thing and it takes the whole flock personally
     if (!it.grab && it.grabCool <= 0) {
       const gpx = g.player.x, gpy = g.player.y;
       for (const gl of it.glitches) {
-        const touching = gl.kind === 'lift'
-          ? g.player.mode !== 'walk' && gpx > gl.x0 - 6 && gpx < gl.x1 + 6 && gpy > gl.y0 && gpy < gl.y1 + 30
-          : g.player.mode === 'climb' && Math.floor(gpx / TILE) === gl.c;
+        let touching = false;
+        if (gl.kind === 'lift') {
+          touching = g.player.mode !== 'walk' && gpx > gl.x0 - 6 && gpx < gl.x1 + 6 && gpy > gl.y0 && gpy < gl.y1 + 30;
+        } else if (gl.run) {
+          const vx = gl.run.xBot - gl.run.xTop, vy = gl.run.yBot - gl.run.yTop;
+          const tt = ((gpx - gl.run.xTop) * vx + (gpy - gl.run.yTop) * vy) / (vx * vx + vy * vy || 1);
+          if (tt > 0.12 && tt < 0.92) {
+            touching = Math.hypot(gpx - gl.run.xTop - vx * tt, gpy - gl.run.yTop - vy * tt) < 15;
+          }
+        }
         if (touching) {
           it.grab = {
             x: (gl.x0 + gl.x1) / 2,
@@ -944,9 +1175,9 @@ export class TubeFlock {
         }
       }
     }
-    // narrate the level you land on
+    // narrate the level you land on (not every floor a ride glides past)
     const fi = this.playerFloorIdx(it);
-    if (g.player.mode === 'walk' && fi !== it._saidFloor) {
+    if (!it.playerCar && !it.escRide && g.player.mode === 'walk' && fi !== it._saidFloor) {
       if (it._saidFloor !== undefined) g.say(it.def.levels[fi] || '');
       it._saidFloor = fi;
     }
@@ -1077,6 +1308,10 @@ export class TubeFlock {
   // ---------------------------------------------------------- sim
   update(dt) {
     if (this.arriveT > 0) this.arriveT -= dt;
+    // ten game-seconds per real second, and never night: past nine in
+    // the evening the clock snaps to half six the next morning
+    this.clock += dt * 10 / 60;
+    if (this.clock >= 21 * 60) { this.clock = 6.5 * 60; this.day++; }
     // a full-screen station postcard holds the world still until read
     if (this.factCard) { this.factCard.t += dt; return; }
     if (this.interior) { this.updateInterior(dt); return; }
@@ -1465,7 +1700,9 @@ export class TubeFlock {
     ctx.textAlign = 'left';
     ctx.globalAlpha = 0.7;
     ctx.font = `bold ${fs * 0.6}px Georgia, serif`;
-    ctx.fillText(`TUBULAR SMELLS · FLOCK ${this.roster.length}/${LOST.length + 1} · SCORE ${this.score} · HI ${this.hiscore}`, 12, fs * 0.95);
+    const mast = `TUBULAR SMELLS · FLOCK ${this.roster.length}/${LOST.length + 1} · SCORE ${this.score} · ${this.clockText()}`;
+    ctx.fillText(mast, 12, fs * 0.95);
+    this.drawClock(ctx, 12 + ctx.measureText(mast).width + fs * 0.75, fs * 0.72, fs * 0.5);
     ctx.globalAlpha = 1;
     // the roster roosts along the top right, under the speaker
     this.roster.slice(0, 12).forEach((b, i) => {
@@ -1585,6 +1822,8 @@ export class TubeFlock {
     ctx.translate(g.offX, g.offY);
     ctx.scale(g.scale, g.scale);
     ctx.translate(-g.camX, -g.camY);
+    // the cars ride over the world: box, skeleton riders, glass doors
+    this.drawLiftCars(ctx, it, t);
     // broken facilities glitching: a 0.3s orientation flip, or a Jet Set
     // Willy colour roll. Under prefers-reduced-motion, a calm static X.
     for (const gl of it.glitches) {
@@ -1700,8 +1939,10 @@ export class TubeFlock {
     // compact tallies at the left; big readable lines in the rest
     ctx.textAlign = 'left';
     ctx.font = `bold ${fs * 0.62}px Georgia, serif`;
-    ctx.fillText(`FLOCK ${this.roster.length}/${LOST.length + 1}`, 10, fs * 1.1);
-    ctx.fillText(`SCORE ${this.score}`, 10, fs * 2.1);
+    const flockTxt = `FLOCK ${this.roster.length}/${LOST.length + 1}`;
+    ctx.fillText(flockTxt, 10, fs * 1.1);
+    ctx.fillText(`SCORE ${this.score} · ${this.clockText()}`, 10, fs * 2.1);
+    this.drawClock(ctx, 10 + ctx.measureText(flockTxt).width + fs * 0.75, fs * 0.85, fs * 0.5);
     const lx = 20 + ctx.measureText(`SCORE ${this.score}`).width;
     const cw = w - lx * 2;   // symmetric so centred text clears the tallies
     ctx.textAlign = 'center';
@@ -1755,6 +1996,38 @@ export class TubeFlock {
     ctx.textAlign = 'center';
     ctx.fillText('⌂ MAP', mb.x + mb.w / 2, mb.y + mb.h * 0.66);
     ctx.textAlign = 'left';
+    ctx.restore();
+  }
+  clockText() {
+    const mins = this.clock % (24 * 60);
+    return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(Math.floor(mins % 60)).padStart(2, '0')}`;
+  }
+  // a little station clock, spinning ten times too fast — the rat race
+  drawClock(ctx, x, y, r) {
+    const mins = this.clock % (24 * 60);
+    const h = mins / 60, m = mins % 60, s = (this.clock * 60) % 60;
+    ctx.save();
+    ctx.fillStyle = 'rgba(247,242,230,0.95)';
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    for (let k = 0; k < 4; k++) {
+      const a = k * Math.PI / 2;
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(a) * (r - 1.5), y + Math.sin(a) * (r - 1.5));
+      ctx.lineTo(x + Math.cos(a) * (r - 4), y + Math.sin(a) * (r - 4));
+      ctx.stroke();
+    }
+    const hand = (frac, ln, w2, col) => {
+      const a = frac * Math.PI * 2 - Math.PI / 2;
+      ctx.strokeStyle = col; ctx.lineWidth = w2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(a) * ln, y + Math.sin(a) * ln);
+      ctx.stroke();
+    };
+    hand((h % 12) / 12, r * 0.5, 2, PALETTE.ink);
+    hand(m / 60, r * 0.76, 1.5, PALETTE.ink);
+    if (!this.g.reducedMotion) hand(s / 60, r * 0.84, 0.9, PALETTE.danger);
     ctx.restore();
   }
   mapButtonRect() {
@@ -2061,9 +2334,98 @@ export class TubeFlock {
       ctx.stroke();
     }
   }
+  // sloped escalators: balustrade band, gliding treads, a direction
+  // chevron at the boarding end. Broken ones stand still and sulk red.
+  drawEscRuns(ctx, it, t) {
+    for (const run of it.escRuns) {
+      const { xTop, yTop, xBot, yBot } = run;
+      const len = Math.hypot(xBot - xTop, yBot - yTop) || 1;
+      const ux = (xBot - xTop) / len, uy = (yBot - yTop) / len;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = run.broken ? 'rgba(178,59,43,0.75)' : PALETTE.ladder;
+      ctx.lineWidth = 10;
+      ctx.beginPath(); ctx.moveTo(xTop, yTop - 6); ctx.lineTo(xBot, yBot - 6); ctx.stroke();
+      // handrail + posts
+      ctx.strokeStyle = 'rgba(38,34,30,0.75)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(xTop, yTop - 26); ctx.lineTo(xBot, yBot - 26);
+      ctx.moveTo(xTop, yTop - 6); ctx.lineTo(xTop, yTop - 26);
+      ctx.moveTo(xBot, yBot - 6); ctx.lineTo(xBot, yBot - 26);
+      ctx.stroke();
+      // treads glide with the travel; a broken run's stand still
+      const phase = run.broken ? 0 : (t * 40) % 14;
+      ctx.strokeStyle = PALETTE.ink;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let d = phase; d < len; d += 14) {
+        const dd = run.up ? len - d : d;
+        const mx = xTop + ux * dd, my = yTop + uy * dd - 6;
+        ctx.moveTo(mx + uy * 5, my - ux * 5);
+        ctx.lineTo(mx - uy * 5, my + ux * 5);
+      }
+      ctx.stroke();
+      // which way it carries: chevron over the boarding end
+      const [bx, by] = run.up ? [xBot, yBot] : [xTop, yTop];
+      ctx.fillStyle = run.broken ? PALETTE.danger : PALETTE.platform;
+      const ay = by - 34;
+      ctx.beginPath();
+      if (run.up) { ctx.moveTo(bx - 5, ay + 4); ctx.lineTo(bx + 5, ay + 4); ctx.lineTo(bx, ay - 5); }
+      else { ctx.moveTo(bx - 5, ay - 4); ctx.lineTo(bx + 5, ay - 4); ctx.lineTo(bx, ay + 5); }
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  // one glass box per shaft: the car, its riders as glowing skeletons,
+  // and sliding doors at every landing it calls at
+  drawLiftCars(ctx, it, t) {
+    for (const sh of it.level.lifts) {
+      const car = sh.car;
+      if (!car) continue;
+      const cx = (sh.x0 + sh.x1) / 2;
+      const w2 = (sh.x1 - sh.x0) - 10;
+      const hh = 46;
+      const cy = car.y;
+      // the box (dead cars park dark)
+      ctx.fillStyle = sh.out ? '#413c34' : '#efe9d8';
+      ctx.strokeStyle = sh.color || PALETTE.ink;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.roundRect(cx - w2 / 2, cy - hh, w2, hh, 3); ctx.fill(); ctx.stroke();
+      // who's aboard, X-ray style
+      if (!sh.out) {
+        const seats = [];
+        if (it.playerCar === sh) seats.push({ bird: true });
+        for (const oc of car.occupants) seats.push({ aid: oc.aid });
+        seats.forEach((s, i) => {
+          const px = cx + (i - (seats.length - 1) / 2) * 15;
+          if (s.bird) drawBirdSkeleton(ctx, px, cy - 10, t);
+          else drawCommuterSkeleton(ctx, px, cy - 2, s.aid, t);
+        });
+      }
+      // sliding doors at each landing
+      for (const row of sh.stops) {
+        const dy = row * TILE;
+        const here = !sh.out && car.state !== 'move' && sh.stops[car.stop] === row;
+        const open = here ? car.door : 0;
+        ctx.strokeStyle = 'rgba(38,34,30,0.7)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cx - w2 / 2 - 3, dy - hh - 3, w2 + 6, hh + 3);
+        const half = (w2 / 2) * (1 - open);
+        if (half > 0.5) {
+          ctx.fillStyle = 'rgba(126,136,146,0.4)';   // glass: skeletons shine through
+          ctx.fillRect(cx - w2 / 2, dy - hh, half, hh);
+          ctx.fillRect(cx + w2 / 2 - half, dy - hh, half, hh);
+          ctx.strokeStyle = 'rgba(38,34,30,0.55)';
+          ctx.lineWidth = 1.2;
+          ctx.strokeRect(cx - w2 / 2, dy - hh, half, hh);
+          ctx.strokeRect(cx + w2 / 2 - half, dy - hh, half, hh);
+        }
+      }
+    }
+  }
   drawDressing(ctx, it, t) {
     const lv = it.level;
     this.drawEarthEdges(ctx, it, t);
+    this.drawEscRuns(ctx, it, t);
     const lineColor = it.pendingEdge ? LINES[it.pendingEdge.line].color
       : (this.line ? LINES[this.line].color : PALETTE.platform);
     // framed lino adverts on the back walls
@@ -2259,23 +2621,28 @@ export class TubeFlock {
     for (let i = 0; i < n; i++) {
       ctx.beginPath(); ctx.moveTo(dx0, fy(i)); ctx.lineTo(dx1, fy(i)); ctx.stroke();
     }
-    // escalator and stair runs
+    // stair runs, straight down
     for (const run of it.vertRuns) {
+      if (run.kind !== 'H') continue;
       const i0 = Math.max(0, it.floorRows.indexOf(run.top - 1));
       const i1i = it.floorRows.indexOf(run.bot + 1);
       const i1 = i1i < 0 ? n - 1 : i1i;
       const exx = mapX(run.c + 0.5);
-      if (run.kind === 'S') {
-        const broken = it.brokenEsc && it.brokenEsc.has(run.c);
-        ctx.strokeStyle = broken ? PALETTE.danger : PALETTE.ladder;
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(exx - 3, fy(i1)); ctx.lineTo(exx + 3, fy(i0)); ctx.stroke();
-      } else {
-        ctx.strokeStyle = 'rgba(38,34,30,0.45)';
-        ctx.lineWidth = 1.4;
-        ctx.beginPath(); ctx.moveTo(exx, fy(i1)); ctx.lineTo(exx, fy(i0)); ctx.stroke();
-      }
+      ctx.strokeStyle = 'rgba(38,34,30,0.45)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(exx, fy(i1)); ctx.lineTo(exx, fy(i0)); ctx.stroke();
     }
+    // escalators slope on the guide exactly as they do in the hall
+    it.escRuns.forEach((run, ri) => {
+      const iT = Math.max(0, it.floorRows.indexOf(run.yTop / TILE));
+      const iB = it.floorRows.indexOf(run.yBot / TILE);
+      ctx.strokeStyle = run.broken ? PALETTE.danger : PALETTE.ladder;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(mapX(run.xBot / TILE), fy(iB < 0 ? n - 1 : iB));
+      ctx.lineTo(mapX(run.xTop / TILE), fy(iT));
+      ctx.stroke();
+    });
     // the lift columns, lettered, proud or crossed out — each drawn only
     // over the levels it actually serves, like the boards in the real lifts
     for (const sh of lv.lifts) {

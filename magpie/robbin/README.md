@@ -168,8 +168,8 @@ open-air platforms clearly at ground level 0 with a +1 footbridge —
 unless TfL's figures say the platforms ride a viaduct, in which case
 the whole station honestly steps up (+1 · 10 m up at Greenford). Lift shafts and escalator banks follow **TfL's own
 per-station counts** — Hampstead is lift-only with zero escalators,
-Holborn has no lifts at all, Bank runs six escalator banks and a
-chained pair of lettered lifts — and one honest staircase always runs
+Holborn has no lifts at all, Bank runs escalator banks over three
+real lettered lifts — and one honest staircase always runs
 the whole way down. **The platforms are a model of London, not of
 your errand**: every platform level carries a door at each end, and
 each door holds that track's real departures — the west end of the
@@ -190,13 +190,27 @@ rescue, the fuller the screens get. Rescued birds join for +400 and
 +150 time; leave by any platform door (ride on by tube) or the WAY
 OUT (locked until the bird is found) to move on.
 
-Each station's lifts form a little graph: shafts are **lettered A/B/C
-left-to-right** with coloured plates at the shaft head, and each one
-serves only its own span of levels — Bank runs a short Lift A
-(street ↔ ticket hall) beside the full-depth Lift B; the modern
-step-free boxes pair a full-height lift with a short street ↔
-concourse one. When a lift fails it is always **one lift, never the
-bank** — the rest, and the stairs, still serve. Stations are dressed
+Each station's lifts are **TfL's real lift graph** where the
+step-free feed knows it (88 stations): `Lifts.csv` routes joined to
+the feed's storey numbers give every lift its true stops, and
+letters follow the on-site boards' street-first order — at Canada
+Water the game generates exactly the wall's Lift guide: **A** street
+↔ ticket hall, **B** the through-lift calling at the Windrush level
+on its way to the Jubilee, **C** the short hop to the Windrush level
+only. Every shaft runs **one glass box of a car** that cycles its
+stops — doors slide at each landing, and you always know who's
+aboard because riders show as **glowing X-ray skeletons through the
+glass** (your bird included). Walk in through open doors, ride, step
+off when they open where you want; closed doors are walls.
+**Escalators are sloped now**, 45° (steeper where the hall is tight,
+as real ones are), zigzagging down the section with gliding treads —
+step onto the boarding end and it carries you; hop off with a jump.
+When a lift fails it is always **one lift, never the bank** — its
+car parks dead and dark mid-shaft — and the stairs still serve.
+A **station clock** ticks ten times faster than reality, always
+daytime (past nine at night it snaps to half six the next morning):
+the rat race spins, commuters hurry visibly at rush hour, and the
+HUD wears the clock face. Stations are dressed
 with real Underground furniture: procedural
 **Lift guide** boards drawn from each station's own layout — floor
 lines, escalator diagonals, each lettered lift column drawn over just
@@ -222,8 +236,15 @@ in the game too, marked with a little arrow on the map. The adversaries are ordi
 **commuters** — bland blobby coat-people, deliberately faceless and
 background, but as varied as a real London platform: every age, build
 and skin tone, headscarves and turbans and flat caps and silver hair,
-phones, totes, coffees, canes and school backpacks. They trudge about,
-ride escalators standing, and never fly.
+phones, totes, coffees, canes and school backpacks. They trudge
+about, ride escalators standing, and never fly. And some of the
+crowd moves through a harder station than the rest: commuters **with
+walking sticks, wheeled cases, prams and wheelchairs** walk slower,
+steady themselves before stepping onto an escalator — and the prams
+and wheelchairs can't do steps or escalators at all, so they make
+for the lift, stand patiently by the doors, and ride; you'll see
+their skeletons glide past behind the glass. The station serves
+everyone or it doesn't really serve anyone.
 Brushing one just flutters you gently aside — no harm done. Quest
 cards read like little stories ("lonely down at the platforms",
 "lost on level −2"). Arriving at a storied station raises a

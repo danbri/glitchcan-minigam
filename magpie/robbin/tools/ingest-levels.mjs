@@ -129,6 +129,7 @@ for (const d of Object.values(depths)) {
 const stations = csv(rd('data/tfl-stationdata/Stations.csv')).slice(1);
 const points = csv(rd('data/tfl-stationdata/StationPoints.csv')).slice(1);
 const idName = new Map(stations.map(r => [r[0], r[1]]));
+const pointLevel = new Map(points.map(r => [r[0], parseInt(r[4], 10)]));
 // area-name prefixes that identify a LINE's platform areas
 const AREA_LINE = [
   [/^bak/i, 'bakerloo'], [/^cen/i, 'central'], [/^dis/i, 'district'],
@@ -163,9 +164,37 @@ for (const p of points) {
   }
 }
 
+// ------------------------------------------- 2b. real lift graphs
+// Lifts.csv routes each lift through named station areas; joined to
+// StationPoints' storey numbers this is the on-site Lift guide as data:
+// Canada Water = [0↔−1], [−1→−2→−3], [−1→−2]. On-site signage letters
+// lifts (the photo of Canada Water's board says A/B/C even though the
+// feed's FriendlyNames say 1/2/4), and boards letter the street lift
+// first — so we sort by (shallowest top, deepest reach) and let the
+// game assign A, B, C in that order.
+const liftGraphs = {};   // key → [[levels shallow→deep], ...]
+for (const row of csv(rd('data/tfl-stationdata/Lifts.csv')).slice(1)) {
+  const [stationId, , , , , , fromAreas, mid1, mid2, toAreas] = row;
+  const name = idName.get(stationId);
+  const key = name && norm(name);
+  if (!key) continue;
+  const lvls = new Set();
+  for (const field of [fromAreas, mid1, mid2, toAreas]) {
+    for (const areaId of (field || '').split('|')) {
+      const lv = pointLevel.get(areaId.trim());
+      if (Number.isFinite(lv)) lvls.add(lv);
+    }
+  }
+  if (lvls.size < 2) continue;
+  (liftGraphs[key] = liftGraphs[key] || []).push([...lvls].sort((a, b) => b - a));
+}
+for (const lifts of Object.values(liftGraphs)) {
+  lifts.sort((a, b) => (b[0] - a[0]) || (a[a.length - 1] - b[b.length - 1]));
+}
+
 // --------------------------------------------------------- 3. merge
 const out = {};
-const keys = new Set([...Object.keys(depths), ...Object.keys(topo)]);
+const keys = new Set([...Object.keys(depths), ...Object.keys(topo), ...Object.keys(liftGraphs)]);
 for (const key of [...keys].sort()) {
   const d = depths[key] || {};
   const t = topo[key] || { lineLevel: {}, negs: new Set(), hasUp: false };
@@ -188,14 +217,16 @@ for (const key of [...keys].sort()) {
   const deepest = Math.min(...Object.values(t.lineLevel), 0);
   const conc = negs.filter(n => n > deepest).sort((a, b) => a - b)[0];
   if (conc !== undefined && conc !== entry.ticket) entry.concourse = conc;
+  if (liftGraphs[key]) entry.liftGraph = liftGraphs[key];
   out[key] = entry;
 }
 
 const covered = Object.keys(out).filter(k => CANON.has(k));
 const withLevels = covered.filter(k => Object.values(out[k].lines).some(l => l.level !== undefined));
 const withDepths = covered.filter(k => Object.values(out[k].lines).some(l => l.depth !== undefined));
+const withLifts = covered.filter(k => out[k].liftGraph);
 console.log(`stations in game network : ${CANON.size}`);
-console.log(`covered by real data     : ${covered.length} (storeys ${withLevels.length}, depths ${withDepths.length})`);
+console.log(`covered by real data     : ${covered.length} (storeys ${withLevels.length}, depths ${withDepths.length}, lift graphs ${withLifts.length})`);
 if (foiUnmatched.length) console.log('FOI names unmatched      :', foiUnmatched.join(' | '));
 const un2 = [...new Set(stations.map(r => r[1]))].filter(n => !norm(n));
 console.log('stationdata unmatched    :', un2.length, '(non-tube/non-windrush stations expected here)');

@@ -393,7 +393,7 @@ const SKIN = ['#8d5524', '#a3714a', '#c68642', '#d9a577', '#e8c39a', '#f0d5b8'];
 const COATS = ['#4a5064', '#6b5a46', '#7c7a74', '#5a6652', '#7d5a68', '#4f6b74', '#877852', '#5b5b6e'];
 const HAIRS = ['#2c2c30', '#4a3a28', '#6e4a33', '#23252c', '#d8d3c8'];
 const CLOTHS = ['#a3573f', '#4f6b74', '#877852', '#7d5a68', '#5f7d6a', '#b0894a'];
-export function drawCommuter(ctx, { x, y, size = 48, facing = 1, phase = 0, pose = 'walk', variant = 0 }) {
+export function drawCommuter(ctx, { x, y, size = 48, facing = 1, phase = 0, pose = 'walk', variant = 0, aid = null }) {
   const v = Math.abs(Math.floor(variant));
   const skin = SKIN[v % SKIN.length];
   const coat = COATS[(v * 5 + 1) % COATS.length];
@@ -411,17 +411,25 @@ export function drawCommuter(ctx, { x, y, size = 48, facing = 1, phase = 0, pose
   ctx.scale((facing < 0 ? -s : s) * build, s * height);
   ctx.translate(-50, -92);
   if (elder) { ctx.translate(50, 92); ctx.rotate(0.08); ctx.translate(-50, -92); }
-  // legs
-  const swing = pose === 'walk' ? Math.sin(phase) * 0.42 : 0.05;
+  // legs — unless a wheelchair carries them
+  const slowAid = aid === 'stick' || aid === 'case';
+  const swing = pose === 'walk' ? Math.sin(phase) * (slowAid ? 0.22 : 0.42) : 0.05;
   ctx.strokeStyle = '#2c2c30';
   ctx.lineWidth = 5;
   ctx.lineCap = 'round';
-  for (const [hx, sgn] of [[44, 1], [57, -1]]) {
-    const a = pose === 'ride' ? 0 : swing * sgn;
+  if (aid === 'wheelchair') {
+    // seated: thighs forward, shins down to the footrest
     ctx.beginPath();
-    ctx.moveTo(hx, 64);
-    ctx.lineTo(hx + Math.sin(a) * 27, 64 + Math.cos(a) * 27);
+    ctx.moveTo(48, 60); ctx.lineTo(66, 62); ctx.lineTo(68, 78);
     ctx.stroke();
+  } else {
+    for (const [hx, sgn] of [[44, 1], [57, -1]]) {
+      const a = pose === 'ride' ? 0 : swing * sgn;
+      ctx.beginPath();
+      ctx.moveTo(hx, 64);
+      ctx.lineTo(hx + Math.sin(a) * 27, 64 + Math.cos(a) * 27);
+      ctx.stroke();
+    }
   }
   // gentle idle sway
   if (pose === 'stand') ctx.translate(Math.sin(phase * 0.7) * 1.2, 0);
@@ -526,6 +534,101 @@ export function drawCommuter(ctx, { x, y, size = 48, facing = 1, phase = 0, pose
     ctx.beginPath(); ctx.moveTo(66, 48); ctx.lineTo(72, 90); ctx.stroke();
     ctx.beginPath(); ctx.arc(63, 48, 3.5, Math.PI * 1.4, Math.PI * 0.4, true); ctx.stroke();
   }                          // 5: hands in pockets
+  // mobility: the aids that make steps and escalators someone else's luxury
+  if (aid === 'stick') {
+    ctx.strokeStyle = '#4a3a28';
+    ctx.lineWidth = 3.4;
+    ctx.beginPath(); ctx.moveTo(67, 50); ctx.lineTo(74, 90); ctx.stroke();
+    ctx.beginPath(); ctx.arc(64, 49, 3.5, Math.PI * 1.4, Math.PI * 0.4, true); ctx.stroke();
+  } else if (aid === 'case') {
+    // wheeled suitcase trailing on its telescopic handle
+    ctx.strokeStyle = '#2c2c30';
+    ctx.lineWidth = 2.6;
+    ctx.beginPath(); ctx.moveTo(36, 52); ctx.lineTo(22, 66); ctx.stroke();
+    ctx.fillStyle = cloth;
+    ctx.beginPath(); ctx.roundRect(10, 62, 17, 24, 3); ctx.fill();
+    ctx.strokeRect(10, 62, 17, 24);
+    ctx.fillStyle = '#2c2c30';
+    ctx.beginPath(); ctx.arc(13, 89, 3.2, 0, Math.PI * 2); ctx.fill();
+  } else if (aid === 'pram') {
+    // the buggy goes ahead, precious cargo under the hood
+    ctx.strokeStyle = '#2c2c30';
+    ctx.lineWidth = 2.8;
+    ctx.beginPath(); ctx.moveTo(66, 48); ctx.lineTo(78, 62); ctx.stroke();
+    ctx.fillStyle = cloth;
+    ctx.beginPath(); ctx.roundRect(74, 60, 24, 15, 5); ctx.fill();
+    ctx.beginPath(); ctx.arc(94, 64, 9, Math.PI * 1.2, Math.PI * 1.9); ctx.fill();
+    ctx.fillStyle = '#2c2c30';
+    ctx.beginPath(); ctx.arc(79, 86, 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(94, 86, 4.5, 0, Math.PI * 2); ctx.fill();
+  } else if (aid === 'wheelchair') {
+    // the chair: big spoked wheel, castor, seat and push-rim
+    ctx.strokeStyle = '#2c2c30';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(50, 74, 16, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 1.4;
+    for (let k = 0; k < 4; k++) {
+      const a2 = phase * 0.8 + k * Math.PI / 4;
+      ctx.beginPath();
+      ctx.moveTo(50 - Math.cos(a2) * 14, 74 - Math.sin(a2) * 14);
+      ctx.lineTo(50 + Math.cos(a2) * 14, 74 + Math.sin(a2) * 14);
+      ctx.stroke();
+    }
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(70, 86, 4.5, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(40, 58); ctx.lineTo(48, 62); ctx.moveTo(64, 62); ctx.lineTo(70, 82); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ---------------------------------------------------- X-ray passengers
+// Glowing bones behind the lift glass: you always know who's aboard.
+function boneStyle(ctx) {
+  ctx.strokeStyle = 'rgba(196,255,210,0.95)';
+  ctx.fillStyle = 'rgba(196,255,210,0.95)';
+  ctx.shadowColor = 'rgba(140,255,170,0.9)';
+  ctx.shadowBlur = 7;
+  ctx.lineWidth = 1.6;
+  ctx.lineCap = 'round';
+}
+export function drawCommuterSkeleton(ctx, x, y, aid = null, t = 0) {
+  ctx.save();
+  ctx.translate(x, y + Math.sin(t * 2.2 + x) * 0.8);
+  boneStyle(ctx);
+  ctx.beginPath(); ctx.arc(0, -34, 4.2, 0, Math.PI * 2); ctx.stroke();     // skull
+  ctx.beginPath(); ctx.moveTo(0, -29); ctx.lineTo(0, -12); ctx.stroke();   // spine
+  for (let i = 0; i < 3; i++) {                                             // ribs
+    ctx.beginPath(); ctx.arc(0, -25 + i * 4, 4.6 - i * 0.7, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+  }
+  ctx.beginPath(); ctx.moveTo(0, -26); ctx.lineTo(-6, -16); ctx.moveTo(0, -26); ctx.lineTo(6, -16); ctx.stroke();
+  if (aid === 'wheelchair') {
+    ctx.beginPath(); ctx.arc(1, -6, 6.5, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(6, -9); ctx.lineTo(7, -3); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(-3.5, 0); ctx.moveTo(0, -12); ctx.lineTo(3.5, 0); ctx.stroke();
+    if (aid === 'stick') { ctx.beginPath(); ctx.moveTo(6, -16); ctx.lineTo(8.5, 0); ctx.stroke(); }
+    else if (aid === 'case') ctx.strokeRect(-12, -10, 6.5, 10);
+    else if (aid === 'pram') {
+      ctx.strokeRect(6, -10, 9, 6);
+      ctx.beginPath(); ctx.arc(8, -1.5, 2, 0, Math.PI * 2); ctx.arc(13.5, -1.5, 2, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+export function drawBirdSkeleton(ctx, x, y, t = 0) {
+  ctx.save();
+  ctx.translate(x, y + Math.sin(t * 3) * 1);
+  boneStyle(ctx);
+  ctx.beginPath(); ctx.arc(5, -10, 3, 0, Math.PI * 2); ctx.stroke();       // skull
+  ctx.beginPath(); ctx.moveTo(8, -10); ctx.lineTo(11.5, -9); ctx.stroke(); // beak
+  ctx.beginPath(); ctx.moveTo(2.5, -8); ctx.quadraticCurveTo(-2, -7, -6, -4); ctx.stroke();
+  for (const a of [-0.5, -0.15, 0.2]) {                                     // wing fan
+    ctx.beginPath();
+    ctx.moveTo(-1, -6);
+    ctx.lineTo(-1 + Math.cos(2.4 + a) * 8, -6 + Math.sin(2.4 + a) * 8);
+    ctx.stroke();
+  }
+  ctx.beginPath(); ctx.moveTo(-3, -3); ctx.lineTo(-3, 0); ctx.moveTo(0.5, -3); ctx.lineTo(0.5, 0); ctx.stroke();
   ctx.restore();
 }
 

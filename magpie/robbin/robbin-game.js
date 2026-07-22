@@ -653,7 +653,8 @@ export class Enemy extends Walker {
       // commuters trudge; on an escalator they stand and ride
       drawCommuter(ctx, {
         x: this.x, y: this.y, size: 52, facing: this.dir, phase: this.phase,
-        pose: this.mode === 'climb' ? 'ride' : 'walk', variant: this.def.v ?? 0,
+        pose: this.riding || this.waitT > 0 ? 'stand' : this.mode === 'climb' ? 'ride' : 'walk',
+        variant: this.def.v ?? 0, aid: this.aid,
       });
       return;
     }
