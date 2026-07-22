@@ -972,15 +972,17 @@ class Game {
       if (!e.repeat && KONA_KEYS[e.key]) this.feedKonami(KONA_KEYS[e.key]);
       if (e.key === 'Enter') {
         if (this.creditsOpen()) { this.hideCredits(); return; }
+        if (this.state === 'tube' && this.tube.quitConfirm) { this.tube.exit(); return; }   // Enter answers QUIT
         if (this.state === 'tube' && this.tube.dismissFact()) return;
         this.pressStart(); return;
       }
       if (e.key === 'Escape') {
         if (this.creditsOpen()) { this.hideCredits(); return; }
         if (this.state === 'tube') {
+          if (this.tube.cancelQuit()) return;    // Escape answers KEEP FLYING
           if (this.tube.dismissFact()) return;   // the postcard goes first
           if (this.tube.interior) { this.tube.popOut(); return; }   // then the station
-          this.tube.exit(); return;
+          this.tube.requestQuit(); return;       // the map asks before quitting
         }
         if (this.state === 'gameover') { this.backToMenu(); return; }
         return;
@@ -1036,12 +1038,13 @@ class Game {
     });
     this.canvas.addEventListener('pointerdown', e => {
       if (this.state === 'map') { this.continueFromMap(); return; }
+      if (this.state === 'tube' && this.tube.quitTap(e.clientX, e.clientY)) return;   // the quit question is modal
       if (this.state === 'tube' && this.tube.dismissFact()) return;   // postcard: tap anywhere
       if (this.state === 'tube' && this.tube.interior
         && this.tube.mapButtonHit(e.clientX, e.clientY) && this.tube.popOut()) return;
       if (this.state === 'tube' && !this.tube.interior && !this.tube.travel
         && !this.tube.finale && !this.tube.over
-        && this.tube.menuButtonHit(e.clientX, e.clientY)) { this.tube.exit(); return; }
+        && this.tube.menuButtonHit(e.clientX, e.clientY)) { this.tube.requestQuit(); return; }
       if (this.state === 'tube' && this.tube.over) { this.tube.handleJump(); return; }
       // flick gestures on the play field (glide mode + tube travel)
       this.gesture = { x: e.clientX, y: e.clientY, used: false };

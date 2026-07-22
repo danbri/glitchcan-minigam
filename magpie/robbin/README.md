@@ -133,8 +133,14 @@ by surprise — and if you wander in anyway, **ESC or the ⌂ MAP button
 pops the flock straight back out**, no trek to the exit, nothing
 lost. When the postcard is up at the lost bird's own station, **one
 GO does both jobs** — it puts the card away and drops in — no double
-press. The map screen carries a matching **⏏ MENU button** (ESC's
-visible twin) that quits to the top menu. Inside, changes cross the station underground to the new
+press. The map screen carries a **⏏ QUIT chip in the same top-right
+corner as the interior's ⌂ MAP chip** — one learned place for "leave
+this screen". Quitting can't be undone (the journey has no save), so
+it never quits outright: a LEAVE THE JOURNEY? dialog warns that the
+flock, stops flown and lost things found will be gone (only the high
+score stays). KEEP FLYING is the big warm default; GO and ESC also
+answer "keep flying", Enter or tapping QUIT leaves. ESC on the map
+goes through the same question. Inside, changes cross the station underground to the new
 line's own directional door; rescues end by **surfacing** — the WAY
 OUT — or by riding on from any platform. Lines that share a platform
 swap trains without the trek — a real cross-platform change. Riding

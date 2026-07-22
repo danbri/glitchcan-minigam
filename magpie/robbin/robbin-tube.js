@@ -502,6 +502,7 @@ export class TubeFlock {
     this.changeHint = null;
     this.stats = { stops: 0, visited: new Set([this.cur]), objects: 0 };
     this.foundObjects = new Set();   // stations whose lost thing is handed in
+    this.quitConfirm = false;
     // the clock: always daytime, ten times reality — the rat race spins
     this.clock = 7 * 60 + Math.floor(Math.random() * 11 * 60);
     this.day = 1;
@@ -694,6 +695,7 @@ export class TubeFlock {
     return true;
   }
   handleDir(dx, dy) {
+    if (this.quitConfirm) return;   // the question holds the floor
     if (this.dismissFact()) return;
     if (this.over || this.travel || this.interior || this.gather || this.finale || Math.hypot(dx, dy) < 0.3) return;
     const [cx, cy] = this.toXY(this.cur);
@@ -738,6 +740,7 @@ export class TubeFlock {
     this.g.foley.whoosh();
   }
   handleJump() {
+    if (this.cancelQuit()) return;   // GO means "keep flying", never "quit"
     if (this.dismissFact()) {
       // one press does it: reading the postcard and going in are the
       // same intent when the lost bird's station is right here
@@ -761,6 +764,7 @@ export class TubeFlock {
     }
   }
   exit() {
+    this.quitConfirm = false;
     this.saveHi();
     this.g.soundtrack?.stop(1.2);
     this.g.midiScore?.stop(1.2);
@@ -1886,7 +1890,7 @@ export class TubeFlock {
       // an armed line change owns the NEXT line until GO (or a new swipe)
       const che = this.changeHint.edge;
       ctx.fillStyle = LINES[che.line]?.pale ? PALETTE.ink : (LINES[che.line]?.color || PALETTE.ink);
-      this.fitText(ctx, `GO: change to the ${LINE_SHORT[che.line] || che.line} line toward ${che.to}`, valX, fs * 3.55, w - valX - 12, fs * 0.95);
+      this.fitText(ctx, `GO: change to the ${LINE_SHORT[che.line] || che.line} line toward ${che.to}`, valX, fs * 3.55, w - valX - fs * 3.7, fs * 0.95);
       ctx.fillStyle = PALETTE.ink;
     } else if (ob) {
       const hop = this.nextHopTo(ob.at);
@@ -1913,21 +1917,21 @@ export class TubeFlock {
         nx += fs * 1.35;
         ctx.fillStyle = PALETTE.ink;
         const hopTxt = `${LINE_SHORT[hop.edge.line] || hop.edge.line} ${this.compass(dx, dy)} · ${hop.stops} stop${hop.stops === 1 ? '' : 's'} to ${ob.name}`;
-        this.fitText(ctx, hopTxt, nx, fs * 3.55, w - nx - fs * 2.2, fs * 0.95);
+        this.fitText(ctx, hopTxt, nx, fs * 3.55, w - nx - fs * 4.9, fs * 0.95);
       } else {
         // we're standing on it
         ctx.fillStyle = PALETTE.danger;
-        this.fitText(ctx, `${ob.name} is HERE — press GO to drop in!`, nx, fs * 3.55, w - nx - fs * 2.2, fs * 0.95);
+        this.fitText(ctx, `${ob.name} is HERE — press GO to drop in!`, nx, fs * 3.55, w - nx - fs * 4.9, fs * 0.95);
         ctx.fillStyle = PALETTE.ink;
       }
-      // the bird in question perches on the end of the line
-      drawBird(ctx, ob.sp, { x: w - fs * 1.1, y: fs * 3.7, size: fs * 1.15, facing: -1, phase: t * 6, pose: 'stand' });
+      // the bird in question perches on the end of the line (left of QUIT)
+      drawBird(ctx, ob.sp, { x: w - fs * 4.0, y: fs * 3.7, size: fs * 1.15, facing: -1, phase: t * 6, pose: 'stand' });
       ctx.globalAlpha = 0.6;
-      this.fitText(ctx, `${ob.name} the ${ob.sp}: ${ob.note}`, labX, fs * 4.5, w - 24, fs * 0.62, 'italic');
+      this.fitText(ctx, `${ob.name} the ${ob.sp}: ${ob.note}`, labX, fs * 4.5, w - labX - fs * 3.7, fs * 0.62, 'italic');
       ctx.globalAlpha = 1;
     } else {
       ctx.fillStyle = PALETTE.platform;
-      this.fitText(ctx, '♥ fly together as long as you like — the flock is whole ♥', valX, fs * 3.55, w - valX - 12, fs * 0.95);
+      this.fitText(ctx, '♥ fly together as long as you like — the flock is whole ♥', valX, fs * 3.55, w - valX - fs * 3.7, fs * 0.95);
       ctx.fillStyle = PALETTE.ink;
     }
     if (primer) {
@@ -1957,11 +1961,11 @@ export class TubeFlock {
     if (!g.touchUI) {
       ctx.globalAlpha = 0.6;
       ctx.fillStyle = PALETTE.ink;
-      this.fitText(ctx, 'swipe or arrows to fly a line · no rush — the flock waits · ESC: home to roost', w / 2, h - fs * 0.7, w - 16, fs * 0.72, 'normal');
+      this.fitText(ctx, 'swipe or arrows to fly a line · no rush — the flock waits · ESC or ⏏: quit (it asks first)', w / 2, h - fs * 0.7, w - 16, fs * 0.72, 'normal');
       ctx.globalAlpha = 1;
     }
-    // ⏏ MENU: one tap back to the top menu from the map
-    if (!this.finale && !this.over) {
+    // ⏏ QUIT: same corner as the interior's ⌂ MAP chip — it asks first
+    if (!this.finale && !this.over && !this.travel) {
       const mb = this.menuButtonRect();
       ctx.fillStyle = 'rgba(247,242,230,0.92)';
       ctx.strokeStyle = PALETTE.ink;
@@ -1970,11 +1974,13 @@ export class TubeFlock {
       ctx.fillStyle = PALETTE.ink;
       ctx.font = `bold ${fs * 0.52}px Georgia, serif`;
       ctx.textAlign = 'center';
-      ctx.fillText('⏏ MENU', mb.x + mb.w / 2, mb.y + mb.h * 0.66);
+      ctx.fillText('⏏ QUIT', mb.x + mb.w / 2, mb.y + mb.h * 0.66);
       ctx.textAlign = 'left';
     }
     // the postcard covers everything, and waits
     if (this.factCard) this.drawFactOverlay(ctx);
+    // …and the quit question outranks even the postcard
+    if (this.quitConfirm) this.drawQuitDialog(ctx);
     ctx.restore();
   }
   // ------------------------------------------------ interior rendering
@@ -2216,17 +2222,88 @@ export class TubeFlock {
     const r = this.mapButtonRect();
     return x >= r.x - 8 && x <= r.x + r.w + 8 && y >= r.y - 8 && y <= r.y + r.h + 8;
   }
-  // ⏏ MENU on the map screen: quit to the top menu (ESC's visible twin).
-  // Sits just above the touch band, clear of the thumbs and the masthead.
-  menuButtonRect() {
-    const g = this.g, w = g.cssW, h = g.cssH;
-    const fs = Math.max(17, Math.min(24, w / 22));
-    const { bot } = this.viewBand();
-    return { x: w - fs * 3.6 - 8, y: h - bot - fs * 1.55, w: fs * 3.6, h: fs * 1.1 };
-  }
+  // ⏏ QUIT on the map screen lives in the SAME top-right spot as the
+  // interior's ⌂ MAP chip — one learned corner for "leave this screen".
+  // It never quits outright: the journey (flock, stops, lost property)
+  // can't be resumed, so a small dialog asks first.
+  menuButtonRect() { return this.mapButtonRect(); }
   menuButtonHit(x, y) {
     const r = this.menuButtonRect();
     return x >= r.x - 8 && x <= r.x + r.w + 8 && y >= r.y - 8 && y <= r.y + r.h + 8;
+  }
+  requestQuit() {
+    if (this.interior || this.travel || this.finale || this.over || this.quitConfirm) return false;
+    this.quitConfirm = true;
+    this.g.haptics.tick();
+    this.g.say('Quit to the menu? The journey — flock, stops flown, lost property — will be lost. '
+      + 'The high score stays. GO or Escape keeps flying; QUIT (or Enter) leaves.');
+    return true;
+  }
+  cancelQuit() {
+    if (!this.quitConfirm) return false;
+    this.quitConfirm = false;
+    this.g.say('Flying on.');
+    return true;
+  }
+  quitDialogRects() {
+    const g = this.g, w = g.cssW, h = g.cssH;
+    const fs = Math.max(19, Math.min(30, w / 15));
+    const cw = Math.min(w - 36, 430);
+    const ch = fs * 6.4;
+    const cx = (w - cw) / 2;
+    const cy = Math.max(12, h * 0.5 - ch * 0.62);
+    const bw = (cw - fs * 1.8) / 2;
+    const bh = fs * 1.55;
+    const by = cy + ch - bh - fs * 0.6;
+    return {
+      fs,
+      card: { x: cx, y: cy, w: cw, h: ch },
+      keep: { x: cx + fs * 0.6, y: by, w: bw, h: bh },
+      quit: { x: cx + cw - bw - fs * 0.6, y: by, w: bw, h: bh },
+    };
+  }
+  // a tap while the question is up: QUIT leaves, anywhere else stays.
+  // Modal — returns true whenever the dialog was open.
+  quitTap(x, y) {
+    if (!this.quitConfirm) return false;
+    const r = this.quitDialogRects();
+    const within = b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
+    if (within(r.quit)) { this.exit(); return true; }
+    this.cancelQuit();
+    return true;
+  }
+  drawQuitDialog(ctx) {
+    const g = this.g, w = g.cssW, h = g.cssH;
+    const r = this.quitDialogRects();
+    const fs = r.fs;
+    ctx.save();
+    ctx.fillStyle = 'rgba(242,236,221,0.88)';   // the map dims to paper
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(247,242,230,0.98)';
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(r.card.x, r.card.y, r.card.w, r.card.h, 12); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = PALETTE.ink;
+    ctx.textAlign = 'center';
+    ctx.font = `bold ${fs * 0.95}px Georgia, serif`;
+    ctx.fillText('LEAVE THE JOURNEY?', r.card.x + r.card.w / 2, r.card.y + fs * 1.45);
+    ctx.font = `italic ${fs * 0.62}px Georgia, serif`;
+    ctx.globalAlpha = 0.85;
+    ctx.fillText('the flock, the stops flown and the lost things found', r.card.x + r.card.w / 2, r.card.y + fs * 2.55);
+    ctx.fillText('will be gone — only the high score stays', r.card.x + r.card.w / 2, r.card.y + fs * 3.35);
+    ctx.globalAlpha = 1;
+    // KEEP FLYING is the big warm default; QUIT is quiet and outlined
+    ctx.fillStyle = PALETTE.platform;
+    ctx.beginPath(); ctx.roundRect(r.keep.x, r.keep.y, r.keep.w, r.keep.h, 8); ctx.fill();
+    ctx.fillStyle = '#f7f2e6';
+    ctx.font = `bold ${fs * 0.62}px Georgia, serif`;
+    ctx.fillText('♥ KEEP FLYING', r.keep.x + r.keep.w / 2, r.keep.y + r.keep.h * 0.66);
+    ctx.strokeStyle = PALETTE.danger;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.roundRect(r.quit.x, r.quit.y, r.quit.w, r.quit.h, 8); ctx.stroke();
+    ctx.fillStyle = PALETTE.danger;
+    ctx.fillText('⏏ QUIT', r.quit.x + r.quit.w / 2, r.quit.y + r.quit.h * 0.66);
+    ctx.restore();
   }
   // ------------------------------------------------ the earth beyond
   // The play area ends at the station walls, and the presentation says
