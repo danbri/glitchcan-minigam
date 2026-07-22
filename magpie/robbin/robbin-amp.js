@@ -10,8 +10,8 @@
 // works on iPhones where the Fullscreen API doesn't):
 //   THE DIG      the buried wonders breathing bass under a fence of
 //                bone bars with falling peak-hold knuckles
-//   MURMURATION  a flock of ink birds swirling boids-fashion; the
-//                music steers them, the kick scatters them
+//   MURMURATION  a moonlit flock on TRUE boids (grid neighbourhoods,
+//                trails); the music steers, a hawk stoops on the kick
 //   STRATA CORE  a scrolling log-frequency spectrogram laid down as
 //                geological sediment — magnitude on ONE clay→bone
 //                lightness ramp (never a rainbow), ochre only for the
@@ -19,9 +19,9 @@
 //                that scrolls away into history
 //   ROUNDABOUT   a radial spectrum in the eleven line colours around
 //                a slowly turning skeleton bird, peak dots orbiting
-//   THE WIRE     the classic oscilloscope as a wobbling ink wire with
-//                eggs riding it (they hop on the kick) and a wren
-//                pecking along at the end
+//   THE WIRE     the classic oscilloscope, phosphor-green on black,
+//                as a wobbling wire with eggs riding it (they hop on
+//                the kick) and a wren pecking along at the end
 //   GOLDFEATHER  the Bond title sequence: a rifled gun-barrel iris, a
 //                strutting robin silhouette, orbiting quills, and the
 //                red curtain falling on the big kick
@@ -107,7 +107,8 @@ export class RobbAmp {
     this.full = false;
     this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.MODES = ['THE DIG', 'MURMURATION', 'STRATA CORE', 'ROUNDABOUT', 'THE WIRE',
-      'GOLDFEATHER', 'ATTIC 1984', 'NIGHT TRAIN', 'A SERIES OF TUBES'];
+      'GOLDFEATHER', 'ATTIC 1984', 'NIGHT TRAIN', 'A SERIES OF TUBES',
+      'GAUSSIAN SPLATS', 'AVIARY 3D'];
     // fresh eyes land on the dark neon network; a saved choice is kept
     const savedMode = localStorage.getItem('robbin.ampviz');
     this.mode = savedMode == null ? 8 : Math.min(this.MODES.length - 1, +savedMode);
@@ -315,7 +316,9 @@ export class RobbAmp {
     else if (mode === 5) this.vGoldfeather(ctx, W2, H2, au);
     else if (mode === 6) this.vAttic(ctx, W2, H2, au);
     else if (mode === 7) this.vNightTrain(ctx, W2, H2, au);
-    else this.vPipes(ctx, W2, H2, au);
+    else if (mode === 8) this.vPipes(ctx, W2, H2, au);
+    else if (mode === 9) this.vSplats(ctx, W2, H2, au);
+    else this.vAviary(ctx, W2, H2, au);
     if (this.modeFlash > 0) {
       this.modeFlash -= 1 / 60;
       ctx.save();
@@ -411,60 +414,113 @@ export class RobbAmp {
     wonders[this.wonderIdx % wonders.length](ctx);
     ctx.restore();
   }
-  // MURMURATION — ink birds swirl; music steers, the kick scatters
+  // MURMURATION — moonlit now, and properly BOIDSY: real neighbourhoods
+  // on a spatial grid (separation / alignment / cohesion), motion
+  // trails, and a hawk that stoops on the kick and scatters the flock
+  // the way real starlings scatter — locally, in a travelling wave
   vMurmuration(ctx, W2, H2, au) {
     const { bass, mids, treble, kick, t } = au;
-    if (!this.boids) {
-      this.boids = Array.from({ length: 110 }, (_, i) => ({
+    const N = 170;
+    if (!this.boids || this.boids.length !== N) {
+      this.boids = Array.from({ length: N }, (_, i) => ({
         x: Math.random() * W2, y: Math.random() * H2,
         vx: Math.cos(i) * 30, vy: Math.sin(i) * 30,
       }));
+      this.murmSized = null;
     }
-    ctx.fillStyle = '#f2ecdd';
+    // trails: fade the night rather than wipe it
+    if (this.murmSized !== `${W2}x${H2}`) {
+      this.murmSized = `${W2}x${H2}`;
+      ctx.fillStyle = '#0d0f14';
+      ctx.fillRect(0, 0, W2, H2);
+    }
+    ctx.fillStyle = 'rgba(13,15,20,0.3)';
     ctx.fillRect(0, 0, W2, H2);
-    // a pale evening sun and the faintest thread of river
-    ctx.fillStyle = 'rgba(185,138,46,0.16)';
-    ctx.beginPath(); ctx.arc(W2 * 0.8, H2 * 0.3, H2 * 0.22 * (1 + bass * 0.2), 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(146,183,205,0.35)';
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    for (let x = 0; x <= W2; x += 24) {
-      const y = H2 * 0.9 + Math.sin(x * 0.02 + 2) * 6;
-      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    // a paper moon and dim stars
+    for (let i = 0; i < 18; i++) {
+      const sx2 = ((i * 173 + 29) % W2), sy = ((i * 101 + 13) % Math.round(H2 * 0.6));
+      ctx.fillStyle = `rgba(220,228,244,${0.1 + 0.2 * Math.abs(Math.sin(t + i)) * (0.4 + treble)})`;
+      ctx.fillRect(sx2, sy, 2, 2);
     }
-    ctx.stroke();
+    ctx.fillStyle = 'rgba(238,240,246,0.75)';
+    ctx.beginPath(); ctx.arc(W2 * 0.82, H2 * 0.24, H2 * 0.11, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#0d0f14';
+    ctx.beginPath(); ctx.arc(W2 * 0.85, H2 * 0.225, H2 * 0.095, 0, Math.PI * 2); ctx.fill();
+    // the hawk stoops on the kick, aiming through the flock's heart
     const B = this.boids, n = B.length;
-    let cx = 0, cy = 0, avx = 0, avy = 0;
-    for (const b of B) { cx += b.x; cy += b.y; avx += b.vx; avy += b.vy; }
-    cx /= n; cy /= n; avx /= n; avy /= n;
-    const speed = 42 + treble * 150 + mids * 60;
-    const coh = 0.012 + mids * 0.05;
+    let cx = 0, cy = 0;
+    for (const b of B) { cx += b.x; cy += b.y; }
+    cx /= n; cy /= n;
+    if (kick && !this.hawk) {
+      const side = Math.random() < 0.5 ? -30 : W2 + 30;
+      const a = Math.atan2(cy - H2 * 0.1, cx - side);
+      this.hawk = { x: side, y: H2 * 0.1, vx: Math.cos(a) * 6.4, vy: Math.sin(a) * 6.4 };
+    }
+    if (this.hawk) {
+      const hk = this.hawk;
+      hk.x += hk.vx; hk.y += hk.vy;
+      drawBird(ctx, 'blackbird', { x: hk.x, y: hk.y, size: 40,
+        facing: hk.vx >= 0 ? 1 : -1, phase: t * 7, pose: 'airdown' });
+      if (hk.x < -60 || hk.x > W2 + 60 || hk.y > H2 + 60) this.hawk = null;
+    }
+    // true boids: bucket the sky, then steer by ACTUAL neighbours
+    const cell = 42;
+    const cols = Math.max(1, Math.ceil(W2 / cell));
+    const grid = new Map();
+    B.forEach((b, i) => {
+      const k2 = Math.floor(b.y / cell) * cols + Math.floor(b.x / cell);
+      (grid.get(k2) ?? grid.set(k2, []).get(k2)).push(i);
+    });
+    const speed = 46 + treble * 150 + mids * 70;
+    const alignW = 0.06 + mids * 0.09;
+    const cohW = 0.004 + mids * 0.012;
     for (let i = 0; i < n; i++) {
       const b = B[i];
-      b.vx += (cx - b.x) * coh * 0.06 + (avx - b.vx) * 0.05;
-      b.vy += (cy - b.y) * coh * 0.06 + (avy - b.vy) * 0.05;
-      for (const j of [(i + 1) % n, (i + 13) % n]) {   // sampled separation
-        const o = B[j], dx = b.x - o.x, dy = b.y - o.y;
-        const d2 = dx * dx + dy * dy;
-        if (d2 > 0.01 && d2 < 400) { b.vx += dx * 0.02; b.vy += dy * 0.02; }
+      const gx = Math.floor(b.x / cell), gy = Math.floor(b.y / cell);
+      let ax = 0, ay = 0, mx = 0, my = 0, sx3 = 0, sy3 = 0, cnt = 0;
+      for (let oy = -1; oy <= 1; oy++) {
+        for (let ox = -1; ox <= 1; ox++) {
+          const bucket = grid.get((gy + oy) * cols + (gx + ox));
+          if (!bucket) continue;
+          for (const j of bucket) {
+            if (j === i) continue;
+            const o = B[j];
+            const dx = o.x - b.x, dy = o.y - b.y;
+            const d2 = dx * dx + dy * dy;
+            if (d2 > cell * cell * 2) continue;
+            cnt++;
+            ax += o.vx; ay += o.vy;          // alignment
+            mx += o.x; my += o.y;            // cohesion
+            if (d2 < 330 && d2 > 0.01) {     // separation
+              sx3 -= dx / d2 * 34; sy3 -= dy / d2 * 34;
+            }
+          }
+        }
       }
-      b.vx += Math.sin(t * 1.3 + i) * 0.6;             // wander
-      b.vy += Math.cos(t * 1.1 + i * 1.7) * 0.6;
-      if (kick) {                                       // the kick scatters
-        const dx = b.x - cx, dy = b.y - cy, d = Math.hypot(dx, dy) || 1;
-        b.vx += (dx / d) * 60; b.vy += (dy / d) * 60;
+      if (cnt) {
+        b.vx += (ax / cnt - b.vx) * alignW + (mx / cnt - b.x) * cohW + sx3;
+        b.vy += (ay / cnt - b.vy) * alignW + (my / cnt - b.y) * cohW + sy3;
+      }
+      b.vx += (cx - b.x) * 0.0012 + Math.sin(t * 1.3 + i) * 0.5;   // home + wander
+      b.vy += (cy - b.y) * 0.0012 + Math.cos(t * 1.1 + i * 1.7) * 0.5;
+      if (this.hawk) {                        // fear travels locally
+        const dx = b.x - this.hawk.x, dy = b.y - this.hawk.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < 8100) { const d = Math.sqrt(d2) || 1; b.vx += dx / d * 9; b.vy += dy / d * 9; }
       }
       const v = Math.hypot(b.vx, b.vy) || 1;
       const cap = speed * (0.7 + ((i * 37) % 10) / 18);
       if (v > cap) { b.vx = (b.vx / v) * cap; b.vy = (b.vy / v) * cap; }
+      const vmin = speed * 0.3;
+      if (v < vmin) { b.vx = (b.vx / v) * vmin; b.vy = (b.vy / v) * vmin; }
       b.x += b.vx / 60; b.y += b.vy / 60;
       if (b.x < -20) b.x = W2 + 18; if (b.x > W2 + 20) b.x = -18;
       if (b.y < -20) b.y = H2 + 18; if (b.y > H2 + 20) b.y = -18;
-      // an ink chevron: body stroke + wing tick, flapping by phase
+      // a moonlit chevron with the faintest pastel shift per bird
       const hx = b.vx / v, hy = b.vy / v;
       const flap = Math.sin(t * 12 + i) * 3;
-      ctx.strokeStyle = 'rgba(38,34,30,0.85)';
-      ctx.lineWidth = 1.8;
+      ctx.strokeStyle = `hsla(${210 + (i % 9) * 14}, 45%, 82%, 0.8)`;
+      ctx.lineWidth = 1.7;
       ctx.beginPath();
       ctx.moveTo(b.x - hx * 5, b.y - hy * 5);
       ctx.lineTo(b.x + hx * 4, b.y + hy * 4);
@@ -475,7 +531,7 @@ export class RobbAmp {
       ctx.stroke();
     }
     for (let k = 0; k < 3; k++) {   // three full birds lead the wave
-      const b = B[k * 31];
+      const b = B[k * 41];
       drawBird(ctx, ['robin', 'bluetit', 'wren'][k], {
         x: b.x, y: b.y, size: 26, facing: b.vx >= 0 ? 1 : -1,
         phase: t * 12 + k, pose: 'airup',
@@ -573,20 +629,23 @@ export class RobbAmp {
   // THE WIRE — the oscilloscope as an ink wire with eggs riding it
   vWire(ctx, W2, H2, au) {
     const { bass, kick, t } = au;
-    ctx.fillStyle = '#f2ecdd';
+    ctx.fillStyle = '#0a0f0a';                     // the scope goes dark
     ctx.fillRect(0, 0, W2, H2);
-    ctx.strokeStyle = 'rgba(38,34,30,0.08)';       // recessive rules
+    ctx.strokeStyle = 'rgba(130,220,150,0.09)';    // phosphor graticule
     ctx.lineWidth = 1;
     for (let y = H2 * 0.25; y < H2; y += H2 * 0.25) {
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W2, y); ctx.stroke();
+    }
+    for (let x = W2 * 0.2; x < W2; x += W2 * 0.2) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H2); ctx.stroke();
     }
     const yM = H2 * 0.55, amp = H2 * 0.3;
     const wy = x => {
       const s = this.wave[Math.floor((x / W2) * (this.wave.length - 1))];
       return yM + ((s - 128) / 128) * amp;
     };
-    // the wire itself: an ochre under-stroke then the ink line — lino
-    for (const [colour, width, off] of [['rgba(185,138,46,0.5)', 4, 1.6], ['#26221e', 2.4, 0]]) {
+    // the wire itself: a wide phosphor glow under a bright green trace
+    for (const [colour, width, off] of [['rgba(120,255,160,0.22)', 7, 0], ['#9df29d', 2.2, 0]]) {
       ctx.strokeStyle = colour;
       ctx.lineWidth = width;
       ctx.beginPath();
@@ -608,8 +667,8 @@ export class RobbAmp {
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(Math.atan(slope) * 0.7);
-      ctx.fillStyle = '#f7f2e6';
-      ctx.strokeStyle = '#26221e';
+      ctx.fillStyle = 'rgba(238,244,232,0.92)';
+      ctx.strokeStyle = 'rgba(120,255,160,0.8)';
       ctx.lineWidth = 1.6;
       ctx.beginPath(); ctx.ellipse(0, 0, 5.2, 6.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.restore();
@@ -1038,5 +1097,162 @@ export class RobbAmp {
       const [x, y] = at(ch0, this.ridep);
       drawBird(ctx, 'robin', { x, y: y - 4, size: 20, facing: 1, phase: t * 12, pose: 'airup' });
     }
+  }
+// GAUSSIAN SPLATS — a point cloud of soft pastel gaussians in 3D,
+  // morphing between geometric solids (sphere, torus, helix, twin
+  // cones) as the song moves. Each splat is displaced by its own
+  // frequency band, the whole cloud turns with the mids and breathes
+  // with the bass, and morphs land on the kick.
+  buildSplats() {
+    if (this.splats) return this.splats;
+    const N = 620;
+    const shapes = [];
+    const fib = [];
+    for (let i = 0; i < N; i++) {          // fibonacci sphere
+      const y = 1 - (i / (N - 1)) * 2;
+      const r = Math.sqrt(1 - y * y);
+      const a = i * 2.39996;
+      fib.push([Math.cos(a) * r, y, Math.sin(a) * r]);
+    }
+    shapes.push(fib);
+    shapes.push(Array.from({ length: N }, (_, i) => {   // torus
+      const u = (i / N) * Math.PI * 2 * 13, v = (i / N) * Math.PI * 2;
+      const R = 0.72, r2 = 0.34;
+      return [(R + r2 * Math.cos(u)) * Math.cos(v), r2 * Math.sin(u), (R + r2 * Math.cos(u)) * Math.sin(v)];
+    }));
+    shapes.push(Array.from({ length: N }, (_, i) => {   // double helix
+      const u = (i / N) * Math.PI * 8, side = i % 2 ? 1 : -1;
+      return [Math.cos(u + (side > 0 ? 0 : Math.PI)) * 0.55, (i / N) * 2 - 1, Math.sin(u + (side > 0 ? 0 : Math.PI)) * 0.55];
+    }));
+    shapes.push(Array.from({ length: N }, (_, i) => {   // twin cones
+      const v = (i / N) * 2 - 1, a = i * 2.39996;
+      const r2 = 1 - Math.abs(v);
+      return [Math.cos(a) * r2 * 0.85, v, Math.sin(a) * r2 * 0.85];
+    }));
+    // pre-tinted soft sprites: five pastel gaussians
+    const sprites = [200, 275, 330, 25, 145].map(h => {
+      const c = document.createElement('canvas');
+      c.width = c.height = 32;
+      const g2 = c.getContext('2d');
+      const grad = g2.createRadialGradient(16, 16, 0, 16, 16, 16);
+      grad.addColorStop(0, `hsla(${h}, 80%, 80%, 0.9)`);
+      grad.addColorStop(0.4, `hsla(${h}, 80%, 72%, 0.35)`);
+      grad.addColorStop(1, `hsla(${h}, 80%, 66%, 0)`);
+      g2.fillStyle = grad;
+      g2.fillRect(0, 0, 32, 32);
+      return c;
+    });
+    this.splats = { N, shapes, sprites, from: 0, to: 1, morph: 1 };
+    return this.splats;
+  }
+  vSplats(ctx, W2, H2, au) {
+    const { bass, mids, treble, kick, t } = au;
+    const S = this.buildSplats();
+    ctx.fillStyle = '#0c0b12';
+    ctx.fillRect(0, 0, W2, H2);
+    if (kick && S.morph >= 1) {            // a new solid on the kick
+      S.from = S.to;
+      S.to = (S.to + 1 + Math.floor(Math.random() * (S.shapes.length - 1))) % S.shapes.length;
+      S.morph = 0;
+    }
+    S.morph = Math.min(1, S.morph + 0.016);
+    const e = S.morph < 0.5 ? 2 * S.morph * S.morph : 1 - Math.pow(-2 * S.morph + 2, 2) / 2;
+    const ry = t * 0.4 + mids * 1.2, rx = Math.sin(t * 0.23) * 0.5;
+    const cy2 = Math.cos(ry), sy2 = Math.sin(ry), cx2 = Math.cos(rx), sx2 = Math.sin(rx);
+    const scale = Math.min(W2, H2) * (0.5 + bass * 0.07);
+    const A = S.shapes[S.from], Bp = S.shapes[S.to];
+    ctx.globalCompositeOperation = 'lighter';   // splats add up to glow
+    for (let i = 0; i < S.N; i++) {
+      let x = A[i][0] + (Bp[i][0] - A[i][0]) * e;
+      let y = A[i][1] + (Bp[i][1] - A[i][1]) * e;
+      let z = A[i][2] + (Bp[i][2] - A[i][2]) * e;
+      const band = this.bins[4 + ((i * 7) % 400)] / 255;   // its own band breathes
+      const puff = 1 + band * 0.3 * (0.4 + treble);
+      x *= puff; y *= puff; z *= puff;
+      const x1 = x * cy2 - z * sy2, z1 = x * sy2 + z * cy2;   // spin
+      const y1 = y * cx2 - z1 * sx2, z2 = y * sx2 + z1 * cx2;
+      const pz = 1 / (1.75 - z2 * 0.55);
+      const sx4 = W2 / 2 + x1 * scale * pz;
+      const sy4 = H2 / 2 + y1 * scale * pz;
+      const r2 = (4 + band * 11) * pz;
+      ctx.globalAlpha = 0.5 + z2 * 0.22;
+      ctx.drawImage(S.sprites[i % S.sprites.length], sx4 - r2, sy4 - r2, r2 * 2, r2 * 2);
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  // AVIARY 3D — the settings-page cut-paper birds, at last on stage: a
+  // real three.js scene (borrowing the flock-wipe's lazily loaded
+  // library and bird factory) composited into the visualizer — nine
+  // hinged paper birds wheeling in the dark, wings beating with the
+  // treble, the camera drifting with the mids
+  ensureAviary(W2, H2) {
+    const w = this.g.wipe;
+    if (!w?.THREE) { w?.preload?.(); return null; }
+    if (!this.av) {
+      const THREE = w.THREE;
+      const r = new THREE.WebGLRenderer({ alpha: true, antialias: false });
+      r.setPixelRatio(1);
+      const scene = new THREE.Scene();
+      const cam = new THREE.PerspectiveCamera(45, 1, 0.1, 60);
+      scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x141020, 2.1));
+      const key = new THREE.DirectionalLight(0xaad4f0, 2.2);
+      key.position.set(-3, 5, 4);
+      scene.add(key);
+      const rim = new THREE.DirectionalLight(0xffb0c8, 1.6);
+      rim.position.set(4, 2, -3);
+      scene.add(rim);
+      const factory = w.birdMod.makeBirdFactory(THREE, r);
+      const cast = Array.from({ length: 9 }, (_, i) => {
+        const b = factory.createBird(i % 2 ? 'bluetit' : 'robin', 0.72);
+        scene.add(b);
+        return b;
+      });
+      this.av = { r, scene, cam, cast };
+    }
+    const r = this.av.r;
+    if (r.domElement.width !== W2 || r.domElement.height !== H2) {
+      r.setSize(W2, H2, false);
+      this.av.cam.aspect = W2 / H2;
+      this.av.cam.updateProjectionMatrix();
+    }
+    return this.av;
+  }
+  vAviary(ctx, W2, H2, au) {
+    const { bass, mids, treble, t } = au;
+    ctx.fillStyle = '#0e0c14';
+    ctx.fillRect(0, 0, W2, H2);
+    for (let i = 0; i < 30; i++) {         // pastel dust behind the birds
+      const dx = ((i * 191 + 53) % W2), dy = ((i * 127 + 31) % H2);
+      ctx.fillStyle = `hsla(${(i * 43) % 360}, 60%, 78%, ${0.05 + 0.1 * Math.abs(Math.sin(t + i)) * (0.4 + treble)})`;
+      ctx.fillRect(dx, dy, 2, 2);
+    }
+    const av = this.ensureAviary(W2, H2);
+    if (!av) {                             // three.js still on its way
+      ctx.fillStyle = 'rgba(242,236,221,0.6)';
+      ctx.font = `italic ${Math.max(13, H2 * 0.07)}px Georgia, serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('the aviary is waking up…', W2 / 2, H2 / 2);
+      ctx.textAlign = 'left';
+      return;
+    }
+    av.cast.forEach((b, i) => {
+      const a = t * (0.32 + (i % 3) * 0.09) + i * 0.7;
+      const rad = 1.6 + (i % 4) * 0.5 + bass * 0.3;
+      b.position.set(Math.cos(a) * rad, Math.sin(a * 1.6 + i) * 1.1, Math.sin(a) * rad * 0.7);
+      b.rotation.y = Math.cos(a) >= 0 ? Math.PI : 0;   // paper faces its heading
+      b.rotation.z = Math.sin(a * 2) * 0.15;
+      const parts = b.userData.parts;
+      const phase = t * (7 + treble * 16) + i * 1.3;
+      parts.wing.rotation.x = -0.22 + Math.sin(phase) * 1.05;
+      parts.tail.rotation.z = -0.11 + Math.sin(phase * 0.45 - 0.8) * 0.09;
+      parts.head.rotation.z = -Math.sin(phase - 1.1) * 0.04;
+      const sc = 0.72 * (1 + bass * 0.12);
+      b.scale.setScalar(sc);
+    });
+    av.cam.position.set(Math.sin(t * 0.14) * (2.6 + mids * 1.4), Math.sin(t * 0.1) * 0.8, 6.2 - mids * 1.2);
+    av.cam.lookAt(0, 0, 0);
+    av.r.render(av.scene, av.cam);
+    ctx.drawImage(av.r.domElement, 0, 0, W2, H2);
   }
 }

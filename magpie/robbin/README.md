@@ -350,20 +350,22 @@ tribute jukebox for every track in the library: striped title bar,
 big green LCD marquee (sized for eyes that remember the original),
 transport + seek + volume, playlist, lock-screen metadata. It
 streams through an `<audio>` element (no decoded-PCM cost) into the
-Soundtrack's bus so the master mute rules it. **Five visualizer
+Soundtrack's bus so the master mute rules it. **Eleven visualizer
 looks, all in the lino language — tap the visuals to cycle, ⛶ for
 fullscreen** (a fixed overlay, so it works on iPhones where the
 Fullscreen API doesn't; the canvas steps out to `<body>` because the
 player window's CSS transform would otherwise re-anchor it):
 THE DIG (buried wonders breathing bass under bone bars with falling
-peak-hold knuckles), MURMURATION (a boids flock of ink birds — the
-music steers, the kick scatters), STRATA CORE (a log-frequency
+peak-hold knuckles), MURMURATION (now moonlit and properly BOIDSY —
+170 birds on true grid neighbourhoods with separation/alignment/
+cohesion, motion trails, and a hawk that stoops on the kick,
+scattering fear locally the way real starlings do), STRATA CORE (a log-frequency
 spectrogram laid down as sediment on ONE clay→bone lightness ramp —
 never a rainbow — with a fossil buried on every kick, scrolling into
 history), ROUNDABOUT (a radial spectrum in the network's line
 colours around a slowly turning skeleton bird, peak dots orbiting),
-THE WIRE (the classic oscilloscope as an ink wire with eggs that
-hop on the kick and a wren pecking along), **GOLDFEATHER** (the Bond
+THE WIRE (the oscilloscope gone phosphor-green on black, graticule
+and all, eggs glowing on the trace, the wren still pecking), **GOLDFEATHER** (the Bond
 title sequence our story deserves: a rifled gun-barrel iris gliding
 across black with a strutting robin silhouette inside, gold quills
 orbiting, the red curtain falling on the big kick — Robbin will
@@ -383,7 +385,17 @@ one breathing with its own slice of the spectrum, blobs of light
 travelling the tunnels at the music's pace, a kick ringing a random
 junction, the Thames glowing past beneath, faint neon dust in the
 dark — and one pastel robin riding the whole network home. A saved
-mode choice is respected. Reduced motion keeps the still
+mode choice is respected. Then the late arrivals: **GAUSSIAN
+SPLATS** — a 620-point cloud of soft pastel gaussians composited
+additively, morphing between solids (fibonacci sphere, torus, double
+helix, twin cones) with a new shape landing on each kick, every
+splat displaced by its own frequency band; and **AVIARY 3D** — the
+settings-page cut-paper birds at last on the jukebox stage: a real
+three.js scene (borrowing the flock-wipe's lazily loaded library and
+bird factory) composited into the visualizer, nine hinged paper
+birds wheeling in the dark with wings beating to the treble and the
+camera drifting with the mids ("the aviary is waking up…" while
+three.js loads). Reduced motion keeps the still
 dig. ESC folds fullscreen first, then buries the player.
 It has its own address too: **`#robbamp`** opens it from the URL,
 and **`#robbamp=<what>`** opens on a song — `<what>` is a track
