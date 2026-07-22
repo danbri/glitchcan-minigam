@@ -205,9 +205,12 @@ Water the game generates exactly the wall's Lift guide: **A** street
 on its way to the Jubilee, **C** the short hop to the Windrush level
 only. Every shaft runs **one glass box of a car** that cycles its
 stops — doors slide at each landing, and you always know who's
-aboard because riders show as **glowing X-ray skeletons through the
-glass** (your bird included). Walk in through open doors, ride, step
-off when they open where you want; closed doors are walls.
+aboard because riders show as **colour-cycling X-ray skeletons
+through the glass** (your bird included). The landing floor runs in
+front of the doors, so you can always walk PAST a lift — boarding
+is deliberate: stand at the open doors and press **up** (the game
+coaches you: "↑ board"); step off with a direction when the doors
+open where you want.
 **Escalators are sloped now**, 45° (steeper where the hall is tight,
 as real ones are), zigzagging down the section with gliding treads —
 step onto **either end** and it takes you to the other (with the

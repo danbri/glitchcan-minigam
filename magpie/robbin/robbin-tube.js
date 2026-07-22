@@ -635,6 +635,7 @@ export class TubeFlock {
     d.shaftDefs.forEach((sd, i) => {
       bits.push(`Lift ${String.fromCharCode(65 + i)} serves ${sd.stops.map(rowName).join(', ')}.`);
     });
+    if (d.shaftDefs.length) bits.push('Stand at the doors and press up to board.');
     for (const p of d.platDefs) {
       const doors = Object.values(p.doors).map(dr =>
         `${boundWord(this.cur, dr.edges[0].to).toLowerCase()} to ${dr.edges[0].to} at the ${side(dr.c)} end`);
@@ -779,6 +780,14 @@ export class TubeFlock {
           t: Math.random() * 1.5, door: 1, occupants: [] };
       }
     });
+    // the landing floor runs IN FRONT of the lift doors: you can walk
+    // straight past a lift without being blocked or swallowed — the
+    // shaft is only open where the car actually travels between floors
+    for (const sh of level.lifts) {
+      if (!sh.stops) continue;
+      const c0 = Math.round(sh.x0 / TILE), c1 = Math.round(sh.x1 / TILE);
+      for (const r of sh.stops) for (let c = c0; c < c1; c++) level.grid[r][c] = '#';
+    }
     // sloped escalator runs, with per-run outages
     const escRuns = def.escRuns.map((r0, i) => ({ ...r0, broken: this.facilityOut(this.cur, 'esc', i) }));
     const brokenEsc = new Set();
@@ -1090,8 +1099,16 @@ export class TubeFlock {
         // a call from another landing cuts the loitering short
         if (car.call != null && car.stop !== car.call && car.t < DWELL - DOOR_T) car.t = DWELL - DOOR_T;
         car.door = car.t < DWELL - DOOR_T ? Math.min(1, car.t / DOOR_T) : Math.max(0, (DWELL - car.t) / DOOR_T);
+        // open doors with a bird stood right there: coach the boarding
+        if (!sh.out && !it.playerCar && car.door > 0.9 && !car.coached
+          && Math.abs(g.player.x - (sh.x0 + sh.x1) / 2) < 60
+          && Math.abs(g.player.y - sh.stops[car.stop] * TILE) < 10) {
+          car.coached = true;
+          g.fx.push({ x: (sh.x0 + sh.x1) / 2, y: sh.stops[car.stop] * TILE - 64, txt: '↑ board', t: 1.4 });
+          g.say(`Lift ${sh.id} doors open — press up to board.`);
+        }
         if (car.t >= DWELL) {
-          car.state = 'move'; car.t = 0; car.door = 0; car.held = 0;
+          car.state = 'move'; car.t = 0; car.door = 0; car.held = 0; car.coached = false;
           if (car.call != null && car.call !== car.stop) {
             car.next = car.call;               // straight there, no calling points
             car.dir = Math.sign(car.call - car.stop) || 1;
@@ -1173,19 +1190,6 @@ export class TubeFlock {
     } else {
       g.player.update(dt, { ...dirIn, jump: g.input.jump || g.jumpTap }, g);
       g.jumpTap = false;
-      // closed lift doors are walls — no wandering into the shaft…
-      // (only on the floors the shaft actually passes through)
-      for (const sh of lv.lifts) {
-        if (!sh.car || !sh.stops) continue;
-        if (g.player.y < sh.stops[0] * TILE - 6 || g.player.y > sh.stops[sh.stops.length - 1] * TILE + 6) continue;
-        const cx = (sh.x0 + sh.x1) / 2;
-        const canEnter = !sh.out && sh.car.state === 'dwell' && sh.car.door > 0.6
-          && Math.abs(g.player.y - sh.stops[sh.car.stop] * TILE) < 8;
-        if (canEnter || g.player.mode !== 'walk') continue;
-        if (g.player.x > sh.x0 - 6 && g.player.x < sh.x1 + 6) {
-          g.player.x = g.player.x < cx ? sh.x0 - 6 : sh.x1 + 6;
-        }
-      }
       // stand by a shaft's doors a beat and the car is CALLED to your
       // landing — it finishes its doors, comes straight to you (no
       // calling points), and the button by the door glows amber
@@ -1204,44 +1208,43 @@ export class TubeFlock {
           g.say(`Lift ${sh.id} called.`);
         }
       }
-      // …open doors welcome you aboard: the car floor catches your very
-      // first step through the doorway (the shaft is a hole otherwise).
-      // The step-out cooldown guards only the revolving door, never the
-      // escalators beyond it.
+      // …boarding is DELIBERATE: stand at the open doors and press UP
+      // (a queued glide-up counts). Walking past never swallows you —
+      // the doorway is just a doorway.
       if (it.carCool > 0) it.carCool -= dt;
-      if ((g.player.mode === 'walk' || g.player.mode === 'fall') && it.grabCool <= 0) {
+      const wantUp = dirIn.up || (g.controlMode === 'glide' && g.nextHeading && g.nextHeading.y < 0);
+      if (wantUp && g.player.mode === 'walk' && it.grabCool <= 0 && !(it.carCool > 0)) {
         for (const sh of lv.lifts) {
-          if (it.carCool > 0) break;
           const car = sh.car;
           if (!car || sh.out || car.state !== 'dwell' || car.door < 0.6) continue;
           const cx = (sh.x0 + sh.x1) / 2;
-          if (Math.abs(g.player.x - cx) < 30 && Math.abs(g.player.y - sh.stops[car.stop] * TILE) < 14) {
+          if (Math.abs(g.player.x - cx) < 22 && Math.abs(g.player.y - sh.stops[car.stop] * TILE) < 8) {
             it.playerCar = sh;
             it.boardStop = car.stop;
-            // gliding in mustn't glide straight out: the ride resets the heading
-            if (g.controlMode === 'glide') { g.heading = { x: 0, y: 0 }; g.nextHeading = null; }
+            g.heading = { x: 0, y: 0 };
+            g.nextHeading = null;
             g.foley.whoosh();
             g.haptics.tick();
             g.say(`Aboard Lift ${sh.id}. Press a direction when the doors open to step off.`);
             break;
           }
         }
-        // an escalator MOUTH is a mouth: walk into either end, from
-        // either side, and it takes you to the other end. (Jump over it
-        // if you truly meant to pass; a short cooldown after stepping
-        // off stops it swallowing you straight back.)
-        if (it.escCool > 0) it.escCool -= dt;
-        if (!it.playerCar && !(it.escCool > 0)) {
-          const moving = dirIn.left ? -1 : dirIn.right ? 1 : 0;
-          outer: for (const run of it.escRuns) {
-            if (run.broken) continue;
-            for (const fromTop of [false, true]) {
-              const [bx, by] = fromTop ? [run.xTop, run.yTop] : [run.xBot, run.yBot];
-              if (moving !== 0 && Math.abs(g.player.x - bx) < 12 && Math.abs(g.player.y - by) < 10) {
-                it.escRide = { run, s: 0, fromTop };
-                g.foley.step();
-                break outer;
-              }
+      }
+      // an escalator MOUTH is a mouth: walk into either end, from
+      // either side, and it takes you to the other end. (Jump over it
+      // if you truly meant to pass; a short cooldown after stepping
+      // off stops it swallowing you straight back.)
+      if (it.escCool > 0) it.escCool -= dt;
+      if (!it.playerCar && !(it.escCool > 0) && g.player.mode === 'walk' && it.grabCool <= 0) {
+        const moving = dirIn.left ? -1 : dirIn.right ? 1 : 0;
+        outer: for (const run of it.escRuns) {
+          if (run.broken) continue;
+          for (const fromTop of [false, true]) {
+            const [bx, by] = fromTop ? [run.xTop, run.yTop] : [run.xBot, run.yBot];
+            if (moving !== 0 && Math.abs(g.player.x - bx) < 12 && Math.abs(g.player.y - by) < 10) {
+              it.escRide = { run, s: 0, fromTop };
+              g.foley.step();
+              break outer;
             }
           }
         }

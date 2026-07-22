@@ -365,10 +365,22 @@ export class ScorePlayer extends Chiptune {
     const t = ctx.currentTime;
     this.level.gain.cancelScheduledValues(t);
     this.level.gain.setValueAtTime(0.0001, t);
-    this.level.gain.exponentialRampToValueAtTime(0.5, t + 1.2);
+    this.level.gain.exponentialRampToValueAtTime(0.95, t + 1.2);
     this.step = 0;
     this.next = t + 0.06;
     this.timer = setInterval(() => this.schedScore(), 40);
+  }
+  swell() {
+    if (!this.level) return;
+    const t = this.ctx.currentTime;
+    this.level.gain.cancelScheduledValues(t);
+    this.level.gain.setValueAtTime(this.level.gain.value, t);
+    this.level.gain.linearRampToValueAtTime(1.2, t + 0.25);
+    this.level.gain.linearRampToValueAtTime(0.95, t + 2.2);
+    this.filter.frequency.cancelScheduledValues(t);
+    this.filter.frequency.setValueAtTime(this.filter.frequency.value, t);
+    this.filter.frequency.linearRampToValueAtTime(6400, t + 0.3);
+    this.filter.frequency.linearRampToValueAtTime(800 + 5200 * (this.intensity ?? 0.85), t + 2.5);
   }
   schedScore() {
     while (this.next < this.ctx.currentTime + 0.18) {
@@ -402,10 +414,10 @@ export class ScorePlayer extends Chiptune {
   padChord(t, rootM, triad, dur) {
     for (const iv of triad) {
       for (const det of [-6, 6]) {
-        this.tone({ freq: f(rootM + 12 + iv), t, dur, gain: 0.016, type: 'sawtooth',
+        this.tone({ freq: f(rootM + 12 + iv), t, dur, gain: 0.026, type: 'sawtooth',
           detune: det, attack: dur * 0.35, echo: 0.15, fam: 'pad' });
       }
-      this.tone({ freq: f(rootM + iv), t, dur, gain: 0.019, type: 'triangle',
+      this.tone({ freq: f(rootM + iv), t, dur, gain: 0.03, type: 'triangle',
         attack: dur * 0.3, fam: 'pad' });
     }
   }
@@ -423,10 +435,10 @@ export class ScorePlayer extends Chiptune {
       // quiet engines: warm washes, a low heartbeat, breath of the rails
       if (pos === 0) this.padChord(t, rootM, triad, barDur);
       if (pos % 8 === 0) this.tone({ freq: f(rootM - 12), t, dur: this.s16() * 6,
-        gain: 0.05 * en, type: 'sine', fam: 'bass' });
-      if (pos % 4 === 2) this.chuff(t, 0.012 + 0.012 * en);
+        gain: 0.085 * en, type: 'sine', fam: 'bass' });
+      if (pos % 4 === 2) this.chuff(t, 0.02 + 0.016 * en);
       if (pos === 8 && bar % 2 === 1) this.tone({ freq: f(rootM + 24 + triad[1]), t,
-        dur: this.s16() * 5, gain: 0.032, vibrato: 5, echo: 0.4, fam: 'lead' });
+        dur: this.s16() * 5, gain: 0.055, vibrato: 5, echo: 0.4, fam: 'lead' });
     } else if (this.movement === 'gears') {
       // gears and birdcalls: clockwork arps, tick hats, chirps offbeat
       if (pos === 0) { this.padChord(t, rootM, triad, barDur); this.kick(t, 0.05 + 0.04 * en); }
