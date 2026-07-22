@@ -7,6 +7,15 @@
 // monotony). generic: the rotation for every other station, alongside
 // GEARS AND BIRDCALLS.
 export const TRACKS = {
-  perStation: {},
-  generic: []
+  perStation: {
+    "GLOUCESTER ROAD": "per-station/gloucester-road-americana-d-remastered.mp3",
+    "LEICESTER SQUARE": "per-station/leicester-square-subjunction-fn.mp3",
+    "LONDON BRIDGE": "per-station/london-bridge-gogogo-remastered.mp3",
+    "SOUTH KENSINGTON": "per-station/south-kensington-muntelo-remastered.mp3",
+    "ST PAUL'S": "per-station/st-pauls-gregorians.mp3"
+  },
+  generic: [
+    "generic/aching-evocative-space-waltz.mp3",
+    "generic/hypnotic-sleepy-loops.mp3"
+  ]
 };
