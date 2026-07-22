@@ -328,3 +328,136 @@ export class Soundtrack {
     this.level.gain.linearRampToValueAtTime(0.75, t + 2.4);
   }
 }
+
+// ---------------------------------------------------- the score, LIVE
+// The MIDI-like performance of the three tracks: robbin-score.js holds
+// what the analysis heard (tempo, key, chord cycle, energy arc) and
+// this player performs it through the Chiptune's own voices — loopable
+// to the bar and parameterized: intensity layers with the flock,
+// setPace() leans with rush hour, movements crossfade at bar edges,
+// and the passacaglia stacks a new layer every time its ground repeats.
+import { SCORE } from './robbin-score.js';
+
+export class ScorePlayer extends Chiptune {
+  constructor(getCtx) {
+    super(getCtx);
+    this.movement = null;
+    this.pending = null;
+    this.pace = 1;
+  }
+  s16() {
+    const mv = SCORE[this.movement];
+    return 60 / ((mv?.bpm || 100) * this.pace) / 4;
+  }
+  setPace(p) { this.pace = Math.max(0.6, Math.min(1.5, p)); }
+  play(movement) {
+    if (!SCORE[movement]) return;
+    if (this.timer) {
+      if (this.movement !== movement) this.pending = movement;   // swap at the bar line
+      return;
+    }
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    this.ctx = ctx;
+    this.movement = movement;
+    this.pending = null;
+    this.ensureGraph();
+    const t = ctx.currentTime;
+    this.level.gain.cancelScheduledValues(t);
+    this.level.gain.setValueAtTime(0.0001, t);
+    this.level.gain.exponentialRampToValueAtTime(0.5, t + 1.2);
+    this.step = 0;
+    this.next = t + 0.06;
+    this.timer = setInterval(() => this.schedScore(), 40);
+  }
+  schedScore() {
+    while (this.next < this.ctx.currentTime + 0.18) {
+      if (this.pending && this.step % 16 === 0) {
+        this.movement = this.pending;
+        this.pending = null;
+        this.step = 0;
+      }
+      this.playScoreStep(this.step, this.next);
+      this.next += this.s16();
+      this.step++;
+    }
+  }
+  // a chuffing engine breath: lowpassed noise, quiet and regular
+  chuff(t, gain) {
+    const ctx = this.ctx;
+    const src = ctx.createBufferSource(); src.buffer = this.noise;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(gain, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    src.connect(lp).connect(g).connect(this.fam.perc);
+    src.start(t); src.stop(t + 0.1);
+  }
+  // two quick rising notes: a birdcall over the machinery
+  birdcall(t, m) {
+    for (const [dt, off, dur] of [[0, 0, 0.07], [0.09, 5, 0.11]]) {
+      this.tone({ freq: f(m + off), t: t + dt, dur, gain: 0.045, type: 'sine', echo: 0.4, fam: 'lead' });
+    }
+  }
+  padChord(t, rootM, triad, dur) {
+    for (const iv of triad) {
+      for (const det of [-6, 6]) {
+        this.tone({ freq: f(rootM + 12 + iv), t, dur, gain: 0.016, type: 'sawtooth',
+          detune: det, attack: dur * 0.35, echo: 0.15, fam: 'pad' });
+      }
+      this.tone({ freq: f(rootM + iv), t, dur, gain: 0.019, type: 'triangle',
+        attack: dur * 0.3, fam: 'pad' });
+    }
+  }
+  playScoreStep(st, t) {
+    const mv = SCORE[this.movement];
+    if (!mv) return;
+    const bar = Math.floor(st / 16) % mv.loop;
+    const pos = st & 15;
+    const ch = mv.cycle[bar];
+    const rootM = 48 + ch.root - (ch.root > 7 ? 12 : 0);
+    const triad = ch.minor ? [0, 3, 7] : [0, 4, 7];
+    const en = mv.energy[bar] ?? 0.8;                 // the record's own arc
+    const barDur = 16 * this.s16();
+    if (this.movement === 'engines') {
+      // quiet engines: warm washes, a low heartbeat, breath of the rails
+      if (pos === 0) this.padChord(t, rootM, triad, barDur);
+      if (pos % 8 === 0) this.tone({ freq: f(rootM - 12), t, dur: this.s16() * 6,
+        gain: 0.05 * en, type: 'sine', fam: 'bass' });
+      if (pos % 4 === 2) this.chuff(t, 0.012 + 0.012 * en);
+      if (pos === 8 && bar % 2 === 1) this.tone({ freq: f(rootM + 24 + triad[1]), t,
+        dur: this.s16() * 5, gain: 0.032, vibrato: 5, echo: 0.4, fam: 'lead' });
+    } else if (this.movement === 'gears') {
+      // gears and birdcalls: clockwork arps, tick hats, chirps offbeat
+      if (pos === 0) { this.padChord(t, rootM, triad, barDur); this.kick(t, 0.05 + 0.04 * en); }
+      const arpNote = triad[[0, 2, 1, 2][pos % 4]] + (pos % 8 >= 4 ? 12 : 0);
+      this.tone({ freq: f(rootM + 12 + arpNote), t, dur: this.s16() * 0.55,
+        gain: 0.03 * (0.6 + 0.4 * en), fam: 'arp' });
+      if (pos % 2 === 0) this.hat(t, 0.018 + 0.014 * en);
+      if (pos === 14 && bar % 2 === 1) this.birdcall(t, rootM + 24);
+    } else {
+      // the inexorable passacaglia: the ground walks every beat, and a
+      // new layer joins each time the cycle comes round again
+      const rep = Math.floor(st / (16 * mv.loop));
+      const layers = Math.min(4, 1 + (rep % 5) + Math.round((this.intensity ?? 0.5)));
+      if (pos % 4 === 0) {
+        const walk = [0, 0, 7, ch.minor ? 3 : 4][(pos / 4) & 3];
+        this.tone({ freq: f(rootM - 12 + walk), t, dur: this.s16() * 3.4,
+          gain: 0.09, type: 'triangle', fam: 'bass' });
+      }
+      if (layers >= 2 && pos === 0) this.padChord(t, rootM, triad, barDur);
+      if (layers >= 3) {
+        if (pos === 0) this.kick(t, 0.08);
+        if (pos === 8) this.kick(t, 0.05);
+        if (pos % 2 === 1) this.hat(t, 0.02 + 0.012 * en);
+      }
+      if (layers >= 4) {
+        const a = triad[[0, 1, 2, 1][pos % 4]];
+        this.tone({ freq: f(rootM + 12 + a), t, dur: this.s16() * 0.8,
+          gain: 0.026, echo: 0.3, fam: 'arp' });
+        if (pos % 8 === 4) this.tone({ freq: f(rootM + 24 + triad[bar % 3]), t,
+          dur: this.s16() * 6, gain: 0.05, vibrato: 6, echo: 0.5, fam: 'lead' });
+      }
+    }
+  }
+}

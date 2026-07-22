@@ -210,7 +210,12 @@ glass** (your bird included). Walk in through open doors, ride, step
 off when they open where you want; closed doors are walls.
 **Escalators are sloped now**, 45° (steeper where the hall is tight,
 as real ones are), zigzagging down the section with gliding treads —
-step onto the boarding end and it carries you; hop off with a jump.
+step onto **either end** and it takes you to the other (with the
+treads is a glide, against them a determined trudge); hop off with a
+jump. And lifts **come when called**: stand by any closed doors a
+beat and the car cuts its loitering short and comes straight to you,
+amber call light lit — open doors are even held a moment while you
+stand at them.
 When a lift fails it is always **one lift, never the bank** — its
 car parks dead and dark mid-shaft — and the stairs still serve.
 A **station clock** ticks ten times faster than reality, always
@@ -260,15 +265,24 @@ thing about the place in big readable type; the world holds still
 until you dismiss it (tap, JUMP, Enter or Esc). Rescues bloom with
 hearts and a musical swell,
 and the flock swirls boids-fashion around you, fuller every reunion.
-Tubular Smells has a **recorded score, ported to WebAudio**: three
-tracks in `audio/`, fetched once, decoded into buffers, looped and
-crossfaded by mood — **THE QUIET ENGINES** while you fly the map,
-**GEARS AND BIRDCALLS** inside the stations, **THE INEXORABLE
-PASSACAGLIA** for the homecoming finale. Rescue swells bloom the
-track's level; the mute button rules the record and the band alike.
-If the tracks can't load (offline, odd codec) the procedural
-chiptune steps straight back in, exactly as before — and the Flight
-Line arcade stays the chiptune's own stage: warm detuned pad washes
+Tubular Smells' score comes in two forms, toggled from the menu
+(SCORE: MIDI / TAPE). **MIDI (the default) is a live, parameterized
+performance**: `tools/analyze-tracks.mjs` listened to the three
+recordings with WebAudio (onset autocorrelation for tempo, per-bar
+chroma vs triad templates for harmony, chroma self-similarity for
+loop length, RMS for the energy arc) and baked what it heard into
+`robbin-score.js` — THE QUIET ENGINES as an 83 BPM E-minor wash
+with engine-chuff breaths, GEARS AND BIRDCALLS as 102 BPM G-minor
+clockwork arps with offbeat birdcalls, THE INEXORABLE PASSACAGLIA
+as a 140 BPM D-minor **twelve-bar ground bass that stacks a new
+layer every time it comes round**. Because it's performed live it
+loops to the bar, movements swap at bar lines, intensity layers
+grow with the flock, rescue swells bloom it, and it leans ~12%
+faster in rush hour. **TAPE is the recordings themselves**, decoded
+into buffers, looped and crossfaded by mood. Either way the mute
+button rules everything, and if the tape can't load the MIDI score
+takes the stage (offline never silences the game). The Flight Line
+arcade stays the original chiptune's own show: warm detuned pad washes
 and a heartbeat at first, hats, arpeggio shimmer and finally the
 lead melody fading in as intensity rises (a master lowpass opens
 with it; `Chiptune.setIntensity(0..1)` / `swell()`).

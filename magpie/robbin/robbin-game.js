@@ -4,7 +4,7 @@
 // level four — the dreaded lift. Keyboard + touch.
 
 import { PALETTE, BIRDS, drawBird, drawGrain, drawBottle, drawCommuter, birdSVG } from './robbin-sprites.js';
-import { Chiptune, Soundtrack } from './robbin-music.js';
+import { Chiptune, Soundtrack, ScorePlayer } from './robbin-music.js';
 import { TubeFlock } from './robbin-tube.js';
 
 export const TILE = 32, COLS = 20, ROWS = 15;
@@ -682,8 +682,13 @@ class Game {
     this.music = new Chiptune(() => { this.foley.ensure(); return this.foley.ctx; });
     // the recorded score, ported to WebAudio: three moods, crossfaded
     this.soundtrack = new Soundtrack(() => { this.foley.ensure(); return this.foley.ctx; });
+    // …and the same three tracks as a LIVE MIDI-like performance:
+    // loopable to the bar, responsive to flock, rush hour and rescues
+    this.midiScore = new ScorePlayer(() => { this.foley.ensure(); return this.foley.ctx; });
+    this.scoreMode = localStorage.getItem('robbin.scoremode') === 'tape' ? 'tape' : 'midi';
     this.music.setMuted(localStorage.getItem('robbin.mute') === '1');
     this.soundtrack.setMuted(this.music.muted);
+    this.midiScore.setMuted(this.music.muted);
     this.input = { left: 0, right: 0, up: 0, down: 0, jump: 0 };
     // glide mode: a swipe sets a persistent heading; diagonals keep both
     // intents live, so SE runs east and takes the first southbound ladder
@@ -774,6 +779,7 @@ class Game {
     this.score = 0; this.lives = 5; this.stationIndex = 0; this.nextLifeAt = EXTRA_LIFE_EVERY;
     this.foley.ensure(); this.foley.start();
     this.soundtrack.stop(1);       // the Flight Line is the chiptune's stage
+    this.midiScore.stop(1);
     this.music.start();
     this.loadStation(0);
     document.getElementById('title').classList.add('hidden');
@@ -1041,6 +1047,12 @@ class Game {
     document.getElementById('tomenu')?.addEventListener('pointerdown', e => {
       e.stopPropagation(); this.backToMenu();
     });
+    const sb = document.getElementById('scoremode');
+    if (sb) sb.textContent = `SCORE: ${this.scoreMode.toUpperCase()}`;
+    sb?.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      this.toggleScoreMode();
+    });
     document.getElementById('ctrlmode')?.addEventListener('pointerdown', e => {
       e.stopPropagation();
       this.controlMode = this.controlMode === 'hold' ? 'glide' : 'hold';
@@ -1125,8 +1137,16 @@ class Game {
     const m = !this.music.muted;
     this.music.setMuted(m);
     this.soundtrack.setMuted(m);
+    this.midiScore.setMuted(m);
     localStorage.setItem('robbin.mute', m ? '1' : '0');
     this.updateMuteButton();
+  }
+  toggleScoreMode() {
+    this.scoreMode = this.scoreMode === 'midi' ? 'tape' : 'midi';
+    localStorage.setItem('robbin.scoremode', this.scoreMode);
+    const b = document.getElementById('scoremode');
+    if (b) b.textContent = `SCORE: ${this.scoreMode.toUpperCase()}`;
+    if (this.state === 'tube') this.tube.updateMusic();
   }
   updateMuteButton() {
     const b = document.getElementById('mute');

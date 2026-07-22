@@ -502,12 +502,23 @@ export class TubeFlock {
   // (offline never silences the game).
   updateMusic() {
     const g = this.g;
-    if (g.soundtrack && !g.soundtrack.failed) {
-      const mood = this.finale ? 'passacaglia' : this.interior ? 'gears' : 'engines';
+    const mood = this.finale ? 'passacaglia' : this.interior ? 'gears' : 'engines';
+    // TAPE mode: the recordings themselves, crossfaded
+    if (g.scoreMode === 'tape' && g.soundtrack && !g.soundtrack.failed) {
       g.music.stop(0.9);
+      g.midiScore?.stop(0.9);
       g.soundtrack.play(mood).then(() => {
-        if (g.soundtrack.failed) this.updateMusic();   // fell over: band returns
+        if (g.soundtrack.failed) this.updateMusic();   // fell over: MIDI takes it
       });
+      return;
+    }
+    // MIDI mode (the default): the parameterized live performance —
+    // loops to the bar, layers with the flock, leans with rush hour
+    g.soundtrack?.stop(1);
+    g.music.stop(0.9);
+    if (g.midiScore) {
+      g.midiScore.play(mood);
+      g.midiScore.setIntensity(0.25 + 0.75 * ((this.roster.length - 1) / LOST.length));
       return;
     }
     g.music.start();
@@ -515,7 +526,8 @@ export class TubeFlock {
   }
   swellMusic() {
     const g = this.g;
-    if (g.soundtrack?.active) g.soundtrack.swell();
+    if (g.midiScore?.timer) g.midiScore.swell();
+    else if (g.soundtrack?.active) g.soundtrack.swell();
     else g.music.swell();
   }
   get objective() { return this.lostIdx < LOST.length ? LOST[this.lostIdx] : null; }
@@ -720,6 +732,7 @@ export class TubeFlock {
   exit() {
     this.saveHi();
     this.g.soundtrack?.stop(1.2);
+    this.g.midiScore?.stop(1.2);
     this.g.music.start();
     this.g.music.setIntensity(0.4);   // the menu keeps a gentle band
     this.g.camFocus = null;
@@ -1056,17 +1069,35 @@ export class TubeFlock {
       if (!car || car.state === 'dead') continue;
       car.t += dt;
       if (car.state === 'dwell') {
+        // held doors: a bird (or a caller) standing right by the open
+        // doors keeps them open a little longer, like a kind commuter
+        const px2 = g.player.x, py2 = g.player.y;
+        const holding = !sh.out && Math.abs(px2 - (sh.x0 + sh.x1) / 2) < 60
+          && Math.abs(py2 - sh.stops[car.stop] * TILE) < 10
+          && !it.playerCar && (car.held || 0) < 3;
+        if (holding && car.t > DWELL - DOOR_T - 0.15) {
+          car.held = (car.held || 0) + dt;
+          car.t = DWELL - DOOR_T - 0.15;
+        }
+        // a call from another landing cuts the loitering short
+        if (car.call != null && car.stop !== car.call && car.t < DWELL - DOOR_T) car.t = DWELL - DOOR_T;
         car.door = car.t < DWELL - DOOR_T ? Math.min(1, car.t / DOOR_T) : Math.max(0, (DWELL - car.t) / DOOR_T);
         if (car.t >= DWELL) {
-          car.state = 'move'; car.t = 0; car.door = 0;
-          if (car.stop + car.dir < 0 || car.stop + car.dir >= sh.stops.length) car.dir *= -1;
-          car.next = car.stop + car.dir;
+          car.state = 'move'; car.t = 0; car.door = 0; car.held = 0;
+          if (car.call != null && car.call !== car.stop) {
+            car.next = car.call;               // straight there, no calling points
+            car.dir = Math.sign(car.call - car.stop) || 1;
+          } else {
+            if (car.stop + car.dir < 0 || car.stop + car.dir >= sh.stops.length) car.dir *= -1;
+            car.next = car.stop + car.dir;
+          }
         }
       } else {
         const ty = sh.stops[car.next] * TILE;
         const step = Math.sign(ty - car.y) * CAR_V * dt;
         if (Math.abs(ty - car.y) <= Math.abs(step)) {
           car.y = ty; car.stop = car.next; car.state = 'dwell'; car.t = 0;
+          if (car.call === car.stop) car.call = null;   // the call is answered
           // passengers bound for this floor step off
           car.occupants = car.occupants.filter(oc => {
             if (oc.off !== sh.stops[car.stop]) return true;
@@ -1107,12 +1138,17 @@ export class TubeFlock {
         g.say(`Off at ${it.def.levels[it.floorRows.indexOf(sh.stops[car.stop])] || 'a level'}.`);
       }
     } else if (it.escRide) {
-      // a sloped escalator carries you; hop off early with a jump
+      // a sloped escalator carries you toward the end you didn't enter;
+      // with the treads it's a glide, against them it's a determined
+      // trudge (everyone has walked down an up escalator once).
+      // Hop off early with a jump.
       const ride = it.escRide, run = ride.run;
-      const [sx, sy, ex, ey] = run.up ? [run.xBot, run.yBot, run.xTop, run.yTop]
-        : [run.xTop, run.yTop, run.xBot, run.yBot];
+      const [sx, sy, ex, ey] = ride.fromTop
+        ? [run.xTop, run.yTop, run.xBot, run.yBot]
+        : [run.xBot, run.yBot, run.xTop, run.yTop];
+      const withRun = run.up ? !ride.fromTop : ride.fromTop;
       const len = Math.hypot(ex - sx, ey - sy) || 1;
-      ride.s += (64 / len) * dt;
+      ride.s += ((withRun ? 72 : 42) / len) * dt;
       g.player.x = sx + (ex - sx) * Math.min(1, ride.s);
       g.player.y = sy + (ey - sy) * Math.min(1, ride.s);
       g.player.vx = 0; g.player.vy = 0; g.player.mode = 'walk';
@@ -1140,6 +1176,24 @@ export class TubeFlock {
           g.player.x = g.player.x < cx ? sh.x0 - 6 : sh.x1 + 6;
         }
       }
+      // stand by a shaft's doors a beat and the car is CALLED to your
+      // landing — it finishes its doors, comes straight to you (no
+      // calling points), and the button by the door glows amber
+      for (const sh of lv.lifts) {
+        if (!sh.car || sh.out) continue;
+        const cx = (sh.x0 + sh.x1) / 2;
+        const idx = sh.stops.findIndex(r => Math.abs(g.player.y - r * TILE) < 8);
+        const near = idx >= 0 && Math.abs(g.player.x - cx) < 44 && g.player.mode === 'walk';
+        sh.callT = near ? (sh.callT || 0) + dt : 0;
+        if (near && sh.callT > 0.35 && sh.car.call !== idx
+          && !(sh.car.state === 'dwell' && sh.car.stop === idx)
+          && !(sh.car.state === 'move' && sh.car.next === idx)) {
+          sh.car.call = idx;
+          g.foley.step();
+          g.haptics.tick();
+          g.say(`Lift ${sh.id} called.`);
+        }
+      }
       // …open doors welcome you aboard: the car floor catches your very
       // first step through the doorway (the shaft is a hole otherwise).
       // The step-out cooldown guards only the revolving door, never the
@@ -1162,17 +1216,20 @@ export class TubeFlock {
             break;
           }
         }
-        // stepping onto a working escalator's boarding end takes you
+        // stepping onto EITHER end of a working escalator takes you to
+        // the other — from above too, of course
         if (!it.playerCar) {
-          for (const run of it.escRuns) {
+          outer: for (const run of it.escRuns) {
             if (run.broken) continue;
-            const [bx, by] = run.up ? [run.xBot, run.yBot] : [run.xTop, run.yTop];
-            const toward = Math.sign((run.up ? run.xTop : run.xBot) - bx);
-            const moving = dirIn.left ? -1 : dirIn.right ? 1 : 0;
-            if (Math.abs(g.player.x - bx) < 10 && Math.abs(g.player.y - by) < 8 && moving === toward) {
-              it.escRide = { run, s: 0 };
-              g.foley.step();
-              break;
+            for (const fromTop of [false, true]) {
+              const [bx, by] = fromTop ? [run.xTop, run.yTop] : [run.xBot, run.yBot];
+              const toward = Math.sign((fromTop ? run.xBot : run.xTop) - bx);
+              const moving = dirIn.left ? -1 : dirIn.right ? 1 : 0;
+              if (Math.abs(g.player.x - bx) < 10 && Math.abs(g.player.y - by) < 8 && moving === toward) {
+                it.escRide = { run, s: 0, fromTop };
+                g.foley.step();
+                break outer;
+              }
             }
           }
         }
@@ -1181,6 +1238,7 @@ export class TubeFlock {
     // the rat race has a pace: rush hours hurry, aids slow you down
     const hr = (this.clock / 60) % 24;
     const pace = (hr >= 7.5 && hr < 9.5) || (hr >= 16.5 && hr < 18.5) ? 1.35 : 1;
+    this.g.midiScore?.setPace(pace > 1 ? 1.12 : 1);   // the score leans with the rush
     for (const e of it.enemies) {
       if (e.inCar || e.riding) continue;
       if (e.waitT > 0) { e.waitT -= dt; continue; }
@@ -2444,11 +2502,15 @@ export class TubeFlock {
           else drawCommuterSkeleton(ctx, px, cy - 2, s.aid, t);
         });
       }
-      // sliding doors at each landing
-      for (const row of sh.stops) {
+      // sliding doors at each landing (+ an amber call light)
+      sh.stops.forEach((row, ri) => {
         const dy = row * TILE;
         const here = !sh.out && car.state !== 'move' && sh.stops[car.stop] === row;
         const open = here ? car.door : 0;
+        if (car.call === ri) {
+          ctx.fillStyle = '#d9a327';
+          ctx.beginPath(); ctx.arc(cx - w2 / 2 - 8, dy - hh * 0.55, 3, 0, Math.PI * 2); ctx.fill();
+        }
         ctx.strokeStyle = 'rgba(38,34,30,0.7)';
         ctx.lineWidth = 2;
         ctx.strokeRect(cx - w2 / 2 - 3, dy - hh - 3, w2 + 6, hh + 3);
@@ -2462,7 +2524,7 @@ export class TubeFlock {
           ctx.strokeRect(cx - w2 / 2, dy - hh, half, hh);
           ctx.strokeRect(cx + w2 / 2 - half, dy - hh, half, hh);
         }
-      }
+      });
     }
   }
   drawDressing(ctx, it, t) {
