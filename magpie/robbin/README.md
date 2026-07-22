@@ -398,8 +398,14 @@ three.js scene (borrowing the flock-wipe's lazily loaded library and
 bird factory) composited into the visualizer, nine hinged paper
 birds wheeling in the dark with wings beating to the treble and the
 camera drifting with the mids ("the aviary is waking up…" while
-three.js loads). Reduced motion keeps the still
-dig. ESC folds fullscreen first, then buries the player.
+three.js loads). And the twelfth reel is the
+Konami reward migrated home: **ROLL THE CREDITS** — the old credits
+overlay reborn as a viz mode, its buried-wonder gallery breathing
+with the bass and going Jet-Set-Willy hot on the kick, the scroll
+keeping time with the mids. Enter the Konami code anywhere (keys or
+the touch pad chant, JUMP JUMP for B A) and ROBBAMP opens straight
+onto it with the Piccadilly wiggle playing. Reduced motion keeps the
+still dig. ESC folds fullscreen first, then buries the player.
 It has its own address too: **`#robbamp`** opens it from the URL,
 and **`#robbamp=<what>`** opens on a song — `<what>` is a track
 NUMBER as printed in the playlist (`#robbamp=3`), any name substring

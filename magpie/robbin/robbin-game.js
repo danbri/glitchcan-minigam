@@ -1368,12 +1368,13 @@ class Game {
     return !document.getElementById('credits').classList.contains('hidden');
   }
   showCredits() {
+    // the Konami reward lives in the jukebox now: ROBBAMP opens on the
+    // ROLL THE CREDITS reel with the Piccadilly wiggle playing
     this.foley.ensure();
     this.foley.clear();                          // a little fanfare
     this.haptics.chord();
     if (this.state === 'play') this.state = 'paused';   // the arcade waits politely
-    this.creditScroll = 0;
-    document.getElementById('credits').classList.remove('hidden');
+    (this.amp ??= new RobbAmp(this)).openCredits();
   }
   hideCredits() {
     document.getElementById('credits').classList.add('hidden');

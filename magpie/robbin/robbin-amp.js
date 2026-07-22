@@ -108,7 +108,7 @@ export class RobbAmp {
     this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.MODES = ['THE DIG', 'MURMURATION', 'STRATA CORE', 'ROUNDABOUT', 'THE WIRE',
       'GOLDFEATHER', 'ATTIC 1984', 'NIGHT TRAIN', 'A SERIES OF TUBES',
-      'GAUSSIAN SPLATS', 'AVIARY 3D'];
+      'GAUSSIAN SPLATS', 'AVIARY 3D', 'ROLL THE CREDITS'];
     // fresh eyes land on the dark neon network; a saved choice is kept
     const savedMode = localStorage.getItem('robbin.ampviz');
     this.mode = savedMode == null ? 8 : Math.min(this.MODES.length - 1, +savedMode);
@@ -253,6 +253,7 @@ export class RobbAmp {
     if (location.hash.startsWith('#robbamp')) {
       history.replaceState(null, '', location.pathname + location.search);
     }
+    if (this.g.state === 'paused') this.g.state = 'play';   // Konami mid-arcade
     // the WINDOW closes; the SONG plays on (that's the point — walk
     // back into the game with your track). Only if nothing is sounding
     // does the menu band take the stage back here.
@@ -318,7 +319,8 @@ export class RobbAmp {
     else if (mode === 7) this.vNightTrain(ctx, W2, H2, au);
     else if (mode === 8) this.vPipes(ctx, W2, H2, au);
     else if (mode === 9) this.vSplats(ctx, W2, H2, au);
-    else this.vAviary(ctx, W2, H2, au);
+    else if (mode === 10) this.vAviary(ctx, W2, H2, au);
+    else this.vCredits(ctx, W2, H2, au);
     if (this.modeFlash > 0) {
       this.modeFlash -= 1 / 60;
       ctx.save();
@@ -1254,5 +1256,111 @@ export class RobbAmp {
     av.cam.lookAt(0, 0, 0);
     av.r.render(av.scene, av.cam);
     ctx.drawImage(av.r.domElement, 0, 0, W2, H2);
+  }
+/*
+    ROLL THE CREDITS — the Konami reward, migrated from its old overlay
+    into the jukebox where it belongs: the credit roll as a viz mode.
+    The scroll keeps time with the mids, the buried-wonder gallery
+    breathes with the bass and goes Jet-Set-Willy hot on the kick, and
+    the Konami code anywhere in the game opens ROBBAMP straight onto
+    this reel with the Piccadilly wiggle playing.
+  */
+  openCredits() {
+    this.mode = this.MODES.length - 1;   // a moment, not a saved preference
+    this.modeFlash = 3;
+    this.creditScroll = 0;
+    this.open('piccadilly-circus-wiggly-wiggle-remastered');
+  }
+  vCredits(ctx, W2, H2, au) {
+    const { bass, mids, kick, treble, t } = au;
+    // the clay case, after dark
+    ctx.fillStyle = '#241c12';
+    ctx.fillRect(0, 0, W2, H2);
+    ctx.strokeStyle = 'rgba(16,12,8,0.6)';
+    ctx.lineWidth = 2;
+    for (let y = 18; y < H2; y += 52) {
+      ctx.beginPath();
+      for (let x = 0; x <= W2; x += 20) {
+        const yy = y + Math.sin(x * 0.05) * (4 + mids * 5);
+        x === 0 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
+      }
+      ctx.stroke();
+    }
+    const ROLL = [
+      { role: 'BIRD ART', name: 'Libby' },
+      { role: 'GAME CONCEPT', name: 'Dan' },
+      { role: 'INSPIRATIONAL', name: 'Chuckie Egg · Gathering Sky' },
+      { role: 'SOUNDTRACK', name: 'The Quiet Engines · Gears and Birdcalls · The Inexorable Passacaglia' },
+      { role: 'STATION SONGS', name: 'eight songs for eight stations' },
+      { role: 'JUKEBOX', name: 'ROBBAMP · Buried Frequencies' },
+      { role: 'SOFTWARE & ADDITIONAL A/V', name: 'Computers' },
+      { role: '', name: '· found in the clay ·' },
+      { wonder: 0, cap: 'great bones' },
+      { wonder: 1, cap: 'mammoth & visitor' },
+      { wonder: 2, cap: 'longship' },
+      { wonder: 3, cap: 'the curious ring' },
+      { wonder: 4, cap: 'ammonite' },
+      { wonder: 5, cap: 'pterodactyl, commuting' },
+    ];
+    const P = TubeFlock.prototype;
+    const art = [
+      c => P.buriedBones.call(null, c, 0, 0, n => 7 % n || 0),
+      c => P.buriedMammothUfo.call(null, c, -14, 0),
+      c => P.buriedLongship.call(null, c, 0, 0),
+      c => P.buriedRing.call(null, c, 0, 0),
+      c => P.buriedAmmonite.call(null, c, 0, 0),
+      c => P.buriedPteroBike.call(null, c, 0, -8),
+    ];
+    const hOf = it => it.wonder !== undefined ? (it.wonder === 1 || it.wonder === 5 ? 190 : 160) : 76;
+    const total = ROLL.reduce((a, it) => a + hOf(it), 0);
+    this.creditScroll = (this.creditScroll || 0) + (0.4 + mids * 1.3);
+    let y = H2 + 20 - (this.creditScroll % (total + H2 + 40));
+    if (kick) this.credHot = 1;
+    this.credHot = Math.max(0, (this.credHot || 0) - 0.03);
+    for (const it of ROLL) {
+      const hh = hOf(it);
+      const cy = y + hh / 2;
+      y += hh;
+      if (cy < -hh || cy > H2 + hh) continue;
+      const shim = Math.sin(t * 9 + cy * 0.05) * treble * 3;   // treble shimmer
+      ctx.textAlign = 'center';
+      if (it.role !== undefined) {
+        if (it.role) {
+          ctx.fillStyle = '#b9a67f';
+          ctx.font = 'bold 13px Georgia, serif';
+          ctx.fillText(it.role, W2 / 2 + shim, cy - 13);
+        }
+        ctx.fillStyle = this.credHot > 0.6 ? `hsl(${(t * 160) % 360}, 85%, 78%)` : '#ecdfc2';
+        let fpx = 20;                          // long names shrink to fit
+        ctx.font = `bold ${fpx}px Georgia, serif`;
+        while (fpx > 11 && ctx.measureText(it.name).width > W2 - 18) {
+          fpx -= 1;
+          ctx.font = `bold ${fpx}px Georgia, serif`;
+        }
+        ctx.fillText(it.name, W2 / 2 - shim, cy + 12);
+      } else {
+        ctx.save();
+        ctx.translate(W2 / 2, cy - 14);
+        const pulse = 1 + bass * 0.12;
+        ctx.scale(pulse, pulse);
+        ctx.lineWidth = 2.4;
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = 0.85;
+        ctx.strokeStyle = ctx.fillStyle = this.credHot > 0
+          ? `hsla(${(t * 160 + it.wonder * 40) % 360}, 90%, 74%, 0.95)` : '#d8c8a4';
+        art[it.wonder](ctx);
+        ctx.restore();
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = '#b9a67f';
+        ctx.font = 'italic 13px Georgia, serif';
+        ctx.fillText(it.cap, W2 / 2, cy + hh / 2 - 16);
+        ctx.globalAlpha = 1;
+      }
+    }
+    // a little flypast keeps the roll company
+    drawBird(ctx, 'robin', {
+      x: (t * 40) % (W2 + 60) - 30, y: 24 + Math.sin(t * 2.2) * 8,
+      size: 22, facing: 1, phase: t * 12, pose: 'airup',
+    });
   }
 }
