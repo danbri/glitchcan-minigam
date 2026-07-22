@@ -341,6 +341,19 @@ real stations (area-name aliases live in the tool), and regenerates
 rotation with another generic covering; only a broken CORE track
 (map / finale) hands tape mode to the MIDI band. See
 `audio/README.md`.
+And — quietly, in the corner of ⚙ SETTINGS, behind a small 🐣 —
+**ROBBAMP · BURIED FREQUENCIES** (`robbin-amp.js`), a Winamp-classic
+tribute jukebox for the whole library: striped title bar, green LCD
+marquee, transport + seek + volume, playlist, lock-screen metadata.
+It streams through an `<audio>` element (no decoded-PCM cost) into
+the Soundtrack's bus so the master mute rules it, and its visualizer
+is an archaeology dig: the earth-edge buried wonders — bones,
+mammoth-and-saucer, longship, ring, ammonite, the ptero-cyclist,
+the lost river — reused straight off the game's own drawing code,
+pulsing with the bass and flashing Jet-Set-Willy colours on the hot
+hits, under a spectrum fence of little bones, with a skeleton bird
+keeping time and a live one flitting across on treble peaks
+(reduced motion: static ivory, no flights). ESC buries it again.
 **MIDI is a live, parameterized performance**: `tools/analyze-tracks.mjs` listened to the three
 recordings with WebAudio (onset autocorrelation for tempo, per-bar
 chroma vs triad templates for harmony, chroma self-similarity for

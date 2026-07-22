@@ -86,6 +86,19 @@
   }
   #menu button:hover, #menu2 button:hover, #menu3 button:hover { background: var(--green); color: var(--paper); }
 
+  /* something small is buried in the settings page */
+  #egg {
+    position: absolute;
+    right: calc(14px + env(safe-area-inset-right));
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    border: none;
+    background: none;
+    font-size: 1.5rem;
+    opacity: 0.3;
+    cursor: pointer;
+  }
+  #egg:hover, #egg:focus-visible { opacity: 1; }
+
   #credits { background: var(--paper); }
   .sr-only {
     position: absolute;
@@ -204,6 +217,7 @@
       <button type="button" id="play3d">&#9986;&#65039; ROBBIN IN 3D &mdash; the cut-paper birds off the page</button>
       <button type="button" id="optback">&larr; BACK &nbsp;(ESC)</button>
     </div>
+    <button type="button" id="egg" aria-label="a curious egg">&#128035;</button>
   </div>
 
   <div id="gameover" class="overlay hidden">

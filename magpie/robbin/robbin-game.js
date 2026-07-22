@@ -7,6 +7,7 @@ import { PALETTE, BIRDS, drawBird, drawGrain, drawBottle, drawCommuter, birdSVG 
 import { Chiptune, Soundtrack, ScorePlayer } from './robbin-music.js';
 import { TubeFlock } from './robbin-tube.js';
 import { FlockWipe } from './robbin-wipe3d.js';
+import { RobbAmp } from './robbin-amp.js';
 
 export const TILE = 32, COLS = 20, ROWS = 15;
 export const W = COLS * TILE, H = ROWS * TILE;
@@ -983,6 +984,7 @@ class Game {
         this.pressStart(); return;
       }
       if (e.key === 'Escape') {
+        if (this.amp?.close()) return;   // the jukebox goes back in its egg
         if (this.creditsOpen()) { this.hideCredits(); return; }
         if (this.optionsOpen()) { this.hideOptions(); return; }
         if (this.state === 'tube') {
@@ -1137,6 +1139,11 @@ class Game {
     });
     document.getElementById('play3d')?.addEventListener('pointerdown', e => {
       e.stopPropagation(); location.href = 'robbin3d.html';
+    });
+    // 🐣 the curious egg: a little buried jukebox
+    document.getElementById('egg')?.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      (this.amp ??= new RobbAmp(this)).toggle();
     });
     document.getElementById('tomenu')?.addEventListener('pointerdown', e => {
       e.stopPropagation(); this.backToMenu();
