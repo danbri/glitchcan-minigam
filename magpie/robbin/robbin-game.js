@@ -1145,6 +1145,11 @@ class Game {
       e.stopPropagation();
       (this.amp ??= new RobbAmp(this)).toggle();
     });
+    // …with its own address: #robbamp (or #robbamp=<track-slug>) opens
+    // it straight from the URL — the hash follows the playing track so
+    // the bar is always shareable
+    addEventListener('hashchange', () => this.handleAmpHash());
+    this.handleAmpHash();
     document.getElementById('tomenu')?.addEventListener('pointerdown', e => {
       e.stopPropagation(); this.backToMenu();
     });
@@ -1267,6 +1272,15 @@ class Game {
     if (this.wipe.active) return;   // one flock at a time
     this.foley.ensure();            // audio must wake INSIDE the tap gesture
     if (!this.wipe.run({ onCovered: go })) go();
+  }
+  handleAmpHash() {
+    const m = location.hash.match(/^#robbamp(?:=([^&]+))?$/);
+    if (m) {
+      if (this.state === 'title' && !this.optionsOpen()) this.showOptions();
+      (this.amp ??= new RobbAmp(this)).open(m[1] ? decodeURIComponent(m[1]) : undefined);
+    } else if (this.amp?.isOpen()) {
+      this.amp.close();
+    }
   }
   optionsOpen() {
     return !document.getElementById('options').classList.contains('hidden');

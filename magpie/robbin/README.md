@@ -346,17 +346,28 @@ rotation with another generic covering; only a broken CORE track
 `audio/README.md`.
 And — quietly, in the corner of ⚙ SETTINGS, behind a small 🐣 —
 **ROBBAMP · BURIED FREQUENCIES** (`robbin-amp.js`), a Winamp-classic
-tribute jukebox for every track in the library: striped title bar, green LCD
-marquee, transport + seek + volume, playlist, lock-screen metadata.
-It streams through an `<audio>` element (no decoded-PCM cost) into
-the Soundtrack's bus so the master mute rules it, and its visualizer
-is an archaeology dig: the earth-edge buried wonders — bones,
-mammoth-and-saucer, longship, ring, ammonite, the ptero-cyclist,
-the lost river — reused straight off the game's own drawing code,
-pulsing with the bass and flashing Jet-Set-Willy colours on the hot
-hits, under a spectrum fence of little bones, with a skeleton bird
-keeping time and a live one flitting across on treble peaks
-(reduced motion: static ivory, no flights). ESC buries it again.
+tribute jukebox for every track in the library: striped title bar,
+big green LCD marquee (sized for eyes that remember the original),
+transport + seek + volume, playlist, lock-screen metadata. It
+streams through an `<audio>` element (no decoded-PCM cost) into the
+Soundtrack's bus so the master mute rules it. **Five visualizer
+looks, all in the lino language — tap the visuals to cycle, ⛶ for
+fullscreen** (a fixed overlay, so it works on iPhones where the
+Fullscreen API doesn't; the canvas steps out to `<body>` because the
+player window's CSS transform would otherwise re-anchor it):
+THE DIG (buried wonders breathing bass under bone bars with falling
+peak-hold knuckles), MURMURATION (a boids flock of ink birds — the
+music steers, the kick scatters), STRATA CORE (a log-frequency
+spectrogram laid down as sediment on ONE clay→bone lightness ramp —
+never a rainbow — with a fossil buried on every kick, scrolling into
+history), ROUNDABOUT (a radial spectrum in the network's line
+colours around a slowly turning skeleton bird, peak dots orbiting),
+and THE WIRE (the classic oscilloscope as an ink wire with eggs that
+hop on the kick and a wren pecking along). Reduced motion keeps the
+still dig. ESC folds fullscreen first, then buries the player.
+It has its own address too: **`#robbamp`** opens it from the URL,
+**`#robbamp=<track-slug>`** opens on that song, and the hash follows
+the playing track so the bar is always shareable.
 **MIDI is a live, parameterized performance**: `tools/analyze-tracks.mjs` listened to the three
 recordings with WebAudio (onset autocorrelation for tempo, per-bar
 chroma vs triad templates for harmony, chroma self-similarity for
