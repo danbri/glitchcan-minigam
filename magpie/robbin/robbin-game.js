@@ -746,7 +746,7 @@ class Game {
     // …and the same three tracks as a LIVE MIDI-like performance:
     // loopable to the bar, responsive to flock, rush hour and rescues
     this.midiScore = new ScorePlayer(() => { this.foley.ensure(); return this.foley.ctx; });
-    this.scoreMode = localStorage.getItem('robbin.scoremode') === 'tape' ? 'tape' : 'midi';
+    this.scoreMode = localStorage.getItem('robbin.scoremode') === 'midi' ? 'midi' : 'tape';
     this.music.setMuted(localStorage.getItem('robbin.mute') === '1');
     this.soundtrack.setMuted(this.music.muted);
     this.midiScore.setMuted(this.music.muted);
@@ -1039,6 +1039,9 @@ class Game {
       if (this.state === 'tube' && this.tube.dismissFact()) return;   // postcard: tap anywhere
       if (this.state === 'tube' && this.tube.interior
         && this.tube.mapButtonHit(e.clientX, e.clientY) && this.tube.popOut()) return;
+      if (this.state === 'tube' && !this.tube.interior && !this.tube.travel
+        && !this.tube.finale && !this.tube.over
+        && this.tube.menuButtonHit(e.clientX, e.clientY)) { this.tube.exit(); return; }
       if (this.state === 'tube' && this.tube.over) { this.tube.handleJump(); return; }
       // flick gestures on the play field (glide mode + tube travel)
       this.gesture = { x: e.clientX, y: e.clientY, used: false };

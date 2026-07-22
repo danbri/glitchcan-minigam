@@ -354,10 +354,10 @@ function genStation(name) {
   // Lift guides and notice boards live on circulation floors, never on
   // platforms — a board over a waiting train helps nobody
   const platRows = plats.map(p => p.row);
-  const guides = shaftDefs.map((sd, i) => {
+  const guides = shaftDefs.slice(0, 1).map(sd => {
     const rows = sd.stops.filter(r => !platRows.includes(r));
     const row = rows.length ? rows[rows.length - 1] : sd.stops[0];
-    return [Math.max(2, Math.min(17, sd.c + (i ? 3 : -3))), row];
+    return [Math.max(2, Math.min(17, sd.c - 3)), row];
   });
   if (!guides.length) guides.push([freeCol(floors[Math.min(1, floors.length - 1)]), floors[Math.min(1, floors.length - 1)]]);
   const boardRow = [...floors].reverse().find(r => !platRows.includes(r)) ?? floors[0];
@@ -366,9 +366,20 @@ function genStation(name) {
   for (let i = 0, n = 2 + (floors.length > 2 ? 1 : 0); i < n; i++) {
     commuters.push({ t: 'commuter', c: 2 + rnd(16), floor: floors[rnd(floors.length)], d: rnd(2) ? 1 : -1, v: rnd(20) });
   }
+  // a few stations hide a small lost thing — lost property, waiting for
+  // a sharp-eyed bird. Roughly one station in three, seeded like the rest.
+  let lostObject = null;
+  if (rnd(3) === 0) {
+    const kinds = ['glove', 'umbrella', 'teddy bear', 'scarf', 'library book', 'toy train'];
+    const fr = floors[rnd(floors.length)];
+    let c = freeCol(fr);
+    for (let k = 0; k < 20 && grid[fr - 1][c] !== '.'; k++) c = 2 + rnd(16);
+    lostObject = { c, r: fr - 1, kind: kinds[rnd(kinds.length)] };
+  }
   const def = {
     map: grid.map(r => r.join('')),
     commuters, bystanders, ads, signs, levels, levelNums, guides, helps, board,
+    lostObject,
     streetRow, gateOut, platDefs, platLevel, spawnStreet, perch,
     shaftDefs, escRuns,
     underground: !surface,
@@ -489,7 +500,8 @@ export class TubeFlock {
     this.gather = null;
     this.scene = null;
     this.changeHint = null;
-    this.stats = { stops: 0, visited: new Set([this.cur]) };
+    this.stats = { stops: 0, visited: new Set([this.cur]), objects: 0 };
+    this.foundObjects = new Set();   // stations whose lost thing is handed in
     // the clock: always daytime, ten times reality — the rat race spins
     this.clock = 7 * 60 + Math.floor(Math.random() * 11 * 60);
     this.day = 1;
@@ -643,6 +655,7 @@ export class TubeFlock {
     }
     const broken = it.glitches.map(gl => gl.kind === 'lift' ? 'a lift' : 'an escalator');
     if (broken.length) bits.push(`Broken and glitching — do not touch: ${broken.join(', ')}.`);
+    if (it.lost) bits.push(`Lost property: somebody dropped a ${it.lost.kind} on ${levelName(it.lost.r)}. Finding it is worth 250.`);
     bits.push(`The WAY OUT is on ${levelName(d.gateOut.r)}, ${side(d.gateOut.c)} side. Stairs always work.`);
     return bits.join(' ');
   }
@@ -725,7 +738,16 @@ export class TubeFlock {
     this.g.foley.whoosh();
   }
   handleJump() {
-    if (this.dismissFact()) return;
+    if (this.dismissFact()) {
+      // one press does it: reading the postcard and going in are the
+      // same intent when the lost bird's station is right here
+      if (!this.interior && !this.travel && !this.finale && !this.over
+        && this.objective && this.objective.at === this.cur) {
+        this.gather = null;
+        this.enterInterior(null, this.objective, { arrival: true });
+      }
+      return;
+    }
     // in an interior, jumping goes through the play input — but on the
     // map, GO is THE way in: it drops into the bird's station (with the
     // train-arrival scene), carries an armed line change inside, or
@@ -836,6 +858,11 @@ export class TubeFlock {
       playing,
       rescue: rescue && perch ? {
         ...rescue, x: perch.c * TILE + 16, y: (perch.r + 1) * TILE, found: false,
+      } : null,
+      // the station's lost thing, if it has one and nobody found it yet
+      lost: def.lostObject && !this.foundObjects?.has(this.cur) ? {
+        ...def.lostObject,
+        x: def.lostObject.c * TILE + 16, y: (def.lostObject.r + 1) * TILE,
       } : null,
       // every station draws its crowd from a different corner of London —
       // and some of that crowd moves slowly, with a stick, a case, a
@@ -982,7 +1009,7 @@ export class TubeFlock {
     g.foley.clear();
     if (it.rescue) this.freeChange = this.cur;   // rescued and out — no second toll
     else if (it.pendingEdge) this.line = null;   // surfaced on foot instead: fresh start
-    if (it.rescue && !this.objective && !this.finaleDone) {
+    if (it.rescue && !this.finaleDone && (this.roster.length >= 7 || !this.objective)) {
       // a long murmuration wheels the whole family home across London
       this.finaleDone = true;
       this.finale = {
@@ -995,7 +1022,9 @@ export class TubeFlock {
       this.arriveMsg = '♥ THE FLOCK IS WHOLE ♥';
       this.swellMusic();
       g.haptics.chord();
-      g.say(`${it.rescue.name} was the last of them. The flock is whole — ${this.roster.length} birds wheel home together across London.`);
+      g.say(this.objective
+        ? `${it.rescue.name} makes ${this.roster.length} — enough to fly home together. The flock wheels home across London.`
+        : `${it.rescue.name} joins and the flock is whole. The flock wheels home across London.`);
     } else {
       g.say(`Surfaced at ${this.cur} — back on the map. ${this.describeStation()}`);
     }
@@ -1361,6 +1390,20 @@ export class TubeFlock {
         g.say(`${it.rescue.name} joins the flock! ${this.roster.length} birds now. Head up to the street and out the WAY OUT.`);
       }
     }
+    // the lost thing: brush past it and it's found — a warm little
+    // side-hunt, never required, always worth a detour
+    if (it.lost && Math.abs(px - it.lost.x) < 18 && Math.abs(py - it.lost.y) < 26) {
+      this.foundObjects.add(this.cur);
+      this.stats.objects++;
+      this.score += 250;
+      g.fx.push({ x: it.lost.x, y: it.lost.y - 26, txt: `the ${it.lost.kind}! +250`, t: 1.6 });
+      g.hearts(it.lost.x, it.lost.y - 12, 5);
+      g.foley.egg();
+      g.haptics.tick();
+      this.saveHi();
+      g.say(`You found the lost ${it.lost.kind}! Handed in at ${this.cur}. ${this.stats.objects} lost thing${this.stats.objects === 1 ? '' : 's'} found.`);
+      it.lost = null;
+    }
     if (it.celebrate) {
       it.celebrate.t -= dt;
       if (it.celebrate.t <= 0) it.celebrate = null;
@@ -1452,9 +1495,10 @@ export class TubeFlock {
         this.factCard = {
           title: 'HOME TO ROOST',
           station: 'THE FLOCK IS WHOLE',
-          fact: `All ${this.roster.length} birds together — ${this.stats.stops} stops flown, `
-            + `${this.stats.visited.size} stations seen, ${this.score} points. `
-            + 'London is yours now: fly on together as long as you like.',
+          fact: `${this.roster.length} birds fly home together — ${this.stats.stops} stops flown, `
+            + `${this.stats.visited.size} stations seen`
+            + `${this.stats.objects ? `, ${this.stats.objects} lost thing${this.stats.objects === 1 ? '' : 's'} found` : ''}, `
+            + `${this.score} points. London is yours now: the other birds are still out there.`,
           t: 0,
         };
         this.updateMusic();
@@ -1816,7 +1860,7 @@ export class TubeFlock {
     ctx.textAlign = 'left';
     ctx.globalAlpha = 0.7;
     ctx.font = `bold ${fs * 0.6}px Georgia, serif`;
-    const mast = `TUBULAR SMELLS · FLOCK ${this.roster.length}/${LOST.length + 1} · SCORE ${this.score} · ${this.clockText()}`;
+    const mast = `TUBULAR SMELLS · FLOCK ${this.roster.length}/${this.finaleDone ? LOST.length + 1 : 7} · SCORE ${this.score} · ${this.clockText()}`;
     ctx.fillText(mast, 12, fs * 0.95);
     this.drawClock(ctx, 12 + ctx.measureText(mast).width + fs * 0.75, fs * 0.72, fs * 0.5);
     ctx.globalAlpha = 1;
@@ -1889,7 +1933,7 @@ export class TubeFlock {
     if (primer) {
       ctx.textAlign = 'center';
       ctx.globalAlpha = 0.65;
-      this.fitText(ctx, `find all ${LOST.length + 1} birds and lead the flock home — fly stop by stop, GO enters a station`, w / 2, fs * 5.4, w - 24, fs * 0.68, 'italic');
+      this.fitText(ctx, 'find SIX lost birds and lead the flock home — fly stop by stop, GO enters a station', w / 2, fs * 5.4, w - 24, fs * 0.68, 'italic');
       this.fitText(ctx, 'found your bird? ride on from any platform, or take the WAY OUT', w / 2, fs * 6.3, w - 24, fs * 0.68, 'italic');
       ctx.globalAlpha = 1;
       ctx.textAlign = 'left';
@@ -1915,6 +1959,19 @@ export class TubeFlock {
       ctx.fillStyle = PALETTE.ink;
       this.fitText(ctx, 'swipe or arrows to fly a line · no rush — the flock waits · ESC: home to roost', w / 2, h - fs * 0.7, w - 16, fs * 0.72, 'normal');
       ctx.globalAlpha = 1;
+    }
+    // ⏏ MENU: one tap back to the top menu from the map
+    if (!this.finale && !this.over) {
+      const mb = this.menuButtonRect();
+      ctx.fillStyle = 'rgba(247,242,230,0.92)';
+      ctx.strokeStyle = PALETTE.ink;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect(mb.x, mb.y, mb.w, mb.h, 6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = PALETTE.ink;
+      ctx.font = `bold ${fs * 0.52}px Georgia, serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('⏏ MENU', mb.x + mb.w / 2, mb.y + mb.h * 0.66);
+      ctx.textAlign = 'left';
     }
     // the postcard covers everything, and waits
     if (this.factCard) this.drawFactOverlay(ctx);
@@ -2059,7 +2116,7 @@ export class TubeFlock {
     // compact tallies at the left; big readable lines in the rest
     ctx.textAlign = 'left';
     ctx.font = `bold ${fs * 0.62}px Georgia, serif`;
-    const flockTxt = `FLOCK ${this.roster.length}/${LOST.length + 1}`;
+    const flockTxt = `FLOCK ${this.roster.length}/${this.finaleDone ? LOST.length + 1 : 7}`;
     ctx.fillText(flockTxt, 10, fs * 1.1);
     ctx.fillText(`SCORE ${this.score} · ${this.clockText()}`, 10, fs * 2.1);
     this.drawClock(ctx, 10 + ctx.measureText(flockTxt).width + fs * 0.75, fs * 0.85, fs * 0.5);
@@ -2157,6 +2214,18 @@ export class TubeFlock {
   }
   mapButtonHit(x, y) {
     const r = this.mapButtonRect();
+    return x >= r.x - 8 && x <= r.x + r.w + 8 && y >= r.y - 8 && y <= r.y + r.h + 8;
+  }
+  // ⏏ MENU on the map screen: quit to the top menu (ESC's visible twin).
+  // Sits just above the touch band, clear of the thumbs and the masthead.
+  menuButtonRect() {
+    const g = this.g, w = g.cssW, h = g.cssH;
+    const fs = Math.max(17, Math.min(24, w / 22));
+    const { bot } = this.viewBand();
+    return { x: w - fs * 3.6 - 8, y: h - bot - fs * 1.55, w: fs * 3.6, h: fs * 1.1 };
+  }
+  menuButtonHit(x, y) {
+    const r = this.menuButtonRect();
     return x >= r.x - 8 && x <= r.x + r.w + 8 && y >= r.y - 8 && y <= r.y + r.h + 8;
   }
   // ------------------------------------------------ the earth beyond
@@ -2681,6 +2750,8 @@ export class TubeFlock {
     });
     // Lift guide boards — the station's own diagram of itself
     for (const [c, r] of it.def.guides || []) this.drawLiftGuide(ctx, it, c * TILE, r * TILE);
+    // the lost thing, glinting quietly where somebody dropped it
+    if (it.lost) this.drawLostObject(ctx, it.lost, t);
     // Help points
     for (const [c, r] of it.def.helps || []) {
       const hx = c * TILE + 10, hy = r * TILE;
@@ -2712,6 +2783,89 @@ export class TubeFlock {
       ctx.fillStyle = '#f6f3ea';
       ctx.beginPath(); ctx.ellipse(dr.x, dr.y, 1.8, 2.4, 0, 0, Math.PI * 2); ctx.fill();
     }
+  }
+  // lost property, drawn small and warm where it fell; a soft twinkle
+  // says "come and look" without shouting (static under reduced motion)
+  drawLostObject(ctx, lost, t) {
+    const x = lost.x, y = lost.y;
+    ctx.save();
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = PALETTE.ink;
+    switch (lost.kind) {
+      case 'glove':
+        ctx.fillStyle = '#b23b2b';
+        ctx.beginPath(); ctx.roundRect(x - 5, y - 10, 10, 9, 3); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(x + 3, y - 8, 5, 4, 2); ctx.fill(); ctx.stroke();
+        break;
+      case 'umbrella':
+        ctx.strokeStyle = '#2e5e45';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x - 8, y - 3); ctx.lineTo(x + 6, y - 12); ctx.stroke();
+        ctx.fillStyle = '#2e5e45';
+        ctx.beginPath();
+        ctx.moveTo(x - 9, y - 5); ctx.quadraticCurveTo(x - 2, y - 14, x + 7, y - 13);
+        ctx.quadraticCurveTo(x - 1, y - 11, x - 9, y - 5);
+        ctx.fill();
+        ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(x - 9, y - 2, 2.4, Math.PI * 0.2, Math.PI, false); ctx.stroke();
+        break;
+      case 'teddy bear':
+        ctx.fillStyle = '#b98a2e';
+        ctx.beginPath(); ctx.arc(x, y - 5, 4.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y - 12, 3.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x - 3, y - 15, 1.5, 0, Math.PI * 2);
+        ctx.arc(x + 3, y - 15, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = PALETTE.ink;
+        ctx.beginPath();
+        ctx.arc(x - 1.2, y - 12.5, 0.6, 0, Math.PI * 2);
+        ctx.arc(x + 1.2, y - 12.5, 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case 'scarf':
+        ctx.strokeStyle = '#4f4a76';
+        ctx.lineWidth = 3.4;
+        ctx.beginPath();
+        ctx.moveTo(x - 8, y - 2);
+        ctx.quadraticCurveTo(x - 2, y - 9, x + 3, y - 4);
+        ctx.quadraticCurveTo(x + 8, y - 1, x + 9, y - 7);
+        ctx.stroke();
+        ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 1;
+        for (let k = 0; k < 3; k++) {
+          ctx.beginPath(); ctx.moveTo(x + 7.5 + k, y - 6); ctx.lineTo(x + 7 + k, y - 2.5); ctx.stroke();
+        }
+        break;
+      case 'library book':
+        ctx.fillStyle = '#23406e';
+        ctx.beginPath(); ctx.roundRect(x - 6, y - 9, 12, 8, 1.5); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#f2ecdd';
+        ctx.beginPath(); ctx.moveTo(x - 3.5, y - 7); ctx.lineTo(x + 3.5, y - 7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x - 3.5, y - 5); ctx.lineTo(x + 2, y - 5); ctx.stroke();
+        break;
+      default:   // toy train
+        ctx.fillStyle = '#d94327';
+        ctx.beginPath(); ctx.roundRect(x - 7, y - 8, 10, 6, 1.5); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(x + 1, y - 11, 6, 9, 1.5); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = PALETTE.ink;
+        ctx.beginPath();
+        ctx.arc(x - 4, y - 1.5, 1.6, 0, Math.PI * 2);
+        ctx.arc(x + 1, y - 1.5, 1.6, 0, Math.PI * 2);
+        ctx.arc(x + 5, y - 1.5, 1.6, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+    }
+    // the twinkle
+    const tw = this.g.reducedMotion ? 0.55 : 0.35 + 0.45 * (0.5 + 0.5 * Math.sin(t * 3.1 + x));
+    ctx.globalAlpha = tw;
+    ctx.strokeStyle = '#b98a2e';
+    ctx.lineWidth = 1.2;
+    const sy = y - 20, sr = 3;
+    ctx.beginPath();
+    ctx.moveTo(x - sr, sy); ctx.lineTo(x + sr, sy);
+    ctx.moveTo(x, sy - sr); ctx.lineTo(x, sy + sr);
+    ctx.stroke();
+    ctx.restore();
   }
   playerFloorIdx(it) {
     const y = this.g.player.y / TILE;

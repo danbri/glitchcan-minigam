@@ -117,19 +117,24 @@ arriving at the bird's station gathers the flock at the mouth and GO
 drops in with the train-arrival scene. Nothing ever pulls you inside
 by surprise — and if you wander in anyway, **ESC or the ⌂ MAP button
 pops the flock straight back out**, no trek to the exit, nothing
-lost. Inside, changes cross the station underground to the new
+lost. When the postcard is up at the lost bird's own station, **one
+GO does both jobs** — it puts the card away and drops in — no double
+press. The map screen carries a matching **⏏ MENU button** (ESC's
+visible twin) that quits to the top menu. Inside, changes cross the station underground to the new
 line's own directional door; rescues end by **surfacing** — the WAY
 OUT — or by riding on from any platform. Lines that share a platform
 swap trains without the trek — a real cross-platform change. Riding
 straight through interchanges on your own line never drops you
 inside. A short primer sits on the map until the first rescue.
 
-**The journey has a shape:** twenty-three birds — ROBBIN and the
-twenty-two lost — and the header always says how far along you are
-(FLOCK 7/23). Find the last one and the whole family wheels home to
-Liverpool Street in a long murmuration; a HOME TO ROOST postcard
-closes the story with your own numbers (stops flown, stations seen,
-score), and then London is yours to fly for as long as you like.
+**The journey has a shape:** the header always says how far along
+you are (FLOCK 4/7), and **six lost birds are enough** — ROBBIN plus
+six makes a family, and surfacing with the sixth wheels everyone
+home to Liverpool Street in a long murmuration. A HOME TO ROOST
+postcard closes the story with your own numbers (stops flown,
+stations seen, lost things found, score), and then London is yours
+to fly for as long as you like — twenty-two lost birds are out there
+for completists, and a late rescue still earns the flight home.
 
 A cosy, heartwarming journey — no clock, no lives, no fail state. The
 main dynamic is **growing the flock**: twenty-two lost libbirds —
@@ -226,7 +231,8 @@ daytime (past nine at night it snaps to half six the next morning):
 the rat race spins, commuters hurry visibly at rush hour, and the
 HUD wears the clock face. Stations are dressed
 with real Underground furniture: procedural
-**Lift guide** boards drawn from each station's own layout — floor
+a **Lift guide** board drawn from the station's own layout (one per
+station, on a circulation floor — never over a platform) — floor
 lines, escalator diagonals, each lettered lift column drawn over just
 the levels it serves and crossed red when out, and
 a live "you are here" dot that follows you; a dated, hand-scrawled
@@ -268,9 +274,18 @@ thing about the place in big readable type; the world holds still
 until you dismiss it (tap, JUMP, Enter or Esc). Rescues bloom with
 hearts and a musical swell,
 and the flock swirls boids-fashion around you, fuller every reunion.
+**Some stations hide a lost thing** — a glove, an umbrella, a teddy
+bear, a scarf, a library book, a toy train — roughly one station in
+three, seeded like everything else, glinting quietly on some floor
+with a soft twinkle (static under reduced motion). Brush it and it's
+found: +250, a word from the announcer, and the HOME TO ROOST card
+counts your lost-property record. The station narration tips you off
+("Lost property: somebody dropped a teddy bear on −1 · ticket
+hall"). Never required, always worth the detour.
 Tubular Smells' score comes in two forms, toggled from the menu
-(SCORE: MIDI / TAPE). **MIDI (the default) is a live, parameterized
-performance**: `tools/analyze-tracks.mjs` listened to the three
+(SCORE: TAPE / MIDI). **TAPE (the default) is the recordings
+themselves**, decoded into buffers, looped and crossfaded by mood.
+**MIDI is a live, parameterized performance**: `tools/analyze-tracks.mjs` listened to the three
 recordings with WebAudio (onset autocorrelation for tempo, per-bar
 chroma vs triad templates for harmony, chroma self-similarity for
 loop length, RMS for the energy arc) and baked what it heard into
@@ -281,8 +296,7 @@ as a 140 BPM D-minor **twelve-bar ground bass that stacks a new
 layer every time it comes round**. Because it's performed live it
 loops to the bar, movements swap at bar lines, intensity layers
 grow with the flock, rescue swells bloom it, and it leans ~12%
-faster in rush hour. **TAPE is the recordings themselves**, decoded
-into buffers, looped and crossfaded by mood. Either way the mute
+faster in rush hour. Either way the mute
 button rules everything, and if the tape can't load the MIDI score
 takes the stage (offline never silences the game). The Flight Line
 arcade stays the original chiptune's own show: warm detuned pad washes
