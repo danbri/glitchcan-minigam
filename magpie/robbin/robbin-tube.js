@@ -802,6 +802,7 @@ export class TubeFlock {
     g.level = level;
     g.player = player;
     g.heading = { x: 0, y: 0 };   // glide mode: stand until told
+    g.nextHeading = null;
     g.screen = { def: { name: this.cur }, enemies: this.interior.enemies, cleared: false };
     g.fx = []; g.parts = [];
     if (arrival) {
@@ -1058,16 +1059,22 @@ export class TubeFlock {
           up: g.heading.y < 0 ? 1 : 0, down: g.heading.y > 0 ? 1 : 0 }
       : g.input;
     if (it.playerCar) {
-      // the bird in the box: ride until the doors open somewhere you like
+      // the bird in the box: ride until the doors open somewhere you
+      // like. The stop you boarded at doesn't count — walking in must
+      // never mean instantly stepping out the far side (a held glide or
+      // held key exits at the NEXT stop instead; JUMP bails anywhere).
       const sh = it.playerCar, car = sh.car;
+      if (car.state === 'move') it.boardStop = -99;
       g.player.x = (sh.x0 + sh.x1) / 2;
       g.player.y = car.y;
       g.player.vx = 0; g.player.vy = 0; g.player.mode = 'walk';
       for (const b of it.buddies) { b.x = g.player.x - 6; b.y = car.y - 24; b.vx = b.vy = 0; }
       const side = dirIn.left ? -1 : dirIn.right ? 1 : 0;
-      if (car.state === 'dwell' && car.door > 0.6 && (side || g.jumpTap)) {
-        g.player.x += (side || 1) * 26;
+      const mayExit = car.stop !== it.boardStop || g.jumpTap;
+      if (car.state === 'dwell' && car.door > 0.6 && (side || g.jumpTap) && mayExit) {
+        g.player.x += (side || 1) * 42;   // clear of the doorway — no instant re-board
         it.playerCar = null;
+        it.carCool = 0.4;
         g.jumpTap = false;
         g.haptics.tick();
         g.say(`Off at ${it.def.levels[it.floorRows.indexOf(sh.stops[car.stop])] || 'a level'}.`);
@@ -1106,17 +1113,22 @@ export class TubeFlock {
           g.player.x = g.player.x < cx ? sh.x0 - 6 : sh.x1 + 6;
         }
       }
-      // …open doors welcome you aboard
-      if (g.player.mode === 'walk' && it.grabCool <= 0) {
+      // …open doors welcome you aboard: the car floor catches your very
+      // first step through the doorway (the shaft is a hole otherwise)
+      if (it.carCool > 0) it.carCool -= dt;
+      if ((g.player.mode === 'walk' || g.player.mode === 'fall') && it.grabCool <= 0 && !(it.carCool > 0)) {
         for (const sh of lv.lifts) {
           const car = sh.car;
           if (!car || sh.out || car.state !== 'dwell' || car.door < 0.6) continue;
           const cx = (sh.x0 + sh.x1) / 2;
-          if (Math.abs(g.player.x - cx) < 12 && Math.abs(g.player.y - sh.stops[car.stop] * TILE) < 8) {
+          if (Math.abs(g.player.x - cx) < 30 && Math.abs(g.player.y - sh.stops[car.stop] * TILE) < 14) {
             it.playerCar = sh;
+            it.boardStop = car.stop;
+            // gliding in mustn't glide straight out: the ride resets the heading
+            if (g.controlMode === 'glide') { g.heading = { x: 0, y: 0 }; g.nextHeading = null; }
             g.foley.whoosh();
             g.haptics.tick();
-            g.say(`Aboard Lift ${sh.id}.`);
+            g.say(`Aboard Lift ${sh.id}. Press a direction when the doors open to step off.`);
             break;
           }
         }

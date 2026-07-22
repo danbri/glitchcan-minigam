@@ -981,7 +981,8 @@ class Game {
         const r = dpad.getBoundingClientRect();
         const dx = e.clientX - (r.left + r.width / 2);
         const dy = e.clientY - (r.top + r.height / 2);
-        if (Math.hypot(dx, dy) < 10) return null;
+        // the centre cell is the BRAKE: tap it to stop a glide dead
+        if (Math.hypot(dx, dy) < r.width / 6) return { x: 0, y: 0 };
         const oct = Math.round(Math.atan2(dy, dx) / (Math.PI / 4));
         const v = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]][(oct + 8) % 8];
         return { x: v[0], y: v[1] };
@@ -989,7 +990,7 @@ class Game {
       const show = d => cells.forEach(c =>
         c.classList.toggle('lit', !!d && c.dataset.d === `${d.x},${d.y}`));
       const apply = d => {
-        if (this.state === 'tube' && !this.tube.interior) { if (d) this.tube.handleDir(d.x, d.y); return; }
+        if (this.state === 'tube' && !this.tube.interior) { if (d && (d.x || d.y)) this.tube.handleDir(d.x, d.y); return; }
         // glide mode glides everywhere a bird flits — arcade AND interiors
         if (this.controlMode === 'glide') { if (d) this.setHeading(d.x, d.y); return; }
         // hold semantics: flight-line HOLD mode and station interiors
@@ -1010,7 +1011,7 @@ class Game {
         const d = padDir(e); show(d); apply(d); padHaptic(d);
         // cardinal taps sing the old song too; a fat-fingered diagonal is
         // simply not part of the tune (ignored, never a reset)
-        if (d && !(d.x && d.y)) {
+        if (d && (d.x || d.y) && !(d.x && d.y)) {
           this.feedKonami(d.y < 0 ? 'up' : d.y > 0 ? 'down' : d.x < 0 ? 'left' : 'right');
         }
       });
@@ -1057,9 +1058,44 @@ class Game {
     }
   }
   setHeading(x, y) {
+    const h = this.heading || { x: 0, y: 0 };
+    if (x === 0 && y === 0) { this.heading = { x: 0, y: 0 }; this.nextHeading = null; return; }
+    // tapping the exact opposite of your glide is a BRAKE, not a
+    // somersault: stop dead; tap again to set off the other way
+    if ((h.x || h.y) && x === -h.x && y === -h.y) {
+      this.heading = { x: 0, y: 0 };
+      this.nextHeading = null;
+      this.haptics.thud();
+      return;
+    }
+    // Pac-Man turns: a pure vertical tap mid-corridor is a PROGRAMMED
+    // turn — keep flying, take the climb at the next ladder or stair
+    if (x === 0 && y !== 0 && (h.x || h.y) && this.player && this.player.mode !== 'climb' && !this.ladderHere(y)) {
+      this.nextHeading = { x, y };
+      this.haptics.tick();
+      return;
+    }
     // a cardinal swipe commits to that axis; a diagonal keeps both intents
-    if (this.heading && (this.heading.x !== x || this.heading.y !== y)) this.haptics.tick();
+    if (h.x !== x || h.y !== y) this.haptics.tick();
     this.heading = { x, y };
+    this.nextHeading = null;
+  }
+  ladderHere(dy) {
+    const p = this.player, lv = this.level;
+    if (!p || !lv) return false;
+    const c = Math.floor(p.x / TILE);
+    const r = Math.round(p.y / TILE);
+    return dy < 0 ? (lv.ladder(c, r - 1) || lv.ladder(c, r))
+      : (lv.ladder(c, r) || lv.ladder(c, r + 1));
+  }
+  // the queued turn fires the moment it becomes possible
+  promoteHeading() {
+    if (!this.nextHeading) return;
+    if (this.player?.mode === 'climb' || this.ladderHere(this.nextHeading.y)) {
+      this.heading = this.nextHeading;
+      this.nextHeading = null;
+      this.haptics.tick();
+    }
   }
   applySwipe(dx, dy) {
     const ax = Math.abs(dx), ay = Math.abs(dy);
@@ -1135,6 +1171,7 @@ class Game {
         jb.setAttribute('aria-label', mapMode ? 'Go — step into this station' : 'Jump');
       }
     }
+    if (this.controlMode === 'glide') this.promoteHeading();
     this.update(dt);
     this.draw();
     if (this.creditsOpen()) this.drawCreditRoll(dt);

@@ -100,6 +100,12 @@ stops on game over, and toggles with **M** or the speaker button
     Diagonals keep both intents live: SE runs east and boards the first
     southbound ladder it passes (or, if already climbing, steps off at
     the first junction where floor continues east) — "downstream" moves.
+    A pure up/down tap mid-corridor is a **programmed turn**: keep
+    flying, take the climb at the next stairs — and gliding into a
+    lift's open doors boards it (the ride clears your heading; tap a
+    direction when the doors open elsewhere to step off). Stopping is
+    easy: **tap your opposite to brake dead** (tap again to set off the
+    other way), or tap the **■ centre of the pad**.
 
 ## ROBBIN: TUBULAR SMELLS (TUBE FLOCK)
 
