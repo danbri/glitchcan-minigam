@@ -525,11 +525,15 @@ export class TubeFlock {
   updateMusic() {
     const g = this.g;
     const mood = this.finale ? 'passacaglia' : this.interior ? 'gears' : 'engines';
-    // TAPE mode: the recordings themselves, crossfaded
+    // TAPE mode: the recordings themselves, crossfaded — inside a
+    // station the tape may be that station's OWN song (see audio/)
     if (g.scoreMode === 'tape' && g.soundtrack && !g.soundtrack.failed) {
+      const tape = this.interior && !this.finale
+        ? (this.interior.trackChoice ??= this.pickInteriorTrack())
+        : mood;
       g.music.stop(0.9);
       g.midiScore?.stop(0.9);
-      g.soundtrack.play(mood).then(() => {
+      g.soundtrack.play(tape).then(() => {
         if (g.soundtrack.failed) this.updateMusic();   // fell over: MIDI takes it
       });
       return;
@@ -551,6 +555,20 @@ export class TubeFlock {
     if (g.midiScore?.timer) g.midiScore.swell();
     else if (g.soundtrack?.active) g.soundtrack.swell();
     else g.music.swell();
+  }
+  // which tape plays inside the current station: its own song leads
+  // (two visits in three — a generic track takes the third turn so long
+  // sessions don't wear a groove); everywhere else, the generic
+  // rotation varied by station and visit. Chosen once per visit.
+  pickInteriorTrack() {
+    const st = this.g.soundtrack;
+    this.musicVisit = (this.musicVisit || 0) + 1;
+    if (!st) return 'gears';
+    const own = st.stationTrack(this.cur);
+    if (own && this.musicVisit % 3 !== 0) return own;
+    const pool = st.genericPool();
+    if (!pool.length) return 'gears';
+    return pool[(hashName(this.cur) + this.musicVisit) % pool.length];
   }
   get objective() { return this.lostIdx < LOST.length ? LOST[this.lostIdx] : null; }
   // one facility in ten is having a day off — per lift shaft, per

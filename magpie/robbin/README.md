@@ -329,6 +329,16 @@ so at most TWO tracks stay decoded at once (LRU; the compressed
 bytes are kept and simply re-decoded after an eviction — never
 re-downloaded). A `MONO_DOWNMIX` switch in `robbin-music.js` can
 halve that again; it ships OFF to keep the recordings as made.
+The library grows: `audio/per-station/` holds a station's OWN song
+(played inside it two visits in three — the third takes a generic
+turn, against monotony) and `audio/generic/` the rotation for
+everywhere else, alongside the gears. Drop files in and run
+`tools/ingest-audio.mjs` — it hashes against `audio/HASHES.sha256`
+(duplicates reported and skipped, never deleted), maps filenames to
+real stations (area-name aliases live in the tool), and regenerates
+`robbin-tracks.js`. A broken side track just falls out of rotation
+with the gears covering; only a broken CORE track hands tape mode to
+the MIDI band. See `audio/README.md`.
 **MIDI is a live, parameterized performance**: `tools/analyze-tracks.mjs` listened to the three
 recordings with WebAudio (onset autocorrelation for tempo, per-bar
 chroma vs triad templates for harmony, chroma self-similarity for

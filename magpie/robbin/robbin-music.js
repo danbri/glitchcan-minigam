@@ -3,6 +3,8 @@
 // square arpeggio shimmer, triangle bass over a sine sub-octave, soft noise
 // hats and a thumpy sine kick. 8 bars of C–Am–F–G at 112 BPM, looped.
 
+import { TRACKS } from './robbin-tracks.js';
+
 const BPM = 112;
 const STEPS = 128;                       // 8 bars × 16 sixteenths
 const S16 = 60 / BPM / 4;
@@ -262,14 +264,32 @@ export class Soundtrack {
       gears: `${base}gears-and-birdcalls.mp3`,
       passacaglia: `${base}the-inexorable-passacaglia.mp3`,
     };
+    // the wider tape library: a station's own song plays inside it,
+    // generic tracks rotate everywhere else (see audio/README.md)
+    this.tracks = TRACKS;
+    for (const [station, file] of Object.entries(TRACKS.perStation)) {
+      this.urls[`st:${station}`] = base + file;
+    }
+    TRACKS.generic.forEach((file, i) => { this.urls[`gen:${i}`] = base + file; });
     this.buffers = {};
     this.raw = {};       // fetched compressed bytes, kept — refetch never needed
     this.recent = [];    // decode LRU, newest last
     this.loading = {};
+    this.bad = new Set();   // individual tracks that failed to load
     this.playing = null;
     this.want = null;
     this.muted = false;
     this.failed = false;
+  }
+  /** the station's own track name, when it has one that still loads */
+  stationTrack(station) {
+    const name = `st:${station}`;
+    return this.urls[name] && !this.bad.has(name) ? name : null;
+  }
+  /** the interior rotation: every healthy generic track, plus the gears */
+  genericPool() {
+    return ['gears', ...this.tracks.generic.map((_, i) => `gen:${i}`)]
+      .filter(n => !this.bad.has(n));
   }
   ensureGraph() {
     const ctx = this.getCtx();
@@ -307,7 +327,10 @@ export class Soundtrack {
         this.buffers[name] = buf;
         this.touch(name);
       } catch {
-        this.failed = true;                      // the band plays on instead
+        // a side track (per-station / generic) just drops out of the
+        // rotation; only a broken CORE track hands tape mode to the band
+        this.bad.add(name);
+        if (name === 'engines' || name === 'gears' || name === 'passacaglia') this.failed = true;
       } finally {
         delete this.loading[name];
       }
@@ -326,12 +349,20 @@ export class Soundtrack {
       delete this.buffers[evict];
     }
   }
-  /** crossfade to a named mood (null = fade to silence) */
+  /** crossfade to a named track (null = fade to silence) */
   async play(name, fade = 1.8) {
+    const requested = name;
     this.want = name;
     if (!this.ensureGraph()) return;
-    if (name) await this.load(name);
-    if (this.failed || this.want !== name) return;   // superseded mid-decode
+    if (name) {
+      await this.load(name);
+      if (this.bad.has(name) && !this.failed) {   // side track fell over: the gears cover the set
+        name = 'gears';
+        await this.load(name);
+      }
+    }
+    if (this.failed || this.want !== requested) return;   // superseded mid-decode
+    if (name && this.bad.has(name)) return;
     if (this.playing?.name === name) return;
     const t = this.ctx.currentTime;
     if (this.playing) {
