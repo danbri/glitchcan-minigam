@@ -143,6 +143,10 @@ for (const st of STATIONS) {
 class Foley {
   constructor() { this.ctx = null; }
   ensure() {
+    // iOS routes WebAudio as 'ambient' by default, so the ring/silent
+    // switch mutes the whole game — declare ourselves playback (16.4+)
+    // and the music survives the switch like any media app
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* shrug */ }
     if (!this.ctx) {
       try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
       catch { this.ctx = null; }
@@ -240,6 +244,32 @@ class Haptics {
       try { this.switchEl?.click(); } catch { /* shrug */ }
     }
   }
+  // GUARANTEED tap haptics on iOS: real (invisible) switch controls
+  // riding ON the touch controls themselves. A physical tap toggles
+  // them natively — no programmatic-click policy can refuse that —
+  // and the pointer events still bubble to the game's own handlers.
+  mountTouchSwitches() {
+    if (!this.ios || this.mounted) return;
+    this.mounted = [];
+    for (const id of ['btn-jump', 'dpad']) {
+      const host = document.getElementById(id);
+      if (!host) continue;
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.setAttribute('switch', '');
+      input.tabIndex = -1;
+      input.setAttribute('aria-hidden', 'true');
+      input.dataset.hswitch = '1';
+      input.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;opacity:0.01;margin:0;border:0;';
+      if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+      host.appendChild(input);
+      this.mounted.push(input);
+    }
+  }
+  unmountTouchSwitches() {
+    for (const el of this.mounted || []) el.remove();
+    this.mounted = null;
+  }
   tick()  { this.fire(10); }                 // accepted tap / heading change
   thud()  { this.fire(24); }                 // doors, landings, entries
   buzz()  { this.fire([34, 30, 34]); }       // the glitch-grab
@@ -247,7 +277,8 @@ class Haptics {
   setEnabled(on) {
     this.enabled = on;
     localStorage.setItem('robbin.haptics', on ? '1' : '0');
-    if (on) this.tick();   // confirm in the medium itself
+    if (on) { this.mountTouchSwitches(); this.tick(); }   // confirm in the medium itself
+    else this.unmountTouchSwitches();
   }
 }
 
@@ -434,20 +465,30 @@ export class Player extends Walker {
       if (input.jump) {
         this.mode = 'jump'; this.vy = -JUMP_V * 0.9; game.foley.jump();
       } else {
+        // stepping off is PROGRAMMED, Pac-Man style: press a side
+        // anywhere on the ladder and you leave at the next floor you
+        // reach — no more pixel-perfect windows, no more hanging
+        // between levels because the tap came a beat early
         const dirH = input.right - input.left;
-        if (dirH) {
-          // step off at a junction; a held diagonal exits where floor
-          // actually continues that way (the "downstream" of SE/NE etc),
-          // but only once it has climbed clear of the junction it boarded at
+        if (dir) this.climbDir = dir;
+        if (dirH) this.exitH = dirH;
+        const wantH = dirH || this.exitH || 0;
+        if (wantH) {
           const rb = Math.round(this.y / TILE);
           const c = colOf(this.x);
-          if (Math.abs(this.y - rb * TILE) < 7 && lv.solid(c, rb)
-              && (!dir || (lv.solid(c + dirH, rb) && Math.abs(this.y - (this.grabY ?? this.y)) > 8))) {
-            this.y = rb * TILE; this.mode = 'walk';
+          if (Math.abs(this.y - rb * TILE) < 10 && lv.solid(c, rb)
+              && (!dir || (lv.solid(c + wantH, rb) && Math.abs(this.y - (this.grabY ?? this.y)) > 14))) {
+            this.y = rb * TILE; this.mode = 'walk'; this.exitH = 0;
+            this.facing = wantH;
           }
         }
-        if (this.mode === 'climb' && dir && (this.y === this.range.minY || this.y === this.range.maxY)) {
-          if (this.supported(this.x, this.y)) this.mode = 'walk';
+        // exit queued but no vertical held: drift on toward that floor
+        if (this.mode === 'climb' && !dir && this.exitH) {
+          this.y += (this.climbDir || 1) * climbV * 0.8 * dt;
+          this.y = Math.max(this.range.minY, Math.min(this.range.maxY, this.y));
+        }
+        if (this.mode === 'climb' && (dir || this.exitH) && (this.y === this.range.minY || this.y === this.range.maxY)) {
+          if (this.supported(this.x, this.y)) { this.mode = 'walk'; this.exitH = 0; }
         }
       }
     } else { // jump / fall
@@ -716,6 +757,13 @@ class Game {
     this.heading = { x: 0, y: 0 };
     this.tube = new TubeFlock(this);
     this.haptics = new Haptics();
+    if (this.haptics.enabled) this.haptics.mountTouchSwitches();
+    // iOS suspends the AudioContext when the tab naps; wake it with the tab
+    for (const ev of ['visibilitychange', 'pageshow', 'focus']) {
+      addEventListener(ev, () => {
+        if (this.foley.ctx && this.foley.ctx.state === 'suspended') this.foley.ctx.resume();
+      });
+    }
     this.state = 'title';
     this.hiscore = Number(localStorage.getItem('robbin.hiscore') || 0);
     this.fx = [];
@@ -958,7 +1006,10 @@ class Game {
     for (const btn of document.querySelectorAll('[data-k]')) {
       const k = btn.dataset.k;
       const on = e => {
-        e.preventDefault(); this.input[k] = 1;
+        // don't preventDefault on the invisible iOS haptic switch — the
+        // native toggle IS the buzz
+        if (!e.target?.dataset?.hswitch) e.preventDefault();
+        this.input[k] = 1;
         if (k === 'jump') {
           this.haptics.tick();
           this.feedKonami('jump');
@@ -1037,7 +1088,8 @@ class Game {
         lastPad = key;
       };
       dpad.addEventListener('pointerdown', e => {
-        e.preventDefault(); padActive = true; this.foley.ensure();
+        if (!e.target?.dataset?.hswitch) e.preventDefault();
+        padActive = true; this.foley.ensure();
         const d = padDir(e); show(d); apply(d); padHaptic(d);
         // cardinal taps sing the old song too; a fat-fingered diagonal is
         // simply not part of the tune (ignored, never a reset)
@@ -1212,7 +1264,10 @@ class Game {
       document.body.classList.toggle('mapmode', mapMode);
       const jb = document.getElementById('btn-jump');
       if (jb) {
-        jb.textContent = mapMode ? 'GO' : 'JUMP';
+        // swap the label SPAN only — textContent on the button would
+        // wipe its children, including the invisible iOS haptic switch
+        const lbl = jb.querySelector('.lbl') || jb;
+        lbl.textContent = mapMode ? 'GO' : 'JUMP';
         jb.setAttribute('aria-label', mapMode ? 'Go — step into this station' : 'Jump');
       }
     }

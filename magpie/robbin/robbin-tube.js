@@ -1161,11 +1161,13 @@ export class TubeFlock {
       g.player.y = sy + (ey - sy) * Math.min(1, ride.s);
       g.player.vx = 0; g.player.vy = 0; g.player.mode = 'walk';
       if (g.input.jump || g.jumpTap) {
-        it.escRide = null; g.player.mode = 'jump'; g.player.vy = -230; g.jumpTap = false;
+        it.escRide = null; it.escCool = 0.5;
+        g.player.mode = 'jump'; g.player.vy = -230; g.jumpTap = false;
       } else if (ride.s >= 1) {
-        g.player.x = ex + Math.sign(ex - sx) * 10;
+        g.player.x = ex + Math.sign(ex - sx) * 14;
         g.player.y = ey;
         it.escRide = null;
+        it.escCool = 0.5;
         g.haptics.tick();
       }
     } else {
@@ -1224,16 +1226,18 @@ export class TubeFlock {
             break;
           }
         }
-        // stepping onto EITHER end of a working escalator takes you to
-        // the other — from above too, of course
-        if (!it.playerCar) {
+        // an escalator MOUTH is a mouth: walk into either end, from
+        // either side, and it takes you to the other end. (Jump over it
+        // if you truly meant to pass; a short cooldown after stepping
+        // off stops it swallowing you straight back.)
+        if (it.escCool > 0) it.escCool -= dt;
+        if (!it.playerCar && !(it.escCool > 0)) {
+          const moving = dirIn.left ? -1 : dirIn.right ? 1 : 0;
           outer: for (const run of it.escRuns) {
             if (run.broken) continue;
             for (const fromTop of [false, true]) {
               const [bx, by] = fromTop ? [run.xTop, run.yTop] : [run.xBot, run.yBot];
-              const toward = Math.sign((fromTop ? run.xBot : run.xTop) - bx);
-              const moving = dirIn.left ? -1 : dirIn.right ? 1 : 0;
-              if (Math.abs(g.player.x - bx) < 10 && Math.abs(g.player.y - by) < 8 && moving === toward) {
+              if (moving !== 0 && Math.abs(g.player.x - bx) < 12 && Math.abs(g.player.y - by) < 10) {
                 it.escRide = { run, s: 0, fromTop };
                 g.foley.step();
                 break outer;
