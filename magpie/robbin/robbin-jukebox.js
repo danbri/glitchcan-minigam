@@ -114,9 +114,17 @@ export class RobbinJukebox extends HTMLElement {
     let k = this.list.findIndex(tr => tr.slug === q);
     if (k >= 0) return k;
     const squash = s => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-    const needle = squash(String(q));
-    if (!needle) return -1;
-    return this.list.findIndex(tr => squash(`${tr.slug} ${tr.label}`).includes(needle));
+    let needle = squash(String(q));
+    // a stale link may lead with a station a track has since moved away
+    // from (paddington-night-mail… → euston-night-mail…): drop leading
+    // words until something answers, so old shared URLs keep working
+    while (needle) {
+      const k2 = this.list.findIndex(tr => squash(`${tr.slug} ${tr.label}`).includes(needle));
+      if (k2 >= 0) return k2;
+      const cut = needle.indexOf(' ');
+      needle = cut < 0 ? '' : needle.slice(cut + 1);
+    }
+    return -1;
   }
   indexForStation(station) {
     return this.list.findIndex(tr => tr.station === station);
