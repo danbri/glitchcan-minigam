@@ -11,6 +11,11 @@ platform grows a slot and the content fills it.
 
 ## Authoring stories
 
+- Choice presentation (spec §4): a beat offers a HAND of ~3 verb
+  choices; nuances fold under verbs via `# CHOICE: nuance # GROUP: x`;
+  big enumerations declare `# VIEW: list` on the knot; `# NEEDS:` shows
+  a gate instead of hiding it. Hints optional, flat list is the truth.
+
 - Read `inklet/INK-GOTCHAS.md` before writing Ink. The big one: `//` in a
   tag value truncates — escape absolute URLs as `https:\/\/...` (only two
   exist, both in toc.fink.js:269,283).

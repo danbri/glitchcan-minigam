@@ -5,6 +5,9 @@ description: FINK base data platform — the .fink.js polyglot file format, sigi
 
 # FINK platform skill
 
+The normative spec is `docs/fink-spec-v1.md` — consult it first; this
+skill is the working commentary.
+
 The platform is mechanisms only. Story names, track titles, station names,
 splash copy: none of it belongs in platform code (destined for NPM). If a
 change needs a story fact, it goes through config, a manifest, or a typed
