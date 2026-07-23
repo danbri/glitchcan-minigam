@@ -1202,6 +1202,12 @@ class Game {
       e.stopPropagation();
       (this.amp ??= new RobbAmp(this)).toggle();
     });
+    // 🦉 the knowing owl has seen how it ends: preview the flight home
+    document.getElementById('owl')?.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      this.hideOptions();
+      this.enterWith(() => { this.startTube(); this.tube.previewFinale(); });
+    });
     // …with its own address: #robbamp (or #robbamp=<track-slug>) opens
     // it straight from the URL — the hash follows the playing track so
     // the bar is always shareable

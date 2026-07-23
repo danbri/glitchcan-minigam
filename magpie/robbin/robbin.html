@@ -98,6 +98,18 @@
     cursor: pointer;
   }
   #egg:hover, #egg:focus-visible { opacity: 1; }
+  /* …and something wise roosts in the opposite corner */
+  #owl {
+    position: absolute;
+    left: calc(14px + env(safe-area-inset-left));
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    border: none;
+    background: none;
+    font-size: 1.5rem;
+    opacity: 0.3;
+    cursor: pointer;
+  }
+  #owl:hover, #owl:focus-visible { opacity: 1; }
 
   #credits { background: var(--paper); }
   .sr-only {
@@ -219,6 +231,7 @@
       <button type="button" id="optback">&larr; BACK &nbsp;(ESC)</button>
     </div>
     <button type="button" id="egg" aria-label="a curious egg">&#128035;</button>
+    <button type="button" id="owl" aria-label="a knowing owl">&#129417;</button>
   </div>
 
   <div id="gameover" class="overlay hidden">

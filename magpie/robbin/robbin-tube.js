@@ -1098,6 +1098,32 @@ export class TubeFlock {
     }
     this.updateMusic();   // quiet engines again (or the passacaglia home)
   }
+  // 🦉 the knowing owl in settings has seen how it ends: dress a fresh
+  // run as a finished one — six birds aboard, a west-to-east start —
+  // and let the real finale sequence fly exactly as it ships
+  previewFinale() {
+    const g = this.g;
+    this.start();
+    this.cur = 'PADDINGTON';        // a proper glide across town
+    this.cam = [...POS[this.cur]];
+    this.lostIdx = 6;               // the first six count as rescued
+    for (const b of LOST.slice(0, 6)) this.roster.push({ sp: b.sp, name: b.name });
+    const [x, y] = this.toXY(this.cur);
+    this.flock = this.roster.map((b, i) => ({ sp: b.sp, x, y, ph: i * 1.7 }));
+    this.finaleDone = true;
+    this.finale = {
+      t: 0, dur: 14, swells: 0,
+      from: [...POS[this.cur]],
+      to: [...POS['LIVERPOOL STREET']],
+      home: 'LIVERPOOL STREET',
+    };
+    this.arriveT = 6;
+    this.arriveMsg = '♥ THE FLOCK IS WHOLE ♥';
+    this.swellMusic();
+    g.haptics.chord();
+    g.say('Preview: the whole flock wheels home across London.');
+    this.updateMusic();
+  }
   // wandered in by mistake? One press pops the flock straight back out
   // to the map — no trek to the WAY OUT, nothing lost, no judgement
   popOut() {
