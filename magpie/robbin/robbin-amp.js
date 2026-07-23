@@ -1688,7 +1688,7 @@ export class RobbAmp {
     st.hop *= 0.86;
     ctx.fillStyle = '#0d0a08';
     ctx.fillRect(0, 0, W2, H2);
-    const sx = W2 * 0.1, sw = W2 * 0.8, syTop = H2 * 0.14, sh = H2 * 0.62, syBot = syTop + sh;
+    const sx = W2 * 0.1, sw = W2 * 0.8, sh = Math.min(H2 * 0.62, sw * 0.9), syTop = Math.max(H2 * 0.08, (H2 - sh) / 2 - sh * 0.08), syBot = syTop + sh;
     ctx.save();
     ctx.beginPath(); ctx.rect(sx, syTop, sw, sh); ctx.clip();
     const sky = ctx.createLinearGradient(0, syTop, 0, syBot);   // backcloth
@@ -2304,6 +2304,9 @@ export class RobbAmp {
     st.off += (0.6 + mids * 2.6);
     ctx.fillStyle = '#0f0c0a';
     ctx.fillRect(0, 0, W2, H2);
+    // a tall portrait fullscreen must not bend the hall vertical:
+    // the stairs live in a centred box no taller than the width allows
+    const boxH = Math.min(H2, W2 * 1.05), yT = (H2 - boxH) / 2;
     // vault hint
     const vault = ctx.createRadialGradient(W2 * 0.7, H2 * 0.1, 10, W2 * 0.7, H2 * 0.1, H2);
     vault.addColorStop(0, 'rgba(185,138,46,0.13)');
@@ -2313,8 +2316,8 @@ export class RobbAmp {
     const K = 5;
     for (let k = 0; k < K; k++) {
       const f = k / (K - 1);
-      const x0 = W2 * (0.02 + f * 0.16), y0 = H2 * (0.98 - f * 0.1);
-      const x1 = W2 * (0.6 + f * 0.1), y1 = H2 * (0.16 - f * 0.06);
+      const x0 = W2 * (0.02 + f * 0.16), y0 = yT + boxH * (0.98 - f * 0.1);
+      const x1 = W2 * (0.6 + f * 0.1), y1 = yT + boxH * (0.16 - f * 0.06);
       const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy);
       const ux = dx / len, uy = dy / len;
       // balustrade
@@ -2351,8 +2354,8 @@ export class RobbAmp {
     for (let i = st.riders.length - 1; i >= 0; i--) {
       const r = st.riders[i];
       const f = r.k / (K - 1);
-      const x0 = W2 * (0.02 + f * 0.16), y0 = H2 * (0.98 - f * 0.1);
-      const x1 = W2 * (0.6 + f * 0.1), y1 = H2 * (0.16 - f * 0.06);
+      const x0 = W2 * (0.02 + f * 0.16), y0 = yT + boxH * (0.98 - f * 0.1);
+      const x1 = W2 * (0.6 + f * 0.1), y1 = yT + boxH * (0.16 - f * 0.06);
       const len = Math.hypot(x1 - x0, y1 - y0);
       r.d += r.dir * (0.6 + mids * 2.6) * 0.55;
       if (r.d < 0 || r.d > len) { st.riders.splice(i, 1); continue; }

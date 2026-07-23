@@ -517,6 +517,9 @@ export class TubeFlock {
     this.foundObjects = new Set();   // stations whose lost thing is handed in
     this.eatenGrain = new Map();     // station -> Set("c,r"): crumbs stay eaten
     this.quitConfirm = false;
+    this.finale = null;
+    this.finaleDone = false;
+    this.lineFlash = null;
     // the clock: always daytime, ten times reality — the rat race spins
     this.clock = 7 * 60 + Math.floor(Math.random() * 11 * 60);
     this.day = 1;
@@ -1018,6 +1021,8 @@ export class TubeFlock {
         this.scene = null;
         this.interior = null;
         g.camFocus = null;
+        if (it.rescue) this.freeChange = this.cur;   // rescued and out: same toll rule as the WAY OUT
+        if (this.maybeFinale(it)) { this.updateMusic(); return; }
         this.updateMusic();
         this.depart(edge);
       }
@@ -1082,26 +1087,34 @@ export class TubeFlock {
     g.foley.clear();
     if (it.rescue) this.freeChange = this.cur;   // rescued and out — no second toll
     else if (it.pendingEdge) this.line = null;   // surfaced on foot instead: fresh start
-    if (it.rescue && !this.finaleDone && (this.roster.length >= 7 || !this.objective)) {
-      // a long murmuration wheels the whole family home across London
-      this.finaleDone = true;
-      this.finale = {
-        t: 0, dur: 14, swells: 0,
-        from: [...POS[this.cur]],
-        to: [...POS['LIVERPOOL STREET']],
-        home: 'LIVERPOOL STREET',
-      };
-      this.arriveT = 6;
-      this.arriveMsg = 'UNFLOCKABLE…';
-      this.swellMusic();
-      g.haptics.chord();
-      g.say(this.objective
-        ? `${it.rescue.name} makes ${this.roster.length} — enough to fly home together. The flock wheels home across London.`
-        : `${it.rescue.name} joins — the flock is unflockable now. It wheels home across London.`);
-    } else {
-      g.say(`Surfaced at ${this.cur} — back on the map. ${this.describeStation()}`);
-    }
+    if (this.maybeFinale(it)) { /* the ending has the stage */ }
+    else g.say(`Surfaced at ${this.cur} — back on the map. ${this.describeStation()}`);
     this.updateMusic();   // quiet engines again (or the passacaglia home)
+  }
+  // the ending arms the moment the family is big enough — HOWEVER the
+  // station was left. It used to live only behind the WAY OUT, so a
+  // player who always rode onward from the platform (as the how-to
+  // suggests!) could reach 9/7 and never see it. Field bug, July 2026.
+  maybeFinale(it) {
+    if (!it?.rescue || this.finaleDone) return false;
+    if (this.roster.length < 7 && this.objective) return false;
+    const g = this.g;
+    this.finaleDone = true;
+    this.travel = null;               // the flight home outranks any train
+    this.finale = {
+      t: 0, dur: 14, swells: 0,
+      from: [...POS[this.cur]],
+      to: [...POS['LIVERPOOL STREET']],
+      home: 'LIVERPOOL STREET',
+    };
+    this.arriveT = 6;
+    this.arriveMsg = 'UNFLOCKABLE…';
+    this.swellMusic();
+    g.haptics.chord();
+    g.say(this.objective
+      ? `${it.rescue.name} makes ${this.roster.length} — enough to fly home together. The flock wheels home across London.`
+      : `${it.rescue.name} joins — the flock is unflockable now. It wheels home across London.`);
+    return true;
   }
   // 🦉 the knowing owl in settings has seen how it ends: dress a fresh
   // run as a finished one — six birds aboard, a west-to-east start —
