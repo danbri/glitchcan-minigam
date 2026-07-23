@@ -771,6 +771,9 @@ class Game {
     this.showCustomAudio = localStorage.getItem('robbin.custaudio') === 'on';
     // 🗣 the narrator: the same say() text the screen reader gets, but
     // spoken aloud through speechSynthesis — off unless asked for
+    // 🛸 the konami code unlocks the teleporter in settings — for keeps
+    this.teleportOn = localStorage.getItem('robbin.konami') === '1'
+      && localStorage.getItem('robbin.teleport') === 'on';
     this.narrator = {
       on: 'speechSynthesis' in window && localStorage.getItem('robbin.narrator') === 'on',
       voice: null,
@@ -1023,7 +1026,7 @@ class Game {
       const want = KONAMI[this._kona];
       const hit = tok === want || (tok === 'jump' && (want === 'b' || want === 'a'));
       this._kona = hit ? this._kona + 1 : (tok === KONAMI[0] ? 1 : 0);
-      if (this._kona >= KONAMI.length) { this._kona = 0; this.showCredits(); }
+      if (this._kona >= KONAMI.length) { this._kona = 0; this.unlockTeleport(); this.showCredits(); }
     };
     addEventListener('keydown', e => {
       if (!e.repeat && KONA_KEYS[e.key]) this.feedKonami(KONA_KEYS[e.key]);
@@ -1128,6 +1131,18 @@ class Game {
         && this.tube.gearButtonHit(e.clientX, e.clientY)) {
         this.haptics.tick(); this.showOptions(); return;
       }
+      if (this.state === 'tube' && this.teleportOn && !this.tube.interior
+        && !this.tube.travel && !this.tube.finale && !this.tube.quitConfirm) {
+        const stn = this.tube.stationAt(e.clientX, e.clientY);
+        if (stn) {
+          const now = performance.now();
+          if (this._tapStn === stn && now - this._tapT < 900) this._tapN++;
+          else { this._tapStn = stn; this._tapN = 1; }
+          this._tapT = now;
+          if (this._tapN >= 3) { this._tapN = 0; this.tube.teleportTo(stn); }
+          return;   // station taps belong to the teleporter while it hums
+        }
+      }
       if (this.state === 'tube' && this.showCustomAudio && !this.tube.interior
         && !this.tube.travel && !this.tube.finale && !this.tube.quitConfirm) {
         const stn = this.tube.songStationAt(e.clientX, e.clientY);
@@ -1155,6 +1170,14 @@ class Game {
         const [a, b] = [...this.touches.values()];
         const d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1;
         this.tube.mapZoom = Math.max(this.tube.fitZoom(), Math.min(2.8, this.pinch.z0 * (d / this.pinch.d0)));
+        return;
+      }
+      if (this.state === 'tube' && this.teleportOn && this.gesture && this.touches.size <= 1
+        && !this.tube.interior && !this.tube.travel && !this.tube.finale && !this.tube.quitConfirm) {
+        this.gesture.used = true;   // the drag IS the flight — no swipe
+        this.tube.slideBy(e.clientX - this.gesture.x, e.clientY - this.gesture.y);
+        this.gesture.x = e.clientX;
+        this.gesture.y = e.clientY;
         return;
       }
       if (!this.gesture || this.gesture.used) return;
@@ -1270,6 +1293,22 @@ class Game {
       e.currentTarget.hidden = true;
       this.say('Back to station music — each stop plays its own song again.');
     });
+    // 🛸 the teleporter: hidden until the old song has been sung once
+    const tpb = document.getElementById('teleportmode');
+    if (tpb) {
+      tpb.hidden = localStorage.getItem('robbin.konami') !== '1';
+      tpb.textContent = `🛸 TELEPORT: ${this.teleportOn ? 'ON' : 'OFF'}`;
+      tpb.addEventListener('pointerdown', e => {
+        e.stopPropagation();
+        this.teleportOn = !this.teleportOn;
+        localStorage.setItem('robbin.teleport', this.teleportOn ? 'on' : 'off');
+        tpb.textContent = `🛸 TELEPORT: ${this.teleportOn ? 'ON' : 'OFF'}`;
+        this.tube?.setTeleport(this.teleportOn && this.state === 'tube');
+        this.say(this.teleportOn
+          ? 'Teleport on. Tap a station three times to hop the flock there; drag the map to fly anywhere.'
+          : 'Teleport off — back on the rails.');
+      });
+    }
     // 🗣 the narrator speaks the same lines the screen reader gets —
     // the button only appears where the browser can actually talk
     const nb = document.getElementById('narrmode');
@@ -1464,6 +1503,13 @@ class Game {
   }
   creditsOpen() {
     return !document.getElementById('credits').classList.contains('hidden');
+  }
+  unlockTeleport() {
+    const first = localStorage.getItem('robbin.konami') !== '1';
+    localStorage.setItem('robbin.konami', '1');
+    const tb = document.getElementById('teleportmode');
+    if (tb) tb.hidden = false;
+    if (first) this.say('Something new hums in settings: the teleporter.');
   }
   showCredits() {
     // the Konami reward lives in the jukebox now: ROBBAMP opens on the

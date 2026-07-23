@@ -526,6 +526,9 @@ export class TubeFlock {
     this.outSeed = (Math.random() * 0xffffffff) >>> 0;
     this._outMemo = new Map();
     this.cam = [...POS[this.cur]];
+    // 🛸 konami reward: free flight — the camera rides freePos instead
+    // of the current station while the teleporter is switched on
+    this.freePos = this.g.teleportOn ? [...POS[this.cur]] : null;
     const [x, y] = this.toXY(this.cur);
     this.flock = [{ sp: 'robin', x, y, ph: 0 }];
     this.updateMusic();
@@ -748,6 +751,56 @@ export class TubeFlock {
     return [this.g.cssW / 2 + (p[0] - this.cam[0]) * s, cy + (p[1] - this.cam[1]) * s];
   }
   toXY(name) { return this.toScreen(POS[name]); }
+  // 🛸 TELEPORT (konami-unlocked, optional): triple-tap hops the whole
+  // flock anywhere; dragging slides freely across the city, the nearest
+  // station becoming yours as you pass. A cheat that keeps the rules of
+  // GO: entering is still always your act.
+  setTeleport(on) {
+    this.freePos = on && this.cur && POS[this.cur] ? [...POS[this.cur]] : null;
+  }
+  stationAt(px, py) {
+    if (this.interior || this.travel || this.finale) return null;
+    let best = null, bd = 22;
+    for (const name of Object.keys(POS)) {
+      const [x, y] = this.toXY(name);
+      const d = Math.hypot(px - x, py - y);
+      if (d < bd) { bd = d; best = name; }
+    }
+    return best;
+  }
+  teleportTo(name) {
+    if (!POS[name] || this.travel || this.interior || this.finale || this.over) return;
+    this.cur = name;
+    this.line = null;
+    this.changeHint = null;
+    this.freeChange = null;
+    if (this.freePos) this.freePos = [...POS[name]];
+    this.stats.visited.add(name);
+    this.flutterT = 0.9;
+    this.g.haptics.chord();
+    this.g.foley.whoosh();
+    this.g.say(`Teleport — the flock blinks across London to ${name}.`);
+  }
+  slideBy(dx, dy) {
+    if (!this.freePos) this.freePos = [...(POS[this.cur] || this.cam)];
+    const sc = this.mapScale();
+    this.freePos[0] -= dx / sc;
+    this.freePos[1] -= dy / sc;
+    const m = 3;
+    this.freePos[0] = Math.min(BOUNDS.x1 + m, Math.max(BOUNDS.x0 - m, this.freePos[0]));
+    this.freePos[1] = Math.min(BOUNDS.y1 + m, Math.max(BOUNDS.y0 - m, this.freePos[1]));
+    let best = null, bd = 2.4;
+    for (const name of Object.keys(POS)) {
+      const d = Math.hypot(POS[name][0] - this.freePos[0], POS[name][1] - this.freePos[1]);
+      if (d < bd) { bd = d; best = name; }
+    }
+    if (best && best !== this.cur) {
+      this.cur = best;
+      this.line = null;
+      this.stats.visited.add(best);
+      this.g.haptics.tick();
+    }
+  }
   // ---------------------------------------------------------- input
   // the full-screen postcard reads until dismissed — any press moves on
   dismissFact() {
@@ -1663,6 +1716,7 @@ export class TubeFlock {
         // arriving at a node is a felt thing: a soft buzz in the hand,
         // and the flock flutters down to a near-hover while it settles
         this.flutterT = 0.9;
+        if (this.freePos) this.freePos = [...POS[this.cur]];
         this.g.haptics.flutter();
         if (this.objective && this.cur === this.objective.at) {
           this.gather = { t: 0, dur: 1.7 };
@@ -1678,7 +1732,7 @@ export class TubeFlock {
     const p = this.travel
       ? [this.travel.a[0] + (this.travel.b[0] - this.travel.a[0]) * k,
          this.travel.a[1] + (this.travel.b[1] - this.travel.a[1]) * k]
-      : POS[this.cur];
+      : (this.freePos ?? POS[this.cur]);
     const ease = 1 - Math.exp(-dt * 3);
     this.cam[0] += (p[0] - this.cam[0]) * ease;
     this.cam[1] += (p[1] - this.cam[1]) * ease;
