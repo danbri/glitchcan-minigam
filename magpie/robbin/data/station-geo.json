@@ -1082,5 +1082,165 @@
  "WALTHAMSTOW CENTRAL": [
   -0.019885,
   51.582965
+ ],
+ "LEWISHAM": [
+  -0.01287,
+  51.46467
+ ],
+ "ELVERSON ROAD": [
+  -0.01673,
+  51.46907
+ ],
+ "DEPTFORD BRIDGE": [
+  -0.02244,
+  51.47422
+ ],
+ "GREENWICH": [
+  -0.01367,
+  51.47809
+ ],
+ "CUTTY SARK (FOR MARITIME GREENWICH)": [
+  -0.01081,
+  51.48167
+ ],
+ "ISLAND GARDENS": [
+  -0.01014,
+  51.48781
+ ],
+ "MUDCHUTE": [
+  -0.01474,
+  51.4907
+ ],
+ "CROSSHARBOUR": [
+  -0.01461,
+  51.49573
+ ],
+ "SOUTH QUAY": [
+  -0.01613,
+  51.50005
+ ],
+ "HERON QUAYS": [
+  -0.02142,
+  51.50338
+ ],
+ "WEST INDIA QUAY": [
+  -0.02031,
+  51.50703
+ ],
+ "POPLAR": [
+  -0.01738,
+  51.50774
+ ],
+ "ALL SAINTS": [
+  -0.01313,
+  51.511
+ ],
+ "LANGDON PARK": [
+  -0.01415,
+  51.51517
+ ],
+ "DEVONS ROAD": [
+  -0.01761,
+  51.52267
+ ],
+ "BOW CHURCH": [
+  -0.02094,
+  51.52786
+ ],
+ "PUDDING MILL LANE": [
+  -0.01275,
+  51.5343
+ ],
+ "WESTFERRY": [
+  -0.02675,
+  51.50943
+ ],
+ "LIMEHOUSE": [
+  -0.03981,
+  51.51239
+ ],
+ "SHADWELL": [
+  -0.05664,
+  51.51169
+ ],
+ "TOWER GATEWAY": [
+  -0.07482,
+  51.51062
+ ],
+ "BECKTON": [
+  0.06145,
+  51.51436
+ ],
+ "GALLIONS REACH": [
+  0.07155,
+  51.50894
+ ],
+ "CYPRUS": [
+  0.06393,
+  51.50847
+ ],
+ "BECKTON PARK": [
+  0.05493,
+  51.50879
+ ],
+ "ROYAL ALBERT": [
+  0.04594,
+  51.50836
+ ],
+ "PRINCE REGENT": [
+  0.03416,
+  51.50926
+ ],
+ "CUSTOM HOUSE (FOR EXCEL)": [
+  0.0267,
+  51.50972
+ ],
+ "ROYAL VICTORIA": [
+  0.0185,
+  51.50934
+ ],
+ "EAST INDIA": [
+  -0.00233,
+  51.50936
+ ],
+ "BLACKWALL": [
+  -0.00697,
+  51.50799
+ ],
+ "WOOLWICH ARSENAL": [
+  0.06913,
+  51.49001
+ ],
+ "KING GEORGE V": [
+  0.06262,
+  51.502
+ ],
+ "LONDON CITY AIRPORT": [
+  0.04874,
+  51.50342
+ ],
+ "PONTOON DOCK": [
+  0.03211,
+  51.50221
+ ],
+ "WEST SILVERTOWN": [
+  0.02246,
+  51.50284
+ ],
+ "STAR LANE": [
+  0.00416,
+  51.52079
+ ],
+ "ABBEY ROAD": [
+  0.00374,
+  51.53193
+ ],
+ "STRATFORD HIGH STREET": [
+  -0.00108,
+  51.5382
+ ],
+ "STRATFORD INTERNATIONAL": [
+  -0.00964,
+  51.54527
  ]
 }

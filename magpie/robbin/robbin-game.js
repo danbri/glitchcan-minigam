@@ -1113,6 +1113,11 @@ class Game {
       if (this.state === 'tube' && !this.tube.interior && !this.tube.travel
         && !this.tube.finale && !this.tube.over
         && this.tube.menuButtonHit(e.clientX, e.clientY)) { this.tube.requestQuit(); return; }
+      if (this.state === 'tube' && !this.tube.interior && !this.tube.travel
+        && !this.tube.finale && !this.tube.over && !this.tube.quitConfirm
+        && this.tube.gearButtonHit(e.clientX, e.clientY)) {
+        this.haptics.tick(); this.showOptions(); return;
+      }
       if (this.state === 'tube' && this.showCustomAudio && !this.tube.interior
         && !this.tube.travel && !this.tube.finale && !this.tube.quitConfirm) {
         const stn = this.tube.songStationAt(e.clientX, e.clientY);
@@ -1236,6 +1241,13 @@ class Game {
       this.say(this.showCustomAudio
         ? 'Map jukebox on. Stations with their own song glow gold on the map — tap one to play it, then fly on with the music.'
         : 'Map jukebox off.');
+    });
+    // ⏹ hand the stage back: stop the jukebox, station songs return
+    document.getElementById('stopjuke')?.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      this.jukebox?.stop();
+      e.currentTarget.hidden = true;
+      this.say('Back to station music — each stop plays its own song again.');
     });
     // 🗣 the narrator speaks the same lines the screen reader gets —
     // the button only appears where the browser can actually talk
@@ -1420,6 +1432,10 @@ class Game {
   showOptions() {
     document.getElementById('title').classList.add('hidden');
     document.getElementById('options').classList.remove('hidden');
+    // ⏹ the way back to location-triggered songs — only offered while
+    // a jukebox track actually holds the stage
+    const sj = document.getElementById('stopjuke');
+    if (sj) sj.hidden = !this.jukebox?.engaged;
   }
   hideOptions() {
     document.getElementById('options').classList.add('hidden');

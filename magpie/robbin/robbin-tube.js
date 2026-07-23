@@ -120,6 +120,7 @@ const LINE_SHORT = {
   bakerloo: 'Bakerloo', central: 'Central', circle: 'Circle', district: 'District',
   'hammersmith-city': 'H&C', jubilee: 'Jubilee', metropolitan: 'Met', northern: 'Northern',
   piccadilly: 'Piccadilly', victoria: 'Victoria', 'waterloo-city': 'W&C', windrush: 'Windrush',
+  dlr: 'DLR',
 };
 const hashName = s => {
   let h = 0;
@@ -1998,7 +1999,7 @@ export class TubeFlock {
       // an armed line change owns the NEXT line until GO (or a new swipe)
       const che = this.changeHint.edge;
       ctx.fillStyle = LINES[che.line]?.pale ? PALETTE.ink : (LINES[che.line]?.color || PALETTE.ink);
-      this.fitText(ctx, `GO: change to the ${LINE_SHORT[che.line] || che.line} line toward ${che.to}`, valX, fs * 3.55, w - valX - fs * 3.7, fs * 0.95);
+      this.fitText(ctx, `GO: change to the ${LINE_SHORT[che.line] || che.line} line toward ${che.to}`, valX, fs * 3.55, w - valX - fs * 5.3, fs * 0.95);
       ctx.fillStyle = PALETTE.ink;
     } else if (ob) {
       const hop = this.nextHopTo(ob.at);
@@ -2025,21 +2026,21 @@ export class TubeFlock {
         nx += fs * 1.35;
         ctx.fillStyle = PALETTE.ink;
         const hopTxt = `${LINE_SHORT[hop.edge.line] || hop.edge.line} ${this.compass(dx, dy)} · ${hop.stops} stop${hop.stops === 1 ? '' : 's'} to ${ob.name}`;
-        this.fitText(ctx, hopTxt, nx, fs * 3.55, w - nx - fs * 4.9, fs * 0.95);
+        this.fitText(ctx, hopTxt, nx, fs * 3.55, w - nx - fs * 6.4, fs * 0.95);
       } else {
         // we're standing on it
         ctx.fillStyle = PALETTE.danger;
-        this.fitText(ctx, `${ob.name} is HERE — press GO to drop in!`, nx, fs * 3.55, w - nx - fs * 4.9, fs * 0.95);
+        this.fitText(ctx, `${ob.name} is HERE — press GO to drop in!`, nx, fs * 3.55, w - nx - fs * 6.4, fs * 0.95);
         ctx.fillStyle = PALETTE.ink;
       }
       // the bird in question perches on the end of the line (left of QUIT)
-      drawBird(ctx, ob.sp, { x: w - fs * 4.0, y: fs * 3.7, size: fs * 1.15, facing: -1, phase: t * 6, pose: 'stand' });
+      drawBird(ctx, ob.sp, { x: w - fs * 5.5, y: fs * 3.7, size: fs * 1.15, facing: -1, phase: t * 6, pose: 'stand' });
       ctx.globalAlpha = 0.6;
       this.fitText(ctx, `${ob.name} the ${ob.sp}: ${ob.note}`, labX, fs * 4.5, w - labX - fs * 3.7, fs * 0.62, 'italic');
       ctx.globalAlpha = 1;
     } else {
       ctx.fillStyle = PALETTE.platform;
-      this.fitText(ctx, 'fly together as long as you like — unflockable', valX, fs * 3.55, w - valX - fs * 3.7, fs * 0.95);
+      this.fitText(ctx, 'fly together as long as you like — unflockable', valX, fs * 3.55, w - valX - fs * 5.3, fs * 0.95);
       ctx.fillStyle = PALETTE.ink;
     }
     ctx.textAlign = 'center';
@@ -2060,16 +2061,18 @@ export class TubeFlock {
     }
     // ⏏ QUIT: same corner as the interior's ⌂ MAP chip — it asks first
     if (!this.finale && !this.over && !this.travel) {
-      const mb = this.menuButtonRect();
-      ctx.fillStyle = 'rgba(247,242,230,0.92)';
-      ctx.strokeStyle = PALETTE.ink;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.roundRect(mb.x, mb.y, mb.w, mb.h, 6); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = PALETTE.ink;
-      ctx.font = `bold ${fs * 0.52}px Georgia, serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText('⏏ QUIT', mb.x + mb.w / 2, mb.y + mb.h * 0.66);
-      ctx.textAlign = 'left';
+      const chips = [[this.menuButtonRect(), '\u23cf QUIT'], [this.gearButtonRect(), '\u2699']];
+      for (const [rect, label] of chips) {
+        ctx.fillStyle = 'rgba(247,242,230,0.92)';
+        ctx.strokeStyle = PALETTE.ink;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 6); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = PALETTE.ink;
+        ctx.font = `bold ${fs * 0.52}px Georgia, serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(label, rect.x + rect.w / 2, rect.y + rect.h * 0.66);
+        ctx.textAlign = 'left';
+      }
     }
     // the postcard covers everything, and waits
     if (this.factCard) this.drawFactOverlay(ctx);
@@ -2321,6 +2324,16 @@ export class TubeFlock {
   // It never quits outright: the journey (flock, stops, lost property)
   // can't be resumed, so a small dialog asks first.
   menuButtonRect() { return this.mapButtonRect(); }
+  // ⚙ SETTINGS sits just left of QUIT: mid-journey tweaks, no quitting
+  gearButtonRect() {
+    const r = this.mapButtonRect();
+    const fs = Math.max(17, Math.min(24, this.g.cssW / 22));
+    return { x: r.x - fs * 1.5 - 6, y: r.y, w: fs * 1.5, h: r.h };
+  }
+  gearButtonHit(x, y) {
+    const r = this.gearButtonRect();
+    return x >= r.x - 6 && x <= r.x + r.w + 6 && y >= r.y - 8 && y <= r.y + r.h + 8;
+  }
   menuButtonHit(x, y) {
     const r = this.menuButtonRect();
     return x >= r.x - 8 && x <= r.x + r.w + 8 && y >= r.y - 8 && y <= r.y + r.h + 8;
