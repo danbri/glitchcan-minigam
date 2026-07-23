@@ -5,7 +5,7 @@
 // the Soundtrack's bus so the master mute rules it like everything
 // else.
 //
-// SEVENTEEN visualizer looks (this.MODES below is canonical) — tap
+// TWENTY-SEVEN visualizer looks (this.MODES below is canonical) — tap
 // the visuals to change, ⛶ for fullscreen (a fixed overlay, so it
 // works on iPhones where the Fullscreen API doesn't):
 //   THE DIG      the buried wonders breathing bass under a fence of
@@ -38,6 +38,7 @@
 // the bar is always shareable).
 import { drawBird, drawBirdSkeleton, drawCommuter } from './robbin-sprites.js';
 import { TubeFlock } from './robbin-tube.js';
+import { STATION_LEVELS } from './tube-levels.js';
 import { NETWORK } from './tube-network.js';
 import { RobbinJukebox } from './robbin-jukebox.js';
 
@@ -109,7 +110,9 @@ export class RobbAmp {
     this.MODES = ['THE DIG', 'MURMURATION', 'STRATA CORE', 'ROUNDABOUT', 'THE WIRE',
       'GOLDFEATHER', 'ATTIC 1984', 'NIGHT TRAIN', 'A SERIES OF TUBES',
       'GAUSSIAN SPLATS', 'AVIARY 3D', 'C-90', 'DEPARTURE BOARD', 'NIGHT MAIL',
-      'NIGHT BUS', 'TOY THEATRE', 'ROLL THE CREDITS'];
+      'NIGHT BUS', 'TOY THEATRE', 'BIRDS ON WIRES', 'ZOETROPE', 'SHIPPING FORECAST',
+      'CRANE BALLET', 'LIFT GRAPH', 'DEPTH GAUGE', 'THAMES MURMUR', 'ESCALATOR HALL',
+      'PAPER AVIARY', 'SMELL MAP', 'ROLL THE CREDITS'];
     // fresh eyes land on the dark neon network; a saved choice is kept
     const savedMode = localStorage.getItem('robbin.ampviz');
     this.mode = savedMode == null ? 8 : Math.min(this.MODES.length - 1, +savedMode);
@@ -343,6 +346,16 @@ export class RobbAmp {
     else if (mode === 13) this.vNightMail(ctx, W2, H2, au);
     else if (mode === 14) this.vNightBus(ctx, W2, H2, au);
     else if (mode === 15) this.vTheatre(ctx, W2, H2, au);
+    else if (mode === 16) this.vWires(ctx, W2, H2, au);
+    else if (mode === 17) this.vZoetrope(ctx, W2, H2, au);
+    else if (mode === 18) this.vForecast(ctx, W2, H2, au);
+    else if (mode === 19) this.vCranes(ctx, W2, H2, au);
+    else if (mode === 20) this.vLifts(ctx, W2, H2, au);
+    else if (mode === 21) this.vDepth(ctx, W2, H2, au);
+    else if (mode === 22) this.vThames(ctx, W2, H2, au);
+    else if (mode === 23) this.vEscalators(ctx, W2, H2, au);
+    else if (mode === 24) this.vScissors(ctx, W2, H2, au);
+    else if (mode === 25) this.vSmell(ctx, W2, H2, au);
     else this.vCredits(ctx, W2, H2, au);
     if (this.modeFlash > 0) {
       this.modeFlash -= 1 / 60;
@@ -1762,6 +1775,743 @@ export class RobbAmp {
       ctx.closePath();
       ctx.fill();
     }
+  }
+    bandAt(i0, n) {
+    let v = 0;
+    for (let i = i0; i < i0 + n; i++) v += this.bins[i];
+    return v / (n * 255);
+  }
+  /*
+    BIRDS ON WIRES — five telegraph wires ARE a musical stave. Strong
+    frequencies land birds on them at their pitch, the roll scrolls
+    away like a player piano, and the kick twangs the whole stave.
+  */
+  vWires(ctx, W2, H2, au) {
+    const { mids, kick, t } = au;
+    const st = this.wr ??= { notes: [], cool: new Array(10).fill(0), twang: 0 };
+    if (kick) st.twang = 1;
+    st.twang *= 0.9;
+    const sky = ctx.createLinearGradient(0, 0, 0, H2);
+    sky.addColorStop(0, '#0b0e18');
+    sky.addColorStop(1, '#181423');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W2, H2);
+    ctx.fillStyle = '#e9e2cf';
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath(); ctx.arc(W2 * 0.85, H2 * 0.16, 9, 0, 7); ctx.fill();
+    ctx.globalAlpha = 1;
+    const y0 = H2 * 0.24, gap = H2 * 0.13;
+    const wireY = (line, x) =>
+      y0 + line * gap + Math.sin(x * 0.045 - t * 9) * st.twang * 7;
+    // notes land where the loud bands sit: low band = low wire
+    const scroll = 34 + mids * 60;
+    for (let b = 0; b < 10; b++) {
+      st.cool[b] = Math.max(0, st.cool[b] - 1 / 60);
+      const v = this.bandAt(3 + b * 34, 30);
+      if (v > 0.34 && !st.cool[b] && st.notes.length < 42) {
+        st.cool[b] = 0.28;
+        st.notes.push({ x: W2 + 14, line: 4 - (b * 4.4 / 9), sp: ['robin', 'bluetit', 'wren', 'blackbird'][b % 4], ph: Math.random() * 7 });
+      }
+    }
+    // the stave
+    ctx.strokeStyle = 'rgba(233,226,207,0.5)';
+    ctx.lineWidth = 1.6;
+    for (let line = 0; line < 5; line++) {
+      ctx.beginPath();
+      for (let x = 0; x <= W2; x += 12) {
+        const y = wireY(line, x);
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    for (const [px] of [[W2 * 0.12], [W2 * 0.88]]) {   // poles
+      ctx.strokeStyle = 'rgba(20,16,12,0.9)';
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(px, y0 - 24); ctx.lineTo(px, H2); ctx.stroke();
+    }
+    for (let i = st.notes.length - 1; i >= 0; i--) {
+      const n = st.notes[i];
+      n.x -= scroll / 60;
+      if (n.x < -20) { st.notes.splice(i, 1); continue; }
+      drawBird(ctx, n.sp, { x: n.x, y: wireY(n.line, n.x) - 6, size: 15,
+        facing: -1, phase: t * 4 + n.ph, pose: 'stand' });
+    }
+  }
+  /*
+    ZOETROPE — the pre-cinema drum. The strobe locks to the music: on
+    the beat the bird runs clean, off it ghosts and stutters. Bass
+    tilts the drum, treble spins the crank.
+  */
+  vZoetrope(ctx, W2, H2, au) {
+    const { bass, mids, treble, kick, t } = au;
+    const st = this.zoe ??= { rot: 0, tilt: 0 };
+    if (kick) st.tilt = (Math.random() < 0.5 ? -1 : 1) * 0.06;
+    st.tilt *= 0.92;
+    st.rot += (0.8 + mids * 3.2) / 60;
+    ctx.fillStyle = '#100d0a';
+    ctx.fillRect(0, 0, W2, H2);
+    const cx = W2 / 2, cy = H2 * 0.52, R = Math.min(W2, H2) * 0.36;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(st.tilt * bass * 6);
+    // the drum: rim, slots, inner scene
+    ctx.fillStyle = '#241a10';
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#b98a2e';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    const SLOTS = 12;
+    for (let k = 0; k < SLOTS; k++) {
+      const an = st.rot + (k / SLOTS) * Math.PI * 2;
+      ctx.save();
+      ctx.rotate(an);
+      ctx.fillStyle = '#070503';
+      ctx.fillRect(R * 0.82, -3.5, R * 0.16, 7);
+      ctx.restore();
+    }
+    // strobe: the bird appears once per slot-pass; ghosts trail it
+    const frame = Math.floor(st.rot * SLOTS);
+    const poses = ['stand', 'airup', 'airdown', 'airup'];
+    for (let gho = 3; gho >= 0; gho--) {
+      const an = ((frame - gho) / SLOTS) * Math.PI * 2 - Math.PI / 2;
+      const r2 = R * 0.55;
+      ctx.save();
+      ctx.translate(Math.cos(an) * r2, Math.sin(an) * r2);
+      ctx.globalAlpha = gho ? 0.12 * (4 - gho) : 0.95;
+      drawBird(ctx, 'robin', { x: 0, y: 0, size: R * 0.3,
+        facing: 1, phase: frame, pose: poses[(frame - gho + 8) % poses.length] });
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+    // hub + crank spun by the treble
+    ctx.fillStyle = '#b98a2e';
+    ctx.beginPath(); ctx.arc(0, 0, 7, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#b98a2e';
+    ctx.lineWidth = 3.4;
+    const ca = t * (2 + treble * 26);
+    ctx.beginPath(); ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(ca) * 22, Math.sin(ca) * 22); ctx.stroke();
+    ctx.restore();
+    // the stand
+    ctx.strokeStyle = '#241a10';
+    ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.moveTo(cx, cy + R); ctx.lineTo(cx, H2 - 8); ctx.stroke();
+  }
+  /*
+    SHIPPING FORECAST — the network as a night weather chart: isobars
+    ring the loudest stations, a cold front sweeps through on the
+    kick, wind barbs shiver with the treble. Cockfosters, Morden,
+    Upminster: moderate or good, occasionally poor.
+  */
+  vForecast(ctx, W2, H2, au) {
+    const { treble, kick, t } = au;
+    const P = this.buildPipes(W2, H2);
+    const st = this.fcst ??= { front: -1 };
+    if (kick && st.front < 0) st.front = -0.1;
+    if (st.front >= 0 && (st.front += 1.6 / 60) > 1.2) st.front = -1;
+    ctx.fillStyle = '#0a1020';
+    ctx.fillRect(0, 0, W2, H2);
+    // the network as faint chart geography
+    ctx.globalAlpha = 0.22;
+    for (const ch of P.chains) {
+      ctx.strokeStyle = '#e9e2cf';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ch.pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // pressure systems: one ring-set per loud sample point
+    const marks = [];
+    for (let i = 0; i < 9; i++) {
+      const ch = P.chains[(i * 5) % P.chains.length];
+      const pt = ch.pts[(i * 13) % ch.pts.length];
+      marks.push({ pt, v: this.bandAt(4 + i * 40, 34) });
+    }
+    for (const m of marks) {
+      if (m.v < 0.1) continue;
+      ctx.strokeStyle = `rgba(233,226,207,${0.25 + m.v * 0.5})`;
+      ctx.lineWidth = 1.4;
+      for (let r = 1; r <= 3; r++) {
+        ctx.beginPath();
+        ctx.arc(m.pt[0], m.pt[1], r * (10 + m.v * 26), 0, 7);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#e9e2cf';
+      ctx.font = 'bold 11px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(m.v > 0.4 ? 'L' : 'H', m.pt[0], m.pt[1] + 4);
+    }
+    // wind barbs shiver on a loose grid
+    ctx.strokeStyle = 'rgba(233,226,207,0.4)';
+    ctx.lineWidth = 1.2;
+    for (let gx = 20; gx < W2; gx += 54) {
+      for (let gy = 24; gy < H2; gy += 60) {
+        const an = Math.sin(gx * 0.05 + t) + treble * Math.sin(t * 13 + gy);
+        ctx.save();
+        ctx.translate(gx, gy);
+        ctx.rotate(an);
+        ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(6, 0);
+        ctx.moveTo(6, 0); ctx.lineTo(2, -4); ctx.stroke();
+        ctx.restore();
+      }
+    }
+    // the cold front marches through
+    if (st.front >= 0) {
+      const fx = st.front * (W2 + 80) - 40;
+      ctx.strokeStyle = '#7fb4d9';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let y = 0; y <= H2; y += 10) {
+        const x = fx + Math.sin(y * 0.03 + t * 2) * 14;
+        y === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.fillStyle = '#7fb4d9';
+      for (let y = 14; y < H2; y += 44) {
+        const x = fx + Math.sin(y * 0.03 + t * 2) * 14;
+        ctx.beginPath();
+        ctx.moveTo(x, y); ctx.lineTo(x + 9, y + 6); ctx.lineTo(x, y + 12);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+    // sea areas around the edges
+    ctx.fillStyle = 'rgba(233,226,207,0.55)';
+    ctx.font = 'bold 10px Georgia, serif';
+    ctx.textAlign = 'center';
+    const areas = [['COCKFOSTERS', W2 * 0.75, 16], ['UXBRIDGE', W2 * 0.12, H2 * 0.4],
+      ['MORDEN', W2 * 0.35, H2 - 10], ['UPMINSTER', W2 * 0.88, H2 * 0.55], ['EPPING', W2 * 0.3, 16]];
+    for (const [nm, x, y] of areas) ctx.fillText(nm, x, y);
+  }
+  /*
+    CRANE BALLET — the Docklands night the DLR earned: tower cranes
+    swing their jibs to their own bands, hooks ride like VU meters,
+    warning lamps blink the beat, and on the big kicks a plane climbs
+    out of City Airport. Reflections wobble in the dock.
+  */
+  vCranes(ctx, W2, H2, au) {
+    const { bass, kick, t } = au;
+    const st = this.crn ??= { angs: new Array(6).fill(0), lamp: 0, plane: -1 };
+    if (kick) { st.lamp = 1; if (bass > 0.5 && st.plane < 0) st.plane = 0; }
+    st.lamp *= 0.92;
+    const waterY = H2 * 0.78;
+    const sky = ctx.createLinearGradient(0, 0, 0, waterY);
+    sky.addColorStop(0, '#070a14');
+    sky.addColorStop(1, '#141225');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W2, waterY);
+    ctx.fillStyle = '#05070d';
+    ctx.fillRect(0, waterY, W2, H2 - waterY);
+    // low skyline
+    ctx.fillStyle = '#0c0f1a';
+    for (let x = 0; x < W2; x += 26) {
+      const hh = 12 + ((Math.sin(x * 3.7) + 1) * 16);
+      ctx.fillRect(x, waterY - hh, 22, hh);
+    }
+    const N = 6;
+    for (let i = 0; i < N; i++) {
+      const bx = W2 * (0.08 + i * 0.16), bh = H2 * (0.34 + (i % 3) * 0.09);
+      const v = this.bandAt(4 + i * 60, 50);
+      const target = -0.45 + v * 1.1;
+      st.angs[i] += (target - st.angs[i]) * 0.06;
+      const topY = waterY - bh;
+      ctx.strokeStyle = '#2a2f45';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(bx, waterY); ctx.lineTo(bx, topY); ctx.stroke();
+      // lattice hints
+      ctx.lineWidth = 1;
+      for (let y = waterY - 8; y > topY; y -= 14) {
+        ctx.beginPath(); ctx.moveTo(bx - 3, y); ctx.lineTo(bx + 3, y - 7); ctx.stroke();
+      }
+      ctx.save();
+      ctx.translate(bx, topY);
+      ctx.rotate(st.angs[i] * 0.35);
+      const jib = W2 * 0.11;
+      ctx.strokeStyle = '#333a55';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(-jib * 0.35, 0); ctx.lineTo(jib, 0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(jib * 0.55, 0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(-jib * 0.3, 0); ctx.stroke();
+      // hook load rides the band
+      const drop = (1 - v) * bh * 0.5 + 8;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(jib * 0.85, 0); ctx.lineTo(jib * 0.85, drop); ctx.stroke();
+      ctx.fillStyle = '#3d4463';
+      ctx.fillRect(jib * 0.85 - 4, drop, 8, 8);
+      // lamps
+      ctx.fillStyle = `rgba(217,67,39,${0.25 + st.lamp * 0.75})`;
+      ctx.beginPath(); ctx.arc(0, -12, 2.6, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(jib, 0, 2.2, 0, 7); ctx.fill();
+      ctx.restore();
+      // reflection
+      ctx.globalAlpha = 0.2;
+      ctx.strokeStyle = '#4a5478';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(bx, waterY);
+      ctx.lineTo(bx + Math.sin(t * 3 + i) * 4, waterY + bh * 0.3);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    if (st.plane >= 0) {
+      st.plane += 0.008;
+      if (st.plane > 1) st.plane = -1;
+      else {
+        const px = W2 * (0.9 - st.plane * 0.9), py = waterY - 14 - st.plane * H2 * 0.55;
+        ctx.fillStyle = '#e9e2cf';
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(-0.22);
+        ctx.beginPath();
+        ctx.moveTo(9, 0); ctx.lineTo(-7, -2); ctx.lineTo(-3, 0); ctx.lineTo(-7, 2);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = `rgba(217,67,39,${Math.sin(t * 12) > 0 ? 0.9 : 0.2})`;
+        ctx.beginPath(); ctx.arc(px - 8, py, 1.6, 0, 7); ctx.fill();
+      }
+    }
+  }
+  /*
+    LIFT GRAPH — the machinery the game actually simulates, made
+    monumental: shafts side by side, cars riding their bands,
+    counterweights answering, and every set of doors opening at once
+    on the kick with the light spilling out.
+  */
+  vLifts(ctx, W2, H2, au) {
+    const { kick, t } = au;
+    const st = this.lft ??= { ys: new Array(7).fill(0.5), doors: 0 };
+    if (kick) st.doors = 1;
+    st.doors *= 0.9;
+    ctx.fillStyle = '#12100c';
+    ctx.fillRect(0, 0, W2, H2);
+    const N = 7, sw = W2 / N;
+    for (let f = 1; f < 5; f++) {   // floor lines behind everything
+      ctx.strokeStyle = 'rgba(233,226,207,0.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, H2 * f / 5); ctx.lineTo(W2, H2 * f / 5); ctx.stroke();
+    }
+    for (let i = 0; i < N; i++) {
+      const x0 = i * sw + sw * 0.16, x1 = (i + 1) * sw - sw * 0.16;
+      const cxx = (x0 + x1) / 2;
+      const v = this.bandAt(4 + i * 52, 46);
+      const prev = st.ys[i];
+      st.ys[i] += ((1 - v) - st.ys[i]) * 0.08;
+      const rising = st.ys[i] < prev;
+      const carH = Math.min(H2 * 0.16, sw * 0.9);
+      const carY = H2 * 0.08 + st.ys[i] * (H2 * 0.78 - carH);
+      // guides
+      ctx.strokeStyle = 'rgba(185,138,46,0.35)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(x0, H2 * 0.05); ctx.lineTo(x0, H2 * 0.94); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1, H2 * 0.05); ctx.lineTo(x1, H2 * 0.94); ctx.stroke();
+      // cable twangs when the car moves fast
+      const sway = Math.abs(st.ys[i] - prev) * 400;
+      ctx.strokeStyle = '#8a8272';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (let y = H2 * 0.05; y <= carY; y += 8) {
+        const xx = cxx + Math.sin(y * 0.14 + t * 22) * sway;
+        y <= H2 * 0.05 ? ctx.moveTo(xx, y) : ctx.lineTo(xx, y);
+      }
+      ctx.stroke();
+      // counterweight mirrors
+      const cwY = H2 * 0.86 - st.ys[i] * (H2 * 0.7);
+      ctx.fillStyle = '#241f16';
+      ctx.fillRect(x1 - 5, cwY, 5, carH * 0.5);
+      // the car, doors parting on the kick
+      ctx.fillStyle = '#2c2418';
+      ctx.strokeStyle = '#b98a2e';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.roundRect(x0 + 2, carY, x1 - x0 - 4, carH, 3); ctx.fill(); ctx.stroke();
+      const open = st.doors * (x1 - x0 - 8) * 0.5;
+      if (open > 1) {
+        const spill = ctx.createLinearGradient(cxx, carY, cxx, carY + carH);
+        spill.addColorStop(0, 'rgba(255,205,110,0.85)');
+        spill.addColorStop(1, 'rgba(255,140,60,0.25)');
+        ctx.fillStyle = spill;
+        ctx.fillRect(cxx - open / 2, carY + 2, open, carH - 4);
+      }
+      // direction arrow above the shaft
+      ctx.fillStyle = rising ? '#9fe3b0' : '#d97f6a';
+      ctx.beginPath();
+      if (rising) { ctx.moveTo(cxx, H2 * 0.025); ctx.lineTo(cxx - 5, H2 * 0.05); ctx.lineTo(cxx + 5, H2 * 0.05); }
+      else { ctx.moveTo(cxx, H2 * 0.05); ctx.lineTo(cxx - 5, H2 * 0.025); ctx.lineTo(cxx + 5, H2 * 0.025); }
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  /*
+    DEPTH GAUGE — the FOI depths, played. A cross-section of London
+    clay with real stations hanging at their true depths; the bass is
+    a rising water table, the treble sparks the deep-level pockets,
+    and each kick drops a lift car down a shaft.
+  */
+  vDepth(ctx, W2, H2, au) {
+    const { bass, treble, kick, t } = au;
+    let st = this.dpt;
+    if (!st) {
+      const rows = Object.entries(STATION_LEVELS)
+        .map(([n, d]) => [n, Math.max(...Object.values(d.lines).map(l => l.depth ?? 0))])
+        .filter(([, d]) => d > 0)
+        .sort((a, b) => a[1] - b[1]);
+      const picks = [];
+      for (let i = 0; i < 12; i++) picks.push(rows[Math.floor(i * (rows.length - 1) / 11)]);
+      st = this.dpt = { picks, maxD: picks[11][1], drop: -1, dropX: 0 };
+    }
+    if (kick && st.drop < 0) { st.drop = 0; st.dropX = Math.floor(Math.random() * 12); }
+    const soil = ctx.createLinearGradient(0, 0, 0, H2);
+    soil.addColorStop(0, '#2b2214');
+    soil.addColorStop(0.5, '#241a10');
+    soil.addColorStop(1, '#17100a');
+    ctx.fillStyle = soil;
+    ctx.fillRect(0, 0, W2, H2);
+    for (let y = 30; y < H2; y += 34) {          // strata seams
+      ctx.strokeStyle = 'rgba(16,12,8,0.5)';
+      ctx.beginPath();
+      for (let x = 0; x <= W2; x += 18)
+        ctx.lineTo(x, y + Math.sin(x * 0.04 + y) * 3);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#3a4a2c';                   // the street
+    ctx.fillRect(0, 0, W2, 10);
+    // the water table breathes with the bass
+    const wY = H2 * (0.95 - bass * 0.72);
+    ctx.fillStyle = 'rgba(90,116,140,0.22)';
+    ctx.fillRect(0, wY, W2, H2 - wY);
+    ctx.strokeStyle = 'rgba(127,180,217,0.6)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    for (let x = 0; x <= W2; x += 10)
+      ctx.lineTo(x, wY + Math.sin(x * 0.06 + t * 3) * 3);
+    ctx.stroke();
+    const colW = W2 / 12;
+    ctx.textAlign = 'center';
+    for (let i = 0; i < 12; i++) {
+      const [name, d] = st.picks[i];
+      const x = colW * (i + 0.5);
+      const y = 24 + (d / st.maxD) * (H2 - 70);
+      const v = this.bandAt(4 + i * 40, 34);
+      // shaft
+      ctx.strokeStyle = 'rgba(233,226,207,0.16)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, 10); ctx.lineTo(x, y - 8); ctx.stroke();
+      // platform pocket, lit by its band (deep ones spark on treble)
+      const deepSpark = d > st.maxD * 0.6 ? treble * 0.8 : 0;
+      const lit = Math.min(1, 0.2 + v * 1.6 + deepSpark);
+      ctx.fillStyle = `rgba(255,205,110,${lit * 0.85})`;
+      ctx.beginPath(); ctx.roundRect(x - colW * 0.34, y - 8, colW * 0.68, 16, 4); ctx.fill();
+      ctx.strokeStyle = 'rgba(233,226,207,0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect(x - colW * 0.34, y - 8, colW * 0.68, 16, 4); ctx.stroke();
+      if (i === 0 || i === 11) {
+        ctx.fillStyle = 'rgba(233,226,207,0.75)';
+        ctx.font = 'bold 9px Georgia, serif';
+        ctx.fillText(`${name.split(' ')[0]} ${Math.round(d)}m`, x, y + 22);
+      }
+    }
+    if (st.drop >= 0) {
+      st.drop += 0.03;
+      const [, d] = st.picks[st.dropX];
+      const yTop = 12, yBot = 24 + (d / st.maxD) * (H2 - 70) - 10;
+      if (st.drop > 1) st.drop = -1;
+      else {
+        const y = yTop + (yBot - yTop) * st.drop * st.drop;
+        ctx.fillStyle = '#e9e2cf';
+        ctx.fillRect(colW * (st.dropX + 0.5) - 5, y, 10, 12);
+      }
+    }
+  }
+  /*
+    THAMES MURMUR — one organism, not a flock: a starling cloud over
+    the river at dusk, stretched by the mids, sheared in two by the
+    kick, always re-merging. The Thames itself rides underneath.
+  */
+  vThames(ctx, W2, H2, au) {
+    const { bass, mids, kick, t } = au;
+    const st = this.thm ??= { split: 0 };
+    if (kick) st.split = 1;
+    st.split *= 0.94;
+    const dusk = ctx.createLinearGradient(0, 0, 0, H2);
+    dusk.addColorStop(0, '#1a1430');
+    dusk.addColorStop(0.7, '#3a2438');
+    dusk.addColorStop(1, '#1c1520');
+    ctx.fillStyle = dusk;
+    ctx.fillRect(0, 0, W2, H2);
+    // the river, silver, from the real polyline
+    const th = NETWORK.thames ?? [];
+    if (th.length) {
+      const xs = th.map(p => p[0]), ys = th.map(p => p[1]);
+      const x0 = Math.min(...xs), x1 = Math.max(...xs);
+      const y0 = Math.min(...ys), y1 = Math.max(...ys);
+      ctx.strokeStyle = 'rgba(200,214,230,0.5)';
+      ctx.lineWidth = 7;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      th.forEach((p, i) => {
+        const x = ((p[0] - x0) / (x1 - x0)) * W2;
+        const y = H2 * 0.78 + ((p[1] - y0) / (y1 - y0 || 1)) * H2 * 0.16;
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      });
+      ctx.stroke();
+    }
+    // St Paul's on the skyline
+    const skY = H2 * 0.74;
+    ctx.fillStyle = '#12101c';
+    ctx.fillRect(0, skY, W2, H2 * 0.06);
+    ctx.beginPath();
+    ctx.arc(W2 * 0.3, skY, 16, Math.PI, 0);
+    ctx.fill();
+    ctx.fillRect(W2 * 0.3 - 2, skY - 22, 4, 8);
+    // the murmuration: overlapping soft ellipses = one dark organism
+    const cx = W2 * (0.5 + Math.sin(t * 0.4) * 0.18);
+    const cy = H2 * (0.34 + Math.cos(t * 0.53) * 0.1);
+    const stretch = 1 + mids * 1.6;
+    ctx.fillStyle = 'rgba(20,16,22,0.85)';
+    for (let arm = 0; arm < 2; arm++) {
+      const off = st.split * (arm ? 1 : -1) * W2 * 0.13;
+      for (let i = 0; i < 12; i++) {
+        const an = t * 1.1 + i * 0.55 + arm * 3;
+        const ex = cx + off + Math.cos(an) * W2 * 0.07 * stretch * (1 + i * 0.12);
+        const ey = cy + Math.sin(an * 1.3) * H2 * 0.05 * (1 + i * 0.08);
+        ctx.beginPath();
+        ctx.ellipse(ex, ey, (14 + i * 3) * stretch, 10 + i * 2, Math.sin(an) * 0.6, 0, 7);
+        ctx.fill();
+      }
+    }
+    // stray birds on the edge of the mass
+    for (let i = 0; i < 7; i++) {
+      const an = t * 2 + i * 1.9;
+      const ex = cx + Math.cos(an) * W2 * 0.16 * stretch;
+      const ey = cy + Math.sin(an * 1.4) * H2 * 0.1 - bass * 12;
+      ctx.strokeStyle = 'rgba(20,16,22,0.9)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(ex - 4, ey); ctx.quadraticCurveTo(ex, ey - 3, ex, ey);
+      ctx.quadraticCurveTo(ex, ey - 3, ex + 4, ey);
+      ctx.stroke();
+    }
+  }
+  /*
+    ESCALATOR HALL — the great diagonal hall from below, Piranesi by
+    way of TfL: treads scroll at tempo, commuter silhouettes ride,
+    and the uplighters along the balustrades ARE the spectrum,
+    flaring like flashbulbs on the kick.
+  */
+  vEscalators(ctx, W2, H2, au) {
+    const { mids, kick, t } = au;
+    const st = this.esc ??= { off: 0, flare: 0, riders: [] };
+    if (kick) st.flare = 1;
+    st.flare *= 0.88;
+    st.off += (0.6 + mids * 2.6);
+    ctx.fillStyle = '#0f0c0a';
+    ctx.fillRect(0, 0, W2, H2);
+    // vault hint
+    const vault = ctx.createRadialGradient(W2 * 0.7, H2 * 0.1, 10, W2 * 0.7, H2 * 0.1, H2);
+    vault.addColorStop(0, 'rgba(185,138,46,0.13)');
+    vault.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = vault;
+    ctx.fillRect(0, 0, W2, H2);
+    const K = 5;
+    for (let k = 0; k < K; k++) {
+      const f = k / (K - 1);
+      const x0 = W2 * (0.02 + f * 0.16), y0 = H2 * (0.98 - f * 0.1);
+      const x1 = W2 * (0.6 + f * 0.1), y1 = H2 * (0.16 - f * 0.06);
+      const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy);
+      const ux = dx / len, uy = dy / len;
+      // balustrade
+      ctx.strokeStyle = '#241f16';
+      ctx.lineWidth = 10 - f * 4;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      // treads scrolling (alternate direction per stair)
+      const dir = k % 2 ? 1 : -1;
+      ctx.strokeStyle = 'rgba(233,226,207,0.35)';
+      ctx.lineWidth = 1.4;
+      const step = 17 - f * 5;
+      for (let d = ((dir > 0 ? st.off : -st.off) % step + step) % step; d < len; d += step) {
+        const px = x0 + ux * d, py = y0 + uy * d;
+        ctx.beginPath();
+        ctx.moveTo(px - uy * (6 - f * 2), py + ux * (6 - f * 2));
+        ctx.lineTo(px + uy * (6 - f * 2), py - ux * (6 - f * 2));
+        ctx.stroke();
+      }
+      // riders (sparse, silhouette)
+      if (Math.random() < 0.005 && st.riders.length < 10) st.riders.push({ k, d: dir > 0 ? 0 : len, dir });
+      // uplighters: the spectrum climbs the stairs
+      const lamps = 9;
+      for (let li = 0; li < lamps; li++) {
+        const d = (li + 0.5) * len / lamps;
+        const v = Math.min(1, this.bandAt(4 + ((k * lamps + li) % 10) * 40, 30) * 1.8 + st.flare * 0.7);
+        const px = x0 + ux * d - uy * (8 - f * 3), py = y0 + uy * d + ux * (8 - f * 3);
+        const g2 = ctx.createRadialGradient(px, py, 0, px, py, 9 + v * 14);
+        g2.addColorStop(0, `rgba(255,205,110,${0.25 + v * 0.65})`);
+        g2.addColorStop(1, 'rgba(255,140,60,0)');
+        ctx.fillStyle = g2;
+        ctx.beginPath(); ctx.arc(px, py, 9 + v * 14, 0, 7); ctx.fill();
+      }
+    }
+    for (let i = st.riders.length - 1; i >= 0; i--) {
+      const r = st.riders[i];
+      const f = r.k / (K - 1);
+      const x0 = W2 * (0.02 + f * 0.16), y0 = H2 * (0.98 - f * 0.1);
+      const x1 = W2 * (0.6 + f * 0.1), y1 = H2 * (0.16 - f * 0.06);
+      const len = Math.hypot(x1 - x0, y1 - y0);
+      r.d += r.dir * (0.6 + mids * 2.6) * 0.55;
+      if (r.d < 0 || r.d > len) { st.riders.splice(i, 1); continue; }
+      const px = x0 + (x1 - x0) * r.d / len, py = y0 + (y1 - y0) * r.d / len;
+      ctx.globalAlpha = 0.85;
+      drawCommuter(ctx, { x: px, y: py - 10, size: 30 - f * 10, facing: r.dir, phase: 0, pose: 'stand', variant: r.k });
+      ctx.globalAlpha = 1;
+    }
+  }
+  /*
+    PAPER AVIARY — Libby's process, live: scissors trace a bird
+    outline along the sheet, the mids drive the cut, the kick snips a
+    burst, and every finished bird takes colour and flies off in a
+    puff of offcut confetti.
+  */
+  vScissors(ctx, W2, H2, au) {
+    const { mids, treble, kick, t } = au;
+    const st = this.cutz ??= { cut: 0, fly: -1, sp: 'robin', confetti: [] };
+    ctx.fillStyle = '#171310';
+    ctx.fillRect(0, 0, W2, H2);
+    // the sheet
+    const sx = W2 * 0.16, sy = H2 * 0.14, sw = W2 * 0.68, sh = H2 * 0.66;
+    ctx.save();
+    ctx.translate(2, 4);
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath(); ctx.roundRect(sx, sy, sw, sh, 4); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = '#e9e2cf';
+    ctx.beginPath(); ctx.roundRect(sx, sy, sw, sh, 4); ctx.fill();
+    // the bird outline as a parametric path on the sheet
+    const cx = sx + sw / 2, cy = sy + sh / 2, R = Math.min(sw, sh) * 0.33;
+    const pt = k => {
+      const a = k * Math.PI * 2;
+      const body = 1 + 0.35 * Math.sin(a * 2 + 1.2) + 0.2 * Math.sin(a * 3 + 0.4);
+      return [cx + Math.cos(a) * R * body, cy + Math.sin(a) * R * 0.72 * body];
+    };
+    if (st.fly < 0) {
+      st.cut = Math.min(1, st.cut + (0.0012 + mids * 0.006) + (kick ? 0.05 : 0));
+      ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = '#8a8272';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      for (let k = 0; k <= st.cut; k += 0.01) {
+        const [x, y] = pt(k);
+        k === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // the scissors at the cutting point
+      const [px, py] = pt(st.cut);
+      const [qx, qy] = pt(Math.min(1, st.cut + 0.02));
+      const an = Math.atan2(qy - py, qx - px);
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(an);
+      const snip = Math.sin(t * (8 + treble * 30)) * 0.35;
+      ctx.strokeStyle = '#4a453c';
+      ctx.lineWidth = 2.4;
+      for (const sgn of [1, -1]) {
+        ctx.save();
+        ctx.rotate(snip * sgn);
+        ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(15, 0); ctx.stroke();
+        ctx.beginPath(); ctx.arc(-8, sgn * 3.4, 3.6, 0, 7); ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+      if (st.cut >= 1) {
+        st.fly = 0;
+        for (let i = 0; i < 26; i++) st.confetti.push({
+          x: cx + (Math.random() - 0.5) * R * 2, y: cy + (Math.random() - 0.5) * R,
+          vx: (Math.random() - 0.5) * 3, vy: -1 - Math.random() * 2.5, r: 2 + Math.random() * 4, a: 1 });
+      }
+    } else {
+      // the finished bird takes wing
+      st.fly += 0.012 + mids * 0.01;
+      const fx = cx + st.fly * W2 * 0.5, fy = cy - st.fly * H2 * 0.5;
+      drawBird(ctx, st.sp, { x: fx, y: fy, size: R * 1.1, facing: 1, phase: t * 12, pose: 'airup' });
+      if (st.fly >= 1.1) {
+        st.fly = -1;
+        st.cut = 0;
+        st.sp = ['robin', 'bluetit', 'wren', 'blackbird'][Math.floor(Math.random() * 4)];
+      }
+    }
+    for (let i = st.confetti.length - 1; i >= 0; i--) {
+      const c = st.confetti[i];
+      c.x += c.vx + Math.sin(t * 6 + c.r) * treble * 2;
+      c.y += c.vy;
+      c.vy += 0.05;
+      c.a -= 0.008;
+      if (c.a <= 0) { st.confetti.splice(i, 1); continue; }
+      ctx.globalAlpha = c.a;
+      ctx.fillStyle = '#e9e2cf';
+      ctx.fillRect(c.x, c.y, c.r, c.r * 0.7);
+      ctx.globalAlpha = 1;
+    }
+  }
+  /*
+    SMELL MAP — TUBULAR SMELLS' birthright, finally visualised: each
+    line exhales perfume in its own colour, plume density riding that
+    line's band, and the kick puffs a scent-ring out of a station
+    mouth. The whole Underground, breathing.
+  */
+  vSmell(ctx, W2, H2, au) {
+    const { kick, t } = au;
+    const P = this.buildPipes(W2, H2);
+    const st = this.sml ??= { plumes: [], rings: [] };
+    ctx.fillStyle = 'rgba(10,9,14,0.24)';        // fade = drift trails
+    ctx.fillRect(0, 0, W2, H2);
+    ctx.globalAlpha = 0.3;
+    for (const ch of P.chains) {                 // the network, faint
+      ctx.strokeStyle = ch.colour;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ch.pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // each line breathes by its band
+    for (let li = 0; li < P.chains.length; li++) {
+      const ch = P.chains[li];
+      const v = this.bandAt(4 + (li % 11) * 38, 32);
+      if (Math.random() < v * 0.4 && st.plumes.length < 130) {
+        const [x, y] = ch.pts[Math.floor(Math.random() * ch.pts.length)];
+        st.plumes.push({ x, y, vy: -0.3 - Math.random() * 0.5, col: ch.colour, r: 2 + v * 5, a: 0.4, seed: Math.random() * 7 });
+      }
+    }
+    if (kick && P.chains.length) {
+      const ch = P.chains[Math.floor(Math.random() * P.chains.length)];
+      const [x, y] = ch.pts[Math.floor(Math.random() * ch.pts.length)];
+      st.rings.push({ x, y, r: 2, col: ch.colour, a: 0.8 });
+    }
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = st.plumes.length - 1; i >= 0; i--) {
+      const pl = st.plumes[i];
+      pl.x += Math.sin(t * 1.7 + pl.seed + pl.y * 0.02) * 0.7;
+      pl.y += pl.vy;
+      pl.r += 0.09;
+      pl.a -= 0.006;
+      if (pl.a <= 0) { st.plumes.splice(i, 1); continue; }
+      const g2 = ctx.createRadialGradient(pl.x, pl.y, 0, pl.x, pl.y, pl.r * 2.4);
+      g2.addColorStop(0, pl.col + '');
+      g2.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = pl.a * 0.14;
+      ctx.fillStyle = g2;
+      ctx.beginPath(); ctx.arc(pl.x, pl.y, pl.r * 2.4, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    for (let i = st.rings.length - 1; i >= 0; i--) {
+      const rg = st.rings[i];
+      rg.r += 1.8;
+      rg.a -= 0.02;
+      if (rg.a <= 0) { st.rings.splice(i, 1); continue; }
+      ctx.globalAlpha = rg.a;
+      ctx.strokeStyle = rg.col;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(rg.x, rg.y, rg.r, 0, 7); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
   }
   /*
     ROLL THE CREDITS — the Konami reward, migrated from its old overlay
