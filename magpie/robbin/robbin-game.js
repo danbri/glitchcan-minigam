@@ -170,6 +170,7 @@ class Foley {
   }
   jump()  { this.chirp(300, 620, 0.14, 'triangle', 0.1); }
   whoosh(){ this.chirp(900, 220, 0.16, 'triangle', 0.08); }
+  buzz()  { this.chirp(86, 60, 0.22, 'sawtooth', 0.07); }   // the low note of a line change
   egg()   { this.chirp(880, 880, 0.06, 'sine', 0.12); this.chirp(1320, 1320, 0.09, 'sine', 0.12, 0.06); }
   grain() { this.chirp(220, 180, 0.1, 'triangle', 0.12); }
   cream() { // a creamy little glug-and-trill
@@ -277,6 +278,7 @@ class Haptics {
   thud()  { this.fire(24); }                 // doors, landings, entries
   buzz()  { this.fire([34, 30, 34]); }       // the glitch-grab
   chord() { this.fire([18, 40, 18, 40, 46]); }   // reunions, finales
+  buzz()  { this.fire([12, 26, 12, 26, 12]); }   // a rasp: changing lines is a commitment
   setEnabled(on) {
     this.enabled = on;
     localStorage.setItem('robbin.haptics', on ? '1' : '0');

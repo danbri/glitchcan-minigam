@@ -784,7 +784,11 @@ export class TubeFlock {
       // never a surprise: changing lines means heading inside, and
       // heading inside is always YOUR act — arm the change, ask for GO
       this.changeHint = { edge: best };
-      this.g.haptics.tick();
+      // leaving your line is a MOMENT: the rest of the map steps back
+      // into shadow for a beat, the pocket buzzes, a low note sounds
+      this.lineFlash = { t: 1, line: this.line, target: best.line };
+      this.g.haptics.buzz();
+      this.g.foley.buzz();
       this.g.say(`Changing to the ${LINE_SHORT[best.line] || best.line} line toward ${best.to} means heading inside ${this.cur}. Press GO to go in, or fly your own line on.`);
       return;
     }
@@ -1565,6 +1569,7 @@ export class TubeFlock {
   // ---------------------------------------------------------- sim
   update(dt) {
     if (this.arriveT > 0) this.arriveT -= dt;
+    if (this.lineFlash && (this.lineFlash.t -= dt / 0.9) <= 0) this.lineFlash = null;
     // ten game-seconds per real second, and never night: past nine in
     // the evening the clock snaps to half six the next morning
     this.clock += dt * 10 / 60;
@@ -1829,10 +1834,14 @@ export class TubeFlock {
       }
       ctx.stroke();
     };
+    const lf = this.lineFlash;
     for (const [lineId, def] of Object.entries(LINES)) {
+      const shadowed = lf && lineId !== lf.line && lineId !== lf.target;
+      if (shadowed) ctx.globalAlpha = Math.max(0.15, 1 - lf.t * 0.85);
       if (def.pale) traceSegs(lineId, def, 8.6, 'rgba(38,34,30,0.5)');   // ink underlay keeps pale inks legible
       traceSegs(lineId, def, 6.4, def.color);
       if (def.hollow) traceSegs(lineId, def, 2.4, PALETTE.paper);        // Overground-style hollow stripe
+      if (shadowed) ctx.globalAlpha = 1;
       // one-way stretches wear a little arrow in their served direction
       for (const [f, t2] of def.oneWay || []) {
         const [ax, ay] = this.toXY(f), [bx, by] = this.toXY(t2);
