@@ -766,6 +766,21 @@ class Game {
     this.jukebox = RobbinJukebox.ensure(this);
     addEventListener('jukebox-state', e => this.onJukeboxState(e.detail.engaged));
     this.showCustomAudio = localStorage.getItem('robbin.custaudio') === 'on';
+    // 🗣 the narrator: the same say() text the screen reader gets, but
+    // spoken aloud through speechSynthesis — off unless asked for
+    this.narrator = {
+      on: 'speechSynthesis' in window && localStorage.getItem('robbin.narrator') === 'on',
+      voice: null,
+    };
+    if ('speechSynthesis' in window) {
+      const pick = () => {
+        const vs = speechSynthesis.getVoices();
+        this.narrator.voice = vs.find(v => v.lang === 'en-GB')
+          || vs.find(v => v.lang?.startsWith('en')) || null;
+      };
+      pick();
+      speechSynthesis.addEventListener?.('voiceschanged', pick);
+    }
     // the 3D flock wipe warms up in the background; if three.js hasn't
     // landed by the time PLAY is pressed, the transition just skips it
     this.wipe = new FlockWipe();
@@ -796,6 +811,31 @@ class Game {
     if (!el) return;
     this._sayFlip = !this._sayFlip;
     el.textContent = text + (this._sayFlip ? '' : ' ');
+    this.speak(text);
+  }
+  // …and aloud, when the narrator is on: latest wins here too, the
+  // game bands duck under the voice, and a song the player chose on
+  // the jukebox is never talked over
+  speak(text) {
+    if (!this.narrator?.on) return;
+    if (this.jukebox?.engaged) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    if (this.narrator.voice) u.voice = this.narrator.voice;
+    u.rate = 1.04;
+    u.onstart = () => this.duckForSpeech(true);
+    u.onend = u.onerror = () => this.duckForSpeech(false);
+    speechSynthesis.speak(u);
+  }
+  duckForSpeech(on) {
+    for (const band of [this.music, this.soundtrack, this.midiScore]) {
+      const b = band?.bus;
+      if (!b || band.muted) continue;
+      const g = b.gain, now = b.context.currentTime;
+      g.cancelScheduledValues(now);
+      g.setValueAtTime(g.value, now);
+      g.linearRampToValueAtTime(on ? 0.35 : 1, now + 0.25);
+    }
   }
   resize() {
     this.touchUI = window.matchMedia('(pointer: coarse)').matches;
@@ -1197,6 +1237,21 @@ class Game {
         ? 'Map jukebox on. Stations with their own song glow gold on the map — tap one to play it, then fly on with the music.'
         : 'Map jukebox off.');
     });
+    // 🗣 the narrator speaks the same lines the screen reader gets —
+    // the button only appears where the browser can actually talk
+    const nb = document.getElementById('narrmode');
+    if (nb && 'speechSynthesis' in window) {
+      nb.hidden = false;
+      nb.textContent = `🗣 NARRATOR: ${this.narrator.on ? 'ON' : 'OFF'}`;
+      nb.addEventListener('pointerdown', e => {
+        e.stopPropagation();
+        this.narrator.on = !this.narrator.on;
+        localStorage.setItem('robbin.narrator', this.narrator.on ? 'on' : 'off');
+        nb.textContent = `🗣 NARRATOR: ${this.narrator.on ? 'ON' : 'OFF'}`;
+        if (this.narrator.on) this.speak('Narrator on. I will call the stations as the flock flies.');
+        else speechSynthesis.cancel();
+      });
+    }
     // 🐣 the curious egg: a little buried jukebox
     document.getElementById('egg')?.addEventListener('pointerdown', e => {
       e.stopPropagation();
