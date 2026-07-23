@@ -734,7 +734,7 @@ export class TubeFlock {
   viewBand() {
     const g = this.g, w = g.cssW, h = g.cssH;
     const fs = Math.max(17, Math.min(24, w / 22));
-    const top = fs * (this.roster.length === 1 ? 7.1 : 5.2);
+    const top = fs * 5.2;
     const bot = g.touchUI ? Math.min(h * 0.3, 215) : fs * 1.9;
     return { top, bot, cy: top + (h - top - bot) / 2 };
   }
@@ -1958,10 +1958,9 @@ export class TubeFlock {
         pose: moving ? ((b.vy || 0) < -6 ? 'airup' : 'airdown') : 'flit',
       });
     }
-    // a slim masthead — tiny title row, one big quest line, one note —
-    // so the city keeps the screen; primer rows appear until the first
-    // rescue, and the touch band below stays honest map-free space
-    const primer = this.roster.length === 1;
+    // a slim masthead — tiny tally row, one big quest line, one note —
+    // so the city keeps the screen; the how-to lives in settings now,
+    // and the touch band below stays honest map-free space
     const { top: headH, bot: botInset } = this.viewBand();
     ctx.fillStyle = 'rgba(242,236,221,0.88)';
     ctx.fillRect(0, 0, w, headH);
@@ -1973,7 +1972,7 @@ export class TubeFlock {
     ctx.textAlign = 'left';
     ctx.globalAlpha = 0.7;
     ctx.font = `bold ${fs * 0.6}px Georgia, serif`;
-    const mast = `UP THE JUNCTION · FLOCK ${this.roster.length}/${this.finaleDone ? LOST.length + 1 : 7} · SCORE ${this.score} · ${this.clockText()}`;
+    const mast = `FLOCK ${this.roster.length}/${this.finaleDone ? LOST.length + 1 : 7} · SCORE ${this.score} · ${this.clockText()}`;
     ctx.fillText(mast, 12, fs * 0.95);
     this.drawClock(ctx, 12 + ctx.measureText(mast).width + fs * 0.75, fs * 0.72, fs * 0.5);
     ctx.globalAlpha = 1;
@@ -1990,7 +1989,7 @@ export class TubeFlock {
     const labX = 12;
     ctx.font = `bold ${fs * 0.55}px Georgia, serif`;
     ctx.fillStyle = PALETTE.platform;
-    ctx.fillText('HERE', labX, fs * 2.15);
+    ctx.fillText('NOW', labX, fs * 2.15);
     ctx.fillText('NEXT', labX, fs * 3.55);
     const valX = labX + ctx.measureText('NEXT').width + 12;
     ctx.fillStyle = PALETTE.ink;
@@ -2043,14 +2042,6 @@ export class TubeFlock {
       this.fitText(ctx, 'fly together as long as you like — unflockable', valX, fs * 3.55, w - valX - fs * 3.7, fs * 0.95);
       ctx.fillStyle = PALETTE.ink;
     }
-    if (primer) {
-      ctx.textAlign = 'center';
-      ctx.globalAlpha = 0.65;
-      this.fitText(ctx, 'find SIX lost birds and lead the flock home — fly stop by stop, GO enters a station', w / 2, fs * 5.4, w - 24, fs * 0.68, 'italic');
-      this.fitText(ctx, 'found your bird? ride on from any platform, or take the WAY OUT', w / 2, fs * 6.3, w - 24, fs * 0.68, 'italic');
-      ctx.globalAlpha = 1;
-      ctx.textAlign = 'left';
-    }
     ctx.textAlign = 'center';
     const msgY = headH + (h - botInset - headH) * 0.3;
     if (this.arriveT > 0) {
@@ -2066,12 +2057,6 @@ export class TubeFlock {
         ctx.fillText(`the flock gathers at ${this.cur}…`, w / 2, msgY);
         ctx.globalAlpha = 1;
       }
-    }
-    if (!g.touchUI) {
-      ctx.globalAlpha = 0.6;
-      ctx.fillStyle = PALETTE.ink;
-      this.fitText(ctx, 'swipe or arrows to fly a line · no rush — the flock waits · ESC or ⏏: quit (it asks first)', w / 2, h - fs * 0.7, w - 16, fs * 0.72, 'normal');
-      ctx.globalAlpha = 1;
     }
     // ⏏ QUIT: same corner as the interior's ⌂ MAP chip — it asks first
     if (!this.finale && !this.over && !this.travel) {
