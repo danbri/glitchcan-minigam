@@ -183,6 +183,7 @@ export class RobbAmp {
   cycleMode() {
     this.mode = (this.mode + 1) % this.MODES.length;
     localStorage.setItem('robbin.ampviz', String(this.mode));
+    this.shuffleT = performance.now() / 1000;   // your pick holds its 15s
     this.modeFlash = 2.4;
     this.g.haptics?.tick();
     this.g.say?.(`Visuals: ${this.MODES[this.mode]}.`);
@@ -281,6 +282,22 @@ export class RobbAmp {
       const w = name.offsetWidth / 3 || 1;
       name.style.transform = `translateX(${-(this.marq % w)}px)`;
     }
+    // while the song plays, wander to a fresh look every 15 seconds —
+    // a manual tap re-arms the clock, saved choice untouched. ROLL THE
+    // CREDITS is a moment, not a stop: the wander never leaves it or
+    // lands on it, and reduced motion keeps the still dig
+    const nowS = performance.now() / 1000;
+    if (!a.paused && !this.reduced && this.mode !== this.MODES.length - 1) {
+      if (this.shuffleT === undefined) this.shuffleT = nowS;
+      if (nowS - this.shuffleT >= 15) {
+        this.shuffleT = nowS;
+        let m = this.mode;
+        while (m === this.mode) m = Math.floor(Math.random() * (this.MODES.length - 1));
+        this.mode = m;
+        this.modeFlash = 2.4;
+        this.g.say?.(`Visuals: ${this.MODES[this.mode]}.`);
+      }
+    } else this.shuffleT = nowS;
     this.drawViz();
   }
   // ------------------------------------------------------------ visuals
