@@ -47,10 +47,16 @@ try {
     modules: ['FinkPlayer', 'FinkInkEngine', 'FinkSandbox', 'FinkNavigation',
       'FinkMinigames', 'FinkAudio', 'FinkFoley', 'MinigameHost'].filter(m => !window[m]),
     story: !!window.FinkInkEngine.story,
+    typedBlocks: Array.isArray(window.FinkSandbox.lastBlocks)
+      && window.FinkSandbox.lastBlocks.length > 0
+      && window.FinkSandbox.lastBlocks.every(b => b.mediaType && typeof b.raw === 'string'),
   }));
   boot.modules.length === 0 && boot.story
     ? pass('boot: all modules present, TOC compiled')
     : fail(`boot: missing ${boot.modules.join(',')} story=${boot.story}`);
+  boot.typedBlocks
+    ? pass('sandbox: typed blocks captured alongside legacy data')
+    : fail('sandbox: lastBlocks missing or malformed');
   await page.screenshot({ path: join(shots, '1-toc.png') }).catch(() => {});
   await page.waitForTimeout(2500);   // listeners attach after first render
 

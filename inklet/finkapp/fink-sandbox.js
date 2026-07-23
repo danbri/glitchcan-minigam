@@ -7,6 +7,17 @@ window.FinkSandbox = {
     activeMessageHandler: null,
     loadedCount: 0,  // Track successful FINK loads for stats
 
+    // Typed sigil registry (v1): every registered tagged-template name
+    // captures a typed block. oooOO -> text/x-ink is the ONE default;
+    // hosts may register more. OO('media/type') is always available as
+    // the unregistered escape hatch. Capture stays RAW (strings.raw) —
+    // tag-URL \/-escaping depends on it. See packages/gcfink.
+    sigils: { oooOO: 'text/x-ink' },
+    lastBlocks: null,   // typed blocks from the most recent load
+    registerSigil(name, mediaType) {
+        if (/^[A-Za-z_$][\w$]*$/.test(name)) this.sigils[name] = String(mediaType);
+    },
+
     // Duplicate load prevention: track recently loaded URLs with timestamps
     recentLoads: new Map(),
     DUPLICATE_LOAD_WINDOW_MS: 5000,  // 5 second window for duplicate detection
@@ -139,6 +150,7 @@ window.FinkSandbox = {
                     case 'fink-loaded':
                         FinkUtils.debugLog('FINK loaded - data blocks: ' + (data.data ? data.data.length : 0));
                         clearTimeout(this.sandboxTimeout);
+                        this.lastBlocks = Array.isArray(data.blocks) ? data.blocks : null;
                         if (data.data && data.data.length > 0) {
                             // Use only the first oooOO block (matches working hamfink2026 behavior)
                             const finkContent = data.data[0];
@@ -172,21 +184,29 @@ window.FinkSandbox = {
 <body>
 <script>
 window.finkData = [];
+window.finkBlocks = [];
 
-function oooOO(strings) {
-    const content = (typeof strings === 'object' && strings.raw)
-        ? strings.raw.join('')
-        : String(strings);
-    window.finkData.push(content);
-    return content;
+var FINK_SIGILS = ${JSON.stringify(this.sigils)};
+
+function finkCapture(sigil, mediaType) {
+    return function (strings) {
+        const content = (typeof strings === 'object' && strings.raw)
+            ? strings.raw.join('')
+            : String(strings);
+        window.finkBlocks.push({ sigil: sigil, mediaType: mediaType, raw: content });
+        if (mediaType === 'text/x-ink') window.finkData.push(content);
+        return content;
+    };
 }
+for (var sigilName in FINK_SIGILS) window[sigilName] = finkCapture(sigilName, FINK_SIGILS[sigilName]);
+window.OO = function (mediaType) { return finkCapture('OO', String(mediaType || 'text/plain')); };
 
 // Set up message listener FIRST (before posting sandbox-ready)
 window.addEventListener('message', function(e) {
     if (e.data && e.data.type === 'exec-script') {
         try {
             (new Function(e.data.content))();
-            parent.postMessage({ type: 'fink-loaded', data: window.finkData }, '*');
+            parent.postMessage({ type: 'fink-loaded', data: window.finkData, blocks: window.finkBlocks }, '*');
         } catch (err) {
             parent.postMessage({ type: 'fink-error', error: 'Execution error: ' + err.message }, '*');
         }
