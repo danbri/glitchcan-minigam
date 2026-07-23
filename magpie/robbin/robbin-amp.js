@@ -1309,33 +1309,60 @@ export class RobbAmp {
       c => P.buriedAmmonite.call(null, c, 0, 0),
       c => P.buriedPteroBike.call(null, c, 0, -8),
     ];
-    const hOf = it => it.wonder !== undefined ? (it.wonder === 1 || it.wonder === 5 ? 190 : 160) : 76;
-    const total = ROLL.reduce((a, it) => a + hOf(it), 0);
+    // long lines WRAP on their · seams instead of shrinking away —
+    // a narrow portrait window gets more lines, never smaller type
+    const namePx = Math.max(15, Math.min(21, W2 * 0.05));
+    const rolePx = Math.max(12, Math.min(15, W2 * 0.037));
+    const maxW = W2 - 24;
+    const linesOf = name => {
+      ctx.font = `bold ${namePx}px Georgia, serif`;
+      if (ctx.measureText(name).width <= maxW) return [name];
+      const lines = [];
+      let cur = '';
+      for (const part of String(name).split(' · ')) {
+        const trial = cur ? cur + ' · ' + part : part;
+        if (cur && ctx.measureText(trial).width > maxW) { lines.push(cur); cur = part; }
+        else cur = trial;
+      }
+      if (cur) lines.push(cur);
+      return lines;
+    };
+    const lay = ROLL.map(it => {
+      if (it.wonder !== undefined) return { it, h: it.wonder === 1 || it.wonder === 5 ? 190 : 160 };
+      const lines = linesOf(it.name);
+      return { it, lines, h: (it.role ? rolePx + 10 : 0) + lines.length * (namePx + 8) + 28 };
+    });
+    const total = lay.reduce((a, l) => a + l.h, 0);
     this.creditScroll = (this.creditScroll || 0) + (0.4 + mids * 1.3);
     let y = H2 + 20 - (this.creditScroll % (total + H2 + 40));
     if (kick) this.credHot = 1;
     this.credHot = Math.max(0, (this.credHot || 0) - 0.03);
-    for (const it of ROLL) {
-      const hh = hOf(it);
-      const cy = y + hh / 2;
+    for (const L of lay) {
+      const it = L.it, hh = L.h;
+      const yTop = y, cy = y + hh / 2;
       y += hh;
       if (cy < -hh || cy > H2 + hh) continue;
       const shim = Math.sin(t * 9 + cy * 0.05) * treble * 3;   // treble shimmer
       ctx.textAlign = 'center';
       if (it.role !== undefined) {
+        let ty = yTop + 10;
         if (it.role) {
           ctx.fillStyle = '#b9a67f';
-          ctx.font = 'bold 13px Georgia, serif';
-          ctx.fillText(it.role, W2 / 2 + shim, cy - 13);
+          ctx.font = `bold ${rolePx}px Georgia, serif`;
+          ctx.fillText(it.role, W2 / 2 + shim, ty + rolePx);
+          ty += rolePx + 10;
         }
         ctx.fillStyle = this.credHot > 0.6 ? `hsl(${(t * 160) % 360}, 85%, 78%)` : '#ecdfc2';
-        let fpx = 20;                          // long names shrink to fit
-        ctx.font = `bold ${fpx}px Georgia, serif`;
-        while (fpx > 11 && ctx.measureText(it.name).width > W2 - 18) {
-          fpx -= 1;
+        for (const line of L.lines) {
+          let fpx = namePx;                    // a lone over-long line still bends
           ctx.font = `bold ${fpx}px Georgia, serif`;
+          while (fpx > 12 && ctx.measureText(line).width > maxW) {
+            fpx -= 1;
+            ctx.font = `bold ${fpx}px Georgia, serif`;
+          }
+          ctx.fillText(line, W2 / 2 - shim, ty + fpx);
+          ty += namePx + 8;
         }
-        ctx.fillText(it.name, W2 / 2 - shim, cy + 12);
       } else {
         ctx.save();
         ctx.translate(W2 / 2, cy - 14);

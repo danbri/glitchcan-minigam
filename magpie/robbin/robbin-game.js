@@ -1088,7 +1088,7 @@ class Game {
       if (this.pinch && this.touches.size >= 2) {
         const [a, b] = [...this.touches.values()];
         const d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1;
-        this.tube.mapZoom = Math.max(0.55, Math.min(2.8, this.pinch.z0 * (d / this.pinch.d0)));
+        this.tube.mapZoom = Math.max(this.tube.fitZoom(), Math.min(2.8, this.pinch.z0 * (d / this.pinch.d0)));
         return;
       }
       if (!this.gesture || this.gesture.used) return;
@@ -1109,7 +1109,7 @@ class Game {
     this.canvas.addEventListener('wheel', e => {
       if (this.state !== 'tube' || this.tube.interior || this.tube.travel) return;
       e.preventDefault();
-      this.tube.mapZoom = Math.max(0.55, Math.min(2.8,
+      this.tube.mapZoom = Math.max(this.tube.fitZoom(), Math.min(2.8,
         (this.tube.mapZoom || 1) * Math.exp(-e.deltaY * 0.0012)));
     }, { passive: false });
 

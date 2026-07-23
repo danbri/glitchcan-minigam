@@ -24,6 +24,17 @@ const POS = NETWORK.pos;
 // their lifts never break and their escalators all run your way — unless
 // TfL's own lift-disruption feed said otherwise on the day of the bake
 const STEP_FREE = new Set(NETWORK.stepFree);
+// the whole city in design units — the far edge of the zoom-out
+const BOUNDS = (() => {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const p of Object.values(POS)) {
+    if (p[0] < x0) x0 = p[0];
+    if (p[0] > x1) x1 = p[0];
+    if (p[1] < y0) y0 = p[1];
+    if (p[1] > y1) y1 = p[1];
+  }
+  return { x0, y0, x1, y1 };
+})();
 
 // the scattered flock, in rescue order (first hop is a gentle same-line
 // trip). Every bird has a little story; every rescue is a small reunion.
@@ -701,6 +712,25 @@ export class TubeFlock {
   // the band between the masthead and the touch controls, so the map
   // owns the space the thumbs and words don't.
   mapScale() { return (Math.min(this.g.cssW, this.g.cssH) / 26) * (this.mapZoom || 1); }
+  // fully zoomed out means the WHOLE network on screen: the pinch floor
+  // is wherever London fits the view band, a little margin included
+  fitZoom() {
+    const g = this.g, { top, bot } = this.viewBand();
+    const base = Math.min(g.cssW, g.cssH) / 26, m = 1.4;
+    return Math.min(
+      g.cssW / ((BOUNDS.x1 - BOUNDS.x0 + m * 2) * base),
+      Math.max(40, g.cssH - top - bot) / ((BOUNDS.y1 - BOUNDS.y0 + m * 2) * base));
+  }
+  // once the player leans out, keep the view on the city — and when the
+  // viewport outgrows the city, centre it, so the far zoom shows it all
+  clampCam() {
+    const s = this.mapScale(), g = this.g, { top, bot, cy } = this.viewBand();
+    const m = 1.4, hw = g.cssW / 2 / s;
+    const hTop = (cy - top) / s, hBot = (g.cssH - bot - cy) / s;
+    const cl = (v, lo, hi) => lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v));
+    this.cam[0] = cl(this.cam[0], BOUNDS.x0 - m + hw, BOUNDS.x1 + m - hw);
+    this.cam[1] = cl(this.cam[1], BOUNDS.y0 - m + hTop, BOUNDS.y1 + m - hBot);
+  }
   viewBand() {
     const g = this.g, w = g.cssW, h = g.cssH;
     const fs = Math.max(17, Math.min(24, w / 22));
@@ -1589,6 +1619,7 @@ export class TubeFlock {
     const ease = 1 - Math.exp(-dt * 3);
     this.cam[0] += (p[0] - this.cam[0]) * ease;
     this.cam[1] += (p[1] - this.cam[1]) * ease;
+    if ((this.mapZoom || 1) < 0.999) this.clampCam();
     const [lx, ly] = this.toScreen(p);
     flockStep(this.flock, dt, lx, ly - 14, t, 0.85);
   }
