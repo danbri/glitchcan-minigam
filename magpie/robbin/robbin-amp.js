@@ -903,17 +903,20 @@ export class RobbAmp {
     this.trainOff = (this.trainOff || 0) + (0.4 + mids * 2.6);
     ctx.fillStyle = '#14120e';
     ctx.fillRect(0, 0, W2, H2);
+    // in a tall portrait fullscreen the journey must not scatter: sky,
+    // skylines, viaduct and train all hang off one bottom-weighted box
+    const boxH = Math.min(H2, W2 * 1.15), yOff = (H2 - boxH) * 0.6;
     // stars twinkle with the treble; the moon is paper
     for (let i = 0; i < 26; i++) {
-      const sx2 = ((i * 149 + 31) % W2), sy = ((i * 83 + 11) % Math.round(H2 * 0.5));
+      const sx2 = ((i * 149 + 31) % W2), sy = ((i * 83 + 11) % Math.round(yOff + boxH * 0.5));
       const tw = 0.25 + 0.6 * Math.abs(Math.sin(t * (1 + (i % 5) * 0.6) + i)) * (0.4 + treble);
       ctx.fillStyle = `rgba(242,236,221,${Math.min(0.9, tw)})`;
       ctx.fillRect(sx2, sy, 2, 2);
     }
     ctx.fillStyle = 'rgba(242,236,221,0.85)';
-    ctx.beginPath(); ctx.arc(W2 * 0.78, H2 * 0.2, H2 * 0.1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(W2 * 0.78, yOff + boxH * 0.2, boxH * 0.1, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#14120e';
-    ctx.beginPath(); ctx.arc(W2 * 0.81, H2 * 0.185, H2 * 0.085, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(W2 * 0.81, yOff + boxH * 0.185, boxH * 0.085, 0, Math.PI * 2); ctx.fill();
     // two skylines in parallax — domes and towers of the whole journey
     const skyline = (speed, base, colour, seedMul) => {
       ctx.fillStyle = colour;
@@ -944,17 +947,19 @@ export class RobbAmp {
         }
       }
     };
-    skyline(0.35, H2 * 0.62, '#241f19', 1);
-    skyline(0.7, H2 * 0.74, '#2f2820', 7);
+    skyline(0.35, yOff + boxH * 0.62, '#241f19', 1);
+    skyline(0.7, yOff + boxH * 0.74, '#2f2820', 7);
     // the viaduct the night train runs on
-    const vy = H2 * 0.86;
+    const vy = yOff + boxH * 0.86;
     ctx.fillStyle = '#3a2f24';
     ctx.fillRect(0, vy, W2, H2 - vy);
     ctx.fillStyle = '#14120e';
+    const archY = Math.min(H2, vy + boxH * 0.14);
+    if (archY < H2) ctx.fillRect(0, archY, W2, H2 - archY);
     const aoff = this.trainOff % 44;
     for (let x = -44; x < W2 + 44; x += 44) {
       ctx.beginPath();
-      ctx.arc(x - aoff + 22, H2 + 2, 16, Math.PI, 0);
+      ctx.arc(x - aoff + 22, archY + 2, 16, Math.PI, 0);
       ctx.fill();
     }
     // the train itself: engine + three carriages, windows ARE the bands
