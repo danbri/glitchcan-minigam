@@ -1029,6 +1029,7 @@ class Game {
       if (e.key === 'Enter') {
         if (this.creditsOpen()) { this.hideCredits(); return; }
         if (this.optionsOpen()) { this.hideOptions(); return; }
+        if (this.quitAsk) { this.pilotQuit(); return; }
         if (this.state === 'tube' && this.tube.quitConfirm) { this.tube.exit(); return; }   // Enter answers QUIT
         if (this.state === 'tube' && this.tube.dismissFact()) return;
         this.pressStart(); return;
@@ -1044,6 +1045,10 @@ class Game {
           this.tube.requestQuit(); return;       // the map asks before quitting
         }
         if (this.state === 'gameover') { this.backToMenu(); return; }
+        if (this.state === 'play' || this.state === 'paused') {
+          if (this.quitAsk) { this.cancelPilotQuit(); return; }
+          this.askPilotQuit(); return;
+        }
         return;
       }
       if (e.key === 'p' || e.key === 'P') { this.togglePause(); return; }
@@ -1127,6 +1132,17 @@ class Game {
         if (k >= 0) { (this.amp ??= new RobbAmp(this)).open(this.jukebox.list[k].slug); return; }
       }
       if (this.state === 'tube' && this.tube.over) { this.tube.handleJump(); return; }
+      if (this.state === 'play' || this.state === 'paused') {
+        if (this.quitAsk) {
+          const r = this.pilotQuitDialogRects();
+          const inb = b => e.clientX >= b.x && e.clientX <= b.x + b.w && e.clientY >= b.y && e.clientY <= b.y + b.h;
+          if (inb(r.quit)) { this.pilotQuit(); return; }
+          this.cancelPilotQuit(); return;
+        }
+        const r = this.pilotQuitRect();
+        if (e.clientX >= r.x - 6 && e.clientX <= r.x + r.w + 6
+          && e.clientY >= r.y - 6 && e.clientY <= r.y + r.h + 6) { this.askPilotQuit(); return; }
+      }
       // flick gestures on the play field (glide mode + tube travel)
       this.gesture = { x: e.clientX, y: e.clientY, used: false };
     });
@@ -1460,6 +1476,7 @@ class Game {
     if (this.state === 'paused') this.state = 'play';
   }
   togglePause() {
+    if (this.quitAsk) return;   // the question holds the floor
     if (this.state === 'play') this.state = 'paused';
     else if (this.state === 'paused') this.state = 'play';
   }
@@ -2120,7 +2137,81 @@ class Game {
         });
       }
     }
+    // ⏏ QUIT rides under the HUD bar in the arcade — same learned
+    // corner as the tube's, and it asks first too
+    if (this.state === 'play' || this.state === 'paused') {
+      const r = this.pilotQuitRect();
+      ctx.fillStyle = 'rgba(247,242,230,0.92)';
+      ctx.strokeStyle = PALETTE.ink;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = PALETTE.ink;
+      ctx.font = `bold ${r.h * 0.5}px Georgia, serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('⏏ QUIT', r.x + r.w / 2, r.y + r.h * 0.66);
+      if (this.quitAsk) this.drawPilotQuitDialog(ctx);
+    }
     ctx.restore();
+  }
+  pilotQuitRect() {
+    const hudH = Math.max(38, Math.min(52, this.cssH * 0.07));
+    const fs = Math.max(14, Math.min(19, this.cssW / 30));
+    return { x: this.cssW - fs * 3.6 - 8, y: hudH + 8, w: fs * 3.6, h: fs * 1.5 };
+  }
+  pilotQuitDialogRects() {
+    const w = this.cssW, h = this.cssH;
+    const fs = Math.max(17, Math.min(24, w / 22));
+    const cw = Math.min(w - 40, 420), chh = fs * 6.2;
+    const cx = (w - cw) / 2, cy = (h - chh) / 2 - fs;
+    return { fs, card: { x: cx, y: cy, w: cw, h: chh },
+      keep: { x: cx + cw * 0.07, y: cy + chh - fs * 2.2, w: cw * 0.5, h: fs * 1.6 },
+      quit: { x: cx + cw * 0.62, y: cy + chh - fs * 2.2, w: cw * 0.31, h: fs * 1.6 } };
+  }
+  drawPilotQuitDialog(ctx) {
+    const r = this.pilotQuitDialogRects(), fs = r.fs;
+    ctx.fillStyle = 'rgba(242,236,221,0.88)';
+    ctx.fillRect(0, 0, this.cssW, this.cssH);
+    ctx.fillStyle = 'rgba(247,242,230,0.98)';
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(r.card.x, r.card.y, r.card.w, r.card.h, 12); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = PALETTE.ink;
+    ctx.textAlign = 'center';
+    ctx.font = `bold ${fs * 0.95}px Georgia, serif`;
+    ctx.fillText('QUIT THE PILOT?', r.card.x + r.card.w / 2, r.card.y + fs * 1.45);
+    ctx.font = `italic ${fs * 0.62}px Georgia, serif`;
+    ctx.globalAlpha = 0.85;
+    ctx.fillText('the score will be lost — only the high score stays', r.card.x + r.card.w / 2, r.card.y + fs * 2.6);
+    ctx.globalAlpha = 1;
+    // KEEP PLAYING is the big warm default; QUIT is quiet and outlined
+    ctx.fillStyle = PALETTE.platform;
+    ctx.beginPath(); ctx.roundRect(r.keep.x, r.keep.y, r.keep.w, r.keep.h, 8); ctx.fill();
+    ctx.fillStyle = PALETTE.paper;
+    ctx.font = `bold ${fs * 0.62}px Georgia, serif`;
+    ctx.fillText('KEEP PLAYING', r.keep.x + r.keep.w / 2, r.keep.y + r.keep.h * 0.65);
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.roundRect(r.quit.x, r.quit.y, r.quit.w, r.quit.h, 8); ctx.stroke();
+    ctx.fillStyle = PALETTE.ink;
+    ctx.fillText('QUIT', r.quit.x + r.quit.w / 2, r.quit.y + r.quit.h * 0.65);
+  }
+  askPilotQuit() {
+    if (this.quitAsk) return;
+    this.quitAsk = true;
+    if (this.state === 'play') this.state = 'paused';
+    this.haptics.tick();
+    this.say('Quit to the menu? The score will be lost; the high score stays. Enter or QUIT leaves, Escape keeps playing.');
+  }
+  cancelPilotQuit() {
+    this.quitAsk = false;
+    this.state = 'play';
+    this.say('Playing on.');
+  }
+  pilotQuit() {
+    this.quitAsk = false;
+    this.music.setIntensity(0.4);
+    this.backToMenu();
+    this.say('Back at the menu.');
   }
 }
 
