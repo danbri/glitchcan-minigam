@@ -1,0 +1,112 @@
+---
+name: fink
+description: FINK base data platform — the .fink.js polyglot file format, sigil extraction (oooOO/OO), ink compilation, tag grammar, sandbox loading, navigation links, minigame SDK, and validation/QA recipes. Use when writing or changing platform code (packages/gcfink, inklet/finkapp, inklet/minigames), validating story files, or debugging loading/compilation. NOT for story/game content authoring — that is the glitchcanary skill.
+---
+
+# FINK platform skill
+
+The platform is mechanisms only. Story names, track titles, station names,
+splash copy: none of it belongs in platform code (destined for NPM). If a
+change needs a story fact, it goes through config, a manifest, or a typed
+content block.
+
+## The file format (load-bearing facts)
+
+- `.fink.js` files are **JavaScript, not text**. Content is captured by
+  tagged template literals ("sigils") executed in a sandbox. NEVER parse
+  them with regex/string ops (CLAUDE.md: NO HACKPARSING).
+- `oooOO` is the default sigil → `text/x-ink`. The typed model and the
+  curried escape hatch `OO('media/type')` live in
+  `packages/gcfink/src/lib/sigils.js`.
+- **Capture is RAW** (`strings.raw`) everywhere — browser sandbox
+  (`inklet/finkapp/fink-sandbox.js:176-178`) and gcfink alike. This is
+  load-bearing: tag URLs escape `//` as `\/\/`, and only raw capture
+  preserves the backslashes.
+
+## The `//` tag truncation bug (verified empirically)
+
+The ink compiler treats `//` as a comment even inside `# TAG: value`:
+- `# FINK: https://x` compiles to tag `FINK: https:` — and then
+  `new URL('https:', currentStoryUrl)` resolves to the CURRENT story, so
+  the failure mode is a silent self-reload.
+- Escaped `# FINK: https:\/\/x` compiles to the full URL. Relative paths
+  are always safe.
+- Regression-locked in `packages/gcfink/test/inkCompile.real.test.js`;
+  lint via `lintTagUrls` in gcfink. Author guidance: `inklet/INK-GOTCHAS.md`.
+
+## Sandbox rules (SECURITY-CRITICAL — CLAUDE.md)
+
+- Do not casually modify `fink-sandbox.js`. `'\n'` vs `'\\n'` broke story
+  loading once (silent "Loading..." hang). After ANY sandbox/player change
+  run the mandatory test: TOC loads → Episodes → Hampstead plays, no
+  console errors.
+- Loader flow: fetch text in parent → execute in throwaway
+  `<iframe sandbox="allow-scripts">` srcdoc defining `oooOO` → postMessage
+  back → currently uses data[0] (first block only).
+
+## Platform contract warts (v1 reality, documented for v2 cleanup)
+
+- `fink-ink-engine.js:100` unconditionally appends a private
+  `=== _inventory ===` knot (declaring diamonds/mega_diamonds/keys/score
+  if absent) to EVERY story. Stories divert to it
+  (world-between-worlds.fink.js), so standalone validators must stub it:
+  append `\n=== _inventory ===\nstub.\n-> END\n` when `-> _inventory`
+  appears. The injected knot also contains a story link
+  (world-between-worlds) — a known content leak.
+- Other known leaks: `fink-config.js` (DEFAULT_FINK_FILE, LOCAL_FINKS,
+  absolute /glitchcan-minigam/ paths), minigame registry + splash copy in
+  `fink-minigames.js:26-37`, chess's `../../thumbwar/minichess.html`.
+
+## Minigame SDK
+
+- Two systems: the LIVE path is `fink-minigames.js` (ad-hoc, hardcoded
+  registry `iframeMinigames`, loads `../minigames/<type>/index.html` into
+  a sandboxed iframe). The DESIGNED path is `inklet/minigames/`
+  (`MinigameHost` + guest `minigame-sdk.js` + per-game manifest.json with
+  variables.read/write allowlists) — loaded but not yet routed.
+- postMessage protocol (both): host→guest `init {config,variables}`,
+  `pause`, `resume`, `terminate`, `key`; guest→host `ready`, `progress`,
+  `set-variable`, `complete {result}`, `error`. Minigames cannot divert
+  Ink; they mutate variables and the host resumes via
+  `FinkInkEngine.continueStory()`.
+- Tag grammar: `# MINIGAME: <name> [mode=x] [controls=dpad|lite|none]`
+  parsed at `fink-ink-engine.js:314-333`; the Continue loop BREAKS on
+  MINIGAME/FINK tags.
+- Sandboxed iframes have an OPAQUE ORIGIN: guest ES-module imports and
+  fetches need CORS. GitHub Pages sends `Access-Control-Allow-Origin: *`;
+  plain `python3 -m http.server` does NOT — local harnesses need a
+  CORS-enabled server.
+
+## Navigation / links
+
+- Two-part hash links: `#<urlHash8>-<knotHash9>`, SHA-256 with salt
+  `glitchcan-fink-v2` (v1 kept as legacy fallback). Spec:
+  `docs/fink-linking-spec.md`. Public knots = not `_`-prefixed;
+  `# PUBLIC:` marks respawn entry points.
+
+## Validation & QA recipes
+
+- Unit + corpus: `cd packages/gcfink && npm test` (zero-dep runner; corpus
+  test extracts + real-compiles every `inklet/**/*.fink.js`).
+- Story validator: `node inklet/validation/checkfink.mjs` (`--scan`; no
+  `--report` flag exists).
+- Headless browser: Playwright with
+  `executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`,
+  args `['--no-sandbox']`. Serve the PARENT of the repo dir so absolute
+  `/glitchcan-minigam/...` paths resolve:
+  `python3 -m http.server 8091 --directory /home/user` →
+  `http://127.0.0.1:8091/glitchcan-minigam/inklet/finkapp/`.
+  Boot check: all of FinkPlayer/FinkInkEngine/FinkSandbox/FinkNavigation/
+  FinkMinigames/FinkAudio/FinkFoley/MinigameHost on window, and
+  `FinkInkEngine.compiledCount >= 1`.
+- Local servers die on worker restarts — always curl-check and restart
+  with `(setsid nohup python3 -m http.server ... &)`.
+
+## Audio (current state)
+
+- `FinkAudio`: single looping bg track, crossfade, no playlist, no mute
+  UI. `FinkFoley`: procedural layers; shares FinkAudio's context when
+  present. Known bugs: `fink-slider.js` references `FinkFoley.ctx` (real
+  name `.context`) so snap sounds are dead; gems spawns a throwaway
+  AudioContext per sound. The richer architecture to migrate toward is
+  magpie/robbin's jukebox model (single owner element + bus + views).
