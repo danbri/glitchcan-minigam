@@ -525,11 +525,11 @@ export class TubeFlock {
     const [x, y] = this.toXY(this.cur);
     this.flock = [{ sp: 'robin', x, y, ph: 0 }];
     this.updateMusic();
-    this.g.say(`Tubular Smells — a cosy journey, no clock, no fail state. You are at ${this.cur}. ${this.describeStation()}`);
+    this.g.say(`Up the Junction — a cosy journey, no clock, no fail state. You are at ${this.cur}. ${this.describeStation()}`);
   }
   // the band assembles as the flock does: washes for one bird, full song
   // for the whole family
-  // the recorded score rules Tubular Smells when it can load: THE QUIET
+  // the recorded score rules Up the Junction when it can load: THE QUIET
   // ENGINES on the map, GEARS AND BIRDCALLS inside the stations, THE
   // INEXORABLE PASSACAGLIA for the flight home. The chiptune band steps
   // back — and steps straight back in if the tracks can't be fetched
@@ -1087,12 +1087,12 @@ export class TubeFlock {
         home: 'LIVERPOOL STREET',
       };
       this.arriveT = 6;
-      this.arriveMsg = '♥ THE FLOCK IS WHOLE ♥';
+      this.arriveMsg = 'UNFLOCKABLE…';
       this.swellMusic();
       g.haptics.chord();
       g.say(this.objective
         ? `${it.rescue.name} makes ${this.roster.length} — enough to fly home together. The flock wheels home across London.`
-        : `${it.rescue.name} joins and the flock is whole. The flock wheels home across London.`);
+        : `${it.rescue.name} joins — the flock is unflockable now. It wheels home across London.`);
     } else {
       g.say(`Surfaced at ${this.cur} — back on the map. ${this.describeStation()}`);
     }
@@ -1118,7 +1118,7 @@ export class TubeFlock {
       home: 'LIVERPOOL STREET',
     };
     this.arriveT = 6;
-    this.arriveMsg = '♥ THE FLOCK IS WHOLE ♥';
+    this.arriveMsg = 'UNFLOCKABLE…';
     this.swellMusic();
     g.haptics.chord();
     g.say('Preview: the whole flock wheels home across London.');
@@ -1476,7 +1476,7 @@ export class TubeFlock {
         this.arriveT = 3;
         this.arriveMsg = this.objective
           ? `♥ ${it.rescue.name} joins the flock ♥`
-          : '♥ THE FLOCK IS WHOLE ♥';
+          : 'UNFLOCKABLE…';
         it.celebrate = { x: px, y: py - 30, t: 2.2 };
         g.fx.push({ x: px, y: py - 60, txt: `♥ ${it.rescue.name}! ♥`, t: 2.2 });
         g.hearts(px, py - 20, 10);
@@ -1592,7 +1592,7 @@ export class TubeFlock {
         // the journey's own postcard: what this flock actually did
         this.factCard = {
           title: 'HOME TO ROOST',
-          station: 'THE FLOCK IS WHOLE',
+          station: 'UNFLOCKABLE',
           fact: `${this.roster.length} birds fly home together — ${this.stats.stops} stops flown, `
             + `${this.stats.visited.size} stations seen`
             + `${this.stats.objects ? `, ${this.stats.objects} lost thing${this.stats.objects === 1 ? '' : 's'} found` : ''}, `
@@ -1973,7 +1973,7 @@ export class TubeFlock {
     ctx.textAlign = 'left';
     ctx.globalAlpha = 0.7;
     ctx.font = `bold ${fs * 0.6}px Georgia, serif`;
-    const mast = `TUBULAR SMELLS · FLOCK ${this.roster.length}/${this.finaleDone ? LOST.length + 1 : 7} · SCORE ${this.score} · ${this.clockText()}`;
+    const mast = `UP THE JUNCTION · FLOCK ${this.roster.length}/${this.finaleDone ? LOST.length + 1 : 7} · SCORE ${this.score} · ${this.clockText()}`;
     ctx.fillText(mast, 12, fs * 0.95);
     this.drawClock(ctx, 12 + ctx.measureText(mast).width + fs * 0.75, fs * 0.72, fs * 0.5);
     ctx.globalAlpha = 1;
@@ -2040,7 +2040,7 @@ export class TubeFlock {
       ctx.globalAlpha = 1;
     } else {
       ctx.fillStyle = PALETTE.platform;
-      this.fitText(ctx, '♥ fly together as long as you like — the flock is whole ♥', valX, fs * 3.55, w - valX - fs * 3.7, fs * 0.95);
+      this.fitText(ctx, 'fly together as long as you like — unflockable', valX, fs * 3.55, w - valX - fs * 3.7, fs * 0.95);
       ctx.fillStyle = PALETTE.ink;
     }
     if (primer) {

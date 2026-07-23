@@ -8,9 +8,9 @@ platforms (and eat the grain if you don't get there first).
 **Play:** `robbin.html` · **Sprite proofs (dev):** `sprites.html`
 
 Two episodes from the title screen: **ROBBIN: PILOT EPISODE** — the
-Flight Line arcade below — and **ROBBIN: TUBULAR SMELLS** — the
+Flight Line arcade below — and **ROBBIN: UP THE JUNCTION** — the
 flock-growing Underground journey (the most developed of the two).
-The mood Tubular Smells aims for is distilled from the reception of
+The mood Up the Junction aims for is distilled from the reception of
 *Gathering Sky* — see **`MOOD.md`** for the north star and the
 standing tuning principles (no fail state, music first, sparse
 surface, the flock is the protagonist, the ending must land).
@@ -136,7 +136,7 @@ stops on game over, and toggles with **M** or the speaker button
     easy: **tap your opposite to brake dead** (tap again to set off the
     other way), or tap the **■ centre of the pad**.
 
-## ROBBIN: TUBULAR SMELLS (TUBE FLOCK)
+## ROBBIN: UP THE JUNCTION (TUBE FLOCK)
 
 **The loop, in one breath:** the map names a lost bird and its
 station; fly your line stop by stop toward it; **GO is the only way
@@ -323,7 +323,7 @@ found: +250, a word from the announcer, and the HOME TO ROOST card
 counts your lost-property record. The station narration tips you off
 ("Lost property: somebody dropped a teddy bear on −1 · ticket
 hall"). Never required, always worth the detour.
-Tubular Smells' score comes in two forms, toggled from the menu
+Up the Junction' score comes in two forms, toggled from the menu
 (SCORE: TAPE / MIDI). **TAPE (the default) is the recordings
 themselves**, decoded into buffers, looped and crossfaded by mood.
 The files are lean 64 kbps MP3s (~6.8 MB the set) and each is only
@@ -465,7 +465,7 @@ Separate hi-score.
   outages); interiors announce their levels, broken facilities and
   exits on entry, then each level as you land on it, plus rescues,
   boardings, surfacings and glitch-grabs. The Pilot announces
-  screens, deaths, clears and game over. TUBULAR SMELLS — turn-based
+  screens, deaths, clears and game over. UP THE JUNCTION — turn-based
   map navigation, no clock, no fail state — is genuinely playable
   this way; the interiors are navigable with patience; the arcade
   Pilot remains reflex-driven and is narrated but not equivalent.

@@ -1,6 +1,6 @@
 # The mood we are after — notes from Gathering Sky's reception
 
-TUBULAR SMELLS is inspired by *Gathering Sky* (A Stately Frog, 2015):
+UP THE JUNCTION is inspired by *Gathering Sky* (A Stately Frog, 2015):
 a wordless, ~45-minute experience of guiding a flock of birds across
 the sky, with an orchestral score performed by the San Francisco
 Conservatory of Music. These notes distil what its reviewers said the
@@ -36,7 +36,7 @@ our own words; short phrases quoted from the cited reviews.)
 - **Honest brevity.** Short, and better for it; "finishing in an hour
   seems like a poor choice" — dawdling is the intended pace.
 
-## How TUBULAR SMELLS lines up
+## How UP THE JUNCTION lines up
 
 Already aligned: no clock, no lives, no fail state; brushing a
 commuter is a flutter, not a death; the flock swirls boids-fashion
@@ -47,7 +47,7 @@ comedy, not punishment.
 
 Standing tuning principles, from the list above:
 
-1. **Never add a fail state to Tubular Smells.** Weather, yes;
+1. **Never add a fail state to Up the Junction.** Weather, yes;
    losing, no.
 2. **Emotion belongs in the music first.** New moments should get an
    audio gesture before they get UI.

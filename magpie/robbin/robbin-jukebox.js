@@ -132,7 +132,7 @@ export class RobbinJukebox extends HTMLElement {
     this.kickAudio();
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: tr.label, artist: 'ROBBIN · TUBULAR SMELLS', album: 'ROBBAMP',
+        title: tr.label, artist: 'ROBBIN · UP THE JUNCTION', album: 'ROBBAMP',
       });
     }
     this.emit('jukebox-track', { index: k, track: tr });
