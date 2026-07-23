@@ -86,6 +86,12 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
 
 ## Validation & QA recipes
 
+- Player E2E (the mandatory journey, automated):
+  `node inklet/finkapp/test/e2e.mjs` — self-serving, asserts boot → TOC
+  compiled → Episodes → Hampstead loads (compiledCount 2) → two story
+  beats → zero page errors. UI buttons render BEFORE their listeners
+  attach: always settle ~700ms before clicking, and prefer
+  waitForFunction over sleeps.
 - Unit + corpus: `cd packages/gcfink && npm test` (zero-dep runner; corpus
   test extracts + real-compiles every `inklet/**/*.fink.js`).
 - Story validator: `node inklet/validation/checkfink.mjs` (`--scan`; no
