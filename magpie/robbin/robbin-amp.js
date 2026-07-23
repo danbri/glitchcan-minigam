@@ -5,7 +5,7 @@
 // the Soundtrack's bus so the master mute rules it like everything
 // else.
 //
-// EIGHT visualizer looks, all in the game's own lino language — tap
+// SEVENTEEN visualizer looks (this.MODES below is canonical) — tap
 // the visuals to change, ⛶ for fullscreen (a fixed overlay, so it
 // works on iPhones where the Fullscreen API doesn't):
 //   THE DIG      the buried wonders breathing bass under a fence of
@@ -108,7 +108,8 @@ export class RobbAmp {
     this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.MODES = ['THE DIG', 'MURMURATION', 'STRATA CORE', 'ROUNDABOUT', 'THE WIRE',
       'GOLDFEATHER', 'ATTIC 1984', 'NIGHT TRAIN', 'A SERIES OF TUBES',
-      'GAUSSIAN SPLATS', 'AVIARY 3D', 'ROLL THE CREDITS'];
+      'GAUSSIAN SPLATS', 'AVIARY 3D', 'C-90', 'DEPARTURE BOARD', 'NIGHT MAIL',
+      'NIGHT BUS', 'TOY THEATRE', 'ROLL THE CREDITS'];
     // fresh eyes land on the dark neon network; a saved choice is kept
     const savedMode = localStorage.getItem('robbin.ampviz');
     this.mode = savedMode == null ? 8 : Math.min(this.MODES.length - 1, +savedMode);
@@ -337,6 +338,11 @@ export class RobbAmp {
     else if (mode === 8) this.vPipes(ctx, W2, H2, au);
     else if (mode === 9) this.vSplats(ctx, W2, H2, au);
     else if (mode === 10) this.vAviary(ctx, W2, H2, au);
+    else if (mode === 11) this.vC90(ctx, W2, H2, au);
+    else if (mode === 12) this.vBoard(ctx, W2, H2, au);
+    else if (mode === 13) this.vNightMail(ctx, W2, H2, au);
+    else if (mode === 14) this.vNightBus(ctx, W2, H2, au);
+    else if (mode === 15) this.vTheatre(ctx, W2, H2, au);
     else this.vCredits(ctx, W2, H2, au);
     if (this.modeFlash > 0) {
       this.modeFlash -= 1 / 60;
@@ -1274,7 +1280,490 @@ export class RobbAmp {
     av.r.render(av.scene, av.cam);
     ctx.drawImage(av.r.domElement, 0, 0, W2, H2);
   }
-/*
+  /*
+    C-90 — the cassette itself, honoured at last: reels at true tape
+    speed (the supply pancake visibly thins), the tape span across the
+    heads IS the oscilloscope, VU needles with real ballistics, and a
+    judder on the kick like a cheap deck with a worn belt.
+  */
+  vC90(ctx, W2, H2, au) {
+    const { bass, treble, kick, t } = au;
+    const st = this.c90 ??= { rotL: 0, rotR: 0, vuL: 0, vuR: 0, judder: 0 };
+    if (kick) st.judder = 1;
+    st.judder *= 0.82;
+    ctx.fillStyle = '#14120e';
+    ctx.fillRect(0, 0, W2, H2);
+    ctx.globalAlpha = 0.045;                       // brushed deck face
+    ctx.strokeStyle = '#f2ecdd';
+    ctx.lineWidth = 1;
+    for (let y = 3; y < H2; y += 7) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W2, y); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    const a = this.audio, dur = a?.duration || 0;
+    const p = dur ? Math.min(1, a.currentTime / dur) : 0;
+    const playing = a && !a.paused;
+    ctx.save();
+    ctx.translate((Math.random() - 0.5) * 3 * st.judder, (Math.random() - 0.5) * 2 * st.judder);
+    const cw = Math.min(W2 * 0.86, 430), ch = Math.min(H2 * 0.66, cw * 0.62);
+    const cx = W2 / 2, cy = H2 * 0.46;
+    const x0 = cx - cw / 2, y0 = cy - ch / 2;
+    ctx.fillStyle = '#221e1a';                     // the shell
+    ctx.strokeStyle = '#0c0a08';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.roundRect(x0, y0, cw, ch, 12); ctx.fill(); ctx.stroke();
+    for (const sx of [x0 + cw * 0.06, x0 + cw * 0.94]) {   // shell screws
+      ctx.fillStyle = '#0e0c0a';
+      ctx.beginPath(); ctx.arc(sx, y0 + ch * 0.9, 2.5, 0, 7); ctx.fill();
+    }
+    const lastGasp = dur && dur - a.currentTime < 10;      // side nearly over
+    ctx.fillStyle = lastGasp && Math.sin(t * 6) > 0 ? '#e8d3c4' : '#e9e2cf';
+    ctx.beginPath(); ctx.roundRect(x0 + cw * 0.06, y0 + ch * 0.07, cw * 0.88, ch * 0.30, 6); ctx.fill();
+    ctx.fillStyle = '#8a2f1d';
+    ctx.fillRect(x0 + cw * 0.06, y0 + ch * 0.07, cw * 0.88, ch * 0.055);
+    ctx.fillStyle = '#26221e';
+    ctx.textAlign = 'left';
+    ctx.font = `bold ${Math.max(9, ch * 0.07)}px Georgia, serif`;
+    ctx.fillText('SIDE A · 90 min', x0 + cw * 0.09, y0 + ch * 0.185);
+    ctx.font = `italic ${Math.max(11, ch * 0.10)}px Georgia, serif`;
+    const label = this.jb.current?.label || '';
+    let fpx = Math.max(11, ch * 0.10);
+    while (fpx > 9 && ctx.measureText(label).width > cw * 0.8) { fpx--; ctx.font = `italic ${fpx}px Georgia, serif`; }
+    ctx.fillText(label, x0 + cw * 0.09, y0 + ch * 0.31);
+    // the reels behind their window
+    const ry = y0 + ch * 0.60;
+    const hubR = ch * 0.085, tapeMax = ch * 0.20;
+    const rL = hubR + (tapeMax - hubR) * (1 - p), rR = hubR + (tapeMax - hubR) * p;
+    ctx.fillStyle = '#0e0c0a';
+    ctx.beginPath(); ctx.roundRect(cx - cw * 0.34, ry - tapeMax - 6, cw * 0.68, tapeMax * 2 + 12, 10); ctx.fill();
+    if (playing) { st.rotL += 2.6 / rL; st.rotR += 2.6 / rR; }
+    for (const [rx, rr, rot] of [[cx - cw * 0.2, rL, st.rotL], [cx + cw * 0.2, rR, st.rotR]]) {
+      ctx.fillStyle = '#33261a';                   // the tape pancake
+      ctx.beginPath(); ctx.arc(rx, ry, rr, 0, 7); ctx.fill();
+      ctx.fillStyle = '#c8c2b2';                   // hub with teeth
+      ctx.beginPath(); ctx.arc(rx, ry, hubR * 0.72, 0, 7); ctx.fill();
+      ctx.strokeStyle = '#4a453c';
+      ctx.lineWidth = 3;
+      for (let k = 0; k < 6; k++) {
+        const an = rot + k * Math.PI / 3;
+        ctx.beginPath();
+        ctx.moveTo(rx + Math.cos(an) * hubR * 0.2, ry + Math.sin(an) * hubR * 0.2);
+        ctx.lineTo(rx + Math.cos(an) * hubR * 0.62, ry + Math.sin(an) * hubR * 0.62);
+        ctx.stroke();
+      }
+    }
+    // tape run: down past the rollers, across the heads — the LIVE wire
+    const hy = y0 + ch + 14;
+    ctx.strokeStyle = '#4a3423';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - cw * 0.2 - rL, ry);
+    ctx.lineTo(cx - cw * 0.30, hy);
+    ctx.moveTo(cx + cw * 0.2 + rR, ry);
+    ctx.lineTo(cx + cw * 0.30, hy);
+    ctx.stroke();
+    ctx.strokeStyle = lastGasp ? '#c98a6a' : '#b98a2e';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    const span0 = cx - cw * 0.30, span1 = cx + cw * 0.30;
+    for (let i = 0; i <= 90; i++) {
+      const f = i / 90;
+      const w = this.wave[Math.floor(f * (this.wave.length - 1))] / 128 - 1;
+      const yy = hy + w * ch * 0.06 * (0.35 + treble * 2.2) + st.judder * (Math.random() - 0.5) * 4;
+      const xx = span0 + (span1 - span0) * f;
+      i === 0 ? ctx.moveTo(xx, yy) : ctx.lineTo(xx, yy);
+    }
+    ctx.stroke();
+    for (const rx of [span0, span1]) {             // guide rollers
+      ctx.fillStyle = '#c8c2b2';
+      ctx.beginPath(); ctx.arc(rx, hy, 4, 0, 7); ctx.fill();
+    }
+    ctx.restore();
+    // twin VU dials with needle ballistics, peak lamps going red
+    const dialR = Math.min(W2 * 0.11, H2 * 0.16);
+    for (const [side, key, tgt] of [[0, 'vuL', Math.min(1, bass * 1.7)], [1, 'vuR', Math.min(1, treble * 2.4)]]) {
+      const dx = side ? W2 - dialR - 14 : dialR + 14, dy = H2 - 12;
+      const v = st[key] += (tgt - st[key]) * (tgt > st[key] ? 0.4 : 0.09);
+      ctx.fillStyle = '#e9e2cf';
+      ctx.beginPath(); ctx.arc(dx, dy, dialR, Math.PI, 0); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#8a8272';
+      ctx.lineWidth = 1;
+      for (let k = 0; k <= 8; k++) {
+        const an = Math.PI + (k / 8) * Math.PI;
+        ctx.beginPath();
+        ctx.moveTo(dx + Math.cos(an) * dialR * 0.8, dy + Math.sin(an) * dialR * 0.8);
+        ctx.lineTo(dx + Math.cos(an) * dialR * 0.92, dy + Math.sin(an) * dialR * 0.92);
+        ctx.stroke();
+      }
+      const nan = Math.PI + (0.06 + v * 0.88) * Math.PI;
+      ctx.strokeStyle = '#26221e';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(dx, dy);
+      ctx.lineTo(dx + Math.cos(nan) * dialR * 0.85, dy + Math.sin(nan) * dialR * 0.85);
+      ctx.stroke();
+      ctx.fillStyle = v > 0.82 ? '#d94327' : '#3a3428';
+      ctx.beginPath(); ctx.arc(dx + dialR * 0.7, dy - dialR * 0.18, 3.4, 0, 7); ctx.fill();
+    }
+  }
+  /*
+    DEPARTURE BOARD — a full split-flap board. Each row's flaps flutter
+    with one slice of the spectrum, destinations are real stations off
+    the network, the top row carries the playing track, and every kick
+    fires a full cascade like the 19:03 just got its platform.
+  */
+  boardRetarget(st, epoch, label) {
+    const pad = (txt, n) => String(txt).slice(0, n).padEnd(n);
+    for (let r = 0; r < st.rows; r++) {
+      let line;
+      if (r === 0) line = pad(`NOW PLAYING  ${label}`, st.cols);
+      else {
+        const name = st.stations[(epoch * 7 + r * 13) % st.stations.length];
+        const hh = String((17 + ((epoch + r) % 6))).padStart(2, '0');
+        const mm = String((epoch * 11 + r * 17) % 60).padStart(2, '0');
+        line = pad(`${hh}:${mm}  ${pad(name, st.cols - 9)} ${1 + ((epoch + r * 3) % 9)}`, st.cols);
+      }
+      st.targets[r] = line;
+      st.spin[r] = [...line].map((_, c) => 3 + c * 0.55 + r * 1.6);
+    }
+  }
+  vBoard(ctx, W2, H2, au) {
+    const { kick, t } = au;
+    const CH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789·:&\'- ';
+    const rowH = Math.max(24, Math.min(36, H2 / 7.5));
+    const cols = Math.max(16, Math.min(26, Math.floor(W2 / 15)));
+    const rows = Math.max(4, Math.floor((H2 - 14) / rowH));
+    let st = this.boardSt;
+    if (!st || st.rows !== rows || st.cols !== cols) {
+      st = this.boardSt = { rows, cols, epoch: 0, targets: [], spin: [], lastCascade: 0,
+        stations: Object.keys(NETWORK.pos ?? { LONDON: 1 }) };
+      this.boardRetarget(st, 0, this.jb.current?.label || '');
+      st.spin = st.spin.map(row => row.map(() => 0));
+    }
+    if ((kick && t - st.lastCascade > 1.4) || (st.label !== this.jb.current?.label)) {
+      st.label = this.jb.current?.label || '';
+      st.epoch++;
+      this.boardRetarget(st, st.epoch, st.label);
+      st.lastCascade = t;
+    }
+    ctx.fillStyle = '#0b0a09';
+    ctx.fillRect(0, 0, W2, H2);
+    const cellW = (W2 - 12) / cols;
+    const fpx = Math.min(rowH * 0.62, cellW * 1.5);
+    ctx.font = `bold ${fpx}px "Courier New", monospace`;
+    ctx.textAlign = 'center';
+    // per-row flutter: a row's slice of the spectrum respins its cells
+    for (let r = 0; r < rows; r++) {
+      const b0 = 4 + r * 40, b1 = b0 + 36;
+      let e = 0;
+      for (let i = b0; i < b1; i++) e += this.bins[i];
+      e /= (b1 - b0) * 255;
+      const y = 8 + r * rowH;
+      for (let c = 0; c < cols; c++) {
+        if (st.spin[r][c] <= 0 && Math.random() < e * 0.10) st.spin[r][c] = 1 + Math.random() * 4;
+        const spinning = st.spin[r][c] > 0;
+        if (spinning) st.spin[r][c] -= 1;
+        const chTarget = st.targets[r][c] || ' ';
+        const chNow = spinning ? CH[Math.floor(Math.random() * CH.length)] : chTarget;
+        const x = 6 + c * cellW;
+        ctx.fillStyle = '#161310';
+        ctx.beginPath(); ctx.roundRect(x + 0.5, y, cellW - 1.5, rowH - 4, 3); ctx.fill();
+        ctx.fillStyle = r === 0 ? '#9fe3b0' : spinning ? '#8a7440' : '#f0b64e';
+        ctx.fillText(chNow, x + cellW / 2, y + rowH * 0.68);
+        ctx.strokeStyle = 'rgba(0,0,0,0.55)';      // the flap hinge
+        ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(x + 1, y + (rowH - 4) / 2); ctx.lineTo(x + cellW - 1, y + (rowH - 4) / 2); ctx.stroke();
+      }
+    }
+  }
+  /*
+    NIGHT MAIL — the travelling post office. Pigeonholes ARE the
+    spectrum (each column fills with its band), letters fly to the
+    loudest hole, lineside poles whip past the window at tempo, and
+    the carriage sways on the bass. This is the night mail crossing
+    the border, bringing the cheque and the postal order.
+  */
+  vNightMail(ctx, W2, H2, au) {
+    const { bass, mids, kick, t } = au;
+    const st = this.mail ??= { letters: [], fill: new Array(11).fill(0), poleX: 0 };
+    ctx.fillStyle = '#191009';
+    ctx.fillRect(0, 0, W2, H2);
+    ctx.save();
+    ctx.translate(Math.sin(t * 1.7) * (1 + bass * 3), Math.cos(t * 2.3) * bass * 2);
+    // the window: night country flying past
+    const winX = 10, winY = H2 * 0.09, winW = W2 * 0.28, winH = H2 * 0.56;
+    ctx.beginPath(); ctx.roundRect(winX, winY, winW, winH, 10);
+    ctx.fillStyle = '#0b1120'; ctx.fill();
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = '#e9e2cf';
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath(); ctx.arc(winX + winW * 0.7, winY + winH * 0.22, 9, 0, 7); ctx.fill();
+    ctx.globalAlpha = 1;
+    st.poleX -= 3 + mids * 15;                    // poles at tempo
+    const gap = 84;
+    if (st.poleX < -gap) st.poleX += gap;
+    ctx.strokeStyle = '#05070d';
+    ctx.lineWidth = 3;
+    for (let x = st.poleX; x < winW + gap; x += gap) {
+      ctx.beginPath();
+      ctx.moveTo(winX + x, winY + winH);
+      ctx.lineTo(winX + x, winY + winH * 0.3);
+      ctx.stroke();
+      ctx.lineWidth = 1;
+      ctx.beginPath();                            // the sagging wire
+      ctx.moveTo(winX + x, winY + winH * 0.34);
+      ctx.quadraticCurveTo(winX + x + gap / 2, winY + winH * 0.42, winX + x + gap, winY + winH * 0.34);
+      ctx.stroke();
+      ctx.lineWidth = 3;
+    }
+    ctx.restore();
+    ctx.strokeStyle = '#3a2c1c';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.roundRect(winX, winY, winW, winH, 10); ctx.stroke();
+    // the pigeonhole wall: one column per band, filled by loudness
+    const gx = winX + winW + 16, gw = W2 - gx - 12, gy = H2 * 0.08, gh = H2 * 0.60;
+    const nCols = st.fill.length, cw = gw / nCols, slots = 6, sh = gh / slots;
+    let loud = 0, loudC = 0;
+    for (let c = 0; c < nCols; c++) {
+      const b0 = 4 + c * 38;
+      let v = 0;
+      for (let i = b0; i < b0 + 34; i++) v += this.bins[i];
+      v /= 34 * 255;
+      if (v > loud) { loud = v; loudC = c; }
+      st.fill[c] += (v - st.fill[c]) * 0.22;
+      const filled = Math.round(st.fill[c] * slots);
+      for (let r2 = 0; r2 < slots; r2++) {
+        const x = gx + c * cw, y = gy + gh - (r2 + 1) * sh;
+        ctx.strokeStyle = '#3a2c1c';
+        ctx.lineWidth = 1.4;
+        ctx.strokeRect(x + 1, y + 1, cw - 2, sh - 2);
+        if (r2 < filled) {
+          ctx.fillStyle = r2 === filled - 1 ? '#f5ecd4' : '#d8c8a4';
+          ctx.fillRect(x + 3, y + sh * 0.3, cw - 6, sh * 0.55);
+          ctx.fillStyle = '#d94327';
+          ctx.fillRect(x + cw - 8, y + sh * 0.36, 3, 3);
+        }
+      }
+    }
+    // letters fly from the sorting desk to the loudest hole
+    const burst = (kick ? 5 : 0) + ((bass + mids) > 0.5 && Math.random() < 0.5 ? 1 : 0);
+    for (let k = 0; k < burst; k++) {
+      const c = Math.random() < 0.6 ? loudC : Math.floor(Math.random() * nCols);
+      st.letters.push({ x: W2 * 0.45 + Math.random() * W2 * 0.2, y: H2 * 0.88,
+        tx: gx + c * cw + cw / 2, ty: gy + gh - (st.fill[c] * gh) - 6, k: 0 });
+    }
+    for (let i = st.letters.length - 1; i >= 0; i--) {
+      const L = st.letters[i];
+      L.k += 0.045;
+      if (L.k >= 1) { st.letters.splice(i, 1); continue; }
+      const mx = (L.x + L.tx) / 2, my = Math.min(L.y, L.ty) - H2 * 0.18;
+      const q = L.k, iq = 1 - q;
+      const x = iq * iq * L.x + 2 * iq * q * mx + q * q * L.tx;
+      const y = iq * iq * L.y + 2 * iq * q * my + q * q * L.ty;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(Math.sin(L.k * 9) * 0.4);
+      ctx.fillStyle = '#f5ecd4';
+      ctx.fillRect(-6, -4, 12, 8);
+      ctx.fillStyle = '#d94327';
+      ctx.fillRect(3, -3, 2.4, 2.4);
+      ctx.restore();
+    }
+    // the sorting desk, and the robin supervising the frame
+    ctx.fillStyle = '#241a10';
+    ctx.fillRect(W2 * 0.36, H2 * 0.86, W2 * 0.5, H2 * 0.05);
+    drawBird(ctx, 'robin', { x: gx - 8, y: gy + gh + 16, size: 15, facing: 1, phase: t * 4, pose: 'stand' });
+    ctx.restore();
+  }
+  /*
+    NIGHT BUS — rain on the top-deck front window. The city beyond is
+    bokeh that is secretly the spectrum, treble seeds the drops, and
+    the wiper sweeps on the kick, clearing the glass for a beat.
+  */
+  vNightBus(ctx, W2, H2, au) {
+    const { mids, treble, kick, t } = au;
+    let st = this.bus;
+    if (!st || st.w !== W2 || st.h !== H2) {
+      st = this.bus = { w: W2, h: H2, drops: [], lights: [], wipe: -1 };
+      for (let i = 0; i < 26; i++) st.lights.push({
+        x: Math.random() * (W2 + 60) - 30, y: H2 * (0.2 + Math.random() * 0.6),
+        r: 5 + Math.random() * 16, band: 3 + Math.floor(Math.random() * 9) * 40,
+        hue: [345, 30, 55, 140, 190, 260, 320][i % 7], near: Math.random() < 0.5 });
+    }
+    const grad = ctx.createLinearGradient(0, 0, 0, H2);
+    grad.addColorStop(0, '#05070e');
+    grad.addColorStop(1, '#0c1018');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W2, H2);
+    // bokeh city: brightness is that light's slice of the spectrum
+    ctx.globalCompositeOperation = 'lighter';
+    for (const L of st.lights) {
+      L.x -= (0.25 + mids * 1.6) * (L.near ? 1.5 : 0.6);
+      if (L.x < -40) { L.x = W2 + 40; L.y = H2 * (0.2 + Math.random() * 0.6); }
+      let v = 0;
+      for (let i = L.band; i < L.band + 30; i++) v += this.bins[i];
+      v /= 30 * 255;
+      const rr = L.r * (0.7 + v * 1.7);
+      const g2 = ctx.createRadialGradient(L.x, L.y, 0, L.x, L.y, rr);
+      g2.addColorStop(0, `hsla(${L.hue}, 65%, 72%, ${0.14 + v * 0.3})`);
+      g2.addColorStop(1, 'hsla(0, 0%, 0%, 0)');
+      ctx.fillStyle = g2;
+      ctx.beginPath(); ctx.arc(L.x, L.y, rr, 0, 7); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    // rain: treble seeds it, gravity does the rest
+    const seed = 1 + Math.floor(treble * 7);
+    for (let k = 0; k < seed; k++) {
+      if (st.drops.length < 160) st.drops.push({
+        x: Math.random() * W2, y: -4 + Math.random() * H2 * 0.3,
+        vy: 0.4 + Math.random() * 1.2, r: 1 + Math.random() * 2.2 });
+    }
+    ctx.strokeStyle = 'rgba(190, 214, 240, 0.4)';
+    ctx.lineCap = 'round';
+    for (let i = st.drops.length - 1; i >= 0; i--) {
+      const d = st.drops[i];
+      d.vy = Math.min(3.2, d.vy + 0.035 * d.r);
+      d.y += d.vy;
+      d.x += Math.sin(d.y * 0.05 + d.r) * 0.4;
+      if (d.y > H2 + 6) { st.drops.splice(i, 1); continue; }
+      ctx.lineWidth = d.r;
+      ctx.beginPath();
+      ctx.moveTo(d.x, d.y - d.vy * 4);
+      ctx.lineTo(d.x, d.y);
+      ctx.stroke();
+    }
+    // the wiper answers the kick
+    if (kick && st.wipe < 0) st.wipe = 0;
+    if (st.wipe >= 0) {
+      st.wipe += 0.05;
+      const px = W2 * 0.6, py = H2 + 24, arm = H2 * 1.02;
+      const an = -Math.PI * 0.88 + st.wipe * Math.PI * 0.76;
+      st.drops = st.drops.filter(d => {
+        const da = Math.atan2(d.y - py, d.x - px);
+        return Math.abs(da - an) > 0.16;
+      });
+      ctx.strokeStyle = '#04050a';
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + Math.cos(an) * arm, py + Math.sin(an) * arm);
+      ctx.stroke();
+      ctx.strokeStyle = '#1a2130';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      if (st.wipe >= 1) st.wipe = -1;
+    }
+    // the deck rail, and breath on the corners of the glass
+    ctx.fillStyle = '#04050a';
+    ctx.beginPath(); ctx.roundRect(-8, H2 - 22, W2 + 16, 30, 8); ctx.fill();
+    const fog = ctx.createRadialGradient(W2 / 2, H2 * 0.55, H2 * 0.4, W2 / 2, H2 * 0.55, H2);
+    fog.addColorStop(0, 'rgba(8, 10, 16, 0)');
+    fog.addColorStop(1, 'rgba(8, 10, 16, 0.5)');
+    ctx.fillStyle = fog;
+    ctx.fillRect(0, 0, W2, H2);
+  }
+  /*
+    TOY THEATRE — a penny plain, tuppence coloured. Cut-paper flats
+    slide in their grooves with the bands, the limelight snaps to a
+    new mark on the kick, footlights are the spectrum, and the robin
+    works the stage as the actor.
+  */
+  vTheatre(ctx, W2, H2, au) {
+    const { bass, mids, treble, kick, t } = au;
+    const st = this.thea ??= { spotX: 0.5, spotT: 0.5, hop: 0 };
+    if (kick) { st.spotT = 0.15 + Math.random() * 0.7; st.hop = 1; }
+    st.spotX += (st.spotT - st.spotX) * 0.1;
+    st.hop *= 0.86;
+    ctx.fillStyle = '#0d0a08';
+    ctx.fillRect(0, 0, W2, H2);
+    const sx = W2 * 0.1, sw = W2 * 0.8, syTop = H2 * 0.14, sh = H2 * 0.62, syBot = syTop + sh;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(sx, syTop, sw, sh); ctx.clip();
+    const sky = ctx.createLinearGradient(0, syTop, 0, syBot);   // backcloth
+    sky.addColorStop(0, `hsl(228, 42%, ${7 + bass * 11}%)`);
+    sky.addColorStop(1, `hsl(228, 30%, ${13 + bass * 8}%)`);
+    ctx.fillStyle = sky;
+    ctx.fillRect(sx, syTop, sw, sh);
+    ctx.fillStyle = '#e9e2cf';
+    for (let i = 0; i < 16; i++) {                              // stars on treble
+      const stx = sx + ((i * 73.7) % sw), sty = syTop + ((i * 41.3) % (sh * 0.5));
+      ctx.globalAlpha = 0.25 + Math.abs(Math.sin(t * 2 + i * 2)) * treble * 1.6;
+      ctx.fillRect(stx, sty, 2, 2);
+    }
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath(); ctx.arc(sx + sw * 0.78, syTop + sh * 0.2, 11 + bass * 4, 0, 7); ctx.fill();
+    ctx.globalAlpha = 1;
+    // two rows of rooftop flats sliding in their grooves
+    for (const [row, dir, col, yF] of [[0, 1, '#141019', 0.42], [1, -1, '#0f0c12', 0.62]]) {
+      const off = Math.sin(t * (0.5 + row * 0.23)) * 6 + (mids - 0.28) * 34 * dir;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(sx - 40, syBot);
+      const baseY = syTop + sh * yF;
+      for (let x = -40; x < sw + 40; x += 34) {
+        const hh2 = 12 + ((Math.sin((x + row * 99) * 7.3) + 1) * 14);
+        ctx.lineTo(sx + x + off, baseY - hh2);
+        ctx.lineTo(sx + x + off + 20, baseY - hh2);
+        ctx.lineTo(sx + x + off + 20, baseY - hh2 - 8 - (x % 3) * 3);
+        ctx.lineTo(sx + x + off + 26, baseY - hh2 - 8 - (x % 3) * 3);
+        ctx.lineTo(sx + x + off + 26, baseY - hh2);
+        ctx.lineTo(sx + x + off + 34, baseY - hh2);
+      }
+      ctx.lineTo(sx + sw + 40, syBot);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // the ground row jitters with the treble
+    ctx.fillStyle = '#12160e';
+    ctx.fillRect(sx, syBot - 16 + (Math.random() - 0.5) * treble * 3, sw, 20);
+    // limelight, snapping to its mark
+    const spx = sx + sw * st.spotX;
+    const lime = ctx.createRadialGradient(spx, syBot - 10, 4, spx, syBot - 10, sh * 0.42);
+    lime.addColorStop(0, `rgba(245, 236, 210, ${0.24 + bass * 0.22})`);
+    lime.addColorStop(1, 'rgba(245, 236, 210, 0)');
+    ctx.fillStyle = lime;
+    ctx.beginPath(); ctx.ellipse(spx, syBot - 12, sh * 0.4, sh * 0.52, 0, 0, 7); ctx.fill();
+    // the actor takes the light
+    drawBird(ctx, 'robin', { x: spx, y: syBot - 8 - st.hop * 16, size: 24,
+      facing: st.spotT >= st.spotX ? 1 : -1, phase: t * 6, pose: st.hop > 0.4 ? 'airup' : 'stand' });
+    ctx.restore();
+    // footlights: the spectrum as a row of little flames
+    const nF = 12, fw = sw / nF;
+    for (let i = 0; i < nF; i++) {
+      let v = 0;
+      const b0 = 4 + i * 36;
+      for (let k = b0; k < b0 + 32; k++) v += this.bins[k];
+      v /= 32 * 255;
+      const fx = sx + fw * (i + 0.5), fy = syBot + 10;
+      const fh = 4 + v * 15 + Math.random() * 2;
+      ctx.fillStyle = '#3a2c1c';
+      ctx.fillRect(fx - 3, fy, 6, 5);
+      const fl = ctx.createRadialGradient(fx, fy - fh / 2, 0, fx, fy - fh / 2, fh);
+      fl.addColorStop(0, 'rgba(255, 205, 110, 0.9)');
+      fl.addColorStop(1, 'rgba(255, 140, 60, 0)');
+      ctx.fillStyle = fl;
+      ctx.beginPath(); ctx.ellipse(fx, fy - fh / 2, 3.2, fh / 2 + 2, 0, 0, 7); ctx.fill();
+    }
+    // the proscenium frames it all
+    ctx.fillStyle = '#2c2013';
+    ctx.fillRect(sx - 20, syTop - 14, 20, sh + 44);
+    ctx.fillRect(sx + sw, syTop - 14, 20, sh + 44);
+    ctx.fillRect(sx - 20, syTop - 14, sw + 40, 16);
+    ctx.fillRect(sx - 20, syBot + 16, sw + 40, 14);
+    ctx.strokeStyle = '#b98a2e';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(sx - 12, syTop - 6, sw + 24, sh + 30);
+    for (const side of [0, 1]) {                                // curtain swags
+      const cx2 = side ? sx + sw : sx;
+      ctx.fillStyle = '#6e2015';
+      ctx.beginPath();
+      ctx.moveTo(cx2, syTop);
+      ctx.quadraticCurveTo(cx2 + (side ? -sw * 0.2 : sw * 0.2), syTop + sh * 0.12 + Math.sin(t * 1.3) * bass * 6,
+        cx2, syTop + sh * 0.34);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  /*
     ROLL THE CREDITS — the Konami reward, migrated from its old overlay
     into the jukebox where it belongs: the credit roll as a viz mode.
     The scroll keeps time with the mids, the buried-wonder gallery
