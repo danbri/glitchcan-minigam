@@ -801,6 +801,30 @@ export class TubeFlock {
       this.g.haptics.tick();
     }
   }
+  // FINK embed support: begin the journey at a named station, and
+  // resolve loose mode slugs ('hampstead') to real station names
+  stationFromSlug(slug) {
+    const want = String(slug || '').toUpperCase().replace(/[-_]+/g, ' ').trim();
+    if (!want) return null;
+    if (POS[want]) return want;
+    const names = Object.keys(POS);
+    return names.find(n => n === want)
+      || names.find(n => n.startsWith(want))
+      || names.find(n => n.includes(want))
+      || null;
+  }
+  startAt(name) {
+    if (!POS[name]) return false;
+    this.cur = name;
+    this.cam = [...POS[name]];
+    this.stats.visited = new Set([name]);
+    if (this.freePos) this.freePos = [...POS[name]];
+    const [x, y] = this.toXY(name);
+    this.flock = [{ sp: 'robin', x, y, ph: 0 }];
+    this.updateMusic();
+    this.g.say(`The journey begins at ${name}. ${this.describeStation()}`);
+    return true;
+  }
   // ---------------------------------------------------------- input
   // the full-screen postcard reads until dismissed — any press moves on
   dismissFact() {
@@ -885,6 +909,7 @@ export class TubeFlock {
   exit() {
     this.quitConfirm = false;
     this.saveHi();
+    if (this.g.embedComplete?.(true)) return;   // FINK guest: hand back to the story
     this.g.soundtrack?.stop(1.2);
     this.g.midiScore?.stop(1.2);
     if (!this.g.jukebox?.engaged) {
@@ -1567,6 +1592,7 @@ export class TubeFlock {
         this.updateMusic();
         this.swellMusic();
         this.saveHi();
+        g.embedProgress?.();
         g.say(`${it.rescue.name} joins the flock! ${this.roster.length} birds now. Head up to the street and out the WAY OUT.`);
       }
     }

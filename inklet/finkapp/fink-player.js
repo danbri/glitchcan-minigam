@@ -45,8 +45,8 @@ window.FinkPlayer = {
 
         // Check for hash navigation first
         let targetFink = null;
-        if (window.FinkNavigation && window.location.hash) {
-            targetFink = FinkNavigation.getFinkFromHash();
+        if (window.FinkNavigation && (window.location.hash || window.location.search)) {
+            targetFink = FinkNavigation.getFinkFromHash();   // handles ?story= too
         }
 
         // Auto-load story from hash or config

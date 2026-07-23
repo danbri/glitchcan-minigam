@@ -10,6 +10,7 @@ VAR mega_diamonds = 0
 VAR jeans_worn = false
 VAR tie_worn = false
 VAR giro_collected = false
+VAR robbin_birds = 0
 VAR giro_cashed = false
 VAR tweed_taken = false
 VAR penguin_taken = false
@@ -96,6 +97,26 @@ Neon rain slicks binbags and chip wrappers.
 }
 + Flag down a night-bus
     Nobody stops for riff-raff. #CLASS:danger
+    -> street
++ Down into Hampstead tube -> hampstead_tube
+
+=== hampstead_tube ===
+#BG:#0d0d1f
+#CLASS:info
+The deepest station on the whole Underground. The lift drops fifty-eight and a half metres — the escalators never dared come out here.
+
+Down on the platforms, something is singing. A robin, cut from paper, gathering a flock through the tunnels. # MINIGAME: robbin mode=hampstead controls=none
+-> tube_return
+
+=== tube_return ===
+#BG:#001515
+The lift hauls you back toward the surface, the song fading under the hum of the cables.
++ [Out into the rain]
+    { robbin_birds > 0:
+        You surface blinking into the neon rain. Somewhere far below, {robbin_birds} small birds are riding the trains together. #CLASS:success
+    - else:
+        You surface into the neon rain. The singing carries on below, unfinished.
+    }
     -> street
 
 === jobcentre ===

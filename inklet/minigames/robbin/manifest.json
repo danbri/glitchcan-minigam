@@ -1,0 +1,14 @@
+{
+  "name": "robbin",
+  "version": "1.0.0",
+  "title": "Robbin — Up the Junction",
+  "description": "Cosy flock journey across the real London Underground. Cut-paper birds, real TfL data, no fail state.",
+  "entry": "index.html",
+  "sandbox": { "timeout": 30000 },
+  "variables": {
+    "read": ["difficulty"],
+    "write": ["robbin_birds", "robbin_score", "minigame_played", "score"]
+  },
+  "modes": ["hampstead", "pilot", "free"],
+  "ui": { "width": "100%", "height": "100%", "background": "#f2ecdd" }
+}

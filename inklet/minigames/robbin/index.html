@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<!-- FINK minigame wrapper for ROBBIN (magpie/robbin). The host's iframe
+     onload handler stays attached across navigations, so after this
+     redirect it re-sends init to the real game page — which speaks the
+     minigame SDK protocol natively when ?embed=1. -->
+<html lang="en">
+<head><meta charset="UTF-8"><title>ROBBIN</title></head>
+<body>
+<script>
+  location.replace('/glitchcan-minigam/magpie/robbin/robbin.html?embed=1');
+</script>
+</body>
+</html>

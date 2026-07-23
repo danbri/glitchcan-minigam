@@ -74,4 +74,11 @@ platform grows a slot and the content fills it.
 3. Invoke from Ink: `# MINIGAME: <name> mode=<m> controls=<dpad|lite|none>`
    then divert to a return knot; read the variables the game wrote.
 4. Remember: guest iframes have opaque origins — ES modules/fetches need
-   CORS (fine on GitHub Pages, needs a CORS server locally).
+   CORS (fine on GitHub Pages, needs a CORS server locally), and
+   localStorage THROWS there — shim it (robbin.html head shows how).
+5. Reactions to minigame results go BEHIND a choice in the return knot,
+   and the MINIGAME tag goes INLINE on a text line — a bare tag line
+   attaches forward through the divert and the destination's first line
+   (with any conditionals) evaluates before the game runs. INK-GOTCHAS §8.
+6. Worked example: hampstead_tube/tube_return in hampstead.fink.js;
+   full-loop test: node inklet/finkapp/test/e2e-robbin.mjs.

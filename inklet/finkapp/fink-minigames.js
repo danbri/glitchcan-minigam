@@ -23,7 +23,7 @@ window.FinkMinigames = {
     },
 
     // Known iframe-based minigames
-    iframeMinigames: ['mudslider', 'battleboids', 'gridluck', 'chess'],
+    iframeMinigames: ['mudslider', 'battleboids', 'gridluck', 'chess', 'robbin'],
 
     // Minigame metadata for splash screens and controls
     // controls: 'dpad' (full d-pad + A/B), 'lite' (simplified), 'none' (tap only)
@@ -33,7 +33,8 @@ window.FinkMinigames = {
         mudslider: { icon: '⛏️', title: 'Mudslider', subtitle: 'Boulder Dash-style puzzle', controls: 'lite' },
         battleboids: { icon: '🧙', title: 'BoidWars', subtitle: 'Command your wizard flock', controls: 'none' },
         gridluck: { icon: '👻', title: 'GridLuck', subtitle: 'Pac-Man style maze chase', controls: 'none' },
-        chess: { icon: '♟️', title: 'Chess', subtitle: 'Classic strategy game', controls: 'none' }
+        chess: { icon: '♟️', title: 'Chess', subtitle: 'Classic strategy game', controls: 'none' },
+        robbin: { icon: '🐦', title: 'Robbin', subtitle: 'Grow the flock across the Underground', controls: 'none' }
     },
 
     // Active inline minigames (keyed by container ID)

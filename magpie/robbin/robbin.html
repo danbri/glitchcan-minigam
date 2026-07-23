@@ -4,6 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>ROBBIN — kulupu waso tawa</title>
+<script>
+// FINK-embed guests run in a sandboxed iframe with an OPAQUE ORIGIN,
+// where touching window.localStorage throws a SecurityError — which
+// would kill the game modules at import time. Shim it with a session
+// Map: the game runs fine, preferences simply don't persist.
+try { window.localStorage.getItem; } catch (e) {
+  (function () {
+    const m = new Map();
+    Object.defineProperty(window, 'localStorage', { value: {
+      getItem: (k) => m.has(String(k)) ? m.get(String(k)) : null,
+      setItem: (k, v) => m.set(String(k), String(v)),
+      removeItem: (k) => m.delete(String(k)),
+      clear: () => m.clear(),
+      key: (i) => [...m.keys()][i] ?? null,
+      get length() { return m.size; },
+    } });
+  })();
+}
+</script>
 <style>
   :root {
     --paper: #f2ecdd;

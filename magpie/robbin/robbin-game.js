@@ -800,6 +800,26 @@ class Game {
       });
     }
     this.state = 'title';
+    // FINK embed mode: ?embed=1 — the game becomes a minigame-SDK guest.
+    // The host (fink-minigames.js) sends init/pause/resume/terminate via
+    // postMessage; we reply ready/progress/complete. Mode slugs name the
+    // starting station ('hampstead'); 'pilot' runs the arcade episode.
+    this.embed = new URLSearchParams(location.search).get('embed') === '1';
+    if (this.embed) {
+      this._embedStarted = false;
+      document.getElementById('title').classList.add('hidden');
+      addEventListener('message', e => {
+        const d = e.data;
+        if (!d || typeof d.type !== 'string') return;
+        if (d.type === 'init') this.embedStart(d.config?.mode);
+        else if (d.type === 'pause') { if (this.state === 'play') this.state = 'paused'; }
+        else if (d.type === 'resume') { if (this.state === 'paused') this.state = 'play'; }
+        else if (d.type === 'terminate') this.embedComplete(false);
+      });
+      try { parent.postMessage({ type: 'ready', capabilities: { modes: ['hampstead', 'pilot', 'free'] } }, '*'); } catch { /* standalone */ }
+      // a host that never speaks still gets a game (open the map free)
+      setTimeout(() => { if (!this._embedStarted) this.embedStart('free'); }, 4000);
+    }
     this.hiscore = Number(localStorage.getItem('robbin.hiscore') || 0);
     this.fx = [];
     this.parts = [];     // air-ticks and feather puffs (secondary action)
@@ -1503,6 +1523,40 @@ class Game {
   }
   creditsOpen() {
     return !document.getElementById('credits').classList.contains('hidden');
+  }
+  embedStart(mode) {
+    if (this._embedStarted) return;
+    this._embedStarted = true;
+    const m = String(mode || 'free').toLowerCase();
+    if (m === 'pilot') { this.newGame(); return; }
+    this.startTube();
+    if (!['free', 'normal', 'full'].includes(m)) {
+      const st = this.tube.stationFromSlug(m);
+      if (st) this.tube.startAt(st);
+    }
+  }
+  embedProgress() {
+    if (!this.embed) return;
+    const t = this.tube;
+    try {
+      parent.postMessage({ type: 'progress', data: {
+        score: t?.score ?? this.score ?? 0,
+        robbin_birds: Math.max(0, (t?.roster?.length ?? 1) - 1) } }, '*');
+    } catch { /* standalone */ }
+  }
+  embedComplete(success) {
+    if (!this.embed) return false;
+    const t = this.tube;
+    try {
+      parent.postMessage({ type: 'complete', result: {
+        success: !!success,
+        score: t?.score ?? this.score ?? 0,
+        variables: {
+          robbin_birds: Math.max(0, (t?.roster?.length ?? 1) - 1),
+          robbin_score: t?.score ?? 0,
+          minigame_played: true } } }, '*');
+    } catch { /* standalone */ }
+    return true;
   }
   unlockTeleport() {
     const first = localStorage.getItem('robbin.konami') !== '1';
@@ -2258,6 +2312,7 @@ class Game {
   }
   pilotQuit() {
     this.quitAsk = false;
+    if (this.embedComplete(true)) return;
     this.music.setIntensity(0.4);
     this.backToMenu();
     this.say('Back at the menu.');

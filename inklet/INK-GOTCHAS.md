@@ -122,3 +122,46 @@ Errors will show line numbers. Fix and re-test.
 ---
 
 *This guide: `inklet/INK-GOTCHAS.md`*
+
+---
+
+## 8. Tags on Their Own Line Attach FORWARD — Even Through a Divert
+
+A bare tag line before a divert does not annotate "this moment"; it
+attaches to the **next text line**, wherever that is:
+
+```ink
+Something sings below.
+
+# MINIGAME: robbin      ← attaches to the first line of tube_return!
+-> tube_return
+```
+
+The engine breaks on the tag *after* the destination knot's first line
+has already been evaluated — so any `{var: ...}` conditional there ran
+BEFORE the minigame did anything.
+
+### Fix: inline the tag, and put reactions behind a choice
+
+```ink
+Something sings below. # MINIGAME: robbin mode=hampstead
+-> tube_return
+
+=== tube_return ===
+The lift hauls you back up.
++ [Out into the rain]
+    { robbin_birds > 0: The flock rides below. - else: Unfinished song. }
+    -> street
+```
+
+Choice output is evaluated when the choice is *taken* — after the
+minigame completed and wrote its variables. (Found and E2E-locked
+2026-07, `inklet/finkapp/test/e2e-robbin.mjs`.)
+
+## 9. Sandboxed Guests Have No localStorage
+
+A `# MINIGAME:` iframe runs with an opaque origin: touching
+`window.localStorage` **throws**, killing ES modules at import time.
+Guest games must shim it (see the head of `magpie/robbin/robbin.html`).
+Same for module/asset fetches: they need CORS (fine on GitHub Pages,
+needs a CORS-enabled server locally).
