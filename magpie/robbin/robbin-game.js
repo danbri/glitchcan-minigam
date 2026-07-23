@@ -279,6 +279,7 @@ class Haptics {
   buzz()  { this.fire([34, 30, 34]); }       // the glitch-grab
   chord() { this.fire([18, 40, 18, 40, 46]); }   // reunions, finales
   buzz()  { this.fire([12, 26, 12, 26, 12]); }   // a rasp: changing lines is a commitment
+  flutter() { this.fire([8, 24, 8]); }           // wings settling at a node
   setEnabled(on) {
     this.enabled = on;
     localStorage.setItem('robbin.haptics', on ? '1' : '0');
@@ -1054,6 +1055,7 @@ class Game {
       if (e.key === 'p' || e.key === 'P') { this.togglePause(); return; }
       if (e.key === 'm' || e.key === 'M') { this.toggleMute(); return; }
       const k = keymap[e.key];
+      if (this.state === 'tube') this.tube.dismissToast?.();
       if (k) {
         this.input[k] = 1;
         if (k === 'jump' && !e.repeat) {
@@ -1112,6 +1114,7 @@ class Game {
         return;
       }
       if (this.pinch) return;
+      if (this.state === 'tube') this.tube.dismissToast?.();   // a touch waves the card off
       if (this.state === 'map') { this.continueFromMap(); return; }
       if (this.state === 'tube' && this.tube.quitTap(e.clientX, e.clientY)) return;   // the quit question is modal
       if (this.state === 'tube' && this.tube.dismissFact()) return;   // postcard: tap anywhere

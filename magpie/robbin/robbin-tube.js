@@ -808,15 +808,14 @@ export class TubeFlock {
   }
   handleJump() {
     if (this.cancelQuit()) return;   // GO means "keep flying", never "quit"
-    if (this.dismissFact()) {
-      // one press does it: reading the postcard and going in are the
-      // same intent when the lost bird's station is right here
-      if (!this.interior && !this.travel && !this.finale && !this.over
-        && this.objective && this.objective.at === this.cur) {
-        this.gather = null;
+    if (this.dismissFact()) return;  // only the big moments card now (the finale)
+    if (this.gather) {
+      // the flock is still settling but GO is GO: straight in
+      this.gather = null;
+      if (this.objective && this.objective.at === this.cur) {
         this.enterInterior(null, this.objective, { arrival: true });
+        return;
       }
-      return;
     }
     // in an interior, jumping goes through the play input — but on the
     // map, GO is THE way in: it drops into the bird's station (with the
@@ -905,8 +904,12 @@ export class TubeFlock {
     // you start where you really would: train arrivals and line changes
     // step off mid-platform on the level your line runs at
     const inRow = def.platLevel[this.line] || def.platDefs[def.platDefs.length - 1].row;
+    // step off where the train actually stops: the door serving the
+    // line and direction just ridden, not an abstract mid-platform
+    const rideDoor = this.lastRide && this.lastRide.at === this.cur && this.lastRide.line === this.line
+      ? doorForEdge(def, { line: this.lastRide.line, to: this.lastRide.from }) : null;
     if (arrival || (pendingEdge && this.line)) {
-      level.spawn = { x: 9 * TILE + 16, y: inRow * TILE };
+      level.spawn = { x: (rideDoor?.c ?? 9) * TILE + 16, y: inRow * TILE };
     } else {
       level.spawn = { x: def.spawnStreet.c * TILE + 16, y: (def.spawnStreet.r + 1) * TILE };
     }
@@ -925,6 +928,14 @@ export class TubeFlock {
       }
     }
     this.stats?.visited.add(this.cur);
+    // the Did-you-know now slides in OVER the interior — up to five
+    // seconds or the first touch — instead of gating entry. Once per
+    // station per journey; the game never repeats itself at you.
+    const story = STATION_FACTS[this.cur];
+    if (story && !(this.factShown ??= new Set()).has(this.cur)) {
+      this.factShown.add(this.cur);
+      this.toast = { fact: story, station: this.cur, t: 0, ttl: 5, leaving: 0 };
+    }
     this.interior = {
       def, level, pendingEdge, gate, floorRows, vertRuns, seed,
       escRuns, escRide: null, playerCar: null,
@@ -1582,6 +1593,12 @@ export class TubeFlock {
   // ---------------------------------------------------------- sim
   update(dt) {
     if (this.arriveT > 0) this.arriveT -= dt;
+    if (this.flutterT > 0) this.flutterT -= dt;
+    if (this.toast) {
+      this.toast.t += dt;
+      if (!this.toast.leaving && this.toast.t >= this.toast.ttl) this.toast.leaving = this.toast.t;
+      if (this.toast.leaving && this.toast.t >= this.toast.leaving + 0.3) this.toast = null;
+    }
     if (this.lineFlash && (this.lineFlash.t -= dt / 0.9) <= 0) this.lineFlash = null;
     // ten game-seconds per real second, and never night: past nine in
     // the evening the clock snaps to half six the next morning
@@ -1589,7 +1606,7 @@ export class TubeFlock {
     if (this.clock >= 21 * 60) { this.clock = 6.5 * 60; this.day++; }
     // a full-screen station postcard holds the world still until read
     if (this.factCard) { this.factCard.t += dt; return; }
-    if (this.interior) { this.updateInterior(dt); return; }
+    if (this.interior) { this.updateInterior(dt); return; }   // (the toast ticked above)
     if (this.finale) {
       // the long flight home: camera glides across the city, the whole
       // family swirling in one wide murmuration around it
@@ -1635,20 +1652,21 @@ export class TubeFlock {
     if (this.travel) {
       this.travel.t += dt / this.travel.dur;
       if (this.travel.t >= 1) {
-        this.cur = this.travel.edge.to;
-        this.line = this.travel.edge.line;
+        const rode = this.travel.edge;
+        this.lastRide = { line: rode.line, from: this.cur, at: rode.to };
+        this.cur = rode.to;
+        this.line = rode.line;
         this.travel = null;
         this.stats.stops++;
         this.stats.visited.add(this.cur);
         this.g.foley.step();
+        // arriving at a node is a felt thing: a soft buzz in the hand,
+        // and the flock flutters down to a near-hover while it settles
+        this.flutterT = 0.9;
+        this.g.haptics.flutter();
         if (this.objective && this.cur === this.objective.at) {
-          // don't whisk straight inside: let the flock settle in first —
-          // and if the station has a story, it takes the whole screen
-          // and waits to be read (dismiss to continue)
-          const fact = STATION_FACTS[this.cur];
           this.gather = { t: 0, dur: 1.7 };
-          if (fact) this.factCard = { fact, station: this.cur, t: 0 };
-          this.g.say(`${this.cur} — this is the place. ${fact ? fact + ' Tap or jump to continue. ' : ''}The flock gathers…`);
+          this.g.say(`${this.cur} — this is the place. The flock gathers…`);
           return;
         }
         this.g.say(`${this.cur}. ${this.describeStation()}`);
@@ -1666,7 +1684,7 @@ export class TubeFlock {
     this.cam[1] += (p[1] - this.cam[1]) * ease;
     if ((this.mapZoom || 1) < 0.999) this.clampCam();
     const [lx, ly] = this.toScreen(p);
-    flockStep(this.flock, dt, lx, ly - 14, t, 0.85);
+    flockStep(this.flock, dt, lx, ly - 14, t, this.flutterT > 0 ? 0.28 : 0.85);
   }
   // word-wrap into centred lines; returns the lines it drew
   wrapText(ctx, text, cx, y, maxW, px, lineH, weight = '', family = 'Georgia, serif') {
@@ -1789,7 +1807,7 @@ export class TubeFlock {
     const t = performance.now() / 1000;
     // phone-first type: readable at arm's length, shrink-to-fit when long
     const fs = Math.max(17, Math.min(24, w / 22));
-    if (this.interior) { this.drawInterior(ctx, fs); return; }
+    if (this.interior) { this.drawInterior(ctx, fs); this.drawToast(ctx, fs); return; }
     ctx.save();
     const ob = this.objective;
     ctx.textAlign = 'center';
@@ -1885,10 +1903,25 @@ export class TubeFlock {
       const inter = INTER_SET.has(name);
       const here = name === this.cur;
       if (inter || here) {
-        ctx.beginPath(); ctx.arc(x, y, inter ? 8 : 6.5, 0, Math.PI * 2);
-        ctx.fillStyle = PALETTE.paper; ctx.fill();
-        ctx.lineWidth = 3.2;
-        ctx.strokeStyle = PALETTE.ink; ctx.stroke();
+        if (here && !this.travel && !this.finale) {
+          // your station breathes: swollen ring and a warm glow, the
+          // standing invitation that GO goes HERE
+          const pulse = 1 + Math.sin(t * 3.1) * 0.16;
+          const halo = ctx.createRadialGradient(x, y, 2, x, y, 22 * pulse);
+          halo.addColorStop(0, 'rgba(46,94,69,0.45)');
+          halo.addColorStop(1, 'rgba(46,94,69,0)');
+          ctx.fillStyle = halo;
+          ctx.beginPath(); ctx.arc(x, y, 22 * pulse, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(x, y, (inter ? 8.5 : 7) * pulse, 0, Math.PI * 2);
+          ctx.fillStyle = PALETTE.paper; ctx.fill();
+          ctx.lineWidth = 3.4;
+          ctx.strokeStyle = PALETTE.green || PALETTE.ink; ctx.stroke();
+        } else {
+          ctx.beginPath(); ctx.arc(x, y, inter ? 8 : 6.5, 0, Math.PI * 2);
+          ctx.fillStyle = PALETTE.paper; ctx.fill();
+          ctx.lineWidth = 3.2;
+          ctx.strokeStyle = PALETTE.ink; ctx.stroke();
+        }
       } else {
         // a tick perpendicular to the line, sticking out one side
         const e0 = EDGES.get(name)[0];
@@ -2101,6 +2134,45 @@ export class TubeFlock {
     // …and the quit question outranks even the postcard
     if (this.quitConfirm) this.drawQuitDialog(ctx);
     ctx.restore();
+    this.drawToast(ctx, fs);
+  }
+  // the Did-you-know as a visitor, not a gatekeeper: slides down from
+  // above, lingers up to five seconds or until any interaction, and
+  // slides away while the game plays on underneath
+  drawToast(ctx, fs) {
+    const tst = this.toast;
+    if (!tst) return;
+    const g = this.g, w = g.cssW;
+    const cw = Math.min(w - 16, 560), cx = w / 2;
+    const bodyFs = Math.max(14, fs * 0.78), lh = bodyFs * 1.3;
+    ctx.save();
+    ctx.font = `italic ${bodyFs}px Georgia, serif`;
+    const words = tst.fact.split(' ');
+    let nLines = 1, probe = '';
+    for (const word of words) {
+      const test = probe ? `${probe} ${word}` : word;
+      if (probe && ctx.measureText(test).width > cw - 44) { nLines++; probe = word; }
+      else probe = test;
+    }
+    const ch = fs * 1.5 + nLines * lh + fs * 0.9;
+    const inK = Math.min(1, tst.t / 0.35);
+    const easeIn = 1 - Math.pow(1 - inK, 3);
+    const outK = tst.leaving ? Math.min(1, (tst.t - tst.leaving) / 0.3) : 0;
+    const y = -ch + (ch + 8) * easeIn - (ch + 16) * outK * outK;
+    ctx.fillStyle = 'rgba(247,242,230,0.97)';
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(cx - cw / 2, y, cw, ch, 12); ctx.fill(); ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PALETTE.platform;
+    ctx.font = `bold ${fs * 0.5}px Georgia, serif`;
+    ctx.fillText(`DID YOU KNOW · ${tst.station}`, cx, y + fs * 0.95);
+    ctx.fillStyle = PALETTE.ink;
+    this.wrapText(ctx, tst.fact, cx, y + fs * 1.5 + bodyFs * 0.6, cw - 44, bodyFs, lh, 'italic');
+    ctx.restore();
+  }
+  dismissToast() {
+    if (this.toast && !this.toast.leaving) this.toast.leaving = this.toast.t;
   }
   // ------------------------------------------------ interior rendering
   drawInterior(ctx, fs) {

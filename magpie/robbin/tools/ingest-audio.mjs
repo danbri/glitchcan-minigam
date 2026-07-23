@@ -35,8 +35,8 @@ const ALIASES = {
   WESTMINSTER: 'WESTMINSTER',
   CAMDEN: 'CAMDEN TOWN',
   NOTTINGHILL: 'NOTTING HILL GATE',
-  SHOREDITCH: 'LIVERPOOL STREET',   // Shoreditch High St itself is not on this network
-  BRICKLANE: 'LIVERPOOL STREET',
+  SHOREDITCH: 'SHOREDITCH HIGH STREET',   // on the network since the Windrush graft
+  BRICKLANE: 'SHOREDITCH HIGH STREET',
   HEATHROW: 'HEATHROW TERMINALS 2 & 3',
   OLYMPICPARK: 'STRATFORD',
   GREENWICH: 'NORTH GREENWICH',   // no Cutty Sark / plain Greenwich on this network

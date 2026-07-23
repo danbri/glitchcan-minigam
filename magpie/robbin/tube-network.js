@@ -3,12 +3,14 @@
 // by hand; re-run the tool to refresh. Step-free list is curated (real-ish).
 // Snapshot date: 2026-07-20 · relaid out 2026-07-21
 // DLR grafted 2026-07-23 by tools/graft-dlr.mjs
-// (existing positions untouched; newcomers placed by local affine fit).
+// Windrush (full) + Elizabeth core grafted 2026-07-23
+// by tools/graft-overground.mjs (existing positions untouched).
 
 export const NETWORK = {
  "generated": "2026-07-20",
  "relaidOut": "2026-07-21",
  "dlrGrafted": "2026-07-23",
+ "overgroundGrafted": "2026-07-23",
  "pos": {
   "HARROW & WEALDSTONE": [
    59.55,
@@ -1253,6 +1255,106 @@ export const NETWORK = {
   "STRATFORD INTERNATIONAL": [
    177.7,
    76.57
+  ],
+  "WEST CROYDON": [
+   146.12,
+   156.17
+  ],
+  "NORWOOD JUNCTION": [
+   148.28,
+   151.89
+  ],
+  "ANERLEY": [
+   150.46,
+   147.43
+  ],
+  "PENGE WEST": [
+   152.66,
+   142.8
+  ],
+  "SYDENHAM": [
+   154.41,
+   137.79
+  ],
+  "FOREST HILL": [
+   156.48,
+   132.63
+  ],
+  "HONOR OAK PARK": [
+   158.56,
+   127.38
+  ],
+  "BROCKLEY": [
+   160.67,
+   122.05
+  ],
+  "NEW CROSS GATE": [
+   162.78,
+   116.67
+  ],
+  "WAPPING": [
+   158.62,
+   98.03
+  ],
+  "SHOREDITCH HIGH STREET": [
+   159.83,
+   86.16
+  ],
+  "HOXTON": [
+   155.6,
+   84.35
+  ],
+  "HAGGERSTON": [
+   152.5,
+   80.95
+  ],
+  "DALSTON JUNCTION": [
+   151.06,
+   76.58
+  ],
+  "CANONBURY": [
+   147,
+   74.41
+  ],
+  "CLAPHAM JUNCTION": [
+   135.83,
+   119.63
+  ],
+  "WANDSWORTH ROAD": [
+   140.5,
+   118.65
+  ],
+  "CLAPHAM HIGH STREET": [
+   145.22,
+   117.26
+  ],
+  "DENMARK HILL": [
+   150.04,
+   115.78
+  ],
+  "PECKHAM RYE": [
+   154.96,
+   114.27
+  ],
+  "QUEENS ROAD PECKHAM": [
+   159.94,
+   112.76
+  ],
+  "CRYSTAL PALACE": [
+   151.55,
+   141.52
+  ],
+  "NEW CROSS": [
+   163.74,
+   115.27
+  ],
+  "WOOLWICH": [
+   191.25,
+   99.33
+  ],
+  "ABBEY WOOD": [
+   195.59,
+   100.13
   ]
  },
  "thames": [
@@ -2068,6 +2170,7 @@ export const NETWORK = {
     "bakerloo",
     "circle",
     "district",
+    "elizabeth",
     "hammersmith-city"
    ],
    "deep": 1,
@@ -2308,6 +2411,7 @@ export const NETWORK = {
    "lines": [
     "central",
     "dlr",
+    "elizabeth",
     "jubilee"
    ],
    "deep": 1,
@@ -2342,6 +2446,7 @@ export const NETWORK = {
    "lines": [
     "central",
     "circle",
+    "elizabeth",
     "hammersmith-city",
     "metropolitan"
    ],
@@ -2398,6 +2503,7 @@ export const NETWORK = {
    "escalators": 6,
    "lines": [
     "central",
+    "elizabeth",
     "northern"
    ],
    "deep": 1,
@@ -2409,6 +2515,7 @@ export const NETWORK = {
    "escalators": 8,
    "lines": [
     "central",
+    "elizabeth",
     "jubilee"
    ],
    "deep": 1,
@@ -2897,6 +3004,7 @@ export const NETWORK = {
    "escalators": 0,
    "lines": [
     "circle",
+    "elizabeth",
     "hammersmith-city",
     "metropolitan"
    ],
@@ -3208,7 +3316,9 @@ export const NETWORK = {
    "escalators": 0,
    "lines": [
     "district",
-    "hammersmith-city"
+    "elizabeth",
+    "hammersmith-city",
+    "windrush"
    ],
    "deep": 0,
    "sub": 1
@@ -3466,6 +3576,7 @@ export const NETWORK = {
    "escalators": 20,
    "lines": [
     "dlr",
+    "elizabeth",
     "jubilee"
    ],
    "deep": 1,
@@ -4705,7 +4816,8 @@ export const NETWORK = {
    "lifts": 3,
    "escalators": 2,
    "lines": [
-    "victoria"
+    "victoria",
+    "windrush"
    ],
    "deep": 1,
    "sub": 0
@@ -4955,7 +5067,8 @@ export const NETWORK = {
    "lifts": 2,
    "escalators": 0,
    "lines": [
-    "dlr"
+    "dlr",
+    "windrush"
    ],
    "deep": 0,
    "sub": 0
@@ -5035,7 +5148,8 @@ export const NETWORK = {
    "lifts": 0,
    "escalators": 0,
    "lines": [
-    "dlr"
+    "dlr",
+    "elizabeth"
    ],
    "deep": 0,
    "sub": 0
@@ -5159,6 +5273,256 @@ export const NETWORK = {
    ],
    "deep": 0,
    "sub": 0
+  },
+  "WEST CROYDON": {
+   "zone": 5,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "NORWOOD JUNCTION": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "ANERLEY": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "PENGE WEST": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "SYDENHAM": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "FOREST HILL": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HONOR OAK PARK": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "BROCKLEY": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "NEW CROSS GATE": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WAPPING": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "SHOREDITCH HIGH STREET": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HOXTON": {
+   "zone": 1,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "HAGGERSTON": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "DALSTON JUNCTION": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "CANONBURY": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "CLAPHAM JUNCTION": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WANDSWORTH ROAD": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "CLAPHAM HIGH STREET": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "DENMARK HILL": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "PECKHAM RYE": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "QUEENS ROAD PECKHAM": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "CRYSTAL PALACE": {
+   "zone": 3,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "NEW CROSS": {
+   "zone": 2,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "windrush"
+   ],
+   "deep": 0,
+   "sub": 0
+  },
+  "WOOLWICH": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "elizabeth"
+   ],
+   "deep": 0,
+   "sub": 1
+  },
+  "ABBEY WOOD": {
+   "zone": 4,
+   "lifts": 0,
+   "escalators": 0,
+   "lines": [
+    "elizabeth"
+   ],
+   "deep": 0,
+   "sub": 1
   }
  },
  "lines": {
@@ -5809,8 +6173,49 @@ export const NETWORK = {
    "hollow": true,
    "chains": [
     [
-     "ROTHERHITHE",
+     "WEST CROYDON",
+     "NORWOOD JUNCTION",
+     "ANERLEY",
+     "PENGE WEST",
+     "SYDENHAM"
+    ],
+    [
+     "SYDENHAM",
+     "FOREST HILL",
+     "HONOR OAK PARK",
+     "BROCKLEY",
+     "NEW CROSS GATE",
+     "SURREY QUAYS"
+    ],
+    [
+     "SURREY QUAYS",
      "CANADA WATER",
+     "ROTHERHITHE",
+     "WAPPING",
+     "SHADWELL",
+     "WHITECHAPEL",
+     "SHOREDITCH HIGH STREET",
+     "HOXTON",
+     "HAGGERSTON",
+     "DALSTON JUNCTION",
+     "CANONBURY",
+     "HIGHBURY & ISLINGTON"
+    ],
+    [
+     "CLAPHAM JUNCTION",
+     "WANDSWORTH ROAD",
+     "CLAPHAM HIGH STREET",
+     "DENMARK HILL",
+     "PECKHAM RYE",
+     "QUEENS ROAD PECKHAM",
+     "SURREY QUAYS"
+    ],
+    [
+     "CRYSTAL PALACE",
+     "SYDENHAM"
+    ],
+    [
+     "NEW CROSS",
      "SURREY QUAYS"
     ]
    ]
@@ -5935,6 +6340,31 @@ export const NETWORK = {
     [
      "WESTFERRY",
      "CANARY WHARF"
+    ]
+   ]
+  },
+  "elizabeth": {
+   "name": "Elizabeth",
+   "color": "#6950A1",
+   "chains": [
+    [
+     "PADDINGTON",
+     "BOND STREET",
+     "TOTTENHAM COURT ROAD",
+     "FARRINGDON",
+     "LIVERPOOL STREET",
+     "WHITECHAPEL"
+    ],
+    [
+     "WHITECHAPEL",
+     "STRATFORD"
+    ],
+    [
+     "WHITECHAPEL",
+     "CANARY WHARF",
+     "CUSTOM HOUSE (FOR EXCEL)",
+     "WOOLWICH",
+     "ABBEY WOOD"
     ]
    ]
   }
