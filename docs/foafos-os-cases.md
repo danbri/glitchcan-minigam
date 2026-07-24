@@ -17,9 +17,13 @@ still vapour. Scorecard at the end.
 
 `magpie/edot` is eleven apps in one shell: Documents, Data
 (sql/spreadsheet/rdf/viz), Slides, Calendar, Mail, Maps, Files/Backup,
-Groups, Projects, Automations. It has already grown, independently,
-three things foafos also has — which is strong evidence both are
-reaching for the same missing layer:
+Groups, Projects, Automations. It already has three things foafos also
+has. Not convergent evolution — same designer, same instincts (a
+formative exposure to CORBA, XMPP, and web browsers is legible in all
+three organs: object brokerage → string-id capabilities, presence and
+federated messaging → the bus and transports, the browser → the shell
+substrate itself). The design recurring across projects and years is
+evidence it is load-bearing:
 
 | edot has | foafos has | verdict |
 |---|---|---|
