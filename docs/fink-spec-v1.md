@@ -283,6 +283,24 @@ two failures of the retired slider panel: a split state that crushed
 the game to a 4px sliver, and a mini state that hid its own restore
 control).
 
+### 5.1.1 Input is a host service — normative
+
+Directional input belongs to the shell, not to each guest:
+
+- The host renders the on-screen pad. **A guest MUST NOT render its own
+  touch controls when `init.config.controls.provider === 'host'`.** A
+  pad inside a sandboxed iframe cannot see the visible viewport or the
+  device's safe-area insets (`env(safe-area-inset-*)` is 0 there), so
+  guest pads land under browser chrome — this is a correctness rule,
+  not a style preference.
+- Sources (touch, keyboard, gamepad) normalize to one vocabulary:
+  `up down left right a b start`. The host translates to the existing
+  SDK `key` messages, so guests written before this rule keep working.
+- Autorepeat, deadzones and edge-detection are the service's policy
+  (`packages/foafos/src/input.mjs`). A connected gamepad retires the
+  on-screen pad.
+- Window geometry MUST use the visible viewport (`100dvh`), not `100vh`.
+
 ### 5.2 Verbs and native handlers
 
 Widgets and minigames MUST be fully playable standalone, with their own

@@ -58,6 +58,8 @@
     #spectrum-frame {
       position: relative;
       width: 100%;
+      /* the 20px bezel is part of the width, or the TV hangs off a phone */
+      box-sizing: border-box;
       padding-bottom: 75%; /* 4:3 ratio */
       margin: 0 auto;
       background: #000;
@@ -277,8 +279,12 @@
       top: 0;
       left: 0;
       width: 100%;
+      /* width:100% + padding without border-box pushed this 29px past
+         the viewport on a phone, giving the whole page a sideways wobble */
+      box-sizing: border-box;
       display: flex;
       justify-content: space-between;
+      gap: 0.5em;
       padding: 1em;
       color: var(--spectrum-bright-white);
       font-size: 0.9em;

@@ -79,6 +79,15 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   → host sets iframe.allow before src. Maker window (drawer → WIDGETS →
   🔧 Maker, or `FoafOS.openMaker()`): live editable variables table,
   dream-stack line, SDK tap feed (sys.sdk.tx/rx).
+- INPUT IS A HOST SERVICE (spec §5.1.1): `FoafInput`
+  (packages/foafos/src/input.mjs) owns touch pad + keyboard + Gamepad
+  API, normalized to up/down/left/right/a/b/start, translated to legacy
+  SDK `key` messages. Guests get `init.config.controls.provider='host'`
+  and MUST hide their own touch controls — an in-iframe pad can't see
+  the visible viewport or safe-area insets (env() is 0 in an iframe), so
+  it ends up under browser chrome. Use `100dvh`, never `100vh`, for
+  window/app height. Pad shows only when: game active + controls≠none +
+  not pip + no gamepad + pointer:coarse (tests need `hasTouch: true`).
 - Verb protocol (spec §5.2): guests declare natively-handled shell verbs
   in `ready` (`capabilities.verbs: ['quit','audio']`). Declared → shell
   delegates (no frost over native pause; ✕ sends `quit` and the game's
