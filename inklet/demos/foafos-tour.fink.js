@@ -25,7 +25,7 @@ And you are back — the outer story resumed exactly where it held its breath. T
 
 === game ===
 A minigame is a sandboxed window speaking a small protocol. Robbin will open now: try the grip ▦ — FULL, SPLIT (story and game share the screen), PIP (a live corner, tap to restore). Pause is ⏸. The ✕ hands quitting to the game's own paper dialog — the shell never just kills a guest that owns its exit.
-Down on the platforms, something is singing. # MINIGAME: robbin mode=hampstead controls=none
+Down on the platforms, something is singing. # MINIGAME: robbin mode=hampstead controls=dpad
 -> game_return
 
 === game_return ===

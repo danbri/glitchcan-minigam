@@ -105,7 +105,7 @@ Neon rain slicks binbags and chip wrappers.
 #CLASS:info
 The deepest station on the whole Underground. The lift drops fifty-eight and a half metres — the escalators never dared come out here.
 
-Down on the platforms, something is singing. A robin, cut from paper, gathering a flock through the tunnels. # MINIGAME: robbin mode=hampstead controls=none
+Down on the platforms, something is singing. A robin, cut from paper, gathering a flock through the tunnels. # MINIGAME: robbin mode=hampstead controls=dpad
 -> tube_return
 
 === tube_return ===

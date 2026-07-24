@@ -34,7 +34,7 @@ window.FinkMinigames = {
         battleboids: { icon: '🧙', title: 'BoidWars', subtitle: 'Command your wizard flock', controls: 'none' },
         gridluck: { icon: '👻', title: 'GridLuck', subtitle: 'Pac-Man style maze chase', controls: 'none' },
         chess: { icon: '♟️', title: 'Chess', subtitle: 'Classic strategy game', controls: 'none' },
-        robbin: { icon: '🐦', title: 'Robbin', subtitle: 'Grow the flock across the Underground', controls: 'none' }
+        robbin: { icon: '🐦', title: 'Robbin', subtitle: 'Grow the flock across the Underground', controls: 'dpad' }
     },
 
     // Active inline minigames (keyed by container ID)
@@ -683,8 +683,14 @@ window.FinkMinigames = {
                         mode,
                         // Input is an OS service: the host owns the on-screen
                         // pad (it alone sees the real viewport + safe areas).
-                        // Guests MUST hide their own touch controls.
-                        controls: { provider: 'host', scheme: this.currentControls },
+                        // SAFETY RULE: only claim the input when we will
+                        // actually render a pad — a guest told to hide its own
+                        // controls by a host that then shows none leaves the
+                        // player with no way to move.
+                        controls: {
+                            provider: (this.currentControls && this.currentControls !== 'none') ? 'host' : 'guest',
+                            scheme: this.currentControls,
+                        },
                     },
                     variables: this._getStoryVariables()
                 });

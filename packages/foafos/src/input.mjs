@@ -137,6 +137,57 @@ export class FoafInput {
     return this;
   }
 
+  // ── joystick surface: the whole pad area steers, diagonals included ──
+  // Four discrete buttons cannot express up+left with one thumb, and
+  // games that fly (rather than walk a grid) need that. The surface maps
+  // the thumb's offset from centre to one or two directions and keeps
+  // them pressed as it slides — drag-steering, like a real stick.
+  bindJoystick(el, { deadzone = 0.28 } = {}) {
+    if (!el) return this;
+    el.style.touchAction = 'none';
+    let active = null;                 // pointerId currently steering
+    const dirsFor = (dx, dy) => {
+      const mag = Math.hypot(dx, dy);
+      if (mag < deadzone) return [];
+      const out = [];
+      // 22.5° bands: a direction counts when it carries enough of the
+      // vector, so both fire in the diagonal wedge.
+      if (dx <= -deadzone * 0.7) out.push('left');
+      if (dx >= deadzone * 0.7) out.push('right');
+      if (dy <= -deadzone * 0.7) out.push('up');
+      if (dy >= deadzone * 0.7) out.push('down');
+      return out;
+    };
+    const steer = (e) => {
+      const r = el.getBoundingClientRect();
+      const dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
+      const dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+      const want = new Set(dirsFor(dx, dy));
+      for (const d of ['up', 'down', 'left', 'right']) {
+        if (want.has(d) && !this.held.has(d)) this.press(d, 'touch');
+        else if (!want.has(d) && this.held.has(d)) this.release(d, 'touch');
+      }
+      el.dataset.dirs = [...want].join(' ');
+    };
+    el.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      active = e.pointerId;
+      el.setPointerCapture?.(e.pointerId);
+      steer(e);
+    });
+    el.addEventListener('pointermove', (e) => { if (active === e.pointerId) steer(e); });
+    const end = (e) => {
+      if (active !== e.pointerId) return;
+      active = null;
+      el.dataset.dirs = '';
+      for (const d of ['up', 'down', 'left', 'right']) this.release(d, 'touch');
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('contextmenu', (e) => e.preventDefault());
+    return this;
+  }
+
   // ── gamepad ──────────────────────────────────────────────────────────
   attachGamepads() {
     if (typeof window === 'undefined' || !navigator.getGamepads) return this;

@@ -142,16 +142,42 @@ body.foaf-pad-on #foafos-dock {
 }
 #foaf-pad[hidden] { display: none; }
 
+/* One joystick surface with painted arrows — thumb position steers,
+   diagonals included, and sliding re-aims without lifting off. */
 .foaf-pad-dir {
-    display: grid;
-    grid-template-columns: repeat(3, clamp(44px, 13vw, 58px));
-    grid-template-rows: repeat(3, clamp(44px, 13vw, 58px));
-    gap: 4px;
+    pointer-events: auto;
+    touch-action: none;
+    position: relative;
+    width: clamp(140px, 42vw, 186px);
+    height: clamp(140px, 42vw, 186px);
+    border-radius: 50%;
+    border: 2px solid rgba(242, 236, 221, 0.5);
+    background: rgba(38, 34, 30, 0.26);
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
 }
-.foaf-pad-dir button:nth-child(1) { grid-area: 1 / 2; }
-.foaf-pad-dir button:nth-child(2) { grid-area: 2 / 1; }
-.foaf-pad-dir button:nth-child(3) { grid-area: 2 / 3; }
-.foaf-pad-dir button:nth-child(4) { grid-area: 3 / 2; }
+.foaf-pad-dir .pd {
+    position: absolute;
+    color: rgba(242, 236, 221, 0.85);
+    font-size: 1.15rem;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    transition: color 0.1s, text-shadow 0.1s;
+}
+.foaf-pad-dir .u { left: 50%; top: 15%; }
+.foaf-pad-dir .d { left: 50%; top: 85%; }
+.foaf-pad-dir .l { left: 15%; top: 50%; }
+.foaf-pad-dir .r { left: 85%; top: 50%; }
+.foaf-pad-dir .c { left: 50%; top: 50%; font-size: 0.7rem; opacity: 0.35; }
+/* light up whichever directions the thumb is currently asking for */
+.foaf-pad-dir[data-dirs~="up"] .u,
+.foaf-pad-dir[data-dirs~="down"] .d,
+.foaf-pad-dir[data-dirs~="left"] .l,
+.foaf-pad-dir[data-dirs~="right"] .r {
+    color: #7dffb2;
+    text-shadow: 0 0 10px rgba(46, 255, 150, 0.8);
+}
 
 .foaf-pad-act {
     display: flex;

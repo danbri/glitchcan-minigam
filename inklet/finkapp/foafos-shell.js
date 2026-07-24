@@ -140,19 +140,22 @@ function buildPad() {
   pad.hidden = true;
   pad.setAttribute('role', 'group');
   pad.setAttribute('aria-label', 'Game controls');
+  // The directional area is ONE joystick surface (diagonals, drag-steer);
+  // the arrows are painted affordances, not four separate buttons.
   pad.innerHTML = `
-    <div class="foaf-pad-dir">
-      <button type="button" data-action="up" aria-label="Up">▲</button>
-      <button type="button" data-action="left" aria-label="Left">◀</button>
-      <button type="button" data-action="right" aria-label="Right">▶</button>
-      <button type="button" data-action="down" aria-label="Down">▼</button>
+    <div class="foaf-pad-dir" role="application" aria-label="Direction pad — drag to steer">
+      <span class="pd u">▲</span><span class="pd l">◀</span>
+      <span class="pd r">▶</span><span class="pd d">▼</span>
+      <span class="pd c">●</span>
     </div>
     <div class="foaf-pad-act">
       <button type="button" data-action="a" aria-label="Action">A</button>
       <button type="button" data-action="b" aria-label="Back">B</button>
     </div>`;
   document.body.appendChild(pad);
-  input.bindSurface(pad).attachKeyboard().attachGamepads();
+  input.bindSurface(pad)
+    .bindJoystick(pad.querySelector('.foaf-pad-dir'))
+    .attachKeyboard().attachGamepads();
 
   // A real gamepad retires the on-screen pad (and brings it back).
   bus.subscribe('input.gamepad', () => refreshPad());

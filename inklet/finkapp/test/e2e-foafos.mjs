@@ -176,23 +176,30 @@ try {
     window.__keys = [];
     addEventListener('message', e => { if (e.data?.type === 'key') window.__keys.push(`${e.data.event}:${e.data.key}`); });
   });
+  // steer the joystick surface up-and-left: a diagonal must reach the
+  // guest as BOTH directions (four discrete buttons cannot do this)
   const padGeom = await page.evaluate(async () => {
     FinkMinigames.currentControls = 'dpad';
     FoafOS.refreshPad();
     await new Promise(r => setTimeout(r, 200));
     const p = document.getElementById('foaf-pad');
-    const r = p.getBoundingClientRect();
-    const btn = p.querySelector('[data-action="left"]');
-    btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+    const stick = p.querySelector('.foaf-pad-dir');
+    const r = stick.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const at = (t, x, y) => stick.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerId: 1, clientX: x, clientY: y }));
+    at('pointerdown', cx - r.width * 0.35, cy - r.height * 0.35);
     await new Promise(r2 => setTimeout(r2, 150));
-    btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
+    at('pointerup', cx - r.width * 0.35, cy - r.height * 0.35);
     await new Promise(r2 => setTimeout(r2, 80));
     return { hidden: p.hidden, onScreen: r.bottom <= window.innerHeight + 1, bottom: Math.round(r.bottom), vh: window.innerHeight };
   });
   const keys = await frame.evaluate(() => window.__keys);
-  padGeom.onScreen && !padGeom.hidden && keys[0] === 'keydown:ArrowLeft' && keys.at(-1) === 'keyup:ArrowLeft' && keys.length > 2
-    ? pass(`host pad on screen (${padGeom.bottom}/${padGeom.vh}) and routed ${keys.length} key events with autorepeat`)
-    : fail(`input service wrong: ${JSON.stringify({ padGeom, keys })}`);
+  const uniq = [...new Set(keys)];
+  padGeom.onScreen && !padGeom.hidden && keys.length > 2
+    && uniq.includes('keydown:ArrowUp') && uniq.includes('keydown:ArrowLeft')
+    && uniq.includes('keyup:ArrowUp') && uniq.includes('keyup:ArrowLeft')
+    ? pass(`host pad on screen (${padGeom.bottom}/${padGeom.vh}); diagonal steer sent ${keys.length} key events (up+left)`)
+    : fail(`input service wrong: ${JSON.stringify({ padGeom, uniq })}`);
   await page.evaluate(() => { FinkMinigames.currentControls = 'none'; FoafOS.refreshPad(); });
 
   // 5. session: seal with passphrase, reload, sealed survives, unlock round-trips
