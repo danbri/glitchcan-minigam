@@ -214,6 +214,10 @@ function buildUI() {
         <button type="button" id="foafos-forget" title="Delete the saved session">FORGET</button>
       </div>
     </section>
+    <section id="foafos-skin-wrap">
+      <h4>SKIN</h4>
+      <div id="skin-picker" role="group" aria-label="Visual skin"></div>
+    </section>
     <section id="foafos-shelf-wrap">
       <h4>WINDOWS</h4>
       <div id="foafos-shelf"></div>
@@ -288,6 +292,32 @@ function buildUI() {
 
   refreshStatus();
   announceSession('started');
+
+  // ── skins: a system service, not a story decision ──
+  // One DOM, several identities (fink-skins.css). Every skin is held to
+  // the same AA contrast / focus / hit-target bar by test/skins-a11y.mjs.
+  const SKINS = [
+    ['spectrum', 'Spectrum'], ['paper', 'Paper'], ['terminal', 'Terminal'],
+    ['aurora', 'Aurora'], ['broadsheet', 'Broadsheet'], ['calm', 'Calm'],
+  ];
+  const picker = $('#skin-picker');
+  const applySkin = (id) => {
+    document.documentElement.dataset.skin = id;
+    try { localStorage.setItem('foafos.skin', id); } catch { /* private mode */ }
+    for (const b of picker.children) b.setAttribute('aria-pressed', String(b.dataset.skin === id));
+    bus.publish('ui.skin', { skin: id, summary: `skin → ${id}` }, { retain: true });
+  };
+  for (const [id, label] of SKINS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.skin = id;
+    b.textContent = label;
+    b.setAttribute('aria-pressed', String(document.documentElement.dataset.skin === id));
+    b.addEventListener('click', () => applySkin(id));
+    picker.appendChild(b);
+  }
+  FoafOS.skins = SKINS.map(s => s[0]);
+  FoafOS.setSkin = applySkin;
 
   // ── the shelf: EVERY window, as a standard tree (not chip soup) ──
   // The story is a window too (it predates the WM — listed, not magic);

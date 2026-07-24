@@ -180,6 +180,24 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   `docs/fink-linking-spec.md`. Public knots = not `_`-prefixed;
   `# PUBLIC:` marks respawn entry points.
 
+## Skins (fink-skins.css)
+
+- Six identities over ONE DOM: spectrum (original), paper, terminal,
+  aurora, broadsheet, calm. Chosen via drawer → SKIN, `?skin=`, or
+  `FoafOS.setSkin()`; persisted at `foafos.skin`; applied pre-paint by an
+  inline script so there's no flash.
+- Every surface reads the token contract (`--sk-bg/-figure --sk-ink/-dim
+  --sk-accent/-ink --sk-line --sk-choice-* --sk-font-* --sk-radius
+  --sk-choice-marker --sk-shadow --sk-info/-mega/-code-*`). Adding a skin
+  = define the contract; never hardcode a colour in player CSS again.
+- GATE: `node inklet/finkapp/test/skins-a11y.mjs` — AA contrast for body
+  text, resting choice AND hover, visible focus ring, 44px targets, no
+  overflow. A skin that fails is a bug, not a taste.
+- Two traps that bit here: `getComputedStyle` is LIVE (snapshot before
+  `focus()` or you measure focus styles), and translucent surfaces must
+  be composited as a STACK (page → scene → choice), not treated as
+  opaque backdrops.
+
 ## Finkiverse map (stories AND widgets)
 
 - `node inklet/tools/fink-universe.mjs` → `docs/fink-universe.json`;

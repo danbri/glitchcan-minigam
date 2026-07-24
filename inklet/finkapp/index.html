@@ -18,6 +18,17 @@
     <link rel="stylesheet" href="fink-minigames.css">
     <link rel="stylesheet" href="fink-breadcrumb.css">
     <link rel="stylesheet" href="foafos-shell.css">
+    <!-- skins last: they express every surface through the token contract -->
+    <link rel="stylesheet" href="fink-skins.css">
+    <script>
+      // Apply the chosen skin BEFORE first paint (no flash of retro).
+      (function () {
+        var q = new URLSearchParams(location.search).get('skin');
+        var saved = null;
+        try { saved = localStorage.getItem('foafos.skin'); } catch (e) {}
+        document.documentElement.dataset.skin = q || saved || 'spectrum';
+      })();
+    </script>
 </head>
 <body>
 

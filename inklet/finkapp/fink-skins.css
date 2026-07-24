@@ -1,0 +1,352 @@
+/* FINK skins — one DOM, several complete visual identities.
+ *
+ * The player's original look is a ZX-Spectrum tribute. It is a *choice*,
+ * not the platform: this file introduces a token contract every surface
+ * reads from, then supplies alternative identities that swap the tokens
+ * (and a few structural rules) without touching markup or behaviour.
+ *
+ * Contract (every skin MUST define all of these):
+ *   --sk-bg --sk-bg-figure   page and scene backgrounds
+ *   --sk-ink --sk-ink-dim    body text, secondary text
+ *   --sk-accent --sk-accent-ink   accent surface + text ON that accent
+ *   --sk-line                hairlines and borders
+ *   --sk-choice-bg --sk-choice-ink --sk-choice-line     resting choice
+ *   --sk-choice-hover-bg --sk-choice-hover-ink          engaged choice
+ *   --sk-font-body --sk-font-ui --sk-size --sk-leading
+ *   --sk-radius --sk-choice-marker --sk-shadow
+ *
+ * ACCESSIBILITY IS NOT PART OF THE STYLE BUDGET. Every skin is checked
+ * by test/skins-a11y.mjs for WCAG AA contrast (body text and choices),
+ * a visible focus ring, and 44px+ hit targets. A skin that fails is a
+ * bug, not a taste.
+ */
+
+/* ── the contract, defaulted to the original identity ─────────────── */
+:root,
+:root[data-skin="spectrum"] {
+    --sk-info: #00c0c0;
+    --sk-mega: #ffd24a;
+    --sk-code-bg: #111111;
+    --sk-code-ink: #e8e8e8;
+    --sk-bg: #000;
+    --sk-bg-figure: rgba(0, 20, 0, 0.6);
+    --sk-ink: #f6f6f6;
+    --sk-ink-dim: #9fd9a0;
+    --sk-accent: #00c0c0;
+    --sk-accent-ink: #000;
+    --sk-line: #00c0c0;
+    --sk-choice-bg: #002244;
+    --sk-choice-ink: #7ff;
+    --sk-choice-line: #00c0c0;
+    --sk-choice-hover-bg: #663300;
+    --sk-choice-hover-ink: #fff;
+    --sk-font-body: "Press Start 2P", Courier, monospace;
+    --sk-font-ui: "Press Start 2P", Courier, monospace;
+    --sk-size: 14px;
+    --sk-leading: 1.5;
+    --sk-radius: 0px;
+    --sk-choice-marker: '▶ ';
+    --sk-shadow: none;
+}
+
+/* ── PAPER — a printed novel. Warm, serif, unhurried. ─────────────── */
+:root[data-skin="paper"] {
+    --sk-info: #1f5e73;
+    --sk-mega: #8a5a00;
+    --sk-code-bg: #efe7d6;
+    --sk-code-ink: #241f1a;
+    --sk-bg: #f4efe4;
+    --sk-bg-figure: #fffdf7;
+    --sk-ink: #241f1a;
+    --sk-ink-dim: #6b6055;
+    --sk-accent: #8a3324;
+    --sk-accent-ink: #fffdf7;
+    --sk-line: #cdc2ad;
+    --sk-choice-bg: #fffdf7;
+    --sk-choice-ink: #6d2419;
+    --sk-choice-line: #c8b9a0;
+    --sk-choice-hover-bg: #8a3324;
+    --sk-choice-hover-ink: #fffdf7;
+    --sk-font-body: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --sk-font-ui: Georgia, serif;
+    --sk-size: 18px;
+    --sk-leading: 1.65;
+    --sk-radius: 3px;
+    --sk-choice-marker: '— ';
+    --sk-shadow: 0 1px 0 rgba(0,0,0,0.05);
+}
+
+/* ── TERMINAL — modern developer dark. Sharp, quiet, legible. ─────── */
+:root[data-skin="terminal"] {
+    --sk-info: #7fd1ff;
+    --sk-mega: #ffcb6b;
+    --sk-code-bg: #0a0f16;
+    --sk-code-ink: #e6edf3;
+    --sk-bg: #0d1117;
+    --sk-bg-figure: #131a23;
+    --sk-ink: #e6edf3;
+    --sk-ink-dim: #93a1b1;
+    --sk-accent: #4aa3ff;
+    --sk-accent-ink: #04121f;
+    --sk-line: #2b3440;
+    --sk-choice-bg: #182029;
+    --sk-choice-ink: #b9d6ff;
+    --sk-choice-line: #33507a;
+    --sk-choice-hover-bg: #2a5fa8;
+    --sk-choice-hover-ink: #ffffff;
+    --sk-font-body: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sk-font-ui: ui-monospace, Menlo, Consolas, monospace;
+    --sk-size: 15px;
+    --sk-leading: 1.6;
+    --sk-radius: 6px;
+    --sk-choice-marker: '› ';
+    --sk-shadow: none;
+}
+
+/* ── AURORA — a contemporary phone app. Rounded, soft, vivid. ─────── */
+:root[data-skin="aurora"] {
+    --sk-info: #9fd8ff;
+    --sk-mega: #ffd479;
+    --sk-code-bg: #1b1030;
+    --sk-code-ink: #f3edff;
+    --sk-bg: #10091f;
+    --sk-bg-figure: rgba(255, 255, 255, 0.055);
+    --sk-ink: #f3edff;
+    --sk-ink-dim: #b9a9d8;
+    --sk-accent: #b78cff;
+    --sk-accent-ink: #17092b;
+    --sk-line: rgba(183, 140, 255, 0.32);
+    --sk-choice-bg: rgba(255, 255, 255, 0.08);
+    --sk-choice-ink: #f0e6ff;
+    --sk-choice-line: rgba(183, 140, 255, 0.45);
+    --sk-choice-hover-bg: #7d4fd8;
+    --sk-choice-hover-ink: #ffffff;
+    --sk-font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --sk-font-ui: system-ui, -apple-system, sans-serif;
+    --sk-size: 16px;
+    --sk-leading: 1.62;
+    --sk-radius: 16px;
+    --sk-choice-marker: '';
+    --sk-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+}
+
+/* ── BROADSHEET — editorial print. Big type, rules, authority. ────── */
+:root[data-skin="broadsheet"] {
+    --sk-info: #5a2ea6;
+    --sk-mega: #8a4b00;
+    --sk-code-bg: #f2f2f2;
+    --sk-code-ink: #111111;
+    --sk-bg: #ffffff;
+    --sk-bg-figure: #ffffff;
+    --sk-ink: #111111;
+    --sk-ink-dim: #575757;
+    --sk-accent: #14213d;
+    --sk-accent-ink: #ffffff;
+    --sk-line: #111111;
+    --sk-choice-bg: #ffffff;
+    --sk-choice-ink: #14213d;
+    --sk-choice-line: #111111;
+    --sk-choice-hover-bg: #14213d;
+    --sk-choice-hover-ink: #ffffff;
+    --sk-font-body: "Iowan Old Style", Georgia, "Times New Roman", serif;
+    --sk-font-ui: Helvetica, Arial, sans-serif;
+    --sk-size: 18px;
+    --sk-leading: 1.55;
+    --sk-radius: 0px;
+    --sk-choice-marker: '';
+    --sk-shadow: none;
+}
+
+/* ── CALM — muted and roomy. Low stimulation, still AA. ───────────── */
+:root[data-skin="calm"] {
+    --sk-info: #27543f;
+    --sk-mega: #8a5a00;
+    --sk-code-bg: #e6ece6;
+    --sk-code-ink: #26302a;
+    --sk-bg: #eef1ec;
+    --sk-bg-figure: #f8faf7;
+    --sk-ink: #26302a;
+    --sk-ink-dim: #5c6b60;
+    --sk-accent: #2f6b4f;
+    --sk-accent-ink: #f8faf7;
+    --sk-line: #c6d1c7;
+    --sk-choice-bg: #f8faf7;
+    --sk-choice-ink: #27543f;
+    --sk-choice-line: #b6c7ba;
+    --sk-choice-hover-bg: #2f6b4f;
+    --sk-choice-hover-ink: #ffffff;
+    --sk-font-body: "Avenir Next", Optima, system-ui, sans-serif;
+    --sk-font-ui: system-ui, sans-serif;
+    --sk-size: 17px;
+    --sk-leading: 1.75;
+    --sk-radius: 10px;
+    --sk-choice-marker: '';
+    --sk-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* ══ the surfaces, expressed only in tokens ═══════════════════════ */
+
+html, body {
+    background: var(--sk-bg);
+    color: var(--sk-ink);
+    font-family: var(--sk-font-body);
+    font-size: var(--sk-size);
+    line-height: var(--sk-leading);
+}
+/* the spectrum skin keeps its CRT dot-grid; other skins are flat */
+:root:not([data-skin="spectrum"]) body { background-image: none; }
+
+#story-output { color: var(--sk-ink); }
+#story-output p, .story-section p { font-family: var(--sk-font-body); }
+
+.story-section.current {
+    background: var(--sk-bg-figure);
+    border-color: var(--sk-line);
+    border-radius: var(--sk-radius);
+    color: var(--sk-ink);
+}
+#story-output.history-expanded .story-section.past {
+    background: var(--sk-bg-figure);
+    border-color: var(--sk-line);
+    color: var(--sk-ink-dim);
+}
+.history-toggle {
+    background: transparent;
+    border: 1px solid var(--sk-line);
+    border-radius: var(--sk-radius);
+    color: var(--sk-ink-dim);
+    font-family: var(--sk-font-ui);
+}
+.history-toggle:hover, .history-toggle.expanded {
+    background: var(--sk-accent);
+    color: var(--sk-accent-ink);
+}
+
+/* choices — the hand (spec §4) */
+.choice-btn {
+    background: var(--sk-choice-bg);
+    color: var(--sk-choice-ink);
+    border: 1px solid var(--sk-choice-line);
+    border-radius: var(--sk-radius);
+    font-family: var(--sk-font-ui);
+    font-size: var(--sk-size);
+    box-shadow: var(--sk-shadow);
+    padding: 0.7em 0.85em;
+}
+.choice-btn::before { content: var(--sk-choice-marker); opacity: 0.75; }
+.choice-btn:hover, .choice-btn:focus-visible {
+    background: var(--sk-choice-hover-bg);
+    color: var(--sk-choice-hover-ink);
+    border-color: var(--sk-accent);
+}
+.choice-btn:hover::before { content: var(--sk-choice-marker); }
+/* Focus must be unmistakable in EVERY skin — never rely on colour alone */
+.choice-btn:focus-visible,
+.history-toggle:focus-visible,
+button:focus-visible {
+    outline: 3px solid var(--sk-accent);
+    outline-offset: 2px;
+}
+
+/* editorial flourish: broadsheet rules its choices instead of boxing */
+:root[data-skin="broadsheet"] .choice-btn {
+    border-width: 0 0 2px 0;
+    padding-left: 0;
+    font-weight: 600;
+}
+:root[data-skin="broadsheet"] .story-section.current { border: 0; }
+:root[data-skin="broadsheet"] #story-output p:first-of-type::first-letter {
+    font-size: 2.6em; float: left; line-height: 0.86; padding: 0.06em 0.1em 0 0;
+}
+/* aurora floats its cards */
+:root[data-skin="aurora"] .story-section.current {
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--sk-line);
+}
+/* paper indents successive paragraphs like a book */
+:root[data-skin="paper"] #story-output p + p { text-indent: 1.4em; }
+
+/* shell surfaces follow the skin so the whole thing coheres */
+#foafos-drawer, .foafos-window {
+    background: var(--sk-bg-figure);
+    color: var(--sk-ink);
+    border-color: var(--sk-line);
+}
+#foafos-drawer, .foafos-window, #foafos-dock, #wm-chrome {
+    font-family: var(--sk-font-ui);
+}
+#foafos-dock, #wm-chrome {
+    background: var(--sk-bg);
+    border-color: var(--sk-line);
+    color: var(--sk-accent);
+}
+#wm-chrome button { background: var(--sk-choice-bg); color: var(--sk-choice-ink); border-color: var(--sk-choice-line); }
+#wm-chrome button.active { background: var(--sk-accent); color: var(--sk-accent-ink); border-color: var(--sk-accent); }
+.foafos-window-bar { background: var(--sk-accent); color: var(--sk-accent-ink); border-color: var(--sk-line); }
+.foafos-chip { background: var(--sk-choice-bg); color: var(--sk-choice-ink); border-color: var(--sk-choice-line); }
+#foafos-session input { background: var(--sk-bg); color: var(--sk-ink); border-color: var(--sk-line); }
+.foafos-row button { background: var(--sk-choice-bg); color: var(--sk-choice-ink); border-color: var(--sk-choice-line); }
+#foafos-drawer h4 { color: var(--sk-accent); }
+foafos-feed { --foaf-accent: var(--sk-accent); }
+
+/* the skin picker itself */
+#skin-picker { display: flex; flex-wrap: wrap; gap: 0.35em; }
+#skin-picker button {
+    flex: 1 1 auto;
+    padding: 0.5em 0.6em;
+    border: 1px solid var(--sk-choice-line);
+    border-radius: var(--sk-radius);
+    background: var(--sk-choice-bg);
+    color: var(--sk-choice-ink);
+    font: inherit;
+    font-size: 0.8em;
+    cursor: pointer;
+    min-height: var(--touch-target-min);
+}
+#skin-picker button[aria-pressed="true"] {
+    background: var(--sk-accent);
+    color: var(--sk-accent-ink);
+    border-color: var(--sk-accent);
+}
+
+/* Honour a user who asks the system for more contrast. */
+@media (prefers-contrast: more) {
+    .choice-btn { border-width: 2px; }
+    :root { --sk-ink-dim: var(--sk-ink); }
+}
+
+/* Semantic content classes (# CLASS: info|code|mega) are content-driven
+   but must never opt out of legibility — they read from the contract. */
+.info { color: var(--sk-info); }
+.mega { color: var(--sk-mega); text-shadow: none; }
+.code {
+    background: var(--sk-code-bg);
+    color: var(--sk-code-ink);
+    border: 1px solid var(--sk-line);
+    border-radius: var(--sk-radius);
+}
+.player-decision { color: var(--sk-ink-dim); }
+
+/* Chrome that lives over the story follows the skin too — otherwise a
+   light skin keeps a Spectrum-green status bar and a cyan menu bubble
+   floating on top of it. */
+.scroll-status-bar {
+    background: var(--sk-bg-figure);
+    border-top: 1px solid var(--sk-line);
+    color: var(--sk-ink-dim);
+    font-family: var(--sk-font-ui);
+}
+.radial-menu-trigger {
+    background: var(--sk-bg-figure);
+    border-color: var(--sk-accent);
+    color: var(--sk-accent);
+}
+.radial-menu.open .radial-menu-trigger {
+    background: var(--sk-accent);
+    color: var(--sk-accent-ink);
+}
+.radial-menu-item {
+    background: var(--sk-choice-bg);
+    color: var(--sk-choice-ink);
+    border-color: var(--sk-choice-line);
+}
