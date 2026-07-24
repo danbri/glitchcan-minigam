@@ -13,13 +13,14 @@ import {
   saveSealed, loadSealed, clearSealed,
   widgets, defineBaseCards, defineFeed,
   SseTransport, WebSocketTransport, FeedPoller,
-  FoafCluster, defineGuest, defineTable,
+  FoafCluster, defineGuest, defineTable, defineTree,
 } from '../../packages/foafos/src/index.mjs';
 
 defineBaseCards();
 defineFeed();
 defineGuest();
 defineTable();
+defineTree();
 
 // Launchable guest widgets (sandboxed processes). Paths resolve under
 // the deploy root; grants are per-instance.
@@ -149,7 +150,11 @@ function buildUI() {
 
   const feed = document.createElement('foafos-feed');
   feed.bus = bus;
-  feed.setAttribute('topics', '*');
+  // Named topics, not '*': the cluster heartbeats every second on
+  // sys.cluster.* and would flood the feed with plumbing. sys.guest.*
+  // stays visible (denials are security-relevant).
+  feed.setAttribute('topics',
+    'story.*,minigame.*,wm.*,session.*,audio.*,widget.*,net.*,sys.guest.*');
   drawer.querySelector('#foafos-feed-wrap').appendChild(feed);
 
   const setDrawer = (open) => {
@@ -206,56 +211,64 @@ function buildUI() {
   refreshStatus();
   announceSession('started');
 
-  // ── the shelf: EVERY window, live from bus events ──
+  // ── the shelf: EVERY window, as a standard tree (not chip soup) ──
   // The story is a window too (it predates the WM — listed, not magic);
-  // widget windows are listed per instance, not per kind.
+  // widget windows are grouped per instance under one collapsible node.
   const shelf = $('#foafos-shelf');
-  const chip = (label, title, onClick) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'foafos-chip';
-    b.textContent = label;
-    b.title = title;
-    b.addEventListener('click', onClick);
-    return b;
-  };
-  const renderShelf = () => {
-    shelf.textContent = '';
+  const shelfTree = document.createElement('foaf-tree');
+  shelfTree.setAttribute('label', 'Open windows');
+  shelf.appendChild(shelfTree);
 
-    // 1. the story
-    shelf.appendChild(chip('📖 Story', 'Bring the story forward', () => {
+  const renderShelf = () => {
+    const nodes = [{ id: 'story', icon: '📖', label: 'Story' }];
+
+    const mg = window.FinkMinigames;
+    if (mg?.active && mg.currentType) {
+      const info = mg.minigameInfo?.[mg.currentType] || {};
+      nodes.push({
+        id: 'game', icon: info.icon || '🎮', label: info.title || mg.currentType,
+        badge: (window.FinkWM?.mode || '—').toUpperCase() + (mg.windowState?.paused ? ' ⏸' : ''),
+      });
+    }
+
+    const wins = [...document.querySelectorAll('.foafos-window')];
+    if (wins.length) {
+      nodes.push({
+        id: 'widgets', icon: '🧩', label: 'Widgets', badge: String(wins.length),
+        children: wins.map((win) => ({
+          id: `win:${win.dataset.wid}`,
+          label: win.querySelector('.foafos-window-bar span')?.textContent || 'widget',
+          actions: [{ id: 'close', icon: '✕', label: 'Close' }],
+        })),
+      });
+    }
+    shelfTree.data = nodes;
+  };
+
+  const winById = (id) => document.querySelector(`.foafos-window[data-wid="${id.slice(4)}"]`);
+  shelfTree.addEventListener('tree-select', (e) => {
+    const id = e.detail.id;
+    if (id === 'story') {
       const wm = window.FinkWM;
       if (wm?.active && wm.mode === 'full') wm.setMode('split');
       setDrawer(false);
       document.getElementById('narrative-view')?.focus?.();
-    }));
-
-    // 2. the game window (WM-managed)
-    const mg = window.FinkMinigames;
-    if (mg?.active && mg.currentType) {
-      const info = mg.minigameInfo?.[mg.currentType] || {};
-      const mode = window.FinkWM?.mode || '—';
-      const paused = mg.windowState?.paused ? ' ⏸' : '';
-      shelf.appendChild(chip(
-        `${info.icon || '🎮'} ${info.title || mg.currentType} · ${mode.toUpperCase()}${paused}`,
-        'Bring this window forward',
-        () => {
-          const wm = window.FinkWM;
-          if (wm) wm.setMode(wm.mode === 'pip' ? wm.lastNonPipMode : 'full');
-          setDrawer(false);
-        }));
-    }
-
-    // 3. every open widget window, by instance
-    for (const win of document.querySelectorAll('.foafos-window')) {
-      const label = win.querySelector('.foafos-window-bar span')?.textContent || 'widget';
-      shelf.appendChild(chip(label, 'Raise this widget', () => {
+    } else if (id === 'game') {
+      const wm = window.FinkWM;
+      if (wm) wm.setMode(wm.mode === 'pip' ? wm.lastNonPipMode : 'full');
+      setDrawer(false);
+    } else if (id.startsWith('win:')) {
+      const win = winById(id);
+      if (win) {
         document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
         win.style.zIndex = 2630;
         setDrawer(false);
-      }));
+      }
     }
-  };
+  });
+  shelfTree.addEventListener('tree-action', (e) => {
+    if (e.detail.action === 'close' && e.detail.id.startsWith('win:')) winById(e.detail.id)?.remove();
+  });
   bus.subscribe('wm.*', renderShelf);
   bus.subscribe('minigame.*', renderShelf);
   // widget windows announce open/close on wm.widget.*; removals by any
@@ -297,6 +310,7 @@ function buildUI() {
     widgetSeq++;
     const win = document.createElement('div');
     win.className = 'foafos-window';
+    win.dataset.wid = `w${widgetSeq}`;
     win.setAttribute('role', 'group');
     win.setAttribute('aria-label', title);
     win.style.width = `${w}px`;

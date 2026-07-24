@@ -82,7 +82,8 @@ try {
   const drawer = await page.evaluate(() => ({
     open: document.getElementById('foafos-drawer').classList.contains('open'),
     cards: document.querySelectorAll('foafos-feed foaf-card').length,
-    chip: [...document.querySelectorAll('.foafos-chip')].map(c => c.textContent).find(t => /Robbin/.test(t)) || null,
+    chip: [...(document.querySelector('#foafos-shelf foaf-tree')?.shadowRoot.querySelectorAll('[role=treeitem]') ?? [])]
+      .map(li => li.textContent).find(t => /Robbin/.test(t)) || null,
   }));
   drawer.open && drawer.cards >= 4 && /Robbin/i.test(drawer.chip || '')
     ? pass(`drawer: ${drawer.cards} feed cards, shelf chip "${drawer.chip}"`)
@@ -95,8 +96,11 @@ try {
   await page.waitForTimeout(400);
   const blurred = await frame.evaluate(() => window.__robbin.game._audioFocus === false);
   blurred ? pass('pip sent audio-blur — guest ducked') : fail('guest never lost audio focus');
-  await page.evaluate(() =>
-    [...document.querySelectorAll('.foafos-chip')].find(c => /Robbin/.test(c.textContent))?.click());
+  await page.evaluate(() => {
+    const sr = document.querySelector('#foafos-shelf foaf-tree').shadowRoot;
+    [...sr.querySelectorAll('[role=treeitem]')].find(li => /Robbin/.test(li.textContent))
+      ?.querySelector('.row').click();
+  });
   await page.waitForTimeout(400);
   const restored = await page.evaluate(() => ({ mode: FinkWM.mode, drawerOpen: document.getElementById('foafos-drawer').classList.contains('open') }));
   const refocused = await frame.evaluate(() => window.__robbin.game._audioFocus === true);
@@ -138,11 +142,13 @@ try {
   // the shelf lists EVERY window per instance: story + game + 2 widgets
   await page.evaluate(() => document.getElementById('foafos-dock').click());
   await page.waitForTimeout(300);
-  const chips = await page.evaluate(() =>
-    [...document.querySelectorAll('#foafos-shelf .foafos-chip')].map(c => c.textContent));
-  chips.length === 4 && chips[0].includes('Story') && chips.filter(c => c.includes('Tally')).length === 2
-    ? pass(`shelf lists all windows: ${chips.join(' | ')}`)
-    : fail(`shelf wrong: ${JSON.stringify(chips)}`);
+  const chips = await page.evaluate(() => {
+    const sr = document.querySelector('#foafos-shelf foaf-tree').shadowRoot;
+    return [...sr.querySelectorAll('[role=treeitem] > .row .label')].map(x => x.textContent);
+  });
+  chips.length === 5 && chips[0] === 'Story' && chips.filter(c => c.includes('Tally')).length === 2
+    ? pass(`shelf tree lists all windows: ${chips.join(' | ')}`)
+    : fail(`shelf tree wrong: ${JSON.stringify(chips)}`);
   await page.evaluate(() => document.getElementById('foafos-dock').click());
   const widgetCheck = {
     a: await tallies[0].evaluate(() => document.getElementById('count').textContent),
