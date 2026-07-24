@@ -27,6 +27,11 @@ const WIDGET_CATALOG = [
     w: 240, h: 200, grants: (n) => ({ publish: [`widget.tally.${n}.*`], subscribe: ['widget.tally.*'] }) },
   { key: 'data', title: '▦ Data (SQLite)', src: '../../magpie/edot/data/guest.html',
     w: 520, h: 400, grants: (n) => ({ publish: [`widget.data.${n}.*`], subscribe: ['widget.data.*'] }) },
+  // The full standalone game (menu, episodes, map jukebox, ROBBAMP) as a
+  // window — it speaks no guest protocol, which is also the demo: an
+  // undeclared guest simply gets no bus access at all.
+  { key: 'robbin', title: '🐦 Robbin (full game)', src: '../../magpie/robbin/robbin.html',
+    w: 390, h: 560, grants: () => ({ publish: [], subscribe: [] }) },
 ];
 
 const bus = new FoafBus();
