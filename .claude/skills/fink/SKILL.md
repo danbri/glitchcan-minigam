@@ -78,6 +78,15 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   own dialog decides — double-✕ within 10s force-terminates). Undeclared
   → generic fallback. Standalone-first: verbs map onto handlers the game
   already has; robbin deliberately omits 'pause' (tube has none).
+- Dream stack (spec §3.4, from docs/3dmap-idea.md): `# FINK: url` +
+  `# LINKREL: goDeeper` pushes {url, state.ToJson()} and descends;
+  END at depth>0 POPS and the outer story resumes mid-breath (LoadJson
+  restores position — no knot bookkeeping); goShallower pops early;
+  oneWay clears the stack; depth cap 8. Inner stories start fresh, no
+  write-up (Depth Principle v1). Retained `story.state` topic carries
+  {phase, depth}; body[data-fink-depth] drives the deepening-surface
+  CSS. E2E: e2e-dream.mjs (assert position via OFFERED CHOICES, not
+  page text — scrollback keeps history). Demo: demos/dream-outer/-inner.
 - Tag grammar: `# MINIGAME: <name> [mode=x] [controls=dpad|lite|none]`
   parsed at `fink-ink-engine.js:314-333`; the Continue loop BREAKS on
   MINIGAME/FINK tags.
