@@ -1,0 +1,21 @@
+{
+  "name": "foafos",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "foafos shell core: local event bus, sealed ephemeral sessions, web-component widget/feed contract, transports to the wider event ecosystem",
+  "main": "src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs"
+  },
+  "keywords": [
+    "event-bus",
+    "web-components",
+    "activity-feed",
+    "shell",
+    "foaf"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "test": "node ./test/run.js"
+  }
+}

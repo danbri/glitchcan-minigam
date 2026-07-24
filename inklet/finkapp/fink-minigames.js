@@ -587,6 +587,9 @@ window.FinkMinigames = {
         this.currentMode = mode;
         this.currentControls = effectiveControls;
 
+        window.FoafOS?.bus.publish('minigame.start',
+            { type, mode, summary: `${(this.minigameInfo[type] || {}).title || type} started (${mode})` });
+
         // Switch to minigame view
         this.switchView('minigame');
 
@@ -894,6 +897,11 @@ window.FinkMinigames = {
     // Handle minigame completion
     handleMinigameComplete(result) {
         this.log(`Minigame complete: ${JSON.stringify(result)}`);
+        window.FoafOS?.bus.publish('minigame.complete', {
+            type: this.currentType, success: result?.success ?? null, score: result?.score ?? null,
+            summary: `${(this.minigameInfo[this.currentType] || {}).title || this.currentType} finished` +
+                (result?.score != null ? ` · score ${result.score}` : ''),
+        });
         this.log(`Window state before reset: ${JSON.stringify(this.windowState)}`);
 
         this.active = false;

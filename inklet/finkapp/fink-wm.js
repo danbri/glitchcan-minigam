@@ -62,6 +62,7 @@ window.FinkWM = {
         this.elements.chrome.classList.remove('wm-hidden');
         this._setCollapsed(true);
         this.setMode(mode, { animate: false });
+        window.FoafOS?.bus.publish('wm.open', { summary: 'game window opened' });
     },
 
     close() {
@@ -74,6 +75,7 @@ window.FinkWM = {
         view.classList.remove('state-full', 'state-split', 'state-pip', 'wm-transitioning');
         view.style.left = view.style.top = view.style.right = view.style.bottom = '';
         this.log('window closed');
+        window.FoafOS?.bus.publish('wm.close', { summary: 'game window closed' });
     },
 
     // ── mode machine ─────────────────────────────────────────────────────
@@ -109,7 +111,21 @@ window.FinkWM = {
 
         this._haptic();
         this._scheduleCollapse();
-        if (old !== mode) this.log(`mode: ${old || '—'} → ${mode}`);
+
+        // Audio focus is window focus for the ears: a pip'd game keeps
+        // running but yields the stage (spec §5.1 / §7).
+        if (mode === 'pip' && old !== 'pip') {
+            window.FinkMinigames?._sendToIframe?.({ type: 'audio-blur' });
+            window.FoafOS?.bus.publish('audio.focus', { focused: false, summary: 'game yielded audio focus' }, { retain: true });
+        } else if (old === 'pip' && mode !== 'pip') {
+            window.FinkMinigames?._sendToIframe?.({ type: 'audio-focus' });
+            window.FoafOS?.bus.publish('audio.focus', { focused: true, summary: 'game took audio focus' }, { retain: true });
+        }
+
+        if (old !== mode) {
+            this.log(`mode: ${old || '—'} → ${mode}`);
+            window.FoafOS?.bus.publish('wm.mode', { mode, prev: old, summary: `window → ${mode}` }, { retain: true });
+        }
     },
 
     // ── chrome: collapse + drag-dock ─────────────────────────────────────

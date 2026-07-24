@@ -68,7 +68,9 @@ platform grows a slot and the content fills it.
   birds via `maybeFinale` — never regress this to one exit path.
 - Headless playtest hook: `window.__robbin.game`; scratchpad test suites
   cover map, jukebox, amp, finale, teleport. Run affected ones after any
-  gameplay change.
+  gameplay change. KNOWN FLAKE (verified 2026-07): test-robbin2's `.lift`
+  riding check fails ~2/3 under heavy machine load on the UNCHANGED
+  baseline — before blaming a change, stash and re-run the baseline.
 - Owner rules: NEVER edit credits or owner-personal content without
   being asked (standing incident); Bristol tree memorial fields are
   off-limits repo-wide; no TfL branding (roundel) in game art.

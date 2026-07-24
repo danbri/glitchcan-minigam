@@ -101,6 +101,26 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   state explicitly (`FinkWM._setCollapsed(false)`) before clicking
   toolbar buttons.
 
+## foafos shell (working name — owner decides terminology)
+
+- `packages/foafos/` = NPM-bound shell core (bus, sealed sessions,
+  widget/feed contract, transports); `inklet/finkapp/foafos-shell.js` =
+  the reference shell instance (`window.FoafOS`). Design doc:
+  `docs/foafos-notes.md`.
+- Platform modules publish with GUARDED one-liners
+  (`window.FoafOS?.bus.publish(...)`) — never a hard dependency; the
+  shell is a module script so it loads after the classic scripts.
+- Topics in use: story.beat, minigame.start/complete, wm.open/close/mode,
+  audio.focus, session.*, net.<transport>.*. Retained topics carry
+  current state (wm.mode, audio.focus, session.current).
+- Sessions: ephemeral unless sealed with a passphrase (AES-GCM; no
+  unencrypted persistence path — that's deliberate, don't add one).
+- Audio-focus protocol: pip ⇒ host sends `audio-blur` SDK message,
+  un-pip ⇒ `audio-focus`; robbin ducks its buses and refuses to un-duck
+  while blurred. Guest flag for tests: `game._audioFocus`.
+- E2E: `node inklet/finkapp/test/e2e-foafos.mjs`; unit:
+  `cd packages/foafos && npm test`.
+
 ## Navigation / links
 
 - Two-part hash links: `#<urlHash8>-<knotHash9>`, SHA-256 with salt

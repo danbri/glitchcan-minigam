@@ -807,6 +807,7 @@ class Game {
     this.embed = new URLSearchParams(location.search).get('embed') === '1';
     if (this.embed) {
       this._embedStarted = false;
+      this._audioFocus = true;   // host may blur us (pip) via audio-focus protocol
       document.getElementById('title').classList.add('hidden');
       addEventListener('message', e => {
         const d = e.data;
@@ -814,6 +815,8 @@ class Game {
         if (d.type === 'init') this.embedStart(d.config?.mode);
         else if (d.type === 'pause') { if (this.state === 'play') this.state = 'paused'; }
         else if (d.type === 'resume') { if (this.state === 'paused') this.state = 'play'; }
+        else if (d.type === 'audio-blur') { this._audioFocus = false; this.duckForSpeech(true); }
+        else if (d.type === 'audio-focus') { this._audioFocus = true; this.duckForSpeech(false); }
         else if (d.type === 'terminate') this.embedComplete(false);
       });
       try { parent.postMessage({ type: 'ready', capabilities: { modes: ['hampstead', 'pilot', 'free'] } }, '*'); } catch { /* standalone */ }
@@ -854,6 +857,8 @@ class Game {
     speechSynthesis.speak(u);
   }
   duckForSpeech(on) {
+    // While the host has blurred us (pip), speech ending must not un-duck.
+    if (!on && this.embed && this._audioFocus === false) on = true;
     for (const band of [this.music, this.soundtrack, this.midiScore]) {
       const b = band?.bus;
       if (!b || band.muted) continue;

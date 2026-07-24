@@ -363,7 +363,14 @@ window.FinkInkEngine = {
                 }
             }
 
+            // Story beats are shell events too (read textContent BEFORE the
+            // fragment is consumed by the DOM append below).
+            const beatText = storyFragment.textContent?.trim();
             FinkUI.replaceStoryContent(storyFragment);
+            if (beatText) {
+                window.FoafOS?.bus.publish('story.beat',
+                    { summary: beatText.slice(0, 140) + (beatText.length > 140 ? '…' : '') });
+            }
 
             // Apply collected BASEHREF first (affects image path resolution)
             if (collectedBasehref) {
