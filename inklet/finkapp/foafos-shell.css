@@ -21,6 +21,13 @@
 }
 #foafos-dock:hover { opacity: 1; border-color: var(--zx-cyan); color: var(--zx-cyan); }
 
+/* The action buttons claim the bottom-right corner while playing; the
+   dock steps aside rather than sitting under the player's thumb. */
+body.foaf-pad-on #foafos-dock {
+    bottom: calc(200px + env(safe-area-inset-bottom));
+    opacity: 0.5;
+}
+
 #foafos-drawer {
     position: fixed;
     top: 0;

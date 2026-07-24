@@ -175,6 +175,9 @@ function refreshPad() {
   if (!show) input.releaseAll();
   pad.hidden = !show;
   pad.classList.toggle('act-hidden', mg?.currentControls === 'lite');
+  // the dock lives in the same corner as the action buttons — get out
+  // of the player's way while the pad is up
+  document.body.classList.toggle('foaf-pad-on', show);
 }
 FoafOS.refreshPad = refreshPad;
 
