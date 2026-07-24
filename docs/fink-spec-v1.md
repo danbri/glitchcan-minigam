@@ -106,6 +106,34 @@ break takes effect). INK-GOTCHAS §8; E2E-locked in `e2e-robbin.mjs`.
 Three layers: global media base → story `BASEHREF` (file-relative
 fallback) → path. See `FinkUtils.resolveLayeredMediaUrl`.
 
+### 3.4 Document composition — the depth model
+
+Incorporates `docs/3dmap-idea.md` (Levels, the Depth Principle,
+LINKREL vocabulary). A `# FINK:` link may carry `# LINKREL:` naming the
+relationship; each maps to a composition semantic — Ink's own
+control-flow vocabulary at document scale:
+
+| LINKREL | Ink analogue | semantics |
+|---|---|---|
+| *(bare)* / `sameWorld` | divert | replace the story (today's behavior, frozen for back-compat) |
+| `goDeeper` | tunnel in | **push** the current frame (URL + full Ink state incl. position) onto the dream stack; descend. Depth cap 8 → fault |
+| `goShallower` | tunnel out | **pop** (the link URL is documentation); no-op at depth 0 |
+| `oneWay` | divert, bridge burned | replace and clear the stack |
+| `unstable` | — | reserved: traversal MAY mutate state (transit hooks) |
+| *(merge)* | thread | **(roadmap)** load, namespace-rewrite clashing symbols, splice, recompile atomically (`fink-namespace-preprocessor.js` is the machinery) |
+
+Normative behaviors, E2E-locked in `e2e-dream.mjs`:
+- **END at depth > 0 is the pop edge, not the end.** The outer story
+  resumes mid-breath (Ink `state.ToJson()` restores position and
+  variables both). END at depth 0 is terminal.
+- **Depth Principle scoping (v1):** an inner story starts with fresh
+  state; writes do not propagate up. (Read-down and sanctioned exports
+  are roadmap — the minigame variables contract is the model.)
+- The engine publishes retained `story.state`
+  `{phase: loading|play|end|fault, depth}`; the shell surfaces depth
+  (shelf badge, and the story surface itself degrades with depth —
+  reduced-motion honored).
+
 ## 4. Choice presentation model
 
 Ink's flat `currentChoices` array **is the truth**. Presentation is a

@@ -220,7 +220,9 @@ function buildUI() {
   shelf.appendChild(shelfTree);
 
   const renderShelf = () => {
-    const nodes = [{ id: 'story', icon: '📖', label: 'Story' }];
+    const depth = window.FinkInkEngine?.storyStack?.length || 0;
+    const nodes = [{ id: 'story', icon: '📖', label: 'Story',
+      badge: depth ? `DREAM ${depth}` : undefined }];
 
     const mg = window.FinkMinigames;
     if (mg?.active && mg.currentType) {
@@ -271,6 +273,7 @@ function buildUI() {
   });
   bus.subscribe('wm.*', renderShelf);
   bus.subscribe('minigame.*', renderShelf);
+  bus.subscribe('story.state', renderShelf);
   // widget windows announce open/close on wm.widget.*; removals by any
   // path (bar ✕, script) are caught by observing the DOM
   new MutationObserver(renderShelf).observe(document.body, { childList: true });

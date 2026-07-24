@@ -6,8 +6,25 @@ window.FinkInkEngine = {
     finkStoryContent: '',
     currentStoryTags: {},
     lastSeenFinkTag: null,
+    lastSeenLinkRel: null,   // # LINKREL: annotation on the pending FINK link
     pendingMinigame: null,
     compiledCount: 0,  // Track successful INK compilations
+
+    // The dream stack (docs/3dmap-idea.md): LINKREL goDeeper pushes the
+    // current frame (url + full Ink state incl. position) and descends;
+    // END at depth > 0 pops — the outer story resumes mid-breath.
+    storyStack: [],
+    _pendingRestoreState: null,
+    get depth() { return this.storyStack.length; },
+
+    // One retained truth for shell/shelf/assistive tech:
+    // phase ∈ loading | play | end | fault, plus dream depth.
+    publishStoryState(phase, extra = {}) {
+        document.body.dataset.finkDepth = String(this.depth);
+        window.FoafOS?.bus.publish('story.state',
+            { phase, depth: this.depth, summary: `story ${phase}` + (this.depth ? ` · depth ${this.depth}` : ''), ...extra },
+            { retain: true });
+    },
 
     // Private inventory INK - gets injected into all stories
     // Variables are only declared if not already present in story
@@ -162,6 +179,19 @@ window.FinkInkEngine = {
                                            this.currentStoryTags.basehref + '/';
             }
 
+            // Returning from a dream: restore the saved frame state and
+            // resume — deep links don't apply to a pop.
+            if (this._pendingRestoreState) {
+                const saved = this._pendingRestoreState;
+                this._pendingRestoreState = null;
+                this.story.state.LoadJson(saved);
+                FinkUtils.debugLog('Dream frame restored; resuming outer story');
+                FinkUI.clearStory();
+                FinkUI.hideStatus();
+                this.continueStory();
+                return true;
+            }
+
             // Build navigation map and check for deep links
             if (window.FinkNavigation) {
                 // Check for deep link - this may navigate to a different knot or load a different FINK
@@ -311,6 +341,10 @@ window.FinkInkEngine = {
                             shouldLoadExternal = true;
                             FinkUtils.debugLog('FINK tag detected: ' + value);
                             break;
+                        case 'LINKREL':
+                            this.lastSeenLinkRel = value.trim();
+                            FinkUtils.debugLog('LINKREL: ' + this.lastSeenLinkRel);
+                            break;
                         case 'MINIGAME':
                             // Parse: "gridluck mode=cave controls=dpad" or just "chess"
                             // controls: dpad (full), lite (simple), none (tap only)
@@ -371,6 +405,7 @@ window.FinkInkEngine = {
                 window.FoafOS?.bus.publish('story.beat',
                     { summary: beatText.slice(0, 140) + (beatText.length > 140 ? '…' : '') });
             }
+            this.publishStoryState('play');
 
             // Apply collected BASEHREF first (affects image path resolution)
             if (collectedBasehref) {
@@ -467,10 +502,17 @@ window.FinkInkEngine = {
                     this.continueStory(index);
                 });
                 FinkUI.hideStatus();
+            } else if (this.storyStack.length > 0) {
+                // END at depth is not the end — it is the pop edge:
+                // the dream thins and the outer story resumes.
+                FinkUtils.debugLog('End of dream — popping stack');
+                this.popStoryFrame();
+                return;
             } else {
                 FinkUtils.debugLog('Reached end of story');
                 FinkUI.showEndOfStory();
                 FinkUI.hideStatus();
+                this.publishStoryState('end');
             }
 
             // Update stats display
@@ -492,8 +534,34 @@ window.FinkInkEngine = {
             return;
         }
 
+        // Document composition by LINKREL (spec §3.4 / docs/3dmap-idea.md):
+        // bare FINK = replace (back-compat); goDeeper = push this frame and
+        // descend; goShallower = pop (the URL is documentation); oneWay =
+        // replace with the way back burned (stack cleared).
+        const rel = (this.lastSeenLinkRel || '').toLowerCase();
+        this.lastSeenLinkRel = null;
+        if (rel === 'goshallower' && this.storyStack.length > 0) {
+            this.popStoryFrame();
+            return;
+        }
+        if (rel === 'godeeper') {
+            if (this.storyStack.length >= 8) {
+                FinkUI.showStatus('The dream refuses: too deep.');
+                this.publishStoryState('fault', { reason: 'depth-cap' });
+                return;
+            }
+            this.storyStack.push({
+                url: FinkPlayer.currentStoryUrl,
+                state: this.story.state.ToJson(),
+            });
+            FinkUtils.debugLog(`goDeeper: pushed frame, depth now ${this.depth}`);
+        } else if (rel === 'oneway') {
+            this.storyStack = [];
+        }
+
         FinkUtils.debugLog('Loading external FINK file: ' + this.lastSeenFinkTag);
         FinkUI.showStatus('Loading ' + this.lastSeenFinkTag + '...', true);
+        this.publishStoryState('loading', { to: this.lastSeenFinkTag });
 
         const baseUrl = FinkPlayer.currentStoryUrl || window.location.href;
         const resolvedUrl = new URL(this.lastSeenFinkTag, baseUrl).href;
@@ -546,6 +614,29 @@ window.FinkInkEngine = {
                 if (window.swimEvent) swimEvent('net', '❌', 'Load Failed', error.message);
             });
         }, 500);
+    },
+
+    // Pop the dream stack: reload the outer document and restore its full
+    // Ink state (position included) — the outer story resumes mid-breath.
+    popStoryFrame() {
+        const frame = this.storyStack.pop();
+        if (!frame?.url) return;
+        FinkUtils.debugLog(`Popping to ${frame.url} (depth now ${this.depth})`);
+        FinkUI.showStatus('Surfacing…', true);
+        this.publishStoryState('loading', { to: frame.url, pop: true });
+        this._pendingRestoreState = frame.state;
+        FinkSandbox.clearLoadRecord(frame.url);
+        FinkSandbox.loadViaSandbox(frame.url)
+            .then(async (content) => {
+                if (content === null) { this._pendingRestoreState = null; return; }
+                FinkPlayer.currentStoryUrl = frame.url;
+                await this.compileAndRunStory(content);
+            })
+            .catch((error) => {
+                this._pendingRestoreState = null;
+                FinkUI.showStatus('Error surfacing from the dream: ' + error.message);
+                this.publishStoryState('fault', { reason: 'pop-load' });
+            });
     },
 
     // Extract story-level tags from compiled INK Story

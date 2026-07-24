@@ -71,6 +71,32 @@ main {
 
 .view.active { display: flex; }
 
+/* --- Dream depth: the surface degrades as you descend (3dmap-idea:
+   Level 1 clean, Level 2 subtle aberration, 3+ reality tears) --- */
+body[data-fink-depth="1"] #narrative-view {
+    filter: saturate(1.25) contrast(1.04) hue-rotate(-4deg);
+}
+body[data-fink-depth="2"] #narrative-view {
+    filter: saturate(1.5) contrast(1.1) hue-rotate(-10deg);
+    animation: dreamWobble 9s ease-in-out infinite;
+}
+body[data-fink-depth="3"] #narrative-view,
+body[data-fink-depth="4"] #narrative-view,
+body[data-fink-depth="5"] #narrative-view,
+body[data-fink-depth="6"] #narrative-view,
+body[data-fink-depth="7"] #narrative-view,
+body[data-fink-depth="8"] #narrative-view {
+    filter: saturate(1.9) contrast(1.2) hue-rotate(-22deg) blur(0.3px);
+    animation: dreamWobble 5s ease-in-out infinite;
+}
+@keyframes dreamWobble {
+    0%, 100% { transform: skewX(0deg); }
+    50% { transform: skewX(0.4deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+    body[data-fink-depth] #narrative-view { animation: none; }
+}
+
 /* --- Narrative View --- */
 #narrative-view {
     padding: 0.5em;
