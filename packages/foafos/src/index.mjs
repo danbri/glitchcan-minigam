@@ -20,3 +20,4 @@ export { defineFeed } from './feed.mjs';
 export { SseTransport, WebSocketTransport, FeedPoller } from './transports.mjs';
 export { FoafCluster } from './cluster.mjs';
 export { scopeBus, defineGuest } from './guest.mjs';
+export { defineTable } from './table.mjs';

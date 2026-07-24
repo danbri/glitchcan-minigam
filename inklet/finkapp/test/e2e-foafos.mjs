@@ -82,7 +82,7 @@ try {
   const drawer = await page.evaluate(() => ({
     open: document.getElementById('foafos-drawer').classList.contains('open'),
     cards: document.querySelectorAll('foafos-feed foaf-card').length,
-    chip: document.querySelector('.foafos-chip')?.textContent || null,
+    chip: [...document.querySelectorAll('.foafos-chip')].map(c => c.textContent).find(t => /Robbin/.test(t)) || null,
   }));
   drawer.open && drawer.cards >= 4 && /Robbin/i.test(drawer.chip || '')
     ? pass(`drawer: ${drawer.cards} feed cards, shelf chip "${drawer.chip}"`)
@@ -95,7 +95,8 @@ try {
   await page.waitForTimeout(400);
   const blurred = await frame.evaluate(() => window.__robbin.game._audioFocus === false);
   blurred ? pass('pip sent audio-blur — guest ducked') : fail('guest never lost audio focus');
-  await page.click('.foafos-chip');
+  await page.evaluate(() =>
+    [...document.querySelectorAll('.foafos-chip')].find(c => /Robbin/.test(c.textContent))?.click());
   await page.waitForTimeout(400);
   const restored = await page.evaluate(() => ({ mode: FinkWM.mode, drawerOpen: document.getElementById('foafos-drawer').classList.contains('open') }));
   const refocused = await frame.evaluate(() => window.__robbin.game._audioFocus === true);
@@ -134,6 +135,15 @@ try {
   const tallies = page.frames().filter(f => f.url().includes('tally/index.html'));
   await tallies[0].evaluate(() => document.getElementById('bump').click());
   await page.waitForTimeout(300);
+  // the shelf lists EVERY window per instance: story + game + 2 widgets
+  await page.evaluate(() => document.getElementById('foafos-dock').click());
+  await page.waitForTimeout(300);
+  const chips = await page.evaluate(() =>
+    [...document.querySelectorAll('#foafos-shelf .foafos-chip')].map(c => c.textContent));
+  chips.length === 4 && chips[0].includes('Story') && chips.filter(c => c.includes('Tally')).length === 2
+    ? pass(`shelf lists all windows: ${chips.join(' | ')}`)
+    : fail(`shelf wrong: ${JSON.stringify(chips)}`);
+  await page.evaluate(() => document.getElementById('foafos-dock').click());
   const widgetCheck = {
     a: await tallies[0].evaluate(() => document.getElementById('count').textContent),
     b: await tallies[1].evaluate(() => document.getElementById('count').textContent),
@@ -164,6 +174,44 @@ try {
   unlocked.name === 'Wren of Hampstead' && unlocked.mark === 42
     ? pass('session unlocked after reload — profile and data intact')
     : fail(`unlock round-trip wrong: ${JSON.stringify(unlocked)}`);
+
+  // 6. builtin gems: PAUSE actually stops time (regression: gem expiry
+  // timers used to run through pause; the game completed itself and
+  // vanished from the window list while "paused")
+  await page.waitForTimeout(1000);
+  await page.evaluate(() => {
+    GemsMinigame.config.normal = { spawnCount: 2, spawnInterval: 100, maxGems: 2, timeout: 400, emojis: ['💎'] };
+    FinkMinigames.startMinigame('gems', 'normal');
+  });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => FinkMinigames.togglePause());
+  await page.waitForTimeout(1500);   // > timeout+delay: unpatched, game self-completes here
+  const pausedState = await page.evaluate(() => ({
+    active: FinkMinigames.active, paused: FinkMinigames.windowState.paused,
+  }));
+  pausedState.active && pausedState.paused
+    ? pass('paused gems window survives (expiry timers frozen)')
+    : fail(`gems vanished while paused: ${JSON.stringify(pausedState)}`);
+  await page.evaluate(() => FinkMinigames.togglePause());
+  await page.waitForFunction(() => FinkMinigames.active === false, null, { timeout: 10000 });
+  pass('resumed gems completes normally');
+
+  // 7. standard widgets: a data share opens in the shell's <foaf-table>
+  await page.evaluate(() => FoafOS.bus.publish('widget.data.x.share',
+    { title: 'Birds', columns: ['name', 'count'], rows: [['robin', 1], ['wren', 2]] },
+    { source: 'guest:x' }));
+  await page.waitForTimeout(400);
+  const tableView = await page.evaluate(() => {
+    const t = document.querySelector('.foafos-window foaf-table');
+    return t ? {
+      caption: t.shadowRoot.querySelector('caption').textContent,
+      rows: t.shadowRoot.querySelectorAll('tbody tr').length,
+      sortable: t.shadowRoot.querySelector('th[aria-sort]') !== null,
+    } : null;
+  });
+  tableView?.rows === 2 && /Birds · 2 rows/.test(tableView.caption) && tableView.sortable
+    ? pass(`share opened in standard table explorer ("${tableView.caption}")`)
+    : fail(`foaf-table wrong: ${JSON.stringify(tableView)}`);
 
   pageErrors.length === 0 ? pass('no page errors')
     : fail(`page errors: ${pageErrors.slice(0, 3).join(' · ')}`);

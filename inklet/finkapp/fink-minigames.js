@@ -861,6 +861,8 @@ window.FinkMinigames = {
     pauseMinigame() {
         if (this.iframeMinigame) {
             this._sendToIframe({ type: 'pause' });
+        } else {
+            window.GemsMinigame?.setPaused?.(true);   // builtin games
         }
     },
 
@@ -868,6 +870,8 @@ window.FinkMinigames = {
     resumeMinigame() {
         if (this.iframeMinigame) {
             this._sendToIframe({ type: 'resume' });
+        } else {
+            window.GemsMinigame?.setPaused?.(false);
         }
     },
 

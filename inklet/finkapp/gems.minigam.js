@@ -65,8 +65,9 @@ window.GemsMinigame = {
             this.spawnGem();
         }
 
-        // Continue spawning
+        // Continue spawning (a paused game spawns nothing)
         this.spawnTimer = setInterval(() => {
+            if (this.paused) return;
             if (this.totalSpawned < cfg.maxGems) {
                 this.spawnGem();
             } else {
@@ -99,14 +100,19 @@ window.GemsMinigame = {
         this.container.appendChild(gem);
         this.activeGems++;
 
-        // Auto-remove after timeout if not collected
-        setTimeout(() => {
+        // Auto-remove after timeout if not collected. Time stands still
+        // while paused: an expiry that fires during pause re-arms instead
+        // of removing (pause used to let every gem quietly expire and the
+        // game complete itself out of the window list).
+        const expire = () => {
+            if (this.paused) { setTimeout(expire, 500); return; }
             if (gem.parentNode && !gem.classList.contains('collected')) {
                 gem.remove();
                 this.activeGems--;
                 this.checkAutoComplete();
             }
-        }, cfg.timeout);
+        };
+        setTimeout(expire, cfg.timeout);
     },
 
     // Collect a gem
@@ -176,8 +182,15 @@ window.GemsMinigame = {
         return result;
     },
 
+    // Host pause hook (builtin games have no iframe to message)
+    setPaused(on) {
+        this.paused = !!on;
+        if (!on) this.checkAutoComplete();
+    },
+
     // Check if game should auto-complete
     checkAutoComplete() {
+        if (this.paused) return;
         const cfg = this.config[this.mode];
         // Auto-complete when all gems spawned AND none left on screen
         if (this.totalSpawned >= cfg.maxGems && this.activeGems <= 0 && this.active) {

@@ -13,12 +13,13 @@ import {
   saveSealed, loadSealed, clearSealed,
   widgets, defineBaseCards, defineFeed,
   SseTransport, WebSocketTransport, FeedPoller,
-  FoafCluster, defineGuest,
+  FoafCluster, defineGuest, defineTable,
 } from '../../packages/foafos/src/index.mjs';
 
 defineBaseCards();
 defineFeed();
 defineGuest();
+defineTable();
 
 // Launchable guest widgets (sandboxed processes). Paths resolve under
 // the deploy root; grants are per-instance.
@@ -205,35 +206,74 @@ function buildUI() {
   refreshStatus();
   announceSession('started');
 
-  // ── the shelf: open windows, live from bus events ──
+  // ── the shelf: EVERY window, live from bus events ──
+  // The story is a window too (it predates the WM — listed, not magic);
+  // widget windows are listed per instance, not per kind.
   const shelf = $('#foafos-shelf');
+  const chip = (label, title, onClick) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'foafos-chip';
+    b.textContent = label;
+    b.title = title;
+    b.addEventListener('click', onClick);
+    return b;
+  };
   const renderShelf = () => {
     shelf.textContent = '';
+
+    // 1. the story
+    shelf.appendChild(chip('📖 Story', 'Bring the story forward', () => {
+      const wm = window.FinkWM;
+      if (wm?.active && wm.mode === 'full') wm.setMode('split');
+      setDrawer(false);
+      document.getElementById('narrative-view')?.focus?.();
+    }));
+
+    // 2. the game window (WM-managed)
     const mg = window.FinkMinigames;
     if (mg?.active && mg.currentType) {
       const info = mg.minigameInfo?.[mg.currentType] || {};
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'foafos-chip';
       const mode = window.FinkWM?.mode || '—';
-      chip.textContent = `${info.icon || '🎮'} ${info.title || mg.currentType} · ${mode.toUpperCase()}`;
-      chip.title = 'Bring this window forward';
-      chip.addEventListener('click', () => {
-        const wm = window.FinkWM;
-        if (wm) wm.setMode(wm.mode === 'pip' ? wm.lastNonPipMode : 'full');
+      const paused = mg.windowState?.paused ? ' ⏸' : '';
+      shelf.appendChild(chip(
+        `${info.icon || '🎮'} ${info.title || mg.currentType} · ${mode.toUpperCase()}${paused}`,
+        'Bring this window forward',
+        () => {
+          const wm = window.FinkWM;
+          if (wm) wm.setMode(wm.mode === 'pip' ? wm.lastNonPipMode : 'full');
+          setDrawer(false);
+        }));
+    }
+
+    // 3. every open widget window, by instance
+    for (const win of document.querySelectorAll('.foafos-window')) {
+      const label = win.querySelector('.foafos-window-bar span')?.textContent || 'widget';
+      shelf.appendChild(chip(label, 'Raise this widget', () => {
+        document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
+        win.style.zIndex = 2630;
         setDrawer(false);
-      });
-      shelf.appendChild(chip);
-    } else {
-      const none = document.createElement('div');
-      none.className = 'foafos-none';
-      none.textContent = 'no game windows open';
-      shelf.appendChild(none);
+      }));
     }
   };
   bus.subscribe('wm.*', renderShelf);
   bus.subscribe('minigame.*', renderShelf);
+  // widget windows announce open/close on wm.widget.*; removals by any
+  // path (bar ✕, script) are caught by observing the DOM
+  new MutationObserver(renderShelf).observe(document.body, { childList: true });
   renderShelf();
+
+  // ── standard widgets: data shares open in the shell's table explorer ──
+  // The guest computed it; the trusted, uniformly-skinned, a11y-pooled
+  // <foaf-table> presents it.
+  bus.subscribe('widget.data.*', (e) => {
+    if (!e.topic.endsWith('.share') || !e.data?.columns) return;
+    const win = makeWindow(`▤ ${e.data.title || 'shared table'} · from ${e.source}`, 460, 320);
+    const table = document.createElement('foaf-table');
+    table.data = { title: e.data.title, columns: e.data.columns, rows: e.data.rows || [] };
+    win.appendChild(table);
+    document.body.appendChild(win);
+  });
 
   // ── widget launcher: sandboxed guests as floating windows ──
   let widgetSeq = 0;
@@ -250,19 +290,48 @@ function buildUI() {
     launcher.appendChild(btn);
   }
 
-  function openWidgetWindow(spec) {
-    const name = `${spec.key}${++widgetSeq}`;
+  // One standard window frame for everything the shell floats: titlebar
+  // (drag handle), close button, raise-on-interact. Content varies;
+  // chrome does not — that uniformity IS the skin.
+  function makeWindow(title, w, h) {
+    widgetSeq++;
     const win = document.createElement('div');
     win.className = 'foafos-window';
     win.setAttribute('role', 'group');
-    win.setAttribute('aria-label', `${spec.title} widget window ${name}`);
-    win.style.width = `${spec.w}px`;
-    win.style.height = `${spec.h}px`;
+    win.setAttribute('aria-label', title);
+    win.style.width = `${w}px`;
+    win.style.height = `${h}px`;
     win.style.left = `${12 + (widgetSeq % 5) * 24}px`;
     win.style.top = `${60 + (widgetSeq % 5) * 24}px`;
     win.innerHTML = `
-      <div class="foafos-window-bar"><span>${spec.title} · ${name}</span>
-        <button type="button" class="foafos-window-close" aria-label="Close widget">✕</button></div>`;
+      <div class="foafos-window-bar"><span>${title}</span>
+        <button type="button" class="foafos-window-close" aria-label="Close ${title}">✕</button></div>`;
+
+    win.querySelector('.foafos-window-close').addEventListener('click', () => win.remove());
+
+    const bar = win.querySelector('.foafos-window-bar');
+    let drag = null;
+    bar.addEventListener('pointerdown', (e) => {
+      if (e.target.tagName === 'BUTTON') return;
+      e.preventDefault();
+      bar.setPointerCapture(e.pointerId);
+      const r = win.getBoundingClientRect();
+      drag = { x: e.clientX, y: e.clientY, left: r.left, top: r.top };
+      document.querySelectorAll('.foafos-window').forEach(x => { x.style.zIndex = 2620; });
+      win.style.zIndex = 2630;
+    });
+    bar.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      win.style.left = `${Math.max(0, Math.min(window.innerWidth - 80, drag.left + e.clientX - drag.x))}px`;
+      win.style.top = `${Math.max(0, Math.min(window.innerHeight - 40, drag.top + e.clientY - drag.y))}px`;
+    });
+    bar.addEventListener('pointerup', () => { drag = null; });
+    return win;
+  }
+
+  function openWidgetWindow(spec) {
+    const name = `${spec.key}${widgetSeq + 1}`;
+    const win = makeWindow(`${spec.title} · ${name}`, spec.w, spec.h);
 
     const guest = document.createElement('foafos-guest');
     guest.setAttribute('src', spec.src);
@@ -273,28 +342,6 @@ function buildUI() {
     guest.config = { label: name };
     win.appendChild(guest);
     document.body.appendChild(win);
-
-    win.querySelector('.foafos-window-close').addEventListener('click', () => win.remove());
-
-    // drag by the titlebar
-    const bar = win.querySelector('.foafos-window-bar');
-    let drag = null;
-    bar.addEventListener('pointerdown', (e) => {
-      if (e.target.tagName === 'BUTTON') return;
-      e.preventDefault();
-      bar.setPointerCapture(e.pointerId);
-      const r = win.getBoundingClientRect();
-      drag = { x: e.clientX, y: e.clientY, left: r.left, top: r.top };
-      // raise above siblings
-      document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
-      win.style.zIndex = 2630;
-    });
-    bar.addEventListener('pointermove', (e) => {
-      if (!drag) return;
-      win.style.left = `${Math.max(0, Math.min(window.innerWidth - 80, drag.left + e.clientX - drag.x))}px`;
-      win.style.top = `${Math.max(0, Math.min(window.innerHeight - 40, drag.top + e.clientY - drag.y))}px`;
-    });
-    bar.addEventListener('pointerup', () => { drag = null; });
     return win;
   }
   FoafOS.openWidget = (key) => {
