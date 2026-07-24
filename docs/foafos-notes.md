@@ -74,6 +74,17 @@ Principles:
 
 ## Deliberately not yet
 
+- **The story as a fully WM-managed window.** It's now listed in the
+  shelf (and focusing it un-fullscreens the game), but the narrative
+  view still isn't a FinkWM window with modes of its own — that
+  refactor makes the shell genuinely N-window and is the prerequisite
+  for concurrent minigames.
+- **Standard widget set beyond `<foaf-table>`**: `<foaf-tree>`
+  (explorer), `<foaf-list>`, `<foaf-form>` — same pattern: apps
+  compute, trusted uniformly-skinned components present, accessibility
+  pooled once. App-internal menus unify via the command registry
+  (edot Phase 3), not by restyling each app.
+
 - **Multi-window minigames.** The ink engine runs one MINIGAME break at
   a time; the shelf and WM are built for N windows but the engine
   contract isn't. Next step would be detaching window lifetime from the
