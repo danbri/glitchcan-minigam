@@ -98,31 +98,22 @@
         <div id="choices"></div>
     </div>
 
+    <!-- FinkWM chrome: the game window's controls. Lives at body level so it
+         survives every window mode; draggable by its grip, docks to a screen
+         edge, collapses to the grip alone. -->
+    <div id="wm-chrome" class="wm-hidden collapsed" role="toolbar" aria-label="Game window controls">
+        <button type="button" id="wm-handle" aria-label="Window controls" aria-expanded="false">▦</button>
+        <div id="wm-buttons">
+            <button type="button" id="wm-full" title="Full screen" aria-label="Full screen">▣</button>
+            <button type="button" id="wm-split" title="Split with story" aria-label="Split with story">◫</button>
+            <button type="button" id="wm-pip" title="Picture-in-picture" aria-label="Picture-in-picture">◰</button>
+            <button type="button" id="minigame-pause" title="Pause" aria-label="Pause game">⏸</button>
+            <button type="button" id="returnToStory" title="Exit minigame" aria-label="Exit minigame">✕</button>
+        </div>
+    </div>
+
     <!-- Minigame View -->
     <div id="minigame-view" class="view">
-        <!-- Game Window Slider Control -->
-        <div id="game-slider" class="game-slider hidden">
-            <div class="game-slider-track">
-                <div class="game-slider-snap" data-state="full" style="left: 0%"></div>
-                <div class="game-slider-snap" data-state="embed" style="left: 33%"></div>
-                <div class="game-slider-snap" data-state="mini-live" style="left: 66%"></div>
-                <div class="game-slider-snap" data-state="mini-paused" style="left: 100%"></div>
-                <div class="game-slider-thumb" id="game-slider-thumb"></div>
-            </div>
-            <div class="game-slider-labels">
-                <span>FULL</span><span>EMBED</span><span>MINI</span><span>⏸</span>
-            </div>
-        </div>
-
-        <!-- Minigame control bar -->
-        <div id="minigame-controls">
-            <button id="minigame-pause" title="Pause">⏸</button>
-            <button id="minigame-pin" title="Pin (keep visible while reading)">📌</button>
-            <button id="minigame-minimize" title="Minimize">−</button>
-            <button id="minigame-maximize" title="Maximize">□</button>
-            <button id="returnToStory" title="Exit minigame">✕</button>
-        </div>
-
         <!-- Minigame content area -->
         <div id="minigame-content">
             <div id="game-container"></div>
@@ -215,7 +206,7 @@
 <script src="chess.minigam.js"></script>
 <script src="../minigames/minigame-host.js"></script>
 <script src="fink-minigames.js"></script>
-<script src="fink-slider.js"></script>
+<script src="fink-wm.js"></script>
 <script src="fink-ink-engine.js"></script>
 <script src="fink-player.js"></script>
 

@@ -547,10 +547,11 @@ window.FinkMinigames = {
             view.style.right = '';
             view.style.bottom = '';
 
-            // CRITICAL: Remove slider state classes that have z-index/position:fixed
+            // CRITICAL: Remove window state classes that have z-index/position:fixed
             // Without this, state-full (z-index:2000, position:fixed) blocks clicks on narrative
-            view.classList.remove('state-full', 'state-embed', 'state-mini-live', 'state-mini-paused');
-            view.classList.remove('slider-transitioning');
+            view.classList.remove('state-full', 'state-split', 'state-pip',
+                'state-embed', 'state-mini-live', 'state-mini-paused');
+            view.classList.remove('wm-transitioning', 'slider-transitioning');
         }
 
         // Reset button states and icons
@@ -589,10 +590,9 @@ window.FinkMinigames = {
         // Switch to minigame view
         this.switchView('minigame');
 
-        // Show slider and set to full state
-        if (window.FinkWindowSlider) {
-            FinkWindowSlider.setState('full', false);
-            FinkWindowSlider.show();
+        // Open the game window (FinkWM owns geometry: full/split/pip)
+        if (window.FinkWM) {
+            FinkWM.open('full');
         }
 
         // Show d-pad based on control type (pass mode string for proper handling)
@@ -902,9 +902,9 @@ window.FinkMinigames = {
         this._resetWindowState();
         this.log(`Window state after reset: ${JSON.stringify(this.windowState)}`);
 
-        // Hide slider and d-pad
-        if (window.FinkWindowSlider) {
-            FinkWindowSlider.hide();
+        // Close the game window and hide the d-pad
+        if (window.FinkWM) {
+            FinkWM.close();
         }
         this._showDPad(false);
 
@@ -933,8 +933,9 @@ window.FinkMinigames = {
             // Remove ALL position-altering classes
             this.elements.minigameView.classList.remove(
                 'active', 'paused', 'pinned', 'minimized', 'maximized',
-                'transitioning', 'state-full', 'state-embed',
-                'state-mini-live', 'state-mini-paused', 'slider-transitioning'
+                'transitioning', 'state-full', 'state-split', 'state-pip',
+                'state-embed', 'state-mini-live', 'state-mini-paused',
+                'wm-transitioning', 'slider-transitioning'
             );
             // Clear any inline styles that might override CSS
             this.elements.minigameView.style.cssText = '';

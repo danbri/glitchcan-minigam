@@ -80,6 +80,27 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   plain `python3 -m http.server` does NOT — local harnesses need a
   CORS-enabled server.
 
+## Window manager (FinkWM)
+
+- `fink-wm.js` is the single owner of game-window geometry (spec §5.1):
+  modes full/split/pip, pause orthogonal. The chrome (`#wm-chrome`) is
+  draggable, edge-docking (persisted at `fink.wm.dock`), collapsible to
+  its grip. Pip: tap restores, drag moves, guest input suspended via
+  `pointer-events: none` on iframe/canvas.
+- It REPLACED two rival systems: the FULL/EMBED/MINI slider
+  (`fink-slider.js`, kept on disk but unloaded — EMBED rendered a 4px
+  sliver, MINI had no way back) and the hidden pause/pin/min/max button
+  bar. Never reintroduce a second geometry owner.
+- Layout trap: `#minigame-view` is a `.view` flex child with
+  `min-height:0` — a bare `height:` on it gets crushed to a sliver.
+  Split uses `flex: 0 0 52%` + `min-height` instead.
+- Buttons `#minigame-pause` and `#returnToStory` live IN the chrome but
+  are wired by FinkMinigames — keep those ids stable.
+- E2E: `node inklet/finkapp/test/e2e-wm.mjs`. Grip taps TOGGLE collapse
+  and the toolbar auto-collapses after 4.5s — tests must set collapse
+  state explicitly (`FinkWM._setCollapsed(false)`) before clicking
+  toolbar buttons.
+
 ## Navigation / links
 
 - Two-part hash links: `#<urlHash8>-<knotHash9>`, SHA-256 with salt

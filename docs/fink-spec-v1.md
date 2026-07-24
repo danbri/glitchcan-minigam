@@ -226,6 +226,30 @@ Guest games run in `<iframe sandbox="allow-scripts">` (opaque origin).
   re-sent `init`. (`inklet/minigames/robbin/` is the worked example;
   full loop locked by `inklet/finkapp/test/e2e-robbin.mjs`.)
 
+### 5.1 The window model
+
+The game runner is the shell of a small web OS: the story is the
+desktop, a running minigame is a **window**. One state machine
+(`FinkWM`) owns window geometry:
+
+- Modes: `full` (window owns the screen) · `split` (story and game
+  genuinely share it) · `pip` (a live corner viewport). **Pause is
+  orthogonal to geometry** — any mode can be paused, and pausing never
+  moves the window.
+- The chrome (title-bar toolbar) is itself a first-class window
+  citizen: draggable by its grip, docks to a screen edge (persisted),
+  and collapses to the grip alone. It is reachable in every mode.
+- **No one-way doors — normative:** every mode MUST be exitable by a
+  direct gesture. Pip restores on tap; in pip the window is a viewport,
+  not a control surface (guest input is suspended).
+- Mode changes are presentation only: they send no SDK messages except
+  pause/resume, and never touch story state.
+
+Locked by `inklet/finkapp/test/e2e-wm.mjs` (which regression-tests the
+two failures of the retired slider panel: a split state that crushed
+the game to a 4px sliver, and a mini state that hid its own restore
+control).
+
 ## 6. Links, navigation, identity
 
 Incorporates `docs/fink-linking-spec.md`: two-part SHA-256 hash links
@@ -267,4 +291,5 @@ origin. A conforming **presenter** implements §4.4.
   (real compiler), whole-corpus extract+compile.
 - `node inklet/finkapp/test/e2e.mjs` — the mandatory journey.
 - `node inklet/finkapp/test/e2e-robbin.mjs` — the full widget loop.
+- `node inklet/finkapp/test/e2e-wm.mjs` — the window manager (§5.1).
 - `node inklet/validation/checkfink.mjs` — per-story validation.

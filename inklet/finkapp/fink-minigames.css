@@ -15,100 +15,91 @@
     display: flex;
 }
 
-/* --- Game Window Slider (at top, replaces old window control buttons) --- */
-.game-slider {
+/* --- FinkWM chrome ---
+   One compact toolbar for the game window. Docked to a screen edge,
+   draggable by its grip, collapsible to the grip alone. */
+#wm-chrome {
     position: fixed;
     top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 85%;
-    max-width: 300px;
-    z-index: 2500;
-    padding: 0.6em 0.8em;
-    background: rgba(0, 0, 0, 0.9);
-    border-radius: var(--border-radius-md);
-    border: 2px solid var(--zx-cyan);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    right: 8px;
+    z-index: 2600;
+    display: flex;
+    align-items: center;
+    gap: 0.25em;
+    padding: 0.2em;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid var(--zx-cyan);
+    border-radius: 999px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+    touch-action: none;
 }
 
-.game-slider.hidden { display: none; }
+#wm-chrome.wm-hidden { display: none; }
 
-/* Hide slider when minigame is minimized - pip is too small for it */
-#minigame-view.minimized .game-slider,
-#minigame-view.state-mini-live .game-slider,
-#minigame-view.state-mini-paused .game-slider {
-    display: none !important;
-}
+/* Docked left: grip stays on the screen-edge side */
+#wm-chrome.dock-left { flex-direction: row-reverse; }
 
-.game-slider-track {
-    position: relative;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 3px;
-    margin: 0.8em 0.5em;
-}
+#wm-buttons { display: flex; gap: 0.25em; }
+#wm-chrome.dock-left #wm-buttons { flex-direction: row-reverse; }
 
-.game-slider-snap {
-    position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 14px;
-    height: 14px;
+/* Collapsed: just the grip */
+#wm-chrome.collapsed #wm-buttons { display: none; }
+#wm-chrome.collapsed { opacity: 0.75; }
+#wm-chrome.collapsed:hover { opacity: 1; }
+
+#wm-chrome button {
+    width: 40px;
+    height: 40px;
+    min-width: var(--touch-target-min);
+    min-height: var(--touch-target-min);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #222;
+    border: 1px solid #555;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
-    border: 2px solid rgba(255, 255, 255, 0.5);
+    color: #fff;
+    font-size: 1em;
     cursor: pointer;
-    transition: background 0.15s, transform 0.15s, border-color 0.15s;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
-.game-slider-snap:hover {
+#wm-chrome button:hover {
+    background: #444;
+    border-color: var(--zx-cyan);
+}
+
+#wm-chrome button.active {
     background: var(--zx-cyan);
     border-color: var(--zx-cyan);
-    transform: translate(-50%, -50%) scale(1.2);
+    color: #000;
 }
 
-.game-slider-snap.active {
-    background: var(--zx-yellow);
-    border-color: var(--zx-yellow);
-    box-shadow: 0 0 10px var(--zx-yellow);
-}
-
-.game-slider-thumb {
-    position: absolute;
-    top: 50%;
-    left: 0%;
-    transform: translate(-50%, -50%);
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--zx-cyan), var(--zx-blue));
-    border: 2px solid #fff;
+#wm-handle {
     cursor: grab;
-    touch-action: none;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-    transition: left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s;
-    z-index: 10;
+    background: transparent !important;
+    border-color: transparent !important;
+    color: var(--zx-cyan) !important;
+}
+#wm-handle:active { cursor: grabbing; }
+
+/* Pause shows as an amber latch when engaged */
+#minigame-pause.active {
+    background: var(--zx-yellow) !important;
+    border-color: var(--zx-yellow) !important;
+    color: #000 !important;
 }
 
-.game-slider-thumb:active {
-    cursor: grabbing;
-    box-shadow: 0 0 15px var(--zx-cyan);
+#returnToStory {
+    background: rgba(80, 20, 20, 0.9) !important;
+    border-color: #f55 !important;
+}
+#returnToStory:hover {
+    background: #733 !important;
+    border-color: #f88 !important;
 }
 
-.game-slider-thumb.dragging {
-    transition: none;
-}
-
-.game-slider-labels {
-    display: flex;
-    justify-content: space-between;
-    font-size: 9px;
-    color: rgba(255, 255, 255, 0.6);
-    padding: 0 0.3em;
-    margin-top: 0.3em;
-}
-
-/* --- State Classes for Slider --- */
+/* --- Window modes --- */
 #minigame-view.state-full {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -118,121 +109,50 @@
     border-radius: 0;
 }
 
-#minigame-view.state-embed {
+/* Split: the story keeps the top of the column, the game holds a real
+   share of it. flex-basis with flex-shrink:0 — a bare height here gets
+   crushed to a sliver by the .view min-height:0 flex context. */
+#minigame-view.state-split {
+    flex: 0 0 52%;
+    min-height: 200px;
     position: relative;
-    width: 100%;
-    height: 60vh;
-    border-radius: var(--border-radius-md);
-    border: 2px solid var(--zx-cyan);
-    margin: 0.5em 0;
+    border-top: 2px solid var(--zx-cyan);
 }
 
-#minigame-view.state-mini-live {
+/* Pip: a live viewport in the corner, not a control surface — input is
+   suspended (tap restores, drag moves). */
+#minigame-view.state-pip {
     position: fixed;
-    bottom: 80px;
-    right: 20px;
-    width: 140px;
-    height: 100px;
-    border-radius: var(--border-radius-md);
+    bottom: 84px;
+    right: 16px;
+    width: 200px;
+    height: 140px;
+    z-index: 1500;
     border: 2px solid var(--zx-green);
-    z-index: 1000;
-    box-shadow: 0 4px 20px rgba(0, 255, 100, 0.2);
-}
-
-#minigame-view.state-mini-paused {
-    position: fixed;
-    bottom: 80px;
-    right: 20px;
-    width: 140px;
-    height: 100px;
     border-radius: var(--border-radius-md);
-    border: 2px solid var(--zx-mag);
-    z-index: 1000;
-    filter: grayscale(50%);
+    overflow: hidden;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    touch-action: none;
 }
 
-/* Smooth transitions between states */
-#minigame-view.slider-transitioning {
+#minigame-view.state-pip iframe,
+#minigame-view.state-pip canvas {
+    pointer-events: none;
+}
+
+/* Smooth transitions between modes */
+#minigame-view.wm-transitioning {
     transition:
         width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
         height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+        flex-basis 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
         top 0.25s ease-out,
         left 0.25s ease-out,
         right 0.25s ease-out,
         bottom 0.25s ease-out,
         border-radius 0.2s ease,
         border-color 0.2s ease;
-}
-
-/* --- Minigame Control Bar --- */
-/* Simplified: Only exit button shown - slider handles size/state */
-#minigame-controls {
-    display: flex;
-    gap: 0.3em;
-    padding: 0.3em 0.5em;
-    background: rgba(0, 0, 0, 0.8);
-    border-bottom: 1px solid var(--zx-blue);
-    justify-content: flex-end;
-    z-index: 10;
-    flex-shrink: 0;
-}
-
-/* Show only the exit button - other controls handled by slider */
-#minigame-controls {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    z-index: 200;
-    background: transparent;
-    border: none;
-    padding: 0;
-}
-
-/* Hide all controls except exit button */
-#minigame-controls button:not(#returnToStory) {
-    display: none;
-}
-
-#minigame-controls button {
-    background: #333;
-    border: 1px solid #555;
-    color: #fff;
-    font-size: 1em;
-    width: 2.2em;
-    height: 2.2em;
-    min-width: var(--touch-target-min);
-    min-height: var(--touch-target-min);
-    border-radius: var(--border-radius-sm);
-    cursor: pointer;
-    transition: background var(--transition-fast), border-color var(--transition-fast);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-#minigame-controls button:hover {
-    background: #444;
-    border-color: var(--zx-cyan);
-}
-
-#minigame-controls button:active {
-    transform: scale(0.95);
-}
-
-#returnToStory {
-    background: rgba(80, 20, 20, 0.9);
-    border: 2px solid #f55;
-    color: #fff;
-    font-size: 1.2em;
-    width: 2.5em;
-    height: 2.5em;
-    border-radius: 50%;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-}
-#returnToStory:hover {
-    background: #733;
-    border-color: #f88;
-    transform: scale(1.1);
 }
 
 /* --- Minigame Content Area --- */
@@ -675,9 +595,9 @@
     user-select: none;
 }
 
-/* Show d-pad on touch devices when game is active */
+/* Show d-pad on touch devices only when the game window is full —
+   in split/pip the story owns the rest of the screen */
 @media (pointer: coarse) {
-    #minigame-view.active .game-dpad,
     #minigame-view.state-full .game-dpad {
         display: block;
     }
@@ -741,7 +661,6 @@
 }
 
 @media (pointer: coarse) {
-    #minigame-view.active .game-action-btns,
     #minigame-view.state-full .game-action-btns {
         display: flex;
     }
