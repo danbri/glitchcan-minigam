@@ -365,6 +365,79 @@ function buildUI() {
     const spec = WIDGET_CATALOG.find(s => s.key === key);
     return spec ? openWidgetWindow(spec) : null;
   };
+
+  // ── the Maker window: the creator's x-ray of the delivery engine ──
+  // Zoom out: the dream stack + story state. Zoom mid: every live story
+  // variable, editable (the currency of story↔minigame linkage). Zoom
+  // in: a live tap of the minigame SDK protocol. All from standard
+  // widgets — foaf-table, foafos-feed — so it stays skinnable/pooled.
+  const makerBtn = document.createElement('button');
+  makerBtn.type = 'button';
+  makerBtn.className = 'foafos-chip';
+  makerBtn.textContent = '🔧 Maker';
+  makerBtn.addEventListener('click', () => { openMaker(); setDrawer(false); });
+  launcher.appendChild(makerBtn);
+
+  function storyVarRows() {
+    const vs = window.FinkInkEngine?.story?.variablesState;
+    if (!vs) return [];
+    let names = [];
+    try { names = [...vs._globalVariables.keys()]; }
+    catch { names = ['diamonds', 'mega_diamonds', 'keys', 'score']; }
+    return names.map(n => [n, String(vs[n])]);
+  }
+
+  function openMaker() {
+    if (document.getElementById('foafos-maker')) return;
+    const win = makeWindow('🔧 Maker', 380, 520);
+    win.id = 'foafos-maker';
+
+    const body = document.createElement('div');
+    body.style.cssText = 'flex:1;min-height:0;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px;font:11px monospace;color:#eee;';
+    body.innerHTML = `
+      <div id="maker-state"></div>
+      <div>
+        <input id="maker-var" placeholder="variable" aria-label="Variable name" style="width:38%">
+        <input id="maker-val" placeholder="value" aria-label="Variable value" style="width:30%">
+        <button type="button" id="maker-set">SET</button>
+      </div>`;
+    win.appendChild(body);
+
+    const vars = document.createElement('foaf-table');
+    body.insertBefore(vars, body.querySelector('div:nth-child(2)'));
+    const sdk = document.createElement('foafos-feed');
+    sdk.bus = bus;
+    sdk.setAttribute('topics', 'sys.sdk.*,sys.guest.*,story.state');
+    body.appendChild(sdk);
+
+    const refresh = () => {
+      if (!win.isConnected) return;
+      const st = bus.retained('story.state')[0]?.data;
+      const stack = window.FinkInkEngine?.storyStack || [];
+      win.querySelector('#maker-state').textContent =
+        `story: ${st?.phase || '—'} · depth ${st?.depth ?? 0}` +
+        (stack.length ? ` · stack: ${stack.map(f => f.url.split('/').pop()).join(' ▸ ')}` : '');
+      vars.data = { title: 'story variables', columns: ['name', 'value'], rows: storyVarRows() };
+    };
+    const unsubs = ['story.state', 'story.beat', 'minigame.*'].map(t => bus.subscribe(t, refresh));
+    new MutationObserver(() => { if (!win.isConnected) unsubs.forEach(u => u()); })
+      .observe(document.body, { childList: true });
+
+    win.querySelector('#maker-set').addEventListener('click', () => {
+      const name = win.querySelector('#maker-var').value.trim();
+      const raw = win.querySelector('#maker-val').value.trim();
+      if (!name || !window.FinkInkEngine?.story) return;
+      const num = Number(raw);
+      window.FinkInkEngine.story.variablesState[name] = Number.isNaN(num) ? raw : num;
+      bus.publish('sys.sdk.tx', { summary: `maker set ${name}=${raw}`, msg: 'maker-set' }, { source: 'maker' });
+      refresh();
+    });
+
+    document.body.appendChild(win);
+    refresh();
+    return win;
+  }
+  FoafOS.openMaker = openMaker;
 }
 
 if (document.readyState === 'loading') {

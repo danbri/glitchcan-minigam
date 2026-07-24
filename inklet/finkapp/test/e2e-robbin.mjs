@@ -53,7 +53,9 @@ try {
   pass('hampstead compiled as first story');
 
   // 2. jump the story to the tube knot — the MINIGAME tag must fire
+  // (with diamonds in the purse: init must carry them into the game)
   await page.evaluate(() => {
+    FinkInkEngine.story.variablesState['diamonds'] = 5;
     FinkInkEngine.story.ChoosePathString('hampstead_tube');
     FinkInkEngine.continueStory();
   });
@@ -81,6 +83,10 @@ try {
   inGame.cur === 'HAMPSTEAD' && inGame.started
     ? pass(`game booted in embed mode at ${inGame.cur}`)
     : fail(`embed boot wrong: ${JSON.stringify(inGame)}`);
+  const purse = await frame.evaluate(() => window.__robbin.game.embedVars?.diamonds);
+  purse === 5
+    ? pass('story diamonds rode in with init (embedVars.diamonds=5)')
+    : fail(`diamonds missing from init: ${purse}`);
 
   // 4. play: fake three rescues, then quit through the game's own flow
   await frame.evaluate(() => {

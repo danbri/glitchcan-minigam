@@ -242,9 +242,14 @@ Guest games run in `<iframe sandbox="allow-scripts">` (opaque origin).
 - Games cannot divert the story. They mutate declared variables; the
   host resumes Ink on completion. Reactions follow §3.2.
 - Packaging: `inklet/minigames/<name>/` with `manifest.json`
-  (variables.read/write allowlists, modes, ui). The live tag routing is
-  the registry in `fink-minigames.js`; **(roadmap)** routing moves to
-  the manifest-enforcing `MinigameHost`.
+  (variables.read/write allowlists, modes, ui, and `features` — browser
+  permissions such as `geolocation` that the host grants onto the
+  iframe's permissions policy before load; no declaration, no power).
+  The live tag routing is the registry in `fink-minigames.js`;
+  **(roadmap)** routing moves to the manifest-enforcing `MinigameHost`.
+- The host taps the protocol onto the bus (`sys.sdk.tx/rx`) — hidden
+  from the default feed, surfaced in the shell's Maker window, which
+  also exposes live editable story variables and the dream stack.
 - Opaque-origin consequences — normative for guests: `localStorage`
   access throws (shim it — see `magpie/robbin/robbin.html`); module and
   asset fetches require CORS (GitHub Pages provides it; local harnesses

@@ -812,7 +812,12 @@ class Game {
       addEventListener('message', e => {
         const d = e.data;
         if (!d || typeof d.type !== 'string') return;
-        if (d.type === 'init') this.embedStart(d.config?.mode);
+        if (d.type === 'init') {
+          // story variables ride in with init (diamonds, score, …) —
+          // the currency a story-side shop can spend via set-variable
+          this.embedVars = d.variables || {};
+          this.embedStart(d.config?.mode);
+        }
         else if (d.type === 'pause') { if (this.state === 'play') this.state = 'paused'; }
         else if (d.type === 'resume') { if (this.state === 'paused') this.state = 'play'; }
         else if (d.type === 'audio-blur') { this._audioFocus = false; this.duckForSpeech(true); }

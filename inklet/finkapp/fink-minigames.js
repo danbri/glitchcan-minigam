@@ -647,11 +647,25 @@ window.FinkMinigames = {
 
             // Create sandboxed iframe
             const iframe = document.createElement('iframe');
-            iframe.src = `../minigames/${type}/index.html`;
             iframe.title = `${(this.minigameInfo[type] || {}).title || type} minigame`;
             iframe.sandbox = 'allow-scripts';
             iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
             iframe.id = `minigame-iframe-${type}`;
+
+            // Manifest 'features' become the iframe's permissions policy
+            // (e.g. geolocation for teleport-home). Best-effort: no
+            // manifest, no features. allow must be set BEFORE src.
+            fetch(`../minigames/${type}/manifest.json`)
+                .then(r => r.ok ? r.json() : null)
+                .catch(() => null)
+                .then(manifest => {
+                    const feats = manifest?.features || [];
+                    if (feats.length) {
+                        iframe.allow = feats.map(f => `${f} 'src'`).join('; ');
+                        this.log(`Manifest features granted: ${feats.join(', ')}`);
+                    }
+                    iframe.src = `../minigames/${type}/index.html`;
+                });
 
             this.elements.iframeContainer.appendChild(iframe);
             this.iframeMinigame = iframe;
@@ -678,6 +692,8 @@ window.FinkMinigames = {
         if (!data || typeof data.type !== 'string') return;
 
         this.log(`Iframe message: ${data.type}`);
+        window.FoafOS?.bus.publish('sys.sdk.rx',
+            { summary: `← ${data.type}`, msg: data.type, detail: data }, { source: 'sdk' });
 
         switch (data.type) {
             case 'ready':
@@ -741,6 +757,10 @@ window.FinkMinigames = {
     _sendToIframe(data) {
         if (this.iframeMinigame && this.iframeMinigame.contentWindow) {
             this.iframeMinigame.contentWindow.postMessage(data, '*');
+            // SDK tap: makers watch the protocol on sys.sdk.* (hidden
+            // from the default feed, shown in the Maker window)
+            window.FoafOS?.bus.publish('sys.sdk.tx',
+                { summary: `→ ${data.type}`, msg: data.type, detail: data }, { source: 'sdk' });
         }
     },
 

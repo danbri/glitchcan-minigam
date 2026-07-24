@@ -219,6 +219,35 @@ try {
     ? pass(`share opened in standard table explorer ("${tableView.caption}")`)
     : fail(`foaf-table wrong: ${JSON.stringify(tableView)}`);
 
+  // 8. the Maker window: variables x-ray + SDK tap
+  await page.evaluate(() => {
+    FinkInkEngine.story.variablesState['diamonds'] = 7;
+    FoafOS.openMaker();
+  });
+  await page.waitForTimeout(600);
+  const maker = await page.evaluate(() => {
+    const w = document.getElementById('foafos-maker');
+    const t = w?.querySelector('foaf-table');
+    const rows = t ? [...t.shadowRoot.querySelectorAll('tbody tr')].map(r => r.textContent) : [];
+    return {
+      state: w?.querySelector('#maker-state')?.textContent || '',
+      diamondsRow: rows.find(r => r.includes('diamonds')),
+      sdkCards: w?.querySelectorAll('foafos-feed foaf-card').length ?? 0,
+    };
+  });
+  /story: (end|play)/.test(maker.state) && /diamonds7/.test((maker.diamondsRow || '').replace(/\s/g, ''))
+    ? pass(`maker: state line + live variables (${maker.diamondsRow?.trim()})`)
+    : fail(`maker wrong: ${JSON.stringify(maker)}`);
+  // SET writes into the running story
+  await page.evaluate(() => {
+    const w = document.getElementById('foafos-maker');
+    w.querySelector('#maker-var').value = 'diamonds';
+    w.querySelector('#maker-val').value = '42';
+    w.querySelector('#maker-set').click();
+  });
+  const setback = await page.evaluate(() => FinkInkEngine.story.variablesState['diamonds']);
+  setback === 42 ? pass('maker SET wrote a live story variable') : fail(`maker set failed: ${setback}`);
+
   pageErrors.length === 0 ? pass('no page errors')
     : fail(`page errors: ${pageErrors.slice(0, 3).join(' · ')}`);
   console.log(process.exitCode ? '\nFOAFOS E2E: FAIL' : '\nFOAFOS E2E: PASS');

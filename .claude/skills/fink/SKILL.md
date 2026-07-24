@@ -72,6 +72,13 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   `set-variable`, `complete {result}`, `error`. Minigames cannot divert
   Ink; they mutate variables and the host resumes via
   `FinkInkEngine.continueStory()`.
+- Story↔minigame linkage that ALREADY exists (use before building new):
+  init carries diamonds/mega_diamonds/keys/score/player_level/difficulty
+  (`_getStoryVariables`); guests spend live via `set-variable`; robbin
+  stashes them as `game.embedVars`. Manifest `features: ["geolocation"]`
+  → host sets iframe.allow before src. Maker window (drawer → WIDGETS →
+  🔧 Maker, or `FoafOS.openMaker()`): live editable variables table,
+  dream-stack line, SDK tap feed (sys.sdk.tx/rx).
 - Verb protocol (spec §5.2): guests declare natively-handled shell verbs
   in `ready` (`capabilities.verbs: ['quit','audio']`). Declared → shell
   delegates (no frost over native pause; ✕ sends `quit` and the game's
