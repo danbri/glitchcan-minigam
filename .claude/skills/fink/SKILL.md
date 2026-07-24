@@ -139,6 +139,12 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   announced ('sys.guest.denied'). Two-same-widget isolation locked by
   `node packages/foafos/test/e2e-guest.mjs` (run from repo root); demo
   at packages/foafos/demo/guests.html.
+- A11y contract (verified live 2026-07): every iframe gets a `title`;
+  toggles expose aria-pressed (wm modes, pause); dock has
+  aria-expanded/controls synced via setDrawer(); feed = role=feed with
+  role=article cards (aria-label topic+time+summary); widget windows
+  role=group + label; Escape closes drawer. Keyboard path for pip/drag
+  is the chrome buttons. Keep this contract when adding shell UI.
 - E2E: `node inklet/finkapp/test/e2e-foafos.mjs`; unit:
   `cd packages/foafos && npm test`.
 
