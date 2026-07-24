@@ -332,6 +332,15 @@ select.tbtn {
   min-width: 13rem;
   padding: 0.3rem;
   z-index: 30;
+  /* The File menu grew past two dozen items; without a ceiling it renders
+     taller than the window (1071px in an 800px viewport was measured) and
+     everything below the fold becomes unreachable, because the app shell
+     itself does not scroll. Clamp and scroll at EVERY width — this used
+     to be a phones-only rule, which is how a working menu came to look
+     like a menu that does nothing. */
+  max-height: calc(100dvh - 5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .menu-panel[hidden] { display: none; }
 .menu-item {

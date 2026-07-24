@@ -32,7 +32,10 @@
 
     /* ---- dropdown menus ---- */
     .menu { position: fixed; z-index: 1000; min-width: 12rem; padding: 0.25rem; background: var(--surface);
-      border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,0.22); }
+      border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+      /* registry-driven menus can be long: clamp and scroll rather than
+         run off the bottom of the window (see edot.css .menu-panel) */
+      max-height: calc(100dvh - 4rem); overflow-y: auto; overscroll-behavior: contain; }
     .menu[hidden] { display: none; }
     .mi { display: flex; align-items: center; gap: 1rem; width: 100%; box-sizing: border-box; font: inherit; font-size: 0.85rem;
       text-align: left; background: transparent; border: 0; color: var(--ink); padding: 0.35rem 0.6rem; border-radius: calc(var(--radius) - 1px); cursor: pointer; }

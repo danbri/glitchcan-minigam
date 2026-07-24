@@ -39,6 +39,7 @@ const SUITES = [
   ['commands-shell', 'test-commands-shell.mjs'],
   ['a11y-commands', 'test-a11y-commands.mjs'],
   ['shell', 'test-shell.mjs'],
+  ['menu-reach', 'test-menu-reach.mjs'],
   ['workspace', 'test-workspace.mjs'],
   ['places', 'places/test-places.mjs'],
   ['place-input', 'places/test-place-input.mjs'],
