@@ -115,6 +115,53 @@
 .foafos-chip:hover { background: rgba(0, 229, 255, 0.25); }
 .foafos-none { opacity: 0.5; font-size: 0.8em; }
 
+/* floating widget windows (sandboxed guests) */
+.foafos-window {
+    position: fixed;
+    z-index: 2620;
+    background: #0a0a12;
+    border: 1px solid var(--zx-cyan);
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    max-width: 96vw;
+    max-height: 80vh;
+    resize: both;
+    min-width: 180px;
+    min-height: 140px;
+}
+.foafos-window-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5em;
+    padding: 0.3em 0.6em;
+    background: rgba(0, 229, 255, 0.12);
+    border-bottom: 1px solid rgba(0, 229, 255, 0.4);
+    font-size: 0.75em;
+    color: var(--zx-cyan);
+    cursor: move;
+    touch-action: none;
+    user-select: none;
+    flex-shrink: 0;
+}
+.foafos-window-close {
+    background: none;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #ccc;
+    width: 1.8em;
+    height: 1.8em;
+    cursor: pointer;
+}
+.foafos-window foafos-guest {
+    flex: 1;
+    min-height: 0;
+    display: block;
+}
+
 #foafos-feed-wrap {
     flex: 1;
     min-height: 0;

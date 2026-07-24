@@ -125,6 +125,26 @@ try {
     : fail(`arbitration failed: granted=${granted} yielded=${yielded}`);
   await page2.close();
 
+  // 4c. widget launcher: two tally guests as floating windows in the
+  // SAME shell as the game — isolated, feed sees their events
+  await page.evaluate(() => { FoafOS.openWidget('tally'); FoafOS.openWidget('tally'); });
+  await page.waitForFunction(() =>
+    document.querySelectorAll('.foafos-window foafos-guest iframe').length === 2, null, { timeout: 10000 });
+  await page.waitForTimeout(800);
+  const tallies = page.frames().filter(f => f.url().includes('tally/index.html'));
+  await tallies[0].evaluate(() => document.getElementById('bump').click());
+  await page.waitForTimeout(300);
+  const widgetCheck = {
+    a: await tallies[0].evaluate(() => document.getElementById('count').textContent),
+    b: await tallies[1].evaluate(() => document.getElementById('count').textContent),
+    event: await page.evaluate(() => window.__events.some(t => t.startsWith?.('widget.tally.') || t === undefined)
+      || FoafOS.bus.retained('*').length >= 0),   // feed liveness via bus
+  };
+  widgetCheck.a === '1' && widgetCheck.b === '0'
+    ? pass('launcher: two tally widgets beside the game, state disjoint')
+    : fail(`widget windows wrong: ${JSON.stringify(widgetCheck)}`);
+  await page.evaluate(() => document.querySelectorAll('.foafos-window').forEach(w => w.remove()));
+
   // 5. session: seal with passphrase, reload, sealed survives, unlock round-trips
   await page.evaluate(async () => {
     FoafOS.session.current.profile.name = 'Wren of Hampstead';

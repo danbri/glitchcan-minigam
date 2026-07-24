@@ -13,11 +13,21 @@ import {
   saveSealed, loadSealed, clearSealed,
   widgets, defineBaseCards, defineFeed,
   SseTransport, WebSocketTransport, FeedPoller,
-  FoafCluster,
+  FoafCluster, defineGuest,
 } from '../../packages/foafos/src/index.mjs';
 
 defineBaseCards();
 defineFeed();
+defineGuest();
+
+// Launchable guest widgets (sandboxed processes). Paths resolve under
+// the deploy root; grants are per-instance.
+const WIDGET_CATALOG = [
+  { key: 'tally', title: '🔢 Tally', src: '../../packages/foafos/demo/tally/index.html',
+    w: 240, h: 200, grants: (n) => ({ publish: [`widget.tally.${n}.*`], subscribe: ['widget.tally.*'] }) },
+  { key: 'data', title: '▦ Data (SQLite)', src: '../../magpie/edot/data/guest.html',
+    w: 520, h: 400, grants: (n) => ({ publish: [`widget.data.${n}.*`], subscribe: ['widget.data.*'] }) },
+];
 
 const bus = new FoafBus();
 bus.bridge('foafos');   // two tabs of the shell share one nervous system
@@ -120,6 +130,8 @@ function buildUI() {
     <section id="foafos-shelf-wrap">
       <h4>WINDOWS</h4>
       <div id="foafos-shelf"></div>
+      <h4>WIDGETS</h4>
+      <div id="foafos-launcher"></div>
     </section>
     <section id="foafos-feed-wrap">
       <h4>FEED</h4>
@@ -210,6 +222,70 @@ function buildUI() {
   bus.subscribe('wm.*', renderShelf);
   bus.subscribe('minigame.*', renderShelf);
   renderShelf();
+
+  // ── widget launcher: sandboxed guests as floating windows ──
+  let widgetSeq = 0;
+  const launcher = $('#foafos-launcher');
+  for (const spec of WIDGET_CATALOG) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'foafos-chip';
+    btn.textContent = spec.title;
+    btn.addEventListener('click', () => {
+      openWidgetWindow(spec);
+      drawer.classList.remove('open');
+    });
+    launcher.appendChild(btn);
+  }
+
+  function openWidgetWindow(spec) {
+    const name = `${spec.key}${++widgetSeq}`;
+    const win = document.createElement('div');
+    win.className = 'foafos-window';
+    win.style.width = `${spec.w}px`;
+    win.style.height = `${spec.h}px`;
+    win.style.left = `${12 + (widgetSeq % 5) * 24}px`;
+    win.style.top = `${60 + (widgetSeq % 5) * 24}px`;
+    win.innerHTML = `
+      <div class="foafos-window-bar"><span>${spec.title} · ${name}</span>
+        <button type="button" class="foafos-window-close" aria-label="Close widget">✕</button></div>`;
+
+    const guest = document.createElement('foafos-guest');
+    guest.setAttribute('src', spec.src);
+    guest.setAttribute('name', name);
+    guest.bus = bus;
+    guest.grants = spec.grants(name);
+    guest.config = { label: name };
+    win.appendChild(guest);
+    document.body.appendChild(win);
+
+    win.querySelector('.foafos-window-close').addEventListener('click', () => win.remove());
+
+    // drag by the titlebar
+    const bar = win.querySelector('.foafos-window-bar');
+    let drag = null;
+    bar.addEventListener('pointerdown', (e) => {
+      if (e.target.tagName === 'BUTTON') return;
+      e.preventDefault();
+      bar.setPointerCapture(e.pointerId);
+      const r = win.getBoundingClientRect();
+      drag = { x: e.clientX, y: e.clientY, left: r.left, top: r.top };
+      // raise above siblings
+      document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
+      win.style.zIndex = 2630;
+    });
+    bar.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      win.style.left = `${Math.max(0, Math.min(window.innerWidth - 80, drag.left + e.clientX - drag.x))}px`;
+      win.style.top = `${Math.max(0, Math.min(window.innerHeight - 40, drag.top + e.clientY - drag.y))}px`;
+    });
+    bar.addEventListener('pointerup', () => { drag = null; });
+    return win;
+  }
+  FoafOS.openWidget = (key) => {
+    const spec = WIDGET_CATALOG.find(s => s.key === key);
+    return spec ? openWidgetWindow(spec) : null;
+  };
 }
 
 if (document.readyState === 'loading') {
