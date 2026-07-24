@@ -376,6 +376,7 @@ window.FinkMinigames = {
             this.elements.pauseBtn?.classList.remove('active');
             if (this.elements.pauseBtn) this.elements.pauseBtn.textContent = '⏸';
         }
+        this.elements.pauseBtn?.setAttribute('aria-pressed', String(this.windowState.paused));
 
         this.log(`Minigame ${this.windowState.paused ? 'paused' : 'resumed'}`);
     },
@@ -647,6 +648,7 @@ window.FinkMinigames = {
             // Create sandboxed iframe
             const iframe = document.createElement('iframe');
             iframe.src = `../minigames/${type}/index.html`;
+            iframe.title = `${(this.minigameInfo[type] || {}).title || type} minigame`;
             iframe.sandbox = 'allow-scripts';
             iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
             iframe.id = `minigame-iframe-${type}`;

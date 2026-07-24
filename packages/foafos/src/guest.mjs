@@ -63,6 +63,8 @@ export function defineGuest() {
       const frame = document.createElement('iframe');
       frame.setAttribute('sandbox', 'allow-scripts');
       frame.src = this.getAttribute('src');
+      // frames need accessible names — assistive tech lists them by title
+      frame.title = this.getAttribute('label') || `widget ${name}`;
       frame.style.cssText = 'width:100%;height:100%;border:0;display:block;';
       this._frame = frame;
 

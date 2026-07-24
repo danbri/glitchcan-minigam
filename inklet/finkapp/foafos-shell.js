@@ -111,7 +111,9 @@ function buildUI() {
   const dock = document.createElement('button');
   dock.id = 'foafos-dock';
   dock.type = 'button';
-  dock.setAttribute('aria-label', 'Open foafos shell');
+  dock.setAttribute('aria-label', 'foafos shell');
+  dock.setAttribute('aria-expanded', 'false');
+  dock.setAttribute('aria-controls', 'foafos-drawer');
   dock.textContent = '⊞';
 
   const drawer = document.createElement('aside');
@@ -124,8 +126,8 @@ function buildUI() {
     </header>
     <section id="foafos-session">
       <div id="foafos-session-status" role="status"></div>
-      <input id="foafos-name" type="text" placeholder="name (optional)" autocomplete="off">
-      <input id="foafos-pass" type="password" placeholder="passphrase" autocomplete="off">
+      <input id="foafos-name" type="text" placeholder="name (optional)" aria-label="Session name" autocomplete="off">
+      <input id="foafos-pass" type="password" placeholder="passphrase" aria-label="Session passphrase" autocomplete="off">
       <div class="foafos-row">
         <button type="button" id="foafos-save" title="Encrypt this session to this browser">SAVE</button>
         <button type="button" id="foafos-unlock" title="Decrypt the saved session">UNLOCK</button>
@@ -149,8 +151,13 @@ function buildUI() {
   feed.setAttribute('topics', '*');
   drawer.querySelector('#foafos-feed-wrap').appendChild(feed);
 
-  dock.addEventListener('click', () => drawer.classList.toggle('open'));
-  drawer.querySelector('#foafos-close').addEventListener('click', () => drawer.classList.remove('open'));
+  const setDrawer = (open) => {
+    drawer.classList.toggle('open', open);
+    dock.setAttribute('aria-expanded', String(open));
+  };
+  dock.addEventListener('click', () => setDrawer(!drawer.classList.contains('open')));
+  drawer.querySelector('#foafos-close').addEventListener('click', () => setDrawer(false));
+  drawer.addEventListener('keydown', (e) => { if (e.key === 'Escape') { setDrawer(false); dock.focus(); } });
 
   // session controls
   const $ = (id) => drawer.querySelector(id);
@@ -214,7 +221,7 @@ function buildUI() {
       chip.addEventListener('click', () => {
         const wm = window.FinkWM;
         if (wm) wm.setMode(wm.mode === 'pip' ? wm.lastNonPipMode : 'full');
-        drawer.classList.remove('open');
+        setDrawer(false);
       });
       shelf.appendChild(chip);
     } else {
@@ -238,7 +245,7 @@ function buildUI() {
     btn.textContent = spec.title;
     btn.addEventListener('click', () => {
       openWidgetWindow(spec);
-      drawer.classList.remove('open');
+      setDrawer(false);
     });
     launcher.appendChild(btn);
   }
@@ -247,6 +254,8 @@ function buildUI() {
     const name = `${spec.key}${++widgetSeq}`;
     const win = document.createElement('div');
     win.className = 'foafos-window';
+    win.setAttribute('role', 'group');
+    win.setAttribute('aria-label', `${spec.title} widget window ${name}`);
     win.style.width = `${spec.w}px`;
     win.style.height = `${spec.h}px`;
     win.style.left = `${12 + (widgetSeq % 5) * 24}px`;
@@ -258,6 +267,7 @@ function buildUI() {
     const guest = document.createElement('foafos-guest');
     guest.setAttribute('src', spec.src);
     guest.setAttribute('name', name);
+    guest.setAttribute('label', `${spec.title} ${name}`);
     guest.bus = bus;
     guest.grants = spec.grants(name);
     guest.config = { label: name };

@@ -106,6 +106,7 @@ window.FinkWM = {
 
         for (const [m, btn] of Object.entries(this.elements.modeBtns)) {
             btn?.classList.toggle('active', m === mode);
+            btn?.setAttribute('aria-pressed', String(m === mode));
         }
         this.elements.handle.textContent = { full: '▣', split: '◫', pip: '◰' }[mode] || '▦';
 

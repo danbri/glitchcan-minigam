@@ -69,6 +69,9 @@ export function defineBaseCards() {
     _render() {
       const ev = this._item;
       if (!ev) return;
+      // feed children are articles with accessible names (role=feed contract)
+      this.setAttribute('role', 'article');
+      this.setAttribute('aria-label', `${ev.topic} at ${new Date(ev.ts).toLocaleTimeString()}: ${this._summary(ev)}`);
       if (!this.shadowRoot) {
         this.attachShadow({ mode: 'open' });
         this.shadowRoot.innerHTML = `
