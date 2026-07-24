@@ -98,7 +98,12 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
 - Unit + corpus: `cd packages/gcfink && npm test` (zero-dep runner; corpus
   test extracts + real-compiles every `inklet/**/*.fink.js`).
 - Story validator: `node inklet/validation/checkfink.mjs` (`--scan`; no
-  `--report` flag exists).
+  `--report` flag exists). In environments without full puppeteer (only
+  puppeteer-core is a repo dep) set
+  `PUPPETEER_EXECUTABLE_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`.
+  It stubs `_inventory` (spec §2) and only treats `.json` as ink when
+  `inkVersion` is present (Lucid scenes also have a `root` key — do not
+  loosen that filter again). Sweep result 2026-07: 17/17 pass.
 - Headless browser: Playwright with
   `executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`,
   args `['--no-sandbox']`. Serve the PARENT of the repo dir so absolute

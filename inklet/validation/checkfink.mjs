@@ -23,7 +23,11 @@ const ink  = await import(
 const { Compiler, Story } = ink;
 
 // ── FINK validation via Puppeteer ─────────────────────────────────────
-import puppeteer from 'puppeteer';
+// Full `puppeteer` (bundled browser) when present; otherwise
+// `puppeteer-core` with a browser named via PUPPETEER_EXECUTABLE_PATH.
+const puppeteer = await import('puppeteer')
+  .catch(() => import('puppeteer-core'))
+  .then(m => m.default);
 
 let browserInstance = null;
 
@@ -31,6 +35,7 @@ async function getBrowser() {
   if (!browserInstance) {
     browserInstance = await puppeteer.launch({
       headless: true,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
       args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-web-security', '--allow-file-access-from-files']
     });
   }
@@ -110,8 +115,10 @@ async function scanRepo() {
             try {
               const content = await fs.readFile(fullPath, 'utf8');
               const json = JSON.parse(content);
-              // Check if it looks like an INK story JSON
-              if (json && (json.inkVersion || json.root || json.listDefs)) {
+              // Compiled Ink always carries inkVersion. Do NOT accept a bare
+              // `root` key — Lucid SDF scenes have one too, and matching it
+              // once dragged 100+ scene files into the scan as failures.
+              if (json && json.inkVersion) {
                 files.push(relativePath);
               }
             } catch {

@@ -33,6 +33,9 @@ platform grows a slot and the content fills it.
   your story only compiles inside the player (validators stub it).
 - Validate: `cd packages/gcfink && npm test` runs the whole corpus;
   `node inklet/validation/checkfink.mjs` for individual files.
+- Interpolation is `{var}`, NOT `${var}` — a `${...}` inside `oooOO` is
+  evaluated as JavaScript at capture time and throws ReferenceError
+  (this silently broke test-variables.fink.js for months).
 
 ## The story map
 

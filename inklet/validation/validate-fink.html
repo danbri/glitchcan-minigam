@@ -99,9 +99,18 @@
                     const sanitizedInk = extractedInk.replace(/^(\s*#.*)\|(.+)$/gm, (m) => m.replace(/\|/g, '¦'));
 
                     validationResult.extractedInkLength = sanitizedInk.length;
-                    
+
+                    // Platform contract (docs/fink-spec-v1.md §2): the player
+                    // injects a private _inventory knot into every story, so
+                    // stories may divert to it. Standalone validators MUST
+                    // stub it (same rule as gcfink's corpus test).
+                    let compileInk = sanitizedInk;
+                    if (/->\s*_inventory/.test(compileInk) && !/^\s*===\s*_inventory\s*===/m.test(compileInk)) {
+                        compileInk += '\n=== _inventory ===\nstub.\n-> END\n';
+                    }
+
                     // Compile extracted INK content
-                    const compiler = new inkjs.Compiler(sanitizedInk);
+                    const compiler = new inkjs.Compiler(compileInk);
                     try {
                         const story = compiler.Compile();
                         validationResult.success = true;

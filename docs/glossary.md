@@ -9,7 +9,7 @@ A reference guide to key concepts in the FINK interactive fiction system.
 
 - **File format:** `.fink.js` files containing `oooOO` template literals
 - **Example:** [`inklet/bagend.fink.js`](../inklet/bagend.fink.js)
-- **Documentation:** [`glitchcanary.md`](../glitchcanary.md) (authoritative FINK spec)
+- **Documentation:** [`docs/fink-spec-v1.md`](fink-spec-v1.md) (normative v1.0 platform spec); [`glitchcanary.md`](../glitchcanary.md) (background & format history)
 
 A FINK file looks like:
 ```javascript
@@ -197,7 +197,8 @@ Prevents re-loading the same FINK URL within a session.
 ## Related Documentation
 
 - [`CLAUDE.md`](../CLAUDE.md) - Development rules and project context
-- [`glitchcanary.md`](../glitchcanary.md) - FINK format specification
+- [`docs/fink-spec-v1.md`](fink-spec-v1.md) - Normative FINK platform specification (v1.0)
+- [`glitchcanary.md`](../glitchcanary.md) - FINK format background
 - [`inklet/BUGS.md`](../inklet/BUGS.md) - Bug tracker
 - [`docs/fink_link_cache_nav.md`](fink_link_cache_nav.md) - Navigation cache design
 - [`docs/finkapp-ideas.md`](finkapp-ideas.md) - Feature ideas

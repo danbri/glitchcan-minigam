@@ -10,7 +10,7 @@ VAR clothes_description = "smart outfit"
 
 === wardrobe_start ===
 IMAGE: hobbit_pantry.png
-You stand before a wardrobe. {has_clothes: You can see a ${clothes_description} hanging inside.}
+You stand before a wardrobe. {has_clothes: You can see a {clothes_description} hanging inside.}
 
 + [Open the wardrobe] -> wardrobe_open
 + [Look around the room] -> room_look
@@ -26,7 +26,7 @@ You open the wardrobe. Inside you find a smart outfit hanging on a hook.
 
 === room_look ===
 IMAGE: village_overview.png
-You look around the room. {has_clothes: You're holding a ${clothes_description}.} {is_wearing_clothes: You're smartly dressed in your ${clothes_description}.}
+You look around the room. {has_clothes: You're holding a {clothes_description}.} {is_wearing_clothes: You're smartly dressed in your {clothes_description}.}
 
 + [Check the wardrobe] -> wardrobe_start
 + [Put on clothes] -> wear_clothes
@@ -34,7 +34,7 @@ You look around the room. {has_clothes: You're holding a ${clothes_description}.
 
 === wear_clothes ===
 IMAGE: peaceful_sunset.png
-{has_clothes: You put on the smart outfit. You look much more presentable now!} {is_wearing_clothes: You're already wearing the ${clothes_description}.}
+{has_clothes: You put on the smart outfit. You look much more presentable now!} {is_wearing_clothes: You're already wearing the {clothes_description}.}
 
 + [Look in mirror ~ is_wearing_clothes = true] -> mirror_look
 + [Remove clothes ~ is_wearing_clothes = false] -> remove_clothes
@@ -42,19 +42,19 @@ IMAGE: peaceful_sunset.png
 
 === take_clothes ===
 IMAGE: adventure_path.png
-You take the smart outfit from the wardrobe. {has_clothes: You're now holding the ${clothes_description}!}
+You take the smart outfit from the wardrobe. {has_clothes: You're now holding the {clothes_description}!}
 
 + [Continue] -> wardrobe_open
 
 === mirror_look ===
 IMAGE: peaceful_sunset.png
-You look at yourself in the mirror. {is_wearing_clothes: The ${clothes_description} suits you perfectly!}
+You look at yourself in the mirror. {is_wearing_clothes: The {clothes_description} suits you perfectly!}
 
 + [Continue] -> room_look
 
 === remove_clothes ===
 IMAGE: village_overview.png
-You take off the clothes and fold them carefully. {has_clothes: You're now holding the ${clothes_description} again.}
+You take off the clothes and fold them carefully. {has_clothes: You're now holding the {clothes_description} again.}
 
 + [Continue] -> room_look
 `
