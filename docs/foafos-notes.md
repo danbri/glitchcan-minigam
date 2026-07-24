@@ -27,7 +27,17 @@ Principles:
    (WebID, fedi, OAuth, the planned fly.io service for logins/state/
    authoring/shares) is a later layer that populates `profile` without
    changing the storage contract.
-4. **The shell participates in the wider event ecosystem through
+4. **Widgets run standalone first; the shell's verbs delegate to native
+   handlers.** A game/widget must be complete without foafos, with its
+   own unstandardized pause/quit/settings. The shell defines only a verb
+   vocabulary (loose global consistency); guests declare which verbs
+   they handle natively (`ready → capabilities.verbs`) and the shell
+   delegates those, imposing its generic fallback only for the rest.
+   Spec §5.2. Ancestry: the edot kernel's capability/command registry
+   (`docs/edot/command-registry.md`, `docs/apps/shell.md`) — stable
+   string ids, per-app native implementations; the two vocabularies
+   should converge as foafos grows a command surface.
+5. **The shell participates in the wider event ecosystem through
    transports** — a deliberately thin contract ({connect(bus), close(),
    send?}) so MQTT/XMPP/WebRTC/fedi are adapters, not architecture.
    Inbound events are marked `net.<name>.*` and are feed content like

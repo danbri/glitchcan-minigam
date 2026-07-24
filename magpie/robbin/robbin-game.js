@@ -817,9 +817,13 @@ class Game {
         else if (d.type === 'resume') { if (this.state === 'paused') this.state = 'play'; }
         else if (d.type === 'audio-blur') { this._audioFocus = false; this.duckForSpeech(true); }
         else if (d.type === 'audio-focus') { this._audioFocus = true; this.duckForSpeech(false); }
+        else if (d.type === 'quit') this.embedQuit();
         else if (d.type === 'terminate') this.embedComplete(false);
       });
-      try { parent.postMessage({ type: 'ready', capabilities: { modes: ['hampstead', 'pilot', 'free'] } }, '*'); } catch { /* standalone */ }
+      // verbs: shell verbs we handle natively (own dialogs/presentation).
+      // No 'pause' — the tube deliberately has no pause concept (the flock
+      // waits), so the shell's generic pause is the right fallback there.
+      try { parent.postMessage({ type: 'ready', capabilities: { modes: ['hampstead', 'pilot', 'free'], verbs: ['quit', 'audio'] } }, '*'); } catch { /* standalone */ }
       // a host that never speaks still gets a game (open the map free)
       setTimeout(() => { if (!this._embedStarted) this.embedStart('free'); }, 4000);
     }
@@ -1562,6 +1566,21 @@ class Game {
           minigame_played: true } } }, '*');
     } catch { /* standalone */ }
     return true;
+  }
+  // Shell 'quit' verb → our own native exit flows (the paper dialogs),
+  // never a bare terminate. The player decides; completion happens via
+  // the normal embedComplete path when they confirm.
+  embedQuit() {
+    if (this.state === 'tube' && this.tube) {
+      // In an interior/travel/finale moment the dialog can't open —
+      // leaving there is the same as taking the WAY OUT: complete with
+      // whatever the journey gathered.
+      if (!this.tube.requestQuit()) this.embedComplete(true);
+    } else if (this.state === 'play' || this.state === 'paused') {
+      this.askPilotQuit();
+    } else {
+      this.embedComplete(false);
+    }
   }
   unlockTeleport() {
     const first = localStorage.getItem('robbin.konami') !== '1';

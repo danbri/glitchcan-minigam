@@ -250,6 +250,36 @@ two failures of the retired slider panel: a split state that crushed
 the game to a 4px sliver, and a mini state that hid its own restore
 control).
 
+### 5.2 Verbs and native handlers
+
+Widgets and minigames MUST be fully playable standalone, with their own
+— deliberately unstandardized — handlers for pausing, quitting,
+settings, and the rest. The shell imposes only a **loose global
+consistency**: a small verb vocabulary with fixed names and meanings,
+implemented however each guest likes.
+
+- Verbs (v1): `pause`/`resume`, `quit`, `audio-blur`/`audio-focus`.
+- A guest declares the verbs it handles natively in its `ready`
+  message: `capabilities: { verbs: ['quit', 'audio'] }`.
+- For a **declared** verb the shell DELEGATES: it sends the verb
+  message and stays out of the way (no frost overlay over a game that
+  presents its own pause; no `terminate` when `quit` routes to the
+  game's own confirmation dialog — the guest completes via the normal
+  SDK path when the player decides).
+- For an **undeclared** verb the shell applies its generic fallback
+  (frost-pane pause, hard terminate). Undeclared is always safe:
+  guests ignore unknown messages.
+- Escape hatch — normative: delegation must never create a stuck
+  window. The reference host hard-terminates if exit is pressed again
+  within 10s of a delegated `quit`.
+
+The declared-verbs pattern follows the edot kernel's capability
+registry (`docs/edot/command-registry.md`): stable string ids, native
+per-app implementations, contextual applicability. Worked example:
+robbin declares `quit` (routes to its paper dialogs) and `audio`
+(bus ducking) but NOT `pause` — the tube deliberately has no pause
+concept, so the shell's generic pause is the correct fallback there.
+
 ## 6. Links, navigation, identity
 
 Incorporates `docs/fink-linking-spec.md`: two-part SHA-256 hash links

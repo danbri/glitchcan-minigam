@@ -72,6 +72,12 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   `set-variable`, `complete {result}`, `error`. Minigames cannot divert
   Ink; they mutate variables and the host resumes via
   `FinkInkEngine.continueStory()`.
+- Verb protocol (spec §5.2): guests declare natively-handled shell verbs
+  in `ready` (`capabilities.verbs: ['quit','audio']`). Declared → shell
+  delegates (no frost over native pause; ✕ sends `quit` and the game's
+  own dialog decides — double-✕ within 10s force-terminates). Undeclared
+  → generic fallback. Standalone-first: verbs map onto handlers the game
+  already has; robbin deliberately omits 'pause' (tube has none).
 - Tag grammar: `# MINIGAME: <name> [mode=x] [controls=dpad|lite|none]`
   parsed at `fink-ink-engine.js:314-333`; the Continue loop BREAKS on
   MINIGAME/FINK tags.

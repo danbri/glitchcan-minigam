@@ -523,7 +523,9 @@ window.FinkMinigames = {
         const view = this.elements.minigameView;
         if (!view) return;
 
-        view.classList.toggle('paused', this.windowState.paused);
+        // A guest that declared the 'pause' verb presents pause its own way —
+        // suppress the shell's frost overlay for it.
+        view.classList.toggle('paused', this.windowState.paused && !this.guestVerbs?.has('pause'));
         view.classList.toggle('pinned', this.windowState.pinned);
         view.classList.toggle('minimized', this.windowState.minimized);
         view.classList.toggle('maximized', this.windowState.maximized);
@@ -678,6 +680,11 @@ window.FinkMinigames = {
         switch (data.type) {
             case 'ready':
                 this.log('Minigame ready, capabilities: ' + JSON.stringify(data.capabilities));
+                // Verb protocol: the guest declares which shell verbs it
+                // handles natively (its own dialogs/presentation). For those
+                // the shell DELEGATES instead of imposing its generic
+                // behavior. Undeclared verbs get the shell fallback.
+                this.guestVerbs = new Set(data.capabilities?.verbs || []);
                 break;
 
             case 'progress':
@@ -868,6 +875,16 @@ window.FinkMinigames = {
 
         // Handle iframe minigame
         if (this.iframeMinigame) {
+            // Verb protocol: a guest that declared 'quit' owns the exit
+            // flow (its own confirmation dialog; it completes via the SDK
+            // when the player decides). Pressing exit again within 10s is
+            // the escape hatch — hard terminate, never a stuck window.
+            if (this.guestVerbs?.has('quit') && Date.now() - (this._quitSentAt || 0) > 10000) {
+                this._quitSentAt = Date.now();
+                this._sendToIframe({ type: 'quit' });
+                this.log('Quit delegated to guest (exit again to force)');
+                return;
+            }
             this._sendToIframe({ type: 'terminate', reason: 'user_exit' });
             this._cleanupIframe();
             this.handleMinigameComplete({ type: this.currentType, success: false });
@@ -897,6 +914,8 @@ window.FinkMinigames = {
     // Handle minigame completion
     handleMinigameComplete(result) {
         this.log(`Minigame complete: ${JSON.stringify(result)}`);
+        this.guestVerbs = null;
+        this._quitSentAt = 0;
         window.FoafOS?.bus.publish('minigame.complete', {
             type: this.currentType, success: result?.success ?? null, score: result?.score ?? null,
             summary: `${(this.minigameInfo[this.currentType] || {}).title || this.currentType} finished` +

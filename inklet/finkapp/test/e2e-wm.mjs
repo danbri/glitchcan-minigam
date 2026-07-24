@@ -133,10 +133,25 @@ try {
     ? pass(`chrome drag-docked left (persisted top=${docked.stored.top})`)
     : fail(`dock failed: ${JSON.stringify(docked)}`);
 
-  // 7. FULL again, then exit closes the window and the story continues
+  // 7. exit is a VERB, not a kill switch: robbin declared 'quit', so ✕
+  // delegates to the game's own paper dialog; confirming there completes
+  // through the normal SDK path and the shell closes the window.
   await page.evaluate(() => { FinkWM.setMode('full'); FinkWM._setCollapsed(false); });
   await page.waitForTimeout(300);
+  const gameFrame = page.frames().find(f => f.url().includes('magpie/robbin/robbin.html'));
+  await gameFrame.waitForFunction(() => window.__robbin?.game?.state === 'tube', null, { timeout: 15000 });
   await page.click('#returnToStory');
+  await page.waitForTimeout(500);
+  const delegated = await page.evaluate(() => !!document.querySelector('#minigame-iframe-robbin'))
+    && await gameFrame.evaluate(() => window.__robbin.game.tube.quitConfirm === true);
+  delegated
+    ? pass('✕ delegated: game window survives, native quit dialog is up')
+    : fail('✕ hard-killed a guest that owns its quit flow');
+  await gameFrame.evaluate(() => {
+    const t = window.__robbin.game.tube;
+    const r = t.quitDialogRects();
+    t.quitTap(r.quit.x + r.quit.w / 2, r.quit.y + r.quit.h / 2);
+  });
   await page.waitForTimeout(800);
   const closed = await page.evaluate(() => ({
     wmActive: FinkWM.active,
