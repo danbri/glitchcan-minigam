@@ -18,3 +18,4 @@ export {
 export { WidgetRegistry, widgets, defineBaseCards } from './widgets.mjs';
 export { defineFeed } from './feed.mjs';
 export { SseTransport, WebSocketTransport, FeedPoller } from './transports.mjs';
+export { FoafCluster } from './cluster.mjs';

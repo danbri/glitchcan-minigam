@@ -124,6 +124,17 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
 - Audio-focus protocol: pip ⇒ host sends `audio-blur` SDK message,
   un-pip ⇒ `audio-focus`; robbin ducks its buses and refuses to un-duck
   while blurred. Guest flag for tests: `game._audioFocus`.
+- Cluster (`packages/foafos/src/cluster.mjs`): same-origin shell windows
+  bridge buses, elect a coordinator, arbitrate named resources (one
+  holder, last claim wins, holder yields; 'audio' is wired — second
+  window claiming audio blurs the first window's game). Courtesy
+  protocol, NOT a security boundary. Race lesson: track desired vs HELD
+  separately — a stale cross-tab state event must not clobber an
+  in-flight claim. Playwright: BroadcastChannel needs pages in the SAME
+  context (`browser.newContext()` then `context.newPage()` twice).
+- OS-cases analysis + scorecard: `docs/foafos-os-cases.md` (edot office
+  suite, foaf.tv/tvp, zero-trust). Next milestone named there:
+  `<foafos-guest>` generic sandboxed widget host with filtered bus view.
 - E2E: `node inklet/finkapp/test/e2e-foafos.mjs`; unit:
   `cd packages/foafos && npm test`.
 

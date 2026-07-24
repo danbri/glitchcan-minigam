@@ -40,7 +40,8 @@ let browser;
 try {
   browser = await chromium.launch({ headless: true, executablePath: EXE,
     args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
-  const page = await browser.newPage({ viewport: { width: 430, height: 860 } });
+  const context = await browser.newContext({ viewport: { width: 430, height: 860 } });
+  const page = await context.newPage();
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(String(e).slice(0, 200)));
 
@@ -101,6 +102,28 @@ try {
   restored.mode !== 'pip' && !restored.drawerOpen && refocused
     ? pass('shelf chip restored the window and audio focus')
     : fail(`shelf restore wrong: ${JSON.stringify({ restored, refocused })}`);
+
+  // 4b. cluster: a SECOND shell window claims audio — the first window's
+  // game is told to yield. One machine, one soundtrack.
+  // same browser context — BroadcastChannel does not cross contexts
+  const page2 = await context.newPage();
+  await page2.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/`);
+  await page2.waitForFunction(() => !!window.FoafOS?.cluster, null, { timeout: 25000 });
+  await page2.waitForTimeout(500);
+  const clusterView = await page2.evaluate(() => ({
+    members: FoafOS.cluster.members.size,
+    coordinator: FoafOS.cluster.coordinator,
+  }));
+  clusterView.members >= 2 && clusterView.coordinator
+    ? pass(`second window joined the cluster (${clusterView.members} members, coordinator elected)`)
+    : fail(`cluster wrong: ${JSON.stringify(clusterView)}`);
+  const granted = await page2.evaluate(() => FoafOS.cluster.claim('audio', { label: 'window two' }));
+  await page.waitForTimeout(600);
+  const yielded = await frame.evaluate(() => window.__robbin.game._audioFocus === false);
+  granted && yielded
+    ? pass('window two claimed audio — window one\'s game yielded (cross-window blur)')
+    : fail(`arbitration failed: granted=${granted} yielded=${yielded}`);
+  await page2.close();
 
   // 5. session: seal with passphrase, reload, sealed survives, unlock round-trips
   await page.evaluate(async () => {

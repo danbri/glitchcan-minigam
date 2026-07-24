@@ -13,6 +13,7 @@ import {
   saveSealed, loadSealed, clearSealed,
   widgets, defineBaseCards, defineFeed,
   SseTransport, WebSocketTransport, FeedPoller,
+  FoafCluster,
 } from '../../packages/foafos/src/index.mjs';
 
 defineBaseCards();
@@ -64,6 +65,30 @@ function announceSession(what) {
 
 FoafOS.session.current = createSession();
 window.FoafOS = FoafOS;
+
+// ── cluster: sibling shell windows, lightly coordinated ─────────────────
+// The bus is bridged across tabs; the cluster elects a coordinator that
+// arbitrates shared resources. First concrete resource: AUDIO — start a
+// game in a second window and the first window's game is told to yield
+// (audio-blur), so one machine never plays two soundtracks at once.
+
+const cluster = new FoafCluster(bus);
+cluster.start();
+FoafOS.cluster = cluster;
+
+bus.subscribe('minigame.start', (e) => {
+  if (e.source === 'local') cluster.claim('audio', { label: e.data.type });
+});
+bus.subscribe('audio.focus', (e) => {
+  if (e.source !== 'local') return;
+  if (e.data.focused) cluster.claim('audio', { label: 'game window' });
+  else if (!e.data.yielded) cluster.release('audio');
+});
+cluster.onYield('audio', () => {
+  window.FinkMinigames?._sendToIframe?.({ type: 'audio-blur' });
+  bus.publish('audio.focus',
+    { focused: false, yielded: true, summary: 'audio yielded to another window' }, { retain: true });
+});
 
 // ── shell UI: dock + drawer ──────────────────────────────────────────────
 

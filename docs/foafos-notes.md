@@ -1,5 +1,9 @@
 # foafos — design notes (v0, July 2026)
 
+*Sequel: `docs/foafos-os-cases.md` — the office-suite (edot) and
+foaf.tv (tvp) use cases, the multi-window cluster, zero-trust
+principles, and the honest "is the OS label deserved" scorecard.*
+
 *Working name. Terminology — including "foafos" itself, and what to call
 a shell instance — is danbri's to settle. Nothing below is named-in-stone;
 the code keeps names one rename away.*
