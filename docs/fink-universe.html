@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finkiverse map — stories and widgets</title>
+<style>
+  :root { color-scheme: dark; --bg:#06060c; --ink:#e8e8ef; --muted:#8a8aa0;
+          --story:#7db8ff; --widget:#7dffb2; --ext:#ffcf6b; --bad:#ff6b6b; --deep:#c98cff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;
+         height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
+  header { padding:.6rem .8rem; border-bottom:1px solid #23233a; display:flex; flex-wrap:wrap; gap:.6rem; align-items:baseline; }
+  h1 { font-size:1rem; margin:0; color:var(--widget); letter-spacing:.05em; }
+  .counts { color:var(--muted); }
+  .legend { margin-left:auto; display:flex; gap:.9rem; flex-wrap:wrap; }
+  .legend span { display:flex; align-items:center; gap:.3rem; }
+  .sw { width:11px; height:11px; border-radius:50%; display:inline-block; }
+  .sw.d { border-radius:2px; transform:rotate(45deg); }
+  main { flex:1; min-height:0; display:flex; }
+  #stage { flex:1; min-width:0; touch-action:none; }
+  aside { width:min(46vw,320px); border-left:1px solid #23233a; padding:.7rem .8rem; overflow-y:auto; }
+  aside h2 { font-size:.85rem; margin:.2rem 0 .5rem; color:var(--story); word-break:break-all; }
+  aside dl { display:grid; grid-template-columns:auto 1fr; gap:.15rem .6rem; margin:0 0 .8rem; }
+  aside dt { color:var(--muted); }
+  aside dd { margin:0; word-break:break-all; }
+  aside ul { margin:.2rem 0 .8rem; padding-left:1rem; }
+  aside li { margin:.15rem 0; }
+  .hint { color:var(--muted); }
+  .bad { color:var(--bad); }
+  circle, polygon, text { cursor:pointer; }
+  text { font:10px ui-monospace,monospace; fill:var(--ink); pointer-events:none; }
+  @media (max-width:700px) { main { flex-direction:column; } aside { width:auto; max-height:38dvh; border-left:0; border-top:1px solid #23233a; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>FINKIVERSE MAP</h1>
+  <span class="counts" id="counts"></span>
+  <span class="legend">
+    <span><i class="sw" style="background:var(--story)"></i>story</span>
+    <span><i class="sw d" style="background:var(--widget)"></i>widget</span>
+    <span><i class="sw" style="background:var(--ext)"></i>external</span>
+    <span><i class="sw" style="background:var(--deep)"></i>goDeeper</span>
+    <span><i class="sw" style="background:var(--bad)"></i>problem</span>
+  </span>
+</header>
+<main>
+  <svg id="stage"></svg>
+  <aside>
+    <div id="detail"><p class="hint">Tap a node. Drag to move it; drag the background to pan.</p></div>
+  </aside>
+</main>
+<script>
+const svg = document.getElementById('stage');
+const detail = document.getElementById('detail');
+let N = [], E = [], view = { x: 0, y: 0, k: 1 };
+
+fetch('fink-universe.json').then(r => r.json()).then(u => {
+  document.getElementById('counts').textContent =
+    `${u.counts.stories} stories · ${u.counts.widgets} widgets · ${u.counts.external} external · ${u.counts.edges} links`;
+  const byId = new Map();
+  N = u.nodes.map((n, i) => {
+    const a = (i / u.nodes.length) * Math.PI * 2;
+    const o = { ...n, x: 400 + Math.cos(a) * 240, y: 300 + Math.sin(a) * 220, vx: 0, vy: 0 };
+    byId.set(n.id, o); return o;
+  });
+  E = u.edges.map(e => ({ ...e, s: byId.get(e.from), t: byId.get(e.to) })).filter(e => e.s && e.t);
+  for (const n of N) n.deg = E.filter(e => e.s === n || e.t === n).length;
+  layout(); draw();
+});
+
+// tiny force layout — repulsion, spring edges, gentle centring
+function layout(steps = 320) {
+  for (let s = 0; s < steps; s++) {
+    for (let i = 0; i < N.length; i++) {
+      for (let j = i + 1; j < N.length; j++) {
+        const a = N[i], b = N[j];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        let d2 = dx * dx + dy * dy || 1;
+        const f = 5200 / d2;
+        const d = Math.sqrt(d2);
+        const ux = dx / d, uy = dy / d;
+        a.vx -= ux * f; a.vy -= uy * f; b.vx += ux * f; b.vy += uy * f;
+      }
+    }
+    for (const e of E) {
+      const dx = e.t.x - e.s.x, dy = e.t.y - e.s.y;
+      const d = Math.hypot(dx, dy) || 1;
+      const f = (d - 120) * 0.012;
+      const ux = dx / d, uy = dy / d;
+      e.s.vx += ux * f; e.s.vy += uy * f; e.t.vx -= ux * f; e.t.vy -= uy * f;
+    }
+    for (const n of N) {
+      n.vx += (400 - n.x) * 0.0016; n.vy += (300 - n.y) * 0.0016;
+      n.x += (n.vx *= 0.82); n.y += (n.vy *= 0.82);
+    }
+  }
+}
+
+const colour = (n) => n.error ? 'var(--bad)'
+  : n.kind === 'widget' ? (n.packaged ? 'var(--widget)' : 'var(--bad)')
+  : n.kind === 'external' ? 'var(--ext)' : 'var(--story)';
+
+function draw() {
+  const w = svg.clientWidth || 800, h = svg.clientHeight || 600;
+  svg.setAttribute('viewBox', `${view.x} ${view.y} ${w / view.k} ${h / view.k}`);
+  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let out = `<defs><marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+    <path d="M0 0 L8 4 L0 8 z" fill="#55557a"/></marker></defs>`;
+  for (const e of E) {
+    const col = e.type === 'minigame' ? 'var(--widget)' : e.linkrel === 'godeeper' ? 'var(--deep)' : '#44446a';
+    out += `<line x1="${e.s.x}" y1="${e.s.y}" x2="${e.t.x}" y2="${e.t.y}" stroke="${col}"
+      stroke-width="${e.linkrel === 'godeeper' ? 2 : 1}" ${e.type === 'minigame' ? 'stroke-dasharray="4 3"' : ''}
+      marker-end="url(#a)" opacity=".75"/>`;
+  }
+  for (const n of N) {
+    const r = 6 + Math.min(9, (n.deg || 0));
+    out += n.kind === 'widget'
+      ? `<polygon data-id="${esc(n.id)}" points="${n.x},${n.y - r} ${n.x + r},${n.y} ${n.x},${n.y + r} ${n.x - r},${n.y}" fill="${colour(n)}"/>`
+      : `<circle data-id="${esc(n.id)}" cx="${n.x}" cy="${n.y}" r="${r}" fill="${colour(n)}"
+          ${n.entry ? 'stroke="#fff" stroke-width="1.5"' : ''}/>`;
+    out += `<text x="${n.x + r + 3}" y="${n.y + 3}">${esc(n.title)}</text>`;
+  }
+  svg.innerHTML = out;
+}
+
+svg.addEventListener('pointerdown', (e) => {
+  const id = e.target.dataset?.id;
+  if (id) { show(N.find(n => n.id === id)); dragNode(e, N.find(n => n.id === id)); }
+  else panStart(e);
+});
+
+function show(n) {
+  if (!n) return;
+  const ins = E.filter(e => e.t === n), outs = E.filter(e => e.s === n);
+  const li = (e, dir) => `<li>${dir} <b>${e.type}${e.linkrel ? '/' + e.linkrel : ''}</b> ${dir === '→' ? e.t.title : e.s.title}${e.knot ? ` <span class="hint">(${e.knot})</span>` : ''}</li>`;
+  detail.innerHTML = `<h2>${n.title}</h2><dl>
+    <dt>kind</dt><dd>${n.kind}${n.kind === 'widget' ? (n.packaged ? ' · packaged' : ' · <span class="bad">no package</span>') : ''}</dd>
+    <dt>path</dt><dd>${n.id}</dd>
+    ${n.knots != null ? `<dt>knots</dt><dd>${n.knots}</dd>` : ''}
+    ${n.entry ? '<dt>entry</dt><dd>nothing links here</dd>' : ''}
+    ${n.error ? `<dt>error</dt><dd class="bad">${n.error}</dd>` : ''}
+  </dl>
+  ${outs.length ? `<b>links out (${outs.length})</b><ul>${outs.map(e => li(e, '→')).join('')}</ul>` : ''}
+  ${ins.length ? `<b>linked from (${ins.length})</b><ul>${ins.map(e => li(e, '←')).join('')}</ul>` : ''}`;
+}
+
+function dragNode(ev, n) {
+  const move = (e) => {
+    const s = (svg.viewBox.baseVal.width || svg.clientWidth) / svg.clientWidth;
+    n.x += e.movementX * s; n.y += e.movementY * s; draw();
+  };
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+function panStart() {
+  const move = (e) => {
+    const s = (svg.viewBox.baseVal.width || svg.clientWidth) / svg.clientWidth;
+    view.x -= e.movementX * s; view.y -= e.movementY * s; draw();
+  };
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+svg.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  view.k = Math.max(0.3, Math.min(3, view.k * (e.deltaY < 0 ? 1.12 : 0.89)));
+  draw();
+}, { passive: false });
+addEventListener('resize', draw);
+</script>
+</body>
+</html>

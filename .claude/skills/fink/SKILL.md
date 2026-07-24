@@ -180,6 +180,21 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   `docs/fink-linking-spec.md`. Public knots = not `_`-prefixed;
   `# PUBLIC:` marks respawn entry points.
 
+## Finkiverse map (stories AND widgets)
+
+- `node inklet/tools/fink-universe.mjs` → `docs/fink-universe.json`;
+  view `docs/fink-universe.html` (zero-dep SVG force map, click a node
+  for its in/out links). `--print` for a text dump.
+- Edges: `fink` (typed by `LINKREL`, goDeeper drawn purple), `minigame`
+  (dashed, to widget diamonds). Widgets are classified against the REAL
+  registry (fink-minigames.js executed in a vm, not parsed): registered?
+  iframe vs inline? packaged on disk? Anything unlaunchable is flagged.
+- Older `inklet/tools/fink-graph.mjs` + `docs/fink-ring-viz.html` cover
+  story→story links only, and their report predates widgets.
+- Gotcha it exposed: **`#` mid-line is a TAG in ink**, so prose like
+  "loaded via the # FINK: tag" compiles into a live FINK load. Two demo
+  files shipped that bug for months.
+
 ## Validation & QA recipes
 
 - Player E2E (the mandatory journey, automated):

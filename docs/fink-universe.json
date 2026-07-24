@@ -1,0 +1,540 @@
+{
+ "generated": "fink-universe.mjs",
+ "counts": {
+  "stories": 19,
+  "widgets": 7,
+  "external": 2,
+  "edges": 47
+ },
+ "nodes": [
+  {
+   "id": "inklet/_tmp_shane-manor.fink.js",
+   "kind": "story",
+   "title": "_tmp_shane-manor.fink.js",
+   "links": 0,
+   "knots": 55,
+   "bytes": 42180
+  },
+  {
+   "id": "inklet/bagend.fink.js",
+   "kind": "story",
+   "title": "bagend.fink.js",
+   "links": 1,
+   "knots": 18,
+   "bytes": 11093
+  },
+  {
+   "id": "inklet/world-between-worlds.fink.js",
+   "kind": "story",
+   "title": "world-between-worlds.fink.js",
+   "links": 4,
+   "knots": 17,
+   "bytes": 4988
+  },
+  {
+   "id": "inklet/demos/dev-worldpools.fink.js",
+   "kind": "story",
+   "title": "dev-worldpools.fink.js",
+   "links": 0,
+   "knots": 7,
+   "bytes": 2105
+  },
+  {
+   "id": "inklet/demos/diamond-cave.fink.js",
+   "kind": "story",
+   "title": "diamond-cave.fink.js",
+   "links": 12,
+   "knots": 40,
+   "bytes": 10141
+  },
+  {
+   "id": "widget:gems",
+   "kind": "widget",
+   "title": "gems",
+   "links": 0,
+   "registered": true,
+   "delivery": "inline",
+   "packaged": true
+  },
+  {
+   "id": "inklet/demos/hamfink2026-ch2.fink.js",
+   "kind": "story",
+   "title": "hamfink2026-ch2.fink.js",
+   "links": 7,
+   "knots": 28,
+   "bytes": 11016
+  },
+  {
+   "id": "inklet/hampstead.fink.js",
+   "kind": "story",
+   "title": "hampstead.fink.js",
+   "links": 1,
+   "knots": 40,
+   "bytes": 17485
+  },
+  {
+   "id": "inklet/riverbend.fink.js",
+   "kind": "story",
+   "title": "riverbend.fink.js",
+   "links": 1,
+   "knots": 59,
+   "bytes": 27633
+  },
+  {
+   "id": "inklet/shane-manor.fink.js",
+   "kind": "story",
+   "title": "shane-manor.fink.js",
+   "links": 2,
+   "knots": 57,
+   "bytes": 42778
+  },
+  {
+   "id": "inklet/mudslidemines.fink.js",
+   "kind": "story",
+   "title": "mudslidemines.fink.js",
+   "links": 2,
+   "knots": 16,
+   "bytes": 5494
+  },
+  {
+   "id": "inklet/demos/dream-inner.fink.js",
+   "kind": "story",
+   "title": "dream-inner.fink.js",
+   "links": 0,
+   "knots": 2,
+   "bytes": 220
+  },
+  {
+   "id": "inklet/demos/dream-outer.fink.js",
+   "kind": "story",
+   "title": "dream-outer.fink.js",
+   "links": 1,
+   "knots": 3,
+   "bytes": 562,
+   "entry": true
+  },
+  {
+   "id": "inklet/demos/foafos-tour.fink.js",
+   "kind": "story",
+   "title": "foafos-tour.fink.js",
+   "links": 2,
+   "knots": 8,
+   "bytes": 3129,
+   "entry": true
+  },
+  {
+   "id": "widget:robbin",
+   "kind": "widget",
+   "title": "robbin",
+   "links": 0,
+   "registered": true,
+   "delivery": "iframe",
+   "packaged": true
+  },
+  {
+   "id": "widget:mega",
+   "kind": "widget",
+   "title": "mega",
+   "links": 0,
+   "registered": true,
+   "delivery": "inline",
+   "packaged": false
+  },
+  {
+   "id": "inklet/tml-2025-langlearn.fink.js",
+   "kind": "story",
+   "title": "tml-2025-langlearn.fink.js",
+   "links": 0,
+   "knots": 36,
+   "bytes": 5634
+  },
+  {
+   "id": "inklet/demos/hamfink2026-ch3.fink.js",
+   "kind": "story",
+   "title": "hamfink2026-ch3.fink.js",
+   "links": 2,
+   "knots": 40,
+   "bytes": 23830
+  },
+  {
+   "id": "inklet/demos/radio-foundation-quiz.fink.js",
+   "kind": "story",
+   "title": "radio-foundation-quiz.fink.js",
+   "links": 0,
+   "knots": 89,
+   "bytes": 29339,
+   "entry": true
+  },
+  {
+   "id": "widget:mudslider",
+   "kind": "widget",
+   "title": "mudslider",
+   "links": 0,
+   "registered": true,
+   "delivery": "iframe",
+   "packaged": true
+  },
+  {
+   "id": "widget:chess",
+   "kind": "widget",
+   "title": "chess",
+   "links": 0,
+   "registered": true,
+   "delivery": "iframe",
+   "packaged": true
+  },
+  {
+   "id": "inklet/toc.fink.js",
+   "kind": "story",
+   "title": "toc.fink.js",
+   "links": 12,
+   "knots": 22,
+   "bytes": 9070,
+   "entry": true
+  },
+  {
+   "id": "cozyverse/maple-hollow.fink.js",
+   "kind": "story",
+   "title": "maple-hollow.fink.js",
+   "links": 0,
+   "knots": 14,
+   "bytes": 10640
+  },
+  {
+   "id": "https://danbri.github.io/isle_of_glitch/awakening.fink.js",
+   "kind": "external",
+   "title": "https://danbri.github.io/isle_of_glitch/awakening.fink.js",
+   "links": 0
+  },
+  {
+   "id": "https://danbri.github.io/glitchcan-minigam/inklet/demos/radio-foundation-quiz.fink.js",
+   "kind": "external",
+   "title": "https://danbri.github.io/glitchcan-minigam/inklet/demos/radio-foundation-quiz.fink.js",
+   "links": 0
+  },
+  {
+   "id": "inklet/validation/tests/test-variables.fink.js",
+   "kind": "story",
+   "title": "test-variables.fink.js",
+   "links": 0,
+   "knots": 8,
+   "bytes": 1932,
+   "entry": true
+  },
+  {
+   "id": "widget:battleboids",
+   "kind": "widget",
+   "title": "battleboids",
+   "links": 0,
+   "registered": true,
+   "delivery": "iframe",
+   "packaged": true
+  },
+  {
+   "id": "widget:gridluck",
+   "kind": "widget",
+   "title": "gridluck",
+   "links": 0,
+   "registered": true,
+   "delivery": "iframe",
+   "packaged": true
+  }
+ ],
+ "edges": [
+  {
+   "from": "inklet/bagend.fink.js",
+   "to": "inklet/world-between-worlds.fink.js",
+   "type": "fink",
+   "knot": "portal_dive"
+  },
+  {
+   "from": "inklet/demos/diamond-cave.fink.js",
+   "to": "widget:gems",
+   "type": "minigame",
+   "knot": "start_minigame",
+   "spec": "gems"
+  },
+  {
+   "from": "inklet/demos/diamond-cave.fink.js",
+   "to": "inklet/demos/hamfink2026-ch2.fink.js",
+   "type": "fink",
+   "knot": "load_chapter2"
+  },
+  {
+   "from": "inklet/demos/diamond-cave.fink.js",
+   "to": "inklet/hampstead.fink.js",
+   "type": "fink",
+   "knot": "load_hampstead_fraud"
+  },
+  {
+   "from": "inklet/demos/diamond-cave.fink.js",
+   "to": "widget:gems",
+   "type": "minigame",
+   "knot": "gems_demo",
+   "spec": "gems mode=normal"
+  },
+  {
+   "from": "inklet/demos/diamond-cave.fink.js",
+   "to": "inklet/riverbend.fink.js",
+   "type": "fink",
+   "knot": "load_riverbend"
+  },
+  {
+   "from": "inklet/demos/diamond-cave.fink.js",
+   "to": "inklet/shane-manor.fink.js",
+   "type": "fink",
+   "knot": "load_shane_manor"
+  },
+  {
+   "from": "inklet/demos/diamond-cave.fink.js",
+   "to": "inklet/hampstead.fink.js",
+   "type": "fink",
+   "knot": "load_hampstead_full"
+  },
+  {
+   "from": "inklet/demos/diamond-cave.fink.js",
+   "to": "inklet/mudslidemines.fink.js",
+   "type": "fink",
+   "knot": "load_mudslide"
+  },
+  {
+   "from": "inklet/demos/diamond-cave.fink.js",
+   "to": "inklet/bagend.fink.js",
+   "type": "fink",
+   "knot": "load_bagend"
+  },
+  {
+   "from": "inklet/demos/diamond-cave.fink.js",
+   "to": "inklet/riverbend.fink.js",
+   "type": "fink",
+   "knot": "load_riverbend_adventure"
+  },
+  {
+   "from": "inklet/demos/diamond-cave.fink.js",
+   "to": "inklet/demos/dev-worldpools.fink.js",
+   "type": "fink",
+   "knot": "dev_pools"
+  },
+  {
+   "from": "inklet/demos/diamond-cave.fink.js",
+   "to": "inklet/world-between-worlds.fink.js",
+   "type": "fink",
+   "knot": "wbw_portal"
+  },
+  {
+   "from": "inklet/demos/dream-outer.fink.js",
+   "to": "inklet/demos/dream-inner.fink.js",
+   "type": "fink",
+   "knot": "descend",
+   "linkrel": "godeeper"
+  },
+  {
+   "from": "inklet/demos/foafos-tour.fink.js",
+   "to": "inklet/demos/dream-inner.fink.js",
+   "type": "fink",
+   "knot": "descend",
+   "linkrel": "godeeper"
+  },
+  {
+   "from": "inklet/demos/foafos-tour.fink.js",
+   "to": "widget:robbin",
+   "type": "minigame",
+   "knot": "game",
+   "spec": "robbin mode=hampstead controls=dpad"
+  },
+  {
+   "from": "inklet/demos/hamfink2026-ch2.fink.js",
+   "to": "widget:mega",
+   "type": "minigame",
+   "knot": "start_mega_minigame",
+   "spec": "mega"
+  },
+  {
+   "from": "inklet/demos/hamfink2026-ch2.fink.js",
+   "to": "inklet/hampstead.fink.js",
+   "type": "fink",
+   "knot": "portal_to_hampstead"
+  },
+  {
+   "from": "inklet/demos/hamfink2026-ch2.fink.js",
+   "to": "inklet/bagend.fink.js",
+   "type": "fink",
+   "knot": "enter_bagend"
+  },
+  {
+   "from": "inklet/demos/hamfink2026-ch2.fink.js",
+   "to": "inklet/mudslidemines.fink.js",
+   "type": "fink",
+   "knot": "enter_mines"
+  },
+  {
+   "from": "inklet/demos/hamfink2026-ch2.fink.js",
+   "to": "inklet/riverbend.fink.js",
+   "type": "fink",
+   "knot": "enter_riverbend"
+  },
+  {
+   "from": "inklet/demos/hamfink2026-ch2.fink.js",
+   "to": "inklet/tml-2025-langlearn.fink.js",
+   "type": "fink",
+   "knot": "enter_language"
+  },
+  {
+   "from": "inklet/demos/hamfink2026-ch2.fink.js",
+   "to": "inklet/demos/hamfink2026-ch3.fink.js",
+   "type": "fink",
+   "knot": "load_chapter3"
+  },
+  {
+   "from": "inklet/demos/hamfink2026-ch3.fink.js",
+   "to": "inklet/demos/hamfink2026-ch2.fink.js",
+   "type": "fink",
+   "knot": "ch3_end_back"
+  },
+  {
+   "from": "inklet/demos/hamfink2026-ch3.fink.js",
+   "to": "inklet/demos/hamfink2026-ch2.fink.js",
+   "type": "fink",
+   "knot": "wood_between_worlds"
+  },
+  {
+   "from": "inklet/hampstead.fink.js",
+   "to": "widget:robbin",
+   "type": "minigame",
+   "knot": "hampstead_tube",
+   "spec": "robbin mode=hampstead controls=dpad"
+  },
+  {
+   "from": "inklet/mudslidemines.fink.js",
+   "to": "widget:mudslider",
+   "type": "minigame",
+   "knot": "Cave_Exploration",
+   "spec": "mudslider mode=cave"
+  },
+  {
+   "from": "inklet/mudslidemines.fink.js",
+   "to": "inklet/world-between-worlds.fink.js",
+   "type": "fink",
+   "knot": "Exit_To_Menu"
+  },
+  {
+   "from": "inklet/riverbend.fink.js",
+   "to": "inklet/world-between-worlds.fink.js",
+   "type": "fink",
+   "knot": "riverbend_portal"
+  },
+  {
+   "from": "inklet/shane-manor.fink.js",
+   "to": "widget:chess",
+   "type": "minigame",
+   "knot": "chess_minigame",
+   "spec": "chess"
+  },
+  {
+   "from": "inklet/shane-manor.fink.js",
+   "to": "inklet/world-between-worlds.fink.js",
+   "type": "fink",
+   "knot": "manor_portal"
+  },
+  {
+   "from": "inklet/toc.fink.js",
+   "to": "inklet/bagend.fink.js",
+   "type": "fink",
+   "knot": "hobbit_selected"
+  },
+  {
+   "from": "inklet/toc.fink.js",
+   "to": "inklet/demos/diamond-cave.fink.js",
+   "type": "fink",
+   "knot": "diamond_cave_selected"
+  },
+  {
+   "from": "inklet/toc.fink.js",
+   "to": "inklet/hampstead.fink.js",
+   "type": "fink",
+   "knot": "hampstead_selected"
+  },
+  {
+   "from": "inklet/toc.fink.js",
+   "to": "inklet/mudslidemines.fink.js",
+   "type": "fink",
+   "knot": "mudslidemines_selected"
+  },
+  {
+   "from": "inklet/toc.fink.js",
+   "to": "inklet/riverbend.fink.js",
+   "type": "fink",
+   "knot": "riverbend_selected"
+  },
+  {
+   "from": "inklet/toc.fink.js",
+   "to": "cozyverse/maple-hollow.fink.js",
+   "type": "fink",
+   "knot": "maple_hollow_selected"
+  },
+  {
+   "from": "inklet/toc.fink.js",
+   "to": "inklet/tml-2025-langlearn.fink.js",
+   "type": "fink",
+   "knot": "ukrainian_selected"
+  },
+  {
+   "from": "inklet/toc.fink.js",
+   "to": "inklet/world-between-worlds.fink.js",
+   "type": "fink",
+   "knot": "dev_wbw_selected"
+  },
+  {
+   "from": "inklet/toc.fink.js",
+   "to": "inklet/shane-manor.fink.js",
+   "type": "fink",
+   "knot": "shane_manor_selected"
+  },
+  {
+   "from": "inklet/toc.fink.js",
+   "to": "inklet/_tmp_shane-manor.fink.js",
+   "type": "fink",
+   "knot": "shane_manor_enriched_selected"
+  },
+  {
+   "from": "inklet/toc.fink.js",
+   "to": "https://danbri.github.io/isle_of_glitch/awakening.fink.js",
+   "type": "fink",
+   "knot": "awakening_selected"
+  },
+  {
+   "from": "inklet/toc.fink.js",
+   "to": "https://danbri.github.io/glitchcan-minigam/inklet/demos/radio-foundation-quiz.fink.js",
+   "type": "fink",
+   "knot": "radiocrash_selected"
+  },
+  {
+   "from": "inklet/world-between-worlds.fink.js",
+   "to": "widget:gems",
+   "type": "minigame",
+   "knot": "play_gems",
+   "spec": "gems"
+  },
+  {
+   "from": "inklet/world-between-worlds.fink.js",
+   "to": "widget:mudslider",
+   "type": "minigame",
+   "knot": "play_mudslider",
+   "spec": "mudslider"
+  },
+  {
+   "from": "inklet/world-between-worlds.fink.js",
+   "to": "widget:battleboids",
+   "type": "minigame",
+   "knot": "play_battleboids",
+   "spec": "battleboids"
+  },
+  {
+   "from": "inklet/world-between-worlds.fink.js",
+   "to": "widget:gridluck",
+   "type": "minigame",
+   "knot": "play_gridluck",
+   "spec": "gridluck"
+  }
+ ]
+}

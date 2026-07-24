@@ -276,7 +276,7 @@ Queen moves first. The king tries to escape or capture. There's a forced win!
 # CLASS: info
 Collect gems before they fade! 💎
 
-# MINIGAME: normal
+# MINIGAME: gems mode=normal
 
 -> minigame_tour
 

@@ -355,14 +355,14 @@ This Chapter 2 story was loaded from:
 
 hamfink2026-ch2.fink.js
 
-It uses the oooOO template literal format and was loaded via the # FINK: tag in Chapter 1.
+It uses the oooOO template literal format and was loaded via the FINK tag in Chapter 1.
 
 State (diamonds, score, etc.) was preserved across the chapter transition!
 
 Key code patterns:
 - oooOO\`...\` wraps the entire Ink content
-- # MINIGAME: mega triggers the mega gem minigame
-- # FINK: loads external stories
+- the MINIGAME tag (with mega) triggers the mega gem minigame
+- the FINK tag loads external stories
 - Variables sync between JavaScript and Ink
 
 The Wood Between the Worlds connects to:
