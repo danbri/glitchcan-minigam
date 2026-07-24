@@ -133,8 +133,12 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   in-flight claim. Playwright: BroadcastChannel needs pages in the SAME
   context (`browser.newContext()` then `context.newPage()` twice).
 - OS-cases analysis + scorecard: `docs/foafos-os-cases.md` (edot office
-  suite, foaf.tv/tvp, zero-trust). Next milestone named there:
-  `<foafos-guest>` generic sandboxed widget host with filtered bus view.
+  suite, foaf.tv/tvp, zero-trust).
+- `<foafos-guest>` + `scopeBus` (src/guest.mjs): sandboxed widget
+  processes with grant-filtered bus views; denied publishes dropped AND
+  announced ('sys.guest.denied'). Two-same-widget isolation locked by
+  `node packages/foafos/test/e2e-guest.mjs` (run from repo root); demo
+  at packages/foafos/demo/guests.html.
 - E2E: `node inklet/finkapp/test/e2e-foafos.mjs`; unit:
   `cd packages/foafos && npm test`.
 

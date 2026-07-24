@@ -17,13 +17,8 @@ still vapour. Scorecard at the end.
 
 `magpie/edot` is eleven apps in one shell: Documents, Data
 (sql/spreadsheet/rdf/viz), Slides, Calendar, Mail, Maps, Files/Backup,
-Groups, Projects, Automations. It already has three things foafos also
-has. Not convergent evolution — same designer, same instincts (a
-formative exposure to CORBA, XMPP, and web browsers is legible in all
-three organs: object brokerage → string-id capabilities, presence and
-federated messaging → the bus and transports, the browser → the shell
-substrate itself). The design recurring across projects and years is
-evidence it is load-bearing:
+Groups, Projects, Automations. It already has three of the same organs;
+the mapping, and what to merge:
 
 | edot has | foafos has | verdict |
 |---|---|---|
@@ -131,18 +126,21 @@ What this must mean here, concretely:
 |---|---|
 | IPC / event spine | ✅ FoafBus (+ cross-tab), edot Bus to converge |
 | Window management | ✅ FinkWM (modes, chrome, verbs) — single-window per shell so far |
-| Process isolation | ◐ real for minigames (iframe guests); office widgets still co-located; two-same-kind-widgets needs the guest tier |
-| Capability model | ◐ verbs + manifests + resource claims exist; filtered bus views + grant UI unbuilt |
+| Process isolation | ✅ `<foafos-guest>`: sandboxed widget processes; two-same-kind passes (`test/e2e-guest.mjs`). Office co-located tier remains as the trusted/cheap option |
+| Capability model | ◐ verbs + manifests + resource claims + scoped bus views (grants enforced host-side, denials announced); grant UI unbuilt |
 | Sessions/identity | ◐ sealed local sessions; federation unbuilt (edot's provider model is the map) |
 | Device scheduling | ◐ audio shipped incl. cross-window; fullscreen/cast/fs named but unwired |
 | Multi-instance coordination | ✅ cluster (same-origin); cross-origin/device needs a rendezvous |
 | Package/app model | ◐ manifests + registries; no install/update story |
 
-Verdict: **"shell" is earned today; "OS" is earned when a widget you
-don't trust can run twice, side by side, with visible grants** — the
-edot two-spreadsheets test. That's the next concrete milestone:
-`<foafos-guest>` — a generic sandboxed widget host (the minigame host,
-de-game-ified) with a filtered bus view and a manifest prompt.
+The two-spreadsheets test — an untrusted widget running twice, side by
+side, granted comms only — now passes: `<foafos-guest>` +
+`scopeBus` (`packages/foafos/src/guest.mjs`, demo
+`packages/foafos/demo/guests.html`, locked by `test/e2e-guest.mjs`).
+Remaining before the label is comfortable: a grant/consent UI (grants
+are currently set by the embedding page, not chosen by the user), the
+edot apps actually mounted as guests, and fullscreen/cast wired to the
+cluster arbiter.
 
 *(Terminology throughout remains the owner's: "foafOS", "shell
 instance", "coordinator", "cluster" are all working names.)*

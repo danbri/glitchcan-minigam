@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>tally widget</title>
+<script>
+// Minimal foafos guest widget: a tally counter. Fully standalone
+// (works opened directly); as a guest it speaks the guest protocol.
+// Opaque origin: localStorage throws — shim, state is per-instance.
+try { window.localStorage.getItem; } catch (e) {
+  (function () {
+    const m = new Map();
+    Object.defineProperty(window, 'localStorage', { value: {
+      getItem: (k) => m.has(k) ? m.get(k) : null,
+      setItem: (k, v) => m.set(k, String(v)),
+      removeItem: (k) => m.delete(k),
+    } });
+  })();
+}
+</script>
+<style>
+  body { font-family: monospace; background: #111; color: #eee; margin: 0; padding: 10px; }
+  h3 { margin: 0 0 6px; color: #0ef; font-size: 14px; }
+  #count { font-size: 32px; }
+  button { font-family: inherit; margin-top: 6px; margin-right: 4px; }
+  #peer { opacity: 0.6; font-size: 11px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<h3 id="who">tally</h3>
+<div id="count">0</div>
+<button id="bump">+1</button>
+<button id="rogue" title="publishes outside my grants — host must drop it">try forbidden</button>
+<div id="peer">peer: —</div>
+<script>
+let name = 'standalone';
+const count = () => Number(localStorage.getItem('tally') || 0);
+const show = () => { document.getElementById('count').textContent = count(); };
+const post = (m) => { try { parent.postMessage(m, '*'); } catch (e) {} };
+
+document.getElementById('bump').addEventListener('click', () => {
+  localStorage.setItem('tally', count() + 1);
+  show();
+  post({ type: 'bus-publish', topic: 'widget.tally.' + name + '.changed', data: { count: count(), summary: name + ' → ' + count() } });
+});
+document.getElementById('rogue').addEventListener('click', () => {
+  post({ type: 'bus-publish', topic: 'session.hijack', data: { from: name } });
+});
+
+addEventListener('message', (e) => {
+  const d = e.data;
+  if (!d || typeof d.type !== 'string') return;
+  if (d.type === 'init') {
+    name = d.config?.label || d.name;
+    document.getElementById('who').textContent = 'tally ' + name;
+  } else if (d.type === 'bus-event' && d.event?.topic?.startsWith('widget.tally.')) {
+    if (!d.event.topic.includes('.' + name + '.')) {
+      document.getElementById('peer').textContent = 'peer: ' + d.event.topic + ' = ' + d.event.data.count;
+    }
+  }
+});
+post({ type: 'ready' });
+show();
+</script>
+</body>
+</html>

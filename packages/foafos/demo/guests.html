@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>foafos guests — two of the same widget, isolated</title>
+<style>
+  body { font-family: monospace; background: #06060c; color: #eee; margin: 0; padding: 12px; }
+  h2 { color: #f0f; font-size: 16px; }
+  #row { display: flex; gap: 12px; }
+  foafos-guest { flex: 1; height: 180px; border: 1px solid #0ef; border-radius: 8px; overflow: hidden; }
+  #log { margin-top: 12px; font-size: 11px; opacity: 0.8; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h2>two tallies, two processes</h2>
+<div id="row"></div>
+<div id="log"></div>
+<script type="module">
+  import { FoafBus } from '../src/bus.mjs';
+  import { defineGuest } from '../src/guest.mjs';
+
+  defineGuest();
+  const bus = new FoafBus();
+  window.__bus = bus;
+  window.__events = [];
+  bus.subscribe('*', (e) => {
+    window.__events.push(e);
+    document.getElementById('log').textContent =
+      window.__events.slice(-8).map(x => `${x.topic} ${JSON.stringify(x.data)}`).join('\n');
+  });
+
+  for (const label of ['a', 'b']) {
+    const g = document.createElement('foafos-guest');
+    g.setAttribute('src', 'tally/index.html');
+    g.setAttribute('name', label);
+    g.bus = bus;
+    g.grants = { publish: [`widget.tally.${label}.*`], subscribe: ['widget.tally.*'] };
+    g.config = { label };
+    document.getElementById('row').appendChild(g);
+  }
+</script>
+</body>
+</html>
