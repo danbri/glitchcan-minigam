@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>two spreadsheets — edot Data as foafos guests</title>
+<style>
+  body { font-family: monospace; background: #06060c; color: #eee; margin: 0; padding: 12px; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; }
+  h2 { color: #f0f; font-size: 15px; margin: 0 0 10px; }
+  #row { display: flex; gap: 12px; flex: 1; min-height: 0; }
+  foafos-guest { flex: 1; border: 1px solid #0ef; border-radius: 8px; overflow: hidden; }
+  #log { margin-top: 10px; font-size: 11px; opacity: 0.8; white-space: pre-wrap; max-height: 90px; overflow-y: auto; }
+</style>
+</head>
+<body>
+<h2>the two-spreadsheets test — one app, two sandboxed processes</h2>
+<div id="row"></div>
+<div id="log"></div>
+<script type="module">
+  import { FoafBus } from '../../../packages/foafos/src/bus.mjs';
+  import { defineGuest } from '../../../packages/foafos/src/guest.mjs';
+
+  defineGuest();
+  const bus = new FoafBus();
+  window.__bus = bus;
+  window.__events = [];
+  bus.subscribe('*', (e) => {
+    window.__events.push(e);
+    document.getElementById('log').textContent =
+      window.__events.slice(-6).map(x => `${x.topic} ${x.data.summary || ''}`).join('\n');
+  });
+
+  for (const label of ['a', 'b']) {
+    const g = document.createElement('foafos-guest');
+    g.setAttribute('src', 'guest.html');
+    g.setAttribute('name', label);
+    g.bus = bus;
+    g.grants = { publish: [`widget.data.${label}.*`], subscribe: ['widget.data.*'] };
+    g.config = { label };
+    document.getElementById('row').appendChild(g);
+  }
+</script>
+</body>
+</html>

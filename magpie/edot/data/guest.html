@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>edot data — foafos guest</title>
+<script>
+// This page runs the FULL edot Data app (SQLite-WASM spreadsheet/database)
+// as a sandboxed foafos guest. Opaque origin: web storage throws on
+// access, so shim BOTH stores in-memory BEFORE any module loads. Each
+// guest instance therefore gets its own private, transient database —
+// which is the point.
+try { window.localStorage.getItem; } catch (e) {
+  (function () {
+    const m = new Map();
+    Object.defineProperty(window, 'localStorage', { value: {
+      getItem: (k) => m.has(k) ? m.get(k) : null,
+      setItem: (k, v) => m.set(k, String(v)),
+      removeItem: (k) => m.delete(k),
+      clear: () => m.clear(),
+      key: (i) => [...m.keys()][i] ?? null,
+      get length() { return m.size; },
+    } });
+  })();
+}
+try { window.indexedDB.open; } catch (e) {
+  // Minimal in-memory stand-in covering the engine's blob-store usage
+  // (open → upgradeneeded/success; transaction → objectStore put/get).
+  (function () {
+    const stores = new Map();
+    const store = (db, s) => {
+      const key = db + ':' + s;
+      if (!stores.has(key)) stores.set(key, new Map());
+      return stores.get(key);
+    };
+    Object.defineProperty(window, 'indexedDB', { value: {
+      open(dbName) {
+        const r = {};
+        setTimeout(() => {
+          r.result = {
+            createObjectStore: (s) => store(dbName, s),
+            transaction: (s) => {
+              const m = store(dbName, s);
+              const tx = {};
+              tx.objectStore = () => ({
+                put: (v, k) => { m.set(k, v); setTimeout(() => tx.oncomplete?.(), 0); return {}; },
+                get: (k) => {
+                  const rq = {};
+                  setTimeout(() => { rq.result = m.has(k) ? m.get(k) : undefined; rq.onsuccess?.({ target: rq }); }, 0);
+                  return rq;
+                },
+              });
+              return tx;
+            },
+          };
+          r.onupgradeneeded?.({ target: r });
+          r.onsuccess?.({ target: r });
+        }, 0);
+        return r;
+      },
+    } });
+  })();
+}
+</script>
+<link rel="stylesheet" href="../css/edot-tokens.css">
+<link rel="stylesheet" href="data.css">
+<style>
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body { display: flex; flex-direction: column; font-family: var(--font-ui, system-ui); background: var(--d-bg, #fff); color: var(--d-ink, #111); }
+  edot-data { flex: 1 1 auto; min-height: 0; display: block; }
+</style>
+</head>
+<body>
+<edot-data></edot-data>
+<script type="module">
+  // The guest-protocol adapter: bridge the app's own kernel bus onto the
+  // foafos guest protocol. The app is unmodified; sharing a table
+  // ('data:share' on the edot kernel) becomes a granted foafos topic.
+  import { getKernel } from '../js/edot-kernel.js';
+  import './data-workspace.js';
+
+  let name = 'data';
+  const kernel = getKernel();
+  window.__edotKernel = kernel;   // playtest hook
+
+  addEventListener('message', (e) => {
+    const d = e.data;
+    if (d?.type === 'init') name = d.config?.label || d.name || name;
+  });
+  kernel.bus.subscribe('data:share', (p) => {
+    try {
+      parent.postMessage({ type: 'bus-publish', topic: `widget.data.${name}.share`,
+        data: { title: p.title, columns: p.columns, rows: p.rows, summary: `${name} shared "${p.title}" (${p.rows?.length ?? 0} rows)` } }, '*');
+    } catch { /* standalone */ }
+  });
+  try { parent.postMessage({ type: 'ready' }, '*'); } catch { /* standalone */ }
+</script>
+</body>
+</html>
