@@ -28,6 +28,8 @@
     bottom: 0;
     width: min(92vw, 360px);
     z-index: 2700;
+    /* shell surfaces do not leak gestures into the page beneath */
+    overscroll-behavior: contain;
     background: rgba(6, 6, 12, 0.96);
     border-left: 2px solid var(--zx-mag);
     transform: translateX(105%);
@@ -115,6 +117,70 @@
 .foafos-chip:hover { background: rgba(0, 229, 255, 0.25); }
 .foafos-none { opacity: 0.5; font-size: 0.8em; }
 
+/* ── FoafInput: the shell's one d-pad (OS service) ──
+   Lives in the host page so it gets the REAL visible viewport and the
+   device's safe-area insets — an in-iframe pad cannot see either, which
+   is how guest pads end up under the browser chrome. */
+#foaf-pad {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    z-index: 2610;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 0 clamp(8px, 3vw, 24px);
+    pointer-events: none;   /* only the buttons take input */
+}
+#foaf-pad[hidden] { display: none; }
+
+.foaf-pad-dir {
+    display: grid;
+    grid-template-columns: repeat(3, clamp(44px, 13vw, 58px));
+    grid-template-rows: repeat(3, clamp(44px, 13vw, 58px));
+    gap: 4px;
+}
+.foaf-pad-dir button:nth-child(1) { grid-area: 1 / 2; }
+.foaf-pad-dir button:nth-child(2) { grid-area: 2 / 1; }
+.foaf-pad-dir button:nth-child(3) { grid-area: 2 / 3; }
+.foaf-pad-dir button:nth-child(4) { grid-area: 3 / 2; }
+
+.foaf-pad-act {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+}
+#foaf-pad.act-hidden .foaf-pad-act { display: none; }
+
+#foaf-pad button {
+    pointer-events: auto;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    border: 2px solid rgba(242, 236, 221, 0.7);
+    border-radius: 12px;
+    background: rgba(38, 34, 30, 0.32);
+    color: #f2ecdd;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--touch-target-min, 44px);
+    min-height: var(--touch-target-min, 44px);
+}
+.foaf-pad-act button {
+    width: clamp(56px, 16vw, 72px);
+    height: clamp(56px, 16vw, 72px);
+    border-radius: 50%;
+}
+#foaf-pad button.pressed,
+#foaf-pad button:active {
+    background: rgba(46, 94, 69, 0.8);
+    transform: scale(0.94);
+}
+
 /* floating widget windows (sandboxed guests) */
 .foafos-window {
     position: fixed;
@@ -167,5 +233,15 @@
     min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+/* No text selection, native drags, or long-press callouts on any shell
+   chrome — drags stay drags, taps stay taps */
+#foafos-dock, #foafos-drawer header, .foafos-window-bar, .foafos-chip,
+#foafos-shelf, #foafos-launcher {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 foafos-feed { display: block; --foaf-accent: var(--zx-mag); }

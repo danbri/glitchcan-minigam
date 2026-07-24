@@ -40,7 +40,8 @@ let browser;
 try {
   browser = await chromium.launch({ headless: true, executablePath: EXE,
     args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
-  const context = await browser.newContext({ viewport: { width: 430, height: 860 } });
+  // hasTouch ⇒ pointer:coarse, which is what gates the on-screen pad
+  const context = await browser.newContext({ viewport: { width: 430, height: 860 }, hasTouch: true });
   const page = await context.newPage();
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(String(e).slice(0, 200)));
@@ -160,6 +161,39 @@ try {
     ? pass('launcher: two tally widgets beside the game, state disjoint')
     : fail(`widget windows wrong: ${JSON.stringify(widgetCheck)}`);
   await page.evaluate(() => document.querySelectorAll('.foafos-window').forEach(w => w.remove()));
+
+  // 4d. input as an OS service: the pad lives in the HOST page (only it
+  // sees the real viewport + safe areas), the guest hides its own, and
+  // presses arrive as SDK key messages with service-owned autorepeat.
+  const guestPad = await frame.evaluate(() => ({
+    hostControls: window.__robbin.game.hostControls === true,
+    ownPadHidden: getComputedStyle(document.getElementById('touch')).display === 'none',
+  }));
+  guestPad.hostControls && guestPad.ownPadHidden
+    ? pass('guest yielded its on-screen pad to the shell')
+    : fail(`guest pad not yielded: ${JSON.stringify(guestPad)}`);
+  await frame.evaluate(() => {
+    window.__keys = [];
+    addEventListener('message', e => { if (e.data?.type === 'key') window.__keys.push(`${e.data.event}:${e.data.key}`); });
+  });
+  const padGeom = await page.evaluate(async () => {
+    FinkMinigames.currentControls = 'dpad';
+    FoafOS.refreshPad();
+    await new Promise(r => setTimeout(r, 200));
+    const p = document.getElementById('foaf-pad');
+    const r = p.getBoundingClientRect();
+    const btn = p.querySelector('[data-action="left"]');
+    btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+    await new Promise(r2 => setTimeout(r2, 150));
+    btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
+    await new Promise(r2 => setTimeout(r2, 80));
+    return { hidden: p.hidden, onScreen: r.bottom <= window.innerHeight + 1, bottom: Math.round(r.bottom), vh: window.innerHeight };
+  });
+  const keys = await frame.evaluate(() => window.__keys);
+  padGeom.onScreen && !padGeom.hidden && keys[0] === 'keydown:ArrowLeft' && keys.at(-1) === 'keyup:ArrowLeft' && keys.length > 2
+    ? pass(`host pad on screen (${padGeom.bottom}/${padGeom.vh}) and routed ${keys.length} key events with autorepeat`)
+    : fail(`input service wrong: ${JSON.stringify({ padGeom, keys })}`);
+  await page.evaluate(() => { FinkMinigames.currentControls = 'none'; FoafOS.refreshPad(); });
 
   // 5. session: seal with passphrase, reload, sealed survives, unlock round-trips
   await page.evaluate(async () => {

@@ -131,7 +131,9 @@
         </div>
 
         <!-- Mobile D-Pad Controls -->
-        <div id="game-dpad" class="game-dpad">
+        <!-- legacy pad: superseded by the shell-owned FoafInput surface
+             (#foaf-pad, injected by foafos-shell.js) -->
+        <div id="game-dpad" class="game-dpad" hidden>
             <div class="game-dpad-grid">
                 <div class="dpad-empty"></div>
                 <button class="dpad-btn" data-dir="up">▲</button>
@@ -145,8 +147,8 @@
             </div>
         </div>
 
-        <!-- Mobile Action Buttons -->
-        <div id="game-action-btns" class="game-action-btns">
+        <!-- Mobile Action Buttons (legacy, superseded by #foaf-pad) -->
+        <div id="game-action-btns" class="game-action-btns" hidden>
             <button class="action-btn" id="action-btn-a" title="Action">A</button>
             <button class="action-btn action-btn-secondary" id="action-btn-b" title="Secondary">B</button>
         </div>

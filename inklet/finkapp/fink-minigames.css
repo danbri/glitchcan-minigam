@@ -104,7 +104,11 @@
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     width: 100vw !important;
+    /* dvh = the CURRENTLY visible viewport. With 100vh the window (and
+       the guest iframe inside it) extends under mobile browser chrome,
+       which is what pushed guest d-pads off screen. */
     height: 100vh !important;
+    height: 100dvh !important;
     z-index: 2000;
     border-radius: 0;
 }

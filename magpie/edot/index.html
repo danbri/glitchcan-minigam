@@ -70,7 +70,17 @@
 
     @media (max-width: 700px) {
       .doc-name { display: none; }
-      .rail { width: auto; flex-direction: row; overflow-x: auto; border-right: none; border-top: 1px solid var(--line); order: 2; }
+      /* The rail scrolls on a phone (11 apps never fit 390px). It used to
+         scroll silently, so Projects/Groups past the right edge looked
+         like they did not exist: give it snap points and a fade that
+         says "there is more this way". */
+      .rail { width: auto; flex-direction: row; overflow-x: auto; border-right: none; border-top: 1px solid var(--line); order: 2;
+        scroll-snap-type: x proximity; overscroll-behavior-x: contain; scrollbar-width: none;
+        -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+        mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%); }
+      .rail::-webkit-scrollbar { display: none; }
+      .rail button { scroll-snap-align: end; flex: 0 0 auto; }
+      .rail.at-end { -webkit-mask-image: none; mask-image: none; }
       .bodyrow { flex-direction: column; }
       .stage { order: 1; }
       /* Workspace is a core surface — it must stay reachable on every device.
@@ -252,6 +262,13 @@
       b.addEventListener('click', () => go(a.id));
       rail.appendChild(b);
     }
+
+    // Drop the "more this way" fade once the rail is scrolled to the end.
+    const railEnd = () => rail.classList.toggle('at-end',
+      rail.scrollLeft + rail.clientWidth >= rail.scrollWidth - 2);
+    rail.addEventListener('scroll', railEnd, { passive: true });
+    addEventListener('resize', railEnd);
+    railEnd();
 
     async function mountComponent(app, host, scopeKey) {
       for (const href of (app.css || [])) await injectScoped(href, `[data-app="${scopeKey}"]`, scopeKey);

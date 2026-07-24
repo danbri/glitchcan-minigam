@@ -14,6 +14,7 @@ import {
   widgets, defineBaseCards, defineFeed,
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
+  FoafInput, ACTION_KEYS,
 } from '../../packages/foafos/src/index.mjs';
 
 defineBaseCards();
@@ -107,9 +108,80 @@ cluster.onYield('audio', () => {
     { focused: false, yielded: true, summary: 'audio yielded to another window' }, { retain: true });
 });
 
+// ── input: one d-pad for the whole shell (OS service) ───────────────────
+// The pad lives in the HOST page, not inside a guest iframe: only the
+// host sees the real visible viewport and the device's safe-area insets,
+// which is why an in-iframe pad ends up under the browser chrome.
+// Sources (touch pad, keyboard, gamepad) normalize to actions; the sink
+// routes them to the focused window as legacy SDK key messages, so
+// guests need no changes.
+
+const input = new FoafInput({ bus });
+FoafOS.input = input;
+
+input.addSink((e) => {
+  const mg = window.FinkMinigames;
+  if (mg?.active && mg.iframeMinigame) {
+    const map = ACTION_KEYS[e.action];
+    if (map) {
+      mg.iframeMinigame.contentWindow?.postMessage({
+        type: 'key', event: e.phase === 'press' ? 'keydown' : 'keyup',
+        key: map.key, code: map.code,
+      }, '*');
+    }
+  }
+  // widgets and any other listener can use the normalized form
+  if (!e.repeat) bus.publish('input.action', { action: e.action, phase: e.phase, source: e.source });
+});
+
+function buildPad() {
+  const pad = document.createElement('div');
+  pad.id = 'foaf-pad';
+  pad.hidden = true;
+  pad.setAttribute('role', 'group');
+  pad.setAttribute('aria-label', 'Game controls');
+  pad.innerHTML = `
+    <div class="foaf-pad-dir">
+      <button type="button" data-action="up" aria-label="Up">▲</button>
+      <button type="button" data-action="left" aria-label="Left">◀</button>
+      <button type="button" data-action="right" aria-label="Right">▶</button>
+      <button type="button" data-action="down" aria-label="Down">▼</button>
+    </div>
+    <div class="foaf-pad-act">
+      <button type="button" data-action="a" aria-label="Action">A</button>
+      <button type="button" data-action="b" aria-label="Back">B</button>
+    </div>`;
+  document.body.appendChild(pad);
+  input.bindSurface(pad).attachKeyboard().attachGamepads();
+
+  // A real gamepad retires the on-screen pad (and brings it back).
+  bus.subscribe('input.gamepad', () => refreshPad());
+  bus.subscribe('minigame.start', () => refreshPad());
+  bus.subscribe('minigame.complete', () => refreshPad());
+  bus.subscribe('wm.mode', () => refreshPad());
+  bus.subscribe('wm.close', () => refreshPad());
+  return pad;
+}
+
+function refreshPad() {
+  const pad = document.getElementById('foaf-pad');
+  if (!pad) return;
+  const mg = window.FinkMinigames;
+  const wantsPad = mg?.active && mg.currentControls && mg.currentControls !== 'none';
+  const fullOrSplit = !window.FinkWM?.mode || window.FinkWM.mode !== 'pip';
+  const hasGamepad = bus.retained('input.gamepad')[0]?.data?.connected === true;
+  const coarse = window.matchMedia?.('(pointer: coarse)').matches;
+  const show = !!(wantsPad && fullOrSplit && !hasGamepad && coarse);
+  if (!show) input.releaseAll();
+  pad.hidden = !show;
+  pad.classList.toggle('act-hidden', mg?.currentControls === 'lite');
+}
+FoafOS.refreshPad = refreshPad;
+
 // ── shell UI: dock + drawer ──────────────────────────────────────────────
 
 function buildUI() {
+  buildPad();
   const dock = document.createElement('button');
   dock.id = 'foafos-dock';
   dock.type = 'button';

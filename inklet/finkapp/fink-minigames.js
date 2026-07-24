@@ -601,8 +601,9 @@ window.FinkMinigames = {
             FinkWM.open('full');
         }
 
-        // Show d-pad based on control type (pass mode string for proper handling)
-        this._showDPad(effectiveControls);
+        // Input surface is the shell's (FoafInput); legacy pad stays hidden
+        this._showDPad(false);
+        window.FoafOS?.refreshPad?.();
 
         // Check if this is an iframe-based minigame
         if (this.iframeMinigames.includes(type)) {
@@ -678,7 +679,13 @@ window.FinkMinigames = {
                 this.log('Iframe loaded, sending init');
                 this._sendToIframe({
                     type: 'init',
-                    config: { mode },
+                    config: {
+                        mode,
+                        // Input is an OS service: the host owns the on-screen
+                        // pad (it alone sees the real viewport + safe areas).
+                        // Guests MUST hide their own touch controls.
+                        controls: { provider: 'host', scheme: this.currentControls },
+                    },
                     variables: this._getStoryVariables()
                 });
                 // D-pad visibility is handled in startMinigame based on controls param
@@ -758,9 +765,13 @@ window.FinkMinigames = {
         if (this.iframeMinigame && this.iframeMinigame.contentWindow) {
             this.iframeMinigame.contentWindow.postMessage(data, '*');
             // SDK tap: makers watch the protocol on sys.sdk.* (hidden
-            // from the default feed, shown in the Maker window)
-            window.FoafOS?.bus.publish('sys.sdk.tx',
-                { summary: `→ ${data.type}`, msg: data.type, detail: data }, { source: 'sdk' });
+            // from the default feed, shown in the Maker window).
+            // 'key' is excluded — d-pad repeat fires every 50ms and
+            // tapping it would burn the frame budget on bus dispatch.
+            if (data.type !== 'key') {
+                window.FoafOS?.bus.publish('sys.sdk.tx',
+                    { summary: `→ ${data.type}`, msg: data.type, detail: data }, { source: 'sdk' });
+            }
         }
     },
 

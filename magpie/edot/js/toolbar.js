@@ -20,15 +20,27 @@ const LAYOUT = [
 // and light up to show the current block's alignment.
 const ALIGN = { alignLeft: 'left', alignCenter: 'center', alignRight: 'right', alignJustify: 'justify' };
 
+// Four bars of the given widths (of 12), ragged per `align`.
+function alignSvg(widths, align) {
+  const rows = widths.map((w, i) => {
+    const x = align === 'center' ? (12 - w) / 2 : align === 'end' ? 12 - w : 0;
+    return `<rect x="${x + 1}" y="${i * 3 + 2}" width="${w}" height="1.6" rx="0.8"/>`;
+  }).join('');
+  return `<svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true" focusable="false" fill="currentColor">${rows}</svg>`;
+}
+
 const ICONS = {
   bold: { glyph: 'B', cls: 'icon' },
   italic: { glyph: 'I', cls: 'icon italic' },
   underline: { glyph: 'U', cls: 'icon underline' },
   strike: { glyph: 'S', cls: 'icon strike' },
-  alignLeft: { glyph: '≡', label: 'Align left' },
-  alignCenter: { glyph: '☰', label: 'Align centre' },
-  alignRight: { glyph: '≣', label: 'Align right' },
-  alignJustify: { glyph: '▤', label: 'Justify' },
+  // Alignment gets drawn, not glyphed: ≡ and ☰ are read as "menu" by
+  // everyone (users kept tapping align-centre expecting a menu), and no
+  // Unicode character conveys ragged-edge alignment. Short/long bars do.
+  alignLeft: { svg: alignSvg([10, 6, 10, 6], 'start'), label: 'Align left' },
+  alignCenter: { svg: alignSvg([10, 6, 10, 6], 'center'), label: 'Align centre' },
+  alignRight: { svg: alignSvg([10, 6, 10, 6], 'end'), label: 'Align right' },
+  alignJustify: { svg: alignSvg([10, 10, 10, 10], 'start'), label: 'Justify' },
   bulletList: { glyph: '•—' },
   numberList: { glyph: '1.' },
   outdent: { glyph: '⇤' },
@@ -118,7 +130,9 @@ export class Toolbar {
     const tip = label + (cmd && cmd.key ? ` · ${shortcutText(cmd)}` : '');
 
     btn.className = 'tbtn' + (icon.cls ? ` ${icon.cls}` : '');
-    const g = document.createElement('span'); g.className = 'tglyph'; g.textContent = icon.glyph;
+    const g = document.createElement('span'); g.className = 'tglyph';
+    // icon.svg is a module constant (never user content)
+    if (icon.svg) g.innerHTML = icon.svg; else g.textContent = icon.glyph;
     const l = document.createElement('span'); l.className = 'tlabel'; l.textContent = label;
     btn.append(g, l);
     btn.setAttribute('aria-label', tip);

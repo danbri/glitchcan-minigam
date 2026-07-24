@@ -52,6 +52,7 @@
 
 html, body {
     height: 100vh;
+    height: 100dvh;   /* match the VISIBLE viewport on mobile, not the tall one */
     margin: 0;
     background: var(--zx-black) radial-gradient(#111 2px, #000 2px);
     background-size: 4px 4px;

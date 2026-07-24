@@ -816,6 +816,14 @@ class Game {
           // story variables ride in with init (diamonds, score, …) —
           // the currency a story-side shop can spend via set-variable
           this.embedVars = d.variables || {};
+          // Input is an OS service: when the host provides the pad, hide
+          // ours. An in-iframe pad can't see the real viewport bottom or
+          // the safe-area inset, so it lands under the browser chrome.
+          if (d.config?.controls?.provider === 'host') {
+            this.hostControls = true;
+            const touch = document.getElementById('touch');
+            if (touch) touch.style.display = 'none';
+          }
           this.embedStart(d.config?.mode);
         }
         else if (d.type === 'pause') { if (this.state === 'play') this.state = 'paused'; }
