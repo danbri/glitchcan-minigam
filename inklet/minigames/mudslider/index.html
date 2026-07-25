@@ -262,6 +262,11 @@
             });
         });
 
+        // guest-a11y.js owns announcing: it writes the guest's own live
+        // region AND forwards to the shell's pooled announcer. (The SDK
+        // has no announce() — calling one would just throw.)
+        const say = (t) => window.__mgA11y?.announce?.(t);
+
         // Periodic progress sync (every 1 second)
         let progressInterval = null;
         function startProgressSync() {
@@ -276,6 +281,36 @@
                     if (currentGems !== gameState.gemsCollected) {
                         gameState.gemsCollected = currentGems;
                         sdk.progress({ gems: currentGems });
+                    }
+                }
+                // Speak the things a sighted player reads off the board.
+                // The whole game is one canvas, so without this a screen
+                // reader gets an unlabelled box — and the SHELL's
+                // announcer is where the player's attention already is,
+                // it survives this window closing, and with several
+                // widgets running it is the only place that can say
+                // WHICH one spoke. Only on change: a live region that
+                // repeats itself is noise.
+                const st = game.playerState;
+                if (st) {
+                    if (st.currentScreenId !== gameState.lastRoom) {
+                        gameState.lastRoom = st.currentScreenId;
+                        const name = game.shadowRoot?.getElementById('room-name')?.textContent?.trim();
+                        say(name ? `Room: ${name}` : `Room ${st.currentScreenId}`);
+                    }
+                    if (st.lives !== gameState.lastLives) {
+                        if (gameState.lastLives !== undefined) {
+                            say(st.lives === 0 ? 'No lives left' : `${st.lives} lives left`);
+                        }
+                        gameState.lastLives = st.lives;
+                    }
+                    const held = Object.entries(st.keys || {})
+                        .filter(([, v]) => v).map(([k]) => k).sort().join(',');
+                    if (held !== gameState.lastKeys) {
+                        if (gameState.lastKeys && held.length > gameState.lastKeys.length) {
+                            say(`Picked up a ${held.split(',').pop()} key`);
+                        }
+                        gameState.lastKeys = held;
                     }
                 }
             }, 1000);

@@ -856,6 +856,24 @@ window.FinkMinigames = {
                 lastSync: { gameGems: 0, storyDiamonds: currentDiamonds },
             });
             this.windowInstance = inst;
+            // The story's ambience belongs to the story surface. A game
+            // window is a different place, and `# FOLEY: water(...)` is a
+            // LOOPING noise bed with a 60s tail — so without this it
+            // played on underneath an unrelated game. Field report: played
+            // riverbend muted, started gridluck, unmuted, and there was
+            // riverbend's river. Mute is a level, not a stop, so it hid
+            // the leak rather than causing it.
+            //
+            // fink-player.js already stops foley when the story CHANGES;
+            // this is the same rule for the other way of leaving the
+            // story. Window minigames only — an inline one is part of the
+            // story surface and its ambience should carry on.
+            if (window.FinkFoley) {
+                window.FinkFoley.stop();
+                window.FoafOS?.bus.publish('audio.foley.stop', {
+                    summary: `story ambience stopped for ${type}`, reason: 'minigame-window',
+                });
+            }
             // Until it answers, assume we cannot reach its audio. Better
             // for the mute button to over-report what it misses than to
             // claim silence it cannot deliver — but not for a guest we

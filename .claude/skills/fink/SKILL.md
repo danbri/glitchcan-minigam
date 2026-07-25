@@ -599,6 +599,14 @@ before writing another harness; these traps each cost a wrong conclusion.
   turn down even if it did. Both were true of mudslider ("muting
   mudslider does nothing" — correct). Fix is a single master gain plus
   `sdk.onAudio`. Only robbin is still un-mutable, and says so.
+- **Audio must not outlive the thing that started it.** `# FOLEY:
+  water(...)` is a LOOPING noise bed with a 60s tail, and opening a game
+  window did not stop it — riverbend's river played on under gridluck.
+  Mute HID the leak rather than causing it (mute is a level, not a stop),
+  which is why it went unnoticed. `fink-player.js` stopped foley on story
+  change; `fink-minigames.js` now does the same when a game WINDOW opens
+  (inline minigames are part of the story surface, so they don't).
+  Locked by `e2e-audio-leak.mjs`.
 - The shell registers an `uncontrollable` placeholder for every guest so
   mute over-reports rather than over-promises — but `silent: true` in
   `minigameInfo` suppresses it. A SILENT game in the "cannot be turned
@@ -618,6 +626,28 @@ before writing another harness; these traps each cost a wrong conclusion.
   pointer-aimed battleboids look broken); a splash screen is not an
   unresponsive game; `robbin.tube.cam` is an array, so `cam.x` is
   undefined and pins the sample to a constant.
+
+## Media in stories
+
+- `# VIDEO:` accepts a local `.mp4/.webm/.mov` OR a bare 11-character
+  YouTube id (`fink-ui.js` sniffs on length). Maple Hollow
+  (`cozyverse/maple-hollow.fink.js`) is 13 embeds / 11 distinct ids, none
+  of them in the repo.
+- The video container is inserted ABOVE the story text, so it used to
+  scroll off the top as passages accumulated with nothing to say it was
+  up there. It is now `position: sticky; top: 0` inside `#narrative-view`
+  (the scroller), plus a collapse control to hand the screen back.
+- Collapsing has to zero `padding-bottom` as well as set `height`: the
+  YouTube branch builds its 16:9 box with `padding-bottom: 56.25%`, and
+  **an element can never be shorter than its own padding** — the same
+  lesson as the split-pane layout. Setting height alone did nothing.
+- Repo video weight (July 2026): 7 mp4s, ~122 MiB, largest 66 MB;
+  `.git` is 624 MB. `media/d94a6357-….mp4` and
+  `inklet/media/d94a6357-….mp4` are byte-identical duplicates (16.5 MB
+  each) — flagged, NOT deleted (owner's call, CLAUDE.md).
+- GitHub Pages will serve mp4 with byte-range seeking, but **Pages does
+  not resolve Git LFS pointers**, so LFS is not a way out. Git keeps every
+  binary forever, which is why re-encoding in place still grows the repo.
 
 ## Validation & QA recipes
 

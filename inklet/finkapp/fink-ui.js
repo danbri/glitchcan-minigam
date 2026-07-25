@@ -535,7 +535,15 @@ window.FinkUI = {
         if (!videoContainer) {
             videoContainer = document.createElement('div');
             videoContainer.id = 'video-container';
-            videoContainer.style.cssText = 'position:relative;width:100%;max-width:640px;min-height:180px;background:#111;margin:1rem auto;border-radius:8px;overflow:hidden;border:2px solid #f0f;';
+            // STICKY, not static. The container is inserted above the
+            // story text, so as passages accumulate the reader scrolls
+            // down and the video leaves the top of the screen with
+            // nothing to say it is up there. Reported from the field:
+            // "often excess text scrolls us past the video and it is not
+            // obvious we must scroll up." #narrative-view is the
+            // scroller, and this is inside it, so sticky pins it while
+            // the prose moves underneath — the phone-video idiom.
+            videoContainer.style.cssText = 'position:sticky;top:0;z-index:5;width:100%;max-width:640px;min-height:180px;background:#111;margin:1rem auto;border-radius:8px;overflow:hidden;border:2px solid #f0f;';
             // Insert before story output for better visibility
             console.log('[VIDEO-TRACE] this.elements:', this.elements);
             if (this.elements.storyOutput) {
@@ -600,6 +608,50 @@ window.FinkUI = {
             this.elements.storyImage.classList.add('hidden');
         }
         videoContainer.style.display = 'block';
+        // A pinned video costs ~200px of a phone screen, so hand it back
+        // on request. Collapsing beats un-pinning: the reader chooses
+        // between the picture and the prose instead of losing the video
+        // off the top and having to work out that it went up there.
+        this._addVideoCollapse(videoContainer);
+    },
+
+    // Collapse/expand control for the sticky video. Re-added after every
+    // load because the container's innerHTML is replaced each time.
+    _addVideoCollapse(container) {
+        // a new video should arrive open, whatever the last one was left as
+        container.dataset.collapsed = '0';
+        // remember the aspect box the media type set, so expanding restores
+        // the right one (YouTube uses 56.25%; a local <video> uses none)
+        container.dataset.padBottom = container.style.paddingBottom || '';
+        container.style.minHeight = '180px';
+        container.style.height = '';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'video-collapse';
+        btn.setAttribute('aria-expanded', 'true');
+        btn.setAttribute('aria-controls', 'video-container');
+        btn.setAttribute('aria-label', 'Collapse video');
+        btn.textContent = '▾';
+        btn.style.cssText = 'position:absolute;top:4px;right:4px;z-index:6;' +
+            'min-width:32px;min-height:32px;border-radius:6px;border:1px solid #f0f;' +
+            'background:rgba(0,0,0,0.65);color:#f0f;font:inherit;line-height:1;cursor:pointer;';
+        btn.addEventListener('click', () => {
+            const wasOpen = container.dataset.collapsed !== '1';
+            container.dataset.collapsed = wasOpen ? '1' : '0';
+            container.style.minHeight = wasOpen ? '0' : '180px';
+            container.style.height = wasOpen ? '34px' : '';
+            // The YouTube branch makes its 16:9 box with
+            // `padding-bottom: 56.25%`, and an element can never be
+            // shorter than its own padding — setting height alone left it
+            // exactly as tall as before. Same lesson this repo already
+            // learned in the split-pane layout.
+            container.style.paddingBottom = wasOpen ? '0' : (container.dataset.padBottom || '');
+            btn.textContent = wasOpen ? '▴' : '▾';
+            btn.setAttribute('aria-expanded', String(!wasOpen));
+            btn.setAttribute('aria-label', wasOpen ? 'Expand video' : 'Collapse video');
+        });
+        container.appendChild(btn);
     },
 
     // Status and messaging
