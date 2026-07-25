@@ -47,9 +47,12 @@
     gap: 0.3em;
 }
 
-.stats-bar #stat-diamonds-wrap { color: #5cf; }
-.stats-bar #stat-mega-wrap { color: #fc5; }
-.stats-bar #stat-score-wrap { color: #5f5; }
+/* Items are built from the story's own `# STATUS:` declaration, so they
+   are addressed by the variable they show rather than by a fixed id. A
+   story that invents its own counter still gets a colour. */
+.stats-bar [data-status-var="diamonds"] { color: #5cf; }
+.stats-bar [data-status-var="mega_diamonds"] { color: #fc5; }
+.stats-bar [data-status-var="score"] { color: #5f5; }
 
 /* --- Main Layout --- */
 main {

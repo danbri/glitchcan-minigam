@@ -549,6 +549,41 @@ Locked by `inklet/finkapp/test/e2e-caps.mjs`, which asserts the boundary
 by *trying to cross it* — `parent.document`, `parent.FoafOS` and
 `localStorage` must all throw inside a de-privileged app.
 
+### 5.5.2 The status line belongs to the story — normative
+
+The player MUST NOT hardcode a status line. A story declares its own with
+`# STATUS:` tags, one per item, in declaration order:
+
+```ink
+# STATUS: flock_size icon=🐦 label=flock always
+# STATUS: fuel icon=⛽ format=bar max=8 always
+# STATUS: none          -- no status line at all
+```
+
+- Items are keyed by **variable**. A knot the reader loops through
+  re-declares its tags on every visit, so a repeat declaration MUST
+  update in place rather than append.
+- `format`: `number` (default) · `bar` (needs `max`) · `percent` · `time`
+  · `text`. Unknown formats fall back to `number`.
+- Items hide at zero unless `always`. Each item MUST carry an accessible
+  name pairing the value with what it counts — an emoji alone is silence
+  to a screen reader.
+- Declared items MUST be cleared when a new story compiles, or one
+  story's HUD follows the reader into the next.
+- A story that declares nothing keeps the host's default, so existing
+  stories are unaffected.
+
+### 5.5.3 Service inventory — normative
+
+Some capabilities are brokered per app; others are services the shell
+owns and mediates; others are named in the vocabulary with nothing behind
+them. A host MUST be able to report which is which (`FoafOS.services()`),
+with `state` ∈ `brokered` | `shell` | `unimplemented`, and MUST surface
+the unimplemented ones to the user rather than letting the vocabulary
+imply a boundary that does not exist. Today: `storage`, `vars`, `audio`
+and `input` are brokered; `wm` and `announce` are shell-owned;
+`geolocation`, `capture`, `gpu` and `cast` are named but unimplemented.
+
 ### 5.6 Shell surfaces: home and switcher
 
 Two affordances the platform borrows rather than invents, because every

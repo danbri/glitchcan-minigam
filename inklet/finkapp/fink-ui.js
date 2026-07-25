@@ -19,11 +19,10 @@ window.FinkUI = {
             storyImage: document.getElementById('story-image'),
             storyVideo: document.getElementById('story-video'),
             imageContainer: document.getElementById('image-container'),
-            // Stats
-            statDiamonds: document.getElementById('stat-diamonds'),
-            statMega: document.getElementById('stat-mega'),
-            statKeys: document.getElementById('stat-keys'),
-            statScore: document.getElementById('stat-score')
+            // The status bar's contents are built from the story's own
+            // `# STATUS:` declaration, so there are no fixed stat ids to
+            // cache here any more.
+            statsBar: document.getElementById('stats-bar'),
         };
 
         this.setupEventListeners();
@@ -677,23 +676,100 @@ window.FinkUI = {
         }
     },
 
-    // Stats display update
+    // ── the status line is the STORY's, not the player's ───────────────
+    //
+    // It used to be three hardcoded ids in the markup and three hardcoded
+    // lines here: diamonds, mega, score. Every story got the treasure
+    // economy's status bar whether or not it had a treasure economy, and
+    // a story with a flock size or a fuel gauge had nowhere to put it.
+    //
+    // Now a story declares its own with `# STATUS:` (see the ink engine),
+    // and this renders whatever it asked for. Stories that declare
+    // nothing keep the old three, so nothing that exists today changes.
+
+    // The default, which is simply what was hardcoded before.
+    DEFAULT_STATUS: [
+        { var: 'diamonds', icon: '💎', hideWhenZero: true },
+        { var: 'mega_diamonds', icon: '👑', hideWhenZero: true },
+        { var: 'score', icon: '⭐', hideWhenZero: true },
+    ],
+    statusItems: null,          // null = story said nothing, use the default
+
+    /** Called by the ink engine for each `# STATUS:` tag. */
+    setStatusItems(items) {
+        this.statusItems = Array.isArray(items) ? items : null;
+        this._statusBuilt = false;
+        this.updateStatsDisplay();
+    },
+
+    _statusSpec() { return this.statusItems || this.DEFAULT_STATUS; },
+
+    _buildStatusBar() {
+        const bar = document.getElementById('stats-bar');
+        if (!bar) return;
+        bar.textContent = '';
+        for (const item of this._statusSpec()) {
+            const span = document.createElement('span');
+            span.className = 'stat-item';
+            span.dataset.statusVar = item.var || '';
+            // A status item is read out as "12 diamonds", not "12" — the
+            // emoji alone is silence to a screen reader.
+            span.setAttribute('role', 'status');
+            const icon = document.createElement('span');
+            icon.setAttribute('aria-hidden', 'true');
+            icon.textContent = (item.icon || '') + ' ';
+            const val = document.createElement('span');
+            val.className = 'stat-value';
+            span.append(icon, val);
+            bar.appendChild(span);
+        }
+        this._statusBuilt = true;
+    },
+
     updateStatsDisplay() {
         if (!window.FinkInkEngine?.story?.variablesState) return;
-
         const vars = FinkInkEngine.story.variablesState;
+        if (!this._statusBuilt) this._buildStatusBar();
+        const bar = document.getElementById('stats-bar');
+        if (!bar) return;
 
-        // Helper to update stat and show/hide wrapper
-        const updateStat = (id, wrapId, value) => {
-            const el = document.getElementById(id);
-            const wrap = document.getElementById(wrapId);
-            if (el) el.textContent = value || 0;
-            if (wrap) wrap.classList.toggle('visible', value > 0);
-        };
+        const spec = this._statusSpec();
+        [...bar.children].forEach((span, i) => {
+            const item = spec[i];
+            if (!item) return;
+            let raw;
+            try { raw = vars[item.var]; } catch (e) { raw = undefined; }
+            const n = Number(raw) || 0;
+            const text = this._formatStat(item, raw, n);
+            span.querySelector('.stat-value').textContent = text;
+            span.setAttribute('aria-label', `${text} ${item.label || item.var || ''}`.trim());
+            // hideWhenZero is the old behavior; a gauge usually wants to
+            // stay put at zero, so it is opt-in rather than automatic.
+            const show = item.hideWhenZero === false ? true : (item.hideWhenZero ? n > 0 : n > 0);
+            span.classList.toggle('visible', show);
+        });
+    },
 
-        updateStat('stat-diamonds', 'stat-diamonds-wrap', vars['diamonds']);
-        updateStat('stat-mega', 'stat-mega-wrap', vars['mega_diamonds']);
-        updateStat('stat-score', 'stat-score-wrap', vars['score']);
+    _formatStat(item, raw, n) {
+        switch (item.format) {
+            case 'bar': {
+                const max = Number(item.max) || 10;
+                const filled = Math.max(0, Math.min(max, Math.round(n)));
+                return '▮'.repeat(filled) + '▯'.repeat(Math.max(0, max - filled));
+            }
+            case 'percent': {
+                const max = Number(item.max) || 100;
+                return `${Math.round((n / max) * 100)}%`;
+            }
+            case 'time': {
+                const m = Math.floor(n / 60), sec = Math.floor(n % 60);
+                return `${m}:${String(sec).padStart(2, '0')}`;
+            }
+            case 'text':
+                return String(raw ?? '');
+            default:
+                return String(n);
+        }
     },
 
     // View switching (narrative/minigame)

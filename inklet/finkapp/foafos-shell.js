@@ -16,7 +16,8 @@ import {
   FoafCluster, defineGuest, defineTable, defineTree,
   FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, localBackend,
 } from '../../packages/foafos/src/index.mjs';
-import { appsByFamily, appById, ambientApps } from './foafos-apps.js';
+import { appsByFamily, appById, ambientApps, APPS } from './foafos-apps.js';
+window.__foafAppRegistry = APPS;   // the service inventory counts holders from this
 
 defineBaseCards();
 defineFeed();
@@ -739,6 +740,46 @@ function buildUI() {
   }
   FoafOS.openHome = openHome;
 
+  // ── the service inventory ─────────────────────────────────────────
+  // Some capabilities are not a flag on an app but a SERVICE the shell
+  // provides and mediates — the window manager, audio, input. Others are
+  // device powers the browser guards (camera, microphone, location, GPU,
+  // cast) that nothing here brokers yet.
+  //
+  // Listing both, with honest status, is the point. A capability
+  // vocabulary that quietly contains names nothing implements is how you
+  // end up believing a boundary exists. `state` is one of:
+  //   brokered      a real broker mediates it, per app
+  //   shell         the shell owns it; apps ask via verbs, never directly
+  //   unimplemented named in the vocabulary, nothing behind it yet
+  const SERVICES = [
+    { id: 'storage', label: 'Storage', state: 'brokered',
+      provider: 'FoafStore', note: 'per-app namespace, quota, audit; local backend today' },
+    { id: 'vars', label: 'Story variables', state: 'brokered',
+      provider: 'FoafVars', note: 'shared economy vs private, dreams read-only' },
+    { id: 'audio', label: 'Audio', state: 'brokered',
+      provider: 'FoafAudio', note: 'master level; reports what it cannot reach' },
+    { id: 'input', label: 'Input', state: 'brokered',
+      provider: 'FoafInput', note: 'pad + keyboard + gamepad, normalized' },
+    { id: 'wm', label: 'Window manager', state: 'shell',
+      provider: 'FinkWM', note: 'geometry is the shell\'s alone; apps get resized' },
+    { id: 'announce', label: 'Announcements', state: 'shell',
+      provider: 'foafos-announcer', note: 'pooled live region' },
+    { id: 'geolocation', label: 'Location', state: 'unimplemented',
+      provider: null, note: 'iframe allow= only; no broker, no prompt of ours' },
+    { id: 'capture', label: 'Camera / microphone', state: 'unimplemented',
+      provider: null, note: 'nothing requests or mediates getUserMedia' },
+    { id: 'gpu', label: 'GPU', state: 'unimplemented',
+      provider: null, note: 'WebGL/WebGPU go straight to the browser, unmediated' },
+    { id: 'cast', label: 'Cast / external display', state: 'unimplemented',
+      provider: null, note: 'no Presentation or Remote Playback wiring' },
+  ];
+  FoafOS.services = () => SERVICES.map(s => ({
+    ...s,
+    holders: (window.__foafAppRegistry || []).filter(
+      a => (a.capabilities || []).includes(s.id)).map(a => a.id),
+  }));
+
   // Say out loud which apps still run with ambient authority. The whole
   // point of naming `same-origin` as a capability instead of hard-coding
   // it into the launcher is that it can be COUNTED — a boundary nobody
@@ -748,10 +789,15 @@ function buildUI() {
     const el = document.getElementById('foafos-caps-note');
     if (!el) return;
     const ambient = ambientApps();
+    const unimplemented = SERVICES.filter(s => s.state === 'unimplemented').map(s => s.label);
     el.textContent = ambient.length
       ? `${ambient.length} app(s) run with ambient authority: ${ambient.map(a => a.name).join(', ')} — ` +
         `they reach the shell's own origin, so the brokers are advisory for them.`
       : 'every app is sandboxed to an opaque origin; nothing has ambient authority.';
+    // and be straight about the vocabulary that is only a vocabulary
+    if (unimplemented.length) {
+      el.textContent += ` Not brokered by us: ${unimplemented.join(', ')}.`;
+    }
     el.classList.toggle('error', ambient.length > 0);
   }
   FoafOS.refreshCaps = refreshCaps;

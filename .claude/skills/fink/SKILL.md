@@ -667,6 +667,37 @@ it is drawn and confers NO authority; `capabilities` say what it may do.
 - `e2e-caps.mjs` asserts the boundary by trying to cross it, and drives
   the whole storage path through a real app (channels), not a fixture.
 
+## The status line is the story's (spec §5.5.2)
+
+`# STATUS: <var> [icon=] [label=] [format=number|bar|percent|time|text]
+[max=] [always]`, one tag per item. `# STATUS: none` = no bar. A story
+that declares nothing gets the old hardcoded three
+(diamonds/mega/score), so nothing existing changed.
+
+- Items are keyed by VAR, not appended — a looping knot re-declares its
+  tags every visit and appending turned 3 items into 6 then 9. The test
+  caught that immediately; it is the obvious bug and easy to miss.
+- Cleared on compile, or one story's HUD follows the reader into the
+  next (same shape as the foley leak).
+- `#stats-bar` is now EMPTY in index.html and built by
+  `FinkUI._buildStatusBar()`; CSS colours address `[data-status-var=…]`,
+  not fixed ids. Demo: `inklet/demos/status-demo.fink.js` (flock + fuel
+  gauge, no treasure economy).
+- Still declarative-only. Real per-story JS widgets should be apps with a
+  `status` surface and `vars:read` — sandboxed like everything else —
+  NOT story JS evaluated in the host page, which would hand story files
+  the ambient authority we just took off the Office apps.
+
+## Service inventory (spec §5.5.3)
+
+`FoafOS.services()` names every privileged thing and its honest state:
+`brokered` (storage, vars, audio, input — a real broker, per app),
+`shell` (wm, announce — the shell owns it, apps ask via verbs), and
+`unimplemented` (geolocation, capture, gpu, cast — in the vocabulary,
+nothing behind them). The drawer prints the unimplemented ones. A
+vocabulary containing names nothing implements is how you end up
+believing a boundary exists.
+
 ## Media in stories
 
 - `# VIDEO:` accepts a local `.mp4/.webm/.mov` OR a bare 11-character

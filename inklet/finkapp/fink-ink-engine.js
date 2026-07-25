@@ -151,6 +151,13 @@ window.FinkInkEngine = {
 
             this.story = compiledStory;
             this.compiledCount++;  // Track successful compilations
+            // A new work brings its own status line. Without this, one
+            // story's `# STATUS:` items would follow the reader into the
+            // next one — the same shape of bug as story ambience leaking
+            // into a game. Cleared to null (not []) so "declared nothing"
+            // still means "use the default three".
+            this._statusItems = null;
+            window.FinkUI?.setStatusItems?.(null);
             FinkUtils.debugLog('INK compilation successful! (total: ' + this.compiledCount + ')');
 
             // Tell the variable broker which names this work actually
@@ -355,6 +362,52 @@ window.FinkInkEngine = {
                             this.lastSeenLinkRel = value.trim();
                             FinkUtils.debugLog('LINKREL: ' + this.lastSeenLinkRel);
                             break;
+                        // A story declares its OWN status line. The player
+                        // used to hardcode diamonds/mega/score, so every
+                        // story wore the treasure economy's HUD whether it
+                        // had one or not, and a story with a flock size or
+                        // a fuel gauge had nowhere to put it.
+                        //
+                        //   # STATUS: flock_size icon=🐦 label=flock
+                        //   # STATUS: fuel icon=⛽ format=bar max=8
+                        //   # STATUS: none          (no status line at all)
+                        //
+                        // Declaring nothing keeps the old three, so nothing
+                        // that exists today changes.
+                        case 'STATUS': {
+                            const raw = value.trim();
+                            if (/^none$/i.test(raw)) {
+                                this._statusItems = [];
+                                window.FinkUI?.setStatusItems?.([]);
+                                break;
+                            }
+                            const parts = raw.split(/\s+/);
+                            const item = { var: parts[0], hideWhenZero: true };
+                            for (const p of parts.slice(1)) {
+                                const eq = p.indexOf('=');
+                                if (eq < 0) continue;
+                                const k = p.slice(0, eq), v = p.slice(eq + 1);
+                                if (k === 'icon') item.icon = v;
+                                else if (k === 'label') item.label = v.replace(/_/g, ' ');
+                                else if (k === 'format') item.format = v;
+                                else if (k === 'max') item.max = Number(v);
+                                else if (k === 'always') item.hideWhenZero = false;
+                            }
+                            if (/(^|\s)always(\s|$)/.test(raw)) item.hideWhenZero = false;
+                            // Tags arrive one at a time and accumulate in
+                            // declaration order. Keyed by variable, NOT
+                            // appended: a knot the reader loops through
+                            // re-declares its tags every visit, and
+                            // appending turned three items into six and
+                            // then nine. Re-declaring updates in place.
+                            const items = (this._statusItems || []).slice();
+                            const at = items.findIndex(x => x.var === item.var);
+                            if (at >= 0) items[at] = item; else items.push(item);
+                            this._statusItems = items;
+                            window.FinkUI?.setStatusItems?.(this._statusItems);
+                            FinkUtils.debugLog(`STATUS: ${item.var} (${this._statusItems.length} item(s))`);
+                            break;
+                        }
                         case 'MINIGAME':
                             // Parse: "gridluck mode=cave controls=dpad" or just "chess"
                             // controls: dpad (full), lite (simple), none (tap only)

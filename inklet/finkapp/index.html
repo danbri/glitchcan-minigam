@@ -49,12 +49,11 @@
     <button id="settingsBtn" title="Developer panel">⚙️</button>
 </header>
 
-<!-- Stats Bar - Shows diamond counts -->
-<div id="stats-bar" class="stats-bar">
-    <span class="stat-item" id="stat-diamonds-wrap">💎 <span id="stat-diamonds">0</span></span>
-    <span class="stat-item" id="stat-mega-wrap">👑 <span id="stat-mega">0</span></span>
-    <span class="stat-item" id="stat-score-wrap">⭐ <span id="stat-score">0</span></span>
-</div>
+<!-- Status bar. Built by FinkUI from whatever the STORY declared with
+     `# STATUS:` tags; falls back to diamonds/mega/score, which is what
+     used to be hardcoded here. Deliberately empty in the markup so there
+     is one source of truth for what it contains. -->
+<div id="stats-bar" class="stats-bar" role="group" aria-label="Story status"></div>
 
 <!-- Developer Panel -->
 <div id="dev-panel" class="dev-panel">

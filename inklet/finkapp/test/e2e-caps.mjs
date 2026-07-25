@@ -153,6 +153,21 @@ try {
       : fail(`broker did not persist: ${JSON.stringify(persisted)}`);
   }
 
+  // 7. the service inventory is honest about what is NOT brokered.
+  // A capability vocabulary that quietly contains names nothing
+  // implements is how you end up believing a boundary exists.
+  const svc = await page.evaluate(() => window.FoafOS.services());
+  const mediated = svc.filter(s => s.state === 'brokered').map(s => s.id);
+  const unimpl = svc.filter(s => s.state === 'unimplemented').map(s => s.id);
+  const providedWithoutProvider = svc.filter(s => s.state === 'brokered' && !s.provider);
+  mediated.length >= 4 && unimpl.length >= 3 && providedWithoutProvider.length === 0
+    ? pass(`services: ${mediated.length} brokered (${mediated.join(', ')}), ${unimpl.length} named but unimplemented (${unimpl.join(', ')})`)
+    : fail(`service inventory wrong: ${JSON.stringify(svc.map(s => [s.id, s.state]))}`);
+  const noteText = await page.evaluate(() => document.getElementById('foafos-caps-note')?.textContent || '');
+  /Not brokered by us/.test(noteText)
+    ? pass('the drawer admits which device services have no broker')
+    : fail(`unimplemented services not disclosed: "${noteText}"`);
+
   pageErrors.length === 0 ? pass('no page errors')
     : fail(`page errors: ${pageErrors.slice(0, 2).join(' · ')}`);
   console.log(process.exitCode ? '\nCAPS E2E: FAIL' : '\nCAPS E2E: PASS');
