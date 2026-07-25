@@ -83,7 +83,9 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   (packages/foafos/src/input.mjs) owns touch pad + keyboard + Gamepad
   API, normalized to up/down/left/right/a/b/start, translated to legacy
   SDK `key` messages. Guests get `init.config.controls.provider='host'`
-  and MUST hide their own touch controls — an in-iframe pad can't see
+  and should hide their own touch controls (a guest that never answers
+  the conformance probe gets the service RETRACTED instead — §5.1.2,
+  below) — an in-iframe pad can't see
   the visible viewport or safe-area insets (env() is 0 in an iframe), so
   it ends up under browser chrome. Use `100dvh`, never `100vh`, for
   window/app height. Pad shows only when: game active + controls≠none +
@@ -302,6 +304,37 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   its attacks from INSIDE a real guest frame.
 - Still one window-mode game at a time: that is FinkWM's model. Multiple
   simultaneous game *windows* is unblocked, not done.
+
+## The conformance probe: adaptation, not compliance (spec §5.1.2)
+
+- The shell cannot inspect a guest (opaque origin), so "does this widget
+  know its duties?" is answered by ASKING and seeing who answers.
+  `init.config.contracts` offers them; the guest replies
+  `{type:'conformance', contracts:[…]}`; silence past 2.5s means it
+  predates the contract.
+- **On non-conformance the shell RETRACTS the equivalent OS service**
+  rather than stacking on top of it. Silence therefore costs a legacy
+  widget nothing — it keeps working exactly as standalone. This replaced
+  "guests MUST hide their own controls", which mudslider simply didn't,
+  giving the player two overlapping pads.
+- Adaptation costs one line: `sdk.onControls(cb)` both applies the policy
+  and answers the probe, because **registering a handler IS the answer**.
+  Native-protocol guests post `conformance` themselves (robbin).
+- **Retraction must never produce a dead game.** A guest that already
+  hid its controls has to be told to put them back, so retraction sends
+  `{type:'controls', controls:{provider:'guest'}}` rather than just
+  hiding the pad — and a LATE conformance restores the service (a
+  flicker beats an unplayable game). Both directions are asserted.
+- The real on-screen pad is the shell's `#foaf-pad` (FoafInput);
+  `#game-dpad` is legacy. `refreshPad()` gates on `inputRetracted`, so
+  retraction must call `FoafOS.refreshPad()`, not just `_showDPad`.
+- E2E: `node inklet/finkapp/test/e2e-conformance.mjs`. It fakes an
+  ignorant guest by deafening the host to that guest's answer — the rest
+  of the guest is untouched, which is the property under test.
+- Test lesson: the announcer is a TRANSIENT live region that clears
+  itself between messages, so asserting on its instantaneous text is
+  flaky by construction. Record the bus topic and separately prove the
+  announcer is wired to it.
 
 ## Guest accessibility (spec §5.1.1 + the July 2026 audit)
 

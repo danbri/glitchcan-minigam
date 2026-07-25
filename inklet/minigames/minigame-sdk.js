@@ -22,10 +22,12 @@ class MinigameSDK {
             pause: null,
             resume: null,
             terminate: null,
-            variableChanged: null
+            variableChanged: null,
+            controls: null
         };
         this._ready = false;
         this._paused = false;
+        this._contracts = new Set();
 
         // Setup message listener
         window.addEventListener('message', (event) => this._handleMessage(event));
@@ -73,6 +75,44 @@ class MinigameSDK {
     onTerminate(callback) {
         this._callbacks.terminate = callback;
         return this;
+    }
+
+    /**
+     * Register a controls handler — and, by doing so, TELL THE SHELL you
+     * speak the controls contract.
+     *
+     * The shell cannot see inside this iframe, so "does this widget know
+     * its duties?" is answered by asking and seeing who answers.
+     * Registering here is the answer. A guest that never calls this is
+     * assumed to predate the contract, and the shell RETRACTS its own
+     * d-pad rather than stacking one on top of the guest's — which is
+     * exactly the bug this replaces (mudslider drew its arrows under the
+     * shell's joystick).
+     *
+     * So: silence costs a legacy widget nothing. Adaptation costs one
+     * line.
+     *
+     *   sdk.onControls(({ provider }) => {
+     *     myPad.hidden = (provider === 'host');
+     *   });
+     *
+     * The callback fires on init and again whenever the shell changes
+     * its mind (e.g. after retracting or restoring the service).
+     *
+     * @param {Function} callback - ({provider, scheme}) => void
+     */
+    onControls(callback) {
+        this._callbacks.controls = callback;
+        this._declare('controls');
+        // if init already landed, honour it immediately
+        if (this._config?.controls) callback(this._config.controls);
+        return this;
+    }
+
+    /** Tell the shell which contracts this guest speaks. */
+    _declare(contract) {
+        this._contracts.add(contract);
+        this._sendMessage({ type: 'conformance', contracts: [...this._contracts] });
     }
 
     /**
@@ -196,6 +236,21 @@ class MinigameSDK {
                 if (this._callbacks.init) {
                     this._callbacks.init(this._config, this._variables);
                 }
+                // Answer the probe with whatever we speak. Sent AFTER the
+                // init callback so a guest that registers onControls from
+                // inside onInit is still counted.
+                if (this._contracts.size) {
+                    this._sendMessage({ type: 'conformance', contracts: [...this._contracts] });
+                }
+                if (this._callbacks.controls && this._config.controls) {
+                    this._callbacks.controls(this._config.controls);
+                }
+                break;
+
+            case 'controls':
+                // the shell changed its mind (retracted or restored)
+                this._config = { ...(this._config || {}), controls: data.controls };
+                if (this._callbacks.controls) this._callbacks.controls(data.controls || {});
                 break;
 
             case 'pause':

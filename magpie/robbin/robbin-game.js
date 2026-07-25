@@ -808,6 +808,16 @@ class Game {
     if (this.embed) {
       this._embedStarted = false;
       this._audioFocus = true;   // host may blur us (pip) via audio-focus protocol
+      // Input is an OS service. When the host provides the pad, hide
+      // ours: an in-iframe pad can't see the real viewport bottom or the
+      // safe-area inset, so it lands under the browser chrome. The shell
+      // can also hand input BACK (it retracts the service from guests
+      // that never answered its probe), so this has to be reversible.
+      this.applyHostControls = (controls) => {
+        this.hostControls = controls?.provider === 'host';
+        const touch = document.getElementById('touch');
+        if (touch) touch.style.display = this.hostControls ? 'none' : '';
+      };
       document.getElementById('title').classList.add('hidden');
       addEventListener('message', e => {
         const d = e.data;
@@ -819,13 +829,15 @@ class Game {
           // Input is an OS service: when the host provides the pad, hide
           // ours. An in-iframe pad can't see the real viewport bottom or
           // the safe-area inset, so it lands under the browser chrome.
-          if (d.config?.controls?.provider === 'host') {
-            this.hostControls = true;
-            const touch = document.getElementById('touch');
-            if (touch) touch.style.display = 'none';
-          }
+          this.applyHostControls(d.config?.controls);
+          // Answer the shell's conformance probe. A guest that stays
+          // silent is assumed to predate the contract, and the shell
+          // retracts its pad rather than stacking one on ours — which
+          // for us would be wrong, because we DO hide ours.
+          try { parent.postMessage({ type: 'conformance', contracts: ['controls'] }, '*'); } catch { /* standalone */ }
           this.embedStart(d.config?.mode);
         }
+        else if (d.type === 'controls') { this.applyHostControls(d.controls); }
         else if (d.type === 'pause') { if (this.state === 'play') this.state = 'paused'; }
         else if (d.type === 'resume') { if (this.state === 'paused') this.state = 'play'; }
         else if (d.type === 'audio-blur') { this._audioFocus = false; this.duckForSpeech(true); }

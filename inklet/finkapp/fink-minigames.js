@@ -6,8 +6,13 @@
 // a guest said something meaningful" from ordinary page chatter.
 const GUEST_MESSAGE_TYPES = new Set([
     'ready', 'progress', 'set-variable', 'complete', 'error', 'log', 'log-batch',
-    'announce',
+    'announce', 'conformance',
 ]);
+
+// How long a guest gets to answer the conformance probe before the shell
+// concludes it has never heard of the contract. Generous: a guest that
+// redirects (robbin) has to load a whole second document first.
+const CONFORMANCE_GRACE_MS = 2500;
 
 window.FinkMinigames = {
     // State
@@ -66,6 +71,8 @@ window.FinkMinigames = {
             id,
             grants: { read: [], write: [] },
             lastSync: { gameGems: 0, storyDiamonds: 0 },
+            contracts: new Set(),   // OS services this guest has agreed to
+            probeTimer: null,
             ...rec,
         };
         this.instances.set(id, inst);
@@ -78,6 +85,7 @@ window.FinkMinigames = {
 
     _dropInstance(inst) {
         if (!inst || !this.instances.has(inst.id)) return;
+        if (inst.probeTimer) clearTimeout(inst.probeTimer);
         this.instances.delete(inst.id);
         window.FoafOS?.bus.publish('minigame.instance', {
             summary: `${inst.type} instance ${inst.id} closed (${this.instances.size} running)`,
@@ -840,23 +848,29 @@ window.FinkMinigames = {
             // Wait for iframe to load, then send init
             iframe.onload = () => {
                 this.log('Iframe loaded, sending init');
+                const config = {
+                    mode,
+                    // Input is an OS service: the host owns the on-screen
+                    // pad (it alone sees the real viewport + safe areas).
+                    // SAFETY RULE: only claim the input when we will
+                    // actually render a pad — a guest told to hide its own
+                    // controls by a host that then shows none leaves the
+                    // player with no way to move.
+                    controls: {
+                        provider: (this.currentControls && this.currentControls !== 'none') ? 'host' : 'guest',
+                        scheme: this.currentControls,
+                    },
+                    // The contracts we are offering. A guest that knows
+                    // them answers with `conformance`; silence means it
+                    // predates them and keeps doing its own thing.
+                    contracts: ['controls'],
+                };
                 this._sendToIframe({
                     type: 'init',
-                    config: {
-                        mode,
-                        // Input is an OS service: the host owns the on-screen
-                        // pad (it alone sees the real viewport + safe areas).
-                        // SAFETY RULE: only claim the input when we will
-                        // actually render a pad — a guest told to hide its own
-                        // controls by a host that then shows none leaves the
-                        // player with no way to move.
-                        controls: {
-                            provider: (this.currentControls && this.currentControls !== 'none') ? 'host' : 'guest',
-                            scheme: this.currentControls,
-                        },
-                    },
+                    config,
                     variables: this._getStoryVariables(this._guestActor(inst))
                 });
+                this._probeConformance(inst, config);
                 // D-pad visibility is handled in startMinigame based on controls param
             };
         }
@@ -906,6 +920,10 @@ window.FinkMinigames = {
                 this._handleIframeComplete(inst, data.result);
                 break;
 
+            case 'conformance':
+                this._acceptConformance(inst, data.contracts);
+                break;
+
             case 'announce':
                 this._announce(inst, data.text);
                 break;
@@ -929,6 +947,77 @@ window.FinkMinigames = {
                     });
                 }
                 break;
+        }
+    },
+
+    // ---- Conformance probe -----------------------------------------------
+    // The shell cannot inspect a guest: opaque origin, no DOM access. So
+    // "does this widget know its duties?" can only be answered by asking
+    // and seeing whether anyone answers.
+    //
+    // The rule is ADAPTATION, not compliance. A guest that answers gets
+    // the OS service. A guest that stays silent has never heard of the
+    // contract, so it is doing its own thing — and the shell RETRACTS the
+    // equivalent service rather than stacking on top of it. Mudslider is
+    // why: it drew its own arrows underneath the shell's joystick, and
+    // the player got two overlapping control systems.
+    //
+    // Silence therefore costs a legacy widget nothing. It keeps working
+    // exactly as it did standalone, which is the whole point.
+    _probeConformance(inst, config) {
+        if (inst.probeTimer) clearTimeout(inst.probeTimer);
+        // Nothing to retract if we were never providing the service.
+        if (config?.controls?.provider !== 'host') return;
+        inst.probeTimer = setTimeout(() => {
+            inst.probeTimer = null;
+            if (inst.contracts.has('controls')) return;   // answered in time
+            this._retractInputService(inst);
+        }, CONFORMANCE_GRACE_MS);
+    },
+
+    // Hand input back to a guest that never agreed to give it up.
+    _retractInputService(inst) {
+        if (inst.inputRetracted) return;
+        inst.inputRetracted = true;
+        this.log(`[${inst.id}] no controls conformance — retracting the host pad`);
+        // Tell it plainly, in case it is listening but wasn't built for
+        // the handshake; a guest that hid its pad on 'host' will show it
+        // again on 'guest'.
+        this._sendToIframe({
+            type: 'controls',
+            controls: { provider: 'guest', scheme: this.currentControls },
+        }, inst);
+        if (inst === this.windowInstance) {
+            this._showDPad('none');
+            window.FoafOS?.refreshPad?.();   // the shell owns the real pad
+        }
+        window.FoafOS?.bus.publish('sys.guest.nonconforming', {
+            summary: `${inst.type} does not speak the controls contract — it keeps its own`,
+            id: inst.id, type: inst.type, contract: 'controls',
+        });
+    },
+
+    // A guest that answers LATE still gets the service back: better a
+    // brief flicker than a game with no controls at all.
+    _acceptConformance(inst, contracts) {
+        for (const c of contracts || []) inst.contracts.add(c);
+        window.FoafOS?.bus.publish('sys.guest.conformance', {
+            summary: `${inst.type} speaks: ${[...inst.contracts].join(', ') || '(nothing)'}`,
+            id: inst.id, type: inst.type, contracts: [...inst.contracts],
+        });
+        if (!inst.contracts.has('controls')) return;
+        if (inst.probeTimer) { clearTimeout(inst.probeTimer); inst.probeTimer = null; }
+        if (inst.inputRetracted && this.currentControls && this.currentControls !== 'none') {
+            inst.inputRetracted = false;
+            this.log(`[${inst.id}] late controls conformance — restoring the host pad`);
+            this._sendToIframe({
+                type: 'controls',
+                controls: { provider: 'host', scheme: this.currentControls },
+            }, inst);
+            if (inst === this.windowInstance) {
+                this._showDPad(this.currentControls);
+                window.FoafOS?.refreshPad?.();
+            }
         }
     },
 
@@ -1694,6 +1783,10 @@ window.FinkMinigames = {
 
             case 'set-variable':
                 this._setStoryVariable(data.name, data.value, this._guestActor(inst));
+                break;
+
+            case 'conformance':
+                this._acceptConformance(inst, data.contracts);
                 break;
 
             case 'announce':

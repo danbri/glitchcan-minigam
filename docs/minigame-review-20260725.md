@@ -270,6 +270,28 @@ outcome of it being the only one not built on a canvas.
 
 ---
 
+## 6a. Addendum: the conformance probe
+
+The mudslider finding ("never reads `config.controls.provider`, violating
+spec §5.1.1") prompted a better protocol than tightening the mandate.
+
+The shell cannot inspect a guest, so it now **probes**: `init` offers
+`config.contracts`, a guest that speaks one answers `conformance`, and
+silence past 2.5s means the guest predates the contract. On silence the
+shell **retracts** the equivalent OS service instead of stacking on top
+of it — the ignorant guest keeps doing its own thing, which is what it
+was already doing successfully.
+
+This inverts the burden the right way round. Silence costs a legacy
+widget nothing; adaptation costs one line (`sdk.onControls(cb)`, where
+registering the handler IS the answer). Retraction also has to *tell* the
+guest — one that already hid its controls must put them back — and a late
+answer restores the service, because a brief flicker beats an unplayable
+game.
+
+Spec §5.1.2; locked by `e2e-conformance.mjs` (8 assertions, both
+directions). Adopted by mudslider (SDK) and robbin (native).
+
 ## 7. Recommended next actions
 
 1. **Resolve the two gems.** One implementation, packaged, manifested.

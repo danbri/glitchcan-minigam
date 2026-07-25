@@ -133,13 +133,13 @@
         }
 
         // SDK event handlers
-        // Spec 5.1.1: input is a HOST service. When the shell says it is
-        // providing the pad, a guest MUST hide its own touch controls —
-        // otherwise the player gets two overlapping sets, which is
-        // exactly what a screenshot of this game showed: the shell's
-        // joystick sitting on top of these four arrow buttons.
-        function applyControlPolicy(config) {
-            const hostOwnsInput = config?.controls?.provider === 'host';
+        // Input is a HOST service. Registering onControls both handles
+        // the policy AND tells the shell we speak the contract — a guest
+        // that stays silent gets the shell's pad retracted instead, and
+        // keeps doing its own thing. This game is the reason: it used to
+        // draw these four arrows underneath the shell's joystick.
+        function applyControlPolicy(controls) {
+            const hostOwnsInput = controls?.provider === 'host';
             const el = gameState.gameElement;
             const root = el && el.shadowRoot;
             if (!root) return;
@@ -151,6 +151,11 @@
             }
             style.textContent = hostOwnsInput ? '#controls { display: none !important; }' : '';
         }
+        sdk.onControls((controls) => {
+            applyControlPolicy(controls);
+            // the custom element may only just have upgraded
+            setTimeout(() => applyControlPolicy(controls), 400);
+        });
 
         sdk.onInit((config, variables) => {
             console.log('[Mudslider] Initialized with config:', config);
@@ -161,9 +166,7 @@
             if (!gameState.gameElement) {
                 createGame();
             }
-            // the element may only just have upgraded; try now and once more
-            applyControlPolicy(config);
-            setTimeout(() => applyControlPolicy(config), 400);
+            applyControlPolicy(config?.controls);
 
             // Auto-start the game (skip "Ready?" button)
             setTimeout(() => {

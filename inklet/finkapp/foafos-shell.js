@@ -179,7 +179,11 @@ function refreshPad() {
   const pad = document.getElementById('foaf-pad');
   if (!pad) return;
   const mg = window.FinkMinigames;
-  const wantsPad = mg?.active && mg.currentControls && mg.currentControls !== 'none';
+  // A guest that never answered the conformance probe (spec §5.1.2) has
+  // had the input service retracted: it is doing its own thing, and a
+  // second pad on top of its own is the bug we are avoiding.
+  const retracted = !!mg?.windowInstance?.inputRetracted;
+  const wantsPad = mg?.active && mg.currentControls && mg.currentControls !== 'none' && !retracted;
   const fullOrSplit = !window.FinkWM?.mode || window.FinkWM.mode !== 'pip';
   const hasGamepad = bus.retained('input.gamepad')[0]?.data?.connected === true;
   const coarse = window.matchMedia?.('(pointer: coarse)').matches;
@@ -231,6 +235,10 @@ function buildAnnouncer() {
     'ui.skin': (d) => `Skin ${d.skin}`,
     'sys.guest.denied': (d) => `Blocked: ${d.guest} tried to publish ${d.topic}`,
     'sys.guest.unrouted': (d) => d.summary,
+    // A widget that never answered the probe keeps its own controls and
+    // the shell steps back (spec §5.1.2). The player's controls just
+    // changed, so say so.
+    'sys.guest.nonconforming': (d) => d.summary,
     // Pooled from the guests themselves (guest-a11y.js). A canvas game
     // has nothing for a screen reader to read; this is how it speaks.
     'guest.announce': (d) => d.summary,

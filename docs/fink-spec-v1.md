@@ -301,6 +301,44 @@ Directional input belongs to the shell, not to each guest:
   on-screen pad.
 - Window geometry MUST use the visible viewport (`100dvh`), not `100vh`.
 
+### 5.1.2 The conformance probe — normative
+
+The shell cannot inspect a guest: opaque origin, no DOM access. So "does
+this widget know its duties?" can only be answered by asking and seeing
+who answers.
+
+- `init.config.contracts` lists the OS contracts the shell is offering
+  (v1: `['controls']`).
+- A guest that speaks a contract replies
+  `{ type: 'conformance', contracts: [...] }`. It may reply at any time;
+  replying repeatedly is harmless.
+- If nothing arrives within the grace period (2.5s — a redirecting
+  wrapper has a second document to load), the shell concludes the guest
+  **predates the contract**, and therefore is doing its own thing.
+
+**The rule is adaptation, not compliance.** On non-conformance the shell
+RETRACTS the equivalent service rather than stacking on top of it:
+
+- it sends `{ type: 'controls', controls: { provider: 'guest', … } }`
+- it hides its own d-pad
+- it publishes `sys.guest.nonconforming`, which the announcer speaks
+
+So silence costs a legacy widget nothing: it keeps working exactly as it
+did standalone. Adaptation costs one line — `sdk.onControls(cb)`, which
+both applies the policy and answers the probe, because registering a
+handler IS the answer. Guests speaking the protocol natively post the
+`conformance` message themselves (see `magpie/robbin/robbin-game.js`).
+
+**Retraction must never produce a dead game — normative.** A guest that
+already hid its own controls has to be told to put them back, which is
+why retraction sends `controls` rather than simply hiding the pad. For
+the same reason a LATE `conformance` is honoured and the service is
+restored: a brief flicker beats a game nobody can play.
+
+This replaces "guests MUST hide their own touch controls" (§5.1.1) as
+the *enforcement* mechanism. The obligation still stands for guests that
+opt in; the difference is that the shell no longer assumes it.
+
 ### 5.2 Verbs and native handlers
 
 Widgets and minigames MUST be fully playable standalone, with their own
