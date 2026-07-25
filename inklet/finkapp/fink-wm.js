@@ -50,7 +50,7 @@ window.FinkWM = {
         this._initChromeDrag();
         this._initPipGestures();
         this._applyDock(this._loadDock());
-        window.addEventListener('resize', () => this._applyDock(this._loadDock()));
+        window.addEventListener('resize', () => { this._applyDock(this._loadDock()); this._layoutSplit(); });
 
         this.log('window manager ready');
     },
@@ -60,7 +60,11 @@ window.FinkWM = {
     open(mode = 'full') {
         this.active = true;
         this.elements.chrome.classList.remove('wm-hidden');
-        this._setCollapsed(true);
+        // Open EXPANDED: a lone ▦ grip reads as "this game has no window
+        // controls" (reported from the field). Show the toolbar, then let
+        // the usual idle timer tuck it away.
+        this._setCollapsed(false);
+        this._scheduleCollapse();
         this.setMode(mode, { animate: false });
         window.FoafOS?.bus.publish('wm.open', { summary: 'game window opened' });
     },
@@ -74,6 +78,9 @@ window.FinkWM = {
         this._setCollapsed(true);
         view.classList.remove('state-full', 'state-split', 'state-pip', 'wm-transitioning');
         view.style.left = view.style.top = view.style.right = view.style.bottom = '';
+        view.style.height = '';
+        if (this.elements.narrative) this.elements.narrative.style.height = '';
+        delete document.body.dataset.wmMode;
         this.log('window closed');
         window.FoafOS?.bus.publish('wm.close', { summary: 'game window closed' });
     },
@@ -95,6 +102,9 @@ window.FinkWM = {
 
         view.classList.remove('state-full', 'state-split', 'state-pip');
         view.classList.add(`state-${mode}`);
+        // the mode is layout information the whole page needs (split has
+        // to size the narrative deterministically, not by content)
+        document.body.dataset.wmMode = mode;
 
         // Leaving pip clears any dragged-to position.
         if (old === 'pip' && mode !== 'pip') {
@@ -110,6 +120,7 @@ window.FinkWM = {
         }
         this.elements.handle.textContent = { full: '▣', split: '◫', pip: '◰' }[mode] || '▦';
 
+        this._layoutSplit();
         this._haptic();
         this._scheduleCollapse();
 
@@ -127,6 +138,26 @@ window.FinkWM = {
             this.log(`mode: ${old || '—'} → ${mode}`);
             window.FoafOS?.bus.publish('wm.mode', { mode, prev: old, summary: `window → ${mode}` }, { retain: true });
         }
+    },
+
+    // Split geometry, in measured pixels. CSS could not hold the
+    // narrative to its share (flex basis, grid rows and absolute insets
+    // all let it size from its own content), which clipped the bottom of
+    // the game. Two numbers that add up cannot do that.
+    _layoutSplit() {
+        const view = this.elements.view;
+        const narrative = this.elements.narrative;
+        const main = view?.parentElement;
+        if (!view || !narrative || !main) return;
+        if (this.mode !== 'split') {
+            narrative.style.height = '';
+            view.style.height = '';
+            return;
+        }
+        const total = main.clientHeight;
+        const gameH = Math.max(180, Math.round(total * 0.52));
+        view.style.height = `${gameH}px`;
+        narrative.style.height = `${Math.max(0, total - gameH)}px`;
     },
 
     // ── chrome: collapse + drag-dock ─────────────────────────────────────

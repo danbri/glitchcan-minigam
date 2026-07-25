@@ -123,6 +123,28 @@
     border-top: 2px solid var(--zx-cyan);
 }
 
+/* Split geometry is applied in JS (FinkWM._layoutSplit): three CSS
+   attempts — flex basis, grid rows, absolute insets — each left the
+   narrative sized from its own content (397px where 369 was available),
+   clipping the game or hiding the story's last lines. Measured pixels
+   cannot be argued with. */
+body[data-wm-mode="split"] main { overflow: hidden; }
+body[data-wm-mode="split"] #narrative-view {
+    flex: none;
+    min-height: 0;
+    overflow-y: auto;
+    /* THE root cause of every failed attempt: #narrative-view carries
+       padding-bottom: 50vh (scroll-past-the-end room). With border-box
+       an element can never be shorter than its own padding, so 369px of
+       assigned height rendered as 397px — under flex, grid AND absolute
+       insets alike. In split the story does not need a 50vh runway. */
+    padding-bottom: 1em;
+}
+body[data-wm-mode="split"] #minigame-view.state-split {
+    flex: none;
+    min-height: 0;
+}
+
 /* Pip: a live viewport in the corner, not a control surface — input is
    suspended (tap restores, drag moves). */
 #minigame-view.state-pip {

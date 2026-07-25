@@ -63,12 +63,17 @@ try {
     return r ? { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) } : null;
   }, sel);
 
-  // 1. chrome: visible, compact when collapsed
+  // 1. chrome: opens EXPANDED so the controls are discoverable (a lone
+  // grip was reported in the field as "this game has no OS controls")
+  const chromeOpen = await box('#wm-chrome');
+  const openExpanded = await page.evaluate(() =>
+    !document.getElementById('wm-chrome').classList.contains('collapsed'));
+  openExpanded && chromeOpen.w > 200
+    ? pass(`chrome opens expanded (${chromeOpen.w}px, all controls visible)`)
+    : fail(`chrome not discoverable on open: w=${chromeOpen?.w} expanded=${openExpanded}`);
+  await page.evaluate(() => FinkWM._setCollapsed(true));
   const chrome = await box('#wm-chrome');
-  const collapsed = await page.evaluate(() => document.getElementById('wm-chrome').classList.contains('collapsed'));
-  chrome && collapsed && chrome.w < 90
-    ? pass(`chrome present, collapsed to grip (${chrome.w}x${chrome.h})`)
-    : fail(`chrome wrong: ${JSON.stringify(chrome)} collapsed=${collapsed}`);
+  chrome.w < 90 ? pass(`collapses to a grip (${chrome.w}px)`) : fail(`grip too wide: ${chrome.w}`);
 
   // 2. grip tap expands the toolbar
   await page.click('#wm-handle');
@@ -89,6 +94,16 @@ try {
   split.mode === 'split' && split.game > 250 && split.narrative > 150
     ? pass(`split: game ${Math.round(split.game)}px + story ${Math.round(split.narrative)}px (no sliver)`)
     : fail(`split broken: ${JSON.stringify(split)}`);
+  // and the two panes must TILE: no clipped game bottom, no story text
+  // hidden behind it (padding-bottom:50vh made this fail invisibly)
+  const tile = await page.evaluate(() => {
+    const n = document.getElementById('narrative-view').getBoundingClientRect();
+    const g = document.getElementById('minigame-view').getBoundingClientRect();
+    return { gap: Math.round(g.top - n.bottom), overshoot: Math.round(g.bottom - window.innerHeight) };
+  });
+  Math.abs(tile.gap) <= 1 && tile.overshoot <= 0
+    ? pass('split panes tile exactly (no overlap, nothing clipped)')
+    : fail(`split does not tile: gap=${tile.gap} overshoot=${tile.overshoot}`);
 
   // 4. PIP: small, then a tap restores — no one-way doors
   await page.click('#wm-pip');
