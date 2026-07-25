@@ -87,6 +87,9 @@ try {
     FinkMinigames.currentControls = 'dpad';
     FoafOS.refreshPad();
     FoafOS.openWidget('tally');
+    // the new OS surfaces: the app grid and the running-apps switcher
+    FoafOS.openHome();
+    FoafOS.openSwitcher();
     FinkWM._setCollapsed(false);
     document.getElementById('foafos-dock').click();
   });

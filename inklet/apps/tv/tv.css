@@ -1,0 +1,41 @@
+/* Ten-foot-ish: big rows, one obvious selection, no hover-only state.
+   The same list has to work with a d-pad on a TV, a thumb on a phone and
+   arrow keys on a desktop, so selection is a class, never :hover. */
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; height: 100dvh; overflow: hidden;
+  font: 16px/1.45 ui-sans-serif, system-ui, sans-serif;
+  background: #0b0e14; color: #e8ecf4;
+}
+#tv { display: flex; flex-direction: column; height: 100dvh; padding: 12px; gap: 10px; }
+header { flex: none; }
+h1 { margin: 0; font-size: 1.15rem; letter-spacing: .12em; text-transform: uppercase; }
+#now { margin: 4px 0 0; color: #9fb3d0; font-size: .92rem; min-height: 1.4em; }
+#channels {
+  flex: 1; min-height: 0; overflow-y: auto;
+  list-style: none; margin: 0; padding: 0;
+  border: 1px solid #22304a; border-radius: 10px;
+}
+#channels:focus-visible { outline: 3px solid #6cf; outline-offset: 2px; }
+li {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; min-height: 48px;      /* thumb-sized on a phone */
+  border-bottom: 1px solid #17202f; cursor: pointer;
+}
+li:last-child { border-bottom: 0; }
+li .num { color: #6b83a6; font-variant-numeric: tabular-nums; min-width: 2.2em; }
+li .name { flex: 1; }
+li .tag { color: #6b83a6; font-size: .8rem; }
+li[aria-selected="true"] { background: #16233a; }
+li.playing .num::after { content: ' ●'; color: #6cf; }
+#transport { flex: none; display: flex; gap: 8px; justify-content: center; }
+#transport button {
+  flex: 1; max-width: 120px; min-height: 48px; font-size: 1.2rem;
+  background: #16233a; color: #e8ecf4; border: 1px solid #2b3d5c;
+  border-radius: 10px; cursor: pointer;
+}
+#transport button:focus-visible { outline: 3px solid #6cf; outline-offset: 2px; }
+#hint { flex: none; margin: 0; }
+#hint { color: #5f7796; font-size: .78rem; text-align: center; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

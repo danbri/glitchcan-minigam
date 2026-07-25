@@ -5,6 +5,11 @@ window.FinkAudio = {
     context: null,
     currentSource: null,
     currentGain: null,
+    // Master level from the shell's audio service (FoafAudio). 1 until
+    // something governs us. Applied to every source at creation AND live,
+    // or a mute would only silence whatever happened to be playing when
+    // the button was pressed.
+    masterLevel: 1,
     currentTrack: null,
     fadeDuration: 2.0, // seconds
     unlocked: false,
@@ -60,9 +65,9 @@ window.FinkAudio = {
             source.connect(gain);
             gain.connect(this.context.destination);
 
-            // Fade in
+            // Fade in, to the master level rather than to 1
             gain.gain.setValueAtTime(0, this.context.currentTime);
-            gain.gain.linearRampToValueAtTime(1, this.context.currentTime + this.fadeDuration);
+            gain.gain.linearRampToValueAtTime(this.masterLevel, this.context.currentTime + this.fadeDuration);
 
             source.start();
             this.currentSource = source;
@@ -118,7 +123,7 @@ window.FinkAudio = {
             const gain = this.context.createGain();
             source.buffer = audioBuffer;
             source.loop = false;
-            gain.gain.value = volume;
+            gain.gain.value = volume * this.masterLevel;
             source.connect(gain);
             gain.connect(this.context.destination);
             source.start();

@@ -305,6 +305,50 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
 - Still one window-mode game at a time: that is FinkWM's model. Multiple
   simultaneous game *windows* is unblocked, not done.
 
+## Audio as an OS service (spec §5.5)
+
+- `FoafAudio` (`packages/foafos/src/audio.mjs`): master volume + mute,
+  persisted at `foafos.audio`, announced on retained `audio.volume`.
+  `level = muted ? 0 : volume` — mute must never destroy the chosen level,
+  or unmuting feels broken. Nudging the slider up from silence unmutes.
+- Sinks register with `apply(level)`; it is called on registration too, so
+  a source that starts while muted starts silent.
+- **The honest limit**: there is no `iframe.volume`. Only same-document
+  sources (FinkAudio/FinkFoley, whose gain the shell owns) and guests that
+  answered the `audio` probe can be turned down. `coverage().uncovered`
+  names the rest and the drawer SAYS SO — a mute button that silences
+  three of four sources and pretends otherwise is worse than one that
+  admits it. Mark noisy apps `audio: true` in the registry so the
+  disclosure isn't padded with silent spreadsheets.
+- FinkAudio/FinkFoley now carry `masterLevel` applied at source creation
+  AND live; without the former, a mute only silenced whatever happened to
+  be playing when the button was pressed.
+- Launcher windows are NOT minigames, so FinkMinigames' guest plumbing
+  does not reach them — `governAppFrame()` in the shell offers the same
+  contract to app iframes. The first version shipped a channel player the
+  master volume could not touch.
+- `# AUDIO: <file>` was always able to load an mp3; no story had ever
+  done it. `# AUDIO: synth:<layer>` routes to FinkFoley — before July 2026
+  it went to FinkAudio.play(), which fetched a "synth:" URL and failed
+  silently. Demo: `inklet/demos/audio-demo.fink.js`.
+
+## Home and switcher (spec §5.6)
+
+- `FoafOS.openHome()` (Alt+H) — grouped app grid; `FoafOS.openSwitcher()`
+  (Alt+Tab) — what is running, gathered from story + WM game + inline
+  instances + shell windows; Alt+M toggles mute. Shortcuts skip
+  INPUT/TEXTAREA/SELECT/contenteditable.
+- The installed set is CONTENT: `inklet/finkapp/foafos-apps.js`, never
+  `packages/foafos`. `kind` ∈ window | game | story | panel decides how
+  the shell opens it; nothing else distinguishes an office app from a maze.
+- CSS trap that bit here: `--sk-bg-figure` is TRANSLUCENT in two skins
+  (terminal 0.6, aurora 0.055). Fine for a floating panel, wrong for a
+  full-screen overlay — story text showed through the app grid. Composite
+  the figure over `--sk-bg` instead of trusting one token to be opaque.
+- One-installation test: `node inklet/finkapp/test/e2e-desktop.mjs
+  [--shots]` runs an office app, a game and the TV app at once and checks
+  ONE launcher, ONE switcher and ONE volume see all of them.
+
 ## The conformance probe: adaptation, not compliance (spec §5.1.2)
 
 - The shell cannot inspect a guest (opaque origin), so "does this widget

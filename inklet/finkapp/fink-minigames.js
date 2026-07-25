@@ -86,6 +86,7 @@ window.FinkMinigames = {
     _dropInstance(inst) {
         if (!inst || !this.instances.has(inst.id)) return;
         if (inst.probeTimer) clearTimeout(inst.probeTimer);
+        window.FoafOS?.audio?.unregister(`guest:${inst.id}`);
         this.instances.delete(inst.id);
         window.FoafOS?.bus.publish('minigame.instance', {
             summary: `${inst.type} instance ${inst.id} closed (${this.instances.size} running)`,
@@ -816,6 +817,12 @@ window.FinkMinigames = {
                 lastSync: { gameGems: 0, storyDiamonds: currentDiamonds },
             });
             this.windowInstance = inst;
+            // Until it answers, assume we cannot reach its audio. Better
+            // for the mute button to over-report what it misses than to
+            // claim silence it cannot deliver.
+            window.FoafOS?.audio?.register(`guest:${inst.id}`, () => {}, {
+                label: (this.minigameInfo[type] || {}).title || type, kind: 'uncontrollable',
+            });
 
             // Until the manifest lands, the guest may write nothing. A
             // race that opened a hole would be worse than one that
@@ -863,7 +870,12 @@ window.FinkMinigames = {
                     // The contracts we are offering. A guest that knows
                     // them answers with `conformance`; silence means it
                     // predates them and keeps doing its own thing.
-                    contracts: ['controls'],
+                    contracts: ['controls', 'audio'],
+                    // Current master level, so a guest starts at the right
+                    // volume instead of blasting once and then ducking.
+                    audio: window.FoafOS?.audio
+                        ? { level: FoafOS.audio.level, volume: FoafOS.audio.volume, muted: FoafOS.audio.muted }
+                        : null,
                 };
                 this._sendToIframe({
                     type: 'init',
@@ -1000,7 +1012,12 @@ window.FinkMinigames = {
     // A guest that answers LATE still gets the service back: better a
     // brief flicker than a game with no controls at all.
     _acceptConformance(inst, contracts) {
+        const hadAudio = inst.contracts.has('audio');
         for (const c of contracts || []) inst.contracts.add(c);
+        // A guest that speaks `audio` becomes a sink of the master
+        // volume; one that does not is registered as UNGOVERNABLE, so
+        // the mute button can say what it cannot reach.
+        if (!hadAudio && inst.contracts.has('audio')) this._registerAudioSink(inst);
         window.FoafOS?.bus.publish('sys.guest.conformance', {
             summary: `${inst.type} speaks: ${[...inst.contracts].join(', ') || '(nothing)'}`,
             id: inst.id, type: inst.type, contracts: [...inst.contracts],
@@ -1019,6 +1036,20 @@ window.FinkMinigames = {
                 window.FoafOS?.refreshPad?.();
             }
         }
+    },
+
+    // Make this guest obey the master volume. Only possible because it
+    // answered the probe — there is no way to turn down an iframe from
+    // outside.
+    _registerAudioSink(inst) {
+        const audio = window.FoafOS?.audio;
+        if (!audio || inst.audioSink) return;
+        const info = this.minigameInfo[inst.type] || {};
+        audio.unregister(`guest:${inst.id}`);   // drop any 'uncontrollable' placeholder
+        inst.audioSink = audio.register(`guest:${inst.id}`, (level) => {
+            this._sendToIframe({ type: 'audio-level', level,
+                volume: audio.volume, muted: audio.muted }, inst);
+        }, { label: info.title || inst.type, kind: 'guest' });
     },
 
     // Pooled accessibility: a guest says something, the SHELL announces

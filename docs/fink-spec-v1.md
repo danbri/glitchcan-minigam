@@ -443,6 +443,49 @@ as a service rather than a per-game feature:
   governance ledger in one call. `?slow` / `?timescale=` on the shell.
   Guest surface: `window.__mgDebug`.
 
+### 5.5 Audio is a host service — normative
+
+Volume and mute belong to the shell, not to each sound source. Guests
+receive `init.config.audio = {level, volume, muted}` and, if they declare
+the `audio` contract (§5.1.2), `{type:'audio-level', level, …}` on every
+change. `level` is `muted ? 0 : volume`, so mute never destroys the
+level a person chose.
+
+**The honest limit — normative.** A guest runs in a sandboxed iframe with
+its own AudioContext, and there is no `iframe.volume`. A master volume is
+therefore only real for:
+
+- same-document sources (FinkAudio, FinkFoley), whose gain the shell owns
+- guests that answered the `audio` probe
+- app windows whose frame answered (the shell offers the same contract to
+  launcher windows, not just minigames)
+
+A guest that never answers **cannot be turned down**, and the control MUST
+say which sources it cannot reach rather than showing a slider that
+quietly lies (`FoafAudio.coverage().uncovered`). Registries SHOULD mark
+which apps make sound (`audio: true`) so the disclosure lists noisy
+silent-by-nature apps, not every open spreadsheet.
+
+### 5.6 Shell surfaces: home and switcher
+
+Two affordances the platform borrows rather than invents, because every
+device already teaches them:
+
+- **Home** — a grouped grid of installed apps (`FoafOS.openHome()`,
+  Alt+H). One grid for every family; the shell does not know which app is
+  an office document and which is a maze.
+- **Switcher** — a list of what is running (`FoafOS.openSwitcher()`,
+  Alt+Tab), assembled from every subsystem that has its own idea of a
+  window: the story, the WM's game, embedded guest instances, and shell
+  windows.
+
+Both are `role="dialog" aria-modal="true"`, close on Escape, and open
+focused. Alt+M toggles mute. Shortcuts MUST NOT fire while a text field
+or contenteditable has focus.
+
+The installed set is **content, not platform**: `foafos-apps.js` lives
+beside the shell instance, never in `packages/foafos` (NPM boundary).
+
 ## 6. Links, navigation, identity
 
 Incorporates `docs/fink-linking-spec.md`: two-part SHA-256 hash links

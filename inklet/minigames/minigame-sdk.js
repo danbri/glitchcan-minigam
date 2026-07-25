@@ -23,7 +23,8 @@ class MinigameSDK {
             resume: null,
             terminate: null,
             variableChanged: null,
-            controls: null
+            controls: null,
+            audio: null
         };
         this._ready = false;
         this._paused = false;
@@ -106,6 +107,28 @@ class MinigameSDK {
         this._declare('controls');
         // if init already landed, honour it immediately
         if (this._config?.controls) callback(this._config.controls);
+        return this;
+    }
+
+    /**
+     * Register an audio handler — and, by doing so, let the shell's
+     * volume and mute actually reach you.
+     *
+     * This one matters more than it looks. The shell CANNOT turn a guest
+     * down: an iframe has its own AudioContext and there is no
+     * `iframe.volume`. So a master volume is only real for guests that
+     * answer. A guest that stays silent keeps playing through a mute,
+     * and the shell reports it as ungovernable rather than showing a
+     * slider that quietly lies.
+     *
+     *   sdk.onAudio(({ level }) => { myGain.gain.value = level; });
+     *
+     * @param {Function} callback - ({level, volume, muted}) => void
+     */
+    onAudio(callback) {
+        this._callbacks.audio = callback;
+        this._declare('audio');
+        if (this._audioState) callback(this._audioState);
         return this;
     }
 
@@ -245,12 +268,21 @@ class MinigameSDK {
                 if (this._callbacks.controls && this._config.controls) {
                     this._callbacks.controls(this._config.controls);
                 }
+                if (this._callbacks.audio && this._config.audio) {
+                    this._audioState = this._config.audio;
+                    this._callbacks.audio(this._config.audio);
+                }
                 break;
 
             case 'controls':
                 // the shell changed its mind (retracted or restored)
                 this._config = { ...(this._config || {}), controls: data.controls };
                 if (this._callbacks.controls) this._callbacks.controls(data.controls || {});
+                break;
+
+            case 'audio-level':
+                this._audioState = { level: data.level, volume: data.volume, muted: data.muted };
+                if (this._callbacks.audio) this._callbacks.audio(this._audioState);
                 break;
 
             case 'pause':

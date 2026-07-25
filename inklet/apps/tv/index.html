@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Channels</title>
+<link rel="stylesheet" href="tv.css">
+</head>
+<body>
+<main id="tv">
+  <header>
+    <h1>Channels</h1>
+    <p id="now" role="status" aria-live="polite">Nothing playing</p>
+  </header>
+
+  <!-- A channel list is the one TV affordance every set has had since
+       1936: a numbered list you move up and down with two keys. Arrow
+       keys / d-pad move, Enter tunes in. -->
+  <ul id="channels" role="listbox" aria-label="Channels" tabindex="0"></ul>
+
+  <div id="transport" role="group" aria-label="Transport">
+    <button type="button" id="prev" aria-label="Previous channel">⏮</button>
+    <button type="button" id="play" aria-label="Play or pause">▶</button>
+    <button type="button" id="next" aria-label="Next channel">⏭</button>
+  </div>
+  <p id="hint">The shell's volume governs this app. Mute it from the dock.</p>
+</main>
+<script src="../../minigames/guest-a11y.js"></script>
+<script src="../../minigames/minigame-sdk.js"></script>
+<script type="module" src="tv.js"></script>
+</body>
+</html>

@@ -4,6 +4,10 @@
 window.FinkFoley = {
     context: null,
     masterGain: null,
+    // Base mix (0.5) times the shell's master level. Kept apart so the
+    // OS volume never destroys the foley's own balance against music.
+    baseMix: 0.5,
+    masterLevel: 1,
     layers: {},  // Named layers for concurrent sounds: { layerId: { nodes, intervals, gainNode } }
 
     // Classic 1D Perlin noise implementation
@@ -65,7 +69,7 @@ window.FinkFoley = {
             this.context = window.FinkAudio?.context || new (window.AudioContext || window.webkitAudioContext)();
             if (window.FinkAudio) window.FinkAudio.context = this.context;
             this.masterGain = this.context.createGain();
-            this.masterGain.gain.value = 0.5;
+            this.masterGain.gain.value = this.baseMix * this.masterLevel;
             this.masterGain.connect(this.context.destination);
         }
         if (this.context.state === 'suspended') await this.context.resume();
@@ -458,6 +462,14 @@ window.FinkFoley = {
     },
 
     // Play foley from parsed tag
+    // Called by the shell's audio service; safe before the context exists.
+    setMasterLevel(level) {
+        this.masterLevel = Math.max(0, Math.min(1, Number(level) ?? 1));
+        if (this.masterGain) {
+            try { this.masterGain.gain.value = this.baseMix * this.masterLevel; } catch (e) { /* not started */ }
+        }
+    },
+
     async playFoley(tagValue, layerPrefix = 'foley') {
         const parsed = this.parseFoleyTag(tagValue);
         if (!parsed) {

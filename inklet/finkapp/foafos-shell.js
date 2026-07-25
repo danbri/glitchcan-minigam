@@ -14,8 +14,9 @@ import {
   widgets, defineBaseCards, defineFeed,
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
-  FoafInput, ACTION_KEYS, FoafVars,
+  FoafInput, ACTION_KEYS, FoafVars, FoafAudio,
 } from '../../packages/foafos/src/index.mjs';
+import { appsByFamily, appById } from './foafos-apps.js';
 
 defineBaseCards();
 defineFeed();
@@ -102,6 +103,29 @@ FoafOS.cluster = cluster;
 const vars = new FoafVars({ bus });
 FoafOS.vars = vars;
 bus.subscribe('story.state', (e) => vars.setDepth(e.data?.depth || 0));
+
+// ── audio: volume and mute as an OS service ────────────────────────────
+// Every sound source used to have its own idea of loudness and none of
+// them could be turned down. Same-document sources obey directly; guests
+// obey only if they answered the `audio` probe, and the control reports
+// the ones it cannot reach rather than pretending.
+let audioStore = null;
+try { audioStore = window.localStorage; } catch (e) { /* sealed/blocked */ }
+const audio = new FoafAudio({ bus, storage: audioStore });
+FoafOS.audio = audio;
+
+// FinkAudio and FinkFoley live in THIS document, so they always obey.
+audio.register('story.music', (level) => {
+  const a = window.FinkAudio;
+  if (a?.currentGain) { try { a.currentGain.gain.value = level * (a.baseVolume ?? 1); } catch (e) { /* not started */ } }
+  if (a) a.masterLevel = level;
+}, { label: 'story music' });
+audio.register('story.foley', (level) => {
+  const f = window.FinkFoley;
+  if (f?.setMasterLevel) f.setMasterLevel(level);
+  else if (f?.masterGain) { try { f.masterGain.gain.value = level; } catch (e) { /* idem */ } }
+  if (f) f.masterLevel = level;
+}, { label: 'story foley' });
 
 bus.subscribe('minigame.start', (e) => {
   if (e.source === 'local') cluster.claim('audio', { label: e.data.type });
@@ -282,9 +306,27 @@ function buildUI() {
         <button type="button" id="foafos-forget" title="Delete the saved session">FORGET</button>
       </div>
     </section>
+    <section id="foafos-audio-wrap">
+      <h4>SOUND</h4>
+      <div class="foafos-row">
+        <button type="button" id="foafos-mute" aria-pressed="false"
+                title="Mute everything the shell can reach (Alt+M)">🔊</button>
+        <input type="range" id="foafos-vol" min="0" max="100" step="1" value="100"
+               aria-label="Volume">
+        <output id="foafos-vol-out" for="foafos-vol">100%</output>
+      </div>
+      <p id="foafos-audio-note" class="foafos-sub" role="status"></p>
+    </section>
     <section id="foafos-skin-wrap">
       <h4>SKIN</h4>
       <div id="skin-picker" role="group" aria-label="Visual skin"></div>
+    </section>
+    <section id="foafos-apps-wrap">
+      <h4>APPS</h4>
+      <div class="foafos-row">
+        <button type="button" id="foafos-home-btn" title="All apps (Alt+H)">⊞ Apps</button>
+        <button type="button" id="foafos-switch-btn" title="Running apps (Alt+Tab)">⧉ Running</button>
+      </div>
     </section>
     <section id="foafos-shelf-wrap">
       <h4>WINDOWS</h4>
@@ -487,6 +529,31 @@ function buildUI() {
       if (inst) window.FinkMinigames._closeInlineMinigame(inst.containerId, false);
     }
   });
+  // ── sound + apps controls ────────────────────────────────────────
+  const volEl = $('#foafos-vol');
+  const volOut = $('#foafos-vol-out');
+  const muteEl = $('#foafos-mute');
+  const noteEl = $('#foafos-audio-note');
+  const paintAudio = () => {
+    const c = audio.coverage();
+    volEl.value = String(Math.round(audio.volume * 100));
+    volOut.textContent = audio.muted ? 'muted' : `${Math.round(audio.volume * 100)}%`;
+    muteEl.textContent = audio.muted ? '🔇' : '🔊';
+    muteEl.setAttribute('aria-pressed', String(audio.muted));
+    // Say what we CANNOT reach. A mute button that silences three of four
+    // sources and pretends otherwise is worse than one that admits it.
+    noteEl.textContent = c.uncovered.length
+      ? `${c.uncovered.join(', ')} ${c.uncovered.length === 1 ? 'has' : 'have'} its own sound — the shell cannot turn it down`
+      : `${c.governed} source${c.governed === 1 ? '' : 's'} under control`;
+  };
+  volEl.addEventListener('input', () => audio.setVolume(volEl.value / 100));
+  muteEl.addEventListener('click', () => audio.toggleMute());
+  bus.subscribe('audio.volume', paintAudio);
+  paintAudio();
+
+  $('#foafos-home-btn').addEventListener('click', () => { openHome(); setDrawer(false); });
+  $('#foafos-switch-btn').addEventListener('click', () => { openSwitcher(); setDrawer(false); });
+
   bus.subscribe('wm.*', renderShelf);
   bus.subscribe('minigame.*', renderShelf);
   bus.subscribe('story.state', renderShelf);
@@ -581,6 +648,241 @@ function buildUI() {
     const spec = WIDGET_CATALOG.find(s => s.key === key);
     return spec ? openWidgetWindow(spec) : null;
   };
+
+  // ── HOME: the app grid ────────────────────────────────────────────
+  // The affordance every device has had for twenty years: a page of
+  // labelled icons, grouped, that opens things. Office, games and media
+  // in ONE grid, opened the same way, because the shell does not know
+  // which is which — that is the whole claim being tested.
+  function openHome() {
+    const existing = document.getElementById('foafos-home');
+    if (existing) { existing.remove(); return null; }
+    const home = document.createElement('div');
+    home.id = 'foafos-home';
+    home.className = 'foafos-overlay';
+    home.setAttribute('role', 'dialog');
+    home.setAttribute('aria-modal', 'true');
+    home.setAttribute('aria-label', 'All apps');
+    home.innerHTML = `<div class="foafos-overlay-head">
+        <h2>Apps</h2>
+        <button type="button" class="foafos-overlay-close" aria-label="Close apps">✕</button>
+      </div><div class="foafos-home-body"></div>`;
+    const body = home.querySelector('.foafos-home-body');
+
+    for (const fam of appsByFamily()) {
+      const sec = document.createElement('section');
+      sec.innerHTML = `<h3>${fam.icon} ${fam.label}</h3>`;
+      const grid = document.createElement('div');
+      grid.className = 'foafos-app-grid';
+      grid.setAttribute('role', 'list');
+      for (const app of fam.apps) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'foafos-app';
+        b.setAttribute('role', 'listitem');
+        b.dataset.app = app.id;
+        b.innerHTML = `<span class="ico" aria-hidden="true">${app.icon}</span><span class="nm"></span>`;
+        b.querySelector('.nm').textContent = app.name;
+        if (app.desc) b.title = app.desc;
+        b.setAttribute('aria-label', `${app.name}${app.desc ? ` — ${app.desc}` : ''}`);
+        b.addEventListener('click', () => { launchApp(app.id); home.remove(); });
+        grid.appendChild(b);
+      }
+      sec.appendChild(grid);
+      body.appendChild(sec);
+    }
+    home.querySelector('.foafos-overlay-close').addEventListener('click', () => home.remove());
+    home.addEventListener('keydown', (e) => { if (e.key === 'Escape') home.remove(); });
+    document.body.appendChild(home);
+    home.querySelector('.foafos-app')?.focus();
+    bus.publish('ui.home', { summary: 'Apps opened' });
+    return home;
+  }
+  FoafOS.openHome = openHome;
+
+  // One launch path for every family. A spreadsheet and a maze open the
+  // same way; only `kind` differs, and that is the shell's business.
+  function launchApp(id) {
+    const app = appById(id);
+    if (!app) return null;
+    bus.publish('app.launch', { summary: `Opening ${app.name}`, id, kind: app.kind });
+    switch (app.kind) {
+      case 'game':
+        window.FinkMinigames?.startMinigame(app.game, 'normal');
+        return null;
+      case 'story':
+        window.FinkPlayer?.loadFinkStory?.(app.url);
+        return null;
+      case 'panel':
+        return app.panel === 'maker' ? openMaker() : null;
+      case 'window':
+      default: {
+        const win = makeWindow(`${app.icon} ${app.name}`, 380, 460);
+        const frame = document.createElement('iframe');
+        frame.src = app.url;
+        frame.title = app.name;
+        // Office apps need their own storage and same-origin XHR; they
+        // are first-party code from this repo, not untrusted guests.
+        frame.setAttribute('sandbox',
+          'allow-scripts allow-same-origin allow-forms allow-popups allow-modals');
+        frame.style.cssText = 'flex:1;width:100%;border:0;min-height:0;';
+        win.appendChild(frame);
+        document.body.appendChild(win);
+        governAppFrame(frame, app, win);
+        return win;
+      }
+    }
+  }
+  FoafOS.launchApp = launchApp;
+
+  // An app window is not a minigame, so none of FinkMinigames' guest
+  // plumbing reaches it — and the first version of this shipped a
+  // channel player the master volume could not touch. The same probe
+  // applies: offer, listen, and register the app as governed or as
+  // ungovernable depending on whether it answers.
+  function governAppFrame(frame, app, win) {
+    const sinkId = `app:${app.id}:${win.dataset.wid}`;
+    // Only apps that declare they make noise get a coverage placeholder.
+    // Listing silent ones would drown the disclosure in spreadsheets.
+    if (app.audio) audio.register(sinkId, () => {}, { label: app.name, kind: 'uncontrollable' });
+
+    const onMsg = (e) => {
+      if (e.source !== frame.contentWindow) return;      // provenance, always
+      const d = e.data;
+      if (!d || d.type !== 'conformance') return;
+      if (!(d.contracts || []).includes('audio')) return;
+      audio.unregister(sinkId);
+      audio.register(sinkId, (level) => {
+        try {
+          frame.contentWindow?.postMessage({ type: 'audio-level', level,
+            volume: audio.volume, muted: audio.muted }, '*');
+        } catch (err) { /* closed */ }
+      }, { label: app.name, kind: 'app' });
+      bus.publish('sys.guest.conformance', {
+        summary: `${app.name} speaks: audio`, id: app.id, contracts: d.contracts,
+      });
+    };
+    window.addEventListener('message', onMsg);
+
+    // Offer the contract. An app using minigame-sdk.js answers as soon as
+    // it calls onAudio; one that never does keeps its own sound and is
+    // reported as such.
+    const offer = () => {
+      try {
+        frame.contentWindow?.postMessage({ type: 'init', config: {
+          mode: 'window', contracts: ['audio'],
+          audio: { level: audio.level, volume: audio.volume, muted: audio.muted },
+        }, variables: {} }, '*');
+      } catch (err) { /* not ready */ }
+    };
+    frame.addEventListener('load', offer);
+    setTimeout(offer, 400);
+
+    // Clean up with the window, or a closed app keeps a sink registered
+    // and the coverage count lies.
+    new MutationObserver((_, obs) => {
+      if (!win.isConnected) {
+        window.removeEventListener('message', onMsg);
+        audio.unregister(sinkId);
+        obs.disconnect();
+      }
+    }).observe(document.body, { childList: true });
+  }
+
+  // ── SWITCHER: recents ─────────────────────────────────────────────
+  // Alt-Tab on a desktop, the square button on Android, a double-tap of
+  // Home on a phone, the source list on a TV. One list of what is
+  // running, one keypress to move between them.
+  function openSwitcher() {
+    const old = document.getElementById('foafos-switcher');
+    if (old) { old.remove(); return null; }
+    const running = collectRunning();
+    const sw = document.createElement('div');
+    sw.id = 'foafos-switcher';
+    sw.className = 'foafos-overlay';
+    sw.setAttribute('role', 'dialog');
+    sw.setAttribute('aria-modal', 'true');
+    sw.setAttribute('aria-label', 'Running apps');
+    sw.innerHTML = `<div class="foafos-overlay-head">
+        <h2>Running <span class="hint">${running.length}</span></h2>
+        <button type="button" class="foafos-overlay-close" aria-label="Close switcher">✕</button>
+      </div><div class="foafos-switch-cards" role="list"></div>`;
+    const cards = sw.querySelector('.foafos-switch-cards');
+    if (!running.length) {
+      cards.innerHTML = '<p class="hint">Nothing else is running. Open something from Apps.</p>';
+    }
+    for (const r of running) {
+      const c = document.createElement('button');
+      c.type = 'button';
+      c.className = 'foafos-switch-card';
+      c.setAttribute('role', 'listitem');
+      c.innerHTML = `<span class="ico" aria-hidden="true">${r.icon}</span>
+        <span class="ttl"></span><span class="sub"></span>`;
+      c.querySelector('.ttl').textContent = r.label;
+      c.querySelector('.sub').textContent = r.detail || '';
+      c.setAttribute('aria-label', `${r.label}${r.detail ? `, ${r.detail}` : ''}`);
+      c.addEventListener('click', () => { r.focus(); sw.remove(); });
+      cards.appendChild(c);
+    }
+    sw.querySelector('.foafos-overlay-close').addEventListener('click', () => sw.remove());
+    sw.addEventListener('keydown', (e) => { if (e.key === 'Escape') sw.remove(); });
+    document.body.appendChild(sw);
+    cards.querySelector('button')?.focus();
+    bus.publish('ui.switcher', { summary: `Switcher: ${running.length} running` });
+    return sw;
+  }
+  FoafOS.openSwitcher = openSwitcher;
+
+  // Everything that counts as "running", from every subsystem that has
+  // its own idea of what a window is.
+  function collectRunning() {
+    const out = [];
+    const mg = window.FinkMinigames;
+    out.push({
+      icon: '📖', label: 'Story',
+      detail: window.FinkInkEngine?.storyStack?.length ? `dream depth ${FinkInkEngine.storyStack.length}` : '',
+      focus: () => { window.FinkWM?.active && FinkWM.mode === 'full' && FinkWM.setMode('split'); },
+    });
+    if (mg?.active && mg.currentType) {
+      const info = mg.minigameInfo?.[mg.currentType] || {};
+      out.push({
+        icon: info.icon || '🎮', label: info.title || mg.currentType,
+        detail: (window.FinkWM?.mode || '').toUpperCase() + (mg.windowState?.paused ? ' paused' : ''),
+        focus: () => window.FinkWM?.setMode('full'),
+      });
+    }
+    for (const inst of (mg?.instances?.values?.() || [])) {
+      if (inst.kind !== 'inline') continue;
+      const info = mg.minigameInfo?.[inst.type] || {};
+      out.push({
+        icon: info.icon || '🎮', label: `${info.title || inst.type}`, detail: `in the story · ${inst.id}`,
+        focus: () => document.getElementById(inst.containerId)
+          ?.scrollIntoView({ block: 'center', behavior: 'smooth' }),
+      });
+    }
+    for (const win of document.querySelectorAll('.foafos-window')) {
+      out.push({
+        icon: '🪟', label: win.querySelector('.foafos-window-bar span')?.textContent || 'window',
+        detail: 'window',
+        focus: () => {
+          document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
+          win.style.zIndex = 2630;
+          win.scrollIntoView({ block: 'nearest' });
+        },
+      });
+    }
+    return out;
+  }
+
+  // Keyboard: the two shortcuts every desktop already trains people on.
+  // Not captured while typing — a text field must keep its keys.
+  document.addEventListener('keydown', (e) => {
+    const t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    if (e.altKey && e.key === 'Tab') { e.preventDefault(); openSwitcher(); }
+    else if (e.altKey && (e.key === 'h' || e.key === 'H')) { e.preventDefault(); openHome(); }
+    else if (e.altKey && (e.key === 'm' || e.key === 'M')) { e.preventDefault(); audio.toggleMute(); }
+  });
 
   // ── the Maker window: the creator's x-ray of the delivery engine ──
   // Zoom out: the dream stack + story state. Zoom mid: every live story
