@@ -111,6 +111,13 @@
             // wrapper (which has nothing to animate).
             // the shell says the window has stopped moving — rebuild now
             if (d.type === 'resized') relayResize();
+            // The SDK turns a host key press into a KeyboardEvent on THIS
+            // document — but the game is a frame deeper, so it never sees
+            // it and the shell's pad does nothing. Pass the raw message on
+            // and let the nested game's own bridge replay it there.
+            if (d.type === 'key' && event.source !== gameFrame.contentWindow) {
+                try { gameFrame.contentWindow?.postMessage(d, '*'); } catch (e) { /* not ready */ }
+            }
             if (d.type === 'debug' && event.source !== gameFrame.contentWindow) {
                 try { gameFrame.contentWindow?.postMessage(d, '*'); } catch (e) { /* not ready */ }
             }

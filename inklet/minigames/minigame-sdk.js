@@ -314,7 +314,7 @@ class MinigameSDK {
 
             case 'key':
                 // Handle keyboard events from parent d-pad
-                this._dispatchKeyEvent(data.event, data.key, data.code);
+                this._dispatchKeyEvent(data.event, data.key, data.code, data.repeat);
                 break;
 
             case 'debug':
@@ -355,12 +355,15 @@ class MinigameSDK {
      * Dispatch a synthetic keyboard event
      * Used for mobile d-pad controls sent from parent
      */
-    _dispatchKeyEvent(eventType, key, code) {
+    _dispatchKeyEvent(eventType, key, code, repeat = false) {
         const event = new KeyboardEvent(eventType, {
             key: key,
             code: code || key,
             keyCode: this._getKeyCode(key),
             which: this._getKeyCode(key),
+            // a held pad button autorepeats in the host's input service;
+            // games read e.repeat to tell a hold from a fresh tap
+            repeat: !!repeat,
             bubbles: true,
             cancelable: true
         });

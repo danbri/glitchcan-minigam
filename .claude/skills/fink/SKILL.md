@@ -90,6 +90,37 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   it ends up under browser chrome. Use `100dvh`, never `100vh`, for
   window/app height. Pad shows only when: game active + controls≠none +
   not pip + no gamepad + pointer:coarse (tests need `hasTouch: true`).
+- **Accepting the service means handling `key`.** Field report, July
+  2026: *"for Minigam & Robbin, the A B buttons weren't working as go"* —
+  true, and worse. Robbin answered the probe and hid its own pad, but had
+  no `key` case in its message handler, so inside the shell it had NO
+  touch input at all. Verified by measurement, not by reading. If a guest
+  hides its controls, prove a press arrives.
+- **A game one frame deeper than the SDK never sees the SDK's event.**
+  The SDK dispatches its synthetic KeyboardEvent on ITS document; for a
+  wrapper (gridluck, battleboids) that is not where the game is. The
+  wrapper forwards the raw message and `inklet/minigames/host-keys.js`
+  replays it in the game's own frame. Include it in the nested document.
+- **`repeat` rides along.** A held button autorepeats in the service;
+  games read `e.repeat` to tell a hold from a fresh tap (robbin's jumpTap
+  and its Konami reader both do), so it must survive the postMessage.
+- Careful reading the pad's absence: `controls: "none"` in the manifest
+  (gridluck, battleboids — they swipe the canvas) means never offered,
+  which is NOT the same as retracted by the conformance probe. Check
+  `FinkMinigames.currentControls` before concluding.
+- Testing the pad: `dispatchEvent('pointerdown')` in Playwright makes an
+  event with a pointerId the browser is not tracking, so
+  `setPointerCapture` throws and the press is skipped. Drive it with
+  `page.mouse` instead. (The service now guards the capture, so one odd
+  pointer event no longer eats the press.) Directions are NOT four
+  buttons — `.foaf-pad-dir` is one joystick surface, so a direction is a
+  pointer landing off-centre.
+- `e2e-input.mjs` plays the Konami code once per controller: keyboard
+  (guest focused), keyboard (shell focused), on-screen pad, gamepad. Ten
+  ordered presses that reset on any wrong token — the strictest proof
+  that a controller is wired and not merely present. Assert on
+  `unlockTeleport`, NOT `creditsOpen()`: `showCredits()` opens ROBBAMP
+  these days and never touches the `#credits` element.
 - Verb protocol (spec §5.2): guests declare natively-handled shell verbs
   in `ready` (`capabilities.verbs: ['quit','audio']`). Declared → shell
   delegates (no frost over native pause; ✕ sends `quit` and the game's

@@ -317,7 +317,26 @@ Directional input belongs to the shell, not to each guest:
 - Autorepeat, deadzones and edge-detection are the service's policy
   (`packages/foafos/src/input.mjs`). A connected gamepad retires the
   on-screen pad.
+- **Accepting the service obliges the guest to handle `key` — normative.**
+  A guest that hides its own controls and does not act on the host's
+  `{ type:'key', … }` message has no input at all. Guests using the SDK
+  get this free; a guest with its own bridge MUST implement the case.
+- **A guest whose game lives in a nested frame MUST forward the raw
+  message.** The SDK dispatches its synthetic KeyboardEvent on the
+  document it was loaded in, which for a wrapper is not where the game
+  is. Include `inklet/minigames/host-keys.js` in the nested document to
+  replay it.
+- **`repeat` is part of the message — normative.** The service
+  autorepeats a held button; games use `e.repeat` to tell a hold from a
+  fresh tap, so the flag MUST survive the trip to the guest.
 - Window geometry MUST use the visible viewport (`100dvh`), not `100vh`.
+
+Verified end-to-end in `inklet/finkapp/test/e2e-input.mjs`, which plays
+the Konami code once per controller — keyboard with the guest focused,
+keyboard with the shell focused, the on-screen pad, and a gamepad. Ten
+ordered presses mixing directions with A and B, where any wrong token
+resets the sequence, is the strictest available proof that a controller
+is genuinely wired rather than merely present.
 
 ### 5.1.2 The conformance probe — normative
 

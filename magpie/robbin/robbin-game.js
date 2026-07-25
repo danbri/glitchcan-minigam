@@ -838,6 +838,21 @@ class Game {
           this.embedStart(d.config?.mode);
         }
         else if (d.type === 'controls') { this.applyHostControls(d.controls); }
+        // Input is a host service, and we HIDE our own pad when the host
+        // provides one — so without this case, accepting the service left
+        // us with no input at all on touch. (Field report: "the A B
+        // buttons weren't working as go".) Replay the host's press as a
+        // real key event so bindInput() — the one input path, which the
+        // Konami reader also sits on — handles it identically to a
+        // physical keyboard. `repeat` must survive the trip: the shell
+        // autorepeats a held button, and bindInput() uses e.repeat to
+        // tell a fresh tap from a hold.
+        else if (d.type === 'key') {
+          dispatchEvent(new KeyboardEvent(d.event === 'keyup' ? 'keyup' : 'keydown', {
+            key: d.key, code: d.code || d.key, repeat: !!d.repeat,
+            bubbles: true, cancelable: true,
+          }));
+        }
         else if (d.type === 'pause') { if (this.state === 'play') this.state = 'paused'; }
         else if (d.type === 'resume') { if (this.state === 'paused') this.state = 'play'; }
         else if (d.type === 'audio-blur') { this._audioFocus = false; this.duckForSpeech(true); }
@@ -1071,9 +1086,12 @@ class Game {
     // ↑↑↓↓←→←→BA — the old song opens the credits. On touch, the JUMP
     // button hums both the B and the A.
     const KONAMI = ['up', 'up', 'down', 'down', 'left', 'right', 'left', 'right', 'b', 'a'];
+    // Escape is what a real B button sends (the shell maps action 'b' →
+    // Escape), so a gamepad or the on-screen pad can play the song too,
+    // not just a keyboard with letter keys.
     const KONA_KEYS = {
       ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
-      b: 'b', B: 'b', a: 'a', A: 'a', ' ': 'jump', z: 'jump', Z: 'jump',
+      b: 'b', B: 'b', Escape: 'b', a: 'a', A: 'a', ' ': 'jump', z: 'jump', Z: 'jump',
     };
     this._kona = 0;
     this.feedKonami = tok => {
@@ -1084,6 +1102,11 @@ class Game {
     };
     addEventListener('keydown', e => {
       if (!e.repeat && KONA_KEYS[e.key]) this.feedKonami(KONA_KEYS[e.key]);
+      // ↑↑↓↓←→←→ then B: at that point the player is plainly playing the
+      // song, not asking to quit, so the song eats the keystroke. Only
+      // Escape needs this — the arrows and JUMP stay live throughout, so
+      // an accidental ↑↑↓↓←→←→ during play still moves the bird.
+      if (e.key === 'Escape' && this._kona === KONAMI.length - 1) return;
       if (e.key === 'Enter') {
         if (this.creditsOpen()) { this.hideCredits(); return; }
         if (this.optionsOpen()) { this.hideOptions(); return; }

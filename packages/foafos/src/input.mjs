@@ -118,7 +118,12 @@ export class FoafInput {
       el.style.touchAction = 'none';
       el.addEventListener('pointerdown', (e) => {
         e.preventDefault();
-        el.setPointerCapture?.(e.pointerId);
+        // Capture keeps the press alive if the thumb slides off the
+        // button — but it THROWS on a pointerId the browser is not
+        // tracking, and an exception here would skip the press entirely.
+        // Losing capture is a slightly worse press; losing the press is
+        // no press at all.
+        try { el.setPointerCapture?.(e.pointerId); } catch { /* uncaptured pointer */ }
         el.classList.add('pressed');
         this.press(action, 'touch');
       });
@@ -172,7 +177,7 @@ export class FoafInput {
     el.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       active = e.pointerId;
-      el.setPointerCapture?.(e.pointerId);
+      try { el.setPointerCapture?.(e.pointerId); } catch { /* uncaptured pointer */ }
       steer(e);
     });
     el.addEventListener('pointermove', (e) => { if (active === e.pointerId) steer(e); });

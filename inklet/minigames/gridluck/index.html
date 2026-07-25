@@ -72,6 +72,17 @@
             console.log('[GridLuck] Terminated:', reason);
         });
 
+        // The SDK turns a host key press into a KeyboardEvent on THIS
+        // document — but the game is a frame deeper, so it never sees it
+        // and the shell's pad does nothing. Pass the raw message on;
+        // host-keys.js replays it in the game's own frame.
+        window.addEventListener('message', (event) => {
+            const d = event.data;
+            if (!d || d.type !== 'key') return;
+            if (event.source === gameFrame.contentWindow) return;
+            try { gameFrame.contentWindow?.postMessage(d, '*'); } catch (e) { /* not ready */ }
+        });
+
         // Monitor game state and sync progress
         setInterval(() => {
             if (!gameActive) return;

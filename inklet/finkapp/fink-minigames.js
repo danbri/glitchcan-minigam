@@ -299,7 +299,9 @@ window.FinkMinigames = {
                 // For continuous movement, repeat keydown every 50ms
                 repeatInterval = setInterval(() => {
                     if (isPressed) {
-                        this._sendKeyToIframe(key, 'keydown');
+                        // repeat:true — a hold is not a stream of fresh
+                        // taps, and guests read e.repeat to tell them apart
+                        this._sendKeyToIframe(key, 'keydown', null, true);
                     }
                 }, 50);
             };
@@ -379,7 +381,7 @@ window.FinkMinigames = {
     },
 
     // Send keyboard event to iframe minigame
-    _sendKeyToIframe(key, eventType, code = null) {
+    _sendKeyToIframe(key, eventType, code = null, repeat = false) {
         if (!this.iframeMinigame) return;
 
         // Send via postMessage to iframe
@@ -387,7 +389,8 @@ window.FinkMinigames = {
             type: 'key',
             event: eventType,
             key: key,
-            code: code || key
+            code: code || key,
+            repeat: repeat
         }, '*');
     },
 

@@ -159,7 +159,11 @@ input.addSink((e) => {
     if (map) {
       mg.iframeMinigame.contentWindow?.postMessage({
         type: 'key', event: e.phase === 'press' ? 'keydown' : 'keyup',
-        key: map.key, code: map.code,
+        // A held button autorepeats here, in the input service. Guests
+        // use e.repeat to tell a fresh tap from a hold (robbin's jumpTap,
+        // its Konami reader), so the flag has to survive the trip or
+        // every repeat reads as a new press.
+        key: map.key, code: map.code, repeat: !!e.repeat,
       }, '*');
     }
   }

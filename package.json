@@ -29,7 +29,7 @@
     "fink:vars": "node inklet/tools/fink-vars.mjs",
     "fink:vars:strict": "node inklet/tools/fink-vars.mjs --strict",
     "fink:universe": "node inklet/tools/fink-universe.mjs",
-    "test:fink:e2e": "node inklet/finkapp/test/e2e.mjs && node inklet/finkapp/test/e2e-wm.mjs && node inklet/finkapp/test/e2e-robbin.mjs && node inklet/finkapp/test/e2e-foafos.mjs && node inklet/finkapp/test/e2e-dream.mjs && node inklet/finkapp/test/e2e-vars.mjs && node inklet/finkapp/test/e2e-boidwars.mjs && node inklet/finkapp/test/skins-a11y.mjs && node inklet/finkapp/test/aria-audit.mjs"
+    "test:fink:e2e": "node inklet/finkapp/test/e2e.mjs && node inklet/finkapp/test/e2e-wm.mjs && node inklet/finkapp/test/e2e-robbin.mjs && node inklet/finkapp/test/e2e-foafos.mjs && node inklet/finkapp/test/e2e-dream.mjs && node inklet/finkapp/test/e2e-vars.mjs && node inklet/finkapp/test/e2e-boidwars.mjs && node inklet/finkapp/test/e2e-input.mjs && node inklet/finkapp/test/skins-a11y.mjs && node inklet/finkapp/test/aria-audit.mjs"
   },
   "repository": {
     "type": "git",
