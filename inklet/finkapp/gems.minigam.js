@@ -83,9 +83,14 @@ window.GemsMinigame = {
         const cfg = this.config[this.mode];
         this.totalSpawned++;
 
-        const gem = document.createElement('div');
+        // A BUTTON, not a decorated div: tab-reachable, named, and
+        // Enter/Space collect it with no extra code. (Audit 2026-07: the
+        // shipped minigames had no keyboard path to anything at all.)
+        const gem = document.createElement('button');
+        gem.type = 'button';
         gem.className = this.mode === 'mega' ? 'gem mega-gem' : 'gem';
         gem.textContent = cfg.emojis[Math.floor(Math.random() * cfg.emojis.length)];
+        gem.setAttribute('aria-label', this.mode === 'mega' ? 'Mega gem' : 'Gem');
 
         // Random position (with padding)
         const padding = 10;
@@ -116,8 +121,9 @@ window.GemsMinigame = {
     },
 
     // Collect a gem
-    collectGem(gemElement) {
-        if (!this.active || gemElement.classList.contains('collected')) return;
+    collectGem(gem) {
+        if (!this.active || gem.classList.contains('collected')) return;
+        const gemElement = gem;
 
         gemElement.classList.add('collected');
         this.collected++;
@@ -126,6 +132,14 @@ window.GemsMinigame = {
         if (this.scoreDisplay) {
             this.scoreDisplay.textContent = this.collected;
         }
+        gem.disabled = true;
+        // A score that only exists as a changing number on screen is
+        // invisible to a screen reader. Say it, through the shell's
+        // pooled announcer.
+        window.FoafOS?.bus.publish('guest.announce', {
+            summary: `${this.mode === 'mega' ? 'Mega gem' : 'Gem'} collected, ${this.collected} total`,
+            type: 'gems', text: `${this.collected} collected`,
+        });
 
         // Play collection sound
         this.playCollectSound();

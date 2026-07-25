@@ -11,7 +11,7 @@
 </style>
 </head>
 <body>
-<canvas id=game></canvas>
+<canvas id=game aria-label="GridLuck maze"></canvas>
 <div id=ui style="position:fixed;top:0;left:0;padding:4px; z-index:50;"></div>
 <div id="controlsDiv">
     <button id="teleportBtn">Teleport (T)</button>
@@ -23,10 +23,40 @@
     <button id="playAgainBtn" style="padding:12px 25px; font-size:22px; background: #ff0; color:#000; border:2px solid #ff0; border-radius: 5px; cursor:pointer; font-family:monospace;">Play Again</button>
 </div>
 
+<!-- Pooled guest accessibility (aria-live region + canvas describer +
+     an announce() that reaches the shell's own announcer). The whole
+     game is one canvas, so without this a screen reader gets an
+     unlabelled box and silence. -->
+<script src="../inklet/minigames/guest-a11y.js"></script>
+<script src="../inklet/minigames/debug-clock.js"></script>
 <script type="module">
 import { Game } from './gridluck-game.js';
 
 // Initialize the game when DOM is ready
-addEventListener('DOMContentLoaded', () => new Game());
+addEventListener('DOMContentLoaded', () => {
+  const game = new Game();
+  // headless-playtest + a11y hook, the convention used by __robbin,
+  // __tftt and __boidwars
+  window.__gridluck = {
+    game,
+    get score() { return game.score; },
+    get level() { return game.level; },
+  };
+  const a = window.__mgA11y;
+  if (a) {
+    a.describeCanvas(document.getElementById('game'), () =>
+      `GridLuck maze. Score ${game.score ?? 0}${game.level != null ? `, level ${game.level}` : ''}.`);
+    let last = null;
+    setInterval(() => {
+      const s = game.score ?? 0;
+      if (last != null && s !== last) a.announce(`Score ${s}`);
+      last = s;
+      const over = document.getElementById('gameOverScreen');
+      if (over && over.style.display !== 'none' && over.style.display !== '') {
+        a.announce(document.getElementById('gameOverMessageText')?.textContent || 'Game over');
+      }
+    }, 900);
+  }
+});
 </script>
 </body></html>

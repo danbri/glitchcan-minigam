@@ -4,12 +4,30 @@
   "title": "GridLuck",
   "description": "Zone-grid treasure crawl with keys, locks and synergies. Wraps thumbwar/ in the minigame SDK.",
   "entry": "index.html",
-  "sandbox": { "timeout": 600000 },
+  "sandbox": {
+    "timeout": 600000
+  },
   "controls": "none",
   "variables": {
-    "read": ["difficulty", "player_level", "keys"],
-    "write": ["gridluck_won", "gridluck_score", "minigame_played", "diamonds", "score"]
+    "read": [
+      "difficulty",
+      "player_level",
+      "keys"
+    ],
+    "write": [
+      "gridluck_won",
+      "gridluck_score",
+      "minigame_played",
+      "diamonds",
+      "score"
+    ]
   },
-  "modes": ["normal"],
-  "ui": { "width": "100%", "height": "100%", "background": "#0b0b12" }
+  "modes": [
+    "normal"
+  ],
+  "ui": {
+    "width": "100%",
+    "height": "100%",
+    "background": "#0b0b12"
+  }
 }

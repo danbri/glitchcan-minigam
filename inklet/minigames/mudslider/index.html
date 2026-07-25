@@ -55,6 +55,7 @@
     </div>
 
     <!-- Load the SDK -->
+    <script src="../guest-a11y.js"></script>
     <script src="../debug-clock.js"></script>
     <script src="../minigame-sdk.js"></script>
 
@@ -132,6 +133,25 @@
         }
 
         // SDK event handlers
+        // Spec 5.1.1: input is a HOST service. When the shell says it is
+        // providing the pad, a guest MUST hide its own touch controls —
+        // otherwise the player gets two overlapping sets, which is
+        // exactly what a screenshot of this game showed: the shell's
+        // joystick sitting on top of these four arrow buttons.
+        function applyControlPolicy(config) {
+            const hostOwnsInput = config?.controls?.provider === 'host';
+            const el = gameState.gameElement;
+            const root = el && el.shadowRoot;
+            if (!root) return;
+            let style = root.getElementById('fink-control-policy');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'fink-control-policy';
+                root.appendChild(style);
+            }
+            style.textContent = hostOwnsInput ? '#controls { display: none !important; }' : '';
+        }
+
         sdk.onInit((config, variables) => {
             console.log('[Mudslider] Initialized with config:', config);
             console.log('[Mudslider] Variables:', variables);
@@ -141,6 +161,9 @@
             if (!gameState.gameElement) {
                 createGame();
             }
+            // the element may only just have upgraded; try now and once more
+            applyControlPolicy(config);
+            setTimeout(() => applyControlPolicy(config), 400);
 
             // Auto-start the game (skip "Ready?" button)
             setTimeout(() => {

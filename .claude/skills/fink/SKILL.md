@@ -276,6 +276,66 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
 - It patches ONE document: a guest wrapping another game in a nested
   iframe must forward the `debug` message inward.
 
+## Guest instances: provenance is the capability model
+
+- Every running guest gets a record in `FinkMinigames.instances` and ONE
+  module-level listener routes by `event.source`. Before July 2026 both
+  message paths were bare `window.addEventListener('message', …)` with no
+  provenance check: two copies of a widget each ran both handlers, they
+  shared one `lastSync`, closing one removed the listener the other was
+  using, and ANY frame on the page could post `set-variable` and have it
+  applied with the focused guest's grants. **A manifest attached to a
+  TYPE means nothing if the host cannot tell which frame is speaking.**
+- `_guestActor(inst)` takes the instance. The no-arg form is host reads
+  only — never use it for anything a guest can trigger.
+- `WindowProxy` identity survives navigation inside a browsing context,
+  so `event.source === iframe.contentWindow` still matches after a
+  wrapper page redirects (robbin does exactly that).
+- Unrouted SDK vocabulary publishes `sys.guest.unrouted` and is dropped.
+  Often innocent (a nested wrapper relaying its own chatter), but a
+  spoof looks identical and silence would hide both.
+- Ids must come from a COUNTER. `inline-minigame-${Date.now()}` gave two
+  widgets opened in the same millisecond the same id, so the second
+  overwrote the first's record.
+- The shelf lists embedded guests under "In the story", one row per
+  instance. E2E: `node inklet/finkapp/test/e2e-instances.mjs` — it posts
+  its attacks from INSIDE a real guest frame.
+- Still one window-mode game at a time: that is FinkWM's model. Multiple
+  simultaneous game *windows* is unblocked, not done.
+
+## Guest accessibility (spec §5.1.1 + the July 2026 audit)
+
+- Audited baseline: six packaged guests, ZERO `aria-*` attributes
+  between them, no live regions, no headings, and no keyboard-reachable
+  element in the three canvas games. Shell-level ARIA was already fine —
+  the entire gap was inside the guests.
+- `inklet/minigames/guest-a11y.js` is the pooled service, included by
+  every guest: sr-only `role=status` region, sr-only `<h1>`, `role="img"`
+  + a LIVE `aria-label` on the canvas via a per-game describer, and
+  `__mgA11y.announce()` (deduped — a loop that announces every frame is
+  worse than silence, a reader never finishes a sentence).
+- Announcements are POOLED: they reach the guest's own live region AND,
+  via `guest.announce` on the bus, the shell's `#foafos-announcer` —
+  which survives the guest closing and is the only place that can say
+  WHICH of two copies spoke.
+- The cheapest big win is turning clickable divs into `<button>`s: tab
+  order, name, Enter/Space and a focus ring, all for free. That single
+  change is most of gems' accessibility. Remember to strip the UA button
+  chrome in CSS and add `:focus-visible`.
+- A canvas game cannot be made playable by roles alone — it needs a text
+  mode. Narration is commentary, not an interface. Say so rather than
+  claiming a canvas game is accessible.
+- Guests MUST hide their own touch controls when
+  `init.config.controls.provider === 'host'`. Mudslider didn't, and drew
+  its arrows underneath the shell's joystick — visible only in a
+  screenshot.
+- Sweep: `node inklet/finkapp/test/sweep-minigames.mjs --shots` boots
+  every widget any story invokes and reports boot/ready/drew/grants plus
+  a11y counts. Measure across ALL frames a guest owns — four of seven are
+  wrappers around a nested game, and measuring only the outer frame
+  reports the wrapper's empty document and flatters the result.
+- Full findings + rankings: `docs/minigame-review-20260725.md`.
+
 ## Actually playing a guest headless
 
 `node inklet/finkapp/test/play-boidwars.mjs [--turns N] [--slow N] [--shots]`

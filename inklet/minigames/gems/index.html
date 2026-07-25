@@ -7,15 +7,20 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="game-container">
+    <main id="game-container">
+        <!-- The score and clock must be readable, not just visible.
+             aria-live on the HUD would fire every tick, so the count is
+             polite+atomic and the timer is off (announced at milestones
+             by game.js instead). -->
         <div id="hud">
-            <div id="score">Gems: <span id="gem-count">0</span></div>
-            <div id="timer">Time: <span id="time-left">30</span>s</div>
+            <div id="score" role="status" aria-live="polite" aria-atomic="true">Gems: <span id="gem-count">0</span></div>
+            <div id="timer" aria-hidden="true">Time: <span id="time-left">30</span>s</div>
         </div>
-        <div id="play-area"></div>
-        <div id="message" class="hidden"></div>
-    </div>
+        <div id="play-area" role="group" aria-label="Gem field — Tab between gems, Enter to collect"></div>
+        <div id="message" class="hidden" role="status" aria-live="assertive"></div>
+    </main>
 
+    <script src="../guest-a11y.js"></script>
     <script src="../debug-clock.js"></script>
     <script src="../minigame-sdk.js"></script>
     <script src="game.js"></script>

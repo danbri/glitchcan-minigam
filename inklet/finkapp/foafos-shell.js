@@ -230,6 +230,11 @@ function buildAnnouncer() {
     'session.saved': () => 'Session saved, encrypted on this device',
     'ui.skin': (d) => `Skin ${d.skin}`,
     'sys.guest.denied': (d) => `Blocked: ${d.guest} tried to publish ${d.topic}`,
+    'sys.guest.unrouted': (d) => d.summary,
+    // Pooled from the guests themselves (guest-a11y.js). A canvas game
+    // has nothing for a screen reader to read; this is how it speaks.
+    'guest.announce': (d) => d.summary,
+    'minigame.instance': (d) => d.summary,
     'story.state': (d) => d.phase === 'fault' ? 'Story error'
       : d.phase === 'loading' ? 'Loading' : d.depth ? `Dream depth ${d.depth}` : null,
   };
@@ -396,6 +401,28 @@ function buildUI() {
       });
     }
 
+    // Guests embedded in the story flow are windows too. They were
+    // invisible here, which is what "multiply instantiated yet only show
+    // up as one in the window list" actually meant: the list only ever
+    // showed the ONE full-window game. Every running instance now has an
+    // id, so every one of them can be named — two copies of the same
+    // widget are two rows, not one.
+    const embedded = [...(mg?.instances?.values?.() || [])].filter(i => i.kind === 'inline');
+    if (embedded.length) {
+      nodes.push({
+        id: 'embedded', icon: '🪟', label: 'In the story', badge: String(embedded.length),
+        children: embedded.map((inst) => {
+          const info = mg.minigameInfo?.[inst.type] || {};
+          return {
+            id: `inst:${inst.id}`,
+            icon: info.icon || '🎮',
+            label: `${info.title || inst.type} · ${inst.id}`,
+            actions: [{ id: 'close', icon: '✕', label: 'Close' }],
+          };
+        }),
+      });
+    }
+
     const wins = [...document.querySelectorAll('.foafos-window')];
     if (wins.length) {
       nodes.push({
@@ -429,10 +456,28 @@ function buildUI() {
         win.style.zIndex = 2630;
         setDrawer(false);
       }
+    } else if (id.startsWith('inst:')) {
+      // scroll the embedded guest into view and mark it — with two
+      // copies of one widget on screen, "which one did I just pick" is
+      // the whole question the list has to answer
+      const inst = window.FinkMinigames?.instances?.get(id.slice(5));
+      const el = inst && document.getElementById(inst.containerId);
+      if (el) {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        el.classList.add('inline-minigame-located');
+        setTimeout(() => el.classList.remove('inline-minigame-located'), 1600);
+        setDrawer(false);
+      }
     }
   });
   shelfTree.addEventListener('tree-action', (e) => {
-    if (e.detail.action === 'close' && e.detail.id.startsWith('win:')) winById(e.detail.id)?.remove();
+    const { action, id } = e.detail;
+    if (action !== 'close') return;
+    if (id.startsWith('win:')) winById(id)?.remove();
+    else if (id.startsWith('inst:')) {
+      const inst = window.FinkMinigames?.instances?.get(id.slice(5));
+      if (inst) window.FinkMinigames._closeInlineMinigame(inst.containerId, false);
+    }
   });
   bus.subscribe('wm.*', renderShelf);
   bus.subscribe('minigame.*', renderShelf);

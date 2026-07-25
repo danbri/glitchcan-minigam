@@ -772,6 +772,26 @@ body[data-wm-mode="split"] #minigame-view.state-split {
     transition: transform var(--transition-fast);
     user-select: none;
     animation: gemPulse 1s ease-in-out infinite;
+    /* A gem is a <button> now (keyboard + screen reader). Strip the
+       chrome the UA adds; keep everything the player could see. */
+    background: none;
+    border: 0;
+    padding: 0;
+    line-height: 1;
+    color: inherit;
+    font-family: inherit;
+}
+/* Keyboard players must be able to SEE which gem is selected. */
+.gem:focus-visible {
+    outline: 3px solid var(--sk-accent, #4fd);
+    outline-offset: 4px;
+    border-radius: 6px;
+    transform: scale(1.3);
+}
+/* The pulse is decorative and constant; it is exactly what
+   prefers-reduced-motion is for. */
+@media (prefers-reduced-motion: reduce) {
+    .gem, .gem.mega-gem { animation: none; }
 }
 .gem.mega-gem {
     font-size: 3em;
@@ -920,4 +940,21 @@ body[data-wm-mode="split"] #minigame-view.state-split {
     font-size: 1.5em;
     color: var(--zx-cyan);
     margin-bottom: 1em;
+}
+
+/* "Which one did I just pick?" — with two copies of the same widget on
+   screen, selecting one in the window list has to point at a specific
+   one. Honours reduced-motion: the ring still appears, it just doesn't
+   pulse. */
+.inline-minigame-located {
+    outline: 3px solid var(--sk-accent, #4fd);
+    outline-offset: 3px;
+    animation: inline-locate 1.6s ease-out;
+}
+@keyframes inline-locate {
+    0%, 40% { outline-color: var(--sk-accent, #4fd); }
+    100% { outline-color: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .inline-minigame-located { animation: none; }
 }

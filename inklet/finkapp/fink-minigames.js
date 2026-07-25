@@ -2,18 +2,21 @@
 // Coordinates view switching and minigame lifecycle
 // Supports both inline minigames (gems, chess) and iframe-sandboxed minigames (mudslider)
 
+// The guest→host vocabulary (spec §5). Used to tell "a frame that is not
+// a guest said something meaningful" from ordinary page chatter.
+const GUEST_MESSAGE_TYPES = new Set([
+    'ready', 'progress', 'set-variable', 'complete', 'error', 'log', 'log-batch',
+    'announce',
+]);
+
 window.FinkMinigames = {
     // State
     active: false,
     currentType: null,
     currentMode: null,
-    iframeMinigame: null,  // Current iframe element
-    messageHandler: null,   // Bound message handler
-    // Delta-based sync: track last update to preserve parallel activity changes
-    lastSync: {
-        gameGems: 0,        // gems reported by game at last sync
-        storyDiamonds: 0    // diamonds we set in story at last sync
-    },
+    iframeMinigame: null,  // Current iframe element (window-mode game)
+    windowInstance: null,  // its instance record — see `instances` below
+    messageHandler: null,   // the single guest-message router (see _onGuestMessage)
     // Window state (pause, pin, minimize, maximize)
     windowState: {
         paused: false,
@@ -39,6 +42,82 @@ window.FinkMinigames = {
 
     // Active inline minigames (keyed by container ID)
     inlineMinigames: {},
+    _inlineSeq: 0,
+
+    // ---- Guest instances -------------------------------------------------
+    // Every running guest gets an id and is routed BY `event.source`.
+    //
+    // Before this, both message paths were bare `window.addEventListener(
+    // 'message', …)` with no provenance check at all. Consequences, all
+    // real: a second copy of the same widget answered for the first; two
+    // inline widgets each ran BOTH handlers, so one gem counted twice;
+    // and any frame on the page could post `set-variable` and have it
+    // applied with whatever grants the focused guest happened to hold.
+    //
+    // Provenance is the whole basis of the capability model. A manifest
+    // attached to a TYPE means nothing if the host cannot tell which
+    // frame is speaking.
+    instances: new Map(),
+    _instanceSeq: 0,
+
+    _registerInstance(rec) {
+        const id = `mg${++this._instanceSeq}`;
+        const inst = {
+            id,
+            grants: { read: [], write: [] },
+            lastSync: { gameGems: 0, storyDiamonds: 0 },
+            ...rec,
+        };
+        this.instances.set(id, inst);
+        window.FoafOS?.bus.publish('minigame.instance', {
+            summary: `${inst.type} instance ${id} opened (${this.instances.size} running)`,
+            id, type: inst.type, kind: inst.kind, count: this.instances.size,
+        });
+        return inst;
+    },
+
+    _dropInstance(inst) {
+        if (!inst || !this.instances.has(inst.id)) return;
+        this.instances.delete(inst.id);
+        window.FoafOS?.bus.publish('minigame.instance', {
+            summary: `${inst.type} instance ${inst.id} closed (${this.instances.size} running)`,
+            id: inst.id, type: inst.type, kind: inst.kind, count: this.instances.size, closed: true,
+        });
+    },
+
+    // WindowProxy identity survives navigation within a browsing context,
+    // so this still matches after a wrapper page redirects to the real
+    // game (robbin does exactly that).
+    _instanceForSource(source) {
+        if (!source) return null;
+        for (const inst of this.instances.values()) {
+            if (inst.iframe?.contentWindow && inst.iframe.contentWindow === source) return inst;
+        }
+        return null;
+    },
+
+    // The single router. One listener for the whole module.
+    _onGuestMessage(event) {
+        const data = event.data;
+        if (!data || typeof data.type !== 'string') return;
+
+        const inst = this._instanceForSource(event.source);
+        if (!inst) {
+            // Unrouted SDK traffic. Often innocent — a nested wrapper
+            // relaying its own chatter — but a spoof looks identical, and
+            // silence would hide both. Never treat it as a guest.
+            if (GUEST_MESSAGE_TYPES.has(data.type)) {
+                this.log(`Ignored unrouted "${data.type}" from an unregistered frame`);
+                window.FoafOS?.bus.publish('sys.guest.unrouted', {
+                    summary: `ignored "${data.type}" from a frame that is not a running guest`,
+                    msg: data.type,
+                });
+            }
+            return;
+        }
+        if (inst.kind === 'inline') this._handleInlineMessage(inst, data);
+        else this._handleIframeMessage(inst, data);
+    },
 
     // ---- Debug clock (host side) ---------------------------------------
     // The shell can run any guest at a fraction of real speed, or freeze
@@ -165,7 +244,12 @@ window.FinkMinigames = {
         this._initDPad();
 
         // Bind message handler for iframe communication
-        this.messageHandler = this._handleIframeMessage.bind(this);
+        // ONE listener for the whole module, installed once and never
+        // removed. Per-guest listeners were the bug: they all fired for
+        // every message on the page, and removing one on close tore down
+        // routing for widgets that were still running.
+        this.messageHandler = this._onGuestMessage.bind(this);
+        window.addEventListener('message', this.messageHandler);
 
         this.log('Minigames system initialized');
     },
@@ -694,9 +778,9 @@ window.FinkMinigames = {
     startIframeMinigame(type, mode = 'full') {
         this.log(`Starting iframe minigame: ${type} (${mode})`);
 
-        // Initialize delta-based sync tracking (preserves parallel activity changes)
+        // Delta-based sync baseline; it lives on the instance record so
+        // parallel widgets cannot measure their gems against each other's.
         const currentDiamonds = window.FinkInkEngine?.story?.variablesState?.['diamonds'] || 0;
-        this.lastSync = { gameGems: 0, storyDiamonds: currentDiamonds };
         this.log(`Starting sync: diamonds=${currentDiamonds}`);
 
         // Hide other containers
@@ -719,10 +803,16 @@ window.FinkMinigames = {
             iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
             iframe.id = `minigame-iframe-${type}`;
 
+            const inst = this._registerInstance({
+                type, kind: 'window', iframe,
+                lastSync: { gameGems: 0, storyDiamonds: currentDiamonds },
+            });
+            this.windowInstance = inst;
+
             // Until the manifest lands, the guest may write nothing. A
             // race that opened a hole would be worse than one that
             // briefly closed one.
-            this.currentGrants = { read: [], write: [] };
+            this.currentGrants = inst.grants;
 
             // Manifest 'features' become the iframe's permissions policy
             // (e.g. geolocation for teleport-home). Best-effort: no
@@ -739,15 +829,13 @@ window.FinkMinigames = {
                         iframe.allow = feats.map(f => `${f} 'src'`).join('; ');
                         this.log(`Manifest features granted: ${feats.join(', ')}`);
                     }
-                    this.currentGrants = this._normalizeGrants(manifest, type);
+                    inst.grants = this._normalizeGrants(manifest, type);
+                    this.currentGrants = inst.grants;
                     iframe.src = `../minigames/${type}/index.html`;
                 });
 
             this.elements.iframeContainer.appendChild(iframe);
             this.iframeMinigame = iframe;
-
-            // Setup message listener
-            window.addEventListener('message', this.messageHandler);
 
             // Wait for iframe to load, then send init
             iframe.onload = () => {
@@ -767,21 +855,21 @@ window.FinkMinigames = {
                             scheme: this.currentControls,
                         },
                     },
-                    variables: this._getStoryVariables(this._guestActor())
+                    variables: this._getStoryVariables(this._guestActor(inst))
                 });
                 // D-pad visibility is handled in startMinigame based on controls param
             };
         }
     },
 
-    // Handle messages from iframe minigame
-    _handleIframeMessage(event) {
-        const data = event.data;
-        if (!data || typeof data.type !== 'string') return;
-
-        this.log(`Iframe message: ${data.type}`);
+    // Handle messages from a window-mode guest. `inst` came from
+    // event.source — every piece of state this touches is that
+    // instance's, never the module's.
+    _handleIframeMessage(inst, data) {
+        this.log(`[${inst.id}/${inst.type}] ${data.type}`);
         window.FoafOS?.bus.publish('sys.sdk.rx',
-            { summary: `← ${data.type}`, msg: data.type, detail: data }, { source: 'sdk' });
+            { summary: `← ${data.type} (${inst.id})`, msg: data.type, from: inst.id, detail: data },
+            { source: 'sdk' });
 
         switch (data.type) {
             case 'ready':
@@ -790,46 +878,36 @@ window.FinkMinigames = {
                 // handles natively (its own dialogs/presentation). For those
                 // the shell DELEGATES instead of imposing its generic
                 // behavior. Undeclared verbs get the shell fallback.
-                this.guestVerbs = new Set(data.capabilities?.verbs || []);
+                inst.verbs = new Set(data.capabilities?.verbs || []);
+                this.guestVerbs = inst.verbs;
                 // a guest that starts while the shell is slowed must be
                 // slowed too, or debugging only works for the first game
                 if (this.debug.timeScale !== 1) {
-                    this._sendToIframe({ type: 'debug', timeScale: this.debug.timeScale });
+                    this._sendToIframe({ type: 'debug', timeScale: this.debug.timeScale }, inst);
                 }
                 break;
 
             case 'progress':
                 // Delta-based sync: preserves changes from parallel activities
                 if (data.data && data.data.gems !== undefined) {
-                    const currentGems = data.data.gems;
-                    const gameDelta = currentGems - this.lastSync.gameGems;
-                    const currentStoryDiamonds = FinkInkEngine?.story?.variablesState?.['diamonds'] || 0;
-                    const newDiamonds = currentStoryDiamonds + gameDelta;
-
-                    // A 'progress' report is the guest asking for a write.
-                    // It goes through the broker like any other, so a game
-                    // that never declared `diamonds` cannot mint them.
-                    if (this._setStoryVariable('diamonds', newDiamonds, this._guestActor())) {
-                        this.lastSync = { gameGems: currentGems, storyDiamonds: newDiamonds };
-                        this.log(`Progress: game=${currentGems} delta=+${gameDelta} diamonds=${newDiamonds}`);
-                    } else {
-                        // don't let a denied write accumulate as a debt the
-                        // next report would cash in
-                        this.lastSync.gameGems = currentGems;
-                    }
+                    this._applyGemDelta(inst, data.data.gems);
                 }
                 if (data.data?.score !== undefined) {
-                    this._setStoryVariable('score', data.data.score, this._guestActor());
+                    this._setStoryVariable('score', data.data.score, this._guestActor(inst));
                 }
                 break;
 
             case 'set-variable':
-                this._setStoryVariable(data.name, data.value, this._guestActor());
+                this._setStoryVariable(data.name, data.value, this._guestActor(inst));
                 break;
 
             case 'complete':
                 this.log('Minigame complete: ' + JSON.stringify(data.result));
-                this._handleIframeComplete(data.result);
+                this._handleIframeComplete(inst, data.result);
+                break;
+
+            case 'announce':
+                this._announce(inst, data.text);
                 break;
 
             case 'error':
@@ -854,10 +932,48 @@ window.FinkMinigames = {
         }
     },
 
-    // Send message to iframe
-    _sendToIframe(data) {
-        if (this.iframeMinigame && this.iframeMinigame.contentWindow) {
-            this.iframeMinigame.contentWindow.postMessage(data, '*');
+    // Pooled accessibility: a guest says something, the SHELL announces
+    // it. A sandboxed iframe's own live region works, but the host
+    // announcer is where the player's attention already is, it survives
+    // the guest closing, and with several widgets running it is the only
+    // place that can say WHICH one spoke.
+    _announce(inst, text) {
+        if (!text) return;
+        const info = this.minigameInfo[inst.type] || {};
+        const many = [...this.instances.values()].filter(i => i.type === inst.type).length > 1;
+        const who = many ? `${info.title || inst.type} ${inst.id}` : (info.title || inst.type);
+        window.FoafOS?.bus.publish('guest.announce', {
+            summary: `${who}: ${String(text).slice(0, 300)}`,
+            id: inst.id, type: inst.type, text,
+        });
+    },
+
+    // Per-instance gem→diamond bridge. Two widgets reporting gems used
+    // to share one `lastSync`, so each one's report was measured against
+    // the other's last total and the story's diamonds walked randomly.
+    _applyGemDelta(inst, currentGems) {
+        const gameDelta = currentGems - inst.lastSync.gameGems;
+        const storyDiamonds = FinkInkEngine?.story?.variablesState?.['diamonds'] || 0;
+        const newDiamonds = storyDiamonds + gameDelta;
+        // A 'progress' report is the guest asking for a write. It goes
+        // through the broker like any other, so a game that never
+        // declared `diamonds` cannot mint them.
+        if (this._setStoryVariable('diamonds', newDiamonds, this._guestActor(inst))) {
+            inst.lastSync = { gameGems: currentGems, storyDiamonds: newDiamonds };
+            this.log(`[${inst.id}] progress: game=${currentGems} delta=+${gameDelta} diamonds=${newDiamonds}`);
+        } else {
+            // don't let a denied write accumulate as a debt the next
+            // report would cash in
+            inst.lastSync.gameGems = currentGems;
+        }
+    },
+
+    // Send message to a guest. Defaults to the window-mode game; pass an
+    // instance to address an inline widget.
+    _sendToIframe(data, inst = null) {
+        const target = inst ? inst.iframe : this.iframeMinigame;
+        if (target && target.contentWindow) {
+            target.contentWindow.postMessage(data, '*');
             // SDK tap: makers watch the protocol on sys.sdk.* (hidden
             // from the default feed, shown in the Maker window).
             // 'key' is excluded — d-pad repeat fires every 50ms and
@@ -870,10 +986,10 @@ window.FinkMinigames = {
     },
 
     // Handle iframe minigame completion
-    _handleIframeComplete(result) {
+    _handleIframeComplete(inst, result) {
         // Update story variables from result
         if (result.variables) {
-            const actor = this._guestActor();
+            const actor = this._guestActor(inst);
             for (const [name, value] of Object.entries(result.variables)) {
                 this._setStoryVariable(name, value, actor);
             }
@@ -892,7 +1008,8 @@ window.FinkMinigames = {
 
     // Clean up iframe minigame
     _cleanupIframe() {
-        window.removeEventListener('message', this.messageHandler);
+        this._dropInstance(this.windowInstance);
+        this.windowInstance = null;
 
         if (this.iframeMinigame) {
             this.iframeMinigame.remove();
@@ -931,11 +1048,16 @@ window.FinkMinigames = {
         };
     },
 
-    _guestActor() {
+    // `inst` is required for anything a guest can trigger — the actor
+    // must describe the frame that SPOKE, not whichever game happens to
+    // be focused. The no-arg form is for host-initiated reads only.
+    _guestActor(inst = null) {
+        const src = inst || this.windowInstance;
         return {
             kind: 'guest',
-            id: this.currentType || 'guest',
-            grants: this.currentGrants || { read: [], write: [] },
+            id: src?.type || this.currentType || 'guest',
+            instance: src?.id || null,
+            grants: src?.grants || this.currentGrants || { read: [], write: [] },
         };
     },
 
@@ -1260,7 +1382,11 @@ window.FinkMinigames = {
      * @returns {HTMLElement} The container element to insert into story
      */
     createInlineContainer(type, display = 'medium', options = {}) {
-        const containerId = `inline-minigame-${Date.now()}`;
+        // NOT Date.now(): two widgets opened in the same millisecond got
+        // the same id, so the second overwrote the first's record and
+        // closing either closed both. A counter is the only thing that
+        // actually guarantees distinctness.
+        const containerId = `inline-minigame-${++this._inlineSeq}`;
         const info = this.minigameInfo[type] || { icon: '🎮', title: type, subtitle: '' };
 
         this.log(`Creating inline container: ${type} (${display})`);
@@ -1503,9 +1629,8 @@ window.FinkMinigames = {
         const entry = this.inlineMinigames[containerId];
         if (!entry) return;
 
-        // Initialize delta-based sync
+        // Delta-based sync baseline (kept on the instance record)
         const currentDiamonds = window.FinkInkEngine?.story?.variablesState?.['diamonds'] || 0;
-        entry.lastSync = { gameGems: 0, storyDiamonds: currentDiamonds };
 
         // Create sandboxed iframe
         const iframe = document.createElement('iframe');
@@ -1516,64 +1641,73 @@ window.FinkMinigames = {
 
         entry.iframe = iframe;
         entry.type = type;
+
+        // This is the surface where several widgets genuinely run at
+        // once — two spreadsheets, two gem boards, the same story with a
+        // widget in two knots. Each gets its OWN instance record, and
+        // the router hands it only its own frame's messages.
+        const inst = this._registerInstance({
+            type, kind: 'inline', iframe, containerId,
+            lastSync: { gameGems: 0, storyDiamonds: currentDiamonds },
+        });
+        entry.instance = inst;
+
         // Inline widgets are guests too, and get the same manifest
         // capability as full-window ones (src is set only once grants
         // are known, so a fast guest cannot beat the check).
-        entry.grants = { read: [], write: [] };
         fetch(`../minigames/${type}/manifest.json`)
             .then(r => r.ok ? r.json() : null)
             .catch(() => null)
             .then(manifest => {
-                entry.grants = this._normalizeGrants(manifest, type);
+                inst.grants = this._normalizeGrants(manifest, type);
+                entry.grants = inst.grants;
                 iframe.src = `../minigames/${type}/index.html`;
             });
 
-        // Setup message listener
-        entry.messageHandler = (event) => this._handleInlineMessage(containerId, event);
-        window.addEventListener('message', entry.messageHandler);
-
         // Send init when loaded
         iframe.onload = () => {
-            this.log(`Inline iframe loaded for ${containerId}`);
-            const actor = { kind: 'guest', id: type, grants: entry.grants };
+            this.log(`Inline iframe loaded for ${containerId} (${inst.id})`);
             iframe.contentWindow?.postMessage({
                 type: 'init',
-                config: { mode: 'inline', display: entry.display },
-                variables: this._getStoryVariables(actor)
+                config: { mode: 'inline', display: entry.display, instance: inst.id },
+                variables: this._getStoryVariables(this._guestActor(inst))
             }, '*');
         };
     },
 
     /**
-     * Handle messages from inline iframe minigames
+     * Handle messages from an inline widget. Routed by event.source, so
+     * two copies of the same widget can never answer for each other.
      */
-    _handleInlineMessage(containerId, event) {
-        const entry = this.inlineMinigames[containerId];
+    _handleInlineMessage(inst, data) {
+        const entry = this.inlineMinigames[inst.containerId];
         if (!entry) return;
 
-        const data = event.data;
-        if (!data || typeof data.type !== 'string') return;
+        window.FoafOS?.bus.publish('sys.sdk.rx',
+            { summary: `← ${data.type} (${inst.id} inline)`, msg: data.type, from: inst.id },
+            { source: 'sdk' });
 
         switch (data.type) {
             case 'progress':
-                // Delta-based sync for inline games
-                if (data.data?.gems !== undefined && entry.lastSync) {
-                    const currentGems = data.data.gems;
-                    const gameDelta = currentGems - entry.lastSync.gameGems;
-                    const currentStoryDiamonds = FinkInkEngine?.story?.variablesState?.['diamonds'] || 0;
-                    const newDiamonds = currentStoryDiamonds + gameDelta;
-                    const actor = { kind: 'guest', id: entry.type || containerId, grants: entry.grants || { write: [] } };
-                    if (this._setStoryVariable('diamonds', newDiamonds, actor)) {
-                        entry.lastSync = { gameGems: currentGems, storyDiamonds: newDiamonds };
-                    } else {
-                        entry.lastSync.gameGems = currentGems;
-                    }
-                }
+                if (data.data?.gems !== undefined) this._applyGemDelta(inst, data.data.gems);
+                break;
+
+            case 'set-variable':
+                this._setStoryVariable(data.name, data.value, this._guestActor(inst));
+                break;
+
+            case 'announce':
+                this._announce(inst, data.text);
                 break;
 
             case 'complete':
-                this.log(`Inline minigame complete: ${containerId}`);
-                // Handle completion - could auto-close or show score
+                this.log(`Inline minigame complete: ${inst.containerId} (${inst.id})`);
+                if (data.result?.variables) {
+                    const actor = this._guestActor(inst);
+                    for (const [n, v] of Object.entries(data.result.variables)) {
+                        this._setStoryVariable(n, v, actor);
+                    }
+                }
                 break;
         }
     },
@@ -1600,11 +1734,7 @@ window.FinkMinigames = {
 
         this.log(`Closing inline minigame: ${containerId}`);
         entry.active = false;
-
-        // Clean up iframe listener if present
-        if (entry.messageHandler) {
-            window.removeEventListener('message', entry.messageHandler);
-        }
+        this._dropInstance(entry.instance);
 
         // Remove container from DOM
         entry.container?.remove();

@@ -23,11 +23,11 @@ const GemCollector = {
 
     // Gem types with their properties
     gemTypes: [
-        { emoji: '💎', value: 1, size: 40, className: 'gem-diamond' },
-        { emoji: '💠', value: 2, size: 35, className: 'gem-blue' },
-        { emoji: '🔶', value: 3, size: 30, className: 'gem-orange' },
-        { emoji: '🔷', value: 2, size: 32, className: 'gem-rhombus' },
-        { emoji: '⚜️', value: 5, size: 45, className: 'gem-fleur', rare: true }
+        { emoji: '💎', value: 1, size: 40, className: 'gem-diamond', name: 'diamond' },
+        { emoji: '💠', value: 2, size: 35, className: 'gem-blue', name: 'blue gem' },
+        { emoji: '🔶', value: 3, size: 30, className: 'gem-orange', name: 'orange gem' },
+        { emoji: '🔷', value: 2, size: 32, className: 'gem-rhombus', name: 'blue rhombus' },
+        { emoji: '⚜️', value: 5, size: 45, className: 'gem-fleur', rare: true, name: 'rare fleur' }
     ],
 
     init() {
@@ -108,12 +108,19 @@ const GemCollector = {
             gemType = commonGems[Math.floor(Math.random() * commonGems.length)];
         }
 
-        // Create gem element
-        const gem = document.createElement('div');
+        // A gem is a BUTTON, not a decorated div. That single change is
+        // most of this game's accessibility: it becomes tab-reachable,
+        // it has a name, and Enter/Space collect it with no extra code.
+        // (Audited 2026-07: every packaged guest had zero aria and no
+        // keyboard path at all.)
+        const gem = document.createElement('button');
+        gem.type = 'button';
         gem.className = `gem ${gemType.className}`;
         gem.textContent = gemType.emoji;
         gem.style.fontSize = `${gemType.size}px`;
         gem.dataset.value = gemType.value;
+        gem.setAttribute('aria-label',
+            `${gemType.name}, worth ${gemType.value}${gemType.value === 1 ? ' gem' : ' gems'}`);
 
         // Random position
         const areaRect = this.playArea.getBoundingClientRect();
@@ -160,8 +167,13 @@ const GemCollector = {
 
         this.gemsCollected += value;
 
+        // Say it. A score that only exists as a moving number on screen
+        // is invisible to a screen reader.
+        window.__mgA11y?.announce(`${gemType.name} collected, ${this.gemsCollected} total`);
+
         // Visual feedback
         gem.classList.add('collected');
+        gem.disabled = true;
 
         // Create floating score indicator
         const scorePopup = document.createElement('div');

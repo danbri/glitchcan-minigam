@@ -215,6 +215,7 @@
         <button id="restartButton">Restart Battle (R)</button>
     </div>
 <!-- platform slow-motion / freeze / step service (see inklet/minigames/debug-clock.js) -->
+<script src="../inklet/minigames/guest-a11y.js"></script>
 <script src="../inklet/minigames/debug-clock.js"></script>
 <script>
     // --- CHUNK 1: Game Constants & Setup Variables ---
@@ -1171,7 +1172,39 @@
         restart: () => fullGameReset(),
     };
 
-    window.addEventListener('load', () => { init(); installHostBridge(); });
+    // Accessibility: the whole game is one canvas, so without this a
+    // screen reader gets an unlabelled box and total silence. A live
+    // description plus turn/damage announcements is not a substitute for
+    // a text mode, but it is the difference between "unusable" and
+    // "followable".
+    function installA11y() {
+        const a = window.__mgA11y;
+        if (!a) return;
+        a.describeCanvas(document.getElementById('gameCanvas'), () => {
+            if (gameState === 'splash_html') return 'Boidwars — press any key or tap to begin';
+            const b = wizards?.[0], p = wizards?.[1];
+            if (!b || !p) return 'Boidwars battlefield';
+            return `Boidwars battlefield. Blue wizard ${b.health} health, purple wizard ` +
+                   `${p.health} health. ${(allBoids || []).length} boids in flight.`;
+        });
+        let lastTurn = null, lastBlue = null, lastPurple = null, lastState = null;
+        setInterval(() => {
+            if (gameState !== lastState) {
+                lastState = gameState;
+                if (gameState === 'gameOver') a.announce(uiMessages?.textContent || 'Battle over', { force: true });
+            }
+            const b = wizards?.[0]?.health, p = wizards?.[1]?.health;
+            if (b !== lastBlue && lastBlue != null) a.announce(`Blue wizard hit — ${b} health left`);
+            if (p !== lastPurple && lastPurple != null) a.announce(`Purple wizard hit — ${p} health left`);
+            lastBlue = b; lastPurple = p;
+            if (gameState === 'playing' && currentPlayerIndex !== lastTurn) {
+                lastTurn = currentPlayerIndex;
+                a.announce(currentPlayerIndex === 0 ? 'Your turn. Aim and release to cast.' : 'Opponent thinking');
+            }
+        }, 600);
+    }
+
+    window.addEventListener('load', () => { init(); installHostBridge(); installA11y(); });
 </script>
 </body>
 </html>
