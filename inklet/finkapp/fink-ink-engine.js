@@ -384,7 +384,18 @@ window.FinkInkEngine = {
                             break;
                         case 'AUDIO':
                             FinkUtils.debugLog('AUDIO tag: ' + value);
-                            if (window.FinkAudio) {
+                            // `synth:<layer>` means "make this sound", not
+                            // "fetch this file" — it belongs to FinkFoley.
+                            // Both AUDIO tags in the corpus said
+                            // `synth:wind` and were routed to FinkAudio,
+                            // which tried to fetch a URL with scheme
+                            // "synth" and died silently ("Failed to
+                            // fetch"). Nobody heard anything for months.
+                            if (/^synth:/i.test(value)) {
+                                const layer = value.replace(/^synth:/i, '').trim();
+                                if (window.FinkFoley) FinkFoley.playFoley(layer, 'audio');
+                                else FinkUtils.debugLog('AUDIO synth: needs FinkFoley');
+                            } else if (window.FinkAudio) {
                                 const audioUrl = FinkUtils.resolveLayeredMediaUrl(
                                     FinkPlayer.mediaBasePath, value
                                 );
