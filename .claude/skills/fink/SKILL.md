@@ -164,6 +164,20 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   announced ('sys.guest.denied'). Two-same-widget isolation locked by
   `node packages/foafos/test/e2e-guest.mjs` (run from repo root); demo
   at packages/foafos/demo/guests.html.
+- A11y GATES (run both; they fail honestly):
+  `node inklet/finkapp/test/aria-audit.mjs [--fail]` — walks the live app
+  with a game + widget + drawer open: unnamed controls, landmarks, live
+  regions, dangling aria refs, iframe titles, duplicate ids, invalid
+  roles, heading order, guest-iframe internals, AND that platform events
+  actually reach the announcer.
+  `node inklet/finkapp/test/skins-a11y.mjs` — per-skin contrast/focus.
+- EVENTS are announced by `#foafos-announcer` (sr-only role=status) in
+  foafos-shell.js, fed from bus topics (wm.mode, minigame.*, audio.focus,
+  session.*, ui.skin, sys.guest.denied, story.state). Add a topic there
+  when you add a platform event, or it is silent to screen readers.
+- Story prose lives in `#story-output` as `role="log" aria-live="polite"
+  aria-relevant="additions"` — without it new beats are never announced,
+  which was true for the whole project until 2026-07.
 - A11y contract (verified live 2026-07): every iframe gets a `title`;
   toggles expose aria-pressed (wm modes, pause); dock has
   aria-expanded/controls synced via setDrawer(); feed = role=feed with

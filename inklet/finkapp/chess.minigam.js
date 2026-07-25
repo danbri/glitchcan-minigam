@@ -17,6 +17,7 @@ window.ChessMinigame = {
         if (!this.iframe) {
             this.iframe = document.createElement('iframe');
             this.iframe.id = 'chess-iframe';
+            this.iframe.title = 'Chess minigame';   // frames are listed by title
             this.iframe.style.cssText = 'width:100%; height:100%; border:none;';
             this.container.appendChild(this.iframe);
         }

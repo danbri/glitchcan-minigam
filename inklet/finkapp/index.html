@@ -106,7 +106,11 @@
             <img id="story-image" class="hidden" alt="">
             <video id="story-video" style="display:none;" controls></video>
         </div>
-        <div id="story-output"></div>
+        <!-- role=log + additions: each new beat is announced as it
+             arrives; past sections are not re-read. Without this a
+             screen-reader user never hears the story advance. -->
+        <div id="story-output" role="log" aria-live="polite"
+             aria-relevant="additions" aria-label="Story"></div>
         <div id="choices"></div>
     </div>
 

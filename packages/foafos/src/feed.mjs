@@ -27,6 +27,10 @@ export function defineFeed() {
       if (!this._list) {
         this._list = document.createElement('div');
         this._list.setAttribute('role', 'feed');
+        // role=feed is a landmark-ish container: it needs a name, or
+        // assistive tech announces an anonymous region
+        this._list.setAttribute('aria-label', this.getAttribute('label') || 'Activity feed');
+        this._list.setAttribute('aria-busy', 'false');
         this.appendChild(this._list);
         this.addEventListener('foaf-action', (e) => {
           const { topic, data } = e.detail || {};

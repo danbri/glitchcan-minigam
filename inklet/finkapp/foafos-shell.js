@@ -186,7 +186,53 @@ FoafOS.refreshPad = refreshPad;
 
 // ── shell UI: dock + drawer ──────────────────────────────────────────────
 
+// ── the announcer: platform EVENTS reach assistive tech ─────────────
+// Windows changing mode, games starting and finishing, audio moving to
+// another tab, the dream deepening, a guest being denied — all of it is
+// visible on screen and, without this, silent to a screen reader. The
+// bus already carries every one of those facts, so one polite live
+// region subscribed to the right topics covers the platform.
+function buildAnnouncer() {
+  const el = document.createElement('div');
+  el.id = 'foafos-announcer';
+  el.className = 'sr-only';
+  el.setAttribute('role', 'status');
+  el.setAttribute('aria-live', 'polite');
+  el.setAttribute('aria-atomic', 'true');
+  document.body.appendChild(el);
+
+  let last = '';
+  const say = (text) => {
+    if (!text || text === last) return;
+    last = text;
+    // clear first so identical-but-repeated messages still fire
+    el.textContent = '';
+    setTimeout(() => { el.textContent = text; }, 30);
+  };
+
+  const SPOKEN = {
+    'minigame.start': (d) => `${d.summary || 'game started'}`,
+    'minigame.complete': (d) => `${d.summary || 'game finished'}`,
+    'wm.mode': (d) => `Game window ${d.mode}`,
+    'wm.open': () => 'Game window opened',
+    'wm.close': () => 'Game window closed',
+    'audio.focus': (d) => d.focused ? 'Game audio resumed' : 'Game audio paused',
+    'session.current': (d) => d.summary,
+    'session.saved': () => 'Session saved, encrypted on this device',
+    'ui.skin': (d) => `Skin ${d.skin}`,
+    'sys.guest.denied': (d) => `Blocked: ${d.guest} tried to publish ${d.topic}`,
+    'story.state': (d) => d.phase === 'fault' ? 'Story error'
+      : d.phase === 'loading' ? 'Loading' : d.depth ? `Dream depth ${d.depth}` : null,
+  };
+  for (const [topic, fmt] of Object.entries(SPOKEN)) {
+    bus.subscribe(topic, (e) => { try { say(fmt(e.data || {})); } catch { /* never break on a message */ } });
+  }
+  FoafOS.announce = say;
+  return el;
+}
+
 function buildUI() {
+  buildAnnouncer();
   buildPad();
   const dock = document.createElement('button');
   dock.id = 'foafos-dock';
