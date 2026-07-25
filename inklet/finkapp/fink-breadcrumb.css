@@ -44,6 +44,10 @@
     color: var(--zx-cyan);
     cursor: pointer;
     padding: 6px 8px;
+    /* 24×24 is the WCAG 2.5.8 (AA) minimum; this was 24×23 — one pixel
+       short, and the only control on the breadcrumb bar. */
+    min-width: 24px;
+    min-height: 24px;
     font-size: 10px;
     opacity: 0.7;
     transition: opacity var(--transition-normal);

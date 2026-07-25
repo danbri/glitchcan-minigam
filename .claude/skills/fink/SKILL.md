@@ -578,6 +578,35 @@ Two rules that came out of it:
 After both: purple 7→5→3 and blue 7→6 in the first three turns. Same
 code, same window, playable.
 
+## Headless QA deep-dive (July 2026) — `docs/qa-headless-20260725.md`
+
+`npm run test:fink:qa` = `qa-journey.mjs` + `qa-games.mjs`. Read the doc
+before writing another harness; these traps each cost a wrong conclusion.
+
+- **qa-journey**: a 21-step OS session (story → drawer → home → office
+  app → TV → switcher → volume → maker → game → split → pip → pause →
+  quit → skins) at phone/tablet/desktop, re-checking the SAME invariants
+  after every step — overflow, offscreen-but-focusable, unnamed control,
+  target < 24px, dialog focus/aria-modal, pad occlusion, errors. It plants
+  known faults first and fails loudly if it cannot see them; **an audit
+  that silently stops working reports clean forever.**
+- **qa-games**: differential responsiveness. Measure idle, measure driven,
+  compare. "The pixels changed" proves nothing when a game self-animates.
+  7/7 respond.
+- Found and fixed: closed drawer kept 20 controls in the tab order (hidden
+  by `transform` alone — now `inert` + `aria-hidden`); app windows opened
+  26–98px off a 390px screen taking the ✕ and SET with them (`makeWindow`
+  now clamps to the viewport); drawer targets 19–23px (now ≥24, WCAG
+  2.5.8).
+- **Traps that made a harness lie** (all recorded in the doc): `scrollWidth`
+  cannot see overflow under `overflow:hidden` — measure geometry;
+  `querySelectorAll` does not cross a shadow boundary; a 32×32 canvas
+  downsample cannot see a one-tile move, so `inconclusive` is a verdict,
+  not a pass; probe each game the way it is PLAYED (arrow keys made
+  pointer-aimed battleboids look broken); a splash screen is not an
+  unresponsive game; `robbin.tube.cam` is an array, so `cam.x` is
+  undefined and pins the sample to a constant.
+
 ## Validation & QA recipes
 
 - Player E2E (the mandatory journey, automated):

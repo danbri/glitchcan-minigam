@@ -86,6 +86,22 @@ body.foaf-pad-on #foafos-dock {
 }
 #foafos-session-status { font-size: 0.8em; opacity: 0.8; min-height: 1.2em; }
 #foafos-session-status.error { color: #f66; opacity: 1; }
+
+/* WCAG 2.5.8 (AA) puts the minimum target at 24×24 CSS px. The drawer's
+   own controls were 19-23px tall — the home screen and switcher already
+   clear 44px, but the drawer never got the same pass. 24px is the floor,
+   not the goal: it keeps the deliberately dense retro chrome dense while
+   making every control hittable with a thumb. Buttons that are big
+   already are untouched, so nothing reflows. */
+#foafos-drawer button,
+#foafos-drawer input:not([type="range"]),
+#foafos-maker button,
+#foafos-maker input {
+    min-height: 24px;
+}
+/* A range input's THUMB is the target, and it tracks the track's height */
+#foafos-drawer input[type="range"] { min-height: 24px; }
+
 #foafos-session input {
     background: rgba(255, 255, 255, 0.07);
     border: 1px solid #444;

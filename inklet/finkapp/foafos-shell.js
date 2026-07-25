@@ -356,7 +356,16 @@ function buildUI() {
   const setDrawer = (open) => {
     drawer.classList.toggle('open', open);
     dock.setAttribute('aria-expanded', String(open));
+    // A closed drawer is hidden by `transform` alone, which moves it out
+    // of SIGHT and nothing else: all 20 of its controls stayed in the tab
+    // order, so tabbing through the story dropped focus into an invisible
+    // panel off the right edge. `inert` withdraws it from focus, hit
+    // testing and the accessibility tree in one go; aria-hidden covers
+    // assistive tech that predates inert.
+    drawer.inert = !open;
+    drawer.setAttribute('aria-hidden', String(!open));
   };
+  setDrawer(false);        // start withdrawn, not merely translated away
   dock.addEventListener('click', () => setDrawer(!drawer.classList.contains('open')));
   drawer.querySelector('#foafos-close').addEventListener('click', () => setDrawer(false));
   drawer.addEventListener('keydown', (e) => { if (e.key === 'Escape') { setDrawer(false); dock.focus(); } });
@@ -603,10 +612,19 @@ function buildUI() {
     win.dataset.wid = `w${widgetSeq}`;
     win.setAttribute('role', 'group');
     win.setAttribute('aria-label', title);
-    win.style.width = `${w}px`;
-    win.style.height = `${h}px`;
-    win.style.left = `${12 + (widgetSeq % 5) * 24}px`;
-    win.style.top = `${60 + (widgetSeq % 5) * 24}px`;
+    // Fit the screen, then cascade inside it. A fixed 380px window with a
+    // cascade offset put its right edge 26-98px past a 390px phone, and
+    // what lives on that edge is the close ✕ and, in Maker, the SET
+    // button — unreachable, with no scroll to bring them back because the
+    // window is position:fixed. Desktop is unchanged; the clamp only
+    // bites when the window would not fit.
+    const winW = Math.min(w, window.innerWidth - 16);
+    const winH = Math.min(h, window.innerHeight - 80);
+    const clamp = (v, max) => Math.max(8, Math.min(v, max));
+    win.style.width = `${winW}px`;
+    win.style.height = `${winH}px`;
+    win.style.left = `${clamp(12 + (widgetSeq % 5) * 24, window.innerWidth - winW - 8)}px`;
+    win.style.top = `${clamp(60 + (widgetSeq % 5) * 24, window.innerHeight - winH - 8)}px`;
     win.innerHTML = `
       <div class="foafos-window-bar"><span>${title}</span>
         <button type="button" class="foafos-window-close" aria-label="Close ${title}">✕</button></div>`;
