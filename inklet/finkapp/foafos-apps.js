@@ -90,12 +90,31 @@ export const APPS = [
     capabilities: ['storage', 'audio', 'same-origin'] },
 
   // ── Make ──────────────────────────────────────────────────────────
+  // HONESTY NOTE, and it is not a small one. `surface: 'story'` is NOT
+  // sandboxed. The narrative runtime (FinkInkEngine / FinkPlayer /
+  // FinkUI) are host-page globals, so a story runs IN the shell's own
+  // document, and its tags reach FinkAudio, FinkFoley, FinkMinigames,
+  // FinkNavigation, FinkBreadcrumb and FoafOS directly. Nothing checks
+  // these capability lists for stories — grep the engine for
+  // "capabilit" and you get nothing.
+  //
+  // These lists therefore DESCRIBE what a story can do; they do not
+  // constrain it. They previously said `[]`, which read as "less
+  // privileged than a spreadsheet" when the truth is the opposite: a
+  // story can launch apps, navigate the whole shell, restyle the host
+  // document and be snapshotted, none of which any app can do.
+  //
+  // This matters beyond tidiness because the Finkiverse links out to
+  // FINK documents we did not write. Gating these tags — so an untrusted
+  // story can be denied `launch` and `navigate` — is the open work.
   { id: 'toc', family: 'make', icon: '📖', name: 'Stories', surface: 'story',
     url: '/glitchcan-minigam/inklet/toc.fink.js', desc: 'The table of contents',
-    capabilities: [], silent: true },
+    capabilities: ['audio', 'launch', 'navigate', 'chrome', 'vars:read', 'vars:write'],
+    enforced: false, silent: true },
   { id: 'audiodemo', family: 'make', icon: '🔊', name: 'Audio demo', surface: 'story',
     url: '/glitchcan-minigam/inklet/demos/audio-demo.fink.js', desc: 'mp3 beds + foley',
-    capabilities: ['audio'] },
+    capabilities: ['audio', 'launch', 'navigate', 'chrome', 'vars:read', 'vars:write'],
+    enforced: false },
   // Shell-native: drawn by the shell itself, so there is no frame and no
   // capability boundary. Listed here so there is ONE registry — but do
   // not read this row as "sandboxed with no capabilities".
@@ -114,6 +133,11 @@ export const appById = (id) => APPS.find(a => a.id === id) || null;
 
 /** Apps still holding the ambient-authority escape hatch. Target: none. */
 export const ambientApps = () => APPS.filter(a => (a.capabilities || []).includes('same-origin'));
+
+/** Apps whose declared capabilities DESCRIBE rather than CONSTRAIN.
+ *  Today: every `story` surface, because the narrative runtime is the
+ *  host page. A list nobody enforces must say so. */
+export const unenforcedApps = () => APPS.filter(a => a.enforced === false);
 
 /** Every capability in use, for the inspector. */
 export const allCapabilities = () =>

@@ -168,6 +168,26 @@ try {
     ? pass('the drawer admits which device services have no broker')
     : fail(`unimplemented services not disclosed: "${noteText}"`);
 
+  // 8. a declared capability list that constrains NOTHING must say so.
+  // Stories run in the host page (FinkInkEngine/FinkPlayer/FinkUI are
+  // globals), so their lists describe rather than limit. The failure this
+  // guards against is a list that reads like a boundary and is not one.
+  const unenf = await page.evaluate(async () => {
+    const m = await import('./foafos-apps.js');
+    return m.unenforcedApps().map(a => ({ id: a.id, surface: a.surface, caps: a.capabilities }));
+  });
+  const storiesAllUnenforced = await page.evaluate(async () => {
+    const m = await import('./foafos-apps.js');
+    return m.APPS.filter(a => a.surface === 'story').every(a => a.enforced === false);
+  });
+  unenf.length > 0 && storiesAllUnenforced && unenf.every(a => a.caps.length > 0)
+    ? pass(`unenforced lists are flagged: ${unenf.map(a => a.id).join(', ')} (story surface runs in the host page)`)
+    : fail(`story privilege not declared honestly: ${JSON.stringify(unenf)}`);
+  const note2 = await page.evaluate(() => document.getElementById('foafos-caps-note')?.textContent || '');
+  /description, not a limit/.test(note2)
+    ? pass('the drawer says the story lists do not constrain')
+    : fail(`story privilege not disclosed: "${note2.slice(-90)}"`);
+
   pageErrors.length === 0 ? pass('no page errors')
     : fail(`page errors: ${pageErrors.slice(0, 2).join(' · ')}`);
   console.log(process.exitCode ? '\nCAPS E2E: FAIL' : '\nCAPS E2E: PASS');

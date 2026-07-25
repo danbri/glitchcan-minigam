@@ -688,6 +688,35 @@ that declares nothing gets the old hardcoded three
   NOT story JS evaluated in the host page, which would hand story files
   the ambient authority we just took off the Office apps.
 
+## Stories are privileged over apps — know this
+
+Asked directly ("does foafos privilege stories over office docs?") and
+the answer is yes, enormously. The story is not an app; it is part of the
+kernel.
+
+- `FinkInkEngine` / `FinkPlayer` / `FinkUI` are **host-page globals**. A
+  story runs in the shell's own document.
+- Its tags reach `FinkAudio`, `FinkFoley`, `FinkMinigames`,
+  `FinkNavigation`, `FinkBreadcrumb`, `FinkUI` and `FoafOS` directly.
+  Nine tag verbs (`AUDIO FOLEY STOP_AUDIO FINK LINKREL MINIGAME STATUS BG
+  CLASS`) and **not one is capability-checked** — grep the engine, player
+  and ui for "capabilit" and you get nothing.
+- So a story can launch an app, navigate the whole shell, restyle the
+  host document, drive audio directly, write any variable ungoverned, and
+  be snapshotted into the dream stack. No app can do any of those.
+  `FoafVars` governs guests writing to the story; nothing governs the
+  story.
+- `capabilities` on a `surface: 'story'` row therefore **describes,
+  it does not constrain** — flagged with `enforced: false`, reported by
+  `unenforcedApps()`, printed in the drawer, and asserted in
+  `e2e-caps.mjs`. They previously said `[]`, which read as *less*
+  privileged than a spreadsheet when the truth is the reverse.
+- Why it matters beyond tidiness: the Finkiverse links to FINK documents
+  we did not write. Gating `launch`/`navigate`/`chrome` for an untrusted
+  story is the open work. Some privilege is legitimate — the story IS the
+  session — but that argues for splitting the narrative RUNTIME (a
+  service) from the story DOCUMENT (an app), which is not done.
+
 ## Service inventory (spec §5.5.3)
 
 `FoafOS.services()` names every privileged thing and its honest state:

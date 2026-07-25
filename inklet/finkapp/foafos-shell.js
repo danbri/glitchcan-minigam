@@ -16,7 +16,7 @@ import {
   FoafCluster, defineGuest, defineTable, defineTree,
   FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, localBackend,
 } from '../../packages/foafos/src/index.mjs';
-import { appsByFamily, appById, ambientApps, APPS } from './foafos-apps.js';
+import { appsByFamily, appById, ambientApps, unenforcedApps, APPS } from './foafos-apps.js';
 window.__foafAppRegistry = APPS;   // the service inventory counts holders from this
 
 defineBaseCards();
@@ -797,6 +797,14 @@ function buildUI() {
     // and be straight about the vocabulary that is only a vocabulary
     if (unimplemented.length) {
       el.textContent += ` Not brokered by us: ${unimplemented.join(', ')}.`;
+    }
+    // The narrative runtime is the host page, so a story's capability
+    // list describes what it can do and constrains nothing. Saying so is
+    // the difference between a known gap and a false sense of one.
+    const unenforced = unenforcedApps();
+    if (unenforced.length) {
+      el.textContent += ` Stories run in the shell itself, so for ` +
+        `${unenforced.map(a => a.name).join(', ')} the list below is a description, not a limit.`;
     }
     el.classList.toggle('error', ambient.length > 0);
   }
