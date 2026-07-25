@@ -276,6 +276,55 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
 - It patches ONE document: a guest wrapping another game in a nested
   iframe must forward the `debug` message inward.
 
+## Actually playing a guest headless
+
+`node inklet/finkapp/test/play-boidwars.mjs [--turns N] [--slow N] [--shots]`
+is a PLAYTEST, not an assertion suite: it drives a real battle and prints
+a turn-by-turn account. Loading is not playing, and the difference is
+where the bugs live — the e2e passed on every geometry assertion while
+the game was mathematically unwinnable.
+
+- Give every guest a headless hook (`__robbin`, `__tftt`, `__boidwars`):
+  read-only state plus the verbs a player actually has. A driver that
+  reaches into internals rots.
+- **The game ending is a legitimate outcome.** When a guest completes,
+  the shell closes the window and the frame DETACHES — every
+  `frame.evaluate` after that throws. Catch it and read the verdict from
+  the host (`battleboids_won`, or `FoafOS.vars.scratch` when no story
+  declares the VAR) instead of crashing one turn before the interesting
+  part.
+- Don't attribute effects to the action that preceded them until you
+  know the latency. Boidwars' flocks cross the map slower than a turn
+  lasts, so damage from turn N lands during turn N+1; per-turn deltas
+  read as "every shot missed". Report the health CURVE.
+- Screenshots earn their keep here. "0 damage in 6 turns" looked like a
+  broken aim helper; the PNG showed two impassable rock needles between
+  the wizards and told the real story in one glance.
+- Budget wall-clock by the debug clock (`ms * SLOW`), or a slowed run
+  times out before the game has done anything.
+
+## Aspect ratio is game logic, not styling
+
+A guest that derives its world from the raw viewport gets a different
+GAME in each window shape. Boidwars computed a correct aspect-fit box
+and then discarded it, so a 430×860 phone produced a 71×143 world — 1:2
+for a game designed 1.5:1. Because `maxHeight = GRID_HEIGHT * 0.7` and
+`baseWidth = GRID_WIDTH * 0.25`, the mountains became needles twice as
+tall as they were wide, sitting between the wizards; an attacking boid
+dies the instant it touches rock, so every flock just mined. Six turns,
+zero hits, 1678 blocks of rubble, both wizards at full health.
+
+Two rules that came out of it:
+- **Clamp the world's aspect** to a playable range (boidwars: 1.0–2.4)
+  and letterbox what falls outside. Pinning it exactly wastes half a
+  phone screen; leaving it free breaks the game.
+- **Tie a feature's size to its own extent, not the grid's.** A mountain
+  height derived from `GRID_HEIGHT` changes shape with the window;
+  `min(GRID_HEIGHT * 0.7, baseWidth * 1.6)` keeps a hill a hill.
+
+After both: purple 7→5→3 and blue 7→6 in the first three turns. Same
+code, same window, playable.
+
 ## Validation & QA recipes
 
 - Player E2E (the mandatory journey, automated):

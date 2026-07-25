@@ -485,7 +485,14 @@
         }
     }
     function generateMountain(peakCenterX, baseWidth, type) { 
-        const maxHeight = GRID_HEIGHT * 0.7; const mountainBaseY = GRID_HEIGHT - 6;
+        // A mountain's HEIGHT must follow its own width, not the grid's.
+        // Tied to GRID_HEIGHT alone, a taller world grew needles: in a
+        // portrait window the two peaks became impassable walls between
+        // the wizards, and since an attacking boid dies the instant it
+        // touches rock, every flock just mined the mountain and nobody
+        // ever took damage. Six turns, zero hits, 1678 blocks of rubble.
+        const maxHeight = Math.min(GRID_HEIGHT * 0.7, baseWidth * 1.6);
+        const mountainBaseY = GRID_HEIGHT - 6;
         for (let c = 0; c < GRID_WIDTH; c++) {
             const distFromPeak = Math.abs(c - peakCenterX); if (distFromPeak > baseWidth / 2  + Math.random() * (baseWidth * 0.2) ) continue;
             const normalizedDist = distFromPeak / (baseWidth / 2); let heightAtCol = maxHeight * (1 - Math.pow(normalizedDist, 1.5 + Math.random()*0.5) ); heightAtCol *= (0.75 + Math.random() * 0.5);
@@ -1023,27 +1030,38 @@
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         
-        // Calculate optimal scale to use full screen while maintaining retro feel
-        const baseAspectRatio = 384 / 256; // 1.5:1 aspect ratio
-        
+        // The world's shape is CLAMPED, not free. Letting it be whatever
+        // the window is made a portrait phone unplayable (see below);
+        // pinning it to exactly 1.5:1 letterboxes away half a phone
+        // screen. Allow anything between square and 2.4:1 and letterbox
+        // only what falls outside.
+        // 384/256 = 1.5:1 is the design shape; these are the bounds
+        // around it that stay playable.
+        const MIN_ASPECT = 1.0, MAX_ASPECT = 2.4;
+        const want = Math.max(MIN_ASPECT, Math.min(MAX_ASPECT, viewportWidth / viewportHeight));
+
         let targetWidth, targetHeight;
-        
-        if (viewportWidth / viewportHeight > baseAspectRatio) {
-            // Screen is wider than base aspect ratio - fit to height
+        if (viewportWidth / viewportHeight > want) {
             targetHeight = viewportHeight;
-            targetWidth = targetHeight * baseAspectRatio;
+            targetWidth = targetHeight * want;
         } else {
-            // Screen is taller than base aspect ratio - fit to width  
             targetWidth = viewportWidth;
-            targetHeight = targetWidth / baseAspectRatio;
+            targetHeight = targetWidth / want;
         }
         
         // Calculate scale factor for pixel-perfect scaling
         SCALE_FACTOR = Math.max(1, Math.floor(Math.min(targetWidth / 384, targetHeight / 256)));
-        
-        // Update native dimensions based on available space but maintain pixel boundaries
-        NATIVE_WIDTH = Math.floor(viewportWidth / SCALE_FACTOR);
-        NATIVE_HEIGHT = Math.floor(viewportHeight / SCALE_FACTOR);
+
+        // Derive the world from the ASPECT-FIT box computed above, not
+        // from the raw viewport. Using the viewport directly made the
+        // playfield whatever shape the window was: a 430×860 phone in
+        // portrait produced a 71×143 world — a 1:2 battlefield for a
+        // game designed at 1.5:1. Both wizards ended up on a thin strip
+        // of ground under 800px of dead sky, with mountains like
+        // needles. Letterbox instead; the canvas is centred by
+        // #gameContainer's flex, and the display size is fitted below.
+        NATIVE_WIDTH = Math.floor(targetWidth / SCALE_FACTOR);
+        NATIVE_HEIGHT = Math.floor(targetHeight / SCALE_FACTOR);
         
         // Ensure minimum playable dimensions
         NATIVE_WIDTH = Math.max(384, NATIVE_WIDTH);
@@ -1119,6 +1137,39 @@
         });
         post({ type: 'boidwars-ready' });
     }
+
+    // Headless-playtest hook (same convention as robbin's __robbin and
+    // tanks-for-the-trees' __tftt). Read-only state plus the two verbs a
+    // player actually has: aim and cast. Everything a driver needs to
+    // play a full battle without reaching into internals.
+    window.__boidwars = {
+        get state() { return gameState; },
+        get turn() { return currentPlayerIndex; },
+        get myTurn() { return gameState === 'playing' && currentPlayerIndex === 0 && !shotFiredThisTurn; },
+        get message() { return uiMessages ? uiMessages.textContent : ''; },
+        get stats() { return JSON.parse(JSON.stringify(gameStats)); },
+        get wizards() {
+            return (wizards || []).map(w => w && ({
+                id: w.id, isAI: w.isAI, health: w.health, state: w.state,
+                x: Math.round(w.position.x), y: Math.round(w.position.y),
+            }));
+        },
+        get boids() { return (allBoids || []).length; },
+        get grid() { return { w: GRID_WIDTH, h: GRID_HEIGHT, rows: terrain.length }; },
+        // Aim relative to the enemy: (0,0) is dead on, +y is above them.
+        // Returns the world point so a driver can log what it tried.
+        aimAtEnemy(dx = 0, dy = 0) {
+            const foe = wizards[1];
+            if (!foe) return null;
+            return { x: foe.position.x + dx, y: foe.position.y - foe.height / 2 + dy };
+        },
+        cast(x, y) {
+            if (!this.myTurn) return false;
+            castSpell(wizards[0], x, y);
+            return true;
+        },
+        restart: () => fullGameReset(),
+    };
 
     window.addEventListener('load', () => { init(); installHostBridge(); });
 </script>
