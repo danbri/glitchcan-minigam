@@ -127,6 +127,9 @@
                 } else {
                     game.classList.add('active');
                 }
+                // Replay the shell's volume: it may have arrived (as part
+                // of init) before this element existed.
+                game.setMasterLevel?.(lastLevel);
             }, 100);
 
             return game;
@@ -155,6 +158,24 @@
             applyControlPolicy(controls);
             // the custom element may only just have upgraded
             setTimeout(() => applyControlPolicy(controls), 400);
+        });
+
+        // Audio is a HOST service too (spec §5.5). Registering onAudio
+        // declares the contract, which is what moves this game out of the
+        // volume control's "cannot be turned down" list — the shell was
+        // telling the truth about that, it just had nothing to hold.
+        // Remember the last level: the element may not exist yet when the
+        // first one arrives, and a mute that is forgotten is worse than a
+        // mute that is refused.
+        let lastLevel = 1;
+        function applyAudioLevel(level) {
+            lastLevel = level;
+            gameState.gameElement?.setMasterLevel?.(level);
+        }
+        window.__mudsliderLevel = () => lastLevel;   // headless probe hook
+        sdk.onAudio(({ level }) => {
+            applyAudioLevel(level);
+            setTimeout(() => applyAudioLevel(level), 400);   // post-upgrade
         });
 
         sdk.onInit((config, variables) => {

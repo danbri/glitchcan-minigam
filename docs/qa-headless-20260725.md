@@ -67,6 +67,13 @@ Current state — **7/7 respond**:
 | gems | state hook | 3 | 5 |
 | mega | state hook | 3 | 5 |
 
+`qa-games` also reports, per game, whether the shell's master volume
+actually reaches it. Added after "muting mudslider in foafos does
+nothing" — the answer is per-game and otherwise silent, so it belongs in
+a standing report rather than in someone's memory. Only robbin is still
+listed as NOT MUTABLE, and honestly so: it makes sound and has no master
+gain.
+
 ## What the audit found, and what was fixed
 
 **1. A closed drawer kept 20 controls in the tab order.** It was hidden
@@ -90,6 +97,19 @@ already clear 44px, but the drawer never got the same pass, and
 `#breadcrumb-toggle` was 24×23 — one pixel short. WCAG 2.5.8 (AA) puts
 the floor at 24×24. Fixed with a `min-height` on drawer and Maker
 controls; the dense retro chrome stays dense.
+
+**4. Muting mudslider did nothing, and two silent games claimed they
+could not be muted.** Two separate bugs behind one symptom. Mudslider
+connected every sound straight to `audioContext.destination` and never
+declared the `audio` contract, so there was no gain node to turn down and
+no `audio-level` message arriving — it now has a master gain and calls
+`sdk.onAudio`, verified going 1 → 0 → 0.3. Separately, the shell
+registered an "uncontrollable" placeholder for EVERY guest on start, so
+gridluck and chess — which emit no sound at all — permanently polluted
+the "cannot be turned down" list and diluted the honest entries. A
+`silent: true` flag in `minigameInfo` now suppresses the placeholder; the
+default stays pessimistic, because over-reporting what mute misses is
+safer than promising silence the shell cannot deliver.
 
 After the fixes: **63 steps across three viewports, zero findings**, with
 the self-test confirming the audit could still see all five fault kinds.

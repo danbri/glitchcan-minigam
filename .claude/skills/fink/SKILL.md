@@ -592,7 +592,19 @@ before writing another harness; these traps each cost a wrong conclusion.
   that silently stops working reports clean forever.**
 - **qa-games**: differential responsiveness. Measure idle, measure driven,
   compare. "The pixels changed" proves nothing when a game self-animates.
-  7/7 respond.
+  7/7 respond. Also reports per game whether the master volume reaches it.
+- **Audio is a host service and a guest must OPT IN.** A guest that never
+  calls `sdk.onAudio` has no `audio-level` message to act on, and one that
+  connects effects straight to `audioContext.destination` has nothing to
+  turn down even if it did. Both were true of mudslider ("muting
+  mudslider does nothing" — correct). Fix is a single master gain plus
+  `sdk.onAudio`. Only robbin is still un-mutable, and says so.
+- The shell registers an `uncontrollable` placeholder for every guest so
+  mute over-reports rather than over-promises — but `silent: true` in
+  `minigameInfo` suppresses it. A SILENT game in the "cannot be turned
+  down" list is a lie in the other direction and dilutes the real
+  entries. gridluck opens an AudioContext and connects nothing; chess has
+  no audio code at all.
 - Found and fixed: closed drawer kept 20 controls in the tab order (hidden
   by `transform` alone — now `inert` + `aria-hidden`); app windows opened
   26–98px off a 390px screen taking the ✕ and SET with them (`makeWindow`

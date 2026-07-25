@@ -42,6 +42,11 @@
                 this.gameOver = false; this.gameWon = false; this.isTransitioning = false;
                 this.animationFrameId = null; this.isGameLoopRunning = false; this.isActive = false;
                 this.audioContext = null; this.audioInitialized = false; this.tileSize = 30;
+                // Master level, owned by the shell (spec §5.5). Held here
+                // as well as on the gain node because the shell can set it
+                // BEFORE the audio context exists — the first mute used to
+                // arrive, find no graph, and be forgotten.
+                this._masterLevel = 1; this.masterGain = null;
                 this.debugLines = []; this.roomNameOverlayTimeoutId = null;
 
                 // Bound event listeners
@@ -284,6 +289,13 @@
                  if (this.audioInitialized || this.audioContext) return;
                  try {
                     this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                     // ONE node between every sound and the speakers, so the
+                     // shell's volume and mute have something to hold. Without
+                     // it each effect connected straight to destination and
+                     // nothing outside this file could turn the game down.
+                     this.masterGain = this.audioContext.createGain();
+                     this.masterGain.gain.value = this._masterLevel;
+                     this.masterGain.connect(this.audioContext.destination);
                      const unlockAudio = () => {
                          if (this.audioContext && this.audioContext.state === 'suspended') {
                              this.audioContext.resume().then(() => { this._debugLog("Audio Context Resumed OK", 'info'); this.audioInitialized = true; document.removeEventListener('click', unlockAudio); document.removeEventListener('touchstart', unlockAudio); })
@@ -300,9 +312,15 @@
                     const now = this.audioContext.currentTime; const osc = this.audioContext.createOscillator(); const gain = this.audioContext.createGain();
                     osc.type = type; osc.frequency.setValueAtTime(f1, now); if (f1 !== f2) osc.frequency.linearRampToValueAtTime(f2, now + dur * 0.8);
                     gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(vol, now + atk); gain.gain.linearRampToValueAtTime(0, now + dur + dcy);
-                    osc.connect(gain); gain.connect(this.audioContext.destination); osc.start(now); osc.stop(now + dur + dcy + 0.05);
+                    osc.connect(gain); gain.connect(this.masterGain || this.audioContext.destination); osc.start(now); osc.stop(now + dur + dcy + 0.05);
                 } catch(e){ this._debugLog(`PlaySound Error: ${e.message}`, 'error'); }
              }
+            /** The shell owns the volume (spec §5.5). level = muted ? 0 : volume. */
+            setMasterLevel(level) {
+                this._masterLevel = Math.max(0, Math.min(1, Number(level) || 0));
+                if (this.masterGain) this.masterGain.gain.value = this._masterLevel;
+                return this._masterLevel;
+            }
             _playDigSound = () => this._playSound('square', 100, 80, 0.05, 0.2, 0.005, 0.04); _playGemSound = () => this._playSound('triangle', 880, 1200, 0.15, 0.4, 0.01, 0.1); _playRockFallSound = () => this._playSound('sawtooth', 150, 50, 0.2, 0.5, 0.02, 0.15); _playPlayerDieSound = () => this._playSound('sawtooth', 440, 110, 0.5, 0.6, 0.01, 0.4); _playKeySound = () => this._playSound('sine', 600, 900, 0.2, 0.4, 0.01, 0.15); _playLockSound = (success) => success ? this._playSound('sine', 500, 700, 0.15, 0.3, 0.01, 0.1) : this._playSound('square', 150, 100, 0.1, 0.4, 0.01, 0.08); _playPortalSound = () => this._playSound('sawtooth', 200, 800, 0.3, 0.5, 0.05, 0.2); _playWinSound = () => this._playSound('sine', 523, 1046, 0.6, 0.5, 0.02, 0.4); _playEnemyHitSound = () => this._playSound('square', 300, 50, 0.2, 0.5, 0.01, 0.15); _playSwitchSound = () => this._playSound('triangle', 300, 600, 0.2, 0.4, 0.01, 0.15); _playRiverHitSound = () => this._playSound('sawtooth', 200, 50, 0.3, 0.6, 0.01, 0.2); _playButtonClickSound = () => this._playSound('sine', 440, 440, 0.05, 0.3);
 
             // --- Particles ---

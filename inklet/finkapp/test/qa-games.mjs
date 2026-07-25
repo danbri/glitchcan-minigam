@@ -125,7 +125,7 @@ try {
     await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
     await page.waitForTimeout(1000);
 
-    const row = { id: g.id, method: '-', idle: '-', driven: '-', verdict: '?', note: '' };
+    const row = { id: g.id, method: '-', idle: '-', driven: '-', verdict: '?', audio: '-', note: '' };
     try {
       await page.evaluate((t) => window.FinkMinigames.startMinigame(t, 'normal'), g.id);
       await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 15000 });
@@ -212,6 +212,19 @@ try {
         return seen.size;                 // distinct states seen in the window
       };
 
+      // Does the master volume actually reach this game? Field report:
+      // "muting mudslider in foafos does nothing" — true, and the same
+      // question is worth asking of every guest, because the answer is
+      // per-game and silent. The shell discloses honestly; this reads the
+      // disclosure back.
+      row.audio = await page.evaluate((id) => {
+        const c = window.FoafOS?.audio?.coverage?.();
+        if (!c) return 'no service';
+        const un = (c.uncovered || []).map(x => (x.label ?? x).toLowerCase());
+        const mine = un.some(l => l.includes(id.toLowerCase()));
+        return mine ? 'NOT MUTABLE' : 'under control';
+      }, g.id);
+
       row.method = hookWorks ? 'state hook' : 'canvas/DOM sample';
       row.idle = await churn(false);
       row.driven = await churn(true);
@@ -235,10 +248,10 @@ try {
   }
 
   console.log('\nGAME RESPONSIVENESS — distinct states seen in a 12-sample window\n');
-  console.log('game          method              idle  driven  verdict');
-  console.log('-'.repeat(70));
+  console.log('game          method              idle  driven  verdict       master volume');
+  console.log('-'.repeat(84));
   for (const r of rows) {
-    console.log(`${r.id.padEnd(13)} ${String(r.method).padEnd(19)} ${String(r.idle).padStart(4)} ${String(r.driven).padStart(7)}  ${r.verdict}`);
+    console.log(`${r.id.padEnd(13)} ${String(r.method).padEnd(19)} ${String(r.idle).padStart(4)} ${String(r.driven).padStart(7)}  ${String(r.verdict).padEnd(13)} ${r.audio}`);
   }
   const notes = rows.filter(r => r.note);
   if (notes.length) {

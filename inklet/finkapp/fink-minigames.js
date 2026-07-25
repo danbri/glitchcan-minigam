@@ -35,13 +35,23 @@ window.FinkMinigames = {
 
     // Minigame metadata for splash screens and controls
     // controls: 'dpad' (full d-pad + A/B), 'lite' (simplified), 'none' (tap only)
+    // `silent: true` means "this guest makes no sound" and is the ONLY
+    // way to stay out of the volume control's "cannot be turned down"
+    // list without answering the audio probe. The default is deliberately
+    // the pessimistic one — a guest we know nothing about is assumed to
+    // make noise we cannot reach, because over-reporting what mute misses
+    // is safer than promising a silence we cannot deliver. But a SILENT
+    // game listed there is a lie in the other direction, and it dilutes
+    // the honest entries until nobody reads them. Verified July 2026:
+    // gridluck opens an AudioContext and never connects anything to it;
+    // chess has no audio code at all.
     minigameInfo: {
-        gems: { icon: '💎', title: 'Gem Hunt', subtitle: 'Collect sparkling gems!', controls: 'none' },
-        mega: { icon: '👑', title: 'Mega Gems', subtitle: 'Legendary treasures await!', controls: 'none' },
+        gems: { icon: '💎', title: 'Gem Hunt', subtitle: 'Collect sparkling gems!', controls: 'none', silent: true },
+        mega: { icon: '👑', title: 'Mega Gems', subtitle: 'Legendary treasures await!', controls: 'none', silent: true },
         mudslider: { icon: '⛏️', title: 'Mudslider', subtitle: 'Boulder Dash-style puzzle', controls: 'lite' },
         battleboids: { icon: '🧙', title: 'BoidWars', subtitle: 'Command your wizard flock', controls: 'none' },
-        gridluck: { icon: '👻', title: 'GridLuck', subtitle: 'Pac-Man style maze chase', controls: 'none' },
-        chess: { icon: '♟️', title: 'Chess', subtitle: 'Classic strategy game', controls: 'none' },
+        gridluck: { icon: '👻', title: 'GridLuck', subtitle: 'Pac-Man style maze chase', controls: 'none', silent: true },
+        chess: { icon: '♟️', title: 'Chess', subtitle: 'Classic strategy game', controls: 'none', silent: true },
         robbin: { icon: '🐦', title: 'Robbin', subtitle: 'Grow the flock across the Underground', controls: 'dpad' }
     },
 
@@ -848,10 +858,14 @@ window.FinkMinigames = {
             this.windowInstance = inst;
             // Until it answers, assume we cannot reach its audio. Better
             // for the mute button to over-report what it misses than to
-            // claim silence it cannot deliver.
-            window.FoafOS?.audio?.register(`guest:${inst.id}`, () => {}, {
-                label: (this.minigameInfo[type] || {}).title || type, kind: 'uncontrollable',
-            });
+            // claim silence it cannot deliver — but not for a guest we
+            // KNOW is silent, which would just be a different lie.
+            const info = this.minigameInfo[type] || {};
+            if (!info.silent) {
+                window.FoafOS?.audio?.register(`guest:${inst.id}`, () => {}, {
+                    label: info.title || type, kind: 'uncontrollable',
+                });
+            }
 
             // Until the manifest lands, the guest may write nothing. A
             // race that opened a hole would be worse than one that
