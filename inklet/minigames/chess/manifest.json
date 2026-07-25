@@ -1,0 +1,15 @@
+{
+  "name": "chess",
+  "version": "1.0.0",
+  "title": "Mini Chess",
+  "description": "Small-board chess puzzle against a simple engine.",
+  "entry": "index.html",
+  "sandbox": { "timeout": 600000 },
+  "controls": "none",
+  "variables": {
+    "read": ["difficulty", "player_level"],
+    "write": ["chess_won", "chess_game_completed", "minigame_played"]
+  },
+  "modes": ["normal"],
+  "ui": { "width": "100%", "height": "100%", "background": "#141018" }
+}

@@ -23,3 +23,4 @@ export { scopeBus, defineGuest } from './guest.mjs';
 export { defineTable } from './table.mjs';
 export { defineTree } from './tree.mjs';
 export { FoafInput, ACTIONS, ACTION_KEYS } from './input.mjs';
+export { FoafVars, SHARED_DEFAULT } from './vars.mjs';

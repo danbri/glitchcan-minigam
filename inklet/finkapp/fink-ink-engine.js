@@ -153,6 +153,16 @@ window.FinkInkEngine = {
             this.compiledCount++;  // Track successful compilations
             FinkUtils.debugLog('INK compilation successful! (total: ' + this.compiledCount + ')');
 
+            // Tell the variable broker which names this work actually
+            // declares, so a permitted-but-unbound write (manifest and
+            // story drifted apart, or a typo) is reported rather than
+            // swallowed by the assignment's try/catch. Read from the
+            // compiled story, never from the source text.
+            try {
+                const declared = compiledStory.variablesState?._globalVariables;
+                window.FoafOS?.vars?.setBound(declared ? [...declared.keys()] : null);
+            } catch { /* older inkjs internals — leave unbound unknown */ }
+
             // Set up error handler
             if (this.story.onError) {
                 this.story.onError = (msg, type) => {

@@ -1,0 +1,19 @@
+{
+  "name": "mudslider",
+  "version": "1.0.0",
+  "title": "Mudslider",
+  "description": "Ten-room isometric adventure: gems, four coloured keys, falling mud.",
+  "entry": "index.html",
+  "sandbox": { "timeout": 900000 },
+  "controls": "dpad",
+  "variables": {
+    "read": ["difficulty", "player_level", "keys"],
+    "write": [
+      "mudslider_gems", "mudslider_rooms", "mudslider_won",
+      "has_red_key", "has_blue_key", "has_yellow_key", "has_green_key",
+      "minigame_played", "diamonds"
+    ]
+  },
+  "modes": ["normal"],
+  "ui": { "width": "100%", "height": "100%", "background": "#1a140f" }
+}

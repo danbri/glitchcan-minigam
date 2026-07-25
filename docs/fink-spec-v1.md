@@ -331,6 +331,80 @@ robbin declares `quit` (routes to its paper dialogs) and `audio`
 (bus ducking) but NOT `pause` — the tube deliberately has no pause
 concept, so the shell's generic pause is the correct fallback there.
 
+### 5.3 Variable governance — normative
+
+A guest is untrusted code. `manifest.json`'s `variables` block is its
+**capability**, not documentation:
+
+- The host resolves the manifest **before** the guest's `src` is set,
+  and a guest with no manifest is granted no writes at all. Failing open
+  would make the whole mechanism theatre.
+- Every path a guest can reach — `set-variable`, `progress` (the
+  gems→`diamonds` and score bridges), and `complete.variables` — goes
+  through the broker. A name absent from `variables.write` is REFUSED.
+- `init.variables` is filtered by `variables.read` ∪ `variables.write` ∪
+  the shared economy ∪ host context. A chess game cannot read a
+  whodunnit's plot flags.
+- Refusals are events (`vars.denied`), never silence: an honest bug and
+  a cheat look identical from the host, so both get surfaced.
+
+Two name classes:
+
+| class | names | meaning |
+|---|---|---|
+| **shared economy** | `diamonds`, `mega_diamonds`, `keys`, `score`, `minigame_played` | cross-work **on purpose**; one slot, many works |
+| **private** | everything else | belongs to the work that declared it |
+
+Independent stories run as separate `Story` objects, so two works using
+`points` are never actually wired together — but a guest granted that
+name writes into whichever story is hosting it. That is the cross-work
+hazard, and `inklet/tools/fink-vars.mjs` reports it (`--strict` fails
+CI). Private names may be namespaced per work as `<workId>__<name>`
+(`FoafVars.scopedName`).
+
+**Depth rule — normative:** inside a dream (§3.4, depth > 0) the shared
+economy is READ-ONLY. A dream may keep its own private counters but MUST
+NOT spend the waking world's diamonds. Things true above are true below;
+they are not changeable from below. This governs the **variable bridge**
+— what guests and the host may push into the story — not Ink's own `~`
+assignments, which are the dream's internal logic and run unimpeded.
+
+Values are bounded (±10⁶ by default) and must be finite. A game that
+"earns" 10⁹ diamonds is reporting a bug, not a score.
+
+A permitted write to a name **nothing declares** is not an attack but is
+still a defect: Ink refuses assignment to an undeclared variable, so the
+value would vanish inside the host's `try`. The broker keeps it in
+`scratch`, publishes `vars.unbound`, and the tool reports it. A story
+opts in to a guest's result simply by declaring the `VAR`.
+
+### 5.4 The debug clock — normative for guests
+
+Under software rendering a moving game is a blur, so "look at the frame"
+is not a debugging strategy. The platform provides slow motion instead,
+as a service rather than a per-game feature:
+
+- Host→guest message: `debug {timeScale, stepFrames}`. `timeScale` 1 =
+  real time, `0.02` = 50× slow, `0` = frozen; `stepFrames` advances
+  exactly n frames while frozen.
+- `inklet/minigames/debug-clock.js` implements it once and MUST be
+  included by any guest, whether it uses `minigame-sdk.js` or speaks the
+  protocol natively. It virtualises `requestAnimationFrame`,
+  `setTimeout`, `setInterval`, `performance.now` and `Date.now` by
+  delivering every k-th real frame (k = 1/scale) with a normally-advanced
+  timestamp — so both fixed-step and dt-integrating games slow down
+  correctly, unmodified, with identical per-frame behaviour.
+- Nothing is patched at scale 1: normal play is untouched.
+- It patches ONE document. A guest wrapping another game in a nested
+  iframe MUST forward the `debug` message inward (see
+  `inklet/minigames/battleboids/index.html`).
+- Standalone: `?timescale=0.02` on the guest's own URL.
+- Host surface: `window.__finkDebug` — `.slow(50)`, `.freeze()`,
+  `.step(n)`, `.normal()`, and `.state()`, which returns the running
+  guest, its window/WM geometry, its granted capability, and the
+  governance ledger in one call. `?slow` / `?timescale=` on the shell.
+  Guest surface: `window.__mgDebug`.
+
 ## 6. Links, navigation, identity
 
 Incorporates `docs/fink-linking-spec.md`: two-part SHA-256 hash links

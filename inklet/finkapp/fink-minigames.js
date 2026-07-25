@@ -40,6 +40,62 @@ window.FinkMinigames = {
     // Active inline minigames (keyed by container ID)
     inlineMinigames: {},
 
+    // ---- Debug clock (host side) ---------------------------------------
+    // The shell can run any guest at a fraction of real speed, or freeze
+    // it and step frame by frame. Headless drivers (and the Maker
+    // window) use this to read a game that is otherwise a blur at
+    // SwiftShader's ~2fps. Applies to guests that know nothing about it:
+    // debug-clock.js virtualises their clocks. See spec §5.4.
+    debug: {
+        timeScale: 1,
+
+        // 50 = the "50×" ask: run everything fifty times slower
+        slow(factor = 50) { return FinkMinigames.debug.setTimeScale(1 / factor); },
+        normal() { return FinkMinigames.debug.setTimeScale(1); },
+        freeze() { return FinkMinigames.debug.setTimeScale(0); },
+
+        setTimeScale(scale) {
+            const s = Math.max(0, Math.min(50, Number(scale) || 0));
+            this.timeScale = s;
+            FinkMinigames._sendToIframe({ type: 'debug', timeScale: s });
+            document.body.dataset.debugTimeScale = s === 1 ? '' : String(s);
+            window.FoafOS?.bus.publish('sys.debug', {
+                summary: s === 1 ? 'time scale: real time'
+                    : s === 0 ? 'time scale: frozen'
+                    : `time scale: ${(1 / s).toFixed(0)}× slow`,
+                timeScale: s,
+            }, { retain: true });
+            FinkMinigames.log(`Debug time scale = ${s}`);
+            return s;
+        },
+
+        step(frames = 1) {
+            FinkMinigames._sendToIframe({ type: 'debug', stepFrames: frames });
+            return frames;
+        },
+
+        // One call a headless driver can await: everything it needs to
+        // know about the running guest.
+        state() {
+            return {
+                timeScale: this.timeScale,
+                active: FinkMinigames.active,
+                type: FinkMinigames.currentType,
+                mode: FinkMinigames.currentMode,
+                window: { ...FinkMinigames.windowState },
+                wm: window.FinkWM ? { mode: FinkWM.mode, collapsed: FinkWM.collapsed } : null,
+                grants: FinkMinigames.currentGrants || null,
+                vars: window.FoafOS?.vars ? {
+                    depth: FoafOS.vars.depth,
+                    denied: FoafOS.vars.log.filter(e => !e.ok).length,
+                    written: FoafOS.vars.log.filter(e => e.ok).length,
+                    scratch: Object.fromEntries(FoafOS.vars.scratch),
+                    recent: FoafOS.vars.log.slice(-12),
+                } : null,
+            };
+        },
+    },
+
     // DOM elements
     elements: {
         narrativeView: null,
@@ -77,6 +133,16 @@ window.FinkMinigames = {
             dpad: document.getElementById('game-dpad'),
             actionBtns: document.getElementById('game-action-btns')
         };
+
+        // The devtools surface, in one place a headless driver can find:
+        //   __finkDebug.slow(50); __finkDebug.freeze(); __finkDebug.step(3)
+        //   await __finkDebug.state()
+        window.__finkDebug = this.debug;
+        try {
+            const ts = new URLSearchParams(location.search).get('timescale');
+            if (ts !== null) this.debug.setTimeScale(parseFloat(ts));
+            if (new URLSearchParams(location.search).has('slow')) this.debug.slow(50);
+        } catch { /* ignore */ }
 
         // Initialize inline minigame modules
         if (window.GemsMinigame && this.elements.gameContainer) {
@@ -653,9 +719,17 @@ window.FinkMinigames = {
             iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
             iframe.id = `minigame-iframe-${type}`;
 
+            // Until the manifest lands, the guest may write nothing. A
+            // race that opened a hole would be worse than one that
+            // briefly closed one.
+            this.currentGrants = { read: [], write: [] };
+
             // Manifest 'features' become the iframe's permissions policy
             // (e.g. geolocation for teleport-home). Best-effort: no
             // manifest, no features. allow must be set BEFORE src.
+            // 'variables' becomes the guest's write capability — see
+            // _setStoryVariable; before this was wired the manifest was
+            // decorative and any guest could set any story variable.
             fetch(`../minigames/${type}/manifest.json`)
                 .then(r => r.ok ? r.json() : null)
                 .catch(() => null)
@@ -665,6 +739,7 @@ window.FinkMinigames = {
                         iframe.allow = feats.map(f => `${f} 'src'`).join('; ');
                         this.log(`Manifest features granted: ${feats.join(', ')}`);
                     }
+                    this.currentGrants = this._normalizeGrants(manifest, type);
                     iframe.src = `../minigames/${type}/index.html`;
                 });
 
@@ -692,7 +767,7 @@ window.FinkMinigames = {
                             scheme: this.currentControls,
                         },
                     },
-                    variables: this._getStoryVariables()
+                    variables: this._getStoryVariables(this._guestActor())
                 });
                 // D-pad visibility is handled in startMinigame based on controls param
             };
@@ -716,6 +791,11 @@ window.FinkMinigames = {
                 // the shell DELEGATES instead of imposing its generic
                 // behavior. Undeclared verbs get the shell fallback.
                 this.guestVerbs = new Set(data.capabilities?.verbs || []);
+                // a guest that starts while the shell is slowed must be
+                // slowed too, or debugging only works for the first game
+                if (this.debug.timeScale !== 1) {
+                    this._sendToIframe({ type: 'debug', timeScale: this.debug.timeScale });
+                }
                 break;
 
             case 'progress':
@@ -726,17 +806,25 @@ window.FinkMinigames = {
                     const currentStoryDiamonds = FinkInkEngine?.story?.variablesState?.['diamonds'] || 0;
                     const newDiamonds = currentStoryDiamonds + gameDelta;
 
-                    this._setStoryVariable('diamonds', newDiamonds);
-                    this.lastSync = { gameGems: currentGems, storyDiamonds: newDiamonds };
-                    this.log(`Progress: game=${currentGems} delta=+${gameDelta} diamonds=${newDiamonds}`);
+                    // A 'progress' report is the guest asking for a write.
+                    // It goes through the broker like any other, so a game
+                    // that never declared `diamonds` cannot mint them.
+                    if (this._setStoryVariable('diamonds', newDiamonds, this._guestActor())) {
+                        this.lastSync = { gameGems: currentGems, storyDiamonds: newDiamonds };
+                        this.log(`Progress: game=${currentGems} delta=+${gameDelta} diamonds=${newDiamonds}`);
+                    } else {
+                        // don't let a denied write accumulate as a debt the
+                        // next report would cash in
+                        this.lastSync.gameGems = currentGems;
+                    }
                 }
                 if (data.data?.score !== undefined) {
-                    this._setStoryVariable('score', data.data.score);
+                    this._setStoryVariable('score', data.data.score, this._guestActor());
                 }
                 break;
 
             case 'set-variable':
-                this._setStoryVariable(data.name, data.value);
+                this._setStoryVariable(data.name, data.value, this._guestActor());
                 break;
 
             case 'complete':
@@ -785,8 +873,9 @@ window.FinkMinigames = {
     _handleIframeComplete(result) {
         // Update story variables from result
         if (result.variables) {
+            const actor = this._guestActor();
             for (const [name, value] of Object.entries(result.variables)) {
-                this._setStoryVariable(name, value);
+                this._setStoryVariable(name, value, actor);
             }
         }
 
@@ -816,39 +905,90 @@ window.FinkMinigames = {
         }
     },
 
-    // Get story variables for minigame
-    _getStoryVariables() {
+    // ---- Variable governance -------------------------------------------
+    // A minigame is untrusted sandboxed code. Its manifest says which
+    // story variables it may touch; FoafVars (packages/foafos) is what
+    // makes that claim binding. Everything the guest can reach — init
+    // variables, progress, set-variable, complete.variables — goes
+    // through here, so "story2 messing with story1's innards" is a
+    // denied, audited event rather than a silent success.
+
+    // Manifest → capability. A guest with no manifest gets nothing but
+    // the shared economy's read side; failing open here would make the
+    // whole mechanism theatre.
+    _normalizeGrants(manifest, type) {
+        const v = manifest?.variables;
+        if (!v) {
+            this.log(`No manifest for "${type}" — guest granted no variable writes`);
+            window.FoafOS?.bus.publish('vars.unmanifested', {
+                summary: `${type} has no manifest: writes will be denied`, id: type,
+            });
+            return { read: [], write: [] };
+        }
+        return {
+            read: Array.isArray(v.read) ? v.read.slice() : [],
+            write: Array.isArray(v.write) ? v.write.slice() : [],
+        };
+    },
+
+    _guestActor() {
+        return {
+            kind: 'guest',
+            id: this.currentType || 'guest',
+            grants: this.currentGrants || { read: [], write: [] },
+        };
+    },
+
+    // Get story variables for minigame. `actor` filters what a guest may
+    // SEE — a chess game has no business reading a story's private state.
+    _getStoryVariables(actor = null) {
         if (!window.FinkInkEngine || !FinkInkEngine.story) return {};
 
         const vars = {};
         const story = FinkInkEngine.story;
 
-        // Get common variables
-        const varNames = ['diamonds', 'mega_diamonds', 'keys', 'score', 'player_level', 'difficulty'];
-        varNames.forEach(name => {
+        // The shared economy plus the conventional host-provided context.
+        // A guest additionally sees whatever its manifest declares.
+        const names = new Set([
+            'diamonds', 'mega_diamonds', 'keys', 'score', 'player_level', 'difficulty',
+            ...(actor?.grants?.read || []), ...(actor?.grants?.write || []),
+        ]);
+        names.forEach(name => {
             if (story.variablesState[name] !== undefined) {
                 vars[name] = story.variablesState[name];
             }
         });
 
-        return vars;
+        // The broker has the last word on what a guest may see.
+        const broker = window.FoafOS?.vars;
+        return broker ? broker.filterReadable(actor, vars) : vars;
     },
 
-    // Set a story variable
-    _setStoryVariable(name, value) {
-        if (!window.FinkInkEngine || !FinkInkEngine.story) return;
+    // Set a story variable. Returns true when the write actually landed.
+    // `actor` defaults to the host itself (story-driven writes, inline
+    // widgets the shell renders directly); guests must pass _guestActor().
+    _setStoryVariable(name, value, actor = null) {
+        if (!window.FinkInkEngine || !FinkInkEngine.story) return false;
 
         const story = FinkInkEngine.story;
-        try {
-            story.variablesState[name] = value;
-            this.log(`Set variable ${name} = ${value}`);
-
-            // Update stats display
+        const apply = (n, v) => {
+            story.variablesState[n] = v;
+            this.log(`Set variable ${n} = ${v}`);
             if (window.FinkUI && FinkUI.updateStatsDisplay) {
                 FinkUI.updateStatsDisplay();
             }
+        };
+
+        const broker = window.FoafOS?.vars;
+        try {
+            if (!broker) {           // shell not present (bare/standalone use)
+                apply(name, value);
+                return true;
+            }
+            return broker.write(actor || { kind: 'host', id: 'shell' }, name, value, apply);
         } catch (e) {
             this.log(`Error setting variable ${name}: ${e.message}`);
+            return false;
         }
     },
 
@@ -1369,12 +1509,24 @@ window.FinkMinigames = {
 
         // Create sandboxed iframe
         const iframe = document.createElement('iframe');
-        iframe.src = `../minigames/${type}/index.html`;
+        iframe.title = `${(this.minigameInfo[type] || {}).title || type} minigame`;
         iframe.sandbox = 'allow-scripts';
         iframe.style.cssText = 'width:100%;height:100%;border:none;';
         contentEl.appendChild(iframe);
 
         entry.iframe = iframe;
+        entry.type = type;
+        // Inline widgets are guests too, and get the same manifest
+        // capability as full-window ones (src is set only once grants
+        // are known, so a fast guest cannot beat the check).
+        entry.grants = { read: [], write: [] };
+        fetch(`../minigames/${type}/manifest.json`)
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+            .then(manifest => {
+                entry.grants = this._normalizeGrants(manifest, type);
+                iframe.src = `../minigames/${type}/index.html`;
+            });
 
         // Setup message listener
         entry.messageHandler = (event) => this._handleInlineMessage(containerId, event);
@@ -1383,10 +1535,11 @@ window.FinkMinigames = {
         // Send init when loaded
         iframe.onload = () => {
             this.log(`Inline iframe loaded for ${containerId}`);
+            const actor = { kind: 'guest', id: type, grants: entry.grants };
             iframe.contentWindow?.postMessage({
                 type: 'init',
                 config: { mode: 'inline', display: entry.display },
-                variables: this._getStoryVariables()
+                variables: this._getStoryVariables(actor)
             }, '*');
         };
     },
@@ -1409,8 +1562,12 @@ window.FinkMinigames = {
                     const gameDelta = currentGems - entry.lastSync.gameGems;
                     const currentStoryDiamonds = FinkInkEngine?.story?.variablesState?.['diamonds'] || 0;
                     const newDiamonds = currentStoryDiamonds + gameDelta;
-                    this._setStoryVariable('diamonds', newDiamonds);
-                    entry.lastSync = { gameGems: currentGems, storyDiamonds: newDiamonds };
+                    const actor = { kind: 'guest', id: entry.type || containerId, grants: entry.grants || { write: [] } };
+                    if (this._setStoryVariable('diamonds', newDiamonds, actor)) {
+                        entry.lastSync = { gameGems: currentGems, storyDiamonds: newDiamonds };
+                    } else {
+                        entry.lastSync.gameGems = currentGems;
+                    }
                 }
                 break;
 

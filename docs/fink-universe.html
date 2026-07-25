@@ -55,6 +55,10 @@
 const svg = document.getElementById('stage');
 const detail = document.getElementById('detail');
 let N = [], E = [], view = { x: 0, y: 0, k: 1 };
+// Variable governance, from fink-vars.mjs. Optional: the map still works
+// without it, it just cannot say who may write what.
+let GOV = null;
+fetch('fink-vars.json').then(r => r.ok ? r.json() : null).then(g => { GOV = g; }).catch(() => {});
 
 fetch('fink-universe.json').then(r => r.json()).then(u => {
   document.getElementById('counts').textContent =
@@ -135,12 +139,34 @@ function show(n) {
   if (!n) return;
   const ins = E.filter(e => e.t === n), outs = E.filter(e => e.s === n);
   const li = (e, dir) => `<li>${dir} <b>${e.type}${e.linkrel ? '/' + e.linkrel : ''}</b> ${dir === '→' ? e.t.title : e.s.title}${e.knot ? ` <span class="hint">(${e.knot})</span>` : ''}</li>`;
+  // what this node may touch, and what it declares
+  let gov = '';
+  if (GOV) {
+    if (n.kind === 'widget') {
+      const g = GOV.guests.find(x => x.id === n.title);
+      gov = g
+        ? `<dt>may write</dt><dd>${g.write.join(', ') || '<span class="bad">nothing declared</span>'}</dd>
+           ${g.read.length ? `<dt>may read</dt><dd>${g.read.join(', ')}</dd>` : ''}
+           ${g.manifest ? '' : '<dt>manifest</dt><dd class="bad">missing — all writes denied</dd>'}`
+        : '<dt>governance</dt><dd class="bad">no manifest</dd>';
+    } else if (n.kind === 'story') {
+      const w = GOV.works.find(x => x.id === n.id);
+      if (w) {
+        const names = Object.keys(w.vars);
+        const shared = names.filter(x => GOV.shared.includes(x));
+        const clash = names.filter(x => (GOV.names.find(e => e.name === x) || {}).class === 'collision');
+        gov = `<dt>variables</dt><dd>${names.length} declared${shared.length ? ` · ${shared.length} shared economy` : ''}</dd>
+          ${clash.length ? `<dt>name clashes</dt><dd class="bad">${clash.join(', ')}</dd>` : ''}`;
+      }
+    }
+  }
   detail.innerHTML = `<h2>${n.title}</h2><dl>
     <dt>kind</dt><dd>${n.kind}${n.kind === 'widget' ? (n.packaged ? ' · packaged' : ' · <span class="bad">no package</span>') : ''}</dd>
     <dt>path</dt><dd>${n.id}</dd>
     ${n.knots != null ? `<dt>knots</dt><dd>${n.knots}</dd>` : ''}
     ${n.entry ? '<dt>entry</dt><dd>nothing links here</dd>' : ''}
     ${n.error ? `<dt>error</dt><dd class="bad">${n.error}</dd>` : ''}
+    ${gov}
   </dl>
   ${outs.length ? `<b>links out (${outs.length})</b><ul>${outs.map(e => li(e, '→')).join('')}</ul>` : ''}
   ${ins.length ? `<b>linked from (${ins.length})</b><ul>${ins.map(e => li(e, '←')).join('')}</ul>` : ''}`;

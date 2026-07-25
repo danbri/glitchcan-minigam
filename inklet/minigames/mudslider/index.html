@@ -55,6 +55,7 @@
     </div>
 
     <!-- Load the SDK -->
+    <script src="../debug-clock.js"></script>
     <script src="../minigame-sdk.js"></script>
 
     <!-- Load the game component -->
@@ -188,13 +189,13 @@
                 success: true,
                 score: result.score || gameState.gemsCollected,
                 variables: {
-                    gems_collected: result.score || gameState.gemsCollected,
+                    mudslider_gems: result.score || gameState.gemsCollected,
                     has_red_key: gameState.keysFound.red,
                     has_blue_key: gameState.keysFound.blue,
                     has_yellow_key: gameState.keysFound.yellow,
                     has_green_key: gameState.keysFound.green,
-                    rooms_explored: gameState.roomsVisited.size,
-                    minigame_won: true
+                    mudslider_rooms: gameState.roomsVisited.size,
+                    mudslider_won: true
                 }
             });
         });
@@ -207,9 +208,9 @@
                 success: false,
                 score: result.score || gameState.gemsCollected,
                 variables: {
-                    gems_collected: result.score || gameState.gemsCollected,
-                    rooms_explored: gameState.roomsVisited.size,
-                    minigame_won: false
+                    mudslider_gems: result.score || gameState.gemsCollected,
+                    mudslider_rooms: gameState.roomsVisited.size,
+                    mudslider_won: false
                 }
             });
         });

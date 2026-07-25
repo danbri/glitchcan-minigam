@@ -227,6 +227,55 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   "loaded via the # FINK: tag" compiles into a live FINK load. Two demo
   files shipped that bug for months.
 
+## Variable governance (spec §5.3)
+
+- A guest's `manifest.json` `variables` block is a CAPABILITY, enforced
+  by `FoafVars` (`packages/foafos/src/vars.mjs`). Before June 2026 it was
+  decoration: `case 'set-variable'` wrote any name, so any minigame could
+  set `diamonds` or reach into another story's plot flags.
+- Enforcement point: `FinkMinigames._setStoryVariable(name, value, actor)`.
+  `actor = _guestActor()` for everything a guest can reach —
+  `set-variable`, `progress` (the gems→diamonds and score bridges), and
+  `complete.variables`. Host-driven writes pass no actor and get
+  `{kind:'host'}`. The manifest is fetched BEFORE `iframe.src` is set, and
+  a guest with no manifest gets `{read:[],write:[]}` — fail closed.
+- Two classes: **shared economy** (`diamonds`, `mega_diamonds`, `keys`,
+  `score`, `minigame_played`) is cross-work on purpose; everything else
+  is private to the work that declared it. `minigame_played` had to MOVE
+  into the shared set — the analyzer correctly flagged it as a cross-work
+  collision while it was private.
+- Dreams are strict: at depth > 0 the shared economy is read-only. A
+  dream keeps its own counters but cannot spend the waking world.
+- `node inklet/tools/fink-vars.mjs [--json] [--strict]` — declared VARs
+  read from the COMPILED story (`variablesState._globalVariables`), never
+  regexed; manifests joined against them. Reports collisions, dead writes
+  (a guest writing a name no story declares — Ink refuses the assignment
+  and the host's `try` swallows it), and unmanifested guests. It collapses
+  `_tmp_x.fink.js` into `x.fink.js` first, or one temp copy of a 24-VAR
+  story reads as 24 collisions.
+- Denials are EVENTS (`vars.denied` / `vars.unbound` / `vars.failed`), not
+  silence — an honest bug and a cheat are indistinguishable at the host,
+  so both surface in the Maker window's governance table.
+- E2E: `node inklet/finkapp/test/e2e-vars.mjs`. It posts the attacks FROM
+  INSIDE the guest frame (`parent.postMessage`), the way a cheating game
+  would — not by calling host functions.
+
+## Debug clock: run a guest 50× slow (spec §5.4)
+
+- `inklet/minigames/debug-clock.js` — ONE implementation, included by
+  every guest (SDK-based and native-protocol alike). It virtualises rAF,
+  setTimeout, setInterval, `performance.now` and `Date.now`: deliver every
+  k-th real frame (k = 1/scale) with a normally-advanced timestamp, so
+  fixed-step AND dt-integrating games both slow correctly, unmodified.
+  Nothing is patched at scale 1.
+- Host: `__finkDebug.slow(50) / .freeze() / .step(n) / .normal() /
+  .state()`. `.state()` returns guest + window geometry + granted
+  capability + governance ledger in one call — the thing to poll from a
+  headless driver. Shell URL: `?slow` or `?timescale=0.02`.
+  Guest URL standalone: `?timescale=0.02`. Guest surface: `__mgDebug`.
+- It patches ONE document: a guest wrapping another game in a nested
+  iframe must forward the `debug` message inward.
+
 ## Validation & QA recipes
 
 - Player E2E (the mandatory journey, automated):

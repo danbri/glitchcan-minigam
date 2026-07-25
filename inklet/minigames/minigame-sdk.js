@@ -31,7 +31,7 @@ class MinigameSDK {
         window.addEventListener('message', (event) => this._handleMessage(event));
 
         // Signal ready to host
-        this._sendMessage({ type: 'ready', capabilities: ['pause', 'resume'] });
+        this._sendMessage({ type: 'ready', capabilities: ['pause', 'resume', 'debug-clock'] });
         this._log('SDK initialized, sent ready signal');
     }
 
@@ -230,10 +230,39 @@ class MinigameSDK {
                 this._dispatchKeyEvent(data.event, data.key, data.code);
                 break;
 
+            case 'debug':
+                // debug-clock.js has its own listener for this; the SDK
+                // only needs to not call it "unknown".
+                break;
+
             default:
                 this._log(`Unknown message type: ${data.type}`);
         }
     }
+
+    // ---- Debug clock ----------------------------------------------------
+    // Implemented once, in debug-clock.js, so guests that speak the
+    // protocol natively (robbin) get it too. The SDK only forwards.
+    // If debug-clock.js was not included, these are honest no-ops.
+
+    /** @param {number} scale 1 = real time, 0.02 = 50x slow, 0 = frozen */
+    setTimeScale(scale) {
+        if (window.__mgDebug) {
+            const s = window.__mgDebug.setTimeScale(scale);
+            this._log(`time scale ${s}`);
+        } else {
+            this._log('setTimeScale ignored: debug-clock.js not loaded');
+        }
+        return this;
+    }
+
+    /** Advance exactly n frames while frozen — deterministic stepping. */
+    stepFrames(n = 1) {
+        window.__mgDebug?.stepFrames(n);
+        return this;
+    }
+
+    get timeScale() { return window.__mgDebug?.state.scale ?? 1; }
 
     /**
      * Dispatch a synthetic keyboard event

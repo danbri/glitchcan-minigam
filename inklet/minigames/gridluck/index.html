@@ -39,6 +39,7 @@
     <iframe id="game-frame" src="../../../thumbwar/gridluck.html"></iframe>
     <div id="pause-overlay">PAUSED</div>
 
+    <script src="../debug-clock.js"></script>
     <script src="../minigame-sdk.js"></script>
     <script>
         const sdk = new MinigameSDK();
@@ -83,8 +84,8 @@
                         success: won,
                         score: lastScore,
                         variables: {
-                            game_won: won,
-                            final_score: lastScore
+                            gridluck_won: won,
+                            gridluck_score: lastScore
                         }
                     });
                     gameActive = false;

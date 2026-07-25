@@ -14,7 +14,7 @@ import {
   widgets, defineBaseCards, defineFeed,
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
-  FoafInput, ACTION_KEYS,
+  FoafInput, ACTION_KEYS, FoafVars,
 } from '../../packages/foafos/src/index.mjs';
 
 defineBaseCards();
@@ -93,6 +93,15 @@ window.FoafOS = FoafOS;
 const cluster = new FoafCluster(bus);
 cluster.start();
 FoafOS.cluster = cluster;
+
+// ── variable governance ────────────────────────────────────────────────
+// Guests are untrusted code. Without this their manifests were
+// decorative: set-variable and complete.variables wrote ANY name into
+// the running story. The broker enforces the manifest, keeps the shared
+// economy bounded, and makes dreams read-only for it.
+const vars = new FoafVars({ bus });
+FoafOS.vars = vars;
+bus.subscribe('story.state', (e) => vars.setDepth(e.data?.depth || 0));
 
 bus.subscribe('minigame.start', (e) => {
   if (e.source === 'local') cluster.claim('audio', { label: e.data.type });
@@ -541,6 +550,26 @@ function buildUI() {
     return names.map(n => [n, String(vs[n])]);
   }
 
+  // The governance ledger: the guest's declared capability, then the
+  // most recent attempts — allowed and refused. A denial nobody can see
+  // looks exactly like a bug in the game.
+  function govRows() {
+    const v = FoafOS.vars;
+    const rows = [];
+    const g = window.FinkMinigames?.currentGrants;
+    const who = window.FinkMinigames?.currentType;
+    if (who && g) {
+      rows.push([who, g.write.join(', ') || '(nothing)', 'may write']);
+      if (g.read.length) rows.push([who, g.read.join(', '), 'may read']);
+    }
+    for (const e of v.log.slice(-14).reverse()) {
+      rows.push([e.actor, `${e.name} = ${e.value}`,
+        e.ok ? (e.depth ? `set · depth ${e.depth}` : 'set') : `DENIED · ${e.reason}`]);
+    }
+    for (const [n, val] of v.scratch) rows.push(['—', `${n} = ${val}`, 'unbound (no VAR)']);
+    return rows;
+  }
+
   function openMaker() {
     if (document.getElementById('foafos-maker')) return;
     const win = makeWindow('🔧 Maker', 380, 520);
@@ -550,6 +579,13 @@ function buildUI() {
     body.style.cssText = 'flex:1;min-height:0;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px;font:11px monospace;color:#eee;';
     body.innerHTML = `
       <div id="maker-state"></div>
+      <div id="maker-clock" role="group" aria-label="Debug clock">
+        <button type="button" data-scale="1" aria-label="Run at real time">▶ 1×</button>
+        <button type="button" data-scale="0.2" aria-label="Run five times slower">5× slow</button>
+        <button type="button" data-scale="0.02" aria-label="Run fifty times slower">50× slow</button>
+        <button type="button" data-scale="0" aria-label="Freeze the game">⏸ freeze</button>
+        <button type="button" id="maker-step" aria-label="Advance one frame">⏭ step</button>
+      </div>
       <div>
         <input id="maker-var" placeholder="variable" aria-label="Variable name" style="width:38%">
         <input id="maker-val" placeholder="value" aria-label="Variable value" style="width:30%">
@@ -558,22 +594,30 @@ function buildUI() {
     win.appendChild(body);
 
     const vars = document.createElement('foaf-table');
-    body.insertBefore(vars, body.querySelector('div:nth-child(2)'));
+    body.insertBefore(vars, body.querySelector('#maker-clock'));
+    // Who is allowed to change what, and every attempt that was refused.
+    // Governance you cannot see is governance nobody trusts.
+    const gov = document.createElement('foaf-table');
+    body.insertBefore(gov, body.querySelector('#maker-clock'));
     const sdk = document.createElement('foafos-feed');
     sdk.bus = bus;
-    sdk.setAttribute('topics', 'sys.sdk.*,sys.guest.*,story.state');
+    sdk.setAttribute('topics', 'sys.sdk.*,sys.guest.*,story.state,vars.*,sys.debug');
     body.appendChild(sdk);
 
     const refresh = () => {
       if (!win.isConnected) return;
       const st = bus.retained('story.state')[0]?.data;
       const stack = window.FinkInkEngine?.storyStack || [];
+      const scale = window.FinkMinigames?.debug?.timeScale ?? 1;
       win.querySelector('#maker-state').textContent =
         `story: ${st?.phase || '—'} · depth ${st?.depth ?? 0}` +
+        (scale !== 1 ? ` · clock ${scale === 0 ? 'frozen' : `${(1 / scale).toFixed(0)}× slow`}` : '') +
         (stack.length ? ` · stack: ${stack.map(f => f.url.split('/').pop()).join(' ▸ ')}` : '');
       vars.data = { title: 'story variables', columns: ['name', 'value'], rows: storyVarRows() };
+      gov.data = { title: 'variable governance', columns: ['actor', 'variable', 'verdict'], rows: govRows() };
     };
-    const unsubs = ['story.state', 'story.beat', 'minigame.*'].map(t => bus.subscribe(t, refresh));
+    const unsubs = ['story.state', 'story.beat', 'minigame.*', 'vars.*', 'sys.debug']
+      .map(t => bus.subscribe(t, refresh));
     new MutationObserver(() => { if (!win.isConnected) unsubs.forEach(u => u()); })
       .observe(document.body, { childList: true });
 
@@ -584,6 +628,14 @@ function buildUI() {
       const num = Number(raw);
       window.FinkInkEngine.story.variablesState[name] = Number.isNaN(num) ? raw : num;
       bus.publish('sys.sdk.tx', { summary: `maker set ${name}=${raw}`, msg: 'maker-set' }, { source: 'maker' });
+      refresh();
+    });
+
+    win.querySelector('#maker-clock').addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      if (btn.id === 'maker-step') { window.FinkMinigames?.debug.step(1); return; }
+      window.FinkMinigames?.debug.setTimeScale(parseFloat(btn.dataset.scale));
       refresh();
     });
 

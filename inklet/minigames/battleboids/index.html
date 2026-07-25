@@ -39,76 +39,89 @@
     <iframe id="game-frame" src="../../../thumbwar/battleboids.html"></iframe>
     <div id="pause-overlay">PAUSED</div>
 
+    <script src="../debug-clock.js"></script>
     <script src="../minigame-sdk.js"></script>
     <script>
         const sdk = new MinigameSDK();
         const gameFrame = document.getElementById('game-frame');
         let gameStarted = false;
 
-        sdk.onInit((config, variables) => {
-            console.log('[Battleboids] Initialized');
-            gameStarted = true;
+        // The game lives in a nested frame. This wrapper is itself
+        // sandboxed with an opaque origin, so contentDocument access to
+        // it is BLOCKED — the previous version's auto-start and
+        // completion polling were silent no-ops, which is why the game
+        // sat on its splash screen and never reported a result. Talk to
+        // it over postMessage (thumbwar/battleboids.html installs a
+        // matching bridge when it has a parent).
+        const toGame = (type) => {
+            try { gameFrame.contentWindow?.postMessage({ type }, '*'); } catch (e) { /* not ready */ }
+        };
+        let bridged = false;
+        let wantStart = false;
+        let completed = false;
 
-            // Auto-start the game by simulating a click on the splash
-            gameFrame.onload = () => {
-                setTimeout(() => {
-                    try {
-                        const splashOverlay = gameFrame.contentDocument?.getElementById('splashOverlay');
-                        if (splashOverlay && splashOverlay.style.display !== 'none') {
-                            splashOverlay.click();
-                        }
-                    } catch (e) {
-                        console.log('[Battleboids] Could not auto-start:', e.message);
-                    }
-                }, 500);
-            };
+        sdk.onInit((config, variables) => {
+            console.log('[Boidwars] Initialized');
+            gameStarted = true;
+            wantStart = true;
+            if (bridged) toGame('boidwars-start');
         });
 
         sdk.onPause(() => {
-            console.log('[Battleboids] Paused');
+            console.log('[Boidwars] Paused');
             document.getElementById('pause-overlay').classList.add('visible');
+            toGame('boidwars-pause');
         });
 
         sdk.onResume(() => {
-            console.log('[Battleboids] Resumed');
+            console.log('[Boidwars] Resumed');
             document.getElementById('pause-overlay').classList.remove('visible');
+            toGame('boidwars-resume');
         });
 
         sdk.onTerminate((reason) => {
-            console.log('[Battleboids] Terminated:', reason);
+            console.log('[Boidwars] Terminated:', reason);
+            toGame('boidwars-pause');
         });
 
-        // Listen for messages from game frame about completion
+        // The shell resizes this frame for full / split / pip. The nested
+        // canvas sizes itself from window.innerHeight, and a nested frame
+        // gets no resize event of its own when only its parent's box
+        // changed — so forward it, or the canvas keeps its first size.
+        const relayResize = () => toGame('boidwars-resize');
+        window.addEventListener('resize', relayResize);
+        if (window.ResizeObserver) new ResizeObserver(relayResize).observe(document.body);
+
         window.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'battleboids-complete') {
-                sdk.complete({
-                    success: event.data.won,
-                    score: event.data.score || 0,
-                    variables: {
-                        game_won: event.data.won
-                    }
-                });
+            const d = event.data;
+            if (!d || typeof d.type !== 'string') return;
+            // The debug clock patches one document. The game is a frame
+            // deeper, so pass the message on or slow-mo stops at this
+            // wrapper (which has nothing to animate).
+            if (d.type === 'debug' && event.source !== gameFrame.contentWindow) {
+                try { gameFrame.contentWindow?.postMessage(d, '*'); } catch (e) { /* not ready */ }
+            }
+            switch (d.type) {
+                case 'boidwars-ready':
+                    bridged = true;
+                    console.log('[Boidwars] game bridge up');
+                    if (wantStart) toGame('boidwars-start');
+                    break;
+                case 'boidwars-state':
+                    sdk.progress({ state: d.state });
+                    break;
+                case 'boidwars-over':
+                    if (completed) break;      // gameOver persists; report once
+                    completed = true;
+                    console.log(`[Boidwars] over: won=${d.won} (${d.message})`);
+                    sdk.complete({
+                        success: !!d.won,
+                        score: d.won ? 100 : 0,
+                        variables: { battleboids_won: !!d.won },
+                    });
+                    break;
             }
         });
-
-        // Also detect when game ends by checking the iframe periodically
-        setInterval(() => {
-            if (!gameStarted) return;
-            try {
-                const restartBtn = gameFrame.contentDocument?.getElementById('restartButton');
-                if (restartBtn && restartBtn.style.display !== 'none') {
-                    // Game has ended
-                    const msg = gameFrame.contentDocument?.getElementById('uiMessages')?.textContent || '';
-                    const won = msg.includes('Victorious');
-                    sdk.complete({
-                        success: won,
-                        score: won ? 100 : 0,
-                        variables: { game_won: won }
-                    });
-                    gameStarted = false; // Prevent multiple completions
-                }
-            } catch (e) { /* iframe not accessible */ }
-        }, 1000);
 
         // Route console logs to host
         if (window.parent !== window) {

@@ -214,6 +214,8 @@
         <div id="uiMessages"></div>
         <button id="restartButton">Restart Battle (R)</button>
     </div>
+<!-- platform slow-motion / freeze / step service (see inklet/minigames/debug-clock.js) -->
+<script src="../inklet/minigames/debug-clock.js"></script>
 <script>
     // --- CHUNK 1: Game Constants & Setup Variables ---
     let NATIVE_WIDTH = 384;
@@ -445,7 +447,31 @@
         });
         ctx.globalAlpha = 1;
     }
-    function initTerrain() { 
+    // Resize the existing terrain to the current GRID_* dimensions,
+    // preserving what overlaps. New ground at the bottom is filled with
+    // rubble so a widened window does not open a hole under the wizards;
+    // new space above is empty sky.
+    function reshapeTerrain() {
+        if (!Array.isArray(terrain) || terrain.length === 0) return;
+        if (terrain.length === GRID_HEIGHT && terrain[0].length === GRID_WIDTH) return;
+        const oldH = terrain.length, oldW = terrain[0].length;
+        const grid = Array(GRID_HEIGHT).fill(null).map((_, r) =>
+            Array(GRID_WIDTH).fill(0).map((_, c) => {
+                if (r < oldH && c < oldW) return terrain[r][c];
+                return (r >= GRID_HEIGHT - 5) ? 3 : 0;   // floor rubble, else sky
+            }));
+        const cols = Array(GRID_HEIGHT).fill(null).map((_, r) =>
+            Array(GRID_WIDTH).fill(0).map((_, c) =>
+                (terrainColors[r] && terrainColors[r][c] != null) ? terrainColors[r][c] : Math.random()));
+        terrain = grid;
+        terrainColors = cols;
+        if (typeof GRID_WIDTH !== 'undefined') {
+            // keep anyone standing on the old floor from falling through
+            for (const wz of (wizards || [])) if (wz) wz.checkFalling?.();
+        }
+    }
+
+    function initTerrain() {
         terrain = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(0));
         terrainColors = Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(null).map(() => Math.random()));
         generateMountain(Math.floor(GRID_WIDTH * 0.28), GRID_WIDTH * 0.25, 1); generateMountain(Math.floor(GRID_WIDTH * 0.72), GRID_WIDTH * 0.25, 2);
@@ -568,7 +594,9 @@
     }
     function isSolidTerrainAtWorld(worldX, worldY, includeFloor = true) { 
          const gridX = Math.floor(worldX / TERRAIN_BLOCK_SIZE); const gridY = Math.floor(worldY / TERRAIN_BLOCK_SIZE);
-        if (gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && gridY < GRID_HEIGHT) { return terrain[gridY][gridX] !== 0; }
+        // bound by the terrain array, not the (resize-mutable) constants
+        const row = (gridY >= 0 && gridY < GRID_HEIGHT) ? terrain[gridY] : undefined;
+        if (row && gridX >= 0 && gridX < GRID_WIDTH && gridX < row.length) { return row[gridX] !== 0; }
         if (includeFloor && worldY >= NATIVE_HEIGHT - TERRAIN_BLOCK_SIZE/2) return true; 
         return worldY < 0 || worldX < 0 || worldX >= NATIVE_WIDTH; 
     }
@@ -852,7 +880,20 @@
     function aiTakeTurn() { if (gameState !== 'playing' || currentPlayerIndex !== 1 || !wizards[1].isAI) return; gameState = 'ai_thinking'; updateUIMessage("AI Turn..."); const aiWizard = wizards[1]; const humanWizard = wizards[0]; aiWizard.setState('aiming'); aiThinkTimer = setTimeout(() => { if (gameState !== 'ai_thinking') return;  let targetX = humanWizard.position.x + (Math.random() - 0.5) * (NATIVE_WIDTH * 0.15); let targetY = humanWizard.position.y - humanWizard.height * 0.3 + (Math.random() - 0.5) * (NATIVE_HEIGHT * 0.1); if (Math.random() < 0.4) { targetY = humanWizard.position.y + humanWizard.height * (0.2 + Math.random()*0.5); targetX += (Math.random() - 0.5) * TERRAIN_BLOCK_SIZE * 5; } const staffHandX = aiWizard.position.x + (aiWizard.id === 0 ? 1 : -1) * (aiWizard.width*0.05); const staffHandY = (aiWizard.position.y - aiWizard.height) + aiWizard.height * 0.4; aiWizard.aimAngle = Math.atan2(targetY - staffHandY, targetX - staffHandX); setTimeout(() => { if(gameState !== 'ai_thinking') return; castSpell(aiWizard, targetX, targetY); gameState = 'playing_phase'; }, 100 + Math.random()*100); }, 400 + Math.random() * 300);  }
     function updateUIMessage(message) { if (gameState === 'gameOver' && (uiMessages.textContent.includes("Victorious!") || uiMessages.textContent.includes("Plummeted!"))) {} else { uiMessages.textContent = message; } }
     function handleTurnTransition() { if(turnTransitionTimer) clearTimeout(turnTransitionTimer); turnTransitionTimer = null; currentPlayerIndex = 1 - currentPlayerIndex; shotFiredThisTurn = false; gameState = 'playing'; isAimingWithInput = false; if (wizards[currentPlayerIndex].isAI) { updateUIMessage("AI Turn..."); aiTakeTurn(); } else { updateUIMessage("Blue Wizard's Turn! Aim."); wizards[currentPlayerIndex].setState('aiming'); humanAimTarget.x = wizards[1-currentPlayerIndex].position.x; humanAimTarget.y = wizards[1-currentPlayerIndex].position.y - wizards[1-currentPlayerIndex].height/2; } }
-    function countMountainBlocks(mountainType) { let count = 0; for (let r = 0; r < GRID_HEIGHT; r++) { for (let c = 0; c < GRID_WIDTH; c++) { if (terrain[r][c] === mountainType) { count++; } } } return count; }
+    // GRID_WIDTH/HEIGHT are recomputed on every resize, but `terrain` was
+    // built by initTerrain() at the size in force then. Iterate the array
+    // we actually have, not the constants — a window resize mid-battle
+    // otherwise indexed past the end and crashed the game loop. (Latent
+    // standalone too: rotating a phone did it.)
+    function countMountainBlocks(mountainType) {
+        let count = 0;
+        for (let r = 0; r < terrain.length; r++) {
+            const row = terrain[r];
+            if (!row) continue;
+            for (let c = 0; c < row.length; c++) if (row[c] === mountainType) count++;
+        }
+        return count;
+    }
     function updateGameStats() { gameStats.player1 = { attackers: 0, workers: 0, mountainBlocks: countMountainBlocks(1), health: wizards[0] ? wizards[0].health : 0 }; gameStats.player2 = { attackers: 0, workers: 0, mountainBlocks: countMountainBlocks(2), health: wizards[1] ? wizards[1].health : 0 }; allBoids.forEach(boid => { const targetPlayerStats = boid.ownerId === 0 ? gameStats.player1 : gameStats.player2; if (boid.state === BOID_STATE_ATTACKING) { targetPlayerStats.attackers++; } else { targetPlayerStats.workers++; }}); }
     function update() { 
         if (gameState === 'splash_html' || gameState === 'game_loading') return; 
@@ -963,7 +1004,8 @@
     }
 
     // --- CHUNK 10: Event Handlers, Reset, and Init ---
-    function gameLoop() { update(); render(); requestAnimationFrame(gameLoop); }
+    let boidwarsPaused = false;
+    function gameLoop() { if (!boidwarsPaused) { update(); render(); } requestAnimationFrame(gameLoop); }
     function getInteractionPosOnCanvas(event) { const rect = canvas.getBoundingClientRect(); const scaleX = NATIVE_WIDTH / rect.width; const scaleY = NATIVE_HEIGHT / rect.height; let clientX, clientY; if (event.touches && event.touches.length > 0) { clientX = event.touches[0].clientX; clientY = event.touches[0].clientY; } else { clientX = event.clientX; clientY = event.clientY; } return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY }; }
     function handleSplashStart() { if (gameState !== 'splash_html') return; initAudio(); playPrimeSound(); splashOverlay.style.display = 'none'; gameContainer.style.display = 'flex'; startSplashAnimation(); gameState = 'splash_animating'; }
     function startSplashAnimation() { particles = [];  splashAnimationTimer = SPLASH_ANIMATION_DURATION; const titleCenterXOnCanvas = NATIVE_WIDTH / 2;  const titleCenterYOnCanvas = NATIVE_HEIGHT / 2; const numSplashParticles = 150; for(let i=0; i < numSplashParticles; i++) { const angle = Math.random() * Math.PI * 2; const speed = 2 + Math.random() * 4; const p = new DebrisParticle( titleCenterXOnCanvas, titleCenterYOnCanvas, PALETTE.BRIGHT_RED_DAMAGE, 0.8 + Math.random() * 0.7 ); p.velocity = new Vector2D(Math.cos(angle) * speed, Math.sin(angle) * speed); p.lifespan = SPLASH_ANIMATION_DURATION * (0.6 + Math.random() * 0.4);  p.gravity = 0.03;  particles.push(p); } }
@@ -1010,13 +1052,26 @@
         if (canvas) {
             canvas.width = NATIVE_WIDTH;
             canvas.height = NATIVE_HEIGHT;
-            canvas.style.width = (NATIVE_WIDTH * SCALE_FACTOR) + 'px';
-            canvas.style.height = (NATIVE_HEIGHT * SCALE_FACTOR) + 'px';
+            // The 384×256 floor above is a MINIMUM PLAYFIELD in game
+            // pixels, not a minimum on screen. Shrink the displayed size
+            // to fit whatever box we were given — a shell can dock this
+            // into a 200px picture-in-picture — keeping the aspect ratio
+            // rather than spilling out of the window.
+            const cssW = NATIVE_WIDTH * SCALE_FACTOR;
+            const cssH = NATIVE_HEIGHT * SCALE_FACTOR;
+            const fit = Math.min(1, viewportWidth / cssW, viewportHeight / cssH);
+            canvas.style.width = Math.floor(cssW * fit) + 'px';
+            canvas.style.height = Math.floor(cssH * fit) + 'px';
             
             // Update dependent game constants
             if (typeof GRID_WIDTH !== 'undefined') {
                 GRID_WIDTH = Math.floor(NATIVE_WIDTH / TERRAIN_BLOCK_SIZE);
                 GRID_HEIGHT = Math.floor(NATIVE_HEIGHT / TERRAIN_BLOCK_SIZE);
+                // These constants index `terrain` in ~30 places. Growing
+                // them without growing the array is an out-of-bounds read
+                // in the next frame — the whole game loop dies. Reshape
+                // the grid here, once, instead of guarding every site.
+                reshapeTerrain();
             }
         }
     }
@@ -1030,7 +1085,42 @@
         updateCanvasDimensions(); // Set up responsive canvas sizing
         uiMessages = document.getElementById('uiMessages');  restartButton = document.getElementById('restartButton'); gameContainer = document.getElementById('gameContainer'); splashOverlay = document.getElementById('splashOverlay'); splashTitleElement = document.getElementById('splashTitle'); splashOverlay.addEventListener('click', handleSplashStart); splashOverlay.addEventListener('touchstart', handleSplashStart, {passive: false}); canvas.addEventListener('mousedown', handleCanvasInteraction);  canvas.addEventListener('mousemove', handleCanvasInteraction); canvas.addEventListener('mouseup', handleCanvasInteraction); canvas.addEventListener('mouseleave', () => { if (gameState !== 'playing' && gameState !== 'playing_phase') return; if (isAimingWithInput) { isAimingWithInput = false; if (wizards[0] && wizards[0].state === 'aiming' && wizards[0].state !== 'casting') wizards[0].setState('idle'); } }); canvas.addEventListener('touchstart', handleCanvasInteraction, { passive: false }); canvas.addEventListener('touchmove', handleCanvasInteraction, { passive: false }); canvas.addEventListener('touchend', handleCanvasInteraction, { passive: false }); canvas.addEventListener('touchcancel', () => { if (gameState !== 'playing' && gameState !== 'playing_phase') return; if (isAimingWithInput) { isAimingWithInput = false; if (wizards[0] && wizards[0].state === 'aiming' && wizards[0].state !== 'casting') wizards[0].setState('idle'); } }); document.addEventListener('keydown', (event) => { if (gameState === 'splash_html') { handleSplashStart(); return; } initAudio(); if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume().catch(e => console.warn("Audio resume failed on keydown:", e));} if (event.key.toLowerCase() === 'r' && (gameState === 'gameOver' || (event.ctrlKey && event.shiftKey))) { fullGameReset(); } }); restartButton.addEventListener('click', () => { initAudio(); if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume().catch(e => console.warn("Audio resume failed on restart click:", e));} fullGameReset(); }); gameLoop(); 
     }
-    window.addEventListener('load', init);
+    // ---- Embedded-host bridge ------------------------------------------
+    // When this page runs inside a shell it cannot be reached by DOM
+    // poking: the wrapper sits in a sandboxed iframe with an opaque
+    // origin, so its old contentDocument checks silently did nothing —
+    // the game never auto-started and never reported a result. Talk over
+    // postMessage instead. Standalone behaviour is unchanged: none of
+    // this runs unless there is a parent frame.
+    function installHostBridge() {
+        if (window.parent === window) return;
+        const post = (msg) => { try { window.parent.postMessage(msg, '*'); } catch (e) { /* detached */ } };
+        let lastState = null;
+        setInterval(() => {
+            if (gameState === lastState) return;
+            lastState = gameState;
+            post({ type: 'boidwars-state', state: gameState });
+            if (gameState === 'gameOver') {
+                // the human is wizard 0; still standing means they won
+                const won = !!(wizards && wizards[0] && wizards[0].health > 0);
+                post({ type: 'boidwars-over', won, message: uiMessages ? uiMessages.textContent : '' });
+            }
+        }, 200);
+        window.addEventListener('message', (e) => {
+            const d = e.data;
+            if (!d || typeof d.type !== 'string') return;
+            switch (d.type) {
+                case 'boidwars-start':   handleSplashStart(); break;
+                case 'boidwars-pause':   boidwarsPaused = true; break;
+                case 'boidwars-resume':  boidwarsPaused = false; break;
+                case 'boidwars-restart': fullGameReset(); break;
+                case 'boidwars-resize':  setViewportHeightUnit(); break;
+            }
+        });
+        post({ type: 'boidwars-ready' });
+    }
+
+    window.addEventListener('load', () => { init(); installHostBridge(); });
 </script>
 </body>
 </html>

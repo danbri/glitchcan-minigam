@@ -1,0 +1,1927 @@
+{
+ "generated": "fink-vars.mjs",
+ "shared": [
+  "diamonds",
+  "mega_diamonds",
+  "keys",
+  "score",
+  "minigame_played"
+ ],
+ "context": [
+  "player_level",
+  "difficulty"
+ ],
+ "counts": {
+  "stories": 19,
+  "guests": 6,
+  "names": 91,
+  "collisions": 0,
+  "defects": 12
+ },
+ "works": [
+  {
+   "id": "inklet/_tmp_shane-manor.fink.js",
+   "kind": "story",
+   "vars": {
+    "player_reputation": {
+     "type": "number",
+     "value": 50
+    },
+    "investigation_style": {
+     "type": "string",
+     "value": ""
+    },
+    "time_pressure": {
+     "type": "number",
+     "value": 5
+    },
+    "evidence_parentage_letters": {
+     "type": "boolean",
+     "value": false
+    },
+    "evidence_photographs": {
+     "type": "boolean",
+     "value": false
+    },
+    "evidence_muddy_boots": {
+     "type": "boolean",
+     "value": false
+    },
+    "evidence_victoria_chess": {
+     "type": "boolean",
+     "value": false
+    },
+    "evidence_will_changes": {
+     "type": "boolean",
+     "value": false
+    },
+    "evidence_threatening_letters": {
+     "type": "boolean",
+     "value": false
+    },
+    "evidence_locked_room_key": {
+     "type": "boolean",
+     "value": false
+    },
+    "evidence_coat_match": {
+     "type": "boolean",
+     "value": false
+    },
+    "victoria_evidence_count": {
+     "type": "number",
+     "value": 0
+    },
+    "victoria_interviewed": {
+     "type": "boolean",
+     "value": false
+    },
+    "victoria_lie_detected": {
+     "type": "boolean",
+     "value": false
+    },
+    "victoria_alibi": {
+     "type": "string",
+     "value": ""
+    },
+    "confronted_with_photos": {
+     "type": "boolean",
+     "value": false
+    },
+    "confronted_with_letters": {
+     "type": "boolean",
+     "value": false
+    },
+    "confronted_with_boots": {
+     "type": "boolean",
+     "value": false
+    },
+    "victoria_deflections": {
+     "type": "number",
+     "value": 0
+    },
+    "discovered_charles_debt_paid": {
+     "type": "boolean",
+     "value": false
+    },
+    "discovered_ashford_secret": {
+     "type": "boolean",
+     "value": false
+    },
+    "discovered_victoria_knew_truth": {
+     "type": "boolean",
+     "value": false
+    },
+    "total_secrets_discovered": {
+     "type": "number",
+     "value": 0
+    },
+    "chess_game_completed": {
+     "type": "boolean",
+     "value": false
+    }
+   }
+  },
+  {
+   "id": "inklet/bagend.fink.js",
+   "kind": "story",
+   "vars": {
+    "troll_status": {
+     "type": "string",
+     "value": "alive"
+    },
+    "has_taken_food": {
+     "type": "boolean",
+     "value": false
+    },
+    "talked_to_gandalf": {
+     "type": "boolean",
+     "value": false
+    },
+    "talked_to_thorin": {
+     "type": "boolean",
+     "value": false
+    },
+    "visited_kitchen": {
+     "type": "boolean",
+     "value": false
+    },
+    "has_key": {
+     "type": "boolean",
+     "value": false
+    },
+    "has_sword": {
+     "type": "boolean",
+     "value": false
+    },
+    "has_map": {
+     "type": "boolean",
+     "value": false
+    },
+    "committed_to_adventure": {
+     "type": "boolean",
+     "value": false
+    },
+    "talked_to_innkeeper": {
+     "type": "boolean",
+     "value": false
+    },
+    "has_treasure": {
+     "type": "boolean",
+     "value": false
+    },
+    "Inventory": {
+     "type": "object",
+     "value": {
+      "origins": [
+       {
+        "_name": "Inventory",
+        "_items": {},
+        "_itemNameToValues": {}
+       }
+      ],
+      "_originNames": [
+       "Inventory"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "id": "inklet/demos/dev-worldpools.fink.js",
+   "kind": "story",
+   "vars": {
+    "mega_diamonds": {
+     "type": "number",
+     "value": 12
+    }
+   }
+  },
+  {
+   "id": "inklet/demos/diamond-cave.fink.js",
+   "kind": "story",
+   "vars": {
+    "diamonds": {
+     "type": "number",
+     "value": 0
+    },
+    "mega_diamonds": {
+     "type": "number",
+     "value": 0
+    },
+    "keys": {
+     "type": "number",
+     "value": 0
+    },
+    "score": {
+     "type": "number",
+     "value": 0
+    },
+    "minigame_played": {
+     "type": "boolean",
+     "value": false
+    },
+    "cavern_explored": {
+     "type": "boolean",
+     "value": false
+    },
+    "tried_passage": {
+     "type": "boolean",
+     "value": false
+    }
+   }
+  },
+  {
+   "id": "inklet/demos/dream-inner.fink.js",
+   "kind": "story",
+   "vars": {}
+  },
+  {
+   "id": "inklet/demos/dream-outer.fink.js",
+   "kind": "story",
+   "vars": {}
+  },
+  {
+   "id": "inklet/demos/foafos-tour.fink.js",
+   "kind": "story",
+   "vars": {}
+  },
+  {
+   "id": "inklet/demos/hamfink2026-ch2.fink.js",
+   "kind": "story",
+   "vars": {
+    "diamonds": {
+     "type": "number",
+     "value": 0
+    },
+    "mega_diamonds": {
+     "type": "number",
+     "value": 0
+    },
+    "keys": {
+     "type": "number",
+     "value": 0
+    },
+    "score": {
+     "type": "number",
+     "value": 0
+    },
+    "portal_stable": {
+     "type": "boolean",
+     "value": false
+    },
+    "collected_shard": {
+     "type": "boolean",
+     "value": false
+    },
+    "was_mugged": {
+     "type": "boolean",
+     "value": false
+    }
+   }
+  },
+  {
+   "id": "inklet/demos/hamfink2026-ch3.fink.js",
+   "kind": "story",
+   "vars": {
+    "diamonds": {
+     "type": "number",
+     "value": 0
+    },
+    "mega_diamonds": {
+     "type": "number",
+     "value": 0
+    },
+    "score": {
+     "type": "number",
+     "value": 0
+    },
+    "bentham_liberated": {
+     "type": "boolean",
+     "value": false
+    },
+    "qwen_alignment_score": {
+     "type": "number",
+     "value": 0
+    },
+    "robot_activated": {
+     "type": "boolean",
+     "value": false
+    },
+    "prank_severity": {
+     "type": "number",
+     "value": 0
+    },
+    "caught_by_security": {
+     "type": "boolean",
+     "value": false
+    },
+    "qwen_consulted": {
+     "type": "number",
+     "value": 0
+    }
+   }
+  },
+  {
+   "id": "inklet/demos/radio-foundation-quiz.fink.js",
+   "kind": "story",
+   "vars": {
+    "score": {
+     "type": "number",
+     "value": 0
+    },
+    "total": {
+     "type": "number",
+     "value": 20
+    },
+    "q": {
+     "type": "number",
+     "value": 0
+    }
+   }
+  },
+  {
+   "id": "inklet/hampstead.fink.js",
+   "kind": "story",
+   "vars": {
+    "score": {
+     "type": "number",
+     "value": 0
+    },
+    "diamonds": {
+     "type": "number",
+     "value": 0
+    },
+    "mega_diamonds": {
+     "type": "number",
+     "value": 0
+    },
+    "jeans_worn": {
+     "type": "boolean",
+     "value": false
+    },
+    "tie_worn": {
+     "type": "boolean",
+     "value": false
+    },
+    "giro_collected": {
+     "type": "boolean",
+     "value": false
+    },
+    "robbin_birds": {
+     "type": "number",
+     "value": 0
+    },
+    "giro_cashed": {
+     "type": "boolean",
+     "value": false
+    },
+    "tweed_taken": {
+     "type": "boolean",
+     "value": false
+    },
+    "penguin_taken": {
+     "type": "boolean",
+     "value": false
+    },
+    "playwright_card": {
+     "type": "boolean",
+     "value": false
+    },
+    "key_2cv": {
+     "type": "boolean",
+     "value": false
+    },
+    "mortgage_signed": {
+     "type": "boolean",
+     "value": false
+    },
+    "debug_message": {
+     "type": "string",
+     "value": ""
+    },
+    "diamond_disposed": {
+     "type": "boolean",
+     "value": false
+    },
+    "met_artist": {
+     "type": "boolean",
+     "value": false
+    },
+    "fraud_caught": {
+     "type": "boolean",
+     "value": false
+    }
+   }
+  },
+  {
+   "id": "inklet/mudslidemines.fink.js",
+   "kind": "story",
+   "vars": {
+    "diamonds": {
+     "type": "number",
+     "value": 0
+    },
+    "score": {
+     "type": "number",
+     "value": 0
+    },
+    "minigame_played": {
+     "type": "boolean",
+     "value": false
+    }
+   }
+  },
+  {
+   "id": "inklet/riverbend.fink.js",
+   "kind": "story",
+   "vars": {}
+  },
+  {
+   "id": "inklet/shane-manor.fink.js",
+   "kind": "story",
+   "vars": {
+    "player_reputation": {
+     "type": "number",
+     "value": 50
+    },
+    "investigation_style": {
+     "type": "string",
+     "value": ""
+    },
+    "time_pressure": {
+     "type": "number",
+     "value": 5
+    },
+    "evidence_parentage_letters": {
+     "type": "boolean",
+     "value": false
+    },
+    "evidence_photographs": {
+     "type": "boolean",
+     "value": false
+    },
+    "evidence_muddy_boots": {
+     "type": "boolean",
+     "value": false
+    },
+    "evidence_victoria_chess": {
+     "type": "boolean",
+     "value": false
+    },
+    "evidence_will_changes": {
+     "type": "boolean",
+     "value": false
+    },
+    "evidence_threatening_letters": {
+     "type": "boolean",
+     "value": false
+    },
+    "evidence_locked_room_key": {
+     "type": "boolean",
+     "value": false
+    },
+    "evidence_coat_match": {
+     "type": "boolean",
+     "value": false
+    },
+    "victoria_evidence_count": {
+     "type": "number",
+     "value": 0
+    },
+    "victoria_interviewed": {
+     "type": "boolean",
+     "value": false
+    },
+    "victoria_lie_detected": {
+     "type": "boolean",
+     "value": false
+    },
+    "victoria_alibi": {
+     "type": "string",
+     "value": ""
+    },
+    "confronted_with_photos": {
+     "type": "boolean",
+     "value": false
+    },
+    "confronted_with_letters": {
+     "type": "boolean",
+     "value": false
+    },
+    "confronted_with_boots": {
+     "type": "boolean",
+     "value": false
+    },
+    "victoria_deflections": {
+     "type": "number",
+     "value": 0
+    },
+    "discovered_charles_debt_paid": {
+     "type": "boolean",
+     "value": false
+    },
+    "discovered_ashford_secret": {
+     "type": "boolean",
+     "value": false
+    },
+    "discovered_victoria_knew_truth": {
+     "type": "boolean",
+     "value": false
+    },
+    "total_secrets_discovered": {
+     "type": "number",
+     "value": 0
+    },
+    "chess_game_completed": {
+     "type": "boolean",
+     "value": false
+    }
+   }
+  },
+  {
+   "id": "inklet/tml-2025-langlearn.fink.js",
+   "kind": "story",
+   "vars": {
+    "correct_answers": {
+     "type": "number",
+     "value": 0
+    }
+   }
+  },
+  {
+   "id": "inklet/toc.fink.js",
+   "kind": "story",
+   "vars": {}
+  },
+  {
+   "id": "inklet/validation/tests/test-variables.fink.js",
+   "kind": "story",
+   "vars": {
+    "has_clothes": {
+     "type": "boolean",
+     "value": false
+    },
+    "is_wearing_clothes": {
+     "type": "boolean",
+     "value": false
+    },
+    "clothes_description": {
+     "type": "string",
+     "value": "smart outfit"
+    }
+   }
+  },
+  {
+   "id": "inklet/world-between-worlds.fink.js",
+   "kind": "story",
+   "vars": {}
+  },
+  {
+   "id": "cozyverse/maple-hollow.fink.js",
+   "kind": "story",
+   "vars": {
+    "warmth": {
+     "type": "number",
+     "value": 0
+    },
+    "visited_bakery": {
+     "type": "boolean",
+     "value": false
+    },
+    "met_jake": {
+     "type": "boolean",
+     "value": false
+    },
+    "heard_song": {
+     "type": "boolean",
+     "value": false
+    }
+   }
+  }
+ ],
+ "guests": [
+  {
+   "id": "battleboids",
+   "kind": "guest",
+   "manifest": true,
+   "read": [
+    "difficulty",
+    "player_level"
+   ],
+   "write": [
+    "battleboids_won",
+    "minigame_played"
+   ]
+  },
+  {
+   "id": "chess",
+   "kind": "guest",
+   "manifest": true,
+   "read": [
+    "difficulty",
+    "player_level"
+   ],
+   "write": [
+    "chess_won",
+    "chess_game_completed",
+    "minigame_played"
+   ]
+  },
+  {
+   "id": "gems",
+   "kind": "guest",
+   "manifest": true,
+   "read": [
+    "player_level",
+    "has_pickaxe",
+    "difficulty"
+   ],
+   "write": [
+    "diamonds",
+    "mega_diamonds",
+    "minigame_played"
+   ]
+  },
+  {
+   "id": "gridluck",
+   "kind": "guest",
+   "manifest": true,
+   "read": [
+    "difficulty",
+    "player_level",
+    "keys"
+   ],
+   "write": [
+    "gridluck_won",
+    "gridluck_score",
+    "minigame_played",
+    "diamonds",
+    "score"
+   ]
+  },
+  {
+   "id": "mudslider",
+   "kind": "guest",
+   "manifest": true,
+   "read": [
+    "difficulty",
+    "player_level",
+    "keys"
+   ],
+   "write": [
+    "mudslider_gems",
+    "mudslider_rooms",
+    "mudslider_won",
+    "has_red_key",
+    "has_blue_key",
+    "has_yellow_key",
+    "has_green_key",
+    "minigame_played",
+    "diamonds"
+   ]
+  },
+  {
+   "id": "robbin",
+   "kind": "guest",
+   "manifest": true,
+   "read": [
+    "difficulty",
+    "diamonds"
+   ],
+   "write": [
+    "robbin_birds",
+    "robbin_score",
+    "minigame_played",
+    "score",
+    "diamonds"
+   ]
+  }
+ ],
+ "names": [
+  {
+   "name": "player_reputation",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "investigation_style",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "time_pressure",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "evidence_parentage_letters",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "evidence_photographs",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "evidence_muddy_boots",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "evidence_victoria_chess",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "evidence_will_changes",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "evidence_threatening_letters",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "evidence_locked_room_key",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "evidence_coat_match",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "victoria_evidence_count",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "victoria_interviewed",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "victoria_lie_detected",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "victoria_alibi",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "confronted_with_photos",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "confronted_with_letters",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "confronted_with_boots",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "victoria_deflections",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "discovered_charles_debt_paid",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "discovered_ashford_secret",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "discovered_victoria_knew_truth",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "total_secrets_discovered",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "chess_game_completed",
+   "declaredBy": [
+    "inklet/_tmp_shane-manor.fink.js",
+    "inklet/shane-manor.fink.js"
+   ],
+   "writableBy": [
+    "chess"
+   ],
+   "readableBy": [],
+   "works": [
+    "inklet/shane-manor.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "troll_status",
+   "declaredBy": [
+    "inklet/bagend.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/bagend.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "has_taken_food",
+   "declaredBy": [
+    "inklet/bagend.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/bagend.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "talked_to_gandalf",
+   "declaredBy": [
+    "inklet/bagend.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/bagend.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "talked_to_thorin",
+   "declaredBy": [
+    "inklet/bagend.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/bagend.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "visited_kitchen",
+   "declaredBy": [
+    "inklet/bagend.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/bagend.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "has_key",
+   "declaredBy": [
+    "inklet/bagend.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/bagend.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "has_sword",
+   "declaredBy": [
+    "inklet/bagend.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/bagend.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "has_map",
+   "declaredBy": [
+    "inklet/bagend.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/bagend.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "committed_to_adventure",
+   "declaredBy": [
+    "inklet/bagend.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/bagend.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "talked_to_innkeeper",
+   "declaredBy": [
+    "inklet/bagend.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/bagend.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "has_treasure",
+   "declaredBy": [
+    "inklet/bagend.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/bagend.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "Inventory",
+   "declaredBy": [
+    "inklet/bagend.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/bagend.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "mega_diamonds",
+   "declaredBy": [
+    "inklet/demos/dev-worldpools.fink.js",
+    "inklet/demos/diamond-cave.fink.js",
+    "inklet/demos/hamfink2026-ch2.fink.js",
+    "inklet/demos/hamfink2026-ch3.fink.js",
+    "inklet/hampstead.fink.js"
+   ],
+   "writableBy": [
+    "gems"
+   ],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/dev-worldpools.fink.js",
+    "inklet/demos/diamond-cave.fink.js",
+    "inklet/demos/hamfink2026-ch2.fink.js",
+    "inklet/demos/hamfink2026-ch3.fink.js",
+    "inklet/hampstead.fink.js"
+   ],
+   "class": "shared"
+  },
+  {
+   "name": "diamonds",
+   "declaredBy": [
+    "inklet/demos/diamond-cave.fink.js",
+    "inklet/demos/hamfink2026-ch2.fink.js",
+    "inklet/demos/hamfink2026-ch3.fink.js",
+    "inklet/hampstead.fink.js",
+    "inklet/mudslidemines.fink.js"
+   ],
+   "writableBy": [
+    "gems",
+    "gridluck",
+    "mudslider",
+    "robbin"
+   ],
+   "readableBy": [
+    "robbin"
+   ],
+   "works": [
+    "inklet/demos/diamond-cave.fink.js",
+    "inklet/demos/hamfink2026-ch2.fink.js",
+    "inklet/demos/hamfink2026-ch3.fink.js",
+    "inklet/hampstead.fink.js",
+    "inklet/mudslidemines.fink.js"
+   ],
+   "class": "shared"
+  },
+  {
+   "name": "keys",
+   "declaredBy": [
+    "inklet/demos/diamond-cave.fink.js",
+    "inklet/demos/hamfink2026-ch2.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [
+    "gridluck",
+    "mudslider"
+   ],
+   "works": [
+    "inklet/demos/diamond-cave.fink.js",
+    "inklet/demos/hamfink2026-ch2.fink.js"
+   ],
+   "class": "shared"
+  },
+  {
+   "name": "score",
+   "declaredBy": [
+    "inklet/demos/diamond-cave.fink.js",
+    "inklet/demos/hamfink2026-ch2.fink.js",
+    "inklet/demos/hamfink2026-ch3.fink.js",
+    "inklet/demos/radio-foundation-quiz.fink.js",
+    "inklet/hampstead.fink.js",
+    "inklet/mudslidemines.fink.js"
+   ],
+   "writableBy": [
+    "gridluck",
+    "robbin"
+   ],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/diamond-cave.fink.js",
+    "inklet/demos/hamfink2026-ch2.fink.js",
+    "inklet/demos/hamfink2026-ch3.fink.js",
+    "inklet/demos/radio-foundation-quiz.fink.js",
+    "inklet/hampstead.fink.js",
+    "inklet/mudslidemines.fink.js"
+   ],
+   "class": "shared"
+  },
+  {
+   "name": "minigame_played",
+   "declaredBy": [
+    "inklet/demos/diamond-cave.fink.js",
+    "inklet/mudslidemines.fink.js"
+   ],
+   "writableBy": [
+    "battleboids",
+    "chess",
+    "gems",
+    "gridluck",
+    "mudslider",
+    "robbin"
+   ],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/diamond-cave.fink.js",
+    "inklet/mudslidemines.fink.js"
+   ],
+   "class": "shared"
+  },
+  {
+   "name": "cavern_explored",
+   "declaredBy": [
+    "inklet/demos/diamond-cave.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/diamond-cave.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "tried_passage",
+   "declaredBy": [
+    "inklet/demos/diamond-cave.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/diamond-cave.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "portal_stable",
+   "declaredBy": [
+    "inklet/demos/hamfink2026-ch2.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/hamfink2026-ch2.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "collected_shard",
+   "declaredBy": [
+    "inklet/demos/hamfink2026-ch2.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/hamfink2026-ch2.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "was_mugged",
+   "declaredBy": [
+    "inklet/demos/hamfink2026-ch2.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/hamfink2026-ch2.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "bentham_liberated",
+   "declaredBy": [
+    "inklet/demos/hamfink2026-ch3.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/hamfink2026-ch3.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "qwen_alignment_score",
+   "declaredBy": [
+    "inklet/demos/hamfink2026-ch3.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/hamfink2026-ch3.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "robot_activated",
+   "declaredBy": [
+    "inklet/demos/hamfink2026-ch3.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/hamfink2026-ch3.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "prank_severity",
+   "declaredBy": [
+    "inklet/demos/hamfink2026-ch3.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/hamfink2026-ch3.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "caught_by_security",
+   "declaredBy": [
+    "inklet/demos/hamfink2026-ch3.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/hamfink2026-ch3.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "qwen_consulted",
+   "declaredBy": [
+    "inklet/demos/hamfink2026-ch3.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/hamfink2026-ch3.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "total",
+   "declaredBy": [
+    "inklet/demos/radio-foundation-quiz.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/radio-foundation-quiz.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "q",
+   "declaredBy": [
+    "inklet/demos/radio-foundation-quiz.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/demos/radio-foundation-quiz.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "jeans_worn",
+   "declaredBy": [
+    "inklet/hampstead.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/hampstead.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "tie_worn",
+   "declaredBy": [
+    "inklet/hampstead.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/hampstead.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "giro_collected",
+   "declaredBy": [
+    "inklet/hampstead.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/hampstead.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "robbin_birds",
+   "declaredBy": [
+    "inklet/hampstead.fink.js"
+   ],
+   "writableBy": [
+    "robbin"
+   ],
+   "readableBy": [],
+   "works": [
+    "inklet/hampstead.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "giro_cashed",
+   "declaredBy": [
+    "inklet/hampstead.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/hampstead.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "tweed_taken",
+   "declaredBy": [
+    "inklet/hampstead.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/hampstead.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "penguin_taken",
+   "declaredBy": [
+    "inklet/hampstead.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/hampstead.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "playwright_card",
+   "declaredBy": [
+    "inklet/hampstead.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/hampstead.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "key_2cv",
+   "declaredBy": [
+    "inklet/hampstead.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/hampstead.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "mortgage_signed",
+   "declaredBy": [
+    "inklet/hampstead.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/hampstead.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "debug_message",
+   "declaredBy": [
+    "inklet/hampstead.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/hampstead.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "diamond_disposed",
+   "declaredBy": [
+    "inklet/hampstead.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/hampstead.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "met_artist",
+   "declaredBy": [
+    "inklet/hampstead.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/hampstead.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "fraud_caught",
+   "declaredBy": [
+    "inklet/hampstead.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/hampstead.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "correct_answers",
+   "declaredBy": [
+    "inklet/tml-2025-langlearn.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/tml-2025-langlearn.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "has_clothes",
+   "declaredBy": [
+    "inklet/validation/tests/test-variables.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/validation/tests/test-variables.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "is_wearing_clothes",
+   "declaredBy": [
+    "inklet/validation/tests/test-variables.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/validation/tests/test-variables.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "clothes_description",
+   "declaredBy": [
+    "inklet/validation/tests/test-variables.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "inklet/validation/tests/test-variables.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "warmth",
+   "declaredBy": [
+    "cozyverse/maple-hollow.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "cozyverse/maple-hollow.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "visited_bakery",
+   "declaredBy": [
+    "cozyverse/maple-hollow.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "cozyverse/maple-hollow.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "met_jake",
+   "declaredBy": [
+    "cozyverse/maple-hollow.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "cozyverse/maple-hollow.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "heard_song",
+   "declaredBy": [
+    "cozyverse/maple-hollow.fink.js"
+   ],
+   "writableBy": [],
+   "readableBy": [],
+   "works": [
+    "cozyverse/maple-hollow.fink.js"
+   ],
+   "class": "private"
+  },
+  {
+   "name": "battleboids_won",
+   "declaredBy": [],
+   "writableBy": [
+    "battleboids"
+   ],
+   "readableBy": [],
+   "works": [],
+   "class": "private"
+  },
+  {
+   "name": "difficulty",
+   "declaredBy": [],
+   "writableBy": [],
+   "readableBy": [
+    "battleboids",
+    "chess",
+    "gems",
+    "gridluck",
+    "mudslider",
+    "robbin"
+   ],
+   "works": [],
+   "class": "context"
+  },
+  {
+   "name": "player_level",
+   "declaredBy": [],
+   "writableBy": [],
+   "readableBy": [
+    "battleboids",
+    "chess",
+    "gems",
+    "gridluck",
+    "mudslider"
+   ],
+   "works": [],
+   "class": "context"
+  },
+  {
+   "name": "chess_won",
+   "declaredBy": [],
+   "writableBy": [
+    "chess"
+   ],
+   "readableBy": [],
+   "works": [],
+   "class": "private"
+  },
+  {
+   "name": "has_pickaxe",
+   "declaredBy": [],
+   "writableBy": [],
+   "readableBy": [
+    "gems"
+   ],
+   "works": [],
+   "class": "private"
+  },
+  {
+   "name": "gridluck_won",
+   "declaredBy": [],
+   "writableBy": [
+    "gridluck"
+   ],
+   "readableBy": [],
+   "works": [],
+   "class": "private"
+  },
+  {
+   "name": "gridluck_score",
+   "declaredBy": [],
+   "writableBy": [
+    "gridluck"
+   ],
+   "readableBy": [],
+   "works": [],
+   "class": "private"
+  },
+  {
+   "name": "mudslider_gems",
+   "declaredBy": [],
+   "writableBy": [
+    "mudslider"
+   ],
+   "readableBy": [],
+   "works": [],
+   "class": "private"
+  },
+  {
+   "name": "mudslider_rooms",
+   "declaredBy": [],
+   "writableBy": [
+    "mudslider"
+   ],
+   "readableBy": [],
+   "works": [],
+   "class": "private"
+  },
+  {
+   "name": "mudslider_won",
+   "declaredBy": [],
+   "writableBy": [
+    "mudslider"
+   ],
+   "readableBy": [],
+   "works": [],
+   "class": "private"
+  },
+  {
+   "name": "has_red_key",
+   "declaredBy": [],
+   "writableBy": [
+    "mudslider"
+   ],
+   "readableBy": [],
+   "works": [],
+   "class": "private"
+  },
+  {
+   "name": "has_blue_key",
+   "declaredBy": [],
+   "writableBy": [
+    "mudslider"
+   ],
+   "readableBy": [],
+   "works": [],
+   "class": "private"
+  },
+  {
+   "name": "has_yellow_key",
+   "declaredBy": [],
+   "writableBy": [
+    "mudslider"
+   ],
+   "readableBy": [],
+   "works": [],
+   "class": "private"
+  },
+  {
+   "name": "has_green_key",
+   "declaredBy": [],
+   "writableBy": [
+    "mudslider"
+   ],
+   "readableBy": [],
+   "works": [],
+   "class": "private"
+  },
+  {
+   "name": "robbin_score",
+   "declaredBy": [],
+   "writableBy": [
+    "robbin"
+   ],
+   "readableBy": [],
+   "works": [],
+   "class": "private"
+  }
+ ],
+ "defects": [
+  {
+   "level": "warn",
+   "kind": "dead-write",
+   "who": "battleboids",
+   "detail": "may write \"battleboids_won\", which no story declares — the assignment will throw and be swallowed"
+  },
+  {
+   "level": "warn",
+   "kind": "dead-write",
+   "who": "chess",
+   "detail": "may write \"chess_won\", which no story declares — the assignment will throw and be swallowed"
+  },
+  {
+   "level": "warn",
+   "kind": "dead-write",
+   "who": "gridluck",
+   "detail": "may write \"gridluck_won\", which no story declares — the assignment will throw and be swallowed"
+  },
+  {
+   "level": "warn",
+   "kind": "dead-write",
+   "who": "gridluck",
+   "detail": "may write \"gridluck_score\", which no story declares — the assignment will throw and be swallowed"
+  },
+  {
+   "level": "warn",
+   "kind": "dead-write",
+   "who": "mudslider",
+   "detail": "may write \"mudslider_gems\", which no story declares — the assignment will throw and be swallowed"
+  },
+  {
+   "level": "warn",
+   "kind": "dead-write",
+   "who": "mudslider",
+   "detail": "may write \"mudslider_rooms\", which no story declares — the assignment will throw and be swallowed"
+  },
+  {
+   "level": "warn",
+   "kind": "dead-write",
+   "who": "mudslider",
+   "detail": "may write \"mudslider_won\", which no story declares — the assignment will throw and be swallowed"
+  },
+  {
+   "level": "warn",
+   "kind": "dead-write",
+   "who": "mudslider",
+   "detail": "may write \"has_red_key\", which no story declares — the assignment will throw and be swallowed"
+  },
+  {
+   "level": "warn",
+   "kind": "dead-write",
+   "who": "mudslider",
+   "detail": "may write \"has_blue_key\", which no story declares — the assignment will throw and be swallowed"
+  },
+  {
+   "level": "warn",
+   "kind": "dead-write",
+   "who": "mudslider",
+   "detail": "may write \"has_yellow_key\", which no story declares — the assignment will throw and be swallowed"
+  },
+  {
+   "level": "warn",
+   "kind": "dead-write",
+   "who": "mudslider",
+   "detail": "may write \"has_green_key\", which no story declares — the assignment will throw and be swallowed"
+  },
+  {
+   "level": "warn",
+   "kind": "dead-write",
+   "who": "robbin",
+   "detail": "may write \"robbin_score\", which no story declares — the assignment will throw and be swallowed"
+  }
+ ]
+}

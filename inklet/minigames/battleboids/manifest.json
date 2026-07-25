@@ -1,0 +1,15 @@
+{
+  "name": "battleboids",
+  "version": "1.0.0",
+  "title": "Battleboids",
+  "description": "Flocking fleet skirmish. Wraps the standalone boids battle in the minigame SDK.",
+  "entry": "index.html",
+  "sandbox": { "timeout": 300000 },
+  "controls": "none",
+  "variables": {
+    "read": ["difficulty", "player_level"],
+    "write": ["battleboids_won", "minigame_played"]
+  },
+  "modes": ["normal"],
+  "ui": { "width": "100%", "height": "100%", "background": "#04070d" }
+}
