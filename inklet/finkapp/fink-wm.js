@@ -124,6 +124,7 @@ window.FinkWM = {
 
         this._paintOwnership();
         this._layoutSplit();
+        this._scheduleSettle();
         this._haptic();
         this._scheduleCollapse();
 
@@ -141,6 +142,25 @@ window.FinkWM = {
             this.log(`mode: ${old || '—'} → ${mode}`);
             window.FoafOS?.bus.publish('wm.mode', { mode, prev: old, summary: `window → ${mode}` }, { retain: true });
         }
+    },
+
+    // Flipping modes quickly is a resize STORM: every change rewrites the
+    // panes' inline heights, the guest iframe reflows, and a canvas game
+    // reallocates its backing store. Ten flips in two seconds is ten
+    // reallocations — cheap on a desktop, and on a phone the way you run
+    // a browser out of canvas memory and get a black rectangle.
+    //
+    // So tell guests when the geometry has SETTLED, once per burst, and
+    // let them do the expensive rebuild then instead of on every step.
+    _scheduleSettle() {
+        clearTimeout(this._settleTimer);
+        this._settleTimer = setTimeout(() => {
+            this._layoutSplit();               // one authoritative measure
+            window.FinkMinigames?._sendToIframe?.({ type: 'resized', mode: this.mode });
+            window.FoafOS?.bus.publish('wm.settled', {
+                summary: `window settled in ${this.mode}`, mode: this.mode,
+            }, { retain: true });
+        }, 220);
     },
 
     // Split geometry, in measured pixels. CSS could not hold the

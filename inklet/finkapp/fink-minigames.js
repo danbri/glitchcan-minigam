@@ -542,6 +542,12 @@ window.FinkMinigames = {
 
     // Toggle pin state (keep visible while reading story)
     togglePin() {
+        // Pinning was "keep the pip on top while I read" — the WM's pip
+        // already is. Nothing to do but stay addressable.
+        window.FinkWM?.setMode('pip');
+    },
+
+    _legacyTogglePin() {
         // Can't pin if minimized
         if (this.windowState.minimized) {
             this.toggleMinimize();
@@ -567,6 +573,12 @@ window.FinkMinigames = {
 
     // Toggle minimize state (pip mode)
     toggleMinimize() {
+        const wm = window.FinkWM;
+        if (wm) { wm.setMode(wm.mode === 'pip' ? wm.lastNonPipMode : 'pip'); return; }
+        this._legacyToggleMinimize();
+    },
+
+    _legacyToggleMinimize() {
         const view = this.elements.minigameView;
 
         // Add transition class for smooth animation
@@ -624,7 +636,14 @@ window.FinkMinigames = {
     },
 
     // Toggle maximize state (true fullscreen)
+    // Kept as aliases so any surviving caller (the dblclick restore path,
+    // a bookmarklet, a story) reaches the real window manager instead of
+    // the dead geometry it used to drive.
     toggleMaximize() {
+        window.FinkWM?.setMode(window.FinkWM.mode === 'full' ? 'split' : 'full');
+    },
+
+    _legacyToggleMaximize() {
         const view = this.elements.minigameView;
 
         // Add transition class for smooth animation
@@ -683,12 +702,19 @@ window.FinkMinigames = {
         const view = this.elements.minigameView;
         if (!view) return;
 
-        // A guest that declared the 'pause' verb presents pause its own way —
-        // suppress the shell's frost overlay for it.
+        // PAUSE ONLY. Geometry belongs to FinkWM and nothing else.
+        //
+        // This used to also toggle `.pinned`, `.minimized` and
+        // `.maximized` — classes from the pause/pin/min/max bar FinkWM
+        // replaced. Their CSS is still full-screen `position: fixed`,
+        // `100vw/100vh !important`, `background: #000`, and this ran on
+        // every pause, so any path that set one of those flags produced a
+        // black overlay the window manager knew nothing about. The
+        // buttons are long gone from the DOM, so it was latent rather
+        // than live — but a second geometry owner is exactly what this
+        // project's own rule forbids, and "latent" only means "not yet".
         view.classList.toggle('paused', this.windowState.paused && !this.guestVerbs?.has('pause'));
-        view.classList.toggle('pinned', this.windowState.pinned);
-        view.classList.toggle('minimized', this.windowState.minimized);
-        view.classList.toggle('maximized', this.windowState.maximized);
+        view.classList.remove('pinned', 'minimized', 'maximized');
     },
 
     // Reset window state when minigame ends

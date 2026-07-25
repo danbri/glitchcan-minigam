@@ -10,7 +10,12 @@
             flex-direction: column;
             align-items: center;
             padding-top: 20px;
-            min-height: 100vh;
+            /* `min-height: 100vh` with default content-box made the body
+               20px TALLER than its own frame — the padding sits outside
+               the 100vh. Harmless full-screen, but in a short split pane
+               `overflow: hidden` then clips the bottom of the board. */
+            box-sizing: border-box;
+            min-height: 100dvh;
             margin: 0;
             background-color: #1a1a2e;
             color: #eee;
@@ -111,8 +116,7 @@
         #skull-animation-overlay {
             display: none;
             position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
+            inset: 0;                 /* not 100vw/100vh — see body above */
             background-color: rgba(0,0,0,0);
             z-index: 2000;
             pointer-events: none;

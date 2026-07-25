@@ -263,23 +263,9 @@ body[data-wm-mode="split"] #minigame-view.state-split {
     opacity: 1;
 }
 
-/* --- Minimized State (Picture-in-Picture pip) --- */
-#minigame-view.minimized {
-    position: fixed;
-    bottom: 80px;
-    right: 20px;
-    width: 160px;
-    height: 100px;
-    border-radius: var(--border-radius-md);
-    border: 2px solid var(--zx-blue);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,150,255,0.3);
-    z-index: 1000;
-    overflow: hidden;
-    /* Pip is draggable */
-    cursor: move;
-    /* Subtle breathing animation */
-    animation: pipBreath 3s ease-in-out infinite;
-}
+/* `.minimized` was the OLD pip, a rival `position: fixed` box at a
+   different size and z-index from FinkWM's `.state-pip`. Both could apply
+   at once. Retired with `.maximized`; FinkWM owns pip. */
 
 @keyframes pipBreath {
     0%, 100% { box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,150,255,0.3); }
@@ -320,20 +306,14 @@ body[data-wm-mode="split"] #minigame-view.state-split {
     opacity: 0.4;
 }
 
-/* --- Maximized State (True fullscreen) --- */
-#minigame-view.maximized {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100vw !important;
-    height: 100vh !important;
-    z-index: 2000;
-    border-radius: 0;
-    border: none;
-    background: #000;
-}
+/* The `.maximized` rule that lived here was a full-screen
+   `position: fixed`, `100vw/100vh !important`, `background: #000`
+   overlay from the pause/pin/min/max bar FinkWM replaced. Nothing should
+   ever apply it again — `_updateWindowState` now actively removes the
+   class — and leaving the rule on disk meant one stray flag could black
+   out the app with geometry the window manager could not see or undo.
+   `100vh` (not dvh) made it worse than full-screen on a phone.
+   FinkWM's `.state-full` is the only fullscreen there is. */
 
 #minigame-view.maximized #minigame-controls {
     position: absolute;

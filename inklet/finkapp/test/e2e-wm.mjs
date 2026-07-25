@@ -218,7 +218,53 @@ try {
     ? pass(`chrome drag-docked left (persisted top=${docked.stored.top})`)
     : fail(`dock failed: ${JSON.stringify(docked)}`);
 
-  // 7. exit is a VERB, not a kill switch: robbin declared 'quit', so ✕
+  // 7. FLIP STORM. Reported from the field: "display gets all messed up or
+  // mostly black after flipping a few times". Every mode change rewrites
+  // the panes' heights and the guest reallocates its canvas backing store,
+  // so a burst of flips is a burst of reallocations. Click the REAL buttons
+  // faster than the 350ms transition, then assert on measured pixels:
+  //   · the panes tile the viewport with no gap and no overlap
+  //   · the guest fits INSIDE its own frame (scrollHeight === innerHeight);
+  //     a guest 4px too tall is 4px of clipped game board
+  //   · the canvas backing store matches its CSS box — a stale backing
+  //     store is exactly what "messed up or mostly black" looks like
+  await page.evaluate(() => { FinkWM.setMode('full'); FinkWM._setCollapsed(false); });
+  await page.waitForTimeout(400);
+  for (const id of ['wm-split', 'wm-full', 'wm-pip', 'wm-split', 'wm-full',
+                    'wm-pip', 'wm-split', 'wm-full', 'wm-split']) {
+    await page.evaluate(() => FinkWM._setCollapsed(false));
+    await page.click(`#${id}`, { force: true }).catch(() => {});
+    await page.waitForTimeout(90);              // inside the transition
+  }
+  await page.waitForTimeout(1200);               // past the settle debounce
+  const storm = await page.evaluate(() => {
+    const v = document.getElementById('minigame-view').getBoundingClientRect();
+    const n = document.getElementById('narrative-view').getBoundingClientRect();
+    return { mode: FinkWM.mode, vh: window.innerHeight,
+      gameTop: Math.round(v.y), gameH: Math.round(v.height),
+      narrTop: Math.round(n.y), narrBottom: Math.round(n.bottom) };
+  });
+  const stormFrame = page.frames().find(f => f.url().includes('magpie/robbin/robbin.html'));
+  const guest = await stormFrame.evaluate(() => {
+    const c = document.getElementById('game');
+    const r = c.getBoundingClientRect();
+    return { ih: window.innerHeight, sh: document.body.scrollHeight,
+      cw: c.width, ch: c.height,
+      boxW: Math.round(r.width), boxH: Math.round(r.height) };
+  });
+  const tiles = storm.mode === 'split' && storm.gameH > 100 &&
+    Math.abs(storm.gameTop + storm.gameH - storm.vh) <= 2 &&
+    storm.narrBottom <= storm.gameTop + 2;
+  tiles ? pass(`10 fast flips: panes still tile (story→${storm.narrBottom}, game ${storm.gameTop}+${storm.gameH}=${storm.vh})`)
+        : fail(`flip storm broke the tiling: ${JSON.stringify(storm)}`);
+  guest.sh === guest.ih
+    ? pass(`guest fits its frame after the storm (${guest.sh}px in ${guest.ih}px)`)
+    : fail(`guest overflows its own frame by ${guest.sh - guest.ih}px — that is clipped game`);
+  Math.abs(guest.cw - guest.boxW) <= 2 && Math.abs(guest.ch - guest.boxH) <= 2
+    ? pass(`canvas backing store tracked the resize (${guest.cw}×${guest.ch})`)
+    : fail(`stale backing store: canvas ${guest.cw}×${guest.ch} in a ${guest.boxW}×${guest.boxH} box`);
+
+  // 8. exit is a VERB, not a kill switch: robbin declared 'quit', so ✕
   // delegates to the game's own paper dialog; confirming there completes
   // through the normal SDK path and the shell closes the window.
   await page.evaluate(() => { FinkWM.setMode('full'); FinkWM._setCollapsed(false); });

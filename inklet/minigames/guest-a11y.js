@@ -28,8 +28,17 @@
 (function () {
   if (window.__mgA11y) return;
 
-  const SR_ONLY = 'position:absolute;width:1px;height:1px;margin:-1px;padding:0;' +
-                  'overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;';
+  // `position:absolute` with no offsets keeps the element's STATIC
+  // position — i.e. after all the content — so a 1px live region parked
+  // at the end of a full-height body made body.scrollHeight exceed
+  // innerHeight by a few pixels. Measured: every guest was 4px over.
+  // Invisible with `overflow:hidden`, but it is a guest that does not fit
+  // its own frame, and in a short split pane that is exactly the class of
+  // bug that clips a game board. Pin it to the origin: a hidden live
+  // region has no business having a place in the layout.
+  const SR_ONLY = 'position:absolute;top:0;left:0;width:1px;height:1px;margin:-1px;padding:0;' +
+                  'overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);' +
+                  'white-space:nowrap;border:0;';
 
   let statusEl = null;
   let lastText = '';

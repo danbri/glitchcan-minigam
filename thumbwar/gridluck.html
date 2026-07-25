@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html><head><meta charset=utf-8><title>GridLuck v1.2.0</title>
 <style>body{margin:0;overflow:hidden;background:#000;color:#0f0;font:16px monospace}
+/* A canvas is inline-replaced: it sits on the text baseline and the line
+   box reserves descender space below it, so a full-height canvas made the
+   document 4px taller than the window. Harmless here (overflow:hidden),
+   but embedded in a short split pane it is 4px of clipped board. */
+canvas{display:block}
 #teleportBtn, #zoomBtn {
     padding: 8px 12px; background: #222; color: #0f0; border: 1px solid #050;
     cursor: pointer; font-family: monospace; font-size: 14px; margin: 5px;

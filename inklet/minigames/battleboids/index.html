@@ -14,6 +14,9 @@
             background: #0A0F28;
         }
         iframe {
+            /* inline-replaced by default: sits on the baseline, so the
+               line box adds descender space below a 100%-tall frame. */
+            display: block;
             width: 100%;
             height: 100%;
             border: none;
@@ -89,7 +92,14 @@
         // canvas sizes itself from window.innerHeight, and a nested frame
         // gets no resize event of its own when only its parent's box
         // changed — so forward it, or the canvas keeps its first size.
-        const relayResize = () => toGame('boidwars-resize');
+        // Debounced: the shell fires a burst of these while someone flips
+        // between modes, and each one makes the nested game reallocate its
+        // canvas. Coalesce to one rebuild per burst.
+        let resizeTimer = null;
+        const relayResize = () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => toGame('boidwars-resize'), 180);
+        };
         window.addEventListener('resize', relayResize);
         if (window.ResizeObserver) new ResizeObserver(relayResize).observe(document.body);
 
@@ -99,6 +109,8 @@
             // The debug clock patches one document. The game is a frame
             // deeper, so pass the message on or slow-mo stops at this
             // wrapper (which has nothing to animate).
+            // the shell says the window has stopped moving — rebuild now
+            if (d.type === 'resized') relayResize();
             if (d.type === 'debug' && event.source !== gameFrame.contentWindow) {
                 try { gameFrame.contentWindow?.postMessage(d, '*'); } catch (e) { /* not ready */ }
             }

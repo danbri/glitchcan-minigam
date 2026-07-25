@@ -277,11 +277,29 @@ desktop, a running minigame is a **window**. One state machine
   not a control surface (guest input is suspended).
 - Mode changes are presentation only: they send no SDK messages except
   pause/resume, and never touch story state.
+- **Exactly one geometry owner — normative.** No other module may set
+  position, size or z-index on the game window. Retiring a geometry owner
+  means deleting its CSS as well as its buttons.
+- **Mode changes settle — normative.** A mode change MAY be one of a
+  burst; the host MUST coalesce and, once the window stops moving, perform
+  one authoritative layout and send `{ type: 'resized', mode }` to the
+  guest. Guests SHOULD debounce their own rebuild on that message, because
+  each rebuild reallocates a canvas backing store.
+
+**Guests fit their frame — normative.** A guest's document MUST NOT be
+taller or wider than the frame it is given: `document.body.scrollHeight`
+MUST equal `window.innerHeight`. Overflow is invisible at full screen
+(`overflow: hidden` hides it) and becomes clipped gameplay in a short
+split pane. The three recurring causes are padding outside a `100vh`
+box under `content-box`, an inline-replaced `<iframe>`/`<canvas>` sitting
+on the text baseline, and an absolutely-positioned visually-hidden element
+left at its static position.
 
 Locked by `inklet/finkapp/test/e2e-wm.mjs` (which regression-tests the
-two failures of the retired slider panel: a split state that crushed
+two failures of the retired slider panel — a split state that crushed
 the game to a 4px sliver, and a mini state that hid its own restore
-control).
+control — plus a flip storm that asserts the panes still tile, the guest
+still fits, and the canvas backing store tracked the resize).
 
 ### 5.1.1 Input is a host service — normative
 

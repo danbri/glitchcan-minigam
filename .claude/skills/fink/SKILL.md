@@ -123,7 +123,9 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
 - It REPLACED two rival systems: the FULL/EMBED/MINI slider
   (`fink-slider.js`, kept on disk but unloaded — EMBED rendered a 4px
   sliver, MINI had no way back) and the hidden pause/pin/min/max button
-  bar. Never reintroduce a second geometry owner.
+  bar. Never reintroduce a second geometry owner — and note the button
+  bar's full-screen-black CSS survived the replacement for months (see
+  "Flipping modes" below).
 - Layout trap: `#minigame-view` is a `.view` flex child with
   `min-height:0` — a bare `height:` on it gets crushed to a sliver.
   Split uses `flex: 0 0 52%` + `min-height` instead.
@@ -168,6 +170,54 @@ Three traps, all found by looking at a screenshot:
 
 Locked by 6 assertions in `e2e-wm.mjs`, including that the names stand
 down again.
+
+## Flipping modes: the resize storm and the guest-fit rule (July 2026)
+
+Field report: *"display gets all messed up or mostly black after flipping
+a few times"*. **The black screen did NOT reproduce headlessly** — ten
+flips at 90ms (inside the 350ms transition), on robbin and gridluck,
+desktop Chromium: geometry stayed correct, no page errors, screenshots
+non-trivial. What follows are the mechanisms that were verified to exist,
+not a proven diagnosis. If it recurs, say so — this is unfinished.
+
+**1. There was still a second geometry owner.** `fink-minigames.css` held
+`#minigame-view.maximized { position:fixed; 100vw/100vh !important;
+background:#000; z-index:2000 }` and a rival `.minimized` fixed box, left
+over from the pause/pin/min/max bar FinkWM replaced — and
+`_updateWindowState()` (called on every *pause*) reapplied those classes.
+The buttons are long gone from index.html, so it was latent, not live. Both
+CSS blocks are deleted; `_updateWindowState()` is pause-only and actively
+`remove()`s the classes; `toggleMaximize/Minimize/Pin` are now thin
+delegates to `FinkWM.setMode`. "Never reintroduce a second geometry owner"
+also means *finish deleting the old one*.
+
+**2. A burst of flips is a burst of canvas reallocations.** Each mode
+change rewrites the panes' inline heights, the guest reflows and a canvas
+game reallocates its backing store. Ten flips = ten reallocations — cheap
+on desktop, and on a phone a plausible way to run out of canvas memory and
+get a black rectangle. So: `FinkWM._scheduleSettle()` debounces 220ms, then
+does ONE authoritative `_layoutSplit()`, sends `{type:'resized', mode}` to
+the guest and publishes retained `wm.settled`. Guests coalesce too —
+battleboids' relay is debounced 180ms and also listens for `resized`.
+
+**3. Guests must fit inside their own frame.** Measured: every guest was
+4–20px taller than its frame. Invisible full-screen under
+`overflow:hidden`; in a short split pane it is that many pixels of clipped
+game board. Three distinct causes, all now fixed:
+- `min-height:100vh` + `padding-top:20px` with default **content-box** —
+  the padding sits OUTSIDE the 100vh (chess, 20px). Add `box-sizing`.
+- An `<iframe>` or `<canvas>` is **inline-replaced**: it sits on the text
+  baseline and the line box reserves descender space below it, so a
+  100%-tall one overflows by ~4px (gridluck's wrapper AND
+  `thumbwar/gridluck.html`'s canvas). `display:block`.
+- A visually-hidden live region at `position:absolute` with **no offsets**
+  keeps its static position — after all content. `guest-a11y.js` now pins
+  it `top:0;left:0`. One file, every guest.
+
+Assert on `document.body.scrollHeight === window.innerHeight` inside the
+guest, and on `canvas.width` vs its CSS box — a stale backing store is
+what "messed up or mostly black" actually looks like. Both are in the
+flip-storm test in `e2e-wm.mjs` (now 23 assertions).
 
 ## foafos shell (working name — owner decides terminology)
 
