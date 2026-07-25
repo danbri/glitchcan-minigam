@@ -14,9 +14,9 @@ import {
   widgets, defineBaseCards, defineFeed,
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
-  FoafInput, ACTION_KEYS, FoafVars, FoafAudio,
+  FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, localBackend,
 } from '../../packages/foafos/src/index.mjs';
-import { appsByFamily, appById } from './foafos-apps.js';
+import { appsByFamily, appById, ambientApps } from './foafos-apps.js';
 
 defineBaseCards();
 defineFeed();
@@ -140,6 +140,19 @@ cluster.onYield('audio', () => {
   bus.publish('audio.focus',
     { focused: false, yielded: true, summary: 'audio yielded to another window' }, { retain: true });
 });
+
+// ── state: storage as a brokered service ───────────────────────────────
+// An app in a sandboxed frame has an opaque origin, where localStorage
+// throws. Rather than hand the origin back (which is what
+// `allow-same-origin` did, and it dissolved every other boundary too),
+// the shell holds the bytes and the app holds a capability. Local
+// backend today; a synced one drops in behind the same interface without
+// any app knowing.
+const store = new FoafStore({
+  bus,
+  backend: localBackend(audioStore || { getItem: () => null, setItem: () => {} }),
+});
+FoafOS.store = store;
 
 // ── input: one d-pad for the whole shell (OS service) ───────────────────
 // The pad lives in the HOST page, not inside a guest iframe: only the
@@ -331,6 +344,10 @@ function buildUI() {
         <button type="button" id="foafos-home-btn" title="All apps (Alt+H)">⊞ Apps</button>
         <button type="button" id="foafos-switch-btn" title="Running apps (Alt+Tab)">⧉ Running</button>
       </div>
+    </section>
+    <section id="foafos-caps-wrap">
+      <h4>CAPABILITIES</h4>
+      <p id="foafos-caps-note" class="foafos-sub" role="status"></p>
     </section>
     <section id="foafos-shelf-wrap">
       <h4>WINDOWS</h4>
@@ -722,32 +739,60 @@ function buildUI() {
   }
   FoafOS.openHome = openHome;
 
-  // One launch path for every family. A spreadsheet and a maze open the
-  // same way; only `kind` differs, and that is the shell's business.
+  // Say out loud which apps still run with ambient authority. The whole
+  // point of naming `same-origin` as a capability instead of hard-coding
+  // it into the launcher is that it can be COUNTED — a boundary nobody
+  // can see is a boundary nobody maintains. Same reasoning as the volume
+  // control's "X cannot be turned down".
+  function refreshCaps() {
+    const el = document.getElementById('foafos-caps-note');
+    if (!el) return;
+    const ambient = ambientApps();
+    el.textContent = ambient.length
+      ? `${ambient.length} app(s) run with ambient authority: ${ambient.map(a => a.name).join(', ')} — ` +
+        `they reach the shell's own origin, so the brokers are advisory for them.`
+      : 'every app is sandboxed to an opaque origin; nothing has ambient authority.';
+    el.classList.toggle('error', ambient.length > 0);
+  }
+  FoafOS.refreshCaps = refreshCaps;
+  refreshCaps();
+
+  // ONE launch path, ONE class of thing. `surface` decides where an app is
+  // drawn; `capabilities` decide what it may do. Those are independent —
+  // being drawn in a window never granted authority, though it used to.
   function launchApp(id) {
     const app = appById(id);
     if (!app) return null;
-    bus.publish('app.launch', { summary: `Opening ${app.name}`, id, kind: app.kind });
-    switch (app.kind) {
-      case 'game':
+    const caps = app.capabilities || [];
+    bus.publish('app.launch', {
+      summary: `Opening ${app.name}`, id, surface: app.surface, capabilities: caps,
+    });
+    // Every app gets a storage namespace it cannot name its way out of.
+    // Granting is per-app and explicit: no capability, no snapshot.
+    store.grant(app.id, caps);
+
+    switch (app.surface) {
+      case 'stage':
         window.FinkMinigames?.startMinigame(app.game, 'normal');
         return null;
       case 'story':
         window.FinkPlayer?.loadFinkStory?.(app.url);
         return null;
       case 'panel':
+        // Shell-native: drawn by the shell, so there is no frame and no
+        // boundary. Kept in one registry for discovery, not for security.
         return app.panel === 'maker' ? openMaker() : null;
       case 'window':
       default: {
         const win = makeWindow(`${app.icon} ${app.name}`, 380, 460);
         const frame = document.createElement('iframe');
-        frame.src = app.url;
         frame.title = app.name;
-        // Office apps need their own storage and same-origin XHR; they
-        // are first-party code from this repo, not untrusted guests.
-        frame.setAttribute('sandbox',
-          'allow-scripts allow-same-origin allow-forms allow-popups allow-modals');
+        frame.setAttribute('sandbox', sandboxFor(app));
+        if (caps.includes('geolocation')) frame.allow = 'geolocation';
         frame.style.cssText = 'flex:1;width:100%;border:0;min-height:0;';
+        // src AFTER sandbox/allow — a frame that starts loading before its
+        // sandbox is set would run its first script under the wrong rules.
+        frame.src = app.url;
         win.appendChild(frame);
         document.body.appendChild(win);
         governAppFrame(frame, app, win);
@@ -757,6 +802,31 @@ function buildUI() {
   }
   FoafOS.launchApp = launchApp;
 
+  // The sandbox an app gets, derived from its declared capabilities.
+  //
+  // `allow-scripts` alone yields an OPAQUE ORIGIN: no parent.document, no
+  // shared storage, no reaching another app. That is the default and the
+  // goal for everything.
+  //
+  // `same-origin` is the declared escape hatch for apps not yet moved off
+  // ambient localStorage/indexedDB. It is genuinely dangerous — it puts
+  // the app in the shell's own origin, where every broker becomes
+  // advisory — so it is named in the registry, announced on the bus, and
+  // listed in the drawer. It should trend to zero.
+  function sandboxFor(app) {
+    const caps = app.capabilities || [];
+    const tokens = ['allow-scripts', 'allow-forms', 'allow-modals'];
+    if (caps.includes('same-origin')) {
+      tokens.push('allow-same-origin', 'allow-popups');
+      bus.publish('sys.app.ambient', {
+        summary: `${app.name} runs with ambient authority (same-origin)`,
+        id: app.id, capabilities: caps,
+      });
+    }
+    return tokens.join(' ');
+  }
+  FoafOS.sandboxFor = sandboxFor;
+
   // An app window is not a minigame, so none of FinkMinigames' guest
   // plumbing reaches it — and the first version of this shipped a
   // channel player the master volume could not touch. The same probe
@@ -764,14 +834,52 @@ function buildUI() {
   // ungovernable depending on whether it answers.
   function governAppFrame(frame, app, win) {
     const sinkId = `app:${app.id}:${win.dataset.wid}`;
-    // Only apps that declare they make noise get a coverage placeholder.
-    // Listing silent ones would drown the disclosure in spreadsheets.
-    if (app.audio) audio.register(sinkId, () => {}, { label: app.name, kind: 'uncontrollable' });
+    const caps = app.capabilities || [];
+    // Only apps that make noise get a coverage placeholder. Listing
+    // silent ones would drown the disclosure in spreadsheets.
+    if (!app.silent) audio.register(sinkId, () => {}, { label: app.name, kind: 'uncontrollable' });
 
     const onMsg = (e) => {
       if (e.source !== frame.contentWindow) return;      // provenance, always
       const d = e.data;
-      if (!d || d.type !== 'conformance') return;
+      if (!d || typeof d.type !== 'string') return;
+
+      // ── the app protocol ──────────────────────────────────────────
+      // An app that loads app-sdk.js says hello; we answer with its id,
+      // its capabilities and its whole stored keyspace, so its
+      // synchronous localStorage shim is warm before its first line runs.
+      if (d.type === 'app.hello') {
+        const snapshot = store.snapshot(app.id);
+        try {
+          frame.contentWindow?.postMessage({
+            type: 'app.init', appId: app.id, capabilities: caps,
+            store: snapshot || {},
+            config: { surface: app.surface, name: app.name },
+          }, '*');
+        } catch (err) { /* closed */ }
+        bus.publish('sys.app.ready', {
+          summary: `${app.name} speaks the app protocol`,
+          id: app.id, capabilities: caps, storage: !!snapshot,
+        });
+        return;
+      }
+      // Writes are PROPOSALS. The broker checks the capability and the
+      // quota, and refuses in the open — the app already applied it to
+      // its own in-memory view, so a refusal is reported rather than
+      // silently diverging.
+      if (d.type === 'store.set' || d.type === 'store.remove' || d.type === 'store.clear') {
+        const r = d.type === 'store.set' ? store.set(app.id, d.key, d.value)
+                : d.type === 'store.remove' ? store.remove(app.id, d.key)
+                : store.clear(app.id);
+        if (!r.ok) {
+          try {
+            frame.contentWindow?.postMessage({ type: 'store.refused', op: d.type, key: d.key, reason: r.reason }, '*');
+          } catch (err) { /* closed */ }
+        }
+        return;
+      }
+
+      if (d.type !== 'conformance') return;
       if (!(d.contracts || []).includes('audio')) return;
       audio.unregister(sinkId);
       audio.register(sinkId, (level) => {

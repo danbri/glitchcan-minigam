@@ -503,6 +503,52 @@ quietly lies (`FoafAudio.coverage().uncovered`). Registries SHOULD mark
 which apps make sound (`audio: true`) so the disclosure lists noisy
 silent-by-nature apps, not every open spreadsheet.
 
+### 5.5.1 Apps, surfaces and capabilities — normative
+
+There is **one class of runnable thing: an app.** A story widget, a maze,
+a spreadsheet and a channel player are all apps. Two properties describe
+one, and they are independent:
+
+- **`surface`** — where it is drawn: `stage` (the window manager's game
+  window), `window` (a floating shell window), `story` (loaded into the
+  story engine), `panel` (shell-native UI). **Surface confers no
+  authority.** Being drawn in a window MUST NOT grant anything that being
+  drawn on the stage would not.
+- **`capabilities`** — what it may do: `storage`, `vars:read`,
+  `vars:write`, `audio`, `input`, `geolocation`. Anything absent is
+  unavailable, and the app MUST be told which capability it lacks rather
+  than receiving an opaque platform error.
+
+**The default is an opaque origin.** An app frame is sandboxed
+`allow-scripts` (plus `allow-forms`/`allow-modals`), giving a distinct
+security context with no `parent.document`, no shared storage, and no
+route to another app. The host derives the sandbox from the declared
+capabilities; it MUST NOT derive it from the surface.
+
+**`same-origin` is a capability, not a default.** It drops an app into
+the shell's own origin, where every other broker becomes advisory. It
+exists only as a declared migration path for apps still using ambient
+`localStorage`/`indexedDB`. When granted, the host MUST announce it
+(`sys.app.ambient`) and MUST list the holders in a user-visible surface.
+The target is zero holders.
+
+**Storage is brokered (`FoafStore`).** The shell holds the bytes; the app
+holds a capability. Each app gets a namespace it cannot name its way out
+of, with a quota. A refused write MUST leave the previous value intact —
+a half-applied write is worse than a refused one. An app without the
+capability MUST receive `null` from a snapshot, never `{}`: an empty
+object reads as "no data yet" and invites an overwrite.
+
+The protocol is `app.hello` (guest→host, "I speak this") answered by
+`app.init { appId, capabilities, store }` carrying the app's whole
+keyspace, so a synchronous storage shim is warm before the app's first
+line runs. Writes are proposals: `store.set`/`store.remove`/`store.clear`
+guest→host, with `store.refused` back when the broker declines.
+
+Locked by `inklet/finkapp/test/e2e-caps.mjs`, which asserts the boundary
+by *trying to cross it* — `parent.document`, `parent.FoafOS` and
+`localStorage` must all throw inside a de-privileged app.
+
 ### 5.6 Shell surfaces: home and switcher
 
 Two affordances the platform borrows rather than invents, because every

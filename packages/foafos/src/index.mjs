@@ -25,3 +25,4 @@ export { defineTree } from './tree.mjs';
 export { FoafInput, ACTIONS, ACTION_KEYS } from './input.mjs';
 export { FoafVars, SHARED_DEFAULT, HOST_CONTEXT } from './vars.mjs';
 export { FoafAudio, AUDIO_KEY } from './audio.mjs';
+export { FoafStore, localBackend, memoryBackend, STORE_CAP } from './store.mjs';

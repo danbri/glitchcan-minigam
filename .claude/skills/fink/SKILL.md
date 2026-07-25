@@ -627,6 +627,46 @@ before writing another harness; these traps each cost a wrong conclusion.
   unresponsive game; `robbin.tube.cam` is an array, so `cam.x` is
   undefined and pins the sample to a constant.
 
+## One class of thing: apps, surfaces, capabilities (July 2026)
+
+foafos used to run TWO kinds of thing, and only one boundary was real:
+office/media windows got `allow-scripts allow-same-origin`, which on a
+same-site URL means the frame keeps the shell's origin — `parent.document`,
+`parent.FoafOS` and the shell's localStorage all reachable. The sandbox
+attribute there was doing no security work at all. Minigames were
+properly isolated (opaque origin). Two postures, one enforced, and
+confusing to reason about.
+
+Now everything is an app. `surface` (stage/window/story/panel) says where
+it is drawn and confers NO authority; `capabilities` say what it may do.
+`sandboxFor(app)` derives the sandbox from capabilities only.
+
+- `packages/foafos/src/store.mjs` — **FoafStore**, the state broker.
+  Per-app namespace, quota, audit, refusals on the bus. Backend-pluggable
+  (`localBackend` now, cloud later behind `read(ns)`/`write(ns,obj)`).
+  A denied snapshot returns **null, not `{}`** — empty reads as "no data
+  yet" and an app will overwrite on that basis.
+- `inklet/apps/app-sdk.js` — the guest side. In an opaque origin
+  `localStorage` **throws SecurityError** (verified). The SDK installs a
+  shim via `Object.defineProperty(window,'localStorage',…)` — an own
+  property, since the native one is a throwing prototype getter — seeded
+  from the `app.init` snapshot so **reads stay synchronous** and existing
+  code works unchanged. Writes hit memory immediately and post to the
+  broker. Honest limit: NOT multi-writer localStorage; two instances of
+  one app will not see each other's writes live.
+- Without the capability the shim throws a named `FoafCapabilityError`
+  saying which capability is missing — a debuggable message beats a bare
+  SecurityError.
+- **`same-origin` is a declared capability**, not a default: the escape
+  hatch for apps not yet migrated (edot/sheets/calendar/files/robbamp use
+  localStorage+indexedDB ~120×). Announced on `sys.app.ambient` and
+  listed in the drawer's CAPABILITIES section. `ambientApps()` counts
+  them. Target: zero.
+- Set `sandbox` and `allow` BEFORE `src`, or the first script runs under
+  the wrong rules.
+- `e2e-caps.mjs` asserts the boundary by trying to cross it, and drives
+  the whole storage path through a real app (channels), not a fixture.
+
 ## Media in stories
 
 - `# VIDEO:` accepts a local `.mp4/.webm/.mov` OR a bare 11-character

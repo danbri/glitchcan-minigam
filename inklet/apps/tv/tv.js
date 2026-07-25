@@ -104,7 +104,26 @@ if (sdk) {
     if (audio) audio.volume = level;
   });
   sdk.onPause(() => { if (audio && !audio.paused) { audio.pause(); playBtn.textContent = '▶'; } });
-  sdk.onInit(() => { select(0); });
+  // Remember the station. This app holds the `storage` capability and no
+  // ambient authority: `localStorage` here is app-sdk's shim over the
+  // shell's store broker, scoped to this app and nothing else. The API is
+  // the ordinary one, so this reads like any other web app — which is the
+  // point of brokering rather than banning.
+  sdk.onInit(() => {
+    let last = 0;
+    try { last = parseInt(localStorage.getItem('tv.station') || '0', 10) || 0; }
+    catch (e) { /* no storage capability — first run of a de-privileged app */ }
+    select(last);
+  });
 }
+
+// Persist on every tune, including standalone (where localStorage is the
+// real one). Wrapped because an app without the capability is told so by
+// a thrown FoafCapabilityError rather than failing silently.
+const rememberStation = () => {
+  try { localStorage.setItem('tv.station', String(index)); } catch (e) { /* not granted */ }
+};
+listEl.addEventListener('click', rememberStation);
+document.addEventListener('keyup', rememberStation);
 
 a11y?.announce(`Channels ready, ${CHANNELS.length} stations`);

@@ -1,16 +1,44 @@
-// The installed apps — one registry, three families.
+// The installed apps — ONE class of thing.
 //
-// This is the "is it really an OS?" test made concrete: an office suite,
-// a game platform and a TV surface in ONE installation, launched the same
-// way, listed the same way, switched between the same way.
+// There used to be two: "apps" (office/media windows, which got
+// `allow-same-origin` and therefore full ambient authority over the
+// shell) and "minigames" (opaque-origin guests that had to ask for
+// everything). Two classes meant two security postures, and only one of
+// them was actually enforced — the other was a sandbox attribute doing no
+// security work. It was also simply confusing to reason about.
 //
-// Everything here is a URL to something that already runs standalone.
-// Nothing is a special case of anything else: the story engine is an app,
-// the spreadsheet is an app, the channel player is an app. The shell's
-// job is to host them, not to know what they are.
+// Now: everything is an app. Same protocol, same brokers, one registry.
+// What differs is
+//
+//   `surface`      — where it is drawn. Presentation only, no authority.
+//                    stage   the window manager's game window (full/split/pip)
+//                    window  a floating shell window
+//                    story   loaded into the story engine (not a frame)
+//                    panel   shell-native UI (not a frame, no boundary)
+//
+//   `capabilities` — what it may do. Nothing is ambient; anything absent
+//                    from this list is unavailable, and the app is told
+//                    why rather than getting a bare SecurityError.
+//
+//                    storage      brokered per-app key/value (FoafStore)
+//                    vars:read    read shared story variables
+//                    vars:write   propose story variable changes
+//                    audio        obey the master volume (and be mutable)
+//                    input        receive the host pad / keyboard / gamepad
+//                    geolocation  iframe allow= geolocation
+//                    same-origin  ESCAPE HATCH — see below
+//
+// `same-origin` is a real capability with a real cost: it drops the app
+// into the shell's own origin, where it can reach `parent.document` and
+// the shell's storage directly, and every broker above becomes advisory.
+// It exists so apps not yet migrated off ambient `localStorage` keep
+// working. It is DECLARED rather than implicit, and the shell lists who
+// holds it (drawer → CAPABILITIES). The goal is zero holders.
+//
+// `silent: true` means the app makes no sound — it stays out of the
+// volume control's "cannot be turned down" list. Default is pessimistic.
 //
 // Content lives here, not in packages/foafos — the NPM boundary rule.
-// A shell shipped to someone else installs their apps, not danbri's.
 
 export const APP_FAMILIES = [
   { id: 'office', label: 'Office', icon: '📄' },
@@ -19,52 +47,63 @@ export const APP_FAMILIES = [
   { id: 'make',   label: 'Make',   icon: '🔧' },
 ];
 
-// `audio: true` means "this app makes noise". Only those get a mute-
-// coverage placeholder — otherwise the volume control's honest note
-// ("X cannot be turned down") fills up with silent spreadsheets and
-// stops being worth reading. The installer knows; the shell cannot.
-//
-// `kind` decides how the shell opens it:
-//   window  — a shell window with an iframe (its own sandboxed process)
-//   game    — hand to FinkMinigames (the WM owns game geometry)
-//   story   — load into the story engine
-//   panel   — a shell-native panel (Maker, settings…)
 export const APPS = [
   // ── Office ────────────────────────────────────────────────────────
-  { id: 'edot',      family: 'office', icon: '🗂️', name: 'edot',        kind: 'window',
-    url: '../../magpie/edot/edot.html',            desc: 'The suite shell' },
-  { id: 'sheets',    family: 'office', icon: '📊', name: 'Data',        kind: 'window',
-    url: '../../magpie/edot/data/data.html',       desc: 'Spreadsheet, SQL, RDF' },
-  { id: 'calendar',  family: 'office', icon: '📅', name: 'Calendar',    kind: 'window',
-    url: '../../magpie/edot/calendar/calendar.html', desc: 'Days and plans' },
-  { id: 'files',     family: 'office', icon: '📁', name: 'Files',       kind: 'window',
-    url: '../../magpie/edot/files/',               desc: 'Pod explorer' },
+  // These still hold `same-origin`: between them they use
+  // localStorage/sessionStorage/indexedDB ~120 times and have not been
+  // moved onto the store broker yet. Migrating them retires the hatch.
+  { id: 'edot', family: 'office', icon: '🗂️', name: 'edot', surface: 'window',
+    url: '../../magpie/edot/edot.html', desc: 'The suite shell',
+    capabilities: ['storage', 'same-origin'], silent: true },
+  { id: 'sheets', family: 'office', icon: '📊', name: 'Data', surface: 'window',
+    url: '../../magpie/edot/data/data.html', desc: 'Spreadsheet, SQL, RDF',
+    capabilities: ['storage', 'same-origin'], silent: true },
+  { id: 'calendar', family: 'office', icon: '📅', name: 'Calendar', surface: 'window',
+    url: '../../magpie/edot/calendar/calendar.html', desc: 'Days and plans',
+    capabilities: ['storage', 'same-origin'], silent: true },
+  { id: 'files', family: 'office', icon: '📁', name: 'Files', surface: 'window',
+    url: '../../magpie/edot/files/', desc: 'Pod explorer',
+    capabilities: ['storage', 'same-origin'], silent: true },
 
   // ── Play ──────────────────────────────────────────────────────────
-  // Games are declared by the minigame registry; these are the entries a
-  // person would expect to see on a home screen.
-  { id: 'robbin',      family: 'play', icon: '🐦', name: 'Robbin',     kind: 'game', game: 'robbin' },
-  { id: 'gridluck',    family: 'play', icon: '👻', name: 'GridLuck',   kind: 'game', game: 'gridluck' },
-  { id: 'mudslider',   family: 'play', icon: '⛏️', name: 'Mudslider',  kind: 'game', game: 'mudslider' },
-  { id: 'battleboids', family: 'play', icon: '🧙', name: 'Boidwars',   kind: 'game', game: 'battleboids' },
-  { id: 'chess',       family: 'play', icon: '♟️', name: 'Chess',      kind: 'game', game: 'chess' },
-  { id: 'gems',        family: 'play', icon: '💎', name: 'Gem Hunt',   kind: 'game', game: 'gems' },
+  // Already isolated, and staying that way. `game` is the id the
+  // minigame host knows this app by.
+  { id: 'robbin', family: 'play', icon: '🐦', name: 'Robbin', surface: 'stage', game: 'robbin',
+    capabilities: ['input', 'vars:read', 'vars:write', 'audio'] },
+  { id: 'gridluck', family: 'play', icon: '👻', name: 'GridLuck', surface: 'stage', game: 'gridluck',
+    capabilities: ['vars:read', 'vars:write'], silent: true },
+  { id: 'mudslider', family: 'play', icon: '⛏️', name: 'Mudslider', surface: 'stage', game: 'mudslider',
+    capabilities: ['input', 'vars:read', 'vars:write', 'audio'] },
+  { id: 'battleboids', family: 'play', icon: '🧙', name: 'Boidwars', surface: 'stage', game: 'battleboids',
+    capabilities: ['vars:read', 'vars:write', 'audio'] },
+  { id: 'chess', family: 'play', icon: '♟️', name: 'Chess', surface: 'stage', game: 'chess',
+    capabilities: ['vars:read', 'vars:write'], silent: true },
+  { id: 'gems', family: 'play', icon: '💎', name: 'Gem Hunt', surface: 'stage', game: 'gems',
+    capabilities: ['vars:read', 'vars:write'], silent: true },
 
   // ── Media ─────────────────────────────────────────────────────────
-  { id: 'channels', family: 'media', icon: '📻', name: 'Channels', kind: 'window', audio: true,
-    url: '../apps/tv/index.html', desc: 'The tape library, as stations' },
-  { id: 'robbamp',  family: 'media', icon: '🎛️', name: 'ROBBAMP', kind: 'window', audio: true,
-    url: '../../magpie/robbin/robbin.html#robbamp', desc: 'The player' },
+  { id: 'channels', family: 'media', icon: '📻', name: 'Channels', surface: 'window',
+    url: '../apps/tv/index.html', desc: 'The tape library, as stations',
+    capabilities: ['storage', 'audio'] },
+  { id: 'robbamp', family: 'media', icon: '🎛️', name: 'ROBBAMP', surface: 'window',
+    url: '../../magpie/robbin/robbin.html#robbamp', desc: 'The player',
+    capabilities: ['storage', 'audio', 'same-origin'] },
 
   // ── Make ──────────────────────────────────────────────────────────
-  { id: 'toc',    family: 'make', icon: '📖', name: 'Stories', kind: 'story',
-    url: '/glitchcan-minigam/inklet/toc.fink.js', desc: 'The table of contents' },
-  { id: 'audiodemo', family: 'make', icon: '🔊', name: 'Audio demo', kind: 'story', audio: true,
-    url: '/glitchcan-minigam/inklet/demos/audio-demo.fink.js', desc: 'mp3 beds + foley' },
-  { id: 'maker',  family: 'make', icon: '🔧', name: 'Maker', kind: 'panel', panel: 'maker',
-    desc: 'Variables, governance, debug clock' },
-  { id: 'universe', family: 'make', icon: '🗺️', name: 'Finkiverse', kind: 'window',
-    url: '../../docs/fink-universe.html', desc: 'Stories and widgets, mapped' },
+  { id: 'toc', family: 'make', icon: '📖', name: 'Stories', surface: 'story',
+    url: '/glitchcan-minigam/inklet/toc.fink.js', desc: 'The table of contents',
+    capabilities: [], silent: true },
+  { id: 'audiodemo', family: 'make', icon: '🔊', name: 'Audio demo', surface: 'story',
+    url: '/glitchcan-minigam/inklet/demos/audio-demo.fink.js', desc: 'mp3 beds + foley',
+    capabilities: ['audio'] },
+  // Shell-native: drawn by the shell itself, so there is no frame and no
+  // capability boundary. Listed here so there is ONE registry — but do
+  // not read this row as "sandboxed with no capabilities".
+  { id: 'maker', family: 'make', icon: '🔧', name: 'Maker', surface: 'panel', panel: 'maker',
+    desc: 'Variables, governance, capabilities', capabilities: ['shell'], silent: true },
+  { id: 'universe', family: 'make', icon: '🗺️', name: 'Finkiverse', surface: 'window',
+    url: '../../docs/fink-universe.html', desc: 'Stories and widgets, mapped',
+    capabilities: [], silent: true },
 ];
 
 export const appsByFamily = () =>
@@ -72,3 +111,10 @@ export const appsByFamily = () =>
     .filter(f => f.apps.length);
 
 export const appById = (id) => APPS.find(a => a.id === id) || null;
+
+/** Apps still holding the ambient-authority escape hatch. Target: none. */
+export const ambientApps = () => APPS.filter(a => (a.capabilities || []).includes('same-origin'));
+
+/** Every capability in use, for the inspector. */
+export const allCapabilities = () =>
+  [...new Set(APPS.flatMap(a => a.capabilities || []))].sort();

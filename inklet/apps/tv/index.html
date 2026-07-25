@@ -25,6 +25,10 @@
   </div>
   <p id="hint">The shell's volume governs this app. Mute it from the dock.</p>
 </main>
+<!-- app-sdk FIRST: it stands in for localStorage before any app code
+     runs. This app has no ambient authority (opaque origin), so the
+     native API would throw SecurityError. -->
+<script src="../app-sdk.js"></script>
 <script src="../../minigames/guest-a11y.js"></script>
 <script src="../../minigames/minigame-sdk.js"></script>
 <script type="module" src="tv.js"></script>
