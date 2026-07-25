@@ -958,3 +958,97 @@ body[data-wm-mode="split"] #minigame-view.state-split {
 @media (prefers-reduced-motion: reduce) {
     .inline-minigame-located { animation: none; }
 }
+
+/* ── Which pane do the controls belong to? ──────────────────────────────
+   In split there are two panes and a floating toolbar claims neither.
+   Every tiling window manager answers this the same way: name the panes,
+   and mark the one holding the controls. Three cues, cheapest first. */
+
+/* A label is absolutely positioned INSIDE its pane, so the pane has to be
+   a positioning context. #narrative-view was static, so `bottom: 0`
+   resolved against the viewport and the story's label fled to the bottom
+   of the screen. position:relative changes no layout. */
+#narrative-view.wm-labelled,
+#minigame-view { position: relative; }
+
+/* 1. pane labels — ABSOLUTE, never in the flow. Split geometry is
+      measured in pixels; a label inside the box would reintroduce the
+      clipping that layout was rebuilt to fix. */
+.wm-pane-label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 5;
+    display: none;                       /* only shown when panes are shared */
+    padding: 0.15em 0.6em 0.2em;
+    background: var(--sk-bg-figure, rgba(0, 0, 0, 0.8));
+    color: var(--sk-dim, #9fb3d0);
+    border-right: 1px solid var(--sk-line, #2b3d5c);
+    border-bottom: 1px solid var(--sk-line, #2b3d5c);
+    border-bottom-right-radius: 8px;
+    font-family: var(--sk-font-ui, monospace);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    pointer-events: none;                /* never eats a tap meant for the pane */
+    white-space: nowrap;
+}
+/* Visible while the shell is naming the panes (a layout change, or a
+   reach for the toolbar). Otherwise out of the guest's way. */
+.wm-labelled.wm-naming > .wm-pane-label,
+#minigame-view.wm-governed > .wm-pane-label { display: block; }
+@media (prefers-reduced-motion: no-preference) {
+    .wm-pane-label { transition: opacity 200ms ease-out; }
+}
+/* The two names MEET AT THE SEAM, like a tiling manager's divider —
+   that is where the eye already goes to tell one pane from the other.
+   It also keeps them clear of the screen top, where the draggable
+   toolbar lives and covered the story's label. */
+#narrative-view > .wm-pane-label {
+    top: auto;
+    bottom: 0;
+    border-bottom: 0;
+    border-top: 1px solid var(--sk-line, #2b3d5c);
+    border-radius: 0 8px 0 0;
+}
+/* The game's label goes on the RIGHT of the seam. Guests put their HUDs
+   top-LEFT by convention (robbin's FLOCK/SCORE, gridluck's level and XP),
+   and the first version of this sat straight on top of them. Opposite
+   ends of the same divider still reads as one boundary; covering a
+   guest's own readout does not. */
+#minigame-view > .wm-pane-label {
+    left: auto;
+    right: 0;
+    color: var(--sk-accent, #4fd);
+    border-right: 0;
+    border-left: 1px solid var(--sk-line, #2b3d5c);
+    border-radius: 0 0 0 8px;
+}
+
+/* 2. the toolbar's chip: "these buttons are for THAT" */
+#wm-target {
+    display: none;
+    max-width: 8em;
+    overflow: hidden;
+    padding: 0 0.4em;
+    color: var(--sk-accent, #4fd);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#wm-chrome.wm-has-target:not(.collapsed) #wm-target { display: inline-block; }
+
+/* 3. and the governed pane gets an edge while the toolbar is touched.
+      A permanent glow round half the screen would just be noise. */
+#minigame-view.wm-governed {
+    outline: 2px solid var(--sk-accent, #4fd);
+    outline-offset: -2px;
+}
+#minigame-view.wm-governed > .wm-pane-label {
+    background: var(--sk-accent, #4fd);
+    color: var(--sk-accent-ink, #001);
+}
+@media (prefers-reduced-motion: no-preference) {
+    #minigame-view { transition: outline-color 160ms ease-out; }
+}

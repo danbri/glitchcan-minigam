@@ -134,6 +134,41 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   state explicitly (`FinkWM._setCollapsed(false)`) before clicking
   toolbar buttons.
 
+## Split mode: whose controls are these? (field report, July 2026)
+
+"When splitscreen it can be v confusing which part of screen the window
+manager controls" — correct: a toolbar floating over two panes claims
+neither. The tiling-WM answer, three cues cheapest first:
+
+1. **name both panes** — `.wm-pane-label`, one per pane, straddling the
+   seam. Story bottom-LEFT of its pane, game top-RIGHT of its own.
+2. **the toolbar names its target** — `#wm-target` chip, plus an
+   aria-label that says which pane and where ("lower half"), because an
+   accent edge is invisible to a screen reader.
+3. **touching the toolbar accents the governed pane** — on
+   pointerenter/focusin, plus a 1.4s flash on pointerdown, since a tap
+   never hovers.
+
+Three traps, all found by looking at a screenshot:
+- The labels are `position:absolute` INSIDE each pane, never in the flow —
+  split geometry is measured in pixels and a label in the box would
+  reintroduce the clipping that layout was rebuilt to fix. **But
+  `#narrative-view` was `position:static`**, so `bottom:0` resolved
+  against the viewport and the story's label fled to the bottom of the
+  screen. Both panes need `position:relative`.
+- The story label first sat at the screen top, **under the draggable
+  chrome**. Moving both to the seam fixes it and reads better.
+- A PERMANENT strip covers the guest's own readout (robbin's FLOCK/SCORE
+  was hidden by it). So the names behave like a TV naming its input:
+  shown on layout change and when you reach for the toolbar
+  (`_flashLabels()`), gone after ~2.6s. Same window under reduced-motion —
+  that is timing, not decoration.
+- Game labels go on the RIGHT because guests put HUDs top-left by
+  convention. Same reason the safe-area contract is still worth doing.
+
+Locked by 6 assertions in `e2e-wm.mjs`, including that the names stand
+down again.
+
 ## foafos shell (working name — owner decides terminology)
 
 - `packages/foafos/` = NPM-bound shell core (bus, sealed sessions,

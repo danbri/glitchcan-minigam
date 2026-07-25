@@ -119,6 +119,10 @@
          edge, collapses to the grip alone. -->
     <div id="wm-chrome" class="wm-hidden collapsed" role="toolbar" aria-label="Game window controls">
         <button type="button" id="wm-handle" aria-label="Window controls" aria-expanded="false">▦</button>
+        <!-- Which pane do these buttons act on? In split there are two,
+             and a floating toolbar answers that for nobody. The chip
+             names its target; the pane it governs gets an accent edge. -->
+        <span id="wm-target" aria-hidden="true"></span>
         <div id="wm-buttons">
             <button type="button" id="wm-full" title="Full screen" aria-label="Full screen" aria-pressed="false">▣</button>
             <button type="button" id="wm-split" title="Split with story" aria-label="Split with story" aria-pressed="false">◫</button>

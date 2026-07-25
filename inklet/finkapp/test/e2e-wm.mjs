@@ -105,6 +105,76 @@ try {
     ? pass('split panes tile exactly (no overlap, nothing clipped)')
     : fail(`split does not tile: gap=${tile.gap} overshoot=${tile.overshoot}`);
 
+  // 3b. WHOSE CONTROLS ARE THESE? In split there are two panes and a
+  // floating toolbar claims neither. Reported from the field: "when
+  // splitscreen it can be v confusing which part of screen the window
+  // manager controls". Both panes must be named, the names must meet at
+  // the seam (clear of the draggable toolbar at the screen top), the
+  // toolbar must name its target, and touching it must mark the pane.
+  const own = await page.evaluate(() => {
+    const labels = [...document.querySelectorAll('.wm-pane-label')].map(e => {
+      const r = e.getBoundingClientRect();
+      return { text: e.textContent.trim(), y: Math.round(r.y), bottom: Math.round(r.bottom),
+               shown: getComputedStyle(e).display !== 'none' };
+    });
+    const chrome = document.getElementById('wm-chrome');
+    return {
+      labels,
+      seam: Math.round(document.getElementById('minigame-view').getBoundingClientRect().top),
+      chromeBottom: Math.round(chrome.getBoundingClientRect().bottom),
+      chip: document.getElementById('wm-target')?.textContent?.trim(),
+      chipShown: getComputedStyle(document.getElementById('wm-target')).display !== 'none',
+      aria: chrome.getAttribute('aria-label'),
+    };
+  });
+  const story = own.labels.find(l => /story/i.test(l.text));
+  const gameLbl = own.labels.find(l => !/story/i.test(l.text));
+  story?.shown && gameLbl?.shown
+    ? pass(`both panes named: "${story.text}" / "${gameLbl.text}"`)
+    : fail(`panes not both labelled: ${JSON.stringify(own.labels)}`);
+  Math.abs(story.bottom - own.seam) <= 3 && Math.abs(gameLbl.y - own.seam) <= 3
+    ? pass(`names meet at the seam (${own.seam}px)`)
+    : fail(`labels not at the seam ${own.seam}: story ends ${story.bottom}, game starts ${gameLbl.y}`);
+  story.y > own.chromeBottom
+    ? pass('story label clears the toolbar (it used to sit underneath it)')
+    : fail(`story label under the chrome: label ${story.y} vs chrome bottom ${own.chromeBottom}`);
+  own.chipShown && own.chip && /pane/i.test(own.aria || '')
+    ? pass(`toolbar names its target: chip "${own.chip}", label "${own.aria}"`)
+    : fail(`toolbar does not say what it controls: ${JSON.stringify(own)}`);
+
+  // Focus, not hover: a keyboard user needs the cue as much as a mouse
+  // user, and `page.hover` is at the mercy of whatever floats above the
+  // toolbar. Both paths run through the same listener.
+  await page.focus('#wm-handle');
+  await page.waitForTimeout(250);
+  const governedByFocus = await page.evaluate(() =>
+    document.getElementById('minigame-view').classList.contains('wm-governed'));
+  governedByFocus ? pass('focusing the toolbar accents the pane it governs')
+                  : fail('no cue linking the toolbar to its pane (focus)');
+  // and the touch path: a tap never hovers, so it flashes instead
+  await page.evaluate(() => {
+    document.getElementById('minigame-view').classList.remove('wm-governed');
+    document.getElementById('wm-chrome').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+  });
+  const governedByTap = await page.evaluate(() =>
+    document.getElementById('minigame-view').classList.contains('wm-governed'));
+  governedByTap ? pass('a tap flashes the same cue (touch never hovers)')
+                : fail('tap did not mark the governed pane');
+
+  // ...and the names get OUT OF THE WAY. A permanent strip sits on the
+  // guest's own readout — robbin's FLOCK/SCORE was covered by the first
+  // version of this — so they behave like a TV naming its input.
+  await page.evaluate(() => {
+    FinkWM._flashLabels(150);
+    document.getElementById('minigame-view').classList.remove('wm-governed');
+  });
+  await page.waitForTimeout(700);
+  const faded = await page.evaluate(() =>
+    [...document.querySelectorAll('.wm-pane-label')].every(l => getComputedStyle(l).display === 'none'));
+  faded ? pass('pane names stand down after naming, leaving the guest its screen')
+        : fail('pane names persist over the guest HUD');
+  await page.evaluate(() => FinkWM._flashLabels());
+
   // 4. PIP: small, then a tap restores — no one-way doors
   await page.click('#wm-pip');
   await page.waitForTimeout(500);
@@ -177,6 +247,17 @@ try {
   !closed.wmActive && closed.chromeHidden && closed.narrative && closed.gameGone
     ? pass('exit: window closed, chrome hidden, story restored')
     : fail(`exit incomplete: ${JSON.stringify(closed)}`);
+
+  await page.evaluate(() => FinkWM.setMode('full'));
+  await page.waitForTimeout(300);
+  const fullHidden = await page.evaluate(() => ({
+    labels: [...document.querySelectorAll('.wm-pane-label')]
+      .every(l => getComputedStyle(l).display === 'none'),
+    aria: document.getElementById('wm-chrome').getAttribute('aria-label'),
+  }));
+  fullHidden.labels && !/pane/i.test(fullHidden.aria)
+    ? pass('one pane needs no telling apart — labels and chip stand down')
+    : fail(`labels persist in full mode: ${JSON.stringify(fullHidden)}`);
 
   pageErrors.length === 0 ? pass('no page errors')
     : fail(`page errors: ${pageErrors.slice(0, 3).join(' · ')}`);

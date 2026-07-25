@@ -30,6 +30,7 @@ window.FinkWM = {
             chrome: document.getElementById('wm-chrome'),
             handle: document.getElementById('wm-handle'),
             buttons: document.getElementById('wm-buttons'),
+            target: document.getElementById('wm-target'),
             view: document.getElementById('minigame-view'),
             narrative: document.getElementById('narrative-view'),
             modeBtns: {
@@ -65,6 +66,7 @@ window.FinkWM = {
         // the usual idle timer tuck it away.
         this._setCollapsed(false);
         this._scheduleCollapse();
+        this._bindOwnershipCues();
         this.setMode(mode, { animate: false });
         window.FoafOS?.bus.publish('wm.open', { summary: 'game window opened' });
     },
@@ -120,6 +122,7 @@ window.FinkWM = {
         }
         this.elements.handle.textContent = { full: '▣', split: '◫', pip: '◰' }[mode] || '▦';
 
+        this._paintOwnership();
         this._layoutSplit();
         this._haptic();
         this._scheduleCollapse();
@@ -166,6 +169,101 @@ window.FinkWM = {
         this.elements.chrome.classList.toggle('collapsed', collapsed);
         this.elements.handle.setAttribute('aria-expanded', String(!collapsed));
         if (collapsed) clearTimeout(this._collapseTimer);
+    },
+
+    // ── Who owns what ────────────────────────────────────────────────
+    // Reported from the field: "when splitscreen it can be very confusing
+    // which part of the screen the window manager controls". Correct — a
+    // toolbar floating over two panes claims neither. Every tiling window
+    // manager solved this the same way: name the panes, and mark the one
+    // that has the controls.
+    //
+    // Three cues, cheapest first:
+    //   1. each pane carries a small label (STORY / the game's name)
+    //   2. the toolbar carries a chip naming its target
+    //   3. touching the toolbar accents the edge of the pane it governs
+    _paintOwnership() {
+        const { view, narrative, chrome, target } = this.elements;
+        if (!view) return;
+        const mg = window.FinkMinigames;
+        const info = mg?.minigameInfo?.[mg?.currentType] || {};
+        const name = info.title || mg?.currentType || 'Game';
+        const icon = info.icon || '🎮';
+
+        // 1. pane labels. Positioned ABSOLUTELY inside each pane so they
+        // never enter the flow — split geometry is measured in pixels and
+        // a label in the box would reintroduce the clipping this layout
+        // was rebuilt to fix.
+        this._paneLabel(view, `${icon} ${name}`, 'game');
+        if (narrative) this._paneLabel(narrative, '📖 Story', 'story');
+        // Only worth showing when there is more than one pane to tell
+        // apart — and then only for a moment. A permanent strip sits on
+        // top of the guest's own readout (robbin's FLOCK/SCORE, gridluck's
+        // level), which is the occlusion this was meant to relieve. So:
+        // name the panes when the layout CHANGES, then get out of the way,
+        // exactly like a TV naming its input. Touching the toolbar brings
+        // them back, so "which pane?" stays answerable on demand.
+        const twoPanes = this.mode === 'split';
+        view.classList.toggle('wm-labelled', twoPanes);
+        narrative?.classList.toggle('wm-labelled', twoPanes);
+        if (twoPanes) this._flashLabels();
+
+        // 2. the chip
+        if (target) target.textContent = twoPanes ? `${icon} ${name}` : '';
+        chrome?.classList.toggle('wm-has-target', twoPanes);
+
+        // 3. and say it to assistive tech, which cannot see an accent edge
+        chrome?.setAttribute('aria-label',
+            twoPanes ? `Controls for the ${name} pane (lower half)` : `${name} window controls`);
+    },
+
+    // Show the pane names for a beat. Reduced-motion users get the same
+    // window — this is timing, not decoration.
+    _flashLabels(ms = 2600) {
+        const { view, narrative } = this.elements;
+        clearTimeout(this._labelTimer);
+        view?.classList.add('wm-naming');
+        narrative?.classList.add('wm-naming');
+        this._labelTimer = setTimeout(() => {
+            view?.classList.remove('wm-naming');
+            narrative?.classList.remove('wm-naming');
+        }, ms);
+    },
+
+    _paneLabel(pane, text, kind) {
+        let el = pane.querySelector(':scope > .wm-pane-label');
+        if (!el) {
+            el = document.createElement('span');
+            el.className = 'wm-pane-label';
+            el.dataset.kind = kind;
+            // decorative: the pane's accessible name comes from its own
+            // role/label, and a screen reader should not read this twice
+            el.setAttribute('aria-hidden', 'true');
+            pane.appendChild(el);
+        }
+        el.textContent = text;
+    },
+
+    // Accent the governed pane while the player is actually touching the
+    // controls — a permanent glow round half the screen would be noise.
+    _bindOwnershipCues() {
+        const { chrome, view } = this.elements;
+        if (!chrome || !view || this._cuesBound) return;
+        this._cuesBound = true;   // open() runs per game; these listeners are per page
+        const on = () => {
+            if (this.mode !== 'split') return;
+            view.classList.add('wm-governed');
+            this._flashLabels();   // reaching for the controls asks "which pane?"
+        };
+        const off = () => view.classList.remove('wm-governed');
+        for (const ev of ['pointerenter', 'focusin']) chrome.addEventListener(ev, on);
+        for (const ev of ['pointerleave', 'focusout']) chrome.addEventListener(ev, off);
+        // a tap on a touch screen never hovers: flash it instead
+        chrome.addEventListener('pointerdown', () => {
+            on();
+            clearTimeout(this._governTimer);
+            this._governTimer = setTimeout(off, 1400);
+        });
     },
 
     _scheduleCollapse() {
