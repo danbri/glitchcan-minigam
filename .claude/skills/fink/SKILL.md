@@ -1225,6 +1225,11 @@ check what the author remembered.**
   `/data|channels/i` against switcher card TEXT, so renaming an app broke a
   test about window management. Assert on app **ids**; if you must check that
   a label is shown, import the registry and take the expected string from it.
+- **CHECK THE SKILLS ARE DISCOVERABLE.** `npm run skills:check` — a skill in
+  the tree that nothing in `.claude/skills/` points at is invisible, and that
+  is how four Lucid skills went unoffered for nine days. It also catches a
+  DANGLING index entry, which is worse: the runtime advertises a skill that
+  cannot load. `--fix` creates the symlinks.
 - **CHECK THE SUITE IS IN THE CHAIN.** `e2e-desktop` was not in
   `test:fink:e2e` at all, so it sat broken while every regression came back
   green. Run this after adding any suite, and occasionally anyway:

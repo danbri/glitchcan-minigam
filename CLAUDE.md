@@ -65,27 +65,44 @@ Browser-based minigames collection with WebGL fluid dynamics, interactive fictio
 
 **Accuracy ledger:** `docs/fable-audit/` contains a repo-wide audit (June 2026) of plans vs implementation, including `claims-register.md` — an adversarially-verified claims table. When this file and the audit disagree, check the register. When making confident *negative* claims ("X doesn't exist", "nothing links Y"), verify them with a recorded check first — roughly a third of such claims in the first audit pass were wrong.
 
-**Skills — SIX exist, and only two used to be discoverable.** `.claude/skills/`
-has `fink` (platform + foafos shell) and `glitchcanary` (story/game content).
-Four more were written for Lucid and left in `lucid/skills/` — properly formed,
-code-verified, with their own README saying "symlink individual skills into
-your skills path". Nobody had. They are symlinked into `.claude/skills/` as of
-July 2026, and `lucid/skills/` stays the single source of truth (edit there):
+**Skills — the convention, and how to keep it honest.** A skill nobody is
+offered is a comment in a file: four Lucid skills sat in `lucid/skills/` for
+nine days while every session was told this project had two, both about FINK.
+So:
 
-| skill | reach for it when… |
-|---|---|
-| `lucid-scene-authoring` | editing scene JSON — primitives, CSG, transforms, `defs`/`ref`, params |
-| `lucid-renderer-interop` | working across Mayfly (WebGL/GLSL) and Stinkyfish (WebGPU/WGSL) |
-| `lucid-rigging-and-physics` | `rig-evaluator.js`, the XPBD stacks, param uniforms |
-| `lucid-animation-and-interaction` | time, looping, the timeline scrubber, camera/gesture |
+> **Skills live next to the code they describe, at `<area>/skills/<name>/`,
+> and are symlinked into `.claude/skills/` so the runtime offers them.**
 
-The symlinks are **verified working** — Claude Code picked all four up mid-
-session, without a restart, the moment they were created. If a session's skill
-listing does not show them, the clone lost the symlinks: read
-`lucid/skills/<name>/SKILL.md` directly and say so, rather than concluding
-Lucid has no documented conventions. Areas with NO
-skill at all: `magpie/edot` (211 files, has `magpie/edot/README.md` and eight
-sibling docs), `trees/` (8 lines of this file), `magpie/elliott4130`.
+Co-located because a skill belongs to its subproject (extract `trees/` and its
+skill goes too) and because the person editing the code is looking at the
+right file. Symlinked rather than copied because two copies of a hard-won
+lesson diverge and you will read the stale one. `.claude/skills/` is a pure
+index: real directories for repo-wide skills, symlinks for co-located ones.
+Claude Code picks up a new symlink **mid-session, without a restart** —
+verified July 2026.
+
+    npm run skills:check          # every SKILL.md discoverable? malformed? dangling?
+    node tools/check-skills.mjs --fix    # create the missing symlinks
+
+| skill | home | reach for it when… |
+|---|---|---|
+| `fink` | `.claude/skills/` | FINK platform + the foafos shell: file format, ink compilation, sandbox, capabilities, brokers, chrome, testing discipline |
+| `glitchcanary` | `.claude/skills/` | story/game CONTENT — authoring `.fink.js`, episode linking, `# MINIGAME:` |
+| `edot-suite` | `magpie/edot/skills/` | the office suite at suite level — kernel capabilities, the 13 apps, 9 storage backends, auth, the 53-suite harness |
+| `tanks-for-the-trees` | `trees/skills/` | `trees/` — the Bristol data pipeline, BNG↔world coordinates, `host.api`/`__tftt`. **Read its data-ethics section first** |
+| `lucid-scene-authoring` | `lucid/skills/` | scene JSON — primitives, CSG, transforms, `defs`/`ref`, params |
+| `lucid-renderer-interop` | `lucid/skills/` | across Mayfly (WebGL/GLSL) and Stinkyfish (WebGPU/WGSL) |
+| `lucid-rigging-and-physics` | `lucid/skills/` | `rig-evaluator.js`, the XPBD stacks, param uniforms |
+| `lucid-animation-and-interaction` | `lucid/skills/` | time, looping, the timeline scrubber, camera/gesture |
+
+**Edit the file at its HOME, never through the symlink's path in the index.**
+
+Still with no skill, and deliberately not given a thin one: `magpie/edot`'s
+editor internals (`magpie/edot/README.md` is thorough — the skill points at it
+rather than duplicating), `magpie/elliott4130` (19 files, has eight docs of its
+own), `spectro`, `palace`, `mudslide`, `thumbwar`, `hat`, `plenia`, `furbacca`,
+`follyfx`. A skill written without verifying the code against it is worse than
+none: it reads as authoritative.
 
 **New model? Start here:** `docs/fable-audit/fable-notes-handoff-20260706.md` — a handoff written for models continuing this collaboration: how danbri works, the engineering norms, the edot architecture + current frontier, hard-won honesty/verification lessons, and a ranked roadmap. Read it once before your first change.
 
