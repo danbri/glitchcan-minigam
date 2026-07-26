@@ -65,6 +65,28 @@ Browser-based minigames collection with WebGL fluid dynamics, interactive fictio
 
 **Accuracy ledger:** `docs/fable-audit/` contains a repo-wide audit (June 2026) of plans vs implementation, including `claims-register.md` — an adversarially-verified claims table. When this file and the audit disagree, check the register. When making confident *negative* claims ("X doesn't exist", "nothing links Y"), verify them with a recorded check first — roughly a third of such claims in the first audit pass were wrong.
 
+**Skills — SIX exist, and only two used to be discoverable.** `.claude/skills/`
+has `fink` (platform + foafos shell) and `glitchcanary` (story/game content).
+Four more were written for Lucid and left in `lucid/skills/` — properly formed,
+code-verified, with their own README saying "symlink individual skills into
+your skills path". Nobody had. They are symlinked into `.claude/skills/` as of
+July 2026, and `lucid/skills/` stays the single source of truth (edit there):
+
+| skill | reach for it when… |
+|---|---|
+| `lucid-scene-authoring` | editing scene JSON — primitives, CSG, transforms, `defs`/`ref`, params |
+| `lucid-renderer-interop` | working across Mayfly (WebGL/GLSL) and Stinkyfish (WebGPU/WGSL) |
+| `lucid-rigging-and-physics` | `rig-evaluator.js`, the XPBD stacks, param uniforms |
+| `lucid-animation-and-interaction` | time, looping, the timeline scrubber, camera/gesture |
+
+The symlinks are **verified working** — Claude Code picked all four up mid-
+session, without a restart, the moment they were created. If a session's skill
+listing does not show them, the clone lost the symlinks: read
+`lucid/skills/<name>/SKILL.md` directly and say so, rather than concluding
+Lucid has no documented conventions. Areas with NO
+skill at all: `magpie/edot` (211 files, has `magpie/edot/README.md` and eight
+sibling docs), `trees/` (8 lines of this file), `magpie/elliott4130`.
+
 **New model? Start here:** `docs/fable-audit/fable-notes-handoff-20260706.md` — a handoff written for models continuing this collaboration: how danbri works, the engineering norms, the edot architecture + current frontier, hard-won honesty/verification lessons, and a ranked roadmap. Read it once before your first change.
 
 ## FINK Player — Current Production Reality (verified June 2026)
