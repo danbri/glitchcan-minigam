@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -9,6 +9,12 @@
 </head>
 <body>
   <edot-files></edot-files>
+  <!-- app-sdk FIRST when hosted by foafos: it stands in for localStorage
+       before any app code runs, which matters here because the edot kernel
+       touches it during construction and an opaque origin THROWS on the
+       bare read. Harmless standalone — nothing sends it app.init, so the
+       native APIs are left alone. -->
+  <script src="../../../inklet/apps/app-sdk.js"></script>
   <script type="module">
     // Seed the always-available local "device" account (OPFS) so the kernel
     // can resolve storage.source({id:'device'}); then load the component.

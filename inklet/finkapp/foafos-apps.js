@@ -56,9 +56,14 @@ export const APPS = [
   // These still hold `same-origin`: between them they use
   // localStorage/sessionStorage/indexedDB ~120 times and have not been
   // moved onto the store broker yet. Migrating them retires the hatch.
+  // MIGRATED (July 2026). edot's own `same-origin` turned out to be
+  // cargo cult: the page has no iframes to reach into, every localStorage
+  // call was already try-wrapped, and `Library.create()` already tried
+  // IndexedDB and fell back to a localStorage backend. All it needed was
+  // for that fallback to land somewhere — app-sdk's shim over the broker.
   { id: 'edot', family: 'office', icon: '🗂️', name: 'edot', surface: 'window',
     url: '../../magpie/edot/edot.html', desc: 'The suite shell',
-    capabilities: ['storage', 'same-origin'], silent: true },
+    capabilities: ['storage'], silent: true },
   { id: 'sheets', family: 'office', icon: '📊', name: 'Data', surface: 'window',
     url: '../../magpie/edot/data/data.html', desc: 'Spreadsheet, SQL, RDF',
     capabilities: ['storage', 'same-origin'], silent: true },
@@ -69,9 +74,17 @@ export const APPS = [
   { id: 'calendar', family: 'office', icon: '📅', name: 'Calendar', surface: 'window',
     url: '../../magpie/edot/calendar/calendar.html', desc: 'Days and plans',
     capabilities: ['storage'], silent: true },
+  // MIGRATED (July 2026). Files stored nothing itself — its escape hatch
+  // was bought for OPFS, which needs an origin to hang a storage bucket on
+  // and so is refused outright in a sandboxed frame. It now probes the
+  // device mount and falls back to BrokeredResourceSource: the same
+  // list/read/write/remove/stat/mkdir interface over the shell's store.
   { id: 'files', family: 'office', icon: '📁', name: 'Files', surface: 'window',
-    url: '../../magpie/edot/files/', desc: 'Pod explorer',
-    capabilities: ['storage', 'same-origin'], silent: true },
+    // files.html, not the directory: there is no index.html here, so the
+    // bare path served a directory listing locally and would 404 on GitHub
+    // Pages. The app had never actually loaded inside the shell.
+    url: '../../magpie/edot/files/files.html', desc: 'Pod explorer',
+    capabilities: ['storage'], silent: true },
 
   // ── Play ──────────────────────────────────────────────────────────
   // Already isolated, and staying that way. `game` is the id the

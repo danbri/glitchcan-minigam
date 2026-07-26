@@ -8,7 +8,29 @@
 // list(path, {offset, limit}) and surface a "Load more" control when a window
 // fills — never materialising a folder that might hold 100k entries.
 import { getKernel } from '../../js/edot-kernel.js';
-import { OpfsResourceSource } from '../../js/resource-source.js';
+import { OpfsResourceSource, BrokeredResourceSource } from '../../js/resource-source.js';
+
+// Which device mount can this page actually have?
+//
+// OPFS needs an origin to hang a storage bucket on. Under foafos an app gets
+// an OPAQUE origin — no bucket, so `navigator.storage.getDirectory()`
+// rejects and OpfsResourceSource cannot mount at all. Files used to buy its
+// way out of that with `same-origin`, which handed it ambient authority over
+// the whole shell in exchange for somewhere to put a few bytes.
+//
+// So: ASK, don't assume. Try OPFS; only if it will genuinely not open, fall
+// back to the brokered source. Standalone this is a no-op — the first branch
+// wins and nothing about the app changes.
+async function openDeviceMount(candidate = null) {
+  const src = candidate || new OpfsResourceSource({ id: 'device' });
+  try {
+    await src.list('/', { offset: 0, limit: 1 });   // the real probe, not a feature test
+    return src;
+  } catch (e) {
+    console.log('[files] device storage unavailable, using the brokered store:', e && e.message);
+    return new BrokeredResourceSource({ id: 'device' });
+  }
+}
 
 const PAGE = 50; // small on purpose, to prove windowing
 
@@ -58,7 +80,10 @@ class EdotFiles extends HTMLElement {
     // Resolve the device mount via the kernel; fall back to a fresh OPFS source.
     let mount = null;
     if (kernel) { try { mount = kernel.capabilities.invoke('storage.source', { id: 'device' }); } catch (_) {} }
-    if (!mount) { mount = new OpfsResourceSource({ id: 'device' }); }
+    // Whatever produced it, PROVE it can list before trusting it: the
+    // kernel's device source is an OPFS one too, and an opaque origin
+    // refuses OPFS whoever constructed it.
+    mount = await openDeviceMount(mount);
     if (!this.mounts.some((m) => m.id === (mount.id || 'device'))) {
       this.mounts.unshift({ id: mount.id || 'device', label: 'This device', provider: mount.provider || 'opfs' });
     }

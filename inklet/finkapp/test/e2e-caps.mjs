@@ -234,13 +234,102 @@ try {
       : fail(`nothing reached the broker: ${JSON.stringify(persisted)}`);
   }
 
+  // 10. Files: the second migration, and a different flavour of refusal.
+  // Files stores nothing of its own — its escape hatch was bought for OPFS,
+  // which needs an origin to hang a storage bucket on and is therefore
+  // refused outright in a sandboxed frame. So the fallback here is a whole
+  // ResourceSource, not a key/value store.
+  //
+  // Fixing this also uncovered that the app had NEVER loaded inside the
+  // shell: the registry pointed at the directory, which has no index.html,
+  // so the frame showed a directory listing locally and would 404 on Pages.
+  // Hence the assertion that the custom element is actually there.
+  await page.evaluate(() => window.FoafOS.store.clear('files'));
+  await page.evaluate(() => window.FoafOS.launchApp('files'));
+  await page.waitForTimeout(4000);
+  const filesFrame = page.frames().find(f => /edot\/files\//.test(f.url()));
+  if (!filesFrame) {
+    fail('files app frame never appeared');
+  } else {
+    const st = await filesFrame.evaluate(async () => {
+      const r = { element: false, boundary: null, brokered: null, wrote: null, listed: null };
+      for (let i = 0; i < 40; i++) {
+        const el = document.querySelector('edot-files');
+        if (el?.mount) { r.element = true; r.brokered = !!el.mount.brokered; break; }
+        await new Promise(z => setTimeout(z, 250));
+      }
+      try { parent.document; r.boundary = 'reachable'; } catch (e) { r.boundary = e.name; }
+      const el = document.querySelector('edot-files');
+      if (el?.mount) {
+        await el.mount.write('/notes/todo.txt', new TextEncoder().encode('brokered bytes'));
+        r.wrote = true;
+        r.listed = (await el.mount.list('/', { offset: 0, limit: 10 })).map(e => e.name);
+      }
+      return r;
+    }).catch(e => ({ err: String(e).slice(0, 110) }));
+
+    st.element === true
+      ? pass('files actually loads inside the shell (it never did before)')
+      : fail(`no <edot-files> in the frame: ${JSON.stringify(st)}`);
+    st.boundary === 'SecurityError'
+      ? pass('files runs de-privileged: parent.document refuses')
+      : fail(`files still has ambient authority: ${JSON.stringify(st)}`);
+    st.brokered === true
+      ? pass('OPFS is refused here, so it mounted the brokered ResourceSource')
+      : fail(`files did not fall back: brokered=${JSON.stringify(st.brokered)}`);
+    Array.isArray(st.listed) && st.listed.includes('notes')
+      ? pass(`a write shows up in the listing (${st.listed.join(', ')})`)
+      : fail(`write did not land: ${JSON.stringify(st)}`);
+
+    const held = await page.evaluate(() => window.FoafOS.store.snapshot('files'));
+    held && Object.keys(held).length
+      ? pass(`the shell holds files' bytes (${Object.keys(held).join(', ')})`)
+      : fail(`nothing reached the broker: ${JSON.stringify(held)}`);
+  }
+
+  // 11. edot itself. Its `same-origin` was cargo cult: no iframes to reach
+  // into, every localStorage call already try-wrapped, and Library.create()
+  // already tried IndexedDB and fell back to a localStorage backend. All it
+  // needed was somewhere for that fallback to land. Worth asserting rather
+  // than assuming, because "it looked like it didn't need it" is exactly
+  // the reasoning that puts an escape hatch there in the first place.
+  await page.evaluate(() => window.FoafOS.store.clear('edot'));
+  await page.evaluate(() => window.FoafOS.launchApp('edot'));
+  await page.waitForTimeout(4000);
+  const edotFrame = page.frames().find(f => /edot\.html/.test(f.url()));
+  if (!edotFrame) {
+    fail('edot frame never appeared');
+  } else {
+    const st = await edotFrame.evaluate(async () => {
+      const r = { boundary: null, shimmed: null, ui: false };
+      try { parent.document; r.boundary = 'reachable'; } catch (e) { r.boundary = e.name; }
+      r.shimmed = Object.prototype.hasOwnProperty.call(window, 'localStorage');
+      for (let i = 0; i < 30; i++) {
+        if (document.querySelector('edot-editor, .edot-app, main')) { r.ui = true; break; }
+        await new Promise(z => setTimeout(z, 200));
+      }
+      return r;
+    }).catch(e => ({ err: String(e).slice(0, 110) }));
+
+    st.boundary === 'SecurityError' && st.shimmed === true
+      ? pass('edot runs de-privileged, with localStorage standing in for it')
+      : fail(`edot still has ambient authority: ${JSON.stringify(st)}`);
+    st.ui === true ? pass('and its UI comes up') : fail('edot rendered nothing');
+
+    const held = await page.evaluate(() => Object.keys(window.FoafOS.store.snapshot('edot') || {}));
+    held.includes('edot.library.v1')
+      ? pass(`the shell holds edot's document library (${held.length} keys)`)
+      : fail(`library did not reach the broker: ${JSON.stringify(held)}`);
+  }
+
   const stillAmbient = await page.evaluate(async () => {
     const m = await import('./foafos-apps.js');
     return m.ambientApps().map(a => a.id);
   });
-  !stillAmbient.includes('calendar')
+  const migrated = ['calendar', 'files', 'edot'];
+  migrated.every(id => !stillAmbient.includes(id))
     ? pass(`ambient-authority holders down to ${stillAmbient.length}: ${stillAmbient.join(', ')}`)
-    : fail('calendar still declares same-origin');
+    : fail(`a migrated app still declares same-origin: ${stillAmbient.join(', ')}`);
 
   pageErrors.length === 0 ? pass('no page errors')
     : fail(`page errors: ${pageErrors.slice(0, 2).join(' · ')}`);

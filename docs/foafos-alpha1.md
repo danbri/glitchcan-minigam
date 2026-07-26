@@ -11,8 +11,8 @@ A browser shell that runs mutually distrustful apps, where an
 
 | root | boots | root capabilities |
 |---|---|---|
-| `?root=` *(default)* | the story TOC | storage · vars · audio · input · launch · navigate · chrome · same-origin |
-| `?root=office` | edot | storage · same-origin |
+| `?root=` *(default)* | the story TOC | storage · vars · audio · input · launch · navigate · chrome · shell · same-origin |
+| `?root=office` | edot | storage · shell · same-origin *(for Data)* |
 | `?root=webtv` | Channels | storage · audio · input |
 | `?root=tellyclub` | Tellyclub | audio |
 
@@ -83,9 +83,10 @@ Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
     destroyed in the same tick the question was asked.
   - `e2e-caps` — the boundary tested **by trying to cross it**: inside a
     de-privileged app, `parent.document`, `parent.FoafOS` and `localStorage`
-    all throw `SecurityError`. Also drives Calendar through a real
-    round-trip (calendar + event, Dates rehydrated) with no ambient
-    authority at all.
+    all throw `SecurityError`. Also drives **Calendar** through a real
+    round-trip (calendar + event, Dates rehydrated) and **Files** through a
+    write that lands in the listing and reaches the broker — both with no
+    ambient authority at all.
   - `e2e-root` — office boots with **zero stories compiled**; attenuation
     refuses in the live page; close cascades to a real guest teardown.
   - `e2e-input` — Konami once per controller.
@@ -104,13 +105,25 @@ Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
 
 ## Missing, plainly
 
-1. **Four apps still hold `same-origin`** — edot, Data, Files, ROBBAMP.
-   **Calendar is migrated** (July 2026) and is the proof the path works on a
-   storage-heavy app: it used IndexedDB, which an opaque origin refuses
-   outright, so its store gained a brokered key/value fallback chosen only
-   when IDB will not open. Standalone it keeps its indexes and cursor
-   deletes; under foafos it runs de-privileged and the shell holds its
-   bytes. The drawer names whoever is left; the count should reach zero.
+1. **Two apps still hold `same-origin`** — Data and ROBBAMP. Three are
+   migrated, each hitting a different wall:
+   - **Calendar** used IndexedDB, which an opaque origin refuses outright,
+     so its store gained a brokered key/value fallback chosen only when IDB
+     will not open. Standalone it keeps its indexes and cursor deletes.
+   - **Files** stored nothing of its own — it held the hatch for **OPFS**,
+     which needs an origin to hang a storage bucket on and is refused in a
+     sandboxed frame. Its fallback is therefore a whole `ResourceSource`
+     (`BrokeredResourceSource`), same list/read/write/remove/stat/mkdir
+     interface over the shell's store. Migrating it also revealed the app
+     had **never loaded inside the shell**: the registry pointed at a
+     directory with no `index.html`.
+   - **edot** itself needed nothing but somewhere to land. Its hatch was
+     cargo cult: no iframes to reach into, every `localStorage` call
+     already try-wrapped, and `Library.create()` already tried IndexedDB
+     and fell back to a `localStorage` backend. Loading app-sdk first gave
+     that fallback the broker, and the shell now holds the document
+     library.
+   The drawer names whoever is left; the count should reach zero.
 2. **Only two games speak `snapshot`.** The contract exists now (July
    2026): closing a game keeps its place, through a reload, because the
    shell writes it to FoafStore. Mudslider comes back in the same room

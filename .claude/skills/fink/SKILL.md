@@ -840,6 +840,39 @@ generalises. Ambient holders: 5 → 4 (edot, sheets, files, robbamp left).
   dropped. Standalone `test-calendar.mjs` must still pass — it does, still
   on IDB.
 
+**Files (July 2026), the second one, and a different wall.** Files stored
+nothing of its own — it held the hatch for **OPFS**, and OPFS needs an
+origin to hang a storage bucket on, so `navigator.storage.getDirectory()`
+rejects in a sandboxed frame no matter who constructs the source. The
+fallback is therefore a whole `ResourceSource`, not a key/value store:
+`BrokeredResourceSource` in `magpie/edot/js/resource-source.js` extends
+`MemoryResourceSource` and writes the tree through `localStorage` (base64
+bytes in JSON), which under foafos is app-sdk's shim over the broker.
+
+- **PROBE, don't feature-test.** `openDeviceMount()` calls `list('/')` on
+  the candidate and only falls back when that actually throws. And it
+  probes whatever the kernel handed back too — the kernel's device source
+  is an OPFS one as well.
+- `getKernel()` reads `typeof localStorage`, and on an opaque origin that
+  THROWS rather than returning undefined. app-sdk must be loaded before the
+  module, as in calendar.html.
+- **A registry URL pointing at a directory is a broken app.** Files was
+  registered as `.../edot/files/`, which has no `index.html`: locally the
+  frame showed a python directory listing, and on GitHub Pages it would
+  404. The app had never once loaded inside the shell. e2e-caps now asserts
+  the custom element is present, not merely that a frame appeared.
+
+**edot (July 2026), the cheap one — check before you assume.** edot's own
+`same-origin` was cargo cult. The page has no iframes to reach into, every
+`localStorage` call was already `try`-wrapped, and `Library.create()`
+already tried IndexedDB and fell back to a `localStorage` backend. All it
+needed was for that fallback to land somewhere: one `<script src=app-sdk>`
+before the module, and the capability dropped. Worth measuring rather than
+assuming in BOTH directions — "it looks like it needs the hatch" is how
+these get granted, and "it looks like it doesn't" is how a migration ships
+broken. e2e-caps asserts the boundary, the shim, the UI coming up, and
+`edot.library.v1` reaching the broker.
+
 ## Stories are privileged over apps — know this
 
 Asked directly ("does foafos privilege stories over office docs?") and

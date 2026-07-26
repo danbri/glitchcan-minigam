@@ -123,6 +123,91 @@ export class OpfsResourceSource extends DirectoryResourceSource {
   async _root() { return navigator.storage.getDirectory(); }
 }
 
+// OPFS, but for a page that has no origin to hold it.
+//
+// Under foafos an app runs in a sandboxed frame with an OPAQUE origin, and
+// an opaque origin has no storage bucket: `navigator.storage.getDirectory()`
+// rejects, so OpfsResourceSource cannot mount at all. That is exactly why
+// Files held `same-origin` — full ambient authority over the shell, bought
+// to have somewhere to keep some files.
+//
+// This is the Calendar pattern applied to a filesystem: same interface,
+// backed by the in-memory tree, persisted through whatever `localStorage`
+// resolves to. Standalone that is the real one; under foafos it is
+// app-sdk's shim over the shell's store broker (namespaced, quota'd,
+// audited). Neither the browser nor this class needs to know which.
+//
+// Bytes are base64 in JSON — larger than the source, and the reason the
+// quota matters. A write that would blow it is refused by the broker and
+// reported here rather than silently dropped.
+const b64 = {
+  enc(bytes) { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s); },
+  dec(str) { const s = atob(str); const out = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i); return out; },
+};
+
+export class BrokeredResourceSource extends MemoryResourceSource {
+  constructor({ id = 'device', key = 'edot.files.tree', storage = null } = {}) {
+    super({ id, provider: 'opfs', locality: 'local' });
+    this._key = key;
+    // Resolved lazily and defensively: reading `localStorage` on an opaque
+    // origin THROWS rather than returning undefined, so this must never be
+    // a bare property read at construction time.
+    this._storage = storage;
+    this.brokered = true;
+    this.load();
+  }
+
+  _kv() {
+    if (this._storage !== null) return this._storage;
+    try { this._storage = (typeof localStorage !== 'undefined') ? localStorage : false; }
+    catch (_) { this._storage = false; }
+    return this._storage;
+  }
+
+  load() {
+    const kv = this._kv();
+    if (!kv) return false;
+    let raw = null;
+    try { raw = kv.getItem(this._key); } catch (_) { return false; }
+    if (!raw) return false;
+    try {
+      const doc = JSON.parse(raw);
+      this._dirs = new Set(Array.isArray(doc.dirs) && doc.dirs.length ? doc.dirs : ['/']);
+      this._files = new Map();
+      for (const [p, f] of Object.entries(doc.files || {})) {
+        this._files.set(p, { bytes: b64.dec(f.b), mtime: f.m || 0 });
+      }
+      return true;
+    } catch (_) {
+      // A corrupt blob must not take the app down with it: start empty and
+      // let the next save overwrite it.
+      return false;
+    }
+  }
+
+  save() {
+    const kv = this._kv();
+    if (!kv) return false;
+    const files = {};
+    for (const [p, f] of this._files) files[p] = { b: b64.enc(f.bytes), m: f.mtime || 0 };
+    try {
+      kv.setItem(this._key, JSON.stringify({ dirs: [...this._dirs], files }));
+      return true;
+    } catch (e) {
+      // Quota, most likely. Loud, because a save that silently fails is how
+      // a user loses work while being shown a saved-looking screen.
+      console.warn('[files] could not persist:', e && e.message);
+      return false;
+    }
+  }
+
+  // Same interface, still synchronous (callers already await it), but every
+  // mutation writes through.
+  mkdir(path) { super.mkdir(path); this.save(); }
+  write(path, bytes) { super.write(path, bytes); this.save(); }
+  remove(path) { super.remove(path); this.save(); }
+}
+
 // A user-chosen LOCAL FOLDER via the File System Access API — the OS tier: access
 // is capability-granted by the OS (a folder-picker prompt), no remote identity.
 // pick() must be called from a user gesture. (Not exercisable headless — there is
