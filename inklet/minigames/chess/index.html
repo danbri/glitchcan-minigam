@@ -188,9 +188,9 @@
             <p id="message"></p>
             <p id="subtle-move-message"></p>
             <div id="buttons-panel">
-                <button id="explanation-btn" class="control-button" title="Help/Rules">?</button>
-                <button id="play-again" class="control-button" title="Play Again">Replay</button>
-                <button id="return-to-story" class="control-button" title="Return to Story">Back</button>
+                <button type="button" id="explanation-btn" class="control-button" title="Help/Rules">?</button>
+                <button type="button" id="play-again" class="control-button" title="Play Again">Replay</button>
+                <button type="button" id="return-to-story" class="control-button" title="Return to Story">Back</button>
             </div>
             <div id="explanation-text">
                 <strong>Mamichess Puzzle</strong><br>
@@ -266,6 +266,31 @@
             });
             sdk.onTerminate((reason) => {
                 console.log('[Chess] Terminate received:', reason);
+            });
+
+            // Survive being closed. The whole game is four values, so
+            // there is no excuse for losing a position mid-puzzle just
+            // because the player went back to read the story.
+            //
+            // Deliberately does NOT capture mid-animation state: a
+            // snapshot taken while a piece is sliding would restore to a
+            // board that disagrees with itself. Refusing (null) is the
+            // honest answer, and the shell reports it as "closing loses
+            // it" rather than pretending.
+            sdk.onSnapshot(() => {
+                if (isAnimatingMove || gameOver) return null;
+                return { kingPos, queenPos, currentTurn };
+            });
+
+            sdk.onRestore((snap) => {
+                if (!snap?.kingPos || !snap?.queenPos) return;
+                resetGame();
+                kingPos = { ...snap.kingPos };
+                queenPos = { ...snap.queenPos };
+                currentTurn = snap.currentTurn || 'white';
+                updateMessage();
+                drawPiecesAndHighlights();
+                window.__mgA11y?.announce?.('Position restored');
             });
         }
 

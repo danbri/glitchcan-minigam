@@ -178,6 +178,46 @@
             setTimeout(() => applyAudioLevel(level), 400);   // post-upgrade
         });
 
+        // Survive being closed. The shell asks on the way out and hands
+        // this back next time — so quitting to the story and coming back
+        // no longer means starting the mine again from the top.
+        //
+        // Small on purpose: it crosses postMessage and the shell may
+        // persist it. Position, score, lives, keys and which room — not
+        // the grid, which the game rebuilds from its own level data.
+        sdk.onSnapshot(() => {
+            const el = gameState.gameElement;
+            if (!el?.player) return null;
+            return {
+                player: { x: el.player.x, y: el.player.y },
+                state: JSON.parse(JSON.stringify(el.playerState || {})),
+            };
+        });
+
+        sdk.onRestore((snap) => {
+            if (!snap) return;
+            // The element may not have upgraded yet; retry briefly rather
+            // than dropping a restore on the floor.
+            let tries = 0;
+            const apply = () => {
+                const el = gameState.gameElement;
+                if (!el?.player || !el.playerState) {
+                    if (tries++ < 20) return setTimeout(apply, 200);
+                    return;
+                }
+                if (snap.state) Object.assign(el.playerState, snap.state);
+                if (snap.player) { el.player.x = snap.player.x; el.player.y = snap.player.y; }
+                // The room in playerState is the source of truth; ask the
+                // game to redraw from it if it knows how.
+                // _loadScreenState, not _loadScreen — checked, because an
+                // optional-call on a name that does not exist is a silent
+                // no-op and the room would quietly not redraw.
+                try { el._loadScreenState?.(el.playerState.currentScreenId); } catch (e) { /* older build */ }
+                say(`Restored: room ${el.playerState.currentScreenId}, ${el.playerState.lives} lives`);
+            };
+            apply();
+        });
+
         sdk.onInit((config, variables) => {
             console.log('[Mudslider] Initialized with config:', config);
             console.log('[Mudslider] Variables:', variables);

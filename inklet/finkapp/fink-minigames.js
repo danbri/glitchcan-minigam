@@ -6,7 +6,7 @@
 // a guest said something meaningful" from ordinary page chatter.
 const GUEST_MESSAGE_TYPES = new Set([
     'ready', 'progress', 'set-variable', 'complete', 'error', 'log', 'log-batch',
-    'announce', 'conformance',
+    'announce', 'conformance', 'snapshot-data',
 ]);
 
 // How long a guest gets to answer the conformance probe before the shell
@@ -931,7 +931,7 @@ window.FinkMinigames = {
                     // The contracts we are offering. A guest that knows
                     // them answers with `conformance`; silence means it
                     // predates them and keeps doing its own thing.
-                    contracts: ['controls', 'audio'],
+                    contracts: ['controls', 'audio', 'snapshot'],
                     // Current master level, so a guest starts at the right
                     // volume instead of blasting once and then ducking.
                     audio: window.FoafOS?.audio
@@ -943,16 +943,106 @@ window.FinkMinigames = {
                     config,
                     variables: this._getStoryVariables(this._guestActor(inst))
                 });
+                // Hand back whatever it left last time. Sent right after
+                // init so a guest that registers onRestore inside onInit
+                // still catches it — and the SDK holds it if not.
+                this._loadSnapshots();
+                const saved = this._snapshots[inst.type];
+                if (saved !== undefined) {
+                    this._sendToIframe({ type: 'restore', state: saved }, inst);
+                    window.FoafOS?.bus.publish('minigame.restore', {
+                        summary: `${inst.type} restored from a snapshot`, type: inst.type,
+                    });
+                }
                 this._probeConformance(inst, config);
                 // D-pad visibility is handled in startMinigame based on controls param
             };
         }
     },
 
+    // ── snapshots ─────────────────────────────────────────────────────
+    // Closing a game used to simply lose it. The shell cannot reach into
+    // an opaque origin and serialise a guest, so the only way is to ASK —
+    // and, as with every other service here, a guest that never answers
+    // is reported honestly rather than closed with a shrug.
+    //
+    // Kept per game TYPE and written through to FoafStore, so reopening
+    // brings the game back after a reload and not merely within one page
+    // load. The store is the shell's, under its own namespace — a guest
+    // cannot read another's saved state, or its own except through the
+    // restore it is handed.
+    _snapshots: {},
+    _snapsLoaded: false,
+
+    /** Hydrate from the store once. Denied or empty both mean nothing. */
+    _loadSnapshots() {
+        if (this._snapsLoaded) return;
+        const ns = window.FoafOS?.snapshotNs;
+        // Not loaded YET is different from nothing to load. If the shell
+        // has not finished wiring the store, stay unloaded and try again
+        // on the next call rather than latching an empty result.
+        if (!ns || !window.FoafOS?.store) return;
+        this._snapsLoaded = true;
+        const raw = window.FoafOS.store.snapshot(ns);
+        if (!raw) return;
+        for (const [type, json] of Object.entries(raw)) {
+            // A corrupt entry must not take the whole feature down with
+            // it — drop that one game's state and carry on.
+            try { this._snapshots[type] = JSON.parse(json); } catch (e) { /* discard */ }
+        }
+    },
+
+    /** Throw away a saved game, in memory and in the store. */
+    _forgetSnapshot(type) {
+        this._loadSnapshots();
+        if (this._snapshots[type] === undefined) return;
+        delete this._snapshots[type];
+        const ns = window.FoafOS?.snapshotNs;
+        if (ns) window.FoafOS?.store?.remove(ns, type);
+        window.FoafOS?.bus.publish('minigame.snapshot', {
+            summary: `${type} finished — its saved game is cleared`, type, cleared: true,
+        });
+    },
+
+    _persistSnapshot(type, state) {
+        const ns = window.FoafOS?.snapshotNs;
+        if (!ns || !window.FoafOS?.store) return;
+        try { window.FoafOS.store.set(ns, type, JSON.stringify(state)); }
+        catch (e) { this.log(`snapshot not persisted: ${e.message}`); }
+    },
+
+    /** Ask a guest for its state. Resolves null if it cannot or will not. */
+    _requestSnapshot(inst, timeoutMs = 400) {
+        if (!inst?.contracts?.has('snapshot')) return Promise.resolve(null);
+        return new Promise((resolve) => {
+            let done = false;
+            const finish = (v) => { if (!done) { done = true; resolve(v); } };
+            inst._snapshotResolve = finish;
+            // A guest that declared the contract and then does not answer
+            // must not hang the close. Losing the state is bad; a window
+            // that will not shut is worse.
+            setTimeout(() => finish(null), timeoutMs);
+            this._sendToIframe({ type: 'snapshot' }, inst);
+        });
+    },
+
+    /** True if reopening this game would bring something back. */
+    hasSnapshot(type) {
+        this._loadSnapshots();
+        return this._snapshots[type] !== undefined;
+    },
+
     // Handle messages from a window-mode guest. `inst` came from
     // event.source — every piece of state this touches is that
     // instance's, never the module's.
     _handleIframeMessage(inst, data) {
+        // The answer to _requestSnapshot. Routed by provenance like
+        // everything else, so one guest cannot answer for another.
+        if (data.type === 'snapshot-data') {
+            inst._snapshotResolve?.(data.state ?? null);
+            inst._snapshotResolve = null;
+            return;
+        }
         this.log(`[${inst.id}/${inst.type}] ${data.type}`);
         window.FoafOS?.bus.publish('sys.sdk.rx',
             { summary: `← ${data.type} (${inst.id})`, msg: data.type, from: inst.id, detail: data },
@@ -1168,6 +1258,12 @@ window.FinkMinigames = {
 
     // Handle iframe minigame completion
     _handleIframeComplete(inst, result) {
+        // A game that FINISHED has nothing to resume. Without this,
+        // "keeps its place" would mean the player could never start a
+        // fresh run: every reopen would drop them back into a game they
+        // already won or lost. Winning is the one thing that should
+        // clear the save.
+        this._forgetSnapshot(inst.type);
         // Update story variables from result
         if (result.variables) {
             const actor = this._guestActor(inst);
@@ -1189,18 +1285,30 @@ window.FinkMinigames = {
 
     // Clean up iframe minigame
     _cleanupIframe() {
-        this._dropInstance(this.windowInstance);
+        const inst = this.windowInstance;
+        const frame = this.iframeMinigame;
         this.windowInstance = null;
+        this.iframeMinigame = null;
+        this._teardownInstance(inst, frame);
+        this._hideIframeContainer();
+    },
 
-        if (this.iframeMinigame) {
-            this.iframeMinigame.remove();
-            this.iframeMinigame = null;
-        }
+    // Remove ONE guest: its registry entry and its frame. Instance-scoped
+    // on purpose — a teardown deferred while we wait for a snapshot must
+    // not be able to reach a game that started in the meantime.
+    _teardownInstance(inst, frame) {
+        this._dropInstance(inst);
+        if (frame) frame.remove();
+    },
 
-        if (this.elements.iframeContainer) {
-            this.elements.iframeContainer.style.display = 'none';
-            this.elements.iframeContainer.innerHTML = '';
-        }
+    // `purge: false` hides the container but leaves its contents alone.
+    // Blanking it destroys the browsing context inside — which is exactly
+    // how the first snapshot attempt killed the guest it was waiting on,
+    // ~200ms before the reply it had just asked for.
+    _hideIframeContainer(purge = true) {
+        if (!this.elements.iframeContainer) return;
+        this.elements.iframeContainer.style.display = 'none';
+        if (purge) this.elements.iframeContainer.innerHTML = '';
     },
 
     // ---- Variable governance -------------------------------------------
@@ -1371,9 +1479,37 @@ window.FinkMinigames = {
                 this.log('Quit delegated to guest (exit again to force)');
                 return;
             }
-            this._sendToIframe({ type: 'terminate', reason: 'user_exit' });
-            this._cleanupIframe();
-            this.handleMinigameComplete({ type: this.currentType, success: false });
+            // Ask before we lose it — and then actually WAIT for the
+            // answer. The first cut fired the question and destroyed the
+            // frame in the same tick; the guest was gone before it could
+            // reply, so every round-trip came back empty.
+            //
+            // The window is closed as far as the player and the rest of
+            // the shell are concerned: hidden now, module pointers
+            // cleared now, story resumed now. Only the frame's actual
+            // removal is deferred, and only until the reply or the
+            // timeout — a window that will not shut is worse than a lost
+            // save, so _requestSnapshot bounds the wait.
+            const dying = this.windowInstance;
+            const frame = this.iframeMinigame;
+            const type = this.currentType;
+            this.windowInstance = null;
+            this.iframeMinigame = null;
+            this._hideIframeContainer(false);
+            this._requestSnapshot(dying).then((state) => {
+                if (state !== null && state !== undefined) {
+                    this._snapshots[type] = state;
+                    this._persistSnapshot(type, state);
+                    window.FoafOS?.bus.publish('minigame.snapshot', {
+                        summary: `${type} saved its state on the way out`, type,
+                    });
+                }
+                this._sendToIframe({ type: 'terminate', reason: 'user_exit' }, dying);
+                this._teardownInstance(dying, frame);
+                // Purge only if nobody moved in while we waited.
+                if (!this.iframeMinigame) this._hideIframeContainer(true);
+            });
+            this.handleMinigameComplete({ type, success: false });
             return;
         }
 

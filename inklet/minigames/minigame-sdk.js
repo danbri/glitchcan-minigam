@@ -132,6 +132,47 @@ class MinigameSDK {
         return this;
     }
 
+    /**
+     * Hand the shell something that can bring this game back.
+     *
+     * Registering declares the `snapshot` contract, which is what lets
+     * the shell tell the truth in the switcher: a guest that never
+     * registers is honestly reported as one that will not survive being
+     * closed, rather than being closed with a shrug.
+     *
+     * The callback returns anything structured-cloneable. Keep it small
+     * — it crosses postMessage and the shell DOES persist it (JSON, in
+     * its own store namespace, so it outlives a reload). Return `null`
+     * to decline: state that would restore to something incoherent
+     * (mid-animation, mid-deal) is better refused than saved.
+     *
+     * @param {Function} callback - () => state
+     */
+    onSnapshot(callback) {
+        this._callbacks.snapshot = callback;
+        this._declare('snapshot');
+        return this;
+    }
+
+    /**
+     * Take back what onSnapshot handed over. Called BEFORE onInit's
+     * callback returns is not guaranteed — treat it as "at some point
+     * early", and make it idempotent.
+     * @param {Function} callback - (state) => void
+     */
+    onRestore(callback) {
+        this._callbacks.restore = callback;
+        this._declare('snapshot');
+        // A restore may have arrived while this guest was still wiring
+        // itself up; replay it rather than dropping it on the floor.
+        if (this._pendingRestore !== undefined) {
+            const s = this._pendingRestore;
+            this._pendingRestore = undefined;
+            try { callback(s); } catch (e) { this._log('restore failed: ' + e.message); }
+        }
+        return this;
+    }
+
     /** Tell the shell which contracts this guest speaks. */
     _declare(contract) {
         this._contracts.add(contract);
@@ -315,6 +356,24 @@ class MinigameSDK {
             case 'key':
                 // Handle keyboard events from parent d-pad
                 this._dispatchKeyEvent(data.event, data.key, data.code, data.repeat);
+                break;
+
+            case 'snapshot':
+                // The shell is about to lose us and is asking what to keep.
+                this._sendMessage({
+                    type: 'snapshot-data',
+                    state: this._callbacks.snapshot ? this._callbacks.snapshot() : null,
+                });
+                break;
+
+            case 'restore':
+                if (this._callbacks.restore) {
+                    try { this._callbacks.restore(data.state); }
+                    catch (e) { this._log('restore failed: ' + e.message); }
+                } else {
+                    // arrived before onRestore was registered
+                    this._pendingRestore = data.state;
+                }
                 break;
 
             case 'debug':

@@ -496,6 +496,41 @@ flip-storm test in `e2e-wm.mjs` (now 23 assertions).
   flaky by construction. Record the bus topic and separately prove the
   announcer is wired to it.
 
+## Snapshot and restore: closing without losing (spec §5.5.4)
+
+- Same shape as every other service: `sdk.onSnapshot(cb)` /
+  `sdk.onRestore(cb)` declare the `snapshot` contract by being
+  registered. On close the shell asks; on next open it hands the state
+  back, right after `init`. Keyed by guest type and written through to
+  FoafStore under `FoafOS.snapshotNs` — a shell-owned namespace, so it
+  survives a reload and no guest can read another's save. A root without
+  `storage` (tellyclub) never gets the grant, so it never persists:
+  attenuation applies to the shell's conveniences too.
+- **Completing clears the save.** Otherwise every reopen drops the player
+  back into a game already won or lost, with no way to start fresh.
+- **The trap, and it is a good one.** The first implementation posted
+  `{type:'snapshot'}` and then tore the frame down in the same tick. No
+  error, no warning, a code path that reads correctly — and every
+  round-trip came back empty. Two separate causes, both invisible:
+  `_cleanupIframe()` ran synchronously after the request, and once that
+  was fixed, `_hideIframeContainer()` blanked `innerHTML` (which destroys
+  the browsing context) because the guard it used had already been
+  nulled. **Only measurement found either.** Never accept "the code
+  sends the message" as evidence; compare state *through* a close.
+- The wait is bounded (400ms) and the window closes immediately from the
+  player's point of view — pointers cleared, container hidden, story
+  resumed. Only the frame's removal is deferred, instance-scoped so a
+  deferred teardown cannot reach a game that started meanwhile.
+- Guests may answer `null` to decline. Chess does, mid-animation: a
+  half-slid piece would restore to a board that disagrees with itself.
+- **Disclosure is part of the feature.** The switcher says *keeps its
+  place* / *closing loses it* before ✕ is pressed, on the row and in the
+  close button's `aria-label`. GridLuck predates the SDK and is reported
+  honestly rather than losing the player's game quietly.
+- E2E: `node inklet/finkapp/test/e2e-snapshot.mjs` — two unrelated
+  adopters (mudslider, chess), the disclosure, a real close (container
+  emptied, no live frame), and proof a silent guest cannot hang it.
+
 ## Guest accessibility (spec §5.1.1 + the July 2026 audit)
 
 - Audited baseline: six packaged guests, ZERO `aria-*` attributes

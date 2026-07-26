@@ -345,7 +345,7 @@ this widget know its duties?" can only be answered by asking and seeing
 who answers.
 
 - `init.config.contracts` lists the OS contracts the shell is offering
-  (v1: `['controls']`).
+  (v1: `['controls', 'audio', 'snapshot']`).
 - A guest that speaks a contract replies
   `{ type: 'conformance', contracts: [...] }`. It may reply at any time;
   replying repeatedly is harmless.
@@ -583,6 +583,46 @@ the unimplemented ones to the user rather than letting the vocabulary
 imply a boundary that does not exist. Today: `storage`, `vars`, `audio`
 and `input` are brokered; `wm` and `announce` are shell-owned;
 `geolocation`, `capture`, `gpu` and `cast` are named but unimplemented.
+
+### 5.5.4 Snapshot and restore — normative
+
+Closing a guest destroys its browsing context and everything in it. The
+shell cannot serialise an opaque origin from the outside — no DOM, no
+globals, not even `localStorage` — so continuity across a close is only
+possible by **asking the guest**, exactly as with every other service
+here.
+
+- A guest that registers `onSnapshot`/`onRestore` thereby declares the
+  `snapshot` contract (registration IS the conformance reply, §5.1.2).
+- On close the shell sends `{ type: 'snapshot' }` to a declaring guest
+  and waits for `{ type: 'snapshot-data', state }`, routed by
+  `event.source` like every other guest message. A guest MAY answer
+  `null` to decline — mid-animation state that would restore to a board
+  disagreeing with itself is better refused than saved.
+- The wait is **bounded** (400ms). A guest that declared the contract and
+  then goes silent MUST NOT be able to hold a window open: losing state
+  is bad, a window that will not shut is worse.
+- The shell MUST NOT destroy the frame before the answer can arrive.
+  This is the whole difficulty of the feature: a request posted in the
+  same tick as the teardown looks correct, runs without error, and
+  captures nothing. Implementations MUST be tested by comparing state
+  *through* a close, never by the presence of the code path.
+- On next open the shell sends `{ type: 'restore', state }` immediately
+  after `init`, so a guest registering `onRestore` inside `onInit` still
+  receives it; the SDK holds a restore that arrives before its handler.
+- The host MUST disclose, **before** the close is pressed, whether the
+  running guest will keep its place. A guest that predates the contract
+  is reported as such, not silently lost.
+- A guest that **completes** (win or lose) clears its saved state. A
+  finished game has nothing to resume, and without this rule "keeps its
+  place" would mean the player can never start a fresh run.
+
+State is keyed by guest type and written through to FoafStore under a
+shell-owned namespace, so it survives a reload. The guest cannot read
+that namespace — it receives only the `restore` it is handed. An
+installation whose root lacks `storage` gets no persistence, because the
+namespace is never granted: attenuation applies to the shell's own
+conveniences too.
 
 ### 5.6 Shell surfaces: home and switcher
 

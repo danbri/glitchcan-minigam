@@ -47,6 +47,11 @@ Adaptation from the guest side.
 - **Window manager** — full / split / pip, one geometry owner, pane labels
   that say which half the toolbar governs.
 - **Suspension** — subtree-wide, and it actually reaches guests.
+- **Closing** — the shell asks the guest for a snapshot on the way out,
+  stores it, and hands it back next time, reload or no reload. It cannot
+  serialise an opaque origin itself, so this only works for guests that
+  agreed to the contract — and the switcher says which is which (*keeps its
+  place* / *closing loses it*) **before** the ✕ is pressed.
 - **Logger** — the bus, filterable, refusals coloured.
 - **Volume** — one master level, plus an honest list of what it *cannot* reach.
 - **Input** — one d-pad for the whole shell; keyboard, touch and gamepad
@@ -58,7 +63,12 @@ Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
 `node --test packages/foafos/test/*.test.js`.
 
 - 27 unit tests (bus, session crypto, widgets, vars, audio, input, store, app tree).
-- 14 browser suites, including:
+- 15 browser suites, including:
+  - `e2e-snapshot` — state compared *through* a close, in two unrelated
+    games, plus the disclosure and the guarantee that a silent guest cannot
+    hang the close. Written this way because the first cut of the feature
+    had a working-looking code path that captured nothing: the frame was
+    destroyed in the same tick the question was asked.
   - `e2e-caps` — the boundary tested **by trying to cross it**: inside a
     de-privileged app, `parent.document`, `parent.FoafOS` and `localStorage`
     all throw `SecurityError`. Also drives Calendar through a real
@@ -89,9 +99,13 @@ Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
    when IDB will not open. Standalone it keeps its indexes and cursor
    deletes; under foafos it runs de-privileged and the shell holds its
    bytes. The drawer names whoever is left; the count should reach zero.
-2. **No snapshot/restore contract.** Close a game and it is gone. This also
-   blocks moving the narrative runtime into a frame, because the dream stack
-   works only *because* the story runs in the host page.
+2. **Only two games speak `snapshot`.** The contract exists now (July
+   2026): closing a game keeps its place, through a reload, because the
+   shell writes it to FoafStore. Mudslider comes back in the same room
+   with the same score and lives; chess with the same position and side
+   to move; finishing a game clears its save so a fresh run is still
+   possible. But GridLuck, boidwars and robbin do not implement it — they
+   are reported honestly rather than adopted, and the count should rise.
 3. **Stories outrank apps.** The runtime is the host page, so a story can
    launch, navigate and restyle. Its capability list describes rather than
    constrains — flagged `enforced: false` and disclosed in the drawer. Gating

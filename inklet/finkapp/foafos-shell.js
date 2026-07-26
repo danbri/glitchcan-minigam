@@ -171,6 +171,17 @@ const rootNode = apps.spawn({
   capabilities: ROOT.capabilities, label: ROOT.label, surface: 'root',
 });
 FoafOS.rootNode = rootNode;
+// Game snapshots are the shell holding bytes on a guest's behalf, so
+// they live in the store like everything else the shell holds — under a
+// namespace of their own, not the guest's, because the guest may not
+// read them back except through the restore it is handed.
+//
+// Bounded by the root, deliberately: an installation with no `storage`
+// (tellyclub) does not quietly persist game state anyway. The store
+// answers `null` to a namespace it never granted, and the minigame host
+// treats that as "nothing saved" — which is exactly true.
+FoafOS.snapshotNs = 'shell:game-snapshots';
+if (ROOT.capabilities.includes('storage')) store.grant(FoafOS.snapshotNs, ['storage']);
 // An installation with no stories should not wear story chrome. The
 // breadcrumb trail and the diamond/score status line are narrative
 // furniture; on an office or TV root they are meaningless decoration
@@ -1165,7 +1176,10 @@ function buildUI() {
         kill.type = 'button';
         kill.className = 'foafos-switch-act danger';
         kill.textContent = '✕';
-        kill.setAttribute('aria-label', `Close ${r.label}${withKin}`);
+        const loss = r.node.surface === 'stage'
+          ? (snapshotNote() === 'keeps its place' ? ', its place is kept' : ', its state is lost')
+          : '';
+        kill.setAttribute('aria-label', `Close ${r.label}${withKin}${loss}`);
         kill.addEventListener('click', (e) => {
           e.stopPropagation();
           FoafOS.apps.close(r.node.id);
@@ -1203,6 +1217,12 @@ function buildUI() {
             child.surface,
             child.suspended ? 'suspended' : '',
             child.surface === 'stage' ? (window.FinkWM?.mode || '') : '',
+            // Say, BEFORE the ✕ is pressed, whether pressing it throws
+            // the game away. The shell cannot serialise an opaque
+            // origin, so this is not a promise it can make on the
+            // guest's behalf — only a report of whether the guest
+            // agreed to the snapshot contract.
+            child.surface === 'stage' ? snapshotNote() : '',
             child.surface === 'story' && window.FinkInkEngine?.storyStack?.length
               ? `dream depth ${FinkInkEngine.storyStack.length}` : '',
           ].filter(Boolean).join(' · '),
@@ -1213,6 +1233,16 @@ function buildUI() {
     };
     if (FoafOS.rootNode) walk(FoafOS.rootNode, 0, FoafOS.root?.label || 'root');
     return out;
+  }
+
+  // Does the game currently on the stage speak `snapshot`? An inline
+  // game has no guest frame to ask, so it answers no — accurately, since
+  // nothing is asking it either.
+  function snapshotNote() {
+    const mg = window.FinkMinigames;
+    if (!mg) return '';
+    return mg.windowInstance?.contracts?.has('snapshot')
+      ? 'keeps its place' : 'closing loses it';
   }
 
   // How to bring a node to the front, per surface. Presentation only.

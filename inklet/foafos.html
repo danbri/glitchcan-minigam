@@ -80,7 +80,11 @@
   <li><strong>Running</strong> (⧉, or <code>Alt+Tab</code>) shows the app
       <em>tree</em>. Start a story, let it open a game, and the game appears
       indented beneath it. The ⏸ and ✕ on a row act on the whole subtree and
-      say how many go with it.</li>
+      say how many go with it, and whether closing loses the game's state.</li>
+  <li><strong>Close and reopen a game.</strong> Mudslider comes back in the
+      room you left it, with your score and lives. Chess comes back to the
+      same position. GridLuck does not — it predates the SDK, and the
+      switcher says so rather than losing your game quietly.</li>
   <li><strong>Logger</strong> (Apps → Make → 📜) is the event bus, filterable.
       Filter for <code>refused</code> to watch the capability system say no.</li>
   <li><strong>Volume</strong> (drawer) reports what it <em>cannot</em> reach
@@ -99,7 +103,10 @@
   <li>Stories are <strong>more</strong> privileged than apps, not less: the narrative
       runtime is the host page, so a story can launch, navigate and restyle.
       Its capability list describes rather than constrains, and says so.</li>
-  <li>There is no snapshot/restore contract yet, so closing a game loses it.</li>
+  <li>Closing a game now <em>keeps its place</em>, even across a reload — but
+      only for guests that agreed to the snapshot contract (mudslider,
+      chess). The switcher tells you which games those are before you press
+      ✕. Finish a game and the save clears, so you can start again.</li>
   <li>Tellyclub's preferences do not persist here — it predates the SDK and
       gets an opaque origin, which it survives only because its author wrote
       defensive storage code.</li>
