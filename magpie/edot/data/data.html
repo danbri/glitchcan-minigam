@@ -29,6 +29,12 @@
   <main>
     <edot-data><div class="boot">Loading SQLite…</div></edot-data>
   </main>
+  <!-- app-sdk FIRST when hosted by foafos: it stands in for localStorage
+       before any app code runs. Harmless standalone: it probes the
+       real localStorage first and leaves it alone when it works. The engine falls back
+       to localStorage when IndexedDB will not open, which in a sandboxed
+       frame it will not — that fallback needs somewhere to land. -->
+  <script src="../../../inklet/apps/app-sdk.js"></script>
   <script type="module" src="../auth/js/login-ui.js"></script>
   <script type="module" src="data-workspace.js"></script>
 </body>

@@ -88,7 +88,29 @@
   // Install before any app code runs. `localStorage` is a Window
   // prototype getter that THROWS in an opaque origin, so an own-property
   // override is the only way to stand in front of it.
+  //
+  // ONLY WHERE THE NATIVE ONE IS UNUSABLE. This used to install
+  // unconditionally, and every page that loaded app-sdk for the sake of
+  // running under foafos therefore lost its real localStorage when opened
+  // STANDALONE — replaced by a shim that throws FoafCapabilityError,
+  // because nothing had granted it anything. Apps whose storage calls are
+  // try-wrapped (edot's are, all of them) just quietly stopped
+  // remembering things. Caught by Data's own standalone suite, which is
+  // the only reason it did not ship.
+  //
+  // So probe, do not feature-test: if the real API answers, leave it
+  // completely alone. That covers standalone and same-origin framing
+  // alike. If it throws, we are in an opaque origin and the shim is
+  // strictly better than a bare SecurityError.
+  const nativeWorks = (name) => {
+    try {
+      const s = window[name];
+      s.getItem('__foaf_probe__');
+      return true;
+    } catch { return false; }
+  };
   const install = (name, shim) => {
+    if (nativeWorks(name)) return false;
     try {
       Object.defineProperty(window, name, { value: shim, configurable: true });
       return true;

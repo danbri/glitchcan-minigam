@@ -153,6 +153,13 @@ cluster.onYield('audio', () => {
 const store = new FoafStore({
   bus,
   backend: localBackend(audioStore || { getItem: () => null, setItem: () => {} }),
+  // Named exceptions, not a raised default. Data keeps a whole SQLite
+  // file, and an almost-empty one is already ~43KB once base64'd, so the
+  // 256KB everyone else gets would run out on a modest spreadsheet.
+  // Raising it for everybody would dissolve the limit for exactly the
+  // apps it exists to bound; naming the app keeps the generosity as
+  // auditable as the grant.
+  quotas: { sheets: 4 * 1024 * 1024 },
 });
 FoafOS.store = store;
 

@@ -56,8 +56,8 @@
   <a class="card" href="finkapp/?root=office">
     <span class="ico" aria-hidden="true">📄</span>
     <span class="nm">Office</span>
-    <span class="why">edot, Data, Calendar, Files. No story engine runs at all — FINK is simply unknown to this installation.</span>
-    <span class="caps">storage · shell · same-origin</span>
+    <span class="why">edot, Data, Calendar, Files. No story engine runs at all — FINK is simply unknown to this installation, and since July 2026 it holds no <code>same-origin</code> either: every app it offers is sandboxed.</span>
+    <span class="caps">storage · shell</span>
   </a>
   <a class="card" href="finkapp/?root=webtv">
     <span class="ico" aria-hidden="true">📺</span>
@@ -100,12 +100,13 @@
 
 <h2>HONEST STATUS</h2>
 <ul>
-  <li>Two apps still run with ambient authority (<code>same-origin</code>):
-      Data and ROBBAMP. The drawer names them. Calendar, Files and edot
-      itself <em>have</em> been migrated — Calendar's IndexedDB and Files'
-      OPFS are both refused in a sandboxed frame, so each gained a fallback
-      that goes through the shell instead, and edot turned out to need
-      nothing but somewhere for its existing fallback to land.</li>
+  <li>One app still runs with ambient authority (<code>same-origin</code>):
+      ROBBAMP. The drawer names it. edot, Data, Calendar and Files have all
+      been migrated — IndexedDB and OPFS are both refused in a sandboxed
+      frame, so each gained a fallback that goes through the shell instead.
+      The <strong>Office</strong> installation therefore holds no escape
+      hatch at all now, which by attenuation means nothing it opens can
+      have one.</li>
   <li>Stories are <strong>more</strong> privileged than apps, not less: the narrative
       runtime is the host page, so a story can launch, navigate and restyle.
       Its capability list describes rather than constrains, and says so.</li>

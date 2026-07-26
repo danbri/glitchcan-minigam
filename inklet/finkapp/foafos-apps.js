@@ -64,9 +64,15 @@ export const APPS = [
   { id: 'edot', family: 'office', icon: '🗂️', name: 'edot', surface: 'window',
     url: '../../magpie/edot/edot.html', desc: 'The suite shell',
     capabilities: ['storage'], silent: true },
+  // MIGRATED (July 2026). Data keeps one SQLite blob, and kept it in
+  // IndexedDB — which an opaque origin refuses to open. Its engine now
+  // picks a backend by trying, and falls back to the same blob base64'd
+  // through the store broker. It reports which one is live, and a refused
+  // write is announced rather than swallowed: this is the app where a
+  // silent autosave failure costs the most.
   { id: 'sheets', family: 'office', icon: '📊', name: 'Data', surface: 'window',
     url: '../../magpie/edot/data/data.html', desc: 'Spreadsheet, SQL, RDF',
-    capabilities: ['storage', 'same-origin'], silent: true },
+    capabilities: ['storage'], silent: true },
   // MIGRATED off the escape hatch (July 2026), and the first Office app to
   // manage it. It used IndexedDB, which an opaque origin refuses; its
   // store now falls back to the brokered key/value when IDB will not open,

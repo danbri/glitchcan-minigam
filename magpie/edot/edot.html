@@ -253,8 +253,8 @@
   </dialog>
 
   <!-- app-sdk FIRST when hosted by foafos: it stands in for localStorage
-       before any app code runs. Harmless standalone (nothing sends it
-       app.init, so the native APIs are left alone). edot's Library already
+       before any app code runs. Harmless standalone: it probes the
+       real localStorage first and leaves it alone when it works. edot's Library already
        tries IndexedDB and falls back to localStorage, which is exactly the
        shape this needs — in a sandboxed frame IDB refuses to open and the
        fallback lands on the shell's store broker instead of nowhere. -->

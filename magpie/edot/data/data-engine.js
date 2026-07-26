@@ -36,7 +36,18 @@ export class DataEngine extends EventTarget {
   async init() {
     const initSqlJs = await loadSqlJsScript();
     this.SQL = await initSqlJs({ locateFile: (f) => new URL(f, SQLJS_BASE).href });
-    const saved = await idbGet().catch(() => null);
+    // Choose the backend by TRYING it, once. `storageKind` is reported so
+    // the UI (and the capability tests) can say which one is live rather
+    // than assuming.
+    let saved = null;
+    try {
+      saved = await idbGet();
+      this.storageKind = 'IndexedDB';
+    } catch (e) {
+      this.storageKind = 'broker';
+      this.storageWhy = String(e && e.message || e).slice(0, 120);
+      saved = kvGet();
+    }
     this.db = saved ? new this.SQL.Database(saved) : new this.SQL.Database();
     this._changed();
     return this;
@@ -153,7 +164,21 @@ export class DataEngine extends EventTarget {
     this._changed();
   }
   _changed() { this.dispatchEvent(new Event('change')); }
-  async _persistNow() { try { await idbSet(this.db.export()); } catch (_) { /* quota */ } }
+  // Save through whichever backend init() settled on. A failure here used
+  // to be swallowed entirely; now it is recorded and announced, because
+  // "your autosave stopped working" is worth knowing before you close the
+  // tab, not after.
+  async _persistNow() {
+    try {
+      const bytes = this.db.export();
+      if (this.storageKind === 'broker') kvSet(bytes); else await idbSet(bytes);
+      this.storageError = null;
+    } catch (e) {
+      this.storageError = String(e && e.message || e).slice(0, 160);
+      console.warn('[data] could not persist:', this.storageError);
+      this.dispatchEvent(new Event('storage-error'));
+    }
+  }
   async clearAll() { this.db = new this.SQL.Database(); await this._persistNow(); this._changed(); }
 }
 
@@ -175,6 +200,9 @@ function idbOpen() {
     r.onupgradeneeded = () => r.result.createObjectStore(IDB_STORE);
     r.onsuccess = () => resolve(r.result);
     r.onerror = () => reject(r.error);
+    // An opaque origin lets you CALL open() and then simply never answers,
+    // so a bare await here would hang the whole boot instead of failing.
+    setTimeout(() => reject(new Error('indexedDB.open timed out')), 3000);
   });
 }
 async function idbSet(bytes) {
@@ -193,4 +221,32 @@ async function idbGet() {
     rq.onsuccess = () => res(rq.result || null);
     rq.onerror = () => rej(rq.error);
   });
+}
+
+// ---- the same blob, through a key/value store ----
+//
+// Under foafos this app runs in a sandboxed frame with an OPAQUE ORIGIN,
+// where IndexedDB is present but refuses to open. That refusal is why Data
+// held `same-origin`: full ambient authority over the shell, bought to have
+// somewhere to keep one SQLite file.
+//
+// So: the same Calendar pattern. Try IDB; if it will not open, fall back to
+// `localStorage`, which standalone is the real one and under foafos is
+// app-sdk's shim over the shell's store broker.
+//
+// The blob is base64 in JSON, which is a third bigger than the database and
+// goes through a quota. A refused write is REPORTED, not swallowed — an
+// autosave that silently stops is how you lose an afternoon's work while
+// looking at a screen that says everything is fine.
+const LS_KEY = 'edot.data.db';
+const b64 = {
+  enc(bytes) { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s); },
+  dec(str) { const s = atob(str); const out = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i); return out; },
+};
+function kvGet() {
+  try { const raw = localStorage.getItem(LS_KEY); return raw ? b64.dec(raw) : null; }
+  catch (_) { return null; }
+}
+function kvSet(bytes) {
+  localStorage.setItem(LS_KEY, b64.enc(bytes));   // throws on quota — deliberately
 }

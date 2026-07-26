@@ -38,13 +38,26 @@ export const memoryBackend = () => {
 };
 
 export class FoafStore {
-  constructor({ bus = null, backend = null, quotaBytes = DEFAULT_QUOTA } = {}) {
+  constructor({ bus = null, backend = null, quotaBytes = DEFAULT_QUOTA, quotas = {} } = {}) {
     this.bus = bus;
     this.backend = backend || memoryBackend();
     this.quotaBytes = quotaBytes;
+    // Per-app overrides. One quota for everything is the right DEFAULT and
+    // the wrong RULE: an app that keeps a SQLite file needs a different
+    // allowance from one that keeps a station number, and the alternative
+    // — raising the default for everybody — dissolves the limit for the
+    // apps it was protecting us from. Named per app, so the generosity is
+    // as auditable as the grant.
+    this.quotas = new Map(Object.entries(quotas));
     this.grants = new Map();      // appId -> Set(capabilities)
     this.audit = [];
   }
+
+  /** The allowance this app gets: its own if named, else the default. */
+  quotaFor(appId) {
+    return this.quotas.has(appId) ? this.quotas.get(appId) : this.quotaBytes;
+  }
+  setQuota(appId, bytes) { this.quotas.set(appId, bytes); return this; }
 
   _say(topic, data) {
     this.audit.push({ topic, ...data });
@@ -84,15 +97,16 @@ export class FoafStore {
     const before = data[key];
     data[key] = String(value);
     const size = JSON.stringify(data).length;
-    if (size > this.quotaBytes) {
+    const quota = this.quotaFor(appId);
+    if (size > quota) {
       // Refuse loudly and leave the old value intact. A half-applied
       // write is worse than a refused one.
       if (before === undefined) delete data[key]; else data[key] = before;
       this._say('store.quota', {
-        summary: `${appId} is out of storage (${size} > ${this.quotaBytes} bytes)`,
-        appId, key, size, quota: this.quotaBytes,
+        summary: `${appId} is out of storage (${size} > ${quota} bytes)`,
+        appId, key, size, quota,
       });
-      return { ok: false, reason: 'quota', size, quota: this.quotaBytes };
+      return { ok: false, reason: 'quota', size, quota };
     }
     this.backend.write(appId, data);
     this._say('store.set', { summary: `${appId} stored ${key}`, appId, key, size });
@@ -126,6 +140,7 @@ export class FoafStore {
     return [...this.grants.entries()].map(([appId, caps]) => ({
       appId, capabilities: [...caps],
       bytes: this.can(appId, STORE_CAP) ? this.usage(appId) : 0,
+      quota: this.quotaFor(appId),
     }));
   }
 }

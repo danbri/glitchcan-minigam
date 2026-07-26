@@ -50,9 +50,16 @@ export const ROOTS = {
   office: {
     id: 'office',
     label: 'Office',
-    // `shell` because this installation offers Maker; it holds no
-    // `chrome`, `launch` or `navigate`, and offers no chrome apps.
-    capabilities: ['storage', 'shell', 'same-origin'],
+    // NO `same-origin` (July 2026). Every app this installation offers —
+    // edot, Data, Calendar, Files — has been migrated onto the storage
+    // broker, so the escape hatch has nothing left to serve. Dropping it
+    // from the ROOT is the stronger statement: by attenuation, nothing
+    // this installation opens can be granted it either, whatever a
+    // registry entry might say. The office desktop is now fully sandboxed.
+    //
+    // `shell` because it offers Maker; no `chrome`, `launch` or
+    // `navigate`, and no chrome apps.
+    capabilities: ['storage', 'shell'],
     boot: { story: false, apps: ['edot'] },
     // No chrome ids here, so an office installation has no breadcrumb,
     // no story status line and no FINK load meter — not hidden, absent.

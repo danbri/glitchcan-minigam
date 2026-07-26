@@ -66,13 +66,13 @@ try {
     const m = await import('./foafos-apps.js');
     const f = window.FoafOS.sandboxFor;
     const of = (id) => f(m.appById(id));
-    return { channels: of('channels'), universe: of('universe'), sheets: of('sheets') };
+    return { channels: of('channels'), universe: of('universe'), hatch: of('robbamp') };
   });
   !derived.channels.includes('allow-same-origin') && !derived.universe.includes('allow-same-origin')
     ? pass('a window app with no same-origin capability gets an opaque origin')
     : fail(`window apps still ambient: ${JSON.stringify(derived)}`);
-  derived.sheets.includes('allow-same-origin')
-    ? pass('the escape hatch is honoured when declared (sheets)')
+  derived.hatch.includes('allow-same-origin')
+    ? pass('the escape hatch is honoured when declared (robbamp — the last holder)')
     : fail('declared same-origin was not applied');
 
   // 3. a de-privileged app really cannot reach the shell
@@ -322,11 +322,102 @@ try {
       : fail(`library did not reach the broker: ${JSON.stringify(held)}`);
   }
 
+  // 11b. app-sdk must not touch a working localStorage.
+  //
+  // It used to install its shim unconditionally, so every page that loaded
+  // app-sdk in order to run under foafos LOST its real localStorage when
+  // opened standalone — replaced by a shim that throws
+  // FoafCapabilityError, because nothing had granted it anything. Apps
+  // whose storage calls are try-wrapped (edot's are, all of them) simply
+  // stopped remembering things, silently. Data's own standalone suite
+  // caught it; nothing in this file would have.
+  //
+  // The shell page itself is same-origin and loads no app-sdk, so this
+  // checks the rule where it is cheap to check: a top-level page with a
+  // working localStorage keeps the native one.
+  {
+    const probe = await page.evaluate(async () => {
+      const r = {};
+      const before = localStorage.getItem('__caps_probe__');
+      // load app-sdk into THIS (same-origin, working-storage) page
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = '../apps/app-sdk.js';
+        s.onload = res; s.onerror = () => rej(new Error('app-sdk did not load'));
+        document.head.appendChild(s);
+      });
+      // NB: hasOwnProperty('localStorage') is true on an ordinary page in
+      // this browser, so it does not discriminate. What matters is whether
+      // app-sdk installed anything, and whether the real API still works.
+      r.installed = window.foaf?._installed?.localStorage;
+      try { localStorage.setItem('__caps_probe__', 'still-native'); r.write = localStorage.getItem('__caps_probe__'); }
+      catch (e) { r.write = e.name; }
+      localStorage.removeItem('__caps_probe__');
+      if (before !== null) localStorage.setItem('__caps_probe__', before);
+      return r;
+    }).catch(e => ({ err: String(e).slice(0, 110) }));
+
+    probe.installed === false && probe.write === 'still-native'
+      ? pass('app-sdk leaves a WORKING localStorage alone (standalone apps keep theirs)')
+      : fail(`app-sdk clobbered native storage: ${JSON.stringify(probe)}`);
+  }
+
+  // 12. Data: the heaviest of them, and the one where a silent failure
+  // costs most. It keeps a whole SQLite file, in IndexedDB, which an
+  // opaque origin refuses to open — so the engine picks a backend by
+  // trying and falls back to the same blob base64'd through the broker.
+  // Also the reason FoafStore grew per-app quotas: an almost-empty SQLite
+  // database is already ~43KB encoded, against a 256KB default.
+  await page.evaluate(() => { window.FoafOS.store.clear('sheets'); window.FoafOS.launchApp('sheets'); });
+  await page.waitForTimeout(6000);
+  const dataFrame = page.frames().find(f => /data\.html/.test(f.url()));
+  if (!dataFrame) {
+    fail('data app frame never appeared');
+  } else {
+    const st = await dataFrame.evaluate(async () => {
+      const r = { boundary: null, kind: null, why: null, rows: null, err: null };
+      try { parent.document; r.boundary = 'reachable'; } catch (e) { r.boundary = e.name; }
+      let eng = null;
+      for (let i = 0; i < 60; i++) {
+        eng = document.querySelector('edot-data')?.engine || window.__data?.engine;
+        if (eng?.storageKind) break;
+        await new Promise(z => setTimeout(z, 250));
+      }
+      if (!eng) return r;
+      r.kind = eng.storageKind; r.why = eng.storageWhy;
+      eng.run('CREATE TABLE IF NOT EXISTS probe (a TEXT)');
+      eng.run("INSERT INTO probe VALUES ('brokered')");
+      await eng._persistNow();
+      r.rows = eng.query('SELECT a FROM probe').rows.flat();
+      r.err = eng.storageError;
+      return r;
+    }).catch(e => ({ err: String(e).slice(0, 110) }));
+
+    st.boundary === 'SecurityError'
+      ? pass('data runs de-privileged: parent.document refuses')
+      : fail(`data still has ambient authority: ${JSON.stringify(st)}`);
+    st.kind === 'broker'
+      ? pass(`IndexedDB is refused here, so it fell back ("${String(st.why).slice(0, 58)}…")`)
+      : fail(`data did not fall back: kind=${JSON.stringify(st.kind)}`);
+    Array.isArray(st.rows) && st.rows.includes('brokered') && !st.err
+      ? pass('SQL runs and the database persists with no error')
+      : fail(`data round-trip failed: ${JSON.stringify(st)}`);
+
+    const blob = await page.evaluate(() => {
+      const s = window.FoafOS.store.snapshot('sheets') || {};
+      return { keys: Object.keys(s), bytes: (s['edot.data.db'] || '').length,
+               quota: window.FoafOS.store.quotaFor('sheets') };
+    });
+    blob.bytes > 1000 && blob.quota > 256 * 1024
+      ? pass(`the shell holds the database (${Math.round(blob.bytes / 1024)}KB of a ${Math.round(blob.quota / 1024)}KB allowance)`)
+      : fail(`database did not reach the broker: ${JSON.stringify(blob)}`);
+  }
+
   const stillAmbient = await page.evaluate(async () => {
     const m = await import('./foafos-apps.js');
     return m.ambientApps().map(a => a.id);
   });
-  const migrated = ['calendar', 'files', 'edot'];
+  const migrated = ['calendar', 'files', 'edot', 'sheets'];
   migrated.every(id => !stillAmbient.includes(id))
     ? pass(`ambient-authority holders down to ${stillAmbient.length}: ${stillAmbient.join(', ')}`)
     : fail(`a migrated app still declares same-origin: ${stillAmbient.join(', ')}`);

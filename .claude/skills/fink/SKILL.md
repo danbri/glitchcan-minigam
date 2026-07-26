@@ -873,6 +873,31 @@ these get granted, and "it looks like it doesn't" is how a migration ships
 broken. e2e-caps asserts the boundary, the shim, the UI coming up, and
 `edot.library.v1` reaching the broker.
 
+**Data (July 2026), and the bug the migrations nearly shipped.** Data keeps
+one SQLite blob in IndexedDB, refused the same way Calendar's was; the
+engine now picks a backend by trying, falls back to the same blob base64'd
+through the broker, reports `storageKind`, and ANNOUNCES a refused write
+(`storage-error` event + console.warn) instead of swallowing it. Also:
+`indexedDB.open()` on an opaque origin can simply never answer, so idbOpen
+has a 3s reject — a bare await there hangs the whole boot instead of
+failing over.
+
+- **Per-app quotas.** An almost-empty SQLite database is ~43KB base64
+  against a 256KB default, so FoafStore grew `quotas`/`quotaFor`/`setQuota`
+  and the shell names `sheets: 4MB`. Raising the DEFAULT would have
+  dissolved the limit for exactly the apps it exists to bound.
+- **app-sdk must probe, not install.** It replaced `localStorage`
+  UNCONDITIONALLY, so every page that loaded it for the sake of foafos lost
+  its real storage when opened STANDALONE — swapped for a shim that throws
+  `FoafCapabilityError` because nothing had granted it anything. edot's
+  calls are all try-wrapped, so it just quietly stopped remembering things.
+  Now it probes (`localStorage.getItem` in a try) and installs only where
+  the native one is unusable. **Data's own standalone suite caught this and
+  nothing in e2e-caps would have** — run an app's own tests after migrating
+  it, not just the shell's.
+- Office root now holds **no `same-origin` at all**: every app it offers is
+  migrated, so by attenuation nothing it opens can have one either.
+
 ## Stories are privileged over apps — know this
 
 Asked directly ("does foafos privilege stories over office docs?") and

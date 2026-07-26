@@ -12,7 +12,7 @@ A browser shell that runs mutually distrustful apps, where an
 | root | boots | root capabilities |
 |---|---|---|
 | `?root=` *(default)* | the story TOC | storage · vars · audio · input · launch · navigate · chrome · shell · same-origin |
-| `?root=office` | edot | storage · shell · same-origin *(for Data)* |
+| `?root=office` | edot | storage · shell |
 | `?root=webtv` | Channels | storage · audio · input |
 | `?root=tellyclub` | Tellyclub | audio |
 
@@ -105,8 +105,8 @@ Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
 
 ## Missing, plainly
 
-1. **Two apps still hold `same-origin`** — Data and ROBBAMP. Three are
-   migrated, each hitting a different wall:
+1. **One app still holds `same-origin`** — ROBBAMP. Four are migrated,
+   each hitting a different wall:
    - **Calendar** used IndexedDB, which an opaque origin refuses outright,
      so its store gained a brokered key/value fallback chosen only when IDB
      will not open. Standalone it keeps its indexes and cursor deletes.
@@ -123,6 +123,15 @@ Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
      and fell back to a `localStorage` backend. Loading app-sdk first gave
      that fallback the broker, and the shell now holds the document
      library.
+   - **Data** keeps a whole SQLite file, in IndexedDB, refused the same
+     way Calendar's was. Its engine now picks a backend by trying and
+     falls back to the same blob base64'd through the broker, reports
+     which one is live, and *announces* a refused write instead of
+     swallowing it — this is the app where a silent autosave failure costs
+     the most. It is also why FoafStore grew **per-app quotas**: an
+     almost-empty SQLite database is already ~43KB encoded against a 256KB
+     default, and raising that default for everybody would dissolve the
+     limit for exactly the apps it exists to bound.
    The drawer names whoever is left; the count should reach zero.
 2. **Only two games speak `snapshot`.** The contract exists now (July
    2026): closing a game keeps its place, through a reload, because the

@@ -68,3 +68,32 @@ test('report shows who holds what', () => {
   assert.ok(r.find(x => x.appId === 'sheets').bytes > 0);
   assert.equal(r.find(x => x.appId === 'robbin').bytes, 0);
 });
+
+test('a named app gets its own quota, and nobody else does', () => {
+  // One quota for everything is the right default and the wrong rule: an
+  // app keeping a SQLite file needs a different allowance from one keeping
+  // a station number. The alternative — raising the default for everybody —
+  // dissolves the limit for the apps it exists to bound.
+  const s = new FoafStore({ backend: memoryBackend(), quotaBytes: 40, quotas: { sheets: 4000 } });
+  s.grant('sheets', [STORE_CAP]).grant('tv', [STORE_CAP]);
+
+  const big = s.set('sheets', 'db', 'x'.repeat(1000));
+  assert.equal(big.ok, true, 'the named app may exceed the default');
+
+  const denied = s.set('tv', 'db', 'x'.repeat(1000));
+  assert.equal(denied.ok, false);
+  assert.equal(denied.reason, 'quota');
+  assert.equal(denied.quota, 40, 'and the refusal reports the quota it actually applied');
+
+  assert.equal(s.quotaFor('sheets'), 4000);
+  assert.equal(s.quotaFor('tv'), 40);
+  assert.equal(s.report().find(x => x.appId === 'sheets').quota, 4000);
+});
+
+test('setQuota raises an allowance after the fact', () => {
+  const s = new FoafStore({ backend: memoryBackend(), quotaBytes: 40 });
+  s.grant('sheets', [STORE_CAP]);
+  assert.equal(s.set('sheets', 'db', 'x'.repeat(500)).ok, false);
+  s.setQuota('sheets', 4000);
+  assert.equal(s.set('sheets', 'db', 'x'.repeat(500)).ok, true);
+});
