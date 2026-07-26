@@ -1,5 +1,5 @@
 {
-  "name": "gcfink",
+  "name": "finkcore",
   "version": "1.0.0",
   "type": "module",
   "description": "Glitch Canary FINK core: typed sigil extraction (oooOO and friends), ink compile glue, authoring lints",

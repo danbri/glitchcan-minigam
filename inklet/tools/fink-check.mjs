@@ -33,7 +33,7 @@ import { createRequire } from 'node:module';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { glob } from 'node:fs/promises';
-import { extractFinkFromJsSource } from '../../packages/gcfink/src/index.js';
+import { extractFinkFromJsSource } from '../../packages/finkcore/src/index.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..');

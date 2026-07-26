@@ -63,6 +63,15 @@ const finkContent = uniqueData.join('\\n');
 ## Project Overview
 Browser-based minigames collection with WebGL fluid dynamics, interactive fiction (FINK), SDF rendering (Lucid), and research artifacts. Mobile/touch-focused interfaces. GitHub Pages deployment at https://danbri.github.io/glitchcan-minigam/
 
+**THE FOCUS (owner's direction, July 2026):** the FINK game platform, the
+minigames (drafts and sketches included), and the office suite — wrapped
+behind **foafos** and the kernels in `packages/`: **`finkcore`** (story/data —
+formerly `gcfink`, compat symlink kept), **`finkgame`** (the guest/minigame
+SDK), **`foafos`** (the shell). `packages/` is a *served runtime location* —
+the live site imports from it — not a build convention. Everything else in
+the repo is a sibling project or a kept sketch, not the venture; when work
+trades off, the platform wins. Map: `docs/foafos-core-map-20260726.md`.
+
 **Accuracy ledger:** `docs/fable-audit/` contains a repo-wide audit (June 2026) of plans vs implementation, including `claims-register.md` — an adversarially-verified claims table. When this file and the audit disagree, check the register. When making confident *negative* claims ("X doesn't exist", "nothing links Y"), verify them with a recorded check first — roughly a third of such claims in the first audit pass were wrong.
 
 **Skills — the convention, and how to keep it honest.** A skill nobody is

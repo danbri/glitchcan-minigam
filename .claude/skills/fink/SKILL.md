@@ -1,6 +1,6 @@
 ---
 name: fink
-description: FINK platform AND the foafos shell it grew into — the .fink.js polyglot file format, sigil extraction (oooOO/OO), ink compilation, tag grammar, sandbox loading, navigation links, minigame SDK; plus root manifests, the app tree and capability attenuation, the storage/secrets/vars/audio/input brokers, brokered actions (git.commit), shell chrome as apps, the window manager, and the testing discipline for all of it. Use when writing or changing platform or shell code (packages/gcfink, packages/foafos, inklet/finkapp, inklet/apps, inklet/minigames), validating story files, debugging loading/compilation, or reasoning about what an app is allowed to do. NOT for story/game content authoring — that is the glitchcanary skill.
+description: FINK platform AND the foafos shell it grew into — the .fink.js polyglot file format, sigil extraction (oooOO/OO), ink compilation, tag grammar, sandbox loading, navigation links, minigame SDK; plus root manifests, the app tree and capability attenuation, the storage/secrets/vars/audio/input brokers, brokered actions (git.commit), shell chrome as apps, the window manager, and the testing discipline for all of it. Use when writing or changing platform or shell code (packages/finkcore — formerly gcfink, packages/finkgame, packages/foafos, inklet/finkapp, inklet/apps, inklet/minigames), validating story files, debugging loading/compilation, or reasoning about what an app is allowed to do. NOT for story/game content authoring — that is the glitchcanary skill.
 ---
 
 # FINK platform skill
@@ -15,6 +15,15 @@ shell IS the player and splitting them invites a future reader to load half
 of a coupled story. Kept together deliberately; the description above was
 widened (July 2026) so the shell half is at least discoverable. If it grows
 much past ~1200 lines, split it and cross-link both ways.
+
+**The kernels (July 2026):** `packages/finkcore` (story/data — formerly
+`gcfink`; a `packages/gcfink` symlink keeps every old path and doc reference
+resolving, so do not "fix" stale-looking mentions in historical docs or in
+`fink-sandbox.js`'s comment), `packages/finkgame` (the guest SDK, formerly
+`inklet/minigames/minigame-sdk.js` — the six guest pages load it from the
+package; it is require()-able in Node and `packages/finkgame/test/run.js`
+pins the protocol shapes offline), `packages/foafos` (the shell). The live
+site imports from `packages/` — it is a served path, proven on Pages.
 
 The platform is mechanisms only. Story names, track titles, station names,
 splash copy: none of it belongs in platform code (destined for NPM). If a

@@ -1,0 +1,10 @@
+{
+  "name": "finkgame",
+  "version": "1.0.0",
+  "description": "The FINK guest kernel: the classic-script SDK a minigame loads to live inside the finkapp host — init/pause/resume/terminate lifecycle, variable mirror, controls/audio/snapshot contracts, key relay. One file, no dependencies, loadable as <script src> in a sandboxed (opaque-origin) frame or require()d in Node for tests.",
+  "main": "src/minigame-sdk.js",
+  "scripts": {
+    "test": "node test/run.js"
+  },
+  "license": "MIT"
+}
