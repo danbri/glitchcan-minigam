@@ -15,6 +15,9 @@
 //                    window  a floating shell window
 //                    story   loaded into the story engine (not a frame)
 //                    panel   shell-native UI (not a frame, no boundary)
+//                    chrome  persistent shell furniture (breadcrumb, status
+//                            line, load meter) — mounted at boot if the
+//                            installation offers it, gone from the DOM if not
 //
 //   `capabilities` — what it may do. Nothing is ambient; anything absent
 //                    from this list is unavailable, and the app is told
@@ -45,6 +48,7 @@ export const APP_FAMILIES = [
   { id: 'play',   label: 'Play',   icon: '🎮' },
   { id: 'media',  label: 'Media',  icon: '📺' },
   { id: 'make',   label: 'Make',   icon: '🔧' },
+  { id: 'chrome', label: 'Chrome', icon: '🧩' },
 ];
 
 export const APPS = [
@@ -149,7 +153,38 @@ export const APPS = [
   { id: 'universe', family: 'make', icon: '🗺️', name: 'Finkiverse', surface: 'window',
     url: '../../docs/fink-universe.html', desc: 'Stories and widgets, mapped',
     capabilities: [], silent: true },
+
+  // ── Chrome ────────────────────────────────────────────────────────
+  // The shell's own furniture, as apps.
+  //
+  // These were narrative decoration hardcoded into the page, and a
+  // storyless installation dealt with them by CSS: a `:root[data-root-
+  // storyless]` rule with `display: none !important`. That is the shape
+  // of the mistake this whole exercise is about — the chrome still
+  // existed, still had ids the story engine wrote into, and was merely
+  // painted over. "Which parts of the UI exist" is exactly the kind of
+  // question a root manifest should answer.
+  //
+  // So: `surface: 'chrome'`, `mount` names the element the shell adopts,
+  // and an installation that does not list them simply does not have
+  // them — out of the DOM, out of the tab order, out of the a11y tree.
+  // They spawn into the app tree like everything else, appear in the
+  // picker as toggles, and closing one from the switcher really removes
+  // it. `capabilities: ['shell']` is honest: they are drawn by the shell
+  // itself, so there is no frame and no boundary to enforce.
+  { id: 'breadcrumb', family: 'chrome', icon: '🧭', name: 'Breadcrumb', surface: 'chrome',
+    mount: 'breadcrumb-container', desc: 'The trail of knots you came through',
+    capabilities: ['shell'], silent: true },
+  { id: 'statusline', family: 'chrome', icon: '💎', name: 'Status line', surface: 'chrome',
+    mount: 'stats-bar', desc: 'Whatever the story declared with # STATUS:',
+    capabilities: ['shell', 'vars:read'], silent: true },
+  { id: 'loadmeter', family: 'chrome', icon: '📜', name: 'Load meter', surface: 'chrome',
+    mount: 'scroll-status-bar', desc: 'FINKs encountered, loaded, compiled',
+    capabilities: ['shell'], silent: true },
 ];
+
+/** The shell furniture, in mount order. */
+export const chromeApps = () => APPS.filter(a => a.surface === 'chrome');
 
 export const appsByFamily = () =>
   APP_FAMILIES.map(f => ({ ...f, apps: APPS.filter(a => a.family === f.id) }))

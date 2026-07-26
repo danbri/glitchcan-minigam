@@ -16,7 +16,7 @@ import {
   FoafCluster, defineGuest, defineTable, defineTree,
   FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, localBackend, AppTree,
 } from '../../packages/foafos/src/index.mjs';
-import { appsByFamily, appById, ambientApps, unenforcedApps, APPS } from './foafos-apps.js';
+import { appsByFamily, appById, ambientApps, unenforcedApps, chromeApps, APPS } from './foafos-apps.js';
 import { resolveRoot, rootOffers } from './foafos-root.js';
 window.__foafAppRegistry = APPS;   // the service inventory counts holders from this
 
@@ -182,13 +182,92 @@ FoafOS.rootNode = rootNode;
 // treats that as "nothing saved" — which is exactly true.
 FoafOS.snapshotNs = 'shell:game-snapshots';
 if (ROOT.capabilities.includes('storage')) store.grant(FoafOS.snapshotNs, ['storage']);
-// An installation with no stories should not wear story chrome. The
-// breadcrumb trail and the diamond/score status line are narrative
-// furniture; on an office or TV root they are meaningless decoration
-// that also happens to claim screen space and tab stops.
+// An installation with no stories should not wear story chrome. The flag
+// stays because it is a true statement about the installation and skins
+// may want it — but it is no longer what REMOVES the narrative
+// furniture. See the chrome apps below: that is now a manifest decision,
+// not a stylesheet one.
 if (ROOT.boot && ROOT.boot.story === false) {
   document.documentElement.setAttribute('data-root-storyless', 'true');
 }
+
+// ── chrome: the shell's own furniture, as apps ─────────────────────────
+// The breadcrumb, the story status line and the FINK load meter were
+// markup in index.html that a storyless root dealt with by CSS:
+// `display: none !important`. They still existed, still held ids the
+// story engine wrote into, and still sat in the document — merely
+// painted over. "Which parts of the UI exist" is a manifest question.
+//
+// So they are apps with `surface: 'chrome'`. Offered by the root → they
+// spawn into the tree, bounded by it like everything else, and the
+// element stays in the page. Not offered → the element is PARKED: taken
+// out of the DOM, and therefore out of layout, tab order and the
+// accessibility tree, which is what the CSS was pretending to do.
+//
+// Parked rather than destroyed because the elements are also the state:
+// the breadcrumb caches its DOM and binds its own listeners at init, so
+// re-appending the same node brings it back intact, while rebuilding it
+// would need a teardown protocol nothing here has.
+const chromeMounted = new Map();   // appId → { node }
+const chromeParked = new Map();    // appId → { el, parent, next }
+
+function parkChrome(app) {
+  const el = document.getElementById(app.mount);
+  if (!el || chromeParked.has(app.id)) return;
+  // Remember where it came from at PARK time, not mount time — the
+  // neighbours can have changed while it was on screen.
+  chromeParked.set(app.id, { el, parent: el.parentNode, next: el.nextSibling });
+  el.remove();
+}
+
+function mountChrome(app) {
+  if (chromeMounted.has(app.id)) return chromeMounted.get(app.id).node;
+  const parked = chromeParked.get(app.id);
+  if (parked) {
+    parked.parent.insertBefore(parked.el, parked.next);
+    chromeParked.delete(app.id);
+  }
+  if (!document.getElementById(app.mount)) return null;   // no such furniture
+  const node = apps.spawn({
+    appId: app.id, parentId: rootNode.id,
+    capabilities: app.capabilities || [], label: app.name, surface: 'chrome',
+  });
+  if (node.refused) { parkChrome(app); return null; }
+  node.onClose = () => { chromeMounted.delete(app.id); parkChrome(app); };
+  chromeMounted.set(app.id, { node });
+  // The breadcrumb caches its elements at init and skips entirely if the
+  // container is missing. If it initialised while we had it parked, give
+  // it the one more chance it needs — guarded on the cache being empty so
+  // this cannot double-bind its listeners.
+  if (app.id === 'breadcrumb' && window.FinkBreadcrumb
+      && !window.FinkBreadcrumb.elements?.container) {
+    try { window.FinkBreadcrumb.init(); } catch (e) { /* older build */ }
+  }
+  bus.publish('chrome.mount', { summary: `${app.name} chrome mounted`, id: app.id });
+  return node;
+}
+
+function unmountChrome(id) {
+  const st = chromeMounted.get(id);
+  if (!st) return false;
+  apps.close(st.node.id);          // onClose parks the element
+  bus.publish('chrome.unmount', { summary: `${appById(id)?.name || id} chrome removed`, id });
+  return true;
+}
+
+/** Boot the furniture this installation asked for; park the rest. */
+function initChrome() {
+  for (const app of chromeApps()) {
+    if (rootOffers(ROOT, app.id)) mountChrome(app);
+    else parkChrome(app);
+  }
+}
+FoafOS.chrome = {
+  mount: (id) => { const a = appById(id); return a ? mountChrome(a) : null; },
+  unmount: unmountChrome,
+  isMounted: (id) => chromeMounted.has(id),
+  offered: () => chromeApps().filter(a => rootOffers(ROOT, a.id)).map(a => a.id),
+};
 bus.publish('root.ready', {
   summary: rootFellBack
     ? `unknown root "${rootRequested}" — booted ${ROOT.label} instead`
@@ -397,6 +476,8 @@ function buildAnnouncer() {
 function buildUI() {
   buildAnnouncer();
   buildPad();
+  // Furniture before anything else asks whether it is there.
+  initChrome();
   const dock = document.createElement('button');
   dock.id = 'foafos-dock';
   dock.type = 'button';
@@ -829,8 +910,26 @@ function buildUI() {
         b.innerHTML = `<span class="ico" aria-hidden="true">${app.icon}</span><span class="nm"></span>`;
         b.querySelector('.nm').textContent = app.name;
         if (app.desc) b.title = app.desc;
-        b.setAttribute('aria-label', `${app.name}${app.desc ? ` — ${app.desc}` : ''}`);
-        b.addEventListener('click', () => { launchApp(app.id); home.remove(); });
+        // Chrome is furniture, not a launch: there is one of it and the
+        // press turns it off and on. A toggle that looks like a launcher
+        // is a small lie, so it says which it is, and to a screen reader
+        // as well as on screen.
+        const isChrome = app.surface === 'chrome';
+        const chromeOn = isChrome && FoafOS.chrome.isMounted(app.id);
+        if (isChrome) {
+          b.classList.add('chrome-toggle');
+          b.setAttribute('aria-pressed', String(chromeOn));
+          b.classList.toggle('on', chromeOn);
+        }
+        b.setAttribute('aria-label',
+          `${app.name}${app.desc ? ` — ${app.desc}` : ''}${isChrome ? (chromeOn ? ', on' : ', off') : ''}`);
+        b.addEventListener('click', () => {
+          launchApp(app.id);
+          // A toggle that closes the panel it lives in cannot be pressed
+          // twice; a launcher that leaves it open buries the thing it
+          // just opened.
+          if (isChrome) { home.remove(); openHome(); } else { home.remove(); }
+        });
         grid.appendChild(b);
       }
       sec.appendChild(grid);
@@ -923,6 +1022,21 @@ function buildUI() {
     const app = appById(id);
     if (!app) return null;
     const caps = app.capabilities || [];
+    // Chrome is furniture: there is only ever one of it, so launching it
+    // TOGGLES rather than opening a second. (Everything below — the
+    // attenuation check, the store grant — already happened for it at
+    // boot, in mountChrome.)
+    if (app.surface === 'chrome') {
+      if (!rootOffers(ROOT, app.id)) {
+        bus.publish('app.launch.refused', {
+          summary: `${app.name} is not part of the ${ROOT.label} installation`,
+          id, root: ROOT.id,
+        });
+        return null;
+      }
+      if (FoafOS.chrome.isMounted(id)) { unmountChrome(id); return null; }
+      return mountChrome(app);
+    }
     // Does this installation even offer it? A webtv root has no business
     // launching a spreadsheet, and the manifest is where that is said.
     if (!rootOffers(ROOT, app.id)) {
@@ -1124,8 +1238,16 @@ function buildUI() {
     sw.setAttribute('role', 'dialog');
     sw.setAttribute('aria-modal', 'true');
     sw.setAttribute('aria-label', 'Running apps');
+    // Count furniture separately. Chrome apps really are running apps and
+    // belong in this list, but "Running 4" when the player has one story
+    // open and three status bars is a true number that reads as a wrong
+    // one.
+    const chromeCount = running.filter(r => r.node?.surface === 'chrome').length;
+    const tally = chromeCount
+      ? `${running.length - chromeCount} + ${chromeCount} chrome`
+      : String(running.length);
     sw.innerHTML = `<div class="foafos-overlay-head">
-        <h2>Running <span class="hint">${running.length}</span></h2>
+        <h2>Running <span class="hint">${tally}</span></h2>
         <button type="button" class="foafos-overlay-close" aria-label="Close switcher">✕</button>
       </div><div class="foafos-switch-cards" role="list"></div>`;
     const cards = sw.querySelector('.foafos-switch-cards');
@@ -1207,7 +1329,13 @@ function buildUI() {
   function collectRunning() {
     const out = [];
     const walk = (node, depth, parentLabel) => {
-      for (const child of FoafOS.apps.children(node.id)) {
+      // Furniture last. Chrome spawns at boot so it is oldest, and the
+      // tree keeps spawn order — which would put three status bars above
+      // the story the player is actually in. Ordering is presentation,
+      // and this is the presentation layer.
+      const kids = [...FoafOS.apps.children(node.id)].sort(
+        (a, b) => (a.surface === 'chrome' ? 1 : 0) - (b.surface === 'chrome' ? 1 : 0));
+      for (const child of kids) {
         const app = appById(child.appId);
         out.push({
           node: child, depth, parentLabel,
@@ -1248,6 +1376,15 @@ function buildUI() {
   // How to bring a node to the front, per surface. Presentation only.
   function focusNode(node) {
     if (node.surface === 'stage') { window.FinkWM?.setMode('full'); return; }
+    // Furniture cannot be raised — it is already there, possibly in a
+    // corner the player was not looking at. Point at it instead.
+    if (node.surface === 'chrome') {
+      const el = document.getElementById(appById(node.appId)?.mount || '');
+      if (!el) return;
+      el.classList.add('foafos-chrome-flash');
+      setTimeout(() => el.classList.remove('foafos-chrome-flash'), 1400);
+      return;
+    }
     if (node.surface === 'story') {
       if (window.FinkWM?.active && window.FinkWM.mode === 'full') window.FinkWM.setMode('split');
       return;

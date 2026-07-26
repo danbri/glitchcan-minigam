@@ -41,6 +41,12 @@ Adaptation from the guest side.
 ## Shell surfaces
 
 - **Picker** (`Alt+H`) — only what the installation offers.
+- **Chrome** — the breadcrumb, the story status line and the FINK load
+  meter are apps (`surface: 'chrome'`), offered per root manifest. An
+  office installation does not hide them, it does not *have* them: no
+  element, no tab stop, nothing in the accessibility tree. On a story root
+  they are toggles in the picker, and they sit in the switcher under
+  "+ N chrome" so furniture is not counted as work.
 - **Switcher** (`Alt+Tab`) — the app **tree**, indented. A game opened by a
   story sits beneath it; ⏸ and ✕ act on the subtree and name what they take
   ("and 1 beneath it").
@@ -63,7 +69,13 @@ Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
 `node --test packages/foafos/test/*.test.js`.
 
 - 27 unit tests (bus, session crypto, widgets, vars, audio, input, store, app tree).
-- 15 browser suites, including:
+- 16 browser suites, including:
+  - `e2e-chrome` — chrome is absent on office (asserted on
+    `getElementById`, never on computed style), toggles cleanly on a story
+    root, and survives the round trip wired. It also pins the bug the work
+    exposed: `shell` was a capability **no root held**, so Maker and Logger
+    could never be launched from the picker — the drawer called
+    `openLogger()` directly and hid it for as long as the tile existed.
   - `e2e-snapshot` — state compared *through* a close, in two unrelated
     games, plus the disclosure and the guarantee that a silent guest cannot
     hang the close. Written this way because the first cut of the feature

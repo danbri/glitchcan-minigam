@@ -51,13 +51,13 @@
     <span class="ico" aria-hidden="true">🐥</span>
     <span class="nm">Glitch Canary</span>
     <span class="why">The full thing: stories, games, office, media. Boots the table of contents.</span>
-    <span class="caps">storage · vars · audio · input · launch · navigate · chrome · same-origin</span>
+    <span class="caps">storage · vars · audio · input · launch · navigate · chrome · shell · same-origin</span>
   </a>
   <a class="card" href="finkapp/?root=office">
     <span class="ico" aria-hidden="true">📄</span>
     <span class="nm">Office</span>
     <span class="why">edot, Data, Calendar, Files. No story engine runs at all — FINK is simply unknown to this installation.</span>
-    <span class="caps">storage · same-origin</span>
+    <span class="caps">storage · shell · same-origin</span>
   </a>
   <a class="card" href="finkapp/?root=webtv">
     <span class="ico" aria-hidden="true">📺</span>
@@ -76,7 +76,12 @@
 <h2>WHAT TO TRY</h2>
 <ul>
   <li><strong>Apps</strong> (drawer → ⊞, or <code>Alt+H</code>) lists only what
-      that installation offers. Office shows no games.</li>
+      that installation offers. Office shows no games — and no breadcrumb or
+      status line either, because those are apps too: the office manifest
+      does not list them, so the elements are not in the page at all.</li>
+  <li><strong>Chrome</strong> tiles (🧩) are toggles, not launchers. Turn the
+      breadcrumb off on the story root and it leaves the document; turn it
+      back on and it returns still working.</li>
   <li><strong>Running</strong> (⧉, or <code>Alt+Tab</code>) shows the app
       <em>tree</em>. Start a story, let it open a game, and the game appears
       indented beneath it. The ⏸ and ✕ on a row act on the whole subtree and

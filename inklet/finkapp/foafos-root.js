@@ -16,7 +16,11 @@
 //   boot          what happens on start: a story to load, apps to open,
 //                 or nothing at all.
 //   apps          which app ids this installation offers. `null` means
-//                 all of them.
+//                 all of them. This includes the CHROME apps — the
+//                 breadcrumb, the status line, the load meter — because
+//                 "what furniture does this installation have" is the
+//                 same question as "what apps does it have", and used to
+//                 be answered by a CSS rule painting over them instead.
 //
 // Select at runtime with `?root=<id>`. Unknown ids fall back to the
 // default rather than booting into nothing, and say so.
@@ -27,8 +31,14 @@ export const ROOTS = {
   glitchcanary: {
     id: 'glitchcanary',
     label: 'Glitch Canary',
+    // `shell` is what the shell-native apps — Maker, Logger, and the
+    // chrome furniture — declare. A root that offers them must hold it,
+    // or the tree refuses to spawn them. It did: pressing Logger in the
+    // Apps picker was a no-op for as long as that tile existed, because
+    // launchApp went through attenuation and the drawer's own button
+    // called openLogger() directly and so never noticed.
     capabilities: ['storage', 'vars:read', 'vars:write', 'audio', 'input',
-                   'launch', 'navigate', 'chrome', 'same-origin'],
+                   'launch', 'navigate', 'chrome', 'shell', 'same-origin'],
     boot: { story: null },        // null = fall back to FinkConfig.DEFAULT_FINK_FILE
     apps: null,                   // all of them
   },
@@ -40,8 +50,12 @@ export const ROOTS = {
   office: {
     id: 'office',
     label: 'Office',
-    capabilities: ['storage', 'same-origin'],
+    // `shell` because this installation offers Maker; it holds no
+    // `chrome`, `launch` or `navigate`, and offers no chrome apps.
+    capabilities: ['storage', 'shell', 'same-origin'],
     boot: { story: false, apps: ['edot'] },
+    // No chrome ids here, so an office installation has no breadcrumb,
+    // no story status line and no FINK load meter — not hidden, absent.
     apps: ['edot', 'sheets', 'calendar', 'files', 'maker'],
   },
 

@@ -748,9 +748,31 @@ back to the default and say `fellBack` on `root.ready`.
 - Spawning under a closed parent is **refused**, never silently reparented.
 - `rootOffers()` gates `launchApp` — an app outside the installation is
   refused with `app.launch.refused`, not quietly opened.
-- Storyless roots set `:root[data-root-storyless]`, which hides the
-  breadcrumb and status bar — narrative furniture on an office desktop is
-  decoration that also claims tab stops.
+- **Shell chrome is apps** (July 2026). Breadcrumb, story status line and
+  FINK load meter have `surface: 'chrome'` and a `mount` id, and the root
+  manifest's `apps` list decides whether they exist. Offered → spawned
+  into the tree and the element stays; not offered → the element is
+  PARKED (removed from the DOM, kept in memory with its parent/next
+  sibling so it can come back with its listeners intact — the breadcrumb
+  caches its DOM and binds once, so destroy/rebuild would return it
+  inert). `:root[data-root-storyless]` still gets set, but it no longer
+  hides anything: the old `display:none !important` rule was the mistake,
+  because the chrome still existed, still had ids the ink engine wrote
+  into, and still sat in the a11y tree.
+  - **Assert absence on `getElementById`, never computed style** — the
+    whole difference between this and the CSS version is invisible to a
+    style check.
+  - Launching a chrome app TOGGLES it; the picker renders those tiles with
+    `aria-pressed` and an on/off marker, because a toggle that looks like
+    a launcher is a small lie.
+  - The switcher counts them separately ("Running 1 + 3 chrome") and sorts
+    them last: they are genuinely running apps, but "Running 4" for one
+    story and three status bars is a true number that reads as a wrong one.
+- **`shell` must be held by the root.** Found doing the above: Maker and
+  Logger declare `capabilities: ['shell']`, no root held `shell`, so
+  `launchApp` refused them — every press of those picker tiles was a
+  no-op, masked because the drawer button called `openLogger()` directly.
+  A capability nothing grants is not a safe default, it is a dead app.
 - **The tree has real branches:** the loaded story becomes a node under
   root (`FoafOS.storyNode`) and games open UNDER it, so closing the story
   tears down its games for real (guest frame gone, WM inactive). Done by

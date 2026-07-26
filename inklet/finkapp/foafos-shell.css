@@ -435,14 +435,39 @@ foafos-feed { display: block; --foaf-accent: var(--zx-mag); }
 }
 #foafos-audio-note { margin: .35rem 0 0; font-size: .72rem; }
 
-/* A storyless installation (office, webtv) wears no narrative furniture.
-   `inert`-adjacent reasoning: hiding with display:none takes these out of
-   the layout AND the tab order, which `visibility` would not. */
-:root[data-root-storyless="true"] #stats-bar,
-:root[data-root-storyless="true"] #breadcrumb-container,
-:root[data-root-storyless="true"] #breadcrumb-toggle,
-:root[data-root-storyless="true"] #scroll-status-bar {
-    display: none !important;
+/* The rule that used to live here hid the breadcrumb, status line and
+   load meter on storyless roots with `display: none !important`. They are
+   chrome APPS now, offered per root manifest, so an installation that
+   does not have them genuinely does not have them — no element, nothing
+   to hide. See foafos-apps.js (surface: 'chrome') and mountChrome(). */
+
+/* Chrome apps in the picker are toggles, not launchers, and say so. */
+.foafos-app.chrome-toggle { position: relative; opacity: .55; }
+.foafos-app.chrome-toggle.on { opacity: 1; }
+.foafos-app.chrome-toggle::after {
+    content: 'off';
+    position: absolute;
+    top: 4px; right: 6px;
+    font-size: .58rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    opacity: .8;
+}
+.foafos-app.chrome-toggle.on::after { content: 'on'; color: var(--sk-accent, #6cf); }
+
+/* Picking a chrome row in the switcher cannot raise it — it is already
+   on screen, just somewhere the player was not looking. Point at it. */
+.foafos-chrome-flash {
+    outline: 2px solid var(--sk-accent, #6cf);
+    outline-offset: 2px;
+    animation: foafos-chrome-flash 1.4s ease-out;
+}
+@keyframes foafos-chrome-flash {
+    0%, 40% { outline-color: var(--sk-accent, #6cf); }
+    100%    { outline-color: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .foafos-chrome-flash { animation: none; }
 }
 
 /* Switcher rows are the app TREE, indented. A child sits under the thing
