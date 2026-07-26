@@ -30,7 +30,7 @@
 //   node inklet/tools/fink-check.mjs --paths 4000    # widen the search
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { glob } from 'node:fs/promises';
 import { extractFinkFromJsSource } from '../../packages/finkcore/src/index.js';
@@ -164,7 +164,10 @@ async function corpus() {
   return out.sort();
 }
 
-const targets = files.length ? files.map(f => join(process.cwd(), f)) : await corpus();
+// `resolve`, not `join`: join(cwd, '/abs/path') fabricates <cwd>/abs/path,
+// which is how this tool ENOENT'd on 24 perfectly real files the first time
+// it was pointed outside the repo (isle_of_glitch, July 2026).
+const targets = files.length ? files.map(f => resolve(process.cwd(), f)) : await corpus();
 let bad = 0;
 console.log(`fink-check: ${targets.length} file(s), up to ${MAX_PATHS} paths each\n`);
 
