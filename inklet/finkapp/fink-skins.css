@@ -197,7 +197,21 @@ html, body {
 :root:not([data-skin="spectrum"]) body { background-image: none; }
 
 #story-output { color: var(--sk-ink); }
-#story-output p, .story-section p { font-family: var(--sk-font-body); }
+/* THE PROSE IS THE CONTENT. `--sk-size` is the skin's type size, and it
+   used to reach only `.choice-btn` — so the story kept the platform's base
+   size (and on a phone, a media query knocked it to 12px) while the
+   choices sat at the skin's 18px, bold. The hierarchy was inverted in
+   every skin. Body text gets the skin size; the leading comes with it. */
+#story-output,
+#story-output p, .story-section p,
+#story-output .text-chunk, .story-section .story-text {
+    font-family: var(--sk-font-body);
+    font-size: var(--sk-size);
+    line-height: var(--sk-leading, 1.55);
+}
+/* Long prose wants a measure, not the full width of a desktop window:
+   past ~72 characters the eye loses the line it is returning to. */
+#story-output { max-width: 68ch; margin-inline: auto; }
 
 .story-section.current {
     background: var(--sk-bg-figure);
@@ -229,9 +243,19 @@ html, body {
     border: 1px solid var(--sk-choice-line);
     border-radius: var(--sk-radius);
     font-family: var(--sk-font-ui);
-    font-size: var(--sk-size);
+    /* A shade under the prose. A choice is the reader's hand, not the
+       author's voice: it must be unmistakably tappable (min-height below)
+       without shouting over the sentence it answers. It used to be BIGGER
+       than the prose and bolder too. */
+    font-size: calc(var(--sk-size) * 0.95);
+    line-height: 1.35;
     box-shadow: var(--sk-shadow);
     padding: 0.7em 0.85em;
+    /* the tap target comes from height, not from type size */
+    min-height: var(--touch-target-min, 44px);
+    display: flex;
+    align-items: center;
+    gap: 0.15em;
 }
 .choice-btn::before { content: var(--sk-choice-marker); opacity: 0.75; }
 .choice-btn:hover, .choice-btn:focus-visible {

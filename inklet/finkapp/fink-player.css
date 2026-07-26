@@ -103,7 +103,10 @@ body[data-fink-depth="8"] #narrative-view {
 /* --- Narrative View --- */
 #narrative-view {
     padding: 0.5em;
-    padding-bottom: 50vh; /* Allow scrolling past content */
+    /* Room to scroll past the end, so the last line can sit mid-screen
+       instead of glued to the bottom edge. Only where there is something
+       to scroll: see [data-fits] below. */
+    padding-bottom: 18vh;
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
@@ -113,12 +116,33 @@ body[data-fink-depth="8"] #narrative-view {
     min-height: 0; /* Critical for flex scroll children */
 }
 
+/* A SHORT SCENE SHOULD NOT LOOK BROKEN.
+   40vh of bottom padding plus a 30vh static tail is ~70% of a phone screen
+   of deliberate emptiness. Fine under a long scene you are scrolling
+   through; with a two-line beat it left one whisper of text adrift in a
+   void, which is exactly the reported bug. FinkUI measures after each
+   render and sets data-fits="yes" when the content already fits, and then
+   the scroll-past affordance — which has nothing to afford — goes away and
+   the scene is centred instead. */
+#narrative-view[data-fits="yes"] {
+    padding-bottom: 0.5em;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+#narrative-view[data-fits="yes"]::after { display: none; }
+
 /* Scroll-past-end zone: TV static that fades to black */
 #narrative-view::after {
     content: '';
     display: block;
-    height: 30vh;
-    margin-top: 2em;
+    /* WAS 30vh, on top of 50vh of padding: ~70% of a phone screen of void
+       once you reached the bottom, which is the reported "sea of
+       whitespace" seen from the other end. The point of this zone is that
+       the last line can rest above the bottom edge rather than against it;
+       ~a third of a screen does that, three quarters does not. */
+    height: 14vh;
+    margin-top: 1.2em;
     background:
         repeating-linear-gradient(
             0deg,
@@ -146,9 +170,18 @@ body[data-fink-depth="8"] #narrative-view {
     100% { background-position: 4px 4px, -4px -4px; }
 }
 
-/* --- Choices Container --- */
+/* --- Choices Container ---
+   `#choices` is the real container; `.choices-container` below was styled
+   for years and never matched anything the player builds, so its
+   `flex-direction: column` never applied and the buttons — being
+   inline-block — flowed onto ONE LINE. Three options crammed side by side
+   under a single shared rule read as one element, not three targets. */
 #choices {
-    padding-top: 0.5em;
+    padding-top: 0.6em;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    align-items: stretch;
 }
 
 /* --- Story Output --- */
@@ -207,14 +240,43 @@ body[data-fink-depth="8"] #narrative-view {
     box-shadow: 0 0 15px rgba(0, 192, 192, 0.15);
 }
 
-/* Lead media inside the chunk */
+/* Lead media inside the chunk.
+   STICKY, because the second half of the field report was "verbose text
+   pushes us past the video and it is not obvious we must scroll up". The
+   media leads the scene; a reader four paragraphs down should still be
+   able to see what they are looking at. It sticks to the top of the scroll
+   container and the prose passes beneath it.
+   Capped at 34vh so image plus a few lines of text both fit a phone. */
 .story-section .section-media {
-    max-width: 100%;
-    max-height: 40vh;
+    /* FULL WIDTH, letterboxed. A picture narrower than the column left the
+       prose visible either side of it as it scrolled past — half-sentences
+       flanking a floating image, which is worse than losing the picture.
+       `width: 100%` with `object-fit: contain` keeps the image centred and
+       undistorted while its BOX spans the measure, so the opaque band below
+       covers everything behind it. */
+    width: 100%;
+    max-height: 34vh;
     display: block;
-    margin: 0 auto 0.8em;
+    margin: 0 0 0.8em;
     border-radius: var(--border-radius-sm);
     object-fit: contain;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    /* it is over the text now, so it needs its own ground — and a seam, so
+       the overlap reads as a deliberate pinned header and not a glitch */
+    background: var(--sk-bg-figure, rgba(0, 20, 0, 1));
+    box-shadow: 0 6px 10px -6px rgba(0, 0, 0, 0.55);
+}
+/* A scene that already fits has nothing to scroll, so sticking would only
+   add a hairline seam. */
+#narrative-view[data-fits="yes"] .story-section .section-media {
+    position: static;
+}
+@media (prefers-reduced-motion: reduce) {
+    /* sticky is not motion, but a taller cap suits users who also tend to
+       have larger text: give the picture less of the screen, not more */
+    .story-section .section-media { max-height: 30vh; }
 }
 
 /* Incremental text reveal */
@@ -491,12 +553,20 @@ body[data-fink-depth="8"] #narrative-view {
 }
 #story-output a:hover { color: var(--zx-yellow); }
 
-/* --- Mobile Responsive --- */
+/* --- Mobile Responsive ---
+   This used to shrink #story-output to --font-size-small (12px) on a phone,
+   which is backwards: the smallest screen is where the prose most needs to
+   be readable. Worse, the skins set `.choice-btn { font-size: var(--sk-size) }`
+   and load AFTER this file — so the choices kept their 18px while the story
+   dropped to 12px, and every scene showed big bold sans-serif options over
+   a whisper of body text. Field report, with screenshots: "unreadable short
+   sentence in a sea of whitespace".
+   Type size now lives in ONE place, the skin (fink-skins.css). */
 @media (max-width: 600px) {
     .fink-header { padding: 0.4em 0.6em; gap: 0.5em; }
-    #story-output { padding: 0.6em; font-size: var(--font-size-small); }
-    .choices-container { gap: 0.4em; }
-    .choice-btn { padding: 0.6em; font-size: var(--font-size-small); }
+    #story-output { padding: 0.6em; }
+    #choices, .choices-container { gap: 0.5em; }
+    .choice-btn { padding: 0.65em 0.8em; }
 }
 
 /* --- Legacy Image Container (hidden, images now inside sections) --- */

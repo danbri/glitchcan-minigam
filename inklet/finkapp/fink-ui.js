@@ -125,9 +125,24 @@ window.FinkUI = {
         }
     },
 
+    // Whether a scene fits is a function of the VIEWPORT, so it has to be
+    // re-asked when the viewport changes — rotate a phone and a scene that
+    // fitted in portrait may not in landscape, and vice versa. Debounced,
+    // because a rotation fires a burst of these.
+    _fitTimer: null,
+    watchFit() {
+        const again = () => {
+            clearTimeout(this._fitTimer);
+            this._fitTimer = setTimeout(() => this.markFit(), 120);
+        };
+        window.addEventListener('resize', again);
+        window.addEventListener('orientationchange', again);
+    },
+
     // Scroll status bar setup
     scrollTimeout: null,
     setupScrollStatusBar() {
+        this.watchFit();
         const narrativeView = document.getElementById('narrative-view');
         const statusBar = document.getElementById('scroll-status-bar');
 
@@ -408,7 +423,39 @@ window.FinkUI = {
                     top: narrativeView.scrollHeight,
                     behavior: 'smooth'
                 });
+                this.markFit();
             }, 50);
+        }
+    },
+
+    /**
+     * Does this scene already fit the screen?
+     *
+     * The narrative view carries a deliberate scroll-past-the-end zone —
+     * bottom padding plus a tail of TV static — so the last line can rest
+     * mid-screen instead of against the bottom edge. Under a long scene
+     * that is right. Under a two-line beat it is ~70% of a phone screen of
+     * void, with one whisper of text adrift at the top; reported from the
+     * field, and it looked broken because it WAS broken.
+     *
+     * CSS cannot ask "is my content taller than me", so measure it here and
+     * say so in an attribute. `data-fits="yes"` drops the affordance that
+     * has nothing to afford and centres the scene instead.
+     *
+     * Measured with the zone temporarily suppressed — otherwise the padding
+     * we are deciding about is itself what makes the content overflow, and
+     * the answer is always "no".
+     */
+    markFit() {
+        const nv = document.getElementById('narrative-view');
+        if (!nv) return;
+        const prev = nv.getAttribute('data-fits');
+        nv.setAttribute('data-fits', 'yes');          // suppress, then measure
+        // +2px of slack: sub-pixel layout should not flip this back and forth.
+        const fits = nv.scrollHeight <= nv.clientHeight + 2;
+        if (!fits) nv.setAttribute('data-fits', 'no');
+        if (nv.getAttribute('data-fits') !== prev) {
+            FinkUtils.debugLog(`Layout: scene ${fits ? 'fits' : 'overflows'} the viewport`);
         }
     },
 

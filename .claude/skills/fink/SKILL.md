@@ -330,6 +330,44 @@ flip-storm test in `e2e-wm.mjs` (now 23 assertions).
   be composited as a STACK (page → scene → choice), not treated as
   opaque backdrops.
 
+### Story typography: four dead rules and an inverted hierarchy (July 2026)
+
+Field report with screenshots: *"unreadable short sentence in a sea of
+whitespace"* and *"verbose tiny text pushes visuals off screen"*. All four
+causes were rules that looked right and did nothing, or did the opposite.
+
+- **`--sk-size` only ever reached `.choice-btn`.** The prose kept the
+  platform base size, and a `@media (max-width: 600px)` rule knocked
+  `#story-output` down to `--font-size-small` — **12px** — while the skins
+  load after fink-player.css and so kept the choices at 18px, bold. Measured:
+  prose 12px/400 under choices 18px/600. On the smallest screen, where the
+  prose most needs to be readable, it was smallest. Type size now lives in
+  ONE place (the skin) and reaches the prose; choices are
+  `calc(var(--sk-size) * 0.95)` with the tap target coming from
+  `min-height`, not from type size.
+- **`.choices-container` matched nothing.** The player builds `#choices`.
+  So the `flex-direction: column` had never applied and the buttons, being
+  `inline-block`, flowed onto ONE LINE — three options crammed side by side
+  under a single shared rule, reading as one element rather than three
+  targets. Visible in both screenshots; nobody had looked.
+- **~70vh of deliberate void.** `padding-bottom: 50vh` plus a `::after`
+  static tail of `30vh`. Right under a long scene, absurd under a two-line
+  beat. CSS cannot ask "am I taller than my container", so `FinkUI.markFit()`
+  measures after each render and sets `data-fits` on `#narrative-view`;
+  `yes` drops the affordance that has nothing to afford and centres the
+  scene. **Measure with the zone suppressed** — otherwise the padding you
+  are deciding about is what makes the content overflow and the answer is
+  always "no". Re-run on resize/orientationchange, debounced.
+- **Lead media scrolled away.** `.section-media` is now `position: sticky;
+  top: 0` — but it must also be `width: 100%`, because a picture narrower
+  than the column left the prose visible either side of it while scrolling,
+  and half-sentences flanking a floating image are worse than losing the
+  image. Full-width box + `object-fit: contain` + opaque background +
+  a shadow seam, so the overlap reads as a pinned header.
+
+Verify by MEASURING computed sizes and screenshotting at 430×860, not by
+reading the CSS: every one of these was invisible in source.
+
 ## Finkiverse map (stories AND widgets)
 
 - `node inklet/tools/fink-universe.mjs` → `docs/fink-universe.json`;
