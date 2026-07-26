@@ -58,9 +58,13 @@ export const APPS = [
   { id: 'sheets', family: 'office', icon: '📊', name: 'Data', surface: 'window',
     url: '../../magpie/edot/data/data.html', desc: 'Spreadsheet, SQL, RDF',
     capabilities: ['storage', 'same-origin'], silent: true },
+  // MIGRATED off the escape hatch (July 2026), and the first Office app to
+  // manage it. It used IndexedDB, which an opaque origin refuses; its
+  // store now falls back to the brokered key/value when IDB will not open,
+  // so it keeps its indexes standalone and loses nothing but them here.
   { id: 'calendar', family: 'office', icon: '📅', name: 'Calendar', surface: 'window',
     url: '../../magpie/edot/calendar/calendar.html', desc: 'Days and plans',
-    capabilities: ['storage', 'same-origin'], silent: true },
+    capabilities: ['storage'], silent: true },
   { id: 'files', family: 'office', icon: '📁', name: 'Files', surface: 'window',
     url: '../../magpie/edot/files/', desc: 'Pod explorer',
     capabilities: ['storage', 'same-origin'], silent: true },

@@ -91,9 +91,11 @@
 
 <h2>HONEST STATUS</h2>
 <ul>
-  <li>Five apps still run with ambient authority (<code>same-origin</code>) because
-      they use <code>localStorage</code>/<code>indexedDB</code> ~120 times and have not
-      been moved onto the storage broker. The drawer names them.</li>
+  <li>Four apps still run with ambient authority (<code>same-origin</code>) because
+      they use <code>localStorage</code>/<code>indexedDB</code> heavily and have not
+      been moved onto the storage broker. The drawer names them. Calendar
+      <em>has</em> been migrated — it used IndexedDB, which an opaque origin
+      refuses, so its store now falls back to the broker.</li>
   <li>Stories are <strong>more</strong> privileged than apps, not less: the narrative
       runtime is the host page, so a story can launch, navigate and restyle.
       Its capability list describes rather than constrains, and says so.</li>

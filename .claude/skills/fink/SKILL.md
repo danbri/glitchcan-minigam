@@ -759,6 +759,30 @@ back to the default and say `fellBack` on `root.ready`.
   Content cannot be verified headlessly in this environment:
   `net::ERR_ABORTED`, no browser egress.
 
+## Migrating an app off `same-origin` (the Calendar pattern)
+
+Calendar is the first Office app off the escape hatch, and the pattern
+generalises. Ambient holders: 5 → 4 (edot, sheets, files, robbamp left).
+
+- Load `inklet/apps/app-sdk.js` FIRST in the app's HTML, before anything
+  else, so `localStorage` is the brokered shim before app code runs.
+  Harmless standalone: nothing sends `app.init`, so the native APIs are
+  left alone.
+- **IndexedDB is the hard part** — the shim only covers
+  localStorage/sessionStorage, and an opaque origin refuses `idb.open()`
+  outright. Calendar's `store.js` now has `openBest()`: try IDB, and on
+  failure use a `KvDb` with the same private API backed by two JSON
+  arrays in (brokered) `localStorage`. Chosen ONLY on failure, so the
+  standalone app keeps its indexes and cursor deletes.
+- A refused write must be noticed. `KvDb._write` warns rather than
+  swallowing — a save that silently did nothing is worse than an error.
+- Then drop `same-origin` from the registry entry and keep `storage`.
+- Prove it de-privileged: `e2e-caps` asserts `parent.document` throws,
+  `store.usingBroker === true`, a real round-trip (calendar + event, Dates
+  rehydrated), that the shell holds the bytes, and that the ambient count
+  dropped. Standalone `test-calendar.mjs` must still pass — it does, still
+  on IDB.
+
 ## Stories are privileged over apps — know this
 
 Asked directly ("does foafos privilege stories over office docs?") and

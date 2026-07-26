@@ -32,6 +32,10 @@
   <main>
     <edot-calendar><div class="boot">Loading calendar…</div></edot-calendar>
   </main>
+  <!-- app-sdk FIRST when hosted by foafos: it stands in for localStorage
+       before any app code runs. Harmless standalone (nothing sends it
+       app.init, so the native APIs are left alone). -->
+  <script src="../../../inklet/apps/app-sdk.js"></script>
   <script type="module" src="../auth/js/login-ui.js"></script>
   <script type="module">
     // Boot the component and expose a headless-test hook (mirrors window.__edot

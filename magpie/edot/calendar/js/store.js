@@ -13,6 +13,76 @@ const IDB_VERSION = 1;
 const CAL_STORE = 'calendars';
 const EV_STORE = 'events';
 
+// ── the brokered fallback ────────────────────────────────────────────
+//
+// Inside foafos an app runs in a sandboxed frame with an OPAQUE ORIGIN,
+// where `indexedDB.open()` fails. The app used to get around that by
+// holding the `same-origin` capability — i.e. by having full ambient
+// authority over the shell, which is a lot to pay for a place to keep
+// some events.
+//
+// So: same public API, two JSON arrays behind `localStorage`. Under
+// foafos that `localStorage` is app-sdk's shim over the shell's store
+// broker (namespaced, quota'd, audited); standalone it is the real one.
+// The calendar cannot tell the difference and does not need to.
+//
+// Chosen only when IndexedDB genuinely will not open, so the standalone
+// app keeps its indexes and its cursor deletes.
+const KV_CALS = 'edot.calendar.calendars';
+const KV_EVS = 'edot.calendar.events';
+
+class KvDb {
+  constructor() { this.kind = 'kv'; }
+  _read(k) { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch { return []; } }
+  _write(k, rows) {
+    try { localStorage.setItem(k, JSON.stringify(rows)); return true; }
+    catch (e) {
+      // A refusal here is the broker saying no (quota, or no capability).
+      // Losing it silently would look like a save that worked.
+      console.warn('[calendar] store refused:', e && e.name);
+      return false;
+    }
+  }
+  all(which) { return this._read(which === 'cal' ? KV_CALS : KV_EVS); }
+  put(which, rec) {
+    const key = which === 'cal' ? KV_CALS : KV_EVS;
+    const rows = this._read(key);
+    const at = rows.findIndex(r => r.id === rec.id);
+    if (at >= 0) rows[at] = rec; else rows.push(rec);
+    return this._write(key, rows);
+  }
+  putMany(which, recs) {
+    const key = which === 'cal' ? KV_CALS : KV_EVS;
+    const rows = this._read(key);
+    for (const rec of recs) {
+      const at = rows.findIndex(r => r.id === rec.id);
+      if (at >= 0) rows[at] = rec; else rows.push(rec);
+    }
+    return this._write(key, rows);
+  }
+  remove(which, id) {
+    const key = which === 'cal' ? KV_CALS : KV_EVS;
+    this._write(key, this._read(key).filter(r => r.id !== id));
+  }
+  removeWhere(which, pred) {
+    const key = which === 'cal' ? KV_CALS : KV_EVS;
+    this._write(key, this._read(key).filter(r => !pred(r)));
+  }
+  clear() { this._write(KV_CALS, []); this._write(KV_EVS, []); }
+}
+
+/** Open IndexedDB, or fall back to the brokered key/value store. */
+async function openBest() {
+  try {
+    const db = await idbOpen();
+    db.kind = 'idb';
+    return db;
+  } catch (e) {
+    console.info('[calendar] IndexedDB unavailable (' + (e && e.name) + ') — using brokered storage');
+    return new KvDb();
+  }
+}
+
 function idbOpen() {
   return new Promise((resolve, reject) => {
     const r = indexedDB.open(IDB_DB, IDB_VERSION);
@@ -64,13 +134,17 @@ function fromStored(ev) {
 export class CalendarStore extends EventTarget {
   constructor() { super(); this.db = null; }
 
-  async init() { this.db = await idbOpen(); return this; }
+  async init() { this.db = await openBest(); return this; }
+
+  get usingBroker() { return this.db?.kind === 'kv'; }
 
   // ---- calendars (layers) ----
   async getCalendars() {
+    if (this.usingBroker) return this.db.all('cal');
     return reqAll(tx(this.db, CAL_STORE));
   }
   async putCalendar(cal) {
+    if (this.usingBroker) { this.db.put('cal', cal); this._changed(); return cal; }
     const t = this.db.transaction(CAL_STORE, 'readwrite');
     t.objectStore(CAL_STORE).put(cal);
     await reqDone(t);
@@ -78,6 +152,12 @@ export class CalendarStore extends EventTarget {
     return cal;
   }
   async deleteCalendar(id) {
+    if (this.usingBroker) {
+      this.db.remove('cal', id);
+      this.db.removeWhere('ev', (r) => r.calendarId === id);
+      this._changed();
+      return;
+    }
     // Remove the calendar and all of its events.
     const t = this.db.transaction([CAL_STORE, EV_STORE], 'readwrite');
     t.objectStore(CAL_STORE).delete(id);
@@ -93,10 +173,14 @@ export class CalendarStore extends EventTarget {
 
   // ---- events ----
   async getEvents() {
+    if (this.usingBroker) return this.db.all('ev').map(fromStored);
     const rows = await reqAll(tx(this.db, EV_STORE));
     return rows.map(fromStored);
   }
   async getEventsFor(calendarId) {
+    if (this.usingBroker) {
+      return this.db.all('ev').filter(r => r.calendarId === calendarId).map(fromStored);
+    }
     const store = tx(this.db, EV_STORE);
     const idx = store.index('calendarId');
     return new Promise((res, rej) => {
@@ -106,6 +190,7 @@ export class CalendarStore extends EventTarget {
     });
   }
   async putEvent(ev) {
+    if (this.usingBroker) { this.db.put('ev', toStored(ev)); this._changed(); return ev; }
     const t = this.db.transaction(EV_STORE, 'readwrite');
     t.objectStore(EV_STORE).put(toStored(ev));
     await reqDone(t);
@@ -113,6 +198,7 @@ export class CalendarStore extends EventTarget {
     return ev;
   }
   async putEvents(events) {
+    if (this.usingBroker) { this.db.putMany('ev', events.map(toStored)); this._changed(); return; }
     const t = this.db.transaction(EV_STORE, 'readwrite');
     const s = t.objectStore(EV_STORE);
     for (const ev of events) s.put(toStored(ev));
@@ -120,6 +206,7 @@ export class CalendarStore extends EventTarget {
     this._changed();
   }
   async deleteEvent(id) {
+    if (this.usingBroker) { this.db.remove('ev', id); this._changed(); return; }
     const t = this.db.transaction(EV_STORE, 'readwrite');
     t.objectStore(EV_STORE).delete(id);
     await reqDone(t);
@@ -127,6 +214,12 @@ export class CalendarStore extends EventTarget {
   }
   // Replace all events belonging to one calendar (used when refreshing a feed).
   async replaceCalendarEvents(calendarId, events) {
+    if (this.usingBroker) {
+      this.db.removeWhere('ev', (r) => r.calendarId === calendarId);
+      this.db.putMany('ev', events.map(toStored));
+      this._changed();
+      return;
+    }
     const t = this.db.transaction(EV_STORE, 'readwrite');
     const s = t.objectStore(EV_STORE);
     const idx = s.index('calendarId');
@@ -141,6 +234,7 @@ export class CalendarStore extends EventTarget {
   }
 
   async clearAll() {
+    if (this.usingBroker) { this.db.clear(); this._changed(); return; }
     const t = this.db.transaction([CAL_STORE, EV_STORE], 'readwrite');
     t.objectStore(CAL_STORE).clear();
     t.objectStore(EV_STORE).clear();

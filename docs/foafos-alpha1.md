@@ -61,7 +61,9 @@ Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
 - 14 browser suites, including:
   - `e2e-caps` — the boundary tested **by trying to cross it**: inside a
     de-privileged app, `parent.document`, `parent.FoafOS` and `localStorage`
-    all throw `SecurityError`.
+    all throw `SecurityError`. Also drives Calendar through a real
+    round-trip (calendar + event, Dates rehydrated) with no ambient
+    authority at all.
   - `e2e-root` — office boots with **zero stories compiled**; attenuation
     refuses in the live page; close cascades to a real guest teardown.
   - `e2e-input` — Konami once per controller.
@@ -80,10 +82,13 @@ Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
 
 ## Missing, plainly
 
-1. **Five apps still hold `same-origin`** — edot, Data, Calendar, Files,
-   ROBBAMP. They use `localStorage`/`indexedDB` ~120 times and have not been
-   moved onto the store broker. The drawer names them; the count should reach
-   zero.
+1. **Four apps still hold `same-origin`** — edot, Data, Files, ROBBAMP.
+   **Calendar is migrated** (July 2026) and is the proof the path works on a
+   storage-heavy app: it used IndexedDB, which an opaque origin refuses
+   outright, so its store gained a brokered key/value fallback chosen only
+   when IDB will not open. Standalone it keeps its indexes and cursor
+   deletes; under foafos it runs de-privileged and the shell holds its
+   bytes. The drawer names whoever is left; the count should reach zero.
 2. **No snapshot/restore contract.** Close a game and it is gone. This also
    blocks moving the narrative runtime into a frame, because the dream stack
    works only *because* the story runs in the host page.

@@ -188,6 +188,60 @@ try {
     ? pass('the drawer says the story lists do not constrain')
     : fail(`story privilege not disclosed: "${note2.slice(-90)}"`);
 
+  // 9. a MIGRATED Office app: no same-origin, real work, data survives.
+  // Channels proved the shim on an app that barely stored anything.
+  // Calendar is the real test — it used IndexedDB, which an opaque origin
+  // refuses outright, so it had to gain a brokered fallback to come off
+  // the escape hatch. This is the ambient-authority count dropping by one.
+  await page.evaluate(() => window.FoafOS.store.clear('calendar'));
+  await page.evaluate(() => window.FoafOS.launchApp('calendar'));
+  await page.waitForTimeout(4000);
+  const cal = page.frames().find(f => /calendar\.html/.test(f.url()));
+  if (!cal) {
+    fail('calendar app frame never appeared');
+  } else {
+    const st = await cal.evaluate(async () => {
+      const r = { boundary: null, broker: null, wrote: null, readBack: null };
+      try { parent.document; r.boundary = 'reachable'; } catch (e) { r.boundary = e.name; }
+      // it must have noticed IDB is refused and fallen back
+      for (let i = 0; i < 40 && !window.__cal; i++) await new Promise(z => setTimeout(z, 250));
+      r.broker = window.__cal?.store?.usingBroker ?? 'no hook';
+      if (window.__cal?.store) {
+        const s = window.__cal.store;
+        await s.putCalendar({ id: 'c1', name: 'Work' });
+        await s.putEvent({ id: 'e1', calendarId: 'c1', title: 'Standup',
+                           start: new Date('2026-08-01T09:00:00Z'), end: new Date('2026-08-01T09:15:00Z') });
+        r.wrote = true;
+        const evs = await s.getEventsFor('c1');
+        r.readBack = evs.length === 1 && evs[0].title === 'Standup' && evs[0].start instanceof Date;
+      }
+      return r;
+    }).catch(e => ({ err: String(e).slice(0, 110) }));
+
+    st.boundary === 'SecurityError'
+      ? pass('calendar runs de-privileged: parent.document refuses')
+      : fail(`calendar still has ambient authority: ${JSON.stringify(st)}`);
+    st.broker === true
+      ? pass('it noticed IndexedDB is refused and fell back to the broker')
+      : fail(`calendar did not fall back: usingBroker=${JSON.stringify(st.broker)}`);
+    st.wrote === true && st.readBack === true
+      ? pass('a calendar and an event round-trip through the broker, Dates rehydrated')
+      : fail(`round-trip failed: ${JSON.stringify(st)}`);
+
+    const persisted = await page.evaluate(() => window.FoafOS.store.snapshot('calendar'));
+    persisted && Object.keys(persisted).some(k => k.includes('calendar'))
+      ? pass(`the shell holds calendar's bytes (${Object.keys(persisted).join(', ')})`)
+      : fail(`nothing reached the broker: ${JSON.stringify(persisted)}`);
+  }
+
+  const stillAmbient = await page.evaluate(async () => {
+    const m = await import('./foafos-apps.js');
+    return m.ambientApps().map(a => a.id);
+  });
+  !stillAmbient.includes('calendar')
+    ? pass(`ambient-authority holders down to ${stillAmbient.length}: ${stillAmbient.join(', ')}`)
+    : fail('calendar still declares same-origin');
+
   pageErrors.length === 0 ? pass('no page errors')
     : fail(`page errors: ${pageErrors.slice(0, 2).join(' · ')}`);
   console.log(process.exitCode ? '\nCAPS E2E: FAIL' : '\nCAPS E2E: PASS');
