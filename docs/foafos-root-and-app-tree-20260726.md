@@ -139,23 +139,134 @@ The last row is the genuinely open one. `FoafVars` governs *guests
 writing to the story*. If the story is no longer privileged, "the story"
 stops being the obvious home for shared state, and something has to be.
 
+### 5.1 `# FINK:` — two separate points, and only one is architecture
+
+**Foundationally**, navigation must be constrained to the running app and
+its subapps. Another app that happens to use FINK internally is different
+business entirely. This falls straight out of §2: navigation is scoped to
+a subtree, like close, like pause, like everything else in the tree. It
+needs no special rule of its own, which is a good sign the tree is the
+right model.
+
+**Pragmatically**, the reason it currently replaces *everything* is not a
+design position — it is what inkjs makes cheap. inkjs has no notion of
+composing two stories, so the only lever available is **recompile with a
+different list of ink inputs**, and the variable and knot clashes are the
+toll for using that lever. `# FINK:` "replacing" is an artefact of the
+tool, dressed up as a semantic.
+
+That distinction matters because it says where the work belongs. The
+composition question — simple merging vs dream-inception nesting vs
+loading a new chapter vs having two bodies of content live at once, and
+what happens to variable and knot names in each — is going to *evolve*,
+probably for years. It must be able to evolve **without dragging a web OS
+frontend along behind it.**
+
+So: composition semantics belong in the **npm library**, not the shell.
+
+```
+gcfink.compose([sourceA, sourceB, …], { mode, naming }) -> { story, nameMap, diagnostics }
+```
+
+The shell picks a mode and consumes the result. Merging strategies get
+library tests rather than E2E-through-a-browser tests, new modes are a
+library version rather than a shell release, and someone using FINK with
+no foafos at all gets the same behaviour.
+
+Two concrete facts that support this:
+
+- The LINKREL vocabulary is *specified* in spec §3.4
+  (`sameWorld` / `goDeeper` / `goShallower` / `oneWay` / `unstable` /
+  `merge`) but *implemented* across `fink-ink-engine.js` and
+  `fink-navigation.js` in the shell. The vocabulary is already
+  library-shaped; the code is not.
+- `inklet/demos/fink-namespace-preprocessor.js` — the machinery for the
+  `merge` case — exists and is **not wired into anything** (verified). It
+  is sitting in a demos folder because there is no library home for it.
+  That is the gap this section is about, in one file.
+
 ## 6. FINK beyond storytelling
 
 Two claims, and I think both are right with one caution each.
 
-### 6.1 As a prettier JSONL
+### 6.1 As a prettier JSONP
 
-Real. `.fink.js` already carries multiple typed blocks via
-`OO(mediaType)`, raw-captured, executed rather than parsed. Against JSONL
-it wins on: comments, unescaped newlines inside records, free syntax
-highlighting, and self-description (the file can *say* what it is,
-because it runs).
+JSONP, not JSONL — and the distinction matters, because it names what
+FINK *is* rather than what it resembles. A `.fink.js` is a script you
+load that calls back into your page with data. `oooOO` is the callback.
+That is JSONP exactly, with two upgrades: the callback is a **tagged
+template** (so the payload needs no escaping and keeps its newlines), and
+there can be **many callbacks with declared media types**
+(`OO('text/turtle')`, `OO('application/vnd.fink.playlist+json')`).
+
+Against JSON-as-data it wins on comments, unescaped multi-line content,
+free syntax highlighting, and self-description — the file can *say* what
+it is, because it runs.
 
 **The cost to state plainly:** reading it requires a JavaScript engine.
-JSONL does not. That is a genuine disadvantage for a data interchange
-format and should be argued rather than glossed — the answer is probably
-"FINK is an authoring and delivery format; export JSONL for consumers who
-just want rows."
+That is a real disadvantage for interchange, and the honest answer is
+that FINK is an authoring and delivery format — export plain JSON/JSONL
+for consumers who just want rows.
+
+### 6.1.1 The unresolved bit: many blocks, and knowing when they landed
+
+This is the open issue, and JSONP is exactly where it bites: *did the
+callback fire, and did all of them?*
+
+**Current state, verified.** The sandbox executes the whole file
+synchronously and then reports:
+
+```js
+(new Function(e.data.content))();
+parent.postMessage({ type: 'fink-loaded',
+                     data: window.finkData, blocks: window.finkBlocks }, '*');
+```
+
+So **"loaded" means "the file's top-level code finished"**. For the
+format's normal shape — top-level tagged-template calls — that is a
+genuinely sound guarantee, and it means classic JSONP's "did it fire?"
+problem is already solved *by construction*. Worth knowing before
+designing anything more elaborate.
+
+Four things it does not survive:
+
+1. **An async block vanishes silently.** A file doing
+   `fetch(u).then(t => oooOO(t))` or deferring a block into a
+   `setTimeout` posts `fink-loaded` *before* that block exists. No error,
+   no warning — the block is simply absent. Nothing checks.
+2. **Everything is eager, and resident about three times over.** All
+   blocks accumulate in `window.finkData`; the whole array crosses
+   postMessage (structured clone = a full copy); the parent keeps
+   `lastBlocks`. A 40 MB binhexed video is a string in the sandbox, plus
+   a clone in transit, plus a copy in the host.
+3. **Only block 0 is consumed.** `data.data[0]`, commented "use only the
+   first oooOO block". `lastBlocks` is captured and — checked — read
+   **nowhere else**. Multi-block is plumbed and unused.
+4. **One flat timeout for the whole file**
+   (`SANDBOX_TIMEOUT_MS: 15000`). A large file fails as "Sandbox
+   timeout", indistinguishable from a hung one.
+
+**Direction I would propose.**
+
+- **Manifest first, payload on demand.** `fink-loaded` returns only
+  `[{ index, sigil, mediaType, bytes }]`. The host then asks for the
+  blocks it actually wants, by index, and the sandbox stays alive until
+  released. This removes one of the three copies outright and makes
+  "block 0 now, block 5 never" expressible — which is the whole point
+  when block 5 is an etext or a video.
+- **An explicit not-done-yet signal.** Because the file is JS it can say
+  so: a file that registers pending work defers `fink-loaded` until it
+  settles. Absent that declaration, synchronous-complete stays the
+  assumption, so every file that exists today is unaffected.
+- **Per-block progress** rather than one 15s cliff, so a slow legitimate
+  load is distinguishable from a hang.
+
+**And a push-back:** binhexing video into a `.fink.js` is the wrong tool
+even once the above exists. The format's strength is co-locating *small*
+typed data with narrative. Large media should be referenced by URL — the
+`# IMAGE:`/`# VIDEO:` tags already work that way, and the browser can
+then stream and range-request it instead of us paying string + clone +
+copy for bytes it could have handled natively.
 
 ### 6.2 As a shape many things fit
 
@@ -221,3 +332,12 @@ Roughly in dependency order, none of them large:
 
 Steps 1–4 are each useful on their own even if step 5 never happens,
 which is the main reason to do them in that order.
+
+Independent of all five, and cheap:
+
+- **Block manifest + on-demand payload** in the sandbox (§6.1.1). Removes
+  a whole copy of every large block and makes multi-block usable at all —
+  today block 0 is the only one anyone reads.
+- **`gcfink.compose()`** as the home for composition semantics (§5.1),
+  starting by giving `fink-namespace-preprocessor.js` a library home
+  instead of a demos folder.
