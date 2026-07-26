@@ -173,6 +173,34 @@ export class FoafSecrets {
   // the clear — is the exact bug this module exists to prevent, so it is
   // not offered.
 
+  /**
+   * Is there a sealed blob on this device?
+   *
+   * Needed because "no secret stored" and "your secret is right there,
+   * sealed, and nobody has unlocked it" are completely different situations
+   * for a user, and a broker that reports the first for the second sends
+   * them off to mint a new token they did not need. The UI can only tell
+   * them apart if this exists.
+   */
+  hasSealed() {
+    try { return !!this.storage?.getItem(this.key); } catch (e) { return false; }
+  }
+
+  /** Drop the sealed blob AND everything held for the run. */
+  clearSealed() {
+    const had = this.hasSealed();
+    try { this.storage?.removeItem(this.key); } catch (e) { /* nothing to do */ }
+    const n = this.count();
+    this._mem = new Map();
+    this._passphrase = null;
+    this.sealed = false;
+    this._say('secrets.cleared', {
+      summary: `every stored secret was forgotten (${n} held, ${had ? 'sealed blob removed' : 'nothing on disk'})`,
+      count: n, had,
+    });
+    return { ok: true, forgotten: n };
+  }
+
   async seal(passphrase) {
     if (!passphrase) throw new Error('a passphrase is required to seal secrets');
     if (!this.storage) return { ok: false, reason: 'no-storage' };

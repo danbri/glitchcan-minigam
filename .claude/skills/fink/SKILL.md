@@ -883,7 +883,18 @@ not thereby get to keep tokens.
 - Sealed at rest via `session.mjs` (AES-GCM + PBKDF2). **No passphrase means
   no sealing** — it holds them for the run and SAYS `sealed: false`, rather
   than silently writing them out in the clear, which is the bug it exists to
-  stop.
+  stop. The drawer's passphrase (`#foafos-pass`, SAVE/UNLOCK/FORGET) seals
+  secrets alongside the session — one prompt, not two.
+- `hasSealed()` exists because **"you have no key" and "your key is sealed
+  here and nobody unlocked it" are different situations**, and reporting the
+  first for the second sends a user off to mint a token they already have.
+- Unsealing restores VALUES, not GRANTS — grants are made at launch, so right
+  after a reload `names(app)` is still `null`. Correct, and asserted.
+  UNLOCK also re-runs `aimVerbsFor` for every live node, or the key comes back
+  and the verb that uses it stays refused.
+- `clearSealed()` on FORGET takes the blob and everything held. Leaving a
+  sealed token behind after someone pressed FORGET is the worst reading of
+  the word.
 - `use(appId, name, fn)` runs `fn` shell-side. It must NEVER accept a
   guest-supplied function — that is reading the secret with extra steps. The
   transport exposes named OPERATIONS.

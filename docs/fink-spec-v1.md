@@ -658,6 +658,15 @@ The secrets interface is deliberately asymmetric:
   session). With no passphrase the host MUST hold secrets for the run
   only and MUST report `sealed: false`. Writing them out unsealed is the
   exact failure the feature exists to prevent, so it MUST NOT be offered.
+- The host MUST be able to report that a sealed store exists but is
+  locked, distinctly from holding nothing. They are different situations
+  for a user, and reporting the second for the first invites them to
+  replace a credential they still have.
+- Unsealing restores values, NOT grants. An app's entitlement is granted
+  when it launches, so a restored secret MUST stay ungrantable to an app
+  that is not running: attenuation is not suspended by a reload.
+- Clearing the session MUST clear the secrets with it. A sealed credential
+  surviving an explicit "forget" is the worst available reading of it.
 - A failed use MUST report the error **type** and never its message: a
   fetch failure's message and URL routinely contain the credential.
 

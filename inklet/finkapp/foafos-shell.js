@@ -697,9 +697,23 @@ function buildUI() {
   const refreshStatus = () => {
     const s = FoafOS.session.current;
     const who = s.profile.name ? `“${s.profile.name}”` : 'anonymous';
-    status(FoafOS.session.hasSealed()
-      ? `${who} · sealed session saved on this device`
-      : `${who} · ephemeral (dies with the tab unless saved)`);
+    status(`${who} · ${FoafOS.session.hasSealed()
+      ? 'sealed session saved on this device'
+      : 'ephemeral (dies with the tab unless saved)'}${secretsNote()}`);
+  };
+  // The passphrase field was already here, and until now it sealed only the
+  // session. Secrets could be sealed the same way and nothing called it, so
+  // in practice they were memory-only — the honest default, but a gap.
+  //
+  // Reporting the SEALED-BUT-LOCKED state is the load-bearing half. "You
+  // have no key stored" and "your key is right there, sealed, and nobody
+  // has unlocked it" are completely different situations, and a shell that
+  // reports the first for the second sends someone off to mint a token they
+  // already have.
+  const secretsNote = () => {
+    if (secrets.count()) return ` · ${secrets.count()} secret(s) ${secrets.sealed ? 'sealed' : 'held for this run'}`;
+    if (secrets.hasSealed()) return ' · secrets sealed on this device — UNLOCK to use them';
+    return '';
   };
 
   $('#foafos-name').addEventListener('change', () => {
@@ -710,24 +724,51 @@ function buildUI() {
   $('#foafos-save').addEventListener('click', async () => {
     try {
       FoafOS.session.current.profile.name = $('#foafos-name').value.trim() || undefined;
-      await FoafOS.session.seal($('#foafos-pass').value);
+      const pass = $('#foafos-pass').value;
+      await FoafOS.session.seal(pass);
+      // …and the secrets with it, under the same passphrase. One prompt, not
+      // two: a user asked to remember a second password for their tokens
+      // will reuse the first one anyway.
+      const sec = await secrets.seal(pass).catch(() => ({ ok: false }));
       $('#foafos-pass').value = '';
       refreshStatus();
-      status('saved — encrypted at rest with your passphrase');
+      status(sec.ok
+        ? `saved — session and ${secrets.count()} secret(s) encrypted at rest`
+        : 'saved — session encrypted at rest with your passphrase');
     } catch (e) { status(String(e.message || e), true); }
   });
   $('#foafos-unlock').addEventListener('click', async () => {
     try {
-      const s = await FoafOS.session.unlock($('#foafos-pass').value);
+      const pass = $('#foafos-pass').value;
+      const s = await FoafOS.session.unlock(pass);
+      // Only after the session opened, so a wrong passphrase has already
+      // failed once and this is not a second guess at the same secret.
+      const sec = await secrets.unseal(pass);
       $('#foafos-pass').value = '';
       $('#foafos-name').value = s.profile.name || '';
+      // A verb an app was granted may now have its key back, so re-apply
+      // every saved destination — otherwise unlocking restores the
+      // credential and leaves the thing that uses it still refused.
+      // `apps.nodes` is a Map, so iterate its values — `?.find?.()` on it is
+      // `undefined` and would have made this whole loop a silent no-op that
+      // looked like working code.
+      for (const node of apps.nodes.values()) {
+        if (node.surface === 'root') continue;
+        aimVerbsFor(node.appId, node.capabilities || []);
+      }
       refreshStatus();
+      if (sec.ok) status(`unlocked — ${secrets.count()} secret(s) available again`);
     } catch (e) { status(String(e.message || e), true); }
   });
   $('#foafos-forget').addEventListener('click', () => {
     FoafOS.session.forget();
+    // Forgetting the session MUST take the credentials with it. Leaving a
+    // sealed token behind after someone pressed FORGET would be the worst
+    // possible reading of the word.
+    const gone = secrets.clearSealed();
     $('#foafos-name').value = '';
     refreshStatus();
+    if (gone.forgotten) status(`forgotten — including ${gone.forgotten} secret(s)`);
   });
 
   refreshStatus();

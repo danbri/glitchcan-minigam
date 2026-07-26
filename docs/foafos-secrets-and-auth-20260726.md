@@ -129,7 +129,31 @@ A verb with **no destination configured is refused**, which is the right
 default for something that writes to a person's repo. The scope is validated
 when it is set, so a typo fails then rather than at someone's first Save.
 
-### 3. The shell collects the credential, not the app
+### 3. Sealing, and the state nobody thinks to report
+
+The passphrase field in the drawer had been sealing only the *session*.
+Sealing secrets was implemented and nothing called it, so in practice they
+were memory-only. Now one passphrase does both — a user asked to remember a
+second password for their tokens will reuse the first one anyway.
+
+The load-bearing part is the state in between. **"You have no key stored"
+and "your key is right there, sealed, and nobody has unlocked it" are
+completely different situations**, and a broker that reports the first for
+the second sends someone off to mint a token they already have. Hence
+`hasSealed()`, and a status line that says which.
+
+Two things deliberately do NOT come back with the value:
+
+- **grants.** Unsealing restores what is held, not who may touch it —
+  grants are made when an app launches. So immediately after a reload the
+  key is in memory and `names('edot')` still returns `null`. That is
+  attenuation outliving a reload rather than being accidentally survived by
+  it, and there is a test asserting exactly that shape.
+- **nothing, on FORGET.** Leaving a sealed token behind after someone
+  pressed FORGET would be the worst available reading of the word, so
+  `clearSealed()` takes the blob and everything held, and says how much.
+
+### 4. The shell collects the credential, not the app
 
 `FoafOS.aimOp(appId, capability, scope)` needed a caller, and the obvious
 place for one turned out to be a load-bearing design point rather than a
@@ -164,9 +188,10 @@ uses is how a vocabulary starts lying.
   is the ceiling on GitHub Pages. Access tokens expire and the user signs in
   again. A "bring your own PAT" path (what GitHub-backed saving already is)
   stays the pragmatic option, and is now storable without being readable.
-- **Sealed at rest needs a passphrase the user actually sets.** Today
-  nothing prompts for one on the office root, so in practice secrets are
-  memory-only there. That is the honest default, not a solved problem.
+- **Sealed at rest needs a passphrase the user actually sets.** The drawer's
+  existing passphrase field now seals secrets alongside the session, so it is
+  reachable — but nothing *prompts*, so a user who never types one still gets
+  memory-only secrets that honestly report `sealed: false`.
 - **No `git.delete`, and reads are not brokered.** `BrokeredGitSource.remove`
   clears the local mirror and says the repo copy remains; binary content is
   refused rather than mangled through a text-only verb.
@@ -211,3 +236,10 @@ uses is how a vocabulary starts lying.
   types the key, the app then commits with a credential **it never handled at
   all**, the input is cleared so the value is not left in the DOM, and the
   typed key appears nowhere the app can observe.
+- `e2e-caps` for sealing, **through a real page reload**, because "the code
+  calls `seal()`" and "the token is there afterwards" are different claims and
+  only the second one matters. What is on the device is ciphertext; after the
+  reload nothing is held but the shell knows a sealed key exists; the
+  passphrase brings it back and the wrong one is refused by name; a restored
+  secret is still gated on a grant; the app then publishes again to the same
+  destination; and FORGET leaves nothing on disk.

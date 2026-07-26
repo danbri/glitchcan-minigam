@@ -289,6 +289,88 @@ try {
   const setback = await page.evaluate(() => FinkInkEngine.story.variablesState['diamonds']);
   setback === 42 ? pass('maker SET wrote a live story variable') : fail(`maker set failed: ${setback}`);
 
+  // The drawer's session controls, driven through real clicks. They had
+  // never been touched by a test — which is how the passphrase field came to
+  // seal the session and silently not the secrets for as long as it did.
+  // Clear the desk first: Maker and the widget windows are on top of the
+  // drawer by now, and a button under another window is not clickable — which
+  // is the actionability check doing its job, not a flake to force past.
+  await page.evaluate(() => {
+    document.querySelectorAll('.foafos-window').forEach(w => w.remove());
+    document.getElementById('foafos-home')?.remove();
+  });
+  await page.evaluate(() => {
+    if (!document.getElementById('foafos-drawer').classList.contains('open')) {
+      document.getElementById('foafos-dock').click();
+    }
+    // a secret to seal, so this is not a test of an empty box
+    const S = window.FoafOS.secrets;
+    S.grant('probe', ['secrets']);
+    S.put('probe', 'tok', 'sk_DRAWER_ROUND_TRIP');
+    document.getElementById('foafos-name').value = 'danbri';
+    document.getElementById('foafos-pass').value = 'correct horse';
+  });
+  const hittable = await page.evaluate(() => {
+    const b = document.getElementById('foafos-save').getBoundingClientRect();
+    return b.width > 0 && b.height >= 24;
+  });
+  hittable ? pass('the session controls are visible and hittable in the open drawer')
+    : fail('the SAVE button has no box — the drawer never opened');
+  await page.click('#foafos-save');
+  await page.waitForTimeout(400);
+  const saved = await page.evaluate(() => ({
+    status: document.getElementById('foafos-session-status').textContent,
+    pass: document.getElementById('foafos-pass').value,
+    sealed: window.FoafOS.secrets.sealed,
+    plaintext: Object.keys(localStorage).some(k => (localStorage.getItem(k) || '').includes('sk_DRAWER_ROUND_TRIP')),
+  }));
+  saved.sealed && saved.pass === '' && !saved.plaintext && /secret/.test(saved.status)
+    ? pass(`SAVE sealed the session AND the secrets ("${saved.status.slice(0, 60)}")`)
+    : fail(`drawer SAVE did not seal secrets: ${JSON.stringify(saved)}`);
+
+  await page.reload();
+  await page.waitForTimeout(2500);
+  const locked = await page.evaluate(() => {
+    // the reload brings the story (and its game window) back, so clear the
+    // desk again before reaching for the drawer
+    document.querySelectorAll('.foafos-window').forEach(w => w.remove());
+    if (!document.getElementById('foafos-drawer').classList.contains('open')) {
+      document.getElementById('foafos-dock').click();
+    }
+    return {
+      status: document.getElementById('foafos-session-status').textContent,
+      held: window.FoafOS.secrets.count(),
+    };
+  });
+  locked.held === 0 && /UNLOCK to use them/.test(locked.status)
+    ? pass('after a reload the drawer says a sealed key is here, not that there is none')
+    : fail(`the locked state was not reported: ${JSON.stringify(locked)}`);
+
+  await page.fill('#foafos-pass', 'correct horse');
+  await page.click('#foafos-unlock');
+  await page.waitForTimeout(500);
+  const drawerUnlocked = await page.evaluate(() => ({
+    name: document.getElementById('foafos-name').value,
+    status: document.getElementById('foafos-session-status').textContent,
+    held: window.FoafOS.secrets.count(),
+    pass: document.getElementById('foafos-pass').value,
+  }));
+  drawerUnlocked.name === 'danbri' && drawerUnlocked.held === 1 && drawerUnlocked.pass === ''
+    ? pass('UNLOCK brought back the session name and the secret together')
+    : fail(`drawer UNLOCK wrong: ${JSON.stringify(drawerUnlocked)}`);
+
+  await page.click('#foafos-forget');
+  await page.waitForTimeout(300);
+  const forgot = await page.evaluate(() => ({
+    status: document.getElementById('foafos-session-status').textContent,
+    held: window.FoafOS.secrets.count(),
+    sealedLeft: window.FoafOS.secrets.hasSealed(),
+    anywhere: Object.keys(localStorage).some(k => (localStorage.getItem(k) || '').includes('sk_DRAWER_ROUND_TRIP')),
+  }));
+  forgot.held === 0 && !forgot.sealedLeft && !forgot.anywhere
+    ? pass('FORGET took the keys with the session — nothing sealed left behind')
+    : fail(`FORGET left credentials: ${JSON.stringify(forgot)}`);
+
   pageErrors.length === 0 ? pass('no page errors')
     : fail(`page errors: ${pageErrors.slice(0, 3).join(' · ')}`);
   console.log(process.exitCode ? '\nFOAFOS E2E: FAIL' : '\nFOAFOS E2E: PASS');

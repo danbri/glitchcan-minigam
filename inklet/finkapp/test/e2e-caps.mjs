@@ -657,6 +657,79 @@ try {
       !JSON.stringify(shellTyped).includes('ghp_TYPED_INTO_THE_SHELL')
         ? pass('the typed key is nowhere in what the app can observe')
         : fail('the key reached the app');
+
+      // Sealing was implemented and nothing called it, so in practice secrets
+      // were memory-only. The passphrase field in the drawer had been sealing
+      // only the SESSION. Tested through a real reload, because "the code
+      // calls seal()" and "the token is there afterwards" are different
+      // claims and only the second one matters.
+      const sealed = await page.evaluate(async () => {
+        const r = await window.FoafOS.secrets.seal('hunter2');
+        return { ...r, onDisk: !!localStorage.getItem('foafos.secrets'),
+                 plaintext: (localStorage.getItem('foafos.secrets') || '').includes('ghp_TYPED_INTO_THE_SHELL') };
+      });
+      sealed.ok && sealed.onDisk && !sealed.plaintext
+        ? pass('sealing writes CIPHERTEXT to the device, not the token')
+        : fail(`sealing went wrong: ${JSON.stringify(sealed)}`);
+
+      await page.reload();
+      await page.waitForTimeout(2500);
+      const afterReload = await page.evaluate(() => ({
+        held: window.FoafOS.secrets.count(),
+        hasSealed: window.FoafOS.secrets.hasSealed(),
+        names: window.FoafOS.secrets.names('edot'),
+      }));
+      afterReload.held === 0 && afterReload.hasSealed === true
+        ? pass('after a reload nothing is held, but the shell knows a sealed key exists')
+        : fail(`the sealed state was misreported: ${JSON.stringify(afterReload)}`);
+
+      const unsealed = await page.evaluate(async () => {
+        const S = window.FoafOS.secrets;
+        const r = await S.unseal('hunter2');
+        const wrong = await S.unseal('not-it');
+        return {
+          r, wrong: wrong.reason, count: S.count(),
+          // NOT a bug: grants are made when an app LAUNCHES, and nothing has
+          // launched in this freshly reloaded page. So the value is back but
+          // the app is still not entitled to name it, which is attenuation
+          // outliving a reload rather than surviving it by accident.
+          beforeLaunch: S.names('edot'),
+        };
+      });
+      unsealed.r?.ok === true && unsealed.count === 2 && unsealed.wrong === 'wrong-passphrase'
+        ? pass('the passphrase brings both keys back, and the wrong one is refused by name')
+        : fail(`unsealing failed: ${JSON.stringify(unsealed)}`);
+      unsealed.beforeLaunch === null
+        ? pass('a restored secret is still gated on a grant — unsealing does not entitle anyone')
+        : fail(`an unlaunched app could name its secrets: ${JSON.stringify(unsealed.beforeLaunch)}`);
+
+      // Now the path a person actually takes: unlock, open the app, use it.
+      await page.evaluate(() => window.FoafOS.launchApp('edot'));
+      await page.waitForTimeout(4000);
+      const app3 = page.frames().find(f => /edot\.html/.test(f.url()));
+      if (!app3) {
+        fail('edot frame never appeared after the reload');
+      } else {
+        const revived = await page.evaluate(() => ({
+          names: window.FoafOS.secrets.names('edot'),
+          aimed: window.FoafOS.ops.scopeFor('edot', 'git:write'),
+        }));
+        const commit = await app3.evaluate(() =>
+          window.foaf.invoke('git.commit', { path: 'edot/after-reload.md', content: 'still works' }));
+        revived.names?.includes('git.token') && revived.aimed?.repo === 'danbri/e2e-notes'
+          && commit?.ok === true
+          ? pass('a sealed key and its destination both survive a reload — the app publishes again')
+          : fail(`the round trip did not survive: ${JSON.stringify({ revived, commit })}`);
+      }
+
+      const forgotten = await page.evaluate(() => {
+        const r = window.FoafOS.secrets.clearSealed();
+        return { ...r, hasSealed: window.FoafOS.secrets.hasSealed(),
+                 anywhere: Object.keys(localStorage).some(k => (localStorage.getItem(k) || '').includes('ghp_TYPED_INTO_THE_SHELL')) };
+      });
+      forgotten.forgotten === 2 && !forgotten.hasSealed && !forgotten.anywhere
+        ? pass('FORGET means forget: the blob and everything held go, and nothing is left on disk')
+        : fail(`clearing left something behind: ${JSON.stringify(forgotten)}`);
     }
     await page.unroute('https://api.github.com/**');
   }

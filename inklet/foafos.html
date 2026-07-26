@@ -132,8 +132,11 @@
       session passphrase) and <strong>nothing prompts for a passphrase</strong>,
       so in practice they are memory-only for the run &mdash; and say so rather
       than quietly writing tokens out in the clear. The same gap applies to
-      brokered actions: they work, and the destination and key you set in
-      Publishing last only for the run unless a passphrase seals them.</li>
+      brokered actions: they work, and the key you set in Publishing lasts only
+      for the run unless you type a passphrase in the drawer (SAVE), which now
+      seals your secrets as well as your session. The status line
+      distinguishes <em>you have no key</em> from <em>your key is sealed here
+      and nobody has unlocked it</em>; FORGET takes the keys with it.</li>
   <li>Tellyclub's preferences do not persist here — it predates the SDK and
       gets an opaque origin, which it survives only because its author wrote
       defensive storage code.</li>

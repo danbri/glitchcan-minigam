@@ -64,6 +64,11 @@ Adaptation from the guest side.
   first: edot's "stay signed in" had been writing a bearer token to the
   shell's disk in plaintext, because reading back what you wrote is what a
   storage broker is *for*. `docs/foafos-secrets-and-auth-20260726.md`.
+  The drawer's passphrase now seals **secrets as well as the session** — one
+  prompt, not two — and the status line distinguishes *you have no key* from
+  *your key is sealed here and nobody has unlocked it*, because sending
+  someone off to mint a token they already have is its own kind of bug.
+  FORGET takes the credentials with it.
 - **Brokered actions** — what "use a secret" actually means. `foaf.invoke(
   'git.commit', { path, content, message })`: the app names an outcome, the
   shell performs it with a credential the app cannot see. Note what the app
@@ -171,11 +176,10 @@ Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
    to move; finishing a game clears its save so a fresh run is still
    possible. But GridLuck, boidwars and robbin do not implement it — they
    are reported honestly rather than adopted, and the count should rise.
-3. **Nothing prompts for a session passphrase.** Secrets are sealable
-   (AES-GCM + PBKDF2) and nothing asks for the key, so on the office root
-   they are memory-only for the run — and report `sealed: false` rather than
-   quietly writing tokens out in the clear. (The sibling gap, "no UI aims a
-   verb", is closed: the **Publishing** panel does it.)
+3. **Solid is bearer-token only, not DPoP**, and `s3.put`/`solid.put` have
+   no callers, so no app declares those capabilities. There is no
+   `git.delete` verb either, so `BrokeredGitSource.remove` clears the local
+   mirror and says the repo copy remains rather than looking like it worked.
 4. **Stories outrank apps.** The runtime is the host page, so a story can
    launch, navigate and restyle. Its capability list describes rather than
    constrains — flagged `enforced: false` and disclosed in the drawer. Gating

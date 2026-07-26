@@ -159,3 +159,51 @@ test('apps cannot see each other, by name or by use', async () => {
   assert.deepEqual(s.names('sheets'), []);
   assert.equal((await s.use('sheets', 'gh', () => 1)).reason, 'missing');
 });
+
+// hasSealed exists because "you have no key" and "your key is right there,
+// sealed, and nobody unlocked it" are completely different situations for a
+// user. A broker that reports the first for the second sends them off to
+// mint a token they already have.
+test('a sealed blob on the device is distinguishable from having nothing', async () => {
+  const store = memStorage();
+  const a = new FoafSecrets({ storage: store });
+  assert.equal(a.hasSealed(), false, 'nothing stored yet');
+  a.grant('edot', [SECRETS_CAP]);
+  a.put('edot', 'gh.token', TOKEN);
+  await a.seal('hunter2');
+
+  // A FRESH broker over the same device: it holds nothing, but must not
+  // claim there is nothing to hold.
+  const b = new FoafSecrets({ storage: store });
+  assert.equal(b.count(), 0);
+  assert.equal(b.hasSealed(), true, 'it can tell the difference');
+  assert.deepEqual(b.names('edot'), null, 'and still refuses an ungranted app');
+  b.grant('edot', [SECRETS_CAP]);
+  assert.deepEqual(b.names('edot'), [], 'granted but locked reads as empty, not as the value');
+  assert.equal((await b.unseal('hunter2')).ok, true);
+  assert.deepEqual(b.names('edot'), ['gh.token']);
+});
+
+test('with no storage at all, hasSealed is false rather than a thrown error', () => {
+  assert.equal(new FoafSecrets({}).hasSealed(), false);
+});
+
+test('clearSealed takes the blob AND what is held — FORGET must mean forget', async () => {
+  const store = memStorage();
+  const bus = busSpy();
+  const s = new FoafSecrets({ storage: store, bus });
+  s.grant('edot', [SECRETS_CAP]);
+  s.put('edot', 'gh.token', TOKEN);
+  await s.seal('hunter2');
+  assert.ok(store._all().length > 0);
+
+  const r = s.clearSealed();
+  assert.equal(r.forgotten, 1);
+  assert.equal(s.hasSealed(), false, 'the sealed blob is gone from the device');
+  assert.equal(s.count(), 0, 'and nothing is still held in memory');
+  assert.equal(s.sealed, false);
+  assert.ok(!store._all().includes(TOKEN));
+  assert.ok(bus.seen.some(e => e.topic === 'secrets.cleared'), 'and it says so');
+  // a re-seal after clearing must not silently resurrect anything
+  assert.equal((await s.unseal('hunter2')).reason, 'nothing-stored');
+});
