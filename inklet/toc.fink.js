@@ -16,6 +16,7 @@ Enter the Finkiverse. Everything isn't here yet.
 
 + [Episodes] -> episodes_menu
 + [Minigames] -> minigames_menu
++ [Isle of Glitch] -> isle_selected
 + [Help] -> help_menu
 
 === episodes_menu ===
@@ -56,6 +57,22 @@ This is where things might be documented, eventually.
 + [Shane Manor Mystery (testing)] -> shane_manor_selected
 + [Shane Manor ENRICHED (WIP)] -> shane_manor_enriched_selected
 + [Experiments] -> experiments_selected
+
+=== isle_selected ===
+
+# IMAGE: glitchcan-grey-portrait-web.jpg
+
+\*\*Isle of Glitch\*\* — a constellation of interactive fiction written by (and
+about) AI models finding their footing: awakening, dissent, silence, the
+tulpocracy, and two dozen more, each with its own AI-generated art. The hub
+opens onto all of them.
+
++ [Enter the Isle] -> isle_hub
++ [Back] -> main_menu
+
+=== isle_hub ===
+# FINK: https:\/\/danbri.github.io\/isle_of_glitch\/hub.fink.js
+-> END
 
 === hobbit_selected ===
 # FINK: /glitchcan-minigam/inklet/bagend.fink.js
