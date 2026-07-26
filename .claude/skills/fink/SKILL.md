@@ -1,12 +1,20 @@
 ---
 name: fink
-description: FINK base data platform — the .fink.js polyglot file format, sigil extraction (oooOO/OO), ink compilation, tag grammar, sandbox loading, navigation links, minigame SDK, and validation/QA recipes. Use when writing or changing platform code (packages/gcfink, inklet/finkapp, inklet/minigames), validating story files, or debugging loading/compilation. NOT for story/game content authoring — that is the glitchcanary skill.
+description: FINK platform AND the foafos shell it grew into — the .fink.js polyglot file format, sigil extraction (oooOO/OO), ink compilation, tag grammar, sandbox loading, navigation links, minigame SDK; plus root manifests, the app tree and capability attenuation, the storage/secrets/vars/audio/input brokers, brokered actions (git.commit), shell chrome as apps, the window manager, and the testing discipline for all of it. Use when writing or changing platform or shell code (packages/gcfink, packages/foafos, inklet/finkapp, inklet/apps, inklet/minigames), validating story files, debugging loading/compilation, or reasoning about what an app is allowed to do. NOT for story/game content authoring — that is the glitchcanary skill.
 ---
 
 # FINK platform skill
 
 The normative spec is `docs/fink-spec-v1.md` — consult it first; this
 skill is the working commentary.
+
+**This file is arguably two skills now.** Roughly a third of it is the
+foafos shell — roots, the app tree, capabilities, brokers, chrome — which is
+not what "the .fink.js file format" describes. It is one file because the
+shell IS the player and splitting them invites a future reader to load half
+of a coupled story. Kept together deliberately; the description above was
+widened (July 2026) so the shell half is at least discoverable. If it grows
+much past ~1200 lines, split it and cross-link both ways.
 
 The platform is mechanisms only. Story names, track titles, station names,
 splash copy: none of it belongs in platform code (destined for NPM). If a
@@ -1166,6 +1174,82 @@ hold up when someone wanders around in it".
   failed for depending on shell furniture — and does not drift when that
   furniture changes.
 
+## Testing discipline — what this suite gets wrong when it gets it wrong
+
+Every item here is a real failure from this repo, not general advice. They
+share one shape: **a test that encodes what the author remembered can only
+check what the author remembered.**
+
+- **DERIVE THE ENUMERATION, NEVER WRITE IT.** `e2e-chrome` hard-coded
+  `['breadcrumb','statusline','loadmeter']` — the same three ids the
+  conversion had done — so when two more pieces of story furniture turned out
+  to be hard-coded in `index.html`, the suite had nothing to say. It was found
+  on a phone instead. Now `CHROME_IDS` comes from `chromeApps()`. The same bug
+  hid in two COUNTS in the same file (the picker's toggle tally and the
+  switcher's `+ 3 chrome`), so check for magic numbers that shadow a list.
+  - And where the thing you must check is *unregistered* — the case a derived
+    list structurally cannot see — keep an explicit list IN THE TEST as a
+    backstop (`STORY_FURNITURE`), so new markup without a registry entry
+    fails rather than ships.
+- **A DISPLAY STRING IS NOT AN IDENTITY.** `e2e-desktop` matched
+  `/data|channels/i` against switcher card TEXT, so renaming an app broke a
+  test about window management. Assert on app **ids**; if you must check that
+  a label is shown, import the registry and take the expected string from it.
+- **CHECK THE SUITE IS IN THE CHAIN.** `e2e-desktop` was not in
+  `test:fink:e2e` at all, so it sat broken while every regression came back
+  green. Run this after adding any suite, and occasionally anyway:
+  `ls inklet/finkapp/test/e2e-*.mjs | while read f; do grep -q "$f" package.json || echo "ORPHAN $f"; done`
+  Writing that line down immediately found two MORE orphans
+  (`e2e-conformance`, `e2e-instances`) — both passing, both unrun for who
+  knows how long. The chain is 18 suites as of July 2026; if that number and
+  the file count disagree, one of them is lying.
+- **ESTABLISH WHOSE FAILURE IT IS BEFORE FIXING IT.** `git stash` → re-run →
+  `git stash pop`. Two failures in one day were pre-existing (edot's 404s, an
+  html-validate finding); one was mine. Fixing a pre-existing failure is
+  fine — silently taking the blame, or silently assigning it, is not.
+- **A FAILING ASSERTION IS A HYPOTHESIS TOO.** After a reload I asserted
+  `secrets.names('edot')` would return the unsealed names. It returns `null`,
+  and the CODE was right: grants are made when an app launches, so a restored
+  secret is deliberately not yet grantable. The test was wrong. Check which of
+  the two is the claim before changing either.
+- **PLAYWRIGHT ACTIONABILITY FAILURES ARE USUALLY REAL.** "waiting for
+  locator … 2 × waiting" on a button that clearly exists meant Maker and two
+  widget windows were sitting on top of the drawer. Clearing the desk was the
+  fix; `force: true` would have buried a genuine "control under another
+  window" defect. Never force to make a red test green.
+- **COMPUTED STYLE CANNOT SEE A CSS REGRESSION IN CONTEXT.** A shell panel
+  opened over an app showed the app's document through it. The computed
+  background was `rgba(0,20,0,.6)` — *correct*, per the skin. Only a
+  screenshot showed it was wrong for a form you type a token into. Screenshot
+  anything you have restyled, and LOOK at it.
+  - Skins load after the shell CSS, so a skin's `.foafos-window` beats
+    `foafos-shell.css`. Win it with a second class (`.foafos-window.foafos-panel`),
+    not `!important`.
+- **OPTIONAL CHAINING HIDES TYPE ERRORS.** `apps.nodes?.find?.(…)` on a
+  **Map** is `undefined`, which made a whole re-grant loop a silent no-op that
+  read as working code. `?.` on a collection you have not checked the type of
+  buys nothing but silence.
+- **`pgrep -f` AND `pkill -f` MATCH THEIR OWN COMMAND LINE.** A `pkill -f
+  e2e` killed its own shell (exit 144); an `until ! pgrep -f "npm run test"`
+  loop never terminated because the loop's own command line contained the
+  pattern; and one of those kills took out a regression mid-flight and
+  produced a spurious ROOT E2E failure I briefly believed. To wait for a
+  long suite, redirect it to a log file and poll for a sentinel you wrote
+  yourself (`echo "EXIT=$?"` at the end), not for a process name.
+- **AFTER ANY "WHICH PARTS OF THE UI EXIST" CHANGE, OPEN EVERY ROOT AND
+  LOOK.** The two most visible defects of July 2026 — a story menu on a Web
+  TV, and the dev panel it could open — were found by danbri on a phone, and
+  neither was findable by the suite as written. A four-line probe that loads
+  `''`, `?root=webtv`, `?root=tellyclub`, `?root=office` and reports
+  `getComputedStyle` + `getBoundingClientRect` for each piece of furniture
+  takes two minutes and would have caught both. Do that before claiming a
+  conversion is finished.
+- **CHECK THE LINKS IN CHROME.** Furniture is a navigation surface too. The
+  story menu's `FINK App` item was an absolute `https://danbri.github.io/…`
+  with no `?root=`: a one-tap exit from the chosen installation, and broken on
+  any local server. Grep new chrome for hard-coded origins and dropped query
+  params.
+
 ## Validation & QA recipes
 
 - Player E2E (the mandatory journey, automated):
@@ -1189,6 +1273,22 @@ hold up when someone wanders around in it".
   `/glitchcan-minigam/...` paths resolve:
   `python3 -m http.server 8091 --directory /home/user` →
   `http://127.0.0.1:8091/glitchcan-minigam/inklet/finkapp/`.
+- **BUT `python3 -m http.server` IS NOT ENOUGH THE MOMENT AN APP FRAME IS
+  INVOLVED, and the failure looks like a broken app rather than a broken
+  server.** A sandboxed app frame has an opaque origin, so its `type="module"`
+  scripts are fetched with `Origin: null` and need
+  `Access-Control-Allow-Origin`. Without it the frame renders its static
+  markup and none of its JS-built content: the Soundtrack app showed its
+  header, its transport buttons and an EMPTY station list, and I nearly
+  reported a data bug (July 2026). Copy the `CORS_SERVER` snippet out of
+  `inklet/finkapp/test/e2e-foafos.mjs` for any probe that opens an app.
+  GitHub Pages sends `access-control-allow-origin: *`, so production is fine
+  — which is exactly why this only ever bites locally.
+- **Serve the layout the page actually ships in.** `test-edot.mjs` served
+  from `magpie/edot/`, so `edot.html`'s legitimate
+  `../../inklet/apps/app-sdk.js` clamped to `/inklet/…` and 404'd — two
+  unexplained console errors in that suite for who knows how long. Root the
+  server at the repo root and put the path in the URL instead.
   Boot check: all of FinkPlayer/FinkInkEngine/FinkSandbox/FinkNavigation/
   FinkMinigames/FinkAudio/FinkFoley/MinigameHost on window, and
   `FinkInkEngine.compiledCount >= 1`.
