@@ -716,7 +716,18 @@ back to the default and say `fellBack` on `root.ready`.
 - Storyless roots set `:root[data-root-storyless]`, which hides the
   breadcrumb and status bar — narrative furniture on an office desktop is
   decoration that also claims tab stops.
-- Locked by `e2e-root.mjs` (10) + `apptree.test.js` (8 unit).
+- **The tree has real branches:** the loaded story becomes a node under
+  root (`FoafOS.storyNode`) and games open UNDER it, so closing the story
+  tears down its games for real (guest frame gone, WM inactive). Done by
+  OBSERVING `story.state` and `minigame.instance` in the shell — the ink
+  engine and minigame host stay unaware, so if the wiring is wrong it is
+  wrong in one file.
+- The real teardown is `FinkMinigames.endMinigame()`. There is no
+  `closeMinigame` — an `onClose` calling it is a silent no-op that leaves
+  the guest running while the tree reports it gone. (Caught here by
+  checking; `FinkWM.close?.() ?? FinkMinigames.closeMinigame?.()` in older
+  tests only ever worked because of the `??`.)
+- Locked by `e2e-root.mjs` (16) + `apptree.test.js` (8 unit).
 
 ## Stories are privileged over apps — know this
 

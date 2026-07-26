@@ -185,6 +185,64 @@ bus.publish('root.ready', {
   id: ROOT.id, capabilities: ROOT.capabilities, fellBack: rootFellBack,
 }, { retain: true });
 
+// ── the tree gets its branches ─────────────────────────────────────────
+// A tree whose every node hangs off root is a list wearing a tree's
+// clothes, and the grouping it was built for has nothing to group. So:
+// the loaded story becomes a node under root, and the games it opens
+// become children of THAT — which is what makes "close the story and
+// everything it opened" mean something.
+//
+// Done by observing lifecycle events that already exist rather than
+// teaching FinkMinigames about the tree. The engine and the minigame host
+// stay unaware; if this were wrong, it would be wrong in one file.
+//
+// Note the capability list: a story's powers DESCRIBE rather than
+// constrain (the narrative runtime is the host page — see foafos-apps.js),
+// so the node carries the root's own set. When the runtime finally moves
+// into a frame, this is the line that starts telling the truth.
+let storyNode = null;
+bus.subscribe('story.state', (e) => {
+  if (e.source !== 'local') return;
+  const phase = e.data?.phase;
+  if (phase !== 'play' || storyNode) return;
+  storyNode = apps.spawn({
+    appId: 'story', parentId: FoafOS.rootNode?.id || null,
+    capabilities: FoafOS.rootNode?.capabilities || [],
+    label: 'Story', surface: 'story',
+  });
+  if (storyNode.refused) storyNode = null;
+  FoafOS.storyNode = storyNode;
+});
+
+// Games open UNDER the story that opened them. The shell mirrors the
+// minigame host's own instance events; onClose routes back through the
+// host so closing a subtree really tears the guest down rather than
+// just forgetting it.
+const gameNodes = new Map();       // minigame instance id -> tree node id
+bus.subscribe('minigame.instance', (e) => {
+  if (e.source !== 'local') return;
+  const { id, type, closed } = e.data || {};
+  if (!id) return;
+  if (closed) {
+    const nodeId = gameNodes.get(id);
+    gameNodes.delete(id);
+    // The guest is already gone; drop the node without re-closing it.
+    if (nodeId && apps.get(nodeId)) { apps.get(nodeId).onClose = null; apps.close(nodeId); }
+    return;
+  }
+  const app = appById(type);
+  const node = apps.spawn({
+    appId: type, parentId: (storyNode || FoafOS.rootNode)?.id || null,
+    capabilities: app?.capabilities || [],
+    label: app?.name || type, surface: 'stage',
+    // endMinigame() is the real teardown — `closeMinigame` does not
+    // exist, and an onClose calling it would have been a silent no-op
+    // that left the guest running while the tree said it was gone.
+    onClose: () => { try { window.FinkMinigames?.endMinigame?.(); } catch (err) { /* already gone */ } },
+  });
+  if (!node.refused) gameNodes.set(id, node.id);
+});
+
 // ── input: one d-pad for the whole shell (OS service) ───────────────────
 // The pad lives in the HOST page, not inside a guest iframe: only the
 // host sees the real visible viewport and the device's safe-area insets,

@@ -150,6 +150,59 @@ try {
     await page.close();
   }
 
+  // ── 5. the tree has BRANCHES: a game opened by a story is its child ─
+  // A tree whose every node hangs off root is a list in tree clothing,
+  // and the grouping it exists for has nothing to group.
+  {
+    const page = (await browser.newPage({ viewport: { width: 900, height: 800 }, hasTouch: true }));
+    const errs = [];
+    page.on('pageerror', e => errs.push(String(e).split('\n')[0].slice(0, 140)));
+    await page.goto(base + `?story=/${repoName}/inklet/hampstead.fink.js`);
+    await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
+    await page.waitForTimeout(1500);
+
+    const hasStory = await page.evaluate(() => !!FoafOS.storyNode);
+    hasStory ? pass('the loaded story is a node under root')
+             : fail('no story node was created');
+
+    await page.evaluate(() => FinkMinigames.startMinigame('gridluck', 'normal'));
+    await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 15000 });
+    await page.waitForTimeout(2500);
+
+    const shape = await page.evaluate(() => {
+      const t = FoafOS.apps;
+      const story = FoafOS.storyNode;
+      const kids = t.children(story.id);
+      return {
+        storyId: story.id,
+        childLabels: kids.map(k => k.label),
+        depths: kids.map(k => t.depth(k.id)),
+        total: t.report().total,
+      };
+    });
+    shape.childLabels.length === 1 && shape.depths[0] === 2
+      ? pass(`the game is a CHILD of the story, not a sibling (${shape.childLabels[0]} at depth 2 of ${shape.total} nodes)`)
+      : fail(`tree is still flat: ${JSON.stringify(shape)}`);
+
+    // and closing the story takes the game with it, for real
+    const after = await page.evaluate(async () => {
+      const t = FoafOS.apps;
+      const closed = t.close(FoafOS.storyNode.id);
+      await new Promise(r => setTimeout(r, 1200));
+      return {
+        closed: closed.length,
+        wmActive: window.FinkWM?.active,
+        guestGone: !document.querySelector('#minigame-iframe-gridluck'),
+        remaining: t.report().total,
+      };
+    });
+    after.closed === 2 && after.wmActive === false && after.guestGone
+      ? pass('closing the story really tore down the game beneath it (guest frame gone, WM inactive)')
+      : fail(`cascade did not reach the guest: ${JSON.stringify(after)}`);
+    errs.length === 0 ? pass('story tree: no page errors') : fail(`story tree errors: ${errs[0]}`);
+    await page.close();
+  }
+
   console.log(process.exitCode ? '\nROOT E2E: FAIL' : '\nROOT E2E: PASS');
 } catch (e) {
   fail(`fatal: ${String(e).slice(0, 250)}`);
