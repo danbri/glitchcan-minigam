@@ -1024,16 +1024,49 @@ function buildUI() {
     win.style.height = `${winH}px`;
     win.style.left = `${clamp(12 + (widgetSeq % 5) * 24, window.innerWidth - winW - 8)}px`;
     win.style.top = `${clamp(60 + (widgetSeq % 5) * 24, window.innerHeight - winH - 8)}px`;
+    // Real window controls, uniform across every floated app — minimize
+    // (collapse to the bar), maximize (fill the viewport, toggling back to
+    // the saved geometry), close. Before this, an app window offered only
+    // ✕: no way to get it out of the way without killing it, and no way to
+    // give it the whole screen — the gap the field report named.
     win.innerHTML = `
       <div class="foafos-window-bar"><span>${title}</span>
-        <button type="button" class="foafos-window-close" aria-label="Close ${title}">✕</button></div>`;
+        <span class="foafos-window-controls">
+          <button type="button" class="foafos-window-btn foafos-window-min" aria-label="Minimize ${title}" aria-pressed="false" title="Minimize">–</button>
+          <button type="button" class="foafos-window-btn foafos-window-max" aria-label="Maximize ${title}" aria-pressed="false" title="Maximize">▢</button>
+          <button type="button" class="foafos-window-btn foafos-window-close" aria-label="Close ${title}" title="Close">✕</button>
+        </span></div>`;
 
     win.querySelector('.foafos-window-close').addEventListener('click', () => win.remove());
+
+    const minBtn = win.querySelector('.foafos-window-min');
+    minBtn.addEventListener('click', () => {
+      const min = win.classList.toggle('minimized');
+      if (min) win.classList.remove('maximized');
+      minBtn.setAttribute('aria-pressed', String(min));
+    });
+
+    const maxBtn = win.querySelector('.foafos-window-max');
+    let restore = null;
+    maxBtn.addEventListener('click', () => {
+      if (win.classList.toggle('maximized')) {
+        restore = { left: win.style.left, top: win.style.top, width: win.style.width, height: win.style.height };
+        win.classList.remove('minimized');
+        minBtn.setAttribute('aria-pressed', 'false');
+        maxBtn.setAttribute('aria-pressed', 'true');
+        maxBtn.textContent = '❐';
+      } else {
+        if (restore) Object.assign(win.style, restore);
+        maxBtn.setAttribute('aria-pressed', 'false');
+        maxBtn.textContent = '▢';
+      }
+    });
 
     const bar = win.querySelector('.foafos-window-bar');
     let drag = null;
     bar.addEventListener('pointerdown', (e) => {
       if (e.target.tagName === 'BUTTON') return;
+      if (win.classList.contains('maximized')) return;   // restore first to move
       e.preventDefault();
       bar.setPointerCapture(e.pointerId);
       const r = win.getBoundingClientRect();
@@ -1305,7 +1338,16 @@ function buildUI() {
         const frame = document.createElement('iframe');
         frame.title = app.name;
         frame.setAttribute('sandbox', sandboxFor(app));
-        if (caps.includes('geolocation')) frame.allow = 'geolocation';
+        // Permissions-Policy delegation. A sandboxed frame has an opaque
+        // origin, which is NOT `self`, so any feature default-scoped to self
+        // — autoplay, geolocation — is DENIED inside it unless the parent
+        // grants it here. A media app whose iframe lacks `autoplay` can
+        // register a MediaSession and look like it is playing while the OS
+        // (iOS especially) keeps it silent, so every `audio` app gets it.
+        const allow = [];
+        if (caps.includes('geolocation')) allow.push('geolocation');
+        if (caps.includes('audio')) allow.push('autoplay');
+        if (allow.length) frame.allow = allow.join('; ');
         frame.style.cssText = 'flex:1;width:100%;border:0;min-height:0;';
         // src AFTER sandbox/allow — a frame that starts loading before its
         // sandbox is set would run its first script under the wrong rules.

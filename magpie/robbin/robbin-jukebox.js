@@ -52,6 +52,19 @@ export class RobbinJukebox extends HTMLElement {
     g.foley.ensure();
     g.soundtrack.ensureGraph();
     this.audio = new Audio();
+    // WebAudio's createMediaElementSource TAINTS — and thereby SILENCES —
+    // a media element whose resource is cross-origin to THIS document.
+    // Sandboxed inside the foafos shell, robbin.html runs on an opaque
+    // origin (location.origin === 'null'), so its own audio/ files, served
+    // from the real site origin, count as cross-origin: the visualizer graph
+    // would output pure silence while the <audio> element still "plays" and
+    // still lights up the OS now-playing controls — exactly the "lots of
+    // dressing, no sound" field report. Requesting the media with CORS makes
+    // the samples reachable again (GitHub Pages serves
+    // Access-Control-Allow-Origin: *). Standalone (same-origin) needs none,
+    // and setting it there would only break a plain local server that sends
+    // no CORS header, so gate it on the opaque origin.
+    if (location.origin === 'null' || location.origin === '') this.audio.crossOrigin = 'anonymous';
     this.audio.addEventListener('ended', () => this.next());
     for (const ev of ['play', 'pause']) {
       this.audio.addEventListener(ev, () => this.emit('jukebox-state', { engaged: this.engaged }));
