@@ -217,7 +217,7 @@ A collection of experimental games, prototypes, and technical demonstrations. Th
 + [HAM-Radio crash course] -> radiocrash_selected
 
 
-**Games & Interactive Experiments:**
+\*\*Games & Interactive Experiments:**
 
 🎮 **FINK Integration Tests:**
 - GamGam Web Components: https://danbri.github.io/glitchcan-minigam/inklet/gamgam-wc.html
@@ -245,7 +245,7 @@ A collection of experimental games, prototypes, and technical demonstrations. Th
 - INK + Video Test A: https://codepen.io/danbri/pen/Byymzyd
 - INK + Video Test B: https://codepen.io/danbri/pen/NPPwpjZ
 
-**Sounds & Visuals:**
+\*\*Sounds & Visuals:**
 
 🎵 **Audio:**
 - Grid-Alt Music Maker: https://danbri.github.io/glitchcan-minigam/blipblop/grid-alt.html
@@ -255,7 +255,7 @@ A collection of experimental games, prototypes, and technical demonstrations. Th
 - Emoji Particles: https://codepen.io/danbri/pen/NPqGjLP
 - Hobbit/Bagend SVG: https://codepen.io/danbri/pen/PwwEVMZ
 
-**Infrastructure:**
+\*\*Infrastructure:**
 
 🔐 **Authentication:**
 - Mock Login (Steam/Discord/Mastodon): https://codepen.io/danbri/pen/QwbbaaY

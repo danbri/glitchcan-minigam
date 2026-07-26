@@ -149,8 +149,8 @@ Awesome! Now that you know some food words, let’s look at a bit of **Ukrainian
 In Ukrainian, nouns change form depending on their role in a sentence — this is called **case**.
 
 Let’s start with two:
-- **Nominative** (subject)
-- **Accusative** (object)
+- \*\*Nominative** (subject)
+- \*\*Accusative** (object)
 
 -> grammar_case_example
 
@@ -159,8 +159,8 @@ Here are some examples:
 
 🟢 **Nominative** (used for the subject of the sentence):  
 - Це **хліб**. (This is bread.)  
-- **Сир** смачний. (The cheese is tasty.)  
-- **Яблуко** зелене. (The apple is green.)
+- \*\*Сир** смачний. (The cheese is tasty.)  
+- \*\*Яблуко** зелене. (The apple is green.)
 
 🔵 **Accusative** (used for the object of the sentence):  
 - Я їм **хліб**. (I eat bread.)  
@@ -236,12 +236,12 @@ That’s the nominative form. In this sentence, we need the accusative: "ков�
 === grammar_review ===
 ✅ Great job! Here's a quick grammar recap using food:
 
-**Nominative (Subject)**  
+\*\*Nominative (Subject)**  
 - Це хліб.  
 - Сир смачний.  
 - Яблуко велике.  
 
-**Accusative (Object)**  
+\*\*Accusative (Object)**  
 - Я їм хліб.  
 - Вона купує сир.  
 - Він їсть ковбасу.
@@ -262,4 +262,6 @@ Keep practicing and soon you’ll be ready for more cases like **genitive**, **i
 
 === end ===
 До побачення! (Goodbye!) You've finished this brief Ukrainian food vocabulary tutorial.
+
+-> END
 `

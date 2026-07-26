@@ -468,6 +468,14 @@ MARY: *whisper* Inspector, I heard things last night. Terrible things.
 
     -> mary_continue
 
+// Ends with a fallback choice: a star and a divert, no text. Both real
+// options are one-time and the hub lets the player come back to Mary, so
+// once she had answered both there was nothing left to choose and the
+// story died with "ran out of content". A fallback is taken only when
+// every other option is exhausted.
+// NB: this note has to live HERE, not between the choices — a comment
+// line inside the choice block makes this compiler lose every knot
+// defined after it.
 === mary_continue ===
 
 MARY: Inspector... there's something else. I saw Miss Victoria that night. Around eleven. She was carrying papers - looked like letters. She was crying.
@@ -485,6 +493,8 @@ MARY: Inspector... there's something else. I saw Miss Victoria that night. Aroun
 * [Which direction was she going?]
     MARY: Toward the study. She... she looked determined. Frightened too, but determined.
     -> investigation_hub
+
+* -> investigation_hub
 
 // ============================================
 // INTERVIEW: VICTORIA - New Scene
@@ -617,6 +627,19 @@ VICTORIA: *wary* What inconsistencies?
 + {confronted_with_photos && confronted_with_letters} [Press for the full truth]
     -> victoria_breaks
 
+// Sticky fallback. Every option above is conditional, so a player who
+// has confronted her with everything they actually found — and found
+// less than all of it — was offered nothing at all and the story ran
+// out of content. A choice with no text is taken only when no other
+// option qualifies.
++ -> victoria_nothing_left
+
+=== victoria_nothing_left ===
+VICTORIA: *quietly* Is that all, Inspector? Then I'd like to be alone.
+
+You have nothing further to put to her — not yet.
+-> investigation_hub
+
 === confront_photos ===
 ~ confronted_with_photos = true
 
@@ -721,6 +744,8 @@ VICTORIA: I don't know. The voice was... muffled. But they were arguing.
 + {victoria_deflections == 2} [Mention Markov - her real father]
     ANDRÉ-LOUIS: Viktor Markov. Your biological father. The man you were hidden from your entire life.
     -> victoria_breaks
+
++ -> investigation_hub
 
 - {victoria_deflections >= 3}
 // Third confrontation - she finally breaks

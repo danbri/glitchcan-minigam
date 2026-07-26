@@ -355,7 +355,7 @@ You're escorted out past the champagne flutes and the horrified neighbours.
 
 Six months community service. A criminal record. And absolutely, definitely, permanently banned from Hampstead.
 
-*** FRAUD DETECTED — GAME OVER ***
+\*\*\* FRAUD DETECTED — GAME OVER ***
 
 Final Score: {score}/8 (invalidated)
 
@@ -364,7 +364,7 @@ Final Score: {score}/8 (invalidated)
 === victory ===
 #BG:#041
 #CLASS:success
-*** HAMPSTEAD ACHIEVED ***
+\*\*\* HAMPSTEAD ACHIEVED ***
 
 Final Score: {score}/8 — you truly embody Hampstead!
 
@@ -522,7 +522,7 @@ You clutch twelve mega diamonds. The portal flickers, unstable.
 === world_between_worlds ===
 #BG:#020
 #CLASS:info
-*** THE WORLD BETWEEN WORLDS ***
+\*\*\* THE WORLD BETWEEN WORLDS ***
 
 You tumble through into a place of impossible stillness.
 
@@ -642,7 +642,7 @@ Final tally from your travels:
 - Realities Glimpsed: Many
 - Artist Apprehended: Not yet
 
-*** THE END... FOR NOW ***
+\*\*\* THE END... FOR NOW ***
 
 -> END
 `

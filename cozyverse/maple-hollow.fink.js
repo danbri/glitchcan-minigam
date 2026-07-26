@@ -186,7 +186,7 @@ Emma finds herself next to Jake, untangling lights.
 
 The melody drifts from somewhere—a radio, a phone, someone humming—and stops them both.
 
-*That* song.
+\*That\* song.
 
 "I never deleted it from my playlist," Jake admits quietly. "I tried. I couldn't."
 
@@ -302,7 +302,7 @@ Behind them, Lily cheers. Grandma June dabs her eyes. And in the bakery window, 
 
 The lights of Maple Hollow burn bright against the winter sky.
 
-**THE END**
+\*\*THE END**
 
 {warmth}: warmth points earned
 {visited_bakery}: visited bakery
@@ -322,7 +322,7 @@ There will be time. For conversations not yet had. For wounds not yet healed. Fo
 
 But tonight, she is home. And that is enough.
 
-**THE END**
+\*\*THE END**
 
 -> END
 `

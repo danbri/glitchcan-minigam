@@ -901,6 +901,49 @@ believing a boundary exists.
   not resolve Git LFS pointers**, so LFS is not a way out. Git keeps every
   binary forever, which is why re-encoding in place still grows the repo.
 
+## Story checking: `npm run fink:check` (July 2026)
+
+`inklet/tools/fink-check.mjs` — offline, no browser, whole corpus in
+seconds. Extracts with gcfink, compiles with real inkjs, then PLAYS every
+story breadth-first over the choice tree, using `state.ToJson()` /
+`LoadJson()` to revisit a point and take a different option. It
+complements `inklet/validation/checkfink.mjs`, which drives a real
+browser and answers "does the player load this"; this answers "does it
+hold up when someone wanders around in it".
+
+**Markdown is not ink, and the corpus was full of the confusion:**
+
+- `*** HAMPSTEAD ACHIEVED ***` at column 0 is not emphasis, it is THREE
+  nested one-time choices. Hampstead's victory screen rendered no text at
+  all — the "Final Score" line was swallowed inside the phantom choice —
+  and offered a bogus option labelled `HAMPSTEAD ACHIEVED ***`. **Nothing
+  errored.** The E2E played that story every run and never looked at it.
+- `- **Nominative** (subject)` is a gather whose content starts with `*`,
+  so the Ukrainian tutorial's grammar list became two spurious choices.
+- Escape with `\*`. Scan: `grep -rn '^\s*-\?\s*\*' --include=*.fink.js`
+- fink-check flags this directly (LEAKED EMPHASIS) by reading the RUNTIME
+  choice text — labels here never legitimately contain an asterisk.
+
+**Other faults it found, all months old:**
+
+- A final knot with no `-> END` — the Ukrainian tutorial died the moment
+  you declined the intro.
+- Knots reachable from a hub whose options are all one-time or all
+  conditional: come back once too often and "ran out of content". The fix
+  is a fallback choice — `*` or `+` with only a divert and no text, taken
+  only when nothing else qualifies.
+
+**Gotchas earned the hard way while fixing them:**
+
+- A `//` comment line INSIDE a choice block makes this compiler lose every
+  knot defined after it. Put the note above the knot header.
+- A backtick anywhere in a `.fink.js` comment closes the template literal
+  and the file extracts as empty ink. The tool reports that case by name.
+- `world-between-worlds` diverts to `_inventory`, which the PLAYER injects
+  (`getPrivateInventoryInk`). fink-check injects a stub, so a story is not
+  failed for depending on shell furniture — and does not drift when that
+  furniture changes.
+
 ## Validation & QA recipes
 
 - Player E2E (the mandatory journey, automated):

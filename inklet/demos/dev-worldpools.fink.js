@@ -10,7 +10,7 @@ VAR mega_diamonds = 12
 #BG:#020
 #CLASS:info
 # AUDIO: synth:wind
-*** THE WORLD BETWEEN WORLDS ***
+\*\*\* THE WORLD BETWEEN WORLDS ***
 
 [Dev shortcut - You have {mega_diamonds} mega diamonds]
 

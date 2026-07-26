@@ -86,6 +86,7 @@ Browser-based minigames collection with WebGL fluid dynamics, interactive fictio
 - Mandatory test after ANY player change: TOC loads → Episodes → Hampstead plays through, choice text labels visible, no console errors.
 
 ### FINK validation
+- `npm run fink:check` (`inklet/tools/fink-check.mjs`) — offline story checker, no browser: real inkjs compile plus a breadth-first playthrough of the choice tree. Found (July 2026) that Hampstead's victory screen rendered NO text and a phantom choice, because `*** HAMPSTEAD ACHIEVED ***` at column 0 is three ink choices, not emphasis. Escape prose asterisks with `\*`.
 - `inklet/validation/checkfink.mjs` — unified validator (.ink/.json/.fink.js), Puppeteer-based, `--scan` flag, CI exit codes. There is NO `--report` flag.
 - Supporting: `validate-fink-puppeteer.mjs`, `validate-fink.html`, `unreachable_knots_tester.html`, `play-fink-cli.mjs`.
 - The "fink-audit dashboard" (fink-audit/ folder, GitHub Action, rich metrics) was planned but **never built**. Treat it as an open proposal, not work-in-progress.
