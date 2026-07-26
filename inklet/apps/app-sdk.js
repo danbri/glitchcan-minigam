@@ -144,6 +144,22 @@
     post({ ...msg, rid });
   });
 
+  // ── verbs: ask for the outcome, never the credential ────────────────
+  // Same round trip as secrets, and deliberately the same bounded shape.
+  // Longer timeout because a verb is a real network request on the shell's
+  // side, not a lookup.
+  let verbSeq = 0;
+  const verbWaiters = new Map();
+  const reqVerb = (msg, ms = 30000) => new Promise((resolve) => {
+    if (window.parent === window) { resolve({ ok: false, reason: 'no-shell' }); return; }
+    const rid = `v${++verbSeq}`;
+    verbWaiters.set(rid, resolve);
+    setTimeout(() => {
+      if (verbWaiters.delete(rid)) resolve({ ok: false, reason: 'timeout' });
+    }, ms);
+    post({ ...msg, rid });
+  });
+
   // ── the public surface ──────────────────────────────────────────────
   const foaf = {
     get id() { return appId; },
@@ -156,8 +172,26 @@
     onResume: (fn) => { listeners.resume.push(fn); return foaf; },
     onTerminate: (fn) => { listeners.terminate.push(fn); return foaf; },
 
-    /** Ask the shell to do something on the app's behalf (a verb). */
-    invoke: (verb, detail) => post({ type: 'verb', verb, detail }),
+    /**
+     * Ask the shell to do something on the app's behalf.
+     *
+     * This is the other half of "there is no secrets.get". The app names an
+     * OUTCOME — `git.commit`, `s3.put`, `solid.put` — and the shell performs
+     * it using a credential the app cannot see. Note what is not sent: no
+     * function (that would be reading the secret with extra steps) and no
+     * host or repo (the grant decides where a verb points, so an app cannot
+     * aim a valid token at somewhere it was never given).
+     *
+     * Resolves `{ ok: true, … }` or `{ ok: false, reason }`, where reason is
+     * one of `unknown-verb`, `denied`, `bad-scope`, `bad-params`,
+     * `throttled`, `no-secret`, `http` (with a `status`), `failed`, or
+     * `no-shell` when running standalone. A refusal is always a named
+     * answer, never silence.
+     */
+    invoke: (verb, detail) => reqVerb({ type: 'verb', verb, detail }),
+
+    /** Which verbs may this app actually call, and what each one needs. */
+    verbs: () => reqVerb({ type: 'verbs.list' }, 4000).then(r => r.verbs || []),
 
     /**
      * Secrets: hand one over, list your own by name, forget one.
@@ -204,6 +238,11 @@
         || d.type === 'secrets.refused') {
       const resolve = secretWaiters.get(d.rid);
       if (resolve) { secretWaiters.delete(d.rid); resolve(d); }
+      return;
+    }
+    if (d.type === 'verb.result' || d.type === 'verbs.result') {
+      const resolve = verbWaiters.get(d.rid);
+      if (resolve) { verbWaiters.delete(d.rid); resolve(d); }
       return;
     }
     switch (d.type) {

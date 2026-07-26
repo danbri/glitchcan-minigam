@@ -208,6 +208,91 @@ export class BrokeredResourceSource extends MemoryResourceSource {
   remove(path) { super.remove(path); this.save(); }
 }
 
+// A repo mount that NEVER HOLDS A TOKEN.
+//
+// GitHubResourceSource (below) is the ordinary kind: hand it a PAT and it
+// talks to api.github.com itself. Under foafos that token has to come from
+// somewhere, and the only place an app can keep one is the secrets broker —
+// which deliberately refuses to hand it back. So the app cannot make the
+// request. That is not a gap in the design, it IS the design: ask the shell
+// for the outcome instead.
+//
+//   this.write(path, bytes)  →  foaf.invoke('git.commit', { path, content })
+//
+// Where that commit lands is not ours to choose. The shell's grant names the
+// repo, the branch and the allowed path prefix; we send a relative path and
+// some bytes. An app that could name the repo could aim a working token at
+// any repo that token can reach, so we cannot be allowed to, and a mount
+// that pretends otherwise would be a lie in the connections list.
+//
+// Reads come from the local mirror it inherits, not from the repo: reading a
+// private repo needs the same credential, and this class holds none. So the
+// semantics are PUBLISH, not sync — edit locally, saving pushes. Said out
+// loud in `locality` and `note` so the UI can say it too.
+export class BrokeredGitSource extends BrokeredResourceSource {
+  constructor({ id = 'git-brokered', key = 'edot.git.mirror', storage = null, foaf = null } = {}) {
+    super({ id, key, storage });
+    this.provider = 'github';
+    this.locality = 'remote';
+    this.brokered = true;
+    this.note = 'publishes through the shell; this app never sees a token';
+    this._foaf = foaf || (typeof window !== 'undefined' ? window.foaf : null);
+    this.lastPublish = null;      // { ok, path, reason, status } — for the UI
+  }
+
+  /** Can we actually publish, or is this a local folder wearing a repo hat? */
+  get canPublish() { return !!this._foaf?.can?.('git:write'); }
+
+  async verbs() {
+    try { return await this._foaf?.verbs?.() || []; } catch (_) { return []; }
+  }
+
+  /**
+   * Write locally AND publish. The local write is not conditional on the
+   * publish succeeding — losing the user's edit because GitHub returned 403
+   * would be the worst of both worlds — but the outcome is recorded and
+   * returned so a caller can say "saved locally, not published".
+   */
+  async write(path, bytes) {
+    super.write(path, bytes);
+    if (!this.canPublish) {
+      this.lastPublish = { ok: false, path, reason: 'no-capability' };
+      return this.lastPublish;
+    }
+    let content;
+    try {
+      content = new TextDecoder('utf-8', { fatal: true }).decode(
+        bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
+    } catch (_) {
+      // git.commit takes text. Binary would need base64 end-to-end and a
+      // second verb; refusing beats silently mangling someone's PNG.
+      this.lastPublish = { ok: false, path, reason: 'binary-unsupported' };
+      return this.lastPublish;
+    }
+    const rel = norm(path).split('/').filter(Boolean).join('/');
+    const r = await this._foaf.invoke('git.commit', {
+      path: rel, content, message: `edot: update ${baseName(path)}`,
+    });
+    // `r` carries a status and a reason, never a credential and never a
+    // response body — the broker strips those before we see them.
+    this.lastPublish = { ok: !!r?.ok, path: rel, reason: r?.reason, status: r?.status, url: r?.url };
+    return this.lastPublish;
+  }
+
+  /**
+   * Local only. There is no `git.delete` verb, so deleting the mirror copy
+   * does not delete the repo copy — and saying so is better than a remove()
+   * that looks like it worked.
+   */
+  remove(path) {
+    super.remove(path);
+    this.lastPublish = { ok: false, path, reason: 'delete-not-brokered' };
+    return this.lastPublish;
+  }
+
+  async verify() { return this.canPublish; }
+}
+
 // A user-chosen LOCAL FOLDER via the File System Access API — the OS tier: access
 // is capability-granted by the OS (a folder-picker prompt), no remote identity.
 // pick() must be called from a user gesture. (Not exercisable headless — there is

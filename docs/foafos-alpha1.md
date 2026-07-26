@@ -11,8 +11,8 @@ A browser shell that runs mutually distrustful apps, where an
 
 | root | boots | root capabilities |
 |---|---|---|
-| `?root=` *(default)* | the story TOC | storage · secrets · vars · audio · input · launch · navigate · chrome · shell · same-origin |
-| `?root=office` | edot | storage · secrets · shell — **no escape hatch at all** |
+| `?root=` *(default)* | the story TOC | storage · secrets · vars · audio · input · launch · navigate · chrome · shell · git:write · same-origin |
+| `?root=office` | edot | storage · secrets · shell · git:write — **no escape hatch at all** |
 | `?root=webtv` | Channels | storage · audio · input |
 | `?root=tellyclub` | Tellyclub | audio |
 
@@ -64,6 +64,19 @@ Adaptation from the guest side.
   first: edot's "stay signed in" had been writing a bearer token to the
   shell's disk in plaintext, because reading back what you wrote is what a
   storage broker is *for*. `docs/foafos-secrets-and-auth-20260726.md`.
+- **Brokered actions** — what "use a secret" actually means. `foaf.invoke(
+  'git.commit', { path, content, message })`: the app names an outcome, the
+  shell performs it with a credential the app cannot see. Note what the app
+  does *not* send — a function (that would be `get` with extra steps) and a
+  repo. **The scope supplies the destination, the app supplies the data**,
+  because an op taking its host from the caller would be a
+  signed-request-to-anywhere primitive with a live token attached. Three ops
+  ship (`git.commit`, `s3.put`, `solid.put`); one has a caller
+  (`BrokeredGitSource`, a repo mount with no token in it).
+- **Publishing** (Apps → Make → 🔑) — where a verb is aimed and where its key
+  is typed. Both belong to the shell, and that is the design rather than a
+  convenience: a token the *app* collects is a token the app has held, however
+  briefly. Here it never touches the guest at all, not even on the way in.
 - **Logger** — the bus, filterable, refusals coloured.
 - **Volume** — one master level, plus an honest list of what it *cannot* reach.
 - **Input** — one d-pad for the whole shell; keyboard, touch and gamepad
@@ -74,7 +87,10 @@ Adaptation from the guest side.
 Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
 `node --test packages/foafos/test/*.test.js`.
 
-- 36 unit tests (bus, session crypto, widgets, vars, audio, input, store, app tree, secrets).
+- **13 unit suites** in `packages/foafos` (bus, session crypto, widgets, vars,
+  audio, input, cluster, guest scope, store, app tree, secrets, ops, SigV4 —
+  the last against AWS's published test vector, because for signing code "it
+  looks like the spec" is not a standard).
 - 16 browser suites, including:
   - `e2e-chrome` — chrome is absent on office (asserted on
     `getElementById`, never on computed style), toggles cleanly on a story
@@ -92,8 +108,13 @@ Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
     all throw `SecurityError`. Also proves **secrets cannot be read back**
     from inside a real app — refused in the SDK and again by the shell —
     while the shell can still *use* the value, and the token appears in
-    neither the store, nor on disk, nor in the audit. Drives **Calendar**
-    through a real
+    neither the store, nor on disk, nor in the audit. Then the verb side: a
+    **sandboxed app commits a file it has no credential for**, and every one
+    of the four real HTTP requests (intercepted, so the shell's own `fetch`
+    runs) went to the *granted* repo on the *granted* branch — despite the app
+    asking for `attacker/loot` on `gh-pages`. An unaimed verb is refused and
+    not even listed; a saved destination does not resurrect a capability the
+    tree denied. Drives **Calendar** through a real
     round-trip (calendar + event, Dates rehydrated) and **Files** through a
     write that lands in the listing and reaches the broker — both with no
     ambient authority at all.
@@ -103,7 +124,7 @@ Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
   - `qa-journey` — 21 steps × 3 viewports, invariants re-checked after every
     step, **0 findings**, with a self-test proving the audit can still see
     planted faults.
-- `packages/foafos@0.2.0` packs clean; its own `npm test` runs all ten suites.
+- `packages/foafos@0.2.0` packs clean; its own `npm test` runs all thirteen suites.
 
 ## Not verified, and why
 
@@ -150,14 +171,19 @@ Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
    to move; finishing a game clears its save so a fresh run is still
    possible. But GridLuck, boidwars and robbin do not implement it — they
    are reported honestly rather than adopted, and the count should rise.
-3. **Stories outrank apps.** The runtime is the host page, so a story can
+3. **Nothing prompts for a session passphrase.** Secrets are sealable
+   (AES-GCM + PBKDF2) and nothing asks for the key, so on the office root
+   they are memory-only for the run — and report `sealed: false` rather than
+   quietly writing tokens out in the clear. (The sibling gap, "no UI aims a
+   verb", is closed: the **Publishing** panel does it.)
+4. **Stories outrank apps.** The runtime is the host page, so a story can
    launch, navigate and restyle. Its capability list describes rather than
    constrains — flagged `enforced: false` and disclosed in the drawer. Gating
    it matters because the Finkiverse links to documents we did not write.
-4. **Composition lives in the shell**, not the library. `# FINK:` replaces
+5. **Composition lives in the shell**, not the library. `# FINK:` replaces
    everything because inkjs cannot compose two stories; that belongs in
    `gcfink.compose()`.
-5. **The block manifest** (multi-block `.fink.js` with on-demand payload) is
+6. **The block manifest** (multi-block `.fink.js` with on-demand payload) is
    deliberately deferred — FINK stays one function, one argument for now.
 
 Roadmap and reasoning: `docs/foafos-root-and-app-tree-20260726.md`.

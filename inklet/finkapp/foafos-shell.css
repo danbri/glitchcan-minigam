@@ -96,9 +96,39 @@ body.foaf-pad-on #foafos-dock {
 #foafos-drawer button,
 #foafos-drawer input:not([type="range"]),
 #foafos-maker button,
-#foafos-maker input {
+#foafos-maker input,
+#foafos-publishing button,
+#foafos-publishing input {
     min-height: 24px;
 }
+/* Shell-native panels (Maker, Logger, Publishing) sit above app windows and
+   are OPAQUE.
+
+   MEASURED, from a screenshot: a panel opened over edot showed edot's
+   document straight through it, because `fink-skins.css` styles
+   `.foafos-window` with `var(--sk-bg-figure)` — which is deliberately
+   translucent (rgba(0,20,0,.6) on the default skin) and loads after this
+   file, so it wins. Translucency is right for a floating app window over a
+   story and wrong for a form you type a repo and a token into. Two class
+   selectors, so this beats the skin's one without !important. */
+.foafos-window.foafos-panel {
+    z-index: 2640;
+    background: #06080f;
+}
+/* Publishing's controls are typed into, so they get the same retro
+   treatment as the session form rather than the browser default. The close ✕
+   is excluded: it already has a look, and taking it over made it vanish into
+   the title bar. */
+#foafos-publishing button:not(.foafos-window-close) {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--zx-cyan, #4dd);
+    border-radius: 4px;
+    color: #eee;
+    font: inherit;
+    padding: 0.25em 0.7em;
+    cursor: pointer;
+}
+#foafos-publishing button:not(.foafos-window-close):hover { background: rgba(77, 221, 221, 0.18); }
 /* A range input's THUMB is the target, and it tracks the track's height */
 #foafos-drawer input[type="range"] { min-height: 24px; }
 

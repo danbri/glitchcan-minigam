@@ -11,12 +11,21 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
+// Serve from the REPO ROOT, not from this folder. edot.html loads
+// `../../inklet/apps/app-sdk.js` — a legitimate relative path to a sibling
+// tree — and a server rooted here clamps that to `/inklet/…` and 404s it.
+// That was showing up as two unexplained console errors in this suite:
+// harness artefact, not a deployment bug, and the fix is to give the page
+// the directory layout it actually ships in.
+const ROOT = path.resolve(DIR, '../..');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.mjs': 'text/javascript' };
 
 const server = http.createServer(async (req, res) => {
   try {
-    const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\//, '') || 'edot.html';
-    const buf = await readFile(path.join(DIR, rel));
+    const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\//, '') || 'magpie/edot/edot.html';
+    const abs = path.resolve(ROOT, rel);
+    if (!abs.startsWith(ROOT + path.sep)) { res.writeHead(403); res.end('no'); return; }
+    const buf = await readFile(abs);
     res.writeHead(200, { 'Content-Type': MIME[path.extname(rel)] || 'application/octet-stream' });
     res.end(buf);
   } catch {
@@ -26,7 +35,7 @@ const server = http.createServer(async (req, res) => {
 
 await new Promise((r) => server.listen(0, r));
 const port = server.address().port;
-const base = `http://127.0.0.1:${port}`;
+const base = `http://127.0.0.1:${port}/magpie/edot`;
 
 const browser = await chromium.launch({
   headless: true,

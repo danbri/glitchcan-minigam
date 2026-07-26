@@ -624,6 +624,82 @@ installation whose root lacks `storage` gets no persistence, because the
 namespace is never granted: attenuation applies to the shell's own
 conveniences too.
 
+### 5.5.5 Secrets and brokered actions — normative
+
+**A secret is not storage.** The one guarantee a storage broker makes —
+you can read back what you wrote — is the one guarantee a credential
+cannot afford. `secrets` is therefore a **separate capability** from
+`storage`: an app that may remember preferences MUST NOT thereby be able
+to keep tokens.
+
+Measured before this rule existed: an app's "stay signed in" moved a
+bearer token from `sessionStorage` to `localStorage`, which under the
+shell is the brokered shim, so the token landed in the shell's own
+origin, in plaintext, on disk. Nothing had been broken. That is what a
+storage broker is *for*.
+
+The secrets interface is deliberately asymmetric:
+
+| | |
+|---|---|
+| `PUT` | an app MAY hand a secret over |
+| `NAMES` | an app MAY ask which of its **own** secrets exist |
+| `USE` | an app MAY ask the shell to act with one |
+| `GET` | **there is no get** |
+
+- `get` MUST be present only in order to **refuse**, with an explanation
+  of what to do instead. A documented refusal is a design; a missing
+  method is an omission. The refusal MUST also be given over the
+  transport (`secrets.refused`, `reason: 'not-readable'`), not only in
+  the SDK — an app that bypasses the SDK must meet the same wall.
+- `names` MUST return `null`, not `[]`, when the capability is absent:
+  absent is not empty.
+- Sealing at rest requires a passphrase (AES-GCM + PBKDF2 over the
+  session). With no passphrase the host MUST hold secrets for the run
+  only and MUST report `sealed: false`. Writing them out unsealed is the
+  exact failure the feature exists to prevent, so it MUST NOT be offered.
+- A failed use MUST report the error **type** and never its message: a
+  fetch failure's message and URL routinely contain the credential.
+
+**Brokered actions.** Because there is no `get`, "use" needs a meaning,
+and the meaning MUST NOT be "run this function the guest supplied" — a
+guest-supplied function receiving the value is `get` with extra steps.
+So the transport carries a verb NAME and data (`{ type: 'verb', verb,
+detail, rid }`, answered by `verb.result`), and the host owns the
+dictionary of what verbs exist.
+
+> **THE SCOPE SUPPLIES THE DESTINATION. THE APP SUPPLIES THE DATA.**
+
+This is normative, not stylistic. An operation that took its host, repo
+or bucket from the caller would be a signed-request-to-anywhere primitive
+with a live credential attached. Therefore:
+
+- The **operation** declares which secret it uses. A caller MUST NOT be
+  able to name one.
+- The **grant** names the destination, and the host MUST validate a scope
+  when it is set rather than when it is used, so a misconfiguration fails
+  at boot and not at a user's first save.
+- The app MAY contribute a path, which MUST be rejected outright if it
+  contains `..` (refused, never resolved) and MUST be checked against the
+  grant's prefix as a path boundary, not a string prefix.
+- A verb with **no scope configured MUST be refused**, and SHOULD NOT
+  appear in the list of verbs the app may call. A verb aimed nowhere must
+  not act.
+- A verb grant requires **both** conditions: the app tree granted the
+  capability (attenuation still applies, §5.5.1) **and** a scope exists.
+  A stored scope MUST NOT resurrect a capability the tree denied.
+- Results MUST carry a status code and MUST NOT carry the provider's
+  response body: error bodies routinely quote the credential back.
+- Every refusal MUST be a named reason (`denied`, `bad-scope`,
+  `bad-params`, `throttled`, `no-secret`, `unknown-verb`, `http`), never
+  silence.
+
+Locked by `packages/foafos/test/{secrets,ops,sigv4}.test.js` and the
+`e2e-caps.mjs` legs, which test the property that matters — an
+**absence** — by grepping the whole observable surface for the value, and
+by attempting to redirect a brokered credential to a destination that was
+never granted.
+
 ### 5.6 Shell surfaces: home and switcher
 
 Two affordances the platform borrows rather than invents, because every

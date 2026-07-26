@@ -15,6 +15,7 @@ import {
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
   FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, FoafSecrets, localBackend, AppTree,
+  defaultOps,
 } from '../../packages/foafos/src/index.mjs';
 import { appsByFamily, appById, ambientApps, unenforcedApps, chromeApps, APPS } from './foafos-apps.js';
 import { resolveRoot, rootOffers } from './foafos-root.js';
@@ -180,6 +181,99 @@ const secrets = new FoafSecrets({
   storage: audioStore || null,
 });
 FoafOS.secrets = secrets;
+
+// ── ops: what "use a secret" actually MEANS ─────────────────────────────
+// Taking `get` away leaves an obvious hole. If "use it" means "run this
+// function I'm handing you", the whole thing was theatre — a guest-supplied
+// function receiving the value is reading the secret with extra steps. So
+// the transport carries a VERB NAME and some data, and the shell decides
+// what that verb does:
+//
+//   app:   foaf.invoke('git.commit', { path, content, message })
+//   shell: ops.invoke('edot', 'git.commit', params)
+//            → secrets.use('edot', 'git.token', (t) => fetch(…))
+//
+// The rule that makes it safe is THE SCOPE SUPPLIES THE DESTINATION, THE
+// APP SUPPLIES THE DATA. An op taking its repo or host from the caller
+// would be a signed-request-to-anywhere primitive with a credential
+// attached. Where each verb points is configuration held HERE, and a verb
+// with no scope configured is refused — a verb aimed nowhere must not act.
+const ops = defaultOps({ secrets, bus });
+FoafOS.ops = ops;
+
+// Scopes are configuration, not code: which repo, which bucket, which pod.
+// Persisted in the shell's own storage (never an app's), so a user sets it
+// once. Nothing prompts for these yet — see `FoafOS.aimOp` below, which is
+// the seam a settings UI would use.
+const OP_SCOPE_KEY = 'foafos.op-scopes';
+function loadOpScopes() {
+  try { return JSON.parse(audioStore?.getItem(OP_SCOPE_KEY) || '{}') || {}; }
+  catch (e) { return {}; }
+}
+function saveOpScopes(all) {
+  try { audioStore?.setItem(OP_SCOPE_KEY, JSON.stringify(all)); } catch (e) { /* full */ }
+}
+/**
+ * Point one of an app's verb capabilities at a destination.
+ * Refuses a scope the op itself rejects, so a typo fails here and now
+ * rather than at the first Save.
+ */
+FoafOS.aimOp = function aimOp(appId, capability, scope) {
+  const all = loadOpScopes();
+  const forApp = { ...(all[appId] || {}), [capability]: scope };
+  try {
+    ops.grant(appId, forApp);                 // validates every scope it is given
+  } catch (e) {
+    bus.publish('ops.refused', {
+      summary: `${appId}'s ${capability} destination was refused: ${e.message}`,
+      appId, capability, reason: 'bad-scope',
+    });
+    return { ok: false, reason: 'bad-scope', detail: e.message };
+  }
+  all[appId] = forApp;
+  saveOpScopes(all);
+  bus.publish('ops.aimed', {
+    summary: `${appId}'s ${capability} now points at ` +
+             `${scope.repo || scope.bucket || scope.base || '(somewhere)'}`,
+    appId, capability,
+  });
+  return { ok: true };
+};
+/**
+ * Install an app's saved verb scopes, intersected with what the app tree
+ * actually granted it. Called on every launch, because a grant that
+ * outlives the reason for it is how a boundary rots.
+ */
+function aimVerbsFor(appId, granted = []) {
+  const saved = loadOpScopes()[appId] || {};
+  const allowed = {};
+  for (const [cap, scope] of Object.entries(saved)) {
+    if (granted.includes(cap)) allowed[cap] = scope;
+    else bus.publish('ops.refused', {
+      summary: `${appId} has a saved ${cap} destination but was not granted ${cap}`,
+      appId, capability: cap, reason: 'not-granted',
+    });
+  }
+  ops.revoke(appId);
+  if (Object.keys(allowed).length) {
+    try { ops.grant(appId, allowed); }
+    catch (e) {
+      bus.publish('ops.refused', {
+        summary: `${appId}'s saved verb destinations are invalid: ${e.message}`,
+        appId, reason: 'bad-scope',
+      });
+    }
+  }
+}
+FoafOS.aimVerbsFor = aimVerbsFor;
+
+FoafOS.unaimOp = function unaimOp(appId) {
+  const all = loadOpScopes();
+  delete all[appId];
+  saveOpScopes(all);
+  ops.revoke(appId);
+  bus.publish('ops.aimed', { summary: `${appId}'s verb destinations were cleared`, appId });
+};
 
 // ── the root, and the tree of apps beneath it ──────────────────────────
 // An installation is a root manifest plus whatever it opens. The root
@@ -986,6 +1080,8 @@ function buildUI() {
       provider: 'FoafStore', note: 'per-app namespace, quota, audit; local backend today' },
     { id: 'secrets', label: 'Secrets', state: 'brokered',
       provider: 'FoafSecrets', note: 'put and use, never get; sealed only with a session passphrase' },
+    { id: 'ops', label: 'Brokered actions', state: 'brokered',
+      provider: 'FoafOps', note: 'git.commit, s3.put, solid.put — the app names the outcome, the grant names the destination' },
     { id: 'vars', label: 'Story variables', state: 'brokered',
       provider: 'FoafVars', note: 'shared economy vs private, dreams read-only' },
     { id: 'audio', label: 'Audio', state: 'brokered',
@@ -1099,6 +1195,13 @@ function buildUI() {
     // …and a secrets namespace, on a SEPARATE capability, so an app that
     // may keep preferences does not thereby get to keep credentials.
     secrets.grant(app.id, caps);
+    // Verb grants are TWO conditions, both required. The app tree must have
+    // granted the capability (so attenuation still bounds it — a child
+    // cannot be aimed at a repo its parent may not write), AND a scope must
+    // have been configured saying where it points. Either alone is refused:
+    // an unaimed verb must not act, and a configured scope for a capability
+    // the tree denied must not resurrect it.
+    aimVerbsFor(app.id, node.capabilities || caps);
 
     switch (app.surface) {
       case 'stage':
@@ -1112,6 +1215,7 @@ function buildUI() {
         // boundary. Kept in one registry for discovery, not for security.
         if (app.panel === 'maker') return openMaker();
         if (app.panel === 'logger') return openLogger();
+        if (app.panel === 'publishing') return openPublishing();
         return null;
       case 'window':
       default: {
@@ -1231,6 +1335,32 @@ function buildUI() {
         if (r.ok) secrets.flush();       // re-seal if we are sealed at all
         reply({ type: 'secrets.result', rid: d.rid, op: d.type, name: d.name,
                 ok: r.ok, reason: r.reason, sealed: secrets.sealed });
+        return;
+      }
+      // A VERB is the other half of secrets: the app names an outcome and
+      // the shell performs it. Note what is NOT here — the app sends a verb
+      // NAME and data, never a function and never a host. `ops` decides
+      // what the name means and where it points; an unknown or unaimed verb
+      // is refused with a reason.
+      if (d.type === 'verb') {
+        ops.invoke(app.id, d.verb, d.detail || {}).then((r) => {
+          try {
+            frame.contentWindow?.postMessage({ type: 'verb.result', rid: d.rid, verb: d.verb, ...r }, '*');
+          } catch (err) { /* closed */ }
+        });
+        return;
+      }
+      if (d.type === 'verbs.list') {
+        try {
+          frame.contentWindow?.postMessage({
+            type: 'verbs.result', rid: d.rid,
+            // Only what this app may actually call, and its destination —
+            // an app has no business enumerating another's grants.
+            verbs: ops.list().filter(o => ops.can(app.id, o.verb)).map(o => ({
+              verb: o.verb, capability: o.capability, secret: o.secret, note: o.note,
+            })),
+          }, '*');
+        } catch (err) { /* closed */ }
         return;
       }
       if (d.type === 'secrets.get') {
@@ -1591,6 +1721,11 @@ function buildUI() {
     if (document.getElementById('foafos-logger')) return null;
     const win = makeWindow('📜 Logger', 460, 420);
     win.id = 'foafos-logger';
+    // Shell-native panels sit ABOVE app windows. An app's iframe is
+    // composited into its own layer, which paints over same-z-index
+    // content — so a panel opened on top of an app showed the app's
+    // document straight through it. Seen in a screenshot, not in code.
+    win.classList.add('foafos-panel');
     const body = document.createElement('div');
     body.style.cssText = 'flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;padding:8px;';
     body.innerHTML = `
@@ -1627,6 +1762,7 @@ function buildUI() {
     if (document.getElementById('foafos-maker')) return;
     const win = makeWindow('🔧 Maker', 380, 520);
     win.id = 'foafos-maker';
+    win.classList.add('foafos-panel');
 
     const body = document.createElement('div');
     body.style.cssText = 'flex:1;min-height:0;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px;font:11px monospace;color:#eee;';
@@ -1697,6 +1833,157 @@ function buildUI() {
     return win;
   }
   FoafOS.openMaker = openMaker;
+
+  // ── Publishing: aim an app's verbs, and hold its key ──────────────────
+  // Both halves belong to the SHELL, and that is the point of the panel
+  // rather than a convenience of it:
+  //
+  //   · the destination, because an app that could choose its own repo
+  //     could aim a working token at any repo that token reaches
+  //   · the credential, because a token an app collects is a token an app
+  //     has HELD, however briefly, and this way it never touches the guest
+  //     at all — not even on the way in
+  //
+  // Before this existed, `git:write` was a granted, brokered, tested
+  // capability that pointed nowhere and had no way for a person to point
+  // it. Tested-but-unreachable is worth saying out loud, so the docs did;
+  // this is the fix rather than a footnote.
+  function openPublishing() {
+    if (document.getElementById('foafos-publishing')) return;
+    const win = makeWindow('🔑 Publishing', 420, 480);
+    win.id = 'foafos-publishing';
+    win.classList.add('foafos-panel');
+
+    const body = document.createElement('div');
+    body.style.cssText = 'flex:1;min-height:0;overflow-y:auto;padding:10px;display:flex;'
+      + 'flex-direction:column;gap:10px;font:11px monospace;color:#eee;';
+    win.appendChild(body);
+
+    // Only apps this installation offers AND that declare a verb capability.
+    // An empty list is a real answer, not a broken panel, so it says so.
+    const verbCaps = (ops.list() || []).map(o => o.capability);
+    const candidates = APPS.filter(a =>
+      rootOffers(ROOT, a.id)
+      && (a.capabilities || []).some(c => verbCaps.includes(c) && ROOT.capabilities.includes(c)));
+
+    const draw = () => {
+      if (!win.isConnected) return;
+      body.textContent = '';
+      const note = document.createElement('p');
+      note.style.cssText = 'margin:0;color:#9ad;line-height:1.5;';
+      note.textContent = candidates.length
+        ? 'The app asks for an outcome; this is where the outcome goes, and where '
+          + 'the key lives. The app never sees either.'
+        : `No app in the ${ROOT.label} installation asks for a brokered action.`;
+      body.appendChild(note);
+
+      for (const app of candidates) {
+        for (const op of ops.list()) {
+          if (!(app.capabilities || []).includes(op.capability)) continue;
+          const scope = ops.scopeFor(app.id, op.capability);
+          const held = (secrets.names(app.id) || []).includes(op.secret);
+
+          const card = document.createElement('section');
+          card.style.cssText = 'border:1px solid #345;padding:8px;display:flex;'
+            + 'flex-direction:column;gap:6px;';
+          const h = document.createElement('h3');
+          h.style.cssText = 'margin:0;font:bold 11px monospace;color:#fff;';
+          h.textContent = `${app.icon} ${app.name} — ${op.verb}`;
+          card.appendChild(h);
+
+          const state = document.createElement('p');
+          state.style.cssText = 'margin:0;color:' + (scope && held ? '#8f8' : '#fa6') + ';';
+          state.textContent = scope
+            ? (held ? `ready — ${scope.repo || scope.bucket || scope.base}`
+                    : `aimed at ${scope.repo || scope.bucket || scope.base}, but no key yet`)
+            : 'not aimed anywhere, so it is refused';
+          card.appendChild(state);
+
+          // git.commit is the only op with a caller, so it is the only one
+          // given a form. Inventing forms for s3/solid would put fields on
+          // screen that nothing reads — see the note in ops.mjs about a
+          // vocabulary that starts lying.
+          if (op.verb === 'git.commit') {
+            const row = (labelText, id, placeholder, value, type = 'text') => {
+              const wrap = document.createElement('label');
+              wrap.style.cssText = 'display:flex;gap:6px;align-items:center;';
+              wrap.textContent = labelText;
+              const input = document.createElement('input');
+              input.type = type;
+              input.id = `pub-${app.id}-${id}`;
+              input.placeholder = placeholder;
+              input.value = value || '';
+              input.style.cssText = 'flex:1;min-width:0;background:#111;color:#eee;'
+                + 'border:1px solid #456;padding:3px;font:11px monospace;';
+              if (type === 'password') input.autocomplete = 'off';
+              wrap.appendChild(input);
+              card.appendChild(wrap);
+              return input;
+            };
+            const repo = row('repo', 'repo', 'owner/name', scope?.repo);
+            const branch = row('branch', 'branch', 'main', scope?.branch || 'main');
+            const prefix = row('prefix', 'prefix', 'edot/ (optional)', scope?.pathPrefix);
+            const key = row('token', 'token', held ? '•••• stored' : 'ghp_…', '', 'password');
+
+            const buttons = document.createElement('div');
+            buttons.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+            const mk = (label, fn) => {
+              const b = document.createElement('button');
+              b.type = 'button';
+              b.textContent = label;
+              b.addEventListener('click', fn);
+              buttons.appendChild(b);
+              return b;
+            };
+            mk('AIM', () => {
+              const r = FoafOS.aimOp(app.id, op.capability, {
+                repo: repo.value.trim(), branch: branch.value.trim() || 'main',
+                pathPrefix: prefix.value.trim(),
+              });
+              if (!r.ok) state.textContent = `refused: ${r.detail || r.reason}`;
+              else draw();
+            });
+            mk('HOLD KEY', () => {
+              const v = key.value;
+              if (!v) return;
+              // Straight into the broker. Not stored here, not echoed back,
+              // and the field is cleared so it does not sit in the DOM.
+              secrets.grant(app.id, app.capabilities || []);
+              const r = secrets.put(app.id, op.secret, v);
+              key.value = '';
+              if (r.ok) secrets.flush();
+              draw();
+            });
+            if (held) mk('FORGET KEY', () => { secrets.forget(app.id, op.secret); draw(); });
+            if (scope) mk('UNAIM', () => { FoafOS.unaimOp(app.id); draw(); });
+            card.appendChild(buttons);
+
+            const warn = document.createElement('p');
+            warn.style.cssText = 'margin:0;color:#888;line-height:1.5;';
+            warn.textContent = secrets.sealed
+              ? 'Sealed at rest with your session passphrase.'
+              : 'No session passphrase, so the key is held for this run only — '
+                + 'it is not written to disk in the clear.';
+            card.appendChild(warn);
+          }
+          body.appendChild(card);
+        }
+      }
+    };
+
+    const feed = document.createElement('foafos-feed');
+    feed.bus = bus;
+    feed.setAttribute('topics', 'ops.*,secrets.*');
+    const unsubs = ['ops.*', 'secrets.*'].map(t => bus.subscribe(t, () => draw()));
+    new MutationObserver(() => { if (!win.isConnected) unsubs.forEach(u => u()); })
+      .observe(document.body, { childList: true });
+
+    document.body.appendChild(win);
+    draw();
+    body.appendChild(feed);
+    return win;
+  }
+  FoafOS.openPublishing = openPublishing;
 }
 
 if (document.readyState === 'loading') {

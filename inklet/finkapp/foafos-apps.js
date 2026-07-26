@@ -75,7 +75,14 @@ export const APPS = [
   // what a storage broker is for. See docs/foafos-secrets-and-auth-20260726.md
   { id: 'edot', family: 'office', icon: '🗂️', name: 'edot', surface: 'window',
     url: '../../magpie/edot/edot.html', desc: 'The suite shell',
-    capabilities: ['storage', 'secrets'], silent: true },
+    // `git:write` is a VERB capability, not a data one: it does not let edot
+    // read a token, it lets it ask the shell to commit a file — and only to
+    // wherever `FoafOS.aimOp` was pointed. With no destination configured,
+    // holding it does nothing at all, which is the correct default for
+    // something that writes to someone's repo. s3/solid ride the same rail
+    // and are deliberately NOT declared until a caller exists for them:
+    // declaring a capability no code uses is how a vocabulary starts lying.
+    capabilities: ['storage', 'secrets', 'git:write'], silent: true },
   // MIGRATED (July 2026). Data keeps one SQLite blob, and kept it in
   // IndexedDB — which an opaque origin refuses to open. Its engine now
   // picks a backend by trying, and falls back to the same blob base64'd
@@ -180,6 +187,14 @@ export const APPS = [
     desc: 'Variables, governance, capabilities', capabilities: ['shell'], silent: true },
   { id: 'logger', family: 'make', icon: '📜', name: 'Logger', surface: 'panel', panel: 'logger',
     desc: 'The event bus, filterable — including everything refused',
+    capabilities: ['shell'], silent: true },
+  // Where an app's brokered actions POINT, and where its credential is
+  // typed in. Both belong to the shell: a token an app collects is a token
+  // an app has held, however briefly, and a destination an app can choose
+  // is not a boundary. This panel is the reason `git:write` is reachable by
+  // a person rather than only by a test.
+  { id: 'publishing', family: 'make', icon: '🔑', name: 'Publishing', surface: 'panel',
+    panel: 'publishing', desc: 'Aim an app\'s brokered actions, and hold its key',
     capabilities: ['shell'], silent: true },
   { id: 'universe', family: 'make', icon: '🗺️', name: 'Finkiverse', surface: 'window',
     url: '../../docs/fink-universe.html', desc: 'Stories and widgets, mapped',

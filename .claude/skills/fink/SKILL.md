@@ -892,9 +892,63 @@ not thereby get to keep tokens.
 - Testing an ABSENCE means grepping the whole observable surface — audit,
   bus, report, sealed blob — for the secret itself. That is what
   `secrets.test.js` does (12 assertions).
-- Next increment is the verb side (`git.commit`, `s3.put`, `solid.put`): the
-  app asks for the OUTCOME and never holds the authority. Same move as
-  brokering storage instead of handing back `allow-same-origin`.
+## Brokered actions — what "use a secret" MEANS (July 2026)
+
+`packages/foafos/src/ops.mjs`. Taking `get` away leaves the obvious question,
+and the wrong answer is "run this function I'm handing you" — a
+guest-supplied `fn` receiving the value is `get` with extra steps. So the
+wire carries a verb NAME plus data and the shell owns the dictionary:
+
+```
+app:   foaf.invoke('git.commit', { path, content, message })  → promise
+shell: ops.invoke('edot','git.commit',…) → secrets.use('edot','git.token', t => fetch(…))
+```
+
+**THE RULE, and it is load-bearing: THE SCOPE SUPPLIES THE DESTINATION, THE
+APP SUPPLIES THE DATA.** An op taking its repo or host from the caller is a
+signed-request-to-anywhere primitive with a live credential attached — an app
+could aim a working GitHub token at any repo that token can reach. So:
+
+- the OP declares which secret it uses; the caller never names one
+- the GRANT names the repo/bucket/pod, validated when set (`ops.grant`
+  throws), so a manifest typo fails at boot not at someone's first Save
+- `api.github.com` is hard-coded in `gitCommitOp`; scope URLs must be https
+- the app brings a path — `cleanPath` returns null on any `..` (refuse, never
+  resolve) and `withinPrefix` is a boundary check, not `startsWith`
+- **no scope configured → refused.** A verb aimed nowhere must not write to
+  someone's repo. `FoafOS.aimOp(appId, cap, scope)` sets it; the caller is the
+  **Publishing** panel (`foafos-shell.js`, `openPublishing`, app id
+  `publishing`, `surface: 'panel'`). Add `publishing` to any root that grants
+  a verb capability, or the grant is unusable — the dead-capability shape
+  again, arriving from the UI side.
+- **THE SHELL COLLECTS THE CREDENTIAL, NOT THE APP.** A token the app collects
+  is a token the app has held, however briefly. Publishing types it straight
+  into `secrets.put` shell-side and clears the field, so the value never
+  enters the guest frame even on the way in.
+- TWO conditions for a verb grant: the app tree granted the capability
+  (attenuation still applies) AND a scope exists. `aimVerbsFor` intersects
+  them on every launch — a saved scope must not resurrect a denied capability.
+- report a `status`, never a response body: GitHub's own 403 quotes the token
+  back at you. A thrown fetch reports `e.name` only (its message has the URL).
+- throttled per app per verb per minute, and a throttle is announced.
+
+Caller: `BrokeredGitSource` (`magpie/edot/js/resource-source.js`) — a repo
+mount with no token in it. Reads come from its local mirror (reading a private
+repo needs the credential it deliberately lacks), so the semantics are
+*publish*, not sync, and it says so. A refused publish keeps the edit locally
+and reports the status. `remove` is local-only and says there is no
+`git.delete` verb; binary is refused rather than mangled through a text verb.
+
+`s3.put`/`solid.put` ship and are tested but have **no callers**, so no app
+declares those capabilities — a vocabulary with unused names starts lying.
+
+Tests: `ops.test.js` (19 — about half are attempts to escape the grant),
+`sigv4.test.js` (5, incl. AWS's published vector),
+`test-brokered-git.mjs` (18, two of which read the class's own source back to
+check it never mentions `api.github.com`), and the e2e-caps leg where a real
+sandboxed app commits a file it has no credential for while every request
+goes to the granted repo — `page.route()` intercepts, so the shell's own
+`fetch` runs (remember the CORS preflight: fulfil `OPTIONS` too).
 
 ## Migrating an app off `same-origin` (the Calendar pattern)
 

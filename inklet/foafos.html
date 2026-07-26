@@ -57,7 +57,7 @@
     <span class="ico" aria-hidden="true">📄</span>
     <span class="nm">Office</span>
     <span class="why">edot, Data, Calendar, Files. No story engine runs at all — FINK is simply unknown to this installation, and since July 2026 it holds no <code>same-origin</code> either: every app it offers is sandboxed.</span>
-    <span class="caps">storage · shell</span>
+    <span class="caps">storage · secrets · shell · git:write</span>
   </a>
   <a class="card" href="finkapp/?root=webtv">
     <span class="ico" aria-hidden="true">📺</span>
@@ -91,7 +91,21 @@
       same position. GridLuck does not — it predates the SDK, and the
       switcher says so rather than losing your game quietly.</li>
   <li><strong>Logger</strong> (Apps → Make → 📜) is the event bus, filterable.
-      Filter for <code>refused</code> to watch the capability system say no.</li>
+      Filter for <code>refused</code> to watch the capability system say no.
+      Filter for <code>secrets</code> or <code>ops</code> and you will see
+      names and byte counts, never a value.</li>
+  <li><strong>Brokered actions.</strong> An app may hand the shell a
+      credential and can never read it back &mdash; so what use is it? It asks
+      for the <em>outcome</em>: <code>foaf.invoke('git.commit', &#123; path,
+      content &#125;)</code>, and the shell makes the request. Where that commit
+      lands is not the app's to choose: the grant names the repo, the branch
+      and an allowed path prefix, because an app that could name the repo
+      could aim a working token at any repo that token can reach. Point it
+      in <strong>Apps &rarr; Make &rarr; 🔑 Publishing</strong>, which is also
+      where the key is typed &mdash; into the shell, never into the app, so the
+      app has not held it even for a moment. Until a repo is named the verb is
+      refused, which is the right default for something that writes to your
+      account.</li>
   <li><strong>Volume</strong> (drawer) reports what it <em>cannot</em> reach
       as well as what it can.</li>
   <li>On a phone, the <strong>d-pad</strong> is the shell's, not the game's —
@@ -114,6 +128,12 @@
       only for guests that agreed to the snapshot contract (mudslider,
       chess). The switcher tells you which games those are before you press
       ✕. Finish a game and the save clears, so you can start again.</li>
+  <li>Secrets can be <strong>sealed</strong> at rest (AES-GCM over the
+      session passphrase) and <strong>nothing prompts for a passphrase</strong>,
+      so in practice they are memory-only for the run &mdash; and say so rather
+      than quietly writing tokens out in the clear. The same gap applies to
+      brokered actions: they work, and the destination and key you set in
+      Publishing last only for the run unless a passphrase seals them.</li>
   <li>Tellyclub's preferences do not persist here — it predates the SDK and
       gets an opaque origin, which it survives only because its author wrote
       defensive storage code.</li>

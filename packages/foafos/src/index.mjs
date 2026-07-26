@@ -28,4 +28,11 @@ export { FoafAudio, AUDIO_KEY } from './audio.mjs';
 export { FoafStore, localBackend, memoryBackend, STORE_CAP } from './store.mjs';
 // A secret is not storage: PUT and USE, never GET. See secrets.mjs for why.
 export { FoafSecrets, SECRETS_CAP, MAX_SECRET_BYTES } from './secrets.mjs';
+// …and what "USE" means: named shell-side verbs over a named secret, aimed
+// by the grant rather than by the caller. Broker the action, not the token.
+export {
+  FoafOps, defaultOps, DEFAULT_OPS, gitCommitOp, s3PutOp, solidPutOp,
+  cleanPath, withinPrefix,
+} from './ops.mjs';
+export { sigv4, awsUriEncode, sha256hex, amzDate, EMPTY_SHA256 } from './sigv4.mjs';
 export { AppTree } from './apptree.mjs';

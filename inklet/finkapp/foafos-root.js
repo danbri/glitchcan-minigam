@@ -38,7 +38,7 @@ export const ROOTS = {
     // launchApp went through attenuation and the drawer's own button
     // called openLogger() directly and so never noticed.
     capabilities: ['storage', 'secrets', 'vars:read', 'vars:write', 'audio', 'input',
-                   'launch', 'navigate', 'chrome', 'shell', 'same-origin'],
+                   'launch', 'navigate', 'chrome', 'shell', 'git:write', 'same-origin'],
     boot: { story: null },        // null = fall back to FinkConfig.DEFAULT_FINK_FILE
     apps: null,                   // all of them
   },
@@ -58,7 +58,10 @@ export const ROOTS = {
     // registry entry might say. The office desktop is now fully sandboxed.
     //
     // `shell` because it offers Maker; `secrets` because it offers edot,
-    // whose GitHub-backed saving holds a token. No `chrome`, `launch` or
+    // whose GitHub-backed saving holds a token; `git:write` so that saving
+    // can happen as a brokered ACTION rather than by handing edot the token
+    // — and it still does nothing until someone names a repo, because a
+    // verb with no destination is refused. No `chrome`, `launch` or
     // `navigate`, and no chrome apps.
     //
     // AND THIS IS THE SECOND TIME. `shell` was a capability no root held,
@@ -67,11 +70,15 @@ export const ROOTS = {
     // e2e-caps, which reported "edot frame never appeared". A capability
     // nothing grants is not a safe default, it is a dead app. When adding
     // one to an app, add it to every root that offers that app.
-    capabilities: ['storage', 'secrets', 'shell'],
+    capabilities: ['storage', 'secrets', 'shell', 'git:write'],
     boot: { story: false, apps: ['edot'] },
     // No chrome ids here, so an office installation has no breadcrumb,
     // no story status line and no FINK load meter — not hidden, absent.
-    apps: ['edot', 'sheets', 'calendar', 'files', 'maker'],
+    // `publishing` because an installation that grants `git:write` and offers
+    // no way to aim it has a capability nobody can use — the same
+    // dead-capability shape as the `shell` and `secrets` bugs above, just
+    // arriving from the UI side instead of the manifest side.
+    apps: ['edot', 'sheets', 'calendar', 'files', 'maker', 'publishing'],
   },
 
   // A TV. One media app, no story, no games, and deliberately NO

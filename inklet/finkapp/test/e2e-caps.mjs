@@ -489,6 +489,178 @@ try {
     }
   }
 
+  // 14. The verb side: broker the ACTION, not the token. Taking `get` away
+  // left the obvious question — what does "use it" MEAN? If the answer were
+  // "run this function I'm handing you", the whole thing was theatre. So the
+  // app sends a verb NAME and data, and the shell decides what that means
+  // and where it points.
+  //
+  // api.github.com is intercepted rather than injected, so the shell's own
+  // `fetch` is what runs and the assertions are about real requests leaving
+  // the page. (No egress here anyway — but a stub in place of fetch would
+  // not have proved the wiring.)
+  {
+    const seen = [];
+    await page.route('https://api.github.com/**', async (route) => {
+      const req = route.request();
+      const cors = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET,PUT,OPTIONS',
+        'Access-Control-Allow-Headers': 'authorization,content-type,accept,x-github-api-version',
+      };
+      if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+      seen.push({ method: req.method(), url: req.url(), auth: req.headers()['authorization'] || null, body: req.postData() });
+      if (req.method() === 'GET') {
+        return route.fulfill({ status: 404, headers: { ...cors, 'Content-Type': 'application/json' }, body: '{"message":"Not Found"}' });
+      }
+      return route.fulfill({
+        status: 201, headers: { ...cors, 'Content-Type': 'application/json' },
+        // GitHub's own error bodies quote the token; include one here so the
+        // "no body reaches the app" claim is tested against the real shape.
+        body: JSON.stringify({ content: { sha: 'blob1', html_url: 'https://github.com/x/y/blob/main/a.md' }, commit: { sha: 'c1' }, message: 'token was gho_E2E_VERB_TOKEN' }),
+      });
+    });
+
+    // Unaimed first: holding `git:write` with no destination configured must
+    // do nothing at all. A verb aimed nowhere is the correct default for
+    // something that writes to someone's repo.
+    const app2 = page.frames().find(f => /edot\.html/.test(f.url()));
+    if (!app2) {
+      fail('edot frame never appeared for the verb probe');
+    } else {
+      const unaimed = await app2.evaluate(async () => {
+        await window.foaf.secrets.put('git.token', 'gho_E2E_VERB_TOKEN');
+        return {
+          verbs: await window.foaf.verbs(),
+          tried: await window.foaf.invoke('git.commit', { path: 'edot/a.md', content: 'hi' }),
+        };
+      }).catch(e => ({ err: String(e).slice(0, 150) }));
+      unaimed.tried?.reason === 'denied' && (unaimed.verbs || []).length === 0
+        ? pass('a verb with no destination configured is refused, and not even listed')
+        : fail(`an unaimed verb was callable: ${JSON.stringify(unaimed)}`);
+
+      // Now point it somewhere. This is shell-side configuration — the app
+      // has no say in it, which is the entire security property.
+      const aimed = await page.evaluate(() => window.FoafOS.aimOp('edot', 'git:write',
+        { repo: 'danbri/e2e-notes', branch: 'main', pathPrefix: 'edot/' }));
+      aimed?.ok === true ? pass('the shell can aim a verb at a repo')
+        : fail(`aimOp refused a valid scope: ${JSON.stringify(aimed)}`);
+
+      const r = await app2.evaluate(async () => ({
+        verbs: (await window.foaf.verbs()).map(v => v.verb),
+        done: await window.foaf.invoke('git.commit', { path: 'edot/a.md', content: 'hello from a sandbox', message: 'e2e' }),
+        // every attempt to choose the destination itself
+        elsewhere: await window.foaf.invoke('git.commit', {
+          path: 'edot/b.md', content: 'x', repo: 'attacker/loot', owner: 'attacker', branch: 'gh-pages',
+        }),
+        outside: await window.foaf.invoke('git.commit', { path: '.github/workflows/evil.yml', content: 'x' }),
+        traversal: await window.foaf.invoke('git.commit', { path: 'edot/../.github/evil.yml', content: 'x' }),
+        unknown: await window.foaf.invoke('rm.rf', {}),
+      })).catch(e => ({ err: String(e).slice(0, 150) }));
+
+      r.done?.ok === true && r.done.sha === 'blob1' && r.verbs?.includes('git.commit')
+        ? pass('a sandboxed app committed a file it has no credential for')
+        : fail(`the verb did not run: ${JSON.stringify(r)}`);
+      r.outside?.reason === 'bad-params' && r.traversal?.reason === 'bad-params' && r.unknown?.reason === 'unknown-verb'
+        ? pass('outside the prefix, traversal and unknown verbs are named refusals')
+        : fail(`a refusal was wrong: ${JSON.stringify({ o: r.outside, t: r.traversal, u: r.unknown })}`);
+
+      const puts = seen.filter(c => c.method === 'PUT');
+      seen.length > 0 && seen.every(c => c.url.startsWith('https://api.github.com/repos/danbri/e2e-notes/'))
+        ? pass(`all ${seen.length} request(s) went to the granted repo, not the one the app asked for`)
+        : fail(`a request escaped the grant: ${seen.map(c => c.url).join(', ')}`);
+      puts.length && puts.every(c => JSON.parse(c.body).branch === 'main')
+        ? pass('the branch came from the grant too')
+        : fail('the branch was not the granted one');
+      puts.some(c => String(c.auth).includes('gho_E2E_VERB_TOKEN'))
+        ? pass('the shell attached the credential the app cannot read')
+        : fail('the request went out without the token');
+
+      // …and the app is no closer to holding it than before.
+      const clean = await app2.evaluate(() => ({
+        result: JSON.stringify(window.__lastVerb || {}),
+        anywhere: JSON.stringify({ ls: (() => { try { return { ...localStorage }; } catch (_) { return {}; } })() }),
+      }));
+      const leaked = await page.evaluate((tok) => ({
+        bus: (window.FoafOS.ops.audit || []).some(a => JSON.stringify(a).includes(tok)),
+        store: JSON.stringify(window.FoafOS.store.snapshot('edot') || {}).includes(tok),
+      }), 'gho_E2E_VERB_TOKEN');
+      !leaked.bus && !leaked.store
+        && !JSON.stringify(r.done).includes('gho_E2E_VERB_TOKEN')
+        && !clean.anywhere.includes('gho_E2E_VERB_TOKEN')
+        ? pass("the token is in the request and nowhere else — not the result, not the audit, not the app's keyspace")
+        : fail(`the token leaked: ${JSON.stringify({ leaked, clean: clean.anywhere.slice(0, 120) })}`);
+      !JSON.stringify(r.done).includes('token was')
+        ? pass("GitHub's response body is not passed through (it quotes credentials)")
+        : fail('the whole API response reached the app');
+
+      // A saved destination must not resurrect a capability the tree denied.
+      const notGranted = await page.evaluate(() => {
+        window.FoafOS.aimOp('channels', 'git:write', { repo: 'danbri/e2e-notes' });
+        window.FoafOS.aimVerbsFor('channels', ['storage', 'audio']);   // what it really holds
+        return window.FoafOS.ops.can('channels', 'git.commit');
+      });
+      notGranted === false
+        ? pass('a saved destination does not resurrect a capability the app tree denied')
+        : fail('an ungranted app could call a verb because a scope was configured');
+
+      // The Publishing panel is what makes any of this reachable by a
+      // person. Both halves belong to the shell on purpose: a token the app
+      // collects is a token the app has held, and a destination the app can
+      // choose is not a boundary. Driven through real clicks, because a
+      // panel that only works when called from the console is not a panel.
+      await page.evaluate(() => { window.FoafOS.unaimOp('edot'); window.FoafOS.secrets.forget('edot', 'git.token'); });
+      const panel = await page.evaluate(() => {
+        const win = window.FoafOS.launchApp('publishing');
+        return { opened: !!win, id: win?.id };
+      });
+      panel.opened && panel.id === 'foafos-publishing'
+        ? pass('Publishing opens from the app registry like any other panel')
+        : fail(`the Publishing panel did not open: ${JSON.stringify(panel)}`);
+
+      const before = await page.textContent('#foafos-publishing');
+      /not aimed anywhere/.test(before || '')
+        ? pass('it says the verb is unaimed rather than showing an empty form')
+        : fail(`Publishing did not report the unaimed state: ${(before || '').slice(0, 160)}`);
+
+      await page.fill('#pub-edot-repo', 'danbri/e2e-notes');
+      await page.fill('#pub-edot-prefix', 'edot/');
+      await page.click('#foafos-publishing button:text("AIM")');
+      await page.fill('#pub-edot-token', 'ghp_TYPED_INTO_THE_SHELL');
+      await page.click('#foafos-publishing button:text("HOLD KEY")');
+      await page.waitForTimeout(200);
+
+      const after = await page.evaluate(() => ({
+        text: document.getElementById('foafos-publishing').textContent,
+        // the field must not still be holding it
+        field: document.getElementById('pub-edot-token')?.value,
+        aimed: window.FoafOS.ops.scopeFor('edot', 'git:write'),
+        held: window.FoafOS.secrets.names('edot'),
+      }));
+      after.aimed?.repo === 'danbri/e2e-notes' && after.held?.includes('git.token')
+        && /ready — danbri\/e2e-notes/.test(after.text)
+        ? pass('a person can aim a verb and hand over a key without an app touching either')
+        : fail(`the panel did not take: ${JSON.stringify({ ...after, text: after.text.slice(0, 140) })}`);
+      after.field === ''
+        ? pass('the token field is cleared, so the value is not left sitting in the DOM')
+        : fail(`the token is still in the input: ${after.field}`);
+
+      const shellTyped = await app2.evaluate(async () => ({
+        // the app never saw it go in, and still cannot get it out
+        names: await window.foaf.secrets.names(),
+        get: (() => { try { window.foaf.secrets.get('git.token'); return 'returned'; } catch (e) { return e.name; } })(),
+        commit: await window.foaf.invoke('git.commit', { path: 'edot/panel.md', content: 'via the panel' }),
+      }));
+      shellTyped.commit?.ok === true && shellTyped.get === 'FoafSecretsNotReadable'
+        ? pass('and the app can then commit with a credential it never handled at all')
+        : fail(`the panel-configured verb did not work: ${JSON.stringify(shellTyped)}`);
+      !JSON.stringify(shellTyped).includes('ghp_TYPED_INTO_THE_SHELL')
+        ? pass('the typed key is nowhere in what the app can observe')
+        : fail('the key reached the app');
+    }
+    await page.unroute('https://api.github.com/**');
+  }
+
   const stillAmbient = await page.evaluate(async () => {
     const m = await import('./foafos-apps.js');
     return m.ambientApps().map(a => a.id);
