@@ -444,3 +444,65 @@ foafos-feed { display: block; --foaf-accent: var(--zx-mag); }
 :root[data-root-storyless="true"] #scroll-status-bar {
     display: none !important;
 }
+
+/* Switcher rows are the app TREE, indented. A child sits under the thing
+   that opened it, so "close" taking three windows is visible before you
+   press it rather than a surprise afterwards. */
+.foafos-switch-row {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    margin-left: calc(var(--depth, 0) * 22px);
+}
+.foafos-switch-row .foafos-switch-card { flex: 1; }
+/* the branch line, so depth reads as lineage and not as a stray margin */
+.foafos-switch-row[style*="--depth: 1"] .foafos-switch-card,
+.foafos-switch-row:not([style*="--depth: 0"]) .foafos-switch-card {
+    border-left: 3px solid var(--zx-cyan);
+}
+.foafos-switch-act {
+    min-width: 44px;
+    min-height: 44px;
+    border: 1px solid #555;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #eee;
+    font-family: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+}
+.foafos-switch-act:hover { border-color: var(--zx-cyan); }
+.foafos-switch-act.danger:hover { border-color: #f66; color: #f88; }
+/* a suspended window says so at a glance rather than looking merely idle */
+.foafos-window.suspended { filter: grayscale(0.7) brightness(0.7); }
+.foafos-window.suspended::after {
+    content: "SUSPENDED";
+    position: absolute;
+    inset: auto 0 0 0;
+    text-align: center;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    background: rgba(0, 0, 0, 0.75);
+    color: var(--zx-yellow);
+    padding: 2px;
+    pointer-events: none;
+}
+
+/* The logger: a console, not a notification centre. Monospace, dense,
+   refusals coloured — the whole point is seeing what was REFUSED. */
+#foafos-log-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    font: 11px/1.45 ui-monospace, 'SF Mono', Menlo, monospace;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 4px 6px;
+}
+.foafos-log-row { display: flex; gap: 8px; white-space: nowrap; }
+.foafos-log-row .lt { color: var(--zx-cyan); flex: 0 0 auto; }
+.foafos-log-row .ls { color: #bbb; overflow: hidden; text-overflow: ellipsis; }
+.foafos-log-row.bad .lt { color: #f77; }
+.foafos-log-row.bad .ls { color: #fbb; }
+#foafos-log-filter { flex: 1; min-width: 0; }

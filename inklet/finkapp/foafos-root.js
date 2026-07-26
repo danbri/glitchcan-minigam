@@ -54,7 +54,18 @@ export const ROOTS = {
     label: 'Web TV',
     capabilities: ['storage', 'audio', 'input'],
     boot: { story: false, apps: ['channels'] },
-    apps: ['channels', 'robbamp'],
+    apps: ['channels', 'robbamp', 'tellyclub'],
+  },
+
+  // Tellyclub as the whole installation: one lean-back app, nothing else.
+  // The narrowest root here, and the point of it is that narrowness is
+  // expressed as DATA — no code knows this configuration exists.
+  tellyclub: {
+    id: 'tellyclub',
+    label: 'Tellyclub',
+    capabilities: ['audio'],
+    boot: { story: false, apps: ['tellyclub'] },
+    apps: ['tellyclub'],
   },
 };
 

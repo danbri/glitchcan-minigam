@@ -797,13 +797,19 @@ function buildUI() {
       </div><div class="foafos-home-body"></div>`;
     const body = home.querySelector('.foafos-home-body');
 
+    // Only what this INSTALLATION offers. The picker used to list every
+    // app in the registry regardless of root, so an office installation
+    // showed games it would then refuse to launch — an icon you can
+    // press that does nothing is worse than no icon.
     for (const fam of appsByFamily()) {
+      const offered = fam.apps.filter(a => rootOffers(ROOT, a.id));
+      if (!offered.length) continue;
       const sec = document.createElement('section');
       sec.innerHTML = `<h3>${fam.icon} ${fam.label}</h3>`;
       const grid = document.createElement('div');
       grid.className = 'foafos-app-grid';
       grid.setAttribute('role', 'list');
-      for (const app of fam.apps) {
+      for (const app of offered) {
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'foafos-app';
@@ -949,7 +955,9 @@ function buildUI() {
       case 'panel':
         // Shell-native: drawn by the shell, so there is no frame and no
         // boundary. Kept in one registry for discovery, not for security.
-        return app.panel === 'maker' ? openMaker() : null;
+        if (app.panel === 'maker') return openMaker();
+        if (app.panel === 'logger') return openLogger();
+        return null;
       case 'window':
       default: {
         const win = makeWindow(`${app.icon} ${app.name}`, 380, 460);
@@ -1113,18 +1121,59 @@ function buildUI() {
     if (!running.length) {
       cards.innerHTML = '<p class="hint">Nothing else is running. Open something from Apps.</p>';
     }
+    // Rows are the TREE, indented — because "5 running" meaning five
+    // unrelated things is a different fact from five things where four
+    // were opened by the first, and only one of those is true.
     for (const r of running) {
+      const row = document.createElement('div');
+      row.className = 'foafos-switch-row';
+      row.setAttribute('role', 'listitem');
+      row.style.setProperty('--depth', String(r.depth || 0));
+
       const c = document.createElement('button');
       c.type = 'button';
       c.className = 'foafos-switch-card';
-      c.setAttribute('role', 'listitem');
       c.innerHTML = `<span class="ico" aria-hidden="true">${r.icon}</span>
         <span class="ttl"></span><span class="sub"></span>`;
       c.querySelector('.ttl').textContent = r.label;
       c.querySelector('.sub').textContent = r.detail || '';
-      c.setAttribute('aria-label', `${r.label}${r.detail ? `, ${r.detail}` : ''}`);
+      c.setAttribute('aria-label',
+        `${r.label}${r.detail ? `, ${r.detail}` : ''}${r.depth ? `, opened by ${r.parentLabel}` : ''}`);
       c.addEventListener('click', () => { r.focus(); sw.remove(); });
-      cards.appendChild(c);
+      row.appendChild(c);
+
+      // Suspend and close act on the SUBTREE. The label says how many
+      // go with it, because "close" taking three things by surprise is
+      // the failure mode of every grouped-window UI ever shipped.
+      if (r.node) {
+        const kin = FoafOS.apps.descendants(r.node.id).length;
+        const withKin = kin ? ` and ${kin} beneath it` : '';
+
+        const sus = document.createElement('button');
+        sus.type = 'button';
+        sus.className = 'foafos-switch-act';
+        sus.textContent = r.node.suspended ? '▶' : '⏸';
+        sus.setAttribute('aria-label',
+          `${r.node.suspended ? 'Resume' : 'Suspend'} ${r.label}${withKin}`);
+        sus.addEventListener('click', (e) => {
+          e.stopPropagation();
+          setSubtreeSuspended(r.node.id, !r.node.suspended);
+          sw.remove(); openSwitcher();
+        });
+
+        const kill = document.createElement('button');
+        kill.type = 'button';
+        kill.className = 'foafos-switch-act danger';
+        kill.textContent = '✕';
+        kill.setAttribute('aria-label', `Close ${r.label}${withKin}`);
+        kill.addEventListener('click', (e) => {
+          e.stopPropagation();
+          FoafOS.apps.close(r.node.id);
+          sw.remove(); openSwitcher();
+        });
+        row.append(sus, kill);
+      }
+      cards.appendChild(row);
     }
     sw.querySelector('.foafos-overlay-close').addEventListener('click', () => sw.remove());
     sw.addEventListener('keydown', (e) => { if (e.key === 'Escape') sw.remove(); });
@@ -1135,46 +1184,75 @@ function buildUI() {
   }
   FoafOS.openSwitcher = openSwitcher;
 
-  // Everything that counts as "running", from every subsystem that has
-  // its own idea of what a window is.
+  // Everything running, AS THE TREE. This used to poll every subsystem
+  // that had its own idea of a window — the story, the minigame host's
+  // instance map, the DOM's floating windows — and flatten the answers
+  // into a list. The tree is now the truth, so this reads it instead;
+  // the per-surface knowledge that survives is only about how to FOCUS
+  // a thing, which really is presentation.
   function collectRunning() {
     const out = [];
-    const mg = window.FinkMinigames;
-    out.push({
-      icon: '📖', label: 'Story',
-      detail: window.FinkInkEngine?.storyStack?.length ? `dream depth ${FinkInkEngine.storyStack.length}` : '',
-      focus: () => { window.FinkWM?.active && FinkWM.mode === 'full' && FinkWM.setMode('split'); },
-    });
-    if (mg?.active && mg.currentType) {
-      const info = mg.minigameInfo?.[mg.currentType] || {};
-      out.push({
-        icon: info.icon || '🎮', label: info.title || mg.currentType,
-        detail: (window.FinkWM?.mode || '').toUpperCase() + (mg.windowState?.paused ? ' paused' : ''),
-        focus: () => window.FinkWM?.setMode('full'),
-      });
-    }
-    for (const inst of (mg?.instances?.values?.() || [])) {
-      if (inst.kind !== 'inline') continue;
-      const info = mg.minigameInfo?.[inst.type] || {};
-      out.push({
-        icon: info.icon || '🎮', label: `${info.title || inst.type}`, detail: `in the story · ${inst.id}`,
-        focus: () => document.getElementById(inst.containerId)
-          ?.scrollIntoView({ block: 'center', behavior: 'smooth' }),
-      });
-    }
-    for (const win of document.querySelectorAll('.foafos-window')) {
-      out.push({
-        icon: '🪟', label: win.querySelector('.foafos-window-bar span')?.textContent || 'window',
-        detail: 'window',
-        focus: () => {
-          document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
-          win.style.zIndex = 2630;
-          win.scrollIntoView({ block: 'nearest' });
-        },
-      });
-    }
+    const walk = (node, depth, parentLabel) => {
+      for (const child of FoafOS.apps.children(node.id)) {
+        const app = appById(child.appId);
+        out.push({
+          node: child, depth, parentLabel,
+          icon: app?.icon || (child.surface === 'story' ? '📖' : '🪟'),
+          label: child.label,
+          detail: [
+            child.surface,
+            child.suspended ? 'suspended' : '',
+            child.surface === 'stage' ? (window.FinkWM?.mode || '') : '',
+            child.surface === 'story' && window.FinkInkEngine?.storyStack?.length
+              ? `dream depth ${FinkInkEngine.storyStack.length}` : '',
+          ].filter(Boolean).join(' · '),
+          focus: () => focusNode(child),
+        });
+        walk(child, depth + 1, child.label);
+      }
+    };
+    if (FoafOS.rootNode) walk(FoafOS.rootNode, 0, FoafOS.root?.label || 'root');
     return out;
   }
+
+  // How to bring a node to the front, per surface. Presentation only.
+  function focusNode(node) {
+    if (node.surface === 'stage') { window.FinkWM?.setMode('full'); return; }
+    if (node.surface === 'story') {
+      if (window.FinkWM?.active && window.FinkWM.mode === 'full') window.FinkWM.setMode('split');
+      return;
+    }
+    const win = document.querySelector(`.foafos-window[data-instance="${node.id}"]`);
+    if (win) {
+      document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
+      win.style.zIndex = 2630;
+      win.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  // Suspending a subtree must actually reach the things in it: a flag
+  // nobody acts on is the same bug as a capability nobody enforces.
+  function setSubtreeSuspended(id, suspended) {
+    const ids = FoafOS.apps.setSuspended(id, suspended);
+    for (const nid of ids) {
+      const node = FoafOS.apps.get(nid);
+      if (!node) continue;
+      if (node.surface === 'stage' && window.FinkMinigames) {
+        // the guest's own pause verb if it declared one, else the shell's
+        try { window.FinkMinigames.togglePause?.(suspended); } catch (e) { /* no game */ }
+      }
+      const win = document.querySelector(`.foafos-window[data-instance="${nid}"]`);
+      const frame = win?.querySelector('iframe');
+      if (frame) {
+        try {
+          frame.contentWindow?.postMessage({ type: suspended ? 'app.suspend' : 'app.resume' }, '*');
+        } catch (e) { /* closed */ }
+        win.classList.toggle('suspended', suspended);
+      }
+    }
+    return ids;
+  }
+  FoafOS.setSubtreeSuspended = setSubtreeSuspended;
 
   // Keyboard: the two shortcuts every desktop already trains people on.
   // Not captured while typing — a text field must keep its keys.
@@ -1226,6 +1304,93 @@ function buildUI() {
     for (const [n, val] of v.scratch) rows.push(['—', `${n} = ${val}`, 'unbound (no VAR)']);
     return rows;
   }
+
+  // ── the logger ────────────────────────────────────────────────────
+  // Everything this shell refuses, denies, attenuates or runs out of
+  // quota for is published on the bus and then, until now, seen by
+  // nobody. A capability system whose refusals are invisible teaches
+  // people that nothing was refused.
+  //
+  // Deliberately NOT the drawer feed: that is a curated set of topics
+  // rendered as friendly cards. This is the firehose, filterable, with
+  // refusals coloured — a console, not a notification centre.
+  const LOG_MAX = 400;
+  const logBuffer = [];
+  const isRefusal = (t) => /(refused|denied|quota|unrouted|failed|error|fault|ambient)/.test(t);
+  // '*' is this bus's catch-all — '**' matches NOTHING (FoafBus.match
+  // handles '*', an exact topic, or a 'prefix.*'), so subscribing with it
+  // would have been a logger that silently logged nothing.
+  bus.subscribe('*', (e) => {
+    logBuffer.push({
+      t: e.topic, s: e.data?.summary || '', ts: e.ts || 0,
+      src: e.source || 'local', bad: isRefusal(e.topic),
+    });
+    if (logBuffer.length > LOG_MAX) logBuffer.shift();
+    if (document.getElementById('foafos-logger')) renderLog();
+  });
+
+  let logFilter = '';
+  let logPaused = false;
+  function renderLog() {
+    const list = document.getElementById('foafos-log-list');
+    if (!list || logPaused) return;
+    const rows = logBuffer.filter(r => !logFilter || (r.t + ' ' + r.s).includes(logFilter));
+    list.textContent = '';
+    for (const r of rows.slice(-160)) {
+      const li = document.createElement('div');
+      li.className = 'foafos-log-row' + (r.bad ? ' bad' : '');
+      const topic = document.createElement('span');
+      topic.className = 'lt';
+      topic.textContent = r.t;
+      const summary = document.createElement('span');
+      summary.className = 'ls';
+      summary.textContent = r.s;
+      li.append(topic, summary);
+      list.appendChild(li);
+    }
+    list.scrollTop = list.scrollHeight;
+    const count = document.getElementById('foafos-log-count');
+    if (count) {
+      const bad = logBuffer.filter(r => r.bad).length;
+      count.textContent = `${rows.length}/${logBuffer.length}${bad ? ` · ${bad} refused` : ''}`;
+    }
+  }
+
+  function openLogger() {
+    if (document.getElementById('foafos-logger')) return null;
+    const win = makeWindow('📜 Logger', 460, 420);
+    win.id = 'foafos-logger';
+    const body = document.createElement('div');
+    body.style.cssText = 'flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;padding:8px;';
+    body.innerHTML = `
+      <div class="foafos-row">
+        <input id="foafos-log-filter" placeholder="filter topics" aria-label="Filter log by topic or text">
+        <button type="button" id="foafos-log-pause" aria-pressed="false" aria-label="Pause the log tail">⏸</button>
+        <button type="button" id="foafos-log-clear" aria-label="Clear the log">CLEAR</button>
+      </div>
+      <p class="foafos-sub" id="foafos-log-count" role="status"></p>
+      <div id="foafos-log-list" role="log" aria-label="Event log" tabindex="0"></div>`;
+    win.appendChild(body);
+    document.body.appendChild(win);
+    body.querySelector('#foafos-log-filter').addEventListener('input', (e) => {
+      logFilter = e.target.value.trim(); renderLog();
+    });
+    const pause = body.querySelector('#foafos-log-pause');
+    pause.addEventListener('click', () => {
+      logPaused = !logPaused;
+      pause.textContent = logPaused ? '▶' : '⏸';
+      pause.setAttribute('aria-pressed', String(logPaused));
+      pause.setAttribute('aria-label', logPaused ? 'Resume the log tail' : 'Pause the log tail');
+      if (!logPaused) renderLog();
+    });
+    body.querySelector('#foafos-log-clear').addEventListener('click', () => {
+      logBuffer.length = 0; renderLog();
+    });
+    renderLog();
+    bus.publish('ui.logger', { summary: 'Logger opened' });
+    return win;
+  }
+  FoafOS.openLogger = openLogger;
 
   function openMaker() {
     if (document.getElementById('foafos-maker')) return;

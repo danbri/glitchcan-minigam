@@ -88,6 +88,25 @@ export const APPS = [
   { id: 'robbamp', family: 'media', icon: '🎛️', name: 'ROBBAMP', surface: 'window',
     url: '../../magpie/robbin/robbin.html#robbamp', desc: 'The player',
     capabilities: ['storage', 'audio', 'same-origin'] },
+  // Tellyclub — danbri's Archive.org TV browser, from the isle_of_glitch
+  // repo, referenced at its deployed URL rather than vendored (it is
+  // ~5.8MB, and it needs the network to stream from archive.org anyway).
+  //
+  // It is the best demonstration in this installation of the capability
+  // model working on an app that knows nothing about foafos: it does NOT
+  // load app-sdk.js, so it gets an opaque origin and its `localStorage`
+  // throws — and it survives, because its author wrapped every storage
+  // call in try/catch. Adaptation, not compliance, from the other side.
+  //
+  // NOT declaring `storage`: without app-sdk it cannot use the broker,
+  // and claiming a capability nothing delivers is the exact lie this
+  // registry keeps catching. The honest consequence is that its channel
+  // and cast preferences do not persist between runs here. Adding one
+  // script tag to a vendored copy would fix that.
+  { id: 'tellyclub', family: 'media', icon: '📺', name: 'Tellyclub', surface: 'window',
+    url: 'https://danbri.github.io/isle_of_glitch/tvp/app/',
+    desc: 'Archive.org TV on a real broadcast schedule',
+    capabilities: ['audio'], external: true, persists: false },
 
   // ── Make ──────────────────────────────────────────────────────────
   // HONESTY NOTE, and it is not a small one. `surface: 'story'` is NOT
@@ -120,6 +139,9 @@ export const APPS = [
   // not read this row as "sandboxed with no capabilities".
   { id: 'maker', family: 'make', icon: '🔧', name: 'Maker', surface: 'panel', panel: 'maker',
     desc: 'Variables, governance, capabilities', capabilities: ['shell'], silent: true },
+  { id: 'logger', family: 'make', icon: '📜', name: 'Logger', surface: 'panel', panel: 'logger',
+    desc: 'The event bus, filterable — including everything refused',
+    capabilities: ['shell'], silent: true },
   { id: 'universe', family: 'make', icon: '🗺️', name: 'Finkiverse', surface: 'window',
     url: '../../docs/fink-universe.html', desc: 'Stories and widgets, mapped',
     capabilities: [], silent: true },

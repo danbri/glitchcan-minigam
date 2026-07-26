@@ -1,20 +1,46 @@
 {
   "name": "foafos",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
-  "description": "foafos shell core: local event bus, sealed ephemeral sessions, web-component widget/feed contract, transports to the wider event ecosystem",
+  "description": "foafos shell core: an app tree with capability attenuation, brokered storage/audio/input/variables, a local event bus, sealed ephemeral sessions, and a web-component widget/feed contract",
   "main": "src/index.mjs",
   "exports": {
-    ".": "./src/index.mjs"
+    ".": "./src/index.mjs",
+    "./bus": "./src/bus.mjs",
+    "./apptree": "./src/apptree.mjs",
+    "./store": "./src/store.mjs",
+    "./vars": "./src/vars.mjs",
+    "./audio": "./src/audio.mjs",
+    "./input": "./src/input.mjs",
+    "./session": "./src/session.mjs",
+    "./widgets": "./src/widgets.mjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
   },
   "keywords": [
+    "capability-security",
+    "attenuation",
+    "app-tree",
+    "window-manager",
     "event-bus",
     "web-components",
-    "activity-feed",
+    "sandbox",
     "shell",
     "foaf"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danbri/glitchcan-minigam",
+    "directory": "packages/foafos"
+  },
   "scripts": {
     "test": "node ./test/run.js"
   }

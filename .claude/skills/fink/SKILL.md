@@ -729,6 +729,36 @@ back to the default and say `fellBack` on `root.ready`.
   tests only ever worked because of the `??`.)
 - Locked by `e2e-root.mjs` (16) + `apptree.test.js` (8 unit).
 
+## alpha1 surfaces: picker, switcher, suspension, logger
+
+- **Picker** (`openHome`) lists only what the ROOT offers (`rootOffers`).
+  It used to list the whole registry, so an office install showed games it
+  would then refuse to launch — an icon you can press that does nothing is
+  worse than no icon.
+- **Switcher** (`openSwitcher`) renders the APP TREE, indented, built by
+  walking `FoafOS.apps` rather than polling each subsystem's idea of a
+  window. Per-row ⏸ and ✕ act on the SUBTREE and say so in their
+  aria-label ("and 1 beneath it") — a grouped-window UI that takes three
+  things by surprise is the classic failure.
+- **Suspension**: `FoafOS.setSubtreeSuspended(id, bool)` sets the tree
+  flag AND reaches the things in it (guest pause, `app.suspend` postMessage
+  to window apps, a `.suspended` class). A flag nobody acts on is the same
+  bug as a capability nobody enforces.
+- **Logger** (`openLogger`, Apps → Make → 📜) is the bus as a filterable
+  console with refusals coloured — distinct from the drawer feed, which is
+  curated topics as friendly cards. **Subscribe with `'*'`, NOT `'**'`:**
+  `FoafBus.match` handles `'*'`, an exact topic, or `'prefix.*'` and
+  nothing else, so `'**'` silently matches nothing. Event timestamps are
+  `e.ts`, not `e.at`.
+- **Tellyclub** (`?root=tellyclub`) is danbri's Archive.org TV browser from
+  the isle_of_glitch repo, referenced at its deployed URL. It knows nothing
+  about foafos, gets an opaque origin, and SURVIVES because its author
+  wrapped every `localStorage` call in try/catch — adaptation from the
+  guest side. It does not declare `storage` (without app-sdk it cannot use
+  the broker), so its prefs do not persist here, and the registry says so.
+  Content cannot be verified headlessly in this environment:
+  `net::ERR_ABORTED`, no browser egress.
+
 ## Stories are privileged over apps — know this
 
 Asked directly ("does foafos privilege stories over office docs?") and

@@ -85,6 +85,17 @@ try {
       ? pass(`office root opened its app instead (${st.windows} window, ${st.tree.total} nodes in the tree)`)
       : fail(`office root opened nothing: ${JSON.stringify({ windows: st.windows, total: st.tree.total })}`);
 
+    // the picker shows only what this installation offers
+    const picker = await page.evaluate(() => {
+      FoafOS.openHome();
+      const ids = [...document.querySelectorAll('#foafos-home .foafos-app')].map(b => b.dataset.app);
+      document.getElementById('foafos-home')?.remove();
+      return ids;
+    });
+    picker.length > 0 && !picker.includes('robbin') && picker.includes('edot')
+      ? pass(`the picker lists only the installation's apps (${picker.join(', ')})`)
+      : fail(`picker leaked apps outside the root: ${JSON.stringify(picker)}`);
+
     // the installation refuses what it does not offer
     const refused = await page.evaluate(() => {
       const before = FoafOS.apps.report().total;
@@ -200,6 +211,96 @@ try {
       ? pass('closing the story really tore down the game beneath it (guest frame gone, WM inactive)')
       : fail(`cascade did not reach the guest: ${JSON.stringify(after)}`);
     errs.length === 0 ? pass('story tree: no page errors') : fail(`story tree errors: ${errs[0]}`);
+    await page.close();
+  }
+
+  // ── 6. the switcher IS the tree, and its verbs act on subtrees ─────
+  {
+    const page = await browser.newPage({ viewport: { width: 900, height: 820 }, hasTouch: true });
+    const errs = [];
+    page.on('pageerror', e => errs.push(String(e).split('\n')[0].slice(0, 140)));
+    await page.goto(base + `?story=/${repoName}/inklet/hampstead.fink.js`);
+    await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => FinkMinigames.startMinigame('gridluck', 'normal'));
+    await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 15000 });
+    await page.waitForTimeout(2500);
+
+    const rows = await page.evaluate(() => {
+      FoafOS.openSwitcher();
+      return [...document.querySelectorAll('.foafos-switch-row')].map(r => ({
+        depth: r.style.getPropertyValue('--depth'),
+        title: r.querySelector('.ttl')?.textContent,
+        acts: [...r.querySelectorAll('.foafos-switch-act')].map(b => b.getAttribute('aria-label')),
+      }));
+    });
+    const story = rows.find(r => r.title === 'Story');
+    const game = rows.find(r => r.title === 'GridLuck');
+    story?.depth === '0' && game?.depth === '1'
+      ? pass(`switcher shows lineage: Story at depth 0, GridLuck indented beneath it`)
+      : fail(`switcher is still flat: ${JSON.stringify(rows)}`);
+    // the destructive verb must SAY what it takes with it
+    /and 1 beneath it/.test((story?.acts || []).join(' '))
+      ? pass('close/suspend name the subtree they take ("and 1 beneath it")')
+      : fail(`subtree verbs do not disclose scope: ${JSON.stringify(story?.acts)}`);
+
+    // suspending the story suspends the game under it, for real
+    const susp = await page.evaluate(async () => {
+      const t = FoafOS.apps;
+      const story = FoafOS.storyNode;
+      const kid = t.children(story.id)[0];
+      FoafOS.setSubtreeSuspended(story.id, true);
+      await new Promise(r => setTimeout(r, 400));
+      return { story: t.get(story.id).suspended, kid: t.get(kid.id).suspended,
+               root: t.get(FoafOS.rootNode.id).suspended };
+    });
+    susp.story && susp.kid && !susp.root
+      ? pass('suspending a subtree reaches its children and stops at its parent')
+      : fail(`subtree suspend wrong: ${JSON.stringify(susp)}`);
+    errs.length === 0 ? pass('switcher: no page errors') : fail(`switcher errors: ${errs[0]}`);
+    await page.close();
+  }
+
+  // ── 7. the logger shows what was REFUSED ───────────────────────────
+  // A capability system whose refusals are invisible teaches people that
+  // nothing was refused. This is the surface where they become visible.
+  {
+    const { page, errs } = await open('?root=webtv');
+    const log = await page.evaluate(() => {
+      FoafOS.openLogger();
+      // provoke a refusal the webtv root must produce
+      FoafOS.apps.spawn({ appId: 'x', parentId: FoafOS.rootNode.id, capabilities: ['same-origin'] });
+      FoafOS.store.grant('nope', []);
+      FoafOS.store.set('nope', 'k', 'v');
+      const rows = [...document.querySelectorAll('.foafos-log-row')];
+      return {
+        open: !!document.getElementById('foafos-logger'),
+        rows: rows.length,
+        bad: rows.filter(r => r.classList.contains('bad')).length,
+        topics: rows.map(r => r.querySelector('.lt').textContent),
+        count: document.getElementById('foafos-log-count')?.textContent || '',
+      };
+    });
+    log.open && log.rows > 0
+      ? pass(`logger is live (${log.rows} events)`)
+      : fail(`logger empty — the '*' catch-all is not matching: ${JSON.stringify(log)}`);
+    log.bad > 0 && log.topics.includes('app.spawn.refused') && log.topics.includes('store.denied')
+      ? pass(`refusals are visible and marked (${log.bad} flagged, incl. app.spawn.refused + store.denied)`)
+      : fail(`refusals not surfaced: ${JSON.stringify({ bad: log.bad, topics: log.topics.slice(-8) })}`);
+    /refused/.test(log.count)
+      ? pass(`the count says so too: "${log.count}"`)
+      : fail(`count does not mention refusals: "${log.count}"`);
+
+    // and the filter narrows rather than decorating
+    const filtered = await page.evaluate(() => {
+      const f = document.getElementById('foafos-log-filter');
+      f.value = 'refused'; f.dispatchEvent(new Event('input', { bubbles: true }));
+      return [...document.querySelectorAll('.foafos-log-row')].map(r => r.querySelector('.lt').textContent);
+    });
+    filtered.length > 0 && filtered.every(t => /refused/.test(t))
+      ? pass(`filter narrows to ${filtered.length} matching rows`)
+      : fail(`filter did not narrow: ${JSON.stringify(filtered.slice(0, 6))}`);
+    errs.length === 0 ? pass('logger: no page errors') : fail(`logger errors: ${errs[0]}`);
     await page.close();
   }
 
