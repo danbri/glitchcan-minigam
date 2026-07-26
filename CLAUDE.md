@@ -123,7 +123,7 @@ none: it reads as authoritative.
 - INK runtime `onError` IS wired in `finkapp/fink-ink-engine.js`.
 - Layered media path resolution (global base → story BASEHREF → file-relative fallback) is implemented in FinkUtils; config via `fink-config.js` only (no form fields).
 - Save/load: partial (localStorage bookmarks in `fink-player.js`, nav cache in `fink-navigation.js`). `inklet/demos/fink-namespace-preprocessor.js` exists but is NOT wired into the player.
-- Known-broken content: Ukrainian story (`tml-2025-langlearn.fink.js`) runtime error; Maple Hollow story-load 404; Shane Manor compiles but full gameplay never tested (`shane_todo.md`).
+- Known-broken content (re-verified 2026-07-26, headless through the PLAYER, not just compile): the Ukrainian story and Maple Hollow are **fixed** — both load and present choices, Maple Hollow via the TOC route too. Still true: Shane Manor compiles and links chess but full gameplay has never been played through (`shane_todo.md`).
 - Worknotes: a six-review January 2026 campaign (`worknotes/`) is the best statement of open UX/a11y defects (breadcrumb visibility, loading progress, CSP, ARIA). Largely unaddressed.
 
 ### FINK engine architecture (DO NOT BREAK)
