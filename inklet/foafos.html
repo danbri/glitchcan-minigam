@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>foafos alpha1 — pick an installation</title>
+<style>
+  :root { color-scheme: dark; --cyan: #00e5ff; --mag: #ff2ec4; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100dvh; }
+  body {
+    background: #06060c;
+    color: #eee;
+    font: 16px/1.55 ui-monospace, 'SF Mono', Menlo, monospace;
+    padding: clamp(16px, 5vw, 48px);
+  }
+  h1 { color: var(--mag); font-size: clamp(1.4rem, 5vw, 2rem); margin: 0 0 .2em; letter-spacing: .04em; }
+  .sub { opacity: .65; margin: 0 0 2rem; max-width: 62ch; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); max-width: 1100px; }
+  a.card {
+    display: block; padding: 16px; border: 1px solid #333; border-radius: 10px;
+    background: rgba(255,255,255,.03); color: inherit; text-decoration: none;
+    min-height: 44px;
+  }
+  a.card:hover, a.card:focus-visible { border-color: var(--cyan); background: rgba(0,229,255,.07); }
+  a.card:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  .ico { font-size: 1.8rem; line-height: 1; }
+  .nm { color: var(--cyan); font-weight: bold; display: block; margin: .4em 0 .2em; }
+  .why { font-size: .82rem; opacity: .75; }
+  .caps { font-size: .72rem; opacity: .55; margin-top: .6em; word-break: break-word; }
+  h2 { color: var(--cyan); font-size: .85rem; letter-spacing: .2em; margin: 2.5rem 0 .6rem; opacity: .8; }
+  ul { max-width: 74ch; padding-left: 1.2em; }
+  li { margin: .35em 0; font-size: .88rem; }
+  code { color: var(--mag); }
+  footer { margin-top: 3rem; font-size: .78rem; opacity: .5; max-width: 74ch; }
+  footer a, ul a { color: var(--cyan); }
+  h1 .ver { opacity: .5; font-size: .6em; }
+</style>
+</head>
+<body>
+<h1>foafos <span class="ver">alpha1</span></h1>
+<p class="sub">
+  One shell, four installations. Each is a <strong>root manifest</strong> —
+  data, not a fork — naming what the root may do, what it boots, and which
+  apps exist at all. Everything below the root is bounded by it, because a
+  child can never hold a capability its parent lacks.
+</p>
+
+<div class="grid">
+  <a class="card" href="finkapp/">
+    <span class="ico" aria-hidden="true">🐥</span>
+    <span class="nm">Glitch Canary</span>
+    <span class="why">The full thing: stories, games, office, media. Boots the table of contents.</span>
+    <span class="caps">storage · vars · audio · input · launch · navigate · chrome · same-origin</span>
+  </a>
+  <a class="card" href="finkapp/?root=office">
+    <span class="ico" aria-hidden="true">📄</span>
+    <span class="nm">Office</span>
+    <span class="why">edot, Data, Calendar, Files. No story engine runs at all — FINK is simply unknown to this installation.</span>
+    <span class="caps">storage · same-origin</span>
+  </a>
+  <a class="card" href="finkapp/?root=webtv">
+    <span class="ico" aria-hidden="true">📺</span>
+    <span class="nm">Web TV</span>
+    <span class="why">Channels and Tellyclub, lean-back. Holds no <code>same-origin</code>, so nothing it opens can either.</span>
+    <span class="caps">storage · audio · input</span>
+  </a>
+  <a class="card" href="finkapp/?root=tellyclub">
+    <span class="ico" aria-hidden="true">📻</span>
+    <span class="nm">Tellyclub</span>
+    <span class="why">The narrowest: one app, one capability. Archive.org TV on a broadcast schedule.</span>
+    <span class="caps">audio</span>
+  </a>
+</div>
+
+<h2>WHAT TO TRY</h2>
+<ul>
+  <li><strong>Apps</strong> (drawer → ⊞, or <code>Alt+H</code>) lists only what
+      that installation offers. Office shows no games.</li>
+  <li><strong>Running</strong> (⧉, or <code>Alt+Tab</code>) shows the app
+      <em>tree</em>. Start a story, let it open a game, and the game appears
+      indented beneath it. The ⏸ and ✕ on a row act on the whole subtree and
+      say how many go with it.</li>
+  <li><strong>Logger</strong> (Apps → Make → 📜) is the event bus, filterable.
+      Filter for <code>refused</code> to watch the capability system say no.</li>
+  <li><strong>Volume</strong> (drawer) reports what it <em>cannot</em> reach
+      as well as what it can.</li>
+  <li>On a phone, the <strong>d-pad</strong> is the shell's, not the game's —
+      one pad, shared, and it retires when a real gamepad appears.</li>
+</ul>
+
+<h2>HONEST STATUS</h2>
+<ul>
+  <li>Five apps still run with ambient authority (<code>same-origin</code>) because
+      they use <code>localStorage</code>/<code>indexedDB</code> ~120 times and have not
+      been moved onto the storage broker. The drawer names them.</li>
+  <li>Stories are <strong>more</strong> privileged than apps, not less: the narrative
+      runtime is the host page, so a story can launch, navigate and restyle.
+      Its capability list describes rather than constrains, and says so.</li>
+  <li>There is no snapshot/restore contract yet, so closing a game loses it.</li>
+  <li>Tellyclub's preferences do not persist here — it predates the SDK and
+      gets an opaque origin, which it survives only because its author wrote
+      defensive storage code.</li>
+</ul>
+
+<footer>
+  Source: <a href="https://github.com/danbri/glitchcan-minigam">danbri/glitchcan-minigam</a>.
+  Tellyclub lives in <a href="https://github.com/danbri/isle_of_glitch">danbri/isle_of_glitch</a>.
+  Design notes: <code>docs/foafos-root-and-app-tree-20260726.md</code>.
+  Core as a package: <code>packages/foafos</code>.
+</footer>
+</body>
+</html>
