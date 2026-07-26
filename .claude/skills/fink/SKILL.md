@@ -806,11 +806,15 @@ back to the default and say `fellBack` on `root.ready`.
   - The switcher counts them separately ("Running 1 + 3 chrome") and sorts
     them last: they are genuinely running apps, but "Running 4" for one
     story and three status bars is a true number that reads as a wrong one.
-- **`shell` must be held by the root.** Found doing the above: Maker and
-  Logger declare `capabilities: ['shell']`, no root held `shell`, so
-  `launchApp` refused them — every press of those picker tiles was a
-  no-op, masked because the drawer button called `openLogger()` directly.
-  A capability nothing grants is not a safe default, it is a dead app.
+- **A CAPABILITY NOTHING GRANTS IS A DEAD APP.** Found twice in one day.
+  First: Maker and Logger declare `['shell']`, no root held `shell`, so
+  `launchApp` refused them — every press of those picker tiles was a no-op,
+  masked because the drawer button called `openLogger()` directly. Then,
+  hours later, adding `secrets` to edot without adding it to the roots
+  killed edot outright ("edot frame never appeared" — caught by e2e-caps,
+  which is the only reason it did not ship). **When you add a capability to
+  an app, add it to every root that offers that app**, and check the app
+  still launches rather than assuming.
 - **The tree has real branches:** the loaded story becomes a node under
   root (`FoafOS.storyNode`) and games open UNDER it, so closing the story
   tears down its games for real (guest frame gone, WM inactive). Done by
@@ -853,6 +857,44 @@ back to the default and say `fellBack` on `root.ready`.
   the broker), so its prefs do not persist here, and the registry says so.
   Content cannot be verified headlessly in this environment:
   `net::ERR_ABORTED`, no browser egress.
+
+## Secrets are not storage (July 2026)
+
+Answering "is login the next big puzzle?" — no. `magpie/edot/auth/` is PKCE
+S256, 16+ providers, an honest SECURITY.md and **34 passing assertions**.
+What was broken is where the token LIVES.
+
+**Measured** under `?root=office`, edot de-privileged, "stay signed in" on:
+the bearer token was in `FoafStore.snapshot('edot')` in plaintext AND in
+`foafos.store.edot` in plaintext **on disk in the shell's origin**. Nothing
+was broken to cause that — reading back what you wrote is what a storage
+broker is FOR, which is exactly why a credential cannot live in one.
+(`sessionStorage`-scoped tokens are fine: that shim is memory-only, so the
+default is *safer* under foafos than standalone. The bus/audit never carried
+the value.)
+
+`FoafSecrets` (packages/foafos/src/secrets.mjs) is the same shape as
+FoafStore with a deliberately worse interface: **put, names, use — and no
+get.** `secrets.get()` exists only to refuse with an explanation, because a
+documented refusal is a design and a missing method is an omission. A
+separate capability from `storage`, so an app that may keep preferences does
+not thereby get to keep tokens.
+
+- Sealed at rest via `session.mjs` (AES-GCM + PBKDF2). **No passphrase means
+  no sealing** — it holds them for the run and SAYS `sealed: false`, rather
+  than silently writing them out in the clear, which is the bug it exists to
+  stop.
+- `use(appId, name, fn)` runs `fn` shell-side. It must NEVER accept a
+  guest-supplied function — that is reading the secret with extra steps. The
+  transport exposes named OPERATIONS.
+- A failed `use` reports the error TYPE, never its message: a fetch failure's
+  message and URL routinely contain the credential.
+- Testing an ABSENCE means grepping the whole observable surface — audit,
+  bus, report, sealed blob — for the secret itself. That is what
+  `secrets.test.js` does (12 assertions).
+- Next increment is the verb side (`git.commit`, `s3.put`, `solid.put`): the
+  app asks for the OUTCOME and never holds the authority. Same move as
+  brokering storage instead of handing back `allow-same-origin`.
 
 ## Migrating an app off `same-origin` (the Calendar pattern)
 

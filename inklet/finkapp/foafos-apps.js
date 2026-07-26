@@ -24,6 +24,12 @@
 //                    why rather than getting a bare SecurityError.
 //
 //                    storage      brokered per-app key/value (FoafStore)
+//                    secrets      hand the shell a credential (FoafSecrets).
+//                                 PUT and USE, never GET — separate from
+//                                 `storage` because an app that may keep
+//                                 preferences must not thereby get to keep
+//                                 tokens, and because a store you can read
+//                                 back is the wrong home for a secret.
 //                    vars:read    read shared story variables
 //                    vars:write   propose story variable changes
 //                    audio        obey the master volume (and be mutable)
@@ -53,17 +59,23 @@ export const APP_FAMILIES = [
 
 export const APPS = [
   // ── Office ────────────────────────────────────────────────────────
-  // These still hold `same-origin`: between them they use
-  // localStorage/sessionStorage/indexedDB ~120 times and have not been
-  // moved onto the store broker yet. Migrating them retires the hatch.
+  // ALL FOUR are off the escape hatch as of July 2026. Each hit a
+  // different wall — see docs/foafos-alpha1.md — and none of them holds
+  // `same-origin` any more, which is why the office ROOT does not either.
+  //
   // MIGRATED (July 2026). edot's own `same-origin` turned out to be
   // cargo cult: the page has no iframes to reach into, every localStorage
   // call was already try-wrapped, and `Library.create()` already tried
   // IndexedDB and fell back to a localStorage backend. All it needed was
   // for that fallback to land somewhere — app-sdk's shim over the broker.
+  // `secrets` because it really does hold a credential: its GitHub-backed
+  // saving takes a token. Declared SEPARATELY from `storage` on purpose —
+  // measured (July 2026), that token was landing in the storage broker in
+  // plaintext on the shell's disk, because reading back what you wrote is
+  // what a storage broker is for. See docs/foafos-secrets-and-auth-20260726.md
   { id: 'edot', family: 'office', icon: '🗂️', name: 'edot', surface: 'window',
     url: '../../magpie/edot/edot.html', desc: 'The suite shell',
-    capabilities: ['storage'], silent: true },
+    capabilities: ['storage', 'secrets'], silent: true },
   // MIGRATED (July 2026). Data keeps one SQLite blob, and kept it in
   // IndexedDB — which an opaque origin refuses to open. Its engine now
   // picks a backend by trying, and falls back to the same blob base64'd

@@ -14,7 +14,7 @@ import {
   widgets, defineBaseCards, defineFeed,
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
-  FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, localBackend, AppTree,
+  FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, FoafSecrets, localBackend, AppTree,
 } from '../../packages/foafos/src/index.mjs';
 import { appsByFamily, appById, ambientApps, unenforcedApps, chromeApps, APPS } from './foafos-apps.js';
 import { resolveRoot, rootOffers } from './foafos-root.js';
@@ -162,6 +162,24 @@ const store = new FoafStore({
   quotas: { sheets: 4 * 1024 * 1024 },
 });
 FoafOS.store = store;
+
+// ── secrets: the one thing the storage broker must NOT be asked to hold ──
+// Measured (July 2026): edot's "stay signed in" moves its tokens from
+// sessionStorage to localStorage, which under foafos is app-sdk's shim over
+// FoafStore — so a bearer token landed in `foafos.store.edot`, in plaintext,
+// on disk, in the SHELL's origin. Nothing was broken to cause that; reading
+// back what you wrote is what a storage broker is FOR, which is precisely
+// why a credential does not belong in one.
+//
+// FoafSecrets is the same shape with a deliberately worse interface: put,
+// name, use — and no get at all. Sealed at rest only when the session has a
+// passphrase; otherwise it holds them for the run and SAYS so, rather than
+// quietly writing them out in the clear.
+const secrets = new FoafSecrets({
+  bus,
+  storage: audioStore || null,
+});
+FoafOS.secrets = secrets;
 
 // ── the root, and the tree of apps beneath it ──────────────────────────
 // An installation is a root manifest plus whatever it opens. The root
@@ -966,6 +984,8 @@ function buildUI() {
   const SERVICES = [
     { id: 'storage', label: 'Storage', state: 'brokered',
       provider: 'FoafStore', note: 'per-app namespace, quota, audit; local backend today' },
+    { id: 'secrets', label: 'Secrets', state: 'brokered',
+      provider: 'FoafSecrets', note: 'put and use, never get; sealed only with a session passphrase' },
     { id: 'vars', label: 'Story variables', state: 'brokered',
       provider: 'FoafVars', note: 'shared economy vs private, dreams read-only' },
     { id: 'audio', label: 'Audio', state: 'brokered',
@@ -1076,6 +1096,9 @@ function buildUI() {
     // Every app gets a storage namespace it cannot name its way out of.
     // Granting is per-app and explicit: no capability, no snapshot.
     store.grant(app.id, caps);
+    // …and a secrets namespace, on a SEPARATE capability, so an app that
+    // may keep preferences does not thereby get to keep credentials.
+    secrets.grant(app.id, caps);
 
     switch (app.surface) {
       case 'stage':
@@ -1188,6 +1211,40 @@ function buildUI() {
             frame.contentWindow?.postMessage({ type: 'store.refused', op: d.type, key: d.key, reason: r.reason }, '*');
           } catch (err) { /* closed */ }
         }
+        return;
+      }
+
+      // Secrets travel the same way — as PROPOSALS — but only one
+      // direction. There is no `secrets.get`, and a guest that asks is
+      // answered with the reason rather than ignored.
+      if (d.type === 'secrets.put' || d.type === 'secrets.forget' || d.type === 'secrets.names') {
+        const reply = (payload) => {
+          try { frame.contentWindow?.postMessage(payload, '*'); } catch (err) { /* closed */ }
+        };
+        if (d.type === 'secrets.names') {
+          reply({ type: 'secrets.names.result', rid: d.rid, names: secrets.names(app.id) });
+          return;
+        }
+        const r = d.type === 'secrets.put'
+          ? secrets.put(app.id, d.name, d.value)
+          : secrets.forget(app.id, d.name);
+        if (r.ok) secrets.flush();       // re-seal if we are sealed at all
+        reply({ type: 'secrets.result', rid: d.rid, op: d.type, name: d.name,
+                ok: r.ok, reason: r.reason, sealed: secrets.sealed });
+        return;
+      }
+      if (d.type === 'secrets.get') {
+        try {
+          frame.contentWindow?.postMessage({
+            type: 'secrets.refused', rid: d.rid, op: 'get', name: d.name,
+            reason: 'not-readable',
+            hint: 'secrets cannot be read back — ask the shell to use one instead',
+          }, '*');
+        } catch (err) { /* closed */ }
+        bus.publish('secrets.denied', {
+          summary: `${app.name} tried to READ a secret — refused by design`,
+          appId: app.id, name: d.name, op: 'get',
+        });
         return;
       }
 

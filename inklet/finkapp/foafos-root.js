@@ -37,7 +37,7 @@ export const ROOTS = {
     // Apps picker was a no-op for as long as that tile existed, because
     // launchApp went through attenuation and the drawer's own button
     // called openLogger() directly and so never noticed.
-    capabilities: ['storage', 'vars:read', 'vars:write', 'audio', 'input',
+    capabilities: ['storage', 'secrets', 'vars:read', 'vars:write', 'audio', 'input',
                    'launch', 'navigate', 'chrome', 'shell', 'same-origin'],
     boot: { story: null },        // null = fall back to FinkConfig.DEFAULT_FINK_FILE
     apps: null,                   // all of them
@@ -57,9 +57,17 @@ export const ROOTS = {
     // this installation opens can be granted it either, whatever a
     // registry entry might say. The office desktop is now fully sandboxed.
     //
-    // `shell` because it offers Maker; no `chrome`, `launch` or
+    // `shell` because it offers Maker; `secrets` because it offers edot,
+    // whose GitHub-backed saving holds a token. No `chrome`, `launch` or
     // `navigate`, and no chrome apps.
-    capabilities: ['storage', 'shell'],
+    //
+    // AND THIS IS THE SECOND TIME. `shell` was a capability no root held,
+    // so Maker and Logger could never launch; adding `secrets` to an app
+    // without adding it here would have killed edot outright — caught by
+    // e2e-caps, which reported "edot frame never appeared". A capability
+    // nothing grants is not a safe default, it is a dead app. When adding
+    // one to an app, add it to every root that offers that app.
+    capabilities: ['storage', 'secrets', 'shell'],
     boot: { story: false, apps: ['edot'] },
     // No chrome ids here, so an office installation has no breadcrumb,
     // no story status line and no FINK load meter — not hidden, absent.

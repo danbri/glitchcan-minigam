@@ -123,6 +123,27 @@
     sessionStorage: install('sessionStorage', makeShim(false)),
   };
 
+  // ── secrets: request / reply over postMessage ───────────────────────
+  // Unlike storage there is no local mirror to read from, so every call is
+  // a real round trip and returns a promise. Bounded, because a shell that
+  // never answers must not leave an app awaiting forever.
+  let secretSeq = 0;
+  const secretWaiters = new Map();
+  const reqSecret = (msg) => new Promise((resolve) => {
+    if (window.parent === window) {
+      // standalone: there is no shell to hold anything, and pretending
+      // otherwise would invite an app to believe a token was safe
+      resolve({ ok: false, reason: 'no-shell' });
+      return;
+    }
+    const rid = `s${++secretSeq}`;
+    secretWaiters.set(rid, resolve);
+    setTimeout(() => {
+      if (secretWaiters.delete(rid)) resolve({ ok: false, reason: 'timeout' });
+    }, 4000);
+    post({ ...msg, rid });
+  });
+
   // ── the public surface ──────────────────────────────────────────────
   const foaf = {
     get id() { return appId; },
@@ -137,6 +158,33 @@
 
     /** Ask the shell to do something on the app's behalf (a verb). */
     invoke: (verb, detail) => post({ type: 'verb', verb, detail }),
+
+    /**
+     * Secrets: hand one over, list your own by name, forget one.
+     *
+     * THERE IS NO `get`. A token you cannot read back is a token you
+     * cannot leak, log, put in a URL, or be tricked into posting
+     * somewhere by injected script. Ask the shell to USE it instead —
+     * `foaf.invoke('git.commit', …)` — so the value never enters this
+     * frame at all.
+     *
+     * Storage and secrets are separate capabilities on purpose: an app
+     * that may remember preferences should not thereby get to keep
+     * credentials.
+     */
+    secrets: {
+      put: (name, value) => reqSecret({ type: 'secrets.put', name, value }),
+      forget: (name) => reqSecret({ type: 'secrets.forget', name }),
+      names: () => reqSecret({ type: 'secrets.names' }).then(r => r.names || []),
+      get() {
+        const e = new Error(
+          'foafos: secrets cannot be read back. Ask the shell to use the ' +
+          'secret on your behalf (foaf.invoke) so the value never enters ' +
+          'this frame.');
+        e.name = 'FoafSecretsNotReadable';
+        throw e;
+      },
+    },
     /** Say something the shell's announcer should read out. */
     announce: (text) => window.__mgA11y?.announce?.(text),
     /** Explicit async store API for new code that does not want the shim. */
@@ -152,6 +200,12 @@
   window.addEventListener('message', (e) => {
     const d = e.data;
     if (!d || typeof d.type !== 'string') return;
+    if (d.type === 'secrets.result' || d.type === 'secrets.names.result'
+        || d.type === 'secrets.refused') {
+      const resolve = secretWaiters.get(d.rid);
+      if (resolve) { secretWaiters.delete(d.rid); resolve(d); }
+      return;
+    }
     switch (d.type) {
       case 'app.init': {
         appId = d.appId || null;

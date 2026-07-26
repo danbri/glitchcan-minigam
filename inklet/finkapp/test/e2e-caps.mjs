@@ -413,6 +413,82 @@ try {
       : fail(`database did not reach the broker: ${JSON.stringify(blob)}`);
   }
 
+  // 13. Secrets are not storage. Measured before this existed: edot's
+  // "stay signed in" put a bearer token in `foafos.store.edot`, in
+  // plaintext, ON DISK, in the shell's origin — because reading back what
+  // you wrote is what a storage broker is FOR, which is exactly why a
+  // credential must not live in one. FoafSecrets is the same shape with a
+  // deliberately worse interface: put, name, use, and NO get.
+  {
+    // Channels holds `storage` but NOT `secrets`, so it is the refusal
+    // case — and the refusal is the more important half of the design.
+    const noCap = await page.evaluate(async () => {
+      const S = window.FoafOS.secrets;
+      return { put: S.put('channels', 'gh.token', 'nope').reason, names: S.names('channels') };
+    });
+    noCap.put === 'denied' && noCap.names === null
+      ? pass('an app with storage but not secrets is refused (and names is null, not empty)')
+      : fail(`secrets granted too widely: ${JSON.stringify(noCap)}`);
+
+    // edot DOES declare it — its GitHub-backed saving really holds a token.
+    await page.evaluate(() => window.FoafOS.launchApp('edot'));
+    await page.waitForTimeout(4000);
+    const app = page.frames().find(f => /edot\.html/.test(f.url()));
+    if (!app) {
+      fail('edot frame never appeared for the secrets probe');
+    } else {
+      const r = await app.evaluate(async () => {
+        const out = {};
+        out.hasApi = typeof window.foaf?.secrets?.put === 'function';
+        out.put = await window.foaf.secrets.put('gh.token', 'gho_E2E_SECRET_TOKEN');
+        out.names = await window.foaf.secrets.names();
+        // the whole point: there is no way back
+        try { window.foaf.secrets.get('gh.token'); out.get = 'returned'; }
+        catch (e) { out.get = e.name; }
+        // and asking the shell directly is refused too
+        out.askedShell = await new Promise((res) => {
+          const on = (ev) => {
+            if (ev.data?.type === 'secrets.refused') { window.removeEventListener('message', on); res(ev.data.reason); }
+          };
+          window.addEventListener('message', on);
+          parent.postMessage({ type: 'secrets.get', name: 'gh.token', rid: 'probe' }, '*');
+          setTimeout(() => res('no answer'), 2500);
+        });
+        return out;
+      }).catch(e => ({ err: String(e).slice(0, 120) }));
+
+      r.hasApi && r.put?.ok === true && Array.isArray(r.names) && r.names.includes('gh.token')
+        ? pass('an app can hand the shell a secret and list its own names')
+        : fail(`secrets put/names failed: ${JSON.stringify(r)}`);
+      r.get === 'FoafSecretsNotReadable' && r.askedShell === 'not-readable'
+        ? pass('and cannot read it back — refused in the SDK and again by the shell')
+        : fail(`a secret was readable: ${JSON.stringify(r)}`);
+
+      const shellSide = await page.evaluate(async () => {
+        const S = window.FoafOS.secrets;
+        const used = await S.use('edot', 'gh.token', (v) => `saw ${v.length} chars`);
+        return {
+          report: S.report(),
+          sealed: S.sealed,
+          used,
+          // it must NOT have leaked into the storage broker or the bus
+          inStore: JSON.stringify(window.FoafOS.store.snapshot('edot') || {}).includes('gho_E2E_SECRET_TOKEN'),
+          onDisk: Object.keys(localStorage).some(k => (localStorage.getItem(k) || '').includes('gho_E2E_SECRET_TOKEN')),
+          inAudit: JSON.stringify(S.audit).includes('gho_E2E_SECRET_TOKEN'),
+        };
+      });
+      shellSide.used?.ok === true && /saw 20 chars/.test(String(shellSide.used.result))
+        ? pass('the SHELL can use it without the app ever seeing the value')
+        : fail(`shell-side use failed: ${JSON.stringify(shellSide.used)}`);
+      (!shellSide.inStore && !shellSide.onDisk && !shellSide.inAudit)
+        ? pass('the value is not in the store, not on disk, not in the audit')
+        : fail(`the secret leaked: ${JSON.stringify(shellSide)}`);
+      shellSide.sealed === false
+        ? pass('and with no session passphrase it says plainly that it is unsealed')
+        : fail('claimed sealed without a passphrase');
+    }
+  }
+
   const stillAmbient = await page.evaluate(async () => {
     const m = await import('./foafos-apps.js');
     return m.ambientApps().map(a => a.id);

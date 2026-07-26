@@ -26,4 +26,6 @@ export { FoafInput, ACTIONS, ACTION_KEYS } from './input.mjs';
 export { FoafVars, SHARED_DEFAULT, HOST_CONTEXT } from './vars.mjs';
 export { FoafAudio, AUDIO_KEY } from './audio.mjs';
 export { FoafStore, localBackend, memoryBackend, STORE_CAP } from './store.mjs';
+// A secret is not storage: PUT and USE, never GET. See secrets.mjs for why.
+export { FoafSecrets, SECRETS_CAP, MAX_SECRET_BYTES } from './secrets.mjs';
 export { AppTree } from './apptree.mjs';

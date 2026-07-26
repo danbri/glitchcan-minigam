@@ -11,8 +11,8 @@ A browser shell that runs mutually distrustful apps, where an
 
 | root | boots | root capabilities |
 |---|---|---|
-| `?root=` *(default)* | the story TOC | storage · vars · audio · input · launch · navigate · chrome · shell · same-origin |
-| `?root=office` | edot | storage · shell |
+| `?root=` *(default)* | the story TOC | storage · secrets · vars · audio · input · launch · navigate · chrome · shell · same-origin |
+| `?root=office` | edot | storage · secrets · shell — **no escape hatch at all** |
 | `?root=webtv` | Channels | storage · audio · input |
 | `?root=tellyclub` | Tellyclub | audio |
 
@@ -58,6 +58,12 @@ Adaptation from the guest side.
   serialise an opaque origin itself, so this only works for guests that
   agreed to the contract — and the switcher says which is which (*keeps its
   place* / *closing loses it*) **before** the ✕ is pressed.
+- **Secrets** — a broker for credentials, separate from storage: an app may
+  hand one over, list its own by name, and ask the shell to *use* one. There
+  is no way to read one back, in the SDK or over postMessage. Measured
+  first: edot's "stay signed in" had been writing a bearer token to the
+  shell's disk in plaintext, because reading back what you wrote is what a
+  storage broker is *for*. `docs/foafos-secrets-and-auth-20260726.md`.
 - **Logger** — the bus, filterable, refusals coloured.
 - **Volume** — one master level, plus an honest list of what it *cannot* reach.
 - **Input** — one d-pad for the whole shell; keyboard, touch and gamepad
@@ -68,7 +74,7 @@ Adaptation from the guest side.
 Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
 `node --test packages/foafos/test/*.test.js`.
 
-- 27 unit tests (bus, session crypto, widgets, vars, audio, input, store, app tree).
+- 36 unit tests (bus, session crypto, widgets, vars, audio, input, store, app tree, secrets).
 - 16 browser suites, including:
   - `e2e-chrome` — chrome is absent on office (asserted on
     `getElementById`, never on computed style), toggles cleanly on a story
@@ -83,7 +89,11 @@ Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
     destroyed in the same tick the question was asked.
   - `e2e-caps` — the boundary tested **by trying to cross it**: inside a
     de-privileged app, `parent.document`, `parent.FoafOS` and `localStorage`
-    all throw `SecurityError`. Also drives **Calendar** through a real
+    all throw `SecurityError`. Also proves **secrets cannot be read back**
+    from inside a real app — refused in the SDK and again by the shell —
+    while the shell can still *use* the value, and the token appears in
+    neither the store, nor on disk, nor in the audit. Drives **Calendar**
+    through a real
     round-trip (calendar + event, Dates rehydrated) and **Files** through a
     write that lands in the listing and reaches the broker — both with no
     ambient authority at all.
