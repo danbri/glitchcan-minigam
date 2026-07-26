@@ -1,4 +1,4 @@
-// Channels — the tape library as a set of stations.
+// Glitchcan Original Soundtrack — the tape library as a set of stations.
 //
 // A TV app because it needs to be one: a channel list, a transport, a
 // now-playing line, and a volume it does NOT own. It exists to prove the
@@ -126,4 +126,4 @@ const rememberStation = () => {
 listEl.addEventListener('click', rememberStation);
 document.addEventListener('keyup', rememberStation);
 
-a11y?.announce(`Channels ready, ${CHANNELS.length} stations`);
+a11y?.announce(`Soundtrack ready, ${CHANNELS.length} stations`);

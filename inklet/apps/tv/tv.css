@@ -10,7 +10,20 @@ body {
 }
 #tv { display: flex; flex-direction: column; height: 100dvh; padding: 12px; gap: 10px; }
 header { flex: none; }
-h1 { margin: 0; font-size: 1.15rem; letter-spacing: .12em; text-transform: uppercase; }
+/* Three words at 0.12em tracking wrap to two lines in a 380px shell window
+   (measured: 53px of a scarce budget, one station row's worth). Two lines
+   for a three-word title is fine — what is not fine is paying the default
+   1.45 line-height and full tracking for them, so both tighten as the box
+   narrows. `clamp` rather than a media query because this app is sized by
+   its window, not by the device. */
+h1 {
+  margin: 0;
+  font-size: clamp(1rem, 4.2vw, 1.15rem);
+  letter-spacing: clamp(.04em, 1.2vw, .12em);
+  line-height: 1.2;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
 #now { margin: 4px 0 0; color: #9fb3d0; font-size: .92rem; min-height: 1.4em; }
 #channels {
   flex: 1; min-height: 0; overflow-y: auto;

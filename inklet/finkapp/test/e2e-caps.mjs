@@ -120,7 +120,12 @@ try {
     : fail(`capability disclosure missing or wrong: "${note}"`);
 
   // 6. a REAL app, de-privileged, using brokered storage end to end.
-  // Channels holds `storage` and NOT `same-origin`, so its localStorage
+  // App id `channels` — displayed since July 2026 as "Glitchcan Original
+  // Soundtrack". The id is deliberately unchanged: it is the store namespace
+  // and what three root manifests list, so renaming it would orphan saved
+  // state rather than rename anything.
+  //
+  // It holds `storage` and NOT `same-origin`, so its localStorage
   // is app-sdk's shim over the broker. This is the migration path
   // working, not a fixture.
   await page.evaluate(() => window.FoafOS.store.clear('channels'));

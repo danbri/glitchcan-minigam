@@ -128,8 +128,13 @@ export const APPS = [
     capabilities: ['vars:read', 'vars:write'], silent: true },
 
   // ── Media ─────────────────────────────────────────────────────────
-  { id: 'channels', family: 'media', icon: '📻', name: 'Channels', surface: 'window',
-    url: '../apps/tv/index.html', desc: 'The tape library, as stations',
+  // The id stays `channels` after the July 2026 rename: it is the store
+  // namespace (`foafos.store.channels` — changing it silently orphans
+  // someone's last-tuned station), the name three root manifests list, and
+  // what a dozen assertions launch. A display name is a display name.
+  { id: 'channels', family: 'media', icon: '📻', name: 'Glitchcan Original Soundtrack',
+    surface: 'window', url: '../apps/tv/index.html',
+    desc: 'The tape library, as stations',
     capabilities: ['storage', 'audio'] },
   { id: 'robbamp', family: 'media', icon: '🎛️', name: 'ROBBAMP', surface: 'window',
     url: '../../magpie/robbin/robbin.html#robbamp', desc: 'The player',

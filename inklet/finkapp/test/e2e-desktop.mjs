@@ -101,14 +101,26 @@ try {
   // ---- 3. ONE switcher sees all of them --------------------------------
   await page.evaluate(() => FoafOS.openSwitcher());
   await page.waitForSelector('#foafos-switcher', { timeout: 5000 });
-  const cards = await page.evaluate(() =>
-    [...document.querySelectorAll('.foafos-switch-card .ttl')].map(t => t.textContent));
-  const hasStory = cards.some(c => /story/i.test(c));
-  const hasGame = cards.some(c => /robbin/i.test(c));
-  const hasApps = cards.filter(c => /data|channels/i.test(c)).length === 2;
-  hasStory && hasGame && hasApps
-    ? pass(`switcher lists every family: ${cards.join(' · ')}`)
-    : fail(`switcher incomplete: ${JSON.stringify(cards)}`);
+  // Assert on app IDs, and take the expected LABELS from the registry rather
+  // than writing them here. This used to match `/data|channels/i` against the
+  // card text, so renaming Channels to "Glitchcan Original Soundtrack" broke
+  // a test that has nothing to do with names — a display string is not an
+  // identity, and a suite that treats it as one fails on every rename.
+  const view = await page.evaluate(async () => {
+    const { appById } = await import('./foafos-apps.js');
+    return {
+      cards: [...document.querySelectorAll('.foafos-switch-card .ttl')].map(t => t.textContent),
+      running: [...window.FoafOS.apps.nodes.values()].map(n => n.appId),
+      expect: ['sheets', 'channels'].map(id => appById(id)?.name),
+    };
+  });
+  const hasStory = view.cards.some(c => /story/i.test(c));
+  const hasGame = view.cards.some(c => /robbin/i.test(c));
+  const idsUp = ['sheets', 'channels'].every(id => view.running.includes(id));
+  const labelsShown = view.expect.every(n => n && view.cards.includes(n));
+  hasStory && hasGame && idsUp && labelsShown
+    ? pass(`switcher lists every family: ${view.cards.join(' · ')}`)
+    : fail(`switcher incomplete: ${JSON.stringify(view)}`);
   if (SHOTS) await page.screenshot({ path: '/tmp/desktop-3-switcher.png' });
   await page.evaluate(() => document.getElementById('foafos-switcher')?.remove());
 

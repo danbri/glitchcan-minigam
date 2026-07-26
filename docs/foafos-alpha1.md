@@ -13,7 +13,7 @@ A browser shell that runs mutually distrustful apps, where an
 |---|---|---|
 | `?root=` *(default)* | the story TOC | storage · secrets · vars · audio · input · launch · navigate · chrome · shell · git:write · same-origin |
 | `?root=office` | edot | storage · secrets · shell · git:write — **no escape hatch at all** |
-| `?root=webtv` | Channels | storage · audio · input |
+| `?root=webtv` | Glitchcan Original Soundtrack | storage · audio · input |
 | `?root=tellyclub` | Tellyclub | audio |
 
 Everything beneath a root is bounded by it: **`grant(child) ⊆ grant(parent)`**.
@@ -28,7 +28,8 @@ verified in the running page, not just asserted in data.
 - **Office** — edot: word processor, Data (spreadsheet/SQL/RDF), Calendar, Files.
 - **Games** — robbin, gridluck, mudslider, boidwars, chess, gems. All seven
   respond to input under measurement, not just boot.
-- **Media** — Channels (the tape library as stations), ROBBAMP, and
+- **Media** — the Glitchcan Original Soundtrack (the tape library as
+  stations; app id still `channels`), ROBBAMP, and
   **Tellyclub**, danbri's Archive.org TV browser from
   [isle_of_glitch](https://github.com/danbri/isle_of_glitch), referenced at
   its deployed URL.
