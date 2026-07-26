@@ -1174,6 +1174,36 @@ hold up when someone wanders around in it".
   failed for depending on shell furniture — and does not drift when that
   furniture changes.
 
+## Your tool listing is a VIEW of the repo, not the repo
+
+Recorded because a fresh session failed it on the first question asked, and
+because the session writing this had made the same mistake twice in the
+preceding twenty minutes.
+
+Asked "what skills have we got here", a new instance described both
+`.claude/skills/` entries accurately and finished with **"nothing else
+repo-specific."** Four more `SKILL.md` files had been sitting in
+`lucid/skills/`, tracked in git for nine days. `find . -name SKILL.md` would
+have returned six. It had answered a question about the repository by reading
+the list of tools it had been handed.
+
+The same shape, three places this repo has been bitten:
+
+| the view | what it is not |
+|---|---|
+| the skills listing | every skill in the tree |
+| `getComputedStyle` says the background is `rgba(0,20,0,.6)` | how the panel looks over an app — that value was *correct per the skin* and wrong in situ |
+| the suite is green | the suite covers it (`e2e-desktop` was green by not running) |
+| the code path is right there | it ran (the snapshot request was posted into a destroyed frame) |
+
+**So: for any question of the form "what/how many/is there any X in this
+repo", run the search before answering, and if you did not, say you did
+not.** A negative claim is the expensive kind — `docs/fable-audit/` found
+about a third of them wrong on the first pass. Two of mine were wrong in one
+turn: "edot has ~0 lines of documentation anywhere" (it has a README and
+eight sibling docs) and "the lucid scene ledger is stale" (it reconciles
+exactly; I had counted toc ENTRIES against distinct scenes).
+
 ## Testing discipline — what this suite gets wrong when it gets it wrong
 
 Every item here is a real failure from this repo, not general advice. They
