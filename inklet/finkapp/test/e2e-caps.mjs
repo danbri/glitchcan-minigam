@@ -65,14 +65,22 @@ try {
   const derived = await page.evaluate(async () => {
     const m = await import('./foafos-apps.js');
     const f = window.FoafOS.sandboxFor;
-    const of = (id) => f(m.appById(id));
-    return { channels: of('channels'), universe: of('universe'), hatch: of('robbamp') };
+    // EVERY window/media app is opaque now — ROBBAMP was the last holder and
+    // migrated (July 2026). So the assertion is over the whole registry, not
+    // a hand-picked pair.
+    const windowApps = m.APPS.filter(a => a.surface === 'window' || a.surface === 'stage');
+    return {
+      anyAmbient: windowApps.filter(a => f(a).includes('allow-same-origin')).map(a => a.id),
+      // the hatch still WORKS when declared — proven on a synthetic app, so
+      // the mechanism is tested without any real app needing to hold it
+      synthetic: f({ name: 'probe', capabilities: ['same-origin'] }).includes('allow-same-origin'),
+    };
   });
-  !derived.channels.includes('allow-same-origin') && !derived.universe.includes('allow-same-origin')
-    ? pass('a window app with no same-origin capability gets an opaque origin')
-    : fail(`window apps still ambient: ${JSON.stringify(derived)}`);
-  derived.hatch.includes('allow-same-origin')
-    ? pass('the escape hatch is honoured when declared (robbamp — the last holder)')
+  derived.anyAmbient.length === 0
+    ? pass('every window/stage app gets an opaque origin — no registry holder left')
+    : fail(`apps still ambient: ${JSON.stringify(derived.anyAmbient)}`);
+  derived.synthetic
+    ? pass('the escape hatch is still honoured when a capability declares it (mechanism intact)')
     : fail('declared same-origin was not applied');
 
   // 3. a de-privileged app really cannot reach the shell
@@ -112,12 +120,9 @@ try {
 
   // 5. the shell says out loud who still holds ambient authority
   const note = await page.evaluate(() => document.getElementById('foafos-caps-note')?.textContent || '');
-  const named = reg.ambient.length === 0
-    ? /every app is sandboxed/.test(note)
-    : reg.ambient.every(() => true) && /ambient authority/.test(note);
-  named
-    ? pass(`the drawer discloses it: "${note.slice(0, 72)}…"`)
-    : fail(`capability disclosure missing or wrong: "${note}"`);
+  reg.ambient.length === 0 && /every app is sandboxed|nothing has ambient/.test(note)
+    ? pass(`ZERO ambient holders — the drawer says so: "${note.slice(0, 68)}…"`)
+    : fail(`disclosure wrong (ambient=${JSON.stringify(reg.ambient)}): "${note}"`);
 
   // 6. a REAL app, de-privileged, using brokered storage end to end.
   // App id `channels` — displayed since July 2026 as "Glitchcan Original
@@ -763,10 +768,9 @@ try {
     const m = await import('./foafos-apps.js');
     return m.ambientApps().map(a => a.id);
   });
-  const migrated = ['calendar', 'files', 'edot', 'sheets'];
-  migrated.every(id => !stillAmbient.includes(id))
-    ? pass(`ambient-authority holders down to ${stillAmbient.length}: ${stillAmbient.join(', ')}`)
-    : fail(`a migrated app still declares same-origin: ${stillAmbient.join(', ')}`);
+  stillAmbient.length === 0
+    ? pass('ambient-authority holders: ZERO — the whole registry is sandboxed')
+    : fail(`still holding same-origin: ${stillAmbient.join(', ')}`);
 
   pageErrors.length === 0 ? pass('no page errors')
     : fail(`page errors: ${pageErrors.slice(0, 2).join(' · ')}`);

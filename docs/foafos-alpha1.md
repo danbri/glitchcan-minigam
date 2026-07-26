@@ -2,7 +2,7 @@
 
 July 2026. What exists, what is verified, and what is not.
 
-Start at **`inklet/foafos.html`** — four installations of one shell.
+Start at **`inklet/foafos.html`** — three installations of one shell.
 
 ## What alpha1 is
 
@@ -13,8 +13,7 @@ A browser shell that runs mutually distrustful apps, where an
 |---|---|---|
 | `?root=` *(default)* | the story TOC | storage · secrets · vars · audio · input · launch · navigate · chrome · shell · git:write · same-origin |
 | `?root=office` | edot | storage · secrets · shell · git:write — **no escape hatch at all** |
-| `?root=webtv` | Glitchcan Original Soundtrack | storage · audio · input |
-| `?root=tellyclub` | Tellyclub | audio |
+| `?root=webtv` (a.k.a. `?root=tellyclub`, aliased) | Tellyclub | storage · audio · input |
 
 Everything beneath a root is bounded by it: **`grant(child) ⊆ grant(parent)`**.
 That single rule is what makes it safe to let an app open another app, and
@@ -171,8 +170,12 @@ identity and secrets. Reasoning and the full table:
 
 ## Missing, plainly
 
-1. **One app still holds `same-origin`** — ROBBAMP. Four are migrated,
-   each hitting a different wall:
+1. **`same-origin` holders: ZERO** (July 2026). ROBBAMP was the last, and
+   its migration is the same Calendar pattern — app-sdk first, so its 24
+   bare `localStorage` calls hit the broker shim; it was also the reason it
+   had been *unreachable* on the TV root, since a root that correctly holds
+   no escape hatch refused to spawn an app that demanded one. All five that
+   migrated hit a different wall:
    - **Calendar** used IndexedDB, which an opaque origin refuses outright,
      so its store gained a brokered key/value fallback chosen only when IDB
      will not open. Standalone it keeps its indexes and cursor deletes.
@@ -198,7 +201,10 @@ identity and secrets. Reasoning and the full table:
      almost-empty SQLite database is already ~43KB encoded against a 256KB
      default, and raising that default for everybody would dissolve the
      limit for exactly the apps it exists to bound.
-   The drawer names whoever is left; the count should reach zero.
+   The drawer now says "every app is sandboxed; nothing has ambient
+   authority" — the count reached zero, and `sandboxFor` is asserted over the
+   WHOLE registry in e2e-caps rather than a hand-picked pair, so a
+   regression re-adding the hatch fails.
 2. **Only two games speak `snapshot`.** The contract exists now (July
    2026): closing a game keeps its place, through a reload, because the
    shell writes it to FoafStore. Mudslider comes back in the same room

@@ -140,9 +140,16 @@ export const APPS = [
     surface: 'window', url: '../apps/tv/index.html',
     desc: 'The tape library, as stations',
     capabilities: ['storage', 'audio'] },
+  // MIGRATED (July 2026) — and it was the LAST `same-origin` holder, so the
+  // whole registry is now sandboxed. Found because the ROBBAMP tile was DEAD
+  // on the TV root: the root (correctly) holds no escape hatch, attenuation
+  // refused the spawn, and 27 winampesque visualizer modes were unreachable
+  // from the surface built for lean-back listening. danbri asked where the
+  // visualizations went; this line is where. app-sdk now fronts robbin's 24
+  // bare localStorage calls (probe: standalone keeps native storage).
   { id: 'robbamp', family: 'media', icon: '🎛️', name: 'ROBBAMP', surface: 'window',
     url: '../../magpie/robbin/robbin.html#robbamp', desc: 'The player',
-    capabilities: ['storage', 'audio', 'same-origin'] },
+    capabilities: ['storage', 'audio'] },
   // Tellyclub — danbri's Archive.org TV browser, from the isle_of_glitch
   // repo, referenced at its deployed URL rather than vendored (it is
   // ~5.8MB, and it needs the network to stream from archive.org anyway).
@@ -161,6 +168,16 @@ export const APPS = [
   { id: 'tellyclub', family: 'media', icon: '📺', name: 'Tellyclub', surface: 'window',
     url: 'https://danbri.github.io/isle_of_glitch/tvp/app/',
     desc: 'Archive.org TV on a real broadcast schedule',
+    capabilities: ['audio'], external: true, persists: false },
+  // Tellyclub's widgets, broken OUT as sub-apps (owner's direction, July
+  // 2026) rather than reachable only from inside the running TV. The
+  // channel guide is the first: tvp's hash router gained `#guide`, so this
+  // is the same app booted straight into its EPG. More of tellyclub's
+  // internal widgets (controller, venues) can follow the same pattern —
+  // each is one hash route in tvp plus one line here.
+  { id: 'telly-guide', family: 'media', icon: '📋', name: 'Channel Guide', surface: 'window',
+    url: 'https://danbri.github.io/isle_of_glitch/tvp/app/#guide',
+    desc: "What's on, across every Tellyclub channel",
     capabilities: ['audio'], external: true, persists: false },
 
   // ── Make ──────────────────────────────────────────────────────────

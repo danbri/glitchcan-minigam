@@ -81,29 +81,25 @@ export const ROOTS = {
     apps: ['edot', 'sheets', 'calendar', 'files', 'maker', 'publishing'],
   },
 
-  // A TV. One media app, no story, no games, and deliberately NO
-  // same-origin: a lean-back surface has no business holding the escape
-  // hatch, and because root attenuates, nothing it opens can hold it
-  // either. That is the capability tree doing real work in one line.
+  // THE TV — one root (owner's call, July 2026: "should be one"; there
+  // were briefly two, webtv + a tellyclub-only root, which multiplied
+  // installations instead of composing apps). Tellyclub, its broken-out
+  // sub-apps, the Soundtrack and ROBBAMP all live here. Deliberately NO
+  // same-origin — and since ROBBAMP's migration nothing needs it: a
+  // lean-back surface holds no escape hatch, and because root attenuates,
+  // nothing it opens can hold one either.
   webtv: {
     id: 'webtv',
-    label: 'Web TV',
+    label: 'Telly',
     capabilities: ['storage', 'audio', 'input'],
-    boot: { story: false, apps: ['channels'] },
-    apps: ['channels', 'robbamp', 'tellyclub'],
-  },
-
-  // Tellyclub as the whole installation: one lean-back app, nothing else.
-  // The narrowest root here, and the point of it is that narrowness is
-  // expressed as DATA — no code knows this configuration exists.
-  tellyclub: {
-    id: 'tellyclub',
-    label: 'Tellyclub',
-    capabilities: ['audio'],
     boot: { story: false, apps: ['tellyclub'] },
-    apps: ['tellyclub'],
+    apps: ['tellyclub', 'telly-guide', 'channels', 'robbamp'],
   },
 };
+
+// `?root=tellyclub` was a second TV installation for a while; folding it in
+// must not strand anyone's bookmark, so the id aliases to the one TV root.
+ROOTS.tellyclub = ROOTS.webtv;
 
 export const DEFAULT_ROOT = 'glitchcanary';
 

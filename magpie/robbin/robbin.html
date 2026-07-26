@@ -293,6 +293,11 @@ try { window.localStorage.getItem; } catch (e) {
     <button type="button" id="btn-jump" data-k="jump" aria-label="Jump"><span class="lbl">JUMP</span></button>
   </div>
 </div>
+<!-- app-sdk FIRST: robbin makes 24 bare localStorage calls, and in a
+     sandboxed (opaque-origin) frame the native API throws. The shim probes,
+     so standalone and same-origin loads keep their real storage untouched.
+     This is what let ROBBAMP drop `same-origin` — the LAST holder. -->
+<script src="../../inklet/apps/app-sdk.js"></script>
 <!-- platform slow-motion / freeze / step service -->
 <script src="../../inklet/minigames/debug-clock.js"></script>
 <script type="module" src="robbin-game.js"></script>
