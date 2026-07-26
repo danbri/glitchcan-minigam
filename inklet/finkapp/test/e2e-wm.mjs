@@ -305,6 +305,100 @@ try {
     ? pass('one pane needs no telling apart — labels and chip stand down')
     : fail(`labels persist in full mode: ${JSON.stringify(fullHidden)}`);
 
+  // ── the vanishing-controls class (field report, July 2026) ──────────
+  // The toolbar auto-collapses after 4.5s. Measured: it collapsed with the
+  // pointer sitting ON it, and with a button inside holding keyboard focus
+  // — which then evaporated to <body>. Anti-clutter is fine; collapsing
+  // mid-use is theft. These pin the repaired contract, with REAL input —
+  // the toggle listens for pointerup, so a synthetic .click() proves
+  // nothing (that artifact briefly looked like "handle dead in split").
+  const expandByTap = async () => {
+    const hb = await page.evaluate(() => {
+      const b = document.getElementById('wm-handle').getBoundingClientRect();
+      return { x: b.x + b.width / 2, y: b.y + b.height / 2,
+               collapsed: document.getElementById('wm-chrome').classList.contains('collapsed') };
+    });
+    if (hb.collapsed) { await page.mouse.click(hb.x, hb.y); await page.waitForTimeout(200); }
+    return hb;
+  };
+  const btnState = () => page.evaluate(() => {
+    const b = document.getElementById('wm-full').getBoundingClientRect();
+    return b.width > 0 && b.height > 0;
+  });
+
+  // the suite exited the game above, so bring one back — a hidden toolbar
+  // has no handle to tap and would fail these for the wrong reason
+  await page.evaluate(() => window.FinkMinigames.startMinigame('mudslider', 'normal'));
+  await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 15000 });
+  await page.waitForTimeout(800);
+  await page.evaluate(() => FinkWM.setMode('split'));
+  await page.waitForTimeout(400);
+  await expandByTap();
+  (await btnState())
+    ? pass('a real tap on ▦ expands the toolbar in split mode')
+    : fail('toolbar did not expand on tap in split');
+
+  // park the mouse ON the toolbar and outwait the timer
+  const over = await page.evaluate(() => {
+    const b = document.getElementById('wm-buttons').getBoundingClientRect();
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  });
+  await page.mouse.move(over.x, over.y);
+  await page.waitForTimeout(5200);
+  (await btnState())
+    ? pass('hovered toolbar does NOT auto-collapse — no theft mid-use')
+    : fail('toolbar collapsed with the pointer on it');
+
+  // keyboard: focus inside must hold it open, and a later collapse must
+  // hand focus to the handle, never drop it on <body>
+  // "away" must be MEASURED: an earlier suite step docks the toolbar to an
+  // edge, and a hard-coded (5,500) landed exactly on it — :hover held true
+  // and this test failed its opposite. Park clear of the real bbox.
+  const awayFromChrome = async () => {
+    const b = await page.evaluate(() => {
+      const r = document.getElementById('wm-chrome').getBoundingClientRect();
+      return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: innerWidth, h: innerHeight };
+    });
+    const x = b.r < b.w - 60 ? b.w - 30 : Math.max(10, b.l - 60);
+    const y = b.b < b.h - 60 ? b.h - 30 : Math.max(10, b.t - 60);
+    await page.mouse.move(x, y);
+  };
+  await page.evaluate(() => document.getElementById('wm-full').focus());
+  await awayFromChrome();                              // pointer away, focus in
+  await page.waitForTimeout(5200);
+  (await btnState())
+    ? pass('focused toolbar does NOT auto-collapse either')
+    : fail('toolbar collapsed under keyboard focus');
+  const handedOff = await page.evaluate(() => {
+    window.FinkWM._setCollapsed(true);                 // an explicit collapse
+    return document.activeElement?.id;
+  });
+  handedOff === 'wm-handle'
+    ? pass('collapse hands focus to the ▦ handle, not to <body>')
+    : fail(`focus fell to: ${handedOff}`);
+
+  // and unhovered, unfocused, it still tidies itself away — the feature survives
+  await expandByTap();
+  await page.evaluate(() => document.getElementById('wm-handle').blur());
+  await awayFromChrome();
+  // This launcher never delivers a real pointerleave — hover state freezes
+  // at the last park (measured: the :hover chain still showed the button
+  // minutes after the mouse left). The collapse contract is EVENT-driven
+  // now, so dispatching the boundary event is testing the real interface,
+  // not cheating past it.
+  await page.evaluate(() => document.getElementById('wm-chrome')
+    .dispatchEvent(new PointerEvent('pointerleave')));
+  await page.waitForTimeout(5200);
+  (!(await btnState()))
+    ? pass('idle and unattended, it still auto-collapses — anti-clutter intact')
+    : fail('auto-collapse no longer happens at all: ' + JSON.stringify(await page.evaluate(() => ({
+        collapsed: document.getElementById('wm-chrome').classList.contains('collapsed'),
+        active: document.activeElement?.id || document.activeElement?.tagName,
+        hover: document.getElementById('wm-chrome').matches(':hover'),
+        bbox: (() => { const r = document.getElementById('wm-chrome').getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom].map(Math.round); })(),
+        hovered: [...document.querySelectorAll(':hover')].map(e => e.id || e.tagName).join('>'),
+      }))));
+
   pageErrors.length === 0 ? pass('no page errors')
     : fail(`page errors: ${pageErrors.slice(0, 3).join(' · ')}`);
   console.log(process.exitCode ? '\nFINKWM E2E: FAIL' : '\nFINKWM E2E: PASS');

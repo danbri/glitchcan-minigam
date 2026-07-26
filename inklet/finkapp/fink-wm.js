@@ -186,8 +186,16 @@ window.FinkWM = {
     // ── chrome: collapse + drag-dock ─────────────────────────────────────
 
     _setCollapsed(collapsed) {
-        this.elements.chrome.classList.toggle('collapsed', collapsed);
-        this.elements.handle.setAttribute('aria-expanded', String(!collapsed));
+        const { chrome, handle } = this.elements;
+        // If the buttons are about to display:none while one of them holds
+        // focus, the focus would silently land on <body>. Hand it to the
+        // handle instead — the control that brings everything back.
+        if (collapsed && chrome.contains(document.activeElement)
+            && document.activeElement !== handle) {
+            handle.focus();
+        }
+        chrome.classList.toggle('collapsed', collapsed);
+        handle.setAttribute('aria-expanded', String(!collapsed));
         if (collapsed) clearTimeout(this._collapseTimer);
     },
 
@@ -288,7 +296,28 @@ window.FinkWM = {
 
     _scheduleCollapse() {
         clearTimeout(this._collapseTimer);
-        this._collapseTimer = setTimeout(() => this._setCollapsed(true), 4500);
+        this._collapseTimer = setTimeout(() => {
+            // MEASURED (July 2026, headless sweep after a field report of
+            // "vanishing controls"): this timer fired unconditionally — with
+            // the pointer sitting ON the toolbar, and with a button inside
+            // holding keyboard focus, which then evaporated to <body>. An
+            // auto-collapse is anti-clutter; collapsing mid-use is theft.
+            // While the pointer is over the toolbar or focus is inside it,
+            // punt and re-arm.
+            //
+            // `_hot` is an EVENT-tracked flag (pointerenter/leave below),
+            // not `matches(':hover')`: the pseudo-class is unreliable under
+            // automation — measured false with the pointer directly on an
+            // element in one headless launcher and stuck true in another —
+            // and a control's survival should not depend on which one is
+            // watching.
+            const c = this.elements.chrome;
+            if (this._hot || c.contains(document.activeElement)) {
+                this._scheduleCollapse();
+                return;
+            }
+            this._setCollapsed(true);
+        }, 4500);
     },
 
     _initChromeDrag() {
@@ -329,6 +358,23 @@ window.FinkWM = {
         };
         handle.addEventListener('pointerup', finish);
         handle.addEventListener('pointercancel', finish);
+
+        // The presence signals the collapse timer consults. Boundary events
+        // rather than :hover (see _scheduleCollapse); leaving re-arms the
+        // timer so the toolbar tidies itself once genuinely unattended.
+        this._hot = false;
+        chrome.addEventListener('pointerenter', () => { this._hot = true; });
+        chrome.addEventListener('pointerleave', () => {
+            this._hot = false;
+            if (!chrome.classList.contains('collapsed')) this._scheduleCollapse();
+        });
+        // any interaction inside is activity — start the countdown afresh
+        chrome.addEventListener('pointerdown', () => this._scheduleCollapse());
+        chrome.addEventListener('focusin', () => clearTimeout(this._collapseTimer));
+        chrome.addEventListener('focusout', () => {
+            if (!chrome.contains(document.activeElement)
+                && !chrome.classList.contains('collapsed')) this._scheduleCollapse();
+        });
     },
 
     _applyDock(dock) {
