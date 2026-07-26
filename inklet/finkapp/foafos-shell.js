@@ -14,9 +14,10 @@ import {
   widgets, defineBaseCards, defineFeed,
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
-  FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, localBackend,
+  FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, localBackend, AppTree,
 } from '../../packages/foafos/src/index.mjs';
 import { appsByFamily, appById, ambientApps, unenforcedApps, APPS } from './foafos-apps.js';
+import { resolveRoot, rootOffers } from './foafos-root.js';
 window.__foafAppRegistry = APPS;   // the service inventory counts holders from this
 
 defineBaseCards();
@@ -154,6 +155,35 @@ const store = new FoafStore({
   backend: localBackend(audioStore || { getItem: () => null, setItem: () => {} }),
 });
 FoafOS.store = store;
+
+// ── the root, and the tree of apps beneath it ──────────────────────────
+// An installation is a root manifest plus whatever it opens. The root
+// holds a capability set and every app is bounded by it, because the
+// tree attenuates — an app can never be granted what its parent lacks,
+// and root is everyone's ancestor. Trimming the root's list is therefore
+// the one blunt instrument for locking an installation down.
+const { root: ROOT, requested: rootRequested, fellBack: rootFellBack } = resolveRoot();
+const apps = new AppTree({ bus });
+FoafOS.apps = apps;
+FoafOS.root = ROOT;
+const rootNode = apps.spawn({
+  appId: `root:${ROOT.id}`, parentId: null,
+  capabilities: ROOT.capabilities, label: ROOT.label, surface: 'root',
+});
+FoafOS.rootNode = rootNode;
+// An installation with no stories should not wear story chrome. The
+// breadcrumb trail and the diamond/score status line are narrative
+// furniture; on an office or TV root they are meaningless decoration
+// that also happens to claim screen space and tab stops.
+if (ROOT.boot && ROOT.boot.story === false) {
+  document.documentElement.setAttribute('data-root-storyless', 'true');
+}
+bus.publish('root.ready', {
+  summary: rootFellBack
+    ? `unknown root "${rootRequested}" — booted ${ROOT.label} instead`
+    : `${ROOT.label} root: ${ROOT.capabilities.length} capabilities`,
+  id: ROOT.id, capabilities: ROOT.capabilities, fellBack: rootFellBack,
+}, { retain: true });
 
 // ── input: one d-pad for the whole shell (OS service) ───────────────────
 // The pad lives in the HOST page, not inside a guest iframe: only the
@@ -814,12 +844,38 @@ function buildUI() {
   // ONE launch path, ONE class of thing. `surface` decides where an app is
   // drawn; `capabilities` decide what it may do. Those are independent —
   // being drawn in a window never granted authority, though it used to.
-  function launchApp(id) {
+  function launchApp(id, opts = {}) {
     const app = appById(id);
     if (!app) return null;
     const caps = app.capabilities || [];
+    // Does this installation even offer it? A webtv root has no business
+    // launching a spreadsheet, and the manifest is where that is said.
+    if (!rootOffers(ROOT, app.id)) {
+      bus.publish('app.launch.refused', {
+        summary: `${app.name} is not part of the ${ROOT.label} installation`,
+        id, root: ROOT.id,
+      });
+      return null;
+    }
+    // ATTENUATION. The node is created under its parent (root unless a
+    // spawning app said otherwise), and the tree refuses any capability
+    // the parent does not itself hold. This is what makes handing out
+    // `launch` safe: an app cannot mint a more powerful app than itself.
+    const parentId = opts.parentId || FoafOS.rootNode?.id || null;
+    const node = apps.spawn({
+      appId: app.id, parentId, capabilities: caps,
+      label: app.name, surface: app.surface,
+    });
+    if (node.refused) {
+      bus.publish('app.launch.refused', {
+        summary: node.summary || `${app.name} refused: ${node.reason}`,
+        id, reason: node.reason, excess: node.excess,
+      });
+      return null;
+    }
     bus.publish('app.launch', {
-      summary: `Opening ${app.name}`, id, surface: app.surface, capabilities: caps,
+      summary: `Opening ${app.name}`, id, surface: app.surface,
+      capabilities: node.capabilities, instance: node.id, parentId,
     });
     // Every app gets a storage namespace it cannot name its way out of.
     // Granting is per-app and explicit: no capability, no snapshot.
@@ -850,6 +906,10 @@ function buildUI() {
         win.appendChild(frame);
         document.body.appendChild(win);
         governAppFrame(frame, app, win);
+        // Closing the node takes the window with it — and because close
+        // cascades, closing whatever spawned this closes it too.
+        node.onClose = () => win.remove();
+        win.dataset.instance = node.id;
         return win;
       }
     }

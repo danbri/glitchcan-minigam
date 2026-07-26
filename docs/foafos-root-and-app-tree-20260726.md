@@ -316,6 +316,26 @@ narrative.
   to story-as-app. Doing story-as-app first means discovering them the
   hard way.
 
+## 7a. Status: steps 1-3 are done (July 2026)
+
+Implemented and test-locked since this note was written:
+
+- **`AppTree`** (`packages/foafos/src/apptree.mjs`) — instances as a tree,
+  with attenuation enforced in `spawn()` and refusals published rather
+  than thrown. Close cascades deepest-first; suspend/resume take a
+  subtree; spawning under a dead parent is refused, not reparented.
+- **Root manifests** (`inklet/finkapp/foafos-root.js`) — `?root=office`
+  boots with **zero stories compiled**, which is the claim §3 said could
+  not be met. `webtv` holds no `same-origin`, so by attenuation nothing
+  beneath it can either.
+- **Storyless chrome** — a root with no stories hides the breadcrumb and
+  the status line.
+
+Still open, unchanged: the snapshot contract (§4) and therefore
+story-as-app (§5), the composition library (§5.1), and the block manifest
+(§6.1.1) — the last deliberately deferred while FINK stays one function,
+one argument.
+
 ## 8. Smallest honest next steps
 
 Roughly in dependency order, none of them large:

@@ -688,6 +688,36 @@ that declares nothing gets the old hardcoded three
   NOT story JS evaluated in the host page, which would hand story files
   the ambient authority we just took off the Office apps.
 
+## Roots and the app tree (July 2026)
+
+`?root=<id>` selects a **root manifest** (`inklet/finkapp/foafos-root.js`):
+`glitchcanary` (default, boots a story — unchanged), `office` (edot, no
+story engine at all), `webtv` (channels, no same-origin). Unknown ids fall
+back to the default and say `fellBack` on `root.ready`.
+
+- Before this the shell booted **a story or nothing** — `DEFAULT_FINK_FILE`
+  auto-loaded by `fink-player.js` — so "foafos as an office suite" needed
+  a fork. `?root=office` now comes up with **0 stories compiled**
+  (asserted). An explicit `?story=` still wins over the manifest.
+- `AppTree` (`packages/foafos/src/apptree.mjs`) holds running instances as
+  a tree. `FoafOS.apps`, root node at `FoafOS.rootNode`.
+- **ATTENUATION is the point:** `grant(child) ⊆ grant(parent)`, enforced in
+  `spawn()`, refusal published on `app.spawn.refused` with the excess
+  named. Root is everyone's ancestor, so trimming a manifest's
+  capabilities really locks an installation down — webtv holds no
+  `same-origin`, therefore nothing beneath it can be granted it. Verified
+  in the running page, not just in the data.
+- **Close cascades**, deepest first, so an `onClose` that inspects the
+  tree sees a consistent one. An `onClose` that throws does not strand the
+  rest of the subtree. Suspend/resume take a whole subtree.
+- Spawning under a closed parent is **refused**, never silently reparented.
+- `rootOffers()` gates `launchApp` — an app outside the installation is
+  refused with `app.launch.refused`, not quietly opened.
+- Storyless roots set `:root[data-root-storyless]`, which hides the
+  breadcrumb and status bar — narrative furniture on an office desktop is
+  decoration that also claims tab stops.
+- Locked by `e2e-root.mjs` (10) + `apptree.test.js` (8 unit).
+
 ## Stories are privileged over apps — know this
 
 Asked directly ("does foafos privilege stories over office docs?") and

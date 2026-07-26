@@ -434,3 +434,13 @@ foafos-feed { display: block; --foaf-accent: var(--zx-mag); }
     font-variant-numeric: tabular-nums;
 }
 #foafos-audio-note { margin: .35rem 0 0; font-size: .72rem; }
+
+/* A storyless installation (office, webtv) wears no narrative furniture.
+   `inert`-adjacent reasoning: hiding with display:none takes these out of
+   the layout AND the tab order, which `visibility` would not. */
+:root[data-root-storyless="true"] #stats-bar,
+:root[data-root-storyless="true"] #breadcrumb-container,
+:root[data-root-storyless="true"] #breadcrumb-toggle,
+:root[data-root-storyless="true"] #scroll-status-bar {
+    display: none !important;
+}

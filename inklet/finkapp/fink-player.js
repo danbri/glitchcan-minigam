@@ -49,12 +49,32 @@ window.FinkPlayer = {
             targetFink = FinkNavigation.getFinkFromHash();   // handles ?story= too
         }
 
+        // The ROOT MANIFEST decides what this installation boots.
+        //
+        // This used to be "a story, or nothing" — which is why foafos
+        // could not be instantiated as an office or TV installation
+        // without a fork. A manifest that says `boot.story === false`
+        // means the story engine simply idles: FINK is not part of that
+        // installation at all. An explicit ?story= still wins, because
+        // asking for a specific thing should beat a default.
+        const rootBoot = window.FoafOS?.root?.boot;
+        if (!targetFink && rootBoot && rootBoot.story === false) {
+            FinkUtils.debugLog(`Root "${window.FoafOS.root.id}" boots without a story`);
+            setTimeout(() => {
+                for (const appId of (rootBoot.apps || [])) window.FoafOS.launchApp(appId);
+            }, 100);
+            return;
+        }
+
         // Auto-load story from hash or config
         if (targetFink) {
             FinkUtils.debugLog('Loading FINK from hash: ' + targetFink);
             setTimeout(() => {
                 this.loadFinkStory(targetFink);
             }, 100);
+        } else if (rootBoot && rootBoot.story) {
+            FinkUtils.debugLog('Loading story named by the root manifest: ' + rootBoot.story);
+            setTimeout(() => this.loadFinkStory(rootBoot.story), 100);
         } else if (FinkConfig.DEFAULT_FINK_FILE) {
             FinkUtils.debugLog('Auto-loading default FINK from config: ' + FinkConfig.DEFAULT_FINK_FILE);
             setTimeout(() => {
