@@ -157,6 +157,18 @@ Run: `npm run test:fink:e2e`, `npm run test:fink:qa`,
 - **WebGPU** anything. Unavailable headless.
 - **Performance feel.** SwiftShader answers *does it work*, never *is it good*.
 
+## What is shared between installations, and what is not
+
+A root is **not a security boundary** — `?root=` is a query parameter on one
+origin, so per-root storage scoping buys nothing against a hostile user and
+saying otherwise would be a false impression of separation. One thing was
+still worth scoping: **verb destinations**, because a repo aimed under the
+narrow office installation came back armed under the story root, which holds
+`launch` and runs Finkiverse documents unenforced. Everything else shares on
+purpose — the app is the unit for app state, the person is the unit for
+identity and secrets. Reasoning and the full table:
+`docs/foafos-state-scoping-20260726.md`.
+
 ## Missing, plainly
 
 1. **One app still holds `same-origin`** — ROBBAMP. Four are migrated,

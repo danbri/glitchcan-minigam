@@ -115,6 +115,20 @@ body.foaf-pad-on #foafos-dock {
     z-index: 2640;
     background: #06080f;
 }
+/* THE DRAWER HAS THE SAME PROBLEM, and I fixed the panels and did not check
+   it — danbri sent three phone screenshots of the drawer open over the
+   Soundtrack app with both unreadable through each other. Measured:
+   `rgba(0, 20, 0, 0.6)`, `backdrop-filter: none`, z-index 2700 over the
+   window's 2620. So it was correctly ON TOP and see-through, which is the
+   worst of the two.
+   Translucency is defensible for chrome floating over a story you are
+   reading. It is not defensible for a surface with a passphrase field, a
+   volume slider and six skin buttons on it. Two selectors so this beats the
+   skin without !important; `.open` so the closed state keeps whatever
+   transition the skin gives it. */
+#foafos-drawer.open {
+    background: #06080f;
+}
 /* Publishing's controls are typed into, so they get the same retro
    treatment as the session form rather than the browser default. The close ✕
    is excluded: it already has a look, and taking it over made it vanish into

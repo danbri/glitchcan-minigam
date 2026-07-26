@@ -1174,6 +1174,32 @@ hold up when someone wanders around in it".
   failed for depending on shell furniture — and does not drift when that
   furniture changes.
 
+## A ROOT IS NOT A SECURITY BOUNDARY
+
+`?root=office` is a query parameter on one origin. Anyone can type a different
+one. So **per-root storage scoping buys nothing against a hostile user**, and
+describing it as security would be a false impression of separation — worse
+than visible sharing. The real boundaries: the origin, the app sandbox (opaque
+origin per frame), and the app tree's attenuation within a run.
+
+What IS worth scoping per root, and the only thing that was: **verb
+destinations** (`foafos.op-scopes`). Measured — a repo aimed under
+`?root=office` (four capabilities, six apps) came back armed under `?root=`
+(holds `launch`, offers every app, runs Finkiverse documents with their
+capability list unenforced). A destination is half an authority: "commit to
+THIS repo". The credential half was already gated — secrets are memory-only
+unless sealed, so a token cannot cross the navigation a root switch requires.
+Now keyed `{rootId: {appId: {cap: scope}}}`, legacy blobs dropped rather than
+migrated. Defence in depth, not a wall, and the comment says so.
+
+Sharing that is CORRECT and should not be "fixed": `foafos.store.<appId>` (the
+app is the unit — your last-tuned station should not reset because you opened
+the app from a different installation), `foafos.session.v1`/`foafos.secrets`
+(an identity is a person), `shell:game-snapshots`, and `foafos.skin` (a device
+preference — though per-appliance skins are a coherent alternative and the
+owner's call, not ours). Full reasoning:
+`docs/foafos-state-scoping-20260726.md`.
+
 ## Your tool listing is a VIEW of the repo, not the repo
 
 Recorded because a fresh session failed it on the first question asked, and
@@ -1260,6 +1286,11 @@ check what the author remembered.**
   - Skins load after the shell CSS, so a skin's `.foafos-window` beats
     `foafos-shell.css`. Win it with a second class (`.foafos-window.foafos-panel`),
     not `!important`.
+  - **AND FIX EVERY SURFACE OF THAT KIND, not the one in the screenshot.** The
+    panel fix left `#foafos-drawer` translucent — same skin variable, same
+    unreadability, reported from a phone hours later. Translucency is fine for
+    chrome over prose; it is not fine for a surface carrying a passphrase
+    field. Assert on the computed **alpha**, not on appearance.
 - **OPTIONAL CHAINING HIDES TYPE ERRORS.** `apps.nodes?.find?.(…)` on a
   **Map** is `undefined`, which made a whole re-grant loop a silent no-op that
   read as working code. `?.` on a collection you have not checked the type of

@@ -18,7 +18,7 @@ import {
   defaultOps,
 } from '../../packages/foafos/src/index.mjs';
 import { appsByFamily, appById, ambientApps, unenforcedApps, chromeApps, APPS } from './foafos-apps.js';
-import { resolveRoot, rootOffers } from './foafos-root.js';
+import { resolveRoot, rootOffers, ROOTS } from './foafos-root.js';
 window.__foafAppRegistry = APPS;   // the service inventory counts holders from this
 
 defineBaseCards();
@@ -205,13 +205,54 @@ FoafOS.ops = ops;
 // Persisted in the shell's own storage (never an app's), so a user sets it
 // once. Nothing prompts for these yet — see `FoafOS.aimOp` below, which is
 // the seam a settings UI would use.
+//
+// SCOPED PER ROOT (July 2026), and this one is worth explaining because the
+// reasoning cuts against itself.
+//
+// A root is NOT a security boundary and cannot be made into one here. `?root=`
+// is a query parameter on a single origin; anyone can type a different one.
+// So scoping storage per root buys **no** security against a hostile user, and
+// presenting it as though it did would be exactly the false-separation the
+// rest of this shell exists to avoid.
+//
+// It is still right, for a narrower reason. MEASURED: a destination aimed
+// under `?root=office` — an installation holding four capabilities and
+// offering six apps — was live under `?root=` (glitchcanary), which holds
+// `launch`, `navigate` and `same-origin`, offers EVERY app, and is where
+// STORIES run with their capability list unenforced. So "commit to
+// danbri/private-notes", configured in a locked-down office, came back armed
+// in the installation where a document from the Finkiverse can call
+// `launchApp`. The aim survives a root switch unconditionally; the credential
+// does not (secrets are memory-only unless sealed), so the destination was
+// the loose half.
+//
+// That is defence in depth against the shell's own carelessness, not a
+// boundary — a decision made in one installation should not silently apply in
+// another with a different capability set. Legacy unscoped blobs are DROPPED
+// rather than migrated: re-aiming is one tap in Publishing, and inheriting an
+// authority-adjacent decision into an installation that never made it is the
+// thing being fixed.
 const OP_SCOPE_KEY = 'foafos.op-scopes';
+/** Does this blob already have the root layer, or is it the legacy shape? */
+const ROOTS_SEEN = (all) => Object.keys(all).some(k => k in ROOTS);
 function loadOpScopes() {
-  try { return JSON.parse(audioStore?.getItem(OP_SCOPE_KEY) || '{}') || {}; }
-  catch (e) { return {}; }
+  try {
+    const all = JSON.parse(audioStore?.getItem(OP_SCOPE_KEY) || '{}') || {};
+    const mine = all[ROOT.id];
+    // A legacy blob is `{appId: {cap: scope}}` with no root layer. Detect it
+    // by the absence of our root key AND the presence of app-shaped keys, and
+    // discard rather than guess which installation meant it.
+    if (!mine && Object.keys(all).length && !ROOTS_SEEN(all)) return {};
+    return mine || {};
+  } catch (e) { return {}; }
 }
-function saveOpScopes(all) {
-  try { audioStore?.setItem(OP_SCOPE_KEY, JSON.stringify(all)); } catch (e) { /* full */ }
+function saveOpScopes(forRoot) {
+  try {
+    const all = JSON.parse(audioStore?.getItem(OP_SCOPE_KEY) || '{}') || {};
+    const clean = ROOTS_SEEN(all) ? all : {};        // drop a legacy blob once
+    clean[ROOT.id] = forRoot;
+    audioStore?.setItem(OP_SCOPE_KEY, JSON.stringify(clean));
+  } catch (e) { /* full */ }
 }
 /**
  * Point one of an app's verb capabilities at a destination.

@@ -310,6 +310,21 @@ try {
     document.getElementById('foafos-name').value = 'danbri';
     document.getElementById('foafos-pass').value = 'correct horse';
   });
+  // The drawer must be OPAQUE. It carries a passphrase field, a volume slider
+  // and six skin buttons; a translucent one over an app window makes both
+  // unreadable, which is what three phone screenshots showed. Asserting on the
+  // computed alpha, because "it looks fine" is exactly what the panel fix
+  // claimed while leaving this element behind.
+  const solid = await page.evaluate(() => {
+    const cs = getComputedStyle(document.getElementById('foafos-drawer'));
+    const m = /rgba?\(([^)]+)\)/.exec(cs.backgroundColor);
+    const parts = m ? m[1].split(',').map(x => parseFloat(x)) : [];
+    return { background: cs.backgroundColor, alpha: parts.length === 4 ? parts[3] : 1 };
+  });
+  solid.alpha === 1
+    ? pass(`the open drawer is opaque (${solid.background})`)
+    : fail(`the drawer is see-through over apps: ${JSON.stringify(solid)}`);
+
   const hittable = await page.evaluate(() => {
     const b = document.getElementById('foafos-save').getBoundingClientRect();
     return b.width > 0 && b.height >= 24;

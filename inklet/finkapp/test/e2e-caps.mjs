@@ -609,6 +609,26 @@ try {
         ? pass('a saved destination does not resurrect a capability the app tree denied')
         : fail('an ungranted app could call a verb because a scope was configured');
 
+      // Verb destinations are scoped PER ROOT. Measured before this was true: a
+      // repo aimed under `?root=office` — four capabilities, six apps — came
+      // back armed under the story root, which holds `launch`, offers every app,
+      // and runs documents from the Finkiverse with their capability list
+      // unenforced. A root is not a security boundary (it is a query param), so
+      // this is defence against the shell's own carelessness, not a wall.
+      const perRoot = await page.evaluate(() => {
+        const raw = JSON.parse(localStorage.getItem('foafos.op-scopes') || '{}');
+        return {
+          topLevelKeys: Object.keys(raw),
+          // the root layer must be OUTSIDE the app layer
+          rootScoped: Object.keys(raw).every(k => k === window.FoafOS.root.id
+            || Object.values(raw[k] || {}).every(v => typeof v === 'object')),
+          thisRoot: Object.keys(raw[window.FoafOS.root.id] || {}),
+        };
+      });
+      perRoot.topLevelKeys.includes('glitchcanary') && perRoot.thisRoot.includes('edot')
+        ? pass(`verb destinations are keyed by root (${perRoot.topLevelKeys.join(', ')})`)
+        : fail(`op-scopes are not root-scoped: ${JSON.stringify(perRoot)}`);
+
       // The Publishing panel is what makes any of this reachable by a
       // person. Both halves belong to the shell on purpose: a token the app
       // collects is a token the app has held, and a destination the app can
