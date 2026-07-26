@@ -42,12 +42,29 @@ Adaptation from the guest side.
 ## Shell surfaces
 
 - **Picker** (`Alt+H`) — only what the installation offers.
-- **Chrome** — the breadcrumb, the story status line and the FINK load
-  meter are apps (`surface: 'chrome'`), offered per root manifest. An
-  office installation does not hide them, it does not *have* them: no
-  element, no tab stop, nothing in the accessibility tree. On a story root
-  they are toggles in the picker, and they sit in the switcher under
-  "+ N chrome" so furniture is not counted as work.
+- **Chrome** — five pieces of shell furniture are apps (`surface: 'chrome'`),
+  offered per root manifest: the breadcrumb, the story status line, the FINK
+  load meter, the bottom-left story menu and the dev panel. An office
+  installation does not hide them, it does not *have* them: no element, no tab
+  stop, nothing in the accessibility tree. On a story root they are toggles in
+  the picker, and they sit in the switcher under "+ N chrome" so furniture is
+  not counted as work.
+
+  It was **three** until danbri spotted the fourth on a phone: converting
+  three and stopping left the bottom-left ☰ hard-coded in `index.html`, so a
+  Web TV or Tellyclub installation with no story engine at all still offered
+  NavPath, "Reload story", the player's Settings, and a `FINK App` link that
+  was an absolute URL with no `?root=` — a one-tap exit from the installation
+  you chose. Its ⚙️ Settings item opened the **fifth**, the dev panel, whose
+  ink swimlanes have nothing to show a TV. `e2e-chrome` now derives its list
+  from the registry *and* separately checks a list of story-furniture ids, so
+  chrome that was never registered fails rather than ships.
+
+  Still not converted, and named here rather than glossed: `#narrative-view`
+  is present and full-screen on a storyless root (empty, behind everything,
+  so not a visible fault), and `.fink-header` is `display: none` on *every*
+  root — its home/restart/settings buttons are unreachable everywhere, story
+  roots included.
 - **Switcher** (`Alt+Tab`) — the app **tree**, indented. A game opened by a
   story sits beneath it; ⏸ and ✕ act on the subtree and name what they take
   ("and 1 beneath it").

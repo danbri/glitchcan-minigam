@@ -16,8 +16,12 @@
 //                    story   loaded into the story engine (not a frame)
 //                    panel   shell-native UI (not a frame, no boundary)
 //                    chrome  persistent shell furniture (breadcrumb, status
-//                            line, load meter) — mounted at boot if the
-//                            installation offers it, gone from the DOM if not
+//                            line, load meter, story menu, dev panel) —
+//                            mounted at boot if the installation offers it,
+//                            gone from the DOM if not. ALL of it, not a
+//                            subset: the first pass converted three and left
+//                            two hard-coded in index.html, which put a
+//                            story-player menu on a Web TV.
 //
 //   `capabilities` — what it may do. Nothing is ambient; anything absent
 //                    from this list is unavailable, and the app is told
@@ -231,6 +235,30 @@ export const APPS = [
     capabilities: ['shell', 'vars:read'], silent: true },
   { id: 'loadmeter', family: 'chrome', icon: '📜', name: 'Load meter', surface: 'chrome',
     mount: 'scroll-status-bar', desc: 'FINKs encountered, loaded, compiled',
+    capabilities: ['shell'], silent: true },
+  // THE ONE I MISSED (reported from a phone, July 2026). Converting the
+  // breadcrumb, the status line and the load meter and stopping there left
+  // a fourth piece of story furniture hard-coded in index.html — so a Web
+  // TV or Tellyclub installation, with no story engine running at all,
+  // still showed a bottom-left ☰ offering NavPath, Reload story, the
+  // player's Settings, the story's Home, and a link labelled "FINK App"
+  // that was an absolute URL with no `?root=` on it: not merely useless
+  // furniture but a one-tap exit from the installation you chose.
+  //
+  // The measurement that would have caught it, and now does (e2e-chrome):
+  // assert on the FURNITURE, not on the three ids I happened to convert.
+  { id: 'storymenu', family: 'chrome', icon: '☰', name: 'Story menu', surface: 'chrome',
+    mount: 'radial-menu', desc: 'NavPath, reload, settings — all story-player controls',
+    capabilities: ['shell'], silent: true },
+  // …and what that menu's ⚙️ Settings item OPENED. Measured on webtv: the
+  // dev panel was `display:none` rather than showing, so it was never the
+  // visible fault — but the only reachable route to it was the ☰ above, and
+  // an installation with no story engine has nothing to inspect with an ink
+  // swimlane view. Registered for the same reason as the others: absent
+  // beats painted over, and one door closing is not the same as the room
+  // not being there.
+  { id: 'devpanel', family: 'chrome', icon: '🔧', name: 'Dev panel', surface: 'chrome',
+    mount: 'dev-panel', desc: 'Logs, swimlanes, config, FINK files, audio',
     capabilities: ['shell'], silent: true },
 ];
 

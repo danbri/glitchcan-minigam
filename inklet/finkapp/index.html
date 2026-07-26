@@ -176,7 +176,12 @@
 <!-- Radial Menu (Bottom-Left) -->
 <div class="radial-menu" id="radial-menu">
     <div class="radial-menu-items">
-        <a href="https://danbri.github.io/glitchcan-minigam/inklet/finkapp/" class="radial-menu-item" title="FINK App Home">
+        <!-- Relative, not the absolute deployed URL it used to be: that
+             hard-coded https://danbri.github.io/… so it broke on a local
+             server, and it dropped any `?root=` on the way, which turned a
+             menu item into a silent exit from the installation. `./` is the
+             same destination in production and the right one everywhere. -->
+        <a href="./" class="radial-menu-item" title="FINK App Home">
             <span class="menu-icon">🔗</span>
             <span>FINK App</span>
         </a>

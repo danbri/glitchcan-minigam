@@ -46,7 +46,23 @@ await new Promise(r => setTimeout(r, 900));
 const fail = (m) => { console.error('✖', m); process.exitCode = 1; };
 const pass = (m) => console.log('✔', m);
 const base = `http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/`;
-const CHROME_IDS = ['breadcrumb', 'statusline', 'loadmeter'];
+// DERIVED, not written here. This used to be the literal three ids that
+// were converted in July 2026, so when a FOURTH piece of story furniture
+// turned out to be hard-coded in index.html — the bottom-left radial ☰,
+// offering NavPath, "Reload story" and a link out of the installation — the
+// suite had nothing to say about it. It was reported from a phone instead.
+// Deriving the list means registering a chrome app is enough to be checked.
+const CHROME_IDS = (await import('../foafos-apps.js')).chromeApps().map(a => a.id);
+const CHROME_MOUNTS = (await import('../foafos-apps.js')).chromeApps().map(a => a.mount);
+
+// The backstop for the same class of miss: story-player furniture that was
+// never registered as an app at all, so no manifest can decline it. Ids live
+// HERE on purpose — adding narrative chrome to index.html without giving it
+// a registry entry should fail this, loudly, rather than ship.
+const STORY_FURNITURE = [
+  'breadcrumb-container', 'breadcrumb-toggle', 'stats-bar',
+  'scroll-status-bar', 'radial-menu', 'dev-panel',
+];
 
 let browser;
 try {
@@ -65,20 +81,16 @@ try {
   // ── 1. a story root wears its furniture, as apps ───────────────────
   {
     const { page, errs } = await open('');
-    const st = await page.evaluate((ids) => ({
+    const st = await page.evaluate(([ids, mounts]) => ({
       offered: FoafOS.chrome.offered(),
       mounted: ids.filter(id => FoafOS.chrome.isMounted(id)),
-      dom: {
-        breadcrumb: !!document.getElementById('breadcrumb-container'),
-        statusline: !!document.getElementById('stats-bar'),
-        loadmeter: !!document.getElementById('scroll-status-bar'),
-      },
+      dom: Object.fromEntries(mounts.map(m => [m, !!document.getElementById(m)])),
       inTree: (function walk(n) {
         return FoafOS.apps.children(n.id).flatMap(c => [c.appId, ...walk(c)]);
       })(FoafOS.rootNode),
-    }), CHROME_IDS);
+    }), [CHROME_IDS, CHROME_MOUNTS]);
     CHROME_IDS.every(id => st.mounted.includes(id))
-      ? pass(`story root mounts all three chrome apps (${st.mounted.join(', ')})`)
+      ? pass(`story root mounts all ${CHROME_IDS.length} chrome apps (${st.mounted.join(', ')})`)
       : fail(`chrome not mounted: ${JSON.stringify(st)}`);
     Object.values(st.dom).every(Boolean)
       ? pass('their elements are in the document')
@@ -117,7 +129,7 @@ try {
       h.remove();
       return t;
     });
-    picker.length === 3 && picker.every(t => t.endsWith('=true'))
+    picker.length === CHROME_IDS.length && picker.every(t => t.endsWith('=true'))
       ? pass(`picker shows chrome as pressed toggles (${picker.join(', ')})`)
       : fail(`picker did not report chrome state: ${JSON.stringify(picker)}`);
 
@@ -128,7 +140,7 @@ try {
       s.remove();
       return h;
     });
-    /\+ 3 chrome/.test(tally)
+    new RegExp(`\\+ ${CHROME_IDS.length} chrome`).test(tally)
       ? pass(`switcher separates furniture from work ("${tally.trim()}")`)
       : fail(`switcher tally unhelpful: ${tally}`);
 
@@ -139,19 +151,14 @@ try {
   // ── 2. the office root does not have them at all ───────────────────
   {
     const { page, errs } = await open('?root=office');
-    const st = await page.evaluate(() => ({
+    const st = await page.evaluate((furniture) => ({
       offered: FoafOS.chrome.offered(),
-      dom: [
-        document.getElementById('breadcrumb-container'),
-        document.getElementById('breadcrumb-toggle'),
-        document.getElementById('stats-bar'),
-        document.getElementById('scroll-status-bar'),
-      ].map(Boolean),
+      dom: furniture.filter(id => document.getElementById(id)),
       // a refused launch, not a hidden one
       refused: (() => { const n = FoafOS.launchApp('breadcrumb'); return n === null; })(),
-    }));
-    st.offered.length === 0 && st.dom.every(x => x === false)
-      ? pass('office root has no breadcrumb, status line or load meter — absent, not hidden')
+    }), STORY_FURNITURE);
+    st.offered.length === 0 && st.dom.length === 0
+      ? pass(`office root carries none of the ${STORY_FURNITURE.length} pieces of story furniture — absent, not hidden`)
       : fail(`office still carries chrome: ${JSON.stringify(st)}`);
     st.refused
       ? pass('and cannot be talked into mounting one')

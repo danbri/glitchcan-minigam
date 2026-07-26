@@ -786,9 +786,13 @@ back to the default and say `fellBack` on `root.ready`.
 - Spawning under a closed parent is **refused**, never silently reparented.
 - `rootOffers()` gates `launchApp` — an app outside the installation is
   refused with `app.launch.refused`, not quietly opened.
-- **Shell chrome is apps** (July 2026). Breadcrumb, story status line and
-  FINK load meter have `surface: 'chrome'` and a `mount` id, and the root
-  manifest's `apps` list decides whether they exist. Offered → spawned
+- **Shell chrome is apps** (July 2026). FIVE pieces: breadcrumb, story status
+  line, FINK load meter, the bottom-left story menu (`radial-menu`) and the
+  dev panel (`dev-panel`). Each has `surface: 'chrome'` and a `mount` id, and
+  the root manifest's `apps` list decides whether it exists. Not yet
+  converted: `#narrative-view` (present and full-screen even on a storyless
+  root) and `.fink-header` (`display:none` on every root — its three buttons
+  are dead everywhere). Offered → spawned
   into the tree and the element stays; not offered → the element is
   PARKED (removed from the DOM, kept in memory with its parent/next
   sibling so it can come back with its listeners intact — the breadcrumb
@@ -803,9 +807,24 @@ back to the default and say `fellBack` on `root.ready`.
   - Launching a chrome app TOGGLES it; the picker renders those tiles with
     `aria-pressed` and an on/off marker, because a toggle that looks like
     a launcher is a small lie.
-  - The switcher counts them separately ("Running 1 + 3 chrome") and sorts
+  - The switcher counts them separately ("Running 1 + N chrome") and sorts
     them last: they are genuinely running apps, but "Running 4" for one
     story and three status bars is a true number that reads as a wrong one.
+  - **CONVERT THE FURNITURE, NOT THREE PIECES OF IT.** The first pass did
+    breadcrumb + status line + load meter and stopped, leaving the radial ☰
+    hard-coded in `index.html` — so Web TV and Tellyclub, with no story
+    engine running at all, still showed NavPath, "Reload story", the
+    player's Settings and a `FINK App` link that was an ABSOLUTE URL with no
+    `?root=`: a one-tap exit from the installation, which also broke on a
+    local server. danbri found it on a phone; no test could, because
+    `e2e-chrome` hard-coded the same three ids the conversion did.
+    Now: `CHROME_IDS` is derived from `chromeApps()`, and a separate
+    `STORY_FURNITURE` id list in the test is the backstop for chrome that
+    was never registered at all. When adding narrative furniture to
+    `index.html`, give it a registry entry in the same commit.
+  - Furniture is also a NAVIGATION surface. An item that leaves the
+    installation is worse than a useless one, so check every link in chrome
+    for a hard-coded origin and a dropped `?root=`.
 - **A CAPABILITY NOTHING GRANTS IS A DEAD APP.** Found twice in one day.
   First: Maker and Logger declare `['shell']`, no root held `shell`, so
   `launchApp` refused them — every press of those picker tiles was a no-op,
