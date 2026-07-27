@@ -13,6 +13,7 @@ import {
 } from './world.js';
 import { UnderwaterFX, glowSprite, currentAt } from './fx.js';
 import { Composite } from './post.js';
+import { Fauna } from './fauna.js';
 import { FACTS, QUEST_ITEMS, TOOLS, HINTS } from './facts.js';
 
 const AIR_MAX = 100;
@@ -159,6 +160,9 @@ export class WaterworldGame {
 
     // the living water: currents, fish, god rays, plankton, vents, plumes
     this.fx = new UnderwaterFX(this.scene, { lite: this.lite });
+    // …and the big life: hulls above, dolphins, sharks, reef fish
+    this.fauna = new Fauna(this.scene, { lite: this.lite });
+    this.dock.colliders.push(...this.fauna.colliders);
     this.ir = false;
     this._irMats = new Map();
     this._irUsedOnce = false;
@@ -274,8 +278,16 @@ export class WaterworldGame {
       this.scene.add(head);
       if (this.ir) { this._irApply(head); segs.forEach(s => this._irApply(s)); }
       const cx = 30 + Math.random() * 70, cz = (Math.random() - 0.5) * 120;
+      // ELECTRIC: crackling arc sprites flicker along the body
+      const arcs = [];
+      for (let a = 0; a < 3; a++) {
+        const arc = glowSprite(0x9fdcff, 1.3, 0.85);
+        arc.userData.irHot = true;
+        (a === 0 ? head : segs[(a * 2) % segs.length]).add(arc);
+        arcs.push(arc);
+      }
       this.eels.push({
-        head, segs,
+        head, segs, arcs,
         pos: new THREE.Vector3(cx, floorYAt(cx, cz) + 6 + Math.random() * 10, cz),
         angle: Math.random() * Math.PI * 2,
         center: new THREE.Vector3(cx, 0, cz),
@@ -751,7 +763,8 @@ export class WaterworldGame {
     this.pos.z = Math.max(BOUNDS.minZ + 2, Math.min(BOUNDS.maxZ - 2, this.pos.z));
     const fy = floorYAt(this.pos.x, this.pos.z) + 1.4;
     if (this.pos.y < fy) { this.pos.y = fy; this.vel.y = Math.abs(this.vel.y) * 0.3; }
-    if (this.pos.y > BOUNDS.surface) { this.pos.y = BOUNDS.surface; this.vel.y = -Math.abs(this.vel.y) * 0.3; }
+    // you can porpoise: the sail may break the surface for a moment
+    if (this.pos.y > -0.9) { this.pos.y = -0.9; this.vel.y = -Math.abs(this.vel.y) * 0.3; }
     for (const c of this.dock.colliders) {
       const d = this.pos.distanceTo(c);
       if (d < c.r) {
@@ -779,7 +792,9 @@ export class WaterworldGame {
     ud.beacon.visible = Math.sin(this.elapsed * 4.5) > -0.35;   // masthead blink
 
     const camTarget = this.pos.clone().addScaledVector(fwd, -10).add(new THREE.Vector3(0, 3.5, 0));
-    camTarget.y = Math.min(camTarget.y, BOUNDS.surface + 1);
+    // near the top the camera may ride just above the waterline, so
+    // porpoising actually shows you OUT for a breath
+    camTarget.y = Math.min(camTarget.y, BOUNDS.surface + 2.6);
     this.camera.position.lerp(camTarget, 1 - Math.pow(0.001, dt));
     // the gaze is smoothed too: a lookAt chasing a jittery forward
     // vector is half of any "camera snapping" complaint
@@ -825,6 +840,24 @@ export class WaterworldGame {
       ? [...this.fatbergs.map(f => f.mesh.position), this.pos]
       : [];
     this.fx.step(dt, this.elapsed, this.pos, threats, -this.camera.position.y, hot);
+    const faunaEv = this.fauna.step(dt, this.elapsed, this.pos);
+    if (faunaEv.dolphinsNear) {
+      if (!this.codex.has('dolphin_visit')) {
+        this.codex.add('dolphin_visit');
+        this._factQueue.push('dolphin_visit');
+      }
+      if (this.elapsed - (this._lastClicks || 0) > 15) {
+        this._lastClicks = this.elapsed;
+        this.ui.audio?.clicks();
+        this.ui.announce('Dolphins nearby — you can hear their clicks.');
+      }
+    }
+    if (faunaEv.sharksNear && !this.codex.has('shark_visit')) {
+      this.codex.add('shark_visit');
+      this._factQueue.push('shark_visit');
+      this.ui.toast('🦈 A shark is circling. It mostly eats crabs. Mostly.', 'warn');
+      this.ui.announce('A shark is circling the sub, out of curiosity.');
+    }
 
     // -------- air + hull economy
     this.air -= dt * (thrusting ? 1.7 : 1.1) * (1 + this.banks * 0.06);
@@ -990,8 +1023,19 @@ export class WaterworldGame {
         if (toPlayer < 2.6 && e.bite <= 0) {
           e.bite = 1.6;
           this.ui.audio?.growl();
-          this._damage(1, 'An eel gets its teeth into the hull');
+          this.ui.audio?.zap();
+          this._damage(1, 'An electric eel jolts the hull — every gauge flickers');
+          if (!this.codex.has('eel_zap')) {
+            this.codex.add('eel_zap');
+            this._factQueue.push('eel_zap');
+          }
         }
+      }
+      // the crackle: arcs flicker at random, harder when hunting
+      const hunting = e.pos.distanceTo(this.pos) < 22;
+      for (const arc of e.arcs) {
+        arc.visible = Math.random() < (hunting ? 0.45 : 0.18);
+        if (arc.visible) arc.scale.setScalar(0.8 + Math.random() * (hunting ? 1.6 : 1.0));
       }
       // pose: head faces travel, segments follow like a chain
       e.head.position.copy(e.pos);

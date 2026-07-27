@@ -264,6 +264,34 @@ export class WaterAudio {
     o.start(t); o.stop(t + 0.8); vib.stop(t + 0.8);
   }
 
+  clicks() {
+    // dolphin: a falling train of bright little ticks
+    if (!this.ctx) return;
+    const t = this._now();
+    for (let i = 0; i < 7; i++) {
+      const { o, g } = this._osc('sine', 2400 - i * 180, this.master);
+      this._env(g, t + i * 0.06, 0.05, 0.004, 0.05);
+      o.start(t + i * 0.06); o.stop(t + i * 0.06 + 0.08);
+    }
+  }
+
+  zap() {
+    // electric eel: a crackle of filtered noise over a snapping drop
+    if (!this.ctx) return;
+    const t = this._now();
+    const n = this._noise(0.25);
+    const hp = this.ctx.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 1800;
+    const g = this.ctx.createGain();
+    n.connect(hp).connect(g).connect(this.master);
+    this._env(g, t, 0.22, 0.004, 0.22);
+    n.start(t);
+    const { o, g: g2 } = this._osc('square', 320, this.master);
+    o.frequency.exponentialRampToValueAtTime(70, t + 0.16);
+    this._env(g2, t, 0.14, 0.004, 0.16);
+    o.start(t); o.stop(t + 0.2);
+  }
+
   sealBark() {
     if (!this.ctx) return;
     const t = this._now();
