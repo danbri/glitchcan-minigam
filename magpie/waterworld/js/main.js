@@ -61,6 +61,9 @@ function hud(s) {
     ...s.items.map(i => ({ magnet: '🧲', rope: '🪢', lamp: '🏮', battery: '🔋', soda: '📦', nozzle: '🔩' }[i] || '❓')),
   ];
   $('inv').textContent = held.join(' ') || '·';
+  const irBtn = $('ir-btn');
+  irBtn.classList.toggle('on', !!s.ir);
+  irBtn.setAttribute('aria-pressed', String(!!s.ir));
 }
 
 function complete(result) {
@@ -115,6 +118,7 @@ function setAction(action, down, fromRepeat) {
 }
 document.addEventListener('keydown', (e) => {
   if (!started && (e.key === ' ' || e.key === 'Enter')) { startGame(); return; }
+  if ((e.key === 'i' || e.key === 'I') && !e.repeat) { game?.toggleIR(); return; }
   const action = KEYMAP[e.key] ?? KEYMAP[e.key?.toLowerCase?.()];
   if (!action) return;
   if (e.key !== 'Escape') e.preventDefault?.();
@@ -179,6 +183,7 @@ function startGame() {
 }
 
 $('splash').addEventListener('pointerdown', startGame);
+$('ir-btn').addEventListener('pointerdown', (e) => { e.stopPropagation(); game?.toggleIR(); });
 $('endcard').addEventListener('pointerdown', () => {
   if (!EMBED && game?.over) location.reload();
 });
