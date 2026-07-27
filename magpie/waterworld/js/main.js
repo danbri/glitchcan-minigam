@@ -242,6 +242,7 @@ function buildPad() {
 function applyControls(controls) {
   const hostOwns = controls?.provider === 'host';
   $('pad').style.display = hostOwns ? 'none' : '';
+  $('pad-toggle').style.display = hostOwns ? 'none' : '';
 }
 
 // ---------------------------------------------------------------- boot
@@ -269,7 +270,10 @@ function startGame() {
     };
   }
   game.start();
-  announce('Dive started. Steer with the pad, A to thrust, B for sonar.');
+  announce('Dive started. Brush the water to steer, tap to ping the sonar.');
+  setTimeout(() => {
+    if (game && !game.over) hint('Brush the water to steer her, Captain — tap ？ for everything else');
+  }, 2500);
 }
 
 $('splash').addEventListener('pointerdown', startGame);
@@ -305,12 +309,31 @@ $('end-again').addEventListener('click', () => location.reload());
 window.addEventListener('resize', () => game?.resize());
 
 buildPad();
-// touch-first: show the pad on anything that can touch, not only
-// pointer:coarse — hybrids and tablets count
+// Touch-first means GESTURES first: brush to steer, tap to ping. The
+// d-pad is the last resort, parked behind the 🎮 chip until summoned.
 if (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window ||
     navigator.maxTouchPoints > 0) {
-  $('pad').dataset.touch = '1';
+  $('pad-toggle').dataset.touch = '1';
 }
+$('pad-toggle').addEventListener('pointerdown', (e) => {
+  e.stopPropagation();
+  const open = !$('pad').classList.contains('open');
+  $('pad').classList.toggle('open', open);
+  $('pad-toggle').classList.toggle('on', open);
+  $('pad-toggle').setAttribute('aria-pressed', String(open));
+  if (open) toast('🎮 D-pad out — ▲▼◀▶ steer · A thrust · B sonar', 'hint');
+});
+$('help-btn').addEventListener('pointerdown', (e) => {
+  e.stopPropagation();
+  const panel = $('help-panel');
+  const opening = !panel.classList.contains('show');
+  panel.classList.toggle('show', opening);
+  $('help-btn').setAttribute('aria-expanded', String(opening));
+});
+$('help-close').addEventListener('click', () => {
+  $('help-panel').classList.remove('show');
+  $('help-btn').setAttribute('aria-expanded', 'false');
+});
 
 // canvas a11y: name it and keep a live description of the dive
 const describe = () => {

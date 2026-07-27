@@ -63,6 +63,9 @@ export class WaterworldGame {
     this._autoThrust = false;
     this._autoFizz = false;
     this._helmActive = false;
+    this._smYaw = 0;             // low-passed desired heading — the
+    this._smPitch = 0;           // helm may never snap between poses
+    this._terrainLift = false;   // hysteresis, not a flickering flag
 
     // visitors
     this.seal = null;
@@ -343,6 +346,9 @@ export class WaterworldGame {
   // and even works the fizz lance when she's alongside a fatberg.
   _helm(dt) {
     this._helmActive = true;
+    // re-engaging after manual or a brush: start the filter from where
+    // the boat actually is, or the first frame swings from stale state
+    if (!this._helmWasActive) { this._smYaw = this.yaw; this._smPitch = this.pitch; }
     let desYaw, desPitch;
     const exploring = this._explore && this.elapsed < this._explore.until;
     const obj = exploring ? null : this._objective();
@@ -354,8 +360,10 @@ export class WaterworldGame {
       const dx = obj.target.x - this.pos.x, dz = obj.target.z - this.pos.z;
       const dy = (obj.target.y ?? this.pos.y) - this.pos.y;
       dist = Math.hypot(dx, dz);
-      desYaw = Math.atan2(-dz, dx);
-      desPitch = Math.max(-0.65, Math.min(0.65, Math.atan2(dy, Math.max(dist, 2))));
+      // deadband: right on top of the target, bearing is noise — hold
+      // the heading and settle vertically instead of chasing atan2 jitter
+      desYaw = dist < 5 ? this.yaw : Math.atan2(-dz, dx);
+      desPitch = Math.max(-0.65, Math.min(0.65, Math.atan2(dy, Math.max(dist, 5))));
     } else {
       this._helmActive = false;
       return;
@@ -379,9 +387,16 @@ export class WaterworldGame {
           this.pos.z - c.z).normalize(), (c.r + 7 - d) / 6);
       }
     }
-    // terrain ahead: pull up early, duck under the surface
+    // terrain ahead: pull up early — WITH hysteresis, or the lift flag
+    // flickers every frame and the boat wags between two pitches
     const px = this.pos.x + dir.x * 12, pz = this.pos.z + dir.z * 12;
-    if (this.pos.y - 3.5 < floorYAt(px, pz)) dir.y = Math.max(dir.y, 0.6);
+    const clearance = this.pos.y - floorYAt(px, pz);
+    if (this._terrainLift) {
+      if (clearance > 7) this._terrainLift = false;
+    } else if (clearance < 3.5) {
+      this._terrainLift = true;
+    }
+    if (this._terrainLift) dir.y = Math.max(dir.y, 0.6);
     if (this.pos.y > BOUNDS.surface - 2) dir.y = Math.min(dir.y, -0.1);
     if (px < BOUNDS.minX + 8 || px > BOUNDS.maxX - 8 ||
         pz < BOUNDS.minZ + 8 || pz > BOUNDS.maxZ - 8) {
@@ -391,14 +406,26 @@ export class WaterworldGame {
     dir.normalize();
     desYaw = Math.atan2(-dir.z, dir.x);
     desPitch = Math.max(-0.8, Math.min(0.8, Math.asin(Math.max(-1, Math.min(1, dir.y)))));
-    // steer smoothly, remember the turn for the rudder animation
-    let dYaw = desYaw - this.yaw;
+    // LOW-PASS the desired heading before steering toward it. Raw desire
+    // can flip pose-to-pose (avoidance engaging, a target passing under
+    // the keel) and steering straight at it made the boat oscillate
+    // between two angles with no in-between — the reported glitch. The
+    // filtered desire cannot step, so the boat cannot snap.
+    let sd = desYaw - this._smYaw;
+    while (sd > Math.PI) sd -= Math.PI * 2;
+    while (sd < -Math.PI) sd += Math.PI * 2;
+    this._smYaw += sd * Math.min(1, 3.5 * dt);
+    while (this._smYaw > Math.PI) this._smYaw -= Math.PI * 2;
+    while (this._smYaw < -Math.PI) this._smYaw += Math.PI * 2;
+    this._smPitch += (desPitch - this._smPitch) * Math.min(1, 3.5 * dt);
+    // steer toward the FILTERED desire, remember the turn for the rudder
+    let dYaw = this._smYaw - this.yaw;
     while (dYaw > Math.PI) dYaw -= Math.PI * 2;
     while (dYaw < -Math.PI) dYaw += Math.PI * 2;
     const turn = Math.max(-1.5 * dt, Math.min(1.5 * dt, dYaw));
     this.yaw += turn;
     this._helmTurn = Math.max(-0.5, Math.min(0.5, dYaw));
-    this.pitch += Math.max(-1.1 * dt, Math.min(1.1 * dt, desPitch - this.pitch));
+    this.pitch += Math.max(-1.1 * dt, Math.min(1.1 * dt, this._smPitch - this.pitch));
     this._autoThrust = exploring || dist > 7;
     // she pings as she hunts — the sonar chimes are half the mood
     if (this._pingCooldown <= 0 && this.elapsed - this._lastAutoPing > 7 && !exploring) {
@@ -674,6 +701,7 @@ export class WaterworldGame {
     this._helmActive = false;
     const manual = this.elapsed < this.manualUntil;
     if (this.autopilot && !manual && !this.over) this._helm(dt);
+    this._helmWasActive = this._helmActive;
 
     // -------- steering: yaw/pitch on the pad, thrust on A
     const turn = 1.9 * dt, pitchRate = 1.4 * dt;
@@ -713,7 +741,7 @@ export class WaterworldGame {
 
     // -------- pose the sub + camera
     this.sub.position.copy(this.pos);
-    const roll = (k.left ? 0.25 : 0) - (k.right ? 0.25 : 0);
+    const roll = (k.left ? 0.25 : 0) - (k.right ? 0.25 : 0) + (this._helmTurn || 0) * 0.45;
     this.sub.rotation.set(0, this.yaw, 0);
     this.sub.rotateZ(this.pitch * 0.7);
     this.sub.rotation.x += (roll - this.sub.rotation.x) * 0.2;
@@ -729,7 +757,12 @@ export class WaterworldGame {
     const camTarget = this.pos.clone().addScaledVector(fwd, -10).add(new THREE.Vector3(0, 3.5, 0));
     camTarget.y = Math.min(camTarget.y, BOUNDS.surface + 1);
     this.camera.position.lerp(camTarget, 1 - Math.pow(0.001, dt));
-    this.camera.lookAt(this.pos.clone().addScaledVector(fwd, 6));
+    // the gaze is smoothed too: a lookAt chasing a jittery forward
+    // vector is half of any "camera snapping" complaint
+    const lookTarget = this.pos.clone().addScaledVector(fwd, 6);
+    this._camLook = this._camLook || lookTarget.clone();
+    this._camLook.lerp(lookTarget, 1 - Math.pow(0.004, dt));
+    this.camera.lookAt(this._camLook);
 
     // -------- fog and light by depth (the deep is DARK without the lamp)
     const depth = -this.pos.y;
