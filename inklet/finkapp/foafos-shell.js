@@ -818,9 +818,13 @@ function buildUI() {
   // ── skins: a system service, not a story decision ──
   // One DOM, several identities (fink-skins.css). Every skin is held to
   // the same AA contrast / focus / hit-target bar by test/skins-a11y.mjs.
+  // Broadsheet leads and is labelled as the default — it IS the default
+  // (index.html boot script), and the picker should say so rather than
+  // presenting six equal strangers with Spectrum in the seat of honour.
   const SKINS = [
-    ['spectrum', 'Spectrum'], ['paper', 'Paper'], ['terminal', 'Terminal'],
-    ['aurora', 'Aurora'], ['broadsheet', 'Broadsheet'], ['calm', 'Calm'],
+    ['broadsheet', 'Broadsheet · default'], ['spectrum', 'Spectrum'],
+    ['paper', 'Paper'], ['terminal', 'Terminal'],
+    ['aurora', 'Aurora'], ['calm', 'Calm'],
   ];
   const picker = $('#skin-picker');
   const applySkin = (id) => {
