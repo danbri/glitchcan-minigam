@@ -16,6 +16,19 @@ import { FACTS, QUEST_ITEMS, TOOLS, HINTS } from './facts.js';
 const AIR_MAX = 100;
 const HULL_MAX = 4;
 const _cur = new THREE.Vector3();
+// The sub's pose is composed from QUATERNIONS, never read back from
+// Euler angles. The old code did `rotation.set(yaw)` + `rotateZ(pitch)`
+// and then read-modified `rotation.x` — but a yaw+pitch composition has
+// two equivalent Euler representations, and near the flip boundary the
+// extracted angles alternate between them frame to frame. Writing .x
+// back then slammed the craft between two orientations with no
+// in-between: the reported drift glitch.
+const _qYaw = new THREE.Quaternion();
+const _qPitch = new THREE.Quaternion();
+const _qRoll = new THREE.Quaternion();
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+const Z_AXIS = new THREE.Vector3(0, 0, 1);
+const X_AXIS = new THREE.Vector3(1, 0, 0);
 
 export class WaterworldGame {
   // ui: { hud(state), toast(text, cls), fact(title, text, icon),
@@ -65,6 +78,7 @@ export class WaterworldGame {
     this._helmActive = false;
     this._smYaw = 0;             // low-passed desired heading — the
     this._smPitch = 0;           // helm may never snap between poses
+    this._smRoll = 0;            // roll as a SCALAR, never read from Eulers
     this._terrainLift = false;   // hysteresis, not a flickering flag
 
     // visitors
@@ -739,12 +753,14 @@ export class WaterworldGame {
       }
     }
 
-    // -------- pose the sub + camera
+    // -------- pose the sub + camera (quaternion compose — see top note)
     this.sub.position.copy(this.pos);
-    const roll = (k.left ? 0.25 : 0) - (k.right ? 0.25 : 0) + (this._helmTurn || 0) * 0.45;
-    this.sub.rotation.set(0, this.yaw, 0);
-    this.sub.rotateZ(this.pitch * 0.7);
-    this.sub.rotation.x += (roll - this.sub.rotation.x) * 0.2;
+    const rollTarget = (k.left ? 0.25 : 0) - (k.right ? 0.25 : 0) + (this._helmTurn || 0) * 0.45;
+    this._smRoll += (rollTarget - this._smRoll) * Math.min(1, 6 * dt);
+    _qYaw.setFromAxisAngle(Y_AXIS, this.yaw);
+    _qPitch.setFromAxisAngle(Z_AXIS, this.pitch * 0.7);
+    _qRoll.setFromAxisAngle(X_AXIS, this._smRoll);
+    this.sub.quaternion.copy(_qYaw).multiply(_qPitch).multiply(_qRoll);
     const ud = this.sub.userData;
     ud.prop.rotation.x += dt * (thrusting ? 24 : 6);
     ud.prop2.rotation.x -= dt * (thrusting ? 24 : 6);      // counter-rotating
