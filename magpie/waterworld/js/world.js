@@ -346,7 +346,8 @@ export function makeSteelyard() {
   return g;
 }
 
-// An ancestor bone: a great rib, half out of the silt.
+// A ghost's bone: a great rib, half out of the silt — if the ghosts
+// are real, these are theirs; if not, the guilt is real enough.
 export function makeBone() {
   const g = new THREE.Group();
   const rib = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.32, 10, 18, Math.PI * 0.85), mat(0xe8e2d4, { emissive: 0x333026 }));

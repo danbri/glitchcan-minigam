@@ -22,7 +22,7 @@ export const STORY_FACTS = {
   whale_lament: {
     title: 'THE LAMENT',
     icon: '🐋',
-    text: 'London burned whale oil for light and boiled spermaceti for candles. The whales were never mourned. A loudspeaker — magnet and living current — can carry a song sad enough to be heard by the dead.',
+    text: 'London burned whale oil for light and boiled spermaceti for candles. The whales were never mourned. A loudspeaker — magnet and living current — can carry a song sad enough to be heard by the dead. If they can hear. If they are there at all.',
   },
   candle_barge: {
     title: 'PALE & SONS',
@@ -149,7 +149,7 @@ export class Campaign {
     const w = this.whale, e = this.eel, r = this.ruby;
     if (w.step === 'bones') {
       const bone = g.bones.find(b => !b.taken);
-      if (bone) options.push({ icon: '🦴', text: `Whales: gather ancestor bones (${g.bones.filter(b => b.taken).length}/3)`, target: bone.mesh.position });
+      if (bone) options.push({ icon: '🦴', text: `Whales: gather the ghosts' bones (${g.bones.filter(b => b.taken).length}/3)`, target: bone.mesh.position });
     } else if (w.step === 'bury') {
       options.push({ icon: '⚓', text: `Whales: bury the bones at the Steelyard stone (${this.whale.bonesBuried}/3)`, target: g.steelyard.position });
     } else if (w.step === 'speaker') {
