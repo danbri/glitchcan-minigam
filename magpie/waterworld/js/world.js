@@ -1,10 +1,12 @@
-// Waterworld — the drowned dock, built picoCAD-style: chunky low-poly
-// primitives, flat shading, PICO-8 palette, nothing smooth that could be
-// crunchy instead. All geometry is generated; there are no asset files.
+// Waterworld — the drowned dock. ART DIRECTION v2 (the picoCAD/blocky
+// constraints are officially retired): smooth-shaded organic forms,
+// full-resolution rendering, soft round particles, bioluminescent
+// accents. All geometry is still generated — no asset files — but
+// nothing is crunched, snapped or flat-shaded any more.
 
 import * as THREE from '../../../trees/vendor/three.module.min.js';
 
-// The PICO-8 palette, the whole aesthetic contract.
+// Named colours kept as a convenience vocabulary (no longer a constraint).
 export const P8 = {
   black: 0x000000, navy: 0x1d2b53, plum: 0x7e2553, green: 0x008751,
   brown: 0xab5236, dusk: 0x5f574f, grey: 0xc2c3c7, white: 0xfff1e8,
@@ -16,9 +18,35 @@ const _mats = new Map();
 export function mat(color, opts = {}) {
   const key = color + JSON.stringify(opts);
   if (!_mats.has(key)) {
-    _mats.set(key, new THREE.MeshLambertMaterial({ color, flatShading: true, ...opts }));
+    _mats.set(key, new THREE.MeshLambertMaterial({ color, ...opts }));
   }
   return _mats.get(key);
+}
+
+// One soft round dot, shared by every particle system — square GL points
+// were half of what read as "pixelated".
+let _softDot = null;
+export function softDot() {
+  if (_softDot) return _softDot;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 1, 32, 32, 30);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.5, 'rgba(255,255,255,0.5)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  _softDot = new THREE.CanvasTexture(c);
+  return _softDot;
+}
+
+// Smooth primitive helpers for organic shapes.
+export function ball(parent, r, color, x = 0, y = 0, z = 0, opts = {}) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 14), mat(color, opts));
+  m.position.set(x, y, z);
+  parent.add(m);
+  return m;
 }
 
 export function box(parent, w, h, d, color, x = 0, y = 0, z = 0) {
@@ -28,62 +56,29 @@ export function box(parent, w, h, d, color, x = 0, y = 0, z = 0) {
   return m;
 }
 
-export function cyl(parent, rt, rb, h, color, x = 0, y = 0, z = 0, seg = 6) {
+export function cyl(parent, rt, rb, h, color, x = 0, y = 0, z = 0, seg = 16) {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat(color));
   m.position.set(x, y, z);
   parent.add(m);
   return m;
 }
 
-// Neon treatment: darken the faces to near-silhouette and trace every
-// hard edge with an additive glowing line. Structures become mysterious
-// shapes drawn in light; the particles do the rest of the talking.
-const _lineMats = new Map();
-function lineMat(color) {
-  if (!_lineMats.has(color)) {
-    _lineMats.set(color, new THREE.LineBasicMaterial({
-      color, transparent: true, opacity: 0.85,
-      blending: THREE.AdditiveBlending, depthWrite: false,
-    }));
-  }
-  return _lineMats.get(color);
-}
-const _darkMats = new Map();
-function darkMat(srcColor) {
-  const c = new THREE.Color(srcColor).multiplyScalar(0.22).getHex();
-  if (!_darkMats.has(c)) {
-    _darkMats.set(c, new THREE.MeshLambertMaterial({ color: c, flatShading: true }));
-  }
-  return _darkMats.get(c);
-}
-
-export function neonize(root, edgeColor, { keepFaces = false } = {}) {
+// Signature tinting: each structure family keeps an identity via a
+// faint emissive undertone rather than wireframe edges (retired with
+// the blocky art). Call on a finished group.
+export function tint(root, emissiveHex, strength = 1) {
+  const cache = new Map();
   root.traverse((o) => {
-    if (!o.isMesh || o.userData.noNeon || o.isLineSegments) return;
-    if (!keepFaces && o.material && o.material.color) {
-      o.material = darkMat(o.material.color.getHex());
+    if (!o.isMesh || !o.material || !o.material.color || o.userData.noTint) return;
+    const key = o.material.color.getHex();
+    if (!cache.has(key)) {
+      const m = o.material.clone();
+      m.emissive = new THREE.Color(emissiveHex).multiplyScalar(0.18 * strength);
+      cache.set(key, m);
     }
-    const edges = new THREE.LineSegments(
-      new THREE.EdgesGeometry(o.geometry, 20), lineMat(edgeColor));
-    edges.userData.noNeon = true;
-    o.add(edges);
+    o.material = cache.get(key);
   });
   return root;
-}
-
-// Chunk a geometry: snap vertices to a coarse grid so even curved
-// primitives read as hand-placed picoCAD verts.
-export function crunch(geo, step = 0.5) {
-  const pos = geo.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    pos.setXYZ(i,
-      Math.round(pos.getX(i) / step) * step,
-      Math.round(pos.getY(i) / step) * step,
-      Math.round(pos.getZ(i) / step) * step);
-  }
-  pos.needsUpdate = true;
-  geo.computeVertexNormals();
-  return geo;
 }
 
 // ---------------------------------------------------------------- the sub
@@ -104,187 +99,217 @@ function nameplateTexture(text) {
   g.font = 'bold 17px monospace';
   g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText(text, 64, 17);
-  const t = new THREE.CanvasTexture(c);
-  t.magFilter = THREE.NearestFilter;
-  return t;
+  return new THREE.CanvasTexture(c);
 }
 
 export function makeSub() {
   const g = new THREE.Group();
-  // hull: main pressure vessel, tapered nose, keel strake
-  const hull = box(g, 3.6, 1.6, 1.8, P8.orange);
-  hull.name = 'hull';
-  box(g, 1.2, 1.3, 1.5, P8.orange, 2.1, 0, 0);           // fore section
-  box(g, 0.9, 0.95, 1.05, P8.yellow, 2.8, 0, 0);         // nose cap
-  box(g, 0.45, 0.5, 0.55, P8.orange, 3.35, 0, 0);        // bow tip
-  box(g, 3.4, 0.35, 0.5, P8.brown, 0.1, -0.95, 0);       // keel
-  box(g, 1.1, 1.0, 1.5, P8.orange, -2.0, 0, 0);          // stern taper
-  // conning tower with glowing bridge windows and rail
-  box(g, 1.5, 1.05, 1.05, P8.yellow, -0.2, 1.25, 0);
-  box(g, 0.9, 0.35, 0.9, P8.orange, -0.2, 1.9, 0);
-  const bridgeGlass = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.95),
-    mat(P8.blue, { emissive: 0x1155aa }));
-  bridgeGlass.position.set(0.45, 1.3, 0);
-  g.add(bridgeGlass);
-  for (const zz of [-0.45, 0.45]) {                       // tower rail
-    box(g, 1.3, 0.06, 0.06, P8.grey, -0.2, 2.15, zz);
+  // hull: a proper turned torpedo body — LatheGeometry profile, smooth
+  const profile = [];
+  const L = 7.2;
+  for (let i = 0; i <= 20; i++) {
+    const t = i / 20;                              // 0 = stern, 1 = bow
+    const r = 1.05 * Math.sin(Math.PI * Math.min(1, 0.12 + t * 0.95)) ** 0.7;
+    profile.push(new THREE.Vector2(Math.max(0.02, r), (t - 0.52) * L));
   }
-  // periscope + antenna + masthead beacon (blinks, wired by game)
-  box(g, 0.12, 0.9, 0.12, P8.grey, 0.15, 2.55, 0);
-  box(g, 0.3, 0.1, 0.1, P8.grey, 0.28, 2.9, 0);
-  box(g, 0.06, 1.1, 0.06, P8.grey, -0.55, 2.6, 0);
-  const beacon = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.18),
-    mat(P8.yellow, { emissive: 0xaa8800 }));
-  beacon.position.set(-0.55, 3.2, 0);
-  g.add(beacon);
+  const hullGeo = new THREE.LatheGeometry(profile, 28);
+  hullGeo.rotateZ(-Math.PI / 2);                   // axis along +x
+  const hull = new THREE.Mesh(hullGeo, mat(P8.orange));
+  hull.name = 'hull';
+  g.add(hull);
+  // sail: elliptical tower with a rounded cap
+  const sail = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.78, 1.5, 20), mat(P8.yellow));
+  sail.scale.z = 0.62;
+  sail.position.set(-0.1, 1.35, 0);
+  g.add(sail);
+  const sailCap = new THREE.Mesh(new THREE.SphereGeometry(0.62, 20, 12), mat(P8.yellow));
+  sailCap.scale.set(1, 0.45, 0.62);
+  sailCap.position.set(-0.1, 2.1, 0);
+  g.add(sailCap);
+  const glass = ball(g, 0.34, P8.blue, 0.42, 1.5, 0, { emissive: 0x2277cc });
+  glass.scale.set(0.7, 0.8, 1.1);
+  // periscope, antenna, masthead beacon (blinks, wired by game)
+  cyl(g, 0.05, 0.07, 1.0, P8.grey, 0.12, 2.6, 0, 10);
+  cyl(g, 0.035, 0.035, 1.2, P8.grey, -0.5, 2.7, 0, 8);
+  const beacon = ball(g, 0.12, P8.yellow, -0.5, 3.35, 0, { emissive: 0xaa8800 });
   g.userData.beacon = beacon;
-  // running lights, the real convention: green starboard, red port
-  const stbd = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.14),
-    mat(P8.lime, { emissive: 0x007722 }));
-  stbd.position.set(1.2, 0.5, -0.98);
-  const port = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.14),
-    mat(P8.red, { emissive: 0x770011 }));
-  port.position.set(1.2, 0.5, 0.98);
-  g.add(stbd, port);
-  // glowing portholes down both flanks
-  for (let i = 0; i < 4; i++) {
-    for (const zz of [0.92, -0.92]) {
-      const ph = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.08),
-        mat(P8.blue, { emissive: 0x0d4488 }));
-      ph.position.set(1.6 - i * 1.0, 0.15, zz);
-      g.add(ph);
+  // running lights: green starboard, red port (the real convention)
+  ball(g, 0.09, P8.lime, 1.1, 0.55, -0.85, { emissive: 0x00aa33 });
+  ball(g, 0.09, P8.red, 1.1, 0.55, 0.85, { emissive: 0xaa0022 });
+  // glowing portholes down both flanks, following the hull's curve
+  for (let i = 0; i < 5; i++) {
+    const px = 1.8 - i * 0.95;
+    const pr = 0.95 * Math.sin(Math.PI * Math.min(1, 0.12 + ((px / L) + 0.52) * 0.95)) ** 0.7;
+    for (const s of [1, -1]) {
+      ball(g, 0.1, P8.blue, px, 0.12, s * pr, { emissive: 0x2266cc });
     }
   }
-  // headlamp housing on the nose
-  box(g, 0.3, 0.45, 0.7, P8.dusk, 3.0, 0.45, 0);
-  // dive planes (fore) + stern planes: animated with pitch
+  // headlamp housing
+  const lampH = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), mat(P8.dusk));
+  lampH.scale.set(0.7, 1, 1);
+  lampH.position.set(3.1, 0.35, 0);
+  g.add(lampH);
+  // dive planes fore + stern (animated with pitch): slim smooth foils
+  const foil = (w, len) => {
+    const f = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 8), mat(P8.brown));
+    f.scale.set(w / 2, 0.06, len / 2);
+    return f;
+  };
   const planes = new THREE.Group();
-  const pf1 = box(planes, 0.9, 0.1, 1.6, P8.brown, 2.0, -0.2, 0);
-  planes.userData = {};
+  const pf = foil(0.9, 3.0); planes.add(pf);
+  planes.position.set(1.9, -0.15, 0);
   g.add(planes);
   const sternPlanes = new THREE.Group();
-  box(sternPlanes, 1.0, 0.12, 3.0, P8.brown, 0, 0, 0);
-  box(sternPlanes, 0.5, 0.1, 0.5, P8.yellow, 0, 0, 1.55);   // wingtips
-  box(sternPlanes, 0.5, 0.1, 0.5, P8.yellow, 0, 0, -1.55);
-  sternPlanes.position.set(-1.5, 0.15, 0);
+  sternPlanes.add(foil(1.0, 3.4));
+  sternPlanes.position.set(-1.6, 0.1, 0);
   g.add(sternPlanes);
   g.userData.planes = sternPlanes;
   g.userData.forePlanes = planes;
-  // rudder: animated with the helm
+  // rudder: a smooth vertical foil
   const rudder = new THREE.Group();
-  box(rudder, 0.9, 1.9, 0.14, P8.brown, -0.35, 0.35, 0);
-  box(rudder, 0.4, 0.4, 0.1, P8.yellow, -0.6, 1.2, 0);
-  rudder.position.set(-2.4, 0.3, 0);
+  const rf = foil(1.0, 2.2);
+  rf.rotation.x = Math.PI / 2;
+  rudder.add(rf);
+  rudder.position.set(-2.6, 0.35, 0);
   g.add(rudder);
   g.userData.rudder = rudder;
-  // twin counter-rotating props in a ring guard
+  // twin counter-rotating props: three curved blades each
   const mkProp = (z) => {
     const p = new THREE.Group();
-    p.position.set(-2.65, -0.1, z);
-    const b1 = box(p, 0.1, 1.1, 0.3, P8.grey); b1.rotation.x = 0.5;
-    const b2 = box(p, 0.1, 0.3, 1.1, P8.grey); b2.rotation.x = 0.5;
+    p.position.set(-3.15, -0.05, z);
+    for (let b = 0; b < 3; b++) {
+      const blade = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 6), mat(P8.grey));
+      blade.scale.set(0.12, 1, 0.34);
+      blade.position.y = 0;
+      const holder = new THREE.Group();
+      holder.rotation.x = (b / 3) * Math.PI * 2;
+      blade.position.y = 0.45;
+      blade.rotation.x = 0.5;
+      holder.add(blade);
+      p.add(holder);
+    }
+    ball(p, 0.14, P8.dusk, 0, 0, 0);
     g.add(p);
     return p;
   };
-  g.userData.prop = mkProp(0.45);
-  g.userData.prop2 = mkProp(-0.45);
+  g.userData.prop = mkProp(0.4);
+  g.userData.prop2 = mkProp(-0.4);
   // nameplate, both sides
-  for (const [zz, ry] of [[0.95, 0], [-0.95, Math.PI]]) {
-    const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.4),
+  for (const [zz, ry] of [[0.9, 0], [-0.9, Math.PI]]) {
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.38),
       new THREE.MeshBasicMaterial({ map: nameplateTexture('🐥 GC-01'), transparent: false }));
-    plate.position.set(-0.6, 0.55, zz + (zz > 0 ? 0.001 : -0.001));
+    plate.position.set(-0.5, 0.45, zz + (zz > 0 ? 0.02 : -0.02));
     plate.rotation.y = ry;
-    plate.userData.noNeon = true;
+    plate.userData.noTint = true;
     g.add(plate);
   }
-  // procedural greebling: rivet strips, patch plates, weld seams —
-  // no two boats quite alike
-  for (let i = 0; i < 26; i++) {
-    const s = 0.08 + Math.random() * 0.1;
-    const r = box(g, s, s, 0.06,
-      Math.random() > 0.3 ? P8.brown : P8.dusk,
-      -1.6 + Math.random() * 3.4,
-      -0.6 + Math.random() * 1.2,
-      (Math.random() > 0.5 ? 0.91 : -0.91));
-    r.userData.noNeon = true;
-  }
-  for (let i = 0; i < 5; i++) {                           // patch plates
-    box(g, 0.5 + Math.random() * 0.4, 0.4 + Math.random() * 0.3, 0.05,
-      Math.random() > 0.5 ? P8.brown : P8.orange,
-      -1.5 + Math.random() * 3, -0.4 + Math.random() * 0.9,
-      Math.random() > 0.5 ? 0.93 : -0.93);
+  // gentle greebling: rounded rivets and sensor bumps along the hull
+  for (let i = 0; i < 18; i++) {
+    const px = -2.2 + Math.random() * 4.2;
+    const pr = 0.98 * Math.sin(Math.PI * Math.min(1, 0.12 + ((px / L) + 0.52) * 0.95)) ** 0.7;
+    const a = (Math.random() - 0.5) * 1.6;
+    ball(g, 0.05 + Math.random() * 0.05,
+      Math.random() > 0.4 ? P8.brown : P8.dusk,
+      px, Math.sin(a) * pr * 0.5, Math.sign(Math.random() - 0.5) * Math.cos(a) * pr);
   }
   return g;
 }
 
-// A curious Thames seal — pure delight, zero threat.
+// A curious Thames seal — pure delight, zero threat. Now properly plump.
 export function makeSeal() {
   const g = new THREE.Group();
-  box(g, 1.8, 0.9, 0.9, P8.dusk, 0, 0, 0);               // body
-  box(g, 0.9, 0.7, 0.7, P8.dusk, 1.2, 0.15, 0);          // chest
-  box(g, 0.65, 0.6, 0.6, P8.grey, 1.85, 0.3, 0);         // head
-  box(g, 0.2, 0.2, 0.5, P8.grey, 2.2, 0.15, 0);          // muzzle
-  box(g, 0.1, 0.1, 0.1, P8.black, 2.35, 0.25, 0);        // nose
-  box(g, 0.12, 0.12, 0.12, P8.black, 2.0, 0.45, 0.22);   // eyes
-  box(g, 0.12, 0.12, 0.12, P8.black, 2.0, 0.45, -0.22);
-  box(g, 0.5, 0.1, 0.7, P8.grey, 0.6, -0.4, 0.5).rotation.z = 0.4;   // flippers
-  box(g, 0.5, 0.1, 0.7, P8.grey, 0.6, -0.4, -0.5).rotation.z = 0.4;
-  const tail = box(g, 0.7, 0.5, 0.8, P8.dusk, -1.1, 0.05, 0);
-  box(g, 0.4, 0.15, 1.1, P8.grey, -1.5, 0.05, 0);        // tail fluke
+  const body = ball(g, 1.0, P8.dusk, 0, 0, 0);            // torpedo body
+  body.scale.set(1.9, 0.85, 0.9);
+  const chest = ball(g, 0.72, P8.grey, 1.25, 0.1, 0);
+  chest.scale.set(1.1, 0.95, 0.95);
+  ball(g, 0.5, P8.grey, 1.95, 0.32, 0);                   // head
+  const muzzle = ball(g, 0.26, P8.grey, 2.35, 0.2, 0);
+  muzzle.scale.set(1.2, 0.8, 0.9);
+  ball(g, 0.09, P8.black, 2.6, 0.26, 0);                  // nose
+  ball(g, 0.1, P8.black, 2.15, 0.5, 0.2);                 // big dark eyes
+  ball(g, 0.1, P8.black, 2.15, 0.5, -0.2);
+  for (const s of [1, -1]) {                              // fore flippers
+    const f = ball(g, 0.4, P8.grey, 0.7, -0.45, s * 0.6);
+    f.scale.set(1.4, 0.25, 0.8);
+    f.rotation.z = 0.35; f.rotation.y = s * 0.4;
+  }
+  const tail = ball(g, 0.5, P8.dusk, -1.5, 0.02, 0);
+  tail.scale.set(1.2, 0.7, 0.8);
+  const fluke = ball(g, 0.42, P8.grey, -2.0, 0.02, 0);
+  fluke.scale.set(0.5, 0.18, 1.5);
   g.userData.tail = tail;
   return g;
 }
 
-// The Glitch Canary itself. 🐥
+// The Glitch Canary itself. 🐥 Round, as a duck should be.
 export function makeDuck() {
   const g = new THREE.Group();
-  box(g, 1.1, 0.8, 0.9, P8.yellow, 0, 0, 0);             // body
-  box(g, 0.6, 0.6, 0.6, P8.yellow, 0.5, 0.6, 0);         // head
-  box(g, 0.35, 0.18, 0.3, P8.orange, 0.92, 0.5, 0);      // beak
-  box(g, 0.1, 0.1, 0.1, P8.black, 0.66, 0.75, 0.18);     // eyes
-  box(g, 0.1, 0.1, 0.1, P8.black, 0.66, 0.75, -0.18);
-  box(g, 0.5, 0.3, 0.1, P8.orange, -0.45, 0.15, 0).rotation.z = 0.5;  // tail tuft
+  const body = ball(g, 0.62, P8.yellow, 0, 0, 0);
+  body.scale.set(1.15, 0.85, 0.95);
+  ball(g, 0.38, P8.yellow, 0.42, 0.62, 0);                // head
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.4, 12), mat(P8.orange));
+  beak.rotation.z = -Math.PI / 2;
+  beak.position.set(0.85, 0.55, 0);
+  g.add(beak);
+  ball(g, 0.07, P8.black, 0.62, 0.75, 0.17);              // eyes
+  ball(g, 0.07, P8.black, 0.62, 0.75, -0.17);
+  const tail = ball(g, 0.3, P8.yellow, -0.6, 0.15, 0);    // tail tuft
+  tail.scale.set(1.1, 0.6, 0.7);
+  tail.rotation.z = 0.5;
   return g;
 }
 
 // ---------------------------------------------------------------- fauna
 export function makeEelHead() {
   const g = new THREE.Group();
-  const head = new THREE.Mesh(crunch(new THREE.ConeGeometry(0.8, 2.2, 5), 0.3), mat(P8.green));
-  head.rotation.z = -Math.PI / 2;
-  g.add(head);
-  // sharp teeth: a ring of tiny white cones round the mouth
-  for (let i = 0; i < 5; i++) {
-    const t = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.5, 4), mat(P8.white));
-    const a = (i / 5) * Math.PI * 2;
-    t.position.set(1.0, Math.cos(a) * 0.45, Math.sin(a) * 0.45);
+  // a sleek muscular head: stretched sphere + smooth tapering snout
+  const skull = ball(g, 0.75, P8.green, -0.2, 0, 0);
+  skull.scale.set(1.25, 0.9, 0.85);
+  const snout = new THREE.Mesh(new THREE.ConeGeometry(0.62, 1.8, 16), mat(P8.green));
+  snout.rotation.z = -Math.PI / 2;
+  snout.position.x = 0.8;
+  g.add(snout);
+  // sharp teeth: a ring of slender white fangs round the mouth
+  for (let i = 0; i < 7; i++) {
+    const t = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.45, 8), mat(P8.white));
+    const a = (i / 7) * Math.PI * 2;
+    t.position.set(1.25, Math.cos(a) * 0.36, Math.sin(a) * 0.36);
     t.rotation.z = Math.PI / 2;
     g.add(t);
   }
-  box(g, 0.3, 0.3, 0.3, P8.red, -0.2, 0.45, 0.35);   // eye
-  box(g, 0.3, 0.3, 0.3, P8.red, -0.2, 0.45, -0.35);  // eye
+  ball(g, 0.15, P8.red, -0.1, 0.42, 0.4, { emissive: 0x880011 });   // eyes
+  ball(g, 0.15, P8.red, -0.1, 0.42, -0.4, { emissive: 0x880011 });
   return g;
 }
 
 export function makeEelSegment(i) {
-  const s = 0.75 - i * 0.05;
-  return new THREE.Mesh(new THREE.BoxGeometry(1.1, s * 1.4, s * 1.4),
+  const s = 0.7 - i * 0.055;
+  const m = new THREE.Mesh(new THREE.SphereGeometry(s, 14, 10),
     mat(i % 2 ? P8.green : P8.lime));
+  m.scale.set(1.5, 1, 1);
+  return m;
 }
 
 export function makeFatberg(radius = 3) {
-  const geo = new THREE.IcosahedronGeometry(radius, 1);
+  // a greasy organic blob: high-subdivision icosahedron, smoothly lumped
+  const geo = new THREE.IcosahedronGeometry(radius, 3);
   const pos = geo.attributes.position;
+  const v = new THREE.Vector3();
   for (let i = 0; i < pos.count; i++) {
-    const k = 0.72 + Math.random() * 0.55;
-    pos.setXYZ(i, pos.getX(i) * k, pos.getY(i) * k * 0.85, pos.getZ(i) * k);
+    v.set(pos.getX(i), pos.getY(i), pos.getZ(i));
+    const n = 1
+      + 0.22 * Math.sin(v.x * 1.7 + 3.1) * Math.sin(v.y * 2.1)
+      + 0.16 * Math.sin(v.z * 2.4 + v.x * 1.2)
+      + 0.08 * Math.sin(v.y * 4.7);
+    v.multiplyScalar(n);
+    pos.setXYZ(i, v.x, v.y * 0.85, v.z);
   }
-  crunch(geo, 0.4);
+  geo.computeVertexNormals();
   const m = new THREE.Mesh(geo, mat(P8.peach));
-  // horrible sweetcorn-yellow lumps, the documented fatberg garnish
-  for (let i = 0; i < 6; i++) {
-    const lump = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), mat(P8.yellow));
-    lump.position.setFromSphericalCoords(radius * 0.85,
+  // the documented sweetcorn garnish, now rounded
+  for (let i = 0; i < 7; i++) {
+    const lump = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), mat(P8.yellow));
+    lump.position.setFromSphericalCoords(radius * 0.95,
       Math.random() * Math.PI, Math.random() * Math.PI * 2);
     m.add(lump);
   }
@@ -293,12 +318,12 @@ export function makeFatberg(radius = 3) {
 
 export function makeMine() {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(crunch(new THREE.IcosahedronGeometry(1.1, 0), 0.3), mat(P8.dusk));
+  const body = new THREE.Mesh(new THREE.SphereGeometry(1.1, 18, 14), mat(P8.dusk));
   g.add(body);
-  for (let i = 0; i < 8; i++) {
-    const s = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.7, 4), mat(P8.grey));
+  for (let i = 0; i < 10; i++) {
+    const s = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.65, 10), mat(P8.grey));
     const v = new THREE.Vector3().setFromSphericalCoords(1.25,
-      Math.acos(1 - 2 * ((i + 0.5) / 8)), i * 2.39996);
+      Math.acos(1 - 2 * ((i + 0.5) / 10)), i * 2.39996);
     s.position.copy(v);
     s.lookAt(v.clone().multiplyScalar(2));
     s.rotateX(Math.PI / 2);
@@ -335,7 +360,7 @@ export function makeSalvageMesh(type) {
 
 export function makeQuestMesh() {
   const g = new THREE.Group();
-  const m = new THREE.Mesh(crunch(new THREE.OctahedronGeometry(0.7, 0), 0.2), mat(P8.pink, { emissive: 0x550022 }));
+  const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.7, 0), mat(P8.pink, { emissive: 0x662233 }));
   m.position.y = 0.7;
   g.add(m);
   g.userData.spin = m;
@@ -354,8 +379,8 @@ export function floorYAt(x, z) {
   if (x < 20) y = SHELF_Y;
   else if (x > 55) y = DEEP_Y;
   else y = SHELF_Y + (x - 20) / 35 * (DEEP_Y - SHELF_Y);   // the slope
-  // gentle chunky ripple so the floor is not a plane
-  y += Math.round((Math.sin(x * 0.11) + Math.cos(z * 0.13)) * 2) * 0.6;
+  // gentle rolling silt dunes — smooth, no steps
+  y += (Math.sin(x * 0.11) + Math.cos(z * 0.13)) * 1.2;
   return y;
 }
 
@@ -378,7 +403,7 @@ function makeFloor(scene) {
   geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   geo.computeVertexNormals();
   const m = new THREE.Mesh(geo,
-    new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+    new THREE.MeshLambertMaterial({ vertexColors: true }));
   scene.add(m);
   return m;
 }
@@ -465,7 +490,7 @@ export function makeDivingBell(scene) {
   const g = new THREE.Group();
   g.position.set(-95, -14, 0);
   const dome = new THREE.Mesh(
-    crunch(new THREE.SphereGeometry(4, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), 0.5),
+    new THREE.SphereGeometry(4, 24, 14, 0, Math.PI * 2, 0, Math.PI / 2),
     mat(P8.yellow));
   g.add(dome);
   cyl(g, 4.4, 4.6, 1.2, P8.orange, 0, -0.4, 0, 8);
@@ -508,7 +533,7 @@ export function makeWeeds(scene, count = 110) {
     const x = BOUNDS.minX + Math.random() * (BOUNDS.maxX - BOUNDS.minX);
     const z = BOUNDS.minZ + Math.random() * (BOUNDS.maxZ - BOUNDS.minZ);
     const h = 3 + Math.random() * 8;
-    const s = new THREE.Mesh(new THREE.BoxGeometry(0.4, h, 0.4),
+    const s = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.24, h, 8),
       mat(Math.random() > 0.5 ? P8.green : P8.lime,
         { emissive: Math.random() > 0.5 ? 0x0a3d22 : 0x123d0a }));
     s.position.set(x, floorYAt(x, z) + h / 2, z);
@@ -531,14 +556,14 @@ export function buildDock(scene) {
   const bell = makeDivingBell(scene);
   const crates = makeCrates(scene);
   const weeds = makeWeeds(scene);
-  // the neon pass: each structure family gets its own signature glow
-  neonize(quay, 0x1d6f8f);
-  for (const m of culverts) neonize(m.group, 0x00e436);
-  neonize(crane, 0xffa300);
-  neonize(barge, 0xff77a8);
-  neonize(warehouse, 0x83769c);
-  neonize(crates, 0x8f6a30);
-  neonize(bell, 0xffec27, { keepFaces: true });
+  // signature undertones: each structure family keeps a faint emissive
+  // identity — the mystery now comes from light, not wireframes
+  tint(quay, 0x1d6f8f, 0.6);
+  for (const m of culverts) tint(m.group, 0x00e436, 0.8);
+  tint(crane, 0xffa300, 0.7);
+  tint(barge, 0xff77a8, 0.7);
+  tint(warehouse, 0x83769c, 0.8);
+  tint(bell, 0xffec27, 0.9);
   // sphere colliders for the big set pieces (cheap, forgiving)
   const colliders = [
     { x: 60, y: DEEP_Y + 8, z: 40, r: 9 },       // crane base
@@ -556,8 +581,9 @@ export function makeParticleCloud(count, color, size, spread) {
   for (let i = 0; i < count * 3; i++) posArr[i] = (Math.random() - 0.5) * spread;
   geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
   const m = new THREE.Points(geo, new THREE.PointsMaterial({
-    color, size, transparent: true, opacity: 0.8, depthWrite: false,
+    color, size: size * 1.5, transparent: true, opacity: 0.8, depthWrite: false,
     blending: THREE.AdditiveBlending, sizeAttenuation: true,
+    map: softDot(),
   }));
   return m;
 }
@@ -588,8 +614,9 @@ export function makeGhostWhale() {
   }
   geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
   const whale = new THREE.Points(geo, new THREE.PointsMaterial({
-    color: 0xc8f0ff, size: 0.55, transparent: true, opacity: 0.0,
+    color: 0xc8f0ff, size: 0.85, transparent: true, opacity: 0.0,
     depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true,
+    map: softDot(),
   }));
   whale.userData.base = posArr.slice();
   return whale;

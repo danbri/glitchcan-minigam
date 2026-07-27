@@ -1,8 +1,12 @@
 # Waterworld — Docklands Deep 🫧
 
-Submarine salvage adventure in a flooded former London dock. picoCAD-style
-low-poly 3D (vendored three.js r169, PICO-8 palette, low-res pixelated
-render, flat shading), procedural lo-fi WebAudio, no external assets.
+Submarine salvage adventure in a flooded former London dock.
+**Art direction v2 (the original picoCAD/blocky constraints are
+officially retired):** smooth deep-sea bioluminescence — full-resolution
+antialiased rendering (ACES tone mapping), smooth-shaded organic forms
+(lathe-turned hull, blobby fatbergs, plump seal), soft round particles,
+god rays, emissive undertones per structure family. Vendored three.js
+r169, procedural lo-fi WebAudio, no external assets.
 
 ## The loop
 

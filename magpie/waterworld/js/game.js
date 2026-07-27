@@ -8,7 +8,7 @@ import * as THREE from '../../../trees/vendor/three.module.min.js';
 import {
   P8, mat, buildDock, makeSub, makeEelHead, makeEelSegment, makeFatberg,
   makeMine, makeSalvageMesh, makeQuestMesh, makeParticleCloud,
-  makeGhostWhale, makeSeal, makeDuck, BOUNDS, SHELF_Y, DEEP_Y, floorYAt, neonize,
+  makeGhostWhale, makeSeal, makeDuck, BOUNDS, SHELF_Y, DEEP_Y, floorYAt, tint,
 } from './world.js';
 import { UnderwaterFX, glowSprite, currentAt } from './fx.js';
 import { FACTS, QUEST_ITEMS, TOOLS, HINTS } from './facts.js';
@@ -94,8 +94,11 @@ export class WaterworldGame {
     // ?probe keeps the buffer readable for headless pixel checks —
     // costs a copy per frame, so never on by default
     const probe = /[?&]probe\b/.test(location.search);
-    this.renderer = new THREE.WebGLRenderer({ canvas: c, antialias: false,
+    this.renderer = new THREE.WebGLRenderer({ canvas: c, antialias: true,
       preserveDrawingBuffer: probe });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.lite ? 1.25 : 2));
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.1;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(P8.navy);
     this.scene.fog = new THREE.FogExp2(P8.navy, 0.02);
@@ -111,7 +114,7 @@ export class WaterworldGame {
 
     this.sub = makeSub();
     this.sub.position.copy(this.pos);
-    neonize(this.sub, 0xffec27, { keepFaces: true });
+    tint(this.sub, 0xffec27, 0.5);
     this.sub.userData.irColor = 0xbb5533;          // a warm engine in the dark
     // the visible beam: an additive cone the headlamp appears to cast
     this.lightCone = new THREE.Mesh(
@@ -179,10 +182,10 @@ export class WaterworldGame {
   }
 
   resize() {
+    // full-resolution rendering (art direction v2 — the low-res
+    // pixelated look is retired)
     const w = this.canvas.clientWidth || 480, h = this.canvas.clientHeight || 270;
-    // picoCAD pixels: render tiny, stretch big. ~270 lines of height.
-    const scale = Math.max(1, Math.floor(h / 270));
-    this.renderer.setSize(Math.floor(w / scale), Math.floor(h / scale), false);
+    this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   }
@@ -248,7 +251,7 @@ export class WaterworldGame {
     this.eels = this.eels || [];
     for (let i = 0; i < n; i++) {
       const head = makeEelHead();
-      neonize(head, 0x00e436);
+      tint(head, 0x00e436, 0.6);
       head.userData.irColor = 0x38506e;         // cold-blooded: a faint trace
       const eyeGlow = glowSprite(0xff004d, 1.6, 0.6);
       eyeGlow.position.set(-0.2, 0.45, 0);
@@ -257,7 +260,6 @@ export class WaterworldGame {
       const segs = [];
       for (let s = 0; s < 6; s++) {
         const m = makeEelSegment(s);
-        neonize(m, 0x00e436);
         m.userData.irColor = 0x38506e;
         this.scene.add(m);
         segs.push(m);
@@ -282,7 +284,6 @@ export class WaterworldGame {
     const spots = [[45, -50], [70, 10], [95, -10], [60, 55], [110, 30]];
     for (const [x, z] of spots) {
       const m = makeMine();
-      neonize(m, 0xff004d);
       m.userData.irColor = 0x8a4a33;             // old explosive, faintly warm
       const blink = glowSprite(0xff004d, 1.6, 0.35);
       blink.position.y = 1.4;
@@ -305,7 +306,7 @@ export class WaterworldGame {
     // one parked in each culvert mouth, blocking it
     for (const mouth of this.dock.culverts) {
       const f = makeFatberg(4.2);
-      neonize(f, 0xffccaa, { keepFaces: true });
+      tint(f, 0xffccaa, 0.4);
       f.userData.irColor = 0xffdd66;             // decomposition runs HOT
       f.position.set(mouth.x, mouth.y + 1, mouth.z + 2);
       this.scene.add(f);
@@ -317,7 +318,7 @@ export class WaterworldGame {
   _spawnRampantFatberg() {
     const mouth = this.dock.culverts[Math.floor(Math.random() * this.dock.culverts.length)];
     const f = makeFatberg(2.6);
-    neonize(f, 0xffccaa, { keepFaces: true });
+    tint(f, 0xffccaa, 0.4);
     f.userData.irColor = 0xffdd66;
     f.position.set(mouth.x, mouth.y + 2, mouth.z + 6);
     this.scene.add(f);
@@ -1116,7 +1117,7 @@ export class WaterworldGame {
 
   _spawnSeal() {
     const m = makeSeal();
-    neonize(m, 0xff77a8, { keepFaces: true });
+    tint(m, 0xff77a8, 0.4);
     m.userData.irColor = 0xdd8855;             // warm-blooded, unlike the eels
     m.position.copy(this.pos).add(new THREE.Vector3(35, 6, 20));
     m.position.y = Math.min(-4, Math.max(floorYAt(m.position.x, m.position.z) + 3, m.position.y));
@@ -1172,7 +1173,7 @@ export class WaterworldGame {
   // second banking. Nose up to it for a honk, confetti and +100.
   _spawnDuck() {
     const m = makeDuck();
-    neonize(m, 0xffec27, { keepFaces: true });
+    tint(m, 0xffec27, 0.6);
     m.userData.irColor = 0xffee88;
     const halo = glowSprite(0xffec27, 5, 0.5);
     halo.userData.irHot = true;
