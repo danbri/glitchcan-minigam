@@ -70,6 +70,24 @@ export const FACTS = {
     value: 50,
     text: 'The 2017 Whitechapel fatberg was 250 metres long and weighed about 130 tonnes. A chunk of it went on display at the Museum of London.',
   },
+  dolphin_visit: {
+    name: 'Thames dolphins',
+    icon: '🐬',
+    value: 0,
+    text: 'Bottlenose dolphins and porpoises really do follow fish up the Thames — sightings run from Gravesend to Putney.',
+  },
+  shark_visit: {
+    name: 'Thames sharks',
+    icon: '🦈',
+    value: 0,
+    text: 'The Thames estuary has real sharks — tope, starry smooth-hound and spurdog. The smooth-hounds mostly eat crabs.',
+  },
+  eel_zap: {
+    name: 'London eels',
+    icon: '⚡',
+    value: 0,
+    text: 'The Thames once ran thick with eels — jellied eels fed the East End, and Eel Pie Island still carries the name. Electric ones are… a local embellishment.',
+  },
   seal_visit: {
     name: 'Thames seal',
     icon: '🦭',

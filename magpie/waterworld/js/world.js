@@ -215,6 +215,112 @@ export function makeSub() {
   return g;
 }
 
+// A moored boat, seen from below: dark rounded hull hanging in the
+// bright ceiling. kind: 'tug' | 'narrowboat' | 'barge'.
+export function makeBoatHull(kind) {
+  const g = new THREE.Group();
+  const spec = {
+    tug: { L: 16, beam: 6, draft: 3.2, color: 0x7a2f20 },
+    narrowboat: { L: 20, beam: 3.4, draft: 1.6, color: 0x1e4030 },
+    barge: { L: 26, beam: 8, draft: 2.6, color: 0x24303e },
+  }[kind] || { L: 18, beam: 6, draft: 2.5, color: 0x333333 };
+  // bottom half-ellipsoid hull
+  const hull = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 26, 14, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+    mat(spec.color));
+  hull.scale.set(spec.L / 2, spec.draft, spec.beam / 2);
+  g.add(hull);
+  // keel strake, rudder, a still prop
+  const keel = new THREE.Mesh(new THREE.BoxGeometry(spec.L * 0.7, 0.3, 0.35), mat(0x1a1a1a));
+  keel.position.y = -spec.draft * 0.96;
+  g.add(keel);
+  const rudder = new THREE.Mesh(new THREE.BoxGeometry(0.2, spec.draft * 0.8, 1.2), mat(0x1a1a1a));
+  rudder.position.set(-spec.L / 2 + 0.4, -spec.draft * 0.5, 0);
+  g.add(rudder);
+  ball(g, 0.5, 0x2a2a2a, -spec.L / 2 + 1.4, -spec.draft * 0.55, 0);
+  // waterline shimmer: a pale band right at the surface
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(1.001, 1.001, 0.25, 26, 1, true),
+    mat(0xd8ecf4, { emissive: 0x5a7f90 }));
+  band.scale.set(spec.L / 2, 1, spec.beam / 2);
+  band.position.y = 0.05;
+  g.add(band);
+  g.userData.spec = spec;
+  return g;
+}
+
+// A dolphin — grey above, pale below, permanently mid-smile.
+export function makeDolphin() {
+  const g = new THREE.Group();
+  const body = ball(g, 1, 0x8fa8b8, 0, 0, 0);
+  body.scale.set(2.1, 0.62, 0.55);
+  const belly = ball(g, 0.92, 0xdfeaf2, 0.1, -0.12, 0);
+  belly.scale.set(1.9, 0.5, 0.48);
+  const snout = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1.0, 14), mat(0x8fa8b8));
+  snout.rotation.z = -Math.PI / 2;
+  snout.position.set(2.2, 0.05, 0);
+  g.add(snout);
+  const fin = ball(g, 0.55, 0x76909f, -0.2, 0.72, 0);   // dorsal
+  fin.scale.set(0.55, 0.9, 0.12);
+  fin.rotation.z = -0.5;
+  for (const s of [1, -1]) {
+    const fl = ball(g, 0.42, 0x76909f, 0.7, -0.3, s * 0.5);
+    fl.scale.set(0.9, 0.14, 0.5);
+    fl.rotation.y = s * 0.5;
+  }
+  const fluke = ball(g, 0.5, 0x76909f, -2.2, 0.05, 0);
+  fluke.scale.set(0.5, 0.14, 1.5);
+  g.userData.fluke = fluke;
+  ball(g, 0.08, 0x111111, 1.55, 0.18, 0.32);
+  ball(g, 0.08, 0x111111, 1.55, 0.18, -0.32);
+  return g;
+}
+
+// A shark — longer, lower, and not actually interested in you.
+export function makeShark() {
+  const g = new THREE.Group();
+  const body = ball(g, 1, 0x5c707e, 0, 0, 0);
+  body.scale.set(2.7, 0.7, 0.6);
+  const belly = ball(g, 0.9, 0xc4ccd2, 0.1, -0.18, 0);
+  belly.scale.set(2.4, 0.5, 0.5);
+  const snout = ball(g, 0.55, 0x5c707e, 2.5, 0, 0);
+  snout.scale.set(1.2, 0.55, 0.7);
+  const dorsal = ball(g, 0.8, 0x4a5a66, -0.1, 0.95, 0);
+  dorsal.scale.set(0.7, 1.0, 0.1);
+  dorsal.rotation.z = -0.35;
+  for (const s of [1, -1]) {
+    const p = ball(g, 0.6, 0x4a5a66, 0.9, -0.35, s * 0.7);
+    p.scale.set(0.9, 0.1, 0.55);
+    p.rotation.y = s * 0.6;
+    p.rotation.z = s * -0.15;
+  }
+  const tail = new THREE.Group();
+  const tUp = ball(tail, 0.7, 0x4a5a66, 0, 0.5, 0);
+  tUp.scale.set(0.5, 1.1, 0.1);
+  tUp.rotation.z = 0.5;
+  const tDn = ball(tail, 0.45, 0x4a5a66, 0, -0.3, 0);
+  tDn.scale.set(0.4, 0.7, 0.1);
+  tDn.rotation.z = -0.4;
+  tail.position.set(-2.8, 0, 0);
+  g.add(tail);
+  g.userData.tail = tail;
+  ball(g, 0.09, 0x0a0a0a, 2.1, 0.15, 0.4);
+  ball(g, 0.09, 0x0a0a0a, 2.1, 0.15, -0.4);
+  return g;
+}
+
+// A bright little reef fish for the close-up shots the schools can't do.
+export function makeReefFish(color) {
+  const g = new THREE.Group();
+  const body = ball(g, 0.4, color, 0, 0, 0, { emissive: new THREE.Color(color).multiplyScalar(0.25).getHex() });
+  body.scale.set(1.5, 1.0, 0.4);
+  const tail = ball(g, 0.28, color, -0.68, 0, 0);
+  tail.scale.set(0.6, 0.9, 0.1);
+  g.userData.tail = tail;
+  ball(g, 0.05, 0x111111, 0.42, 0.1, 0.13);
+  ball(g, 0.05, 0x111111, 0.42, 0.1, -0.13);
+  return g;
+}
+
 // A curious Thames seal — pure delight, zero threat. Now properly plump.
 export function makeSeal() {
   const g = new THREE.Group();
