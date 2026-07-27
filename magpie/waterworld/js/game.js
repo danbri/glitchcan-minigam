@@ -68,9 +68,9 @@ export class WaterworldGame {
     this.scene.fog = new THREE.FogExp2(P8.navy, 0.02);
     this.camera = new THREE.PerspectiveCamera(70, 16 / 9, 0.1, 400);
 
-    // light through water: cool hemisphere + a weak sun shaft
-    this.scene.add(new THREE.HemisphereLight(0x66aaff, 0x0a1030, 1.1));
-    const sun = new THREE.DirectionalLight(0xaaddff, 0.9);
+    // light through water: a friendly bright blue, dimming with depth
+    this.scene.add(new THREE.HemisphereLight(0x77bbff, 0x102048, 1.35));
+    const sun = new THREE.DirectionalLight(0xbbe6ff, 1.0);
     sun.position.set(20, 80, 10);
     this.scene.add(sun);
 
@@ -492,7 +492,7 @@ export class WaterworldGame {
     this.air = AIR_MAX;
     this.banks++;
     this.ui.audio?.bank(n);
-    this.ui.toast(`⬆ BANKED ×${n}  +${gained}${mult > 1 ? `  (×${mult.toFixed(2)})` : ''}`, 'gold');
+    this.ui.toast(`🎉 BANKED ×${n}  +${gained}${mult > 1 ? `  (×${mult.toFixed(2)} haul bonus!)` : ''}`, 'gold');
     this.ui.announce(`Banked ${n} items for ${gained} points. Air refilled.`);
     if (hadChest) { this._win(); return; }
     // banking stirs the dock: more eels, and eventually the fatbergs move
@@ -610,11 +610,13 @@ export class WaterworldGame {
       this.scene.fog.density = 0.011;
     } else {
       const deepT = Math.min(1, Math.max(0, (depth - 25) / 40));
-      const fogC = new THREE.Color(P8.navy).lerp(new THREE.Color(P8.black), deepT * 0.9);
+      const fogC = new THREE.Color(P8.navy)
+        .lerp(new THREE.Color(P8.blue), 0.30 * (1 - deepT))   // cheery shallows
+        .lerp(new THREE.Color(P8.black), deepT * 0.85);
       this.scene.fog.color.copy(fogC);
       this.scene.background.copy(fogC);
       const lampBoost = this.tools.has('arclamp') ? 0.45 : 1;
-      this.scene.fog.density = (0.018 + deepT * 0.03 * lampBoost);
+      this.scene.fog.density = (0.016 + deepT * 0.03 * lampBoost);
     }
     if (!this.tools.has('arclamp')) this.headlamp.intensity = 40;
     this.lightCone.material.opacity = this.ir ? 0
@@ -684,7 +686,7 @@ export class WaterworldGame {
       const f = FACTS[type];
       this._factShowing = true;
       this.ui.fact(f.name.toUpperCase(), f.text, f.icon);
-      setTimeout(() => { this._factShowing = false; }, 5200);
+      setTimeout(() => { this._factShowing = false; }, 9500);
     }
     this._hintTimer -= dt;
     if (this._hintTimer < 0) {
@@ -696,8 +698,63 @@ export class WaterworldGame {
     this.ui.hud(this.hudState());
   }
 
+  // The objective: one line, always on screen, with a live arrow. The
+  // player should never wonder what to do next or which way to swim.
+  _objective() {
+    if (this.over) return null;
+    const bell = this.dock.bell.position;
+    const nearest = (list) => {
+      let best = null, bd = 1e9;
+      for (const it of list) {
+        const d = it.mesh.position.distanceTo(this.pos);
+        if (d < bd) { bd = d; best = it; }
+      }
+      return best;
+    };
+    const carryingChest = this.hasChest || this.cargo.some(c => c.type === 'captains_chest');
+    if (carryingChest) return { icon: '🏴‍☠️', text: 'Bank the chest at the bell!', target: bell };
+    if (this.air < 30) return { icon: '💨', text: 'Air low — swim to the bell!', target: bell };
+    if (this.whaleActive) {
+      if (!this.tools.has('grapple')) {
+        const part = nearest(this.quest.filter(q => !q.taken && (q.id === 'magnet' || q.id === 'rope')));
+        if (part) return { icon: '🪝', text: 'Craft a grapple: find magnet + rope', target: part.mesh.position };
+      }
+      return { icon: '🐋', text: 'Follow the whale to the chest!', target: this.chest.mesh.position };
+    }
+    if (this.cargo.length >= 4) return { icon: '⬆', text: `Great haul! Bank ${this.cargo.length} finds at the bell`, target: bell };
+    if (this.banks === 0 && this.cargo.length >= 3) return { icon: '🔔', text: 'Nice! Now bank them at the glowing bell', target: bell };
+    if (this.tools.has('fizzlance')) {
+      const berg = this.fatbergs.find(f => f.blocking);
+      if (berg) return { icon: '🫧', text: 'Hold B by a fatberg to fizz it away', target: berg.mesh.position };
+    }
+    const grabbable = this.salvage.filter(s => !s.collected && !s.hidden && (!s.heavy || this.tools.has('grapple')));
+    const s = nearest(grabbable);
+    if (this.banks === 0) {
+      return { icon: '✨', text: `Grab ${Math.max(0, 3 - this.cargo.length)} more shiny finds — press B to ping!`, target: s?.mesh.position ?? bell };
+    }
+    const gear = nearest(this.quest.filter(q => !q.taken));
+    if (gear && (!s || gear.mesh.position.distanceTo(this.pos) < s.mesh.position.distanceTo(this.pos))) {
+      return { icon: '💗', text: 'Pink glow = gear! Collect it to craft tools', target: gear.mesh.position };
+    }
+    return { icon: '✨', text: 'Ping (B) and gather salvage', target: s?.mesh.position ?? bell };
+  }
+
   hudState() {
+    const obj = this._objective();
+    let objOut = null;
+    if (obj && obj.target) {
+      const dx = obj.target.x - this.pos.x, dz = obj.target.z - this.pos.z;
+      let rel = Math.atan2(-dz, dx) - this.yaw;
+      while (rel > Math.PI) rel -= Math.PI * 2;
+      while (rel < -Math.PI) rel += Math.PI * 2;
+      objOut = {
+        icon: obj.icon, text: obj.text,
+        dist: Math.round(Math.hypot(dx, dz)),
+        deg: Math.round(-rel * 180 / Math.PI),
+      };
+    }
     return {
+      obj: objOut,
       air: this.air / AIR_MAX, hull: this.hull, hullMax: HULL_MAX,
       score: this.score, cargo: this.cargo.length,
       cargoValue: this.cargo.reduce((a, c) => a + c.value, 0),

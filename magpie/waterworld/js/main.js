@@ -22,6 +22,31 @@ let pendingRestore;
 const sdk = window.MinigameSDK ? new MinigameSDK() : null;
 
 // ---------------------------------------------------------------- UI glue
+// Nothing important is allowed to vanish: every toast and fact also lands
+// in the ship's log (📜), where it stays for the whole dive.
+const logEntries = [];
+function addLog(text, cls = '') {
+  logEntries.unshift({ text, cls, at: game ? Math.round(game.elapsed) : 0 });
+  if (logEntries.length > 80) logEntries.pop();
+  const badge = $('log-btn');
+  if (!$('log-panel').classList.contains('show')) badge.classList.add('unread');
+}
+function renderLog() {
+  const list = $('log-list');
+  list.innerHTML = '';
+  for (const e of logEntries) {
+    const li = document.createElement('li');
+    li.className = e.cls;
+    const t = document.createElement('span');
+    t.className = 'log-t';
+    t.textContent = `${String(Math.floor(e.at / 60)).padStart(2, '0')}:${String(e.at % 60).padStart(2, '0')}`;
+    li.appendChild(t);
+    li.appendChild(document.createTextNode(' ' + e.text));
+    list.appendChild(li);
+  }
+  if (!logEntries.length) list.innerHTML = '<li>Nothing logged yet — go find something!</li>';
+}
+
 function toast(text, cls = '') {
   const box = $('toasts');
   const t = document.createElement('div');
@@ -29,7 +54,9 @@ function toast(text, cls = '') {
   t.textContent = text;
   box.appendChild(t);
   while (box.children.length > 4) box.removeChild(box.firstChild);
-  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 600); }, 2600);
+  const life = cls === 'hint' ? 8000 : 6000;
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 600); }, life);
+  addLog(text, cls);
 }
 
 let factTimer = null;
@@ -40,15 +67,41 @@ function fact(title, text, icon) {
   $('fact-text').textContent = text;
   f.classList.add('show');
   if (factTimer) clearTimeout(factTimer);
-  factTimer = setTimeout(() => f.classList.remove('show'), 5000);
+  // stays a good long while — and it's tappable away, never lost (see log)
+  factTimer = setTimeout(() => f.classList.remove('show'), 14000);
+  addLog(`${icon || '📜'} ${title} — ${text}`, 'gold');
   announce(`${title}. ${text}`);
 }
 
 function hint(text) { toast('💡 ' + text, 'hint'); }
 
+function flash(cls) {
+  const el = $('flash');
+  el.className = '';
+  void el.offsetWidth;          // restart the animation
+  el.className = cls;
+}
+
 function announce(text) { window.__mgA11y?.announce?.(text); }
 
+let lastHull, lastScore, lastObjText;
 function hud(s) {
+  // the guide banner: what to do, which way, how far
+  if (s.obj) {
+    $('obj-text').textContent = `${s.obj.icon} ${s.obj.text}`;
+    $('obj-arrow').style.transform = `rotate(${s.obj.deg}deg)`;
+    $('obj-dist').textContent = s.obj.dist + 'm';
+    if (s.obj.text !== lastObjText) {
+      lastObjText = s.obj.text;
+      announce(`New goal: ${s.obj.text}`);
+      addLog(`${s.obj.icon} GOAL: ${s.obj.text}`, 'hint');
+    }
+  }
+  // feel the moment: red flash on damage, gold shimmer on scoring
+  if (lastHull !== undefined && s.hull < lastHull) flash('hurt');
+  if (lastScore !== undefined && s.score > lastScore) flash('gain');
+  lastHull = s.hull; lastScore = s.score;
+
   $('air-fill').style.width = Math.max(0, s.air * 100) + '%';
   $('air-fill').classList.toggle('low', s.air < 0.25);
   $('hull').textContent = '▮'.repeat(Math.max(0, s.hull)) + '▯'.repeat(Math.max(0, s.hullMax - s.hull));
@@ -68,10 +121,10 @@ function hud(s) {
 
 function complete(result) {
   const el = $('endcard');
-  $('end-title').textContent = result.success ? '★ TREASURE RAISED ★' : 'SUB LOST';
+  $('end-title').textContent = result.success ? '🎉 TREASURE RAISED! 🎉' : '💫 WHAT A DIVE!';
   $('end-body').textContent = result.success
-    ? `The captain’s chest is aboard the bell. Score ${result.score} — ${result.stats.codex} codex entries logged.`
-    : `Score ${result.score}. The dock keeps its secrets a while longer.`;
+    ? `The captain’s chest is aboard the bell! Score ${result.score}, with ${result.stats.codex} pieces of London history in your log. Marvellous.`
+    : `Score ${result.score} and ${result.stats.codex} history entries logged — the dock will still be there tomorrow. Dive again!`;
   el.classList.add('show');
   audio.stopMusic();
   if (sdk && EMBED) {
@@ -184,6 +237,20 @@ function startGame() {
 
 $('splash').addEventListener('pointerdown', startGame);
 $('ir-btn').addEventListener('pointerdown', (e) => { e.stopPropagation(); game?.toggleIR(); });
+$('fact').addEventListener('pointerdown', () => $('fact').classList.remove('show'));
+$('log-btn').addEventListener('pointerdown', (e) => {
+  e.stopPropagation();
+  const panel = $('log-panel');
+  const opening = !panel.classList.contains('show');
+  if (opening) renderLog();
+  panel.classList.toggle('show', opening);
+  $('log-btn').classList.remove('unread');
+  $('log-btn').setAttribute('aria-expanded', String(opening));
+});
+$('log-close').addEventListener('click', () => {
+  $('log-panel').classList.remove('show');
+  $('log-btn').setAttribute('aria-expanded', 'false');
+});
 $('endcard').addEventListener('pointerdown', () => {
   if (!EMBED && game?.over) location.reload();
 });
@@ -192,6 +259,12 @@ $('end-again').addEventListener('click', () => location.reload());
 window.addEventListener('resize', () => game?.resize());
 
 buildPad();
+// touch-first: show the pad on anything that can touch, not only
+// pointer:coarse — hybrids and tablets count
+if (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window ||
+    navigator.maxTouchPoints > 0) {
+  $('pad').dataset.touch = '1';
+}
 
 // canvas a11y: name it and keep a live description of the dive
 const describe = () => {

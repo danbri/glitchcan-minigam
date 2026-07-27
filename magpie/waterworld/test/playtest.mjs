@@ -127,6 +127,25 @@ try {
   if (eelDelta > 1) pass(`eel gave chase (closed ${eelDelta.toFixed(1)} units)`);
   else fail(`eel did not chase (delta ${eelDelta.toFixed(2)})`);
 
+  // the guide layer: objective banner always has a goal and a live arrow
+  const obj = await page.evaluate(() => ({
+    text: document.getElementById('obj-text').textContent,
+    dist: document.getElementById('obj-dist').textContent,
+    arrow: document.getElementById('obj-arrow').style.transform,
+  }));
+  if (obj.text.length > 4 && /\d+m/.test(obj.dist) && /rotate/.test(obj.arrow)) {
+    pass(`objective banner live: "${obj.text}" ${obj.dist}`);
+  } else fail('objective banner empty: ' + JSON.stringify(obj));
+
+  // the ship's log keeps everything; opening it shows entries
+  await page.evaluate(() => document.getElementById('log-btn')
+    .dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+  const logCount = await page.evaluate(() =>
+    document.querySelectorAll('#log-panel.show #log-list li').length);
+  if (logCount >= 1) pass(`ship's log open with ${logCount} entries`);
+  else fail('log panel empty or closed');
+  await page.click('#log-close');
+
   // the living water: fish schools must exist and actually swirl
   const fish = await page.evaluate(async () => {
     const fx = window.__waterworld.game.fx;
