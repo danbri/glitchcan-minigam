@@ -2,6 +2,10 @@ oooOO`
 // The World Between Worlds - A hub connecting all adventures
 // Inspired by the Wood Between the Worlds from The Magician's Nephew
 
+VAR waterworld_won = false
+VAR waterworld_treasure = 0
+VAR waterworld_artifacts = 0
+
 -> world_between_worlds
 
 === world_between_worlds ===
@@ -101,6 +105,7 @@ You stand in a glowing space filled with floating game cabinets. Each one hums w
 + [Mudslider] Boulder Dash-style puzzle -> play_mudslider
 + [BoidWars] Command your wizard flock -> play_battleboids
 + [GridLuck] Pac-Man style maze chase -> play_gridluck
++ [Waterworld] Submarine salvage in the drowned dock -> play_waterworld
 + Return to the World Between Worlds -> world_between_worlds
 
 === play_gems ===
@@ -123,11 +128,22 @@ Flocks of strange creatures await your command...
 The maze materializes around you...
 -> arcade_return
 
+=== play_waterworld ===
+# MINIGAME: waterworld
+One cabinet stands apart, dripping. The screen shows green water and old brick — a drowned dock, waiting. You sink into it...
+-> arcade_return
+
 === arcade_return ===
 You return to the arcade, the glow of games surrounding you.
 
 + Play another game -> arcade_hangout
++ {waterworld_won} [Look at the dripping chest by the flooded cabinet] -> waterworld_trophy
 + Return to the World Between Worlds -> world_between_worlds
+
+=== waterworld_trophy ===
+The pirate captain's chest sits by the flooded cabinet, still dripping dock water. {waterworld_treasure} points of drowned London history, raised from the deep — {waterworld_artifacts} kinds of artifact logged in the codex. Somewhere far off, a whale sings.
+
++ Back to the arcade -> arcade_return
 
 === wbw_more_options ===
 #BG:#020

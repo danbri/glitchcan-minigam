@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<!-- FINK minigame wrapper for WATERWORLD (magpie/waterworld). The host's
+     iframe onload handler stays attached across navigations, so after
+     this redirect it re-sends init to the real game page — which speaks
+     the minigame SDK protocol natively. Relative on purpose: a hard-coded
+     origin breaks local servers and pins the deployment path. -->
+<html lang="en">
+<head><meta charset="UTF-8"><title>Waterworld</title></head>
+<body>
+<script>
+  location.replace('../../../magpie/waterworld/waterworld.html');
+</script>
+</body>
+</html>

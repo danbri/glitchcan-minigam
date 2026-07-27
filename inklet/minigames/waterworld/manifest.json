@@ -1,0 +1,35 @@
+{
+  "name": "waterworld",
+  "version": "1.0.0",
+  "title": "Waterworld",
+  "description": "Submarine salvage in the drowned dock: sonar, eels, fatbergs, a ghost whale, and a pirate chest.",
+  "entry": "index.html",
+  "sandbox": {
+    "timeout": 1200000
+  },
+  "controls": "dpad",
+  "variables": {
+    "read": [
+      "difficulty",
+      "player_level",
+      "score",
+      "diamonds"
+    ],
+    "write": [
+      "waterworld_won",
+      "waterworld_treasure",
+      "waterworld_artifacts",
+      "score",
+      "diamonds",
+      "minigame_played"
+    ]
+  },
+  "modes": [
+    "normal"
+  ],
+  "ui": {
+    "width": "100%",
+    "height": "100%",
+    "background": "#1d2b53"
+  }
+}

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Waterworld — Docklands Deep</title>
+<style>
+  /* PICO-8 palette, CRT chrome. Guests must fit their own frame:
+     box-sizing everywhere, dvh never vh, canvas display:block. */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    background: #000;
+    color: #fff1e8;
+    font-family: 'Courier New', ui-monospace, monospace;
+    touch-action: manipulation;
+    -webkit-user-select: none; user-select: none;
+  }
+  #stage { position: relative; width: 100%; height: 100dvh; }
+  canvas#scene {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+  /* scanlines: the cheapest possible CRT */
+  #stage::after {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg,
+      rgba(0,0,0,0.16) 0px, rgba(0,0,0,0.16) 1px,
+      transparent 1px, transparent 3px);
+    mix-blend-mode: multiply;
+    z-index: 30;
+  }
+
+  /* ------- HUD ------- */
+  #hud {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.5em 1em;
+    padding: max(0.4em, env(safe-area-inset-top)) 0.7em 0.4em;
+    font-size: clamp(11px, 2.4vmin, 16px);
+    letter-spacing: 0.06em;
+    color: #ffec27;
+    text-shadow: 0 0 6px rgba(255,236,39,0.7), 1px 1px 0 #000;
+    z-index: 20;
+    pointer-events: none;
+  }
+  #air-rail {
+    flex: 1 1 90px; max-width: 180px; height: 0.7em;
+    border: 1px solid #29adff; background: rgba(29,43,83,0.6);
+  }
+  #air-fill { height: 100%; width: 100%; background: #29adff; transition: width 0.3s; }
+  #air-fill.low { background: #ff004d; animation: blink 0.6s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0.35; } }
+  #hull { color: #ff77a8; }
+  #inv { color: #ffccaa; }
+
+  /* ------- toasts + facts ------- */
+  #toasts {
+    position: absolute; left: 50%; top: 18%;
+    transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 0.3em;
+    z-index: 22; pointer-events: none;
+    width: min(92%, 34em);
+  }
+  .toast {
+    font-size: clamp(12px, 2.6vmin, 17px);
+    padding: 0.25em 0.8em;
+    background: rgba(0,0,0,0.65);
+    border: 1px solid #29adff;
+    color: #fff1e8;
+    text-shadow: 1px 1px 0 #000;
+    transition: opacity 0.5s;
+    text-align: center;
+  }
+  .toast.good { border-color: #00e436; color: #00e436; }
+  .toast.bad  { border-color: #ff004d; color: #ff004d; }
+  .toast.warn { border-color: #ffa300; color: #ffa300; }
+  .toast.gold { border-color: #ffec27; color: #ffec27; }
+  .toast.hint { border-color: #83769c; color: #c2c3c7; font-style: italic; }
+  .toast.out { opacity: 0; }
+
+  #fact {
+    position: absolute; left: 50%; bottom: 24%;
+    transform: translate(-50%, 20px);
+    width: min(92%, 30em);
+    background: rgba(29,43,83,0.92);
+    border: 2px solid #ffec27;
+    padding: 0.6em 0.9em;
+    z-index: 23;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.4s, transform 0.4s;
+  }
+  #fact.show { opacity: 1; transform: translate(-50%, 0); }
+  #fact-title { color: #ffec27; font-size: clamp(12px, 2.6vmin, 16px); letter-spacing: 0.1em; }
+  #fact-text { color: #fff1e8; font-size: clamp(11px, 2.4vmin, 15px); margin-top: 0.3em; line-height: 1.35; }
+  #fact-icon { float: right; font-size: 1.6em; margin-left: 0.4em; }
+
+  /* ------- overlays ------- */
+  .overlay {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 0.8em; text-align: center;
+    background: rgba(0, 4, 16, 0.86);
+    z-index: 40; padding: 1em;
+  }
+  .overlay.show { display: flex; }
+  .overlay h2 {
+    font-size: clamp(20px, 6vmin, 44px);
+    color: #29adff;
+    letter-spacing: 0.14em;
+    text-shadow: 0 0 14px rgba(41,173,255,0.8), 2px 2px 0 #1d2b53;
+  }
+  .overlay p { color: #c2c3c7; font-size: clamp(12px, 2.8vmin, 17px); max-width: 34em; line-height: 1.4; }
+  .overlay .press { color: #ffec27; animation: blink 1.2s steps(2) infinite; }
+  #end-title { color: #ffec27; }
+  #end-again {
+    font: inherit; font-size: clamp(14px, 3vmin, 18px);
+    background: #1d2b53; color: #ffec27; border: 2px solid #ffec27;
+    padding: 0.5em 1.4em; cursor: pointer;
+  }
+  #end-again:focus-visible { outline: 3px solid #29adff; outline-offset: 2px; }
+
+  /* ------- touch pad (standalone only; the shell brings its own) ------- */
+  #pad {
+    position: absolute; left: 0; right: 0;
+    bottom: max(0.6em, env(safe-area-inset-bottom));
+    display: flex; justify-content: space-between; align-items: flex-end;
+    padding: 0 4vw; z-index: 25;
+    pointer-events: none;
+  }
+  @media (pointer: fine) { #pad { display: none; } }
+  #dirs { display: grid; grid-template-columns: repeat(3, 3.2em); grid-template-rows: repeat(3, 3.2em); }
+  #pad button {
+    pointer-events: auto;
+    font: inherit; font-size: 1.1em;
+    background: rgba(29,43,83,0.55); color: #29adff;
+    border: 1px solid #29adff;
+    min-width: 44px; min-height: 44px;
+    touch-action: none;
+  }
+  #pad button.held { background: rgba(41,173,255,0.5); color: #fff1e8; }
+  #p-up { grid-area: 1 / 2; } #p-left { grid-area: 2 / 1; }
+  #p-right { grid-area: 2 / 3; } #p-down { grid-area: 3 / 2; }
+  #acts { display: flex; gap: 0.8em; }
+  #acts button { border-radius: 50%; width: 3.6em; height: 3.6em; color: #ffec27; border-color: #ffec27; }
+
+  .sr-only {
+    position: absolute; top: 0; left: 0; width: 1px; height: 1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<h1 class="sr-only">Waterworld: Docklands Deep — submarine salvage adventure</h1>
+<div id="stage">
+  <canvas id="scene"></canvas>
+
+  <div id="hud" aria-hidden="true">
+    <span>AIR</span><div id="air-rail"><div id="air-fill"></div></div>
+    <span id="hull">▮▮▮▮</span>
+    <span id="depth">0m</span>
+    <span id="cargo">⚓—</span>
+    <span id="score">00000</span>
+    <span id="codex">📖0/12</span>
+    <span id="inv">·</span>
+  </div>
+
+  <div id="toasts"></div>
+
+  <div id="fact" role="note">
+    <span id="fact-icon">📜</span>
+    <div id="fact-title"></div>
+    <div id="fact-text"></div>
+  </div>
+
+  <div id="splash" class="overlay">
+    <h2>WATERWORLD</h2>
+    <p>— DOCKLANDS DEEP —</p>
+    <p>The old dock flooded a century ago and kept everything it swallowed.
+       Pilot the sub. Ping the dark. Raise what London lost.</p>
+    <p>STEER: pad · THRUST: A · SONAR/TOOL: B<br>
+       Bank salvage at the diving bell before your air runs out.</p>
+    <p class="press">▶ PRESS A OR TAP TO DIVE ◀</p>
+  </div>
+
+  <div id="paused" class="overlay"><h2>PAUSED</h2><p>The story has the helm.</p></div>
+
+  <div id="endcard" class="overlay">
+    <h2 id="end-title">DIVE OVER</h2>
+    <p id="end-body"></p>
+    <button id="end-again" type="button" hidden>DIVE AGAIN</button>
+  </div>
+
+  <div id="pad" role="group" aria-label="touch controls">
+    <div id="dirs">
+      <button id="p-up" type="button" aria-label="pitch up">▲</button>
+      <button id="p-left" type="button" aria-label="turn left">◀</button>
+      <button id="p-right" type="button" aria-label="turn right">▶</button>
+      <button id="p-down" type="button" aria-label="pitch down">▼</button>
+    </div>
+    <div id="acts">
+      <button id="p-b" type="button" aria-label="sonar ping and tools">B</button>
+      <button id="p-a" type="button" aria-label="thrust">A</button>
+    </div>
+  </div>
+</div>
+
+<!-- Platform services: a11y pool, debug clock, SDK — classic scripts,
+     shared with every other guest. -->
+<script src="../../inklet/minigames/guest-a11y.js"></script>
+<script src="../../inklet/minigames/debug-clock.js"></script>
+<script src="../../packages/finkgame/src/minigame-sdk.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

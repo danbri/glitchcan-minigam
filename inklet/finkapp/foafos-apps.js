@@ -130,6 +130,8 @@ export const APPS = [
     capabilities: ['vars:read', 'vars:write'], silent: true },
   { id: 'gems', family: 'play', icon: '💎', name: 'Gem Hunt', surface: 'stage', game: 'gems',
     capabilities: ['vars:read', 'vars:write'], silent: true },
+  { id: 'waterworld', family: 'play', icon: '🫧', name: 'Waterworld', surface: 'stage', game: 'waterworld',
+    capabilities: ['input', 'vars:read', 'vars:write', 'audio'] },
 
   // ── Media ─────────────────────────────────────────────────────────
   // The id stays `channels` after the July 2026 rename: it is the store
