@@ -22,9 +22,12 @@
     border-color: rgba(0, 192, 192, 0.5);
 }
 
-/* Minimal mode: just the toggle icon */
+/* Minimal mode: just the toggle icon. Round, like the dock and WM grips —
+   the shell's corner affordances share one visual language, so a bare
+   square '▶' box no longer reads as debris that survived a refactor. */
 .breadcrumb-container.mode-minimal {
     max-width: 40px;
+    border-radius: 50%;
 }
 
 /* Compact mode: single line like browser address bar */
@@ -179,12 +182,10 @@
     }
 }
 
-/* Ensure breadcrumb doesn't overlap header */
-@media (max-width: 480px) {
-    .breadcrumb-container {
-        top: 50px; /* Below the fink-header */
-    }
-}
+/* The 50px mobile offset cleared `.fink-header` — an element that is
+   `display: none`. Fifty dead pixels for a ghost. The breadcrumb sits in
+   the top-left corner on every viewport; the stats bar, when a story
+   earns one, layers beneath it harmlessly. */
 
 /* Toast notification for copy feedback */
 .breadcrumb-toast {

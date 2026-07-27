@@ -651,7 +651,7 @@ function buildUI() {
   drawer.setAttribute('aria-label', 'foafos shell');
   drawer.innerHTML = `
     <header>
-      <b>FOAFOS</b> <span class="foafos-sub">shell · working title</span>
+      <b>FOAFOS</b> <span class="foafos-sub">shell</span>
       <button type="button" id="foafos-close" aria-label="Close shell">✕</button>
     </header>
     <section id="foafos-session">
@@ -1048,19 +1048,35 @@ function buildUI() {
 
     const maxBtn = win.querySelector('.foafos-window-max');
     let restore = null;
-    maxBtn.addEventListener('click', () => {
-      if (win.classList.toggle('maximized')) {
-        restore = { left: win.style.left, top: win.style.top, width: win.style.width, height: win.style.height };
+    const setMax = (on) => {
+      win.classList.toggle('maximized', on);
+      if (on) {
         win.classList.remove('minimized');
         minBtn.setAttribute('aria-pressed', 'false');
-        maxBtn.setAttribute('aria-pressed', 'true');
-        maxBtn.textContent = '❐';
+      } else if (restore) {
+        Object.assign(win.style, restore);
+      }
+      maxBtn.setAttribute('aria-pressed', String(on));
+      maxBtn.textContent = on ? '❐' : '▢';
+    };
+    maxBtn.addEventListener('click', () => {
+      if (!win.classList.contains('maximized')) {
+        restore = { left: win.style.left, top: win.style.top, width: win.style.width, height: win.style.height };
+        setMax(true);
       } else {
-        if (restore) Object.assign(win.style, restore);
-        maxBtn.setAttribute('aria-pressed', 'false');
-        maxBtn.textContent = '▢';
+        setMax(false);
       }
     });
+
+    // A phone is not a desktop. Floating a 380px window over a 390px
+    // screen leaves a dead frame of pixels around a cramped box — the
+    // desktop metaphor at exactly the size where it stops paying rent.
+    // Small viewports open maximized; the ❐ button restores the floating
+    // geometry (kept in `restore`) for anyone who wants the cascade.
+    if (window.innerWidth < 520) {
+      restore = { left: win.style.left, top: win.style.top, width: win.style.width, height: win.style.height };
+      setMax(true);
+    }
 
     const bar = win.querySelector('.foafos-window-bar');
     let drag = null;
@@ -1334,7 +1350,15 @@ function buildUI() {
         return null;
       case 'window':
       default: {
-        const win = makeWindow(`${app.icon} ${app.name}`, 380, 460);
+        // Size to the screen, not to a constant. 380×460 was tuned for a
+        // phone; on a 1280×800 desktop it floated a keyhole in a sea of
+        // black — edot at postcard size in an installation whose point is
+        // writing documents. Apps get ~55vw × ~72vh, bounded so a phone
+        // still gets the compact float (which auto-maximizes anyway) and a
+        // huge monitor is not wallpapered edge to edge.
+        const appW = Math.min(720, Math.max(380, Math.round(window.innerWidth * 0.55)));
+        const appH = Math.min(680, Math.max(460, Math.round(window.innerHeight * 0.72)));
+        const win = makeWindow(`${app.icon} ${app.name}`, appW, appH);
         const frame = document.createElement('iframe');
         frame.title = app.name;
         frame.setAttribute('sandbox', sandboxFor(app));

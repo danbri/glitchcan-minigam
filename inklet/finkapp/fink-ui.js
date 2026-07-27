@@ -249,7 +249,9 @@ window.FinkUI = {
             choiceBtn.dataset.index = i;
 
             const emoji = this.chooseEmoji(choice.text);
-            choiceBtn.innerHTML = `${emoji} ${FinkUtils.escapeHtml(choice.text.trim())}`;
+            choiceBtn.innerHTML = emoji
+                ? `${emoji} ${FinkUtils.escapeHtml(choice.text.trim())}`
+                : FinkUtils.escapeHtml(choice.text.trim());
 
             setTimeout(() => choiceBtn.classList.add('ready'), 100 * (i + 1) + 400);
 
@@ -300,8 +302,14 @@ window.FinkUI = {
                 return emoji;
             }
         }
-        const index = Math.floor(Math.random() * FinkConfig.defaultEmojis.length);
-        return FinkConfig.defaultEmojis[index];
+        // No decorative fallback. Keyword-matched emojis above are
+        // SEMANTIC — 🚶 on "go", 💎 on "gems" — and earn their place. The
+        // old fallback drew a random 🚀/✨/🌟 per RENDER, so the same menu
+        // wore different ornaments on every load, stacked on top of the
+        // skin's own choice marker (--sk-choice-marker). One decoration
+        // owner: the skin marks choices; emojis appear only when they
+        // mean something.
+        return '';
     },
 
     // Story content management

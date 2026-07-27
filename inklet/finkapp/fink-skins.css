@@ -210,8 +210,12 @@ html, body {
     line-height: var(--sk-leading, 1.55);
 }
 /* Long prose wants a measure, not the full width of a desktop window:
-   past ~72 characters the eye loses the line it is returning to. */
-#story-output { max-width: 68ch; margin-inline: auto; }
+   past ~72 characters the eye loses the line it is returning to.
+   The CHOICES share the measure: a 68ch story card above edge-to-edge
+   1280px buttons read as two different apps on one screen. One column,
+   one system — prose and the choices that answer it. */
+#story-output, #choices { max-width: 68ch; margin-inline: auto; }
+#choices { width: 100%; }
 
 .story-section.current {
     background: var(--sk-bg-figure);

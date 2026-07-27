@@ -36,6 +36,14 @@
     justify-content: center;
 }
 
+/* No visible stats → no bar. With every item hidden this rendered as an
+   11px bordered hairline across the top of every story that never declared
+   a STATUS — furniture for furniture's sake. The bar earns its row only
+   when a story puts something on it. */
+.stats-bar:not(:has(.stat-item.visible)) {
+    display: none;
+}
+
 .stats-bar .stat-item {
     display: none; /* Hidden by default, shown when value > 0 */
     color: var(--zx-cyan);
@@ -432,10 +440,11 @@ body[data-fink-depth="8"] #narrative-view {
     transition: background var(--transition-normal), border-color var(--transition-normal);
 }
 
-.choice-btn::before {
-    content: '▶ ';
-    opacity: 0.6;
-}
+/* The choice marker belongs to the SKIN, not the base layer: fink-skins.css
+   sets `.choice-btn::before { content: var(--sk-choice-marker) }` — '▶ ' for
+   spectrum, '— ' for paper, '› ' for terminal, none for the rest. The base
+   rule that used to force '▶ ' everywhere (and swap to '▶▶ ' on hover,
+   shifting the label) is gone; hover feedback is colour/border/underline. */
 
 .choice-btn:nth-child(1) { animation-delay: 0.1s; }
 .choice-btn:nth-child(2) { animation-delay: 0.2s; }
@@ -455,10 +464,6 @@ body[data-fink-depth="8"] #narrative-view {
     color: #fff;
     border-color: var(--zx-yellow);
     text-decoration: underline;
-}
-.choice-btn:hover::before {
-    content: '▶▶ ';
-    opacity: 1;
 }
 .choice-btn:active { transform: scale(0.98); }
 
