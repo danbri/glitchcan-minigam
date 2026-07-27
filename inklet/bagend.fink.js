@@ -13,6 +13,7 @@ oooOO`
 // ==== Burrow's End ====
 // Start the player at the burrow; richer state via Ink variables & lists.
 # BASEHREF: media/bagend/
+# FINK RENDERHINT X-PAGED-BEATS
 -> The_Burrow
 
 // ===== Global variables =====

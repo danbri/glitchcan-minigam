@@ -328,6 +328,7 @@ window.FinkUI = {
         this.pageIndex = null;
         this.parts = [];
         this.partIndex = 0;
+        this.partsEnabled = false;   // each story opts in for itself
         document.body.removeAttribute('data-fink-paging-past');
         document.body.removeAttribute('data-fink-part-pending');
     },
@@ -354,6 +355,13 @@ window.FinkUI = {
     pageIndex: null,   // null = on the latest beat (live)
     partIndex: 0,      // which part of the shown beat
     parts: [],         // chunk groups of the shown beat
+    // Splitting is OPT-IN per story while it proves itself:
+    //   # FINK RENDERHINT X-PAGED-BEATS
+    // as a global tag (or on any knot, from which point it sticks).
+    // No colon, so the tag parser's split(':') leaves it whole and it
+    // can never be misread as a # FINK: navigation link. Without the
+    // hint the beat pager still works; beats just never split.
+    partsEnabled: false,
 
     _sections() {
         return this.elements.storyOutput
@@ -366,6 +374,23 @@ window.FinkUI = {
         return this.pageIndex === null ? s[s.length - 1] : s[this.pageIndex];
     },
 
+    // The hint arrives on the ink tag stream — global tags at the top of
+    // the story, or any knot's tags (from which point it sticks). Checked
+    // lazily against the LIVE story object because the engine consumes
+    // tags in its own loop; updateImageFromINKTags is not on every path.
+    _pagedBeatsHinted() {
+        if (this.partsEnabled) return true;
+        const story = window.FinkInkEngine?.story;
+        if (!story) return false;
+        const HINT = /^FINK\s+RENDERHINT\s+X-PAGED-BEATS$/i;
+        const tags = [...(story.globalTags || []), ...(story.currentTags || [])];
+        if (tags.some(t => HINT.test(String(t).trim()))) {
+            this.partsEnabled = true;
+            FinkUtils.debugLog('RENDERHINT: X-PAGED-BEATS enabled');
+        }
+        return this.partsEnabled;
+    },
+
     // Split a section's flow (everything but the pinned .section-media)
     // into viewport-fitting groups. Returns at least one part.
     _partitionSection(section) {
@@ -373,6 +398,7 @@ window.FinkUI = {
         if (!chunks.length) return [chunks];
         // measure with everything shown — one reflow, then decide
         chunks.forEach(c => { c.style.display = ''; });
+        if (!this._pagedBeatsHinted()) return [chunks];   // hint not given: one part, whole beat
         const scroller = section.closest('.theatre-panel-body')
             || document.getElementById('narrative-view');
         const budgetBase = scroller ? scroller.clientHeight : window.innerHeight;
@@ -710,6 +736,17 @@ window.FinkUI = {
         if (!story) return null;
 
         const currentTags = story.currentTags || [];
+
+        // Render hints ride the same tag stream. Once seen — globally or
+        // on any knot — the hint sticks for the rest of the story.
+        if (!this.partsEnabled) {
+            const HINT = /^FINK\s+RENDERHINT\s+X-PAGED-BEATS$/i;
+            const globalTags = story.globalTags || [];
+            if ([...globalTags, ...currentTags].some(t => HINT.test(t.trim()))) {
+                this.partsEnabled = true;
+                FinkUtils.debugLog('RENDERHINT: X-PAGED-BEATS enabled');
+            }
+        }
         let imageToShow = null;
         let videoToShow = null;
         let newBasePath = null;
