@@ -1487,7 +1487,7 @@ export class WaterworldGame {
     const syGlow = glowSprite(0xbfd4e8, 7, 0.4);
     syGlow.position.y = 4;
     this.steelyard.add(syGlow);
-    // three ancestor bones, scattered where whales would rest
+    // three bones of the ghosts, scattered where the whales went down
     for (const [x, z] of [[-15, 62], [52, -58], [88, 48]]) {
       const b = makeBone();
       b.position.set(x, floorYAt(x, z) + 0.8, z);
@@ -1725,14 +1725,14 @@ export class WaterworldGame {
   _stepCampaign(dt) {
     const c = this.campaign;
     if (c.stage === 'dormant') return;
-    // ancestor bones: swim close to gather
+    // the ghosts' bones: swim close to gather
     if (c.whale.step === 'bones') {
       for (const b of this.bones) {
         if (!b.taken && b.mesh.position.distanceTo(this.pos) < 3.6) {
           b.taken = true;
           this.scene.remove(b.mesh);
           this.ui.audio?.pickup(30);
-          this.ui.toast(`🦴 ANCESTOR BONE (${this.bones.filter(x => x.taken).length}/3)`, 'good');
+          this.ui.toast(`🦴 A GHOST'S BONE (${this.bones.filter(x => x.taken).length}/3)`, 'good');
         }
       }
       if (this.bones.every(b => b.taken)) {

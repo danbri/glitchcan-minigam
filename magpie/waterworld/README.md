@@ -17,7 +17,8 @@ procedural lo-fi WebAudio, no external assets.
 Your first banking wakes the sentient fatbergs; they mean to take the
 city. Build a coalition of three, then win the finale:
 
-- **Whale ghosts:** gather three ancestor bones → bury them at the
+- **Whale ghosts:** gather the ghosts' three bones (or are the ghosts
+  only a guilty city's imagination?) → bury them at the
   Steelyard stone (Hanseatic ground — Cannon Street Station stands on it,
   which is true) → craft the loudspeaker (magnet + dynamo coil) → sing
   the lament → sink the PALE & SONS candle-drone barge by ping-detonating
