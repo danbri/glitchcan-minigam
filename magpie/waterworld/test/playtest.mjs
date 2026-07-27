@@ -76,6 +76,47 @@ try {
   if (!subParts.length) pass('sub v2: props, planes, rudder, beacon all present');
   else fail('sub missing parts: ' + subParts.join(','));
 
+  // DASH: double-tap A must spike the speed
+  const dashed = await page.evaluate(async () => {
+    const g = window.__waterworld.game;
+    const v0 = g.vel.length();
+    g.setKey('a', true); g.setKey('a', false);
+    g.setKey('a', true); g.setKey('a', false);
+    await new Promise(r => setTimeout(r, 120));
+    return { v0, v1: g.vel.length() };
+  });
+  if (dashed.v1 > dashed.v0 + 10) pass(`dash spikes speed (${dashed.v0.toFixed(1)} → ${dashed.v1.toFixed(1)})`);
+  else fail(`dash inert: ${JSON.stringify(dashed)}`);
+
+  // PUSH-YOUR-LUCK: damage with cargo aboard spills recoverable loot
+  const spilled = await page.evaluate(() => {
+    const g = window.__waterworld.game;
+    g.cargo.push({ type: 'clay_pipe', value: 10 }, { type: 'green_bottle', value: 10 },
+      { type: 'tea_chest', value: 20 }, { type: 'cannonball', value: 25 });
+    g._damage(0, 'test knock');
+    return { spilled: g.spilled.length, kept: g.cargo.length };
+  });
+  if (spilled.spilled >= 2 && spilled.kept >= 1) pass(`hit spills cargo (${spilled.spilled} loose, ${spilled.kept} kept)`);
+  else fail('spill mechanic broken: ' + JSON.stringify(spilled));
+  await page.evaluate(() => {
+    const g = window.__waterworld.game;
+    g.spilled.forEach(s => g.scene.remove(s.mesh));
+    g.spilled = []; g.cargo = []; g.hull = 4;
+  });
+
+  // LEGIBILITY: the sonar chart opens and draws
+  await page.evaluate(() => document.getElementById('map-btn')
+    .dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+  const mapOpen = await page.evaluate(() => {
+    const cv = document.getElementById('map-canvas');
+    const shown = document.getElementById('map-panel').classList.contains('show');
+    const px = cv.getContext('2d').getImageData(cv.width / 2, cv.height / 2, 1, 1).data;
+    return { shown, drawn: px[0] + px[1] + px[2] > 0 };
+  });
+  if (mapOpen.shown && mapOpen.drawn) pass('sonar chart opens and draws');
+  else fail('sonar chart broken: ' + JSON.stringify(mapOpen));
+  await page.click('#map-close');
+
   // POSE CONTINUITY: the craft's quaternion must never jump between
   // frames. The old Euler read-back pose flipped representations ~67
   // times per slow diving turn (measured); a brushed turn with pitch is

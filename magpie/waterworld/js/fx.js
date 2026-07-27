@@ -96,7 +96,7 @@ class School {
     scene.add(this.points);
   }
 
-  step(dt, t, sub, threats) {
+  step(dt, t, sub, threats, tide = 1) {
     const { n, pos, vel } = this;
     const K = 7;                       // sampled neighbours per boid
     const maxV = 8.5;
@@ -132,7 +132,7 @@ class School {
       // the gyre carries everyone
       _tmp.set(pos[ix], pos[ix + 1], pos[ix + 2]);
       currentAt(_tmp, t, _tmp);
-      ax += _tmp.x * 0.35; ay += _tmp.y * 0.35; az += _tmp.z * 0.35;
+      ax += _tmp.x * 0.35 * tide; ay += _tmp.y * 0.35 * tide; az += _tmp.z * 0.35 * tide;
 
       vel[ix] += ax * dt * 4; vel[ix + 1] += ay * dt * 4; vel[ix + 2] += az * dt * 4;
       const sp = Math.hypot(vel[ix], vel[ix + 1], vel[ix + 2]);
@@ -261,7 +261,8 @@ export class UnderwaterFX {
   }
 
   // hotSpots: [{x,y,z}] — fatbergs and the sub's engine, fed by game.js
-  step(dt, t, subPos, threats, camDepth, hotSpots = []) {
+  step(dt, t, subPos, threats, camDepth, hotSpots = [], tide = 1) {
+    this._tide = tide;
     // god rays live near the surface and die with depth
     const depthFade = Math.max(0, Math.min(1, 1 - (camDepth - 10) / 34));
     for (const r of this.rays) {
@@ -281,7 +282,7 @@ export class UnderwaterFX {
 
     this._drift(this.debris, dt, t, 1.0, 0);
 
-    for (const s of this.schools) s.step(dt, t, subPos, threats);
+    for (const s of this.schools) s.step(dt, t, subPos, threats, tide);
 
     // vent bubbles rise and recycle
     for (const v of this.vents) {
@@ -326,9 +327,10 @@ export class UnderwaterFX {
       _tmp.set(pos.getX(i), pos.getY(i), pos.getZ(i));
       const p = _tmp.clone();
       currentAt(p, t, _tmp);
-      let x = p.x + _tmp.x * carry * dt;
+      const tide = this._tide || 1;
+      let x = p.x + _tmp.x * carry * tide * dt;
       let y = p.y + (_tmp.y * carry + rise) * dt;
-      let z = p.z + _tmp.z * carry * dt;
+      let z = p.z + _tmp.z * carry * tide * dt;
       if (x < BOUNDS.minX) x = BOUNDS.maxX; if (x > BOUNDS.maxX) x = BOUNDS.minX;
       if (z < BOUNDS.minZ) z = BOUNDS.maxZ; if (z > BOUNDS.maxZ) z = BOUNDS.minZ;
       if (y > -2) y = -58; if (y < -60) y = -3;

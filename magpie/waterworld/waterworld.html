@@ -30,7 +30,7 @@
   #hud {
     position: absolute; top: 0; left: 0; right: 0;
     display: flex; flex-wrap: wrap; align-items: center; gap: 0.5em 1em;
-    padding: max(0.4em, env(safe-area-inset-top)) 14rem 0.4em 0.7em;
+    padding: max(0.4em, env(safe-area-inset-top)) 17rem 0.4em 0.7em;
     font-size: clamp(11px, 2.4vmin, 16px);
     letter-spacing: 0.06em;
     color: #ffec27;
@@ -127,6 +127,42 @@
   /* ------- ship's log ------- */
   #log-btn { color: #29adff; border-color: #29adff; }
   #log-btn.unread::after { content: '●'; color: #ffec27; margin-left: 0.25em; }
+  #map-btn { color: #7ef2ff; border-color: #7ef2ff; }
+
+  /* the captain's banking order: appears whenever a haul is riding */
+  #bank-btn {
+    position: absolute;
+    right: 0.7em;
+    bottom: max(7.5em, calc(env(safe-area-inset-bottom) + 7em));
+    z-index: 26;
+    width: 4.4em; height: 4.4em;
+    border-radius: 50%;
+    font: inherit; font-size: clamp(13px, 3vmin, 17px); font-weight: bold;
+    background: rgba(40, 30, 0, 0.72); color: #ffec27;
+    border: 2px solid #ffec27;
+    box-shadow: 0 0 14px rgba(255, 236, 39, 0.5);
+    cursor: pointer;
+    animation: bank-breathe 1.6s ease-in-out infinite;
+  }
+  #bank-btn span { display: block; font-size: 0.55em; letter-spacing: 0.08em; }
+  #bank-btn:focus-visible { outline: 3px solid #29adff; outline-offset: 2px; }
+  @keyframes bank-breathe { 50% { box-shadow: 0 0 22px rgba(255,236,39,0.8); } }
+
+  #map-panel {
+    position: absolute; inset: 3.6em 0.6em auto 0.6em;
+    max-height: 78dvh;
+    display: none; flex-direction: column;
+    background: rgba(6, 14, 34, 0.97);
+    border: 2px solid #7ef2ff;
+    z-index: 47;
+  }
+  #map-panel.show { display: flex; }
+  #map-canvas { width: 100%; height: auto; display: block; }
+  #map-legend {
+    padding: 0.4em 0.8em;
+    font-size: clamp(10px, 2.4vmin, 13px);
+    color: #9fb6c8; border-top: 1px solid #29527a;
+  }
   #log-panel {
     position: absolute; inset: 3.6em 0.6em auto 0.6em;
     max-height: 62dvh;
@@ -305,7 +341,18 @@
     <button id="auto-btn" class="chip" type="button" aria-label="toggle autopilot" aria-pressed="true">⚓AUTO</button>
     <button id="help-btn" class="chip" type="button" aria-label="how to play" aria-expanded="false">？</button>
     <button id="log-btn" class="chip" type="button" aria-label="ship's log" aria-expanded="false">📜</button>
+    <button id="map-btn" class="chip" type="button" aria-label="sonar chart" aria-expanded="false">🗺</button>
     <button id="ir-btn" class="chip" type="button" aria-label="toggle thermal sight" aria-pressed="false">IR</button>
+  </div>
+  <button id="bank-btn" type="button" aria-label="take the haul to the bell" hidden>🔔<span>BANK</span></button>
+
+  <div id="map-panel" role="dialog" aria-label="Sonar chart">
+    <div class="panel-head">
+      <span>🗺 SONAR CHART</span>
+      <button id="map-close" type="button" aria-label="close chart">✕</button>
+    </div>
+    <canvas id="map-canvas" width="640" height="440"></canvas>
+    <div id="map-legend">🟡 salvage · 💗 gear · 🔴 mine · 🟠 fatberg · 🔵 you · 🔔 bell · ⬜ boats — sonar pings chart the world</div>
   </div>
   <button id="pad-toggle" type="button" aria-label="show d-pad controls" aria-pressed="false">🎮</button>
 
@@ -316,7 +363,11 @@
     </div>
     <ul id="help-list">
       <li><strong>Brush the water</strong> — set a new course. She follows it, then resumes the hunt.</li>
-      <li><strong>Tap the water</strong> — sonar ping: lights up treasure, stuns eels up close, pops mines at a safe distance.</li>
+      <li><strong>Tap the water</strong> — sonar ping: lights up treasure, stuns eels up close, pops mines at a safe distance. Pinged things stay on your 🗺 chart.</li>
+      <li><strong>Double-tap</strong> (or double-tap A) — DASH: a burst of speed for a breath of air.</li>
+      <li><strong>🔔 BANK</strong> — the haul multiplier grows with every item you carry (×3 tops!) — but a hit knocks half your cargo loose. Banking is YOUR call.</li>
+      <li><strong>Grab fast for COMBOS</strong> — quick successive finds are worth more.</li>
+      <li><strong>Watch the water</strong> — tides surge the current, and sometimes the silt exposes a cache for sixty seconds.</li>
       <li><strong>➤ The banner arrow</strong> always points at your current goal.</li>
       <li><strong>⚓AUTO</strong> — autopilot on/off. Off = you have the boat.</li>
       <li><strong>🎮</strong> — summon the d-pad if you want stick-and-button control (▲▼◀▶ steer · A thrust · B sonar/tools).</li>
