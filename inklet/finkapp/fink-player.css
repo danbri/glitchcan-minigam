@@ -233,6 +233,9 @@ body[data-fink-depth="8"] #narrative-view {
 .story-pager .pager-all { margin-left: auto; }
 /* Browsing the past: the choices belong to the live page only. */
 body[data-fink-paging-past] #choices { display: none; }
+/* Mid-beat: parts remain — the choices wait for the last screen of the
+   scene, and ▶ is the way there. */
+body[data-fink-part-pending] #choices { display: none; }
 
 .history-toggle {
     display: none; /* Hidden until there's history */

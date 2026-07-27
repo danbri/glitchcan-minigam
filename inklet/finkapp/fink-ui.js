@@ -326,7 +326,10 @@ window.FinkUI = {
         this.historyToggle = null;
         this.pagerEls = null;
         this.pageIndex = null;
+        this.parts = [];
+        this.partIndex = 0;
         document.body.removeAttribute('data-fink-paging-past');
+        document.body.removeAttribute('data-fink-part-pending');
     },
 
     // ── PAGED READING ───────────────────────────────────────────────────
@@ -338,11 +341,106 @@ window.FinkUI = {
     //   ALL    every beat stacked, scrolling (the old history view)
     // Browsing the past hides the choices — you cannot choose from
     // yesterday — and ▶ walks back to the live page where they return.
+    //
+    // PARTS. A beat is the logical page; on a phone with an image it can
+    // overflow the physical one. An over-tall beat is split into PARTS —
+    // groups of its chunks that fit the viewport under the pinned image —
+    // and ▶ walks part 1 → part 2 → … before it advances the beat. The
+    // choices belong to the LAST part of the live beat: until the reader
+    // has paged through the scene, ▶ is the only affordance, so the text
+    // arrives screen by screen instead of as a scroll. ◀ across a beat
+    // boundary lands on the previous beat's LAST part, so reading
+    // backwards flows too. ALL remains the un-split, stacked scroll.
     pageIndex: null,   // null = on the latest beat (live)
+    partIndex: 0,      // which part of the shown beat
+    parts: [],         // chunk groups of the shown beat
 
     _sections() {
         return this.elements.storyOutput
             ? [...this.elements.storyOutput.querySelectorAll('.story-section')] : [];
+    },
+
+    _shownSection() {
+        const s = this._sections();
+        if (!s.length) return null;
+        return this.pageIndex === null ? s[s.length - 1] : s[this.pageIndex];
+    },
+
+    // Split a section's flow (everything but the pinned .section-media)
+    // into viewport-fitting groups. Returns at least one part.
+    _partitionSection(section) {
+        const chunks = [...section.children].filter(c => !c.classList.contains('section-media'));
+        if (!chunks.length) return [chunks];
+        // measure with everything shown — one reflow, then decide
+        chunks.forEach(c => { c.style.display = ''; });
+        const scroller = section.closest('.theatre-panel-body')
+            || document.getElementById('narrative-view');
+        const budgetBase = scroller ? scroller.clientHeight : window.innerHeight;
+        const media = section.querySelector(':scope > .section-media');
+        const mediaH = (media && getComputedStyle(media).display !== 'none') ? media.offsetHeight : 0;
+        const pagerH = this.historyToggle ? this.historyToggle.offsetHeight : 0;
+        const budget = Math.max(120, budgetBase - mediaH - pagerH - 56);
+        const parts = [];
+        let cur = [], curH = 0;
+        for (const c of chunks) {
+            const h = c.offsetHeight || 24;
+            if (cur.length && curH + h > budget) { parts.push(cur); cur = []; curH = 0; }
+            cur.push(c); curH += h;
+        }
+        if (cur.length) parts.push(cur);
+        return parts;
+    },
+
+    // (Re)partition the shown beat and land on a part.
+    // arrive: 'first' | 'last' | 'keep'
+    _setupParts(arrive = 'first') {
+        const section = this._shownSection();
+        if (!section) return;
+        if (this.elements.storyOutput?.classList.contains('history-expanded')) return; // ALL: never split
+        this.parts = this._partitionSection(section);
+        if (this.parts.length > 1) {
+            // paging needs its controls even before there is a past
+            this.ensureHistoryToggle().classList.add('has-history');
+        }
+        const last = this.parts.length - 1;
+        this.partIndex = arrive === 'last' ? last
+            : arrive === 'keep' ? Math.min(this.partIndex, last) : 0;
+        this._applyPart();
+    },
+
+    _applyPart() {
+        const section = this._shownSection();
+        if (!section) return;
+        const group = this.parts[this.partIndex] || [];
+        this.parts.forEach((part, i) => {
+            part.forEach(c => { c.style.display = i === this.partIndex ? '' : 'none'; });
+        });
+        const live = this.pageIndex === null;
+        const morePending = live && this.partIndex < this.parts.length - 1;
+        document.body.toggleAttribute('data-fink-part-pending', morePending);
+        this.updatePager();
+        const nv = section.closest('.theatre-panel-body') || document.getElementById('narrative-view');
+        if (nv && group.length) nv.scrollTo({ top: 0 });
+    },
+
+    // Partition after layout settles; re-run when the scene image loads
+    // (its height moves the budget) and when the viewport turns.
+    _schedulePartition(arrive = 'first') {
+        clearTimeout(this._partTimer);
+        this._partTimer = setTimeout(() => {
+            this._setupParts(arrive);
+            const section = this._shownSection();
+            section?.querySelectorAll('img').forEach(img => {
+                if (!img.complete) img.addEventListener('load', () => this._setupParts('keep'), { once: true });
+            });
+        }, 120);
+        if (!this._partResizeBound) {
+            this._partResizeBound = true;
+            window.addEventListener('resize', () => {
+                clearTimeout(this._partResizeTimer);
+                this._partResizeTimer = setTimeout(() => this._setupParts('keep'), 200);
+            });
+        }
     },
 
     ensureHistoryToggle() {   // name kept: callers ask for "the look-back control"
@@ -371,11 +469,17 @@ window.FinkUI = {
         const all = mk('pager-all', 'Show every beat, scrolling', 'ALL');
 
         prev.addEventListener('click', () => {
+            if (this.partIndex > 0) {                       // earlier part of this beat
+                this.partIndex--; this._applyPart(); return;
+            }
             const n = this._sections().length;
             const i = this.pageIndex === null ? n - 1 : this.pageIndex;
-            if (i > 0) this.showPage(i - 1);
+            if (i > 0) this.showPage(i - 1, { arrive: 'last' });
         });
         next.addEventListener('click', () => {
+            if (this.partIndex < this.parts.length - 1) {   // next part of this beat
+                this.partIndex++; this._applyPart(); return;
+            }
             if (this.pageIndex !== null) this.showPage(this.pageIndex + 1);
         });
         all.addEventListener('click', () => {
@@ -384,11 +488,13 @@ window.FinkUI = {
             all.setAttribute('aria-pressed', String(expanded));
             // ALL always returns to the live page underneath: the stacked
             // view ends at the current beat with its choices.
-            this.showPage(null, { skipAllReset: true });
+            this.showPage(null, { skipAllReset: true, skipParts: expanded });
             this._sections().forEach(s => {
                 const isCurrent = s.classList.contains('current');
                 s.style.display = (expanded || isCurrent) ? 'block' : 'none';
+                if (expanded) [...s.children].forEach(c => { c.style.display = ''; });  // no splits in ALL
             });
+            if (expanded) document.body.removeAttribute('data-fink-part-pending');
         });
 
         if (this.elements.storyOutput) {
@@ -418,7 +524,13 @@ window.FinkUI = {
         const shown = i === null ? liveIndex : i;
         sections.forEach((s, k) => { s.style.display = k === shown ? 'block' : 'none'; });
         document.body.toggleAttribute('data-fink-paging-past', i !== null);
-        this.updatePager();
+        if (opts.skipParts) {
+            this.parts = []; this.partIndex = 0;
+            document.body.removeAttribute('data-fink-part-pending');
+            this.updatePager();
+        } else {
+            this._setupParts(opts.arrive || 'first');
+        }
         const nv = document.getElementById('narrative-view');
         if (nv) nv.scrollTo({ top: 0 });
     },
@@ -428,9 +540,12 @@ window.FinkUI = {
         const n = this._sections().length;
         const live = this.pageIndex === null;
         const shown = live ? n : this.pageIndex + 1;
-        this.pagerEls.counter.textContent = n > 1 ? `${shown}/${n}` : '';
-        this.pagerEls.prev.disabled = n < 2 || shown <= 1;
-        this.pagerEls.next.disabled = live;
+        const nParts = this.parts.length;
+        const beatLabel = n > 1 ? `${shown}/${n}` : '';
+        const partLabel = nParts > 1 ? `·${this.partIndex + 1}/${nParts}` : '';
+        this.pagerEls.counter.textContent = beatLabel + partLabel || (nParts > 1 ? partLabel.slice(1) : '');
+        this.pagerEls.prev.disabled = (n < 2 || shown <= 1) && this.partIndex === 0;
+        this.pagerEls.next.disabled = live && this.partIndex >= nParts - 1;
     },
 
     // Start a new content section, marking old ones as past
@@ -474,7 +589,10 @@ window.FinkUI = {
         // Past sections may carry inline display:block from an ALL view —
         // normalize them all, or the stack quietly stays stacked.
         this.pageIndex = null;
+        this.parts = [];
+        this.partIndex = 0;
         document.body.removeAttribute('data-fink-paging-past');
+        document.body.removeAttribute('data-fink-part-pending');
         if (this.elements.storyOutput) {
             this.elements.storyOutput.classList.remove('history-expanded');
             this.elements.storyOutput.querySelectorAll('.story-section.past')
@@ -494,6 +612,9 @@ window.FinkUI = {
             const section = this.startNewSection();
             section.appendChild(fragment);
             this.scrollToCurrentSection();
+            // Split the fresh beat into screen-fitting parts once layout
+            // settles (and again when its image finishes loading).
+            this._schedulePartition('first');
         }
     },
 
