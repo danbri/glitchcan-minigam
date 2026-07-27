@@ -1,0 +1,14 @@
+{
+  "name": "Waterworld — Docklands Deep",
+  "short_name": "Waterworld",
+  "description": "Submarine salvage adventure in a flooded London dock.",
+  "start_url": "./waterworld.html",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#06122e",
+  "theme_color": "#06122e",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
