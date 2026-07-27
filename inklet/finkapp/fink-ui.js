@@ -324,32 +324,113 @@ window.FinkUI = {
         }
         this.currentSection = null;
         this.historyToggle = null;
+        this.pagerEls = null;
+        this.pageIndex = null;
+        document.body.removeAttribute('data-fink-paging-past');
     },
 
-    // Ensure history toggle button exists
-    ensureHistoryToggle() {
+    // ── PAGED READING ───────────────────────────────────────────────────
+    // The story accumulates one .story-section per beat — image and prose
+    // together, past ones hidden. That IS a book; the old "[+] History"
+    // dump was the only way to look back, and it stacked everything into
+    // one scroll. The pager reads the same structure three ways:
+    //   ◀ / ▶  one beat per screen, its image with its words
+    //   ALL    every beat stacked, scrolling (the old history view)
+    // Browsing the past hides the choices — you cannot choose from
+    // yesterday — and ▶ walks back to the live page where they return.
+    pageIndex: null,   // null = on the latest beat (live)
+
+    _sections() {
+        return this.elements.storyOutput
+            ? [...this.elements.storyOutput.querySelectorAll('.story-section')] : [];
+    },
+
+    ensureHistoryToggle() {   // name kept: callers ask for "the look-back control"
         if (this.historyToggle) return this.historyToggle;
 
-        const toggle = document.createElement('button');
-        toggle.className = 'history-toggle';
-        toggle.textContent = '[+] History';
-        toggle.addEventListener('click', () => {
-            const expanded = this.elements.storyOutput.classList.toggle('history-expanded');
-            toggle.textContent = expanded ? '[-] History' : '[+] History';
-            toggle.classList.toggle('expanded', expanded);
+        const bar = document.createElement('div');
+        bar.className = 'story-pager';
+        bar.setAttribute('role', 'navigation');
+        bar.setAttribute('aria-label', 'Read earlier beats');
 
-            // Update inline styles to match expanded state
-            const pastSections = this.elements.storyOutput.querySelectorAll('.story-section.past');
-            pastSections.forEach(section => {
-                section.style.display = expanded ? 'block' : 'none';
+        const mk = (cls, label, text) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = `history-toggle ${cls}`;
+            b.setAttribute('aria-label', label);
+            b.textContent = text;
+            bar.appendChild(b);
+            return b;
+        };
+        const prev = mk('pager-prev', 'Previous beat', '◀');
+        const counter = document.createElement('span');
+        counter.className = 'pager-counter';
+        counter.setAttribute('aria-live', 'polite');
+        bar.appendChild(counter);
+        const next = mk('pager-next', 'Next beat', '▶');
+        const all = mk('pager-all', 'Show every beat, scrolling', 'ALL');
+
+        prev.addEventListener('click', () => {
+            const n = this._sections().length;
+            const i = this.pageIndex === null ? n - 1 : this.pageIndex;
+            if (i > 0) this.showPage(i - 1);
+        });
+        next.addEventListener('click', () => {
+            if (this.pageIndex !== null) this.showPage(this.pageIndex + 1);
+        });
+        all.addEventListener('click', () => {
+            const expanded = this.elements.storyOutput.classList.toggle('history-expanded');
+            all.classList.toggle('expanded', expanded);
+            all.setAttribute('aria-pressed', String(expanded));
+            // ALL always returns to the live page underneath: the stacked
+            // view ends at the current beat with its choices.
+            this.showPage(null, { skipAllReset: true });
+            this._sections().forEach(s => {
+                const isCurrent = s.classList.contains('current');
+                s.style.display = (expanded || isCurrent) ? 'block' : 'none';
             });
         });
 
         if (this.elements.storyOutput) {
-            this.elements.storyOutput.insertBefore(toggle, this.elements.storyOutput.firstChild);
+            this.elements.storyOutput.insertBefore(bar, this.elements.storyOutput.firstChild);
         }
-        this.historyToggle = toggle;
-        return toggle;
+        this.historyToggle = bar;
+        this.pagerEls = { prev, next, all, counter };
+        return bar;
+    },
+
+    // Show beat i (0-based); null = the live beat. Keeps the pager honest.
+    showPage(i, opts = {}) {
+        const sections = this._sections();
+        const n = sections.length;
+        if (!n) return;
+        if (!opts.skipAllReset && this.elements.storyOutput.classList.contains('history-expanded')) {
+            // leaving ALL: collapse back to one-page view first
+            this.elements.storyOutput.classList.remove('history-expanded');
+            if (this.pagerEls) {
+                this.pagerEls.all.classList.remove('expanded');
+                this.pagerEls.all.setAttribute('aria-pressed', 'false');
+            }
+        }
+        if (i !== null && i >= n - 1) i = null;      // walked back to the front
+        this.pageIndex = i;
+        const liveIndex = n - 1;
+        const shown = i === null ? liveIndex : i;
+        sections.forEach((s, k) => { s.style.display = k === shown ? 'block' : 'none'; });
+        document.body.toggleAttribute('data-fink-paging-past', i !== null);
+        this.updatePager();
+        const nv = document.getElementById('narrative-view');
+        if (nv) nv.scrollTo({ top: 0 });
+    },
+
+    updatePager() {
+        if (!this.pagerEls) return;
+        const n = this._sections().length;
+        const live = this.pageIndex === null;
+        const shown = live ? n : this.pageIndex + 1;
+        this.pagerEls.counter.textContent = n > 1 ? `${shown}/${n}` : '';
+        this.pagerEls.prev.disabled = n < 2 || shown <= 1;
+        this.pagerEls.next.disabled = live;
     },
 
     // Start a new content section, marking old ones as past
@@ -369,7 +450,7 @@ window.FinkUI = {
                 FinkUtils.debugLog(`Marked section ${i} as past (display:none)`);
             });
 
-            // Show history toggle if there's past content
+            // Show the pager once there's a past to page back through
             if (hasPastContent) {
                 this.ensureHistoryToggle();
                 this.historyToggle.classList.add('has-history');
@@ -387,6 +468,23 @@ window.FinkUI = {
         if (this.elements.storyOutput) {
             this.elements.storyOutput.appendChild(section);
         }
+
+        // A new beat always lands the reader on the LIVE page: whatever
+        // they were re-reading, the story has moved and the pager follows.
+        // Past sections may carry inline display:block from an ALL view —
+        // normalize them all, or the stack quietly stays stacked.
+        this.pageIndex = null;
+        document.body.removeAttribute('data-fink-paging-past');
+        if (this.elements.storyOutput) {
+            this.elements.storyOutput.classList.remove('history-expanded');
+            this.elements.storyOutput.querySelectorAll('.story-section.past')
+                .forEach(s => { s.style.display = 'none'; });
+        }
+        if (this.pagerEls) {
+            this.pagerEls.all.classList.remove('expanded');
+            this.pagerEls.all.setAttribute('aria-pressed', 'false');
+        }
+        this.updatePager();
 
         return section;
     },
@@ -416,7 +514,7 @@ window.FinkUI = {
                 // Scroll to show the current section with a small offset from top
                 // This ensures the image (if any) is visible along with content
                 const sectionTop = this.currentSection.offsetTop;
-                const historyToggle = narrativeView.querySelector('.history-toggle');
+                const historyToggle = narrativeView.querySelector('.story-pager');
                 const toggleHeight = historyToggle ? historyToggle.offsetHeight : 0;
                 // Scroll to section top, accounting for history toggle
                 const scrollTarget = Math.max(0, sectionTop - toggleHeight - 10);
