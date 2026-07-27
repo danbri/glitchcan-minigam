@@ -410,14 +410,14 @@ export class WaterworldGame {
     for (let i = 0; i < 4; i++) this._bubbleT = -1;   // a burst in the wake
   }
 
-  // A brush across the water is a course order from the captain: bank
-  // onto the swiped heading and hold it a while, then resume the hunt.
-  // dxN/dyN are normalised screen deltas (right and down positive).
+  // A brush across the water is a course order — one gesture, held a
+  // while. Kept for the test harness and coarse flicks; live dragging
+  // goes through steerDrag below, which feels like holding the nose.
   brush(dxN, dyN) {
-    const yaw = this.yaw - dxN * 3.4;
-    const pitch = Math.max(-0.8, Math.min(0.8, this.pitch - dyN * 2.2));
-    this._explore = { yaw, pitch, until: this.elapsed + 8 };
-    this.manualUntil = 0;          // the helm answers the brush at once
+    const yaw = this.yaw - dxN * 2.2;
+    const pitch = Math.max(-0.75, Math.min(0.75, this.pitch - dyN * 1.6));
+    this._explore = { yaw, pitch, until: this.elapsed + 5 };
+    this.manualUntil = 0;
     this.autopilot = true;
     this.ui.audio?.swish();
     if (this._brushCount < 3) {
@@ -427,6 +427,33 @@ export class WaterworldGame {
     this.ui.announce('New course set.');
   }
 
+  // INCREMENTAL drag steering: each pointer-move nudges the commanded
+  // course by the step since the last event. Dragging feels like
+  // holding the sub's nose, not like throwing orders — the fix for
+  // "lurchy". Down = dive, up = climb, and small drags do small things.
+  steerDrag(dxStep, dyStep) {
+    const live = this._explore && this.elapsed < this._explore.until;
+    const yaw = (live ? this._explore.yaw : this.yaw) - dxStep * 5.0;
+    const basePitch = live ? this._explore.pitch : this.pitch;
+    const pitch = Math.max(-0.75, Math.min(0.75, basePitch - dyStep * 3.4));
+    this._explore = { yaw, pitch, until: this.elapsed + 4 };
+    this.manualUntil = 0;
+    this.autopilot = true;
+  }
+
+  // Hold station: press and hold without moving. She kills way and
+  // hangs in the water until you let go. THE missing "slow down".
+  setBrake(on) {
+    if (on && !this._brake && !this.over) {
+      this.ui.announce('Holding station.');
+      if (!this._brakeShown) {
+        this._brakeShown = true;
+        this.ui.toast('⚓ Holding station — release to sail on', 'hint');
+      }
+    }
+    this._brake = on;
+  }
+
   // ------------------------------------------------------------- the helm
   // Sails toward the objective (or a brushed course), keeps off the
   // floor, the surface, the walls and the mines, pings as she hunts,
@@ -434,8 +461,14 @@ export class WaterworldGame {
   _helm(dt) {
     this._helmActive = true;
     // re-engaging after manual or a brush: start the filter from where
-    // the boat actually is, or the first frame swings from stale state
-    if (!this._helmWasActive) { this._smYaw = this.yaw; this._smPitch = this.pitch; }
+    // the boat actually is, or the first frame swings from stale state —
+    // and EASE the turn rate back in, so the takeover never yanks
+    if (!this._helmWasActive) {
+      this._smYaw = this.yaw;
+      this._smPitch = this.pitch;
+      this._helmEase = 0;
+    }
+    this._helmEase = Math.min(1, (this._helmEase ?? 1) + dt / 1.3);
     let desYaw, desPitch;
     const exploring = this._explore && this.elapsed < this._explore.until;
     const obj = exploring ? null : this._objective();
@@ -509,10 +542,12 @@ export class WaterworldGame {
     let dYaw = this._smYaw - this.yaw;
     while (dYaw > Math.PI) dYaw -= Math.PI * 2;
     while (dYaw < -Math.PI) dYaw += Math.PI * 2;
-    const turn = Math.max(-1.5 * dt, Math.min(1.5 * dt, dYaw));
+    const rate = 1.5 * this._helmEase;
+    const turn = Math.max(-rate * dt, Math.min(rate * dt, dYaw));
     this.yaw += turn;
-    this._helmTurn = Math.max(-0.5, Math.min(0.5, dYaw));
-    this.pitch += Math.max(-1.1 * dt, Math.min(1.1 * dt, this._smPitch - this.pitch));
+    this._helmTurn = Math.max(-0.5, Math.min(0.5, dYaw)) * this._helmEase;
+    this.pitch += Math.max(-1.1 * this._helmEase * dt,
+      Math.min(1.1 * this._helmEase * dt, this._smPitch - this.pitch));
     this._autoThrust = exploring || dist > 7;
     // she pings as she hunts — the sonar chimes are half the mood
     if (this._pingCooldown <= 0 && this.elapsed - this._lastAutoPing > 7 && !exploring) {
@@ -844,10 +879,10 @@ export class WaterworldGame {
       Math.cos(this.pitch) * Math.cos(this.yaw),
       Math.sin(this.pitch),
       -Math.cos(this.pitch) * Math.sin(this.yaw));
-    const thrusting = k.a || this._autoThrust;
-    const thrust = thrusting ? 34 : 9;   // brisker: ploddy is literal speed
+    const thrusting = (k.a || this._autoThrust) && !this._brake;
+    const thrust = this._brake ? 0 : (thrusting ? 34 : 9);
     this.vel.addScaledVector(fwd, thrust * dt);
-    this.vel.multiplyScalar(Math.pow(0.14, dt));            // water drag
+    this.vel.multiplyScalar(Math.pow(this._brake ? 0.02 : 0.14, dt));  // drag; brake kills way fast
     this.vel.y += Math.sin(this.elapsed * 0.8) * 0.06 * dt; // gentle swell
     currentAt(this.pos, this.elapsed, _cur);                 // the gyre tugs
     this.vel.addScaledVector(_cur, 0.35 * this.tide * dt);
@@ -1536,6 +1571,63 @@ export class WaterworldGame {
     this.chest.hidden = false;
     this.chest.mesh.visible = true;
     this.chest._known = true;
+
+    // lore whispers: swim near a story site and the world introduces
+    // itself — discovery for explorers, no help page required
+    this._whispers = [
+      { at: () => this.steelyard.position, r: 22, done: false,
+        text: '⚓ An old boundary stone below… something gathers around it.' },
+      { at: () => this.elders[0].mesh.position, r: 20, done: false,
+        text: '⚡ A crowned eel watches you. It says nothing — yet.' },
+      { at: () => this.elders[1].mesh.position, r: 20, done: false,
+        text: '⚡ Another crowned eel, coiled and cold. The two tribes do not speak.' },
+      { at: () => this.chest.mesh.position, r: 20, done: false,
+        text: '💎 A strongbox in the silt, branded EIC. Far too heavy to lift bare.' },
+      { at: () => this.candleBarge?.position, r: 26, done: false,
+        text: '🕯️ A drone barge hums overhead: PALE & SONS, EST. 1712.' },
+    ];
+  }
+
+  // The Coalition board — the story, readable at any moment. Rendered
+  // by main.js when the player taps the goal banner.
+  boardState() {
+    const c = this.campaign;
+    if (c.stage === 'dormant') {
+      return { title: 'THE DOCK IS QUIET', seats: '', rows: [
+        { icon: '🫧', text: 'Salvage the drowned past. Land a haul at the bell — and see what wakes.' },
+      ] };
+    }
+    const w = {
+      bones: `gather the ghosts' bones (${this.bones.filter(b => b.taken).length}/3)`,
+      bury: 'bury the bones at the Steelyard stone',
+      speaker: 'craft the loudspeaker — magnet + dynamo coil',
+      lament: 'sing the lament at the Steelyard (B there)',
+      barge: `sink the PALE & SONS barge — ping the charges under it (${c.whale.bargeHits}/2)`,
+      joined: 'JOINED ✓',
+    }[c.whale.step];
+    const e = {
+      parley: 'parley with both crowned elders (a gentle ping, up close)',
+      fragments: `find the torn Eel Pie Charter (${c.eel.fragments}/3)`,
+      restore: 'return the charter to both elders',
+      joined: 'JOINED ✓',
+    }[c.eel.step];
+    const r = {
+      chest: this.tools.has('grapple')
+        ? 'raise the East India strongbox'
+        : 'craft the grapple (hook + rope), then raise the strongbox',
+      decide: `rubies: ${c.ruby.held} held · ${c.ruby.returned}/3 returned · decide at the bell`,
+      joined: 'JOINED ✓',
+    }[c.ruby.step];
+    const rows = [
+      { icon: '🐋', text: `Whale ghosts — ${w}` },
+      { icon: '⚡', text: `Eel tribes — ${e}` },
+      { icon: '🦭', text: `The river — ${r}` },
+    ];
+    if (c.stage === 'finale') {
+      rows.push({ icon: '🟤', text: `THE RISING — herd the bergs with your sonar: ${c.finale.penned}/${c.finale.bergs.length} penned in Blight Corner` });
+    }
+    if (c.stage === 'won') rows.push({ icon: '🎆', text: 'The bergs are beaten. The end.' });
+    return { title: 'THE COALITION', seats: `${c.seats()}/3 seats`, rows };
   }
 
   _collectStrongbox(s) {
@@ -1725,6 +1817,16 @@ export class WaterworldGame {
   _stepCampaign(dt) {
     const c = this.campaign;
     if (c.stage === 'dormant') return;
+    // whispers: the world introduces its own story sites
+    for (const wh of this._whispers || []) {
+      if (wh.done) continue;
+      const p = wh.at();
+      if (p && p.distanceTo(this.pos) < wh.r) {
+        wh.done = true;
+        this.ui.toast(wh.text, 'hint');
+        this.ui.announce(wh.text.replace(/^[^ ]+ /, ''));
+      }
+    }
     // the ghosts' bones: swim close to gather
     if (c.whale.step === 'bones') {
       for (const b of this.bones) {

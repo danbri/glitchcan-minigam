@@ -68,6 +68,41 @@ try {
   if (brushed) pass('brush gesture set an explore course');
   else fail('brush gesture ignored');
 
+  // drag steering: incremental nudges set a live course
+  const dragged = await page.evaluate(() => {
+    const g = window.__waterworld.game;
+    const y0 = g._explore ? g._explore.yaw : g.yaw;
+    g.steerDrag(0.15, 0.05);
+    g.steerDrag(0.15, 0.05);
+    return { moved: Math.abs(g._explore.yaw - y0) > 0.5, live: g._explore.until > g.elapsed };
+  });
+  if (dragged.moved && dragged.live) pass('drag steering nudges the course incrementally');
+  else fail('steerDrag broken: ' + JSON.stringify(dragged));
+
+  // hold station: the brake kills way
+  const braked = await page.evaluate(async () => {
+    const g = window.__waterworld.game;
+    g.vel.set(10, 0, 0);
+    g.setBrake(true);
+    await new Promise(r => setTimeout(r, 700));
+    const v = g.vel.length();
+    g.setBrake(false);
+    return v;
+  });
+  if (braked < 4) pass(`brake holds station (speed 10 → ${braked.toFixed(1)})`);
+  else fail(`brake weak: speed still ${braked.toFixed(1)}`);
+
+  // the coalition board opens from the goal banner
+  await page.evaluate(() => document.getElementById('objective')
+    .dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+  const board = await page.evaluate(() => ({
+    shown: document.getElementById('board-panel').classList.contains('show'),
+    rows: document.querySelectorAll('#board-list li').length,
+  }));
+  if (board.shown && board.rows >= 1) pass(`coalition board opens from the banner (${board.rows} rows)`);
+  else fail('board broken: ' + JSON.stringify(board));
+  await page.click('#board-close');
+
   // the detailed boat: animated parts must exist
   const subParts = await page.evaluate(() => {
     const ud = window.__waterworld.game.sub.userData;

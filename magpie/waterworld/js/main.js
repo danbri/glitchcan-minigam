@@ -107,7 +107,7 @@ function flash(cls) {
 
 function announce(text) { window.__mgA11y?.announce?.(text); }
 
-let lastHull, lastScore, lastObjText;
+let lastHull, lastScore, lastObjText, lastDepth;
 function hud(s) {
   // the guide banner: what to do, which way, how far
   $('objective').style.display = s.obj && !s.over ? '' : 'none';
@@ -130,7 +130,10 @@ function hud(s) {
   $('air-fill').classList.toggle('low', s.air < 0.25);
   $('hull').textContent = '▮'.repeat(Math.max(0, s.hull)) + '▯'.repeat(Math.max(0, s.hullMax - s.hull));
   $('score').textContent = String(s.score).padStart(5, '0');
-  $('depth').textContent = s.depth + 'm';
+  // depth with a live climb/dive marker — swipe feedback you can read
+  const dTrend = lastDepth === undefined ? '' : s.depth < lastDepth - 0.4 ? '▲' : s.depth > lastDepth + 0.4 ? '▼' : '';
+  lastDepth = s.depth;
+  $('depth').textContent = s.depth + 'm' + dTrend;
   $('cargo').textContent = s.cargo
     ? `⚓${s.cargo} ×${s.haulMult.toFixed(2)}${s.combo >= 2 ? ` 🔥${s.combo}` : ''}`
     : '⚓—';
@@ -228,7 +231,7 @@ function setAction(action, down, fromRepeat) {
     releaseTimers[action] = setTimeout(() => game.setKey(action, false), fromRepeat ? 350 : 900);
   } else clearTimeout(releaseTimers[action]);
 }
-const PANELS = ['help-panel', 'log-panel', 'map-panel', 'choice-panel'];
+const PANELS = ['help-panel', 'log-panel', 'map-panel', 'choice-panel', 'board-panel'];
 function closeTopPanel() {
   for (const id of PANELS) {
     const p = $(id);
@@ -257,37 +260,65 @@ document.addEventListener('keyup', (e) => {
 // canvas is ours even when the host owns the pad.
 {
   const sceneEl = $('scene');
+  const dragArrow = $('drag-arrow');
   let gesture = null;
+  let brakeTimer = null;
   sceneEl.addEventListener('pointerdown', (e) => {
     if (!started) return;
-    gesture = { x0: e.clientX, y0: e.clientY, t0: performance.now(), moved: false, last: 0 };
+    gesture = { x0: e.clientX, y0: e.clientY, lastX: e.clientX, lastY: e.clientY,
+      t0: performance.now(), moved: false, braking: false };
+    // press and HOLD without moving = hold station (the brake)
+    brakeTimer = setTimeout(() => {
+      if (gesture && !gesture.moved && game) {
+        gesture.braking = true;
+        audio.ensure();
+        game.setBrake(true);
+      }
+    }, 380);
   });
   sceneEl.addEventListener('pointermove', (e) => {
     if (!gesture || !game) return;
-    const dx = e.clientX - gesture.x0, dy = e.clientY - gesture.y0;
-    if (Math.hypot(dx, dy) > 24) {
+    const total = Math.hypot(e.clientX - gesture.x0, e.clientY - gesture.y0);
+    if (!gesture.moved && total > 14) {
       gesture.moved = true;
-      const now = performance.now();
-      if (now - gesture.last > 160) {
-        gesture.last = now;
-        audio.ensure();
-        game.brush(dx / window.innerWidth, dy / window.innerHeight);
-      }
+      clearTimeout(brakeTimer);
+      if (gesture.braking) { gesture.braking = false; game.setBrake(false); }
+      audio.ensure();
+    }
+    if (gesture.moved) {
+      // incremental: each move nudges the nose by the step since last
+      game.steerDrag(
+        (e.clientX - gesture.lastX) / window.innerWidth,
+        (e.clientY - gesture.lastY) / window.innerHeight);
+      gesture.lastX = e.clientX;
+      gesture.lastY = e.clientY;
+      // show the command: an arrow from where the drag began
+      const dx = e.clientX - gesture.x0, dy = e.clientY - gesture.y0;
+      dragArrow.style.display = 'block';
+      dragArrow.style.left = gesture.x0 + 'px';
+      dragArrow.style.top = gesture.y0 + 'px';
+      dragArrow.style.transform =
+        `translate(-50%,-50%) rotate(${Math.atan2(dy, dx) * 180 / Math.PI}deg)`;
+      dragArrow.style.width = Math.min(120, Math.hypot(dx, dy)) + 'px';
     }
   });
   let lastTapAt = 0;
-  const endGesture = (e) => {
-    if (gesture && game && !gesture.moved && performance.now() - gesture.t0 < 400) {
+  const endGesture = () => {
+    clearTimeout(brakeTimer);
+    dragArrow.style.display = 'none';
+    if (!gesture) return;
+    if (gesture.braking && game) game.setBrake(false);
+    else if (game && !gesture.moved && performance.now() - gesture.t0 < 380) {
       audio.ensure();
       const now = performance.now();
-      if (now - lastTapAt < 320) game.dash();   // double-tap = DASH
+      if (now - lastTapAt < 300) game.dash();   // double-tap = DASH
       else game._doPing();                      // a tap is a ping
       lastTapAt = now;
     }
     gesture = null;
   };
   sceneEl.addEventListener('pointerup', endGesture);
-  sceneEl.addEventListener('pointercancel', () => { gesture = null; });
+  sceneEl.addEventListener('pointercancel', endGesture);
 }
 
 // Own touch pad (standalone only — the shell provides one and tells us).
@@ -341,7 +372,7 @@ function startGame() {
   game.start();
   announce('Dive started. Brush the water to steer, tap to ping the sonar.');
   setTimeout(() => {
-    if (game && !game.over) hint('Brush to steer · tap ？ for help');
+    if (game && !game.over) hint('Drag to steer · hold still to brake · tap ？ for help');
   }, 2500);
 }
 
@@ -378,7 +409,7 @@ $('end-again').addEventListener('click', () => location.reload());
 window.addEventListener('resize', () => game?.resize());
 
 // keyboard operability: Enter/Space on any chip fires its pointer handler
-for (const el of document.querySelectorAll('.chip, #bank-btn, #pad-toggle')) {
+for (const el of document.querySelectorAll('.chip, #bank-btn, #pad-toggle, #objective')) {
   el.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -529,6 +560,39 @@ $('map-close').addEventListener('click', () => {
   $('map-panel').classList.remove('show');
   $('map-btn').setAttribute('aria-expanded', 'false');
   if (mapTimer) { clearInterval(mapTimer); mapTimer = null; }
+});
+
+// The Coalition board: tap the goal banner and the story lays itself
+// out — every arc, its current step, the seats filled. Discovery
+// without a walkthrough.
+function renderBoard() {
+  if (!game) return;
+  const b = game.boardState();
+  $('board-title').textContent = `🤝 ${b.title}${b.seats ? ' — ' + b.seats : ''}`;
+  const list = $('board-list');
+  list.replaceChildren();
+  for (const r of b.rows) {
+    const li = document.createElement('li');
+    li.textContent = `${r.icon} ${r.text}`;
+    if (/JOINED|The end/.test(r.text)) li.className = 'done';
+    list.appendChild(li);
+  }
+}
+let boardTimer = null;
+$('objective').addEventListener('pointerdown', (e) => {
+  e.stopPropagation();
+  const panel = $('board-panel');
+  const opening = !panel.classList.contains('show');
+  panel.classList.toggle('show', opening);
+  if (opening) {
+    renderBoard();
+    boardTimer = setInterval(renderBoard, 500);
+    announce('Coalition board open.');
+  } else if (boardTimer) { clearInterval(boardTimer); boardTimer = null; }
+});
+$('board-close').addEventListener('click', () => {
+  $('board-panel').classList.remove('show');
+  if (boardTimer) { clearInterval(boardTimer); boardTimer = null; }
 });
 
 // canvas a11y: name it and keep a live description of the dive
