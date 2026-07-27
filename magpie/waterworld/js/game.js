@@ -11,6 +11,7 @@ import {
   makeGhostWhale, makeSeal, makeDuck, BOUNDS, SHELF_Y, DEEP_Y, floorYAt, tint,
 } from './world.js';
 import { UnderwaterFX, glowSprite, currentAt } from './fx.js';
+import { Composite } from './post.js';
 import { FACTS, QUEST_ITEMS, TOOLS, HINTS } from './facts.js';
 
 const AIR_MAX = 100;
@@ -109,6 +110,10 @@ export class WaterworldGame {
     const sun = new THREE.DirectionalLight(0xbbe6ff, 1.0);
     sun.position.set(20, 80, 10);
     this.scene.add(sun);
+    this._sunDir = sun.position.clone().normalize();
+
+    // the compositing pass: crepuscular rays, absorption, grade, grain
+    this.post = new Composite(this.renderer, this.scene, this.camera, { lite: this.lite });
 
     this.dock = buildDock(this.scene);
 
@@ -186,6 +191,7 @@ export class WaterworldGame {
     // pixelated look is retired)
     const w = this.canvas.clientWidth || 480, h = this.canvas.clientHeight || 270;
     this.renderer.setSize(w, h, false);
+    this.post?.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   }
@@ -801,6 +807,16 @@ export class WaterworldGame {
     if (!this.tools.has('arclamp')) this.headlamp.intensity = 40;
     this.lightCone.material.opacity = this.ir ? 0
       : (this.tools.has('arclamp') ? 0.13 : 0.06);
+    this._deepT = this.ir ? 0 : Math.min(1, Math.max(0, (depth - 25) / 40));
+
+    // shader clocks: the caustic webs and the living surface
+    const floorShader = this.dock.floor.material.userData.shader;
+    if (floorShader) floorShader.uniforms.uTime.value = this.elapsed;
+    const surf = this.dock.surface.material;
+    if (surf.uniforms) {
+      surf.uniforms.uTime.value = this.elapsed;
+      surf.uniforms.uCam.value.copy(this.camera.position);
+    }
 
     // -------- the living water
     const threats = [this.pos, ...this.eels.map(e => e.pos)];
@@ -1260,7 +1276,14 @@ export class WaterworldGame {
 
   // ------------------------------------------------------------- loop
   render() {
-    this.renderer.render(this.scene, this.camera);
+    if (this.post) {
+      const camDepth = -this.camera.position.y;
+      const rayAmt = Math.max(0, Math.min(1, 1 - (camDepth - 10) / 34));
+      this.post.render(this.elapsed, this._sunDir,
+        { deep: this._deepT || 0, ir: this.ir, rayAmt });
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 
   _frame(t) {

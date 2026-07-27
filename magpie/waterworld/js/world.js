@@ -384,6 +384,63 @@ export function floorYAt(x, z) {
   return y;
 }
 
+// The surface, seen from below: an animated fragment shader — layered
+// travelling waves, a bright sun patch, distance fade. The ceiling of
+// the whole world, and it moves.
+export function makeWaterSurface(scene) {
+  const geo = new THREE.PlaneGeometry(
+    (BOUNDS.maxX - BOUNDS.minX) * 1.4, (BOUNDS.maxZ - BOUNDS.minZ) * 1.8, 1, 1);
+  geo.rotateX(Math.PI / 2);          // face DOWN at the player
+  const mat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    uniforms: {
+      uTime: { value: 0 },
+      uCam: { value: new THREE.Vector3() },
+      uSunDir: { value: new THREE.Vector3(0.24, 0.94, 0.12) },
+    },
+    vertexShader: /* glsl */`
+      varying vec3 vW;
+      void main() {
+        vW = (modelMatrix * vec4(position, 1.0)).xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: /* glsl */`
+      precision highp float;
+      varying vec3 vW;
+      uniform float uTime;
+      uniform vec3 uCam;
+      uniform vec3 uSunDir;
+      void main() {
+        vec2 p = vW.xz;
+        float t = uTime;
+        // layered travelling waves — cheap, endless, never tiles
+        float w = 0.0;
+        w += sin(p.x * 0.055 + t * 0.9 + sin(p.y * 0.083 - t * 0.6));
+        w += sin(p.y * 0.071 - t * 0.7 + sin(p.x * 0.047 + t * 0.8)) * 0.8;
+        w += sin((p.x + p.y) * 0.031 + t * 0.5) * 0.6;
+        w += sin(length(p) * 0.09 - t * 1.1) * 0.3;
+        float shimmer = 0.5 + w * 0.18;
+        // the sun through the surface: a soft bright patch
+        vec3 toCam = normalize(uCam - vW);
+        vec2 sunXZ = uCam.xz + uSunDir.xz / max(uSunDir.y, 0.05) * (-uCam.y);
+        float sun = exp(-length(p - sunXZ) * 0.012);
+        vec3 col = mix(vec3(0.15, 0.42, 0.62), vec3(0.75, 0.92, 1.0), shimmer * 0.5);
+        col += vec3(1.0, 0.95, 0.8) * sun * (0.9 + 0.25 * w);
+        // fade with distance so the plane never shows an edge
+        float dist = length(vW - uCam);
+        float a = clamp(1.4 - dist / 160.0, 0.0, 1.0) * 0.85;
+        gl_FragColor = vec4(col, a);
+      }`,
+  });
+  const m = new THREE.Mesh(geo, mat);
+  m.position.y = -0.3;
+  m.renderOrder = 2;
+  scene.add(m);
+  return m;
+}
+
 function makeFloor(scene) {
   const geo = new THREE.PlaneGeometry(
     BOUNDS.maxX - BOUNDS.minX, BOUNDS.maxZ - BOUNDS.minZ, 48, 32);
@@ -402,8 +459,30 @@ function makeFloor(scene) {
   }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   geo.computeVertexNormals();
-  const m = new THREE.Mesh(geo,
-    new THREE.MeshLambertMaterial({ vertexColors: true }));
+  // caustics live IN the floor's fragment shader: animated light webs
+  // dancing on the silt, fading out with depth (sunlight runs out)
+  const floorMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  floorMat.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = { value: 0 };
+    floorMat.userData.shader = shader;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;')
+      .replace('#include <begin_vertex>',
+        '#include <begin_vertex>\nvWPos = (modelMatrix * vec4(position, 1.0)).xyz;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nuniform float uTime;')
+      .replace('#include <emissivemap_fragment>', /* glsl */`#include <emissivemap_fragment>
+        {
+          vec2 cp = vWPos.xz * 0.16;
+          float ct = uTime * 0.55;
+          float c1 = sin(cp.x + ct + sin(cp.y * 1.31 - ct * 0.73));
+          float c2 = sin(cp.y - ct * 0.82 + sin(cp.x * 1.72 + ct));
+          float web = pow(max(0.0, c1 * c2), 3.0);
+          float sunFade = clamp(1.0 - (-vWPos.y - 34.0) / 28.0, 0.0, 1.0);
+          totalEmissiveRadiance += vec3(0.30, 0.55, 0.62) * web * sunFade * 0.75;
+        }`);
+  };
+  const m = new THREE.Mesh(geo, floorMat);
   scene.add(m);
   return m;
 }
@@ -547,7 +626,8 @@ export function makeWeeds(scene, count = 110) {
 
 // The whole static set. Returns collider list for the physics step.
 export function buildDock(scene) {
-  makeFloor(scene);
+  const floor = makeFloor(scene);
+  const surface = makeWaterSurface(scene);
   const quay = makeQuayWalls(scene);
   const culverts = makeCulverts(scene);
   const crane = makeCrane(scene);
@@ -570,7 +650,7 @@ export function buildDock(scene) {
     { x: -40, y: SHELF_Y + 4, z: 30, r: 10 },    // barge
     { x: 85, y: DEEP_Y + 6, z: -30, r: 11 },     // warehouse
   ];
-  return { culverts, crane, barge, warehouse, bell, weeds, colliders };
+  return { culverts, crane, barge, warehouse, bell, weeds, colliders, floor, surface };
 }
 
 // ---------------------------------------------------------------- particles

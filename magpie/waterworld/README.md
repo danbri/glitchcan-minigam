@@ -5,8 +5,12 @@ Submarine salvage adventure in a flooded former London dock.
 officially retired):** smooth deep-sea bioluminescence — full-resolution
 antialiased rendering (ACES tone mapping), smooth-shaded organic forms
 (lathe-turned hull, blobby fatbergs, plump seal), soft round particles,
-god rays, emissive undertones per structure family. Vendored three.js
-r169, procedural lo-fi WebAudio, no external assets.
+god rays, emissive undertones per structure family — and a shader
+compositing pass (`js/post.js`): screen-space crepuscular rays,
+depth-based water absorption, teal grade, vignette, breathing light and
+fine grain, plus an animated water-surface shader overhead and GPU
+caustic webs dancing on the shallow floor. Vendored three.js r169,
+procedural lo-fi WebAudio, no external assets.
 
 ## The loop
 
