@@ -70,6 +70,12 @@ export const FACTS = {
     value: 50,
     text: 'The 2017 Whitechapel fatberg was 250 metres long and weighed about 130 tonnes. A chunk of it went on display at the Museum of London.',
   },
+  seal_visit: {
+    name: 'Thames seal',
+    icon: '🦭',
+    value: 0,
+    text: 'Harbour and grey seals really do live in the Thames — conservationists count hundreds in the annual seal survey.',
+  },
   captains_chest: {
     name: 'Captain’s chest',
     icon: '🏴‍☠️',

@@ -87,27 +87,163 @@ export function crunch(geo, step = 0.5) {
 }
 
 // ---------------------------------------------------------------- the sub
+// The captain's boat deserves the detail budget: riveted plating,
+// glowing portholes, proper red/green running lights, dive planes and a
+// rudder that really deflect, twin counter-rotating props, a blinking
+// masthead beacon and a nameplate. Procedural greebles — every hull is
+// subtly its own.
+function nameplateTexture(text) {
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 32;
+  const g = c.getContext('2d');
+  g.fillStyle = '#1d2b53';
+  g.fillRect(0, 0, 128, 32);
+  g.strokeStyle = '#ffec27'; g.lineWidth = 3;
+  g.strokeRect(2, 2, 124, 28);
+  g.fillStyle = '#ffec27';
+  g.font = 'bold 17px monospace';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, 64, 17);
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = THREE.NearestFilter;
+  return t;
+}
+
 export function makeSub() {
   const g = new THREE.Group();
+  // hull: main pressure vessel, tapered nose, keel strake
   const hull = box(g, 3.6, 1.6, 1.8, P8.orange);
   hull.name = 'hull';
-  box(g, 1.2, 1.2, 1.4, P8.orange, 2.1, 0, 0);          // nose
-  box(g, 0.9, 0.9, 0.9, P8.yellow, 2.75, 0, 0);          // nose tip
-  box(g, 1.4, 1.0, 1.0, P8.yellow, -0.2, 1.2, 0);        // conning tower
-  box(g, 0.35, 0.7, 0.1, P8.grey, 0.3, 1.9, 0);          // periscope
-  box(g, 1.0, 0.15, 2.8, P8.brown, -1.4, 0.2, 0);        // stern planes
-  box(g, 0.15, 1.8, 0.8, P8.brown, -1.7, 0.4, 0);        // rudder
-  const propG = new THREE.Group();
-  propG.position.set(-2.1, 0, 0);
-  const b1 = box(propG, 0.12, 1.6, 0.4, P8.grey);
-  b1.rotation.x = 0.4;
-  const b2 = box(propG, 0.12, 0.4, 1.6, P8.grey);
-  b2.rotation.x = 0.4;
-  g.add(propG);
-  g.userData.prop = propG;
-  // porthole eyes: two bright dots so the sub reads at distance
-  box(g, 0.15, 0.4, 0.4, P8.blue, 2.35, 0.25, 0.55);
-  box(g, 0.15, 0.4, 0.4, P8.blue, 2.35, 0.25, -0.55);
+  box(g, 1.2, 1.3, 1.5, P8.orange, 2.1, 0, 0);           // fore section
+  box(g, 0.9, 0.95, 1.05, P8.yellow, 2.8, 0, 0);         // nose cap
+  box(g, 0.45, 0.5, 0.55, P8.orange, 3.35, 0, 0);        // bow tip
+  box(g, 3.4, 0.35, 0.5, P8.brown, 0.1, -0.95, 0);       // keel
+  box(g, 1.1, 1.0, 1.5, P8.orange, -2.0, 0, 0);          // stern taper
+  // conning tower with glowing bridge windows and rail
+  box(g, 1.5, 1.05, 1.05, P8.yellow, -0.2, 1.25, 0);
+  box(g, 0.9, 0.35, 0.9, P8.orange, -0.2, 1.9, 0);
+  const bridgeGlass = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.95),
+    mat(P8.blue, { emissive: 0x1155aa }));
+  bridgeGlass.position.set(0.45, 1.3, 0);
+  g.add(bridgeGlass);
+  for (const zz of [-0.45, 0.45]) {                       // tower rail
+    box(g, 1.3, 0.06, 0.06, P8.grey, -0.2, 2.15, zz);
+  }
+  // periscope + antenna + masthead beacon (blinks, wired by game)
+  box(g, 0.12, 0.9, 0.12, P8.grey, 0.15, 2.55, 0);
+  box(g, 0.3, 0.1, 0.1, P8.grey, 0.28, 2.9, 0);
+  box(g, 0.06, 1.1, 0.06, P8.grey, -0.55, 2.6, 0);
+  const beacon = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.18),
+    mat(P8.yellow, { emissive: 0xaa8800 }));
+  beacon.position.set(-0.55, 3.2, 0);
+  g.add(beacon);
+  g.userData.beacon = beacon;
+  // running lights, the real convention: green starboard, red port
+  const stbd = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.14),
+    mat(P8.lime, { emissive: 0x007722 }));
+  stbd.position.set(1.2, 0.5, -0.98);
+  const port = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.14),
+    mat(P8.red, { emissive: 0x770011 }));
+  port.position.set(1.2, 0.5, 0.98);
+  g.add(stbd, port);
+  // glowing portholes down both flanks
+  for (let i = 0; i < 4; i++) {
+    for (const zz of [0.92, -0.92]) {
+      const ph = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.08),
+        mat(P8.blue, { emissive: 0x0d4488 }));
+      ph.position.set(1.6 - i * 1.0, 0.15, zz);
+      g.add(ph);
+    }
+  }
+  // headlamp housing on the nose
+  box(g, 0.3, 0.45, 0.7, P8.dusk, 3.0, 0.45, 0);
+  // dive planes (fore) + stern planes: animated with pitch
+  const planes = new THREE.Group();
+  const pf1 = box(planes, 0.9, 0.1, 1.6, P8.brown, 2.0, -0.2, 0);
+  planes.userData = {};
+  g.add(planes);
+  const sternPlanes = new THREE.Group();
+  box(sternPlanes, 1.0, 0.12, 3.0, P8.brown, 0, 0, 0);
+  box(sternPlanes, 0.5, 0.1, 0.5, P8.yellow, 0, 0, 1.55);   // wingtips
+  box(sternPlanes, 0.5, 0.1, 0.5, P8.yellow, 0, 0, -1.55);
+  sternPlanes.position.set(-1.5, 0.15, 0);
+  g.add(sternPlanes);
+  g.userData.planes = sternPlanes;
+  g.userData.forePlanes = planes;
+  // rudder: animated with the helm
+  const rudder = new THREE.Group();
+  box(rudder, 0.9, 1.9, 0.14, P8.brown, -0.35, 0.35, 0);
+  box(rudder, 0.4, 0.4, 0.1, P8.yellow, -0.6, 1.2, 0);
+  rudder.position.set(-2.4, 0.3, 0);
+  g.add(rudder);
+  g.userData.rudder = rudder;
+  // twin counter-rotating props in a ring guard
+  const mkProp = (z) => {
+    const p = new THREE.Group();
+    p.position.set(-2.65, -0.1, z);
+    const b1 = box(p, 0.1, 1.1, 0.3, P8.grey); b1.rotation.x = 0.5;
+    const b2 = box(p, 0.1, 0.3, 1.1, P8.grey); b2.rotation.x = 0.5;
+    g.add(p);
+    return p;
+  };
+  g.userData.prop = mkProp(0.45);
+  g.userData.prop2 = mkProp(-0.45);
+  // nameplate, both sides
+  for (const [zz, ry] of [[0.95, 0], [-0.95, Math.PI]]) {
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.4),
+      new THREE.MeshBasicMaterial({ map: nameplateTexture('🐥 GC-01'), transparent: false }));
+    plate.position.set(-0.6, 0.55, zz + (zz > 0 ? 0.001 : -0.001));
+    plate.rotation.y = ry;
+    plate.userData.noNeon = true;
+    g.add(plate);
+  }
+  // procedural greebling: rivet strips, patch plates, weld seams —
+  // no two boats quite alike
+  for (let i = 0; i < 26; i++) {
+    const s = 0.08 + Math.random() * 0.1;
+    const r = box(g, s, s, 0.06,
+      Math.random() > 0.3 ? P8.brown : P8.dusk,
+      -1.6 + Math.random() * 3.4,
+      -0.6 + Math.random() * 1.2,
+      (Math.random() > 0.5 ? 0.91 : -0.91));
+    r.userData.noNeon = true;
+  }
+  for (let i = 0; i < 5; i++) {                           // patch plates
+    box(g, 0.5 + Math.random() * 0.4, 0.4 + Math.random() * 0.3, 0.05,
+      Math.random() > 0.5 ? P8.brown : P8.orange,
+      -1.5 + Math.random() * 3, -0.4 + Math.random() * 0.9,
+      Math.random() > 0.5 ? 0.93 : -0.93);
+  }
+  return g;
+}
+
+// A curious Thames seal — pure delight, zero threat.
+export function makeSeal() {
+  const g = new THREE.Group();
+  box(g, 1.8, 0.9, 0.9, P8.dusk, 0, 0, 0);               // body
+  box(g, 0.9, 0.7, 0.7, P8.dusk, 1.2, 0.15, 0);          // chest
+  box(g, 0.65, 0.6, 0.6, P8.grey, 1.85, 0.3, 0);         // head
+  box(g, 0.2, 0.2, 0.5, P8.grey, 2.2, 0.15, 0);          // muzzle
+  box(g, 0.1, 0.1, 0.1, P8.black, 2.35, 0.25, 0);        // nose
+  box(g, 0.12, 0.12, 0.12, P8.black, 2.0, 0.45, 0.22);   // eyes
+  box(g, 0.12, 0.12, 0.12, P8.black, 2.0, 0.45, -0.22);
+  box(g, 0.5, 0.1, 0.7, P8.grey, 0.6, -0.4, 0.5).rotation.z = 0.4;   // flippers
+  box(g, 0.5, 0.1, 0.7, P8.grey, 0.6, -0.4, -0.5).rotation.z = 0.4;
+  const tail = box(g, 0.7, 0.5, 0.8, P8.dusk, -1.1, 0.05, 0);
+  box(g, 0.4, 0.15, 1.1, P8.grey, -1.5, 0.05, 0);        // tail fluke
+  g.userData.tail = tail;
+  return g;
+}
+
+// The Glitch Canary itself. 🐥
+export function makeDuck() {
+  const g = new THREE.Group();
+  box(g, 1.1, 0.8, 0.9, P8.yellow, 0, 0, 0);             // body
+  box(g, 0.6, 0.6, 0.6, P8.yellow, 0.5, 0.6, 0);         // head
+  box(g, 0.35, 0.18, 0.3, P8.orange, 0.92, 0.5, 0);      // beak
+  box(g, 0.1, 0.1, 0.1, P8.black, 0.66, 0.75, 0.18);     // eyes
+  box(g, 0.1, 0.1, 0.1, P8.black, 0.66, 0.75, -0.18);
+  box(g, 0.5, 0.3, 0.1, P8.orange, -0.45, 0.15, 0).rotation.z = 0.5;  // tail tuft
   return g;
 }
 

@@ -42,7 +42,7 @@
   #hud {
     position: absolute; top: 0; left: 0; right: 0;
     display: flex; flex-wrap: wrap; align-items: center; gap: 0.5em 1em;
-    padding: max(0.4em, env(safe-area-inset-top)) 8rem 0.4em 0.7em;
+    padding: max(0.4em, env(safe-area-inset-top)) 13rem 0.4em 0.7em;
     font-size: clamp(11px, 2.4vmin, 16px);
     letter-spacing: 0.06em;
     color: #ffec27;
@@ -138,6 +138,21 @@
     min-width: 44px; min-height: 28px; cursor: pointer;
   }
   #log-btn.unread::after { content: '●'; color: #ffec27; margin-left: 0.25em; }
+  #auto-btn {
+    position: absolute;
+    top: max(0.4em, env(safe-area-inset-top));
+    right: 8.4rem;
+    z-index: 21;
+    font: inherit; font-size: clamp(10px, 2.2vmin, 13px); letter-spacing: 0.06em;
+    background: rgba(0,0,0,0.5); color: #5f574f;
+    border: 1px solid #5f574f; padding: 0.15em 0.5em;
+    min-width: 44px; min-height: 28px; cursor: pointer;
+  }
+  #auto-btn.on {
+    color: #00e436; border-color: #00e436;
+    box-shadow: 0 0 8px rgba(0,228,54,0.5);
+  }
+  #auto-btn:focus-visible { outline: 2px solid #29adff; outline-offset: 2px; }
   #log-btn:focus-visible { outline: 2px solid #ffec27; outline-offset: 2px; }
   #log-panel {
     position: absolute; inset: 3.6em 0.6em auto 0.6em;
@@ -282,6 +297,7 @@
   </div>
   <button id="ir-btn" type="button" aria-label="toggle thermal sight" aria-pressed="false">IR</button>
   <button id="log-btn" type="button" aria-label="ship's log" aria-expanded="false">📜</button>
+  <button id="auto-btn" type="button" aria-label="toggle autopilot" aria-pressed="true">⚓AUTO</button>
 
   <div id="objective" aria-hidden="true">
     <span id="obj-arrow">➤</span>
@@ -312,8 +328,9 @@
     <p>— DOCKLANDS DEEP —</p>
     <p>🫧 A sunny dive into a drowned London dock! Ping for treasure,
        tickle history out of the mud, and bring it home to the glowing bell.</p>
-    <p>➤ The glowing arrow always knows the way.<br>
-       ▲▼◀▶ steer &nbsp;·&nbsp; A thrust &nbsp;·&nbsp; B sonar &nbsp;·&nbsp; 📜 log &nbsp;·&nbsp; IR heat-vision</p>
+    <p>⚓ She sails herself, Captain — <strong>brush the water</strong> to set
+       a new course, <strong>tap</strong> to ping the sonar.<br>
+       Or take the helm: ▲▼◀▶ steer · A thrust · B sonar · 📜 log · IR heat</p>
     <p class="press">▶ TAP ANYWHERE TO DIVE ◀</p>
   </div>
 
