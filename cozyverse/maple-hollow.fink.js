@@ -12,13 +12,13 @@ VAR heard_song = false
 === train_arrives ===
 # VIDEO: R4ZGGJsho7I
 
-The train screeches in. Through frost-laced glass, Emma watches Maple Hollow surface from the snow—unchanged, impossibly so, after three years gone.
+The train brakes with a familiar screech.
 
-— As Aslan might say: "You cannot go back to the beginning, but you can start where you are."
+Beyond the frosted glass, Maple Hollow appears: the same clock above the station door, still five minutes slow.
 
-She hasn't been home since the night she left. Since Jake.
+Emma has not been back in three years. Not since Jake.
 
-The platform is empty. Steam rises off the engine like breath.
+Only one person waits on the platform.
 
 + [Step onto the platform, heart pounding]
     ~ warmth += 1
