@@ -40,6 +40,7 @@ Minigames and experiments, eventually for integration into story-based episodes.
 
 + [BoidWars] -> boidwars_selected
 + [GridLuck] -> gridluck_selected
++ [Waterworld] -> waterworld_selected
 + [Ukrainian Language] -> ukrainian_selected
 
 
@@ -171,6 +172,18 @@ Pac-Man style maze chase with treasures, power-ups, and zone exploration. Naviga
 
 + [Play GridLuck]
     # MINIGAME: gridluck
+    -> minigame_return
+
+=== waterworld_selected ===
+
+# IMAGE: glitchcan-grey-portrait-web.jpg
+
+Waterworld — Docklands Deep
+
+Pilot a submarine through a flooded London dock in picoCAD-style 3D. Sonar-ping the dark, salvage drowned history, dodge eels and rampant fatbergs, and follow the ghost whale to a pirate captain's chest.
+
++ [Play Waterworld]
+    # MINIGAME: waterworld
     -> minigame_return
 
 === minigame_return ===
