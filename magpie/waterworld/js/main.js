@@ -47,16 +47,35 @@ function renderLog() {
   if (!logEntries.length) list.innerHTML = '<li>Nothing logged yet — go find something!</li>';
 }
 
-function toast(text, cls = '') {
+// ONE toast at a time. Stacked translucent text was unreadable soup on a
+// phone; everything still lands in the log, so nothing is lost by being
+// brief. A visible fact card outranks routine toasts entirely.
+const toastQueue = [];
+let toastActive = false;
+function _nextToast() {
+  if (toastActive || !toastQueue.length) return;
+  const { text, cls } = toastQueue.shift();
+  if ($('fact').classList.contains('show') && cls !== 'bad' && cls !== 'gold') {
+    _nextToast();                       // routine news yields to the fact
+    return;
+  }
+  toastActive = true;
   const box = $('toasts');
   const t = document.createElement('div');
   t.className = 'toast ' + cls;
   t.textContent = text;
   box.appendChild(t);
-  while (box.children.length > 4) box.removeChild(box.firstChild);
-  const life = cls === 'hint' ? 8000 : 6000;
-  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 600); }, life);
+  const life = (cls === 'bad' || cls === 'gold') ? 4200 : cls === 'hint' ? 4800 : 3200;
+  setTimeout(() => {
+    t.classList.add('out');
+    setTimeout(() => { t.remove(); toastActive = false; _nextToast(); }, 450);
+  }, life);
+}
+function toast(text, cls = '') {
   addLog(text, cls);
+  toastQueue.push({ text, cls });
+  while (toastQueue.length > 3) toastQueue.shift();
+  _nextToast();
 }
 
 let factTimer = null;
@@ -66,9 +85,11 @@ function fact(title, text, icon) {
   $('fact-title').textContent = title;
   $('fact-text').textContent = text;
   f.classList.add('show');
+  $('toasts').replaceChildren();        // the fact is THE message right now
+  toastActive = false;
   if (factTimer) clearTimeout(factTimer);
-  // stays a good long while — and it's tappable away, never lost (see log)
-  factTimer = setTimeout(() => f.classList.remove('show'), 14000);
+  // long enough to read, tappable away, and always kept in the log
+  factTimer = setTimeout(() => { f.classList.remove('show'); _nextToast(); }, 9000);
   addLog(`${icon || '📜'} ${title} — ${text}`, 'gold');
   announce(`${title}. ${text}`);
 }
@@ -280,7 +301,7 @@ function startGame() {
   game.start();
   announce('Dive started. Brush the water to steer, tap to ping the sonar.');
   setTimeout(() => {
-    if (game && !game.over) hint('Brush the water to steer her, Captain — tap ？ for everything else');
+    if (game && !game.over) hint('Brush to steer · tap ？ for help');
   }, 2500);
 }
 
@@ -341,6 +362,22 @@ $('help-btn').addEventListener('pointerdown', (e) => {
 $('help-close').addEventListener('click', () => {
   $('help-panel').classList.remove('show');
   $('help-btn').setAttribute('aria-expanded', 'false');
+});
+
+// Fullscreen: real where the platform allows it; on iPhone Safari the
+// only honest route is Add to Home Screen, so say so.
+$('fs-btn').addEventListener('pointerdown', async (e) => {
+  e.stopPropagation();
+  if (document.fullscreenElement) { document.exitFullscreen?.(); return; }
+  const el = document.documentElement;
+  const rq = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (rq) {
+    try { await rq.call(el); } catch (err) { /* denied — fine */ }
+  } else if (navigator.standalone) {
+    toast('Already fullscreen, Captain!', 'hint');
+  } else {
+    toast('📲 Share → Add to Home Screen = true fullscreen', 'hint');
+  }
 });
 
 // The captain's banking order — the ONE decision the helm never makes

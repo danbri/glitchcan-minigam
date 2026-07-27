@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#06122e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>Waterworld — Docklands Deep</title>
 <style>
   /* Art direction v2: smooth deep-sea. No scanlines, no pixelation, a
@@ -13,6 +19,8 @@
     width: 100%;
     height: 100dvh;
     overflow: hidden;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     background: #000;
     color: #fff1e8;
     font-family: ui-rounded, -apple-system, 'Segoe UI', system-ui, sans-serif;
@@ -26,41 +34,53 @@
     height: 100%;
   }
 
-  /* ------- HUD ------- */
-  #hud {
+  /* ------- HUD: two tight rows, never a column ------- */
+  #topbar {
     position: absolute; top: 0; left: 0; right: 0;
-    display: flex; flex-wrap: wrap; align-items: center; gap: 0.5em 1em;
-    padding: max(0.4em, env(safe-area-inset-top)) 17rem 0.4em 0.7em;
-    font-size: clamp(11px, 2.4vmin, 16px);
-    letter-spacing: 0.06em;
+    display: flex; flex-wrap: nowrap; align-items: center; gap: 0.5em;
+    padding: max(0.3em, env(safe-area-inset-top)) 0.5em 0.15em;
+    z-index: 20;
+  }
+  #hud {
+    display: flex; flex: 1 1 auto; min-width: 0;
+    align-items: center; gap: 0.5em;
+    font-size: clamp(10px, 2.9vw, 15px);
     color: #ffec27;
     text-shadow: 0 0 6px rgba(255,236,39,0.7), 1px 1px 0 #000;
-    z-index: 20;
     pointer-events: none;
   }
+  #hud2 {
+    position: absolute; top: calc(max(0.3em, env(safe-area-inset-top)) + 2.5em);
+    left: 0.6em; right: 0.6em;
+    display: flex; flex-wrap: nowrap; gap: 0.9em; overflow: hidden;
+    font-size: clamp(10px, 2.7vw, 13px);
+    letter-spacing: 0.05em;
+    color: #ffec27;
+    text-shadow: 0 0 5px rgba(255,236,39,0.6), 1px 1px 0 #000;
+    z-index: 20; pointer-events: none;
+    white-space: nowrap;
+  }
   #air-rail {
-    flex: 1 1 90px; max-width: 180px; height: 0.7em;
+    flex: 1 1 60px; max-width: 180px; height: 0.7em;
     border: 1px solid #29adff; background: rgba(29,43,83,0.6);
   }
   #air-fill { height: 100%; width: 100%; background: #29adff; transition: width 0.3s; }
   #air-fill.low { background: #ff004d; animation: blink 0.6s steps(2) infinite; }
   @keyframes blink { 50% { opacity: 0.35; } }
-  #hull { color: #ff77a8; }
+  #hull { color: #ff77a8; flex: 0 0 auto; }
   #inv { color: #ffccaa; }
-  /* the chip rail: every mode/panel control in one predictable place */
+  /* the chip rail rides IN the header row — icon-sized, never a wall */
   #chips {
-    position: absolute;
-    top: max(0.4em, env(safe-area-inset-top));
-    right: 0.5em;
-    display: flex; gap: 0.35em;
-    z-index: 21;
+    display: flex; gap: 0.3em;
+    margin-left: auto;
+    pointer-events: auto;
   }
   .chip {
-    font: inherit; font-size: clamp(11px, 2.4vmin, 14px); letter-spacing: 0.06em;
+    font: inherit; font-size: clamp(11px, 3vw, 14px);
     background: rgba(0,0,0,0.55); color: #83769c;
     border: 1px solid #83769c; border-radius: 0.4em;
-    padding: 0.15em 0.5em;
-    min-width: 44px; min-height: 32px; cursor: pointer;
+    padding: 0.1em 0.3em;
+    min-width: 38px; min-height: 30px; cursor: pointer;
   }
   .chip:focus-visible { outline: 2px solid #29adff; outline-offset: 2px; }
   #ir-btn.on {
@@ -75,7 +95,7 @@
 
   /* ------- objective banner: always on, always pointing ------- */
   #objective {
-    position: absolute; left: 50%; top: 5.6em;
+    position: absolute; left: 50%; top: 4.9em;
     transform: translateX(-50%);
     display: flex; align-items: center; gap: 0.5em;
     max-width: 94%;
@@ -101,7 +121,7 @@
 
   /* ------- toasts + facts ------- */
   #toasts {
-    position: absolute; left: 50%; top: 9.6em;
+    position: absolute; left: 50%; top: 8.4em;
     transform: translateX(-50%);
     display: flex; flex-direction: column; align-items: center; gap: 0.3em;
     z-index: 22; pointer-events: none;
@@ -229,7 +249,7 @@
   }
 
   #fact {
-    position: absolute; left: 50%; bottom: 24%;
+    position: absolute; left: 50%; bottom: 18%;
     transform: translate(-50%, 20px);
     width: min(92%, 30em);
     background: rgba(29,43,83,0.92);
@@ -328,21 +348,26 @@
 <div id="stage">
   <canvas id="scene"></canvas>
 
-  <div id="hud" aria-hidden="true">
-    <span>AIR</span><div id="air-rail"><div id="air-fill"></div></div>
-    <span id="hull">▮▮▮▮</span>
-    <span id="depth">0m</span>
-    <span id="cargo">⚓—</span>
-    <span id="score">00000</span>
-    <span id="codex">📖0/12</span>
-    <span id="inv">·</span>
+  <div id="topbar">
+    <div id="hud" aria-hidden="true">
+      <div id="air-rail"><div id="air-fill"></div></div>
+      <span id="hull">▮▮▮▮</span>
+    </div>
+    <div id="chips">
+      <button id="auto-btn" class="chip" type="button" aria-label="toggle autopilot" aria-pressed="true">⚓</button>
+      <button id="help-btn" class="chip" type="button" aria-label="how to play" aria-expanded="false">？</button>
+      <button id="log-btn" class="chip" type="button" aria-label="ship's log" aria-expanded="false">📜</button>
+      <button id="map-btn" class="chip" type="button" aria-label="sonar chart" aria-expanded="false">🗺</button>
+      <button id="ir-btn" class="chip" type="button" aria-label="toggle thermal sight" aria-pressed="false">IR</button>
+      <button id="fs-btn" class="chip" type="button" aria-label="fullscreen">⛶</button>
+    </div>
   </div>
-  <div id="chips">
-    <button id="auto-btn" class="chip" type="button" aria-label="toggle autopilot" aria-pressed="true">⚓AUTO</button>
-    <button id="help-btn" class="chip" type="button" aria-label="how to play" aria-expanded="false">？</button>
-    <button id="log-btn" class="chip" type="button" aria-label="ship's log" aria-expanded="false">📜</button>
-    <button id="map-btn" class="chip" type="button" aria-label="sonar chart" aria-expanded="false">🗺</button>
-    <button id="ir-btn" class="chip" type="button" aria-label="toggle thermal sight" aria-pressed="false">IR</button>
+  <div id="hud2" aria-hidden="true">
+    <span id="depth">0m</span>
+    <span id="score">00000</span>
+    <span id="cargo">⚓—</span>
+    <span id="codex">📖0/16</span>
+    <span id="inv">·</span>
   </div>
   <button id="bank-btn" type="button" aria-label="take the haul to the bell" hidden>🔔<span>BANK</span></button>
 
@@ -375,6 +400,7 @@
       <li><strong>📜</strong> — the ship's log keeps every fact and event of the dive.</li>
       <li>Swim into <strong>shiny things</strong> to collect them; the <strong>glowing bell</strong> banks cargo and refills air.</li>
       <li><strong>Pink glows are gear</strong> — two parts auto-craft a tool: grapple, arc lamp, fizz lance (hold B by a fatberg).</li>
+      <li><strong>⛶</strong> — fullscreen. On iPhone: Share → <em>Add to Home Screen</em> runs it truly fullscreen.</li>
       <li>Keyboard: WASD/arrows · Space thrust · Esc/X sonar · I thermal.</li>
     </ul>
   </div>
