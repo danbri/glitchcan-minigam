@@ -1,3 +1,5 @@
+only report to me in ASD-STE100 Simplified Technical English.
+
 # CLAUDE.md - Lucid SDF/CSG System
 
 Only report to me in ASD-STE100 Simplified Technical English.

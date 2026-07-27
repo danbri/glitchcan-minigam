@@ -1,3 +1,5 @@
+only report to me in ASD-STE100 Simplified Technical English.
+
 # CLAUDE.md - Guide for 🐥 Minigames
 
 Only report to me in ASD-STE100 Simplified Technical English.
