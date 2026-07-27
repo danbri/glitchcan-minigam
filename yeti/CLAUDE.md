@@ -1,5 +1,7 @@
 # CLAUDE.md - Yeti Bestiary
 
+Only report to me in ASD-STE100 Simplified Technical English.
+
 ## Core Principle: Zero Code Dependencies
 
 **CRITICAL**: Yeti has **zero code dependencies** with `lucid/*`.
