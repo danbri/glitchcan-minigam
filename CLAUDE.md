@@ -1,3 +1,5 @@
+only report to me in ASD-STE100 Simplified Technical English.
+
 # CLAUDE.md - Guide for 🐥 Minigames
 <!-- Rebuild trigger: 2025-10-22 14:30 UTC -->
 <!-- Major revision 2026-06-10: stripped stale 2025 changelogs, corrected facts per docs/fable-audit/, added Data Ethics rule -->

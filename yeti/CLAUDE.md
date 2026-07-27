@@ -1,3 +1,5 @@
+only report to me in ASD-STE100 Simplified Technical English.
+
 # CLAUDE.md - Yeti Bestiary
 
 ## Core Principle: Zero Code Dependencies
