@@ -4,7 +4,7 @@
 // (IR) systems. No gameplay state lives here; game.js asks, fx answers.
 
 import * as THREE from '../../../trees/vendor/three.module.min.js';
-import { BOUNDS, floorYAt } from './world.js';
+import { BOUNDS, floorYAt, softDot } from './world.js';
 
 // ---------------------------------------------------------------- textures
 function radialTexture(inner = 'rgba(255,255,255,1)', outer = 'rgba(255,255,255,0)') {
@@ -86,8 +86,9 @@ class School {
     this.geo = new THREE.BufferGeometry();
     this.geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
     this.mat = new THREE.PointsMaterial({
-      size, transparent: true, opacity: 0.95, depthWrite: false,
+      size: size * 1.6, transparent: true, opacity: 0.95, depthWrite: false,
       blending: THREE.AdditiveBlending, sizeAttenuation: true,
+      map: softDot(),
     });
     this.mat.color.setHSL(baseHue, 0.85, 0.62);
     this.points = new THREE.Points(this.geo, this.mat);
@@ -203,8 +204,9 @@ export class UnderwaterFX {
     pgeo.setAttribute('position', new THREE.BufferAttribute(pa, 3));
     pgeo.setAttribute('color', new THREE.BufferAttribute(pc, 3));
     this.plankton = new THREE.Points(pgeo, new THREE.PointsMaterial({
-      size: 0.42, vertexColors: true, transparent: true, opacity: 0.7,
+      size: 0.65, vertexColors: true, transparent: true, opacity: 0.7,
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+      map: softDot(),
     }));
     this.plankton.frustumCulled = false;
     scene.add(this.plankton);
@@ -249,8 +251,9 @@ export class UnderwaterFX {
     for (let i = 0; i < count; i++) fill(i, a);
     geo.setAttribute('position', new THREE.BufferAttribute(a, 3));
     const p = new THREE.Points(geo, new THREE.PointsMaterial({
-      color, size, transparent: true, opacity,
+      color, size: size * 1.5, transparent: true, opacity,
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+      map: softDot(),
     }));
     p.frustumCulled = false;
     this.scene.add(p);
@@ -345,7 +348,7 @@ export class UnderwaterFX {
     const bits = [];
     for (let i = 0; i < 36; i++) {
       const m = new THREE.Mesh(
-        new THREE.BoxGeometry(0.22, 0.22, 0.04),
+        new THREE.SphereGeometry(0.13, 8, 6),
         new THREE.MeshBasicMaterial({ color: colors[i % colors.length] }));
       m.position.copy(pos);
       m.userData.vel = new THREE.Vector3(

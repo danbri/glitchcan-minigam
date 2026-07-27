@@ -1,8 +1,12 @@
 # Waterworld — Docklands Deep 🫧
 
-Submarine salvage adventure in a flooded former London dock. picoCAD-style
-low-poly 3D (vendored three.js r169, PICO-8 palette, low-res pixelated
-render, flat shading), procedural lo-fi WebAudio, no external assets.
+Submarine salvage adventure in a flooded former London dock.
+**Art direction v2 (the original picoCAD/blocky constraints are
+officially retired):** smooth deep-sea bioluminescence — full-resolution
+antialiased rendering (ACES tone mapping), smooth-shaded organic forms
+(lathe-turned hull, blobby fatbergs, plump seal), soft round particles,
+god rays, emissive undertones per structure family. Vendored three.js
+r169, procedural lo-fi WebAudio, no external assets.
 
 ## The loop
 
@@ -30,9 +34,8 @@ Sonar also stuns eels up close and safely detonates mines at a distance.
 
 ## The living water (js/fx.js)
 
-The blocky bones wear a neon skin: structures are near-silhouettes traced
-in additive glowing edges (`neonize`), each family its own signature
-colour. One basin-wide gyre (`currentAt`) carries everything: three boid
+Each structure family keeps a signature colour as a faint emissive
+undertone (`tint`). One basin-wide gyre (`currentAt`) carries everything: three boid
 fish schools haunting the wrecks (shimmering hue-cycling point clouds),
 plankton, drifting debris, vent bubble columns, and the dust motes
 hanging in the **god rays** — slanted additive light shafts that fade
