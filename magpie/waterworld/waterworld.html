@@ -104,7 +104,7 @@
     background: rgba(10, 25, 60, 0.85);
     border: 2px solid #29adff;
     border-radius: 2em;
-    font-size: clamp(13px, 3.4vmin, 18px);
+    font-size: clamp(12px, 3vw, 15px);
     color: #fff1e8;
     text-shadow: 1px 1px 0 #000;
     box-shadow: 0 0 12px rgba(41,173,255,0.45);
@@ -148,6 +148,8 @@
   .toast.gold { border-color: #ffec27; color: #ffec27; }
   .toast.hint { border-color: #83769c; color: #c2c3c7; font-style: italic; }
   .toast.out { opacity: 0; }
+  .toast.tappable { pointer-events: auto; cursor: pointer; }
+  .toast.factoid { border-width: 2px; font-weight: 600; }
 
   /* ------- ship's log ------- */
   #log-btn { color: #29adff; border-color: #29adff; }
@@ -261,7 +263,7 @@
   #choice-options button:focus-visible { outline: 2px solid #ffec27; outline-offset: 2px; }
 
   /* when the end screen is up, the live UI stands down */
-  body.game-over #objective, body.game-over #toasts, body.game-over #fact,
+  body.game-over #objective, body.game-over #toasts,
   body.game-over #bank-btn, body.game-over #choice-panel, body.game-over #pad,
   body.game-over #pad-toggle { display: none !important; }
 
@@ -314,21 +316,6 @@
     100% { opacity: 0; }
   }
 
-  #fact {
-    position: absolute; left: 50%; bottom: 18%;
-    transform: translate(-50%, 20px);
-    width: min(92%, 30em);
-    background: rgba(29,43,83,0.92);
-    border: 2px solid #ffec27;
-    padding: 0.6em 0.9em;
-    z-index: 23;
-    opacity: 0; pointer-events: none;
-    transition: opacity 0.4s, transform 0.4s;
-  }
-  #fact.show { opacity: 1; transform: translate(-50%, 0); }
-  #fact-title { color: #ffec27; font-size: clamp(12px, 2.6vmin, 16px); letter-spacing: 0.1em; }
-  #fact-text { color: #fff1e8; font-size: clamp(11px, 2.4vmin, 15px); margin-top: 0.3em; line-height: 1.35; }
-  #fact-icon { float: right; font-size: 1.6em; margin-left: 0.4em; }
 
   /* ------- overlays ------- */
   .overlay {
@@ -508,12 +495,6 @@
   <div id="flash" aria-hidden="true"></div>
 
   <div id="toasts"></div>
-
-  <div id="fact" role="note">
-    <span id="fact-icon">📜</span>
-    <div id="fact-title"></div>
-    <div id="fact-text"></div>
-  </div>
 
   <div id="splash" class="overlay">
     <h2>WATERWORLD</h2>
