@@ -8,7 +8,7 @@ export const FACTS = {
     name: 'Clay pipe',
     icon: '🪈',
     value: 10,
-    text: 'Clay tobacco pipes are the mudlark’s commonest find — Victorians smoked them once or twice and tossed them in the river.',
+    text: 'Clay tobacco pipes are the mudlark’s commonest find — Londoners smoked and tossed them from Elizabethan times onward, three centuries of disposable pipes.',
   },
   green_bottle: {
     name: 'Green bottle',

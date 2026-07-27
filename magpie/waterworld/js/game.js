@@ -9,6 +9,7 @@ import {
   P8, mat, buildDock, makeSub, makeEelHead, makeEelSegment, makeFatberg,
   makeMine, makeSalvageMesh, makeQuestMesh, makeParticleCloud,
   makeGhostWhale, makeSeal, makeDuck, BOUNDS, SHELF_Y, DEEP_Y, floorYAt, tint,
+  softDot,
 } from './world.js';
 import { UnderwaterFX, glowSprite, currentAt } from './fx.js';
 import { Composite } from './post.js';
@@ -1234,20 +1235,33 @@ export class WaterworldGame {
     // thrust bubbles
     this._bubbleT -= dt;
     if ((this.keys.a || this._autoThrust) && this._bubbleT < 0 && !this.over) {
-      this._bubbleT = 0.1;
+      this._bubbleT = 0.07;
       if (Math.random() < 0.25) this.ui.audio?.bubble();
-      const b = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.25), mat(P8.white));
+      // beautiful bubbles: soft round camera-facing sprites that wobble
+      // up, swell gently and dissolve — never a cube again
+      const b = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: softDot(), color: 0xdff4ff, transparent: true, opacity: 0.7,
+        depthWrite: false,
+      }));
+      b.scale.setScalar(0.16 + Math.random() * 0.24);
       b.position.copy(this.pos).add(new THREE.Vector3(
-        -Math.cos(this.yaw) * 2.5, 0, Math.sin(this.yaw) * 2.5));
+        -Math.cos(this.yaw) * 2.8, -0.1 + Math.random() * 0.3,
+        Math.sin(this.yaw) * 2.8));
+      b.userData.irHot = false;
+      b.userData.drift = (Math.random() - 0.5) * 0.8;
       this.scene.add(b);
-      this.bubbles.push({ mesh: b, age: 0 });
+      this.bubbles.push({ mesh: b, age: 0, life: 1.8 + Math.random() });
     }
     for (let i = this.bubbles.length - 1; i >= 0; i--) {
       const b = this.bubbles[i];
       b.age += dt;
-      b.mesh.position.y += dt * (3 + b.age);
-      b.mesh.position.x += Math.sin(b.age * 7) * dt;
-      if (b.age > 2.5 || b.mesh.position.y > BOUNDS.surface) {
+      b.mesh.position.y += dt * (2.6 + b.age * 1.4);
+      b.mesh.position.x += Math.sin(b.age * 6 + b.mesh.userData.drift * 9) * dt * 0.7;
+      b.mesh.position.z += Math.cos(b.age * 5) * dt * b.mesh.userData.drift;
+      b.mesh.scale.multiplyScalar(1 + dt * 0.35);            // swell as it rises
+      b.mesh.material.opacity = 0.7 * Math.max(0, 1 - b.age / b.life);
+      if (b.age > b.life || b.mesh.position.y > BOUNDS.surface) {
+        b.mesh.material.dispose();
         this.scene.remove(b.mesh); this.bubbles.splice(i, 1);
       }
     }
