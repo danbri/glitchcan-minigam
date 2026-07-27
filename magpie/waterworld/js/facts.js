@@ -105,8 +105,10 @@ export const FACTS = {
 // Quest items — combine in pairs, adventure-style. Auto-crafts when you
 // hold both halves.
 export const QUEST_ITEMS = {
-  magnet: { name: 'Bar magnet', icon: '🧲', pairsWith: 'rope', makes: 'grapple' },
-  rope: { name: 'Tarred rope', icon: '🪢', pairsWith: 'magnet', makes: 'grapple' },
+  hook: { name: 'Boat hook', icon: '🪝', pairsWith: 'rope', makes: 'grapple' },
+  rope: { name: 'Tarred rope', icon: '🪢', pairsWith: 'hook', makes: 'grapple' },
+  magnet: { name: 'Bar magnet', icon: '🧲', pairsWith: 'coil', makes: 'loudspeaker' },
+  coil: { name: 'Dynamo coil', icon: '🌀', pairsWith: 'magnet', makes: 'loudspeaker' },
   lamp: { name: 'Arc lamp', icon: '🏮', pairsWith: 'battery', makes: 'arclamp' },
   battery: { name: 'Wet cell', icon: '🔋', pairsWith: 'lamp', makes: 'arclamp' },
   soda: { name: 'Soda crate', icon: '📦', pairsWith: 'nozzle', makes: 'fizzlance' },
@@ -115,8 +117,12 @@ export const QUEST_ITEMS = {
 
 export const TOOLS = {
   grapple: {
-    name: 'Magnet grapple', icon: '🪝',
-    text: 'Magnet + rope. Hauls heavy salvage — even a pirate chest — off the dock floor.',
+    name: 'Boat-hook grapple', icon: '🪝',
+    text: 'Hook + rope. Hauls heavy salvage — even a strongbox — off the dock floor.',
+  },
+  loudspeaker: {
+    name: 'Whale-song loudspeaker', icon: '🔊',
+    text: 'Magnet + dynamo coil: electricity and iron. Loud enough for a lament the dead can hear.',
   },
   arclamp: {
     name: 'Arc lamp', icon: '💡',

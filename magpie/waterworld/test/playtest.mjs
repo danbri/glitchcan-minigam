@@ -144,7 +144,9 @@ try {
   // reported drift glitch)
   const wobble = await page.evaluate(async () => {
     const g = window.__waterworld.game;
-    const s = g.salvage.find(s => !s.collected && !s.hidden && s.heavy);   // can't collect it
+    // the strongbox: heavy (uncollectable without grapple) AND in open
+    // water, away from collider-avoidance limit cycles
+    const s = g.salvage.find(s => s.type === 'captains_chest');
     window.__waterworld.teleport(s.mesh.position.x, s.mesh.position.y + 2, s.mesh.position.z);
     await new Promise(r => setTimeout(r, 1200));   // let the filter settle
     const yaws = [];
@@ -291,6 +293,52 @@ try {
   if (fish.schools >= 2 && fish.moved > 0.01) pass(`fish schools swirling (${fish.schools} schools)`);
   else fail(`boids inert: ${JSON.stringify(fish)}`);
 
+  // REACHABILITY: every quest item must be collectable — a rope inside
+  // wreck collision once made the game unwinnable (review finding)
+  const unreachable = await page.evaluate(async () => {
+    const g = window.__waterworld.game;
+    const bad = [];
+    for (const q of g.quest) {
+      if (q.taken) continue;
+      window.__waterworld.teleport(q.mesh.position.x, q.mesh.position.y + 1, q.mesh.position.z);
+      await new Promise(r => setTimeout(r, 350));
+      if (!q.taken) bad.push(q.id);
+    }
+    return bad;
+  });
+  if (!unreachable.length) pass('all quest items reachable (grapple, loudspeaker, lamp, lance)');
+  else fail('UNREACHABLE quest items: ' + unreachable.join(','));
+
+  // CAMPAIGN SMOKE: the story machine advances through the whale + eel arcs
+  const story = await page.evaluate(async () => {
+    const g = window.__waterworld.game;
+    const c = g.campaign;
+    c.begin();
+    const s0 = c.stage;
+    for (const b of g.bones) {
+      window.__waterworld.teleport(b.mesh.position.x, b.mesh.position.y + 1, b.mesh.position.z);
+      await new Promise(r => setTimeout(r, 350));
+    }
+    const afterBones = c.whale.step;
+    window.__waterworld.teleport(g.steelyard.position.x + 2, g.steelyard.position.y + 3, g.steelyard.position.z);
+    await new Promise(r => setTimeout(r, 400));
+    const afterBury = c.whale.step;
+    for (const el of g.elders) {
+      window.__waterworld.teleport(el.mesh.position.x + 3, el.mesh.position.y, el.mesh.position.z);
+      await new Promise(r => setTimeout(r, 250));
+      window.__waterworld.ping();
+      await new Promise(r => setTimeout(r, 1200));
+    }
+    return { s0, afterBones, afterBury, eelStep: c.eel.step, seats: c.seats() };
+  });
+  // afterBury is 'speaker' normally, or 'lament' when the reachability
+  // sweep above already auto-crafted the loudspeaker — both are legal
+  if (story.s0 === 'rising' && story.afterBones === 'bury'
+      && ['speaker', 'lament'].includes(story.afterBury)
+      && story.eelStep === 'fragments') {
+    pass(`campaign advances (whale: ${story.afterBury}, eels: ${story.eelStep})`);
+  } else fail('campaign machine stuck: ' + JSON.stringify(story));
+
   // the curious seal: spawn it and let it swim
   const seal = await page.evaluate(async () => {
     window.__waterworld.game._spawnSeal();
@@ -329,12 +377,35 @@ try {
     pass(`screenshot → ${SHOTDIR}/waterworld-play.png`);
   }
 
-  // win path: force the chest through banking, endcard must show
-  await page.evaluate(() => window.__waterworld.win());
-  await page.waitForSelector('#endcard.show', { timeout: 8000 });
-  const won = await page.evaluate(() => window.__waterworld.state().won);
-  if (won) pass('win path: endcard shown, state.won true');
-  else fail('win path broken');
+  // THE FINALE: coalition complete → berg armada → pen → SPARK → the end
+  const finale = await page.evaluate(async () => {
+    const g = window.__waterworld.game;
+    const c = g.campaign;
+    c.coalition.whales = true;
+    c.coalition.eels = true;
+    c.joinRiver();                       // third seat triggers the finale
+    await new Promise(r => setTimeout(r, 400));
+    const bergs = c.finale.bergs.length;
+    c.finale.bergs.forEach(b => { b.penned = true; });
+    const p = g.pylon.position;
+    window.__waterworld.teleport(p.x - 6, p.y + 8, p.z);
+    await new Promise(r => setTimeout(r, 400));
+    window.__waterworld.ping();
+    await new Promise(r => setTimeout(r, 600));
+    return { bergs, stage: c.stage, won: g.won };
+  });
+  if (finale.bergs === 6 && finale.stage === 'won' && finale.won) {
+    pass(`FINALE: armada of ${finale.bergs} penned and sparked — story won`);
+  } else fail('finale broken: ' + JSON.stringify(finale));
+  await page.waitForSelector('#endcard.show', { timeout: 9000 });
+  const end = await page.evaluate(() => ({
+    title: document.getElementById('end-title').textContent,
+    uiDown: document.body.classList.contains('game-over'),
+    bannerGone: getComputedStyle(document.getElementById('objective')).display === 'none',
+  }));
+  if (/BERGS ARE BEATEN/.test(end.title) && end.uiDown && end.bannerGone) {
+    pass('story endcard up, live UI stood down');
+  } else fail('endcard state wrong: ' + JSON.stringify(end));
 
   if (pageErrors.length) fail('page errors: ' + pageErrors.join(' | '));
   else pass('zero page errors');

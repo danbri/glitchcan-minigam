@@ -321,6 +321,99 @@ export function makeReefFish(color) {
   return g;
 }
 
+// ---- Campaign sites -------------------------------------------------
+
+// The Steelyard stone: a Hanseatic boundary marker, remembered ground.
+export function makeSteelyard() {
+  const g = new THREE.Group();
+  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3.2, 1.2, 8), mat(0x4a5568));
+  plinth.position.y = 0.6;
+  g.add(plinth);
+  const stone = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.5, 4.2, 6), mat(0x5c6b7c, { emissive: 0x101820 }));
+  stone.position.y = 3;
+  g.add(stone);
+  const seal = new THREE.Mesh(new THREE.TorusGeometry(0.8, 0.18, 8, 16), mat(P8.yellow, { emissive: 0x665500 }));
+  seal.position.set(0, 3.6, 1.05);
+  g.add(seal);
+  // grave-plots: three empty hollows waiting for the bones
+  g.userData.plots = [];
+  for (let i = 0; i < 3; i++) {
+    const plot = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.2, 10), mat(0x2a3440));
+    plot.position.set(Math.cos(i * 2.1) * 3.4, 0.15, Math.sin(i * 2.1) * 3.4);
+    g.add(plot);
+    g.userData.plots.push(plot);
+  }
+  return g;
+}
+
+// An ancestor bone: a great rib, half out of the silt.
+export function makeBone() {
+  const g = new THREE.Group();
+  const rib = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.32, 10, 18, Math.PI * 0.85), mat(0xe8e2d4, { emissive: 0x333026 }));
+  rib.rotation.z = 0.4 + Math.random() * 0.5;
+  g.add(rib);
+  return g;
+}
+
+// A charter fragment: torn vellum in a bottle-green glass case.
+export function makeFragment() {
+  const g = new THREE.Group();
+  const caseM = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.3, 0.3), mat(0x9fdcff, { emissive: 0x28506e }));
+  caseM.position.y = 0.7;
+  caseM.rotation.z = (Math.random() - 0.5) * 0.6;
+  g.add(caseM);
+  return g;
+}
+
+// An elder eel: bigger, calmer, crowned in living light.
+export function makeElderEel(tint) {
+  const g = new THREE.Group();
+  const head = makeEelHead();
+  head.scale.setScalar(1.7);
+  g.add(head);
+  const crown = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.12, 8, 12), mat(tint, { emissive: tint }));
+  crown.position.y = 1.1;
+  crown.rotation.x = 0.4;
+  g.add(crown);
+  g.userData.head = head;
+  return g;
+}
+
+// The candle company's drone cargo barge: PALE & SONS, est. 1712.
+export function makeDroneBarge() {
+  const g = makeBoatHull('barge');
+  // cargo of candle crates
+  for (let i = 0; i < 4; i++) {
+    const crate = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.6, 2.2), mat(0xcfc4a8));
+    crate.position.set(-6 + i * 4, 1.2, (i % 2) * 2 - 1);
+    g.add(crate);
+  }
+  // drone rotor masts — nobody crews this thing
+  for (const x of [-9, 0, 9]) {
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 4, 8), mat(0x333944));
+    mast.position.set(x, 3, 0);
+    g.add(mast);
+    const rotor = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.08, 0.3), mat(0x556070));
+    rotor.position.set(x, 5, 0);
+    g.add(rotor);
+    (g.userData.rotors = g.userData.rotors || []).push(rotor);
+  }
+  return g;
+}
+
+// The Eel Federation's spark pylon, raised at Blight Corner.
+export function makePylon() {
+  const g = new THREE.Group();
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 1.1, 18, 8), mat(0x37474f));
+  mast.position.y = 9;
+  g.add(mast);
+  const orb = new THREE.Mesh(new THREE.SphereGeometry(1.6, 16, 12), mat(0x9fdcff, { emissive: 0x3a7fb0 }));
+  orb.position.y = 19;
+  g.add(orb);
+  g.userData.orb = orb;
+  return g;
+}
+
 // A curious Thames seal — pure delight, zero threat. Now properly plump.
 export function makeSeal() {
   const g = new THREE.Group();
