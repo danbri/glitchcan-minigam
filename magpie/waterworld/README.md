@@ -34,9 +34,8 @@ Sonar also stuns eels up close and safely detonates mines at a distance.
 
 ## The living water (js/fx.js)
 
-The blocky bones wear a neon skin: structures are near-silhouettes traced
-in additive glowing edges (`neonize`), each family its own signature
-colour. One basin-wide gyre (`currentAt`) carries everything: three boid
+Each structure family keeps a signature colour as a faint emissive
+undertone (`tint`). One basin-wide gyre (`currentAt`) carries everything: three boid
 fish schools haunting the wrecks (shimmering hue-cycling point clouds),
 plankton, drifting debris, vent bubble columns, and the dust motes
 hanging in the **god rays** — slanted additive light shafts that fade
