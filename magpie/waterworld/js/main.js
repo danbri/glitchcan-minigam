@@ -10,6 +10,8 @@ const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const EMBED = window.parent !== window;
 const LITE = params.has('lite');
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window ||
+  navigator.maxTouchPoints > 0;
 
 const audio = new WaterAudio();
 let game = null;
@@ -108,6 +110,7 @@ function announce(text) { window.__mgA11y?.announce?.(text); }
 let lastHull, lastScore, lastObjText;
 function hud(s) {
   // the guide banner: what to do, which way, how far
+  $('objective').style.display = s.obj && !s.over ? '' : 'none';
   if (s.obj) {
     $('obj-text').textContent = `${s.obj.icon} ${s.obj.text}`;
     $('obj-arrow').style.transform = `rotate(${s.obj.deg}deg)`;
@@ -135,10 +138,11 @@ function hud(s) {
   bankBtn.hidden = !s.cargo || s.over;
   $('codex').textContent = `📖${s.codex}/${s.codexTotal}`;
   const held = [
-    ...s.tools.map(t => ({ grapple: '🪝', arclamp: '💡', fizzlance: '🫧' }[t] || '🔧')),
-    ...s.items.map(i => ({ magnet: '🧲', rope: '🪢', lamp: '🏮', battery: '🔋', soda: '📦', nozzle: '🔩' }[i] || '❓')),
+    ...s.tools.map(t => ({ grapple: '🪝', arclamp: '💡', fizzlance: '🫧', loudspeaker: '🔊' }[t] || '🔧')),
+    ...s.items.map(i => ({ magnet: '🧲', rope: '🪢', hook: '🪝', coil: '🌀', lamp: '🏮', battery: '🔋', soda: '📦', nozzle: '🔩' }[i] || '❓')),
   ];
   $('inv').textContent = held.join(' ') || '·';
+  $('seats').textContent = s.seats ? `🤝${s.seats}` : '';
   const irBtn = $('ir-btn');
   irBtn.classList.toggle('on', !!s.ir);
   irBtn.setAttribute('aria-pressed', String(!!s.ir));
@@ -148,11 +152,17 @@ function hud(s) {
 }
 
 function complete(result) {
+  document.body.classList.add('game-over');   // live UI stands down
   const el = $('endcard');
-  $('end-title').textContent = result.success ? '🎉 TREASURE RAISED! 🎉' : '💫 WHAT A DIVE!';
-  $('end-body').textContent = result.success
-    ? `The captain’s chest is aboard the bell! Score ${result.score}, with ${result.stats.codex} pieces of London history in your log. Marvellous.`
-    : `Score ${result.score} and ${result.stats.codex} history entries logged — the dock will still be there tomorrow. Dive again!`;
+  if (result.storyWon) {
+    $('end-title').textContent = '🎆 THE BERGS ARE BEATEN! 🎆';
+    $('end-body').textContent = `Methane, whale-song and one unified spark — Blight Corner goes up like a second Great Fire, backwards. Democracy is saved, and somewhere in City Hall a stinky wet wipe lands in the Mayor's lunch. Score ${result.score}, ${result.stats.codex} codex entries. The end.`;
+  } else {
+    $('end-title').textContent = result.success ? '🎉 A FINE DIVE! 🎉' : '💫 WHAT A DIVE!';
+    $('end-body').textContent = result.success
+      ? `Score ${result.score}, with ${result.stats.codex} pieces of London history in your log. Marvellous.`
+      : `Score ${result.score} and ${result.stats.codex} history entries logged — the dock will still be there tomorrow. Dive again!`;
+  }
   el.classList.add('show');
   audio.stopMusic();
   if (sdk && EMBED) {
@@ -173,7 +183,28 @@ function complete(result) {
   }
 }
 
-const ui = { hud, toast, fact, hint, announce, complete, audio };
+function choice(prompt, options) {
+  return new Promise((resolve) => {
+    const panel = $('choice-panel');
+    $('choice-prompt').textContent = prompt;
+    const box = $('choice-options');
+    box.replaceChildren();
+    for (const o of options) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = o.label;
+      b.addEventListener('click', () => {
+        panel.classList.remove('show');
+        resolve(o.value);
+      });
+      box.appendChild(b);
+    }
+    panel.classList.add('show');
+    box.firstChild?.focus();
+  });
+}
+
+const ui = { hud, toast, fact, hint, announce, complete, audio, choice };
 
 // ---------------------------------------------------------------- input
 // One mapping for real keyboards AND the shell's input service: the host
@@ -197,8 +228,17 @@ function setAction(action, down, fromRepeat) {
     releaseTimers[action] = setTimeout(() => game.setKey(action, false), fromRepeat ? 350 : 900);
   } else clearTimeout(releaseTimers[action]);
 }
+const PANELS = ['help-panel', 'log-panel', 'map-panel', 'choice-panel'];
+function closeTopPanel() {
+  for (const id of PANELS) {
+    const p = $(id);
+    if (p && p.classList.contains('show')) { p.classList.remove('show'); return true; }
+  }
+  return false;
+}
 document.addEventListener('keydown', (e) => {
   if (!started && (e.key === ' ' || e.key === 'Enter')) { startGame(); return; }
+  if (e.key === 'Escape' && closeTopPanel()) return;   // close beats sonar
   if ((e.key === 'i' || e.key === 'I') && !e.repeat) { game?.toggleIR(); return; }
   const action = KEYMAP[e.key] ?? KEYMAP[e.key?.toLowerCase?.()];
   if (!action) return;
@@ -281,7 +321,7 @@ function startGame() {
   $('splash').classList.remove('show');
   audio.ensure();
   if (!game) {
-    game = new WaterworldGame($('scene'), ui, { lite: LITE });
+    game = new WaterworldGame($('scene'), ui, { lite: LITE, touch: IS_TOUCH });
     game.init();
     if (pendingRestore) { game.restore(pendingRestore); pendingRestore = null; }
     window.__waterworld = {
@@ -294,7 +334,7 @@ function startGame() {
       grabAll: () => game.salvage.filter(s => !s.collected && !s.hidden && !s.heavy)
         .slice(0, 3).forEach(s => game._collect(s)),
       bank: () => game._bank(),
-      win: () => { game.hasChest = true; game.cargo.push({ type: 'captains_chest', value: 250 }); game._bank(); },
+      win: () => game._testWin(),
       lose: () => game._lose('Scuttled by the test harness.'),
     };
   }
@@ -337,13 +377,20 @@ $('end-again').addEventListener('click', () => location.reload());
 
 window.addEventListener('resize', () => game?.resize());
 
+// keyboard operability: Enter/Space on any chip fires its pointer handler
+for (const el of document.querySelectorAll('.chip, #bank-btn, #pad-toggle')) {
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    }
+  });
+}
+
 buildPad();
 // Touch-first means GESTURES first: brush to steer, tap to ping. The
 // d-pad is the last resort, parked behind the 🎮 chip until summoned.
-if (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window ||
-    navigator.maxTouchPoints > 0) {
-  $('pad-toggle').dataset.touch = '1';
-}
+if (IS_TOUCH) $('pad-toggle').dataset.touch = '1';
 $('pad-toggle').addEventListener('pointerdown', (e) => {
   e.stopPropagation();
   const open = !$('pad').classList.contains('open');

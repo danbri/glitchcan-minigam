@@ -108,9 +108,12 @@
     text-shadow: 1px 1px 0 #000;
     box-shadow: 0 0 12px rgba(41,173,255,0.45);
     z-index: 21; pointer-events: none;
-    white-space: nowrap; overflow: hidden;
+    overflow: hidden;
   }
-  #obj-text { overflow: hidden; text-overflow: ellipsis; }
+  #obj-text {
+    overflow: hidden; line-height: 1.25;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
   #obj-arrow {
     display: inline-block;
     color: #ffec27; font-size: 1.25em;
@@ -231,6 +234,34 @@
   #log-list li.bad { color: #ff004d; }
   #log-list li.warn { color: #ffa300; }
   .log-t { color: #83769c; font-size: 0.85em; margin-right: 0.3em; }
+
+  /* ------- the decision modal (ruby court, story choices) ------- */
+  #choice-panel {
+    position: absolute; left: 50%; bottom: 22%;
+    transform: translateX(-50%);
+    width: min(94%, 26em);
+    display: none; flex-direction: column; gap: 0.5em;
+    background: rgba(10, 20, 50, 0.97);
+    border: 2px solid #ffec27; border-radius: 0.6em;
+    padding: 0.8em;
+    z-index: 48;
+  }
+  #choice-panel.show { display: flex; }
+  #choice-prompt { color: #ffec27; font-size: clamp(13px, 3.2vw, 16px); line-height: 1.4; }
+  #choice-options { display: flex; flex-direction: column; gap: 0.4em; }
+  #choice-options button {
+    font: inherit; font-size: clamp(12px, 3vw, 15px);
+    text-align: left;
+    background: rgba(29,43,83,0.8); color: #fff1e8;
+    border: 1px solid #29adff; border-radius: 0.4em;
+    padding: 0.5em 0.8em; min-height: 44px; cursor: pointer;
+  }
+  #choice-options button:focus-visible { outline: 2px solid #ffec27; outline-offset: 2px; }
+
+  /* when the end screen is up, the live UI stands down */
+  body.game-over #objective, body.game-over #toasts, body.game-over #fact,
+  body.game-over #bank-btn, body.game-over #choice-panel, body.game-over #pad,
+  body.game-over #pad-toggle { display: none !important; }
 
   /* ------- feedback flashes ------- */
   #flash {
@@ -368,6 +399,7 @@
     <span id="cargo">⚓—</span>
     <span id="codex">📖0/16</span>
     <span id="inv">·</span>
+    <span id="seats"></span>
   </div>
   <button id="bank-btn" type="button" aria-label="take the haul to the bell" hidden>🔔<span>BANK</span></button>
 
@@ -387,6 +419,7 @@
       <button id="help-close" type="button" aria-label="close help">✕</button>
     </div>
     <ul id="help-list">
+      <li><strong>THE STORY:</strong> your first banking wakes the bergs. Build the coalition of three — whale ghosts (bones → Steelyard → loudspeaker → sink the candle barge), the eel tribes (parley → find the torn charter), and the river (the East India rubies: spend or return). Then herd the risen bergs to Blight Corner and spark the pylon.</li>
       <li><strong>Brush the water</strong> — set a new course. She follows it, then resumes the hunt.</li>
       <li><strong>Tap the water</strong> — sonar ping: lights up treasure, stuns eels up close, pops mines at a safe distance. Pinged things stay on your 🗺 chart.</li>
       <li><strong>Double-tap</strong> (or double-tap A) — DASH: a burst of speed for a breath of air.</li>
@@ -419,6 +452,11 @@
     <ul id="log-list"></ul>
   </div>
 
+  <div id="choice-panel" role="dialog" aria-label="Decision">
+    <div id="choice-prompt"></div>
+    <div id="choice-options"></div>
+  </div>
+
   <div id="flash" aria-hidden="true"></div>
 
   <div id="toasts"></div>
@@ -432,8 +470,9 @@
   <div id="splash" class="overlay">
     <h2>WATERWORLD</h2>
     <p>— DOCKLANDS DEEP —</p>
-    <p>🫧 A sunny dive into a drowned London dock! Ping for treasure,
-       tickle history out of the mud, and bring it home to the glowing bell.</p>
+    <p>🫧 The fatbergs beneath London are WAKING — and they want the city.
+       Salvage the drowned past, and build a coalition to stop them:
+       the whale ghosts, the divided eel tribes, and the river itself.</p>
     <p>⚓ She sails herself, Captain — <strong>brush the water</strong> to set
        a new course, <strong>tap</strong> to ping the sonar.<br>
        ？ help · 📜 log · IR heat-vision · 🎮 summons a d-pad if you want one</p>

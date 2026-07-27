@@ -14,6 +14,10 @@ import {
 import { UnderwaterFX, glowSprite, currentAt } from './fx.js';
 import { Composite } from './post.js';
 import { Fauna } from './fauna.js';
+import { Campaign } from './quests.js';
+import {
+  makeSteelyard, makeBone, makeFragment, makeElderEel, makeDroneBarge, makePylon,
+} from './world.js';
 import { FACTS, QUEST_ITEMS, TOOLS, HINTS } from './facts.js';
 
 const AIR_MAX = 100;
@@ -51,6 +55,8 @@ export class WaterworldGame {
     this.pos = new THREE.Vector3(-88, -16, 8);
     this.vel = new THREE.Vector3();
     this.yaw = 0; this.pitch = 0;
+    this.airMax = AIR_MAX;
+    this.hullMax = HULL_MAX;
     this.air = AIR_MAX;
     this.hull = HULL_MAX;
     this.score = 0;
@@ -103,6 +109,16 @@ export class WaterworldGame {
     this._cacheT = 80;
     this.cache = null;
     this._bankOrder = false;     // the CAPTAIN decides when to bank
+    this.touchy = !!opts.touch;  // input-aware copy: 'tap' vs 'press B'
+
+    // THE RISING: the story campaign (quests.js)
+    this.campaign = new Campaign(this);
+    this.bones = [];
+    this.fragments = [];
+    this.elders = [];
+    this.podWhales = [];
+    this._bellNagT = 0;
+    this._chargeRespawn = [];
   }
 
   // ------------------------------------------------------------- setup
@@ -262,9 +278,13 @@ export class WaterworldGame {
       this.scene.add(g);
       this.quest.push({ id, mesh: g, taken: false });
     };
-    // shallow, findable: the grapple and the fizz lance
+    // shallow, findable — every item placed in OPEN water (a quest item
+    // inside a collision volume made the game unwinnable once; the
+    // playtest now asserts reachability for all of them)
+    put('hook', -25, 48);
+    put('rope', -56, 12);
     put('magnet', -75, 30);
-    put('rope', -42, 27, SHELF_Y + 8);      // on the barge deck
+    put('coil', 96, -14);
     put('soda', -12, -22);
     put('nozzle', 58, 38, DEEP_Y + 24);     // hanging off the crane jib
     // behind the fatbergs: the lamp for the deep
@@ -579,8 +599,11 @@ export class WaterworldGame {
   _doPing() {
     if (this.over || this._pingCooldown > 0) return;
     this._pingCooldown = 0.9;
+    this.air = Math.max(0, this.air - 0.8);   // sonar spends a breath
     this._pingAge = 0;
+    this._lastPingAt = this.pos.clone();       // the whales herd HERE
     this.fx?.pingPulse();          // the plankton answer the sonar
+    this._campaignPing();
     this.pingRing.visible = true;
     this.pingRing.position.copy(this.pos);
     this.ui.audio?.ping();
@@ -655,8 +678,9 @@ export class WaterworldGame {
         m.userData.irHot = true;
         this.scene.add(m);
         this.spilled.push({ ...c, mesh: m, age: 0,
-          vel: new THREE.Vector3((Math.random() - 0.5) * 5, 2 + Math.random() * 2,
-            (Math.random() - 0.5) * 5) });
+          lockUntil: this.elapsed + 2.5,   // no instant self-refund
+          vel: new THREE.Vector3((Math.random() - 0.5) * 11, 3 + Math.random() * 4,
+            (Math.random() - 0.5) * 11) });
       }
       this.ui.toast(`💥 ${dropN} CARGO KNOCKED LOOSE — grab it quick!`, 'bad');
       this.ui.announce(`${dropN} pieces of cargo knocked loose. They will not float forever.`);
@@ -670,6 +694,15 @@ export class WaterworldGame {
   }
 
   _collect(s) {
+    if (s.type === 'captains_chest') { this._collectStrongbox(s); return; }
+    if (this.cargo.length >= 8) {
+      if (!this._fullNag || this.elapsed - this._fullNag > 5) {
+        this._fullNag = this.elapsed;
+        this.ui.toast('⚓ HOLD FULL — bank before you take more!', 'warn');
+        this.ui.announce('The hold is full. Bank the haul first.');
+      }
+      return;
+    }
     s.collected = true;
     this.scene.remove(s.mesh);
     // COMBO: quick successive grabs are worth more — routes matter
@@ -716,8 +749,8 @@ export class WaterworldGame {
   }
 
   _bank() {
-    if (!this.cargo.length) { this.air = AIR_MAX; return; }
-    const n = this.cargo.length;
+    if (!this.cargo.length) { this.air = this.airMax; return; }
+    const n0 = this.airMax; this.air = n0; const n = this.cargo.length;
     const base = this.cargo.reduce((a, c) => a + c.value, 0);
     // the haul bonus is now worth chasing — and worth risking
     const mult = Math.min(3, 1 + 0.25 * (n - 1));
@@ -727,14 +760,11 @@ export class WaterworldGame {
     this.score += gained;
     this.bankedValue += gained;
     for (const c of this.cargo) this.bankedTypes.add(c.type);
-    const hadChest = this.cargo.some(c => c.type === 'captains_chest');
     this.cargo = [];
-    this.air = AIR_MAX;
     this.banks++;
     this.ui.audio?.bank(n);
     this.ui.toast(`🎉 BANKED ×${n}  +${gained}${mult > 1 ? `  (×${mult.toFixed(2)} haul bonus!)` : ''}`, 'gold');
     this.ui.announce(`Banked ${n} items for ${gained} points. Air refilled.`);
-    if (hadChest) { this._win(); return; }
     // confetti — a banked haul is a little party
     this.fx.confetti(this.scene, this.pos.clone());
     // banking stirs the dock: more eels, and eventually the fatbergs move
@@ -742,10 +772,8 @@ export class WaterworldGame {
     if (this.banks === 2 && !this.duck && !this._duckDone) this._spawnDuck();
     if (this.eels.length < 7) this._spawnEels(1);
     if (this.banks >= 2) this._spawnRampantFatberg();
-    // the whale comes when the dock has given up enough of its past
-    if (!this.whaleActive && (this.bankedTypes.size >= 6 || this.bankedValue >= 320)) {
-      this._wakeWhale();
-    }
+    // the first banking wakes what sleeps below
+    this.campaign.begin();
   }
 
   _wakeWhale() {
@@ -929,13 +957,13 @@ export class WaterworldGame {
 
     // -------- air + hull economy
     this.air -= dt * (thrusting ? 1.7 : 1.1) * (1 + this.banks * 0.06);
-    if (this.air < 25 && !this._lowAirWarned) {
+    if (this.air < this.airMax * 0.25 && !this._lowAirWarned) {
       this._lowAirWarned = true;
       this.ui.audio?.alarm();
       this.ui.toast('⚠ AIR LOW — BACK TO THE BELL', 'warn');
       this.ui.announce('Air is low. Return to the diving bell.');
     }
-    if (this.air >= 25) this._lowAirWarned = false;
+    if (this.air >= this.airMax * 0.25) this._lowAirWarned = false;
     if (this.air <= 0) {
       this.air = 0;
       this._drownT = (this._drownT || 0) + dt;
@@ -945,8 +973,16 @@ export class WaterworldGame {
     // -------- the bell: bank + breathe
     const bellPos = this.dock.bell.position;
     if (this.pos.distanceTo(bellPos) < 9) {
-      if (this.air < AIR_MAX - 1 || this.cargo.length) this._bank();
-      this.air = Math.min(AIR_MAX, this.air + dt * 40);
+      // banking is the captain's act: the 🔔 order, or hands on the helm.
+      // The autopilot may only breathe here — it never banks for you.
+      const captains = this._bankOrder || !this.autopilot || this.elapsed < this.manualUntil;
+      if (captains && this.cargo.length) this._bank();
+      else if (this.cargo.length && this.elapsed - this._bellNagT > 6) {
+        this._bellNagT = this.elapsed;
+        this.ui.toast('🔔 At the bell — tap BANK to cash the haul', 'hint');
+      }
+      this.air = Math.min(this.airMax, this.air + dt * 40);
+      this._maybeRubyCourt();
     }
     this.dock.bell.userData.ring.rotation.z += dt * 0.8;
 
@@ -977,6 +1013,7 @@ export class WaterworldGame {
     this._stepFatbergs(dt);
     this._stepMines(dt);
     this._stepWhale(dt);
+    this._stepCampaign(dt);
     this._maybeSeal(dt);
     this._stepDuck(dt);
     this._stepParticles(dt);
@@ -1014,16 +1051,7 @@ export class WaterworldGame {
       }
       return best;
     };
-    const carryingChest = this.hasChest || this.cargo.some(c => c.type === 'captains_chest');
-    if (carryingChest) return { icon: '🏴‍☠️', text: 'Bank the chest at the bell!', target: bell };
     if (this.air < 30) return { icon: '💨', text: 'Air low — swim to the bell!', target: bell };
-    if (this.whaleActive) {
-      if (!this.tools.has('grapple')) {
-        const part = nearest(this.quest.filter(q => !q.taken && (q.id === 'magnet' || q.id === 'rope')));
-        if (part) return { icon: '🪝', text: 'Craft a grapple: find magnet + rope', target: part.mesh.position };
-      }
-      return { icon: '🐋', text: 'Follow the whale to the chest!', target: this.chest.mesh.position };
-    }
     // banking is the CAPTAIN'S call (the 🔔 button) — the helm only
     // suggests it, it never decides for you
     if (this._bankOrder && this.cargo.length) {
@@ -1032,6 +1060,8 @@ export class WaterworldGame {
     if (this.banks === 0 && this.cargo.length >= 3) return { icon: '🔔', text: 'Nice haul riding! Tap 🔔 BANK when ready', target: bell };
     const spill = this.spilled[0];
     if (spill) return { icon: '⚠', text: 'Your spilled cargo is fading — grab it!', target: spill.mesh.position };
+    const story = this.campaign.objective();
+    if (story) return story;
     if (this.tools.has('fizzlance')) {
       const berg = this.fatbergs.find(f => f.blocking);
       if (berg) return { icon: '🫧', text: 'Hold B by a fatberg to fizz it away', target: berg.mesh.position };
@@ -1039,13 +1069,15 @@ export class WaterworldGame {
     const grabbable = this.salvage.filter(s => !s.collected && !s.hidden && (!s.heavy || this.tools.has('grapple')));
     const s = nearest(grabbable);
     if (this.banks === 0) {
-      return { icon: '✨', text: `Grab ${Math.max(0, 3 - this.cargo.length)} more shiny finds — press B to ping!`, target: s?.mesh.position ?? bell };
+      const n = Math.max(1, 3 - this.cargo.length);
+      const verb = this.touchy ? 'tap the water to ping!' : 'press B to ping!';
+      return { icon: '✨', text: `Grab ${n} more shiny ${n === 1 ? 'find' : 'finds'} — ${verb}`, target: s?.mesh.position ?? bell };
     }
     const gear = nearest(this.quest.filter(q => !q.taken));
     if (gear && (!s || gear.mesh.position.distanceTo(this.pos) < s.mesh.position.distanceTo(this.pos))) {
       return { icon: '💗', text: 'Pink glow = gear! Collect it to craft tools', target: gear.mesh.position };
     }
-    return { icon: '✨', text: 'Ping (B) and gather salvage', target: s?.mesh.position ?? bell };
+    return { icon: '✨', text: this.touchy ? 'Tap to ping, gather salvage' : 'Ping (B) and gather salvage', target: s?.mesh.position ?? bell };
   }
 
   hudState() {
@@ -1064,7 +1096,7 @@ export class WaterworldGame {
     }
     return {
       obj: objOut,
-      air: this.air / AIR_MAX, hull: this.hull, hullMax: HULL_MAX,
+      air: this.air / this.airMax, hull: this.hull, hullMax: this.hullMax,
       score: this.score, cargo: this.cargo.length,
       cargoValue: this.cargo.reduce((a, c) => a + c.value, 0),
       depth: Math.round(-this.pos.y),
@@ -1076,6 +1108,8 @@ export class WaterworldGame {
       haulMult: Math.min(3, 1 + 0.25 * Math.max(0, this.cargo.length - 1)),
       combo: this.combo, dashReady: this._dashCd <= 0,
       tide: this.tide > 1, spilled: this.spilled.length,
+      seats: this.campaign.stage === 'dormant' ? null : this.campaign.hudSeats(),
+      storyStage: this.campaign.stage,
     };
   }
 
@@ -1164,6 +1198,7 @@ export class WaterworldGame {
       s.vel.multiplyScalar(1 - dt * 1.6);
       s.vel.y -= dt * 0.5;                      // it slowly settles
       s.mesh.material.opacity = 0.9 * Math.max(0, 1 - s.age / 18);
+      if (this.elapsed < s.lockUntil) continue;   // it has to drift first
       if (s.mesh.position.distanceTo(this.pos) < 3.2) {
         this.cargo.push({ type: s.type, value: s.value });
         this.ui.audio?.pickup(s.value);
@@ -1443,6 +1478,428 @@ export class WaterworldGame {
     }
   }
 
+  // ------------------------------------------------------- THE RISING
+  _spawnCampaignSites() {
+    // the Steelyard stone: remembered ground, north-west shallows
+    this.steelyard = makeSteelyard();
+    this.steelyard.position.set(-98, floorYAt(-98, -62), -62);
+    this.scene.add(this.steelyard);
+    const syGlow = glowSprite(0xbfd4e8, 7, 0.4);
+    syGlow.position.y = 4;
+    this.steelyard.add(syGlow);
+    // three ancestor bones, scattered where whales would rest
+    for (const [x, z] of [[-15, 62], [52, -58], [88, 48]]) {
+      const b = makeBone();
+      b.position.set(x, floorYAt(x, z) + 0.8, z);
+      const halo = glowSprite(0xe8f4ff, 3.4, 0.45);
+      halo.position.y = 1.5;
+      b.add(halo);
+      this.scene.add(b);
+      this.bones.push({ mesh: b, taken: false });
+    }
+    // the elder eels: Amp tribe (lime) west, Volt tribe (blue) east
+    for (const [tribe, tint, x, z] of [['Amp', 0x00e436, -66, -66], ['Volt', 0x29adff, 96, -44]]) {
+      const m = makeElderEel(tint);
+      m.position.set(x, floorYAt(x, z) + 6, z);
+      m.userData.irColor = 0x38506e;
+      this.scene.add(m);
+      this.elders.push({ tribe, mesh: m, phase: Math.random() * 9, home: m.position.clone() });
+    }
+    // the torn charter, in three glass cases
+    for (const [x, z] of [[-45, -40], [30, 66], [72, -12]]) {
+      const f = makeFragment();
+      f.position.set(x, floorYAt(x, z) + 0.4, z);
+      const halo = glowSprite(0x7ef2ff, 3, 0.5);
+      halo.position.y = 1;
+      f.add(halo);
+      this.scene.add(f);
+      this.fragments.push({ mesh: f, taken: false });
+    }
+    // PALE & SONS drone barge, on its delivery run at the surface
+    this.candleBarge = makeDroneBarge();
+    this.candleBarge.position.set(-110, -0.4, -22);
+    this.scene.add(this.candleBarge);
+    this._bargeDir = 1;
+    // two salvaged depth charges bobbing near its lane
+    this.charges = [];
+    for (const x of [-35, 45]) {
+      const c = makeMine();
+      c.scale.setScalar(0.8);
+      c.position.set(x, -6, -22);
+      const halo = glowSprite(0xffa300, 2.4, 0.4);
+      halo.userData.irHot = true;
+      c.add(halo);
+      this.scene.add(c);
+      this.charges.push({ mesh: c, live: true, x });
+    }
+    // the strongbox is visible from the start — a promise on the chart
+    this.chest.hidden = false;
+    this.chest.mesh.visible = true;
+    this.chest._known = true;
+  }
+
+  _collectStrongbox(s) {
+    if (!this.tools.has('grapple')) {
+      if (!s._nagged || this.elapsed - s._nagged > 6) {
+        s._nagged = this.elapsed;
+        this.ui.toast('TOO HEAVY — craft the grapple (hook + rope)', 'warn');
+      }
+      return;
+    }
+    s.collected = true;
+    this.scene.remove(s.mesh);
+    this.hasChest = true;
+    this.campaign.ruby.step = 'decide';
+    this.campaign.ruby.held = 5;
+    this.campaign.fact('eic_rubies');
+    this.ui.audio?.craft();
+    this.ui.toast('💎 THE EAST INDIA STRONGBOX — five uncut rubies', 'gold');
+    this.ui.announce('You raise the East India Company strongbox. Five uncut rubies. Decide at the bell.');
+  }
+
+  _maybeRubyCourt() {
+    const r = this.campaign.ruby;
+    if (r.step !== 'decide' || r.held <= 0) return;
+    if (this._rubyCourtOpen || this.elapsed - (this._rubyCourtT || 0) < 4) return;
+    this._rubyCourtOpen = true;
+    this._rubyCourtT = this.elapsed;
+    this.ui.choice(
+      `💎 A ruby in your glove (${r.held} left). The river is watching.`,
+      [
+        { label: '⛑ Spend: hull +1 and full repair', value: 'hull' },
+        { label: '🫁 Spend: air tank +25', value: 'air' },
+        { label: '💧 Return it to the river', value: 'return' },
+        { label: 'Not yet', value: 'later' },
+      ],
+    ).then((v) => {
+      this._rubyCourtOpen = false;
+      if (v === 'later' || !v) return;
+      r.held--;
+      if (v === 'hull') {
+        this.hullMax += 1;
+        this.hull = this.hullMax;
+        r.spent++;
+        this.ui.toast('⛑ Hull reinforced with ruby-hard plate', 'good');
+      } else if (v === 'air') {
+        this.airMax += 25;
+        this.air = this.airMax;
+        r.spent++;
+        this.ui.toast('🫁 Air tank expanded — a deep breath of it', 'good');
+      } else {
+        r.returned++;
+        this.score += 40;
+        this.fx.confetti(this.scene, this.dock.bell.position.clone());
+        this.ui.toast(`💧 Returned to the river (+40) — ${r.returned}/3 for the River Folk`, 'gold');
+        if (r.returned >= 3) this.campaign.joinRiver();
+      }
+    });
+  }
+
+  _campaignPing() {
+    const c = this.campaign;
+    // parley: a gentle ping close to an elder is how you talk
+    for (const el of this.elders) {
+      if (el.mesh.position.distanceTo(this.pos) > 10) continue;
+      if (c.eel.step === 'parley' && !c.eel.parleyed.has(el.tribe)) {
+        c.eel.parleyed.add(el.tribe);
+        this.ui.audio?.zap();
+        this.ui.toast(el.tribe === 'Amp'
+          ? '⚡ AMP ELDER: "The Volts took the island. The charter would prove it — if it existed."'
+          : '⚡ VOLT ELDER: "The Amps hoard the current. Read the charter, if you can find it."', 'hint');
+        this.ui.announce(`You parley with the ${el.tribe} elder.`);
+        if (c.eel.parleyed.size >= 2) {
+          c.eel.step = 'fragments';
+          c.fact('eel_schism');
+        }
+      } else if (c.eel.step === 'restore' && !c.eel.returned.has(el.tribe)) {
+        c.eel.returned.add(el.tribe);
+        this.ui.audio?.craft();
+        this.ui.toast(`📜 The ${el.tribe} elder reads the restored charter…`, 'gold');
+        if (c.eel.returned.size >= 2) c.joinEels();
+      }
+    }
+    // the lament: loudspeaker at the Steelyard
+    if (c.whale.step === 'lament' && this.tools.has('loudspeaker')
+        && this.steelyard && this.steelyard.position.distanceTo(this.pos) < 12) {
+      c.whale.step = 'barge';
+      this.ui.audio?.whaleSong();
+      setTimeout(() => this.ui.audio?.whaleSong(), 1800);
+      setTimeout(() => this.ui.audio?.whaleSong(), 3600);
+      this._wakeWhale();
+      this._raisePod();
+      c.fact('candle_barge');
+      this.ui.toast('🎵 THE LAMENT SOUNDS — the ghosts are listening', 'gold');
+      this.ui.announce('The lament sounds over the Steelyard. The whale ghosts rise to listen.');
+    }
+    // depth charges under the candle barge
+    if (c.whale.step === 'barge' && this.candleBarge) {
+      for (const ch of this.charges) {
+        if (!ch.live) continue;
+        const d = ch.mesh.position.distanceTo(this.pos);
+        if (d > 7 && d < 18) {
+          const under = Math.abs(this.candleBarge.position.x - ch.mesh.position.x) < 11
+            && Math.abs(this.candleBarge.position.z - ch.mesh.position.z) < 8;
+          ch.live = false;
+          ch.mesh.visible = false;
+          ch.respawnAt = this.elapsed + 14;
+          this.ui.audio?.boom();
+          const burst = makeParticleCloud(50, 0xffa300, 1.4, 9);
+          burst.position.copy(ch.mesh.position);
+          burst.userData.age = 0;
+          this.scene.add(burst);
+          this.glints.push(burst);
+          if (under) {
+            c.whale.bargeHits++;
+            this.ui.toast(`🕯️ DIRECT HIT ON PALE & SONS (${c.whale.bargeHits}/2)`, 'gold');
+            if (c.whale.bargeHits >= 2) this._sinkBarge();
+          } else {
+            this.ui.toast('💨 The charge blows wide — time it under the barge', 'warn');
+          }
+        }
+      }
+    }
+    // the spark: all bergs penned, ping the pylon
+    if (this.campaign.stage === 'finale' && this.pylon
+        && this.campaign.finale.bergs.length
+        && this.campaign.finale.bergs.every(b => b.penned || b.dead)
+        && this.pylon.position.distanceTo(this.pos) < 14) {
+      this._spark();
+    }
+  }
+
+  _raisePod() {
+    for (let i = 0; i < 2; i++) {
+      const w = makeGhostWhale();
+      w.material.opacity = 0.55;
+      w.visible = true;
+      w.userData.phase = i * 2.4;
+      w.position.set(-70 + i * 30, -16 - i * 4, -30 + i * 20);
+      this.scene.add(w);
+      this.podWhales.push(w);
+    }
+  }
+
+  _sinkBarge() {
+    this.candleBarge.userData.sinking = 0;
+    this.ui.toast('🕯️ PALE & SONS IS GOING DOWN', 'gold');
+    this.ui.announce('The candle barge is sinking. The whale ghosts watch it go.');
+    // its cargo becomes honest salvage
+    for (let i = 0; i < 3; i++) {
+      const g = makeSalvageMesh('tea_chest');
+      g.position.set(this.candleBarge.position.x + (i - 1) * 5,
+        floorYAt(this.candleBarge.position.x, -22) + 0.5, -20 + i * 3);
+      this.scene.add(g);
+      this.salvage.push({ type: 'tea_chest', mesh: g, collected: false,
+        heavy: false, hidden: false, value: 30, _known: true });
+    }
+    this.campaign.joinWhales();
+  }
+
+  _beginFinale() {
+    // the pylon rises at Blight Corner
+    this.pylon = makePylon();
+    this.pylon.position.set(100, floorYAt(100, 64), 64);
+    this.scene.add(this.pylon);
+    const glow = glowSprite(0x9fdcff, 12, 0.5);
+    glow.position.y = 19;
+    glow.userData.irHot = true;
+    this.pylon.add(glow);
+    // the armada rises from the culverts
+    for (let i = 0; i < 6; i++) {
+      const mouth = this.dock.culverts[i % this.dock.culverts.length];
+      const m = makeFatberg(3.2 + Math.random());
+      m.userData.irColor = 0xffdd66;
+      m.position.set(mouth.x + (Math.random() - 0.5) * 8,
+        mouth.y + 4 + Math.random() * 6, mouth.z + 8 + Math.random() * 6);
+      this.scene.add(m);
+      if (this.ir) this._irApply(m);
+      this.campaign.finale.bergs.push({ mesh: m, penned: false, dead: false,
+        vel: new THREE.Vector3(), wobble: Math.random() * 9 });
+    }
+    if (!this.whaleActive) { this._wakeWhale(); }
+    if (!this.podWhales.length) this._raisePod();
+    this.ui.toast('🟤 THE BERG ARMADA RISES — herd them to Blight Corner!', 'warn');
+    this.ui.announce('The berg armada is rising. Ping near a berg and the whales will herd it toward Blight Corner.');
+  }
+
+  _stepCampaign(dt) {
+    const c = this.campaign;
+    if (c.stage === 'dormant') return;
+    // ancestor bones: swim close to gather
+    if (c.whale.step === 'bones') {
+      for (const b of this.bones) {
+        if (!b.taken && b.mesh.position.distanceTo(this.pos) < 3.6) {
+          b.taken = true;
+          this.scene.remove(b.mesh);
+          this.ui.audio?.pickup(30);
+          this.ui.toast(`🦴 ANCESTOR BONE (${this.bones.filter(x => x.taken).length}/3)`, 'good');
+        }
+      }
+      if (this.bones.every(b => b.taken)) {
+        c.whale.step = 'bury';
+        c.fact('steelyard');
+      }
+    } else if (c.whale.step === 'bury' && this.steelyard
+        && this.steelyard.position.distanceTo(this.pos) < 9) {
+      c.whale.bonesBuried = 3;
+      c.whale.step = 'speaker';
+      for (const plot of this.steelyard.userData.plots) plot.material = this.steelyard.children[1].material;
+      this.ui.audio?.bank(3);
+      this.ui.toast('⚓ THE BONES REST IN REMEMBERED GROUND', 'gold');
+      this.ui.announce('The bones are buried at the Steelyard. The ground remembers.');
+      c.fact('whale_lament');
+    } else if (c.whale.step === 'speaker' && this.tools.has('loudspeaker')) {
+      c.whale.step = 'lament';
+    }
+    // charter fragments
+    if (c.eel.step === 'fragments') {
+      for (const f of this.fragments) {
+        if (!f.taken && f.mesh.position.distanceTo(this.pos) < 3.6) {
+          f.taken = true;
+          c.eel.fragments++;
+          this.scene.remove(f.mesh);
+          this.ui.audio?.pickup(30);
+          this.ui.toast(`📜 CHARTER FRAGMENT (${c.eel.fragments}/3)`, 'good');
+        }
+      }
+      if (c.eel.fragments >= 3) {
+        c.eel.step = 'restore';
+        this.ui.toast('📜 The charter reads: "…held IN COMMON by all tribes…"', 'gold');
+      }
+    }
+    // elder eels idle in place, regal
+    for (const el of this.elders) {
+      el.phase += dt * 0.5;
+      el.mesh.position.y = el.home.y + Math.sin(el.phase) * 1.2;
+      el.mesh.rotation.y += dt * 0.15;
+    }
+    // the candle barge patrols until it doesn't
+    if (this.candleBarge) {
+      const cb = this.candleBarge;
+      if (cb.userData.sinking !== undefined) {
+        cb.userData.sinking += dt;
+        cb.position.y -= dt * 1.6;
+        cb.rotation.z += dt * 0.06;
+        if (cb.position.y < -30) { this.scene.remove(cb); this.candleBarge = null; }
+      } else {
+        cb.position.x += this._bargeDir * dt * 2.4;
+        if (cb.position.x > 110) this._bargeDir = -1;
+        if (cb.position.x < -110) this._bargeDir = 1;
+        for (const r of (cb.userData.rotors || [])) r.rotation.y += dt * 20;
+      }
+    }
+    for (const ch of this.charges || []) {
+      if (!ch.live && ch.respawnAt && this.elapsed > ch.respawnAt) {
+        ch.live = true;
+        ch.mesh.visible = true;
+        ch.mesh.position.set(ch.x, -6, -22);
+      }
+      if (ch.live) ch.mesh.position.y = -6 + Math.sin(this.elapsed * 1.3 + ch.x) * 0.4;
+    }
+    // pod whales converge on the last sonar ping — YOUR herding tool
+    const herd = this._lastPingAt;
+    for (const w of this.podWhales) {
+      const target = herd ? herd.clone().add(new THREE.Vector3(
+        Math.sin(this.elapsed * 0.4 + w.userData.phase) * 8, 3, Math.cos(this.elapsed * 0.5 + w.userData.phase) * 8))
+        : this.pos.clone().add(new THREE.Vector3(0, 6, 10));
+      target.y = Math.max(floorYAt(target.x, target.z) + 4, Math.min(-4, target.y));
+      const dir = target.sub(w.position);
+      const d = dir.length();
+      if (d > 1) w.position.addScaledVector(dir.normalize(), Math.min(9, d) * dt);
+      w.lookAt(w.position.clone().add(dir));
+      w.rotateY(-Math.PI / 2);
+    }
+    // finale: bergs flee whales, drift for the city, stick in the pen
+    if (c.stage === 'finale') {
+      if (this.pylon) this.pylon.userData.orb.material.emissive?.setHex(
+        Math.sin(this.elapsed * 6) > 0 ? 0x66c0ff : 0x1a3a55);
+      let penned = 0;
+      for (const b of c.finale.bergs) {
+        if (b.dead) continue;
+        const m = b.mesh;
+        b.wobble += dt;
+        m.rotation.y += dt * 0.15;
+        if (b.penned) {
+          penned++;
+          m.position.x = Math.max(76, m.position.x);
+          m.position.z = Math.max(46, m.position.z);
+          m.position.y += Math.sin(b.wobble) * 0.02;
+          continue;
+        }
+        // fear of the ghosts: pushed away from any pod whale
+        b.vel.multiplyScalar(1 - dt * 0.8);
+        for (const w of [this.whale, ...this.podWhales]) {
+          if (!w || !w.visible) continue;
+          const d = m.position.distanceTo(w.position);
+          if (d < 20) {
+            b.vel.addScaledVector(
+              _cur.subVectors(m.position, w.position).normalize(), (20 - d) * 0.5 * dt * 6);
+          }
+        }
+        // otherwise: rising toward the city (the north wall)
+        b.vel.z -= dt * 0.6;
+        b.vel.y += dt * 0.15;
+        m.position.addScaledVector(b.vel, dt);
+        m.position.x = Math.max(BOUNDS.minX + 6, Math.min(BOUNDS.maxX - 4, m.position.x));
+        m.position.z = Math.max(BOUNDS.minZ + 6, Math.min(BOUNDS.maxZ - 4, m.position.z));
+        m.position.y = Math.max(floorYAt(m.position.x, m.position.z) + 3, Math.min(-4, m.position.y));
+        if (m.position.x > 76 && m.position.z > 46) {
+          b.penned = true;
+          this.ui.audio?.bank(1);
+          this.ui.toast(`🟤 BERG PENNED (${c.finale.bergs.filter(x => x.penned).length}/${c.finale.bergs.length})`, 'gold');
+        }
+      }
+      c.finale.penned = c.finale.bergs.filter(x => x.penned).length;
+    }
+  }
+
+  // Harness shortcut: complete-with-success without playing the story.
+  _testWin() {
+    if (this.over) return;
+    this.score += 250;
+    this.won = true;
+    this.over = true;
+    this.ui.complete({ success: true, score: this.score, stats: {
+      artifacts: this.bankedTypes.size, codex: this.codex.size, tools: this.tools.size,
+    } });
+  }
+
+  _spark() {
+    const c = this.campaign;
+    if (c.stage !== 'finale' || c.finale.sparked) return;
+    c.finale.sparked = true;
+    c.stage = 'spark';
+    this.ui.audio?.zap();
+    this.ui.audio?.boom();
+    setTimeout(() => this.ui.audio?.boom(), 500);
+    setTimeout(() => this.ui.audio?.victory(), 1000);
+    for (const b of c.finale.bergs) {
+      b.dead = true;
+      const burst = makeParticleCloud(70, 0xffa300, 1.6, 14);
+      burst.position.copy(b.mesh.position);
+      burst.userData.age = 0;
+      this.scene.add(burst);
+      this.glints.push(burst);
+      this.scene.remove(b.mesh);
+    }
+    this.fx.confetti(this.scene, this.pylon.position.clone().add(new THREE.Vector3(0, 10, 0)));
+    this.fx.confetti(this.scene, this.pos.clone());
+    this.score += 500;
+    c.stage = 'won';
+    c.fact('victory');
+    this.won = true;
+    this.over = true;
+    this.ui.announce('The bergs go up over Blight Corner. Democracy is saved. The end.');
+    setTimeout(() => {
+      this.ui.complete({
+        success: true,
+        score: this.score,
+        storyWon: true,
+        stats: { artifacts: this.bankedTypes.size, codex: this.codex.size, tools: this.tools.size },
+      });
+    }, 3500);
+  }
+
   _stepParticles(dt) {
     // marine snow drifts down and wraps
     this.snow.material.opacity = this.ir ? 0.12 : 0.8;
@@ -1546,7 +2003,8 @@ export class WaterworldGame {
 
   // ------------------------------------------------------------- persistence
   snapshot() {
-    if (this.over) return null;   // a finished game should not be resumed
+    if (this.over) return null;
+    if (this.campaign.stage !== 'dormant') return null;   // a finished game should not be resumed
     return {
       pos: this.pos.toArray(), yaw: this.yaw, pitch: this.pitch,
       air: this.air, hull: this.hull, score: this.score,

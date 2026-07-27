@@ -12,6 +12,29 @@ fine grain, plus an animated water-surface shader overhead and GPU
 caustic webs dancing on the shallow floor. Vendored three.js r169,
 procedural lo-fi WebAudio, no external assets.
 
+## The story — THE RISING (js/quests.js)
+
+Your first banking wakes the sentient fatbergs; they mean to take the
+city. Build a coalition of three, then win the finale:
+
+- **Whale ghosts:** gather three ancestor bones → bury them at the
+  Steelyard stone (Hanseatic ground — Cannon Street Station stands on it,
+  which is true) → craft the loudspeaker (magnet + dynamo coil) → sing
+  the lament → sink the PALE & SONS candle-drone barge by ping-detonating
+  depth charges under its patrol line.
+- **Eel Federation:** parley with the Amp and Volt elders (a gentle ping
+  up close) → recover the three torn Eel Pie Charter fragments → return
+  the charter: the island was held IN COMMON. The tribes unite.
+- **The River Folk:** raise the East India Company strongbox with the
+  grapple (hook + rope). Five uncut rubies: SPEND them at the bell
+  (hull +1, air +25) or RETURN them to the river — return three and the
+  river folk take the third seat.
+
+**Finale:** the berg armada rises. Ghost whales converge on your last
+sonar ping — ping to herd bergs into Blight Corner over the methane
+vents, then spark the eel pylon. Democracy is saved; a wet wipe lands in
+the Mayor's lunch. The end.
+
 ## The loop
 
 Ping the sonar (B) → glints reveal salvage → touch to collect → bank cargo
@@ -25,14 +48,14 @@ Adventure-style crafting, auto-combined when both halves are aboard:
 
 | combo | tool | unlocks |
 |---|---|---|
-| magnet + rope | grapple | heavy salvage, including the chest |
+| hook + rope | grapple | heavy salvage, including the strongbox |
+| magnet + dynamo coil | loudspeaker | the whale lament at the Steelyard |
 | lamp + wet cell | arc lamp | seeing anything in the deep basin |
 | soda crate + brass nozzle | fizz lance | dissolving fatbergs (hold B nearby) |
 
-Bank enough of the dock's past and the **ghost whale** — a particle-cloud
-whale, no mesh — appears and leads you east to the pirate captain's chest.
-Grapple it, bank it, win. Lose the hull (eel bites, mines, fatberg hugs,
-running out of air) and the dive ends with a partial score.
+Victory belongs to the campaign (see THE RISING above). Lose the hull
+(eel bites, mines, fatberg hugs, running out of air) and the dive ends
+with a partial score.
 
 Sonar also stuns eels up close and safely detonates mines at a distance.
 
