@@ -76,6 +76,43 @@ try {
   if (!subParts.length) pass('sub v2: props, planes, rudder, beacon all present');
   else fail('sub missing parts: ' + subParts.join(','));
 
+  // helm smoothness: park right on top of a target and make sure the
+  // heading settles instead of flip-flopping between two angles (the
+  // reported drift glitch)
+  const wobble = await page.evaluate(async () => {
+    const g = window.__waterworld.game;
+    const s = g.salvage.find(s => !s.collected && !s.hidden && s.heavy);   // can't collect it
+    window.__waterworld.teleport(s.mesh.position.x, s.mesh.position.y + 2, s.mesh.position.z);
+    await new Promise(r => setTimeout(r, 1200));   // let the filter settle
+    const yaws = [];
+    for (let i = 0; i < 8; i++) {
+      await new Promise(r => setTimeout(r, 200));
+      yaws.push(g.yaw);
+    }
+    let reversals = 0;
+    for (let i = 2; i < yaws.length; i++) {
+      const a = yaws[i - 1] - yaws[i - 2], b = yaws[i] - yaws[i - 1];
+      if (Math.abs(a) > 0.06 && Math.abs(b) > 0.06 && Math.sign(a) !== Math.sign(b)) reversals++;
+    }
+    return reversals;
+  });
+  if (wobble <= 1) pass(`helm settles over a target (${wobble} heading reversals)`);
+  else fail(`helm oscillates: ${wobble} heading reversals in 1.6s`);
+
+  // help is one tap away, and the pad hides behind its chip
+  await page.evaluate(() => document.getElementById('help-btn')
+    .dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+  const helpOpen = await page.evaluate(() =>
+    document.getElementById('help-panel').classList.contains('show') &&
+    document.querySelectorAll('#help-list li').length >= 8);
+  if (helpOpen) pass('help panel opens with the full function list');
+  else fail('help panel broken');
+  await page.click('#help-close');
+  const padHidden = await page.evaluate(() =>
+    getComputedStyle(document.getElementById('pad')).display === 'none');
+  if (padHidden) pass('d-pad parked by default (last resort)');
+  else fail('d-pad visible by default');
+
   // hand steering takes priority from here — determinism for the rest
   await page.evaluate(() => {
     window.__waterworld.game.autopilot = false;

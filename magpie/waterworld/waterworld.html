@@ -42,7 +42,7 @@
   #hud {
     position: absolute; top: 0; left: 0; right: 0;
     display: flex; flex-wrap: wrap; align-items: center; gap: 0.5em 1em;
-    padding: max(0.4em, env(safe-area-inset-top)) 13rem 0.4em 0.7em;
+    padding: max(0.4em, env(safe-area-inset-top)) 14rem 0.4em 0.7em;
     font-size: clamp(11px, 2.4vmin, 16px);
     letter-spacing: 0.06em;
     color: #ffec27;
@@ -59,25 +59,35 @@
   @keyframes blink { 50% { opacity: 0.35; } }
   #hull { color: #ff77a8; }
   #inv { color: #ffccaa; }
-  #ir-btn {
+  /* the chip rail: every mode/panel control in one predictable place */
+  #chips {
     position: absolute;
     top: max(0.4em, env(safe-area-inset-top));
-    right: 0.7em;
+    right: 0.5em;
+    display: flex; gap: 0.35em;
     z-index: 21;
-    font: inherit; font-size: clamp(10px, 2.2vmin, 14px); letter-spacing: 0.1em;
-    background: rgba(0,0,0,0.5); color: #83769c;
-    border: 1px solid #83769c; padding: 0.15em 0.6em;
-    min-width: 44px; min-height: 28px; cursor: pointer;
   }
+  .chip {
+    font: inherit; font-size: clamp(11px, 2.4vmin, 14px); letter-spacing: 0.06em;
+    background: rgba(0,0,0,0.55); color: #83769c;
+    border: 1px solid #83769c; border-radius: 0.4em;
+    padding: 0.15em 0.5em;
+    min-width: 44px; min-height: 32px; cursor: pointer;
+  }
+  .chip:focus-visible { outline: 2px solid #29adff; outline-offset: 2px; }
   #ir-btn.on {
     color: #ffa300; border-color: #ffa300;
     box-shadow: 0 0 8px rgba(255,163,0,0.6);
   }
-  #ir-btn:focus-visible { outline: 2px solid #29adff; outline-offset: 2px; }
+  #auto-btn.on {
+    color: #00e436; border-color: #00e436;
+    box-shadow: 0 0 8px rgba(0,228,54,0.5);
+  }
+  #help-btn { color: #29adff; border-color: #29adff; }
 
   /* ------- objective banner: always on, always pointing ------- */
   #objective {
-    position: absolute; left: 50%; top: 3.2em;
+    position: absolute; left: 50%; top: 5.6em;
     transform: translateX(-50%);
     display: flex; align-items: center; gap: 0.5em;
     max-width: 94%;
@@ -103,7 +113,7 @@
 
   /* ------- toasts + facts ------- */
   #toasts {
-    position: absolute; left: 50%; top: 6.4em;
+    position: absolute; left: 50%; top: 9.6em;
     transform: translateX(-50%);
     display: flex; flex-direction: column; align-items: center; gap: 0.3em;
     z-index: 22; pointer-events: none;
@@ -127,33 +137,8 @@
   .toast.out { opacity: 0; }
 
   /* ------- ship's log ------- */
-  #log-btn {
-    position: absolute;
-    top: max(0.4em, env(safe-area-inset-top));
-    right: 4.6em;
-    z-index: 21;
-    font: inherit; font-size: clamp(12px, 2.6vmin, 16px);
-    background: rgba(0,0,0,0.5); color: #29adff;
-    border: 1px solid #29adff; padding: 0.15em 0.55em;
-    min-width: 44px; min-height: 28px; cursor: pointer;
-  }
+  #log-btn { color: #29adff; border-color: #29adff; }
   #log-btn.unread::after { content: '●'; color: #ffec27; margin-left: 0.25em; }
-  #auto-btn {
-    position: absolute;
-    top: max(0.4em, env(safe-area-inset-top));
-    right: 8.4rem;
-    z-index: 21;
-    font: inherit; font-size: clamp(10px, 2.2vmin, 13px); letter-spacing: 0.06em;
-    background: rgba(0,0,0,0.5); color: #5f574f;
-    border: 1px solid #5f574f; padding: 0.15em 0.5em;
-    min-width: 44px; min-height: 28px; cursor: pointer;
-  }
-  #auto-btn.on {
-    color: #00e436; border-color: #00e436;
-    box-shadow: 0 0 8px rgba(0,228,54,0.5);
-  }
-  #auto-btn:focus-visible { outline: 2px solid #29adff; outline-offset: 2px; }
-  #log-btn:focus-visible { outline: 2px solid #ffec27; outline-offset: 2px; }
   #log-panel {
     position: absolute; inset: 3.6em 0.6em auto 0.6em;
     max-height: 62dvh;
@@ -163,16 +148,33 @@
     z-index: 45;
   }
   #log-panel.show { display: flex; }
-  #log-head {
+  .panel-head {
     display: flex; justify-content: space-between; align-items: center;
     padding: 0.4em 0.8em;
     color: #ffec27; letter-spacing: 0.12em;
     border-bottom: 1px solid #29adff;
   }
-  #log-close {
+  .panel-head button {
     font: inherit; background: none; color: #ff77a8;
     border: 1px solid #ff77a8; min-width: 44px; min-height: 32px; cursor: pointer;
   }
+  #help-panel {
+    position: absolute; inset: 3.6em 0.6em auto 0.6em;
+    max-height: 72dvh;
+    display: none; flex-direction: column;
+    background: rgba(8, 18, 45, 0.97);
+    border: 2px solid #29adff;
+    z-index: 46;
+  }
+  #help-panel.show { display: flex; }
+  #help-list {
+    list-style: none; overflow-y: auto;
+    padding: 0.6em 0.9em; margin: 0;
+    font-size: clamp(12px, 2.9vmin, 15px); line-height: 1.55;
+    color: #c2c3c7;
+  }
+  #help-list li { margin-bottom: 0.55em; }
+  #help-list strong { color: #ffec27; font-weight: bold; }
   #log-list {
     list-style: none; overflow-y: auto;
     padding: 0.5em 0.8em; margin: 0;
@@ -256,7 +258,23 @@
        ever hangs off the edge of a narrow phone */
     font-size: clamp(10px, 3.4vw, 16px);
   }
-  #pad[data-touch="1"] { display: flex; }
+  #pad.open { display: flex; }
+  /* the d-pad is the LAST resort on mobile — brush and tap come first.
+     It hides behind this chip until summoned. */
+  #pad-toggle {
+    position: absolute;
+    left: 0.6em;
+    bottom: max(0.8em, env(safe-area-inset-bottom));
+    z-index: 26;
+    display: none;
+    font: inherit; font-size: clamp(14px, 3vmin, 18px);
+    background: rgba(0,0,0,0.55); color: #83769c;
+    border: 1px solid #83769c; border-radius: 50%;
+    width: 52px; height: 52px; cursor: pointer;
+  }
+  #pad-toggle[data-touch="1"] { display: block; }
+  #pad-toggle.on { color: #29adff; border-color: #29adff; }
+  #pad-toggle:focus-visible { outline: 2px solid #29adff; outline-offset: 2px; }
   #dirs { display: grid; grid-template-columns: repeat(3, 3.9em); grid-template-rows: repeat(3, 3.9em); gap: 2px; }
   #pad button {
     pointer-events: auto;
@@ -295,9 +313,32 @@
     <span id="codex">📖0/12</span>
     <span id="inv">·</span>
   </div>
-  <button id="ir-btn" type="button" aria-label="toggle thermal sight" aria-pressed="false">IR</button>
-  <button id="log-btn" type="button" aria-label="ship's log" aria-expanded="false">📜</button>
-  <button id="auto-btn" type="button" aria-label="toggle autopilot" aria-pressed="true">⚓AUTO</button>
+  <div id="chips">
+    <button id="auto-btn" class="chip" type="button" aria-label="toggle autopilot" aria-pressed="true">⚓AUTO</button>
+    <button id="help-btn" class="chip" type="button" aria-label="how to play" aria-expanded="false">？</button>
+    <button id="log-btn" class="chip" type="button" aria-label="ship's log" aria-expanded="false">📜</button>
+    <button id="ir-btn" class="chip" type="button" aria-label="toggle thermal sight" aria-pressed="false">IR</button>
+  </div>
+  <button id="pad-toggle" type="button" aria-label="show d-pad controls" aria-pressed="false">🎮</button>
+
+  <div id="help-panel" role="dialog" aria-label="How to play">
+    <div class="panel-head">
+      <span>🧭 HOW TO CAPTAIN</span>
+      <button id="help-close" type="button" aria-label="close help">✕</button>
+    </div>
+    <ul id="help-list">
+      <li><strong>Brush the water</strong> — set a new course. She follows it, then resumes the hunt.</li>
+      <li><strong>Tap the water</strong> — sonar ping: lights up treasure, stuns eels up close, pops mines at a safe distance.</li>
+      <li><strong>➤ The banner arrow</strong> always points at your current goal.</li>
+      <li><strong>⚓AUTO</strong> — autopilot on/off. Off = you have the boat.</li>
+      <li><strong>🎮</strong> — summon the d-pad if you want stick-and-button control (▲▼◀▶ steer · A thrust · B sonar/tools).</li>
+      <li><strong>IR</strong> — thermal sight: fatbergs and mines glow warm through the dark. Ghosts run cold.</li>
+      <li><strong>📜</strong> — the ship's log keeps every fact and event of the dive.</li>
+      <li>Swim into <strong>shiny things</strong> to collect them; the <strong>glowing bell</strong> banks cargo and refills air.</li>
+      <li><strong>Pink glows are gear</strong> — two parts auto-craft a tool: grapple, arc lamp, fizz lance (hold B by a fatberg).</li>
+      <li>Keyboard: WASD/arrows · Space thrust · Esc/X sonar · I thermal.</li>
+    </ul>
+  </div>
 
   <div id="objective" aria-hidden="true">
     <span id="obj-arrow">➤</span>
@@ -306,7 +347,7 @@
   </div>
 
   <div id="log-panel" role="dialog" aria-label="Ship's log">
-    <div id="log-head">
+    <div class="panel-head">
       <span>📜 SHIP'S LOG</span>
       <button id="log-close" type="button" aria-label="close log">✕</button>
     </div>
@@ -330,7 +371,7 @@
        tickle history out of the mud, and bring it home to the glowing bell.</p>
     <p>⚓ She sails herself, Captain — <strong>brush the water</strong> to set
        a new course, <strong>tap</strong> to ping the sonar.<br>
-       Or take the helm: ▲▼◀▶ steer · A thrust · B sonar · 📜 log · IR heat</p>
+       ？ help · 📜 log · IR heat-vision · 🎮 summons a d-pad if you want one</p>
     <p class="press">▶ TAP ANYWHERE TO DIVE ◀</p>
   </div>
 
