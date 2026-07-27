@@ -96,11 +96,11 @@ export class WaterAudio {
   }
 
   _startMusic() {
-    // a shy pentatonic music box: minor penta on D, tape-wobbled
-    const scale = [146.83, 174.61, 196.0, 220.0, 261.63, 293.66, 349.23];
+    // a sunny pentatonic music box: major penta on C, tape-wobbled
+    const scale = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33];
     const step = () => {
       if (!this.ctx || this.ctx.state !== 'running') return;
-      if (Math.random() < 0.65) {
+      if (Math.random() < 0.75) {
         const f = scale[Math.floor(Math.random() * scale.length)];
         const t = this._now();
         const { o, g } = this._osc('triangle', f, this.echo);
@@ -113,7 +113,7 @@ export class WaterAudio {
         o.start(t); o.stop(t + 2); wob.stop(t + 2);
       }
     };
-    this._musicTimer = setInterval(step, 900);
+    this._musicTimer = setInterval(step, 700);
   }
 
   stopMusic() { if (this._musicTimer) clearInterval(this._musicTimer); this._musicTimer = null; }
