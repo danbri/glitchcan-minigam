@@ -3,19 +3,23 @@
    - Rich state tracking from v2
    - Nice dialogue preserved from v1
    - Fixed Troll_Clearing IMAGE tag placement
+   - July 2026: the serial numbers filed off. The furniture is folklore —
+     a cozy burrow, a wizard at the door, trolls caught by the dawn (that
+     one is straight out of the Eddas) — but the NAMES were borrowed, and
+     they've gone home. Filename kept so every # FINK: link still works.
 */
 
 oooOO`
-// ==== Bag End ====
-// Start the player at Bag End; richer state via Ink variables & lists.
+// ==== Burrow's End ====
+// Start the player at the burrow; richer state via Ink variables & lists.
 # BASEHREF: media/bagend/
--> Bag_End
+-> The_Burrow
 
 // ===== Global variables =====
 VAR troll_status = "alive"
 VAR has_taken_food = false
-VAR talked_to_gandalf = false
-VAR talked_to_thorin = false
+VAR talked_to_wizard = false
+VAR talked_to_dwarf = false
 VAR visited_kitchen = false
 VAR has_key = false
 VAR has_sword = false
@@ -30,79 +34,79 @@ LIST Inventory = cheese, bread, apples, key, sword, map
 
 // ===== Knots =====
 
-== Bag_End ==
+== The_Burrow ==
 
-You are in a comfortable hobbit-hole with a round green door. This is Bag End, home of Bilbo Baggins. A tall wizard sits smoking a pipe.
+A comfortable burrow with a round green door. Yours. A tall wizard sits by your fire, smoking a pipe he was not offered.
 # IMAGE: ../coverart/bagend_entrance_img_9445.jpeg
-+ {not talked_to_gandalf} [Talk to the Wizard] -> Talk_To_Gandalf
-+ [Leave through the front door] -> Outside_Bag_End
++ {not talked_to_wizard} [Talk to the Wizard] -> Talk_To_Wizard
++ [Leave through the front door] -> Outside_The_Burrow
 + [Go to the kitchen] -> Kitchen
 
-== Outside_Bag_End ==
+== Outside_The_Burrow ==
 
 # IMAGE: adventure_path.svg
-You stand on the path outside your hobbit-hole. The green hills of Hobbiton stretch before you. A well-worn path leads East toward the village and North into the wilderness.
-+ [Return inside] -> Bag_End
-+ [Go East to the village] -> Hobbiton_Village
-+ [Go North into the wilderness] -> Trollshaws
+The path outside your burrow. Green hills roll east toward the village; a rougher track runs north into the wild.
++ [Return inside] -> The_Burrow
++ [Go East to the village] -> Mossbottom_Village
++ [Go North into the wilderness] -> Troll_Woods
 
 == Kitchen ==
 
 # IMAGE: hobbit_pantry.svg
 {visited_kitchen:
-    You're back in your cozy kitchen. The Dwarf is still seated at your table, stroking his beard.
+    Back in your kitchen. The Dwarf is still at your table, stroking his beard.
 - else:
-    This is a well-stocked hobbit kitchen with pantries full of food. A small window looks out onto the garden. A stern dwarf sits at your table, looking impatient.
+    A well-stocked kitchen: full pantries, a window on the garden — and a stern dwarf at your table, looking impatient.
 }
 ~ visited_kitchen = true
 
-+ {not talked_to_thorin} [Talk to the Dwarf] -> Talk_To_Thorin
-+ [Return to the main room] -> Bag_End
++ {not talked_to_dwarf} [Talk to the Dwarf] -> Talk_To_Dwarf
++ [Return to the main room] -> The_Burrow
 + {not has_taken_food} [Take some food]
-    You put some cheese, bread and apples in your pocket. You suspect you'll be glad of them later.
+    Cheese, bread, apples — into your pockets. You suspect you'll be glad of them.
     ~ has_taken_food = true
     ~ Inventory += cheese
     ~ Inventory += bread
     ~ Inventory += apples
     -> Kitchen
 
-== Hobbiton_Village ==
+== Mossbottom_Village ==
 
 # IMAGE: gandalf_at_door.svg
-The cheerful village of Hobbiton bustles with activity. Hobbits go about their business, some giving you curious looks. The Green Dragon Inn stands invitingly nearby.
-+ [Return West to Bag End] -> Outside_Bag_End
-+ [Enter the Green Dragon Inn] -> Green_Dragon
-+ [Go North toward the wilderness] -> Trollshaws
+Mossbottom bustles. Neighbours nod; a few stare. The Drowsy Dragon inn stands invitingly near.
++ [Return West to the burrow] -> Outside_The_Burrow
++ [Enter the Drowsy Dragon] -> Drowsy_Dragon
++ [Go North toward the wilderness] -> Troll_Woods
 
-== Green_Dragon ==
+== Drowsy_Dragon ==
 
 # IMAGE: green_dragon.svg
-The cozy interior of the Green Dragon Inn is filled with hobbits drinking ale and telling stories. The innkeeper nods to you from behind the bar.
+Inside: ale, stories, and a fire that has never once gone out. The innkeeper nods from behind the bar.
 
 + {not talked_to_innkeeper} [Talk to the innkeeper]
-    "Heading out on an adventure, are you, Mr. Bilbo?" asks the innkeeper with a wink.
+    "Off on an adventure, are you, Mr. Digweed?" The innkeeper winks.
     "News travels fast," you mutter.
-    "That it does. Mind those trolls in the woods north of here. They've been causing trouble."
+    "That it does. Mind the trolls in the woods up north — trouble lately."
     ~ talked_to_innkeeper = true
-    -> Green_Dragon
+    -> Drowsy_Dragon
 
 {talked_to_innkeeper:
-    The innkeeper is busy polishing a mug now, and lets you be.
+    The innkeeper polishes a mug and lets you be.
 }
 
-+ [Leave the inn] -> Hobbiton_Village
++ [Leave the inn] -> Mossbottom_Village
 
-== Trollshaws ==
+== Troll_Woods ==
 
 # IMAGE: trollshaws.svg
-The path leads into a dark wooded area. Massive boulders dot the landscape. You can hear strange grunting noises ahead. A cave entrance is visible to the East.
-+ [Go South back to Hobbiton] -> Hobbiton_Village
+The path darkens under old trees. Boulders everywhere. Grunting, somewhere ahead. A cave mouth gapes to the east.
++ [Go South back to the village] -> Mossbottom_Village
 
 // Gate the cave until trolls are stone; offer a teasing approach otherwise.
 + {troll_status == "stone"} [Go East to the cave] -> Troll_Cave
 + {troll_status != "stone"} [Approach the cave]
-    You take a few steps toward the cave mouth, but the angry troll voices echo closer. Not a good idea while they're still about.
-    -> Trollshaws
+    A few steps toward the cave, and the troll voices come closer. Not while they're still about.
+    -> Troll_Woods
 
 + {troll_status != "stone"} [Investigate the noises] -> Troll_Clearing
 
@@ -116,70 +120,70 @@ The path leads into a dark wooded area. Massive boulders dot the landscape. You 
     -> Troll_Clearing_Dawn
 }
 
-You enter a clearing where three enormous trolls sit around a fire. They appear to be arguing about how to cook you! The sun is starting to rise.
+Three enormous trolls sit around a fire, arguing about how best to cook you. The sky is beginning to pale.
 + [Hide and wait]
-    You hide behind a tree. As the trolls continue to argue, the first rays of dawn strike them. With horrified expressions, they freeze and turn to stone!
+    You slip behind a tree. The trolls argue on — until the first light of dawn strikes them. They freeze, appalled, and turn to stone.
     ~ troll_status = "stone"
     -> Troll_Clearing_Dawn
-+ [Run back to the path] -> Trollshaws
++ [Run back to the path] -> Troll_Woods
 
 == Troll_Clearing_Dawn ==
 
 # IMAGE: troll_statues.svg
-The clearing is quiet now. Three troll statues stand in comical poses, frozen in sunlight.
+Quiet now. Three troll statues in comical poses, frozen in sunlight.
 {not has_key:
-    A gleam of metal catches your eye near the largest troll.
+    Metal glints near the largest.
     + [Examine the gleam]
-        You discover a key and a short sword. The sword glows faintly blue in your hand.
+        A key — and a short sword that glows faint blue in your hand.
         ~ has_key = true
         ~ has_sword = true
         ~ Inventory += key
         ~ Inventory += sword
         -> Troll_Clearing_Dawn
 - else:
-    The trolls are silent. You've already retrieved everything of value here.
+    The trolls are silent. Nothing else of value here.
 }
-+ [Return to the path] -> Trollshaws
++ [Return to the path] -> Troll_Woods
 + [Go to the cave] -> Troll_Cave
 
 == Troll_Cave ==
 
 # IMAGE: troll_cave.svg
-The cave is dark and smells terrible. Piles of bones litter the floor. A chest sits in the corner.
-{troll_status == "alive": We don't know how many trolls live here, so best to be extremely careful.}
+Dark, and it smells terrible. Bones on the floor. A chest in the corner.
+{troll_status == "alive": No telling how many live here. Tread softly.}
 + [Open the chest]
     {troll_status == "stone" && has_key && not has_map:
-        You unlock the chest with the key and carefully lift the lid. Inside you find a small hoard of gold coins and a curious map showing the path to the Lonely Mountain. The adventure truly begins!
+        The key turns. Inside: gold coins, and a curious map marking a road to the Far Mountain. The adventure truly begins.
         ~ has_map = true
         ~ has_treasure = true
         ~ Inventory += map
     }
     {troll_status == "stone" && has_map:
-        The chest is already open and empty save for dust.
+        Open and empty now, save for dust.
     }
     {troll_status == "stone" && not has_key:
-        The chest is locked tight. You need a key to open it.
+        Locked tight. It wants a key.
     }
     {troll_status == "alive":
-        The chest is locked tight, and you can hear the trolls arguing nearby. Too dangerous to investigate while they're around!
+        Locked — and the trolls sound close. Not now.
     }
     -> Troll_Cave_Explored
-+ [Leave the cave] -> Trollshaws
++ [Leave the cave] -> Troll_Woods
 
 == Troll_Cave_Explored ==
 
 # IMAGE: troll_cave.svg
 {troll_status == "stone" && has_map:
-    With treasure in your pockets and a map to guide you, you've proven yourself a true burglar. The cave no longer seems so frightening.
+    Treasure in your pockets, a map in your hand. Quite the burglar after all. The cave seems smaller now.
 }
 {troll_status == "stone" && not has_map:
-    The chest remains locked. You might have missed something back at the clearing.
+    The chest stays shut. Perhaps you missed something back at the clearing.
 }
 {troll_status == "alive":
-    The cave remains dangerous while the trolls are around. Best to leave quickly.
+    Dangerous while the trolls are about. Leave quickly.
 }
 + [Return to the trolls] -> return_to_trolls
-+ {has_treasure} [Head back to Hobbiton with your treasure] -> Victorious_Return
++ {has_treasure} [Head home with your treasure] -> Victorious_Return
 
 == return_to_trolls ==
 {troll_status == "stone":
@@ -191,13 +195,13 @@ The cave is dark and smells terrible. Piles of bones litter the floor. A chest s
 == Victorious_Return ==
 
 # IMAGE: bag_end_exterior.svg
-You return to Bag End as the sun sets, your pockets heavy with troll gold and your mind filled with the wonders you've seen. The Wizard sits on your doorstep, smoking his pipe with a knowing smile.
+You come home at sunset, pockets heavy with troll gold. The Wizard sits on your doorstep, smiling as if he knew.
 
-"So, Bilbo," he says, "still think you want no part in adventures?"
+"So," he says. "Still want no part in adventures?"
 
-You pat the treasure in your pocket and gaze toward the horizon. "Perhaps... there are greater adventures yet to come."
+You pat your pocket and look to the horizon. "Perhaps... there are greater ones yet to come."
 
-+ [Begin planning the journey to the Lonely Mountain]
++ [Begin planning the journey to the Far Mountain]
     ~ committed_to_adventure = true
     -> The_Adventure_Begins
 + [Stay content with your small victory] -> Peaceful_Retirement
@@ -205,9 +209,9 @@ You pat the treasure in your pocket and gaze toward the horizon. "Perhaps... the
 == The_Adventure_Begins ==
 
 # IMAGE: adventure_path.svg
-With the Wizard's guidance and the treasure map as your guide, you set off toward greater adventures. The path to the Lonely Mountain stretches before you, filled with dangers and wonders beyond imagination.
+With the Wizard's guidance and the map in your hand, you set out. The road to the Far Mountain runs long, and strange.
 
-Your story as a burglar has only just begun...
+Your career as a burglar has only begun...
 
 Nearby, a pool shimmers like molten emerald. A fox eyes a pair of ducklings greedily. The water seems to reflect a different sky...
 
@@ -216,7 +220,7 @@ Nearby, a pool shimmers like molten emerald. A fox eyes a pair of ducklings gree
 
 == portal_dive ==
 # BG:#020
-The cool water envelops you. For a moment you cannot breathe, cannot think—
+The cool water closes over you. For a moment you cannot breathe, cannot think—
 
 Then you surface in a place between all places.
 
@@ -226,60 +230,59 @@ Then you surface in a place between all places.
 == Peaceful_Retirement ==
 
 # IMAGE: hobbit_pantry.svg
-You decide that one adventure is quite enough for a respectable hobbit. You hide the troll treasure in your pantry and return to your quiet life of gardening and meals.
+One adventure is quite enough for a respectable burrower. You hide the gold in the pantry and go back to your garden and your meals.
 
-Sometimes, on clear evenings, you look toward the mountains and wonder what might have been...
+On clear evenings, you look toward the mountains and wonder what might have been...
 
 + [Settle into quiet contentment] -> END
 + [One evening, a strange pool appears in your garden...] -> portal_dive
 
-== Talk_To_Gandalf ==
+== Talk_To_Wizard ==
 
 # IMAGE: gandalf_at_door.svg
-"My dear Bilbo," says the Wizard, "I am looking for someone to share in an adventure."
+"My dear fellow," says the Wizard, "I am looking for someone to share in an adventure."
 
-"No thank you!" you reply hastily. "I don't want any adventures, thank you. Not today."
+"No thank you!" you reply, rather fast. "No adventures. Not today."
 
-The Wizard looks at you with raised eyebrows. "We shall see..." He puffs thoughtfully on his pipe, and you notice a strange mark scratched on your green door.
+"We shall see..." He puffs his pipe. There is a fresh scratch on your green door.
 
-+ {not talked_to_gandalf} [Ask about the mark on the door]
-    "Oh, that's just a burglar mark," the Wizard says casually. "It means this is a good house to burgle."
-    "BURGLE?!" you splutter. "I'll have you know this is a respectable household!"
-    ~ talked_to_gandalf = true
-    -> Bag_End
-+ {not talked_to_gandalf} [Ask about the adventure]
-    "Ah, now that's more like it!" The Wizard's eyes twinkle. "There's a dragon needs dealing with, and a treasure to be recovered. Perfectly straightforward."
-    "A DRAGON?!" you exclaim, nearly dropping your tea.
-    ~ talked_to_gandalf = true
-    -> Bag_End
-+ [Return to your comfortable armchair] -> Bag_End
-{talked_to_gandalf:
-    Once you've asked your questions, the Wizard simply smiles knowingly at you and goes back to his pipe.
++ {not talked_to_wizard} [Ask about the mark on the door]
+    "A burglar's mark," he says airily. "It means: good house to burgle."
+    "BURGLE?!" you splutter. "This is a respectable household!"
+    ~ talked_to_wizard = true
+    -> The_Burrow
++ {not talked_to_wizard} [Ask about the adventure]
+    "That's more like it." His eyes twinkle. "A dragon wants dealing with, and a treasure recovering. Perfectly straightforward."
+    "A DRAGON?!" You nearly drop your tea.
+    ~ talked_to_wizard = true
+    -> The_Burrow
++ [Return to your comfortable armchair] -> The_Burrow
+{talked_to_wizard:
+    The Wizard simply smiles and returns to his pipe.
 }
 
-== Talk_To_Thorin ==
+== Talk_To_Dwarf ==
 
 # IMAGE: hobbit_pantry.svg
-"Hmm, burglar?" The Dwarf examines you skeptically. "You don't look like much of a thief to me."
+"Burglar?" The Dwarf looks you over. "You don't look like much of a thief."
 
-"I'm not a burglar!" you protest. "I'm a respectable hobbit!"
+"I'm not!" you protest. "I'm a respectable burrower!"
 
-The Dwarf strokes his magnificent beard thoughtfully. "Perhaps... but the Wizard speaks highly of your people. He says you move quietly and have quick fingers."
+He strokes his magnificent beard. "Perhaps. But the Wizard says your people move quietly, and have quick fingers."
 
 + [Show you can be stealthy]
-    You creep around the kitchen as quietly as possible, managing to pocket a small cake without making a sound.
-    "Impressive," admits the Dwarf. "Perhaps you'll do after all."
-    ~ talked_to_thorin = true
+    You creep round your own kitchen and pocket a small cake without a sound.
+    "Hm," the Dwarf admits. "Perhaps you'll do."
+    ~ talked_to_dwarf = true
     -> Kitchen
 + [Insist you're not burglar material]
-    "I'm perfectly respectable!" you declare. "I pay my taxes, tend my garden, and have never been on an adventure in my life!"
-    The Dwarf nods grimly. "Exactly what we need. Someone unexpected."
-    ~ talked_to_thorin = true
+    "I pay my taxes, tend my garden, and have never had an adventure in my life!"
+    "Exactly what we need," he says grimly. "Someone unexpected."
+    ~ talked_to_dwarf = true
     -> Kitchen
 + [Ask about the treasure]
-    The Dwarf's eyes gleam. "The treasure of Erebor, stolen by the dragon Smaug. Gold beyond counting, and the Arkenstone - the Heart of the Mountain."
+    His eyes gleam. "A hoard under the Far Mountain — gold beyond counting, and at its heart a gem beyond price. A dragon sleeps on all of it."
     Your own eyes widen despite yourself. That does sound rather exciting...
-    ~ talked_to_thorin = true
+    ~ talked_to_dwarf = true
     -> Kitchen
 `
-

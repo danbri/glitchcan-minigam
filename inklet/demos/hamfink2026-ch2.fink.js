@@ -258,7 +258,7 @@ The pool shows a round green door set into a hillside. Smoke rises from a chimne
 
 "Bag End," you whisper. The words feel familiar.
 
-This pool leads to the Shire - to a hobbit's comfortable home, just before an unexpected adventure begins.
+This pool leads to Burrow's End - to a burrower's comfortable home, just before an unexpected adventure begins.
 
 + [Step into the pool...] -> enter_bagend
 + [Look at other pools] -> wood_between_worlds

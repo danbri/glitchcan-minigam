@@ -545,9 +545,9 @@ You have {mega_diamonds} mega diamonds. Your old life feels very far away now.
 #BG:#141
 The golden pool shows rolling green hills, round doors set into hillsides, and the distant glint of a river.
 
-A sign half-buried in moss reads: "The Shire — Bag End — Second Breakfast Served Daily"
+A sign half-buried in moss reads: "Burrow's End — Second Breakfast Served Daily"
 
-Somewhere down there, a hobbit is putting the kettle on.
+Somewhere down there, a burrower is putting the kettle on.
 
 + Step into the pool
     # FINK: bagend.fink.js
