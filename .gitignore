@@ -33,3 +33,4 @@ npm-debug.log*
 # Environment files
 .env
 .env.local
+_tmp_review_*.mjs
