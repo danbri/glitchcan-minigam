@@ -133,7 +133,11 @@ body[data-fink-depth="8"] #narrative-view {
    the scroll-past affordance — which has nothing to afford — goes away and
    the scene is centred instead. */
 #narrative-view[data-fits="yes"] {
-    padding-bottom: 0.5em;
+    /* 76px, not 0.5em: the dock and the WM grip are FIXED circles in the
+       bottom corners, and a centred short scene put its choice row exactly
+       under them — a corner control overlapping a tappable row. Content
+       and controls each get their own ground. */
+    padding-bottom: 76px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -186,10 +190,23 @@ body[data-fink-depth="8"] #narrative-view {
    under a single shared rule read as one element, not three targets. */
 #choices {
     padding-top: 0.6em;
+    /* Same gutter as the scene card above: choices used to run flush to
+       the screen edge while the prose sat inside padded chrome — two
+       different left edges in one column. */
+    padding-inline: 0.5em;
     display: flex;
     flex-direction: column;
     gap: 0.5em;
     align-items: stretch;
+}
+
+/* The emoji lead is a fixed-width SLOT, so a mixed batch — some choices
+   with a semantic emoji, some without — keeps one text edge instead of
+   the ragged indent 2-of-3 ornaments used to cause. Rendered only when
+   at least one choice in the batch has an emoji. */
+.choice-btn .choice-lead {
+    display: inline-block;
+    min-width: 1.5em;
 }
 
 /* --- Story Output --- */
@@ -316,6 +333,29 @@ body[data-fink-part-pending] #choices { display: none; }
 #narrative-view[data-fits="yes"] .story-section .section-media {
     position: static;
 }
+/* LANDSCAPE PHONES: side-by-side, not letterbox. A 34vh cap on a ~400px
+   viewport shrank the scene image to a stamp floating in a full-width
+   white band — empty wings both sides, prose crammed beneath. Short-wide
+   screens read like a book spread instead: picture left, words right.
+   (position: static — sticky has nothing to do in a column this short.) */
+@media (orientation: landscape) and (max-height: 540px) {
+    .story-section {
+        display: grid;
+        grid-template-columns: minmax(160px, 36%) minmax(0, 1fr);
+        column-gap: 0.9em;
+        align-items: start;
+    }
+    .story-section .section-media {
+        grid-column: 1;
+        grid-row: 1 / span 40;
+        position: static;
+        width: 100%;
+        max-height: none;
+        margin: 0;
+    }
+    .story-section > :not(.section-media) { grid-column: 2; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     /* sticky is not motion, but a taller cap suits users who also tend to
        have larger text: give the picture less of the screen, not more */

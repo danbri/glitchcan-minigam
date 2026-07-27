@@ -243,15 +243,24 @@ window.FinkUI = {
         if (!this.storedChoices) return;
         this.clearChoices();
 
+        // Alignment is a batch decision. When SOME choices earn a semantic
+        // emoji and others don't, per-choice prefixes give the list two
+        // different text edges — a ragged indent that reads as a mistake.
+        // If any choice in this batch has an emoji, every choice gets a
+        // fixed-width lead slot (empty for the plain ones); if none do,
+        // nobody pays for the indent.
+        const emojis = this.storedChoices.map(c => this.chooseEmoji(c.text));
+        const anyEmoji = emojis.some(Boolean);
+
         this.storedChoices.forEach((choice, i) => {
             const choiceBtn = document.createElement('button');
             choiceBtn.className = 'choice-btn';
             choiceBtn.dataset.index = i;
 
-            const emoji = this.chooseEmoji(choice.text);
-            choiceBtn.innerHTML = emoji
-                ? `${emoji} ${FinkUtils.escapeHtml(choice.text.trim())}`
-                : FinkUtils.escapeHtml(choice.text.trim());
+            const label = FinkUtils.escapeHtml(choice.text.trim());
+            choiceBtn.innerHTML = anyEmoji
+                ? `<span class="choice-lead" aria-hidden="true">${emojis[i] || ''}</span>${label}`
+                : label;
 
             setTimeout(() => choiceBtn.classList.add('ready'), 100 * (i + 1) + 400);
 
@@ -403,7 +412,11 @@ window.FinkUI = {
             || document.getElementById('narrative-view');
         const budgetBase = scroller ? scroller.clientHeight : window.innerHeight;
         const media = section.querySelector(':scope > .section-media');
-        const mediaH = (media && getComputedStyle(media).display !== 'none') ? media.offsetHeight : 0;
+        // Landscape phones lay the scene out side-by-side (CSS grid), so
+        // the image spends no vertical budget — subtracting it there
+        // halved every part for no reason.
+        const sideBySide = matchMedia('(orientation: landscape) and (max-height: 540px)').matches;
+        const mediaH = (!sideBySide && media && getComputedStyle(media).display !== 'none') ? media.offsetHeight : 0;
         const pagerH = this.historyToggle ? this.historyToggle.offsetHeight : 0;
         const budget = Math.max(120, budgetBase - mediaH - pagerH - 56);
         const parts = [];
