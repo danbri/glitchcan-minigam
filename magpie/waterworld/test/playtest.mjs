@@ -76,6 +76,28 @@ try {
   if (!subParts.length) pass('sub v2: props, planes, rudder, beacon all present');
   else fail('sub missing parts: ' + subParts.join(','));
 
+  // POSE CONTINUITY: the craft's quaternion must never jump between
+  // frames. The old Euler read-back pose flipped representations ~67
+  // times per slow diving turn (measured); a brushed turn with pitch is
+  // exactly the manoeuvre that exposed it.
+  await page.mouse.move(215, 430);
+  await page.mouse.down();
+  await page.mouse.move(120, 520, { steps: 5 });   // hard turn + dive
+  await page.mouse.up();
+  const poseJump = await page.evaluate(async () => {
+    const g = window.__waterworld.game;
+    const prev = g.sub.quaternion.clone();
+    let worst = 0;
+    for (let i = 0; i < 25; i++) {
+      await new Promise(r => setTimeout(r, 80));
+      worst = Math.max(worst, prev.angleTo(g.sub.quaternion));
+      prev.copy(g.sub.quaternion);
+    }
+    return worst;
+  });
+  if (poseJump < 0.6) pass(`craft pose continuous through a turn (max step ${poseJump.toFixed(3)} rad)`);
+  else fail(`craft pose SNAPS: ${poseJump.toFixed(2)} rad between samples`);
+
   // helm smoothness: park right on top of a target and make sure the
   // heading settles instead of flip-flopping between two angles (the
   // reported drift glitch)
