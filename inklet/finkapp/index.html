@@ -22,11 +22,14 @@
     <link rel="stylesheet" href="fink-skins.css">
     <script>
       // Apply the chosen skin BEFORE first paint (no flash of retro).
+      // Default is broadsheet (owner's call, July 2026): the readable
+      // newsprint identity greets first-time readers; ?skin= and a saved
+      // choice still win, so nobody who picked a skin loses it.
       (function () {
         var q = new URLSearchParams(location.search).get('skin');
         var saved = null;
         try { saved = localStorage.getItem('foafos.skin'); } catch (e) {}
-        document.documentElement.dataset.skin = q || saved || 'spectrum';
+        document.documentElement.dataset.skin = q || saved || 'broadsheet';
       })();
     </script>
 </head>
