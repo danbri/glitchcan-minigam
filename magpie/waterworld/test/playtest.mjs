@@ -1,0 +1,151 @@
+#!/usr/bin/env node
+// Waterworld standalone playtest — a PLAYTEST, not just a boot check:
+// boots the page, dives, steers, pings, collects, banks, and wins, all
+// through the real input path and the __waterworld hook.
+//
+//   node magpie/waterworld/test/playtest.mjs [--shots]
+
+import { spawn } from 'node:child_process';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { chromium } from '@playwright/test';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const repoRoot = join(here, '..', '..', '..');
+const serveRoot = join(repoRoot, '..');
+const PORT = 8177;
+const EXE = process.env.PW_CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const SHOTS = process.argv.includes('--shots');
+const SHOTDIR = process.env.WW_SHOTDIR || '/tmp';
+
+const server = spawn('python3', ['-m', 'http.server', String(PORT), '--directory', serveRoot],
+  { stdio: 'ignore' });
+await new Promise(r => setTimeout(r, 900));
+
+let failures = 0;
+const fail = (m) => { console.error('✖', m); failures++; };
+const pass = (m) => console.log('✔', m);
+
+let browser;
+try {
+  browser = await chromium.launch({
+    headless: true, executablePath: EXE,
+    args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader',
+      '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'],
+  });
+  const page = await browser.newPage({ viewport: { width: 430, height: 860 } });
+  const pageErrors = [];
+  page.on('pageerror', e => pageErrors.push(String(e).slice(0, 300)));
+
+  await page.goto(`http://127.0.0.1:${PORT}/glitchcan-minigam/magpie/waterworld/waterworld.html?lite&probe`);
+  await page.waitForSelector('#splash.show', { timeout: 15000 });
+  pass('splash shown');
+
+  // dive via the keyboard, like a player would
+  await page.keyboard.press(' ');
+  await page.waitForFunction(() => !!window.__waterworld, null, { timeout: 15000 });
+  await page.waitForTimeout(1500);
+  pass('game started, __waterworld hook up');
+
+  // guest-fit rule: the page must fit its own frame exactly
+  const fit = await page.evaluate(() => ({
+    scroll: document.body.scrollHeight, inner: window.innerHeight,
+  }));
+  if (fit.scroll === fit.inner) pass(`page fits its frame (${fit.inner}px)`);
+  else fail(`page overflows: scrollHeight ${fit.scroll} vs innerHeight ${fit.inner}`);
+
+  // the canvas must actually draw something
+  const drawn = await page.evaluate(() => {
+    const c = document.getElementById('scene');
+    const gl = c.getContext('webgl2') || c.getContext('webgl');
+    const px = new Uint8Array(4 * 64);
+    gl.readPixels(gl.drawingBufferWidth / 2 - 4, gl.drawingBufferHeight / 2 - 2,
+      8, 8, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    return px.some(v => v > 8);
+  });
+  if (drawn) pass('canvas is rendering (non-black pixels)');
+  else fail('canvas appears black');
+
+  // steer: hold left + thrust, the sub must move and turn
+  const before = await page.evaluate(() => ({
+    pos: window.__waterworld.pos(), yaw: window.__waterworld.game.yaw,
+  }));
+  await page.keyboard.down('ArrowLeft');
+  await page.keyboard.down(' ');
+  await page.waitForTimeout(1200);
+  await page.keyboard.up('ArrowLeft');
+  await page.keyboard.up(' ');
+  const after = await page.evaluate(() => ({
+    pos: window.__waterworld.pos(), yaw: window.__waterworld.game.yaw,
+  }));
+  const moved = Math.hypot(after.pos[0] - before.pos[0], after.pos[2] - before.pos[2]);
+  if (moved > 2) pass(`sub moved ${moved.toFixed(1)} units under thrust`);
+  else fail(`sub barely moved (${moved.toFixed(2)} units)`);
+  if (Math.abs(after.yaw - before.yaw) > 0.4) pass('sub turned under ArrowLeft');
+  else fail(`yaw barely changed (${(after.yaw - before.yaw).toFixed(2)})`);
+
+  // sonar ping via Escape (the host pad's B key)
+  await page.keyboard.press('Escape');
+  const pinged = await page.evaluate(() => window.__waterworld.game._pingCooldown > 0);
+  if (pinged) pass('Escape fired the sonar ping');
+  else fail('Escape did not ping');
+
+  // collect: teleport onto a known clay pipe and let auto-collect work
+  await page.evaluate(() => {
+    const g = window.__waterworld.game;
+    const s = g.salvage.find(s => !s.collected && !s.hidden && !s.heavy);
+    window.__waterworld.teleport(s.mesh.position.x, s.mesh.position.y + 1, s.mesh.position.z);
+  });
+  await page.waitForTimeout(600);
+  const cargo = await page.evaluate(() => window.__waterworld.state().cargo);
+  if (cargo >= 1) pass(`auto-collected salvage (cargo=${cargo})`);
+  else fail('salvage not collected on touch');
+
+  // bank: teleport to the bell, score must rise and air refill
+  await page.evaluate(() => {
+    const g = window.__waterworld.game;
+    g.air = 30;
+    const b = g.dock.bell.position;
+    window.__waterworld.teleport(b.x + 3, b.y, b.z);
+  });
+  await page.waitForTimeout(900);
+  const banked = await page.evaluate(() => window.__waterworld.state());
+  if (banked.score > 0) pass(`banked cargo for ${banked.score} points`);
+  else fail('banking did not score');
+  if (banked.air > 0.5) pass('air refilled at the bell');
+  else fail(`air did not refill (${banked.air})`);
+
+  // hazards exist and think: an eel must approach a nearby sub
+  const eelDelta = await page.evaluate(async () => {
+    const g = window.__waterworld.game;
+    const e = g.eels[0];
+    window.__waterworld.teleport(e.pos.x + 12, e.pos.y, e.pos.z);
+    const d0 = e.pos.distanceTo(g.pos);
+    await new Promise(r => setTimeout(r, 1200));
+    return d0 - e.pos.distanceTo(g.pos);
+  });
+  if (eelDelta > 1) pass(`eel gave chase (closed ${eelDelta.toFixed(1)} units)`);
+  else fail(`eel did not chase (delta ${eelDelta.toFixed(2)})`);
+
+  if (SHOTS) {
+    await page.screenshot({ path: join(SHOTDIR, 'waterworld-play.png') });
+    pass(`screenshot → ${SHOTDIR}/waterworld-play.png`);
+  }
+
+  // win path: force the chest through banking, endcard must show
+  await page.evaluate(() => window.__waterworld.win());
+  await page.waitForSelector('#endcard.show', { timeout: 8000 });
+  const won = await page.evaluate(() => window.__waterworld.state().won);
+  if (won) pass('win path: endcard shown, state.won true');
+  else fail('win path broken');
+
+  if (pageErrors.length) fail('page errors: ' + pageErrors.join(' | '));
+  else pass('zero page errors');
+} catch (e) {
+  fail('playtest crashed: ' + e.message);
+} finally {
+  await browser?.close();
+  server.kill();
+}
+console.log(failures ? `\n${failures} FAILURE(S)` : '\nALL PASS');
+process.exit(failures ? 1 : 0);
