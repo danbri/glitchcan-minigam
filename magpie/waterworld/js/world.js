@@ -35,6 +35,42 @@ export function cyl(parent, rt, rb, h, color, x = 0, y = 0, z = 0, seg = 6) {
   return m;
 }
 
+// Neon treatment: darken the faces to near-silhouette and trace every
+// hard edge with an additive glowing line. Structures become mysterious
+// shapes drawn in light; the particles do the rest of the talking.
+const _lineMats = new Map();
+function lineMat(color) {
+  if (!_lineMats.has(color)) {
+    _lineMats.set(color, new THREE.LineBasicMaterial({
+      color, transparent: true, opacity: 0.85,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    }));
+  }
+  return _lineMats.get(color);
+}
+const _darkMats = new Map();
+function darkMat(srcColor) {
+  const c = new THREE.Color(srcColor).multiplyScalar(0.22).getHex();
+  if (!_darkMats.has(c)) {
+    _darkMats.set(c, new THREE.MeshLambertMaterial({ color: c, flatShading: true }));
+  }
+  return _darkMats.get(c);
+}
+
+export function neonize(root, edgeColor, { keepFaces = false } = {}) {
+  root.traverse((o) => {
+    if (!o.isMesh || o.userData.noNeon || o.isLineSegments) return;
+    if (!keepFaces && o.material && o.material.color) {
+      o.material = darkMat(o.material.color.getHex());
+    }
+    const edges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(o.geometry, 20), lineMat(edgeColor));
+    edges.userData.noNeon = true;
+    o.add(edges);
+  });
+  return root;
+}
+
 // Chunk a geometry: snap vertices to a coarse grid so even curved
 // primitives read as hand-placed picoCAD verts.
 export function crunch(geo, step = 0.5) {
@@ -199,8 +235,8 @@ function makeFloor(scene) {
     const x = pos.getX(i), z = pos.getZ(i);
     pos.setY(i, floorYAt(x, z) - 0.4);
     const t = Math.min(1, Math.max(0, (x - 10) / 60));
-    const c = silt.clone().lerp(deep, t);
-    if (Math.sin(x * 1.7 + z * 2.3) > 0.93) c.copy(weed);
+    const c = silt.clone().lerp(deep, t).multiplyScalar(0.5);   // let the neon lead
+    if (Math.sin(x * 1.7 + z * 2.3) > 0.93) c.copy(weed).multiplyScalar(0.7);
     colors.push(c.r, c.g, c.b);
   }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
@@ -329,15 +365,18 @@ function makeCrates(scene) {
 }
 
 // Kelp/weed: thin green boxes waving — cheap, sells "underwater" hard.
-export function makeWeeds(scene) {
+export function makeWeeds(scene, count = 110) {
   const g = new THREE.Group();
   const stalks = [];
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < count; i++) {
     const x = BOUNDS.minX + Math.random() * (BOUNDS.maxX - BOUNDS.minX);
     const z = BOUNDS.minZ + Math.random() * (BOUNDS.maxZ - BOUNDS.minZ);
-    const h = 3 + Math.random() * 6;
-    const s = box(g, 0.4, h, 0.4, Math.random() > 0.5 ? P8.green : P8.lime,
-      x, floorYAt(x, z) + h / 2, z);
+    const h = 3 + Math.random() * 8;
+    const s = new THREE.Mesh(new THREE.BoxGeometry(0.4, h, 0.4),
+      mat(Math.random() > 0.5 ? P8.green : P8.lime,
+        { emissive: Math.random() > 0.5 ? 0x0a3d22 : 0x123d0a }));
+    s.position.set(x, floorYAt(x, z) + h / 2, z);
+    g.add(s);
     s.userData.phase = Math.random() * Math.PI * 2;
     stalks.push(s);
   }
@@ -348,14 +387,22 @@ export function makeWeeds(scene) {
 // The whole static set. Returns collider list for the physics step.
 export function buildDock(scene) {
   makeFloor(scene);
-  makeQuayWalls(scene);
+  const quay = makeQuayWalls(scene);
   const culverts = makeCulverts(scene);
   const crane = makeCrane(scene);
   const barge = makeBarge(scene);
   const warehouse = makeWarehouse(scene);
   const bell = makeDivingBell(scene);
-  makeCrates(scene);
+  const crates = makeCrates(scene);
   const weeds = makeWeeds(scene);
+  // the neon pass: each structure family gets its own signature glow
+  neonize(quay, 0x1d6f8f);
+  for (const m of culverts) neonize(m.group, 0x00e436);
+  neonize(crane, 0xffa300);
+  neonize(barge, 0xff77a8);
+  neonize(warehouse, 0x83769c);
+  neonize(crates, 0x8f6a30);
+  neonize(bell, 0xffec27, { keepFaces: true });
   // sphere colliders for the big set pieces (cheap, forgiving)
   const colliders = [
     { x: 60, y: DEEP_Y + 8, z: 40, r: 9 },       // crane base

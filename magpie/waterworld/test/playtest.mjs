@@ -127,6 +127,39 @@ try {
   if (eelDelta > 1) pass(`eel gave chase (closed ${eelDelta.toFixed(1)} units)`);
   else fail(`eel did not chase (delta ${eelDelta.toFixed(2)})`);
 
+  // the living water: fish schools must exist and actually swirl
+  const fish = await page.evaluate(async () => {
+    const fx = window.__waterworld.game.fx;
+    const p0 = fx.schools[0].pos[0];
+    await new Promise(r => setTimeout(r, 800));
+    return { schools: fx.schools.length, moved: Math.abs(fx.schools[0].pos[0] - p0) };
+  });
+  if (fish.schools >= 2 && fish.moved > 0.01) pass(`fish schools swirling (${fish.schools} schools)`);
+  else fail(`boids inert: ${JSON.stringify(fish)}`);
+
+  // IR mode: toggle on via the real key, hot things read hot, toggle off
+  await page.keyboard.press('i');
+  const ir = await page.evaluate(() => {
+    const g = window.__waterworld.game;
+    return {
+      on: g.ir, fxIr: g.fx.ir,
+      fatbergHot: g.fatbergs[0].mesh.material.color.getHex(),
+      fogDark: g.scene.fog.color.getHex(),
+    };
+  });
+  if (ir.on && ir.fxIr) pass('IR toggled on via I key');
+  else fail('IR did not toggle: ' + JSON.stringify(ir));
+  if (ir.fatbergHot === 0xffdd66) pass('fatberg reads hot in IR');
+  else fail(`fatberg not hot in IR: ${ir.fatbergHot.toString(16)}`);
+  if (SHOTS) await page.screenshot({ path: join(SHOTDIR, 'waterworld-ir.png') });
+  await page.keyboard.press('i');
+  const irOff = await page.evaluate(() => {
+    const g = window.__waterworld.game;
+    return { on: g.ir, restored: g.fatbergs[0].mesh.material.color.getHex() !== 0xffdd66 };
+  });
+  if (!irOff.on && irOff.restored) pass('IR toggled off, materials restored');
+  else fail('IR restore broken: ' + JSON.stringify(irOff));
+
   if (SHOTS) {
     await page.screenshot({ path: join(SHOTDIR, 'waterworld-play.png') });
     pass(`screenshot → ${SHOTDIR}/waterworld-play.png`);

@@ -42,7 +42,7 @@
   #hud {
     position: absolute; top: 0; left: 0; right: 0;
     display: flex; flex-wrap: wrap; align-items: center; gap: 0.5em 1em;
-    padding: max(0.4em, env(safe-area-inset-top)) 0.7em 0.4em;
+    padding: max(0.4em, env(safe-area-inset-top)) 4.5em 0.4em 0.7em;
     font-size: clamp(11px, 2.4vmin, 16px);
     letter-spacing: 0.06em;
     color: #ffec27;
@@ -59,6 +59,21 @@
   @keyframes blink { 50% { opacity: 0.35; } }
   #hull { color: #ff77a8; }
   #inv { color: #ffccaa; }
+  #ir-btn {
+    position: absolute;
+    top: max(0.4em, env(safe-area-inset-top));
+    right: 0.7em;
+    z-index: 21;
+    font: inherit; font-size: clamp(10px, 2.2vmin, 14px); letter-spacing: 0.1em;
+    background: rgba(0,0,0,0.5); color: #83769c;
+    border: 1px solid #83769c; padding: 0.15em 0.6em;
+    min-width: 44px; min-height: 28px; cursor: pointer;
+  }
+  #ir-btn.on {
+    color: #ffa300; border-color: #ffa300;
+    box-shadow: 0 0 8px rgba(255,163,0,0.6);
+  }
+  #ir-btn:focus-visible { outline: 2px solid #29adff; outline-offset: 2px; }
 
   /* ------- toasts + facts ------- */
   #toasts {
@@ -171,6 +186,7 @@
     <span id="codex">📖0/12</span>
     <span id="inv">·</span>
   </div>
+  <button id="ir-btn" type="button" aria-label="toggle thermal sight" aria-pressed="false">IR</button>
 
   <div id="toasts"></div>
 
@@ -185,7 +201,7 @@
     <p>— DOCKLANDS DEEP —</p>
     <p>The old dock flooded a century ago and kept everything it swallowed.
        Pilot the sub. Ping the dark. Raise what London lost.</p>
-    <p>STEER: pad · THRUST: A · SONAR/TOOL: B<br>
+    <p>STEER: pad · THRUST: A · SONAR/TOOL: B · THERMAL: I / IR<br>
        Bank salvage at the diving bell before your air runs out.</p>
     <p class="press">▶ PRESS A OR TAP TO DIVE ◀</p>
   </div>

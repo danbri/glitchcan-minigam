@@ -8,12 +8,14 @@ import * as THREE from '../../../trees/vendor/three.module.min.js';
 import {
   P8, mat, buildDock, makeSub, makeEelHead, makeEelSegment, makeFatberg,
   makeMine, makeSalvageMesh, makeQuestMesh, makeParticleCloud,
-  makeGhostWhale, BOUNDS, SHELF_Y, DEEP_Y, floorYAt,
+  makeGhostWhale, BOUNDS, SHELF_Y, DEEP_Y, floorYAt, neonize,
 } from './world.js';
+import { UnderwaterFX, glowSprite, currentAt } from './fx.js';
 import { FACTS, QUEST_ITEMS, TOOLS, HINTS } from './facts.js';
 
 const AIR_MAX = 100;
 const HULL_MAX = 4;
+const _cur = new THREE.Vector3();
 
 export class WaterworldGame {
   // ui: { hud(state), toast(text, cls), fact(title, text, icon),
@@ -76,6 +78,17 @@ export class WaterworldGame {
 
     this.sub = makeSub();
     this.sub.position.copy(this.pos);
+    neonize(this.sub, 0xffec27, { keepFaces: true });
+    this.sub.userData.irColor = 0xbb5533;          // a warm engine in the dark
+    // the visible beam: an additive cone the headlamp appears to cast
+    this.lightCone = new THREE.Mesh(
+      new THREE.ConeGeometry(3.6, 16, 10, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0xcfe8ff, transparent: true, opacity: 0.06,
+        blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+    this.lightCone.rotation.z = Math.PI / 2;       // apex forward at the nose
+    this.lightCone.position.set(10.5, 0, 0);
+    this.lightCone.userData.noNeon = true;
+    this.sub.add(this.lightCone);
     this.scene.add(this.sub);
     this.headlamp = new THREE.SpotLight(0xfff1e8, 0, 60, 0.5, 0.4);
     this.headlamp.position.set(2, 0, 0);
@@ -101,6 +114,12 @@ export class WaterworldGame {
     this.snow = makeParticleCloud(this.lite ? 150 : 500, 0x99bbdd, 0.35, 180);
     this.snow.position.y = -30;
     this.scene.add(this.snow);
+
+    // the living water: currents, fish, god rays, plankton, vents, plumes
+    this.fx = new UnderwaterFX(this.scene, { lite: this.lite });
+    this.ir = false;
+    this._irMats = new Map();
+    this._irUsedOnce = false;
     this.bubbles = [];
     this._bubbleT = 0;
 
@@ -109,9 +128,18 @@ export class WaterworldGame {
       new THREE.TorusGeometry(1, 0.12, 4, 24),
       mat(P8.blue, { emissive: 0x1155aa, transparent: true, opacity: 0.9 }));
     this.pingRing.visible = false;
+    this.pingRing.userData.irSkip = true;
     this.scene.add(this.pingRing);
     this._pingAge = 99;
     this.glints = [];
+
+    // the bell is the warm heart of the dive — let it read that way
+    const bellGlow = glowSprite(0xffec27, 11, 0.5);
+    bellGlow.userData.irHot = true;
+    bellGlow.position.y = -1;
+    this.dock.bell.add(bellGlow);
+    this.dock.bell.userData.irColor = 0xffaa44;
+    this.lightCone.userData.irSkip = true;
 
     this.resize();
     this.render();
@@ -134,6 +162,12 @@ export class WaterworldGame {
       const g = makeSalvageMesh(type);
       g.position.set(x, y, z);
       g.rotation.y = Math.random() * Math.PI * 2;
+      const halo = glowSprite(
+        type === 'captains_chest' ? 0xffec27 : type === 'fatberg_relic' ? 0xffccaa : 0xaef0ff,
+        type === 'captains_chest' ? 4.5 : 2.0,
+        type === 'captains_chest' ? 0.6 : 0.3);
+      halo.position.y = 0.8;
+      g.add(halo);
       this.scene.add(g);
       this.salvage.push({ type, mesh: g, collected: false,
         heavy: !!opts.heavy, hidden: !!opts.hidden,
@@ -161,6 +195,9 @@ export class WaterworldGame {
     const put = (id, x, z, y) => {
       const g = makeQuestMesh();
       g.position.set(x, y ?? floorYAt(x, z) + 0.3, z);
+      const halo = glowSprite(0xff77a8, 3.2, 0.45);
+      halo.position.y = 0.7;
+      g.add(halo);
       this.scene.add(g);
       this.quest.push({ id, mesh: g, taken: false });
     };
@@ -178,13 +215,22 @@ export class WaterworldGame {
     this.eels = this.eels || [];
     for (let i = 0; i < n; i++) {
       const head = makeEelHead();
+      neonize(head, 0x00e436);
+      head.userData.irColor = 0x38506e;         // cold-blooded: a faint trace
+      const eyeGlow = glowSprite(0xff004d, 1.6, 0.6);
+      eyeGlow.position.set(-0.2, 0.45, 0);
+      eyeGlow.userData.irHot = true;
+      head.add(eyeGlow);
       const segs = [];
       for (let s = 0; s < 6; s++) {
         const m = makeEelSegment(s);
+        neonize(m, 0x00e436);
+        m.userData.irColor = 0x38506e;
         this.scene.add(m);
         segs.push(m);
       }
       this.scene.add(head);
+      if (this.ir) { this._irApply(head); segs.forEach(s => this._irApply(s)); }
       const cx = 30 + Math.random() * 70, cz = (Math.random() - 0.5) * 120;
       this.eels.push({
         head, segs,
@@ -203,6 +249,13 @@ export class WaterworldGame {
     const spots = [[45, -50], [70, 10], [95, -10], [60, 55], [110, 30]];
     for (const [x, z] of spots) {
       const m = makeMine();
+      neonize(m, 0xff004d);
+      m.userData.irColor = 0x8a4a33;             // old explosive, faintly warm
+      const blink = glowSprite(0xff004d, 1.6, 0.35);
+      blink.position.y = 1.4;
+      blink.userData.irHot = true;
+      m.add(blink);
+      m.userData.blink = blink;
       const y = floorYAt(x, z) + 5 + Math.random() * 6;
       m.position.set(x, y, z);
       this.scene.add(m);
@@ -219,6 +272,8 @@ export class WaterworldGame {
     // one parked in each culvert mouth, blocking it
     for (const mouth of this.dock.culverts) {
       const f = makeFatberg(4.2);
+      neonize(f, 0xffccaa, { keepFaces: true });
+      f.userData.irColor = 0xffdd66;             // decomposition runs HOT
       f.position.set(mouth.x, mouth.y + 1, mouth.z + 2);
       this.scene.add(f);
       this.fatbergs.push({ mesh: f, hp: 3, r: 4.5, blocking: true,
@@ -229,8 +284,11 @@ export class WaterworldGame {
   _spawnRampantFatberg() {
     const mouth = this.dock.culverts[Math.floor(Math.random() * this.dock.culverts.length)];
     const f = makeFatberg(2.6);
+    neonize(f, 0xffccaa, { keepFaces: true });
+    f.userData.irColor = 0xffdd66;
     f.position.set(mouth.x, mouth.y + 2, mouth.z + 6);
     this.scene.add(f);
+    if (this.ir) this._irApply(f);
     const away = new THREE.Vector3(Math.random() - 0.5, 0.1, 0.8).normalize().multiplyScalar(2.2);
     this.fatbergs.push({ mesh: f, hp: 2, r: 2.8, blocking: false, vel: away,
       wobble: Math.random() * 9 });
@@ -242,6 +300,74 @@ export class WaterworldGame {
   setKey(k, down) {
     if (k in this.keys) this.keys[k] = down;
     if (k === 'b' && down) this._doPing();
+  }
+
+  // ------------------------------------------------------------- IR mode
+  // Thermal sight: every mesh drops to a cold navy silhouette unless
+  // something tagged it with a temperature (userData.irColor, inherited
+  // down the subtree). Fatbergs blaze — decomposition runs warm — the
+  // sub's engine glows, old explosives smoulder, eels barely register
+  // (cold-blooded), and the ghost whale shows as a COLD blue void.
+  _irMat(color) {
+    if (!this._irMats.has(color)) {
+      this._irMats.set(color, new THREE.MeshBasicMaterial({ color }));
+    }
+    return this._irMats.get(color);
+  }
+
+  _irColorFor(o) {
+    let n = o;
+    while (n) {
+      if (n.userData && n.userData.irColor) return n.userData.irColor;
+      n = n.parent;
+    }
+    return null;
+  }
+
+  _irApply(root) {
+    root.traverse((o) => {
+      if (o.userData && o.userData.irSkip) return;
+      if (o.isLineSegments) {
+        if (o.visible) { o.userData._irHid = true; o.visible = false; }
+      } else if (o.isSprite) {
+        if (!o.userData.irHot && o.visible) { o.userData._irHid = true; o.visible = false; }
+      } else if (o.isMesh) {
+        if (!o.userData._origMat) o.userData._origMat = o.material;
+        o.material = this._irMat(this._irColorFor(o) ?? 0x0a1224);
+      }
+    });
+  }
+
+  _irRestore(root) {
+    root.traverse((o) => {
+      if (o.userData && o.userData._irHid) { o.visible = true; delete o.userData._irHid; }
+      if (o.isMesh && o.userData._origMat) {
+        o.material = o.userData._origMat;
+        delete o.userData._origMat;
+      }
+    });
+  }
+
+  toggleIR() {
+    this.ir = !this.ir;
+    this.fx.setIR(this.ir);
+    if (this.ir) {
+      this._irApply(this.scene);
+      this.whale.material.color.set(0x3366ff);
+      this.ui.toast('▣ THERMAL SIGHT', 'warn');
+      if (!this._irUsedOnce) {
+        this._irUsedOnce = true;
+        this.ui.fact('THERMAL EYE',
+          'Decomposing fat runs warm — sewer crews find fatbergs by their heat. Ghosts, of course, run cold.',
+          '🌡️');
+      }
+      this.ui.announce('Thermal view on. Warm things glow; the water goes dark.');
+    } else {
+      this._irRestore(this.scene);
+      this.whale.material.color.set(0xc8f0ff);
+      this.ui.toast('▢ THERMAL OFF', 'hint');
+      this.ui.announce('Thermal view off.');
+    }
   }
 
   // ------------------------------------------------------------- actions
@@ -443,6 +569,8 @@ export class WaterworldGame {
     this.vel.addScaledVector(fwd, thrust * dt);
     this.vel.multiplyScalar(Math.pow(0.14, dt));            // water drag
     this.vel.y += Math.sin(this.elapsed * 0.8) * 0.06 * dt; // gentle swell
+    currentAt(this.pos, this.elapsed, _cur);                 // the gyre tugs
+    this.vel.addScaledVector(_cur, 0.35 * dt);
     this.pos.addScaledVector(this.vel, dt);
 
     // -------- containment: walls, floor, surface
@@ -475,13 +603,29 @@ export class WaterworldGame {
 
     // -------- fog and light by depth (the deep is DARK without the lamp)
     const depth = -this.pos.y;
-    const deepT = Math.min(1, Math.max(0, (depth - 25) / 40));
-    const fogC = new THREE.Color(P8.navy).lerp(new THREE.Color(P8.black), deepT * 0.9);
-    this.scene.fog.color.copy(fogC);
-    this.scene.background.copy(fogC);
-    const lampBoost = this.tools.has('arclamp') ? 0.45 : 1;
-    this.scene.fog.density = (0.018 + deepT * 0.03 * lampBoost);
+    if (this.ir) {
+      // heat sees through the murk: near-black, unusually clear
+      this.scene.fog.color.set(0x000308);
+      this.scene.background.set(0x000308);
+      this.scene.fog.density = 0.011;
+    } else {
+      const deepT = Math.min(1, Math.max(0, (depth - 25) / 40));
+      const fogC = new THREE.Color(P8.navy).lerp(new THREE.Color(P8.black), deepT * 0.9);
+      this.scene.fog.color.copy(fogC);
+      this.scene.background.copy(fogC);
+      const lampBoost = this.tools.has('arclamp') ? 0.45 : 1;
+      this.scene.fog.density = (0.018 + deepT * 0.03 * lampBoost);
+    }
     if (!this.tools.has('arclamp')) this.headlamp.intensity = 40;
+    this.lightCone.material.opacity = this.ir ? 0
+      : (this.tools.has('arclamp') ? 0.13 : 0.06);
+
+    // -------- the living water
+    const threats = [this.pos, ...this.eels.map(e => e.pos)];
+    const hot = this.ir
+      ? [...this.fatbergs.map(f => f.mesh.position), this.pos]
+      : [];
+    this.fx.step(dt, this.elapsed, this.pos, threats, -this.camera.position.y, hot);
 
     // -------- air + hull economy
     this.air -= dt * (k.a ? 1.7 : 1.1) * (1 + this.banks * 0.06);
@@ -562,6 +706,7 @@ export class WaterworldGame {
       tools: [...this.tools],
       codex: this.codex.size, codexTotal: Object.keys(FACTS).length,
       whale: this.whaleActive, chest: this.hasChest, over: this.over, won: this.won,
+      ir: this.ir,
     };
   }
 
@@ -676,6 +821,11 @@ export class WaterworldGame {
       if (!m.live) continue;
       m.mesh.rotation.y += dt * 0.4;
       const d = m.mesh.position.distanceTo(this.pos);
+      const blink = m.mesh.userData.blink;
+      if (blink) {
+        blink.material.opacity = 0.2 +
+          0.5 * Math.abs(Math.sin(this.elapsed * (d < 8 ? 7 : 1.6)));
+      }
       if (d < 3.2) this._detonate(m, true);
       else if (d < 8) {
         m.beep -= dt;
@@ -699,9 +849,10 @@ export class WaterworldGame {
     if (dist > 1) this.whale.position.addScaledVector(dir.normalize(), Math.min(6, dist) * dt * 0.9);
     this.whale.lookAt(target);
     this.whale.rotateY(-Math.PI / 2);
-    // fade in, breathe
+    // fade in, breathe (in thermal sight she is a steady cold presence)
     const m = this.whale.material;
-    m.opacity = Math.min(0.75, m.opacity + dt * 0.2) * (0.8 + Math.sin(this.whalePhase * 1.3) * 0.2);
+    const ceiling = this.ir ? 0.95 : 0.75;
+    m.opacity = Math.min(ceiling, m.opacity + dt * 0.2) * (0.8 + Math.sin(this.whalePhase * 1.3) * 0.2);
     // tail swish: displace the base positions a little
     const pos = this.whale.geometry.attributes.position, base = this.whale.userData.base;
     for (let i = 0; i < pos.count; i++) {
@@ -718,6 +869,7 @@ export class WaterworldGame {
 
   _stepParticles(dt) {
     // marine snow drifts down and wraps
+    this.snow.material.opacity = this.ir ? 0.12 : 0.8;
     const sp = this.snow.geometry.attributes.position;
     for (let i = 0; i < sp.count; i++) {
       let y = sp.getY(i) - dt * 1.1;

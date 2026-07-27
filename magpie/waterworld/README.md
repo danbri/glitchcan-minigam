@@ -28,10 +28,29 @@ running out of air) and the dive ends with a partial score.
 
 Sonar also stuns eels up close and safely detonates mines at a distance.
 
+## The living water (js/fx.js)
+
+The blocky bones wear a neon skin: structures are near-silhouettes traced
+in additive glowing edges (`neonize`), each family its own signature
+colour. One basin-wide gyre (`currentAt`) carries everything: three boid
+fish schools haunting the wrecks (shimmering hue-cycling point clouds),
+plankton, drifting debris, vent bubble columns, and the dust motes
+hanging in the **god rays** — slanted additive light shafts that fade
+with depth. The sub casts a visible beam cone and feels the current.
+
+**IR / thermal sight** (I key, or the IR button in the HUD): the water
+goes near-black and unusually clear; everything drops to a cold navy
+silhouette unless it carries heat. Fatbergs blaze (decomposition runs
+warm — how sewer crews actually find them), the sub's engine glows, old
+mines smoulder, eels barely register (cold-blooded), and the ghost whale
+reads as a *cold* blue presence. Heat plumes rise off warm sources.
+Late-spawned entities inherit the active mode.
+
 ## Controls
 
 - **Steer:** arrows / WASD / d-pad (left-right = yaw, up-down = pitch)
 - **A / Space / Z:** thrust · **B / Escape / X:** sonar ping + tools
+- **I / IR button:** thermal sight
 - Touch pad appears standalone; inside the FINK shell the host provides
   input (`sdk.onControls`) and this pad hides.
 
