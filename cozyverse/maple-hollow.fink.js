@@ -12,23 +12,23 @@ VAR heard_song = false
 === train_arrives ===
 # VIDEO: R4ZGGJsho7I
 
-The train slows with a familiar screech. Through frost-laced windows, Emma watches Maple Hollow emerge from the snow—unchanged, impossibly unchanged, after three years away.
+The train screeches in. Through frost-laced glass, Emma watches Maple Hollow surface from the snow—unchanged, impossibly so, after three years gone.
 
 — As Aslan might say: "You cannot go back to the beginning, but you can start where you are."
 
 She hasn't been home since the night she left. Since Jake.
 
-The platform is nearly empty. Steam rises from the engine like breath in winter air.
+The platform is empty. Steam rises off the engine like breath.
 
 + [Step onto the platform, heart pounding]
     ~ warmth += 1
-    Emma's boots crunch on fresh snow. The cold bites her cheeks, but something else makes her breath catch—
+    Her boots crunch fresh snow. The cold bites—then something else catches her breath—
     -> spot_jake
 + [Linger in the doorway, scanning the crowd]
-    She hesitates. The smart thing would be to go straight to Mom's. Avoid... complications.
+    She hesitates. Smarter to go straight to Mom's. Avoid... complications.
     -> go_to_bakery
 + [Watch a snowflake land on her glove]
-    A single perfect crystal. She remembers catching snowflakes with him, counting the points, making wishes.
+    One perfect crystal. She used to catch them with him, counting the points, making wishes.
     -> stranger_kindness
 
 === spot_jake ===
