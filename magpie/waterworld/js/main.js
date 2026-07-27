@@ -107,7 +107,11 @@ function hud(s) {
   $('hull').textContent = '▮'.repeat(Math.max(0, s.hull)) + '▯'.repeat(Math.max(0, s.hullMax - s.hull));
   $('score').textContent = String(s.score).padStart(5, '0');
   $('depth').textContent = s.depth + 'm';
-  $('cargo').textContent = s.cargo ? `⚓${s.cargo} (+${s.cargoValue})` : '⚓—';
+  $('cargo').textContent = s.cargo
+    ? `⚓${s.cargo} ×${s.haulMult.toFixed(2)}${s.combo >= 2 ? ` 🔥${s.combo}` : ''}`
+    : '⚓—';
+  const bankBtn = $('bank-btn');
+  bankBtn.hidden = !s.cargo || s.over;
   $('codex').textContent = `📖${s.codex}/${s.codexTotal}`;
   const held = [
     ...s.tools.map(t => ({ grapple: '🪝', arclamp: '💡', fizzlance: '🫧' }[t] || '🔧')),
@@ -210,10 +214,14 @@ document.addEventListener('keyup', (e) => {
       }
     }
   });
+  let lastTapAt = 0;
   const endGesture = (e) => {
     if (gesture && game && !gesture.moved && performance.now() - gesture.t0 < 400) {
       audio.ensure();
-      game._doPing();                      // a tap is a ping
+      const now = performance.now();
+      if (now - lastTapAt < 320) game.dash();   // double-tap = DASH
+      else game._doPing();                      // a tap is a ping
+      lastTapAt = now;
     }
     gesture = null;
   };
@@ -333,6 +341,110 @@ $('help-btn').addEventListener('pointerdown', (e) => {
 $('help-close').addEventListener('click', () => {
   $('help-panel').classList.remove('show');
   $('help-btn').setAttribute('aria-expanded', 'false');
+});
+
+// The captain's banking order — the ONE decision the helm never makes
+$('bank-btn').addEventListener('pointerdown', (e) => {
+  e.stopPropagation();
+  if (!game) return;
+  game._bankOrder = true;
+  game.autopilot = true;
+  game.manualUntil = 0;
+  audio.ensure();
+  toast('🔔 Aye aye — making for the bell!', 'gold');
+  announce('Taking the haul to the bell.');
+});
+
+// The sonar chart: what the pings have taught us, drawn top-down
+function drawMap() {
+  if (!game) return;
+  const cv = $('map-canvas');
+  const g2 = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const X = (x) => ((x + 120) / 240) * (W - 30) + 15;
+  const Z = (z) => ((z + 80) / 160) * (H - 30) + 15;
+  // water: shallow west, deep east
+  const grad = g2.createLinearGradient(0, 0, W, 0);
+  grad.addColorStop(0, '#0d3a5c'); grad.addColorStop(0.55, '#0a2748'); grad.addColorStop(1, '#050f26');
+  g2.fillStyle = grad;
+  g2.fillRect(0, 0, W, H);
+  g2.strokeStyle = '#7ef2ff'; g2.lineWidth = 2;
+  g2.strokeRect(6, 6, W - 12, H - 12);
+  const dot = (x, z, color, r = 5) => {
+    g2.fillStyle = color;
+    g2.beginPath(); g2.arc(X(x), Z(z), r, 0, Math.PI * 2); g2.fill();
+  };
+  // culvert mouths
+  g2.fillStyle = '#1f8f4e';
+  for (const m of game.dock.culverts) g2.fillRect(X(m.x) - 8, Z(-80) - 4, 16, 8);
+  // hulls above
+  g2.fillStyle = 'rgba(220,230,240,0.7)';
+  for (const h of game.fauna.hulls) {
+    g2.save();
+    g2.translate(X(h.position.x), Z(h.position.z));
+    g2.rotate(-h.rotation.y);
+    g2.fillRect(-16, -5, 32, 10);
+    g2.restore();
+  }
+  // what the sonar has charted
+  for (const s of game.salvage) {
+    if (s._known && !s.collected && !s.hidden) dot(s.mesh.position.x, s.mesh.position.z, '#ffd75e');
+  }
+  for (const q of game.quest) {
+    if (q._known && !q.taken) dot(q.mesh.position.x, q.mesh.position.z, '#ff77a8', 6);
+  }
+  for (const m of game.mines) {
+    if (m._known && m.live) {
+      g2.strokeStyle = '#ff2244'; g2.lineWidth = 3;
+      const mx = X(m.mesh.position.x), mz = Z(m.mesh.position.z);
+      g2.beginPath();
+      g2.moveTo(mx - 6, mz - 6); g2.lineTo(mx + 6, mz + 6);
+      g2.moveTo(mx + 6, mz - 6); g2.lineTo(mx - 6, mz + 6);
+      g2.stroke();
+    }
+  }
+  for (const f of game.fatbergs) dot(f.mesh.position.x, f.mesh.position.z, '#e8b07a', f.r * 1.6);
+  if (game.cache) {
+    g2.strokeStyle = '#7ef2ff'; g2.lineWidth = 2;
+    g2.beginPath(); g2.arc(X(game.cache.x), Z(game.cache.z),
+      10 + 4 * Math.sin(performance.now() / 200), 0, Math.PI * 2);
+    g2.stroke();
+  }
+  // the bell
+  const b = game.dock.bell.position;
+  dot(b.x, b.z, '#ffec27', 9);
+  g2.fillStyle = '#442';
+  g2.font = '14px sans-serif'; g2.textAlign = 'center';
+  g2.fillText('🔔', X(b.x), Z(b.z) + 5);
+  // whale, if she's up
+  if (game.whaleActive) dot(game.whale.position.x, game.whale.position.z, 'rgba(200,240,255,0.8)', 8);
+  // YOU: an arrow showing heading
+  g2.save();
+  g2.translate(X(game.pos.x), Z(game.pos.z));
+  g2.rotate(-game.yaw + Math.PI / 2);
+  g2.fillStyle = '#29adff';
+  g2.beginPath();
+  g2.moveTo(0, -11); g2.lineTo(7, 8); g2.lineTo(-7, 8);
+  g2.closePath(); g2.fill();
+  g2.restore();
+}
+let mapTimer = null;
+$('map-btn').addEventListener('pointerdown', (e) => {
+  e.stopPropagation();
+  const panel = $('map-panel');
+  const opening = !panel.classList.contains('show');
+  panel.classList.toggle('show', opening);
+  $('map-btn').setAttribute('aria-expanded', String(opening));
+  if (opening) {
+    drawMap();
+    mapTimer = setInterval(drawMap, 300);
+    announce('Sonar chart open.');
+  } else if (mapTimer) { clearInterval(mapTimer); mapTimer = null; }
+});
+$('map-close').addEventListener('click', () => {
+  $('map-panel').classList.remove('show');
+  $('map-btn').setAttribute('aria-expanded', 'false');
+  if (mapTimer) { clearInterval(mapTimer); mapTimer = null; }
 });
 
 // canvas a11y: name it and keep a live description of the dive

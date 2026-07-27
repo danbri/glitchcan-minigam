@@ -730,10 +730,104 @@ export function makeWeeds(scene, count = 110) {
   return stalks;
 }
 
+// The world above the water: a Docklands skyline ringing the basin, a
+// gradient sky dome, drifting clouds. Grouped so the game can show it
+// only when the player is shallow enough to care.
+export function makeSky(scene) {
+  const g = new THREE.Group();
+  // sky dome: warm horizon rising to blue, sun glow baked in
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(330, 24, 12),
+    new THREE.ShaderMaterial({
+      side: THREE.BackSide, fog: false, depthWrite: false,
+      uniforms: { uSun: { value: new THREE.Vector3(0.24, 0.94, 0.12) } },
+      vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+      fragmentShader: `varying vec3 vDir; uniform vec3 uSun;
+        void main(){
+          float h = clamp(vDir.y, 0.0, 1.0);
+          vec3 col = mix(vec3(0.95,0.82,0.62), vec3(0.35,0.62,0.92), pow(h, 0.55));
+          col += vec3(1.0,0.9,0.7) * pow(max(dot(vDir, normalize(uSun)), 0.0), 60.0) * 0.8;
+          gl_FragColor = vec4(col, 1.0);
+        }`,
+    }));
+  g.add(dome);
+  // the skyline: warehouses, towers, gantry cranes — dark shapes on the rim
+  const sil = (w, h, d, x, z, ry = 0) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d),
+      mat(0x2a3648, { fog: false }));
+    m.position.set(x, h / 2, z);
+    m.rotation.y = ry;
+    g.add(m);
+    return m;
+  };
+  for (let x = -150; x <= 150; x += 18 + Math.random() * 14) {
+    sil(10 + Math.random() * 12, 5 + Math.random() * 22, 8, x, BOUNDS.minZ - 30);
+    sil(10 + Math.random() * 12, 4 + Math.random() * 16, 8, x, BOUNDS.maxZ + 30);
+  }
+  for (let z = -70; z <= 70; z += 24 + Math.random() * 12) {
+    sil(8, 6 + Math.random() * 24, 10 + Math.random() * 10, BOUNDS.maxX + 34, z);
+    sil(8, 4 + Math.random() * 12, 10 + Math.random() * 10, BOUNDS.minX - 34, z);
+  }
+  // two gantry cranes, the Docklands signature
+  for (const [cx, cz] of [[-60, BOUNDS.minZ - 26], [90, BOUNDS.maxZ + 26]]) {
+    sil(3, 26, 3, cx, cz);
+    const jib = sil(24, 2, 2, cx + 9, cz);
+    jib.position.y = 25;
+    sil(2, 8, 2, cx + 20, cz).position.y = 20;
+  }
+  // clouds: big soft sprites on a slow drift
+  g.userData.clouds = [];
+  for (let i = 0; i < 4; i++) {
+    const c = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: softDot(), color: 0xffffff, transparent: true, opacity: 0.5,
+      depthWrite: false, fog: false,
+    }));
+    c.scale.set(60 + Math.random() * 50, 18 + Math.random() * 10, 1);
+    c.position.set((Math.random() - 0.5) * 400, 50 + Math.random() * 40, (Math.random() - 0.5) * 400);
+    g.add(c);
+    g.userData.clouds.push(c);
+  }
+  scene.add(g);
+  return g;
+}
+
+// Underwater horizon interest: looming pilings and wreck ribs near the
+// walls, fog-shrouded — the eye always finds a silhouette out there.
+export function makeHorizon(scene) {
+  const g = new THREE.Group();
+  const spots = [[-100, -60], [-95, 50], [110, -50], [40, -70], [-40, 70], [115, 60]];
+  for (const [x, z] of spots) {
+    const n = 3 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < n; i++) {
+      const h = 10 + Math.random() * 20;
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, h, 10),
+        mat(0x1c2836));
+      p.position.set(x + (Math.random() - 0.5) * 10,
+        floorYAt(x, z) + h / 2, z + (Math.random() - 0.5) * 10);
+      p.rotation.z = (Math.random() - 0.5) * 0.15;
+      g.add(p);
+    }
+  }
+  // two wreck ribcages: arcs of curved dark ribs
+  for (const [x, z, ry] of [[-85, -35, 0.4], [100, 25, -1.1]]) {
+    for (let i = 0; i < 7; i++) {
+      const rib = new THREE.Mesh(new THREE.TorusGeometry(7 - i * 0.2, 0.5, 8, 14, Math.PI), mat(0x22303c));
+      rib.position.set(x + i * 2.6 * Math.cos(ry), floorYAt(x, z), z + i * 2.6 * Math.sin(ry));
+      rib.rotation.y = ry + Math.PI / 2;
+      g.add(rib);
+    }
+  }
+  scene.add(g);
+  return g;
+}
+
 // The whole static set. Returns collider list for the physics step.
 export function buildDock(scene) {
   const floor = makeFloor(scene);
   const surface = makeWaterSurface(scene);
+  const sky = makeSky(scene);
+  makeHorizon(scene);
   const quay = makeQuayWalls(scene);
   const culverts = makeCulverts(scene);
   const crane = makeCrane(scene);
@@ -756,7 +850,7 @@ export function buildDock(scene) {
     { x: -40, y: SHELF_Y + 4, z: 30, r: 10 },    // barge
     { x: 85, y: DEEP_Y + 6, z: -30, r: 11 },     // warehouse
   ];
-  return { culverts, crane, barge, warehouse, bell, weeds, colliders, floor, surface };
+  return { culverts, crane, barge, warehouse, bell, weeds, colliders, floor, surface, sky };
 }
 
 // ---------------------------------------------------------------- particles

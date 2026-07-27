@@ -89,6 +89,20 @@ export class WaterworldGame {
     this._sealAt = 45;
     this.duck = null;
     this._duckDone = false;
+
+    // the decision layer: combos, dash, spillable cargo, events
+    this.combo = 0;
+    this._comboT = -99;
+    this._dashCd = 0;
+    this._lastA = -99;
+    this._fovKick = 0;
+    this.spilled = [];           // dropped cargo, briefly recoverable
+    this.tide = 1;
+    this._tideT = 55;
+    this._tideLeft = 0;
+    this._cacheT = 80;
+    this.cache = null;
+    this._bankOrder = false;     // the CAPTAIN decides when to bank
   }
 
   // ------------------------------------------------------------- setup
@@ -354,7 +368,26 @@ export class WaterworldGame {
     if (k in this.keys) this.keys[k] = down;
     // taking any control surface takes the helm for a few seconds
     if (down && k !== 'b') this.manualUntil = this.elapsed + 4;
+    if (k === 'a' && down) {
+      if (this.elapsed - this._lastA < 0.35) this.dash();
+      this._lastA = this.elapsed;
+    }
     if (k === 'b' && down) this._doPing();
+  }
+
+  // DASH: a hard push of water. Double-tap A (or double-tap the screen).
+  // Costs a breath of air, so it's a spend, not a freebie.
+  dash() {
+    if (this.over || this._dashCd > 0) return;
+    this._dashCd = 2.2;
+    const fwd = new THREE.Vector3(
+      Math.cos(this.pitch) * Math.cos(this.yaw), Math.sin(this.pitch),
+      -Math.cos(this.pitch) * Math.sin(this.yaw));
+    this.vel.addScaledVector(fwd, 30);
+    this.air = Math.max(0, this.air - 1.5);
+    this._fovKick = 1;
+    this.ui.audio?.whoosh();
+    for (let i = 0; i < 4; i++) this._bubbleT = -1;   // a burst in the wake
   }
 
   // A brush across the water is a course order from the captain: bank
@@ -564,11 +597,16 @@ export class WaterworldGame {
     for (const s of this.salvage) {
       if (!s.collected && !s.hidden && s.mesh.position.distanceTo(this.pos) < R) {
         glintAt(s.mesh.position, P8.yellow);
+        s._known = true;                       // and the CHART remembers it
       }
     }
     for (const q of this.quest) {
-      if (!q.taken && q.mesh.position.distanceTo(this.pos) < R) glintAt(q.mesh.position, P8.pink);
+      if (!q.taken && q.mesh.position.distanceTo(this.pos) < R) {
+        glintAt(q.mesh.position, P8.pink);
+        q._known = true;
+      }
     }
+    for (const m of this.mines) if (m.live && m.mesh.position.distanceTo(this.pos) < R) m._known = true;
     // stun close eels
     for (const e of this.eels) {
       if (e.pos.distanceTo(this.pos) < 10) {
@@ -604,6 +642,25 @@ export class WaterworldGame {
   _damage(n, why) {
     if (this.over) return;
     this.hull -= n;
+    this.combo = 0;
+    // PUSH YOUR LUCK: a hit knocks half your unbanked haul loose. It
+    // floats there, recoverable, fading — bank early or dive braver.
+    if (this.cargo.length >= 2) {
+      const dropN = Math.ceil(this.cargo.length / 2);
+      const dropped = this.cargo.splice(this.cargo.length - dropN, dropN);
+      for (const c of dropped) {
+        const m = glowSprite(0xffd75e, 2.2, 0.9);
+        m.position.copy(this.pos).add(new THREE.Vector3(
+          (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 4));
+        m.userData.irHot = true;
+        this.scene.add(m);
+        this.spilled.push({ ...c, mesh: m, age: 0,
+          vel: new THREE.Vector3((Math.random() - 0.5) * 5, 2 + Math.random() * 2,
+            (Math.random() - 0.5) * 5) });
+      }
+      this.ui.toast(`💥 ${dropN} CARGO KNOCKED LOOSE — grab it quick!`, 'bad');
+      this.ui.announce(`${dropN} pieces of cargo knocked loose. They will not float forever.`);
+    }
     this.ui.audio?.hurt();
     this.ui.toast('💥 HULL ' + '▮'.repeat(Math.max(0, this.hull)) + '▯'.repeat(Math.max(0, HULL_MAX - this.hull)), 'bad');
     if (why) this.ui.announce(why);
@@ -615,10 +672,17 @@ export class WaterworldGame {
   _collect(s) {
     s.collected = true;
     this.scene.remove(s.mesh);
-    this.cargo.push({ type: s.type, value: s.value });
-    this.ui.audio?.pickup(s.value);
+    // COMBO: quick successive grabs are worth more — routes matter
+    if (this.elapsed - this._comboT < 8) this.combo++;
+    else this.combo = 1;
+    this._comboT = this.elapsed;
+    const value = Math.round(s.value * (1 + 0.15 * (this.combo - 1)));
+    this.cargo.push({ type: s.type, value });
+    this.ui.audio?.pickup(value);
     const f = FACTS[s.type];
-    this.ui.toast(`${f.icon} ${f.name.toUpperCase()} +${s.value}`, 'good');
+    this.ui.toast(
+      `${f.icon} ${f.name.toUpperCase()} +${value}` +
+      (this.combo >= 2 ? `  🔥COMBO ×${this.combo}` : ''), 'good');
     if (!this.codex.has(s.type)) {
       this.codex.add(s.type);
       this._factQueue.push(s.type);
@@ -655,8 +719,11 @@ export class WaterworldGame {
     if (!this.cargo.length) { this.air = AIR_MAX; return; }
     const n = this.cargo.length;
     const base = this.cargo.reduce((a, c) => a + c.value, 0);
-    const mult = 1 + 0.15 * (n - 1);
+    // the haul bonus is now worth chasing — and worth risking
+    const mult = Math.min(3, 1 + 0.25 * (n - 1));
     const gained = Math.round(base * mult);
+    this._bankOrder = false;
+    this.combo = 0;
     this.score += gained;
     this.bankedValue += gained;
     for (const c of this.cargo) this.bankedTypes.add(c.type);
@@ -750,12 +817,12 @@ export class WaterworldGame {
       Math.sin(this.pitch),
       -Math.cos(this.pitch) * Math.sin(this.yaw));
     const thrusting = k.a || this._autoThrust;
-    const thrust = thrusting ? 26 : 7;   // always some way on
+    const thrust = thrusting ? 34 : 9;   // brisker: ploddy is literal speed
     this.vel.addScaledVector(fwd, thrust * dt);
     this.vel.multiplyScalar(Math.pow(0.14, dt));            // water drag
     this.vel.y += Math.sin(this.elapsed * 0.8) * 0.06 * dt; // gentle swell
     currentAt(this.pos, this.elapsed, _cur);                 // the gyre tugs
-    this.vel.addScaledVector(_cur, 0.35 * dt);
+    this.vel.addScaledVector(_cur, 0.35 * this.tide * dt);
     this.pos.addScaledVector(this.vel, dt);
 
     // -------- containment: walls, floor, surface
@@ -818,7 +885,8 @@ export class WaterworldGame {
       this.scene.fog.color.copy(fogC);
       this.scene.background.copy(fogC);
       const lampBoost = this.tools.has('arclamp') ? 0.45 : 1;
-      this.scene.fog.density = (0.016 + deepT * 0.03 * lampBoost);
+      // thinner fog: the basin should read as a place, not a box
+      this.scene.fog.density = (0.0115 + deepT * 0.026 * lampBoost);
     }
     if (!this.tools.has('arclamp')) this.headlamp.intensity = 40;
     this.lightCone.material.opacity = this.ir ? 0
@@ -839,7 +907,7 @@ export class WaterworldGame {
     const hot = this.ir
       ? [...this.fatbergs.map(f => f.mesh.position), this.pos]
       : [];
-    this.fx.step(dt, this.elapsed, this.pos, threats, -this.camera.position.y, hot);
+    this.fx.step(dt, this.elapsed, this.pos, threats, -this.camera.position.y, hot, this.tide);
     const faunaEv = this.fauna.step(dt, this.elapsed, this.pos);
     if (faunaEv.dolphinsNear) {
       if (!this.codex.has('dolphin_visit')) {
@@ -903,6 +971,8 @@ export class WaterworldGame {
       if (!q.taken) q.mesh.userData.spin.rotation.y += dt * 2;
     }
 
+    this._stepEvents(dt);
+    this._stepSpilled(dt);
     this._stepEels(dt);
     this._stepFatbergs(dt);
     this._stepMines(dt);
@@ -954,8 +1024,14 @@ export class WaterworldGame {
       }
       return { icon: '🐋', text: 'Follow the whale to the chest!', target: this.chest.mesh.position };
     }
-    if (this.cargo.length >= 4) return { icon: '⬆', text: `Great haul! Bank ${this.cargo.length} finds at the bell`, target: bell };
-    if (this.banks === 0 && this.cargo.length >= 3) return { icon: '🔔', text: 'Nice! Now bank them at the glowing bell', target: bell };
+    // banking is the CAPTAIN'S call (the 🔔 button) — the helm only
+    // suggests it, it never decides for you
+    if (this._bankOrder && this.cargo.length) {
+      return { icon: '🔔', text: 'Aye — taking the haul home!', target: bell };
+    }
+    if (this.banks === 0 && this.cargo.length >= 3) return { icon: '🔔', text: 'Nice haul riding! Tap 🔔 BANK when ready', target: bell };
+    const spill = this.spilled[0];
+    if (spill) return { icon: '⚠', text: 'Your spilled cargo is fading — grab it!', target: spill.mesh.position };
     if (this.tools.has('fizzlance')) {
       const berg = this.fatbergs.find(f => f.blocking);
       if (berg) return { icon: '🫧', text: 'Hold B by a fatberg to fizz it away', target: berg.mesh.position };
@@ -997,7 +1073,108 @@ export class WaterworldGame {
       codex: this.codex.size, codexTotal: Object.keys(FACTS).length,
       whale: this.whaleActive, chest: this.hasChest, over: this.over, won: this.won,
       ir: this.ir, auto: this.autopilot,
+      haulMult: Math.min(3, 1 + 0.25 * Math.max(0, this.cargo.length - 1)),
+      combo: this.combo, dashReady: this._dashCd <= 0,
+      tide: this.tide > 1, spilled: this.spilled.length,
     };
+  }
+
+  // ------------------------------------------------------------- events
+  // The dock has moods now: tides that double the current, and sunken
+  // caches that surface for sixty seconds. Urgency makes decisions.
+  _stepEvents(dt) {
+    if (this._dashCd > 0) this._dashCd -= dt;
+    if (this._fovKick > 0) {
+      this._fovKick = Math.max(0, this._fovKick - dt * 2);
+      this.camera.fov = 70 + 11 * this._fovKick;
+      this.camera.updateProjectionMatrix();
+    }
+    // the world above appears as you rise; clouds drift always
+    this.dock.sky.visible = this.pos.y > -26;
+    for (const c of this.dock.sky.userData.clouds) c.position.x += dt * 1.2;
+
+    // tide surge
+    if (this._tideLeft > 0) {
+      this._tideLeft -= dt;
+      if (this._tideLeft <= 0) {
+        this.tide = 1;
+        this.ui.toast('🌊 The tide slackens.', 'hint');
+      }
+    } else {
+      this._tideT -= dt;
+      if (this._tideT <= 0 && !this.over) {
+        this._tideT = 75 + Math.random() * 45;
+        this._tideLeft = 25;
+        this.tide = 2.6;
+        this.ui.toast('🌊 THE TIDE TURNS — ride the current!', 'warn');
+        this.ui.announce('The tide is turning. The current runs strong for a while.');
+      }
+    }
+    // sunken cache
+    if (this.cache) {
+      this.cache.beacon.material.opacity = 0.4 + 0.3 * Math.sin(this.elapsed * 5);
+      const left = this.cache.until - this.elapsed;
+      if (left <= 0) {
+        for (const s of this.cache.items) {
+          if (!s.collected) { s.collected = true; this.scene.remove(s.mesh); }
+        }
+        this.scene.remove(this.cache.beacon);
+        this.cache = null;
+        this.ui.toast('The silt takes the cache back.', 'hint');
+      } else if (this.cache.items.every(s => s.collected)) {
+        this.scene.remove(this.cache.beacon);
+        this.cache = null;
+        this.score += 30;
+        this.ui.toast('📦 CACHE CLEARED +30', 'gold');
+      }
+    } else {
+      this._cacheT -= dt;
+      if (this._cacheT <= 0 && !this.over) {
+        this._cacheT = 110 + Math.random() * 60;
+        const cx = -60 + Math.random() * 130, cz = (Math.random() - 0.5) * 110;
+        const types = ['roman_coin', 'ships_bell', 'tea_chest'];
+        const items = types.map((type, i) => {
+          const g = makeSalvageMesh(type);
+          g.position.set(cx + (i - 1) * 3, floorYAt(cx, cz) + 0.4, cz + (i % 2) * 3);
+          const halo = glowSprite(0x7ef2ff, 2.4, 0.5);
+          halo.position.y = 0.8;
+          g.add(halo);
+          this.scene.add(g);
+          const rec = { type, mesh: g, collected: false, heavy: false, hidden: false,
+            value: FACTS[type].value, _known: true };
+          this.salvage.push(rec);
+          return rec;
+        });
+        const beacon = glowSprite(0x7ef2ff, 14, 0.5);
+        beacon.position.set(cx, floorYAt(cx, cz) + 8, cz);
+        beacon.userData.irHot = true;
+        this.scene.add(beacon);
+        this.cache = { items, beacon, until: this.elapsed + 60, x: cx, z: cz };
+        this.ui.toast('📦 THE SILT SHIFTS — a cache is exposed! 60s', 'gold');
+        this.ui.announce('A sunken cache is exposed nearby, but only for a minute.');
+      }
+    }
+  }
+
+  _stepSpilled(dt) {
+    for (let i = this.spilled.length - 1; i >= 0; i--) {
+      const s = this.spilled[i];
+      s.age += dt;
+      s.mesh.position.addScaledVector(s.vel, dt);
+      s.vel.multiplyScalar(1 - dt * 1.6);
+      s.vel.y -= dt * 0.5;                      // it slowly settles
+      s.mesh.material.opacity = 0.9 * Math.max(0, 1 - s.age / 18);
+      if (s.mesh.position.distanceTo(this.pos) < 3.2) {
+        this.cargo.push({ type: s.type, value: s.value });
+        this.ui.audio?.pickup(s.value);
+        this.ui.toast('↩ CARGO RECOVERED', 'good');
+        this.scene.remove(s.mesh);
+        this.spilled.splice(i, 1);
+      } else if (s.age > 18) {
+        this.scene.remove(s.mesh);
+        this.spilled.splice(i, 1);
+      }
+    }
   }
 
   _stepEels(dt) {

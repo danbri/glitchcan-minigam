@@ -264,6 +264,21 @@ export class WaterAudio {
     o.start(t); o.stop(t + 0.8); vib.stop(t + 0.8);
   }
 
+  whoosh() {
+    // dash: a throaty push of water
+    if (!this.ctx) return;
+    const t = this._now();
+    const n = this._noise(0.5);
+    const bp = this.ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.Q.value = 0.7;
+    bp.frequency.setValueAtTime(900, t);
+    bp.frequency.exponentialRampToValueAtTime(180, t + 0.4);
+    const g = this.ctx.createGain();
+    n.connect(bp).connect(g).connect(this.master);
+    this._env(g, t, 0.3, 0.02, 0.42);
+    n.start(t);
+  }
+
   clicks() {
     // dolphin: a falling train of bright little ticks
     if (!this.ctx) return;
