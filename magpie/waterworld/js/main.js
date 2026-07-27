@@ -56,43 +56,49 @@ const toastQueue = [];
 let toastActive = false;
 function _nextToast() {
   if (toastActive || !toastQueue.length) return;
-  const { text, cls } = toastQueue.shift();
-  if ($('fact').classList.contains('show') && cls !== 'bad' && cls !== 'gold') {
-    _nextToast();                       // routine news yields to the fact
-    return;
-  }
+  const { text, cls, onTap } = toastQueue.shift();
   toastActive = true;
   const box = $('toasts');
   const t = document.createElement('div');
   t.className = 'toast ' + cls;
   t.textContent = text;
+  if (onTap) {
+    t.classList.add('tappable');
+    t.addEventListener('pointerdown', (e) => { e.stopPropagation(); onTap(); });
+  }
   box.appendChild(t);
-  const life = (cls === 'bad' || cls === 'gold') ? 4200 : cls === 'hint' ? 4800 : 3200;
+  const life = cls.includes('factoid') ? 6000
+    : (cls === 'bad' || cls === 'gold') ? 4200 : cls === 'hint' ? 4800 : 3200;
   setTimeout(() => {
     t.classList.add('out');
     setTimeout(() => { t.remove(); toastActive = false; _nextToast(); }, 450);
   }, life);
 }
-function toast(text, cls = '') {
+function toast(text, cls = '', onTap = null) {
   addLog(text, cls);
-  toastQueue.push({ text, cls });
+  toastQueue.push({ text, cls, onTap });
   while (toastQueue.length > 3) toastQueue.shift();
   _nextToast();
 }
 
-let factTimer = null;
+// A fact is ONE slim gold line now — never a panel over the action. The
+// full text lives in the ship's log (tap the line to open it) and is
+// read in full by the announcer.
+function openLogPanel() {
+  const panel = $('log-panel');
+  if (!panel.classList.contains('show')) {
+    renderLog();
+    panel.classList.add('show');
+    $('log-btn').classList.remove('unread');
+    $('log-btn').setAttribute('aria-expanded', 'true');
+  }
+}
 function fact(title, text, icon) {
-  const f = $('fact');
-  $('fact-icon').textContent = icon || '📜';
-  $('fact-title').textContent = title;
-  $('fact-text').textContent = text;
-  f.classList.add('show');
-  $('toasts').replaceChildren();        // the fact is THE message right now
-  toastActive = false;
-  if (factTimer) clearTimeout(factTimer);
-  // long enough to read, tappable away, and always kept in the log
-  factTimer = setTimeout(() => { f.classList.remove('show'); _nextToast(); }, 9000);
   addLog(`${icon || '📜'} ${title} — ${text}`, 'gold');
+  toastQueue.unshift({ text: `${icon || '📜'} ${title} — tap for the tale 📜`,
+    cls: 'gold factoid', onTap: openLogPanel });
+  while (toastQueue.length > 3) toastQueue.pop();
+  _nextToast();
   announce(`${title}. ${text}`);
 }
 
@@ -387,7 +393,6 @@ $('auto-btn').addEventListener('pointerdown', (e) => {
     : '🕹 Manual helm — you have the boat, Captain', 'hint');
   announce(game.autopilot ? 'Autopilot on' : 'Manual helm');
 });
-$('fact').addEventListener('pointerdown', () => $('fact').classList.remove('show'));
 $('log-btn').addEventListener('pointerdown', (e) => {
   e.stopPropagation();
   const panel = $('log-panel');
