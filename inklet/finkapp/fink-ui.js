@@ -314,6 +314,10 @@ window.FinkUI = {
 
     // Story content management
     clearStory() {
+        // A new story starts on the classic layout; its first video scene
+        // re-enters theatre, and a ✕ in the OLD story shouldn't veto it.
+        this._theatreOff = false;
+        this._exitTheatre();
         if (this.elements.storyOutput) {
             this.elements.storyOutput.innerHTML = '';
             this.elements.storyOutput.classList.remove('history-expanded');
@@ -654,7 +658,15 @@ window.FinkUI = {
             iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none;';
             iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
             iframe.allowFullscreen = true;
-            iframe.src = `https://youtube.com/embed/${videoPath}?autoplay=1`;
+            // enablejsapi so the player reports state: theatre mode reveals
+            // the docked text panel the moment the video ENDS.
+            iframe.src = `https://youtube.com/embed/${videoPath}?autoplay=1&enablejsapi=1`;
+            iframe.addEventListener('load', () => {
+                // YT only emits events after a client says it is listening.
+                try {
+                    iframe.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 'fink-theatre', channel: 'widget' }), '*');
+                } catch (e) { /* cross-origin hiccup: no end signal, panel stays manual */ }
+            });
             videoContainer.appendChild(iframe);
         }
 
@@ -667,6 +679,96 @@ window.FinkUI = {
         // between the picture and the prose instead of losing the video
         // off the top and having to work out that it went up there.
         this._addVideoCollapse(videoContainer);
+        // Video scenes invert the hierarchy: the video IS the scene, so it
+        // takes the screen and the prose rides on top in a dockable panel.
+        this._enterTheatre(videoContainer, isLocalFile ? videoContainer.querySelector('video') : null);
+    },
+
+    // ── THEATRE MODE ────────────────────────────────────────────────────
+    // A scene led by video maximizes it: the video becomes a full-viewport
+    // stage and #story-output + #choices move into a floating panel overlaid
+    // on it. The panel minimizes to a slim tab on the right edge (the video
+    // is the point; the text waits in the wings) and auto-reveals when the
+    // video finishes — "the text after it plays". Its ✕ exits theatre back
+    // to the classic sticky-video-above-prose layout for the rest of the
+    // story. Everything MOVES (same nodes, same ids) rather than clones, so
+    // every other module's getElementById keeps working.
+    _theatreOff: false,       // reader closed theatre; respect that for this story
+
+    _enterTheatre(videoContainer, localVideoEl) {
+        if (this._theatreOff) return;
+        const main = document.querySelector('main') || document.body;
+
+        let panel = document.getElementById('theatre-panel');
+        if (!panel) {
+            panel = document.createElement('div');
+            panel.id = 'theatre-panel';
+            panel.setAttribute('role', 'region');
+            panel.setAttribute('aria-label', 'Story text');
+            panel.innerHTML = `
+              <div class="theatre-panel-bar">
+                <span class="theatre-panel-title">STORY</span>
+                <span class="theatre-panel-controls">
+                  <button type="button" class="theatre-dock" aria-label="Tuck story text to the side" title="Tuck to the side">⇥</button>
+                  <button type="button" class="theatre-exit" aria-label="Exit video theatre" title="Exit theatre">✕</button>
+                </span>
+              </div>
+              <div class="theatre-panel-body"></div>`;
+            panel.querySelector('.theatre-dock').addEventListener('click', () => this._dockTheatrePanel(true));
+            panel.querySelector('.theatre-exit').addEventListener('click', () => { this._theatreOff = true; this._exitTheatre(); });
+            // The docked tab IS the panel, collapsed: clicking it restores.
+            panel.addEventListener('click', (e) => {
+                if (panel.classList.contains('docked') && !e.target.closest('button')) this._dockTheatrePanel(false);
+            });
+            main.appendChild(panel);
+        }
+
+        const body = panel.querySelector('.theatre-panel-body');
+        if (this.elements.storyOutput && this.elements.storyOutput.parentNode !== body) {
+            body.appendChild(this.elements.storyOutput);
+        }
+        if (this.elements.choicesContainer && this.elements.choicesContainer.parentNode !== body) {
+            body.appendChild(this.elements.choicesContainer);
+        }
+        document.body.dataset.theatre = 'on';
+        panel.classList.remove('docked');
+
+        // Reveal-on-end. Local <video>: the ended event. YouTube: state 0
+        // via the iframe API messages requested in updateVideo.
+        if (localVideoEl) {
+            localVideoEl.addEventListener('ended', () => this._dockTheatrePanel(false), { once: true });
+        }
+        if (!this._theatreYtListener) {
+            this._theatreYtListener = (e) => {
+                if (typeof e.origin !== 'string' || !/(^https?:\/\/)([^/]*\.)?(youtube\.com|youtube-nocookie\.com)$/.test(e.origin)) return;
+                let d = e.data;
+                if (typeof d === 'string') { try { d = JSON.parse(d); } catch { return; } }
+                if (d && d.event === 'onStateChange' && d.info === 0) this._dockTheatrePanel(false);
+            };
+            window.addEventListener('message', this._theatreYtListener);
+        }
+    },
+
+    _dockTheatrePanel(docked) {
+        const panel = document.getElementById('theatre-panel');
+        if (!panel || document.body.dataset.theatre !== 'on') return;
+        panel.classList.toggle('docked', docked);
+        const dockBtn = panel.querySelector('.theatre-dock');
+        if (dockBtn) dockBtn.setAttribute('aria-expanded', String(!docked));
+        if (docked) panel.setAttribute('aria-label', 'Story text (tucked aside — activate to reopen)');
+        else panel.setAttribute('aria-label', 'Story text');
+    },
+
+    _exitTheatre() {
+        const panel = document.getElementById('theatre-panel');
+        const nv = document.getElementById('narrative-view');
+        if (nv) {
+            // Original order: media, then prose, then choices.
+            if (this.elements.storyOutput) nv.appendChild(this.elements.storyOutput);
+            if (this.elements.choicesContainer) nv.appendChild(this.elements.choicesContainer);
+        }
+        if (panel) panel.remove();
+        delete document.body.dataset.theatre;
     },
 
     // Collapse/expand control for the sticky video. Re-added after every

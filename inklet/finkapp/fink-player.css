@@ -467,6 +467,125 @@ body[data-fink-depth="8"] #narrative-view {
 }
 .choice-btn:active { transform: scale(0.98); }
 
+/* --- THEATRE MODE: video is the stage, text rides on top --- */
+/* The video container abandons its sticky 640px box and fills the
+   viewport; YouTube letterboxes itself inside the frame. */
+/* !important throughout: updateVideo writes the inline sticky-card styles
+   (cssText) on the container, and inline always beats a stylesheet without
+   it. This block is the deliberate scoped override of exactly those. */
+body[data-theatre="on"] #video-container {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 500 !important;    /* over the page, under the shell (dock 2600+) */
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #000 !important;
+    padding-bottom: 0 !important;  /* the 56.25% aspect box is for the inline card */
+}
+body[data-theatre="on"] #video-container iframe,
+body[data-theatre="on"] #video-container video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+}
+/* theatre has its own controls; the inline collapse chevron would dangle */
+body[data-theatre="on"] .video-collapse { display: none; }
+
+/* The floating text panel. Bottom sheet on phones, bottom-right card on
+   wider screens; its body scrolls, the video never does. */
+#theatre-panel {
+    position: fixed;
+    z-index: 520;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    max-height: 46vh;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 8, 16, 0.88);
+    border: 1px solid var(--zx-cyan);
+    border-radius: var(--border-radius-md);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+    transition: transform 0.25s ease, max-height 0.25s ease;
+}
+@media (min-width: 700px) {
+    #theatre-panel {
+        left: auto;
+        width: min(420px, 40vw);
+        max-height: 60vh;
+    }
+}
+.theatre-panel-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5em;
+    padding: 0.25em 0.4em 0.25em 0.7em;
+    border-bottom: 1px solid rgba(0, 192, 192, 0.35);
+    flex-shrink: 0;
+}
+.theatre-panel-title {
+    font-size: var(--font-size-tiny);
+    letter-spacing: 0.15em;
+    color: var(--zx-cyan);
+    opacity: 0.8;
+}
+.theatre-panel-controls { display: inline-flex; gap: 0.3em; }
+.theatre-panel-controls button {
+    background: none;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #ccc;
+    min-width: 1.9em;
+    min-height: 1.9em;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+}
+.theatre-panel-controls button:hover { background: rgba(0, 229, 255, 0.18); }
+.theatre-panel-body {
+    overflow-y: auto;
+    min-height: 0;
+    padding: 0.4em 0.6em 0.7em;
+}
+/* Inside the panel the prose sheds its outer box — the panel IS the box. */
+#theatre-panel #story-output { max-width: none; padding: 0.2em 0; }
+#theatre-panel #choices { max-width: none; padding-top: 0.4em; }
+#theatre-panel .story-section.current { box-shadow: none; }
+/* the panel's media would double the video already on stage */
+#theatre-panel .section-media, #theatre-panel .media-chunk { display: none; }
+
+/* Docked: the panel tucks to the right edge as a slim tab — the video is
+   the point; the text waits in the wings. Clicking the tab restores. */
+#theatre-panel.docked {
+    left: auto;
+    right: 0;
+    bottom: 20vh;
+    width: auto;
+    max-height: none;
+    cursor: pointer;
+    border-radius: var(--border-radius-md) 0 0 var(--border-radius-md);
+    border-right: 0;
+}
+#theatre-panel.docked .theatre-panel-body { display: none; }
+#theatre-panel.docked .theatre-panel-bar {
+    border-bottom: 0;
+    padding: 0.7em 0.35em;
+    writing-mode: vertical-rl;
+}
+#theatre-panel.docked .theatre-dock { display: none; }
+#theatre-panel.docked .theatre-panel-title::before { content: '❮ '; }
+
 /* --- Story Content Classes --- */
 .success { color: var(--zx-cyan); text-shadow: 0 0 10px var(--zx-cyan); }
 .success::before { content: '✓ '; }
