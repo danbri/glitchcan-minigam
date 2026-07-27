@@ -46,11 +46,27 @@ mines smoulder, eels barely register (cold-blooded), and the ghost whale
 reads as a *cold* blue presence. Heat plumes rise off warm sources.
 Late-spawned entities inherit the active mode.
 
+## The captain's helm
+
+She sails herself: the autopilot follows the current objective, keeps
+off the floor/surface/walls, swerves mines, pings as she hunts and even
+works the fizz lance alongside a fatberg. **Brushing the touchscreen is
+a course order** — the sub banks onto the swiped heading for ~8s, then
+resumes the hunt. A tap is a ping. Any pad/keyboard input takes the
+helm manually for a few seconds; the ⚓AUTO chip toggles the autopilot
+outright.
+
+Delight pack: bioluminescent plankton flare on every ping, confetti on
+every banked haul, a curious Thames seal that orbits the boat barking
+hello (true codex entry — the annual seal survey is real), and after
+the second banking, keep an eye on the surface near the bell. 🐥
+
 ## Controls
 
+- **Brush the water:** set a new course · **Tap:** sonar ping
 - **Steer:** arrows / WASD / d-pad (left-right = yaw, up-down = pitch)
 - **A / Space / Z:** thrust · **B / Escape / X:** sonar ping + tools
-- **I / IR button:** thermal sight
+- **I / IR button:** thermal sight · **⚓AUTO:** autopilot on/off
 - Touch pad appears standalone; inside the FINK shell the host provides
   input (`sdk.onControls`) and this pad hides.
 

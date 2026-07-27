@@ -335,4 +335,45 @@ export class UnderwaterFX {
   }
 
   setIR(on) { this.ir = on; }
+
+  // Bioluminescent answer to the sonar: the plankton flare for a moment.
+  pingPulse() { this._pulse = 1; }
+
+  // Confetti in dock colours — banking a haul should feel like a party.
+  confetti(scene, pos) {
+    const colors = [0xff004d, 0xffa300, 0xffec27, 0x00e436, 0x29adff, 0xff77a8];
+    const bits = [];
+    for (let i = 0; i < 36; i++) {
+      const m = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, 0.22, 0.04),
+        new THREE.MeshBasicMaterial({ color: colors[i % colors.length] }));
+      m.position.copy(pos);
+      m.userData.vel = new THREE.Vector3(
+        (Math.random() - 0.5) * 8, 2 + Math.random() * 5, (Math.random() - 0.5) * 8);
+      m.userData.spin = new THREE.Vector3(Math.random() * 6, Math.random() * 6, Math.random() * 6);
+      scene.add(m);
+      bits.push(m);
+    }
+    this._confetti = (this._confetti || []).concat(bits.map(m => ({ m, age: 0 })));
+  }
+
+  stepExtras(scene, dt) {
+    if (this._pulse > 0) {
+      this._pulse = Math.max(0, this._pulse - dt * 0.8);
+      this.plankton.material.opacity = Math.min(1, 0.55 + this._pulse * 0.45);
+      this.plankton.material.size = 0.42 + this._pulse * 0.35;
+    }
+    if (this._confetti?.length) {
+      for (let i = this._confetti.length - 1; i >= 0; i--) {
+        const c = this._confetti[i];
+        c.age += dt;
+        c.m.position.addScaledVector(c.m.userData.vel, dt);
+        c.m.userData.vel.multiplyScalar(1 - dt * 1.2);
+        c.m.userData.vel.y -= dt * 1.5;                    // flutter down
+        c.m.rotation.x += c.m.userData.spin.x * dt;
+        c.m.rotation.y += c.m.userData.spin.y * dt;
+        if (c.age > 2.4) { scene.remove(c.m); this._confetti.splice(i, 1); }
+      }
+    }
+  }
 }

@@ -47,6 +47,41 @@ try {
   await page.waitForTimeout(1500);
   pass('game started, __waterworld hook up');
 
+  // captain's helm: with nobody touching anything, she sails herself
+  const ap0 = await page.evaluate(() => window.__waterworld.pos());
+  await page.waitForTimeout(2500);
+  const ap1 = await page.evaluate(() => window.__waterworld.pos());
+  const cruised = Math.hypot(ap1[0] - ap0[0], ap1[2] - ap0[2]);
+  if (cruised > 3) pass(`autopilot cruises unaided (${cruised.toFixed(1)} units)`);
+  else fail(`autopilot inert (${cruised.toFixed(2)} units)`);
+
+  // a brush across the water sets a new course — through the real
+  // pointer path, the way a thumb would
+  await page.mouse.move(215, 430);
+  await page.mouse.down();
+  await page.mouse.move(340, 400, { steps: 6 });
+  await page.mouse.up();
+  const brushed = await page.evaluate(() => {
+    const g = window.__waterworld.game;
+    return g._explore && g._explore.until > g.elapsed;
+  });
+  if (brushed) pass('brush gesture set an explore course');
+  else fail('brush gesture ignored');
+
+  // the detailed boat: animated parts must exist
+  const subParts = await page.evaluate(() => {
+    const ud = window.__waterworld.game.sub.userData;
+    return ['prop', 'prop2', 'planes', 'forePlanes', 'rudder', 'beacon'].filter(k => !ud[k]);
+  });
+  if (!subParts.length) pass('sub v2: props, planes, rudder, beacon all present');
+  else fail('sub missing parts: ' + subParts.join(','));
+
+  // hand steering takes priority from here — determinism for the rest
+  await page.evaluate(() => {
+    window.__waterworld.game.autopilot = false;
+    window.__waterworld.game._explore = null;
+  });
+
   // guest-fit rule: the page must fit its own frame exactly
   const fit = await page.evaluate(() => ({
     scroll: document.body.scrollHeight, inner: window.innerHeight,
@@ -155,6 +190,16 @@ try {
   });
   if (fish.schools >= 2 && fish.moved > 0.01) pass(`fish schools swirling (${fish.schools} schools)`);
   else fail(`boids inert: ${JSON.stringify(fish)}`);
+
+  // the curious seal: spawn it and let it swim
+  const seal = await page.evaluate(async () => {
+    window.__waterworld.game._spawnSeal();
+    await new Promise(r => setTimeout(r, 600));
+    const s = window.__waterworld.game.seal;
+    return s ? { state: s.state } : null;
+  });
+  if (seal) pass(`seal visiting (state: ${seal.state})`);
+  else fail('seal failed to spawn');
 
   // IR mode: toggle on via the real key, hot things read hot, toggle off
   await page.keyboard.press('i');

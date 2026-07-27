@@ -117,6 +117,9 @@ function hud(s) {
   const irBtn = $('ir-btn');
   irBtn.classList.toggle('on', !!s.ir);
   irBtn.setAttribute('aria-pressed', String(!!s.ir));
+  const autoBtn = $('auto-btn');
+  autoBtn.classList.toggle('on', !!s.auto);
+  autoBtn.setAttribute('aria-pressed', String(!!s.auto));
 }
 
 function complete(result) {
@@ -184,6 +187,40 @@ document.addEventListener('keyup', (e) => {
   if (action) setAction(action, false);
 });
 
+// Captain's gestures: brush the water to set a course, tap to ping.
+// Works with finger or mouse, standalone or inside the shell — the
+// canvas is ours even when the host owns the pad.
+{
+  const sceneEl = $('scene');
+  let gesture = null;
+  sceneEl.addEventListener('pointerdown', (e) => {
+    if (!started) return;
+    gesture = { x0: e.clientX, y0: e.clientY, t0: performance.now(), moved: false, last: 0 };
+  });
+  sceneEl.addEventListener('pointermove', (e) => {
+    if (!gesture || !game) return;
+    const dx = e.clientX - gesture.x0, dy = e.clientY - gesture.y0;
+    if (Math.hypot(dx, dy) > 24) {
+      gesture.moved = true;
+      const now = performance.now();
+      if (now - gesture.last > 160) {
+        gesture.last = now;
+        audio.ensure();
+        game.brush(dx / window.innerWidth, dy / window.innerHeight);
+      }
+    }
+  });
+  const endGesture = (e) => {
+    if (gesture && game && !gesture.moved && performance.now() - gesture.t0 < 400) {
+      audio.ensure();
+      game._doPing();                      // a tap is a ping
+    }
+    gesture = null;
+  };
+  sceneEl.addEventListener('pointerup', endGesture);
+  sceneEl.addEventListener('pointercancel', () => { gesture = null; });
+}
+
 // Own touch pad (standalone only — the shell provides one and tells us).
 function buildPad() {
   const pad = $('pad');
@@ -237,6 +274,15 @@ function startGame() {
 
 $('splash').addEventListener('pointerdown', startGame);
 $('ir-btn').addEventListener('pointerdown', (e) => { e.stopPropagation(); game?.toggleIR(); });
+$('auto-btn').addEventListener('pointerdown', (e) => {
+  e.stopPropagation();
+  if (!game) return;
+  game.autopilot = !game.autopilot;
+  toast(game.autopilot
+    ? '⚓ Autopilot on — brush the water to set a course!'
+    : '🕹 Manual helm — you have the boat, Captain', 'hint');
+  announce(game.autopilot ? 'Autopilot on' : 'Manual helm');
+});
 $('fact').addEventListener('pointerdown', () => $('fact').classList.remove('show'));
 $('log-btn').addEventListener('pointerdown', (e) => {
   e.stopPropagation();

@@ -8,7 +8,7 @@ import * as THREE from '../../../trees/vendor/three.module.min.js';
 import {
   P8, mat, buildDock, makeSub, makeEelHead, makeEelSegment, makeFatberg,
   makeMine, makeSalvageMesh, makeQuestMesh, makeParticleCloud,
-  makeGhostWhale, BOUNDS, SHELF_Y, DEEP_Y, floorYAt, neonize,
+  makeGhostWhale, makeSeal, makeDuck, BOUNDS, SHELF_Y, DEEP_Y, floorYAt, neonize,
 } from './world.js';
 import { UnderwaterFX, glowSprite, currentAt } from './fx.js';
 import { FACTS, QUEST_ITEMS, TOOLS, HINTS } from './facts.js';
@@ -53,6 +53,22 @@ export class WaterworldGame {
     this._hintIdx = 0;
     this._hintTimer = 18;
     this._factQueue = [];
+
+    // the captain's helm: she sails herself until you touch her
+    this.autopilot = true;
+    this.manualUntil = 0;
+    this._explore = null;        // a brushed course order {yaw,pitch,until}
+    this._brushCount = 0;
+    this._lastAutoPing = 0;
+    this._autoThrust = false;
+    this._autoFizz = false;
+    this._helmActive = false;
+
+    // visitors
+    this.seal = null;
+    this._sealAt = 45;
+    this.duck = null;
+    this._duckDone = false;
   }
 
   // ------------------------------------------------------------- setup
@@ -299,7 +315,102 @@ export class WaterworldGame {
   // ------------------------------------------------------------- input
   setKey(k, down) {
     if (k in this.keys) this.keys[k] = down;
+    // taking any control surface takes the helm for a few seconds
+    if (down && k !== 'b') this.manualUntil = this.elapsed + 4;
     if (k === 'b' && down) this._doPing();
+  }
+
+  // A brush across the water is a course order from the captain: bank
+  // onto the swiped heading and hold it a while, then resume the hunt.
+  // dxN/dyN are normalised screen deltas (right and down positive).
+  brush(dxN, dyN) {
+    const yaw = this.yaw - dxN * 3.4;
+    const pitch = Math.max(-0.8, Math.min(0.8, this.pitch - dyN * 2.2));
+    this._explore = { yaw, pitch, until: this.elapsed + 8 };
+    this.manualUntil = 0;          // the helm answers the brush at once
+    this.autopilot = true;
+    this.ui.audio?.swish();
+    if (this._brushCount < 3) {
+      this._brushCount++;
+      this.ui.toast('↪ Aye aye, Captain — new course!', 'good');
+    }
+    this.ui.announce('New course set.');
+  }
+
+  // ------------------------------------------------------------- the helm
+  // Sails toward the objective (or a brushed course), keeps off the
+  // floor, the surface, the walls and the mines, pings as she hunts,
+  // and even works the fizz lance when she's alongside a fatberg.
+  _helm(dt) {
+    this._helmActive = true;
+    let desYaw, desPitch;
+    const exploring = this._explore && this.elapsed < this._explore.until;
+    const obj = exploring ? null : this._objective();
+    let dist = 99;
+    if (exploring) {
+      desYaw = this._explore.yaw;
+      desPitch = this._explore.pitch;
+    } else if (obj && obj.target) {
+      const dx = obj.target.x - this.pos.x, dz = obj.target.z - this.pos.z;
+      const dy = (obj.target.y ?? this.pos.y) - this.pos.y;
+      dist = Math.hypot(dx, dz);
+      desYaw = Math.atan2(-dz, dx);
+      desPitch = Math.max(-0.65, Math.min(0.65, Math.atan2(dy, Math.max(dist, 2))));
+    } else {
+      this._helmActive = false;
+      return;
+    }
+    // avoidance, as a steering vector blended into the desired heading
+    const dir = new THREE.Vector3(
+      Math.cos(desPitch) * Math.cos(desYaw), Math.sin(desPitch),
+      -Math.cos(desPitch) * Math.sin(desYaw));
+    for (const m of this.mines) {
+      if (!m.live) continue;
+      const d = m.mesh.position.distanceTo(this.pos);
+      if (d < 13) {
+        dir.addScaledVector(
+          _cur.subVectors(this.pos, m.mesh.position).normalize(), (13 - d) / 6);
+      }
+    }
+    for (const c of this.dock.colliders) {
+      const d = this.pos.distanceTo(c);
+      if (d < c.r + 7) {
+        dir.addScaledVector(_cur.set(this.pos.x - c.x, this.pos.y - c.y,
+          this.pos.z - c.z).normalize(), (c.r + 7 - d) / 6);
+      }
+    }
+    // terrain ahead: pull up early, duck under the surface
+    const px = this.pos.x + dir.x * 12, pz = this.pos.z + dir.z * 12;
+    if (this.pos.y - 3.5 < floorYAt(px, pz)) dir.y = Math.max(dir.y, 0.6);
+    if (this.pos.y > BOUNDS.surface - 2) dir.y = Math.min(dir.y, -0.1);
+    if (px < BOUNDS.minX + 8 || px > BOUNDS.maxX - 8 ||
+        pz < BOUNDS.minZ + 8 || pz > BOUNDS.maxZ - 8) {
+      dir.x += (0 - this.pos.x) * 0.02;
+      dir.z += (0 - this.pos.z) * 0.02;
+    }
+    dir.normalize();
+    desYaw = Math.atan2(-dir.z, dir.x);
+    desPitch = Math.max(-0.8, Math.min(0.8, Math.asin(Math.max(-1, Math.min(1, dir.y)))));
+    // steer smoothly, remember the turn for the rudder animation
+    let dYaw = desYaw - this.yaw;
+    while (dYaw > Math.PI) dYaw -= Math.PI * 2;
+    while (dYaw < -Math.PI) dYaw += Math.PI * 2;
+    const turn = Math.max(-1.5 * dt, Math.min(1.5 * dt, dYaw));
+    this.yaw += turn;
+    this._helmTurn = Math.max(-0.5, Math.min(0.5, dYaw));
+    this.pitch += Math.max(-1.1 * dt, Math.min(1.1 * dt, desPitch - this.pitch));
+    this._autoThrust = exploring || dist > 7;
+    // she pings as she hunts — the sonar chimes are half the mood
+    if (this._pingCooldown <= 0 && this.elapsed - this._lastAutoPing > 7 && !exploring) {
+      this._lastAutoPing = this.elapsed;
+      this._doPing();
+    }
+    // and works the lance alongside a fatberg
+    if (this.tools.has('fizzlance')) {
+      for (const f of this.fatbergs) {
+        if (f.mesh.position.distanceTo(this.pos) < f.r + 5.5) { this._autoFizz = true; break; }
+      }
+    }
   }
 
   // ------------------------------------------------------------- IR mode
@@ -375,6 +486,7 @@ export class WaterworldGame {
     if (this.over || this._pingCooldown > 0) return;
     this._pingCooldown = 0.9;
     this._pingAge = 0;
+    this.fx?.pingPulse();          // the plankton answer the sonar
     this.pingRing.visible = true;
     this.pingRing.position.copy(this.pos);
     this.ui.audio?.ping();
@@ -495,8 +607,11 @@ export class WaterworldGame {
     this.ui.toast(`🎉 BANKED ×${n}  +${gained}${mult > 1 ? `  (×${mult.toFixed(2)} haul bonus!)` : ''}`, 'gold');
     this.ui.announce(`Banked ${n} items for ${gained} points. Air refilled.`);
     if (hadChest) { this._win(); return; }
+    // confetti — a banked haul is a little party
+    this.fx.confetti(this.scene, this.pos.clone());
     // banking stirs the dock: more eels, and eventually the fatbergs move
     if (this.banks === 1) this.ui.hint(HINTS[2]);
+    if (this.banks === 2 && !this.duck && !this._duckDone) this._spawnDuck();
     if (this.eels.length < 7) this._spawnEels(1);
     if (this.banks >= 2) this._spawnRampantFatberg();
     // the whale comes when the dock has given up enough of its past
@@ -553,19 +668,27 @@ export class WaterworldGame {
     this.elapsed += dt;
     const k = this.keys;
 
+    // -------- the helm: she sails herself unless the captain takes her
+    this._autoThrust = false;
+    this._autoFizz = false;
+    this._helmActive = false;
+    const manual = this.elapsed < this.manualUntil;
+    if (this.autopilot && !manual && !this.over) this._helm(dt);
+
     // -------- steering: yaw/pitch on the pad, thrust on A
     const turn = 1.9 * dt, pitchRate = 1.4 * dt;
     if (k.left) this.yaw += turn;
     if (k.right) this.yaw -= turn;
     if (k.up) this.pitch = Math.min(0.9, this.pitch + pitchRate);
     if (k.down) this.pitch = Math.max(-0.9, this.pitch - pitchRate);
-    if (!k.up && !k.down) this.pitch *= Math.pow(0.2, dt);   // level out
+    if (!k.up && !k.down && !this._helmActive) this.pitch *= Math.pow(0.2, dt);
 
     const fwd = new THREE.Vector3(
       Math.cos(this.pitch) * Math.cos(this.yaw),
       Math.sin(this.pitch),
       -Math.cos(this.pitch) * Math.sin(this.yaw));
-    const thrust = k.a ? 26 : 7;   // always some way on; A is the engine
+    const thrusting = k.a || this._autoThrust;
+    const thrust = thrusting ? 26 : 7;   // always some way on
     this.vel.addScaledVector(fwd, thrust * dt);
     this.vel.multiplyScalar(Math.pow(0.14, dt));            // water drag
     this.vel.y += Math.sin(this.elapsed * 0.8) * 0.06 * dt; // gentle swell
@@ -594,7 +717,14 @@ export class WaterworldGame {
     this.sub.rotation.set(0, this.yaw, 0);
     this.sub.rotateZ(this.pitch * 0.7);
     this.sub.rotation.x += (roll - this.sub.rotation.x) * 0.2;
-    this.sub.userData.prop.rotation.x += dt * (k.a ? 22 : 6);
+    const ud = this.sub.userData;
+    ud.prop.rotation.x += dt * (thrusting ? 24 : 6);
+    ud.prop2.rotation.x -= dt * (thrusting ? 24 : 6);      // counter-rotating
+    ud.planes.rotation.z += (-this.pitch * 0.55 - ud.planes.rotation.z) * 0.2;
+    ud.forePlanes.rotation.z += (-this.pitch * 0.8 - ud.forePlanes.rotation.z) * 0.2;
+    const helmOrder = (k.left ? 0.45 : 0) - (k.right ? 0.45 : 0) + (this._helmTurn || 0);
+    ud.rudder.rotation.y += (helmOrder - ud.rudder.rotation.y) * 0.18;
+    ud.beacon.visible = Math.sin(this.elapsed * 4.5) > -0.35;   // masthead blink
 
     const camTarget = this.pos.clone().addScaledVector(fwd, -10).add(new THREE.Vector3(0, 3.5, 0));
     camTarget.y = Math.min(camTarget.y, BOUNDS.surface + 1);
@@ -630,7 +760,7 @@ export class WaterworldGame {
     this.fx.step(dt, this.elapsed, this.pos, threats, -this.camera.position.y, hot);
 
     // -------- air + hull economy
-    this.air -= dt * (k.a ? 1.7 : 1.1) * (1 + this.banks * 0.06);
+    this.air -= dt * (thrusting ? 1.7 : 1.1) * (1 + this.banks * 0.06);
     if (this.air < 25 && !this._lowAirWarned) {
       this._lowAirWarned = true;
       this.ui.audio?.alarm();
@@ -677,7 +807,10 @@ export class WaterworldGame {
     this._stepFatbergs(dt);
     this._stepMines(dt);
     this._stepWhale(dt);
+    this._maybeSeal(dt);
+    this._stepDuck(dt);
     this._stepParticles(dt);
+    this.fx.stepExtras(this.scene, dt);
 
     // -------- timers, hints, facts
     if (this._pingCooldown > 0) this._pingCooldown -= dt;
@@ -763,7 +896,7 @@ export class WaterworldGame {
       tools: [...this.tools],
       codex: this.codex.size, codexTotal: Object.keys(FACTS).length,
       whale: this.whaleActive, chest: this.hasChest, over: this.over, won: this.won,
-      ir: this.ir,
+      ir: this.ir, auto: this.autopilot,
     };
   }
 
@@ -814,7 +947,7 @@ export class WaterworldGame {
   }
 
   _stepFatbergs(dt) {
-    const lanceOn = this.tools.has('fizzlance') && this.keys.b;
+    const lanceOn = this.tools.has('fizzlance') && (this.keys.b || this._autoFizz);
     let fizzing = false;
     for (let i = this.fatbergs.length - 1; i >= 0; i--) {
       const f = this.fatbergs[i];
@@ -924,6 +1057,104 @@ export class WaterworldGame {
     }
   }
 
+  // ---------------------------------------------------------- visitors
+  // A curious Thames seal: swims in, loops the sub barking hello, and
+  // slips away. Pure delight, zero threat — and a true codex entry.
+  _maybeSeal(dt) {
+    if (!this.seal && !this.over && this.elapsed > this._sealAt) this._spawnSeal();
+    if (this.seal) this._stepSeal(dt);
+  }
+
+  _spawnSeal() {
+    const m = makeSeal();
+    neonize(m, 0xff77a8, { keepFaces: true });
+    m.userData.irColor = 0xdd8855;             // warm-blooded, unlike the eels
+    m.position.copy(this.pos).add(new THREE.Vector3(35, 6, 20));
+    m.position.y = Math.min(-4, Math.max(floorYAt(m.position.x, m.position.z) + 3, m.position.y));
+    this.scene.add(m);
+    if (this.ir) this._irApply(m);
+    this.seal = { mesh: m, state: 'approach', phase: 0, barks: 0 };
+    this.ui.audio?.sealBark();
+    this.ui.toast('🦭 A curious seal is coming to say hello!', 'good');
+    this.ui.announce('A curious seal approaches.');
+    if (!this.codex.has('seal_visit')) {
+      this.codex.add('seal_visit');
+      this._factQueue.push('seal_visit');
+    }
+  }
+
+  _stepSeal(dt) {
+    const s = this.seal, m = s.mesh;
+    let target;
+    if (s.state === 'approach') {
+      target = this.pos.clone().add(new THREE.Vector3(0, 2, 0));
+      if (m.position.distanceTo(this.pos) < 8) { s.state = 'orbit'; s.phase = 0; }
+    } else if (s.state === 'orbit') {
+      s.phase += dt * 1.5;
+      target = this.pos.clone().add(new THREE.Vector3(
+        Math.cos(s.phase) * 5.5, 1.5 + Math.sin(s.phase * 2) * 1.2, Math.sin(s.phase) * 5.5));
+      if (Math.floor(s.phase / 2.5) > s.barks) {
+        s.barks++;
+        this.ui.audio?.sealBark();
+      }
+      if (s.phase > Math.PI * 4.5) {
+        s.state = 'depart';
+        s.exit = this.pos.clone().add(new THREE.Vector3(
+          (Math.random() - 0.5) * 160, 8, (Math.random() - 0.5) * 120));
+      }
+    } else {
+      target = s.exit;
+      if (m.position.distanceTo(this.pos) > 60) {
+        this.scene.remove(m);
+        this.seal = null;
+        this._sealAt = this.elapsed + 110 + Math.random() * 60;
+        return;
+      }
+    }
+    const dir = new THREE.Vector3().subVectors(target, m.position);
+    const d = dir.length();
+    if (d > 0.5) m.position.addScaledVector(dir.normalize(), Math.min(11, d * 2.2) * dt);
+    m.lookAt(m.position.clone().add(dir));
+    m.rotateY(-Math.PI / 2);
+    m.userData.tail.rotation.z = Math.sin(this.elapsed * 7) * 0.35;
+  }
+
+  // The Glitch Canary: paddling at the surface near the bell after your
+  // second banking. Nose up to it for a honk, confetti and +100.
+  _spawnDuck() {
+    const m = makeDuck();
+    neonize(m, 0xffec27, { keepFaces: true });
+    m.userData.irColor = 0xffee88;
+    const halo = glowSprite(0xffec27, 5, 0.5);
+    halo.userData.irHot = true;
+    m.add(halo);
+    const b = this.dock.bell.position;
+    m.position.set(b.x + 7, BOUNDS.surface - 0.2, b.z + 5);
+    this.scene.add(m);
+    if (this.ir) this._irApply(m);
+    this.duck = m;
+    this.ui.toast('…did something just splash, up by the bell?', 'hint');
+  }
+
+  _stepDuck(dt) {
+    if (!this.duck) return;
+    const m = this.duck;
+    m.position.y = BOUNDS.surface - 0.2 + Math.sin(this.elapsed * 2.2) * 0.18;
+    m.rotation.y += dt * 0.6;
+    if (m.position.distanceTo(this.pos) < 4.5) {
+      this._duckDone = true;
+      this.score += 100;
+      this.ui.audio?.honk();
+      this.fx.confetti(this.scene, m.position.clone());
+      this.ui.fact('THE GLITCH CANARY',
+        '🐥 Patron bird of the whole arcade, paddling a long way from home. It approves of your seamanship. +100!',
+        '🐥');
+      this.ui.announce('The Glitch Canary honks its approval. One hundred points.');
+      this.scene.remove(m);
+      this.duck = null;
+    }
+  }
+
   _stepParticles(dt) {
     // marine snow drifts down and wraps
     this.snow.material.opacity = this.ir ? 0.12 : 0.8;
@@ -936,7 +1167,7 @@ export class WaterworldGame {
     sp.needsUpdate = true;
     // thrust bubbles
     this._bubbleT -= dt;
-    if (this.keys.a && this._bubbleT < 0 && !this.over) {
+    if ((this.keys.a || this._autoThrust) && this._bubbleT < 0 && !this.over) {
       this._bubbleT = 0.1;
       if (Math.random() < 0.25) this.ui.audio?.bubble();
       const b = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.25), mat(P8.white));

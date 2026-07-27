@@ -264,6 +264,45 @@ export class WaterAudio {
     o.start(t); o.stop(t + 0.8); vib.stop(t + 0.8);
   }
 
+  sealBark() {
+    if (!this.ctx) return;
+    const t = this._now();
+    for (let i = 0; i < 2; i++) {
+      const { o, g } = this._osc('sawtooth', 420, this.master);
+      const bp = this.ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 700; bp.Q.value = 2;
+      g.disconnect(); g.connect(bp).connect(this.master);
+      o.frequency.exponentialRampToValueAtTime(240, t + i * 0.22 + 0.15);
+      this._env(g, t + i * 0.22, 0.18, 0.02, 0.16);
+      o.start(t + i * 0.22); o.stop(t + i * 0.22 + 0.2);
+    }
+  }
+
+  honk() {
+    if (!this.ctx) return;
+    const t = this._now();
+    for (let i = 0; i < 2; i++) {
+      for (const f of [285, 355]) {
+        const { o, g } = this._osc('square', f, this.echo);
+        g.connect(this.master);
+        this._env(g, t + i * 0.28, 0.1, 0.02, 0.2);
+        o.start(t + i * 0.28); o.stop(t + i * 0.28 + 0.25);
+      }
+    }
+  }
+
+  swish() {
+    if (!this.ctx) return;
+    const t = this._now();
+    const n = this._noise(0.25);
+    const bp = this.ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 0.8;
+    const g = this.ctx.createGain();
+    n.connect(bp).connect(g).connect(this.master);
+    this._env(g, t, 0.08, 0.04, 0.2);
+    n.start(t);
+  }
+
   victory() {
     if (!this.ctx) return;
     const t = this._now();
