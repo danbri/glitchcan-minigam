@@ -76,9 +76,16 @@ window.FinkUtils = {
         }
     },
 
-    // Debug logging - routes to FinkDevPanel if available
+    // Observability step 5: a debug line is a bus fact on debug.*.
+    // The dev panel's log tab observes the channel (as can the Logger or
+    // any future surface) instead of being called directly. Before the
+    // shell module has run there is no bus yet, so early lines fall back
+    // to the old direct path — nothing is lost across boot.
     debugLog(message) {
-        if (window.FinkDevPanel) {
+        const bus = window.FoafOS?.bus;
+        if (bus && window.FinkDevPanel?.busWired) {
+            bus.publish('debug.log', { summary: message, msg: message, level: 'debug' });
+        } else if (window.FinkDevPanel) {
             FinkDevPanel.log(message, 'debug');
         } else {
             console.log(`[FINK] ${message}`);
@@ -86,9 +93,12 @@ window.FinkUtils = {
     }
 };
 
-// Global convenience logging function
+// Global convenience logging function — same bus-first routing
 window.log = (msg, type = 'info') => {
-    if (window.FinkDevPanel) {
+    const bus = window.FoafOS?.bus;
+    if (bus && window.FinkDevPanel?.busWired) {
+        bus.publish('debug.log', { summary: msg, msg, level: type });
+    } else if (window.FinkDevPanel) {
         FinkDevPanel.log(msg, type);
     } else {
         console.log(`[${type}] ${msg}`);

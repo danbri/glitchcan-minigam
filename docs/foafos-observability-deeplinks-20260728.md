@@ -59,8 +59,18 @@ Order of work (each step is small and testable):
    dev panel INK and FINK lanes observe `ink.*`/`fink.*` with replay.
    The NET lane still uses `swimEvent` — `net.*` feeds the user-facing
    feed, so loading noise stays off it for now).
-5. `debugLog` becomes a thin wrapper that also mirrors to a `debug.*`
-   bus channel; the dev panel log tab reads the bus.
+5. ~~`debugLog` mirrors to a `debug.*` bus channel; the dev panel log
+   tab reads the bus~~ (done 2026-07-28: `FinkUtils.debugLog` and
+   `window.log` publish `debug.log` once the panel signals `busWired`;
+   before that moment the direct path covers boot so no line is lost
+   and none duplicates. The Logger firehose sees the channel for free;
+   `scopeBus` grant filtering keeps `debug.*` out of guest frames).
+
+All five steps are done. What remains beyond this list: the NET/GAME
+lanes still use `swimEvent` (kept off the bus so `net.*` loading noise
+stays out of the user-facing feed — decide a `netdebug.*`-style split
+before migrating), and whoever replaces the live player with the boxed
+storyrunner inherits this wiring.
 
 ## 3. Deep links: durable versus ephemeral
 

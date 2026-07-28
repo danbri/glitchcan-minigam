@@ -68,6 +68,19 @@ window.FinkDevPanel = {
                 !!d.highlight);
         }, { replay: true });
         observe('nav'); observe('ink'); observe('fink');
+
+        // Step 5: the log tab reads the debug.* channel. FinkUtils.debugLog
+        // and window.log publish here once the bus exists (direct-call
+        // fallback covers pre-shell boot). No replay: debug lines are a
+        // stream, not state.
+        bus.subscribe('debug.*', (e) => {
+            const d = e.data || {};
+            this.log(d.msg ?? d.summary ?? '', d.level || 'debug');
+        });
+        // Publishers switch to the bus only now — anything logged before
+        // this moment took the direct path, so no line is dropped in the
+        // window between shell boot and panel init.
+        this.busWired = true;
     },
 
     setupEventListeners() {
@@ -375,6 +388,6 @@ window.FinkDevPanel = {
     }
 };
 
-// Global convenience function
-window.log = (msg, type = 'info') => FinkDevPanel.log(msg, type);
+// window.log is defined in fink-utils.js (bus-first, observability step
+// 5) — this file no longer overrides it with a direct call.
 window.swimEvent = (lane, icon, title, detail, highlight) => FinkDevPanel.swimEvent(lane, icon, title, detail, highlight);
