@@ -1147,8 +1147,29 @@ kernel.
 - Why it matters beyond tidiness: the Finkiverse links to FINK documents
   we did not write. Gating `launch`/`navigate`/`chrome` for an untrusted
   story is the open work. Some privilege is legitimate — the story IS the
-  session — but that argues for splitting the narrative RUNTIME (a
-  service) from the story DOCUMENT (an app), which is not done.
+  session — but that argues for splitting the narrative RUNTIME from the
+  story DOCUMENT.
+
+**The boxed runner exists now (Phase 2 Slab 1, 2026-07-28).**
+`inklet/apps/storyrunner/` is a FinkStoryRunner that runs the whole thing
+sandboxed: it compiles (backticks browser kernel) and plays a real ink
+story INSIDE an opaque-origin app frame, renders prose+choices in its own
+document, styles itself (`# BG:` hits the frame, not the host), and reaches
+the shell only via `foaf.storyRequest` → capability-checked `story:*` verbs
+(`story.request` handler in `governAppFrame`) + the scoped bus. `# MINIGAME:`
+becomes a governed `story.launch` that opens a separately-boxed guest — up
+AND down. `e2e-storyrunner.mjs` proves containment: `parent.FoafOS` /
+`parent.FinkInkEngine` / `parent.document` all throw from inside.
+- This runs PARALLEL to the live host-side player (unchanged, still
+  privileged). It is NOT yet a replacement — no media (C8), no
+  link/navigate wiring, and the compile step still runs in the runner's
+  own frame rather than a nested throwaway iframe (inner-integrity
+  follow-up). Threat model + phases:
+  `docs/fink-story-sandbox-threatmodel-20260728.md`.
+- `app-sdk.js` grew `foaf.storyRequest` and `foaf.bus`, and now replays
+  `onInit` to a late (module) listener — app.init can land before a
+  `type=module` app registers its handler; without the replay the app
+  never boots (this cost a debugging pass).
 
 ## Service inventory (spec §5.5.3)
 

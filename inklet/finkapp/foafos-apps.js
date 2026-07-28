@@ -145,6 +145,20 @@ export const APPS = [
     surface: 'window', url: '../apps/tv/index.html',
     desc: 'The tape library, as stations',
     capabilities: ['storage', 'audio'] },
+  // The narrative runtime, BOXED — a story compiled and played entirely in
+  // an opaque-origin frame, reaching the shell only through story:* verbs
+  // (spec §5.7, threat model 2026-07-28). Parallel to the live host-side
+  // player while it reaches parity; this proves "sandboxed all the way up."
+  // NO same-origin: it is a real box. story:launch lets a # MINIGAME: tag
+  // ask the shell to open a (separately boxed) guest — up AND down.
+  { id: 'storyrunner', family: 'play', icon: '📖', name: 'Story Runner (boxed)',
+    surface: 'window', url: '../apps/storyrunner/index.html',
+    desc: 'A FINK story, sandboxed all the way up',
+    // no `story` override: the runner defaults to its own ./demo.fink.js,
+    // resolved relative to the RUNNER frame (a finkapp-relative path would
+    // resolve against the wrong base once fetched inside the box)
+    capabilities: ['story:launch'],
+    bus: { publish: ['app.storyrunner.*'], subscribe: ['wm.mode', 'audio.volume', 'ui.skin'] } },
   // MIGRATED (July 2026) — and it was the LAST `same-origin` holder, so the
   // whole registry is now sandboxed. Found because the ROBBAMP tile was DEAD
   // on the TV root: the root (correctly) holds no escape hatch, attenuation

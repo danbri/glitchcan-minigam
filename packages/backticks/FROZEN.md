@@ -45,6 +45,15 @@ boundary for genuinely untrusted input stays with the caller's isolate —
 for the live player, the iframe. See
 `docs/fink-story-sandbox-threatmodel-20260728.md`.
 
+**Two entry points, so the kernel is browser-safe.** `.` (`src/index.js`)
+is the PURE kernel — no Node builtins — importable in a browser (the boxed
+story runner `inklet/apps/storyrunner/` imports it directly). `./node`
+(`src/node.js`) adds `extractBlocks` (the `node:vm` isolate) and re-exports
+the kernel, so a Node caller gets everything from one place. A bare
+`import 'node:vm'` in the kernel would have thrown at load in the browser —
+keeping it out of `index.js` is what makes "one definition, both
+environments" real.
+
 ## Provenance
 
 Extracted July 2026 from two hand-copied implementations that had already

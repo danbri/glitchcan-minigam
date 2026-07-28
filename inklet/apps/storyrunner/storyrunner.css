@@ -1,0 +1,28 @@
+/* The runner styles ITSELF. A story's # BG: / # CLASS: apply here, inside
+   the box, never to the host — containment is visible in the CSS scope. */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100dvh; overflow: hidden;
+  background: #06122e; color: #fff1e8;
+  font-family: ui-rounded, -apple-system, 'Segoe UI', system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
+}
+#stage {
+  height: 100dvh; display: flex; flex-direction: column;
+  padding: max(0.8em, env(safe-area-inset-top)) 1em 1em;
+  gap: 0.8em; overflow-y: auto;
+}
+#prose { display: flex; flex-direction: column; gap: 0.7em; font-size: clamp(15px, 4vw, 19px); line-height: 1.4; }
+#prose p { white-space: pre-wrap; }
+#prose p.player { opacity: 0.6; font-style: italic; }
+#choices { list-style: none; display: flex; flex-direction: column; gap: 0.5em; margin-top: auto; }
+#choices button {
+  font: inherit; font-size: clamp(14px, 3.6vw, 17px);
+  text-align: left; width: 100%;
+  padding: 0.7em 0.9em; min-height: 44px;
+  background: rgba(41,173,255,0.12); color: #fff1e8;
+  border: 1px solid #29adff; border-radius: 0.5em; cursor: pointer;
+}
+#choices button:focus-visible { outline: 2px solid #ffec27; outline-offset: 2px; }
+#choices button:hover { background: rgba(41,173,255,0.22); }
+#status { font-size: 0.8em; opacity: 0.6; }

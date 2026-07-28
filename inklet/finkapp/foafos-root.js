@@ -38,7 +38,8 @@ export const ROOTS = {
     // launchApp went through attenuation and the drawer's own button
     // called openLogger() directly and so never noticed.
     capabilities: ['storage', 'secrets', 'vars:read', 'vars:write', 'audio', 'input',
-                   'launch', 'navigate', 'chrome', 'shell', 'git:write', 'same-origin'],
+                   'launch', 'navigate', 'chrome', 'shell', 'git:write', 'same-origin',
+                   'story:launch', 'story:link', 'story:navigate'],
     boot: { story: null },        // null = fall back to FinkConfig.DEFAULT_FINK_FILE
     apps: null,                   // all of them
   },

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>FINK Story Runner</title>
+<link rel="stylesheet" href="storyrunner.css">
+</head>
+<body>
+<!-- The narrative runtime, BOXED. This whole page is a foafos app in an
+     opaque-origin frame: it compiles and plays a .fink.js entirely in its
+     own document, renders prose and choices HERE, styles ITSELF, and
+     reaches the shell only through the app protocol (foaf.storyRequest /
+     foaf.bus). It has no `parent.FoafOS`, no host DOM — that is the point.
+     The live host-side player (inklet/finkapp) is unchanged; this is the
+     "sandboxed all the way up" runner proving containment. -->
+<main id="stage" aria-live="off">
+  <div id="prose" role="log" aria-live="polite" aria-relevant="additions"></div>
+  <ul id="choices" aria-label="Choices"></ul>
+  <p id="status" role="status" aria-live="polite"></p>
+</main>
+
+<!-- app-sdk FIRST: opaque origin, so it stands in for localStorage and
+     carries the verb/bus protocol before any runtime code runs. -->
+<script src="../app-sdk.js"></script>
+<!-- inkjs: the real compiler, global `inkjs`. NO hackparsing (CLAUDE.md). -->
+<script src="../../../third_party/ink/ink-full.js"></script>
+<script type="module" src="storyrunner.js"></script>
+</body>
+</html>

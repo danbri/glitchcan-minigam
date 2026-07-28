@@ -5,7 +5,8 @@
   "description": "The FINK sigil capture kernel: raw tagged-template extraction of typed blocks from .fink.js polyglot files. Isolation is the caller's; correctness is frozen here.",
   "main": "src/index.js",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./node": "./src/node.js"
   },
   "files": [
     "src",

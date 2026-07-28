@@ -10,6 +10,8 @@
 // docs/fink-story-sandbox-threatmodel-20260728.md for why the capture step
 // is isolated by the CALLER (iframe / vm), not by this module.
 
+// Node context → import from the node adapter, which re-exports the whole
+// pure kernel plus extractBlocks (the node:vm isolate).
 export {
   DEFAULT_SIGILS,
   extractBlocks,
@@ -18,4 +20,4 @@ export {
   rawOf,
   createCapture,
   firstInkOf,
-} from '../../../backticks/src/index.js';
+} from '../../../backticks/src/node.js';
