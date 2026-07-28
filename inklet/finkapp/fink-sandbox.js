@@ -155,6 +155,13 @@ window.FinkSandbox = {
                             // Use only the first oooOO block (matches working hamfink2026 behavior)
                             const finkContent = data.data[0];
                             this.loadedCount++;  // Track successful loads
+                            // Observability step 4: publish the load as a
+                            // retained bus fact for the load meter. Count
+                            // and size only — never the content itself.
+                            window.FoafOS?.bus.publish('fink.load', {
+                                summary: `fink loaded, ${finkContent.length} chars (total ${this.loadedCount})`,
+                                count: this.loadedCount, chars: finkContent.length,
+                            }, { retain: true });
                             FinkUtils.debugLog('FINK story loaded: ' + finkContent.length + ' characters (total: ' + this.loadedCount + ')');
                             resolve(finkContent);
                         } else {

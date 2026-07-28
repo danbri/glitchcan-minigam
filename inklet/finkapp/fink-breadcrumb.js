@@ -196,6 +196,13 @@ window.FinkBreadcrumb = {
     clearHistory() {
         this.finkStack = [];
         FinkUtils.debugLog('Breadcrumb: Stack cleared');
+        // The emptied stack is a nav fact too — without it the bus-fed
+        // load meter would keep showing the old depth after a return to
+        // the main menu.
+        window.FoafOS?.bus.publish('nav.fink', {
+            summary: 'story stack cleared',
+            url: null, depth: 0, stack: [],
+        }, { retain: true });
         this.render();
     },
 

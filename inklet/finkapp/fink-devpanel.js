@@ -43,23 +43,31 @@ window.FinkDevPanel = {
         this.log('DevPanel initialized', 'debug');
     },
 
-    // The NAV lane observes the foafos bus; it keeps no private diary.
-    // nav.* facts are published by whoever knows them (breadcrumb: nav.fink,
-    // nav.knot; navigation: nav.link) and every observer sees the same ones.
+    // The NAV, INK and FINK lanes observe the foafos bus; they keep no
+    // private diary. Facts are published by whoever knows them (breadcrumb:
+    // nav.fink, nav.knot; navigation: nav.link; engine: ink.compile,
+    // ink.choice, ink.error; sandbox: fink.load; player/engine: fink.ready)
+    // and every observer — lane, feed, Logger — sees the same ones.
     // foafos-shell.js is a module script, so the bus exists before
     // DOMContentLoaded runs init() — no polling needed.
     observeBus() {
         const bus = window.FoafOS?.bus;
         if (!bus) return;
-        const icons = { 'nav.fink': '📖', 'nav.knot': '📍', 'nav.link': '🧭' };
-        bus.subscribe('nav.*', (e) => {
+        const icons = {
+            'nav.fink': '📖', 'nav.knot': '📍', 'nav.link': '🧭',
+            'ink.compile': '🖋️', 'ink.choice': '👆', 'ink.error': '⚠️',
+            'fink.load': '📥', 'fink.ready': '✅',
+        };
+        const laneFor = { nav: 'nav', ink: 'ink', fink: 'fink' };
+        const observe = (family) => bus.subscribe(`${family}.*`, (e) => {
             const d = e.data || {};
-            this.swimEvent('nav',
-                d.icon || icons[e.topic] || '🧭',
-                e.topic.slice(4),
+            this.swimEvent(laneFor[family],
+                d.icon || icons[e.topic] || '•',
+                e.topic.slice(family.length + 1),
                 d.summary || '',
                 !!d.highlight);
         }, { replay: true });
+        observe('nav'); observe('ink'); observe('fink');
     },
 
     setupEventListeners() {

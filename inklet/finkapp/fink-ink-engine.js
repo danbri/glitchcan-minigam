@@ -151,6 +151,13 @@ window.FinkInkEngine = {
 
             this.story = compiledStory;
             this.compiledCount++;  // Track successful compilations
+            // Observability step 4: a successful compile is a bus fact,
+            // not a private counter. Retained so a late subscriber (the
+            // load meter) sees the current total.
+            window.FoafOS?.bus.publish('ink.compile', {
+                summary: `ink compiled (total ${this.compiledCount})`,
+                count: this.compiledCount,
+            }, { retain: true });
             // A new work brings its own status line. Without this, one
             // story's `# STATUS:` items would follow the reader into the
             // next one — the same shape of bug as story ambience leaking
@@ -174,7 +181,10 @@ window.FinkInkEngine = {
             if (this.story.onError) {
                 this.story.onError = (msg, type) => {
                     FinkUtils.debugLog(`INK Runtime ${type}: ${msg}`);
-                    if (window.swimEvent) swimEvent('ink', '⚠️', 'Runtime ' + type, msg);
+                    window.FoafOS?.bus.publish('ink.error', {
+                        summary: `Runtime ${type} — ${msg}`,
+                        type, msg, highlight: true,
+                    });
                 };
             }
 
@@ -251,7 +261,9 @@ window.FinkInkEngine = {
             if (choiceIndex !== null && typeof choiceIndex === 'number') {
                 FinkUtils.debugLog('Making choice: ' + choiceIndex);
                 this.story.ChooseChoiceIndex(choiceIndex);
-                if (window.swimEvent) swimEvent('ink', '👆', 'Choice', `Index: ${choiceIndex}`);
+                window.FoafOS?.bus.publish('ink.choice', {
+                    summary: `choice ${choiceIndex}`, index: choiceIndex,
+                });
 
                 // Clear fink_respawn flag after first choice
                 if (window.FinkNavigation) {
@@ -680,7 +692,9 @@ window.FinkInkEngine = {
                 FinkPlayer.currentStoryUrl = resolvedUrl;
 
                 await this.compileAndRunStory(content);
-                if (window.swimEvent) swimEvent('fink', '✅', 'FINK Loaded', resolvedUrl.split('/').pop());
+                window.FoafOS?.bus.publish('fink.ready', {
+                    summary: resolvedUrl.split('/').pop(), url: resolvedUrl,
+                });
             })
             .catch(error => {
                 FinkUtils.debugLog('Error loading external FINK: ' + error.message);

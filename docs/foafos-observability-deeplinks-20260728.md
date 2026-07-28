@@ -47,9 +47,18 @@ Order of work (each step is small and testable):
    lane observes `nav.*` with retained-event replay; `FinkNavigation.
    swimLog` now publishes `nav.link` to the bus instead of writing to
    the panel — no direct `swimEvent('nav', …)` caller remains).
-3. Load meter chrome app subscribes; delete `updateFinkStats` polling.
-4. INK/FINK lanes: engine publishes `ink.compile`, `fink.load` events
-   (sandbox and engine counters become bus facts).
+3. ~~Load meter chrome app subscribes; delete `updateFinkStats`
+   polling~~ (done 2026-07-28: the meter subscribes to `nav.fink` /
+   `fink.load` / `ink.compile` with replay; the scroll-time polling and
+   `updateFinkStats` are gone; `clearHistory` publishes depth 0 so the
+   meter cannot go stale on return-to-menu).
+4. ~~INK/FINK lanes: engine publishes `ink.compile`, `fink.load`
+   events~~ (done 2026-07-28: engine publishes `ink.compile`,
+   `ink.choice`, `ink.error`; sandbox publishes `fink.load` (count and
+   size only, never content); player/engine publish `fink.ready`; the
+   dev panel INK and FINK lanes observe `ink.*`/`fink.*` with replay.
+   The NET lane still uses `swimEvent` — `net.*` feeds the user-facing
+   feed, so loading noise stays off it for now).
 5. `debugLog` becomes a thin wrapper that also mirrors to a `debug.*`
    bus channel; the dev panel log tab reads the bus.
 

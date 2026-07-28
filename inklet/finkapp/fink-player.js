@@ -138,7 +138,9 @@ window.FinkPlayer = {
 
             await FinkInkEngine.compileAndRunStory(content);
 
-            if (window.swimEvent) swimEvent('fink', '✅', 'FINK Loaded', finkUrl.split('/').pop());
+            window.FoafOS?.bus.publish('fink.ready', {
+                summary: finkUrl.split('/').pop(), url: finkUrl,
+            });
         } catch (error) {
             FinkUtils.debugLog('Error loading story: ' + error.message);
             FinkUI.showStatus(`Error: ${error.message}`);

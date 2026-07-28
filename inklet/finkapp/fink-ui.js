@@ -69,6 +69,9 @@ window.FinkUI = {
 
         // Scroll status bar
         this.setupScrollStatusBar();
+
+        // Load meter reads the bus (observability step 3)
+        this.observeLoadMeter();
     },
 
     // Radial menu setup
@@ -154,9 +157,6 @@ window.FinkUI = {
                 // Show status bar while scrolling
                 statusBar.classList.add('visible');
 
-                // Update stats
-                this.updateFinkStats();
-
                 // Clear existing timer
                 if (scrollTimer) clearTimeout(scrollTimer);
 
@@ -170,25 +170,21 @@ window.FinkUI = {
         }
     },
 
-    // Update FINK stats in the status bar
-    updateFinkStats() {
-        const encounterEl = document.getElementById('stat-finks-encountered');
-        const loadedEl = document.getElementById('stat-finks-loaded');
-        const compiledEl = document.getElementById('stat-finks-compiled');
-
-        // `FinkNavigation.finkHistory` never existed — the counter read a
-        // phantom field and told every player "FINKS: 0" while a story was
-        // demonstrably loaded. The real record of which finks are stacked
-        // is the breadcrumb's finkStack (pre-foafos tooling, but truthful).
-        if (encounterEl) {
-            encounterEl.textContent = window.FinkBreadcrumb?.finkStack?.length || 0;
-        }
-        if (window.FinkSandbox) {
-            if (loadedEl) loadedEl.textContent = FinkSandbox.loadedCount || 0;
-        }
-        if (window.FinkInkEngine) {
-            if (compiledEl) compiledEl.textContent = FinkInkEngine.compiledCount || 0;
-        }
+    // Observability step 3: the load meter observes the bus instead of
+    // polling counters on every scroll event. nav.fink carries the story
+    // stack depth (breadcrumb), fink.load and ink.compile carry the
+    // sandbox/engine totals — all retained, so replay shows the current
+    // numbers even though the meter subscribes after boot.
+    observeLoadMeter() {
+        const bus = window.FoafOS?.bus;
+        if (!bus) return;
+        const set = (id, n) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = n ?? 0;
+        };
+        bus.subscribe('nav.fink', (e) => set('stat-finks-encountered', e.data?.depth), { replay: true });
+        bus.subscribe('fink.load', (e) => set('stat-finks-loaded', e.data?.count), { replay: true });
+        bus.subscribe('ink.compile', (e) => set('stat-finks-compiled', e.data?.count), { replay: true });
     },
 
     handleHomeClick() {
