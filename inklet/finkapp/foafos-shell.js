@@ -708,7 +708,7 @@ function buildUI() {
   // sys.cluster.* and would flood the feed with plumbing. sys.guest.*
   // stays visible (denials are security-relevant).
   feed.setAttribute('topics',
-    'story.*,minigame.*,wm.*,session.*,audio.*,widget.*,net.*,sys.guest.*');
+    'story.*,minigame.*,wm.*,session.*,audio.*,widget.*,net.*,sys.guest.*,nav.*');
   drawer.querySelector('#foafos-feed-wrap').appendChild(feed);
 
   const setDrawer = (open) => {

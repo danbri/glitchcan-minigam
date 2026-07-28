@@ -283,9 +283,12 @@ button:focus-visible {
     font-weight: 600;
 }
 :root[data-skin="broadsheet"] .story-section.current { border: 0; }
-:root[data-skin="broadsheet"] #story-output p:first-of-type::first-letter {
-    font-size: 2.6em; float: left; line-height: 0.86; padding: 0.06em 0.1em 0 0;
-}
+/* NO drop cap. It read as newsprint until the field showed its misfires:
+   it split acronyms ("Z X-Spectrum"), capitalised ink's choice echoes
+   ("W ear the tie"), dropped-capped one-line captions, and orphaned
+   opening quote marks. CSS cannot tell which first paragraph deserves
+   one, so none of them get it — the serif, the rules and the measure
+   carry the broadsheet identity. */
 /* aurora floats its cards */
 :root[data-skin="aurora"] .story-section.current {
     backdrop-filter: blur(8px);

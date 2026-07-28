@@ -380,7 +380,18 @@ window.FinkWM = {
     _applyDock(dock) {
         const { chrome } = this.elements;
         if (!chrome) return;
-        const d = dock || { side: 'right', top: 8 };
+        if (!dock) {
+            // Never dragged: the STYLESHEET owns the geometry. Writing the
+            // default as inline pixels froze the grip at top:8px for every
+            // mode, which beat the fullscreen-mode rule that drops it below
+            // a game's own header band (it sat exactly on Robbin's QUIT
+            // chip). Inline geometry is the record of a user's drag — no
+            // drag, no inline.
+            chrome.style.top = chrome.style.left = chrome.style.right = '';
+            chrome.classList.remove('dock-left');
+            return;
+        }
+        const d = dock;
         const maxTop = Math.max(8, window.innerHeight - 56);
         chrome.style.top = `${Math.min(d.top, maxTop)}px`;
         if (d.side === 'left') {

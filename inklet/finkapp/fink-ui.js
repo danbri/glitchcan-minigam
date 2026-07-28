@@ -176,8 +176,12 @@ window.FinkUI = {
         const loadedEl = document.getElementById('stat-finks-loaded');
         const compiledEl = document.getElementById('stat-finks-compiled');
 
-        if (window.FinkNavigation) {
-            if (encounterEl) encounterEl.textContent = FinkNavigation.finkHistory?.length || 0;
+        // `FinkNavigation.finkHistory` never existed — the counter read a
+        // phantom field and told every player "FINKS: 0" while a story was
+        // demonstrably loaded. The real record of which finks are stacked
+        // is the breadcrumb's finkStack (pre-foafos tooling, but truthful).
+        if (encounterEl) {
+            encounterEl.textContent = window.FinkBreadcrumb?.finkStack?.length || 0;
         }
         if (window.FinkSandbox) {
             if (loadedEl) loadedEl.textContent = FinkSandbox.loadedCount || 0;
@@ -222,7 +226,15 @@ window.FinkUI = {
             if (!cancelBtn.classList.contains('ready')) return;
             confirmDiv.remove();
             this.clearChoices();
-            this.displayStoredChoices();
+            // "Continue playing" with nothing to continue — no stored
+            // choices, e.g. after a failed story load — was a blank
+            // screen with zero actions. When there is nothing to go back
+            // to, going home IS continuing.
+            if (this.storedChoices?.length) {
+                this.displayStoredChoices();
+            } else {
+                window.FinkPlayer?.returnToMainMenu();
+            }
         });
 
         this.elements.choicesContainer.appendChild(confirmBtn);
@@ -666,9 +678,22 @@ window.FinkUI = {
         }
     },
 
+    // The element that actually scrolls the prose: the theatre panel body
+    // when theatre mode holds the story, #narrative-view otherwise. The
+    // scroll helpers used to hardcode narrative-view, so in theatre every
+    // beat rendered with the panel at scrollTop 0 and the choices below
+    // the fold of a scroller nothing ever scrolled.
+    _scroller() {
+        if (document.body.dataset.theatre === 'on') {
+            const body = document.querySelector('#theatre-panel .theatre-panel-body');
+            if (body) return body;
+        }
+        return document.getElementById('narrative-view');
+    },
+
     // Scroll to top to see current section
     scrollToCurrentSection() {
-        const narrativeView = document.getElementById('narrative-view');
+        const narrativeView = this._scroller();
         if (narrativeView && this.currentSection) {
             setTimeout(() => {
                 // Scroll to show the current section with a small offset from top
@@ -684,18 +709,69 @@ window.FinkUI = {
     },
 
     scrollToBottom() {
-        // Scroll the narrative view container, not just story output
-        const narrativeView = document.getElementById('narrative-view');
-        if (narrativeView) {
-            // Use smooth scroll with a small delay to ensure content is rendered
+        // Runs after the choices render. Bottom is only the right place
+        // when the whole beat FITS the scroller — then it shows prose and
+        // choices together. When the beat is taller than the screen,
+        // bottom-anchoring scrolled every text chunk off the top: on a
+        // 340px landscape phone the reader saw an image edge and three
+        // buttons, and the story text of every beat went unread. A beat
+        // that overflows starts at its TOP — reading position — and the
+        // reader (or the pager parts) walks down to the choices.
+        const scroller = this._scroller();
+        if (scroller) {
             setTimeout(() => {
-                narrativeView.scrollTo({
-                    top: narrativeView.scrollHeight,
-                    behavior: 'smooth'
-                });
+                const section = this.currentSection;
+                // ONE rule: a new beat lands at its START. The old
+                // scroll-to-scrollHeight bottom-anchored every beat, and
+                // the scroll-past padding beyond the choices pushed the
+                // prose off the top even when everything would have fit.
+                // A beat that fits shows its choices from the start
+                // anyway; one that overflows shows the ▾ hint and the
+                // reader (or the pager parts) walks down to them.
+                const pager = scroller.querySelector('.story-pager');
+                const top = Math.max(0, (section ? section.offsetTop : 0) - (pager ? pager.offsetHeight : 0) - 10);
+                scroller.scrollTo({ top, behavior: 'smooth' });
                 this.markFit();
+                this._updateMoreHint();
+                // once the smooth scroll lands, re-judge whether more
+                // content remains below the fold
+                setTimeout(() => this._updateMoreHint(), 450);
             }, 50);
         }
+    },
+
+    // "There is more below" — a pinned ▾ on the scroller whenever content
+    // continues past the fold and the reader is not at the bottom. This is
+    // what tells a first-time player that the choices exist down there.
+    _updateMoreHint() {
+        const scroller = this._scroller();
+        if (!scroller) return;
+        let hint = document.getElementById('fink-more-hint');
+        const host = scroller.parentElement || scroller;
+        const more = scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > 24;
+        if (!hint) {
+            if (!more) return;
+            hint = document.createElement('button');
+            hint.id = 'fink-more-hint';
+            hint.type = 'button';
+            hint.setAttribute('aria-label', 'More below — scroll for the rest');
+            hint.textContent = '▾';
+            hint.addEventListener('click', () => {
+                const s = this._scroller();
+                s?.scrollTo({ top: s.scrollTop + s.clientHeight * 0.8, behavior: 'smooth' });
+            });
+            document.body.appendChild(hint);
+            if (!this._moreHintBound) {
+                this._moreHintBound = true;
+                ['scroll', 'resize'].forEach(ev =>
+                    window.addEventListener(ev, () => this._updateMoreHint(), { capture: true, passive: true }));
+            }
+        }
+        // pin it to the scroller's on-screen bottom edge, centred
+        const r = scroller.getBoundingClientRect();
+        hint.style.left = `${Math.round(r.left + r.width / 2)}px`;
+        hint.style.top = `${Math.round(Math.min(r.bottom, window.innerHeight) - 34)}px`;
+        hint.classList.toggle('shown', more);
     },
 
     /**
@@ -1091,6 +1167,28 @@ window.FinkUI = {
             const spinner = this.elements.statusOverlay.querySelector('.status-spinner');
             if (spinner) {
                 spinner.style.display = showLoader ? 'inline-block' : 'none';
+            }
+            // An error is a fork, not a wall. "Tap to dismiss" used to drop
+            // the player onto a blank black stage with nothing tappable —
+            // the only way out was discovering ☰ → Home. The error state
+            // now carries its own way home.
+            let esc = this.elements.statusOverlay.querySelector('.status-menu-btn');
+            if (!showLoader) {
+                if (!esc) {
+                    esc = document.createElement('button');
+                    esc.type = 'button';
+                    esc.className = 'choice-btn ready status-menu-btn';
+                    esc.textContent = '⟵ Return to menu';
+                    esc.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.hideStatus();
+                        window.FinkPlayer?.returnToMainMenu();
+                    });
+                    this.elements.statusOverlay.appendChild(esc);
+                }
+                esc.style.display = '';
+            } else if (esc) {
+                esc.style.display = 'none';
             }
         }
     },

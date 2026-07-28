@@ -7,7 +7,10 @@
     position: fixed;
     top: 4px;
     left: 4px;
-    z-index: 100;
+    /* Above the stats bar (z 100). Both sat at z 100; the bar is later
+       in the DOM, so it painted over the chip AND swallowed its taps the
+       moment a story earned a stat — black chip on black bar, dead. */
+    z-index: 150;
     background: rgba(0, 0, 0, 0.85);
     border: 1px solid rgba(0, 192, 192, 0.3);
     border-radius: var(--border-radius-sm);

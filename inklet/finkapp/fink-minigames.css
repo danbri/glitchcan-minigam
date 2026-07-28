@@ -36,6 +36,12 @@
 
 #wm-chrome.wm-hidden { display: none; }
 
+/* Fullscreen game: drop the grip below the game's own header band.
+   At top:8px it sat exactly on Robbin's canvas-drawn QUIT chip and goal
+   HUD (y≈58-75) — the shell's window control eating the game's exit
+   control. Dragging still wins: the drag-dock writes inline styles. */
+body[data-wm-mode="full"] #wm-chrome { top: 84px; }
+
 /* Docked left: grip stays on the screen-edge side */
 #wm-chrome.dock-left { flex-direction: row-reverse; }
 

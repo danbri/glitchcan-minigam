@@ -125,6 +125,17 @@ window.FinkBreadcrumb = {
         FinkUtils.debugLog('Breadcrumb: New FINK level ' + (this.finkStack.length - 1) + ': ' + this.formatUrl(url));
         FinkUtils.debugLog('Breadcrumb: Stack is now: [' + this.finkStack.map(l => this.formatUrl(l.url)).join(', ') + ']');
 
+        // Observability: the story-overlay tree is shell state, not a
+        // private widget diary. Publishing it puts every FINK-enters-FINK
+        // transition on the bus, where the Logger, the feed and any future
+        // debugging surface see it — the first step of retiring this
+        // widget's pre-foafos side-channel logging.
+        window.FoafOS?.bus.publish('nav.fink', {
+            summary: `story level ${this.finkStack.length}: ${this.formatUrl(url)}`,
+            url, depth: this.finkStack.length,
+            stack: this.finkStack.map(l => this.formatUrl(l.url)),
+        });
+
         // Limit stack depth to prevent unbounded growth (10 levels deep should be plenty)
         if (this.finkStack.length > 10) {
             this.finkStack.shift();
@@ -161,6 +172,11 @@ window.FinkBreadcrumb = {
         }
 
         FinkUtils.debugLog('Breadcrumb: Recorded knot at level ' + (this.finkStack.length - 1) + ': ' + knotName);
+        window.FoafOS?.bus.publish('nav.knot', {
+            summary: `→ ${knotName}`,
+            knot: knotName, depth: this.finkStack.length,
+            fink: this.formatUrl(currentLevel.url),
+        });
         this.render();
     },
 

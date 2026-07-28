@@ -29,6 +29,9 @@
     display: flex;
     gap: 1em;
     padding: 0.4em 0.8em;
+    /* symmetric inline padding keeps the centred items clear of the
+       breadcrumb chip that overlays the bar's left end */
+    padding-inline: 44px;
     background: rgba(0, 0, 0, 0.85);
     border-bottom: 1px solid var(--zx-blue);
     font-size: 0.9em;
@@ -199,6 +202,13 @@ body[data-fink-depth="8"] #narrative-view {
     gap: 0.5em;
     align-items: stretch;
 }
+/* At rest, the last choice must clear the two fixed corner circles
+   (radial trigger left, dock right — tops ~68px off the bottom edge).
+   Measured in the field: taps on the ends of the bottom choice opened
+   the radial menu or the drawer instead of choosing. Theatre's panel
+   has its own geometry and opts out. */
+#narrative-view #choices { margin-bottom: 88px; }
+#theatre-panel #choices { margin-bottom: 0; }
 
 /* The emoji lead is a fixed-width SLOT, so a mixed batch — some choices
    with a semantic emoji, some without — keeps one text edge instead of
@@ -250,6 +260,38 @@ body[data-fink-depth="8"] #narrative-view {
 .story-pager .pager-all { margin-left: auto; }
 /* Browsing the past: the choices belong to the live page only. */
 body[data-fink-paging-past] #choices { display: none; }
+
+/* "More below" hint: pinned ▾ over the scroller's bottom edge whenever
+   content (usually the choices) continues past the fold. */
+#fink-more-hint {
+    position: fixed;
+    transform: translateX(-50%);
+    /* above the theatre panel (520) and the story flow, below the shell
+       chrome (2600s) — its first version sat at 510, one layer UNDER the
+       panel it was pinned to, so the choices ate its taps: the exact
+       covered-control defect class this pass exists to kill */
+    z-index: 1500;
+    width: 30px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid var(--zx-cyan);
+    border-radius: 13px;
+    background: rgba(0, 8, 16, 0.8);
+    color: var(--zx-cyan);
+    font: inherit;
+    line-height: 1;
+    cursor: pointer;
+    display: none;
+    /* Finite: three nudges to catch the eye, then it sits still.
+       An infinite wobble is noise (and never "stable" to automation). */
+    animation: moreHintNudge 1.6s ease-in-out 3;
+}
+#fink-more-hint.shown { display: block; }
+@media (prefers-reduced-motion: reduce) { #fink-more-hint { animation: none; } }
+@keyframes moreHintNudge {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(3px); }
+}
 /* Mid-beat: parts remain — the choices wait for the last screen of the
    scene, and ▶ is the way there. */
 body[data-fink-part-pending] #choices { display: none; }
@@ -350,7 +392,12 @@ body[data-fink-part-pending] #choices { display: none; }
         grid-row: 1 / span 40;
         position: static;
         width: 100%;
-        max-height: none;
+        /* CAPPED. Uncapped, a portrait image in the left column grew
+           taller than the viewport, drove the scroller's height, and
+           every beat opened scrolled past its own prose. */
+        max-height: calc(100vh - 120px);
+        object-fit: contain;
+        object-position: top;
         margin: 0;
     }
     .story-section > :not(.section-media) { grid-column: 2; }
@@ -631,7 +678,9 @@ body[data-theatre="on"] .video-collapse { display: none; }
 .theatre-panel-body {
     overflow-y: auto;
     min-height: 0;
-    padding: 0.4em 0.6em 0.7em;
+    /* enough bottom room that the last visible line never sits cut in
+       half by the panel edge */
+    padding: 0.4em 0.6em 1.1em;
 }
 /* Inside the panel the prose sheds its outer box — the panel IS the box. */
 #theatre-panel #story-output { max-width: none; padding: 0.2em 0; }
@@ -798,6 +847,12 @@ body[data-theatre="on"] .video-collapse { display: none; }
 #status-overlay.active {
     opacity: 1;
     visibility: visible;
+}
+/* The error state's way home (see FinkUI.showStatus). */
+#status-overlay .status-menu-btn {
+    margin-top: 1.4em;
+    min-width: 220px;
+    text-align: center;
 }
 #status-overlay.dismissable {
     cursor: pointer;
