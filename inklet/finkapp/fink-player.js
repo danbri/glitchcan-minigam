@@ -1,7 +1,23 @@
 // FINK Player - Main coordination module for finkapp
 // Coordinates UI, INK engine, minigames, foley, audio, and navigation
+//
+// ⚠️ PENDING DELETE — this is the HOST-PAGE story player: it runs stories
+// with the shell's own authority (direct globals, unmediated host DOM).
+// It is SUPERSEDED by the boxed runner (inklet/apps/storyrunner/), which
+// runs a story in an opaque-origin frame reaching the shell only through
+// story:* verbs. This module is kept ONLY until the boxed runner reaches
+// parity — the blockers are tracked in issue #779 (minigame pause/resume,
+// variable governance, dream stack, navigation). When #779 is green, the
+// bundled-story boot flips to boxed and this file is removed. Do not add
+// features here; add them to the boxed runner.
 
 window.FinkPlayer = {
+    // Deprecation flag — read by the shell/roots and surfaced in the
+    // service inventory so "which player am I on" is never a guess.
+    PENDING_DELETE: true,
+    supersededBy: 'inklet/apps/storyrunner',
+    trackingIssue: 779,
+
     mediaBasePath: '',
     currentStoryUrl: null,
     globalMediaBase: null,
@@ -9,6 +25,8 @@ window.FinkPlayer = {
     // Initialize the player
     init() {
         FinkUtils.debugLog('Initializing FINK Player (finkapp) with modular architecture...');
+        console.warn('[FinkPlayer] PENDING DELETE: the host-page player is superseded by the '
+            + 'boxed runner (inklet/apps/storyrunner). Kept until parity — see issue #779.');
 
         // Initialize all modules
         FinkUI.init();

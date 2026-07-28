@@ -209,6 +209,17 @@ try {
     pass('an unknown narrative verb is refused with a named reason');
   } else fail('deny path wrong: ' + JSON.stringify(refusal));
 
+  // ── 7. the DEFAULT is switched to boxed; the host player is flagged ──
+  const direction = await page.evaluate(() => ({
+    declaredDefault: FoafOS.root?.storyPlayer?.default,
+    autoBoot: FoafOS.root?.storyPlayer?.autoBoot,
+    legacyPending: window.FinkPlayer?.PENDING_DELETE === true,
+    legacyIssue: window.FinkPlayer?.trackingIssue,
+  }));
+  if (direction.declaredDefault === 'boxed' && direction.legacyPending && direction.legacyIssue === 779) {
+    pass(`default surface = boxed; host player flagged pending-delete (auto-boot ${direction.autoBoot} until #${direction.legacyIssue})`);
+  } else fail('default switch / pending-delete flag wrong: ' + JSON.stringify(direction));
+
   if (pageErrors.length) fail('page errors: ' + pageErrors.join(' | '));
   else pass('zero page errors');
 } catch (e) {
