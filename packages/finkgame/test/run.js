@@ -124,5 +124,41 @@ ok('setVariable mirrors locally and proposes to the host', () => {
   assert.ok(win.sent.some((m) => /variable/i.test(m.type)), 'and a proposal went out');
 });
 
+// ── the bus surface ────────────────────────────────────────────────────
+// A stage guest is a full foafos app: sdk.bus is its scoped view of the
+// shell bus. The HOST enforces grants; the SDK's duties are the wire
+// shape, local dispatch, and declaring the contract.
+ok('bus.publish posts the bus-publish wire shape and declares the contract', () => {
+  const { win, sdk } = boot();
+  sdk.bus.publish('guest.mygame.beat', { kind: 'win' });
+  const pub = win.sent.filter((m) => m.type === 'bus-publish').pop();
+  assert.deepEqual(pub, { type: 'bus-publish', topic: 'guest.mygame.beat', data: { kind: 'win' } });
+  const conf = win.sent.filter((m) => m.type === 'conformance').pop();
+  assert.ok(conf.contracts.includes('bus'), 'bus contract declared');
+});
+
+ok('bus.subscribe dispatches matching bus-events and honours unsubscribe', () => {
+  const { win, sdk } = boot();
+  const seen = [];
+  const un = sdk.bus.subscribe('wm.*', (e) => seen.push(e.topic));
+  sdk.bus.subscribe('audio.volume', (e) => seen.push(e.topic));
+  win.deliver({ type: 'bus-event', event: { topic: 'wm.mode', data: { mode: 'pip' } } });
+  win.deliver({ type: 'bus-event', event: { topic: 'audio.volume', data: { level: 0.5 } } });
+  win.deliver({ type: 'bus-event', event: { topic: 'story.state', data: {} } });   // no subscriber
+  assert.deepEqual(seen, ['wm.mode', 'audio.volume']);
+  un();
+  win.deliver({ type: 'bus-event', event: { topic: 'wm.mode', data: {} } });
+  assert.deepEqual(seen, ['wm.mode', 'audio.volume'], 'unsubscribed pattern stays quiet');
+});
+
+ok('a broken bus subscriber cannot take down the dispatch', () => {
+  const { win, sdk } = boot();
+  const seen = [];
+  sdk.bus.subscribe('*', () => { throw new Error('boom'); });
+  sdk.bus.subscribe('*', (e) => seen.push(e.topic));
+  win.deliver({ type: 'bus-event', event: { topic: 'wm.mode', data: {} } });
+  assert.deepEqual(seen, ['wm.mode']);
+});
+
 console.log(fail ? `\n${fail} failure(s)` : '\nAll finkgame kernel checks passed');
 process.exit(fail ? 1 : 0);

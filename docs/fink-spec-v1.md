@@ -729,6 +729,42 @@ or contenteditable has focus.
 The installed set is **content, not platform**: `foafos-apps.js` lives
 beside the shell instance, never in `packages/foafos` (NPM boundary).
 
+### 5.7 Guests and window apps on the bus — normative
+
+Stage guests are full foafos apps: spawned in the app tree under the
+app that summoned them (the story), and SPEAKING on the shell bus
+through a scoped view. Window apps (office documents, TV widgets) hold
+the same citizenship. One wire protocol serves all three guest kinds
+(`<foafos-guest>` widgets, stage minigames, window apps):
+
+    guest → host   { type: 'bus-publish', topic, data }
+    host  → guest  { type: 'bus-event', event }          (granted only)
+
+- The SHELL builds the scoped view (`scopeBus`) and owns the policy;
+  the frame hosts (`FinkMinigames.attachBus`, `governAppFrame`) only
+  route. Grants come from the app's registry entry (`bus: {publish,
+  subscribe}`) or the surface default: a stage guest may publish
+  `guest.<type>.*` and hear `wm.mode`, `audio.volume`, `story.state`;
+  a window app may publish `app.<id>.*` and hear `wm.mode`,
+  `audio.volume`, `ui.skin`.
+- Every publish is stamped with its speaker (`guest:<type>#<instance>`)
+  — two copies of one game are two voices, and provenance survives the
+  bridge because routing is by `event.source` before any grant check.
+- A publish outside the grant is dropped AND announced
+  (`sys.guest.denied`), never silent: an honest bug and a cheat are
+  indistinguishable at the host, so both surface.
+- Guest side, the SDK exposes `sdk.bus.publish(topic, data)` and
+  `sdk.bus.subscribe(pattern, cb)`; using either declares the `bus`
+  contract (registering a handler IS the answer, §5.1.2). Grants ride
+  in `init.config.bus` so a guest need not learn them by being denied.
+  Standalone, both are honest no-ops.
+- The scoped view closes with the instance (`_dropInstance`, window
+  teardown) — a closed app keeps no voice.
+
+E2E: `inklet/finkapp/test/e2e-bus.mjs` — posts its attacks from inside
+real guest frames. SDK wire shapes pinned offline in
+`packages/finkgame/test/run.js`.
+
 ## 6. Links, navigation, identity
 
 Incorporates `docs/fink-linking-spec.md`: two-part SHA-256 hash links

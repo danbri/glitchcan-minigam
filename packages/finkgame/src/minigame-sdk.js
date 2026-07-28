@@ -29,6 +29,36 @@ class MinigameSDK {
         this._ready = false;
         this._paused = false;
         this._contracts = new Set();
+        this._busSubs = [];
+
+        /**
+         * The guest's scoped view of the shell bus. A stage guest is a
+         * full foafos app: it may publish in its granted namespace
+         * (default `guest.<type>.*`) and hears the granted shell
+         * surfaces (default wm.mode, audio.volume, story.state). The
+         * HOST enforces the grants; a denied publish is dropped and
+         * announced shell-side (sys.guest.denied), never silent.
+         * Grants arrive in init as `config.bus`. Standalone (no host)
+         * these are honest no-ops.
+         *
+         *   sdk.bus.publish('guest.mygame.beat', { kind: 'win' });
+         *   sdk.bus.subscribe('wm.mode', (e) => layout(e.data.mode));
+         */
+        this.bus = {
+            publish: (topic, data = {}) => {
+                this._declareOnce('bus');
+                this._sendMessage({ type: 'bus-publish', topic, data });
+            },
+            subscribe: (pattern, callback) => {
+                this._declareOnce('bus');
+                const sub = { pattern, callback };
+                this._busSubs.push(sub);
+                return () => {
+                    const i = this._busSubs.indexOf(sub);
+                    if (i >= 0) this._busSubs.splice(i, 1);
+                };
+            },
+        };
 
         // Setup message listener
         window.addEventListener('message', (event) => this._handleMessage(event));
@@ -177,6 +207,17 @@ class MinigameSDK {
     _declare(contract) {
         this._contracts.add(contract);
         this._sendMessage({ type: 'conformance', contracts: [...this._contracts] });
+    }
+
+    /** _declare, but quiet on repeats — bus calls happen per-frame. */
+    _declareOnce(contract) {
+        if (!this._contracts.has(contract)) this._declare(contract);
+    }
+
+    /** Topic matching, same semantics as FoafBus: '*', exact, 'prefix.*'. */
+    _busMatch(pattern, topic) {
+        if (pattern === '*' || pattern === topic) return true;
+        return pattern.endsWith('.*') && topic.startsWith(pattern.slice(0, -1));
     }
 
     /**
@@ -375,6 +416,20 @@ class MinigameSDK {
                     this._pendingRestore = data.state;
                 }
                 break;
+
+            case 'bus-event': {
+                // A granted shell bus event. Dispatch to local subscribers
+                // whose pattern matches; the host already filtered by grant.
+                const ev = data.event;
+                if (!ev || typeof ev.topic !== 'string') break;
+                for (const sub of [...this._busSubs]) {
+                    if (this._busMatch(sub.pattern, ev.topic)) {
+                        try { sub.callback(ev); }
+                        catch (e) { this._log('bus subscriber failed: ' + e.message); }
+                    }
+                }
+                break;
+            }
 
             case 'debug':
                 // debug-clock.js has its own listener for this; the SDK

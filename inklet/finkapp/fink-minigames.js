@@ -6,7 +6,7 @@
 // a guest said something meaningful" from ordinary page chatter.
 const GUEST_MESSAGE_TYPES = new Set([
     'ready', 'progress', 'set-variable', 'complete', 'error', 'log', 'log-batch',
-    'announce', 'conformance', 'snapshot-data',
+    'announce', 'conformance', 'snapshot-data', 'bus-publish',
 ]);
 
 // How long a guest gets to answer the conformance probe before the shell
@@ -98,10 +98,39 @@ window.FinkMinigames = {
         if (!inst || !this.instances.has(inst.id)) return;
         if (inst.probeTimer) clearTimeout(inst.probeTimer);
         window.FoafOS?.audio?.unregister(`guest:${inst.id}`);
+        inst.scopedBus?.close();
+        inst.scopedBus = null;
         this.instances.delete(inst.id);
         window.FoafOS?.bus.publish('minigame.instance', {
             summary: `${inst.type} instance ${inst.id} closed (${this.instances.size} running)`,
             id: inst.id, type: inst.type, kind: inst.kind, count: this.instances.size, closed: true,
+        });
+    },
+
+    // ---- The bus: stage guests are apps too --------------------------
+    // A guest is a full foafos app — spawned in the app tree under the
+    // story that summoned it, and SPEAKING on the shell bus through a
+    // scoped view. The SHELL builds the scoped bus (policy lives with
+    // the registry, in foafos-shell.js) and hands it here; this module
+    // only routes. Wire protocol matches <foafos-guest>:
+    //   guest → host  { type:'bus-publish', topic, data }
+    //   host → guest  { type:'bus-event', event }        (granted only)
+    // Denied publishes are dropped AND announced (sys.guest.denied) by
+    // scopeBus itself — an honest bug and a cheat look identical here.
+    attachBus(instanceId, scoped, grants) {
+        const inst = this.instances.get(instanceId);
+        if (!inst) { scoped.close(); return; }
+        inst.scopedBus?.close();
+        inst.scopedBus = scoped;
+        inst.busGrants = grants;
+        inst.busName = `guest:${inst.type}#${instanceId}`;
+        // granted inbound events flow to the guest, its own echoes excluded
+        scoped.subscribe('*', (e) => {
+            if (e.source === inst.busName) return;
+            const w = inst.iframe?.contentWindow;
+            if (!w) return;
+            try { w.postMessage({ type: 'bus-event', event: e }, '*'); }
+            catch (err) { /* frame mid-teardown */ }
         });
     },
 
@@ -938,6 +967,11 @@ window.FinkMinigames = {
                     audio: window.FoafOS?.audio
                         ? { level: FoafOS.audio.level, volume: FoafOS.audio.volume, muted: FoafOS.audio.muted }
                         : null,
+                    // The guest's scoped view of the shell bus (attached by
+                    // the shell when the app-tree node spawned). Telling a
+                    // guest its grants beats letting it discover them by
+                    // being denied.
+                    bus: inst.busGrants || null,
                 };
                 this._sendToIframe({
                     type: 'init',
@@ -1090,6 +1124,13 @@ window.FinkMinigames = {
 
             case 'announce':
                 this._announce(inst, data.text);
+                break;
+
+            case 'bus-publish':
+                // Provenance is inst (routed by event.source); authority is
+                // the scoped bus (grants); denial is scopeBus's to announce.
+                if (inst.scopedBus) inst.scopedBus.publish(String(data.topic || ''), data.data);
+                else this.log(`bus-publish from ${inst.id} dropped (no bus attached)`);
                 break;
 
             case 'error':
@@ -2020,6 +2061,11 @@ window.FinkMinigames = {
 
             case 'announce':
                 this._announce(inst, data.text);
+                break;
+
+            case 'bus-publish':
+                if (inst.scopedBus) inst.scopedBus.publish(String(data.topic || ''), data.data);
+                else this.log(`bus-publish from ${inst.id} dropped (no bus attached)`);
                 break;
 
             case 'complete':

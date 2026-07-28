@@ -104,11 +104,16 @@ the second banking, keep an eye on the surface near the bell. 🐥
 ## Integration
 
 Speaks the minigame SDK natively (`ready`/`init`/`key`/`pause`/`resume`/
-`snapshot`/`complete`; conformance: controls, audio, snapshot). Packaged
-wrapper: `inklet/minigames/waterworld/` (redirect + manifest). Invoked
-from `# MINIGAME: waterworld` — live in the world-between-worlds arcade.
-Writes `waterworld_won`, `waterworld_treasure`, `waterworld_artifacts`,
-plus the shared economy (`score`, `diamonds`, `minigame_played`).
+`snapshot`/`complete`; conformance: controls, audio, snapshot, bus).
+Packaged wrapper: `inklet/minigames/waterworld/` (redirect + manifest).
+Invoked from `# MINIGAME: waterworld` — live in the world-between-worlds
+arcade. Writes `waterworld_won`, `waterworld_treasure`,
+`waterworld_artifacts`, plus the shared economy (`score`, `diamonds`,
+`minigame_played`).
+
+A full foafos app (spec §5.7): app-tree node under the story, scoped bus
+view. Publishes `guest.waterworld.{win,loss,story-won,lore}`; subscribes
+`wm.mode` (sheds HUD chrome in pip) — grants in `foafos-apps.js`.
 
 Headless hook: `window.__waterworld` (state/pos/press/ping/teleport/
 grabAll/bank/win/lose). Playtest: `node magpie/waterworld/test/playtest.mjs`.

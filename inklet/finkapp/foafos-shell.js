@@ -15,7 +15,7 @@ import {
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
   FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, FoafSecrets, localBackend, AppTree,
-  defaultOps,
+  defaultOps, scopeBus,
 } from '../../packages/foafos/src/index.mjs';
 import { appsByFamily, appById, ambientApps, unenforcedApps, chromeApps, APPS } from './foafos-apps.js';
 import { resolveRoot, rootOffers, ROOTS } from './foafos-root.js';
@@ -468,6 +468,16 @@ bus.subscribe('story.state', (e) => {
 // minigame host's own instance events; onClose routes back through the
 // host so closing a subtree really tears the guest down rather than
 // just forgetting it.
+//
+// Stage guests are apps, full stop — managed by their superior app (the
+// story) but first-class in the tree AND on the bus. Each instance gets
+// a SCOPED bus view: publish limited to its own namespace, inbound
+// limited to the shell surfaces that shape it. Policy (the grants) is
+// decided here, next to the registry; FinkMinigames only routes frames.
+const busGrantsFor = (type, app) => app?.bus || {
+  publish: [`guest.${type}.*`],
+  subscribe: ['wm.mode', 'audio.volume', 'story.state'],
+};
 const gameNodes = new Map();       // minigame instance id -> tree node id
 bus.subscribe('minigame.instance', (e) => {
   if (e.source !== 'local') return;
@@ -490,7 +500,14 @@ bus.subscribe('minigame.instance', (e) => {
     // that left the guest running while the tree said it was gone.
     onClose: () => { try { window.FinkMinigames?.endMinigame?.(); } catch (err) { /* already gone */ } },
   });
-  if (!node.refused) gameNodes.set(id, node.id);
+  if (!node.refused) {
+    gameNodes.set(id, node.id);
+    const grants = busGrantsFor(type, app);
+    // name feeds scopeBus's source stamp: `guest:<type>#<instance>` —
+    // two copies of one game are two distinct voices
+    window.FinkMinigames?.attachBus?.(
+      id, scopeBus(bus, { name: `${type}#${id}`, ...grants }), grants);
+  }
 });
 
 // ── input: one d-pad for the whole shell (OS service) ───────────────────
@@ -1430,6 +1447,22 @@ function buildUI() {
     // silent ones would drown the disclosure in spreadsheets.
     if (!app.silent) audio.register(sinkId, () => {}, { label: app.name, kind: 'uncontrollable' });
 
+    // Window apps are bus citizens too — same scoped view, same wire
+    // protocol as stage guests and <foafos-guest> widgets. A TV widget
+    // is an app; it speaks in its own namespace and hears the shell
+    // surfaces that shape it.
+    const busGrants = app.bus || {
+      publish: [`app.${app.id}.*`],
+      subscribe: ['wm.mode', 'audio.volume', 'ui.skin'],
+    };
+    const busName = `${app.id}#${win.dataset.wid}`;
+    const scoped = scopeBus(bus, { name: busName, ...busGrants });
+    scoped.subscribe('*', (e) => {
+      if (e.source === `guest:${busName}`) return;
+      try { frame.contentWindow?.postMessage({ type: 'bus-event', event: e }, '*'); }
+      catch (err) { /* closed */ }
+    });
+
     const onMsg = (e) => {
       if (e.source !== frame.contentWindow) return;      // provenance, always
       const d = e.data;
@@ -1529,6 +1562,10 @@ function buildUI() {
         });
         return;
       }
+      if (d.type === 'bus-publish') {
+        scoped.publish(String(d.topic || ''), d.data);
+        return;
+      }
 
       if (d.type !== 'conformance') return;
       if (!(d.contracts || []).includes('audio')) return;
@@ -1553,6 +1590,7 @@ function buildUI() {
         frame.contentWindow?.postMessage({ type: 'init', config: {
           mode: 'window', contracts: ['audio'],
           audio: { level: audio.level, volume: audio.volume, muted: audio.muted },
+          bus: busGrants,
         }, variables: {} }, '*');
       } catch (err) { /* not ready */ }
     };
@@ -1565,6 +1603,7 @@ function buildUI() {
       if (!win.isConnected) {
         window.removeEventListener('message', onMsg);
         audio.unregister(sinkId);
+        scoped.close();
         obs.disconnect();
       }
     }).observe(document.body, { childList: true });
