@@ -24,9 +24,11 @@ load-bearing*:
 > We can then compare policy options on a level playing field, knowing the
 > containment holds even if a given policy is wrong.
 
-So the order is: (1) this document; (2) the runtime/document split — the
-level playing field; (3) trust tiers as policy on top of it. This doc
-designs all three so the build is designed, not improvised.
+So the order is: (1) this document; (2) **containment** — FinkStoryRunner
+becomes a boxed app and the story a boxed document, the level playing
+field; (3) **policy** — the forkable inter-story trust graph on top of it.
+Containment and policy are two different problems (§4); this doc designs
+both so the build is designed, not improvised.
 
 ---
 
@@ -91,98 +93,172 @@ Rows C2, C3, C4, C13 are the sharp edges: unmediated host-DOM and
 host-global reach. C13 is the one the frame split closes for free — an
 opaque origin simply has no handle to `parent`.
 
-## 4. The target architecture: runtime is a service, document is an app
+## 4. Two different problems — do not conflate them
 
-Split the two things that today are one:
+The owner's sharpening, 2026-07-28. There are **two** problems here and
+they are not the same:
 
-- **The narrative RUNTIME** — inkjs, the Continue loop, the dream stack,
-  tag dispatch, media resolution — is a **shell service** (trusted,
-  host-side or in a trusted worker). It owns no story data as authority;
-  it is a machine that runs whatever document is handed to it.
-- **The story DOCUMENT** — the `.fink.js` and its compiled Ink — is an
-  **app**: it runs in an opaque-origin frame (`surface: 'story'`, like any
-  other app in the tree), and reaches the runtime ONLY through the same
-  bus + verb protocol every other app uses.
+1. **CONTAINMENT — box the runner and every app.** Table stakes.
+   Non-negotiable. The platform's job. This is the frame boundary, and
+   "half-boxed is not boxed." Once done, the worst any app or story can do
+   is contained to its own opaque origin.
+2. **POLICY INTELLIGENCE — the inter-story trust graph.** *"Being really
+   smart on security is a competitive advantage."* This is the nuanced
+   decision of whether story B, referenced by story A, may do what A does.
+   It lives inside a **forkable** runner, and it is the moat.
 
-Concretely, mapping onto machinery that already exists:
+Containment makes the platform safe. Policy makes a *fork* good. The first
+must be perfect; the second may be imperfect and still ship, because the
+first contains its mistakes. Do not let work on the interesting second
+problem substitute for the boring first one — that was the whole "half is
+false" critique.
 
-- The story app frame speaks the **guest wire protocol** we just built
-  (spec §5.7): `bus-publish` / `bus-event`, scoped, provenance-stamped.
-- Tag effects become **verbs** (spec §5.5.5 / brokered actions): the story
-  frame requests `chrome.bg`, `story.link`, `story.minigame`, `audio.play`,
-  `story.navigate`; the shell's `ops` dictionary decides what each means,
-  validates, and performs it. The story supplies data, never a
-  destination or a function.
-- Variable writes go through **`FoafVars`** at the story boundary — the
-  governance that today only guards *guests writing into a story* now also
-  guards *the story itself*.
-- Prose renders in the **story frame's own document**. The host never
-  `innerHTML`s story-authored text again. C1's markdown pass moves inside
-  the frame, where an XSS is contained to the frame's opaque origin.
+### 4.1 The app model: one shape, many sizes
 
-What the story frame is granted is the **trust tier** (§5). What it can do
-with a grant is bounded by the frame. That is the level playing field.
+Everything is an app; size is not a security property. Same containment,
+same bus, same verb protocol, whether it is a suite or a status pill.
 
-### Why this is safe even if the policy is wrong
+- **Big apps:** **FinkStoryRunner** (the narrative runtime), **TellyClub**
+  (TV), **Office** (the edot suite).
+- **Small apps:** widgets, minigames, chrome/UI elements, the status line.
 
-If we mis-grant — say we let an untrusted story call `chrome.bg` — the
-damage is: it restyles **its own frame**. If we mis-grant `story.navigate`,
-the shell mediates the target and can refuse cross-origin. The credential
-half is already gated: secrets are memory-only unless sealed, and there is
-no `secrets.get`. So a policy bug is an app-level bug, not a host
-compromise. That is the whole point of doing the frame first.
+**FinkStoryRunner is an app, not a kernel service** — this corrects the
+earlier draft, which called the runtime a "trusted shell service." It is a
+big app like TellyClub: opaque origin, boxed by the shell, reaching the
+host only through the bus + verbs. And it is **forkable** — the platform
+ships one; anyone can ship another. The fork is where trust *policy* lives.
 
-## 5. Trust tiers (policy, on top of the boundary)
+### 4.2 Nested containment
 
-Three tiers, coarse on purpose. The tier sets the frame's capability grant.
+    ┌─ shell (host origin) ── owns secrets, bus, app tree, verb dictionary
+    │  boxes every app; the one thing that must never be wrong
+    │
+    │  ┌─ FinkStoryRunner (big app, opaque origin, FORKABLE) ──────────┐
+    │  │  boxed by the shell. Runs stories. Holds the trust POLICY.     │
+    │  │                                                                │
+    │  │   ┌─ story A  (danbri-test.fink.js) ─ boxed by runner + shell  │
+    │  │   │   refs → story B (danja-test.fink.js)                      │
+    │  │   │            relationType = peeredStory                      │
+    │  │   │            integrity   = sha256-7344…                      │
+    │  │   │   ┌─ story B ─ grant decided by the runner's POLICY ────┐  │
+    │  │   │   └──────────────────────────────────────────────────────┘  │
+    │  │   └──────────────────────────────────────────────────────────┘ │
+    │  └────────────────────────────────────────────────────────────────┘
+    └──────────────────────────────────────────────────────────────────
+
+**Two boxing layers.** The shell boxes the runner; the runner's policy
+governs the stories inside it. Even a naive or hostile runner-fork policy
+cannot exceed what the shell granted the runner — so a *smart* fork is a
+better product and a *dumb* fork is still contained. That is exactly the
+"evil app in a box, never the host page" property, one level down.
+
+Mechanisms, all reusing machinery that already exists:
+
+- The story app frame speaks the **guest wire protocol** (spec §5.7):
+  `bus-publish` / `bus-event`, scoped, provenance-stamped.
+- Tag effects become **verbs** (spec §5.5.5): `chrome.bg`, `story.link`,
+  `story.minigame`, `audio.play`, `story.navigate`. The story supplies
+  data, never a destination or a function; the runner (and behind it the
+  shell) decides what a verb means and whether it is allowed.
+- Variable writes go through **`FoafVars`** at the story boundary.
+- Prose renders in the story frame's **own document** — the host never
+  `innerHTML`s story text again; C1's markdown pass moves inside the frame,
+  where an XSS is contained to that opaque origin.
+
+## 5. The inter-story trust graph (the competitive-advantage layer)
+
+A reference from one story to another is a **typed, content-pinned edge**:
+
+    # FINK: danja-test.fink.js
+    # LINKREL: peeredStory
+    # INTEGRITY: sha256-7344273250…
+
+- **relationType** (`peeredStory`, and the existing `goDeeper` /
+  `goShallower` / `oneWay`) is the vocabulary a policy reasons over. A peer
+  is a different relationship from a child dream, and may deserve a
+  different default grant.
+- **The content hash is load-bearing.** `sha256-…` is Subresource-Integrity
+  format: it pins the reference to **exact, immutable content**. You can
+  only write a precise policy — *"trust danja-test to do exactly what I
+  do"* — if `danja-test` names a thing that cannot be swapped out from
+  under you. Trust attaches to **content, not a mutable URL**. A reference
+  without a hash can never rise above the `untrusted` tier, because there
+  is nothing stable to trust.
+
+### 5.1 Policy is a function, and it is forkable
+
+The runner's policy is:
+
+    grant(peer) = policy(referrer, relationType, contentHash,
+                         provenance, grant(referrer))
+
+- *"A peer gets exactly what the referrer can do"* is **one** policy — the
+  symmetric-peer option the owner named. A conservative default fork would
+  instead attenuate by relationType (peer < self, dream < peer).
+- **Attenuation is the platform floor:** `grant(peer) ⊆ grant(referrer)`
+  is enforced by the app tree regardless of the fork's policy. A fork may
+  choose to grant *less*; it can only grant *more* up to what the shell
+  gave the runner — and that ceiling is the containment guarantee.
+- **Forks compete on intelligence above the floor:** hash allowlists,
+  author-signing / reputation, per-origin trust, interactive
+  capability negotiation ("this peer wants economy write — allow once?").
+  This is where "really smart on security" becomes product differentiation
+  — and none of it can breach the shell box beneath it.
+
+### 5.2 Default tiers (the platform's own conservative fork)
+
+The platform ships a deliberately coarse default policy — three tiers.
+A fork replaces this function; it does not replace the containment.
 
 - **`bundled`** — shipped in this repo / this root's manifest. Full
-  narrative capability: chrome, link, minigame, audio, navigate, shared
-  economy read/write. This is Hampstead, Bagend, world-between-worlds.
-- **`linked`** — reached by `# FINK:` from a bundled story, same origin
-  or an allowlisted origin. Narrative capability MINUS: no shared-economy
-  WRITE (read-only, like a dream), no `story.navigate` outside the
-  installation, no `story.minigame` beyond a safe set. Can tell its own
-  tale, cannot spend the waking world or drive the shell.
-- **`untrusted`** — anything else (arbitrary origin, unknown author).
-  Prose + choices + its own media only. No chrome, no economy, no launch,
-  no navigate. It renders, it offers choices, it ends. Nothing it does
-  escapes its frame.
+  narrative capability. Hampstead, Bagend, world-between-worlds.
+- **`linked`** — reached by a hash-pinned `# FINK:` from a bundled story,
+  same origin or an allowlisted origin. Narrative capability MINUS shared-
+  economy WRITE, `story.navigate` outside the installation, and
+  `story.minigame` beyond a safe set. Tells its own tale; cannot spend the
+  waking world or drive the shell.
+- **`untrusted`** — anything else, or any reference lacking a hash. Prose +
+  choices + its own media. No chrome, no economy, no launch, no navigate.
+  It renders, offers choices, and ends. Nothing escapes its frame.
 
-Tiers are assigned by the runtime at load time from provenance (where did
-this URL come from, is the origin allowlisted), never self-declared by the
-story. Attenuation still applies: a `linked` child of an `untrusted`
-parent cannot exceed `untrusted` (grant(child) ⊆ grant(parent), the
-app-tree rule).
-
-**A root is not a security boundary** (existing rule): `?root=` is a query
-param. Tiers must not rely on it for containment — the frame origin and the
-verb gates are the real boundary; the tier only tunes the grant within
-that boundary.
+Tiers are assigned by the runner from provenance and the edge, **never
+self-declared by the story**. **A root is not a security boundary**
+(existing rule): `?root=` is a query param; the frame origin and the verb
+gates are the real boundary, and the tier only tunes the grant within it.
 
 ## 6. Phased implementation
 
-Each phase is shippable and testable on its own. The boundary (Phase 2) is
-the one that changes the security posture; everything after tunes policy.
+The split from §4 sets the order: **CONTAINMENT first (Phases 1–2), then
+POLICY (Phases 3–4).** Containment must be perfect; policy may be imperfect
+and still ship, because containment contains its mistakes.
 
-- **Phase 1 — this document.** ✅ Enumerate channels, attacker model,
-  target contract, tiers.
-- **Phase 2 — the frame boundary (the level playing field).**
-  1. A `story-host` service in the shell: owns the runtime, exposes it as
-     verbs + bus, renders nothing itself.
-  2. A `story-app` frame (opaque origin) that runs the Continue loop and
-     renders prose/choices/media in ITS OWN document.
+- **Phase 1 — this document.** ✅ Channels, attacker model, target
+  contract, the two-problem split, the trust-graph model.
+- **Phase 2 — CONTAINMENT: FinkStoryRunner becomes a boxed app.** This is
+  the level playing field; it changes the security posture.
+  1. **FinkStoryRunner** as a big app (peer of TellyClub/Office): owns the
+     runtime (inkjs, Continue loop, dream stack, tag dispatch), runs in its
+     own frame, reaches the host only via bus + verbs.
+  2. The story DOCUMENT runs in an opaque-origin frame and renders
+     prose/choices/media in ITS OWN document.
   3. Route every channel in §3 through the boundary; delete every
-     `parent.*`/host-global reach from story-run code.
-  4. Gate: an assertion suite that, from inside the story frame, TRIES each
-     C-row breakout and proves it is refused or contained — the e2e-vars /
-     e2e-caps pattern, posted from inside the frame.
-- **Phase 3 — trust tiers.** Provenance → tier → grant. The `untrusted`
-  tier proven to render a hostile fixture story with no escape.
-- **Phase 4 — hardening + disclosure.** Bus-flood throttle, storage quota,
-  a visible tier indicator (the user should SEE that an encountered story
-  is running restricted), the service inventory telling the truth about
-  what the running story may do.
+     `parent.*`/host-global reach from story-run code (C13 closes for
+     free once there is no `parent`).
+  4. Gate: a breakout suite that, from inside the story frame, TRIES each
+     C-row and proves it refused or contained (e2e-vars / e2e-caps
+     pattern). This gate is the definition of "boxed."
+- **Phase 3 — POLICY: the trust graph, default fork.** Typed + hash-pinned
+  edges (`relationType` + `# INTEGRITY:`); `policy(referrer, rel, hash,
+  provenance, grant) → grant(peer)`; the three default tiers. Proven: an
+  `untrusted` (or unhashed) reference renders a hostile fixture with no
+  escape; a hash-pinned `peeredStory` gets the symmetric grant.
+- **Phase 4 — POLICY as a fork surface + disclosure.** Make the policy
+  function a replaceable module (the competitive-advantage seam): a fork
+  can supply reputation, signing, allowlists, interactive negotiation. Plus
+  bus-flood throttle, storage quota, and a VISIBLE tier indicator — the
+  user should SEE that an encountered story runs restricted, and the
+  service inventory should tell the truth about what the running story may
+  do.
 
 ## 7. Test topology (designed now, built with each phase)
 
@@ -204,8 +280,10 @@ the one that changes the security posture; everything after tunes policy.
 - Not defending against browser sandbox-escape bugs or Spectre.
 - Not making `untrusted` stories *featureful* — restricted is the point.
 - Not moving the compile sandbox (C14) — it already holds.
-- Not a cryptographic author-identity / signing scheme (a later tier
-  refinement, noted not built).
+- Not shipping a cryptographic author-identity / signing scheme in the
+  default policy. But the Phase-4 policy seam is designed to ACCEPT one:
+  signing, reputation, and hash-allowlists are exactly the fork-level
+  intelligence the competitive-advantage layer exists to host.
 
 ---
 
