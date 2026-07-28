@@ -252,13 +252,37 @@ self-declared by the story**. **A root is not a security boundary**
 (existing rule): `?root=` is a query param; the frame origin and the verb
 gates are the real boundary, and the tier only tunes the grant within it.
 
-### 5.3 The session is a tainted accumulation (owner, 2026-07-28)
+### 5.3 The session is a game session — ephemeral, evolving (owner, 2026-07-28)
 
-A per-load tier is not enough, because a running FINK **session is not one
-document — it accumulates.** Trust is a property of the session's
-accumulated state, not of a single compile. After sandbox compilation,
-content keeps being **injected and merged** into the live session, and each
-injection is a taint vector:
+First, what a session *is*, before what can go wrong with it. A FINK
+session is a **game session**: a live, dynamically-evolving, **ephemeral**
+playthrough — not a document and not a fixed object. The runtime
+(FinkStoryRunner) owns it; it lives inside the runner's box; it is created
+when play begins, evolves with every choice / link / dream / minigame
+outcome, and is **gone when play ends unless deliberately sealed.** This is
+the existing foafos session model (`session.mjs`: ephemeral unless sealed
+with a passphrase, AES-GCM, `session.current` retained — the skill's *"no
+unencrypted persistence path, deliberately"*). The game session is that
+ephemeral thing, seen from play.
+
+Two consequences fall straight out of "ephemeral and evolving":
+
+- **Ephemerality is itself a mitigation.** Whatever a session accumulates,
+  a fresh session starts clean — blast radius is bounded in *time*, not
+  just in space. "Close it and reopen" is a real recovery, by design.
+- **Sealing / restoring is the taint-persistence vector.** The moment you
+  SEAL an evolving session you persist its accumulated state across time —
+  and on restore it re-enters play as if trusted. So the integrity tiers
+  below must be **sealed and restored WITH the state**; a save that drops
+  provenance would launder lower-tier accumulation into trusted state on
+  the next load. Save/restore, bookmarks, and the dream stack are all
+  operations on this one evolving object, and all must carry provenance.
+
+Now the security lens on that same evolving thing. A per-load tier is not
+enough, because the session **accumulates**: trust is a property of the
+session's evolving state, not of a single compile. After sandbox
+compilation, content keeps being **injected and merged** into the live
+session, and each injection is a taint vector:
 
 - **Shell injection.** The engine appends `_inventory` (and its VAR
   declarations) to EVERY story — so even a lone story's running state is
