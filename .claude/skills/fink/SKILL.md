@@ -1162,10 +1162,15 @@ AND down. `e2e-storyrunner.mjs` proves containment: `parent.FoafOS` /
 `parent.FinkInkEngine` / `parent.document` all throw from inside.
 - This runs PARALLEL to the live host-side player (unchanged, still
   privileged). It is NOT yet a replacement — no media (C8), no
-  link/navigate wiring, and the compile step still runs in the runner's
-  own frame rather than a nested throwaway iframe (inner-integrity
-  follow-up). Threat model + phases:
+  link/navigate wiring. Threat model + phases:
   `docs/fink-story-sandbox-threatmodel-20260728.md`.
+- **Boxes within boxes (Slab 2):** the runner does NOT run the story's JS
+  in its own frame — `extractInBox()` runs it in a nested throwaway
+  `sandbox="allow-scripts"` iframe using the frozen backticks
+  `INSTALL_CAPTURE_SOURCE`, and gets back only harvested strings. So a
+  hostile `.fink.js` can't touch the runner's own foaf, let alone the
+  host. Recursion end to end: shell → runner → compile box; shell →
+  runner → governed guest.
 - `app-sdk.js` grew `foaf.storyRequest` and `foaf.bus`, and now replays
   `onInit` to a late (module) listener — app.init can land before a
   `type=module` app registers its handler; without the replay the app

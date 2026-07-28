@@ -6,27 +6,66 @@
 // `parent.FoafOS` and never writes host DOM. That is the "sandboxed all the
 // way up" containment the live host-side player does not yet have.
 //
-// Extraction uses the frozen @foafos/backticks kernel (browser-safe entry).
-// Compilation uses the real inkjs (global). NO hackparsing (CLAUDE.md).
-//
-// HONEST LIMIT (hardening follow-up): the story's JS runs via new Function
-// in THIS frame, so a hostile story could tamper with this runner's own
-// app-sdk — but it still cannot exceed the runner's grant or reach the
-// host, because the frame is opaque-origin. Nesting the compile step in a
-// throwaway iframe (backticks INSTALL_CAPTURE_SOURCE) closes that inner gap
-// next; the OUTER containment (no host reach) holds now and is what the
-// e2e proves.
+// Boxes within boxes ("all the way down"). The shell boxes this runner; the
+// runner boxes the COMPILE step. The story's JS never runs in the runner's
+// own frame — it runs in a nested throwaway opaque-origin iframe, using the
+// frozen backticks INSTALL_CAPTURE_SOURCE. So a hostile .fink.js cannot even
+// touch this runner's foaf/app-sdk, let alone the host. The runner receives
+// only harvested strings. Compilation uses the real inkjs. NO hackparsing.
 
-import { createCapture, firstInkOf } from '../../../packages/backticks/src/index.js';
+import { INSTALL_CAPTURE_SOURCE } from '../../../packages/backticks/src/index.js';
 
 const $ = (id) => document.getElementById(id);
 const state = {
   storyUrl: null, ready: false, prose: [], choices: [], bg: null,
-  ended: false, requests: [],
+  ended: false, requests: [], boxedCompile: false,
 };
 let story = null;
 
 function setStatus(msg) { $('status').textContent = msg; }
+
+// Extract the ink from a .fink.js by RUNNING it in a nested sandboxed
+// iframe (opaque origin), not in this frame. Returns { ink, blocks }.
+function extractInBox(src) {
+  return new Promise((resolve) => {
+    const frame = document.createElement('iframe');
+    frame.setAttribute('sandbox', 'allow-scripts');   // opaque origin, no same-origin
+    frame.style.display = 'none';
+    // The nested box installs the FROZEN capture (byte-identical to the
+    // kernel — proved in backticks/test/browser-source.test.js), runs the
+    // untrusted story, harvests, and posts back only strings.
+    frame.srcdoc = `<!DOCTYPE html><meta charset="utf-8"><script>
+      var FINK_SIGILS = { oooOO: 'text/x-ink' };
+      var install = ${INSTALL_CAPTURE_SOURCE};
+      var harvest = install(window, FINK_SIGILS);
+      addEventListener('message', function (e) {
+        if (!e.data || e.data.type !== 'fink-exec') return;
+        try { (new Function(e.data.src))(); } catch (err) { /* post-capture throw */ }
+        parent.postMessage({ type: 'fink-harvested', result: harvest() }, '*');
+      });
+      parent.postMessage({ type: 'fink-box-ready' }, '*');
+    <\/script>`;
+    let done = false;
+    const finish = (result) => {
+      if (done) return; done = true;
+      window.removeEventListener('message', onMsg);
+      frame.remove();
+      resolve(result || { ink: '', blocks: [] });
+    };
+    const onMsg = (e) => {
+      if (e.source !== frame.contentWindow || !e.data) return;
+      if (e.data.type === 'fink-box-ready') {
+        frame.contentWindow.postMessage({ type: 'fink-exec', src }, '*');
+      } else if (e.data.type === 'fink-harvested') {
+        const r = e.data.result || {};
+        finish({ ink: r.firstInk || '', blocks: r.blocks || [] });
+      }
+    };
+    window.addEventListener('message', onMsg);
+    setTimeout(() => finish(null), 4000);            // never hang the runner
+    document.body.appendChild(frame);
+  });
+}
 
 // Prose is added as TEXT, never innerHTML — contained AND xss-proof.
 function addProse(text, cls) {
@@ -130,17 +169,10 @@ async function boot(config) {
     setStatus('could not load story: ' + e.message);
     return;
   }
-  // Extract ink with the frozen kernel: install the sigils, run the file's
-  // JS in THIS frame (contained by the opaque origin), harvest the ink.
-  const { globals, blocks } = createCapture();
-  const names = Object.keys(globals);
-  try {
-    // eslint-disable-next-line no-new-func
-    new Function(...names, src)(...names.map((n) => globals[n]));
-  } catch {
-    // window/document touches throw AFTER the sigils ran — blocks stand.
-  }
-  const ink = firstInkOf(blocks);
+  // Extract ink in a NESTED sandbox — the story's JS never touches this
+  // runner. Boxes within boxes: shell → runner → compile box.
+  const { ink } = await extractInBox(src);
+  state.boxedCompile = true;
   if (!ink) { setStatus('no ink content found'); return; }
   try {
     story = new inkjs.Compiler(ink).Compile();
