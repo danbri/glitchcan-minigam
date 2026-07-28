@@ -358,10 +358,19 @@ and still ship, because containment contains its mistakes.
   guest — up AND down). `e2e-storyrunner.mjs` proves the box: from inside,
   `parent.FoafOS` / `parent.FinkInkEngine` / `parent.document` all throw
   `SecurityError` (C13 closed by construction). It runs PARALLEL to the live
-  host-side player, which is untouched. Remaining Slab 2+: media verbs
-  (C8), link/navigate wiring (C4/C12), nesting the compile step in a
-  throwaway iframe INSIDE the runner (inner integrity), and reaching feature
-  parity so the boxed runner can replace the host-side player.
+  host-side player, which is untouched.
+
+  **Slab 2 landed (2026-07-28): boxes within boxes.** The compile step no
+  longer runs in the runner's own frame — `extractInBox()` runs the
+  untrusted `.fink.js` in a NESTED throwaway `sandbox="allow-scripts"`
+  iframe (opaque origin) via the frozen `INSTALL_CAPTURE_SOURCE`, and the
+  runner receives only harvested strings. The recursion now holds end to
+  end: shell → runner → compile box, and shell → runner → (governed)
+  launched guest — sandboxed all the way up AND down. `e2e-storyrunner.mjs`
+  proves it: the demo's file-level JS sets a canary that, had it run in the
+  runner frame, would land on the runner window; it does not.
+  Remaining Slab 3+: media verbs (C8), link/navigate wiring (C4/C12), and
+  feature parity so the boxed runner can replace the host-side player.
 - **Phase 3 — POLICY: the trust graph + session integrity, default fork.**
   Typed edges (`relationType` + optional `# INTEGRITY:`) weighed over
   MULTIPLE signals (hash, origin, signature, reputation, consent — §5), not

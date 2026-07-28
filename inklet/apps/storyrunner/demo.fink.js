@@ -27,3 +27,8 @@ You climb into a dry maintenance loft. A different way in.
 Either way, the dock is waiting.
 -> END
 `;
+// A .fink.js is executable JS. This benign line stands in for any code a
+// story's file runs: if extraction happened in the RUNNER frame it would
+// land on the runner's window; because it happens in a NESTED box, the
+// runner never sees it. The e2e asserts the runner has no __stpr_canary.
+try { window.__stpr_canary = 'ran-in-frame'; } catch (e) { /* boxed */ }

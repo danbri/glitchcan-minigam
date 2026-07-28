@@ -108,6 +108,17 @@ try {
   if (contained) pass(`no host reach from the box (${JSON.stringify(reach)})`);
   else fail('BOX LEAKS to host: ' + JSON.stringify(reach));
 
+  // ── 3b. boxes within boxes: the story's JS ran in a NESTED sandbox, ──
+  // not in the runner frame. The demo's file-level JS sets __stpr_canary;
+  // if it had run in the runner frame, the runner window would carry it.
+  const inner = await frame.evaluate(() => ({
+    boxed: !!window.__storyrunner.state.boxedCompile,
+    canaryInRunner: typeof window.__stpr_canary,     // 'undefined' when boxed
+  }));
+  if (inner.boxed && inner.canaryInRunner === 'undefined') {
+    pass('compile step nested in its own box — story JS never touched the runner');
+  } else fail('inner box leaked: ' + JSON.stringify(inner));
+
   // ── 4. a choice that hits # MINIGAME: surfaces as a governed request ──
   // Choose option 0 ("Take the torch") → hatch → # MINIGAME: waterworld.
   await frame.evaluate(() => window.__storyrunner.choose(0));
