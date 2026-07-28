@@ -47,9 +47,28 @@ try {
   await page.waitForTimeout(1500);
   pass('game started, __waterworld hook up');
 
+  // The full composite (AO + rays) starves the swiftshader sim clock
+  // (~0.2× wall speed) and makes every timed window flaky. Run raw;
+  // the composite itself is asserted by the canvas check below, which
+  // re-enables it for one frame.
+  await page.evaluate(() => { window.__waterworld.game.post.enabled = false; });
+
+  // Kinetic assertions wait on the GAME clock, not the wall clock —
+  // wall-time windows starve when swiftshader frames run slow and made
+  // a different assertion flake on every loaded run.
+  await page.evaluate(() => {
+    window.__simWait = (secs) => new Promise((res) => {
+      const g = window.__waterworld.game, t0 = g.elapsed;
+      const iv = setInterval(() => {
+        if (g.elapsed - t0 >= secs) { clearInterval(iv); res(); }
+      }, 50);
+    });
+  });
+  const simAdvance = (secs) => page.evaluate((s) => window.__simWait(s), secs);
+
   // captain's helm: with nobody touching anything, she sails herself
   const ap0 = await page.evaluate(() => window.__waterworld.pos());
-  await page.waitForTimeout(2500);
+  await simAdvance(2.5);
   const ap1 = await page.evaluate(() => window.__waterworld.pos());
   const cruised = Math.hypot(ap1[0] - ap0[0], ap1[2] - ap0[2]);
   if (cruised > 3) pass(`autopilot cruises unaided (${cruised.toFixed(1)} units)`);
@@ -84,7 +103,7 @@ try {
     const g = window.__waterworld.game;
     g.vel.set(10, 0, 0);
     g.setBrake(true);
-    await new Promise(r => setTimeout(r, 700));
+    await window.__simWait(0.7);
     const v = g.vel.length();
     g.setBrake(false);
     return v;
@@ -117,7 +136,7 @@ try {
     const v0 = g.vel.length();
     g.setKey('a', true); g.setKey('a', false);
     g.setKey('a', true); g.setKey('a', false);
-    await new Promise(r => setTimeout(r, 120));
+    await window.__simWait(0.12);
     return { v0, v1: g.vel.length() };
   });
   if (dashed.v1 > dashed.v0 + 10) pass(`dash spikes speed (${dashed.v0.toFixed(1)} → ${dashed.v1.toFixed(1)})`);
@@ -183,10 +202,10 @@ try {
     // water, away from collider-avoidance limit cycles
     const s = g.salvage.find(s => s.type === 'captains_chest');
     window.__waterworld.teleport(s.mesh.position.x, s.mesh.position.y + 2, s.mesh.position.z);
-    await new Promise(r => setTimeout(r, 1200));   // let the filter settle
+    await window.__simWait(1.2);                   // let the filter settle
     const yaws = [];
     for (let i = 0; i < 8; i++) {
-      await new Promise(r => setTimeout(r, 200));
+      await window.__simWait(0.2);
       yaws.push(g.yaw);
     }
     let reversals = 0;
@@ -226,7 +245,9 @@ try {
   if (fit.scroll === fit.inner) pass(`page fits its frame (${fit.inner}px)`);
   else fail(`page overflows: scrollHeight ${fit.scroll} vs innerHeight ${fit.inner}`);
 
-  // the canvas must actually draw something
+  // the canvas must actually draw something — THROUGH the composite
+  await page.evaluate(() => { window.__waterworld.game.post.enabled = true; });
+  await page.waitForTimeout(600);
   const drawn = await page.evaluate(() => {
     const c = document.getElementById('scene');
     const gl = c.getContext('webgl2') || c.getContext('webgl');
@@ -235,8 +256,9 @@ try {
       8, 8, gl.RGBA, gl.UNSIGNED_BYTE, px);
     return px.some(v => v > 8);
   });
-  if (drawn) pass('canvas is rendering (non-black pixels)');
+  if (drawn) pass('canvas is rendering through the composite (non-black pixels)');
   else fail('canvas appears black');
+  await page.evaluate(() => { window.__waterworld.game.post.enabled = false; });
 
   // steer: hold left + thrust, the sub must move and turn
   const before = await page.evaluate(() => ({
@@ -293,7 +315,7 @@ try {
     const e = g.eels[0];
     window.__waterworld.teleport(e.pos.x + 12, e.pos.y, e.pos.z);
     const d0 = e.pos.distanceTo(g.pos);
-    await new Promise(r => setTimeout(r, 1200));
+    await window.__simWait(1.2);
     return d0 - e.pos.distanceTo(g.pos);
   });
   if (eelDelta > 1) pass(`eel gave chase (closed ${eelDelta.toFixed(1)} units)`);
@@ -372,6 +394,9 @@ try {
     for (const el of g.elders) {
       window.__waterworld.teleport(el.mesh.position.x + 3, el.mesh.position.y, el.mesh.position.z);
       await new Promise(r => setTimeout(r, 250));
+      // sonar cooldown counts SIM seconds; at swiftshader frame rates
+      // that is many wall seconds and the second ping would be swallowed
+      g._pingCooldown = 0;
       window.__waterworld.ping();
       await new Promise(r => setTimeout(r, 1200));
     }
@@ -446,6 +471,7 @@ try {
     const p = g.pylon.position;
     window.__waterworld.teleport(p.x - 6, p.y + 8, p.z);
     await new Promise(r => setTimeout(r, 400));
+    g._pingCooldown = 0;
     window.__waterworld.ping();
     await new Promise(r => setTimeout(r, 600));
     return { bergs, stage: c.stage, won: g.won };
