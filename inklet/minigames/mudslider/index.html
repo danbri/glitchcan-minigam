@@ -188,9 +188,15 @@
         sdk.onSnapshot(() => {
             const el = gameState.gameElement;
             if (!el?.player) return null;
+            // visited is a Set — JSON.stringify turns a Set into {} and a
+            // restore of that {} made visited.add() throw, which nulled the
+            // grid ("Error: Grid not loaded!" on every re-entry). Ship it
+            // as an array instead.
+            const state = JSON.parse(JSON.stringify(el.playerState || {}));
+            state.visited = [...(el.playerState?.visited || [])];
             return {
                 player: { x: el.player.x, y: el.player.y },
-                state: JSON.parse(JSON.stringify(el.playerState || {})),
+                state,
             };
         });
 
@@ -206,6 +212,12 @@
                     return;
                 }
                 if (snap.state) Object.assign(el.playerState, snap.state);
+                // Rebuild the Set. Old snapshots on players' devices carry
+                // visited:{} (the pre-fix JSON round trip), so tolerate any
+                // shape rather than crashing the room loader.
+                const v = snap.state?.visited;
+                el.playerState.visited = new Set(Array.isArray(v) ? v : []);
+                if (el.playerState.currentScreenId) el.playerState.visited.add(el.playerState.currentScreenId);
                 if (snap.player) { el.player.x = snap.player.x; el.player.y = snap.player.y; }
                 // The room in playerState is the source of truth; ask the
                 // game to redraw from it if it knows how.

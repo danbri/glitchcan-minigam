@@ -407,6 +407,14 @@
             _loadScreenState(screenId) { /* ... (same as previous version) ... */
                  try {
                      this._debugLog(`Loading screen: ${screenId}`, 'info'); const TILES = GCMinigamSlovib.TILES;
+                     // Self-heal: a restored snapshot may hand visited back
+                     // as a plain object or array. The catch below nulls the
+                     // grid on ANY throw, so visited.add() must never be the
+                     // thing that kills the room.
+                     if (!(this.playerState.visited instanceof Set)) {
+                         const v = this.playerState.visited;
+                         this.playerState.visited = new Set(Array.isArray(v) ? v : []);
+                     }
                      const targetScreenId = GCMinigamSlovib.worldData[screenId] ? screenId : '0,0';
                      if (screenId !== targetScreenId) { this._debugLog(`!! Screen data missing: ${screenId}, fallback to ${targetScreenId}`, 'warn'); }
                      const data = GCMinigamSlovib.worldData[targetScreenId]; if (!data || !Array.isArray(data.layout)) { throw new Error(`Invalid worldData for ${targetScreenId}`); }
