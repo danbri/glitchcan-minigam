@@ -30,6 +30,16 @@ sampling in `fink-ui.js`.
   forward from the right; a new beat rises from below, and its choices
   rise to meet the reader's descending eye.
 
+## Scope (owner correction, 2026-07-28)
+
+The classic animation principles are for the MINIGAMES — things that
+are alive and move, like Waterworld's fauna (`magpie/waterworld/js/
+fauna.js`: arcs via bounded-rate headings, banking into turns,
+speed-coupled squash & stretch, shark wind-up anticipation, breach-spray
+secondary action, weight through tail tempo). The story player's
+interface keeps only the restraint subset below — calm arrivals, one
+light source, no exaggeration. UI is furniture; fauna is cast.
+
 ## The principles, mapped
 
 | principle | where it lives |
