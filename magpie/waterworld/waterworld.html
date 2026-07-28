@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#06122e">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>Waterworld — Docklands Deep</title>
 <style>
@@ -75,10 +76,11 @@
     margin-left: auto;
     pointer-events: auto;
   }
+  /* two-colour UI: cyan = information, gold = value/active */
   .chip {
     font: inherit; font-size: clamp(11px, 3vw, 14px);
-    background: rgba(0,0,0,0.55); color: #83769c;
-    border: 1px solid #83769c; border-radius: 0.4em;
+    background: rgba(0,0,0,0.55); color: #7ec8e8;
+    border: 1px solid rgba(126,200,232,0.55); border-radius: 0.4em;
     padding: 0.1em 0.3em;
     min-width: 38px; min-height: 30px; cursor: pointer;
   }
@@ -88,10 +90,9 @@
     box-shadow: 0 0 8px rgba(255,163,0,0.6);
   }
   #auto-btn.on {
-    color: #00e436; border-color: #00e436;
-    box-shadow: 0 0 8px rgba(0,228,54,0.5);
+    color: #ffd75e; border-color: #ffd75e;
+    box-shadow: 0 0 8px rgba(255,215,94,0.5);
   }
-  #help-btn { color: #29adff; border-color: #29adff; }
 
   /* ------- objective banner: always on, always pointing ------- */
   #objective {
@@ -289,15 +290,15 @@
   #drag-arrow {
     position: absolute; display: none;
     height: 4px; width: 60px;
-    background: linear-gradient(90deg, rgba(255,236,39,0.15), #ffec27);
+    background: linear-gradient(90deg, rgba(126,200,232,0.1), #7ef2ff);
     border-radius: 2px;
     transform-origin: 0 50%;
-    box-shadow: 0 0 10px rgba(255,236,39,0.7);
+    box-shadow: 0 0 10px rgba(126,242,255,0.7);
     pointer-events: none; z-index: 27;
   }
   #drag-arrow::after {
     content: ''; position: absolute; right: -7px; top: -5px;
-    border: 7px solid transparent; border-left-color: #ffec27;
+    border: 7px solid transparent; border-left-color: #7ef2ff;
   }
 
   /* ------- feedback flashes ------- */

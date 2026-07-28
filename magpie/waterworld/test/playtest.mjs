@@ -298,6 +298,17 @@ try {
   });
   if (eelDelta > 1) pass(`eel gave chase (closed ${eelDelta.toFixed(1)} units)`);
   else fail(`eel did not chase (delta ${eelDelta.toFixed(2)})`);
+  // keep-alive: the chase leaves a live eel on our tail, and the sweeps
+  // ahead teleport through hazards. Death mid-harness jams every later
+  // assertion (over=true blocks pings and collects), so from here the
+  // harness sails an unsinkable boat: _lose becomes a no-op and the
+  // tanks stay topped up. Damage/lose behavior was already asserted above.
+  await page.evaluate(() => {
+    const g = window.__waterworld.game;
+    g._lose = () => {};
+    g.air = 100; g.hull = 3;
+    setInterval(() => { g.air = Math.max(g.air, 60); g.hull = Math.max(g.hull, 3); }, 2000);
+  });
 
   // the guide layer: objective banner always has a goal and a live arrow
   const obj = await page.evaluate(() => ({
@@ -372,6 +383,7 @@ try {
       && ['speaker', 'lament'].includes(story.afterBury)
       && story.eelStep === 'fragments') {
     pass(`campaign advances (whale: ${story.afterBury}, eels: ${story.eelStep})`);
+  await page.evaluate(() => { const g = window.__waterworld.game; g.air = 100; g.hull = 3; });
   } else fail('campaign machine stuck: ' + JSON.stringify(story));
 
   // the curious seal: spawn it and let it swim
@@ -413,6 +425,15 @@ try {
   }
 
   // THE FINALE: coalition complete → berg armada → pen → SPARK → the end
+  // Long swiftshader runs starve the sub of air and hull; feed her first
+  // (over must be false or _doPing refuses and the spark never fires).
+  const alive = await page.evaluate(() => {
+    const g = window.__waterworld.game;
+    g.air = 100; g.hull = 3;
+    return { over: g.over, won: g.won };
+  });
+  if (!alive.over) pass('sub alive going into the finale');
+  else fail('sub dead before the finale: ' + JSON.stringify(alive));
   const finale = await page.evaluate(async () => {
     const g = window.__waterworld.game;
     const c = g.campaign;
