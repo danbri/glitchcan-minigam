@@ -1522,6 +1522,10 @@ function buildUI() {
         });
         if (!need) { reply({ ok: false, reason: 'unknown-verb' }); return; }
         if (!caps.includes(need)) { reply({ ok: false, reason: 'denied' }); return; }
+        // Keep the Running ⓘ "utilized" ledger truthful: a boxed runner's
+        // narrative effects are a broker path like storage/secrets/verb/
+        // audio, and must tally the same way (parked-work note, 2026-07-28).
+        tallyCap(app.id, need);
         try {
           if (verb === 'story.launch') {
             const game = String(d.detail?.game || '').toLowerCase();

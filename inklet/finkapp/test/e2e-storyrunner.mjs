@@ -133,6 +133,12 @@ try {
   if (sawGoverned) pass('the shell governed the launch request (bus story.request)');
   else fail('shell never saw the story.launch request');
 
+  // the Running ⓘ "utilized" ledger must count the narrative effect —
+  // story:* is a broker path like storage/secrets/verb/audio
+  const tallied = await page.evaluate(() => FoafOS.capUse('storyrunner')?.['story:launch'] || 0);
+  if (tallied >= 1) pass(`capUse tallied story:launch (${tallied})`);
+  else fail('story:launch not counted in the capUse ledger: ' + tallied);
+
   // ── 5. withheld capability is refused (named, not silent) ────────────
   const refusal = await frame.evaluate(async () => {
     // story.navigate is granted here but not implemented; story.link too.
