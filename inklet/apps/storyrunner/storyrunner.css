@@ -26,3 +26,44 @@ html, body {
 #choices button:focus-visible { outline: 2px solid #ffec27; outline-offset: 2px; }
 #choices button:hover { background: rgba(41,173,255,0.22); }
 #status { font-size: 0.8em; opacity: 0.6; }
+
+/* ─────────── media roles: a per-beat spectrum of prominence ─────────── */
+#media { display: none; width: 100%; }
+#media .media-el { display: block; width: 100%; height: auto; max-width: 100%; }
+
+/* feature (default): big pinned media, prose scrolls below it */
+#stage[data-media-role="feature"] #media {
+  display: block; position: sticky; top: 0; z-index: 1;
+  max-height: 62vh; background: #04060d; text-align: center;
+}
+#stage[data-media-role="feature"] #media .media-el {
+  width: auto; max-width: 100%; max-height: 62vh; margin: 0 auto;
+}
+
+/* hero: the media IS the beat — it owns the screen; prose is a caption */
+#stage[data-media-role="hero"] { position: relative; padding: 0; justify-content: flex-end; }
+#stage[data-media-role="hero"] #media {
+  display: block; position: absolute; inset: 0; z-index: 0; background: #000;
+}
+#stage[data-media-role="hero"] #media .media-el {
+  width: 100%; height: 100%; object-fit: contain; border: 0;
+}
+#stage[data-media-role="hero"] #prose {
+  position: relative; z-index: 2; margin: 0; max-height: 40vh; overflow-y: auto;
+  padding: 2.5em 1em 0.6em;
+  background: linear-gradient(transparent, rgba(2, 6, 13, 0.9) 45%);
+}
+#stage[data-media-role="hero"] #choices {
+  position: relative; z-index: 3; margin: 0;
+  padding: 0 1em max(0.8em, env(safe-area-inset-bottom));
+  background: rgba(2, 6, 13, 0.9);
+}
+
+/* accent: text leads; media is a small thumbnail in the top-right corner
+   (float is ignored inside the flex column, so align-self does the work) */
+#stage[data-media-role="accent"] #media {
+  display: block; align-self: flex-end; width: 34%; max-width: 160px;
+  margin: 0 0 0.4em 0.8em; cursor: pointer;
+}
+#stage[data-media-role="accent"] #media .media-el { border-radius: 0.4em; }
+#stage[data-media-role="accent"] #prose { margin-top: -0.2em; }

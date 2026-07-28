@@ -82,7 +82,7 @@ try {
     const s = window.__storyrunner.state;
     return { prose: s.prose.length, choices: s.choices.length, bg: s.bg };
   });
-  if (played.prose >= 1 && played.choices >= 2) {
+  if (played.prose >= 1 && played.choices >= 1) {
     pass(`story played in-frame (${played.prose} prose, ${played.choices} choices)`);
   } else fail('runner did not render a playable beat: ' + JSON.stringify(played));
 
@@ -119,8 +119,42 @@ try {
     pass('compile step nested in its own box — story JS never touched the runner');
   } else fail('inner box leaked: ' + JSON.stringify(inner));
 
-  // ── 4. a choice that hits # MINIGAME: surfaces as a governed request ──
-  // Choose option 0 ("Take the torch") → hatch → # MINIGAME: waterworld.
+  // ── 4. MEDIA ROLES: a per-beat spectrum, each sized differently ──────
+  const mediaAt = () => frame.evaluate(() => {
+    const stage = document.getElementById('stage');
+    const el = document.querySelector('#media .media-el');
+    const mb = document.getElementById('media').getBoundingClientRect();
+    return {
+      role: stage.getAttribute('data-media-role'),
+      spec: window.__storyrunner.state.mediaSpec,
+      tag: el && el.tagName, src: el && (el.getAttribute('src') || ''),
+      mediaH: Math.round(mb.height), stageH: Math.round(stage.getBoundingClientRect().height),
+    };
+  });
+  await page.waitForTimeout(300);
+  const feat = await mediaAt();
+  if (feat.role === 'feature' && feat.spec === 'X-MEDIA-FEATURE' && feat.tag === 'IMG') {
+    pass(`feature: pinned image, prose below (${feat.mediaH}/${feat.stageH}px)`);
+  } else fail('feature media wrong: ' + JSON.stringify(feat));
+
+  // → hero: the media owns the screen; a YouTube id becomes a nocookie embed
+  await frame.evaluate(() => window.__storyrunner.choose(0));
+  await page.waitForTimeout(400);
+  const hero = await mediaAt();
+  if (hero.role === 'hero' && hero.spec === 'X-MEDIA-HERO' && hero.tag === 'IFRAME'
+      && /youtube-nocookie\.com\/embed\/0123456789a/.test(hero.src) && hero.mediaH >= hero.stageH * 0.8) {
+    pass(`hero: video owns the screen (${hero.mediaH}/${hero.stageH}px), nocookie embed`);
+  } else fail('hero media wrong: ' + JSON.stringify(hero));
+
+  // → accent: text leads; media is a small thumbnail
+  await frame.evaluate(() => window.__storyrunner.choose(0));
+  await page.waitForTimeout(400);
+  const acc = await mediaAt();
+  if (acc.role === 'accent' && acc.spec === 'X-MEDIA-ACCENT' && acc.mediaH < acc.stageH * 0.5) {
+    pass(`accent: small thumbnail, text leads (${acc.mediaH}/${acc.stageH}px)`);
+  } else fail('accent media wrong: ' + JSON.stringify(acc));
+
+  // ── 5. a choice that hits # MINIGAME: surfaces as a governed request ──
   await frame.evaluate(() => window.__storyrunner.choose(0));
   await page.waitForTimeout(800);
   const req = await frame.evaluate(() => window.__storyrunner.state.requests);

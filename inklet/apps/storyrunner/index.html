@@ -15,6 +15,8 @@
      The live host-side player (inklet/finkapp) is unchanged; this is the
      "sandboxed all the way up" runner proving containment. -->
 <main id="stage" aria-live="off">
+  <!-- the beat's central media; role (hero/feature/accent) sets its size -->
+  <div id="media" aria-hidden="false"></div>
   <div id="prose" role="log" aria-live="polite" aria-relevant="additions"></div>
   <ul id="choices" aria-label="Choices"></ul>
   <p id="status" role="status" aria-live="polite"></p>
