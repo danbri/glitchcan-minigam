@@ -28,9 +28,10 @@
 (function () {
   if (window.foaf) return;
 
-  const listeners = { init: [], grant: [], suspend: [], resume: [], terminate: [] };
+  const listeners = { init: [], grant: [], suspend: [], resume: [], terminate: [], audio: [] };
   let appId = null;
   let capabilities = new Set();
+  let lastAudio = null;   // retained so a late onAudio replays the level
   // app.init may land BEFORE a deferred module registers onInit (app-sdk is
   // a classic script; the app is type=module). Retain the config so a late
   // onInit replays instead of missing the boot signal.
@@ -273,6 +274,19 @@
       },
     },
 
+    /**
+     * Audio is a host service. Register here to receive the master level
+     * ({level, volume, muted}); apply it to your own gain/element so the
+     * shell's mute and volume actually reach you. Registering also DECLARES
+     * the audio contract (the shell can't turn down a guest that stays
+     * silent). Replays the current level if one already arrived.
+     */
+    onAudio: (fn) => {
+      listeners.audio.push(fn);
+      if (lastAudio) { try { fn(lastAudio); } catch (err) { console.error(err); } }
+      return foaf;
+    },
+
     /** Say something the shell's announcer should read out. */
     announce: (text) => window.__mgA11y?.announce?.(text),
     /** Explicit async store API for new code that does not want the shim. */
@@ -302,6 +316,11 @@
     if (d.type === 'story.result') {
       const resolve = storyWaiters.get(d.rid);
       if (resolve) { storyWaiters.delete(d.rid); resolve(d); }
+      return;
+    }
+    if (d.type === 'audio-level') {
+      lastAudio = { level: d.level, volume: d.volume, muted: d.muted };
+      for (const fn of [...listeners.audio]) { try { fn(lastAudio); } catch (err) { console.error(err); } }
       return;
     }
     if (d.type === 'bus-event') {

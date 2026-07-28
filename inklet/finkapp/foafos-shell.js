@@ -1533,8 +1533,16 @@ function buildUI() {
             window.FinkMinigames?.startMinigame?.(game);
             reply({ ok: true, launched: game });
           } else {
-            // link / navigate: granted but not yet wired — named, not silent.
-            reply({ ok: false, reason: 'not-implemented' });
+            // link (# FINK: follow) / navigate. The shell AUTHORIZES the
+            // destination; the boxed runner does the contained fetch+render.
+            // POLICY v0 (pre-Phase-3): same-origin only. The trust graph —
+            // tiers, # INTEGRITY: hashes, plural signals — decides the rest
+            // in Phase 3; this is the gate it will slot into.
+            let base, target;
+            try { base = new URL(frame.src); target = new URL(String(d.detail?.url || ''), base); }
+            catch { reply({ ok: false, reason: 'bad-url' }); return; }
+            if (target.origin !== base.origin) { reply({ ok: false, reason: 'cross-origin-blocked' }); return; }
+            reply({ ok: true, url: target.href });
           }
         } catch (err) {
           reply({ ok: false, reason: 'failed' });

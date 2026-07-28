@@ -20,6 +20,7 @@ const state = {
   storyUrl: null, ready: false, prose: [], choices: [], bg: null,
   ended: false, requests: [], boxedCompile: false,
   media: null, mediaRole: null, mediaSpec: null,
+  audio: null, audioLevel: 1, linkedTo: null,
 };
 let story = null;
 
@@ -116,7 +117,9 @@ function handleTag(tag) {
       storyRequest('story.launch', { game: value.split(/\s+/)[0] });
       break;
     case 'FINK':
-      storyRequest('story.link', { url: value });
+      // A link to another story. Resolve it against THIS story's location,
+      // then break the beat and ask the shell to authorize it (§story.link).
+      _pendingLink = resolveStoryUrl(value);
       break;
     // A beat's central media. The last IMAGE/VIDEO in a beat wins (matches
     // the live engine); rendered after the Continue loop.
@@ -124,9 +127,44 @@ function handleTag(tag) {
       _beatMedia = parseMedia(key, value);
       break;
     case 'AUDIO':
-      setStatus('(audio is a later slab)');   // named, not silent
+      playAudio(value);
+      break;
+    case 'STOP_AUDIO':
+      stopAudio();
       break;
   }
+}
+
+// Audio, BOXED and GOVERNED. A looping bed for `# AUDIO: <file>`, played by
+// an <audio> element in the runner's own frame, its volume driven by the
+// shell's master level (foaf.onAudio) so the dock's mute reaches it. Synth
+// audio (`# AUDIO: synth:*`) is the host's FinkFoley — not reachable from
+// the box; named, not silent.
+let _audioEl = null;
+let _audioLevel = 1;
+
+function playAudio(value) {
+  const v = (value || '').trim();
+  if (/^synth:/i.test(v)) { setStatus('(synth audio is host-only, not in the boxed runner)'); return; }
+  if (!v) return;
+  stopAudio();
+  _audioEl = new Audio(v);
+  _audioEl.loop = true;
+  _audioEl.volume = _audioLevel;
+  _audioEl.play().catch(() => { /* autoplay may wait for a gesture */ });
+  state.audio = v;
+}
+
+function stopAudio() {
+  if (_audioEl) { try { _audioEl.pause(); } catch (e) { /* gone */ } _audioEl = null; }
+  state.audio = null;
+}
+
+// The shell's master volume/mute, applied to the runner's bed.
+function applyAudioLevel({ level }) {
+  _audioLevel = level;
+  if (_audioEl) _audioEl.volume = level;
+  state.audioLevel = level;
 }
 
 // Media role — a per-beat spectrum of prominence. SHORT authoring form
@@ -137,6 +175,7 @@ function handleTag(tag) {
 //   accent  → X-MEDIA-ACCENT   text leads; media is a small, tappable thumb
 const MEDIA_ROLES = { hero: 'X-MEDIA-HERO', feature: 'X-MEDIA-FEATURE', accent: 'X-MEDIA-ACCENT' };
 let _beatMedia;   // undefined = no media tag this beat (keep previous, sticky)
+let _pendingLink; // undefined = no FINK link this beat
 
 function parseMedia(kind, value) {
   const parts = value.split(/\s+/).filter(Boolean);
@@ -195,16 +234,30 @@ async function storyRequest(verb, detail) {
   return res;
 }
 
+// Resolve a story-authored URL (# FINK: value) against the CURRENT story's
+// location, to an absolute URL the shell can authorize.
+function resolveStoryUrl(value) {
+  try { return new URL(String(value).trim(), new URL(state.storyUrl, location.href)).href; }
+  catch { return ''; }
+}
+
 function advance() {
   if (!story) return;
   _beatMedia = undefined;                 // undefined ⇒ keep previous (sticky)
+  _pendingLink = undefined;
   while (story.canContinue) {
     const text = story.Continue();
     (story.currentTags || []).forEach(handleTag);
     const trimmed = text.trim();
     if (trimmed) addProse(trimmed);
+    if (_pendingLink !== undefined) break;   // a FINK link ends the beat
   }
   if (_beatMedia !== undefined) renderMedia(_beatMedia);
+  if (_pendingLink !== undefined) {
+    const url = _pendingLink; _pendingLink = undefined;
+    followLink(url);
+    return;                                  // the linked story replaces this one
+  }
   renderChoices();
   if (!story.canContinue && story.currentChoices.length === 0) {
     state.ended = true;
@@ -220,14 +273,27 @@ function choose(i) {
   advance();
 }
 
-async function boot(config) {
-  state.storyUrl = config?.story
-    || new URLSearchParams(location.search).get('story')
-    || './demo.fink.js';
+// Follow a # FINK link: the shell AUTHORIZES the destination (policy), the
+// runner does the contained load. A refusal is shown, never silent.
+async function followLink(absUrl) {
+  const res = await storyRequest('story.link', { url: absUrl });
+  if (res.ok && res.url) { state.linkedTo = res.url; await loadStory(res.url); }
+  else setStatus(`link refused: ${res.reason}`);
+}
+
+// Load (or replace with) a story at `url`, wholly inside the box: fetch,
+// nested-box extract, compile, reset the beat surface, play.
+async function loadStory(url) {
+  state.storyUrl = url;
   setStatus('loading…');
+  $('prose').textContent = '';
+  $('choices').textContent = '';
+  renderMedia(null);
+  stopAudio();
+  state.prose = []; state.choices = []; story = null;
   let src;
   try {
-    src = await (await fetch(state.storyUrl)).text();
+    src = await (await fetch(url)).text();
   } catch (e) {
     setStatus('could not load story: ' + e.message);
     return;
@@ -248,6 +314,13 @@ async function boot(config) {
   advance();
 }
 
+async function boot(config) {
+  const url = config?.story
+    || new URLSearchParams(location.search).get('story')
+    || './demo.fink.js';
+  await loadStory(url);
+}
+
 // Headless hook for the containment e2e — read-only state + the verbs a
 // player has. A driver that reaches into internals rots.
 window.__storyrunner = {
@@ -259,6 +332,7 @@ window.__storyrunner = {
 // Live inside foafos if present; run standalone otherwise (dev).
 if (window.foaf?.onInit) {
   window.foaf.onInit((config) => boot(config));
+  window.foaf.onAudio?.(applyAudioLevel);   // the dock's volume reaches our bed
 } else {
   boot({});
 }
