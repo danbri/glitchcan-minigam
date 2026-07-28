@@ -1,8 +1,8 @@
-// Waterworld — the drowned dock. ART DIRECTION v2 (the picoCAD/blocky
-// constraints are officially retired): smooth-shaded organic forms,
-// full-resolution rendering, soft round particles, bioluminescent
-// accents. All geometry is still generated — no asset files — but
-// nothing is crunched, snapped or flat-shaded any more.
+// Waterworld — the drowned dock. ART DIRECTION v3: v2 retired the
+// picoCAD/blocky constraints; v3 retires the flat-Lambert "GL demo"
+// look. Every solid surface is PBR (MeshStandardMaterial) lit by a
+// procedural environment map, with generated grunge/bump textures on
+// the large surfaces. All assets are still code — no image files.
 
 import * as THREE from '../../../trees/vendor/three.module.min.js';
 
@@ -14,13 +14,156 @@ export const P8 = {
   blue: 0x29adff, mauve: 0x83769c, pink: 0xff77a8, peach: 0xffccaa,
 };
 
+// MATERIAL PASS (July 2026): flat Lambert read as a 1998 GL demo.
+// Everything solid is now MeshStandardMaterial — real specular response,
+// roughness variation, and an environment map (set in game.js) so metal
+// glints and wet surfaces sheen. Custom opts: rough, metal, bump
+// (bump scale; 0 disables the shared noise bump).
 const _mats = new Map();
 export function mat(color, opts = {}) {
   const key = color + JSON.stringify(opts);
   if (!_mats.has(key)) {
-    _mats.set(key, new THREE.MeshLambertMaterial({ color, ...opts }));
+    const { rough, metal, bump, tex, ...rest } = opts;
+    const m = new THREE.MeshStandardMaterial({
+      color,
+      roughness: rough ?? 0.82,
+      metalness: metal ?? 0.06,
+      ...rest,
+    });
+    if (bump !== 0) {
+      m.bumpMap = noiseTex();
+      m.bumpScale = bump ?? 0.35;
+    }
+    // tex: [kind, rx, ry] — a near-white detail map multiplied by the
+    // material colour, so grime rides on top of the tuned palette
+    if (tex) {
+      m.map = texRepeat(grungeTex(0xd8d4cc, tex[0]), tex[1] ?? 1, tex[2] ?? 1);
+    }
+    _mats.set(key, m);
   }
   return _mats.get(key);
+}
+
+// One tileable grayscale noise canvas, shared as the default bumpMap —
+// it breaks the mathematically perfect surface every primitive has.
+let _noiseTex = null;
+export function noiseTex() {
+  if (_noiseTex) return _noiseTex;
+  const S = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d');
+  g.fillStyle = '#808080';
+  g.fillRect(0, 0, S, S);
+  // layered blotches, drawn twice with wrap offsets so the tile seams hide
+  for (let layer = 0; layer < 3; layer++) {
+    const n = [180, 420, 900][layer];
+    const r = [26, 11, 4][layer];
+    for (let i = 0; i < n; i++) {
+      const x = Math.random() * S, y = Math.random() * S;
+      const v = Math.floor(96 + Math.random() * 120);
+      g.fillStyle = `rgba(${v},${v},${v},${0.16 - layer * 0.04})`;
+      for (const [ox, oy] of [[0, 0], [-S, 0], [S, 0], [0, -S], [0, S]]) {
+        g.beginPath();
+        g.arc(x + ox, y + oy, r * (0.5 + Math.random()), 0, 7);
+        g.fill();
+      }
+    }
+  }
+  _noiseTex = new THREE.CanvasTexture(c);
+  _noiseTex.wrapS = _noiseTex.wrapT = THREE.RepeatWrapping;
+  return _noiseTex;
+}
+
+// Procedural grunge: a tinted, weathered surface texture — blotches,
+// streaks and grime built on the base colour. kind: 'concrete' (mottled
+// with vertical water stains), 'metal' (horizontal wear + rivet seams),
+// 'wax' (greasy soft blotches). Cached per colour+kind.
+const _grunge = new Map();
+export function grungeTex(hex, kind = 'concrete') {
+  const key = hex + kind;
+  if (_grunge.has(key)) return _grunge.get(key);
+  const S = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d');
+  const col = new THREE.Color(hex);
+  const css = (m, a = 1) =>
+    `rgba(${Math.floor(col.r * 255 * m)},${Math.floor(col.g * 255 * m)},${Math.floor(col.b * 255 * m)},${a})`;
+  g.fillStyle = css(1);
+  g.fillRect(0, 0, S, S);
+  // mottling: darker and lighter patches of the same hue
+  for (let i = 0; i < 300; i++) {
+    const x = Math.random() * S, y = Math.random() * S;
+    g.fillStyle = css(0.45 + Math.random() * 1.0, 0.16 + Math.random() * 0.16);
+    for (const [ox, oy] of [[0, 0], [-S, 0], [S, 0], [0, -S], [0, S]]) {
+      g.beginPath();
+      g.arc(x + ox, y + oy, 6 + Math.random() * 26, 0, 7);
+      g.fill();
+    }
+  }
+  if (kind === 'concrete') {
+    // vertical water stains running down from random points
+    for (let i = 0; i < 42; i++) {
+      const x = Math.random() * S, y = Math.random() * S * 0.6;
+      const w = 2 + Math.random() * 7, h = 30 + Math.random() * 120;
+      const grad = g.createLinearGradient(0, y, 0, y + h);
+      grad.addColorStop(0, css(0.4, 0.42));
+      grad.addColorStop(1, css(0.4, 0));
+      g.fillStyle = grad;
+      g.fillRect(x - w / 2, y, w, h);
+    }
+  } else if (kind === 'metal') {
+    // horizontal brushed wear + dark plate seams
+    for (let i = 0; i < 40; i++) {
+      const y = Math.random() * S;
+      g.fillStyle = css(0.7 + Math.random() * 0.5, 0.10);
+      g.fillRect(0, y, S, 1 + Math.random() * 3);
+    }
+    for (let i = 0; i < 5; i++) {
+      const y = Math.floor(Math.random() * S);
+      g.fillStyle = css(0.4, 0.5);
+      g.fillRect(0, y, S, 2);
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  _grunge.set(key, t);
+  return t;
+}
+
+// The environment: a tiny equirect gradient — bright rippled surface
+// above, deep teal below, a sun smear. scene.environment turns every
+// Standard material's fresnel and roughness into visible light response.
+export function makeEnvTexture() {
+  const W = 128, H = 64;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0.0, '#bfeaf2');
+  grad.addColorStop(0.42, '#3f96a8');
+  grad.addColorStop(0.55, '#1c5f74');
+  grad.addColorStop(1.0, '#04141f');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, W, H);
+  // the sun, smeared by the surface
+  const sun = g.createRadialGradient(W * 0.3, H * 0.14, 1, W * 0.3, H * 0.14, 16);
+  sun.addColorStop(0, 'rgba(255,246,214,0.95)');
+  sun.addColorStop(1, 'rgba(255,246,214,0)');
+  g.fillStyle = sun;
+  g.fillRect(0, 0, W, H);
+  // surface ripple bands
+  for (let i = 0; i < 22; i++) {
+    const y = 2 + Math.random() * H * 0.32;
+    g.fillStyle = `rgba(230,250,255,${0.05 + Math.random() * 0.1})`;
+    g.fillRect(Math.random() * W, y, 10 + Math.random() * 40, 1 + Math.random() * 2);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.mapping = THREE.EquirectangularReflectionMapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
 }
 
 // One soft round dot, shared by every particle system — square GL points
@@ -41,6 +184,14 @@ export function softDot() {
   return _softDot;
 }
 
+// A texture clone with its own repeat (clones share the image — cheap).
+export function texRepeat(t, rx, ry) {
+  const c = t.clone();
+  c.repeat.set(rx, ry);
+  c.needsUpdate = true;
+  return c;
+}
+
 // Smooth primitive helpers for organic shapes.
 export function ball(parent, r, color, x = 0, y = 0, z = 0, opts = {}) {
   const m = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 14), mat(color, opts));
@@ -49,15 +200,15 @@ export function ball(parent, r, color, x = 0, y = 0, z = 0, opts = {}) {
   return m;
 }
 
-export function box(parent, w, h, d, color, x = 0, y = 0, z = 0) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color));
+export function box(parent, w, h, d, color, x = 0, y = 0, z = 0, opts = {}) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color, opts));
   m.position.set(x, y, z);
   parent.add(m);
   return m;
 }
 
-export function cyl(parent, rt, rb, h, color, x = 0, y = 0, z = 0, seg = 16) {
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat(color));
+export function cyl(parent, rt, rb, h, color, x = 0, y = 0, z = 0, seg = 16, opts = {}) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat(color, opts));
   m.position.set(x, y, z);
   parent.add(m);
   return m;
@@ -114,7 +265,8 @@ export function makeSub() {
   }
   const hullGeo = new THREE.LatheGeometry(profile, 28);
   hullGeo.rotateZ(-Math.PI / 2);                   // axis along +x
-  const hull = new THREE.Mesh(hullGeo, mat(0xe09a3a, { emissive: 0x5a2c08 }));
+  const hull = new THREE.Mesh(hullGeo,
+    mat(0xe09a3a, { emissive: 0x5a2c08, rough: 0.42, metal: 0.5, tex: ['metal', 3, 2], bump: 0.12 }));
   hull.name = 'hull';
   g.add(hull);
   // sail: elliptical tower with a rounded cap
@@ -505,7 +657,8 @@ export function makeFatberg(radius = 3) {
     pos.setXYZ(i, v.x, v.y * 0.85, v.z);
   }
   geo.computeVertexNormals();
-  const m = new THREE.Mesh(geo, mat(0xa89f70, { emissive: 0x141c08 }));
+  const m = new THREE.Mesh(geo,
+    mat(0xa89f70, { emissive: 0x141c08, rough: 0.97, bump: 1.1, tex: ['wax', 2, 2] }));
   // the documented sweetcorn garnish, now rounded
   for (let i = 0; i < 7; i++) {
     const lump = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), mat(P8.yellow));
@@ -661,7 +814,11 @@ function makeFloor(scene) {
   geo.computeVertexNormals();
   // caustics live IN the floor's fragment shader: animated light webs
   // dancing on the silt, fading out with depth (sunlight runs out)
-  const floorMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const floorMat = new THREE.MeshStandardMaterial({
+    vertexColors: true, roughness: 0.96, metalness: 0,
+    map: texRepeat(grungeTex(0xd8d4cc, 'wax'), 30, 20),
+    bumpMap: texRepeat(noiseTex(), 26, 16), bumpScale: 1.4,
+  });
   floorMat.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = { value: 0 };
     floorMat.userData.shader = shader;
@@ -691,7 +848,8 @@ function makeQuayWalls(scene) {
   const g = new THREE.Group();
   const H = 70, T = 6;
   const wall = (w, d, x, z) => {
-    const b = box(g, w, H, d, P8.dusk, x, -H / 2 + 2, z);
+    const b = box(g, w, H, d, P8.dusk, x, -H / 2 + 2, z,
+      { tex: ['concrete', 12, 5], rough: 0.92, bump: 1.3 });
     return b;
   };
   wall(BOUNDS.maxX - BOUNDS.minX + T * 2, T, 0, BOUNDS.minZ - T / 2);
@@ -755,8 +913,8 @@ export function makeCulverts(scene) {
 function makeCrane(scene) {
   const g = new THREE.Group();
   g.position.set(60, DEEP_Y, 40);
-  box(g, 4, 26, 4, P8.dusk, 0, 13, 0);
-  box(g, 22, 2.5, 2.5, P8.dusk, 8, 26, 0).rotation.z = -0.12;
+  box(g, 4, 26, 4, P8.dusk, 0, 13, 0, { tex: ['metal', 2, 6], rough: 0.6, metal: 0.6 });
+  box(g, 22, 2.5, 2.5, P8.dusk, 8, 26, 0, { tex: ['metal', 6, 1], rough: 0.6, metal: 0.6 }).rotation.z = -0.12;
   box(g, 2, 6, 2, P8.brown, 18, 21, 0);   // hook block, drooping
   cyl(g, 0.4, 0.4, 14, P8.dusk, 18, 13, 0);
   g.rotation.z = 0.35;                     // toppled, half fallen
@@ -769,7 +927,7 @@ function makeBarge(scene) {
   const g = new THREE.Group();
   g.position.set(-40, SHELF_Y + 1.5, 30);
   g.rotation.y = 0.8; g.rotation.z = 0.28;
-  box(g, 26, 5, 9, 0x5a3f48, 0, 2, 0);
+  box(g, 26, 5, 9, 0x5a3f48, 0, 2, 0, { tex: ['metal', 6, 2], rough: 0.68, metal: 0.45 });
   box(g, 24, 1.5, 7, P8.black, 0, 4.5, 0);     // open hold
   box(g, 5, 4, 8, P8.dusk, -9, 6, 0);          // wheelhouse
   box(g, 1.2, 6, 1.2, P8.brown, 6, 7, 2);      // broken mast
@@ -781,9 +939,9 @@ function makeWarehouse(scene) {
   const g = new THREE.Group();
   g.position.set(85, DEEP_Y, -30);
   // roofless brick shell, tumbled columns
-  box(g, 30, 14, 2, 0x4a4050, 0, 7, -10);
-  box(g, 30, 9, 2, 0x4a4050, 0, 4.5, 12);
-  box(g, 2, 12, 22, 0x4a4050, -15, 6, 1);
+  box(g, 30, 14, 2, 0x4a4050, 0, 7, -10, { tex: ['concrete', 6, 3], rough: 0.9, bump: 0.6 });
+  box(g, 30, 9, 2, 0x4a4050, 0, 4.5, 12, { tex: ['concrete', 6, 2], rough: 0.9, bump: 0.6 });
+  box(g, 2, 12, 22, 0x4a4050, -15, 6, 1, { tex: ['concrete', 4, 3], rough: 0.9, bump: 0.6 });
   for (let i = 0; i < 4; i++) {
     const c = cyl(g, 1, 1.2, 10, P8.dusk, -8 + i * 6, 1.5, 1, 6);
     c.rotation.z = 1.35; c.rotation.y = i;
@@ -972,7 +1130,7 @@ export function buildDock(scene) {
   const weeds = makeWeeds(scene);
   // signature undertones: each structure family keeps a faint emissive
   // identity — the mystery now comes from light, not wireframes
-  tint(quay, 0x1d6f8f, 0.6);
+  tint(quay, 0x1d6f8f, 0.3);   // low: emissive fill flattens the concrete grime
   for (const m of culverts) tint(m.group, 0x00e436, 0.8);
   tint(crane, 0xffa300, 0.3);
   tint(barge, 0xff77a8, 0.25);

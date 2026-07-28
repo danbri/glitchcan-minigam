@@ -9,7 +9,7 @@ import {
   P8, mat, buildDock, makeSub, makeEelHead, makeEelSegment, makeFatberg,
   makeMine, makeSalvageMesh, makeQuestMesh, makeParticleCloud,
   makeGhostWhale, makeSeal, makeDuck, BOUNDS, SHELF_Y, DEEP_Y, floorYAt, tint,
-  softDot,
+  softDot, makeEnvTexture,
 } from './world.js';
 import { UnderwaterFX, glowSprite, currentAt } from './fx.js';
 import { Composite } from './post.js';
@@ -135,6 +135,11 @@ export class WaterworldGame {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(P8.navy);
     this.scene.fog = new THREE.FogExp2(P8.navy, 0.02);
+    // image-based light: the water column itself lights every Standard
+    // material — fresnel sheen on wet surfaces, glints on metal
+    this._envTex = makeEnvTexture();
+    this.scene.environment = this._envTex;
+    this.scene.environmentIntensity = 0.55;
     this.camera = new THREE.PerspectiveCamera(70, 16 / 9, 0.1, 400);
 
     // light through water: a friendly bright blue, dimming with depth
@@ -611,6 +616,7 @@ export class WaterworldGame {
     this.ir = !this.ir;
     this.fx.setIR(this.ir);
     if (this.ir) {
+      this.scene.environment = null;       // heat does not reflect
       this._irApply(this.scene);
       this.whale.material.color.set(0x3366ff);
       this.ui.toast('▣ THERMAL SIGHT', 'warn');
@@ -622,6 +628,7 @@ export class WaterworldGame {
       }
       this.ui.announce('Thermal view on. Warm things glow; the water goes dark.');
     } else {
+      this.scene.environment = this._envTex;
       this._irRestore(this.scene);
       this.whale.material.color.set(0xc8f0ff);
       this.ui.toast('▢ THERMAL OFF', 'hint');

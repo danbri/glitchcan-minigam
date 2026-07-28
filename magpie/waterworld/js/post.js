@@ -49,6 +49,23 @@ void main() {
     col.r *= 1.0 - d * 0.2;
   }
 
+  // -- crease shading: a neighbour meaningfully nearer than us occludes
+  //    us (cheap screen-space AO — grounds objects, shades corners).
+  //    Taps with a huge relative gap are a silhouette edge, not a
+  //    crease, and are rejected to avoid dark halos in the fog.
+  if (uHasDepth > 0.5) {
+    float c = linDepth(vUv);
+    float occ = 0.0;
+    vec2 px = 1.0 / uRes;
+    for (int i = 0; i < AO_TAPS; i++) {
+      float a = 6.2832 * float(i) / float(AO_TAPS);
+      vec2 o = vec2(cos(a), sin(a)) * px * (3.0 + 3.0 * float(i - (i / 2) * 2));
+      float rel = (c - linDepth(vUv + o)) / max(c, 1e-4);
+      if (rel > 0.004 && rel < 0.3) occ += min(rel * 10.0, 0.5);
+    }
+    col *= 1.0 - min(occ / float(AO_TAPS), 0.45);
+  }
+
   // -- crepuscular rays: march toward the sun, gather what glows
   if (uSunVis > 0.001 && uIR < 0.5) {
     vec2 stp = (uSun - vUv) / float(RAY_SAMPLES);
@@ -105,7 +122,7 @@ export class Composite {
     }
 
     this.mat = new THREE.ShaderMaterial({
-      defines: { RAY_SAMPLES: this.lite ? 10 : 22 },
+      defines: { RAY_SAMPLES: this.lite ? 10 : 22, AO_TAPS: this.lite ? 4 : 8 },
       uniforms: {
         tScene: { value: this.rt.texture },
         tDepth: { value: this.rt.depthTexture || this.rt.texture },
@@ -147,6 +164,11 @@ export class Composite {
 
   // sunDir: normalized direction TOWARD the sun in world space
   render(time, sunDir, { deep = 0, ir = false, rayAmt = 1 } = {}) {
+    if (!this.enabled) {                 // harness escape hatch: raw render
+      this.renderer.setRenderTarget(null);
+      this.renderer.render(this.scene, this.camera);
+      return;
+    }
     const u = this.mat.uniforms;
     u.uTime.value = time;
     u.uDeep.value = deep;
