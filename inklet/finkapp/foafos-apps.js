@@ -157,7 +157,7 @@ export const APPS = [
     // no `story` override: the runner defaults to its own ./demo.fink.js,
     // resolved relative to the RUNNER frame (a finkapp-relative path would
     // resolve against the wrong base once fetched inside the box)
-    capabilities: ['story:launch'],
+    capabilities: ['story:launch', 'story:link', 'story:navigate', 'audio'],
     bus: { publish: ['app.storyrunner.*'], subscribe: ['wm.mode', 'audio.volume', 'ui.skin'] } },
   // MIGRATED (July 2026) — and it was the LAST `same-origin` holder, so the
   // whole registry is now sandboxed. Found because the ROBBAMP tile was DEAD

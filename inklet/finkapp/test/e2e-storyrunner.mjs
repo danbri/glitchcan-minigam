@@ -137,6 +137,22 @@ try {
     pass(`feature: pinned image, prose below (${feat.mediaH}/${feat.stageH}px)`);
   } else fail('feature media wrong: ' + JSON.stringify(feat));
 
+  // ── 4b. AUDIO: a governed, boxed bed. # AUDIO: plays a looping element,
+  // and the shell's master volume reaches it via foaf.onAudio.
+  const audio0 = await frame.evaluate(() => window.__storyrunner.state.audio);
+  if (audio0 && /ambient\.wav/.test(audio0)) pass('# AUDIO: started a looping bed in the box');
+  else fail('audio bed not started: ' + JSON.stringify(audio0));
+  // turn the shell's master volume down; the runner's bed must follow
+  const audioGoverned = await page.evaluate(async () => {
+    FoafOS.audio.setVolume(0.25);
+    await new Promise((r) => setTimeout(r, 300));
+    return document.querySelector('iframe[src*="storyrunner"]') ? null : true;
+  });
+  const lvl = await frame.evaluate(() => window.__storyrunner.state.audioLevel);
+  if (lvl <= 0.26) pass(`shell master volume reaches the boxed bed (level ${lvl})`);
+  else fail('master volume did not reach the runner: ' + lvl);
+  await page.evaluate(() => FoafOS.audio.setVolume(1));
+
   // → hero: the media owns the screen; a YouTube id becomes a nocookie embed
   await frame.evaluate(() => window.__storyrunner.choose(0));
   await page.waitForTimeout(400);
@@ -154,33 +170,43 @@ try {
     pass(`accent: small thumbnail, text leads (${acc.mediaH}/${acc.stageH}px)`);
   } else fail('accent media wrong: ' + JSON.stringify(acc));
 
-  // ── 5. a choice that hits # MINIGAME: surfaces as a governed request ──
-  await frame.evaluate(() => window.__storyrunner.choose(0));
-  await page.waitForTimeout(800);
-  const req = await frame.evaluate(() => window.__storyrunner.state.requests);
-  const launchReq = req.find((r) => r.verb === 'story.launch');
+  // ── 5. # FINK: LINK — the shell authorizes, the runner loads the peer
+  // story IN ITS BOX, and the peer's own # MINIGAME: becomes a governed
+  // launch. One flow proves link-following AND cross-story containment.
+  await frame.evaluate(() => window.__storyrunner.choose(0));   // doorway → # FINK
+  await frame.waitForFunction(
+    () => /peer\.fink\.js/.test(window.__storyrunner.state.linkedTo || '')
+      && window.__storyrunner.state.prose.some((p) => /different dock/.test(p.text)),
+    null, { timeout: 8000 });
+  pass('# FINK: followed an authorized link — peer story loaded in the box');
+
+  const linkReq = await frame.evaluate(() =>
+    window.__storyrunner.state.requests.find((r) => r.verb === 'story.link'));
+  if (linkReq) pass('the link went through story.link (shell-authorized), not a raw fetch');
+  else fail('no story.link request recorded');
+
+  const launchReq = await frame.evaluate(() =>
+    window.__storyrunner.state.requests.find((r) => r.verb === 'story.launch'));
   if (launchReq && launchReq.detail?.game === 'waterworld') {
-    pass('# MINIGAME: surfaced as a story.launch REQUEST, not a direct launch');
-  } else fail('minigame tag did not become a governed request: ' + JSON.stringify(req));
-  const sawGoverned = await page.evaluate(() =>
-    window.__srLog.some((e) => e.verb === 'story.launch'));
-  if (sawGoverned) pass('the shell governed the launch request (bus story.request)');
-  else fail('shell never saw the story.launch request');
+    pass("peer story's # MINIGAME: surfaced as a governed story.launch");
+  } else fail('minigame tag did not become a governed request: ' + JSON.stringify(launchReq));
 
-  // the Running ⓘ "utilized" ledger must count the narrative effect —
-  // story:* is a broker path like storage/secrets/verb/audio
-  const tallied = await page.evaluate(() => FoafOS.capUse('storyrunner')?.['story:launch'] || 0);
-  if (tallied >= 1) pass(`capUse tallied story:launch (${tallied})`);
-  else fail('story:launch not counted in the capUse ledger: ' + tallied);
+  // the Running ⓘ "utilized" ledger counts BOTH narrative effects
+  const use = await page.evaluate(() => FoafOS.capUse('storyrunner') || {});
+  if ((use['story:link'] || 0) >= 1 && (use['story:launch'] || 0) >= 1) {
+    pass(`capUse tallied story:link (${use['story:link']}) and story:launch (${use['story:launch']})`);
+  } else fail('capUse ledger missing a story:* use: ' + JSON.stringify(use));
 
-  // ── 5. withheld capability is refused (named, not silent) ────────────
-  const refusal = await frame.evaluate(async () => {
-    // story.navigate is granted here but not implemented; story.link too.
-    // Use an unknown verb to prove the deny path shape.
-    return window.foaf.storyRequest('story.smuggle', { anywhere: 'evil.example' });
-  });
+  // ── 6. POLICY: a cross-origin link is refused; unknown verbs too ─────
+  const xorigin = await frame.evaluate(() =>
+    window.foaf.storyRequest('story.link', { url: 'https://evil.example/x.fink.js' }));
+  if (xorigin && xorigin.ok === false && xorigin.reason === 'cross-origin-blocked') {
+    pass('a cross-origin link is refused (policy v0: same-origin only)');
+  } else fail('cross-origin link not blocked: ' + JSON.stringify(xorigin));
+  const refusal = await frame.evaluate(() =>
+    window.foaf.storyRequest('story.smuggle', { anywhere: 'evil.example' }));
   if (refusal && refusal.ok === false && refusal.reason === 'unknown-verb') {
-    pass('an ungoverned narrative verb is refused with a named reason');
+    pass('an unknown narrative verb is refused with a named reason');
   } else fail('deny path wrong: ' + JSON.stringify(refusal));
 
   if (pageErrors.length) fail('page errors: ' + pageErrors.join(' | '));

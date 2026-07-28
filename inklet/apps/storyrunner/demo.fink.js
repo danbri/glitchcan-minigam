@@ -5,6 +5,7 @@
 oooOO`
 # BG: rgb(10, 31, 20)
 # IMAGE: media-feature.svg
+# AUDIO: ambient.wav
 You come to in a flooded lift shaft. Water to your knees, a torch on a hook.
 A cracked screen glows on the far wall.
 + [Watch the drowned newsreel] -> newsreel
@@ -18,16 +19,11 @@ The screen floods the shaft with light. For one long minute, the film is everyth
 # IMAGE: media-accent.svg accent
 A small thing, easy to miss beside the torch. You keep it, and read the painted sign: DOCK 7.
 # STATUS: torch in hand
-+ [Open the hatch] -> hatch
++ [Step through the humming doorway] -> doorway
 
-=== hatch ===
-# IMAGE: media-feature.svg
-The hatch gives. Beyond it, a flooded arcade hums with old light.
-# MINIGAME: waterworld
--> ending
-
-=== ending ===
-The dock is waiting.
+=== doorway ===
+The doorway hums with a light from somewhere else. You step through, into another story entirely.
+# FINK: peer.fink.js
 -> END
 `;
 // A .fink.js is executable JS. This benign line stands in for any code a
