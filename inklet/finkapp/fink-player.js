@@ -122,7 +122,9 @@ window.FinkPlayer = {
                 FinkBreadcrumb.setFinkUrl(resolvedUrl);
             }
 
-            if (window.swimEvent) swimEvent('net', '📥', 'Loading FINK', finkUrl);
+            window.FoafOS?.bus.publish('fetch.start', {
+                summary: `Loading FINK — ${finkUrl.split('/').pop()}`, url: finkUrl,
+            });
 
             // Clear any duplicate detection for this URL - this is intentional user action
             FinkSandbox.clearLoadRecord(resolvedUrl);
@@ -144,7 +146,9 @@ window.FinkPlayer = {
         } catch (error) {
             FinkUtils.debugLog('Error loading story: ' + error.message);
             FinkUI.showStatus(`Error: ${error.message}`);
-            if (window.swimEvent) swimEvent('net', '❌', 'Load Failed', error.message);
+            window.FoafOS?.bus.publish('fetch.fail', {
+                summary: `Load failed — ${error.message}`, error: error.message, highlight: true,
+            });
         }
     },
 
@@ -321,9 +325,6 @@ window.fink = {
     breadcrumb: window.FinkBreadcrumb
 };
 
-// Global swimEvent function for logging to swimlanes
-window.swimEvent = (lane, emoji, title, detail) => {
-    if (window.FinkDevPanel) {
-        FinkDevPanel.swimEvent(lane, emoji, title, detail);
-    }
-};
+// window.swimEvent is retired: the dev panel lanes observe the bus
+// (nav.*, ink.*, fink.*, fetch.*, net.*, game.*) — publish a fact there
+// instead of writing into a lane.

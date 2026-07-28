@@ -57,17 +57,20 @@ window.FinkDevPanel = {
             'nav.fink': '📖', 'nav.knot': '📍', 'nav.link': '🧭',
             'ink.compile': '🖋️', 'ink.choice': '👆', 'ink.error': '⚠️',
             'fink.load': '📥', 'fink.ready': '✅',
+            'fetch.start': '📥', 'fetch.fail': '❌', 'game.audio': '🎵',
         };
-        const laneFor = { nav: 'nav', ink: 'ink', fink: 'fink' };
-        const observe = (family) => bus.subscribe(`${family}.*`, (e) => {
+        // family → lane: fetch.* (loader lifecycle, kept off the user
+        // feed) and transport net.* share the NET lane.
+        const observe = (family, lane) => bus.subscribe(`${family}.*`, (e) => {
             const d = e.data || {};
-            this.swimEvent(laneFor[family],
+            this.swimEvent(lane,
                 d.icon || icons[e.topic] || '•',
                 e.topic.slice(family.length + 1),
                 d.summary || '',
                 !!d.highlight);
         }, { replay: true });
-        observe('nav'); observe('ink'); observe('fink');
+        observe('nav', 'nav'); observe('ink', 'ink'); observe('fink', 'fink');
+        observe('fetch', 'net'); observe('net', 'net'); observe('game', 'game');
 
         // Step 5: the log tab reads the debug.* channel. FinkUtils.debugLog
         // and window.log publish here once the bus exists (direct-call
@@ -389,5 +392,5 @@ window.FinkDevPanel = {
 };
 
 // window.log is defined in fink-utils.js (bus-first, observability step
-// 5) — this file no longer overrides it with a direct call.
-window.swimEvent = (lane, icon, title, detail, highlight) => FinkDevPanel.swimEvent(lane, icon, title, detail, highlight);
+// 5). window.swimEvent is gone: every lane observes the bus, and no
+// module writes into a lane directly any more.

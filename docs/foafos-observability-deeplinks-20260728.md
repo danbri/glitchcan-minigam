@@ -66,11 +66,18 @@ Order of work (each step is small and testable):
    and none duplicates. The Logger firehose sees the channel for free;
    `scopeBus` grant filtering keeps `debug.*` out of guest frames).
 
-All five steps are done. What remains beyond this list: the NET/GAME
-lanes still use `swimEvent` (kept off the bus so `net.*` loading noise
-stays out of the user-facing feed — decide a `netdebug.*`-style split
-before migrating), and whoever replaces the live player with the boxed
-storyrunner inherits this wiring.
+All five steps are done, and the follow-up landed the same day: the
+NET/GAME lanes observe the bus too. Loader lifecycle facts publish as
+`fetch.start`/`fetch.fail` — a family the drawer feed does not
+subscribe to, so loading noise stays out of the user feed while
+transport `net.<name>.*` events keep their feed cards. The audio-track
+fact is `game.audio`. `window.swimEvent` is deleted; no module writes
+into a lane directly. Found on the way: the NET lane had CSS and code
+but never markup — `swimEvent('net', …)` rendered into a null element
+for its whole life. The lane now exists in index.html.
+
+What remains beyond this list: whoever replaces the live player with
+the boxed storyrunner inherits this wiring.
 
 ## 3. Deep links: durable versus ephemeral
 

@@ -83,7 +83,9 @@ window.FinkAudio = {
             }
 
             this.log(`Playing ${this.currentTrack}`);
-            if (window.swimEvent) swimEvent('game', '🎵', 'Audio', this.currentTrack);
+            window.FoafOS?.bus.publish('game.audio', {
+                summary: `Audio — ${this.currentTrack}`, track: this.currentTrack,
+            });
         } catch (e) {
             this.log(`Error: ${e.message}`, 'error');
         }

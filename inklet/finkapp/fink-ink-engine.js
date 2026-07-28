@@ -653,7 +653,9 @@ window.FinkInkEngine = {
         const resolvedUrl = new URL(this.lastSeenFinkTag, baseUrl).href;
         FinkUtils.debugLog('Resolved URL: ' + resolvedUrl);
 
-        if (window.swimEvent) swimEvent('net', '📥', 'Loading FINK', this.lastSeenFinkTag);
+        window.FoafOS?.bus.publish('fetch.start', {
+            summary: `Loading FINK — ${this.lastSeenFinkTag}`, url: this.lastSeenFinkTag,
+        });
 
         // CRITICAL: Clear URL hash before loading new FINK to prevent navigation loop.
         // Without this, checkDeepLink() sees the old FINK's hash and tries to navigate
@@ -699,7 +701,9 @@ window.FinkInkEngine = {
             .catch(error => {
                 FinkUtils.debugLog('Error loading external FINK: ' + error.message);
                 FinkUI.showStatus('Error loading external story: ' + error.message);
-                if (window.swimEvent) swimEvent('net', '❌', 'Load Failed', error.message);
+                window.FoafOS?.bus.publish('fetch.fail', {
+                    summary: `Load failed — ${error.message}`, error: error.message, highlight: true,
+                });
             });
         }, 500);
     },

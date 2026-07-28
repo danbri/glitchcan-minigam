@@ -87,6 +87,10 @@
         <div class="swimlane"><div class="swimlane-header ink">🖋️ INK</div><div class="swimlane-body" id="swim-ink"></div></div>
         <div class="swimlane"><div class="swimlane-header fink">📜 FINK</div><div class="swimlane-body" id="swim-fink"></div></div>
         <div class="swimlane"><div class="swimlane-header game">🎮 GAME</div><div class="swimlane-body" id="swim-game"></div></div>
+        <!-- NET was always a lane in the code but never in the markup:
+             swimEvent('net', …) rendered into a null element for its whole
+             life. Added when the lanes moved onto the bus (fetch.*/net.*). -->
+        <div class="swimlane"><div class="swimlane-header net">📡 NET</div><div class="swimlane-body" id="swim-net"></div></div>
     </div>
     <div id="state-content" class="dev-tab-content"><pre id="state-display">Loading...</pre></div>
     <div id="finks-content" class="dev-tab-content">
