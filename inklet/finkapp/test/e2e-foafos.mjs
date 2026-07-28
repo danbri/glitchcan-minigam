@@ -325,12 +325,21 @@ try {
     ? pass(`the open drawer is opaque (${solid.background})`)
     : fail(`the drawer is see-through over apps: ${JSON.stringify(solid)}`);
 
-  const hittable = await page.evaluate(() => {
-    const b = document.getElementById('foafos-save').getBoundingClientRect();
-    return b.width > 0 && b.height >= 24;
+  // The session machinery is deliberately FOLDED (rarely used): closed by
+  // default, one status line showing; opening the fold makes SAVE hittable.
+  const fold = await page.evaluate(() => {
+    const det = document.getElementById('foafos-session-details');
+    const before = det.open;
+    const closedBox = document.getElementById('foafos-save').getBoundingClientRect().height;
+    det.open = true;
+    const openBox = document.getElementById('foafos-save').getBoundingClientRect();
+    return { startedClosed: !before, closedBox, hittable: openBox.width > 0 && openBox.height >= 24 };
   });
-  hittable ? pass('the session controls are visible and hittable in the open drawer')
-    : fail('the SAVE button has no box — the drawer never opened');
+  fold.startedClosed && fold.closedBox === 0
+    ? pass('session controls start folded away — one quiet status line')
+    : fail(`session fold not default-closed: ${JSON.stringify(fold)}`);
+  fold.hittable ? pass('the session controls are visible and hittable once unfolded')
+    : fail('the SAVE button has no box even with the fold open');
   await page.click('#foafos-save');
   await page.waitForTimeout(400);
   const saved = await page.evaluate(() => ({
@@ -361,6 +370,7 @@ try {
     ? pass('after a reload the drawer says a sealed key is here, not that there is none')
     : fail(`the locked state was not reported: ${JSON.stringify(locked)}`);
 
+  await page.evaluate(() => { document.getElementById('foafos-session-details').open = true; });
   await page.fill('#foafos-pass', 'correct horse');
   await page.click('#foafos-unlock');
   await page.waitForTimeout(500);

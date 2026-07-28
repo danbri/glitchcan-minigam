@@ -87,6 +87,33 @@ body.foaf-pad-on #foafos-dock {
 #foafos-session-status { font-size: 0.8em; opacity: 0.8; min-height: 1.2em; }
 #foafos-session-status.error { color: #f66; opacity: 1; }
 
+/* Rarely used, so it folds: one quiet line, machinery inside.
+   The explicit closed-state rule matters: the UA hides a closed
+   details' children at UA-level priority, and our own `.foafos-row
+   { display:flex }` (any author rule) silently overrides that — the
+   "closed" fold was rendering its buttons anyway. */
+#foafos-session-details:not([open]) > :not(summary) { display: none; }
+#foafos-session-details > summary {
+    cursor: pointer;
+    list-style: none;
+    font-size: 0.8em;
+    opacity: 0.75;
+    padding: 0.35em 0;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+}
+#foafos-session-details > summary::-webkit-details-marker { display: none; }
+#foafos-session-details > summary::after {
+    content: '▸';
+    opacity: 0.5;
+    margin-left: auto;
+}
+#foafos-session-details[open] > summary::after { content: '▾'; }
+#foafos-session-details[open] > summary { opacity: 1; }
+#foafos-session-details > input { margin-top: 0.35em; }
+
 /* WCAG 2.5.8 (AA) puts the minimum target at 24×24 CSS px. The drawer's
    own controls were 19-23px tall — the home screen and switcher already
    clear 44px, but the drawer never got the same pass. 24px is the floor,
@@ -440,6 +467,80 @@ foafos-feed { display: block; --foaf-accent: var(--zx-mag); }
     padding: 1rem;
 }
 .foafos-home-body section { margin-bottom: 1.5rem; }
+
+/* The wall: a full-width brick course between top-level app subtrees.
+   Everything between two walls is one sandbox lineage; the bricks are
+   the partition drawn where it actually is. */
+.foafos-switch-wall {
+    overflow: hidden;
+    white-space: nowrap;
+    text-align: center;
+    font-size: 0.8rem;
+    line-height: 1;
+    opacity: 0.55;
+    margin: 0.55rem -1rem;
+    user-select: none;
+    pointer-events: none;
+}
+
+/* ⓘ panel: provenance + the three capability ledgers */
+.foafos-app-info {
+    margin: 0 0 0.5rem calc(0.6rem + var(--depth, 0) * 1.1rem);
+    padding: 0.55rem 0.7rem;
+    border: 1px solid rgba(0, 192, 192, 0.3);
+    border-left-width: 3px;
+    border-radius: 8px;
+    background: rgba(0, 24, 30, 0.5);
+    font-size: 0.78rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+.foafos-app-info .fi-row { display: flex; gap: 0.6rem; align-items: baseline; }
+.foafos-app-info .fi-k {
+    flex: 0 0 6.2em;
+    opacity: 0.65;
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+}
+.foafos-app-info .fi-v { min-width: 0; overflow-wrap: anywhere; }
+.foafos-app-info .fi-caps { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.foafos-app-info .fi-cap {
+    padding: 0.15em 0.55em;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    opacity: 0.6;
+    font-size: 0.72rem;
+}
+.foafos-app-info .fi-cap.granted { opacity: 0.9; border-color: rgba(0, 192, 192, 0.55); }
+.foafos-app-info .fi-cap.used {
+    border-color: var(--zx-green, #5f5);
+    color: var(--zx-green, #5f5);
+    opacity: 1;
+}
+.foafos-app-info .fi-cap.refused { border-style: dashed; text-decoration: line-through; }
+
+/* the story-overlay tree, living in the tabs now */
+.foafos-app-info .fi-row-tree { flex-direction: column; gap: 0.25rem; }
+.foafos-app-info .fi-tree { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+.foafos-app-info .fi-tree-level {
+    text-align: left;
+    background: none;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    font-size: 0.76rem;
+    opacity: 0.75;
+    padding: 0.3em 0.4em;
+    margin-left: calc(var(--fi-depth, 0) * 0.9rem);
+    border-left: 1px solid rgba(0, 192, 192, 0.3);
+    border-radius: 0 6px 6px 0;
+    cursor: pointer;
+    min-height: 24px;
+}
+.foafos-app-info .fi-tree-level:hover:not(:disabled) { background: rgba(0, 192, 192, 0.14); opacity: 1; }
+.foafos-app-info .fi-tree-level.current { opacity: 1; color: var(--zx-cyan); cursor: default; }
 .foafos-home-body h3 {
     margin: 0 0 .6rem;
     font-size: .8rem;

@@ -38,6 +38,10 @@ One rule: **a tool observes the bus; it does not keep a private diary.**
   `guest.*` channel, not in per-app consoles.
 
 Order of work (each step is small and testable):
+0. ~~Running panel shows the three ledgers~~ (done 2026-07-28: the ⓘ
+   panel renders requested / granted-by-chain / UTILIZED, fed by the
+   shell's capUse tally; the story-overlay tree renders there too, and
+   the floating widget lost its expanded mode).
 1. ~~Breadcrumb publishes `nav.*`~~ (done, this commit).
 2. Dev panel NAV lane subscribes to `nav.*` (delete its private feed).
 3. Load meter chrome app subscribes; delete `updateFinkStats` polling.

@@ -672,14 +672,18 @@ function buildUI() {
       <button type="button" id="foafos-close" aria-label="Close shell">✕</button>
     </header>
     <section id="foafos-session">
-      <div id="foafos-session-status" role="status"></div>
-      <input id="foafos-name" type="text" placeholder="name (optional)" aria-label="Session name" autocomplete="off">
-      <input id="foafos-pass" type="password" placeholder="passphrase" aria-label="Session passphrase" autocomplete="off">
-      <div class="foafos-row">
-        <button type="button" id="foafos-save" title="Encrypt this session to this browser">SAVE</button>
-        <button type="button" id="foafos-unlock" title="Decrypt the saved session">UNLOCK</button>
-        <button type="button" id="foafos-forget" title="Delete the saved session">FORGET</button>
-      </div>
+      <!-- Rarely used, so it folds to one quiet line (owner's call). The
+           status stays visible; the passphrase machinery waits inside. -->
+      <details id="foafos-session-details">
+        <summary><span aria-hidden="true">👤</span> <span id="foafos-session-status" role="status"></span></summary>
+        <input id="foafos-name" type="text" placeholder="name (optional)" aria-label="Session name" autocomplete="off">
+        <input id="foafos-pass" type="password" placeholder="passphrase" aria-label="Session passphrase" autocomplete="off">
+        <div class="foafos-row">
+          <button type="button" id="foafos-save" title="Encrypt this session to this browser">SAVE</button>
+          <button type="button" id="foafos-unlock" title="Decrypt the saved session">UNLOCK</button>
+          <button type="button" id="foafos-forget" title="Delete the saved session">FORGET</button>
+        </div>
+      </details>
     </section>
     <section id="foafos-audio-wrap">
       <h4>SOUND</h4>
@@ -1440,6 +1444,19 @@ function buildUI() {
   // channel player the master volume could not touch. The same probe
   // applies: offer, listen, and register the app as governed or as
   // ungovernable depending on whether it answers.
+  // ── capability USE ledger ────────────────────────────────────────────
+  // "Granted" is a promise; "utilized" is a fact. Every brokered verb an
+  // app actually exercises is tallied here, so the Running panel can show
+  // requested / granted / USED side by side — the difference between an
+  // app that could touch storage and one that has, four hundred times.
+  const capUse = new Map();   // appId → { cap: count }
+  FoafOS.capUse = (appId) => capUse.get(appId) || {};
+  function tallyCap(appId, cap) {
+    const u = capUse.get(appId) || {};
+    u[cap] = (u[cap] || 0) + 1;
+    capUse.set(appId, u);
+  }
+
   function governAppFrame(frame, app, win) {
     const sinkId = `app:${app.id}:${win.dataset.wid}`;
     const caps = app.capabilities || [];
@@ -1492,6 +1509,7 @@ function buildUI() {
       // its own in-memory view, so a refusal is reported rather than
       // silently diverging.
       if (d.type === 'store.set' || d.type === 'store.remove' || d.type === 'store.clear') {
+        tallyCap(app.id, 'storage');
         const r = d.type === 'store.set' ? store.set(app.id, d.key, d.value)
                 : d.type === 'store.remove' ? store.remove(app.id, d.key)
                 : store.clear(app.id);
@@ -1507,6 +1525,7 @@ function buildUI() {
       // direction. There is no `secrets.get`, and a guest that asks is
       // answered with the reason rather than ignored.
       if (d.type === 'secrets.put' || d.type === 'secrets.forget' || d.type === 'secrets.names') {
+        tallyCap(app.id, 'secrets');
         const reply = (payload) => {
           try { frame.contentWindow?.postMessage(payload, '*'); } catch (err) { /* closed */ }
         };
@@ -1528,6 +1547,7 @@ function buildUI() {
       // what the name means and where it points; an unknown or unaimed verb
       // is refused with a reason.
       if (d.type === 'verb') {
+        tallyCap(app.id, d.verb?.startsWith('git.') ? 'git:write' : 'ops');
         ops.invoke(app.id, d.verb, d.detail || {}).then((r) => {
           try {
             frame.contentWindow?.postMessage({ type: 'verb.result', rid: d.rid, verb: d.verb, ...r }, '*');
@@ -1569,6 +1589,7 @@ function buildUI() {
 
       if (d.type !== 'conformance') return;
       if (!(d.contracts || []).includes('audio')) return;
+      tallyCap(app.id, 'audio');
       audio.unregister(sinkId);
       audio.register(sinkId, (level) => {
         try {
@@ -1642,7 +1663,31 @@ function buildUI() {
     // Rows are the TREE, indented — because "5 running" meaning five
     // unrelated things is a different fact from five things where four
     // were opened by the first, and only one of those is true.
+    //
+    // WALLS between the top-level subtrees: each depth-0 app and its
+    // descendants share one sandbox lineage; the next depth-0 app is the
+    // other side of a partition. The brick row IS the security diagram —
+    // everything between two walls can only talk through the shell.
+    let firstGroup = true;
+    let prevTopChrome = false;
     for (const r of running) {
+      if ((r.depth || 0) === 0) {
+        const isChrome = r.node?.surface === 'chrome';
+        // Chrome furniture all runs in the shell's own lineage — five
+        // status bars behind five walls would be brick soup and a lie.
+        // One wall in front of the furniture block, walls between real
+        // app subtrees.
+        if (!firstGroup && !(isChrome && prevTopChrome)) {
+          const wall = document.createElement('div');
+          wall.className = 'foafos-switch-wall';
+          wall.setAttribute('role', 'separator');
+          wall.setAttribute('aria-label', 'sandbox partition');
+          wall.innerHTML = '<span aria-hidden="true">🧱🧱🧱🧱🧱🧱🧱🧱🧱🧱🧱🧱</span>';
+          cards.appendChild(wall);
+        }
+        firstGroup = false;
+        prevTopChrome = isChrome;
+      }
       const row = document.createElement('div');
       row.className = 'foafos-switch-row';
       row.setAttribute('role', 'listitem');
@@ -1660,23 +1705,49 @@ function buildUI() {
       c.addEventListener('click', () => { r.focus(); sw.remove(); });
       row.appendChild(c);
 
-      // Suspend and close act on the SUBTREE. The label says how many
-      // go with it, because "close" taking three things by surprise is
-      // the failure mode of every grouped-window UI ever shipped.
       if (r.node) {
         const kin = FoafOS.apps.descendants(r.node.id).length;
         const withKin = kin ? ` and ${kin} beneath it` : '';
 
+        // ⓘ — provenance and capabilities, on demand
+        const info = document.createElement('button');
+        info.type = 'button';
+        info.className = 'foafos-switch-act foafos-switch-info';
+        info.textContent = 'ⓘ';
+        info.setAttribute('aria-expanded', 'false');
+        info.setAttribute('aria-label', `Details for ${r.label}: origin and capabilities`);
+        info.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const open = row.nextElementSibling?.classList?.contains('foafos-app-info');
+          if (open) { row.nextElementSibling.remove(); info.setAttribute('aria-expanded', 'false'); return; }
+          const panel = buildAppInfo(r.node, r.label);
+          row.after(panel);
+          info.setAttribute('aria-expanded', 'true');
+        });
+
+        // PAUSE is a tristate: running → the app alone → the app with
+        // its whole tree → running. Each press does the next thing; the
+        // label always says exactly what that is.
+        const kids = FoafOS.apps.descendants(r.node.id);
+        const kidsAllSusp = kids.length > 0 && kids.every(k => k.suspended);
         const sus = document.createElement('button');
         sus.type = 'button';
         sus.className = 'foafos-switch-act';
-        sus.textContent = r.node.suspended ? '▶' : '⏸';
-        sus.setAttribute('aria-label',
-          `${r.node.suspended ? 'Resume' : 'Suspend'} ${r.label}${withKin}`);
+        let glyph, act, label;
+        if (!r.node.suspended) {
+          glyph = '⏸'; act = () => setNodeSuspended(r.node.id, true);
+          label = `Pause ${r.label}${kin ? ' (press again to pause its tree too)' : ''}`;
+        } else if (kin && !kidsAllSusp) {
+          glyph = '⏸⧉'; act = () => setSubtreeSuspended(r.node.id, true);
+          label = `Pause ${r.label}${withKin}`;
+        } else {
+          glyph = '▶'; act = () => setSubtreeSuspended(r.node.id, false);
+          label = `Resume ${r.label}${withKin}`;
+        }
+        sus.textContent = glyph;
+        sus.setAttribute('aria-label', label);
         sus.addEventListener('click', (e) => {
-          e.stopPropagation();
-          setSubtreeSuspended(r.node.id, !r.node.suspended);
-          sw.remove(); openSwitcher();
+          e.stopPropagation(); act(); sw.remove(); openSwitcher();
         });
 
         const kill = document.createElement('button');
@@ -1692,7 +1763,7 @@ function buildUI() {
           FoafOS.apps.close(r.node.id);
           sw.remove(); openSwitcher();
         });
-        row.append(sus, kill);
+        row.append(info, sus, kill);
       }
       cards.appendChild(row);
     }
@@ -1784,8 +1855,7 @@ function buildUI() {
 
   // Suspending a subtree must actually reach the things in it: a flag
   // nobody acts on is the same bug as a capability nobody enforces.
-  function setSubtreeSuspended(id, suspended) {
-    const ids = FoafOS.apps.setSuspended(id, suspended);
+  function applySuspendFx(ids, suspended) {
     for (const nid of ids) {
       const node = FoafOS.apps.get(nid);
       if (!node) continue;
@@ -1802,9 +1872,123 @@ function buildUI() {
         win.classList.toggle('suspended', suspended);
       }
     }
+  }
+  function setSubtreeSuspended(id, suspended) {
+    const ids = FoafOS.apps.setSuspended(id, suspended);
+    applySuspendFx(ids, suspended);
     return ids;
   }
   FoafOS.setSubtreeSuspended = setSubtreeSuspended;
+  function setNodeSuspended(id, suspended) {
+    const ids = FoafOS.apps.setSuspended(id, suspended, { subtree: false });
+    applySuspendFx(ids, suspended);
+    return ids;
+  }
+  FoafOS.setNodeSuspended = setNodeSuspended;
+
+  // ── the ⓘ panel: where an app CAME FROM and what it MAY DO ──────────
+  // Three ledgers side by side: requested (what the registry entry asks
+  // for), granted (what attenuation actually allowed, and through whom),
+  // utilized (what the app has really exercised, counted). For the story
+  // node it also names the fink file that was TRUSTED to drive the UI —
+  // with its salted link hash — and carries the story-overlay tree, which
+  // used to float over the prose as its own widget.
+  function buildAppInfo(node, label) {
+    const app = appById(node.appId);
+    const panel = document.createElement('div');
+    panel.className = 'foafos-app-info';
+    panel.setAttribute('role', 'region');
+    panel.setAttribute('aria-label', `Details for ${label}`);
+
+    const row = (k, v, cls = '') => {
+      const d = document.createElement('div');
+      d.className = 'fi-row ' + cls;
+      d.innerHTML = `<span class="fi-k"></span><span class="fi-v"></span>`;
+      d.querySelector('.fi-k').textContent = k;
+      if (typeof v === 'string') d.querySelector('.fi-v').textContent = v;
+      else d.querySelector('.fi-v').appendChild(v);
+      panel.appendChild(d);
+      return d;
+    };
+
+    // origin
+    let origin = 'shell built-in';
+    if (app?.url) {
+      try {
+        const u = new URL(app.url, location.href);
+        origin = (u.origin === location.origin ? 'this site' : u.hostname) + ' · ' + u.pathname;
+      } catch (e) { origin = app.url; }
+    }
+    row('origin', origin);
+
+    // the story's trusted source + its deep-link hash
+    if (node.surface === 'story' && window.FinkPlayer?.currentStoryUrl) {
+      const src = FinkPlayer.currentStoryUrl;
+      const v = document.createElement('span');
+      v.textContent = src.split('/').slice(-2).join('/');
+      v.title = src;
+      row('trusted fink', v);
+      const hashRow = row('link hash', '…');
+      window.FinkNavigation?.generateUrlHash?.(src).then(h => {
+        hashRow.querySelector('.fi-v').textContent = h;
+      }).catch(() => { hashRow.querySelector('.fi-v').textContent = 'n/a'; });
+      if (FinkPlayer.mediaBasePath) row('media base', FinkPlayer.mediaBasePath);
+    }
+
+    // grant chain: who handed these capabilities down
+    const chain = [];
+    let p = node.parentId ? FoafOS.apps.get(node.parentId) : null;
+    while (p) { chain.push(p.label || p.appId); p = p.parentId ? FoafOS.apps.get(p.parentId) : null; }
+    chain.push(`root “${FoafOS.root?.label || 'root'}”`);
+    row('granted by', chain.join(' ⊂ '));
+
+    // capability chips: requested vs granted vs used
+    const requested = app?.capabilities || node.capabilities || [];
+    const granted = node.capabilities || [];
+    const used = FoafOS.capUse(node.appId);
+    const capWrap = document.createElement('span');
+    capWrap.className = 'fi-caps';
+    const all = [...new Set([...requested, ...granted, ...Object.keys(used)])];
+    if (!all.length) capWrap.textContent = 'none';
+    for (const cap of all) {
+      const chip = document.createElement('span');
+      const isGranted = granted.includes(cap);
+      const n = used[cap] || 0;
+      chip.className = 'fi-cap' + (isGranted ? ' granted' : ' refused') + (n ? ' used' : '');
+      chip.textContent = cap + (n ? ` ×${n}` : '');
+      chip.title = `${cap}: ${requested.includes(cap) ? 'requested' : 'not requested'}, ` +
+        `${isGranted ? 'granted' : 'NOT granted'}, ${n ? `used ${n}×` : 'never used'}`;
+      capWrap.appendChild(chip);
+    }
+    row('capabilities', capWrap);
+
+    // the story-overlay tree lives HERE now (owner's call: in the tabs,
+    // not floating over the prose)
+    if (node.surface === 'story' && window.FinkBreadcrumb?.finkStack?.length) {
+      const tree = document.createElement('div');
+      tree.className = 'fi-tree';
+      window.FinkBreadcrumb.finkStack.forEach((level, i, stack) => {
+        const isCur = i === stack.length - 1;
+        const line = document.createElement('button');
+        line.type = 'button';
+        line.className = 'fi-tree-level' + (isCur ? ' current' : '');
+        line.style.setProperty('--fi-depth', String(i));
+        const knots = level.knots.slice(-3).map(k => k.name).join(' › ');
+        line.textContent = `${isCur ? '📖' : '📁'} ${window.FinkBreadcrumb.formatUrl(level.url)}` +
+          (knots ? `  ›  ${knots}` : '') +
+          (level.knots.length > 3 ? `  (+${level.knots.length - 3})` : '');
+        if (!isCur) {
+          line.title = 'Return to this story';
+          line.addEventListener('click', () => window.FinkBreadcrumb.navigateBackToFink(i));
+        } else {
+          line.disabled = true;
+        }
+        tree.appendChild(line);
+      });
+      row('story tree', tree, 'fi-row-tree');
+    }
+    return panel;
+  }
 
   // Keyboard: the two shortcuts every desktop already trains people on.
   // Not captured while typing — a text field must keep its keys.

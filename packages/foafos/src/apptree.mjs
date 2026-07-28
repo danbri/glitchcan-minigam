@@ -124,11 +124,14 @@ export class AppTree {
     return closed;
   }
 
-  /** Suspend/resume a whole subtree. Returns the ids affected. */
-  setSuspended(id, suspended) {
+  /** Suspend/resume a node — by default with its whole subtree
+   *  (children never outlive or outrun their parent's state), or alone
+   *  with { subtree: false } for the switcher's app-only pause.
+   *  Returns the ids affected. */
+  setSuspended(id, suspended, { subtree = true } = {}) {
     const node = this.get(id);
     if (!node) return [];
-    const affected = [node, ...this.descendants(id)];
+    const affected = subtree ? [node, ...this.descendants(id)] : [node];
     for (const n of affected) n.suspended = suspended;
     this._say(suspended ? 'app.suspend' : 'app.resume', {
       summary: `${node.label}${affected.length > 1 ? ` +${affected.length - 1}` : ''} ${suspended ? 'suspended' : 'resumed'}`,

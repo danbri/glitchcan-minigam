@@ -74,11 +74,15 @@ window.FinkBreadcrumb = {
         });
     },
 
-    // Cycle through display modes: minimal → compact → expanded → minimal
+    // Cycle through display modes: minimal → compact → minimal. The
+    // EXPANDED tree moved into the shell's Running panel (owner's call —
+    // "the Stories tree should live within tabs"): press ⧉ Running and
+    // open ⓘ on the story. The expanded render path below survives for
+    // that panel's benefit and for anyone calling setMode directly.
     toggleExpanded() {
-        const modes = ['minimal', 'compact', 'expanded'];
-        const currentIndex = modes.indexOf(this.displayMode);
-        this.displayMode = modes[(currentIndex + 1) % 3];
+        const modes = ['minimal', 'compact'];
+        const currentIndex = Math.max(0, modes.indexOf(this.displayMode));
+        this.displayMode = modes[(currentIndex + 1) % modes.length];
         this.render();
     },
 
