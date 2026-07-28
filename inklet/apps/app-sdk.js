@@ -31,6 +31,10 @@
   const listeners = { init: [], grant: [], suspend: [], resume: [], terminate: [] };
   let appId = null;
   let capabilities = new Set();
+  // app.init may land BEFORE a deferred module registers onInit (app-sdk is
+  // a classic script; the app is type=module). Retain the config so a late
+  // onInit replays instead of missing the boot signal.
+  let lastInitConfig = null;
   let ready = false;
 
   const post = (msg) => {
@@ -160,6 +164,33 @@
     post({ ...msg, rid });
   });
 
+  // ── story requests: shell-mediated narrative effects ────────────────
+  // A boxed narrative runtime (FinkStoryRunner) has no host reach, so a
+  // tag effect that must touch the shell — launch a minigame, follow a
+  // peer FINK link, navigate — is a capability-checked REQUEST, not a
+  // direct call. Same bounded shape as a verb; the shell governs it by
+  // the app's capabilities and answers `{ ok, reason }`.
+  let storySeq = 0;
+  const storyWaiters = new Map();
+  const reqStory = (msg, ms = 8000) => new Promise((resolve) => {
+    if (window.parent === window) { resolve({ ok: false, reason: 'no-shell' }); return; }
+    const rid = `s${++storySeq}`;
+    storyWaiters.set(rid, resolve);
+    setTimeout(() => {
+      if (storyWaiters.delete(rid)) resolve({ ok: false, reason: 'timeout' });
+    }, ms);
+    post({ ...msg, rid });
+  });
+
+  // ── the scoped bus: an app is a bus citizen (spec §5.7) ─────────────
+  // publish limited to the app's granted namespace; inbound limited to
+  // the granted shell surfaces. The HOST enforces; a denied publish is
+  // dropped and announced shell-side. Standalone, both are no-ops.
+  const busSubs = [];
+  const busMatch = (pattern, topic) =>
+    pattern === '*' || pattern === topic
+    || (pattern.endsWith('.*') && topic.startsWith(pattern.slice(0, -1)));
+
   // ── the public surface ──────────────────────────────────────────────
   const foaf = {
     get id() { return appId; },
@@ -167,7 +198,12 @@
     can: (cap) => capabilities.has(cap),
     capabilities: () => [...capabilities],
 
-    onInit: (fn) => { listeners.init.push(fn); return foaf; },
+    onInit: (fn) => {
+      listeners.init.push(fn);
+      // already initialised? replay, so a late (module) listener still boots
+      if (ready) { try { fn(lastInitConfig || {}, foaf); } catch (err) { console.error(err); } }
+      return foaf;
+    },
     onSuspend: (fn) => { listeners.suspend.push(fn); return foaf; },
     onResume: (fn) => { listeners.resume.push(fn); return foaf; },
     onTerminate: (fn) => { listeners.terminate.push(fn); return foaf; },
@@ -219,6 +255,24 @@
         throw e;
       },
     },
+    /**
+     * Ask the shell to perform a narrative effect — `story.launch`,
+     * `story.link`, `story.navigate`. Capability-checked shell-side;
+     * resolves `{ ok, reason }`. The runtime supplies data (which game,
+     * which url); the shell decides whether it is allowed and does it.
+     */
+    storyRequest: (verb, detail) => reqStory({ type: 'story.request', verb, detail }),
+
+    /** The scoped bus (spec §5.7). publish/subscribe over the shell bus. */
+    bus: {
+      publish: (topic, data = {}) => post({ type: 'bus-publish', topic, data }),
+      subscribe: (pattern, cb) => {
+        const sub = { pattern, cb };
+        busSubs.push(sub);
+        return () => { const i = busSubs.indexOf(sub); if (i >= 0) busSubs.splice(i, 1); };
+      },
+    },
+
     /** Say something the shell's announcer should read out. */
     announce: (text) => window.__mgA11y?.announce?.(text),
     /** Explicit async store API for new code that does not want the shim. */
@@ -245,10 +299,27 @@
       if (resolve) { verbWaiters.delete(d.rid); resolve(d); }
       return;
     }
+    if (d.type === 'story.result') {
+      const resolve = storyWaiters.get(d.rid);
+      if (resolve) { storyWaiters.delete(d.rid); resolve(d); }
+      return;
+    }
+    if (d.type === 'bus-event') {
+      const ev = d.event;
+      if (ev && typeof ev.topic === 'string') {
+        for (const sub of [...busSubs]) {
+          if (busMatch(sub.pattern, ev.topic)) {
+            try { sub.cb(ev); } catch (err) { console.error(err); }
+          }
+        }
+      }
+      return;
+    }
     switch (d.type) {
       case 'app.init': {
         appId = d.appId || null;
         capabilities = new Set(d.capabilities || []);
+        lastInitConfig = d.config || {};
         storageGranted = capabilities.has('storage');
         // Seed the synchronous view BEFORE any app callback runs, so an
         // onInit handler that immediately reads a setting sees it.

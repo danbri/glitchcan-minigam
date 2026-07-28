@@ -1495,13 +1495,46 @@ function buildUI() {
           frame.contentWindow?.postMessage({
             type: 'app.init', appId: app.id, capabilities: caps,
             store: snapshot || {},
-            config: { surface: app.surface, name: app.name },
+            config: { surface: app.surface, name: app.name, story: app.story, bus: busGrants },
           }, '*');
         } catch (err) { /* closed */ }
         bus.publish('sys.app.ready', {
           summary: `${app.name} speaks the app protocol`,
           id: app.id, capabilities: caps, storage: !!snapshot,
         });
+        return;
+      }
+      // A narrative effect from a BOXED story runtime. The runtime has no
+      // host reach, so a tag that must touch the shell arrives here as a
+      // capability-checked request — "sandboxed all the way up." Each verb
+      // maps to a `story:<x>` capability; the effect is performed by the
+      // shell's own APIs, never by the app. Refusal is a named answer.
+      if (d.type === 'story.request') {
+        const reply = (payload) => {
+          try { frame.contentWindow?.postMessage({ type: 'story.result', rid: d.rid, ...payload }, '*'); }
+          catch (err) { /* closed */ }
+        };
+        const verb = String(d.verb || '');
+        const need = { 'story.launch': 'story:launch', 'story.link': 'story:link',
+                       'story.navigate': 'story:navigate' }[verb];
+        bus.publish('story.request', {
+          summary: `${app.name}: ${verb}`, appId: app.id, verb, detail: d.detail,
+        });
+        if (!need) { reply({ ok: false, reason: 'unknown-verb' }); return; }
+        if (!caps.includes(need)) { reply({ ok: false, reason: 'denied' }); return; }
+        try {
+          if (verb === 'story.launch') {
+            const game = String(d.detail?.game || '').toLowerCase();
+            if (!game) { reply({ ok: false, reason: 'bad-params' }); return; }
+            window.FinkMinigames?.startMinigame?.(game);
+            reply({ ok: true, launched: game });
+          } else {
+            // link / navigate: granted but not yet wired — named, not silent.
+            reply({ ok: false, reason: 'not-implemented' });
+          }
+        } catch (err) {
+          reply({ ok: false, reason: 'failed' });
+        }
         return;
       }
       // Writes are PROPOSALS. The broker checks the capability and the

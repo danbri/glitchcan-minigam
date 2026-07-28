@@ -1,10 +1,12 @@
 // The frozen kernel contract. Every assertion here pins a behaviour that a
 // caller relies on byte-for-byte; a change that trips one is a MAJOR bump.
 import assert from 'node:assert';
+// extractBlocks is the node:vm adapter (../src/node.js); everything else is
+// the pure kernel. node.js re-exports the kernel, so one import covers both.
 import {
   DEFAULT_SIGILS, rawOf, createCapture, extractBlocks,
   blocksOfType, inkOf, firstInkOf,
-} from '../src/index.js';
+} from '../src/node.js';
 
 export async function run() {
   // ── 1. RAW capture: backslash-escaped `//` must survive verbatim ──────

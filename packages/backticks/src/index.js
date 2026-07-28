@@ -33,8 +33,10 @@
 //     firstInkOf: the first ink block's raw text (the live browser
 //     player's current single-block contract). Two contracts, both named,
 //     so choosing between them is on the record and never an accident.
-
-import vm from 'node:vm';
+//
+// This file is the PURE, BROWSER-SAFE kernel — no Node builtins — so the
+// boxed browser runner imports it directly. The node:vm isolation adapter
+// (`extractBlocks`) lives in ./node.js, imported only from Node.
 
 /** The one binding the kernel ships. Everything else is the host's choice. */
 export const DEFAULT_SIGILS = new Map([['oooOO', 'text/x-ink']]);
@@ -106,34 +108,6 @@ export function firstInkOf(blocks) {
   return first ? first.raw : '';
 }
 
-/**
- * Node isolation adapter: run a .fink.js source in a node:vm context with
- * the capture globals installed, and return the captured blocks.
- *
- * node:vm is NOT a hard security boundary (a determined source can reach
- * out), which is why the runner is a THIN adapter and the trust boundary
- * for untrusted input remains the CALLER's choice of isolate — for the
- * live player that is an opaque-origin iframe, not this.
- *
- * @param {string} jsSource
- * @param {object} [opts]
- * @param {Map<string,string>|Object} [opts.sigils]
- * @param {number} [opts.timeout] vm timeout ms (default 2000)
- * @returns {{ blocks: Array<{sigil,mediaType,raw,index}> }}
- */
-export function extractBlocks(jsSource, opts = {}) {
-  if (typeof jsSource !== 'string') throw new TypeError('jsSource must be a string');
-  const { globals, blocks } = createCapture(opts.sigils ?? DEFAULT_SIGILS);
-  const context = vm.createContext({ ...globals }, { name: 'backticks-extract' });
-  try {
-    new vm.Script(jsSource, { filename: 'input.fink.js' })
-      .runInContext(context, { timeout: opts.timeout ?? 2000 });
-  } catch {
-    // Sources that touch window/document throw AFTER their sigil calls
-    // ran — the captured blocks are still good.
-  }
-  return { blocks };
-}
 
 /**
  * The browser/iframe capture installer, as a self-contained source STRING.

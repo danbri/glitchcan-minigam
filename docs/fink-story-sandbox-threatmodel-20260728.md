@@ -347,6 +347,21 @@ and still ship, because containment contains its mistakes.
   4. Gate: a breakout suite that, from inside the story frame, TRIES each
      C-row and proves it refused or contained (e2e-vars / e2e-caps
      pattern). This gate is the definition of "boxed."
+
+  **Slab 1 landed (2026-07-28):** `inklet/apps/storyrunner/` is a boxed
+  FinkStoryRunner — it compiles (backticks kernel) and plays a real ink
+  story entirely inside an opaque-origin app frame, renders prose+choices in
+  its own document, and styles ITSELF (`# BG:` colours the frame, not the
+  host). It reaches the shell only through `foaf.storyRequest` →
+  capability-checked `story:*` verbs and the scoped bus; `# MINIGAME:`
+  surfaces as a governed `story.launch` (which opens a separately-boxed
+  guest — up AND down). `e2e-storyrunner.mjs` proves the box: from inside,
+  `parent.FoafOS` / `parent.FinkInkEngine` / `parent.document` all throw
+  `SecurityError` (C13 closed by construction). It runs PARALLEL to the live
+  host-side player, which is untouched. Remaining Slab 2+: media verbs
+  (C8), link/navigate wiring (C4/C12), nesting the compile step in a
+  throwaway iframe INSIDE the runner (inner integrity), and reaching feature
+  parity so the boxed runner can replace the host-side player.
 - **Phase 3 — POLICY: the trust graph + session integrity, default fork.**
   Typed edges (`relationType` + optional `# INTEGRITY:`) weighed over
   MULTIPLE signals (hash, origin, signature, reputation, consent — §5), not
