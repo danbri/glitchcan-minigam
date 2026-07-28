@@ -276,9 +276,12 @@ button:focus-visible {
     outline-offset: 2px;
 }
 
-/* editorial flourish: broadsheet rules its choices instead of boxing */
+/* editorial flourish: broadsheet rules its choices instead of boxing.
+   HAIRLINES, not ledger bars — a 2px black rule under every row had the
+   rhythm of a spreadsheet; a 1px rule at 45% strength reads as a page. */
 :root[data-skin="broadsheet"] .choice-btn {
-    border-width: 0 0 2px 0;
+    border-width: 0 0 1px 0;
+    border-color: color-mix(in srgb, var(--sk-line) 45%, transparent);
     padding-left: 0;
     font-weight: 600;
 }
@@ -306,11 +309,12 @@ button:focus-visible {
 #foafos-drawer, .foafos-window, #foafos-dock, #wm-chrome {
     font-family: var(--sk-font-ui);
 }
-#foafos-dock, #wm-chrome {
+#foafos-dock, #wm-chrome, .breadcrumb-container.mode-minimal {
     background: var(--sk-bg);
     border-color: var(--sk-line);
     color: var(--sk-accent);
 }
+.breadcrumb-container.mode-minimal .breadcrumb-toggle { color: var(--sk-accent); }
 #wm-chrome button { background: var(--sk-choice-bg); color: var(--sk-choice-ink); border-color: var(--sk-choice-line); }
 #wm-chrome button.active { background: var(--sk-accent); color: var(--sk-accent-ink); border-color: var(--sk-accent); }
 .foafos-window-bar { background: var(--sk-accent); color: var(--sk-accent-ink); border-color: var(--sk-line); }

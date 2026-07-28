@@ -255,14 +255,12 @@ window.FinkUI = {
         if (!this.storedChoices) return;
         this.clearChoices();
 
-        // Alignment is a batch decision. When SOME choices earn a semantic
-        // emoji and others don't, per-choice prefixes give the list two
-        // different text edges — a ragged indent that reads as a mistake.
-        // If any choice in this batch has an emoji, every choice gets a
-        // fixed-width lead slot (empty for the plain ones); if none do,
-        // nobody pays for the indent.
+        // The lead slot is ALWAYS rendered (empty when the choice has no
+        // emoji): one fixed icon gutter, one text edge — across the whole
+        // story, not just within a batch. The earlier batch-conditional
+        // version kept each list straight but let the edge jump between
+        // beats, which reads as drift once you page.
         const emojis = this.storedChoices.map(c => this.chooseEmoji(c.text));
-        const anyEmoji = emojis.some(Boolean);
 
         this.storedChoices.forEach((choice, i) => {
             const choiceBtn = document.createElement('button');
@@ -270,9 +268,8 @@ window.FinkUI = {
             choiceBtn.dataset.index = i;
 
             const label = FinkUtils.escapeHtml(choice.text.trim());
-            choiceBtn.innerHTML = anyEmoji
-                ? `<span class="choice-lead" aria-hidden="true">${emojis[i] || ''}</span>${label}`
-                : label;
+            choiceBtn.innerHTML =
+                `<span class="choice-lead" aria-hidden="true">${emojis[i] || ''}</span>${label}`;
 
             setTimeout(() => choiceBtn.classList.add('ready'), 100 * (i + 1) + 400);
 
@@ -570,10 +567,19 @@ window.FinkUI = {
             }
         }
         if (i !== null && i >= n - 1) i = null;      // walked back to the front
+        const prevShown = this.pageIndex === null ? n - 1 : this.pageIndex;
         this.pageIndex = i;
         const liveIndex = n - 1;
         const shown = i === null ? liveIndex : i;
         sections.forEach((s, k) => { s.style.display = k === shown ? 'block' : 'none'; });
+        // Motion carries direction: back slides in from the left, forward
+        // from the right — the page tells you which way you just moved.
+        const sec = sections[shown];
+        if (sec && shown !== prevShown) {
+            sec.classList.remove('page-enter-back', 'page-enter-fwd');
+            void sec.offsetWidth;   // restart the animation
+            sec.classList.add(shown < prevShown ? 'page-enter-back' : 'page-enter-fwd');
+        }
         document.body.toggleAttribute('data-fink-paging-past', i !== null);
         if (opts.skipParts) {
             this.parts = []; this.partIndex = 0;
@@ -908,6 +914,7 @@ window.FinkUI = {
             if (targetSection.parentNode && targetSection.classList.contains('current')) {
                 targetSection.insertBefore(img, targetSection.firstChild);
                 FinkUtils.debugLog(`Image INSERTED: ${imagePath} (was decision #${capturedDecisionCount}, now #${nowDecisionCount})`);
+                this._applyAmbient(img, targetSection);
             } else {
                 FinkUtils.debugLog(`Image BLOCKED: ${imagePath} (was decision #${capturedDecisionCount}, now #${nowDecisionCount}) - section is ${targetSection.parentNode ? 'past' : 'removed'}`);
             }
@@ -918,6 +925,35 @@ window.FinkUI = {
         };
 
         img.src = actualImagePath;
+    },
+
+    // AMBIENT LIGHT FROM THE ARTWORK. Average the scene image down to a
+    // handful of pixels and hand its colour to the card as
+    // --scene-ambient, so the frame takes the painting's own light.
+    // Deliberately NO crossOrigin attribute on the image: setting it
+    // would BREAK loading from any host without CORS headers. Instead we
+    // just try — same-origin images sample fine; a tainted cross-origin
+    // canvas throws, we catch, and the skin's line colour stands.
+    _applyAmbient(img, section) {
+        try {
+            const c = document.createElement('canvas');
+            c.width = c.height = 8;
+            const ctx = c.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(img, 0, 0, 8, 8);
+            const d = ctx.getImageData(0, 0, 8, 8).data;
+            let r = 0, g = 0, b = 0, n = 0;
+            for (let i = 0; i < d.length; i += 4) {
+                if (d[i + 3] < 32) continue;          // ignore transparent
+                r += d[i]; g += d[i + 1]; b += d[i + 2]; n++;
+            }
+            if (!n) return;
+            r = Math.round(r / n); g = Math.round(g / n); b = Math.round(b / n);
+            // lift very dark averages a little — a glow needs some light
+            const max = Math.max(r, g, b);
+            if (max < 60 && max > 0) { const k = 60 / max; r = Math.round(r * k); g = Math.round(g * k); b = Math.round(b * k); }
+            section.style.setProperty('--scene-ambient', `${r} ${g} ${b}`);
+            section.classList.add('has-ambient');
+        } catch (e) { /* tainted canvas or no 2d context: keep the skin line */ }
     },
 
     updateVideo(videoPath, rawBasehref) {

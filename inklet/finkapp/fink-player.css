@@ -143,7 +143,12 @@ body[data-fink-depth="8"] #narrative-view {
     padding-bottom: 76px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    /* Composed, not centred: dead-centre placement left equal voids above
+       and below — leftover space, not placed space. The card hangs from
+       an upper third-line (critic's armature note); the remaining air
+       sits below the choices where the corner controls live. */
+    justify-content: flex-start;
+    padding-top: max(6vh, 28px);
 }
 #narrative-view[data-fits="yes"]::after { display: none; }
 
@@ -339,7 +344,51 @@ body[data-fink-part-pending] #choices { display: none; }
     border: 1px solid var(--zx-cyan);
     border-radius: var(--border-radius-md);
     padding: 0.8em;
-    box-shadow: 0 0 15px rgba(0, 192, 192, 0.15);
+    /* One light source, upper-left, for the whole app: a soft ambient
+       halo plus a directional drop. Shadows that all agree on where the
+       light is are most of what "solid" means for flat UI. */
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+                0 10px 30px -14px rgba(0, 0, 0, 0.5),
+                0 0 15px rgba(0, 192, 192, 0.12);
+    /* Staging: one entrance for the whole scene — the card rises and
+       settles as a unit, then its text and choices play inside it. */
+    animation: sceneEnter var(--dur-slow) var(--ease-out-soft);
+}
+@keyframes sceneEnter {
+    0% { opacity: 0; transform: translateY(12px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+/* AMBIENT LIGHT FROM THE ARTWORK. When the scene image decodes, FinkUI
+   samples its average colour and sets --scene-ambient (an "R G B"
+   triple) on the section. The card's edge and glow then take the
+   painting's own light — a golden scene glows gold, a night scene goes
+   cold — which is what binds image and prose into ONE composition.
+   Cross-origin images that refuse sampling simply keep the skin line. */
+.story-section.has-ambient {
+    border-color: rgb(var(--scene-ambient) / 0.85);
+    /* the wash: the painting's light spills a little way down the card
+       (inset shadow paints above the skin's background, below content —
+       so it survives the skins' background shorthand) */
+    box-shadow: inset 0 2.2em 2.6em -2em rgb(var(--scene-ambient) / 0.22),
+                0 12px 34px -14px rgb(var(--scene-ambient) / 0.45),
+                0 0 26px rgb(var(--scene-ambient) / 0.22);
+}
+
+/* Direction is information: paging BACK enters from the left, coming
+   FORWARD enters from the right. The motion says which way you moved. */
+.story-section.page-enter-back { animation: pageFromLeft var(--dur-base) var(--ease-out-soft); }
+.story-section.page-enter-fwd { animation: pageFromRight var(--dur-base) var(--ease-out-soft); }
+@keyframes pageFromLeft {
+    0% { opacity: 0; transform: translateX(-16px); }
+    100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes pageFromRight {
+    0% { opacity: 0; transform: translateX(16px); }
+    100% { opacity: 1; transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .story-section.page-enter-back, .story-section.page-enter-fwd { animation: none; }
 }
 
 /* Lead media inside the chunk.
@@ -369,6 +418,28 @@ body[data-fink-part-pending] #choices { display: none; }
        the overlap reads as a deliberate pinned header and not a glitch */
     background: var(--sk-bg-figure, rgba(0, 20, 0, 1));
     box-shadow: 0 6px 10px -6px rgba(0, 0, 0, 0.55);
+    /* Painting treatment: a touch more chroma and contrast (a varnish
+       coat, not a filter look), and a soft matte — the outer few percent
+       of the plate fades into the card so hard rectangle edges stop
+       fighting the prose. */
+    filter: saturate(1.06) contrast(1.03);
+    -webkit-mask-image: radial-gradient(ellipse 118% 118% at 50% 42%, #000 76%, transparent 100%);
+    mask-image: radial-gradient(ellipse 118% 118% at 50% 42%, #000 76%, transparent 100%);
+}
+
+/* The slow drift: the painting breathes. Scale-only (compositor), 28s,
+   there and back — below the threshold of "animation", above the
+   threshold of "alive". Live scene only; the past stands still. */
+.story-section.current .section-media {
+    animation: sceneDrift 28s ease-in-out infinite alternate;
+}
+@keyframes sceneDrift {
+    from { transform: scale(1); }
+    to { transform: scale(1.045); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .story-section.current .section-media { animation: none; }
+    .story-section .section-media { mask-image: none; -webkit-mask-image: none; }
 }
 /* A scene that already fits has nothing to scroll, so sticking would only
    add a hairline seam. */
@@ -401,6 +472,13 @@ body[data-fink-part-pending] #choices { display: none; }
         margin: 0;
     }
     .story-section > :not(.section-media) { grid-column: 2; }
+    /* The choices belong to the RIGHT page: full-width rows under both
+       columns broke the spread into unrelated bands. Bound to the text
+       column's measure, art page left, reading page right — a book. */
+    #narrative-view #choices {
+        margin-left: calc(36% + 0.9em);
+        margin-bottom: 76px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -459,39 +537,41 @@ body[data-fink-part-pending] #choices { display: none; }
     opacity: 0.5;
 }
 
-/* Text animation styles */
+/* Text animation styles.
+   Compositor only: transform + opacity. The old blur(4-8px) keyframes
+   repainted every frame, smeared the type mid-entrance, and read as
+   soft focus rather than intent. Slow-out (fast start, gentle landing)
+   is the arriving-object curve; the rise is small because text is not a
+   physical prop — it should settle, not leap. */
 #story-output .text-chunk {
     margin: 0.5em 0;
-    animation: chunkAppear 0.6s ease-out forwards;
+    animation: chunkAppear var(--dur-base) var(--ease-out-soft) forwards;
     opacity: 0;
-    transform: translateY(10px) scale(0.95);
-    filter: blur(4px);
+    transform: translateY(8px);
 }
 
 #story-output .text-chunk.visible {
     opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
+    transform: translateY(0);
 }
 
-/* Word-by-word reveal animation */
+/* Word-by-word reveal: the same settle, per word — a whisper of
+   follow-through (2px past, then back) keeps it alive without wobble. */
 #story-output .text-chunk .word {
     display: inline-block;
     opacity: 0;
-    filter: blur(8px);
-    transform: translateY(5px) scale(0.9);
-    animation: wordReveal 0.4s ease-out forwards;
+    transform: translateY(4px);
+    animation: wordReveal var(--dur-base) var(--ease-settle) forwards;
 }
 
 @keyframes wordReveal {
-    0% { opacity: 0; filter: blur(8px); transform: translateY(5px) scale(0.9); }
-    60% { opacity: 1; filter: blur(2px); transform: translateY(-2px) scale(1.02); }
-    100% { opacity: 1; filter: blur(0); transform: translateY(0) scale(1); }
+    0% { opacity: 0; transform: translateY(4px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes chunkAppear {
-    0% { opacity: 0; transform: translateY(10px) scale(0.95); filter: blur(4px); }
-    100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+    0% { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
 
 /* Latest chunk styling */
@@ -553,13 +633,14 @@ body[data-fink-part-pending] #choices { display: none; }
     font-family: inherit;
     font-size: var(--font-size-base);
     cursor: pointer;
-    animation: choiceAppear 0.4s ease-out forwards;
+    animation: choiceAppear var(--dur-slow) var(--ease-settle) forwards;
     opacity: 0;
-    transform: translateX(-20px);
+    transform: translateY(10px);
     position: relative;
     pointer-events: none;
     min-height: var(--touch-target-min);
-    transition: background var(--transition-normal), border-color var(--transition-normal);
+    transition: background var(--transition-normal), border-color var(--transition-normal),
+                transform var(--transition-fast);
 }
 
 /* The choice marker belongs to the SKIN, not the base layer: fink-skins.css
@@ -568,14 +649,20 @@ body[data-fink-part-pending] #choices { display: none; }
    rule that used to force '▶ ' everywhere (and swap to '▶▶ ' on hover,
    shifting the label) is gone; hover feedback is colour/border/underline. */
 
-.choice-btn:nth-child(1) { animation-delay: 0.1s; }
-.choice-btn:nth-child(2) { animation-delay: 0.2s; }
-.choice-btn:nth-child(3) { animation-delay: 0.3s; }
-.choice-btn:nth-child(4) { animation-delay: 0.4s; }
+/* Timing: a 70ms stagger reads as one gesture dealing cards, not four
+   separate events. The old 100ms × sideways-slide felt like a queue. */
+.choice-btn:nth-child(1) { animation-delay: 60ms; }
+.choice-btn:nth-child(2) { animation-delay: 130ms; }
+.choice-btn:nth-child(3) { animation-delay: 200ms; }
+.choice-btn:nth-child(4) { animation-delay: 270ms; }
+.choice-btn:nth-child(n+5) { animation-delay: 340ms; }
 
+/* Rise with follow-through: up, 2px past, settle. The choices arrive
+   from below because that is where the reader's eye is heading. */
 @keyframes choiceAppear {
-    0% { opacity: 0; transform: translateX(-20px); }
-    100% { opacity: 1; transform: translateX(0); }
+    0% { opacity: 0; transform: translateY(10px); }
+    70% { opacity: 1; transform: translateY(-2px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
 
 .choice-btn.ready { pointer-events: auto; }
@@ -587,7 +674,20 @@ body[data-fink-part-pending] #choices { display: none; }
     border-color: var(--zx-yellow);
     text-decoration: underline;
 }
-.choice-btn:active { transform: scale(0.98); }
+/* Press: a real button gives — down and slightly smaller, instantly. */
+.choice-btn:active { transform: translateY(1px) scale(0.985); }
+
+/* Reduced motion: content appears, nothing travels. */
+@media (prefers-reduced-motion: reduce) {
+    #story-output .text-chunk,
+    #story-output .text-chunk .word,
+    .choice-btn,
+    .story-section.current {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}
 
 /* --- THEATRE MODE: video is the stage, text rides on top --- */
 /* The video container abandons its sticky 640px box and fills the

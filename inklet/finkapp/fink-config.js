@@ -11,7 +11,7 @@ window.FinkConfig = {
     emojiMap: {
         'go': '🚶', 'walk': '🚶‍♂️', 'run': '🏃‍♀️', 'look': '👀', 'search': '🔍',
         'take': '🤲', 'grab': '✊', 'hold': '👐', 'find': '🔎',
-        'talk': '💬', 'ask': '❓', 'tell': '🗣️', 'speak': '🗯️',
+        'talk': '💬', 'ask': '💭', 'tell': '🗣️', 'speak': '🗯️',
         'listen': '👂', 'hear': '🔊', 'watch': '👁️', 'observe': '🧐',
         'wait': '⏳', 'stay': '⌛', 'hide': '🙈', 'escape': '🏃‍♂️',
         'open': '🔓', 'close': '🔒', 'climb': '🧗‍♀️', 'jump': '⏫',
@@ -19,7 +19,7 @@ window.FinkConfig = {
         'use': '🔧', 'call': '📞', 'push': '👉', 'pull': '👈',
         'read': '📚', 'write': '✍️', 'follow': '🦮', 'lead': '🧭',
         'right': '➡️', 'left': '⬅️', 'up': '⬆️', 'down': '⬇️',
-        'yes': '✅', 'no': '❌', 'maybe': '❓', 'help': '🆘',
+        'yes': '👍', 'no': '👎', 'maybe': '💭', 'help': 'ℹ️',
         'restart': '🔄', 'mine': '⛏️', 'gems': '💎', 'play': '🎮',
         'explore': '🧭', 'enter': '🚪', 'exit': '🚪', 'back': '↩️'
     },

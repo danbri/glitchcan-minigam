@@ -25,12 +25,23 @@
     border-color: rgba(0, 192, 192, 0.5);
 }
 
-/* Minimal mode: just the toggle icon. Round, like the dock and WM grips —
-   the shell's corner affordances share one visual language, so a bare
-   square '▶' box no longer reads as debris that survived a refactor. */
+/* Minimal mode: just the toggle icon. ONE CHROME FAMILY: same 40px
+   circle, same single stroke, same corner inset as the dock and the WM
+   grip — three corner controls in three styles read as debris; one
+   family reads as furniture. Colours come from the skin group in
+   fink-skins.css, same as its siblings. */
 .breadcrumb-container.mode-minimal {
     max-width: 40px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+}
+.breadcrumb-container.mode-minimal .breadcrumb-toggle {
+    min-width: 38px;
+    min-height: 38px;
+    opacity: 0.85;
 }
 
 /* Compact mode: single line like browser address bar */

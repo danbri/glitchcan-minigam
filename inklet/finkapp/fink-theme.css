@@ -30,6 +30,18 @@
     --transition-normal: 0.15s ease;
     --transition-slow: 0.3s ease;
 
+    /* Motion language (see docs/finkapp-motion-language-20260728.md).
+       Two curves carry the whole app: a soft decelerate for things that
+       ARRIVE (slow-out), and a settle curve with a small overshoot for
+       things that need follow-through. Durations in three sizes only —
+       one rhythm, not forty bespoke timings. Compositor rule: entrances
+       animate transform and opacity ONLY (no blur/filter keyframes). */
+    --ease-out-soft: cubic-bezier(0.22, 0.9, 0.26, 1);
+    --ease-settle: cubic-bezier(0.3, 1.25, 0.4, 1);
+    --dur-fast: 140ms;
+    --dur-base: 300ms;
+    --dur-slow: 480ms;
+
     /* Borders */
     --border-radius-sm: 4px;
     --border-radius-md: 8px;
