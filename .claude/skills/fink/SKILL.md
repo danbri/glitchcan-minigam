@@ -1171,6 +1171,19 @@ AND down. `e2e-storyrunner.mjs` proves containment: `parent.FoafOS` /
   hostile `.fink.js` can't touch the runner's own foaf, let alone the
   host. Recursion end to end: shell → runner → compile box; shell →
   runner → governed guest.
+- **Media roles (Slab 3):** a beat's central media has a prominence role —
+  `hero` (media owns the screen, prose is a bottom caption), `feature`
+  (default: pinned media, prose below), `accent` (small top-right thumb,
+  text leads; tap to enlarge). SHORT authoring form
+  (`# VIDEO: <id> hero`, `# IMAGE: pic.svg accent`), MAPPED to render-hint
+  spec tokens (`X-MEDIA-HERO/FEATURE/ACCENT`) so it shares the paged-beats
+  render-hint namespace. `MEDIA_ROLES` in storyrunner.js is the one map;
+  CSS keys off `#stage[data-media-role]`. A bare 11-char `# VIDEO:` value
+  → youtube-nocookie embed, in-frame. Doc:
+  `docs/fink-media-roles-20260728.md`; layouts asserted (geometry + spec
+  token) in `e2e-storyrunner.mjs`. Still boxed — media renders in the
+  runner's own frame. Remaining for parity: local audio, and the
+  link/navigate verbs.
 - `app-sdk.js` grew `foaf.storyRequest` and `foaf.bus`, and now replays
   `onInit` to a late (module) listener — app.init can land before a
   `type=module` app registers its handler; without the replay the app

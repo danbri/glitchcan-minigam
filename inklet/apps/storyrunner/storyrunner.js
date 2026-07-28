@@ -19,6 +19,7 @@ const $ = (id) => document.getElementById(id);
 const state = {
   storyUrl: null, ready: false, prose: [], choices: [], bg: null,
   ended: false, requests: [], boxedCompile: false,
+  media: null, mediaRole: null, mediaSpec: null,
 };
 let story = null;
 
@@ -117,11 +118,71 @@ function handleTag(tag) {
     case 'FINK':
       storyRequest('story.link', { url: value });
       break;
-    // IMAGE / VIDEO / AUDIO: media verbs, a later slab. Named, not silent.
-    case 'IMAGE': case 'VIDEO': case 'AUDIO':
-      setStatus(`(${key.toLowerCase()} pending: media verbs are a later slab)`);
+    // A beat's central media. The last IMAGE/VIDEO in a beat wins (matches
+    // the live engine); rendered after the Continue loop.
+    case 'IMAGE': case 'VIDEO':
+      _beatMedia = parseMedia(key, value);
+      break;
+    case 'AUDIO':
+      setStatus('(audio is a later slab)');   // named, not silent
       break;
   }
+}
+
+// Media role — a per-beat spectrum of prominence. SHORT authoring form
+// (`# VIDEO: <id> hero`), MAPPED to the render-hint spec so the two
+// schemes stay in sync (docs/fink-media-roles-20260728.md):
+//   hero    → X-MEDIA-HERO     media owns the screen; prose is a caption
+//   feature → X-MEDIA-FEATURE  big pinned media, prose scrolls below (default)
+//   accent  → X-MEDIA-ACCENT   text leads; media is a small, tappable thumb
+const MEDIA_ROLES = { hero: 'X-MEDIA-HERO', feature: 'X-MEDIA-FEATURE', accent: 'X-MEDIA-ACCENT' };
+let _beatMedia;   // undefined = no media tag this beat (keep previous, sticky)
+
+function parseMedia(kind, value) {
+  const parts = value.split(/\s+/).filter(Boolean);
+  let role = 'feature';
+  if (parts.length > 1 && MEDIA_ROLES[parts[parts.length - 1].toLowerCase()]) {
+    role = parts.pop().toLowerCase();
+  }
+  return { kind, src: parts.join(' '), role };
+}
+
+function renderMedia(m) {
+  const stage = $('stage');
+  const box = $('media');
+  box.textContent = '';
+  box.onclick = null;
+  if (!m || !m.src) {
+    stage.removeAttribute('data-media-role');
+    state.media = null; state.mediaRole = null; state.mediaSpec = null;
+    return;
+  }
+  let el;
+  if (m.kind === 'VIDEO' && /^[\w-]{11}$/.test(m.src)) {
+    // a bare 11-char id is a YouTube video — nocookie embed, in-frame
+    el = document.createElement('iframe');
+    el.src = `https://www.youtube-nocookie.com/embed/${m.src}`;
+    el.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+    el.setAttribute('allowfullscreen', '');
+    el.title = 'story video';
+  } else if (m.kind === 'VIDEO') {
+    el = document.createElement('video');
+    el.src = m.src; el.controls = true; el.playsInline = true;
+  } else {
+    el = document.createElement('img');
+    el.src = m.src; el.alt = '';
+  }
+  el.className = 'media-el';
+  box.appendChild(el);
+  stage.setAttribute('data-media-role', m.role);
+  // accent: tap the thumbnail to blow it up to hero, tap again to shrink
+  if (m.role === 'accent') {
+    box.onclick = () => stage.setAttribute('data-media-role',
+      stage.getAttribute('data-media-role') === 'accent' ? 'hero' : 'accent');
+  }
+  state.media = { kind: m.kind, src: m.src };
+  state.mediaRole = m.role;
+  state.mediaSpec = MEDIA_ROLES[m.role];
 }
 
 async function storyRequest(verb, detail) {
@@ -136,12 +197,14 @@ async function storyRequest(verb, detail) {
 
 function advance() {
   if (!story) return;
+  _beatMedia = undefined;                 // undefined ⇒ keep previous (sticky)
   while (story.canContinue) {
     const text = story.Continue();
     (story.currentTags || []).forEach(handleTag);
     const trimmed = text.trim();
     if (trimmed) addProse(trimmed);
   }
+  if (_beatMedia !== undefined) renderMedia(_beatMedia);
   renderChoices();
   if (!story.canContinue && story.currentChoices.length === 0) {
     state.ended = true;
