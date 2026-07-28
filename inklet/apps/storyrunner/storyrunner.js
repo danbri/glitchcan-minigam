@@ -135,11 +135,14 @@ function handleTag(tag) {
   }
 }
 
-// Audio, BOXED and GOVERNED. A looping bed for `# AUDIO: <file>`, played by
-// an <audio> element in the runner's own frame, its volume driven by the
-// shell's master level (foaf.onAudio) so the dock's mute reaches it. Synth
-// audio (`# AUDIO: synth:*`) is the host's FinkFoley — not reachable from
-// the box; named, not silent.
+// Audio as a HOST service — and the iOS fix. Inside foafos the runner does
+// NOT play audio in its own sandboxed frame (iOS blocks a cross-origin
+// frame with no gesture unlock); it asks the SHELL to play it via
+// FinkAudio, which lives in the gesture-unlocked host document and is
+// already governed by the master volume. Standalone (no shell), it falls
+// back to an in-frame element so dev still hears something. Synth audio
+// (`# AUDIO: synth:*`) is the host's FinkFoley — not reachable from the
+// box; named, not silent.
 let _audioEl = null;
 let _audioLevel = 1;
 
@@ -147,20 +150,28 @@ function playAudio(value) {
   const v = (value || '').trim();
   if (/^synth:/i.test(v)) { setStatus('(synth audio is host-only, not in the boxed runner)'); return; }
   if (!v) return;
-  stopAudio();
+  state.audio = v;
+  if (window.foaf?.storyRequest) {
+    // brokered to the shell — plays from the host document (iOS-friendly)
+    storyRequest('story.audio', { url: resolveStoryUrl(v), action: 'play' });
+    return;
+  }
+  stopAudio();                                   // standalone dev fallback
   _audioEl = new Audio(v);
   _audioEl.loop = true;
   _audioEl.volume = _audioLevel;
   _audioEl.play().catch(() => { /* autoplay may wait for a gesture */ });
-  state.audio = v;
 }
 
 function stopAudio() {
-  if (_audioEl) { try { _audioEl.pause(); } catch (e) { /* gone */ } _audioEl = null; }
   state.audio = null;
+  if (window.foaf?.storyRequest) { storyRequest('story.audio', { action: 'stop' }); return; }
+  if (_audioEl) { try { _audioEl.pause(); } catch (e) { /* gone */ } _audioEl = null; }
 }
 
-// The shell's master volume/mute, applied to the runner's bed.
+// The shell's master volume/mute. When brokered, FinkAudio already applies
+// it host-side; we only drive the standalone fallback element. Recorded
+// either way so "is the box governed" is observable.
 function applyAudioLevel({ level }) {
   _audioLevel = level;
   if (_audioEl) _audioEl.volume = level;

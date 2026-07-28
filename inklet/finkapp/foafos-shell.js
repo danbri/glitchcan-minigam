@@ -1516,7 +1516,7 @@ function buildUI() {
         };
         const verb = String(d.verb || '');
         const need = { 'story.launch': 'story:launch', 'story.link': 'story:link',
-                       'story.navigate': 'story:navigate' }[verb];
+                       'story.navigate': 'story:navigate', 'story.audio': 'audio' }[verb];
         bus.publish('story.request', {
           summary: `${app.name}: ${verb}`, appId: app.id, verb, detail: d.detail,
         });
@@ -1532,6 +1532,21 @@ function buildUI() {
             if (!game) { reply({ ok: false, reason: 'bad-params' }); return; }
             window.FinkMinigames?.startMinigame?.(game);
             reply({ ok: true, launched: game });
+          } else if (verb === 'story.audio') {
+            // Audio is a HOST service — and this is the iOS fix. A
+            // sandboxed frame has no gesture unlock, so `new Audio()`
+            // inside the box is throttled/blocked on iOS. Playing through
+            // FinkAudio (this document, gesture-unlocked, already governed
+            // by the master volume) is both the correct capability model
+            // and the thing that actually plays on a phone.
+            const action = d.detail?.action || 'play';
+            if (action === 'stop') { window.FinkAudio?.stop?.(); reply({ ok: true, action }); return; }
+            let base, target;
+            try { base = new URL(frame.src); target = new URL(String(d.detail?.url || ''), base); }
+            catch { reply({ ok: false, reason: 'bad-url' }); return; }
+            if (target.origin !== base.origin) { reply({ ok: false, reason: 'cross-origin-blocked' }); return; }
+            window.FinkAudio?.play?.(target.href, target.href);
+            reply({ ok: true, url: target.href });
           } else {
             // link (# FINK: follow) / navigate. The shell AUTHORIZES the
             // destination; the boxed runner does the contained fetch+render.

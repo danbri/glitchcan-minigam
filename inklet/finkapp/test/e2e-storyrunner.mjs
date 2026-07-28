@@ -137,19 +137,22 @@ try {
     pass(`feature: pinned image, prose below (${feat.mediaH}/${feat.stageH}px)`);
   } else fail('feature media wrong: ' + JSON.stringify(feat));
 
-  // ── 4b. AUDIO: a governed, boxed bed. # AUDIO: plays a looping element,
-  // and the shell's master volume reaches it via foaf.onAudio.
-  const audio0 = await frame.evaluate(() => window.__storyrunner.state.audio);
-  if (audio0 && /ambient\.wav/.test(audio0)) pass('# AUDIO: started a looping bed in the box');
-  else fail('audio bed not started: ' + JSON.stringify(audio0));
-  // turn the shell's master volume down; the runner's bed must follow
-  const audioGoverned = await page.evaluate(async () => {
-    FoafOS.audio.setVolume(0.25);
-    await new Promise((r) => setTimeout(r, 300));
-    return document.querySelector('iframe[src*="storyrunner"]') ? null : true;
-  });
+  // ── 4b. AUDIO is a HOST service (the iOS fix). # AUDIO: must be BROKERED
+  // to the shell — played from the host document, not with new Audio()
+  // inside the sandboxed frame (which iOS throttles) — and governed by the
+  // shell master volume.
+  const audio0 = await frame.evaluate(() => ({
+    src: window.__storyrunner.state.audio,
+    brokered: window.__storyrunner.state.requests.some(
+      (r) => r.verb === 'story.audio' && r.detail?.action === 'play'),
+  }));
+  if (audio0.src && /ambient\.wav/.test(audio0.src) && audio0.brokered) {
+    pass('# AUDIO: brokered to the shell (host document — iOS-friendly), not played in the box');
+  } else fail('audio not brokered: ' + JSON.stringify(audio0));
+  await page.evaluate(() => FoafOS.audio.setVolume(0.25));
+  await page.waitForTimeout(300);
   const lvl = await frame.evaluate(() => window.__storyrunner.state.audioLevel);
-  if (lvl <= 0.26) pass(`shell master volume reaches the boxed bed (level ${lvl})`);
+  if (lvl <= 0.26) pass(`shell master volume reaches the runner (level ${lvl})`);
   else fail('master volume did not reach the runner: ' + lvl);
   await page.evaluate(() => FoafOS.audio.setVolume(1));
 
