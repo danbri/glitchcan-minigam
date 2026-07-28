@@ -43,7 +43,10 @@ Order of work (each step is small and testable):
    shell's capUse tally; the story-overlay tree renders there too, and
    the floating widget lost its expanded mode).
 1. ~~Breadcrumb publishes `nav.*`~~ (done, this commit).
-2. Dev panel NAV lane subscribes to `nav.*` (delete its private feed).
+2. ~~Dev panel NAV lane subscribes to `nav.*`~~ (done 2026-07-28: the
+   lane observes `nav.*` with retained-event replay; `FinkNavigation.
+   swimLog` now publishes `nav.link` to the bus instead of writing to
+   the panel — no direct `swimEvent('nav', …)` caller remains).
 3. Load meter chrome app subscribes; delete `updateFinkStats` polling.
 4. INK/FINK lanes: engine publishes `ink.compile`, `fink.load` events
    (sandbox and engine counters become bus facts).

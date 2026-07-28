@@ -39,7 +39,27 @@ window.FinkDevPanel = {
         };
 
         this.setupEventListeners();
+        this.observeBus();
         this.log('DevPanel initialized', 'debug');
+    },
+
+    // The NAV lane observes the foafos bus; it keeps no private diary.
+    // nav.* facts are published by whoever knows them (breadcrumb: nav.fink,
+    // nav.knot; navigation: nav.link) and every observer sees the same ones.
+    // foafos-shell.js is a module script, so the bus exists before
+    // DOMContentLoaded runs init() — no polling needed.
+    observeBus() {
+        const bus = window.FoafOS?.bus;
+        if (!bus) return;
+        const icons = { 'nav.fink': '📖', 'nav.knot': '📍', 'nav.link': '🧭' };
+        bus.subscribe('nav.*', (e) => {
+            const d = e.data || {};
+            this.swimEvent('nav',
+                d.icon || icons[e.topic] || '🧭',
+                e.topic.slice(4),
+                d.summary || '',
+                !!d.highlight);
+        }, { replay: true });
     },
 
     setupEventListeners() {

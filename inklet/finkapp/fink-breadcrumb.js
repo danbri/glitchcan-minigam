@@ -138,7 +138,7 @@ window.FinkBreadcrumb = {
             summary: `story level ${this.finkStack.length}: ${this.formatUrl(url)}`,
             url, depth: this.finkStack.length,
             stack: this.finkStack.map(l => this.formatUrl(l.url)),
-        });
+        }, { retain: true });
 
         // Limit stack depth to prevent unbounded growth (10 levels deep should be plenty)
         if (this.finkStack.length > 10) {
@@ -180,7 +180,7 @@ window.FinkBreadcrumb = {
             summary: `→ ${knotName}`,
             knot: knotName, depth: this.finkStack.length,
             fink: this.formatUrl(currentLevel.url),
-        });
+        }, { retain: true });
         this.render();
     },
 

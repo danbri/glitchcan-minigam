@@ -91,11 +91,15 @@ window.FinkNavigation = {
         this.initialized = true;
     },
 
-    // Swimlane logging helper
+    // Navigation facts go on the foafos bus, not into any panel directly.
+    // The dev panel's NAV lane (and the feed, and anything else) observes
+    // nav.* — one fact, every observer. See docs/foafos-observability-
+    // deeplinks-20260728.md.
     swimLog(icon, title, detail, highlight = false) {
-        if (window.swimEvent) {
-            swimEvent('nav', icon, title, detail, highlight);
-        }
+        window.FoafOS?.bus.publish('nav.link', {
+            summary: `${title} — ${detail}`,
+            icon, title, detail, highlight
+        }, { retain: true });
     },
 
     // Setup modern Navigation API
