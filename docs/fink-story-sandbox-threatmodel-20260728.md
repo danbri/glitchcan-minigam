@@ -82,9 +82,10 @@ model — mediated, dropped, or proven safe.**
 | C6 | `# AUDIO:` / `# FOLEY:` / `# STOP_AUDIO:` | drives FinkAudio/FinkFoley directly | nuisance; cross-story audio leak (already a known bug) | Verb `audio.*` through the existing audio service |
 | C7 | `# STATUS:` | writes the host status bar | spoof another story's HUD | Declarative, rendered by the runtime from a typed payload; no host reach |
 | C8 | `# IMAGE:` / `# VIDEO:` / `# BASEHREF:` | sets media paths, builds `<video>`, YouTube embed in host | SSRF-ish fetch; embed arbitrary origin; path traversal on BASEHREF | Media resolves and renders in the story frame; BASEHREF confined to a declared prefix |
-| C9 | Ink variables | `variablesState[x] = y` ungoverned | write shared economy or another story's flags | `FoafVars`-style governance already exists for guests; extend to the story boundary |
+| C9 | Ink variables | `variablesState[x] = y` ungoverned | write shared economy or another story's flags | `FoafVars`-style governance at the story boundary; PLUS provenance-on-state and the taint rule (§5.3) |
 | C10 | Ink external functions | `BindExternalFunction` — **grep: none bound today** | if ever added, host code the story calls directly | Forbidden across the boundary; the runtime binds none on a story's behalf |
-| C11 | Dream stack | pushes `story.state.ToJson()` + descends | a child story rides the parent's frame/authority | Each dream frame is its own app instance; depth is the runtime's, state is the child's |
+| C11 | Dream stack | pushes `story.state.ToJson()` + descends | a child story rides the parent's frame/authority; state accumulates and taints (§5.3) | Each dream frame is its own app instance; state carries its writer's tier; low tier can't raise high (§5.3) |
+| C15 | Session accumulation | `_inventory` injection, shared-economy flow, var/knot rename & MERGE into one namespace | merging can collapse document boundaries and hand one story another's authority | Provenance-on-state + integrity rule; a merge is bounded by its least-trusted input (§5.3) |
 | C12 | Navigation / links | two-part hash links, `# LINKREL` | drive the shell's navigation | Verb `story.navigate`, gated |
 | C13 | Direct globals | `window.FinkInkEngine`, `FinkPlayer`, `FinkUI`, `FoafOS` all reachable from story-run code | total, today | **Gone by construction**: opaque origin has no `parent.*` |
 | C14 | The compile step | `.fink.js` via `new Function` | ALREADY isolated in an opaque iframe (`fink-sandbox.js`) | Unchanged — this boundary already holds |
@@ -177,13 +178,27 @@ A reference from one story to another is a **typed, content-pinned edge**:
   `goShallower` / `oneWay`) is the vocabulary a policy reasons over. A peer
   is a different relationship from a child dream, and may deserve a
   different default grant.
-- **The content hash is load-bearing.** `sha256-…` is Subresource-Integrity
-  format: it pins the reference to **exact, immutable content**. You can
-  only write a precise policy — *"trust danja-test to do exactly what I
-  do"* — if `danja-test` names a thing that cannot be swapped out from
-  under you. Trust attaches to **content, not a mutable URL**. A reference
-  without a hash can never rise above the `untrusted` tier, because there
-  is nothing stable to trust.
+- **The content hash is ONE signal — a strong one, not the only one, and
+  not required.** `sha256-…` (Subresource-Integrity format) pins the
+  reference to **exact, immutable content**, which is what lets you write
+  the *precise* policy *"trust danja-test to do exactly what I do"* — that
+  particular claim needs immutability, because trust in exact behaviour is
+  meaningless if the bytes can change under you. But that is the strict
+  end of a spectrum, not a gate on all trust:
+
+  > **Correction (owner, 2026-07-28):** an earlier draft said a reference
+  > *"can only"* be trusted with a hash and *"can never"* rise above
+  > `untrusted` without one. That is wrong. It is reasonable sometimes to
+  > be more lax, or to trust on **different signals**.
+
+  A policy may legitimately trust on: **origin** (an allowlisted host),
+  **author identity** (a signature over the content, which licenses trust
+  in *this author's future files too*, not just one hash), **reputation**
+  (a registry, a prior good history), **trust-on-first-use**, or an
+  **explicit human "allow once."** The hash buys *content-precise* trust;
+  a signature buys *author* trust across many files; an origin allowlist
+  buys *coarse* trust cheaply. Choosing among these — and how lax to be —
+  is exactly the forkable policy (§5.1), not a fixed rule.
 
 ### 5.1 Policy is a function, and it is forkable
 
@@ -199,6 +214,12 @@ The runner's policy is:
   is enforced by the app tree regardless of the fork's policy. A fork may
   choose to grant *less*; it can only grant *more* up to what the shell
   gave the runner — and that ceiling is the containment guarantee.
+- **`contentHash` is one input among several.** The signature of `policy`
+  should read more like `policy(referrer, relationType, {hash, origin,
+  signature, reputation, priorConsent}, provenance, grant(referrer))` — a
+  fork weighs whichever signals it trusts. A strict fork demands a hash; a
+  laxer one accepts an allowlisted origin or a known author key; a social
+  one asks the human.
 - **Forks compete on intelligence above the floor:** hash allowlists,
   author-signing / reputation, per-origin trust, interactive
   capability negotiation ("this peer wants economy write — allow once?").
@@ -217,14 +238,69 @@ A fork replaces this function; it does not replace the containment.
   economy WRITE, `story.navigate` outside the installation, and
   `story.minigame` beyond a safe set. Tells its own tale; cannot spend the
   waking world or drive the shell.
-- **`untrusted`** — anything else, or any reference lacking a hash. Prose +
+- **`untrusted`** — anything the policy has no positive signal for. Prose +
   choices + its own media. No chrome, no economy, no launch, no navigate.
   It renders, offers choices, and ends. Nothing escapes its frame.
+
+These are the *default* fork's cut-offs, not laws. This default happens to
+treat an unhashed reference as `untrusted` — a conservative choice — but a
+different fork may raise it on origin, signature, or consent (§5). The
+tiers are a starting policy, not the boundary; the boundary is the frame.
 
 Tiers are assigned by the runner from provenance and the edge, **never
 self-declared by the story**. **A root is not a security boundary**
 (existing rule): `?root=` is a query param; the frame origin and the verb
 gates are the real boundary, and the tier only tunes the grant within it.
+
+### 5.3 The session is a tainted accumulation (owner, 2026-07-28)
+
+A per-load tier is not enough, because a running FINK **session is not one
+document — it accumulates.** Trust is a property of the session's
+accumulated state, not of a single compile. After sandbox compilation,
+content keeps being **injected and merged** into the live session, and each
+injection is a taint vector:
+
+- **Shell injection.** The engine appends `_inventory` (and its VAR
+  declarations) to EVERY story — so even a lone story's running state is
+  already a *merge* of author content and shell content.
+- **The dream stack.** `# FINK: … goDeeper` pushes the parent's full state
+  (`state.ToJson()`) and descends into a child document; END pops back. The
+  parent's state persists across an excursion into less-trusted content.
+- **Shared economy.** `diamonds`/`score`/`keys` flow story→story by design
+  (and guest→story via the SDK). A value a `linked` story wrote is later
+  read by a `bundled` one: information flowing *up* the trust order.
+- **Var/knot renaming & merging.** The namespace-merge idea
+  (`fink-namespace-preprocessor.js`, not yet wired) folds multiple `.fink.js`
+  into one namespace. Merging is the sharpest vector of all: fold danja's
+  knots into danbri's namespace and, within that namespace, danja's content
+  can acquire danbri's authority. A crafted name (or a collision) becomes a
+  reach into another document's flags.
+
+**The model: state carries the tier of whoever WROTE it — provenance on
+state, not just on the running document.** From that, an *integrity* rule
+(Biba-shaped): a higher-tier reader must treat lower-tier-written state as
+**tainted** — advisory at least, refused for anything sensitive (spending
+the economy, gating a verb, choosing a navigation target). Low-integrity
+input must not silently become high-integrity authority.
+
+This is not new machinery invented here; it is the **generalisation of a
+rule that already exists**: *"dreams at depth > 0 get the shared economy
+read-only."* That is exactly "a less-trusted accumulation must not write
+the waking world's high-integrity state." Generalise it:
+
+- Every shared var (and every merged knot region) is tagged with the tier
+  of its writer; a read across a tier boundary is flagged to the policy.
+- The **shared economy is the one deliberately-shared channel**, and it is
+  already governed (`FoafVars`, spec §5.3). Everything else stays
+  **partitioned** unless a merge is an explicit, tier-bounded decision.
+- **A merge's result is bounded by its least-trusted input** for the merged
+  region. Merging is a trust decision the runner's policy makes, not a
+  mechanical convenience — and, like everything in §5, it is forkable.
+
+Containment (Phase 2) still holds under all of this: taint can corrupt what
+happens *inside* the runner's session, but it cannot cross the shell box.
+The session-taint model is a **Phase 3+ concern** — an integrity policy on
+top of the boundary, not a substitute for it.
 
 ## 6. Phased implementation
 
@@ -247,11 +323,17 @@ and still ship, because containment contains its mistakes.
   4. Gate: a breakout suite that, from inside the story frame, TRIES each
      C-row and proves it refused or contained (e2e-vars / e2e-caps
      pattern). This gate is the definition of "boxed."
-- **Phase 3 — POLICY: the trust graph, default fork.** Typed + hash-pinned
-  edges (`relationType` + `# INTEGRITY:`); `policy(referrer, rel, hash,
-  provenance, grant) → grant(peer)`; the three default tiers. Proven: an
-  `untrusted` (or unhashed) reference renders a hostile fixture with no
-  escape; a hash-pinned `peeredStory` gets the symmetric grant.
+- **Phase 3 — POLICY: the trust graph + session integrity, default fork.**
+  Typed edges (`relationType` + optional `# INTEGRITY:`) weighed over
+  MULTIPLE signals (hash, origin, signature, reputation, consent — §5), not
+  a hash gate; `policy(referrer, rel, signals, provenance, grant) →
+  grant(peer)`; the three default tiers. PLUS the session-taint model
+  (§5.3): provenance on shared/merged state, and the integrity rule that a
+  higher-tier reader treats lower-tier-written state as tainted (generalise
+  the existing dream-economy-read-only rule). Proven: an `untrusted`
+  fixture renders with no escape; a trusted `peeredStory` gets its grant; a
+  low-tier write cannot silently raise high-tier authority through the
+  shared economy or a merged namespace.
 - **Phase 4 — POLICY as a fork surface + disclosure.** Make the policy
   function a replaceable module (the competitive-advantage seam): a fork
   can supply reputation, signing, allowlists, interactive negotiation. Plus
