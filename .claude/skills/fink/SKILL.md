@@ -449,6 +449,34 @@ reading the CSS: every one of these was invisible in source.
 - It patches ONE document: a guest wrapping another game in a nested
   iframe must forward the `debug` message inward.
 
+## Guests on the bus (spec §5.7) — stage games and window apps are apps
+
+Owner's ruling (July 2026): "stage games under stories ARE SUPPOSED TO BE
+FULLY APPS TOO … with comms via the current foafos bus. Similarly tv
+widgets are Apps." The tree half was already true (game nodes spawn under
+`FoafOS.storyNode`); the bus half is now implemented.
+
+- ONE wire protocol for all three guest kinds (`<foafos-guest>`, stage
+  minigames, window apps): guest→host `{type:'bus-publish', topic, data}`,
+  host→guest `{type:'bus-event', event}`. Reused from guest.mjs — do not
+  invent a second vocabulary.
+- The SHELL builds the scoped view and owns policy (`busGrantsFor` next to
+  the registry in foafos-shell.js; `governAppFrame` for window apps);
+  `FinkMinigames.attachBus` only routes. Registry entries may declare
+  `bus: {publish, subscribe}`; defaults are `guest.<type>.*` /
+  `app.<id>.*` publish plus wm.mode + audio.volume (+ story.state for
+  stage, ui.skin for windows).
+- Source stamp `guest:<type>#<instance>` — provenance survives the bridge
+  because routing is by `event.source` BEFORE any grant check. Denials go
+  to `sys.guest.denied`, never silence.
+- SDK surface: `sdk.bus.publish` / `sdk.bus.subscribe` (using either
+  declares the `bus` contract; standalone they are honest no-ops). Grants
+  arrive in `init.config.bus`.
+- Proof of life: waterworld sheds its HUD chrome in pip because it HEARD
+  `wm.mode`, and publishes `guest.waterworld.{win,loss,story-won,lore}`.
+- E2E `e2e-bus.mjs` (in the chain) posts attacks from INSIDE real guest
+  frames; SDK shapes pinned in `packages/finkgame/test/run.js`.
+
 ## Guest instances: provenance is the capability model
 
 - Every running guest gets a record in `FinkMinigames.instances` and ONE

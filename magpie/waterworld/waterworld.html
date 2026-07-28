@@ -268,6 +268,11 @@
   body.game-over #bank-btn, body.game-over #choice-panel, body.game-over #pad,
   body.game-over #pad-toggle { display: none !important; }
 
+  /* pip (learned from the shell bus): the window is a thumbnail — shed
+     every layer of chrome and leave just the picture */
+  body.wm-pip #chips, body.wm-pip #hud2, body.wm-pip #objective,
+  body.wm-pip #toasts, body.wm-pip #bank-btn, body.wm-pip #seats { display: none !important; }
+
   /* the coalition board: the story, laid out */
   #board-panel {
     position: absolute; inset: auto 0.6em 22% 0.6em;

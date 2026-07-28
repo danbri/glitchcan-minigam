@@ -100,6 +100,7 @@ function fact(title, text, icon) {
   while (toastQueue.length > 3) toastQueue.pop();
   _nextToast();
   announce(`${title}. ${text}`);
+  window.__wwBeat?.('lore', { summary: `codex: ${title}`, title });
 }
 
 function hint(text) { toast('💡 ' + text, 'hint'); }
@@ -174,6 +175,10 @@ function complete(result) {
   }
   el.classList.add('show');
   audio.stopMusic();
+  window.__wwBeat?.(result.storyWon ? 'story-won' : result.success ? 'win' : 'loss', {
+    summary: result.storyWon ? 'the bergs are beaten' : `dive over, score ${result.score}`,
+    score: result.score,
+  });
   if (sdk && EMBED) {
     sdk.complete({
       success: result.success,
@@ -626,6 +631,18 @@ if (sdk) {
     if (game) game.restore(snap);
     else pendingRestore = snap;
   });
+  // The bus: a stage guest is a full foafos app. Hear the window
+  // manager and shed chrome when the window is a thumbnail; speak the
+  // dive's beats into our granted namespace so the shell's feed,
+  // logger and sibling apps can follow the story.
+  sdk.bus.subscribe('wm.mode', (e) => {
+    document.body.classList.toggle('wm-pip', e.data?.mode === 'pip');
+  });
+  window.__wwBeat = (kind, detail = {}) => {
+    sdk.bus.publish(`guest.waterworld.${kind}`, {
+      summary: `waterworld: ${detail.summary || kind}`, ...detail,
+    });
+  };
 }
 
 // Standalone: show the splash and wait for a gesture.
