@@ -69,10 +69,14 @@ void main() {
   if (uIR < 0.5) {
     col = pow(col, vec3(0.96));
     col += vec3(-0.006, 0.006, 0.020);
+    // the basin swallows light: darker overall as the sub goes deep
+    col *= 1.0 - uDeep * 0.30;
   }
 
   // -- vignette, breathing light, fine grain
   col *= 1.12;
+  // soft shoulder: rays + surface sparkle may stack; roll off before clipping
+  col = col / (1.0 + 0.18 * col);
   vec2 q = vUv - 0.5;
   col *= 1.0 - dot(q, q) * 0.30;
   col *= 1.0 + 0.015 * sin(uTime * 0.4);

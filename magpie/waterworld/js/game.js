@@ -151,7 +151,6 @@ export class WaterworldGame {
 
     this.sub = makeSub();
     this.sub.position.copy(this.pos);
-    tint(this.sub, 0xffec27, 0.5);
     this.sub.userData.irColor = 0xbb5533;          // a warm engine in the dark
     // the visible beam: an additive cone the headlamp appears to cast
     this.lightCone = new THREE.Mesh(
@@ -240,7 +239,7 @@ export class WaterworldGame {
       g.position.set(x, y, z);
       g.rotation.y = Math.random() * Math.PI * 2;
       const halo = glowSprite(
-        type === 'captains_chest' ? 0xffec27 : type === 'fatberg_relic' ? 0xffccaa : 0xaef0ff,
+        type === 'captains_chest' ? 0xffec27 : type === 'fatberg_relic' ? 0xffccaa : 0xffd75e,
         type === 'captains_chest' ? 4.5 : 2.0,
         type === 'captains_chest' ? 0.6 : 0.3);
       halo.position.y = 0.8;
@@ -942,14 +941,16 @@ export class WaterworldGame {
       this.scene.fog.density = 0.011;
     } else {
       const deepT = Math.min(1, Math.max(0, (depth - 25) / 40));
-      const fogC = new THREE.Color(P8.navy)
-        .lerp(new THREE.Color(P8.blue), 0.30 * (1 - deepT))   // cheery shallows
-        .lerp(new THREE.Color(P8.black), deepT * 0.85);
+      // three water zones: sunlit teal → open blue → near-black basin
+      const fogC = deepT < 0.5
+        ? new THREE.Color(0x1e6f6a).lerp(new THREE.Color(0x16406e), deepT * 2)
+        : new THREE.Color(0x16406e).lerp(new THREE.Color(0x04060d), (deepT - 0.5) * 2);
+      const shallowT = Math.min(1, Math.max(0, (12 - depth) / 12));
+      fogC.lerp(new THREE.Color(P8.navy), (1 - shallowT) * 0.35 * (1 - deepT));
       this.scene.fog.color.copy(fogC);
       this.scene.background.copy(fogC);
       const lampBoost = this.tools.has('arclamp') ? 0.45 : 1;
-      // thinner fog: the basin should read as a place, not a box
-      this.scene.fog.density = (0.0115 + deepT * 0.026 * lampBoost);
+      this.scene.fog.density = (0.0115 + deepT * 0.034 * lampBoost);
     }
     if (!this.tools.has('arclamp')) this.headlamp.intensity = 40;
     this.lightCone.material.opacity = this.ir ? 0
@@ -1205,7 +1206,7 @@ export class WaterworldGame {
         const items = types.map((type, i) => {
           const g = makeSalvageMesh(type);
           g.position.set(cx + (i - 1) * 3, floorYAt(cx, cz) + 0.4, cz + (i % 2) * 3);
-          const halo = glowSprite(0x7ef2ff, 2.4, 0.5);
+          const halo = glowSprite(0xffd75e, 2.4, 0.5);
           halo.position.y = 0.8;
           g.add(halo);
           this.scene.add(g);
@@ -1214,7 +1215,7 @@ export class WaterworldGame {
           this.salvage.push(rec);
           return rec;
         });
-        const beacon = glowSprite(0x7ef2ff, 14, 0.5);
+        const beacon = glowSprite(0xffd75e, 14, 0.5);
         beacon.position.set(cx, floorYAt(cx, cz) + 8, cz);
         beacon.userData.irHot = true;
         this.scene.add(beacon);
@@ -1399,7 +1400,7 @@ export class WaterworldGame {
     this.whale.rotateY(-Math.PI / 2);
     // fade in, breathe (in thermal sight she is a steady cold presence)
     const m = this.whale.material;
-    const ceiling = this.ir ? 0.95 : 0.75;
+    const ceiling = this.ir ? 0.95 : 0.9;
     m.opacity = Math.min(ceiling, m.opacity + dt * 0.2) * (0.8 + Math.sin(this.whalePhase * 1.3) * 0.2);
     // tail swish: displace the base positions a little
     const pos = this.whale.geometry.attributes.position, base = this.whale.userData.base;

@@ -114,15 +114,15 @@ export function makeSub() {
   }
   const hullGeo = new THREE.LatheGeometry(profile, 28);
   hullGeo.rotateZ(-Math.PI / 2);                   // axis along +x
-  const hull = new THREE.Mesh(hullGeo, mat(P8.orange));
+  const hull = new THREE.Mesh(hullGeo, mat(0xe09a3a, { emissive: 0x5a2c08 }));
   hull.name = 'hull';
   g.add(hull);
   // sail: elliptical tower with a rounded cap
-  const sail = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.78, 1.5, 20), mat(P8.yellow));
+  const sail = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.78, 1.5, 20), mat(0xd9a441, { emissive: 0x633a0c }));
   sail.scale.z = 0.62;
   sail.position.set(-0.1, 1.35, 0);
   g.add(sail);
-  const sailCap = new THREE.Mesh(new THREE.SphereGeometry(0.62, 20, 12), mat(P8.yellow));
+  const sailCap = new THREE.Mesh(new THREE.SphereGeometry(0.62, 20, 12), mat(0xd9a441, { emissive: 0x633a0c }));
   sailCap.scale.set(1, 0.45, 0.62);
   sailCap.position.set(-0.1, 2.1, 0);
   g.add(sailCap);
@@ -505,7 +505,7 @@ export function makeFatberg(radius = 3) {
     pos.setXYZ(i, v.x, v.y * 0.85, v.z);
   }
   geo.computeVertexNormals();
-  const m = new THREE.Mesh(geo, mat(P8.peach));
+  const m = new THREE.Mesh(geo, mat(0xa89f70, { emissive: 0x141c08 }));
   // the documented sweetcorn garnish, now rounded
   for (let i = 0; i < 7; i++) {
     const lump = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), mat(P8.yellow));
@@ -702,6 +702,33 @@ function makeQuayWalls(scene) {
   for (let x = -110; x <= 110; x += 20) {
     cyl(g, 0.8, 0.9, 6, P8.brown, x, -3, BOUNDS.maxZ - 2, 6);
   }
+  // the walls get a face: an algae band at the waterline, pilaster
+  // ribs, and rust streaks — no more featureless navy planes
+  const dress = (horizontal, fixed) => {
+    const L = horizontal ? (BOUNDS.maxX - BOUNDS.minX) : (BOUNDS.maxZ - BOUNDS.minZ);
+    const at = (u, y, w, h, d, color, opts) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(
+        horizontal ? w : d, h, horizontal ? d : w), mat(color, opts));
+      m.position.set(
+        horizontal ? u : fixed, y, horizontal ? fixed : u);
+      g.add(m);
+    };
+    // algae band just under the surface
+    at(0, -3, L, 3, 0.5, 0x2e4a33, { emissive: 0x0c1a0e });
+    // pilasters
+    for (let u = -L / 2 + 9; u < L / 2; u += 19) {
+      at(u, -20, 1.4, 44, 0.7, 0x39424e);
+    }
+    // rust streaks
+    for (let i = 0; i < 5; i++) {
+      const u = -L / 2 + Math.random() * L;
+      at(u, -10 - Math.random() * 12, 1.8, 8 + Math.random() * 12, 0.4, 0x4a3527);
+    }
+  };
+  dress(true, BOUNDS.minZ + 3.2);
+  dress(true, BOUNDS.maxZ - 3.2);
+  dress(false, BOUNDS.minX + 3.2);
+  dress(false, BOUNDS.maxX - 3.2);
   scene.add(g);
   return g;
 }
@@ -742,7 +769,7 @@ function makeBarge(scene) {
   const g = new THREE.Group();
   g.position.set(-40, SHELF_Y + 1.5, 30);
   g.rotation.y = 0.8; g.rotation.z = 0.28;
-  box(g, 26, 5, 9, P8.plum, 0, 2, 0);
+  box(g, 26, 5, 9, 0x5a3f48, 0, 2, 0);
   box(g, 24, 1.5, 7, P8.black, 0, 4.5, 0);     // open hold
   box(g, 5, 4, 8, P8.dusk, -9, 6, 0);          // wheelhouse
   box(g, 1.2, 6, 1.2, P8.brown, 6, 7, 2);      // broken mast
@@ -754,9 +781,9 @@ function makeWarehouse(scene) {
   const g = new THREE.Group();
   g.position.set(85, DEEP_Y, -30);
   // roofless brick shell, tumbled columns
-  box(g, 30, 14, 2, P8.plum, 0, 7, -10);
-  box(g, 30, 9, 2, P8.plum, 0, 4.5, 12);
-  box(g, 2, 12, 22, P8.plum, -15, 6, 1);
+  box(g, 30, 14, 2, 0x4a4050, 0, 7, -10);
+  box(g, 30, 9, 2, 0x4a4050, 0, 4.5, 12);
+  box(g, 2, 12, 22, 0x4a4050, -15, 6, 1);
   for (let i = 0; i < 4; i++) {
     const c = cyl(g, 1, 1.2, 10, P8.dusk, -8 + i * 6, 1.5, 1, 6);
     c.rotation.z = 1.35; c.rotation.y = i;
@@ -847,12 +874,25 @@ export function makeSky(scene) {
     }));
   g.add(dome);
   // the skyline: warehouses, towers, gantry cranes — dark shapes on the rim
+  let alt = false;
   const sil = (w, h, d, x, z, ry = 0) => {
+    alt = !alt;
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d),
-      mat(0x2a3648, { fog: false }));
+      mat(alt ? 0x2a3648 : 0x1f2a3a, { fog: false }));
     m.position.set(x, h / 2, z);
     m.rotation.y = ry;
     g.add(m);
+    // a few lit windows on the taller blocks: the city is home
+    if (h > 12 && Math.random() < 0.7) {
+      for (let i = 0; i < 2 + Math.floor(Math.random() * 3); i++) {
+        const win = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.2, 0.2),
+          mat(0xd9a441, { emissive: 0x8a6420, fog: false }));
+        win.position.set(x + (Math.random() - 0.5) * w * 0.7,
+          3 + Math.random() * (h - 5),
+          z + (d / 2 + 0.1) * (z > 0 ? -1 : 1));
+        g.add(win);
+      }
+    }
     return m;
   };
   for (let x = -150; x <= 150; x += 18 + Math.random() * 14) {
@@ -934,9 +974,9 @@ export function buildDock(scene) {
   // identity — the mystery now comes from light, not wireframes
   tint(quay, 0x1d6f8f, 0.6);
   for (const m of culverts) tint(m.group, 0x00e436, 0.8);
-  tint(crane, 0xffa300, 0.7);
-  tint(barge, 0xff77a8, 0.7);
-  tint(warehouse, 0x83769c, 0.8);
+  tint(crane, 0xffa300, 0.3);
+  tint(barge, 0xff77a8, 0.25);
+  tint(warehouse, 0x83769c, 0.3);
   tint(bell, 0xffec27, 0.9);
   // sphere colliders for the big set pieces (cheap, forgiving)
   const colliders = [
@@ -988,10 +1028,16 @@ export function makeGhostWhale() {
   }
   geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
   const whale = new THREE.Points(geo, new THREE.PointsMaterial({
-    color: 0xc8f0ff, size: 0.85, transparent: true, opacity: 0.0,
+    color: 0xdff6ff, size: 1.15, transparent: true, opacity: 0.0,
     depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true,
     map: softDot(),
   }));
   whale.userData.base = posArr.slice();
+  const core = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: softDot(), color: 0xbfeaff, transparent: true, opacity: 0.3,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }));
+  core.scale.set(16, 8, 1);
+  whale.add(core);
   return whale;
 }
