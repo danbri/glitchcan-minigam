@@ -36,12 +36,26 @@ content block.
   tagged template literals ("sigils") executed in a sandbox. NEVER parse
   them with regex/string ops (CLAUDE.md: NO HACKPARSING).
 - `oooOO` is the default sigil → `text/x-ink`. The typed model and the
-  curried escape hatch `OO('media/type')` live in
-  `packages/gcfink/src/lib/sigils.js`.
+  curried escape hatch `OO('media/type')` are the **frozen
+  `@foafos/backticks` kernel** (`packages/backticks/`) — the ONE
+  definition of capture. `finkcore/src/lib/sigils.js` is now a thin
+  re-export of it; `packages/backticks/FROZEN.md` is the contract.
+- **backticks is the capture kernel, NOT a sandbox.** It runs inside an
+  isolate the caller supplies (opaque iframe in the browser, `node:vm`
+  in Node); "given isolation, capture is deterministic and
+  raw-preserving." The story-sandbox threat model
+  (`docs/fink-story-sandbox-threatmodel-20260728.md`) owns the isolation
+  boundary; this owns correctness. Two extraction views, both named:
+  `inkOf` (unique, newline-joined) and `firstInkOf` (first ink block —
+  the live browser player's contract). Tests:
+  `npm run test:backticks` (kernel contract + browser-source
+  equivalence). Still a **gated follow-up**: rewiring the live
+  `fink-sandbox.js` srcdoc to inject `INSTALL_CAPTURE_SOURCE` instead of
+  its hand-copied capture — do it behind the mandatory Hampstead journey.
 - **Capture is RAW** (`strings.raw`) everywhere — browser sandbox
-  (`inklet/finkapp/fink-sandbox.js:176-178`) and gcfink alike. This is
-  load-bearing: tag URLs escape `//` as `\/\/`, and only raw capture
-  preserves the backslashes.
+  (`inklet/finkapp/fink-sandbox.js:176-178`) and the backticks kernel
+  alike. This is load-bearing: tag URLs escape `//` as `\/\/`, and only
+  raw capture preserves the backslashes.
 
 ## The `//` tag truncation bug (verified empirically)
 

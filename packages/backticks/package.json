@@ -1,0 +1,27 @@
+{
+  "name": "@foafos/backticks",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "The FINK sigil capture kernel: raw tagged-template extraction of typed blocks from .fink.js polyglot files. Isolation is the caller's; correctness is frozen here.",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "FROZEN.md",
+    "README.md"
+  ],
+  "keywords": [
+    "fink",
+    "ink",
+    "inkjs",
+    "tagged-template",
+    "sigil",
+    "foafos"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "test": "node ./test/run.js"
+  }
+}
