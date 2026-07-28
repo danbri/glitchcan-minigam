@@ -151,9 +151,11 @@ export const APPS = [
   // player while it reaches parity; this proves "sandboxed all the way up."
   // NO same-origin: it is a real box. story:launch lets a # MINIGAME: tag
   // ask the shell to open a (separately boxed) guest — up AND down.
-  { id: 'storyrunner', family: 'play', icon: '📖', name: 'Story Runner (boxed)',
+  // The DEFAULT story surface (see foafos-root storyPlayer). Runs a FINK
+  // story sandboxed; supersedes the host-page player (pending delete, #779).
+  { id: 'storyrunner', family: 'play', icon: '📖', name: 'Story Runner',
     surface: 'window', url: '../apps/storyrunner/index.html',
-    desc: 'A FINK story, sandboxed all the way up',
+    desc: 'A FINK story, sandboxed all the way up', featured: true,
     // no `story` override: the runner defaults to its own ./demo.fink.js,
     // resolved relative to the RUNNER frame (a finkapp-relative path would
     // resolve against the wrong base once fetched inside the box)
