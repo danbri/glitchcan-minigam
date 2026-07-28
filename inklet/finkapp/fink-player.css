@@ -405,10 +405,16 @@ body[data-fink-part-pending] #choices { display: none; }
        `width: 100%` with `object-fit: contain` keeps the image centred and
        undistorted while its BOX spans the measure, so the opaque band below
        covers everything behind it. */
-    width: 100%;
+    /* The plate hugs the picture. width:100% built a full-measure white
+       band around every image — on a tall phone the poster sat small in
+       a sea of card (field report: "a lot of wasted space where images
+       could live"). Now the element is the image's own size, centred,
+       and tall screens give it real room. */
+    width: auto;
+    max-width: 100%;
     max-height: 34vh;
     display: block;
-    margin: 0 0 0.8em;
+    margin: 0 auto 0.8em;
     border-radius: var(--border-radius-sm);
     object-fit: contain;
     position: sticky;
@@ -425,6 +431,12 @@ body[data-fink-part-pending] #choices { display: none; }
     filter: saturate(1.06) contrast(1.03);
     -webkit-mask-image: radial-gradient(ellipse 118% 118% at 50% 42%, #000 76%, transparent 100%);
     mask-image: radial-gradient(ellipse 118% 118% at 50% 42%, #000 76%, transparent 100%);
+}
+
+/* Tall portrait screens have the height to spend: the scene gets nearly
+   half of it. (34vh stays for short screens, where prose must fit too.) */
+@media (orientation: portrait) and (min-height: 640px) {
+    .story-section .section-media { max-height: 48vh; }
 }
 
 /* The slow drift: the painting breathes. Scale-only (compositor), 28s,
