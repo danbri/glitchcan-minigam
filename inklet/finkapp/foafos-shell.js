@@ -544,6 +544,18 @@ bus.subscribe('minigame.instance', (e) => {
     // two copies of one game are two distinct voices
     window.FinkMinigames?.attachBus?.(
       id, scopeBus(bus, { name: `${type}#${id}`, ...grants }), grants);
+  } else {
+    // BACKSTOP. The story.launch verb checks attenuation before starting
+    // a guest, but this handler is reached by every launch path — and a
+    // guest the tree refused must not keep running unlisted. Without
+    // this, "refused" meant a missing row while the game played on:
+    // invisible to the Running panel, unpausable, uncloseable. Refusing
+    // authority has to mean the thing stops.
+    bus.publish('app.spawn.refused', {
+      summary: node.summary || `${type} refused (${node.reason}) — tearing the guest down`,
+      reason: node.reason, excess: node.excess, appId: type,
+    });
+    try { window.FinkMinigames?.endMinigame?.(); } catch (err) { /* already gone */ }
   }
 });
 
@@ -1683,10 +1695,35 @@ function buildUI() {
           if (verb === 'story.launch') {
             const game = String(d.detail?.game || '').toLowerCase();
             if (!game) { reply({ ok: false, reason: 'bad-params' }); return; }
+            // ATTENUATION IS CHECKED BEFORE THE GUEST STARTS.
+            //
+            // It used to be checked after: startMinigame() ran, the game
+            // announced itself, and only THEN did the tree try to spawn a
+            // node — which it refused, out loud, while the game carried on
+            // playing. The refusal was book-keeping, not enforcement, and
+            // the result was worse than a peer: a guest running with no
+            // node at all, so the Running panel could not show it, pause
+            // it, or close it (verified 2026-07-29, and the reason this
+            // check moved). A border you announce but do not hold is
+            // decoration.
+            const parentNodeId = win.dataset.instance || null;
+            const parentNode = parentNodeId ? apps.get(parentNodeId) : null;
+            const wantCaps = appById(game)?.capabilities || [];
+            const excess = parentNode
+              ? wantCaps.filter(c => !parentNode.capabilities.includes(c))
+              : [];
+            if (excess.length) {
+              bus.publish('app.spawn.refused', {
+                summary: `${app.name} may not grant ${excess.join(', ')} to ${game} — it does not hold ${excess.length > 1 ? 'them' : 'it'}`,
+                reason: 'attenuation', excess, appId: app.id, game,
+              });
+              reply({ ok: false, reason: 'attenuation', excess });
+              return;
+            }
             // Record the real instantiator so the game parents under THIS
-            // runner's node (win.dataset.instance), reflecting the true
-            // control/instantiation/capability border in the tree.
-            _pendingGameParent = { type: game, parentNodeId: win.dataset.instance || null };
+            // runner's node, reflecting the true control/instantiation/
+            // capability border in the tree.
+            _pendingGameParent = { type: game, parentNodeId };
             window.FinkMinigames?.startMinigame?.(game);
             reply({ ok: true, launched: game });
           } else if (verb === 'story.audio') {

@@ -238,6 +238,46 @@ try {
     pass('instantiation border real: the game is a CHILD of the runner, caps bounded by it');
   } else fail('tree border wrong: ' + JSON.stringify(tree));
 
+  // ── 5b. attenuation ENFORCES — it does not merely announce ──────────
+  // The check above passes trivially: waterworld's declared caps happen
+  // to sit inside the runner's. The question that matters is what an
+  // OVER-privileged game does. Until 2026-07-29 the answer was: the
+  // shell published a refusal, skipped the node — and the guest played
+  // on regardless, invisible to the Running panel and impossible to
+  // pause or close. Refusing authority has to mean the thing stops.
+  {
+    // close the running game, then make waterworld ask for more than the
+    // runner holds
+    await page.evaluate(async () => {
+      const { appById } = await import('./foafos-apps.js');
+      window.FinkMinigames?.endMinigame?.();
+      await new Promise((r) => setTimeout(r, 400));
+      const ww = appById('waterworld');
+      window.__attnSaved = ww.capabilities;
+      ww.capabilities = [...ww.capabilities, 'git:write'];   // runner holds no git:write
+    });
+    const reply = await frame.evaluate(() =>
+      window.foaf.storyRequest('story.launch', { game: 'waterworld' }));
+    await page.waitForTimeout(1200);
+    const outcome = await page.evaluate(() => ({
+      node: [...FoafOS.apps.nodes.values()].some((n) => n.appId === 'waterworld'),
+      guestActive: !!window.FinkMinigames?.active,
+    }));
+    if (reply && reply.ok === false && reply.reason === 'attenuation'
+        && !outcome.node && !outcome.guestActive) {
+      pass('attenuation ENFORCES: an over-privileged game is refused and never runs');
+    } else {
+      fail('attenuation only announced: ' + JSON.stringify({ reply, ...outcome }));
+    }
+    // put the registry back and restore the child the control section needs
+    await page.evaluate(async () => {
+      const { appById } = await import('./foafos-apps.js');
+      appById('waterworld').capabilities = window.__attnSaved;
+    });
+    await frame.evaluate(() => window.foaf.storyRequest('story.launch', { game: 'waterworld' }));
+    await page.waitForTimeout(2000);
+  }
+
   // ── 6. POLICY: a cross-origin link is refused; unknown verbs too ─────
   const xorigin = await frame.evaluate(() =>
     window.foaf.storyRequest('story.link', { url: 'https://evil.example/x.fink.js' }));
