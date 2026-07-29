@@ -240,6 +240,82 @@ try {
     pass('instantiation border real: the game is a CHILD of the runner, caps bounded by it');
   } else fail('tree border wrong: ' + JSON.stringify(tree));
 
+  // ── 5a. PARITY (#779 blockers 1+2): pause, writeback, economy ───────
+  // The runner used to fire story.launch and carry straight on, so a
+  // story that says "play, then use what you won" ran the "then" while
+  // the game was still on screen, with the pre-game values — every
+  // chess/gems/waterworld ending was unreachable. peer.fink.js is the
+  // fixture: it declares shared VARs, pauses on # MINIGAME:, and spends
+  // what the game wrote.
+  {
+    const paused = await frame.evaluate(() => ({
+      paused: window.__storyrunner.paused(),
+      pausedFor: window.__storyrunner.state.pausedFor,
+      choices: document.querySelectorAll('#choices button').length,
+    }));
+    paused.paused && paused.pausedFor === 'waterworld' && paused.choices === 0
+      ? pass('the story PAUSED on # MINIGAME: — no choices while the game plays')
+      : fail(`story did not pause for its game: ${JSON.stringify(paused)}`);
+
+    // The guest earns treasure the way a guest does: from inside its own
+    // frame, over the real protocol, so the manifest check is real.
+    const guest = page.frames().find((f) => /waterworld/.test(f.url()));
+    if (!guest) fail('no waterworld guest frame to earn anything');
+    else {
+      await guest.evaluate(() => {
+        parent.postMessage({ type: 'set-variable', name: 'diamonds', value: 7 }, '*');
+        parent.postMessage({ type: 'set-variable', name: 'score', value: 240 }, '*');
+        parent.postMessage({ type: 'set-variable', name: 'keys', value: 99 }, '*');  // NOT in its manifest
+      });
+      await page.waitForTimeout(700);
+      const economy = await page.evaluate(() => ({
+        mirror: FoafOS.storyVars.all(),
+        denied: FoafOS.vars.log.filter((l) => !l.ok).map((l) => l.name),
+      }));
+      economy.mirror.diamonds === 7 && economy.mirror.score === 240
+        ? pass(`a boxed story's economy is brokered shell-side (${JSON.stringify(economy.mirror)})`)
+        : fail(`guest writes lost under the boxed runner: ${JSON.stringify(economy)}`);
+      economy.mirror.keys === undefined && economy.denied.includes('keys')
+        ? pass('a write outside the guest manifest is DENIED, not silently applied')
+        : fail(`variable governance not enforced: ${JSON.stringify(economy)}`);
+    }
+
+    // End the game through the host's own completion entry point.
+    await page.evaluate(() => FinkMinigames.handleMinigameComplete(
+      { type: 'waterworld', success: true, score: 240 }));
+    await page.waitForTimeout(1400);
+    const resumed = await frame.evaluate(() => ({
+      paused: window.__storyrunner.paused(),
+      diamonds: window.__storyrunner.varOf('diamonds'),
+      score: window.__storyrunner.varOf('score'),
+      choices: document.querySelectorAll('#choices button').length,
+      prose: document.getElementById('prose')?.textContent || '',
+    }));
+    !resumed.paused && resumed.choices > 0
+      ? pass('the story RESUMED where the tag broke the beat')
+      : fail(`story did not resume: ${JSON.stringify(resumed)}`);
+    resumed.diamonds === 7 && resumed.score === 240
+      ? pass('completion wrote back into the boxed story\'s own ink')
+      : fail(`writeback failed: diamonds=${resumed.diamonds} score=${resumed.score}`);
+    // The assertion that matters: the beat SPENDS the winnings. A tag
+    // binds to the line that FOLLOWS it, so a fixture with the tag after
+    // its lead-in breaks on the post-game line and prints stale values —
+    // this catches that whole class.
+    /7 diamond/.test(resumed.prose) && /240/.test(resumed.prose)
+      ? pass('the after-game beat printed the values the game produced')
+      : fail(`beat used stale values: "${resumed.prose.slice(-120)}"`);
+
+    const spend = await frame.evaluate(() => window.__storyrunner.spend('diamonds', 3));
+    const left = await page.evaluate(() => FoafOS.storyVars.all().diamonds);
+    spend.ok && left === 3
+      ? pass('a story SPENDS through the broker (7 → 3), never by reaching in')
+      : fail(`brokered spend failed: ${JSON.stringify({ spend, left })}`);
+    const priv = await frame.evaluate(() => window.__storyrunner.spend('secret_plot_flag', 1));
+    priv.ok === false && priv.reason === 'not-shared'
+      ? pass('a private variable is refused BY NAME — the boundary is the shared set')
+      : fail(`a private variable was brokered: ${JSON.stringify(priv)}`);
+  }
+
   // ── 5b. attenuation ENFORCES — it does not merely announce ──────────
   // The check above passes trivially: waterworld's declared caps happen
   // to sit inside the runner's. The question that matters is what an

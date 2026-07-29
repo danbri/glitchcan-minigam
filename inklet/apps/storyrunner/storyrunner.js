@@ -21,6 +21,7 @@ const state = {
   ended: false, requests: [], boxedCompile: false,
   media: null, mediaRole: null, mediaSpec: null,
   audio: null, audioPlaying: false, audioLevel: 1, linkedTo: null,
+  pausedFor: null, lastGame: null, economy: null,
 };
 let story = null;
 
@@ -119,7 +120,14 @@ function handleTag(tag) {
       window.foaf?.bus?.publish('app.storyrunner.status', { items: _statusItems });
       break;
     case 'MINIGAME':
-      storyRequest('story.launch', { game: value.split(/\s+/)[0] });
+      // A game BREAKS the beat and PAUSES the story (#779), the same way
+      // the host engine's Continue loop breaks on this tag. Before this
+      // the runner fired the verb and carried straight on, so a story
+      // that says "play, then use what you won" ran the "then" while the
+      // game was still on screen — and every chess/gems/waterworld
+      // ending was unreachable. The shell hands the result back and
+      // `resumeAfterGame()` continues from exactly here.
+      _pendingGame = value.split(/\s+/)[0];
       break;
     case 'FINK':
       // A link to another story. Resolve it against THIS story's location,
@@ -276,18 +284,26 @@ function advance() {
   if (!story) return;
   _beatMedia = undefined;                 // undefined ⇒ keep previous (sticky)
   _pendingLink = undefined;
+  _pendingGame = undefined;
   while (story.canContinue) {
     const text = story.Continue();
     (story.currentTags || []).forEach(handleTag);
     const trimmed = text.trim();
     if (trimmed) addProse(trimmed);
-    if (_pendingLink !== undefined) break;   // a FINK link ends the beat
+    // A FINK link or a MINIGAME ends the beat — matching the host
+    // engine, which breaks its loop on exactly these two tags.
+    if (_pendingLink !== undefined || _pendingGame !== undefined) break;
   }
   if (_beatMedia !== undefined) renderMedia(_beatMedia);
   if (_pendingLink !== undefined) {
     const url = _pendingLink; _pendingLink = undefined;
     followLink(url);
     return;                                  // the linked story replaces this one
+  }
+  if (_pendingGame !== undefined) {
+    const game = _pendingGame; _pendingGame = undefined;
+    launchAndWait(game);
+    return;                                  // paused: no choices until it ends
   }
   renderChoices();
   if (!story.canContinue && story.currentChoices.length === 0) {
@@ -302,6 +318,83 @@ function choose(i) {
   addProse(story.currentChoices[i].text, 'player');
   story.ChooseChoiceIndex(i);
   advance();
+}
+
+// ── minigames: pause, then resume with what was won (#779) ────────────
+//
+// The story cannot resume itself and the shell cannot reach into this
+// frame's ink, so the shell carries the result across: `story.launch`
+// answers `awaiting: 'minigame.complete'`, and a `story.event` message
+// arrives when the game ends. While paused there are NO choices — the
+// story is genuinely suspended, not merely quiet.
+let _pendingGame;                       // undefined = no game this beat
+let _awaitingGame = null;
+
+async function launchAndWait(game) {
+  const res = await storyRequest('story.launch', { game });
+  if (!res.ok) {
+    // A refused launch must not strand the reader in a story with no
+    // choices. Say so and carry on — the beat continues without the game.
+    setStatus(`${game} refused: ${res.reason}`);
+    state.pausedFor = null;
+    renderChoices();
+    return;
+  }
+  _awaitingGame = game;
+  state.pausedFor = game;
+  setStatus(`playing ${game}…`);
+  renderChoices();                      // clears them: paused means paused
+  window.foaf?.bus?.publish('app.storyrunner.paused', {
+    summary: `story paused for ${game}`, game,
+  });
+}
+
+// The result comes back governed: the shell checked the guest's manifest
+// when it wrote, so these values are the ACCEPTED economy, not a request.
+// The runner mirrors them into its own ink VARs — assignment to a name
+// the story never declared throws in inkjs, so each is guarded and the
+// misses are reported rather than swallowed.
+function resumeAfterGame(detail) {
+  const game = _awaitingGame;
+  _awaitingGame = null;
+  state.pausedFor = null;
+  const applied = [], missed = [];
+  for (const [name, value] of Object.entries(detail?.variables || {})) {
+    try { story.variablesState[name] = value; applied.push(name); }
+    catch { missed.push(name); }
+  }
+  state.lastGame = { game, success: detail?.success ?? null,
+                     score: detail?.score ?? null, applied, missed };
+  window.foaf?.bus?.publish('app.storyrunner.resumed', {
+    summary: `${game} finished — story resumes` +
+      (applied.length ? ` (${applied.join(', ')})` : ''),
+    game, applied, missed,
+  });
+  setStatus(missed.length ? `resumed (undeclared: ${missed.join(', ')})` : 'resumed');
+  advance();                            // continue from where the tag broke
+}
+
+// The shared economy, brokered. Seeded at compile so a story opens with
+// the treasure the reader already has, and re-read after a game so its
+// own VARs agree with the shell's canonical copy.
+async function seedEconomy() {
+  const declared = declaredNames();
+  if (declared) await storyRequest('story.vars', { op: 'declares', names: declared });
+  const res = await storyRequest('story.vars', { op: 'read' });
+  if (!res.ok || !res.values) return;
+  for (const [name, value] of Object.entries(res.values)) {
+    if (value === undefined) continue;
+    try { story.variablesState[name] = value; } catch { /* not declared here */ }
+  }
+  state.economy = res.values;
+}
+
+// Read the names from the COMPILED story, never from its source text.
+function declaredNames() {
+  try {
+    const g = story?.variablesState?._globalVariables;
+    return g ? [...g.keys()] : null;
+  } catch { return null; }
 }
 
 // Follow a # FINK link: the shell AUTHORIZES the destination (policy), the
@@ -342,6 +435,9 @@ async function loadStory(url) {
   }
   state.ready = true;
   setStatus('');
+  // Seed the shared economy BEFORE the first beat, or a story that opens
+  // by reading `diamonds` shows a zero the reader has already disproved.
+  await seedEconomy();
   advance();
 }
 
@@ -358,7 +454,21 @@ window.__storyrunner = {
   get state() { return JSON.parse(JSON.stringify(state)); },
   choose,
   ready: () => state.ready,
+  paused: () => !!_awaitingGame,
+  // read a story VAR (for the parity tests — the economy is the point)
+  varOf: (name) => { try { return story?.variablesState?.[name]; } catch { return undefined; } },
+  spend: (name, value) => storyRequest('story.vars', { op: 'write', name, value }),
 };
+
+// Shell → runner events. Only the parent may speak, and only the
+// vocabulary below: a story that ends up hosting a hostile frame cannot
+// forge a resume, because anything not from `parent` is dropped.
+window.addEventListener('message', (e) => {
+  if (e.source !== window.parent) return;
+  const d = e.data;
+  if (!d || d.type !== 'story.event') return;
+  if (d.event === 'minigame.complete' && _awaitingGame) resumeAfterGame(d.detail);
+});
 
 // Live inside foafos if present; run standalone otherwise (dev).
 if (window.foaf?.onInit) {

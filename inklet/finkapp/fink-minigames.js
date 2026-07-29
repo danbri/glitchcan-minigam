@@ -1421,16 +1421,36 @@ window.FinkMinigames = {
     // `actor` defaults to the host itself (story-driven writes, inline
     // widgets the shell renders directly); guests must pass _guestActor().
     _setStoryVariable(name, value, actor = null) {
-        if (!window.FinkInkEngine || !FinkInkEngine.story) return false;
+        // WHOSE variables are these? A BOXED story's ink lives in its own
+        // frame, so the shell keeps its economy (FoafOS.storyVars) and the
+        // runner mirrors it back on completion. This used to `return false`
+        // whenever there was no host-page story, so under the boxed runner
+        // every treasure a guest earned was dropped before the broker was
+        // even consulted — no write, no denial, no event (#779).
+        //
+        // But "no host story" is the WRONG test, and the suite caught it:
+        // under the default boot the legacy player holds a compiled TOC
+        // *and* a boxed runner may be running, so a guest launched by the
+        // runner wrote into the idle TOC's variables. Provenance decides —
+        // the shell claims the economy for the story that launched the
+        // game, and only that claim routes a write to the mirror.
+        const store = window.FoafOS?.storyVars || null;
+        const boxed = !!store?.owner;
+        const story = boxed ? null : (window.FinkInkEngine?.story || null);
+        if (!boxed && !story) return false;
 
-        const story = FinkInkEngine.story;
-        const apply = (n, v) => {
-            story.variablesState[n] = v;
-            this.log(`Set variable ${n} = ${v}`);
-            if (window.FinkUI && FinkUI.updateStatsDisplay) {
-                FinkUI.updateStatsDisplay();
+        const apply = boxed
+            ? (n, v) => {
+                store._apply(n, v);
+                this.log(`Set variable ${n} = ${v} (boxed story ${store.owner})`);
             }
-        };
+            : (n, v) => {
+                story.variablesState[n] = v;
+                this.log(`Set variable ${n} = ${v}`);
+                if (window.FinkUI && FinkUI.updateStatsDisplay) {
+                    FinkUI.updateStatsDisplay();
+                }
+            };
 
         const broker = window.FoafOS?.vars;
         try {

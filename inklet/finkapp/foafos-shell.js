@@ -105,6 +105,41 @@ FoafOS.cluster = cluster;
 // economy bounded, and makes dreams read-only for it.
 const vars = new FoafVars({ bus });
 FoafOS.vars = vars;
+
+// The shared economy, shell-side (#779 variable governance).
+//
+// A boxed story's ink variables live INSIDE its own frame — the shell
+// cannot reach them, and that is the containment working, not a defect.
+// So the SHARED economy (diamonds / mega_diamonds / keys / score /
+// minigame_played) needs a canonical copy the shell owns: the runner
+// mirrors it in at compile and asks the shell to write it, and a guest
+// that earns treasure writes here too. Private story variables never
+// leave the box — strictly better isolation than the host-page player,
+// where every variable was ambient.
+//
+// This is a mirror, not a second authority: every write still goes
+// through FoafVars.write, so the manifest check, the dream read-only
+// rule and the platform limits all still apply, and denials are still
+// events.
+const storyVars = new Map();
+let storyVarsOwner = null;   // appId of the boxed story whose game is playing
+FoafOS.storyVars = {
+  // WHOSE economy a guest's write belongs to is a question of PROVENANCE,
+  // not of whether a host story happens to exist. Under the default boot
+  // the legacy player holds a compiled TOC *and* a boxed runner can be
+  // running: "no host story" therefore picked the wrong target, and a
+  // guest launched by the boxed runner wrote its treasure into the idle
+  // TOC's variables instead. Set while a boxed story's game plays.
+  get owner() { return storyVarsOwner; },
+  _own: (appId) => { storyVarsOwner = appId; },
+  _disown: () => { storyVarsOwner = null; },
+  get: (name) => storyVars.get(name),
+  all: () => Object.fromEntries(storyVars),
+  // Only the broker may call this — it is the `apply` half of a governed
+  // write, never a way around one.
+  _apply: (name, value) => { storyVars.set(name, value); },
+  clear: () => storyVars.clear(),
+};
 bus.subscribe('story.state', (e) => vars.setDepth(e.data?.depth || 0));
 
 // ── audio: volume and mute as an OS service ────────────────────────────
@@ -506,6 +541,50 @@ const gameNodes = new Map();       // minigame instance id -> tree node id
 // of this type was instantiated by this app node." Read+cleared by the
 // minigame.instance handler so the game parents under its real launcher.
 let _pendingGameParent = null;
+
+// The boxed story that is PAUSED waiting for a game to finish (#779).
+// The host engine pauses its Continue loop on a `# MINIGAME:` beat and
+// resumes on completion; a boxed runner must do the same, but it cannot
+// see the guest and the shell cannot see its ink — so the shell carries
+// the result across. Frame-scoped so one runner's game cannot resume a
+// different runner's story.
+let _storyLauncher = null;
+
+// The one list of names that cross the story boundary. Taken from the
+// kernel's own export (`SHARED_DEFAULT`) rather than retyped: a second
+// copy of this list is a second policy, and they would drift. Read from
+// the live instance so a shell that narrows the set stays consistent.
+const SHARED_ECONOMY = [...vars.shared];
+
+const changedSince = (before, after) => Object.fromEntries(
+  Object.entries(after).filter(([k, v]) => before[k] !== v));
+
+// Completion travels back to whoever launched. The variables have ALREADY
+// been governed (the guest's manifest was checked when it wrote them),
+// so what the runner receives is the accepted economy, not a request.
+bus.subscribe('minigame.complete', (e) => {
+  if (e.source !== 'local') return;
+  const waiting = _storyLauncher;
+  _storyLauncher = null;
+  if (!waiting) return;
+  FoafOS.storyVars._disown();
+  try {
+    waiting.frame.contentWindow?.postMessage({
+      type: 'story.event', event: 'minigame.complete',
+      detail: {
+        game: waiting.game,
+        success: e.data?.success ?? null,
+        score: e.data?.score ?? null,
+        // Only what this game actually changed.
+        variables: changedSince(waiting.before || {}, FoafOS.storyVars.all()),
+      },
+    }, '*');
+  } catch (err) { /* the runner closed while its game played */ }
+  bus.publish('story.resume', {
+    summary: `${waiting.game} finished — ${waiting.appId} resumes`,
+    appId: waiting.appId, game: waiting.game,
+  });
+});
 bus.subscribe('minigame.instance', (e) => {
   if (e.source !== 'local') return;
   const { id, type, closed } = e.data || {};
@@ -1868,8 +1947,12 @@ function buildUI() {
           catch (err) { /* closed */ }
         };
         const verb = String(d.verb || '');
-        const need = { 'story.launch': 'story:launch', 'story.link': 'story:link',
-                       'story.navigate': 'story:navigate', 'story.audio': 'audio' }[verb];
+        // story.vars splits by direction: reading the economy and spending
+        // it are different authorities, so they map to different caps.
+        const need = verb === 'story.vars'
+          ? (d.detail?.op === 'write' ? 'vars:write' : 'vars:read')
+          : { 'story.launch': 'story:launch', 'story.link': 'story:link',
+              'story.navigate': 'story:navigate', 'story.audio': 'audio' }[verb];
         bus.publish('story.request', {
           summary: `${app.name}: ${verb}`, appId: app.id, verb, detail: d.detail,
         });
@@ -1912,8 +1995,58 @@ function buildUI() {
             // runner's node, reflecting the true control/instantiation/
             // capability border in the tree.
             _pendingGameParent = { type: game, parentNodeId };
+            // Remember WHO is waiting. A boxed story pauses on a
+            // `# MINIGAME:` beat exactly as the host engine does, and the
+            // shell must hand the result back to that frame — the story
+            // cannot resume itself and the shell cannot reach into its
+            // ink. Frame-scoped, so a second runner's game cannot resume
+            // the first one's story.
+            // Snapshot the economy so completion can forward only what THIS
+            // game changed. Forwarding the whole mirror would hand a story
+            // the private variables an earlier story's game had written —
+            // read is already narrowed to the shared set, and the writeback
+            // has to be narrowed the same way or it is the wider hole.
+            _storyLauncher = { frame, appId: app.id, game, nodeId: parentNodeId,
+                               before: FoafOS.storyVars.all() };
+            // Claim the economy for the duration: every write this game
+            // makes belongs to the boxed story that launched it.
+            FoafOS.storyVars._own(app.id);
             window.FinkMinigames?.startMinigame?.(game);
-            reply({ ok: true, launched: game });
+            reply({ ok: true, launched: game, awaiting: 'minigame.complete' });
+          } else if (verb === 'story.vars') {
+            // The shared economy, brokered (#779). A boxed story reads the
+            // canonical values to seed its own ink VARs, and asks to write
+            // them; FoafVars decides. `declares` lets the runner tell the
+            // shell which names its compiled story actually binds, so
+            // `vars.unbound` stays truthful for a story the shell cannot
+            // read — without it every write to a real VAR would be
+            // announced as writing into a void.
+            const op = d.detail?.op || 'read';
+            const actor = { kind: 'story', id: app.id,
+                            grants: { read: SHARED_ECONOMY, write: SHARED_ECONOMY } };
+            if (op === 'declares') {
+              const names = Array.isArray(d.detail?.names) ? d.detail.names.map(String) : null;
+              vars.setBound(names);
+              reply({ ok: true, bound: names ? names.length : null });
+            } else if (op === 'read') {
+              // Only the shared economy crosses the boundary. A story's
+              // private variables are its own business and stay in the box.
+              reply({ ok: true, values: vars.visibleTo(actor, FoafOS.storyVars.all()) });
+            } else if (op === 'write') {
+              const name = String(d.detail?.name || '');
+              if (!SHARED_ECONOMY.includes(name)) {
+                // Refuse by NAME, not silently: a story trying to broker a
+                // private variable has misunderstood the boundary, and
+                // saying so is how it finds out.
+                reply({ ok: false, reason: 'not-shared', name });
+                return;
+              }
+              const wrote = vars.write(actor, name, d.detail?.value, FoafOS.storyVars._apply);
+              reply({ ok: wrote, name, value: FoafOS.storyVars.get(name),
+                      reason: wrote ? null : 'denied' });
+            } else {
+              reply({ ok: false, reason: 'bad-params', op });
+            }
           } else if (verb === 'story.audio') {
             // Audio is a HOST service — and this is the iOS fix. A
             // sandboxed frame has no gesture unlock, so `new Audio()`
