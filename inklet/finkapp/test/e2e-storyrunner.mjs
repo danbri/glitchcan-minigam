@@ -137,18 +137,20 @@ try {
     pass(`feature: pinned image, prose below (${feat.mediaH}/${feat.stageH}px)`);
   } else fail('feature media wrong: ' + JSON.stringify(feat));
 
-  // ── 4b. AUDIO is a HOST service (the iOS fix). # AUDIO: must be BROKERED
-  // to the shell — played from the host document, not with new Audio()
-  // inside the sandboxed frame (which iOS throttles) — and governed by the
-  // shell master volume.
+  // ── 4b. AUDIO plays IN THE RUNNER'S OWN FRAME (the iOS fix). The bed is
+  // an <audio> element in the boxed document, so the choice tap that ends a
+  // beat is a gesture in the SAME document iOS wants for playback — a
+  // host-brokered story.audio verb cannot carry that user-activation across
+  // the frame border. So: # AUDIO: is NOT brokered, and it is playing.
   const audio0 = await frame.evaluate(() => ({
     src: window.__storyrunner.state.audio,
+    playing: window.__storyrunner.state.audioPlaying,
     brokered: window.__storyrunner.state.requests.some(
       (r) => r.verb === 'story.audio' && r.detail?.action === 'play'),
   }));
-  if (audio0.src && /ambient\.wav/.test(audio0.src) && audio0.brokered) {
-    pass('# AUDIO: brokered to the shell (host document — iOS-friendly), not played in the box');
-  } else fail('audio not brokered: ' + JSON.stringify(audio0));
+  if (audio0.src && /ambient\.wav/.test(audio0.src) && audio0.playing && !audio0.brokered) {
+    pass('# AUDIO: played in the runner frame (gesture-unlockable on iOS), not brokered');
+  } else fail('audio not played in-frame: ' + JSON.stringify(audio0));
   await page.evaluate(() => FoafOS.audio.setVolume(0.25));
   await page.waitForTimeout(300);
   const lvl = await frame.evaluate(() => window.__storyrunner.state.audioLevel);
