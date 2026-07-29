@@ -20,7 +20,7 @@ const state = {
   storyUrl: null, ready: false, prose: [], choices: [], bg: null,
   ended: false, requests: [], boxedCompile: false,
   media: null, mediaRole: null, mediaSpec: null,
-  audio: null, audioLevel: 1, linkedTo: null,
+  audio: null, audioPlaying: false, audioLevel: 1, linkedTo: null,
 };
 let story = null;
 
@@ -140,43 +140,57 @@ function handleTag(tag) {
   }
 }
 
-// Audio as a HOST service — and the iOS fix. Inside foafos the runner does
-// NOT play audio in its own sandboxed frame (iOS blocks a cross-origin
-// frame with no gesture unlock); it asks the SHELL to play it via
-// FinkAudio, which lives in the gesture-unlocked host document and is
-// already governed by the master volume. Standalone (no shell), it falls
-// back to an in-frame element so dev still hears something. Synth audio
-// (`# AUDIO: synth:*`) is the host's FinkFoley — not reachable from the
-// box; named, not silent.
+// Audio in the runner's OWN frame, UNLOCKED ON THE RUNNER'S OWN TAP.
+//
+// The iOS fix, corrected. iOS unlocks audio only on a gesture in the SAME
+// document as the sound. The player's taps — the choices — happen HERE, in
+// the runner frame, not in the host. An earlier version brokered audio to
+// the host so it "played from a gesture-unlocked document"; but the host's
+// gesture never comes (all interaction is in this frame), so on a deep link
+// it stayed silent forever. So: play here, and if iOS blocks the first
+// play(), arm a one-shot that starts the bed on the next tap in this frame.
+// Volume still comes from the shell master (foaf.onAudio → our element), so
+// the dock's mute reaches it — audio-as-a-host-service, where the guest
+// applies the level itself (spec §5.5). Synth audio (`# AUDIO: synth:*`) is
+// the host's FinkFoley, not reachable from the box; named, not silent.
 let _audioEl = null;
 let _audioLevel = 1;
+let _audioArmed = false;
 
 function playAudio(value) {
   const v = (value || '').trim();
   if (/^synth:/i.test(v)) { setStatus('(synth audio is host-only, not in the boxed runner)'); return; }
   if (!v) return;
   state.audio = v;
-  if (window.foaf?.storyRequest) {
-    // brokered to the shell — plays from the host document (iOS-friendly)
-    storyRequest('story.audio', { url: resolveStoryUrl(v), action: 'play' });
-    return;
-  }
-  stopAudio();                                   // standalone dev fallback
-  _audioEl = new Audio(v);
+  stopAudio(true);
+  _audioEl = new Audio(resolveStoryUrl(v));
   _audioEl.loop = true;
   _audioEl.volume = _audioLevel;
-  _audioEl.play().catch(() => { /* autoplay may wait for a gesture */ });
+  _audioEl.play().then(() => { state.audioPlaying = true; }).catch(() => armAudioUnlock());
 }
 
-function stopAudio() {
-  state.audio = null;
-  if (window.foaf?.storyRequest) { storyRequest('story.audio', { action: 'stop' }); return; }
+// iOS blocks play() with no gesture. The next tap anywhere in the runner
+// (a choice, the pad) starts the bed — that tap IS the gesture iOS wants.
+function armAudioUnlock() {
+  if (_audioArmed) return;
+  _audioArmed = true;
+  const go = () => {
+    document.removeEventListener('pointerdown', go);
+    document.removeEventListener('touchend', go);
+    _audioArmed = false;
+    if (_audioEl) _audioEl.play().then(() => { state.audioPlaying = true; }).catch(() => { /* still blocked */ });
+  };
+  document.addEventListener('pointerdown', go, { once: true, passive: true });
+  document.addEventListener('touchend', go, { once: true, passive: true });
+}
+
+function stopAudio(keep) {
+  if (!keep) state.audio = null;
+  state.audioPlaying = false;
   if (_audioEl) { try { _audioEl.pause(); } catch (e) { /* gone */ } _audioEl = null; }
 }
 
-// The shell's master volume/mute. When brokered, FinkAudio already applies
-// it host-side; we only drive the standalone fallback element. Recorded
-// either way so "is the box governed" is observable.
+// The shell's master volume/mute, applied to the runner's own element.
 function applyAudioLevel({ level }) {
   _audioLevel = level;
   if (_audioEl) _audioEl.volume = level;
