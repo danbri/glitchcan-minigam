@@ -95,7 +95,7 @@ try {
   const disclosed = await page.evaluate(() => {
     const sw = FoafOS.openSwitcher();
     const rows = [...sw.querySelectorAll('.foafos-switch-card')].map(c => c.textContent);
-    const kill = [...sw.querySelectorAll('.foafos-switch-act.danger')]
+    const kill = [...sw.querySelectorAll('.foafos-switch-act.foafos-danger')]
       .map(b => b.getAttribute('aria-label'));
     sw.remove();
     return { rows, kill };

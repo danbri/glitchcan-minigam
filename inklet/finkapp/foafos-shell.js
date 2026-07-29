@@ -331,6 +331,20 @@ const rootNode = apps.spawn({
   capabilities: ROOT.capabilities, label: ROOT.label, surface: 'root',
 });
 FoafOS.rootNode = rootNode;
+
+// WMBling — the furniture rack. Chrome widgets (status bars, meters,
+// menus: window-manager bling) hang under this one node instead of
+// directly off the root. The Running tree then shows the furniture as
+// one rack (Breadcrumb ⊂ WMBling ⊂ root), one wall guards it because
+// it IS one subtree — no display-time clustering — and one tristate
+// pause can idle all the bling at once. It holds the root's grant so
+// any widget's own (smaller) grant attenuates from it unchanged.
+const wmblingNode = apps.spawn({
+  appId: 'wmbling', parentId: rootNode.id,
+  capabilities: rootNode.capabilities,
+  label: 'WMBling', surface: 'chrome',
+});
+FoafOS.wmblingNode = wmblingNode;
 // Game snapshots are the shell holding bytes on a guest's behalf, so
 // they live in the store like everything else the shell holds — under a
 // namespace of their own, not the guest's, because the guest may not
@@ -389,7 +403,7 @@ function mountChrome(app) {
   }
   if (!document.getElementById(app.mount)) return null;   // no such furniture
   const node = apps.spawn({
-    appId: app.id, parentId: rootNode.id,
+    appId: app.id, parentId: wmblingNode.id,
     capabilities: app.capabilities || [], label: app.name, surface: 'chrome',
   });
   if (node.refused) { parkChrome(app); return null; }
@@ -1726,10 +1740,15 @@ function buildUI() {
     // belong in this list, but "Running 4" when the player has one story
     // open and three status bars is a true number that reads as a wrong
     // one.
-    const chromeCount = running.filter(r => r.node?.surface === 'chrome').length;
-    const tally = chromeCount
-      ? `${running.length - chromeCount} + ${chromeCount} chrome`
-      : String(running.length);
+    // The root row and the WMBling rack are structure, not workload —
+    // neither counts as "running an app".
+    const rackId = FoafOS.wmblingNode?.id;
+    const chromeCount = running.filter(r =>
+      r.node?.surface === 'chrome' && r.node.id !== rackId).length;
+    const appCount = running.filter(r =>
+      r.node !== FoafOS.rootNode && r.node?.id !== rackId
+      && r.node?.surface !== 'chrome').length;
+    const tally = chromeCount ? `${appCount} + ${chromeCount} chrome` : String(appCount);
     sw.innerHTML = `<div class="foafos-overlay-head">
         <h2>Running <span class="hint">${tally}</span></h2>
         <button type="button" class="foafos-overlay-close" aria-label="Close switcher">✕</button>
@@ -1742,20 +1761,16 @@ function buildUI() {
     // unrelated things is a different fact from five things where four
     // were opened by the first, and only one of those is true.
     //
-    // WALLS between the top-level subtrees: each depth-0 app and its
-    // descendants share one sandbox lineage; the next depth-0 app is the
+    // WALLS between the subtrees directly under the root: each of those
+    // and its descendants share one sandbox lineage; the next one is the
     // other side of a partition. The brick row IS the security diagram —
     // everything between two walls can only talk through the shell.
+    // Chrome furniture needs no clustering hack any more: it is ONE
+    // subtree under the WMBling rack, so it gets one wall structurally.
     let firstGroup = true;
-    let prevTopChrome = false;
     for (const r of running) {
-      if ((r.depth || 0) === 0) {
-        const isChrome = r.node?.surface === 'chrome';
-        // Chrome furniture all runs in the shell's own lineage — five
-        // status bars behind five walls would be brick soup and a lie.
-        // One wall in front of the furniture block, walls between real
-        // app subtrees.
-        if (!firstGroup && !(isChrome && prevTopChrome)) {
+      if ((r.depth || 0) === 1) {
+        if (!firstGroup) {
           const wall = document.createElement('div');
           wall.className = 'foafos-switch-wall';
           wall.setAttribute('role', 'separator');
@@ -1764,7 +1779,6 @@ function buildUI() {
           cards.appendChild(wall);
         }
         firstGroup = false;
-        prevTopChrome = isChrome;
       }
       const row = document.createElement('div');
       row.className = 'foafos-switch-row';
@@ -1784,6 +1798,7 @@ function buildUI() {
       row.appendChild(c);
 
       if (r.node) {
+        const isRoot = r.node === FoafOS.rootNode;
         const kin = FoafOS.apps.descendants(r.node.id).length;
         const withKin = kin ? ` and ${kin} beneath it` : '';
 
@@ -1845,7 +1860,10 @@ function buildUI() {
           FoafOS.apps.close(r.node.id);
           sw.remove(); openSwitcher();
         });
-        row.append(info, sus, kill);
+        // The root gets ⓘ only. Pausing or closing the shell from
+        // inside the shell is a rug-pull, not a control.
+        if (isRoot) row.append(info);
+        else row.append(info, sus, kill);
       }
       cards.appendChild(row);
     }
@@ -1897,7 +1915,18 @@ function buildUI() {
         walk(child, depth + 1, child.label);
       }
     };
-    if (FoafOS.rootNode) walk(FoafOS.rootNode, 0, FoafOS.root?.label || 'root');
+    // The root is SHOWN, at depth 0 — the shell used to hide its own row,
+    // which left the one hierarchy fact everything shares (⊂ root)
+    // invisible until ⓘ was opened. Everything else hangs beneath it.
+    if (FoafOS.rootNode) {
+      out.push({
+        node: FoafOS.rootNode, depth: 0, parentLabel: null,
+        icon: FoafOS.root?.icon || '🏠',
+        label: FoafOS.rootNode.label, detail: 'root',
+        focus: () => {},
+      });
+      walk(FoafOS.rootNode, 1, FoafOS.root?.label || 'root');
+    }
     return out;
   }
 

@@ -236,9 +236,14 @@ try {
     });
     const story = rows.find(r => r.title === 'Story');
     const game = rows.find(r => r.title === 'GridLuck');
-    story?.depth === '0' && game?.depth === '1'
-      ? pass(`switcher shows lineage: Story at depth 0, GridLuck indented beneath it`)
-      : fail(`switcher is still flat: ${JSON.stringify(rows)}`);
+    // The root row is SHOWN at depth 0; app subtrees start at depth 1.
+    const rootRow = rows.find(r => r.depth === '0');
+    rootRow && story?.depth === '1' && game?.depth === '2'
+      ? pass(`switcher shows lineage: root "${rootRow.title}" at 0, Story at 1, GridLuck beneath it`)
+      : fail(`switcher lineage wrong: ${JSON.stringify(rows)}`);
+    rootRow && rootRow.acts.length === 1
+      ? pass('the root row offers ⓘ only — no pause/close on the shell itself')
+      : fail(`root row actions wrong: ${JSON.stringify(rootRow?.acts)}`);
     // the destructive verb must SAY what it takes with it
     /and 1 beneath it/.test((story?.acts || []).join(' '))
       ? pass('close/suspend name the subtree they take ("and 1 beneath it")')
