@@ -112,6 +112,11 @@ function handleTag(tag) {
       break;
     case 'STATUS':
       setStatus(value);
+      // Contribute the story's readout to the menubar (grouped under this
+      // app in the tree). Small, in our own namespace — the sandbox allows
+      // app.storyrunner.*; the menubar (shell furniture) aggregates it.
+      _statusItems = value ? [{ id: 'status', label: value }] : [];
+      window.foaf?.bus?.publish('app.storyrunner.status', { items: _statusItems });
       break;
     case 'MINIGAME':
       storyRequest('story.launch', { game: value.split(/\s+/)[0] });
@@ -187,6 +192,7 @@ function applyAudioLevel({ level }) {
 const MEDIA_ROLES = { hero: 'X-MEDIA-HERO', feature: 'X-MEDIA-FEATURE', accent: 'X-MEDIA-ACCENT' };
 let _beatMedia;   // undefined = no media tag this beat (keep previous, sticky)
 let _pendingLink; // undefined = no FINK link this beat
+let _statusItems = [];   // the story's menubar readouts
 
 function parseMedia(kind, value) {
   const parts = value.split(/\s+/).filter(Boolean);

@@ -1120,3 +1120,31 @@ body[data-theatre="on"] .video-collapse { display: none; }
     color: var(--zx-cyan);
     font-weight: bold;
 }
+
+/* ── Menubar: clock + app dashboard widgets, grouped by the app tree ── */
+#foaf-menubar {
+    display: flex;
+    align-items: center;
+    gap: 0.9em;
+    padding: 0.25em 0.8em;
+    padding-inline: 44px;
+    font-size: 0.82em;
+    background: rgba(0, 0, 0, 0.72);
+    border-bottom: 1px solid var(--zx-blue);
+    color: var(--zx-white, #fff);
+    z-index: 99;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+/* nothing but the clock → no bar (the clock alone does not earn a row) */
+#foaf-menubar:not(:has(.mb-group)) { display: none; }
+#foaf-menubar .mb-clock { opacity: 0.85; font-variant-numeric: tabular-nums; }
+#foaf-menubar .mb-group {
+    display: inline-flex; align-items: center; gap: 0.4em;
+    /* indent by tree depth: a child app's readouts sit in from its parent */
+    margin-inline-start: calc(var(--mb-depth, 0) * 1.2em);
+    padding-inline-start: 0.6em;
+    border-inline-start: 2px solid rgba(255, 255, 255, 0.18);
+}
+#foaf-menubar .mb-app { opacity: 0.6; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.06em; }
+#foaf-menubar .mb-widget { font-variant-numeric: tabular-nums; }

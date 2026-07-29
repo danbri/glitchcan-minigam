@@ -173,6 +173,25 @@ try {
     pass(`accent: small thumbnail, text leads (${acc.mediaH}/${acc.stageH}px)`);
   } else fail('accent media wrong: ' + JSON.stringify(acc));
 
+  // ── 4c. MENUBAR: the story's # STATUS: (fired at the accent beat) surfaces
+  // as a dashboard widget in the shell menubar, GROUPED under the app in the
+  // tree; a clock is always present. This is the hierarchy the parallel
+  // view lacked — a story's readout at its own level, a minigame's nested.
+  await page.waitForTimeout(400);
+  const menubar = await page.evaluate(() => {
+    const el = document.getElementById('foaf-menubar');
+    const grp = el?.querySelector('.mb-group[data-app="storyrunner"]');
+    return {
+      mounted: !!(window.FoafMenubar && window.FoafMenubar._state().mounted),
+      clock: !!el?.querySelector('.mb-clock'),
+      group: !!grp,
+      text: grp?.textContent || '',
+    };
+  });
+  if (menubar.mounted && menubar.clock && menubar.group && /torch/.test(menubar.text)) {
+    pass(`menubar: clock + storyrunner group with the story's readout ("${menubar.text.trim()}")`);
+  } else fail('menubar wrong: ' + JSON.stringify(menubar));
+
   // ── 5. # FINK: LINK — the shell authorizes, the runner loads the peer
   // story IN ITS BOX, and the peer's own # MINIGAME: becomes a governed
   // launch. One flow proves link-following AND cross-story containment.
