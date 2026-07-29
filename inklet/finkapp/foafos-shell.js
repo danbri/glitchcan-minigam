@@ -337,11 +337,20 @@ FoafOS.rootNode = rootNode;
 // directly off the root. The Running tree then shows the furniture as
 // one rack (Breadcrumb ⊂ WMBling ⊂ root), one wall guards it because
 // it IS one subtree — no display-time clustering — and one tristate
-// pause can idle all the bling at once. It holds the root's grant so
-// any widget's own (smaller) grant attenuates from it unchanged.
+// pause can idle all the bling at once.
+//
+// Its grant is REAL, not plumbing: the union of what the registered
+// chrome widgets themselves declare (today: shell, vars:read), clipped
+// to what the root holds. A first draft gave the rack the root's whole
+// grant for attenuation convenience — which made ⓘ show git:write and
+// secrets chips on a furniture rack that uses neither. Display only
+// real structure. A widget declaring something outside this union is
+// refused at its own spawn and parked, which is the right failure and
+// the signal to widen the rack deliberately.
 const wmblingNode = apps.spawn({
   appId: 'wmbling', parentId: rootNode.id,
-  capabilities: rootNode.capabilities,
+  capabilities: [...new Set(chromeApps().flatMap(a => a.capabilities || []))]
+    .filter(c => rootNode.capabilities.includes(c)),
   label: 'WMBling', surface: 'chrome',
 });
 FoafOS.wmblingNode = wmblingNode;
