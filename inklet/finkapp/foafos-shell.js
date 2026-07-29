@@ -1451,6 +1451,15 @@ function buildUI() {
   }
   FoafOS.launchApp = launchApp;
 
+  // One-tap deep link: `?app=<id>` opens an app straight after boot, so a
+  // shareable URL can drop someone into the boxed Story Runner (or any app
+  // the root offers) without hunting through the drawer. `rootOffers`/
+  // attenuation still gate it — a link cannot open what the root withholds.
+  try {
+    const wanted = new URLSearchParams(location.search).get('app');
+    if (wanted) setTimeout(() => { try { launchApp(wanted); } catch (e) { /* refused */ } }, 300);
+  } catch (e) { /* no location */ }
+
   // The sandbox an app gets, derived from its declared capabilities.
   //
   // `allow-scripts` alone yields an OPAQUE ORIGIN: no parent.document, no
