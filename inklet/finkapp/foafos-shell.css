@@ -661,19 +661,22 @@ foafos-feed { display: block; --foaf-accent: var(--zx-mag); }
 .foafos-switch-row:not([style*="--depth: 0"]) .foafos-switch-card {
     border-left: 3px solid var(--zx-cyan);
 }
+/* Skin tokens, not dark-theme constants: on the light Broadsheet
+   overlay the old #eee glyphs were near-invisible (field screenshot,
+   2026-07-29). */
 .foafos-switch-act {
     min-width: 44px;
     min-height: 44px;
-    border: 1px solid #555;
+    border: 1px solid var(--sk-line, #555);
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.06);
-    color: #eee;
+    background: transparent;
+    color: var(--sk-ink, #eee);
     font-family: inherit;
     font-size: 1rem;
     cursor: pointer;
 }
-.foafos-switch-act:hover { border-color: var(--zx-cyan); }
-.foafos-switch-act.danger:hover { border-color: #f66; color: #f88; }
+.foafos-switch-act:hover { border-color: var(--sk-accent, #6cf); }
+.foafos-switch-act.foafos-danger:hover { border-color: #f66; color: #f66; }
 /* a suspended window says so at a glance rather than looking merely idle */
 .foafos-window.suspended { filter: grayscale(0.7) brightness(0.7); }
 .foafos-window.suspended::after {

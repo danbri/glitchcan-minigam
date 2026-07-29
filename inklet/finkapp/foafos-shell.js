@@ -1830,7 +1830,11 @@ function buildUI() {
 
         const kill = document.createElement('button');
         kill.type = 'button';
-        kill.className = 'foafos-switch-act danger';
+        // 'foafos-danger', not 'danger': the player stylesheet has a global
+        // .danger::before { content: '⚠ ' } which bolted a warning triangle
+        // onto every close button in the switcher (field screenshot,
+        // 2026-07-29). Scoped name, no shared decoration.
+        kill.className = 'foafos-switch-act foafos-danger';
         kill.textContent = '✕';
         const loss = r.node.surface === 'stage'
           ? (snapshotNote() === 'keeps its place' ? ', its place is kept' : ', its state is lost')
