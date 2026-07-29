@@ -84,6 +84,23 @@ window.FinkPlayer = {
             return;
         }
 
+        // #779's flip lever, opt-in early. The root manifest declares
+        // storyPlayer.default 'boxed' but autoBoot stays 'legacy' until
+        // the parity blockers close — and until now NOTHING read either
+        // field, so there was no way to boot the boxed runner at all.
+        // `?player=boxed` (or a manifest autoBoot of 'boxed', when #779
+        // flips it) boots the BOXED runner as the story surface and lets
+        // this pending-delete player idle. An explicit ?story=/deep link
+        // still wins and loads legacy, which is the only player that can
+        // be handed an arbitrary story today.
+        const wantBoxed = new URLSearchParams(window.location.search).get('player') === 'boxed'
+            || window.FoafOS?.root?.storyPlayer?.autoBoot === 'boxed';
+        if (!targetFink && wantBoxed) {
+            FinkUtils.debugLog('Boot: boxed story runner (?player=boxed / manifest autoBoot)');
+            setTimeout(() => window.FoafOS?.launchApp?.('storyrunner'), 150);
+            return;
+        }
+
         // Auto-load story from hash or config
         if (targetFink) {
             FinkUtils.debugLog('Loading FINK from hash: ' + targetFink);
