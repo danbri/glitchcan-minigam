@@ -479,6 +479,10 @@ const busGrantsFor = (type, app) => app?.bus || {
   subscribe: ['wm.mode', 'audio.volume', 'story.state'],
 };
 const gameNodes = new Map();       // minigame instance id -> tree node id
+// One-shot hint set by a boxed runner's story.launch: "the next minigame
+// of this type was instantiated by this app node." Read+cleared by the
+// minigame.instance handler so the game parents under its real launcher.
+let _pendingGameParent = null;
 bus.subscribe('minigame.instance', (e) => {
   if (e.source !== 'local') return;
   const { id, type, closed } = e.data || {};
@@ -491,8 +495,18 @@ bus.subscribe('minigame.instance', (e) => {
     return;
   }
   const app = appById(type);
+  // The instantiation border, made real: if a boxed runner launched this
+  // game (story.launch recorded which node asked), parent it under THAT
+  // runner — not the global story/root node. Then the tree reflects the
+  // truth the menubar renders: who instantiated whom, whose close cascades
+  // to it, and whose capability grant bounds it (attenuation). The hint is
+  // one-shot and only trusted if the recorded parent is still alive.
+  let parentId = (storyNode || FoafOS.rootNode)?.id || null;
+  const hint = _pendingGameParent;
+  _pendingGameParent = null;
+  if (hint && hint.type === type && apps.get(hint.parentNodeId)) parentId = hint.parentNodeId;
   const node = apps.spawn({
-    appId: type, parentId: (storyNode || FoafOS.rootNode)?.id || null,
+    appId: type, parentId,
     capabilities: app?.capabilities || [],
     label: app?.name || type, surface: 'stage',
     // endMinigame() is the real teardown — `closeMinigame` does not
@@ -1530,6 +1544,10 @@ function buildUI() {
           if (verb === 'story.launch') {
             const game = String(d.detail?.game || '').toLowerCase();
             if (!game) { reply({ ok: false, reason: 'bad-params' }); return; }
+            // Record the real instantiator so the game parents under THIS
+            // runner's node (win.dataset.instance), reflecting the true
+            // control/instantiation/capability border in the tree.
+            _pendingGameParent = { type: game, parentNodeId: win.dataset.instance || null };
             window.FinkMinigames?.startMinigame?.(game);
             reply({ ok: true, launched: game });
           } else if (verb === 'story.audio') {
