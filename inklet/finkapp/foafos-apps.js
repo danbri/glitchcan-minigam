@@ -159,7 +159,12 @@ export const APPS = [
     // no `story` override: the runner defaults to its own ./demo.fink.js,
     // resolved relative to the RUNNER frame (a finkapp-relative path would
     // resolve against the wrong base once fetched inside the box)
-    capabilities: ['story:launch', 'story:link', 'story:navigate', 'audio'],
+    // It holds what it CONFERS: a minigame it launches becomes its child,
+    // and attenuation requires the child's caps ⊆ the runner's. So the
+    // runner carries input + vars:read/write on behalf of the games it
+    // instantiates — the capability border is real, not cosmetic.
+    capabilities: ['story:launch', 'story:link', 'story:navigate', 'audio',
+                   'input', 'vars:read', 'vars:write'],
     bus: { publish: ['app.storyrunner.*'], subscribe: ['wm.mode', 'audio.volume', 'ui.skin'] } },
   // MIGRATED (July 2026) — and it was the LAST `same-origin` holder, so the
   // whole registry is now sandboxed. Found because the ROBBAMP tile was DEAD

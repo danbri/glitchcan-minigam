@@ -219,6 +219,25 @@ try {
     pass(`capUse tallied story:link (${use['story:link']}) and story:launch (${use['story:launch']})`);
   } else fail('capUse ledger missing a story:* use: ' + JSON.stringify(use));
 
+  // ── 5b. THE BORDER IS REAL — the launched game is a CHILD of the runner
+  // in the app tree (instantiation), not a sibling under story/root. Its
+  // caps are bounded by the runner's (attenuation), and closing the runner
+  // cascades to it (control). This is the hierarchy the menubar reflects.
+  await page.waitForTimeout(400);
+  const tree = await page.evaluate(() => {
+    const apps = FoafOS.apps;
+    const runner = [...apps.nodes.values()].find((n) => n.appId === 'storyrunner');
+    const game = [...apps.nodes.values()].find((n) => n.appId === 'waterworld');
+    return {
+      runner: !!runner, game: !!game,
+      gameUnderRunner: !!(runner && game && game.parentId === runner.id),
+      gameCapsBounded: !!(runner && game && game.capabilities.every((c) => runner.capabilities.includes(c))),
+    };
+  });
+  if (tree.gameUnderRunner && tree.gameCapsBounded) {
+    pass('instantiation border real: the game is a CHILD of the runner, caps bounded by it');
+  } else fail('tree border wrong: ' + JSON.stringify(tree));
+
   // ── 6. POLICY: a cross-origin link is refused; unknown verbs too ─────
   const xorigin = await frame.evaluate(() =>
     window.foaf.storyRequest('story.link', { url: 'https://evil.example/x.fink.js' }));
@@ -241,6 +260,19 @@ try {
   if (direction.declaredDefault === 'boxed' && direction.legacyPending && direction.legacyIssue === 779) {
     pass(`default surface = boxed; host player flagged pending-delete (auto-boot ${direction.autoBoot} until #${direction.legacyIssue})`);
   } else fail('default switch / pending-delete flag wrong: ' + JSON.stringify(direction));
+
+  // ── 8. CONTROL border (LAST — it detaches the runner frame): closing the
+  // runner subtree tears down its child game. Real control, real cascade.
+  const cascade = await page.evaluate(() => {
+    const apps = FoafOS.apps;
+    const runner = [...apps.nodes.values()].find((n) => n.appId === 'storyrunner');
+    const before = [...apps.nodes.values()].some((n) => n.appId === 'waterworld');
+    apps.close(runner.id);
+    const after = [...apps.nodes.values()].some((n) => n.appId === 'waterworld');
+    return { before, after };
+  });
+  if (cascade.before && !cascade.after) pass('control border real: closing the runner cascaded to its child game');
+  else fail('close did not cascade to the child game: ' + JSON.stringify(cascade));
 
   if (pageErrors.length) fail('page errors: ' + pageErrors.join(' | '));
   else pass('zero page errors');

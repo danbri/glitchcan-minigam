@@ -25,13 +25,28 @@ Apps publish in their **own scoped namespace** — the sandbox already allows
 `app.<id>.*`, so a boxed guest needs no new grant. The menubar, being
 trusted shell furniture (host-side), reads them all.
 
-## The hierarchy
-Groups are ordered and **indented by app-tree depth** (`FoafOS.apps`): a
-story's readouts at one level, its running minigame's nested beneath. A
-group appears when its app starts publishing and disappears when the app
-closes (`minigame.instance {closed}`). This is the nesting the flat
-parallel/tabbed view lacked — one story owning the frame, its guests'
-dashboards tucked under it.
+## The hierarchy reflects a REAL border (not a display nesting)
+Groups are ordered and **indented by app-tree depth** (`FoafOS.apps`) — but
+the point is what that tree *means*. It is not a cosmetic nesting; it is the
+**instantiation / control / capability border**:
+
+- **Instantiation.** When the boxed runner launches a minigame
+  (`story.launch`), the shell records the requesting runner's node and
+  parents the game **under that runner** — not under a global story/root
+  node. So the game is genuinely the runner's child because the runner
+  genuinely made it. (Correction, 2026-07-29: an earlier cut parented
+  launched games under the global story node, so the menubar's nesting was
+  faithful to a tree that was itself wrong. Fixed — see
+  `e2e-storyrunner.mjs` "instantiation border real".)
+- **Control.** Closing the runner **cascades** to its child game (the tree's
+  close cascade tears the guest down). Asserted.
+- **Capability.** The child's grant ⊆ the parent's (attenuation). The runner
+  therefore holds what it confers (`input`, `vars:read/write`) — a game it
+  launches cannot exceed it. Asserted.
+
+A group appears when its app starts publishing and disappears when the app
+closes. So the indent in the menubar is a true statement about who made,
+controls, and bounds whom — the border the flat parallel/tabbed view hid.
 
 ## Contributing (any app)
 ```js
