@@ -353,6 +353,75 @@ body.foaf-pad-on #foafos-dock {
 .foafos-window-btn:hover,
 .foafos-window-close:hover { background: rgba(0, 229, 255, 0.18); }
 
+/* ── OVERVIEW ──────────────────────────────────────────────────────────
+   Windows interpolate into a grid of cards. Compositor-only: only
+   `transform` animates, so no window is re-laid-out and no iframe
+   reloads. Motion tokens, not magic numbers. */
+.foafos-window.foafos-ov {
+    transition: transform var(--dur-base, 300ms) var(--ease-out-soft, ease);
+    resize: none;
+    box-shadow: 0 14px 44px rgba(0, 0, 0, 0.7);
+}
+/* The click-catcher that sits over the guest iframe while in overview —
+   an iframe swallows pointer events, so without this a tap on a card
+   would land inside the guest instead of picking the card. */
+.foafos-ov-hit {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+.foafos-ov-hit:hover { background: rgba(0, 229, 255, 0.10); }
+.foafos-ov-hit:focus-visible {
+    outline: 3px solid var(--sk-accent, #6cf);
+    outline-offset: -3px;
+}
+/* Dim everything that is not a card, so the hand of cards reads as the
+   only live layer. */
+body.foafos-overview-on::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 2610;
+    background: rgba(0, 0, 0, 0.55);
+    animation: foafos-ov-fade var(--dur-fast, 140ms) var(--ease-out-soft, ease);
+}
+@keyframes foafos-ov-fade { from { opacity: 0; } to { opacity: 1; } }
+#foafos-ov-strip {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 2700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .8rem;
+    padding: .5rem .8rem;
+    padding-top: max(.5rem, env(safe-area-inset-top));
+    background: var(--sk-bg, #0a0a12);
+    color: var(--sk-ink, #e8ecf4);
+    border-bottom: 1px solid var(--sk-line, #2b3d5c);
+    font: inherit;
+    font-size: .85rem;
+    letter-spacing: .08em;
+}
+#foafos-ov-done {
+    min-width: 44px;
+    min-height: 44px;
+    border: 1px solid var(--sk-line, #555);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--sk-ink, #eee);
+    font: inherit;
+    cursor: pointer;
+}
+#foafos-ov-done:hover { border-color: var(--sk-accent, #6cf); }
+@media (prefers-reduced-motion: reduce) {
+    .foafos-window.foafos-ov { transition: none; }
+    body.foafos-overview-on::before { animation: none; }
+}
+
 /* Minimized: only the title bar remains; content and resize suppressed. */
 .foafos-window.minimized {
     height: auto !important;

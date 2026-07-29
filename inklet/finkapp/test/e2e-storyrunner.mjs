@@ -263,16 +263,27 @@ try {
 
   // ── 8. CONTROL border (LAST — it detaches the runner frame): closing the
   // runner subtree tears down its child game. Real control, real cascade.
-  const cascade = await page.evaluate(() => {
+  const cascade = await page.evaluate(async () => {
     const apps = FoafOS.apps;
-    const runner = [...apps.nodes.values()].find((n) => n.appId === 'storyrunner');
     const before = [...apps.nodes.values()].some((n) => n.appId === 'waterworld');
-    apps.close(runner.id);
-    const after = [...apps.nodes.values()].some((n) => n.appId === 'waterworld');
-    return { before, after };
+    // Press the button a PERSON presses. This used to call win.remove()
+    // alone: the box vanished while the node and every app it had
+    // launched stayed alive, so closing a story left its game running
+    // under a parent nobody could see (field report, 2026-07-29). The
+    // API-level apps.close() was already correct — testing only that
+    // missed the whole defect, because closing is revoking authority and
+    // the affordance is where a person does it.
+    const win = document.querySelector('.foafos-window iframe[src*="storyrunner"]')?.closest('.foafos-window');
+    if (!win) return { before, noWindow: true };
+    win.querySelector('.foafos-window-close').click();
+    await new Promise((r) => setTimeout(r, 600));
+    const ids = [...apps.nodes.values()].map((n) => n.appId);
+    return { before, after: ids.includes('waterworld'), runnerGone: !ids.includes('storyrunner'),
+             windowGone: !document.querySelector('.foafos-window iframe[src*="storyrunner"]') };
   });
-  if (cascade.before && !cascade.after) pass('control border real: closing the runner cascaded to its child game');
-  else fail('close did not cascade to the child game: ' + JSON.stringify(cascade));
+  if (cascade.before && !cascade.after && cascade.runnerGone && cascade.windowGone)
+    pass('control border real: the window ✕ closed the runner AND its child game');
+  else fail('the window close button did not cascade: ' + JSON.stringify(cascade));
 
   if (pageErrors.length) fail('page errors: ' + pageErrors.join(' | '));
   else pass('zero page errors');

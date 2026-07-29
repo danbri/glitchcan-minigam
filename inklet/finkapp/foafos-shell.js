@@ -1066,6 +1066,98 @@ function buildUI() {
   // One standard window frame for everything the shell floats: titlebar
   // (drag handle), close button, raise-on-interact. Content varies;
   // chrome does not — that uniformity IS the skin.
+  // ── OVERVIEW ────────────────────────────────────────────────────────
+  // "Show all windows": every open window interpolates from where it is
+  // to a card in a grid, so a stack of overlapping boxes becomes a hand
+  // of playing cards you can pick from. Pick one and it flies back.
+  //
+  // FLIP, and compositor-only: geometry stays exactly where it was
+  // (left/top/width/height untouched) and only `transform` moves — so
+  // there is no layout thrash, no iframe reload, and a guest mid-frame
+  // does not notice it was ever moved. Follows the motion language:
+  // --ease-out-soft, --dur-base. See docs/finkapp-motion-language.
+  //
+  // Each card needs its own hit layer: a window's content is an IFRAME,
+  // which swallows pointer events, so a click on the card body would
+  // otherwise reach the guest instead of picking the card.
+  let overviewOn = false;
+  function overviewWindows() {
+    return [...document.querySelectorAll('.foafos-window')]
+      .filter(w => !w.classList.contains('minimized'));
+  }
+  function enterOverview() {
+    if (overviewOn) return;
+    const wins = overviewWindows();
+    if (!wins.length) return;
+    overviewOn = true;
+    document.body.classList.add('foafos-overview-on');
+
+    const pad = 14, top = 54;                  // room for the hint strip
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const cols = Math.ceil(Math.sqrt(wins.length));
+    const rows = Math.ceil(wins.length / cols);
+    const cellW = (vw - pad * (cols + 1)) / cols;
+    const cellH = (vh - top - pad * (rows + 1)) / rows;
+
+    wins.forEach((win, i) => {
+      const r = win.getBoundingClientRect();
+      const cx = i % cols, cy = Math.floor(i / cols);
+      const slotX = pad + cx * (cellW + pad);
+      const slotY = top + pad + cy * (cellH + pad);
+      // Never magnify: a small window in overview should stay small, so
+      // relative size still reads as it does on the desktop.
+      const s = Math.min(cellW / r.width, cellH / r.height, 1);
+      // Centre the scaled card in its cell.
+      const dx = slotX + (cellW - r.width * s) / 2 - r.left;
+      const dy = slotY + (cellH - r.height * s) / 2 - r.top;
+      win.classList.add('foafos-ov');
+      win.style.transformOrigin = '0 0';
+      win.style.transform = `translate(${dx}px, ${dy}px) scale(${s})`;
+
+      const hit = document.createElement('button');
+      hit.type = 'button';
+      hit.className = 'foafos-ov-hit';
+      hit.setAttribute('aria-label',
+        `Show ${win.querySelector('.foafos-window-bar span')?.textContent || 'window'}`);
+      hit.addEventListener('click', (e) => { e.stopPropagation(); exitOverview(win); });
+      win.appendChild(hit);
+    });
+
+    const strip = document.createElement('div');
+    strip.id = 'foafos-ov-strip';
+    strip.innerHTML = `<span>${wins.length} window${wins.length > 1 ? 's' : ''} — pick one</span>
+      <button type="button" id="foafos-ov-done" aria-label="Leave overview">✕</button>`;
+    document.body.appendChild(strip);
+    strip.querySelector('#foafos-ov-done').addEventListener('click', () => exitOverview(null));
+    strip.querySelector('#foafos-ov-done').focus();
+
+    bus.publish('wm.overview', { summary: `overview: ${wins.length} windows`, count: wins.length, on: true });
+  }
+  function exitOverview(focusWin) {
+    if (!overviewOn) return;
+    overviewOn = false;
+    document.body.classList.remove('foafos-overview-on');
+    document.getElementById('foafos-ov-strip')?.remove();
+    for (const win of document.querySelectorAll('.foafos-window.foafos-ov')) {
+      win.querySelector('.foafos-ov-hit')?.remove();
+      win.style.transform = '';                 // interpolates back home
+      // Drop the class only after the return trip, or the transition it
+      // rides is removed mid-flight and the card teleports.
+      setTimeout(() => win.classList.remove('foafos-ov'), 420);
+    }
+    if (focusWin) {
+      document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
+      focusWin.style.zIndex = 2630;
+    }
+    bus.publish('wm.overview', { summary: 'overview closed', on: false });
+  }
+  FoafOS.enterOverview = enterOverview;
+  FoafOS.exitOverview = exitOverview;
+  FoafOS.toggleOverview = () => (overviewOn ? exitOverview(null) : enterOverview());
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overviewOn) { e.preventDefault(); exitOverview(null); }
+  });
+
   function makeWindow(title, w, h) {
     widgetSeq++;
     const win = document.createElement('div');
@@ -1094,12 +1186,27 @@ function buildUI() {
     win.innerHTML = `
       <div class="foafos-window-bar"><span>${title}</span>
         <span class="foafos-window-controls">
+          <button type="button" class="foafos-window-btn foafos-window-ov" aria-label="Show all windows" title="Show all windows">⧉</button>
           <button type="button" class="foafos-window-btn foafos-window-min" aria-label="Minimize ${title}" aria-pressed="false" title="Minimize">–</button>
           <button type="button" class="foafos-window-btn foafos-window-max" aria-label="Maximize ${title}" aria-pressed="false" title="Maximize">▢</button>
           <button type="button" class="foafos-window-btn foafos-window-close" aria-label="Close ${title}" title="Close">✕</button>
         </span></div>`;
 
-    win.querySelector('.foafos-window-close').addEventListener('click', () => win.remove());
+    win.querySelector('.foafos-window-ov').addEventListener('click', () => enterOverview());
+
+    // The window ✕ closes the NODE, not just the box it is drawn in.
+    // It used to call win.remove() alone: the DOM window vanished while
+    // the tree node and every child it had spawned stayed alive — so
+    // closing a boxed Story Runner left the game it launched running,
+    // with a ghost parent nobody could see (field report, 2026-07-29).
+    // Closing the node cascades depth-first to descendants, and each
+    // node's own onClose removes its window, so this both takes the
+    // subtree down and still removes this window.
+    win.querySelector('.foafos-window-close').addEventListener('click', () => {
+      const nodeId = win.dataset.instance;
+      if (nodeId && FoafOS.apps.get(nodeId)) FoafOS.apps.close(nodeId);
+      else win.remove();   // a window with no node behind it (shared table, tools)
+    });
 
     const minBtn = win.querySelector('.foafos-window-min');
     minBtn.addEventListener('click', () => {

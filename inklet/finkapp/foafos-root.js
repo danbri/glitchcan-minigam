@@ -30,7 +30,12 @@ export const ROOTS = {
   // around it. Default, so nothing changes for anyone not asking.
   glitchcanary: {
     id: 'glitchcanary',
-    label: 'Glitch Canary',
+    // The DISPLAY name is Finkiverse (owner's call, July 2026). The id
+    // stays `glitchcanary`: it is in shared `?root=` links, the storage
+    // namespace and the per-root capability ledger, so renaming it would
+    // orphan saved data and break links that are already out there. A
+    // label is what people read; an id is what things are keyed by.
+    label: 'Finkiverse',
     // `shell` is what the shell-native apps — Maker, Logger, and the
     // chrome furniture — declare. A root that offers them must hold it,
     // or the tree refuses to spawn them. It did: pressing Logger in the
