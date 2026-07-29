@@ -353,6 +353,94 @@ body.foaf-pad-on #foafos-dock {
 .foafos-window-btn:hover,
 .foafos-window-close:hover { background: rgba(0, 229, 255, 0.18); }
 
+/* ── CAROUSEL ──────────────────────────────────────────────────────────
+   The mobile shell. One deck owns the screen; you swipe between decks.
+   A deck is a top-level subtree, so a story and the game it launched are
+   one card. Panes inside a deck are tiled by the layout code, not
+   dragged: on a phone, dragging a window is a desktop habit, not a
+   gesture anyone wants. */
+body.foafos-carousel-on .foafos-window {
+    resize: none;
+    max-width: none;
+    max-height: none;
+    border-radius: 10px;
+    transition: transform var(--dur-base, 300ms) var(--ease-out-soft, ease),
+                opacity var(--dur-fast, 140ms) linear;
+}
+/* Panes of a deck that is not showing: off to the side, not destroyed —
+   an app you swiped past is still running, and swiping back must find it
+   exactly as you left it. */
+body.foafos-carousel-on .foafos-window.foafos-pane-off {
+    transform: translateX(105vw);
+    opacity: 0;
+    pointer-events: none;
+}
+/* The grip is a desktop affordance; in carousel mode the title bar is a
+   label, not a handle. */
+body.foafos-carousel-on .foafos-window-bar { cursor: default; }
+body.foafos-carousel-on .foafos-window-min,
+body.foafos-carousel-on .foafos-window-max { display: none; }
+
+#foafos-deck-strip {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 2660;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    height: 46px;
+    padding: 0 .4rem;
+    padding-top: env(safe-area-inset-top);
+    background: var(--sk-bg, #0a0a12);
+    color: var(--sk-ink, #e8ecf4);
+    border-bottom: 1px solid var(--sk-line, #2b3d5c);
+    font-size: .82rem;
+}
+#foafos-deck-strip .dk-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    letter-spacing: .04em;
+}
+#foafos-deck-strip .dk-count { opacity: .55; font-variant-numeric: tabular-nums; }
+#foafos-deck-strip .dk-arrow {
+    min-width: 44px;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
+#foafos-deck-strip .dk-arrow:hover { color: var(--sk-accent, #6cf); }
+#foafos-deck-strip .dk-dots { display: inline-flex; gap: 4px; }
+/* 44px hit area, 7px of ink — the dot is a target, not just a mark. */
+#foafos-deck-strip .dk-dot {
+    width: 18px; height: 44px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+}
+#foafos-deck-strip .dk-dot::after {
+    content: "";
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: 7px; height: 7px;
+    margin: -3.5px 0 0 -3.5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: .3;
+}
+#foafos-deck-strip .dk-dot.on::after { opacity: 1; background: var(--sk-accent, #6cf); }
+@media (prefers-reduced-motion: reduce) {
+    body.foafos-carousel-on .foafos-window { transition: none; }
+}
+
 /* ── OVERVIEW ──────────────────────────────────────────────────────────
    Windows interpolate into a grid of cards. Compositor-only: only
    `transform` animates, so no window is re-laid-out and no iframe

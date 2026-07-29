@@ -1078,6 +1078,194 @@ function buildUI() {
   // One standard window frame for everything the shell floats: titlebar
   // (drag handle), close button, raise-on-interact. Content varies;
   // chrome does not — that uniformity IS the skin.
+  // ── CAROUSEL ────────────────────────────────────────────────────────
+  // A mobile shell, not a desktop one. Free-floating draggable boxes are
+  // a desktop artifact: on a phone one thing owns the screen, you swipe
+  // between things, and a second thing appears only when it earns half.
+  //
+  // The unit you swipe between is a DECK, and a deck is a TOP-LEVEL
+  // SUBTREE — not a window. A story and the game it launched are ONE
+  // card, because they are one thing to a person: the hierarchy the
+  // capability tree already knows is the hierarchy the carousel shows.
+  // Furniture (the WMBling rack) is never a deck.
+  //
+  // WITHIN a deck, panes compose: one owns the deck, or two split it, or
+  // more tile. That is the "story in text mode beside a 3D map, trading
+  // state in real time" case — they are panes of one deck, and they talk
+  // over the scoped bus they already have. Composition is inside a card;
+  // switching is between cards.
+  //
+  // Opt-in for now (`?shell=carousel`, or FoafOS.setCarousel(true)) so
+  // the desktop model keeps working while this proves itself.
+  let carouselOn = false;
+  let deckIndex = 0;
+  const preCarouselGeom = new WeakMap();
+
+  function carouselDecks() {
+    const decks = [];
+    const claimed = new Set();
+    for (const child of apps.children(rootNode.id)) {
+      if (child.id === wmblingNode.id) continue;
+      const members = [child, ...apps.descendants(child.id)];
+      const panes = [];
+      for (const n of members) {
+        const w = document.querySelector(`.foafos-window[data-instance="${n.id}"]`);
+        if (w) { panes.push(w); claimed.add(w); }
+      }
+      const stage = members.find(n => n.surface === 'stage') || null;
+      if (!panes.length && !stage) continue;
+      decks.push({ node: child, members, panes, stage,
+                   title: members.map(m => m.label).join(' ▸ ') });
+    }
+    // Windows with no node behind them (shared tables, shell tools) are
+    // still real things on screen; each gets its own deck rather than
+    // being silently dropped.
+    for (const w of document.querySelectorAll('.foafos-window')) {
+      if (claimed.has(w)) continue;
+      decks.push({ node: null, members: [], panes: [w], stage: null,
+                   title: w.querySelector('.foafos-window-bar span')?.textContent || 'window' });
+    }
+    return decks;
+  }
+
+  function layoutCarousel() {
+    if (!carouselOn) return;
+    const decks = carouselDecks();
+    const strip = document.getElementById('foafos-deck-strip');
+    if (!decks.length) {
+      if (strip) strip.querySelector('.dk-title').textContent = 'nothing running';
+      return;
+    }
+    deckIndex = Math.max(0, Math.min(deckIndex, decks.length - 1));
+    const head = 46;
+    const top = head + (parseInt(getComputedStyle(document.documentElement)
+      .getPropertyValue('--foaf-safe-top'), 10) || 0);
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const foot = 64;                                  // the dock's lane
+
+    decks.forEach((deck, di) => {
+      const active = di === deckIndex;
+      // A deck holding a running stage game yields half the screen to it
+      // (FinkWM owns that surface) and tiles its windows in the other
+      // half — composition, not a fight over the same pixels.
+      const withStage = active && !!deck.stage;
+      if (withStage) window.FinkWM?.setMode?.('split');
+      const areaY = top;
+      const areaH = (vh - top - foot) * (withStage ? 0.5 : 1);
+      const n = deck.panes.length;
+      const cols = n <= 1 ? 1 : (vw > vh || n > 2 ? Math.ceil(Math.sqrt(n)) : 1);
+      const rows = Math.ceil(n / cols) || 1;
+      const gap = 6;
+      const cw = (vw - gap * (cols + 1)) / cols;
+      const ch = (areaH - gap * (rows + 1)) / rows;
+
+      deck.panes.forEach((win, i) => {
+        if (!preCarouselGeom.has(win)) {
+          preCarouselGeom.set(win, { left: win.style.left, top: win.style.top,
+                                     width: win.style.width, height: win.style.height });
+        }
+        win.classList.add('foafos-pane');
+        win.classList.toggle('foafos-pane-off', !active);
+        win.style.left = `${gap + (i % cols) * (cw + gap)}px`;
+        win.style.top = `${areaY + gap + Math.floor(i / cols) * (ch + gap)}px`;
+        win.style.width = `${cw}px`;
+        win.style.height = `${ch}px`;
+        win.classList.remove('minimized', 'maximized');
+      });
+    });
+
+    if (strip) {
+      strip.querySelector('.dk-title').textContent = decks[deckIndex].title;
+      const dots = strip.querySelector('.dk-dots');
+      dots.textContent = '';
+      decks.forEach((d, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'dk-dot' + (i === deckIndex ? ' on' : '');
+        b.setAttribute('aria-label', `Show ${d.title}`);
+        b.setAttribute('aria-current', i === deckIndex ? 'true' : 'false');
+        b.addEventListener('click', () => goDeck(i));
+        dots.appendChild(b);
+      });
+      strip.querySelector('.dk-count').textContent = `${deckIndex + 1}/${decks.length}`;
+    }
+    bus.publish('wm.deck', {
+      summary: `deck ${deckIndex + 1}/${decks.length}: ${decks[deckIndex].title}`,
+      index: deckIndex, count: decks.length, title: decks[deckIndex].title,
+      panes: decks[deckIndex].panes.length,
+    });
+  }
+
+  function goDeck(i) {
+    const decks = carouselDecks();
+    if (!decks.length) return;
+    deckIndex = (i + decks.length) % decks.length;
+    layoutCarousel();
+  }
+  const nextDeck = () => goDeck(deckIndex + 1);
+  const prevDeck = () => goDeck(deckIndex - 1);
+
+  function setCarousel(on) {
+    if (on === carouselOn) return;
+    carouselOn = on;
+    document.body.classList.toggle('foafos-carousel-on', on);
+    if (on) {
+      const strip = document.createElement('div');
+      strip.id = 'foafos-deck-strip';
+      strip.innerHTML = `<button type="button" class="dk-arrow dk-prev" aria-label="Previous app">‹</button>
+        <span class="dk-title"></span>
+        <span class="dk-dots" role="group" aria-label="Running apps"></span>
+        <span class="dk-count"></span>
+        <button type="button" class="dk-arrow dk-next" aria-label="Next app">›</button>`;
+      document.body.appendChild(strip);
+      strip.querySelector('.dk-prev').addEventListener('click', prevDeck);
+      strip.querySelector('.dk-next').addEventListener('click', nextDeck);
+      // Swipe: a deck change is a horizontal gesture, and must not steal
+      // a vertical scroll inside a pane.
+      let x0 = null, y0 = null;
+      document.addEventListener('touchstart', (e) => {
+        if (!carouselOn || e.touches.length !== 1) return;
+        x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+      }, { passive: true });
+      document.addEventListener('touchend', (e) => {
+        if (!carouselOn || x0 === null) return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - x0, dy = t.clientY - y0;
+        x0 = null;
+        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6) (dx < 0 ? nextDeck() : prevDeck());
+      }, { passive: true });
+      window.addEventListener('resize', layoutCarousel);
+      // Any change to what is running re-derives the decks: the tree is
+      // the source of truth, so the carousel never drifts from it.
+      bus.subscribe('app.spawn', () => setTimeout(layoutCarousel, 60));
+      bus.subscribe('app.close', () => setTimeout(layoutCarousel, 60));
+      layoutCarousel();
+    } else {
+      document.getElementById('foafos-deck-strip')?.remove();
+      for (const win of document.querySelectorAll('.foafos-window.foafos-pane')) {
+        win.classList.remove('foafos-pane', 'foafos-pane-off');
+        const g = preCarouselGeom.get(win);
+        if (g) Object.assign(win.style, g);
+      }
+    }
+    bus.publish('wm.shell', { summary: `shell model: ${on ? 'carousel' : 'desktop'}`, carousel: on });
+  }
+  FoafOS.setCarousel = setCarousel;
+  FoafOS.goDeck = goDeck;
+  FoafOS.decks = () => carouselDecks().map(d => ({ title: d.title,
+    panes: d.panes.length, stage: !!d.stage, members: d.members.map(m => m.label) }));
+  FoafOS.isCarousel = () => carouselOn;
+  document.addEventListener('keydown', (e) => {
+    if (!carouselOn || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.target.closest('input, textarea')) return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); nextDeck(); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); prevDeck(); }
+  });
+  if (new URLSearchParams(location.search).get('shell') === 'carousel') {
+    setTimeout(() => setCarousel(true), 400);
+  }
+
   // ── OVERVIEW ────────────────────────────────────────────────────────
   // "Show all windows": every open window interpolates from where it is
   // to a card in a grid, so a stack of overlapping boxes becomes a hand
