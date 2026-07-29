@@ -59,6 +59,13 @@
      is one source of truth for what it contains. -->
 <div id="stats-bar" class="stats-bar" role="group" aria-label="Story status"></div>
 
+<!-- Menubar: a chrome strip that gathers small "dashboard" widgets (a
+     clock, and whatever running apps publish as app.<id>.status) and
+     groups them by the app-tree HIERARCHY — a story's readouts, and its
+     running minigame's nested beneath. Empty in markup: foafos-menubar.js
+     is the one source of truth. Mounts only if the root offers it. -->
+<div id="foaf-menubar" role="group" aria-label="Menubar"></div>
+
 <!-- Developer Panel -->
 <div id="dev-panel" class="dev-panel">
     <div id="dev-tabs" class="dev-tabs">
@@ -241,6 +248,7 @@
 <script src="../minigames/minigame-host.js"></script>
 <script src="fink-minigames.js"></script>
 <script src="fink-wm.js"></script>
+<script src="foafos-menubar.js"></script>
 <script type="module" src="foafos-shell.js"></script>
 <script src="fink-ink-engine.js"></script>
 <script src="fink-player.js"></script>

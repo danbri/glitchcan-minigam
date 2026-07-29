@@ -274,6 +274,9 @@ export const APPS = [
   { id: 'loadmeter', family: 'chrome', icon: '📜', name: 'Load meter', surface: 'chrome',
     mount: 'scroll-status-bar', desc: 'FINKs encountered, loaded, compiled',
     capabilities: ['shell'], silent: true },
+  { id: 'menubar', family: 'chrome', icon: '📊', name: 'Menubar', surface: 'chrome',
+    mount: 'foaf-menubar', desc: 'A clock and app dashboard widgets, grouped by the app tree',
+    capabilities: ['shell'], silent: true },
   // THE ONE I MISSED (reported from a phone, July 2026). Converting the
   // breadcrumb, the status line and the load meter and stopping there left
   // a fourth piece of story furniture hard-coded in index.html — so a Web
