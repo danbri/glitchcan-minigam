@@ -50,7 +50,7 @@ try {
   const errs = [];
   page.on('pageerror', e => errs.push(String(e).split('\n')[0].slice(0, 160)));
 
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?story=/${repoName}/inklet/hampstead.fink.js`);
+  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
   await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
   await page.waitForTimeout(1200);
 

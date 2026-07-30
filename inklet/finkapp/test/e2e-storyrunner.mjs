@@ -56,7 +56,12 @@ try {
   const pageErrors = [];
   page.on('pageerror', (e) => pageErrors.push(String(e).slice(0, 200)));
 
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/`);
+  // `?player=none` — this suite LAUNCHES the runner itself and reads its
+  // frame, so the page must start with no story surface of its own. Without
+  // it, the installation's own boxed boot puts a second runner in the page
+  // (playing the installation's story, not the runner's demo) and every probe
+  // below reads whichever frame it finds first.
+  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=none`);
   await page.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
   await page.waitForTimeout(1200);
 

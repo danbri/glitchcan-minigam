@@ -77,16 +77,24 @@ try {
     const page = await browser.newPage({ viewport: { width: 430, height: 860 } });
     await page.goto(base);
     await page.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
+    // PLAYER-AGNOSTIC on purpose. The gate under test is "?app= means that
+    // app, and nothing else", so the control has to be "a plain boot DOES
+    // open a story surface" — without naming which player provides it. The
+    // earlier version read the host engine only, so it would have failed the
+    // day the boxed runner became the default and told us the gate was too
+    // wide, which would have been the wrong diagnosis.
     await page.waitForFunction(
-      () => !!window.FinkInkEngine?.story || !!window.FinkPlayer?.currentStoryUrl,
+      () => !!window.FinkInkEngine?.story || !!window.FinkPlayer?.currentStoryUrl
+        || [...document.querySelectorAll('iframe')].some(f => /apps\/storyrunner\//.test(f.src)),
       null, { timeout: 20000 }).catch(() => {});
     const booted = await page.evaluate(() => ({
       url: window.FinkPlayer?.currentStoryUrl || null,
       story: !!window.FinkInkEngine?.story,
+      boxed: [...document.querySelectorAll('iframe')].some(f => /apps\/storyrunner\//.test(f.src)),
     }));
-    if (booted.url || booted.story) {
-      pass(`control: plain boot still loads the default story (${booted.url || 'compiled'})`);
-    } else fail('control: default story no longer boots — gate is too wide');
+    if (booted.url || booted.story || booted.boxed) {
+      pass(`control: plain boot still opens a story surface (${booted.boxed ? 'boxed runner' : booted.url || 'compiled in host'})`);
+    } else fail('control: no story surface boots at all — gate is too wide');
     await page.close();
   }
 } catch (e) {

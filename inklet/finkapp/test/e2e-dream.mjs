@@ -46,7 +46,7 @@ try {
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(String(e).slice(0, 200)));
 
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?story=/${repoName}/inklet/demos/dream-outer.fink.js`);
+  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/demos/dream-outer.fink.js`);
   await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
   await page.waitForFunction(() => document.body.textContent.includes('baseline reality'), null, { timeout: 10000 });
   await page.waitForTimeout(900);

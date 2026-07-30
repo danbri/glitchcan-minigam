@@ -46,7 +46,7 @@ try {
   browser = await chromium.launch({ headless: true, executablePath: EXE, args: ['--no-sandbox'] });
   const ctx = await browser.newContext({ viewport: { width: 430, height: 860 }, hasTouch: true });
   const page = await ctx.newPage();
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?story=/${repoName}/inklet/demos/foafos-tour.fink.js`);
+  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/demos/foafos-tour.fink.js`);
   await page.waitForFunction(() => document.querySelectorAll('#choices .choice-btn').length > 0, null, { timeout: 25000 });
   await page.waitForTimeout(800);
 

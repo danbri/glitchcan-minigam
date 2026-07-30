@@ -47,7 +47,7 @@ const pass = (m) => console.log('✔', m);
 
 const boot = async (browser) => {
   const page = await browser.newPage({ viewport: { width: 430, height: 860 }, hasTouch: true });
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?story=/${repoName}/inklet/hampstead.fink.js`);
+  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
   await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
   await page.waitForTimeout(1200);
   return page;

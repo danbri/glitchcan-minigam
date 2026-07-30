@@ -72,7 +72,7 @@ try {
     const page = await ctx.newPage();
     const errs = [];
     page.on('pageerror', e => errs.push(String(e).slice(0, 120)));
-    await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?skin=${skin}&story=/${repoName}/inklet/demos/foafos-tour.fink.js`);
+    await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&skin=${skin}&story=/${repoName}/inklet/demos/foafos-tour.fink.js`);
     await page.waitForFunction(() => document.querySelectorAll('#choices .choice-btn').length > 0, null, { timeout: 25000 });
     await page.waitForTimeout(700);
 

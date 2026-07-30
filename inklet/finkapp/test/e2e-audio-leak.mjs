@@ -42,7 +42,7 @@ try {
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(String(e).slice(0, 160)));
 
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?story=/${repoName}/inklet/riverbend.fink.js`);
+  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/riverbend.fink.js`);
   await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
   await page.waitForTimeout(2000);
 

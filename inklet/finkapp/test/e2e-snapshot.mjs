@@ -43,7 +43,7 @@ await new Promise(r => setTimeout(r, 900));
 const fail = (m) => { console.error('✖', m); process.exitCode = 1; };
 const pass = (m) => console.log('✔', m);
 const base = `http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/`;
-const story = `?story=/${repoName}/inklet/hampstead.fink.js`;
+const story = `?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`;
 
 let browser;
 try {

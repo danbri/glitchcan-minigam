@@ -54,17 +54,27 @@ try {
     return { page, errs };
   };
 
-  // ── 1. the default root is unchanged: a story installation ─────────
+  // ── 1. the default root boots a story, and boots it IN THE BOX ─────
+  // This leg used to read `FinkInkEngine.compiledCount >= 1` — the host
+  // page's ink engine — as the proof that a story installation boots a
+  // story. That made "level 0 runs ink" the definition of working. Under the
+  // layer model the shell must NOT compile ink: the story surface is the
+  // boxed runner (level 1). So the assertion is now: a story surface opens,
+  // and the host engine compiled NOTHING.
   {
     const { page, errs } = await open('');
     const st = await page.evaluate(() => ({
       root: FoafOS.root.id,
-      compiled: window.FinkInkEngine?.compiledCount || 0,
+      hostCompiled: window.FinkInkEngine?.compiledCount || 0,
+      boxed: [...document.querySelectorAll('iframe')].some(f => /apps\/storyrunner\//.test(f.src)),
       rootCaps: FoafOS.rootNode.capabilities.length,
     }));
-    st.root === 'glitchcanary' && st.compiled >= 1
-      ? pass(`default root still boots a story (${st.root}, ${st.compiled} compiled, ${st.rootCaps} root capabilities)`)
-      : fail(`default root regressed: ${JSON.stringify(st)}`);
+    st.root === 'glitchcanary' && st.boxed
+      ? pass(`default root boots its story in the box (${st.root}, ${st.rootCaps} root capabilities)`)
+      : fail(`default root did not open the boxed story surface: ${JSON.stringify(st)}`);
+    st.hostCompiled === 0
+      ? pass('level 0 compiled no ink — the shell is not a story player')
+      : fail(`the host page compiled ${st.hostCompiled} story(ies): ink is still running at level 0`);
     errs.length === 0 ? pass('default root: no page errors') : fail(`default root errors: ${errs[0]}`);
     await page.close();
   }
@@ -168,7 +178,7 @@ try {
     const page = (await browser.newPage({ viewport: { width: 900, height: 800 }, hasTouch: true }));
     const errs = [];
     page.on('pageerror', e => errs.push(String(e).split('\n')[0].slice(0, 140)));
-    await page.goto(base + `?story=/${repoName}/inklet/hampstead.fink.js`);
+    await page.goto(base + `?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
     await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
     await page.waitForTimeout(1500);
 
@@ -219,7 +229,7 @@ try {
     const page = await browser.newPage({ viewport: { width: 900, height: 820 }, hasTouch: true });
     const errs = [];
     page.on('pageerror', e => errs.push(String(e).split('\n')[0].slice(0, 140)));
-    await page.goto(base + `?story=/${repoName}/inklet/hampstead.fink.js`);
+    await page.goto(base + `?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
     await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
     await page.waitForTimeout(1500);
     await page.evaluate(() => FinkMinigames.startMinigame('gridluck', 'normal'));

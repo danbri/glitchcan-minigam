@@ -355,7 +355,7 @@ try {
       if (/favicon|ERR_CONNECTION_RESET|Failed to load resource/i.test(t)) return;
       consoleErrors.push(t.slice(0, 150));
     });
-    await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?story=/${repoName}/inklet/hampstead.fink.js`);
+    await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
 
     console.log(`\n━━ ${vp.name} ${vp.width}×${vp.height} ${vp.touch ? '(touch)' : '(mouse)'} ━━`);
     await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });

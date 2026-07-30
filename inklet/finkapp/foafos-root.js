@@ -53,21 +53,21 @@ export const ROOTS = {
     // story AUTO-BOOT still uses 'legacy' until #779's parity blockers
     // close (minigame pause/resume, variables, navigation) — flipping it
     // now would regress Hampstead. One line flips it when #779 is green.
-    // PARITY IS REACHED — and the flip is still one line, deliberately not
-    // taken yet. Measured 2026-07-30: with `autoBoot: 'boxed'` the whole
-    // journey works (TOC → Episodes → Hampstead, no errors), but FIVE
-    // suites go red — e2e-foafos, e2e-root, e2e-caps, e2e-vars and
-    // e2e-storyrunner's own media/audio legs all use "the legacy player
-    // compiled a story on boot" as their fixture, not as their subject.
-    // Flipping without migrating them first would leave master red for a
-    // parallel session to trip over, and a green suite is how everyone
-    // else here knows the tree is sound.
+    // FLIPPED, 2026-07-30. Parity was reached first, then the fixtures were
+    // migrated: every suite whose subject IS the host-page player now says
+    // `?player=legacy` in its URL, and the ones that drive the runner
+    // themselves say `?player=none`. A URL that names its player is the
+    // whole trick — the fixtures had been reading "a story compiled in the
+    // host page" as the definition of a working boot, so the flip looked
+    // like twenty regressions when it was one changed truth.
     //
-    // So: `?player=boxed` is fully live and proven, `?player=legacy` is
-    // the way back, and this line flips once those five fixtures are
-    // rewritten to state which player they mean. See #779.
-    storyPlayer: { default: 'boxed', autoBoot: 'legacy', supersedes: 'legacy',
-                   parityReached: '2026-07-30', flipBlockedBy: 'test-fixtures', issue: 779 },
+    // What this line now means: an ordinary visit boots the story INSIDE the
+    // box (level 1 of the layer model), and level 0 compiles no ink at all.
+    // `?player=legacy` is the way back, without a deploy, if the box
+    // misbehaves in the field. `?player=none` opens the shell with nothing
+    // playing. See docs/foafos-story-layering-20260730.md and issue #779.
+    storyPlayer: { default: 'boxed', autoBoot: 'boxed', supersedes: 'legacy',
+                   parityReached: '2026-07-30', flipped: '2026-07-30', issue: 779 },
     apps: null,                   // all of them
   },
 

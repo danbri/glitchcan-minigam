@@ -48,7 +48,7 @@ try {
   page.on('pageerror', e => pageErrors.push(String(e).slice(0, 200)));
 
   // Boot straight into the widget loop (same path e2e-robbin locks)
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?story=/${repoName}/inklet/hampstead.fink.js`);
+  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
   await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
   await page.waitForTimeout(1500);
   await page.evaluate(() => {

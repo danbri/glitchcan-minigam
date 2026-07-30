@@ -41,7 +41,7 @@ try {
   page.on('response', r => { if (r.status() === 404) missing.push(r.url()); });
 
   // 1. boot: all modules, TOC compiled
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/`);
+  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy`);
   await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 20000 });
   const boot = await page.evaluate(() => ({
     modules: ['FinkPlayer', 'FinkInkEngine', 'FinkSandbox', 'FinkNavigation',
