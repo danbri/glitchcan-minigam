@@ -84,19 +84,19 @@ window.FinkPlayer = {
             return;
         }
 
-        // #779's flip lever, opt-in early. The root manifest declares
-        // storyPlayer.default 'boxed' but autoBoot stays 'legacy' until
-        // the parity blockers close — and until now NOTHING read either
-        // field, so there was no way to boot the boxed runner at all.
-        // `?player=boxed` (or a manifest autoBoot of 'boxed', when #779
-        // flips it) boots the BOXED runner as the story surface and lets
-        // this pending-delete player idle. An explicit ?story=/deep link
-        // still wins and loads legacy, which is the only player that can
-        // be handed an arbitrary story today.
-        // `?player=legacy` is the way BACK, and it wins over everything:
-        // the manifest now boots boxed, so the escape hatch has to be
-        // reachable without a deploy if anything about the box misbehaves
-        // in the field.
+        // WHICH PLAYER (#779, flipped 2026-07-30). The root manifest's
+        // `storyPlayer.autoBoot` is now 'boxed', so an ordinary visit boots
+        // the sandboxed runner and THIS player — the one on the shell page,
+        // pending delete — idles. Three ways to say otherwise:
+        //
+        //   ?player=legacy  the way BACK, and it wins over everything, so a
+        //                   field problem with the box needs no deploy
+        //   ?player=boxed   the box, on an installation that boots legacy
+        //   ?player=none    no story surface at all
+        //
+        // `?story=` no longer forces this player. It used to, because the
+        // boxed runner could only play its own demo; it can now be handed
+        // any FINK, which is the whole point of the sandbox.
         const askedPlayer = new URLSearchParams(window.location.search).get('player');
         // `?player=none` boots NO story surface. It exists because a test that
         // drives the runner itself must be able to say "this page starts

@@ -250,24 +250,47 @@ try {
     pass(`capUse tallied story:link (${use['story:link']}) and story:launch (${use['story:launch']})`);
   } else fail('capUse ledger missing a story:* use: ' + JSON.stringify(use));
 
-  // ── 5b. THE BORDER IS REAL — the launched game is a CHILD of the runner
-  // in the app tree (instantiation), not a sibling under story/root. Its
-  // caps are bounded by the runner's (attenuation), and closing the runner
-  // cascades to it (control). This is the hierarchy the menubar reflects.
+  // ── 5b. THE BORDERS ARE REAL, AND THERE ARE THREE OF THEM ───────────
+  // The layer model (docs/foafos-story-layering-20260730.md) says a launched
+  // game is a child of the SESSION that launched it, the session is a child
+  // of the StoryRunner, and the runner is a child of the root:
+  //
+  //     root (0) → Finkosphere (1) → story session (2) → game (3)
+  //
+  // This leg used to assert the game was a direct child of the RUNNER, which
+  // was true and one level too coarse: with one node for the runner there was
+  // nowhere to say WHICH playthrough opened the game, so two stories in one
+  // runner would have hung their games off the same parent.
   await page.waitForTimeout(400);
   const tree = await page.evaluate(() => {
     const apps = FoafOS.apps;
-    const runner = [...apps.nodes.values()].find((n) => n.appId === 'storyrunner');
-    const game = [...apps.nodes.values()].find((n) => n.appId === 'waterworld');
+    const all = [...apps.nodes.values()];
+    const runner = all.find((n) => n.appId === 'storyrunner');
+    const session = all.find((n) => n.appId === 'story-session');
+    const game = all.find((n) => n.appId === 'waterworld');
     return {
-      runner: !!runner, game: !!game,
-      gameUnderRunner: !!(runner && game && game.parentId === runner.id),
-      gameCapsBounded: !!(runner && game && game.capabilities.every((c) => runner.capabilities.includes(c))),
+      runner: !!runner, session: !!session, game: !!game,
+      sessionLabel: session?.label || null,
+      sessionUnderRunner: !!(runner && session && session.parentId === runner.id),
+      gameUnderSession: !!(session && game && game.parentId === session.id),
+      sessionDepth: session ? apps.depth(session.id) : null,
+      gameDepth: game ? apps.depth(game.id) : null,
+      sessionCapsBounded: !!(runner && session
+        && session.capabilities.every((c) => runner.capabilities.includes(c))),
+      gameCapsBounded: !!(session && game
+        && game.capabilities.every((c) => session.capabilities.includes(c))),
     };
   });
-  if (tree.gameUnderRunner && tree.gameCapsBounded) {
-    pass('instantiation border real: the game is a CHILD of the runner, caps bounded by it');
-  } else fail('tree border wrong: ' + JSON.stringify(tree));
+  if (tree.sessionUnderRunner && tree.gameUnderSession
+      && tree.sessionDepth === 2 && tree.gameDepth === 3
+      && tree.sessionCapsBounded && tree.gameCapsBounded) {
+    pass(`three borders real: root → runner → session "${tree.sessionLabel}" (depth 2) → game (depth 3), caps attenuating at each step`);
+  } else fail('layer tree wrong: ' + JSON.stringify(tree));
+
+  // Cascade is NOT asserted here on purpose: closing the session would kill
+  // the game that legs 5a/5c/8 still need. Section 8 presses the window ✕ and
+  // proves the whole runner subtree — which now contains the session — comes
+  // down together.
 
   // ── 5a. PARITY (#779 blockers 1+2): pause, writeback, economy ───────
   // The runner used to fire story.launch and carry straight on, so a
