@@ -21,6 +21,8 @@ const state = {
   ended: false, requests: [], boxedCompile: false,
   media: null, mediaRole: null, mediaSpec: null,
   audio: null, audioPlaying: false, audioLevel: 1, linkedTo: null,
+  pausedFor: null, lastGame: null, economy: null,
+  depth: 0, restored: false,
 };
 let story = null;
 
@@ -119,12 +121,25 @@ function handleTag(tag) {
       window.foaf?.bus?.publish('app.storyrunner.status', { items: _statusItems });
       break;
     case 'MINIGAME':
-      storyRequest('story.launch', { game: value.split(/\s+/)[0] });
+      // A game BREAKS the beat and PAUSES the story (#779), the same way
+      // the host engine's Continue loop breaks on this tag. Before this
+      // the runner fired the verb and carried straight on, so a story
+      // that says "play, then use what you won" ran the "then" while the
+      // game was still on screen — and every chess/gems/waterworld
+      // ending was unreachable. The shell hands the result back and
+      // `resumeAfterGame()` continues from exactly here.
+      _pendingGame = value.split(/\s+/)[0];
       break;
     case 'FINK':
       // A link to another story. Resolve it against THIS story's location,
       // then break the beat and ask the shell to authorize it (§story.link).
       _pendingLink = resolveStoryUrl(value);
+      break;
+    case 'LINKREL':
+      // How the link COMPOSES (spec §3.4): goDeeper descends and keeps the
+      // way back, goShallower surfaces early, oneWay burns the stack. Bare
+      // FINK still replaces, which is the back-compatible default.
+      _pendingRel = value.trim();
       break;
     // A beat's central media. The last IMAGE/VIDEO in a beat wins (matches
     // the live engine); rendered after the Continue loop.
@@ -276,12 +291,18 @@ function advance() {
   if (!story) return;
   _beatMedia = undefined;                 // undefined ⇒ keep previous (sticky)
   _pendingLink = undefined;
+  _pendingGame = undefined;
+  // A LINKREL from an earlier beat must not colour a later link: the
+  // annotation belongs to the link it travels with.
+  _pendingRel = undefined;
   while (story.canContinue) {
     const text = story.Continue();
     (story.currentTags || []).forEach(handleTag);
     const trimmed = text.trim();
     if (trimmed) addProse(trimmed);
-    if (_pendingLink !== undefined) break;   // a FINK link ends the beat
+    // A FINK link or a MINIGAME ends the beat — matching the host
+    // engine, which breaks its loop on exactly these two tags.
+    if (_pendingLink !== undefined || _pendingGame !== undefined) break;
   }
   if (_beatMedia !== undefined) renderMedia(_beatMedia);
   if (_pendingLink !== undefined) {
@@ -289,8 +310,24 @@ function advance() {
     followLink(url);
     return;                                  // the linked story replaces this one
   }
+  if (_pendingGame !== undefined) {
+    const game = _pendingGame; _pendingGame = undefined;
+    launchAndWait(game);
+    return;                                  // paused: no choices until it ends
+  }
   renderChoices();
   if (!story.canContinue && story.currentChoices.length === 0) {
+    // END inside a dream POPS instead of ending — that is what makes a
+    // nested story a dream rather than a dead end. Only the outermost END
+    // is really the end.
+    if (_frames.length) {
+      window.foaf?.bus?.publish('app.storyrunner.surfacing', {
+        summary: `inner story ended — surfacing to depth ${_frames.length - 1}`,
+        depth: _frames.length - 1,
+      });
+      surface();
+      return;
+    }
     state.ended = true;
     setStatus('— THE END —');
     window.foaf?.bus?.publish('app.storyrunner.ended', { summary: 'story ended' });
@@ -304,17 +341,141 @@ function choose(i) {
   advance();
 }
 
-// Follow a # FINK link: the shell AUTHORIZES the destination (policy), the
-// runner does the contained load. A refusal is shown, never silent.
+// ── minigames: pause, then resume with what was won (#779) ────────────
+//
+// The story cannot resume itself and the shell cannot reach into this
+// frame's ink, so the shell carries the result across: `story.launch`
+// answers `awaiting: 'minigame.complete'`, and a `story.event` message
+// arrives when the game ends. While paused there are NO choices — the
+// story is genuinely suspended, not merely quiet.
+let _pendingGame;                       // undefined = no game this beat
+let _awaitingGame = null;
+
+async function launchAndWait(game) {
+  const res = await storyRequest('story.launch', { game });
+  if (!res.ok) {
+    // A refused launch must not strand the reader in a story with no
+    // choices. Say so and carry on — the beat continues without the game.
+    setStatus(`${game} refused: ${res.reason}`);
+    state.pausedFor = null;
+    renderChoices();
+    return;
+  }
+  _awaitingGame = game;
+  state.pausedFor = game;
+  setStatus(`playing ${game}…`);
+  renderChoices();                      // clears them: paused means paused
+  window.foaf?.bus?.publish('app.storyrunner.paused', {
+    summary: `story paused for ${game}`, game,
+  });
+}
+
+// The result comes back governed: the shell checked the guest's manifest
+// when it wrote, so these values are the ACCEPTED economy, not a request.
+// The runner mirrors them into its own ink VARs — assignment to a name
+// the story never declared throws in inkjs, so each is guarded and the
+// misses are reported rather than swallowed.
+function resumeAfterGame(detail) {
+  const game = _awaitingGame;
+  _awaitingGame = null;
+  state.pausedFor = null;
+  const applied = [], missed = [];
+  for (const [name, value] of Object.entries(detail?.variables || {})) {
+    try { story.variablesState[name] = value; applied.push(name); }
+    catch { missed.push(name); }
+  }
+  state.lastGame = { game, success: detail?.success ?? null,
+                     score: detail?.score ?? null, applied, missed };
+  window.foaf?.bus?.publish('app.storyrunner.resumed', {
+    summary: `${game} finished — story resumes` +
+      (applied.length ? ` (${applied.join(', ')})` : ''),
+    game, applied, missed,
+  });
+  setStatus(missed.length ? `resumed (undeclared: ${missed.join(', ')})` : 'resumed');
+  advance();                            // continue from where the tag broke
+}
+
+// The shared economy, brokered. Seeded at compile so a story opens with
+// the treasure the reader already has, and re-read after a game so its
+// own VARs agree with the shell's canonical copy.
+async function seedEconomy() {
+  const declared = declaredNames();
+  if (declared) await storyRequest('story.vars', { op: 'declares', names: declared });
+  const res = await storyRequest('story.vars', { op: 'read' });
+  if (!res.ok || !res.values) return;
+  for (const [name, value] of Object.entries(res.values)) {
+    if (value === undefined) continue;
+    try { story.variablesState[name] = value; } catch { /* not declared here */ }
+  }
+  state.economy = res.values;
+}
+
+// Read the names from the COMPILED story, never from its source text.
+function declaredNames() {
+  try {
+    const g = story?.variablesState?._globalVariables;
+    return g ? [...g.keys()] : null;
+  } catch { return null; }
+}
+
+// ── the dream stack (spec §3.4) ────────────────────────────────────────
+//
+// Frames live HERE, in the box: a frame holds the outer story's saved ink
+// position (`state.ToJson()`), which is the story's own business and must
+// not cross to the shell. The shell holds the DEPTH — see its story.link
+// handler for why that half cannot be ours to claim.
+let _pendingRel;                   // undefined = plain replace
+const _frames = [];                // {url, state}
+
+// Follow a # FINK link: the shell AUTHORIZES the destination and the
+// composition (policy + depth), the runner does the contained load. A
+// refusal is shown, never silent.
 async function followLink(absUrl) {
-  const res = await storyRequest('story.link', { url: absUrl });
-  if (res.ok && res.url) { state.linkedTo = res.url; await loadStory(res.url); }
-  else setStatus(`link refused: ${res.reason}`);
+  const rel = (_pendingRel || '').toLowerCase();
+  _pendingRel = undefined;
+  const res = await storyRequest('story.link', { url: absUrl, rel });
+  if (!res.ok) {
+    // Depth-cap is a story-visible outcome, not a crash: the dream simply
+    // refuses. Leave the reader where they are, with choices intact.
+    setStatus(res.reason === 'depth-cap'
+      ? 'The dream refuses: too deep.'
+      : `link refused: ${res.reason}`);
+    renderChoices();
+    return;
+  }
+  if (rel === 'goshallower') { await surface(); return; }
+  if (rel === 'godeeper') {
+    // Push BEFORE loading: once the inner story compiles, `story` is the
+    // inner one and the outer position is gone.
+    _frames.push({ url: state.storyUrl, state: story.state.ToJson() });
+  } else if (rel === 'oneway') {
+    _frames.length = 0;            // the way back is burned
+  }
+  state.depth = res.depth ?? _frames.length;
+  document.body.dataset.depth = String(state.depth);
+  state.linkedTo = res.url;
+  await loadStory(res.url);
+}
+
+// Surface one level: reload the outer document and restore its FULL ink
+// state, so the outer story resumes mid-breath rather than restarting at
+// a knot. No knot bookkeeping — LoadJson carries the position.
+async function surface() {
+  const frame = _frames.pop();
+  if (!frame) return false;
+  const res = await storyRequest('story.link', { url: frame.url, rel: 'surface' });
+  state.depth = res.ok ? (res.depth ?? _frames.length) : _frames.length;
+  document.body.dataset.depth = String(state.depth);
+  setStatus('surfacing…');
+  await loadStory(frame.url, frame.state);
+  return true;
 }
 
 // Load (or replace with) a story at `url`, wholly inside the box: fetch,
 // nested-box extract, compile, reset the beat surface, play.
-async function loadStory(url) {
+// `restore` is a saved `state.ToJson()` — supplied when surfacing from a
+// dream, so the outer story resumes exactly where it paused.
+async function loadStory(url, restore = null) {
   state.storyUrl = url;
   setStatus('loading…');
   $('prose').textContent = '';
@@ -342,6 +503,16 @@ async function loadStory(url) {
   }
   state.ready = true;
   setStatus('');
+  // Seed the shared economy BEFORE the first beat, or a story that opens
+  // by reading `diamonds` shows a zero the reader has already disproved.
+  await seedEconomy();
+  // Surfacing from a dream: restore the outer story's saved position so it
+  // resumes mid-breath. Must happen after seeding and before the first
+  // advance(), or the restored position is immediately overwritten.
+  if (restore) {
+    try { story.state.LoadJson(restore); state.restored = true; }
+    catch (e) { setStatus('could not restore the outer story: ' + e.message); }
+  }
   advance();
 }
 
@@ -358,7 +529,23 @@ window.__storyrunner = {
   get state() { return JSON.parse(JSON.stringify(state)); },
   choose,
   ready: () => state.ready,
+  paused: () => !!_awaitingGame,
+  depth: () => _frames.length,
+  frames: () => _frames.map((f) => f.url.split('/').pop()),
+  // read a story VAR (for the parity tests — the economy is the point)
+  varOf: (name) => { try { return story?.variablesState?.[name]; } catch { return undefined; } },
+  spend: (name, value) => storyRequest('story.vars', { op: 'write', name, value }),
 };
+
+// Shell → runner events. Only the parent may speak, and only the
+// vocabulary below: a story that ends up hosting a hostile frame cannot
+// forge a resume, because anything not from `parent` is dropped.
+window.addEventListener('message', (e) => {
+  if (e.source !== window.parent) return;
+  const d = e.data;
+  if (!d || d.type !== 'story.event') return;
+  if (d.event === 'minigame.complete' && _awaitingGame) resumeAfterGame(d.detail);
+});
 
 // Live inside foafos if present; run standalone otherwise (dev).
 if (window.foaf?.onInit) {

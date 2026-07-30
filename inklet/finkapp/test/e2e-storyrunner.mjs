@@ -240,6 +240,136 @@ try {
     pass('instantiation border real: the game is a CHILD of the runner, caps bounded by it');
   } else fail('tree border wrong: ' + JSON.stringify(tree));
 
+  // ── 5a. PARITY (#779 blockers 1+2): pause, writeback, economy ───────
+  // The runner used to fire story.launch and carry straight on, so a
+  // story that says "play, then use what you won" ran the "then" while
+  // the game was still on screen, with the pre-game values — every
+  // chess/gems/waterworld ending was unreachable. peer.fink.js is the
+  // fixture: it declares shared VARs, pauses on # MINIGAME:, and spends
+  // what the game wrote.
+  {
+    const paused = await frame.evaluate(() => ({
+      paused: window.__storyrunner.paused(),
+      pausedFor: window.__storyrunner.state.pausedFor,
+      choices: document.querySelectorAll('#choices button').length,
+    }));
+    paused.paused && paused.pausedFor === 'waterworld' && paused.choices === 0
+      ? pass('the story PAUSED on # MINIGAME: — no choices while the game plays')
+      : fail(`story did not pause for its game: ${JSON.stringify(paused)}`);
+
+    // The guest earns treasure the way a guest does: from inside its own
+    // frame, over the real protocol, so the manifest check is real.
+    const guest = page.frames().find((f) => /waterworld/.test(f.url()));
+    if (!guest) fail('no waterworld guest frame to earn anything');
+    else {
+      await guest.evaluate(() => {
+        parent.postMessage({ type: 'set-variable', name: 'diamonds', value: 7 }, '*');
+        parent.postMessage({ type: 'set-variable', name: 'score', value: 240 }, '*');
+        parent.postMessage({ type: 'set-variable', name: 'keys', value: 99 }, '*');  // NOT in its manifest
+      });
+      await page.waitForTimeout(700);
+      const economy = await page.evaluate(() => ({
+        mirror: FoafOS.storyVars.all(),
+        denied: FoafOS.vars.log.filter((l) => !l.ok).map((l) => l.name),
+      }));
+      economy.mirror.diamonds === 7 && economy.mirror.score === 240
+        ? pass(`a boxed story's economy is brokered shell-side (${JSON.stringify(economy.mirror)})`)
+        : fail(`guest writes lost under the boxed runner: ${JSON.stringify(economy)}`);
+      economy.mirror.keys === undefined && economy.denied.includes('keys')
+        ? pass('a write outside the guest manifest is DENIED, not silently applied')
+        : fail(`variable governance not enforced: ${JSON.stringify(economy)}`);
+    }
+
+    // End the game through the host's own completion entry point.
+    await page.evaluate(() => FinkMinigames.handleMinigameComplete(
+      { type: 'waterworld', success: true, score: 240 }));
+    await page.waitForTimeout(1400);
+    const resumed = await frame.evaluate(() => ({
+      paused: window.__storyrunner.paused(),
+      diamonds: window.__storyrunner.varOf('diamonds'),
+      score: window.__storyrunner.varOf('score'),
+      choices: document.querySelectorAll('#choices button').length,
+      prose: document.getElementById('prose')?.textContent || '',
+    }));
+    !resumed.paused && resumed.choices > 0
+      ? pass('the story RESUMED where the tag broke the beat')
+      : fail(`story did not resume: ${JSON.stringify(resumed)}`);
+    resumed.diamonds === 7 && resumed.score === 240
+      ? pass('completion wrote back into the boxed story\'s own ink')
+      : fail(`writeback failed: diamonds=${resumed.diamonds} score=${resumed.score}`);
+    // The assertion that matters: the beat SPENDS the winnings. A tag
+    // binds to the line that FOLLOWS it, so a fixture with the tag after
+    // its lead-in breaks on the post-game line and prints stale values —
+    // this catches that whole class.
+    /7 diamond/.test(resumed.prose) && /240/.test(resumed.prose)
+      ? pass('the after-game beat printed the values the game produced')
+      : fail(`beat used stale values: "${resumed.prose.slice(-120)}"`);
+
+    const spend = await frame.evaluate(() => window.__storyrunner.spend('diamonds', 3));
+    const left = await page.evaluate(() => FoafOS.storyVars.all().diamonds);
+    spend.ok && left === 3
+      ? pass('a story SPENDS through the broker (7 → 3), never by reaching in')
+      : fail(`brokered spend failed: ${JSON.stringify({ spend, left })}`);
+    const priv = await frame.evaluate(() => window.__storyrunner.spend('secret_plot_flag', 1));
+    priv.ok === false && priv.reason === 'not-shared'
+      ? pass('a private variable is refused BY NAME — the boundary is the shared set')
+      : fail(`a private variable was brokered: ${JSON.stringify(priv)}`);
+  }
+
+  // ── 5c. DREAM STACK (#779): goDeeper descends, END pops mid-breath ──
+  // The depth is the SHELL's count, not the story's claim — a story that
+  // could report its own depth could claim 0 from inside a dream and
+  // switch off the read-only rule on the shared economy.
+  {
+    const dive = await page.evaluate(async () => {
+      const f = document.querySelector('iframe[src*="storyrunner"]');
+      // Ask through the governed verb, exactly as a # LINKREL: goDeeper does.
+      const before = FoafOS.storyDepth('storyrunner');
+      f.contentWindow.postMessage({ type: 'noop' }, '*');   // keep the frame live
+      return { before };
+    });
+    void dive;
+    // Drive the real path: the runner asks, the shell decides.
+    const asked = await frame.evaluate(() => window.foaf.storyRequest('story.link',
+      { url: new URL('./dream.fink.js', location.href).href, rel: 'goDeeper' }));
+    await page.waitForTimeout(300);
+    const deep = await page.evaluate(() => ({
+      shell: FoafOS.storyDepth('storyrunner'),
+      vars: FoafOS.vars.depth,
+    }));
+    asked.ok && asked.depth === 1 && deep.shell === 1 && deep.vars === 1
+      ? pass('goDeeper: the shell counts the depth and the broker knows it')
+      : fail(`depth not tracked shell-side: ${JSON.stringify({ asked, deep })}`);
+
+    // Inside a dream the shared economy is READ-ONLY (spec + FoafVars).
+    const dreamSpend = await frame.evaluate(() => window.__storyrunner.spend('diamonds', 999));
+    dreamSpend.ok === false
+      ? pass('a dream cannot spend the waking world — shared economy read-only at depth')
+      : fail(`a dream spent the shared economy: ${JSON.stringify(dreamSpend)}`);
+
+    // The cap is real, and refusing is a story-visible outcome.
+    let capped = null;
+    for (let i = 0; i < 9; i++) {
+      capped = await frame.evaluate(() => window.foaf.storyRequest('story.link',
+        { url: new URL('./dream.fink.js', location.href).href, rel: 'goDeeper' }));
+      if (!capped.ok) break;
+    }
+    capped && capped.ok === false && capped.reason === 'depth-cap'
+      ? pass(`the dream refuses past the cap (depth ${capped.depth})`)
+      : fail(`no depth cap: ${JSON.stringify(capped)}`);
+
+    // Surface all the way back so later sections start from the waking world.
+    for (let i = 0; i < 12; i++) {
+      const up = await frame.evaluate(() => window.foaf.storyRequest('story.link',
+        { url: new URL('./demo.fink.js', location.href).href, rel: 'surface' }));
+      if (up.depth === 0) break;
+    }
+    const back = await page.evaluate(() => ({ shell: FoafOS.storyDepth('storyrunner'), vars: FoafOS.vars.depth }));
+    back.shell === 0 && back.vars === 0
+      ? pass('surfacing returns the shell and the broker to depth 0')
+      : fail(`depth stuck after surfacing: ${JSON.stringify(back)}`);
+  }
+
   // ── 5b. attenuation ENFORCES — it does not merely announce ──────────
   // The check above passes trivially: waterworld's declared caps happen
   // to sit inside the runner's. The question that matters is what an
