@@ -796,6 +796,9 @@ try {
       took ? pass('the demo offers a peer link (# LINKREL: peer)')
            : fail('no peer choice found at the coin beat');
       await pp.waitForTimeout(4000);
+      // A peer now ends itself when its story ends (12j), so the close leg
+      // cannot ask "is one open?" to decide whether it has anything to prove.
+      let peerEverOpened = false;
 
       // 12a. TWO SESSIONS, SIDE BY SIDE, in the shell's tree.
       const shape = await pp.evaluate(() => {
@@ -823,6 +826,7 @@ try {
       });
       if (!peer) fail('the peer frame never appeared');
       else {
+        peerEverOpened = true;
         await peer.waitForFunction(() => window.__storyrunner?.ready?.(), null, { timeout: 20000 });
         const played = await peer.evaluate(() => ({
           url: (window.__storyrunner.state.storyUrl || '').split('/').pop(),
@@ -919,17 +923,88 @@ try {
         cache.size <= 6
           ? pass(`and the cache stays bounded (${cache.size} of 6)`)
           : fail(`the cache is unbounded: ${cache.size} entries`);
+
+        // 12i. A PEER LOOKS LIKE NOTHING (owner, 2026-07-30). Reading into a
+        // peer is just more story and more choices — it must not throw the
+        // reader into window management. So: it takes the reading surface, it
+        // offers NO chrome of its own, and the reader's own stage goes inert
+        // rather than merely being covered. That last part is not decoration:
+        // `#prose` is aria-live, so without it a screen reader — and the voice
+        // interface being built — gets two stories interleaved.
+        const look = await outer.evaluate(() => {
+          const el = document.getElementById('peer');
+          if (!el) return { missing: true };
+          const r = el.getBoundingClientRect();
+          const stage = document.getElementById('stage');
+          return {
+            buttons: el.querySelectorAll('button').length,
+            bars: el.querySelectorAll('.peer-bar, header').length,
+            coverage: Math.round((r.width * r.height)
+              / (window.innerWidth * window.innerHeight) * 100),
+            stageInert: !!stage?.inert,
+            stageHidden: stage?.getAttribute('aria-hidden') === 'true',
+          };
+        });
+        !look.missing && look.buttons === 0 && look.bars === 0 && look.coverage >= 90
+          ? pass(`the peer offers no chrome and takes the reading surface (${look.coverage}% of it, 0 buttons)`)
+          : fail(`the peer is window management: ${JSON.stringify(look)}`);
+        look.stageInert && look.stageHidden
+          ? pass('and the reader\'s own stage is inert, so one story is narrated at a time')
+          : fail(`the covered stage is still live: ${JSON.stringify(look)}`);
+
+        // 12j. THE WAY BACK IS THE STORY ENDING — the only route a reader ever
+        // needs, and the peer equivalent of a dream surfacing. `beside.fink.js`
+        // folds the chart and reaches END; the peer must then stop covering the
+        // reader's own story, WITHOUT reloading it. No reload is the difference
+        // between peering and dreaming: a dream has to LoadJson its way back,
+        // a peer's neighbour never stopped being live.
+        const before = await outer.evaluate(() => window.__storyrunner.cache().loads);
+        for (let i = 0; i < 8; i++) {
+          const gone = await outer.evaluate(() => !document.getElementById('peer'));
+          if (gone) break;
+          const bs = await peer.$$('#choices button');
+          if (!bs.length) { await pp.waitForTimeout(900); continue; }
+          let clicked = false;
+          for (const b of bs) {
+            if ((await b.textContent()).toLowerCase().includes('fold')) { await b.click(); clicked = true; break; }
+          }
+          if (!clicked) await bs[0].click();
+          await pp.waitForTimeout(1400);
+        }
+        const back = await outer.evaluate(() => {
+          const stage = document.getElementById('stage');
+          const s = window.__storyrunner.state;
+          return {
+            peerEl: !!document.getElementById('peer'),
+            peerState: s.peer,
+            stageInert: !!stage?.inert,
+            choices: s.choices.length,
+            url: (s.storyUrl || '').split('/').pop(),
+            loads: window.__storyrunner.cache().loads,
+          };
+        });
+        !back.peerEl && !back.peerState && !back.stageInert
+          ? pass('the peer\'s story ended and it stopped covering the reader\'s own — no control needed')
+          : fail(`the peer did not give the surface back: ${JSON.stringify(back)}`);
+        // `!peerEl` again on purpose: "the reader has choices and nothing
+        // reloaded" is also true while the peer is still covering them, so
+        // without it this leg passes on the old two-pane build. It did.
+        !back.peerEl && back.choices >= 1 && back.url === 'demo.fink.js' && back.loads === before
+          ? pass(`and the reader resumed their LIVE beat, not a reload (${back.choices} choices, ${back.loads} loads unchanged)`)
+          : fail(`the reader's own story was not waiting: ${JSON.stringify({ ...back, before })}`);
       }
 
-      // 12f. Closing the peer ends THAT session and leaves the other reading.
-      // Gated on a peer EXISTING: with no peer open, "one session left and no
-      // peers" is true of a runner that never opened one, so this leg would
-      // pass while proving nothing. It did, on the first run.
-      const shut = await pp.evaluate(() =>
-        [...FoafOS.apps.nodes.values()].some((n) => n.peerOf));
-      if (!shut) fail('no peer to close — 12f proved nothing');
+      // 12f. THE SHELL'S BOOKKEEPING, whichever way the peer went. 12j ends it
+      // the way a reader does — its story finishes — and the debug hook is the
+      // other route. Either must leave the shell with ONE session, still
+      // reading, and no orphan peer node. Gated on a peer having EXISTED: with
+      // none, "one session and no peers" is also true of a runner that never
+      // opened one, so this leg would pass while proving nothing. It did, once.
+      if (!peerEverOpened) fail('no peer was ever opened — 12f proved nothing');
       else {
-        await outer.evaluate(() => window.__storyrunner.closePeer());
+        const stillOpen = await pp.evaluate(() =>
+          [...FoafOS.apps.nodes.values()].some((n) => n.peerOf));
+        if (stillOpen) await outer.evaluate(() => window.__storyrunner.closePeer());
         await pp.waitForTimeout(1200);
         const after = await pp.evaluate(() => {
           const all = [...FoafOS.apps.nodes.values()];
@@ -941,7 +1016,7 @@ try {
         });
         const stillReading = await outer.evaluate(() => window.__storyrunner.state.choices.length);
         after.sessions === 1 && after.peers === 0 && after.runnerAlive && stillReading >= 1
-          ? pass('closing the peer ended one session and left the other reading')
+          ? pass(`the peer's session is gone and the other is still reading (via ${stillOpen ? 'the debug hook' : 'its story ending'})`)
           : fail(`peer close wrong: ${JSON.stringify({ ...after, stillReading })}`);
       }
       perr.length === 0 ? pass('peering: no page errors') : fail(`peering errors: ${perr[0]}`);

@@ -26,6 +26,27 @@ A capability is *permission to ask*; foafos does the doing. This is what makes
 the borders below trustworthy: they are not politeness, they are the only path
 to any effect.
 
+## Presentation invariant (read second)
+
+**The layers are for the platform. The reader gets a story.** (Owner,
+2026-07-30.) Every border below is real, and **none of them may show up as
+chrome**. Whatever composition is happening — a link, a dream, a peer, a merged
+chunk — what the reader experiences is *more story and more choices*, at most
+with an interstitial or a passing notice. No pane management, no window
+furniture, no configuration.
+
+**The voice interface is the test.** A pure voice interface is in development,
+and it has no panes, no `✕`, and no corner to put a title bar in. So: if a
+feature can only be understood by looking at a second pane, or can only be left
+by pressing a control, it is wrong at the design level and not merely
+unpolished. Anything that must be *said* to be usable is the honest version —
+which is why "the story ends and you are back" beats any button.
+
+Mechanism belongs in the **advanced/debug view** — the runner's Subtree panel,
+the shell's app tree, the capability ledger, the address bar. Those exist so the
+mechanism is auditable, not so the reader must learn it. A reader who never
+opens them must lose nothing.
+
 ## The layers
 
 ### 0 — foafos shell
@@ -300,8 +321,33 @@ against the file named.
   copy of the engine to drift. Two refusals define the border from the other
   side: a peer may not announce sessions (its plain link would arrive as
   "replace" and end the reader's own story) and may not observe the subtree
-  (that is level 1's authority). **One peer at a time** — three panes on a
-  phone is not a design.
+  (that is level 1's authority). **One peer at a time.**
+
+  **A PEER LOOKS LIKE NOTHING** (owner, 2026-07-30). Reading into a peer is
+  *just more story and more choices* — possibly an interstitial or a notice, and
+  nothing else. It must never throw the reader out of the illusion and into
+  window management. So a peer **takes the reading surface**, the way a dream
+  already does: no title bar, no close button, no split pane. The way back is
+  **the peer's story ending** — the peer equivalent of a dream surfacing — so
+  the reader needs no control at all. The first version was two stacked panes
+  with a `✕`, which was wrong twice over: it announced the mechanism to the
+  reader, and a pane means nothing in the **voice interface** in development,
+  where there is no second pane to look at. Measured on that old build: 45% of
+  the surface, one chrome bar, one button.
+
+  What peering *is* stays invisible and structural, which is the whole point:
+  the reader's own story is not destroyed, and they come back to its **live
+  beat**. Measured: no reload — the outer story's load count does not change,
+  because it never stopped being that document's running story. A dream has to
+  reload and `LoadJson` its way back; a peer just stops covering the page.
+  The covered stage is also made **inert and `aria-hidden`**, which is not
+  decoration: the prose region is `aria-live`, so without it a screen reader —
+  and the voice interface — narrates two stories interleaved, and a keyboard
+  reader can tab into choices that are not on screen.
+
+  The mechanism shows only where mechanisms belong: the runner's Subtree panel,
+  the shell's own app tree, and the capability ledger. That is the
+  advanced/debug view, and the reader never has to open it.
 - **Level 3 parents under level 2.** A launched game is a child of the SESSION,
   not of the engine. Measured: `root → Finkosphere → session → game` at depths
   0, 1, 2, 3, with capabilities attenuating at each step.

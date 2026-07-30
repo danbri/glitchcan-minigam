@@ -510,6 +510,15 @@ function advance() {
       return;
     }
     state.ended = true;
+    // A PEER'S END IS NOT THE END — it is the way back, and the only one the
+    // reader ever needs. Say so upward and let our mediator uncover the story
+    // we were standing beside. "— THE END —" here would be a lie: the reader
+    // has a story still running underneath.
+    if (IS_PEER) {
+      state.ended = false;
+      try { parent.postMessage({ type: 'session.done' }, '*'); } catch { /* no mediator */ }
+      return;
+    }
     setStatus('— THE END —');
     window.foaf?.bus?.publish('app.storyrunner.ended', { summary: 'story ended' });
   }
@@ -803,8 +812,18 @@ async function followLink(absUrl) {
 // what the peer opens under the peer — see the shell's `story.launch`, which
 // checks that name is one of our own sessions before it trusts it.
 //
-// ONE peer at a time, deliberately. Two is a layout question (three panes on a
-// phone is not a design, it is a shrug) and the mechanism is proved by one.
+// ONE peer at a time, deliberately — and now for a stronger reason than layout.
+// A PEER MUST NOT LOOK LIKE ANYTHING (owner, 2026-07-30). Reading into a peer
+// is just more story and more choices; it must not throw the reader out of the
+// illusion and into window management. So a peer takes the READING SURFACE, the
+// way a dream already does — no title bar, no ✕, no split pane — and the reader
+// comes back when the peer's story ends. Two panes was the wrong answer twice
+// over: it announced the mechanism to the reader, and it cannot exist at all in
+// the voice interface being built, where there is no second pane to look at.
+// What peering IS remains invisible and structural: the reader's own story is
+// not destroyed, and they return to its live beat rather than a restart.
+// The mechanism shows only where mechanisms belong — the Subtree panel, the
+// shell's own app tree and the capability ledger.
 const PEER_CAP = 1;
 let _peer = null;      // { url, session, frame, el }
 
@@ -827,16 +846,6 @@ async function openPeer(absUrl) {
   const wrap = document.createElement('section');
   wrap.className = 'peer';
   wrap.id = 'peer';
-  const bar = document.createElement('header');
-  bar.className = 'peer-bar';
-  const name = document.createElement('span');
-  name.textContent = res.label || 'beside';   // TEXT, never innerHTML
-  const shut = document.createElement('button');
-  shut.type = 'button';
-  shut.textContent = '✕';
-  shut.setAttribute('aria-label', `Close ${res.label || 'the peer story'}`);
-  shut.addEventListener('click', () => { closePeer(); });
-  bar.append(name, shut);
 
   // Opaque origin: `allow-scripts` WITHOUT `allow-same-origin`. The peer gets
   // no handle on this document, which is the whole point of the second frame.
@@ -844,23 +853,55 @@ async function openPeer(absUrl) {
   frame.setAttribute('sandbox', 'allow-scripts');
   frame.title = res.label || 'A story beside this one';
   frame.src = `./index.html?peer=1&story=${encodeURIComponent(absUrl)}`;
-  wrap.append(bar, frame);
+  wrap.append(frame);
   document.body.appendChild(wrap);
   document.body.dataset.peer = '1';
+
+  // THE OUTER STAGE GOES INERT while the peer reads. Not decoration: `#prose`
+  // is `aria-live="polite"`, so without this a screen reader or a voice
+  // interface is read TWO stories interleaved, and a keyboard reader can tab
+  // into choices that are not on screen. Set before `advance()`, so the beat
+  // prepared below is not announced over the peer's opening line.
+  stageInert(true);
 
   _peer = { url: absUrl, session: res.id, frame, el: wrap };
   state.peer = { url: absUrl, session: res.id, label: res.label || null };
   setStatus('');
-  advance();                     // the reader's own story carries on
+  // The reader's own story advances one beat and WAITS there, hidden. Nothing
+  // is lost: on return that prepared beat is what they read next, which is what
+  // leaving a book face-down and picking it up feels like.
+  advance();
 }
 
-async function closePeer() {
+// Hide/expose the reader's own reading surface. The peer overlays it, so the
+// stage must stop being reachable — by assistive tech, by the tab key, by a
+// stray click — rather than merely being covered.
+function stageInert(on) {
+  const stage = $('stage');
+  if (!stage) return;
+  if (on) { stage.setAttribute('aria-hidden', 'true'); stage.inert = true; }
+  else { stage.removeAttribute('aria-hidden'); stage.inert = false; }
+}
+
+// `why` is 'ended' when the peer's own story finished — the ordinary way back,
+// and the only one a reader ever sees. Anything else is a debug/advanced route
+// (the `__storyrunner` hook, the shell's own app tree), which is why the reader
+// is given no control of their own.
+async function closePeer(why = 'closed') {
   if (!_peer) return false;
   const { session, el } = _peer;
   _peer = null;
   state.peer = null;
   el.remove();
   delete document.body.dataset.peer;
+  stageInert(false);
+  // NO RELOAD, and this is the point of peering rather than dreaming. The
+  // reader's own story never stopped being this document's live `story`: its
+  // prose is still in the DOM and its choices are still bound. A dream has to
+  // reload and `LoadJson` its way back; a peer just stops covering the page.
+  // A short, polite cue on the status line — the same line a dream surfaces
+  // with — because a reader who cannot see the change is owed the words.
+  if (why === 'ended') setStatus('back to your own story');
   // End the SESSION, by name: a peer is not the innermost session, so an
   // unnamed end would close the wrong one.
   await storyRequest('story.session', { op: 'end', id: session });
@@ -888,6 +929,11 @@ window.addEventListener('message', (e) => {
     });
     return;
   }
+  // THE WAY BACK. The peer's story reached its end, so it stops covering the
+  // reader's own — the peer equivalent of a dream surfacing when the inner
+  // story ends. No capability is involved: a session is saying it is finished,
+  // which is the one thing it is always entitled to say about itself.
+  if (d.type === 'session.done') { closePeer('ended'); return; }
   if (d.type === 'story.request') {
     const verb = String(d.verb || '');
     // AN ALLOW-LIST, and the two refusals are the interesting part.
