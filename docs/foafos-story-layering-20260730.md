@@ -211,6 +211,21 @@ against the file named.
   effects not secrets (nodes, sessions, depth, game outcomes; never another
   app's state), subtree scope, disclosed on the bus and tallied in the ledger,
   and ephemeral (a bounded array in the runner's frame, nothing persisted).
+- **Peering** (added 2026-07-30). `# LINKREL: peer` opens a second session
+  BESIDE the first: both live, neither containing the other, the reader keeping
+  their choices in one while the other keeps its own. The shell spawns a sibling
+  session marked `peerOf` and does not close what a peer stands beside.
+  A peer is a NESTED RUNNER — the same page in its own sandboxed frame at its
+  own opaque origin — which buys three things: the two stories are isolated by
+  the browser rather than by our good behaviour (measured: `parent.document` and
+  `parent.__storyrunner` both throw from inside the peer); the mediation chain
+  is literal, since the peer asks the runner and the runner asks foafos; and a
+  peer is a full runner, so it plays media, audio and games without a reduced
+  copy of the engine to drift. Two refusals define the border from the other
+  side: a peer may not announce sessions (its plain link would arrive as
+  "replace" and end the reader's own story) and may not observe the subtree
+  (that is level 1's authority). **One peer at a time** — three panes on a
+  phone is not a design.
 - **Level 3 parents under level 2.** A launched game is a child of the SESSION,
   not of the engine. Measured: `root → Finkosphere → session → game` at depths
   0, 1, 2, 3, with capabilities attenuating at each step.
@@ -237,10 +252,14 @@ against the file named.
   file set is superseded and pending delete (issue #779). Deleting it is a
   separate job from flipping the default, and the suites pinned to
   `?player=legacy` are the list of what has to move first.
-- **One session at a time, per runner.** The stack exists and dreams nest, but
-  a `# FINK:` link still **replaces** the content in the same frame, so peering
-  — two sibling sessions playing side by side — has a node for it and no
-  mechanism yet.
+- **Dream depth is counted per RUNNER, not per session.** With a peer open there
+  are two live sessions and one depth counter, so a peer that dreams moves a
+  number the reader's own story also reads. Harmless today (a peer fixture that
+  dreams does not exist) and wrong in principle: the count should be per session
+  while staying shell-side, which is a change to `storyDepth`'s key.
+- **A peer keeps nothing.** It gets no store, and its session is not
+  snapshotted, so closing the window loses the peer while restoring the primary.
+  Whether a peer should come back is a design question, not an oversight.
 - **Session-to-session mechanics.** The shared economy crosses through
   `story.vars` at the shell, which is the level-0 half of the job. The level-2
   half — a session managing its relations to other sessions, with state
@@ -326,7 +345,8 @@ The order matters: each step makes the next one smaller.
    app-tree paper's §1, the threat model's §5.3).
 4. ~~**Give the StoryRunner its observability.**~~ **DONE 2026-07-30** — the
    stream and its four rules. What is left on top of it is dashboards.
-5. **Peering**: two sibling sessions playing at once, then the session-to-session
-   mechanics (state propagation, variable and knot renaming).
+5. ~~**Peering**: two sibling sessions playing at once~~ **DONE 2026-07-30.**
+   Still open beneath it: the session-to-session mechanics (state propagation,
+   variable and knot renaming) and per-session dream depth.
 6. **Formalise the per-session cache**, then **the reality broker**.
 7. **Delete the host-page engine**, which is what all of this was for.

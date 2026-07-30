@@ -30,6 +30,22 @@ A small thing, easy to miss beside the torch. You keep it, and read the painted 
 // so a new branch goes second or the suite's walk silently changes route.
 + [Step through the humming doorway] -> doorway
 + [Close your eyes for a moment] -> down
++ [Unroll the chart beside you] -> beside
+
+=== beside ===
+// peer STANDS BESIDE: both stories live, neither inside the other, and this
+// one keeps its choices while the chart keeps its own. Tag first, lead-in
+// second — a tag binds to the line that FOLLOWS it.
+# FINK: beside.fink.js
+# LINKREL: peer
+You unroll the chart on the crate beside you, and leave it open.
+-> chartopen
+
+=== chartopen ===
+The chart lies open beside you, and the shaft still waits.
++ [Step through the humming doorway] -> doorway
++ [Close your eyes for a moment] -> down
+-> END
 
 === doorway ===
 // A bare FINK link REPLACES — the back-compatible default.

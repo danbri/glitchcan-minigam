@@ -712,12 +712,20 @@ try {
         () => window.__storyrunner?.ready?.() && window.__storyrunner.state.choices.length > 0,
         null, { timeout: 25000 });
       await playable();
+      // WAIT FOR THE CHANGE, not for a duration. A fixed 2.6s was enough on a
+      // quiet machine and not enough on a busy one: the journey leg failed
+      // once with the TOC's own choices still on screen, which reads exactly
+      // like "Hampstead is missing" and is not.
       const pick = async (frag) => {
         const cs = await tf.evaluate(() => window.__storyrunner.state.choices);
         const i = cs.findIndex((c) => c.toLowerCase().includes(frag));
         if (i < 0) return { ok: false, cs };
         await tf.evaluate((n) => window.__storyrunner.choose(n), i);
-        await page.waitForTimeout(2600);
+        await tf.waitForFunction((before) => {
+          const s = window.__storyrunner?.state;
+          if (!s || !s.choices.length) return false;
+          return JSON.stringify(s.choices) !== before;
+        }, JSON.stringify(cs), { timeout: 25000 }).catch(() => {});
         return { ok: true, label: cs[i] };
       };
       const toc = await tf.evaluate(() => window.__storyrunner.state.choices);
@@ -734,6 +742,158 @@ try {
         ? pass('MANDATORY JOURNEY boxed: TOC → Episodes → Hampstead plays')
         : fail(`journey broke: ep=${JSON.stringify(ep)} hp=${JSON.stringify(hp)} at=${JSON.stringify(landed)}`);
     }
+  }
+
+  // ── 12. PEERING: two sibling sessions, both live ────────────────────
+  // Its own page, because reaching the peer branch means leaving the spine
+  // walk that every leg above rides on.
+  {
+    const pp = await browser.newPage({ viewport: { width: 430, height: 900 } });
+    const perr = [];
+    pp.on('pageerror', (e) => perr.push(String(e).slice(0, 160)));
+    await pp.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=none`);
+    await pp.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
+    await pp.evaluate(() => {
+      window.__peerLog = [];
+      FoafOS.bus.subscribe('story.request', (e) => window.__peerLog.push(e.data));
+    });
+    await pp.evaluate(() => FoafOS.launchApp('storyrunner'));
+    // The OUTER runner is the frame with no `peer=1`; the peer is the one with
+    // it. Both share a pathname, so the query is what tells them apart — and
+    // the outer frame must be identified before the peer exists, or "the first
+    // storyrunner frame" is a race.
+    const outerOf = () => pp.frames().find((f) => {
+      try {
+        const u = new URL(f.url());
+        return u.pathname.includes('/apps/storyrunner/') && !u.searchParams.get('peer');
+      } catch { return false; }
+    });
+    let outer = null;
+    for (let i = 0; i < 40 && !outer; i++) { outer = outerOf(); if (!outer) await pp.waitForTimeout(400); }
+    if (!outer) fail('peering: the runner frame never appeared');
+    else {
+      await outer.waitForFunction(() => window.__storyrunner?.ready?.(), null, { timeout: 20000 });
+      // Walk the spine to the coin beat, then take the CHART, by label.
+      const tap = async (label) => {
+        for (const b of await outer.$$('#choices button')) {
+          if ((await b.textContent()).toLowerCase().includes(label)) { await b.click(); return true; }
+        }
+        return false;
+      };
+      // Two beats to the coin, THEN the chart: the peer branch hangs off the
+      // coin knot, not off the newsreel.
+      await tap('drowned newsreel');
+      await pp.waitForTimeout(1100);
+      await tap('odd coin');
+      await pp.waitForTimeout(1100);
+      const took = await tap('chart beside you');
+      took ? pass('the demo offers a peer link (# LINKREL: peer)')
+           : fail('no peer choice found at the coin beat');
+      await pp.waitForTimeout(4000);
+
+      // 12a. TWO SESSIONS, SIDE BY SIDE, in the shell's tree.
+      const shape = await pp.evaluate(() => {
+        const all = [...FoafOS.apps.nodes.values()];
+        const runner = all.find((n) => n.appId === 'storyrunner');
+        const sessions = all.filter((n) => n.appId === 'story-session');
+        return {
+          runner: !!runner,
+          count: sessions.length,
+          allUnderRunner: sessions.every((s) => s.parentId === runner?.id),
+          depths: sessions.map((s) => FoafOS.apps.depth(s.id)),
+          labels: sessions.map((s) => s.label),
+          peerOf: sessions.filter((s) => s.peerOf).length,
+          dreamOf: sessions.filter((s) => s.dreamOf).length,
+        };
+      });
+      shape.count === 2 && shape.allUnderRunner && shape.depths.every((d) => d === 2)
+        && shape.peerOf === 1 && shape.dreamOf === 0
+        ? pass(`two sessions stand BESIDE each other under the runner (${shape.labels.join(' | ')}), one marked peerOf`)
+        : fail(`peer session shape wrong: ${JSON.stringify(shape)}`);
+
+      // 12b. The peer is a REAL runner in its own frame, and it plays.
+      const peer = pp.frames().find((f) => {
+        try { return new URL(f.url()).searchParams.get('peer') === '1'; } catch { return false; }
+      });
+      if (!peer) fail('the peer frame never appeared');
+      else {
+        await peer.waitForFunction(() => window.__storyrunner?.ready?.(), null, { timeout: 20000 });
+        const played = await peer.evaluate(() => ({
+          url: (window.__storyrunner.state.storyUrl || '').split('/').pop(),
+          prose: window.__storyrunner.state.prose.length,
+          choices: window.__storyrunner.state.choices.length,
+          watching: window.__storyrunner.observing(),
+        }));
+        played.url === 'beside.fink.js' && played.prose >= 1 && played.choices >= 1
+          ? pass(`the peer plays its own story in its own frame (${played.url}, ${played.prose} prose, ${played.choices} choices)`)
+          : fail(`the peer did not play: ${JSON.stringify(played)}`);
+        // A session is not the observability point — level 1 is.
+        played.watching === false
+          ? pass('and it does NOT watch the subtree: that authority stayed at level 1')
+          : fail('a level-2 session started observing');
+
+        // 12c. CONTAINMENT between peers. Two Story objects in one frame would
+        // be separated by our good behaviour; two frames are separated by the
+        // browser, and this is the assertion that says which one we built.
+        const reach = await peer.evaluate(() => {
+          const probe = (fn) => { try { return fn() ? 'reachable' : 'empty'; } catch { return 'blocked'; } };
+          return {
+            doc: probe(() => window.parent.document.body),
+            runner: probe(() => window.parent.__storyrunner),
+          };
+        });
+        reach.doc === 'blocked' && reach.runner === 'blocked'
+          ? pass('the peer cannot reach the story it stands beside (opaque origin, both ways blocked)')
+          : fail(`peer containment leaked: ${JSON.stringify(reach)}`);
+
+        // 12d. The reader's own story is STILL LIVE — that is the whole claim.
+        const primary = await outer.evaluate(() => ({
+          choices: window.__storyrunner.state.choices.length,
+          url: (window.__storyrunner.state.storyUrl || '').split('/').pop(),
+        }));
+        primary.choices >= 1 && primary.url === 'demo.fink.js'
+          ? pass(`the first story kept its own choices while the peer played (${primary.choices})`)
+          : fail(`the primary story stopped being playable: ${JSON.stringify(primary)}`);
+
+        // 12e. The peer's verbs went up TAGGED with its own session, which is
+        // how the shell parents what a peer opens under the peer.
+        const tagged = await pp.evaluate(() => {
+          const all = [...FoafOS.apps.nodes.values()];
+          const peerNode = all.find((n) => n.appId === 'story-session' && n.peerOf);
+          return (window.__peerLog || []).filter((r) => r.detail?.session
+            && r.detail.session === peerNode?.id).map((r) => r.verb);
+        });
+        tagged.length >= 1
+          ? pass(`the peer's verbs arrive tagged with its own session (${[...new Set(tagged)].join(', ')})`)
+          : fail('no forwarded verb carried the peer session id');
+      }
+
+      // 12f. Closing the peer ends THAT session and leaves the other reading.
+      // Gated on a peer EXISTING: with no peer open, "one session left and no
+      // peers" is true of a runner that never opened one, so this leg would
+      // pass while proving nothing. It did, on the first run.
+      const shut = await pp.evaluate(() =>
+        [...FoafOS.apps.nodes.values()].some((n) => n.peerOf));
+      if (!shut) fail('no peer to close — 12f proved nothing');
+      else {
+        await outer.evaluate(() => window.__storyrunner.closePeer());
+        await pp.waitForTimeout(1200);
+        const after = await pp.evaluate(() => {
+          const all = [...FoafOS.apps.nodes.values()];
+          return {
+            sessions: all.filter((n) => n.appId === 'story-session').length,
+            peers: all.filter((n) => n.peerOf).length,
+            runnerAlive: all.some((n) => n.appId === 'storyrunner'),
+          };
+        });
+        const stillReading = await outer.evaluate(() => window.__storyrunner.state.choices.length);
+        after.sessions === 1 && after.peers === 0 && after.runnerAlive && stillReading >= 1
+          ? pass('closing the peer ended one session and left the other reading')
+          : fail(`peer close wrong: ${JSON.stringify({ ...after, stillReading })}`);
+      }
+      perr.length === 0 ? pass('peering: no page errors') : fail(`peering errors: ${perr[0]}`);
+    }
+    await pp.close();
   }
 
   if (pageErrors.length) fail('page errors: ' + pageErrors.join(' | '));

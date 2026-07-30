@@ -132,3 +132,50 @@ html, body {
 #watch li { margin: .1rem 0; font-variant-numeric: tabular-nums; }
 /* Empty means nothing has happened yet, so say nothing at all. */
 #watch:empty { display: none; }
+
+/* A PEER SESSION — the story beside this one, in its own nested frame at its
+   own opaque origin. Stacked rather than side by side: this runs on a phone
+   first, and two columns on a phone is two unreadable columns. The reader's own
+   story keeps the larger share, because it is the one they are reading. */
+.peer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 45vh;
+  z-index: 4;                       /* under the watch panel, over the stage */
+  display: flex;
+  flex-direction: column;
+  background: var(--sk-bg, #0b0b0f);
+  border-top: 2px solid rgba(255, 255, 255, .22);
+}
+.peer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .3rem .5rem;
+  color: var(--sk-dim, inherit);
+  font-size: .74rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.peer-bar button {
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: .2rem .45rem;
+  min-width: 2.2rem;                /* a touch target, not a glyph */
+  min-height: 2.2rem;
+}
+.peer iframe {
+  flex: 1 1 auto;
+  width: 100%;
+  border: 0;
+  /* clear the collapsed watch summary so the peer's last line is readable */
+  margin-bottom: 1.6rem;
+}
+/* The reader's own story gives up room rather than being scrolled off. */
+body[data-peer] #stage { max-height: 55vh; overflow-y: auto; }

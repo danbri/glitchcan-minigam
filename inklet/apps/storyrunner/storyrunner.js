@@ -16,6 +16,10 @@
 import { INSTALL_CAPTURE_SOURCE } from '../../../packages/backticks/src/index.js';
 
 const $ = (id) => document.getElementById(id);
+// A PEER runner is this same page, nested inside another runner, playing the
+// story beside it. It is a level-2 session: it plays, but it does not watch a
+// subtree and it does not announce sessions (see the outer runner's allow-list).
+const IS_PEER = new URLSearchParams(location.search).get('peer') === '1';
 const state = {
   storyUrl: null, ready: false, prose: [], choices: [], bg: null,
   ended: false, requests: [], boxedCompile: false,
@@ -24,7 +28,7 @@ const state = {
   pausedFor: null, lastGame: null, economy: null,
   depth: 0, restored: false,
   sessionId: null, sessionLabel: null,
-  observing: false, observed: [],
+  observing: false, observed: [], peer: null, isPeer: false,
   basehref: null, mediaBase: null, status: [], foley: null,
   resumedFromSave: false, knot: null, link: null, knots: 0, skin: null,
 };
@@ -749,6 +753,7 @@ async function followLink(absUrl) {
     return;
   }
   if (rel === 'goshallower') { await surface(); return; }
+  if (rel === 'peer') { await openPeer(res.url); return; }
   if (rel === 'godeeper') {
     // Push BEFORE loading: once the inner story compiles, `story` is the
     // inner one and the outer position is gone.
@@ -761,6 +766,149 @@ async function followLink(absUrl) {
   state.linkedTo = res.url;
   await loadStory(res.url, null, rel || 'replace');
 }
+
+// ── PEERING (level 2, the layer model's sibling relation) ─────────────────
+//
+// A dream is INSIDE its outer story and surfaces back into it. A peer stands
+// BESIDE it: both live, neither containing the other. That is a different
+// thing from a link, and it needs a second story actually running — which one
+// frame with one inkjs Story cannot do.
+//
+// So a peer is a NESTED RUNNER: this same page, in its own sandboxed frame at
+// its own opaque origin. Three things fall out of that, and they are the
+// reasons for doing it this way rather than juggling two Story objects here:
+//
+//   · The peer cannot touch this runner's document, prose or ink. Two stories
+//     in one frame would be isolated only by our good behaviour; two frames
+//     are isolated by the browser.
+//   · The mediation chain stops being a metaphor. The peer asks US, we ask
+//     foafos, foafos acts — session → StoryRunner → foafos broker → effect,
+//     exactly as written down.
+//   · It is the same code. A peer plays media, audio, minigames and dreams
+//     because it IS a runner, not a reduced copy of one that drifts.
+//
+// We are its shell, so we owe it the small part of the app protocol it needs:
+// an `app.init` in answer to its `app.hello`, and forwarding for its verbs. We
+// tag every forwarded verb with the peer's OWN session id, so the shell parents
+// what the peer opens under the peer — see the shell's `story.launch`, which
+// checks that name is one of our own sessions before it trusts it.
+//
+// ONE peer at a time, deliberately. Two is a layout question (three panes on a
+// phone is not a design, it is a shrug) and the mechanism is proved by one.
+const PEER_CAP = 1;
+let _peer = null;      // { url, session, frame, el }
+
+async function openPeer(absUrl) {
+  if (_peer) {                    // the second peer replaces the first
+    await closePeer();
+  }
+  // The peer's session is a SIBLING under our node, not a child of ours: the
+  // shell decides that from `rel`, and it is the shell that says whether a
+  // peer is allowed at all.
+  const res = await storyRequest('story.session', { op: 'start', url: absUrl, rel: 'peer' });
+  // RESUME THE BEAT, refused or not. Every other link REPLACES the story, so
+  // breaking out of the Continue loop and stopping there is correct for them.
+  // A peer replaces nothing: the reader's own story is still mid-beat, and
+  // leaving it there is what "the primary story stopped being playable, 0
+  // choices" looked like — the story had said its line about the chart and
+  // then had nowhere to go.
+  if (!res.ok) { setStatus(`peer refused: ${res.reason}`); advance(); return; }
+
+  const wrap = document.createElement('section');
+  wrap.className = 'peer';
+  wrap.id = 'peer';
+  const bar = document.createElement('header');
+  bar.className = 'peer-bar';
+  const name = document.createElement('span');
+  name.textContent = res.label || 'beside';   // TEXT, never innerHTML
+  const shut = document.createElement('button');
+  shut.type = 'button';
+  shut.textContent = '✕';
+  shut.setAttribute('aria-label', `Close ${res.label || 'the peer story'}`);
+  shut.addEventListener('click', () => { closePeer(); });
+  bar.append(name, shut);
+
+  // Opaque origin: `allow-scripts` WITHOUT `allow-same-origin`. The peer gets
+  // no handle on this document, which is the whole point of the second frame.
+  const frame = document.createElement('iframe');
+  frame.setAttribute('sandbox', 'allow-scripts');
+  frame.title = res.label || 'A story beside this one';
+  frame.src = `./index.html?peer=1&story=${encodeURIComponent(absUrl)}`;
+  wrap.append(bar, frame);
+  document.body.appendChild(wrap);
+  document.body.dataset.peer = '1';
+
+  _peer = { url: absUrl, session: res.id, frame, el: wrap };
+  state.peer = { url: absUrl, session: res.id, label: res.label || null };
+  setStatus('');
+  advance();                     // the reader's own story carries on
+}
+
+async function closePeer() {
+  if (!_peer) return false;
+  const { session, el } = _peer;
+  _peer = null;
+  state.peer = null;
+  el.remove();
+  delete document.body.dataset.peer;
+  // End the SESSION, by name: a peer is not the innermost session, so an
+  // unnamed end would close the wrong one.
+  await storyRequest('story.session', { op: 'end', id: session });
+  return true;
+}
+
+// We are the peer's mediator. Everything below is the small part of the shell's
+// app protocol a nested runner needs — and nothing more, because anything we
+// hand it beyond this it did not ask for and cannot be held to.
+window.addEventListener('message', (e) => {
+  if (!_peer || e.source !== _peer.frame.contentWindow) return;
+  const d = e.data;
+  if (!d || typeof d.type !== 'string') return;
+  const down = (msg) => {
+    try { _peer.frame.contentWindow?.postMessage(msg, '*'); } catch (err) { /* gone */ }
+  };
+  if (d.type === 'app.hello') {
+    // The peer inherits our media base and our skin, because it is part of the
+    // same installation and the same reading. It does NOT inherit a store: a
+    // peer keeps nothing of its own, which matches "ephemeral unless sealed".
+    down({
+      type: 'app.init', appId: 'story-session', capabilities: [],
+      store: {},
+      config: { story: _peer.url, mediaBase: state.mediaBase, skin: state.skin },
+    });
+    return;
+  }
+  if (d.type === 'story.request') {
+    const verb = String(d.verb || '');
+    // AN ALLOW-LIST, and the two refusals are the interesting part.
+    //
+    // `story.session` — a peer must not announce sessions. Its own session is
+    // the one WE opened for it, and a plain link from inside it would arrive at
+    // the shell as "replace", which ends every session this runner has: the
+    // reader's own story would vanish because the story beside it followed a
+    // link. Refusing means the peer navigates inside its own node.
+    // `story.observe` — watching the subtree is level 1's job, and the peer is
+    // level 2. A session that could watch its siblings is not a session.
+    const PEER_VERBS = ['story.link', 'story.navigate', 'story.vars',
+                        'story.audio', 'story.launch'];
+    if (!PEER_VERBS.includes(verb)) {
+      down({ type: 'story.result', rid: d.rid, ok: false, reason: 'not-for-sessions' });
+      return;
+    }
+    // FORWARD, tagged with whose session this is. We add the tag; we cannot
+    // forge one, because the shell only honours names it already knows to be
+    // ours.
+    const detail = { ...(d.detail || {}), session: _peer.session };
+    storyRequest(verb, detail).then((res) => {
+      const { type, rid, ...rest } = res || {};
+      down({ type: 'story.result', rid: d.rid, ...rest });
+    });
+    return;
+  }
+  // A peer's bus publishes and its snapshot are not forwarded: the first would
+  // let it speak in our name, and the second belongs to a session that keeps
+  // nothing. Both are refusals by silence, which the SDK reads as a timeout.
+});
 
 // Surface one level: reload the outer document and restore its FULL ink
 // state, so the outer story resumes mid-breath rather than restarting at
@@ -858,6 +1006,8 @@ window.__storyrunner = {
   paused: () => !!_awaitingGame,
   depth: () => _frames.length,
   session: () => state.sessionId,
+  peer: () => state.peer,
+  closePeer: () => closePeer(),
   observed: () => state.observed.map((o) => o.line),
   observing: () => state.observing,
   frames: () => _frames.map((f) => f.url.split('/').pop()),
@@ -1004,7 +1154,7 @@ if (window.foaf?.onInit) {
     // Ask to watch our own subtree BEFORE the story starts, so the first
     // session is in the record rather than the second. A refusal is not fatal:
     // a runner without `story:observe` plays exactly as before, with no log.
-    startObserving();
+    if (!IS_PEER) startObserving();     // level 1 watches; level 2 plays
     // Give a pending restore one tick to arrive before deciding.
     setTimeout(() => {
       if (booted) return;

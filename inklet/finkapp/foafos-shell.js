@@ -2257,8 +2257,18 @@ function buildUI() {
             // the engine that happens to be running it (level 3 under level
             // 2). The runner node is the fallback for a runner that never
             // announced a session — a standalone frame, or an older build.
+            //
+            // With PEERS there is more than one live session, and only the
+            // runner knows which of them asked. So it may NAME one — and the
+            // shell checks the name is one of that runner's own sessions. That
+            // check is the whole of the trust here: a runner naming its own
+            // sessions is choosing among nodes that all hold its own grant, so
+            // it can gain nothing; naming anything else is refused.
             const runnerNodeId = win.dataset.instance || null;
-            const parentNodeId = currentSession(runnerNodeId)?.id || runnerNodeId;
+            const ownSessions = storySessions.get(runnerNodeId) || [];
+            const named = d.detail?.session ? String(d.detail.session) : null;
+            const parentNodeId = (named && ownSessions.includes(named) ? named : null)
+              || currentSession(runnerNodeId)?.id || runnerNodeId;
             const parentNode = parentNodeId ? apps.get(parentNodeId) : null;
             const wantCaps = appById(game)?.capabilities || [];
             const excess = parentNode
@@ -2310,8 +2320,15 @@ function buildUI() {
             const stack = storySessions.get(runnerNode.id);
 
             if (op === 'end') {
-              const top = stack.pop();
-              if (top) apps.close(top);
+              // A named session ends that one; unnamed ends the innermost. A
+              // peer is not on top of the stack, so "close the peer" has to be
+              // sayable. The name must be one of THIS runner's own sessions:
+              // the runner may end what it started and nothing else.
+              const named = d.detail?.id ? String(d.detail.id) : null;
+              const at = named ? stack.indexOf(named) : stack.length - 1;
+              if (at < 0) { reply({ ok: false, reason: 'not-mine' }); return; }
+              const [id] = stack.splice(at, 1);
+              if (id) apps.close(id);
               reply({ ok: true, op, id: currentSession(runnerNode.id)?.id || null });
               return;
             }
@@ -2330,8 +2347,11 @@ function buildUI() {
             }
             // A plain link or a one-way link ends every playthrough it
             // replaces. A dream keeps the outer one alive — that is precisely
-            // what makes it a dream rather than a jump.
-            if (rel !== 'godeeper') {
+            // what makes it a dream rather than a jump. So does a PEER, and the
+            // difference between them is what they are to each other: a dream
+            // is inside its outer session and surfaces back into it, a peer
+            // stands beside it and neither one contains the other.
+            if (rel !== 'godeeper' && rel !== 'peer') {
               while (stack.length) { const id = stack.pop(); if (id) apps.close(id); }
             }
             const outer = currentSession(runnerNode.id);
@@ -2342,12 +2362,14 @@ function buildUI() {
             });
             if (node.refused) { reply({ ok: false, reason: node.reason || 'refused' }); return; }
             if (rel === 'godeeper' && outer) node.dreamOf = outer.id;
+            if (rel === 'peer' && outer) node.peerOf = outer.id;
             stack.push(node.id);
             bus.publish('story.session', {
               summary: `story session "${node.label}" started`
-                + (node.dreamOf ? ` inside "${outer.label}"` : ''),
+                + (node.dreamOf ? ` inside "${outer.label}"` : '')
+                + (node.peerOf ? ` beside "${outer.label}"` : ''),
               id: node.id, appId: app.id, rel, dreamOf: node.dreamOf || null,
-              sessions: stack.length,
+              peerOf: node.peerOf || null, sessions: stack.length,
             });
             reply({ ok: true, op, rel, id: node.id, label: node.label });
           } else if (verb === 'story.observe') {
