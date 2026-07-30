@@ -88,6 +88,82 @@ will often keep a **cache** of what it fetched — either the recently fetched
 a re-merge does not re-fetch and re-compile from zero. The cache belongs to
 the session (the storyapp), not to the shell.
 
+**MERGE IS NOT PEERING, and the test is the front door** (owner, 2026-07-30).
+Two different needs were briefly being served by one mechanism, and only one of
+them wants a frame:
+
+- **A merge chunk has no entry point.** It is a room of a vast city, an episode
+  of one work — meaningless if a reader arrived at it alone. It joins the engine
+  already running: fetch it, add it to the ordered set this session has already
+  parsed, recompile the union, carry on. No frame, no origin of its own, no
+  shell of its own. **Publication and linkage, not window management.** An
+  episodal game must not become a tree of sandboxed widget frames.
+- **A peer HAS an entry point, or could have one.** Its own URL, quite possibly
+  its own server, quite possibly its own preferred copy of foafos sitting beside
+  it and styled for that work — while other frontends can still play it. The
+  frame is right here precisely because it matches a real border: separate
+  origin, separate front door, separate authorship.
+
+The question an author answers is not "how big is this" but **"could a reader
+have arrived here instead?"**
+
+**The intended peer is REMOTE, and today the shell refuses it.** A peer's whole
+point is a different front door — another author, another server, its own copy
+of foafos beside it. Policy v0 allows same-origin only: `foafos-shell.js:2582`
+answers a cross-origin link with `cross-origin-blocked`, and `:2570` does the
+same for media. So peering is proven as a mechanism against local fixtures, and
+the case it exists for is still gated. That gate is where the trust graph goes
+(tiers, `# INTEGRITY:` hashes, plural signals) — it is not a bug to patch, it
+is the slot the next phase fills. Anyone reading "peering works" should read it
+as "peering works within one origin".
+
+**Whose shell plays a remote peer? OPEN.** When a peer ships its own tweaked
+foafos, three answers are all defensible and the choice is the owner's:
+1. **The linking story's shell keeps playing** — one reader, one installation,
+   one set of brokers and one audit ledger. Simple, and the remote author's
+   styling is lost.
+2. **The peer's stated preference wins** — the fetched work names the shell it
+   wants and gets it, nested. Honours authorship, and hands an unknown server
+   the frame the reader is looking at.
+3. **The reader's installation always wins** — their brokers, their master
+   volume, their ledger, whatever the remote author prefers. Safest, and the
+   least generous to the peer.
+   The mediation invariant survives all three, because any nested shell still
+   reaches real I/O only through the outer one. What differs is who chooses the
+   chrome.
+
+**Naming — stated, since either can work as long as we are clear.** Today the
+top-level runner and a story-carrying leaf are **the same JS type and the same
+page**: `inklet/apps/storyrunner/index.html`, one module, distinguished only by
+`?peer=1` → `IS_PEER` (`storyrunner.js:22`), which subtracts two powers
+(a peer may not announce sessions and may not observe). There are **no custom
+elements** — no `<fink-runner>`, no `<fink-session>`; nothing in the platform
+calls `customElements.define` for either. That is deliberate for now: one code
+path cannot drift from itself, which is the reason a peer is a full runner
+rather than a reduced copy. The decision this records is that **sameness is the
+current answer, and any future split must be a stated one** — if a
+story-carrying leaf ever gets its own type or element name, the distinction has
+to be a real border (different powers, different lifecycle), not a synonym.
+
+**Measured, before building the merge** (2026-07-30, real inkjs, offline):
+
+| question | answer |
+|---|---|
+| does `state.LoadJson` into a RECOMPILED SUPERSET throw? | no, it loads |
+| do variable values survive? | yes, exactly as saved |
+| is the reader still at the same beat? | yes — the same choice is on offer |
+| can the new chunk see the LIVE state? | **yes** — the merged-in knot read the restored value and incremented it |
+| visit counts? | 0, which is ink's normal behaviour, not a merge fault |
+| the same `VAR` in two merged files? | **compile error** |
+| the same knot name in two merged files? | **compile error** |
+
+So the mechanism is sound and **renaming is a prerequisite, not a refinement**:
+a naive concatenation fails loudly the moment two authors both write
+`=== hall ===`. Failing loudly is the good version — nothing is silently
+overwritten — but a city built by many hands collides constantly.
+`inklet/demos/fink-namespace-preprocessor.js` exists and is wired into nothing;
+it is the shape of the tool this needs, and has not been read yet.
+
 ### 3 — subApp instances spawned by a session
 A session can **spawn subApps**: minigames, maps, notification widgets. These
 are children of the *session* that launched them — that is where they parent
@@ -264,6 +340,13 @@ against the file named.
 - **A peer keeps nothing.** It gets no store, and its session is not
   snapshotted, so closing the window loses the peer while restoring the primary.
   Whether a peer should come back is a design question, not an oversight.
+- **A REMOTE peer, which is the case peering exists for.** Policy v0 refuses a
+  cross-origin link (`foafos-shell.js:2582`), so every peer today is a
+  same-origin fixture. And whose shell plays a remote peer is an open owner
+  question — see "The intended peer is REMOTE" under level 2.
+- **MERGE — frameless composition.** A session cannot yet pull a further fink
+  into the engine it is already running. The measurements are done and the order
+  is fixed: renaming first, then merge (route step 7). Nothing of it is code.
 - **Session-to-session mechanics.** The shared economy crosses through
   `story.vars` at the shell, which is the level-0 half of the job. The level-2
   half — a session managing its relations to other sessions, with state
@@ -360,7 +443,17 @@ The order matters: each step makes the next one smaller.
    with per-session dream depth. Still open beneath it: the session-to-session
    mechanics — state propagation, and variable/knot renaming so two stories
    compose without colliding.
-6. ~~**Formalise the per-session cache**~~ **DONE 2026-07-30.** Then **the
-   reality broker**, which is still a proposal and wants an owner decision
+6. ~~**Formalise the per-session cache**~~ **DONE 2026-07-30.**
+7. **Renaming, then MERGE — in that order** (owner, 2026-07-30). Merge is the
+   frameless half of composition: fetch a chunk, add it to the ordered set this
+   session already parsed, recompile the union, restore the reader's state. The
+   probe above says every part of that works — **except that two authors both
+   writing `=== hall ===` or `VAR lamp` is a compile error**. So renaming comes
+   first: a pass that gives each merged source its own namespace, with tests
+   over a deliberate collision. `inklet/demos/fink-namespace-preprocessor.js`
+   exists, is wired into nothing, and is the first thing to read. Merge shipped
+   without renaming would work for one author and break on contact with a
+   second.
+8. **The reality broker**, still a proposal, and it wants an owner decision
    before code: it changes what an app is told about the world.
-7. **Delete the host-page engine**, which is what all of this was for.
+9. **Delete the host-page engine**, which is what all of this was for.
