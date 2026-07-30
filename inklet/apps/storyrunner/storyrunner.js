@@ -23,6 +23,7 @@ const state = {
   audio: null, audioPlaying: false, audioLevel: 1, linkedTo: null,
   pausedFor: null, lastGame: null, economy: null,
   depth: 0, restored: false,
+  sessionId: null, sessionLabel: null,
   basehref: null, mediaBase: null, status: [], foley: null,
   resumedFromSave: false, knot: null, link: null, knots: 0, skin: null,
 };
@@ -757,7 +758,7 @@ async function followLink(absUrl) {
   state.depth = res.depth ?? _frames.length;
   document.body.dataset.depth = String(state.depth);
   state.linkedTo = res.url;
-  await loadStory(res.url);
+  await loadStory(res.url, null, rel || 'replace');
 }
 
 // Surface one level: reload the outer document and restore its FULL ink
@@ -770,7 +771,7 @@ async function surface() {
   state.depth = res.ok ? (res.depth ?? _frames.length) : _frames.length;
   document.body.dataset.depth = String(state.depth);
   setStatus('surfacing…');
-  await loadStory(frame.url, frame.state);
+  await loadStory(frame.url, frame.state, 'surface');
   return true;
 }
 
@@ -778,7 +779,11 @@ async function surface() {
 // nested-box extract, compile, reset the beat surface, play.
 // `restore` is a saved `state.ToJson()` — supplied when surfacing from a
 // dream, so the outer story resumes exactly where it paused.
-async function loadStory(url, restore = null) {
+// `rel` names the relation to the playthrough being LEFT: 'replace' (a plain
+// link, or the first load), 'godeeper' (a dream), 'oneway', 'surface'. The
+// shell needs it to decide whether the outer session lives on, so it travels
+// with the session announcement rather than being guessed from the depth.
+async function loadStory(url, restore = null, rel = 'replace') {
   state.storyUrl = url;
   setStatus('loading…');
   $('prose').textContent = '';
@@ -808,6 +813,15 @@ async function loadStory(url, restore = null) {
   setStatus('');
   _statusItems = [];              // a new work brings its own status line
   renderStatusBar();
+  // THIS PLAYTHROUGH IS A THING (level 2 of the layer model). We cannot make
+  // a node — we ask the shell for one and keep the token it hands back.
+  // Everything this playthrough opens parents under it, so the ask happens
+  // before any of it: before the economy read, before the first beat.
+  {
+    const session = await storyRequest('story.session', { op: 'start', url, rel });
+    state.sessionId = session.ok ? session.id : null;
+    state.sessionLabel = session.ok ? (session.label || null) : null;
+  }
   // Seed the shared economy BEFORE the first beat, or a story that opens
   // by reading `diamonds` shows a zero the reader has already disproved.
   await seedEconomy();
@@ -842,6 +856,7 @@ window.__storyrunner = {
   ready: () => state.ready,
   paused: () => !!_awaitingGame,
   depth: () => _frames.length,
+  session: () => state.sessionId,
   frames: () => _frames.map((f) => f.url.split('/').pop()),
   snapshot: () => snapshotPlaythrough(),
   gotoHash: (h) => gotoKnotHash(h),

@@ -542,6 +542,50 @@ const gameNodes = new Map();       // minigame instance id -> tree node id
 // minigame.instance handler so the game parents under its real launcher.
 let _pendingGameParent = null;
 
+// STORY SESSIONS — level 2 of docs/foafos-story-layering-20260730.md.
+//
+// A runner is one app node, but a reader's playthrough is not the runner: it
+// starts, it links to another fink, it dreams, it ends, and the runner
+// outlives all of that. Without a node for the playthrough there is nowhere
+// to hang what a playthrough opens — every game hung off the runner, so
+// "close this story" could only mean "close the engine", and two stories in
+// one runner would have shared one parent.
+//
+// The stack is per runner node, outermost first: a dream pushes, surfacing
+// pops. The DREAM DEPTH COUNT stays separate and stays the shell's (see the
+// story.link handler) — a session must not be able to report its own depth,
+// and this map must not quietly become the place where it does.
+const storySessions = new Map();   // runner node id -> [session node id]
+
+// The label comes from the URL, in the shell, on purpose: a guest-supplied
+// title would put guest text in the switcher, the Running panel and the
+// carousel with no length or content rule behind it.
+const sessionLabel = (url) => {
+  try {
+    const base = decodeURIComponent(String(url).split('?')[0].split('#')[0])
+      .split('/').pop() || '';
+    const name = base.replace(/\.fink\.js$/i, '').replace(/[_-]+/g, ' ').trim();
+    return name.slice(0, 32) || 'story';
+  } catch { return 'story'; }
+};
+
+// Innermost LIVE session for a runner. Skips ids whose node has gone (a
+// cascade close can take a session out from under the stack).
+const currentSession = (runnerNodeId) => {
+  const stack = storySessions.get(runnerNodeId) || [];
+  for (let i = stack.length - 1; i >= 0; i--) {
+    const node = apps.get(stack[i]);
+    if (node) return node;
+  }
+  return null;
+};
+FoafOS.storySession = (runnerNodeId) => currentSession(runnerNodeId);
+// A closed runner leaves a stack of dead ids behind. currentSession already
+// steps over them, but the map entry itself would live for the page's life.
+bus.subscribe('app.close', (e) => {
+  for (const id of (e.data?.closed || [])) storySessions.delete(id);
+});
+
 // The boxed story that is PAUSED waiting for a game to finish (#779).
 // The host engine pauses its Continue loop on a `# MINIGAME:` beat and
 // resumes on completion; a boxed runner must do the same, but it cannot
@@ -2099,6 +2143,9 @@ function buildUI() {
         const need = verb === 'story.vars'
           ? (d.detail?.op === 'write' ? 'vars:write' : 'vars:read')
           : { 'story.launch': 'story:launch', 'story.link': 'story:link',
+              // A session IS the runner's composition of one or more finks,
+              // so it answers to the composition authority.
+              'story.session': 'story:link',
               'story.navigate': 'story:navigate', 'story.audio': 'audio' }[verb];
         bus.publish('story.request', {
           summary: `${app.name}: ${verb}`, appId: app.id, verb, detail: d.detail,
@@ -2124,7 +2171,12 @@ function buildUI() {
             // it, or close it (verified 2026-07-29, and the reason this
             // check moved). A border you announce but do not hold is
             // decoration.
-            const parentNodeId = win.dataset.instance || null;
+            // The game parents under the SESSION that launched it, not under
+            // the engine that happens to be running it (level 3 under level
+            // 2). The runner node is the fallback for a runner that never
+            // announced a session — a standalone frame, or an older build.
+            const runnerNodeId = win.dataset.instance || null;
+            const parentNodeId = currentSession(runnerNodeId)?.id || runnerNodeId;
             const parentNode = parentNodeId ? apps.get(parentNodeId) : null;
             const wantCaps = appById(game)?.capabilities || [];
             const excess = parentNode
@@ -2160,6 +2212,62 @@ function buildUI() {
             FoafOS.storyVars._own(app.id);
             window.FinkMinigames?.startMinigame?.(game);
             reply({ ok: true, launched: game, awaiting: 'minigame.complete' });
+          } else if (verb === 'story.session') {
+            // A PLAYTHROUGH ANNOUNCES ITSELF and the shell gives it a node
+            // (level 2). The runner holds no authority to make one; it asks,
+            // and gets back an opaque token. The node holds exactly the
+            // runner's own grant — equal, never wider, which attenuation
+            // allows and which is what makes the level-3 border beneath it
+            // mean something.
+            const runnerNodeId = win.dataset.instance || null;
+            const runnerNode = runnerNodeId ? apps.get(runnerNodeId) : null;
+            if (!runnerNode) { reply({ ok: false, reason: 'no-node' }); return; }
+            const op = String(d.detail?.op || '');
+            const rel = String(d.detail?.rel || 'replace').toLowerCase();
+            if (!storySessions.has(runnerNode.id)) storySessions.set(runnerNode.id, []);
+            const stack = storySessions.get(runnerNode.id);
+
+            if (op === 'end') {
+              const top = stack.pop();
+              if (top) apps.close(top);
+              reply({ ok: true, op, id: currentSession(runnerNode.id)?.id || null });
+              return;
+            }
+            if (op !== 'start') { reply({ ok: false, reason: 'bad-params' }); return; }
+
+            // Surfacing ENDS the inner playthrough; it does not start a new
+            // one. The outer session is still there, mid-breath, and gets its
+            // reader back — spawning a second node for it would count one
+            // story twice and orphan whatever the first node held.
+            if (rel === 'surface' || rel === 'goshallower') {
+              const inner = stack.pop();
+              if (inner) apps.close(inner);
+              const back = currentSession(runnerNode.id);
+              reply({ ok: true, op, rel, id: back?.id || null, label: back?.label || null });
+              return;
+            }
+            // A plain link or a one-way link ends every playthrough it
+            // replaces. A dream keeps the outer one alive — that is precisely
+            // what makes it a dream rather than a jump.
+            if (rel !== 'godeeper') {
+              while (stack.length) { const id = stack.pop(); if (id) apps.close(id); }
+            }
+            const outer = currentSession(runnerNode.id);
+            const node = apps.spawn({
+              appId: 'story-session', parentId: runnerNode.id,
+              capabilities: runnerNode.capabilities,
+              label: sessionLabel(d.detail?.url), surface: 'story',
+            });
+            if (node.refused) { reply({ ok: false, reason: node.reason || 'refused' }); return; }
+            if (rel === 'godeeper' && outer) node.dreamOf = outer.id;
+            stack.push(node.id);
+            bus.publish('story.session', {
+              summary: `story session "${node.label}" started`
+                + (node.dreamOf ? ` inside "${outer.label}"` : ''),
+              id: node.id, appId: app.id, rel, dreamOf: node.dreamOf || null,
+              sessions: stack.length,
+            });
+            reply({ ok: true, op, rel, id: node.id, label: node.label });
           } else if (verb === 'story.navigate') {
             // NAVIGATION / DEEP LINKS (#779). The address bar belongs to the
             // HOST page — a boxed story cannot touch `location`, and that is

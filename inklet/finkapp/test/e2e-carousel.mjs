@@ -96,7 +96,12 @@ try {
   }
   await page.waitForTimeout(4500);
   const deck = await page.evaluate(() => FoafOS.decks());
-  deck.length === 1 && deck[0].stage && deck[0].members.length === 2
+  // ONE deck, and the whole lineage inside it. The member count is >= 3
+  // rather than == 2 because the game hangs off the story SESSION now, not
+  // off the engine: runner ▸ session ▸ game (the layer model's levels 1, 2
+  // and 3). What this leg is really guarding is that a launched game does
+  // not become its OWN card — the deck is a subtree, whatever its depth.
+  deck.length === 1 && deck[0].stage && deck[0].members.length >= 3
     ? pass(`the launched game joins its launcher's deck: "${deck[0].members.join(' ▸ ')}" — one card, not two`)
     : fail(`hierarchy lost — a launched game became its own card: ${JSON.stringify(deck)}`);
 
