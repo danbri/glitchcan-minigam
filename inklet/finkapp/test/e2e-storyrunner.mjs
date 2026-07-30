@@ -620,6 +620,52 @@ try {
     }
   }
 
+  // ── 11. THE MANDATORY JOURNEY, BOXED (CLAUDE.md) ────────────────────
+  // TOC loads → Episodes → Hampstead plays, choice labels visible, no
+  // console errors. That journey is the project's standing gate for ANY
+  // player change; a boxed engine that cannot walk it is not at parity
+  // whatever the feature list says. It exercises two `# FINK:` hops
+  // (toc → episodes list is in-story, then a real cross-file link).
+  {
+    const url = `http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/`
+      + `?player=boxed&story=/${repoName}/inklet/toc.fink.js`;
+    await page.goto(url);
+    await page.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
+    let tf = null;
+    for (let i = 0; i < 50 && !tf; i++) {
+      tf = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+      if (!tf) await page.waitForTimeout(300);
+    }
+    if (!tf) fail('the box never opened for the TOC');
+    else {
+      const playable = () => tf.waitForFunction(
+        () => window.__storyrunner?.ready?.() && window.__storyrunner.state.choices.length > 0,
+        null, { timeout: 25000 });
+      await playable();
+      const pick = async (frag) => {
+        const cs = await tf.evaluate(() => window.__storyrunner.state.choices);
+        const i = cs.findIndex((c) => c.toLowerCase().includes(frag));
+        if (i < 0) return { ok: false, cs };
+        await tf.evaluate((n) => window.__storyrunner.choose(n), i);
+        await page.waitForTimeout(2600);
+        return { ok: true, label: cs[i] };
+      };
+      const toc = await tf.evaluate(() => window.__storyrunner.state.choices);
+      toc.length >= 2
+        ? pass(`TOC loaded in the box with labelled choices (${toc.slice(0, 3).join(' · ')})`)
+        : fail(`TOC did not present choices: ${JSON.stringify(toc)}`);
+      const ep = await pick('episode');
+      const hp = ep.ok ? await pick('hampstead') : { ok: false };
+      const landed = await tf.evaluate(() => ({
+        url: (window.__storyrunner.state.storyUrl || '').split('/').pop(),
+        choices: window.__storyrunner.state.choices.length,
+      }));
+      ep.ok && hp.ok && landed.url === 'hampstead.fink.js' && landed.choices > 0
+        ? pass('MANDATORY JOURNEY boxed: TOC → Episodes → Hampstead plays')
+        : fail(`journey broke: ep=${JSON.stringify(ep)} hp=${JSON.stringify(hp)} at=${JSON.stringify(landed)}`);
+    }
+  }
+
   if (pageErrors.length) fail('page errors: ' + pageErrors.join(' | '));
   else pass('zero page errors');
 } catch (e) {

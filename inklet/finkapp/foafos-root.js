@@ -53,7 +53,21 @@ export const ROOTS = {
     // story AUTO-BOOT still uses 'legacy' until #779's parity blockers
     // close (minigame pause/resume, variables, navigation) — flipping it
     // now would regress Hampstead. One line flips it when #779 is green.
-    storyPlayer: { default: 'boxed', autoBoot: 'legacy', supersedes: 'legacy', issue: 779 },
+    // PARITY IS REACHED — and the flip is still one line, deliberately not
+    // taken yet. Measured 2026-07-30: with `autoBoot: 'boxed'` the whole
+    // journey works (TOC → Episodes → Hampstead, no errors), but FIVE
+    // suites go red — e2e-foafos, e2e-root, e2e-caps, e2e-vars and
+    // e2e-storyrunner's own media/audio legs all use "the legacy player
+    // compiled a story on boot" as their fixture, not as their subject.
+    // Flipping without migrating them first would leave master red for a
+    // parallel session to trip over, and a green suite is how everyone
+    // else here knows the tree is sound.
+    //
+    // So: `?player=boxed` is fully live and proven, `?player=legacy` is
+    // the way back, and this line flips once those five fixtures are
+    // rewritten to state which player they mean. See #779.
+    storyPlayer: { default: 'boxed', autoBoot: 'legacy', supersedes: 'legacy',
+                   parityReached: '2026-07-30', flipBlockedBy: 'test-fixtures', issue: 779 },
     apps: null,                   // all of them
   },
 

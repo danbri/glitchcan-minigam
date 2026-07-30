@@ -93,16 +93,31 @@ window.FinkPlayer = {
         // this pending-delete player idle. An explicit ?story=/deep link
         // still wins and loads legacy, which is the only player that can
         // be handed an arbitrary story today.
-        const wantBoxed = new URLSearchParams(window.location.search).get('player') === 'boxed'
-            || window.FoafOS?.root?.storyPlayer?.autoBoot === 'boxed';
+        // `?player=legacy` is the way BACK, and it wins over everything:
+        // the manifest now boots boxed, so the escape hatch has to be
+        // reachable without a deploy if anything about the box misbehaves
+        // in the field.
+        const askedPlayer = new URLSearchParams(window.location.search).get('player');
+        const wantBoxed = askedPlayer !== 'legacy'
+            && (askedPlayer === 'boxed'
+                || window.FoafOS?.root?.storyPlayer?.autoBoot === 'boxed');
         // `?story=` USED to force the legacy player, because the boxed
         // runner could only play its own demo. It can now be handed any
         // FINK (the shell passes `?story=` through in the init config), so
         // asking for the box means the box — including for an arbitrary
         // story, which is the whole point of the sandbox (#779).
         if (wantBoxed) {
-            FinkUtils.debugLog('Boot: boxed story runner (?player=boxed / manifest autoBoot)');
-            setTimeout(() => window.FoafOS?.launchApp?.('storyrunner'), 150);
+            // Hand the boxed engine the story this INSTALLATION boots —
+            // a deep link, else the root manifest's, else the config
+            // default. One-shot, so a later manual launch of the engine
+            // still opens its own demo.
+            const bootStory = targetFink || (rootBoot && rootBoot.story)
+                || FinkConfig.DEFAULT_FINK_FILE || null;
+            FinkUtils.debugLog('Boot: boxed story engine (Finkosphere) → ' + (bootStory || 'its own demo'));
+            setTimeout(() => {
+                window.FoafOS?.setBootStory?.(bootStory);
+                window.FoafOS?.launchApp?.('storyrunner');
+            }, 150);
             return;
         }
 

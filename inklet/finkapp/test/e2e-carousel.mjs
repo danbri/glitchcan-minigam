@@ -57,7 +57,14 @@ try {
   const pageErrors = [];
   page.on('pageerror', (e) => pageErrors.push(String(e).slice(0, 200)));
 
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=boxed&shell=carousel`);
+  // NAME THE FIXTURE. `?player=boxed` alone now opens the INSTALLATION's
+  // boot story (the TOC), which is correct for a reader and wrong for this
+  // suite: the walk below needs demo.fink.js, whose doorway links to a
+  // story with a `# MINIGAME:`. Relying on "whatever boxed happens to
+  // open" made this test fail the moment that default improved.
+  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/`
+    + `?player=boxed&shell=carousel`
+    + `&story=/${repoName}/inklet/apps/storyrunner/demo.fink.js`);
   await page.waitForFunction(() => window.FoafOS?.isCarousel?.() === true, null, { timeout: 25000 });
   await page.waitForTimeout(2500);
 
@@ -78,7 +85,7 @@ try {
 
   // ── 3. HIERARCHY: a launched game joins its launcher's deck ─────────
   // Walk the demo into peer.fink.js, whose # MINIGAME: launches a game.
-  const runnerFrame = () => page.frames().find((f) => /storyrunner/.test(f.url()));
+  const runnerFrame = () => page.frames().find((f) => { try { return new URL(f.url()).pathname.includes('/apps/storyrunner/'); } catch { return false; } });
   for (const label of ['drowned newsreel', 'odd coin', 'humming doorway']) {
     await page.waitForTimeout(1100);
     const f = runnerFrame();

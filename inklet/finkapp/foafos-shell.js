@@ -584,6 +584,12 @@ const storyDepth = new Map();
 // setFinkUrl PUSHES a level, so calling it on every beat would build a
 // stack of one story repeated.
 const _navSeen = new Map();
+
+// The story the BOOT path wants the boxed engine to open, consumed once.
+// fink-player sets it just before launching the runner as the boot surface.
+let _bootStory = null;
+FoafOS.setBootStory = (url) => { _bootStory = url || null; };
+const takeBootStory = () => { const u = _bootStory; _bootStory = null; return u; };
 const DREAM_CAP = 8;
 FoafOS.storyDepth = (appId) => storyDepth.get(appId) || 0;
 
@@ -2043,9 +2049,20 @@ function buildUI() {
               // in the box exactly as `?story=` does for the host player.
               // Without this the boxed runner could only play its own demo,
               // which is not parity by any reading (#779).
+              // WHICH story, in precedence order:
+              //   registry override → host `?story=` → the BOOT story, but
+              //   only when this launch IS the boot story surface.
+              // The last clause is one-shot and deliberate. Reading
+              // DEFAULT_FINK_FILE unconditionally made every direct launch
+              // of the runner open the table of contents instead of its own
+              // demo — which silently changed e2e-storyrunner's fixture and
+              // broke its `# BG:`/`# AUDIO:` legs. An app launched on its
+              // own keeps its own default; only the boot path imposes the
+              // installation's.
               story: app.story
                 || ((app.capabilities || []).includes('story:link')
-                    ? new URLSearchParams(location.search).get('story') : null)
+                    ? (new URLSearchParams(location.search).get('story') || takeBootStory())
+                    : null)
                 || null,
               // The GLOBAL media base — outermost layer of the layered chain
               // (global → story BASEHREF → file-relative). A boxed story
