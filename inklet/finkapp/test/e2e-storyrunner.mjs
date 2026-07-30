@@ -501,6 +501,43 @@ try {
     pass('control border real: the window ✕ closed the runner AND its child game');
   else fail('the window close button did not cascade: ' + JSON.stringify(cascade));
 
+  // ── 9. SAVE / RESTORE the playthrough (#779, spec §5.5.4) ───────────
+  // Runs LAST because section 8 closed the runner — reopening is exactly
+  // the case under test. Closing used to lose the whole reading: the
+  // runner holds no `storage` and the shell cannot reach into its ink, so
+  // the state travels by the snapshot contract, now offered to WINDOW apps
+  // and not only stage games. The bytes sit in the SHELL's namespace, so
+  // no app can read another's save, and a root without `storage` never
+  // gets the grant and never persists.
+  {
+    const kept = await page.evaluate(() =>
+      Object.keys(FoafOS.store.snapshot(FoafOS.snapshotNs) || {}));
+    kept.includes('app:storyrunner')
+      ? pass("closing the runner kept its playthrough in the shell's namespace")
+      : fail(`nothing kept on close: ${JSON.stringify(kept)}`);
+
+    await page.evaluate(() => FoafOS.launchApp('storyrunner'));
+    let re = null;
+    for (let i = 0; i < 40 && !re; i++) {
+      re = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+      if (!re) await page.waitForTimeout(300);
+    }
+    if (!re) fail('runner did not reopen');
+    else {
+      await re.waitForFunction(() => window.__storyrunner?.ready?.(), null, { timeout: 20000 });
+      await page.waitForTimeout(700);
+      const back = await re.evaluate(() => ({
+        resumed: window.__storyrunner.state.resumedFromSave,
+        url: (window.__storyrunner.state.storyUrl || '').split('/').pop(),
+      }));
+      // peer.fink.js was the last thing being read, so a resume lands
+      // there; a restart would land on demo.fink.js's opening beat.
+      back.resumed && back.url === 'peer.fink.js'
+        ? pass(`reopening RESUMED the reading (${back.url}), it did not restart`)
+        : fail(`did not resume the playthrough: ${JSON.stringify(back)}`);
+    }
+  }
+
   if (pageErrors.length) fail('page errors: ' + pageErrors.join(' | '));
   else pass('zero page errors');
 } catch (e) {

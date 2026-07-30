@@ -550,6 +550,32 @@ let _pendingGameParent = null;
 // different runner's story.
 let _storyLauncher = null;
 
+// Window-app snapshots (spec §5.5.4). The bytes live in the SHELL's own
+// namespace, keyed by app id — a guest can neither read another app's save
+// nor name its way out of its own. Without `storage` on the root the
+// namespace was never granted, so nothing persists: attenuation applies to
+// the shell's conveniences too.
+const _snapWaiters = new Map();
+const appSnapKey = (appId) => `app:${appId}`;
+function loadAppSnapshot(appId) {
+  try {
+    const all = store.snapshot(FoafOS.snapshotNs);
+    const raw = all && all[appSnapKey(appId)];
+    return raw ? JSON.parse(raw) : undefined;
+  } catch { return undefined; }
+}
+function saveAppSnapshot(appId, state) {
+  try {
+    if (state === null || state === undefined) {
+      store.remove(FoafOS.snapshotNs, appSnapKey(appId));
+      return false;
+    }
+    store.set(FoafOS.snapshotNs, appSnapKey(appId), JSON.stringify(state));
+    return true;
+  } catch { return false; }
+}
+FoafOS.forgetAppSnapshot = (appId) => saveAppSnapshot(appId, null);
+
 // Dream depth PER BOXED STORY APP, counted by the shell (see the
 // story.link handler for why it cannot be the guest's to report).
 // Cap from spec §3.4 — a dream that can always go deeper is a hang.
@@ -1836,7 +1862,27 @@ function buildUI() {
         governAppFrame(frame, app, win);
         // Closing the node takes the window with it — and because close
         // cascades, closing whatever spawned this closes it too.
-        node.onClose = () => win.remove();
+        // Ask for the playthrough before the frame goes. The window closes
+        // immediately from the player's point of view — only the frame's
+        // removal waits, and only for the bounded ask. Doing it the other
+        // way round posts into a destroyed browsing context and every
+        // round-trip comes back empty, which is exactly how the minigame
+        // snapshot shipped broken the first time (spec §5.5.4).
+        node.onClose = () => {
+          const ask = frame.__foafSnapshot;
+          win.style.pointerEvents = 'none';
+          if (!ask) { win.remove(); return; }
+          ask().then((state) => {
+            if (state !== undefined) {
+              const kept = saveAppSnapshot(app.id, state);
+              bus.publish('app.snapshot', {
+                summary: kept ? `${app.name} kept its place` : `${app.name} declined to save`,
+                id: app.id, kept,
+              });
+            }
+            win.remove();
+          }).catch(() => win.remove());
+        };
         win.dataset.instance = node.id;
         return win;
       }
@@ -2215,7 +2261,26 @@ function buildUI() {
         return;
       }
 
+      // SNAPSHOT (spec §5.5.4) for WINDOW apps, not just stage games.
+      // A boxed story's playthrough lives in its frame, so closing the
+      // window used to lose it outright: the runner holds `storage` for
+      // nothing and the shell cannot reach into its ink. Same shape as
+      // everywhere else — the app answers with what it wants kept, the
+      // shell holds the bytes in ITS OWN namespace, and hands them back
+      // after the next init. No guest can read another's save (#779).
+      if (d.type === 'app.snapshot-data') {
+        const waiter = _snapWaiters.get(app.id);
+        if (waiter) { _snapWaiters.delete(app.id); waiter(d.state ?? null); }
+        return;
+      }
+
       if (d.type !== 'conformance') return;
+      if ((d.contracts || []).includes('snapshot')) {
+        appContracts.add('snapshot');
+        // A LATE registration must still be honoured: a deferred module
+        // registers after init, and the state is already waiting.
+        maybeRestore();
+      }
       if (!(d.contracts || []).includes('audio')) return;
       tallyCap(app.id, 'audio');
       audio.unregister(sinkId);
@@ -2234,10 +2299,34 @@ function buildUI() {
     // Offer the contract. An app using minigame-sdk.js answers as soon as
     // it calls onAudio; one that never does keeps its own sound and is
     // reported as such.
+    // Contracts this app has declared, and the state waiting for it.
+    const appContracts = new Set();
+    const saved = loadAppSnapshot(app.id);
+    let restoreSent = false;
+    const maybeRestore = () => {
+      if (restoreSent || saved === undefined || !appContracts.has('snapshot')) return;
+      restoreSent = true;
+      try { frame.contentWindow?.postMessage({ type: 'app.restore', state: saved }, '*'); }
+      catch (err) { /* closed */ }
+      bus.publish('app.restore', {
+        summary: `${app.name} restored from a snapshot`, id: app.id,
+      });
+    };
+    // Ask on the way out. Bounded, because a guest that never answers must
+    // not hold the close: the window goes now, only the ASK waits.
+    frame.__foafSnapshot = () => new Promise((resolve) => {
+      if (!appContracts.has('snapshot')) { resolve(undefined); return; }
+      const t = setTimeout(() => { _snapWaiters.delete(app.id); resolve(undefined); }, 400);
+      _snapWaiters.set(app.id, (state) => { clearTimeout(t); resolve(state); });
+      try { frame.contentWindow?.postMessage({ type: 'app.snapshot', rid: 's' }, '*'); }
+      catch (err) { clearTimeout(t); _snapWaiters.delete(app.id); resolve(undefined); }
+    });
+    frame.__foafAppId = app.id;
+
     const offer = () => {
       try {
         frame.contentWindow?.postMessage({ type: 'init', config: {
-          mode: 'window', contracts: ['audio'],
+          mode: 'window', contracts: ['audio', 'snapshot'],
           audio: { level: audio.level, volume: audio.volume, muted: audio.muted },
           bus: busGrants,
           // The GLOBAL media base — the outermost layer of the layered
@@ -2253,6 +2342,10 @@ function buildUI() {
     };
     frame.addEventListener('load', offer);
     setTimeout(offer, 400);
+    // An app that declares `snapshot` in its init conformance is ready
+    // immediately; one that registers later is caught by maybeRestore() in
+    // the conformance handler above.
+    setTimeout(maybeRestore, 700);
 
     // Clean up with the window, or a closed app keeps a sink registered
     // and the coverage count lies.

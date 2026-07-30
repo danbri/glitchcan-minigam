@@ -24,6 +24,7 @@ const state = {
   pausedFor: null, lastGame: null, economy: null,
   depth: 0, restored: false,
   basehref: null, mediaBase: null, status: [], foley: null,
+  resumedFromSave: false,
 };
 let story = null;
 
@@ -688,6 +689,7 @@ window.__storyrunner = {
   paused: () => !!_awaitingGame,
   depth: () => _frames.length,
   frames: () => _frames.map((f) => f.url.split('/').pop()),
+  snapshot: () => snapshotPlaythrough(),
   // read a story VAR (for the parity tests — the economy is the point)
   varOf: (name) => { try { return story?.variablesState?.[name]; } catch { return undefined; } },
   spend: (name, value) => storyRequest('story.vars', { op: 'write', name, value }),
@@ -703,9 +705,68 @@ window.addEventListener('message', (e) => {
   if (d.event === 'minigame.complete' && _awaitingGame) resumeAfterGame(d.detail);
 });
 
+// SAVE / RESTORE the playthrough (spec §5.5.4, #779). Closing the window
+// used to lose the whole reading. Registering these two handlers IS the
+// declaration; the shell holds the bytes in its own namespace and hands
+// them back after the next init.
+//
+// What travels: where the reader is, and how they got there — the ink
+// position (`state.ToJson()`), the story URL, the dream stack, and the
+// story's own media/status declarations. NOT the prose already on screen:
+// re-rendering the scrollback from a save would put words in the reader's
+// past that they might not have read, and the ink state is the truth.
+function snapshotPlaythrough() {
+  if (!story || !state.ready) return null;              // nothing to keep yet
+  // Decline while paused for a game: the ink is mid-beat and the game holds
+  // state of its own, so a save here would restore into a story waiting for
+  // a completion that will never arrive.
+  if (_awaitingGame) return null;
+  try {
+    return {
+      v: 1,
+      storyUrl: state.storyUrl,
+      ink: story.state.ToJson(),
+      frames: _frames.map((f) => ({ url: f.url, state: f.state })),
+      basehref: state.basehref,
+      status: _statusItems,
+    };
+  } catch { return null; }
+}
+
+async function restorePlaythrough(snap) {
+  if (!snap || snap.v !== 1 || !snap.storyUrl) return;
+  _frames.length = 0;
+  for (const f of (snap.frames || [])) _frames.push(f);
+  state.depth = _frames.length;
+  // loadStory applies the ink state after compiling and seeding, which is
+  // the same path surfacing from a dream uses.
+  await loadStory(snap.storyUrl, snap.ink);
+  if (snap.basehref) state.basehref = snap.basehref;
+  if (Array.isArray(snap.status) && snap.status.length) {
+    _statusItems = snap.status;
+    renderStatusBar();
+  }
+  state.resumedFromSave = true;
+  window.foaf?.bus?.publish('app.storyrunner.resumed-save', {
+    summary: `resumed ${snap.storyUrl.split('/').pop()} at depth ${_frames.length}`,
+    depth: _frames.length,
+  });
+}
+
 // Live inside foafos if present; run standalone otherwise (dev).
 if (window.foaf?.onInit) {
-  window.foaf.onInit((config) => boot(config));
+  let booted = false;
+  // A restore REPLACES the boot story, so it must win the race rather than
+  // load a fresh copy first and then throw it away.
+  window.foaf.onRestore?.((snap) => {
+    if (snap) { booted = true; restorePlaythrough(snap); }
+  });
+  window.foaf.onSnapshot?.(snapshotPlaythrough);
+  window.foaf.onInit((config) => {
+    state.mediaBase = config?.mediaBase || null;
+    // Give a pending restore one tick to arrive before booting fresh.
+    setTimeout(() => { if (!booted) { booted = true; boot(config); } }, 120);
+  });
   window.foaf.onAudio?.(applyAudioLevel);   // the dock's volume reaches our bed
 } else {
   boot({});

@@ -29,6 +29,14 @@
   if (window.foaf) return;
 
   const listeners = { init: [], grant: [], suspend: [], resume: [], terminate: [], audio: [] };
+  // SNAPSHOT / RESTORE (spec §5.5.4), same shape as every other service:
+  // REGISTERING the handler IS the answer to the shell's contract probe.
+  // A window app that never registers keeps working exactly as before and
+  // simply does not persist — the shell then says so out loud rather than
+  // promising a save it cannot make.
+  let snapshotFn = null;
+  let restoreFn = null;
+  let pendingRestore;      // the shell may restore before the app registers
   let appId = null;
   let capabilities = new Set();
   let lastAudio = null;   // retained so a late onAudio replays the level
@@ -41,6 +49,18 @@
   const post = (msg) => {
     try { if (window.parent !== window) window.parent.postMessage(msg, '*'); }
     catch { /* standalone */ }
+  };
+
+  // Contracts this app speaks. REGISTERING a handler is the declaration —
+  // there is no separate "I support X" call to forget. Sent on init and
+  // again on any later registration, because a deferred module can register
+  // after init has already gone out and the shell must hear about it (a
+  // late answer restores the service, spec §5.1.2).
+  const contracts = new Set(['app']);
+  const declareContract = (name) => {
+    if (contracts.has(name)) return;
+    contracts.add(name);
+    if (ready) post({ type: 'conformance', contracts: [...contracts] });
   };
 
   // ── storage ─────────────────────────────────────────────────────────
@@ -205,6 +225,21 @@
       if (ready) { try { fn(lastInitConfig || {}, foaf); } catch (err) { console.error(err); } }
       return foaf;
     },
+    /** Return the state to keep; `null` declines (mid-animation, say). */
+    onSnapshot: (fn) => { snapshotFn = fn; declareContract('snapshot'); return foaf; },
+    /** Receive whatever was kept last time, right after init. */
+    onRestore: (fn) => {
+      restoreFn = fn;
+      declareContract('snapshot');
+      // The shell sends `restore` immediately after `init`, which can beat a
+      // deferred module's registration. Hold it and replay, or the save is
+      // silently dropped and reads as "nothing was ever kept".
+      if (pendingRestore !== undefined) {
+        const held = pendingRestore; pendingRestore = undefined;
+        try { fn(held); } catch (err) { console.error(err); }
+      }
+      return foaf;
+    },
     onSuspend: (fn) => { listeners.suspend.push(fn); return foaf; },
     onResume: (fn) => { listeners.resume.push(fn); return foaf; },
     onTerminate: (fn) => { listeners.terminate.push(fn); return foaf; },
@@ -318,6 +353,19 @@
       if (resolve) { storyWaiters.delete(d.rid); resolve(d); }
       return;
     }
+    if (d.type === 'app.snapshot') {
+      // Answer even when nothing is registered: silence would make the
+      // shell wait out its timeout on every close.
+      let stateOut = null;
+      if (snapshotFn) { try { stateOut = snapshotFn(); } catch (err) { console.error(err); } }
+      post({ type: 'app.snapshot-data', rid: d.rid, state: stateOut ?? null });
+      return;
+    }
+    if (d.type === 'app.restore') {
+      if (restoreFn) { try { restoreFn(d.state); } catch (err) { console.error(err); } }
+      else pendingRestore = d.state;
+      return;
+    }
     if (d.type === 'audio-level') {
       lastAudio = { level: d.level, volume: d.volume, muted: d.muted };
       for (const fn of [...listeners.audio]) { try { fn(lastAudio); } catch (err) { console.error(err); } }
@@ -347,7 +395,8 @@
         ready = true;
         // Declare what we speak, so the shell can adapt rather than assume
         // (the conformance rule, spec §5.1.2).
-        post({ type: 'conformance', contracts: ['app', ...(d.capabilities || [])] });
+        for (const c of (d.capabilities || [])) contracts.add(c);
+        post({ type: 'conformance', contracts: [...contracts] });
         listeners.init.forEach(fn => { try { fn(d.config || {}, foaf); } catch (err) { console.error(err); } });
         break;
       }
