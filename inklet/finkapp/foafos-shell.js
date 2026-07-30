@@ -2038,7 +2038,7 @@ function buildUI() {
             } else if (op === 'read') {
               // Only the shared economy crosses the boundary. A story's
               // private variables are its own business and stay in the box.
-              reply({ ok: true, values: vars.visibleTo(actor, FoafOS.storyVars.all()) });
+              reply({ ok: true, values: vars.filterReadable(actor, FoafOS.storyVars.all()) });
             } else if (op === 'write') {
               const name = String(d.detail?.name || '');
               if (!SHARED_ECONOMY.includes(name)) {
