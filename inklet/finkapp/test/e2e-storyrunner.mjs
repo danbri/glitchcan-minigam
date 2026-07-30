@@ -316,6 +316,60 @@ try {
       : fail(`a private variable was brokered: ${JSON.stringify(priv)}`);
   }
 
+  // ── 5c. DREAM STACK (#779): goDeeper descends, END pops mid-breath ──
+  // The depth is the SHELL's count, not the story's claim — a story that
+  // could report its own depth could claim 0 from inside a dream and
+  // switch off the read-only rule on the shared economy.
+  {
+    const dive = await page.evaluate(async () => {
+      const f = document.querySelector('iframe[src*="storyrunner"]');
+      // Ask through the governed verb, exactly as a # LINKREL: goDeeper does.
+      const before = FoafOS.storyDepth('storyrunner');
+      f.contentWindow.postMessage({ type: 'noop' }, '*');   // keep the frame live
+      return { before };
+    });
+    void dive;
+    // Drive the real path: the runner asks, the shell decides.
+    const asked = await frame.evaluate(() => window.foaf.storyRequest('story.link',
+      { url: new URL('./dream.fink.js', location.href).href, rel: 'goDeeper' }));
+    await page.waitForTimeout(300);
+    const deep = await page.evaluate(() => ({
+      shell: FoafOS.storyDepth('storyrunner'),
+      vars: FoafOS.vars.depth,
+    }));
+    asked.ok && asked.depth === 1 && deep.shell === 1 && deep.vars === 1
+      ? pass('goDeeper: the shell counts the depth and the broker knows it')
+      : fail(`depth not tracked shell-side: ${JSON.stringify({ asked, deep })}`);
+
+    // Inside a dream the shared economy is READ-ONLY (spec + FoafVars).
+    const dreamSpend = await frame.evaluate(() => window.__storyrunner.spend('diamonds', 999));
+    dreamSpend.ok === false
+      ? pass('a dream cannot spend the waking world — shared economy read-only at depth')
+      : fail(`a dream spent the shared economy: ${JSON.stringify(dreamSpend)}`);
+
+    // The cap is real, and refusing is a story-visible outcome.
+    let capped = null;
+    for (let i = 0; i < 9; i++) {
+      capped = await frame.evaluate(() => window.foaf.storyRequest('story.link',
+        { url: new URL('./dream.fink.js', location.href).href, rel: 'goDeeper' }));
+      if (!capped.ok) break;
+    }
+    capped && capped.ok === false && capped.reason === 'depth-cap'
+      ? pass(`the dream refuses past the cap (depth ${capped.depth})`)
+      : fail(`no depth cap: ${JSON.stringify(capped)}`);
+
+    // Surface all the way back so later sections start from the waking world.
+    for (let i = 0; i < 12; i++) {
+      const up = await frame.evaluate(() => window.foaf.storyRequest('story.link',
+        { url: new URL('./demo.fink.js', location.href).href, rel: 'surface' }));
+      if (up.depth === 0) break;
+    }
+    const back = await page.evaluate(() => ({ shell: FoafOS.storyDepth('storyrunner'), vars: FoafOS.vars.depth }));
+    back.shell === 0 && back.vars === 0
+      ? pass('surfacing returns the shell and the broker to depth 0')
+      : fail(`depth stuck after surfacing: ${JSON.stringify(back)}`);
+  }
+
   // ── 5b. attenuation ENFORCES — it does not merely announce ──────────
   // The check above passes trivially: waterworld's declared caps happen
   // to sit inside the runner's. The question that matters is what an

@@ -165,3 +165,50 @@ A `# MINIGAME:` iframe runs with an opaque origin: touching
 Guest games must shim it (see the head of `magpie/robbin/robbin.html`).
 Same for module/asset fetches: they need CORS (fine on GitHub Pages,
 needs a CORS-enabled server locally).
+
+---
+
+## 10. A tag binds to the line that FOLLOWS it
+
+**`# TAG:` attaches to the NEXT piece of content, not the previous one.**
+Verified by dumping `story.currentTags` after each `Continue()`.
+
+This matters because the engine BREAKS the beat on `# MINIGAME:` and
+`# FINK:` — and the break happens *after* the line those tags landed on
+has already been shown.
+
+```ink
+// WRONG — the tag rides the POST-game line
+You climb into the rig.
+# MINIGAME: waterworld
+-> surfacing
+
+=== surfacing ===
+You surface with {diamonds} diamonds.     // shown BEFORE the game runs,
+                                          // with the pre-game value
+```
+
+```ink
+// RIGHT — tag first, lead-in second, after-content behind a divert
+# MINIGAME: waterworld
+You climb into the rig.
+-> surfacing
+
+=== surfacing ===
+You surface with {diamonds} diamonds.     // shown on resume, with the
+                                          // value the game produced
+```
+
+The symptoms are quiet and look like engine bugs:
+
+- **`# MINIGAME:`** — the "after the game" beat prints with the values
+  from *before* it, and the game appears over text that has already moved
+  on. (`mudslidemines.fink.js` has always had this right; it is the
+  convention to copy.)
+- **`# FINK:` + `# LINKREL: goDeeper`** — the beat emits the line you
+  meant to show *after* surfacing, and the state saved for the way back
+  is already past it. Coming back up, the reader gets an empty beat.
+- **`# IMAGE:` / `# VIDEO:`** — media attaches to the next beat, so a
+  picture appears one beat late.
+
+Rule of thumb: **write the tag directly above the line it decorates.**

@@ -22,6 +22,7 @@ const state = {
   media: null, mediaRole: null, mediaSpec: null,
   audio: null, audioPlaying: false, audioLevel: 1, linkedTo: null,
   pausedFor: null, lastGame: null, economy: null,
+  depth: 0, restored: false,
 };
 let story = null;
 
@@ -133,6 +134,12 @@ function handleTag(tag) {
       // A link to another story. Resolve it against THIS story's location,
       // then break the beat and ask the shell to authorize it (§story.link).
       _pendingLink = resolveStoryUrl(value);
+      break;
+    case 'LINKREL':
+      // How the link COMPOSES (spec §3.4): goDeeper descends and keeps the
+      // way back, goShallower surfaces early, oneWay burns the stack. Bare
+      // FINK still replaces, which is the back-compatible default.
+      _pendingRel = value.trim();
       break;
     // A beat's central media. The last IMAGE/VIDEO in a beat wins (matches
     // the live engine); rendered after the Continue loop.
@@ -285,6 +292,9 @@ function advance() {
   _beatMedia = undefined;                 // undefined ⇒ keep previous (sticky)
   _pendingLink = undefined;
   _pendingGame = undefined;
+  // A LINKREL from an earlier beat must not colour a later link: the
+  // annotation belongs to the link it travels with.
+  _pendingRel = undefined;
   while (story.canContinue) {
     const text = story.Continue();
     (story.currentTags || []).forEach(handleTag);
@@ -307,6 +317,17 @@ function advance() {
   }
   renderChoices();
   if (!story.canContinue && story.currentChoices.length === 0) {
+    // END inside a dream POPS instead of ending — that is what makes a
+    // nested story a dream rather than a dead end. Only the outermost END
+    // is really the end.
+    if (_frames.length) {
+      window.foaf?.bus?.publish('app.storyrunner.surfacing', {
+        summary: `inner story ended — surfacing to depth ${_frames.length - 1}`,
+        depth: _frames.length - 1,
+      });
+      surface();
+      return;
+    }
     state.ended = true;
     setStatus('— THE END —');
     window.foaf?.bus?.publish('app.storyrunner.ended', { summary: 'story ended' });
@@ -397,17 +418,64 @@ function declaredNames() {
   } catch { return null; }
 }
 
-// Follow a # FINK link: the shell AUTHORIZES the destination (policy), the
-// runner does the contained load. A refusal is shown, never silent.
+// ── the dream stack (spec §3.4) ────────────────────────────────────────
+//
+// Frames live HERE, in the box: a frame holds the outer story's saved ink
+// position (`state.ToJson()`), which is the story's own business and must
+// not cross to the shell. The shell holds the DEPTH — see its story.link
+// handler for why that half cannot be ours to claim.
+let _pendingRel;                   // undefined = plain replace
+const _frames = [];                // {url, state}
+
+// Follow a # FINK link: the shell AUTHORIZES the destination and the
+// composition (policy + depth), the runner does the contained load. A
+// refusal is shown, never silent.
 async function followLink(absUrl) {
-  const res = await storyRequest('story.link', { url: absUrl });
-  if (res.ok && res.url) { state.linkedTo = res.url; await loadStory(res.url); }
-  else setStatus(`link refused: ${res.reason}`);
+  const rel = (_pendingRel || '').toLowerCase();
+  _pendingRel = undefined;
+  const res = await storyRequest('story.link', { url: absUrl, rel });
+  if (!res.ok) {
+    // Depth-cap is a story-visible outcome, not a crash: the dream simply
+    // refuses. Leave the reader where they are, with choices intact.
+    setStatus(res.reason === 'depth-cap'
+      ? 'The dream refuses: too deep.'
+      : `link refused: ${res.reason}`);
+    renderChoices();
+    return;
+  }
+  if (rel === 'goshallower') { await surface(); return; }
+  if (rel === 'godeeper') {
+    // Push BEFORE loading: once the inner story compiles, `story` is the
+    // inner one and the outer position is gone.
+    _frames.push({ url: state.storyUrl, state: story.state.ToJson() });
+  } else if (rel === 'oneway') {
+    _frames.length = 0;            // the way back is burned
+  }
+  state.depth = res.depth ?? _frames.length;
+  document.body.dataset.depth = String(state.depth);
+  state.linkedTo = res.url;
+  await loadStory(res.url);
+}
+
+// Surface one level: reload the outer document and restore its FULL ink
+// state, so the outer story resumes mid-breath rather than restarting at
+// a knot. No knot bookkeeping — LoadJson carries the position.
+async function surface() {
+  const frame = _frames.pop();
+  if (!frame) return false;
+  const res = await storyRequest('story.link', { url: frame.url, rel: 'surface' });
+  state.depth = res.ok ? (res.depth ?? _frames.length) : _frames.length;
+  document.body.dataset.depth = String(state.depth);
+  setStatus('surfacing…');
+  await loadStory(frame.url, frame.state);
+  return true;
 }
 
 // Load (or replace with) a story at `url`, wholly inside the box: fetch,
 // nested-box extract, compile, reset the beat surface, play.
-async function loadStory(url) {
+// `restore` is a saved `state.ToJson()` — supplied when surfacing from a
+// dream, so the outer story resumes exactly where it paused.
+async function loadStory(url, restore = null) {
   state.storyUrl = url;
   setStatus('loading…');
   $('prose').textContent = '';
@@ -438,6 +506,13 @@ async function loadStory(url) {
   // Seed the shared economy BEFORE the first beat, or a story that opens
   // by reading `diamonds` shows a zero the reader has already disproved.
   await seedEconomy();
+  // Surfacing from a dream: restore the outer story's saved position so it
+  // resumes mid-breath. Must happen after seeding and before the first
+  // advance(), or the restored position is immediately overwritten.
+  if (restore) {
+    try { story.state.LoadJson(restore); state.restored = true; }
+    catch (e) { setStatus('could not restore the outer story: ' + e.message); }
+  }
   advance();
 }
 
@@ -455,6 +530,8 @@ window.__storyrunner = {
   choose,
   ready: () => state.ready,
   paused: () => !!_awaitingGame,
+  depth: () => _frames.length,
+  frames: () => _frames.map((f) => f.url.split('/').pop()),
   // read a story VAR (for the parity tests — the economy is the point)
   varOf: (name) => { try { return story?.variablesState?.[name]; } catch { return undefined; } },
   spend: (name, value) => storyRequest('story.vars', { op: 'write', name, value }),

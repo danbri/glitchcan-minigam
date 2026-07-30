@@ -550,6 +550,13 @@ let _pendingGameParent = null;
 // different runner's story.
 let _storyLauncher = null;
 
+// Dream depth PER BOXED STORY APP, counted by the shell (see the
+// story.link handler for why it cannot be the guest's to report).
+// Cap from spec §3.4 — a dream that can always go deeper is a hang.
+const storyDepth = new Map();
+const DREAM_CAP = 8;
+FoafOS.storyDepth = (appId) => storyDepth.get(appId) || 0;
+
 // The one list of names that cross the story boundary. Taken from the
 // kernel's own export (`SHARED_DEFAULT`) rather than retyped: a second
 // copy of this list is a second policy, and they would drift. Read from
@@ -2072,7 +2079,38 @@ function buildUI() {
             try { base = new URL(frame.src); target = new URL(String(d.detail?.url || ''), base); }
             catch { reply({ ok: false, reason: 'bad-url' }); return; }
             if (target.origin !== base.origin) { reply({ ok: false, reason: 'cross-origin-blocked' }); return; }
-            reply({ ok: true, url: target.href });
+            // DREAM STACK (#779 / spec §3.4). Composition is the shell's
+            // call, and so is the DEPTH — a story that could report its own
+            // depth could claim 0 from inside a dream and switch off the
+            // read-only rule on the shared economy. So the runner ASKS
+            // ("goDeeper" / "goShallower" / "oneWay") and the shell counts.
+            // The ink state itself stays in the box: the shell holds the
+            // number, never the story's saved position.
+            const rel = String(d.detail?.rel || '').toLowerCase();
+            let depth = storyDepth.get(app.id) || 0;
+            if (rel === 'godeeper') {
+              if (depth >= DREAM_CAP) {
+                bus.publish('story.state', { summary: 'the dream refuses: too deep',
+                  phase: 'fault', reason: 'depth-cap', depth });
+                reply({ ok: false, reason: 'depth-cap', depth });
+                return;
+              }
+              depth += 1;
+            } else if (rel === 'goshallower' || rel === 'surface') {
+              depth = Math.max(0, depth - 1);
+            } else if (rel === 'oneway') {
+              depth = 0;                       // the way back is burned
+            }
+            storyDepth.set(app.id, depth);
+            // The shell's own topic — the runner may not publish this, and
+            // the broker's dream rule keys off it (vars.setDepth), so it
+            // must come from here.
+            bus.publish('story.state', {
+              summary: depth ? `dream depth ${depth}` : 'surfaced',
+              phase: 'loading', depth, appId: app.id, rel: rel || 'replace',
+            }, { retain: true });
+            document.body.dataset.finkDepth = String(depth);
+            reply({ ok: true, url: target.href, depth, rel: rel || 'replace' });
           }
         } catch (err) {
           reply({ ok: false, reason: 'failed' });
