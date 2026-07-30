@@ -67,3 +67,23 @@ html, body {
 }
 #stage[data-media-role="accent"] #media .media-el { border-radius: 0.4em; }
 #stage[data-media-role="accent"] #prose { margin-top: -0.2em; }
+
+/* The story's status line (spec §5.5.2). Colours address the VAR, not a
+   fixed id, so a story naming its own readouts styles cleanly. */
+#statusbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem .9rem;
+  margin: .5rem 0 0;
+  padding: .4rem .1rem 0;
+  border-top: 1px solid rgba(255, 255, 255, .14);
+  font-size: .78rem;
+  letter-spacing: .04em;
+  opacity: .85;
+}
+#statusbar[hidden] { display: none; }
+.sb-item { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sb-item[data-status-var="diamonds"] { color: #7fd7ff; }
+.sb-item[data-status-var="mega_diamonds"] { color: #ff9ae0; }
+.sb-item[data-status-var="keys"] { color: #ffd479; }
+.sb-item[data-status-var="score"] { color: #b6f5a8; }

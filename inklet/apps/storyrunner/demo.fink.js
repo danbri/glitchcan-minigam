@@ -3,6 +3,13 @@
 // colour the FRAME, not the host), and a # MINIGAME: tag (which must
 // surface as a governed verb request). Media are bundled local SVGs.
 oooOO`
+// These fixtures keep their art BESIDE the story file, so they must say
+// so: the layered chain's story layer defaults to "media/" (the Bagend
+// pattern), and without this the SVGs resolve into a folder that does
+// not exist. The e2e's role assertion passed at ZERO height while that
+// was true — geometry alone cannot tell a laid-out image from a broken
+// one.
+# BASEHREF: ./
 # BG: rgb(10, 31, 20)
 # IMAGE: media-feature.svg
 # AUDIO: ambient.wav

@@ -128,13 +128,23 @@ try {
       role: stage.getAttribute('data-media-role'),
       spec: window.__storyrunner.state.mediaSpec,
       tag: el && el.tagName, src: el && (el.getAttribute('src') || ''),
+      // DID IT LOAD? An <img> with a bad src still lays out (0px tall) and
+      // still reports role + tag, so geometry alone cannot tell a pinned
+      // image from a broken one — a layered-resolution regression sailed
+      // past this check reporting "0/809px" as a pass. naturalWidth is the
+      // only honest answer for an image.
+      loaded: !el ? false
+        : el.tagName === 'IMG' ? el.naturalWidth > 0
+        : el.tagName === 'IFRAME' ? !!el.src
+        : el.readyState !== undefined ? el.readyState > 0 || !!el.src : !!el.src,
       mediaH: Math.round(mb.height), stageH: Math.round(stage.getBoundingClientRect().height),
     };
   });
   await page.waitForTimeout(300);
   const feat = await mediaAt();
-  if (feat.role === 'feature' && feat.spec === 'X-MEDIA-FEATURE' && feat.tag === 'IMG') {
-    pass(`feature: pinned image, prose below (${feat.mediaH}/${feat.stageH}px)`);
+  if (feat.role === 'feature' && feat.spec === 'X-MEDIA-FEATURE' && feat.tag === 'IMG'
+      && feat.loaded && feat.mediaH > 20) {
+    pass(`feature: pinned image LOADED, prose below (${feat.mediaH}/${feat.stageH}px)`);
   } else fail('feature media wrong: ' + JSON.stringify(feat));
 
   // ── 4b. AUDIO plays IN THE RUNNER'S OWN FRAME (the iOS fix). The bed is
@@ -314,6 +324,40 @@ try {
     priv.ok === false && priv.reason === 'not-shared'
       ? pass('a private variable is refused BY NAME — the boundary is the shared set')
       : fail(`a private variable was brokered: ${JSON.stringify(priv)}`);
+  }
+
+  // ── 5d. media / status / synth parity (#779) ────────────────────────
+  // The peer story declares `# BASEHREF: ./`, two `# STATUS:` items and
+  // `# AUDIO: synth:water`. All three used to be missing or refused.
+  {
+    const parity = await frame.evaluate(() => ({
+      basehref: window.__storyrunner.state.basehref,
+      // The shell hands over the installation-wide layer; a boxed story
+      // cannot read fink-config.js for itself.
+      mediaBase: window.__storyrunner.state.mediaBase,
+      resolved: window.__storyrunner.state.media?.resolved || null,
+      status: window.__storyrunner.state.status,
+      bar: [...document.querySelectorAll('#statusbar .sb-item')].map((s) => s.textContent),
+      barHidden: document.getElementById('statusbar')?.hidden,
+      foley: window.__storyrunner.state.foley,
+      audioReq: window.__storyrunner.state.requests
+        .filter((r) => r.verb === 'story.audio').map((r) => r.detail?.action),
+    }));
+    parity.basehref === './'
+      ? pass('# BASEHREF: read — the story\'s own media layer')
+      : fail(`BASEHREF ignored: ${JSON.stringify(parity.basehref)}`);
+    // Resolution must go through the chain, not straight off the story URL:
+    // with BASEHREF "./" the two agree here, so assert the mechanism ran by
+    // checking the src is absolute and inside the runner's own folder.
+    /\/apps\/storyrunner\/media-feature\.svg$/.test(parity.resolved || '')
+      ? pass(`media resolved through the layered chain (${parity.resolved.split('/').slice(-2).join('/')})`)
+      : fail(`layered media resolution wrong: ${parity.resolved}`);
+    parity.bar.length === 2 && /💎/.test(parity.bar[0]) && /Score/.test(parity.bar[1])
+      ? pass(`# STATUS: built the real status bar, keyed by var (${parity.bar.join(' · ')})`)
+      : fail(`status widget wrong: ${JSON.stringify(parity)}`);
+    parity.foley === 'water' && parity.audioReq.includes('foley')
+      ? pass('# AUDIO: synth: routed to the host FinkFoley over the governed verb')
+      : fail(`synth audio not routed: ${JSON.stringify(parity)}`);
   }
 
   // ── 5c. DREAM STACK (#779): goDeeper descends, END pops mid-breath ──

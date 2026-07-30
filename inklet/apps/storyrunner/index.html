@@ -19,6 +19,10 @@
   <div id="media" aria-hidden="false"></div>
   <div id="prose" role="log" aria-live="polite" aria-relevant="additions"></div>
   <ul id="choices" aria-label="Choices"></ul>
+  <!-- The story's own status line, built from its `# STATUS:` tags.
+       Empty and hidden until a story declares something: this runner has
+       no hardcoded economy to fall back on. -->
+  <div id="statusbar" role="group" aria-label="Story status" hidden></div>
   <p id="status" role="status" aria-live="polite"></p>
 </main>
 

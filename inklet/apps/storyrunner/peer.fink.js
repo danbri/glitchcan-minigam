@@ -12,6 +12,15 @@ VAR diamonds = 0
 VAR score = 0
 VAR waterworld_won = false
 
+// The story's own media layer. "./" means "beside this story file", which
+// is where these fixtures keep their SVGs — the layered chain is
+// global base → this → the path each beat names.
+# BASEHREF: ./
+// Declarative status items (spec §5.5.2): keyed by VAR, one tag each.
+# STATUS: diamonds icon=💎 format=number
+# STATUS: score icon=🏅 label=Score format=number
+// Procedural sound: no file exists, the host's FinkFoley generates it.
+# AUDIO: synth:water
 # BG: rgb(20, 10, 28)
 # IMAGE: media-feature.svg
 Beyond the doorway: a different dock, a different tale.

@@ -23,6 +23,7 @@ const state = {
   audio: null, audioPlaying: false, audioLevel: 1, linkedTo: null,
   pausedFor: null, lastGame: null, economy: null,
   depth: 0, restored: false,
+  basehref: null, mediaBase: null, status: [], foley: null,
 };
 let story = null;
 
@@ -112,13 +113,20 @@ function handleTag(tag) {
     case 'CLASS':
       if (value) document.body.classList.add(value);
       break;
+    case 'BASEHREF':
+      // The story's own media layer. Set before any IMAGE/VIDEO resolves,
+      // because it changes what those paths MEAN.
+      state.basehref = value || null;
+      break;
     case 'STATUS':
-      setStatus(value);
-      // Contribute the story's readout to the menubar (grouped under this
-      // app in the tree). Small, in our own namespace — the sandbox allows
-      // app.storyrunner.*; the menubar (shell furniture) aggregates it.
-      _statusItems = value ? [{ id: 'status', label: value }] : [];
-      window.foaf?.bus?.publish('app.storyrunner.status', { items: _statusItems });
+      // The status line is the STORY'S (spec §5.5.2): declarative items,
+      // one tag each — `# STATUS: <var> [icon=] [label=] [format=] [max=]`
+      // — keyed by VAR so a looping knot re-declaring its tags does not
+      // append duplicates (3 items becoming 6 then 9 was the live
+      // player's bug). `# STATUS: none` means no bar. A bare phrase with
+      // no var is still shown as plain text, which is what this runner
+      // used to do for everything.
+      declareStatus(value);
       break;
     case 'MINIGAME':
       // A game BREAKS the beat and PAUSES the story (#779), the same way
@@ -174,11 +182,24 @@ let _audioArmed = false;
 
 function playAudio(value) {
   const v = (value || '').trim();
-  if (/^synth:/i.test(v)) { setStatus('(synth audio is host-only, not in the boxed runner)'); return; }
   if (!v) return;
+  // `synth:<layer>` is PROCEDURAL — there is no file, and the generator is
+  // the host's FinkFoley. So it is a host service, asked for by name over
+  // the governed audio verb. This used to print "synth is host-only" and
+  // play nothing (#779).
+  if (/^synth:/i.test(v)) {
+    const layer = v.replace(/^synth:/i, '').trim();
+    state.audio = v;
+    storyRequest('story.audio', { action: 'foley', layer }).then((res) => {
+      state.foley = res.ok ? layer : null;
+      if (!res.ok) setStatus(`synth audio refused: ${res.reason}`);
+    });
+    return;
+  }
   state.audio = v;
   stopAudio(true);
-  _audioEl = new Audio(resolveStoryUrl(v));
+  // Layered resolution — a bed lives with the art, not next to the story.
+  _audioEl = new Audio(resolveMedia(v));
   _audioEl.loop = true;
   _audioEl.volume = _audioLevel;
   _audioEl.play().then(() => { state.audioPlaying = true; }).catch(() => armAudioUnlock());
@@ -221,7 +242,94 @@ function applyAudioLevel({ level }) {
 const MEDIA_ROLES = { hero: 'X-MEDIA-HERO', feature: 'X-MEDIA-FEATURE', accent: 'X-MEDIA-ACCENT' };
 let _beatMedia;   // undefined = no media tag this beat (keep previous, sticky)
 let _pendingLink; // undefined = no FINK link this beat
-let _statusItems = [];   // the story's menubar readouts
+// ── the status line is the STORY'S (spec §5.5.2) ──────────────────────
+//
+// `# STATUS: <var> [icon=🔑] [label=Keys] [format=number|bar|percent|
+// time|text] [max=10] [always]`, one tag per item. `# STATUS: none`
+// clears the bar. A story that declares nothing gets no bar — the boxed
+// runner has no hardcoded economy to fall back on, and inventing one
+// would be the content leak the platform keeps removing.
+//
+// Keyed by VAR, never appended: a looping knot re-declares its tags on
+// every visit, and appending turned three items into six then nine in the
+// live player. Cleared on compile, or one story's HUD follows the reader
+// into the next.
+let _statusItems = [];   // the story's readouts, in declaration order
+
+function declareStatus(value) {
+  const v = (value || '').trim();
+  if (!v) return;
+  if (/^none$/i.test(v)) { _statusItems = []; renderStatusBar(); return; }
+  const parts = v.split(/\s+/);
+  const first = parts[0];
+  // A phrase with no key=value pairs and no plausible var name is plain
+  // prose — keep showing it as text rather than inventing an item.
+  const kv = {};
+  let bare = true;
+  for (const p of parts.slice(1)) {
+    const eq = p.indexOf('=');
+    if (eq > 0) { kv[p.slice(0, eq).toLowerCase()] = p.slice(eq + 1); bare = false; }
+    else if (p === 'always') { kv.always = 'true'; bare = false; }
+  }
+  if (bare && !/^[A-Za-z_][\w]*$/.test(first)) { setStatus(v); return; }
+  const item = {
+    id: first,
+    icon: kv.icon || '',
+    label: kv.label ? kv.label.replace(/_/g, ' ') : first.replace(/_/g, ' '),
+    format: (kv.format || 'number').toLowerCase(),
+    max: kv.max != null ? Number(kv.max) : null,
+    always: kv.always === 'true',
+  };
+  const at = _statusItems.findIndex((i) => i.id === item.id);
+  if (at >= 0) _statusItems[at] = item; else _statusItems.push(item);
+  renderStatusBar();
+}
+
+function statusValue(item) {
+  let raw;
+  try { raw = story?.variablesState?.[item.id]; } catch { raw = undefined; }
+  if (raw === undefined || raw === null) return item.always ? '—' : null;
+  const n = Number(raw);
+  switch (item.format) {
+    case 'percent': return `${Math.round((Number.isFinite(n) ? n : 0))}%`;
+    case 'time': {
+      const s = Math.max(0, Math.floor(Number.isFinite(n) ? n : 0));
+      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    }
+    case 'bar': {
+      const max = item.max || 10;
+      const filled = Math.max(0, Math.min(max, Math.round(Number.isFinite(n) ? n : 0)));
+      return '█'.repeat(filled) + '·'.repeat(Math.max(0, max - filled));
+    }
+    case 'text': return String(raw);
+    default: return String(Number.isFinite(n) ? n : raw);
+  }
+}
+
+function renderStatusBar() {
+  const bar = $('statusbar');
+  if (bar) {
+    bar.textContent = '';
+    for (const item of _statusItems) {
+      const v = statusValue(item);
+      if (v === null) continue;                 // undeclared and not `always`
+      const span = document.createElement('span');
+      span.className = 'sb-item';
+      span.dataset.statusVar = item.id;
+      span.textContent = `${item.icon ? item.icon + ' ' : ''}${item.label}: ${v}`;
+      bar.appendChild(span);
+    }
+    bar.hidden = !bar.childElementCount;
+  }
+  // Contribute the same readouts to the menubar (grouped under this app in
+  // the tree). Small, and in our own namespace — the sandbox allows
+  // app.storyrunner.*; the menubar (shell furniture) aggregates it.
+  window.foaf?.bus?.publish('app.storyrunner.status', {
+    items: _statusItems.map((i) => ({ id: i.id,
+      label: `${i.icon ? i.icon + ' ' : ''}${i.label}: ${statusValue(i) ?? '—'}` })),
+  });
+  state.status = _statusItems.map((i) => ({ id: i.id, value: statusValue(i) }));
+}
 
 function parseMedia(kind, value) {
   const parts = value.split(/\s+/).filter(Boolean);
@@ -252,10 +360,11 @@ function renderMedia(m) {
     el.title = 'story video';
   } else if (m.kind === 'VIDEO') {
     el = document.createElement('video');
-    el.src = m.src; el.controls = true; el.playsInline = true;
+    // Layered resolution, not story-relative: global base → BASEHREF → path.
+    el.src = resolveMedia(m.src); el.controls = true; el.playsInline = true;
   } else {
     el = document.createElement('img');
-    el.src = m.src; el.alt = '';
+    el.src = resolveMedia(m.src); el.alt = '';
   }
   el.className = 'media-el';
   box.appendChild(el);
@@ -265,7 +374,7 @@ function renderMedia(m) {
     box.onclick = () => stage.setAttribute('data-media-role',
       stage.getAttribute('data-media-role') === 'accent' ? 'hero' : 'accent');
   }
-  state.media = { kind: m.kind, src: m.src };
+  state.media = { kind: m.kind, src: m.src, resolved: el.src || null };
   state.mediaRole = m.role;
   state.mediaSpec = MEDIA_ROLES[m.role];
 }
@@ -287,6 +396,43 @@ function resolveStoryUrl(value) {
   catch { return ''; }
 }
 
+// LAYERED MEDIA RESOLUTION (#779), matching FinkUtils' three layers:
+//
+//   global media base (shell config, handed over at init)
+//     → story `# BASEHREF:` (defaults to "media/")
+//       → the path the beat named
+//
+// An absolute path or a full URL short-circuits the chain — a story that
+// says `/somewhere/pic.png` means it. Media resolution is NOT the same
+// question as story-link resolution: art commonly lives in one shared
+// folder while stories live in several, which is the whole reason the
+// global layer exists.
+function resolveMedia(path) {
+  const p = String(path || '').trim();
+  if (!p) return '';
+  if (/^https?:\/\//i.test(p)) return p;
+  if (p.startsWith('/')) { try { return new URL(p, location.origin).href; } catch { return p; } }
+  const storyDir = (() => {
+    try { return new URL('.', new URL(state.storyUrl, location.href)).href; }
+    catch { return location.href; }
+  })();
+  // The global base is itself resolved against the page, not the story —
+  // it is an installation-wide fact, not a story-relative one.
+  let base = storyDir;
+  if (state.mediaBase) {
+    try { base = new URL(state.mediaBase, location.href).href; } catch { /* keep storyDir */ }
+  }
+  let href = state.basehref || 'media/';
+  if (!href.endsWith('/')) href += '/';
+  let mediaBase;
+  try {
+    mediaBase = /^https?:\/\//i.test(href) ? href
+      : href.startsWith('/') ? new URL(href, location.origin).href
+      : new URL(href, base).href;
+  } catch { mediaBase = base + href; }
+  try { return new URL(p, mediaBase).href; } catch { return mediaBase + p; }
+}
+
 function advance() {
   if (!story) return;
   _beatMedia = undefined;                 // undefined ⇒ keep previous (sticky)
@@ -305,6 +451,9 @@ function advance() {
     if (_pendingLink !== undefined || _pendingGame !== undefined) break;
   }
   if (_beatMedia !== undefined) renderMedia(_beatMedia);
+  // Values change as the story runs, so the bar is re-read every beat —
+  // the tags DECLARE the items, the ink holds the numbers.
+  renderStatusBar();
   if (_pendingLink !== undefined) {
     const url = _pendingLink; _pendingLink = undefined;
     followLink(url);
@@ -503,6 +652,8 @@ async function loadStory(url, restore = null) {
   }
   state.ready = true;
   setStatus('');
+  _statusItems = [];              // a new work brings its own status line
+  renderStatusBar();
   // Seed the shared economy BEFORE the first beat, or a story that opens
   // by reading `diamonds` shows a zero the reader has already disproved.
   await seedEconomy();
@@ -517,6 +668,11 @@ async function loadStory(url, restore = null) {
 }
 
 async function boot(config) {
+  // The installation-wide media base: the outermost layer of the layered
+  // chain. Handed over by the shell because a boxed story cannot read
+  // fink-config.js. Absent standalone, which correctly leaves resolution
+  // story-relative.
+  state.mediaBase = config?.mediaBase || null;
   const url = config?.story
     || new URLSearchParams(location.search).get('story')
     || './demo.fink.js';

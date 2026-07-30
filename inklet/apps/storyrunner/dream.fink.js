@@ -8,6 +8,13 @@
 oooOO`
 VAR diamonds = 0
 
+// These fixtures keep their art BESIDE the story file, so they must say
+// so: the layered chain's story layer defaults to "media/" (the Bagend
+// pattern), and without this the SVGs resolve into a folder that does
+// not exist. The e2e's role assertion passed at ZERO height while that
+// was true — geometry alone cannot tell a laid-out image from a broken
+// one.
+# BASEHREF: ./
 # BG: rgb(6, 6, 26)
 # IMAGE: media-accent.svg accent
 The dock dissolves. You are somewhere older, and the light comes from under the floor.
