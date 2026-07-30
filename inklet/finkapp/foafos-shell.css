@@ -45,9 +45,25 @@ body.foaf-pad-on #foafos-dock {
     flex-direction: column;
     color: #eee;
     font-size: 0.9em;
-    overflow: hidden;
+    /* The whole drawer scrolls. It USED to be overflow:hidden with only the
+       FEED scrolling internally, on the assumption every section above the
+       feed fits on screen. In an in-app browser (Claude's iOS WKWebView:
+       a URL bar on top, a toolbar plus the home indicator on the bottom)
+       the usable height is much shorter, so the fixed sections — SOUND,
+       SKIN, APPS, WINDOWS — were squeezed and clipped with no way to reach
+       them: "the app list and running apps are missing." Now content that
+       does not fit scrolls into view, and the bottom pad clears the iOS
+       toolbar so the last section is not hidden under it. */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: env(safe-area-inset-bottom);
 }
 #foafos-drawer.open { transform: translateX(0); }
+
+/* Sections keep their natural height and drive the scroll, instead of
+   shrinking (flex default) and clipping their own content. */
+#foafos-drawer > header,
+#foafos-drawer > section:not(#foafos-feed-wrap) { flex-shrink: 0; }
 
 #foafos-drawer header {
     display: flex;
@@ -56,6 +72,11 @@ body.foaf-pad-on #foafos-dock {
     padding: 0.7em 0.8em;
     border-bottom: 1px solid rgba(255, 255, 255, 0.15);
     color: var(--zx-mag);
+    /* Stay reachable while the body scrolls — the ✕ must not scroll away. */
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: rgba(6, 6, 12, 0.96);
 }
 .foafos-sub { font-size: 0.75em; opacity: 0.6; color: #ccc; }
 #foafos-close {
@@ -537,8 +558,11 @@ body.foafos-overview-on::before {
 }
 
 #foafos-feed-wrap {
-    flex: 1;
-    min-height: 0;
+    /* Grow to fill the drawer on a tall screen; keep a usable floor on a
+       short one (in-app browser) so it neither collapses to nothing nor
+       squeezes the sections above it — those drive the drawer scroll. */
+    flex: 1 0 8em;
+    min-height: 8em;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
