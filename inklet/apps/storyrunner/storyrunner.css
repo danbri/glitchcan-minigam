@@ -139,8 +139,10 @@ html, body {
    IT TAKES THE READING SURFACE, and looks like nothing (owner, 2026-07-30).
    Reading into a peer is just more story and more choices. No title bar, no
    close button, no split pane: the earlier two-pane version announced the
-   mechanism to the reader, and a pane is meaningless in the voice interface
-   being built. What makes it a peer rather than a link stays structural — the
+   mechanism to the reader, and a pane does not survive the voice interface
+   being built. This is about composition INSIDE a reading; the shell around it
+   keeps its windows and controls as it always did.
+   What makes it a peer rather than a link stays structural — the
    reader's own story is alive underneath and they return to its live beat. The
    way back is the peer's story ENDING, so it needs no control.
 

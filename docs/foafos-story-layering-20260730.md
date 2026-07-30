@@ -28,19 +28,29 @@ to any effect.
 
 ## Presentation invariant (read second)
 
-**The layers are for the platform. The reader gets a story.** (Owner,
-2026-07-30.) Every border below is real, and **none of them may show up as
-chrome**. Whatever composition is happening — a link, a dream, a peer, a merged
-chunk — what the reader experiences is *more story and more choices*, at most
-with an interstitial or a passing notice. No pane management, no window
-furniture, no configuration.
+**Scope first, because an earlier draft of this section overreached.** foafos is
+a windowing shell and stays one: windows, panes, the switcher, the drawer, the
+carousel, the app tree, close and suspend controls. Those are the shell doing
+its job, and none of them are in question. This invariant is about **narrative
+composition inside one reading** — a link, a dream, a peer, a merged chunk —
+and nothing else.
 
-**The voice interface is the test.** A pure voice interface is in development,
-and it has no panes, no `✕`, and no corner to put a title bar in. So: if a
-feature can only be understood by looking at a second pane, or can only be left
-by pressing a control, it is wrong at the design level and not merely
-unpolished. Anything that must be *said* to be usable is the honest version —
-which is why "the story ends and you are back" beats any button.
+**Within a reading, the layers are for the platform and the reader gets a
+story.** (Owner, 2026-07-30.) Every border below is real, and **a composition
+border may not present itself to the reader as furniture to manage**. Following
+a story somewhere gives *more story and more choices*, at most with an
+interstitial or a passing notice. The reader is never handed a second pane to
+arrange or a control to dismiss in order to carry on reading.
+
+**Voice is one supported surface, and it is a useful test — not a ban on
+screens.** A pure voice interface is in development; it will coexist with the
+windowed shell rather than replace it. So the question to ask of a *composition*
+feature is "does this still work when the only surface is voice?" If the answer
+is no — it can only be understood by looking at a second pane, or only left by
+pressing a control — the design is wrong for a reading, however good it looks on
+a screen. That is why "the story ends and you are back" beats a close button.
+Everything the shell does *around* a reading is free to be visual; a reader
+still has the window controls the shell always gave them.
 
 Mechanism belongs in the **advanced/debug view** — the runner's Subtree panel,
 the shell's app tree, the capability ledger, the address bar. Those exist so the

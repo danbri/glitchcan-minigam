@@ -978,8 +978,10 @@ async function mergeStory(absUrl, entry = '') {
 // illusion and into window management. So a peer takes the READING SURFACE, the
 // way a dream already does — no title bar, no ✕, no split pane — and the reader
 // comes back when the peer's story ends. Two panes was the wrong answer twice
-// over: it announced the mechanism to the reader, and it cannot exist at all in
-// the voice interface being built, where there is no second pane to look at.
+// over: it announced the mechanism to the reader, and it does not survive the
+// voice interface being built, where there is no second pane to look at. That
+// is a rule about COMPOSITION INSIDE A READING, not about the platform: foafos
+// is a windowing shell and keeps its windows, switcher and drawer.
 // What peering IS remains invisible and structural: the reader's own story is
 // not destroyed, and they return to its live beat rather than a restart.
 // The mechanism shows only where mechanisms belong — the Subtree panel, the
