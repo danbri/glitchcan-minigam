@@ -86,6 +86,20 @@ try {
     pass(`story played in-frame (${played.prose} prose, ${played.choices} choices)`);
   } else fail('runner did not render a playable beat: ' + JSON.stringify(played));
 
+  // ── 1b. THE BOOT ECONOMY READ succeeded. seedEconomy() runs on every
+  // story load and does story.vars op:'read'; the shell must answer it, not
+  // throw. A method-name slip (vars.visibleTo, which never existed — the
+  // method is filterReadable) made every read reply "refused: failed" and
+  // painted it at the foot of the demo. state.economy is only set when the
+  // read comes back ok, so a non-null object is proof the path works.
+  const econ = await frame.evaluate(() => ({
+    economy: window.__storyrunner.state.economy,
+    status: document.getElementById('status')?.textContent || '',
+  }));
+  if (econ.economy && typeof econ.economy === 'object' && !/refused/.test(econ.status)) {
+    pass(`boot story.vars read succeeded (economy seeded: ${JSON.stringify(econ.economy)})`);
+  } else fail(`boot story.vars read failed: ${JSON.stringify(econ)}`);
+
   // ── 2. # BG: coloured the RUNNER's frame, never the host ─────────────
   const bg = await frame.evaluate(() => document.body.style.background);
   const hostBg = await page.evaluate(() => document.body.style.background);
