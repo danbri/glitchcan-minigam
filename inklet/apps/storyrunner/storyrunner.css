@@ -35,6 +35,18 @@ html, body {
 #choices button:hover { background: var(--sk-accent, rgba(41,173,255,0.22));
   color: var(--sk-accent-ink, inherit); }
 #status { font-size: 0.8em; opacity: 0.6; }
+/* In the accessibility tree, absent from the picture. The reading surface is
+   deliberately untitled to LOOK at, and a screen-reader user still needs a
+   landmark to jump to — those are not in conflict. */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip-path: inset(50%); overflow: hidden; white-space: nowrap;
+}
+/* Focus lands here after a beat, so it must not draw a box around the whole
+   story — the outline says "you are reading", not "you may type here". */
+#prose:focus { outline: none; }
+#prose:focus-visible { outline: 2px solid var(--sk-accent, #ffec27); outline-offset: 4px; }
 
 /* ─────────── media roles: a per-beat spectrum of prominence ─────────── */
 #media { display: none; width: 100%; }

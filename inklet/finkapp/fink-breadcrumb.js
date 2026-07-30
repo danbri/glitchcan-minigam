@@ -460,6 +460,15 @@ window.FinkBreadcrumb = {
             };
             this.elements.toggle.textContent = icons[this.displayMode];
             this.elements.toggle.title = titles[this.displayMode];
+            // THE GLYPH IS NOT THE NAME, and the class is not the state. The
+            // arrow says "▶" to a screen reader and to an agent, and `title`
+            // cannot fix it because an element's own text outranks title in
+            // the accessible-name calculation. So the same words the title
+            // carries become the NAME, and the tristate is exposed as
+            // expanded/collapsed rather than only painted.
+            this.elements.toggle.setAttribute('aria-label', titles[this.displayMode]);
+            this.elements.toggle.setAttribute('aria-expanded',
+                String(this.displayMode !== 'minimal'));
         }
 
         // Update URL display based on mode

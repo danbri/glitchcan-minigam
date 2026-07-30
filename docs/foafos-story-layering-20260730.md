@@ -57,6 +57,41 @@ the shell's app tree, the capability ledger, the address bar. Those exist so the
 mechanism is auditable, not so the reader must learn it. A reader who never
 opens them must lose nothing.
 
+## The browser surface is an API (read third)
+
+**foafos must be usable by non-visual readers and by agents, and that is the
+same requirement.** (Owner, 2026-07-30.) A screen-reader user, a voice
+interface, an automation agent and a sighted reader all drive **one**
+accessibility tree. So roles, names and states are a **contract**, not polish —
+and no parallel "agent API" is needed or wanted. A second surface would drift
+from the first, and the first is the one disabled readers depend on.
+
+The contract, stated as questions the tree must answer without sight:
+**where am I** (a named region and a heading), **what was said** (a polite live
+region), **what may I do** (a named list of named controls), **what happened**
+(a status region), and **what state is a control in** (`aria-expanded`,
+`aria-pressed` — exposed, not merely painted).
+
+Two rules learned by measuring rather than assuming:
+
+- **A glyph is not a name.** `☰`, `▶`, `🔊` pass a naive "has a non-empty
+  accessible name" check and tell a non-visual reader nothing. `title` does not
+  rescue them, because an element's own text **outranks** `title` in the
+  accessible-name calculation — a helpful `title="Show navigation path"` sat
+  beside a button the browser named "▶". Emoji may decorate a name; they may
+  not be one.
+- **Focus must follow the reading.** After taking a choice the keyboard landed
+  back on the document body, so every beat cost a non-visual reader a walk down
+  the whole page. Focus now lands on the new prose, and the choices follow in
+  DOM order, so nothing is skipped.
+
+**The audit went blind when the story moved into the box** (found 2026-07-30).
+`aria-audit.mjs` walked the top document of a `?player=legacy` page and reported
+**0 errors** — about a room the reading had left. It now visits the boxed
+surface and walks into the runner frame, and it found three real defects
+immediately. A checker pinned to a superseded surface is worse than no checker:
+it certifies.
+
 ## The layers
 
 ### 0 — foafos shell

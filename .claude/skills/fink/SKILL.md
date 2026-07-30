@@ -183,6 +183,21 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   cannot compile alone. Do NOT auto-rename ink identifiers to dodge collisions
   — that is hackparsing; `inklet/demos/fink-namespace-preprocessor.js` is a
   strawman, not the tool. E2E: e2e-storyrunner.mjs §13.
+- THE BROWSER SURFACE IS AN API (owner, 2026-07-30). Non-visual readers and
+  agents drive the SAME accessibility tree as everyone else, so roles/names/
+  states are a contract — do not build a parallel agent API. The reading
+  surface must answer, without sight: where am I (named region + heading),
+  what was said (polite live region), what may I do (named list of named
+  controls), what happened (status), what state is this control in
+  (aria-expanded/aria-pressed). Two measured rules: **a glyph is not a name**
+  (`title` does NOT rescue it — an element's own text outranks title in the
+  accname calculation, so `title="Menu"` on a button reading "☰" names it
+  "☰"), and **focus must follow the reading** (after a choice the runner
+  focuses `#prose`, else every beat drops a keyboard reader at the body).
+  Checker: `inklet/finkapp/test/aria-audit.mjs` — §11 visits the BOXED surface
+  and walks into the runner frame. It used to audit `?player=legacy` only and
+  reported 0 errors about a surface the reading had left; if you move the
+  reading again, move the audit with it.
 - Tag grammar: `# MINIGAME: <name> [mode=x] [controls=dpad|lite|none]`
   parsed at `fink-ink-engine.js:314-333`; the Continue loop BREAKS on
   MINIGAME/FINK tags.

@@ -239,7 +239,15 @@ try {
     if (missed.length) note('error', `announcer missed ${missed.length} event class(es); heard: ${JSON.stringify(events.heard)}`);
   }
 
-  // 10. our own guest widgets are part of the platform surface
+  // 10. THE READING SURFACE ITSELF, plus our own guest widgets.
+  //
+  // The storyrunner is in this list because the audit went BLIND when the
+  // story moved into the box: everything above walks the top document, and
+  // once the reading happens in a sandboxed frame the walk finds an empty
+  // room and reports zero errors. That is the worst kind of green. The
+  // reading surface is the one surface a non-visual reader spends all their
+  // time in, so it is checked harder than a widget — names, and whether the
+  // beat is addressable at all.
   for (const frame of page.frames()) {
     if (!/tally|robbin|guest\.html/.test(frame.url())) continue;
     const gaps = await frame.evaluate(() => {
@@ -258,6 +266,106 @@ try {
       return bad;
     }).catch(() => []);
     for (const g of gaps) note('warn', `guest ${frame.url().split('/').pop()}: unnamed ${g}`);
+  }
+
+  // ── 11. THE READING SURFACE, WHERE THE READING ACTUALLY HAPPENS ─────────
+  //
+  // Everything above walks the top document of a `?player=legacy` page. When
+  // the story moved into the box that walk started finding an EMPTY ROOM and
+  // reporting zero errors — the worst kind of green, and it lasted until the
+  // accessibility tree was dumped by hand. So the boxed surface gets its own
+  // visit, and it is checked harder than a widget: it is the one surface a
+  // non-visual reader spends all their time in.
+  {
+    const bp = await ctx.newPage();
+    await bp.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=boxed`);
+    await bp.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
+    let rf = null;
+    for (let i = 0; i < 50 && !rf; i++) {
+      rf = bp.frames().find((f) => f.url().includes('apps/storyrunner'));
+      if (!rf) await bp.waitForTimeout(300);
+    }
+    if (!rf) note('error', 'the reading surface never appeared to audit');
+    else {
+      await rf.waitForFunction(
+        () => window.__storyrunner?.ready?.() && window.__storyrunner.state.choices.length > 0,
+        null, { timeout: 25000 }).catch(() => {});
+      // TAKE A CHOICE FIRST. Focus management is only observable after a beat
+      // the READER caused; on first paint the document body is a fair place
+      // for the keyboard to be.
+      await rf.evaluate(() => window.__storyrunner.choose(0)).catch(() => {});
+      await bp.waitForTimeout(2200);
+      // THE BROWSER SURFACE IS AN API (owner, 2026-07-30). A non-visual reader
+    // and an agent drive the same accessibility tree, so these are contract
+    // checks, not polish: can you NAME where you are, READ what was said, and
+    // FIND what you may do next — without seeing anything.
+    const surface = await rf.evaluate(() => {
+      const nameOf = (el) => !el ? null
+        : (el.getAttribute('aria-label')
+           || (el.getAttribute('aria-labelledby')
+               && document.getElementById(el.getAttribute('aria-labelledby'))?.textContent)
+           || null);
+      const main = document.querySelector('main');
+      const log = document.querySelector('[role="log"]');
+      const list = document.querySelector('#choices');
+      return {
+        mainNamed: !!nameOf(main),
+        logNamed: !!nameOf(log),
+        logLive: log?.getAttribute('aria-live') || null,
+        choicesNamed: !!nameOf(list),
+        choices: [...document.querySelectorAll('#choices button')].map((b) => b.textContent.trim()).filter(Boolean).length,
+        heading: !!document.querySelector('h1, [role="heading"]'),
+        // Where is the keyboard after a beat has rendered? `body` means a
+        // reader who takes a choice is dropped back at the top of the
+        // document every time.
+        focus: document.activeElement === document.body ? 'body'
+             : (document.activeElement?.id || document.activeElement?.tagName || 'none'),
+        // Media named by its FILE PATH is not a name.
+        pathAlts: [...document.querySelectorAll('img')]
+          .map((i) => i.getAttribute('alt') || '')
+          .filter((a) => /\.(png|jpe?g|svg|webp|gif)$/i.test(a) || a.includes('/')).length,
+      };
+    }).catch(() => null);
+    if (!surface) note('error', 'reading surface: could not be inspected at all');
+    else {
+    if (!surface.mainNamed) note('error', 'reading surface: the story region has no accessible name — "main" is anonymous');
+    if (!surface.heading) note('error', 'reading surface: no heading, so there is no way to jump to the story');
+    if (surface.logLive !== 'polite') note('error', `reading surface: prose is not a polite live region (aria-live=${surface.logLive})`);
+    if (!surface.choicesNamed) note('error', 'reading surface: the choice list has no accessible name');
+    if (!surface.choices) note('error', 'reading surface: no named choices to act on');
+    if (surface.pathAlts) note('error', `reading surface: ${surface.pathAlts} image(s) named by file path, which is not a name`);
+    if (surface.focus === 'body') note('error', 'reading surface: focus does not follow the reading — after a beat the keyboard is back at the document body');
+    }
+    }
+
+    // A GLYPH IS NOT A NAME. Check 1 above asks whether a control has a
+    // non-empty accessible name, and "☰" and "▶" pass it while telling a
+    // non-visual reader — or an agent — nothing at all. So: a name with no
+    // letters in it is not a name. Emoji may DECORATE a name ("🔊 Mute"); they
+    // may not BE one.
+    const glyphOnly = await bp.evaluate(() => {
+      const out = [];
+      for (const el of document.querySelectorAll('button, a[href], summary, [role="button"]')) {
+        if (el.offsetParent === null) continue;
+        // REAL accname precedence: aria-label, then aria-labelledby, then the
+        // element's own text, and `title` only as a LAST resort. Getting this
+        // backwards is why the first version of this check passed: it read the
+        // helpful `title="Show navigation path"` and never noticed that the
+        // browser names the button "▶", because text content outranks title.
+        const labelled = el.getAttribute('aria-labelledby');
+        const name = (el.getAttribute('aria-label')
+          || (labelled && document.getElementById(labelled)?.textContent)
+          || el.textContent
+          || el.title || '').trim();
+        if (!name) { out.push(`${el.id || el.tagName}: no name at all`); continue; }
+        // Any letter in any script counts. Digits alone do not name a control.
+        if (!/\p{L}/u.test(name)) out.push(`${el.id || el.tagName}: named "${name}"`);
+      }
+      return out;
+    }).catch(() => []);
+    for (const g of glyphOnly) note('error', `shell control named by a glyph, not a word — ${g}`);
+
+    await bp.close();
   }
 
 } catch (e) {

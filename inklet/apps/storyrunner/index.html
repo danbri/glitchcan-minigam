@@ -14,10 +14,25 @@
      foaf.bus). It has no `parent.FoafOS`, no host DOM — that is the point.
      The live host-side player (inklet/finkapp) is unchanged; this is the
      "sandboxed all the way up" runner proving containment. -->
-<main id="stage" aria-live="off">
+<!-- THE BROWSER SURFACE IS AN API (owner, 2026-07-30). A non-visual reader, an
+     agent, and a sighted reader all drive this same accessibility tree, so the
+     names and roles below are a contract rather than decoration: you must be
+     able to say WHERE YOU ARE, read WHAT WAS SAID, and find WHAT YOU MAY DO,
+     without seeing anything. `inklet/finkapp/test/aria-audit.mjs` §11 holds it.
+
+     The heading is visually hidden because the reading surface is deliberately
+     untitled to look at — but with no heading at all there is no landmark to
+     jump to, which is how a screen-reader user navigates. It names the story
+     from the SHELL's session label, never from guest text. -->
+<main id="stage" aria-live="off" aria-labelledby="story-title">
+  <h1 id="story-title" class="visually-hidden">Story</h1>
   <!-- the beat's central media; role (hero/feature/accent) sets its size -->
   <div id="media" aria-hidden="false"></div>
-  <div id="prose" role="log" aria-live="polite" aria-relevant="additions"></div>
+  <!-- `tabindex="-1"` so focus can FOLLOW THE READING: after a beat the reader
+       caused, the keyboard lands here, at the new prose, and the choices follow
+       in DOM order. Without it every choice drops them at the document body. -->
+  <div id="prose" role="log" aria-live="polite" aria-relevant="additions"
+       tabindex="-1" aria-label="Story text"></div>
   <ul id="choices" aria-label="Choices"></ul>
   <!-- The story's own status line, built from its `# STATUS:` tags.
        Empty and hidden until a story declares something: this runner has

@@ -80,14 +80,22 @@ window.FinkUI = {
         const trigger = document.getElementById('radial-menu-trigger');
 
         if (trigger && menu) {
+            // STATE IS EXPOSED, NOT JUST PAINTED. `open` is a class a sighted
+            // reader sees; `aria-expanded` is the same fact for a screen reader
+            // or an agent. Kept in one place so the two cannot drift — a
+            // stale aria-expanded is worse than none, because it is believed.
+            const sayOpen = () => trigger.setAttribute('aria-expanded',
+                String(menu.classList.contains('open')));
             trigger.addEventListener('click', () => {
                 menu.classList.toggle('open');
+                sayOpen();
             });
 
             // Close menu when clicking outside
             document.addEventListener('click', (e) => {
                 if (!menu.contains(e.target)) {
                     menu.classList.remove('open');
+                    sayOpen();
                 }
             });
 

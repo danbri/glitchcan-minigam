@@ -556,6 +556,22 @@ function choose(i) {
   _pendingEcho = story.currentChoices[i].text;
   story.ChooseChoiceIndex(i);
   advance();
+  // FOCUS FOLLOWS THE READING. Without this a reader who takes a choice is
+  // dropped back at the document body and must walk the whole page again for
+  // every beat — measured by the aria audit, which is why it is a named
+  // defect rather than a nicety. Focus lands on the PROSE, not on the first
+  // choice: a screen reader then starts at the new text and reaches the
+  // choices in DOM order, so nothing is skipped. Only after a beat the READER
+  // caused — on first paint the body is a fair place for the keyboard to be.
+  focusTheReading();
+}
+
+// The beat's new text is where a non-visual reader wants to be. `preventScroll`
+// because the stage manages its own scrolling and a focus jump would fight it.
+function focusTheReading() {
+  const prose = $('prose');
+  if (!prose) return;
+  try { prose.focus({ preventScroll: true }); } catch { prose.focus(); }
 }
 
 // ── minigames: pause, then resume with what was won (#779) ────────────
@@ -1247,6 +1263,12 @@ async function loadStory(url, restore = null, rel = 'replace') {
     const session = await storyRequest('story.session', { op: 'start', url, rel });
     state.sessionId = session.ok ? session.id : null;
     state.sessionLabel = session.ok ? (session.label || null) : null;
+    // NAME THE STORY REGION. The heading is what a screen-reader user jumps to
+    // and what an agent reads to know where it is, so it carries the SHELL's
+    // label — computed from the URL the shell authorized — rather than
+    // anything the story said about itself.
+    const h = $('story-title');
+    if (h) h.textContent = state.sessionLabel || 'Story';
   }
   // Seed the shared economy BEFORE the first beat, or a story that opens
   // by reading `diamonds` shows a zero the reader has already disproved.

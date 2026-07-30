@@ -81,6 +81,13 @@ try {
   if (!frame) throw new Error('storyrunner frame never appeared');
   await frame.waitForFunction(() => window.__storyrunner?.ready?.(), null, { timeout: 20000 });
   pass('boxed runner compiled and started a story in its own frame');
+  // `ready()` means COMPILED, not RENDERED. Between the two the runner still
+  // announces its session, seeds the economy and builds its knot hashes, all
+  // awaited — so reading prose/choices straight after `ready()` is a race that
+  // this suite had been winning by luck. Wait for the BEAT.
+  await frame.waitForFunction(
+    () => window.__storyrunner.state.choices.length > 0 || window.__storyrunner.state.ended,
+    null, { timeout: 20000 }).catch(() => {});
 
   // ── 1. it PLAYED: prose + a choice tree rendered in-frame ────────────
   const played = await frame.evaluate(() => {

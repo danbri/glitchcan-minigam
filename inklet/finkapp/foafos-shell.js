@@ -1049,6 +1049,7 @@ function buildUI() {
       <h4>SOUND</h4>
       <div class="foafos-row">
         <button type="button" id="foafos-mute" aria-pressed="false"
+                aria-label="Mute all sound"
                 title="Mute everything the shell can reach (Alt+M)">🔊</button>
         <input type="range" id="foafos-vol" min="0" max="100" step="1" value="100"
                aria-label="Volume">
@@ -1362,6 +1363,11 @@ function buildUI() {
     volEl.value = String(Math.round(audio.volume * 100));
     volOut.textContent = audio.muted ? 'muted' : `${Math.round(audio.volume * 100)}%`;
     muteEl.textContent = audio.muted ? '🔇' : '🔊';
+    // THE GLYPH IS NOT THE NAME. A speaker emoji tells a screen reader — and
+    // an agent — nothing, and `title` does not help because an element's own
+    // text outranks it in the accessible-name calculation. So the name is
+    // carried by aria-label and tracks the state the glyph is showing.
+    muteEl.setAttribute('aria-label', audio.muted ? 'Unmute all sound' : 'Mute all sound');
     muteEl.setAttribute('aria-pressed', String(audio.muted));
     // Say what we CANNOT reach. A mute button that silences three of four
     // sources and pretends otherwise is worse than one that admits it.
