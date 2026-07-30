@@ -866,6 +866,32 @@ try {
         tagged.length >= 1
           ? pass(`the peer's verbs arrive tagged with its own session (${[...new Set(tagged)].join(', ')})`)
           : fail('no forwarded verb carried the peer session id');
+
+        // 12g. DEPTH BELONGS TO A PLAYTHROUGH. The peer dreams; the reader's
+        // own story must not descend with it, and must still be able to spend
+        // the shared economy. Under a single per-runner counter this was the
+        // opposite: a peer's dream turned the reader's own economy read-only.
+        for (const b of await peer.$$('#choices button')) {
+          if ((await b.textContent()).toLowerCase().includes('margin note')) { await b.click(); break; }
+        }
+        await pp.waitForTimeout(4000);
+        const depths = await pp.evaluate(() => {
+          const all = [...FoafOS.apps.nodes.values()];
+          const peerNode = all.find((n) => n.appId === 'story-session' && n.peerOf);
+          const own = all.find((n) => n.appId === 'story-session' && !n.peerOf);
+          return {
+            peer: FoafOS.storyDepth(peerNode?.id),
+            own: FoafOS.storyDepth(own?.id),
+          };
+        });
+        depths.peer === 1 && depths.own === 0
+          ? pass(`the peer dreamed alone (peer depth ${depths.peer}, the story beside it ${depths.own})`)
+          : fail(`depth is not per session: ${JSON.stringify(depths)}`);
+        // And the reader can still spend, which is the effect that matters.
+        const spend = await outer.evaluate(() => window.__storyrunner.spend('diamonds', 5));
+        spend?.ok
+          ? pass('the reader can still spend the shared economy while the peer dreams')
+          : fail(`the peer's dream froze the reader's economy: ${JSON.stringify(spend)}`);
       }
 
       // 12f. Closing the peer ends THAT session and leaves the other reading.

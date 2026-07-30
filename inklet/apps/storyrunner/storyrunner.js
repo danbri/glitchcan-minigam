@@ -387,6 +387,15 @@ function renderMedia(m) {
 }
 
 async function storyRequest(verb, detail) {
+  // SAY WHICH PLAYTHROUGH IS ASKING. Without this the shell has to guess, and
+  // its only sensible guess is "the innermost session" — which was right for a
+  // dream stack and wrong the moment a peer sat on top of it: the reader's own
+  // spend was checked against the PEER's dream depth and refused. A request
+  // that already names a session keeps it; that is the peer-forwarding path,
+  // where the name belongs to the peer and not to us.
+  if (state.sessionId && detail && detail.session === undefined) {
+    detail = { ...detail, session: state.sessionId };
+  }
   state.requests.push({ verb, detail });
   const foaf = window.foaf;
   if (!foaf?.storyRequest) { setStatus(`(standalone: ${verb} not sent)`); return { ok: false, reason: 'standalone' }; }

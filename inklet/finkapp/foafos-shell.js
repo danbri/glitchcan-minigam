@@ -580,6 +580,22 @@ const currentSession = (runnerNodeId) => {
   return null;
 };
 FoafOS.storySession = (runnerNodeId) => currentSession(runnerNodeId);
+
+// WHICH PLAYTHROUGH IS THIS? Dream depth is a property of a session, so it is
+// keyed by one. A runner may NAME which of its sessions is asking — needed
+// once a peer forwards on another session's behalf — and the name is honoured
+// only when it is already one of that runner's own. Falling back to the
+// runner's app id keeps a runner that never announced a session working
+// exactly as it did before sessions existed.
+const depthKeyFor = (app, win, named) => {
+  const runnerNodeId = win?.dataset?.instance || null;
+  const own = storySessions.get(runnerNodeId) || [];
+  if (named && own.includes(String(named))) return String(named);
+  return currentSession(runnerNodeId)?.id || app.id;
+};
+// Tell the broker the depth of the session about to be checked. Set at the
+// point of the check, never inferred from whoever moved last.
+const applyDepthFor = (key) => vars.setDepth(storyDepth.get(key) || 0);
 // A closed runner leaves a stack of dead ids behind. currentSession already
 // steps over them, but the map entry itself would live for the page's life.
 bus.subscribe('app.close', (e) => {
@@ -714,7 +730,19 @@ let _bootStory = null;
 FoafOS.setBootStory = (url) => { _bootStory = url || null; };
 const takeBootStory = () => { const u = _bootStory; _bootStory = null; return u; };
 const DREAM_CAP = 8;
-FoafOS.storyDepth = (appId) => storyDepth.get(appId) || 0;
+// Reads either key: a session id (what the map holds now) or an APP id, which
+// is what the dev panel and the dream tests ask with. An app id resolves to
+// that app's live session, because "how deep is the runner" now means "how
+// deep is the playthrough it is showing".
+FoafOS.storyDepth = (key) => {
+  if (storyDepth.has(key)) return storyDepth.get(key) || 0;
+  for (const node of apps.nodes.values()) {
+    if (node.appId !== key) continue;
+    const s = currentSession(node.id);
+    if (s && storyDepth.has(s.id)) return storyDepth.get(s.id) || 0;
+  }
+  return 0;
+};
 
 // The one list of names that cross the story boundary. Taken from the
 // kernel's own export (`SHARED_DEFAULT`) rather than retyped: a second
@@ -2485,6 +2513,12 @@ function buildUI() {
               // right: the shell only ever puts the shared economy in it.
               reply({ ok: true, values: vars.filterReadable(actor, FoafOS.storyVars.all()) });
             } else if (op === 'write') {
+              // WHOSE DEPTH? The broker holds one number, and the read-only
+              // rule has to be checked against the depth of the session
+              // ASKING — not the depth of whichever session moved last. With
+              // a peer open those are different sessions, so this is set here,
+              // immediately before the check, rather than trusted from the bus.
+              applyDepthFor(depthKeyFor(app, win, d.detail?.session));
               const name = String(d.detail?.name || '');
               if (!SHARED_ECONOMY.includes(name)) {
                 // Refuse by NAME, not silently: a story trying to broker a
@@ -2494,8 +2528,15 @@ function buildUI() {
                 return;
               }
               const wrote = vars.write(actor, name, d.detail?.value, FoafOS.storyVars._apply);
-              reply({ ok: wrote, name, value: FoafOS.storyVars.get(name),
-                      reason: wrote ? null : 'denied' });
+              // SAY WHY. `vars.write` returns a boolean, but it has already
+              // published the reason on `vars.denied` — so a refusal used to
+              // reach the story as the bare word "denied", which reads like a
+              // capability failure and is not. It cost a confused half hour
+              // reading a dream refusal as a missing grant. The broker's own
+              // words go back to the asker.
+              const why = wrote ? null
+                : (vars.log?.[vars.log.length - 1]?.reason || 'denied');
+              reply({ ok: wrote, name, value: FoafOS.storyVars.get(name), reason: why });
             } else {
               reply({ ok: false, reason: 'bad-params', op });
             }
@@ -2547,7 +2588,18 @@ function buildUI() {
             // The ink state itself stays in the box: the shell holds the
             // number, never the story's saved position.
             const rel = String(d.detail?.rel || '').toLowerCase();
-            let depth = storyDepth.get(app.id) || 0;
+            // KEYED BY SESSION, not by runner. It used to be the runner's app
+            // id, which was one number for the whole engine — fine while a
+            // runner played one story, and wrong the moment peering let two
+            // sessions read at once: a peer that dreamed made the reader's own
+            // story read-only, and surfacing from the peer's dream unlocked it
+            // again. Depth is a property of a playthrough.
+            //
+            // The COUNT still belongs to the shell, for the same reason as
+            // before: a story that could report its own depth could claim 0
+            // from inside a dream and switch off the read-only rule.
+            const depthKey = depthKeyFor(app, win, d.detail?.session);
+            let depth = storyDepth.get(depthKey) || 0;
             if (rel === 'godeeper') {
               if (depth >= DREAM_CAP) {
                 bus.publish('story.state', { summary: 'the dream refuses: too deep',
@@ -2561,13 +2613,14 @@ function buildUI() {
             } else if (rel === 'oneway') {
               depth = 0;                       // the way back is burned
             }
-            storyDepth.set(app.id, depth);
+            storyDepth.set(depthKey, depth);
             // The shell's own topic — the runner may not publish this, and
             // the broker's dream rule keys off it (vars.setDepth), so it
             // must come from here.
             bus.publish('story.state', {
               summary: depth ? `dream depth ${depth}` : 'surfaced',
-              phase: 'loading', depth, appId: app.id, rel: rel || 'replace',
+              phase: 'loading', depth, appId: app.id, session: depthKey,
+              rel: rel || 'replace',
             }, { retain: true });
             document.body.dataset.finkDepth = String(depth);
             reply({ ok: true, url: target.href, depth, rel: rel || 'replace' });

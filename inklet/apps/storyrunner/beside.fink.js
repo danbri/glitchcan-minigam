@@ -24,6 +24,17 @@ A chart of the dock, drawn from beside you. It moves when you do.
 
 + [Read the soundings] -> soundings
 + [Fold the chart] -> folded
++ [Follow the margin note down] -> intothemargin
+
+=== intothemargin ===
+// A DREAM INSIDE A PEER. Depth belongs to a playthrough, so descending here
+// must move THIS session's depth and leave the story beside it at zero — which
+// is what the e2e checks, because a shared counter made a peer's dream turn
+// the reader's own economy read-only.
+# FINK: dream.fink.js
+# LINKREL: goDeeper
+The margin note keeps going, down the fold, into somewhere the chart does not admit to.
+-> soundings
 
 === soundings ===
 Seven fathoms at the mouth, three at the steps. Someone has written a number in the margin and circled it twice.

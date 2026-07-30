@@ -245,6 +245,15 @@ against the file named.
   economy. Keep the count at the shell after level-2 nodes exist. The ink state
   stays in the box; the shell holds only the number.
 
+  **Per SESSION, not per runner** (2026-07-30). It was keyed by the runner's app
+  id, which is one number for the whole engine — right while a runner played one
+  story, wrong the moment peering let two read at once. Measured on the old code:
+  a peer's dream turned the reader's own economy read-only. Two halves to the
+  fix: the shell keys depth by session, and every request from a runner NAMES
+  its own session, because the shell's only other option is to guess "the
+  innermost", which is the peer. A runner may name only sessions already known
+  to be its own.
+
 **Not built.**
 
 - **The host-page engine is still in the page.** It no longer plays by default,
@@ -252,11 +261,6 @@ against the file named.
   file set is superseded and pending delete (issue #779). Deleting it is a
   separate job from flipping the default, and the suites pinned to
   `?player=legacy` are the list of what has to move first.
-- **Dream depth is counted per RUNNER, not per session.** With a peer open there
-  are two live sessions and one depth counter, so a peer that dreams moves a
-  number the reader's own story also reads. Harmless today (a peer fixture that
-  dreams does not exist) and wrong in principle: the count should be per session
-  while staying shell-side, which is a change to `storyDepth`'s key.
 - **A peer keeps nothing.** It gets no store, and its session is not
   snapshotted, so closing the window loses the peer while restoring the primary.
   Whether a peer should come back is a design question, not an oversight.
@@ -345,8 +349,9 @@ The order matters: each step makes the next one smaller.
    app-tree paper's §1, the threat model's §5.3).
 4. ~~**Give the StoryRunner its observability.**~~ **DONE 2026-07-30** — the
    stream and its four rules. What is left on top of it is dashboards.
-5. ~~**Peering**: two sibling sessions playing at once~~ **DONE 2026-07-30.**
-   Still open beneath it: the session-to-session mechanics (state propagation,
-   variable and knot renaming) and per-session dream depth.
+5. ~~**Peering**: two sibling sessions playing at once~~ **DONE 2026-07-30**,
+   with per-session dream depth. Still open beneath it: the session-to-session
+   mechanics — state propagation, and variable/knot renaming so two stories
+   compose without colliding.
 6. **Formalise the per-session cache**, then **the reality broker**.
 7. **Delete the host-page engine**, which is what all of this was for.
