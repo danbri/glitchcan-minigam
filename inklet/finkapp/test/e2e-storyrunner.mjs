@@ -552,6 +552,74 @@ try {
     }
   }
 
+  // ── 10. PARITY ON A BUNDLED STORY (#779) ────────────────────────────
+  // The fixtures prove mechanisms; a bundled story is the bar. Hampstead is
+  // the mandatory journey, and it must play IN THE BOX with its real art,
+  // real knots, a deep link that names the knot, and the shell's skin.
+  {
+    const url = `http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/`
+      + `?player=boxed&story=/${repoName}/inklet/hampstead.fink.js`;
+    await page.goto(url);
+    await page.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
+    let hf = null;
+    for (let i = 0; i < 50 && !hf; i++) {
+      hf = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+      if (!hf) await page.waitForTimeout(300);
+    }
+    if (!hf) fail('the box never opened for a bundled story');
+    else {
+      // Wait for a PLAYABLE beat, not merely for the url — `storyUrl` is
+      // set at the START of loadStory, so matching on it alone measured the
+      // runner mid-compile and reported 0 knots, 0 prose, 0 choices.
+      await hf.waitForFunction(() => window.__storyrunner?.ready?.()
+        && /hampstead/.test(window.__storyrunner.state.storyUrl || '')
+        && window.__storyrunner.state.prose.length > 0
+        && window.__storyrunner.state.choices.length > 0, null, { timeout: 25000 });
+      const h = await hf.evaluate(() => ({
+        url: (window.__storyrunner.state.storyUrl || '').split('/').pop(),
+        knots: window.__storyrunner.state.knots,
+        prose: window.__storyrunner.state.prose.length,
+        choices: window.__storyrunner.state.choices.length,
+        skin: window.__storyrunner.state.skin,
+        bg: getComputedStyle(document.body).backgroundColor,
+      }));
+      h.url === 'hampstead.fink.js' && h.knots > 30 && h.prose >= 1 && h.choices >= 1
+        ? pass(`a BUNDLED story plays in the box (${h.url}, ${h.knots} knots, ${h.choices} choice)`)
+        : fail(`bundled story did not play boxed: ${JSON.stringify(h)}`);
+      // `?story=` used to force the legacy player; asking for the box now
+      // means the box, for any story.
+      const legacy = await page.evaluate(() => !!window.FinkInkEngine?.story);
+      !legacy
+        ? pass('?story= went to the BOX, not the host-page player')
+        : fail('the host player compiled the story instead of the box');
+      h.skin
+        ? pass(`the box wears the shell's skin from first paint (${h.skin}, ${h.bg})`)
+        : fail(`skin tokens never reached the box: ${JSON.stringify(h)}`);
+
+      // Walk two beats, and the address bar must name the knot.
+      await hf.evaluate(() => window.__storyrunner.choose(0));
+      await page.waitForTimeout(1200);
+      await hf.evaluate(() => window.__storyrunner.choose(0));
+      await page.waitForTimeout(1400);
+      const link = await page.evaluate(() => location.hash);
+      const at = await hf.evaluate(() => window.__storyrunner.state.knot);
+      /^#[0-9a-f]{8}-[0-9a-f]{9}$/.test(link) && at
+        ? pass(`the deep link names the beat (${link}, knot "${at}")`)
+        : fail(`no two-part deep link while reading: "${link}" knot=${at}`);
+
+      // And the shell's own generator agrees, so the link is shareable
+      // into the host player — same salt, same lengths, same string.
+      const same = await page.evaluate(async (knot) => {
+        const f = document.querySelector('iframe[src*="storyrunner"]');
+        const storyUrl = await f.contentWindow ? null : null;
+        return FinkNavigation.generateKnotHash(knot);
+      }, at);
+      link.endsWith(same)
+        ? pass('the boxed link is byte-identical to a host-player link')
+        : fail(`hash disagreement: link=${link} shell=${same}`);
+    }
+  }
+
   if (pageErrors.length) fail('page errors: ' + pageErrors.join(' | '));
   else pass('zero page errors');
 } catch (e) {

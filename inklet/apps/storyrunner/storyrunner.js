@@ -24,7 +24,7 @@ const state = {
   pausedFor: null, lastGame: null, economy: null,
   depth: 0, restored: false,
   basehref: null, mediaBase: null, status: [], foley: null,
-  resumedFromSave: false,
+  resumedFromSave: false, knot: null, link: null, knots: 0, skin: null,
 };
 let story = null;
 
@@ -442,11 +442,21 @@ function advance() {
   // A LINKREL from an earlier beat must not colour a later link: the
   // annotation belongs to the link it travels with.
   _pendingRel = undefined;
+  sampleKnot();                           // valid BEFORE the first Continue
   while (story.canContinue) {
     const text = story.Continue();
+    sampleKnot();                         // and again while there is a path
     (story.currentTags || []).forEach(handleTag);
     const trimmed = text.trim();
-    if (trimmed) addProse(trimmed);
+    if (trimmed) {
+      if (_pendingEcho !== undefined) {
+        const echo = _pendingEcho; _pendingEcho = undefined;
+        // Compare on collapsed whitespace: ink re-flows its output.
+        const norm = (x) => x.replace(/\s+/g, ' ').trim().toLowerCase();
+        if (!norm(trimmed).startsWith(norm(echo))) addProse(echo, 'player');
+      }
+      addProse(trimmed);
+    }
     // A FINK link or a MINIGAME ends the beat — matching the host
     // engine, which breaks its loop on exactly these two tags.
     if (_pendingLink !== undefined || _pendingGame !== undefined) break;
@@ -466,6 +476,11 @@ function advance() {
     return;                                  // paused: no choices until it ends
   }
   renderChoices();
+  sampleKnot();                           // choices know their own container
+  // Tell the shell where the reader is, so the address bar and breadcrumb
+  // follow the reading. After renderChoices, so the position reported is
+  // the one the reader is actually looking at.
+  reportPosition();
   if (!story.canContinue && story.currentChoices.length === 0) {
     // END inside a dream POPS instead of ending — that is what makes a
     // nested story a dream rather than a dead end. Only the outermost END
@@ -486,7 +501,15 @@ function advance() {
 
 function choose(i) {
   if (!story || i < 0 || i >= story.currentChoices.length) return;
-  addProse(story.currentChoices[i].text, 'player');
+  // DON'T echo yet. An UNBRACKETED ink choice (`+ Open wardrobe -> knot`)
+  // has its text included in the story's own output when taken, so echoing
+  // here printed it twice — visible under Hampstead as "Open wardrobe"
+  // followed by "Open wardrobe Inside the wardrobe you see…". The live
+  // player adds no echo at all for exactly this reason. A BRACKETED choice
+  // (`+ [Look] …`) is suppressed by ink, though, and then an echo is the
+  // only record of what the reader chose. So: hold it, and add it only if
+  // the story did not say it itself.
+  _pendingEcho = story.currentChoices[i].text;
   story.ChooseChoiceIndex(i);
   advance();
 }
@@ -568,6 +591,135 @@ function declaredNames() {
   } catch { return null; }
 }
 
+// ── navigation: the runner owns the POSITION, the shell owns the URL ───
+//
+// A boxed story cannot touch `location` — that is the containment working.
+// So after every beat the runner reports where the reader is and the shell
+// mints the two-part link, updates the address bar and feeds the
+// breadcrumb. The hashes are FinkNavigation's, so a link minted from the
+// box is byte-identical to one minted by the host player and just as
+// shareable.
+//
+// The KNOT is read from the compiled story's own path string, never
+// guessed from prose: `currentPathString` is the ink runtime's answer.
+// WHEN you ask matters. The live engine's own comment says it: after the
+// initial divert the path is valid BEFORE the first Continue() and becomes
+// NULL after it. So the knot is sampled during the beat, not read off
+// afterwards — asking at the end returned null every time and no two-part
+// link was ever minted.
+let _beatKnot = null;
+
+// "newsreel.0.c-1" → "newsreel". The container, not the leaf, because a
+// link should land on a beat a reader recognises. A purely numeric head
+// means root-level content, which genuinely has no knot name.
+function knotHead(path) {
+  const head = String(path || '').split('.')[0];
+  return head && !/^\d+$/.test(head) ? head : null;
+}
+
+// TWO signals, because neither alone is enough — measured, not assumed:
+//
+//   · `state.currentPathString` is valid BEFORE the first Continue() of a
+//     beat and NULL after it (the live engine's own comment says so). But
+//     when a CHOICE caused the divert it still reads the old container, so
+//     it never names the knot you just entered.
+//   · the choices now on offer were DEFINED inside the current knot, so
+//     `choice.sourcePath` names it exactly. This is the one that works for
+//     choice-driven stories, which is most of them.
+//
+// Visit counts are not a third option: ink only tracks them for containers
+// a conditional references, so they read 0 for every knot in these stories.
+function sampleKnot() {
+  try {
+    const fromPath = knotHead(story?.state?.currentPathString);
+    if (fromPath) { _beatKnot = fromPath; return; }
+    const src = story?.currentChoices?.[0]?.sourcePath;
+    const fromChoice = knotHead(src);
+    if (fromChoice) _beatKnot = fromChoice;
+  } catch { /* no path yet */ }
+}
+function currentKnot() { return _beatKnot; }
+
+let _lastReported = '';
+function reportPosition(push = false) {
+  if (!story || !state.storyUrl) return;
+  const knot = currentKnot();
+  const key = `${state.storyUrl}#${knot || ''}`;
+  if (key === _lastReported) return;          // one report per real move
+  _lastReported = key;
+  state.knot = knot;
+  storyRequest('story.navigate', { op: 'position', url: state.storyUrl, knot, push })
+    .then((res) => { if (res.ok) state.link = res.link || null; });
+}
+
+// A deep link at boot: the shell answers what the URL asks for, and the
+// runner goes there if it can. A knot it does not have is reported, not
+// silently ignored — a shared link that lands somewhere wrong should say so.
+async function honourDeepLink() {
+  const res = await storyRequest('story.navigate', { op: 'resolve' });
+  if (!res.ok || !res.parsed) return false;
+  return gotoKnotHash(res.parsed.knotHash);
+}
+
+// Resolve a knot HASH against this story's own knots. The runner builds the
+// map itself, in the box, from the compiled story — the shell never needs
+// the story's knot names to route a link.
+const _knotHashes = new Map();      // knotHash -> knotName
+async function buildKnotHashes() {
+  _knotHashes.clear();
+  const names = knotNames();
+  for (const name of names) {
+    const h = await knotHash(name);
+    if (h) _knotHashes.set(h, name);
+  }
+  state.knots = names.length;
+}
+
+// SHA-256 with the linking spec's salt and lengths (docs/fink-linking-spec).
+// Kept in step with FinkNavigation deliberately: the same string must come
+// out of both, or a link shared from the box would not open in the player.
+const LINK_SALT = 'glitchcan-fink-v2';
+async function knotHash(name) {
+  try {
+    const data = `${LINK_SALT}:knot:#${String(name).trim()}`;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 9);
+  } catch { return null; }
+}
+
+// Knot names from the COMPILED story, never regexed out of the source.
+function knotNames() {
+  try {
+    const root = story?.mainContentContainer;
+    const out = [];
+    for (const [name, child] of (root?.namedContent || new Map())) {
+      if (typeof name === 'string' && !name.startsWith('_') && child) out.push(name);
+    }
+    return out;
+  } catch { return []; }
+}
+
+function gotoKnotHash(hash) {
+  const name = _knotHashes.get(hash);
+  if (!name) {
+    setStatus('that link points somewhere this story does not have');
+    window.foaf?.bus?.publish('app.storyrunner.link-miss', {
+      summary: `unknown knot hash ${hash}`, hash,
+    });
+    return false;
+  }
+  try {
+    story.ChoosePathString(name);
+    $('prose').textContent = '';
+    state.prose = [];
+    advance();
+    return true;
+  } catch (e) {
+    setStatus('could not open that link: ' + e.message);
+    return false;
+  }
+}
+
 // ── the dream stack (spec §3.4) ────────────────────────────────────────
 //
 // Frames live HERE, in the box: a frame holds the outer story's saved ink
@@ -575,6 +727,7 @@ function declaredNames() {
 // not cross to the shell. The shell holds the DEPTH — see its story.link
 // handler for why that half cannot be ours to claim.
 let _pendingRel;                   // undefined = plain replace
+let _pendingEcho;                  // the chosen text, pending de-duplication
 const _frames = [];                // {url, state}
 
 // Follow a # FINK link: the shell AUTHORIZES the destination and the
@@ -658,6 +811,7 @@ async function loadStory(url, restore = null) {
   // Seed the shared economy BEFORE the first beat, or a story that opens
   // by reading `diamonds` shows a zero the reader has already disproved.
   await seedEconomy();
+  await buildKnotHashes();
   // Surfacing from a dream: restore the outer story's saved position so it
   // resumes mid-breath. Must happen after seeding and before the first
   // advance(), or the restored position is immediately overwritten.
@@ -690,6 +844,8 @@ window.__storyrunner = {
   depth: () => _frames.length,
   frames: () => _frames.map((f) => f.url.split('/').pop()),
   snapshot: () => snapshotPlaythrough(),
+  gotoHash: (h) => gotoKnotHash(h),
+  knotHashes: () => [..._knotHashes.entries()],
   // read a story VAR (for the parity tests — the economy is the point)
   varOf: (name) => { try { return story?.variablesState?.[name]; } catch { return undefined; } },
   spend: (name, value) => storyRequest('story.vars', { op: 'write', name, value }),
@@ -703,7 +859,22 @@ window.addEventListener('message', (e) => {
   const d = e.data;
   if (!d || d.type !== 'story.event') return;
   if (d.event === 'minigame.complete' && _awaitingGame) resumeAfterGame(d.detail);
+  // Back/forward: the shell heard the history event and says where the URL
+  // now points. Suppress our own re-report, or going back would immediately
+  // rewrite the address bar to where we just came from.
+  if (d.event === 'navigate') {
+    const hash = d.detail?.parsed?.knotHash;
+    if (hash) { _lastReported = 'suppressed'; gotoKnotHash(hash); }
+  }
 });
+
+function applySkinTokens(tokens, skin) {
+  if (!tokens) return;
+  for (const [k, v] of Object.entries(tokens)) {
+    try { document.documentElement.style.setProperty(k, v); } catch { /* bad token */ }
+  }
+  if (skin) { state.skin = skin; document.documentElement.dataset.skin = skin; }
+}
 
 // SAVE / RESTORE the playthrough (spec §5.5.4, #779). Closing the window
 // used to lose the whole reading. Registering these two handlers IS the
@@ -756,18 +927,38 @@ async function restorePlaythrough(snap) {
 // Live inside foafos if present; run standalone otherwise (dev).
 if (window.foaf?.onInit) {
   let booted = false;
-  // A restore REPLACES the boot story, so it must win the race rather than
-  // load a fresh copy first and then throw it away.
-  window.foaf.onRestore?.((snap) => {
-    if (snap) { booted = true; restorePlaythrough(snap); }
-  });
+  let savedSnap;
+  // Hold the save; do not act on it yet. PRECEDENCE, and the ordering the
+  // suite caught me getting wrong: an EXPLICIT `?story=` is someone asking
+  // for a particular story and must beat a save of a different one —
+  // "asking for a specific thing should beat a default". A save only wins
+  // the DEFAULT boot, where it is the most recent thing the reader did.
+  window.foaf.onRestore?.((snap) => { savedSnap = snap || undefined; });
   window.foaf.onSnapshot?.(snapshotPlaythrough);
   window.foaf.onInit((config) => {
     state.mediaBase = config?.mediaBase || null;
-    // Give a pending restore one tick to arrive before booting fresh.
-    setTimeout(() => { if (!booted) { booted = true; boot(config); } }, 120);
+    applySkinTokens(config?.skinTokens, config?.skin);
+    // Give a pending restore one tick to arrive before deciding.
+    setTimeout(() => {
+      if (booted) return;
+      booted = true;
+      const asked = config?.story || null;
+      const savedUrl = savedSnap?.storyUrl || null;
+      const sameStory = asked && savedUrl
+        && savedUrl.split('/').pop() === String(asked).split('/').pop();
+      if (savedSnap && (!asked || sameStory)) { restorePlaythrough(savedSnap); return; }
+      // A DEEP LINK beats the default story: the URL says where, the
+      // session says how far.
+      boot(config).then(() => honourDeepLink());
+    }, 140);
   });
   window.foaf.onAudio?.(applyAudioLevel);   // the dock's volume reaches our bed
+  // SKINS PARITY: the shell hands over its resolved token values (it cannot
+  // hand over a stylesheet across an opaque origin, and a second copy of
+  // fink-skins.css would drift). Applied to our own root, so the box reads
+  // as part of the same installation instead of a foreign panel.
+  window.foaf.bus?.subscribe('ui.skin', (e) =>
+    applySkinTokens(e?.data?.tokens, e?.data?.skin));
 } else {
   boot({});
 }

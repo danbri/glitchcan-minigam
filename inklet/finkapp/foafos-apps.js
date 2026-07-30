@@ -153,7 +153,11 @@ export const APPS = [
   // ask the shell to open a (separately boxed) guest — up AND down.
   // The DEFAULT story surface (see foafos-root storyPlayer). Runs a FINK
   // story sandboxed; supersedes the host-page player (pending delete, #779).
-  { id: 'storyrunner', family: 'play', icon: '📖', name: 'Story Runner',
+  // FINKOSPHERE — the boxed story engine (owner's name, July 2026). The id
+  // stays `storyrunner`: it is in `?app=` links, the snapshot key
+  // (`app:storyrunner`), the capUse ledger and the e2e suites. A label is
+  // what people read; an id is what things are keyed by.
+  { id: 'storyrunner', family: 'play', icon: '📖', name: 'Finkosphere',
     surface: 'window', url: '../apps/storyrunner/index.html',
     desc: 'A FINK story, sandboxed all the way up', featured: true,
     // no `story` override: the runner defaults to its own ./demo.fink.js,

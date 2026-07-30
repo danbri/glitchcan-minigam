@@ -95,7 +95,12 @@ window.FinkPlayer = {
         // be handed an arbitrary story today.
         const wantBoxed = new URLSearchParams(window.location.search).get('player') === 'boxed'
             || window.FoafOS?.root?.storyPlayer?.autoBoot === 'boxed';
-        if (!targetFink && wantBoxed) {
+        // `?story=` USED to force the legacy player, because the boxed
+        // runner could only play its own demo. It can now be handed any
+        // FINK (the shell passes `?story=` through in the init config), so
+        // asking for the box means the box — including for an arbitrary
+        // story, which is the whole point of the sandbox (#779).
+        if (wantBoxed) {
             FinkUtils.debugLog('Boot: boxed story runner (?player=boxed / manifest autoBoot)');
             setTimeout(() => window.FoafOS?.launchApp?.('storyrunner'), 150);
             return;

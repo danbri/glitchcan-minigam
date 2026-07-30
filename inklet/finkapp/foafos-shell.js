@@ -580,6 +580,10 @@ FoafOS.forgetAppSnapshot = (appId) => saveAppSnapshot(appId, null);
 // story.link handler for why it cannot be the guest's to report).
 // Cap from spec §3.4 — a dream that can always go deeper is a hang.
 const storyDepth = new Map();
+// Which story URL the breadcrumb has already been told about, per app —
+// setFinkUrl PUSHES a level, so calling it on every beat would build a
+// stack of one story repeated.
+const _navSeen = new Map();
 const DREAM_CAP = 8;
 FoafOS.storyDepth = (appId) => storyDepth.get(appId) || 0;
 
@@ -591,6 +595,31 @@ const SHARED_ECONOMY = [...vars.shared];
 
 const changedSince = (before, after) => Object.fromEntries(
   Object.entries(after).filter(([k, v]) => before[k] !== v));
+
+// BACK / FORWARD for a boxed story. The host page owns history, so the
+// shell hears the event and tells the runner where the URL now points. The
+// runner decides whether it can go there — a knot it does not have is its
+// own business, and it says so rather than the shell guessing.
+//
+// Registered once, and it addresses whichever boxed story frames exist:
+// history is global, so a hash change is not scoped to one runner.
+let _navSuppress = false;
+window.addEventListener('popstate', () => {
+  if (_navSuppress) return;
+  const frag = (location.hash || '').slice(1);
+  const parsed = window.FinkNavigation?.parseFinkLinkId?.(frag) || null;
+  for (const f of document.querySelectorAll('.foafos-window iframe')) {
+    if (!/apps\/storyrunner/.test(f.src || '')) continue;
+    try {
+      f.contentWindow?.postMessage({ type: 'story.event', event: 'navigate',
+        detail: { hash: frag || null, parsed } }, '*');
+    } catch (err) { /* closed */ }
+  }
+  bus.publish('nav.link', {
+    summary: frag ? `back/forward → ${frag}` : 'back/forward → start',
+    icon: '⏪', title: 'Back/Forward', detail: frag || '(start)',
+  }, { retain: true });
+});
 
 // Completion travels back to whoever launched. The variables have ALREADY
 // been governed (the guest's manifest was checked when it wrote them),
@@ -1008,12 +1037,38 @@ function buildUI() {
     ['paper', 'Paper'], ['terminal', 'Terminal'],
     ['aurora', 'Aurora'], ['calm', 'Calm'],
   ];
+  // The token contract, read from the live document AFTER the skin is set.
+  // getComputedStyle is the only honest source: a skin may define a token
+  // in any of several rules, and only the cascade knows which won.
+  const SKIN_TOKENS = ['--sk-bg', '--sk-bg-figure', '--sk-ink', '--sk-dim',
+    '--sk-accent', '--sk-accent-ink', '--sk-line', '--sk-font-ui',
+    '--sk-font-body', '--sk-size', '--sk-radius', '--sk-choice-bg',
+    '--sk-choice-ink', '--sk-choice-line', '--sk-shadow'];
+  const skinTokens = FoafOS.skinTokens = () => {
+    const cs = getComputedStyle(document.documentElement);
+    const out = {};
+    for (const t of SKIN_TOKENS) {
+      const v = cs.getPropertyValue(t).trim();
+      if (v) out[t] = v;
+    }
+    return out;
+  };
+
   const picker = $('#skin-picker');
   const applySkin = (id) => {
     document.documentElement.dataset.skin = id;
     try { localStorage.setItem('foafos.skin', id); } catch { /* private mode */ }
     for (const b of picker.children) b.setAttribute('aria-pressed', String(b.dataset.skin === id));
-    bus.publish('ui.skin', { skin: id, summary: `skin → ${id}` }, { retain: true });
+    // Carry the TOKEN VALUES, not just the name. A boxed story is a
+    // separate document with an opaque origin: it cannot read the shell's
+    // stylesheet or its computed custom properties, so a bare skin id left
+    // the box looking like nothing else on screen (#779 skins parity). The
+    // shell reads its own resolved tokens and hands them over; the guest
+    // applies them to its own root and styles itself through the same
+    // contract every other surface uses. One vocabulary, no second copy of
+    // fink-skins.css.
+    bus.publish('ui.skin', { skin: id, summary: `skin → ${id}`, tokens: skinTokens() },
+      { retain: true });
   };
   for (const [id, label] of SKINS) {
     const b = document.createElement('button');
@@ -1980,7 +2035,29 @@ function buildUI() {
           frame.contentWindow?.postMessage({
             type: 'app.init', appId: app.id, capabilities: caps,
             store: snapshot || {},
-            config: { surface: app.surface, name: app.name, story: app.story, bus: busGrants },
+            config: {
+              surface: app.surface, name: app.name, bus: busGrants,
+              // WHICH story to open. A registry override wins; otherwise the
+              // HOST page's `?story=` passes through to any app that plays
+              // stories, so `?player=boxed&story=…` opens an arbitrary FINK
+              // in the box exactly as `?story=` does for the host player.
+              // Without this the boxed runner could only play its own demo,
+              // which is not parity by any reading (#779).
+              story: app.story
+                || ((app.capabilities || []).includes('story:link')
+                    ? new URLSearchParams(location.search).get('story') : null)
+                || null,
+              // The GLOBAL media base — outermost layer of the layered chain
+              // (global → story BASEHREF → file-relative). A boxed story
+              // cannot read fink-config.js, so the shell hands it over.
+              mediaBase: window.FinkConfig?.DEFAULT_MEDIA_PATH || null,
+              // The skin, from the FIRST paint. `ui.skin` is retained on the
+              // bus but a scoped subscription does not replay it, so without
+              // this the box wore its own colours until someone changed skin
+              // — a flash of foreign panel on every boot.
+              skin: document.documentElement.dataset.skin || null,
+              skinTokens: FoafOS.skinTokens ? FoafOS.skinTokens() : null,
+            },
           }, '*');
         } catch (err) { /* closed */ }
         bus.publish('sys.app.ready', {
@@ -2066,6 +2143,62 @@ function buildUI() {
             FoafOS.storyVars._own(app.id);
             window.FinkMinigames?.startMinigame?.(game);
             reply({ ok: true, launched: game, awaiting: 'minigame.complete' });
+          } else if (verb === 'story.navigate') {
+            // NAVIGATION / DEEP LINKS (#779). The address bar belongs to the
+            // HOST page — a boxed story cannot touch `location`, and that is
+            // the containment working, not a gap. So the split mirrors the
+            // dream stack: the runner owns the POSITION and reports it; the
+            // shell owns the URL, the breadcrumb and history.
+            //
+            //   op:'position'  the reader moved — mint the two-part link,
+            //                  put it in the address bar, feed the breadcrumb
+            //   op:'resolve'   what does the URL currently ask for?
+            //
+            // Hashes come from FinkNavigation so a link minted here is
+            // byte-identical to one minted by the host player: same salt,
+            // same lengths, same shareable string (docs/fink-linking-spec).
+            const nav = window.FinkNavigation;
+            if (!nav) { reply({ ok: false, reason: 'no-navigator' }); return; }
+            const op = d.detail?.op || 'position';
+            if (op === 'position') {
+              const storyUrl = String(d.detail?.url || '');
+              const knot = String(d.detail?.knot || '');
+              if (!storyUrl) { reply({ ok: false, reason: 'bad-params' }); return; }
+              (async () => {
+                let linkId = null;
+                try {
+                  linkId = knot ? await nav.generateFinkLinkId(storyUrl, knot)
+                                : await nav.generateUrlHash(storyUrl);
+                  // replaceState, not a hash assignment: a beat is not a
+                  // history entry, or Back would walk the reader backwards
+                  // one sentence at a time. Explicit `push` asks for one.
+                  const to = `${location.pathname}${location.search}#${linkId}`;
+                  if (d.detail?.push) history.pushState({ fink: linkId }, '', to);
+                  else history.replaceState({ fink: linkId }, '', to);
+                } catch (e) { /* crypto unavailable — the story still plays */ }
+                // The breadcrumb is shell furniture and reads nav.* facts;
+                // the runner may not publish those topics, so translate.
+                try {
+                  if (window.FinkBreadcrumb) {
+                    if (storyUrl !== _navSeen.get(app.id)) {
+                      window.FinkBreadcrumb.setFinkUrl(storyUrl);
+                      _navSeen.set(app.id, storyUrl);
+                    }
+                    if (knot) window.FinkBreadcrumb.recordKnot(knot);
+                  }
+                } catch (e) { /* furniture parked on this root */ }
+                reply({ ok: true, link: linkId, url: storyUrl, knot: knot || null });
+              })();
+              return;
+            }
+            if (op === 'resolve') {
+              const frag = (location.hash || '').slice(1);
+              const parsed = nav.parseFinkLinkId ? nav.parseFinkLinkId(frag) : null;
+              reply({ ok: true, hash: frag || null, parsed: parsed || null,
+                      story: new URLSearchParams(location.search).get('story') || null });
+              return;
+            }
+            reply({ ok: false, reason: 'bad-params', op });
           } else if (verb === 'story.vars') {
             // The shared economy, brokered (#779). A boxed story reads the
             // canonical values to seed its own ink VARs, and asks to write
@@ -2084,6 +2217,15 @@ function buildUI() {
             } else if (op === 'read') {
               // Only the shared economy crosses the boundary. A story's
               // private variables are its own business and stay in the box.
+              // filterReadable, NOT `visibleTo` — the latter does not exist,
+              // so the call threw and the catch-all reported the useless
+              // `reason: 'failed'`. Visible on screen the whole time as
+              // "story.vars refused: failed" under Hampstead; a wrong method
+              // name on an object is exactly the type error a broad catch
+              // hides. Found here and in #787 independently, which is a
+              // reason to narrow that catch rather than keep re-finding it.
+              // A `kind:'story'` actor reads the whole mirror, which is
+              // right: the shell only ever puts the shared economy in it.
               reply({ ok: true, values: vars.filterReadable(actor, FoafOS.storyVars.all()) });
             } else if (op === 'write') {
               const name = String(d.detail?.name || '');
@@ -2335,8 +2477,12 @@ function buildUI() {
           // to hand it over, or the runner can only ever resolve media
           // relative to the story file and installations that keep their
           // art elsewhere break (#779).
-          mediaBase: window.FinkConfig?.DEFAULT_MEDIA_PATH || null,
-          story: app.story || null,
+          // NOTE: `story` and `mediaBase` belong on `app.init` (the
+          // app.hello reply), NOT here — `foaf.onInit` is fed by that
+          // message, and this one only carries the audio/snapshot contract
+          // offer. Putting them here silently did nothing: the runner kept
+          // playing its own demo and reported mediaBase null.
+          //
         }, variables: {} }, '*');
       } catch (err) { /* not ready */ }
     };

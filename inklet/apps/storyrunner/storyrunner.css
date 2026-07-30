@@ -3,7 +3,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
   width: 100%; height: 100dvh; overflow: hidden;
-  background: #06122e; color: #fff1e8;
+  /* SKINS PARITY (#779): every colour goes through the shared token
+     contract, with the runner's original values as fallbacks so it
+     still looks right standalone, where no shell hands tokens over. */
+  background: var(--sk-bg, #06122e); color: var(--sk-ink, #fff1e8);
+  font-family: var(--sk-font-body, inherit);
   font-family: ui-rounded, -apple-system, 'Segoe UI', system-ui, sans-serif;
   -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
 }
@@ -20,11 +24,16 @@ html, body {
   font: inherit; font-size: clamp(14px, 3.6vw, 17px);
   text-align: left; width: 100%;
   padding: 0.7em 0.9em; min-height: 44px;
-  background: rgba(41,173,255,0.12); color: #fff1e8;
+  background: var(--sk-choice-bg, rgba(41,173,255,0.12));
+  color: var(--sk-choice-ink, #fff1e8);
+  border-color: var(--sk-choice-line, var(--sk-line, currentColor));
+  border-radius: var(--sk-radius, 6px);
+  font-family: var(--sk-font-ui, inherit);
   border: 1px solid #29adff; border-radius: 0.5em; cursor: pointer;
 }
 #choices button:focus-visible { outline: 2px solid #ffec27; outline-offset: 2px; }
-#choices button:hover { background: rgba(41,173,255,0.22); }
+#choices button:hover { background: var(--sk-accent, rgba(41,173,255,0.22));
+  color: var(--sk-accent-ink, inherit); }
 #status { font-size: 0.8em; opacity: 0.6; }
 
 /* ─────────── media roles: a per-beat spectrum of prominence ─────────── */
@@ -34,7 +43,7 @@ html, body {
 /* feature (default): big pinned media, prose scrolls below it */
 #stage[data-media-role="feature"] #media {
   display: block; position: sticky; top: 0; z-index: 1;
-  max-height: 62vh; background: #04060d; text-align: center;
+  max-height: 62vh; background: var(--sk-bg-figure, #04060d); text-align: center;
 }
 #stage[data-media-role="feature"] #media .media-el {
   width: auto; max-width: 100%; max-height: 62vh; margin: 0 auto;
@@ -71,6 +80,7 @@ html, body {
 /* The story's status line (spec §5.5.2). Colours address the VAR, not a
    fixed id, so a story naming its own readouts styles cleanly. */
 #statusbar {
+  color: var(--sk-dim, inherit);
   display: flex;
   flex-wrap: wrap;
   gap: .35rem .9rem;
