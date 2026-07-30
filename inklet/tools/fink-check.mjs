@@ -167,7 +167,22 @@ async function corpus() {
 // `resolve`, not `join`: join(cwd, '/abs/path') fabricates <cwd>/abs/path,
 // which is how this tool ENOENT'd on 24 perfectly real files the first time
 // it was pointed outside the repo (isle_of_glitch, July 2026).
-const targets = files.length ? files.map(f => resolve(process.cwd(), f)) : await corpus();
+// MERGE UNIONS (the layer model's frameless composition). A merge fragment
+// diverts into its host's knots and reads its host's variables, so it does not
+// compile alone — and it is not a work on its own. Rather than skip it, check
+// it the only way it ever runs: as the union a session compiles. The manifest
+// says which fragment belongs to which story, because the alternative is
+// reading `# FINK:`/`# LINKREL:` out of ink as text, which this tool refuses to
+// do (see NO HACKPARSING at the top).
+const unions = (() => {
+  try {
+    return JSON.parse(readFileSync(join(here, 'fink-unions.json'), 'utf8')).unions || [];
+  } catch { return []; }
+})();
+const fragments = new Set(unions.flatMap(u => u.merge.map(m => resolve(repoRoot, m))));
+
+const targets = (files.length ? files.map(f => resolve(process.cwd(), f)) : await corpus())
+  .filter(f => !fragments.has(f));
 let bad = 0;
 console.log(`fink-check: ${targets.length} file(s), up to ${MAX_PATHS} paths each\n`);
 
@@ -203,6 +218,50 @@ for (const file of targets) {
   } else {
     console.log(`✔ ${name}  ${r.paths} paths, ${r.knots.size} knots, depth ${r.deepest}`
       + (r.truncated ? ' (search truncated)' : ''));
+  }
+}
+
+// ── the unions ────────────────────────────────────────────────────────────
+// Same extraction and the same real compiler, over the concatenation the runner
+// builds: host first, then each fragment in the order it would be merged.
+// `join('\n')` and NOT '\\n' — see the sandbox incident in CLAUDE.md.
+if (unions.length && !files.length) {
+  console.log('\nmerge unions:');
+  for (const u of unions) {
+    const parts = [u.host, ...u.merge];
+    const label = `${u.host.split('/').pop()} + ${u.merge.map(m => m.split('/').pop()).join(' + ')}`;
+    let ink;
+    try {
+      ink = parts.map(p => extractFinkFromJsSource(readFileSync(resolve(repoRoot, p), 'utf8'))).join('\n');
+    } catch (e) {
+      console.log(`✖ ${label}\n    EXTRACT: ${String(e).split('\n')[0]}`);
+      bad++; continue;
+    }
+    const { story, errors } = compile(ink);
+    if (u.expect === 'collision') {
+      // INVERTED on purpose: this union MUST be refused. A pass here would mean
+      // two authors' clashing declarations had merged silently, which is the
+      // failure the whole design guards against.
+      if (story && !errors.length) {
+        console.log(`✖ ${label}\n    expected a COLLISION and the union compiled — a clash merged silently`);
+        bad++;
+      } else {
+        console.log(`✔ ${label}  collision refused by the compiler: ${errors[0] || 'compile failed'}`);
+      }
+      continue;
+    }
+    if (!story || errors.length) {
+      console.log(`✖ ${label}\n    ${errors.slice(0, 4).join('\n    ')}`);
+      bad++; continue;
+    }
+    const r = play(story);
+    if (r.faults.length) {
+      bad++;
+      console.log(`✖ ${label}  (${r.paths} paths, ${r.knots.size} knots)\n    ${r.faults[0].message}`);
+    } else {
+      console.log(`✔ ${label}  ${r.paths} paths, ${r.knots.size} knots, depth ${r.deepest}`
+        + (r.truncated ? ' (search truncated)' : ''));
+    }
   }
 }
 

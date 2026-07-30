@@ -30,6 +30,10 @@ const state = {
   sessionId: null, sessionLabel: null,
   observing: false, observed: [], peer: null, isPeer: false,
   loads: 0, fetches: 0, cacheHits: 0,
+  // THE ORDERED SET THIS SESSION HAS PARSED. One entry after a plain load,
+  // one more per merged chunk — this is the "pragmatic set" the inkjs engine
+  // runs over, and the reason a session is a composition rather than a file.
+  sources: [], merges: [], mergedInk: 0,
   basehref: null, mediaBase: null, status: [], foley: null,
   resumedFromSave: false, knot: null, link: null, knots: 0, skin: null,
 };
@@ -153,9 +157,23 @@ function handleTag(tag) {
       break;
     case 'LINKREL':
       // How the link COMPOSES (spec §3.4): goDeeper descends and keeps the
-      // way back, goShallower surfaces early, oneWay burns the stack. Bare
-      // FINK still replaces, which is the back-compatible default.
+      // way back, goShallower surfaces early, oneWay burns the stack, merge
+      // grows this engine without a frame. Bare FINK still replaces, which is
+      // the back-compatible default.
       _pendingRel = value.trim();
+      break;
+    case 'ENTRY':
+      // Where to go once a MERGE lands — the knot in the merged chunk to enter.
+      //
+      // It is a tag of its own rather than a URL fragment, and that is not a
+      // style choice: `# FINK: annex.fink.js#annex` is TWO TAGS to ink, because
+      // `#` starts a tag in ink's own syntax. The fragment never reaches the
+      // runner. Measured the hard way — the merge landed and the reader read the
+      // refusal branch, because the entry name arrived empty.
+      //
+      // ENTRY is not a front door. No reader can arrive at it; it is the host
+      // story saying which of the merged knots the reader walks into now.
+      _pendingEntry = value.trim();
       break;
     // A beat's central media. The last IMAGE/VIDEO in a beat wins (matches
     // the live engine); rendered after the Continue loop.
@@ -456,8 +474,9 @@ function advance() {
   _pendingLink = undefined;
   _pendingGame = undefined;
   // A LINKREL from an earlier beat must not colour a later link: the
-  // annotation belongs to the link it travels with.
+  // annotation belongs to the link it travels with. Same for ENTRY.
   _pendingRel = undefined;
+  _pendingEntry = undefined;
   sampleKnot();                           // valid BEFORE the first Continue
   while (story.canContinue) {
     const text = story.Continue();
@@ -752,6 +771,7 @@ function gotoKnotHash(hash) {
 // not cross to the shell. The shell holds the DEPTH — see its story.link
 // handler for why that half cannot be ours to claim.
 let _pendingRel;                   // undefined = plain replace
+let _pendingEntry;                 // # ENTRY: the knot to walk into after a merge
 let _pendingEcho;                  // the chosen text, pending de-duplication
 const _frames = [];                // {url, state}
 
@@ -760,7 +780,9 @@ const _frames = [];                // {url, state}
 // refusal is shown, never silent.
 async function followLink(absUrl) {
   const rel = (_pendingRel || '').toLowerCase();
+  const entry = (_pendingEntry || '').trim();
   _pendingRel = undefined;
+  _pendingEntry = undefined;
   const res = await storyRequest('story.link', { url: absUrl, rel });
   if (!res.ok) {
     // Depth-cap is a story-visible outcome, not a crash: the dream simply
@@ -773,6 +795,12 @@ async function followLink(absUrl) {
   }
   if (rel === 'goshallower') { await surface(); return; }
   if (rel === 'peer') { await openPeer(res.url); return; }
+  // MERGE never loads a story: it grows the one already running. The shell has
+  // already authorized this destination under `rel: 'merge'` in the request
+  // above, so the granted URL is handed straight on — asking twice would be a
+  // second same-origin check and a second entry in the capability ledger for
+  // one act.
+  if (rel === 'merge') { await mergeStory(res.url, entry); return; }
   if (rel === 'godeeper') {
     // Push BEFORE loading: once the inner story compiles, `story` is the
     // inner one and the outer position is gone.
@@ -784,6 +812,138 @@ async function followLink(absUrl) {
   document.body.dataset.depth = String(state.depth);
   state.linkedTo = res.url;
   await loadStory(res.url, null, rel || 'replace');
+}
+
+// ── MERGE (level 2: composition WITHOUT a frame) ───────────────────────────
+//
+// MERGE IS NOT PEERING (owner, 2026-07-30). A peer has a front door of its own,
+// so it gets a frame. A merge chunk has NONE — it is a room of one city, an
+// episode of one work, meaningless to arrive at alone. So it makes no frame, no
+// origin, no session and no shell: it joins the engine already running.
+//
+//     fetch it → append it to the ordered set this session has parsed
+//     → recompile the UNION with the real compiler → restore the reader's
+//     state into it → carry on
+//
+// Publication and linkage, not window management. An episodal game must not
+// become a tree of sandboxed widget frames.
+//
+// EVERY STEP OF THAT WAS MEASURED FIRST (offline, real inkjs, 2026-07-30):
+// `state.LoadJson` into a recompiled superset loads; variables keep their
+// values; the reader is still at the same beat with the same choice on offer;
+// and a merged-in knot reads AND writes the live state. Visit counts read 0,
+// which is ink's own behaviour and not a merge fault.
+//
+// COLLISIONS: the same measurement found that two files both declaring
+// `VAR lamp`, or both defining `=== hall ===`, are a COMPILE ERROR. That is
+// the good failure — nothing is silently overwritten — and it is why the union
+// is compiled into a LOCAL before anything is assigned. A refused merge leaves
+// the reader exactly where they were, reading the story they already had.
+//
+// THE ARBITER IS THE REAL COMPILER, and deliberately so. The obvious
+// alternative — auto-renaming each chunk's knots and vars behind a namespace —
+// means rewriting ink identifiers with pattern matching, across diverts,
+// tunnels, threads, logic and prose. That is the hackparsing this repo has a
+// rule about, and `inklet/demos/fink-namespace-preprocessor.js` is what it
+// looks like when attempted: a self-described strawman, regex-based, variables
+// only, blind to knot names. So we do not guess. We hand the union to
+// `inkjs.Compiler` and report ITS words to the author.
+//
+// The reader sees nothing of any of this: no frame, no notice, no control. More
+// story, more choices — the presentation invariant.
+//
+// `# ENTRY:` names the knot to walk into once the merge lands. It is a tag of
+// its own and NOT a URL fragment, because `#` starts a tag in ink's own syntax:
+// `# FINK: annex.fink.js#annex` is two tags to the compiler, and the fragment
+// never arrives. Without an ENTRY the chunk is simply added and the beat carries
+// on. An ENTRY is not a front door — no reader can arrive at it; it is the host
+// story saying where in the merged content the reader now is.
+async function mergeStory(absUrl, entry = '') {
+  // AUTHORIZATION STILL APPLIES. A merge fetches content, so the shell decides
+  // whether this destination is allowed — same-origin under policy v0, and the
+  // trust graph later. What the shell must NOT do is treat it as a new
+  // playthrough: `rel: 'merge'` leaves the session and the dream depth alone.
+  const res = await storyRequest('story.link', { url: absUrl, rel: 'merge' });
+  if (!res.ok) { setStatus(`merge refused: ${res.reason}`); advance(); return false; }
+
+  let ink;
+  try { ink = await inkFor(res.url); }
+  catch (e) { setStatus('could not load the chunk: ' + e.message); advance(); return false; }
+  if (!ink) { setStatus('nothing to merge: no ink content'); advance(); return false; }
+
+  const url = bare(res.url);
+  if (state.sources.some((s) => s.url === url)) {
+    // Already in the set. Merging twice would redeclare every one of its knots
+    // against itself, so the compile would fail and the author would be told
+    // their own chunk collides with their own chunk. Say the true thing.
+    setStatus('');
+    state.merges.push({ url, ok: true, already: true });
+    advance();
+    return true;
+  }
+
+  // COMPILE INTO A LOCAL. `story` is the reader's live playthrough and must not
+  // be touched until the union is known to compile.
+  const saved = story.state.ToJson();
+  const sources = [...state.sources, { url, ink }];
+  let merged;
+  // `join('\n')` and NOT '\\n' — see the sandbox incident in CLAUDE.md. A
+  // literal backslash-n here would fuse the last line of one file to the first
+  // line of the next and the failure would look like an authoring mistake.
+  const compiler = new inkjs.Compiler(sources.map((s) => s.ink).join('\n'));
+  try {
+    merged = compiler.Compile();
+  } catch (e) {
+    // The compiler's OWN words, because it is the only thing here that
+    // understands ink. A duplicate `VAR` or a duplicate knot name lands here.
+    //
+    // The DETAIL is on the compiler instance, not on the exception: what is
+    // thrown says only "Compilation failed." while `compiler.errors` carries
+    // "found declaration variable 'diamonds' that was already declared
+    // (line 16)" — the line and the name an author needs. Measured: the first
+    // version reported the useless string, which is why the instance is kept.
+    const why = (compiler.errors && compiler.errors.length
+      ? String(compiler.errors[0])
+      : String(e.message || 'compile error')).split('\n')[0];
+    setStatus(`this chunk does not fit: ${why}`);
+    state.merges.push({ url, ok: false, reason: why });
+    window.foaf?.bus?.publish('app.storyrunner.merge', {
+      summary: `merge refused — ${why}`, phase: 'fault', url,
+    });
+    advance();                     // the reader's own story is untouched
+    return false;
+  }
+  try {
+    merged.state.LoadJson(saved);
+  } catch (e) {
+    setStatus('could not carry your place into the merged story: ' + e.message);
+    state.merges.push({ url, ok: false, reason: 'restore-failed' });
+    advance();
+    return false;
+  }
+
+  story = merged;
+  state.sources = sources;
+  state.merges.push({ url, ok: true });
+  state.mergedInk = sources.reduce((n, s) => n + s.ink.length, 0);
+  await buildKnotHashes();         // the union has knots the old hashes lack
+  window.foaf?.bus?.publish('app.storyrunner.merge', {
+    summary: `merged ${url.split('/').pop()} — ${sources.length} sources in this session`,
+    phase: 'loading', url, sources: sources.length,
+  });
+  setStatus('');
+
+  // `# ENTRY:` says where to go now. `ChoosePathString` resets the callstack, so
+  // it discards the beat the host story had queued behind the merge — which is
+  // what makes the host's fallback branch a REFUSAL path rather than something
+  // the reader always reads. An unknown name is an authoring mistake worth
+  // showing rather than swallowing.
+  if (entry) {
+    try { story.ChoosePathString(entry); }
+    catch (e) { setStatus(`merged, but "${entry}" is not a knot in it`); }
+  }
+  advance();
+  return true;
 }
 
 // ── PEERING (level 2, the layer model's sibling relation) ─────────────────
@@ -994,6 +1154,41 @@ function rememberInk(url, ink) {
   }
 }
 
+// A url without its fragment. The fragment names a KNOT, not a file, so it
+// must not reach `fetch` as part of the identity of the bytes — otherwise
+// `annex.fink.js#annex` and `annex.fink.js#attic` are two cache entries and
+// two fetches of one file.
+const bare = (u) => { try { const x = new URL(u); x.hash = ''; return x.href; } catch { return u; } };
+
+// GET THE INK FOR A URL — cache, then fetch, then nested-box extract. Factored
+// out of `loadStory` because MERGE needs exactly this and nothing else: it does
+// not reset the surface, does not announce a session, and does not touch depth.
+// THE SESSION'S CACHE (the layer model's "inkjs reality" note). A dream
+// surfaces back into the story it came from, and a reader who links away and
+// returns is a re-entry: without a cache each of those pays for a fetch and a
+// whole nested-box extraction again. What is kept is the EXTRACTED INK — the
+// strings the compile box harvested — not a compiled story, because the
+// vendored inkjs does not promise a story survives a serialise/restore round
+// trip and NO HACKPARSING means the compiler stays the only way in. So a hit
+// still compiles, with the real compiler, from bytes we already have.
+//
+// It belongs to the SESSION, not the shell: it lives in this frame and dies
+// with it. The shell never sees a story's source, which is the containment
+// working and the reason this cache cannot live anywhere else.
+async function inkFor(url) {
+  const key = bare(url);
+  const hit = _inkCache.get(key);
+  if (hit) { state.cacheHits += 1; state.boxedCompile = true; return hit; }
+  state.fetches += 1;
+  const src = await (await fetch(key)).text();
+  // Extract ink in a NESTED sandbox — the story's JS never touches this
+  // runner. Boxes within boxes: shell → runner → compile box.
+  const { ink } = await extractInBox(src);
+  state.boxedCompile = true;
+  if (ink) rememberInk(key, ink);
+  return ink;
+}
+
 // Load (or replace with) a story at `url`, wholly inside the box: fetch,
 // nested-box extract, compile, reset the beat surface, play.
 // `restore` is a saved `state.ToJson()` — supplied when surfacing from a
@@ -1023,26 +1218,15 @@ async function loadStory(url, restore = null, rel = 'replace') {
   // It belongs to the SESSION, not the shell: it lives in this frame and dies
   // with it. The shell never sees a story's source, which is the containment
   // working and the reason this cache cannot live anywhere else.
-  let ink = _inkCache.get(url) || null;
-  if (ink) {
-    state.cacheHits += 1;
-    state.boxedCompile = true;
-  } else {
-    let src;
-    try {
-      state.fetches += 1;
-      src = await (await fetch(url)).text();
-    } catch (e) {
-      setStatus('could not load story: ' + e.message);
-      return;
-    }
-    // Extract ink in a NESTED sandbox — the story's JS never touches this
-    // runner. Boxes within boxes: shell → runner → compile box.
-    ({ ink } = await extractInBox(src));
-    state.boxedCompile = true;
-    if (ink) rememberInk(url, ink);
-  }
+  let ink;
+  try { ink = await inkFor(url); }
+  catch (e) { setStatus('could not load story: ' + e.message); return; }
   if (!ink) { setStatus('no ink content found'); return; }
+  // A PLAIN LOAD RESETS THE COMPOSITION. Whatever this session had merged
+  // belonged to the story being left; the new one starts as one source and
+  // grows its own set. (A dream surfacing reloads the outer story, so its
+  // merges are lost with it — recorded in the doc, not pretended away.)
+  state.sources = [{ url: bare(url), ink }];
   try {
     story = new inkjs.Compiler(ink).Compile();
   } catch (e) {
@@ -1100,6 +1284,11 @@ window.__storyrunner = {
   peer: () => state.peer,
   cache: () => ({ loads: state.loads, fetches: state.fetches,
                   hits: state.cacheHits, size: _inkCache.size }),
+  // The composition: which files this ONE engine is running over, and what
+  // happened to each merge attempt.
+  sources: () => state.sources.map((s) => s.url.split('/').pop()),
+  merges: () => state.merges.map((m) => ({ ...m, url: m.url.split('/').pop() })),
+  knotCount: () => { try { return [...story.mainContentContainer.namedContent.keys()].length; } catch { return 0; } },
   closePeer: () => closePeer(),
   observed: () => state.observed.map((o) => o.line),
   observing: () => state.observing,
@@ -1147,6 +1336,10 @@ function noteObservation(o) {
     : o.kind === 'close'   ? `closed ${o.count} node${o.count === 1 ? '' : 's'}`
     : o.kind === 'session' ? (o.dreamOf ? 'session began inside another' : `session began (${o.rel})`)
     : o.kind === 'depth'   ? (o.depth ? `dream depth ${o.depth}` : 'surfaced')
+    // Composition belongs in the debug view and NOWHERE else — the reader of a
+    // merged story sees more story, never a mechanism. This panel is the
+    // advanced view the presentation invariant allows.
+    : o.kind === 'compose' ? `merged ${o.file || 'content'} into the story`
     : o.kind === 'game'    ? `${o.game || 'game'} finished`
                              + (o.score != null ? ` · score ${o.score}` : '')
                              + (o.success === false ? ' · lost' : '')

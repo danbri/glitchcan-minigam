@@ -178,12 +178,40 @@ to be a real border (different powers, different lifecycle), not a synonym.
 | the same `VAR` in two merged files? | **compile error** |
 | the same knot name in two merged files? | **compile error** |
 
-So the mechanism is sound and **renaming is a prerequisite, not a refinement**:
-a naive concatenation fails loudly the moment two authors both write
-`=== hall ===`. Failing loudly is the good version — nothing is silently
-overwritten — but a city built by many hands collides constantly.
-`inklet/demos/fink-namespace-preprocessor.js` exists and is wired into nothing;
-it is the shape of the tool this needs, and has not been read yet.
+**BUILT 2026-07-30.** `# LINKREL: merge` does exactly the above, and the reader
+sees only more story. Two decisions are worth keeping:
+
+- **`# ENTRY:` names the knot to walk into, and it is a TAG, not a URL
+  fragment.** `# FINK: annex.fink.js#annex` is *two tags* to the ink compiler,
+  because `#` starts a tag in ink's own syntax — the fragment never arrives.
+  Measured the hard way: the merge landed and the reader read the host's
+  fallback branch. An ENTRY is not a front door; no reader can arrive at it.
+- **The arbiter is the real compiler, and a refusal costs the reader nothing.**
+  The union compiles into a *local*; only on success does it become the
+  reader's story. A collision leaves them exactly where they were, and the
+  author is told in `compiler.errors`' own words — "found declaration variable
+  'diamonds' that was already declared (line 16)". Note *`compiler.errors`*,
+  not the exception: what is thrown says only "Compilation failed."
+
+**On renaming — position changed, and stated rather than dropped.** This doc
+previously said renaming was a prerequisite. It is not: the requirement was
+that a clash must never merge silently, and the real compiler already meets it
+precisely, at the right moment, with the line and the name. What renaming would
+add is *convenience* for many hands — and it means rewriting ink identifiers
+across diverts, tunnels, threads, logic and prose with pattern matching, which
+is the hackparsing this repo has a rule about.
+`inklet/demos/fink-namespace-preprocessor.js` has now been read: it is a
+self-described strawman, regex-based, variables only, blind to knot names. It is
+not the tool, and building on it would ship a landmine. Automatic renaming needs
+a real ink front-end; until there is one, colliding authors get a precise
+diagnostic, which is how every language without modules works.
+
+**Fragments are offline-checkable.** A merge chunk cannot compile alone — it
+diverts into its host's knots and reads its host's variables — so `fink:check`
+would report it as broken. It now checks the union instead, from
+`inklet/tools/fink-unions.json`, and the collision fixture is an *inverted*
+test: that union MUST fail to compile, because a pass would mean two authors'
+declarations had merged silently.
 
 ### 3 — subApp instances spawned by a session
 A session can **spawn subApps**: minigames, maps, notification widgets. These
@@ -348,6 +376,17 @@ against the file named.
   The mechanism shows only where mechanisms belong: the runner's Subtree panel,
   the shell's own app tree, and the capability ledger. That is the
   advanced/debug view, and the reader never has to open it.
+- **MERGE — composition with NO frame** (added 2026-07-30). `# LINKREL: merge`
+  fetches a chunk, appends it to the ordered set this session has parsed,
+  recompiles the union with the real compiler and carries the reader's place
+  across. Measured: the ordered set grows to two, one engine holds 15 knots, no
+  new frame is made, the shell records composition rather than a journey (one
+  session, depth 0), the reader walks into the knot `# ENTRY:` names, and the
+  merged knot **writes the live state** — which is what an episode of one work
+  needs and a peer must never have. The merged chunk diverts back into its host,
+  which only compiles as a union. A colliding chunk is refused in the compiler's
+  own words and the reader keeps their story. The composition appears in the
+  Subtree panel and nowhere else.
 - **Level 3 parents under level 2.** A launched game is a child of the SESSION,
   not of the engine. Measured: `root → Finkosphere → session → game` at depths
   0, 1, 2, 3, with capabilities attenuating at each step.
@@ -390,9 +429,6 @@ against the file named.
   cross-origin link (`foafos-shell.js:2582`), so every peer today is a
   same-origin fixture. And whose shell plays a remote peer is an open owner
   question — see "The intended peer is REMOTE" under level 2.
-- **MERGE — frameless composition.** A session cannot yet pull a further fink
-  into the engine it is already running. The measurements are done and the order
-  is fixed: renaming first, then merge (route step 7). Nothing of it is code.
 - **Session-to-session mechanics.** The shared economy crosses through
   `story.vars` at the shell, which is the level-0 half of the job. The level-2
   half — a session managing its relations to other sessions, with state
@@ -490,16 +526,17 @@ The order matters: each step makes the next one smaller.
    mechanics — state propagation, and variable/knot renaming so two stories
    compose without colliding.
 6. ~~**Formalise the per-session cache**~~ **DONE 2026-07-30.**
-7. **Renaming, then MERGE — in that order** (owner, 2026-07-30). Merge is the
-   frameless half of composition: fetch a chunk, add it to the ordered set this
-   session already parsed, recompile the union, restore the reader's state. The
-   probe above says every part of that works — **except that two authors both
-   writing `=== hall ===` or `VAR lamp` is a compile error**. So renaming comes
-   first: a pass that gives each merged source its own namespace, with tests
-   over a deliberate collision. `inklet/demos/fink-namespace-preprocessor.js`
-   exists, is wired into nothing, and is the first thing to read. Merge shipped
-   without renaming would work for one author and break on contact with a
-   second.
+7. ~~**Renaming, then MERGE**~~ **MERGE DONE 2026-07-30**, and the order turned
+   out to be wrong: the requirement was never "rename", it was "a clash must not
+   merge silently", and the real compiler meets that exactly. Renaming is
+   downgraded from prerequisite to convenience, and it needs a real ink
+   front-end rather than the regex strawman — see the merge section above.
 8. **The reality broker**, still a proposal, and it wants an owner decision
    before code: it changes what an app is told about the world.
 9. **Delete the host-page engine**, which is what all of this was for.
+
+**Still open beneath merge.** A dream that surfaces reloads its outer story, so
+merges made before descending are lost with it — recorded, not pretended away.
+Automatic renaming, when there is a front-end that can do it honestly. And a
+session's composition is not snapshotted, so a restored playthrough comes back
+as its base story.

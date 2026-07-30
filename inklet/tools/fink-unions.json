@@ -1,0 +1,31 @@
+{
+  "_comment": [
+    "MERGE FRAGMENTS, and the stories they belong to.",
+    "",
+    "A merge chunk has no front door (docs/foafos-story-layering-20260730.md):",
+    "it diverts into knots its host declares and reads variables its host owns,",
+    "so it CANNOT compile alone and it is not a work on its own. Checking it as",
+    "a standalone story reports a fault that is really the file doing its job.",
+    "",
+    "So fink-check does not skip fragments — it checks them the only way they",
+    "are ever run: as the UNION the session compiles. Every path below is",
+    "repo-relative. A file listed under `merge` is not checked on its own.",
+    "",
+    "`expect: \"collision\"` inverts the test: the union MUST fail to compile.",
+    "That is the fixture proving two authors who both declare `VAR diamonds`",
+    "or both define `=== coin ===` are caught by the real compiler rather than",
+    "silently overwriting each other — a refusal the runner turns into a story",
+    "that keeps reading."
+  ],
+  "unions": [
+    {
+      "host": "inklet/apps/storyrunner/demo.fink.js",
+      "merge": ["inklet/apps/storyrunner/annex.fink.js"]
+    },
+    {
+      "host": "inklet/apps/storyrunner/demo.fink.js",
+      "merge": ["inklet/apps/storyrunner/annexclash.fink.js"],
+      "expect": "collision"
+    }
+  ]
+}

@@ -145,7 +145,8 @@ player only to keep the escape hatch alive, or to delete part of it.
 ### FINK engine architecture (DO NOT BREAK)
 - `.fink.js` files contain `oooOO`...`` tagged template literal calls — **JavaScript, not text**. Loaded via script injection into a sandboxed iframe; content captured by the `oooOO` function and returned via postMessage. **Never parse them as text.**
 - Real compiler only: `new inkjs.Compiler(finkContent).Compile()` then `new inkjs.Story(...)`. Vendored at `third_party/ink/ink-full.js` (version unrecorded in-file; tooling pins `inkjs ^2.3.2` in package.json).
-- INK tags (`# IMAGE:`, `# FINK:`, `# BASEHREF:`, `# MENU:`, `# VIDEO:`, `# MINIGAME:`) are legitimate INK extensions used at story or knot level. See `glitchcanary.md` and `docs/glossary.md`.
+- INK tags (`# IMAGE:`, `# FINK:`, `# BASEHREF:`, `# MENU:`, `# VIDEO:`, `# MINIGAME:`, `# LINKREL:`, `# ENTRY:`) are legitimate INK extensions used at story or knot level. See `glitchcanary.md` and `docs/glossary.md`.
+- **`#` starts a tag in ink**, so a URL in a tag CANNOT carry a fragment: `# FINK: x.fink.js#knot` is two tags and the fragment never reaches the runner. That is why the merged-content entry point is its own `# ENTRY:` tag.
 - Reference implementation: `inklet/demos/hamfinkdemo.html`.
 - Mandatory test after ANY player change: TOC loads → Episodes → Hampstead plays through, choice text labels visible, no console errors.
 

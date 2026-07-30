@@ -722,27 +722,55 @@ try {
       // quiet machine and not enough on a busy one: the journey leg failed
       // once with the TOC's own choices still on screen, which reads exactly
       // like "Hampstead is missing" and is not.
-      const pick = async (frag) => {
-        const cs = await tf.evaluate(() => window.__storyrunner.state.choices);
+      // WAIT FOR THE THING WE NEED NEXT, not merely for "something changed".
+      // "Changed" fired on a transient beat and then the TOC's own hub choices
+      // were back on screen, so the next pick looked for Hampstead among the
+      // top-level menu and reported the journey broken — the exact false alarm
+      // this helper was written to stop, one level deeper. `want` is what the
+      // click is FOR: a choice label to appear, or the story file to change.
+      // ONE RETRY, AGAINST A RE-RESOLVED FRAME. Diagnosed by dumping the
+      // runner's state on failure: the story was back at its OPENING beat —
+      // one prose line, knot `main_menu` — which means the frame reloaded under
+      // the click and the choice went with the old document. The page boots the
+      // TOC from `?story=` while the shell is also auto-booting, so the frame
+      // the test holds can be replaced a moment after it first plays. A retry
+      // absorbs that; a genuinely broken journey still fails both attempts and
+      // reports the same diagnosis.
+      const runnerFrame = () => page.frames().find((f) => f.url().includes('apps/storyrunner'));
+      const attempt = async (frag, want) => {
+        const f = runnerFrame() || tf;
+        await f.waitForFunction(
+          () => window.__storyrunner?.ready?.() && window.__storyrunner.state.choices.length > 0,
+          null, { timeout: 25000 });
+        const cs = await f.evaluate(() => window.__storyrunner.state.choices);
         const i = cs.findIndex((c) => c.toLowerCase().includes(frag));
-        if (i < 0) return { ok: false, cs };
-        await tf.evaluate((n) => window.__storyrunner.choose(n), i);
-        await tf.waitForFunction((before) => {
+        if (i < 0) return { ok: false, cs, label: null };
+        await f.evaluate((n) => window.__storyrunner.choose(n), i);
+        const arrived = await f.waitForFunction((w) => {
           const s = window.__storyrunner?.state;
           if (!s || !s.choices.length) return false;
-          return JSON.stringify(s.choices) !== before;
-        }, JSON.stringify(cs), { timeout: 25000 }).catch(() => {});
-        return { ok: true, label: cs[i] };
+          if (w.file) return (s.storyUrl || '').endsWith(w.file);
+          return s.choices.some((c) => c.toLowerCase().includes(w.choice));
+        }, want, { timeout: 20000 }).then(() => true).catch(() => false);
+        return { ok: arrived, label: cs[i], cs };
+      };
+      const pick = async (frag, want) => {
+        let r = await attempt(frag, want).catch(() => ({ ok: false, cs: ['frame went away'] }));
+        if (!r.ok) r = await attempt(frag, want).catch((e) => ({ ok: false, cs: [String(e).slice(0, 60)] }));
+        return r;
       };
       const toc = await tf.evaluate(() => window.__storyrunner.state.choices);
       toc.length >= 2
         ? pass(`TOC loaded in the box with labelled choices (${toc.slice(0, 3).join(' · ')})`)
         : fail(`TOC did not present choices: ${JSON.stringify(toc)}`);
-      const ep = await pick('episode');
-      const hp = ep.ok ? await pick('hampstead') : { ok: false };
+      const ep = await pick('episode', { choice: 'hampstead' });
+      const hp = ep.ok ? await pick('hampstead', { file: 'hampstead.fink.js' }) : { ok: false };
       const landed = await tf.evaluate(() => ({
         url: (window.__storyrunner.state.storyUrl || '').split('/').pop(),
         choices: window.__storyrunner.state.choices.length,
+        knot: window.__storyrunner.state.knot,
+        tail: window.__storyrunner.state.prose.slice(-3).map((p) => p.text.slice(0, 70)),
+        status: window.__storyrunner.state.status,
       }));
       ep.ok && hp.ok && landed.url === 'hampstead.fink.js' && landed.choices > 0
         ? pass('MANDATORY JOURNEY boxed: TOC → Episodes → Hampstead plays')
@@ -1022,6 +1050,160 @@ try {
       perr.length === 0 ? pass('peering: no page errors') : fail(`peering errors: ${perr[0]}`);
     }
     await pp.close();
+  }
+
+  // ── 13. MERGE: composition with NO frame ───────────────────────────────
+  // MERGE IS NOT PEERING (owner, 2026-07-30). A peer has a front door, so it
+  // gets a frame. A merge chunk has none: it joins the engine already running,
+  // is appended to the ordered set this session has parsed, and the union is
+  // recompiled with the reader's place carried across. Its own page, for the
+  // same reason as peering — the branch leaves the spine walk.
+  {
+    const mp = await browser.newPage({ viewport: { width: 430, height: 900 } });
+    const merr = [];
+    mp.on('pageerror', (e) => merr.push(String(e).slice(0, 160)));
+    await mp.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=none`);
+    await mp.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
+    await mp.evaluate(() => FoafOS.launchApp('storyrunner'));
+    let run = null;
+    for (let i = 0; i < 40 && !run; i++) {
+      run = mp.frames().find((f) => {
+        try { return new URL(f.url()).pathname.includes('/apps/storyrunner/'); } catch { return false; }
+      });
+      if (!run) await mp.waitForTimeout(400);
+    }
+    if (!run) fail('merge: the runner frame never appeared');
+    else {
+      await run.waitForFunction(() => window.__storyrunner?.ready?.(), null, { timeout: 20000 });
+      const tap = async (label) => {
+        for (const b of await run.$$('#choices button')) {
+          if ((await b.textContent()).toLowerCase().includes(label)) { await b.click(); return true; }
+        }
+        return false;
+      };
+      const framesNow = () => mp.frames().filter((f) => {
+        try { return new URL(f.url()).pathname.includes('/apps/storyrunner/'); } catch { return false; }
+      }).length;
+
+      const oneSource = await run.evaluate(() => window.__storyrunner.sources());
+      oneSource.length === 1 && oneSource[0] === 'demo.fink.js'
+        ? pass('a session starts as ONE source (demo.fink.js)')
+        : fail(`the composition did not start at one source: ${JSON.stringify(oneSource)}`);
+
+      await tap('drowned newsreel');
+      await mp.waitForTimeout(1100);
+      await tap('odd coin');
+      await mp.waitForTimeout(1100);
+      const framesBefore = framesNow();
+      const took = await tap('door that was not there');
+      took ? pass('the demo offers a merge link (# LINKREL: merge)')
+           : fail('no merge choice found at the coin beat');
+      await mp.waitForTimeout(3500);
+
+      // 13a. THE ORDERED SET GREW, and one engine runs over it.
+      const after = await run.evaluate(() => ({
+        sources: window.__storyrunner.sources(),
+        merges: window.__storyrunner.merges(),
+        knots: window.__storyrunner.knotCount(),
+        // The LAST few lines, not the whole transcript. Prose accumulates, so
+        // `join(all)` matches text the reader read minutes ago — which is how
+        // the divert-home leg below passed while never clicking anything.
+        prose: window.__storyrunner.state.prose.slice(-3).map((p) => p.text).join(' ').toLowerCase(),
+        choices: window.__storyrunner.state.choices.length,
+        url: (window.__storyrunner.state.storyUrl || '').split('/').pop(),
+      }));
+      after.sources.length === 2 && after.sources[1] === 'annex.fink.js' && after.merges[0]?.ok
+        ? pass(`the chunk joined the ordered set (${after.sources.join(' + ')}, ${after.knots} knots in one engine)`)
+        : fail(`the merge did not land: ${JSON.stringify(after)}`);
+      // The story URL must NOT change: a merge is not a navigation, and the
+      // session is still a playthrough OF demo.fink.js that has grown.
+      after.url === 'demo.fink.js'
+        ? pass('and it is still the same playthrough, not a navigation')
+        : fail(`the merge navigated: storyUrl is now ${after.url}`);
+
+      // 13b. NO FRAME. This is the whole distinction from peering, and the
+      // owner's point: an episodal game must not become a tree of sandboxed
+      // widget frames.
+      framesNow() === framesBefore
+        ? pass(`no new frame was made for the merged content (${framesNow()} runner frame)`)
+        : fail(`merge made a frame: ${framesBefore} → ${framesNow()}`);
+
+      // 13c. NO NEW SESSION, AND NO DEPTH CHANGE. A merge chunk has no front
+      // door, so there is nowhere for the reader to have gone.
+      const tree = await mp.evaluate(() => {
+        const all = [...FoafOS.apps.nodes.values()];
+        const own = all.find((n) => n.appId === 'story-session');
+        return {
+          sessions: all.filter((n) => n.appId === 'story-session').length,
+          depth: FoafOS.storyDepth(own?.id),
+        };
+      });
+      tree.sessions === 1 && tree.depth === 0
+        ? pass('the shell saw composition, not a journey (1 session, depth 0)')
+        : fail(`merge moved the reader: ${JSON.stringify(tree)}`);
+
+      // 13d. THE READER IS IN THE MERGED CONTENT, via the URL fragment naming
+      // the entry knot — and the merged knot WROTE the live state, which is
+      // what an episode of one work needs and a peer must never have.
+      const diamonds = await run.evaluate(() => window.__storyrunner.varOf('diamonds'));
+      after.prose.includes('annex')
+        ? pass('the reader walked into the merged knot (# ENTRY: named it)')
+        : fail(`the entry knot was not reached: "${after.prose.slice(-120)}"`);
+      diamonds >= 1
+        ? pass(`and the merged chunk wrote the LIVE state (diamonds = ${diamonds})`)
+        : fail(`the merged knot did not see live state: diamonds = ${diamonds}`);
+
+      // 13e. THE MERGED CHUNK DIVERTS BACK INTO ITS HOST — which only compiles
+      // as a union, so this is the clearest proof that one engine holds both.
+      const wentHome = await tap('back through the door');
+      await mp.waitForTimeout(1500);
+      const home = await run.evaluate(() => ({
+        prose: window.__storyrunner.state.prose.slice(-3).map((p) => p.text).join(' ').toLowerCase(),
+        choices: window.__storyrunner.state.choices.length,
+      }));
+      // `wentHome` gated: without it a missing choice reads as a pass, because
+      // "dock 7" is somewhere in the transcript from the first visit.
+      wentHome && home.prose.includes('dock 7') && home.choices >= 1
+        ? pass('the merged chunk diverted back into its host story')
+        : fail(`the way home from the merged chunk failed: ${JSON.stringify({ ...home, wentHome })}`);
+
+      // 13f. A COLLISION IS REFUSED, IN THE COMPILER'S OWN WORDS, and the
+      // reader keeps reading. Measured offline first: two files that both
+      // declare `VAR diamonds` are a compile error. The union is compiled into
+      // a local precisely so this cannot cost the reader their story.
+      const tookClash = await tap('wrong key');
+      tookClash ? pass('the demo offers a colliding chunk to merge')
+                : fail('no colliding merge choice found');
+      await mp.waitForTimeout(3500);
+      const clash = await run.evaluate(() => ({
+        sources: window.__storyrunner.sources(),
+        merges: window.__storyrunner.merges(),
+        status: document.getElementById('status')?.textContent || '',
+        choices: window.__storyrunner.state.choices.length,
+        knots: window.__storyrunner.knotCount(),
+      }));
+      const refusal = clash.merges.find((m) => m.ok === false);
+      refusal && clash.sources.length === 2
+        ? pass(`the clashing chunk was refused and NOT added (${refusal.reason.slice(0, 60)})`)
+        : fail(`the collision was not refused: ${JSON.stringify(clash)}`);
+      /diamonds|declar/i.test(clash.status)
+        ? pass(`and the author is told in the compiler's own words ("${clash.status.slice(0, 70)}")`)
+        : fail(`the refusal said nothing useful: "${clash.status}"`);
+      clash.choices >= 1
+        ? pass(`the reader kept their story through the refusal (${clash.choices} choices)`)
+        : fail('a refused merge left the reader with no choices');
+
+      // 13g. Composition shows in the DEBUG view and nowhere else — the
+      // presentation invariant. The reader saw more story; the Subtree panel
+      // saw a merge.
+      const seen = await run.evaluate(() => window.__storyrunner.observed());
+      seen.some((l) => /merged/i.test(l))
+        ? pass('level 1 observed the composition (Subtree panel, not the reading surface)')
+        : fail(`the merge is invisible to observability: ${JSON.stringify(seen.slice(-4))}`);
+
+      merr.length === 0 ? pass('merge: no page errors') : fail(`merge errors: ${merr[0]}`);
+    }
+    await mp.close();
   }
 
   if (pageErrors.length) fail('page errors: ' + pageErrors.join(' | '));

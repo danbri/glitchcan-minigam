@@ -10,6 +10,11 @@ oooOO`
 // was true — geometry alone cannot tell a laid-out image from a broken
 // one.
 # BASEHREF: ./
+// Declared here so a MERGED chunk can read and write it. That is the point of
+// merging rather than peering: annex.fink.js joins this engine and sees this
+// variable live, where a peer — a separate session in a separate frame — could
+// only reach the shared economy through the shell.
+VAR diamonds = 0
 # BG: rgb(10, 31, 20)
 # IMAGE: media-feature.svg
 # AUDIO: ambient.wav
@@ -31,6 +36,43 @@ A small thing, easy to miss beside the torch. You keep it, and read the painted 
 + [Step through the humming doorway] -> doorway
 + [Close your eyes for a moment] -> down
 + [Unroll the chart beside you] -> beside
++ [Open the door that was not there] -> annexdoor
++ [Try the door with the wrong key] -> clashdoor
+
+=== annexdoor ===
+// MERGE — composition with NO frame. annex.fink.js is appended to the ordered
+// set this session has parsed, the union is recompiled, and the reader's place
+// is carried across. ENTRY names the knot to walk into once it lands, and it is
+// a tag rather than a URL fragment because "#" starts a tag in ink's own syntax:
+// "annex.fink.js#annex" is two tags to the compiler. It is not a front door,
+// because no reader can arrive at it.
+# FINK: annex.fink.js
+# LINKREL: merge
+# ENTRY: annex
+The door was not there a moment ago, and it is open.
+-> annexrefused
+
+=== annexrefused ===
+// Only reached if the merge was REFUSED. On success the ENTRY tag has already
+// taken the reader into the annex and this knot is never seen, because
+// ChoosePathString resets the callstack and discards what was queued here.
+// Either way the reader is still reading, which is the behaviour that matters.
+The door is only a door after all. You stay where you are.
++ [Back to the sign] -> coin
+
+=== clashdoor ===
+// THE DELIBERATE COLLISION. annexclash.fink.js redeclares this story's own
+// VAR and one of its knots, so the union does not compile — and the reader must
+// end up here, reading, rather than looking at a broken story.
+# FINK: annexclash.fink.js
+# LINKREL: merge
+# ENTRY: annex
+The key turns and then stops, as if the lock had changed its mind.
+-> clashrefused
+
+=== clashrefused ===
+The door stays shut. The shaft is still the shaft.
++ [Back to the sign] -> coin
 
 === beside ===
 // peer STANDS BESIDE: both stories live, neither inside the other, and this

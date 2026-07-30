@@ -670,6 +670,19 @@ bus.subscribe('story.state', (e) => {
     tellWatcher(w, 'depth', { depth: e.data.depth });
   }
 });
+// COMPOSITION IS AN EFFECT, so a watcher sees it. A merge changes what a
+// session is running over without opening a node or moving the reader, so
+// nothing else on this stream would report it — and "what is this playthrough
+// made of" is exactly the level-1 question observability exists to answer.
+// It carries a file name taken from the URL THE SHELL RESOLVED and authorized,
+// never from guest text — the same rule as a session label.
+bus.subscribe('story.compose', (e) => {
+  const file = (() => { try { return new URL(e.data?.url).pathname.split('/').pop(); } catch { return null; } })();
+  for (const w of storyWatch.values()) {
+    if (e.data?.appId && e.data.appId !== w.appId) continue;
+    tellWatcher(w, 'compose', { file });
+  }
+});
 bus.subscribe('minigame.complete', (e) => {
   if (e.source !== 'local') return;
   const nodeId = gameNodes.get(e.data?.id);
@@ -2599,6 +2612,25 @@ function buildUI() {
             // before: a story that could report its own depth could claim 0
             // from inside a dream and switch off the read-only rule.
             const depthKey = depthKeyFor(app, win, d.detail?.session);
+            // MERGE IS NOT A JOURNEY. The destination still needs authorizing —
+            // it is a fetch of content, and the same-origin gate above has
+            // already had its say — but nothing about the reader's position
+            // changes: no session starts or ends, the dream depth is untouched,
+            // and `story.state` is not republished. A merge chunk has no front
+            // door, so there is nowhere for the reader to have gone. Answering
+            // here, before the depth arithmetic, is what makes that true: fall
+            // through and `rel: 'merge'` would be treated as a plain replace
+            // and reset the depth to 0 mid-dream.
+            if (rel === 'merge') {
+              const at = storyDepth.get(depthKey) || 0;
+              bus.publish('story.compose', {
+                summary: `merged content into the story: ${target.pathname.split('/').pop()}`,
+                phase: 'loading', appId: app.id, session: depthKey, depth: at,
+                rel: 'merge', url: target.href,
+              });
+              reply({ ok: true, url: target.href, depth: at, rel: 'merge' });
+              return;
+            }
             let depth = storyDepth.get(depthKey) || 0;
             if (rel === 'godeeper') {
               if (depth >= DREAM_CAP) {

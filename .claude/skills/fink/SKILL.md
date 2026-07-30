@@ -167,6 +167,22 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   {phase, depth}; body[data-fink-depth] drives the deepening-surface
   CSS. E2E: e2e-dream.mjs (assert position via OFFERED CHOICES, not
   page text — scrollback keeps history). Demo: demos/dream-outer/-inner.
+- Composition without a frame (2026-07-30): `# FINK: url` + `# LINKREL: merge`
+  + `# ENTRY: knot` APPENDS that file to the ordered set the session has
+  parsed, recompiles the UNION with the real compiler and `LoadJson`s the
+  reader's place into it. No frame, no session, no depth change — an episodal
+  game must not become a tree of sandboxed widget frames. Merge is for content
+  with no front door (a room of one city); `# LINKREL: peer` is for content
+  that HAS one. **`# ENTRY:` is a tag and NOT a URL fragment**: `#` starts a tag
+  in ink, so `file.fink.js#knot` is two tags and the fragment never arrives.
+  Collisions (same `VAR`, same knot name in two files) are a COMPILE ERROR —
+  the union is compiled into a local, so a refusal leaves the reader reading,
+  and the message comes from `compiler.errors`, not the thrown exception (which
+  says only "Compilation failed."). Offline: `inklet/tools/fink-unions.json`
+  tells `fink:check` which fragments belong to which host, since a fragment
+  cannot compile alone. Do NOT auto-rename ink identifiers to dodge collisions
+  — that is hackparsing; `inklet/demos/fink-namespace-preprocessor.js` is a
+  strawman, not the tool. E2E: e2e-storyrunner.mjs §13.
 - Tag grammar: `# MINIGAME: <name> [mode=x] [controls=dpad|lite|none]`
   parsed at `fink-ink-engine.js:314-333`; the Continue loop BREAKS on
   MINIGAME/FINK tags.
