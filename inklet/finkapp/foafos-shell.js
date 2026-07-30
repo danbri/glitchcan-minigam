@@ -586,6 +586,85 @@ bus.subscribe('app.close', (e) => {
   for (const id of (e.data?.closed || [])) storySessions.delete(id);
 });
 
+// OBSERVABILITY AT LEVEL 1 (the layer model's Observability section).
+//
+// The StoryRunner is the observability point for the story subtree: it knows a
+// beat from a choice and a dream depth from an economy change, where the shell
+// only sees traffic. But a boxed runner cannot watch its own children — it has
+// no reach into them, which is the containment working. So the shell forwards,
+// and the forwarding is where the rules live:
+//
+//   · SUBTREE ONLY. A watcher is told about its own descendants and nothing
+//     else. The Office root and the TV root are not its children and do not
+//     ask through it, so it never hears them. The filter is computed HERE
+//     because a guest cannot be trusted to discard what it should not see —
+//     by then it has already seen it.
+//   · EFFECTS, NOT SECRETS. What was DONE: nodes opened and closed, sessions
+//     started, games finished, depth changed. Never another app's private
+//     state.
+//   · IN THE OPEN. Starting to watch tallies the capability and says so on the
+//     bus. Observation is a power; the person can see it in the ledger.
+//   · EPHEMERAL. The shell keeps no log for a watcher. It forwards live events
+//     and nothing else, so what the runner learns dies with its frame.
+const storyWatch = new Map();      // runner node id -> { frame, appId, members:Set }
+
+const tellWatcher = (w, kind, detail) => {
+  try {
+    w.frame.contentWindow?.postMessage({
+      type: 'story.event', event: 'observe', detail: { kind, ...detail },
+    }, '*');
+  } catch (err) { /* frame gone; the next close event clears it */ }
+};
+
+// Membership is tracked as it happens rather than derived on demand: by the
+// time `app.close` fires the nodes are already deleted, so ancestry cannot be
+// walked backwards.
+bus.subscribe('app.spawn', (e) => {
+  const { id, parentId, appId } = e.data || {};
+  if (!id) return;
+  for (const w of storyWatch.values()) {
+    if (!parentId || !w.members.has(parentId)) continue;
+    w.members.add(id);
+    tellWatcher(w, 'spawn', { id, appId, label: apps.get(id)?.label || appId,
+                              depth: apps.depth(id) });
+  }
+});
+bus.subscribe('app.close', (e) => {
+  const closed = e.data?.closed || [];
+  for (const [runnerId, w] of storyWatch) {
+    const mine = closed.filter((id) => w.members.has(id));
+    if (!mine.length) continue;
+    for (const id of mine) w.members.delete(id);
+    // The watcher itself going down ends the watch: no frame to tell.
+    if (closed.includes(runnerId)) { storyWatch.delete(runnerId); continue; }
+    tellWatcher(w, 'close', { ids: mine, count: mine.length });
+  }
+});
+bus.subscribe('story.session', (e) => {
+  for (const w of storyWatch.values()) {
+    if (e.data?.appId !== w.appId) continue;
+    tellWatcher(w, 'session', { id: e.data?.id, rel: e.data?.rel,
+                                dreamOf: e.data?.dreamOf || null });
+  }
+});
+bus.subscribe('story.state', (e) => {
+  if (typeof e.data?.depth !== 'number') return;
+  for (const w of storyWatch.values()) {
+    if (e.data?.appId && e.data.appId !== w.appId) continue;
+    tellWatcher(w, 'depth', { depth: e.data.depth });
+  }
+});
+bus.subscribe('minigame.complete', (e) => {
+  if (e.source !== 'local') return;
+  const nodeId = gameNodes.get(e.data?.id);
+  for (const w of storyWatch.values()) {
+    if (!nodeId || !w.members.has(nodeId)) continue;
+    tellWatcher(w, 'game', { game: e.data?.type || null,
+                             success: e.data?.success ?? null,
+                             score: e.data?.score ?? null });
+  }
+});
+
 // The boxed story that is PAUSED waiting for a game to finish (#779).
 // The host engine pauses its Continue loop on a `# MINIGAME:` beat and
 // resumes on completion; a boxed runner must do the same, but it cannot
@@ -2146,6 +2225,9 @@ function buildUI() {
               // A session IS the runner's composition of one or more finks,
               // so it answers to the composition authority.
               'story.session': 'story:link',
+              // Watching is its OWN authority. It is not implied by playing a
+              // story, and a runner that only plays should not silently get it.
+              'story.observe': 'story:observe',
               'story.navigate': 'story:navigate', 'story.audio': 'audio' }[verb];
         bus.publish('story.request', {
           summary: `${app.name}: ${verb}`, appId: app.id, verb, detail: d.detail,
@@ -2268,6 +2350,34 @@ function buildUI() {
               sessions: stack.length,
             });
             reply({ ok: true, op, rel, id: node.id, label: node.label });
+          } else if (verb === 'story.observe') {
+            const runnerNodeId = win.dataset.instance || null;
+            const runnerNode = runnerNodeId ? apps.get(runnerNodeId) : null;
+            if (!runnerNode) { reply({ ok: false, reason: 'no-node' }); return; }
+            const op = String(d.detail?.op || 'start');
+            if (op === 'stop') {
+              storyWatch.delete(runnerNode.id);
+              bus.publish('story.observe', {
+                summary: `${app.name} stopped watching its subtree`,
+                appId: app.id, watching: false,
+              }, { retain: true });
+              reply({ ok: true, op });
+              return;
+            }
+            if (op !== 'start') { reply({ ok: false, reason: 'bad-params' }); return; }
+            // The starting set is the runner and everything already beneath it,
+            // so a watch begun mid-play does not miss the session and game that
+            // are already open.
+            const members = new Set([runnerNode.id,
+              ...apps.descendants(runnerNode.id).map((n) => n.id)]);
+            storyWatch.set(runnerNode.id, { frame, appId: app.id, members });
+            // IN THE OPEN, and retained, so the drawer shows it to a person who
+            // opens the panel later rather than only to whoever was looking.
+            bus.publish('story.observe', {
+              summary: `${app.name} is watching its own subtree (${members.size} node${members.size === 1 ? '' : 's'})`,
+              appId: app.id, watching: true, nodes: members.size,
+            }, { retain: true });
+            reply({ ok: true, op, nodes: members.size });
           } else if (verb === 'story.navigate') {
             // NAVIGATION / DEEP LINKS (#779). The address bar belongs to the
             // HOST page — a boxed story cannot touch `location`, and that is

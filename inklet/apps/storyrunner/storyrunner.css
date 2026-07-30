@@ -97,3 +97,38 @@ html, body {
 .sb-item[data-status-var="mega_diamonds"] { color: #ff9ae0; }
 .sb-item[data-status-var="keys"] { color: #ffd479; }
 .sb-item[data-status-var="score"] { color: #b6f5a8; }
+
+/* WHAT THIS RUNNER HAS SEEN (level-1 observability). Collapsed by default and
+   pinned to the bottom edge: it must never compete with the prose for a
+   reader's attention, and it must not move the story when it grows. Skin
+   tokens, so it belongs to the same installation as everything else. */
+#watch-panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  color: var(--sk-dim, inherit);
+  background: var(--sk-bg, rgba(0, 0, 0, .82));
+  border-top: 1px solid rgba(255, 255, 255, .14);
+  font-size: .72rem;
+  letter-spacing: .03em;
+}
+#watch-panel > summary {
+  cursor: pointer;
+  padding: .3rem .7rem;
+  opacity: .6;
+  list-style: none;
+}
+#watch-panel > summary::-webkit-details-marker { display: none; }
+#watch-panel > summary::before { content: '⌖ '; }
+#watch-panel[open] > summary { opacity: .9; }
+#watch {
+  margin: 0;
+  padding: 0 .7rem .5rem 1.4rem;
+  max-height: 8.5rem;
+  overflow-y: auto;
+}
+#watch li { margin: .1rem 0; font-variant-numeric: tabular-nums; }
+/* Empty means nothing has happened yet, so say nothing at all. */
+#watch:empty { display: none; }

@@ -44,15 +44,11 @@ export const ROOTS = {
     // called openLogger() directly and so never noticed.
     capabilities: ['storage', 'secrets', 'vars:read', 'vars:write', 'audio', 'input',
                    'launch', 'navigate', 'chrome', 'shell', 'git:write', 'same-origin',
-                   'story:launch', 'story:link', 'story:navigate'],
+                   'story:launch', 'story:link', 'story:navigate', 'story:observe'],
     boot: { story: null },        // null = fall back to FinkConfig.DEFAULT_FINK_FILE
-    // The DIRECTION is set: the boxed runner (inklet/apps/storyrunner) is
-    // the default story surface, and the host-page player is pending
-    // delete (see fink-player.js / issue #779). The declared default below
-    // is honoured by on-demand story loads and `?player=`; the bundled-
-    // story AUTO-BOOT still uses 'legacy' until #779's parity blockers
-    // close (minigame pause/resume, variables, navigation) — flipping it
-    // now would regress Hampstead. One line flips it when #779 is green.
+    // The boxed runner (inklet/apps/storyrunner) is the story surface, and the
+    // host-page player is pending delete (see fink-player.js / issue #779).
+    //
     // FLIPPED, 2026-07-30. Parity was reached first, then the fixtures were
     // migrated: every suite whose subject IS the host-page player now says
     // `?player=legacy` in its URL, and the ones that drive the runner

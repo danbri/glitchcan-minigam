@@ -202,6 +202,15 @@ against the file named.
   link or a one-way link ends the playthrough it replaces, a dream keeps the
   outer session alive and marks the new one its dream, and surfacing ends the
   inner one so the outer gets its reader back mid-breath.
+- **The StoryRunner observes its own subtree** (added 2026-07-30).
+  `story.observe`, on its own capability `story:observe` — watching is not
+  implied by playing. The shell forwards effects from the watcher's descendants
+  and nothing else, and computes that filter itself: a guest cannot be trusted
+  to discard what it should not see, because by then it has seen it. Measured:
+  an app opened outside the subtree stays invisible. The four rules hold —
+  effects not secrets (nodes, sessions, depth, game outcomes; never another
+  app's state), subtree scope, disclosed on the bus and tallied in the ledger,
+  and ephemeral (a bounded array in the runner's frame, nothing persisted).
 - **Level 3 parents under level 2.** A launched game is a child of the SESSION,
   not of the engine. Measured: `root → Finkosphere → session → game` at depths
   0, 1, 2, 3, with capabilities attenuating at each step.
@@ -236,11 +245,12 @@ against the file named.
   `story.vars` at the shell, which is the level-0 half of the job. The level-2
   half — a session managing its relations to other sessions, with state
   propagation and variable/knot renaming — is not built as session operations.
-- **Observability at level 1.** Today the drawer FEED subscribes to bus topics
-  at level 0 (`foafos-shell.js`, topics `story.*,minigame.*,wm.*,session.*,`
-  `audio.*,widget.*,net.*,sys.guest.*,nav.*`). The interpreted, story-scoped
-  view that belongs to the StoryRunner — dashboards, session graph, per-session
-  meaning — is not built there.
+- **Cross-session dashboards.** The StoryRunner now observes its own subtree
+  (see "True today"), and reads the stream as story events. What is NOT built
+  on top of it: totals across sessions, a session graph, and the menubar's
+  small dashboardy things fed from level 1 rather than level 0. The drawer FEED
+  at level 0 still exists and is still the raw view; the two do not conflict,
+  which is what the two-kinds-of-seeing rule says.
 - **Caching is not formalised.** The runner fetches the source and compiles it
   in a throwaway nested box each time. A per-session cache of fetched source or
   merged JSON is design intent, not code.
@@ -314,8 +324,8 @@ The order matters: each step makes the next one smaller.
    under the session; the depth count stayed at the shell.
 3. ~~**Correct the conflicting docs.**~~ **DONE 2026-07-30** (CLAUDE.md, the
    app-tree paper's §1, the threat model's §5.3).
-4. **Give the StoryRunner its observability.** A story-scoped, interpreted view
-   of its own subtree, in the ledger, ephemeral by default.
+4. ~~**Give the StoryRunner its observability.**~~ **DONE 2026-07-30** — the
+   stream and its four rules. What is left on top of it is dashboards.
 5. **Peering**: two sibling sessions playing at once, then the session-to-session
    mechanics (state propagation, variable and knot renaming).
 6. **Formalise the per-session cache**, then **the reality broker**.

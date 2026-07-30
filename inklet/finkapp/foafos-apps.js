@@ -167,8 +167,12 @@ export const APPS = [
     // and attenuation requires the child's caps ⊆ the runner's. So the
     // runner carries input + vars:read/write on behalf of the games it
     // instantiates — the capability border is real, not cosmetic.
-    capabilities: ['story:launch', 'story:link', 'story:navigate', 'audio',
-                   'input', 'vars:read', 'vars:write'],
+    // `story:observe` is the LEVEL-1 job from the layer model: this app is the
+    // observability point for the story subtree beneath it. It is a separate
+    // capability from playing, so a runner that should only play can be handed
+    // a list without it and the shell will refuse the verb.
+    capabilities: ['story:launch', 'story:link', 'story:navigate', 'story:observe',
+                   'audio', 'input', 'vars:read', 'vars:write'],
     bus: { publish: ['app.storyrunner.*'], subscribe: ['wm.mode', 'audio.volume', 'ui.skin'] } },
   // MIGRATED (July 2026) — and it was the LAST `same-origin` holder, so the
   // whole registry is now sandboxed. Found because the ROBBAMP tile was DEAD

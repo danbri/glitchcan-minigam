@@ -24,6 +24,7 @@ const state = {
   pausedFor: null, lastGame: null, economy: null,
   depth: 0, restored: false,
   sessionId: null, sessionLabel: null,
+  observing: false, observed: [],
   basehref: null, mediaBase: null, status: [], foley: null,
   resumedFromSave: false, knot: null, link: null, knots: 0, skin: null,
 };
@@ -857,6 +858,8 @@ window.__storyrunner = {
   paused: () => !!_awaitingGame,
   depth: () => _frames.length,
   session: () => state.sessionId,
+  observed: () => state.observed.map((o) => o.line),
+  observing: () => state.observing,
   frames: () => _frames.map((f) => f.url.split('/').pop()),
   snapshot: () => snapshotPlaythrough(),
   gotoHash: (h) => gotoKnotHash(h),
@@ -881,7 +884,52 @@ window.addEventListener('message', (e) => {
     const hash = d.detail?.parsed?.knotHash;
     if (hash) { _lastReported = 'suppressed'; gotoKnotHash(hash); }
   }
+  if (d.event === 'observe') noteObservation(d.detail);
 });
+
+// OBSERVABILITY, LEVEL 1. The shell forwards what happens in OUR subtree and
+// nothing else (it computes that filter; see its story.observe handler). Our
+// job is the part the shell cannot do: reading it as story events rather than
+// as traffic — a session starting, a dream deepening, a game coming back.
+//
+// EPHEMERAL BY DEFAULT, and this is not a comment about the future: the log is
+// a bounded array in this frame. Nothing writes it to storage, and it dies with
+// the frame. Persisting it would mean sealing it, and that needs consent.
+const OBSERVE_CAP = 40;
+
+function noteObservation(o) {
+  if (!o || !o.kind) return;
+  const line =
+      o.kind === 'spawn'   ? `opened ${o.label || o.appId} (depth ${o.depth})`
+    : o.kind === 'close'   ? `closed ${o.count} node${o.count === 1 ? '' : 's'}`
+    : o.kind === 'session' ? (o.dreamOf ? 'session began inside another' : `session began (${o.rel})`)
+    : o.kind === 'depth'   ? (o.depth ? `dream depth ${o.depth}` : 'surfaced')
+    : o.kind === 'game'    ? `${o.game || 'game'} finished`
+                             + (o.score != null ? ` · score ${o.score}` : '')
+                             + (o.success === false ? ' · lost' : '')
+    : o.kind;
+  state.observed.push({ kind: o.kind, line });
+  if (state.observed.length > OBSERVE_CAP) state.observed.shift();
+  renderObserved();
+}
+
+function renderObserved() {
+  const el = $('watch');
+  if (!el) return;
+  el.textContent = '';
+  for (const o of state.observed.slice(-8).reverse()) {
+    const li = document.createElement('li');
+    li.textContent = o.line;                 // TEXT, never innerHTML
+    el.appendChild(li);
+  }
+}
+
+async function startObserving() {
+  const res = await storyRequest('story.observe', { op: 'start' });
+  state.observing = !!res.ok;
+  if (!res.ok) setStatus(`cannot watch: ${res.reason}`);
+  return res;
+}
 
 function applySkinTokens(tokens, skin) {
   if (!tokens) return;
@@ -953,6 +1001,10 @@ if (window.foaf?.onInit) {
   window.foaf.onInit((config) => {
     state.mediaBase = config?.mediaBase || null;
     applySkinTokens(config?.skinTokens, config?.skin);
+    // Ask to watch our own subtree BEFORE the story starts, so the first
+    // session is in the record rather than the second. A refusal is not fatal:
+    // a runner without `story:observe` plays exactly as before, with no log.
+    startObserving();
     // Give a pending restore one tick to arrive before deciding.
     setTimeout(() => {
       if (booted) return;

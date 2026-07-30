@@ -292,6 +292,48 @@ try {
   // proves the whole runner subtree — which now contains the session — comes
   // down together.
 
+  // ── 5e. OBSERVABILITY IS SCOPED TO THE SUBTREE ──────────────────────
+  // The runner is the observability point for the story subtree (level 1),
+  // and the whole value of that claim is the WORD "its own". So: open an app
+  // that is NOT beneath the runner, and prove the runner never hears it. The
+  // filter lives in the shell because a guest cannot be trusted to discard
+  // what it should not see — by then it has already seen it.
+  const watched = await frame.evaluate(() => ({
+    observing: window.__storyrunner.observing(),
+    lines: window.__storyrunner.observed(),
+  }));
+  watched.observing
+    ? pass('the runner is watching its own subtree (story:observe granted)')
+    : fail('the runner never started observing');
+  watched.lines.some((l) => /session began/.test(l))
+    ? pass(`it read its own session start as a story event ("${watched.lines.find((l) => /session began/.test(l))}")`)
+    : fail(`session start not observed: ${JSON.stringify(watched.lines)}`);
+  watched.lines.some((l) => /Waterworld/i.test(l))
+    ? pass('and the game it launched, by name')
+    : fail(`launched game not observed: ${JSON.stringify(watched.lines)}`);
+
+  // A sibling app, outside the subtree. Logger is a shell app under root.
+  const before = watched.lines.length;
+  await page.evaluate(() => FoafOS.launchApp('logger'));
+  await page.waitForTimeout(1500);
+  const after = await frame.evaluate(() => window.__storyrunner.observed());
+  const leaked = after.slice(before).filter((l) => /logger/i.test(l));
+  leaked.length === 0
+    ? pass(`a sibling app outside the subtree stayed invisible to the runner (${after.length - before} new line(s), none of them Logger)`)
+    : fail(`observation leaked outside the subtree: ${JSON.stringify(leaked)}`);
+
+  // And the person can see that watching is happening — observation is a
+  // power, so it is announced rather than silent.
+  const disclosed = await page.evaluate(() =>
+    (FoafOS.bus.retained('story.observe')[0] || {}).data || null);
+  disclosed && disclosed.watching === true && /watching its own subtree/.test(disclosed.summary || '')
+    ? pass(`the shell disclosed the watch ("${disclosed.summary}")`)
+    : fail(`watching was not disclosed on the bus: ${JSON.stringify(disclosed)}`);
+  const useLedger = await page.evaluate(() => FoafOS.capUse('storyrunner') || {});
+  (useLedger['story:observe'] || 0) >= 1
+    ? pass(`and tallied it in the ledger (story:observe ${useLedger['story:observe']})`)
+    : fail(`story:observe not in the capability ledger: ${JSON.stringify(useLedger)}`);
+
   // ── 5a. PARITY (#779 blockers 1+2): pause, writeback, economy ───────
   // The runner used to fire story.launch and carry straight on, so a
   // story that says "play, then use what you won" ran the "then" while
