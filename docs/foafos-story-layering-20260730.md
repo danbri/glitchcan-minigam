@@ -274,9 +274,16 @@ against the file named.
   small dashboardy things fed from level 1 rather than level 0. The drawer FEED
   at level 0 still exists and is still the raw view; the two do not conflict,
   which is what the two-kinds-of-seeing rule says.
-- **Caching is not formalised.** The runner fetches the source and compiles it
-  in a throwaway nested box each time. A per-session cache of fetched source or
-  merged JSON is design intent, not code.
+- **The per-session cache is code** (2026-07-30). A session keeps the EXTRACTED
+  INK for what it fetched, bounded at six entries, oldest out first — a dream
+  stack walks back the way it came, so the entries a reader is about to need are
+  the newest. Measured: a peer's dream ending and surfacing gave 3 loads, 2
+  fetches, 1 hit. What is kept is the ink, not a compiled story: the vendored
+  inkjs does not promise a story survives a serialise/restore round trip, and NO
+  HACKPARSING means the real compiler stays the only way in — so a hit still
+  compiles, from bytes already in hand. The cache lives in the runner's frame
+  and dies with it, which is what "belongs to the session, not the shell" means
+  in practice: the shell never sees a story's source at all.
 - **Reality broker — not built.** No `location`, time or environment broker
   exists.
 
@@ -353,5 +360,7 @@ The order matters: each step makes the next one smaller.
    with per-session dream depth. Still open beneath it: the session-to-session
    mechanics — state propagation, and variable/knot renaming so two stories
    compose without colliding.
-6. **Formalise the per-session cache**, then **the reality broker**.
+6. ~~**Formalise the per-session cache**~~ **DONE 2026-07-30.** Then **the
+   reality broker**, which is still a proposal and wants an owner decision
+   before code: it changes what an app is told about the world.
 7. **Delete the host-page engine**, which is what all of this was for.

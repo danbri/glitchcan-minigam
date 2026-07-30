@@ -496,6 +496,12 @@ try {
     back.shell === 0 && back.vars === 0
       ? pass('surfacing returns the shell and the broker to depth 0')
       : fail(`depth stuck after surfacing: ${JSON.stringify(back)}`);
+
+    // The session cache is NOT asserted here, and the reason is worth writing
+    // down: this leg drives `foaf.storyRequest` straight at the shell, so the
+    // depth moves without the runner ever loading a story. Measured that way it
+    // read 2 loads / 2 fetches / 0 hits and looked like a cache that did not
+    // work. Section 12 asserts it where a story really is re-entered.
   }
 
   // ── 5b. attenuation ENFORCES — it does not merely announce ──────────
@@ -892,6 +898,27 @@ try {
         spend?.ok
           ? pass('the reader can still spend the shared economy while the peer dreams')
           : fail(`the peer's dream froze the reader's economy: ${JSON.stringify(spend)}`);
+
+        // 12h. THE SESSION'S CACHE, asserted where a story is really RE-ENTERED.
+        // The peer is in a dream; playing it out reaches END, which pops and
+        // surfaces — and surfacing loads the story it came from a second time.
+        // That load must be served from the session's own cache rather than
+        // costing another fetch and another nested-box extraction.
+        for (let i = 0; i < 6; i++) {
+          const done = await peer.evaluate(() => window.__storyrunner.cache().hits >= 1);
+          if (done) break;
+          const bs = await peer.$$('#choices button');
+          if (!bs.length) { await pp.waitForTimeout(900); continue; }
+          await bs[0].click();
+          await pp.waitForTimeout(1400);
+        }
+        const cache = await peer.evaluate(() => window.__storyrunner.cache());
+        cache.hits >= 1 && cache.fetches < cache.loads
+          ? pass(`the session cached its ink: ${cache.loads} loads, ${cache.fetches} fetches, ${cache.hits} hit(s), ${cache.size} held`)
+          : fail(`no re-entry was served from the cache: ${JSON.stringify(cache)}`);
+        cache.size <= 6
+          ? pass(`and the cache stays bounded (${cache.size} of 6)`)
+          : fail(`the cache is unbounded: ${cache.size} entries`);
       }
 
       // 12f. Closing the peer ends THAT session and leaves the other reading.

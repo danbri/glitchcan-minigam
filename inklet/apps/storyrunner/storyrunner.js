@@ -29,6 +29,7 @@ const state = {
   depth: 0, restored: false,
   sessionId: null, sessionLabel: null,
   observing: false, observed: [], peer: null, isPeer: false,
+  loads: 0, fetches: 0, cacheHits: 0,
   basehref: null, mediaBase: null, status: [], foley: null,
   resumedFromSave: false, knot: null, link: null, knots: 0, skin: null,
 };
@@ -933,6 +934,20 @@ async function surface() {
   return true;
 }
 
+// Bounded, and bounded by COUNT rather than bytes: a handful of ink files is
+// kilobytes, and a story someone reads through is a handful of files. Oldest
+// out first — a dream stack walks back the way it came, so the entries a reader
+// is about to need are the ones added most recently.
+const INK_CACHE_CAP = 6;
+const _inkCache = new Map();
+function rememberInk(url, ink) {
+  _inkCache.delete(url);                    // re-insert to refresh its age
+  _inkCache.set(url, ink);
+  while (_inkCache.size > INK_CACHE_CAP) {
+    _inkCache.delete(_inkCache.keys().next().value);
+  }
+}
+
 // Load (or replace with) a story at `url`, wholly inside the box: fetch,
 // nested-box extract, compile, reset the beat surface, play.
 // `restore` is a saved `state.ToJson()` — supplied when surfacing from a
@@ -949,17 +964,38 @@ async function loadStory(url, restore = null, rel = 'replace') {
   renderMedia(null);
   stopAudio();
   state.prose = []; state.choices = []; story = null;
-  let src;
-  try {
-    src = await (await fetch(url)).text();
-  } catch (e) {
-    setStatus('could not load story: ' + e.message);
-    return;
+  state.loads += 1;
+  // THE SESSION'S CACHE (the layer model's "inkjs reality" note). A dream
+  // surfaces back into the story it came from, and a reader who links away and
+  // returns is a re-entry: without a cache each of those pays for a fetch and a
+  // whole nested-box extraction again. What is kept is the EXTRACTED INK — the
+  // strings the compile box harvested — not a compiled story, because the
+  // vendored inkjs does not promise a story survives a serialise/restore round
+  // trip and NO HACKPARSING means the compiler stays the only way in. So a hit
+  // still compiles, with the real compiler, from bytes we already have.
+  //
+  // It belongs to the SESSION, not the shell: it lives in this frame and dies
+  // with it. The shell never sees a story's source, which is the containment
+  // working and the reason this cache cannot live anywhere else.
+  let ink = _inkCache.get(url) || null;
+  if (ink) {
+    state.cacheHits += 1;
+    state.boxedCompile = true;
+  } else {
+    let src;
+    try {
+      state.fetches += 1;
+      src = await (await fetch(url)).text();
+    } catch (e) {
+      setStatus('could not load story: ' + e.message);
+      return;
+    }
+    // Extract ink in a NESTED sandbox — the story's JS never touches this
+    // runner. Boxes within boxes: shell → runner → compile box.
+    ({ ink } = await extractInBox(src));
+    state.boxedCompile = true;
+    if (ink) rememberInk(url, ink);
   }
-  // Extract ink in a NESTED sandbox — the story's JS never touches this
-  // runner. Boxes within boxes: shell → runner → compile box.
-  const { ink } = await extractInBox(src);
-  state.boxedCompile = true;
   if (!ink) { setStatus('no ink content found'); return; }
   try {
     story = new inkjs.Compiler(ink).Compile();
@@ -1016,6 +1052,8 @@ window.__storyrunner = {
   depth: () => _frames.length,
   session: () => state.sessionId,
   peer: () => state.peer,
+  cache: () => ({ loads: state.loads, fetches: state.fetches,
+                  hits: state.cacheHits, size: _inkCache.size }),
   closePeer: () => closePeer(),
   observed: () => state.observed.map((o) => o.line),
   observing: () => state.observing,
