@@ -196,6 +196,19 @@ against the file named.
 - **Observation is already partly in the ledger.** `tallyCap` records every
   capability use, so verb use is visible to the person. The honesty rule below
   is therefore started, not merely stated.
+- **Level 2 is a node** (added 2026-07-30). A playthrough announces itself with
+  `story.session` and the shell spawns `story-session` under the runner, with
+  the runner's own grant and no more. The relation travels with it: a plain
+  link or a one-way link ends the playthrough it replaces, a dream keeps the
+  outer session alive and marks the new one its dream, and surfacing ends the
+  inner one so the outer gets its reader back mid-breath.
+- **Level 3 parents under level 2.** A launched game is a child of the SESSION,
+  not of the engine. Measured: `root → Finkosphere → session → game` at depths
+  0, 1, 2, 3, with capabilities attenuating at each step.
+- **Level 0 boots no ink** (flipped 2026-07-30). `autoBoot: 'boxed'`. An
+  ordinary visit plays the story in the box and the host page's engine compiles
+  nothing. `?player=legacy` is the way back, `?player=none` opens the shell
+  with nothing playing.
 
 **A rule, not a gap.**
 
@@ -210,21 +223,15 @@ against the file named.
 
 **Not built.**
 
-- **Level 0 still boots an ink engine.** `foafos-root.js` says
-  `autoBoot: 'legacy'`, and `inklet/finkapp/index.html` loads
-  `fink-ink-engine.js`. With no query parameter the host-page player plays.
-  `?player=boxed` is live and proven; `?player=legacy` is the way back. This is
-  the largest remaining gap against "level 0 knows nothing about ink", and the
-  block is test fixtures: five suites use "the legacy player compiled a story
-  on boot" as their fixture, not as their subject (`flipBlockedBy`, issue #779).
-- **Level 2 is not yet a distinct node.** The boxed runner plays one story at a
-  time; a `# FINK:` link **replaces** the content in the same frame. Nested play
-  is a stack of saved ink states inside the box, not nested nodes. There is no
-  per-session object between the StoryRunner and its subApps.
-- **Minigames parent under the StoryRunner, not the session.**
-  `_pendingGameParent` parents a launched game under the runner node. The
-  target is: parent under the **session** node. The session node has to exist
-  first.
+- **The host-page engine is still in the page.** It no longer plays by default,
+  but `inklet/finkapp/index.html` still loads it so `?player=legacy` works. The
+  file set is superseded and pending delete (issue #779). Deleting it is a
+  separate job from flipping the default, and the suites pinned to
+  `?player=legacy` are the list of what has to move first.
+- **One session at a time, per runner.** The stack exists and dreams nest, but
+  a `# FINK:` link still **replaces** the content in the same frame, so peering
+  — two sibling sessions playing side by side — has a node for it and no
+  mechanism yet.
 - **Session-to-session mechanics.** The shared economy crosses through
   `story.vars` at the shell, which is the level-0 half of the job. The level-2
   half — a session managing its relations to other sessions, with state
@@ -298,14 +305,18 @@ is really a question of *which layer owns it, and which foafos verb carries it*.
 
 The order matters: each step makes the next one smaller.
 
-1. **Make the boot default boxed.** Rewrite the five suites that use the legacy
-   boot as a fixture, so each states which player it means. Then set
-   `autoBoot: 'boxed'` and stop the page from starting the host ink engine.
-   This is the step that makes level 0 free of ink.
-2. **Create the level-2 session node.** One tree node for each playthrough,
-   under the StoryRunner. Move minigame parenting to it. Keep the depth count at
-   the shell.
-3. **Give the StoryRunner its observability.** A story-scoped, interpreted view
+1. ~~**Make the boot default boxed.**~~ **DONE 2026-07-30.** Twenty-two suites
+   named a story URL and then waited on the HOST page's ink engine as proof the
+   page was up, which made "level 0 runs ink" the definition of a working boot.
+   Every URL now says which player it means, `?player=none` was added for the
+   suites that drive the runner themselves, and `autoBoot` is `'boxed'`.
+2. ~~**Create the level-2 session node.**~~ **DONE 2026-07-30.** Games parent
+   under the session; the depth count stayed at the shell.
+3. ~~**Correct the conflicting docs.**~~ **DONE 2026-07-30** (CLAUDE.md, the
+   app-tree paper's §1, the threat model's §5.3).
+4. **Give the StoryRunner its observability.** A story-scoped, interpreted view
    of its own subtree, in the ledger, ephemeral by default.
-4. **Formalise the per-session cache**, then **the reality broker**.
-5. **Correct the four conflicting docs** listed above.
+5. **Peering**: two sibling sessions playing at once, then the session-to-session
+   mechanics (state propagation, variable and knot renaming).
+6. **Formalise the per-session cache**, then **the reality broker**.
+7. **Delete the host-page engine**, which is what all of this was for.
