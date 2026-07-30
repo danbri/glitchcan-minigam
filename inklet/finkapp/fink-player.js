@@ -101,6 +101,19 @@ window.FinkPlayer = {
             return;
         }
 
+        // A one-tap app deep link (?app=<id>) makes THAT app the surface.
+        // The shell launches it (foafos-shell deep-link handler). The
+        // legacy player must NOT also auto-boot the bundled story, or the
+        // general FINK story runs behind the requested app's window — which
+        // is exactly what "behind the demo window the general fink stuff is
+        // running" is. So the story engine idles for an app deep link. An
+        // explicit ?story= still wins, because targetFink is set above.
+        const wantApp = new URLSearchParams(window.location.search).get('app');
+        if (!targetFink && wantApp) {
+            FinkUtils.debugLog(`Boot: app deep link ?app=${wantApp} — story engine idles`);
+            return;
+        }
+
         // Auto-load story from hash or config
         if (targetFink) {
             FinkUtils.debugLog('Loading FINK from hash: ' + targetFink);
