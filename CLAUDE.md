@@ -117,10 +117,24 @@ none: it reads as authoritative.
 
 **New model? Start here:** `docs/fable-audit/fable-notes-handoff-20260706.md` — a handoff written for models continuing this collaboration: how danbri works, the engineering norms, the edot architecture + current frontier, hard-won honesty/verification lessons, and a ranked roadmap. Read it once before your first change.
 
-## FINK Player — Current Production Reality (verified June 2026)
-**The production player is `inklet/finkapp/index.html`** (15+ modules: ink engine, sandbox, navigation/deep-linking, breadcrumbs, minigame SDK + embedded chess/gems, procedural foley audio, dev panel).
+## FINK Player — Current Production Reality (player flipped 2026-07-30)
+**The production PAGE is `inklet/finkapp/index.html`. The production STORY
+ENGINE is no longer on that page — it is the boxed runner at
+`inklet/apps/storyrunner/` ("Finkosphere"), and an ordinary visit boots it.**
 
-- `inklet/app/` is the **older parallel implementation** (8 modules) — kept for reference; finkapp is canonical. Do not mirror changes into app/ unless asked.
+That is the layer model in `docs/foafos-story-layering-20260730.md`: the shell
+is level 0 and plays nothing; the story runs at level 1, in a frame at an
+opaque origin, reaching the shell only through capability-checked `story:*`
+verbs. The host-page engine (`fink-ink-engine.js`, `fink-ui.js`,
+`fink-player.js` and the modules around them) is **superseded and pending
+delete** (issue #779). It still loads, and `?player=legacy` still boots it —
+that escape hatch is deliberate, so a field problem with the box does not need
+a deploy. `?player=none` opens the shell with no story at all.
+
+**Working on the story engine? Work on the boxed runner.** Change the host
+player only to keep the escape hatch alive, or to delete part of it.
+
+- `inklet/app/` is the **older parallel implementation** (8 modules) — kept for reference; finkapp is the canonical page. Do not mirror changes into app/ unless asked.
 - `inklet5.html` does not exist and never shipped under that name. `inklet6.html` is a 118-byte redirect to `app/`. Historic references to `toc-simple.fink.js`, `hampstead1.fink.js`, `bagend1.fink.js`, `jungle2.fink.js` are phantoms — the real files are the unsuffixed versions.
 - INK runtime `onError` IS wired in `finkapp/fink-ink-engine.js`.
 - Layered media path resolution (global base → story BASEHREF → file-relative fallback) is implemented in FinkUtils; config via `fink-config.js` only (no form fields).

@@ -259,11 +259,24 @@ session is a **game session**: a live, dynamically-evolving, **ephemeral**
 playthrough — not a document and not a fixed object. The runtime
 (FinkStoryRunner) owns it; it lives inside the runner's box; it is created
 when play begins, evolves with every choice / link / dream / minigame
-outcome, and is **gone when play ends unless deliberately sealed.** This is
-the existing foafos session model (`session.mjs`: ephemeral unless sealed
-with a passphrase, AES-GCM, `session.current` retained — the skill's *"no
-unencrypted persistence path, deliberately"*). The game session is that
-ephemeral thing, seen from play.
+outcome, and is **gone when play ends unless deliberately sealed.**
+
+**Two different things wear the word "session" — corrected 2026-07-30.** An
+earlier version of this paragraph said the game session *is* "the existing
+foafos session model (`session.mjs`)". It is not. They sit on different
+layers of `docs/foafos-story-layering-20260730.md`:
+
+- the **foafos identity session** (`session.mjs`) is level 0: ephemeral unless
+  sealed with a passphrase, AES-GCM, `session.current` retained — the skill's
+  *"no unencrypted persistence path, deliberately"*. It is what the drawer's
+  SESSION panel saves, unlocks and forgets;
+- a **story session** is level 2: a playthrough inside the runner's box. Its
+  isolation is *backed by* foafos — capability and origin borders — but it is
+  not the identity session, and sealing one is not sealing the other.
+
+What the two DO share is the rule that matters here: ephemeral unless
+deliberately sealed. Read the rest of this section as being about the story
+session.
 
 Two consequences fall straight out of "ephemeral and evolving":
 

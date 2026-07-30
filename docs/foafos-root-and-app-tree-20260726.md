@@ -8,6 +8,14 @@ rather than recalled.*
 
 ## 1. The historical reading, and it checks out
 
+> **SUPERSEDED, 2026-07-30 — read this section as history.** The layer picture
+> below (ink handling at the top level, unisolated) is what the migration
+> removed. An ordinary visit now boots the story inside the boxed runner at
+> level 1, and the shell compiles no ink; `?player=legacy` reaches the old
+> arrangement on purpose. The current model is
+> `docs/foafos-story-layering-20260730.md`. **Sections 2 onward still hold** —
+> the proposal, the attenuation rule and the tree are what got built.
+
 The pre-foafos player was already a proto-shell. The split was:
 
 - **Top level, unisolated:** all the Ink handling, the UI, choice
