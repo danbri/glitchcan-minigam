@@ -303,6 +303,18 @@ export class LayerViz {
     this.inertia.pitch = 0;
   }
 
+  /**
+   * Spotlight one layer: its labels stay, other layers' labels hide, and
+   * renderers that implement the optional setLayerFocus adapter method dim
+   * the other layers' geometry. Pass null (or the current id) to clear.
+   * Returns the focused layer id or null.
+   */
+  focusLayer(layerId) {
+    this.focusedLayer = this.focusedLayer === layerId ? null : layerId;
+    this.renderer.setLayerFocus?.(this.focusedLayer);
+    return this.focusedLayer;
+  }
+
   dispose() {
     this.disposed = true;
     cancelAnimationFrame(this._raf);
@@ -527,16 +539,36 @@ export class LayerViz {
 
   _updateLabels() {
     if (!this.showLabels) return;
+    // Project every label, then place nearest-first with overlap culling:
+    // a label that would land on top of an already-placed one hides, so
+    // dense clusters stay readable instead of becoming ink.
+    const placed = [];
+    const candidates = [];
     for (const { node, el } of this.labels) {
+      if (this.focusedLayer && node.layerId !== this.focusedLayer) {
+        el.style.display = 'none';
+        continue;
+      }
       const p = this.renderer.projectNode(node);
       if (!p || !p.inFront) {
         el.style.display = 'none';
         continue;
       }
+      candidates.push({ el, p });
+    }
+    candidates.sort((a, b) => a.p.distance - b.p.distance);
+    const { labelFadeNear, labelFadeRange } = this.config;
+    for (const { el, p } of candidates) {
+      const collides = placed.some(q =>
+        Math.abs(q.x - p.x) < 70 && Math.abs(q.y - p.y) < 15);
+      if (collides) {
+        el.style.display = 'none';
+        continue;
+      }
+      placed.push(p);
       el.style.left = `${p.x}px`;
       el.style.top = `${p.y}px`;
       el.style.display = 'block';
-      const { labelFadeNear, labelFadeRange } = this.config;
       el.style.opacity = Math.max(
         0,
         Math.min(1, (labelFadeNear - p.distance) / labelFadeRange)

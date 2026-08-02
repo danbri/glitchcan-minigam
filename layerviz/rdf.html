@@ -86,7 +86,16 @@
             margin-top: 8px; padding-top: 8px;
             border-top: 1px solid rgba(255,255,255,0.2);
         }
-        .layer-item { display: flex; align-items: center; margin: 5px 0; font-size: 11px; }
+        .layer-item {
+            display: flex; align-items: center; margin: 2px 0; font-size: 11px;
+            width: 100%; text-align: left; background: none; border: none;
+            border-radius: 6px; padding: 3px 5px; color: #ddd; cursor: pointer;
+        }
+        .layer-item:hover { background: rgba(255,255,255,0.1); }
+        .layer-item.focused {
+            background: rgba(255,255,255,0.18);
+            color: #fff; font-weight: 600;
+        }
         .layer-color { width: 14px; height: 14px; border-radius: 3px; margin-right: 8px; flex-shrink: 0; }
 
         #status { font-size: 11px; color: #ffe28a; min-height: 14px; }
@@ -132,8 +141,9 @@
 <body>
     <div id="canvas-container"></div>
 
-    <div id="info">
-        <div id="info-header">
+    <div id="info" role="region" aria-label="LayerViz controls">
+        <div id="info-header" role="button" tabindex="0" aria-expanded="true"
+             aria-label="Move panel by dragging, activate to minimise">
             <h3>Real RDF &rarr; LayerViz</h3>
             <div id="toggle-arrow"></div>
         </div>
@@ -145,30 +155,60 @@
                <a href="https://github.com/danbri/factoidal">factoidal</a>
                (bundled with this site). Each visual layer is a
                <strong>named graph</strong> (<code>urn:layer:*</code>).</p>
-            <p id="status">loading engine&hellip;</p>
+            <p id="status" aria-live="polite">loading engine&hellip;</p>
 
             <div class="button-group">
-                <button id="btn-closure">🧠 Compute closure</button>
-                <select id="closure-regime" title="entailment regime">
+                <button id="btn-closure" aria-label="Compute entailment closure">🧠 Compute closure</button>
+                <select id="closure-regime" title="entailment regime" aria-label="Entailment regime">
                     <option value="RDFS">RDFS</option>
                     <option value="OWL-RL">OWL-RL</option>
                 </select>
+                <button id="btn-reset-view" aria-label="Reset camera view">🎯 Reset view</button>
             </div>
 
-            <div class="layer-legend" id="layer-legend"></div>
+            <div class="layer-legend" id="layer-legend" role="group"
+                 aria-label="Layers — activate one to spotlight it"></div>
+            <p style="margin:4px 0 0 0;color:#aaa">tap a layer above to
+               spotlight it; tap again to clear</p>
 
-            <p style="margin-top:10px"><strong>SPARQL</strong> over the layer graphs:</p>
-            <textarea id="sparql-box" spellcheck="false">SELECT ?g (COUNT(*) AS ?triples) WHERE {
+            <p style="margin-top:10px"><strong>SPARQL</strong> over the layer graphs
+               (<kbd>Ctrl</kbd>+<kbd>Enter</kbd> runs):</p>
+            <select id="sparql-examples" aria-label="Example queries" style="width:100%;margin-bottom:5px">
+                <option value="">— example queries —</option>
+                <option value="SELECT ?g (COUNT(*) AS ?triples) WHERE {
+  GRAPH ?g { ?s ?p ?o }
+} GROUP BY ?g ORDER BY ?g">Triples per layer graph</option>
+                <option value="SELECT ?s ?p ?o WHERE {
+  GRAPH <urn:layer:projects> { ?s ?p ?o }
+}">Everything in the projects layer</option>
+                <option value="PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+SELECT ?g ?agent WHERE {
+  GRAPH ?g { ?agent a foaf:Agent }
+}">Implied Agents (run closure first)</option>
+                <option value="PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?g ?s ?label WHERE {
+  GRAPH ?g { ?s rdfs:label ?label }
+  FILTER(CONTAINS(LCASE(?label), "web"))
+}">Labels containing 'web'</option>
+                <option value="PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+ASK {
+  GRAPH <urn:layer:vocabulary> {
+    ?c rdfs:subClassOf <http://xmlns.com/foaf/0.1/Agent>
+  }
+}">ASK: anything subclass of Agent?</option>
+            </select>
+            <textarea id="sparql-box" spellcheck="false" aria-label="SPARQL query">SELECT ?g (COUNT(*) AS ?triples) WHERE {
   GRAPH ?g { ?s ?p ?o }
 } GROUP BY ?g ORDER BY ?g</textarea>
             <div class="button-group">
                 <button id="btn-run-sparql">▶ Run</button>
             </div>
-            <div id="sparql-results"></div>
+            <div id="sparql-results" aria-live="polite"></div>
 
             <p><strong>Drag header</strong> to move this panel, tap it to
                minimise &bull; <strong>Drag scene</strong> to rotate &bull;
-               <strong>Pinch/scroll</strong> to zoom</p>
+               <strong>Pinch/scroll</strong> to zoom &bull;
+               <strong>Tap nodes</strong> for details</p>
         </div>
     </div>
 
@@ -453,8 +493,9 @@
             const legend = document.getElementById('layer-legend');
             legend.textContent = '';
             for (const layer of spec.layers) {
-                const item = document.createElement('div');
+                const item = document.createElement('button');
                 item.className = 'layer-item';
+                item.type = 'button';
                 const swatch = document.createElement('div');
                 swatch.className = 'layer-color';
                 swatch.style.background = `#${layer.color.toString(16).padStart(6, '0')}`;
@@ -463,6 +504,16 @@
                     ? 'urn:layer:implied' : `urn:layer:${layer.id}`;
                 label.textContent = `${layer.label} — ${graph}`;
                 item.append(swatch, label);
+                item.setAttribute('aria-pressed', 'false');
+                item.addEventListener('click', () => {
+                    const focused = state.viz.focusLayer(layer.id);
+                    for (const el of legend.children) {
+                        el.classList.toggle('focused',
+                            focused !== null && el === item);
+                        el.setAttribute('aria-pressed',
+                            String(focused !== null && el === item));
+                    }
+                });
                 legend.appendChild(item);
             }
         }
@@ -556,11 +607,37 @@
 
         document.getElementById('btn-run-sparql')
             .addEventListener('click', runUserQuery);
+        document.getElementById('btn-reset-view')
+            .addEventListener('click', () => state.viz?.resetCamera());
+        document.getElementById('sparql-examples')
+            .addEventListener('change', e => {
+                if (e.target.value) {
+                    document.getElementById('sparql-box').value = e.target.value;
+                    e.target.selectedIndex = 0;
+                }
+            });
+        document.getElementById('sparql-box')
+            .addEventListener('keydown', e => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    runUserQuery();
+                }
+            });
 
         const infoPanel = document.getElementById('info');
         const header = document.getElementById('info-header');
-        header.addEventListener('click', () =>
-            infoPanel.classList.toggle('collapsed'));
+        const toggleInfo = () => {
+            infoPanel.classList.toggle('collapsed');
+            header.setAttribute('aria-expanded',
+                String(!infoPanel.classList.contains('collapsed')));
+        };
+        header.addEventListener('click', toggleInfo);
+        header.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleInfo();
+            }
+        });
         makeDraggablePanel(infoPanel, header);
     </script>
 </body>

@@ -46,6 +46,10 @@ export function createThreeRenderer({ container, model, config }) {
   const nodeMeshes = [];
   const meshByNode = new Map();
   const linkMeshes = [];
+  // Every layer-owned material, for layer spotlighting: {material,
+  // baseOpacity, layerId} — links carry a height span instead of an id.
+  const focusables = [];
+  const layerHeights = new Map(model.layers.map(l => [l.id, l.height]));
 
   for (const layer of model.layers) {
     buildLayerFrame(layer);
@@ -53,13 +57,20 @@ export function createThreeRenderer({ container, model, config }) {
       const mesh = buildNode(node, layer.color);
       nodeMeshes.push(mesh);
       meshByNode.set(node, mesh);
+      focusables.push({ material: mesh.material, baseOpacity: 1, layerId: layer.id });
     }
-    for (const edge of layer.edges) scene.add(buildEdge(edge));
+    for (const edge of layer.edges) {
+      const line = buildEdge(edge);
+      scene.add(line);
+      focusables.push({ material: line.material, baseOpacity: 0.6, layerId: layer.id });
+    }
   }
   for (const link of model.links) {
     const mesh = buildLink(link);
     linkMeshes.push(mesh);
     scene.add(mesh);
+    focusables.push({ material: mesh.material, baseOpacity: 0.7,
+      span: [link.minY, link.maxY] });
   }
 
   function buildLayerFrame(layer) {
@@ -72,6 +83,7 @@ export function createThreeRenderer({ container, model, config }) {
       transparent: true,
       opacity: 0.8
     });
+    focusables.push({ material, baseOpacity: 0.8, layerId: layer.id });
     const edgeGeometry = new THREE.BoxGeometry(size, thick, thick);
     const sideGeometry = new THREE.BoxGeometry(thick, thick, size);
     const rails = [
@@ -88,15 +100,14 @@ export function createThreeRenderer({ container, model, config }) {
       scene.add(rail);
     }
 
-    const plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(size, size),
-      new THREE.MeshPhongMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.05,
-        side: THREE.DoubleSide
-      })
-    );
+    const planeMaterial = new THREE.MeshPhongMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.05,
+      side: THREE.DoubleSide
+    });
+    focusables.push({ material: planeMaterial, baseOpacity: 0.05, layerId: layer.id });
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(size, size), planeMaterial);
     plane.position.y = layer.height;
     plane.rotation.x = -Math.PI / 2;
     plane.receiveShadow = true;
@@ -206,6 +217,22 @@ export function createThreeRenderer({ container, model, config }) {
       raycaster.setFromCamera(pointerNdc, camera);
       const hits = raycaster.intersectObjects(nodeMeshes);
       return hits.length ? hits[0].object.userData.node : null;
+    },
+
+    /**
+     * Optional contract extension: spotlight one layer by dimming every
+     * other layer's geometry. null restores. Vertical links stay lit when
+     * their span touches the focused layer's height.
+     */
+    setLayerFocus(layerId) {
+      const height = layerHeights.get(layerId);
+      for (const f of focusables) {
+        const lit = layerId == null
+          || (f.layerId ? f.layerId === layerId
+            : f.span[0] <= height && height <= f.span[1]);
+        f.material.transparent = true;
+        f.material.opacity = lit ? f.baseOpacity : f.baseOpacity * 0.12;
+      }
     },
 
     setHighlight(node) {

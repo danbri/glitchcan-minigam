@@ -322,6 +322,8 @@ export function createWebGPURenderer({ container, model, config }) {
 
   const railList = [];
   const planeList = [];
+  const railLayerIds = [];
+  const planeLayerIds = [];
   for (const layer of model.layers) {
     const size = config.frameSize, thick = config.frameThickness;
     const c = hexToRgb(layer.color);
@@ -331,7 +333,9 @@ export function createWebGPURenderer({ container, model, config }) {
       [{ x: size / 2, y: layer.height, z: 0 }, [thick, thick, size], c],
       [{ x: -size / 2, y: layer.height, z: 0 }, [thick, thick, size], c]
     );
+    railLayerIds.push(layer.id, layer.id, layer.id, layer.id);
     planeList.push([{ x: 0, y: layer.height, z: 0 }, [size, 1, size], [1, 1, 1]]);
+    planeLayerIds.push(layer.id);
   }
   const railInstances = new Float32Array(railList.length * INSTANCE_FLOATS);
   railList.forEach(([pos, scale, color], i) =>
@@ -351,12 +355,15 @@ export function createWebGPURenderer({ container, model, config }) {
   });
 
   const lineFloats = [];
+  const lineLayerRanges = []; // {layerId, start, end} in vertex indices
   for (const layer of model.layers) {
     const c = hexToRgb(layer.color);
+    const start = lineFloats.length / 7;
     for (const edge of layer.edges) {
       lineFloats.push(edge.a.x, edge.a.y, edge.a.z, c[0], c[1], c[2], 0.6);
       lineFloats.push(edge.b.x, edge.b.y, edge.b.z, c[0], c[1], c[2], 0.6);
     }
+    lineLayerRanges.push({ layerId: layer.id, start, end: lineFloats.length / 7 });
   }
   const lineVerts = new Float32Array(lineFloats);
 
@@ -697,6 +704,44 @@ export function createWebGPURenderer({ container, model, config }) {
         }
       });
       return best;
+    },
+
+    /**
+     * Optional contract extension (parity with the three.js adapter):
+     * spotlight one layer by dimming every other layer's instances.
+     * Cheap here — instance/vertex opacity floats are rewritten in place.
+     */
+    setLayerFocus(layerId) {
+      const DIM = 0.12;
+      const layerById = new Map(model.layers.map(l => [l.id, l]));
+      const height = layerById.get(layerId)?.height;
+      const factor = lit => (layerId == null || lit) ? 1 : DIM;
+
+      model.nodes.forEach((node, i) => {
+        sphereInstances[i * INSTANCE_FLOATS + 10] =
+          1 * factor(node.layerId === layerId);
+      });
+      railLayerIds.forEach((id, i) => {
+        railInstances[i * INSTANCE_FLOATS + 10] = 0.8 * factor(id === layerId);
+      });
+      planeLayerIds.forEach((id, i) => {
+        planeInstances[i * INSTANCE_FLOATS + 10] = 0.05 * factor(id === layerId);
+      });
+      model.links.forEach((link, i) => {
+        linkInstances[i * INSTANCE_FLOATS + 10] = 0.7 *
+          factor(height !== undefined && link.minY <= height && height <= link.maxY);
+      });
+      for (const r of lineLayerRanges) {
+        const lit = factor(r.layerId === layerId);
+        for (let v = r.start; v < r.end; v++) lineVerts[v * 7 + 6] = 0.6 * lit;
+      }
+      // Sphere + link buffers rewrite every frame; the static ones need a
+      // push now (if the device is up — otherwise init uploads the arrays).
+      if (state.ready && !state.disposed) {
+        state.device.queue.writeBuffer(gpu.railInst, 0, railInstances);
+        state.device.queue.writeBuffer(gpu.planeInst, 0, planeInstances);
+        if (gpu.lineVbuf) state.device.queue.writeBuffer(gpu.lineVbuf, 0, lineVerts);
+      }
     },
 
     setHighlight(node) {

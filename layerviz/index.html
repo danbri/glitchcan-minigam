@@ -159,8 +159,30 @@
         .layer-item {
             display: flex;
             align-items: center;
-            margin: 6px 0;
+            margin: 2px 0;
             font-size: 11px;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            border-radius: 6px;
+            padding: 3px 5px;
+            color: #ddd;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .layer-item:hover { background: rgba(255,255,255,0.1); }
+
+        .layer-item.focused {
+            background: rgba(255,255,255,0.18);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .button-group button.active {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
         }
 
         .layer-color {
@@ -249,23 +271,36 @@
         window.__layerviz = viz; // headless-playtest hook, like __tftt in trees/
 
         // Legend is generated from the graph spec, so data and legend agree.
+        // Each entry is a button: activate to spotlight that layer.
         const legend = document.getElementById('layer-legend');
         for (const layer of DEFAULT_GRAPH.layers) {
-            const item = document.createElement('div');
+            const item = document.createElement('button');
             item.className = 'layer-item';
+            item.type = 'button';
+            item.setAttribute('aria-pressed', 'false');
             const swatch = document.createElement('div');
             swatch.className = 'layer-color';
             swatch.style.background = `#${layer.color.toString(16).padStart(6, '0')}`;
             const text = document.createElement('span');
             text.textContent = layer.label;
             item.append(swatch, text);
+            item.addEventListener('click', () => {
+                const focused = viz.focusLayer(layer.id);
+                for (const el of legend.children) {
+                    const on = focused !== null && el === item;
+                    el.classList.toggle('focused', on);
+                    el.setAttribute('aria-pressed', String(on));
+                }
+            });
             legend.appendChild(item);
         }
 
         document.getElementById('btn-animation')
-            .addEventListener('click', () => viz.toggleAnimation());
+            .addEventListener('click', e => e.target.classList.toggle(
+                'active', !viz.toggleAnimation()));
         document.getElementById('btn-labels')
-            .addEventListener('click', () => viz.toggleLabels());
+            .addEventListener('click', e => e.target.classList.toggle(
+                'active', !viz.toggleLabels()));
         document.getElementById('btn-reset')
             .addEventListener('click', () => viz.resetCamera());
 
