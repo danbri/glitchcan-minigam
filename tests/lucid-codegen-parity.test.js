@@ -265,9 +265,9 @@ describe('whole library still codegens on both backends', () => {
     expect(failures).toEqual([]);
   });
 
-  // The clipmap engine (lucid/clipmap/) bakes a scene, so it needs the codegen
+  // The clipclop engine (lucid/clipclop/) bakes a scene, so it needs the codegen
   // to emit its exact contract from a Lucid JSON scene. Lock that bridge in.
-  describe('clipmap bridge (generateWgslSceneSDF)', () => {
+  describe('clipclop bridge (generateWgslSceneSDF)', () => {
     const bridge = (json, opts) => generateWgslSceneSDF(loadJsonScene(json), opts || {});
     const REQUIRED = [
       'struct Scene', 'struct CacheSample',

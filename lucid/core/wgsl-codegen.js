@@ -117,11 +117,11 @@ export function generateWgslFromJson(scene, options = {}) {
 }
 
 /**
- * Codegen bridge for the clipmap engine (lucid/clipmap/).
+ * Codegen bridge for the clipclop engine (lucid/clipclop/).
  *
- * The clipmap engine bakes a scene into a sparse SDF atlas, so the ONE
+ * The clipclop engine bakes a scene into a sparse SDF atlas, so the ONE
  * scene-specific thing it needs is a distance field it can sample plus an
- * albedo. Its contract (see lucid/clipmap/index.html):
+ * albedo. Its contract (see lucid/clipclop/index.html):
  *
  *   struct Scene { params: vec4f };            // .x cut flag, .y time, .z demoId
  *   struct CacheSample { distance: f32, albedo: vec3f };
@@ -178,7 +178,7 @@ export function generateWgslSceneSDF(scene, options = {}) {
     // where a fast ellipsoid's error compounds — spend the Newton steps.
     ellipsoidFidelity: options.ellipsoidFidelity != null ? options.ellipsoidFidelity : 'auto',
     ellipsoidHelpersEmitted: new Set(),
-    // Re-map builtins to what the clipmap engine can actually provide.
+    // Re-map builtins to what the clipclop engine can actually provide.
     builtinOverrides: {
       time: 'scene.params.y',
       frame: '0.0',
@@ -191,7 +191,7 @@ export function generateWgslSceneSDF(scene, options = {}) {
 
   const sceneExpr = walkNode(scene.root, ctx);
 
-  let wgsl = '// ===== Lucid → clipmap scene bridge (generated) =====\n';
+  let wgsl = '// ===== Lucid → clipclop scene bridge (generated) =====\n';
   wgsl += '// Emitted by generateWgslSceneSDF(). Replaces the engine\'s hardcoded\n';
   wgsl += '// demo scene block. Uniform-free: params baked as constants.\n\n';
 
@@ -1402,7 +1402,7 @@ function valueToWgsl(value, ctx, expectedType = null) {
 
   case 'var':
     // Builtin overrides let a caller re-map time/frame/mouse/etc. to a different
-    // source than the default `u.*` uniforms — e.g. the clipmap bridge feeds
+    // source than the default `u.*` uniforms — e.g. the clipclop bridge feeds
     // `time` from `scene.params.y` and zeroes the inputs the engine lacks.
     if (ctx.builtinOverrides && Object.prototype.hasOwnProperty.call(ctx.builtinOverrides, value.name)) {
       return ctx.builtinOverrides[value.name];

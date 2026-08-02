@@ -1,11 +1,18 @@
-# Clipmap — Lucid's third engine (explorable SDF worlds)
+# Clipclop — Lucid's third engine (explorable SDF worlds)
 
 A peer to `mayfly/` (WebGL) and `stinkyfish/` (WebGPU), but solving a different
 problem. Mayfly and Stinkyfish **raymarch an analytic SDF per fragment** — exact,
-cheap, param-animatable, ideal for viewing a single modeled object. Clipmap is a
+cheap, param-animatable, ideal for viewing a single modeled object. Clipclop is a
 **sparse SDF engine for large, high-detail, walkable worlds** — the SOTA direction
 where per-fragment analytic raymarchers fall over (detail, scene size, WebXR,
 multiplayer).
+
+**Why "clipclop", not "clipmap".** The name is deliberately *not* the technique.
+Today the engine bakes into a three-level clipmap, but that is one implementation
+choice — brick maps, sparse voxel octrees, hash grids are all on the table. Naming
+the engine after its current data structure would bake that choice into its
+identity. So it gets a menagerie name (like mayfly / stinkyfish), and "clipmap"
+stays what it is: the technique it happens to use right now.
 
 **Entry point:** `index.html` (standalone WebGPU app, first-person controls).
 **Needs a real WebGPU device** — it cannot run in the headless CI browser here.
@@ -79,7 +86,54 @@ const { wgsl } = generateWgslSceneSDF(loadJsonScene(sceneJson));
 // → drop-in replacement for the engine's hardcoded demo scene block
 ```
 
-- [x] `core/` codegen target: JSON scene → `fn sceneSDF(p, scene)->f32` (+ albedo). **Node-verifiable** — all 119 scenes emit valid, contract-matching WGSL; locked in by `tests/lucid-codegen-parity.test.js` (`clipmap bridge` block).
+- [x] `core/` codegen target: JSON scene → `fn sceneSDF(p, scene)->f32` (+ albedo). **Node-verifiable** — all 119 scenes emit valid, contract-matching WGSL; locked in by `tests/lucid-codegen-parity.test.js` (`clipclop bridge` block).
 - [ ] Feed it into a fork of this engine's scene block (replace the hardcoded `sceneMonument`/`cache*` demos). Full self-contained replacement — the engine's own `sd*` primitives use different signatures (e.g. `sdCapsule` takes two endpoints), so the bridge must own the primitive set (`emitPrimitives: true`, the default). Requires a real WebGPU device to render-verify.
 - [ ] Animation path: re-derive `sceneSDF` constants per frame → dirty region → re-bake.
 - [ ] Provenance: engine authored externally (WebGPU sparse-clipmap design from YouTube notes); landed verbatim, kept precious. Modify with care.
+
+## Beyond codegen: runtime-parameterized templates (the Dreams direction)
+
+Codegen — JSON → WGSL string → compile — is the *first* bridge, and the right one
+for a fixed catalogue of scenes. But it has a cost the SOTA goal eventually can't
+pay: **every parameter change that touches structure needs a recompile.** For a
+static monument that is fine. For *live* content it is the wrong shape.
+
+Media Molecule's **Dreams** is the touchstone here: players sculpt and animate a
+whole world out of SDF primitives in real time, with no shader recompile per edit.
+The field is *data the GPU reads*, not *code the CPU regenerates*.
+
+That points at a second bridge, sitting beside codegen rather than replacing it:
+
+**Templates evaluated in a compute shader, parameterized by a uniform/storage
+buffer.** One quadruped template — spine, four legs, neck, head — with a parameter
+vector (leg length, body girth, snout length, ear shape, hoof vs. paw, tail).
+`pig`, `sheep`, `cow`, `dog` are then *points in that parameter space*, not four
+compiled shaders. Morph between them by animating the buffer; the clipclop bake
+already re-generates only the dirty bricks, so a slowly-morphing animal costs only
+the bricks it actually moves through.
+
+The same logic extends to the harder layers:
+
+- **Physics / constraints in GPU compute.** Lucid already has WGSL XPBD
+  (`core/physics/xpbd-gpu.js`, real but currently unused — see the rigging skill).
+  A rig/constraint solver that runs as a compute pass writes joint transforms into
+  the same parameter buffer the template reads — so "evaluate rig → drive geometry"
+  becomes one GPU round-trip, not a CPU per-frame loop feeding uniforms.
+- **The rig `chains`/`conserved` work** (CPU today, in `rig-evaluator.js`) is the
+  CPU reference for exactly such a solver. Its expression AST is the thing to port.
+
+This does **not** retire the codegen bridge. The split is by *lifetime*:
+
+| | Codegen bridge (done) | Runtime template (proposed) |
+|---|---|---|
+| Field is | compiled WGSL | data in a buffer |
+| Param change | recompile | write a buffer, mark dirty |
+| Good for | fixed scene catalogue, exact per-object parity | live sculpting, morphable families, physics-driven geometry |
+| Verifiable without GPU | ✅ (string codegen) | partly (template math in Node; bake needs a device) |
+
+Open question to settle before building: does a template's parameter set live in
+the **same JSON scene standard** (a new node type, e.g. `template: "quadruped"`
+with a `params` block that both bridges understand), or as a sibling format? The
+interop pillar says: same standard at the input, if we can make one node type mean
+"compile me" to Mayfly/Stinkyfish and "hand my params to the compute template" to
+clipclop.
