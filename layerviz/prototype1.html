@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semantic Knowledge Graph Layers - Three.js</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            touch-action: none;
+        }
+
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            width: 300px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            transform-origin: top right;
+        }
+
+        #info.collapsed {
+            background: rgba(0, 0, 0, 0.6);
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+            50% { box-shadow: 0 4px 25px rgba(102, 126, 234, 0.4); }
+        }
+
+        #info-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 10px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #info.collapsed #info-header {
+            padding: 12px;
+            justify-content: center;
+        }
+
+        #info-header:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        #info-header:active {
+            background: rgba(255,255,255,0.15);
+        }
+
+        #info h3 {
+            margin: 0;
+            font-size: 14px;
+            color: #fff;
+            flex-grow: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        #info.collapsed h3 {
+            display: none;
+        }
+
+        #toggle-arrow {
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #fff;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            flex-shrink: 0;
+            pointer-events: none;
+        }
+
+        #info.collapsed #toggle-arrow {
+            transform: rotate(-90deg);
+            margin: 0;
+            pointer-events: none;
+        }
+
+        #info-content {
+            padding: 0 15px 15px 15px;
+            max-height: 600px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            opacity: 1;
+        }
+
+        #info.collapsed #info-content {
+            max-height: 0;
+            padding: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .button-group button {
+            flex: 1;
+            min-width: 70px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .button-group button:hover, .button-group button:active {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        #info p {
+            margin: 6px 0;
+            font-size: 11px;
+            color: #ddd;
+            line-height: 1.4;
+        }
+
+        .layer-legend {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .layer-item {
+            display: flex;
+            align-items: center;
+            margin: 6px 0;
+            font-size: 11px;
+        }
+
+        .layer-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            margin-right: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+
+        /* Remove old controls styles */
+        .controls {
+            display: none;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            #info {
+                width: 250px;
+                top: 5px;
+                right: 5px;
+            }
+
+            #info.collapsed {
+                width: 36px;
+                height: 36px;
+            }
+
+            #info h3 {
+                font-size: 12px;
+            }
+
+            #info p, .layer-item {
+                font-size: 10px;
+            }
+
+            .button-group button {
+                font-size: 10px;
+                padding: 6px 10px;
+                min-width: 60px;
+            }
+
+            #tooltip {
+                font-size: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #info {
+                width: 220px;
+            }
+
+            #info-content {
+                max-height: 400px;
+            }
+        }
+
+        #tooltip {
+            position: absolute;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: none;
+            display: none;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="info">
+        <div id="info-header">
+            <h3>Multi-Layer Knowledge Graph</h3>
+            <div id="toggle-arrow"></div>
+        </div>
+        <div id="info-content">
+            <div class="button-group">
+                <button onclick="toggleAnimation()">⏯️ Animation</button>
+                <button onclick="toggleLabels()">🏷️ Labels</button>
+                <button onclick="resetCamera()">🎯 Reset</button>
+            </div>
+
+            <p><strong>Hover over nodes</strong> to see entity details</p>
+            <p><strong>Green connections</strong> show shared entities across layers</p>
+            <p><strong>Drag to rotate</strong> • <strong>Scroll to zoom</strong></p>
+
+            <div class="layer-legend">
+                <div class="layer-item">
+                    <div class="layer-color" style="background: #FFD700;"></div>
+                    <span>Social Graph - People & Organizations</span>
+                </div>
+                <div class="layer-item">
+                    <div class="layer-color" style="background: #FF6B6B;"></div>
+                    <span>Technology Graph - Software & Standards</span>
+                </div>
+                <div class="layer-item">
+                    <div class="layer-color" style="background: #4ECDC4;"></div>
+                    <span>Document Graph - Papers & Blogs</span>
+                </div>
+                <div class="layer-item">
+                    <div class="layer-color" style="background: #95E1D3;"></div>
+                    <span>Concept Graph - Ideas & Topics</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tooltip"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer;
+        let raycaster, mouse;
+        let layers = [];
+        let allNodes = [];
+        let allEdges = [];
+        let verticalConnections = [];
+        let labels = [];
+        let animating = true;
+        let showLabels = true;
+        let mouseX = 0, mouseY = 0;
+
+        // Define knowledge graph data for each layer
+        const graphData = {
+            // Layer 0: Social Graph (People & Organizations)
+            social: {
+                color: 0xFFD700,
+                height: 0,
+                nodes: [
+                    { id: 'danbri', label: 'Dan Brickley', x: 0, z: 0, type: 'person' },
+                    { id: 'timbl', label: 'Tim Berners-Lee', x: -5, z: -3, type: 'person' },
+                    { id: 'w3c', label: 'W3C', x: 5, z: -3, type: 'organization' },
+                    { id: 'google', label: 'Google', x: 5, z: 3, type: 'organization' },
+                    { id: 'schema_org', label: 'Schema.org', x: 0, z: 5, type: 'organization' },
+                    { id: 'mozilla', label: 'Mozilla', x: -5, z: 3, type: 'organization' }
+                ],
+                edges: [
+                    ['danbri', 'w3c'],
+                    ['danbri', 'google'],
+                    ['danbri', 'schema_org'],
+                    ['timbl', 'w3c'],
+                    ['w3c', 'schema_org']
+                ]
+            },
+
+            // Layer 1: Technology Graph (Software & Standards)
+            technology: {
+                color: 0xFF6B6B,
+                height: 5,
+                nodes: [
+                    { id: 'rdf', label: 'RDF', x: -5, z: -3, type: 'standard' },
+                    { id: 'sparql', label: 'SPARQL', x: 5, z: -3, type: 'language' },
+                    { id: 'json_ld', label: 'JSON-LD', x: 0, z: 0, type: 'format' },
+                    { id: 'schema_org', label: 'Schema.org', x: 0, z: 5, type: 'vocabulary' },
+                    { id: 'foaf', label: 'FOAF', x: -5, z: 3, type: 'vocabulary' },
+                    { id: 'owl', label: 'OWL', x: 5, z: 3, type: 'language' },
+                    { id: 'turtle', label: 'Turtle', x: -3, z: 0, type: 'format' }
+                ],
+                edges: [
+                    ['rdf', 'sparql'],
+                    ['rdf', 'json_ld'],
+                    ['rdf', 'turtle'],
+                    ['json_ld', 'schema_org'],
+                    ['rdf', 'foaf'],
+                    ['rdf', 'owl'],
+                    ['foaf', 'schema_org']
+                ]
+            },
+
+            // Layer 2: Document Graph (Papers & Blogs)
+            document: {
+                color: 0x4ECDC4,
+                height: 10,
+                nodes: [
+                    { id: 'danbri_blog', label: "Dan's Blog", x: 0, z: 0, type: 'blog' },
+                    { id: 'schema_docs', label: 'Schema.org Docs', x: 0, z: 5, type: 'documentation' },
+                    { id: 'rdf_primer', label: 'RDF Primer', x: -5, z: -3, type: 'specification' },
+                    { id: 'foaf_spec', label: 'FOAF Spec', x: -5, z: 3, type: 'specification' },
+                    { id: 'kg_paper', label: 'Knowledge Graphs', x: 5, z: 0, type: 'paper' },
+                    { id: 'semantic_web', label: 'Semantic Web', x: 3, z: -4, type: 'paper' }
+                ],
+                edges: [
+                    ['danbri_blog', 'schema_docs'],
+                    ['danbri_blog', 'foaf_spec'],
+                    ['rdf_primer', 'foaf_spec'],
+                    ['schema_docs', 'kg_paper'],
+                    ['semantic_web', 'kg_paper'],
+                    ['rdf_primer', 'semantic_web']
+                ]
+            },
+
+            // Layer 3: Concept Graph (Ideas & Topics)
+            concept: {
+                color: 0x95E1D3,
+                height: 15,
+                nodes: [
+                    { id: 'linked_data', label: 'Linked Data', x: 0, z: 0, type: 'concept' },
+                    { id: 'semantic_web', label: 'Semantic Web', x: 3, z: -4, type: 'concept' },
+                    { id: 'knowledge_graph', label: 'Knowledge Graph', x: 5, z: 0, type: 'concept' },
+                    { id: 'ontology', label: 'Ontology', x: -5, z: -3, type: 'concept' },
+                    { id: 'metadata', label: 'Metadata', x: -5, z: 3, type: 'concept' },
+                    { id: 'open_data', label: 'Open Data', x: 0, z: 5, type: 'concept' }
+                ],
+                edges: [
+                    ['linked_data', 'semantic_web'],
+                    ['linked_data', 'knowledge_graph'],
+                    ['semantic_web', 'ontology'],
+                    ['linked_data', 'metadata'],
+                    ['linked_data', 'open_data'],
+                    ['knowledge_graph', 'ontology']
+                ]
+            }
+        };
+
+        // Entities that appear in multiple layers (for vertical connections)
+        const sharedEntities = [
+            { id: 'schema_org', layers: ['social', 'technology'] },
+            { id: 'danbri', layers: ['social'], connectTo: 'danbri_blog' },
+            { id: 'semantic_web', layers: ['document', 'concept'] },
+            { id: 'foaf', layers: ['technology'], connectTo: 'foaf_spec' },
+            { id: 'rdf', layers: ['technology'], connectTo: 'rdf_primer' }
+        ];
+
+        function init() {
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x2a2a3a, 1, 100);
+
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(
+                75,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(20, 15, 20);
+            camera.lookAt(0, 7.5, 0);
+
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Raycaster for mouse interaction
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            directionalLight.position.set(15, 25, 15);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.camera.near = 0.1;
+            directionalLight.shadow.camera.far = 60;
+            directionalLight.shadow.camera.left = -20;
+            directionalLight.shadow.camera.right = 20;
+            directionalLight.shadow.camera.top = 20;
+            directionalLight.shadow.camera.bottom = -20;
+            scene.add(directionalLight);
+
+            const pointLight = new THREE.PointLight(0xffffff, 0.3);
+            pointLight.position.set(-10, 20, -10);
+            scene.add(pointLight);
+
+            createGraphLayers();
+            createVerticalConnections();
+
+            // Event listeners
+            document.addEventListener('mousemove', onMouseMove, false);
+            document.addEventListener('wheel', onMouseWheel, false);
+            window.addEventListener('resize', onWindowResize, false);
+
+            // Touch controls for mobile
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let initialPinchDistance = 0;
+            let cameraDistance = 28;
+
+            document.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                } else if (e.touches.length === 2) {
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    initialPinchDistance = Math.sqrt(dx * dx + dy * dy);
+                }
+                e.preventDefault();
+            }, { passive: false });
+
+            document.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1) {
+                    const deltaX = e.touches[0].clientX - touchStartX;
+                    const deltaY = e.touches[0].clientY - touchStartY;
+
+                    mouseX = deltaX * 0.1;
+                    mouseY = -deltaY * 0.1;
+
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                } else if (e.touches.length === 2 && initialPinchDistance > 0) {
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    const currentDistance = Math.sqrt(dx * dx + dy * dy);
+
+                    const scale = currentDistance / initialPinchDistance;
+                    cameraDistance /= scale;
+                    cameraDistance = Math.max(10, Math.min(50, cameraDistance));
+
+                    const currentPos = camera.position.normalize().multiplyScalar(cameraDistance);
+                    camera.position.copy(currentPos);
+
+                    initialPinchDistance = currentDistance;
+                }
+                e.preventDefault();
+            }, { passive: false });
+
+            document.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) {
+                    initialPinchDistance = 0;
+                }
+            });
+
+            animate();
+        }
+
+        function createGraphLayers() {
+            const layerNames = ['social', 'technology', 'document', 'concept'];
+
+            layerNames.forEach((layerName, index) => {
+                const layerData = graphData[layerName];
+                const layerGroup = new THREE.Group();
+
+                // Create frame
+                createLayerFrame(layerData.height, layerData.color);
+
+                // Create nodes
+                const nodeMap = {};
+                layerData.nodes.forEach(nodeData => {
+                    const node = createNode(nodeData, layerData.color, layerData.height);
+                    nodeMap[nodeData.id] = node;
+                    layerGroup.add(node);
+                    allNodes.push(node);
+
+                    // Create label
+                    const label = createLabel(nodeData.label, node.position);
+                    labels.push(label);
+                });
+
+                // Create edges
+                layerData.edges.forEach(edge => {
+                    const startNode = nodeMap[edge[0]];
+                    const endNode = nodeMap[edge[1]];
+                    if (startNode && endNode) {
+                        const edgeLine = createEdge(startNode.position, endNode.position, layerData.color);
+                        layerGroup.add(edgeLine);
+                        allEdges.push(edgeLine);
+                    }
+                });
+
+                scene.add(layerGroup);
+                layers.push(layerGroup);
+            });
+        }
+
+        function createLayerFrame(height, color) {
+            const frameSize = 14;
+            const frameThickness = 0.2;
+
+            const frameMaterial = new THREE.MeshPhongMaterial({
+                color: color,
+                emissive: color,
+                emissiveIntensity: 0.2,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            // Create frame edges
+            const positions = [
+                [0, height, frameSize/2],
+                [0, height, -frameSize/2],
+                [frameSize/2, height, 0],
+                [-frameSize/2, height, 0]
+            ];
+
+            const edgeGeometry = new THREE.BoxGeometry(frameSize, frameThickness, frameThickness);
+            const sideGeometry = new THREE.BoxGeometry(frameThickness, frameThickness, frameSize);
+
+            positions.forEach((pos, idx) => {
+                const geometry = idx < 2 ? edgeGeometry : sideGeometry;
+                const frame = new THREE.Mesh(geometry, frameMaterial);
+                frame.position.set(...pos);
+                frame.castShadow = true;
+                frame.receiveShadow = true;
+                scene.add(frame);
+            });
+
+            // Create transparent plane
+            const planeGeometry = new THREE.PlaneGeometry(frameSize, frameSize);
+            const planeMaterial = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.05,
+                side: THREE.DoubleSide
+            });
+
+            const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+            plane.position.y = height;
+            plane.rotation.x = -Math.PI / 2;
+            plane.receiveShadow = true;
+            scene.add(plane);
+        }
+
+        function createNode(nodeData, color, height) {
+            const geometry = new THREE.SphereGeometry(0.4, 32, 32);
+            const material = new THREE.MeshPhongMaterial({
+                color: color,
+                emissive: color,
+                emissiveIntensity: 0.3,
+                shininess: 100
+            });
+
+            const node = new THREE.Mesh(geometry, material);
+            node.position.set(nodeData.x, height, nodeData.z);
+            node.castShadow = true;
+            node.receiveShadow = true;
+            node.userData = nodeData;
+
+            return node;
+        }
+
+        function createEdge(start, end, color) {
+            const points = [];
+            points.push(new THREE.Vector3(start.x, start.y, start.z));
+            points.push(new THREE.Vector3(end.x, end.y, end.z));
+
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.6,
+                linewidth: 2
+            });
+
+            const line = new THREE.Line(geometry, material);
+            return line;
+        }
+
+        function createVerticalConnections() {
+            sharedEntities.forEach(entity => {
+                const positions = [];
+
+                // Find positions of shared entities across layers
+                Object.keys(graphData).forEach(layerName => {
+                    const layer = graphData[layerName];
+                    const node = layer.nodes.find(n => n.id === entity.id || n.id === entity.connectTo);
+                    if (node && (entity.layers.includes(layerName) || entity.connectTo === node.id)) {
+                        positions.push({
+                            x: node.x,
+                            y: layer.height,
+                            z: node.z
+                        });
+                    }
+                });
+
+                // Create vertical connection if entity appears in multiple layers
+                if (positions.length > 1) {
+                    const minY = Math.min(...positions.map(p => p.y));
+                    const maxY = Math.max(...positions.map(p => p.y));
+                    const height = maxY - minY;
+
+                    const geometry = new THREE.CylinderGeometry(0.1, 0.1, height, 16);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0x00ff00,
+                        emissive: 0x00ff00,
+                        emissiveIntensity: 0.4,
+                        transparent: true,
+                        opacity: 0.7
+                    });
+
+                    const cylinder = new THREE.Mesh(geometry, material);
+                    cylinder.position.set(
+                        positions[0].x,
+                        minY + height/2,
+                        positions[0].z
+                    );
+                    cylinder.castShadow = true;
+                    scene.add(cylinder);
+                    verticalConnections.push(cylinder);
+                }
+            });
+        }
+
+        function createLabel(text, position) {
+            // Create a div element for the label
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'label3d';
+            labelDiv.style.position = 'absolute';
+            labelDiv.style.color = 'white';
+            labelDiv.style.fontSize = '12px';
+            labelDiv.style.fontFamily = 'Arial, sans-serif';
+            labelDiv.style.textShadow = '0 0 4px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.6)';
+            labelDiv.style.pointerEvents = 'none';
+            labelDiv.style.userSelect = 'none';
+            labelDiv.style.whiteSpace = 'nowrap';
+            labelDiv.style.fontWeight = '500';
+            labelDiv.textContent = text;
+
+            // Store position for updating
+            labelDiv.userData = { position: position };
+
+            document.body.appendChild(labelDiv);
+            return labelDiv;
+        }
+
+        function updateLabels() {
+            if (!showLabels) {
+                labels.forEach(label => {
+                    label.style.display = 'none';
+                });
+                return;
+            }
+
+            labels.forEach(label => {
+                if (label.userData && label.userData.position) {
+                    const vector = new THREE.Vector3(
+                        label.userData.position.x,
+                        label.userData.position.y + 0.7,
+                        label.userData.position.z
+                    );
+
+                    // Project 3D position to 2D screen coordinates
+                    vector.project(camera);
+
+                    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+                    const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+
+                    label.style.left = x + 'px';
+                    label.style.top = y + 'px';
+                    label.style.display = 'block';
+
+                    // Fade labels based on distance
+                    const distance = camera.position.distanceTo(label.userData.position);
+                    const opacity = Math.max(0, Math.min(1, (30 - distance) / 20));
+                    label.style.opacity = opacity;
+                }
+            });
+        }
+
+        function onMouseMove(event) {
+            // For camera rotation
+            mouseX = (event.clientX - window.innerWidth / 2) * 0.05;
+            mouseY = (event.clientY - window.innerHeight / 2) * 0.05;
+
+            // For raycasting
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Check for hover
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(allNodes);
+
+            const tooltip = document.getElementById('tooltip');
+            if (intersects.length > 0) {
+                const node = intersects[0].object;
+                if (node.userData && node.userData.label) {
+                    tooltip.innerHTML = `<strong>${node.userData.label}</strong><br>Type: ${node.userData.type}<br>ID: ${node.userData.id}`;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = event.clientX + 10 + 'px';
+                    tooltip.style.top = event.clientY - 30 + 'px';
+
+                    // Highlight node
+                    node.material.emissiveIntensity = 0.6;
+                    node.scale.set(1.2, 1.2, 1.2);
+                }
+            } else {
+                tooltip.style.display = 'none';
+                // Reset all nodes
+                allNodes.forEach(node => {
+                    node.material.emissiveIntensity = 0.3;
+                    node.scale.set(1, 1, 1);
+                });
+            }
+        }
+
+        function onMouseWheel(event) {
+            const zoomSpeed = 0.05;
+            camera.position.x *= 1 + event.deltaY * zoomSpeed * 0.01;
+            camera.position.y *= 1 + event.deltaY * zoomSpeed * 0.01;
+            camera.position.z *= 1 + event.deltaY * zoomSpeed * 0.01;
+
+            // Limit zoom
+            const distance = camera.position.length();
+            if (distance < 10) {
+                camera.position.normalize().multiplyScalar(10);
+            } else if (distance > 50) {
+                camera.position.normalize().multiplyScalar(50);
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (animating) {
+                // Smooth camera movement
+                camera.position.x += (mouseX - camera.position.x) * 0.02;
+                camera.position.y += (-mouseY - camera.position.y + 15) * 0.02;
+                camera.lookAt(0, 7.5, 0);
+
+                // Animate nodes slightly
+                allNodes.forEach((node, i) => {
+                    node.position.y = node.userData.originalY || node.position.y;
+                    if (!node.userData.originalY) {
+                        node.userData.originalY = node.position.y;
+                    }
+                    node.position.y += Math.sin(Date.now() * 0.001 + i * 0.5) * 0.05;
+                });
+
+                // Pulse vertical connections
+                verticalConnections.forEach((conn, i) => {
+                    conn.material.emissiveIntensity = 0.4 + Math.sin(Date.now() * 0.002 + i) * 0.2;
+                });
+            }
+
+            // Always update labels to follow nodes
+            updateLabels();
+
+            renderer.render(scene, camera);
+        }
+
+        function toggleAnimation() {
+            animating = !animating;
+        }
+
+        function toggleLabels() {
+            showLabels = !showLabels;
+            if (!showLabels) {
+                labels.forEach(label => {
+                    label.style.display = 'none';
+                });
+            }
+        }
+
+        function toggleInfo() {
+            const infoPanel = document.getElementById('info');
+            infoPanel.classList.toggle('collapsed');
+
+            // Save state to localStorage for persistence
+            const isCollapsed = infoPanel.classList.contains('collapsed');
+            localStorage.setItem('infoPanelCollapsed', isCollapsed);
+        }
+
+        // Check saved state on load and add click handler
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedState = localStorage.getItem('infoPanelCollapsed');
+            if (savedState === 'true') {
+                document.getElementById('info').classList.add('collapsed');
+            }
+
+            // Add click event listener to header
+            document.getElementById('info-header').addEventListener('click', toggleInfo);
+        });
+
+        function resetCamera() {
+            camera.position.set(20, 15, 20);
+            camera.lookAt(0, 7.5, 0);
+        }
+
+        // Cleanup function for labels
+        function cleanup() {
+            labels.forEach(label => {
+                if (label.parentNode) {
+                    label.parentNode.removeChild(label);
+                }
+            });
+        }
+
+        window.addEventListener('beforeunload', cleanup);
+
+        // Initialize the scene
+        init();
+    </script>
+</body>
+</html>
