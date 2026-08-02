@@ -332,8 +332,15 @@ export class LayerViz {
       this._listeners.push([target, type, fn, opts]);
     };
 
+    // Mousemove stays on document: rotation intent tracks the pointer
+    // everywhere, and it never blocks other elements' events.
     on(document, 'mousemove', e => this._onMouseMove(e));
-    on(document, 'wheel', e => this._onWheel(e));
+    // Wheel and touch bind to the container ONLY. On document they would
+    // swallow taps and scrolls aimed at overlay UI (the info panel):
+    // preventDefault() on a document-level touchstart stops the browser
+    // from synthesizing the click, making overlay buttons dead on touch
+    // devices.
+    on(this.container, 'wheel', e => this._onWheel(e));
     on(window, 'resize', () => this._onResize());
 
     // Touch: one finger rotates, two fingers pinch-zoom.
@@ -341,7 +348,7 @@ export class LayerViz {
     let touchStartY = 0;
     let pinchDistance = 0;
 
-    on(document, 'touchstart', e => {
+    on(this.container, 'touchstart', e => {
       if (e.touches.length === 1) {
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
@@ -351,7 +358,7 @@ export class LayerViz {
       e.preventDefault();
     }, { passive: false });
 
-    on(document, 'touchmove', e => {
+    on(this.container, 'touchmove', e => {
       if (e.touches.length === 1) {
         this.pointer.x = (e.touches[0].clientX - touchStartX) * 0.1;
         this.pointer.y = -(e.touches[0].clientY - touchStartY) * 0.1;
@@ -365,7 +372,7 @@ export class LayerViz {
       e.preventDefault();
     }, { passive: false });
 
-    on(document, 'touchend', e => {
+    on(this.container, 'touchend', e => {
       if (e.touches.length < 2) pinchDistance = 0;
     });
   }

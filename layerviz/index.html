@@ -11,13 +11,13 @@
             overflow: hidden;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            touch-action: none;
         }
 
         #canvas-container {
             position: relative;
             width: 100vw;
             height: 100vh;
+            touch-action: none;
         }
 
         #info {
@@ -245,6 +245,7 @@
             createRenderer: createThreeRenderer,
             spec: DEFAULT_GRAPH
         });
+        window.__layerviz = viz; // headless-playtest hook, like __tftt in trees/
 
         // Legend is generated from the graph spec, so data and legend agree.
         const legend = document.getElementById('layer-legend');
