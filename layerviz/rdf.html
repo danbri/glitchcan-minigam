@@ -364,6 +364,13 @@
                 if (base.has(key(b))) continue;
                 const s = b.s.value, t = b.t.value;
                 if (!visual.has(s) || NOISE.has(t)) continue;
+                // OWL-RL bindings include internal comprehension-witness
+                // classes (__rl_svf_…, __rl_minqc1_…). They are engine
+                // machinery, not inferred facts — and their local names
+                // shorten to real class names, which once fooled us into
+                // reporting a phantom soundness bug (see notes/). Full-IRI
+                // filtering, before any shortening.
+                if (t.startsWith('__rl_')) continue;
                 if (!byEntity.has(s)) byEntity.set(s, { names: [], iris: [] });
                 byEntity.get(s).names.push(localName(t));
                 byEntity.get(s).iris.push(t);

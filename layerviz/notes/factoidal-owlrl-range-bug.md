@@ -1,50 +1,54 @@
-# factoidal npm build: OWL-RL range rule types the SUBJECT
+# RETRACTED: "OWL-RL range rule types the SUBJECT" — my display artifact
 
-Found 2026-08-02 while wiring the npm build into
-`layerviz/rdf.html`'s closure button.
+**Correction 2026-08-02, same day.** The factoidal side is right and
+the original claim below is WRONG. The OWL-RL range rule is sound.
+Rerunning the minimal repro printing FULL IRIs (no shortening):
 
-**Build:** `@danbri/foafos` 0.1.0-alpha.0, `version.json` gitSha
-`e3f9e2f8186c4ae98ce02219ca0c6c880cc372d4`, builtAt
-2026-07-21T04:35:59Z (Pages mirror `docs/npm/foafos`, factoidal repo
-commit `668c70a`). Node 22.
-
-## Repro (Node, `npm/factoidal/index.mjs`)
-
-```js
-const ttl = `
-@prefix : <http://ex/> .
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-:alice a :Person .
-:doc1 :maker :alice .
-:Person a rdfs:Class .
-:maker rdfs:range :Person .`;
-const ds = await parse(ttl, { format: 'turtle' });
-const rows = await query(ds, 'SELECT ?s ?t WHERE { ?s a ?t }',
-                         { entail: 'OWL-RL' });
+```
+doc1 a "http://www.w3.org/2002/07/owl#Thing"
+doc1 a "__rl_svf_http://ex/maker__on__http://ex/Person"
+doc1 a "__rl_minqc1_http://ex/maker__on__http://ex/Person"
+doc1 a "__rl_maxqc1_http://ex/maker__on__http://ex/Person"
+doc1 a "__rl_exactqc1_http://ex/maker__on__http://ex/Person"
+EXACT doc1 a http://ex/Person present: false
 ```
 
-**Actual:** bindings include `:doc1 a :Person` (4 duplicate rows).
-The `rdfs:range` rule (prp-rng) types the triple's SUBJECT; it must
-type the OBJECT.
+No binding contains `doc1 a <http://ex/Person>`. My harness shortened
+term IRIs with `.split(/[/#]/).pop()`, which collapses the engine's
+internal comprehension-witness classes
+(`__rl_svf_http://ex/maker__on__http://ex/Person` etc.) to exactly
+`Person`. The "4 duplicate rows" were four distinct witness classes
+(someValuesFrom, min-/max-/exact-cardinality-1) — the fingerprint of
+the comprehension layer, as the rebuttal said. Every "unsound" card
+observation ("Overview.html a Person", "card#i a OnlineAccount") is
+the same collapse.
 
-**Expected:** no `:doc1 a :Person`; range only confirms
-`:alice a :Person`.
+Lesson recorded: never diff or display shortened terms; compare full
+IRIs, shorten only at the last render step. `layerviz/rdf.html`'s
+closure now filters `__rl_*` witness classes so they cannot surface
+as implied facts.
 
-**RDFS regime is correct** on the same input — OWL-RL only. OWL-RL
-`owl:inverseOf` is also correct on the same data.
+One residual question for factoidal (observation, not a bug claim):
+is it intended that `__rl_*` witness classes appear in user-facing
+SELECT bindings under `entail: 'OWL-RL'` (and pass `FILTER(isIRI(?t))`
+despite not being IRI-shaped)? A consumer must know to filter them.
 
-## Real-world effect
-
-On timbl's FOAF card + FOAF axioms (`layerviz/rdf.html` data), OWL-RL
-types `DesignIssues/Overview.html a foaf:Person`,
-`card#i a foaf:OnlineAccount`, and similar for every domain/range
-axiom touching the entity.
-
-## Related findings, same build, same session
+## Still-standing findings (verified without shortening)
 
 - `FILTER EXISTS` / `FILTER NOT EXISTS` return empty results even in
   the plain single-pattern form; `MINUS` evaluates correctly.
+  (Empty result sets — no display step involved.)
 - Statements with unresolvable relative IRIs are dropped silently —
-  always pass `baseIRI`. Parse errors generally silent-drop rather
-  than throw.
+  always pass `baseIRI` (dataset size 19 vs 86 on timbl's card).
+  Parse errors generally silent-drop rather than throw.
 - npm README quickstart shows sync `parse`/`query`; the API is async.
+
+---
+
+## Original (wrong) report, kept for the record
+
+Build: `@danbri/foafos` 0.1.0-alpha.0, gitSha `e3f9e2f8…`, builtAt
+2026-07-21. Claim was: given `:doc1 :maker :alice .` and
+`:maker rdfs:range :Person .`, OWL-RL infers `:doc1 a :Person` (4
+rows), i.e. prp-rng typing the subject. Actual cause: shortened
+display of witness classes, as above.
