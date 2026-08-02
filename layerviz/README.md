@@ -55,6 +55,32 @@ const viz = new LayerViz({
 `viz.toggleAnimation()`, `viz.toggleLabels()`, `viz.resetCamera()`, and
 `viz.dispose()` are the public controls.
 
+## Real RDF: rdf.html (factoidal)
+
+`rdf.html` builds its layers from real RDF at runtime: Tim Berners-Lee's
+public FOAF card (snapshot: `data/tbl-card.ttl`), parsed and
+SPARQL-queried in the browser by
+[factoidal](https://github.com/danbri/factoidal)'s npm build, imported
+same-origin from the Pages mirror
+`https://danbri.github.io/factoidal/npm/foafos/browser.js`. Usage:
+
+```js
+const { query } = await import('https://danbri.github.io/factoidal/npm/foafos/browser.js');
+const r = await query(turtleText, sparql, {
+  dataFormat: 'turtle',
+  baseIRI: 'https://…'   // REQUIRED if the data has relative IRIs — without
+                         // it those statements are dropped silently
+});
+r.results.bindings       // SPARQL-JSON
+```
+
+Known engine quirks in the npm build (2026-08-02, found building this):
+`FILTER EXISTS` / `FILTER NOT EXISTS` return empty results — use `MINUS`
+or filter in JS; parse errors and unresolvable relative IRIs drop
+statements silently rather than throwing. Node API (`npm/factoidal`
+`index.mjs`) is promise-based: `await parse(text, {format, baseIRI})`,
+`await query(dataset, sparql)` with RDF/JS bindings.
+
 ## Backends
 
 - three.js/WebGL: `layerviz-three.js` (here), used by `index.html`.

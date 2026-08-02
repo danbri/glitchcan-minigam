@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LayerViz - Real RDF via factoidal</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            touch-action: none;
+        }
+
+        #info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            width: 300px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+
+        #info h3 {
+            margin: 0;
+            padding: 12px 15px 0 15px;
+            font-size: 14px;
+        }
+
+        #info-content {
+            padding: 8px 15px 15px 15px;
+        }
+
+        #info p {
+            margin: 6px 0;
+            font-size: 11px;
+            color: #ddd;
+            line-height: 1.4;
+        }
+
+        #info a { color: #9db8ff; }
+
+        .layer-legend {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .layer-item {
+            display: flex;
+            align-items: center;
+            margin: 6px 0;
+            font-size: 11px;
+        }
+
+        .layer-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        #status {
+            font-size: 11px;
+            color: #ffe28a;
+        }
+
+        @media (max-width: 768px) {
+            #info { width: 250px; top: 5px; right: 5px; }
+            #info p, .layer-item { font-size: 10px; }
+        }
+    </style>
+    <script type="importmap">
+    { "imports": { "three": "../trees/vendor/three.module.min.js" } }
+    </script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="info">
+        <h3>Real RDF &rarr; LayerViz</h3>
+        <div id="info-content">
+            <p>Tim Berners-Lee's public FOAF card
+               (<a href="https://www.w3.org/People/Berners-Lee/card">source</a>,
+               snapshot in <code>data/</code>), parsed and SPARQL-queried
+               <strong>in your browser</strong> by
+               <a href="https://github.com/danbri/factoidal">factoidal</a> —
+               the F*-verified RDF engine. No hand-written RDF parsing here.</p>
+            <p id="status">loading engine&hellip;</p>
+            <div class="layer-legend" id="layer-legend"></div>
+            <p><strong>Drag to rotate</strong> &bull; <strong>Pinch or scroll to zoom</strong> &bull; <strong>Tap nodes</strong> for details</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { LayerViz } from './layerviz.js';
+        import { createThreeRenderer } from './layerviz-three.js';
+
+        const status = document.getElementById('status');
+        const FACTOIDAL =
+            'https://danbri.github.io/factoidal/npm/foafos/browser.js';
+        const BASE = 'https://www.w3.org/People/Berners-Lee/card';
+
+        // Layer skeleton. Nodes and edges are filled from SPARQL below.
+        const LAYERS = [
+            { id: 'people', label: 'People', color: 0xFFD700, height: 0 },
+            { id: 'projects', label: 'Projects & Organizations', color: 0xFF6B6B, height: 5 },
+            { id: 'documents', label: 'Documents', color: 0x4ECDC4, height: 10 },
+            { id: 'events', label: 'Events & Talks', color: 0x95E1D3, height: 15 }
+        ];
+
+        const HUB = 'https://www.w3.org/People/Berners-Lee/card#i';
+        const localName = iri =>
+            decodeURIComponent(iri.replace(/[/#]$/, '').split(/[/#]/).pop());
+
+        async function buildSpecFromRdf() {
+            const [{ query }, ttl] = await Promise.all([
+                import(FACTOIDAL),
+                fetch('./data/tbl-card.ttl').then(r => r.text())
+            ]);
+            status.textContent = 'running SPARQL…';
+            const opts = { dataFormat: 'turtle', baseIRI: BASE };
+            const rows = async sparql =>
+                (await query(ttl, sparql, opts)).results.bindings;
+
+            const PREFIXES = `
+                PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+                PREFIX con: <http://www.w3.org/2000/10/swap/pim/contact#>
+                PREFIX doap: <http://usefulinc.com/ns/doap#>
+                PREFIX dc: <http://purl.org/dc/elements/1.1/>
+                PREFIX dct: <http://purl.org/dc/terms/>
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>`;
+
+            // One query per layer: entities related to the hub, with the
+            // real predicate that links them and a label when one exists.
+            const layerQueries = {
+                people: `${PREFIXES} SELECT DISTINCT ?s ?label ?rel WHERE {
+                    { <${HUB}> con:assistant ?s . BIND("assistant" AS ?rel) }
+                    UNION { <${HUB}> foaf:knows ?s . BIND("knows" AS ?rel) }
+                    OPTIONAL { ?s foaf:name ?label }
+                }`,
+                projects: `${PREFIXES} SELECT DISTINCT ?s ?label ?rel WHERE {
+                    { ?s doap:developer <${HUB}> . BIND("developer" AS ?rel) }
+                    UNION { ?s foaf:member <${HUB}> . BIND("member" AS ?rel) }
+                    OPTIONAL { ?s rdfs:label ?label }
+                }`,
+                documents: `${PREFIXES} SELECT DISTINCT ?s ?label ?rel WHERE {
+                    { ?s foaf:maker <${HUB}> . BIND("maker" AS ?rel) }
+                    UNION { <${HUB}> foaf:account ?s . BIND("account" AS ?rel) }
+                    OPTIONAL { { ?s dc:title ?label } UNION { ?s dct:title ?label } }
+                }`,
+                events: `${PREFIXES} SELECT DISTINCT ?s ?label ?rel WHERE {
+                    { ?s con:participant <${HUB}> . BIND("participant" AS ?rel) }
+                    UNION { ?s foaf:maker <${HUB}> . ?s dct:title ?label2 .
+                            BIND("maker" AS ?rel) }
+                    OPTIONAL { { ?s dc:title ?label } UNION { ?s dct:title ?label }
+                               UNION { ?s rdfs:label ?label } }
+                }`
+            };
+            // Events run before documents: both match maker-of items, and
+            // the shared `seen` set gives events first claim. (This dedup
+            // is in JS because the npm build's FILTER [NOT] EXISTS returns
+            // empty results — engine bug found while building this page;
+            // MINUS works.)
+            const QUERY_ORDER = ['people', 'projects', 'events', 'documents'];
+
+            const hubName = (await rows(`${PREFIXES}
+                SELECT ?n WHERE { <${HUB}> foaf:name ?n } LIMIT 1`))
+                [0]?.n?.value || 'Tim Berners-Lee';
+
+            const seen = new Set();
+            const itemsByLayer = {};
+            for (const layerId of QUERY_ORDER) {
+                const bindings = await rows(layerQueries[layerId]);
+                const items = itemsByLayer[layerId] = [];
+                for (const b of bindings) {
+                    const iri = b.s.value;
+                    if (iri === HUB || seen.has(iri)) continue;
+                    seen.add(iri);
+                    items.push({
+                        id: iri,
+                        label: b.label?.value || localName(iri),
+                        type: b.rel?.value || 'related'
+                    });
+                }
+            }
+
+            const layers = [];
+            for (const meta of LAYERS) {
+                const items = itemsByLayer[meta.id];
+                // The hub anchors every layer at the centre; items ring it.
+                const nodes = [{
+                    id: HUB, label: hubName, type: 'person', x: 0, z: 0
+                }];
+                const edges = [];
+                items.forEach((item, i) => {
+                    const a = (i / items.length) * 2 * Math.PI;
+                    nodes.push({ ...item, x: Math.sin(a) * 5, z: Math.cos(a) * 5 });
+                    edges.push([HUB, item.id]);
+                });
+                layers.push({ ...meta, nodes, edges });
+            }
+
+            return {
+                layers,
+                // The hub occurs in every layer: one column ties them.
+                sharedEntities: [{ id: HUB, layers: LAYERS.map(l => l.id) }]
+            };
+        }
+
+        try {
+            const spec = await buildSpecFromRdf();
+            const viz = new LayerViz({
+                container: document.getElementById('canvas-container'),
+                createRenderer: createThreeRenderer,
+                spec
+            });
+            window.__layerviz = viz; // headless-playtest hook
+
+            const legend = document.getElementById('layer-legend');
+            for (const layer of spec.layers) {
+                const item = document.createElement('div');
+                item.className = 'layer-item';
+                const swatch = document.createElement('div');
+                swatch.className = 'layer-color';
+                swatch.style.background =
+                    `#${layer.color.toString(16).padStart(6, '0')}`;
+                const text = document.createElement('span');
+                text.textContent =
+                    `${layer.label} — ${layer.nodes.length - 1} entities`;
+                item.append(swatch, text);
+                legend.appendChild(item);
+            }
+            const n = spec.layers.reduce((s, l) => s + l.nodes.length, 0);
+            status.textContent =
+                `✓ ${n} nodes from live SPARQL over 86 triples`;
+        } catch (err) {
+            status.textContent = `engine failed: ${err.message ?? err}`;
+            console.error(err);
+        }
+    </script>
+</body>
+</html>
