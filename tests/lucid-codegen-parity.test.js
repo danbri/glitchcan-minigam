@@ -18,6 +18,7 @@ const { loadJsonScene } = await import('../lucid/core/json-loader.js');
 const { generateGlslFromJson } = await import('../lucid/core/json-codegen.js');
 const { generateWgslFromJson, generateWgslSceneSDF } = await import('../lucid/core/wgsl-codegen.js');
 const { evaluateExpr, evaluateRig } = await import('../lucid/core/rig-evaluator.js');
+const { exprToSexpr, readOne, formToExpr, formToNode } = await import('../lucid/core/sexpr.js');
 
 const glsl = (json, opts) => generateGlslFromJson(loadJsonScene(json), opts || {});
 const wgsl = (json, opts) => generateWgslFromJson(loadJsonScene(json), opts || {});
@@ -325,5 +326,84 @@ describe('whole library still codegens on both backends', () => {
       }
       expect(failures).toEqual([]);
     });
+  });
+});
+
+// The IR is already an S-expression in a JSON costume. core/sexpr.js is its
+// surface syntax — a reader/printer over the SAME IR, so codegen is untouched.
+// These lock in that the surface is faithful: it must not change what codegen
+// emits, for any expression in the corpus.
+describe('s-expression surface (core/sexpr.js)', () => {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const scenesDir = path.join(here, '..', 'lucid', 'scenes');
+  const walk = (dir) => {
+    let out = [];
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) out = out.concat(walk(p));
+      else if (e.name.endsWith('.json') && e.name !== 'toc.json') out.push(p);
+    }
+    return out;
+  };
+  const files = walk(scenesDir);
+
+  const roundExpr = (ir) => formToExpr(readOne(exprToSexpr(ir)));
+
+  it('round-trips basic expression shapes to identical IR', () => {
+    const cases = [
+      { expr: 'mul', args: [{ var: 'rotationSpeed' }, { var: 'time' }] },
+      { expr: 'add', args: [1, { expr: 'mul', args: [0.01, { var: 'time' }] }] },
+      { expr: 'neg', args: [{ var: 'x' }] },
+      { expr: 'sub', args: [{ var: 'a' }, { var: 'b' }] },
+      { expr: 'clamp', args: [{ var: 'x' }, 0, 1] }
+    ];
+    for (const c of cases) expect(roundExpr(c)).toEqual(c);
+  });
+
+  it('reads the readable form (* rotationSpeed time)', () => {
+    expect(formToExpr(readOne('(* rotationSpeed time)')))
+      .toEqual({ expr: 'mul', args: [{ var: 'rotationSpeed' }, { var: 'time' }] });
+    expect(formToExpr(readOne('(- x)'))).toEqual({ expr: 'neg', args: [{ var: 'x' }] });
+    expect(formToExpr(readOne('(- a b)'))).toEqual({ expr: 'sub', args: [{ var: 'a' }, { var: 'b' }] });
+  });
+
+  it('parses a scene node subtree that codegens to valid WGSL', () => {
+    const root = formToNode(readOne(
+      '(union (material [1 0 0] (sphere :r 0.5)) (translate [1 0 0] (box :size [0.6 0.6 0.6])))'));
+    const w = generateWgslFromJson(loadJsonScene({ name: 'd', root }), {});
+    expect(w).toContain('fn sceneSDF(p: vec3f)');
+    expect(w).toContain('sdBox');
+  });
+
+  it('every expression in the corpus is codegen-faithful after round-trip', () => {
+    const walkExprs = (x, acc) => {
+      if (Array.isArray(x)) { x.forEach(v => walkExprs(v, acc)); return; }
+      if (x && typeof x === 'object') {
+        if ((x.expr || x.op) && x.args) acc.push(x);
+        Object.values(x).forEach(v => walkExprs(v, acc));
+      }
+    };
+    const shadersFor = (e) => {
+      const s = loadJsonScene({ name: 't', root: { type: 'sphere', params: { r: e } } });
+      return generateWgslFromJson(s, {}) + generateGlslFromJson(s, {});
+    };
+    const exprs = [];
+    for (const f of files) {
+      try { walkExprs(JSON.parse(readFileSync(f, 'utf8')), exprs); } catch { /* skip */ }
+    }
+    expect(exprs.length).toBeGreaterThan(100);  // guard: we actually collected some
+    const failures = [];
+    for (const e of exprs) {
+      const round = roundExpr(e);
+      let a;
+      try { a = shadersFor(e); } catch {
+        // legacy bare-string args can't codegen in the synthetic wrapper;
+        // fall back to structural identity of the round-tripped IR
+        if (JSON.stringify(e) !== JSON.stringify(round)) failures.push(exprToSexpr(e));
+        continue;
+      }
+      if (a !== shadersFor(round)) failures.push(exprToSexpr(e));
+    }
+    expect(failures).toEqual([]);
   });
 });
