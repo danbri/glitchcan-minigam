@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LayerViz - Real RDF via factoidal</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            touch-action: none;
+        }
+
+        #info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.72);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            width: 320px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+
+        #info-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            cursor: grab;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #info-header h3 { margin: 0; font-size: 14px; flex-grow: 1; }
+
+        #toggle-arrow {
+            width: 0; height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #fff;
+            transition: transform 0.3s;
+            pointer-events: none;
+        }
+
+        #info.collapsed #toggle-arrow { transform: rotate(-90deg); }
+        #info.collapsed { width: auto; }
+        #info.collapsed #info-content { display: none; }
+
+        #info-content {
+            padding: 0 15px 15px 15px;
+            max-height: 78vh;
+            overflow-y: auto;
+        }
+
+        #info p { margin: 6px 0; font-size: 11px; color: #ddd; line-height: 1.4; }
+        #info a { color: #9db8ff; }
+
+        .button-group { display: flex; gap: 8px; margin: 8px 0; flex-wrap: wrap; }
+
+        button, select {
+            padding: 7px 11px;
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 11px;
+            font-family: inherit;
+        }
+        button:hover { background: rgba(255,255,255,0.22); }
+        select option { color: #000; }
+
+        .layer-legend {
+            margin-top: 8px; padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        .layer-item {
+            display: flex; align-items: center; margin: 2px 0; font-size: 11px;
+            width: 100%; text-align: left; background: none; border: none;
+            border-radius: 6px; padding: 3px 5px; color: #ddd; cursor: pointer;
+        }
+        .layer-item:hover { background: rgba(255,255,255,0.1); }
+        .layer-item.focused {
+            background: rgba(255,255,255,0.18);
+            color: #fff; font-weight: 600;
+        }
+        .layer-color { width: 14px; height: 14px; border-radius: 3px; margin-right: 8px; flex-shrink: 0; }
+
+        #status { font-size: 11px; color: #ffe28a; min-height: 14px; }
+
+        #sparql-box {
+            width: 100%;
+            box-sizing: border-box;
+            height: 84px;
+            background: rgba(0,0,0,0.45);
+            color: #cfe3ff;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 6px;
+            font-family: ui-monospace, Menlo, Consolas, monospace;
+            font-size: 10.5px;
+            padding: 6px;
+            resize: vertical;
+        }
+
+        #sparql-results {
+            margin-top: 6px;
+            max-height: 180px;
+            overflow: auto;
+            font-size: 10px;
+        }
+        #sparql-results table { border-collapse: collapse; width: 100%; }
+        #sparql-results th, #sparql-results td {
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 2px 5px;
+            text-align: left;
+            white-space: nowrap;
+        }
+        #sparql-results th { color: #ffe28a; }
+
+        @media (max-width: 768px) {
+            #info { width: 270px; top: 5px; right: 5px; }
+            #info p, .layer-item { font-size: 10px; }
+        }
+    </style>
+    <script type="importmap">
+    { "imports": { "three": "../../trees/vendor/three.module.min.js" } }
+    </script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="info" role="region" aria-label="LayerViz controls">
+        <div id="info-header" role="button" tabindex="0" aria-expanded="true"
+             aria-label="Move panel by dragging, activate to minimise">
+            <h3>Real RDF &rarr; LayerViz</h3>
+            <div id="toggle-arrow"></div>
+        </div>
+        <div id="info-content">
+            <p>Two real datasets — Tim Berners-Lee's public
+               <a href="https://www.w3.org/People/Berners-Lee/card">FOAF card</a>
+               and a FOAF vocabulary excerpt — parsed and SPARQL-queried
+               <strong>in your browser</strong> by
+               <a href="https://github.com/danbri/factoidal">factoidal</a>
+               (bundled with this site). Each visual layer is a
+               <strong>named graph</strong> (<code>urn:layer:*</code>).</p>
+            <p id="status" aria-live="polite">loading engine&hellip;</p>
+
+            <div class="button-group">
+                <button id="btn-closure" aria-label="Compute entailment closure">🧠 Compute closure</button>
+                <select id="closure-regime" title="entailment regime" aria-label="Entailment regime">
+                    <option value="RDFS">RDFS</option>
+                    <option value="OWL-RL">OWL-RL</option>
+                </select>
+                <button id="btn-reset-view" aria-label="Reset camera view">🎯 Reset view</button>
+            </div>
+
+            <div class="layer-legend" id="layer-legend" role="group"
+                 aria-label="Layers — activate one to spotlight it"></div>
+            <p style="margin:4px 0 0 0;color:#aaa">tap a layer above to
+               spotlight it; tap again to clear</p>
+
+            <p style="margin-top:10px"><strong>SPARQL</strong> over the layer graphs
+               (<kbd>Ctrl</kbd>+<kbd>Enter</kbd> runs):</p>
+            <select id="sparql-examples" aria-label="Example queries" style="width:100%;margin-bottom:5px">
+                <option value="">— example queries —</option>
+                <option value="SELECT ?g (COUNT(*) AS ?triples) WHERE {
+  GRAPH ?g { ?s ?p ?o }
+} GROUP BY ?g ORDER BY ?g">Triples per layer graph</option>
+                <option value="SELECT ?s ?p ?o WHERE {
+  GRAPH <urn:layer:projects> { ?s ?p ?o }
+}">Everything in the projects layer</option>
+                <option value="PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+SELECT ?g ?agent WHERE {
+  GRAPH ?g { ?agent a foaf:Agent }
+}">Implied Agents (run closure first)</option>
+                <option value="PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?g ?s ?label WHERE {
+  GRAPH ?g { ?s rdfs:label ?label }
+  FILTER(CONTAINS(LCASE(?label), "web"))
+}">Labels containing 'web'</option>
+                <option value="PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+ASK {
+  GRAPH <urn:layer:vocabulary> {
+    ?c rdfs:subClassOf <http://xmlns.com/foaf/0.1/Agent>
+  }
+}">ASK: anything subclass of Agent?</option>
+            </select>
+            <textarea id="sparql-box" spellcheck="false" aria-label="SPARQL query">SELECT ?g (COUNT(*) AS ?triples) WHERE {
+  GRAPH ?g { ?s ?p ?o }
+} GROUP BY ?g ORDER BY ?g</textarea>
+            <div class="button-group">
+                <button id="btn-run-sparql">▶ Run</button>
+            </div>
+            <div id="sparql-results" aria-live="polite"></div>
+
+            <p><strong>Drag header</strong> to move this panel, tap it to
+               minimise &bull; <strong>Drag scene</strong> to rotate &bull;
+               <strong>Pinch/scroll</strong> to zoom &bull;
+               <strong>Tap nodes</strong> for details</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { LayerViz } from './layerviz.js';
+        import { makeDraggablePanel } from './panel.js';
+
+        // WebGPU-first, WebGL fallback — same policy as index.html. The
+        // chosen factory is reused by every rebuild (closure on/off).
+        let createRenderer;
+        let backendName;
+        if (navigator.gpu && await navigator.gpu.requestAdapter().catch(() => null)) {
+            ({ createWebGPURenderer: createRenderer } =
+                await import('./layerviz-webgpu.js'));
+            backendName = 'WebGPU';
+        } else {
+            ({ createThreeRenderer: createRenderer } =
+                await import('./layerviz-three.js'));
+            backendName = 'WebGL (three.js fallback)';
+        }
+
+        const status = document.getElementById('status');
+        // Vendored engine (third_party/data/PROVENANCE.md) — self-contained.
+        const FACTOIDAL = './third_party/data/browser.js';
+        const BASE = 'https://www.w3.org/People/Berners-Lee/card';
+        const HUB = `${BASE}#i`;
+
+        const FOAF = 'http://xmlns.com/foaf/0.1/';
+        const CON = 'http://www.w3.org/2000/10/swap/pim/contact#';
+        const DOAP = 'http://usefulinc.com/ns/doap#';
+        const RDFS = 'http://www.w3.org/2000/01/rdf-schema#';
+        const RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+
+        // rel tag -> [predicate IRI, direction]: 'out' = hub->item.
+        const REL = {
+            knows: [`${FOAF}knows`, 'out'],
+            assistant: [`${CON}assistant`, 'out'],
+            account: [`${FOAF}account`, 'out'],
+            developer: [`${DOAP}developer`, 'in'],
+            member: [`${FOAF}member`, 'in'],
+            maker: [`${FOAF}maker`, 'in'],
+            participant: [`${CON}participant`, 'in']
+        };
+
+        const LAYER_DEFS = [
+            { id: 'people', label: 'People', color: 0xFFD700, height: 0 },
+            { id: 'projects', label: 'Projects & Organizations', color: 0xFF6B6B, height: 5 },
+            { id: 'documents', label: 'Documents', color: 0x4ECDC4, height: 10 },
+            { id: 'events', label: 'Events & Talks', color: 0x95E1D3, height: 15 },
+            { id: 'vocabulary', label: 'FOAF Vocabulary', color: 0xB39DDB, height: 20 }
+        ];
+        const SUBLAYER_LIFT = 2;
+
+        const localName = iri =>
+            decodeURIComponent(iri.replace(/[/#]$/, '').split(/[/#]/).pop());
+        const lighten = hex => {
+            const mix = c => Math.round(c + (255 - c) * 0.55);
+            return (mix(hex >> 16 & 255) << 16) | (mix(hex >> 8 & 255) << 8) | mix(hex & 255);
+        };
+        const escNt = s => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+            .replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+
+        // ---- engine + data ------------------------------------------------
+        const [engine, cardTtl, vocabTtl] = await Promise.all([
+            import(FACTOIDAL),
+            fetch('./data/tbl-card.ttl').then(r => r.text()),
+            fetch('./data/foaf-vocab-excerpt.ttl').then(r => r.text())
+        ]);
+        const combined = `${cardTtl}\n${vocabTtl}`;
+        const qOpts = { dataFormat: 'turtle', baseIRI: BASE };
+        const rows = async sparql =>
+            (await engine.query(combined, sparql, qOpts)).results.bindings;
+
+        const PREFIXES = `
+            PREFIX foaf: <${FOAF}>
+            PREFIX con: <${CON}>
+            PREFIX doap: <${DOAP}>
+            PREFIX rdfs: <${RDFS}>
+            PREFIX dc: <http://purl.org/dc/elements/1.1/>
+            PREFIX dct: <http://purl.org/dc/terms/>`;
+
+        const HUB_QUERIES = {
+            people: `${PREFIXES} SELECT DISTINCT ?s ?label ?rel WHERE {
+                { <${HUB}> con:assistant ?s . BIND("assistant" AS ?rel) }
+                UNION { <${HUB}> foaf:knows ?s . BIND("knows" AS ?rel) }
+                OPTIONAL { ?s foaf:name ?label } }`,
+            projects: `${PREFIXES} SELECT DISTINCT ?s ?label ?rel WHERE {
+                { ?s doap:developer <${HUB}> . BIND("developer" AS ?rel) }
+                UNION { ?s foaf:member <${HUB}> . BIND("member" AS ?rel) }
+                OPTIONAL { ?s rdfs:label ?label } }`,
+            events: `${PREFIXES} SELECT DISTINCT ?s ?label ?rel WHERE {
+                { ?s con:participant <${HUB}> . BIND("participant" AS ?rel) }
+                UNION { ?s foaf:maker <${HUB}> . ?s dct:title ?l2 . BIND("maker" AS ?rel) }
+                OPTIONAL { { ?s dc:title ?label } UNION { ?s dct:title ?label }
+                           UNION { ?s rdfs:label ?label } } }`,
+            documents: `${PREFIXES} SELECT DISTINCT ?s ?label ?rel WHERE {
+                { ?s foaf:maker <${HUB}> . BIND("maker" AS ?rel) }
+                UNION { <${HUB}> foaf:account ?s . BIND("account" AS ?rel) }
+                OPTIONAL { { ?s dc:title ?label } UNION { ?s dct:title ?label } } }`
+        };
+        // Events before documents: both match maker-of items; the shared
+        // dedup set gives events first claim. (JS dedup because this
+        // engine build's FILTER [NOT] EXISTS returns empty; MINUS works.)
+        const QUERY_ORDER = ['people', 'projects', 'events', 'documents'];
+
+        const state = {
+            hubName: 'Tim Berners-Lee',
+            itemsByLayer: {},     // layerId -> [{id,label,rel}]
+            vocab: null,          // {nodes, edges}
+            graphs: [],           // [{name, nquads}] — the named graphs
+            implied: null,        // {regime, byEntity: Map, count}
+            viz: null
+        };
+
+        async function loadBase() {
+            status.textContent = 'running SPARQL…';
+            state.hubName = (await rows(`${PREFIXES}
+                SELECT ?n WHERE { <${HUB}> foaf:name ?n } LIMIT 1`))
+                [0]?.n?.value || state.hubName;
+
+            const seen = new Set();
+            for (const layerId of QUERY_ORDER) {
+                const items = state.itemsByLayer[layerId] = [];
+                for (const b of await rows(HUB_QUERIES[layerId])) {
+                    const iri = b.s.value;
+                    if (iri === HUB || seen.has(iri)) continue;
+                    seen.add(iri);
+                    items.push({ id: iri, label: b.label?.value || localName(iri),
+                                 rel: b.rel?.value || 'related' });
+                }
+            }
+
+            // Vocabulary layer: classes + subClassOf edges, from the data.
+            const classes = await rows(`${PREFIXES}
+                SELECT DISTINCT ?c ?label WHERE {
+                    ?c a rdfs:Class . OPTIONAL { ?c rdfs:label ?label } }`);
+            const subs = await rows(`${PREFIXES}
+                SELECT ?a ?b WHERE { ?a rdfs:subClassOf ?b }`);
+            state.vocab = {
+                nodes: classes.map(b => ({ id: b.c.value,
+                    label: b.label?.value || localName(b.c.value), rel: 'class' })),
+                edges: subs.map(b => [b.a.value, b.b.value])
+            };
+
+            buildNamedGraphs();
+        }
+
+        /** Each visual layer's triples, as one named graph. */
+        function buildNamedGraphs() {
+            state.graphs = [];
+            for (const def of LAYER_DEFS.slice(0, 4)) {
+                const lines = [];
+                for (const item of state.itemsByLayer[def.id]) {
+                    const [pred, dir] = REL[item.rel] || [`${RDFS}seeAlso`, 'out'];
+                    lines.push(dir === 'out'
+                        ? `<${HUB}> <${pred}> <${item.id}> .`
+                        : `<${item.id}> <${pred}> <${HUB}> .`);
+                    if (item.label !== localName(item.id)) {
+                        lines.push(`<${item.id}> <${RDFS}label> "${escNt(item.label)}" .`);
+                    }
+                }
+                state.graphs.push({ name: `urn:layer:${def.id}`,
+                    content: lines.join('\n'), dataFormat: 'ntriples' });
+            }
+            state.graphs.push({ name: 'urn:layer:vocabulary',
+                content: vocabTtl, dataFormat: 'turtle' });
+            if (state.implied) {
+                const lines = [];
+                for (const [iri, classes] of state.implied.byEntity) {
+                    for (const c of classes.iris) {
+                        lines.push(`<${iri}> <${RDF}type> <${c}> .`);
+                    }
+                }
+                state.graphs.push({ name: 'urn:layer:implied',
+                    content: lines.join('\n'), dataFormat: 'ntriples' });
+            }
+        }
+
+        // ---- closure ------------------------------------------------------
+        const NOISE = new Set([
+            `${RDFS}Class`, `${RDFS}Resource`, `${RDFS}Datatype`,
+            `${RDF}Property`, `${RDFS}ContainerMembershipProperty`,
+            'http://www.w3.org/2002/07/owl#Thing',
+            'http://www.w3.org/2002/07/owl#Class',
+            'http://www.w3.org/2002/07/owl#ObjectProperty'
+        ]);
+
+        async function computeClosure(regime) {
+            status.textContent = `computing ${regime} closure…`;
+            const typeQuery =
+                'SELECT ?s ?t WHERE { ?s a ?t . FILTER(isIRI(?s) && isIRI(?t)) }';
+            const key = b => `${b.s.value}|${b.t.value}`;
+            const base = new Set(
+                (await engine.query(combined, typeQuery, qOpts))
+                    .results.bindings.map(key));
+            const inf = (await engine.query(combined, typeQuery,
+                { ...qOpts, entail: regime })).results.bindings;
+
+            const visual = new Set([HUB]);
+            for (const items of Object.values(state.itemsByLayer)) {
+                for (const i of items) visual.add(i.id);
+            }
+            const byEntity = new Map();
+            let count = 0;
+            for (const b of inf) {
+                if (base.has(key(b))) continue;
+                const s = b.s.value, t = b.t.value;
+                if (!visual.has(s) || NOISE.has(t)) continue;
+                // OWL-RL bindings include internal comprehension-witness
+                // classes (__rl_svf_…, __rl_minqc1_…). They are engine
+                // machinery, not inferred facts — and their local names
+                // shorten to real class names, which once fooled us into
+                // reporting a phantom soundness bug (see notes/). Full-IRI
+                // filtering, before any shortening.
+                if (t.startsWith('__rl_')) continue;
+                if (!byEntity.has(s)) byEntity.set(s, { names: [], iris: [] });
+                byEntity.get(s).names.push(localName(t));
+                byEntity.get(s).iris.push(t);
+                count++;
+            }
+            state.implied = { regime, byEntity, count };
+            buildNamedGraphs();
+        }
+
+        // ---- spec + viz ---------------------------------------------------
+        function ringPosition(i, n, radius = 5) {
+            const a = (i / Math.max(1, n)) * 2 * Math.PI;
+            return { x: Math.sin(a) * radius, z: Math.cos(a) * radius };
+        }
+
+        function buildSpec() {
+            const layers = [];
+            const sharedEntities = [
+                { id: HUB, layers: ['people', 'projects', 'documents', 'events'] }
+            ];
+            const positions = new Map(); // iri -> {layerId, x, z}
+
+            for (const def of LAYER_DEFS.slice(0, 4)) {
+                const items = state.itemsByLayer[def.id];
+                const nodes = [{ id: HUB, label: state.hubName, type: 'person', x: 0, z: 0 }];
+                const edges = [];
+                items.forEach((item, i) => {
+                    const p = ringPosition(i, items.length);
+                    nodes.push({ id: item.id, label: item.label, type: item.rel, ...p });
+                    positions.set(item.id, { layerId: def.id, ...p });
+                    edges.push([HUB, item.id]);
+                });
+                layers.push({ ...def, nodes, edges });
+            }
+            positions.set(HUB, { layerId: 'people', x: 0, z: 0 });
+
+            const vdef = LAYER_DEFS[4];
+            layers.push({ ...vdef,
+                nodes: state.vocab.nodes.map((n, i) => ({
+                    id: n.id, label: n.label, type: 'class',
+                    ...ringPosition(i, state.vocab.nodes.length, 4.5) })),
+                edges: state.vocab.edges
+            });
+
+            // Implied-triples sublayers: a lifted ghost layer per base
+            // layer, one marker node per entity, column down to the entity.
+            if (state.implied) {
+                const byLayer = {};
+                for (const [iri, info] of state.implied.byEntity) {
+                    const pos = positions.get(iri);
+                    if (!pos) continue;
+                    (byLayer[pos.layerId] ??= []).push({ iri, info, pos });
+                }
+                for (const def of LAYER_DEFS.slice(0, 4)) {
+                    const hits = byLayer[def.id];
+                    if (!hits?.length) continue;
+                    const nodes = hits.map(h => ({
+                        id: `${h.iri}||implied`,
+                        label: `⊢ ${h.info.names.join(', ')}`,
+                        type: `implied (${state.implied.regime})`,
+                        x: h.pos.x, z: h.pos.z
+                    }));
+                    layers.push({
+                        id: `${def.id}-implied`,
+                        label: `${def.label} — implied`,
+                        color: lighten(def.color),
+                        height: def.height + SUBLAYER_LIFT,
+                        nodes, edges: []
+                    });
+                    for (const h of hits) {
+                        sharedEntities.push({ id: h.iri, layers: [def.id],
+                            connectTo: `${h.iri}||implied` });
+                    }
+                }
+            }
+            return { layers, sharedEntities };
+        }
+
+        function renderLegend(spec) {
+            const legend = document.getElementById('layer-legend');
+            legend.textContent = '';
+            for (const layer of spec.layers) {
+                const item = document.createElement('button');
+                item.className = 'layer-item';
+                item.type = 'button';
+                const swatch = document.createElement('div');
+                swatch.className = 'layer-color';
+                swatch.style.background = `#${layer.color.toString(16).padStart(6, '0')}`;
+                const label = document.createElement('span');
+                const graph = layer.id.endsWith('-implied')
+                    ? 'urn:layer:implied' : `urn:layer:${layer.id}`;
+                label.textContent = `${layer.label} — ${graph}`;
+                item.append(swatch, label);
+                item.setAttribute('aria-pressed', 'false');
+                item.addEventListener('click', () => {
+                    const focused = state.viz.focusLayer(layer.id);
+                    for (const el of legend.children) {
+                        el.classList.toggle('focused',
+                            focused !== null && el === item);
+                        el.setAttribute('aria-pressed',
+                            String(focused !== null && el === item));
+                    }
+                });
+                legend.appendChild(item);
+            }
+        }
+
+        function rebuild() {
+            state.viz?.dispose();
+            const spec = buildSpec();
+            state.viz = new LayerViz({
+                container: document.getElementById('canvas-container'),
+                createRenderer,
+                spec
+            });
+            window.__layerviz = state.viz; // headless-playtest hook
+            renderLegend(spec);
+        }
+
+        // ---- user SPARQL over the named graphs ----------------------------
+        async function runUserQuery() {
+            const out = document.getElementById('sparql-results');
+            out.textContent = 'running…';
+            try {
+                const files = state.graphs.map(g => ({
+                    content: g.content, graph: g.name, dataFormat: g.dataFormat }));
+                const r = await engine.queryDataset(files,
+                    document.getElementById('sparql-box').value, {});
+                const bindings = r.results?.bindings ?? [];
+                out.textContent = '';
+                if (r.boolean !== undefined) { out.textContent = `ASK → ${r.boolean}`; return; }
+                if (!bindings.length) { out.textContent = 'no results'; return; }
+                const vars = r.head.vars;
+                const table = document.createElement('table');
+                const head = table.insertRow();
+                for (const v of vars) {
+                    const th = document.createElement('th');
+                    th.textContent = v;
+                    head.appendChild(th);
+                }
+                for (const b of bindings.slice(0, 20)) {
+                    const tr = table.insertRow();
+                    for (const v of vars) {
+                        const val = b[v]?.value ?? '';
+                        tr.insertCell().textContent =
+                            val.startsWith('http') || val.startsWith('urn:')
+                                ? (val.startsWith('urn:') ? val : localName(val)) : val;
+                    }
+                }
+                out.appendChild(table);
+                if (bindings.length > 20) {
+                    const more = document.createElement('p');
+                    more.textContent = `… ${bindings.length - 20} more rows`;
+                    out.appendChild(more);
+                }
+            } catch (err) {
+                out.textContent = `query failed: ${err.message ?? err}`;
+            }
+        }
+
+        // ---- boot + UI ----------------------------------------------------
+        try {
+            await loadBase();
+            rebuild();
+            // Confirm the WebGPU device actually came up; fall back if not.
+            if (state.viz.renderer.ready) {
+                try {
+                    await state.viz.renderer.ready;
+                } catch (err) {
+                    console.warn('WebGPU init failed, falling back:', err);
+                    ({ createThreeRenderer: createRenderer } =
+                        await import('./layerviz-three.js'));
+                    backendName = 'WebGL (three.js fallback)';
+                    rebuild();
+                }
+            }
+            const n = buildSpec().layers.reduce((s, l) => s + l.nodes.length, 0);
+            status.textContent =
+                `✓ ${n} nodes, ${state.graphs.length} named graphs — ${backendName}`;
+        } catch (err) {
+            status.textContent = `engine failed: ${err.message ?? err}`;
+            console.error(err);
+        }
+
+        const btnClosure = document.getElementById('btn-closure');
+        btnClosure.addEventListener('click', async () => {
+            try {
+                if (state.implied) {
+                    state.implied = null;
+                    buildNamedGraphs();
+                    rebuild();
+                    btnClosure.textContent = '🧠 Compute closure';
+                    status.textContent = 'closure removed';
+                    return;
+                }
+                const regime = document.getElementById('closure-regime').value;
+                await computeClosure(regime);
+                rebuild();
+                btnClosure.textContent = '🧠 Remove closure';
+                status.textContent =
+                    `✓ ${state.implied.count} implied triples (${regime}) — ` +
+                    'ghost sublayers added, graph urn:layer:implied';
+            } catch (err) {
+                status.textContent = `closure failed: ${err.message ?? err}`;
+            }
+        });
+
+        document.getElementById('btn-run-sparql')
+            .addEventListener('click', runUserQuery);
+        document.getElementById('btn-reset-view')
+            .addEventListener('click', () => state.viz?.resetCamera());
+        document.getElementById('sparql-examples')
+            .addEventListener('change', e => {
+                if (e.target.value) {
+                    document.getElementById('sparql-box').value = e.target.value;
+                    e.target.selectedIndex = 0;
+                }
+            });
+        document.getElementById('sparql-box')
+            .addEventListener('keydown', e => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    runUserQuery();
+                }
+            });
+
+        const infoPanel = document.getElementById('info');
+        const header = document.getElementById('info-header');
+        const toggleInfo = () => {
+            infoPanel.classList.toggle('collapsed');
+            header.setAttribute('aria-expanded',
+                String(!infoPanel.classList.contains('collapsed')));
+        };
+        header.addEventListener('click', toggleInfo);
+        header.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleInfo();
+            }
+        });
+        makeDraggablePanel(infoPanel, header);
+    </script>
+</body>
+</html>

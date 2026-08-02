@@ -270,8 +270,8 @@
     </div>
 
     <script type="module">
-        import { LayerViz, DEFAULT_GRAPH } from '../../layerviz/layerviz.js';
-        import { makeDraggablePanel } from '../../layerviz/panel.js';
+        import { LayerViz, DEFAULT_GRAPH } from './layerviz.js';
+        import { makeDraggablePanel } from './panel.js';
 
         const container = document.getElementById('canvas-container');
         const badge = document.getElementById('backend-badge');
@@ -294,7 +294,7 @@
                     viz.dispose();
                 }
             }
-            const { createThreeRenderer } = await import('../../layerviz/layerviz-three.js');
+            const { createThreeRenderer } = await import('./layerviz-three.js');
             badge.textContent = 'backend: WebGL (three.js fallback)';
             return new LayerViz({
                 container,

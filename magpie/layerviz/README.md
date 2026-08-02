@@ -1,52 +1,80 @@
-# LayerViz WebGPU
+# LayerViz
 
-The WebGPU build of LayerViz. The core library and the graph data live at
-`../../layerviz/` — this folder holds only the WebGPU backend and its page.
-One core, two backends; do not copy the core here.
+A 3D view of multi-layer knowledge graphs. Graphs stack as horizontal
+planes; green vertical links connect entities that occur in more than
+one layer; tap a legend entry to spotlight a layer. **WebGPU-first**:
+both pages boot the raw-WGSL backend and fall back to three.js/WebGL
+when no adapter is available (a badge/status line names the active
+backend). Everything lives here — the old root `layerviz/` folder holds
+only redirect stubs.
 
-## Files
+## Pages
 
-- `index.html` — boots WebGPU first. If the browser has no WebGPU adapter,
-  or device setup fails, it falls back to the three.js/WebGL adapter at
-  `../../layerviz/layerviz-three.js`. A badge in the info panel shows the
-  active backend.
-- `layerviz-webgpu.js` — the WebGPU RendererAdapter. Raw WGSL, no
-  framework, no CDN. It implements the same contract as the three.js
-  adapter, so `layerviz.js` is unchanged.
+- `index.html` — the demo graph (semantic-web stack, hardcoded spec).
+- `rdf.html` — layers built at runtime from REAL RDF: timbl's FOAF card
+  plus a FOAF vocabulary excerpt (`data/`), parsed and SPARQL-queried
+  in-browser by [factoidal](https://github.com/danbri/factoidal)
+  (vendored at `third_party/data/`, see its PROVENANCE.md). Each visual
+  layer is a named graph (`urn:layer:*`); the panel has a SPARQL box
+  over those graphs (Ctrl+Enter runs), and a "Compute closure" button
+  (RDFS / OWL-RL) that mounts implied-triples ghost sublayers and adds
+  graph `urn:layer:implied`.
+- `prototype1.html` — the original prototype, kept verbatim (CDN three
+  r128). Reference only.
 
-## What the WebGPU adapter does differently
+## Architecture
 
-- **Instancing.** All node spheres are one draw call; likewise the frame
-  rails (boxes), the shared-entity links (cylinders), the layer planes,
-  and all graph edges (one line-list draw). Six draw calls per frame.
-- **One uniform write per frame** (view-projection, camera, light, fog).
-  The animation updates touch only two small instance buffers: node
-  bob/highlight and link pulse.
-- **CPU picking and projection.** Hover picking is a ray-sphere test on
-  the model; label placement is a matrix transform. No GPU readback.
-- **Surface quality.** devicePixelRatio-aware canvas (capped at 2) with
-  4x MSAA and a premultiplied-alpha surface over the page gradient.
-- **Not carried over:** shadow maps. The three.js adapter's soft shadows
-  are a large cost for a small effect at this scene scale; the WebGPU
-  path uses direct + ambient light only.
+- `layerviz.js` — renderer-neutral core: graph spec format, model
+  builder, controller (orbit camera with 1:1 drag + pinch/wheel zoom +
+  inertia, labels with overlap culling, tooltip, tap-to-inspect,
+  `focusLayer` spotlight). Imports no rendering library; talks to
+  renderers only through the RendererAdapter contract documented at the
+  top of the file. Optional adapter method: `setLayerFocus(layerId)`.
+- `layerviz-webgpu.js` — the PRIMARY backend. Raw WGSL, instanced (6
+  draw calls/frame), CPU picking/projection, 4x MSAA, dpr-capped
+  surface, per-instance-opacity layer spotlight. Sync factory over
+  async GPU setup; `ready` promise for fallback decisions;
+  `debugReadPixels()` test hook. Headless caveat: pipelines validate
+  and frames submit under swiftshader flags, but headless Dawn never
+  presents pixels — visual verification needs a real WebGPU browser.
+- `layerviz-three.js` — the fallback backend (three.js r169 via import
+  map to `../../trees/vendor/three.module.min.js`, no CDN).
+- `panel.js` — draggable overlay panels (drag header to move, tap to
+  minimise), shared by both pages.
+- `notes/` — engine findings, including a retraction worth re-reading
+  before reporting "unsound inference" bugs (full-IRI lesson).
 
-## Verification status (headless, 2026-08-02)
+## Using factoidal here
 
-- **WebGL fallback: fully verified** — renders correctly, screenshot
-  checked, hover/labels/legend work, no console errors.
-- **WebGPU path: API-verified only.** With
-  `--enable-unsafe-webgpu --enable-features=Vulkan
-  --use-webgpu-adapter=swiftshader` the headless Chromium DOES take the
-  WebGPU path (badge shows it): device init, WGSL compilation, pipeline
-  creation, and repeated frame submission all succeed with zero
-  validation errors, and picking/labels/tooltip work. But the surface
-  never presents pixels headless — screenshots are blank, `drawImage`
-  readback returns zeros, and `mapAsync` fails with "A valid external
-  Instance reference no longer exists" (a known headless Dawn limit).
-  So per the CLAUDE.md rule, the WebGPU output is **not visually
-  verified**. Check in a real WebGPU browser: the badge must say
-  "backend: WebGPU" and the scene must match `../../layerviz/index.html`.
+```js
+const { query } = await import('./third_party/data/browser.js');
+const r = await query(turtleText, sparql, {
+  dataFormat: 'turtle',
+  baseIRI: 'https://…'   // REQUIRED if data has relative IRIs — without
+                         // it those statements are dropped silently
+});
+r.results.bindings       // SPARQL-JSON
+```
 
-Test hooks: the page sets `window.__layerviz`; the adapter has a
-`debugReadPixels()` method (renders a frame, copies a centre block of
-the canvas texture to the CPU) for use on real hardware.
+Known engine quirks (build 2026-07-21, `e3f9e2f8`): `FILTER [NOT]
+EXISTS` returns empty results (use `MINUS` or JS filtering); OWL-RL
+bindings surface internal `__rl_*` comprehension-witness classes —
+filter them on FULL IRIs before any display shortening; the npm
+README's sync quickstart is stale (API is async). When the fresh npm
+build lands, re-vendor `third_party/data/` and re-test these.
+
+## Use with your own data
+
+```js
+import { LayerViz } from './layerviz.js';
+import { createWebGPURenderer } from './layerviz-webgpu.js';
+
+const viz = new LayerViz({
+  container: document.getElementById('canvas-container'),
+  createRenderer: createWebGPURenderer,
+  spec: { layers: [...], sharedEntities: [...] }   // see layerviz.js
+});
+```
+
+Public controls: `toggleAnimation()`, `toggleLabels()`,
+`resetCamera()`, `focusLayer(id)`, `dispose()`.
