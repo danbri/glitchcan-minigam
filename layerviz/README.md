@@ -60,12 +60,13 @@ const viz = new LayerViz({
 `rdf.html` builds its layers from real RDF at runtime: Tim Berners-Lee's
 public FOAF card (snapshot: `data/tbl-card.ttl`), parsed and
 SPARQL-queried in the browser by
-[factoidal](https://github.com/danbri/factoidal)'s npm build, imported
-same-origin from the Pages mirror
-`https://danbri.github.io/factoidal/npm/foafos/browser.js`. Usage:
+[factoidal](https://github.com/danbri/factoidal)'s npm build, vendored
+into this site at `third_party/foafos/` (provenance + update notes in
+`third_party/foafos/PROVENANCE.md`) so the page has no dependency on
+the factoidal deployment. Usage:
 
 ```js
-const { query } = await import('https://danbri.github.io/factoidal/npm/foafos/browser.js');
+const { query } = await import('../third_party/foafos/browser.js');
 const r = await query(turtleText, sparql, {
   dataFormat: 'turtle',
   baseIRI: 'https://…'   // REQUIRED if the data has relative IRIs — without

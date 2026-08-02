@@ -98,7 +98,8 @@
                snapshot in <code>data/</code>), parsed and SPARQL-queried
                <strong>in your browser</strong> by
                <a href="https://github.com/danbri/factoidal">factoidal</a> —
-               the F*-verified RDF engine. No hand-written RDF parsing here.</p>
+               the F*-verified RDF engine, bundled with this site.
+               No hand-written RDF parsing here.</p>
             <p id="status">loading engine&hellip;</p>
             <div class="layer-legend" id="layer-legend"></div>
             <p><strong>Drag to rotate</strong> &bull; <strong>Pinch or scroll to zoom</strong> &bull; <strong>Tap nodes</strong> for details</p>
@@ -110,8 +111,9 @@
         import { createThreeRenderer } from './layerviz-three.js';
 
         const status = document.getElementById('status');
-        const FACTOIDAL =
-            'https://danbri.github.io/factoidal/npm/foafos/browser.js';
+        // Vendored engine (third_party/foafos/PROVENANCE.md) — the site is
+        // self-contained; no dependency on the factoidal Pages deployment.
+        const FACTOIDAL = '../third_party/foafos/browser.js';
         const BASE = 'https://www.w3.org/People/Berners-Lee/card';
 
         // Layer skeleton. Nodes and edges are filled from SPARQL below.
