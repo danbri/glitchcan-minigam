@@ -152,8 +152,7 @@ export const DEFAULTS = {
   hoverScale: 1.2,
   zoomMin: 10,
   zoomMax: 50,
-  cameraStart: { x: 20, y: 15, z: 20 },
-  cameraLift: 15
+  cameraStart: { x: 20, y: 15, z: 20 }
 };
 
 /**
@@ -252,13 +251,29 @@ export class LayerViz {
     this.hovered = null;
     this.disposed = false;
 
-    const start = this.config.cameraStart;
+    // Orbit camera state: yaw/pitch/distance around the focus target.
+    // Drag gestures write to this directly, so the camera answers within
+    // the same frame — no easing lag.
+    this.orbit = this._orbitFrom(this.config.cameraStart, this.model.focus);
+    this.inertia = { yaw: 0, pitch: 0 };
+    this._pointers = new Map();
+    this._pinchDist = 0;
+    this._lastRotate = { yaw: 0, pitch: 0 };
     this.view = {
-      position: { x: start.x, y: start.y, z: start.z },
+      position: this._orbitPosition(),
       target: { ...this.model.focus }
     };
-    // Pointer-driven rotation intent, same units as the prototype.
-    this.pointer = { x: 0, y: 0 };
+
+    // Labels and tooltip live in a clipped overlay INSIDE the container.
+    // On document.body, an off-screen label widens the mobile layout
+    // viewport, which shoves fixed-position UI off the visible screen.
+    if (getComputedStyle(container).position === 'static') {
+      container.style.position = 'relative';
+    }
+    this.overlay = document.createElement('div');
+    this.overlay.style.cssText =
+      'position:absolute;inset:0;overflow:hidden;pointer-events:none';
+    container.appendChild(this.overlay);
 
     this.tooltip = tooltip || this._createTooltip();
     this.labels = this.model.nodes.map(node => this._createLabel(node));
@@ -283,20 +298,21 @@ export class LayerViz {
   }
 
   resetCamera() {
-    const start = this.config.cameraStart;
-    this.view.position = { x: start.x, y: start.y, z: start.z };
-    this.pointer.x = 0;
-    this.pointer.y = 0;
+    this.orbit = this._orbitFrom(this.config.cameraStart, this.view.target);
+    this.inertia.yaw = 0;
+    this.inertia.pitch = 0;
   }
 
   dispose() {
     this.disposed = true;
     cancelAnimationFrame(this._raf);
+    clearTimeout(this._tapHide);
     for (const [target, type, fn, opts] of this._listeners) {
       target.removeEventListener(type, fn, opts);
     }
     for (const l of this.labels) l.el.remove();
     if (this._ownTooltip) this.tooltip.remove();
+    this.overlay.remove();
     this.renderer.dispose();
   }
 
@@ -308,7 +324,7 @@ export class LayerViz {
       'position:absolute;padding:8px 12px;background:rgba(0,0,0,0.9);' +
       'color:#fff;border-radius:5px;font-size:12px;pointer-events:none;' +
       'display:none;z-index:1000;box-shadow:0 2px 10px rgba(0,0,0,0.3)';
-    document.body.appendChild(el);
+    this.overlay.appendChild(el);
     this._ownTooltip = true;
     return el;
   }
@@ -321,7 +337,7 @@ export class LayerViz {
       'text-shadow:0 0 4px rgba(0,0,0,0.8),0 0 8px rgba(0,0,0,0.6);' +
       'pointer-events:none;user-select:none;white-space:nowrap;display:none';
     el.textContent = node.label;
-    document.body.appendChild(el);
+    this.overlay.appendChild(el);
     return { node, el };
   }
 
@@ -332,62 +348,147 @@ export class LayerViz {
       this._listeners.push([target, type, fn, opts]);
     };
 
-    // Mousemove stays on document: rotation intent tracks the pointer
-    // everywhere, and it never blocks other elements' events.
-    on(document, 'mousemove', e => this._onMouseMove(e));
-    // Wheel and touch bind to the container ONLY. On document they would
-    // swallow taps and scrolls aimed at overlay UI (the info panel):
-    // preventDefault() on a document-level touchstart stops the browser
-    // from synthesizing the click, making overlay buttons dead on touch
-    // devices.
-    on(this.container, 'wheel', e => this._onWheel(e));
-    on(window, 'resize', () => this._onResize());
-
-    // Touch: one finger rotates, two fingers pinch-zoom.
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let pinchDistance = 0;
-
-    on(this.container, 'touchstart', e => {
-      if (e.touches.length === 1) {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-      } else if (e.touches.length === 2) {
-        pinchDistance = this._touchDistance(e);
+    // Everything binds to the container only, so overlay UI (the info
+    // panel) keeps its own taps, clicks, and scrolling. Pointer Events
+    // unify mouse, touch, and pen; the container's CSS touch-action:none
+    // hands us the raw gestures.
+    on(this.container, 'pointerdown', e => this._onPointerDown(e));
+    on(this.container, 'pointermove', e => this._onPointerMove(e));
+    on(this.container, 'pointerup', e => this._onPointerEnd(e));
+    on(this.container, 'pointercancel', e => this._onPointerEnd(e));
+    on(this.container, 'pointerleave', e => {
+      // Touch pointers always "leave" on lift — that must not erase the
+      // tap tooltip; its own timer clears it.
+      if (e.pointerType !== 'touch' && this._pointers.size === 0) {
+        this._clearHover();
       }
-      e.preventDefault();
-    }, { passive: false });
-
-    on(this.container, 'touchmove', e => {
-      if (e.touches.length === 1) {
-        this.pointer.x = (e.touches[0].clientX - touchStartX) * 0.1;
-        this.pointer.y = -(e.touches[0].clientY - touchStartY) * 0.1;
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-      } else if (e.touches.length === 2 && pinchDistance > 0) {
-        const current = this._touchDistance(e);
-        this._scaleZoom(pinchDistance / current);
-        pinchDistance = current;
-      }
-      e.preventDefault();
-    }, { passive: false });
-
-    on(this.container, 'touchend', e => {
-      if (e.touches.length < 2) pinchDistance = 0;
     });
+    on(this.container, 'wheel', e => this._onWheel(e), { passive: false });
+    on(window, 'resize', () => this._onResize());
   }
 
-  _touchDistance(e) {
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
+  // ---- orbit camera ----------------------------------------------------
+
+  _orbitFrom(pos, target) {
+    const dx = pos.x - target.x;
+    const dy = pos.y - target.y;
+    const dz = pos.z - target.z;
+    const distance = Math.hypot(dx, dy, dz) || 1;
+    return {
+      yaw: Math.atan2(dx, dz),
+      pitch: Math.asin(Math.max(-1, Math.min(1, dy / distance))),
+      distance
+    };
   }
 
-  _onMouseMove(event) {
-    this.pointer.x = (event.clientX - window.innerWidth / 2) * 0.05;
-    this.pointer.y = (event.clientY - window.innerHeight / 2) * 0.05;
+  _orbitPosition() {
+    const { yaw, pitch, distance } = this.orbit;
+    const t = this.view ? this.view.target : this.model.focus;
+    const c = Math.cos(pitch);
+    return {
+      x: t.x + distance * Math.sin(yaw) * c,
+      y: t.y + distance * Math.sin(pitch),
+      z: t.z + distance * Math.cos(yaw) * c
+    };
+  }
 
-    const node = this.renderer.pick(event.clientX, event.clientY);
+  /** Rotate like OrbitControls: a full-height drag is a full revolution. */
+  _rotate(dx, dy) {
+    const s = (2 * Math.PI) / Math.max(200, this.container.clientHeight || 600);
+    const dYaw = -dx * s;
+    const dPitch = dy * s;
+    this.orbit.yaw += dYaw;
+    this.orbit.pitch = Math.max(-1.35, Math.min(1.35, this.orbit.pitch + dPitch));
+    this._lastRotate = { yaw: dYaw, pitch: dPitch, at: performance.now() };
+  }
+
+  /** Multiply the orbit distance, clamped to config limits. Immediate. */
+  _zoomBy(factor) {
+    this.orbit.distance = Math.max(
+      this.config.zoomMin,
+      Math.min(this.config.zoomMax, this.orbit.distance * factor)
+    );
+  }
+
+  // ---- pointer gestures ------------------------------------------------
+
+  _onPointerDown(e) {
+    // Best-effort: synthetic events have no active pointer to capture,
+    // and a throw here would kill gesture tracking entirely.
+    try { this.container.setPointerCapture(e.pointerId); } catch { /* ok */ }
+    this._pointers.set(e.pointerId, {
+      x: e.clientX, y: e.clientY,
+      startX: e.clientX, startY: e.clientY,
+      moved: 0, type: e.pointerType
+    });
+    this.inertia.yaw = 0;
+    this.inertia.pitch = 0;
+    this._lastRotate = { yaw: 0, pitch: 0 };
+    if (this._pointers.size === 2) this._pinchDist = this._pointerDistance();
+    this._clearHover();
+  }
+
+  _onPointerMove(e) {
+    const p = this._pointers.get(e.pointerId);
+    if (!p) {
+      // Not dragging: mouse/pen hover picks nodes.
+      if (e.pointerType !== 'touch') this._hoverPick(e.clientX, e.clientY);
+      return;
+    }
+    const dx = e.clientX - p.x;
+    const dy = e.clientY - p.y;
+    p.x = e.clientX;
+    p.y = e.clientY;
+    p.moved += Math.abs(dx) + Math.abs(dy);
+    if (this._pointers.size === 1) {
+      this._rotate(dx, dy);
+    } else if (this._pointers.size === 2 && this._pinchDist > 0) {
+      const d = this._pointerDistance();
+      if (d > 0) this._zoomBy(this._pinchDist / d);
+      this._pinchDist = d;
+    }
+  }
+
+  _onPointerEnd(e) {
+    const p = this._pointers.get(e.pointerId);
+    this._pointers.delete(e.pointerId);
+    if (this._pointers.size < 2) this._pinchDist = 0;
+    if (this._pointers.size === 0 && p) {
+      if (p.moved < 8) {
+        // A tap: show what was tapped (touch has no hover), briefly.
+        this._hoverPick(e.clientX, e.clientY);
+        if (p.type === 'touch' && this.hovered) {
+          clearTimeout(this._tapHide);
+          this._tapHide = setTimeout(() => this._clearHover(), 3000);
+        }
+      } else if (performance.now() - (this._lastRotate.at || 0) < 120) {
+        // A flick: glide with the release velocity, capped. A drag that
+        // stopped before release gets no glide — that reads as intended.
+        const cap = v => Math.max(-0.06, Math.min(0.06, v));
+        this.inertia.yaw = cap(this._lastRotate.yaw);
+        this.inertia.pitch = cap(this._lastRotate.pitch);
+      }
+    }
+  }
+
+  _pointerDistance() {
+    const [a, b] = [...this._pointers.values()];
+    if (!a || !b) return 0;
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  _onWheel(event) {
+    event.preventDefault();
+    // Trackpad pinches arrive as ctrl+wheel: give them a stronger response
+    // so the gesture feels one-to-one.
+    const speed = event.ctrlKey ? 0.01 : 0.0015;
+    this._zoomBy(Math.exp(event.deltaY * speed));
+  }
+
+  // ---- hover + tooltip -------------------------------------------------
+
+  _hoverPick(clientX, clientY) {
+    const node = this.renderer.pick(clientX, clientY);
     if (node !== this.hovered) {
       this.hovered = node;
       this.renderer.setHighlight(node);
@@ -403,30 +504,21 @@ export class LayerViz {
         document.createElement('br'),
         `ID: ${node.id}`
       );
+      const rect = this.container.getBoundingClientRect();
       this.tooltip.style.display = 'block';
-      this.tooltip.style.left = `${event.clientX + 10}px`;
-      this.tooltip.style.top = `${event.clientY - 30}px`;
+      this.tooltip.style.left = `${clientX - rect.left + 10}px`;
+      this.tooltip.style.top = `${clientY - rect.top - 30}px`;
     } else {
       this.tooltip.style.display = 'none';
     }
   }
 
-  _onWheel(event) {
-    this._scaleZoom(1 + event.deltaY * 0.0005);
-  }
-
-  /** Scale the camera's distance from the origin, clamped to config limits. */
-  _scaleZoom(factor) {
-    const p = this.view.position;
-    const length = Math.sqrt(p.x * p.x + p.y * p.y + p.z * p.z) || 1;
-    const next = Math.max(
-      this.config.zoomMin,
-      Math.min(this.config.zoomMax, length * factor)
-    );
-    const s = next / length;
-    p.x *= s;
-    p.y *= s;
-    p.z *= s;
+  _clearHover() {
+    if (this.hovered) {
+      this.hovered = null;
+      this.renderer.setHighlight(null);
+    }
+    this.tooltip.style.display = 'none';
   }
 
   _onResize() {
@@ -456,12 +548,21 @@ export class LayerViz {
     if (this.disposed) return;
     this._raf = requestAnimationFrame(this._frame);
 
-    if (this.animating) {
-      // Ease the camera toward the pointer intent, as in the prototype.
-      const p = this.view.position;
-      p.x += (this.pointer.x - p.x) * 0.02;
-      p.y += (-this.pointer.y - p.y + this.config.cameraLift) * 0.02;
+    // Flicked drags glide to a stop; active drags already moved the orbit.
+    if (this._pointers.size === 0) {
+      if (Math.abs(this.inertia.yaw) > 1e-5 || Math.abs(this.inertia.pitch) > 1e-5) {
+        this.orbit.yaw += this.inertia.yaw;
+        this.orbit.pitch = Math.max(-1.35,
+          Math.min(1.35, this.orbit.pitch + this.inertia.pitch));
+        this.inertia.yaw *= 0.92;
+        this.inertia.pitch *= 0.92;
+      } else {
+        this.inertia.yaw = 0;
+        this.inertia.pitch = 0;
+      }
     }
+    this.view.position = this._orbitPosition();
+
     this.renderer.animate(timeMs, this.animating);
     this.renderer.setView(this.view);
     this.renderer.render();
