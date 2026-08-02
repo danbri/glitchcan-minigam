@@ -19,6 +19,7 @@ const { generateGlslFromJson } = await import('../lucid/core/json-codegen.js');
 const { generateWgslFromJson, generateWgslSceneSDF } = await import('../lucid/core/wgsl-codegen.js');
 const { evaluateExpr, evaluateRig } = await import('../lucid/core/rig-evaluator.js');
 const { exprToSexpr, readOne, formToExpr, formToNode } = await import('../lucid/core/sexpr.js');
+const { spliceEngine } = await import('../lucid/clipclop/splice-lib.js');
 
 const glsl = (json, opts) => generateGlslFromJson(loadJsonScene(json), opts || {});
 const wgsl = (json, opts) => generateWgslFromJson(loadJsonScene(json), opts || {});
@@ -326,6 +327,61 @@ describe('whole library still codegens on both backends', () => {
       }
       expect(failures).toEqual([]);
     });
+  });
+});
+
+// The clipclop splice injects the bridge WGSL into a fetched copy of the engine
+// and rewrites the bake seam. It can't render headless (no WebGPU), but the two
+// real hazards — duplicate fn defs and calls to undefined lx_* functions — are
+// checkable by assembling the WGSL module the way the engine does. This also
+// guards the seam anchors: if the engine's WGSL changes, spliceEngine throws.
+describe('clipclop splice (splice-lib.js)', () => {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const engineHtml = readFileSync(path.join(here, '..', 'lucid', 'clipclop', 'index.html'), 'utf8');
+  const wgslBlocks = (html) => {
+    const re = /\/\* wgsl \*\/`([\s\S]*?)`/g; const out = []; let m;
+    while ((m = re.exec(html)) !== null) out.push(m[1]);
+    return out;
+  };
+  const fnDecls = (src) => {
+    const re = /\bfn\s+([A-Za-z_]\w*)\s*\(/g; const out = []; let m;
+    while ((m = re.exec(src)) !== null) out.push(m[1]);
+    return out;
+  };
+  const lxCalls = (src) => {
+    const re = /\b(lx_[A-Za-z0-9_]*)\s*\(/g; const out = new Set(); let m;
+    while ((m = re.exec(src)) !== null) out.add(m[1]);
+    return [...out];
+  };
+
+  const cases = [
+    '(scale 3 (smoothUnion :k 0.5 (sphere :r 1.2) (translate [0 1.4 0] (sphere :r 0.9)) (translate [1.8 0 0] (box :size [0.7 0.7 0.7]))))',
+    '(union (material [1 0 0] (sphere :r 1)) (translate [1.5 0 0] (torus :major 0.8 :minor 0.3)))'
+  ];
+
+  for (const s of cases) {
+    it(`assembles a collision-free WGSL module for ${s.slice(0, 30)}…`, () => {
+      const root = formToNode(readOne(s));
+      const { html, bridge } = spliceEngine(engineHtml, { name: 't', root });
+      const [sceneW, analyticW, cacheW] = wgslBlocks(html);
+      const mod = sceneW + '\n' + analyticW + '\n' + cacheW;
+
+      const decls = fnDecls(mod);
+      const dupes = [...new Set(decls.filter((n, i) => decls.indexOf(n) !== i))];
+      expect(dupes).toEqual([]);                       // no redefinitions
+
+      const declSet = new Set(decls);
+      const undefinedCalls = lxCalls(mod).filter(c => !declSet.has(c));
+      expect(undefinedCalls).toEqual([]);              // every lx_ call is defined
+
+      expect(html).toContain(`return ${bridge.entry}(p,s);`);  // bake seam rewritten
+      expect(html).toContain('name="lucid-splice"');
+    });
+  }
+
+  it('throws a clear error if the engine seam anchors are gone', () => {
+    expect(() => spliceEngine('<html>no wgsl</html>', { name: 't', root: { type: 'sphere', params: {} } }))
+      .toThrow(/anchor not found|header not found/);
   });
 });
 

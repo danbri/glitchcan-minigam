@@ -87,7 +87,7 @@ const { wgsl } = generateWgslSceneSDF(loadJsonScene(sceneJson));
 ```
 
 - [x] `core/` codegen target: JSON scene → `fn sceneSDF(p, scene)->f32` (+ albedo). **Node-verifiable** — all 119 scenes emit valid, contract-matching WGSL; locked in by `tests/lucid-codegen-parity.test.js` (`clipclop bridge` block).
-- [ ] Feed it into a fork of this engine's scene block (replace the hardcoded `sceneMonument`/`cache*` demos). Full self-contained replacement — the engine's own `sd*` primitives use different signatures (e.g. `sdCapsule` takes two endpoints), so the bridge must own the primitive set (`emitPrimitives: true`, the default). Requires a real WebGPU device to render-verify.
+- [x] Feed it into the engine — done **without editing the engine**, via a runtime DOM splice: `splice.html` fetches `index.html` as text, injects the bridge WGSL (namespaced `lx_*` to dodge the primitive-signature collisions — the engine's `sdCapsule` takes two endpoints, `sdTorus` two floats), rewrites the one bake seam (`cacheSceneSample`) to sample the Lucid field, and boots the result in an iframe. `splice-lib.js` holds the transform. Assembly is Node-checked (no duplicate `fn` defs, no undefined `lx_*` calls, seam anchors present) and locked in by the parity suite (`clipclop splice` block). **The WGSL compile + render still need a real WebGPU device** — headless boots to the engine's own "no adapter" screen.
 - [ ] Animation path: re-derive `sceneSDF` constants per frame → dirty region → re-bake.
 - [ ] Provenance: engine authored externally (WebGPU sparse-clipmap design from YouTube notes); landed verbatim, kept precious. Modify with care.
 

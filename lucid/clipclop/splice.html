@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clipclop — Lucid scene splice</title>
+<style>
+  :root { color-scheme: dark; --bg:#0a0f16; --panel:#111925; --edge:#1e2c3d; --ink:#cfe3ff; --dim:#7c93ac; --acc:#39c0ff; --err:#ff6b6b; --ok:#54e39a; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.5 ui-monospace, Menlo, monospace; }
+  header { padding:10px 14px; border-bottom:1px solid var(--edge); display:flex; gap:12px; align-items:baseline; flex-wrap:wrap; }
+  header h1 { font-size:15px; margin:0; font-weight:600; }
+  header .sub { color:var(--dim); font-size:12px; }
+  header .status { margin-left:auto; font-size:12px; }
+  .status.ok { color:var(--ok); } .status.err { color:var(--err); }
+  main { display:grid; grid-template-columns: minmax(280px, 0.8fr) minmax(320px, 1.3fr); gap:1px; background:var(--edge); height:calc(100% - 46px); }
+  @media (max-width:820px){ main{ grid-template-columns:1fr; grid-template-rows:auto 60vh; height:auto; } }
+  .col { background:var(--bg); display:flex; flex-direction:column; min-height:0; }
+  .bar { display:flex; gap:6px; padding:8px 12px; flex-wrap:wrap; border-bottom:1px solid var(--edge); align-items:center; }
+  .bar button { background:var(--panel); color:var(--ink); border:1px solid var(--edge); border-radius:6px; padding:6px 12px; cursor:pointer; font:12px ui-monospace,monospace; }
+  .bar button.go { border-color:var(--acc); color:var(--acc); }
+  .bar button:hover { border-color:var(--acc); }
+  .bar .note { color:var(--dim); font-size:11px; }
+  textarea { flex:0 0 40%; min-height:150px; background:var(--panel); color:var(--ink); border:0; border-bottom:1px solid var(--edge);
+             padding:12px; resize:vertical; font:13px/1.5 ui-monospace, Menlo, monospace; tab-size:2; }
+  pre { margin:0; padding:12px; overflow:auto; white-space:pre-wrap; word-break:break-word; color:var(--dim); font-size:11px; flex:1 1 auto; }
+  .col.right { position:relative; }
+  iframe { width:100%; height:100%; border:0; background:#05080d; display:block; }
+  .banner { padding:8px 12px; font-size:11px; color:var(--dim); border-bottom:1px solid var(--edge); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Clipclop · Lucid scene splice</h1>
+  <span class="sub">S-expr → bridge WGSL → injected into the engine → baked</span>
+  <span class="status" id="status">ready</span>
+</header>
+<main>
+  <div class="col left">
+    <div class="bar">
+      <button type="button" class="go" id="run">splice &amp; run ▶</button>
+      <span class="note">edits the engine only in memory; boots it in the frame →</span>
+    </div>
+    <textarea id="src" spellcheck="false"></textarea>
+    <div class="banner">generated bridge WGSL (namespaced <code>lx_*</code>, injected at the CacheSample seam):</div>
+    <pre id="wgsl"></pre>
+  </div>
+  <div class="col right">
+    <iframe id="frame" title="spliced clipclop engine"></iframe>
+  </div>
+</main>
+
+<script type="module">
+  import { readOne, formToNode } from '../core/sexpr.js';
+  import { spliceEngine } from './splice-lib.js';
+
+  const $ = (id) => document.getElementById(id);
+  const statusEl = $('status');
+
+  // A scene sized to the engine's world (metres): a few big smooth-unioned
+  // forms near the origin so the default camera frames them.
+  $('src').value =
+`; a Lucid scene, baked by the clipclop engine
+(scale 3
+  (smoothUnion :k 0.5
+    (material [0.85 0.78 0.62] (sphere :r 1.2))
+    (translate [0 1.4 0] (material [0.9 0.4 0.25] (sphere :r 0.9)))
+    (translate [1.8 0 0] (material [0.3 0.55 0.9] (box :size [0.7 0.7 0.7])))
+    (translate [-1.8 0.2 0] (material [0.4 0.8 0.5] (torus :major 0.8 :minor 0.28)))))`;
+
+  async function run() {
+    statusEl.textContent = 'splicing…'; statusEl.className = 'status';
+    try {
+      const root = formToNode(readOne($('src').value.trim()));
+      const sceneJson = { name: 'spliced', root };
+
+      const engineHtml = await fetch('./index.html', { cache: 'no-store' }).then(r => {
+        if (!r.ok) throw new Error('cannot fetch engine index.html (' + r.status + ')');
+        return r.text();
+      });
+
+      const { html, bridge } = spliceEngine(engineHtml, sceneJson);
+      $('wgsl').textContent = bridge.block;
+
+      // Boot the spliced engine. Use a blob URL (not srcdoc) so the engine's
+      // relative module imports resolve against this directory.
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      $('frame').src = url;
+
+      const warn = bridge.unresolvedVars.length
+        ? ` · ${bridge.unresolvedVars.length} unresolved var(s) zeroed`
+        : '';
+      statusEl.textContent = 'spliced ✓ — engine booting in frame' + warn;
+      statusEl.className = 'status ok';
+      window.__splice = { ok: true, wgslLen: bridge.block.length, unresolved: bridge.unresolvedVars };
+    } catch (e) {
+      statusEl.textContent = 'error: ' + e.message;
+      statusEl.className = 'status err';
+      $('wgsl').textContent = String(e.stack || e.message);
+      window.__splice = { ok: false, error: e.message };
+    }
+  }
+
+  $('run').onclick = run;
+  run();
+</script>
+</body>
+</html>
