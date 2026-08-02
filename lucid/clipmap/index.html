@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#06111f">
+<title>WebGPU sparse SDF — three-level clipmap — yfix</title>
+<style>
+:root{color-scheme:dark;--st:env(safe-area-inset-top,0px);--sr:env(safe-area-inset-right,0px);--sb:env(safe-area-inset-bottom,0px);--sl:env(safe-area-inset-left,0px)}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none;background:#06111f;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#hud{position:fixed;z-index:6;top:calc(var(--st) + 10px);left:calc(var(--sl) + 10px);max-width:min(69vw,620px);padding:8px 10px;border:1px solid #baffcf55;border-radius:11px;background:#03101dcc;color:#baffcf;box-shadow:0 6px 30px #0006;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);white-space:pre-wrap;font-size:clamp(9px,2.2vw,12px);line-height:1.32;pointer-events:none}
+#error{position:fixed;z-index:30;inset:calc(var(--st) + 14px) calc(var(--sr) + 14px) calc(var(--sb) + 14px) calc(var(--sl) + 14px);display:none;overflow:auto;padding:18px;border:2px solid #ff7185;border-radius:14px;background:#1c0309f5;color:#ffdbe0;white-space:pre-wrap;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;touch-action:pan-y;user-select:text;-webkit-user-select:text}
+#top{position:fixed;z-index:9;top:calc(var(--st) + 10px);right:calc(var(--sr) + 10px);display:grid;grid-template-columns:repeat(2,minmax(58px,auto));gap:7px}
+button{min-width:58px;min-height:42px;padding:0 10px;border:1px solid #ffffff40;border-radius:12px;background:#03101dcc;color:#fff;font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.04em;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button:active,button.active{background:#2b76b4eb}
+#shapePanel{position:fixed;z-index:11;left:calc(var(--sl) + 12px);right:calc(var(--sr) + 12px);bottom:calc(var(--sb) + min(38vh,300px) + 8px);display:none;padding:9px;border:1px solid #baffcf55;border-radius:13px;background:#03101df2;box-shadow:0 12px 36px #0009;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#shapePanel.open{display:block}
+#shapePanel .title{color:#baffcf;font-size:10px;letter-spacing:.08em;margin:0 0 7px 2px}
+#shapeChoices{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+#shapeChoices button{min-width:0;padding:0 4px;font-size:8px}
+#controls{position:fixed;z-index:7;left:0;right:0;bottom:0;height:min(38vh,300px);pointer-events:none}
+.pad{position:absolute;bottom:calc(var(--sb) + 16px);width:min(34vw,180px);aspect-ratio:1;border:1px solid #ffffff3d;border-radius:50%;background:radial-gradient(circle,#0d2a4760,#040c1738);box-shadow:inset 0 0 30px #0005;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}
+#movePad{left:calc(var(--sl) + 14px)}
+#lookPad{right:calc(var(--sr) + 14px)}
+.padLabel{position:absolute;inset:0;display:grid;place-items:center;color:#ffffff88;text-align:center;font:700 9px/1.25 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.08em;pointer-events:none}
+#stick{position:absolute;left:50%;top:50%;width:42%;aspect-ratio:1;transform:translate(-50%,-50%);border:1px solid #ffffff70;border-radius:50%;background:#58abe78c;box-shadow:0 5px 20px #0006;pointer-events:none}
+#vertical{position:absolute;right:calc(var(--sr) + min(36vw,198px));bottom:calc(var(--sb) + 25px);display:grid;gap:9px;pointer-events:auto}
+#vertical button{width:48px;min-width:48px;height:48px;border-radius:50%;padding:0;font-size:17px}
+#crosshair{position:fixed;z-index:4;left:50%;top:50%;width:22px;height:22px;transform:translate(-50%,-50%);opacity:.56;pointer-events:none}
+#crosshair:before,#crosshair:after{content:"";position:absolute;background:#fff;border-radius:2px;box-shadow:0 0 4px #000}
+#crosshair:before{width:14px;height:1px;left:4px;top:10px}
+#crosshair:after{width:1px;height:14px;left:10px;top:4px}
+#reportPanel{position:fixed;z-index:40;inset:calc(var(--st) + 10px) calc(var(--sr) + 10px) calc(var(--sb) + 10px) calc(var(--sl) + 10px);display:none;grid-template-rows:auto 1fr auto;gap:8px;padding:12px;border:1px solid #baffcf77;border-radius:14px;background:#020a12f7;box-shadow:0 12px 50px #000c;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#reportPanel.open{display:grid}
+#reportHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#baffcf;font-size:11px;letter-spacing:.08em}
+#reportText{width:100%;height:100%;resize:none;border:1px solid #ffffff26;border-radius:9px;padding:10px;background:#01070d;color:#c7ffda;font:10px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre;overflow:auto;user-select:text;-webkit-user-select:text;touch-action:pan-y}
+#reportActions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+#reportStatus{color:#baffcf;font-size:9px;min-height:12px;margin-left:2px}
+@media(max-width:520px){#hud{max-width:calc(100vw - 142px - var(--sl) - var(--sr))}#top{grid-template-columns:1fr}button{min-height:39px}#shapeChoices{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(pointer:fine){#controls{opacity:.45}.pad{width:132px}#vertical{right:160px}}
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Interactive WebGPU sparse SDF clipmap scene"></canvas>
+<div id="crosshair"></div>
+<pre id="hud">Starting WebGPU…</pre>
+<pre id="error"></pre>
+<div id="top">
+  <button id="autoBtn" class="active">AUTO</button>
+  <button id="cutBtn" class="active">CUT ON</button>
+  <button id="debugBtn">SHADED</button>
+  <button id="shapesBtn">SHAPES</button>
+  <button id="reportBtn">REPORT</button>
+  <button id="resetBtn">RESET</button>
+</div>
+<div id="shapePanel" role="dialog" aria-label="Demo shapes">
+  <div class="title">DEMO SHAPES</div>
+  <div id="shapeChoices">
+    <button data-demo="0" class="active">MONUMENT</button>
+    <button data-demo="1">PRIMITIVES</button>
+    <button data-demo="2">BOOLEANS</button>
+    <button data-demo="3">SMOOTH LAB</button>
+    <button data-demo="4">SNOWMAN</button>
+    <button data-demo="5">INVADERS</button>
+    <button data-demo="6">MEADOW</button>
+    <button data-demo="7">DRAGON</button>
+  </div>
+</div>
+<div id="reportPanel" role="dialog" aria-label="Copyable diagnostics report">
+  <div><div id="reportHeader"><span>SDF DIAGNOSTICS</span><span id="reportBuild"></span></div><div id="reportStatus"></div></div>
+  <textarea id="reportText" readonly spellcheck="false"></textarea>
+  <div id="reportActions"><button id="refreshReportBtn">REFRESH</button><button id="copyReportBtn">COPY</button><button id="closeReportBtn">CLOSE</button></div>
+</div>
+<div id="controls">
+  <div id="movePad" class="pad"><div class="padLabel">MOVE</div><div id="stick"></div></div>
+  <div id="lookPad" class="pad"><div class="padLabel">DRAG<br>TO LOOK</div></div>
+  <div id="vertical"><button id="upBtn">▲</button><button id="downBtn">▼</button></div>
+</div>
+<script type="module">
+const canvas=document.querySelector('#c'),hud=document.querySelector('#hud'),errorPanel=document.querySelector('#error');
+const autoBtn=document.querySelector('#autoBtn'),cutBtn=document.querySelector('#cutBtn'),debugBtn=document.querySelector('#debugBtn'),shapesBtn=document.querySelector('#shapesBtn'),reportBtn=document.querySelector('#reportBtn'),resetBtn=document.querySelector('#resetBtn');
+const shapePanel=document.querySelector('#shapePanel'),shapeButtons=[...document.querySelectorAll('#shapeChoices button')];
+const reportPanel=document.querySelector('#reportPanel'),reportText=document.querySelector('#reportText'),reportStatus=document.querySelector('#reportStatus'),reportBuild=document.querySelector('#reportBuild'),refreshReportBtn=document.querySelector('#refreshReportBtn'),copyReportBtn=document.querySelector('#copyReportBtn'),closeReportBtn=document.querySelector('#closeReportBtn');
+const movePad=document.querySelector('#movePad'),lookPad=document.querySelector('#lookPad'),stick=document.querySelector('#stick'),upBtn=document.querySelector('#upBtn'),downBtn=document.querySelector('#downBtn');
+let stopped=false,startupStage='initialising';
+const BUILD_ID='clipmap-2026-08-02-adaptive-refine-14';
+const diagnosticEvents=[];
+const shaderMessages=[];
+const diagnostics={gpu:null,lastError:null};
+let reportProvider=()=>baseReport();
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const DSL_SOURCES={
+  invaders:`(scene "Distance Field Invaders" :version "2.0" :subtitle "Parametric space invaders with animation controls" (params (moveSpeed :type scalar :value 1 :min 0.2 :max 3) (moveAmplitude :type scalar :value 0.3 :min 0.05 :max 0.8) (invaderScale :type scalar :value 1 :min 0.5 :max 2) (topRowColor :type color3 :value [0 1 0.5]) (bottomRowColor :type color3 :value [1 0.3 0.8])) (defs (invader (subtract (union (box :size [0.35 0.25 0.1]) (box :size [0.1 0.1 0.1] :translate [0.25 0.35 0]) (box :size [0.1 0.1 0.1] :translate [-0.25 0.35 0]) (box :size [0.05 0.15 0.1] :translate [0.4 0.05 0]) (box :size [0.05 0.15 0.1] :translate [-0.4 0.05 0]) (box :size [0.1 0.1 0.1] :translate [0.35 -0.35 0]) (box :size [0.1 0.1 0.1] :translate [-0.35 -0.35 0])) (union (box :size [0.08 0.08 0.2] :translate [0.15 0.1 0.05]) (box :size [0.08 0.08 0.2] :translate [-0.15 0.1 0.05]) (box :size [0.12 0.08 0.2] :translate [0 -0.25 0.05]))))) (root (union (material {"type":"material","params":{"color":{"var":"topRowColor"}},"child":{"type":"transform","transform":{"translate":[-1.5,0.6,0],"scale":{"var":"invaderScale"}},"child":{"type":"ref","id":"invader"}}}) (material {"type":"material","params":{"color":{"var":"bottomRowColor"}},"child":{"type":"transform","transform":{"translate":[0,-0.6,0],"scale":{"var":"invaderScale"}},"child":{"type":"ref","id":"invader"}}}))))`,
+  meadow:`(scene "Flower Meadow" :version "1.2" :subtitle "Poppies and sunflowers with per-instance variation" (params (flowerSpacing :type scalar :value 0.5 :min 0.3 :max 1) (poppyColor :type color3 :value [0.9 0.1 0.1]) (sunflowerColor :type color3 :value [1 0.85 0.1])) (defs (poppy (union (capsule :h 0.25 :r 0.012 :color [0.2 0.5 0.15]) (sphere :r 0.07 :color $poppyColor :translate [0 0.28 0] :scale [1 0.4 1]) (sphere :r 0.025 :color [0.1 0.1 0.1] :translate [0 0.3 0]))) (sunflower (union (capsule :h 0.35 :r 0.018 :color [0.25 0.45 0.1]) (sphere :r 0.12 :color $sunflowerColor :translate [0 0.4 0] :scale [1 0.3 1]) (sphere :r 0.06 :color [0.4 0.25 0.1] :translate [0 0.42 0])))) (root (union (repeat :period [$flowerSpacing 0 $flowerSpacing] (select {"type":"select","cond":{"expr":"step","args":[0.6,{"expr":"hash","args":[{"var":"flowerId"}]}]},"a":{"type":"ref","id":"poppy"},"b":{"type":"ref","id":"sunflower"}})))))`,
+  dragon:`(scene "The Dread Wyrm" :version "1.1" :subtitle "A horrific procedural dragon with warped anatomy, noise-sculpted hide, jaws, wings and fire" (params (breath :type scalar :value 1 :min 0 :max 1) (scale :type scalar :value 1 :min 0.6 :max 1.5) (hideColor :type color3 :value [0.08 0.32 0.12]) (bellyColor :type color3 :value [0.55 0.42 0.12]) (fireColor :type color3 :value [1 0.18 0.02])) (defs (horn (cone :h 0.55 :r1 0.12 :r2 0.01)) (tooth (cone :h 0.18 :r1 0.05 :r2 0.005)) (claw (cone :h 0.22 :r1 0.06 :r2 0.005))) (root (union (material {"type":"material","params":{"color":{"var":"hideColor"}},"child":{"type":"dragonBody","notes":"ellipsoids, capsules and mirrored wings"}}) (material {"type":"material","params":{"color":{"var":"bellyColor"}},"child":{"type":"dragonBelly"}}) (material {"type":"material","params":{"color":{"var":"fireColor"}},"child":{"type":"dragonFire","animated":true}}))))`
+};
+function tokenizeDSL(source){
+  const out=[];let i=0;
+  const ws=c=>/\s|,/.test(c);
+  while(i<source.length){let c=source[i];if(ws(c)){i++;continue;}if(c===';'){while(i<source.length&&source[i]!='\n')i++;continue;}
+    if('()[]'.includes(c)){out.push({type:c,value:c});i++;continue;}
+    if(c==='"'){let j=i+1,esc=false;for(;j<source.length;j++){if(!esc&&source[j]==='"')break;esc=!esc&&source[j]==='\\';if(source[j]!=='\\')esc=false;}out.push({type:'value',value:JSON.parse(source.slice(i,j+1))});i=j+1;continue;}
+    if(c==='{'){let j=i,depth=0,str=false,esc=false;for(;j<source.length;j++){const q=source[j];if(str){if(!esc&&q==='"')str=false;esc=!esc&&q==='\\';if(q!=='\\')esc=false;continue;}if(q==='"'){str=true;continue;}if(q==='{')depth++;if(q==='}'&&--depth===0){j++;break;}}out.push({type:'value',value:JSON.parse(source.slice(i,j))});i=j;continue;}
+    let j=i;while(j<source.length&&!ws(source[j])&&!('()[]{}'.includes(source[j])))j++;const raw=source.slice(i,j);let value=raw;if(/^[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?$/i.test(raw))value=Number(raw);else if(raw==='true')value=true;else if(raw==='false')value=false;else if(raw.startsWith(':'))value={keyword:raw.slice(1)};else if(raw.startsWith('$'))value={var:raw.slice(1)};else value={symbol:raw};out.push({type:'value',value});i=j;
+  }return out;
+}
+function parseDSL(source){const t=tokenizeDSL(source);let i=0;function read(){const x=t[i++];if(!x)throw new Error('Unexpected end of DSL');if(x.type==='('){const a=[];while(t[i]?.type!==')')a.push(read());i++;return a;}if(x.type==='['){const a=[];while(t[i]?.type!==']')a.push(read());i++;return a;}if(x.type===')'||x.type===']')throw new Error('Unexpected '+x.type);return x.value;}const root=read();if(i!==t.length)throw new Error('Trailing DSL tokens');return root;}
+const sym=x=>x&&typeof x==='object'&&'symbol'in x?x.symbol:null;
+function keywordMap(items,start=0){const o={};for(let i=start;i<items.length;i+=2){const k=items[i];if(!k||typeof k!=='object'||!('keyword'in k))continue;o[k.keyword]=items[i+1];}return o;}
+function canonicalScene(ast){if(sym(ast?.[0])!=='scene')throw new Error('Expected scene form');const ir={type:'scene',name:ast[1],version:null,subtitle:null,params:{},defs:{},root:null,nodeCount:0,jsonNodes:0};for(let i=2;i<ast.length;i++){const part=ast[i];if(part?.keyword==='version'){ir.version=ast[++i];continue;}if(part?.keyword==='subtitle'){ir.subtitle=ast[++i];continue;}const head=sym(part?.[0]);if(head==='params'){for(const q of part.slice(1)){const n=sym(q[0]);if(!n||n.startsWith('_'))continue;ir.params[n]=keywordMap(q,1);}}else if(head==='defs'){for(const q of part.slice(1))ir.defs[sym(q[0])]=q[1];}else if(head==='root')ir.root=part[1];}
+  (function walk(x){if(Array.isArray(x)){ir.nodeCount++;for(const y of x)walk(y)}else if(x&&typeof x==='object'){if(!('symbol'in x)&&!('keyword'in x)&&!('var'in x))ir.jsonNodes++;for(const y of Object.values(x))walk(y)}})(ir.root);return ir;}
+const parsedDSL={};for(const [name,source] of Object.entries(DSL_SOURCES)){try{parsedDSL[name]=canonicalScene(parseDSL(source));}catch(error){parsedDSL[name]={error:String(error)}}}
+function inIframe(){try{return window.self!==window.top}catch{return true}}
+function recordEvent(type,detail={}){diagnosticEvents.push({t:+performance.now().toFixed(1),type,...detail});if(diagnosticEvents.length>40)diagnosticEvents.shift()}
+function baseReport(){return{build:BUILD_ID,generatedAt:new Date().toISOString(),startupStage,stopped,url:location.href,referrer:document.referrer||null,secureContext:isSecureContext,inIframe:inIframe(),visibility:document.visibilityState,userAgent:navigator.userAgent,platform:navigator.platform||null,language:navigator.language,devicePixelRatio:devicePixelRatio||1,screen:{width:screen.width,height:screen.height,availWidth:screen.availWidth,availHeight:screen.availHeight},viewport:{innerWidth,innerHeight,visualWidth:visualViewport?.width??null,visualHeight:visualViewport?.height??null},webgpu:{navigatorGpu:Boolean(navigator.gpu),...diagnostics.gpu},startupError:diagnostics.lastError,shaderMessages:[...shaderMessages],events:[...diagnosticEvents]}}
+function reportJSON(){let value;try{value=reportProvider()}catch(error){value={...baseReport(),reportProviderError:String(error)}}return JSON.stringify(value,null,2)}
+function refreshReport(){reportText.value=reportJSON();reportStatus.textContent='Current state captured. Copy and paste this JSON into chat.'}
+async function copyReport(){refreshReport();let copied=false;try{await navigator.clipboard.writeText(reportText.value);copied=true}catch{}if(!copied){reportText.focus();reportText.select();try{copied=document.execCommand('copy')}catch{copied=false}}reportStatus.textContent=copied?'Copied to clipboard.':'Clipboard blocked — long-press the selected text and copy.'}
+reportBuild.textContent=BUILD_ID;
+reportBtn.onclick=()=>{reportPanel.classList.add('open');refreshReport()};
+refreshReportBtn.onclick=refreshReport;
+copyReportBtn.onclick=copyReport;
+closeReportBtn.onclick=()=>reportPanel.classList.remove('open');
+
+const mix=(a,b,t)=>a*(1-t)+b*t;
+function errorText(e){if(!e)return'';return [...new Set([typeof e==='string'?e:'',e.name,e.message,e.reason?`reason: ${e.reason}`:'',e.stack].filter(Boolean).map(String))].join('\n')}
+function fatal(message,error){stopped=true;diagnostics.lastError={stage:startupStage,message,error:errorText(error)};recordEvent('fatal',{stage:startupStage,message,error:errorText(error)});errorPanel.textContent=`WEBGPU ERROR\n\nStage: ${startupStage}\n\n${message}${error?`\n\n${errorText(error)}`:''}\n\nPress REPORT to copy structured diagnostics.`;errorPanel.style.display='block';hud.textContent='WEBGPU ERROR — details on screen · REPORT available';console.error(message,error||'')}
+const v3=(x=0,y=0,z=0)=>({x,y,z});
+const add=(a,b)=>v3(a.x+b.x,a.y+b.y,a.z+b.z),sub=(a,b)=>v3(a.x-b.x,a.y-b.y,a.z-b.z),mul=(a,s)=>v3(a.x*s,a.y*s,a.z*s),dot=(a,b)=>a.x*b.x+a.y*b.y+a.z*b.z,length3=a=>Math.hypot(a.x,a.y,a.z),normalize=a=>{const l=length3(a)||1;return v3(a.x/l,a.y/l,a.z/l)};
+function rotateCameraJS(v,yaw,pitch){const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);const q=v3(v.x,cp*v.y+sp*v.z,-sp*v.y+cp*v.z);return v3(cy*q.x+sy*q.z,q.y,-sy*q.x+cy*q.z)}
+function terrainHeightJS(p){return 0.24*Math.sin(p.x*0.17)*Math.cos(p.z*0.14)+0.08*Math.sin(p.x*0.49+p.z*0.29)}
+function sdSphereJS(p,r){return length3(p)-r}
+function sdRoundBoxJS(p,b,r){const q=v3(Math.abs(p.x)-b.x,Math.abs(p.y)-b.y,Math.abs(p.z)-b.z);const mx=v3(Math.max(q.x,0),Math.max(q.y,0),Math.max(q.z,0));return length3(mx)+Math.min(Math.max(q.x,Math.max(q.y,q.z)),0)-r}
+function sdCapsuleJS(p,a,b,r){const pa=sub(p,a),ba=sub(b,a);const h=clamp(dot(pa,ba)/dot(ba,ba),0,1);return length3(sub(pa,mul(ba,h)))-r}
+function sdTorusJS(p,major,minor){const qx=Math.hypot(p.x,p.z)-major;return Math.hypot(qx,p.y)-minor}
+function sdCylinderJS(p,r,h){const dx=Math.hypot(p.x,p.z)-r,dy=Math.abs(p.y)-h;return Math.min(Math.max(dx,dy),0)+Math.hypot(Math.max(dx,0),Math.max(dy,0))}
+function sdOctahedronJS(p,s){return (Math.abs(p.x)+Math.abs(p.y)+Math.abs(p.z)-s)*0.57735027}
+function smoothMinJS(a,b,k){const h=clamp(0.5+0.5*(b-a)/k,0,1);return mix(b,a,h)-k*h*(1-h)}
+function snowmanJS(p){const bottom=sdSphereJS(sub(p,v3(0,-0.3,0)),0.5);const middle=sdSphereJS(sub(p,v3(0,0.35,0)),0.38);const head=sdSphereJS(sub(p,v3(0,0.88,0)),0.28);return Math.min(bottom,Math.min(middle,head))}
+function sceneSDFJS(p,demoId,cutOn){
+  if(demoId===4){
+    let d=p.y+0.8;
+    d=Math.min(d,snowmanJS(p));
+    d=Math.min(d,sdCapsuleJS(p,v3(0.55,0.35,0),v3(0.85,0.55,0),0.02));
+    d=Math.min(d,sdCapsuleJS(p,v3(-0.55,0.35,0),v3(-0.85,0.55,0),0.02));
+    return d;
+  }
+  if(demoId===1){
+    let d=p.y-terrainHeightJS(p);
+    d=Math.min(d,sdSphereJS(sub(p,v3(-8,2.35,5)),2.35));
+    d=Math.min(d,sdRoundBoxJS(sub(p,v3(-3.2,2.25,5)),v3(1.85,2.05,1.85),0.45));
+    d=Math.min(d,sdTorusJS(sub(p,v3(1.8,2.65,5)),2.0,0.48));
+    d=Math.min(d,sdCapsuleJS(p,v3(5.8,0.8,3.5),v3(5.8,5.1,6.5),0.86));
+    d=Math.min(d,sdCylinderJS(sub(p,v3(9.2,2.0,5)),1.55,2.0));
+    d=Math.min(d,sdOctahedronJS(sub(p,v3(1.8,2.4,10)),2.35));
+    return d;
+  }
+  if(demoId===2){
+    let d=p.y-terrainHeightJS(p);
+    const outer=sdRoundBoxJS(sub(p,v3(0,3.8,5)),v3(6,3.45,4.6),0.75);
+    const inner=sdRoundBoxJS(sub(p,v3(0,3.8,5)),v3(4.65,2.25,5.3),0.55);
+    let shell=Math.max(outer,-inner);
+    const ring=sdTorusJS(sub(p,v3(0,4,5)),4.8,0.55);
+    const lens=Math.max(sdSphereJS(sub(p,v3(-8.1,3,5)),2.9),sdRoundBoxJS(sub(p,v3(-8.1,3,5)),v3(2,3.6,2),0.25));
+    d=Math.min(d,Math.min(shell,Math.min(ring,lens)));
+    return d;
+  }
+  if(demoId===3){
+    let d=p.y-terrainHeightJS(p);
+    let blob=sdSphereJS(sub(p,v3(-3.2,3.1,5)),3.25);
+    blob=smoothMinJS(blob,sdSphereJS(sub(p,v3(2.4,3.8,5.4)),3.75),1.45);
+    blob=smoothMinJS(blob,sdSphereJS(sub(p,v3(0,6.2,7)),2.8),1.15);
+    blob=smoothMinJS(blob,sdTorusJS(sub(p,v3(0,3.2,5)),5.0,0.72),0.60);
+    return Math.min(d,blob);
+  }
+  let d=p.y-terrainHeightJS(p);
+  const lower=sdRoundBoxJS(sub(p,v3(0,3.35,5)),v3(5.15,3.10,4.9),1.25);
+  const dome=sdSphereJS(sub(p,v3(0,5.7,5)),4.35);
+  d=Math.min(d,smoothMinJS(lower,dome,0.85));
+  d=Math.min(d,sdRoundBoxJS(sub(p,v3(-8.8,1.65,4)),v3(1.15,1.65,1.15),0.34));
+  d=Math.min(d,sdRoundBoxJS(sub(p,v3(8.8,1.65,4)),v3(1.15,1.65,1.15),0.34));
+  d=Math.min(d,sdSphereJS(sub(p,v3(-8.8,4.55,4)),1.38));
+  d=Math.min(d,sdTorusJS(sub(p,v3(8.8,4.35,4)),1.55,0.38));
+  if(cutOn){const cut=sdCapsuleJS(p,v3(0,3.15,-3),v3(0,3.15,13),1.72);d=Math.max(d,-cut)}
+  return d;
+}
+function findOrbitPivot(camera,demoId,cutOn,targetHint){
+  const origin=v3(camera.x,camera.y,camera.z);
+  const forward=rotateCameraJS(v3(0,0,1),camera.yaw,camera.pitch);
+  const targetDistance=Math.max(0.5,length3(sub(targetHint,origin)));
+  const maxDistance=Math.min(26,targetDistance*1.35+2.0);
+  let t=0.45;
+  let best=targetHint,bestAbs=1e9,bestT=targetDistance;
+  for(let i=0;i<72;i++){
+    const point=add(origin,mul(forward,t));
+    const distance=sceneSDFJS(point,demoId,cutOn);
+    const absolute=Math.abs(distance);
+    if(absolute<bestAbs){best=point;bestAbs=absolute;bestT=t}
+    if(absolute<0.025&&t<maxDistance){
+      return{point,source:'centre-ray-hit',residual:absolute,distance:t};
+    }
+    t+=Math.max(absolute*0.55,0.055);
+    if(t>maxDistance)break;
+  }
+  if(bestAbs<0.16&&bestT<maxDistance){
+    return{point:best,source:'centre-ray-near',residual:bestAbs,distance:bestT};
+  }
+  return{point:v3(targetHint.x,targetHint.y,targetHint.z),source:'scene-target-fallback',residual:null,distance:targetDistance};
+}
+
+async function main(){
+  if(!navigator.gpu)throw new Error(`navigator.gpu unavailable.\nURL: ${location.href}\nsecureContext: ${isSecureContext}\nUse a normal HTTPS origin such as CodePen or localhost.`);
+  startupStage='requesting adapter';
+  let adapter=await navigator.gpu.requestAdapter({powerPreference:'high-performance'});
+  if(!adapter)adapter=await navigator.gpu.requestAdapter();
+  if(!adapter)throw new Error('No WebGPU adapter returned.');
+  startupStage='requesting device';
+  const device=await adapter.requestDevice();
+  const adapterInfo=adapter.info?{vendor:adapter.info.vendor||null,architecture:adapter.info.architecture||null,device:adapter.info.device||null,description:adapter.info.description||null,subgroupMinSize:adapter.info.subgroupMinSize??null,subgroupMaxSize:adapter.info.subgroupMaxSize??null}:null;
+  const limitNames=['maxTextureDimension2D','maxTextureDimension3D','maxStorageBufferBindingSize','maxBufferSize','maxComputeWorkgroupsPerDimension','maxComputeInvocationsPerWorkgroup','maxComputeWorkgroupSizeX','maxComputeWorkgroupSizeY','maxComputeWorkgroupSizeZ'];
+  diagnostics.gpu={adapterInfo,adapterFeatures:[...adapter.features],deviceFeatures:[...device.features],limits:Object.fromEntries(limitNames.map(name=>[name,Number(device.limits[name]??0)]))};
+  const pipelineParams=new URLSearchParams(location.search);const forceLegacyAnalytic=pipelineParams.get('legacy')==='1'||pipelineParams.get('full')==='1';const portableDefault=false;
+  recordEvent('device-ready',{adapterInfo,features:diagnostics.gpu.deviceFeatures,rendererRequested:forceLegacyAnalytic?'legacy-analytic-reference':'hierarchical-sparse'});
+  let pipelineProbe=false,pipelineProbeError=null;
+  device.addEventListener('uncapturederror',e=>{const err=e.error||e;recordEvent('uncaptured-error',{error:errorText(err),suppressed:pipelineProbe});if(pipelineProbe){pipelineProbeError=err;return;}fatal('Uncaptured WebGPU validation error.',err)});
+  device.lost.then(i=>{recordEvent('device-lost',{reason:i.reason||'unknown',message:i.message||''});if(!stopped)fatal(`Device lost: ${i.reason||'unknown'}`,i)});
+  async function scoped(label,fn,awaitGPU=false){startupStage=label;device.pushErrorScope('validation');let value,thrown;try{value=fn();if(value?.then)value=await value;if(awaitGPU)await device.queue.onSubmittedWorkDone()}catch(e){thrown=e}const ve=await device.popErrorScope();if(thrown)throw new Error(`${label}: ${errorText(thrown)}`);if(ve)throw new Error(`${label}: ${errorText(ve)}`);return value}
+
+  const context=canvas.getContext('webgpu');
+  if(!context)throw new Error('Could not create WebGPU canvas context.');
+  const format=navigator.gpu.getPreferredCanvasFormat();
+  let quality=1.0;
+  function resize(){const r=canvas.getBoundingClientRect(),coarse=matchMedia('(pointer:coarse)').matches,dpr=Math.min(devicePixelRatio||1,coarse?1.25:1.75)*quality;const w=Math.max(1,Math.min(device.limits.maxTextureDimension2D,Math.floor(r.width*dpr))),h=Math.max(1,Math.min(device.limits.maxTextureDimension2D,Math.floor(r.height*dpr)));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;context.configure({device,format,alphaMode:'opaque'})}}
+  addEventListener('resize',resize,{passive:true});visualViewport?.addEventListener('resize',resize,{passive:true});resize();
+
+  const LEVEL_COUNT=3,GX=16,GY=10,GZ=20,LOGICAL_CELLS=8,APRON=1,SAMPLES=11,BASE_CELL=0.375,MAX_LOGICAL=GX*GY*GZ,MAX_BRICKS=1728,AX=12,AY=12,AZ=12,ATLAS_X=AX*SAMPLES,ATLAS_Y=AY*SAMPLES,ATLAS_Z=AZ*SAMPLES,MACRO=4,MX=Math.ceil(GX/MACRO),MY=Math.ceil(GY/MACRO),MZ=Math.ceil(GZ/MACRO),MACRO_COUNT=MX*MY*MZ;
+  const levelSpecs=Array.from({length:LEVEL_COUNT},(_,index)=>{const cell=BASE_CELL*(2**index);return{index,cell,brick:cell*LOGICAL_CELLS}});
+
+  const cameraBuffer=await scoped('camera buffer',()=>device.createBuffer({size:32,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST}));
+  const clipsBuffer=await scoped('clipmap uniform buffer',()=>device.createBuffer({size:96,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST}));
+  const sceneBuffer=await scoped('scene buffer',()=>device.createBuffer({size:16,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST}));
+  const atlasSampler=await scoped('filtered atlas sampler',()=>device.createSampler({addressModeU:'clamp-to-edge',addressModeV:'clamp-to-edge',addressModeW:'clamp-to-edge',magFilter:'linear',minFilter:'linear',mipmapFilter:'nearest'}));
+
+  const levels=[];
+  for(const spec of levelSpecs){
+    const prefix=`L${spec.index}`;
+    const pageTex=await scoped(`${prefix} page texture`,()=>device.createTexture({size:{width:GX,height:GY,depthOrArrayLayers:GZ},dimension:'3d',format:'r32uint',usage:GPUTextureUsage.STORAGE_BINDING|GPUTextureUsage.TEXTURE_BINDING}));
+    const atlasTex=await scoped(`${prefix} atlas texture`,()=>device.createTexture({size:{width:ATLAS_X,height:ATLAS_Y,depthOrArrayLayers:ATLAS_Z},dimension:'3d',format:'rgba16float',usage:GPUTextureUsage.STORAGE_BINDING|GPUTextureUsage.TEXTURE_BINDING}));
+    const macroTex=await scoped(`${prefix} macro occupancy texture`,()=>device.createTexture({size:{width:MX,height:MY,depthOrArrayLayers:MZ},dimension:'3d',format:'r32uint',usage:GPUTextureUsage.STORAGE_BINDING|GPUTextureUsage.TEXTURE_BINDING}));
+    const dirtyBuffer=await scoped(`${prefix} dirty buffer`,()=>device.createBuffer({size:MAX_LOGICAL*16,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST}));
+    const generatedBuffer=await scoped(`${prefix} generated buffer`,()=>device.createBuffer({size:MAX_LOGICAL*16,usage:GPUBufferUsage.STORAGE}));
+    const stateBuffer=await scoped(`${prefix} allocator state`,()=>device.createBuffer({size:16,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST|GPUBufferUsage.COPY_SRC}));
+    const freeListBuffer=await scoped(`${prefix} free list`,()=>device.createBuffer({size:MAX_BRICKS*4,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST}));
+    const updateBuffer=await scoped(`${prefix} update uniform`,()=>device.createBuffer({size:16,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST}));
+    const levelInfo=await scoped(`${prefix} level info`,()=>device.createBuffer({size:16,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST}));
+    const macroInfo=await scoped(`${prefix} macro info`,()=>device.createBuffer({size:16,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST}));
+    const dispatchBuffer=await scoped(`${prefix} indirect generation args`,()=>device.createBuffer({size:16,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.INDIRECT|GPUBufferUsage.COPY_DST}));
+    const readback=await scoped(`${prefix} readback`,()=>device.createBuffer({size:16,usage:GPUBufferUsage.COPY_DST|GPUBufferUsage.MAP_READ}));
+    const initialFree=new Uint32Array(MAX_BRICKS);for(let i=0;i<MAX_BRICKS;i++)initialFree[i]=MAX_BRICKS-1-i;
+    device.queue.writeBuffer(freeListBuffer,0,initialFree);
+    device.queue.writeBuffer(stateBuffer,0,new Uint32Array([MAX_BRICKS,0,0,0]));
+    device.queue.writeBuffer(levelInfo,0,new Float32Array([spec.cell,spec.brick,spec.index,0]));
+    levels.push({index:spec.index,cell:spec.cell,brick:spec.brick,pageTex,atlasTex,macroTex,pageView:pageTex.createView({dimension:'3d'}),atlasView:atlasTex.createView({dimension:'3d'}),macroView:macroTex.createView({dimension:'3d'}),dirtyBuffer,generatedBuffer,stateBuffer,freeListBuffer,updateBuffer,levelInfo,macroInfo,dispatchBuffer,readback,origin:null,free:MAX_BRICKS,resident:0,readbackBusy:false,lastDirty:0,lastKind:'idle',lastEncodeMs:0,lastQueueCompletionMs:0,lastUpdateAt:0});
+  }
+
+  const sceneWGSL=/* wgsl */`
+struct Scene{params:vec4<f32>};
+fn sdSphere(p:vec3<f32>,r:f32)->f32{return length(p)-r;}
+fn sdRoundBox(p:vec3<f32>,b:vec3<f32>,r:f32)->f32{let q=abs(p)-b;return length(max(q,vec3<f32>(0.0)))+min(max(q.x,max(q.y,q.z)),0.0)-r;}
+fn sdCapsule(p:vec3<f32>,a:vec3<f32>,b:vec3<f32>,r:f32)->f32{let pa=p-a;let ba=b-a;let h=clamp(dot(pa,ba)/dot(ba,ba),0.0,1.0);return length(pa-ba*h)-r;}
+fn sdTorus(p:vec3<f32>,major:f32,minor:f32)->f32{let q=vec2<f32>(length(p.xz)-major,p.y);return length(q)-minor;}
+fn sdCylinder(p:vec3<f32>,radius:f32,halfHeight:f32)->f32{let d=abs(vec2<f32>(length(p.xz),p.y))-vec2<f32>(radius,halfHeight);return min(max(d.x,d.y),0.0)+length(max(d,vec2<f32>(0.0)));}
+fn sdOctahedron(p0:vec3<f32>,size:f32)->f32{let p=abs(p0);return (p.x+p.y+p.z-size)*0.57735027;}
+fn sdCappedConeY(p:vec3<f32>,h:f32,r1:f32,r2:f32)->f32{
+  let q=vec2<f32>(length(p.xz),p.y);let k1=vec2<f32>(r2,h);let k2=vec2<f32>(r2-r1,2.0*h);
+  let ca=vec2<f32>(q.x-min(q.x,select(r2,r1,q.y<0.0)),abs(q.y)-h);
+  let cb=q-k1+k2*clamp(dot(k1-q,k2)/dot(k2,k2),0.0,1.0);
+  return select(1.0,-1.0,cb.x<0.0&&ca.y<0.0)*sqrt(min(dot(ca,ca),dot(cb,cb)));
+}
+fn smoothMin(a:f32,b:f32,k:f32)->f32{let h=clamp(0.5+0.5*(b-a)/k,0.0,1.0);return mix(b,a,h)-k*h*(1.0-h);}
+fn terrainHeight(p:vec3<f32>)->f32{return 0.24*sin(p.x*0.17)*cos(p.z*0.14)+0.08*sin(p.x*0.49+p.z*0.29);}
+fn hash1(n:f32)->f32{return fract(sin(n)*43758.5453123);}
+fn hash3(n:f32)->vec3<f32>{return vec3<f32>(hash1(n+11.0),hash1(n+37.0),hash1(n+71.0));}
+fn sceneMonument(p:vec3<f32>,cutOn:bool)->f32{
+  var d=p.y-terrainHeight(p);let lower=sdRoundBox(p-vec3<f32>(0.0,3.35,5.0),vec3<f32>(5.15,3.10,4.9),1.25);let dome=sdSphere(p-vec3<f32>(0.0,5.7,5.0),4.35);
+  d=min(d,smoothMin(lower,dome,0.85));d=min(d,sdRoundBox(p-vec3<f32>(-8.8,1.65,4.0),vec3<f32>(1.15,1.65,1.15),0.34));d=min(d,sdRoundBox(p-vec3<f32>(8.8,1.65,4.0),vec3<f32>(1.15,1.65,1.15),0.34));d=min(d,sdSphere(p-vec3<f32>(-8.8,4.55,4.0),1.38));d=min(d,sdTorus(p-vec3<f32>(8.8,4.35,4.0),1.55,0.38));if(cutOn){d=max(d,-sdCapsule(p,vec3<f32>(0.0,3.15,-3.0),vec3<f32>(0.0,3.15,13.0),1.72));}return d;
+}
+fn scenePrimitives(p:vec3<f32>,cutOn:bool)->f32{
+  var d=p.y-terrainHeight(p);d=min(d,sdSphere(p-vec3<f32>(-8.0,2.35,5.0),2.35));var box=sdRoundBox(p-vec3<f32>(-3.2,2.25,5.0),vec3<f32>(1.85,2.05,1.85),0.45);if(cutOn){box=max(box,-sdCylinder(p-vec3<f32>(-3.2,2.4,5.0),0.70,3.0));}d=min(d,box);d=min(d,sdTorus(p-vec3<f32>(1.8,2.65,5.0),2.0,0.48));d=min(d,sdCapsule(p,vec3<f32>(5.8,0.8,3.5),vec3<f32>(5.8,5.1,6.5),0.86));d=min(d,sdCylinder(p-vec3<f32>(9.2,2.0,5.0),1.55,2.0));d=min(d,sdOctahedron(p-vec3<f32>(1.8,2.4,10.0),2.35));return d;
+}
+fn sceneBooleans(p:vec3<f32>,cutOn:bool)->f32{
+  var d=p.y-terrainHeight(p);let outer=sdRoundBox(p-vec3<f32>(0.0,3.8,5.0),vec3<f32>(6.0,3.45,4.6),0.75);let inner=sdRoundBox(p-vec3<f32>(0.0,3.8,5.0),vec3<f32>(4.65,2.25,5.3),0.55);let shell=max(outer,-inner);let ring=sdTorus(p-vec3<f32>(0.0,4.0,5.0),4.8,0.55);let lens=max(sdSphere(p-vec3<f32>(-8.1,3.0,5.0),2.9),sdRoundBox(p-vec3<f32>(-8.1,3.0,5.0),vec3<f32>(2.0,3.6,2.0),0.25));d=min(d,min(shell,min(ring,lens)));if(cutOn){d=max(d,-sdCapsule(p,vec3<f32>(0.0,3.8,-2.0),vec3<f32>(0.0,3.8,12.0),1.25));}return d;
+}
+fn sceneSmoothLab(p:vec3<f32>,cutOn:bool)->f32{
+  var d=p.y-terrainHeight(p);var blob=sdSphere(p-vec3<f32>(-3.2,3.1,5.0),3.25);blob=smoothMin(blob,sdSphere(p-vec3<f32>(2.4,3.8,5.4),3.75),1.45);blob=smoothMin(blob,sdSphere(p-vec3<f32>(0.0,6.2,7.0),2.8),1.15);blob=smoothMin(blob,sdTorus(p-vec3<f32>(0.0,3.2,5.0),5.0,0.72),0.60);if(cutOn){blob=max(blob,-sdCapsule(p,vec3<f32>(-7.0,4.0,1.0),vec3<f32>(7.0,4.0,9.0),1.05));}return min(d,blob);
+}
+fn sceneSDF(p:vec3<f32>,scene:Scene)->f32{let demo=i32(scene.params.z+0.5);let cutOn=scene.params.x>0.5;if(demo==1){return scenePrimitives(p,cutOn);}if(demo==2){return sceneBooleans(p,cutOn);}if(demo==3){return sceneSmoothLab(p,cutOn);}return sceneMonument(p,cutOn);}
+`;
+
+  const analyticWGSL=/* wgsl */`
+fn capsuleXRot(p:vec3<f32>,centre:vec3<f32>,halfLength:f32,radius:f32,degrees:f32)->f32{let a=degrees*0.01745329252;let dir=vec3<f32>(cos(a),sin(a),0.0);return sdCapsule(p,centre-dir*halfLength,centre+dir*halfLength,radius);}
+fn sdBox(p:vec3<f32>,b:vec3<f32>)->f32{let q=abs(p)-b;return length(max(q,vec3<f32>(0.0)))+min(max(q.x,max(q.y,q.z)),0.0);}
+fn invaderShape(p:vec3<f32>)->f32{var d=sdBox(p,vec3<f32>(0.35,0.25,0.10));d=min(d,sdBox(p-vec3<f32>(0.25,0.35,0),vec3<f32>(0.10)));d=min(d,sdBox(p-vec3<f32>(-0.25,0.35,0),vec3<f32>(0.10)));d=min(d,sdBox(p-vec3<f32>(0.40,0.05,0),vec3<f32>(0.05,0.15,0.10)));d=min(d,sdBox(p-vec3<f32>(-0.40,0.05,0),vec3<f32>(0.05,0.15,0.10)));d=min(d,sdBox(p-vec3<f32>(0.35,-0.35,0),vec3<f32>(0.10)));d=min(d,sdBox(p-vec3<f32>(-0.35,-0.35,0),vec3<f32>(0.10)));var holes=sdBox(p-vec3<f32>(0.15,0.10,0.05),vec3<f32>(0.08,0.08,0.20));holes=min(holes,sdBox(p-vec3<f32>(-0.15,0.10,0.05),vec3<f32>(0.08,0.08,0.20)));holes=min(holes,sdBox(p-vec3<f32>(0,-0.25,0.05),vec3<f32>(0.12,0.08,0.20)));return max(d,-holes);}
+fn hashCell(c:vec2<i32>)->f32{return fract(sin(dot(vec2<f32>(c),vec2<f32>(127.1,311.7)))*43758.5453);}
+fn ellipsoidApprox(p:vec3<f32>,scale:vec3<f32>,r:f32)->f32{let q=p/scale;return (length(q)-r)*min(scale.x,min(scale.y,scale.z));}
+fn rotY3(p:vec3<f32>,a:f32)->vec3<f32>{let c=cos(a);let q=sin(a);return vec3<f32>(c*p.x-q*p.z,p.y,q*p.x+c*p.z);}
+fn dragonWingMembrane(p:vec3<f32>,side:f32,flap:f32)->f32{let wp=rotY3(p-vec3<f32>(side*1.00,1.00,0.22),side*(0.38+flap));return max(ellipsoidApprox(wp-vec3<f32>(side*1.55,-0.03,0.24),vec3<f32>(1.95,0.08,1.18),1.0),-wp.y-0.11);}
+fn dragonHideWarp(p:vec3<f32>)->f32{return 0.018*sin(p.x*5.1+p.z*4.3)*sin(p.y*6.7-p.z*2.1)+0.009*sin(dot(p,vec3<f32>(11.3,7.1,5.9)));}
+`;
+
+
+  const cacheSceneWGSL=sceneWGSL+analyticWGSL+/* wgsl */`
+struct CacheSample{distance:f32,albedo:vec3<f32>};
+fn cachePick(d:f32,c:vec3<f32>,a:CacheSample)->CacheSample{if(d<a.distance){return CacheSample(d,c);}return a;}
+fn cacheSnowman(p:vec3<f32>)->CacheSample{
+  var a=CacheSample(p.y+0.8,vec3<f32>(0.90,0.93,0.98));
+  a=cachePick(sdSphere(p-vec3<f32>(0.0,-0.3,0.0),0.5),vec3<f32>(0.95,0.97,1.0),a);
+  a=cachePick(sdSphere(p-vec3<f32>(0.0,0.35,0.0),0.38),vec3<f32>(0.95,0.97,1.0),a);
+  a=cachePick(sdSphere(p-vec3<f32>(0.0,0.88,0.0),0.28),vec3<f32>(0.95,0.97,1.0),a);
+  let nl=p-vec3<f32>(0.0,0.88,0.405);a=cachePick(sdCappedConeY(vec3<f32>(nl.x,nl.z,nl.y),0.125,0.05,0.01),vec3<f32>(1.0,0.5,0.1),a);
+  a=cachePick(sdSphere(p-vec3<f32>(0.10,0.95,0.22),0.035),vec3<f32>(0.04),a);a=cachePick(sdSphere(p-vec3<f32>(-0.10,0.95,0.22),0.035),vec3<f32>(0.04),a);
+  for(var i=0;i<5;i=i+1){let fi=f32(i);a=cachePick(sdSphere(p-vec3<f32>(-0.10+fi*0.05,0.78-0.03*abs(fi-2.0),0.24+0.01*(2.0-abs(fi-2.0))),0.02),vec3<f32>(0.04),a);}
+  a=cachePick(sdSphere(p-vec3<f32>(0.0,0.50,0.36),0.04),vec3<f32>(0.04),a);a=cachePick(sdSphere(p-vec3<f32>(0.0,0.30,0.38),0.04),vec3<f32>(0.04),a);a=cachePick(sdSphere(p-vec3<f32>(0.0,0.10,0.36),0.04),vec3<f32>(0.04),a);
+  a=cachePick(capsuleXRot(p,vec3<f32>(0.55,0.35,0),0.35,0.02,20.0),vec3<f32>(0.40,0.25,0.10),a);a=cachePick(capsuleXRot(p,vec3<f32>(-0.55,0.35,0),0.35,0.02,160.0),vec3<f32>(0.40,0.25,0.10),a);
+  a=cachePick(capsuleXRot(p,vec3<f32>(0.72,0.48,0),0.08,0.012,50.0),vec3<f32>(0.40,0.25,0.10),a);a=cachePick(capsuleXRot(p,vec3<f32>(-0.72,0.48,0),0.08,0.012,130.0),vec3<f32>(0.40,0.25,0.10),a);
+  return a;
+}
+fn cacheInvaders(p:vec3<f32>,time:f32)->CacheSample{
+  let amp=0.30;let poses=array<vec3<f32>,6>(vec3<f32>(-1.5+sin(time)*amp,0.6,0),vec3<f32>(0,0.6+sin(time+1.0)*amp*0.7,0),vec3<f32>(1.5+sin(time)*amp,0.6,0),vec3<f32>(-1.5,-0.6,0),vec3<f32>(sin(time)*amp,-0.6,0),vec3<f32>(1.5,-0.6+sin(time+3.0)*amp*0.7,0));
+  var a=CacheSample(1e9,vec3<f32>(0.0));for(var i=0;i<6;i=i+1){a=cachePick(invaderShape(p-poses[i]),select(vec3<f32>(1.0,0.3,0.8),vec3<f32>(0.0,1.0,0.5),i<3),a);}return a;
+}
+fn cacheMeadow(p:vec3<f32>)->CacheSample{
+  var a=CacheSample(p.y,vec3<f32>(0.06,0.24,0.08));let spacing=0.5;let base=vec2<i32>(floor(p.xz/spacing));
+  for(var dz=-1;dz<=1;dz=dz+1){for(var dx=-1;dx<=1;dx=dx+1){let c=base+vec2<i32>(dx,dz);let h=hashCell(c);let jx=(hashCell(c+vec2<i32>(50,0))-0.5)*0.22;let jz=(hashCell(c+vec2<i32>(0,150))-0.5)*0.22;let sc=0.72+hashCell(c+vec2<i32>(600,700))*0.45;let q=p-vec3<f32>((f32(c.x)+0.5)*spacing+jx,0,(f32(c.y)+0.5)*spacing+jz);let sun=h>=0.6;let stem=sdCapsule(q/sc,vec3<f32>(0),vec3<f32>(0,select(0.25,0.35,sun),0),select(0.012,0.018,sun))*sc;let petal=ellipsoidApprox(q/sc-vec3<f32>(0,select(0.28,0.4,sun),0),vec3<f32>(1,select(0.4,0.3,sun),1),select(0.07,0.12,sun))*sc;let centre=sdSphere(q/sc-vec3<f32>(0,select(0.30,0.42,sun),0),select(0.025,0.06,sun))*sc;a=cachePick(stem,vec3<f32>(0.20,0.50,0.15),a);a=cachePick(petal,select(vec3<f32>(0.90,0.10,0.10),vec3<f32>(1.0,0.85,0.10),sun),a);a=cachePick(centre,vec3<f32>(0.22,0.14,0.06),a);}}
+  return a;
+}
+fn cacheDragon(p:vec3<f32>,time:f32)->CacheSample{
+  var a=CacheSample(p.y+1.15,vec3<f32>(0.055,0.07,0.045));let hide=vec3<f32>(0.045,0.23,0.08);let bone=vec3<f32>(0.78,0.70,0.48);let wing=vec3<f32>(0.16,0.22,0.06);
+  let rough=smoothstep(-0.2,1.9,p.y)*dragonHideWarp(p);
+  a=cachePick(smoothMin(ellipsoidApprox(p-vec3<f32>(0.0,0.72,0.20),vec3<f32>(1.12,0.82,1.46),1.0),ellipsoidApprox(p-vec3<f32>(0.0,0.36,0.98),vec3<f32>(1.02,0.56,1.58),1.0),0.34)+rough,hide,a);
+  a=cachePick(smoothMin(sdCapsule(p,vec3<f32>(0.00,0.96,-0.22),vec3<f32>(0.07,1.15,-0.70),0.34),sdCapsule(p,vec3<f32>(0.07,1.15,-0.70),vec3<f32>(0.10,1.28,-1.10),0.28),0.16)+rough,hide,a);
+  let hp=p-vec3<f32>(0.0,1.22,-2.02);var head=sdRoundBox(hp,vec3<f32>(0.42,0.30,0.66),0.18);head=smoothMin(head,sdRoundBox(hp-vec3<f32>(0,-0.02,-0.56),vec3<f32>(0.24,0.17,0.45),0.10),0.12);head=max(head,-sdRoundBox(hp-vec3<f32>(0,-0.08,-0.46),vec3<f32>(0.16,0.07,0.34),0.04));a=cachePick(head,vec3<f32>(0.09,0.30,0.09),a);
+  a=cachePick(sdCapsule(p,vec3<f32>(0,0.56,1.92),vec3<f32>(0.12,0.48,3.52),0.33)+rough,hide,a);a=cachePick(sdCapsule(p,vec3<f32>(0.12,0.48,3.52),vec3<f32>(-0.18,0.34,4.82),0.24),hide,a);a=cachePick(sdCapsule(p,vec3<f32>(-0.18,0.34,4.82),vec3<f32>(0.26,0.26,6.24),0.14),hide,a);
+  for(var side=-1;side<=1;side=side+2){let x=f32(side);let flap=0.18*sin(time*1.9+x*0.7);a=cachePick(dragonWingMembrane(p,x,flap),wing,a);a=cachePick(sdCapsule(p,vec3<f32>(x*0.70,1.10,0.05),vec3<f32>(x*3.18,1.56,0.20),0.09),vec3<f32>(0.04,0.10,0.03),a);a=cachePick(sdCapsule(p,vec3<f32>(x*0.62,0.20,0.72),vec3<f32>(x*0.94,-0.64,0.58),0.20)+rough*0.3,hide,a);a=cachePick(sdCapsule(p,vec3<f32>(x*0.94,-0.64,0.58),vec3<f32>(x*1.05,-0.98,0.04),0.11),hide,a);a=cachePick(sdSphere(p-vec3<f32>(x*0.24,1.20,-2.28),0.060),vec3<f32>(1.0,0.06,0.01),a);a=cachePick(sdCappedConeY(p-vec3<f32>(x*0.34,1.70,-1.72),0.34,0.11,0.008),bone,a);}
+  for(var i=0;i<11;i=i+1){let fi=f32(i);let zz=-0.28+fi*0.56;let yy=1.18-0.08*fi+0.05*sin(fi*0.9);a=cachePick(sdCappedConeY(p-vec3<f32>(0,yy,zz),0.18+0.03*sin(fi*0.7),0.11,0.008),bone,a);}
+  for(var i=0;i<5;i=i+1){let fi=f32(i);a=cachePick(sdCappedConeY(p-vec3<f32>(0.12*(fi-2.0),1.00,-2.42+fi*0.13),0.08,0.03,0.004),bone,a);}
+  let breath=0.82+0.18*sin(time*5.0);for(var i=0;i<9;i=i+1){let fi=f32(i);let j=hash3(fi*9.7+floor(time*7.0));a=cachePick(sdSphere(p-vec3<f32>((j.x-0.5)*0.10,(j.y-0.5)*0.08+0.98,-2.68-fi*0.32+(j.z-0.5)*0.05),(0.13+fi*0.028)*breath),vec3<f32>(1.0,0.16,0.01),a);}return a;
+}
+fn cacheSceneSample(p:vec3<f32>,s:Scene)->CacheSample{let demo=i32(s.params.z+0.5);if(demo==4){return cacheSnowman(p);}if(demo==5){return cacheInvaders(p,s.params.y);}if(demo==6){return cacheMeadow(p);}if(demo==7){return cacheDragon(p,s.params.y);}let d=sceneSDF(p,s);var c=vec3<f32>(0.24,0.56,0.54);if(demo==1){c=0.52+0.30*cos(vec3<f32>(0.0,2.0,4.0)+p.x*0.35);}else if(demo==2){c=vec3<f32>(0.73,0.61,0.42);}else if(demo==3){c=mix(vec3<f32>(0.20,0.78,0.72),vec3<f32>(0.88,0.30,0.70),smoothstep(-4.0,4.0,p.x));}return CacheSample(d,c);}
+fn cacheSceneSDF(p:vec3<f32>,s:Scene)->f32{return cacheSceneSample(p,s).distance;}
+fn cacheSceneAlbedo(p:vec3<f32>,s:Scene)->vec3<f32>{return cacheSceneSample(p,s).albedo;}
+`;
+
+
+  const releaseWGSL=/* wgsl */`
+const GX:i32=${GX};const GY:i32=${GY};const GZ:i32=${GZ};const MAX:u32=${MAX_BRICKS}u;
+struct UpdateInfo{count:u32,p0:u32,p1:u32,p2:u32};
+struct AllocState{freeCount:atomic<u32>,generatedCount:atomic<u32>,residentCount:atomic<u32>,pad:u32};
+@group(0)@binding(0)var pageOld:texture_3d<u32>;
+@group(0)@binding(1)var<storage,read>dirtyBricks:array<vec4<i32>>;
+@group(0)@binding(2)var<storage,read_write>allocState:AllocState;
+@group(0)@binding(3)var<storage,read_write>freeSlots:array<u32>;
+@group(0)@binding(4)var<uniform>updateInfo:UpdateInfo;
+fn positiveMod(a:i32,b:i32)->i32{let r=a%b;return select(r+b,r,r>=0);}fn pageCoord(w:vec3<i32>)->vec3<i32>{return vec3<i32>(positiveMod(w.x,GX),positiveMod(w.y,GY),positiveMod(w.z,GZ));}
+@compute @workgroup_size(64)fn main(@builtin(global_invocation_id)gid:vec3<u32>){let index=gid.x;if(index>=updateInfo.count){return;}let oldEntry=textureLoad(pageOld,pageCoord(dirtyBricks[index].xyz),0).x;if(oldEntry>=2u&&oldEntry!=0xffffffffu){let freeIndex=atomicAdd(&allocState.freeCount,1u);if(freeIndex<MAX){freeSlots[freeIndex]=oldEntry-2u;}atomicSub(&allocState.residentCount,1u);}}
+`;
+
+  const classifyWGSL=cacheSceneWGSL+/* wgsl */`
+const GX:i32=${GX};const GY:i32=${GY};const GZ:i32=${GZ};const MAX:u32=${MAX_BRICKS}u;
+struct UpdateInfo{count:u32,p0:u32,p1:u32,p2:u32};struct AllocState{freeCount:atomic<u32>,generatedCount:atomic<u32>,residentCount:atomic<u32>,pad:u32};struct LevelInfo{params:vec4<f32>};
+@group(0)@binding(0)var<uniform>scene:Scene;@group(0)@binding(1)var pageNew:texture_storage_3d<r32uint,write>;@group(0)@binding(2)var<storage,read>dirtyBricks:array<vec4<i32>>;@group(0)@binding(3)var<storage,read_write>allocState:AllocState;@group(0)@binding(4)var<storage,read_write>freeSlots:array<u32>;@group(0)@binding(5)var<storage,read_write>generatedBricks:array<vec4<i32>>;@group(0)@binding(6)var<uniform>updateInfo:UpdateInfo;@group(0)@binding(7)var<uniform>levelInfo:LevelInfo;
+fn positiveMod(a:i32,b:i32)->i32{let r=a%b;return select(r+b,r,r>=0);}fn pageCoord(w:vec3<i32>)->vec3<i32>{return vec3<i32>(positiveMod(w.x,GX),positiveMod(w.y,GY),positiveMod(w.z,GZ));}
+fn popFreeSlot()->u32{loop{let count=atomicLoad(&allocState.freeCount);if(count==0u){return 0xffffffffu;}let result=atomicCompareExchangeWeak(&allocState.freeCount,count,count-1u);if(result.exchanged){return freeSlots[count-1u];}}}
+@compute @workgroup_size(64)fn main(@builtin(global_invocation_id)gid:vec3<u32>){let index=gid.x;if(index>=updateInfo.count){return;}let worldBrick=dirtyBricks[index].xyz;let cell=levelInfo.params.x;let brick=levelInfo.params.y;let brickMin=vec3<f32>(worldBrick)*brick;var minimumDistance=1e20;var maximumDistance=-1e20;for(var z=0;z<3;z=z+1){for(var y=0;y<3;y=y+1){for(var x=0;x<3;x=x+1){let f=vec3<f32>(f32(x),f32(y),f32(z))*0.5;let d=cacheSceneSDF(brickMin+f*brick,scene);minimumDistance=min(minimumDistance,d);maximumDistance=max(maximumDistance,d);}}}let guard=0.47*brick+1.35*cell;var entry:u32=0u;if(minimumDistance>guard){entry=0u;}else if(maximumDistance < -guard){entry=1u;}else{let slot=popFreeSlot();if(slot==0xffffffffu){entry=0xffffffffu;}else{entry=slot+2u;let generatedIndex=atomicAdd(&allocState.generatedCount,1u);generatedBricks[generatedIndex]=vec4<i32>(worldBrick,i32(slot));atomicAdd(&allocState.residentCount,1u);}}textureStore(pageNew,pageCoord(worldBrick),vec4<u32>(entry,0u,0u,0u));}
+`;
+
+  const generateWGSL=cacheSceneWGSL+/* wgsl */`
+const SAMPLES:u32=${SAMPLES}u;const APRON:i32=${APRON};const AX:u32=${AX}u;const AY:u32=${AY}u;
+struct AllocState{freeCount:atomic<u32>,generatedCount:atomic<u32>,residentCount:atomic<u32>,pad:u32};struct LevelInfo{params:vec4<f32>};
+@group(0)@binding(0)var<uniform>scene:Scene;@group(0)@binding(1)var atlas:texture_storage_3d<rgba16float,write>;@group(0)@binding(2)var<storage,read>generatedBricks:array<vec4<i32>>;@group(0)@binding(3)var<storage,read_write>allocState:AllocState;@group(0)@binding(4)var<uniform>levelInfo:LevelInfo;
+@compute @workgroup_size(64)fn main(@builtin(workgroup_id)wg:vec3<u32>,@builtin(local_invocation_index)li:u32){let generatedIndex=wg.x;if(generatedIndex>=atomicLoad(&allocState.generatedCount)){return;}let record=generatedBricks[generatedIndex];let worldBrick=record.xyz;let slot=u32(record.w);let cell=levelInfo.params.x;let brick=levelInfo.params.y;let sx=slot%AX;let sy=(slot/AX)%AY;let sz=slot/(AX*AY);let atlasBase=vec3<u32>(sx,sy,sz)*SAMPLES;let total=SAMPLES*SAMPLES*SAMPLES;var i=li;loop{if(i>=total){break;}let x=i%SAMPLES;let y=(i/SAMPLES)%SAMPLES;let z=i/(SAMPLES*SAMPLES);let localSample=vec3<i32>(i32(x),i32(y),i32(z))-vec3<i32>(APRON);let p=vec3<f32>(worldBrick)*brick+vec3<f32>(localSample)*cell;let sample=cacheSceneSample(p,scene);textureStore(atlas,vec3<i32>(atlasBase+vec3<u32>(x,y,z)),vec4<f32>(sample.distance,sample.albedo));i+=64u;}}
+`;
+
+  const renderWGSL=sceneWGSL+analyticWGSL+/* wgsl */`
+const GX:i32=${GX};const GY:i32=${GY};const GZ:i32=${GZ};const SAMPLES:i32=${SAMPLES};const APRON:f32=${APRON}.0;const AX:i32=${AX};const AY:i32=${AY};const MACRO:i32=${MACRO};const MX:i32=${MX};const MY:i32=${MY};const MZ:i32=${MZ};const ATLAS_DIMS:vec3<f32>=vec3<f32>(${ATLAS_X}.0,${ATLAS_Y}.0,${ATLAS_Z}.0);
+struct Camera{position:vec4<f32>,params:vec4<f32>};struct ClipLevel{origin:vec4<f32>,params:vec4<f32>};struct Clips{l0:ClipLevel,l1:ClipLevel,l2:ClipLevel};struct VSOut{@builtin(position)position:vec4<f32>,@location(0)uv:vec2<f32>};
+@group(0)@binding(0)var<uniform>camera:Camera;@group(0)@binding(1)var<uniform>clips:Clips;@group(0)@binding(2)var<uniform>scene:Scene;@group(0)@binding(3)var page0:texture_3d<u32>;@group(0)@binding(4)var page1:texture_3d<u32>;@group(0)@binding(5)var page2:texture_3d<u32>;@group(0)@binding(6)var atlas0:texture_3d<f32>;@group(0)@binding(7)var atlas1:texture_3d<f32>;@group(0)@binding(8)var atlas2:texture_3d<f32>;@group(0)@binding(9)var atlasSampler:sampler;@group(0)@binding(10)var macro0:texture_3d<u32>;@group(0)@binding(11)var macro1:texture_3d<u32>;@group(0)@binding(12)var macro2:texture_3d<u32>;
+@vertex fn vs(@builtin(vertex_index)i:u32)->VSOut{let p=array<vec2<f32>,3>(vec2<f32>(-1.0,-1.0),vec2<f32>(3.0,-1.0),vec2<f32>(-1.0,3.0));var o:VSOut;o.position=vec4<f32>(p[i],0.0,1.0);o.uv=p[i];return o;}
+fn positiveMod(a:i32,b:i32)->i32{let r=a%b;return select(r+b,r,r>=0);}fn pageCoord(w:vec3<i32>)->vec3<i32>{return vec3<i32>(positiveMod(w.x,GX),positiveMod(w.y,GY),positiveMod(w.z,GZ));}
+fn levelOrigin(level:i32)->vec3<f32>{if(level==0){return clips.l0.origin.xyz;}if(level==1){return clips.l1.origin.xyz;}return clips.l2.origin.xyz;}fn levelCell(level:i32)->f32{if(level==0){return clips.l0.params.x;}if(level==1){return clips.l1.params.x;}return clips.l2.params.x;}fn levelBrick(level:i32)->f32{if(level==0){return clips.l0.params.y;}if(level==1){return clips.l1.params.y;}return clips.l2.params.y;}
+fn pageEntry(level:i32,w:vec3<i32>)->u32{let c=pageCoord(w);if(level==0){return textureLoad(page0,c,0).x;}if(level==1){return textureLoad(page1,c,0).x;}return textureLoad(page2,c,0).x;}
+fn atlasBase(slot:i32)->vec3<i32>{let x=slot%AX;let y=(slot/AX)%AY;let z=slot/(AX*AY);return vec3<i32>(x,y,z)*SAMPLES;}
+fn sampleBrick(level:i32,slot:i32,p:vec3<f32>,worldBrick:vec3<i32>)->f32{let cell=levelCell(level);let brick=levelBrick(level);let q=clamp((p-vec3<f32>(worldBrick)*brick)/cell+vec3<f32>(APRON),vec3<f32>(0.0),vec3<f32>(f32(SAMPLES-1)));let uvw=(vec3<f32>(atlasBase(slot))+q+vec3<f32>(0.5))/ATLAS_DIMS;if(level==0){return textureSampleLevel(atlas0,atlasSampler,uvw,0.0).x;}if(level==1){return textureSampleLevel(atlas1,atlasSampler,uvw,0.0).x;}return textureSampleLevel(atlas2,atlasSampler,uvw,0.0).x;}
+fn insideInset(p:vec3<f32>,level:i32)->bool{let origin=levelOrigin(level);let brick=levelBrick(level);let inset=vec3<f32>(brick*2.0);let extent=vec3<f32>(f32(GX),f32(GY),f32(GZ))*brick;return all(p>=origin+inset)&&all(p<origin+extent-inset);}fn preferredLevel(p:vec3<f32>)->i32{if(insideInset(p,0)){return 0;}if(insideInset(p,1)){return 1;}return 2;}
+fn rotateCamera(v:vec3<f32>,yaw:f32,pitch:f32)->vec3<f32>{let cy=cos(yaw);let sy=sin(yaw);let cp=cos(pitch);let sp=sin(pitch);let q=vec3<f32>(v.x,cp*v.y+sp*v.z,-sp*v.y+cp*v.z);return vec3<f32>(cy*q.x+sy*q.z,q.y,-sy*q.x+cy*q.z);}fn safeInv(x:f32)->f32{return select(1.0/x,1e20,abs(x)<1e-7);}fn rayBox(ro:vec3<f32>,rd:vec3<f32>,mn:vec3<f32>,mx:vec3<f32>)->vec2<f32>{let inv=vec3<f32>(safeInv(rd.x),safeInv(rd.y),safeInv(rd.z));let a=(mn-ro)*inv;let b=(mx-ro)*inv;let lo=min(a,b);let hi=max(a,b);return vec2<f32>(max(max(lo.x,lo.y),lo.z),min(min(hi.x,hi.y),hi.z));}
+fn normalAnalytic(p:vec3<f32>)->vec3<f32>{let e=0.018;return normalize(vec3<f32>(sceneSDF(p+vec3<f32>(e,0,0),scene)-sceneSDF(p-vec3<f32>(e,0,0),scene),sceneSDF(p+vec3<f32>(0,e,0),scene)-sceneSDF(p-vec3<f32>(0,e,0),scene),sceneSDF(p+vec3<f32>(0,0,e),scene)-sceneSDF(p-vec3<f32>(0,0,e),scene)));}
+fn sky(rd:vec3<f32>)->vec3<f32>{let h=clamp(rd.y*.5+.5,0.0,1.0);return mix(vec3<f32>(0.08,0.18,0.24),vec3<f32>(0.015,0.045,0.10),smoothstep(0.15,0.92,h));}
+fn heartbeatAmount(seconds:f32)->f32{let phase=fract(seconds/1.08);let first=(phase-0.115)/0.045;let second=(phase-0.305)/0.070;return clamp(exp(-first*first)+0.68*exp(-second*second),0.0,1.0);}fn debugGridColour()->vec3<f32>{return mix(vec3<f32>(0.0,1.0,0.0),vec3<f32>(0.8666667,1.0,0.0),heartbeatAmount(scene.params.y));}
+
+fn groundColour(p:vec3<f32>)->vec3<f32>{if(i32(scene.params.z+0.5)==4){return vec3<f32>(0.90,0.93,0.98);}return mix(vec3<f32>(0.10,0.23,0.14),vec3<f32>(0.17,0.39,0.22),0.5+0.5*sin(p.x*0.22)*cos(p.z*0.20));}
+fn sceneColour(p:vec3<f32>)->vec3<f32>{
+  let demo=i32(scene.params.z+0.5);
+  if(demo==4){
+    // The plane is y=-0.8. A broad threshold avoids coarse-field hit error
+    // misclassifying the snow as carrot/stick material.
+    if(p.y < -0.66){return vec3<f32>(0.90,0.93,0.98);}
+    let noseP=vec3<f32>(p.x,p.z-0.415,p.y-0.88);
+    let nose=sdCappedConeY(noseP,0.135,0.07,0.015);
+    var coal=min(sdSphere(p-vec3<f32>(0.1,0.95,0.22),0.055),sdSphere(p-vec3<f32>(-0.1,0.95,0.22),0.055));
+    coal=min(coal,sdSphere(p-vec3<f32>(-0.1,0.78,0.24),0.035));coal=min(coal,sdSphere(p-vec3<f32>(-0.05,0.76,0.25),0.035));coal=min(coal,sdSphere(p-vec3<f32>(0.0,0.75,0.26),0.035));coal=min(coal,sdSphere(p-vec3<f32>(0.05,0.76,0.25),0.035));coal=min(coal,sdSphere(p-vec3<f32>(0.1,0.78,0.24),0.035));coal=min(coal,sdSphere(p-vec3<f32>(0.0,0.5,0.36),0.065));coal=min(coal,sdSphere(p-vec3<f32>(0.0,0.3,0.38),0.065));coal=min(coal,sdSphere(p-vec3<f32>(0.0,0.1,0.36),0.065));
+    var stick=min(sdCapsule(p,vec3<f32>(0.55,0.35,0.0),vec3<f32>(0.88,0.47,0.0),0.035),sdCapsule(p,vec3<f32>(-0.55,0.35,0.0),vec3<f32>(-0.88,0.47,0.0),0.035));
+    stick=min(stick,sdCapsule(p,vec3<f32>(0.72,0.48,0.0),vec3<f32>(0.80,0.55,0.0),0.022));stick=min(stick,sdCapsule(p,vec3<f32>(0.74,0.44,0.0),vec3<f32>(0.82,0.40,0.0),0.020));stick=min(stick,sdCapsule(p,vec3<f32>(-0.72,0.48,0.0),vec3<f32>(-0.80,0.55,0.0),0.022));stick=min(stick,sdCapsule(p,vec3<f32>(-0.74,0.44,0.0),vec3<f32>(-0.82,0.40,0.0),0.020));
+    if(abs(nose)<0.085){return vec3<f32>(1.0,0.5,0.1);}
+    if(abs(coal)<0.075){return vec3<f32>(0.08,0.08,0.09);}
+    if(abs(stick)<0.075){return vec3<f32>(0.40,0.25,0.10);}
+    return vec3<f32>(0.95,0.97,1.0);
+  }
+  let groundDistance=abs(p.y-terrainHeight(p));if(groundDistance<0.08){return groundColour(p);}
+  if(demo==1){var best=1e9;var color=vec3<f32>(0.2,0.4,0.4);let d0=sdSphere(p-vec3<f32>(-8.0,2.35,5.0),2.35);if(abs(d0)<best){best=abs(d0);color=vec3<f32>(0.88,0.28,0.62);}let d1=sdRoundBox(p-vec3<f32>(-3.2,2.25,5.0),vec3<f32>(1.85,2.05,1.85),0.45);if(abs(d1)<best){best=abs(d1);color=vec3<f32>(0.18,0.78,0.80);}let d2=sdTorus(p-vec3<f32>(1.8,2.65,5.0),2.0,0.48);if(abs(d2)<best){best=abs(d2);color=vec3<f32>(0.96,0.74,0.24);}let d3=sdCapsule(p,vec3<f32>(5.8,0.8,3.5),vec3<f32>(5.8,5.1,6.5),0.86);if(abs(d3)<best){best=abs(d3);color=vec3<f32>(0.97,0.56,0.24);}let d4=sdCylinder(p-vec3<f32>(9.2,2.0,5.0),1.55,2.0);if(abs(d4)<best){best=abs(d4);color=vec3<f32>(0.52,0.38,0.96);}let d5=sdOctahedron(p-vec3<f32>(1.8,2.4,10.0),2.35);if(abs(d5)<best){color=vec3<f32>(0.56,0.92,0.36);}return color;}
+  if(demo==2){
+    let ground=p.y-terrainHeight(p);let outer=sdRoundBox(p-vec3<f32>(0.0,3.8,5.0),vec3<f32>(6.0,3.45,4.6),0.75);let inner=sdRoundBox(p-vec3<f32>(0.0,3.8,5.0),vec3<f32>(4.65,2.25,5.3),0.55);let shell=max(outer,-inner);let ring=sdTorus(p-vec3<f32>(0.0,4.0,5.0),4.8,0.55);let lens=max(sdSphere(p-vec3<f32>(-8.1,3.0,5.0),2.9),sdRoundBox(p-vec3<f32>(-8.1,3.0,5.0),vec3<f32>(2.0,3.6,2.0),0.25));
+    var best=ground;var color=vec3<f32>(0.18,0.42,0.24);if(shell<best){best=shell;color=vec3<f32>(0.77,0.71,0.60);}if(ring<best){best=ring;color=vec3<f32>(0.24,0.72,0.90);}if(lens<best){best=lens;color=vec3<f32>(0.96,0.46,0.30);}if(scene.params.x>0.5){let bore=sdCapsule(p,vec3<f32>(0.0,3.8,-2.0),vec3<f32>(0.0,3.8,12.0),1.25);if(-bore>best){color=vec3<f32>(0.38,0.33,0.29);}}return color;
+  }
+  if(demo==3){let a=max(0.0,1.0-abs(sdSphere(p-vec3<f32>(-3.2,3.1,5.0),3.25))/2.0);let b=max(0.0,1.0-abs(sdSphere(p-vec3<f32>(2.4,3.8,5.4),3.75))/2.0);let c=max(0.0,1.0-abs(sdSphere(p-vec3<f32>(0.0,6.2,7.0),2.8))/2.0);let total=max(0.001,a+b+c);return (vec3<f32>(0.22,0.80,0.72)*a+vec3<f32>(0.86,0.32,0.74)*b+vec3<f32>(0.98,0.63,0.26)*c)/total;}
+  var best=1e9;var color=vec3<f32>(0.30,0.58,0.55);let m=abs(sdRoundBox(p-vec3<f32>(0.0,3.35,5.0),vec3<f32>(5.15,3.10,4.9),1.25));if(m<best){best=m;color=vec3<f32>(0.24,0.53,0.55);}let dDome=abs(sdSphere(p-vec3<f32>(0.0,5.7,5.0),4.35));if(dDome<best){best=dDome;color=vec3<f32>(0.30,0.63,0.62);}let leftP=abs(sdRoundBox(p-vec3<f32>(-8.8,1.65,4.0),vec3<f32>(1.15,1.65,1.15),0.34));if(leftP<best){best=leftP;color=vec3<f32>(0.52,0.68,0.83);}let rightP=abs(sdRoundBox(p-vec3<f32>(8.8,1.65,4.0),vec3<f32>(1.15,1.65,1.15),0.34));if(rightP<best){best=rightP;color=vec3<f32>(0.79,0.66,0.30);}let leftS=abs(sdSphere(p-vec3<f32>(-8.8,4.55,4.0),1.38));if(leftS<best){best=leftS;color=vec3<f32>(0.66,0.90,1.0);}let tor=abs(sdTorus(p-vec3<f32>(8.8,4.35,4.0),1.55,0.38));if(tor<best){color=vec3<f32>(0.96,0.77,0.28);}return color;
+}
+fn refinedHit(ro:vec3<f32>,rd:vec3<f32>,guess:f32,cell:f32)->vec2<f32>{let radius=cell*1.20;var previousT=max(0.0,guess-radius);var previousD=sceneSDF(ro+rd*previousT,scene);var bestT=previousT;var bestAbs=abs(previousD);for(var i=1;i<=20;i=i+1){let currentT=max(0.0,guess-radius+(2.0*radius)*f32(i)/20.0);let currentD=sceneSDF(ro+rd*currentT,scene);if(abs(currentD)<bestAbs){bestAbs=abs(currentD);bestT=currentT;}if(previousD*currentD<=0.0){var lo=previousT;var hi=currentT;var dlo=previousD;for(var j=0;j<11;j=j+1){let mid=0.5*(lo+hi);let dm=sceneSDF(ro+rd*mid,scene);if(dlo*dm>0.0){lo=mid;dlo=dm;}else{hi=mid;}}let t=0.5*(lo+hi);return vec2<f32>(t,abs(sceneSDF(ro+rd*t,scene)));}previousT=currentT;previousD=currentD;}var t=bestT;for(var k=0;k<6;k=k+1){let e=0.025;let d=sceneSDF(ro+rd*t,scene);let deriv=(sceneSDF(ro+rd*(t+e),scene)-sceneSDF(ro+rd*(t-e),scene))/(2.0*e);if(abs(deriv)<0.08){break;}t-=clamp(d/deriv,-cell*0.28,cell*0.28);}return vec2<f32>(t,abs(sceneSDF(ro+rd*t,scene)));}
+fn validHit(candidate:vec2<f32>,guess:f32,cell:f32)->bool{return candidate.y<0.012&&abs(candidate.x-guess)<cell*1.55;}
+fn snowOverlay(p:vec3<f32>,rd:vec3<f32>)->vec3<f32>{if(i32(scene.params.z+0.5)!=4){return vec3<f32>(0.0);}let t=scene.params.y*0.5;var acc=0.0;for(var i=0;i<14;i=i+1){let fi=f32(i);let h=hash3(fi*13.1);let pos=vec3<f32>((h.x-0.5)*3.3,1.8-fract(t+h.y)*2.5,(h.z-0.5)*3.3);let q=p-pos;let flake=smoothstep(0.08,0.0,length(q));acc=max(acc,flake);}return vec3<f32>(acc*0.7);}
+fn shade(p:vec3<f32>,n:vec3<f32>,rd:vec3<f32>,t:f32,steps:i32,worldBrick:vec3<i32>,level:i32)->vec4<f32>{let dbg=i32(camera.params.z+0.5);let light=normalize(vec3<f32>(-0.46,0.82,-0.34));let diff=max(dot(n,light),0.0);let hemi=0.5+0.5*n.y;let halfV=normalize(light-rd);let spec=pow(max(dot(n,halfV),0.0),56.0);let rim=pow(1.0-max(dot(n,-rd),0.0),3.0);var col=sceneColour(p)*(0.22+0.24*hemi+0.68*diff)+vec3<f32>(0.96,0.98,1.0)*spec*0.18+sceneColour(p)*rim*0.10+snowOverlay(p,rd);if(dbg==1){let brick=levelBrick(level);let local=(p-vec3<f32>(worldBrick)*brick)/brick;let edge=min(min(min(local.x,1.0-local.x),min(local.y,1.0-local.y)),min(local.z,1.0-local.z));let line=1.0-smoothstep(0.0,0.016,edge);col=mix(col,debugGridColour(),line*0.95);}if(dbg==2){if(level==0){col=vec3<f32>(0.08,0.78,0.88);}else if(level==1){col=vec3<f32>(0.55,0.32,0.92);}else{col=vec3<f32>(0.90,0.26,0.48);}}if(dbg==3){let u=clamp(f32(steps)/100.0,0.0,1.0);col=mix(vec3<f32>(0.03,0.18,0.55),vec3<f32>(0.95,0.12,0.10),u);}let fog=1.0-exp(-0.00105*t*t);return vec4<f32>(mix(col,sky(rd),fog),1.0);}
+
+struct SnowSample{distance:f32,material:u32};
+fn snowUnion(a:SnowSample,b:SnowSample)->SnowSample{if(b.distance<a.distance){return b;}return a;}
+fn snowPrimitive(d:f32,m:u32)->SnowSample{return SnowSample(d,m);}
+fn snowmanSample(p:vec3<f32>)->SnowSample{
+  var s=snowPrimitive(p.y+0.8,4u);
+  s=snowUnion(s,snowPrimitive(sdSphere(p-vec3<f32>(0.0,-0.3,0.0),0.5),0u));
+  s=snowUnion(s,snowPrimitive(sdSphere(p-vec3<f32>(0.0,0.35,0.0),0.38),0u));
+  s=snowUnion(s,snowPrimitive(sdSphere(p-vec3<f32>(0.0,0.88,0.0),0.28),0u));
+  let nl=p-vec3<f32>(0.0,0.88,0.405);
+  s=snowUnion(s,snowPrimitive(sdCappedConeY(vec3<f32>(nl.x,nl.z,nl.y),0.125,0.05,0.01),1u));
+  s=snowUnion(s,snowPrimitive(sdSphere(p-vec3<f32>( 0.1,0.95,0.22),0.035),2u));
+  s=snowUnion(s,snowPrimitive(sdSphere(p-vec3<f32>(-0.1,0.95,0.22),0.035),2u));
+  s=snowUnion(s,snowPrimitive(sdSphere(p-vec3<f32>(-0.10,0.78,0.24),0.02),2u));
+  s=snowUnion(s,snowPrimitive(sdSphere(p-vec3<f32>(-0.05,0.76,0.25),0.02),2u));
+  s=snowUnion(s,snowPrimitive(sdSphere(p-vec3<f32>( 0.00,0.75,0.26),0.02),2u));
+  s=snowUnion(s,snowPrimitive(sdSphere(p-vec3<f32>( 0.05,0.76,0.25),0.02),2u));
+  s=snowUnion(s,snowPrimitive(sdSphere(p-vec3<f32>( 0.10,0.78,0.24),0.02),2u));
+  s=snowUnion(s,snowPrimitive(sdSphere(p-vec3<f32>(0.0,0.50,0.36),0.04),2u));
+  s=snowUnion(s,snowPrimitive(sdSphere(p-vec3<f32>(0.0,0.30,0.38),0.04),2u));
+  s=snowUnion(s,snowPrimitive(sdSphere(p-vec3<f32>(0.0,0.10,0.36),0.04),2u));
+  s=snowUnion(s,snowPrimitive(capsuleXRot(p,vec3<f32>( 0.55,0.35,0.0),0.35,0.02, 20.0),3u));
+  s=snowUnion(s,snowPrimitive(capsuleXRot(p,vec3<f32>( 0.72,0.48,0.0),0.08,0.012,50.0),3u));
+  s=snowUnion(s,snowPrimitive(capsuleXRot(p,vec3<f32>( 0.74,0.44,0.0),0.07,0.01,-20.0),3u));
+  s=snowUnion(s,snowPrimitive(capsuleXRot(p,vec3<f32>(-0.55,0.35,0.0),0.35,0.02,160.0),3u));
+  s=snowUnion(s,snowPrimitive(capsuleXRot(p,vec3<f32>(-0.72,0.48,0.0),0.08,0.012,130.0),3u));
+  s=snowUnion(s,snowPrimitive(capsuleXRot(p,vec3<f32>(-0.74,0.44,0.0),0.07,0.01,200.0),3u));
+  return s;
+}
+fn snowNormal(p:vec3<f32>)->vec3<f32>{let e=0.0015;return normalize(vec3<f32>(snowmanSample(p+vec3<f32>(e,0,0)).distance-snowmanSample(p-vec3<f32>(e,0,0)).distance,snowmanSample(p+vec3<f32>(0,e,0)).distance-snowmanSample(p-vec3<f32>(0,e,0)).distance,snowmanSample(p+vec3<f32>(0,0,e)).distance-snowmanSample(p-vec3<f32>(0,0,e)).distance));}
+fn snowMaterial(m:u32)->vec3<f32>{if(m==1u){return vec3<f32>(1.0,0.5,0.1);}if(m==2u){return vec3<f32>(0.055,0.055,0.065);}if(m==3u){return vec3<f32>(0.40,0.25,0.10);}if(m==4u){return vec3<f32>(0.90,0.93,0.98);}return vec3<f32>(0.95,0.97,1.0);}
+fn renderSnowmanAnalytic(ro:vec3<f32>,rd:vec3<f32>)->vec4<f32>{
+  var t=0.0;var hit=false;var sample=snowmanSample(ro);
+  for(var i=0;i<160;i=i+1){let p=ro+rd*t;sample=snowmanSample(p);if(abs(sample.distance)<0.0012){hit=true;break;}t+=max(abs(sample.distance)*0.78,0.0008);if(t>18.0){break;}}
+  if(!hit){return vec4<f32>(sky(rd),1.0);}
+  let p=ro+rd*t;let n=snowNormal(p);let light=normalize(vec3<f32>(-0.46,0.82,-0.34));let diff=max(dot(n,light),0.0);let hemi=0.5+0.5*n.y;let h=normalize(light-rd);let spec=pow(max(dot(n,h),0.0),56.0);let rim=pow(1.0-max(dot(n,-rd),0.0),3.0);let base=snowMaterial(sample.material);var col=base*(0.24+0.24*hemi+0.68*diff)+vec3<f32>(1.0)*spec*0.22+base*rim*0.08;let fog=1.0-exp(-0.00105*t*t);return vec4<f32>(mix(col,sky(rd),fog),1.0);
+}
+
+struct ProcSample{distance:f32,material:u32};
+fn invaderSample(p:vec3<f32>,time:f32)->ProcSample{let a=0.30;var best=ProcSample(1e9,10u);let poses=array<vec3<f32>,6>(vec3<f32>(-1.5+sin(time)*a,0.6,0),vec3<f32>(0,0.6+sin(time+1.0)*a*0.7,0),vec3<f32>(1.5+sin(time)*a,0.6,0),vec3<f32>(-1.5,-0.6,0),vec3<f32>(sin(time)*a,-0.6,0),vec3<f32>(1.5,-0.6+sin(time+3.0)*a*0.7,0));for(var i=0;i<6;i=i+1){let d=invaderShape(p-poses[i]);if(d<best.distance){best=ProcSample(d,select(11u,10u,i<3));}}return best;}
+fn meadowSample(p:vec3<f32>)->ProcSample{var best=ProcSample(p.y,24u);let spacing=0.5;let base=vec2<i32>(floor(p.xz/spacing));for(var dz=-1;dz<=1;dz=dz+1){for(var dx=-1;dx<=1;dx=dx+1){let c=base+vec2<i32>(dx,dz);let h=hashCell(c);let jx=(hashCell(c+vec2<i32>(50,0))-0.5)*0.22;let jz=(hashCell(c+vec2<i32>(0,150))-0.5)*0.22;let sc=0.72+hashCell(c+vec2<i32>(600,700))*0.45;let q=p-vec3<f32>((f32(c.x)+0.5)*spacing+jx,0,(f32(c.y)+0.5)*spacing+jz);let sun=h>=0.6;let stem=sdCapsule(q/sc,vec3<f32>(0),vec3<f32>(0,select(0.25,0.35,sun),0),select(0.012,0.018,sun))*sc;let petal=ellipsoidApprox(q/sc-vec3<f32>(0,select(0.28,0.4,sun),0),vec3<f32>(1,select(0.4,0.3,sun),1),select(0.07,0.12,sun))*sc;let centre=sdSphere(q/sc-vec3<f32>(0,select(0.30,0.42,sun),0),select(0.025,0.06,sun))*sc;if(stem<best.distance){best=ProcSample(stem,20u);}if(petal<best.distance){best=ProcSample(petal,select(21u,22u,sun));}if(centre<best.distance){best=ProcSample(centre,23u);}}}return best;}
+fn procPick(d:f32,m:u32,current:ProcSample)->ProcSample{if(d<current.distance){return ProcSample(d,m);}return current;}
+fn dragonSample(p:vec3<f32>,time:f32)->ProcSample{
+  var best=ProcSample(p.y+1.15,39u);
+  let roughMask=smoothstep(-0.2,1.9,p.y);
+  best=procPick(smoothMin(ellipsoidApprox(p-vec3<f32>(0.0,0.72,0.20),vec3<f32>(1.12,0.82,1.46),1.0),ellipsoidApprox(p-vec3<f32>(0.0,0.36,0.98),vec3<f32>(1.02,0.56,1.58),1.0),0.34)+dragonHideWarp(p)*roughMask,30u,best);
+  best=procPick(smoothMin(sdCapsule(p,vec3<f32>(0.00,0.96,-0.22),vec3<f32>(0.07,1.15,-0.70),0.34),sdCapsule(p,vec3<f32>(0.07,1.15,-0.70),vec3<f32>(0.10,1.28,-1.10),0.28),0.16)+dragonHideWarp(p)*roughMask,30u,best);
+  best=procPick(sdCapsule(p,vec3<f32>(0.00,0.56,1.92),vec3<f32>(0.12,0.48,3.52),0.33)+dragonHideWarp(p)*roughMask,30u,best);
+  best=procPick(sdCapsule(p,vec3<f32>(0.12,0.48,3.52),vec3<f32>(-0.18,0.34,4.82),0.24),30u,best);
+  best=procPick(sdCapsule(p,vec3<f32>(-0.18,0.34,4.82),vec3<f32>(0.26,0.26,6.24),0.14),30u,best);
+
+  if(p.z>-3.45&&p.z<-0.75&&abs(p.x)<1.25&&p.y>0.25&&p.y<2.25){
+    let headLocal=p-vec3<f32>(0.0,1.22,-2.02);
+    var head=sdRoundBox(headLocal,vec3<f32>(0.42,0.30,0.66),0.18);
+    head=smoothMin(head,sdRoundBox(headLocal-vec3<f32>(0.0,-0.02,-0.56),vec3<f32>(0.24,0.17,0.45),0.10),0.12);
+    head=smoothMin(head,sdRoundBox(headLocal-vec3<f32>(0.0,-0.23,-0.42),vec3<f32>(0.22,0.10,0.35),0.08),0.10);
+    head=max(head,-sdRoundBox(headLocal-vec3<f32>(0.0,-0.08,-0.46),vec3<f32>(0.16,0.07,0.34),0.04));
+    best=procPick(head,31u,best);
+    for(var side=-1;side<=1;side=side+2){let x=f32(side);best=procPick(sdSphere(p-vec3<f32>(x*0.24,1.20,-2.28),0.060),35u,best);best=procPick(sdSphere(p-vec3<f32>(x*0.20,1.17,-2.12),0.040),38u,best);best=procPick(sdCappedConeY(p-vec3<f32>(x*0.34,1.70,-1.72),0.34,0.11,0.008),36u,best);}
+    for(var i=0;i<5;i=i+1){let fi=f32(i);let upper=p-vec3<f32>(0.12*(fi-2.0),1.00,-2.42+fi*0.13);let lower=p-vec3<f32>(0.12*(fi-2.0),0.86,-2.36+fi*0.13);best=procPick(sdCappedConeY(upper,0.08,0.03,0.004),32u,best);best=procPick(sdCappedConeY(vec3<f32>(lower.x,-lower.y,lower.z),0.08,0.03,0.004),32u,best);}
+  }
+
+  if(p.y>-0.15&&p.y<2.35&&p.z>-1.1&&p.z<2.75&&abs(p.x)<4.15){
+    for(var side=-1;side<=1;side=side+2){let x=f32(side);let flap=0.18*sin(time*1.9+x*0.7);best=procPick(dragonWingMembrane(p,x,flap),33u,best);best=procPick(sdCapsule(p,vec3<f32>(x*0.70,1.10,0.05),vec3<f32>(x*3.18,1.56,0.20),0.09),34u,best);best=procPick(sdCapsule(p,vec3<f32>(x*0.88,1.08,0.24),vec3<f32>(x*2.54,1.18,1.04),0.065),34u,best);best=procPick(sdCapsule(p,vec3<f32>(x*1.05,1.02,0.34),vec3<f32>(x*2.38,0.90,1.78),0.048),34u,best);}
+  }
+
+  if(p.y>-1.35&&p.y<0.85&&p.z>-0.65&&p.z<3.35&&abs(p.x)<1.55){
+    for(var side=-1;side<=1;side=side+2){let x=f32(side);best=procPick(sdCapsule(p,vec3<f32>(x*0.62,0.20,0.72),vec3<f32>(x*0.94,-0.64,0.58),0.20)+dragonHideWarp(p)*0.3,30u,best);best=procPick(sdCapsule(p,vec3<f32>(x*0.94,-0.64,0.58),vec3<f32>(x*1.05,-0.98,0.04),0.11),32u,best);best=procPick(sdCapsule(p,vec3<f32>(x*0.58,0.22,1.72),vec3<f32>(x*0.92,-0.56,2.24),0.22)+dragonHideWarp(p)*0.3,30u,best);best=procPick(sdCapsule(p,vec3<f32>(x*1.01,-0.88,2.72),vec3<f32>(x*1.13,-0.95,2.90),0.032),32u,best);}
+  }
+
+  if(abs(p.x)<0.72&&p.y>0.35&&p.y<1.95&&p.z>-0.75&&p.z<6.45){for(var i=0;i<11;i=i+1){let fi=f32(i);let zz=-0.28+fi*0.56;let yy=1.18-0.08*fi+0.05*sin(fi*0.9);let hh=0.18+0.03*sin(fi*0.7);best=procPick(sdCappedConeY(p-vec3<f32>(0.0,yy,zz),hh,0.11,0.008),36u,best);}}
+  if(abs(p.x)<0.95&&p.y>0.15&&p.y<1.85&&p.z<-2.15&&p.z>-6.1){let breath=0.82+0.18*sin(time*5.0);for(var i=0;i<9;i=i+1){let fi=f32(i);let jitter=hash3(fi*9.7+floor(time*7.0));best=procPick(sdSphere(p-vec3<f32>((jitter.x-0.5)*0.10,(jitter.y-0.5)*0.08+0.98,-2.68-fi*0.32+(jitter.z-0.5)*0.05),(0.13+fi*0.028)*breath),37u,best);}}
+  return best;
+}
+fn procSample(p:vec3<f32>,demo:i32)->ProcSample{if(demo==5){return invaderSample(p,scene.params.y);}if(demo==6){return meadowSample(p);}return dragonSample(p,scene.params.y);}
+fn procColour(m:u32)->vec3<f32>{if(m==10u){return vec3<f32>(0.0,1.0,0.5);}if(m==11u){return vec3<f32>(1.0,0.3,0.8);}if(m==20u){return vec3<f32>(0.2,0.5,0.15);}if(m==21u){return vec3<f32>(0.9,0.1,0.1);}if(m==22u){return vec3<f32>(1.0,0.85,0.1);}if(m==23u){return vec3<f32>(0.22,0.14,0.06);}if(m==30u){return vec3<f32>(0.045,0.23,0.08);}if(m==31u){return vec3<f32>(0.10,0.30,0.10);}if(m==32u){return vec3<f32>(0.84,0.78,0.62);}if(m==33u){return vec3<f32>(0.18,0.24,0.07);}if(m==34u){return vec3<f32>(0.05,0.11,0.03);}if(m==35u){return vec3<f32>(1.0,0.08,0.02);}if(m==36u){return vec3<f32>(0.72,0.61,0.30);}if(m==37u){return vec3<f32>(1.0,0.18,0.02);}if(m==38u){return vec3<f32>(0.92,0.24,0.30);}if(m==39u){return vec3<f32>(0.055,0.07,0.045);}return vec3<f32>(0.12,0.25,0.10);}
+fn procApproximate(m:u32)->bool{return m==21u||m==22u||m==30u||m==33u;}
+fn procNormal(p:vec3<f32>,demo:i32)->vec3<f32>{let e=0.0018;let k1=vec3<f32>(1.0,-1.0,-1.0);let k2=vec3<f32>(-1.0,-1.0,1.0);let k3=vec3<f32>(-1.0,1.0,-1.0);let k4=vec3<f32>(1.0,1.0,1.0);return normalize(k1*procSample(p+k1*e,demo).distance+k2*procSample(p+k2*e,demo).distance+k3*procSample(p+k3*e,demo).distance+k4*procSample(p+k4*e,demo).distance);}
+fn renderProcedural(ro:vec3<f32>,rd:vec3<f32>,demo:i32)->vec4<f32>{
+  var t=0.0;var tLimit=24.0;var hit=false;var s=procSample(ro,demo);
+  if(demo==7){let bounds=rayBox(ro,rd,vec3<f32>(-4.25,-1.35,-6.15),vec3<f32>(4.25,2.55,6.55));if(bounds.y<max(bounds.x,0.0)){return vec4<f32>(sky(rd),1.0);}t=max(bounds.x,0.0);tLimit=bounds.y;}
+  let epsilon=select(0.0014,0.0030,demo==7);let marchScale=select(0.72,0.82,demo==7);let minimumStep=select(0.0007,0.0018,demo==7);
+  for(var i=0;i<180;i=i+1){if(demo==7&&i>=108){break;}let p=ro+rd*t;s=procSample(p,demo);if(abs(s.distance)<epsilon){hit=true;break;}t+=max(abs(s.distance)*marchScale,minimumStep);if(t>tLimit){break;}}
+  if(!hit){return vec4<f32>(sky(rd),1.0);}let p=ro+rd*t;let n=procNormal(p,demo);let light=normalize(vec3<f32>(-0.46,0.82,-0.34));let diff=max(dot(n,light),0.0);let hemi=0.5+0.5*n.y;let h=normalize(light-rd);let spec=pow(max(dot(n,h),0.0),48.0);var base=procColour(s.material);if(i32(camera.params.z+0.5)==4){base=select(vec3<f32>(0.05,0.95,0.28),vec3<f32>(1.0,0.20,0.03),procApproximate(s.material));}let rim=pow(1.0-max(dot(n,-rd),0.0),3.2);var col=base*(0.22+0.26*hemi+0.74*diff)+vec3<f32>(1)*spec*0.18+base*rim*0.10;if(demo==7&&s.material==35u){col=col+vec3<f32>(1.2,0.16,0.02);}if(demo==7&&s.material==37u){col=col+vec3<f32>(0.8,0.20,0.02);}return vec4<f32>(col,1.0);
+}
+@fragment fn fs(input:VSOut)->@location(0)vec4<f32>{let uv=vec2<f32>(input.uv.x*camera.params.x,input.uv.y);let rd=rotateCamera(normalize(vec3<f32>(uv*camera.params.y,1.0)),camera.params.w,camera.position.w);let ro=camera.position.xyz;let demo=i32(scene.params.z+0.5);if(demo==4){return renderSnowmanAnalytic(ro,rd);}if(demo==5||demo==6||demo==7){return renderProcedural(ro,rd,demo);}let outerMin=clips.l2.origin.xyz;let outerMax=outerMin+vec3<f32>(f32(GX),f32(GY),f32(GZ))*clips.l2.params.y;let wb=rayBox(ro,rd,outerMin,outerMax);if(wb.y<max(wb.x,0.0)){return vec4<f32>(sky(rd),1.0);}var t=max(wb.x,0.0)+0.0007;var totalSteps=0;var carryValid=false;var carryT=t;var carryD=0.0;var previousLevel=-1;for(var bi=0;bi<160;bi=bi+1){if(t>wb.y){break;}let p=ro+rd*t;var level=preferredLevel(p);let brick=levelBrick(level);let cell=levelCell(level);let worldBrick=vec3<i32>(floor(p/brick));let brickMin=vec3<f32>(worldBrick)*brick;let bb=rayBox(ro,rd,brickMin,brickMin+vec3<f32>(brick));let brickExit=min(bb.y,wb.y);let entry=pageEntry(level,worldBrick);if(level!=previousLevel){carryValid=false;}previousLevel=level;if(entry>=2u&&entry!=0xffffffffu){let slot=i32(entry-2u);var tt=t;var previousT=carryT;var previousD=carryD;var havePrevious=carryValid&&carryT<=tt&&tt-carryT<cell*0.12;for(var si=0;si<48;si=si+1){totalSteps=totalSteps+1;let d=sampleBrick(level,slot,ro+rd*tt,worldBrick);if(abs(d)<max(0.014,cell*0.035)){let candidate=refinedHit(ro,rd,tt,cell);if(validHit(candidate,tt,cell)){let hp=ro+rd*candidate.x;let hitBrick=vec3<i32>(floor(hp/brick));return shade(hp,normalAnalytic(hp),rd,candidate.x,totalSteps,hitBrick,level);}}if(havePrevious&&d*previousD<0.0){var lo=previousT;var hi=tt;var dlo=previousD;for(var ri=0;ri<7;ri=ri+1){let mid=0.5*(lo+hi);let dm=sampleBrick(level,slot,ro+rd*mid,worldBrick);if(dm*dlo>0.0){lo=mid;dlo=dm;}else{hi=mid;}}let guess=0.5*(lo+hi);let candidate=refinedHit(ro,rd,guess,cell);if(validHit(candidate,guess,cell)){let hp=ro+rd*candidate.x;let hitBrick=vec3<i32>(floor(hp/brick));return shade(hp,normalAnalytic(hp),rd,candidate.x,totalSteps,hitBrick,level);}}havePrevious=true;previousT=tt;previousD=d;tt+=max(abs(d)*0.55,cell*0.027);if(tt>brickExit){break;}}let exitT=max(t,brickExit-0.0007);carryT=exitT;carryD=sampleBrick(level,slot,ro+rd*exitT,worldBrick);carryValid=true;}else if(entry==0u||entry==1u){carryT=brickExit;carryD=select(1.0,-1.0,entry==1u);carryValid=true;}else{carryValid=false;}t=brickExit+0.0007;}return vec4<f32>(sky(rd),1.0);}
+`;
+
+  const prepareIndirectWGSL=/* wgsl */`
+struct AllocState{freeCount:atomic<u32>,generatedCount:atomic<u32>,residentCount:atomic<u32>,pad:u32};
+@group(0)@binding(0)var<storage,read_write>allocState:AllocState;
+@group(0)@binding(1)var<storage,read_write>args:array<u32>;
+@compute @workgroup_size(1)fn main(){args[0]=atomicLoad(&allocState.generatedCount);args[1]=1u;args[2]=1u;args[3]=0u;}
+`;
+
+  const buildMacroWGSL=/* wgsl */`
+const GX:i32=16;const GY:i32=10;const GZ:i32=20;const MACRO:i32=4;const MX:i32=4;const MY:i32=3;const MZ:i32=5;const COUNT:u32=60u;
+struct MacroInfo{origin:vec4<i32>};
+@group(0)@binding(0)var page:texture_3d<u32>;
+@group(0)@binding(1)var macroOut:texture_storage_3d<r32uint,write>;
+@group(0)@binding(2)var<uniform>info:MacroInfo;
+fn positiveMod(a:i32,b:i32)->i32{let r=a%b;return select(r+b,r,r>=0);}
+fn pageCoord(w:vec3<i32>)->vec3<i32>{return vec3<i32>(positiveMod(w.x,GX),positiveMod(w.y,GY),positiveMod(w.z,GZ));}
+@compute @workgroup_size(64)fn main(@builtin(global_invocation_id)gid:vec3<u32>){
+  let index=gid.x;if(index>=COUNT){return;}
+  let ix=i32(index)%MX;let iy=(i32(index)/MX)%MY;let iz=i32(index)/(MX*MY);let macroCoord=vec3<i32>(ix,iy,iz);var occupied=0u;
+  for(var z=0;z<MACRO;z=z+1){for(var y=0;y<MACRO;y=y+1){for(var x=0;x<MACRO;x=x+1){
+    let local=macroCoord*MACRO+vec3<i32>(x,y,z);
+    if(local.x<GX&&local.y<GY&&local.z<GZ){let entry=textureLoad(page,pageCoord(info.origin.xyz+local),0).x;if(entry>=2u){occupied=1u;}}
+  }}}
+  textureStore(macroOut,macroCoord,vec4<u32>(occupied,0u,0u,0u));
+}
+`;
+
+  const sparseRenderWGSL=cacheSceneWGSL+/* wgsl */`
+const GX:i32=${GX};const GY:i32=${GY};const GZ:i32=${GZ};const SAMPLES:i32=${SAMPLES};const APRON:f32=${APRON}.0;const AX:i32=${AX};const AY:i32=${AY};const MACRO:i32=${MACRO};const MX:i32=${MX};const MY:i32=${MY};const MZ:i32=${MZ};const ATLAS_DIMS:vec3<f32>=vec3<f32>(${ATLAS_X}.0,${ATLAS_Y}.0,${ATLAS_Z}.0);
+struct Camera{position:vec4<f32>,params:vec4<f32>};struct ClipLevel{origin:vec4<f32>,params:vec4<f32>};struct Clips{l0:ClipLevel,l1:ClipLevel,l2:ClipLevel};struct VSOut{@builtin(position)position:vec4<f32>,@location(0)uv:vec2<f32>};
+@group(0)@binding(0)var<uniform>camera:Camera;@group(0)@binding(1)var<uniform>clips:Clips;@group(0)@binding(2)var<uniform>scene:Scene;@group(0)@binding(3)var page0:texture_3d<u32>;@group(0)@binding(4)var page1:texture_3d<u32>;@group(0)@binding(5)var page2:texture_3d<u32>;@group(0)@binding(6)var atlas0:texture_3d<f32>;@group(0)@binding(7)var atlas1:texture_3d<f32>;@group(0)@binding(8)var atlas2:texture_3d<f32>;@group(0)@binding(9)var atlasSampler:sampler;@group(0)@binding(10)var macro0:texture_3d<u32>;@group(0)@binding(11)var macro1:texture_3d<u32>;@group(0)@binding(12)var macro2:texture_3d<u32>;
+@vertex fn vs(@builtin(vertex_index)i:u32)->VSOut{let p=array<vec2<f32>,3>(vec2<f32>(-1,-1),vec2<f32>(3,-1),vec2<f32>(-1,3));var o:VSOut;o.position=vec4<f32>(p[i],0,1);o.uv=p[i];return o;}
+fn positiveMod(a:i32,b:i32)->i32{let r=a%b;return select(r+b,r,r>=0);}fn pageCoord(w:vec3<i32>)->vec3<i32>{return vec3<i32>(positiveMod(w.x,GX),positiveMod(w.y,GY),positiveMod(w.z,GZ));}
+fn levelOrigin(l:i32)->vec3<f32>{if(l==0){return clips.l0.origin.xyz;}if(l==1){return clips.l1.origin.xyz;}return clips.l2.origin.xyz;}fn levelCell(l:i32)->f32{if(l==0){return clips.l0.params.x;}if(l==1){return clips.l1.params.x;}return clips.l2.params.x;}fn levelBrick(l:i32)->f32{if(l==0){return clips.l0.params.y;}if(l==1){return clips.l1.params.y;}return clips.l2.params.y;}
+fn pageEntry(l:i32,w:vec3<i32>)->u32{let c=pageCoord(w);if(l==0){return textureLoad(page0,c,0).x;}if(l==1){return textureLoad(page1,c,0).x;}return textureLoad(page2,c,0).x;}fn macroEntry(l:i32,c:vec3<i32>)->u32{if(l==0){return textureLoad(macro0,c,0).x;}if(l==1){return textureLoad(macro1,c,0).x;}return textureLoad(macro2,c,0).x;}fn levelOriginBrick(l:i32)->vec3<i32>{return vec3<i32>(round(levelOrigin(l)/levelBrick(l)));}fn atlasBase(slot:i32)->vec3<i32>{return vec3<i32>(slot%AX,(slot/AX)%AY,slot/(AX*AY))*SAMPLES;}
+fn sampleField(l:i32,slot:i32,p:vec3<f32>,wb:vec3<i32>)->vec4<f32>{let q=clamp((p-vec3<f32>(wb)*levelBrick(l))/levelCell(l)+vec3<f32>(APRON),vec3<f32>(0),vec3<f32>(f32(SAMPLES-1)));let uvw=(vec3<f32>(atlasBase(slot))+q+vec3<f32>(0.5))/ATLAS_DIMS;if(l==0){return textureSampleLevel(atlas0,atlasSampler,uvw,0);}if(l==1){return textureSampleLevel(atlas1,atlasSampler,uvw,0);}return textureSampleLevel(atlas2,atlasSampler,uvw,0);}
+fn insideInset(p:vec3<f32>,l:i32)->bool{let b=levelBrick(l);let o=levelOrigin(l);let e=vec3<f32>(f32(GX),f32(GY),f32(GZ))*b;let inset=vec3<f32>(b*1.5);return all(p>=o+inset)&&all(p<o+e-inset);}fn preferredLevel(p:vec3<f32>)->i32{if(insideInset(p,0)){return 0;}if(insideInset(p,1)){return 1;}return 2;}
+fn rotateCamera(v:vec3<f32>,yaw:f32,pitch:f32)->vec3<f32>{let cy=cos(yaw);let sy=sin(yaw);let cp=cos(pitch);let sp=sin(pitch);let q=vec3<f32>(v.x,cp*v.y+sp*v.z,-sp*v.y+cp*v.z);return vec3<f32>(cy*q.x+sy*q.z,q.y,-sy*q.x+cy*q.z);}fn safeInv(x:f32)->f32{return select(1.0/x,1e20,abs(x)<1e-7);}fn rayBox(ro:vec3<f32>,rd:vec3<f32>,mn:vec3<f32>,mx:vec3<f32>)->vec2<f32>{let inv=vec3<f32>(safeInv(rd.x),safeInv(rd.y),safeInv(rd.z));let a=(mn-ro)*inv;let b=(mx-ro)*inv;let lo=min(a,b);let hi=max(a,b);return vec2<f32>(max(max(lo.x,lo.y),lo.z),min(min(hi.x,hi.y),hi.z));}
+fn sky(rd:vec3<f32>)->vec3<f32>{let h=clamp(rd.y*.5+.5,0,1);return mix(vec3<f32>(0.08,0.18,0.24),vec3<f32>(0.015,0.045,0.10),smoothstep(0.15,0.92,h));}
+fn cachedNormal(l:i32,slot:i32,p:vec3<f32>,wb:vec3<i32>)->vec3<f32>{
+  // Tetrahedral gradient: four filtered samples rather than six central differences.
+  // Besides reducing texture traffic, this averages the trilinear field more isotropically.
+  let e=max(levelCell(l)*0.34,0.0008);
+  let k1=vec3<f32>(1.0,-1.0,-1.0);let k2=vec3<f32>(-1.0,-1.0,1.0);let k3=vec3<f32>(-1.0,1.0,-1.0);let k4=vec3<f32>(1.0,1.0,1.0);
+  return normalize(k1*sampleField(l,slot,p+k1*e,wb).x+k2*sampleField(l,slot,p+k2*e,wb).x+k3*sampleField(l,slot,p+k3*e,wb).x+k4*sampleField(l,slot,p+k4*e,wb).x);
+}
+fn analyticNormal(p:vec3<f32>,cell:f32)->vec3<f32>{let e=max(cell*0.055,0.00065);let dx=cacheSceneSDF(p+vec3<f32>(e,0,0),scene)-cacheSceneSDF(p-vec3<f32>(e,0,0),scene);let dy=cacheSceneSDF(p+vec3<f32>(0,e,0),scene)-cacheSceneSDF(p-vec3<f32>(0,e,0),scene);let dz=cacheSceneSDF(p+vec3<f32>(0,0,e),scene)-cacheSceneSDF(p-vec3<f32>(0,0,e),scene);return normalize(vec3<f32>(dx,dy,dz));}
+fn refineGuided(ro:vec3<f32>,rd:vec3<f32>,guess:f32,cell:f32,cachedN:vec3<f32>)->vec2<f32>{
+  // Cycle 13: validate the gradient-guided correction at the corrected point.
+  // The previous build returned the pre-correction residual, so its acceptance test
+  // could not tell a useful correction from an overshoot.
+  let slope=dot(cachedN,rd);
+  let safeSlope=select(slope,select(-0.22,0.22,slope>=0.0),abs(slope)<0.22);
+  let d0=cacheSceneSDF(ro+rd*guess,scene);
+  var t=max(0.0,guess-clamp(d0/safeSlope,-cell*0.36,cell*0.36));
+  let d1=cacheSceneSDF(ro+rd*t,scene);
+  // One bounded residual correction reuses the slope; no third scene evaluation.
+  t=max(0.0,t-clamp(d1/safeSlope,-cell*0.16,cell*0.16));
+  return vec2<f32>(t,abs(d1));
+}
+fn tetraAnalyticNormal(p:vec3<f32>,cell:f32)->vec3<f32>{
+  let e=max(cell*0.10,0.0012);
+  let k1=vec3<f32>(1.0,-1.0,-1.0);let k2=vec3<f32>(-1.0,-1.0,1.0);let k3=vec3<f32>(-1.0,1.0,-1.0);let k4=vec3<f32>(1.0,1.0,1.0);
+  return normalize(k1*cacheSceneSDF(p+k1*e,scene)+k2*cacheSceneSDF(p+k2*e,scene)+k3*cacheSceneSDF(p+k3*e,scene)+k4*cacheSceneSDF(p+k4*e,scene));
+}
+fn finalNormal(p:vec3<f32>,rd:vec3<f32>,cachedN:vec3<f32>,cell:f32,level:i32,residual:f32)->vec3<f32>{
+  // Cycle 14: reserve expensive analytic normals for visibly uncertain L0 hits.
+  // Well-converged silhouettes now use the smoother tetrahedral cached gradient.
+  let silhouette=abs(dot(cachedN,-rd))<0.46;
+  let uncertain=residual>max(0.0015,cell*0.035);
+  if(level==0&&silhouette&&uncertain){return tetraAnalyticNormal(p,cell);}
+  return cachedN;
+}
+
+fn shade(p:vec3<f32>,n:vec3<f32>,rd:vec3<f32>,albedo:vec3<f32>,t:f32,steps:i32,wb:vec3<i32>,l:i32)->vec4<f32>{let light=normalize(vec3<f32>(-0.46,0.82,-0.34));let diff=max(dot(n,light),0);let hemi=0.5+0.5*n.y;let h=normalize(light-rd);let spec=pow(max(dot(n,h),0),48);let rim=pow(1-max(dot(n,-rd),0),3);var col=albedo*(0.20+0.26*hemi+0.72*diff)+vec3<f32>(1)*spec*0.18+albedo*rim*0.10;let dbg=i32(camera.params.z+0.5);if(dbg==1){let b=levelBrick(l);let q=(p-vec3<f32>(wb)*b)/b;let edge=min(min(min(q.x,1-q.x),min(q.y,1-q.y)),min(q.z,1-q.z));col=mix(col,vec3<f32>(0,1,0),1-smoothstep(0,0.016,edge));}if(dbg==2){col=select(select(vec3<f32>(0.90,0.26,0.48),vec3<f32>(0.55,0.32,0.92),l==1),vec3<f32>(0.08,0.78,0.88),l==0);}if(dbg==3){col=mix(vec3<f32>(0.03,0.18,0.55),vec3<f32>(0.95,0.12,0.10),clamp(f32(steps)/100,0,1));}let fog=1-exp(-0.00105*t*t);return vec4<f32>(mix(col,sky(rd),fog),1);}
+@fragment fn fs(input:VSOut)->@location(0)vec4<f32>{let uv=vec2<f32>(input.uv.x*camera.params.x,input.uv.y);let rd=rotateCamera(normalize(vec3<f32>(uv*camera.params.y,1)),camera.params.w,camera.position.w);let ro=camera.position.xyz;let outerMin=clips.l2.origin.xyz;let outerMax=outerMin+vec3<f32>(f32(GX),f32(GY),f32(GZ))*clips.l2.params.y;let range=rayBox(ro,rd,outerMin,outerMax);if(range.y<max(range.x,0)){return vec4<f32>(sky(rd),1);}var t=max(range.x,0)+0.0005;var steps=0;for(var bi=0;bi<144;bi=bi+1){if(t>range.y){break;}let p=ro+rd*t;let l=preferredLevel(p);let b=levelBrick(l);let cell=levelCell(l);let wb=vec3<i32>(floor(p/b));let originBrick=levelOriginBrick(l);let localBrick=wb-originBrick;let macroCoord=clamp(localBrick/MACRO,vec3<i32>(0),vec3<i32>(MX-1,MY-1,MZ-1));if(macroEntry(l,macroCoord)==0u){let macroMinBrick=originBrick+macroCoord*MACRO;let macroMaxBrick=min(macroMinBrick+vec3<i32>(MACRO),originBrick+vec3<i32>(GX,GY,GZ));let mr=rayBox(ro,rd,vec3<f32>(macroMinBrick)*b,vec3<f32>(macroMaxBrick)*b);t=max(t+0.0005,min(mr.y,range.y)+0.0005);continue;}let br=rayBox(ro,rd,vec3<f32>(wb)*b,vec3<f32>(wb+vec3<i32>(1))*b);let exitT=min(br.y,range.y);let entry=pageEntry(l,wb);if(entry>=2u&&entry!=0xffffffffu){let slot=i32(entry-2u);var tt=t;var prevT=tt;var prev=sampleField(l,slot,ro+rd*tt,wb);for(var si=0;si<40;si=si+1){steps=steps+1;let q=ro+rd*tt;let sm=sampleField(l,slot,q,wb);let eps=max(cell*0.045,0.001);if(abs(sm.x)<eps){let cn=cachedNormal(l,slot,q,wb);let refined=refineGuided(ro,rd,tt,cell,cn);if(refined.y<max(0.008,cell*0.16)){let hp=ro+rd*refined.x;let cached=sampleField(l,slot,hp,wb);return shade(hp,finalNormal(hp,rd,cn,cell,l,refined.y),rd,cached.yzw,refined.x,steps,vec3<i32>(floor(hp/b)),l);}}if(sm.x*prev.x<0){var lo=prevT;var hi=tt;var dlo=prev.x;for(var ri=0;ri<8;ri=ri+1){let mid=0.5*(lo+hi);let dm=sampleField(l,slot,ro+rd*mid,wb).x;if(dm*dlo>0){lo=mid;dlo=dm;}else{hi=mid;}}let hitT=0.5*(lo+hi);let guessP=ro+rd*hitT;let cn=cachedNormal(l,slot,guessP,wb);let refined=refineGuided(ro,rd,hitT,cell,cn);let hp=ro+rd*refined.x;let cached=sampleField(l,slot,hp,wb);return shade(hp,finalNormal(hp,rd,cn,cell,l,refined.y),rd,cached.yzw,refined.x,steps,vec3<i32>(floor(hp/b)),l);}prevT=tt;prev=sm;tt+=clamp(abs(sm.x)*0.62,cell*0.05,cell*1.45);if(tt>exitT){break;}}}t=exitT+0.0005;}return vec4<f32>(sky(rd),1);}
+`;
+
+  const releaseModule=await scoped('compile release shader',()=>device.createShaderModule({label:'sdf-release-wgsl',code:releaseWGSL}));
+  const classifyModule=await scoped('compile classify shader',()=>device.createShaderModule({label:'sdf-classify-wgsl',code:classifyWGSL}));
+  const generateModule=await scoped('compile generate shader',()=>device.createShaderModule({label:'sdf-generate-wgsl',code:generateWGSL}));
+  const prepareIndirectModule=await scoped('compile indirect generation shader',()=>device.createShaderModule({label:'sdf-prepare-indirect-wgsl',code:prepareIndirectWGSL}));
+  const buildMacroModule=await scoped('compile macro hierarchy shader',()=>device.createShaderModule({label:'sdf-build-macro-wgsl',code:buildMacroWGSL}));
+  const sparseModule=await scoped('compile hierarchical sparse render shader',()=>device.createShaderModule({label:'sdf-hierarchical-sparse-wgsl',code:sparseRenderWGSL}));
+  for(const [name,module] of [['release',releaseModule],['classify',classifyModule],['generate',generateModule],['prepare-indirect',prepareIndirectModule],['build-macro',buildMacroModule],['sparse-render',sparseModule]]){if(!module.getCompilationInfo)continue;const info=await module.getCompilationInfo();for(const m of info.messages)shaderMessages.push({shader:name,type:m.type,line:m.lineNum,column:m.linePos,offset:m.offset,length:m.length,message:m.message});const errors=info.messages.filter(m=>m.type==='error');if(errors.length)throw new Error(errors.map(m=>`${name}.wgsl:${m.lineNum}:${m.linePos} ${m.message}`).join('\n'));}
+
+  const releaseBGL=await scoped('release layout',()=>device.createBindGroupLayout({label:'sdf-release-bgl',entries:[{binding:0,visibility:GPUShaderStage.COMPUTE,texture:{sampleType:'uint',viewDimension:'3d'}},{binding:1,visibility:GPUShaderStage.COMPUTE,buffer:{type:'read-only-storage',minBindingSize:MAX_LOGICAL*16}},{binding:2,visibility:GPUShaderStage.COMPUTE,buffer:{type:'storage',minBindingSize:16}},{binding:3,visibility:GPUShaderStage.COMPUTE,buffer:{type:'storage',minBindingSize:MAX_BRICKS*4}},{binding:4,visibility:GPUShaderStage.COMPUTE,buffer:{type:'uniform',minBindingSize:16}}]}));
+  const classifyBGL=await scoped('classify layout',()=>device.createBindGroupLayout({label:'sdf-classify-bgl',entries:[{binding:0,visibility:GPUShaderStage.COMPUTE,buffer:{type:'uniform',minBindingSize:16}},{binding:1,visibility:GPUShaderStage.COMPUTE,storageTexture:{access:'write-only',format:'r32uint',viewDimension:'3d'}},{binding:2,visibility:GPUShaderStage.COMPUTE,buffer:{type:'read-only-storage',minBindingSize:MAX_LOGICAL*16}},{binding:3,visibility:GPUShaderStage.COMPUTE,buffer:{type:'storage',minBindingSize:16}},{binding:4,visibility:GPUShaderStage.COMPUTE,buffer:{type:'storage',minBindingSize:MAX_BRICKS*4}},{binding:5,visibility:GPUShaderStage.COMPUTE,buffer:{type:'storage',minBindingSize:MAX_LOGICAL*16}},{binding:6,visibility:GPUShaderStage.COMPUTE,buffer:{type:'uniform',minBindingSize:16}},{binding:7,visibility:GPUShaderStage.COMPUTE,buffer:{type:'uniform',minBindingSize:16}}]}));
+  const generateBGL=await scoped('generate layout',()=>device.createBindGroupLayout({label:'sdf-generate-bgl',entries:[{binding:0,visibility:GPUShaderStage.COMPUTE,buffer:{type:'uniform',minBindingSize:16}},{binding:1,visibility:GPUShaderStage.COMPUTE,storageTexture:{access:'write-only',format:'rgba16float',viewDimension:'3d'}},{binding:2,visibility:GPUShaderStage.COMPUTE,buffer:{type:'read-only-storage',minBindingSize:MAX_LOGICAL*16}},{binding:3,visibility:GPUShaderStage.COMPUTE,buffer:{type:'storage',minBindingSize:16}},{binding:4,visibility:GPUShaderStage.COMPUTE,buffer:{type:'uniform',minBindingSize:16}}]}));
+  const prepareIndirectBGL=await scoped('indirect generation layout',()=>device.createBindGroupLayout({label:'sdf-prepare-indirect-bgl',entries:[{binding:0,visibility:GPUShaderStage.COMPUTE,buffer:{type:'storage',minBindingSize:16}},{binding:1,visibility:GPUShaderStage.COMPUTE,buffer:{type:'storage',minBindingSize:16}}]}));
+  const buildMacroBGL=await scoped('macro hierarchy layout',()=>device.createBindGroupLayout({label:'sdf-build-macro-bgl',entries:[{binding:0,visibility:GPUShaderStage.COMPUTE,texture:{sampleType:'uint',viewDimension:'3d'}},{binding:1,visibility:GPUShaderStage.COMPUTE,storageTexture:{access:'write-only',format:'r32uint',viewDimension:'3d'}},{binding:2,visibility:GPUShaderStage.COMPUTE,buffer:{type:'uniform',minBindingSize:16}}]}));
+  const renderBGL=await scoped('render layout',()=>device.createBindGroupLayout({label:'sdf-render-bgl',entries:[{binding:0,visibility:GPUShaderStage.FRAGMENT,buffer:{type:'uniform',minBindingSize:32}},{binding:1,visibility:GPUShaderStage.FRAGMENT,buffer:{type:'uniform',minBindingSize:96}},{binding:2,visibility:GPUShaderStage.FRAGMENT,buffer:{type:'uniform',minBindingSize:16}},{binding:3,visibility:GPUShaderStage.FRAGMENT,texture:{sampleType:'uint',viewDimension:'3d'}},{binding:4,visibility:GPUShaderStage.FRAGMENT,texture:{sampleType:'uint',viewDimension:'3d'}},{binding:5,visibility:GPUShaderStage.FRAGMENT,texture:{sampleType:'uint',viewDimension:'3d'}},{binding:6,visibility:GPUShaderStage.FRAGMENT,texture:{sampleType:'float',viewDimension:'3d'}},{binding:7,visibility:GPUShaderStage.FRAGMENT,texture:{sampleType:'float',viewDimension:'3d'}},{binding:8,visibility:GPUShaderStage.FRAGMENT,texture:{sampleType:'float',viewDimension:'3d'}},{binding:9,visibility:GPUShaderStage.FRAGMENT,sampler:{type:'filtering'}},{binding:10,visibility:GPUShaderStage.FRAGMENT,texture:{sampleType:'uint',viewDimension:'3d'}},{binding:11,visibility:GPUShaderStage.FRAGMENT,texture:{sampleType:'uint',viewDimension:'3d'}},{binding:12,visibility:GPUShaderStage.FRAGMENT,texture:{sampleType:'uint',viewDimension:'3d'}}]}));
+
+  const releasePipeline=await scoped('release pipeline',()=>device.createComputePipeline({label:'sdf-release',layout:device.createPipelineLayout({bindGroupLayouts:[releaseBGL]}),compute:{module:releaseModule,entryPoint:'main'}}));
+  const classifyPipeline=await scoped('classify pipeline',()=>device.createComputePipeline({label:'sdf-classify',layout:device.createPipelineLayout({bindGroupLayouts:[classifyBGL]}),compute:{module:classifyModule,entryPoint:'main'}}));
+  const generatePipeline=await scoped('generate pipeline',()=>device.createComputePipeline({label:'sdf-generate',layout:device.createPipelineLayout({bindGroupLayouts:[generateBGL]}),compute:{module:generateModule,entryPoint:'main'}}));
+  const prepareIndirectPipeline=await scoped('indirect generation pipeline',()=>device.createComputePipeline({label:'sdf-prepare-indirect',layout:device.createPipelineLayout({bindGroupLayouts:[prepareIndirectBGL]}),compute:{module:prepareIndirectModule,entryPoint:'main'}}));
+  const buildMacroPipeline=await scoped('macro hierarchy pipeline',()=>device.createComputePipeline({label:'sdf-build-macro',layout:device.createPipelineLayout({bindGroupLayouts:[buildMacroBGL]}),compute:{module:buildMacroModule,entryPoint:'main'}}));
+  const renderPipelineLayout=device.createPipelineLayout({label:'sdf-render-layout',bindGroupLayouts:[renderBGL]});
+  const sparseDescriptor={label:'sdf-hierarchical-sparse-render',layout:renderPipelineLayout,vertex:{module:sparseModule,entryPoint:'vs'},fragment:{module:sparseModule,entryPoint:'fs',targets:[{format}]},primitive:{topology:'triangle-list'}};
+  const sparseRenderPipeline=await scoped('hierarchical sparse render pipeline',()=>device.createRenderPipelineAsync?device.createRenderPipelineAsync(sparseDescriptor):device.createRenderPipeline(sparseDescriptor));
+  let renderPipeline=sparseRenderPipeline,fullRenderPipeline=null,pipelineMode='sparse-hierarchical';
+  if(forceLegacyAnalytic){try{const legacyModule=await scoped('compile legacy analytic shader',()=>device.createShaderModule({label:'legacy-analytic-wgsl',code:renderWGSL}));const legacyDescriptor={label:'legacy-analytic-render',layout:renderPipelineLayout,vertex:{module:legacyModule,entryPoint:'vs'},fragment:{module:legacyModule,entryPoint:'fs',targets:[{format}]},primitive:{topology:'triangle-list'}};fullRenderPipeline=await scoped('legacy analytic render pipeline',()=>device.createRenderPipelineAsync?device.createRenderPipelineAsync(legacyDescriptor):device.createRenderPipeline(legacyDescriptor));renderPipeline=fullRenderPipeline;pipelineMode='legacy-analytic-explicit';}catch(error){diagnostics.gpu.pipelineFallback={reason:errorText(error),source:'legacy analytic opt-in'};recordEvent('render-pipeline-fallback',{reason:errorText(error)});}}
+  diagnostics.gpu.pipelineMode=pipelineMode;diagnostics.gpu.portableDefault=false;diagnostics.gpu.fullPipelineAvailable=Boolean(fullRenderPipeline);diagnostics.gpu.unifiedSparse=true;diagnostics.gpu.hierarchicalMacroTraversal=true;diagnostics.gpu.indirectBrickGeneration=true;
+
+  for(const level of levels){
+    level.releaseBind=device.createBindGroup({layout:releaseBGL,entries:[{binding:0,resource:level.pageView},{binding:1,resource:{buffer:level.dirtyBuffer}},{binding:2,resource:{buffer:level.stateBuffer}},{binding:3,resource:{buffer:level.freeListBuffer}},{binding:4,resource:{buffer:level.updateBuffer}}]});
+    level.classifyBind=device.createBindGroup({layout:classifyBGL,entries:[{binding:0,resource:{buffer:sceneBuffer}},{binding:1,resource:level.pageView},{binding:2,resource:{buffer:level.dirtyBuffer}},{binding:3,resource:{buffer:level.stateBuffer}},{binding:4,resource:{buffer:level.freeListBuffer}},{binding:5,resource:{buffer:level.generatedBuffer}},{binding:6,resource:{buffer:level.updateBuffer}},{binding:7,resource:{buffer:level.levelInfo}}]});
+    level.generateBind=device.createBindGroup({layout:generateBGL,entries:[{binding:0,resource:{buffer:sceneBuffer}},{binding:1,resource:level.atlasView},{binding:2,resource:{buffer:level.generatedBuffer}},{binding:3,resource:{buffer:level.stateBuffer}},{binding:4,resource:{buffer:level.levelInfo}}]});
+    level.prepareIndirectBind=device.createBindGroup({layout:prepareIndirectBGL,entries:[{binding:0,resource:{buffer:level.stateBuffer}},{binding:1,resource:{buffer:level.dispatchBuffer}}]});
+    level.buildMacroBind=device.createBindGroup({layout:buildMacroBGL,entries:[{binding:0,resource:level.pageView},{binding:1,resource:level.macroView},{binding:2,resource:{buffer:level.macroInfo}}]});
+  }
+  const renderBind=device.createBindGroup({layout:renderBGL,entries:[{binding:0,resource:{buffer:cameraBuffer}},{binding:1,resource:{buffer:clipsBuffer}},{binding:2,resource:{buffer:sceneBuffer}},{binding:3,resource:levels[0].pageView},{binding:4,resource:levels[1].pageView},{binding:5,resource:levels[2].pageView},{binding:6,resource:levels[0].atlasView},{binding:7,resource:levels[1].atlasView},{binding:8,resource:levels[2].atlasView},{binding:9,resource:atlasSampler},{binding:10,resource:levels[0].macroView},{binding:11,resource:levels[1].macroView},{binding:12,resource:levels[2].macroView}]});
+
+  const demoNames=['MONUMENT','PRIMITIVES','BOOLEANS','SMOOTH LAB','SNOWMAN','INVADERS','MEADOW','DRAGON'];
+  let demoId=0,cutOn=true,debugMode=0,forceFull=true,sceneBakeTime=0;
+  const camera={x:0,y:6.2,z:-16.5,yaw:0,pitch:0};
+  const target={x:0,y:3.6,z:5};
+  let auto=true,angle=0,moveX=0,moveY=0,vertical=0;
+  let orbitPointer=null,orbitLastX=0,orbitLastY=0,orbitPivot=v3(0,0,0),orbitRadius=8,orbitYaw=0,orbitPitch=0,orbitPivotSource='reset-target',orbitPivotResidual=null;
+  const sceneBaseCells=[0.375,0.375,0.375,0.375,0.040,0.050,0.045,0.070];
+  function configureSceneCache(){const base=sceneBaseCells[demoId]??BASE_CELL;sceneBakeTime=performance.now()*0.001;for(const level of levels){level.cell=base*(2**level.index);level.brick=level.cell*LOGICAL_CELLS;level.origin=null;device.queue.writeBuffer(level.levelInfo,0,new Float32Array([level.cell,level.brick,level.index,0]));}forceFull=true;recordEvent('cache-profile',{demoId,baseCell:base,anchor:demoId>=4?'object-target':'camera',animation:'baked-snapshot'});}
+  function writeScene(){device.queue.writeBuffer(sceneBuffer,0,new Float32Array([cutOn?1:0,sceneBakeTime,demoId,0]))}
+  function lookAt(){const dx=target.x-camera.x,dy=target.y-camera.y,dz=target.z-camera.z;camera.yaw=Math.atan2(dx,dz);camera.pitch=Math.atan2(dy,Math.hypot(dx,dz))}
+  function setAuto(v){auto=v;autoBtn.classList.toggle('active',v);autoBtn.textContent=v?'AUTO':'FREE'}
+  function disableAuto(){if(auto)setAuto(false)}
+  function reset(){angle=0;if(demoId===4){camera.x=0;camera.y=0.85;camera.z=-4.8;target.x=0;target.y=0.45;target.z=0}else if(demoId===5){camera.x=0;camera.y=0.25;camera.z=-5.0;target.x=0;target.y=0;target.z=0}else if(demoId===6){camera.x=0;camera.y=1.25;camera.z=-3.2;target.x=0;target.y=0.2;target.z=0.4}else if(demoId===7){camera.x=0;camera.y=1.15;camera.z=-8.2;target.x=0;target.y=0.55;target.z=0.2}else{camera.x=0;camera.y=6.2;camera.z=5-[21.5,22.5,22.5,21.5][demoId];target.x=0;target.y=demoId===1?2.9:3.8;target.z=5;}orbitPivot=v3(target.x,target.y,target.z);orbitRadius=length3(sub(v3(camera.x,camera.y,camera.z),orbitPivot));orbitPivotSource='reset-target';orbitPivotResidual=null;lookAt();setAuto(true)}
+  autoBtn.onclick=()=>setAuto(!auto);
+  resetBtn.onclick=()=>reset();
+  cutBtn.onclick=()=>{cutOn=!cutOn;cutBtn.classList.toggle('active',cutOn);cutBtn.textContent=cutOn?'CUT ON':'CUT OFF';forceFull=true};
+  debugBtn.onclick=()=>{debugMode=(debugMode+1)%5;debugBtn.textContent=['SHADED','BRICKS','LEVELS','STEPS','SDF AUDIT'][debugMode]};
+  shapesBtn.onclick=()=>{shapePanel.classList.toggle('open');shapesBtn.classList.toggle('active',shapePanel.classList.contains('open'))};
+  shapeButtons.forEach(button=>button.onclick=()=>{demoId=Number(button.dataset.demo);configureSceneCache();shapeButtons.forEach(b=>b.classList.toggle('active',b===button));shapePanel.classList.remove('open');shapesBtn.classList.remove('active');forceFull=true;reset()});
+  function originFor(level){const anchor=demoId>=4?target:camera;return{x:Math.floor(anchor.x/level.brick)-Math.floor(GX/2),y:Math.floor(anchor.y/level.brick)-Math.floor(GY/2),z:Math.floor(anchor.z/level.brick)-Math.floor(GZ/2)}}
+  function same(a,b){return a&&b&&a.x===b.x&&a.y===b.y&&a.z===b.z}
+  function inside(x,y,z,o){return x>=o.x&&x<o.x+GX&&y>=o.y&&y<o.y+GY&&z>=o.z&&z<o.z+GZ}
+  function dirtyFor(next,old,full){const values=[];for(let z=0;z<GZ;z++)for(let y=0;y<GY;y++)for(let x=0;x<GX;x++){const wx=next.x+x,wy=next.y+y,wz=next.z+z;if(full||!old||!inside(wx,wy,wz,old))values.push(wx,wy,wz,0)}return new Int32Array(values)}
+  async function readState(level){try{await level.readback.mapAsync(GPUMapMode.READ);const v=new Uint32Array(level.readback.getMappedRange().slice(0,16));level.free=v[0];level.resident=v[2];level.readback.unmap()}catch(e){console.warn(`L${level.index} readback`,e)}finally{level.readbackBusy=false}}
+  function updateLevel(level,next,full){level.lastUpdateAt=performance.now();const encodeStart=performance.now();const dirty=dirtyFor(next,level.origin,full),count=dirty.length/4;level.origin={...next};device.queue.writeBuffer(level.macroInfo,0,new Int32Array([next.x,next.y,next.z,level.index]));if(!count)return;level.lastDirty=count;level.lastKind=full?'full':'slabs';device.queue.writeBuffer(level.dirtyBuffer,0,dirty);device.queue.writeBuffer(level.updateBuffer,0,new Uint32Array([count,0,0,0]));device.queue.writeBuffer(level.stateBuffer,4,new Uint32Array([0]));const enc=device.createCommandEncoder({label:`L${level.index} clipmap update`}),groups=Math.ceil(count/64);const a=enc.beginComputePass();a.setPipeline(releasePipeline);a.setBindGroup(0,level.releaseBind);a.dispatchWorkgroups(groups);a.end();const b=enc.beginComputePass();b.setPipeline(classifyPipeline);b.setBindGroup(0,level.classifyBind);b.dispatchWorkgroups(groups);b.end();const prep=enc.beginComputePass({label:`L${level.index} prepare indirect`});prep.setPipeline(prepareIndirectPipeline);prep.setBindGroup(0,level.prepareIndirectBind);prep.dispatchWorkgroups(1);prep.end();const c=enc.beginComputePass({label:`L${level.index} generate bricks indirect`});c.setPipeline(generatePipeline);c.setBindGroup(0,level.generateBind);c.dispatchWorkgroupsIndirect(level.dispatchBuffer,0);c.end();const shouldRead=!level.readbackBusy;if(shouldRead)enc.copyBufferToBuffer(level.stateBuffer,0,level.readback,0,16);device.queue.submit([enc.finish()]);level.lastEncodeMs=performance.now()-encodeStart;const submittedAt=performance.now();if(shouldRead)level.readbackBusy=true;device.queue.onSubmittedWorkDone().then(()=>{level.lastQueueCompletionMs=performance.now()-submittedAt;if(shouldRead)readState(level)});recordEvent('clipmap-update',{level:level.index,kind:level.lastKind,dirty:count,encodeMs:+level.lastEncodeMs.toFixed(3)})}
+
+  const keys=new Set();
+  addEventListener('keydown',e=>{keys.add(e.key.toLowerCase());disableAuto();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase()))e.preventDefault()});
+  addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));addEventListener('blur',()=>keys.clear());
+  let movePointer=null;
+  function moveUpdate(e){const r=movePad.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,rad=r.width*.34;let dx=(e.clientX-cx)/rad,dy=(e.clientY-cy)/rad,l=Math.hypot(dx,dy);if(l>1){dx/=l;dy/=l}moveX=dx;moveY=-dy;stick.style.transform=`translate(calc(-50% + ${dx*rad*.62}px),calc(-50% + ${dy*rad*.62}px))`}
+  movePad.onpointerdown=e=>{disableAuto();movePointer=e.pointerId;movePad.setPointerCapture(e.pointerId);moveUpdate(e)};movePad.onpointermove=e=>{if(e.pointerId===movePointer)moveUpdate(e)};function endMove(e){if(e.pointerId!==movePointer)return;movePointer=null;moveX=moveY=0;stick.style.transform='translate(-50%,-50%)'}movePad.onpointerup=endMove;movePad.onpointercancel=endMove;
+  let lookPointer=null,lx=0,ly=0;lookPad.onpointerdown=e=>{disableAuto();lookPointer=e.pointerId;lx=e.clientX;ly=e.clientY;lookPad.setPointerCapture(e.pointerId)};lookPad.onpointermove=e=>{if(e.pointerId!==lookPointer)return;camera.yaw+=(e.clientX-lx)*.006;camera.pitch=clamp(camera.pitch-(e.clientY-ly)*.006,-1.35,1.35);lx=e.clientX;ly=e.clientY};lookPad.onpointerup=e=>{if(e.pointerId===lookPointer)lookPointer=null};lookPad.onpointercancel=lookPad.onpointerup;
+  function hold(btn,v){const ids=new Set(),u=()=>{vertical=ids.size?v:0;btn.classList.toggle('active',ids.size>0)};btn.onpointerdown=e=>{disableAuto();btn.setPointerCapture(e.pointerId);ids.add(e.pointerId);u()};btn.onpointerup=e=>{ids.delete(e.pointerId);u()};btn.onpointercancel=btn.onpointerup}hold(upBtn,1);hold(downBtn,-1);
+
+  function beginOrbit(pointer){disableAuto();orbitPointer=pointer.pointerId;orbitLastX=pointer.clientX;orbitLastY=pointer.clientY;canvas.setPointerCapture(pointer.pointerId);const targetHint=v3(target.x,target.y,target.z);const pick=demoId>=5?{point:targetHint,source:'dsl-scene-target',residual:null}:findOrbitPivot(camera,demoId,cutOn,targetHint);orbitPivot=pick.point;orbitPivotSource=pick.source;orbitPivotResidual=pick.residual;const offset=sub(v3(camera.x,camera.y,camera.z),orbitPivot);const targetDistance=Math.max(0.5,length3(sub(v3(camera.x,camera.y,camera.z),targetHint)));orbitRadius=clamp(length3(offset),0.4,targetDistance*1.5);orbitYaw=Math.atan2(orbitPivot.x-camera.x,orbitPivot.z-camera.z);orbitPitch=Math.atan2(camera.y-orbitPivot.y,Math.hypot(camera.x-orbitPivot.x,camera.z-orbitPivot.z));target.x=orbitPivot.x;target.y=orbitPivot.y;target.z=orbitPivot.z;recordEvent('orbit-pivot',{source:orbitPivotSource,residual:orbitPivotResidual==null?null:+orbitPivotResidual.toFixed(4),radius:+orbitRadius.toFixed(3)});}
+  canvas.onpointerdown=e=>{if(e.target!==canvas)return;beginOrbit(e)};
+  canvas.onpointermove=e=>{if(e.pointerId!==orbitPointer)return;orbitYaw+=(e.clientX-orbitLastX)*0.006;orbitPitch=clamp(orbitPitch-(e.clientY-orbitLastY)*0.006,-1.35,1.35);orbitLastX=e.clientX;orbitLastY=e.clientY;const rxy=Math.cos(orbitPitch)*orbitRadius;camera.x=orbitPivot.x-Math.sin(orbitYaw)*rxy;camera.z=orbitPivot.z-Math.cos(orbitYaw)*rxy;camera.y=orbitPivot.y+Math.sin(orbitPitch)*orbitRadius;lookAt();};
+  function endOrbit(e){if(e.pointerId!==orbitPointer)return;orbitPointer=null;}canvas.onpointerup=endOrbit;canvas.onpointercancel=endOrbit;
+
+  configureSceneCache();reset();writeScene();let last=performance.now(),fpsT=last,fpsN=0,fps=0,smoothed=30,lastQualityChange=0,lastSub27At=-1e9,lastCapCandidateAt=0,qualityState='warming';const frameIntervals=[];let cadenceMeanMs=0,cadenceStdDevMs=0,cadenceP95Ms=0,stable30Cap=false;function updateCadence(interval){if(interval>0&&interval<250){frameIntervals.push(interval);if(frameIntervals.length>120)frameIntervals.shift();}if(frameIntervals.length<20){stable30Cap=false;return;}const recent=frameIntervals.slice(-60),mean=recent.reduce((a,b)=>a+b,0)/recent.length,variance=recent.reduce((a,b)=>a+(b-mean)*(b-mean),0)/recent.length,sorted=[...recent].sort((a,b)=>a-b);cadenceMeanMs=mean;cadenceStdDevMs=Math.sqrt(variance);cadenceP95Ms=sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.95))];const capCandidate=inIframe()&&document.visibilityState==='visible'&&mean>31.0&&mean<35.5&&cadenceP95Ms<40.0;if(capCandidate){if(!lastCapCandidateAt)lastCapCandidateAt=performance.now();}else{lastCapCandidateAt=0;}stable30Cap=capCandidate&&performance.now()-lastCapCandidateAt>4500&&performance.now()-lastSub27At>8000;}startupStage='rendering';
+  function projectionDiagnostics(){const fov=Math.tan(62*Math.PI/360);const ray=y=>rotateCameraJS(normalize(v3(0,y*fov,1)),camera.yaw,camera.pitch);const top=ray(1),centre=ray(0),bottom=ray(-1);return{screenYSign:1,topRayY:+top.y.toFixed(5),centreRayY:+centre.y.toFixed(5),bottomRayY:+bottom.y.toFixed(5),cameraAboveTarget:camera.y>target.y};}
+  reportProvider=()=>({...baseReport(),runtime:{pipelineMode,activePipeline:pipelineMode,fps:+fps.toFixed(2),smoothedFps:+smoothed.toFixed(2),quality,canvas:{width:canvas.width,height:canvas.height},cssViewport:{width:canvas.clientWidth,height:canvas.clientHeight},iframeCapSuspected:stable30Cap,frameIntervalMeanMs:+cadenceMeanMs.toFixed(3),frameIntervalStdDevMs:+cadenceStdDevMs.toFixed(3),frameIntervalP95Ms:+cadenceP95Ms.toFixed(3),qualityLockedReason:stable30Cap?'stable 30 Hz cross-origin iframe cadence':null,qualityState,lastSub27MsAgo:Math.max(0,performance.now()-lastSub27At)},scene:{demoId,demoName:demoNames[demoId],rendererMode:pipelineMode.startsWith('legacy')?'legacy-analytic':'hierarchical-sparse-cache',dslParser:{invaders:parsedDSL.invaders?.error||{name:parsedDSL.invaders.name,version:parsedDSL.invaders.version,params:Object.keys(parsedDSL.invaders.params).length,defs:Object.keys(parsedDSL.invaders.defs).length,nodeCount:parsedDSL.invaders.nodeCount,jsonNodes:parsedDSL.invaders.jsonNodes},meadow:parsedDSL.meadow?.error||{name:parsedDSL.meadow.name,version:parsedDSL.meadow.version,params:Object.keys(parsedDSL.meadow.params).length,defs:Object.keys(parsedDSL.meadow.defs).length,nodeCount:parsedDSL.meadow.nodeCount,jsonNodes:parsedDSL.meadow.jsonNodes},dragon:parsedDSL.dragon?.error||{name:parsedDSL.dragon.name,version:parsedDSL.dragon.version,params:Object.keys(parsedDSL.dragon.params).length,defs:Object.keys(parsedDSL.dragon.defs).length,nodeCount:parsedDSL.dragon.nodeCount,jsonNodes:parsedDSL.dragon.jsonNodes}},sdfDiagnostics:{primitiveAudit:{sphere:'exact',capsule:'exact',box:'exact',roundBox:'exact',torus:'exact',ellipsoidApprox:'non-distance approximation',smoothMin:'distance-like / Lipschitz weakened',repeat:'exact placement; amplifies primitive error'},meadow:{repeatCandidatesPerSample:9,previousCandidates:25,petalPrimitive:'ellipsoidApprox',stressPreset:true},dragon:{approximateMaterials:[30,33],exactMaterials:[31,32,34,35,36,37,38,39],notes:['hide warped by low-cost trigonometric microdetail','jaw cavity and teeth modeled explicitly','wing membranes remain approximate'],jankRisk:'complexity paid during sparse-field baking; render path uses cached hierarchy rather than analytic scene evaluation'},booleans:{colourLeak:false,fix:'material selected from final CSG component distances; subtractive bore owns an explicit cut material'}},clipmapScheduling:{suspended:false,anchor:demoId>=4?'object-target':'camera',coarseLevelDragDeferralMs:[0,120,260],baseCell:sceneBaseCells[demoId],animation:'baked-snapshot',macroHierarchy:{brickSpan:MACRO,dimensions:[MX,MY,MZ],nodesPerLevel:MACRO_COUNT,rebuild:'GPU only after page-table changes'},brickGeneration:'GPU indirect dispatch from generatedCount',surfaceRefinement:{mode:'validated cached-gradient-guided correction',distanceSamplesPerHit:2,analyticNormalPolicy:'only uncertain L0 silhouettes',analyticNormalSamples:4,cachedNormalSamples:4,material:'cached trilinear albedo',cycles:['13 corrected-point residual validation','14 tetrahedral cached normals and uncertainty-gated analytic normals']}},cutOn,debugMode,debugName:['SHADED','BRICKS','LEVELS','STEPS','SDF AUDIT'][debugMode],auto},camera:{x:+camera.x.toFixed(4),y:+camera.y.toFixed(4),z:+camera.z.toFixed(4),yaw:+camera.yaw.toFixed(5),pitch:+camera.pitch.toFixed(5),target:{x:+target.x.toFixed(4),y:+target.y.toFixed(4),z:+target.z.toFixed(4)},orbitPivot:{x:+orbitPivot.x.toFixed(4),y:+orbitPivot.y.toFixed(4),z:+orbitPivot.z.toFixed(4)},orbitRadius:+orbitRadius.toFixed(4),orbitPivotSource,orbitPivotResidual:orbitPivotResidual==null?null:+orbitPivotResidual.toFixed(5)},projection:projectionDiagnostics(),clipmaps:levels.map(level=>({level:level.index,cell:level.cell,brick:level.brick,origin:level.origin,resident:level.resident,free:level.free,lastDirty:level.lastDirty,lastKind:level.lastKind,lastEncodeMs:+level.lastEncodeMs.toFixed(3),queueCompletionMs:+level.lastQueueCompletionMs.toFixed(3)}))});
+  function frame(now){if(stopped)return;const rawInterval=now-last;updateCadence(rawInterval);const dt=Math.min(.05,Math.max(0,rawInterval/1000));last=now;if(auto){angle+=dt*.10;const analytic=demoId>=4;const r=demoId===4?4.8:demoId===5?5.0:demoId===6?3.2:demoId===7?8.2:[21.5,22.5,22.5,21.5][demoId];const zCenter=analytic?target.z:target.z;camera.x=target.x+Math.sin(angle)*r;camera.z=zCenter-Math.cos(angle)*r;camera.y=(demoId===4?0.85:demoId===5?0.3:demoId===6?1.25:demoId===7?1.25:6.2)+Math.sin(angle*.7)*(analytic?0.15:0.65);lookAt()}else{let sx=moveX,fw=moveY;if(keys.has('a'))sx--;if(keys.has('d'))sx++;if(keys.has('w'))fw++;if(keys.has('s'))fw--;let m=Math.hypot(sx,fw);if(m>1){sx/=m;fw/=m}let up=vertical+(keys.has('e')||keys.has(' ')?1:0)-(keys.has('q')||keys.has('c')?1:0);up=clamp(up,-1,1);const turn=1.6*dt;if(keys.has('arrowleft'))camera.yaw-=turn;if(keys.has('arrowright'))camera.yaw+=turn;if(keys.has('arrowup'))camera.pitch=clamp(camera.pitch+turn,-1.35,1.35);if(keys.has('arrowdown'))camera.pitch=clamp(camera.pitch-turn,-1.35,1.35);const sp=(keys.has('shift')?13:6.5)*dt,s=Math.sin(camera.yaw),c=Math.cos(camera.yaw);camera.x+=(c*sx+s*fw)*sp;camera.z+=(-s*sx+c*fw)*sp;camera.y+=up*sp}
+    resize();writeScene();const clipData=new Float32Array(24);let anyChanged=false;for(const level of levels){const next=originFor(level);const changed=!same(next,level.origin);const dragDelay=orbitPointer!=null&&demoId<4?[0,120,260][level.index]:0;const due=now-level.lastUpdateAt>=dragDelay;if(forceFull||(changed&&due)){updateLevel(level,next,forceFull||!level.origin);anyChanged=true}const o=level.origin||next,base=level.index*8;clipData.set([o.x*level.brick,o.y*level.brick,o.z*level.brick,0,level.cell,level.brick,level.index,level.index===2?now*0.001:0],base)}if(forceFull&&anyChanged)forceFull=false;device.queue.writeBuffer(clipsBuffer,0,clipData);device.queue.writeBuffer(cameraBuffer,0,new Float32Array([camera.x,camera.y,camera.z,camera.pitch,canvas.width/canvas.height,Math.tan(62*Math.PI/360),debugMode,camera.yaw]));const enc=device.createCommandEncoder({label:'sdf-frame'});if(anyChanged){const macroPass=enc.beginComputePass({label:'sdf-macro-hierarchy-rebuild'});macroPass.setPipeline(buildMacroPipeline);for(const level of levels){macroPass.setBindGroup(0,level.buildMacroBind);macroPass.dispatchWorkgroups(Math.ceil(MACRO_COUNT/64));}macroPass.end();recordEvent('macro-hierarchy-rebuild',{levels:LEVEL_COUNT,nodesPerLevel:MACRO_COUNT});}const pass=enc.beginRenderPass({label:'sdf-main-pass',colorAttachments:[{view:context.getCurrentTexture().createView(),loadOp:'clear',storeOp:'store',clearValue:{r:.015,g:.035,b:.065,a:1}}]});pass.setPipeline(renderPipeline);pass.setBindGroup(0,renderBind);pass.draw(3);pass.end();device.queue.submit([enc.finish()]);
+    fpsN++;if(now-fpsT>=600){fps=fpsN*1000/(now-fpsT);fpsN=0;fpsT=now;smoothed=smoothed*.75+fps*.25;if(smoothed<27)lastSub27At=now;if(now-lastQualityChange>3500){let q=quality,reason='hold';if(stable30Cap){q=Math.min(1,quality+.04);reason='presentation-cap-recovery';}else if(smoothed<24){q=Math.max(.72,quality-.08);reason='sustained-gpu-bound';}else if(smoothed>28.5&&now-lastSub27At>7000){q=Math.min(1,quality+.04);reason='slow-recovery';}if(Math.abs(q-quality)>0.0001){quality=q;qualityState=reason;lastQualityChange=now;resize();recordEvent('quality-change',{quality:+quality.toFixed(2),reason})}}}const cadence=stable30Cap?' · 30 Hz iframe cap':'';const saturated=levels.some(l=>l.free===0)?' · ATLAS SATURATED':'';hud.textContent=`WEBGPU SDF ${pipelineMode.startsWith('legacy')?'LEGACY ANALYTIC':'HIERARCHICAL SPARSE'} · ${auto?'AUTO':'FREE'} · ${demoNames[demoId]}\nL0 ${levels[0].resident}/${MAX_BRICKS} · L1 ${levels[1].resident}/${MAX_BRICKS} · L2 ${levels[2].resident}/${MAX_BRICKS}\n${fps.toFixed(0)} rAF Hz · ${canvas.width}×${canvas.height} · scale ${quality.toFixed(2)}${cadence}${saturated}\n${debugBtn.textContent} · swipe scene to orbit focus · ▲ up ▼ down\ncoloured materials · projection Y + · orbit ${orbitPivotSource} · ${demoId>=4?'object-local sparse field · baked DSL snapshot':`camera clipmap · cut ${cutOn?'on':'off'}`}  \nREPORT copies adapter, shader, camera and clipmap state`;requestAnimationFrame(frame)}requestAnimationFrame(frame);
+}
+main().catch(e=>fatal('Startup failed.',e));
+</script>
+</body>
+</html>
