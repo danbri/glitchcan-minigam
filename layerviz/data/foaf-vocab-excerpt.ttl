@@ -1,0 +1,40 @@
+# Excerpt of the FOAF vocabulary (http://xmlns.com/foaf/0.1/, spec 0.99,
+# Brickley & Miller) plus one DOAP axiom — only the axioms relevant to
+# the terms used in tbl-card.ttl. Hand-excerpted 2026-08-02 because
+# xmlns.com was unreachable from the build environment; replace with a
+# full snapshot of http://xmlns.com/foaf/spec/index.rdf when possible.
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix doap: <http://usefulinc.com/ns/doap#> .
+
+foaf:Agent a rdfs:Class ; rdfs:label "Agent" .
+foaf:Person a rdfs:Class ; rdfs:label "Person" ;
+    rdfs:subClassOf foaf:Agent .
+foaf:Group a rdfs:Class ; rdfs:label "Group" ;
+    rdfs:subClassOf foaf:Agent .
+foaf:Document a rdfs:Class ; rdfs:label "Document" .
+foaf:PersonalProfileDocument a rdfs:Class ;
+    rdfs:label "Personal Profile Document" ;
+    rdfs:subClassOf foaf:Document .
+foaf:OnlineAccount a rdfs:Class ; rdfs:label "Online Account" .
+foaf:Project a rdfs:Class ; rdfs:label "Project" .
+
+foaf:knows rdfs:label "knows" ;
+    rdfs:domain foaf:Person ; rdfs:range foaf:Person .
+foaf:member rdfs:label "member" ;
+    rdfs:domain foaf:Group ; rdfs:range foaf:Agent .
+foaf:maker rdfs:label "maker" ;
+    rdfs:range foaf:Agent ;
+    owl:inverseOf foaf:made .
+foaf:made rdfs:label "made" ;
+    rdfs:domain foaf:Agent .
+foaf:account rdfs:label "account" ;
+    rdfs:domain foaf:Agent ; rdfs:range foaf:OnlineAccount .
+foaf:weblog rdfs:label "weblog" ;
+    rdfs:domain foaf:Agent ; rdfs:range foaf:Document .
+foaf:primaryTopic rdfs:label "primary topic" ;
+    rdfs:domain foaf:Document .
+
+doap:developer rdfs:label "developer" ;
+    rdfs:domain doap:Project ; rdfs:range foaf:Person .

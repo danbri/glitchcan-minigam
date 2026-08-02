@@ -249,6 +249,7 @@
 
     <script type="module">
         import { LayerViz, DEFAULT_GRAPH } from '../../layerviz/layerviz.js';
+        import { makeDraggablePanel } from '../../layerviz/panel.js';
 
         const container = document.getElementById('canvas-container');
         const badge = document.getElementById('backend-badge');
@@ -314,6 +315,7 @@
             localStorage.setItem('infoPanelCollapsed',
                 infoPanel.classList.contains('collapsed'));
         });
+        makeDraggablePanel(infoPanel, document.getElementById('info-header'));
     </script>
 </body>
 </html>
