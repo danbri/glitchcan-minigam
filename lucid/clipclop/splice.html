@@ -20,6 +20,8 @@
   .bar button { background:var(--panel); color:var(--ink); border:1px solid var(--edge); border-radius:6px; padding:6px 12px; cursor:pointer; font:12px ui-monospace,monospace; }
   .bar button.go { border-color:var(--acc); color:var(--acc); }
   .bar button:hover { border-color:var(--acc); }
+  .bar button.mode { color:var(--dim); }
+  .bar button.mode.active { color:var(--ink); border-color:var(--acc); }
   .bar .note { color:var(--dim); font-size:11px; }
   textarea { flex:0 0 40%; min-height:150px; background:var(--panel); color:var(--ink); border:0; border-bottom:1px solid var(--edge);
              padding:12px; resize:vertical; font:13px/1.5 ui-monospace, Menlo, monospace; tab-size:2; }
@@ -39,7 +41,11 @@
   <div class="col left">
     <div class="bar">
       <button type="button" class="go" id="run">splice &amp; run ▶</button>
-      <span class="note">edits the engine only in memory; boots it in the frame →</span>
+      <button type="button" id="mode-codegen" class="mode active">compiled tree</button>
+      <button type="button" id="mode-editlist" class="mode">edit list</button>
+    </div>
+    <div class="bar">
+      <span class="note" id="modenote">code: a shader compiled from the scene tree</span>
     </div>
     <textarea id="src" spellcheck="false"></textarea>
     <div class="banner">generated bridge WGSL (namespaced <code>lx_*</code>, injected at the CacheSample seam):</div>
@@ -56,6 +62,21 @@
 
   const $ = (id) => document.getElementById(id);
   const statusEl = $('status');
+  let mode = 'codegen';
+
+  const MODE_NOTE = {
+    codegen: 'code: a shader compiled from the scene tree',
+    editlist: 'data: a flat edit buffer, folded by a loop (Dreams-style)'
+  };
+  function setMode(m) {
+    mode = m;
+    $('mode-codegen').classList.toggle('active', m === 'codegen');
+    $('mode-editlist').classList.toggle('active', m === 'editlist');
+    $('modenote').textContent = MODE_NOTE[m];
+    run();
+  }
+  $('mode-codegen').onclick = () => setMode('codegen');
+  $('mode-editlist').onclick = () => setMode('editlist');
 
   // A scene sized to the engine's world (metres): a few big smooth-unioned
   // forms near the origin so the default camera frames them.
@@ -79,7 +100,7 @@
         return r.text();
       });
 
-      const { html, bridge } = spliceEngine(engineHtml, sceneJson);
+      const { html, bridge } = spliceEngine(engineHtml, sceneJson, { mode });
       $('wgsl').textContent = bridge.block;
 
       // Boot the spliced engine. Use a blob URL (not srcdoc) so the engine's
@@ -88,12 +109,13 @@
       const url = URL.createObjectURL(blob);
       $('frame').src = url;
 
-      const warn = bridge.unresolvedVars.length
-        ? ` · ${bridge.unresolvedVars.length} unresolved var(s) zeroed`
-        : '';
-      statusEl.textContent = 'spliced ✓ — engine booting in frame' + warn;
+      const detail = bridge.mode === 'editlist'
+        ? ` · ${bridge.count} edits` + (bridge.unsupported && bridge.unsupported.length ? ` · unsupported: ${bridge.unsupported.join(',')}` : '')
+        : (bridge.unresolvedVars && bridge.unresolvedVars.length ? ` · ${bridge.unresolvedVars.length} unresolved var(s) zeroed` : '');
+      statusEl.textContent = `spliced ✓ [${bridge.mode}] — engine booting in frame` + detail;
       statusEl.className = 'status ok';
-      window.__splice = { ok: true, wgslLen: bridge.block.length, unresolved: bridge.unresolvedVars };
+      window.__splice = { ok: true, mode: bridge.mode, wgslLen: bridge.block.length,
+        count: bridge.count, unsupported: bridge.unsupported, unresolved: bridge.unresolvedVars };
     } catch (e) {
       statusEl.textContent = 'error: ' + e.message;
       statusEl.className = 'status err';

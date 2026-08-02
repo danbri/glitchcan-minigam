@@ -88,7 +88,8 @@ const { wgsl } = generateWgslSceneSDF(loadJsonScene(sceneJson));
 
 - [x] `core/` codegen target: JSON scene → `fn sceneSDF(p, scene)->f32` (+ albedo). **Node-verifiable** — all 119 scenes emit valid, contract-matching WGSL; locked in by `tests/lucid-codegen-parity.test.js` (`clipclop bridge` block).
 - [x] Feed it into the engine — done **without editing the engine**, via a runtime DOM splice: `splice.html` fetches `index.html` as text, injects the bridge WGSL (namespaced `lx_*` to dodge the primitive-signature collisions — the engine's `sdCapsule` takes two endpoints, `sdTorus` two floats), rewrites the one bake seam (`cacheSceneSample`) to sample the Lucid field, and boots the result in an iframe. `splice-lib.js` holds the transform. Assembly is Node-checked (no duplicate `fn` defs, no undefined `lx_*` calls, seam anchors present) and locked in by the parity suite (`clipclop splice` block). **The WGSL compile + render still need a real WebGPU device** — headless boots to the engine's own "no adapter" screen.
-- [ ] Animation path: re-derive `sceneSDF` constants per frame → dirty region → re-bake.
+- [x] Second path — the **edit list** (`core/sdf-editlist.js`): flatten the scene tree into a flat edit buffer and fold it with a data-driven loop (the Dreams form, below). The splice offers both: `spliceEngine(html, scene, { mode: 'codegen' | 'editlist' })`, toggled live in `splice.html`. Flatten is Node-verified exact against a reference tree evaluator on the additive subset (`sdf edit list` block).
+- [ ] Animation path: for codegen, re-derive constants per frame; for the edit list, rewrite the buffer → dirty region → re-bake.
 - [ ] Provenance: engine authored externally (WebGPU sparse-clipmap design from YouTube notes); landed verbatim, kept precious. Modify with care.
 
 ## Beyond codegen: runtime-parameterized templates (the Dreams direction)
@@ -130,6 +131,18 @@ This does **not** retire the codegen bridge. The split is by *lifetime*:
 | Param change | recompile | write a buffer, mark dirty |
 | Good for | fixed scene catalogue, exact per-object parity | live sculpting, morphable families, physics-driven geometry |
 | Verifiable without GPU | ✅ (string codegen) | partly (template math in Node; bake needs a device) |
+
+**First step of the runtime path is landed: the edit list** (`core/sdf-editlist.js`).
+It flattens a scene tree into a flat edit buffer and folds it with a data-driven
+loop — `field = 1e9; for each edit: field = blend(field, primitive(edit))`. That
+is the "data the GPU reads" form: to change the scene you rewrite the buffer, not
+recompile. `flattenToEdits` / `evalEdits` / `evalTree` / `generateEditListWgsl`;
+the splice runs it via `mode: 'editlist'`. Faithful on the additive subset
+(unions, one smoothUnion of primitives, running-field subtracts) — verified exact
+in Node against the reference tree evaluator; an approximation for nested smooth
+blends with different radii, which is the genuine tree-vs-list difference. The
+quadruped *template* below is the next step on the same path: a template is an
+edit list whose numbers come from a parameter vector.
 
 Open question to settle before building: does a template's parameter set live in
 the **same JSON scene standard** (a new node type, e.g. `template: "quadruped"`

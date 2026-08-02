@@ -20,6 +20,7 @@ const { generateWgslFromJson, generateWgslSceneSDF } = await import('../lucid/co
 const { evaluateExpr, evaluateRig } = await import('../lucid/core/rig-evaluator.js');
 const { exprToSexpr, readOne, formToExpr, formToNode } = await import('../lucid/core/sexpr.js');
 const { spliceEngine } = await import('../lucid/clipclop/splice-lib.js');
+const { flattenToEdits, evalEdits, evalTree, generateEditListWgsl } = await import('../lucid/core/sdf-editlist.js');
 
 const glsl = (json, opts) => generateGlslFromJson(loadJsonScene(json), opts || {});
 const wgsl = (json, opts) => generateWgslFromJson(loadJsonScene(json), opts || {});
@@ -374,14 +375,67 @@ describe('clipclop splice (splice-lib.js)', () => {
       const undefinedCalls = lxCalls(mod).filter(c => !declSet.has(c));
       expect(undefinedCalls).toEqual([]);              // every lx_ call is defined
 
-      expect(html).toContain(`return ${bridge.entry}(p,s);`);  // bake seam rewritten
+      expect(html).toContain(`let v=${bridge.entryCall};return CacheSample(v.x,v.yzw);`); // bake seam
       expect(html).toContain('name="lucid-splice"');
     });
   }
 
+  it('splices the edit-list mode with a data-driven loop, no collisions', () => {
+    const root = formToNode(readOne(cases[0]));
+    const { html, bridge } = spliceEngine(engineHtml, { name: 't', root }, { mode: 'editlist' });
+    expect(bridge.mode).toBe('editlist');
+    expect(bridge.count).toBeGreaterThan(0);
+    const [sceneW, analyticW, cacheW] = wgslBlocks(html);
+    const mod = sceneW + '\n' + analyticW + '\n' + cacheW;
+    const decls = fnDecls(mod);
+    expect([...new Set(decls.filter((n, i) => decls.indexOf(n) !== i))]).toEqual([]);
+    expect(mod).toContain('fn lx_editField(p: vec3f) -> vec4f');
+    expect(html).toContain('let v=lx_editField(p);return CacheSample(v.x,v.yzw);');
+  });
+
   it('throws a clear error if the engine seam anchors are gone', () => {
     expect(() => spliceEngine('<html>no wgsl</html>', { name: 't', root: { type: 'sphere', params: {} } }))
       .toThrow(/anchor not found|header not found/);
+  });
+});
+
+// The edit list is the Dreams-style runtime form: flatten the tree into a flat
+// buffer, fold it with a loop. It must reproduce the tree field exactly on the
+// additive subset. Verified against a reference tree evaluator, GPU-free.
+describe('sdf edit list (core/sdf-editlist.js)', () => {
+  const editScenes = {
+    'smoothUnion of primitives': '(scale 3 (smoothUnion :k 0.5 (sphere :r 1.2) (translate [0 1.4 0] (sphere :r 0.9)) (translate [1.8 0 0] (box :size [0.7 0.7 0.7]))))',
+    'union': '(union (sphere :r 1) (translate [1.5 0 0] (box :size [0.6 0.6 0.6])))',
+    'rotated + scaled': '(scale 2 (rotate [0 40 0] (union (box :size [0.6 0.3 0.3]) (translate [1 0 0] (sphere :r 0.4)))))',
+    'subtract': '(subtract (sphere :r 1) (translate [0.6 0.6 0] (sphere :r 0.6)))'
+  };
+  const pts = [];
+  for (let i = -4; i <= 4; i++) for (let j = -4; j <= 4; j++) for (let k = -4; k <= 4; k++)
+    pts.push([i * 0.8 + 0.13, j * 0.8 - 0.07, k * 0.8 + 0.21]);
+
+  for (const [name, src] of Object.entries(editScenes)) {
+    it(`flat fold equals the tree field: ${name}`, () => {
+      const scene = loadJsonScene({ name, root: formToNode(readOne(src)) });
+      const { edits, unsupported } = flattenToEdits(scene);
+      expect(unsupported).toEqual([]);
+      expect(edits.length).toBeGreaterThan(0);
+      let maxErr = 0;
+      for (const p of pts) {
+        const a = Math.max(-100, Math.min(100, evalEdits(edits, p).d));
+        const b = Math.max(-100, Math.min(100, evalTree(scene.root, p).d));
+        maxErr = Math.max(maxErr, Math.abs(a - b));
+      }
+      expect(maxErr).toBeLessThan(1e-4);
+    });
+  }
+
+  it('generates a balanced, data-driven WGSL loop', () => {
+    const scene = loadJsonScene({ name: 't', root: formToNode(readOne(editScenes.union)) });
+    const { wgsl, count } = generateEditListWgsl(scene);
+    expect(count).toBe(2);
+    expect(wgsl).toContain('fn lx_editField(p: vec3f) -> vec4f');
+    expect(wgsl).toContain('for (var i = 0u;');
+    expect((wgsl.match(/\{/g) || []).length).toBe((wgsl.match(/\}/g) || []).length);
   });
 });
 

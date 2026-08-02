@@ -22,6 +22,7 @@
 
 import { loadJsonScene } from '../core/json-loader.js';
 import { generateWgslSceneSDF } from '../core/wgsl-codegen.js';
+import { generateEditListWgsl } from '../core/sdf-editlist.js';
 
 /** Prefix every function the bridge declares, at declaration and call sites. */
 export function namespaceWgsl(wgsl, prefix = 'lx_') {
@@ -37,18 +38,31 @@ export function namespaceWgsl(wgsl, prefix = 'lx_') {
 }
 
 /**
- * Build the namespaced bridge WGSL block for a Lucid scene.
- * emitStructs:false — the engine already declares Scene and CacheSample.
- * @returns {{ block: string, entry: string, unresolvedVars: string[] }}
+ * Build the WGSL block for a Lucid scene, in one of two modes:
+ *
+ *  'codegen'  — the compiled tree (generateWgslSceneSDF). Code: nested calls.
+ *               Namespaced lx_* to dodge the engine's primitive signatures.
+ *  'editlist' — the flattened edit list (generateEditListWgsl). Data: a const
+ *               buffer folded by a loop. Already self-contained + prefixed;
+ *               no namespacing needed (it declares no bare sd* primitives).
+ *
+ * Both end at a function that returns vec4f(distance, albedo). The caller wires
+ * the bake seam to it.
+ * @returns {{ block, fieldFn, mode, unresolvedVars?, count?, unsupported? }}
  */
-export function buildBridgeBlock(sceneJson, prefix = 'lx_') {
+export function buildBridgeBlock(sceneJson, opts = {}) {
+  const prefix = opts.prefix || 'lx_';
+  const mode = opts.mode || 'codegen';
   const scene = loadJsonScene(sceneJson);
+
+  if (mode === 'editlist') {
+    const { wgsl, count, unsupported } = generateEditListWgsl(scene, { prefix });
+    // edit-list field takes only the point.
+    return { block: wgsl, entryCall: `${prefix}editField(p)`, mode, count, unsupported };
+  }
   const { wgsl, unresolvedVars } = generateWgslSceneSDF(scene, { emitStructs: false });
-  return {
-    block: namespaceWgsl(wgsl, prefix),
-    entry: prefix + 'cacheSceneSample',
-    unresolvedVars
-  };
+  // codegen's field (lucidSceneField) takes (p, scene).
+  return { block: namespaceWgsl(wgsl, prefix), entryCall: `${prefix}lucidSceneField(p, s)`, mode, unresolvedVars };
 }
 
 /** Find the body of `header` (up to its matching brace) and replace it. */
@@ -73,12 +87,12 @@ const CACHE_FN_HEADER = 'fn cacheSceneSample(p:vec3<f32>,s:Scene)->CacheSample{'
  * Produce the spliced engine HTML.
  * @param {string} engineHtml - the fetched lucid/clipclop/index.html text
  * @param {object} sceneJson  - a Lucid scene (loader input shape)
- * @param {object} [opts]     - { prefix }
- * @returns {{ html: string, bridge: {block,entry,unresolvedVars} }}
+ * @param {object} [opts]     - { prefix, mode: 'codegen'|'editlist' }
+ * @returns {{ html: string, bridge: {block,entryCall,mode,...} }}
  */
 export function spliceEngine(engineHtml, sceneJson, opts = {}) {
   const prefix = opts.prefix || 'lx_';
-  const bridge = buildBridgeBlock(sceneJson, prefix);
+  const bridge = buildBridgeBlock(sceneJson, { prefix, mode: opts.mode || 'codegen' });
 
   if (!engineHtml.includes(CACHESAMPLE_STRUCT)) {
     throw new Error('splice: CacheSample struct anchor not found — engine changed?');
@@ -94,8 +108,9 @@ export function spliceEngine(engineHtml, sceneJson, opts = {}) {
     CACHESAMPLE_STRUCT + '\n/* ===== Lucid bridge (spliced) ===== */\n' + bridge.block + '\n'
   );
 
-  // 2) Rewrite the bake seam to sample the Lucid field.
-  html = replaceFnBody(html, CACHE_FN_HEADER, `return ${bridge.entry}(p,s);`);
+  // 2) Rewrite the bake seam to sample the Lucid field (vec4f: dist + albedo).
+  html = replaceFnBody(html, CACHE_FN_HEADER,
+    `let v=${bridge.entryCall};return CacheSample(v.x,v.yzw);`);
 
   // 3) Marker so a headless check can confirm the transform reached the browser.
   html = html.replace('</title>', '</title>\n<meta name="lucid-splice" content="active">');
