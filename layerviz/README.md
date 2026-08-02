@@ -54,3 +54,10 @@ const viz = new LayerViz({
 
 `viz.toggleAnimation()`, `viz.toggleLabels()`, `viz.resetCamera()`, and
 `viz.dispose()` are the public controls.
+
+## Backends
+
+- three.js/WebGL: `layerviz-three.js` (here), used by `index.html`.
+- WebGPU: `magpie/layerviz/layerviz-webgpu.js` (raw WGSL, instanced),
+  used by `magpie/layerviz/index.html` with automatic WebGL fallback.
+  Both implement the same RendererAdapter contract against this core.
