@@ -51,14 +51,35 @@ is the **standard at the input**, not the pixels.
 
 ## Roadmap: reach this engine from the Lucid scene standard
 
-The one scene-specific input clipmap needs is a WGSL `fn sceneSDF(p: vec3f) -> f32`
-(plus an albedo). Lucid's codegen already turns JSON scenes (primitives, CSG,
-`defs`/`ref`, params, transforms) into WGSL. So the bridge is a **new codegen
-target** — `generateWgslSceneSDF(scene)` — that emits exactly that function from a
-Lucid scene, letting the *same* scenes Mayfly/Stinkyfish view analytically be
-**baked and walked** here.
+The one scene-specific input clipmap needs is a WGSL distance field plus an
+albedo, in this engine's exact contract:
 
-- [ ] `core/` codegen target: JSON scene → `fn sceneSDF(p)->f32` (+ albedo). Node-verifiable.
-- [ ] Feed it into a fork of this engine's `sceneSDFJS`/`cacheSceneSample` (replace hardcoded demos).
+```wgsl
+struct Scene { params: vec4f };            // .x cut flag, .y time (seconds), .z demoId
+struct CacheSample { distance: f32, albedo: vec3f };
+fn sceneSDF(p: vec3f, scene: Scene) -> f32;
+fn cacheSceneSample(p: vec3f, s: Scene) -> CacheSample;
+fn cacheSceneSDF(p: vec3f, s: Scene) -> f32;
+fn cacheSceneAlbedo(p: vec3f, s: Scene) -> vec3f;
+```
+
+Lucid's codegen already turns JSON scenes (primitives, CSG, `defs`/`ref`, params,
+transforms) into WGSL. So the bridge is a **codegen target** —
+`generateWgslSceneSDF(scene, options)` in `core/wgsl-codegen.js` — that emits
+exactly that set from a Lucid scene, reusing the same `walkNode`/primitive/helper
+machinery Mayfly and Stinkyfish already share. The output is **uniform-free**
+(params baked as constants, so no bind group to collide with the engine's), `time`
+is wired to `scene.params.y`, and inputs the engine has no source for
+(frame/mouse) are zeroed. It returns `{ wgsl, unresolvedVars }`.
+
+```js
+import { loadJsonScene } from '../core/json-loader.js';
+import { generateWgslSceneSDF } from '../core/wgsl-codegen.js';
+const { wgsl } = generateWgslSceneSDF(loadJsonScene(sceneJson));
+// → drop-in replacement for the engine's hardcoded demo scene block
+```
+
+- [x] `core/` codegen target: JSON scene → `fn sceneSDF(p, scene)->f32` (+ albedo). **Node-verifiable** — all 119 scenes emit valid, contract-matching WGSL; locked in by `tests/lucid-codegen-parity.test.js` (`clipmap bridge` block).
+- [ ] Feed it into a fork of this engine's scene block (replace the hardcoded `sceneMonument`/`cache*` demos). Full self-contained replacement — the engine's own `sd*` primitives use different signatures (e.g. `sdCapsule` takes two endpoints), so the bridge must own the primitive set (`emitPrimitives: true`, the default). Requires a real WebGPU device to render-verify.
 - [ ] Animation path: re-derive `sceneSDF` constants per frame → dirty region → re-bake.
 - [ ] Provenance: engine authored externally (WebGPU sparse-clipmap design from YouTube notes); landed verbatim, kept precious. Modify with care.

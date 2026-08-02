@@ -116,6 +116,118 @@ export function generateWgslFromJson(scene, options = {}) {
   return wgsl;
 }
 
+/**
+ * Codegen bridge for the clipmap engine (lucid/clipmap/).
+ *
+ * The clipmap engine bakes a scene into a sparse SDF atlas, so the ONE
+ * scene-specific thing it needs is a distance field it can sample plus an
+ * albedo. Its contract (see lucid/clipmap/index.html):
+ *
+ *   struct Scene { params: vec4f };            // .x cut flag, .y time, .z demoId
+ *   struct CacheSample { distance: f32, albedo: vec3f };
+ *   fn sceneSDF(p: vec3f, scene: Scene) -> f32;
+ *   fn cacheSceneSample(p: vec3f, s: Scene) -> CacheSample;
+ *   fn cacheSceneSDF(p: vec3f, s: Scene) -> f32;
+ *   fn cacheSceneAlbedo(p: vec3f, s: Scene) -> vec3f;
+ *
+ * This emits exactly that set from a Lucid JSON scene, reusing the same
+ * walkNode / primitive / helper machinery as generateWgslFromJson. Params are
+ * inlined as constants (no uniform bind group) so the module is self-contained
+ * and drops in where the engine's hardcoded demo WGSL currently lives. `time`
+ * is wired to `scene.params.y`; inputs the engine has no source for
+ * (frame/timeDelta/mouse) are zeroed.
+ *
+ * Because it is uniform-free, animation follows the engine's own path:
+ * re-derive the inlined constants per frame (or emit with time live) → mark the
+ * affected region dirty → re-bake. Node-verifiable: the output is valid
+ * standalone WGSL.
+ *
+ * @param {Object} scene - processed scene IR (from json-loader)
+ * @param {Object} options
+ * @param {boolean} [options.emitStructs=true]     emit Scene + CacheSample structs
+ * @param {boolean} [options.emitPrimitives=true]  emit the sd* primitive set
+ * @param {boolean} [options.emitHelpers=true]     emit smin, rotation, noise helpers
+ * @param {string|number} [options.ellipsoidFidelity='auto']  parity with GLSL resolver
+ * @returns {{ wgsl: string, unresolvedVars: string[] }}
+ */
+export function generateWgslSceneSDF(scene, options = {}) {
+  const emitStructs = options.emitStructs !== false;
+  const emitPrimitives = options.emitPrimitives !== false;
+  const emitHelpers = options.emitHelpers !== false;
+
+  const ctx = {
+    uniforms: new Set(),
+    functions: [],
+    helpers: [],
+    helperCounter: 0,
+    showCutters: false,
+    // Inline every param as a constant → no SceneUniforms bind group (which
+    // would collide with the engine's own bindings). Unknown vars fall back to 0.
+    inlineDefaults: true,
+    inlineUnknownAsZero: true,
+    unresolvedVars: new Set(),
+    localVars: {},
+    instanceIdParam: null,
+    sceneParams: scene.params || {},
+    sceneRig: scene.rig || null,
+    ancestorRotation: null,
+    nodeIdCounter: 0,
+    nodeIdMap: new Map(),
+    pickingMode: false,
+    // Default to 'auto' here (not 'fast'): baked worlds are explored up close,
+    // where a fast ellipsoid's error compounds — spend the Newton steps.
+    ellipsoidFidelity: options.ellipsoidFidelity != null ? options.ellipsoidFidelity : 'auto',
+    ellipsoidHelpersEmitted: new Set(),
+    // Re-map builtins to what the clipmap engine can actually provide.
+    builtinOverrides: {
+      time: 'scene.params.y',
+      frame: '0.0',
+      timeDelta: '0.0',
+      mouse: 'vec4f(0.0, 0.0, 0.0, 0.0)',
+      resolution: 'vec2f(1.0, 1.0)',
+      cameraPos: 'vec3f(0.0, 0.0, 0.0)'
+    }
+  };
+
+  const sceneExpr = walkNode(scene.root, ctx);
+
+  let wgsl = '// ===== Lucid → clipmap scene bridge (generated) =====\n';
+  wgsl += '// Emitted by generateWgslSceneSDF(). Replaces the engine\'s hardcoded\n';
+  wgsl += '// demo scene block. Uniform-free: params baked as constants.\n\n';
+
+  if (emitStructs) {
+    wgsl += 'struct Scene { params: vec4<f32> };\n';
+    wgsl += 'struct CacheSample { distance: f32, albedo: vec3<f32> };\n\n';
+  }
+  if (emitPrimitives) wgsl += generatePrimitiveFunctions();
+  if (emitHelpers) wgsl += generateHelperFunctions();
+
+  if (ctx.helpers.length > 0) {
+    wgsl += '// Generated helper functions\n';
+    wgsl += ctx.helpers.join('\n\n');
+    wgsl += '\n\n';
+  }
+
+  // The one field the walked tree produces: vec4f(distance, r, g, b).
+  wgsl += '// Scene field: distance in .x, albedo in .yzw\n';
+  wgsl += 'fn lucidSceneField(p: vec3f, scene: Scene) -> vec4f {\n';
+  wgsl += `  return ${sceneExpr};\n`;
+  wgsl += '}\n\n';
+
+  // The engine's exact contract, derived from the single field function.
+  wgsl += 'fn sceneSDF(p: vec3f, scene: Scene) -> f32 {\n';
+  wgsl += '  return lucidSceneField(p, scene).x;\n';
+  wgsl += '}\n\n';
+  wgsl += 'fn cacheSceneSample(p: vec3f, s: Scene) -> CacheSample {\n';
+  wgsl += '  let v = lucidSceneField(p, s);\n';
+  wgsl += '  return CacheSample(v.x, v.yzw);\n';
+  wgsl += '}\n\n';
+  wgsl += 'fn cacheSceneSDF(p: vec3f, s: Scene) -> f32 { return cacheSceneSample(p, s).distance; }\n';
+  wgsl += 'fn cacheSceneAlbedo(p: vec3f, s: Scene) -> vec3f { return cacheSceneSample(p, s).albedo; }\n';
+
+  return { wgsl, unresolvedVars: [...ctx.unresolvedVars] };
+}
+
 const MAX_CODEGEN_DEPTH = 200;
 
 /**
@@ -1168,7 +1280,10 @@ function generateDisplace(node, ctx) {
     : '4';
   const noiseType = node.noiseType || 'fbm';
   ctx.needsNoise = true;
-  const timeOffset = node.animate ? ' + u.time * 0.5' : '';
+  // Resolve time through the same builtin override as {var:'time'} so the
+  // animate path doesn't leak a hardcoded `u.time` into bridge output.
+  const timeVar = (ctx.builtinOverrides && ctx.builtinOverrides.time) || 'u.time';
+  const timeOffset = node.animate ? ` + ${timeVar} * 0.5` : '';
   const pt = applyTransform('p', node.transform, ctx);
 
   let noiseCall;
@@ -1286,6 +1401,12 @@ function valueToWgsl(value, ctx, expectedType = null) {
     return formatFloat(value.value);
 
   case 'var':
+    // Builtin overrides let a caller re-map time/frame/mouse/etc. to a different
+    // source than the default `u.*` uniforms — e.g. the clipmap bridge feeds
+    // `time` from `scene.params.y` and zeroes the inputs the engine lacks.
+    if (ctx.builtinOverrides && Object.prototype.hasOwnProperty.call(ctx.builtinOverrides, value.name)) {
+      return ctx.builtinOverrides[value.name];
+    }
     // Handle built-in variables that come from main uniforms
     if (value.name === 'time') {
       return 'u.time';
@@ -1321,6 +1442,18 @@ function valueToWgsl(value, ctx, expectedType = null) {
     // Register uniform with type hint if provided, or infer from name
     const uniformName = `u_${value.name}`;
     const nameLower = value.name.toLowerCase();
+    // Self-contained bridge mode: a var with no default in sceneParams would
+    // otherwise emit a dangling `scene.u_<name>` reference. Inline it as zero
+    // (scalar or vec3) so the emitted module needs no uniform bind group.
+    if (ctx.inlineDefaults && ctx.inlineUnknownAsZero) {
+      const wantVec3 = nameLower.includes('color') || nameLower.includes('radii') ||
+        nameLower.includes('position') || nameLower.includes('translate') ||
+        nameLower.includes('rotate') || nameLower.includes('normal') ||
+        nameLower.includes('direction') ||
+        (nameLower.includes('size') && !nameLower.includes('scale'));
+      if (ctx.unresolvedVars) ctx.unresolvedVars.add(value.name);
+      return wantVec3 ? 'vec3f(0.0, 0.0, 0.0)' : '0.0';
+    }
     // Use more specific patterns to avoid false positives (e.g., "hipposcale" matching "pos")
     const isVec3 = expectedType === 'vec3' ||
       nameLower.includes('color') ||

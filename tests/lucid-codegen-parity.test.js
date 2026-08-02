@@ -16,7 +16,7 @@ globalThis.document = { createElement: () => ({}) };
 
 const { loadJsonScene } = await import('../lucid/core/json-loader.js');
 const { generateGlslFromJson } = await import('../lucid/core/json-codegen.js');
-const { generateWgslFromJson } = await import('../lucid/core/wgsl-codegen.js');
+const { generateWgslFromJson, generateWgslSceneSDF } = await import('../lucid/core/wgsl-codegen.js');
 const { evaluateExpr, evaluateRig } = await import('../lucid/core/rig-evaluator.js');
 
 const glsl = (json, opts) => generateGlslFromJson(loadJsonScene(json), opts || {});
@@ -263,5 +263,67 @@ describe('whole library still codegens on both backends', () => {
       }
     }
     expect(failures).toEqual([]);
+  });
+
+  // The clipmap engine (lucid/clipmap/) bakes a scene, so it needs the codegen
+  // to emit its exact contract from a Lucid JSON scene. Lock that bridge in.
+  describe('clipmap bridge (generateWgslSceneSDF)', () => {
+    const bridge = (json, opts) => generateWgslSceneSDF(loadJsonScene(json), opts || {});
+    const REQUIRED = [
+      'struct Scene', 'struct CacheSample',
+      'fn sceneSDF(p: vec3f, scene: Scene) -> f32',
+      'fn cacheSceneSample(p: vec3f, s: Scene) -> CacheSample',
+      'fn cacheSceneSDF(p: vec3f, s: Scene) -> f32',
+      'fn cacheSceneAlbedo(p: vec3f, s: Scene) -> vec3f'
+    ];
+    const balanced = (s) => {
+      let d = 0;
+      for (const c of s) { if (c === '{') d++; else if (c === '}') { d--; if (d < 0) return false; } }
+      return d === 0;
+    };
+
+    it('emits the engine contract for a simple scene', () => {
+      const { wgsl } = bridge({ name: 't', root: { type: 'sphere', params: { r: 0.5, color: [1, 0, 0] } } });
+      for (const sig of REQUIRED) expect(wgsl).toContain(sig);
+      expect(balanced(wgsl)).toBe(true);
+    });
+
+    it('is uniform-free — no dangling scene.u_ or leaked u.* builtins', () => {
+      // time-driven displace is the classic leak path
+      const { wgsl } = bridge({
+        name: 't',
+        root: { type: 'displace', animate: true, amount: 0.1,
+          child: { type: 'sphere', params: { r: 0.5 } } }
+      });
+      expect(wgsl).not.toContain('scene.u_');
+      expect(wgsl).not.toContain('u.time');
+      expect(wgsl).toContain('scene.params.y');  // time wired to the engine's slot
+    });
+
+    it('respects emit flags for splicing into an engine that already has structs/primitives', () => {
+      const { wgsl } = bridge({ name: 't', root: { type: 'sphere', params: { r: 0.5 } } },
+        { emitStructs: false, emitPrimitives: false, emitHelpers: false });
+      expect(wgsl).not.toContain('struct Scene');
+      expect(wgsl).not.toContain('fn sdSphere');
+      expect(wgsl).toContain('fn sceneSDF(p: vec3f, scene: Scene)');  // contract still present
+    });
+
+    it('generates valid-structured output for all scenes', () => {
+      const failures = [];
+      for (const f of files) {
+        try {
+          const { wgsl } = generateWgslSceneSDF(loadJsonScene(JSON.parse(readFileSync(f, 'utf8'))));
+          const problems = [];
+          for (const sig of REQUIRED) if (!wgsl.includes(sig)) problems.push('missing ' + sig);
+          if (!balanced(wgsl)) problems.push('unbalanced');
+          if (wgsl.includes('scene.u_')) problems.push('dangling uniform');
+          if (/\bu\.(time|frame|mouse|resolution|cameraPos)\b/.test(wgsl)) problems.push('leaked builtin');
+          if (problems.length) failures.push(path.basename(f) + ': ' + problems.join(', '));
+        } catch (e) {
+          failures.push(path.basename(f) + ': ' + e.message.slice(0, 60));
+        }
+      }
+      expect(failures).toEqual([]);
+    });
   });
 });
