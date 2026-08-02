@@ -222,7 +222,9 @@ export function formToNode(form) {
   if (head === 'material') {
     const color = formToExpr(rest[0]);
     const child = formToNode(rest[1]);
-    return { type: 'material', color, child };
+    // color must live at params.color: the GLSL codegen reads only
+    // node.params.color (WGSL reads either). Put it there for both.
+    return { type: 'material', params: { color }, child };
   }
 
   if (CSG.has(head)) {
