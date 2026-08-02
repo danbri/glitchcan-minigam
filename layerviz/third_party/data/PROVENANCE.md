@@ -15,6 +15,7 @@
   `browser-wasm.js` + wasm assets (only for `engine: 'wasm'`), and
   the HACL crypto glue. If a page needs those, vendor them beside
   these files — browser.js resolves them relative to itself.
+- Location: `layerviz/third_party/data/` (owner's choice, 2026-08-02).
 - Used by: `layerviz/rdf.html`.
 - Known quirks of this build (2026-08-02): `FILTER [NOT] EXISTS`
   returns empty results (use `MINUS` or filter in JS); statements
