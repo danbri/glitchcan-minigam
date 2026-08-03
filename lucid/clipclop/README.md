@@ -120,6 +120,14 @@ The same logic extends to the harder layers:
   A rig/constraint solver that runs as a compute pass writes joint transforms into
   the same parameter buffer the template reads — so "evaluate rig → drive geometry"
   becomes one GPU round-trip, not a CPU per-frame loop feeding uniforms.
+  **Step 1&2 landed** (`core/gpu-physics.js`, demo `../physics.html`): a writable
+  body buffer and a single-dispatch integrator (gravity, damping, ground bounce,
+  wall reflect) emitted as a WGSL `@compute` shader over `var<storage,
+  read_write> bodies` — state stays on the GPU, no readback. Verified in Node by
+  a CPU twin that mirrors the shader math line-for-line (bodies fall, settle, stay
+  bounded, deterministic, never sink through the floor); the twin also drives the
+  Mayfly demo so you can watch it. Next: pairwise piling, then XPBD joints so the
+  quadruped legs make a physical puppet.
 - **The rig `chains`/`conserved` work** (CPU today, in `rig-evaluator.js`) is the
   CPU reference for exactly such a solver. Its expression AST is the thing to port.
 

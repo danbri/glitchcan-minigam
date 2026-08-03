@@ -22,6 +22,7 @@ const { exprToSexpr, readOne, formToExpr, formToNode } = await import('../lucid/
 const { spliceEngine } = await import('../lucid/clipclop/splice-lib.js');
 const { flattenToEdits, evalEdits, evalTree, generateEditListWgsl } = await import('../lucid/core/sdf-editlist.js');
 const { quadruped, lerpQuadruped, resolveParams, QUADRUPED_PRESETS } = await import('../lucid/core/sdf-template.js');
+const { defaultPhysicsConfig, initBodies, stepBodies, generatePhysicsWgsl } = await import('../lucid/core/gpu-physics.js');
 
 const glsl = (json, opts) => generateGlslFromJson(loadJsonScene(json), opts || {});
 const wgsl = (json, opts) => generateWgslFromJson(loadJsonScene(json), opts || {});
@@ -479,6 +480,44 @@ describe('quadruped template (core/sdf-template.js)', () => {
     const { wgsl, count } = generateEditListWgsl(loadJsonScene(quadruped('dog')));
     expect(count).toBeGreaterThanOrEqual(10);
     expect(wgsl).toContain('fn lx_editField(p: vec3f) -> vec4f');
+  });
+});
+
+// GPU physics: the CPU twin is the oracle for the WGSL integrator. If the twin
+// is physically correct and matches the shader math, the GPU pass is trusted.
+describe('gpu physics (core/gpu-physics.js)', () => {
+  const cfg = defaultPhysicsConfig();
+
+  it('bodies fall, settle on the ground, stay in bounds, stay finite', () => {
+    const bodies = initBodies(24, cfg);
+    const y0 = bodies.map(b => b.p[1]);
+    for (let s = 0; s < 700; s++) stepBodies(bodies, cfg);
+    expect(bodies.every((b, i) => b.p[1] < y0[i])).toBe(true);           // fell
+    expect(bodies.every(b => Math.abs(b.p[1] - (cfg.groundY + cfg.radius)) < 0.03)).toBe(true); // on ground
+    expect(bodies.every(b => Math.hypot(...b.v) < 0.1)).toBe(true);       // at rest
+    expect(bodies.every(b => Math.abs(b.p[0]) <= cfg.bound + 1e-6 && Math.abs(b.p[2]) <= cfg.bound + 1e-6)).toBe(true);
+    expect(bodies.every(b => [...b.p, ...b.v].every(Number.isFinite))).toBe(true);
+  });
+
+  it('is deterministic — same init, same trajectory', () => {
+    const a = initBodies(16, cfg), b = initBodies(16, cfg);
+    for (let s = 0; s < 200; s++) { stepBodies(a, cfg); stepBodies(b, cfg); }
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+
+  it('a body never sinks below the ground on a hard drop', () => {
+    const one = [{ p: [0, 6, 0], v: [0, 0, 0] }];
+    let minY = Infinity;
+    for (let s = 0; s < 400; s++) { stepBodies(one, cfg); minY = Math.min(minY, one[0].p[1]); }
+    expect(minY).toBeGreaterThanOrEqual(cfg.groundY + cfg.radius - 1e-6);
+  });
+
+  it('emits a single-dispatch compute shader over a read_write body buffer', () => {
+    const w = generatePhysicsWgsl(cfg);
+    expect(w).toContain('@compute @workgroup_size(64)');
+    expect(w).toContain('var<storage, read_write> bodies');
+    expect(w).toContain('fn integrate(');
+    expect((w.match(/\{/g) || []).length).toBe((w.match(/\}/g) || []).length);
   });
 });
 
