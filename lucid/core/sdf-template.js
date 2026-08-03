@@ -159,3 +159,56 @@ export function quadruped(p) {
     : body;
   return { name: 'quadruped', root };
 }
+
+// ---- driving the template geometry from a physics rig (item 2) -----------
+
+/** A capsule oriented from A to B (Lucid capsule runs along +y → rotateAxis). */
+export function orientedCapsule(A, B, r, color) {
+  const d = [B[0] - A[0], B[1] - A[1], B[2] - A[2]];
+  const len = Math.hypot(d[0], d[1], d[2]) || 1e-6;
+  const dir = [d[0] / len, d[1] / len, d[2] / len];
+  const mid = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2, (A[2] + B[2]) / 2];
+  let axis = [dir[2], 0, -dir[0]];                 // cross([0,1,0], dir)
+  const al = Math.hypot(axis[0], axis[1], axis[2]);
+  if (al < 1e-5) axis = [1, 0, 0];                 // dir parallel to Y
+  else axis = [axis[0] / al, axis[1] / al, axis[2] / al];
+  const angle = Math.acos(Math.max(-1, Math.min(1, dir[1]))) * 180 / Math.PI;
+  return { type: 'capsule', params: { h: len / 2, r, color },
+    transform: { translate: mid, rotateAxis: { axis, angle } } };
+}
+
+/**
+ * Build the full quadruped GEOMETRY from a physics rig's joint positions — a
+ * torso, neck, four legs, a tail (oriented capsules) and a head (sphere). So
+ * the ragdoll is not beads: it is the animal, and as physics moves the joints,
+ * the limbs follow. `params` sets colours/thicknesses (a species tint).
+ * @param {{bodies:Array, joints:string[]}} rig - from buildQuadrupedRig
+ */
+export function poseQuadrupedFromRig(rig, params = {}) {
+  const q = resolveParams(params);
+  const at = {};
+  rig.joints.forEach((name, i) => { at[name] = rig.bodies[i].p; });
+  const bodyR = params.bodyR ?? 0.34;
+  const legR = params.legR ?? 0.13;
+  const bcol = q.bodyColor, lcol = q.legColor, scol = q.snoutColor;
+  const parts = [
+    orientedCapsule(at.shoulder, at.hip, bodyR, bcol),       // torso
+    orientedCapsule(at.shoulder, at.neck, bodyR * 0.6, bcol), // neck
+    orientedCapsule(at.hip, at.tail, legR * 0.7, lcol),       // tail
+    orientedCapsule(at.shoulder, at.footFL, legR, lcol),      // legs
+    orientedCapsule(at.shoulder, at.footFR, legR, lcol),
+    orientedCapsule(at.hip, at.footBL, legR, lcol),
+    orientedCapsule(at.hip, at.footBR, legR, lcol),
+    { type: 'sphere', params: { r: bodyR * 0.9, color: bcol }, transform: { translate: at.head.slice() } }, // head
+    // snout: forward of the head, along the neck→head direction
+    (() => {
+      const d = [at.head[0] - at.neck[0], at.head[1] - at.neck[1], at.head[2] - at.neck[2]];
+      const l = Math.hypot(d[0], d[1], d[2]) || 1e-6;
+      const s = [at.head[0] + d[0] / l * bodyR * 0.9, at.head[1] + d[1] / l * bodyR * 0.9, at.head[2] + d[2] / l * bodyR * 0.9];
+      return { type: 'sphere', params: { r: bodyR * 0.55, color: scol }, transform: { translate: s } };
+    })(),
+    // four foot pads
+    ...['footFL', 'footFR', 'footBL', 'footBR'].map(fn => ({ type: 'sphere', params: { r: legR * 1.1, color: scol }, transform: { translate: at[fn].slice() } }))
+  ];
+  return { name: 'quadruped-posed', root: { type: 'smoothUnion', k: 0.12, children: parts } };
+}

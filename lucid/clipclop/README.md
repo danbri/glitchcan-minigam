@@ -134,11 +134,21 @@ The same logic extends to the harder layers:
   satisfied to <1e-2, ends held exactly, middle sags, deterministic).
   **Step 5** maps constraints onto a quadruped skeleton (`buildQuadrupedRig`,
   demo `../puppet.html`): 10 joints, 12 rigid bones — drop it and it flops and
-  settles as a physical ragdoll (Node-verified: bones rigid to <1e-3, settles on
-  the ground, deterministic). Next: the GPU constraint pass needs graph colouring
-  to avoid write races; then drive the FULL template geometry from the rig joints
-  (not just beads) so a morphable pig/cow is also a physical body — geometry and
-  simulation both on the GPU at once.
+  settles as a physical ragdoll.
+  **Step 6 — GPU constraint solve:** `colorConstraints` greedy-colours the
+  constraints into race-free batches (the ragdoll → 5 colours, no batch shares a
+  body); `generateXpbdSolveWgsl` emits the per-batch compute shader; `stepXPBDColored`
+  is the CPU twin, verified to keep bones rigid. This is what lets XPBD run on the
+  GPU (one dispatch per colour).
+  **Step 7 — the full animal, posed from the rig:** `poseQuadrupedFromRig`
+  (`core/sdf-template.js`) builds the real geometry — torso, neck, four legs, tail
+  (oriented capsules via `rotateAxis`), head, snout — from the joint positions. So
+  the puppet is not beads: it is a pig/sheep/cow/dog (species-tinted) that is ALSO
+  a physical body. Verified: it renders and flattens to a bakeable edit list. In
+  fixing this, found and corrected a real bug — `flattenToEdits` rotated the field
+  BACKWARDS vs the shader; now the baked field matches Mayfly/Stinkyfish exactly
+  (verified against a codegen-faithful transform, error 0). Remaining device-side:
+  wire the coloured solve + moving edit buffer into clipclop for live re-bake.
 - **The rig `chains`/`conserved` work** (CPU today, in `rig-evaluator.js`) is the
   CPU reference for exactly such a solver. Its expression AST is the thing to port.
 

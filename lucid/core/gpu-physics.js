@@ -241,6 +241,106 @@ export function buildQuadrupedRig(opts = {}) {
   return { bodies, constraints, bones, joints: names };
 }
 
+// ---- GPU constraint solving: graph colouring (step "item 1") ------------
+// Two constraints that share a body cannot be solved in the same parallel
+// dispatch (they'd write the same body — a race). Greedy graph colouring splits
+// the constraints into BATCHES where no two share a body; each batch is then one
+// race-free compute dispatch. This is what lets XPBD run on the GPU.
+
+/** @returns {{ batches: number[][], colors: number }} batches of constraint indices. */
+export function colorConstraints(constraints) {
+  const colorOf = new Array(constraints.length).fill(-1);
+  // bodyColors[body] = Set of colors already used by a constraint touching it
+  const bodyColors = new Map();
+  const used = (b) => bodyColors.get(b) || (bodyColors.set(b, new Set()), bodyColors.get(b));
+  for (let i = 0; i < constraints.length; i++) {
+    const { a, b } = constraints[i];
+    let c = 0;
+    while (used(a).has(c) || used(b).has(c)) c++;
+    colorOf[i] = c;
+    used(a).add(c); used(b).add(c);
+  }
+  const colors = Math.max(0, ...colorOf) + 1;
+  const batches = Array.from({ length: colors }, () => []);
+  colorOf.forEach((c, i) => batches[c].push(i));
+  return { batches, colors };
+}
+
+/**
+ * XPBD stepped batch-by-batch, exactly as the GPU would dispatch it (one batch =
+ * one race-free pass). Same result as stepXPBD, proving the colouring is usable.
+ */
+export function stepXPBDColored(bodies, constraints, batches, cfg = defaultPhysicsConfig(), iters = 8) {
+  const { gravity, dt, damping, radius, groundY, bound } = cfg;
+  const prev = bodies.map(b => b.p.slice());
+  for (const b of bodies) {
+    if (invMass(b) > 0) {
+      b.v[1] += gravity * dt;
+      b.v = [b.v[0] * damping, b.v[1] * damping, b.v[2] * damping];
+      b.p = [b.p[0] + b.v[0] * dt, b.p[1] + b.v[1] * dt, b.p[2] + b.v[2] * dt];
+    }
+  }
+  const adt2 = dt * dt;
+  for (let it = 0; it < iters; it++) {
+    for (const batch of batches) {          // each batch is parallel-safe on the GPU
+      for (const ci of batch) {
+        const con = constraints[ci];
+        const a = bodies[con.a], b = bodies[con.b];
+        const wa = invMass(a), wb = invMass(b);
+        if (wa + wb === 0) continue;
+        const dx = a.p[0] - b.p[0], dy = a.p[1] - b.p[1], dz = a.p[2] - b.p[2];
+        const dist = Math.hypot(dx, dy, dz) || 1e-6;
+        const s = (-(dist - con.rest) / (wa + wb + (con.compliance || 0) / adt2)) / dist;
+        a.p = [a.p[0] + dx * s * wa, a.p[1] + dy * s * wa, a.p[2] + dz * s * wa];
+        b.p = [b.p[0] - dx * s * wb, b.p[1] - dy * s * wb, b.p[2] - dz * s * wb];
+      }
+    }
+    for (const bd of bodies) {
+      if (bd.p[1] < groundY + radius) bd.p[1] = groundY + radius;
+      bd.p[0] = Math.max(-bound + radius, Math.min(bound - radius, bd.p[0]));
+      bd.p[2] = Math.max(-bound + radius, Math.min(bound - radius, bd.p[2]));
+    }
+  }
+  for (let i = 0; i < bodies.length; i++) {
+    if (invMass(bodies[i]) > 0) bodies[i].v = [(bodies[i].p[0] - prev[i][0]) / dt, (bodies[i].p[1] - prev[i][1]) / dt, (bodies[i].p[2] - prev[i][2]) / dt];
+    else { bodies[i].p = prev[i].slice(); bodies[i].v = [0, 0, 0]; }
+  }
+  return bodies;
+}
+
+/**
+ * The GPU constraint-solve compute shader. One dispatch per colour batch: each
+ * thread owns one constraint in the batch and writes both its bodies — safe
+ * because a batch shares no bodies. Host loops batches × iterations.
+ */
+export function generateXpbdSolveWgsl() {
+  return `// ===== XPBD constraint solve — one race-free colour batch =====
+struct Body { pos: vec4f, vel: vec4f };
+struct Con { ab: vec2u, rest: f32, compliance: f32 }; // a,b indices; rest; compliance
+@group(0) @binding(0) var<storage, read_write> bodies: array<Body>;
+@group(0) @binding(1) var<storage, read> cons: array<Con>;   // constraints of THIS batch
+@group(0) @binding(2) var<uniform> u: vec4f;                  // x = invW default, y = dt
+
+@compute @workgroup_size(64)
+fn solve(@builtin(global_invocation_id) gid: vec3u) {
+  let i = gid.x;
+  if (i >= arrayLength(&cons)) { return; }
+  let c = cons[i];
+  let pa = bodies[c.ab.x].pos.xyz;
+  let pb = bodies[c.ab.y].pos.xyz;
+  let wa = bodies[c.ab.x].vel.w;   // inverse mass packed in vel.w
+  let wb = bodies[c.ab.y].vel.w;
+  if (wa + wb == 0.0) { return; }
+  let d = pa - pb;
+  let dist = max(length(d), 1e-6);
+  let alpha = c.compliance / (u.y * u.y);
+  let s = (-(dist - c.rest) / (wa + wb + alpha)) / dist;
+  bodies[c.ab.x].pos = vec4f(pa + d * (s * wa), 0.0);
+  bodies[c.ab.y].pos = vec4f(pb - d * (s * wb), 0.0);
+}
+`;
+}
+
 const f = (v) => (Number.isInteger(v) ? v + '.0' : String(v));
 
 /**

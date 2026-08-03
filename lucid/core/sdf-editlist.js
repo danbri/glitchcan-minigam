@@ -102,7 +102,27 @@ function composeXf(outer, node) {
     ? (Array.isArray(tr.rotate) ? tr.rotate.map(num)
       : (tr.rotate.type === 'array' ? tr.rotate.values.map(num) : [0, 0, 0]))
     : [0, 0, 0];
-  const R_node = rotXYZ(rotArr[0] || 0, rotArr[1] || 0, rotArr[2] || 0);
+  // rotateAxis { axis, angle(deg) } — Rodrigues; else euler XYZ.
+  let R_node;
+  if (tr.rotateAxis) {
+    const ax = vec3(tr.rotateAxis.axis, [0, 1, 0]);
+    const L = Math.hypot(ax[0], ax[1], ax[2]) || 1;
+    const u = [ax[0] / L, ax[1] / L, ax[2] / L];
+    const th = num(tr.rotateAxis.angle, 0) * Math.PI / 180;
+    const c = Math.cos(th), s = Math.sin(th), t = 1 - c;
+    R_node = [
+      t * u[0] * u[0] + c, t * u[0] * u[1] - s * u[2], t * u[0] * u[2] + s * u[1],
+      t * u[0] * u[1] + s * u[2], t * u[1] * u[1] + c, t * u[1] * u[2] - s * u[0],
+      t * u[0] * u[2] - s * u[1], t * u[1] * u[2] + s * u[0], t * u[2] * u[2] + c
+    ];
+  } else {
+    R_node = rotXYZ(rotArr[0] || 0, rotArr[1] || 0, rotArr[2] || 0);
+  }
+  // The eval path uses R^T as the world→local point rotation. Codegen applies
+  // the rotation matrix directly to the point, so store its transpose here to
+  // MATCH the shader (not the inverse). Without this the baked field renders
+  // rotations backwards vs Mayfly/Stinkyfish.
+  R_node = transpose3(R_node);
   let s_node = 1;
   if (tr.scale != null) {
     const sc = tr.scale;

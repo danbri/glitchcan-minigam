@@ -21,7 +21,7 @@ const { evaluateExpr, evaluateRig } = await import('../lucid/core/rig-evaluator.
 const { exprToSexpr, readOne, formToExpr, formToNode } = await import('../lucid/core/sexpr.js');
 const { spliceEngine } = await import('../lucid/clipclop/splice-lib.js');
 const { flattenToEdits, evalEdits, evalTree, generateEditListWgsl } = await import('../lucid/core/sdf-editlist.js');
-const { quadruped, lerpQuadruped, resolveParams, QUADRUPED_PRESETS } = await import('../lucid/core/sdf-template.js');
+const { quadruped, lerpQuadruped, resolveParams, poseQuadrupedFromRig, orientedCapsule, QUADRUPED_PRESETS } = await import('../lucid/core/sdf-template.js');
 const { defaultPhysicsConfig, initBodies, stepBodies, stepPhysics, stepXPBD, buildChain, buildQuadrupedRig, generatePhysicsWgsl } = await import('../lucid/core/gpu-physics.js');
 
 const glsl = (json, opts) => generateGlslFromJson(loadJsonScene(json), opts || {});
@@ -439,6 +439,34 @@ describe('sdf edit list (core/sdf-editlist.js)', () => {
     expect(wgsl).toContain('for (var i = 0u;');
     expect((wgsl.match(/\{/g) || []).length).toBe((wgsl.match(/\}/g) || []).length);
   });
+
+  // The flatten's rotation must match the shader's (rotate + rotateAxis), or the
+  // baked field renders rotations backwards. Compare against a codegen-faithful
+  // point transform (rotZ∘rotY∘rotX for euler; Rodrigues for axis-angle).
+  it('flatten rotation matches the shader convention', () => {
+    const d2r = (x) => x * Math.PI / 180;
+    const rx = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [p[0], c * p[1] - s * p[2], s * p[1] + c * p[2]]; };
+    const ry = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [c * p[0] + s * p[2], p[1], -s * p[0] + c * p[2]]; };
+    const rz = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [c * p[0] - s * p[1], s * p[0] + c * p[1], p[2]]; };
+    const raxis = (p, ax, ang) => {
+      const a = d2r(ang), L = Math.hypot(...ax) || 1, u = ax.map(v => v / L), c = Math.cos(a), s = Math.sin(a), t = 1 - c;
+      return [(t * u[0] * u[0] + c) * p[0] + (t * u[0] * u[1] - s * u[2]) * p[1] + (t * u[0] * u[2] + s * u[1]) * p[2],
+        (t * u[0] * u[1] + s * u[2]) * p[0] + (t * u[1] * u[1] + c) * p[1] + (t * u[1] * u[2] - s * u[0]) * p[2],
+        (t * u[0] * u[2] - s * u[1]) * p[0] + (t * u[1] * u[2] + s * u[0]) * p[1] + (t * u[2] * u[2] + c) * p[2]];
+    };
+    const sdCap = (p, h, r) => { const y = p[1] - Math.max(-h, Math.min(h, p[1])); return Math.hypot(p[0], y, p[2]) - r; };
+    for (const tf of [{ translate: [0.3, 0.2, 0], rotate: [40, 0, 0] }, { translate: [0.1, 0, 0], rotateAxis: { axis: [0, 0, 1], angle: 35 } }, { translate: [0, 0.2, 0], rotate: [20, 35, 15] }]) {
+      const { edits } = flattenToEdits(loadJsonScene({ name: 't', root: { type: 'capsule', params: { h: 0.5, r: 0.2 }, transform: tf } }));
+      let maxErr = 0;
+      for (let i = 0; i < 150; i++) {
+        const p = [((i * 0.31) % 2 - 1) * 1.2, ((i * 0.53) % 2 - 1) * 1.2, ((i * 0.7) % 2 - 1) * 1.2];
+        let loc = [p[0] - tf.translate[0], p[1] - tf.translate[1], p[2] - tf.translate[2]];
+        loc = tf.rotate ? rz(ry(rx(loc, d2r(tf.rotate[0])), d2r(tf.rotate[1])), d2r(tf.rotate[2])) : raxis(loc, tf.rotateAxis.axis, tf.rotateAxis.angle);
+        maxErr = Math.max(maxErr, Math.abs(sdCap(loc, 0.5, 0.2) - evalEdits(edits, p).d));
+      }
+      expect(maxErr).toBeLessThan(1e-5);
+    }
+  });
 });
 
 // A template is a parameter vector → scene. pig/sheep/cow/dog are points in it.
@@ -480,6 +508,22 @@ describe('quadruped template (core/sdf-template.js)', () => {
     const { wgsl, count } = generateEditListWgsl(loadJsonScene(quadruped('dog')));
     expect(count).toBeGreaterThanOrEqual(10);
     expect(wgsl).toContain('fn lx_editField(p: vec3f) -> vec4f');
+  });
+
+  it('the animal geometry can be posed from rig joints and it bakes (item 2+3)', async () => {
+    const gp = await import('../lucid/core/gpu-physics.js');
+    const c = { ...gp.defaultPhysicsConfig(), radius: 0.16, bound: 6 };
+    const rig = gp.buildQuadrupedRig();
+    for (let s = 0; s < 400; s++) gp.stepXPBD(rig.bodies, rig.constraints, c, 16);
+    const posed = poseQuadrupedFromRig(rig, QUADRUPED_PRESETS.pig);
+    const scene = loadJsonScene(posed);
+    expect(generateGlslFromJson(scene, {})).toContain('vec4 g_df_scene(vec3'); // renders
+    const { edits, unsupported } = flattenToEdits(scene);
+    expect(unsupported).toEqual([]);
+    expect(edits.length).toBeGreaterThanOrEqual(12);                     // torso, neck, tail, 4 legs, head, snout, 4 pads
+    const { wgsl, count } = generateEditListWgsl(scene);
+    expect(count).toBe(edits.length);
+    expect(wgsl).toContain('fn lx_editField(p: vec3f) -> vec4f');        // bakeable for clipclop
   });
 });
 
@@ -570,6 +614,30 @@ describe('gpu physics (core/gpu-physics.js)', () => {
     const A = buildChain(10, [-1, 3, 0], [1, 3, 0], c), B = buildChain(10, [-1, 3, 0], [1, 3, 0], c);
     for (let s = 0; s < 150; s++) { stepXPBD(A.bodies, A.constraints, c, 10); stepXPBD(B.bodies, B.constraints, c, 10); }
     expect(JSON.stringify(A.bodies)).toBe(JSON.stringify(B.bodies));
+  });
+
+  it('graph-colours the ragdoll constraints into race-free batches', async () => {
+    const gp = await import('../lucid/core/gpu-physics.js');
+    const rig = gp.buildQuadrupedRig();
+    const { batches, colors } = gp.colorConstraints(rig.constraints);
+    expect(batches.flat().length).toBe(rig.constraints.length);         // every constraint placed
+    for (const batch of batches) {                                      // no body twice in a batch
+      const seen = new Set();
+      for (const ci of batch) {
+        const { a, b } = rig.constraints[ci];
+        expect(seen.has(a)).toBe(false); expect(seen.has(b)).toBe(false);
+        seen.add(a); seen.add(b);
+      }
+    }
+    // colored solve keeps bones rigid — proves the batches are usable
+    const c = { ...gp.defaultPhysicsConfig(), radius: 0.16, bound: 6 };
+    const rest0 = rig.constraints.map(k => k.rest);
+    for (let s = 0; s < 700; s++) gp.stepXPBDColored(rig.bodies, rig.constraints, batches, c, 20);
+    let maxErr = 0;
+    rig.constraints.forEach((k, i) => { const a = rig.bodies[k.a].p, b = rig.bodies[k.b].p; maxErr = Math.max(maxErr, Math.abs(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) - rest0[i])); });
+    expect(maxErr).toBeLessThan(1e-3);
+    expect(gp.generateXpbdSolveWgsl()).toContain('fn solve(');
+    expect(colors).toBeGreaterThan(0);
   });
 
   it('emits single-dispatch integrate + a Jacobi collide pass over read_write buffers', () => {
