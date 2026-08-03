@@ -42,7 +42,7 @@
   import { loadJsonScene } from './core/json-loader.js';
   import { generateGlslFromJson } from './core/json-codegen.js';
   import { SimpleRaymarcher } from './mayfly/raymarcher.js';
-  import { defaultPhysicsConfig, initBodies, stepBodies, bodiesToScene } from './core/gpu-physics.js';
+  import { defaultPhysicsConfig, initBodies, stepPhysics, bodiesToScene } from './core/gpu-physics.js';
 
   const $ = (id) => document.getElementById(id);
   const cfg = defaultPhysicsConfig();
@@ -86,7 +86,7 @@
   // simulate (CPU twin — the same math the WGSL compute shader runs) + render
   let frame = 0;
   function loop() {
-    stepBodies(bodies, cfg);            // one integrator step
+    stepPhysics(bodies, cfg, 4);        // integrate + 4 separation iterations
     const scene = loadJsonScene(bodiesToScene(bodies, cfg));
     renderer.updateScene(generateGlslFromJson(scene, {}));
     if (renderer.render) renderer.render();

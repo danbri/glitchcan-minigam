@@ -41,8 +41,9 @@ export function initBodies(n, cfg = defaultPhysicsConfig()) {
     // index-based jitter (reproducible)
     const jx = ((i * 0.3197) % 1 - 0.5) * 0.25;
     const jz = ((i * 0.7331) % 1 - 0.5) * 0.25;
+    // start tight so pairwise separation piles them into a heap
     bodies.push({
-      p: [gx * cfg.radius * 2.2 + jx, 2.4 + (i % 5) * 0.55, gz * cfg.radius * 2.2 + jz],
+      p: [gx * cfg.radius * 1.15 + jx, 2.2 + (i % 6) * 0.5, gz * cfg.radius * 1.15 + jz],
       v: [0, 0, 0]
     });
   }
@@ -79,6 +80,48 @@ export function stepBodies(bodies, cfg = defaultPhysicsConfig()) {
     b.p = [px, py, pz];
     b.v = [vx, vy, vz];
   }
+  return bodies;
+}
+
+/**
+ * Pairwise separation (step 3). Jacobi push-apart: read a SNAPSHOT of all
+ * positions, write corrected ones, so the result is order-independent and maps
+ * 1:1 to a GPU pass that reads `bodies` and writes `scratch`. Runs K iterations.
+ * Bodies that overlap get pushed apart by half the overlap each. Re-clamped to
+ * the ground and walls afterwards. Mirrors the WGSL `collide` entry.
+ */
+export function collideBodies(bodies, cfg = defaultPhysicsConfig(), iterations = 4) {
+  const { radius, groundY, bound } = cfg;
+  const minD = 2 * radius;
+  for (let it = 0; it < iterations; it++) {
+    const snap = bodies.map(b => b.p.slice());  // Jacobi snapshot
+    for (let i = 0; i < bodies.length; i++) {
+      let cx = 0, cy = 0, cz = 0;
+      const [ax, ay, az] = snap[i];
+      for (let j = 0; j < bodies.length; j++) {
+        if (j === i) continue;
+        const dx = ax - snap[j][0], dy = ay - snap[j][1], dz = az - snap[j][2];
+        const dist = Math.hypot(dx, dy, dz);
+        if (dist < minD && dist > 1e-6) {
+          const push = (minD - dist) * 0.5 / dist;
+          cx += dx * push; cy += dy * push; cz += dz * push;
+        }
+      }
+      let px = ax + cx, py = ay + cy, pz = az + cz;
+      // re-clamp to ground and walls
+      if (py < groundY + radius) py = groundY + radius;
+      px = Math.max(-bound + radius, Math.min(bound - radius, px));
+      pz = Math.max(-bound + radius, Math.min(bound - radius, pz));
+      bodies[i].p = [px, py, pz];
+    }
+  }
+  return bodies;
+}
+
+/** One full frame: integrate, then K separation iterations. */
+export function stepPhysics(bodies, cfg = defaultPhysicsConfig(), collideIters = 4) {
+  stepBodies(bodies, cfg);
+  collideBodies(bodies, cfg, collideIters);
   return bodies;
 }
 
@@ -130,6 +173,33 @@ fn integrate(@builtin(global_invocation_id) gid: vec3u) {
 
   bodies[i].pos = vec4f(p, 0.0);
   bodies[i].vel = vec4f(v, 0.0);
+}
+
+// Pairwise separation (step 3). Jacobi: read bodies, write scratch. The host
+// runs this K times per frame, copying scratch -> bodies between iterations.
+@group(0) @binding(1) var<storage, read_write> scratch: array<vec4f>;
+
+@compute @workgroup_size(64)
+fn collide(@builtin(global_invocation_id) gid: vec3u) {
+  let i = gid.x;
+  let n = arrayLength(&bodies);
+  if (i >= n) { return; }
+  let minD = 2.0 * RAD;
+  let a = bodies[i].pos.xyz;
+  var corr = vec3f(0.0, 0.0, 0.0);
+  for (var j: u32 = 0u; j < n; j = j + 1u) {
+    if (j == i) { continue; }
+    let d = a - bodies[j].pos.xyz;
+    let dist = length(d);
+    if (dist < minD && dist > 1e-6) {
+      corr = corr + d * ((minD - dist) * 0.5 / dist);
+    }
+  }
+  var p = a + corr;
+  p.y = max(p.y, GROUND + RAD);
+  p.x = clamp(p.x, -BOUND + RAD, BOUND - RAD);
+  p.z = clamp(p.z, -BOUND + RAD, BOUND - RAD);
+  scratch[i] = vec4f(p, 0.0);
 }
 `;
 }

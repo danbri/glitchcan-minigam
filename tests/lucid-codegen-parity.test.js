@@ -22,7 +22,7 @@ const { exprToSexpr, readOne, formToExpr, formToNode } = await import('../lucid/
 const { spliceEngine } = await import('../lucid/clipclop/splice-lib.js');
 const { flattenToEdits, evalEdits, evalTree, generateEditListWgsl } = await import('../lucid/core/sdf-editlist.js');
 const { quadruped, lerpQuadruped, resolveParams, QUADRUPED_PRESETS } = await import('../lucid/core/sdf-template.js');
-const { defaultPhysicsConfig, initBodies, stepBodies, generatePhysicsWgsl } = await import('../lucid/core/gpu-physics.js');
+const { defaultPhysicsConfig, initBodies, stepBodies, stepPhysics, generatePhysicsWgsl } = await import('../lucid/core/gpu-physics.js');
 
 const glsl = (json, opts) => generateGlslFromJson(loadJsonScene(json), opts || {});
 const wgsl = (json, opts) => generateWgslFromJson(loadJsonScene(json), opts || {});
@@ -512,11 +512,27 @@ describe('gpu physics (core/gpu-physics.js)', () => {
     expect(minY).toBeGreaterThanOrEqual(cfg.groundY + cfg.radius - 1e-6);
   });
 
-  it('emits a single-dispatch compute shader over a read_write body buffer', () => {
+  it('pairwise separation piles bodies with no hard overlaps', () => {
+    const bodies = initBodies(30, cfg);
+    for (let s = 0; s < 700; s++) stepPhysics(bodies, cfg, 4);
+    const minD = 2 * cfg.radius;
+    let overlaps = 0;
+    for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) {
+      const d = Math.hypot(bodies[i].p[0] - bodies[j].p[0], bodies[i].p[1] - bodies[j].p[1], bodies[i].p[2] - bodies[j].p[2]);
+      if (d < minD * 0.9) overlaps++;
+    }
+    expect(overlaps).toBe(0);
+    expect(bodies.every(b => b.p[1] >= cfg.groundY + cfg.radius - 1e-6)).toBe(true);
+    expect(bodies.every(b => [...b.p, ...b.v].every(Number.isFinite))).toBe(true);
+  });
+
+  it('emits single-dispatch integrate + a Jacobi collide pass over read_write buffers', () => {
     const w = generatePhysicsWgsl(cfg);
     expect(w).toContain('@compute @workgroup_size(64)');
     expect(w).toContain('var<storage, read_write> bodies');
     expect(w).toContain('fn integrate(');
+    expect(w).toContain('fn collide(');
+    expect(w).toContain('scratch');
     expect((w.match(/\{/g) || []).length).toBe((w.match(/\}/g) || []).length);
   });
 });
