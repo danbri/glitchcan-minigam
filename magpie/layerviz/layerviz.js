@@ -152,7 +152,18 @@ export const DEFAULTS = {
   hoverScale: 1.2,
   zoomMin: 10,
   zoomMax: 50,
-  cameraStart: { x: 20, y: 15, z: 20 }
+  cameraStart: { x: 20, y: 15, z: 20 },
+  fovDeg: 75,
+  // Plan-view snap: nearing a top-down pitch eases the camera to straight
+  // down and cross-fades the projection to ORTHOGRAPHIC (constant size
+  // with distance); tilting away releases it. in/out differ: hysteresis.
+  planSnap: {
+    inPitch: 1.22,   // engage above this pitch (rad)
+    outPitch: 1.05,  // release below this pitch
+    topPitch: 1.55,  // eased-to pitch (~89°; exactly 90° degenerates lookAt)
+    minFovDeg: 3,    // perspective narrows to this before the ortho switch
+    ease: 0.10       // per-frame blend step
+  }
 };
 
 /**
@@ -256,6 +267,12 @@ export class LayerViz {
     // the same frame — no easing lag.
     this.orbit = this._orbitFrom(this.config.cameraStart, this.model.focus);
     this.inertia = { yaw: 0, pitch: 0 };
+    // Plan-view snap state: snapT blends 0 (perspective, free orbit) to 1
+    // (orthographic, straight down). Only used when the renderer offers
+    // the optional setProjection method.
+    this.snapOn = false;
+    this.snapT = 0;
+    this.projectionMode = 'perspective';
     this._pointers = new Map();
     this._pinchDist = 0;
     this._lastRotate = { yaw: 0, pitch: 0 };
@@ -393,8 +410,8 @@ export class LayerViz {
     };
   }
 
-  _orbitPosition() {
-    const { yaw, pitch, distance } = this.orbit;
+  _orbitPosition(pitch = this.orbit.pitch, distance = this.orbit.distance) {
+    const { yaw } = this.orbit;
     const t = this.view ? this.view.target : this.model.focus;
     const c = Math.cos(pitch);
     return {
@@ -569,9 +586,10 @@ export class LayerViz {
       el.style.left = `${p.x}px`;
       el.style.top = `${p.y}px`;
       el.style.display = 'block';
+      const fadeDistance = p.distance * (this._fadeScale || 1);
       el.style.opacity = Math.max(
         0,
-        Math.min(1, (labelFadeNear - p.distance) / labelFadeRange)
+        Math.min(1, (labelFadeNear - fadeDistance) / labelFadeRange)
       );
     }
   }
@@ -593,7 +611,45 @@ export class LayerViz {
         this.inertia.pitch = 0;
       }
     }
-    this.view.position = this._orbitPosition();
+    // Plan-view snap: crossing the top-down threshold eases pitch to
+    // straight down and the projection toward orthographic (dolly-zoom:
+    // the FOV narrows while the camera recedes so apparent size holds,
+    // then flips to true ortho). Hysteresis keeps it from flickering.
+    this._fadeScale = 1;
+    const snap = this.config.planSnap;
+    if (this.renderer.setProjection && snap) {
+      if (!this.snapOn && this.orbit.pitch > snap.inPitch) this.snapOn = true;
+      else if (this.snapOn && this.orbit.pitch < snap.outPitch) this.snapOn = false;
+      const goal = this.snapOn ? 1 : 0;
+      this.snapT += (goal - this.snapT) * snap.ease;
+      if (Math.abs(this.snapT - goal) < 0.02) this.snapT = goal;
+
+      const t = this.snapT;
+      const baseFov = this.config.fovDeg;
+      const halfHeight =
+        this.orbit.distance * Math.tan((baseFov / 2) * Math.PI / 180);
+      if (t === 0) {
+        this.projectionMode = 'perspective';
+        this.renderer.setProjection({ mode: 'perspective', fovDeg: baseFov });
+        this.view.position = this._orbitPosition();
+      } else if (t === 1) {
+        this.projectionMode = 'orthographic';
+        this.renderer.setProjection({ mode: 'orthographic', halfHeight });
+        this.view.position = this._orbitPosition(snap.topPitch);
+      } else {
+        this.projectionMode = 'perspective';
+        const fovDeg = baseFov + (snap.minFovDeg - baseFov) * t;
+        const dist = halfHeight / Math.tan((fovDeg / 2) * Math.PI / 180);
+        const pitch = this.orbit.pitch + (snap.topPitch - this.orbit.pitch) * t;
+        this.renderer.setProjection({ mode: 'perspective', fovDeg });
+        this.view.position = this._orbitPosition(pitch, dist);
+        // The camera recedes during the blend; labels must fade by the
+        // user's zoom, not the receded distance.
+        this._fadeScale = this.orbit.distance / dist;
+      }
+    } else {
+      this.view.position = this._orbitPosition();
+    }
 
     this.renderer.animate(timeMs, this.animating);
     this.renderer.setView(this.view);

@@ -29,7 +29,16 @@ only redirect stubs.
   inertia, labels with overlap culling, tooltip, tap-to-inspect,
   `focusLayer` spotlight). Imports no rendering library; talks to
   renderers only through the RendererAdapter contract documented at the
-  top of the file. Optional adapter method: `setLayerFocus(layerId)`.
+  top of the file. Optional adapter methods: `setLayerFocus(layerId)`,
+  `setProjection({mode, fovDeg|halfHeight})`.
+- **Plan-view snap**: tilt near top-down and the camera eases to
+  straight down while the projection cross-fades to ORTHOGRAPHIC
+  (dolly-zoom, then a true ortho switch), so distance no longer changes
+  size — a map view. Tilt away to release; hysteresis prevents
+  flicker (`config.planSnap`). In plan view a pick returns the TOPMOST
+  node of a stack — combine with the layer spotlight for per-layer
+  maps. Fog scales with camera distance so the dolly recession never
+  fogs the scene out.
 - `layerviz-webgpu.js` — the PRIMARY backend. Raw WGSL, instanced (6
   draw calls/frame), CPU picking/projection, 4x MSAA, dpr-capped
   surface, per-instance-opacity layer spotlight. Sync factory over

@@ -13,7 +13,11 @@ export function createThreeRenderer({ container, model, config }) {
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog(0x2a2a3a, 1, 100);
 
-  const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+  const perspCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 2000);
+  const orthoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 2000);
+  let camera = perspCamera; // active camera; setProjection swaps it
+  let aspect = 1;
+  let orthoHalfHeight = 10;
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.shadowMap.enabled = true;
@@ -166,14 +170,44 @@ export function createThreeRenderer({ container, model, config }) {
 
   return {
     resize(width, height) {
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
+      aspect = width / height;
+      perspCamera.aspect = aspect;
+      perspCamera.updateProjectionMatrix();
+      this.setProjection({ mode: camera === orthoCamera ? 'orthographic' : 'perspective',
+        fovDeg: perspCamera.fov, halfHeight: orthoHalfHeight });
       renderer.setSize(width, height);
     },
 
     setView(view) {
       camera.position.set(view.position.x, view.position.y, view.position.z);
       camera.lookAt(view.target.x, view.target.y, view.target.z);
+      // Fog scales with camera distance, so the dolly-zoom recession of
+      // the plan-view snap (and deep zoom-out) never fogs the scene away.
+      const d = camera.position.distanceTo(
+        new THREE.Vector3(view.target.x, view.target.y, view.target.z));
+      scene.fog.near = d * 0.035;
+      scene.fog.far = d * 3.5;
+    },
+
+    /**
+     * Optional contract extension: switch/blend the projection.
+     * { mode: 'perspective', fovDeg } or { mode: 'orthographic', halfHeight }
+     * — halfHeight is half the vertical view extent in world units.
+     */
+    setProjection(p) {
+      if (p.mode === 'orthographic') {
+        orthoHalfHeight = p.halfHeight ?? orthoHalfHeight;
+        orthoCamera.top = orthoHalfHeight;
+        orthoCamera.bottom = -orthoHalfHeight;
+        orthoCamera.left = -orthoHalfHeight * aspect;
+        orthoCamera.right = orthoHalfHeight * aspect;
+        orthoCamera.updateProjectionMatrix();
+        camera = orthoCamera;
+      } else {
+        if (p.fovDeg) perspCamera.fov = p.fovDeg;
+        perspCamera.updateProjectionMatrix();
+        camera = perspCamera;
+      }
     },
 
     animate(timeMs, animating) {

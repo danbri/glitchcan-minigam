@@ -125,6 +125,17 @@ function perspective(fovYRad, aspect, near, far) {
   return out;
 }
 
+function orthographic(halfHeight, aspect, near, far) {
+  const halfWidth = halfHeight * aspect;
+  const out = new Float32Array(16);
+  out[0] = 1 / halfWidth;
+  out[5] = 1 / halfHeight;
+  out[10] = 1 / (near - far);
+  out[14] = near / (near - far);
+  out[15] = 1;
+  return out;
+}
+
 function lookAt(eye, target, up) {
   let zx = eye.x - target.x, zy = eye.y - target.y, zz = eye.z - target.z;
   let len = Math.hypot(zx, zy, zz) || 1;
@@ -296,7 +307,10 @@ export function createWebGPURenderer({ container, model, config }) {
     dpr: Math.min(window.devicePixelRatio || 1, 2),
     fovY: (75 * Math.PI) / 180,
     near: 0.1,
-    far: 1000,
+    far: 2000,
+    projection: { mode: 'perspective', halfHeight: 10 },
+    fogNear: 1,
+    fogFar: 100,
     view: { position: { ...config.cameraStart }, target: { ...model.focus } },
     viewProj: new Float32Array(16),
     highlightNode: null,
@@ -542,9 +556,17 @@ export function createWebGPURenderer({ container, model, config }) {
 
   function updateViewProj() {
     const aspect = state.width / Math.max(1, state.height);
-    const proj = perspective(state.fovY, aspect, state.near, state.far);
+    const proj = state.projection.mode === 'orthographic'
+      ? orthographic(state.projection.halfHeight, aspect, state.near, state.far)
+      : perspective(state.fovY, aspect, state.near, state.far);
     const view = lookAt(state.view.position, state.view.target, { x: 0, y: 1, z: 0 });
     state.viewProj = mul4(proj, view);
+    // Fog scales with camera distance so the plan-view snap's dolly-zoom
+    // recession (and deep zoom-out) never fogs the scene away.
+    const p = state.view.position, t = state.view.target;
+    const d = Math.hypot(p.x - t.x, p.y - t.y, p.z - t.z);
+    state.fogNear = d * 0.035;
+    state.fogFar = d * 3.5;
   }
 
   /** Camera basis + tangent of half-fov, for CPU picking. */
@@ -562,8 +584,21 @@ export function createWebGPURenderer({ container, model, config }) {
     const ux = ry * fz - rz * fy;
     const uy = rz * fx - rx * fz;
     const uz = rx * fy - ry * fx;
-    const tanHalf = Math.tan(state.fovY / 2);
     const aspect = state.width / Math.max(1, state.height);
+    if (state.projection.mode === 'orthographic') {
+      // Parallel rays: offset the origin across the view plane instead.
+      const hh = state.projection.halfHeight;
+      const ox = ndcX * hh * aspect, oy = ndcY * hh;
+      return {
+        origin: {
+          x: p.x + rx * ox + ux * oy,
+          y: p.y + ry * ox + uy * oy,
+          z: p.z + rz * ox + uz * oy
+        },
+        dir: { x: fx, y: fy, z: fz }
+      };
+    }
+    const tanHalf = Math.tan(state.fovY / 2);
     const dx = fx + ndcX * tanHalf * aspect * rx + ndcY * tanHalf * ux;
     const dy = fy + ndcX * tanHalf * aspect * ry + ndcY * tanHalf * uy;
     const dz = fz + ndcX * tanHalf * aspect * rz + ndcY * tanHalf * uz;
@@ -594,6 +629,23 @@ export function createWebGPURenderer({ container, model, config }) {
       updateViewProj();
     },
 
+    /**
+     * Optional contract extension (parity with the three.js adapter):
+     * { mode: 'perspective', fovDeg } or { mode: 'orthographic', halfHeight }.
+     */
+    setProjection(p) {
+      if (p.mode === 'orthographic') {
+        state.projection = {
+          mode: 'orthographic',
+          halfHeight: p.halfHeight ?? state.projection.halfHeight
+        };
+      } else {
+        state.projection = { mode: 'perspective', halfHeight: state.projection.halfHeight };
+        if (p.fovDeg) state.fovY = (p.fovDeg * Math.PI) / 180;
+      }
+      updateViewProj();
+    },
+
     animate(timeMs, animating) {
       if (!animating) return;
       model.nodes.forEach((node, i) => {
@@ -616,10 +668,10 @@ export function createWebGPURenderer({ container, model, config }) {
       uniformData[16] = p.x; uniformData[17] = p.y; uniformData[18] = p.z;
       uniformData[20] = LIGHT[0]; uniformData[21] = LIGHT[1]; uniformData[22] = LIGHT[2];
       uniformData[24] = FOG_COLOR[0]; uniformData[25] = FOG_COLOR[1]; uniformData[26] = FOG_COLOR[2];
-      uniformData[27] = 1;    // fog near
+      uniformData[27] = state.fogNear;
       uniformData[28] = 0.4;  // ambient
       uniformData[29] = 0.6;  // diffuse
-      uniformData[30] = 100;  // fog far
+      uniformData[30] = state.fogFar;
       device.queue.writeBuffer(gpu.uniformBuf, 0, uniformData);
       device.queue.writeBuffer(gpu.sphereInst, 0, sphereInstances);
       if (gpu.linkInst) device.queue.writeBuffer(gpu.linkInst, 0, linkInstances);
