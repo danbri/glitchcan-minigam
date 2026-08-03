@@ -125,6 +125,79 @@ export function stepPhysics(bodies, cfg = defaultPhysicsConfig(), collideIters =
   return bodies;
 }
 
+// ---- XPBD distance constraints (step 4) ---------------------------------
+// Bodies gain an inverse mass `w` (default 1; a pinned body has w = 0). A
+// constraint {a, b, rest, compliance} holds two bodies a fixed distance apart.
+// This is what turns loose bodies into a jointed structure — a rope, a net, or
+// a creature whose limbs stay attached.
+
+const invMass = (b) => (b.w === undefined ? 1 : b.w);
+
+/**
+ * One XPBD frame: predict, solve constraints (+ ground/walls) K iterations,
+ * then derive velocity from the position change. Deterministic. The CPU twin of
+ * the GPU solver (whose GPU form needs constraint colouring — the next artifact).
+ */
+export function stepXPBD(bodies, constraints, cfg = defaultPhysicsConfig(), iters = 8) {
+  const { gravity, dt, damping, radius, groundY, bound } = cfg;
+  const prev = bodies.map(b => b.p.slice());
+
+  // predict (only non-pinned bodies move)
+  for (const b of bodies) {
+    if (invMass(b) > 0) {
+      b.v[1] += gravity * dt;
+      b.v = [b.v[0] * damping, b.v[1] * damping, b.v[2] * damping];
+      b.p = [b.p[0] + b.v[0] * dt, b.p[1] + b.v[1] * dt, b.p[2] + b.v[2] * dt];
+    }
+  }
+
+  const adt2 = dt * dt;
+  for (let it = 0; it < iters; it++) {
+    for (const con of constraints) {
+      const a = bodies[con.a], b = bodies[con.b];
+      const wa = invMass(a), wb = invMass(b);
+      if (wa + wb === 0) continue;
+      const dx = a.p[0] - b.p[0], dy = a.p[1] - b.p[1], dz = a.p[2] - b.p[2];
+      const dist = Math.hypot(dx, dy, dz) || 1e-6;
+      const C = dist - con.rest;
+      const alpha = (con.compliance || 0) / adt2;
+      const s = (-C / (wa + wb + alpha)) / dist;
+      a.p = [a.p[0] + dx * s * wa, a.p[1] + dy * s * wa, a.p[2] + dz * s * wa];
+      b.p = [b.p[0] - dx * s * wb, b.p[1] - dy * s * wb, b.p[2] - dz * s * wb];
+    }
+    // ground + walls per iteration
+    for (const bd of bodies) {
+      if (bd.p[1] < groundY + radius) bd.p[1] = groundY + radius;
+      bd.p[0] = Math.max(-bound + radius, Math.min(bound - radius, bd.p[0]));
+      bd.p[2] = Math.max(-bound + radius, Math.min(bound - radius, bd.p[2]));
+    }
+  }
+
+  // velocity from motion; pinned bodies are held exactly
+  for (let i = 0; i < bodies.length; i++) {
+    if (invMass(bodies[i]) > 0) {
+      bodies[i].v = [(bodies[i].p[0] - prev[i][0]) / dt, (bodies[i].p[1] - prev[i][1]) / dt, (bodies[i].p[2] - prev[i][2]) / dt];
+    } else {
+      bodies[i].p = prev[i].slice();
+      bodies[i].v = [0, 0, 0];
+    }
+  }
+  return bodies;
+}
+
+/** A chain of `n` bodies between two pinned ends → sags into a catenary. */
+export function buildChain(n, a, b, cfg = defaultPhysicsConfig()) {
+  const bodies = [], constraints = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    bodies.push({ p: [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t + 0.001 * i, a[2] + (b[2] - a[2]) * t], v: [0, 0, 0], w: (i === 0 || i === n - 1) ? 0 : 1 });
+  }
+  // segment rest length > end span / segments, so the chain has slack and sags
+  const seg = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / (n - 1) * 1.35;
+  for (let i = 0; i < n - 1; i++) constraints.push({ a: i, b: i + 1, rest: seg, compliance: 0 });
+  return { bodies, constraints };
+}
+
 const f = (v) => (Number.isInteger(v) ? v + '.0' : String(v));
 
 /**

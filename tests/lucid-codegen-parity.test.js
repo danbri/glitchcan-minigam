@@ -22,7 +22,7 @@ const { exprToSexpr, readOne, formToExpr, formToNode } = await import('../lucid/
 const { spliceEngine } = await import('../lucid/clipclop/splice-lib.js');
 const { flattenToEdits, evalEdits, evalTree, generateEditListWgsl } = await import('../lucid/core/sdf-editlist.js');
 const { quadruped, lerpQuadruped, resolveParams, QUADRUPED_PRESETS } = await import('../lucid/core/sdf-template.js');
-const { defaultPhysicsConfig, initBodies, stepBodies, stepPhysics, generatePhysicsWgsl } = await import('../lucid/core/gpu-physics.js');
+const { defaultPhysicsConfig, initBodies, stepBodies, stepPhysics, stepXPBD, buildChain, generatePhysicsWgsl } = await import('../lucid/core/gpu-physics.js');
 
 const glsl = (json, opts) => generateGlslFromJson(loadJsonScene(json), opts || {});
 const wgsl = (json, opts) => generateWgslFromJson(loadJsonScene(json), opts || {});
@@ -524,6 +524,30 @@ describe('gpu physics (core/gpu-physics.js)', () => {
     expect(overlaps).toBe(0);
     expect(bodies.every(b => b.p[1] >= cfg.groundY + cfg.radius - 1e-6)).toBe(true);
     expect(bodies.every(b => [...b.p, ...b.v].every(Number.isFinite))).toBe(true);
+  });
+
+  it('XPBD holds a jointed chain: constraints satisfied, ends pinned, it sags', () => {
+    const c = { ...cfg, radius: 0.12 };
+    const { bodies, constraints } = buildChain(14, [-2, 3, 0], [2, 3, 0], c);
+    const end0 = bodies[0].p.slice(), endN = bodies[13].p.slice();
+    for (let s = 0; s < 700; s++) stepXPBD(bodies, constraints, c, 16);
+    let maxErr = 0;
+    for (const con of constraints) {
+      const a = bodies[con.a].p, b = bodies[con.b].p;
+      maxErr = Math.max(maxErr, Math.abs(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) - con.rest));
+    }
+    expect(maxErr).toBeLessThan(1e-2);                                  // constraints satisfied
+    expect(bodies[0].p).toEqual(end0);                                 // ends pinned exactly
+    expect(bodies[13].p).toEqual(endN);
+    expect(bodies[7].p[1]).toBeLessThan(3 - 0.5);                      // middle sags well below the ends
+    expect(bodies.every(b => [...b.p, ...b.v].every(Number.isFinite))).toBe(true);
+  });
+
+  it('XPBD is deterministic', () => {
+    const c = { ...cfg, radius: 0.12 };
+    const A = buildChain(10, [-1, 3, 0], [1, 3, 0], c), B = buildChain(10, [-1, 3, 0], [1, 3, 0], c);
+    for (let s = 0; s < 150; s++) { stepXPBD(A.bodies, A.constraints, c, 10); stepXPBD(B.bodies, B.constraints, c, 10); }
+    expect(JSON.stringify(A.bodies)).toBe(JSON.stringify(B.bodies));
   });
 
   it('emits single-dispatch integrate + a Jacobi collide pass over read_write buffers', () => {

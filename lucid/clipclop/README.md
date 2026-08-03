@@ -126,8 +126,15 @@ The same logic extends to the harder layers:
   read_write> bodies` — state stays on the GPU, no readback. Verified in Node by
   a CPU twin that mirrors the shader math line-for-line (bodies fall, settle, stay
   bounded, deterministic, never sink through the floor); the twin also drives the
-  Mayfly demo so you can watch it. Next: pairwise piling, then XPBD joints so the
-  quadruped legs make a physical puppet.
+  Mayfly demo so you can watch it. **Step 3** adds pairwise separation (bodies
+  pile instead of overlap; `../physics.html`). **Step 4** adds XPBD distance
+  constraints (`stepXPBD`, `buildChain`, demo `../rope.html`) — bodies gain an
+  inverse mass, a constraint holds two of them a fixed distance apart, and a
+  chain sags into a catenary with ends pinned (Node-verified: constraints
+  satisfied to <1e-2, ends held exactly, middle sags, deterministic).
+  Next: the GPU constraint pass needs graph colouring to avoid write races; then
+  map the constraints onto the quadruped's joints so its legs make a physical
+  puppet — geometry and simulation both on the GPU, morphable at once.
 - **The rig `chains`/`conserved` work** (CPU today, in `rig-evaluator.js`) is the
   CPU reference for exactly such a solver. Its expression AST is the thing to port.
 
