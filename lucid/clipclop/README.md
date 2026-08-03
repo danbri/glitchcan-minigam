@@ -132,9 +132,13 @@ The same logic extends to the harder layers:
   inverse mass, a constraint holds two of them a fixed distance apart, and a
   chain sags into a catenary with ends pinned (Node-verified: constraints
   satisfied to <1e-2, ends held exactly, middle sags, deterministic).
-  Next: the GPU constraint pass needs graph colouring to avoid write races; then
-  map the constraints onto the quadruped's joints so its legs make a physical
-  puppet — geometry and simulation both on the GPU, morphable at once.
+  **Step 5** maps constraints onto a quadruped skeleton (`buildQuadrupedRig`,
+  demo `../puppet.html`): 10 joints, 12 rigid bones — drop it and it flops and
+  settles as a physical ragdoll (Node-verified: bones rigid to <1e-3, settles on
+  the ground, deterministic). Next: the GPU constraint pass needs graph colouring
+  to avoid write races; then drive the FULL template geometry from the rig joints
+  (not just beads) so a morphable pig/cow is also a physical body — geometry and
+  simulation both on the GPU at once.
 - **The rig `chains`/`conserved` work** (CPU today, in `rig-evaluator.js`) is the
   CPU reference for exactly such a solver. Its expression AST is the thing to port.
 

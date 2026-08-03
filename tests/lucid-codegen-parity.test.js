@@ -22,7 +22,7 @@ const { exprToSexpr, readOne, formToExpr, formToNode } = await import('../lucid/
 const { spliceEngine } = await import('../lucid/clipclop/splice-lib.js');
 const { flattenToEdits, evalEdits, evalTree, generateEditListWgsl } = await import('../lucid/core/sdf-editlist.js');
 const { quadruped, lerpQuadruped, resolveParams, QUADRUPED_PRESETS } = await import('../lucid/core/sdf-template.js');
-const { defaultPhysicsConfig, initBodies, stepBodies, stepPhysics, stepXPBD, buildChain, generatePhysicsWgsl } = await import('../lucid/core/gpu-physics.js');
+const { defaultPhysicsConfig, initBodies, stepBodies, stepPhysics, stepXPBD, buildChain, buildQuadrupedRig, generatePhysicsWgsl } = await import('../lucid/core/gpu-physics.js');
 
 const glsl = (json, opts) => generateGlslFromJson(loadJsonScene(json), opts || {});
 const wgsl = (json, opts) => generateWgslFromJson(loadJsonScene(json), opts || {});
@@ -541,6 +541,28 @@ describe('gpu physics (core/gpu-physics.js)', () => {
     expect(bodies[13].p).toEqual(endN);
     expect(bodies[7].p[1]).toBeLessThan(3 - 0.5);                      // middle sags well below the ends
     expect(bodies.every(b => [...b.p, ...b.v].every(Number.isFinite))).toBe(true);
+  });
+
+  it('quadruped ragdoll: rigid bones, settles on the ground, deterministic', () => {
+    const c = { ...cfg, radius: 0.16, bound: 6 };
+    const rig = buildQuadrupedRig();
+    expect(rig.bones.length).toBe(12);
+    expect(rig.joints.length).toBe(10);
+    const rest0 = rig.constraints.map(k => k.rest);
+    for (let s = 0; s < 800; s++) stepXPBD(rig.bodies, rig.constraints, c, 20);
+    let maxErr = 0;
+    rig.constraints.forEach((k, i) => {
+      const a = rig.bodies[k.a].p, b = rig.bodies[k.b].p;
+      maxErr = Math.max(maxErr, Math.abs(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) - rest0[i]));
+    });
+    expect(maxErr).toBeLessThan(1e-3);                                     // bones stay rigid
+    expect(rig.bodies.every(b => b.p[1] >= c.radius - 1e-6)).toBe(true);   // above ground
+    expect(rig.bodies.every(b => Math.hypot(...b.v) < 0.2)).toBe(true);    // settled
+    expect(rig.bodies.every(b => [...b.p, ...b.v].every(Number.isFinite))).toBe(true);
+
+    const a = buildQuadrupedRig(), b = buildQuadrupedRig();
+    for (let s = 0; s < 120; s++) { stepXPBD(a.bodies, a.constraints, c, 12); stepXPBD(b.bodies, b.constraints, c, 12); }
+    expect(JSON.stringify(a.bodies)).toBe(JSON.stringify(b.bodies));
   });
 
   it('XPBD is deterministic', () => {

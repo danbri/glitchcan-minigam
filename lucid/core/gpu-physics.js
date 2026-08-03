@@ -198,6 +198,49 @@ export function buildChain(n, a, b, cfg = defaultPhysicsConfig()) {
   return { bodies, constraints };
 }
 
+/**
+ * A quadruped skeleton as XPBD bodies + bone constraints — a physical ragdoll.
+ * 10 joints (shoulder, mid-spine, hip, neck, head, tail, four feet) linked by
+ * rigid bones. Drop it and it flops and settles: geometry driven by physics.
+ * @returns {{ bodies, constraints, bones, joints }} bones/joints for rendering.
+ */
+export function buildQuadrupedRig(opts = {}) {
+  const bodyLen = opts.bodyLen ?? 1.6;
+  const standH = opts.standH ?? 1.1;
+  const spread = opts.spread ?? 0.5;
+  const y0 = opts.dropY ?? 1.2;   // start height (it falls from here)
+
+  const J = {}; // name -> position
+  const hz = bodyLen / 2;
+  J.shoulder = [0, standH + y0, -hz];
+  J.mid = [0, standH + y0 + 0.05, 0];
+  J.hip = [0, standH + y0, hz];
+  J.neck = [0, standH + y0 + 0.45, -hz - 0.35];
+  J.head = [0, standH + y0 + 0.7, -hz - 0.8];
+  J.tail = [0, standH + y0 + 0.1, hz + 0.7];
+  J.footFL = [-spread, y0, -hz + 0.1];
+  J.footFR = [spread, y0, -hz + 0.1];
+  J.footBL = [-spread, y0, hz - 0.1];
+  J.footBR = [spread, y0, hz - 0.1];
+
+  const names = Object.keys(J);
+  const idx = Object.fromEntries(names.map((n, i) => [n, i]));
+  const bodies = names.map(n => ({ p: J[n].slice(), v: [0, 0, 0], w: 1 }));
+
+  const dist = (a, b) => Math.hypot(J[a][0] - J[b][0], J[a][1] - J[b][1], J[a][2] - J[b][2]);
+  const boneList = [
+    ['shoulder', 'mid'], ['mid', 'hip'], ['shoulder', 'hip'],   // spine + brace
+    ['shoulder', 'neck'], ['neck', 'head'],                     // neck
+    ['hip', 'tail'],                                            // tail
+    ['shoulder', 'footFL'], ['shoulder', 'footFR'],            // front legs
+    ['hip', 'footBL'], ['hip', 'footBR'],                      // back legs
+    ['footFL', 'footFR'], ['footBL', 'footBR']                 // stance braces
+  ];
+  const constraints = boneList.map(([a, b]) => ({ a: idx[a], b: idx[b], rest: dist(a, b), compliance: a === 'shoulder' && b === 'hip' ? 0.0 : 0.0 }));
+  const bones = boneList.map(([a, b]) => [idx[a], idx[b]]);
+  return { bodies, constraints, bones, joints: names };
+}
+
 const f = (v) => (Number.isInteger(v) ? v + '.0' : String(v));
 
 /**
