@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lucid — quadruped template</title>
+<style>
+  :root { color-scheme: dark; --bg:#0a0f16; --panel:#111925; --edge:#1e2c3d; --ink:#cfe3ff; --dim:#7c93ac; --acc:#39c0ff; --ok:#54e39a; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.5 ui-monospace, Menlo, monospace; }
+  header { padding:10px 14px; border-bottom:1px solid var(--edge); display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
+  header h1 { font-size:15px; margin:0; font-weight:600; }
+  header .sub { color:var(--dim); font-size:12px; }
+  header .status { margin-left:auto; font-size:12px; color:var(--ok); }
+  main { display:flex; flex-direction:column; height:calc(100% - 46px); }
+  #canvas { width:100%; flex:1 1 auto; min-height:200px; display:block; background:#05080d; }
+  .panel { border-top:1px solid var(--edge); padding:10px 14px; display:flex; flex-direction:column; gap:10px; background:var(--panel); }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .row .lbl { color:var(--dim); width:44px; font-size:12px; }
+  .chip { background:#0b1420; color:var(--ink); border:1px solid var(--edge); border-radius:14px; padding:5px 13px; cursor:pointer; font:12px ui-monospace,monospace; }
+  .chip.active { border-color:var(--acc); color:var(--acc); }
+  input[type=range] { flex:1 1 160px; accent-color:var(--acc); min-width:140px; }
+  .morphval { color:var(--acc); width:56px; text-align:right; font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Lucid · quadruped template</h1>
+  <span class="sub">one parameter vector · pig ↔ sheep ↔ cow ↔ dog are points in it</span>
+  <span class="status" id="status">booting…</span>
+</header>
+<main>
+  <canvas id="canvas"></canvas>
+  <div class="panel">
+    <div class="row"><span class="lbl">from</span><span id="fromchips"></span></div>
+    <div class="row"><span class="lbl">to</span><span id="tochips"></span></div>
+    <div class="row"><span class="lbl">morph</span>
+      <input type="range" id="morph" min="0" max="1" step="0.01" value="0">
+      <span class="morphval" id="morphval">from</span>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+  import { loadJsonScene } from './core/json-loader.js';
+  import { generateGlslFromJson } from './core/json-codegen.js';
+  import { SimpleRaymarcher } from './mayfly/raymarcher.js';
+  import { quadruped, lerpQuadruped, QUADRUPED_PRESETS } from './core/sdf-template.js';
+
+  const $ = (id) => document.getElementById(id);
+  const SPECIES = Object.keys(QUADRUPED_PRESETS); // pig, sheep, cow, dog
+  let from = 'pig', to = 'cow';
+
+  function chips(hostId, get, set) {
+    const host = $(hostId);
+    for (const s of SPECIES) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip'; b.textContent = s;
+      b.dataset.sp = s;
+      b.onclick = () => { set(s); paintChips(); render(); };
+      host.appendChild(b);
+    }
+  }
+  function paintChips() {
+    for (const b of $('fromchips').children) b.classList.toggle('active', b.dataset.sp === from);
+    for (const b of $('tochips').children) b.classList.toggle('active', b.dataset.sp === to);
+  }
+  chips('fromchips', () => from, (s) => { from = s; });
+  chips('tochips', () => to, (s) => { to = s; });
+
+  // boot Mayfly
+  const canvas = $('canvas');
+  let renderer;
+  try { renderer = new SimpleRaymarcher(canvas); }
+  catch (e) { $('status').textContent = 'WebGL unavailable'; throw e; }
+  // side-on 3/4 view, framed on the body (animal faces -z, stands on y=0)
+  renderer.cameraDistance = 5.6;
+  renderer.cameraTheta = 2.35;
+  renderer.cameraPhi = 0.12;
+  if ('cameraTarget' in renderer) renderer.cameraTarget = [0, 1.05, 0];
+  function fit() {
+    const r = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.floor(r.width * dpr));
+    canvas.height = Math.max(1, Math.floor(r.height * dpr));
+    if (renderer.resize) renderer.resize(canvas.width, canvas.height);
+  }
+  window.addEventListener('resize', fit);
+
+  function render() {
+    const t = parseFloat($('morph').value);
+    $('morphval').textContent = t === 0 ? 'from' : t === 1 ? 'to' : t.toFixed(2);
+    const params = t === 0 ? from : t === 1 ? to : lerpQuadruped(from, to, t);
+    try {
+      const scene = loadJsonScene(quadruped(params));
+      renderer.updateScene(generateGlslFromJson(scene, {}));
+      $('status').textContent = `${from} → ${to}  ·  ${t.toFixed(2)}`;
+      window.__quad = { ok: true, from, to, t };
+    } catch (e) {
+      $('status').textContent = 'error: ' + e.message;
+      window.__quad = { ok: false, error: e.message };
+    }
+  }
+  $('morph').addEventListener('input', render);
+
+  // drag to orbit, pinch/wheel to zoom (so you can look at the legs on a phone)
+  let drag = null;
+  const pt = (e) => e.touches ? e.touches[0] : e;
+  canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY }; });
+  window.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    renderer.cameraTheta -= (e.clientX - drag.x) * 0.01;
+    renderer.cameraPhi = Math.max(-0.4, Math.min(1.4, renderer.cameraPhi + (e.clientY - drag.y) * 0.01));
+    drag = { x: e.clientX, y: e.clientY };
+  });
+  window.addEventListener('pointerup', () => { drag = null; });
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    renderer.cameraDistance = Math.max(2, Math.min(12, renderer.cameraDistance + e.deltaY * 0.01));
+  }, { passive: false });
+
+  function loop() { if (renderer.render) renderer.render(); requestAnimationFrame(loop); }
+  fit(); paintChips(); render(); loop();
+</script>
+</body>
+</html>

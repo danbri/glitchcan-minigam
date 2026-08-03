@@ -21,6 +21,7 @@ const { evaluateExpr, evaluateRig } = await import('../lucid/core/rig-evaluator.
 const { exprToSexpr, readOne, formToExpr, formToNode } = await import('../lucid/core/sexpr.js');
 const { spliceEngine } = await import('../lucid/clipclop/splice-lib.js');
 const { flattenToEdits, evalEdits, evalTree, generateEditListWgsl } = await import('../lucid/core/sdf-editlist.js');
+const { quadruped, lerpQuadruped, resolveParams, QUADRUPED_PRESETS } = await import('../lucid/core/sdf-template.js');
 
 const glsl = (json, opts) => generateGlslFromJson(loadJsonScene(json), opts || {});
 const wgsl = (json, opts) => generateWgslFromJson(loadJsonScene(json), opts || {});
@@ -436,6 +437,48 @@ describe('sdf edit list (core/sdf-editlist.js)', () => {
     expect(wgsl).toContain('fn lx_editField(p: vec3f) -> vec4f');
     expect(wgsl).toContain('for (var i = 0u;');
     expect((wgsl.match(/\{/g) || []).length).toBe((wgsl.match(/\}/g) || []).length);
+  });
+});
+
+// A template is a parameter vector → scene. pig/sheep/cow/dog are points in it.
+describe('quadruped template (core/sdf-template.js)', () => {
+  const species = Object.keys(QUADRUPED_PRESETS);
+
+  it('has the four species', () => {
+    expect(species.sort()).toEqual(['cow', 'dog', 'pig', 'sheep']);
+  });
+
+  for (const sp of ['pig', 'sheep', 'cow', 'dog']) {
+    it(`${sp} builds a scene that codegens and flattens to edits`, () => {
+      const scene = loadJsonScene(quadruped(sp));
+      const g = generateGlslFromJson(scene, {});
+      expect(g).toContain('vec4 g_df_scene(vec3'); // GLSL scene entry
+      const { edits, unsupported } = flattenToEdits(scene);
+      expect(unsupported).toEqual([]);
+      expect(edits.length).toBeGreaterThanOrEqual(10); // body, 4 legs, neck, head, snout, 2 ears, tail
+    });
+  }
+
+  it('a morph midpoint is a real blend, not a snap to an endpoint', () => {
+    const a = resolveParams('pig'), b = resolveParams('cow');
+    const mid = lerpQuadruped('pig', 'cow', 0.5);
+    // a scalar param that differs between species lands strictly between
+    expect(mid.legLength).toBeGreaterThan(Math.min(a.legLength, b.legLength));
+    expect(mid.legLength).toBeLessThan(Math.max(a.legLength, b.legLength));
+    expect(mid.legLength).toBeCloseTo((a.legLength + b.legLength) / 2, 6);
+    // colour blends componentwise
+    expect(mid.bodyColor[0]).toBeCloseTo((a.bodyColor[0] + b.bodyColor[0]) / 2, 6);
+  });
+
+  it('endpoints resolve exactly to the presets', () => {
+    expect(lerpQuadruped('pig', 'cow', 0).legLength).toBe(resolveParams('pig').legLength);
+    expect(lerpQuadruped('pig', 'cow', 1).legLength).toBe(resolveParams('cow').legLength);
+  });
+
+  it('the template is an edit list: its edits generate a data-driven loop', () => {
+    const { wgsl, count } = generateEditListWgsl(loadJsonScene(quadruped('dog')));
+    expect(count).toBeGreaterThanOrEqual(10);
+    expect(wgsl).toContain('fn lx_editField(p: vec3f) -> vec4f');
   });
 });
 

@@ -144,6 +144,15 @@ blends with different radii, which is the genuine tree-vs-list difference. The
 quadruped *template* below is the next step on the same path: a template is an
 edit list whose numbers come from a parameter vector.
 
+**And that step is landed too** (`core/sdf-template.js`, demo `../quadruped.html`).
+`quadruped(params)` builds a scene from a parameter vector — body, four legs,
+neck, head, snout, ears, tail. `pig`/`sheep`/`cow`/`dog` are four points in that
+vector; `lerpQuadruped(a, b, t)` walks between them and every in-between is a
+valid animal. It returns a normal Lucid scene, so it flattens to the edit list
+and bakes in clipclop like anything else. Morph = re-flatten the lerped vector →
+rewrite the buffer. Node-verified: all four species codegen and flatten;
+midpoints are true blends.
+
 Open question to settle before building: does a template's parameter set live in
 the **same JSON scene standard** (a new node type, e.g. `template: "quadruped"`
 with a `params` block that both bridges understand), or as a sibling format? The
