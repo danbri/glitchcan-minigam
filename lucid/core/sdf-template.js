@@ -218,16 +218,23 @@ export function quadrupedRigParts(rig, params = {}) {
   ];
 }
 
-/** A scene of N capsule parts, every value a uniform. Compile ONCE. */
+/** A scene of N capsule parts, every value a uniform. Compile ONCE.
+ * Declares every var in `params` — Stinkyfish (WebGPU) builds a FIXED uniform
+ * layout from scene.params at compile time, so an undeclared var stays 0 and the
+ * scene renders black. (Mayfly creates uniforms on demand, hiding the bug.) */
 export function partsUniformScene(n, k = 0.12) {
   const children = [];
+  const params = {};
+  const dcl = (name) => { params[name] = { type: 'scalar', value: 0 }; };
   for (let i = 0; i < n; i++) {
+    for (const s of ['t' + i + 'x', 't' + i + 'y', 't' + i + 'z', 'a' + i + 'x', 'a' + i + 'y', 'a' + i + 'z',
+      'ang' + i, 'h' + i, 'r' + i, 'c' + i + 'r', 'c' + i + 'g', 'c' + i + 'b']) dcl(s);
     children.push({ type: 'capsule',
       params: { h: { var: `h${i}` }, r: { var: `r${i}` }, color: [{ var: `c${i}r` }, { var: `c${i}g` }, { var: `c${i}b` }] },
       transform: { translate: [{ var: `t${i}x` }, { var: `t${i}y` }, { var: `t${i}z` }],
         rotateAxis: { axis: [{ var: `a${i}x` }, { var: `a${i}y` }, { var: `a${i}z` }], angle: { var: `ang${i}` } } } });
   }
-  return { name: 'parts-uniform', root: { type: 'smoothUnion', k, children } };
+  return { name: 'parts-uniform', params, root: { type: 'smoothUnion', k, children } };
 }
 
 /** Flatten part descriptors into a {uniformName: value} map for setParam. */

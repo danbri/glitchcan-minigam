@@ -58,6 +58,7 @@
       maxErr = Math.max(maxErr, Math.abs(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) - c.rest));
     }
     window.__maxErr = maxErr;
+    window.__beads = N;
     // place the hanging chain in the clipclop view (world is metres)
     return { name: 'rope', root: { type: 'transform', transform: { translate: [0, 2.5, 5], scale: 1.6 },
       child: { type: 'smoothUnion', k: cfg.radius * 0.9, children } } };
@@ -70,9 +71,9 @@
       if (!engineHtml) engineHtml = await fetch('./clipclop/index.html', { cache: 'no-store' }).then(r => {
         if (!r.ok) throw new Error('cannot fetch clipclop engine (' + r.status + ')'); return r.text();
       });
-      const { html, bridge } = spliceEngine(engineHtml, buildScene(), { mode: 'editlist' });
+      const { html, bridge } = spliceEngine(engineHtml, buildScene(), { mode: 'codegen' });
       $('frame').src = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-      $('info').textContent = bridge.count + ' beads · max stretch ' + (window.__maxErr || 0).toFixed(4);
+      $('info').textContent = (window.__beads || 0) + ' beads · max stretch ' + (window.__maxErr || 0).toFixed(4);
       $('status').textContent = 'baked ✓ — engine in frame';
       window.__rope = { ok: true, edits: bridge.count };
     } catch (e) {

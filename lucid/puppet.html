@@ -60,10 +60,10 @@
       if (!engineHtml) engineHtml = await fetch('./clipclop/index.html', { cache: 'no-store' }).then(r => {
         if (!r.ok) throw new Error('cannot fetch clipclop engine (' + r.status + ')'); return r.text();
       });
-      const { html, bridge } = spliceEngine(engineHtml, buildScene(), { mode: 'editlist' });
+      const { html, bridge } = spliceEngine(engineHtml, buildScene(), { mode: 'codegen' });
       const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
       $('frame').src = url;
-      $('info').textContent = bridge.count + ' edits · clipclop bake';
+      $('info').textContent = species + ' · clipclop bake';
       $('status').textContent = 'baked ✓ — engine in frame';
       $('status').className = 'status';
       window.__puppet = { ok: true, edits: bridge.count, species };

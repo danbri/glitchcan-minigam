@@ -431,7 +431,9 @@ fn collide(@builtin(global_invocation_id) gid: vec3u) {
  */
 export function spheresUniformScene(n, opts = {}) {
   const children = [];
+  const params = {};   // declare every var so Stinkyfish's fixed layout includes it
   for (let i = 0; i < n; i++) {
+    for (const s of [`sx${i}`, `sy${i}`, `sz${i}`, `sr${i}`, `sc${i}r`, `sc${i}g`, `sc${i}b`]) params[s] = { type: 'scalar', value: 0 };
     children.push({ type: 'sphere',
       params: { r: { var: `sr${i}` }, color: [{ var: `sc${i}r` }, { var: `sc${i}g` }, { var: `sc${i}b` }] },
       transform: { translate: [{ var: `sx${i}` }, { var: `sy${i}` }, { var: `sz${i}` }] } });
@@ -439,7 +441,7 @@ export function spheresUniformScene(n, opts = {}) {
   const root = opts.smooth
     ? { type: 'smoothUnion', k: opts.k || 0.1, children }
     : { type: 'union', children };
-  return { name: 'spheres', root };
+  return { name: 'spheres', params, root };
 }
 
 /** {uniformName: value} map for N sphere bodies. radius may be a number or fn. */
