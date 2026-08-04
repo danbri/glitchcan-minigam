@@ -41,7 +41,7 @@
   import { generateGlslFromJson } from './core/json-codegen.js';
   import { SimpleRaymarcher } from './mayfly/raymarcher.js';
   import { defaultPhysicsConfig, buildQuadrupedRig, stepXPBD } from './core/gpu-physics.js';
-  import { poseQuadrupedFromRig, QUADRUPED_PRESETS } from './core/sdf-template.js';
+  import { quadrupedRigParts, partsUniformScene, partsToUniforms, QUADRUPED_PRESETS } from './core/sdf-template.js';
 
   const $ = (id) => document.getElementById(id);
   const cfg = defaultPhysicsConfig(); cfg.radius = 0.16; cfg.bound = 6;
@@ -60,6 +60,25 @@
   renderer.cameraTheta = 0.7;
   renderer.cameraPhi = 0.35;
   renderer.cameraTarget = [0, 0.6, 0];
+  if (renderer.setQuality) renderer.setQuality('high');
+
+  // Compile the shader ONCE: N capsule parts, every value a uniform. Then only
+  // setParam per frame — no per-frame shader recompile (that was the jank).
+  const NPARTS = quadrupedRigParts(rig, QUADRUPED_PRESETS.pig).length;
+  const uniformScene = partsUniformScene(NPARTS);
+  // append a static ground slab to the compiled structure
+  uniformScene.root.children.push({ type: 'box', params: { size: [cfg.bound, 0.05, cfg.bound], color: [0.16, 0.18, 0.22] }, transform: { translate: [0, -0.05, 0] } });
+  let compiled = false;
+  function ensureCompiled() {
+    if (compiled) return;
+    renderer.updateScene(generateGlslFromJson(loadJsonScene(uniformScene), {}));
+    compiled = true;
+  }
+  function pushPose() {
+    const parts = quadrupedRigParts(rig, QUADRUPED_PRESETS[species]);
+    const u = partsToUniforms(parts);
+    for (const k in u) renderer.setParam(k, u[k]);
+  }
 
   function fit() {
     const r = canvas.getBoundingClientRect();
@@ -94,18 +113,12 @@
   });
   window.addEventListener('pointerup', () => { dr = null; });
 
-  // the FULL animal geometry, posed from the rig joints (item 2), + a ground slab
   let species = 'pig';
-  function scene() {
-    const posed = poseQuadrupedFromRig(rig, QUADRUPED_PRESETS[species]);
-    posed.root.children.push({ type: 'box', params: { size: [cfg.bound, 0.05, cfg.bound], color: [0.16, 0.18, 0.22] }, transform: { translate: [0, -0.05, 0] } });
-    return posed;
-  }
-
   let frame = 0;
   function loop() {
     stepXPBD(rig.bodies, rig.constraints, cfg, 20);
-    renderer.updateScene(generateGlslFromJson(loadJsonScene(scene()), {}));
+    ensureCompiled();          // compiles once
+    pushPose();                // per-frame: only uniform updates, no recompile
     if (renderer.render) renderer.render();
     if ((frame++ % 20) === 0) {
       const maxV = Math.max(...rig.bodies.map(b => Math.hypot(...b.v)));

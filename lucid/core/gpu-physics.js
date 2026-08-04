@@ -420,6 +420,35 @@ fn collide(@builtin(global_invocation_id) gid: vec3u) {
 `;
 }
 
+/**
+ * A scene of N spheres, every value a uniform — compile ONCE, then setParam per
+ * frame (no per-frame shader recompile, which is what makes the demos janky).
+ */
+export function spheresUniformScene(n, opts = {}) {
+  const children = [];
+  for (let i = 0; i < n; i++) {
+    children.push({ type: 'sphere',
+      params: { r: { var: `sr${i}` }, color: [{ var: `sc${i}r` }, { var: `sc${i}g` }, { var: `sc${i}b` }] },
+      transform: { translate: [{ var: `sx${i}` }, { var: `sy${i}` }, { var: `sz${i}` }] } });
+  }
+  const root = opts.smooth
+    ? { type: 'smoothUnion', k: opts.k || 0.1, children }
+    : { type: 'union', children };
+  return { name: 'spheres', root };
+}
+
+/** {uniformName: value} map for N sphere bodies. radius may be a number or fn. */
+export function spheresToUniforms(bodies, radius, colorFn) {
+  const u = {};
+  bodies.forEach((b, i) => {
+    u[`sx${i}`] = b.p[0]; u[`sy${i}`] = b.p[1]; u[`sz${i}`] = b.p[2];
+    u[`sr${i}`] = typeof radius === 'function' ? radius(i) : radius;
+    const c = colorFn ? colorFn(i) : [0.5, 0.6, 0.85];
+    u[`sc${i}r`] = c[0]; u[`sc${i}g`] = c[1]; u[`sc${i}b`] = c[2];
+  });
+  return u;
+}
+
 /** Build a Lucid scene (union of spheres) from body positions, for rendering. */
 export function bodiesToScene(bodies, cfg = defaultPhysicsConfig(), colorFn) {
   const children = bodies.map((b, i) => ({

@@ -42,7 +42,7 @@
   import { loadJsonScene } from './core/json-loader.js';
   import { generateGlslFromJson } from './core/json-codegen.js';
   import { SimpleRaymarcher } from './mayfly/raymarcher.js';
-  import { defaultPhysicsConfig, initBodies, stepPhysics, bodiesToScene } from './core/gpu-physics.js';
+  import { defaultPhysicsConfig, initBodies, stepPhysics, spheresUniformScene, spheresToUniforms } from './core/gpu-physics.js';
 
   const $ = (id) => document.getElementById(id);
   const cfg = defaultPhysicsConfig();
@@ -66,6 +66,21 @@
   }
   window.addEventListener('resize', fit);
 
+  if (renderer.setQuality) renderer.setQuality('high');
+  const ballColor = (i) => [0.4 + 0.5 * ((i * 0.37) % 1), 0.55, 0.85];
+
+  // Recompile the shader ONLY when the body COUNT changes; per frame we just
+  // setParam positions (no per-frame recompile — that was the jank).
+  let compiledN = -1;
+  function ensureScene(n) {
+    if (compiledN === n) return;
+    const scene = spheresUniformScene(n);
+    // static ground slab baked into the compiled structure
+    scene.root.children.push({ type: 'box', params: { size: [cfg.bound, 0.05, cfg.bound], color: [0.18, 0.2, 0.24] }, transform: { translate: [0, cfg.groundY - 0.05, 0] } });
+    renderer.updateScene(generateGlslFromJson(loadJsonScene(scene), {}));
+    compiledN = n;
+  }
+
   function drop() {
     bodies = initBodies(parseInt($('count').value, 10), cfg);
   }
@@ -87,8 +102,9 @@
   let frame = 0;
   function loop() {
     stepPhysics(bodies, cfg, 4);        // integrate + 4 separation iterations
-    const scene = loadJsonScene(bodiesToScene(bodies, cfg));
-    renderer.updateScene(generateGlslFromJson(scene, {}));
+    ensureScene(bodies.length);         // compiles only when count changes
+    const u = spheresToUniforms(bodies, cfg.radius, ballColor);
+    for (const k in u) renderer.setParam(k, u[k]);
     if (renderer.render) renderer.render();
     if ((frame++ % 20) === 0) {
       const maxV = Math.max(...bodies.map(b => Math.hypot(...b.v)));

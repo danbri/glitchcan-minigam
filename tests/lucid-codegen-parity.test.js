@@ -21,7 +21,7 @@ const { evaluateExpr, evaluateRig } = await import('../lucid/core/rig-evaluator.
 const { exprToSexpr, readOne, formToExpr, formToNode } = await import('../lucid/core/sexpr.js');
 const { spliceEngine } = await import('../lucid/clipclop/splice-lib.js');
 const { flattenToEdits, evalEdits, evalTree, generateEditListWgsl } = await import('../lucid/core/sdf-editlist.js');
-const { quadruped, lerpQuadruped, resolveParams, poseQuadrupedFromRig, orientedCapsule, QUADRUPED_PRESETS } = await import('../lucid/core/sdf-template.js');
+const { quadruped, lerpQuadruped, resolveParams, poseQuadrupedFromRig, orientedCapsule, quadrupedRigParts, partsUniformScene, partsToUniforms, QUADRUPED_PRESETS } = await import('../lucid/core/sdf-template.js');
 const { defaultPhysicsConfig, initBodies, stepBodies, stepPhysics, stepXPBD, buildChain, buildQuadrupedRig, generatePhysicsWgsl } = await import('../lucid/core/gpu-physics.js');
 
 const glsl = (json, opts) => generateGlslFromJson(loadJsonScene(json), opts || {});
@@ -508,6 +508,22 @@ describe('quadruped template (core/sdf-template.js)', () => {
     const { wgsl, count } = generateEditListWgsl(loadJsonScene(quadruped('dog')));
     expect(count).toBeGreaterThanOrEqual(10);
     expect(wgsl).toContain('fn lx_editField(p: vec3f) -> vec4f');
+  });
+
+  it('uniform posing: compile-once scene + a value map (kills per-frame recompile)', async () => {
+    const gp = await import('../lucid/core/gpu-physics.js');
+    const rig = gp.buildQuadrupedRig();
+    const parts = quadrupedRigParts(rig, QUADRUPED_PRESETS.pig);
+    const u = partsToUniforms(parts);
+    expect(Object.keys(u).length).toBe(parts.length * 12);      // 12 uniforms per part
+    const g = generateGlslFromJson(loadJsonScene(partsUniformScene(parts.length)), {});
+    expect(g).toContain('u_t0x');                               // positions are uniforms
+    expect(g).toContain('u_ang0');                              // orientation is a uniform
+    expect(g).toContain('u_c0r');                               // colour is a uniform
+    // sphere-uniform scene for the ball/rope demos
+    const s = generateGlslFromJson(loadJsonScene(gp.spheresUniformScene(5)), {});
+    expect(s).toContain('u_sx0');
+    expect(Object.keys(gp.spheresToUniforms([{ p: [1, 2, 3] }], 0.3)).length).toBe(7); // 3 pos + r + 3 colour
   });
 
   it('the animal geometry can be posed from rig joints and it bakes (item 2+3)', async () => {

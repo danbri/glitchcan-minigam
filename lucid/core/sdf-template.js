@@ -177,6 +177,71 @@ export function orientedCapsule(A, B, r, color) {
     transform: { translate: mid, rotateAxis: { axis, angle } } };
 }
 
+// ---- uniform-driven posing (for smooth animation, no per-frame recompile) --
+// The scene structure (N parts) is compiled ONCE with every value as a uniform;
+// each frame only the uniform VALUES change (setParam), never the shader. Every
+// part is a capsule — a sphere is a capsule with h = 0 — so one layout fits all.
+
+/** Part descriptor from two joints (a capsule) — {t,axis,angle°,h,r,color}. */
+function capPart(A, B, r, color) {
+  const d = [B[0] - A[0], B[1] - A[1], B[2] - A[2]];
+  const len = Math.hypot(d[0], d[1], d[2]) || 1e-6;
+  const dir = [d[0] / len, d[1] / len, d[2] / len];
+  let axis = [dir[2], 0, -dir[0]];
+  const al = Math.hypot(axis[0], axis[1], axis[2]);
+  axis = al < 1e-5 ? [1, 0, 0] : [axis[0] / al, axis[1] / al, axis[2] / al];
+  return { t: [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2, (A[2] + B[2]) / 2],
+    axis, angle: Math.acos(Math.max(-1, Math.min(1, dir[1]))) * 180 / Math.PI, h: len / 2, r, color };
+}
+const sphPart = (P, r, color) => ({ t: P.slice(), axis: [0, 1, 0], angle: 0, h: 0, r, color });
+
+/** Compute the 13 quadruped part descriptors from a rig + species tint. */
+export function quadrupedRigParts(rig, params = {}) {
+  const q = resolveParams(params);
+  const at = {}; rig.joints.forEach((n, i) => { at[n] = rig.bodies[i].p; });
+  const bodyR = params.bodyR ?? 0.34, legR = params.legR ?? 0.13;
+  const bc = q.bodyColor, lc = q.legColor, sc = q.snoutColor;
+  const nd = [at.head[0] - at.neck[0], at.head[1] - at.neck[1], at.head[2] - at.neck[2]];
+  const nl = Math.hypot(nd[0], nd[1], nd[2]) || 1e-6;
+  const snoutC = [at.head[0] + nd[0] / nl * bodyR * 0.9, at.head[1] + nd[1] / nl * bodyR * 0.9, at.head[2] + nd[2] / nl * bodyR * 0.9];
+  return [
+    capPart(at.shoulder, at.hip, bodyR, bc),
+    capPart(at.shoulder, at.neck, bodyR * 0.6, bc),
+    capPart(at.hip, at.tail, legR * 0.7, lc),
+    capPart(at.shoulder, at.footFL, legR, lc),
+    capPart(at.shoulder, at.footFR, legR, lc),
+    capPart(at.hip, at.footBL, legR, lc),
+    capPart(at.hip, at.footBR, legR, lc),
+    sphPart(at.head, bodyR * 0.9, bc),
+    sphPart(snoutC, bodyR * 0.55, sc),
+    ...['footFL', 'footFR', 'footBL', 'footBR'].map(fn => sphPart(at[fn], legR * 1.1, sc))
+  ];
+}
+
+/** A scene of N capsule parts, every value a uniform. Compile ONCE. */
+export function partsUniformScene(n, k = 0.12) {
+  const children = [];
+  for (let i = 0; i < n; i++) {
+    children.push({ type: 'capsule',
+      params: { h: { var: `h${i}` }, r: { var: `r${i}` }, color: [{ var: `c${i}r` }, { var: `c${i}g` }, { var: `c${i}b` }] },
+      transform: { translate: [{ var: `t${i}x` }, { var: `t${i}y` }, { var: `t${i}z` }],
+        rotateAxis: { axis: [{ var: `a${i}x` }, { var: `a${i}y` }, { var: `a${i}z` }], angle: { var: `ang${i}` } } } });
+  }
+  return { name: 'parts-uniform', root: { type: 'smoothUnion', k, children } };
+}
+
+/** Flatten part descriptors into a {uniformName: value} map for setParam. */
+export function partsToUniforms(parts, extra = {}) {
+  const u = { ...extra };
+  parts.forEach((p, i) => {
+    u[`t${i}x`] = p.t[0]; u[`t${i}y`] = p.t[1]; u[`t${i}z`] = p.t[2];
+    u[`a${i}x`] = p.axis[0]; u[`a${i}y`] = p.axis[1]; u[`a${i}z`] = p.axis[2];
+    u[`ang${i}`] = p.angle; u[`h${i}`] = p.h; u[`r${i}`] = p.r;
+    u[`c${i}r`] = p.color[0]; u[`c${i}g`] = p.color[1]; u[`c${i}b`] = p.color[2];
+  });
+  return u;
+}
+
 /**
  * Build the full quadruped GEOMETRY from a physics rig's joint positions — a
  * torso, neck, four legs, a tail (oriented capsules) and a head (sphere). So

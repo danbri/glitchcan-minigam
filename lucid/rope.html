@@ -39,7 +39,7 @@
   import { loadJsonScene } from './core/json-loader.js';
   import { generateGlslFromJson } from './core/json-codegen.js';
   import { SimpleRaymarcher } from './mayfly/raymarcher.js';
-  import { defaultPhysicsConfig, buildChain, stepXPBD } from './core/gpu-physics.js';
+  import { defaultPhysicsConfig, buildChain, stepXPBD, spheresUniformScene, spheresToUniforms } from './core/gpu-physics.js';
 
   const $ = (id) => document.getElementById(id);
   const cfg = defaultPhysicsConfig(); cfg.radius = 0.13; cfg.bound = 6;
@@ -69,6 +69,13 @@
     if (renderer.resize) renderer.resize(canvas.width, canvas.height);
   }
   window.addEventListener('resize', fit);
+  if (renderer.setQuality) renderer.setQuality('high');
+
+  // compile ONCE (fixed 16 beads); per frame only setParam positions
+  const N = chain.bodies.length;
+  renderer.updateScene(generateGlslFromJson(loadJsonScene(spheresUniformScene(N, { smooth: true, k: cfg.radius * 0.9 })), {}));
+  const beadR = (i) => (i === 0 || i === N - 1) ? cfg.radius * 1.5 : cfg.radius;
+  const beadC = (i) => (i === 0 || i === N - 1) ? [0.9, 0.85, 0.3] : [0.35 + 0.5 * (i / N), 0.55, 0.9];
 
   $('reset').onclick = reset;
   $('nudge').onclick = () => { for (const b of chain.bodies) if (b.w > 0) b.v[2] += 6; };
@@ -84,21 +91,11 @@
   });
   window.addEventListener('pointerup', () => { dr = null; });
 
-  function scene() {
-    const n = chain.bodies.length;
-    const children = chain.bodies.map((b, i) => ({
-      type: 'sphere',
-      params: { r: i === 0 || i === n - 1 ? cfg.radius * 1.5 : cfg.radius,
-        color: i === 0 || i === n - 1 ? [0.9, 0.85, 0.3] : [0.35 + 0.5 * (i / n), 0.55, 0.9] },
-      transform: { translate: b.p.slice() }
-    }));
-    return { name: 'rope', root: { type: 'smoothUnion', k: cfg.radius * 0.9, children } };
-  }
-
   let frame = 0;
   function loop() {
     stepXPBD(chain.bodies, chain.constraints, cfg, 16);
-    renderer.updateScene(generateGlslFromJson(loadJsonScene(scene()), {}));
+    const u = spheresToUniforms(chain.bodies, beadR, beadC);   // per frame: uniforms only
+    for (const k in u) renderer.setParam(k, u[k]);
     if (renderer.render) renderer.render();
     if ((frame++ % 20) === 0) {
       let maxErr = 0;
