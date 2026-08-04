@@ -456,6 +456,34 @@ describe('sdf edit list (core/sdf-editlist.js)', () => {
     expect(wgsl).toContain('fn lx_editField(p: vec3f) -> vec4f');
     expect(wgsl).toContain('for (var i = 0u;');
     expect((wgsl.match(/\{/g) || []).length).toBe((wgsl.match(/\}/g) || []).length);
+    // The fold indexes the data array with a runtime counter, so it must be a
+    // private var, not a module const (const dynamic-indexing bakes black on
+    // some WebGPU implementations).
+    expect(wgsl).toContain('var<private> lx_editData');
+    expect(wgsl).not.toContain('const lx_editData');
+    // The bounding-sphere cull must be present (the bake-cost win while moving).
+    expect(wgsl).toContain('length(p - t) - bound');
+    expect(wgsl).toContain('continue;');
+  });
+
+  // The spatial cull must not change the field: a culled edit is provably a
+  // no-op. Verify the folded field still equals the reference tree exactly on a
+  // spread-out union where most edits are far from any given sample.
+  it('bounding-sphere cull is exact (field unchanged)', () => {
+    const children = [];
+    for (let i = 0; i < 20; i++) {
+      const a = i * 1.3;
+      children.push({ type: 'sphere', params: { r: 0.4, color: [0.6, 0.6, 0.9] },
+        transform: { translate: [Math.cos(a) * 3, (i % 5) * 0.6, Math.sin(a) * 3] } });
+    }
+    const scene = loadJsonScene({ name: 'spread', root: { type: 'union', children } });
+    const { edits } = flattenToEdits(scene);
+    let maxErr = 0;
+    for (let s = 0; s < 3000; s++) {
+      const p = [(Math.random() * 2 - 1) * 5, Math.random() * 4, (Math.random() * 2 - 1) * 5];
+      maxErr = Math.max(maxErr, Math.abs(evalEdits(edits, p).d - evalTree(scene.root, p).d));
+    }
+    expect(maxErr).toBe(0);
   });
 
   // The flatten's rotation must match the shader's (rotate + rotateAxis), or the

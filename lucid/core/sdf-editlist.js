@@ -91,6 +91,21 @@ function primColor(node) {
   return c ? vec3(c, [0.8, 0.8, 0.8]) : [0.8, 0.8, 0.8];
 }
 
+// Bounding-sphere radius (local space) of a primitive — the max extent from its
+// local origin. Used for an exact spatial cull in the fold: a union edit whose
+// bound cannot reach the running distance is provably a no-op.
+function primBound(prim, pr) {
+  switch (prim) {
+  case 0: return pr[0];                              // sphere: r
+  case 1: return len3(pr);                           // box: corner of half-extents
+  case 2: return pr[0] + pr[1];                      // torus: major + minor
+  case 3: return Math.hypot(pr[0], pr[1]);           // cylinder: half-height & r
+  case 4: return pr[0] + pr[1];                      // capsule: half-height + r
+  case 5: return Math.max(pr[0], pr[1], pr[2]);      // ellipsoid: largest radius
+  default: return 1e9;
+  }
+}
+
 // ---- transform accumulation ---------------------------------------------
 // xf = { R:[9], s:number, t:[3] }  world = t + s*R*local
 const XF_ID = () => ({ R: I3.slice(), s: 1, t: [0, 0, 0] });
@@ -160,10 +175,12 @@ export function flattenToEdits(scene) {
     const nx = node.transform ? composeXf(xf, node) : xf;
 
     if (PRIM[node.type] !== undefined) {
+      const params = primParams(node);
       edits.push({
         prim: PRIM[node.type], op, k,
         xf: nx,
-        params: primParams(node),
+        params,
+        bound: primBound(PRIM[node.type], params) * nx.s, // world-space bounding radius
         color: colorOverride || primColor(node)
       });
       return;
@@ -245,6 +262,14 @@ export function evalEdits(edits, p) {
   let d = 1e9, color = [0.6, 0.6, 0.6];
   for (let i = 0; i < edits.length; i++) {
     const e = edits[i];
+    // Exact spatial cull: an additive edit whose bounding sphere cannot reach
+    // the running distance (plus the smooth-blend margin k) is a no-op. This is
+    // the whole speed win — a far edit costs one length() instead of a full
+    // primitive eval + blend. Only additive ops cull; subtracts always run.
+    if (i > 0 && (e.op === OP.union || e.op === OP.smoothUnion)) {
+      const margin = e.op === OP.smoothUnion ? (e.k || 0) : 0;
+      if (len3(sub3(p, e.xf.t)) - e.bound - margin > d) continue;
+    }
     const ed = editDist(e, p);
     if (i === 0) { d = (e.op === OP.subtract || e.op === OP.smoothSubtract) ? -ed : ed; color = e.color; continue; }
     if (e.op === OP.union) {
@@ -315,7 +340,7 @@ export function evalTree(node, p, xf = XF_ID(), colorOverride = null) {
 // Bake the edit list as a flat const f32 array + a data-driven loop. Stays
 // uniform-free, so it splices into clipclop like the codegen bridge does.
 
-const STRIDE = 22; // prim,op,k,s, RT(9), t(3), pr(3), col(3)
+const STRIDE = 23; // prim,op,k,s, RT(9), t(3), pr(3), col(3), bound(1)
 
 function f(v) { return Number.isInteger(v) ? v + '.0' : String(v); }
 
@@ -330,7 +355,8 @@ export function generateEditListWgsl(scene, opts = {}) {
       RT[0], RT[1], RT[2], RT[3], RT[4], RT[5], RT[6], RT[7], RT[8],
       e.xf.t[0], e.xf.t[1], e.xf.t[2],
       e.params[0], e.params[1], e.params[2],
-      e.color[0], e.color[1], e.color[2]);
+      e.color[0], e.color[1], e.color[2],
+      e.bound);
   }
   const N = edits.length;
   const arr = data.map(f).join(', ');
@@ -339,7 +365,10 @@ export function generateEditListWgsl(scene, opts = {}) {
   const wgsl = `// ===== Lucid → edit list (generated, data-driven) =====
 // ${N} edits, stride ${STRIDE}. Folded by a loop, not compiled per node.
 const ${P('EDITS')}: u32 = ${N}u;
-const ${P('editData')} = array<f32, ${Math.max(1, N * STRIDE)}>(${N ? arr : '0.0'});
+// var<private> (not const): the fold indexes this array with a runtime loop
+// counter. Dynamic indexing of a module-scope const is rejected by some WGSL
+// implementations (a black bake on device); a private var is always legal.
+var<private> ${P('editData')}: array<f32, ${Math.max(1, N * STRIDE)}> = array<f32, ${Math.max(1, N * STRIDE)}>(${N ? arr : '0.0'});
 fn ${P('editPrim')}(pl: vec3f, prim: i32, pr: vec3f) -> f32 {
   if (prim == 0) { return length(pl) - pr.x; }
   if (prim == 1) { let q = abs(pl) - pr; return length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0); }
@@ -364,6 +393,13 @@ fn ${P('editField')}(p: vec3f) -> vec4f {
     let t = vec3f(${P('editData')}[o + 13u], ${P('editData')}[o + 14u], ${P('editData')}[o + 15u]);
     let pr = vec3f(${P('editData')}[o + 16u], ${P('editData')}[o + 17u], ${P('editData')}[o + 18u]);
     let c = vec3f(${P('editData')}[o + 19u], ${P('editData')}[o + 20u], ${P('editData')}[o + 21u]);
+    let bound = ${P('editData')}[o + 22u];
+    // Exact spatial cull: skip an additive edit that provably cannot lower d.
+    // margin = k for smoothUnion (the blend reaches k beyond contact), 0 else.
+    if (i > 0u && (op == 0 || op == 2)) {
+      let margin = select(0.0, k, op == 2);
+      if (length(p - t) - bound - margin > d) { continue; }
+    }
     let rel = p - t;
     let local = vec3f(dot(r0, rel), dot(r1, rel), dot(r2, rel)) / s;
     let ed = ${P('editPrim')}(local, prim, pr) * s;
