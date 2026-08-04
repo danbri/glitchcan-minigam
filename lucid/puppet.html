@@ -29,7 +29,8 @@
 <main>
   <canvas id="canvas"></canvas>
   <div class="panel">
-    <button type="button" class="go" id="drop">drop ⤓</button>
+    <button type="button" class="go" id="stand">stand ⤒</button>
+    <button type="button" id="drop">drop ⤓</button>
     <button type="button" id="kick">kick ⤴</button>
     <span class="lbl">as</span><span id="species"></span>
     <span class="lbl" id="info"></span>
@@ -45,29 +46,31 @@
 
   const $ = (id) => document.getElementById(id);
   const cfg = defaultPhysicsConfig(); cfg.radius = 0.16; cfg.bound = 6;
-  let rig;
-  function drop(settle) {
-    rig = buildQuadrupedRig();
-    if (settle) for (let i = 0; i < 260; i++) stepXPBD(rig.bodies, rig.constraints, cfg, 20);
+  let rig, standing = true;
+  function rebuild(mode) {
+    standing = mode === 'stand';
+    rig = buildQuadrupedRig({ stand: standing });
+    if (standing) for (let i = 0; i < 200; i++) stepXPBD(rig.bodies, rig.constraints, cfg, 20); // settle upright
   }
-  drop(true);   // start settled so the first frame shows a flopped puppet
+  rebuild('stand');   // start as a standing animal, not a flopped blob
 
   const canvas = $('canvas');
   let renderer;
   try { renderer = new SimpleRaymarcher(canvas); }
   catch (e) { $('status').textContent = 'WebGL unavailable'; throw e; }
-  renderer.cameraDistance = 6.5;
+  renderer.cameraDistance = 6;
   renderer.cameraTheta = 0.7;
-  renderer.cameraPhi = 0.35;
-  renderer.cameraTarget = [0, 0.6, 0];
-  if (renderer.setQuality) renderer.setQuality('high');
+  renderer.cameraPhi = 0.18;
+  renderer.cameraTarget = [0, 0.9, 0];
+  // tuned raymarch: enough steps for a clean surface, higher relaxation for speed
+  if (renderer.setQuality) renderer.setQuality({ maxSteps: 160, hitThreshold: 0.0025, minStep: 0.003, relaxation: 0.8 });
 
-  // Compile the shader ONCE: N capsule parts, every value a uniform. Then only
-  // setParam per frame — no per-frame shader recompile (that was the jank).
+  // Compile the shader ONCE: N capsule parts, every value a uniform. The GROUND
+  // is the renderer's built-in analytic plane (no SDF ground → no grazing-ray
+  // banding). Then only setParam per frame.
   const NPARTS = quadrupedRigParts(rig, QUADRUPED_PRESETS.pig).length;
   const uniformScene = partsUniformScene(NPARTS);
-  // append a static ground slab to the compiled structure
-  uniformScene.root.children.push({ type: 'box', params: { size: [cfg.bound, 0.05, cfg.bound], color: [0.16, 0.18, 0.22] }, transform: { translate: [0, -0.05, 0] } });
+  if (renderer.setGroundOpacity) renderer.setGroundOpacity(0.35);
   let compiled = false;
   function ensureCompiled() {
     if (compiled) return;
@@ -82,7 +85,7 @@
 
   function fit() {
     const r = canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5); // cap: retina 3x is wasted on a heavy SDF
     canvas.width = Math.max(1, Math.floor(r.width * dpr));
     canvas.height = Math.max(1, Math.floor(r.height * dpr));
     if (renderer.resize) renderer.resize(canvas.width, canvas.height);
@@ -99,8 +102,9 @@
   }
   $('species').firstChild.classList.add('go');
 
-  $('drop').onclick = () => drop(false);
-  $('kick').onclick = () => { for (const b of rig.bodies) { b.v[1] += 5; b.v[0] += (Math.abs(b.p[0]) > 0 ? Math.sign(b.p[0]) : 1) * 1.5; } };
+  $('stand').onclick = () => rebuild('stand');
+  $('drop').onclick = () => rebuild('flop');   // unpin feet → it falls live
+  $('kick').onclick = () => { for (const b of rig.bodies) if (b.w > 0) { b.v[1] += 5; b.v[0] += (b.p[0] >= 0 ? 1 : -1) * 1.5; } };
 
   // drag to orbit
   let dr = null;

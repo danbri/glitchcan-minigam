@@ -205,27 +205,32 @@ export function buildChain(n, a, b, cfg = defaultPhysicsConfig()) {
  * @returns {{ bodies, constraints, bones, joints }} bones/joints for rendering.
  */
 export function buildQuadrupedRig(opts = {}) {
+  const stand = opts.stand || false;                 // stand on pinned feet vs flop
   const bodyLen = opts.bodyLen ?? 1.6;
   const standH = opts.standH ?? 1.1;
   const spread = opts.spread ?? 0.5;
-  const y0 = opts.dropY ?? 1.2;   // start height (it falls from here)
+  const footY = opts.footY ?? 0.15;                  // ground contact height
+  const y0 = opts.dropY ?? (stand ? 0 : 1.2);        // stand at ground, or fall from height
 
   const J = {}; // name -> position
   const hz = bodyLen / 2;
+  const fy = stand ? footY : y0;                     // feet on the ground when standing
   J.shoulder = [0, standH + y0, -hz];
   J.mid = [0, standH + y0 + 0.05, 0];
   J.hip = [0, standH + y0, hz];
   J.neck = [0, standH + y0 + 0.45, -hz - 0.35];
   J.head = [0, standH + y0 + 0.7, -hz - 0.8];
   J.tail = [0, standH + y0 + 0.1, hz + 0.7];
-  J.footFL = [-spread, y0, -hz + 0.1];
-  J.footFR = [spread, y0, -hz + 0.1];
-  J.footBL = [-spread, y0, hz - 0.1];
-  J.footBR = [spread, y0, hz - 0.1];
+  J.footFL = [-spread, fy, -hz + 0.1];
+  J.footFR = [spread, fy, -hz + 0.1];
+  J.footBL = [-spread, fy, hz - 0.1];
+  J.footBR = [spread, fy, hz - 0.1];
 
   const names = Object.keys(J);
   const idx = Object.fromEntries(names.map((n, i) => [n, i]));
-  const bodies = names.map(n => ({ p: J[n].slice(), v: [0, 0, 0], w: 1 }));
+  // when standing, the four feet are pinned (w = 0) so the body hangs from the
+  // rigid leg bones and stays upright instead of collapsing.
+  const bodies = names.map(n => ({ p: J[n].slice(), v: [0, 0, 0], w: (stand && n.startsWith('foot')) ? 0 : 1 }));
 
   const dist = (a, b) => Math.hypot(J[a][0] - J[b][0], J[a][1] - J[b][1], J[a][2] - J[b][2]);
   const boneList = [
