@@ -3,89 +3,85 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Lucid — GPU physics (step 1&2)</title>
+<title>Lucid — GPU physics on clipclop (WebGPU)</title>
 <style>
-  :root { color-scheme: dark; --bg:#0a0f16; --panel:#111925; --edge:#1e2c3d; --ink:#cfe3ff; --dim:#7c93ac; --acc:#39c0ff; --ok:#54e39a; }
+  :root { color-scheme: dark; --bg:#0a0f16; --panel:#111925; --edge:#1e2c3d; --ink:#cfe3ff; --dim:#7c93ac; --acc:#39c0ff; --ok:#54e39a; --err:#ff6b6b; }
   * { box-sizing: border-box; }
   html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.5 ui-monospace, Menlo, monospace; }
   header { padding:10px 14px; border-bottom:1px solid var(--edge); display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
   header h1 { font-size:15px; margin:0; font-weight:600; }
   header .sub { color:var(--dim); font-size:12px; }
   header .status { margin-left:auto; font-size:12px; color:var(--ok); }
+  header .status.err { color:var(--err); }
   main { display:flex; flex-direction:column; height:calc(100% - 46px); }
-  #r { width:100%; flex:1 1 auto; min-height:220px; display:block; background:#05080d; }
+  iframe { width:100%; flex:1 1 auto; min-height:220px; border:0; display:block; background:#05080d; }
   .panel { border-top:1px solid var(--edge); padding:10px 14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; background:var(--panel); }
-  .panel button { background:#0b1420; color:var(--ink); border:1px solid var(--edge); border-radius:8px; padding:7px 14px; cursor:pointer; font:13px ui-monospace,monospace; }
+  .panel button { background:#0b1420; color:var(--ink); border:1px solid var(--edge); border-radius:8px; padding:6px 13px; cursor:pointer; font:12px ui-monospace,monospace; }
   .panel button.go { border-color:var(--acc); color:var(--acc); }
   .panel .lbl { color:var(--dim); font-size:12px; }
-  .be { color:var(--acc); font-size:11px; border:1px solid var(--edge); border-radius:10px; padding:1px 8px; }
   input[type=range] { accent-color:var(--acc); }
 </style>
 </head>
 <body>
 <header>
   <h1>Lucid · GPU physics</h1>
-  <span class="sub">gravity + ground bounce · CPU twin of the WGSL compute shader</span>
+  <span class="sub">bodies settle (CPU twin), then bake into clipclop (WebGPU)</span>
   <span class="status" id="status">booting…</span>
 </header>
 <main>
-  <lucid-renderer id="r" backend="auto" ground-plane="true"></lucid-renderer>
+  <iframe id="frame" title="clipclop engine"></iframe>
   <div class="panel">
-    <button type="button" class="go" id="drop">drop again ⟳</button>
+    <button type="button" class="go" id="drop">drop &amp; bake ⟳</button>
     <span class="lbl">bodies</span>
     <input type="range" id="count" min="4" max="48" step="1" value="24">
     <span class="lbl" id="countval">24</span>
-    <span class="be" id="be">…</span>
-    <span class="lbl" id="restlbl"></span>
+    <span class="lbl" id="info"></span>
   </div>
 </main>
 
 <script type="module">
-  import './components/lucid-renderer.js';   // WebGPU (Stinkyfish) when available, Mayfly fallback
-  import { defaultPhysicsConfig, initBodies, stepPhysics, spheresUniformScene, spheresToUniforms } from './core/gpu-physics.js';
+  import { spliceEngine } from './clipclop/splice-lib.js';
+  import { defaultPhysicsConfig, initBodies, stepPhysics } from './core/gpu-physics.js';
 
   const $ = (id) => document.getElementById(id);
   const cfg = defaultPhysicsConfig();
-  let bodies = initBodies(24, cfg);
   const ballColor = (i) => [0.4 + 0.5 * ((i * 0.37) % 1), 0.55, 0.85];
 
-  const el = $('r');
-  let ready = false, compiledN = -1;
-  el.addEventListener('renderer-ready', (e) => {
-    $('be').textContent = e.detail.backend;
-    el.setCamera({ distance: 8.5, theta: 0.7, phi: 0.25, target: [0, 0.8, 0] });
-    ready = true;
-  });
-  el.addEventListener('render-error', (e) => { $('status').textContent = 'renderer error: ' + (e.detail.error?.message || ''); });
-
-  // recompile ONLY when the body COUNT changes; per frame just setParam positions
-  async function ensureScene(n) {
-    if (compiledN === n) return;
-    compiledN = n;
-    await el.loadSceneJson(spheresUniformScene(n));
+  // Settle N bodies on the CPU, then bake the resting pile as a Lucid scene.
+  function buildScene(n) {
+    const bodies = initBodies(n, cfg);
+    for (let s = 0; s < 500; s++) stepPhysics(bodies, cfg, 4);
+    const children = bodies.map((b, i) => ({
+      type: 'sphere', params: { r: cfg.radius, color: ballColor(i) },
+      transform: { translate: b.p.slice() }
+    }));
+    // scale/place the pile where the clipclop camera looks (world is metres)
+    return { name: 'physics', root: { type: 'transform', transform: { translate: [0, 2, 5], scale: 2.4 },
+      child: { type: 'union', children } } };
   }
 
-  function drop() { bodies = initBodies(parseInt($('count').value, 10), cfg); }
-  $('drop').onclick = drop;
-  $('count').addEventListener('input', () => { $('countval').textContent = $('count').value; drop(); });
-
-  let frame = 0;
-  function loop() {
-    stepPhysics(bodies, cfg, 4);
-    if (ready) {
-      ensureScene(bodies.length);
-      const u = spheresToUniforms(bodies, cfg.radius, ballColor);
-      for (const k in u) el.updateParam(k, u[k]);
+  let engineHtml = null;
+  async function boot() {
+    const n = parseInt($('count').value, 10);
+    $('status').textContent = 'settling ' + n + ' bodies…'; $('status').className = 'status';
+    try {
+      if (!engineHtml) engineHtml = await fetch('./clipclop/index.html', { cache: 'no-store' }).then(r => {
+        if (!r.ok) throw new Error('cannot fetch clipclop engine (' + r.status + ')'); return r.text();
+      });
+      const { html, bridge } = spliceEngine(engineHtml, buildScene(n), { mode: 'editlist' });
+      $('frame').src = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      $('info').textContent = bridge.count + ' edits · clipclop bake';
+      $('status').textContent = 'baked ✓ — engine in frame';
+      window.__physics = { ok: true, edits: bridge.count, n };
+    } catch (e) {
+      $('status').textContent = 'error: ' + e.message; $('status').className = 'status err';
+      window.__physics = { ok: false, error: e.message };
     }
-    if ((frame++ % 12) === 0 && ready) {
-      const maxV = Math.max(...bodies.map(b => Math.hypot(...b.v)));
-      $('status').textContent = maxV < 0.1 ? 'at rest' : 'falling…';
-      $('restlbl').textContent = `max speed ${maxV.toFixed(2)}`;
-      window.__physics = { ok: true, n: bodies.length, maxV };
-    }
-    requestAnimationFrame(loop);
   }
-  loop();
+
+  $('drop').onclick = boot;
+  $('count').addEventListener('input', () => { $('countval').textContent = $('count').value; });
+  boot();
 </script>
 </body>
 </html>

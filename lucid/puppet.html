@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Lucid — physics puppet (quadruped ragdoll)</title>
+<title>Lucid — physics puppet on clipclop (WebGPU)</title>
 <style>
-  :root { color-scheme: dark; --bg:#0a0f16; --panel:#111925; --edge:#1e2c3d; --ink:#cfe3ff; --dim:#7c93ac; --acc:#39c0ff; --ok:#54e39a; }
+  :root { color-scheme: dark; --bg:#0a0f16; --panel:#111925; --edge:#1e2c3d; --ink:#cfe3ff; --dim:#7c93ac; --acc:#39c0ff; --ok:#54e39a; --err:#ff6b6b; }
   * { box-sizing: border-box; }
   html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.5 ui-monospace, Menlo, monospace; }
   header { padding:10px 14px; border-bottom:1px solid var(--edge); display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
   header h1 { font-size:15px; margin:0; font-weight:600; }
   header .sub { color:var(--dim); font-size:12px; }
   header .status { margin-left:auto; font-size:12px; color:var(--ok); }
-  header .be { color:var(--acc); font-size:11px; border:1px solid var(--edge); border-radius:10px; padding:1px 8px; }
+  header .status.err { color:var(--err); }
   main { display:flex; flex-direction:column; height:calc(100% - 46px); }
-  #r { width:100%; flex:1 1 auto; min-height:220px; display:block; background:#05080d; }
-  .panel { border-top:1px solid var(--edge); padding:10px 14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; background:var(--panel); }
-  .panel button { background:#0b1420; color:var(--ink); border:1px solid var(--edge); border-radius:8px; padding:7px 14px; cursor:pointer; font:13px ui-monospace,monospace; }
+  iframe { width:100%; flex:1 1 auto; min-height:220px; border:0; display:block; background:#05080d; }
+  .panel { border-top:1px solid var(--edge); padding:10px 14px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; background:var(--panel); }
+  .panel button { background:#0b1420; color:var(--ink); border:1px solid var(--edge); border-radius:12px; padding:6px 13px; cursor:pointer; font:12px ui-monospace,monospace; }
   .panel button.go { border-color:var(--acc); color:var(--acc); }
   .panel .lbl { color:var(--dim); font-size:12px; }
 </style>
@@ -24,87 +24,68 @@
 <body>
 <header>
   <h1>Lucid · physics puppet</h1>
-  <span class="sub">a quadruped skeleton of XPBD bones — drop it, it flops</span>
-  <span class="be" id="be">…</span>
+  <span class="sub">a quadruped baked into clipclop (WebGPU)</span>
   <span class="status" id="status">booting…</span>
 </header>
 <main>
-  <lucid-renderer id="r" backend="auto" ground-plane="true"></lucid-renderer>
+  <iframe id="frame" title="clipclop engine"></iframe>
   <div class="panel">
-    <button type="button" class="go" id="stand">stand ⤒</button>
-    <button type="button" id="drop">drop ⤓</button>
-    <button type="button" id="kick">kick ⤴</button>
     <span class="lbl">as</span><span id="species"></span>
     <span class="lbl" id="info"></span>
   </div>
 </main>
 
 <script type="module">
-  import './components/lucid-renderer.js';   // WebGPU (Stinkyfish) when available, Mayfly fallback
+  import { spliceEngine } from './clipclop/splice-lib.js';
   import { defaultPhysicsConfig, buildQuadrupedRig, stepXPBD } from './core/gpu-physics.js';
-  import { quadrupedRigParts, partsUniformScene, partsToUniforms, QUADRUPED_PRESETS } from './core/sdf-template.js';
+  import { poseQuadrupedFromRig, QUADRUPED_PRESETS } from './core/sdf-template.js';
 
   const $ = (id) => document.getElementById(id);
   const cfg = defaultPhysicsConfig(); cfg.radius = 0.16; cfg.bound = 6;
   let species = 'pig';
-  let rig, standing = true;
-  function rebuild(mode) {
-    standing = mode === 'stand';
-    rig = buildQuadrupedRig({ stand: standing });
-    if (standing) for (let i = 0; i < 200; i++) stepXPBD(rig.bodies, rig.constraints, cfg, 20); // settle upright
+
+  // Build a standing, settled quadruped and place it where the clipclop camera
+  // looks (its world is metres; the demo view frames roughly (0,4,5)).
+  function buildScene() {
+    const rig = buildQuadrupedRig({ stand: true });
+    for (let i = 0; i < 220; i++) stepXPBD(rig.bodies, rig.constraints, cfg, 20);
+    const posed = poseQuadrupedFromRig(rig, QUADRUPED_PRESETS[species]);
+    return { name: 'puppet', root: { type: 'transform', transform: { translate: [0, 2.6, 5], scale: 3 }, child: posed.root } };
   }
-  rebuild('stand');   // start as a standing animal, not a flopped blob
 
-  const el = $('r');                       // <lucid-renderer backend="auto">
-  const NPARTS = quadrupedRigParts(rig, QUADRUPED_PRESETS.pig).length;
-  const uniformScene = partsUniformScene(NPARTS);   // compiled once by the backend
-
-  let ready = false;
-  el.addEventListener('renderer-ready', async (e) => {
-    $('be').textContent = e.detail.backend;         // shows "stinkyfish" on WebGPU
+  let engineHtml = null;
+  async function boot() {
+    $('status').textContent = 'baking ' + species + '…'; $('status').className = 'status';
     try {
-      await el.loadSceneJson(uniformScene);          // codegens WGSL (or GLSL) once
-      el.setCamera({ distance: 6, theta: 0.7, phi: 0.18, target: [0, 0.9, 0] });
-      el.setGroundPlane(true);
-      ready = true;
-    } catch (err) {
-      $('status').textContent = 'scene load failed: ' + (err?.message || err);
+      if (!engineHtml) engineHtml = await fetch('./clipclop/index.html', { cache: 'no-store' }).then(r => {
+        if (!r.ok) throw new Error('cannot fetch clipclop engine (' + r.status + ')'); return r.text();
+      });
+      const { html, bridge } = spliceEngine(engineHtml, buildScene(), { mode: 'editlist' });
+      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      $('frame').src = url;
+      $('info').textContent = bridge.count + ' edits · clipclop bake';
+      $('status').textContent = 'baked ✓ — engine in frame';
+      $('status').className = 'status';
+      window.__puppet = { ok: true, edits: bridge.count, species };
+    } catch (e) {
+      $('status').textContent = 'error: ' + e.message; $('status').className = 'status err';
+      window.__puppet = { ok: false, error: e.message };
     }
-  });
-  el.addEventListener('render-error', (e) => { $('status').textContent = 'renderer error: ' + (e.detail.error?.message || ''); });
-
-  function pushPose() {
-    const u = partsToUniforms(quadrupedRigParts(rig, QUADRUPED_PRESETS[species]));
-    for (const k in u) el.updateParam(k, u[k]);      // per frame: uniforms only, no recompile
   }
 
-  // species chips (the physical body is also morphable)
   for (const s of Object.keys(QUADRUPED_PRESETS)) {
     const btn = document.createElement('button');
     btn.type = 'button'; btn.textContent = s; btn.dataset.sp = s;
-    btn.style.cssText = 'padding:5px 10px;border-radius:12px';
-    btn.onclick = () => { species = s; for (const c of $('species').children) c.classList.toggle('go', c.dataset.sp === s); };
+    if (s === species) btn.classList.add('go');
+    btn.onclick = () => {
+      species = s;
+      for (const c of $('species').children) c.classList.toggle('go', c.dataset.sp === s);
+      boot();
+    };
     $('species').appendChild(btn);
   }
-  $('species').firstChild.classList.add('go');
 
-  $('stand').onclick = () => rebuild('stand');
-  $('drop').onclick = () => rebuild('flop');   // unpin feet → it falls live
-  $('kick').onclick = () => { for (const b of rig.bodies) if (b.w > 0) { b.v[1] += 5; b.v[0] += (b.p[0] >= 0 ? 1 : -1) * 1.5; } };
-
-  let frame = 0;
-  function loop() {
-    stepXPBD(rig.bodies, rig.constraints, cfg, 20);
-    if (ready) pushPose();       // the component runs its own render loop
-    if ((frame++ % 12) === 0 && ready) {
-      const maxV = Math.max(...rig.bodies.map(b => Math.hypot(...b.v)));
-      $('status').textContent = maxV < 0.15 ? 'settled' : 'moving…';
-      $('info').textContent = `${rig.bones.length} bones · ${rig.joints.length} joints`;
-      window.__puppet = { ok: true, bones: rig.bones.length, joints: rig.joints.length, maxV };
-    }
-    requestAnimationFrame(loop);
-  }
-  loop();
+  boot();
 </script>
 </body>
 </html>
