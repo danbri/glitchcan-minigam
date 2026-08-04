@@ -13,11 +13,12 @@
   header .sub { color:var(--dim); font-size:12px; }
   header .status { margin-left:auto; font-size:12px; color:var(--ok); }
   main { display:flex; flex-direction:column; height:calc(100% - 46px); }
-  #canvas { width:100%; flex:1 1 auto; min-height:220px; display:block; background:#05080d; }
+  #r { width:100%; flex:1 1 auto; min-height:220px; display:block; background:#05080d; }
   .panel { border-top:1px solid var(--edge); padding:10px 14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; background:var(--panel); }
   .panel button { background:#0b1420; color:var(--ink); border:1px solid var(--edge); border-radius:8px; padding:7px 14px; cursor:pointer; font:13px ui-monospace,monospace; }
   .panel button.go { border-color:var(--acc); color:var(--acc); }
   .panel .lbl { color:var(--dim); font-size:12px; }
+  .be { color:var(--acc); font-size:11px; border:1px solid var(--edge); border-radius:10px; padding:1px 8px; }
 </style>
 </head>
 <body>
@@ -27,18 +28,17 @@
   <span class="status" id="status">booting…</span>
 </header>
 <main>
-  <canvas id="canvas"></canvas>
+  <lucid-renderer id="r" backend="auto" ground-plane="false"></lucid-renderer>
   <div class="panel">
     <button type="button" class="go" id="nudge">nudge ⟿</button>
     <button type="button" id="reset">reset</button>
+    <span class="be" id="be">…</span>
     <span class="lbl" id="info"></span>
   </div>
 </main>
 
 <script type="module">
-  import { loadJsonScene } from './core/json-loader.js';
-  import { generateGlslFromJson } from './core/json-codegen.js';
-  import { SimpleRaymarcher } from './mayfly/raymarcher.js';
+  import './components/lucid-renderer.js';   // WebGPU (Stinkyfish) when available, Mayfly fallback
   import { defaultPhysicsConfig, buildChain, stepXPBD, spheresUniformScene, spheresToUniforms } from './core/gpu-physics.js';
 
   const $ = (id) => document.getElementById(id);
@@ -46,59 +46,35 @@
   let chain;
   function reset() {
     chain = buildChain(16, [-2.4, 3.2, 0], [2.4, 3.2, 0], cfg);
-    // settle to the resting catenary before first paint (so it starts hanging)
-    for (let i = 0; i < 400; i++) stepXPBD(chain.bodies, chain.constraints, cfg, 16);
+    for (let i = 0; i < 400; i++) stepXPBD(chain.bodies, chain.constraints, cfg, 16); // settle
   }
   reset();
-
-  const canvas = $('canvas');
-  let renderer;
-  try { renderer = new SimpleRaymarcher(canvas); }
-  catch (e) { $('status').textContent = 'WebGL unavailable'; throw e; }
-  // chain hangs in the x-y plane (z=0); this 3/4 angle shows the vertical sag
-  renderer.cameraDistance = 9;
-  renderer.cameraTheta = 0.32;
-  renderer.cameraPhi = 0.42;
-  renderer.cameraTarget = [0, 2.1, 0];
-
-  function fit() {
-    const r = canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-    canvas.width = Math.max(1, Math.floor(r.width * dpr));
-    canvas.height = Math.max(1, Math.floor(r.height * dpr));
-    if (renderer.resize) renderer.resize(canvas.width, canvas.height);
-  }
-  window.addEventListener('resize', fit);
-  if (renderer.setQuality) renderer.setQuality('high');
-  if (renderer.setGroundPlane) renderer.setGroundPlane(false); // chain hangs in air
-
-  // compile ONCE (fixed 16 beads); per frame only setParam positions
   const N = chain.bodies.length;
-  renderer.updateScene(generateGlslFromJson(loadJsonScene(spheresUniformScene(N, { smooth: true, k: cfg.radius * 0.9 })), {}));
   const beadR = (i) => (i === 0 || i === N - 1) ? cfg.radius * 1.5 : cfg.radius;
   const beadC = (i) => (i === 0 || i === N - 1) ? [0.9, 0.85, 0.3] : [0.35 + 0.5 * (i / N), 0.55, 0.9];
+
+  const el = $('r');
+  let ready = false;
+  el.addEventListener('renderer-ready', async (e) => {
+    $('be').textContent = e.detail.backend;
+    await el.loadSceneJson(spheresUniformScene(N, { smooth: true, k: cfg.radius * 0.9 }));
+    el.setCamera({ distance: 9, theta: 0.32, phi: 0.42, target: [0, 2.1, 0] });
+    el.setGroundPlane(false);
+    ready = true;
+  });
+  el.addEventListener('render-error', (e) => { $('status').textContent = 'renderer error: ' + (e.detail.error?.message || ''); });
 
   $('reset').onclick = reset;
   $('nudge').onclick = () => { for (const b of chain.bodies) if (b.w > 0) b.v[2] += 6; };
 
-  // drag to orbit
-  let dr = null;
-  canvas.addEventListener('pointerdown', (e) => { dr = { x: e.clientX, y: e.clientY }; });
-  window.addEventListener('pointermove', (e) => {
-    if (!dr) return;
-    renderer.cameraTheta -= (e.clientX - dr.x) * 0.01;
-    renderer.cameraPhi = Math.max(-0.3, Math.min(1.3, renderer.cameraPhi + (e.clientY - dr.y) * 0.01));
-    dr = { x: e.clientX, y: e.clientY };
-  });
-  window.addEventListener('pointerup', () => { dr = null; });
-
   let frame = 0;
   function loop() {
     stepXPBD(chain.bodies, chain.constraints, cfg, 16);
-    const u = spheresToUniforms(chain.bodies, beadR, beadC);   // per frame: uniforms only
-    for (const k in u) renderer.setParam(k, u[k]);
-    if (renderer.render) renderer.render();
-    if ((frame++ % 20) === 0) {
+    if (ready) {
+      const u = spheresToUniforms(chain.bodies, beadR, beadC);
+      for (const k in u) el.updateParam(k, u[k]);
+    }
+    if ((frame++ % 12) === 0 && ready) {
       let maxErr = 0;
       for (const c of chain.constraints) {
         const a = chain.bodies[c.a].p, b = chain.bodies[c.b].p;
@@ -110,7 +86,7 @@
     }
     requestAnimationFrame(loop);
   }
-  fit(); loop();
+  loop();
 </script>
 </body>
 </html>
