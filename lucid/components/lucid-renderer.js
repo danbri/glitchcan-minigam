@@ -115,7 +115,11 @@ export class LucidRenderer extends HTMLElement {
 
     switch (name) {
       case 'backend':
-        this._initBackend();
+        // Skip the initial attribute set (fires before connectedCallback with no
+        // renderer yet) — connectedCallback does the first init. Only re-init on a
+        // genuine backend CHANGE after the renderer exists. Prevents a double init
+        // (and a WebGPU→Mayfly fallback race) on every load.
+        if (this._renderer) this._initBackend();
         break;
       case 'scene':
         this.loadScene(newValue);
@@ -316,13 +320,29 @@ export class LucidRenderer extends HTMLElement {
 
     try {
       if (selectedBackend === BACKENDS.STINKYFISH) {
-        await this._initStinkyfish();
+        try {
+          await this._initStinkyfish();
+        } catch (gpuErr) {
+          // navigator.gpu can exist while adapter/device init still fails
+          // (headless, blocklisted GPUs, flaky drivers). For 'auto', degrade to
+          // Mayfly instead of leaving a dead renderer.
+          if (requestedBackend === 'auto') {
+            console.warn('WebGPU init failed, falling back to Mayfly:', gpuErr.message);
+            selectedBackend = BACKENDS.MAYFLY;
+            this._backend = BACKENDS.MAYFLY;
+            this._badgeEl.textContent = BACKENDS.MAYFLY;
+            this._badgeEl.className = `backend-badge ${BACKENDS.MAYFLY}`;
+            await this._initMayfly();
+          } else {
+            throw gpuErr;
+          }
+        }
       } else {
         await this._initMayfly();
       }
 
       this.dispatchEvent(new CustomEvent('renderer-ready', {
-        detail: { backend: selectedBackend }
+        detail: { backend: this._backend }
       }));
 
       // Apply declarative display attributes now the renderer exists

@@ -1693,8 +1693,23 @@ function applyTransform(pVar, transform, ctx) {
     result = `(${result} - ${t})`;
   }
 
-  // Apply rotation - support multiple formats
-  if (transform.rotate) {
+  // Apply rotation - support multiple formats (parity with GLSL codegen:
+  // rotateQ > rotateAxis > rotate). Without rotateAxis/rotateQ here, WGSL
+  // silently drops those rotations — the animal's oriented limbs would render
+  // axis-aligned on Stinkyfish while correct on Mayfly.
+  if (transform.rotateQ) {
+    const q = valueToWgsl(transform.rotateQ, ctx);
+    result = `rotQ(${result}, ${q})`;
+  } else if (transform.rotateAxis) {
+    const aa = transform.rotateAxis;
+    const axis = valueToWgsl(aa.axis || { type: 'array', values: [0, 1, 0].map(v => ({ type: 'const', value: v })) }, ctx);
+    const av = aa.angle;
+    // angle in degrees → radians; a var/expr converts in-shader, a const at build time
+    const angle = (av && typeof av === 'object' && av.type !== 'const')
+      ? `(${valueToWgsl(av, ctx)} * 0.01745329)`
+      : formatFloat((av && av.type === 'const' ? av.value : (av || 0)) * Math.PI / 180);
+    result = `rotAxisAngle(${result}, ${axis}, ${angle})`;
+  } else if (transform.rotate) {
     const rot = transform.rotate;
     const toRad = (deg) => `(${valueToWgsl(deg, ctx)} * 0.01745329)`;
 
@@ -1887,6 +1902,12 @@ fn rotZ(p: vec3f, a: f32) -> vec3f {
   let c = cos(a);
   let s = sin(a);
   return vec3f(c*p.x - s*p.y, s*p.x + c*p.y, p.z);
+}
+
+fn rotQ(p: vec3f, q_in: vec4f) -> vec3f {
+  let q = normalize(q_in);
+  let t = 2.0 * cross(q.xyz, p);
+  return p + q.w * t + cross(q.xyz, t);
 }
 
 fn rotAxisAngle(p: vec3f, axis: vec3f, angle: f32) -> vec3f {

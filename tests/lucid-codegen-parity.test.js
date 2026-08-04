@@ -152,6 +152,24 @@ describe('WGSL domain modifiers apply node.transform', () => {
   }
 });
 
+describe('WGSL honours rotateAxis / rotateQ (parity with GLSL)', () => {
+  it('rotateAxis emits rotAxisAngle in BOTH backends and registers the angle uniform', () => {
+    const scene = { name: 't', root: { type: 'capsule', params: { h: 0.5, r: 0.2 },
+      transform: { translate: [0, 0, 0], rotateAxis: { axis: [0, 0, 1], angle: { var: 'spin' } } } } };
+    const g = glsl(scene), w = wgsl(scene);
+    expect(g).toContain('rotAxisAngle');
+    expect(w).toContain('rotAxisAngle');       // was silently dropped before the fix
+    expect(w).toContain('scene.u_spin');       // the angle var must become a uniform
+    expect(w).toContain('fn rotQ(');           // quaternion helper present too
+  });
+
+  it('rotateQ emits rotQ in WGSL', () => {
+    const w = wgsl({ name: 't', root: { type: 'box', params: { size: [0.4, 0.4, 0.4] },
+      transform: { rotateQ: [0, 0, 0.383, 0.924] } } });
+    expect(w).toContain('rotQ(');
+  });
+});
+
 describe('CPU rig-evaluator op parity with the shader', () => {
   const fract = (x) => x - Math.floor(x);
   it('supports the scalar ops the shaders have (no Unknown-op warning)', () => {
