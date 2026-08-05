@@ -355,9 +355,76 @@ const STRIDE = 23; // prim,op,k,s, RT(9), t(3), pr(3), col(3), bound(1)
 
 function f(v) { return Number.isInteger(v) ? v + '.0' : String(v); }
 
-/** @returns {{ wgsl:string, count:number, unsupported:string[] }} */
+const editMargin = (e) => (e.op === OP.smoothUnion || e.op === OP.smoothSubtract) ? (e.k || 0) : 0;
+
+/**
+ * Group the flat (ordered) edit list into contiguous chunks, each with a
+ * bounding sphere that encloses every edit's reach (centre + bound + margin).
+ * The fold can then skip a whole chunk when its sphere cannot lower the running
+ * distance — O(chunks + near-edits) instead of O(all edits). Contiguous chunks
+ * keep the fold ORDER, so the result is identical. A chunk that contains a
+ * subtractive edit gets radius = ∞ (never skipped): a far subtract is a no-op
+ * for additive culling but not once d < 0, so we simply always run it.
+ * @returns {Array<[cx,cy,cz,radius]>}
+ */
+export function chunkEdits(edits, chunk = 16) {
+  const chunks = [];
+  for (let s = 0; s < edits.length; s += chunk) {
+    const e1 = Math.min(s + chunk, edits.length);
+    let cx = 0, cy = 0, cz = 0, hasSub = false;
+    for (let i = s; i < e1; i++) {
+      cx += edits[i].xf.t[0]; cy += edits[i].xf.t[1]; cz += edits[i].xf.t[2];
+      if (edits[i].op === OP.subtract || edits[i].op === OP.smoothSubtract) hasSub = true;
+    }
+    const n = e1 - s; cx /= n; cy /= n; cz /= n;
+    let R = 0;
+    for (let i = s; i < e1; i++) {
+      const e = edits[i];
+      R = Math.max(R, len3(sub3(e.xf.t, [cx, cy, cz])) + e.bound + editMargin(e));
+    }
+    chunks.push([cx, cy, cz, hasSub ? 1e9 : R]);
+  }
+  return chunks;
+}
+
+/**
+ * JS twin of the chunked WGSL fold — verification only. Must equal
+ * evalEdits(edits, p) exactly (the chunk skip only drops provable no-ops).
+ */
+export function foldChunked(edits, p, chunk = 16) {
+  const chunks = chunkEdits(edits, chunk);
+  let d = 1e9, color = [0.6, 0.6, 0.6];
+  for (let ci = 0; ci < chunks.length; ci++) {
+    const [cx, cy, cz, cr] = chunks[ci];
+    if (len3(sub3(p, [cx, cy, cz])) - cr > d) continue;      // skip whole chunk
+    const start = ci * chunk, end = Math.min(start + chunk, edits.length);
+    for (let i = start; i < end; i++) {
+      const e = edits[i];
+      if (e.op === OP.union || e.op === OP.smoothUnion) {
+        if (len3(sub3(p, e.xf.t)) - e.bound - editMargin(e) > d) continue;
+      }
+      const ed = editDist(e, p);
+      if (e.op === OP.union) { if (ed < d) { d = ed; color = e.color; } }
+      else if (e.op === OP.smoothUnion) {
+        const k = e.k || 1e-6;
+        const h = Math.min(Math.max(0.5 + 0.5 * (ed - d) / k, 0), 1);
+        d = ed * (1 - h) + d * h - k * h * (1 - h);
+        color = [e.color[0] * (1 - h) + color[0] * h, e.color[1] * (1 - h) + color[1] * h, e.color[2] * (1 - h) + color[2] * h];
+      } else if (e.op === OP.subtract) { d = Math.max(d, -ed); }
+      else if (e.op === OP.smoothSubtract) {
+        const k = e.k || 1e-6;
+        const h = Math.min(Math.max(0.5 - 0.5 * (d + ed) / k, 0), 1);
+        d = d * (1 - h) + (-ed) * h + k * h * (1 - h);
+      }
+    }
+  }
+  return { d, color };
+}
+
+/** @returns {{ wgsl:string, count:number, unsupported:string[], chunks:number }} */
 export function generateEditListWgsl(scene, opts = {}) {
   const prefix = opts.prefix || 'lx_';
+  const CHUNK = opts.chunk || 16;
   const { edits, unsupported } = flattenToEdits(scene);
   const data = [];
   for (const e of edits) {
@@ -373,13 +440,22 @@ export function generateEditListWgsl(scene, opts = {}) {
   const arr = data.map(f).join(', ');
   const P = (n) => prefix + n;
 
+  // Chunk bounds: 4 floats (centre.xyz, radius) per contiguous group of CHUNK.
+  const chunks = chunkEdits(edits, CHUNK);
+  const NCHUNK = chunks.length;
+  const chunkArr = chunks.flat().map(f).join(', ');
+
   const wgsl = `// ===== Lucid → edit list (generated, data-driven) =====
-// ${N} edits, stride ${STRIDE}. Folded by a loop, not compiled per node.
+// ${N} edits, stride ${STRIDE}, in ${NCHUNK} chunk(s) of ${CHUNK}. Two-level fold:
+// skip a whole chunk whose bounding sphere cannot lower d, else fold its edits.
 const ${P('EDITS')}: u32 = ${N}u;
+const ${P('CHUNK')}: u32 = ${CHUNK}u;
+const ${P('NCHUNK')}: u32 = ${NCHUNK}u;
 // var<private> (not const): the fold indexes this array with a runtime loop
 // counter. Dynamic indexing of a module-scope const is rejected by some WGSL
 // implementations (a black bake on device); a private var is always legal.
 var<private> ${P('editData')}: array<f32, ${Math.max(1, N * STRIDE)}> = array<f32, ${Math.max(1, N * STRIDE)}>(${N ? arr : '0.0'});
+var<private> ${P('chunkData')}: array<f32, ${Math.max(1, NCHUNK * 4)}> = array<f32, ${Math.max(1, NCHUNK * 4)}>(${NCHUNK ? chunkArr : '0.0'});
 fn ${P('editPrim')}(pl: vec3f, prim: i32, pr: vec3f) -> f32 {
   if (prim == 0) { return length(pl) - pr.x; }
   if (prim == 1) { let q = abs(pl) - pr; return length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0); }
@@ -392,9 +468,18 @@ fn ${P('editPrim')}(pl: vec3f, prim: i32, pr: vec3f) -> f32 {
 fn ${P('editField')}(p: vec3f) -> vec4f {
   var d = 1e9;
   var col = vec3f(0.6, 0.6, 0.6);
-  for (var i = 0u; i < ${P('EDITS')}; i = i + 1u) {
-    let o = i * ${STRIDE}u;
-    let prim = i32(${P('editData')}[o]);
+  for (var ci = 0u; ci < ${P('NCHUNK')}; ci = ci + 1u) {
+    let co = ci * 4u;
+    let cc = vec3f(${P('chunkData')}[co], ${P('chunkData')}[co + 1u], ${P('chunkData')}[co + 2u]);
+    let cr = ${P('chunkData')}[co + 3u];
+    // Skip the whole chunk if its bounding sphere cannot reach the running d.
+    if (length(p - cc) - cr > d) { continue; }
+    let start = ci * ${P('CHUNK')};
+    var stop = start + ${P('CHUNK')};
+    if (stop > ${P('EDITS')}) { stop = ${P('EDITS')}; }
+    for (var i = start; i < stop; i = i + 1u) {
+      let o = i * ${STRIDE}u;
+      let prim = i32(${P('editData')}[o]);
     let op = i32(${P('editData')}[o + 1u]);
     let k = ${P('editData')}[o + 2u];
     let s = ${P('editData')}[o + 3u];
@@ -427,9 +512,10 @@ fn ${P('editField')}(p: vec3f) -> vec4f {
       let h = clamp(0.5 - 0.5 * (d + ed) / k, 0.0, 1.0);
       d = mix(d, -ed, h) + k * h * (1.0 - h);
     }
+    }
   }
   return vec4f(d, col);
 }
 `;
-  return { wgsl, count: N, unsupported };
+  return { wgsl, count: N, unsupported, chunks: NCHUNK };
 }

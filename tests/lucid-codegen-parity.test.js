@@ -20,7 +20,7 @@ const { generateWgslFromJson, generateWgslSceneSDF } = await import('../lucid/co
 const { evaluateExpr, evaluateRig } = await import('../lucid/core/rig-evaluator.js');
 const { exprToSexpr, readOne, formToExpr, formToNode } = await import('../lucid/core/sexpr.js');
 const { spliceEngine } = await import('../lucid/clipclop/splice-lib.js');
-const { flattenToEdits, evalEdits, evalTree, generateEditListWgsl } = await import('../lucid/core/sdf-editlist.js');
+const { flattenToEdits, evalEdits, evalTree, generateEditListWgsl, foldChunked, chunkEdits } = await import('../lucid/core/sdf-editlist.js');
 const editbins = await import('../lucid/core/sdf-editbins.js');
 const { quadruped, lerpQuadruped, resolveParams, poseQuadrupedFromRig, orientedCapsule, quadrupedRigParts, partsUniformScene, partsToUniforms, QUADRUPED_PRESETS } = await import('../lucid/core/sdf-template.js');
 const { defaultPhysicsConfig, initBodies, stepBodies, stepPhysics, stepXPBD, buildChain, buildQuadrupedRig, generatePhysicsWgsl } = await import('../lucid/core/gpu-physics.js');
@@ -455,7 +455,8 @@ describe('sdf edit list (core/sdf-editlist.js)', () => {
     const { wgsl, count } = generateEditListWgsl(scene);
     expect(count).toBe(2);
     expect(wgsl).toContain('fn lx_editField(p: vec3f) -> vec4f');
-    expect(wgsl).toContain('for (var i = 0u;');
+    expect(wgsl).toContain('for (var ci = 0u;');          // two-level: chunk loop
+    expect(wgsl).toContain('for (var i = start;');        // then edits within a chunk
     expect((wgsl.match(/\{/g) || []).length).toBe((wgsl.match(/\}/g) || []).length);
     // The fold indexes the data array with a runtime counter, so it must be a
     // private var, not a module const (const dynamic-indexing bakes black on
@@ -470,6 +471,25 @@ describe('sdf edit list (core/sdf-editlist.js)', () => {
   // The spatial cull must not change the field: a culled edit is provably a
   // no-op. Verify the folded field still equals the reference tree exactly on a
   // spread-out union where most edits are far from any given sample.
+  it('two-level chunked fold equals the flat fold (field unchanged)', () => {
+    // 40 spheres in five separated clusters → several chunks, most skippable.
+    const children = [];
+    for (let c = 0; c < 5; c++) for (let j = 0; j < 8; j++) {
+      const a = j * 0.8;
+      children.push({ type: 'sphere', params: { r: 0.3, color: [0.6, 0.6, 0.9] },
+        transform: { translate: [c * 4 + Math.cos(a) * 0.9, 0.5 + (j % 3) * 0.4, Math.sin(a) * 0.9] } });
+    }
+    const scene = loadJsonScene({ name: 'clusters', root: { type: 'smoothUnion', k: 0.08, children } });
+    const { edits } = flattenToEdits(scene);
+    expect(chunkEdits(edits, 16).length).toBeGreaterThan(1);   // actually chunked
+    let maxErr = 0;
+    for (let s = 0; s < 4000; s++) {
+      const p = [Math.random() * 20 - 2, Math.random() * 3, Math.random() * 4 - 2];
+      maxErr = Math.max(maxErr, Math.abs(foldChunked(edits, p, 16).d - evalEdits(edits, p).d));
+    }
+    expect(maxErr).toBe(0);
+  });
+
   it('bounding-sphere cull is exact (field unchanged)', () => {
     const children = [];
     for (let i = 0; i < 20; i++) {
