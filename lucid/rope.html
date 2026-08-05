@@ -5,85 +5,62 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lucid — XPBD chain on clipclop (WebGPU)</title>
 <style>
-  :root { color-scheme: dark; --bg:#0a0f16; --panel:#111925; --edge:#1e2c3d; --ink:#cfe3ff; --dim:#7c93ac; --acc:#39c0ff; --ok:#54e39a; --err:#ff6b6b; }
-  * { box-sizing: border-box; }
-  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.5 ui-monospace, Menlo, monospace; }
-  header { padding:10px 14px; border-bottom:1px solid var(--edge); display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
-  header h1 { font-size:15px; margin:0; font-weight:600; }
-  header .sub { color:var(--dim); font-size:12px; }
-  header .status { margin-left:auto; font-size:12px; color:var(--ok); }
-  header .status.err { color:var(--err); }
-  main { display:flex; flex-direction:column; height:calc(100% - 46px); }
-  iframe { width:100%; flex:1 1 auto; min-height:220px; border:0; display:block; background:#05080d; }
-  .panel { border-top:1px solid var(--edge); padding:10px 14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; background:var(--panel); }
-  .panel button { background:#0b1420; color:var(--ink); border:1px solid var(--edge); border-radius:8px; padding:6px 13px; cursor:pointer; font:12px ui-monospace,monospace; }
-  .panel button.go { border-color:var(--acc); color:var(--acc); }
-  .panel .lbl { color:var(--dim); font-size:12px; }
+  :root { color-scheme: dark; }
+  html, body { margin:0; height:100%; background:#05080d; color:#cfe3ff; font:14px/1.5 ui-monospace, Menlo, monospace; }
+  #boot { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; }
+  #boot b { color:#39c0ff; }
+  #boot.err { color:#ff6b6b; }
 </style>
 </head>
 <body>
-<header>
-  <h1>Lucid · XPBD chain</h1>
-  <span class="sub">a chain settles to a catenary (CPU twin), then bakes into clipclop (WebGPU)</span>
-  <span class="status" id="status">booting…</span>
-</header>
-<main>
-  <iframe id="frame" title="clipclop engine"></iframe>
-  <div class="panel">
-    <button type="button" class="go" id="rebake">re-bake ⟳</button>
-    <span class="lbl" id="info"></span>
-  </div>
-</main>
+<div id="boot">settling the chain and booting clipclop (WebGPU)…</div>
 
+<!--
+  Boots the clipclop engine TOP-LEVEL (document.write), not in a blob iframe, so
+  one WebGPU device inits in the page context (reliable; the iframe path booted
+  black intermittently). An XPBD chain settles to a catenary on the CPU, then
+  folds through the exact culled edit-list field on the engine's real bake path.
+-->
 <script type="module">
-  import { spliceEngine } from './clipclop/splice-lib.js';
+  import { bootSplicedTopLevel } from './clipclop/splice-lib.js';
   import { defaultPhysicsConfig, buildChain, stepXPBD } from './core/gpu-physics.js';
 
-  const $ = (id) => document.getElementById(id);
+  const boot = document.getElementById('boot');
   const cfg = defaultPhysicsConfig(); cfg.radius = 0.13; cfg.bound = 6;
 
-  function buildScene() {
-    const chain = buildChain(16, [-2.4, 3.2, 0], [2.4, 3.2, 0], cfg);
-    for (let i = 0; i < 500; i++) stepXPBD(chain.bodies, chain.constraints, cfg, 16);
-    const N = chain.bodies.length;
-    const children = chain.bodies.map((b, i) => ({
-      type: 'sphere',
-      params: { r: (i === 0 || i === N - 1) ? cfg.radius * 1.5 : cfg.radius,
-        color: (i === 0 || i === N - 1) ? [0.9, 0.85, 0.3] : [0.35 + 0.5 * (i / N), 0.55, 0.9] },
-      transform: { translate: b.p.slice() }
-    }));
-    let maxErr = 0;
-    for (const c of chain.constraints) {
-      const a = chain.bodies[c.a].p, b = chain.bodies[c.b].p;
-      maxErr = Math.max(maxErr, Math.abs(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) - c.rest));
-    }
-    window.__maxErr = maxErr;
-    window.__beads = N;
-    // place the hanging chain in the clipclop view (world is metres)
-    return { name: 'rope', root: { type: 'transform', transform: { translate: [0, 2.5, 5], scale: 1.6 },
-      child: { type: 'smoothUnion', k: cfg.radius * 0.9, children } } };
+  const chain = buildChain(16, [-2.4, 3.2, 0], [2.4, 3.2, 0], cfg);
+  for (let i = 0; i < 500; i++) stepXPBD(chain.bodies, chain.constraints, cfg, 16);
+  const N = chain.bodies.length;
+  const children = chain.bodies.map((b, i) => ({
+    type: 'sphere',
+    params: { r: (i === 0 || i === N - 1) ? cfg.radius * 1.5 : cfg.radius,
+      color: (i === 0 || i === N - 1) ? [0.9, 0.85, 0.3] : [0.35 + 0.5 * (i / N), 0.55, 0.9] },
+    transform: { translate: b.p.slice() }
+  }));
+  let maxErr = 0;
+  for (const c of chain.constraints) {
+    const a = chain.bodies[c.a].p, b = chain.bodies[c.b].p;
+    maxErr = Math.max(maxErr, Math.abs(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) - c.rest));
   }
+  // place the hanging chain where the clipclop camera looks (world is metres)
+  const scene = { name: 'rope', root: { type: 'transform', transform: { translate: [0, 2.5, 5], scale: 1.6 },
+    child: { type: 'smoothUnion', k: cfg.radius * 0.9, children } } };
 
-  let engineHtml = null;
-  async function boot() {
-    $('status').textContent = 'settling chain…'; $('status').className = 'status';
-    try {
-      if (!engineHtml) engineHtml = await fetch('./clipclop/index.html', { cache: 'no-store' }).then(r => {
-        if (!r.ok) throw new Error('cannot fetch clipclop engine (' + r.status + ')'); return r.text();
-      });
-      const { html, bridge } = spliceEngine(engineHtml, buildScene(), { mode: 'codegen' });
-      $('frame').src = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-      $('info').textContent = (window.__beads || 0) + ' beads · max stretch ' + (window.__maxErr || 0).toFixed(4);
-      $('status').textContent = 'baked ✓ — engine in frame';
-      window.__rope = { ok: true, edits: bridge.count };
-    } catch (e) {
-      $('status').textContent = 'error: ' + e.message; $('status').className = 'status err';
-      window.__rope = { ok: false, error: e.message };
-    }
+  const overlay =
+    `<div style="position:fixed;top:0;left:0;right:0;z-index:99;padding:6px 12px;` +
+    `font:12px ui-monospace,monospace;color:#7c93ac;background:rgba(5,8,13,.55);pointer-events:none">` +
+    `Lucid · XPBD chain — clipclop WebGPU · edit-list+cull · ${N} beads · max stretch ${maxErr.toFixed(4)}</div>`;
+
+  try {
+    const engineHtml = await fetch('./clipclop/index.html', { cache: 'no-store' }).then((r) => {
+      if (!r.ok) throw new Error('cannot fetch clipclop engine (' + r.status + ')');
+      return r.text();
+    });
+    bootSplicedTopLevel(engineHtml, scene, { mode: 'editlist', overlay });
+  } catch (e) {
+    boot.className = 'err';
+    boot.textContent = 'error: ' + e.message;
   }
-
-  $('rebake').onclick = boot;
-  boot();
 </script>
 </body>
 </html>
