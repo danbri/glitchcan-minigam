@@ -117,3 +117,20 @@ export function spliceEngine(engineHtml, sceneJson, opts = {}) {
 
   return { html, bridge };
 }
+
+/**
+ * Splice a scene into the engine and boot it TOP-LEVEL (document.write),
+ * replacing the current page. The engine is self-contained (no imports), so a
+ * top-level write inits ONE WebGPU device in the page context — unlike a blob
+ * iframe, which spins a fresh device per boot and intermittently fails ("boots
+ * black sometimes"). Optional `overlay` HTML is injected before </body>.
+ * @returns {object} the bridge info (for the caller to stash before the write)
+ */
+export function bootSplicedTopLevel(engineHtml, sceneJson, opts = {}) {
+  const { html, bridge } = spliceEngine(engineHtml, sceneJson, { mode: opts.mode || 'editlist' });
+  const out = opts.overlay ? html.replace('</body>', opts.overlay + '\n</body>') : html;
+  document.open();
+  document.write(out);
+  document.close();
+  return bridge;
+}

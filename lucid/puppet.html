@@ -5,87 +5,61 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lucid — physics puppet on clipclop (WebGPU)</title>
 <style>
-  :root { color-scheme: dark; --bg:#0a0f16; --panel:#111925; --edge:#1e2c3d; --ink:#cfe3ff; --dim:#7c93ac; --acc:#39c0ff; --ok:#54e39a; --err:#ff6b6b; }
-  * { box-sizing: border-box; }
-  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.5 ui-monospace, Menlo, monospace; }
-  header { padding:10px 14px; border-bottom:1px solid var(--edge); display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
-  header h1 { font-size:15px; margin:0; font-weight:600; }
-  header .sub { color:var(--dim); font-size:12px; }
-  header .status { margin-left:auto; font-size:12px; color:var(--ok); }
-  header .status.err { color:var(--err); }
-  main { display:flex; flex-direction:column; height:calc(100% - 46px); }
-  iframe { width:100%; flex:1 1 auto; min-height:220px; border:0; display:block; background:#05080d; }
-  .panel { border-top:1px solid var(--edge); padding:10px 14px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; background:var(--panel); }
-  .panel button { background:#0b1420; color:var(--ink); border:1px solid var(--edge); border-radius:12px; padding:6px 13px; cursor:pointer; font:12px ui-monospace,monospace; }
-  .panel button.go { border-color:var(--acc); color:var(--acc); }
-  .panel .lbl { color:var(--dim); font-size:12px; }
+  :root { color-scheme: dark; }
+  html, body { margin:0; height:100%; background:#05080d; color:#cfe3ff; font:14px/1.5 ui-monospace, Menlo, monospace; }
+  #boot { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; }
+  #boot b { color:#39c0ff; }
+  #boot.err { color:#ff6b6b; }
 </style>
 </head>
 <body>
-<header>
-  <h1>Lucid · physics puppet</h1>
-  <span class="sub">a quadruped baked into clipclop (WebGPU)</span>
-  <span class="status" id="status">booting…</span>
-</header>
-<main>
-  <iframe id="frame" title="clipclop engine"></iframe>
-  <div class="panel">
-    <span class="lbl">as</span><span id="species"></span>
-    <span class="lbl" id="info"></span>
-  </div>
-</main>
+<div id="boot">baking the quadruped and booting clipclop (WebGPU)…</div>
 
+<!--
+  Boots the clipclop engine TOP-LEVEL (document.write), not in a blob iframe.
+  The engine is self-contained, so a top-level write inits one WebGPU device in
+  the page context — this removes the fresh-device-per-iframe race that made the
+  spliced demos boot black intermittently. The scene folds through the exact
+  culled edit-list field on the engine's real bake path.
+-->
 <script type="module">
-  import { spliceEngine } from './clipclop/splice-lib.js';
+  import { bootSplicedTopLevel } from './clipclop/splice-lib.js';
   import { defaultPhysicsConfig, buildQuadrupedRig, stepXPBD } from './core/gpu-physics.js';
   import { poseQuadrupedFromRig, QUADRUPED_PRESETS } from './core/sdf-template.js';
 
-  const $ = (id) => document.getElementById(id);
+  const boot = document.getElementById('boot');
+  const params = new URLSearchParams(location.search);
+  let species = params.get('sp');
+  if (!QUADRUPED_PRESETS[species]) species = 'pig';
+
+  // Build a standing, settled quadruped, placed where the clipclop camera looks
+  // (world is metres; the view frames roughly (0,3.6,5)).
   const cfg = defaultPhysicsConfig(); cfg.radius = 0.16; cfg.bound = 6;
-  let species = 'pig';
+  const rig = buildQuadrupedRig({ stand: true });
+  for (let i = 0; i < 220; i++) stepXPBD(rig.bodies, rig.constraints, cfg, 20);
+  const posed = poseQuadrupedFromRig(rig, QUADRUPED_PRESETS[species]);
+  const scene = { name: 'puppet', root: { type: 'transform', transform: { translate: [0, 2.6, 5], scale: 3 }, child: posed.root } };
 
-  // Build a standing, settled quadruped and place it where the clipclop camera
-  // looks (its world is metres; the demo view frames roughly (0,4,5)).
-  function buildScene() {
-    const rig = buildQuadrupedRig({ stand: true });
-    for (let i = 0; i < 220; i++) stepXPBD(rig.bodies, rig.constraints, cfg, 20);
-    const posed = poseQuadrupedFromRig(rig, QUADRUPED_PRESETS[species]);
-    return { name: 'puppet', root: { type: 'transform', transform: { translate: [0, 2.6, 5], scale: 3 }, child: posed.root } };
+  // A thin overlay injected into the engine page: title + species switcher
+  // (each link reloads with ?sp=…, rebaking through this launcher).
+  const links = Object.keys(QUADRUPED_PRESETS).map((s) =>
+    `<a href="?sp=${s}" style="color:${s === species ? '#39c0ff' : '#7c93ac'};text-decoration:none;pointer-events:auto;margin:0 6px">${s}</a>`).join('');
+  const overlay =
+    `<div style="position:fixed;top:0;left:0;right:0;z-index:99;padding:6px 12px;` +
+    `font:12px ui-monospace,monospace;color:#7c93ac;background:rgba(5,8,13,.55);pointer-events:none">` +
+    `Lucid · puppet — clipclop WebGPU · edit-list+cull · as ${links}</div>`;
+
+  try {
+    const engineHtml = await fetch('./clipclop/index.html', { cache: 'no-store' }).then((r) => {
+      if (!r.ok) throw new Error('cannot fetch clipclop engine (' + r.status + ')');
+      return r.text();
+    });
+    // Replaces this document with the booted engine. Nothing after this runs.
+    bootSplicedTopLevel(engineHtml, scene, { mode: 'editlist', overlay });
+  } catch (e) {
+    boot.className = 'err';
+    boot.textContent = 'error: ' + e.message;
   }
-
-  let engineHtml = null;
-  async function boot() {
-    $('status').textContent = 'baking ' + species + '…'; $('status').className = 'status';
-    try {
-      if (!engineHtml) engineHtml = await fetch('./clipclop/index.html', { cache: 'no-store' }).then(r => {
-        if (!r.ok) throw new Error('cannot fetch clipclop engine (' + r.status + ')'); return r.text();
-      });
-      const { html, bridge } = spliceEngine(engineHtml, buildScene(), { mode: 'codegen' });
-      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-      $('frame').src = url;
-      $('info').textContent = species + ' · clipclop bake';
-      $('status').textContent = 'baked ✓ — engine in frame';
-      $('status').className = 'status';
-      window.__puppet = { ok: true, edits: bridge.count, species };
-    } catch (e) {
-      $('status').textContent = 'error: ' + e.message; $('status').className = 'status err';
-      window.__puppet = { ok: false, error: e.message };
-    }
-  }
-
-  for (const s of Object.keys(QUADRUPED_PRESETS)) {
-    const btn = document.createElement('button');
-    btn.type = 'button'; btn.textContent = s; btn.dataset.sp = s;
-    if (s === species) btn.classList.add('go');
-    btn.onclick = () => {
-      species = s;
-      for (const c of $('species').children) c.classList.toggle('go', c.dataset.sp === s);
-      boot();
-    };
-    $('species').appendChild(btn);
-  }
-
-  boot();
 </script>
 </body>
 </html>
