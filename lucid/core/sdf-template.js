@@ -260,8 +260,12 @@ export function poseQuadrupedFromRig(rig, params = {}) {
   const q = resolveParams(params);
   const at = {};
   rig.joints.forEach((name, i) => { at[name] = rig.bodies[i].p; });
-  const bodyR = params.bodyR ?? 0.40;
-  const legR = params.legR ?? 0.16;
+  // Part sizes come from the species dims (girth → torso radius, etc.) so pig,
+  // sheep, cow and dog differ in shape, not only colour. Explicit bodyR/legR
+  // still override (used by the neutral defaults).
+  const bodyR = params.bodyR ?? (q.bodyGirth * 0.62);
+  const legR = params.legR ?? q.legRadius;
+  const headR = q.headSize;
   const bcol = q.bodyColor, lcol = q.legColor, scol = q.snoutColor;
 
   // Body height (spine) and the head→snout forward direction.
@@ -282,18 +286,20 @@ export function poseQuadrupedFromRig(rig, params = {}) {
   };
 
   const head = at.head;
-  const snoutTip = [head[0] + fwd[0] * bodyR * 1.1, head[1] + fwd[1] * bodyR * 1.1, head[2] + fwd[2] * bodyR * 1.1];
-  // ears: above the head, offset left/right and a little back along -fwd.
-  const ear = (sx) => ({ type: 'sphere', params: { r: bodyR * 0.28, color: bcol },
-    transform: { translate: [head[0] + sx * bodyR * 0.5, head[1] + bodyR * 0.7, head[2] - fwd[2] * bodyR * 0.2] } });
+  // snout: forward of the head, length/width from the species.
+  const snoutTip = [head[0] + fwd[0] * (headR + q.snoutLength), head[1] + fwd[1] * (headR + q.snoutLength), head[2] + fwd[2] * (headR + q.snoutLength)];
+  // ears: above the head; earUp lifts them (dog upright) vs sets them out (pig).
+  const earR = q.earSize * 0.7;
+  const ear = (sx) => ({ type: 'sphere', params: { r: earR, color: bcol },
+    transform: { translate: [head[0] + sx * (headR * 0.55 + earR * (1 - q.earUp)), head[1] + headR * (0.5 + 0.5 * q.earUp), head[2] - fwd[2] * headR * 0.2] } });
 
   const parts = [
-    orientedCapsule(at.shoulder, at.hip, bodyR, bcol),        // torso (rounder)
-    orientedCapsule(at.shoulder, head, bodyR * 0.66, bcol),   // neck: fuses body to head
-    orientedCapsule(at.hip, at.tail, legR * 0.6, lcol),       // tail
+    orientedCapsule(at.shoulder, at.hip, bodyR, bcol),        // torso (girth = species)
+    orientedCapsule(at.shoulder, head, bodyR * 0.6, bcol),    // neck: fuses body to head
+    orientedCapsule(at.hip, at.tail, Math.max(legR * 0.5, q.tailRadius), lcol), // tail
     leg(at.footFL), leg(at.footFR), leg(at.footBL), leg(at.footBR),
-    { type: 'sphere', params: { r: bodyR * 0.85, color: bcol }, transform: { translate: head.slice() } }, // head
-    orientedCapsule(head, snoutTip, bodyR * 0.42, scol),      // pig snout (forward)
+    { type: 'sphere', params: { r: headR, color: bcol }, transform: { translate: head.slice() } }, // head
+    orientedCapsule(head, snoutTip, q.snoutRadius, scol),     // snout (forward)
     ear(-1), ear(1),
     // four foot pads
     ...['footFL', 'footFR', 'footBL', 'footBR'].map(fn => ({ type: 'sphere', params: { r: legR * 1.05, color: scol }, transform: { translate: at[fn].slice() } }))

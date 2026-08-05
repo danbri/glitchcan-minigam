@@ -25,7 +25,7 @@
 <script type="module">
   import { bootSplicedTopLevel } from './clipclop/splice-lib.js';
   import { defaultPhysicsConfig, buildQuadrupedRig, stepXPBD } from './core/gpu-physics.js';
-  import { poseQuadrupedFromRig, QUADRUPED_PRESETS } from './core/sdf-template.js';
+  import { poseQuadrupedFromRig, QUADRUPED_PRESETS, resolveParams } from './core/sdf-template.js';
 
   const boot = document.getElementById('boot');
   const params = new URLSearchParams(location.search);
@@ -35,9 +35,18 @@
   // Build a standing, settled quadruped, placed where the clipclop camera looks
   // (world is metres; the view frames roughly (0,3.6,5)).
   const cfg = defaultPhysicsConfig(); cfg.radius = 0.16; cfg.bound = 6;
-  const rig = buildQuadrupedRig({ stand: true });
+  // Species proportions drive the rig (body length, stand height, stance width,
+  // neck/head reach) as well as the part sizes in the pose.
+  const q = resolveParams(species);
+  const rig = buildQuadrupedRig({ stand: true,
+    bodyLen: q.bodyLength * 1.7,
+    standH: 0.55 + q.legLength,
+    spread: q.legSpreadX + 0.06,
+    neckUp: q.headSize * 0.5, neckFwd: q.neckLength * 0.55,
+    headUp: q.headSize * 0.7, headFwd: q.neckLength + q.headSize * 0.4,
+    tailBack: Math.max(0.4, q.tailLength) });
   for (let i = 0; i < 220; i++) stepXPBD(rig.bodies, rig.constraints, cfg, 20);
-  const posed = poseQuadrupedFromRig(rig, QUADRUPED_PRESETS[species]);
+  const posed = poseQuadrupedFromRig(rig, species);
   const scene = { name: 'puppet', root: { type: 'transform', transform: { translate: [0, 2.6, 5], scale: 3 }, child: posed.root } };
 
   // Compact overlay: species switcher (each link reloads with ?sp=…).

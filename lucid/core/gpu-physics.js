@@ -211,6 +211,10 @@ export function buildQuadrupedRig(opts = {}) {
   const spread = opts.spread ?? 0.5;
   const footY = opts.footY ?? 0.15;                  // ground contact height
   const y0 = opts.dropY ?? (stand ? 0 : 1.2);        // stand at ground, or fall from height
+  // neck/head/tail reach — species proportions (defaults = the neutral animal).
+  const neckUp = opts.neckUp ?? 0.22, neckFwd = opts.neckFwd ?? 0.14;
+  const headUp = opts.headUp ?? 0.30, headFwd = opts.headFwd ?? 0.30;
+  const tailUp = opts.tailUp ?? 0.10, tailBack = opts.tailBack ?? 0.70;
 
   const J = {}; // name -> position
   const hz = bodyLen / 2;
@@ -218,9 +222,9 @@ export function buildQuadrupedRig(opts = {}) {
   J.shoulder = [0, standH + y0, -hz];
   J.mid = [0, standH + y0 + 0.05, 0];
   J.hip = [0, standH + y0, hz];
-  J.neck = [0, standH + y0 + 0.22, -hz - 0.14];
-  J.head = [0, standH + y0 + 0.30, -hz - 0.30];
-  J.tail = [0, standH + y0 + 0.1, hz + 0.7];
+  J.neck = [0, standH + y0 + neckUp, -hz - neckFwd];
+  J.head = [0, standH + y0 + headUp, -hz - headFwd];
+  J.tail = [0, standH + y0 + tailUp, hz + tailBack];
   J.footFL = [-spread, fy, -hz + 0.1];
   J.footFR = [spread, fy, -hz + 0.1];
   J.footBL = [-spread, fy, hz - 0.1];
