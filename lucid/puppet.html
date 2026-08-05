@@ -40,14 +40,8 @@
   const posed = poseQuadrupedFromRig(rig, QUADRUPED_PRESETS[species]);
   const scene = { name: 'puppet', root: { type: 'transform', transform: { translate: [0, 2.6, 5], scale: 3 }, child: posed.root } };
 
-  // A thin overlay injected into the engine page: title + species switcher
-  // (each link reloads with ?sp=…, rebaking through this launcher).
-  const links = Object.keys(QUADRUPED_PRESETS).map((s) =>
-    `<a href="?sp=${s}" style="color:${s === species ? '#39c0ff' : '#7c93ac'};text-decoration:none;pointer-events:auto;margin:0 6px">${s}</a>`).join('');
-  const overlay =
-    `<div style="position:fixed;top:0;left:0;right:0;z-index:99;padding:6px 12px;` +
-    `font:12px ui-monospace,monospace;color:#7c93ac;background:rgba(5,8,13,.55);pointer-events:none">` +
-    `Lucid · puppet — clipclop WebGPU · edit-list+cull · as ${links}</div>`;
+  // Compact overlay: species switcher (each link reloads with ?sp=…).
+  const links = Object.keys(QUADRUPED_PRESETS).map((s) => ({ label: s, href: `?sp=${s}`, on: s === species }));
 
   try {
     const engineHtml = await fetch('./clipclop/index.html', { cache: 'no-store' }).then((r) => {
@@ -55,7 +49,7 @@
       return r.text();
     });
     // Replaces this document with the booted engine. Nothing after this runs.
-    bootSplicedTopLevel(engineHtml, scene, { mode: 'editlist', overlay });
+    bootSplicedTopLevel(engineHtml, scene, { mode: 'editlist', title: 'puppet', links });
   } catch (e) {
     boot.className = 'err';
     boot.textContent = 'error: ' + e.message;

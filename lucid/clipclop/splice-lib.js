@@ -119,16 +119,44 @@ export function spliceEngine(engineHtml, sceneJson, opts = {}) {
 }
 
 /**
+ * A compact, mobile-first overlay: one short line, bottom-left, that fades to
+ * near-invisible after a few seconds and toggles back on tap. Built from
+ * { title, links:[{label,href,on}] } so it stays small on a 320px screen.
+ */
+function buildOverlay(opts) {
+  if (!opts.title && !(opts.links && opts.links.length)) return '';
+  const links = (opts.links || []).map((l) =>
+    `<a href="${l.href}" style="color:${l.on ? '#39c0ff' : '#9fb4cc'};text-decoration:none;margin:0 5px;pointer-events:auto">${l.label}</a>`).join('');
+  const text = (opts.title || '') + (links ? ' · ' + links : '');
+  return `<div id="lxov" style="position:fixed;left:8px;bottom:8px;z-index:99;padding:4px 9px;border-radius:9px;` +
+    `font:11px ui-monospace,monospace;color:#9fb4cc;background:rgba(5,8,13,.5);max-width:calc(100vw - 16px);` +
+    `transition:opacity .6s;opacity:.9">${text}</div>` +
+    `<script>(function(){var o=document.getElementById('lxov');if(!o)return;` +
+    `var h=setTimeout(function(){o.style.opacity=0.12;},4000);` +
+    `o.addEventListener('click',function(e){if(e.target.tagName!=='A'){clearTimeout(h);o.style.opacity=(+o.style.opacity<0.5?0.9:0.12);}});})();<\/script>`;
+}
+
+/**
  * Splice a scene into the engine and boot it TOP-LEVEL (document.write),
  * replacing the current page. The engine is self-contained (no imports), so a
  * top-level write inits ONE WebGPU device in the page context — unlike a blob
  * iframe, which spins a fresh device per boot and intermittently fails ("boots
- * black sometimes"). Optional `overlay` HTML is injected before </body>.
+ * black sometimes").
+ *
+ * Also forces auto-orbit OFF: the engine idle-spins the camera, which keeps the
+ * clipmap bricks perpetually dirty and re-bakes the whole scene every frame
+ * (visible jank on heavier scenes). Off, the scene bakes once and holds; the
+ * user still orbits by dragging.
+ *
+ * opts: { mode, title, links:[{label,href,on}] } — title/links make a compact
+ * mobile overlay (see buildOverlay).
  * @returns {object} the bridge info (for the caller to stash before the write)
  */
 export function bootSplicedTopLevel(engineHtml, sceneJson, opts = {}) {
   const { html, bridge } = spliceEngine(engineHtml, sceneJson, { mode: opts.mode || 'editlist' });
-  const out = opts.overlay ? html.replace('</body>', opts.overlay + '\n</body>') : html;
+  let out = html.replace('let auto=true,', 'let auto=false,'); // bake once, hold — no idle-orbit re-bake
+  const overlay = opts.overlay || buildOverlay(opts);
+  if (overlay) out = out.replace('</body>', overlay + '\n</body>');
   document.open();
   document.write(out);
   document.close();
