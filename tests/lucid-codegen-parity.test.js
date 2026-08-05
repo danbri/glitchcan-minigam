@@ -21,6 +21,7 @@ const { evaluateExpr, evaluateRig } = await import('../lucid/core/rig-evaluator.
 const { exprToSexpr, readOne, formToExpr, formToNode } = await import('../lucid/core/sexpr.js');
 const { spliceEngine } = await import('../lucid/clipclop/splice-lib.js');
 const { flattenToEdits, evalEdits, evalTree, generateEditListWgsl } = await import('../lucid/core/sdf-editlist.js');
+const editbins = await import('../lucid/core/sdf-editbins.js');
 const { quadruped, lerpQuadruped, resolveParams, poseQuadrupedFromRig, orientedCapsule, quadrupedRigParts, partsUniformScene, partsToUniforms, QUADRUPED_PRESETS } = await import('../lucid/core/sdf-template.js');
 const { defaultPhysicsConfig, initBodies, stepBodies, stepPhysics, stepXPBD, buildChain, buildQuadrupedRig, generatePhysicsWgsl } = await import('../lucid/core/gpu-physics.js');
 
@@ -789,5 +790,65 @@ describe('s-expression surface (core/sexpr.js)', () => {
       if (a !== shadersFor(round)) failures.push(exprToSexpr(e));
     }
     expect(failures).toEqual([]);
+  });
+});
+
+describe('spatial edit binning (core/sdf-editbins.js)', () => {
+  // A spread-out union: 30 spheres on a ring, so most bricks touch only a few.
+  function ringScene(n = 30) {
+    const children = [];
+    for (let i = 0; i < n; i++) {
+      const a = i * 2.399;
+      children.push({ type: 'sphere', params: { r: 0.4, color: [0.5, 0.6, 0.9] },
+        transform: { translate: [Math.cos(a) * 4, (i % 6) * 0.5, Math.sin(a) * 4] } });
+    }
+    return loadJsonScene({ name: 'ring', root: { type: 'union', children } });
+  }
+
+  it('binned fold equals the full fold within the band (exact)', () => {
+    const scene = ringScene();
+    const { edits } = flattenToEdits(scene);
+    const opts = { cell: 0.6, band: 0.6 };
+    const { binned } = editbins.binScene(scene, opts);
+    let bandErr = 0, checked = 0;
+    for (let s = 0; s < 5000; s++) {
+      const p = [(Math.random() * 2 - 1) * 6, Math.random() * 4, (Math.random() * 2 - 1) * 6];
+      const full = evalEdits(edits, p).d;
+      if (Math.abs(full) <= opts.band) {
+        bandErr = Math.max(bandErr, Math.abs(editbins.evalBinnedField(edits, binned, p).d - full));
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThan(200);   // the band was actually sampled
+    expect(bandErr).toBe(0);                // and the trim changed nothing in it
+  });
+
+  it('bins far fewer edits per brick than the flat list (the scaling win)', () => {
+    const scene = ringScene(30);
+    const { binned } = editbins.binScene(scene, { cell: 0.6, band: 0.6 });
+    expect(binned.avgPerCell).toBeGreaterThan(0);
+    expect(binned.avgPerCell).toBeLessThan(8);   // ~a few, not all 30
+    expect(binned.maxPerCell).toBeLessThan(30);
+  });
+
+  it('CSR bin index is well-formed', () => {
+    const scene = ringScene(12);
+    const { edits } = flattenToEdits(scene);
+    const { binned, grid } = editbins.binScene(scene, { cell: 0.6, band: 0.6 });
+    expect(binned.cellStart.length).toBe(grid.nCells + 1);
+    // monotone non-decreasing offsets; last offset == total scattered
+    for (let i = 0; i < grid.nCells; i++) expect(binned.cellStart[i + 1]).toBeGreaterThanOrEqual(binned.cellStart[i]);
+    expect(binned.cellStart[grid.nCells]).toBe(binned.cellEdits.length);
+    // every scattered index is a valid edit
+    for (const ei of binned.cellEdits) expect(ei).toBeLessThan(edits.length);
+  });
+
+  it('emits storage-buffer WGSL with the binned field entry', () => {
+    const wgsl = editbins.generateBinnedEditWgsl({ group: 3, binding: 0 });
+    expect(wgsl).toContain('var<storage, read> lx_editData');
+    expect(wgsl).toContain('var<storage, read> lx_binStart');
+    expect(wgsl).toContain('var<storage, read> lx_binEdits');
+    expect(wgsl).toContain('fn lx_binnedField(p: vec3f) -> vec4f');
+    expect((wgsl.match(/\{/g) || []).length).toBe((wgsl.match(/\}/g) || []).length);
   });
 });

@@ -257,21 +257,32 @@ function editDist(edit, p) {
   return primDist(local, edit.prim, edit.params) * edit.xf.s;
 }
 
-/** Evaluate the flat edit list at p → { d, color }. Mirrors the WGSL loop. */
-export function evalEdits(edits, p) {
+/**
+ * Fold a subset of the edit list at p → { d, color }. Mirrors the WGSL loop.
+ * `idx` (optional) is the list of edit indices to fold, in order — this is how
+ * a per-brick bin evaluates only its own edits. Omit it to fold every edit.
+ *
+ * Seed-uniform: d starts at 1e9 and EVERY edit folds by its op (no special
+ * first-edit case). This is what makes a binned subset fold identically to the
+ * whole — a union against 1e9 is the value itself, and a smoothUnion against
+ * 1e9 clamps h→0 to the same result, so the first-folded edit seeds correctly
+ * whichever subset it lands in. The flattener never emits a subtract as edit 0,
+ * so no seed case is lost.
+ */
+export function evalEdits(edits, p, idx = null) {
   let d = 1e9, color = [0.6, 0.6, 0.6];
-  for (let i = 0; i < edits.length; i++) {
-    const e = edits[i];
+  const n = idx ? idx.length : edits.length;
+  for (let j = 0; j < n; j++) {
+    const e = edits[idx ? idx[j] : j];
     // Exact spatial cull: an additive edit whose bounding sphere cannot reach
     // the running distance (plus the smooth-blend margin k) is a no-op. This is
     // the whole speed win — a far edit costs one length() instead of a full
     // primitive eval + blend. Only additive ops cull; subtracts always run.
-    if (i > 0 && (e.op === OP.union || e.op === OP.smoothUnion)) {
+    if (e.op === OP.union || e.op === OP.smoothUnion) {
       const margin = e.op === OP.smoothUnion ? (e.k || 0) : 0;
       if (len3(sub3(p, e.xf.t)) - e.bound - margin > d) continue;
     }
     const ed = editDist(e, p);
-    if (i === 0) { d = (e.op === OP.subtract || e.op === OP.smoothSubtract) ? -ed : ed; color = e.color; continue; }
     if (e.op === OP.union) {
       if (ed < d) { d = ed; color = e.color; }
     } else if (e.op === OP.smoothUnion) {
@@ -396,17 +407,15 @@ fn ${P('editField')}(p: vec3f) -> vec4f {
     let bound = ${P('editData')}[o + 22u];
     // Exact spatial cull: skip an additive edit that provably cannot lower d.
     // margin = k for smoothUnion (the blend reaches k beyond contact), 0 else.
-    if (i > 0u && (op == 0 || op == 2)) {
+    // Seed-uniform: d starts 1e9 so this never skips the first real edit.
+    if (op == 0 || op == 2) {
       let margin = select(0.0, k, op == 2);
       if (length(p - t) - bound - margin > d) { continue; }
     }
     let rel = p - t;
     let local = vec3f(dot(r0, rel), dot(r1, rel), dot(r2, rel)) / s;
     let ed = ${P('editPrim')}(local, prim, pr) * s;
-    if (i == 0u) {
-      d = select(ed, -ed, op == 1 || op == 3);
-      col = c;
-    } else if (op == 0) {
+    if (op == 0) {
       if (ed < d) { d = ed; col = c; }
     } else if (op == 2) {
       let h = clamp(0.5 + 0.5 * (ed - d) / k, 0.0, 1.0);
