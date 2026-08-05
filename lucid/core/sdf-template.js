@@ -260,27 +260,43 @@ export function poseQuadrupedFromRig(rig, params = {}) {
   const q = resolveParams(params);
   const at = {};
   rig.joints.forEach((name, i) => { at[name] = rig.bodies[i].p; });
-  const bodyR = params.bodyR ?? 0.34;
-  const legR = params.legR ?? 0.13;
+  const bodyR = params.bodyR ?? 0.40;
+  const legR = params.legR ?? 0.16;
   const bcol = q.bodyColor, lcol = q.legColor, scol = q.snoutColor;
+
+  // Body height (spine) and the head→snout forward direction.
+  const bodyY = (at.shoulder[1] + at.hip[1]) / 2;
+  const fwd = (() => {
+    const d = [at.head[0] - at.neck[0], at.head[1] - at.neck[1], at.head[2] - at.neck[2]];
+    const l = Math.hypot(d[0], d[1], d[2]) || 1e-6;
+    return [d[0] / l, d[1] / l, d[2] / l];
+  })();
+
+  // A leg drops from the body SIDE straight down to its pinned foot — the top
+  // sits just inside the torso (so it fuses), the foot stays where physics
+  // pinned it. This is what makes four planted legs instead of twigs splaying
+  // from one hub.
+  const leg = (foot) => {
+    const top = [Math.sign(foot[0] || 1) * bodyR * 0.85, bodyY - bodyR * 0.5, foot[2]];
+    return orientedCapsule(top, foot, legR, lcol);
+  };
+
+  const head = at.head;
+  const snoutTip = [head[0] + fwd[0] * bodyR * 1.1, head[1] + fwd[1] * bodyR * 1.1, head[2] + fwd[2] * bodyR * 1.1];
+  // ears: above the head, offset left/right and a little back along -fwd.
+  const ear = (sx) => ({ type: 'sphere', params: { r: bodyR * 0.28, color: bcol },
+    transform: { translate: [head[0] + sx * bodyR * 0.5, head[1] + bodyR * 0.7, head[2] - fwd[2] * bodyR * 0.2] } });
+
   const parts = [
-    orientedCapsule(at.shoulder, at.hip, bodyR, bcol),       // torso
-    orientedCapsule(at.shoulder, at.neck, bodyR * 0.6, bcol), // neck
-    orientedCapsule(at.hip, at.tail, legR * 0.7, lcol),       // tail
-    orientedCapsule(at.shoulder, at.footFL, legR, lcol),      // legs
-    orientedCapsule(at.shoulder, at.footFR, legR, lcol),
-    orientedCapsule(at.hip, at.footBL, legR, lcol),
-    orientedCapsule(at.hip, at.footBR, legR, lcol),
-    { type: 'sphere', params: { r: bodyR * 0.9, color: bcol }, transform: { translate: at.head.slice() } }, // head
-    // snout: forward of the head, along the neck→head direction
-    (() => {
-      const d = [at.head[0] - at.neck[0], at.head[1] - at.neck[1], at.head[2] - at.neck[2]];
-      const l = Math.hypot(d[0], d[1], d[2]) || 1e-6;
-      const s = [at.head[0] + d[0] / l * bodyR * 0.9, at.head[1] + d[1] / l * bodyR * 0.9, at.head[2] + d[2] / l * bodyR * 0.9];
-      return { type: 'sphere', params: { r: bodyR * 0.55, color: scol }, transform: { translate: s } };
-    })(),
+    orientedCapsule(at.shoulder, at.hip, bodyR, bcol),        // torso (rounder)
+    orientedCapsule(at.shoulder, head, bodyR * 0.66, bcol),   // neck: fuses body to head
+    orientedCapsule(at.hip, at.tail, legR * 0.6, lcol),       // tail
+    leg(at.footFL), leg(at.footFR), leg(at.footBL), leg(at.footBR),
+    { type: 'sphere', params: { r: bodyR * 0.85, color: bcol }, transform: { translate: head.slice() } }, // head
+    orientedCapsule(head, snoutTip, bodyR * 0.42, scol),      // pig snout (forward)
+    ear(-1), ear(1),
     // four foot pads
-    ...['footFL', 'footFR', 'footBL', 'footBR'].map(fn => ({ type: 'sphere', params: { r: legR * 1.1, color: scol }, transform: { translate: at[fn].slice() } }))
+    ...['footFL', 'footFR', 'footBL', 'footBR'].map(fn => ({ type: 'sphere', params: { r: legR * 1.05, color: scol }, transform: { translate: at[fn].slice() } }))
   ];
   return { name: 'quadruped-posed', root: { type: 'smoothUnion', k: 0.12, children: parts } };
 }

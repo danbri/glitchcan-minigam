@@ -218,8 +218,8 @@ export function buildQuadrupedRig(opts = {}) {
   J.shoulder = [0, standH + y0, -hz];
   J.mid = [0, standH + y0 + 0.05, 0];
   J.hip = [0, standH + y0, hz];
-  J.neck = [0, standH + y0 + 0.45, -hz - 0.35];
-  J.head = [0, standH + y0 + 0.7, -hz - 0.8];
+  J.neck = [0, standH + y0 + 0.22, -hz - 0.14];
+  J.head = [0, standH + y0 + 0.30, -hz - 0.30];
   J.tail = [0, standH + y0 + 0.1, hz + 0.7];
   J.footFL = [-spread, fy, -hz + 0.1];
   J.footFR = [spread, fy, -hz + 0.1];
@@ -228,9 +228,12 @@ export function buildQuadrupedRig(opts = {}) {
 
   const names = Object.keys(J);
   const idx = Object.fromEntries(names.map((n, i) => [n, i]));
-  // when standing, the four feet are pinned (w = 0) so the body hangs from the
-  // rigid leg bones and stays upright instead of collapsing.
-  const bodies = names.map(n => ({ p: J[n].slice(), v: [0, 0, 0], w: (stand && n.startsWith('foot')) ? 0 : 1 }));
+  // When standing, pin the feet AND the spine ends (shoulder, hip). Distance
+  // constraints fix bone LENGTHS, not ANGLES, so pinning feet alone lets the
+  // body pendulum down and collapse. Pinning both ends of each leg makes the
+  // stance rigid; only the neck, head and tail hang and settle naturally.
+  const pinned = (n) => n.startsWith('foot') || n === 'shoulder' || n === 'hip' || n === 'neck' || n === 'head';
+  const bodies = names.map(n => ({ p: J[n].slice(), v: [0, 0, 0], w: (stand && pinned(n)) ? 0 : 1 }));
 
   const dist = (a, b) => Math.hypot(J[a][0] - J[b][0], J[a][1] - J[b][1], J[a][2] - J[b][2]);
   const boneList = [
