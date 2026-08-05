@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lucid — a herd on clipclop (WebGPU)</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin:0; height:100%; background:#05080d; color:#cfe3ff; font:14px/1.5 ui-monospace, Menlo, monospace; }
+  #boot { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; }
+  #boot.err { color:#ff6b6b; }
+</style>
+</head>
+<body>
+<div id="boot">standing the herd and booting clipclop (WebGPU)…</div>
+
+<!--
+  A herd of mixed species in ONE clipclop bake — the scale showcase. Each animal
+  is a species-shaped quadruped (its own rig, settled), placed and turned on the
+  ground, then all unioned into one scene and folded through the culled
+  edit-list field. Boots top-level (reliable, no idle re-bake). Count via ?n=.
+-->
+<script type="module">
+  import { bootSplicedTopLevel } from './clipclop/splice-lib.js';
+  import { defaultPhysicsConfig, buildQuadrupedRig, stepXPBD } from './core/gpu-physics.js';
+  import { poseQuadrupedFromRig, resolveParams } from './core/sdf-template.js';
+
+  const boot = document.getElementById('boot');
+  const params = new URLSearchParams(location.search);
+  let n = parseInt(params.get('n'), 10);
+  if (!Number.isFinite(n)) n = 6;
+  n = Math.max(2, Math.min(16, n));
+
+  const cfg = defaultPhysicsConfig(); cfg.radius = 0.16; cfg.bound = 6;
+  const SPECIES = ['cow', 'sheep', 'pig', 'dog', 'sheep', 'cow', 'pig', 'dog'];
+
+  function oneAnimal(sp) {
+    const q = resolveParams(sp);
+    const rig = buildQuadrupedRig({ stand: true,
+      bodyLen: q.bodyLength * 1.7, standH: 0.55 + q.legLength, spread: q.legSpreadX + 0.06,
+      neckUp: q.headSize * 0.5, neckFwd: q.neckLength * 0.55,
+      headUp: q.headSize * 0.7, headFwd: q.neckLength + q.headSize * 0.4,
+      tailBack: Math.max(0.4, q.tailLength) });
+    for (let i = 0; i < 180; i++) stepXPBD(rig.bodies, rig.constraints, cfg, 18);
+    return poseQuadrupedFromRig(rig, sp);
+  }
+
+  // Scatter the animals on a grid with a deterministic per-row jitter and a
+  // per-index facing (no Math.random — the scene must be reproducible).
+  function buildHerd(count) {
+    const cols = Math.ceil(Math.sqrt(count));
+    const kids = [];
+    for (let i = 0; i < count; i++) {
+      const sp = SPECIES[i % SPECIES.length];
+      const col = i % cols, row = Math.floor(i / cols);
+      const x = (col - (cols - 1) / 2) * 2.4 + ((row % 2) ? 0.7 : -0.5);
+      const z = (row - (Math.ceil(count / cols) - 1) / 2) * 2.3;
+      const angle = (i * 67) % 360; // varied facing
+      kids.push({ type: 'transform',
+        transform: { translate: [x, 0, z], rotateAxis: { axis: [0, 1, 0], angle } },
+        child: oneAnimal(sp).root });
+    }
+    // Lift + place the whole herd where the clipclop camera looks.
+    return { name: 'herd', root: { type: 'transform', transform: { translate: [0, 1.6, 5], scale: 1.15 },
+      child: { type: 'union', children: kids } } };
+  }
+
+  const scene = buildHerd(n);
+  const links = [4, 8, 12].map((c) => ({ label: String(c), href: `?n=${c}`, on: c === n }));
+
+  try {
+    const engineHtml = await fetch('./clipclop/index.html', { cache: 'no-store' }).then((r) => {
+      if (!r.ok) throw new Error('cannot fetch clipclop engine (' + r.status + ')');
+      return r.text();
+    });
+    bootSplicedTopLevel(engineHtml, scene, { mode: 'editlist', title: `herd · ${n}`, links });
+  } catch (e) {
+    boot.className = 'err';
+    boot.textContent = 'error: ' + e.message;
+  }
+</script>
+</body>
+</html>
