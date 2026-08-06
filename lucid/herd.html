@@ -29,7 +29,9 @@
   const params = new URLSearchParams(location.search);
   let n = parseInt(params.get('n'), 10);
   if (!Number.isFinite(n)) n = 6;
-  n = Math.max(2, Math.min(16, n));
+  // 7 parts/animal x 23 stride must stay under the 2047 WGSL const-array limit
+  // → at most 12 animals in one baked edit list.
+  n = Math.max(2, Math.min(12, n));
 
   const cfg = defaultPhysicsConfig(); cfg.radius = 0.16; cfg.bound = 6;
   const SPECIES = ['cow', 'sheep', 'pig', 'dog', 'sheep', 'cow', 'pig', 'dog'];
@@ -42,7 +44,7 @@
       headUp: q.headSize * 0.7, headFwd: q.neckLength + q.headSize * 0.4,
       tailBack: Math.max(0.4, q.tailLength) });
     for (let i = 0; i < 180; i++) stepXPBD(rig.bodies, rig.constraints, cfg, 18);
-    return poseQuadrupedFromRig(rig, sp);
+    return poseQuadrupedFromRig(rig, sp, { simple: true }); // 7 parts — fits the herd under the array limit
   }
 
   // Scatter the animals on a grid with a deterministic per-row jitter and a

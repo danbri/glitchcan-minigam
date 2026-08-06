@@ -256,7 +256,7 @@ export function partsToUniforms(parts, extra = {}) {
  * the limbs follow. `params` sets colours/thicknesses (a species tint).
  * @param {{bodies:Array, joints:string[]}} rig - from buildQuadrupedRig
  */
-export function poseQuadrupedFromRig(rig, params = {}) {
+export function poseQuadrupedFromRig(rig, params = {}, opts = {}) {
   const q = resolveParams(params);
   const at = {};
   rig.joints.forEach((name, i) => { at[name] = rig.bodies[i].p; });
@@ -293,16 +293,22 @@ export function poseQuadrupedFromRig(rig, params = {}) {
   const ear = (sx) => ({ type: 'sphere', params: { r: earR, color: bcol },
     transform: { translate: [head[0] + sx * (headR * 0.55 + earR * (1 - q.earUp)), head[1] + headR * (0.5 + 0.5 * q.earUp), head[2] - fwd[2] * headR * 0.2] } });
 
+  // Core silhouette (7 parts) — enough to read as a quadruped at herd distance.
   const parts = [
     orientedCapsule(at.shoulder, at.hip, bodyR, bcol),        // torso (girth = species)
     orientedCapsule(at.shoulder, head, bodyR * 0.6, bcol),    // neck: fuses body to head
-    orientedCapsule(at.hip, at.tail, Math.max(legR * 0.5, q.tailRadius), lcol), // tail
     leg(at.footFL), leg(at.footFR), leg(at.footBL), leg(at.footBR),
-    { type: 'sphere', params: { r: headR, color: bcol }, transform: { translate: head.slice() } }, // head
-    orientedCapsule(head, snoutTip, q.snoutRadius, scol),     // snout (forward)
-    ear(-1), ear(1),
-    // four foot pads
-    ...['footFL', 'footFR', 'footBL', 'footBR'].map(fn => ({ type: 'sphere', params: { r: legR * 1.05, color: scol }, transform: { translate: at[fn].slice() } }))
+    { type: 'sphere', params: { r: headR, color: bcol }, transform: { translate: head.slice() } } // head
   ];
+  // Detail parts (8 more) — dropped in `simple` mode so a herd stays under the
+  // WGSL const-array limit (a baked edit list caps near ~88 edits).
+  if (!opts.simple) {
+    parts.push(
+      orientedCapsule(at.hip, at.tail, Math.max(legR * 0.5, q.tailRadius), lcol), // tail
+      orientedCapsule(head, snoutTip, q.snoutRadius, scol),   // snout (forward)
+      ear(-1), ear(1),
+      ...['footFL', 'footFR', 'footBL', 'footBR'].map(fn => ({ type: 'sphere', params: { r: legR * 1.05, color: scol }, transform: { translate: at[fn].slice() } })) // foot pads
+    );
+  }
   return { name: 'quadruped-posed', root: { type: 'smoothUnion', k: 0.12, children: parts } };
 }

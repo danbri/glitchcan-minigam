@@ -471,6 +471,13 @@ describe('sdf edit list (core/sdf-editlist.js)', () => {
   // The spatial cull must not change the field: a culled edit is provably a
   // no-op. Verify the folded field still equals the reference tree exactly on a
   // spread-out union where most edits are far from any given sample.
+  it('rejects an edit list too large to bake (2047 WGSL const-array limit)', () => {
+    const children = [];
+    for (let i = 0; i < 90; i++) children.push({ type: 'sphere', params: { r: 0.1 }, transform: { translate: [i * 0.3, 0, 0] } });
+    const scene = loadJsonScene({ name: 'big', root: { type: 'union', children } }); // 90 * 23 = 2070 > 2047
+    expect(() => generateEditListWgsl(scene)).toThrow(/2047/);
+  });
+
   it('two-level chunked fold equals the flat fold (field unchanged)', () => {
     // 40 spheres in five separated clusters → several chunks, most skippable.
     const children = [];

@@ -437,6 +437,13 @@ export function generateEditListWgsl(scene, opts = {}) {
       e.bound);
   }
   const N = edits.length;
+  // A baked var<private> array is a WGSL constant array, capped at 2047 elements
+  // by some implementations (Apple/Tint). editData is N*STRIDE. Fail loudly here
+  // instead of a cryptic on-device "constant array cannot have more than 2047
+  // elements". Larger scenes need the storage-buffer path.
+  if (N * STRIDE > 2047) {
+    throw new Error(`edit list too large to bake: ${N} edits x ${STRIDE} = ${N * STRIDE} elements > 2047 (WGSL const-array limit). Reduce edits (fewer/simpler parts) or use storage buffers.`);
+  }
   const arr = data.map(f).join(', ');
   const P = (n) => prefix + n;
 
