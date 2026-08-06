@@ -437,20 +437,33 @@ export function generateEditListWgsl(scene, opts = {}) {
       e.bound);
   }
   const N = edits.length;
-  // A baked var<private> array is a WGSL constant array, capped at 2047 elements
-  // by some implementations (Apple/Tint). editData is N*STRIDE. Fail loudly here
-  // instead of a cryptic on-device "constant array cannot have more than 2047
-  // elements". Larger scenes need the storage-buffer path.
-  if (N * STRIDE > 2047) {
-    throw new Error(`edit list too large to bake: ${N} edits x ${STRIDE} = ${N * STRIDE} elements > 2047 (WGSL const-array limit). Reduce edits (fewer/simpler parts) or use storage buffers.`);
-  }
-  const arr = data.map(f).join(', ');
   const P = (n) => prefix + n;
-
   // Chunk bounds: 4 floats (centre.xyz, radius) per contiguous group of CHUNK.
   const chunks = chunkEdits(edits, CHUNK);
   const NCHUNK = chunks.length;
-  const chunkArr = chunks.flat().map(f).join(', ');
+
+  // Data declarations. Two forms, SAME fold body:
+  //  storage  — @group buffers, no size limit, engine binds them (scales).
+  //  baked    — var<private> constant arrays, self-contained, but capped at
+  //             2047 elements on some implementations (Apple/Tint).
+  let decls;
+  if (opts.storage) {
+    const g = opts.group != null ? opts.group : 1;
+    const b = opts.binding != null ? opts.binding : 0;
+    decls = `@group(${g}) @binding(${b}) var<storage, read> ${P('editData')}: array<f32>;\n` +
+            `@group(${g}) @binding(${b + 1}) var<storage, read> ${P('chunkData')}: array<f32>;`;
+  } else {
+    if (N * STRIDE > 2047) {
+      throw new Error(`edit list too large to bake: ${N} edits x ${STRIDE} = ${N * STRIDE} elements > 2047 (WGSL const-array limit). Reduce edits (fewer/simpler parts) or use storage buffers.`);
+    }
+    const arr = data.map(f).join(', ');
+    const chunkArr = chunks.flat().map(f).join(', ');
+    decls = `// var<private> (not const): the fold indexes this array with a runtime loop\n` +
+            `// counter. Dynamic indexing of a module-scope const is rejected by some WGSL\n` +
+            `// implementations (a black bake on device); a private var is always legal.\n` +
+            `var<private> ${P('editData')}: array<f32, ${Math.max(1, N * STRIDE)}> = array<f32, ${Math.max(1, N * STRIDE)}>(${N ? arr : '0.0'});\n` +
+            `var<private> ${P('chunkData')}: array<f32, ${Math.max(1, NCHUNK * 4)}> = array<f32, ${Math.max(1, NCHUNK * 4)}>(${NCHUNK ? chunkArr : '0.0'});`;
+  }
 
   const wgsl = `// ===== Lucid → edit list (generated, data-driven) =====
 // ${N} edits, stride ${STRIDE}, in ${NCHUNK} chunk(s) of ${CHUNK}. Two-level fold:
@@ -458,11 +471,7 @@ export function generateEditListWgsl(scene, opts = {}) {
 const ${P('EDITS')}: u32 = ${N}u;
 const ${P('CHUNK')}: u32 = ${CHUNK}u;
 const ${P('NCHUNK')}: u32 = ${NCHUNK}u;
-// var<private> (not const): the fold indexes this array with a runtime loop
-// counter. Dynamic indexing of a module-scope const is rejected by some WGSL
-// implementations (a black bake on device); a private var is always legal.
-var<private> ${P('editData')}: array<f32, ${Math.max(1, N * STRIDE)}> = array<f32, ${Math.max(1, N * STRIDE)}>(${N ? arr : '0.0'});
-var<private> ${P('chunkData')}: array<f32, ${Math.max(1, NCHUNK * 4)}> = array<f32, ${Math.max(1, NCHUNK * 4)}>(${NCHUNK ? chunkArr : '0.0'});
+${decls}
 fn ${P('editPrim')}(pl: vec3f, prim: i32, pr: vec3f) -> f32 {
   if (prim == 0) { return length(pl) - pr.x; }
   if (prim == 1) { let q = abs(pl) - pr; return length(max(q, vec3f(0.0))) + min(max(q.x, max(q.y, q.z)), 0.0); }
@@ -524,5 +533,11 @@ fn ${P('editField')}(p: vec3f) -> vec4f {
   return vec4f(d, col);
 }
 `;
-  return { wgsl, count: N, unsupported, chunks: NCHUNK };
+  const result = { wgsl, count: N, unsupported, chunks: NCHUNK };
+  if (opts.storage) {
+    // Flat typed arrays the engine uploads to the two storage buffers.
+    result.editData = Float32Array.from(data);
+    result.chunkData = Float32Array.from(chunks.flat());
+  }
+  return result;
 }

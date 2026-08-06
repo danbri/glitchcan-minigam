@@ -21,17 +21,19 @@
   edit-list field. Boots top-level (reliable, no idle re-bake). Count via ?n=.
 -->
 <script type="module">
-  import { bootSplicedTopLevel } from './clipclop/splice-lib.js';
+  import { bootSplicedTopLevel, bootStorageTopLevel } from './clipclop/splice-lib.js';
   import { defaultPhysicsConfig, buildQuadrupedRig, stepXPBD } from './core/gpu-physics.js';
   import { poseQuadrupedFromRig, resolveParams } from './core/sdf-template.js';
 
   const boot = document.getElementById('boot');
   const params = new URLSearchParams(location.search);
+  // Default: storage-buffer edit list (no size cap). ?baked=1 uses the older
+  // baked path (self-contained, but caps at ~12 animals).
+  const baked = params.get('baked') === '1';
   let n = parseInt(params.get('n'), 10);
-  if (!Number.isFinite(n)) n = 6;
-  // 7 parts/animal x 23 stride must stay under the 2047 WGSL const-array limit
-  // → at most 12 animals in one baked edit list.
-  n = Math.max(2, Math.min(12, n));
+  if (!Number.isFinite(n)) n = 8;
+  // Baked path caps at 12 (2047 WGSL const-array limit / 7 parts); storage does not.
+  n = Math.max(2, Math.min(baked ? 12 : 40, n));
 
   const cfg = defaultPhysicsConfig(); cfg.radius = 0.16; cfg.bound = 6;
   const SPECIES = ['cow', 'sheep', 'pig', 'dog', 'sheep', 'cow', 'pig', 'dog'];
@@ -68,14 +70,17 @@
   }
 
   const scene = buildHerd(n);
-  const links = [4, 8, 12].map((c) => ({ label: String(c), href: `?n=${c}`, on: c === n }));
+  const counts = baked ? [4, 8, 12] : [8, 20, 30];
+  const links = counts.map((c) => ({ label: String(c), href: `?n=${c}${baked ? '&baked=1' : ''}`, on: c === n }));
+  const title = `herd · ${n}` + (baked ? ' · baked' : '');
 
   try {
     const engineHtml = await fetch('./clipclop/index.html', { cache: 'no-store' }).then((r) => {
       if (!r.ok) throw new Error('cannot fetch clipclop engine (' + r.status + ')');
       return r.text();
     });
-    bootSplicedTopLevel(engineHtml, scene, { mode: 'editlist', title: `herd · ${n}`, links });
+    if (baked) bootSplicedTopLevel(engineHtml, scene, { mode: 'editlist', title, links });
+    else bootStorageTopLevel(engineHtml, scene, { title, links });
   } catch (e) {
     boot.className = 'err';
     boot.textContent = 'error: ' + e.message;

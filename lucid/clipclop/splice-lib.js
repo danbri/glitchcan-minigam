@@ -24,6 +24,90 @@ import { loadJsonScene } from '../core/json-loader.js';
 import { generateWgslSceneSDF } from '../core/wgsl-codegen.js';
 import { generateEditListWgsl } from '../core/sdf-editlist.js';
 
+// ---- storage-buffer edit list (uncapped scale) --------------------------
+// The baked edit list is a WGSL const array capped at 2047 elements (~88 edits).
+// To scale past that, the edit list lives in STORAGE BUFFERS the engine binds on
+// a dedicated group 1, shared across the three pipelines that sample the field
+// (classify / generate / render). Same exact chunked fold — only the data
+// source changes. All edits are Node-checkable; the render needs a real device.
+
+const LX_GROUP = 1;
+
+// Engine anchors (verified unique / ordered in lucid/clipclop/index.html).
+const A_SCENEBUFFER = "sceneBuffer=await scoped('scene buffer',()=>device.createBuffer({size:16,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST}))";
+const A_LAYOUTS = ['bindGroupLayouts:[classifyBGL]', 'bindGroupLayouts:[generateBGL]', 'bindGroupLayouts:[renderBGL]'];
+const A_SETBIND = [
+  ['b.setBindGroup(0,level.classifyBind)', 'b'],
+  ['c.setBindGroup(0,level.generateBind)', 'c'],
+  ['pass.setBindGroup(0,renderBind)', 'pass']
+];
+
+/**
+ * Splice a scene into the engine with the edit list in STORAGE buffers (no size
+ * cap), booting it top-level. Returns the count info; the caller document.writes
+ * nothing — this replaces the page like bootSplicedTopLevel does.
+ * @returns {{ html:string, count:number, chunks:number }}
+ */
+export function buildStorageEngine(engineHtml, sceneJson, opts = {}) {
+  const prefix = opts.prefix || 'lx_';
+  const scene = loadJsonScene(sceneJson);
+  const { wgsl, editData, chunkData, count, chunks } =
+    generateEditListWgsl(scene, { prefix, storage: true, group: LX_GROUP, binding: 0, chunk: opts.chunk || 16 });
+
+  if (!engineHtml.includes(CACHESAMPLE_STRUCT)) throw new Error('splice: CacheSample anchor not found');
+  if (!engineHtml.includes(CACHE_FN_HEADER)) throw new Error('splice: cacheSceneSample header not found');
+  if (!engineHtml.includes(A_SCENEBUFFER)) throw new Error('splice: sceneBuffer anchor not found');
+  for (const a of A_LAYOUTS) if (!engineHtml.includes(a)) throw new Error('splice: layout anchor not found: ' + a);
+  for (const [a] of A_SETBIND) if (!engineHtml.includes(a)) throw new Error('splice: setBindGroup anchor not found: ' + a);
+
+  let html = engineHtml;
+
+  // 1) Inject the storage-fold WGSL after CacheSample (into the shared fragment,
+  //    so classify/generate/render all see the group-1 bindings + editField).
+  html = html.replace(CACHESAMPLE_STRUCT, CACHESAMPLE_STRUCT + '\n/* ===== Lucid storage edit list (spliced) ===== */\n' + wgsl + '\n');
+
+  // 2) Point the bake seam at the edit-list field.
+  html = replaceFnBody(html, CACHE_FN_HEADER, `let v=${prefix}editField(p);return CacheSample(v.x,v.yzw);`);
+
+  // 3) Prepend the edit + chunk data as a plain global, before the engine module.
+  const dataScript = `<script>window.__LX={e:[${Array.from(editData).join(',')}],c:[${Array.from(chunkData).join(',')}]};<\/script>`;
+  html = html.replace('</title>', '</title>\n<meta name="lucid-splice" content="storage">\n' + dataScript);
+
+  // 4) Create the two storage buffers + a group-1 layout/bind, right after the
+  //    scene buffer (runs before pipeline layouts are built). window globals so
+  //    the later pipeline/frame code can reference them regardless of scope.
+  const bufInit = A_SCENEBUFFER + ';(function(){' +
+    'const E=new Float32Array(window.__LX.e),C=new Float32Array(window.__LX.c);' +
+    'const eb=device.createBuffer({size:Math.max(16,E.byteLength),usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});device.queue.writeBuffer(eb,0,E);' +
+    'const cb=device.createBuffer({size:Math.max(16,C.byteLength),usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});device.queue.writeBuffer(cb,0,C);' +
+    'window.__lxBGL=device.createBindGroupLayout({entries:[' +
+    '{binding:0,visibility:GPUShaderStage.COMPUTE|GPUShaderStage.FRAGMENT,buffer:{type:"read-only-storage"}},' +
+    '{binding:1,visibility:GPUShaderStage.COMPUTE|GPUShaderStage.FRAGMENT,buffer:{type:"read-only-storage"}}]});' +
+    'window.__lxBind=device.createBindGroup({layout:window.__lxBGL,entries:[{binding:0,resource:{buffer:eb}},{binding:1,resource:{buffer:cb}}]});' +
+    '})()';
+  html = html.replace(A_SCENEBUFFER, bufInit);
+
+  // 5) Add group 1 to each of the three pipeline layouts.
+  for (const a of A_LAYOUTS) html = html.replace(a, a.replace(']', ',window.__lxBGL]'));
+
+  // 6) Bind group 1 on each of the three passes (right after group 0).
+  for (const [call, enc] of A_SETBIND) html = html.replace(call, call + ';' + enc + '.setBindGroup(1,window.__lxBind)');
+
+  return { html, count, chunks };
+}
+
+/** Splice with storage buffers and boot top-level (replaces the page). */
+export function bootStorageTopLevel(engineHtml, sceneJson, opts = {}) {
+  const { html, count, chunks } = buildStorageEngine(engineHtml, sceneJson, opts);
+  const overlay = opts.overlay || buildOverlay(opts);
+  let out = html.replace('let auto=true,', 'let auto=false,');
+  if (overlay) out = out.replace('</body>', overlay + '\n</body>');
+  document.open();
+  document.write(out);
+  document.close();
+  return { count, chunks };
+}
+
 /** Prefix every function the bridge declares, at declaration and call sites. */
 export function namespaceWgsl(wgsl, prefix = 'lx_') {
   const names = new Set();
