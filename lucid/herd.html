@@ -31,9 +31,10 @@
   // baked path (self-contained, but caps at ~12 animals).
   const baked = params.get('baked') === '1';
   let n = parseInt(params.get('n'), 10);
-  if (!Number.isFinite(n)) n = 8;
-  // Baked path caps at 12 (2047 WGSL const-array limit / 7 parts); storage does not.
-  n = Math.max(2, Math.min(baked ? 12 : 40, n));
+  if (!Number.isFinite(n)) n = 10;
+  // Baked path caps at ~8 (2047 const-array limit / 10 parts). Storage has no
+  // edit cap; the practical ceiling is the clipmap's brick budget (~20-24).
+  n = Math.max(2, Math.min(baked ? 8 : 24, n));
 
   const cfg = defaultPhysicsConfig(); cfg.radius = 0.16; cfg.bound = 6;
   const SPECIES = ['cow', 'sheep', 'pig', 'dog', 'sheep', 'cow', 'pig', 'dog'];
@@ -46,7 +47,7 @@
       headUp: q.headSize * 0.7, headFwd: q.neckLength + q.headSize * 0.4,
       tailBack: Math.max(0.4, q.tailLength) });
     for (let i = 0; i < 180; i++) stepXPBD(rig.bodies, rig.constraints, cfg, 18);
-    return poseQuadrupedFromRig(rig, sp, { simple: true }); // 7 parts — fits the herd under the array limit
+    return poseQuadrupedFromRig(rig, sp, { simple: true }); // 10 parts (with snout + ears) — lighter than the full 15
   }
 
   // Scatter the animals on a grid with a deterministic per-row jitter and a
@@ -70,7 +71,7 @@
   }
 
   const scene = buildHerd(n);
-  const counts = baked ? [4, 8, 12] : [8, 20, 30];
+  const counts = baked ? [4, 6, 8] : [8, 14, 20];
   const links = counts.map((c) => ({ label: String(c), href: `?n=${c}${baked ? '&baked=1' : ''}`, on: c === n }));
   const title = `herd · ${n}` + (baked ? ' · baked' : '');
 

@@ -300,15 +300,15 @@ export function poseQuadrupedFromRig(rig, params = {}, opts = {}) {
     leg(at.footFL), leg(at.footFR), leg(at.footBL), leg(at.footBR),
     { type: 'sphere', params: { r: headR, color: bcol }, transform: { translate: head.slice() } } // head
   ];
-  // Detail parts (8 more) — dropped in `simple` mode so a herd stays under the
-  // WGSL const-array limit (a baked edit list caps near ~88 edits).
+  // Snout + ears in BOTH modes — they are what make it read as an animal.
+  if (!opts.simple) parts.push(orientedCapsule(at.hip, at.tail, Math.max(legR * 0.5, q.tailRadius), lcol)); // tail (full only)
+  parts.push(
+    orientedCapsule(head, snoutTip, q.snoutRadius, scol),     // snout (forward)
+    ear(-1), ear(1)
+  );
+  // Foot pads — full detail only (kept off the herd for lighter bakes).
   if (!opts.simple) {
-    parts.push(
-      orientedCapsule(at.hip, at.tail, Math.max(legR * 0.5, q.tailRadius), lcol), // tail
-      orientedCapsule(head, snoutTip, q.snoutRadius, scol),   // snout (forward)
-      ear(-1), ear(1),
-      ...['footFL', 'footFR', 'footBL', 'footBR'].map(fn => ({ type: 'sphere', params: { r: legR * 1.05, color: scol }, transform: { translate: at[fn].slice() } })) // foot pads
-    );
+    parts.push(...['footFL', 'footFR', 'footBL', 'footBR'].map(fn => ({ type: 'sphere', params: { r: legR * 1.05, color: scol }, transform: { translate: at[fn].slice() } })));
   }
   return { name: 'quadruped-posed', root: { type: 'smoothUnion', k: 0.12, children: parts } };
 }
