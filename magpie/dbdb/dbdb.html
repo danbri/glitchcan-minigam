@@ -22,13 +22,22 @@
   #hud {
     position:fixed; top:0; left:0; right:0; z-index:10;
     display:none; justify-content:space-between; align-items:center;
-    padding:calc(6px + env(safe-area-inset-top)) 12px 6px 12px;
+    padding:calc(8px + env(safe-area-inset-top)) 24px 6px 24px;
     color:#d8d8d8; font-weight:bold; font-size:clamp(13px,3.2vw,20px);
     text-shadow:0 0 6px rgba(0,255,255,.7), 2px 2px 0 #000;
     letter-spacing:.12em; pointer-events:none; white-space:nowrap;
   }
   #hudItems { color:#ffff00; }
+  #hudClock { color:#00d8d8; font-size:.82em; letter-spacing:.06em; padding:0 8px; }
   #hudLives { color:#ffffff; }
+  #flash {
+    position:fixed; inset:0; z-index:15; pointer-events:none;
+    background:#ff0000; opacity:0; transition:opacity .18s;
+  }
+  #flash.on { opacity:0.45; transition:opacity .04s; }
+  @media (prefers-reduced-motion: reduce){
+    #roomName, .overlay h1, .btn, #willyFoot, #goFoot { animation:none !important; }
+  }
   #roomName {
     position:fixed; left:0; right:0; bottom:calc(14px + env(safe-area-inset-bottom));
     z-index:10; text-align:center; pointer-events:none; display:none;
@@ -59,6 +68,7 @@
     color:#ffff00; font-weight:bold; font-size:clamp(13px,3.5vw,18px);
     letter-spacing:.1em; display:none; align-items:center; justify-content:center;
     text-shadow:1px 1px 0 #000; -webkit-tap-highlight-color:transparent;
+    font-family:inherit; padding:0;
   }
   #jumpBtn:active { background:rgba(216,216,0,.45); }
   #stickBase, #stickNub {
@@ -115,12 +125,14 @@
 
 <div id="hud">
   <span id="hudItems">ITEMS 00/00</span>
-  <span id="hudLives">🐥🐥🐥🐥</span>
+  <span id="hudClock">🕛 15:00</span>
+  <span id="hudLives">🐥🐥🐥🐥🐥🐥</span>
 </div>
+<div id="flash"></div>
 <div id="roomName"></div>
 <div id="toast"></div>
 <button type="button" id="muteBtn" aria-label="toggle sound">🔊</button>
-<div id="jumpBtn">JUMP</div>
+<button type="button" id="jumpBtn" aria-label="jump">JUMP</button>
 <div id="stickBase"></div><div id="stickNub"></div>
 
 <!-- ---------- title ---------- -->
@@ -130,7 +142,8 @@
   <h2>A 3D MAISONETTE MISADVENTURE</h2>
   <p>Ducky held one wild party. Now the housekeeper demands a tidy house
      before bedtime. Collect <b>every flashing item</b> in the manor,
-     then get to <b>bed</b> in the Master Bedroom. Mind the residents —
+     then get to <b>bed</b> in the Master Bedroom —
+     <b>before the clock strikes midnight</b>. Mind the residents —
      they are not friendly.</p>
   <p><b>Touch:</b> left thumb = walk &nbsp;·&nbsp; right button = jump<br>
      <b>Keys:</b> arrows / WASD = walk &nbsp;·&nbsp; SPACE / Z = jump &nbsp;·&nbsp; M = mute</p>
@@ -197,12 +210,12 @@ window.addEventListener('error', e => {
 const srgb = hex => new THREE.Color(hex);
 const P = {
   black:   srgb(0x000000),
-  blue:    srgb(0x0000d8), briBlue: srgb(0x2222ff),
-  red:     srgb(0xd80000), briRed:  srgb(0xff2222),
-  magenta: srgb(0xd800d8), briMag:  srgb(0xff44ff),
-  green:   srgb(0x00b800), briGrn:  srgb(0x22ff22),
-  cyan:    srgb(0x00d8d8), briCyan: srgb(0x44ffff),
-  yellow:  srgb(0xd8d800), briYel:  srgb(0xffff33),
+  blue:    srgb(0x0000d8), briBlue: srgb(0x0000ff),
+  red:     srgb(0xd80000), briRed:  srgb(0xff0000),
+  magenta: srgb(0xd800d8), briMag:  srgb(0xff00ff),
+  green:   srgb(0x00d800), briGrn:  srgb(0x00ff00),
+  cyan:    srgb(0x00d8d8), briCyan: srgb(0x00ffff),
+  yellow:  srgb(0xd8d800), briYel:  srgb(0xffff00),
   white:   srgb(0xd8d8d8), briWhite:srgb(0xffffff),
   grey:    srgb(0x9a9a9a), darkGrey:srgb(0x555555),
   brown:   srgb(0x8a5a2a), darkBrown:srgb(0x5a3a1a),
@@ -233,7 +246,7 @@ const guardians = [];    // built later
 const waters = [];       // deadly water boxes {x0,x1,z0,z1,yTop}
 const crumbles = new Map(); // key -> {mesh, state, timer, cell:[x,y,z]}
 
-function addItem(x,y,z){ items.push({x,y,z, mesh:null, taken:false}); }
+function addItem(x,y,z,life=false){ items.push({x,y,z, life, mesh:null, shadow:null, taken:false}); }
 
 /* ---------------- build the manor ---------------- */
 function buildWorld(){
@@ -249,14 +262,16 @@ function buildWorld(){
   setCell(4,0,7, P.stone); setCell(6,0,9, P.stone);   // stepping stones
   setCell(5,0,6, P.stone);
   setCell(12,1,6, P.brown);                           // crate under the item crate
-  // bushes
-  for(const [bx,bz] of [[0,3],[10,3],[12,9],[-2,8],[9,12]]){
+  // bushes (moved off the pond pinch lane)
+  for(const [bx,bz] of [[0,2],[10,3],[12,9],[-2,8],[9,12]]){
     setCell(bx,1,bz,P.green); setCell(bx,2,bz,P.grass2);
   }
   // garden crates to hop
   setCell(11,1,6,P.brown); setCell(12,1,7,P.brown); setCell(12,2,6,P.darkBrown);
+  // boundary posts along the south street edge (physics also clamps there)
+  for(let px=-3;px<=59;px+=3) setCell(px,1,13,P.grass2);
   addItem(5,1.2,6);          // stepping stone
-  addItem(0,3.2,3);          // bush top
+  addItem(6,1.2,9);          // far stepping stone — two water hops
   addItem(12,3.2,6);         // crate top
   addItem(-2,3.2,8);         // bush top
 
@@ -284,7 +299,7 @@ function buildWorld(){
   addItem(26,3.4,5);                                 // goblet on the table
   addItem(15,1.2,10);
   // stairs hall -> first landing (x20..21)
-  for(let s=0;s<4;s++) fill(20,1,5-s-1+1, 21,1+s,5-s, P.grey, P.white);
+  for(let s=0;s<4;s++) fill(20,1,5-s-1+1, 21,1+s,5-s, P.white, P.briYel);   // stair signature: white/bright-yellow check
   // steps at z=4,3,2 rising; wall z=1 is final step (top y=6)
   addItem(21,6.4,2);
 
@@ -300,9 +315,9 @@ function buildWorld(){
   fill(31,1,9, 31,3,9, P.brown);
   addItem(37,2.3,3);          // on the conveyor
   addItem(41,4.3,9);          // end of crumble path
-  addItem(33,1.6,11);
+  addItem(38,1.6,7);          // in the chef's patrol lane — time the grab
   // stairs kitchen -> bathroom (x34..35)
-  for(let s=0;s<4;s++) fill(34,1,5-s-1+1, 35,1+s,5-s, P.grey, P.white);
+  for(let s=0;s<4;s++) fill(34,1,5-s-1+1, 35,1+s,5-s, P.white, P.briYel);   // stair signature: white/bright-yellow check
 
   // --- Conservatory (x44..57): plants ---
   fill(44,0,2, 57,0,11, P.grass, P.grass2);
@@ -323,8 +338,10 @@ function buildWorld(){
 
   // --- First Landing (x14..25): Maria the housekeeper patrols here ---
   fill(14,5,-8, 25,5,0, P.blue, P.darkGrey);
+  // grandfather clock — the landmark, and the bedtime countdown made flesh
+  setCell(15,6,-8,P.brown); setCell(15,7,-8,P.brown); setCell(15,8,-8,P.white);
   // stairs landing -> master bedroom (x17..18), rising toward the back wall
-  for(let s=0;s<4;s++) fill(17,6, -5-s, 18,6+s, -5-s, P.grey, P.white);
+  for(let s=0;s<4;s++) fill(17,6, -5-s, 18,6+s, -5-s, P.white, P.briYel);   // stair signature: white/bright-yellow check
   addItem(24,6.2,-7);
 
   // --- The Bathroom (x26..39): bath with deadly water, flying toilet ---
@@ -347,9 +364,11 @@ function buildWorld(){
   fill(43,8,-8, 43,8,-8, P.brown);
   fill(42,6,-2, 55,6,-2, P.yellow, null, KIND.CONVEYOR, -1); // reading rail, pushes west
   fill(41,6,-2, 41,7,-2, P.darkGrey);
-  addItem(50,7.3,-2); addItem(56,6.2,-7); addItem(45,6.2,0);
+  addItem(50,7.3,-2);          // riding the reading rail
+  addItem(56,6.2,0.5);         // front lip — VISIBLE from the fixed camera
+  addItem(44.5,6.8,-3.3);      // in the ghost's bob lane — dart in when it rises
   // stairs library -> attic (x48..49)
-  for(let s=0;s<4;s++) fill(48,6, -5-s, 49,6+s, -5-s, P.grey, P.white);
+  for(let s=0;s<4;s++) fill(48,6, -5-s, 49,6+s, -5-s, P.white, P.briYel);   // stair signature: white/bright-yellow check
 
   /* ---------------- TERRACE 2 (walk y=11, interior z -18..-10) ------------ */
   fill(14,10,-19, 57,10,-10, P.stone, P.stone2);         // floor slab
@@ -383,6 +402,7 @@ function buildWorld(){
     fill(cx,15,-19, cx+1,16,-19, P.briRed);
     addItem(cx+0.5,17.4,-19);
   }
+  addItem(14.5,15.9,-18.5,true);   // EXTRA LIFE at the far west end of the catwalk
 }
 buildWorld();
 
@@ -407,7 +427,7 @@ function zoneAt(x,y,z){
     if(x>=zn.x0 && x<=zn.x1 && z>=zn.z0 && z<=zn.z1 && y>=zn.yMin) return zn;
   return ZONES[ZONES.length-1];
 }
-const BED = { x0:16, x1:21, z0:-17.5, z1:-15.5, y0:11, y1:14.5 };
+const BED = { x0:16, x1:21, z0:-17.5, z1:-14.8, y0:11, y1:14.5 };  // front face included so bumping the bed talks back
 
 /* =========================================================
    4. RENDERER / SCENE / CAMERA
@@ -442,13 +462,18 @@ const resUniform = uniform(new THREE.Vector2(640,430));
 /* =========================================================
    5. TSL MATERIALS
    ========================================================= */
-// spectrum dither: world-space checker darkening, baked face shades in vertex colors
+// spectrum dither: world-space checker darkening, baked face shades in vertex colors.
+// The current zone (x0,z0,x1,z1 uniform) keeps full contrast; the rest of the
+// manor drops to 72% so the active room owns the eye (cutaway != quilt).
+const zoneRectU = uniform(new THREE.Vector4(-999,-999,999,999));
 const worldMat = new THREE.MeshBasicNodeMaterial();
 {
   const col = attribute('color', 'vec3');
   const wp = positionWorld;
   const chk = mod(floor(wp.x.mul(4)).add(floor(wp.y.mul(4))).add(floor(wp.z.mul(4))), 2.0);
-  worldMat.colorNode = col.mul(mix(0.84, 1.0, chk));
+  const inz = step(zoneRectU.x, wp.x).mul(step(wp.x, zoneRectU.z))
+              .mul(step(zoneRectU.y, wp.z)).mul(step(wp.z, zoneRectU.w));
+  worldMat.colorNode = col.mul(mix(0.84, 1.0, chk)).mul(mix(0.72, 1.0, inz));
 }
 
 // conveyors: animated hazard stripes
@@ -482,11 +507,15 @@ const waterMat = new THREE.MeshBasicNodeMaterial({ transparent:true, opacity:0.9
   waterMat.colorNode = mix(vec3(0.0,0.05,0.55), vec3(0.05,0.75,0.8), band);
 }
 
-// items: palette-snapping spectrum flash
+// items: true spectrum FLASH — snaps through the 7 bright inks, no in-betweens
 const itemMat = new THREE.MeshBasicNodeMaterial();
 {
-  const tq = floor(time.mul(7.0));
-  itemMat.colorNode = clamp(cos(tq.mul(1.7).add(vec3(0.0,2.1,4.2))).mul(0.5).add(0.55), 0.0, 1.0);
+  const inks = [0xffff00,0x00ffff,0x00ff00,0xff00ff,0xff0000,0x0000ff,0xffffff].map(h=>srgb(h));
+  const idx = mod(floor(time.mul(7.0)), 7.0);
+  let node = vec3(inks[0].r, inks[0].g, inks[0].b);
+  for(let i=1;i<7;i++)
+    node = mix(node, vec3(inks[i].r, inks[i].g, inks[i].b), step(i-0.5, idx));
+  itemMat.colorNode = node;
 }
 
 // candle flames / hearth flicker
@@ -581,7 +610,8 @@ for(const it of items){
   it.mesh.position.set(it.x+(Number.isInteger(it.x)?0.5:0), it.y, it.z+(Number.isInteger(it.z)?0.5:0));
   scene.add(it.mesh);
 }
-const ITEMS_TOTAL = items.length;
+const ITEMS_TOTAL = items.filter(i=>!i.life).length;   // extra lives don't count
+for(const it of items) if(it.life) it.mesh.scale.setScalar(1.4);
 
 /* =========================================================
    7. ACTORS — box-people
@@ -645,8 +675,10 @@ function makeGuardian(type){
     anim.push(part(g,-0.32,0.55,0, 0.1,0.35,0.1, 0xffc890));
   } else if(type==='ghost'){
     part(g,0,0,0, 0.7,1.1,0.6, 0xffffff, ghostMat);
-    part(g,0.14,0.8,0.28, 0.1,0.16,0.06, 0x000000, ghostMat);
-    part(g,-0.14,0.8,0.28, 0.1,0.16,0.06, 0x000000, ghostMat);
+    // eyes need their own opaque black material — passing ghostMat made them
+    // pulse white-on-white (a faceless ghost, per the animation review)
+    part(g,0.14,0.8,0.31, 0.12,0.18,0.06, 0x000000);
+    part(g,-0.14,0.8,0.31, 0.12,0.18,0.06, 0x000000);
   } else if(type==='crow'){
     part(g,0,0,0, 0.5,0.4,0.7, 0x151515);
     part(g,0,0.3,0.35, 0.3,0.3,0.3, 0x151515);
@@ -682,7 +714,7 @@ function addGuardian(type, axis, base, min, max, speed, opts={}){
 
 addGuardian('penguin', 'x', [17,1,8.5],   15, 28, 1.7);
 addGuardian('chef',    'z', [38.5,1,5],   4, 10.5, 1.5);
-addGuardian('can',     'x', [46,1,10.5],  45, 56.5, 2.2);
+addGuardian('can',     'x', [46,1,5],     45, 56.5, 2.2);   // patrols the plant-item row
 addGuardian('maid',    'x', [15,6,-3.5],  14, 24.5, 1.9);
 addGuardian('toilet',  'x', [28,6.6,-2],  27.5, 38.5, 2.4, { bobAmp:0.5 });
 addGuardian('ghost',   'y', [44.5,6,-4],  6, 8.6, 1.1, { phase:1 });
@@ -727,6 +759,30 @@ function updateShadow(m, x,y,z){
 }
 const duckShadow = makeShadow();
 for(const gu of guardians) gu.shadow = makeShadow();
+/* items get small static shadows — grounds them against the checker floors */
+for(const it of items){
+  it.shadow = makeShadow();
+  const m = it.mesh.position;
+  updateShadow(it.shadow, m.x, it.y, m.z);
+  it.shadow.scale.multiplyScalar(0.55);
+}
+
+/* x-ray duck: a faint always-on-top silhouette so the player is never lost
+   behind walls or guardians (art + world reviews, showstopper) */
+const xrayMat = new THREE.MeshBasicNodeMaterial({ color: srgb(0xffff00),
+  transparent:true, opacity:0.15, depthTest:false });
+const duckGhost = duck.g.clone(true);
+duckGhost.traverse(o=>{ if(o.isMesh){ o.material = xrayMat; o.renderOrder = 50; } });
+scene.add(duckGhost);
+
+/* pickup pop — one shared expanding ring */
+const popRing = new THREE.Mesh(
+  (()=>{ const g=new THREE.RingGeometry(0.22,0.36,16); g.rotateX(-Math.PI/2); return g; })(),
+  new THREE.MeshBasicNodeMaterial({ color: srgb(0xffffff), transparent:true,
+    opacity:0.8, depthWrite:false, side:THREE.DoubleSide }));
+popRing.visible=false; scene.add(popRing);
+let popAge=1;
+function popAt(x,y,z){ popRing.position.set(x,y,z); popAge=0; popRing.visible=true; }
 
 /* =========================================================
    8. AUDIO — 3-channel square chip + noise
@@ -936,15 +992,19 @@ function worldDir(jx,jy){ return [ jx*R2 - jy*R2, -jx*R2 - jy*R2 ]; }   // [dx,d
    10. PHYSICS + GAME STATE
    ========================================================= */
 const GRAV=26, WALK=4.6, JUMP_V=11.0, FALL_FATAL=12;
+const BEDTIME_SECS = 900;            // 15 real minutes from 11:45 PM to midnight
 const p = {
   x:-1, y:1.1, z:4, vx:0, vy:0, vz:0,
-  grounded:false, coyote:0, fallFrom:1.1,
+  grounded:false, coyote:0, fallFrom:1.1, squash:0,
   dead:false, deadT:0, won:false, facing:0,
 };
 const state = {
-  running:false, lives:4, collected:0, deaths:0, t0:0,
-  zone:null, spawn:[-1,1.1,4], toastT:0,
+  running:false, lives:6, collected:0, deaths:0, t0:0,
+  zone:null, spawn:[-1,1.1,4], toastT:0, clock:BEDTIME_SECS,
 };
+const GUARD_NAMES = { penguin:'THE BUTLER', chef:'THE CHEF', toilet:'THE FLYING LAV',
+  maid:'THE HOUSEKEEPER', ghost:'THE GHOST', crow:'THE CROW',
+  can:'THE WATERING CAN', spider:'THE SPIDER' };
 
 function cellSolid(x,y,z){
   const e = solids.get(key(x,y,z));
@@ -978,13 +1038,22 @@ function groundInfo(px,py,pz){
 
 function respawn(){
   [p.x,p.y,p.z]=state.spawn; p.vx=p.vy=p.vz=0;
-  p.dead=false; p.fallFrom=p.y; duck.g.scale.set(1,1,1); duck.g.rotation.z=0;
+  p.dead=false; p.fallFrom=p.y; p.squash=0;
+  duck.g.scale.set(1,1,1); duck.g.rotation.z=0; duck.g.visible=true;
   // restore crumbles
   for(const c of crumbles.values()){ c.state=1; c.timer=0; c.dmg.value=0; c.mesh.visible=true; c.mesh.scale.set(1,1,1); }
 }
-function die(splash){
+function die(reason, splash=false){
   if(p.dead||p.won) return;
   p.dead=true; p.deadT=0; state.deaths++;
+  if(splash){
+    // perform the death AT the surface, not under the water plane
+    for(const w of waters)
+      if(p.x>w.x0-1 && p.x<w.x1+1 && p.z>w.z0-1 && p.z<w.z1+1) p.y=w.yTop+0.05;
+  }
+  toast(reason);
+  const f=document.getElementById('flash');
+  f.classList.add('on'); setTimeout(()=>f.classList.remove('on'), 220);
   (splash?sfx.splash:sfx.death)();
   if(navigator.vibrate) navigator.vibrate(80);
 }
@@ -998,28 +1067,60 @@ function updateHUD(){
     'ITEMS '+String(state.collected).padStart(2,'0')+'/'+String(ITEMS_TOTAL).padStart(2,'0');
   document.getElementById('hudLives').textContent = '🐥'.repeat(Math.max(0,state.lives));
 }
+let clockAccum=0;
+function updateClockHUD(dt){
+  clockAccum+=dt;
+  if(clockAccum<1) return;
+  clockAccum=0;
+  const el=document.getElementById('hudClock');
+  el.textContent=clockString();
+  el.style.color = state.clock<120 ? '#ff0000' : '#00d8d8';
+}
 
 function setZone(zn){
   if(state.zone===zn) return;
   state.zone=zn;
   state.spawn=[...zn.spawn];
+  zoneRectU.value.set(zn.x0, zn.z0, zn.x1, zn.z1);
   const el=document.getElementById('roomName');
   el.textContent=zn.name; el.style.display='block';
   el.style.animation='none'; void el.offsetWidth; el.style.animation='';
+}
+function clockString(){
+  const left=Math.max(0,Math.ceil(state.clock));
+  return '🕛 '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0');
+}
+function midnight(){
+  state.running=false;
+  music.play(SONG_TITLE);
+  $('goStats').textContent='MIDNIGHT STRUCK! ITEMS: '+state.collected+'/'+ITEMS_TOTAL+
+    '  ·  DEATHS: '+state.deaths;
+  $('gameover').classList.remove('hidden');
+  $('hud').style.display='none'; $('roomName').style.display='none'; $('jumpBtn').style.display='none';
 }
 
 function physics(dt){
   if(p.dead){
     p.deadT+=dt;
-    duck.g.rotation.z += dt*14;
-    duck.g.scale.setScalar(Math.max(0.05, 1-p.deadT*1.4));
-    if(p.deadT>0.9){
+    if(p.deadT<0.35){
+      // hit-stop: a held, flashing beat before the spin (JSW-style moment)
+      duck.g.visible = (Math.floor(p.deadT*20)%2)===0;
+    } else {
+      duck.g.visible = true;
+      duck.g.rotation.z += dt*10;
+      duck.g.scale.setScalar(Math.max(0.05, 1-(p.deadT-0.35)*1.3));
+    }
+    if(p.deadT>1.25){
       state.lives--; updateHUD();
       if(state.lives<=0){ gameOver(); return; }
       respawn();
     }
     return;
   }
+
+  // the bedtime clock ticks (Prince of Persia rules: the deadline is real)
+  state.clock-=dt;
+  if(state.clock<=0){ midnight(); return; }
 
   readInput();
   const [dx,dz]=worldDir(input.jx,input.jy);
@@ -1058,13 +1159,20 @@ function physics(dt){
       p.y=Math.floor(p.y)+1.001; p.z=nz;
     } else nz=p.z;
   } else p.z=nz;
+  // playfield clamp at street level — the garden has edges, not cliffs
+  if(p.y<5){
+    p.x=Math.max(-3.6, Math.min(59.6, p.x));
+    p.z=Math.min(12.6, p.z);
+  }
+
   // Y axis
   let ny=p.y+p.vy*dt;
   if(collides(p.x,ny,p.z)){
     if(p.vy<0){
       const drop=p.fallFrom-ny;
       ny=Math.floor(ny)+1.001;
-      if(!p.grounded && drop>FALL_FATAL){ p.y=ny; die(false); return; }
+      if(!p.grounded && drop>FALL_FATAL){ p.y=ny; die('A LONG WAY DOWN!'); return; }
+      if(!p.grounded && drop>1.2){ p.squash=0.16; chip.ctx&&chip.hit(chip.ctx.currentTime,0.06,0.25); }
       p.grounded=true;
     } else {
       ny=p.y; // bumped head
@@ -1079,12 +1187,12 @@ function physics(dt){
   p.y=ny;
 
   // fell off the world
-  if(p.y<-8){ die(false); return; }
+  if(p.y<-8){ die('LOST IN THE VOID!'); return; }
 
   // deadly water
   for(const w of waters){
     if(p.x>w.x0-HW && p.x<w.x1+HW && p.z>w.z0-HW && p.z<w.z1+HW && p.y<w.yTop-0.15){
-      die(true); return;
+      die("SPLASH! RUBBER DUCKS DON'T SWIM", true); return;
     }
   }
 
@@ -1092,7 +1200,9 @@ function physics(dt){
   for(const gu of guardians){
     const gp=gu.g.position;
     if(Math.abs(p.x-gp.x)<0.62 && Math.abs(p.z-gp.z)<0.62 &&
-       p.y < gp.y+1.1 && p.y+HH > gp.y){ die(false); return; }
+       p.y < gp.y+1.1 && p.y+HH > gp.y){
+      die('CAUGHT BY '+(GUARD_NAMES[gu.type]||'A RESIDENT')+'!'); return;
+    }
   }
 
   // items
@@ -1101,9 +1211,16 @@ function physics(dt){
     const m=it.mesh.position;
     if(Math.abs(p.x-m.x)<0.75 && Math.abs(p.z-m.z)<0.75 && Math.abs(p.y+0.45-m.y)<1.0){
       it.taken=true; it.mesh.visible=false;
-      state.collected++; updateHUD(); sfx.pickup();
-      if(state.collected===ITEMS_TOTAL)
-        toast('ALL ITEMS FOUND! NOW GET TO BED!');
+      if(it.shadow) it.shadow.visible=false;
+      popAt(m.x, m.y, m.z);
+      if(it.life){
+        state.lives=Math.min(9,state.lives+1); updateHUD();
+        toast('EXTRA DUCKY!'); sfx.fanfare();
+      } else {
+        state.collected++; updateHUD(); sfx.pickup();
+        if(state.collected===ITEMS_TOTAL)
+          toast('ALL ITEMS FOUND! NOW GET TO BED!');
+      }
     }
   }
 
@@ -1114,7 +1231,9 @@ function physics(dt){
       (ITEMS_TOTAL-state.collected)+' ITEMS REMAIN');
   }
 
-  setZone(zoneAt(p.x,p.y,p.z));
+  // latch zone (and its respawn point) only when GROUNDED — falling through
+  // zones must not move the respawn (world + design reviews, roof-fall bug)
+  if(p.grounded) setZone(zoneAt(p.x,p.y,p.z));
 }
 
 /* =========================================================
@@ -1129,9 +1248,10 @@ function startGame(){
   $('hud').style.display='flex';
   $('muteBtn').style.display='flex';
   if(('ontouchstart' in window)) $('jumpBtn').style.display='flex';
-  state.running=true; state.lives=4; state.collected=0; state.deaths=0;
-  state.t0=performance.now(); state.zone=null;
-  for(const it of items){ it.taken=false; it.mesh.visible=true; }
+  state.running=true; state.lives=6; state.collected=0; state.deaths=0;
+  state.t0=performance.now(); state.zone=null; state.clock=BEDTIME_SECS;
+  for(const it of items){ it.taken=false; it.mesh.visible=true;
+    if(it.shadow) it.shadow.visible=true; }
   state.spawn=[-1,1.1,4]; respawn(); p.won=false;
   updateHUD();
   music.play(SONG_GAME);
@@ -1147,8 +1267,10 @@ function win(){
   p.won=true; state.running=false;
   sfx.fanfare(); music.stop();
   const secs=Math.round((performance.now()-state.t0)/1000);
+  const spare=Math.max(0,Math.ceil(state.clock));
   $('winStats').textContent='ALL '+ITEMS_TOTAL+' ITEMS · '+state.deaths+' DEATHS · '+
-    Math.floor(secs/60)+'M '+String(secs%60).padStart(2,'0')+'S';
+    Math.floor(secs/60)+'M '+String(secs%60).padStart(2,'0')+'S · IN BED WITH '+
+    Math.floor(spare/60)+':'+String(spare%60).padStart(2,'0')+' TO SPARE';
   $('victory').classList.remove('hidden');
   $('hud').style.display='none'; $('roomName').style.display='none'; $('jumpBtn').style.display='none';
 }
@@ -1159,9 +1281,13 @@ $('title').addEventListener('click', e=>{ chip.ensure(); if(!music.song) music.p
 
 function toggleMute(){
   chip.muted=!chip.muted;
+  try{ localStorage.setItem('jsd-mute', chip.muted?'1':'0'); }catch(e){}
   $('muteBtn').textContent=chip.muted?'🔇':'🔊';
   if(chip.master) chip.master.gain.value=chip.muted?0:0.16;
 }
+try{ if(localStorage.getItem('jsd-mute')==='1'){
+  chip.muted=true; $('muteBtn').textContent='🔇';
+} }catch(e){}
 $('muteBtn').addEventListener('click', toggleMute);
 document.addEventListener('visibilitychange', ()=>{
   if(chip.ctx){ document.hidden ? chip.ctx.suspend() : chip.ctx.resume(); }
@@ -1207,6 +1333,7 @@ function animate(){
   const t=clock.elapsedTime;
 
   if(state.running) physics(dt);
+  if(state.running) updateClockHUD(dt);
   music.update();
 
   // toast timer
@@ -1226,31 +1353,58 @@ function animate(){
     }
   }
 
-  // duck pose
+  // duck pose — weight and commitment (Prince of Persia rules)
   duck.g.position.set(p.x, p.y, p.z);
   if(!p.dead){
     duck.g.rotation.y=p.facing;
     const moving=Math.hypot(input.jx,input.jy)>0.05 && state.running;
     const sw=moving?Math.sin(t*14)*0.6:0;
+    duck.g.rotation.z = moving&&p.grounded ? Math.sin(t*7)*0.09 : 0;   // the waddle
+    duck.g.rotation.x = moving&&p.grounded ? 0.08 : 0;                 // lean into the walk
     duck.lLeg.rotation.x=sw; duck.rLeg.rotation.x=-sw;
     duck.wingL.rotation.z= p.grounded?sw*0.3: 0.9+Math.sin(t*22)*0.4;
     duck.wingR.rotation.z= p.grounded?-sw*0.3:-0.9-Math.sin(t*22)*0.4;
-    duck.g.scale.y = p.grounded?1:(p.vy>2?1.12:0.95);
+    if(p.squash>0){                                                    // landing squash
+      p.squash=Math.max(0,p.squash-dt);
+      const k=p.squash/0.16;
+      duck.g.scale.set(1+0.22*k, 1-0.28*k, 1+0.22*k);
+    } else {
+      duck.g.scale.set(1, p.grounded?1:(p.vy>2?1.12:0.95), 1);
+    }
+    // idle life: a slow breathing bob when standing still
+    if(!moving && p.grounded) duck.g.scale.y *= 1+Math.sin(t*2.2)*0.015;
+  }
+  duckGhost.visible = !p.dead && state.running;
+  duckGhost.position.copy(duck.g.position);
+  duckGhost.rotation.copy(duck.g.rotation);
+  duckGhost.scale.copy(duck.g.scale);
+
+  // pickup pop ring
+  if(popRing.visible){
+    popAge+=dt;
+    if(popAge>0.3) popRing.visible=false;
+    else { const s=0.4+popAge*4.5; popRing.scale.set(s,1,s);
+           popRing.material.opacity=0.8*(1-popAge/0.3); }
   }
 
-  // guardians
+  // guardians — smoothstep eases each patrol end: turns are telegraphed
   for(const gu of guardians){
     const range=gu.max-gu.min;
     const ph=(t*gu.speed/range + gu.phase)%2;
     const k= ph<1 ? ph : 2-ph;
-    const v=gu.min+range*k;
+    const ke=k*k*(3-2*k);
+    const v=gu.min+range*ke;
     const gp=gu.g.position;
     if(gu.axis==='x'){ gp.x=v; gu.g.rotation.y=(ph<1? Math.PI/2 : -Math.PI/2); }
     else if(gu.axis==='z'){ gp.z=v; gu.g.rotation.y=(ph<1?0:Math.PI); }
     else { gp.y=v; }
     if(gu.bobAmp) gp.y=gu.base[1]+Math.sin(t*5+gu.phase*3)*gu.bobAmp;
-    for(let i=0;i<gu.anim.length;i++)
-      gu.anim[i].rotation.x=Math.sin(t*10+i*Math.PI)*0.6;
+    const winged = gu.type==='toilet'||gu.type==='crow';
+    const rate = gu.speed*(winged?9:4.5)+3;             // limb rate follows gait
+    for(let i=0;i<gu.anim.length;i++){
+      if(winged) gu.anim[i].rotation.z=(i?-1:1)*Math.sin(t*rate)*0.7;  // wings FLAP
+      else gu.anim[i].rotation.x=Math.sin(t*rate+i*Math.PI)*0.6;
+    }
     updateShadow(gu.shadow, gu.g.position.x, gu.g.position.y, gu.g.position.z);
   }
   updateShadow(duckShadow, p.x, p.y, p.z);
