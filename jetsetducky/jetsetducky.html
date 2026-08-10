@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Jet Set Ducky — a 3D homage to Jet Set Willy</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body {
+    width:100%; height:100%; overflow:hidden; background:#000;
+    touch-action:none; overscroll-behavior:none;
+    -webkit-user-select:none; user-select:none;
+    font-family:"Courier New", Courier, monospace;
+  }
+  #stage { position:fixed; inset:0; }
+  #stage canvas {
+    width:100%; height:100%; display:block;
+    image-rendering:pixelated; image-rendering:crisp-edges;
+  }
+  /* ---------- HUD ---------- */
+  #hud {
+    position:fixed; top:0; left:0; right:0; z-index:10;
+    display:none; justify-content:space-between; align-items:center;
+    padding:calc(6px + env(safe-area-inset-top)) 12px 6px 12px;
+    color:#d8d8d8; font-weight:bold; font-size:clamp(13px,3.2vw,20px);
+    text-shadow:0 0 6px rgba(0,255,255,.7), 2px 2px 0 #000;
+    letter-spacing:.12em; pointer-events:none; white-space:nowrap;
+  }
+  #hudItems { color:#ffff00; }
+  #hudLives { color:#ffffff; }
+  #roomName {
+    position:fixed; left:0; right:0; bottom:calc(14px + env(safe-area-inset-bottom));
+    z-index:10; text-align:center; pointer-events:none; display:none;
+    font-weight:bold; font-size:clamp(15px,4.5vw,26px); letter-spacing:.18em;
+    text-transform:uppercase; color:#00ffff;
+    text-shadow:2px 2px 0 #000, 0 0 10px rgba(0,255,255,.8);
+    animation:zxflash 1.2s steps(2) infinite;
+  }
+  @keyframes zxflash { 0%{color:#00ffff} 50%{color:#ffff00} 100%{color:#00ffff} }
+  #toast {
+    position:fixed; left:0; right:0; top:22%; z-index:11; text-align:center;
+    pointer-events:none; opacity:0; transition:opacity .3s;
+    font-weight:bold; font-size:clamp(14px,4vw,24px); letter-spacing:.15em;
+    color:#ff00ff; text-shadow:2px 2px 0 #000, 0 0 12px rgba(255,0,255,.8);
+  }
+  #muteBtn {
+    position:fixed; top:calc(40px + env(safe-area-inset-top)); right:10px; z-index:12;
+    width:44px; height:44px; border-radius:8px; border:2px solid #555;
+    background:rgba(0,0,0,.5); color:#fff; font-size:22px; display:none;
+    align-items:center; justify-content:center; cursor:pointer;
+  }
+  /* ---------- touch controls ---------- */
+  #jumpBtn {
+    position:fixed; right:calc(18px + env(safe-area-inset-right));
+    bottom:calc(64px + env(safe-area-inset-bottom)); z-index:12;
+    width:min(24vw,110px); height:min(24vw,110px); border-radius:50%;
+    border:3px solid #ffff00; background:rgba(216,216,0,.18);
+    color:#ffff00; font-weight:bold; font-size:clamp(13px,3.5vw,18px);
+    letter-spacing:.1em; display:none; align-items:center; justify-content:center;
+    text-shadow:1px 1px 0 #000; -webkit-tap-highlight-color:transparent;
+  }
+  #jumpBtn:active { background:rgba(216,216,0,.45); }
+  #stickBase, #stickNub {
+    position:fixed; z-index:12; border-radius:50%; pointer-events:none; display:none;
+  }
+  #stickBase { width:110px; height:110px; border:3px solid #00d8d8; background:rgba(0,216,216,.10); }
+  #stickNub  { width:48px;  height:48px;  border:3px solid #00ffff; background:rgba(0,255,255,.35); }
+  /* ---------- overlays ---------- */
+  .overlay {
+    position:fixed; inset:0; z-index:20; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center;
+    background:#000; color:#d8d8d8; padding:20px; gap:14px;
+  }
+  .overlay h1 {
+    font-size:clamp(30px,9vw,72px); letter-spacing:.06em; line-height:1.05;
+    color:#ffff00; text-shadow:4px 4px 0 #d80000, 8px 8px 0 #0000d8;
+    animation:titlepulse 2.4s ease-in-out infinite;
+  }
+  @keyframes titlepulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.045)} }
+  .overlay h2 { font-size:clamp(15px,4vw,24px); color:#00d8d8; letter-spacing:.2em; }
+  .overlay p  { font-size:clamp(12px,3.2vw,17px); max-width:560px; line-height:1.5; color:#aaa; }
+  .overlay p.fine { font-size:11px; }
+  .overlay .btn {
+    margin-top:8px; padding:14px 34px; border:3px solid #00ff00; border-radius:6px;
+    background:rgba(0,216,0,.12); color:#00ff00; font-weight:bold;
+    font-size:clamp(16px,4.5vw,24px); letter-spacing:.18em; cursor:pointer;
+    font-family:inherit; animation:zxflash 1s steps(2) infinite;
+  }
+  .stripe {
+    width:min(90vw,560px); height:10px; margin:6px 0;
+    background:repeating-linear-gradient(90deg,
+      #d80000 0 40px, #d8d800 40px 80px, #00d800 80px 120px,
+      #00d8d8 120px 160px, #0000d8 160px 200px);
+    transform:skewX(-30deg);
+  }
+  #piano { width:min(92vw,600px); height:52px; position:relative; display:flex; margin-top:6px; }
+  #piano .wk { flex:1; background:#d8d8d8; border:1px solid #000; }
+  #piano .bk { position:absolute; top:0; width:3.2%; height:60%; background:#000; border:1px solid #333; }
+  #willyFoot { font-size:34px; position:absolute; top:-34px; left:0; animation:footwalk 6s linear infinite; }
+  @keyframes footwalk { 0%{left:2%} 50%{left:88%} 100%{left:2%} }
+  #gameover h1 { color:#ff0000; text-shadow:4px 4px 0 #d8d800; }
+  #victory h1 { color:#00ff00; text-shadow:4px 4px 0 #d800d8; }
+  .bigduck { font-size:64px; }
+  #goScene { position:relative; height:120px; width:120px; }
+  #goFoot { position:absolute; top:-10px; left:28px; font-size:56px; transform:rotate(90deg); animation:stomp 2.2s ease-in infinite; }
+  #goDuck { position:absolute; bottom:0; left:36px; font-size:48px; }
+  @keyframes stomp { 0%{top:-70px} 55%{top:-70px} 75%{top:18px} 82%{top:12px} 100%{top:18px} }
+  .hidden { display:none !important; }
+  #err { position:fixed; inset:auto 0 0 0; z-index:50; color:#ff5555; background:#200; padding:8px; font-size:12px; display:none; white-space:pre-wrap; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<div id="hud">
+  <span id="hudItems">ITEMS 00/00</span>
+  <span id="hudLives">🐥🐥🐥🐥</span>
+</div>
+<div id="roomName"></div>
+<div id="toast"></div>
+<button type="button" id="muteBtn" aria-label="toggle sound">🔊</button>
+<div id="jumpBtn">JUMP</div>
+<div id="stickBase"></div><div id="stickNub"></div>
+
+<!-- ---------- title ---------- -->
+<div class="overlay" id="title">
+  <div class="stripe"></div>
+  <h1>JET SET<br>DUCKY</h1>
+  <h2>A 3D MAISONETTE MISADVENTURE</h2>
+  <p>Ducky held one wild party. Now the housekeeper demands a tidy house
+     before bedtime. Collect <b>every flashing item</b> in the manor,
+     then get to <b>bed</b> in the Master Bedroom. Mind the residents —
+     they are not friendly.</p>
+  <p><b>Touch:</b> left thumb = walk &nbsp;·&nbsp; right button = jump<br>
+     <b>Keys:</b> arrows / WASD = walk &nbsp;·&nbsp; SPACE / Z = jump &nbsp;·&nbsp; M = mute</p>
+  <button type="button" class="btn" id="startBtn">TAP TO START</button>
+  <div id="piano"><div id="willyFoot">🦶</div></div>
+  <p class="fine">A loving homage to Matthew Smith's <i>Jet Set Willy</i> (1984)
+     and the great 8-bit isometrics. Music: Grieg &amp; Beethoven (public domain), on a 3-channel square-wave chip.</p>
+  <div class="stripe"></div>
+</div>
+
+<!-- ---------- game over ---------- -->
+<div class="overlay hidden" id="gameover">
+  <h1>GAME OVER</h1>
+  <div id="goScene"><div id="goFoot">🦶</div><div id="goDuck">🐥</div></div>
+  <p id="goStats"></p>
+  <button type="button" class="btn" id="retryBtn">TRY AGAIN</button>
+</div>
+
+<!-- ---------- victory ---------- -->
+<div class="overlay hidden" id="victory">
+  <h1>BEDTIME!</h1>
+  <div class="bigduck">🐥💤🛏️</div>
+  <p id="winStats"></p>
+  <p>Ducky tidied the whole manor and went to bed. The housekeeper is satisfied. For now.</p>
+  <button type="button" class="btn" id="againBtn">PLAY AGAIN</button>
+</div>
+
+<pre id="err"></pre>
+
+<script type="importmap">
+{ "imports": {
+    "three": "./vendor/three.webgpu.min.js",
+    "three/webgpu": "./vendor/three.webgpu.min.js",
+    "three/tsl": "./vendor/three.tsl.min.js"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { Fn, attribute, uv, uniform, time, vec2, vec3, vec4, float,
+         sin, cos, floor, fract, mix, step, clamp, abs, dot, mod,
+         positionWorld, pass } from 'three/tsl';
+
+const Q = new URLSearchParams(location.search);
+const CRT_ON = Q.get('crt') !== '0';
+const errBox = document.getElementById('err');
+window.addEventListener('error', e => {
+  errBox.style.display = 'block';
+  errBox.textContent += (e.message || e.error) + '\n';
+});
+
+/* =========================================================
+   1. PALETTE — ZX Spectrum, converted to linear for buffers
+   ========================================================= */
+/* THREE.Color(hex) already converts sRGB -> linear working space (ColorManagement on) */
+const srgb = hex => new THREE.Color(hex);
+const P = {
+  black:   srgb(0x000000),
+  blue:    srgb(0x0000d8), briBlue: srgb(0x2222ff),
+  red:     srgb(0xd80000), briRed:  srgb(0xff2222),
+  magenta: srgb(0xd800d8), briMag:  srgb(0xff44ff),
+  green:   srgb(0x00b800), briGrn:  srgb(0x22ff22),
+  cyan:    srgb(0x00d8d8), briCyan: srgb(0x44ffff),
+  yellow:  srgb(0xd8d800), briYel:  srgb(0xffff33),
+  white:   srgb(0xd8d8d8), briWhite:srgb(0xffffff),
+  grey:    srgb(0x9a9a9a), darkGrey:srgb(0x555555),
+  brown:   srgb(0x8a5a2a), darkBrown:srgb(0x5a3a1a),
+  grass:   srgb(0x00a000), grass2:  srgb(0x008000),
+  stone:   srgb(0x8f8f8f), stone2:  srgb(0x777777),
+  deep:    srgb(0x000060),
+};
+
+/* =========================================================
+   2. WORLD DATA
+   ========================================================= */
+const solids = new Map();               // "x,y,z" -> {c:Color, kind, conv?}
+const key = (x,y,z) => x+','+y+','+z;
+const KIND = { SOLID:0, CONVEYOR:1, CRUMBLE:2 };
+
+function setCell(x,y,z,c,kind=KIND.SOLID,conv=0){ solids.set(key(x,y,z), {c, kind, conv}); }
+function delCell(x,y,z){ solids.delete(key(x,y,z)); }
+function fill(x0,y0,z0,x1,y1,z1,c,c2=null,kind=KIND.SOLID,conv=0){
+  for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)for(let z=z0;z<=z1;z++)
+    setCell(x,y,z, (c2 && ((x+z)&1)) ? c2 : c, kind, conv);
+}
+function carve(x0,y0,z0,x1,y1,z1){
+  for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)for(let z=z0;z<=z1;z++) delCell(x,y,z);
+}
+
+const items = [];        // {x,y,z, mesh, taken}
+const guardians = [];    // built later
+const waters = [];       // deadly water boxes {x0,x1,z0,z1,yTop}
+const crumbles = new Map(); // key -> {mesh, state, timer, cell:[x,y,z]}
+
+function addItem(x,y,z){ items.push({x,y,z, mesh:null, taken:false}); }
+
+/* ---------------- build the manor ---------------- */
+function buildWorld(){
+  // ground slab
+  fill(-4,0,-21, 60,0,13, P.stone, P.stone2);
+  // garden grass (west of house, x<14)
+  fill(-4,0,2, 13,0,13, P.grass, P.grass2);
+
+  // --- Duck Pond (garden) ---
+  carve(2,0,5, 8,0,10);                       // pond hole
+  fill(2,-1,5, 8,-1,10, P.deep);              // pond basin
+  waters.push({x0:2, x1:9, z0:5, z1:11, yTop:0.85});
+  setCell(4,0,7, P.stone); setCell(6,0,9, P.stone);   // stepping stones
+  setCell(5,0,6, P.stone);
+  setCell(12,1,6, P.brown);                           // crate under the item crate
+  // bushes
+  for(const [bx,bz] of [[0,3],[10,3],[12,9],[-2,8],[9,12]]){
+    setCell(bx,1,bz,P.green); setCell(bx,2,bz,P.grass2);
+  }
+  // garden crates to hop
+  setCell(11,1,6,P.brown); setCell(12,1,7,P.brown); setCell(12,2,6,P.darkBrown);
+  addItem(5,1.2,6);          // stepping stone
+  addItem(0,3.2,3);          // bush top
+  addItem(12,3.2,6);         // crate top
+  addItem(-2,3.2,8);         // bush top
+
+  /* ---------------- GROUND FLOOR (walk y=1, interior z 2..11) ------------- */
+  // back wall z=1 doubles as terrace-1 front face
+  fill(14,1,1, 57,5,1, P.red, P.darkGrey);
+  // west wall of hall with doorway from garden
+  fill(13,1,2, 13,4,11, P.red);
+  carve(13,1,5, 13,3,7);
+  // divider hall|kitchen
+  fill(30,1,2, 30,4,11, P.blue); carve(30,1,5, 30,3,7);
+  // divider kitchen|conservatory
+  fill(44,1,2, 44,4,11, P.green); carve(44,1,5, 44,3,7);
+  // east wall
+  fill(58,1,2, 58,4,11, P.green);
+
+  // --- Grand Hall (x14..29): chequered floor + long table + candles ---
+  fill(14,0,2, 29,0,11, P.stone, P.darkGrey);
+  fill(22,1,4, 27,1,5, P.darkBrown);                 // table legs level
+  carve(23,1,4, 26,1,5);                             // hollow under
+  setCell(22,1,4,P.darkBrown); setCell(27,1,5,P.darkBrown);
+  setCell(22,1,5,P.darkBrown); setCell(27,1,4,P.darkBrown);
+  fill(22,2,4, 27,2,5, P.brown);                     // table top
+  setCell(24,3,4, P.white);                          // candelabra stem
+  addItem(26,3.4,5);                                 // goblet on the table
+  addItem(15,1.2,10);
+  // stairs hall -> first landing (x20..21)
+  for(let s=0;s<4;s++) fill(20,1,5-s-1+1, 21,1+s,5-s, P.grey, P.white);
+  // steps at z=4,3,2 rising; wall z=1 is final step (top y=6)
+  addItem(21,6.4,2);
+
+  // --- Kitchen (x30..43): conveyor counter + crumbling shelf ---
+  fill(30,0,2, 43,0,11, P.white, P.cyan);
+  fill(32,1,3, 41,1,3, P.red, null, KIND.CONVEYOR, +1);   // conveyor counter
+  fill(31,1,3, 31,2,3, P.darkGrey);                        // conveyor end stop
+  fill(42,1,3, 42,2,3, P.darkGrey);
+  for(let i=0;i<5;i++) setCell(33+i*2,3,9, P.yellow, KIND.CRUMBLE);  // crumble path
+  // access staircase up to the crumble shelf
+  setCell(31,1,11,P.brown);
+  fill(31,1,10, 31,2,10, P.brown);
+  fill(31,1,9, 31,3,9, P.brown);
+  addItem(37,2.3,3);          // on the conveyor
+  addItem(41,4.3,9);          // end of crumble path
+  addItem(33,1.6,11);
+  // stairs kitchen -> bathroom (x34..35)
+  for(let s=0;s<4;s++) fill(34,1,5-s-1+1, 35,1+s,5-s, P.grey, P.white);
+
+  // --- Conservatory (x44..57): plants ---
+  fill(44,0,2, 57,0,11, P.grass, P.grass2);
+  for(const [px,pz] of [[47,4],[52,8],[56,4],[46,9]]){
+    setCell(px,1,pz,P.red);                       // pot
+    setCell(px,2,pz,P.green); setCell(px,3,pz,P.grass2);   // plant
+  }
+  fill(50,1,6, 51,1,7, P.brown);                  // potting bench
+  addItem(47,4.3,4); addItem(56,4.3,4); addItem(51,2.3,6);
+
+  /* ---------------- TERRACE 1 (walk y=6, interior z -8..0) ---------------- */
+  fill(14,5,-9, 57,5,0, P.stone, P.stone2);              // floor slab
+  fill(14,6,-9, 57,10,-9, P.magenta, P.darkGrey);        // back wall = terrace-2 face
+  fill(13,6,-8, 13,9,0, P.magenta);                      // west end wall
+  fill(58,6,-8, 58,9,0, P.yellow);                       // east end wall
+  fill(26,6,-8, 26,9,0, P.cyan); carve(26,6,-5, 26,8,-3);// divider landing|bathroom
+  fill(40,6,-8, 40,9,0, P.magenta); carve(40,6,-5, 40,8,-3); // divider bathroom|library
+
+  // --- First Landing (x14..25): Maria the housekeeper patrols here ---
+  fill(14,5,-8, 25,5,0, P.blue, P.darkGrey);
+  // stairs landing -> master bedroom (x17..18), rising toward the back wall
+  for(let s=0;s<4;s++) fill(17,6, -5-s, 18,6+s, -5-s, P.grey, P.white);
+  addItem(24,6.2,-7);
+
+  // --- The Bathroom (x26..39): bath with deadly water, flying toilet ---
+  fill(27,5,-8, 39,5,0, P.cyan, P.white);
+  fill(28,6,-7, 32,6,-4, P.white);        // bath rim
+  carve(29,6,-6, 31,6,-5);                // bath hollow
+  waters.push({x0:29, x1:32, z0:-6, z1:-4, yTop:6.8});
+  setCell(37,6,-7,P.white); setCell(37,7,-7,P.white);   // sink pedestal
+  addItem(37,8.3,-7);                      // on the sink
+  addItem(28,7.3,-7);                      // on the bath rim
+  addItem(33,6.2,0);
+
+  // --- The Library (x40..57): book wall + shelf conveyor + ghost ---
+  fill(41,5,-8, 57,5,0, P.brown, P.darkBrown);
+  const bookCols=[P.red,P.yellow,P.cyan,P.magenta,P.green,P.blue,P.white];
+  let bi=0;
+  for(let x=42;x<=56;x++)for(let y=6;y<=8;y++){
+    if(((x+y)%5)!==0) setCell(x,y,-8, bookCols[bi++%bookCols.length]);   // books w/ gaps
+  }
+  fill(43,8,-8, 43,8,-8, P.brown);
+  fill(42,6,-2, 55,6,-2, P.yellow, null, KIND.CONVEYOR, -1); // reading rail, pushes west
+  fill(41,6,-2, 41,7,-2, P.darkGrey);
+  addItem(50,7.3,-2); addItem(56,6.2,-7); addItem(45,6.2,0);
+  // stairs library -> attic (x48..49)
+  for(let s=0;s<4;s++) fill(48,6, -5-s, 49,6+s, -5-s, P.grey, P.white);
+
+  /* ---------------- TERRACE 2 (walk y=11, interior z -18..-10) ------------ */
+  fill(14,10,-19, 57,10,-10, P.stone, P.stone2);         // floor slab
+  fill(14,11,-19, 57,14,-19, P.red, P.darkGrey);         // rear parapet wall
+  fill(13,11,-18, 13,14,-10, P.blue);                    // west end wall
+  fill(58,11,-18, 58,14,-10, P.red);                     // east end wall
+  fill(30,11,-18, 30,14,-10, P.yellow); carve(30,11,-15, 30,13,-13);  // divider bed|attic
+
+  // --- Master Bedroom (x14..29): THE BED (goal) ---
+  fill(14,10,-18, 29,10,-10, P.green, P.grass2);
+  // bed: headboard + frame + mattress + pillow (screenshot-2 style)
+  fill(16,11,-17, 20,11,-16, P.yellow);          // frame
+  fill(17,12,-17, 20,12,-16, P.blue);            // mattress
+  setCell(16,12,-17,P.yellow); setCell(16,13,-17,P.yellow); // headboard
+  setCell(17,13,-17, P.white);                   // pillow
+  fill(27,11,-18, 28,13,-17, P.brown);           // wardrobe
+  setCell(26,11,-18, P.brown);                   // chair — the way up
+  addItem(28,14.3,-17);                          // atop the wardrobe
+
+  // --- The Attic (x30..57): junk + crate stairs to the parapet catwalk ---
+  fill(31,10,-18, 57,10,-10, P.darkBrown, P.brown);
+  setCell(34,11,-13,P.brown); setCell(35,11,-13,P.brown); setCell(35,12,-13,P.darkBrown);
+  fill(52,11,-18, 52,11,-17, P.brown);           // crate steps up to parapet
+  fill(53,11,-18, 53,12,-18, P.brown);
+  fill(54,11,-18, 54,13,-18, P.brown);
+  fill(55,11,-18, 55,14,-18, P.brown);
+  addItem(35,13.3,-13); addItem(44,11.2,-11);
+
+  // --- The Rooftops: chimney pots on the parapet (walk y=15 catwalk) ---
+  for(const cx of [22,38]){
+    fill(cx,15,-19, cx+1,16,-19, P.briRed);
+    addItem(cx+0.5,17.4,-19);
+  }
+}
+buildWorld();
+
+/* =========================================================
+   3. ZONES
+   ========================================================= */
+const ZONES = [
+  { name:'The Rooftops',    x0:13,x1:58, z0:-19.6,z1:-18.2, yMin:14, spawn:[55,15.1,-18.5] },
+  { name:'Master Bedroom',  x0:13,x1:30, z0:-19.5,z1:-9, yMin:8,  spawn:[24,11.1,-11.5] },
+  { name:'The Attic',       x0:30,x1:58, z0:-19.5,z1:-9, yMin:8,  spawn:[33,11.1,-11.5] },
+  { name:'First Landing',   x0:13,x1:26, z0:-9.5,z1:1.5, yMin:4,  spawn:[15,6.1,-2] },
+  { name:'The Bathroom',    x0:26,x1:40, z0:-9.5,z1:1.5, yMin:4,  spawn:[35,6.1,-1] },
+  { name:'The Library',     x0:40,x1:58, z0:-9.5,z1:1.5, yMin:4,  spawn:[44,6.1,-1] },
+  { name:'The Grand Hall',  x0:13,x1:30, z0:1,z1:13, yMin:-1, spawn:[15.5,1.1,6] },
+  { name:'The Kitchen',     x0:30,x1:44, z0:1,z1:13, yMin:-1, spawn:[32,1.1,7] },
+  { name:'The Conservatory',x0:44,x1:58, z0:1,z1:13, yMin:-1, spawn:[46,1.1,7] },
+  { name:'The Duck Pond',   x0:-6,x1:14, z0:1,z1:14, yMin:-1, spawn:[-1,1.1,4] },
+  { name:'The Grounds',     x0:-9,x1:62, z0:-22,z1:15, yMin:-2, spawn:[-1,1.1,4] },
+];
+function zoneAt(x,y,z){
+  for(const zn of ZONES)
+    if(x>=zn.x0 && x<=zn.x1 && z>=zn.z0 && z<=zn.z1 && y>=zn.yMin) return zn;
+  return ZONES[ZONES.length-1];
+}
+const BED = { x0:16, x1:21, z0:-17.5, z1:-15.5, y0:11, y1:14.5 };
+
+/* =========================================================
+   4. RENDERER / SCENE / CAMERA
+   ========================================================= */
+const renderer = new THREE.WebGPURenderer({ antialias:false });
+renderer.setClearColor(0x000000, 1);
+document.getElementById('stage').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+
+const VIEW_H = 8.4;
+let aspect = innerWidth/innerHeight;
+const camera = new THREE.OrthographicCamera(-VIEW_H*aspect, VIEW_H*aspect, VIEW_H, -VIEW_H, 0.1, 300);
+const CAM_OFF = new THREE.Vector3(20, 15.4, 20);
+const camTarget = new THREE.Vector3();
+
+function sizeRenderer(){
+  aspect = innerWidth/innerHeight;
+  camera.left=-VIEW_H*aspect; camera.right=VIEW_H*aspect;
+  camera.top=VIEW_H; camera.bottom=-VIEW_H;
+  camera.updateProjectionMatrix();
+  const s = Math.min(1, 430/innerHeight);          // chunky internal resolution
+  renderer.setPixelRatio(1);
+  renderer.setSize(Math.round(innerWidth*s), Math.round(innerHeight*s), false);
+  renderer.domElement.style.width='100%';
+  renderer.domElement.style.height='100%';
+  resUniform.value.set(Math.round(innerWidth*s), Math.round(innerHeight*s));
+}
+const resUniform = uniform(new THREE.Vector2(640,430));
+
+/* =========================================================
+   5. TSL MATERIALS
+   ========================================================= */
+// spectrum dither: world-space checker darkening, baked face shades in vertex colors
+const worldMat = new THREE.MeshBasicNodeMaterial();
+{
+  const col = attribute('color', 'vec3');
+  const wp = positionWorld;
+  const chk = mod(floor(wp.x.mul(4)).add(floor(wp.y.mul(4))).add(floor(wp.z.mul(4))), 2.0);
+  worldMat.colorNode = col.mul(mix(0.84, 1.0, chk));
+}
+
+// conveyors: animated hazard stripes
+function conveyorMaterial(dir){
+  const m = new THREE.MeshBasicNodeMaterial();
+  const wp = positionWorld;
+  const t = time.mul(1.6 * dir);
+  const stripe = step(0.5, fract(wp.x.add(wp.z).mul(1.0).sub(t)));
+  m.colorNode = mix(vec3(0.72,0.02,0.02), vec3(0.85,0.75,0.02), stripe);
+  return m;
+}
+
+// crumble: cracked yellow, darkens with damage via per-mesh uniform
+function crumbleMaterial(damageU){
+  const m = new THREE.MeshBasicNodeMaterial();
+  const wp = positionWorld;
+  const crack = mod(floor(wp.x.mul(5)).add(floor(wp.y.mul(5)).mul(3)).add(floor(wp.z.mul(5)).mul(7)), 4.0);
+  const base = mix(vec3(0.72,0.68,0.05), vec3(0.35,0.30,0.02), step(2.5, crack));
+  m.colorNode = base.mul( float(1.0).sub(damageU.mul(0.75)) );
+  return m;
+}
+
+// water: banded retro shimmer
+const waterMat = new THREE.MeshBasicNodeMaterial({ transparent:true, opacity:0.92 });
+{
+  const wp = positionWorld;
+  const w = sin(wp.x.mul(2.3).add(time.mul(1.9)))
+            .add(sin(wp.z.mul(3.1).sub(time.mul(2.4))))
+            .add(sin(wp.x.add(wp.z).mul(1.4).add(time.mul(1.1))));
+  const band = step(0.5, fract(w.mul(0.4)));
+  waterMat.colorNode = mix(vec3(0.0,0.05,0.55), vec3(0.05,0.75,0.8), band);
+}
+
+// items: palette-snapping spectrum flash
+const itemMat = new THREE.MeshBasicNodeMaterial();
+{
+  const tq = floor(time.mul(7.0));
+  itemMat.colorNode = clamp(cos(tq.mul(1.7).add(vec3(0.0,2.1,4.2))).mul(0.5).add(0.55), 0.0, 1.0);
+}
+
+// candle flames / hearth flicker
+const flameMat = new THREE.MeshBasicNodeMaterial();
+{
+  const f = fract(sin(floor(time.mul(11.0)).mul(37.7)).mul(43758.5));
+  flameMat.colorNode = mix(vec3(1.0,0.55,0.0), vec3(1.0,0.95,0.2), f);
+}
+
+// ghost: soft pulse of transparency
+const ghostMat = new THREE.MeshBasicNodeMaterial({ transparent:true });
+{
+  ghostMat.colorNode = vec3(0.95,0.95,1.0);
+  ghostMat.opacityNode = sin(time.mul(2.6)).mul(0.22).add(0.62);
+}
+
+/* =========================================================
+   6. STATIC WORLD GEOMETRY (merged, hidden faces culled)
+   ========================================================= */
+function buildStaticMesh(){
+  const pos=[], col=[], idx=[];
+  // face defs: [nx,ny,nz, 4 corners], shade factor
+  const FACES = [
+    { n:[0,1,0],  s:1.00, v:[[0,1,0],[0,1,1],[1,1,1],[1,1,0]] },   // top
+    { n:[0,-1,0], s:0.35, v:[[0,0,0],[1,0,0],[1,0,1],[0,0,1]] },   // bottom
+    { n:[1,0,0],  s:0.80, v:[[1,0,0],[1,1,0],[1,1,1],[1,0,1]] },   // +x (lit side)
+    { n:[-1,0,0], s:0.52, v:[[0,0,1],[0,1,1],[0,1,0],[0,0,0]] },   // -x
+    { n:[0,0,1],  s:0.62, v:[[0,0,1],[1,0,1],[1,1,1],[0,1,1]] },   // +z (front)
+    { n:[0,0,-1], s:0.45, v:[[1,0,0],[0,0,0],[0,1,0],[1,1,0]] },   // -z
+  ];
+  const isStatic = e => e && e.kind === KIND.SOLID;
+  for(const [k,e] of solids){
+    if(e.kind !== KIND.SOLID) continue;
+    const [x,y,z] = k.split(',').map(Number);
+    for(const f of FACES){
+      const nb = solids.get(key(x+f.n[0], y+f.n[1], z+f.n[2]));
+      if(isStatic(nb)) continue;                       // hidden face
+      const base = pos.length/3;
+      for(const v of f.v){
+        pos.push(x+v[0], y+v[1], z+v[2]);
+        col.push(e.c.r*f.s, e.c.g*f.s, e.c.b*f.s);
+      }
+      idx.push(base,base+1,base+2, base,base+2,base+3);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col,3));
+  g.setIndex(idx);
+  return new THREE.Mesh(g, worldMat);
+}
+scene.add(buildStaticMesh());
+
+/* conveyors + crumbles get live meshes */
+const boxGeo = new THREE.BoxGeometry(1,1,1);
+boxGeo.translate(0.5,0.5,0.5);
+const convMatE = conveyorMaterial(+1), convMatW = conveyorMaterial(-1);
+for(const [k,e] of solids){
+  const [x,y,z] = k.split(',').map(Number);
+  if(e.kind === KIND.CONVEYOR){
+    const m = new THREE.Mesh(boxGeo, e.conv>0?convMatE:convMatW);
+    m.position.set(x,y,z); scene.add(m);
+  } else if(e.kind === KIND.CRUMBLE){
+    const dmg = uniform(0);
+    const m = new THREE.Mesh(boxGeo, crumbleMaterial(dmg));
+    m.position.set(x,y,z); scene.add(m);
+    crumbles.set(k, { mesh:m, dmg, state:1, timer:0, cell:[x,y,z] });
+  }
+}
+
+/* water planes */
+for(const w of waters){
+  const g = new THREE.PlaneGeometry(w.x1-w.x0, w.z1-w.z0);
+  g.rotateX(-Math.PI/2);
+  const m = new THREE.Mesh(g, waterMat);
+  m.position.set((w.x0+w.x1)/2, w.yTop, (w.z0+w.z1)/2);
+  scene.add(m);
+}
+
+/* candelabra flames */
+const flameGeo = new THREE.BoxGeometry(0.16,0.3,0.16);
+for(const [fx,fy,fz] of [[24.3,4.25,4.5],[24.7,4.25,4.5],[24.5,4.45,4.5]]){
+  const f = new THREE.Mesh(flameGeo, flameMat);
+  f.position.set(fx,fy,fz); scene.add(f);
+}
+
+/* item meshes */
+const itemGeo = new THREE.OctahedronGeometry(0.34);
+for(const it of items){
+  it.mesh = new THREE.Mesh(itemGeo, itemMat);
+  // integer coordinates address a cell: center the item on it
+  it.mesh.position.set(it.x+(Number.isInteger(it.x)?0.5:0), it.y, it.z+(Number.isInteger(it.z)?0.5:0));
+  scene.add(it.mesh);
+}
+const ITEMS_TOTAL = items.length;
+
+/* =========================================================
+   7. ACTORS — box-people
+   ========================================================= */
+function part(group, x,y,z, w,h,d, color, mat){
+  const m = new THREE.Mesh(boxGeo, mat || new THREE.MeshBasicNodeMaterial({ color: srgb(color) }));
+  m.position.set(x-w/2, y, z-d/2);
+  m.scale.set(w,h,d);
+  group.add(m);
+  return m;
+}
+// NOTE: boxGeo is corner-anchored; part() centers x/z and sits y on base.
+
+function makeDuck(){
+  const g = new THREE.Group();
+  part(g, 0,0.30,0,  0.62,0.5,0.66, 0xffd800);        // body
+  part(g, 0,0.80,0.05, 0.44,0.36,0.44, 0xffe030);     // head
+  part(g, 0,0.86,0.36, 0.16,0.10,0.26, 0xff7700);     // beak
+  part(g, 0.11,0.97,0.20, 0.08,0.08,0.08, 0x000000);  // eyes
+  part(g,-0.11,0.97,0.20, 0.08,0.08,0.08, 0x000000);
+  part(g, 0,1.16,0.02, 0.4,0.1,0.4, 0xffffff);        // sailor hat brim
+  part(g, 0,1.24,0.02, 0.3,0.12,0.3, 0x2244ff);       // sailor hat top
+  const lLeg = part(g, 0.16,0.02,0, 0.14,0.30,0.16, 0xff7700);
+  const rLeg = part(g,-0.16,0.02,0, 0.14,0.30,0.16, 0xff7700);
+  const wingL = part(g, 0.36,0.42,0, 0.1,0.3,0.4, 0xd8b800);
+  const wingR = part(g,-0.36,0.42,0, 0.1,0.3,0.4, 0xd8b800);
+  return { g, lLeg, rLeg, wingL, wingR };
+}
+
+function makeGuardian(type){
+  const g = new THREE.Group();
+  const anim = [];
+  if(type==='penguin'){
+    part(g,0,0,0, 0.6,0.9,0.55, 0x111111);
+    part(g,0,0.15,0.24, 0.4,0.55,0.12, 0xffffff);
+    part(g,0,0.9,0, 0.42,0.34,0.4, 0x111111);
+    part(g,0,0.96,0.26, 0.12,0.08,0.2, 0xff8800);
+    anim.push(part(g,0.34,0.3,0, 0.08,0.5,0.3, 0x111111));
+    anim.push(part(g,-0.34,0.3,0, 0.08,0.5,0.3, 0x111111));
+  } else if(type==='chef'){
+    part(g,0,0,0, 0.6,0.85,0.5, 0xffffff);
+    part(g,0,0.85,0, 0.4,0.3,0.38, 0xffc890);
+    part(g,0,1.15,0, 0.44,0.28,0.42, 0xffffff);        // chef hat
+    part(g,0,0.6,0.26, 0.5,0.12,0.06, 0xd80000);       // scarf
+    anim.push(part(g,0.36,0.35,0, 0.1,0.45,0.2, 0xffffff));
+    anim.push(part(g,-0.36,0.35,0, 0.1,0.45,0.2, 0xffffff));
+  } else if(type==='toilet'){
+    part(g,0,0,0, 0.6,0.4,0.6, 0xf0f0f0);              // base
+    part(g,0,0.4,0.08, 0.7,0.22,0.74, 0xffffff);       // bowl rim
+    part(g,0,0.42,-0.3, 0.6,0.7,0.22, 0xe8e8e8);       // cistern
+    part(g,0,1.06,-0.3, 0.5,0.1,0.16, 0x999999);       // flush lid
+    anim.push(part(g,0.42,0.45,0, 0.1,0.16,0.55, 0xffffff));  // wings!
+    anim.push(part(g,-0.42,0.45,0, 0.1,0.16,0.55, 0xffffff));
+  } else if(type==='maid'){
+    part(g,0,0,0, 0.72,0.55,0.6, 0xd800d8);            // skirt
+    part(g,0,0.55,0, 0.5,0.4,0.45, 0xd800d8);
+    part(g,0,0.6,0.24, 0.34,0.3,0.06, 0xffffff);       // apron
+    part(g,0,0.95,0, 0.36,0.32,0.34, 0xffc890);
+    part(g,0,1.24,0, 0.4,0.1,0.38, 0xffffff);          // cap
+    anim.push(part(g,0.32,0.55,0.2, 0.1,0.35,0.1, 0xffc890)); // wagging finger arm
+    anim.push(part(g,-0.32,0.55,0, 0.1,0.35,0.1, 0xffc890));
+  } else if(type==='ghost'){
+    part(g,0,0,0, 0.7,1.1,0.6, 0xffffff, ghostMat);
+    part(g,0.14,0.8,0.28, 0.1,0.16,0.06, 0x000000, ghostMat);
+    part(g,-0.14,0.8,0.28, 0.1,0.16,0.06, 0x000000, ghostMat);
+  } else if(type==='crow'){
+    part(g,0,0,0, 0.5,0.4,0.7, 0x151515);
+    part(g,0,0.3,0.35, 0.3,0.3,0.3, 0x151515);
+    part(g,0,0.36,0.55, 0.1,0.08,0.2, 0xffaa00);
+    part(g,0.07,0.42,0.42, 0.06,0.06,0.06, 0xff0000);
+    anim.push(part(g,0.4,0.25,0, 0.1,0.1,0.6, 0x282828));
+    anim.push(part(g,-0.4,0.25,0, 0.1,0.1,0.6, 0x282828));
+  } else if(type==='can'){
+    part(g,0,0,0, 0.6,0.6,0.5, 0x00a000);              // watering can body
+    part(g,0.42,0.35,0, 0.3,0.1,0.1, 0x00d800);        // spout
+    part(g,-0.35,0.5,0, 0.1,0.25,0.1, 0x00d800);       // handle
+    anim.push(part(g,0.62,0.28,0, 0.14,0.1,0.14, 0x44ffff)); // drip
+  } else if(type==='spider'){
+    part(g,0,0.2,0, 0.5,0.4,0.5, 0x111111);
+    part(g,0.1,0.5,0.2, 0.08,0.08,0.06, 0xff0000);
+    part(g,-0.1,0.5,0.2, 0.08,0.08,0.06, 0xff0000);
+    for(const s of [-1,1]){
+      anim.push(part(g, s*0.34,0.05,0.15, 0.08,0.3,0.08, 0x111111));
+      anim.push(part(g, s*0.34,0.05,-0.15, 0.08,0.3,0.08, 0x111111));
+    }
+  }
+  return { g, anim };
+}
+
+function addGuardian(type, axis, base, min, max, speed, opts={}){
+  const built = makeGuardian(type);
+  built.g.position.set(...base);
+  scene.add(built.g);
+  guardians.push({ type, axis, base:[...base], min, max, speed,
+                   phase: opts.phase||0, bobAmp: opts.bobAmp||0,
+                   thread: opts.thread||false, ...built });
+}
+
+addGuardian('penguin', 'x', [17,1,8.5],   15, 28, 1.7);
+addGuardian('chef',    'z', [38.5,1,5],   4, 10.5, 1.5);
+addGuardian('can',     'x', [46,1,10.5],  45, 56.5, 2.2);
+addGuardian('maid',    'x', [15,6,-3.5],  14, 24.5, 1.9);
+addGuardian('toilet',  'x', [28,6.6,-2],  27.5, 38.5, 2.4, { bobAmp:0.5 });
+addGuardian('ghost',   'y', [44.5,6,-4],  6, 8.6, 1.1, { phase:1 });
+addGuardian('crow',    'x', [16,11.8,-14],14.5, 56, 3.6, { bobAmp:0.4 });
+addGuardian('spider',  'y', [40,11,-15],  11, 13.6, 1.4, { thread:true });
+
+// spider thread
+{
+  const tg = new THREE.PlaneGeometry(0.04, 4);
+  const tm = new THREE.Mesh(tg, new THREE.MeshBasicNodeMaterial({ color: srgb(0xcccccc) }));
+  tm.position.set(40, 13.6, -14.99);
+  scene.add(tm);
+}
+
+/* player */
+const duck = makeDuck();
+scene.add(duck.g);
+
+/* =========================================================
+   8. AUDIO — 3-channel square chip + noise
+   ========================================================= */
+const chip = {
+  ctx:null, master:null, chans:[], noise:null, noiseGain:null, muted:false,
+  ensure(){
+    if(!this.ctx){
+      this.ctx = new (window.AudioContext||window.webkitAudioContext)();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.16;
+      this.master.connect(this.ctx.destination);
+      for(let i=0;i<3;i++){
+        const o=this.ctx.createOscillator(); o.type='square';
+        const g=this.ctx.createGain(); g.gain.value=0;
+        o.connect(g); g.connect(this.master); o.start();
+        this.chans.push({o,g});
+      }
+      const len=this.ctx.sampleRate; // 1s of noise
+      const buf=this.ctx.createBuffer(1,len,this.ctx.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+      const src=this.ctx.createBufferSource(); src.buffer=buf; src.loop=true;
+      this.noiseGain=this.ctx.createGain(); this.noiseGain.gain.value=0;
+      src.connect(this.noiseGain); this.noiseGain.connect(this.master); src.start();
+    }
+    if(this.ctx.state==='suspended') this.ctx.resume();
+  },
+  f(m){ return 440*Math.pow(2,(m-69)/12); },
+  tone(ch,midi,t,dur,vol=1,slideTo=null){
+    if(!this.ctx||this.muted) return;
+    const {o,g}=this.chans[ch];
+    o.frequency.setValueAtTime(this.f(midi),t);
+    if(slideTo!==null) o.frequency.linearRampToValueAtTime(this.f(slideTo), t+dur);
+    g.gain.cancelScheduledValues(t);
+    g.gain.setValueAtTime(vol*0.5,t);
+    g.gain.setTargetAtTime(0.0001,t+dur*0.6,dur*0.22);
+    g.gain.setValueAtTime(0,t+dur+0.02);
+  },
+  hit(t,dur,vol=0.6){
+    if(!this.ctx||this.muted) return;
+    const g=this.noiseGain;
+    g.gain.cancelScheduledValues(t);
+    g.gain.setValueAtTime(vol,t);
+    g.gain.setTargetAtTime(0.0001,t,dur*0.4);
+    g.gain.setValueAtTime(0,t+dur+0.02);
+  }
+};
+
+/* tunes: tracks of [midi|0, steps] */
+const SONG_TITLE = {   // Moonlight Sonata, 1st mvt (approx.), C# minor
+  step:0.20, tracks:[
+    { ch:0, vol:0.7, seq:[[56,1],[61,1],[64,1],[56,1],[61,1],[64,1],[56,1],[61,1],[64,1],[56,1],[61,1],[64,1],
+                          [57,1],[61,1],[64,1],[57,1],[62,1],[66,1],[56,1],[60,1],[63,1],[56,1],[61,1],[64,1]] },
+    { ch:1, vol:0.5, seq:[[37,6],[37,6],[33,3],[38,3],[32,3],[37,3]] },
+  ]
+};
+const SONG_GAME = {    // In the Hall of the Mountain King (approx.), E minor
+  step:0.135, tracks:[
+    { ch:0, vol:0.75, seq:[
+      [52,1],[54,1],[55,1],[57,1],[59,1],[55,1],[59,2],[58,1],[54,1],[58,2],[57,1],[53,1],[57,2],
+      [52,1],[54,1],[55,1],[57,1],[59,1],[55,1],[59,1],[64,1],[62,1],[59,1],[55,1],[59,1],[62,4],
+      [64,1],[66,1],[67,1],[69,1],[71,1],[67,1],[71,2],[70,1],[66,1],[70,2],[69,1],[65,1],[69,2],
+      [64,1],[66,1],[67,1],[69,1],[71,1],[67,1],[71,1],[76,1],[74,1],[71,1],[67,1],[71,1],[74,4]] },
+    { ch:1, vol:0.45, seq:[[40,2],[47,2],[40,2],[47,2],[39,2],[46,2],[40,2],[47,2]] },
+  ]
+};
+const music = {
+  song:null, ptr:[], next:[],
+  play(song){ this.song=song; this.ptr=song?song.tracks.map(()=>0):[];
+              this.next=song?song.tracks.map(()=>chip.ctx?chip.ctx.currentTime+0.1:0):[]; },
+  stop(){ this.song=null; },
+  update(){
+    if(!this.song||!chip.ctx||chip.muted) return;
+    const now=chip.ctx.currentTime;
+    this.song.tracks.forEach((tr,i)=>{
+      if(this.next[i]===0) this.next[i]=now+0.1;
+      while(this.next[i] < now+0.35){
+        const [m,len]=tr.seq[this.ptr[i]];
+        if(m>0) chip.tone(tr.ch, m, this.next[i], this.song.step*len*0.9, tr.vol);
+        this.next[i]+=this.song.step*len;
+        this.ptr[i]=(this.ptr[i]+1)%tr.seq.length;
+      }
+    });
+  }
+};
+const sfx = {
+  jump(){ if(chip.ctx){ const t=chip.ctx.currentTime; chip.tone(2,55,t,0.09,0.6,67); } },
+  pickup(){ if(chip.ctx){ const t=chip.ctx.currentTime;
+    [84,88,91,96].forEach((m,i)=>chip.tone(2,m,t+i*0.045,0.05,0.7)); } },
+  death(){ if(chip.ctx){ const t=chip.ctx.currentTime;
+    chip.tone(2,70,t,0.5,0.8,34); chip.hit(t+0.05,0.3,0.5); } },
+  splash(){ if(chip.ctx){ const t=chip.ctx.currentTime; chip.hit(t,0.4,0.7); chip.tone(2,50,t,0.3,0.5,38); } },
+  fanfare(){ if(chip.ctx){ const t=chip.ctx.currentTime;
+    [64,68,71,76,71,76,80].forEach((m,i)=>chip.tone(2,m,t+i*0.09,0.1,0.8)); } },
+  step(){}
+};
+
+/* =========================================================
+   9. INPUT — keyboard + touch stick
+   ========================================================= */
+const input = { jx:0, jy:0, jump:false, jumpBuf:0 };
+const keys = {};
+const KEYMAP = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down',
+                 ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right',
+                 Space:'jump', KeyZ:'jump', KeyX:'jump' };
+addEventListener('keydown', e=>{
+  if(KEYMAP[e.code]!==undefined){ e.preventDefault(); keys[KEYMAP[e.code]]=true;
+    if(KEYMAP[e.code]==='jump') input.jumpBuf=0.14; }
+  if(e.code==='KeyM') toggleMute();
+});
+addEventListener('keyup', e=>{ if(KEYMAP[e.code]!==undefined) keys[KEYMAP[e.code]]=false; });
+
+const stickBase=document.getElementById('stickBase'), stickNub=document.getElementById('stickNub');
+let stickId=null, stickOrigin=[0,0];
+const touchVec=[0,0];
+function showStick(x,y){ stickBase.style.display=stickNub.style.display='block';
+  stickBase.style.left=(x-55)+'px'; stickBase.style.top=(y-55)+'px'; moveNub(x,y); }
+function moveNub(x,y){ stickNub.style.left=(x-24)+'px'; stickNub.style.top=(y-24)+'px'; }
+function hideStick(){ stickBase.style.display=stickNub.style.display='none'; touchVec[0]=touchVec[1]=0; }
+
+addEventListener('touchstart', e=>{
+  for(const t of e.changedTouches){
+    if(t.clientX < innerWidth*0.55 && stickId===null){
+      stickId=t.identifier; stickOrigin=[t.clientX,t.clientY]; showStick(t.clientX,t.clientY);
+    }
+  }
+}, {passive:true});
+addEventListener('touchmove', e=>{
+  for(const t of e.changedTouches){
+    if(t.identifier===stickId){
+      let dx=t.clientX-stickOrigin[0], dy=t.clientY-stickOrigin[1];
+      const len=Math.hypot(dx,dy);
+      if(len>46){ dx*=46/len; dy*=46/len; }
+      moveNub(stickOrigin[0]+dx, stickOrigin[1]+dy);
+      touchVec[0]=Math.abs(dx)>7?dx/46:0;
+      touchVec[1]=Math.abs(dy)>7?-dy/46:0;
+    }
+  }
+}, {passive:true});
+function touchEnd(e){
+  for(const t of e.changedTouches){
+    if(t.identifier===stickId){ stickId=null; hideStick(); }
+  }
+}
+addEventListener('touchend', touchEnd, {passive:true});
+addEventListener('touchcancel', touchEnd, {passive:true});
+
+const jumpBtn=document.getElementById('jumpBtn');
+jumpBtn.addEventListener('touchstart', e=>{ e.preventDefault(); input.jumpBuf=0.14; keys.jump=true; }, {passive:false});
+jumpBtn.addEventListener('touchend', e=>{ e.preventDefault(); keys.jump=false; }, {passive:false});
+jumpBtn.addEventListener('mousedown', ()=>{ input.jumpBuf=0.14; keys.jump=true; });
+jumpBtn.addEventListener('mouseup', ()=>{ keys.jump=false; });
+
+function readInput(){
+  let jx=touchVec[0], jy=touchVec[1];
+  if(keys.left) jx-=1; if(keys.right) jx+=1;
+  if(keys.up) jy+=1; if(keys.down) jy-=1;
+  const l=Math.hypot(jx,jy); if(l>1){ jx/=l; jy/=l; }
+  input.jx=jx; input.jy=jy;
+}
+
+/* screen dir -> world dir (camera yaw is fixed 45°) */
+const R2=Math.SQRT1_2;
+function worldDir(jx,jy){ return [ jx*R2 - jy*R2, -jx*R2 - jy*R2 ]; }   // [dx,dz]
+
+/* =========================================================
+   10. PHYSICS + GAME STATE
+   ========================================================= */
+const GRAV=26, WALK=4.6, JUMP_V=11.0, FALL_FATAL=12;
+const p = {
+  x:-1, y:1.1, z:4, vx:0, vy:0, vz:0,
+  grounded:false, coyote:0, fallFrom:1.1,
+  dead:false, deadT:0, won:false, facing:0,
+};
+const state = {
+  running:false, lives:4, collected:0, deaths:0, t0:0,
+  zone:null, spawn:[-1,1.1,4], toastT:0,
+};
+
+function cellSolid(x,y,z){
+  const e = solids.get(key(x,y,z));
+  if(!e) return null;
+  if(e.kind===KIND.CRUMBLE){
+    const c = crumbles.get(key(x,y,z));
+    if(c && c.state<=0) return null;
+  }
+  return e;
+}
+const HW=0.32, HH=0.92;
+function collides(px,py,pz){
+  const x0=Math.floor(px-HW), x1=Math.floor(px+HW);
+  const y0=Math.floor(py), y1=Math.floor(py+HH);
+  const z0=Math.floor(pz-HW), z1=Math.floor(pz+HW);
+  for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)for(let z=z0;z<=z1;z++)
+    if(cellSolid(x,y,z)) return true;
+  return false;
+}
+function groundInfo(px,py,pz){
+  // cell just under the feet
+  const y=Math.floor(py-0.06);
+  const x0=Math.floor(px-HW), x1=Math.floor(px+HW);
+  const z0=Math.floor(pz-HW), z1=Math.floor(pz+HW);
+  for(let x=x0;x<=x1;x++)for(let z=z0;z<=z1;z++){
+    const e=cellSolid(x,y,z);
+    if(e) return {e, x, y, z};
+  }
+  return null;
+}
+
+function respawn(){
+  [p.x,p.y,p.z]=state.spawn; p.vx=p.vy=p.vz=0;
+  p.dead=false; p.fallFrom=p.y; duck.g.scale.set(1,1,1); duck.g.rotation.z=0;
+  // restore crumbles
+  for(const c of crumbles.values()){ c.state=1; c.timer=0; c.dmg.value=0; c.mesh.visible=true; c.mesh.scale.set(1,1,1); }
+}
+function die(splash){
+  if(p.dead||p.won) return;
+  p.dead=true; p.deadT=0; state.deaths++;
+  (splash?sfx.splash:sfx.death)();
+  if(navigator.vibrate) navigator.vibrate(80);
+}
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.style.opacity=1; state.toastT=2.2;
+}
+
+function updateHUD(){
+  document.getElementById('hudItems').textContent =
+    'ITEMS '+String(state.collected).padStart(2,'0')+'/'+String(ITEMS_TOTAL).padStart(2,'0');
+  document.getElementById('hudLives').textContent = '🐥'.repeat(Math.max(0,state.lives));
+}
+
+function setZone(zn){
+  if(state.zone===zn) return;
+  state.zone=zn;
+  state.spawn=[...zn.spawn];
+  const el=document.getElementById('roomName');
+  el.textContent=zn.name; el.style.display='block';
+  el.style.animation='none'; void el.offsetWidth; el.style.animation='';
+}
+
+function physics(dt){
+  if(p.dead){
+    p.deadT+=dt;
+    duck.g.rotation.z += dt*14;
+    duck.g.scale.setScalar(Math.max(0.05, 1-p.deadT*1.4));
+    if(p.deadT>0.9){
+      state.lives--; updateHUD();
+      if(state.lives<=0){ gameOver(); return; }
+      respawn();
+    }
+    return;
+  }
+
+  readInput();
+  const [dx,dz]=worldDir(input.jx,input.jy);
+  const mag=Math.hypot(input.jx,input.jy);
+  p.vx=dx*WALK; p.vz=dz*WALK;
+  if(mag>0.05) p.facing=Math.atan2(dx,dz);
+
+  // conveyor push
+  const gi=groundInfo(p.x,p.y,p.z);
+  if(p.grounded && gi && gi.e.kind===KIND.CONVEYOR){ p.vx += gi.e.conv*2.4; }
+  // crumble trigger
+  if(p.grounded && gi && gi.e.kind===KIND.CRUMBLE){
+    const c=crumbles.get(key(gi.x,gi.y,gi.z));
+    if(c && c.state>0) c.timer+=dt*2.2;
+  }
+
+  // jump
+  input.jumpBuf=Math.max(0,input.jumpBuf-dt);
+  p.coyote = p.grounded ? 0.12 : Math.max(0,p.coyote-dt);
+  if(input.jumpBuf>0 && p.coyote>0){
+    p.vy=JUMP_V; p.grounded=false; p.coyote=0; input.jumpBuf=0; sfx.jump();
+  }
+  p.vy-=GRAV*dt; if(p.vy<-24) p.vy=-24;
+
+  // X axis + auto-step
+  let nx=p.x+p.vx*dt;
+  if(p.vx!==0 && collides(nx,p.y,p.z)){
+    if(p.grounded && !collides(nx,Math.floor(p.y)+1.001,p.z)){
+      p.y=Math.floor(p.y)+1.001; p.x=nx;
+    } else nx=p.x;
+  } else p.x=nx;
+  // Z axis + auto-step
+  let nz=p.z+p.vz*dt;
+  if(p.vz!==0 && collides(p.x,p.y,nz)){
+    if(p.grounded && !collides(p.x,Math.floor(p.y)+1.001,nz)){
+      p.y=Math.floor(p.y)+1.001; p.z=nz;
+    } else nz=p.z;
+  } else p.z=nz;
+  // Y axis
+  let ny=p.y+p.vy*dt;
+  if(collides(p.x,ny,p.z)){
+    if(p.vy<0){
+      const drop=p.fallFrom-ny;
+      ny=Math.floor(ny)+1.001;
+      if(!p.grounded && drop>FALL_FATAL){ p.y=ny; die(false); return; }
+      p.grounded=true;
+    } else {
+      ny=p.y; // bumped head
+    }
+    p.vy=0;
+  } else {
+    if(p.vy<0 && p.grounded){ p.fallFrom=p.y; }
+    if(Math.abs(p.vy)>0.01) p.grounded=false;
+  }
+  if(p.grounded) p.fallFrom=Math.max(p.fallFrom,p.y);
+  if(!p.grounded && p.vy>0) p.fallFrom=Math.max(p.fallFrom,ny);
+  p.y=ny;
+
+  // fell off the world
+  if(p.y<-8){ die(false); return; }
+
+  // deadly water
+  for(const w of waters){
+    if(p.x>w.x0-HW && p.x<w.x1+HW && p.z>w.z0-HW && p.z<w.z1+HW && p.y<w.yTop-0.15){
+      die(true); return;
+    }
+  }
+
+  // guardians
+  for(const gu of guardians){
+    const gp=gu.g.position;
+    if(Math.abs(p.x-gp.x)<0.62 && Math.abs(p.z-gp.z)<0.62 &&
+       p.y < gp.y+1.1 && p.y+HH > gp.y){ die(false); return; }
+  }
+
+  // items
+  for(const it of items){
+    if(it.taken) continue;
+    const m=it.mesh.position;
+    if(Math.abs(p.x-m.x)<0.75 && Math.abs(p.z-m.z)<0.75 && Math.abs(p.y+0.45-m.y)<1.0){
+      it.taken=true; it.mesh.visible=false;
+      state.collected++; updateHUD(); sfx.pickup();
+      if(state.collected===ITEMS_TOTAL)
+        toast('ALL ITEMS FOUND! NOW GET TO BED!');
+    }
+  }
+
+  // bed goal
+  if(p.x>BED.x0 && p.x<BED.x1 && p.z>BED.z0 && p.z<BED.z1 && p.y>BED.y0 && p.y<BED.y1){
+    if(state.collected===ITEMS_TOTAL){ win(); return; }
+    else if(state.toastT<=0) toast('THE HOUSEKEEPER SAYS: TIDY FIRST! '+
+      (ITEMS_TOTAL-state.collected)+' ITEMS REMAIN');
+  }
+
+  setZone(zoneAt(p.x,p.y,p.z));
+}
+
+/* =========================================================
+   11. FLOW — title / run / game over / victory
+   ========================================================= */
+const $=id=>document.getElementById(id);
+function startGame(){
+  chip.ensure();
+  $('title').classList.add('hidden');
+  $('gameover').classList.add('hidden');
+  $('victory').classList.add('hidden');
+  $('hud').style.display='flex';
+  $('muteBtn').style.display='flex';
+  if(('ontouchstart' in window)) $('jumpBtn').style.display='flex';
+  state.running=true; state.lives=4; state.collected=0; state.deaths=0;
+  state.t0=performance.now(); state.zone=null;
+  for(const it of items){ it.taken=false; it.mesh.visible=true; }
+  state.spawn=[-1,1.1,4]; respawn(); p.won=false;
+  updateHUD();
+  music.play(SONG_GAME);
+}
+function gameOver(){
+  state.running=false;
+  music.play(SONG_TITLE);
+  $('goStats').textContent='ITEMS: '+state.collected+'/'+ITEMS_TOTAL+'  ·  DEATHS: '+state.deaths;
+  $('gameover').classList.remove('hidden');
+  $('hud').style.display='none'; $('roomName').style.display='none'; $('jumpBtn').style.display='none';
+}
+function win(){
+  p.won=true; state.running=false;
+  sfx.fanfare(); music.stop();
+  const secs=Math.round((performance.now()-state.t0)/1000);
+  $('winStats').textContent='ALL '+ITEMS_TOTAL+' ITEMS · '+state.deaths+' DEATHS · '+
+    Math.floor(secs/60)+'M '+String(secs%60).padStart(2,'0')+'S';
+  $('victory').classList.remove('hidden');
+  $('hud').style.display='none'; $('roomName').style.display='none'; $('jumpBtn').style.display='none';
+}
+$('startBtn').addEventListener('click', startGame);
+$('retryBtn').addEventListener('click', startGame);
+$('againBtn').addEventListener('click', startGame);
+$('title').addEventListener('click', e=>{ chip.ensure(); if(!music.song) music.play(SONG_TITLE); });
+
+function toggleMute(){
+  chip.muted=!chip.muted;
+  $('muteBtn').textContent=chip.muted?'🔇':'🔊';
+  if(chip.master) chip.master.gain.value=chip.muted?0:0.16;
+}
+$('muteBtn').addEventListener('click', toggleMute);
+document.addEventListener('visibilitychange', ()=>{
+  if(chip.ctx){ document.hidden ? chip.ctx.suspend() : chip.ctx.resume(); }
+});
+
+/* =========================================================
+   12. CRT POST-PROCESSING (TSL)
+   ========================================================= */
+let post=null;
+function buildPost(){
+  post = new THREE.PostProcessing(renderer);
+  const scenePass = pass(scene, camera);
+  const tex = scenePass.getTextureNode();
+  const crt = Fn(()=>{
+    const suv = uv();
+    const c = suv.sub(0.5);
+    const r2 = dot(c,c);
+    const wuv = suv.add(c.mul(r2).mul(0.14));               // barrel
+    const off = c.mul(r2).mul(0.012);                        // chromatic aberration
+    const cr = tex.sample(wuv.add(off)).r;
+    const cg = tex.sample(wuv).g;
+    const cb = tex.sample(wuv.sub(off)).b;
+    let col = vec3(cr,cg,cb);
+    const scan = sin(wuv.y.mul(resUniform.y).mul(Math.PI)).abs().mul(0.18).add(0.86);
+    const mask = mod(floor(wuv.x.mul(resUniform.x)), 2.0).mul(0.06).add(0.94);
+    const vig = clamp(float(1.15).sub(r2.mul(1.6)), 0.0, 1.0);
+    const flick = sin(time.mul(9.0)).mul(0.015).add(0.985);
+    const inside = step(0.0,wuv.x).mul(step(wuv.x,1.0)).mul(step(0.0,wuv.y)).mul(step(wuv.y,1.0));
+    col = col.mul(scan).mul(mask).mul(vig).mul(flick).mul(inside);
+    // phosphor lift on bright pixels
+    col = col.add(col.mul(col).mul(0.25));
+    return vec4(col, 1.0);
+  });
+  post.outputNode = crt();
+}
+
+/* =========================================================
+   13. MAIN LOOP
+   ========================================================= */
+const clock = new THREE.Clock();
+function animate(){
+  const dt=Math.min(clock.getDelta(), 1/30);
+  const t=clock.elapsedTime;
+
+  if(state.running) physics(dt);
+  music.update();
+
+  // toast timer
+  if(state.toastT>0){ state.toastT-=dt; if(state.toastT<=0) $('toast').style.opacity=0; }
+
+  // crumble updates
+  for(const c of crumbles.values()){
+    if(c.state<=0){
+      c.timer+=dt;
+      if(c.timer>4){ c.state=1; c.timer=0; c.dmg.value=0; c.mesh.visible=true; }
+      continue;
+    }
+    if(c.timer>0){
+      c.dmg.value=Math.min(1,c.timer);
+      c.mesh.scale.y=1-c.timer*0.4;
+      if(c.timer>=1){ c.state=0; c.timer=0; c.mesh.visible=false; }
+    }
+  }
+
+  // duck pose
+  duck.g.position.set(p.x, p.y, p.z);
+  if(!p.dead){
+    duck.g.rotation.y=p.facing;
+    const moving=Math.hypot(input.jx,input.jy)>0.05 && state.running;
+    const sw=moving?Math.sin(t*14)*0.6:0;
+    duck.lLeg.rotation.x=sw; duck.rLeg.rotation.x=-sw;
+    duck.wingL.rotation.z= p.grounded?sw*0.3: 0.9+Math.sin(t*22)*0.4;
+    duck.wingR.rotation.z= p.grounded?-sw*0.3:-0.9-Math.sin(t*22)*0.4;
+    duck.g.scale.y = p.grounded?1:(p.vy>2?1.12:0.95);
+  }
+
+  // guardians
+  for(const gu of guardians){
+    const range=gu.max-gu.min;
+    const ph=(t*gu.speed/range + gu.phase)%2;
+    const k= ph<1 ? ph : 2-ph;
+    const v=gu.min+range*k;
+    const gp=gu.g.position;
+    if(gu.axis==='x'){ gp.x=v; gu.g.rotation.y=(ph<1? Math.PI/2 : -Math.PI/2); }
+    else if(gu.axis==='z'){ gp.z=v; gu.g.rotation.y=(ph<1?0:Math.PI); }
+    else { gp.y=v; }
+    if(gu.bobAmp) gp.y=gu.base[1]+Math.sin(t*5+gu.phase*3)*gu.bobAmp;
+    for(let i=0;i<gu.anim.length;i++)
+      gu.anim[i].rotation.x=Math.sin(t*10+i*Math.PI)*0.6;
+  }
+
+  // items spin
+  for(const it of items){
+    if(it.taken) continue;
+    it.mesh.rotation.y=t*2.5;
+    it.mesh.position.y=it.y+Math.sin(t*3+it.x)*0.08;
+  }
+
+  // camera follow
+  camTarget.lerp(new THREE.Vector3(p.x,p.y+1.2,p.z), Math.min(1,dt*5));
+  camera.position.copy(camTarget).add(CAM_OFF);
+  camera.lookAt(camTarget);
+
+  if(post && CRT_ON) post.render();
+  else renderer.render(scene,camera);
+}
+
+/* =========================================================
+   14. BOOT
+   ========================================================= */
+(async()=>{
+  try{
+    await renderer.init();
+    if(CRT_ON) buildPost();
+    sizeRenderer();
+    addEventListener('resize', sizeRenderer);
+    camTarget.set(p.x,p.y+1.2,p.z);
+    renderer.setAnimationLoop(animate);
+  }catch(err){
+    errBox.style.display='block';
+    errBox.textContent='Renderer failed: '+err.message;
+  }
+})();
+
+/* piano keys for the title screen */
+{
+  const piano=$('piano');
+  for(let i=0;i<14;i++){ const k=document.createElement('div'); k.className='wk'; piano.appendChild(k); }
+  const blackAt=[0,1,3,4,5,7,8,10,11,12];
+  for(const i of blackAt){ const b=document.createElement('div'); b.className='bk';
+    b.style.left=(5.4+i*7.1)+'%'; piano.appendChild(b); }
+}
+
+/* headless-test hook */
+window.__jsd = {
+  version:'1.0.0',
+  get player(){ return {x:p.x,y:p.y,z:p.z,grounded:p.grounded,dead:p.dead}; },
+  get state(){ return {running:state.running, lives:state.lives,
+                       collected:state.collected, total:ITEMS_TOTAL,
+                       zone:state.zone?state.zone.name:null}; },
+  start(){ startGame(); },
+  press(name,down=true){ keys[name]=down; if(name==='jump'&&down) input.jumpBuf=0.14; },
+  teleport(x,y,z){ p.x=x; p.y=y; p.z=z; p.vx=p.vy=p.vz=0; p.fallFrom=y; },
+  mute(){ chip.muted=true; if(chip.master) chip.master.gain.value=0; },
+};
+</script>
+</body>
+</html>
