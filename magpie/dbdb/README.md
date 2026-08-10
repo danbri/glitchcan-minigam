@@ -4,7 +4,7 @@ Single-page, self-contained isometric platformer. Part *Jet Set Willy* (named
 rooms, patrol guardians, collect-then-bed goal, fixed lives), part *Ant
 Attack* / filmation (one continuous scrolling isometric world). Mobile first.
 
-Play: `jetsetducky.html`. No build step, no CDN, no network at runtime.
+Play: `dbdb.html`. No build step, no CDN, no network at runtime.
 
 ## Tech
 - **three.js r180 WebGPU build**, vendored in `vendor/` (`three.webgpu.min.js`
