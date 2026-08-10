@@ -101,6 +101,7 @@
   .overlay h2 { font-size:clamp(15px,4vw,24px); color:#67b6bd; letter-spacing:.2em; }
   .overlay p  { font-size:clamp(12px,3.2vw,17px); max-width:560px; line-height:1.5; color:#9f9f9f; }
   .overlay p.fine { font-size:11px; }
+  #setLabel { color:#94e089; letter-spacing:.1em; }
   .overlay .btn {
     margin-top:8px; padding:14px 34px; border:3px solid #94e089; border-radius:6px;
     background:rgba(85,160,73,.25); color:#94e089; font-weight:bold;
@@ -152,6 +153,7 @@
   <div class="stripe"></div>
   <h1>JET SET<br>DUCKY</h1>
   <h2>A 3D MAISONETTE MISADVENTURE</h2>
+  <p id="setLabel"></p>
   <p>Ducky held one wild party. The housekeeper blames <i>you</i>.
      With Ducky on your shoulder, collect <b>every flashing item</b> in the
      manor, then get to <b>bed</b> in the Master Bedroom —
@@ -245,12 +247,25 @@ const P = {
 const solids = new Map();               // "x,y,z" -> {c:Color, kind, conv?}
 const key = (x,y,z) => x+','+y+','+z;
 const KIND = { SOLID:0, CONVEYOR:1, CRUMBLE:2, BRIDGE:3 };
-/* timed mechanisms: pressure plates raise bridges / douse fires for 7s */
-const bridges = [ {meshes:[], timer:0} ];                 // group 0: pond bridge
-const fires   = [ {x0:16,x1:19,z0:1,z1:2,y0:1,y1:2.6, timer:0, meshes:[]} ];
+/* timed mechanisms: pressure plates raise bridges (or drop gates: invert)
+   and douse fires for 7s */
+const bridges = [ {meshes:[], timer:0, invert:false} ];   // group 0: pond bridge
+const fires   = [ {x0:16,x1:19,z0:1,z1:2,y0:1,y1:2.6, timer:0, meshes:[], flamePos:[]} ];
+for(let i=0;i<5;i++) fires[0].flamePos.push([16.4+i*0.55, 1.25+(i%2)*0.18, 1.5]);
 const plates  = [ {x:1,y:1,z:8,  type:'bridge', idx:0, mesh:null},
                   {x:17,y:1,z:4, type:'fire',   idx:0, mesh:null} ];
 const PLATE_HOLD = 7;
+const pendingGuardians = [];   // specs queued by the generator, spawned later
+const courtZones = [];         // generated zone entries for the Puzzle Gardens
+
+/* 1000 seeded puzzle sets: ?set=1..1000, default = today's set */
+const SET = Math.min(1000, Math.max(1,
+  parseInt(Q.get('set')) || (Math.floor(Date.now()/86400000)%1000)+1 ));
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0;
+  let t=Math.imul(a^a>>>15, 1|a); t=t+Math.imul(t^t>>>7, 61|t)^t;
+  return ((t^t>>>14)>>>0)/4294967296; }; }
+const rng = mulberry32(SET*2654435761);
+const pick = arr => arr[Math.floor(rng()*arr.length)];
 
 function setCell(x,y,z,c,kind=KIND.SOLID,conv=0){ solids.set(key(x,y,z), {c, kind, conv}); }
 function delCell(x,y,z){ solids.delete(key(x,y,z)); }
@@ -444,6 +459,98 @@ function buildWorld(){
 buildWorld();
 
 /* =========================================================
+   2b. THE PUZZLE GARDENS — procedural walled courtyards east
+   of the manor. Six per set; six puzzle templates; 1000 sets.
+   ========================================================= */
+const COURTS=6, COURT_W=13, COURT_X0=62;
+const WORLD_E = COURT_X0 + COURTS*COURT_W + 2;
+function buildCourts(){
+  // extend the street and ground eastward
+  fill(61,0,-1, WORLD_E,0,13, P.stone, P.stone2);
+  for(let px=63;px<=WORLD_E;px+=3) setCell(px,1,13,P.grass2);
+  const wallCols=[P.red,P.blue,P.magenta,P.brown,P.darkGrey,P.green];
+  const adj=['Topiary','Fountain','Sundial','Beehive','Rose','Physic','Knot','Statue','Moonlit','Walled','Quiet','Bramble'];
+  const nouns=['Court','Garden','Yard','Close','Plot','Terrace'];
+  const usedNames=new Set();
+
+  /* templates place inside a 12x4 slot at (ox, oz)..(ox+11, oz+3) */
+  const T = [
+    function pool(ox,oz){                       // plate -> plank bridge over water
+      carve(ox+3,0,oz, ox+7,0,oz+3);
+      fill(ox+3,-1,oz, ox+7,-1,oz+3, P.deep);
+      waters.push({x0:ox+3,x1:ox+8,z0:oz,z1:oz+4,yTop:0.85});
+      for(let bx=ox+2;bx<=ox+8;bx++) setCell(bx,0,oz+2, P.briBlue, KIND.BRIDGE, bridges.length);
+      bridges.push({meshes:[],timer:0,invert:false});
+      plates.push({x:ox+1,y:1,z:oz+2, type:'bridge', idx:bridges.length-1, mesh:null});
+      addItem(ox+5,2.6,oz+2);
+    },
+    function hearth(ox,oz){                     // plate -> douse the flame strip
+      const fi={x0:ox+4,x1:ox+7,z0:oz+1,z1:oz+2,y0:1,y1:2.6,timer:0,meshes:[],flamePos:[]};
+      for(let i=0;i<4;i++) fi.flamePos.push([ox+4.4+i*0.7, 1.25+(i%2)*0.18, oz+1.5]);
+      fires.push(fi);
+      fill(ox+3,1,oz+1, ox+3,2,oz+1, P.darkGrey);      // side stops force a crossing
+      fill(ox+7,1,oz+1, ox+7,2,oz+1, P.darkGrey);
+      plates.push({x:ox+1,y:1,z:oz, type:'fire', idx:fires.length-1, mesh:null});
+      addItem(ox+5,1.6,oz+2);
+    },
+    function gate(ox,oz){                       // plate -> portcullis drops open
+      fill(ox+8,1,oz, ox+8,3,oz+3, pick(wallCols));
+      carve(ox+8,1,oz+1, ox+8,3,oz+2);
+      for(let gy=1;gy<=3;gy++)for(let gz=oz+1;gz<=oz+2;gz++)
+        setCell(ox+8,gy,gz, P.darkBrown, KIND.BRIDGE, bridges.length);
+      bridges.push({meshes:[],timer:0,invert:true});
+      plates.push({x:ox+6,y:1,z:oz+1, type:'bridge', idx:bridges.length-1, mesh:null});
+      addItem(ox+10,1.6,oz+1); addItem(ox+10,1.6,oz+2);
+    },
+    function crumbleHop(ox,oz){                 // floating crumble hopscotch
+      setCell(ox+2,1,oz+2, P.brown);
+      setCell(ox+4,2,oz+2, P.yellow, KIND.CRUMBLE);
+      setCell(ox+6,2,oz+2, P.yellow, KIND.CRUMBLE);
+      fill(ox+8,1,oz+2, ox+8,2,oz+2, P.brown);
+      addItem(ox+8,3.2,oz+2);
+    },
+    function lane(ox,oz){                       // a resident patrols the prize
+      pendingGuardians.push({ type:pick(['penguin','chef','maid','can','crow']),
+        axis:'x', base:[ox+1.5,1,oz+2.5], min:ox+1.5, max:ox+10.5,
+        speed:1.4+rng()*1.2, opts:{} });
+      addItem(ox+6,1.6,oz+2);
+    },
+    function bonkCols(ox,oz){                   // clonk the columns
+      for(const cx of [ox+3,ox+7]){
+        const h=2+Math.floor(rng()*2);
+        fill(cx,1,oz+2, cx,h,oz+2, pick(wallCols));
+        addItem(cx,h+1.2+0.2,oz+2);
+      }
+    },
+  ];
+
+  for(let i=0;i<COURTS;i++){
+    const ox=COURT_X0+i*COURT_W;                // interior x: ox..ox+11
+    const wc=wallCols[i%wallCols.length];
+    // tall walls only on the backdrop sides (north/west); the camera-facing
+    // south/east sides are low fences so the default view sees the interior
+    fill(ox-1,1,1,  ox+12,3,1,  wc, P.darkGrey);          // north wall (backdrop)
+    fill(ox-1,1,11, ox+12,1,11, wc, P.darkGrey);          // south fence (street at z12+)
+    carve(ox+5,1,11, ox+6,1,11);                          //   ...with a gateway
+    if(i===0) fill(ox-1,1,2, ox-1,3,10, wc);              // west wall (backdrop, court 0)
+    fill(ox+12,1,2, ox+12,1,10, wc);                      // east fence (hop it!)
+    fill(ox,0,2, ox+11,0,10, pick([P.grass,P.stone,P.white]), pick([P.grass2,P.stone2,P.darkGrey]));
+    // two puzzles per court: one in the north slot, one in the south slot
+    const tN=Math.floor(rng()*T.length), tS=(tN+1+Math.floor(rng()*(T.length-1)))%T.length;
+    T[tN](ox, 2);
+    T[tS](ox, 6);
+    // a potted plant + free item for the completionists
+    setCell(ox+10,1,10,P.red); setCell(ox+10,2,10,P.green);
+    addItem(ox+10,3.2,10);
+    let name; do{ name='The '+pick(adj)+' '+pick(nouns); }while(usedNames.has(name));
+    usedNames.add(name);
+    courtZones.push({ name, x0:ox-1,x1:ox+12, z0:1,z1:12, yMin:-1,
+                      spawn:[ox+5.5,1.1,10.2] });
+  }
+}
+buildCourts();
+
+/* =========================================================
    3. ZONES
    ========================================================= */
 const ZONES = [
@@ -457,7 +564,8 @@ const ZONES = [
   { name:'The Kitchen',     x0:30,x1:44, z0:1,z1:13, yMin:-1, spawn:[32,1.1,7] },
   { name:'The Conservatory',x0:44,x1:58, z0:1,z1:13, yMin:-1, spawn:[46,1.1,7] },
   { name:'The Duck Pond',   x0:-6,x1:14, z0:1,z1:14, yMin:-1, spawn:[-1,1.1,4] },
-  { name:'The Grounds',     x0:-9,x1:62, z0:-22,z1:15, yMin:-2, spawn:[-1,1.1,4] },
+  ...courtZones,
+  { name:'The Grounds',     x0:-9,x1:WORLD_E+3, z0:-22,z1:15, yMin:-2, spawn:[-1,1.1,4] },
 ];
 function zoneAt(x,y,z){
   for(const zn of ZONES)
@@ -623,6 +731,7 @@ const boxGeo = new THREE.BoxGeometry(1,1,1);
 boxGeo.translate(0.5,0.5,0.5);
 const convMatE = conveyorMaterial(+1), convMatW = conveyorMaterial(-1);
 const bridgeMat = new THREE.MeshBasicNodeMaterial({ color: srgb(0x7869c4) });
+const gateMat = new THREE.MeshBasicNodeMaterial({ color: srgb(0x574200) });
 for(const [k,e] of solids){
   const [x,y,z] = k.split(',').map(Number);
   if(e.kind === KIND.CONVEYOR){
@@ -634,9 +743,10 @@ for(const [k,e] of solids){
     m.position.set(x,y,z); scene.add(m);
     crumbles.set(k, { mesh:m, dmg, state:1, timer:0, cell:[x,y,z] });
   } else if(e.kind === KIND.BRIDGE){
-    const m = new THREE.Mesh(boxGeo, bridgeMat);
-    m.position.set(x,y,z); m.visible=false; scene.add(m);
-    bridges[e.conv].meshes.push(m);
+    const grp = bridges[e.conv];
+    const m = new THREE.Mesh(boxGeo, grp.invert?gateMat:bridgeMat);
+    m.position.set(x,y,z); m.visible=!!grp.invert; scene.add(m);
+    grp.meshes.push(m);
   }
 }
 
@@ -665,12 +775,12 @@ for(const [fx,fy,fz] of [[24.3,4.25,4.5],[24.7,4.25,4.5],[24.5,4.45,4.5]]){
   const f = new THREE.Mesh(flameGeo, flameMat);
   f.position.set(fx,fy,fz); scene.add(f);
 }
-/* hearth flames (hidden while the fire is doused) + stove flame */
-for(let i=0;i<5;i++){
+/* fire flames everywhere (hidden while their fire is doused) + stove flame */
+for(const fi of fires) for(const [fx,fy,fz] of fi.flamePos){
   const f = new THREE.Mesh(flameGeo, flameMat);
-  f.position.set(16.4+i*0.55, 1.25+((i%2)*0.18), 1.5);
+  f.position.set(fx,fy,fz);
   f.scale.setScalar(1.5); scene.add(f);
-  fires[0].meshes.push(f);
+  fi.meshes.push(f);
 }
 { const f = new THREE.Mesh(flameGeo, flameMat);
   f.position.set(38.7,3.1,2.5); scene.add(f); }        // stove burner
@@ -815,6 +925,7 @@ addGuardian('toilet',  'x', [28,6.6,-2],  27.5, 38.5, 2.4, { bobAmp:0.5 });
 addGuardian('ghost',   'y', [44.5,6,-4],  6, 8.6, 1.1, { phase:1 });
 addGuardian('crow',    'x', [16,11.8,-14],14.5, 56, 3.6, { bobAmp:0.4 });
 addGuardian('spider',  'y', [40,11,-15],  11, 13.6, 1.4, { thread:true });
+for(const g of pendingGuardians) addGuardian(g.type, g.axis, g.base, g.min, g.max, g.speed, g.opts);
 
 // spider thread
 {
@@ -833,7 +944,7 @@ function makeHuman(){
   const g = new THREE.Group();                    // origin at the feet
   const body = new THREE.Group(); g.add(body);    // bob / lean / weight-shift rig
   const M = c => new THREE.MeshBasicNodeMaterial({ color: srgb(c) });
-  const SKIN=0xe8b48c, SHIRT=0xf6f4ec, TROUSER=0xe9e4d4, HAIR=0x2a2018, BOOT=0x4a3826;
+  const SKIN=0xe8b48c, SHIRT=0xf6f4ec, TROUSER=0xd8d0b8, HAIR=0x2a2018, BOOT=0x4a3826;
   // a joint: group at the pivot, box hanging h below it (real hinges, not corners)
   function seg(parent, jx,jy,jz, w,h,d, c, oy=-1){
     const j = new THREE.Group(); j.position.set(jx,jy,jz); parent.add(j);
@@ -842,10 +953,18 @@ function makeHuman(){
     return j;
   }
   const pelvis = seg(body, 0,0.98,0, 0.34,0.16,0.22, TROUSER);
+  { const belt = new THREE.Mesh(boxGeo, M(0x574200));              // belt line
+    belt.position.set(-0.18,-0.02,-0.12); belt.scale.set(0.36,0.06,0.24); pelvis.add(belt); }
   const torso  = seg(body, 0,0.98,0, 0.42,0.52,0.24, SHIRT, +1);
   const headJ  = seg(body, 0,1.52,0, 0.24,0.26,0.24, SKIN, +1);
-  { const hair = new THREE.Mesh(boxGeo, M(HAIR));                  // hair cap
-    hair.position.set(-0.13,0.16,-0.13); hair.scale.set(0.26,0.12,0.26); headJ.add(hair); }
+  { const cap = new THREE.Mesh(boxGeo, M(HAIR));                   // hair: top...
+    cap.position.set(-0.14,0.18,-0.14); cap.scale.set(0.28,0.10,0.28); headJ.add(cap);
+    const back = new THREE.Mesh(boxGeo, M(HAIR));                  // ...and back of head
+    back.position.set(-0.14,0.04,-0.16); back.scale.set(0.28,0.16,0.08); headJ.add(back);
+    for(const ex of [0.06,-0.11]){                                 // eyes, facing +z
+      const eye = new THREE.Mesh(boxGeo, M(0x2a2018));
+      eye.position.set(ex,0.13,0.10); eye.scale.set(0.05,0.05,0.04); headJ.add(eye);
+    } }
   const hipL = seg(body,  0.09,0.86,0, 0.13,0.42,0.16, TROUSER);
   const hipR = seg(body, -0.09,0.86,0, 0.13,0.42,0.16, TROUSER);
   const kneeL = seg(hipL, 0,-0.42,0, 0.11,0.40,0.13, TROUSER);
@@ -856,11 +975,13 @@ function makeHuman(){
   }
   const shL = seg(body,  0.27,1.44,0, 0.10,0.30,0.14, SHIRT);
   const shR = seg(body, -0.27,1.44,0, 0.10,0.30,0.14, SHIRT);
+  shL.rotation.z = 0.10; shR.rotation.z = -0.10;      // arms rest clear of the torso
   const elL = seg(shL, 0,-0.30,0, 0.09,0.28,0.11, SKIN);
   const elR = seg(shR, 0,-0.30,0, 0.09,0.28,0.11, SKIN);
-  // Ducky rides the right shoulder, facing forward
+  // Ducky SITS on the left shoulder, tucked against the neck, looking outward
   const mini = makeDuck();
-  mini.g.scale.setScalar(0.26); mini.g.position.set(-0.30,1.52,0.02);
+  mini.g.scale.setScalar(0.22); mini.g.position.set(-0.24,1.45,0.03);
+  mini.g.rotation.y = -0.4;
   body.add(mini.g);
   return { g, r:{ body, pelvis, torso, headJ, hipL, hipR, kneeL, kneeR, shL, shR, elL, elR }, mini };
 }
@@ -1144,7 +1265,7 @@ function worldDir(jx,jy){
    10. PHYSICS + GAME STATE
    ========================================================= */
 const GRAV=26, WALK=4.6, JUMP_V=11.0, FALL_FATAL=12;
-const BEDTIME_SECS = 900;            // 15 real minutes from 11:45 PM to midnight
+const BEDTIME_SECS = 1200;           // 20 real minutes to midnight (the manor grew)
 const p = {
   x:-1, y:1.1, z:4, vx:0, vy:0, vz:0,
   grounded:false, coyote:0, fallFrom:1.1, squash:0,
@@ -1337,8 +1458,8 @@ function physics(dt){
   } else p.z=nz;
   // playfield clamp at street level — the garden has edges, not cliffs
   if(p.y<5){
-    p.x=Math.max(-3.6, Math.min(59.6, p.x));
-    p.z=Math.min(12.6, p.z);
+    p.x=Math.max(-3.6, Math.min(WORLD_E-0.6, p.x));
+    p.z=Math.min(13.4, p.z);
   }
 
   // Y axis
@@ -1624,13 +1745,14 @@ function animate(){
         H.body.position.y=-0.36*k;
         H.body.rotation.x=0.32*k;
       } else if(moving){                          // the traced stride
-        H.hipL.rotation.x=-s*0.66;
-        H.hipR.rotation.x= s*0.66;
-        H.kneeL.rotation.x=Math.max(0, Math.sin(gaitPhase-0.7))*1.05;
-        H.kneeR.rotation.x=Math.max(0,-Math.sin(gaitPhase-0.7))*1.05;
-        H.shL.rotation.x= s*0.48; H.shR.rotation.x=-s*0.48;
-        H.elL.rotation.x=-0.45;   H.elR.rotation.x=-0.45;
-        H.body.position.y=Math.abs(c)*0.055-0.028;
+        const amp=Math.min(1, sp/WALK);           // amplitude follows real speed
+        H.hipL.rotation.x=-s*0.66*amp;
+        H.hipR.rotation.x= s*0.66*amp;
+        H.kneeL.rotation.x=Math.max(0, Math.sin(gaitPhase-0.7))*1.05*amp;
+        H.kneeR.rotation.x=Math.max(0,-Math.sin(gaitPhase-0.7))*1.05*amp;
+        H.shL.rotation.x= s*0.48*amp; H.shR.rotation.x=-s*0.48*amp;
+        H.elL.rotation.x=-0.45-s*0.15; H.elR.rotation.x=-0.45+s*0.15;
+        H.body.position.y=(Math.abs(c)*0.055-0.028)*amp;
         H.body.rotation.x=0.13;                   // lean into the run
         H.body.rotation.z=s*0.03;
         H.torso.rotation.y=s*0.09;                // counter-rotation
@@ -1717,6 +1839,9 @@ function animate(){
     renderer.setAnimationLoop(animate);
     const sb=document.getElementById('startBtn');
     sb.disabled=false; sb.textContent='TAP TO START';
+    document.getElementById('setLabel').textContent =
+      'PUZZLE SET '+String(SET).padStart(3,'0')+' OF 1000'+
+      (Q.get('set')?'':' · TODAY’S SET')+' · ?set=N picks another';
   }catch(err){
     errBox.style.display='block';
     errBox.textContent='Renderer failed: '+err.message;

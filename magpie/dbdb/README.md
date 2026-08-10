@@ -33,8 +33,12 @@ Play: `dbdb.html`. No build step.
 Ten zones on a terraced cutaway manor: Duck Pond → Grand Hall / Kitchen /
 Conservatory (ground), First Landing / Bathroom / Library (terrace 1),
 Master Bedroom / Attic (terrace 2), Rooftops (parapet catwalk + chimneys).
-27 items; collect all, then reach the bed before the 15-minute bedtime
-clock strikes midnight. 6 lives; deadly water, guardians, a lit hearth,
+~50 items across the manor AND the Puzzle Gardens — six procedurally
+generated walled courtyards east of the house, built from six puzzle
+templates (plank bridge, hearth, portcullis gate, crumble hopscotch,
+guardian lane, bonk columns) by a seeded generator: `?set=1..1000` picks
+one of 1000 puzzle sets (default: today's). Collect all, then reach the
+bed before the 20-minute bedtime clock strikes midnight. 6 lives; deadly water, guardians, a lit hearth,
 long falls. Auto-step climbs 1-block stairs; jump clears ~2.3 blocks.
 Pressure plates run timed mechanisms (pond bridge, hearth douse). Jumping
 and clonking an item's supporting block claims the item (Mario-style).
