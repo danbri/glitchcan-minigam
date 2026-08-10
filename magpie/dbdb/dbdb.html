@@ -134,7 +134,7 @@
      they are not friendly.</p>
   <p><b>Touch:</b> left thumb = walk &nbsp;·&nbsp; right button = jump<br>
      <b>Keys:</b> arrows / WASD = walk &nbsp;·&nbsp; SPACE / Z = jump &nbsp;·&nbsp; M = mute</p>
-  <button type="button" class="btn" id="startBtn">TAP TO START</button>
+  <button type="button" class="btn" id="startBtn" disabled>LOADING…</button>
   <div id="piano"><div id="willyFoot">🦶</div></div>
   <p class="fine">A loving homage to Matthew Smith's <i>Jet Set Willy</i> (1984)
      and the great 8-bit isometrics. Music: Grieg &amp; Beethoven (public domain), on a 3-channel square-wave chip.</p>
@@ -170,7 +170,7 @@ async function loadThree(){
   try {
     return await Promise.race([
       import(CDN),
-      new Promise((_,rej)=>setTimeout(()=>rej(new Error('cdn timeout')), 5000)),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('cdn timeout')), 3500)),
     ]);
   } catch(e) {
     console.warn('CDN three.js unavailable ('+e.message+'), using vendored copy');
@@ -701,6 +701,33 @@ addGuardian('spider',  'y', [40,11,-15],  11, 13.6, 1.4, { thread:true });
 const duck = makeDuck();
 scene.add(duck.g);
 
+/* drop shadows — the one depth cue an axonometric camera cannot fake.
+   A dark square projected onto the first solid cell below each actor. */
+const shadowMat = new THREE.MeshBasicNodeMaterial({ color: srgb(0x000000),
+  transparent:true, opacity:0.38, depthWrite:false });
+const shadowGeo = new THREE.PlaneGeometry(0.8,0.8);
+shadowGeo.rotateX(-Math.PI/2);
+function makeShadow(){
+  const m = new THREE.Mesh(shadowGeo, shadowMat);
+  m.visible = false; scene.add(m); return m;
+}
+function groundTopBelow(x,yFrom,z){
+  const cx=Math.floor(x), cz=Math.floor(z);
+  for(let y=Math.floor(yFrom-0.001); y>=-3; y--)
+    if(cellSolid(cx,y,cz)) return y+1;
+  return null;
+}
+function updateShadow(m, x,y,z){
+  const top = groundTopBelow(x,y,z);
+  if(top===null || y-top>14){ m.visible=false; return; }
+  m.visible=true;
+  m.position.set(x, top+0.02, z);
+  const s = Math.max(0.35, 1-(y-top)*0.12);
+  m.scale.set(s,1,s);
+}
+const duckShadow = makeShadow();
+for(const gu of guardians) gu.shadow = makeShadow();
+
 /* =========================================================
    8. AUDIO — 3-channel square chip + noise
    ========================================================= */
@@ -749,24 +776,63 @@ const chip = {
   }
 };
 
-/* tunes: tracks of [midi|0, steps] */
-const SONG_TITLE = {   // Moonlight Sonata, 1st mvt (approx.), C# minor
-  step:0.20, tracks:[
-    { ch:0, vol:0.7, seq:[[56,1],[61,1],[64,1],[56,1],[61,1],[64,1],[56,1],[61,1],[64,1],[56,1],[61,1],[64,1],
-                          [57,1],[61,1],[64,1],[57,1],[62,1],[66,1],[56,1],[60,1],[63,1],[56,1],[61,1],[64,1]] },
-    { ch:1, vol:0.5, seq:[[37,6],[37,6],[33,3],[38,3],[32,3],[37,3]] },
+/* tunes: tracks of [midi|0, steps]. All tracks of a song have EQUAL total
+   steps, so harmony stays aligned across the whole loop (no phasing drift). */
+const times = (n,arr)=>{ const o=[]; for(let i=0;i<n;i++) for(const x of arr) o.push([x[0],x[1]]); return o; };
+const trans = (arr,s)=>arr.map(([m,d])=>[m>0?m+s:0, d]);
+
+/* Moonlight Sonata, 1st movement, C# minor — 12 bars, 12 triplet steps each.
+   Per bar: [arpeggio chord (3 notes), bass root]. Loop ~27s. */
+const MOON_BARS = [
+  [[56,61,64],37], [[56,61,64],37], [[57,61,64],33], [[57,62,66],38],
+  [[56,60,66],32], [[56,61,64],37], [[54,57,61],42], [[56,60,63],32],
+  [[56,61,64],37], [[56,61,64],37], [[57,61,64],33], [[56,60,63],32],
+];
+const SONG_TITLE = {
+  step:0.19, tracks:[
+    { ch:0, vol:0.55, seq: MOON_BARS.flatMap(([c])=>times(4,[[c[0],1],[c[1],1],[c[2],1]])) },
+    { ch:1, vol:0.5,  seq: MOON_BARS.map(([,b])=>[b,12]) },
+    { ch:2, vol:0.42, seq:[            // the theme, entering at bar 5
+      [0,48],
+      [0,6],[68,3],[68,3], [68,12], [69,4],[68,4],[66,4], [63,12],
+      [0,6],[68,3],[68,3], [68,12], [69,4],[64,4],[61,4], [63,8],[0,4],
+    ] },
   ]
 };
-const SONG_GAME = {    // In the Hall of the Mountain King (approx.), E minor
+
+/* In the Hall of the Mountain King, E minor — the 30-step theme, stated
+   8 times through registers (Grieg's build), coda, breath. Loop ~35s. */
+const MK = [
+  [52,1],[54,1],[55,1],[57,1],[59,1],[55,1],[59,2],
+  [58,1],[54,1],[58,2],
+  [57,1],[53,1],[57,2],
+  [52,1],[54,1],[55,1],[57,1],[59,1],[55,1],[59,1],[64,1],
+  [62,1],[59,1],[55,1],[59,1],[62,2],
+];
+const MK_PEDAL_E = times(15,[[40,2]]);                       // E2 pedal
+const MK_PULSE   = [...times(7,[[40,2],[47,2]]),[40,2]];     // E2/B2 pulse
+const MK_PEDAL_G = times(15,[[43,2]]);                       // G2 pedal (+3 statements)
+const SONG_GAME = {
   step:0.135, tracks:[
     { ch:0, vol:0.75, seq:[
-      [52,1],[54,1],[55,1],[57,1],[59,1],[55,1],[59,2],[58,1],[54,1],[58,2],[57,1],[53,1],[57,2],
-      [52,1],[54,1],[55,1],[57,1],[59,1],[55,1],[59,1],[64,1],[62,1],[59,1],[55,1],[59,1],[62,4],
-      [64,1],[66,1],[67,1],[69,1],[71,1],[67,1],[71,2],[70,1],[66,1],[70,2],[69,1],[65,1],[69,2],
-      [64,1],[66,1],[67,1],[69,1],[71,1],[67,1],[71,1],[76,1],[74,1],[71,1],[67,1],[71,1],[74,4]] },
-    { ch:1, vol:0.45, seq:[[40,2],[47,2],[40,2],[47,2],[39,2],[46,2],[40,2],[47,2]] },
+      ...MK, ...MK, ...trans(MK,12), ...trans(MK,12),
+      ...trans(MK,3), ...trans(MK,3), ...trans(MK,12), ...trans(MK,12),
+      [76,1],[74,1],[71,1],[67,1],[64,1],[62,1],[59,1],[55,1],[52,4],   // coda
+      [0,8],                                                            // breath
+    ] },
+    { ch:1, vol:0.45, seq:[
+      ...MK_PEDAL_E, ...MK_PEDAL_E, ...MK_PULSE, ...MK_PULSE,
+      ...MK_PEDAL_G, ...MK_PEDAL_G, ...MK_PULSE, ...MK_PULSE,
+      [40,2],[40,2],[40,2],[40,2],[40,4],
+      [0,8],
+    ] },
   ]
 };
+/* loop-length invariant — a mismatch here is what "out of tune" sounds like */
+for(const song of [SONG_TITLE, SONG_GAME]){
+  const sums = song.tracks.map(t=>t.seq.reduce((a,[,d])=>a+d,0));
+  if(new Set(sums).size!==1) console.error('SONG TRACK LENGTH MISMATCH', sums);
+}
 const music = {
   song:null, ptr:[], next:[],
   play(song){ this.song=song; this.ptr=song?song.tracks.map(()=>0):[];
@@ -1185,7 +1251,10 @@ function animate(){
     if(gu.bobAmp) gp.y=gu.base[1]+Math.sin(t*5+gu.phase*3)*gu.bobAmp;
     for(let i=0;i<gu.anim.length;i++)
       gu.anim[i].rotation.x=Math.sin(t*10+i*Math.PI)*0.6;
+    updateShadow(gu.shadow, gu.g.position.x, gu.g.position.y, gu.g.position.z);
   }
+  updateShadow(duckShadow, p.x, p.y, p.z);
+  if(p.dead) duckShadow.visible=false;
 
   // items spin
   for(const it of items){
@@ -1214,6 +1283,8 @@ function animate(){
     addEventListener('resize', sizeRenderer);
     camTarget.set(p.x,p.y+1.2,p.z);
     renderer.setAnimationLoop(animate);
+    const sb=document.getElementById('startBtn');
+    sb.disabled=false; sb.textContent='TAP TO START';
   }catch(err){
     errBox.style.display='block';
     errBox.textContent='Renderer failed: '+err.message;
