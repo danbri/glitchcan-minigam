@@ -4,12 +4,14 @@ Single-page, self-contained isometric platformer. Part *Jet Set Willy* (named
 rooms, patrol guardians, collect-then-bed goal, fixed lives), part *Ant
 Attack* / filmation (one continuous scrolling isometric world). Mobile first.
 
-Play: `dbdb.html`. No build step, no CDN, no network at runtime.
+Play: `dbdb.html`. No build step.
 
 ## Tech
-- **three.js r180 WebGPU build**, vendored in `vendor/` (`three.webgpu.min.js`
-  + `three.core.min.js` + `three.tsl.min.js`). `WebGPURenderer` falls back to
-  WebGL2 automatically, so TSL runs everywhere.
+- **three.js r180 WebGPU build**, loaded from the jsDelivr CDN first, with a
+  5-second timeout falling back to the vendored copy in
+  `third_party/three/` (`three.webgpu.min.js` + `three.core.min.js`; TSL
+  functions come from the build's `TSL` export, so no import map is needed).
+  `WebGPURenderer` falls back to WebGL2 automatically, so TSL runs everywhere.
 - **TSL node materials:** world-space dither ("attribute clash") on the merged
   block mesh, banded shimmer water, animated chevron conveyors, crack-pattern
   crumble blocks with a per-block damage uniform, palette-snapping item flash,

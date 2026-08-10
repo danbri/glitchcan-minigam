@@ -160,19 +160,27 @@
 
 <pre id="err"></pre>
 
-<script type="importmap">
-{ "imports": {
-    "three": "./vendor/three.webgpu.min.js",
-    "three/webgpu": "./vendor/three.webgpu.min.js",
-    "three/tsl": "./vendor/three.tsl.min.js"
-} }
-</script>
-
 <script type="module">
-import * as THREE from 'three';
-import { Fn, attribute, uv, uniform, time, vec2, vec3, vec4, float,
-         sin, cos, floor, fract, mix, step, clamp, abs, dot, mod,
-         positionWorld, pass } from 'three/tsl';
+/* three.js r180 WebGPU build: CDN first, vendored third_party/ fallback.
+   The build imports "./three.core.min.js" relative to itself, so each source
+   resolves its own sibling; the TSL functions ride along as the TSL export. */
+async function loadThree(){
+  const CDN   = 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.min.js';
+  const LOCAL = '../../third_party/three/three.webgpu.min.js';
+  try {
+    return await Promise.race([
+      import(CDN),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('cdn timeout')), 5000)),
+    ]);
+  } catch(e) {
+    console.warn('CDN three.js unavailable ('+e.message+'), using vendored copy');
+    return import(LOCAL);
+  }
+}
+const THREE = await loadThree();
+const { Fn, attribute, uv, uniform, time, vec2, vec3, vec4, float,
+        sin, cos, floor, fract, mix, step, clamp, abs, dot, mod,
+        positionWorld, pass } = THREE.TSL;
 
 const Q = new URLSearchParams(location.search);
 const CRT_ON = Q.get('crt') !== '0';
