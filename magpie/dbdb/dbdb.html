@@ -27,12 +27,12 @@
     text-shadow:0 0 6px rgba(0,255,255,.7), 2px 2px 0 #000;
     letter-spacing:.12em; pointer-events:none; white-space:nowrap;
   }
-  #hudItems { color:#ffff00; }
-  #hudClock { color:#00d8d8; font-size:.82em; letter-spacing:.06em; padding:0 8px; }
+  #hudItems { color:#bfce72; }
+  #hudClock { color:#67b6bd; font-size:.82em; letter-spacing:.06em; padding:0 8px; }
   #hudLives { color:#ffffff; }
   #flash {
     position:fixed; inset:0; z-index:15; pointer-events:none;
-    background:#ff0000; opacity:0; transition:opacity .18s;
+    background:#b86962; opacity:0; transition:opacity .18s;
   }
   #flash.on { opacity:0.45; transition:opacity .04s; }
   @media (prefers-reduced-motion: reduce){
@@ -42,16 +42,16 @@
     position:fixed; left:0; right:0; bottom:calc(14px + env(safe-area-inset-bottom));
     z-index:10; text-align:center; pointer-events:none; display:none;
     font-weight:bold; font-size:clamp(15px,4.5vw,26px); letter-spacing:.18em;
-    text-transform:uppercase; color:#00ffff;
-    text-shadow:2px 2px 0 #000, 0 0 10px rgba(0,255,255,.8);
+    text-transform:uppercase; color:#67b6bd;
+    text-shadow:2px 2px 0 #000, 0 0 10px rgba(103,182,189,.8);
     animation:zxflash 1.2s steps(2) infinite;
   }
-  @keyframes zxflash { 0%{color:#00ffff} 50%{color:#ffff00} 100%{color:#00ffff} }
+  @keyframes zxflash { 0%{color:#67b6bd} 50%{color:#bfce72} 100%{color:#67b6bd} }
   #toast {
     position:fixed; left:0; right:0; top:22%; z-index:11; text-align:center;
     pointer-events:none; opacity:0; transition:opacity .3s;
     font-weight:bold; font-size:clamp(14px,4vw,24px); letter-spacing:.15em;
-    color:#ff00ff; text-shadow:2px 2px 0 #000, 0 0 12px rgba(255,0,255,.8);
+    color:#b86962; text-shadow:2px 2px 0 #000, 0 0 12px rgba(184,105,98,.8);
   }
   #muteBtn {
     position:fixed; top:calc(40px + env(safe-area-inset-top)); right:10px; z-index:12;
@@ -64,44 +64,45 @@
     position:fixed; right:calc(18px + env(safe-area-inset-right));
     bottom:calc(64px + env(safe-area-inset-bottom)); z-index:12;
     width:min(24vw,110px); height:min(24vw,110px); border-radius:50%;
-    border:3px solid #ffff00; background:rgba(216,216,0,.18);
-    color:#ffff00; font-weight:bold; font-size:clamp(13px,3.5vw,18px);
+    border:3px solid #bfce72; background:rgba(191,206,114,.2);
+    color:#bfce72; font-weight:bold; font-size:clamp(13px,3.5vw,18px);
     letter-spacing:.1em; display:none; align-items:center; justify-content:center;
     text-shadow:1px 1px 0 #000; -webkit-tap-highlight-color:transparent;
     font-family:inherit; padding:0;
   }
-  #jumpBtn:active { background:rgba(216,216,0,.45); }
+  #jumpBtn:active { background:rgba(191,206,114,.5); }
   #stickBase, #stickNub {
     position:fixed; z-index:12; border-radius:50%; pointer-events:none; display:none;
   }
-  #stickBase { width:110px; height:110px; border:3px solid #00d8d8; background:rgba(0,216,216,.10); }
-  #stickNub  { width:48px;  height:48px;  border:3px solid #00ffff; background:rgba(0,255,255,.35); }
+  #stickBase { width:110px; height:110px; border:3px solid #67b6bd; background:rgba(103,182,189,.12); }
+  #stickNub  { width:48px;  height:48px;  border:3px solid #67b6bd; background:rgba(103,182,189,.4); }
   /* ---------- overlays ---------- */
   .overlay {
     position:fixed; inset:0; z-index:20; display:flex; flex-direction:column;
     align-items:center; justify-content:center; text-align:center;
-    background:#000; color:#d8d8d8; padding:20px; gap:14px;
+    background:#40318d; color:#7869c4; padding:28px; gap:14px;
+    border:14px solid #7869c4; box-sizing:border-box;
   }
   .overlay h1 {
     font-size:clamp(30px,9vw,72px); letter-spacing:.06em; line-height:1.05;
-    color:#ffff00; text-shadow:4px 4px 0 #d80000, 8px 8px 0 #0000d8;
+    color:#bfce72; text-shadow:4px 4px 0 #883932, 8px 8px 0 #000;
     animation:titlepulse 2.4s ease-in-out infinite;
   }
   @keyframes titlepulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.045)} }
-  .overlay h2 { font-size:clamp(15px,4vw,24px); color:#00d8d8; letter-spacing:.2em; }
-  .overlay p  { font-size:clamp(12px,3.2vw,17px); max-width:560px; line-height:1.5; color:#aaa; }
+  .overlay h2 { font-size:clamp(15px,4vw,24px); color:#67b6bd; letter-spacing:.2em; }
+  .overlay p  { font-size:clamp(12px,3.2vw,17px); max-width:560px; line-height:1.5; color:#9f9f9f; }
   .overlay p.fine { font-size:11px; }
   .overlay .btn {
-    margin-top:8px; padding:14px 34px; border:3px solid #00ff00; border-radius:6px;
-    background:rgba(0,216,0,.12); color:#00ff00; font-weight:bold;
+    margin-top:8px; padding:14px 34px; border:3px solid #94e089; border-radius:6px;
+    background:rgba(85,160,73,.25); color:#94e089; font-weight:bold;
     font-size:clamp(16px,4.5vw,24px); letter-spacing:.18em; cursor:pointer;
     font-family:inherit; animation:zxflash 1s steps(2) infinite;
   }
   .stripe {
     width:min(90vw,560px); height:10px; margin:6px 0;
     background:repeating-linear-gradient(90deg,
-      #d80000 0 40px, #d8d800 40px 80px, #00d800 80px 120px,
-      #00d8d8 120px 160px, #0000d8 160px 200px);
+      #883932 0 40px, #bfce72 40px 80px, #55a049 80px 120px,
+      #67b6bd 120px 160px, #7869c4 160px 200px);
     transform:skewX(-30deg);
   }
   #piano { width:min(92vw,600px); height:52px; position:relative; display:flex; margin-top:6px; }
@@ -109,8 +110,8 @@
   #piano .bk { position:absolute; top:0; width:3.2%; height:60%; background:#000; border:1px solid #333; }
   #willyFoot { font-size:34px; position:absolute; top:-34px; left:0; animation:footwalk 6s linear infinite; }
   @keyframes footwalk { 0%{left:2%} 50%{left:88%} 100%{left:2%} }
-  #gameover h1 { color:#ff0000; text-shadow:4px 4px 0 #d8d800; }
-  #victory h1 { color:#00ff00; text-shadow:4px 4px 0 #d800d8; }
+  #gameover h1 { color:#b86962; text-shadow:4px 4px 0 #574200; }
+  #victory h1 { color:#94e089; text-shadow:4px 4px 0 #8b3f96; }
   .bigduck { font-size:64px; }
   #goScene { position:relative; height:120px; width:120px; }
   #goFoot { position:absolute; top:-10px; left:28px; font-size:56px; transform:rotate(90deg); animation:stomp 2.2s ease-in infinite; }
@@ -140,9 +141,9 @@
   <div class="stripe"></div>
   <h1>JET SET<br>DUCKY</h1>
   <h2>A 3D MAISONETTE MISADVENTURE</h2>
-  <p>Ducky held one wild party. Now the housekeeper demands a tidy house
-     before bedtime. Collect <b>every flashing item</b> in the manor,
-     then get to <b>bed</b> in the Master Bedroom —
+  <p>Ducky held one wild party. The housekeeper blames <i>you</i>.
+     With Ducky on your shoulder, collect <b>every flashing item</b> in the
+     manor, then get to <b>bed</b> in the Master Bedroom —
      <b>before the clock strikes midnight</b>. Mind the residents —
      they are not friendly.</p>
   <p><b>Touch:</b> left thumb = walk &nbsp;·&nbsp; right button = jump<br>
@@ -197,6 +198,7 @@ const { Fn, attribute, uv, uniform, time, vec2, vec3, vec4, float,
 
 const Q = new URLSearchParams(location.search);
 const CRT_ON = Q.get('crt') !== '0';
+const HERO = Q.get('hero')==='duck' ? 'duck' : 'human';   // ?hero=duck keeps the old star
 const errBox = document.getElementById('err');
 window.addEventListener('error', e => {
   errBox.style.display = 'block';
@@ -204,24 +206,26 @@ window.addEventListener('error', e => {
 });
 
 /* =========================================================
-   1. PALETTE — ZX Spectrum, converted to linear for buffers
+   1. PALETTE — Commodore 64 (VIC-II, Pepto values).
+   The C64's earthy 16 legitimize every brown/grey/olive the
+   manor needs; the hyper-real hero is deliberately OFF-palette.
    ========================================================= */
 /* THREE.Color(hex) already converts sRGB -> linear working space (ColorManagement on) */
 const srgb = hex => new THREE.Color(hex);
 const P = {
   black:   srgb(0x000000),
-  blue:    srgb(0x0000d8), briBlue: srgb(0x0000ff),
-  red:     srgb(0xd80000), briRed:  srgb(0xff0000),
-  magenta: srgb(0xd800d8), briMag:  srgb(0xff00ff),
-  green:   srgb(0x00d800), briGrn:  srgb(0x00ff00),
-  cyan:    srgb(0x00d8d8), briCyan: srgb(0x00ffff),
-  yellow:  srgb(0xd8d800), briYel:  srgb(0xffff00),
-  white:   srgb(0xd8d8d8), briWhite:srgb(0xffffff),
-  grey:    srgb(0x9a9a9a), darkGrey:srgb(0x555555),
-  brown:   srgb(0x8a5a2a), darkBrown:srgb(0x5a3a1a),
-  grass:   srgb(0x00a000), grass2:  srgb(0x008000),
-  stone:   srgb(0x8f8f8f), stone2:  srgb(0x777777),
-  deep:    srgb(0x000060),
+  blue:    srgb(0x40318d), briBlue: srgb(0x7869c4),
+  red:     srgb(0x883932), briRed:  srgb(0xb86962),
+  magenta: srgb(0x8b3f96), briMag:  srgb(0x8b3f96),
+  green:   srgb(0x55a049), briGrn:  srgb(0x94e089),
+  cyan:    srgb(0x67b6bd), briCyan: srgb(0x67b6bd),
+  yellow:  srgb(0xbfce72), briYel:  srgb(0xbfce72),
+  white:   srgb(0xffffff), briWhite:srgb(0xffffff),
+  grey:    srgb(0x9f9f9f), darkGrey:srgb(0x505050),
+  brown:   srgb(0x8b5429), darkBrown:srgb(0x574200),
+  grass:   srgb(0x55a049), grass2:  srgb(0x574200),
+  stone:   srgb(0x787878), stone2:  srgb(0x505050),
+  deep:    srgb(0x40318d),
 };
 
 /* =========================================================
@@ -266,13 +270,14 @@ function buildWorld(){
   for(const [bx,bz] of [[0,2],[10,3],[12,9],[-2,8],[9,12]]){
     setCell(bx,1,bz,P.green); setCell(bx,2,bz,P.grass2);
   }
-  // garden crates to hop
-  setCell(11,1,6,P.brown); setCell(12,1,7,P.brown); setCell(12,2,6,P.darkBrown);
+  // garden crates to hop — kept clear of the hall doorway approach (z5..7)
+  setCell(11,1,9,P.brown); setCell(12,1,8,P.brown); setCell(12,2,9,P.darkBrown);
+  setCell(12,1,9,P.brown);
   // boundary posts along the south street edge (physics also clamps there)
   for(let px=-3;px<=59;px+=3) setCell(px,1,13,P.grass2);
   addItem(5,1.2,6);          // stepping stone
   addItem(6,1.2,9);          // far stepping stone — two water hops
-  addItem(12,3.2,6);         // crate top
+  addItem(12,3.2,9);         // crate top
   addItem(-2,3.2,8);         // bush top
 
   /* ---------------- GROUND FLOOR (walk y=1, interior z 2..11) ------------- */
@@ -482,7 +487,7 @@ function conveyorMaterial(dir){
   const wp = positionWorld;
   const t = time.mul(1.6 * dir);
   const stripe = step(0.5, fract(wp.x.add(wp.z).mul(1.0).sub(t)));
-  m.colorNode = mix(vec3(0.72,0.02,0.02), vec3(0.85,0.75,0.02), stripe);
+  m.colorNode = mix(vec3(0.25,0.04,0.035), vec3(0.52,0.62,0.17), stripe);  // C64 red/yellow
   return m;
 }
 
@@ -504,13 +509,13 @@ const waterMat = new THREE.MeshBasicNodeMaterial({ transparent:true, opacity:0.9
             .add(sin(wp.z.mul(3.1).sub(time.mul(2.4))))
             .add(sin(wp.x.add(wp.z).mul(1.4).add(time.mul(1.1))));
   const band = step(0.5, fract(w.mul(0.4)));
-  waterMat.colorNode = mix(vec3(0.0,0.05,0.55), vec3(0.05,0.75,0.8), band);
+  waterMat.colorNode = mix(vec3(0.05,0.03,0.27), vec3(0.14,0.47,0.51), band);  // C64 blue/cyan
 }
 
-// items: true spectrum FLASH — snaps through the 7 bright inks, no in-betweens
+// items: hardware FLASH — snaps through 7 bright C64 inks, no in-betweens
 const itemMat = new THREE.MeshBasicNodeMaterial();
 {
-  const inks = [0xffff00,0x00ffff,0x00ff00,0xff00ff,0xff0000,0x0000ff,0xffffff].map(h=>srgb(h));
+  const inks = [0xffffff,0xbfce72,0x94e089,0x7869c4,0x67b6bd,0xb86962,0x8b5429].map(h=>srgb(h));
   const idx = mod(floor(time.mul(7.0)), 7.0);
   let node = vec3(inks[0].r, inks[0].g, inks[0].b);
   for(let i=1;i<7;i++)
@@ -522,7 +527,7 @@ const itemMat = new THREE.MeshBasicNodeMaterial();
 const flameMat = new THREE.MeshBasicNodeMaterial();
 {
   const f = fract(sin(floor(time.mul(11.0)).mul(37.7)).mul(43758.5));
-  flameMat.colorNode = mix(vec3(1.0,0.55,0.0), vec3(1.0,0.95,0.2), f);
+  flameMat.colorNode = mix(vec3(0.26,0.09,0.02), vec3(0.52,0.62,0.17), f);  // C64 orange/yellow
 }
 
 // ghost: soft pulse of transparency
@@ -729,9 +734,53 @@ addGuardian('spider',  'y', [40,11,-15],  11, 13.6, 1.4, { thread:true });
   scene.add(tm);
 }
 
-/* player */
-const duck = makeDuck();
-scene.add(duck.g);
+/* ---------- the hero ----------
+   Default: a realistically proportioned human with proper joint pivots and
+   rotoscope-style procedural cycles — deliberately hyper-real (and off-palette)
+   against the chunky C64 world, Prince of Persia style. Ducky rides the
+   shoulder. ?hero=duck restores the original waddling star. */
+function makeHuman(){
+  const g = new THREE.Group();                    // origin at the feet
+  const body = new THREE.Group(); g.add(body);    // bob / lean / weight-shift rig
+  const M = c => new THREE.MeshBasicNodeMaterial({ color: srgb(c) });
+  const SKIN=0xe8b48c, SHIRT=0xf6f4ec, TROUSER=0xe9e4d4, HAIR=0x2a2018, BOOT=0x4a3826;
+  // a joint: group at the pivot, box hanging h below it (real hinges, not corners)
+  function seg(parent, jx,jy,jz, w,h,d, c, oy=-1){
+    const j = new THREE.Group(); j.position.set(jx,jy,jz); parent.add(j);
+    const m = new THREE.Mesh(boxGeo, M(c));
+    m.position.set(-w/2, oy<0?-h:0, -d/2); m.scale.set(w,h,d); j.add(m);
+    return j;
+  }
+  const pelvis = seg(body, 0,0.98,0, 0.34,0.16,0.22, TROUSER);
+  const torso  = seg(body, 0,0.98,0, 0.42,0.52,0.24, SHIRT, +1);
+  const headJ  = seg(body, 0,1.52,0, 0.24,0.26,0.24, SKIN, +1);
+  { const hair = new THREE.Mesh(boxGeo, M(HAIR));                  // hair cap
+    hair.position.set(-0.13,0.16,-0.13); hair.scale.set(0.26,0.12,0.26); headJ.add(hair); }
+  const hipL = seg(body,  0.09,0.86,0, 0.13,0.42,0.16, TROUSER);
+  const hipR = seg(body, -0.09,0.86,0, 0.13,0.42,0.16, TROUSER);
+  const kneeL = seg(hipL, 0,-0.42,0, 0.11,0.40,0.13, TROUSER);
+  const kneeR = seg(hipR, 0,-0.42,0, 0.11,0.40,0.13, TROUSER);
+  for(const k of [kneeL,kneeR]){                                    // boots
+    const f = new THREE.Mesh(boxGeo, M(BOOT));
+    f.position.set(-0.06,-0.46,-0.05); f.scale.set(0.12,0.07,0.24); k.add(f);
+  }
+  const shL = seg(body,  0.27,1.44,0, 0.10,0.30,0.14, SHIRT);
+  const shR = seg(body, -0.27,1.44,0, 0.10,0.30,0.14, SHIRT);
+  const elL = seg(shL, 0,-0.30,0, 0.09,0.28,0.11, SKIN);
+  const elR = seg(shR, 0,-0.30,0, 0.09,0.28,0.11, SKIN);
+  // Ducky rides the right shoulder, facing forward
+  const mini = makeDuck();
+  mini.g.scale.setScalar(0.26); mini.g.position.set(-0.30,1.52,0.02);
+  body.add(mini.g);
+  return { g, r:{ body, pelvis, torso, headJ, hipL, hipR, kneeL, kneeR, shL, shR, elL, elR }, mini };
+}
+
+const hero = HERO==='duck'
+  ? (()=>{ const d=makeDuck(); return { g:d.g, duck:d, r:null }; })()
+  : makeHuman();
+scene.add(hero.g);
+let gaitPhase=0;
+const lerpTo=(o,a,tgt,k)=>{ o.rotation[a]+=(tgt-o.rotation[a])*Math.min(1,k); };
 
 /* drop shadows — the one depth cue an axonometric camera cannot fake.
    A dark square projected onto the first solid cell below each actor. */
@@ -771,7 +820,7 @@ for(const it of items){
    behind walls or guardians (art + world reviews, showstopper) */
 const xrayMat = new THREE.MeshBasicNodeMaterial({ color: srgb(0xffff00),
   transparent:true, opacity:0.15, depthTest:false });
-const duckGhost = duck.g.clone(true);
+const duckGhost = hero.g.clone(true);
 duckGhost.traverse(o=>{ if(o.isMesh){ o.material = xrayMat; o.renderOrder = 50; } });
 scene.add(duckGhost);
 
@@ -1015,7 +1064,7 @@ function cellSolid(x,y,z){
   }
   return e;
 }
-const HW=0.32, HH=0.92;
+const HW=0.32, HH = HERO==='duck' ? 0.92 : 1.6;
 function collides(px,py,pz){
   const x0=Math.floor(px-HW), x1=Math.floor(px+HW);
   const y0=Math.floor(py), y1=Math.floor(py+HH);
@@ -1039,7 +1088,7 @@ function groundInfo(px,py,pz){
 function respawn(){
   [p.x,p.y,p.z]=state.spawn; p.vx=p.vy=p.vz=0;
   p.dead=false; p.fallFrom=p.y; p.squash=0;
-  duck.g.scale.set(1,1,1); duck.g.rotation.z=0; duck.g.visible=true;
+  hero.g.scale.set(1,1,1); hero.g.rotation.set(0,p.facing,0); hero.g.visible=true;
   // restore crumbles
   for(const c of crumbles.values()){ c.state=1; c.timer=0; c.dmg.value=0; c.mesh.visible=true; c.mesh.scale.set(1,1,1); }
 }
@@ -1103,12 +1152,20 @@ function physics(dt){
   if(p.dead){
     p.deadT+=dt;
     if(p.deadT<0.35){
-      // hit-stop: a held, flashing beat before the spin (JSW-style moment)
-      duck.g.visible = (Math.floor(p.deadT*20)%2)===0;
+      // hit-stop: a held, flashing beat before the fall (JSW-style moment)
+      hero.g.visible = (Math.floor(p.deadT*20)%2)===0;
+    } else if(HERO==='duck'){
+      hero.g.visible = true;
+      hero.g.rotation.z += dt*10;
+      hero.g.scale.setScalar(Math.max(0.05, 1-(p.deadT-0.35)*1.3));
     } else {
-      duck.g.visible = true;
-      duck.g.rotation.z += dt*10;
-      duck.g.scale.setScalar(Math.max(0.05, 1-(p.deadT-0.35)*1.3));
+      // the human crumples — a fall, not a fizzle
+      hero.g.visible = true;
+      const k=Math.min(1,(p.deadT-0.35)/0.55);
+      hero.g.rotation.x = -k*k*1.55;
+      const H=hero.r;
+      H.shL.rotation.x = H.shR.rotation.x = -2.6*k;
+      H.kneeL.rotation.x = H.kneeR.rotation.x = 0.5*k;
     }
     if(p.deadT>1.25){
       state.lives--; updateHUD();
@@ -1353,31 +1410,83 @@ function animate(){
     }
   }
 
-  // duck pose — weight and commitment (Prince of Persia rules)
-  duck.g.position.set(p.x, p.y, p.z);
+  // hero pose — weight and commitment (Prince of Persia rules)
+  hero.g.position.set(p.x, p.y, p.z);
   if(!p.dead){
-    duck.g.rotation.y=p.facing;
+    hero.g.rotation.y=p.facing;
     const moving=Math.hypot(input.jx,input.jy)>0.05 && state.running;
-    const sw=moving?Math.sin(t*14)*0.6:0;
-    duck.g.rotation.z = moving&&p.grounded ? Math.sin(t*7)*0.09 : 0;   // the waddle
-    duck.g.rotation.x = moving&&p.grounded ? 0.08 : 0;                 // lean into the walk
-    duck.lLeg.rotation.x=sw; duck.rLeg.rotation.x=-sw;
-    duck.wingL.rotation.z= p.grounded?sw*0.3: 0.9+Math.sin(t*22)*0.4;
-    duck.wingR.rotation.z= p.grounded?-sw*0.3:-0.9-Math.sin(t*22)*0.4;
-    if(p.squash>0){                                                    // landing squash
-      p.squash=Math.max(0,p.squash-dt);
-      const k=p.squash/0.16;
-      duck.g.scale.set(1+0.22*k, 1-0.28*k, 1+0.22*k);
+    if(HERO==='duck'){
+      const d=hero.duck;
+      const sw=moving?Math.sin(t*14)*0.6:0;
+      hero.g.rotation.z = moving&&p.grounded ? Math.sin(t*7)*0.09 : 0;
+      hero.g.rotation.x = moving&&p.grounded ? 0.08 : 0;
+      d.lLeg.rotation.x=sw; d.rLeg.rotation.x=-sw;
+      d.wingL.rotation.z= p.grounded?sw*0.3: 0.9+Math.sin(t*22)*0.4;
+      d.wingR.rotation.z= p.grounded?-sw*0.3:-0.9-Math.sin(t*22)*0.4;
+      if(p.squash>0){
+        p.squash=Math.max(0,p.squash-dt);
+        const k=p.squash/0.16;
+        hero.g.scale.set(1+0.22*k, 1-0.28*k, 1+0.22*k);
+      } else hero.g.scale.set(1, p.grounded?1:(p.vy>2?1.12:0.95), 1);
+      if(!moving && p.grounded) hero.g.scale.y *= 1+Math.sin(t*2.2)*0.015;
     } else {
-      duck.g.scale.set(1, p.grounded?1:(p.vy>2?1.12:0.95), 1);
+      /* rotoscope-style procedural cycles, phase driven by DISTANCE so the
+         feet track the ground like traced footage, not a metronome */
+      const H=hero.r;
+      hero.g.rotation.x=0; hero.g.rotation.z=0;
+      const sp=Math.hypot(p.vx,p.vz);
+      if(p.grounded&&moving) gaitPhase+=sp*dt*2.35;
+      const s=Math.sin(gaitPhase), c=Math.cos(gaitPhase);
+      if(!p.grounded){
+        const rising=p.vy>1;                     // gather, then reach for the landing
+        lerpTo(H.hipL,'x', rising?-1.15:-0.30, dt*14);
+        lerpTo(H.hipR,'x', rising?-0.50: 0.15, dt*14);
+        lerpTo(H.kneeL,'x', rising? 1.55: 0.40, dt*14);
+        lerpTo(H.kneeR,'x', rising? 0.85: 0.15, dt*14);
+        lerpTo(H.shL,'x', -2.3, dt*10);
+        lerpTo(H.shR,'x', rising?-2.3:-1.2, dt*10);
+        lerpTo(H.elL,'x', -0.3, dt*10); lerpTo(H.elR,'x', -0.3, dt*10);
+        H.body.rotation.x=0.16; H.body.rotation.z=0;
+        H.body.position.y=0;
+        H.torso.rotation.y=0;
+      } else if(p.squash>0){                     // the landing absorb — deep and fast
+        p.squash=Math.max(0,p.squash-dt);
+        const k=p.squash/0.16;
+        H.hipL.rotation.x=H.hipR.rotation.x=-1.05*k;
+        H.kneeL.rotation.x=H.kneeR.rotation.x= 1.55*k;
+        H.shL.rotation.x=H.shR.rotation.x=-0.65*k;
+        H.body.position.y=-0.36*k;
+        H.body.rotation.x=0.32*k;
+      } else if(moving){                          // the traced stride
+        H.hipL.rotation.x=-s*0.66;
+        H.hipR.rotation.x= s*0.66;
+        H.kneeL.rotation.x=Math.max(0, Math.sin(gaitPhase-0.7))*1.05;
+        H.kneeR.rotation.x=Math.max(0,-Math.sin(gaitPhase-0.7))*1.05;
+        H.shL.rotation.x= s*0.48; H.shR.rotation.x=-s*0.48;
+        H.elL.rotation.x=-0.45;   H.elR.rotation.x=-0.45;
+        H.body.position.y=Math.abs(c)*0.055-0.028;
+        H.body.rotation.x=0.13;                   // lean into the run
+        H.body.rotation.z=s*0.03;
+        H.torso.rotation.y=s*0.09;                // counter-rotation
+        H.headJ.rotation.y=-s*0.05;               // gaze stabilizes
+      } else {                                    // idle: alive, shifting weight
+        for(const j of [H.hipL,H.hipR,H.kneeL,H.kneeR]) lerpTo(j,'x',0,dt*8);
+        lerpTo(H.shL,'x',0.05,dt*8); lerpTo(H.shR,'x',0.05,dt*8);
+        lerpTo(H.elL,'x',-0.12,dt*8); lerpTo(H.elR,'x',-0.12,dt*8);
+        H.body.position.y=Math.sin(t*1.8)*0.012;
+        H.body.rotation.x=0;
+        H.body.rotation.z=Math.sin(t*0.6)*0.028;
+        H.torso.rotation.y=0;
+        H.headJ.rotation.y=Math.sin(t*0.9)*0.06;  // looking about
+      }
+      // Ducky keeps her own tiny life on the shoulder
+      hero.mini.g.rotation.z=Math.sin(t*3)*0.06;
     }
-    // idle life: a slow breathing bob when standing still
-    if(!moving && p.grounded) duck.g.scale.y *= 1+Math.sin(t*2.2)*0.015;
   }
   duckGhost.visible = !p.dead && state.running;
-  duckGhost.position.copy(duck.g.position);
-  duckGhost.rotation.copy(duck.g.rotation);
-  duckGhost.scale.copy(duck.g.scale);
+  duckGhost.position.copy(hero.g.position);
+  duckGhost.rotation.copy(hero.g.rotation);
+  duckGhost.scale.copy(hero.g.scale);
 
   // pickup pop ring
   if(popRing.visible){

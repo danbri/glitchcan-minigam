@@ -2,7 +2,11 @@
 
 Single-page, self-contained isometric platformer. Part *Jet Set Willy* (named
 rooms, patrol guardians, collect-then-bed goal, fixed lives), part *Ant
-Attack* / filmation (one continuous scrolling isometric world). Mobile first.
+Attack* / filmation (one continuous scrolling isometric world), part *Prince
+of Persia* (a bedtime deadline, and a rotoscope-style articulated human hero
+— deliberately hyper-real and off-palette against the C64-coloured blocky
+manor, with Ducky riding the shoulder; `?hero=duck` restores the original
+duck). World palette is the Commodore 64's 16 (Pepto values). Mobile first.
 
 Play: `dbdb.html`. No build step.
 
