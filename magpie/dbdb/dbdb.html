@@ -71,6 +71,15 @@
     font-family:inherit; padding:0;
   }
   #jumpBtn:active { background:rgba(191,206,114,.5); }
+  .rotBtn {
+    position:fixed; z-index:12; width:44px; height:44px; border-radius:10px;
+    top:calc(52px + env(safe-area-inset-top));
+    border:2px solid #67b6bd; background:rgba(103,182,189,.15); color:#67b6bd;
+    font-size:24px; display:none; align-items:center; justify-content:center;
+    font-family:inherit; padding:0; -webkit-tap-highlight-color:transparent;
+  }
+  #rotL { left:10px; } #rotR { right:10px; }
+  .rotBtn:active { background:rgba(103,182,189,.4); }
   #stickBase, #stickNub {
     position:fixed; z-index:12; border-radius:50%; pointer-events:none; display:none;
   }
@@ -134,6 +143,8 @@
 <div id="toast"></div>
 <button type="button" id="muteBtn" aria-label="toggle sound">🔊</button>
 <button type="button" id="jumpBtn" aria-label="jump">JUMP</button>
+<button type="button" class="rotBtn" id="rotL" aria-label="rotate camera left">⟲</button>
+<button type="button" class="rotBtn" id="rotR" aria-label="rotate camera right">⟳</button>
 <div id="stickBase"></div><div id="stickNub"></div>
 
 <!-- ---------- title ---------- -->
@@ -233,7 +244,13 @@ const P = {
    ========================================================= */
 const solids = new Map();               // "x,y,z" -> {c:Color, kind, conv?}
 const key = (x,y,z) => x+','+y+','+z;
-const KIND = { SOLID:0, CONVEYOR:1, CRUMBLE:2 };
+const KIND = { SOLID:0, CONVEYOR:1, CRUMBLE:2, BRIDGE:3 };
+/* timed mechanisms: pressure plates raise bridges / douse fires for 7s */
+const bridges = [ {meshes:[], timer:0} ];                 // group 0: pond bridge
+const fires   = [ {x0:16,x1:19,z0:1,z1:2,y0:1,y1:2.6, timer:0, meshes:[]} ];
+const plates  = [ {x:1,y:1,z:8,  type:'bridge', idx:0, mesh:null},
+                  {x:17,y:1,z:4, type:'fire',   idx:0, mesh:null} ];
+const PLATE_HOLD = 7;
 
 function setCell(x,y,z,c,kind=KIND.SOLID,conv=0){ solids.set(key(x,y,z), {c, kind, conv}); }
 function delCell(x,y,z){ solids.delete(key(x,y,z)); }
@@ -275,6 +292,10 @@ function buildWorld(){
   setCell(12,1,9,P.brown);
   // boundary posts along the south street edge (physics also clamps there)
   for(let px=-3;px<=59;px+=3) setCell(px,1,13,P.grass2);
+  // PUZZLE: the plate on the west shore raises a bridge across the pond
+  // for 7 seconds; the item hangs over mid-water, a jump up from the planks
+  for(let bx=2;bx<=8;bx++) setCell(bx,0,8, P.briBlue, KIND.BRIDGE, 0);
+  addItem(5,2.6,8);          // over the bridge — plate, sprint, leap
   addItem(5,1.2,6);          // stepping stone
   addItem(6,1.2,9);          // far stepping stone — two water hops
   addItem(12,3.2,9);         // crate top
@@ -295,6 +316,15 @@ function buildWorld(){
 
   // --- Grand Hall (x14..29): chequered floor + long table + candles ---
   fill(14,0,2, 29,0,11, P.stone, P.darkGrey);
+  fill(20,0,6, 27,0,7, P.red);                       // red carpet to the table
+  // PUZZLE: the hearth — flames guard an item in the alcove; the plate at
+  // (20,3) douses them for 7 seconds
+  carve(16,1,1, 18,3,1);                             // fireplace alcove
+  fill(16,1,0, 18,3,0, P.black);                     // firebox back (seals the wall)
+  fill(15,1,1, 15,3,1, P.darkGrey);                  // chimney breast
+  fill(19,1,1, 19,3,1, P.darkGrey);
+  fill(15,4,1, 19,4,1, P.darkGrey);                  // mantel
+  addItem(17,1.6,1);                                 // in the fireplace
   fill(22,1,4, 27,1,5, P.darkBrown);                 // table legs level
   carve(23,1,4, 26,1,5);                             // hollow under
   setCell(22,1,4,P.darkBrown); setCell(27,1,5,P.darkBrown);
@@ -310,6 +340,7 @@ function buildWorld(){
 
   // --- Kitchen (x30..43): conveyor counter + crumbling shelf ---
   fill(30,0,2, 43,0,11, P.white, P.cyan);
+  fill(38,1,2, 39,2,2, P.darkGrey);                  // the stove (flame decor on top)
   fill(32,1,3, 41,1,3, P.red, null, KIND.CONVEYOR, +1);   // conveyor counter
   fill(31,1,3, 31,2,3, P.darkGrey);                        // conveyor end stop
   fill(42,1,3, 42,2,3, P.darkGrey);
@@ -324,8 +355,9 @@ function buildWorld(){
   // stairs kitchen -> bathroom (x34..35)
   for(let s=0;s<4;s++) fill(34,1,5-s-1+1, 35,1+s,5-s, P.white, P.briYel);   // stair signature: white/bright-yellow check
 
-  // --- Conservatory (x44..57): plants ---
+  // --- Conservatory (x44..57): plants under glass roof ribs ---
   fill(44,0,2, 57,0,11, P.grass, P.grass2);
+  for(const rx of [46,50,54]) fill(rx,5,2, rx,5,11, P.briCyan);   // glass ribs
   for(const [px,pz] of [[47,4],[52,8],[56,4],[46,9]]){
     setCell(px,1,pz,P.red);                       // pot
     setCell(px,2,pz,P.green); setCell(px,3,pz,P.grass2);   // plant
@@ -447,8 +479,20 @@ scene.background = new THREE.Color(0x000000);
 const VIEW_H = 8.4;
 let aspect = innerWidth/innerHeight;
 const camera = new THREE.OrthographicCamera(-VIEW_H*aspect, VIEW_H*aspect, VIEW_H, -VIEW_H, 0.1, 300);
-const CAM_OFF = new THREE.Vector3(20, 15.4, 20);
 const camTarget = new THREE.Vector3();
+/* 360° camera: four diagonal stations; rotation interpolates, then snaps */
+const CAM_DIST = 28.28, CAM_H = 15.4;
+let camYawIdx = 0;                        // 0..3 -> 45° + idx*90°
+let camYaw = Math.PI/4;
+function camYawTarget(){ return Math.PI/4 + camYawIdx*Math.PI/2; }
+function rotateCam(dir){ camYawIdx=(camYawIdx+dir+4)%4; }
+const CAM_OFF = new THREE.Vector3();
+function updateCamOff(dt){
+  let d = camYawTarget()-camYaw;
+  d = ((d+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;   // shortest path
+  camYaw += d*Math.min(1, dt*6);
+  CAM_OFF.set(Math.sin(camYaw)*CAM_DIST, CAM_H, Math.cos(camYaw)*CAM_DIST);
+}
 
 function sizeRenderer(){
   aspect = innerWidth/innerHeight;
@@ -578,6 +622,7 @@ scene.add(buildStaticMesh());
 const boxGeo = new THREE.BoxGeometry(1,1,1);
 boxGeo.translate(0.5,0.5,0.5);
 const convMatE = conveyorMaterial(+1), convMatW = conveyorMaterial(-1);
+const bridgeMat = new THREE.MeshBasicNodeMaterial({ color: srgb(0x7869c4) });
 for(const [k,e] of solids){
   const [x,y,z] = k.split(',').map(Number);
   if(e.kind === KIND.CONVEYOR){
@@ -588,7 +633,21 @@ for(const [k,e] of solids){
     const m = new THREE.Mesh(boxGeo, crumbleMaterial(dmg));
     m.position.set(x,y,z); scene.add(m);
     crumbles.set(k, { mesh:m, dmg, state:1, timer:0, cell:[x,y,z] });
+  } else if(e.kind === KIND.BRIDGE){
+    const m = new THREE.Mesh(boxGeo, bridgeMat);
+    m.position.set(x,y,z); m.visible=false; scene.add(m);
+    bridges[e.conv].meshes.push(m);
   }
+}
+
+/* pressure plates */
+const plateGeo = new THREE.BoxGeometry(0.86,0.14,0.86);
+plateGeo.translate(0,0.07,0);
+const plateMat = new THREE.MeshBasicNodeMaterial({ color: srgb(0xbfce72) });
+for(const pl of plates){
+  pl.mesh = new THREE.Mesh(plateGeo, plateMat);
+  pl.mesh.position.set(pl.x+0.5, pl.y, pl.z+0.5);
+  scene.add(pl.mesh);
 }
 
 /* water planes */
@@ -606,6 +665,37 @@ for(const [fx,fy,fz] of [[24.3,4.25,4.5],[24.7,4.25,4.5],[24.5,4.45,4.5]]){
   const f = new THREE.Mesh(flameGeo, flameMat);
   f.position.set(fx,fy,fz); scene.add(f);
 }
+/* hearth flames (hidden while the fire is doused) + stove flame */
+for(let i=0;i<5;i++){
+  const f = new THREE.Mesh(flameGeo, flameMat);
+  f.position.set(16.4+i*0.55, 1.25+((i%2)*0.18), 1.5);
+  f.scale.setScalar(1.5); scene.add(f);
+  fires[0].meshes.push(f);
+}
+{ const f = new THREE.Mesh(flameGeo, flameMat);
+  f.position.set(38.7,3.1,2.5); scene.add(f); }        // stove burner
+
+/* sense-of-place decor (visual only, not solid) */
+const decorMat = c => new THREE.MeshBasicNodeMaterial({ color: srgb(c) });
+function decorBox(x,y,z,w,h,d,c){
+  const m = new THREE.Mesh(boxGeo, decorMat(c));
+  m.position.set(x-w/2,y,z-d/2); m.scale.set(w,h,d); scene.add(m); return m;
+}
+// library ladder against the book wall
+decorBox(52.2,6,-7.55, 0.08,2.6,0.08, 0x8b5429);
+decorBox(52.8,6,-7.55, 0.08,2.6,0.08, 0x8b5429);
+for(let r=0;r<4;r++) decorBox(52.5,6.3+r*0.6,-7.55, 0.7,0.07,0.07, 0xbfce72);
+// bathroom mirror over the sink
+decorBox(37.5,7.4,-8.42, 1.4,1.1,0.08, 0x67b6bd);
+decorBox(37.5,7.5,-8.38, 1.15,0.85,0.06, 0xffffff);
+// attic cobwebs (reuse the ghost's translucent pulse)
+for(const [cx,cy,cz] of [[31.6,13.2,-17.6],[56.4,13.4,-11.4]]){
+  const web = new THREE.Mesh(new THREE.PlaneGeometry(1.6,1.6), ghostMat);
+  web.position.set(cx,cy,cz); web.rotation.y=Math.PI/4; scene.add(web);
+}
+// hall portrait of the housekeeper, judging you
+decorBox(26.5,2.6,1.98, 1.1,1.5,0.08, 0x574200);
+decorBox(26.5,2.75,2.02, 0.85,1.2,0.06, 0x8b3f96);
 
 /* item meshes */
 const itemGeo = new THREE.OctahedronGeometry(0.34);
@@ -816,13 +906,19 @@ for(const it of items){
   it.shadow.scale.multiplyScalar(0.55);
 }
 
-/* x-ray duck: a faint always-on-top silhouette so the player is never lost
-   behind walls or guardians (art + world reviews, showstopper) */
+/* x-ray hero: drawn ONLY where the hero is occluded (inverted depth test),
+   so there is no ghost-double while walking in the open — the silhouette
+   appears exactly and only behind walls and guardians */
 const xrayMat = new THREE.MeshBasicNodeMaterial({ color: srgb(0xffff00),
-  transparent:true, opacity:0.15, depthTest:false });
+  transparent:true, opacity:0.35, depthWrite:false });
+xrayMat.depthFunc = THREE.GreaterDepth;
 const duckGhost = hero.g.clone(true);
 duckGhost.traverse(o=>{ if(o.isMesh){ o.material = xrayMat; o.renderOrder = 50; } });
 scene.add(duckGhost);
+/* parallel traverse lists so the silhouette copies the live pose each frame */
+const poseSrc=[], poseDst=[];
+hero.g.traverse(o=>poseSrc.push(o));
+duckGhost.traverse(o=>poseDst.push(o));
 
 /* pickup pop — one shared expanding ring */
 const popRing = new THREE.Mesh(
@@ -964,6 +1060,7 @@ const sfx = {
   death(){ if(chip.ctx){ const t=chip.ctx.currentTime;
     chip.tone(2,70,t,0.5,0.8,34); chip.hit(t+0.05,0.3,0.5); } },
   splash(){ if(chip.ctx){ const t=chip.ctx.currentTime; chip.hit(t,0.4,0.7); chip.tone(2,50,t,0.3,0.5,38); } },
+  plate(){ if(chip.ctx){ const t=chip.ctx.currentTime; chip.tone(2,72,t,0.07,0.6); chip.tone(2,79,t+0.08,0.1,0.6); } },
   fanfare(){ if(chip.ctx){ const t=chip.ctx.currentTime;
     [64,68,71,76,71,76,80].forEach((m,i)=>chip.tone(2,m,t+i*0.09,0.1,0.8)); } },
   step(){}
@@ -981,7 +1078,11 @@ addEventListener('keydown', e=>{
   if(KEYMAP[e.code]!==undefined){ e.preventDefault(); keys[KEYMAP[e.code]]=true;
     if(KEYMAP[e.code]==='jump') input.jumpBuf=0.14; }
   if(e.code==='KeyM') toggleMute();
+  if(e.code==='KeyQ') rotateCam(1);
+  if(e.code==='KeyE') rotateCam(-1);
 });
+document.getElementById('rotL').addEventListener('click', ()=>rotateCam(1));
+document.getElementById('rotR').addEventListener('click', ()=>rotateCam(-1));
 addEventListener('keyup', e=>{ if(KEYMAP[e.code]!==undefined) keys[KEYMAP[e.code]]=false; });
 
 const stickBase=document.getElementById('stickBase'), stickNub=document.getElementById('stickNub');
@@ -1033,9 +1134,11 @@ function readInput(){
   input.jx=jx; input.jy=jy;
 }
 
-/* screen dir -> world dir (camera yaw is fixed 45°) */
-const R2=Math.SQRT1_2;
-function worldDir(jx,jy){ return [ jx*R2 - jy*R2, -jx*R2 - jy*R2 ]; }   // [dx,dz]
+/* screen dir -> world dir, rotating with the camera yaw */
+function worldDir(jx,jy){
+  const fx=-Math.sin(camYaw), fz=-Math.cos(camYaw);   // ground-projected screen-up
+  return [ -fz*jx + fx*jy, fx*jx + fz*jy ];           // right = (-fz, fx)
+}
 
 /* =========================================================
    10. PHYSICS + GAME STATE
@@ -1062,6 +1165,7 @@ function cellSolid(x,y,z){
     const c = crumbles.get(key(x,y,z));
     if(c && c.state<=0) return null;
   }
+  if(e.kind===KIND.BRIDGE) return bridges[e.conv].timer>0 ? e : null;
   return e;
 }
 const HW=0.32, HH = HERO==='duck' ? 0.92 : 1.6;
@@ -1106,6 +1210,20 @@ function die(reason, splash=false){
   (splash?sfx.splash:sfx.death)();
   if(navigator.vibrate) navigator.vibrate(80);
 }
+function collectItem(it){
+  it.taken=true; it.mesh.visible=false;
+  if(it.shadow) it.shadow.visible=false;
+  const m=it.mesh.position;
+  popAt(m.x, m.y, m.z);
+  if(it.life){
+    state.lives=Math.min(9,state.lives+1); updateHUD();
+    toast('EXTRA DUCKY!'); sfx.fanfare();
+  } else {
+    state.collected++; updateHUD(); sfx.pickup();
+    if(state.collected===ITEMS_TOTAL)
+      toast('ALL ITEMS FOUND! NOW GET TO BED!');
+  }
+}
 function toast(msg){
   const el=document.getElementById('toast');
   el.textContent=msg; el.style.opacity=1; state.toastT=2.2;
@@ -1146,6 +1264,7 @@ function midnight(){
     '  ·  DEATHS: '+state.deaths;
   $('gameover').classList.remove('hidden');
   $('hud').style.display='none'; $('roomName').style.display='none'; $('jumpBtn').style.display='none';
+  $('rotL').style.display='none'; $('rotR').style.display='none';
 }
 
 function physics(dt){
@@ -1243,8 +1362,42 @@ function physics(dt){
   if(!p.grounded && p.vy>0) p.fallFrom=Math.max(p.fallFrom,ny);
   p.y=ny;
 
+  // airborne bonk: clonking an item's supporting block — from below or from
+  // its side — claims the item; no precision landing on top required
+  if(!p.grounded){
+    const ex=HW+0.30;
+    const ry0=Math.floor(p.y+HH-0.3), ry1=Math.floor(p.y+HH+0.5);
+    for(let cx=Math.floor(p.x-ex);cx<=Math.floor(p.x+ex);cx++)
+    for(let cz=Math.floor(p.z-ex);cz<=Math.floor(p.z+ex);cz++)
+    for(let cy=ry0;cy<=ry1;cy++){
+      if(!cellSolid(cx,cy,cz) || cellSolid(cx,cy+1,cz)) continue;
+      for(const it of items){
+        if(it.taken) continue;
+        const m=it.mesh.position;
+        if(Math.floor(m.x)===cx && Math.floor(m.z)===cz && m.y>cy+0.9 && m.y<cy+2.4)
+          collectItem(it);
+      }
+    }
+  }
+
   // fell off the world
   if(p.y<-8){ die('LOST IN THE VOID!'); return; }
+
+  // pressure plates
+  if(p.grounded) for(const pl of plates){
+    if(Math.floor(p.x)===pl.x && Math.floor(p.z)===pl.z && Math.abs(p.y-pl.y)<0.3){
+      const tgt = pl.type==='bridge' ? bridges[pl.idx] : fires[pl.idx];
+      if(tgt.timer<=0.2) sfx.plate();
+      tgt.timer = PLATE_HOLD;
+    }
+  }
+
+  // hearth fire (deadly while lit)
+  for(const f of fires){
+    if(f.timer>0) continue;
+    if(p.x>f.x0-HW && p.x<f.x1+HW && p.z>f.z0-HW && p.z<f.z1+HW &&
+       p.y<f.y1 && p.y+HH>f.y0){ die('ROASTED BY THE HEARTH!'); return; }
+  }
 
   // deadly water
   for(const w of waters){
@@ -1262,23 +1415,12 @@ function physics(dt){
     }
   }
 
-  // items
+  // items (walk-through pickup)
   for(const it of items){
     if(it.taken) continue;
     const m=it.mesh.position;
-    if(Math.abs(p.x-m.x)<0.75 && Math.abs(p.z-m.z)<0.75 && Math.abs(p.y+0.45-m.y)<1.0){
-      it.taken=true; it.mesh.visible=false;
-      if(it.shadow) it.shadow.visible=false;
-      popAt(m.x, m.y, m.z);
-      if(it.life){
-        state.lives=Math.min(9,state.lives+1); updateHUD();
-        toast('EXTRA DUCKY!'); sfx.fanfare();
-      } else {
-        state.collected++; updateHUD(); sfx.pickup();
-        if(state.collected===ITEMS_TOTAL)
-          toast('ALL ITEMS FOUND! NOW GET TO BED!');
-      }
-    }
+    if(Math.abs(p.x-m.x)<0.75 && Math.abs(p.z-m.z)<0.75 && Math.abs(p.y+0.45-m.y)<1.0)
+      collectItem(it);
   }
 
   // bed goal
@@ -1304,11 +1446,14 @@ function startGame(){
   $('victory').classList.add('hidden');
   $('hud').style.display='flex';
   $('muteBtn').style.display='flex';
+  $('rotL').style.display='flex'; $('rotR').style.display='flex';
   if(('ontouchstart' in window)) $('jumpBtn').style.display='flex';
   state.running=true; state.lives=6; state.collected=0; state.deaths=0;
   state.t0=performance.now(); state.zone=null; state.clock=BEDTIME_SECS;
   for(const it of items){ it.taken=false; it.mesh.visible=true;
     if(it.shadow) it.shadow.visible=true; }
+  for(const b of bridges) b.timer=0;
+  for(const f of fires) f.timer=0;
   state.spawn=[-1,1.1,4]; respawn(); p.won=false;
   updateHUD();
   music.play(SONG_GAME);
@@ -1319,6 +1464,7 @@ function gameOver(){
   $('goStats').textContent='ITEMS: '+state.collected+'/'+ITEMS_TOTAL+'  ·  DEATHS: '+state.deaths;
   $('gameover').classList.remove('hidden');
   $('hud').style.display='none'; $('roomName').style.display='none'; $('jumpBtn').style.display='none';
+  $('rotL').style.display='none'; $('rotR').style.display='none';
 }
 function win(){
   p.won=true; state.running=false;
@@ -1330,6 +1476,7 @@ function win(){
     Math.floor(spare/60)+':'+String(spare%60).padStart(2,'0')+' TO SPARE';
   $('victory').classList.remove('hidden');
   $('hud').style.display='none'; $('roomName').style.display='none'; $('jumpBtn').style.display='none';
+  $('rotL').style.display='none'; $('rotR').style.display='none';
 }
 $('startBtn').addEventListener('click', startGame);
 $('retryBtn').addEventListener('click', startGame);
@@ -1395,6 +1542,25 @@ function animate(){
 
   // toast timer
   if(state.toastT>0){ state.toastT-=dt; if(state.toastT<=0) $('toast').style.opacity=0; }
+
+  // plate mechanisms: bridge planks and doused fires tick down
+  const tickWarn=(was,now)=>{ if(chip.ctx && !chip.muted && now>0 && now<3 &&
+    Math.ceil(was)!==Math.ceil(now)) chip.tone(2,81,chip.ctx.currentTime,0.05,0.35); };
+  for(const b of bridges){
+    const was=b.timer; b.timer=Math.max(0,b.timer-dt);
+    const on=b.timer>0;
+    for(const m of b.meshes) m.visible=on;
+    tickWarn(was,b.timer);
+  }
+  for(const f of fires){
+    const was=f.timer; f.timer=Math.max(0,f.timer-dt);
+    for(const m of f.meshes) m.visible = f.timer<=0;
+    tickWarn(was,f.timer);
+  }
+  for(const pl of plates){
+    const tgt = pl.type==='bridge' ? bridges[pl.idx] : fires[pl.idx];
+    pl.mesh.scale.y = tgt.timer>0 ? 0.4 : 1;
+  }
 
   // crumble updates
   for(const c of crumbles.values()){
@@ -1484,9 +1650,11 @@ function animate(){
     }
   }
   duckGhost.visible = !p.dead && state.running;
-  duckGhost.position.copy(hero.g.position);
-  duckGhost.rotation.copy(hero.g.rotation);
-  duckGhost.scale.copy(hero.g.scale);
+  for(let i=0;i<poseSrc.length;i++){
+    poseDst[i].position.copy(poseSrc[i].position);
+    poseDst[i].rotation.copy(poseSrc[i].rotation);
+    poseDst[i].scale.copy(poseSrc[i].scale);
+  }
 
   // pickup pop ring
   if(popRing.visible){
@@ -1526,7 +1694,8 @@ function animate(){
     it.mesh.position.y=it.y+Math.sin(t*3+it.x)*0.08;
   }
 
-  // camera follow
+  // camera follow + yaw interpolation
+  updateCamOff(dt);
   camTarget.lerp(new THREE.Vector3(p.x,p.y+1.2,p.z), Math.min(1,dt*5));
   camera.position.copy(camTarget).add(CAM_OFF);
   camera.lookAt(camTarget);

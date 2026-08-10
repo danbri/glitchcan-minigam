@@ -33,8 +33,13 @@ Play: `dbdb.html`. No build step.
 Ten zones on a terraced cutaway manor: Duck Pond → Grand Hall / Kitchen /
 Conservatory (ground), First Landing / Bathroom / Library (terrace 1),
 Master Bedroom / Attic (terrace 2), Rooftops (parapet catwalk + chimneys).
-25 items; collect all, then touch the bed. 4 lives; deadly water, guardians,
+27 items; collect all, then reach the bed before the 15-minute bedtime
+clock strikes midnight. 6 lives; deadly water, guardians, a lit hearth,
 long falls. Auto-step climbs 1-block stairs; jump clears ~2.3 blocks.
+Pressure plates run timed mechanisms (pond bridge, hearth douse). Jumping
+and clonking an item's supporting block claims the item (Mario-style).
+Camera rotates through the four diagonals (Q/E or the ⟲⟳ buttons),
+interpolating then snapping; controls are screen-relative and rotate too.
 
 ## Headless testing
 `window.__jsd` hook: `.start()`, `.press(name,down)`, `.teleport(x,y,z)`,
