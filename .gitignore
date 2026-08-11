@@ -35,3 +35,4 @@ npm-debug.log*
 .env.local
 _tmp_review_*.mjs
 magpie/dbdb/tools/scout-out/
+magpie/dbdb/tools/pack-work/

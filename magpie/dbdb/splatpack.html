@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#010204">
+<title>SPLATPACK — the clone stamp for reality</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#010204;
+    touch-action:none; overscroll-behavior:none;
+    -webkit-user-select:none; user-select:none;
+    font-family:"Courier New",ui-monospace,monospace; color:#9fe8b0; }
+  #stage { position:fixed; inset:0; }
+  #stage canvas { width:100%; height:100%; display:block; }
+  #phos { position:fixed; inset:0; pointer-events:none; z-index:6;
+    background:
+      radial-gradient(120% 100% at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,20,8,.55) 100%),
+      repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, rgba(0,0,0,0) 1px 3px); }
+  #head { position:fixed; top:0; left:0; right:0; z-index:8; display:flex;
+    justify-content:space-between; padding:10px 14px 8px; pointer-events:none;
+    font-size:11px; letter-spacing:.3em; color:rgba(159,232,176,.75);
+    text-shadow:0 0 8px rgba(80,255,140,.5); }
+  #bar { position:fixed; bottom:0; left:0; right:0; z-index:9; display:flex;
+    flex-wrap:wrap; gap:6px; padding:10px; align-items:center;
+    background:rgba(1,10,5,.85); border-top:1px solid rgba(159,232,176,.4); }
+  #bar button { background:none; border:1px solid #9fe8b0; color:#9fe8b0;
+    font:12px monospace; padding:8px 10px; border-radius:4px; }
+  #bar button.on { background:rgba(80,255,140,.22); }
+  #cred { position:fixed; bottom:52px; left:10px; right:10px; z-index:8;
+    font-size:8.5px; opacity:.55; pointer-events:none; line-height:1.5; }
+  #err { position:fixed; inset:auto 0 0 0; z-index:50; color:#ff9a9a;
+    background:rgba(30,0,0,.92); padding:8px; font-size:11px; display:none;
+    white-space:pre-wrap; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="phos"></div>
+<div id="head"><span>SPLATPACK · STAMP CATALOG</span><span id="hInfo"></span></div>
+<div id="cred"></div>
+<div id="bar"></div>
+<pre id="err"></pre>
+
+<script type="module">
+const errBox=document.getElementById('err');
+window.addEventListener('error', e=>{ errBox.style.display='block';
+  errBox.textContent += (e.message||e.error)+'\n'; });
+window.addEventListener('unhandledrejection', e=>{ errBox.style.display='block';
+  errBox.textContent += 'async: '+(e.reason&&e.reason.message||e.reason)+'\n'; });
+
+/* PlayCanvas — CDN first, vendored fallback (house pattern) */
+async function loadPC(){
+  const CDN='https://cdn.jsdelivr.net/npm/playcanvas@2.21.3/build/playcanvas.min.mjs';
+  const LOCAL='../../third_party/playcanvas/playcanvas.min.mjs';
+  try{ return await Promise.race([ import(CDN),
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('cdn timeout')),3500)) ]); }
+  catch(e){ console.warn('playcanvas CDN unavailable, using vendored copy'); return import(LOCAL); }
+}
+const pc = await loadPC();
+const Q=new URLSearchParams(location.search);
+
+const canvas=document.createElement('canvas');
+document.getElementById('stage').appendChild(canvas);
+const app=new pc.Application(canvas, { graphicsDeviceOptions:{ antialias:false } });
+app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
+app.setCanvasResolution(pc.RESOLUTION_AUTO);
+addEventListener('resize',()=>app.resizeCanvas());
+app.start();
+
+const camE=new pc.Entity('cam');
+camE.addComponent('camera',{ clearColor:new pc.Color(0.004,0.008,0.016),
+  fov:60, nearClip:0.05, farClip:400 });
+app.root.addChild(camE);
+
+const pack=await (await fetch('splats/pack/pack.json')).json();
+const EL=Object.fromEntries(pack.elements.map(e=>[e.id,e]));
+document.getElementById('cred').textContent=
+  'clips: '+[...new Set(pack.elements.map(e=>e.credit))].join('  ·  ');
+
+/* asset per element, shared by every stamp of it */
+const assets={};
+function assetFor(id){
+  if(assets[id]) return assets[id];
+  const a=new pc.Asset(id,'gsplat',{ url:'splats/pack/'+EL[id].file });
+  app.assets.add(a); app.assets.load(a);
+  assets[id]=a; return a;
+}
+function stamp(id, x, z, yaw=0, s=1){
+  const e=new pc.Entity('stamp-'+id);
+  const a=assetFor(id);
+  const attach=()=>{ e.addComponent('gsplat',{ asset:a }); };
+  if(a.loaded) attach(); else a.on('load',attach);
+  e.setPosition(x,0,z);
+  e.setEulerAngles(0,yaw,0);
+  e.setLocalScale(s,s,s);
+  app.root.addChild(e);
+  return e;
+}
+
+/* ---- LAYOUTS ----
+   catalog (default): every element side by side on the ground line.
+   yard: a derived scene STAMPED from the pack — walls repeated like
+   the Photoshop clone stamp, a pump on the corner, the car parked. */
+const LAYOUTS={
+  yard: [
+    /* an L of tree-shed brick, stamped 4x */
+    { el:'brickwall', at:[-2.7,-1.8], yaw:0 },
+    { el:'brickwall', at:[-0.9,-1.8], yaw:0 },
+    { el:'brickwall', at:[ 0.9,-1.8], yaw:0 },
+    { el:'brickwall', at:[-3.6,-0.9], yaw:90 },
+    { el:'brickwall', at:[-3.6, 0.9], yaw:90 },
+    /* the glasshouse window as the far facade, stamped twice */
+    { el:'windowwall', at:[ 2.2,-1.75], yaw:0, s:0.72 },
+    { el:'windowwall', at:[ 4.2,-1.75], yaw:0, s:0.72 },
+    /* furniture */
+    { el:'pump',    at:[-2.6, 0.6], yaw:35, s:0.8 },
+    { el:'rustcar', at:[ 1.6, 1.4], yaw:-24, s:0.62 },
+  ],
+};
+let bounds=6;
+function build(name){
+  for(const e of app.root.children.slice())
+    if(e.name && e.name.startsWith('stamp-')) e.destroy();
+  if(name==='catalog'){
+    let x=-4;
+    for(const el of pack.elements){
+      stamp(el.id, x+el.dims[0]/2, 0, 0, 1);
+      x+=el.dims[0]+1.2;
+    }
+    bounds=Math.max(6,(x+4)/2);
+    document.getElementById('hInfo').textContent=pack.elements.length+' ELEMENTS';
+  } else {
+    for(const s of LAYOUTS[name]) stamp(s.el, s.at[0], s.at[1], s.yaw||0, s.s||1);
+    bounds=6;
+    document.getElementById('hInfo').textContent='LAY · '+name.toUpperCase();
+  }
+}
+
+/* orbit: drag spins, wheel/pinch zooms, idle drifts */
+let yaw=25, pitch=14, dist=1.0, idle=0;
+let drag=null, pinch0=0;
+addEventListener('pointerdown',e=>{ if(e.target.closest('#bar')) return; drag=[e.clientX,e.clientY]; });
+addEventListener('pointermove',e=>{ if(!drag) return;
+  yaw-=(e.clientX-drag[0])*0.3; pitch+=(e.clientY-drag[1])*0.25;
+  pitch=Math.max(2,Math.min(70,pitch)); drag=[e.clientX,e.clientY]; idle=0; });
+addEventListener('pointerup',()=>{ drag=null; });
+addEventListener('wheel',e=>{ dist*=e.deltaY>0?1.08:0.93; dist=Math.max(0.35,Math.min(2.5,dist)); idle=0; });
+addEventListener('touchmove',e=>{ if(e.touches.length===2){
+  const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,
+                     e.touches[0].clientY-e.touches[1].clientY);
+  if(pinch0) { dist*=pinch0/d; dist=Math.max(0.35,Math.min(2.5,dist)); }
+  pinch0=d; idle=0; drag=null; } },{passive:true});
+addEventListener('touchend',()=>{ pinch0=0; });
+
+let t=0;
+app.on('update',dt=>{
+  t+=dt; idle+=dt;
+  if(idle>4) yaw+=dt*4;
+  const yr=yaw*Math.PI/180, pr=pitch*Math.PI/180;
+  const d=bounds*2.2*dist;
+  camE.setPosition(Math.sin(yr)*Math.cos(pr)*d, 1+Math.sin(pr)*d, Math.cos(yr)*Math.cos(pr)*d);
+  camE.lookAt(0,0.9,0);
+});
+
+/* bar: catalog + layouts + each element solo */
+const bar=document.getElementById('bar');
+const mk=(label,fn)=>{ const b=document.createElement('button');
+  b.type='button'; b.textContent=label;
+  b.addEventListener('click',()=>{ [...bar.children].forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); fn(); });
+  bar.appendChild(b); return b; };
+const bCat=mk('CATALOG',()=>build('catalog'));
+mk('YARD (derived scene)',()=>build('yard'));
+for(const el of pack.elements)
+  mk(el.id.toUpperCase(),()=>{
+    for(const e2 of app.root.children.slice())
+      if(e2.name && e2.name.startsWith('stamp-')) e2.destroy();
+    stamp(el.id,0,0,0,1); bounds=Math.max(3,el.dims[0]);
+    document.getElementById('hInfo').textContent=el.id.toUpperCase()+' · '+el.count+' g · '+el.scene;
+  });
+
+const start=Q.get('lay');
+(start && LAYOUTS[start] ? mk : ()=>{})   // unknown lay -> ignore
+const b0=start&&LAYOUTS[start]? [...bar.children][1] : bCat;
+b0.classList.add('on');
+build(start&&LAYOUTS[start]?start:'catalog');
+
+/* headless hook */
+window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Object.keys(assets).length>0; },
+  build, get els(){ return pack.elements.map(e=>e.id); },
+  setCam(y2,p2,d2){ yaw=y2; pitch=p2; dist=d2; idle=0; } };
+</script>
+</body>
+</html>

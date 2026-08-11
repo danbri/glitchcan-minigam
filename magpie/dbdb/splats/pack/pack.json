@@ -1,0 +1,104 @@
+{
+  "elements": [
+    {
+      "id": "brickwall",
+      "file": "brickwall.compressed.ply",
+      "scene": "tree",
+      "box": {
+        "c": [
+          0.52,
+          0.7,
+          0.52
+        ],
+        "yaw": -117.1,
+        "size": [
+          1.8,
+          1.9,
+          0.6
+        ]
+      },
+      "count": 19730,
+      "dims": [
+        1.8,
+        1.86,
+        0.6
+      ],
+      "credit": "ChristmasTree · keijiro-tk/splat-data · The Unlicense"
+    },
+    {
+      "id": "pump",
+      "file": "pump.compressed.ply",
+      "scene": "carshop",
+      "box": {
+        "c": [
+          -0.42,
+          -0.7,
+          5.44
+        ],
+        "yaw": -143.5,
+        "size": [
+          2.4,
+          3,
+          2.4
+        ]
+      },
+      "count": 11098,
+      "dims": [
+        2.4,
+        2.14,
+        2.4
+      ],
+      "credit": "Nelson Ghost Town Car Shop · Paolo Tosolini · superspl.at/scene/dd8d9c8b · CC BY 4.0"
+    },
+    {
+      "id": "rustcar",
+      "file": "rustcar.compressed.ply",
+      "scene": "carshop",
+      "box": {
+        "c": [
+          5,
+          -0.6,
+          5
+        ],
+        "yaw": -150,
+        "size": [
+          4.6,
+          2.6,
+          4.6
+        ]
+      },
+      "count": 42917,
+      "dims": [
+        4.6,
+        1.91,
+        4.6
+      ],
+      "credit": "Nelson Ghost Town Car Shop · Paolo Tosolini · superspl.at/scene/dd8d9c8b · CC BY 4.0"
+    },
+    {
+      "id": "windowwall",
+      "file": "windowwall.compressed.ply",
+      "scene": "garden",
+      "box": {
+        "c": [
+          -1.68,
+          1.5,
+          7.56
+        ],
+        "yaw": -179.5,
+        "size": [
+          2.8,
+          3.2,
+          0.9
+        ]
+      },
+      "count": 3330,
+      "dims": [
+        2.8,
+        2.55,
+        0.9
+      ],
+      "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0"
+    }
+  ]
+}
