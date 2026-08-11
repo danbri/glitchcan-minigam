@@ -116,6 +116,29 @@ if(parent!==window)                        // framed in dbdb2: clear its EJECT b
   document.getElementById('head').style.paddingLeft='104px';
 
 /* =========================================================
+   HTML-IN-CANVAS probe — the emerging web API family that
+   would retire our hand-drawn plate: 2D ctx.drawElement()
+   and WebGPU queue.copyElementImageToTexture(). When either
+   ships where we run, the live DOM renders INTO the scene.
+   ?hic=1 shows the report on-screen and, if drawElement
+   exists, uses it live for the plate texture.
+   ========================================================= */
+const HIC2D = typeof CanvasRenderingContext2D!=='undefined'
+  && 'drawElement' in CanvasRenderingContext2D.prototype;
+const HICGPU = !!(navigator.gpu && typeof GPUQueue!=='undefined'
+  && 'copyElementImageToTexture' in GPUQueue.prototype);
+let hicLive = HIC2D && Q.has('hic');   // opt-in until testable in the field
+console.log('html-in-canvas: drawElement', HIC2D, '· copyElementImageToTexture', HICGPU);
+if(Q.has('hic')){
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;bottom:12px;left:10px;z-index:9;font:11px monospace;'
+    +'color:'+tint+';background:rgba(0,20,8,.7);padding:6px 9px;border:1px solid '+tint+';border-radius:6px;';
+  d.textContent='HIC drawElement:'+(HIC2D?'YES':'no')+' gpuCopy:'+(HICGPU?'YES':'no')
+    +(hicLive?' · LIVE DOM PLATE':'');
+  document.body.appendChild(d);
+}
+
+/* =========================================================
    THE PORTS — every scan CC-permissive, every scan shown
    upright: the scene root is rotated so the scan's own up
    becomes world +y, and everything else lives in y-up space.
@@ -407,6 +430,19 @@ function panelDraw(){
     g.fillStyle='#c9ffd6'; g.fillText('▸ '+c, 24, y+21);
     choiceRects.push(r); y+=40;
   });
+  if(hicLive){
+    /* the real thing: blit the live DOM panel into the plate texture,
+       and take the button hit-rects from the DOM's own layout */
+    try{
+      g.setTransform(PANEL_W/300,0,0,PANEL_W/300,0,0);
+      g.drawElement(document.getElementById('panel'), 0, 0);
+      const s2=PANEL_W/300;
+      choiceRects=[...document.querySelectorAll('#panel .choice')].map(b2=>({
+        x:b2.offsetLeft*s2, y:b2.offsetTop*s2,
+        w:b2.offsetWidth*s2, h:b2.offsetHeight*s2 }));
+      g.setTransform(1,0,0,1,0,0);
+    }catch(err){ hicLive=false; console.warn('drawElement failed, hand-drawn plate resumes:', err.message); }
+  }
   g.fillStyle='rgba(0,0,0,0.18)';
   for(let sy=0; sy<PANEL_H; sy+=3) g.fillRect(0,sy,PANEL_W,1);
   panelTex.setSource(pcv);
@@ -979,6 +1015,7 @@ window.__dream = {
   get loaded(){ return loaded; },
   get splatOk(){ return splatOk; },
   get mode(){ return mode; },
+  get hic(){ return { drawElement:HIC2D, gpuCopy:HICGPU, live:hicLive }; },
   get scene(){ return SCENE.credit; },
   get flying(){ return !!flight; },
   get found(){ return found(); },
