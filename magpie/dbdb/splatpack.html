@@ -86,12 +86,12 @@ function assetFor(id){
   app.assets.add(a); app.assets.load(a);
   assets[id]=a; return a;
 }
-function stamp(id, x, z, yaw=0, s=1){
+function stamp(id, x, z, yaw=0, s=1, y=0){
   const e=new pc.Entity('stamp-'+id);
   const a=assetFor(id);
   const attach=()=>{ e.addComponent('gsplat',{ asset:a }); };
   if(a.loaded) attach(); else a.on('load',attach);
-  e.setPosition(x,0,z);
+  e.setPosition(x,y,z);
   e.setEulerAngles(0,yaw,0);
   e.setLocalScale(s,s,s);
   app.root.addChild(e);
@@ -104,18 +104,19 @@ function stamp(id, x, z, yaw=0, s=1){
    the Photoshop clone stamp, a pump on the corner, the car parked. */
 const LAYOUTS={
   yard: [
-    /* an L of tree-shed brick, stamped 4x */
-    { el:'brickwall', at:[-2.7,-1.8], yaw:0 },
-    { el:'brickwall', at:[-0.9,-1.8], yaw:0 },
-    { el:'brickwall', at:[ 0.9,-1.8], yaw:0 },
-    { el:'brickwall', at:[-3.6,-0.9], yaw:90 },
-    { el:'brickwall', at:[-3.6, 0.9], yaw:90 },
-    /* the glasshouse window as the far facade, stamped twice */
-    { el:'windowwall', at:[ 2.2,-1.75], yaw:0, s:0.72 },
-    { el:'windowwall', at:[ 4.2,-1.75], yaw:0, s:0.72 },
-    /* furniture */
-    { el:'pump',    at:[-2.6, 0.6], yaw:35, s:0.8 },
-    { el:'rustcar', at:[ 1.6, 1.4], yaw:-24, s:0.62 },
+    /* ground first: forest-moss tiles as FILLER between the stamps */
+    { el:'grass', at:[-1.5,-1.5] }, { el:'grass', at:[ 1.5,-1.5] },
+    { el:'grass', at:[-1.5, 1.5] }, { el:'grass', at:[ 1.5, 1.5] },
+    /* the glasshouse facade at the back */
+    { el:'windowwall', at:[-0.9,-2.7], yaw:0, s:0.8, y:0.08 },
+    { el:'windowwall', at:[ 1.3,-2.7], yaw:0, s:0.8, y:0.08 },
+    /* a low brick boundary on the west side */
+    { el:'brickwall', at:[-2.9,-1.0], yaw:90, y:0.08 },
+    { el:'brickwall', at:[-2.9, 0.7], yaw:90, y:0.08 },
+    /* furniture: the pump by the wall, two trucks parked */
+    { el:'pump',    at:[-2.1,-1.9], yaw:30,  s:0.85, y:0.1 },
+    { el:'rustcar', at:[ 0.5, 0.7], yaw:-20, s:0.5,  y:0.1 },
+    { el:'redtruck',at:[ 2.3,-1.0], yaw:14,  s:0.55, y:0.1 },
   ],
 };
 let bounds=6;
@@ -131,7 +132,7 @@ function build(name){
     bounds=Math.max(6,(x+4)/2);
     document.getElementById('hInfo').textContent=pack.elements.length+' ELEMENTS';
   } else {
-    for(const s of LAYOUTS[name]) stamp(s.el, s.at[0], s.at[1], s.yaw||0, s.s||1);
+    for(const s of LAYOUTS[name]) stamp(s.el, s.at[0], s.at[1], s.yaw||0, s.s||1, s.y||0);
     bounds=6;
     document.getElementById('hInfo').textContent='LAY · '+name.toUpperCase();
   }

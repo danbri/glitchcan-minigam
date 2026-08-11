@@ -98,7 +98,7 @@ function ensureWorkSplat(sceneKey) {
 }
 
 function clip(opts) {
-  const { scene, id, c, yaw, size } = opts;
+  const { scene, id, c, yaw, size, trim = 0, mode = 'solid', band = 0.35 } = opts;
   const meta = SRC[scene];
   const raw = fs.readFileSync(ensureWorkSplat(scene));
   const n = Math.floor(raw.length / 32);
@@ -120,12 +120,23 @@ function clip(opts) {
     keep.push({ o, p: pl });
   }
   if (keep.length < 500) throw new Error('only ' + keep.length + ' gaussians in the box — check c/yaw/size');
+  /* the travelling-floor problem: scans drag their ground along.
+     --trim T   cuts everything below floor+T (solid elements)
+     --mode floor keeps ONLY the floor band (ground filler tiles) */
+  { const ys0 = keep.map(k => k.p[1]).sort((a, b) => a - b);
+    const fl = ys0[Math.floor(ys0.length * 0.03)];
+    let kept2;
+    if (mode === 'floor') kept2 = keep.filter(k => k.p[1] >= fl && k.p[1] <= fl + band);
+    else if (trim > 0)    kept2 = keep.filter(k => k.p[1] >= fl + trim);
+    else kept2 = keep;
+    if (kept2.length >= 500) { keep.length = 0; keep.push(...kept2); }
+    else console.log('! trim/band left', kept2.length, 'gaussians — keeping untrimmed'); }
   /* canonicalize: centre x/z on the kept mass, floor y at the 3rd pct */
   const xs = keep.map(k => k.p[0]).sort((a, b) => a - b);
   const zs = keep.map(k => k.p[2]).sort((a, b) => a - b);
   const ys = keep.map(k => k.p[1]).sort((a, b) => a - b);
   const cx = (xs[0] + xs[xs.length - 1]) / 2, cz = (zs[0] + zs[zs.length - 1]) / 2;
-  const y0 = ys[Math.floor(ys.length * 0.03)];
+  const y0 = ys[Math.floor(ys.length * 0.02)];
   const out = Buffer.alloc(keep.length * 32);
   keep.forEach((k, j) => {
     raw.copy(out, j * 32, k.o, k.o + 32);
@@ -151,8 +162,8 @@ function clip(opts) {
   const pj = path.join(PACK, 'pack.json');
   const pack = fs.existsSync(pj) ? JSON.parse(fs.readFileSync(pj, 'utf8')) : { elements: [] };
   pack.elements = pack.elements.filter(e => e.id !== id);
-  pack.elements.push({ id, file: id + '.compressed.ply', scene,
-    box: { c, yaw, size }, count: keep.length, dims, credit: meta.credit });
+  pack.elements.push({ id, file: id + '.compressed.ply', scene, mode,
+    box: { c, yaw, size, trim }, count: keep.length, dims, credit: meta.credit });
   pack.elements.sort((a, b) => a.id.localeCompare(b.id));
   fs.writeFileSync(pj, JSON.stringify(pack, null, 2));
   console.log('✓', id, '—', keep.length, 'gaussians, dims', dims.join(' × '),
@@ -167,7 +178,10 @@ if (cmd === 'clip') {
   clip({ scene: opt('scene'), id: opt('id'),
     c: opt('c').split(',').map(Number),
     yaw: +opt('yaw', 0),
-    size: opt('size').split(',').map(Number) });
+    size: opt('size').split(',').map(Number),
+    trim: +opt('trim', 0),
+    mode: opt('mode', 'solid'),
+    band: +opt('band', 0.35) });
 } else if (cmd === 'list') {
   const pj = path.join(PACK, 'pack.json');
   const pack = fs.existsSync(pj) ? JSON.parse(fs.readFileSync(pj, 'utf8')) : { elements: [] };
