@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1a1230">
+<title>CANARY WHARF — one small bird, one big skyline</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body {
+    width:100%; height:100%; overflow:hidden; background:#1a1230;
+    touch-action:none; overscroll-behavior:none;
+    -webkit-user-select:none; user-select:none;
+    font-family:"Avenir Next","Helvetica Neue",Helvetica,Arial,sans-serif;
+  }
+  #stage { position:fixed; inset:0; }
+  #stage canvas { width:100%; height:100%; display:block; }
+  /* ---------- HUD ---------- */
+  #hud {
+    position:fixed; top:0; left:0; right:0; z-index:10; display:none;
+    justify-content:space-between; align-items:center;
+    padding:calc(10px + env(safe-area-inset-top)) 20px 8px 20px;
+    color:#ffe9c4; font-weight:600; font-size:clamp(14px,3.6vw,20px);
+    letter-spacing:.14em; pointer-events:none;
+    text-shadow:0 1px 8px rgba(0,0,0,.8);
+  }
+  #hudBeacons { color:#ffd45e; }
+  #hudSeeds { color:#a8e6ff; }
+  #toast {
+    position:fixed; left:0; right:0; top:26%; z-index:11; text-align:center;
+    pointer-events:none; opacity:0; transition:opacity .45s;
+    font-weight:700; font-size:clamp(16px,4.6vw,26px); letter-spacing:.22em;
+    color:#ffd45e; text-shadow:0 2px 18px rgba(255,180,60,.55), 0 1px 2px #000;
+  }
+  #hint {
+    position:fixed; left:0; right:0; bottom:calc(26px + env(safe-area-inset-bottom));
+    z-index:10; text-align:center; pointer-events:none; display:none;
+    font-weight:500; font-size:clamp(12px,3.2vw,16px); letter-spacing:.18em;
+    color:rgba(255,233,196,.75); text-shadow:0 1px 6px rgba(0,0,0,.8);
+  }
+  #muteBtn {
+    position:fixed; top:calc(52px + env(safe-area-inset-top)); right:14px; z-index:12;
+    width:44px; height:44px; border-radius:50%; border:1px solid rgba(255,233,196,.4);
+    background:rgba(20,12,40,.45); color:#ffe9c4; font-size:20px; display:none;
+    align-items:center; justify-content:center; cursor:pointer; padding:0;
+  }
+  /* ---------- overlays ---------- */
+  .overlay {
+    position:fixed; inset:0; z-index:20; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; gap:18px;
+    padding:30px;
+    background:linear-gradient(180deg,#120b26 0%, #2b1740 34%, #7a2f52 62%, #d96f3f 86%, #f4a95c 100%);
+    color:#ffe9c4;
+  }
+  .overlay::after {           /* skyline silhouette */
+    content:""; position:absolute; left:0; right:0; bottom:0; height:26vh;
+    background:
+      linear-gradient(0deg,#0d0820 60%, transparent 60.5%),
+      linear-gradient(0deg,#0d0820 0%, #0d0820 100%);
+    clip-path:polygon(0 100%,0 62%,7% 62%,7% 45%,13% 45%,13% 66%,20% 66%,20% 30%,24% 30%,27% 18%,30% 30%,34% 30%,34% 58%,42% 58%,42% 38%,49% 38%,49% 62%,56% 62%,56% 26%,62% 26%,62% 55%,70% 55%,70% 44%,76% 44%,76% 68%,84% 68%,84% 52%,90% 52%,90% 72%,100% 72%,100% 100%);
+    opacity:.92; pointer-events:none;
+  }
+  .overlay h1 {
+    font-size:clamp(34px,10vw,84px); letter-spacing:.14em; line-height:1.02;
+    font-weight:800; color:#fff3da;
+    text-shadow:0 0 34px rgba(255,190,90,.55), 0 3px 0 rgba(60,20,60,.6);
+  }
+  .overlay h2 { font-size:clamp(13px,3.6vw,20px); letter-spacing:.34em; font-weight:500; color:#ffd9a0; }
+  .overlay p { font-size:clamp(12px,3.4vw,17px); max-width:520px; line-height:1.65; color:rgba(255,233,196,.9); z-index:1; }
+  .overlay .btn {
+    margin-top:6px; padding:15px 44px; border:0; border-radius:40px;
+    background:linear-gradient(180deg,#ffd45e,#e89a3a); color:#3a1c10;
+    font-weight:800; font-size:clamp(15px,4.4vw,22px); letter-spacing:.2em;
+    cursor:pointer; font-family:inherit; z-index:1;
+    box-shadow:0 6px 30px rgba(255,190,80,.45);
+  }
+  .overlay .btn:disabled { opacity:.55; }
+  .bird { font-size:56px; z-index:1; animation:bob 3s ease-in-out infinite; }
+  @keyframes bob { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-12px) rotate(4deg)} }
+  .hidden { display:none !important; }
+  #err { position:fixed; inset:auto 0 0 0; z-index:50; color:#ff9a9a; background:rgba(40,0,0,.9); padding:8px; font-size:12px; display:none; white-space:pre-wrap; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<div id="hud">
+  <span id="hudBeacons">✦ 0/7</span>
+  <span id="hudSeeds">◦ 0</span>
+</div>
+<div id="toast"></div>
+<div id="hint"></div>
+<button type="button" id="muteBtn" aria-label="toggle sound">♪</button>
+
+<div class="overlay" id="title">
+  <div class="bird">🐤</div>
+  <h1>CANARY<br>WHARF</h1>
+  <h2>ONE SMALL BIRD · ONE BIG SKYLINE</h2>
+  <p>Dusk over the docks. Seven rooftop beacons have gone dark, and the
+     lamplighters are on strike. You are a canary. Obviously this is now
+     your problem.<br><br>
+     <b>Hold</b> anywhere to climb · <b>release</b> to glide ·
+     <b>drag</b> left / right to bank. Land softly on a beacon to light it.
+     Mind the peregrine.</p>
+  <button type="button" class="btn" id="startBtn" disabled>WARMING UP…</button>
+</div>
+
+<div class="overlay hidden" id="victory">
+  <div class="bird">🐤✨</div>
+  <h1>THE WHARF<br>IS LIT</h1>
+  <p id="winStats"></p>
+  <p>Seven towers glowing, one very tired canary. The peregrine pretends
+     it wasn't impressed.</p>
+  <button type="button" class="btn" id="againBtn">FLY AGAIN</button>
+</div>
+
+<pre id="err"></pre>
+
+<script type="module">
+async function loadThree(){
+  const CDN   = 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.min.js';
+  const LOCAL = '../../third_party/three/three.webgpu.min.js';
+  try {
+    return await Promise.race([
+      import(CDN),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('cdn timeout')), 3500)),
+    ]);
+  } catch(e) {
+    console.warn('CDN three.js unavailable ('+e.message+'), using vendored copy');
+    return import(LOCAL);
+  }
+}
+const THREE = await loadThree();
+const { Fn, attribute, uv, uniform, time, vec2, vec3, vec4, float,
+        sin, cos, floor, fract, mix, step, clamp, abs, dot, mod, pow, max, min,
+        positionWorld, normalWorld, positionView, pass, smoothstep, sqrt,
+        length, normalize } = THREE.TSL;
+
+const errBox = document.getElementById('err');
+window.addEventListener('error', e => {
+  errBox.style.display='block';
+  errBox.textContent += (e.message||e.error)+'\n';
+});
+const Q = new URLSearchParams(location.search);
+
+/* =========================================================
+   1. SCENE / RENDERER — perspective, golden dusk
+   ========================================================= */
+const renderer = new THREE.WebGPURenderer({ antialias:true });
+renderer.setClearColor(0x2b1740, 1);
+document.getElementById('stage').appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(62, innerWidth/innerHeight, 0.5, 900);
+scene.fog = null;                       // fog handled in materials (dusk blend)
+
+const SUN = new THREE.Vector3(-0.55, 0.18, -0.62).normalize();   // low in the west
+const DUSK_HI = new THREE.Color(0x2b1740);    // upper sky
+const DUSK_LO = new THREE.Color(0xf4a95c);    // horizon glow
+
+function sizeRenderer(){
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(innerWidth, innerHeight);
+  resU.value.set(innerWidth, innerHeight);
+}
+const resU = uniform(new THREE.Vector2(800,600));
+
+/* dusk-fog helper: blend a color node toward the horizon by view distance */
+const camPosU = uniform(new THREE.Vector3());
+function duskFade(colNode, start=120, end=420, target=null){
+  const d = length(positionWorld.sub(camPosU));
+  const f = smoothstep(start, end, d);
+  const skyC = target || vec3(DUSK_HI.r*0.6+DUSK_LO.r*0.4, DUSK_HI.g*0.6+DUSK_LO.g*0.4, DUSK_HI.b*0.6+DUSK_LO.b*0.4);
+  return mix(colNode, skyC, f);
+}
+
+/* sky dome — the dusk itself: gradient, a low sun, first stars */
+{
+  const skyMat = new THREE.MeshBasicNodeMaterial({ side:THREE.BackSide, depthWrite:false });
+  skyMat.colorNode = Fn(()=>{
+    const dir = normalize(positionWorld.sub(camPosU));
+    const h = clamp(dir.y.mul(1.4).add(0.18), 0.0, 1.0);
+    let sky = mix(vec3(0.98,0.62,0.30), vec3(0.13,0.08,0.26), pow(h, 0.7));
+    sky = mix(sky, vec3(0.42,0.16,0.30), smoothstep(0.35,0.0,h).mul(0.5));
+    const sunD = dot(dir, vec3(-0.55,0.10,-0.62));
+    sky = sky.add(vec3(1.0,0.72,0.35).mul(pow(clamp(sunD,0.0,1.0), 30.0)).mul(1.2));
+    sky = sky.add(vec3(1.0,0.5,0.2).mul(pow(clamp(sunD,0.0,1.0), 6.0)).mul(0.35));
+    const cell = floor(dir.mul(160.0));
+    const hsh = fract(sin(cell.x.mul(12.9898).add(cell.y.mul(78.233)).add(cell.z.mul(37.719))).mul(43758.55));
+    const tw = sin(time.mul(1.7).add(hsh.mul(50.0))).mul(0.5).add(0.5);
+    sky = sky.add(vec3(step(0.994, hsh).mul(tw).mul(smoothstep(0.15,0.6,h)).mul(0.8)));
+    return sky;
+  })();
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(800, 24, 16), skyMat);
+  dome.renderOrder = -10;
+  scene.add(dome);
+}
+
+/* =========================================================
+   2. THE SKYLINE — parametric towers, one merged glass mesh
+   ========================================================= */
+/* Stylised Canary Wharf: One Canada Square centre (pyramid roof),
+   the two big banks flanking, Newfoundland's red lattice, the thin
+   Landmark Pinnacle, cylindrical One Park Drive, South Quay pair. */
+const TOWERS = [
+  { id:0, x:0,   z:0,   w:22, d:22, h:64, style:'ocs'  },   // One Canada Square
+  { id:1, x:-34, z:8,   w:20, d:20, h:46, style:'bank' },   // 8 Canada Sq
+  { id:2, x:34,  z:8,   w:20, d:20, h:46, style:'bank' },   // 25 Canada Sq
+  { id:3, x:-58, z:-24, w:12, d:16, h:52, style:'red'  },   // Newfoundland
+  { id:4, x:-20, z:-56, w:9,  d:9,  h:58, style:'thin' },   // Landmark Pinnacle
+  { id:5, x:52,  z:-44, w:15, d:15, h:40, style:'cyl'  },   // One Park Drive
+  { id:6, x:14,  z:-76, w:13, d:13, h:32, style:'bank' },   // South Quay
+  { id:7, x:36,  z:-80, w:11, d:11, h:36, style:'thin' },
+  { id:8, x:-52, z:28,  w:14, d:10, h:18, style:'low'  },
+  { id:9, x:56,  z:34,  w:12, d:12, h:16, style:'low'  },
+  { id:10,x:-6,  z:44,  w:16, d:10, h:14, style:'low'  },
+  { id:11,x:78,  z:-8,  w:10, d:10, h:22, style:'low'  },
+  { id:12,x:-80, z:-2,  w:10, d:12, h:20, style:'low'  },
+];
+const BEACON_TOWERS = [0,1,2,3,4,5,7];        // seven beacons
+
+const TINTS = {                                // glass base tints (sRGB-ish)
+  ocs:  [0.72,0.78,0.88], bank:[0.55,0.68,0.80], red:[0.80,0.52,0.46],
+  thin: [0.62,0.70,0.85], cyl:[0.70,0.66,0.60], low:[0.45,0.48,0.58],
+};
+
+function buildTowers(){
+  const pos=[],col=[],nor=[],idx=[],seed=[];
+  function quad(vs, n, tint, sd){
+    const b=pos.length/3;
+    for(const v of vs){ pos.push(...v); col.push(...tint); nor.push(...n); seed.push(sd); }
+    idx.push(b,b+1,b+2, b,b+2,b+3);
+  }
+  for(const t of TOWERS){
+    const {x,z,w,d,h}=t, hw=w/2, hd=d/2, tint=TINTS[t.style], sd=t.id*7.13+1;
+    if(t.style==='cyl'){
+      const R=hw, N=14;
+      for(let i=0;i<N;i++){
+        const a0=i/N*Math.PI*2, a1=(i+1)/N*Math.PI*2;
+        const nx=Math.cos((a0+a1)/2), nz=Math.sin((a0+a1)/2);
+        quad([[x+Math.cos(a0)*R,0,z+Math.sin(a0)*R],[x+Math.cos(a0)*R,h,z+Math.sin(a0)*R],
+              [x+Math.cos(a1)*R,h,z+Math.sin(a1)*R],[x+Math.cos(a1)*R,0,z+Math.sin(a1)*R]],
+             [nx,0,nz], tint, sd);
+      }
+      // roof disc (fan)
+      const b=pos.length/3;
+      pos.push(x,h,z); col.push(tint[0]*0.25,tint[1]*0.25,tint[2]*0.25); nor.push(0,1,0); seed.push(sd);
+      for(let i=0;i<=N;i++){
+        const a=i/N*Math.PI*2;
+        pos.push(x+Math.cos(a)*R, h, z+Math.sin(a)*R);
+        col.push(tint[0]*0.25,tint[1]*0.25,tint[2]*0.25); nor.push(0,1,0); seed.push(sd);
+        if(i>0) idx.push(b, b+i, b+i+1);
+      }
+      continue;
+    }
+    quad([[x-hw,0,z+hd],[x-hw,h,z+hd],[x+hw,h,z+hd],[x+hw,0,z+hd]], [0,0,1],  tint, sd);
+    quad([[x+hw,0,z-hd],[x+hw,h,z-hd],[x-hw,h,z-hd],[x-hw,0,z-hd]], [0,0,-1], tint, sd);
+    quad([[x+hw,0,z+hd],[x+hw,h,z+hd],[x+hw,h,z-hd],[x+hw,0,z-hd]], [1,0,0],  tint, sd);
+    quad([[x-hw,0,z-hd],[x-hw,h,z-hd],[x-hw,h,z+hd],[x-hw,0,z+hd]], [-1,0,0], tint, sd);
+    const rc=[tint[0]*0.34,tint[1]*0.33,tint[2]*0.38];
+    quad([[x-hw,h,z-hd],[x-hw,h,z+hd],[x+hw,h,z+hd],[x+hw,h,z-hd]], [0,1,0], rc, sd);
+    if(t.style==='ocs'){                        // the pyramid
+      const ph=10, a=[x-hw*0.92,h,z-hd*0.92], b2=[x+hw*0.92,h,z-hd*0.92],
+            c2=[x+hw*0.92,h,z+hd*0.92], e=[x-hw*0.92,h,z+hd*0.92], apex=[x,h+ph,z];
+      const pyr=[0.55,0.60,0.72];
+      for(const [p1,p2,nn] of [[a,b2,[0,0.6,-0.8]],[b2,c2,[0.8,0.6,0]],[c2,e,[0,0.6,0.8]],[e,a,[-0.8,0.6,0]]]){
+        const base=pos.length/3;
+        for(const v of [p1,p2,apex]){ pos.push(...v); col.push(...pyr); nor.push(...nn); seed.push(sd); }
+        idx.push(base,base+1,base+2);
+      }
+    }
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('color',    new THREE.Float32BufferAttribute(col,3));
+  g.setAttribute('normal',   new THREE.Float32BufferAttribute(nor,3));
+  g.setAttribute('seed',     new THREE.Float32BufferAttribute(seed,1));
+  return g;
+}
+
+/* curtain-wall glass: sun-warmed gradient + window grid + random lit windows */
+const towerMat = new THREE.MeshBasicNodeMaterial();
+{
+  const tint = attribute('color','vec3');
+  const sd = attribute('seed','float');
+  const N = normalWorld;
+  const wp = positionWorld;
+  towerMat.colorNode = Fn(()=>{
+    const sunAmt = clamp(dot(N, vec3(SUN.x,SUN.y,SUN.z)), 0.0, 1.0);
+    const skyRef = mix(vec3(0.10,0.09,0.22), vec3(0.95,0.55,0.28), pow(sunAmt,1.6));
+    const heightGlow = smoothstep(0.0, 60.0, wp.y).mul(0.25);
+    let glass = tint.mul(0.14).add(skyRef.mul(0.40)).add(vec3(heightGlow.mul(0.7), heightGlow.mul(0.42), heightGlow.mul(0.24)));
+    // window grid in world space (skip on roofs)
+    const isWall = step(abs(N.y), 0.5);
+    const gx = wp.x.mul(0.9).add(wp.z.mul(0.9));
+    const gy = wp.y.mul(1.4);
+    const fx = fract(gx), fy = fract(gy);
+    const frame = step(0.12,fx).mul(step(fx,0.92)).mul(step(0.15,fy)).mul(step(fy,0.88));
+    const cellId = floor(gx).mul(113.1).add(floor(gy).mul(7.7)).add(sd.mul(31.7));
+    const h1 = fract(sin(cellId).mul(43758.545));
+    const litAmt = step(h1, 0.34);
+    const warm = mix(vec3(1.0,0.83,0.55), vec3(0.65,0.85,1.0), step(0.86,fract(h1.mul(7.0))));
+    const flick = sin(time.mul(0.7).add(h1.mul(60.0))).mul(0.08).add(0.92);
+    const winGlow = warm.mul(litAmt).mul(frame).mul(isWall).mul(flick).mul(0.95);
+    const winDark = frame.mul(isWall).mul(0.5);
+    glass = glass.mul(float(1.0).sub(winDark.mul(0.55))).add(winGlow);
+    return duskFade(glass);
+  })();
+}
+scene.add(new THREE.Mesh(buildTowers(), towerMat));
+
+/* quays — dark stone platforms beneath the tower clusters */
+const quayMat = new THREE.MeshBasicNodeMaterial();
+quayMat.colorNode = duskFade(vec3(0.10,0.09,0.13).add(
+  fract(sin(floor(positionWorld.x.mul(0.5)).add(floor(positionWorld.z.mul(0.5)).mul(7.0))).mul(437.5)).mul(0.02)));
+const quayGeo = new THREE.BoxGeometry(1,1,1);
+for(const [qx,qz,qw,qd] of [[0,8,110,70],[-2,-58,80,60],[46,-56,60,60],[64,10,50,40],[-70,10,40,50]]){
+  const m=new THREE.Mesh(quayGeo, quayMat);
+  m.scale.set(qw,3,qd); m.position.set(qx,-1.35,qz);   // top rides 0.15 proud of the water
+  scene.add(m);
+}
+
+/* dock water — dusk mirror with ripples and streak reflections */
+const waterMat = new THREE.MeshBasicNodeMaterial();
+{
+  const wp = positionWorld;
+  waterMat.colorNode = Fn(()=>{
+    const rip = sin(wp.x.mul(1.3).add(time.mul(1.1)))
+        .add(sin(wp.z.mul(1.9).sub(time.mul(0.8))))
+        .add(sin(wp.x.add(wp.z).mul(0.8).add(time.mul(0.5))));
+    const base = mix(vec3(0.07,0.06,0.16), vec3(0.85,0.45,0.22),
+                     smoothstep(-2.5, 3.0, rip).mul(0.13).add(smoothstep(60.0,240.0,length(wp.sub(camPosU))).mul(0.4)));
+    // vertical light streaks under towers (cheap bake per famous tower)
+    let streak = float(0);
+    const spts = [[0,0],[-34,8],[34,8],[-20,-56],[52,-44]];
+    for(const [sx,sz] of spts){
+      const dxx = wp.x.sub(sx), dzz = wp.z.sub(sz);
+      streak = streak.add( smoothstep(9.0,0.5,abs(dxx)).mul(smoothstep(40.0,4.0,abs(dzz))).mul(0.20) );
+    }
+    const warm = vec3(1.0,0.72,0.4).mul(streak).mul(sin(wp.z.mul(2.0).add(time.mul(1.4))).mul(0.25).add(0.75));
+    return duskFade(base.add(warm), 130, 420, vec3(0.30,0.14,0.24));   // plum horizon
+  })();
+}
+{
+  const wgeo = new THREE.PlaneGeometry(1400,1400);
+  wgeo.rotateX(-Math.PI/2);
+  const wmesh = new THREE.Mesh(wgeo, waterMat);
+  wmesh.position.y = 0;
+  scene.add(wmesh);
+}
+
+/* =========================================================
+   3. LIFE — beacons, seeds, DLR, murmuration, peregrine, clouds
+   ========================================================= */
+const flashMat = new THREE.MeshBasicNodeMaterial();
+flashMat.colorNode = mix(vec3(0.5,0.05,0.05), vec3(1.0,0.15,0.1),
+                         step(0.5, fract(time.mul(0.75))));
+const boxGeo = new THREE.BoxGeometry(1,1,1);
+{ // aircraft light on the pyramid tip
+  const m = new THREE.Mesh(boxGeo, flashMat);
+  m.scale.setScalar(1.2); m.position.set(0,75.4,0); scene.add(m);
+}
+
+const beacons = [];       // {tower, pos, lit, pad, crown}
+const padMat = new THREE.MeshBasicNodeMaterial();
+padMat.colorNode = mix(vec3(0.15,0.13,0.10), vec3(1.0,0.83,0.37),
+                       sin(time.mul(2.4)).mul(0.5).add(0.5).mul(0.35).add(0.1));
+const padLitMat = new THREE.MeshBasicNodeMaterial();
+padLitMat.colorNode = vec3(1.0,0.85,0.4).mul(sin(time.mul(3.0)).mul(0.15).add(1.0));
+const crownMat = new THREE.MeshBasicNodeMaterial({ transparent:true, opacity:0.85 });
+crownMat.colorNode = vec3(1.0,0.8,0.35).mul(sin(time.mul(1.8)).mul(0.2).add(0.9));
+for(const ti of BEACON_TOWERS){
+  const t = TOWERS[ti];
+  const y = t.h + (t.style==='ocs' ? 10.6 : 0);
+  const pos = new THREE.Vector3(t.x, y+0.6, t.z);
+  const pad = new THREE.Mesh(new THREE.CylinderGeometry(2.4,2.6,1.0,10), padMat);
+  pad.position.set(t.x, y+0.5, t.z); scene.add(pad);
+  const crown = new THREE.Group();
+  for(let i=0;i<6;i++){
+    const fm = new THREE.Mesh(boxGeo, crownMat);
+    const a = i/6*Math.PI*2;
+    fm.scale.set(0.7,2.2,0.7);
+    fm.position.set(t.x+Math.cos(a)*3.4, y+1.6, t.z+Math.sin(a)*3.4);
+    crown.add(fm);
+  }
+  crown.visible=false; scene.add(crown);
+  beacons.push({ tower:t, pos, lit:false, pad, crown });
+}
+
+/* seeds — glowing motes strung in arcs between the towers */
+const seeds = [];
+const seedMat = new THREE.MeshBasicNodeMaterial();
+seedMat.colorNode = vec3(0.65,0.9,1.0).mul(sin(time.mul(3.0).add(positionWorld.x)).mul(0.25).add(0.95));
+const seedGeo = new THREE.OctahedronGeometry(0.55);
+function arc(a, b, peak, n){
+  for(let i=1;i<n;i++){
+    const t=i/n;
+    const x=a.x+(b.x-a.x)*t, z=a.z+(b.z-a.z)*t;
+    const y=a.y+(b.y-a.y)*t + Math.sin(t*Math.PI)*peak;
+    const m=new THREE.Mesh(seedGeo, seedMat);
+    m.position.set(x,y,z); scene.add(m);
+    seeds.push({m, taken:false});
+  }
+}
+{
+  const V=THREE.Vector3;
+  arc(new V(0,68,0),   new V(-34,50,8),  10, 8);
+  arc(new V(0,68,0),   new V(34,50,8),   10, 8);
+  arc(new V(-34,50,8), new V(-58,56,-24),8, 7);
+  arc(new V(34,50,8),  new V(52,44,-44), 10, 8);
+  arc(new V(-20,62,-56),new V(14,36,-76),12, 8);
+  arc(new V(-58,56,-24),new V(-20,62,-56),8, 7);
+  arc(new V(36,40,-80), new V(52,44,-44), 8, 6);
+  arc(new V(-6,18,44),  new V(0,40,20),  8, 6);
+  arc(new V(56,20,34),  new V(34,50,8),  8, 7);
+  arc(new V(-52,22,28), new V(-34,50,8), 8, 7);
+}
+
+/* DLR — a lit train gliding its elevated loop forever */
+const dlrCurve = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(-90,7,40), new THREE.Vector3(-40,7,26), new THREE.Vector3(0,7,22),
+  new THREE.Vector3(44,7,26),  new THREE.Vector3(80,7,0),   new THREE.Vector3(60,7,-60),
+  new THREE.Vector3(10,7,-50), new THREE.Vector3(-50,7,-40),new THREE.Vector3(-86,7,-6),
+], true, 'catmullrom', 0.6);
+{ // track: a ribbon of short segments
+  const trackMat = new THREE.MeshBasicNodeMaterial();
+  trackMat.colorNode = duskFade(vec3(0.13,0.12,0.18));
+  const pts = dlrCurve.getPoints(140);
+  for(let i=0;i<pts.length-1;i+=2){
+    const a=pts[i], b=pts[i+1];
+    const m=new THREE.Mesh(boxGeo, trackMat);
+    m.position.copy(a).add(b).multiplyScalar(0.5); m.position.y=6.4;
+    m.scale.set(2.2, 0.5, a.distanceTo(b)+0.4);
+    m.lookAt(b.x, 6.4, b.z);
+    scene.add(m);
+    if(i%14===0){ const p=new THREE.Mesh(boxGeo, trackMat);
+      p.scale.set(0.8,6.4,0.8); p.position.set(a.x,3.2,a.z); scene.add(p); }
+  }
+}
+const trainMat = new THREE.MeshBasicNodeMaterial();
+trainMat.colorNode = vec3(0.45,0.75,0.85).add(vec3(0.5,0.35,0.1).mul(sin(time.mul(9.0)).mul(0.5).add(0.5)).mul(0.2));
+const trainCars = [];
+for(let i=0;i<3;i++){
+  const c=new THREE.Mesh(boxGeo, trainMat);
+  c.scale.set(2.0,2.2,5.2); scene.add(c); trainCars.push(c);
+}
+
+/* murmuration — a cloud of starlings on interleaved orbits */
+const flock = [];
+{
+  const fm = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color(0x0d0a14) });
+  const fg = new THREE.BoxGeometry(0.4,0.1,0.7);
+  const inst = new THREE.InstancedMesh(fg, fm, 170);
+  scene.add(inst);
+  const M = new THREE.Matrix4();
+  flock.push({ inst, M });
+}
+function updateFlock(t){
+  const {inst, M} = flock[0];
+  const cx = Math.sin(t*0.05)*30-10, cz = Math.cos(t*0.04)*24-20;
+  for(let i=0;i<170;i++){
+    const a = t*(0.5+((i*37)%13)/26) + i*2.39996;
+    const r = 12+((i*53)%15) + Math.sin(t*0.6+i)*3;
+    const x = cx + Math.cos(a)*r;
+    const z = cz + Math.sin(a*0.9)*r*0.6;
+    const y = 42 + Math.sin(t*0.7+i*0.7)*9 + Math.sin(a*2)*4;
+    M.makeRotationY(-a);
+    M.setPosition(x,y,z);
+    inst.setMatrixAt(i, M);
+  }
+  inst.instanceMatrix.needsUpdate = true;
+}
+
+/* the peregrine — dark, fast, territorial */
+const falcon = { g:new THREE.Group(), wl:null, wr:null, angry:0 };
+{
+  const fm = new THREE.MeshBasicNodeMaterial({ color:new THREE.Color(0x18121e) });
+  const body = new THREE.Mesh(boxGeo, fm); body.scale.set(0.9,0.7,2.4); falcon.g.add(body);
+  const beak = new THREE.Mesh(boxGeo, new THREE.MeshBasicNodeMaterial({color:new THREE.Color(0x8a6a30)}));
+  beak.scale.set(0.3,0.25,0.5); beak.position.set(0,0.1,1.4); falcon.g.add(beak);
+  falcon.wl = new THREE.Mesh(boxGeo, fm); falcon.wl.scale.set(3.2,0.14,1.2); falcon.wl.position.x=1.8; falcon.g.add(falcon.wl);
+  falcon.wr = new THREE.Mesh(boxGeo, fm); falcon.wr.scale.set(3.2,0.14,1.2); falcon.wr.position.x=-1.8; falcon.g.add(falcon.wr);
+  scene.add(falcon.g);
+}
+
+/* clouds — big soft billboards drifting */
+const clouds=[];
+{
+  const cm = new THREE.MeshBasicNodeMaterial({ transparent:true, depthWrite:false,
+    blending:THREE.AdditiveBlending });
+  cm.colorNode = vec3(0.30,0.16,0.10);
+  cm.opacityNode = smoothstep(1.0,0.15, length(uv().sub(vec2(0.5,0.5)).mul(vec2(2.0,2.6)))).mul(0.5);
+  const cg = new THREE.PlaneGeometry(90,34);
+  for(let i=0;i<7;i++){
+    const c=new THREE.Mesh(cg, cm);
+    c.position.set((i*61)%260-130, 78+(i*17)%30, (i*97)%240-160);
+    scene.add(c); clouds.push(c);
+  }
+}
+
+/* =========================================================
+   4. THE CANARY
+   ========================================================= */
+const canary = { g:new THREE.Group(), wl:null, wr:null, tail:null };
+{
+  const yell = new THREE.MeshBasicNodeMaterial({ color:new THREE.Color(0xffd94a) });
+  const deep = new THREE.MeshBasicNodeMaterial({ color:new THREE.Color(0xe8a92c) });
+  const body = new THREE.Mesh(boxGeo, yell); body.scale.set(0.9,0.8,1.5); canary.g.add(body);
+  const head = new THREE.Mesh(boxGeo, yell); head.scale.set(0.62,0.6,0.6); head.position.set(0,0.5,0.75); canary.g.add(head);
+  const beak = new THREE.Mesh(boxGeo, new THREE.MeshBasicNodeMaterial({color:new THREE.Color(0xff8830)}));
+  beak.scale.set(0.2,0.16,0.4); beak.position.set(0,0.5,1.15); canary.g.add(beak);
+  for(const s of [1,-1]){
+    const eye = new THREE.Mesh(boxGeo, new THREE.MeshBasicNodeMaterial({color:new THREE.Color(0x181008)}));
+    eye.scale.setScalar(0.11); eye.position.set(0.2*s,0.62,0.98); canary.g.add(eye);
+  }
+  canary.wl = new THREE.Mesh(boxGeo, deep); canary.wl.scale.set(1.7,0.12,0.9); canary.wl.position.set(1.0,0.15,0); canary.g.add(canary.wl);
+  canary.wr = new THREE.Mesh(boxGeo, deep); canary.wr.scale.set(1.7,0.12,0.9); canary.wr.position.set(-1.0,0.15,0); canary.g.add(canary.wr);
+  canary.tail = new THREE.Mesh(boxGeo, deep); canary.tail.scale.set(0.5,0.1,0.9); canary.tail.position.set(0,0.1,-1.0); canary.g.add(canary.tail);
+  canary.g.scale.setScalar(0.68);
+  scene.add(canary.g);
+}
+
+/* =========================================================
+   5. FLIGHT MODEL + STATE
+   ========================================================= */
+const P = {
+  pos: new THREE.Vector3(0, 50, 70),    // airborne approach, skyline dead ahead
+  yaw: Math.PI, pitch: 0, roll: 0,
+  speed: 0, vy: 0, grounded: true,
+  stun: 0,
+};
+const state = { running:false, lit:0, seeds:0, t0:0, toastT:0, bonks:0 };
+const input = { hold:false, steer:0 };
+
+function fwd(){ return new THREE.Vector3(Math.sin(P.yaw), 0, Math.cos(P.yaw)); }
+
+function towerHit(x,y,z, pad=0.6){
+  for(const t of TOWERS){
+    const hw=t.w/2+pad, hd=t.d/2+pad;
+    if(x>t.x-hw && x<t.x+hw && z>t.z-hd && z<t.z+hd && y < t.h + (t.style==='ocs'?10:0)) return t;
+  }
+  return null;
+}
+
+function lightBeacon(b){
+  P.pos.set(b.pos.x, b.pos.y+1.2, b.pos.z);
+  P.vy=3; P.speed=8;
+  b.lit=true; state.lit++;
+  b.pad.material = padLitMat; b.crown.visible=true;
+  sfx.beacon(); updateHUD();
+  toast(state.lit<7 ? 'BEACON LIT — '+(7-state.lit)+' TO GO' : 'THE LAST BEACON!');
+}
+function flight(dt){
+  if(P.stun>0) P.stun-=dt;
+  const steering = input.steer;
+  P.yaw -= steering*dt*1.9;
+  P.roll += ((-steering*0.9)-P.roll)*Math.min(1,dt*6);
+
+  if(input.hold && P.stun<=0){
+    P.vy += dt*26;
+    P.speed += dt*6;
+  } else {
+    P.vy -= dt*10;                       // soft gravity — a soar, not a plummet
+    P.speed += dt*3*(P.vy<0?1:0.2);      // shallow dives convert to speed
+  }
+  P.vy = Math.max(-9.5, Math.min(11, P.vy));
+  P.speed = Math.max(7, Math.min(26, P.speed*Math.pow(0.995, dt*60)));
+  P.pitch += ((P.vy/26*0.8)-P.pitch)*Math.min(1,dt*5);
+
+  const dir = fwd();
+  const nx = P.pos.x + dir.x*P.speed*dt;
+  const nz = P.pos.z + dir.z*P.speed*dt;
+  let ny = P.pos.y + P.vy*dt;
+
+  // beacon perch first — a generous touch-and-go, checked before any bonk
+  for(const b of beacons){
+    const dx=nx-b.pos.x, dz=nz-b.pos.z, dy=ny-b.pos.y;
+    if(!b.lit && dx*dx+dz*dz<36 && dy>-2.5 && dy<6 && P.vy<=3){
+      lightBeacon(b);
+      if(state.lit===7){ win(); }
+      return;
+    }
+  }
+
+  // tower collision: bounce off, lose speed, shed a feather of dignity
+  const hitT = towerHit(nx,ny,nz);
+  if(hitT && !hitT._graced){
+    // clipping the very top of a beacon tower counts as a scrappy landing
+    const hb = beacons.find(b=>b.tower===hitT && !b.lit);
+    if(hb && ny > hitT.h - 3.5){
+      lightBeacon(hb);
+      if(state.lit===7){ win(); }
+      return;
+    }
+  }
+  if(hitT){
+    const away = new THREE.Vector3(P.pos.x-hitT.x, 0, P.pos.z-hitT.z).normalize();
+    P.pos.x += away.x*1.4; P.pos.z += away.z*1.4;
+    P.yaw = Math.atan2(away.x, away.z);
+    P.speed = 8; P.vy = Math.min(P.vy, 2); P.stun=0.4;
+    state.bonks++; sfx.bonk(); toast('OOF — MIND THE GLASS');
+  } else {
+    P.pos.x=nx; P.pos.z=nz;
+  }
+
+  // soft world bounds
+  const R = Math.hypot(P.pos.x, P.pos.z+16);
+  if(R>230){ P.pos.x*=0.995; P.pos.z*=0.995; toastOnce('THE ESTUARY IS NOT YOURS TONIGHT'); }
+  if(ny>110){ ny=110; P.vy=Math.min(P.vy,0); }
+
+  // water
+  if(ny < 1.2){
+    sfx.splash(); state.bonks++;
+    const b = beacons[0];
+    P.pos.set(b.pos.x, b.pos.y+1.5, b.pos.z);
+    P.vy=0; P.speed=8; toast('SOGGY. BACK TO THE TOP.');
+    return;
+  }
+  P.pos.y = ny;
+
+
+  // seeds
+  for(const s of seeds){
+    if(s.taken) continue;
+    if(P.pos.distanceToSquared(s.m.position)<7){
+      s.taken=true; s.m.visible=false;
+      state.seeds++; sfx.seed(); updateHUD();
+    }
+  }
+
+  // the peregrine disapproves of visitors near its pyramid
+  const fd = P.pos.distanceTo(falcon.g.position);
+  if(fd<3 && P.stun<=0){
+    P.stun=0.6; P.speed=8; P.vy=-6;
+    state.bonks++; sfx.bonk(); toast('PEREGRINE! FLY!');
+  }
+}
+
+/* =========================================================
+   6. INPUT — one thumb
+   ========================================================= */
+let touchX0=null, activeTouch=null;
+addEventListener('touchstart', e=>{
+  const t=e.changedTouches[0];
+  activeTouch=t.identifier; touchX0=t.clientX;
+  input.hold=true;
+}, {passive:true});
+addEventListener('touchmove', e=>{
+  for(const t of e.changedTouches){
+    if(t.identifier===activeTouch)
+      input.steer = Math.max(-1, Math.min(1, (t.clientX-touchX0)/(innerWidth*0.22)));
+  }
+}, {passive:true});
+function tEnd(e){
+  for(const t of e.changedTouches){
+    if(t.identifier===activeTouch){ activeTouch=null; input.hold=false; input.steer=0; }
+  }
+}
+addEventListener('touchend', tEnd, {passive:true});
+addEventListener('touchcancel', tEnd, {passive:true});
+const keys={};
+addEventListener('keydown', e=>{
+  if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); input.hold=true; }
+  if(e.code==='ArrowLeft'||e.code==='KeyA') keys.l=true;
+  if(e.code==='ArrowRight'||e.code==='KeyD') keys.r=true;
+  if(e.code==='KeyM') toggleMute();
+});
+addEventListener('keyup', e=>{
+  if(e.code==='Space'||e.code==='ArrowUp') input.hold=false;
+  if(e.code==='ArrowLeft'||e.code==='KeyA') keys.l=false;
+  if(e.code==='ArrowRight'||e.code==='KeyD') keys.r=false;
+});
+addEventListener('mousedown', ()=>{ input.hold=true; });
+addEventListener('mouseup', ()=>{ input.hold=false; });
+
+/* =========================================================
+   7. AUDIO — soft triangle chip, Satie by dusk
+   ========================================================= */
+const chip = {
+  ctx:null, master:null, chans:[], noiseGain:null, muted:false,
+  ensure(){
+    if(!this.ctx){
+      this.ctx = new (window.AudioContext||window.webkitAudioContext)();
+      this.master = this.ctx.createGain(); this.master.gain.value=0.20;
+      this.master.connect(this.ctx.destination);
+      for(let i=0;i<3;i++){
+        const o=this.ctx.createOscillator(); o.type='triangle';
+        const g=this.ctx.createGain(); g.gain.value=0;
+        o.connect(g); g.connect(this.master); o.start();
+        this.chans.push({o,g});
+      }
+      const len=this.ctx.sampleRate;
+      const buf=this.ctx.createBuffer(1,len,this.ctx.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+      const src=this.ctx.createBufferSource(); src.buffer=buf; src.loop=true;
+      const filt=this.ctx.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=900;
+      this.noiseGain=this.ctx.createGain(); this.noiseGain.gain.value=0;
+      src.connect(filt); filt.connect(this.noiseGain); this.noiseGain.connect(this.master); src.start();
+    }
+    if(this.ctx.state==='suspended') this.ctx.resume();
+  },
+  f(m){ return 440*Math.pow(2,(m-69)/12); },
+  tone(ch,midi,t,dur,vol=1,slideTo=null){
+    if(!this.ctx||this.muted) return;
+    const {o,g}=this.chans[ch];
+    o.frequency.setValueAtTime(this.f(midi),t);
+    if(slideTo!==null) o.frequency.linearRampToValueAtTime(this.f(slideTo), t+dur);
+    g.gain.cancelScheduledValues(t);
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(vol*0.5, t+0.02);
+    g.gain.setTargetAtTime(0.0001, t+dur*0.7, dur*0.25);
+  },
+  hiss(t,dur,vol){
+    if(!this.ctx||this.muted) return;
+    const g=this.noiseGain;
+    g.gain.cancelScheduledValues(t);
+    g.gain.setValueAtTime(vol,t);
+    g.gain.setTargetAtTime(0.0001,t,dur*0.5);
+  }
+};
+/* Gymnopédie No.1 (Satie, public domain) — 8 bars, 3/4, looped gently */
+const times=(n,arr)=>{ const o=[]; for(let i=0;i<n;i++) for(const x of arr) o.push([x[0],x[1]]); return o; };
+const GY_BARS = [   // [bass, [chord x2 beats]] per bar
+  [43,[59,62,66]], [38,[57,62,66]], [43,[59,62,66]], [38,[57,62,66]],
+  [43,[59,62,66]], [38,[57,62,66]], [40,[59,64,67]], [45,[60,64,69]],
+];
+const SONG = {
+  step:0.32, tracks:[
+    { ch:0, vol:0.42, seq: times(2, GY_BARS.flatMap(([b])=>[[b,1],[0,2]])) },
+    { ch:1, vol:0.30, seq: times(2, GY_BARS.flatMap(([,c])=>[[0,1],[c[0],1],[c[1],1]])) },
+    { ch:2, vol:0.36, seq: [
+      [0,12],
+      [78,1],[81,1],[79,1],[78,1],[73,1],[71,1],[73,1],[74,1],[69,4],
+      [0,12],
+      [78,1],[81,1],[79,1],[78,1],[73,1],[71,1],[73,1],[74,1],[76,4],
+    ] },
+  ]
+};
+for(const tr of SONG.tracks){                      // equalise loop lengths
+  const total = tr.seq.reduce((a,[,d])=>a+d,0);
+  const longest = Math.max(...SONG.tracks.map(t=>t.seq.reduce((a,[,d])=>a+d,0)));
+  if(total<longest) tr.seq.push([0, longest-total]);
+}
+const music = {
+  ptr:[], next:[], on:false,
+  play(){ this.on=true; this.ptr=SONG.tracks.map(()=>0);
+          this.next=SONG.tracks.map(()=>chip.ctx?chip.ctx.currentTime+0.15:0); },
+  update(){
+    if(!this.on||!chip.ctx||chip.muted) return;
+    const now=chip.ctx.currentTime;
+    SONG.tracks.forEach((tr,i)=>{
+      if(this.next[i]===0) this.next[i]=now+0.15;
+      while(this.next[i] < now+0.4){
+        const [m,len]=tr.seq[this.ptr[i]];
+        if(m>0) chip.tone(tr.ch, m, this.next[i], SONG.step*len*0.95, tr.vol);
+        this.next[i]+=SONG.step*len;
+        this.ptr[i]=(this.ptr[i]+1)%tr.seq.length;
+      }
+    });
+  }
+};
+const sfx = {
+  flapT:0,
+  flap(){ if(chip.ctx && performance.now()-this.flapT>140){
+    this.flapT=performance.now(); chip.hiss(chip.ctx.currentTime, 0.1, 0.05); } },
+  seed(){ if(chip.ctx){ const t=chip.ctx.currentTime;
+    chip.tone(2, 93+Math.floor(Math.random()*5), t, 0.1, 0.4); } },
+  beacon(){ if(chip.ctx){ const t=chip.ctx.currentTime;
+    [74,78,81,86].forEach((m,i)=>chip.tone(2,m,t+i*0.1,0.22,0.5)); } },
+  bonk(){ if(chip.ctx){ const t=chip.ctx.currentTime;
+    chip.tone(2,50,t,0.2,0.5,44); chip.hiss(t,0.15,0.2); } },
+  splash(){ if(chip.ctx){ chip.hiss(chip.ctx.currentTime,0.5,0.35); } },
+  win(){ if(chip.ctx){ const t=chip.ctx.currentTime;
+    [69,74,78,81,86,90].forEach((m,i)=>chip.tone(2,m,t+i*0.13,0.3,0.5)); } },
+};
+function toggleMute(){
+  chip.muted=!chip.muted;
+  try{ localStorage.setItem('cw-mute', chip.muted?'1':'0'); }catch(e){}
+  document.getElementById('muteBtn').textContent = chip.muted?'✕':'♪';
+  if(chip.master) chip.master.gain.value = chip.muted?0:0.20;
+}
+document.getElementById('muteBtn').addEventListener('click', toggleMute);
+try{ if(localStorage.getItem('cw-mute')==='1'){ chip.muted=true;
+  document.getElementById('muteBtn').textContent='✕'; } }catch(e){}
+
+/* =========================================================
+   8. FLOW / HUD
+   ========================================================= */
+const $=id=>document.getElementById(id);
+function updateHUD(){
+  $('hudBeacons').textContent = '✦ '+state.lit+'/7';
+  $('hudSeeds').textContent = '◦ '+state.seeds;
+}
+function toast(msg){
+  const el=$('toast'); el.textContent=msg; el.style.opacity=1; state.toastT=2.4;
+}
+let lastOnce='';
+function toastOnce(msg){ if(lastOnce!==msg){ lastOnce=msg; toast(msg); } }
+function startGame(){
+  chip.ensure(); music.play();
+  $('title').classList.add('hidden'); $('victory').classList.add('hidden');
+  $('hud').style.display='flex'; $('muteBtn').style.display='flex';
+  $('hint').style.display='block';
+  $('hint').textContent='HOLD TO CLIMB · RELEASE TO GLIDE · DRAG TO BANK';
+  setTimeout(()=>{ $('hint').style.display='none'; }, 6000);
+  state.running=true; state.lit=0; state.seeds=0; state.bonks=0;
+  state.t0=performance.now();
+  for(const b of beacons){ b.lit=false; b.pad.material=padMat; b.crown.visible=false; }
+  for(const s of seeds){ s.taken=false; s.m.visible=true; }
+  P.pos.set(0, 50, 70); P.yaw=Math.PI; P.vy=0; P.speed=10; P.stun=0;
+  updateHUD();
+}
+function win(){
+  state.running=false; sfx.win();
+  const secs=Math.round((performance.now()-state.t0)/1000);
+  $('winStats').textContent = Math.floor(secs/60)+'M '+String(secs%60).padStart(2,'0')+'S · '
+    +state.seeds+' SEEDS · '+state.bonks+' BUMPS';
+  $('victory').classList.remove('hidden');
+  $('hud').style.display='none'; $('hint').style.display='none';
+}
+$('startBtn').addEventListener('click', startGame);
+$('againBtn').addEventListener('click', startGame);
+
+/* =========================================================
+   9. POST — golden glow + vignette
+   ========================================================= */
+let post=null;
+function buildPost(){
+  post = new THREE.PostProcessing(renderer);
+  const scenePass = pass(scene, camera);
+  const tex = scenePass.getTextureNode();
+  post.outputNode = Fn(()=>{
+    const suv = uv();
+    const base = tex.sample(suv).rgb;
+    // cheap bloom: 4 wide taps, keep only the bright part
+    const o = float(0.004);
+    let glow = tex.sample(suv.add(vec2(o,o))).rgb
+      .add(tex.sample(suv.add(vec2(o.negate(),o))).rgb)
+      .add(tex.sample(suv.add(vec2(o,o.negate()))).rgb)
+      .add(tex.sample(suv.add(vec2(o.negate(),o.negate()))).rgb).mul(0.25);
+    glow = max(glow.sub(0.62), vec3(0)).mul(0.85);
+    const c = suv.sub(0.5);
+    const vig = float(1.06).sub(dot(c,c).mul(0.9));
+    const grain = fract(sin(dot(suv.mul(resU), vec2(12.9898,78.233))).mul(43758.5)).sub(0.5).mul(0.025);
+    return vec4(base.add(glow).mul(vig).add(grain), 1.0);
+  })();
+}
+
+/* =========================================================
+   10. MAIN LOOP
+   ========================================================= */
+const clock = new THREE.Clock();
+const camPos = new THREE.Vector3(0,80,30);
+function animate(){
+  const dt=Math.min(clock.getDelta(), 1/30);
+  const t=clock.elapsedTime;
+
+  if(state.running) flight(dt);
+  music.update();
+  if(state.toastT>0){ state.toastT-=dt; if(state.toastT<=0) $('toast').style.opacity=0; }
+  if(keys.l) input.steer=-1; else if(keys.r) input.steer=1;
+  else if(activeTouch===null) input.steer*=0.9;
+
+  // canary pose
+  canary.g.position.copy(P.pos);
+  canary.g.rotation.set(-P.pitch, P.yaw, P.roll, 'YXZ');
+  const flap = input.hold ? Math.sin(t*26)*0.9 : Math.sin(t*3)*0.12+0.15;
+  canary.wl.rotation.z =  flap*0.7;
+  canary.wr.rotation.z = -flap*0.7;
+  if(input.hold) sfx.flap();
+
+  // camera: behind and above, looking past the bird at the skyline
+  const back = fwd().multiplyScalar(-11.5);
+  const target = new THREE.Vector3().copy(P.pos).add(back).add(new THREE.Vector3(0, 3.8-P.pitch*3, 0));
+  camPos.lerp(target, Math.min(1, dt*3.2));
+  camera.position.copy(camPos);
+  const look = new THREE.Vector3().copy(P.pos).add(fwd().multiplyScalar(9));
+  camera.lookAt(look.x, look.y+3.6, look.z);
+  camPosU.value.copy(camera.position);
+  scene.children.forEach(o=>{ if(o.geometry&&o.geometry.type==='SphereGeometry') o.position.copy(camera.position); });
+
+  // DLR
+  const u=(t*0.012)%1;
+  for(let i=0;i<trainCars.length;i++){
+    const uu=(u - i*0.006 + 1)%1;
+    const p1=dlrCurve.getPointAt(uu), p2=dlrCurve.getPointAt((uu+0.004)%1);
+    trainCars[i].position.copy(p1); trainCars[i].position.y=7.6;
+    trainCars[i].lookAt(p2.x, 7.6, p2.z);
+  }
+
+  updateFlock(t);
+
+  // peregrine orbit + occasional interest in the player
+  {
+    const fa = t*0.55;
+    const home = new THREE.Vector3(Math.cos(fa)*30, 72+Math.sin(t*0.9)*6, Math.sin(fa)*30);
+    if(state.running && P.pos.y>40 && P.pos.distanceTo(new THREE.Vector3(0,P.pos.y,0))<40){
+      falcon.angry = Math.min(1, falcon.angry+dt*0.5);
+    } else falcon.angry = Math.max(0, falcon.angry-dt*0.3);
+    const goal = home.lerp(P.pos, falcon.angry*0.5);
+    falcon.g.position.lerp(goal, Math.min(1,dt*1.2));
+    falcon.g.lookAt(state.running?P.pos:new THREE.Vector3(0,60,0));
+    const ff=Math.sin(t*11)*0.5;
+    falcon.wl.rotation.z=ff*0.5; falcon.wr.rotation.z=-ff*0.5;
+  }
+
+  for(const c of clouds){ c.position.x += dt*1.1; if(c.position.x>170) c.position.x=-170;
+    c.lookAt(camera.position); }
+
+  seeds.forEach((s,i)=>{ if(!s.taken){ s.m.rotation.y=t*2+i; } });
+
+  if(post) post.render(); else renderer.render(scene,camera);
+}
+
+/* =========================================================
+   11. BOOT
+   ========================================================= */
+(async()=>{
+  try{
+    await renderer.init();
+    buildPost();
+    sizeRenderer();
+    addEventListener('resize', sizeRenderer);
+    renderer.setAnimationLoop(animate);
+    const sb=$('startBtn'); sb.disabled=false; sb.textContent='TAKE FLIGHT';
+  }catch(err){
+    errBox.style.display='block';
+    errBox.textContent='Renderer failed: '+err.message;
+  }
+})();
+
+/* headless-test hook */
+window.__cw = {
+  version:'1.0.0',
+  get bird(){ return {x:P.pos.x,y:P.pos.y,z:P.pos.z,yaw:P.yaw,speed:P.speed}; },
+  get state(){ return {running:state.running, lit:state.lit, seeds:state.seeds, bonks:state.bonks}; },
+  start(){ startGame(); },
+  hold(v){ input.hold=!!v; },
+  steer(v){ input.steer=Math.max(-1,Math.min(1,v)); },
+  teleport(x,y,z,yaw){ P.pos.set(x,y,z); if(yaw!==undefined) P.yaw=yaw; P.vy=0; P.speed=8; },
+  mute(){ chip.muted=true; if(chip.master) chip.master.gain.value=0; },
+};
+</script>
+</body>
+</html>
