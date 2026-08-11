@@ -72,9 +72,6 @@
 <div id="panel"><div class="inkText"></div><div class="choices"></div></div>
 <pre id="err"></pre>
 
-<script type="importmap">
-{ "imports": { "three": "../../third_party/three/three.module.min.js" } }
-</script>
 <script src="../../third_party/ink/ink-full.min.js"></script>
 <script type="module">
 const errBox=document.getElementById('err');
@@ -83,54 +80,7 @@ window.addEventListener('error', e=>{ errBox.style.display='block';
 window.addEventListener('unhandledrejection', e=>{ errBox.style.display='block';
   errBox.textContent += 'async: '+(e.reason&&e.reason.message||e.reason)+'\n'; });
 
-import * as THREE from 'three';
-async function loadSplatLib(){
-  const CDN='https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.min.js';
-  const LOCAL='../../third_party/gaussian-splats-3d/gaussian-splats-3d.module.min.js';
-  try{ return await Promise.race([ import(CDN),
-    new Promise((_,rej)=>setTimeout(()=>rej(new Error('cdn timeout')),3500)) ]); }
-  catch(e){ console.warn('splat lib CDN unavailable, using vendored copy'); return import(LOCAL); }
-}
-const GS3D = await loadSplatLib();
-
-/* =========================================================
-   the dream around the splat: three hidden clues
-   ========================================================= */
-const worldScene = new THREE.Scene();
-
-const CLUES=[
-  { pos:[-1.30, 0.45,-1.10], name:'a paper crown' },
-  { pos:[ 0.25,-0.45, 0.30], name:'a brass key'   },
-  { pos:[ 0.55, 1.05, 1.60], name:'a working bulb'},
-];
-const clueMeshes=[];
-const clueMat=new THREE.MeshBasicMaterial({ color:0xaaffc4 });
-for(const c of CLUES){
-  const grp=new THREE.Group();
-  const core=new THREE.Mesh(new THREE.OctahedronGeometry(0.09), clueMat.clone());
-  grp.add(core);
-  const halo=new THREE.Mesh(new THREE.OctahedronGeometry(0.16),
-    new THREE.MeshBasicMaterial({ color:0x66ff99, transparent:true, opacity:0.25, depthWrite:false }));
-  grp.add(halo);
-  grp.position.set(...c.pos);
-  worldScene.add(grp);
-  clueMeshes.push({ grp, core, halo, found:false, name:c.name });
-}
-/* a faint dust of drifting motes — the static made visible */
-{
-  const N=500, p=new Float32Array(N*3);
-  for(let i=0;i<N;i++){ p[i*3]=(Math.random()*2-1)*6; p[i*3+1]=(Math.random()*2-1)*4; p[i*3+2]=(Math.random()*2-1)*6; }
-  const g=new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(p,3));
-  worldScene.add(new THREE.Points(g, new THREE.PointsMaterial({
-    color:0x59c47a, size:0.02, transparent:true, opacity:0.5, depthWrite:false })));
-}
-
-/* =========================================================
-   splat viewer — the scanned place the terminal dreams of
-   ========================================================= */
 const Q=new URLSearchParams(location.search);
-const HQ=Q.has('hq');
 /* each candy PET tints the dream shell its own phosphor */
 const TINTS={ bondi:'#8fd8e8', strawberry:'#ffa8b6', tangerine:'#ffc896',
               lime:'#c8f0a0', grape:'#cfaef5' };
@@ -140,116 +90,143 @@ for(const id of ['panel','head','exitBtn','loadLine']){
 }
 document.getElementById('panel').style.borderColor=tint;
 document.getElementById('exitBtn').style.borderColor=tint;
-const SPLAT_PATH='splats/christmas-tree-'+(HQ?'400k':'150k')+'.splat';
-/* renderer strategy: GaussianSplats3D where it has proven itself; on iOS
-   (black screen in the field) or on any GS3D failure, self-render the
-   SAME .splat data as a three.js point cloud — the scan, everywhere.
-   ?pc forces the point cloud, ?gs forces GS3D. */
-const IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)
-  || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
-const usePC = Q.has('pc') || (IOS && !Q.has('gs'));
-const CAM_UP =new THREE.Vector3(-0.522,0.836,0.168);
-const CAM_POS=new THREE.Vector3(-0.78,0.66,-4.4);
-const CAM_TGT=new THREE.Vector3(-0.3,-0.05,0.9);
-let viewer=null, cam=null, ownRenderer=null;
+
+/* =========================================================
+   PlayCanvas — REAL gaussian splatting, including on iOS
+   Safari, where GaussianSplats3D drew a black screen. CDN
+   first, vendored third_party/ fallback (house pattern).
+   ========================================================= */
+async function loadPC(){
+  const CDN='https://cdn.jsdelivr.net/npm/playcanvas@2.21.3/build/playcanvas.min.mjs';
+  const LOCAL='../../third_party/playcanvas/playcanvas.min.mjs';
+  try{ return await Promise.race([ import(CDN),
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('cdn timeout')),3500)) ]); }
+  catch(e){ console.warn('playcanvas CDN unavailable, using vendored copy'); return import(LOCAL); }
+}
+const pc = await loadPC();
+
+const HQ=Q.has('hq');
+const SPLAT_PATH='splats/christmas-tree-'+(HQ?'400k':'150k')+'.compressed.ply';
+
+const canvas=document.createElement('canvas');
+document.getElementById('stage').appendChild(canvas);
+const app=new pc.Application(canvas, { graphicsDeviceOptions:{ antialias:false } });
+app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
+app.setCanvasResolution(pc.RESOLUTION_AUTO);
+app.graphicsDevice.maxPixelRatio=Math.min(devicePixelRatio,2);
+app.start();
+
+/* camera on the scan's own tilted vertical (PCA of the core) */
+const CAM_UP =new pc.Vec3(-0.522,0.836,0.168).normalize();
+const CAM_POS=new pc.Vec3(-0.88,0.83,-5.5);
+const CAM_TGT=new pc.Vec3(-0.4,-0.1,0.9);
+const camE=new pc.Entity('cam');
+camE.addComponent('camera', { clearColor:new pc.Color(0.004,0.008,0.016),
+  fov:60, nearClip:0.05, farClip:100 });
+app.root.addChild(camE);
+camE.setPosition(CAM_POS);
+camE.lookAt(CAM_TGT, CAM_UP);
+
+/* one-finger orbit about the scan's up-axis + a slow idle drift */
+let dragging=false,lx=0,ly=0, yaw=0, pitch=0, idle=0;
+addEventListener('pointerdown',e=>{ dragging=true; lx=e.clientX; ly=e.clientY; });
+addEventListener('pointermove',e=>{ if(!dragging) return;
+  yaw-=(e.clientX-lx)*0.28; pitch+=(e.clientY-ly)*0.22;
+  pitch=Math.max(-45,Math.min(45,pitch)); idle=0;
+  lx=e.clientX; ly=e.clientY; });
+addEventListener('pointerup',()=>{ dragging=false; });
+const base=new pc.Vec3().sub2(CAM_POS,CAM_TGT);
+const side=new pc.Vec3().cross(CAM_UP,base).normalize();
+const _q1=new pc.Quat(), _q2=new pc.Quat(), _off=new pc.Vec3(), _pos=new pc.Vec3();
+
+/* =========================================================
+   the three clues, hidden in the drift
+   ========================================================= */
+const CLUES=[
+  { pos:[-1.30, 0.45,-1.10], name:'a paper crown' },
+  { pos:[ 0.25,-0.45, 0.30], name:'a brass key'   },
+  { pos:[ 0.55, 1.05, 1.60], name:'a working bulb'},
+];
+const clueMeshes=[];
+function glowMat(hex, opacity){
+  const m=new pc.StandardMaterial();
+  m.emissive=new pc.Color().fromString(hex);
+  m.diffuse=new pc.Color(0,0,0);
+  m.useLighting=false;
+  if(opacity<1){ m.opacity=opacity; m.blendType=pc.BLEND_NORMAL; m.depthWrite=false; }
+  m.update(); return m;
+}
+for(const c of CLUES){
+  const grp=new pc.Entity('clue');
+  const core=new pc.Entity('core');
+  core.addComponent('render',{ type:'box' });
+  core.render.meshInstances[0].material=glowMat('#aaffc4',1);
+  core.setLocalScale(0.13,0.13,0.13);
+  core.setLocalEulerAngles(45,0,45);
+  grp.addChild(core);
+  const halo=new pc.Entity('halo');
+  halo.addComponent('render',{ type:'box' });
+  halo.render.meshInstances[0].material=glowMat('#66ff99',0.22);
+  halo.setLocalScale(0.24,0.24,0.24);
+  halo.setLocalEulerAngles(45,0,45);
+  grp.addChild(halo);
+  grp.setPosition(c.pos[0],c.pos[1],c.pos[2]);
+  app.root.addChild(grp);
+  clueMeshes.push({ grp, core, halo, found:false, name:c.name });
+}
+
+/* clue pulse + camera orbit, one update hook */
+let t=0;
+app.on('update', dt=>{
+  t+=dt; idle+=dt;
+  if(idle>2.5) yaw+=dt*3.5;                       // the dream drifts (degrees)
+  _q1.setFromAxisAngle(CAM_UP, yaw);
+  _q2.setFromAxisAngle(side, pitch);
+  _q1.transformVector(base,_off); _q2.transformVector(_off,_off);
+  _pos.add2(CAM_TGT,_off);
+  camE.setPosition(_pos);
+  camE.lookAt(CAM_TGT, CAM_UP);
+  clueMeshes.forEach((c,i)=>{
+    if(c.found) return;
+    const s=1+Math.sin(t*3+i*2.1)*0.25;
+    c.core.setLocalScale(0.13*s,0.13*s,0.13*s);
+    const h=1+Math.sin(t*2.2+i)*0.4;
+    c.halo.setLocalScale(0.24*h,0.24*h,0.24*h);
+    c.grp.setEulerAngles(0,(t*(40+i*12))%360,0);
+  });
+});
+
+/* =========================================================
+   the splat itself — compressed.ply via the gsplat component
+   ========================================================= */
 let loaded=false, splatOk=false, mode='none';
 const loadLine=document.getElementById('loadLine');
 function boot(){
+  if(loaded) return;
   loaded=true; loadLine.classList.add('hidden');
-  if(viewer){ viewer.start(); cam=viewer.camera; }
   console.log('dream renderer:', mode);
   renderInk();
 }
-async function startPointCloud(){
-  loadLine.textContent='CONDENSING THE STATIC…';
-  const res=await fetch(SPLAT_PATH);
-  if(!res.ok) throw new Error('splat fetch '+res.status);
-  const buf=await res.arrayBuffer();
-  const n=Math.floor(buf.byteLength/32);
-  const dv=new DataView(buf);
-  const pos=new Float32Array(n*3), col=new Float32Array(n*3);
-  for(let i=0;i<n;i++){
-    const o=i*32;
-    pos[i*3]  =dv.getFloat32(o,true);
-    pos[i*3+1]=dv.getFloat32(o+4,true);
-    pos[i*3+2]=dv.getFloat32(o+8,true);
-    const a=dv.getUint8(o+27)/255;
-    col[i*3]  =dv.getUint8(o+24)/255*a;
-    col[i*3+1]=dv.getUint8(o+25)/255*a;
-    col[i*3+2]=dv.getUint8(o+26)/255*a;
-  }
-  const g=new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(pos,3));
-  g.setAttribute('color', new THREE.BufferAttribute(col,3));
-  worldScene.add(new THREE.Points(g, new THREE.PointsMaterial({
-    vertexColors:true, size:0.016, sizeAttenuation:true,
-    transparent:true, opacity:0.92, depthWrite:false })));
-  ownRenderer=new THREE.WebGLRenderer({ antialias:false });
-  ownRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  ownRenderer.setSize(innerWidth,innerHeight);
-  document.getElementById('stage').appendChild(ownRenderer.domElement);
-  cam=new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.05, 100);
-  cam.up.copy(CAM_UP);
-  cam.position.copy(CAM_POS); cam.lookAt(CAM_TGT);
-  addEventListener('resize', ()=>{ cam.aspect=innerWidth/innerHeight;
-    cam.updateProjectionMatrix(); ownRenderer.setSize(innerWidth,innerHeight); });
-  // one-finger orbit about the scan's own tilted up-axis + a slow drift
-  let dragging=false,lx=0,ly=0, yaw=0, pitch=0, idle=0;
-  addEventListener('pointerdown',e=>{ dragging=true; lx=e.clientX; ly=e.clientY; });
-  addEventListener('pointermove',e=>{ if(!dragging) return;
-    yaw-=(e.clientX-lx)*0.005; pitch+=(e.clientY-ly)*0.004;
-    pitch=Math.max(-0.8,Math.min(0.8,pitch)); idle=0;
-    lx=e.clientX; ly=e.clientY; });
-  addEventListener('pointerup',()=>{ dragging=false; });
-  const base=CAM_POS.clone().sub(CAM_TGT);
-  const side=new THREE.Vector3().crossVectors(CAM_UP, base).normalize();
-  const clk2=new THREE.Clock();
-  (function loop(){
-    requestAnimationFrame(loop);
-    const dt=clk2.getDelta(); idle+=dt;
-    if(idle>2.5) yaw+=dt*0.06;                 // the dream drifts
-    const q1=new THREE.Quaternion().setFromAxisAngle(CAM_UP, yaw);
-    const q2=new THREE.Quaternion().setFromAxisAngle(side, pitch);
-    const off=base.clone().applyQuaternion(q1).applyQuaternion(q2);
-    cam.position.copy(CAM_TGT).add(off);
-    cam.lookAt(CAM_TGT);
-    ownRenderer.render(worldScene, cam);
-  })();
-  splatOk=true; mode='points('+n+')';
-}
 function loadSplat(attempt=0){
   const bust = attempt>0 ? '?r='+attempt+'-'+Date.now() : '';
-  return viewer.addSplatScene(SPLAT_PATH+bust, {
-    showLoadingUI:false, progressiveLoad:false,
-    format: GS3D.SceneFormat.Splat,
-    onProgress:(pct)=>{ loadLine.textContent='TUNING THE STATIC… '+Math.round(pct)+'%'; },
-  }).then(()=>{ splatOk=true; mode='gaussian'; boot(); })
-    .catch(e=>{
-      if(attempt<2){ loadLine.textContent='RE-TUNING ('+(attempt+2)+'/3)…';
-        return new Promise(r=>setTimeout(r, 1500*(attempt+1))).then(()=>loadSplat(attempt+1)); }
-      console.warn('GS3D failed, self-rendering the scan:', e.message);
-      viewer=null;
-      return startPointCloud().then(boot, err=>{
-        console.warn('point cloud failed too, motes only:', err.message);
-        mode='motes'; boot(); });
-    });
-}
-if(usePC){
-  startPointCloud().then(boot, e=>{ console.warn('point cloud failed, motes only:', e.message);
-    mode='motes'; boot(); });
-} else {
-  viewer = new GS3D.Viewer({
-    rootElement: document.getElementById('stage'),
-    threeScene: worldScene,
-    cameraUp: CAM_UP.toArray(),
-    initialCameraPosition: CAM_POS.toArray(),
-    initialCameraLookAt: CAM_TGT.toArray(),
-    sharedMemoryForWorkers: false,
-    antialiased: false,
-    sphericalHarmonicsDegree: 0,
+  const asset=new pc.Asset('tree','gsplat',{ url:SPLAT_PATH+bust });
+  asset.on('load', ()=>{
+    const e=new pc.Entity('tree');
+    e.addComponent('gsplat',{ asset });
+    app.root.addChild(e);
+    window.__tree=e;
+    splatOk=true; mode='playcanvas-gsplat'; boot();
   });
-  loadSplat();
+  asset.on('error', err=>{
+    if(attempt<2){ loadLine.textContent='RE-TUNING ('+(attempt+2)+'/3)…';
+      setTimeout(()=>loadSplat(attempt+1), 1500*(attempt+1)); return; }
+    console.warn('splat load failed, dreaming without the scan:', err);
+    mode='no-splat'; boot();
+  });
+  app.assets.add(asset);
+  app.assets.load(asset);
 }
+loadSplat();
 
 /* =========================================================
    ink — the dream narrates the hunt (REAL inkjs compile)
@@ -314,12 +291,14 @@ function renderInk(){
     b.style.animationDelay=(0.1*i)+'s';
     b.addEventListener('click',()=>{
       inkStory.ChooseChoiceIndex(i); renderInk();
-      if(!inkStory.canContinue && inkStory.currentChoices.length===0) finish();
+      /* completion ONLY when the hunt is done AND the story has ended —
+         a mid-story knot with no choices must never surface the player
+         (the "Listen to the static exits the game" bug) */
+      if(!inkStory.canContinue && inkStory.currentChoices.length===0
+         && found()===3) finish();
     });
     ch.appendChild(b);
   });
-  if(!inkStory.canContinue && inkStory.currentChoices.length===0
-     && found()===3) finish();
 }
 function finish(){
   parent.postMessage({ jsdDream:'complete', clues:found() }, '*');
@@ -327,11 +306,9 @@ function finish(){
 function found(){ return clueMeshes.filter(c=>c.found).length; }
 
 /* =========================================================
-   clue hunting — tap the bright things
+   clue hunting — precise screen-space taps
    ========================================================= */
-/* precise screen-space picking: a clue is collected only when the tap
-   lands ON it (within ~48 px). The old ray-distance test chimed on
-   nearly any tap — a clue lying anywhere near the ray line counted. */
+const _scr=new pc.Vec3(), _to=new pc.Vec3();
 let downAt=null;
 addEventListener('pointerdown', e=>{ downAt=[e.clientX,e.clientY]; });
 addEventListener('pointerup', e=>{
@@ -340,23 +317,22 @@ addEventListener('pointerup', e=>{
   downAt=null;
   if(moved>8 || !loaded) return;
   if(e.target.closest && e.target.closest('#panel,#exitBtn')) return;
-  const C=cam||(viewer&&viewer.camera); if(!C) return;
-  C.updateMatrixWorld();
-  let best=null, bd=48;
+  const scale=app.graphicsDevice.width/innerWidth;   // css px -> device px
+  let best=null, bd=48*scale;
   for(const c of clueMeshes){
     if(c.found) continue;
-    const v=c.grp.position.clone().project(C);
-    if(v.z>1 || v.z<-1) continue;                  // behind or clipped
-    const sx=(v.x+1)/2*innerWidth, sy=(1-v.y)/2*innerHeight;
-    const d=Math.hypot(sx-e.clientX, sy-e.clientY);
+    _to.sub2(c.grp.getPosition(), camE.getPosition());
+    if(_to.dot(camE.forward)<=0) continue;           // behind the camera
+    camE.camera.worldToScreen(c.grp.getPosition(), _scr);
+    const d=Math.hypot(_scr.x-e.clientX*scale, _scr.y-e.clientY*scale);
     if(d<bd){ bd=d; best=c; }
   }
   if(best) collect(best);
 });
 function collect(c){
   c.found=true;
-  c.halo.material.opacity=0.0;
-  c.core.material.color.set(0xffffff);
+  c.halo.enabled=false;
+  c.core.render.meshInstances[0].material=glowMat('#ffffff',1);
   const n=found();
   document.getElementById('clueTally').textContent='CLUES '+n+'/3';
   ping(n);
@@ -365,10 +341,10 @@ function collect(c){
     try{ inkStory.ChoosePathString('found_'+n); }catch(e){}
     renderInk();
   }
-  setTimeout(()=>{ c.grp.visible=false; }, 900);
+  setTimeout(()=>{ c.grp.enabled=false; }, 900);
 }
 
-/* one soft chime per clue (needs a prior gesture — the tap itself) */
+/* one soft chime per clue (the tap itself is the gesture) */
 let actx=null;
 function ping(n){
   try{
@@ -389,22 +365,6 @@ document.getElementById('exitBtn').addEventListener('click', ()=>{
   parent.postMessage({ jsdDream:'exit' }, '*');
 });
 
-/* clue pulse + slow drift */
-const clk=new THREE.Clock();
-function tick(){
-  requestAnimationFrame(tick);
-  const t=clk.getElapsedTime();
-  clueMeshes.forEach((c,i)=>{
-    if(c.found) return;
-    const s=1+Math.sin(t*3+i*2.1)*0.25;
-    c.core.scale.setScalar(s);
-    c.halo.scale.setScalar(1+Math.sin(t*2.2+i)*0.4);
-    c.halo.material.opacity=0.15+Math.abs(Math.sin(t*2.2+i))*0.2;
-    c.grp.rotation.y=t*(0.7+i*0.2);
-  });
-}
-tick();
-
 /* headless-test hook */
 window.__dream = {
   get loaded(){ return loaded; },
@@ -413,6 +373,12 @@ window.__dream = {
   get found(){ return found(); },
   get panelText(){ return panel.querySelector('.inkText').textContent; },
   tap(i){ collect(clueMeshes[i]); },
+  proj(i){ const scale=app.graphicsDevice.width/innerWidth;
+    camE.camera.worldToScreen(clueMeshes[i].grp.getPosition(), _scr);
+    return { x:_scr.x/scale, y:_scr.y/scale }; },
+  setCam(px,py,pz,tx,ty,tz){ CAM_POS.set(px,py,pz); CAM_TGT.set(tx,ty,tz);
+    base.sub2(CAM_POS,CAM_TGT); side.cross(CAM_UP,base).normalize();
+    yaw=0; pitch=0; },
   choose(i){ const b=panel.querySelectorAll('.choice')[i]; if(b) b.click(); },
   exit(){ document.getElementById('exitBtn').click(); },
 };

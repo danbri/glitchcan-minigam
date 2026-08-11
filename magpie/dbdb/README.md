@@ -61,7 +61,10 @@ against the C64 blocks, each with procedural behavioural loops:
   dream shell its own phosphor (`dream.html?tint=`). Stand at any and
   jump to JACK IN: the screen swallows the view (CSS bezel zoom) and boots
   `dream.html` in an iframe — a NESTED ink scene (real inkjs compile)
-  set INSIDE a real Gaussian splat (the SPLATPORT tree scan). You drift
+  set INSIDE a real Gaussian splat (the SPLATPORT tree scan), rendered
+  by the **PlayCanvas engine** ('gsplat' + compressed.ply, vendored at
+  `third_party/playcanvas/`) — REAL splatting on iOS too, where
+  GaussianSplats3D drew a black screen. You drift
   in the scan hunting three glowing clues; each tap advances the ink
   story; WAKE posts back over postMessage and the manor grants an extra
   Ducky. The ink-as-bus doctrine, one layer down: game → terminal →
