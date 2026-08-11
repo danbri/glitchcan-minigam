@@ -44,7 +44,7 @@
   #css3d { position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:7; }
   #css3dCam { width:100%; height:100%; transform-style:preserve-3d; pointer-events:none; }
   #panel {
-    position:absolute; left:0; top:0; transform-origin:50% 50%;
+    position:fixed; left:0; top:0; transform-origin:50% 50%;
     width:300px; min-height:180px; max-height:340px; overflow-y:auto;
     padding:12px 14px;
     background:rgba(1,10,5,.9); border:2px solid rgba(159,232,176,.55);
@@ -508,11 +508,10 @@ function editPlace(cx,cy){
 const css3d=document.getElementById('css3d'), css3dCam=document.getElementById('css3dCam');
 const domPanel=document.getElementById('panel');
 domPanel.style.color=tint; domPanel.style.borderColor=tint;
-/* one screen only: unless ?html=1 the DOM twin is REMOVED from the
-   document, so it cannot desync from the engine plate even on stale
-   caches or odd bearings */
-if(!Q.has('html')) css3d.remove();
-let occPts=null, domVis=false, visTick=0;
+/* the real-HTML screen is the default (owner: "we want DOM on every
+   billboard"); ?nohtml=1 falls back to the engine plate alone */
+if(Q.has('nohtml')) css3d.remove();
+let occPts=null, domVis=false, visTick=0, domForce=null;
 if(SCENE.raw){
   fetch(SCENE.raw, { headers:{ Range:'bytes=0-959999' } })
     .then(r2=>r2.arrayBuffer()).then(b2=>{
@@ -544,12 +543,8 @@ function rayBlockCount(ro,rd,pts,stride,maxT){
 const _vro=new pc.Vec3(), _vrd=new pc.Vec3(), _vp=new pc.Vec3();
 function computeVis(){
   window.__visDbg={};
-  /* field report (owner, iPhone): the DOM twin and the engine plate
-     diverge off the boot bearing — matrix handedness only agreed at one
-     angle. The unified experience is the engine plate alone; the HTML
-     overlay hides behind ?html=1 until the mapping is proven from all
-     bearings. */
-  if(!Q.has('html')) return false;
+  if(domForce!==null) return domForce;
+  if(Q.has('nohtml')) return false;
   if(!loaded) return (__visDbg.loaded=false);
   _vro.copy(camE.getPosition());
   /* facing: are we in front of the fixed screen? */
@@ -580,29 +575,29 @@ function computeVis(){
   }
   return true;
 }
-function eps(v){ return Math.abs(v)<1e-10?0:v; }
-function camCSS(e){
-  return 'matrix3d('+eps(e[0])+','+eps(-e[1])+','+eps(e[2])+','+eps(e[3])+','+eps(e[4])+','+eps(-e[5])+','+eps(e[6])+','+eps(e[7])+','+eps(e[8])+','+eps(-e[9])+','+eps(e[10])+','+eps(e[11])+','+eps(e[12])+','+eps(-e[13])+','+eps(e[14])+','+eps(e[15])+')';
-}
-function objCSS(e){
-  return 'matrix3d('+eps(e[0])+','+eps(e[1])+','+eps(e[2])+','+eps(e[3])+','+eps(-e[4])+','+eps(-e[5])+','+eps(-e[6])+','+eps(-e[7])+','+eps(e[8])+','+eps(e[9])+','+eps(e[10])+','+eps(e[11])+','+eps(e[12])+','+eps(e[13])+','+eps(e[14])+','+eps(e[15])+')';
-}
-const _inv=new pc.Mat4();
+const _v2=new pc.Vec3(), _v3=new pc.Vec3();
 function domUpdate(vis){
   if(!css3d.isConnected) return;
   if(!vis){ css3d.style.display='none'; return; }
   css3d.style.display='block';
-  const h=innerHeight, w=innerWidth;
-  const fovPx=camE.camera.projectionMatrix.data[5]*h/2;
-  css3d.style.perspective=fovPx+'px';
-  _inv.copy(camE.getWorldTransform()).invert();
-  css3dCam.style.transform='translateZ('+fovPx+'px)'+camCSS(_inv.data)
-    +'translate('+(w/2)+'px,'+(h/2)+'px)';
-  const s2=PW/300;
-  const M=panelE.getWorldTransform().data;
-  const m=[M[0]*s2,M[1]*s2,M[2]*s2,0, M[4]*s2,M[5]*s2,M[6]*s2,0,
-           M[8]*s2,M[9]*s2,M[10]*s2,0, M[12],M[13],M[14],1];
-  domPanel.style.transform='translate(-50%,-50%)'+objCSS(m);
+  /* anchored by construction: position, scale and tilt all derive from
+     the SAME worldToScreen projection the engine uses for the plate —
+     the DOM cannot drift from the scene, at any bearing */
+  const scale=app.graphicsDevice.width/innerWidth;
+  camE.camera.worldToScreen(PANEL_POS,_scr);
+  if(_scr.z<0){ css3d.style.display='none'; return; }
+  const sx=_scr.x/scale, sy=_scr.y/scale;
+  const py2=(activeTerm.yaw||0)*Math.PI/180;
+  const nz=new pc.Vec3(Math.sin(py2),0,Math.cos(py2));         // plate normal
+  const rt=new pc.Vec3().cross(pc.Vec3.UP,nz).normalize();     // plate right
+  _v3.set(PANEL_POS.x+rt.x*PW/2, PANEL_POS.y, PANEL_POS.z+rt.z*PW/2);
+  camE.camera.worldToScreen(_v3,_v2);
+  const halfPx=Math.hypot(_v2.x/scale-sx, _v2.y/scale-sy);
+  const k=Math.max(0.05,(halfPx*2)/300);                       // dom width 300px
+  _v3.sub2(camE.getPosition(),PANEL_POS); _v3.y=0; _v3.normalize();
+  const angY=Math.atan2(_v3.dot(rt), _v3.dot(nz));             // signed bearing
+  domPanel.style.transform='translate('+sx+'px,'+sy+'px) translate(-50%,-50%) '
+    +'perspective(900px) rotateY('+(-angY)+'rad) scale('+k+')';
 }
 function domRender(){
   const domPanel=document.getElementById('panel');
@@ -957,6 +952,14 @@ window.__dream = {
   get lastPlace(){ return lastPlace?[+lastPlace.x.toFixed(3),+lastPlace.y.toFixed(3),+lastPlace.z.toFixed(3)]:null; },
   flyToTerm(i){ flyToTerm(TERMINALS[i]); },
   get domVis(){ return domVis; },
+  setDomForce(v){ domForce=v; domVis=(v===null)?domVis:v; },
+  setCam(px,py,pz,tx,ty,tz){ CAM_POS.set(px,py,pz); CAM_TGT.set(tx,ty,tz);
+    tgtGoal=CAM_TGT.clone(); TGT_CUR.copy(CAM_TGT);
+    base.sub2(CAM_POS,CAM_TGT); side.cross(pc.Vec3.UP,base).normalize();
+    yaw=0; pitch=0; distF=1; flight=null; },
+  mats(){ return { cam:[...camE.getWorldTransform().data],
+    proj:[...camE.camera.projectionMatrix.data],
+    panel:[...panelE.getWorldTransform().data], pw:PW }; },
   get lastYaw(){ return +lastYaw.toFixed(1); },
   exit(){ document.getElementById('exitBtn').click(); },
 };

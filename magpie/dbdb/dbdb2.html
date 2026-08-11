@@ -1935,10 +1935,26 @@ function tile(loop,total){                     // repeat a bass loop to EXACTLY 
     out.push([m,d]); acc+=d;
   }
 }
+function bassFrom(mel){
+  /* the melody's own note at each 4-step bar, an octave down, sustained —
+     bass that FOLLOWS the harmony, so it can never go out of tune (the
+     tiled ostinato figures clashed once the melody's chords moved on) */
+  const total=seqLen(mel);
+  const line=new Array(total).fill(0);
+  let acc=0;
+  for(const [m,d] of mel){ for(let i=0;i<d;i++) line[acc+i]=m; acc+=d; }
+  const out=[]; let last=0;
+  for(let s=0;s<total;s+=4){
+    const m=line[s]||line[s+1]||last;
+    if(m>0) last=m;
+    out.push([m>0?m-12:0, Math.min(4,total-s)]);
+  }
+  return out;
+}
 function song(name, tags, step, mel, bassLoop, vols=[0.68,0.42]){
   return { name, tags, step, tracks:[
     { ch:0, vol:vols[0], seq: mel },
-    { ch:1, vol:vols[1], seq: tile(bassLoop, seqLen(mel)) } ] };
+    { ch:1, vol:vols[1]*0.85, seq: bassFrom(mel) } ] };
 }
 /* tiny bass vocabulary */
 const pulse=(r,d=2)=>[[r,d],[0,d]];
