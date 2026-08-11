@@ -8,7 +8,26 @@ of Persia* (a bedtime deadline, and a rotoscope-style articulated human hero
 manor, with Ducky riding the shoulder; `?hero=duck` restores the original
 duck). World palette is the Commodore 64's 16 (Pepto values). Mobile first.
 
-Play: `dbdb.html`. No build step.
+Play: `dbdb2.html` (rev 2, "The Moonlight Shift") or `dbdb.html`
+(original rev). No build step.
+
+## Rev 2 — The Moonlight Shift
+- Chunked engine: 16x16-column merged chunks, per-vertex baked voxel AO +
+  cool moon key + warm lamp glow; distance fog to a night sky; stars and
+  a dithered moon composited in the post pass.
+- Peephole occlusion: a dithered window is discarded through any geometry
+  between camera and hero (screen-space + view-depth test) — replaces the
+  rev-1 x-ray silhouette, which read as "hero everywhere".
+- Full-360 camera: drag anywhere (right half on touch) to spin freely;
+  Q/E or the buttons snap to the nearest diagonal station.
+- THE PUZZLE CITY: 200 generated courts south of the manor, 5 puzzle
+  instances each = a literal 1000 per set (`?set=1..1000`, default =
+  today's; `?mini` builds a 4x3 city). Templates add real game objects:
+  pushable crates (they fall, they stack, they make stepping stones),
+  keys + locks, latching levers, spring pads — plus the rev-1 plates,
+  bridges, gates, fires, crumbles and guardian lanes.
+- Goal unchanged: tidy the manor's items and reach the bed by midnight.
+  City puzzles feed the PUZ counter — bragging rights and spare lives.
 
 ## Tech
 - **three.js r180 WebGPU build**, loaded from the jsDelivr CDN first, with a
