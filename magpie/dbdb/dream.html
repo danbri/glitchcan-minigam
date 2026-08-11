@@ -230,6 +230,17 @@ app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
 app.setCanvasResolution(pc.RESOLUTION_AUTO);
 app.graphicsDevice.maxPixelRatio=Math.min(devicePixelRatio,2);
 app.start();
+/* distance fog: the scan's frayed edge dissolves into the night
+   instead of ending in ragged space (set once R is known, below) */
+function setFog(rr){
+  try{
+    const fc=new pc.Color(0.004,0.008,0.016);
+    const f=app.scene.fog;
+    if(f && typeof f==='object'){ f.type='linear'; f.start=2.1*rr; f.end=4.2*rr; f.color=fc; }
+    else { app.scene.fog=pc.FOG_LINEAR||'linear';
+      app.scene.fogStart=2.1*rr; app.scene.fogEnd=4.2*rr; app.scene.fogColor=fc; }
+  }catch(e){ console.warn('fog unsupported:', e.message); }
+}
 
 /* scene root: rotate scan-up onto world +y — up is up, always */
 function rotationTo(a,b){                      // quat rotating unit vec a -> b
@@ -246,6 +257,7 @@ app.root.addChild(sceneRoot);
 /* the scan centre, in upright world space */
 const C=new pc.Vec3(); upQ.transformVector(new pc.Vec3(...SCENE.c), C);
 const R=SCENE.r;
+setFog(R);
 
 /* camera: y-up, orbiting the scan centre */
 const CAM_TGT=C.clone();
@@ -728,6 +740,16 @@ app.on('update', dt=>{
     if(flight.t>=flight.dur){ const f=flight.onDone; flight=null; if(f) f(); }
   } else if(idle>2.5) yaw+=dt*3.5;              // the dream drifts
   TGT_CUR.lerp(TGT_CUR, tgtGoal, Math.min(1,dt*2.5));
+  /* stay inside the scan's dense core (R is the per-scene 70th-pct
+     density radius — our heuristic for "the realistic zone"): the
+     ragged digitisation fringe stays at arm's length */
+  { const dx0=TGT_CUR.x-C.x, dz0=TGT_CUR.z-C.z, d0=Math.hypot(dx0,dz0);
+    const MAXW=1.05*R;
+    if(d0>MAXW){
+      TGT_CUR.x=C.x+dx0/d0*MAXW; TGT_CUR.z=C.z+dz0/d0*MAXW;
+      tgtGoal.x=TGT_CUR.x; tgtGoal.z=TGT_CUR.z;
+    } }
+  distF=Math.max(0.45,Math.min(1.5,distF));
   _q1.setFromAxisAngle(pc.Vec3.UP, yaw);
   _q2.setFromAxisAngle(side, pitch);
   _q1.transformVector(base,_off); _q2.transformVector(_off,_off);
@@ -888,7 +910,17 @@ function choiceFlight(label){
   }
   if(L.startsWith('port') && sti>=0){
     document.getElementById('hudLoc').textContent='PORT/7 · '+NAMES[sti];
-    fly({ dYaw:130+sti*40, toPitch:4+sti*3, toDist:0.68, tgt:TOUR[sti], dur:5 });
+    /* each corner has its own ABSOLUTE arrival bearing, so choosing the
+       same port twice lands in the same pose (was: a relative sweep
+       that advanced the bearing on every press). Already there? A slow
+       full-circle flourish says so. */
+    const bAng=Math.atan2(base.x,base.z)*180/Math.PI;
+    let want=(sti*90+40)-bAng-yaw;
+    while(want>180) want-=360; while(want<-180) want+=360;
+    const there = Math.abs(want)<12 && TGT_CUR.distance(TOUR[sti])<0.25*R;
+    fly(there
+      ? { dYaw:360, toPitch:4+sti*3, toDist:0.68, tgt:TOUR[sti], dur:6 }
+      : { dYaw:want, toPitch:4+sti*3, toDist:0.68, tgt:TOUR[sti], dur:5 });
     return null;
   }
   if(L.includes('hint')){
