@@ -688,17 +688,31 @@ const aspectU = uniform(1);
 const SKY = srgb(0x0b0c22);
 const worldMat = new THREE.MeshBasicNodeMaterial();
 worldMat.colorNode = Fn(()=>{
-  // the peephole (discard first so culled fragments cost nothing more)
+  /* the VEIL: occluders between camera and hero go mostly-translucent via
+     screen-door discard, but the surviving pixels shimmer — a frosted,
+     wibbly, rapidly colour-cycling curtain. You see the hero; you also
+     unmistakably see that a wall is standing there being polite. */
   const sd2 = screenUV.sub(playerUVU);
-  const sd = sqrt(sd2.x.mul(sd2.x).mul(aspectU).mul(aspectU).add(sd2.y.mul(sd2.y)));
+  const sdRaw = sqrt(sd2.x.mul(sd2.x).mul(aspectU).mul(aspectU).add(sd2.y.mul(sd2.y)));
+  // wibble: the veil's edge breathes and ripples
+  const ang = sd2.y.mul(40.0).add(sd2.x.mul(31.0));
+  const wob = sin(ang.add(time.mul(3.2))).mul(0.012)
+        .add(sin(ang.mul(0.37).sub(time.mul(2.1))).mul(0.008));
+  const sd = sdRaw.add(wob);
   const closer = step(playerViewZU.add(1.0), positionView.z);
-  const hole = smoothstep(0.16, 0.05, sd).mul(closer);
-  const dpx = mod(floor(screenUV.x.mul(resUniform.x)).add(floor(screenUV.y.mul(resUniform.y))), 2.0);
-  Discard( hole.greaterThan(0.6).or( hole.greaterThan(0.12).and(dpx.lessThan(0.5)) ) );
+  const hole = smoothstep(0.17, 0.05, sd).mul(closer);
+  // frosted screen-door: per-pixel hash decides who stays; ~70% open at core
+  const px = floor(screenUV.mul(resUniform));
+  const hsh = fract(sin(px.x.mul(12.9898).add(px.y.mul(78.233))).mul(43758.545));
+  Discard( hole.greaterThan(0.06).and( hsh.lessThan( hole.mul(0.72) ) ) );
   const col = attribute('color', 'vec3');
   const wp = positionWorld;
   const chk = mod(floor(wp.x.mul(4)).add(floor(wp.y.mul(4))).add(floor(wp.z.mul(4))), 2.0);
-  const lit = col.mul(mix(0.88, 1.0, chk));
+  let lit = col.mul(mix(0.88, 1.0, chk));
+  // survivors inside the veil glitter: fast hue rotation, ringed by radius
+  const shim = cos(time.mul(7.0).add(sd.mul(55.0)).add(vec3(0.0,2.1,4.2))).mul(0.5).add(0.5);
+  const sparkle = fract(hsh.add(time.mul(1.7)));
+  lit = mix(lit, shim.mul(0.75).add(lit.mul(0.45)).add(sparkle.mul(0.25)), hole.mul(0.9));
   const dx = wp.x.sub(camTU.x), dz = wp.z.sub(camTU.z);
   const fog = smoothstep(16.0, 40.0, sqrt(dx.mul(dx).add(dz.mul(dz))));
   return mix(lit, vec3(SKY.r,SKY.g,SKY.b), fog.mul(0.88));
@@ -1298,7 +1312,7 @@ const MK = [
 const MK_PEDAL_E = times(15,[[40,2]]);                       // E2 pedal
 const MK_PULSE   = [...times(7,[[40,2],[47,2]]),[40,2]];     // E2/B2 pulse
 const MK_PEDAL_G = times(15,[[43,2]]);                       // G2 pedal (+3 statements)
-const SONG_GAME = {
+const SONG_MK = {
   step:0.135, tracks:[
     { ch:0, vol:0.75, seq:[
       ...MK, ...MK, ...trans(MK,12), ...trans(MK,12),
@@ -1314,8 +1328,43 @@ const SONG_GAME = {
     ] },
   ]
 };
+
+/* Fur Elise (Beethoven) — the Grand Hall's favourite */
+const SONG_ELISE = { name:'FUR ELISE', step:0.14, tracks:[
+  { ch:0, vol:0.7, seq:[
+    [76,1],[75,1],[76,1],[75,1],[76,1],[71,1],[74,1],[72,1],[69,2],[0,1],
+    [60,1],[64,1],[69,1],[71,2],[0,1],[64,1],[68,1],[71,1],[72,2],[0,1],
+    [64,1],[76,1],[75,1],[76,1],[75,1],[76,1],[71,1],[74,1],[72,1],[69,2],[0,1],
+    [60,1],[64,1],[69,1],[71,2],[0,1],[64,1],[72,1],[71,1],[69,4]] },
+  { ch:1, vol:0.4, seq: times(4, [[45,1],[52,1],[57,1],[0,3],[40,1],[47,1],[56,1],[0,3]]) },
+]};
+/* Greensleeves (trad.) — for the terraces at night */
+const SONG_GREEN = { name:'GREENSLEEVES', step:0.16, tracks:[
+  { ch:0, vol:0.68, seq:[
+    [69,2],[72,4],[74,2],[76,3],[77,1],[76,2],[74,4],[71,2],[67,3],[69,1],[71,2],
+    [72,4],[69,2],[69,3],[68,1],[69,2],[71,4],[68,2],[64,4],
+    [69,2],[72,4],[74,2],[76,3],[77,1],[76,2],[74,4],[71,2],[67,3],[69,1],[71,2],
+    [72,3],[71,1],[69,2],[68,3],[66,1],[68,2],[69,4],[69,2],[0,4]] },
+  { ch:1, vol:0.42, seq:[[45,12],[43,12],[41,12],[40,12],[45,12],[43,12],[41,6],[40,6],[45,12]] },
+]};
+/* Badinerie (Bach, Suite No. 2) — brisk, for the Puzzle City */
+const SONG_BADIN = { name:'BADINERIE', step:0.11, tracks:[
+  { ch:0, vol:0.72, seq: times(2, [
+    [71,2],[66,1],[71,1],[74,2],[71,1],[74,1],[78,2],[74,1],[78,1],[83,2],[0,2],
+    [82,1],[83,1],[82,1],[83,1],[78,1],[74,1],[71,1],[74,1],[66,2],[0,2]]) },
+  { ch:1, vol:0.4, seq: times(14, [[47,2],[0,2]]) },
+]};
+/* Morning Mood (Grieg) — because the manor has hope */
+const SONG_MORNING = { name:'MORNING MOOD', step:0.17, tracks:[
+  { ch:0, vol:0.62, seq: times(2, [
+    [79,1],[76,1],[74,1],[72,1],[74,1],[76,1],[79,1],[76,1],[74,1],[72,1],[74,1],[76,1],
+    [79,1],[76,1],[79,1],[81,1],[76,1],[81,1],[79,1],[76,1],[74,1],[72,1],[0,2]]) },
+  { ch:1, vol:0.38, seq: times(4, [[48,4],[55,4],[52,4]]) },
+]};
+const SONGS_GAME = [SONG_MK, SONG_ELISE, SONG_GREEN, SONG_BADIN, SONG_MORNING];
+SONG_MK.name = 'MOUNTAIN KING';
 /* loop-length invariant — a mismatch here is what "out of tune" sounds like */
-for(const song of [SONG_TITLE, SONG_GAME]){
+for(const song of [SONG_TITLE, ...SONGS_GAME]){
   const sums = song.tracks.map(t=>t.seq.reduce((a,[,d])=>a+d,0));
   if(new Set(sums).size!==1) console.error('SONG TRACK LENGTH MISMATCH', sums);
 }
@@ -1333,13 +1382,26 @@ function scanPuzzles(dt){
   }
 }
 const music = {
-  song:null, ptr:[], next:[],
+  song:null, ptr:[], next:[], idx:0, endAt:0,
   play(song){ this.song=song; this.ptr=song?song.tracks.map(()=>0):[];
-              this.next=song?song.tracks.map(()=>chip.ctx?chip.ctx.currentTime+0.1:0):[]; },
+              this.next=song?song.tracks.map(()=>chip.ctx?chip.ctx.currentTime+0.1:0):[];
+              this.endAt=0; },
+  playIndex(i, quiet=false){                 // the jukebox
+    this.idx=(i+SONGS_GAME.length)%SONGS_GAME.length;
+    const song=SONGS_GAME[this.idx];
+    this.play(song);
+    if(chip.ctx){
+      const dur = song.step * song.tracks[0].seq.reduce((a,[,d])=>a+d,0);
+      this.endAt = chip.ctx.currentTime + 0.1 + dur;
+    }
+    if(!quiet && state.running) toast('\u266a '+song.name);
+  },
   stop(){ this.song=null; },
   update(){
     if(!this.song||!chip.ctx||chip.muted) return;
     const now=chip.ctx.currentTime;
+    // rotate the playlist when the current arrangement completes a pass
+    if(this.endAt && now>this.endAt){ this.playIndex(this.idx+1); return; }
     this.song.tracks.forEach((tr,i)=>{
       if(this.next[i]===0) this.next[i]=now+0.1;
       while(this.next[i] < now+0.35){
@@ -1851,7 +1913,7 @@ function startGame(){
   for(const lv of levers){ if(bridges[lv.grp].timer>0){ bridges[lv.grp].timer=0; lv.arm.rotation.z=0.7; } }
   state.spawn=[-1,1.1,4]; respawn(); p.won=false;
   updateHUD();
-  music.play(SONG_GAME);
+  music.playIndex(0, true);
 }
 function gameOver(){
   state.running=false;
@@ -2164,6 +2226,8 @@ window.__jsd = {
   start(){ startGame(); },
   press(name,down=true){ keys[name]=down; if(name==='jump'&&down) input.jumpBuf=0.14; },
   probe(x,y,z){ return !!cellSolid(x,y,z); },
+  get song(){ return { idx:music.idx, name:music.song&&music.song.name||null, count:SONGS_GAME.length }; },
+  nextSong(){ music.playIndex(music.idx+1); },
   get pushDbg(){ return {...pushDbg}; },
   push(dx,dz){ pushCd=0; tryPushCrate(dx,dz); },
   teleport(x,y,z){ p.x=x; p.y=y; p.z=z; p.vx=p.vy=p.vz=0; p.fallFrom=y; },

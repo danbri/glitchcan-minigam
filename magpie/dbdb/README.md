@@ -15,9 +15,12 @@ Play: `dbdb2.html` (rev 2, "The Moonlight Shift") or `dbdb.html`
 - Chunked engine: 16x16-column merged chunks, per-vertex baked voxel AO +
   cool moon key + warm lamp glow; distance fog to a night sky; stars and
   a dithered moon composited in the post pass.
-- Peephole occlusion: a dithered window is discarded through any geometry
-  between camera and hero (screen-space + view-depth test) — replaces the
-  rev-1 x-ray silhouette, which read as "hero everywhere".
+- Veil occlusion (was: peephole): geometry between camera and hero goes
+  mostly-translucent via per-pixel screen-door discard, and the surviving
+  pixels shimmer — a frosted, wibbling, rapidly colour-cycling curtain
+  (wobbled radius, radial hue rings, hash sparkle). You see the hero AND
+  you unmistakably see the wall is still there. Replaces both the rev-1
+  x-ray ("hero everywhere") and the plain cut-out ("mistaken for absence").
 - Full-360 camera: drag anywhere (right half on touch) to spin freely;
   Q/E or the buttons snap to the nearest diagonal station.
 - THE PUZZLE CITY: 200 generated courts south of the manor, 5 puzzle
@@ -45,8 +48,11 @@ Play: `dbdb2.html` (rev 2, "The Moonlight Shift") or `dbdb.html`
   shading + ZX palette baked into vertex colors). Renders at a chunky internal
   resolution (~430 px tall) for the pixel look.
 - **Audio:** 3 square-wave channels + noise over WebAudio — an AY-chip
-  impression. Title: Moonlight Sonata; in-game: In the Hall of the Mountain
-  King (both public domain). SFX for jump/pickup/death/splash/fanfare.
+  impression. Title: Moonlight Sonata. In-game (rev 2): a rotating jukebox
+  of five public-domain arrangements — Mountain King (Grieg), Fur Elise
+  (Beethoven), Greensleeves (trad.), Badinerie (Bach), Morning Mood (Grieg)
+  — advancing each full pass with a now-playing toast. SFX for
+  jump/pickup/death/splash/fanfare.
 
 ## World
 Ten zones on a terraced cutaway manor: Duck Pond → Grand Hall / Kitchen /
