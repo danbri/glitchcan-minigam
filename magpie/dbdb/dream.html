@@ -136,6 +136,11 @@ if(parent!==window)                        // framed in dbdb2: clear its EJECT b
    ========================================================= */
 const SCENES={
   tree:  { names:['HEARTH','TINSEL','ROOTS','STARWARD'], ply:'splats/christmas-tree-150k.compressed.ply',
+           code:'MOONFALL',
+           /* walls: flat surfaces catalogued by tools/wall-scout.mjs
+              (RANSAC over the scan points, visually reviewed) */
+           walls:[{p:[0.52,0.52,0.52], yaw:-117.1, w:1.3},
+                  {p:[0,0,1.04],       yaw:-115.5, w:1.3}],
            /* st: hand-placed stations (owner, via ?edit=1) — each overrides
               the computed TOUR corner of the same index: name, world pos,
               arrival camera bearing */
@@ -164,6 +169,10 @@ const SCENES={
            what:'a motorcycle, parked forever in the static',
            credit:'biker · playcanvas/engine examples · MIT' },
   garden:{ names:['LILYPAD','CANOPY','BRICKPATH','MANGROVE'], ply:'splats/garden-sog/meta.json',
+           code:'VICTORIA',
+           walls:[{p:[-8.4,1.68,0],      yaw:59.6,   w:2.1},
+                  {p:[4.2,0.84,0],       yaw:-178.7, w:2.1},
+                  {p:[-1.68,2.52,7.56],  yaw:-179.5, w:2.1}],
            /* st: scouted by tools/view-scout.mjs (density anchors ->
               scored shots -> visual review), 2026-08-11 */
            st:[{n:'LILY POND', p:[3.5,0.7,3.5], yaw:-135, pit:-4.5, d:0.239},
@@ -841,6 +850,8 @@ if(inkStory){
 }
 function updateTally(){
   document.getElementById('clueTally').textContent='\u25c6 '+vs('gems')+' \u00b7 \u25c7 '+vs('diamonds');
+  if(typeof WRITINGS!=='undefined')
+    for(const W of WRITINGS) if(W.type==='score') drawWriting(W);
 }
 
 /* choices choreograph the camera */
@@ -860,6 +871,71 @@ STN.forEach((s,i)=>{ if(i>=TOUR.length) return;
    Two wild gems drift off the beaten track. */
 TOUR.forEach(p=>spawnGem(p.x,p.y,p.z));
 for(const o of GEM_WILD) spawnGem(C.x+o[0]*R, C.y+o[1]*R, C.z+o[2]*R);
+
+/* =========================================================
+   WRITINGS — clues, clocks, scores, codes, written onto the
+   scan's own flat surfaces (walls catalogued semi-automatedly
+   by tools/wall-scout.mjs, then reviewed by eye). The plates
+   write depth, so the gaussians occlude them naturally.
+   ========================================================= */
+const WRITINGS=[];
+const W_TYPES=['code','clock','score','note'];
+function drawWriting(W){
+  const g=W.ctx;
+  g.setTransform(1,0,0,1,0,0);
+  g.fillStyle='rgba(2,10,5,0.94)'; g.fillRect(0,0,256,128);
+  g.strokeStyle=tint; g.lineWidth=2; g.strokeRect(3,3,250,122);
+  g.fillStyle=tint; g.textAlign='center';
+  if(W.type==='code'){
+    g.font='bold 30px monospace';
+    g.fillText(SCENE.code||SCENEKEY.toUpperCase(),128,58);
+    g.font='11px monospace'; g.globalAlpha=.6;
+    g.fillText('REMEMBER THE WORD',128,96); g.globalAlpha=1;
+  } else if(W.type==='clock'){
+    const d=new Date();
+    g.font='bold 40px monospace';
+    g.fillText(String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'),128,66);
+    g.font='11px monospace'; g.globalAlpha=.6;
+    g.fillText('THE DRIFT KEEPS TIME',128,100); g.globalAlpha=1;
+  } else if(W.type==='score'){
+    g.font='bold 28px monospace';
+    g.fillText('\u25c6 '+vs('gems')+'   \u25c7 '+vs('diamonds'),128,58);
+    g.font='11px monospace'; g.globalAlpha=.6;
+    g.fillText('GEMS \u00b7 DIAMONDS',128,96); g.globalAlpha=1;
+  } else {
+    g.font='13px monospace';
+    g.fillText('THE STATIC WROTE THIS',128,52);
+    g.fillText('WHILE YOU WERE AWAY',128,78);
+  }
+  W.tex.setSource(W.cv);
+}
+function spawnWriting(wd,i){
+  const cv=document.createElement('canvas'); cv.width=256; cv.height=128;
+  const ctx=cv.getContext('2d');
+  const tex=new pc.Texture(app.graphicsDevice,{ width:256, height:128,
+    format:pc.PIXELFORMAT_R8_G8_B8_A8, mipmaps:false });
+  tex.minFilter=pc.FILTER_LINEAR; tex.magFilter=pc.FILTER_LINEAR;
+  const m=new pc.StandardMaterial();
+  m.useLighting=false; m.diffuse=new pc.Color(0,0,0);
+  m.emissive=new pc.Color(1,1,1); m.emissiveMap=tex;
+  m.update();
+  const parent2=new pc.Entity('writing');
+  const pl=new pc.Entity('pl');
+  pl.addComponent('render',{ type:'plane' });
+  pl.render.meshInstances[0].material=m;
+  pl.setLocalEulerAngles(90,0,0);              // plane +y -> facing +z
+  const w=wd.w||0.5*R;
+  pl.setLocalScale(w,1,w*0.5);
+  parent2.addChild(pl);
+  const ar=wd.yaw*Math.PI/180;
+  parent2.setPosition(wd.p[0]+Math.sin(ar)*0.04*R, wd.p[1], wd.p[2]+Math.cos(ar)*0.04*R);
+  parent2.setEulerAngles(0,wd.yaw,0);
+  app.root.addChild(parent2);
+  const W={ cv, ctx, tex, type:W_TYPES[i%W_TYPES.length] };
+  WRITINGS.push(W); drawWriting(W);
+}
+(SCENE.walls||[]).forEach((wd,i)=>spawnWriting(wd,i));
+setInterval(()=>{ for(const W of WRITINGS) if(W.type==='clock') drawWriting(W); }, 30000);
 let tourI=0;
 /* the one true port flight: absolute per-station bearing (hand-placed
    yaw wins over the computed corner), so the same port always lands in
