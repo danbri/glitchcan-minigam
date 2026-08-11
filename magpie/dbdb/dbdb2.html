@@ -3062,7 +3062,11 @@ function dreamEnter(T){
   music.playTag('dreamy', true);
   const w=$('dreamWrap');
   w.classList.remove('hidden');
-  $('dreamFrame').src='dream.html?tint='+((T&&T.name)||'bondi');
+  /* forward edit / hic flags from our own URL into the dream, so
+     dbdb2.html?edit=1 places stations through the integrated door */
+  { const q=new URLSearchParams(location.search); let extra='';
+    for(const k of ['edit','hic']) if(q.get(k)) extra+='&'+k+'='+q.get(k);
+    $('dreamFrame').src='dream.html?tint='+((T&&T.name)||'bondi')+extra; }
   requestAnimationFrame(()=>requestAnimationFrame(()=>w.classList.add('in')));
 }
 function dreamExit(reward){
