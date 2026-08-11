@@ -139,12 +139,32 @@ const SCENES={
            pal:['#a87848','#784818','#d8a878','#787878','#484848','#c8b890'],
            what:'a ghost-town car shop, dust settling on old machines',
            credit:'Nelson Ghost Town Car Shop · Paolo Tosolini · superspl.at/scene/dd8d9c8b · CC BY 4.0' },
+  museum:{ ply:'splats/museum.sog',
+           up:[0,-1,0], c:[0.11,-0.9,-0.03], r:15.0,
+           pal:['#181818', '#484818', '#484848', '#787848', '#184818', '#787878'],
+           what:'an art museum after hours, the paintings listening',
+           credit:'Buffalo AKG Art Museum · Justin Eastman · superspl.at/scene/fadf93a0 · CC BY 4.0' },
+  pool:{ ply:'splats/pool.sog',
+           up:[0,-1,0], c:[-4.43,-4.59,-2.64], r:11.41,
+           pal:['#181818', '#484818', '#787848', '#184818', '#787818', '#784818'],
+           what:'an apartment pool, holding its blue perfectly still',
+           credit:'Apartment Pool · paul · superspl.at/scene/9d145adb · CC BY 4.0' },
+  watertower:{ ply:'splats/watertower.sog',
+           up:[0,-1,0], c:[-13.59,-1.1,-13.78], r:14.7,
+           pal:['#181818', '#a8a8a8', '#787878', '#484848', '#ffffff', '#181848'],
+           what:'a ghost-town water tower, tall against the static',
+           credit:'Nelson Ghost Town Water Tower · Paolo Tosolini · superspl.at/scene/fb3b5ed5 · CC BY 4.0' },
+  calico:{ ply:'splats/calico.sog',
+           up:[0,-1,0], c:[57.7,-1.11,1.97], r:41.41,
+           pal:['#a8a8a8', '#787878', '#484848', '#d8d8d8', '#181818', '#ffffff'],
+           what:'a red-rock desert trail, wind fossilised mid-gust',
+           credit:'Calico Tanks Trail, Red Rock Canyon · Paolo Tosolini · superspl.at/scene/19312f07 · CC BY 4.0' },
 };
 /* places only (owner, Aug 2026): objects render fine but make no game
    sense; every PET dials the winter-tree ROOM until more place-scans
    arrive. Objects stay reachable via ?scene= for testing. */
-const TINT2SCENE={ bondi:'carshop', grape:'tree', strawberry:'forest',
-                   lime:'garden', tangerine:'carshop' };
+const TINT2SCENE={ bondi:'carshop', grape:'museum', strawberry:'forest',
+                   lime:'garden', tangerine:'pool' };
 const SCENE=SCENES[Q.get('scene')] || SCENES[TINT2SCENE[Q.get('tint')]] || SCENES.tree;
 const SPLAT_PATH=(Q.has('hq') && SCENE.hq) ? SCENE.hq : SCENE.ply;
 

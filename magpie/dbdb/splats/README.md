@@ -48,3 +48,18 @@ link. Both **CC BY 4.0**:
 Attribution renders on each in-dream terminal crest. Note: the earlier
 "splat-transform cannot read LOD tiles" claim was wrong — it failed
 only because the shN files had not been downloaded yet.
+
+## Four more CC BY places (Aug 2026): museum, pool, watertower, calico
+All from the superspl.at catalogue crawl, all CC BY 4.0 (rel=license
+verified per scene page), all dieted to one .sog each via
+splat-transform + random subsample:
+- `museum.sog` — "Buffalo AKG Art Museum" · Justin Eastman ·
+  scene fadf93a0 (untiled SOG, 5M→217k, 2.8MB)
+- `pool.sog` — "Apartment Pool" · paul · scene 9d145adb (175k, 2.3MB)
+- `watertower.sog` — "Nelson Ghost Town, Water Tower" · Paolo Tosolini
+  · scene fb3b5ed5 (134k, 1.6MB)
+- `calico.sog` — "Calico Tanks Trail, Red Rock Canyon" · Paolo Tosolini
+  · scene 19312f07 (149k, 1.8MB)
+Scene centres/radii use median + 70th-percentile distance (plain stdev
+was blown up 5x by stray far splats). museum/pool boot framings still
+want an in-game ?edit=1 pass.
