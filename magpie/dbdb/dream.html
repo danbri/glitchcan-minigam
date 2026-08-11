@@ -263,16 +263,28 @@ Three bright things are hidden in the drift. Tap them when you find them. Drag t
 + [Listen to the static] -> listening
 == listening ==
 The needles hum at fifty hertz. The snow is made of other people's photographs.
+-> hub
+== hub ==
 {clues == 0: Nothing found yet. The lights are out there.}
 {clues == 1: One found. Two lights still out there.}
 {clues == 2: Two found. One light still out there.}
--> DONE
++ [Ask the dream for a hint] -> hint
++ [Just drift a while] -> drift
+== hint ==
+{clues == 0: "Low, and left of the tree," the static says. "Something that once sat on a head."}
+{clues == 1: "Near the heart of the scan," it hums. "Small, brass, patient. Drag the view."}
+{clues == 2: "Higher," it crackles. "Past the tree-top, out in the drift. It still has light in it."}
+{clues == 3: "You have them all. Why are we whispering?"}
+-> hub
+== drift ==
+{~The snow tilts, considering.|A photograph of a photograph goes by.|Somebody's living room breathes in.|The tree adjusts its shadow, like a coat.}
+-> hub
 == found_1 ==
 ONE. A paper crown, folded by somebody's grandmother. The tree remembers being decorated.
--> DONE
+-> hub
 == found_2 ==
 TWO. A brass key on red thread. It opens nothing here. It opens something THERE.
--> DONE
+-> hub
 == found_3 ==
 THREE. A bulb that still works. The tree lights from the inside, once, just for you.
 The dream is satisfied. It presses the key into your hand and lets go.
