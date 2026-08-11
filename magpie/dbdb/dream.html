@@ -52,6 +52,15 @@
     font-size:13px; line-height:1.5; pointer-events:auto;
   }
   #panel .crest { font-size:9px; letter-spacing:.3em; opacity:.65; margin-bottom:6px; }
+  #readBtn { position:fixed; bottom:12px; right:10px; z-index:9;
+    background:rgba(0,30,12,.7); border:2px solid rgba(159,232,176,.6);
+    color:#9fe8b0; font-family:inherit; font-size:15px; font-weight:bold;
+    padding:9px 13px; border-radius:8px; cursor:pointer; }
+  #panel.read { position:fixed !important; left:4vw !important; right:4vw !important;
+    top:11vh !important; width:auto !important; max-height:72vh !important;
+    transform:none !important; font-size:17px !important; }
+  #panel.read .choice { font-size:16px; padding:12px 14px; }
+  #panel.read p { font-size:17px; }
   #panel p { margin:0 0 8px; animation:inkIn .7s ease both;
     text-shadow:0 0 6px rgba(80,255,140,.35); }
   @keyframes inkIn { from{opacity:0; transform:translateY(6px); filter:blur(4px);}
@@ -73,6 +82,7 @@
 <div id="head"><span id="hudLoc">PORT/7 · DREAM SHELL</span><span id="clueTally">CLUES 0/3</span></div>
 <button type="button" id="exitBtn">✕ SURFACE</button>
 <div id="loadLine">TUNING THE STATIC…</div>
+<button type="button" id="readBtn" aria-label="toggle large reading mode">⤢ READ</button>
 <div id="css3d"><div id="css3dCam">
   <div id="panel"><div class="crest">PORT/7 TERMINAL</div><div class="inkText"></div><div class="choices"></div></div>
 </div></div>
@@ -95,6 +105,13 @@ for(const id of ['head','exitBtn','loadLine']){
   const el=document.getElementById(id); if(el) el.style.color=tint;
 }
 document.getElementById('exitBtn').style.borderColor=tint;
+const readBtn=document.getElementById('readBtn');
+readBtn.style.color=tint; readBtn.style.borderColor=tint;
+let readMode=false;
+readBtn.addEventListener('click',()=>{
+  readMode=!readMode;
+  readBtn.textContent=readMode?'⤢ WORLD':'⤢ READ';
+});
 if(parent!==window)                        // framed in dbdb2: clear its EJECT button
   document.getElementById('head').style.paddingLeft='104px';
 
@@ -216,17 +233,34 @@ camE.addComponent('camera', { clearColor:new pc.Color(0.004,0.008,0.016),
 app.root.addChild(camE);
 camE.setPosition(CAM_POS); camE.lookAt(CAM_TGT, pc.Vec3.UP);
 
-/* orbit state: yaw/pitch/dist factor + a lerping look target */
-let dragging=false,lx=0,ly=0, yaw=0, pitch=0, distF=1, idle=0;
+/* mansion-consistent controls: LEFT thumb walks the dream (translate),
+   RIGHT thumb turns it (orbit) — the same split as dbdb2's stick+spin */
+let dragging=null,lx=0,ly=0, yaw=0, pitch=0, distF=1, idle=0;
 const TGT_CUR=CAM_TGT.clone();
 let tgtGoal=CAM_TGT.clone();
-addEventListener('pointerdown',e=>{ dragging=true; lx=e.clientX; ly=e.clientY; });
+addEventListener('pointerdown',e=>{
+  dragging = e.clientX < innerWidth*0.45 ? 'walk' : 'orbit';
+  lx=e.clientX; ly=e.clientY; });
 addEventListener('pointermove',e=>{ if(!dragging) return;
   flight=null;                                  // your thumb outranks the choreography
-  yaw-=(e.clientX-lx)*0.28; pitch+=(e.clientY-ly)*0.22;
-  pitch=Math.max(-45,Math.min(60,pitch)); idle=0;
-  lx=e.clientX; ly=e.clientY; });
-addEventListener('pointerup',()=>{ dragging=false; });
+  const dx=e.clientX-lx, dy=e.clientY-ly;
+  if(dragging==='walk'){
+    const yr=yaw*Math.PI/180;
+    const fl=Math.hypot(base.x,base.z)||1;
+    const f0x=-base.x/fl, f0z=-base.z/fl;        // boot forward, on the ground
+    const fx=f0x*Math.cos(yr)+f0z*Math.sin(yr);
+    const fz=f0z*Math.cos(yr)-f0x*Math.sin(yr);
+    const rx=-fz, rz=fx;                         // camera-right on the ground
+    const k=0.0022*R;
+    TGT_CUR.x += rx*dx*k + fx*(-dy)*k;
+    TGT_CUR.z += rz*dx*k + fz*(-dy)*k;
+    tgtGoal=TGT_CUR.clone();
+  } else {
+    yaw-=dx*0.28; pitch+=dy*0.22;
+    pitch=Math.max(-45,Math.min(60,pitch));
+  }
+  idle=0; lx=e.clientX; ly=e.clientY; });
+addEventListener('pointerup',()=>{ dragging=null; });
 const base=new pc.Vec3().sub2(CAM_POS,CAM_TGT);
 const side=new pc.Vec3().cross(pc.Vec3.UP,base).normalize();
 const _q1=new pc.Quat(), _q2=new pc.Quat(), _off=new pc.Vec3(), _pos=new pc.Vec3();
@@ -580,6 +614,12 @@ function computeVis(){
 const _v2=new pc.Vec3(), _v3=new pc.Vec3();
 function domUpdate(vis){
   if(!css3d.isConnected) return;
+  if(readMode){                              // accessibility: big flat card
+    css3d.style.display='block'; plate.enabled=true;
+    domPanel.classList.add('read');
+    return;
+  }
+  domPanel.classList.remove('read');
   if(!vis){ css3d.style.display='none'; plate.enabled=true; return; }
   css3d.style.display='block';
   plate.enabled=false;                    // one screen at a time: DOM speaks
@@ -726,7 +766,7 @@ VAR clues = 0
 -> port
 == port ==
 The terminal dreamed you a place: ${SCENE.what}.
-Its named corners: ${NAMES.join(', ')}. Three bright things hide in the drift — tap them when you see them.
+Its named corners: ${NAMES.join(', ')}. You drift here without a body — LEFT thumb walks, RIGHT thumb turns. Three bright lights hide in the drift: tap them when you see them.
 + [Open the port map] -> hub
 == hub ==
 {clues == 0: Nothing found yet. The lights are out there.}
@@ -851,7 +891,7 @@ addEventListener('pointerup', e=>{
   const moved=Math.hypot(e.clientX-downAt[0], e.clientY-downAt[1]);
   downAt=null;
   if(moved>8 || !loaded) return;
-  if(e.target.closest && e.target.closest('#exitBtn,#ebCopy,#panel')) return;
+  if(e.target.closest && e.target.closest('#exitBtn,#ebCopy,#panel,#readBtn')) return;
   if(EDIT){ editPlace(e.clientX, e.clientY); return; }
   if(termTap(e.clientX, e.clientY)) return;       // PET markers zoom their screen
   if(panelTap(e.clientX, e.clientY)) return;      // the terminal soaks its taps
