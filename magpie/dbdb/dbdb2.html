@@ -1854,10 +1854,15 @@ const chip = {
       this.master = this.ctx.createGain();
       this.master.gain.value = 0.16;
       this.master.connect(this.ctx.destination);
+      /* music channels (0,1) route through a fadeable bus so songs can
+         crossfade gently instead of cutting; sfx (2) stays direct */
+      this.musicBus=this.ctx.createGain();
+      this.musicBus.gain.value=0.62;
+      this.musicBus.connect(this.master);
       for(let i=0;i<3;i++){
         const o=this.ctx.createOscillator(); o.type='square';
         const g=this.ctx.createGain(); g.gain.value=0;
-        o.connect(g); g.connect(this.master); o.start();
+        o.connect(g); g.connect(i<2?this.musicBus:this.master); o.start();
         this.chans.push({o,g});
       }
       const len=this.ctx.sampleRate; // 1s of noise
@@ -2156,20 +2161,36 @@ const music = {
   },
   playTag(tag, quiet=false){               // contextual trigger
     const pool = SONGS_GAME.filter(sg=>sg.tags.includes(tag) && sg!==this.song);
+    if(chip.ctx && chip.musicBus){          // even event cuts arrive gently
+      const now=chip.ctx.currentTime;
+      chip.musicBus.gain.setTargetAtTime(0.1, now, 0.25);
+      chip.musicBus.gain.setTargetAtTime(0.62, now+0.8, 1.2);
+    }
     if(pool.length===0) return this.playIndex(this.idx+1, quiet);
     this.play(pool[Math.floor(Math.random()*pool.length)], quiet);
   },
   pickNext(){
-    // 65%: something fitting where you are; else: onward through the pile
+    // 65%: something fitting where you are; else: onward through the pile.
+    // Rotation is QUIET — no toast, no fanfare; only event cuts announce.
     const tag = contextTag();
-    if(tag && Math.random()<0.65) this.playTag(tag);
-    else this.playIndex(this.idx+1);
+    if(tag && Math.random()<0.65) this.playTag(tag, true);
+    else this.playIndex(this.idx+1, true);
   },
   stop(){ this.song=null; },
   update(){
     if(!this.song||!chip.ctx||chip.muted) return;
     const now=chip.ctx.currentTime;
-    if(this.endAt && now>this.endAt){ this.pickNext(); return; }
+    if(this.endAt && now>this.endAt-2.5 && !this.fading){
+      this.fading=true;                              // ease the song away
+      chip.musicBus.gain.setTargetAtTime(0.1, now, 1.0);
+    }
+    if(this.endAt && now>this.endAt){
+      if(!this.gapUntil){ this.gapUntil=now+6; return; }   // a breath of night
+      if(now<this.gapUntil) return;
+      this.gapUntil=0; this.fading=false;
+      chip.musicBus.gain.setTargetAtTime(0.62, now+0.5, 2.0);  // ease in
+      this.pickNext(); return;
+    }
     this.song.tracks.forEach((tr,i)=>{
       if(this.next[i]===0) this.next[i]=now+0.1;
       while(this.next[i] < now+0.35){

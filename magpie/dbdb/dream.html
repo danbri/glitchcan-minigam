@@ -102,7 +102,7 @@ document.getElementById('exitBtn').style.borderColor=tint;
    becomes world +y, and everything else lives in y-up space.
    ========================================================= */
 const SCENES={
-  tree:  { ply:'splats/christmas-tree-150k.compressed.ply',
+  tree:  { names:['HEARTH','TINSEL','ROOTS','STARWARD'], ply:'splats/christmas-tree-150k.compressed.ply',
            hq:'splats/christmas-tree-400k.compressed.ply',
            raw:'splats/christmas-tree-150k.splat',
            up:[-0.522,0.836,0.168], c:[-0.4,-0.1,0.9], r:2.6,
@@ -124,37 +124,37 @@ const SCENES={
            pal:['#a8a8a8','#d8d8d8','#787878','#784848','#f0e8d8','#484848'],
            what:'a motorcycle, parked forever in the static',
            credit:'biker · playcanvas/engine examples · MIT' },
-  garden:{ ply:'splats/garden-sog/meta.json',
+  garden:{ names:['LILYPAD','CANOPY','BRICKPATH','MANGROVE'], ply:'splats/garden-sog/meta.json',
            up:[0,-1,0], c:[0,0,0], r:4.2,
            pal:['#7da05a','#a8c878','#d8e8c0','#8a9a78','#c8b890','#587048'],
            what:'a tropical glasshouse, breathing green in the static',
            credit:'Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0' },
-  forest:{ ply:'splats/forest.sog',
+  forest:{ names:['TRAILHEAD','UNDERWOOD','CLEARING','MOSSBANK'], ply:'splats/forest.sog',
            up:[0,-1,0], c:[-0.63,-0.57,0.74], r:4.0,
            pal:['#487818','#184818','#787818','#a8c878','#484818','#8a9a58'],
            what:'a forest path, mid-stride, holding the light between trunks',
            credit:'Forest path · Pavel Tanhauser · superspl.at/scene/2be1a75a · CC BY 4.0' },
-  carshop:{ ply:'splats/carshop.sog',
+  carshop:{ names:['OILCAN','WORKBENCH','TINROOF','YARD'], ply:'splats/carshop.sog',
            up:[0,-1,0], c:[0.42,-1.21,-0.26], r:3.6,
            pal:['#a87848','#784818','#d8a878','#787878','#484848','#c8b890'],
            what:'a ghost-town car shop, dust settling on old machines',
            credit:'Nelson Ghost Town Car Shop · Paolo Tosolini · superspl.at/scene/dd8d9c8b · CC BY 4.0' },
-  museum:{ ply:'splats/museum.sog',
+  museum:{ names:['PORTICO','GALLERY','LAWN','COLONNADE'], ply:'splats/museum.sog',
            up:[0,-1,0], c:[0.11,-0.9,-0.03], r:15.0,
            pal:['#181818', '#484818', '#484848', '#787848', '#184818', '#787878'],
            what:'an art museum after hours, the paintings listening',
            credit:'Buffalo AKG Art Museum · Justin Eastman · superspl.at/scene/fadf93a0 · CC BY 4.0' },
-  pool:{ ply:'splats/pool.sog',
+  pool:{ names:['DEEPEND','SUNDECK','LADDER','SHALLOWS'], ply:'splats/pool.sog',
            up:[0,-1,0], c:[-4.43,-4.59,-2.64], r:11.41,
            pal:['#181818', '#484818', '#787848', '#184818', '#787818', '#784818'],
            what:'an apartment pool, holding its blue perfectly still',
            credit:'Apartment Pool · paul · superspl.at/scene/9d145adb · CC BY 4.0' },
-  watertower:{ ply:'splats/watertower.sog',
+  watertower:{ names:['TANK','RUNGS','SHADOWSIDE','GHOSTYARD'], ply:'splats/watertower.sog',
            up:[0,-1,0], c:[-13.59,-1.1,-13.78], r:14.7,
            pal:['#181818', '#a8a8a8', '#787878', '#484848', '#ffffff', '#181848'],
            what:'a ghost-town water tower, tall against the static',
            credit:'Nelson Ghost Town Water Tower · Paolo Tosolini · superspl.at/scene/fb3b5ed5 · CC BY 4.0' },
-  calico:{ ply:'splats/calico.sog',
+  calico:{ names:['REDROCK','SANDWASH','OVERLOOK','CAIRN'], ply:'splats/calico.sog',
            up:[0,-1,0], c:[57.7,-1.11,1.97], r:41.41,
            pal:['#a8a8a8', '#787878', '#484848', '#d8d8d8', '#181818', '#ffffff'],
            what:'a red-rock desert trail, wind fossilised mid-gust',
@@ -508,6 +508,10 @@ function editPlace(cx,cy){
 const css3d=document.getElementById('css3d'), css3dCam=document.getElementById('css3dCam');
 const domPanel=document.getElementById('panel');
 domPanel.style.color=tint; domPanel.style.borderColor=tint;
+/* one screen only: unless ?html=1 the DOM twin is REMOVED from the
+   document, so it cannot desync from the engine plate even on stale
+   caches or odd bearings */
+if(!Q.has('html')) css3d.remove();
 let occPts=null, domVis=false, visTick=0;
 if(SCENE.raw){
   fetch(SCENE.raw, { headers:{ Range:'bytes=0-959999' } })
@@ -585,6 +589,7 @@ function objCSS(e){
 }
 const _inv=new pc.Mat4();
 function domUpdate(vis){
+  if(!css3d.isConnected) return;
   if(!vis){ css3d.style.display='none'; return; }
   css3d.style.display='block';
   const h=innerHeight, w=innerWidth;
@@ -684,6 +689,8 @@ function boot(){
   loaded=true; loadLine.classList.add('hidden');
   console.log('dream renderer:', mode, '· scene:', SCENE.credit);
   renderInk();
+  if(Q.has('far'))                     // arriving from another splat: sweep in
+    fly({ dYaw:230, toPitch:6, toDist:0.9, tgt:TOUR[0], dur:5, quiet:true });
 }
 function loadSplat(attempt=0){
   const bust = attempt>0 ? '?r='+attempt+'-'+Date.now() : '';
@@ -708,30 +715,56 @@ loadSplat();
 /* =========================================================
    ink — the dream narrates the hunt (REAL inkjs compile)
    ========================================================= */
+const NAMES=SCENE.names||['NORTH','EAST','SOUTH','WEST'];
+/* far ports: two other PLACES, chosen per boot */
+const PLACES=['tree','garden','carshop','forest','museum','pool','watertower','calico'];
+const FKEYS=PLACES.filter(k=>SCENES[k]&&SCENES[k]!==SCENE);
+const FAR=[FKEYS[Math.floor(Math.random()*FKEYS.length)]];
+{ let k2=FKEYS[Math.floor(Math.random()*FKEYS.length)];
+  if(k2===FAR[0]) k2=FKEYS[(FKEYS.indexOf(k2)+1)%FKEYS.length];
+  FAR.push(k2); }
 const INK_SOURCE = `
 VAR clues = 0
 -> port
 == port ==
 The terminal dreamed you a place: ${SCENE.what}.
-Three bright things are hidden in the drift. Tap them when you find them. Drag to look around.
-+ [Listen to the static] -> listening
-== listening ==
-The needles hum at fifty hertz. The snow is made of other people's photographs.
--> hub
+Its named corners: ${NAMES.join(', ')}. Three bright things hide in the drift — tap them when you see them.
++ [Open the port map] -> hub
 == hub ==
 {clues == 0: Nothing found yet. The lights are out there.}
 {clues == 1: One found. Two lights still out there.}
 {clues == 2: Two found. One light still out there.}
+{clues == 3: All three found. The key is warm in your hand.}
++ [Port → ${NAMES[0]}] -> st_0
++ [Port → ${NAMES[1]}] -> st_1
++ [Port → ${NAMES[2]}] -> st_2
++ [Port → ${NAMES[3]}] -> st_3
++ [FAR PORT → ${(SCENES[FAR[0]].names||['?'])[0]} · ${FAR[0]}] -> far_0
++ [FAR PORT → ${(SCENES[FAR[1]].names||['?'])[0]} · ${FAR[1]}] -> far_1
 + [Ask the dream for a hint] -> hint
-+ [Just drift a while] -> drift
+== st_0 ==
+The dream slides you along the drift to ${NAMES[0]}.
+-> hub
+== st_1 ==
+${NAMES[1]} assembles itself around you, point by point.
+-> hub
+== st_2 ==
+The static parts. ${NAMES[2]}.
+-> hub
+== st_3 ==
+You arrive at ${NAMES[3]} before the sound of leaving fades.
+-> hub
+== far_0 ==
+The static thickens. Another place entirely takes the screen.
+-> DONE
+== far_1 ==
+The whole scan folds shut behind you.
+-> DONE
 == hint ==
 {clues == 0: "Low, near the base," the static says. "Something that once sat on a head."}
 {clues == 1: "At the heart of the scan," it hums. "Small, brass, patient."}
 {clues == 2: "Higher," it crackles. "Up past the top, out in the drift. It still has light in it."}
-{clues == 3: "You have them all. Why are we whispering?"}
--> hub
-== drift ==
-{~The snow tilts, considering.|A photograph of a photograph goes by.|Somebody's room breathes in.|The scan adjusts its shadow, like a coat.}
+{clues == 3: "You have them all. WAKE when ready — or keep porting."}
 -> hub
 == found_1 ==
 ONE. A paper crown, folded by somebody's grandmother. The scan remembers being loved.
@@ -741,8 +774,8 @@ TWO. A brass key on red thread. It opens nothing here. It opens something THERE.
 -> hub
 == found_3 ==
 THREE. A bulb that still works. The dream lights from the inside, once, just for you.
-It presses the key into your hand and lets go.
 + [WAKE] -> wake
++ [Keep drifting] -> hub
 == wake ==
 You surface through the static, grinning like a fool.
 -> END
@@ -759,15 +792,27 @@ const TOUR=[[0.55,0.05,0],[0,0.02,0.55],[-0.55,0.08,0],[0,0.05,-0.55]]
 let tourI=0;
 function choiceFlight(label){
   const L=label.toLowerCase();
-  if(L.includes('listen')) fly({ dYaw:40, toPitch:4, toDist:0.72, dur:3.5 });
-  else if(L.includes('hint')){
+  const sti=NAMES.findIndex(n=>label.includes(n));
+  if(L.startsWith('far port')){
+    const fk=label.includes('· '+FAR[1])?FAR[1]:FAR[0];
+    fly({ dYaw:200, toPitch:26, toDist:1.9, tgt:CAM_TGT, dur:2.6, onDone:()=>{
+      const u=new URL(location.href);
+      u.searchParams.set('scene',fk); u.searchParams.set('far','1');
+      location.href=u.toString();
+    }});
+    return 'far';
+  }
+  if(L.startsWith('port') && sti>=0){
+    document.getElementById('hudLoc').textContent='PORT/7 · '+NAMES[sti];
+    fly({ dYaw:130+sti*40, toPitch:4+sti*3, toDist:0.68, tgt:TOUR[sti], dur:5 });
+    return null;
+  }
+  if(L.includes('hint')){
     const c=clueMeshes.find(cm=>!cm.found);
     if(c) fly({ dYaw:120, toPitch:10, toDist:0.55, tgt:c.grp.getPosition(), dur:3.8 });
   }
-  else if(L.includes('drift')){
-    tourI=(tourI+1)%TOUR.length;
-    fly({ dYaw:150, toPitch:6, toDist:0.7, tgt:TOUR[tourI], dur:6 });
-  }
+  else if(L.includes('map')) fly({ dYaw:45, toPitch:18, toDist:1.25, tgt:CAM_TGT, dur:3 });
+  else if(L.includes('drifting')) fly({ dYaw:150, toPitch:6, toDist:0.8, tgt:CAM_TGT, dur:5 });
   else if(L.includes('wake')) return 'wake';    // handled by the caller
   return null;
 }
