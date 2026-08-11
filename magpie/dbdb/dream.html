@@ -129,12 +129,22 @@ const SCENES={
            pal:['#7da05a','#a8c878','#d8e8c0','#8a9a78','#c8b890','#587048'],
            what:'a tropical glasshouse, breathing green in the static',
            credit:'Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0' },
+  forest:{ ply:'splats/forest.sog',
+           up:[0,-1,0], c:[-0.63,-0.57,0.74], r:4.0,
+           pal:['#487818','#184818','#787818','#a8c878','#484818','#8a9a58'],
+           what:'a forest path, mid-stride, holding the light between trunks',
+           credit:'Forest path · Pavel Tanhauser · superspl.at/scene/2be1a75a · CC BY 4.0' },
+  carshop:{ ply:'splats/carshop.sog',
+           up:[0,-1,0], c:[0.42,-1.21,-0.26], r:3.6,
+           pal:['#a87848','#784818','#d8a878','#787878','#484848','#c8b890'],
+           what:'a ghost-town car shop, dust settling on old machines',
+           credit:'Nelson Ghost Town Car Shop · Paolo Tosolini · superspl.at/scene/dd8d9c8b · CC BY 4.0' },
 };
 /* places only (owner, Aug 2026): objects render fine but make no game
    sense; every PET dials the winter-tree ROOM until more place-scans
    arrive. Objects stay reachable via ?scene= for testing. */
-const TINT2SCENE={ bondi:'garden', grape:'tree', strawberry:'tree',
-                   lime:'garden', tangerine:'garden' };
+const TINT2SCENE={ bondi:'carshop', grape:'tree', strawberry:'forest',
+                   lime:'garden', tangerine:'carshop' };
 const SCENE=SCENES[Q.get('scene')] || SCENES[TINT2SCENE[Q.get('tint')]] || SCENES.tree;
 const SPLAT_PATH=(Q.has('hq') && SCENE.hq) ? SCENE.hq : SCENE.ply;
 

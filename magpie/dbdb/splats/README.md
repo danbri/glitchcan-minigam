@@ -33,3 +33,18 @@ entry was stripped from meta.json since we render degree 0; that also
 avoids shipping two more webp files. Attribution is rendered on the
 in-dream terminal itself and recorded here. PlayCanvas loads the
 unbundled meta.json directly as a 'gsplat' asset.
+
+## forest.sog + carshop.sog — SuperSplat gallery finds (Aug 2026)
+Discovered by driving a headless browser at the superspl.at gallery
+(via the session proxy) and cataloguing every scene page's rel=license
+link. Both **CC BY 4.0**:
+- `forest.sog` — "Forest path" by **Pavel Tanhäuser**
+  (superspl.at/scene/2be1a75a). Tile 0_0 of the streamed scene (624k),
+  converted with splat-transform and random-subsampled to 208k → one
+  2.4MB .sog bundle.
+- `carshop.sog` — "Nelson Ghost Town, Car Shop" by **Paolo Tosolini**
+  (superspl.at/scene/dd8d9c8b). The coarsest LOD tile (290k of 18.6M!)
+  repacked as one 3.3MB .sog bundle.
+Attribution renders on each in-dream terminal crest. Note: the earlier
+"splat-transform cannot read LOD tiles" claim was wrong — it failed
+only because the shN files had not been downloaded yet.
