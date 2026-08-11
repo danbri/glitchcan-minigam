@@ -1276,98 +1276,201 @@ const chip = {
   }
 };
 
-/* tunes: tracks of [midi|0, steps]. All tracks of a song have EQUAL total
-   steps, so harmony stays aligned across the whole loop (no phasing drift). */
-const times = (n,arr)=>{ const o=[]; for(let i=0;i<n;i++) for(const x of arr) o.push([x[0],x[1]]); return o; };
-const trans = (arr,s)=>arr.map(([m,d])=>[m>0?m+s:0, d]);
-
-/* Moonlight Sonata, 1st movement, C# minor — 12 bars, 12 triplet steps each.
-   Per bar: [arpeggio chord (3 notes), bass root]. Loop ~27s. */
-const MOON_BARS = [
-  [[56,61,64],37], [[56,61,64],37], [[57,61,64],33], [[57,62,66],38],
-  [[56,60,66],32], [[56,61,64],37], [[54,57,61],42], [[56,60,63],32],
-  [[56,61,64],37], [[56,61,64],37], [[57,61,64],33], [[56,60,63],32],
-];
-const SONG_TITLE = {
-  step:0.19, tracks:[
-    { ch:0, vol:0.55, seq: MOON_BARS.flatMap(([c])=>times(4,[[c[0],1],[c[1],1],[c[2],1]])) },
-    { ch:1, vol:0.5,  seq: MOON_BARS.map(([,b])=>[b,12]) },
-    { ch:2, vol:0.42, seq:[            // the theme, entering at bar 5
-      [0,48],
-      [0,6],[68,3],[68,3], [68,12], [69,4],[68,4],[66,4], [63,12],
-      [0,6],[68,3],[68,3], [68,12], [69,4],[64,4],[61,4], [63,8],[0,4],
-    ] },
-  ]
-};
-
-/* In the Hall of the Mountain King, E minor — the 30-step theme, stated
-   8 times through registers (Grieg's build), coda, breath. Loop ~35s. */
-const MK = [
-  [52,1],[54,1],[55,1],[57,1],[59,1],[55,1],[59,2],
-  [58,1],[54,1],[58,2],
-  [57,1],[53,1],[57,2],
-  [52,1],[54,1],[55,1],[57,1],[59,1],[55,1],[59,1],[64,1],
-  [62,1],[59,1],[55,1],[59,1],[62,2],
-];
-const MK_PEDAL_E = times(15,[[40,2]]);                       // E2 pedal
-const MK_PULSE   = [...times(7,[[40,2],[47,2]]),[40,2]];     // E2/B2 pulse
-const MK_PEDAL_G = times(15,[[43,2]]);                       // G2 pedal (+3 statements)
-const SONG_MK = {
-  step:0.135, tracks:[
-    { ch:0, vol:0.75, seq:[
-      ...MK, ...MK, ...trans(MK,12), ...trans(MK,12),
-      ...trans(MK,3), ...trans(MK,3), ...trans(MK,12), ...trans(MK,12),
-      [76,1],[74,1],[71,1],[67,1],[64,1],[62,1],[59,1],[55,1],[52,4],   // coda
-      [0,8],                                                            // breath
-    ] },
-    { ch:1, vol:0.45, seq:[
-      ...MK_PEDAL_E, ...MK_PEDAL_E, ...MK_PULSE, ...MK_PULSE,
-      ...MK_PEDAL_G, ...MK_PEDAL_G, ...MK_PULSE, ...MK_PULSE,
-      [40,2],[40,2],[40,2],[40,2],[40,4],
-      [0,8],
-    ] },
-  ]
-};
-
-/* Fur Elise (Beethoven) — the Grand Hall's favourite */
-const SONG_ELISE = { name:'FUR ELISE', step:0.14, tracks:[
-  { ch:0, vol:0.7, seq:[
-    [76,1],[75,1],[76,1],[75,1],[76,1],[71,1],[74,1],[72,1],[69,2],[0,1],
-    [60,1],[64,1],[69,1],[71,2],[0,1],[64,1],[68,1],[71,1],[72,2],[0,1],
-    [64,1],[76,1],[75,1],[76,1],[75,1],[76,1],[71,1],[74,1],[72,1],[69,2],[0,1],
-    [60,1],[64,1],[69,1],[71,2],[0,1],[64,1],[72,1],[71,1],[69,4]] },
-  { ch:1, vol:0.4, seq: times(4, [[45,1],[52,1],[57,1],[0,3],[40,1],[47,1],[56,1],[0,3]]) },
-]};
-/* Greensleeves (trad.) — for the terraces at night */
-const SONG_GREEN = { name:'GREENSLEEVES', step:0.16, tracks:[
-  { ch:0, vol:0.68, seq:[
-    [69,2],[72,4],[74,2],[76,3],[77,1],[76,2],[74,4],[71,2],[67,3],[69,1],[71,2],
-    [72,4],[69,2],[69,3],[68,1],[69,2],[71,4],[68,2],[64,4],
-    [69,2],[72,4],[74,2],[76,3],[77,1],[76,2],[74,4],[71,2],[67,3],[69,1],[71,2],
-    [72,3],[71,1],[69,2],[68,3],[66,1],[68,2],[69,4],[69,2],[0,4]] },
-  { ch:1, vol:0.42, seq:[[45,12],[43,12],[41,12],[40,12],[45,12],[43,12],[41,6],[40,6],[45,12]] },
-]};
-/* Badinerie (Bach, Suite No. 2) — brisk, for the Puzzle City */
-const SONG_BADIN = { name:'BADINERIE', step:0.11, tracks:[
-  { ch:0, vol:0.72, seq: times(2, [
-    [71,2],[66,1],[71,1],[74,2],[71,1],[74,1],[78,2],[74,1],[78,1],[83,2],[0,2],
-    [82,1],[83,1],[82,1],[83,1],[78,1],[74,1],[71,1],[74,1],[66,2],[0,2]]) },
-  { ch:1, vol:0.4, seq: times(14, [[47,2],[0,2]]) },
-]};
-/* Morning Mood (Grieg) — because the manor has hope */
-const SONG_MORNING = { name:'MORNING MOOD', step:0.17, tracks:[
-  { ch:0, vol:0.62, seq: times(2, [
-    [79,1],[76,1],[74,1],[72,1],[74,1],[76,1],[79,1],[76,1],[74,1],[72,1],[74,1],[76,1],
-    [79,1],[76,1],[79,1],[81,1],[76,1],[81,1],[79,1],[76,1],[74,1],[72,1],[0,2]]) },
-  { ch:1, vol:0.38, seq: times(4, [[48,4],[55,4],[52,4]]) },
-]};
-const SONGS_GAME = [SONG_MK, SONG_ELISE, SONG_GREEN, SONG_BADIN, SONG_MORNING];
-SONG_MK.name = 'MOUNTAIN KING';
-/* loop-length invariant — a mismatch here is what "out of tune" sounds like */
-for(const song of [SONG_TITLE, ...SONGS_GAME]){
-  const sums = song.tracks.map(t=>t.seq.reduce((a,[,d])=>a+d,0));
-  if(new Set(sums).size!==1) console.error('SONG TRACK LENGTH MISMATCH', sums);
+/* =========================================================
+   THE WIRELESS — 50 public-domain arrangements for the
+   3-channel chip, each tagged for contextual triggering and
+   general rotation. All composers dead 70+ years or trad.
+   ========================================================= */
+const times=(n,arr)=>{ const o=[]; for(let i=0;i<n;i++) for(const x of arr) o.push([x[0],x[1]]); return o; };
+const trans=(arr,sh)=>arr.map(([m,d])=>[m>0?m+sh:0, d]);
+const M=(...a)=>{ const o=[]; for(let i=0;i<a.length;i+=2) o.push([a[i],a[i+1]]); return o; };
+const seqLen=q=>q.reduce((a,[,d])=>a+d,0);
+function tile(loop,total){                     // repeat a bass loop to EXACTLY total steps
+  const out=[]; let acc=0;
+  for(;;) for(const [m,d] of loop){
+    if(acc+d>=total){ out.push([m,total-acc]); return out; }
+    out.push([m,d]); acc+=d;
+  }
 }
+function song(name, tags, step, mel, bassLoop, vols=[0.68,0.42]){
+  return { name, tags, step, tracks:[
+    { ch:0, vol:vols[0], seq: mel },
+    { ch:1, vol:vols[1], seq: tile(bassLoop, seqLen(mel)) } ] };
+}
+/* tiny bass vocabulary */
+const pulse=(r,d=2)=>[[r,d],[0,d]];
+const alt=(a,b,d=2)=>[[a,d],[b,d]];
+const waltz=(r,f)=>[[r,1],[f,1],[f,1]];
+const arp=(a,b,c)=>[[a,1],[b,1],[c,1],[0,1]];
+const pad=(...rs)=>rs.map(r=>[r,4]);
+
+/* --- the big five from rev 2.0, now tagged --- */
+const MK = M(52,1,54,1,55,1,57,1,59,1,55,1,59,2, 58,1,54,1,58,2, 57,1,53,1,57,2,
+  52,1,54,1,55,1,57,1,59,1,55,1,59,1,64,1, 62,1,59,1,55,1,59,1,62,2);
+const SONG_MK = { name:'MOUNTAIN KING', tags:['danger','city','spooky'], step:0.135, tracks:[
+  { ch:0, vol:0.75, seq:[ ...MK, ...MK, ...trans(MK,12), ...trans(MK,12),
+    ...trans(MK,3), ...trans(MK,3), ...trans(MK,12), ...trans(MK,12),
+    [76,1],[74,1],[71,1],[67,1],[64,1],[62,1],[59,1],[55,1],[52,4],[0,8]] },
+  { ch:1, vol:0.45, seq: tile([[40,2],[47,2]], 260) },
+]};
+const SONG_TITLE = { name:'MOONLIGHT SONATA', tags:['title','night','dreamy'], step:0.19, tracks:(()=>{
+  const MB=[[[56,61,64],37],[[56,61,64],37],[[57,61,64],33],[[57,62,66],38],
+            [[56,60,66],32],[[56,61,64],37],[[54,57,61],42],[[56,60,63],32],
+            [[56,61,64],37],[[56,61,64],37],[[57,61,64],33],[[56,60,63],32]];
+  return [
+    { ch:0, vol:0.55, seq: MB.flatMap(([c])=>times(4,[[c[0],1],[c[1],1],[c[2],1]])) },
+    { ch:1, vol:0.5,  seq: MB.map(([,b])=>[b,12]) },
+    { ch:2, vol:0.42, seq:[[0,48],[0,6],[68,3],[68,3],[68,12],[69,4],[68,4],[66,4],[63,12],
+                           [0,6],[68,3],[68,3],[68,12],[69,4],[64,4],[61,4],[63,8],[0,4]] } ];
+})() };
+const SONG_ELISE = song('FUR ELISE',['manor','gentle'],0.14, M(
+  76,1,75,1,76,1,75,1,76,1,71,1,74,1,72,1,69,2,0,1, 60,1,64,1,69,1,71,2,0,1,
+  64,1,68,1,71,1,72,2,0,1, 64,1,76,1,75,1,76,1,75,1,76,1,71,1,74,1,72,1,69,2,0,1,
+  60,1,64,1,69,1,71,2,0,1, 64,1,72,1,71,1,69,4),
+  [[45,1],[52,1],[57,1],[0,3],[40,1],[47,1],[56,1],[0,3]]);
+const SONG_GREEN = song('GREENSLEEVES',['terrace','night'],0.16, M(
+  69,2,72,4,74,2,76,3,77,1,76,2, 74,4,71,2,67,3,69,1,71,2, 72,4,69,2,69,3,68,1,69,2,
+  71,4,68,2,64,4, 69,2,72,4,74,2,76,3,77,1,76,2, 74,4,71,2,67,3,69,1,71,2,
+  72,3,71,1,69,2,68,3,66,1,68,2, 69,4,69,2,0,4),
+  [[45,12],[43,12],[41,12],[40,12]]);
+const SONG_BADIN = song('BADINERIE',['city','brisk'],0.11, times(2, M(
+  71,2,66,1,71,1,74,2,71,1,74,1,78,2,74,1,78,1,83,2,0,2,
+  82,1,83,1,82,1,83,1,78,1,74,1,71,1,74,1,66,2,0,2)), pulse(47));
+const SONG_MORNING = song('MORNING MOOD',['dawn','gentle','garden'],0.17, times(2, M(
+  79,1,76,1,74,1,72,1,74,1,76,1,79,1,76,1,74,1,72,1,74,1,76,1,
+  79,1,76,1,79,1,81,1,76,1,81,1,79,1,76,1,74,1,72,1,0,2)), pad(48,55,52));
+
+/* --- the new forty-five --- */
+const SONGS_GAME = [ SONG_MK, SONG_ELISE, SONG_GREEN, SONG_BADIN, SONG_MORNING,
+song('ODE TO JOY',['victory','regal'],0.16, M(
+  64,2,64,2,65,2,67,2,67,2,65,2,64,2,62,2,60,2,60,2,62,2,64,2,64,3,62,1,62,4,
+  64,2,64,2,65,2,67,2,67,2,65,2,64,2,62,2,60,2,60,2,62,2,64,2,62,3,60,1,60,4), alt(48,55)),
+song('EINE KLEINE',['manor','regal'],0.13, M(
+  67,1,0,1,62,1,0,1,67,1,0,1,62,1,0,1,67,1,62,1,67,1,71,1,74,2,0,2,
+  72,1,0,1,69,1,0,1,72,1,0,1,69,1,0,1,72,1,69,1,66,1,69,1,62,2,0,2), pulse(43)),
+song('ALLA TURCA',['city','brisk'],0.11, M(
+  71,1,69,1,68,1,69,1,72,2, 74,1,72,1,71,1,72,1,76,2, 77,1,76,1,75,1,76,1,
+  83,1,81,1,83,1,81,1,83,1,81,1,83,1,81,2,79,2,0,2), pulse(45)),
+song('TOCCATA',['spooky','attic'],0.14, M(
+  81,1,79,1,81,2,0,2, 79,1,77,1,76,1,74,1,73,2,74,2,0,4,
+  69,1,67,1,69,2,0,2, 67,1,65,1,64,1,62,1,61,2,62,2,0,4), [[38,8]]),
+song('AIR ON G',['gentle','bedroom','night'],0.3, M(
+  74,8,79,6,78,2,76,4,74,2,72,2,71,8, 67,4,71,4,74,4,72,2,71,2,69,8), pad(50,47,43,45)),
+song('JESU JOY',['gentle','victory'],0.15, M(
+  67,1,69,1,71,1,74,1,72,1,72,1,76,1,74,1,74,1,79,1,78,1,79,1,
+  74,1,71,1,67,1,69,1,71,1,72,1,74,1,76,1,74,1,72,1,71,1,69,1,
+  71,1,67,1,66,1,67,1,69,1,62,1,64,1,66,1,67,1,69,1,71,1,72,2), arp(43,47,50)),
+song('MINUET IN G',['manor','gentle'],0.15, M(
+  74,2,67,1,69,1,71,1,72,1,74,2,67,2,67,2, 76,2,72,1,74,1,76,1,78,1,79,2,67,2,67,2,
+  72,2,74,1,72,1,71,1,69,1,71,2,72,1,71,1,69,1,67,1, 66,2,67,1,69,1,71,1,67,1,69,4), alt(43,50)),
+song('CANON IN D',['gentle','victory'],0.2, M(
+  78,2,76,2,74,2,73,2,71,2,69,2,71,2,73,2, 74,2,73,2,71,2,69,2,67,2,66,2,67,2,64,2),
+  [[50,4],[45,4],[47,4],[42,4],[43,4],[38,4],[43,4],[45,4]]),
+song('SPRING',['garden','dawn'],0.13, M(
+  76,2,80,1,80,1,80,1,78,1,76,1,83,4, 83,1,81,1,83,1,81,1,78,1,80,4,
+  76,2,80,1,80,1,80,1,78,1,76,1,83,4, 83,1,81,1,78,1,80,1,76,1,76,4), alt(40,47)),
+song('LA DONNA E MOBILE',['regal','city'],0.13, M(
+  67,1,64,1,60,1,67,1,64,1,60,1, 69,2,69,1,65,3, 68,1,65,1,62,1,68,1,65,1,62,1,
+  67,2,67,1,64,3), alt(48,55)),
+song('TRUMPET VOLUNTARY',['regal','victory'],0.16, M(
+  72,2,76,2,79,4,79,2,76,2,79,4, 84,2,79,2,76,2,79,2,72,4,0,2,
+  74,2,76,2,77,4,76,2,74,2,76,4,72,8), pulse(48)),
+song('WILLIAM TELL',['chase','danger'],0.09, times(2, M(
+  67,1,67,1,67,2,0,1, 67,1,67,1,67,2,0,1, 67,1,67,1,67,1,0,1, 71,2,74,2,79,2,0,2)),
+  [[43,1],[0,1]]),
+song('VALKYRIES',['danger','rooftops'],0.12, M(
+  66,1,0,1,71,2,66,1,0,1,74,3, 74,1,0,1,78,2,74,1,0,1,81,3,
+  78,1,0,1,83,2,78,1,0,1,86,3,0,3), alt(35,42)),
+song('HABANERA',['spooky','city','night'],0.14, M(
+  74,3,73,1,72,2,71,2, 69,1,69,1,71,1,72,2,71,1,69,1,68,2,0,2,
+  74,3,73,1,72,2,71,2, 72,1,74,1,76,2,74,1,72,1,71,2,0,2), [[38,2],[45,1],[45,1]]),
+song('TOREADOR',['regal','city'],0.13, M(
+  64,2,62,1,60,2,62,1,64,2,64,1,62,2,60,1, 62,2,62,1,64,1,62,1,60,1,57,2,0,2,
+  64,2,62,1,60,2,62,1,64,2,64,1,62,2,60,1, 60,2,62,1,64,1,66,1,67,4,0,2), alt(48,43)),
+song('CAN-CAN',['chase','brisk','city'],0.09, M(
+  67,2,72,1,72,1,72,1,74,1,72,1,74,1,76,1,74,1,72,1,
+  76,1,76,1,76,1,77,1,76,1,77,1,79,1,77,1,76,1,74,1,72,2,0,2), [[48,1],[55,1]]),
+song('DANSE MACABRE',['spooky','attic','night'],0.13, M(
+  69,2,64,1,69,2,64,1,69,1,67,1,65,1,64,1,62,2,0,2,
+  69,2,64,1,69,2,64,1,69,1,71,1,72,2,71,1,69,2,0,2), waltz(45,52)),
+song('AQUARIUM',['night','dreamy'],0.12, M(
+  81,1,79,1,76,1,74,1,81,1,79,1,76,1,74,1, 80,1,77,1,74,1,71,1,80,1,77,1,74,1,71,1,
+  79,1,76,1,72,1,69,1,79,1,76,1,72,1,69,1, 80,1,77,1,74,1,71,1,80,1,77,1,74,1,71,1), pad(45,41)),
+song('THE SWAN',['gentle','bedroom'],0.28, M(
+  79,4,77,4,76,4,74,2,72,2,74,8, 76,4,74,4,72,4,71,2,69,2,67,8), arp(43,47,50)),
+song('BUMBLEBEE',['chase'],0.07, times(4, M(
+  76,1,75,1,74,1,73,1,72,1,73,1,74,1,75,1)), pulse(45)),
+song('SUGAR PLUM',['spooky','night','bedroom'],0.15, M(
+  76,1,0,1,74,1,0,1,71,1,0,1,67,1,0,1, 68,1,0,1,71,1,0,1,64,1,0,3,
+  76,1,0,1,74,1,0,1,71,1,0,1,67,1,0,1, 66,1,0,1,68,1,0,1,64,1,0,3), pulse(40)),
+song('WALTZ OF FLOWERS',['garden','gentle'],0.14, M(
+  62,1,66,1,69,1,74,2,0,1,73,2,0,1,71,2,69,2,66,2,0,2,
+  62,1,66,1,69,1,76,2,0,1,74,2,0,1,73,2,71,2,69,2,0,2), waltz(38,50)),
+song('SWAN LAKE',['somber','night'],0.16, M(
+  71,4,64,1,66,1,68,1,69,1,71,4, 69,2,71,2,72,4, 71,2,69,2,68,4,64,4), pad(40,45)),
+song('1812 FINALE',['victory','regal'],0.14, M(
+  72,2,74,2,76,4,74,2,72,2,79,4, 76,2,74,2,72,2,74,2,76,2,74,2,72,8), alt(48,55)),
+song('BLUE DANUBE',['manor','gentle'],0.14, M(
+  62,2,66,2,69,2,69,2,0,2,81,2,81,2,0,2,79,2,79,2,0,2,
+  62,2,66,2,69,2,69,2,0,2,80,2,80,2,0,2,78,2,78,2,0,2), waltz(38,45)),
+song('RADETZKY',['regal','brisk'],0.11, M(
+  67,1,0,1,67,1,0,1,67,1,64,1,67,1,64,1,67,1,60,2,0,2,
+  65,1,0,1,65,1,0,1,65,1,62,1,65,1,62,1,65,1,60,2,0,2), [[48,1],[0,1]]),
+song('GYMNOPEDIE',['dreamy','night','title'],0.3, M(
+  0,6,78,1,81,1,79,1,78,1,73,1,71,1,73,1,74,1,69,6,
+  0,6,78,1,81,1,79,1,78,1,73,1,71,1,73,1,74,1,76,6), pad(43,38)),
+song('GNOSSIENNE',['spooky','dreamy','night'],0.2, M(
+  74,2,77,2,76,2,74,2,72,1,71,1,72,2,0,2, 74,2,77,2,76,2,74,2,79,2,77,2,76,2,0,2), pad(38,45)),
+song('CLAIR DE LUNE',['night','dreamy','title'],0.24, M(
+  78,2,76,4,74,2,76,2,78,2,81,4,79,8, 78,2,76,4,74,2,72,2,74,2,76,4,74,8), pad(50,46,45)),
+song('ARABESQUE',['dreamy','garden'],0.11, times(2, M(
+  64,1,68,1,71,1,76,1,71,1,68,1, 66,1,69,1,73,1,78,1,73,1,69,1)), pad(52,54)),
+song('THE ENTERTAINER',['city','brisk'],0.11, M(
+  62,1,63,1,64,1,72,2,64,1,72,2,64,1,72,6,
+  74,1,75,1,76,1,72,1,74,1,76,2,71,1,74,2,72,6), alt(48,55)),
+song('MAPLE LEAF RAG',['city','brisk'],0.1, M(
+  72,1,74,1,72,1,69,1,72,1,74,1,72,1,69,1, 72,1,74,1,76,1,74,1,72,1,74,1,72,1,69,2,
+  65,1,69,1,72,1,74,1,72,1,69,1,65,2), alt(41,48)),
+song('SOLACE',['gentle','night'],0.15, M(
+  76,2,79,2,76,2,74,2, 72,2,74,2,72,2,69,2, 71,2,72,2,74,4,0,2), [[41,2],[48,2]]),
+song('FUNERAL MARCH',['somber','gameover'],0.2, M(
+  62,4,62,3,62,1,62,4, 65,3,64,1,64,3,62,1,62,3,61,1,62,4), pad(38)),
+song('NOCTURNE',['night','gentle','bedroom'],0.18, M(
+  74,4,81,2,79,2,81,2,86,4,83,4, 81,2,79,2,77,2,76,2,74,8), pad(46,43,41)),
+song('MINUTE WALTZ',['chase','brisk'],0.08, times(2, M(
+  69,1,71,1,69,1,68,1,69,1,71,1,69,1,68,1, 72,1,74,1,72,1,71,1,72,1,74,1,72,1,71,1)),
+  waltz(50,57)),
+song('HUNGARIAN DANCE',['chase','city'],0.12, M(
+  74,3,74,1,73,2,74,2, 77,2,76,2,74,2,72,2, 72,1,74,1,75,1,74,1,72,4,0,2), alt(43,50)),
+song('LULLABY',['bedroom','gentle','title'],0.18, M(
+  64,1,64,3,67,4, 64,1,64,3,67,4, 64,2,67,2,72,3,71,1,69,3,69,1,67,4), alt(48,43)),
+song('POMP',['victory','regal'],0.16, M(
+  66,4,67,2,66,2,64,4,62,4, 71,4,69,2,67,2,69,8), pad(38,45)),
+song('SCARBOROUGH FAIR',['terrace','night'],0.16, M(
+  62,2,62,2,69,2,69,2,71,1,72,1,71,2,69,4,
+  74,2,77,2,76,2,74,2,72,2,69,2,71,2,72,2,74,4), pad(38,45)),
+song('TWINKLE',['bedroom','gentle'],0.15, M(
+  60,2,60,2,67,2,67,2,69,2,69,2,67,4, 65,2,65,2,64,2,64,2,62,2,62,2,60,4), alt(48,53)),
+song('FRERE JACQUES (MINOR)',['spooky'],0.15, M(
+  62,2,64,2,65,2,62,2, 62,2,64,2,65,2,62,2, 65,2,67,2,69,4, 65,2,67,2,69,4,
+  69,1,70,1,69,1,67,1,65,2,62,2, 62,2,57,2,62,4), [[38,4],[45,4]]),
+song('RISING SUN',['somber','night','city'],0.15, M(
+  69,2,72,2,74,2,76,4,76,2, 77,2,76,2,72,4,0,2,
+  69,2,72,2,74,2,72,2,69,2,64,4,0,2), pad(45,48,50,41)),
+song('SAILORS HORNPIPE',['brisk','chase','garden'],0.1, M(
+  72,2,71,1,72,1,67,1,64,1,67,2, 69,1,65,1,69,1,72,1,69,1,72,2,
+  74,1,71,1,74,1,76,1,74,1,72,1,71,1,69,1,67,2,0,2), [[48,1],[0,1]]),
+song('BARCAROLLE',['night','gentle','terrace'],0.16, M(
+  67,4,69,2,71,4,69,2, 71,2,72,2,74,4,0,2, 74,2,72,2,71,2,69,2,67,4,0,2), [[43,2],[50,1]]),
+];
+SONGS_GAME.push(SONG_TITLE);          // Moonlight joins the rotation pool too
+/* loop-length invariant — a mismatch here is what "out of tune" sounds like */
+for(const sg of SONGS_GAME){
+  const sums = sg.tracks.map(t=>seqLen(t.seq));
+  if(new Set(sums).size!==1) console.error('SONG TRACK LENGTH MISMATCH', sg.name, sums);
+}
+console.log('wireless:', SONGS_GAME.length, 'tunes');
+
 let solvedCount=0, scanPtr=0, scanAcc=0;
 function scanPuzzles(dt){
   scanAcc+=dt; if(scanAcc<0.1) return; scanAcc=0;
@@ -1381,27 +1484,52 @@ function scanPuzzles(dt){
     }
   }
 }
+/* which tag fits this moment of the game? */
+function contextTag(){
+  if(state.running && state.clock>0 && state.clock<120) return 'danger';
+  const zn = state.zone && state.zone.name;
+  if(!zn) return null;
+  if(zn==='Master Bedroom') return 'bedroom';
+  if(zn==='The Attic') return 'spooky';
+  if(zn==='The Rooftops') return 'rooftops';
+  if(zn==='The Grand Hall'||zn==='The Kitchen'||zn==='The Conservatory') return 'manor';
+  if(zn==='First Landing'||zn==='The Bathroom'||zn==='The Library') return 'terrace';
+  if(zn==='The Duck Pond') return 'garden';
+  if(zn==='The Grounds') return null;
+  return 'city';                         // any generated court
+}
 const music = {
   song:null, ptr:[], next:[], idx:0, endAt:0,
-  play(song){ this.song=song; this.ptr=song?song.tracks.map(()=>0):[];
-              this.next=song?song.tracks.map(()=>chip.ctx?chip.ctx.currentTime+0.1:0):[];
-              this.endAt=0; },
-  playIndex(i, quiet=false){                 // the jukebox
-    this.idx=(i+SONGS_GAME.length)%SONGS_GAME.length;
-    const song=SONGS_GAME[this.idx];
-    this.play(song);
-    if(chip.ctx){
+  play(song, quiet=true){
+    this.song=song; this.ptr=song?song.tracks.map(()=>0):[];
+    this.next=song?song.tracks.map(()=>chip.ctx?chip.ctx.currentTime+0.1:0):[];
+    this.endAt=0;
+    if(song && chip.ctx){
       const dur = song.step * song.tracks[0].seq.reduce((a,[,d])=>a+d,0);
       this.endAt = chip.ctx.currentTime + 0.1 + dur;
     }
-    if(!quiet && state.running) toast('\u266a '+song.name);
+    if(song){ this.idx=Math.max(0, SONGS_GAME.indexOf(song)); }
+    if(!quiet && song && state.running) toast('\u266a '+song.name);
+  },
+  playIndex(i, quiet=false){
+    this.play(SONGS_GAME[(i+SONGS_GAME.length)%SONGS_GAME.length], quiet);
+  },
+  playTag(tag, quiet=false){               // contextual trigger
+    const pool = SONGS_GAME.filter(sg=>sg.tags.includes(tag) && sg!==this.song);
+    if(pool.length===0) return this.playIndex(this.idx+1, quiet);
+    this.play(pool[Math.floor(Math.random()*pool.length)], quiet);
+  },
+  pickNext(){
+    // 65%: something fitting where you are; else: onward through the pile
+    const tag = contextTag();
+    if(tag && Math.random()<0.65) this.playTag(tag);
+    else this.playIndex(this.idx+1);
   },
   stop(){ this.song=null; },
   update(){
     if(!this.song||!chip.ctx||chip.muted) return;
     const now=chip.ctx.currentTime;
-    // rotate the playlist when the current arrangement completes a pass
-    if(this.endAt && now>this.endAt){ this.playIndex(this.idx+1); return; }
+    if(this.endAt && now>this.endAt){ this.pickNext(); return; }
     this.song.tracks.forEach((tr,i)=>{
       if(this.next[i]===0) this.next[i]=now+0.1;
       while(this.next[i] < now+0.35){
@@ -1667,7 +1795,7 @@ function clockString(){
 }
 function midnight(){
   state.running=false;
-  music.play(SONG_TITLE);
+  music.playTag('somber', true);
   $('goStats').textContent='MIDNIGHT STRUCK! TIDY '+state.collected+'/'+ITEMS_TOTAL+
     ' · PUZZLES '+solvedCount+'/'+puzzles.length+' · DEATHS '+state.deaths;
   $('gameover').classList.remove('hidden');
@@ -1703,7 +1831,9 @@ function physics(dt){
   }
 
   // the bedtime clock ticks (Prince of Persia rules: the deadline is real)
+  const clockWas=state.clock;
   state.clock-=dt;
+  if(clockWas>=120 && state.clock<120) music.playTag('danger');   // the wireless knows
   if(state.clock<=0){ midnight(); return; }
 
   readInput();
@@ -1917,7 +2047,7 @@ function startGame(){
 }
 function gameOver(){
   state.running=false;
-  music.play(SONG_TITLE);
+  music.playTag('somber', true);
   $('goStats').textContent='TIDY '+state.collected+'/'+ITEMS_TOTAL+' · PUZZLES '+solvedCount+'/'+puzzles.length+' · DEATHS '+state.deaths;
   $('gameover').classList.remove('hidden');
   $('hud').style.display='none'; $('roomName').style.display='none'; $('jumpBtn').style.display='none';
@@ -1925,7 +2055,7 @@ function gameOver(){
 }
 function win(){
   p.won=true; state.running=false;
-  sfx.fanfare(); music.stop();
+  sfx.fanfare(); music.playTag('victory', true);
   const secs=Math.round((performance.now()-state.t0)/1000);
   const spare=Math.max(0,Math.ceil(state.clock));
   $('winStats').textContent='TIDY '+ITEMS_TOTAL+'/'+ITEMS_TOTAL+' · PUZZLES '+solvedCount+'/'+puzzles.length+' · '+state.deaths+' DEATHS · '+
@@ -2226,8 +2356,10 @@ window.__jsd = {
   start(){ startGame(); },
   press(name,down=true){ keys[name]=down; if(name==='jump'&&down) input.jumpBuf=0.14; },
   probe(x,y,z){ return !!cellSolid(x,y,z); },
-  get song(){ return { idx:music.idx, name:music.song&&music.song.name||null, count:SONGS_GAME.length }; },
-  nextSong(){ music.playIndex(music.idx+1); },
+  get song(){ return { idx:music.idx, name:music.song&&music.song.name||null,
+    tags:music.song&&music.song.tags||[], count:SONGS_GAME.length, context:contextTag() }; },
+  nextSong(){ music.pickNext(); },
+  playTag(t){ music.playTag(t); },
   get pushDbg(){ return {...pushDbg}; },
   push(dx,dz){ pushCd=0; tryPushCrate(dx,dz); },
   teleport(x,y,z){ p.x=x; p.y=y; p.z=z; p.vx=p.vy=p.vz=0; p.fallFrom=y; },

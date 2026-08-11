@@ -48,10 +48,16 @@ Play: `dbdb2.html` (rev 2, "The Moonlight Shift") or `dbdb.html`
   shading + ZX palette baked into vertex colors). Renders at a chunky internal
   resolution (~430 px tall) for the pixel look.
 - **Audio:** 3 square-wave channels + noise over WebAudio — an AY-chip
-  impression. Title: Moonlight Sonata. In-game (rev 2): a rotating jukebox
-  of five public-domain arrangements — Mountain King (Grieg), Fur Elise
-  (Beethoven), Greensleeves (trad.), Badinerie (Bach), Morning Mood (Grieg)
-  — advancing each full pass with a now-playing toast. SFX for
+  impression. In-game (rev 2): THE WIRELESS — a 50-tune tagged playlist
+  of public-domain arrangements (Bach to Joplin, Grieg to Satie; the
+  Moonlight title theme makes 51). Each tune carries tags
+  (danger/victory/somber/spooky/chase/gentle/night/garden/manor/city/…);
+  game events cut in matching tunes (final two minutes → danger, win →
+  victory, midnight → somber) and between events the rotation is 65%
+  biased toward the current zone's tag, else round-robin. Every tune's
+  tracks are length-equalized by construction (`tile()` pads the bass to
+  the melody), which is the anti-out-of-tune invariant, checked at boot.
+  Now-playing toast on every change. SFX for
   jump/pickup/death/splash/fanfare.
 
 ## World
