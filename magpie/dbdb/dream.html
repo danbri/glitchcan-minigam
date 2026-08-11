@@ -145,6 +145,10 @@ if(Q.has('hic')){
    ========================================================= */
 const SCENES={
   tree:  { names:['HEARTH','TINSEL','ROOTS','STARWARD'], ply:'splats/christmas-tree-150k.compressed.ply',
+           /* st: hand-placed stations (owner, via ?edit=1) — each overrides
+              the computed TOUR corner of the same index: name, world pos,
+              arrival camera bearing */
+           st:[{n:'SHED WINDOW', p:[5.302,0.581,-1.589], yaw:103.9}],
            hq:'splats/christmas-tree-400k.compressed.ply',
            raw:'splats/christmas-tree-150k.splat',
            up:[-0.522,0.836,0.168], c:[-0.4,-0.1,0.9], r:2.6,
@@ -208,6 +212,7 @@ const SCENES={
 const TINT2SCENE={ bondi:'carshop', grape:'museum', strawberry:'forest',
                    lime:'garden', tangerine:'pool' };
 const SCENE=SCENES[Q.get('scene')] || SCENES[TINT2SCENE[Q.get('tint')]] || SCENES.tree;
+const SCENEKEY=Object.keys(SCENES).find(k=>SCENES[k]===SCENE)||'tree';
 const SPLAT_PATH=(Q.has('hq') && SCENE.hq) ? SCENE.hq : SCENE.ply;
 
 /* =========================================================
@@ -258,6 +263,7 @@ app.root.addChild(sceneRoot);
 const C=new pc.Vec3(); upQ.transformVector(new pc.Vec3(...SCENE.c), C);
 const R=SCENE.r;
 setFog(R);
+let WALKMAX=1.05*R;   // hand-placed stations may extend this
 
 /* camera: y-up, orbiting the scan centre */
 const CAM_TGT=C.clone();
@@ -527,21 +533,29 @@ if(EDIT){
   bar.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:20;display:flex;gap:8px;align-items:center;padding:10px;background:rgba(1,10,5,.92);border-top:1px solid '+tint+';color:'+tint+';font:11px monospace;';
   bar.innerHTML='<button type="button" id="ebCopy" style="background:none;border:1px solid '+tint+';color:'+tint+';font:bold 12px monospace;padding:8px 12px;border-radius:4px;">COPY DATA</button><span id="ebInfo" style="word-break:break-all;">EDIT: loading hit mesh…</span>';
   document.body.appendChild(bar);
-  fetch('splats/christmas-tree-150k.splat').then(r2=>r2.arrayBuffer()).then(b2=>{
-    const dv=new DataView(b2), n=Math.floor(b2.byteLength/32);
+  /* hit mesh: the loaded resource caches scan-space centers for EVERY
+     splat format (ply / compressed.ply / SOG) — so edit works in any scene */
+  const tryPts=()=>{
+    const a=app.assets.find('scan');
+    const res=a&&a.resource;
+    let cs=res&&res.centers;
+    if((!cs||!cs.length) && res&&res.gsplatData&&res.gsplatData.getCenters)
+      try{ cs=res.gsplatData.getCenters(); }catch(e2){}
+    if(!cs||!cs.length){ setTimeout(tryPts,600); return; }
+    const n=Math.floor(cs.length/3);
     const pts=new Float32Array(n*3); const v=new pc.Vec3();
     for(let i=0;i<n;i++){
-      if(dv.getUint8(i*32+27)<90){ pts[i*3]=1e9; continue; }   // ghosts don't count
-      v.set(dv.getFloat32(i*32,true),dv.getFloat32(i*32+4,true),dv.getFloat32(i*32+8,true));
+      v.set(cs[i*3],cs[i*3+1],cs[i*3+2]);
       upQ.transformVector(v,v);
       pts[i*3]=v.x; pts[i*3+1]=v.y; pts[i*3+2]=v.z;
     }
     editPts=pts;
-    document.getElementById('ebInfo').textContent='EDIT: tap the scan to place a PET';
-  }).catch(e2=>{ document.getElementById('ebInfo').textContent='hit mesh unavailable: '+e2.message; });
+    document.getElementById('ebInfo').textContent='EDIT ['+SCENEKEY+']: tap the scan to place a PET';
+  };
+  tryPts();
   document.getElementById('ebCopy').addEventListener('click',()=>{
     if(!lastPlace) return;
-    const data=JSON.stringify({ scene:(Q.get('scene')||'tree'), label:'NEW PORT',
+    const data=JSON.stringify({ scene:SCENEKEY, label:'NEW PORT',
       pos:[+lastPlace.x.toFixed(3),+lastPlace.y.toFixed(3),+lastPlace.z.toFixed(3)],
       yaw:+lastYaw.toFixed(1) });
     if(navigator.clipboard) navigator.clipboard.writeText(data).catch(()=>{});
@@ -744,7 +758,7 @@ app.on('update', dt=>{
      density radius — our heuristic for "the realistic zone"): the
      ragged digitisation fringe stays at arm's length */
   { const dx0=TGT_CUR.x-C.x, dz0=TGT_CUR.z-C.z, d0=Math.hypot(dx0,dz0);
-    const MAXW=1.05*R;
+    const MAXW=WALKMAX;
     if(d0>MAXW){
       TGT_CUR.x=C.x+dx0/d0*MAXW; TGT_CUR.z=C.z+dz0/d0*MAXW;
       tgtGoal.x=TGT_CUR.x; tgtGoal.z=TGT_CUR.z;
@@ -821,7 +835,9 @@ loadSplat();
 /* =========================================================
    ink — the dream narrates the hunt (REAL inkjs compile)
    ========================================================= */
-const NAMES=SCENE.names||['NORTH','EAST','SOUTH','WEST'];
+const STN=SCENE.st||[];
+const NAMES=(SCENE.names||['NORTH','EAST','SOUTH','WEST'])
+  .map((n,i)=>STN[i]?STN[i].n:n);
 /* far ports: two other PLACES, chosen per boot */
 const PLACES=['tree','garden','carshop','forest','museum','pool','watertower','calico'];
 const FKEYS=PLACES.filter(k=>SCENES[k]&&SCENES[k]!==SCENE);
@@ -895,6 +911,11 @@ catch(e){ console.warn('ink compile failed', e); }
    from area to area, showing the place off on the way */
 const TOUR=[[0.55,0.05,0],[0,0.02,0.55],[-0.55,0.08,0],[0,0.05,-0.55]]
   .map(o=>new pc.Vec3(C.x+o[0]*R, C.y+o[1]*R, C.z+o[2]*R));
+STN.forEach((s,i)=>{ if(i>=TOUR.length) return;
+  TOUR[i]=new pc.Vec3(s.p[0],s.p[1],s.p[2]);
+  /* a curated point is authoritative: the walk fence grows to reach it */
+  WALKMAX=Math.max(WALKMAX, Math.hypot(s.p[0]-C.x,s.p[2]-C.z)+0.15*R);
+});
 let tourI=0;
 function choiceFlight(label){
   const L=label.toLowerCase();
@@ -915,7 +936,8 @@ function choiceFlight(label){
        that advanced the bearing on every press). Already there? A slow
        full-circle flourish says so. */
     const bAng=Math.atan2(base.x,base.z)*180/Math.PI;
-    let want=(sti*90+40)-bAng-yaw;
+    const aim=STN[sti]?STN[sti].yaw:(sti*90+40);
+    let want=aim-bAng-yaw;
     while(want>180) want-=360; while(want<-180) want+=360;
     const there = Math.abs(want)<12 && TGT_CUR.distance(TOUR[sti])<0.25*R;
     fly(there
