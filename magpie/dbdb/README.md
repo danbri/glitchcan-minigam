@@ -106,3 +106,16 @@ Satie on triangle waves). Four levels from full-assist to no-net.
 - The floor is no longer an afterthought: flag-stone paving with joints
   and tone variation, warm promenade edge strips on every quay lip, and a
   pocket park of lime trees.
+
+## Also: SPLATPORT (`splatport.html`)
+Prototype of "infinite evocative locations": a REAL Gaussian splat asset —
+"ChristmasTree" by Keijiro Takahashi (huggingface.co/keijiro-tk/splat-data,
+The Unlicense), prefix-truncated to 150k/400k-splat LODs in `splats/` —
+rendered with the vendored GaussianSplats3D library (MIT,
+`third_party/gaussian-splats-3d/`, CDN-first with local fallback;
+`sharedMemoryForWorkers:false` because GitHub Pages sends no COOP/COEP).
+An ink story (The Portkeeper, real inkjs compile) stands inside the scan
+on the same perspective-matched DOM screen technique as Canary Wharf;
+choices summon snow and Carol-of-the-Bells triangles. Camera framing was
+derived from the data (bbox, densest-cell PCA for the scan's tilted
+vertical, an 8-view orbit probe). `?hq` for the 400k cut.

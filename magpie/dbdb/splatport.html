@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d1e">
+<title>SPLATPORT — locations wished into existence</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body {
+    width:100%; height:100%; overflow:hidden; background:#0a0d1e;
+    touch-action:none; overscroll-behavior:none;
+    -webkit-user-select:none; user-select:none;
+    font-family:"Avenir Next","Helvetica Neue",Helvetica,Arial,sans-serif;
+    color:#e8ecff;
+  }
+  #stage { position:fixed; inset:0; }
+  #stage canvas { width:100%; height:100%; display:block; }
+  #css3d { position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:5; }
+  #css3dCam { width:100%; height:100%; transform-style:preserve-3d; pointer-events:none; }
+  #hud {
+    position:fixed; top:0; left:0; right:0; z-index:10; display:none;
+    justify-content:space-between; padding:calc(10px + env(safe-area-inset-top)) 18px 8px;
+    font-size:clamp(12px,3vw,15px); letter-spacing:.22em; color:#9fb4ff;
+    text-shadow:0 1px 8px rgba(0,0,0,.9); pointer-events:none;
+  }
+  #loadBar {
+    position:fixed; left:20%; right:20%; top:54%; height:3px; z-index:12;
+    background:rgba(159,180,255,.15); border-radius:2px; overflow:hidden; display:none;
+  }
+  #loadBar i { display:block; height:100%; width:0%; background:linear-gradient(90deg,#9fb4ff,#ffe9c4); }
+  /* the in-world story panel */
+  .portScreen {
+    position:absolute; left:0; top:0; transform-origin:50% 50%;
+    width:320px; height:300px; padding:16px 20px;
+    background:linear-gradient(165deg, rgba(10,13,30,.92), rgba(26,20,52,.92));
+    border:1px solid rgba(159,180,255,.5); border-radius:8px;
+    box-shadow:0 0 50px rgba(159,180,255,.2), inset 0 0 60px rgba(120,140,255,.06);
+    color:#e8ecff; font-size:13.5px; line-height:1.5;
+    pointer-events:auto; overflow:hidden;
+    backdrop-filter:blur(2px);
+  }
+  .portScreen .crest { font-size:10px; letter-spacing:.34em; color:rgba(159,180,255,.7); margin-bottom:8px; }
+  .portScreen .inkText p { margin:0 0 8px; animation:inkIn .8s ease both; }
+  @keyframes inkIn { from{opacity:0; transform:translateY(8px); filter:blur(5px);}
+                     to{opacity:1; transform:none; filter:none;} }
+  .portScreen .choice {
+    display:block; width:100%; margin-top:8px; padding:9px 12px; text-align:left;
+    background:rgba(159,180,255,.10); border:1px solid rgba(159,180,255,.45);
+    border-radius:6px; color:#cdd9ff; font-family:inherit; font-size:13px;
+    letter-spacing:.06em; cursor:pointer; animation:inkIn .8s ease both;
+  }
+  .portScreen .choice:active { background:rgba(159,180,255,.3); }
+  /* overlays */
+  .overlay {
+    position:fixed; inset:0; z-index:20; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; gap:16px; padding:28px;
+    background:radial-gradient(120% 90% at 50% 110%, #26204e 0%, #131332 45%, #0a0d1e 100%);
+  }
+  .overlay h1 {
+    font-size:clamp(34px,10vw,80px); letter-spacing:.18em; font-weight:800;
+    color:#eef2ff; text-shadow:0 0 40px rgba(159,180,255,.6);
+  }
+  .overlay h2 { font-size:clamp(12px,3.4vw,18px); letter-spacing:.38em; color:#9fb4ff; font-weight:500; }
+  .overlay p { font-size:clamp(12px,3.3vw,16px); max-width:520px; line-height:1.65; color:rgba(232,236,255,.85); }
+  .overlay .btn {
+    padding:14px 42px; border:0; border-radius:40px;
+    background:linear-gradient(180deg,#cdd9ff,#8fa3e8); color:#131332;
+    font-weight:800; font-size:clamp(14px,4.2vw,20px); letter-spacing:.22em;
+    cursor:pointer; font-family:inherit; box-shadow:0 6px 34px rgba(159,180,255,.4);
+  }
+  .overlay .btn:disabled { opacity:.5; }
+  .snowword { font-size:44px; animation:drift 4s ease-in-out infinite; }
+  @keyframes drift { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  .credit { font-size:10.5px; color:rgba(159,180,255,.55); max-width:480px; line-height:1.5; }
+  .credit a { color:rgba(205,217,255,.8); }
+  .hidden { display:none !important; }
+  #err { position:fixed; inset:auto 0 0 0; z-index:50; color:#ff9a9a; background:rgba(30,0,0,.92); padding:8px; font-size:12px; display:none; white-space:pre-wrap; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="css3d"><div id="css3dCam"></div></div>
+<div id="hud"><span id="hudLoc">LOCATION 01 — THE WINTER TREE</span><span id="hudMood"></span></div>
+<div id="loadBar"><i id="loadFill"></i></div>
+
+<div class="overlay" id="title">
+  <div class="snowword">🌲</div>
+  <h1>SPLATPORT</h1>
+  <h2>LOCATIONS WISHED INTO EXISTENCE</h2>
+  <p>A real place, scanned into a million points of light, with a story
+     standing inside it. Drag to look. Pinch to approach. The Portkeeper's
+     screen will find you.</p>
+  <button type="button" class="btn" id="startBtn" disabled>OPENING PORT…</button>
+  <p class="credit">Splat capture: "ChristmasTree" by Keijiro Takahashi
+     (<a href="https://huggingface.co/keijiro-tk/splat-data">keijiro-tk/splat-data</a>,
+     The Unlicense) · Renderer: GaussianSplats3D (MIT) · Story: ink</p>
+</div>
+
+<pre id="err"></pre>
+
+<script type="importmap">
+{ "imports": { "three": "../../third_party/three/three.module.min.js" } }
+</script>
+<script src="../../third_party/ink/ink-full.min.js"></script>
+<script type="module">
+const errBox=document.getElementById('err');
+window.addEventListener('error', e=>{ errBox.style.display='block';
+  errBox.textContent += (e.message||e.error)+'\n'; });
+const Q=new URLSearchParams(location.search);
+
+import * as THREE from 'three';
+async function loadSplatLib(){
+  const CDN='https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.min.js';
+  const LOCAL='../../third_party/gaussian-splats-3d/gaussian-splats-3d.module.min.js';
+  try{ return await Promise.race([ import(CDN),
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('cdn timeout')),3500)) ]); }
+  catch(e){ console.warn('splat lib CDN unavailable, using vendored copy'); return import(LOCAL); }
+}
+const GS3D = await loadSplatLib();
+
+/* =========================================================
+   the scene around the splat: snow, glow, and the ink screen
+   ========================================================= */
+const worldScene = new THREE.Scene();
+
+/* snow (dormant until the story wills it) */
+let snowOn=false;
+const SNOW=900;
+const snowGeo=new THREE.BufferGeometry();
+{
+  const p=new Float32Array(SNOW*3), v=new Float32Array(SNOW);
+  for(let i=0;i<SNOW;i++){ p[i*3]=(Math.random()*2-1)*7; p[i*3+1]=Math.random()*8-1; p[i*3+2]=(Math.random()*2-1)*7; v[i]=0.3+Math.random()*0.7; }
+  snowGeo.setAttribute('position', new THREE.BufferAttribute(p,3));
+  snowGeo.userData.v=v;
+}
+const snowMat=new THREE.PointsMaterial({ color:0xdfe8ff, size:0.035, transparent:true, opacity:0, depthWrite:false });
+const snow=new THREE.Points(snowGeo, snowMat);
+worldScene.add(snow);
+
+/* =========================================================
+   splat viewer — the real captured place
+   ========================================================= */
+const HQ = Q.has('hq');
+const SPLAT_PATH = 'splats/christmas-tree-'+(HQ?'400k':'150k')+'.splat';
+const viewer = new GS3D.Viewer({
+  rootElement: document.getElementById('stage'),
+  threeScene: worldScene,
+  cameraUp: [-0.522, 0.836, 0.168],           // the scan's own vertical (PCA of the core)
+  initialCameraPosition: [-0.88, 0.83, -5.5],
+  initialCameraLookAt: [-0.4, -0.1, 0.9],
+  sharedMemoryForWorkers: false,     // GitHub Pages sends no COOP/COEP
+  antialiased: false,
+  sphericalHarmonicsDegree: 0,
+});
+let loaded=false;
+const loadBar=document.getElementById('loadBar'), loadFill=document.getElementById('loadFill');
+loadBar.style.display='block';
+viewer.addSplatScene(SPLAT_PATH, {
+  showLoadingUI:false, progressiveLoad:false,
+  onProgress:(pct)=>{ loadFill.style.width=Math.round(pct)+'%'; },
+}).then(()=>{
+  loaded=true; loadBar.style.display='none';
+  const sb=document.getElementById('startBtn');
+  sb.disabled=false; sb.textContent='STEP THROUGH';
+  viewer.start();
+}).catch(e=>{ errBox.style.display='block'; errBox.textContent+='splat load failed: '+e.message+'\n'; });
+
+/* =========================================================
+   ink — THE PORTKEEPER, standing in the scan
+   ========================================================= */
+const INK_SOURCE = `
+VAR mood = "still"
+-> gate
+== gate ==
+The Portkeeper's screen hangs in the cold air beside the tree, politely ignoring gravity.
+"One visitor," it notes. "One location. Infinite weather, within reason."
++ [Let it snow] -> snowfall
++ [Ask where this is] -> where
++ [Just stand a while] -> still
+== snowfall ==
+~ mood = "snow"
+"Granted." The air fills, point by point, as if the scan itself were falling.
++ [Ask where this is] -> where
++ [Stand in the snow] -> still
+== where ==
+"A living room, once. A tree, scanned by a passing engineer into a million luminous opinions. The Unlicense means it belongs to everyone now. Including you."
++ [Let it snow] -> snowfall
++ [Stand a while] -> still
+== still ==
+{mood == "snow": The snow keeps its own counsel. So do you.|The tree glitters with a million held breaths.}
+The Portkeeper dims to amber, satisfied. More ports soon, it implies.
+-> END
+`;
+let inkStory=null;
+try{ inkStory=new inkjs.Compiler(INK_SOURCE).Compile(); }
+catch(e){ console.warn('ink compile failed', e); }
+
+/* minimal CSS3D (same composition proven in canarywharf) */
+const css3d=document.getElementById('css3d'), css3dCam=document.getElementById('css3dCam');
+function eps(v){ return Math.abs(v)<1e-10?0:v; }
+function camCSS(m){ const e=m.elements;
+  return 'matrix3d('+eps(e[0])+','+eps(-e[1])+','+eps(e[2])+','+eps(e[3])+','+eps(e[4])+','+eps(-e[5])+','+eps(e[6])+','+eps(e[7])+','+eps(e[8])+','+eps(-e[9])+','+eps(e[10])+','+eps(e[11])+','+eps(e[12])+','+eps(-e[13])+','+eps(e[14])+','+eps(e[15])+')'; }
+function objCSS(m){ const e=m.elements;
+  return 'matrix3d('+eps(e[0])+','+eps(e[1])+','+eps(e[2])+','+eps(e[3])+','+eps(-e[4])+','+eps(-e[5])+','+eps(-e[6])+','+eps(-e[7])+','+eps(e[8])+','+eps(e[9])+','+eps(e[10])+','+eps(e[11])+','+eps(e[12])+','+eps(e[13])+','+eps(e[14])+','+eps(e[15])+')'; }
+const panel=document.createElement('div');
+panel.className='portScreen';
+panel.innerHTML='<div class="crest">PORTKEEPER TERMINAL · UNL-1</div><div class="inkText"></div><div class="choices"></div>';
+css3dCam.appendChild(panel);
+const panelObj=new THREE.Object3D();
+panelObj.position.set(-1.45, -0.1, -2.1);   // in the initial view cone, screen-right
+panelObj.scale.setScalar(1.5/320);
+worldScene.add(panelObj);
+const _m=new THREE.Matrix4();
+function updatePanel(){
+  const cam=viewer.camera; if(!cam) return;
+  const h=innerHeight, w=innerWidth;
+  cam.updateMatrixWorld();
+  const fovPx=cam.projectionMatrix.elements[5]*h/2;
+  css3d.style.perspective=fovPx+'px';
+  css3dCam.style.transform='translateZ('+fovPx+'px)'+camCSS(_m.copy(cam.matrixWorld).invert())
+    +'translate('+(w/2)+'px,'+(h/2)+'px)';
+  panelObj.lookAt(cam.position);          // the screen politely faces you
+  panelObj.updateMatrixWorld();
+  panel.style.transform='translate(-50%,-50%)'+objCSS(panelObj.matrixWorld);
+}
+function renderInk(){
+  if(!inkStory) return;
+  const txt=panel.querySelector('.inkText'), ch=panel.querySelector('.choices');
+  let html='';
+  while(inkStory.canContinue){
+    const line=inkStory.Continue().trim();
+    if(line) html+='<p>'+line.replace(/</g,'&lt;')+'</p>';
+  }
+  if(html) txt.innerHTML=html;
+  ch.innerHTML='';
+  inkStory.currentChoices.forEach((c,i)=>{
+    const b=document.createElement('button');
+    b.type='button'; b.className='choice'; b.textContent='▸ '+c.text;
+    b.style.animationDelay=(0.12*i)+'s';
+    b.addEventListener('click',()=>{ inkStory.ChooseChoiceIndex(i); renderInk(); applyMood(); });
+    ch.appendChild(b);
+  });
+}
+function applyMood(){
+  if(!inkStory) return;
+  const mood=String(inkStory.variablesState.$('mood'));
+  document.getElementById('hudMood').textContent = mood.toUpperCase();
+  if(mood==='snow' && !snowOn){ snowOn=true; bells(); }
+}
+
+/* soft bells (Carol of the Bells ostinato — Leontovych, public domain) */
+let actx=null;
+function bells(){
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    const seq=[74,72,74,71]; const t0=actx.currentTime+0.05;
+    for(let r=0;r<6;r++) seq.forEach((m,i)=>{
+      const o=actx.createOscillator(), g=actx.createGain();
+      o.type='triangle'; o.frequency.value=440*Math.pow(2,(m-69)/12);
+      g.gain.setValueAtTime(0.12/(1+r*0.15), t0+r*1.6+i*0.4);
+      g.gain.setTargetAtTime(0.0001, t0+r*1.6+i*0.4+0.05, 0.25);
+      o.connect(g); g.connect(actx.destination);
+      o.start(t0+r*1.6+i*0.4); o.stop(t0+r*1.6+i*0.4+1.2);
+    });
+  }catch(e){}
+}
+
+/* =========================================================
+   loop + boot
+   ========================================================= */
+let running=false;
+function tick(){
+  requestAnimationFrame(tick);
+  if(snowOn && snowMat.opacity<0.9) snowMat.opacity+=0.01;
+  if(snowOn){
+    const p=snowGeo.attributes.position, v=snowGeo.userData.v;
+    for(let i=0;i<SNOW;i++){
+      p.array[i*3+1]-=v[i]*0.016;
+      if(p.array[i*3+1]<-2.5) p.array[i*3+1]=6;
+    }
+    p.needsUpdate=true;
+  }
+  if(running) updatePanel();
+}
+tick();
+
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  document.getElementById('title').classList.add('hidden');
+  document.getElementById('hud').style.display='flex';
+  running=true;
+  renderInk(); applyMood();
+});
+
+window.__sp = {
+  get loaded(){ return loaded; },
+  get running(){ return running; },
+  start(){ document.getElementById('startBtn').click(); },
+  choose(i){ const b=panel.querySelectorAll('.choice')[i]; if(b) b.click(); },
+  get panelText(){ return panel.querySelector('.inkText').textContent; },
+  get cam(){ const c=viewer.camera; return c?{x:c.position.x,y:c.position.y,z:c.position.z}:null; },
+  snow(){ snowOn=true; },
+  setView(px,py,pz,ux,uy,uz,tx,ty,tz){
+    const c=viewer.camera; if(!c) return;
+    c.up.set(ux,uy,uz); c.position.set(px,py,pz);
+    if(viewer.controls){ viewer.controls.target.set(tx,ty,tz); viewer.controls.update(); }
+    else c.lookAt(tx,ty,tz);
+  },
+};
+</script>
+</body>
+</html>
