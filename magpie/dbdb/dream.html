@@ -547,7 +547,7 @@ domPanel.style.color=tint; domPanel.style.borderColor=tint;
 /* the real-HTML screen is the default (owner: "we want DOM on every
    billboard"); ?nohtml=1 falls back to the engine plate alone */
 if(Q.has('nohtml')) css3d.remove();
-let occPts=null, domVis=false, visTick=0, domForce=null;
+let occPts=null, domVis=false, visTick=0, domForce=null, lastMotion=0;
 if(SCENE.raw){
   fetch(SCENE.raw, { headers:{ Range:'bytes=0-959999' } })
     .then(r2=>r2.arrayBuffer()).then(b2=>{
@@ -713,7 +713,17 @@ app.on('update', dt=>{
       C.y+m.h+Math.sin(t*0.4+m.ph)*0.06*R,
       C.z+Math.sin(m.a)*m.rr);
   }
-  if(++visTick>=10){ visTick=0; domVis=computeVis(); }
+  if(dragging||flight) lastMotion=t;
+  if(++visTick>=10){ visTick=0;
+    /* the DOM twin only speaks when the camera has SETTLED — during a
+       drag or flight the engine plate carries the screen, because it is
+       scene geometry and cannot lag or skew apart from the splat (the
+       CSS layer composites a frame behind WebGL on iOS and only
+       approximates the tilt: visibly a sticker while moving) */
+    domVis = (domForce!==null) ? domForce
+           : (dragging||flight||t-lastMotion<0.7) ? false
+           : computeVis();
+  }
   domUpdate(domVis);
 });
 
