@@ -188,6 +188,12 @@ const SCENES={
            what:'a motorcycle, parked forever in the static',
            credit:'biker · playcanvas/engine examples · MIT' },
   garden:{ names:['LILYPAD','CANOPY','BRICKPATH','MANGROVE'], ply:'splats/garden-sog/meta.json',
+           /* st: scouted by tools/view-scout.mjs (density anchors ->
+              scored shots -> visual review), 2026-08-11 */
+           st:[{n:'LILY POND', p:[3.5,0.7,3.5], yaw:-135, pit:-4.5, d:0.239},
+               {n:'BRICK PATH', p:[-2.1,1.4,0.7], yaw:108.4, pit:-4.5, d:0.239},
+               {n:'THE LABEL', p:[-10.5,1.4,3.5], yaw:108.4, pit:-4.5, d:0.239},
+               {n:'SUNWALK', p:[7.7,0,-1.4], yaw:-79.7, pit:-4.5, d:0.239}],
            up:[0,-1,0], c:[0,0,0], r:4.2,
            pal:['#7da05a','#a8c878','#d8e8c0','#8a9a78','#c8b890','#587048'],
            what:'a tropical glasshouse, breathing green in the static',
@@ -656,8 +662,9 @@ function editPlace(cx,cy){
   /* pitch and distance of the CURRENT view of the placed point, in the
      orbit rig's own terms — so arrival reproduces the owner's exact view */
   const baseElev=Math.atan2(base.y, Math.hypot(base.x,base.z))*180/Math.PI;
-  lastPit=Math.atan2(cp.y-h.y, Math.hypot(cp.x-h.x,cp.z-h.z))*180/Math.PI - baseElev;
-  lastD=Math.min(1.5, Math.max(0.45, cp.distance(h)/base.length()));
+  /* positive pitch LOWERS the camera in this rig, so store the flip */
+  lastPit=baseElev - Math.atan2(cp.y-h.y, Math.hypot(cp.x-h.x,cp.z-h.z))*180/Math.PI;
+  lastD=Math.min(1.5, Math.max(0.2, cp.distance(h)/base.length()));
   if(!ghost) ghost=makePETmarker([h.x,h.y,h.z]);
   ghost.setPosition(h.x,h.y,h.z);
   ghost.setEulerAngles(0,lastYaw,0);
@@ -835,10 +842,13 @@ app.on('update', dt=>{
       TGT_CUR.x=C.x+dx0/d0*MAXW; TGT_CUR.z=C.z+dz0/d0*MAXW;
       tgtGoal.x=TGT_CUR.x; tgtGoal.z=TGT_CUR.z;
     } }
-  distF=Math.max(0.45,Math.min(1.5,distF));
+  distF=Math.max(MINDF,Math.min(1.5,distF));
   _q1.setFromAxisAngle(pc.Vec3.UP, yaw);
   _q2.setFromAxisAngle(side, pitch);
-  _q1.transformVector(base,_off); _q2.transformVector(_off,_off);
+  /* pitch FIRST (about the boot side axis, in the boot frame), THEN yaw
+     about world-up: pitch is a true elevation at every bearing. The old
+     order (yaw then boot-side pitch) tilted sideways once yawed far. */
+  _q2.transformVector(base,_off); _q1.transformVector(_off,_off);
   _off.mulScalar(distF);
   _pos.add2(TGT_CUR,_off);
   camE.setPosition(_pos);
@@ -993,6 +1003,9 @@ catch(e){ console.warn('ink compile failed', e); }
    from area to area, showing the place off on the way */
 const TOUR=[[0.55,0.05,0],[0,0.02,0.55],[-0.55,0.08,0],[0,0.05,-0.55]]
   .map(o=>new pc.Vec3(C.x+o[0]*R, C.y+o[1]*R, C.z+o[2]*R));
+/* curated stations may sit closer than the generic 0.45 zoom floor */
+let MINDF=0.45;
+STN.forEach(s=>{ if(s.d) MINDF=Math.min(MINDF, s.d); });
 STN.forEach((s,i)=>{ if(i>=TOUR.length) return;
   TOUR[i]=new pc.Vec3(s.p[0],s.p[1],s.p[2]);
   /* a curated point is authoritative: the walk fence grows to reach it */
@@ -1002,9 +1015,12 @@ STN.forEach((s,i)=>{ if(i>=TOUR.length) return;
    and porting there (or tapping the PET) brings the one screen to it —
    still a single unified screen, with several places it can live */
 NAMES.forEach((n,i)=>{
+  const aim=(STN[i]&&STN[i].yaw!==undefined)?STN[i].yaw:(i*90+40);
+  /* the kiosk stands to the arriving viewer's RIGHT, not centre-frame */
+  const ar=aim*Math.PI/180;
   const T={ id:'st'+i, label:n,
-    pos:[TOUR[i].x, TOUR[i].y, TOUR[i].z],
-    yaw:(STN[i]&&STN[i].yaw!==undefined)?STN[i].yaw:(i*90+40) };
+    pos:[TOUR[i].x+Math.cos(ar)*0.24*R, TOUR[i].y, TOUR[i].z-Math.sin(ar)*0.24*R],
+    yaw:aim };
   T.marker=makePETmarker(T.pos);
   TERMINALS.push(T);
 });
@@ -1203,11 +1219,18 @@ window.__dream = {
   setCam(px,py,pz,tx,ty,tz){ CAM_POS.set(px,py,pz); CAM_TGT.set(tx,ty,tz);
     tgtGoal=CAM_TGT.clone(); TGT_CUR.copy(CAM_TGT);
     base.sub2(CAM_POS,CAM_TGT); side.cross(pc.Vec3.UP,base).normalize();
+    /* a tool that places the camera means it: lift the walk fence to
+       reach, or the per-frame clamp silently drags the target home and
+       every recorded pose lies (the garden scout fell for this) */
+    WALKMAX=Math.max(WALKMAX, Math.hypot(tx-C.x,tz-C.z)+0.05*R);
     yaw=0; pitch=0; distF=1; flight=null; },
   mats(){ return { cam:[...camE.getWorldTransform().data],
     proj:[...camE.camera.projectionMatrix.data],
     panel:[...panelE.getWorldTransform().data], pw:PW }; },
   get lastYaw(){ return +lastYaw.toFixed(1); },
+  get centers(){ return editPts; },   // world-space scan points (edit mode)
+  get frame(){ return { C:[C.x,C.y,C.z], R:R, baseLen:base.length(),
+    baseElev:Math.atan2(base.y,Math.hypot(base.x,base.z))*180/Math.PI }; },
   exit(){ document.getElementById('exitBtn').click(); },
 };
 </script>
