@@ -70,7 +70,7 @@
 <body>
 <div id="stage"></div>
 <div id="phos"></div>
-<div id="head"><span>PORT/7 · DREAM SHELL</span><span id="clueTally">CLUES 0/3</span></div>
+<div id="head"><span id="hudLoc">PORT/7 · DREAM SHELL</span><span id="clueTally">CLUES 0/3</span></div>
 <button type="button" id="exitBtn">✕ SURFACE</button>
 <div id="loadLine">TUNING THE STATIC…</div>
 <pre id="err"></pre>
@@ -121,8 +121,11 @@ const SCENES={
            what:'a motorcycle, parked forever in the static',
            credit:'biker · playcanvas/engine examples · MIT' },
 };
-const TINT2SCENE={ bondi:'guitar', grape:'tree', strawberry:'skull',
-                   lime:'tree', tangerine:'biker' };
+/* places only (owner, Aug 2026): objects render fine but make no game
+   sense; every PET dials the winter-tree ROOM until more place-scans
+   arrive. Objects stay reachable via ?scene= for testing. */
+const TINT2SCENE={ bondi:'tree', grape:'tree', strawberry:'tree',
+                   lime:'tree', tangerine:'tree' };
 const SCENE=SCENES[Q.get('scene')] || SCENES[TINT2SCENE[Q.get('tint')]] || SCENES.tree;
 const SPLAT_PATH=(Q.has('hq') && SCENE.hq) ? SCENE.hq : SCENE.ply;
 
@@ -276,7 +279,7 @@ const panelE=new pc.Entity('terminal');
 const plate=new pc.Entity('plate');
 plate.addComponent('render',{ type:'plane' });
 plate.render.meshInstances[0].material=panelMat;
-plate.setLocalEulerAngles(90,0,180);          // plane +y -> facing +z, upright
+plate.setLocalEulerAngles(90,0,0);            // plane +y -> facing +z
 plate.setLocalScale(PW,1,PH);
 panelE.addChild(plate);
 /* anchored in the WORLD, placed once using the boot camera's left */
@@ -297,7 +300,7 @@ function wrapText(s, max){
 }
 function panelDraw(){
   const g=pctx;
-  g.setTransform(-1,0,0,1,PANEL_W,0);   // pre-mirror: the plate shows it flipped
+  g.setTransform(1,0,0,1,0,0);
   g.fillStyle='#020c05'; g.fillRect(0,0,PANEL_W,PANEL_H);
   g.strokeStyle=tint; g.lineWidth=3; g.strokeRect(5,5,PANEL_W-10,PANEL_H-10);
   g.font='11px monospace'; g.fillStyle=tint; g.globalAlpha=0.65;
@@ -324,6 +327,110 @@ function panelDraw(){
   panelTex.setSource(pcv);
 }
 panelDraw();
+
+/* =========================================================
+   TERMINALS — named places in the scan where the screen can
+   live. Tap a PET marker to zoom its screen near-fullscreen;
+   the HUD breadcrumb says where you are. New spots are found
+   with the game itself: ?edit=1 flies the scan, taps place a
+   PET on the splat surface (ray vs the actual gaussian data),
+   COPY DATA yields JSON to paste back into the chat.
+   ========================================================= */
+const TERMINALS=[
+  { id:'port7', label:'BY THE WINTER TREE',
+    pos:[PANEL_POS.x, PANEL_POS.y, PANEL_POS.z] },
+];
+let activeTerm=TERMINALS[0];
+function makePETmarker(p){
+  const g2=new pc.Entity('pet');
+  const s=0.14*R;
+  const mk=(c,x,y,z,w,h,d)=>{ const e=new pc.Entity();
+    e.addComponent('render',{type:'box'});
+    e.render.meshInstances[0].material=glowMat(c,1);
+    e.setLocalScale(w*s,h*s,d*s); e.setLocalPosition(x*s,y*s,z*s);
+    g2.addChild(e); return e; };
+  mk('#1f9bb5', 0,0.12,0.1, 0.92,0.24,0.86);   // chassis
+  mk('#f2efe6', 0,0.28,0.3, 0.72,0.08,0.42);   // keys deck
+  mk('#1f9bb5', 0,0.62,-0.16, 0.8,0.64,0.52);  // head
+  mk('#0a2c14', 0,0.64,0.12, 0.6,0.48,0.06);   // dark screen
+  g2.setPosition(p[0],p[1],p[2]);
+  app.root.addChild(g2); return g2;
+}
+for(const T of TERMINALS) T.marker=makePETmarker(T.pos);
+function flyToTerm(T){
+  activeTerm=T;
+  PANEL_POS.set(T.pos[0],T.pos[1]+0.3*R,T.pos[2]);
+  panelE.setPosition(PANEL_POS);
+  document.getElementById('hudLoc').textContent='PORT/7 · '+T.label;
+  fly({ dYaw:55, toPitch:2, toDist:0.6,
+        tgt:new pc.Vec3(T.pos[0],T.pos[1]+0.3*R,T.pos[2]), dur:2.8 });
+}
+function termTap(cx,cy){
+  const scale=app.graphicsDevice.width/innerWidth;
+  for(const T of TERMINALS){
+    camE.camera.worldToScreen(T.marker.getPosition(), _scr);
+    if(Math.hypot(_scr.x-cx*scale,_scr.y-cy*scale)<52*scale){ flyToTerm(T); return true; }
+  }
+  return false;
+}
+
+/* ---- EDIT MODE ---- */
+const EDIT=Q.has('edit');
+let editPts=null, ghost=null, lastPlace=null;
+if(EDIT){
+  const bar=document.createElement('div');
+  bar.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:20;display:flex;gap:8px;align-items:center;padding:10px;background:rgba(1,10,5,.92);border-top:1px solid '+tint+';color:'+tint+';font:11px monospace;';
+  bar.innerHTML='<button type="button" id="ebCopy" style="background:none;border:1px solid '+tint+';color:'+tint+';font:bold 12px monospace;padding:8px 12px;border-radius:4px;">COPY DATA</button><span id="ebInfo" style="word-break:break-all;">EDIT: loading hit mesh…</span>';
+  document.body.appendChild(bar);
+  fetch('splats/christmas-tree-150k.splat').then(r2=>r2.arrayBuffer()).then(b2=>{
+    const dv=new DataView(b2), n=Math.floor(b2.byteLength/32);
+    const pts=new Float32Array(n*3); const v=new pc.Vec3();
+    for(let i=0;i<n;i++){
+      if(dv.getUint8(i*32+27)<90){ pts[i*3]=1e9; continue; }   // ghosts don't count
+      v.set(dv.getFloat32(i*32,true),dv.getFloat32(i*32+4,true),dv.getFloat32(i*32+8,true));
+      upQ.transformVector(v,v);
+      pts[i*3]=v.x; pts[i*3+1]=v.y; pts[i*3+2]=v.z;
+    }
+    editPts=pts;
+    document.getElementById('ebInfo').textContent='EDIT: tap the scan to place a PET';
+  }).catch(e2=>{ document.getElementById('ebInfo').textContent='hit mesh unavailable: '+e2.message; });
+  document.getElementById('ebCopy').addEventListener('click',()=>{
+    if(!lastPlace) return;
+    const data=JSON.stringify({ scene:(Q.get('scene')||'tree'), label:'NEW PORT',
+      pos:[+lastPlace.x.toFixed(3),+lastPlace.y.toFixed(3),+lastPlace.z.toFixed(3)] });
+    if(navigator.clipboard) navigator.clipboard.writeText(data).catch(()=>{});
+    document.getElementById('ebInfo').textContent=data;
+  });
+}
+function splatHit(cx,cy){
+  if(!editPts) return null;
+  const ro=camE.getPosition(), rd=new pc.Vec3();
+  const scale=app.graphicsDevice.width/innerWidth;
+  camE.camera.screenToWorld(cx*scale,cy*scale,camE.camera.farClip,rd);
+  rd.sub(ro).normalize();
+  const rad2=0.018*R*R;
+  let best=Infinity;
+  for(let i=0;i<editPts.length;i+=9){          // every 3rd splat: plenty
+    const px2=editPts[i]-ro.x, py2=editPts[i+1]-ro.y, pz2=editPts[i+2]-ro.z;
+    const t3=px2*rd.x+py2*rd.y+pz2*rd.z;
+    if(t3<0.2*R||t3>=best) continue;
+    const dx=px2-rd.x*t3, dy=py2-rd.y*t3, dz=pz2-rd.z*t3;
+    if(dx*dx+dy*dy+dz*dz<rad2) best=t3;
+  }
+  if(best===Infinity) return null;
+  return new pc.Vec3().copy(rd).mulScalar(best).add(ro);
+}
+function editPlace(cx,cy){
+  const h=splatHit(cx,cy);
+  if(!h) return false;
+  lastPlace=h;
+  if(ghost) ghost.setPosition(h); else ghost=makePETmarker([h.x,h.y,h.z]);
+  if(ghost) ghost.setPosition(h.x,h.y,h.z);
+  document.getElementById('ebInfo').textContent=
+    'PET at '+h.x.toFixed(2)+', '+h.y.toFixed(2)+', '+h.z.toFixed(2)+' — COPY DATA when happy';
+  return true;
+}
+
 /* raycast a css-pixel tap onto the plate; true = consumed */
 const _rd=new pc.Vec3(), _hit=new pc.Vec3(), _nrm=new pc.Vec3(), _rt=new pc.Vec3();
 function panelTap(cx,cy){
@@ -339,7 +446,7 @@ function panelTap(cx,cy){
   _rt.cross(_nrm, pc.Vec3.UP).normalize();       // viewer-right on the plate
   const lx=_hit.dot(_rt), ly=_hit.y;
   if(Math.abs(lx)>PW/2 || Math.abs(ly)>PH/2) return false;
-  const px=(0.5 + lx/PW)*PANEL_W, py=(0.5 - ly/PH)*PANEL_H;
+  const px=(0.5 - lx/PW)*PANEL_W, py=(0.5 - ly/PH)*PANEL_H;
   choiceRects.forEach((r,i)=>{
     if(px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h) chooseChoice(i);
   });
@@ -511,7 +618,9 @@ addEventListener('pointerup', e=>{
   const moved=Math.hypot(e.clientX-downAt[0], e.clientY-downAt[1]);
   downAt=null;
   if(moved>8 || !loaded) return;
-  if(e.target.closest && e.target.closest('#exitBtn')) return;
+  if(e.target.closest && e.target.closest('#exitBtn,#ebCopy')) return;
+  if(EDIT){ editPlace(e.clientX, e.clientY); return; }
+  if(termTap(e.clientX, e.clientY)) return;       // PET markers zoom their screen
   if(panelTap(e.clientX, e.clientY)) return;      // the terminal soaks its taps
   const scale=app.graphicsDevice.width/innerWidth;   // css px -> device px
   let best=null, bd=48*scale;
@@ -608,6 +717,10 @@ window.__dream = {
     camE.camera.worldToScreen(wp,_scr);
     return { x:_scr.x/scale, y:_scr.y/scale }; },
   choose(i){ chooseChoice(i); },
+  get terms(){ return TERMINALS.map(T=>T.label); },
+  editPlace(x,y){ return editPlace(x,y); },
+  get lastPlace(){ return lastPlace?[+lastPlace.x.toFixed(3),+lastPlace.y.toFixed(3),+lastPlace.z.toFixed(3)]:null; },
+  flyToTerm(i){ flyToTerm(TERMINALS[i]); },
   exit(){ document.getElementById('exitBtn').click(); },
 };
 </script>
