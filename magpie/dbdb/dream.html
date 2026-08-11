@@ -717,7 +717,13 @@ function boot(){
   if(Q.has('far')){                    // arriving from another splat: sweep
     const sti=Math.min(3,Math.max(0,parseInt(Q.get('st')||'0',10)||0));
     flyStation(sti,{arrive:true});       // …down into the CHOSEN station
-  } else termOpen();                     // first boot: the intro, fullscreen
+  } else {
+    /* ink is keyed off ACTIONS — nothing un-asked fills the screen.
+       A one-line whisper points at the first interaction instead. */
+    loadLine.textContent='TAP A GEM WHEN ITS SHIMMER FINDS YOU';
+    loadLine.classList.remove('hidden');
+    setTimeout(()=>loadLine.classList.add('hidden'), 7000);
+  }
 }
 function loadSplat(attempt=0){
   const bust = attempt>0 ? '?r='+attempt+'-'+Date.now() : '';
