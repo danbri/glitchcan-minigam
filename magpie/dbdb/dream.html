@@ -811,8 +811,10 @@ function boot(){
   loaded=true; loadLine.classList.add('hidden');
   console.log('dream renderer:', mode, '· scene:', SCENE.credit);
   renderInk();
-  if(Q.has('far'))                     // arriving from another splat: sweep in
-    fly({ dYaw:230, toPitch:6, toDist:0.9, tgt:TOUR[0], dur:5, quiet:true });
+  if(Q.has('far')){                    // arriving from another splat: sweep
+    const sti=Math.min(3,Math.max(0,parseInt(Q.get('st')||'0',10)||0));
+    flyStation(sti,{arrive:true});       // …down into the CHOSEN station
+  }
 }
 function loadSplat(attempt=0){
   const bust = attempt>0 ? '?r='+attempt+'-'+Date.now() : '';
@@ -840,13 +842,26 @@ loadSplat();
 const STN=SCENE.st||[];
 const NAMES=(SCENE.names||['NORTH','EAST','SOUTH','WEST'])
   .map((n,i)=>STN[i]?STN[i].n:n);
-/* far ports: two other PLACES, chosen per boot */
+/* far ports: EVERY other place, EVERY named station in it — the port
+   map is a directory of the whole dreamt world, not a lucky dip */
 const PLACES=['tree','garden','carshop','forest','museum','pool','watertower','calico'];
 const FKEYS=PLACES.filter(k=>SCENES[k]&&SCENES[k]!==SCENE);
-const FAR=[FKEYS[Math.floor(Math.random()*FKEYS.length)]];
-{ let k2=FKEYS[Math.floor(Math.random()*FKEYS.length)];
-  if(k2===FAR[0]) k2=FKEYS[(FKEYS.indexOf(k2)+1)%FKEYS.length];
-  FAR.push(k2); }
+const nameOf=(k,i)=>{ const s=SCENES[k], st=s.st||[];
+  return st[i]?st[i].n:(s.names||['NORTH','EAST','SOUTH','WEST'])[i]; };
+const GO_LINES=['The whole scan folds shut behind you.',
+  'The static thickens. Another place entirely takes the screen.',
+  'You let go of this place. It lets go of you.',
+  'The drift carries you out past the last gaussian.'];
+let farMenu='', farKnots='', goKnots='';
+FKEYS.forEach((k,ki)=>{
+  farMenu+='+ [FAR PORT \u2192 '+k.toUpperCase()+'] -> far_'+k+'\n';
+  farKnots+='== far_'+k+' ==\nThe static tunes toward '+k.toUpperCase()+': '+SCENES[k].what+'.\n';
+  for(let i=0;i<4;i++)
+    farKnots+='+ [\u21d2 '+nameOf(k,i)+' \u00b7 '+k+'] -> go_'+k+'_'+i+'\n';
+  farKnots+='+ [Back to the far ports] -> farhub\n';
+  for(let i=0;i<4;i++)
+    goKnots+='== go_'+k+'_'+i+' ==\n'+GO_LINES[(ki+i)%GO_LINES.length]+'\n-> DONE\n';
+});
 const INK_SOURCE = `
 VAR clues = 0
 -> port
@@ -863,9 +878,11 @@ Its named corners: ${NAMES.join(', ')}. You drift here without a body — LEFT t
 + [Port → ${NAMES[1]}] -> st_1
 + [Port → ${NAMES[2]}] -> st_2
 + [Port → ${NAMES[3]}] -> st_3
-+ [FAR PORT → ${(SCENES[FAR[0]].names||['?'])[0]} · ${FAR[0]}] -> far_0
-+ [FAR PORT → ${(SCENES[FAR[1]].names||['?'])[0]} · ${FAR[1]}] -> far_1
++ [FAR PORTS — the other scans] -> farhub
 + [Ask the dream for a hint] -> hint
+== farhub ==
+${FKEYS.length} other places hum behind the static. Pick one; then pick where in it to surface.
+${farMenu}+ [Back to this place] -> hub
 == st_0 ==
 The dream slides you along the drift to ${NAMES[0]}.
 -> hub
@@ -878,13 +895,7 @@ The static parts. ${NAMES[2]}.
 == st_3 ==
 You arrive at ${NAMES[3]} before the sound of leaving fades.
 -> hub
-== far_0 ==
-The static thickens. Another place entirely takes the screen.
--> DONE
-== far_1 ==
-The whole scan folds shut behind you.
--> DONE
-== hint ==
+${farKnots}${goKnots}== hint ==
 {clues == 0: "Low, near the base," the static says. "Something that once sat on a head."}
 {clues == 1: "At the heart of the scan," it hums. "Small, brass, patient."}
 {clues == 2: "Higher," it crackles. "Up past the top, out in the drift. It still has light in it."}
@@ -919,34 +930,40 @@ STN.forEach((s,i)=>{ if(i>=TOUR.length) return;
   WALKMAX=Math.max(WALKMAX, Math.hypot(s.p[0]-C.x,s.p[2]-C.z)+0.15*R);
 });
 let tourI=0;
+/* the one true port flight: absolute per-station bearing (hand-placed
+   yaw wins over the computed corner), so the same port always lands in
+   the same pose. Already there? A slow full-circle flourish says so.
+   opts.arrive: the quiet sweep-in when surfacing from another scan. */
+function flyStation(sti, opts={}){
+  document.getElementById('hudLoc').textContent='PORT/7 · '+NAMES[sti];
+  const bAng=Math.atan2(base.x,base.z)*180/Math.PI;
+  const aim=STN[sti]?STN[sti].yaw:(sti*90+40);
+  let want=aim-bAng-yaw;
+  while(want>180) want-=360; while(want<-180) want+=360;
+  const there = !opts.arrive && Math.abs(want)<12 && TGT_CUR.distance(TOUR[sti])<0.25*R;
+  fly(there
+    ? { dYaw:360, toPitch:4+sti*3, toDist:0.68, tgt:TOUR[sti], dur:6 }
+    : { dYaw:want+(opts.arrive?-360:0), toPitch:4+sti*3, toDist:0.68,
+        tgt:TOUR[sti], dur:opts.arrive?5.5:5, quiet:!!opts.arrive });
+}
 function choiceFlight(label){
   const L=label.toLowerCase();
   const sti=NAMES.findIndex(n=>label.includes(n));
-  if(L.startsWith('far port')){
-    const fk=label.includes('· '+FAR[1])?FAR[1]:FAR[0];
+  /* a far station: "⇒ NAME · scenekey" — leave this scan, surface at
+     that exact station of the other one */
+  const fm=label.match(/^\u21d2 (.+) \u00b7 ([a-z]+)$/);
+  if(fm && SCENES[fm[2]]){
+    const k=fm[2];
+    const fsti=Math.max(0,[0,1,2,3].map(i=>nameOf(k,i)).indexOf(fm[1]));
     fly({ dYaw:200, toPitch:26, toDist:1.9, tgt:CAM_TGT, dur:2.6, onDone:()=>{
       const u=new URL(location.href);
-      u.searchParams.set('scene',fk); u.searchParams.set('far','1');
+      u.searchParams.set('scene',k); u.searchParams.set('far','1');
+      u.searchParams.set('st',String(fsti));
       location.href=u.toString();
     }});
     return 'far';
   }
-  if(L.startsWith('port') && sti>=0){
-    document.getElementById('hudLoc').textContent='PORT/7 · '+NAMES[sti];
-    /* each corner has its own ABSOLUTE arrival bearing, so choosing the
-       same port twice lands in the same pose (was: a relative sweep
-       that advanced the bearing on every press). Already there? A slow
-       full-circle flourish says so. */
-    const bAng=Math.atan2(base.x,base.z)*180/Math.PI;
-    const aim=STN[sti]?STN[sti].yaw:(sti*90+40);
-    let want=aim-bAng-yaw;
-    while(want>180) want-=360; while(want<-180) want+=360;
-    const there = Math.abs(want)<12 && TGT_CUR.distance(TOUR[sti])<0.25*R;
-    fly(there
-      ? { dYaw:360, toPitch:4+sti*3, toDist:0.68, tgt:TOUR[sti], dur:6 }
-      : { dYaw:want, toPitch:4+sti*3, toDist:0.68, tgt:TOUR[sti], dur:5 });
-    return null;
-  }
+  if(L.startsWith('port') && sti>=0){ flyStation(sti); return null; }
   if(L.includes('hint')){
     const c=clueMeshes.find(cm=>!cm.found);
     if(c) fly({ dYaw:120, toPitch:10, toDist:0.55, tgt:c.grp.getPosition(), dur:3.8 });
