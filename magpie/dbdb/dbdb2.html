@@ -129,6 +129,23 @@
   #goDuck { position:absolute; bottom:0; left:36px; font-size:48px; }
   @keyframes stomp { 0%{top:-70px} 55%{top:-70px} 75%{top:18px} 82%{top:12px} 100%{top:18px} }
   .hidden { display:none !important; }
+  /* the dream layer: the terminal's screen swallows the view */
+  #dreamWrap { position:fixed; inset:0; z-index:40; display:flex;
+    align-items:center; justify-content:center;
+    background:rgba(2,3,10,0); transition:background .6s ease; }
+  #dreamWrap.in { background:rgba(2,3,10,.88); }
+  #dreamBezel { width:min(94vw,900px); height:min(88vh,640px); position:relative;
+    transform:scale(.03) rotate(-5deg); opacity:.15;
+    transition:transform .65s cubic-bezier(.2,.85,.3,1.15), opacity .45s ease;
+    border:10px solid #1c1a24; border-radius:26px; overflow:hidden;
+    background:#010204;
+    box-shadow:0 0 70px rgba(103,182,189,.45), inset 0 0 44px #000; }
+  #dreamWrap.in #dreamBezel { transform:scale(1) rotate(0); opacity:1; }
+  #dreamFrame { width:100%; height:100%; border:0; background:#010204; }
+  #dreamEject { position:absolute; top:8px; left:8px; z-index:2;
+    background:rgba(20,10,30,.75); border:2px solid #67b6bd; color:#67b6bd;
+    font-family:inherit; font-weight:bold; font-size:12px; letter-spacing:.18em;
+    padding:7px 12px; border-radius:6px; cursor:pointer; }
   #err { position:fixed; inset:auto 0 0 0; z-index:50; color:#ff5555; background:#200; padding:8px; font-size:12px; display:none; white-space:pre-wrap; }
 </style>
 </head>
@@ -162,7 +179,9 @@
      <b>before the clock strikes midnight</b>. Beyond the garden wall lies
      the <b>Puzzle City</b>: one thousand moonlit contraptions — crates,
      keys, levers, springs — for the brave and the sleepless. Drag to spin
-     the world. Mind the residents.</p>
+     the world. Mind the residents — and mind the west end: down
+     <b>Moonfall Parade</b> the maglev hisses in, THE JOVIAL NEWT pours,
+     and the corner-booth terminal dreams in static.</p>
   <p><b>Touch:</b> left thumb = walk &nbsp;·&nbsp; right button = jump<br>
      <b>Keys:</b> arrows / WASD = walk &nbsp;·&nbsp; SPACE / Z = jump &nbsp;·&nbsp; M = mute</p>
   <button type="button" class="btn" id="startBtn" disabled>LOADING…</button>
@@ -187,6 +206,14 @@
   <p id="winStats"></p>
   <p>Ducky tidied the whole manor and went to bed. The housekeeper is satisfied. For now.</p>
   <button type="button" class="btn" id="againBtn">PLAY AGAIN</button>
+</div>
+
+<!-- ---------- the dream layer (the Newt's corner terminal) ---------- -->
+<div id="dreamWrap" class="hidden">
+  <div id="dreamBezel">
+    <button type="button" id="dreamEject">⏏ EJECT</button>
+    <iframe id="dreamFrame" title="the static dream" src="about:blank"></iframe>
+  </div>
 </div>
 
 <pre id="err"></pre>
@@ -605,6 +632,63 @@ buildCity();
 console.assert(puzzles.length===CITY_CX*CITY_CZ*5, 'puzzle count', puzzles.length);
 
 /* =========================================================
+   2d. MOONFALL PARADE — the west district. Not a puzzle: a
+   PLACE. A bar with regulars, two shops, a maglev line, and
+   in the Newt's corner booth a terminal that dreams. (rev 2.1)
+   ========================================================= */
+const districtZones=[];
+function buildDistrict(){
+  fill(-34,0,-21, -5,0,13, P.stone, P.stone2);            // parade ground
+
+  /* THE JOVIAL NEWT — pub shell x -33..-19, z 2..12 */
+  fill(-32,0,3, -20,0,11, P.brown, P.darkBrown);          // floorboards
+  fill(-33,1,2, -19,3,2, P.red, P.darkGrey);              // north wall
+  fill(-33,1,3, -33,3,11, P.red);                          // west wall
+  fill(-33,1,12, -19,1,12, P.darkBrown);                   // south fence (hop it)
+  fill(-19,1,3, -19,1,11, P.darkBrown);                    // east fence
+  carve(-19,1,6, -19,1,8);                                 // the street door
+  fill(-31,1,5, -23,1,5, P.darkBrown);                     // THE COUNTER
+  setCell(-29,1,9, P.brown); setCell(-24,1,9, P.brown);    // two hefty tables
+  setCell(-32,1,10, P.darkGrey);                           // corner-booth desk
+  lamps.push([-27,3.0,6.0],[-31.4,2.7,10.6],[-22,3.0,9.5]);
+
+  /* THE GREENGROCER — x -33..-25, z -17..-9, open to the street */
+  fill(-32,0,-16, -26,0,-10, P.white, P.cyan);
+  fill(-33,1,-17, -25,3,-17, P.green, P.darkGrey);
+  fill(-33,1,-16, -33,3,-10, P.green);
+  fill(-33,1,-9, -25,3,-9, P.green, P.darkGrey);
+  fill(-30,1,-15, -27,1,-15, P.brown);                     // display stands
+  fill(-30,1,-13, -27,1,-13, P.brown);
+  lamps.push([-25.5,3.0,-12.5]);
+
+  /* THE OLD BAKERY — x -33..-25, z -7..1 */
+  fill(-32,0,-6, -26,0,0, P.white, P.stone2);
+  fill(-33,1,-7, -25,3,-7, P.yellow, P.darkGrey);
+  fill(-33,1,-6, -33,3,0, P.yellow);
+  fill(-33,1,1, -25,3,1, P.yellow, P.darkGrey);
+  fill(-33,1,-6, -32,2,-6, P.darkGrey);                    // the oven
+  fill(-30,1,-3, -27,1,-3, P.brown);                       // bread shelf
+  lamps.push([-25.5,3.0,-2.5]);
+
+  /* THE MAGLEV — pylons, beam, platform, stairs to the street */
+  for(let pz=-20; pz<=12; pz+=6) fill(-14,1,pz, -14,4,pz, P.darkGrey);
+  fill(-15,5,-21, -14,5,13, P.blue, P.darkGrey);           // the beam
+  fill(-13,5,-1, -10,5,3, P.stone, P.stone2);              // platform
+  for(let s=0;s<5;s++) fill(-9+s,1,0, -9+s,5-s,2, P.white, P.briYel);   // stair signature: white/bright-yellow check
+
+  /* street lamps on the parade */
+  for(const lz of [-18,-8]){ fill(-19,1,lz, -19,2,lz, P.darkGrey); lamps.push([-18.5,3.4,lz+0.5]); }
+
+  districtZones.push(
+    { name:'The Jovial Newt', x0:-34,x1:-18.5, z0:1.5,z1:13, yMin:-1, spawn:[-21,1.1,7] },
+    { name:'The Greengrocer', x0:-34,x1:-24.5, z0:-17.5,z1:-8.5, yMin:-1, spawn:[-24,1.1,-12] },
+    { name:'The Old Bakery',  x0:-34,x1:-24.5, z0:-8.5,z1:1.5, yMin:-1, spawn:[-24,1.1,-3] },
+    { name:'Moonfall Parade', x0:-34,x1:-4.5, z0:-21,z1:13, yMin:-2, spawn:[-16,1.1,7] },
+  );
+}
+buildDistrict();
+
+/* =========================================================
    3. ZONES
    ========================================================= */
 const ZONES = [
@@ -618,8 +702,9 @@ const ZONES = [
   { name:'The Kitchen',     x0:30,x1:44, z0:1,z1:13, yMin:-1, spawn:[32,1.1,7] },
   { name:'The Conservatory',x0:44,x1:58, z0:1,z1:13, yMin:-1, spawn:[46,1.1,7] },
   { name:'The Duck Pond',   x0:-6,x1:14, z0:1,z1:14, yMin:-1, spawn:[-1,1.1,4] },
+  ...districtZones,
   ...courtZones,
-  { name:'The Grounds',     x0:-9,x1:WORLD_E+3, z0:-22,z1:WORLD_S+3, yMin:-2, spawn:[-1,1.1,4] },
+  { name:'The Grounds',     x0:-37,x1:WORLD_E+3, z0:-22,z1:WORLD_S+3, yMin:-2, spawn:[-1,1.1,4] },
 ];
 function zoneAt(x,y,z){
   for(const zn of ZONES)
@@ -1173,6 +1258,466 @@ function updatePeephole(){
   camTU.value.set(camTarget.x, camTarget.y, camTarget.z);
 }
 
+/* =========================================================
+   7b. THE RESIDENTS — Moonfall Parade lives. Hyper-real
+   rotoscope people on the hero's own rig, off-palette against
+   the C64 blocks: a huge jovial barkeep couple and their scrum
+   of regulars at THE JOVIAL NEWT; maglev shoppers doing the
+   rounds; hover-cars that come when hailed. And the corner
+   booth's curved terminal, dreaming in static (dream.html).
+   ========================================================= */
+const NPC_SKIN=[0xe8b48c,0xdca878,0xc68e5a,0x9c6b44,0x6e4a33];
+const NPC_HAIR=[0x2a2018,0x574200,0x8a8a8a,0xb5651d,0x14100c];
+const NPC_COAT=[0x7d8ba1,0x9b7653,0x5c6b52,0x8c5a5a,0x6b5b7d,0xb0a389];
+const NPC_LEG =[0x4a4f5c,0x5c5044,0x3e4a42,0x554a5e];
+function makeNPC(o={}){
+  const g=new THREE.Group();
+  const body=new THREE.Group(); g.add(body);
+  const Mm=c=>new THREE.MeshBasicNodeMaterial({ color: srgb(c) });
+  const SKIN=o.skin??pick(NPC_SKIN), SHIRT=o.shirt??pick(NPC_COAT),
+        LEG=o.trouser??pick(NPC_LEG), HAIR=o.hair??pick(NPC_HAIR),
+        BOOT=o.boot??0x3a2e22, bulk=o.bulk??1;
+  function seg(parent, jx,jy,jz, w,h,d, c, oy=-1){
+    const j=new THREE.Group(); j.position.set(jx,jy,jz); parent.add(j);
+    const m=new THREE.Mesh(boxGeo, Mm(c));
+    m.position.set(-w/2, oy<0?-h:0, -d/2); m.scale.set(w,h,d); j.add(m);
+    return j;
+  }
+  const pelvis=seg(body,0,0.98,0, 0.34*bulk,0.16,0.22*bulk, LEG);
+  const torso =seg(body,0,0.98,0, 0.42*bulk,0.52,0.24*bulk, SHIRT, +1);
+  if(o.apron!=null){ const a=new THREE.Mesh(boxGeo, Mm(o.apron));
+    a.position.set(-0.17*bulk,0.02,0.125*bulk); a.scale.set(0.34*bulk,0.44,0.05); torso.add(a); }
+  const headJ=seg(body,0,1.52,0, 0.24,0.26,0.24, SKIN, +1);
+  { const cap=new THREE.Mesh(boxGeo, Mm(HAIR));
+    cap.position.set(-0.14,0.18,-0.14); cap.scale.set(0.28,0.10,0.28); headJ.add(cap);
+    const back=new THREE.Mesh(boxGeo, Mm(HAIR));
+    back.position.set(-0.14,0.04,-0.16); back.scale.set(0.28,0.16,0.08); headJ.add(back);
+    for(const ex of [0.06,-0.11]){ const eye=new THREE.Mesh(boxGeo, Mm(0x1c150f));
+      eye.position.set(ex,0.13,0.10); eye.scale.set(0.05,0.05,0.04); headJ.add(eye); } }
+  if(o.mous){ const mo=new THREE.Mesh(boxGeo, Mm(HAIR));   // a magnificent moustache
+    mo.position.set(-0.1,0.03,0.11); mo.scale.set(0.2,0.05,0.03); headJ.add(mo); }
+  if(o.bun){ const b=new THREE.Mesh(boxGeo, Mm(HAIR));     // hair up for service
+    b.position.set(-0.07,0.26,-0.07); b.scale.set(0.14,0.12,0.14); headJ.add(b); }
+  const hipL=seg(body, 0.09,0.86,0, 0.13,0.42,0.16, LEG);
+  const hipR=seg(body,-0.09,0.86,0, 0.13,0.42,0.16, LEG);
+  const kneeL=seg(hipL,0,-0.42,0, 0.11,0.40,0.13, LEG);
+  const kneeR=seg(hipR,0,-0.42,0, 0.11,0.40,0.13, LEG);
+  for(const k of [kneeL,kneeR]){ const f=new THREE.Mesh(boxGeo, Mm(BOOT));
+    f.position.set(-0.06,-0.46,-0.05); f.scale.set(0.12,0.07,0.24); k.add(f); }
+  const shL=seg(body, 0.27*bulk,1.44,0, 0.10,0.30,0.14, SHIRT);
+  const shR=seg(body,-0.27*bulk,1.44,0, 0.10,0.30,0.14, SHIRT);
+  shL.rotation.z=0.10; shR.rotation.z=-0.10;
+  const elL=seg(shL,0,-0.30,0, 0.09,0.28,0.11, SKIN);
+  const elR=seg(shR,0,-0.30,0, 0.09,0.28,0.11, SKIN);
+  const handL=new THREE.Group(); handL.position.set(0,-0.30,0); elL.add(handL);
+  const handR=new THREE.Group(); handR.position.set(0,-0.30,0); elR.add(handR);
+  g.scale.setScalar(o.scale??1);
+  scene.add(g);
+  return { g, body,pelvis,torso,headJ,hipL,hipR,kneeL,kneeR,shL,shR,elL,elR,handL,handR };
+}
+const npcs=[];
+function spawnNPC(o, x,y,z, facing, mode){
+  const n={ r:makeNPC(o), x,y,z, facing, face:facing, mode, gait:Math.random()*6,
+    phase:Math.random()*6.28, timer:1+Math.random()*3, speed:2.2,
+    path:null, pi:0, stagger:0, laugh:0, prop:null, slot:-1, data:{},
+    shadow:makeShadow() };
+  npcs.push(n); return n;
+}
+function makeProp(kind){
+  const grp=new THREE.Group();
+  const Mm=c=>new THREE.MeshBasicNodeMaterial({ color: srgb(c) });
+  const box=(x,y,z,w,h,d,c)=>{ const m=new THREE.Mesh(boxGeo,Mm(c));
+    m.position.set(x-w/2,y,z-d/2); m.scale.set(w,h,d); grp.add(m); return m; };
+  if(kind==='mug'){ box(0,-0.06,0.1, 0.14,0.16,0.14, 0xc9a227); box(0,0.10,0.1, 0.14,0.05,0.14, 0xf6f4ec); }
+  else if(kind==='loaf'){ box(0,0,0.12, 0.5,0.14,0.2, 0xb07c3e); box(0,0.13,0.12, 0.42,0.05,0.16, 0xd9a865); }
+  else if(kind==='veg'){ box(0,0,0.14, 0.34,0.16,0.26, 0x8b5429);
+    box(-0.08,0.15,0.1, 0.1,0.09,0.1, 0x55a049); box(0.06,0.15,0.16, 0.09,0.08,0.09, 0xb83932);
+    box(0,0.14,0.2, 0.08,0.1,0.08, 0xd9822b); }
+  return grp;
+}
+function giveProp(n, kind, hand){
+  dropProp(n);
+  n.prop=makeProp(kind);
+  (hand==='L'?n.r.handL:n.r.handR).add(n.prop);
+}
+function dropProp(n){ if(n.prop){ n.prop.removeFromParent(); n.prop=null; } }
+function npcSetPath(n, pts, mode='walk'){ n.path=pts; n.pi=0; n.mode=mode; }
+function npcStep(n, dt){
+  const wp=n.path && n.path[n.pi];
+  if(!wp) return true;
+  const dx=wp[0]-n.x, dz=wp[2]-n.z, d=Math.hypot(dx,dz);
+  if(d<0.14){ n.y=wp[1]; n.pi++; return n.pi>=n.path.length; }
+  const st=Math.min(d, n.speed*dt);
+  n.x+=dx/d*st; n.z+=dz/d*st;
+  n.y+=(wp[1]-n.y)*Math.min(1,dt*7);
+  n.facing=Math.atan2(dx,dz);
+  n.gait+=st*2.35;
+  return false;
+}
+function npcPose(n, t, dt){
+  const r=n.r;
+  const settleArms=()=>{ lerpTo(r.shL,'x',0.05,dt*6); lerpTo(r.shR,'x',0.05,dt*6);
+    lerpTo(r.elL,'x',-0.12,dt*6); lerpTo(r.elR,'x',-0.12,dt*6); };
+  const settleLegs=()=>{ for(const j of [r.hipL,r.hipR,r.kneeL,r.kneeR]) lerpTo(j,'x',0,dt*8); };
+  const idle=()=>{ settleLegs(); settleArms();
+    r.body.position.y=Math.sin(t*1.8+n.phase)*0.012;
+    r.body.rotation.x=0; r.body.rotation.z=Math.sin(t*0.6+n.phase)*0.03;
+    r.headJ.rotation.y=Math.sin(t*0.9+n.phase)*0.1; r.headJ.rotation.x=0;
+    r.torso.rotation.y=0; };
+  switch(n.mode){
+    case 'walk': case 'carry': {
+      const s=Math.sin(n.gait), carry=n.mode==='carry';
+      r.hipL.rotation.x=-s*0.6; r.hipR.rotation.x=s*0.6;
+      r.kneeL.rotation.x=Math.max(0,Math.sin(n.gait-0.7))*0.95;
+      r.kneeR.rotation.x=Math.max(0,-Math.sin(n.gait-0.7))*0.95;
+      if(carry){ r.shL.rotation.x=r.shR.rotation.x=-0.55;
+        r.elL.rotation.x=r.elR.rotation.x=-1.35; }
+      else { r.shL.rotation.x=s*0.42; r.shR.rotation.x=-s*0.42;
+        r.elL.rotation.x=-0.4-s*0.12; r.elR.rotation.x=-0.4+s*0.12; }
+      r.body.position.y=(Math.abs(Math.cos(n.gait))*0.05-0.025);
+      r.body.rotation.x=0.1; r.body.rotation.z=s*0.03;
+      r.torso.rotation.y=carry?0:s*0.08; r.headJ.rotation.y=carry?0:-s*0.05;
+      r.headJ.rotation.x=0;
+      break; }
+    case 'jostle': {   // shoulder to shoulder, craning, waving a note at the keeps
+      settleLegs();
+      r.body.rotation.z=Math.sin(t*2.1+n.phase)*0.13;
+      r.body.rotation.x=0.05;
+      r.body.position.y=Math.max(0,Math.sin(t*3.1+n.phase*2))*0.05;  // tip-toe bounce
+      r.headJ.rotation.y=Math.sin(t*1.3+n.phase)*0.25; r.headJ.rotation.x=-0.06;
+      lerpTo(r.shL,'x',-0.2,dt*6); lerpTo(r.elL,'x',-0.4,dt*6);
+      r.shR.rotation.x=-2.5+Math.sin(t*5+n.phase)*0.25;   // the waving arm
+      r.elR.rotation.x=-0.2;
+      break; }
+    case 'drink': {
+      idle();
+      const sip=Math.max(0,Math.sin(t*0.9+n.phase*3));    // periodic tip-back
+      r.shR.rotation.x=-0.7-sip*0.5; r.elR.rotation.x=-1.6-sip*0.6;
+      r.headJ.rotation.x=-sip*0.35;
+      break; }
+    case 'pour': {   // the keep at the taps: steady hands, honest work
+      idle();
+      r.shR.rotation.x=-0.9; r.elR.rotation.x=-0.9+Math.sin(t*3.4+n.phase)*0.25;
+      r.shL.rotation.x=-0.3; r.elL.rotation.x=-1.2;
+      r.headJ.rotation.x=0.15;
+      break; }
+    case 'browse': {  // squeezing the tomatoes
+      settleLegs();
+      const reach=Math.max(0,Math.sin(t*0.8+n.phase));
+      r.body.rotation.x=0.12*reach; r.body.rotation.z=0;
+      r.body.position.y=0;
+      r.shR.rotation.x=-0.5-reach*0.7; r.elR.rotation.x=-0.3-reach*0.3;
+      lerpTo(r.shL,'x',0.05,dt*6); lerpTo(r.elL,'x',-0.12,dt*6);
+      r.headJ.rotation.x=0.2*reach; r.headJ.rotation.y=Math.sin(t*0.5+n.phase)*0.15;
+      break; }
+    case 'hail': {    // arm straight up: TAXI!
+      idle();
+      r.shR.rotation.x=-2.9+Math.sin(t*6+n.phase)*0.08; r.elR.rotation.x=-0.1;
+      r.headJ.rotation.y=0.5;   // watching the lane
+      break; }
+    case 'slapping': { // held between walk-in and the slap timeline
+      settleLegs();
+      r.body.position.y=Math.abs(Math.sin(t*4+n.phase))*0.03;
+      r.body.rotation.x=0.04; r.body.rotation.z=0;
+      break; }
+    default: idle();
+  }
+  if(n.stagger>0){ n.stagger=Math.max(0,n.stagger-dt*1.6);
+    r.body.rotation.x+=n.stagger*0.55;
+    r.shL.rotation.x-=n.stagger*1.1; r.shR.rotation.x-=n.stagger*1.1; }
+  if(n.laugh>0){ n.laugh-=dt;
+    r.body.rotation.x+=Math.sin(t*13)*0.05; r.headJ.rotation.x=-0.24;
+    r.body.position.y+=Math.abs(Math.sin(t*9))*0.045; }
+}
+
+/* --- THE JOVIAL NEWT: cast --- */
+const BK=[
+  spawnNPC({skin:0xe8b48c, shirt:0xf6f4ec, trouser:0x3a3630, hair:0x8a4b2a,
+    apron:0x2f4a3d, bulk:1.5, scale:1.18, mous:true}, -29,1,3.8, 0, 'idle'),
+  spawnNPC({skin:0xdca878, shirt:0xf1e6d0, trouser:0x4a3040, hair:0x2a2018,
+    apron:0x5a2f2f, bulk:1.45, scale:1.14, bun:true}, -25,1,3.8, 0, 'idle'),
+];
+BK[0].data.aisle=[-30.5,-27.5]; BK[1].data.aisle=[-26.5,-23.5];
+const QUEUE_X=[-30.2,-28.9,-27.6,-26.3,-25.0];
+const TABLES=[[-28.6,9.6],[-29.6,8.6],[-23.5,9.6],[-24.6,8.5]];
+const patrons=[];
+for(let i=0;i<5;i++){
+  const n=spawnNPC({}, QUEUE_X[i],1,6.3, Math.PI, 'jostle');
+  n.slot=i; patrons.push(n);
+}
+let slapT=9, serveT=5, shuffleT=4, slapAct=-1;
+function updateBar(dt,t){
+  for(const k of BK){
+    k.timer-=dt;
+    if(k.path){ if(npcStep(k,dt)){ k.path=null; k.mode=k.data.next||'idle';
+        k.timer=1.5+Math.random()*3; } }
+    else if(k.mode!=='slapping' && k.timer<=0){
+      const roll=Math.random();
+      if(roll<0.45){ k.mode='pour'; k.timer=2+Math.random()*2; }
+      else if(roll<0.8){ const ax=k.data.aisle;
+        npcSetPath(k,[[ax[0]+Math.random()*(ax[1]-ax[0]),1,3.8]]); k.data.next='idle'; }
+      else { k.mode='idle'; k.timer=2+Math.random()*2; k.laugh=1.2; }
+    }
+    if(!k.path && k.mode!=='slapping') k.facing=0;      // face the bar
+  }
+  // serving: a pour ends in a mug handed over; sometimes with a mighty back-slap
+  serveT-=dt;
+  if(serveT<=0){
+    serveT=6+Math.random()*6;
+    const k=BK[Math.floor(Math.random()*2)];
+    const free=patrons.filter(q=>q.mode==='jostle');
+    if(free.length && k.mode!=='slapping'){
+      const q=free.reduce((a,b)=>Math.abs(a.x-k.x)<Math.abs(b.x-k.x)?a:b);
+      k.mode='pour'; k.timer=1.6;
+      q.data.served=0.9; q.data.keeper=k;
+    }
+  }
+  for(const q of patrons){
+    if(q.data.served!=null){
+      q.data.served-=dt;
+      if(q.data.served<=0){ delete q.data.served;
+        giveProp(q,'mug');
+        const k=q.data.keeper; delete q.data.keeper;
+        if(k && Math.random()<0.5){ k.laugh=1.4; q.stagger=1; q.laugh=1.2;
+          if(chip.ctx&&!chip.muted) chip.hit(chip.ctx.currentTime,0.16,0.45); }
+        const tb=TABLES[Math.floor(Math.random()*TABLES.length)];
+        npcSetPath(q,[[q.x,1,7.6],[tb[0],1,tb[1]]],'walk'); q.data.next='drink';
+        q.data.drinkT=8+Math.random()*8;
+      }
+    }
+    if(q.path){ if(npcStep(q,dt)){ q.path=null; q.mode=q.data.next||'jostle';
+        if(q.mode==='jostle') q.facing=Math.PI; } }
+    else if(q.mode==='drink'){
+      q.data.drinkT-=dt; q.facing=Math.atan2(-26.5-q.x, 5-q.z);
+      if(q.data.drinkT<=0){ dropProp(q);
+        npcSetPath(q,[[QUEUE_X[q.slot],1,6.3]],'walk'); q.data.next='jostle'; }
+    }
+  }
+  // queue jostling: neighbours swap places, shoulders first
+  shuffleT-=dt;
+  if(shuffleT<=0){ shuffleT=4+Math.random()*5;
+    const i=Math.floor(Math.random()*4);
+    const A=patrons.find(q=>q.slot===i&&q.mode==='jostle'&&!q.path);
+    const B=patrons.find(q=>q.slot===i+1&&q.mode==='jostle'&&!q.path);
+    if(A&&B){ const ax=QUEUE_X[A.slot], bx=QUEUE_X[B.slot];
+      A.slot=i+1; B.slot=i;
+      npcSetPath(A,[[bx,1,6.55]],'walk'); A.data.next='jostle';
+      npcSetPath(B,[[ax,1,6.05]],'walk'); B.data.next='jostle'; }
+  }
+  // the couple's party piece: meet mid-bar, slap backs, roar
+  if(slapT>0) slapT-=dt;
+  if(slapT<=0 && slapAct<0 && !BK[0].path && !BK[1].path){
+    slapT=16+Math.random()*10; slapAct=0;
+    npcSetPath(BK[0],[[-27.2,1,3.8]]); BK[0].data.next='slapping';
+    npcSetPath(BK[1],[[-25.8,1,3.8]]); BK[1].data.next='slapping';
+  }
+  if(slapAct>=0 && BK[0].mode==='slapping' && BK[1].mode==='slapping'){
+    const was=slapAct; slapAct+=dt;
+    BK[0].facing=Math.PI/2; BK[1].facing=-Math.PI/2;
+    for(const k of BK){ const r=k.r;
+      if(slapAct<0.5) lerpTo(r.shR,'x',0.95,dt*12);
+      else if(slapAct<0.72) r.shR.rotation.x=-1.9;
+      else lerpTo(r.shR,'x',-0.2,dt*5);
+    }
+    if(was<0.5 && slapAct>=0.5){
+      BK[0].stagger=0.7; BK[1].stagger=0.7;
+      BK[0].laugh=1.6; BK[1].laugh=1.6;
+      if(chip.ctx&&!chip.muted) chip.hit(chip.ctx.currentTime,0.2,0.5);
+    }
+    if(slapAct>2.6){ slapAct=-1;
+      for(const k of BK){ k.mode='idle'; k.timer=2+Math.random()*3; } }
+  }
+}
+
+/* --- THE MAGLEV: a hover carriage on the beam --- */
+const mgGrp=new THREE.Group(); scene.add(mgGrp);
+{
+  const Mm=c=>new THREE.MeshBasicNodeMaterial({ color: srgb(c) });
+  const box=(x,y,z,w,h,d,c)=>{ const m=new THREE.Mesh(boxGeo,Mm(c));
+    m.position.set(x-w/2,y,z-d/2); m.scale.set(w,h,d); mgGrp.add(m); return m; };
+  box(0,0.22,0, 1.5,1.0,4.8, 0xd8d8e4);          // hull
+  box(0,0.42,0, 1.56,0.36,3.9, 0x14121c);        // window strip
+  box(0,1.02,0, 1.3,0.16,4.4, 0x67b6bd);         // roof band
+  box(0,0.0,0, 1.2,0.24,4.2, 0x40318d);          // hover skirt
+  box(0,0.34,-2.7, 1.2,0.6,0.5, 0xb8b8cc);       // noses
+  box(0,0.34, 2.7, 1.2,0.6,0.5, 0xb8b8cc);
+}
+const maglev={ z:-26, v:0, state:'approach', dwell:0 };
+function updateMaglev(dt,t){
+  const STOP=1.0;
+  if(maglev.state==='approach'){
+    const d=STOP-maglev.z;
+    maglev.v=Math.min(9, Math.max(1.2, d*1.1));
+    maglev.z+=maglev.v*dt;
+    if(maglev.z>=STOP-0.05){ maglev.z=STOP; maglev.state='dwell'; maglev.dwell=6;
+      unloadShoppers(); }
+  } else if(maglev.state==='dwell'){
+    maglev.dwell-=dt;
+    if(maglev.dwell<=0){ maglev.state='depart'; maglev.v=0.8; }
+  } else if(maglev.state==='depart'){
+    maglev.v=Math.min(14, maglev.v+10*dt);
+    maglev.z+=maglev.v*dt;
+    if(maglev.z>22){ maglev.state='gone'; maglev.dwell=7+Math.random()*6; }
+  } else {
+    maglev.dwell-=dt;
+    if(maglev.dwell<=0){ maglev.z=-26; maglev.state='approach'; }
+  }
+  mgGrp.position.set(-14, 6.16+Math.sin(t*2.2)*0.04, maglev.z);
+  mgGrp.visible = maglev.state!=='gone';
+}
+
+/* --- SHOPPERS: ride in, descend, buy, hail a car, zoom off --- */
+const shoppers=[];
+for(let i=0;i<6;i++){
+  const s=spawnNPC({}, -12,6,1, 0, 'aboard');
+  s.r.g.visible=false; shoppers.push(s);
+}
+const STAIRS_DOWN=[[-10.8,6,1.2],[-8.5,6,1.2],[-7.5,5,1.2],[-6.5,4,1.2],
+  [-5.5,3,1.2],[-4.5,2,1.2],[-3.9,1,2.4],[-16,1,3.4]];
+function unloadShoppers(){
+  const aboard=shoppers.filter(s=>s.mode==='aboard');
+  const nOut=Math.min(aboard.length, 1+Math.floor(Math.random()*3));
+  for(let i=0;i<nOut;i++){
+    const s=aboard[i];
+    s.x=-12.4; s.y=6; s.z=0.4+Math.random()*1.6;
+    s.r.g.visible=true;
+    const shop = Math.random()<0.5 ? 'veg' : 'bread';
+    s.data.shop=shop;
+    const leg = shop==='veg'
+      ? [[-16,1,-11.5],[-24,1,-11.5],[-28.3,1,-11.5]]
+      : [[-16,1,-1.6],[-24,1,-1.6],[-28.3,1,-1.6]];
+    npcSetPath(s, STAIRS_DOWN.concat(leg), 'walk');
+    s.data.next='browse';
+  }
+}
+function updateShoppers(dt){
+  for(const s of shoppers){
+    if(s.mode==='aboard') continue;
+    if(s.path){
+      if(npcStep(s,dt)){ s.path=null;
+        const nx=s.data.next; delete s.data.next;
+        if(nx==='browse'){ s.mode='browse'; s.timer=4+Math.random()*3; s.facing=Math.PI; }
+        else if(nx==='hail'){ s.mode='hail'; s.facing=Math.PI/2; summonCar(s); }
+        else s.mode=nx||'idle';
+      }
+    } else if(s.mode==='browse'){
+      s.timer-=dt;
+      if(s.timer<=0){
+        giveProp(s, s.data.shop==='veg'?'veg':'loaf', s.data.shop==='veg'?'L':'R');
+        const back = s.data.shop==='veg'
+          ? [[-24,1,-11.5],[-18.3,1,-11]]
+          : [[-24,1,-1.6],[-18.3,1,-2]];
+        npcSetPath(s, back, 'carry'); s.data.next='hail';
+      }
+    }
+  }
+}
+
+/* --- CARS: summoned, low and glowing, gone in a streak --- */
+const cars=[];
+function makeCar(){
+  const grp=new THREE.Group();
+  const Mm=c=>new THREE.MeshBasicNodeMaterial({ color: srgb(c) });
+  const box=(x,y,z,w,h,d,c)=>{ const m=new THREE.Mesh(boxGeo,Mm(c));
+    m.position.set(x-w/2,y,z-d/2); m.scale.set(w,h,d); grp.add(m); return m; };
+  box(0,0.06,0, 0.95,0.4,2.1, 0x35313e);          // body
+  box(0,0.44,0.15, 0.8,0.3,1.1, 0x14121c);        // canopy
+  box(0,0.02,0, 1.0,0.09,2.14, 0x67b6bd);         // glow rail
+  box(0,0.2,-1.1, 0.7,0.12,0.12, 0xffdf80);       // headlight bar
+  scene.add(grp); return grp;
+}
+function summonCar(rider){
+  cars.push({ g:makeCar(), x:-17.0, z:16, tgtZ:rider.z, v:0, state:'come', rider, t:0 });
+}
+function updateCars(dt){
+  for(const c of cars){
+    if(c.state==='come'){
+      const d=c.z-c.tgtZ;
+      const v=Math.min(11, Math.max(1.4, Math.abs(d)*1.3));
+      c.z-=v*dt;
+      if(c.z<=c.tgtZ+0.06){ c.z=c.tgtZ; c.state='board'; c.t=1.3; }
+    } else if(c.state==='board'){
+      c.t-=dt;
+      if(c.t<0.6 && c.rider){ c.rider.r.g.visible=false; dropProp(c.rider);
+        c.rider.mode='aboard'; c.rider=null; }        // back to the maglev pool
+      if(c.t<=0){ c.state='zoom'; c.v=2; }
+    } else {
+      c.v=Math.min(22, c.v+18*dt);
+      c.z-=c.v*dt;
+      c.g.scale.z=1+Math.min(0.5,c.v*0.02);
+      if(c.z<-26){ c.g.removeFromParent(); c.dead=true; }
+    }
+    c.g.position.set(c.x, 1.05+Math.sin(c.z*0.7)*0.015, c.z);
+  }
+  for(let i=cars.length-1;i>=0;i--) if(cars[i].dead) cars.splice(i,1);
+}
+
+function updateNPCs(dt,t){
+  updateBar(dt,t);
+  updateMaglev(dt,t);
+  updateShoppers(dt);
+  updateCars(dt);
+  for(const n of npcs){
+    if(!n.r.g.visible){ n.shadow.visible=false; continue; }
+    let da=n.facing-n.face;
+    while(da>Math.PI) da-=2*Math.PI; while(da<-Math.PI) da+=2*Math.PI;
+    n.face+=da*Math.min(1,dt*10);
+    n.r.g.position.set(n.x,n.y,n.z);
+    n.r.g.rotation.y=n.face;
+    npcPose(n,t,dt);
+    updateShadow(n.shadow,n.x,n.y,n.z);
+  }
+}
+
+/* --- the corner-booth terminal: a curved monitor dreaming in static --- */
+const TERM={x:-30.6,y:1,z:10.5};
+{
+  const grp=new THREE.Group();
+  const Mm=c=>new THREE.MeshBasicNodeMaterial({ color: srgb(c) });
+  const tbox=(x,y,z,w,h,d,c)=>{ const m=new THREE.Mesh(boxGeo,Mm(c));
+    m.position.set(x-w/2,y,z-d/2); m.scale.set(w,h,d); grp.add(m); return m; };
+  tbox(0,0,-0.1, 0.86,0.72,0.5, 0x35313e);        // shell
+  tbox(0,0.72,-0.1, 0.5,0.08,0.36, 0x28242f);     // vent cap
+  const sMat=new THREE.MeshBasicNodeMaterial();
+  sMat.colorNode=Fn(()=>{
+    const u=uv();
+    const cell=floor(u.mul(vec2(40,30))).add(floor(time.mul(12)).mul(vec2(7,13)));
+    const h1=fract(sin(dot(cell,vec2(12.9898,78.233))).mul(43758.545));
+    const scan=sin(u.y.mul(72).add(time.mul(8))).mul(0.5).add(0.5);
+    const gg=h1.mul(0.4).add(scan.mul(0.22)).add(float(0.18));
+    return vec4(gg.mul(0.35), gg, gg.mul(0.55), float(1));
+  })();
+  sMat.side=THREE.DoubleSide;
+  for(const spec of [[0,0,0.16],[-0.24,0.5,0.10],[0.24,-0.5,0.10]]){
+    const s=new THREE.Mesh(new THREE.PlaneGeometry(0.27,0.5), sMat);
+    s.position.set(spec[0], 0.4, spec[2]);
+    s.rotation.y=spec[1];
+    grp.add(s);
+  }
+  tbox(0,0.0,0.42, 0.7,0.09,0.3, 0x46414f);       // the curved keyboard wedge
+  for(let kx=0;kx<6;kx++)for(let kz=0;kz<2;kz++)
+    tbox(-0.25+kx*0.1, 0.1, 0.34+kz*0.13, 0.07,0.03,0.09, kz?0x9aa7b8:0x8a97a8);
+  grp.position.set(-31.4,2,10.5);
+  grp.rotation.y=Math.PI/2;                        // screen faces the room
+  scene.add(grp);
+}
+
+/* --- district dressing (visual only) --- */
+{
+  const shelf=(x,y,z,w,h,d,c)=>decorBox(x,y,z,w,h,d,c);
+  shelf(-27,2.4,3.3, 8,0.12,0.4, 0x574200);        // the Newt's bottle shelf
+  const BOTTLE=[0x55a049,0xb86962,0x67b6bd,0xbfce72];
+  for(let i=0;i<10;i++) shelf(-30.6+i*0.75, 2.52, 3.3, 0.16,0.42,0.16, BOTTLE[i%4]);
+  for(const tx of [-29.5,-27,-24.5]) shelf(tx,2.0,5.5, 0.1,0.36,0.1, 0xc9a227);  // taps
+  for(let i=0;i<7;i++) shelf(-25.4,3.2,-15.5+i, 0.5,0.12,1, i%2?0xf6f4ec:0xb86962); // veg awning
+  for(let i=0;i<7;i++) shelf(-25.4,3.2,-5.5+i, 0.5,0.12,1, i%2?0xf6f4ec:0xbfce72);  // bakery awning
+  const VEGC=[0x55a049,0xb83932,0xd9822b,0xbfce72,0x8b3f96];
+  for(let i=0;i<8;i++) shelf(-29.5+(i%4), 2.0, -14.5+Math.floor(i/4)*2, 0.5,0.28,0.55, VEGC[i%5]);
+  for(let i=0;i<6;i++) shelf(-29.5+i*0.55, 2.0, -2.5, 0.42,0.2,0.24, i%2?0xb07c3e:0xd9a865); // loaves
+  const of1=new THREE.Mesh(flameGeo, flameMat);    // the oven glows
+  of1.position.set(-31.3,1.5,-5.2); of1.scale.setScalar(1.4); scene.add(of1);
+}
+
 /* game-object meshes: crates, locks, levers, springs, lamp heads */
 const crateMat = new THREE.MeshBasicNodeMaterial({ color: srgb(0x8b5429) });
 const crateEdge = new THREE.MeshBasicNodeMaterial({ color: srgb(0x574200) });
@@ -1495,6 +2040,8 @@ function contextTag(){
   if(zn==='The Grand Hall'||zn==='The Kitchen'||zn==='The Conservatory') return 'manor';
   if(zn==='First Landing'||zn==='The Bathroom'||zn==='The Library') return 'terrace';
   if(zn==='The Duck Pond') return 'garden';
+  if(zn==='The Jovial Newt') return 'brisk';
+  if(zn==='The Greengrocer'||zn==='The Old Bakery'||zn==='Moonfall Parade') return 'city';
   if(zn==='The Grounds') return null;
   return 'city';                         // any generated court
 }
@@ -1851,6 +2398,14 @@ function physics(dt){
     if(c && c.state>0) c.timer+=dt*2.2;
   }
 
+  // the Newt's terminal: stand at the booth, jump to jack in
+  { const tdx=p.x-TERM.x, tdz=p.z-TERM.z;
+    if(tdx*tdx+tdz*tdz<2.6 && Math.abs(p.y-TERM.y)<1.6){
+      if(input.jumpBuf>0 && p.grounded){ input.jumpBuf=0; dreamEnter(); return; }
+      if(state.toastT<=0)
+        toast(dream.done?'THE TERMINAL PURRS SOFTLY.':'THE TERMINAL HUMS\u2026 JUMP TO JACK IN');
+    } }
+
   // jump
   input.jumpBuf=Math.max(0,input.jumpBuf-dt);
   p.coyote = p.grounded ? 0.12 : Math.max(0,p.coyote-dt);
@@ -1878,10 +2433,10 @@ function physics(dt){
       p.y=Math.floor(p.y)+1.001; p.z=nz;
     } else nz=p.z;
   } else p.z=nz;
-  // playfield clamp at street level — the garden has edges, not cliffs
+  // playfield clamp at street level — the parade has edges, not cliffs
   if(p.y<5){
-    p.x=Math.max(-3.6, Math.min(WORLD_E-0.6, p.x));
-    p.z=Math.min(WORLD_S-0.6, p.z);
+    p.x=Math.max(-33.4, Math.min(WORLD_E-0.6, p.x));
+    p.z=Math.max(-20.4, Math.min(WORLD_S-0.6, p.z));
   }
 
   // Y axis
@@ -2182,6 +2737,9 @@ function animate(){
     }
   }
 
+  // the residents live whether or not you are playing
+  updateNPCs(dt,t);
+
   // hero pose — weight and commitment (Prince of Persia rules)
   hero.g.position.set(p.x, p.y, p.z);
   if(!p.dead){
@@ -2337,6 +2895,45 @@ function animate(){
     b.style.left=(5.4+i*7.1)+'%'; piano.appendChild(b); }
 }
 
+/* =========================================================
+   12b. THE DREAM LAYER — the Newt's terminal boots a nested
+   ink scene inside a Gaussian-splat scan (dream.html): the
+   ink-as-bus doctrine one level down. Jump at the booth to
+   jack in; the dream reports back over postMessage.
+   ========================================================= */
+const dream={ active:false, done:false };
+function dreamEnter(){
+  if(dream.active) return;
+  dream.active=true;
+  state.running=false;
+  music.playTag('dreamy', true);
+  const w=$('dreamWrap');
+  w.classList.remove('hidden');
+  $('dreamFrame').src='dream.html';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>w.classList.add('in')));
+}
+function dreamExit(reward){
+  if(!dream.active) return;
+  dream.active=false;
+  const w=$('dreamWrap');
+  w.classList.remove('in');
+  setTimeout(()=>{ w.classList.add('hidden'); $('dreamFrame').src='about:blank'; }, 700);
+  state.running=true;
+  if(reward && !dream.done){
+    dream.done=true;
+    state.lives=Math.min(9,state.lives+1); updateHUD();
+    sfx.fanfare();
+    toast('THE DREAM GAVE UP ITS SECRET — EXTRA DUCKY!');
+  } else toast('BACK IN THE NEWT. THE SCREEN FIZZES.');
+  music.playTag('brisk', true);
+}
+addEventListener('message', e=>{
+  const d=e.data||{};
+  if(d.jsdDream==='complete') dreamExit(true);
+  else if(d.jsdDream==='exit') dreamExit(false);
+});
+$('dreamEject').addEventListener('click', ()=>dreamExit(false));
+
 /* headless-test hook */
 window.__jsd = {
   version:'2.0.0',
@@ -2360,6 +2957,11 @@ window.__jsd = {
     tags:music.song&&music.song.tags||[], count:SONGS_GAME.length, context:contextTag() }; },
   nextSong(){ music.pickNext(); },
   playTag(t){ music.playTag(t); },
+  get dream(){ return { active:dream.active, done:dream.done }; },
+  jackIn(){ dreamEnter(); },
+  get residents(){ return npcs.map(n=>n.mode); },
+  get maglev(){ return { state:maglev.state, z:Math.round(maglev.z*10)/10 }; },
+  get carCount(){ return cars.length; },
   get pushDbg(){ return {...pushDbg}; },
   push(dx,dz){ pushCd=0; tryPushCrate(dx,dz); },
   teleport(x,y,z){ p.x=x; p.y=y; p.z=z; p.vx=p.vy=p.vz=0; p.fallFrom=y; },

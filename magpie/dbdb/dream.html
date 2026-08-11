@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#010204">
+<title>THE STATIC DREAM</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body {
+    width:100%; height:100%; overflow:hidden; background:#010204;
+    touch-action:none; overscroll-behavior:none;
+    -webkit-user-select:none; user-select:none;
+    font-family:"Courier New",ui-monospace,monospace; color:#9fe8b0;
+  }
+  #stage { position:fixed; inset:0; }
+  #stage canvas { width:100%; height:100%; display:block; }
+  /* phosphor dressing: the whole page IS the terminal's screen */
+  #phos {
+    position:fixed; inset:0; pointer-events:none; z-index:6;
+    background:
+      radial-gradient(120% 100% at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,20,8,.55) 100%),
+      repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, rgba(0,0,0,0) 1px 3px);
+    mix-blend-mode:normal;
+  }
+  #head {
+    position:fixed; top:0; left:0; right:0; z-index:8; display:flex;
+    justify-content:space-between; padding:10px 14px; pointer-events:none;
+    font-size:11px; letter-spacing:.3em; color:rgba(159,232,176,.75);
+    text-shadow:0 0 8px rgba(80,255,140,.5);
+  }
+  #clueTally { pointer-events:none; }
+  #exitBtn {
+    position:fixed; top:6px; right:8px; z-index:9;
+    background:rgba(0,30,12,.6); border:1px solid rgba(159,232,176,.5);
+    color:#9fe8b0; font-family:inherit; font-size:11px; letter-spacing:.2em;
+    padding:6px 10px; border-radius:4px; cursor:pointer;
+  }
+  #loadLine {
+    position:fixed; left:14%; right:14%; top:52%; z-index:7; text-align:center;
+    font-size:12px; letter-spacing:.28em; color:rgba(159,232,176,.8);
+    text-shadow:0 0 10px rgba(80,255,140,.6);
+  }
+  #panel {
+    position:fixed; left:8px; right:8px; bottom:8px; z-index:8;
+    max-height:44%; overflow-y:auto; padding:12px 14px;
+    background:rgba(1,8,4,.82); border:1px solid rgba(159,232,176,.4);
+    border-radius:6px; box-shadow:0 0 30px rgba(80,255,140,.12) inset;
+    font-size:13px; line-height:1.55;
+  }
+  #panel p { margin:0 0 8px; animation:inkIn .7s ease both;
+    text-shadow:0 0 6px rgba(80,255,140,.35); }
+  @keyframes inkIn { from{opacity:0; transform:translateY(6px); filter:blur(4px);}
+                     to{opacity:1; transform:none; filter:none;} }
+  #panel .choice {
+    display:block; width:100%; margin-top:6px; padding:8px 10px; text-align:left;
+    background:rgba(80,255,140,.08); border:1px solid rgba(159,232,176,.45);
+    border-radius:4px; color:#c9ffd6; font-family:inherit; font-size:12.5px;
+    letter-spacing:.06em; cursor:pointer; animation:inkIn .7s ease both;
+  }
+  #panel .choice:active { background:rgba(80,255,140,.28); }
+  #err { position:fixed; inset:auto 0 0 0; z-index:50; color:#ff9a9a; background:rgba(30,0,0,.92); padding:8px; font-size:11px; display:none; white-space:pre-wrap; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="phos"></div>
+<div id="head"><span>PORT/7 · DREAM SHELL</span><span id="clueTally">CLUES 0/3</span></div>
+<button type="button" id="exitBtn">✕ SURFACE</button>
+<div id="loadLine">TUNING THE STATIC…</div>
+<div id="panel"><div class="inkText"></div><div class="choices"></div></div>
+<pre id="err"></pre>
+
+<script type="importmap">
+{ "imports": { "three": "../../third_party/three/three.module.min.js" } }
+</script>
+<script src="../../third_party/ink/ink-full.min.js"></script>
+<script type="module">
+const errBox=document.getElementById('err');
+window.addEventListener('error', e=>{ errBox.style.display='block';
+  errBox.textContent += (e.message||e.error)+'\n'; });
+
+import * as THREE from 'three';
+async function loadSplatLib(){
+  const CDN='https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.min.js';
+  const LOCAL='../../third_party/gaussian-splats-3d/gaussian-splats-3d.module.min.js';
+  try{ return await Promise.race([ import(CDN),
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('cdn timeout')),3500)) ]); }
+  catch(e){ console.warn('splat lib CDN unavailable, using vendored copy'); return import(LOCAL); }
+}
+const GS3D = await loadSplatLib();
+
+/* =========================================================
+   the dream around the splat: three hidden clues
+   ========================================================= */
+const worldScene = new THREE.Scene();
+
+const CLUES=[
+  { pos:[-1.30, 0.45,-1.10], name:'a paper crown' },
+  { pos:[ 0.25,-0.45, 0.30], name:'a brass key'   },
+  { pos:[ 0.55, 1.05, 1.60], name:'a working bulb'},
+];
+const clueMeshes=[];
+const clueMat=new THREE.MeshBasicMaterial({ color:0xaaffc4 });
+for(const c of CLUES){
+  const grp=new THREE.Group();
+  const core=new THREE.Mesh(new THREE.OctahedronGeometry(0.09), clueMat.clone());
+  grp.add(core);
+  const halo=new THREE.Mesh(new THREE.OctahedronGeometry(0.16),
+    new THREE.MeshBasicMaterial({ color:0x66ff99, transparent:true, opacity:0.25, depthWrite:false }));
+  grp.add(halo);
+  grp.position.set(...c.pos);
+  worldScene.add(grp);
+  clueMeshes.push({ grp, core, halo, found:false, name:c.name });
+}
+/* a faint dust of drifting motes — the static made visible */
+{
+  const N=500, p=new Float32Array(N*3);
+  for(let i=0;i<N;i++){ p[i*3]=(Math.random()*2-1)*6; p[i*3+1]=(Math.random()*2-1)*4; p[i*3+2]=(Math.random()*2-1)*6; }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(p,3));
+  worldScene.add(new THREE.Points(g, new THREE.PointsMaterial({
+    color:0x59c47a, size:0.02, transparent:true, opacity:0.5, depthWrite:false })));
+}
+
+/* =========================================================
+   splat viewer — the scanned place the terminal dreams of
+   ========================================================= */
+const Q=new URLSearchParams(location.search);
+const HQ=Q.has('hq');
+const SPLAT_PATH='splats/christmas-tree-'+(HQ?'400k':'150k')+'.splat';
+const viewer = new GS3D.Viewer({
+  rootElement: document.getElementById('stage'),
+  threeScene: worldScene,
+  cameraUp: [-0.522, 0.836, 0.168],
+  initialCameraPosition: [-0.78, 0.66, -4.4],
+  initialCameraLookAt: [-0.3, -0.05, 0.9],
+  sharedMemoryForWorkers: false,
+  antialiased: false,
+  sphericalHarmonicsDegree: 0,
+});
+let loaded=false, splatOk=false;
+const loadLine=document.getElementById('loadLine');
+function boot(){
+  loaded=true; loadLine.classList.add('hidden');
+  viewer.start();
+  renderInk();
+}
+function loadSplat(attempt=0){
+  const bust = attempt>0 ? '?r='+attempt+'-'+Date.now() : '';
+  return viewer.addSplatScene(SPLAT_PATH+bust, {
+    showLoadingUI:false, progressiveLoad:false,
+    format: GS3D.SceneFormat.Splat,
+    onProgress:(pct)=>{ loadLine.textContent='TUNING THE STATIC… '+Math.round(pct)+'%'; },
+  }).then(()=>{ splatOk=true; boot(); })
+    .catch(e=>{
+      if(attempt<2){ loadLine.textContent='RE-TUNING ('+(attempt+2)+'/3)…';
+        return new Promise(r=>setTimeout(r, 1500*(attempt+1))).then(()=>loadSplat(attempt+1)); }
+      console.warn('splat failed, dreaming in motes only:', e.message);
+      boot();   // the dream still works: clues + ink over the motes
+    });
+}
+loadSplat();
+
+/* =========================================================
+   ink — the dream narrates the hunt (REAL inkjs compile)
+   ========================================================= */
+const INK_SOURCE = `
+VAR clues = 0
+-> port
+== port ==
+The terminal dreamed you a place: a pine tree standing in somebody's scanned-in winter, holding its breath.
+Three bright things are hidden in the drift. Tap them when you find them. Drag to look around.
++ [Listen to the static] -> listening
+== listening ==
+The needles hum at fifty hertz. The snow is made of other people's photographs.
+{clues == 0: Nothing found yet. The lights are out there.}
+{clues == 1: One found. Two lights still out there.}
+{clues == 2: Two found. One light still out there.}
+-> DONE
+== found_1 ==
+ONE. A paper crown, folded by somebody's grandmother. The tree remembers being decorated.
+-> DONE
+== found_2 ==
+TWO. A brass key on red thread. It opens nothing here. It opens something THERE.
+-> DONE
+== found_3 ==
+THREE. A bulb that still works. The tree lights from the inside, once, just for you.
+The dream is satisfied. It presses the key into your hand and lets go.
++ [WAKE] -> wake
+== wake ==
+You surface through the static, grinning like a fool.
+-> END
+`;
+let inkStory=null;
+try{ inkStory=new inkjs.Compiler(INK_SOURCE).Compile(); }
+catch(e){ console.warn('ink compile failed', e); }
+
+const panel=document.getElementById('panel');
+function renderInk(){
+  if(!inkStory) return;
+  const txt=panel.querySelector('.inkText'), ch=panel.querySelector('.choices');
+  let html='';
+  while(inkStory.canContinue){
+    const line=inkStory.Continue().trim();
+    if(line) html+='<p>'+line.replace(/</g,'&lt;')+'</p>';
+  }
+  if(html) txt.innerHTML=html;
+  ch.innerHTML='';
+  inkStory.currentChoices.forEach((c,i)=>{
+    const b=document.createElement('button');
+    b.type='button'; b.className='choice'; b.textContent='▸ '+c.text;
+    b.style.animationDelay=(0.1*i)+'s';
+    b.addEventListener('click',()=>{
+      inkStory.ChooseChoiceIndex(i); renderInk();
+      if(!inkStory.canContinue && inkStory.currentChoices.length===0) finish();
+    });
+    ch.appendChild(b);
+  });
+  if(!inkStory.canContinue && inkStory.currentChoices.length===0
+     && found()===3) finish();
+}
+function finish(){
+  parent.postMessage({ jsdDream:'complete', clues:found() }, '*');
+}
+function found(){ return clueMeshes.filter(c=>c.found).length; }
+
+/* =========================================================
+   clue hunting — tap the bright things
+   ========================================================= */
+const ray=new THREE.Raycaster();
+ray.params.Points={threshold:0.2};
+const ndc=new THREE.Vector2();
+let downAt=null;
+addEventListener('pointerdown', e=>{ downAt=[e.clientX,e.clientY]; });
+addEventListener('pointerup', e=>{
+  if(!downAt) return;
+  const moved=Math.hypot(e.clientX-downAt[0], e.clientY-downAt[1]);
+  downAt=null;
+  if(moved>8 || !loaded) return;
+  if(e.target.closest && e.target.closest('#panel,#exitBtn')) return;
+  const cam=viewer.camera; if(!cam) return;
+  ndc.set(e.clientX/innerWidth*2-1, -(e.clientY/innerHeight)*2+1);
+  ray.setFromCamera(ndc, cam);
+  for(const c of clueMeshes){
+    if(c.found) continue;
+    // generous grab: ray-to-point distance
+    const d=ray.ray.distanceToPoint(c.grp.position);
+    if(d<0.28){ collect(c); break; }
+  }
+});
+function collect(c){
+  c.found=true;
+  c.halo.material.opacity=0.0;
+  c.core.material.color.set(0xffffff);
+  const n=found();
+  document.getElementById('clueTally').textContent='CLUES '+n+'/3';
+  ping(n);
+  if(inkStory){
+    inkStory.variablesState.$('clues', n);
+    try{ inkStory.ChoosePathString('found_'+n); }catch(e){}
+    renderInk();
+  }
+  setTimeout(()=>{ c.grp.visible=false; }, 900);
+}
+
+/* one soft chime per clue (needs a prior gesture — the tap itself) */
+let actx=null;
+function ping(n){
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    const t0=actx.currentTime+0.02;
+    [76+n*3, 83+n*3].forEach((m,i)=>{
+      const o=actx.createOscillator(), g=actx.createGain();
+      o.type='triangle'; o.frequency.value=440*Math.pow(2,(m-69)/12);
+      g.gain.setValueAtTime(0.12, t0+i*0.09);
+      g.gain.setTargetAtTime(0.0001, t0+i*0.09+0.04, 0.2);
+      o.connect(g); g.connect(actx.destination);
+      o.start(t0+i*0.09); o.stop(t0+i*0.09+0.8);
+    });
+  }catch(e){}
+}
+
+document.getElementById('exitBtn').addEventListener('click', ()=>{
+  parent.postMessage({ jsdDream:'exit' }, '*');
+});
+
+/* clue pulse + slow drift */
+const clk=new THREE.Clock();
+function tick(){
+  requestAnimationFrame(tick);
+  const t=clk.getElapsedTime();
+  clueMeshes.forEach((c,i)=>{
+    if(c.found) return;
+    const s=1+Math.sin(t*3+i*2.1)*0.25;
+    c.core.scale.setScalar(s);
+    c.halo.scale.setScalar(1+Math.sin(t*2.2+i)*0.4);
+    c.halo.material.opacity=0.15+Math.abs(Math.sin(t*2.2+i))*0.2;
+    c.grp.rotation.y=t*(0.7+i*0.2);
+  });
+}
+tick();
+
+/* headless-test hook */
+window.__dream = {
+  get loaded(){ return loaded; },
+  get splatOk(){ return splatOk; },
+  get found(){ return found(); },
+  get panelText(){ return panel.querySelector('.inkText').textContent; },
+  tap(i){ collect(clueMeshes[i]); },
+  choose(i){ const b=panel.querySelectorAll('.choice')[i]; if(b) b.click(); },
+  exit(){ document.getElementById('exitBtn').click(); },
+};
+</script>
+</body>
+</html>

@@ -32,6 +32,35 @@ Play: `dbdb2.html` (rev 2, "The Moonlight Shift") or `dbdb.html`
 - Goal unchanged: tidy the manor's items and reach the bed by midnight.
   City puzzles feed the PUZ counter — bragging rights and spare lives.
 
+## Rev 2.1 — Moonfall Parade (the west district)
+Not a puzzle: a PLACE, and it is inhabited. The residents run on the
+hero's own rotoscope rig — hyper-real people, deliberately off-palette
+against the C64 blocks, each with procedural behavioural loops:
+- **THE JOVIAL NEWT** — a pub. A huge jovial barkeep couple (aprons,
+  moustache, hair up) works the counter: pouring, wandering the aisle,
+  and every so often meeting mid-bar for a mighty back-slap and a roar
+  (both stagger, both laugh). Five regulars jostle shoulder-to-shoulder
+  at the counter — tip-toe bouncing, craning, waving notes — swap places
+  in the queue, get served a mug (sometimes with a back-slap that
+  staggers them), carry it to a table, drink with periodic tip-backs,
+  and rejoin the scrum.
+- **The maglev** — an elevated beam down the parade. A hover carriage
+  glides in, dwells at the platform, and lets shoppers off; they descend
+  the station stairs, walk to the greengrocer or the bakery, squeeze the
+  tomatoes (browse-and-reach animation), receive a veg box or a loaf
+  (carried two-handed), walk to the kerb, HAIL (arm straight up) — and a
+  low glowing car slides in, collects them, and zooms off with a
+  motion-stretch. Riders recycle onto the next carriage.
+- **THE DREAM TERMINAL** — in the Newt's corner booth stands a curved
+  keyboard-monitor, screen rolling with TSL static. Stand at it and jump
+  to JACK IN: the screen swallows the view (CSS bezel zoom) and boots
+  `dream.html` in an iframe — a NESTED ink scene (real inkjs compile)
+  set INSIDE a real Gaussian splat (the SPLATPORT tree scan). You drift
+  in the scan hunting three glowing clues; each tap advances the ink
+  story; WAKE posts back over postMessage and the manor grants an extra
+  Ducky. The ink-as-bus doctrine, one layer down: game → terminal →
+  dream → back.
+
 ## Tech
 - **three.js r180 WebGPU build**, loaded from the jsDelivr CDN first, with a
   5-second timeout falling back to the vendored copy in
