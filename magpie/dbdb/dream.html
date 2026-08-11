@@ -73,9 +73,6 @@
 <div id="head"><span>PORT/7 · DREAM SHELL</span><span id="clueTally">CLUES 0/3</span></div>
 <button type="button" id="exitBtn">✕ SURFACE</button>
 <div id="loadLine">TUNING THE STATIC…</div>
-<div id="css3d"><div id="css3dCam">
-  <div id="panel"><div class="crest">PORT/7 TERMINAL</div><div class="inkText"></div><div class="choices"></div></div>
-</div></div>
 <pre id="err"></pre>
 
 <script src="../../third_party/ink/ink-full.min.js"></script>
@@ -91,10 +88,9 @@ const Q=new URLSearchParams(location.search);
 const TINTS={ bondi:'#8fd8e8', strawberry:'#ffa8b6', tangerine:'#ffc896',
               lime:'#c8f0a0', grape:'#cfaef5' };
 const tint=TINTS[Q.get('tint')]||'#9fe8b0';
-for(const id of ['panel','head','exitBtn','loadLine']){
+for(const id of ['head','exitBtn','loadLine']){
   const el=document.getElementById(id); if(el) el.style.color=tint;
 }
-document.getElementById('panel').style.borderColor=tint;
 document.getElementById('exitBtn').style.borderColor=tint;
 
 /* =========================================================
@@ -257,40 +253,97 @@ for(let i=0;i<44;i++){
     h:(Math.random()*2-1)*R*0.8, sp:0.05+Math.random()*0.12, ph:Math.random()*6 });
 }
 
-/* the in-world mini terminal: anchored beside the scan, facing you */
-const panel=document.getElementById('panel');
-const css3d=document.getElementById('css3d'), css3dCam=document.getElementById('css3dCam');
-const PANEL_POS=new pc.Vec3();
-const PANEL_SCALE=(0.72*R)/300;
-function eps(v){ return Math.abs(v)<1e-10?0:v; }
-function camCSS(e){
-  return 'matrix3d('+eps(e[0])+','+eps(-e[1])+','+eps(e[2])+','+eps(e[3])+','+eps(e[4])+','+eps(-e[5])+','+eps(e[6])+','+eps(e[7])+','+eps(e[8])+','+eps(-e[9])+','+eps(e[10])+','+eps(e[11])+','+eps(e[12])+','+eps(-e[13])+','+eps(e[14])+','+eps(e[15])+')';
+/* =========================================================
+   the in-world terminal — an OPAQUE canvas-textured plate
+   rendered INSIDE the engine. Because it writes depth and the
+   gaussians depth-test, the splat itself occludes the panel
+   per-gaussian, automatically. It is anchored in the WORLD
+   (parallax when you move) and billboards yaw-only to stay
+   readable. Taps are raycast onto the plate.
+   ========================================================= */
+const PANEL_W=384, PANEL_H=460;
+const pcv=document.createElement('canvas'); pcv.width=PANEL_W; pcv.height=PANEL_H;
+const pctx=pcv.getContext('2d');
+const panelTex=new pc.Texture(app.graphicsDevice,{ width:PANEL_W, height:PANEL_H,
+  format:pc.PIXELFORMAT_R8_G8_B8_A8, mipmaps:false });
+panelTex.minFilter=pc.FILTER_LINEAR; panelTex.magFilter=pc.FILTER_LINEAR;
+const panelMat=new pc.StandardMaterial();
+panelMat.useLighting=false; panelMat.diffuse=new pc.Color(0,0,0);
+panelMat.emissive=new pc.Color(1,1,1); panelMat.emissiveMap=panelTex;
+panelMat.update();
+const PW=0.95*R, PH=PW*PANEL_H/PANEL_W;
+const panelE=new pc.Entity('terminal');
+const plate=new pc.Entity('plate');
+plate.addComponent('render',{ type:'plane' });
+plate.render.meshInstances[0].material=panelMat;
+plate.setLocalEulerAngles(90,0,180);          // plane +y -> facing +z, upright
+plate.setLocalScale(PW,1,PH);
+panelE.addChild(plate);
+/* anchored in the WORLD, placed once using the boot camera's left */
+const camR0=camE.right.clone(); camR0.y=0; camR0.normalize();
+const PANEL_POS=new pc.Vec3(C.x-camR0.x*0.5*R, C.y+0.05*R, C.z-camR0.z*0.5*R);
+panelE.setPosition(PANEL_POS);
+app.root.addChild(panelE);
+
+let panelLines=['TUNING…'], panelChoices=[], choiceRects=[];
+function wrapText(s, max){
+  const words=s.split(' '), out=[]; let line='';
+  for(const w of words){
+    if((line+' '+w).trim().length>max){ out.push(line.trim()); line=w; }
+    else line+=' '+w;
+  }
+  if(line.trim()) out.push(line.trim());
+  return out;
 }
-function objCSS(e){
-  return 'matrix3d('+eps(e[0])+','+eps(e[1])+','+eps(e[2])+','+eps(e[3])+','+eps(-e[4])+','+eps(-e[5])+','+eps(-e[6])+','+eps(-e[7])+','+eps(e[8])+','+eps(e[9])+','+eps(e[10])+','+eps(e[11])+','+eps(e[12])+','+eps(e[13])+','+eps(e[14])+','+eps(e[15])+')';
+function panelDraw(){
+  const g=pctx;
+  g.setTransform(-1,0,0,1,PANEL_W,0);   // pre-mirror: the plate shows it flipped
+  g.fillStyle='#020c05'; g.fillRect(0,0,PANEL_W,PANEL_H);
+  g.strokeStyle=tint; g.lineWidth=3; g.strokeRect(5,5,PANEL_W-10,PANEL_H-10);
+  g.font='11px monospace'; g.fillStyle=tint; g.globalAlpha=0.65;
+  g.fillText('P O R T / 7   T E R M I N A L', 18, 26);
+  g.globalAlpha=1;
+  let y=52; g.font='15px monospace';
+  for(const para of panelLines){
+    for(const line of wrapText(para, 42)){
+      if(y>PANEL_H-60) break;
+      g.fillText(line, 18, y); y+=20;
+    }
+    y+=8;
+  }
+  choiceRects=[];
+  panelChoices.forEach((c,i)=>{
+    y+=8; const r={x:14,y:y-2,w:PANEL_W-28,h:34};
+    g.globalAlpha=0.16; g.fillStyle=tint; g.fillRect(r.x,r.y,r.w,r.h);
+    g.globalAlpha=1; g.strokeStyle=tint; g.lineWidth=1.5; g.strokeRect(r.x,r.y,r.w,r.h);
+    g.fillStyle='#c9ffd6'; g.fillText('▸ '+c, 24, y+21);
+    choiceRects.push(r); y+=40;
+  });
+  g.fillStyle='rgba(0,0,0,0.18)';
+  for(let sy=0; sy<PANEL_H; sy+=3) g.fillRect(0,sy,PANEL_W,1);
+  panelTex.setSource(pcv);
 }
-const _inv=new pc.Mat4(), _f=new pc.Vec3(), _r=new pc.Vec3(), _u=new pc.Vec3();
-function updatePanel(){
-  /* the terminal floats IN the world but keeps station: left of the
-     subject as seen from wherever you are (parallax without loss) */
-  const camR=camE.right;
-  PANEL_POS.set(TGT_CUR.x - camR.x*0.28*R,
-                TGT_CUR.y + 0.06*R,
-                TGT_CUR.z - camR.z*0.28*R);
-  const h=innerHeight, w=innerWidth;
-  const fovPx=camE.camera.projectionMatrix.data[5]*h/2;
-  css3d.style.perspective=fovPx+'px';
-  _inv.copy(camE.getWorldTransform()).invert();
-  css3dCam.style.transform='translateZ('+fovPx+'px)'+camCSS(_inv.data)
-    +'translate('+(w/2)+'px,'+(h/2)+'px)';
-  /* billboard matrix: +z toward the camera, world-up-ish, uniform scale */
-  _f.sub2(camE.getPosition(), PANEL_POS).normalize();
-  _r.cross(pc.Vec3.UP,_f).normalize();
-  _u.cross(_f,_r);
-  const s=PANEL_SCALE;
-  const m=[ _r.x*s,_r.y*s,_r.z*s,0, _u.x*s,_u.y*s,_u.z*s,0,
-            _f.x*s,_f.y*s,_f.z*s,0, PANEL_POS.x,PANEL_POS.y,PANEL_POS.z,1 ];
-  panel.style.transform='translate(-50%,-50%)'+objCSS(m);
+panelDraw();
+/* raycast a css-pixel tap onto the plate; true = consumed */
+const _rd=new pc.Vec3(), _hit=new pc.Vec3(), _nrm=new pc.Vec3(), _rt=new pc.Vec3();
+function panelTap(cx,cy){
+  const camPos=camE.getPosition();
+  const scale=app.graphicsDevice.width/innerWidth;
+  camE.camera.screenToWorld(cx*scale, cy*scale, camE.camera.farClip, _rd);
+  _rd.sub(camPos).normalize();
+  _nrm.set(camPos.x-PANEL_POS.x, 0, camPos.z-PANEL_POS.z).normalize();
+  const den=_rd.dot(_nrm); if(Math.abs(den)<1e-5) return false;
+  const t2=new pc.Vec3().sub2(PANEL_POS,camPos).dot(_nrm)/den;
+  if(t2<=0) return false;
+  _hit.copy(_rd).mulScalar(t2).add(camPos).sub(PANEL_POS);
+  _rt.cross(_nrm, pc.Vec3.UP).normalize();       // viewer-right on the plate
+  const lx=_hit.dot(_rt), ly=_hit.y;
+  if(Math.abs(lx)>PW/2 || Math.abs(ly)>PH/2) return false;
+  const px=(0.5 + lx/PW)*PANEL_W, py=(0.5 - ly/PH)*PANEL_H;
+  choiceRects.forEach((r,i)=>{
+    if(px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h) chooseChoice(i);
+  });
+  return true;                                    // the plate soaks the tap
 }
 
 /* one update hook: orbit, flights, clue pulse, motes, panel */
@@ -328,7 +381,8 @@ app.on('update', dt=>{
       C.y+m.h+Math.sin(t*0.4+m.ph)*0.06*R,
       C.z+Math.sin(m.a)*m.rr);
   }
-  updatePanel();
+  { const pd=camE.getPosition();
+    panelE.setEulerAngles(0, Math.atan2(pd.x-PANEL_POS.x, pd.z-PANEL_POS.z)*180/Math.PI, 0); }
 });
 
 /* =========================================================
@@ -422,29 +476,24 @@ function choiceFlight(label){
 }
 function renderInk(){
   if(!inkStory) return;
-  const txt=panel.querySelector('.inkText'), ch=panel.querySelector('.choices');
-  let html='';
+  const out=[];
   while(inkStory.canContinue){
     const line=inkStory.Continue().trim();
-    if(line) html+='<p>'+line.replace(/</g,'&lt;')+'</p>';
+    if(line) out.push(line);
   }
-  if(html) txt.innerHTML=html;
-  ch.innerHTML='';
-  inkStory.currentChoices.forEach((c,i)=>{
-    const b=document.createElement('button');
-    b.type='button'; b.className='choice'; b.textContent='▸ '+c.text;
-    b.style.animationDelay=(0.1*i)+'s';
-    b.addEventListener('click',()=>{
-      const kind=choiceFlight(c.text);
-      inkStory.ChooseChoiceIndex(i); renderInk();
-      /* completion ONLY when the hunt is done AND the story has ended —
-         the WAKE flight pulls up and away, then surfaces you */
-      if(kind==='wake' && !inkStory.canContinue
-         && inkStory.currentChoices.length===0 && found()===3)
-        fly({ dYaw:180, toPitch:42, toDist:2.4, tgt:CAM_TGT, dur:3.2, onDone:finish });
-    });
-    ch.appendChild(b);
-  });
+  if(out.length) panelLines=out;
+  panelChoices=inkStory.currentChoices.map(c=>c.text);
+  panelDraw();
+}
+function chooseChoice(i){
+  const c=inkStory && inkStory.currentChoices[i]; if(!c) return;
+  const kind=choiceFlight(c.text);
+  inkStory.ChooseChoiceIndex(i); renderInk();
+  /* completion ONLY when the hunt is done AND the story has ended —
+     the WAKE flight pulls up and away, then surfaces you */
+  if(kind==='wake' && !inkStory.canContinue
+     && inkStory.currentChoices.length===0 && found()===3)
+    fly({ dYaw:180, toPitch:42, toDist:2.4, tgt:CAM_TGT, dur:3.2, onDone:finish });
 }
 function finish(){
   parent.postMessage({ jsdDream:'complete', clues:found() }, '*');
@@ -462,7 +511,8 @@ addEventListener('pointerup', e=>{
   const moved=Math.hypot(e.clientX-downAt[0], e.clientY-downAt[1]);
   downAt=null;
   if(moved>8 || !loaded) return;
-  if(e.target.closest && e.target.closest('#panel,#exitBtn')) return;
+  if(e.target.closest && e.target.closest('#exitBtn')) return;
+  if(panelTap(e.clientX, e.clientY)) return;      // the terminal soaks its taps
   const scale=app.graphicsDevice.width/innerWidth;   // css px -> device px
   let best=null, bd=48*scale;
   for(const c of clueMeshes){
@@ -540,14 +590,24 @@ window.__dream = {
   get scene(){ return SCENE.credit; },
   get flying(){ return !!flight; },
   get found(){ return found(); },
-  get panelText(){ return panel.querySelector('.inkText').textContent; },
+  get panelText(){ return panelLines.join(' '); },
+  get panelChoices(){ return panelChoices.slice(); },
   tap(i){ collect(clueMeshes[i]); },
   proj(i){ const scale=app.graphicsDevice.width/innerWidth;
     camE.camera.worldToScreen(clueMeshes[i].grp.getPosition(), _scr);
     return { x:_scr.x/scale, y:_scr.y/scale }; },
-  panelRect(){ const r=panel.getBoundingClientRect();
-    return { x:Math.round(r.x), y:Math.round(r.y), w:Math.round(r.width), h:Math.round(r.height) }; },
-  choose(i){ const b=panel.querySelectorAll('.choice')[i]; if(b) b.click(); },
+  panelRect(){ const scale=app.graphicsDevice.width/innerWidth;
+    camE.camera.worldToScreen(PANEL_POS, _scr);
+    return { x:Math.round(_scr.x/scale), y:Math.round(_scr.y/scale) }; },
+  btnScreen(i){ const r=choiceRects[i]; if(!r) return null;
+    _nrm.set(camE.getPosition().x-PANEL_POS.x,0,camE.getPosition().z-PANEL_POS.z).normalize();
+    _rt.cross(_nrm, pc.Vec3.UP).normalize();
+    const lx=(0.5-(r.x+r.w/2)/PANEL_W)*PW, ly=(0.5-(r.y+r.h/2)/PANEL_H)*PH;
+    const wp=new pc.Vec3().copy(_rt).mulScalar(lx); wp.y+=ly; wp.add(PANEL_POS);
+    const scale=app.graphicsDevice.width/innerWidth;
+    camE.camera.worldToScreen(wp,_scr);
+    return { x:_scr.x/scale, y:_scr.y/scale }; },
+  choose(i){ chooseChoice(i); },
   exit(){ document.getElementById('exitBtn').click(); },
 };
 </script>
