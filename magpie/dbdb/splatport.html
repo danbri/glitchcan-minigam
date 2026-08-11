@@ -156,15 +156,32 @@ const viewer = new GS3D.Viewer({
 let loaded=false;
 const loadBar=document.getElementById('loadBar'), loadFill=document.getElementById('loadFill');
 loadBar.style.display='block';
-viewer.addSplatScene(SPLAT_PATH, {
-  showLoadingUI:false, progressiveLoad:false,
-  onProgress:(pct)=>{ loadFill.style.width=Math.round(pct)+'%'; },
-}).then(()=>{
-  loaded=true; loadBar.style.display='none';
-  const sb=document.getElementById('startBtn');
-  sb.disabled=false; sb.textContent='STEP THROUGH';
-  viewer.start();
-}).catch(e=>{ errBox.style.display='block'; errBox.textContent+='splat load failed: '+e.message+'\n'; });
+/* resilient load: explicit format (a cache-busting query would defeat
+   extension sniffing), and up to 3 attempts — freshly deployed Pages
+   edges can 404 an asset for a minute */
+function loadSplat(attempt=0){
+  const bust = attempt>0 ? '?r='+attempt+'-'+Date.now() : '';
+  return viewer.addSplatScene(SPLAT_PATH+bust, {
+    showLoadingUI:false, progressiveLoad:false,
+    format: GS3D.SceneFormat.Splat,
+    onProgress:(pct)=>{ loadFill.style.width=Math.round(pct)+'%'; },
+  }).then(()=>{
+    loaded=true; loadBar.style.display='none';
+    const sb=document.getElementById('startBtn');
+    sb.disabled=false; sb.textContent='STEP THROUGH';
+    viewer.start();
+  }).catch(e=>{
+    if(attempt<2){
+      const sb=document.getElementById('startBtn');
+      sb.textContent='RETRYING PORT ('+(attempt+2)+'/3)…';
+      return new Promise(r=>setTimeout(r, 1800*(attempt+1))).then(()=>loadSplat(attempt+1));
+    }
+    errBox.style.display='block';
+    errBox.textContent+='splat load failed after retries: '+e.message+'\n'
+      +'(a hard refresh usually cures a freshly deployed page)\n';
+  });
+}
+loadSplat();
 
 /* =========================================================
    ink — THE PORTKEEPER, standing in the scan
