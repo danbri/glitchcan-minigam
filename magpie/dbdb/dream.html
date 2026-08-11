@@ -73,6 +73,21 @@
   }
   #panel .choice:active { background:rgba(80,255,140,.28); }
   #err { position:fixed; inset:auto 0 0 0; z-index:50; color:#ff9a9a; background:rgba(30,0,0,.92); padding:8px; font-size:11px; display:none; white-space:pre-wrap; }
+  #menuBtn { position:fixed; bottom:12px; left:10px; z-index:9;
+    background:rgba(2,16,8,.72); border:1px solid; border-radius:6px;
+    font:bold 14px monospace; padding:8px 13px; }
+  #menu { position:fixed; bottom:58px; left:10px; z-index:21;
+    background:rgba(1,10,5,.95); border:1px solid; border-radius:8px;
+    padding:10px; font:12px monospace; display:flex; flex-direction:column;
+    gap:8px; max-width:80vw; }
+  #menu button { background:none; border:1px solid currentColor; color:inherit;
+    font:12px monospace; padding:8px 10px; border-radius:4px; text-align:left; }
+  #menu .prow { display:flex; flex-wrap:wrap; gap:6px; }
+  #menu .prow button { padding:6px 8px; font-size:11px; }
+  #menu .mLbl { opacity:.6; font-size:10px; letter-spacing:.2em; }
+  #menu .mCred { opacity:.5; font-size:9px; max-width:260px; }
+  /* the edit bar docks at the very bottom: lift the corner buttons over it */
+  body.edit #readBtn, body.edit #menuBtn { bottom:64px; }
   .hidden { display:none !important; }
 </style>
 </head>
@@ -213,8 +228,40 @@ const SCENES={
    arrive. Objects stay reachable via ?scene= for testing. */
 const TINT2SCENE={ bondi:'carshop', grape:'museum', strawberry:'forest',
                    lime:'garden', tangerine:'pool' };
+const PLACES=['tree','garden','carshop','forest','museum','pool','watertower','calico'];
 const SCENE=SCENES[Q.get('scene')] || SCENES[TINT2SCENE[Q.get('tint')]] || SCENES.tree;
 const SCENEKEY=Object.keys(SCENES).find(k=>SCENES[k]===SCENE)||'tree';
+
+/* ---- ☰ THE MENU — mode switches live here, not in URL paths ---- */
+const menuBtn=document.createElement('button');
+menuBtn.type='button'; menuBtn.id='menuBtn'; menuBtn.textContent='☰';
+menuBtn.setAttribute('aria-label','menu');
+document.body.appendChild(menuBtn);
+const menu=document.createElement('div');
+menu.id='menu'; menu.classList.add('hidden');
+menu.innerHTML='<button type="button" id="mEdit">EDIT PLACEMENT: OFF</button>'
+ +'<div class="mLbl">FAST PORT</div><div class="prow" id="mPorts"></div>'
+ +'<div class="mCred"></div>';
+document.body.appendChild(menu);
+menuBtn.style.color=tint; menuBtn.style.borderColor=tint;
+menu.style.color=tint; menu.style.borderColor=tint;
+{ const row=menu.querySelector('#mPorts');
+  for(const k of PLACES){
+    const b=document.createElement('button'); b.type='button';
+    b.textContent=k.toUpperCase();
+    if(k===SCENEKEY){ b.style.opacity='0.4'; b.disabled=true; }
+    b.addEventListener('click',()=>{
+      const u=new URL(location.href);
+      u.searchParams.set('scene',k);
+      u.searchParams.delete('far'); u.searchParams.delete('st');
+      location.href=u.toString();      // tint + edit ride along
+    });
+    row.appendChild(b);
+  }
+  menu.querySelector('.mCred').textContent=SCENE.credit;
+}
+menuBtn.addEventListener('click',()=>menu.classList.toggle('hidden'));
+menu.querySelector('#mEdit').addEventListener('click',()=>setEdit(!editOn));
 const SPLAT_PATH=(Q.has('hq') && SCENE.hq) ? SCENE.hq : SCENE.ply;
 
 /* =========================================================
@@ -527,14 +574,30 @@ function termTap(cx,cy){
   return false;
 }
 
-/* ---- EDIT MODE ---- */
-const EDIT=Q.has('edit');
-let editPts=null, ghost=null, lastPlace=null;
-if(EDIT){
-  const bar=document.createElement('div');
-  bar.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:20;display:flex;gap:8px;align-items:center;padding:10px;background:rgba(1,10,5,.92);border-top:1px solid '+tint+';color:'+tint+';font:11px monospace;';
-  bar.innerHTML='<button type="button" id="ebCopy" style="background:none;border:1px solid '+tint+';color:'+tint+';font:bold 12px monospace;padding:8px 12px;border-radius:4px;">COPY DATA</button><span id="ebInfo" style="word-break:break-all;">EDIT: loading hit mesh…</span>';
-  document.body.appendChild(bar);
+/* ---- EDIT MODE — a runtime TOGGLE in the ☰ menu, not a separate
+   page: the dream with and without edit is the same dream, READ and
+   all. ?edit=1 merely presets the toggle ON, and the toggle keeps the
+   URL in sync so ports and reloads carry it. ---- */
+let editOn=false;
+let editPts=null, ghost=null, lastPlace=null, ebar=null;
+function setEdit(on){
+  editOn=on;
+  document.body.classList.toggle('edit', on);
+  if(on) buildEditBar();
+  if(ebar) ebar.style.display=on?'flex':'none';
+  const u=new URL(location.href);
+  if(on) u.searchParams.set('edit','1'); else u.searchParams.delete('edit');
+  history.replaceState(null,'',u.toString());
+  const t2=document.getElementById('mEdit');
+  if(t2) t2.textContent='EDIT PLACEMENT: '+(on?'ON':'OFF');
+}
+function buildEditBar(){
+  if(ebar) return;
+  ebar=document.createElement('div');
+  ebar.id='ebar';
+  ebar.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:20;display:flex;gap:8px;align-items:center;padding:10px;background:rgba(1,10,5,.92);border-top:1px solid '+tint+';color:'+tint+';font:11px monospace;';
+  ebar.innerHTML='<button type="button" id="ebCopy" style="background:none;border:1px solid '+tint+';color:'+tint+';font:bold 12px monospace;padding:8px 12px;border-radius:4px;">COPY DATA</button><span id="ebInfo" style="word-break:break-all;">EDIT: loading hit mesh…</span>';
+  document.body.appendChild(ebar);
   /* hit mesh: the loaded resource caches scan-space centers for EVERY
      splat format (ply / compressed.ply / SOG) — so edit works in any scene */
   const tryPts=()=>{
@@ -564,6 +627,7 @@ if(EDIT){
     document.getElementById('ebInfo').textContent=data;
   });
 }
+if(Q.has('edit')) setEdit(true);
 function splatHit(cx,cy){
   if(!editPts) return null;
   const ro=camE.getPosition(), rd=new pc.Vec3();
@@ -850,7 +914,6 @@ const NAMES=(SCENE.names||['NORTH','EAST','SOUTH','WEST'])
   .map((n,i)=>STN[i]?STN[i].n:n);
 /* far ports: EVERY other place, EVERY named station in it — the port
    map is a directory of the whole dreamt world, not a lucky dip */
-const PLACES=['tree','garden','carshop','forest','museum','pool','watertower','calico'];
 const FKEYS=PLACES.filter(k=>SCENES[k]&&SCENES[k]!==SCENE);
 const nameOf=(k,i)=>{ const s=SCENES[k], st=s.st||[];
   return st[i]?st[i].n:(s.names||['NORTH','EAST','SOUTH','WEST'])[i]; };
@@ -935,6 +998,16 @@ STN.forEach((s,i)=>{ if(i>=TOUR.length) return;
   /* a curated point is authoritative: the walk fence grows to reach it */
   WALKMAX=Math.max(WALKMAX, Math.hypot(s.p[0]-C.x,s.p[2]-C.z)+0.15*R);
 });
+/* every station is also a BILLBOARD spot: a PET marker stands there,
+   and porting there (or tapping the PET) brings the one screen to it —
+   still a single unified screen, with several places it can live */
+NAMES.forEach((n,i)=>{
+  const T={ id:'st'+i, label:n,
+    pos:[TOUR[i].x, TOUR[i].y, TOUR[i].z],
+    yaw:(STN[i]&&STN[i].yaw!==undefined)?STN[i].yaw:(i*90+40) };
+  T.marker=makePETmarker(T.pos);
+  TERMINALS.push(T);
+});
 let tourI=0;
 /* the one true port flight: absolute per-station bearing (hand-placed
    yaw wins over the computed corner), so the same port always lands in
@@ -942,6 +1015,8 @@ let tourI=0;
    opts.arrive: the quiet sweep-in when surfacing from another scan. */
 function flyStation(sti, opts={}){
   document.getElementById('hudLoc').textContent='PORT/7 · '+NAMES[sti];
+  const TT=TERMINALS.find(t2=>t2.id==='st'+sti);
+  if(TT){ activeTerm=TT; applyTermPose(TT); }   // the screen ports with you
   const bAng=Math.atan2(base.x,base.z)*180/Math.PI;
   const aim=STN[sti]?STN[sti].yaw:(sti*90+40);
   let want=aim-bAng-yaw;
@@ -1019,8 +1094,8 @@ addEventListener('pointerup', e=>{
   const moved=Math.hypot(e.clientX-downAt[0], e.clientY-downAt[1]);
   downAt=null;
   if(moved>8 || !loaded) return;
-  if(e.target.closest && e.target.closest('#exitBtn,#ebCopy,#panel,#readBtn')) return;
-  if(EDIT){ editPlace(e.clientX, e.clientY); return; }
+  if(e.target.closest && e.target.closest('#exitBtn,#ebCopy,#panel,#readBtn,#menuBtn,#menu,#ebar')) return;
+  if(editOn){ editPlace(e.clientX, e.clientY); return; }
   if(termTap(e.clientX, e.clientY)) return;       // PET markers zoom their screen
   if(panelTap(e.clientX, e.clientY)) return;      // the terminal soaks its taps
   const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)   // css px -> device px
