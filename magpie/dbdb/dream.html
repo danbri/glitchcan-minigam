@@ -124,12 +124,17 @@ const SCENES={
            pal:['#a8a8a8','#d8d8d8','#787878','#784848','#f0e8d8','#484848'],
            what:'a motorcycle, parked forever in the static',
            credit:'biker · playcanvas/engine examples · MIT' },
+  garden:{ ply:'splats/garden-sog/meta.json',
+           up:[0,-1,0], c:[0,0,0], r:4.2,
+           pal:['#7da05a','#a8c878','#d8e8c0','#8a9a78','#c8b890','#587048'],
+           what:'a tropical glasshouse, breathing green in the static',
+           credit:'Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0' },
 };
 /* places only (owner, Aug 2026): objects render fine but make no game
    sense; every PET dials the winter-tree ROOM until more place-scans
    arrive. Objects stay reachable via ?scene= for testing. */
-const TINT2SCENE={ bondi:'tree', grape:'tree', strawberry:'tree',
-                   lime:'tree', tangerine:'tree' };
+const TINT2SCENE={ bondi:'garden', grape:'tree', strawberry:'tree',
+                   lime:'garden', tangerine:'garden' };
 const SCENE=SCENES[Q.get('scene')] || SCENES[TINT2SCENE[Q.get('tint')]] || SCENES.tree;
 const SPLAT_PATH=(Q.has('hq') && SCENE.hq) ? SCENE.hq : SCENE.ply;
 
@@ -317,6 +322,8 @@ function panelDraw(){
   g.strokeStyle=tint; g.lineWidth=3; g.strokeRect(5,5,PANEL_W-10,PANEL_H-10);
   g.font='11px monospace'; g.fillStyle=tint; g.globalAlpha=0.65;
   g.fillText('P O R T / 7   T E R M I N A L', 18, 26);
+  g.font='8px monospace'; g.globalAlpha=0.5;
+  g.fillText(SCENE.credit.slice(0,74), 18, 38);   // CC attribution, on the machine itself
   g.globalAlpha=1;
   let y=52; g.font='15px monospace';
   for(const para of panelLines){

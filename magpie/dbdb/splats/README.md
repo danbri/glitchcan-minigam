@@ -22,3 +22,14 @@ with `npx @playcanvas/splat-transform` for the PlayCanvas gsplat renderer
   MIT). The skull was subsampled 247k→123k gaussians for mobile weight.
   Wired as dream destinations in `dream.html` (SCENES table: per-scene
   up-axis, centre, radius, palette); each candy PET dials a different port.
+
+## garden-sog/ — Botanical Garden Kiel, Victoria House (Aug 2026)
+"Botanical Garden - Victoria House (VR Ready)" by **Simon Bethke**
+(superspl.at/scene/6f697c4d), **CC BY 4.0** (license link on the scene
+page). This is the COARSEST LOD tile of the scene's streaming-SOG form
+(200k gaussians, ~2.3MB: meta.json + 5 webp planes) — the whole
+glasshouse in one budget-friendly bundle. The shN (higher-order SH)
+entry was stripped from meta.json since we render degree 0; that also
+avoids shipping two more webp files. Attribution is rendered on the
+in-dream terminal itself and recorded here. PlayCanvas loads the
+unbundled meta.json directly as a 'gsplat' asset.
