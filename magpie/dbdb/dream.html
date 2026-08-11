@@ -24,7 +24,7 @@
   }
   #head {
     position:fixed; top:0; left:0; right:0; z-index:8; display:flex;
-    justify-content:space-between; padding:10px 14px; pointer-events:none;
+    justify-content:space-between; padding:10px 110px 8px 14px; pointer-events:none;
     font-size:11px; letter-spacing:.3em; color:rgba(159,232,176,.75);
     text-shadow:0 0 8px rgba(80,255,140,.5);
   }
@@ -95,6 +95,8 @@ for(const id of ['head','exitBtn','loadLine']){
   const el=document.getElementById(id); if(el) el.style.color=tint;
 }
 document.getElementById('exitBtn').style.borderColor=tint;
+if(parent!==window)                        // framed in dbdb2: clear its EJECT button
+  document.getElementById('head').style.paddingLeft='104px';
 
 /* =========================================================
    THE PORTS — every scan CC-permissive, every scan shown
@@ -389,7 +391,7 @@ panelDraw();
 const bootYaw=Math.atan2(camE.getPosition().x-PANEL_POS.x,
                          camE.getPosition().z-PANEL_POS.z)*180/Math.PI;
 const TERMINALS=[
-  { id:'port7', label:'BY THE WINTER TREE',
+  { id:'port7', label:'BY '+((SCENE.names||['THE SCAN'])[0]),
     pos:[PANEL_POS.x, PANEL_POS.y-PH*0.72-0.14*R, PANEL_POS.z], yaw:bootYaw },
 ];
 let activeTerm=TERMINALS[0];
@@ -427,7 +429,7 @@ function flyToTerm(T){
         tgt:PANEL_POS.clone(), dur:3.0 });
 }
 function termTap(cx,cy){
-  const scale=app.graphicsDevice.width/innerWidth;
+  const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
   for(const T of TERMINALS){
     camE.camera.worldToScreen(T.marker.getPosition(), _scr);
     if(Math.hypot(_scr.x-cx*scale,_scr.y-cy*scale)<52*scale){ flyToTerm(T); return true; }
@@ -467,7 +469,7 @@ if(EDIT){
 function splatHit(cx,cy){
   if(!editPts) return null;
   const ro=camE.getPosition(), rd=new pc.Vec3();
-  const scale=app.graphicsDevice.width/innerWidth;
+  const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
   camE.camera.screenToWorld(cx*scale,cy*scale,camE.camera.farClip,rd);
   rd.sub(ro).normalize();
   const rad2=0.018*R*R;
@@ -554,7 +556,7 @@ function computeVis(){
   __visDbg.facing=_vp.normalize().dot(nz);
   if(__visDbg.facing<0.3) return false;
   /* on screen? */
-  const scale=app.graphicsDevice.width/innerWidth;
+  const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
   camE.camera.worldToScreen(PANEL_POS,_scr);
   __visDbg.scr=[Math.round(_scr.x/scale),Math.round(_scr.y/scale),+_scr.z.toFixed(2)];
   if(_scr.z<0 || _scr.x<-40*scale || _scr.x>(innerWidth+40)*scale
@@ -578,12 +580,13 @@ function computeVis(){
 const _v2=new pc.Vec3(), _v3=new pc.Vec3();
 function domUpdate(vis){
   if(!css3d.isConnected) return;
-  if(!vis){ css3d.style.display='none'; return; }
+  if(!vis){ css3d.style.display='none'; plate.enabled=true; return; }
   css3d.style.display='block';
+  plate.enabled=false;                    // one screen at a time: DOM speaks
   /* anchored by construction: position, scale and tilt all derive from
      the SAME worldToScreen projection the engine uses for the plate —
      the DOM cannot drift from the scene, at any bearing */
-  const scale=app.graphicsDevice.width/innerWidth;
+  const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
   camE.camera.worldToScreen(PANEL_POS,_scr);
   if(_scr.z<0){ css3d.style.display='none'; return; }
   const sx=_scr.x/scale, sy=_scr.y/scale;
@@ -617,7 +620,7 @@ function domRender(){
 const _rd=new pc.Vec3(), _hit=new pc.Vec3(), _nrm=new pc.Vec3(), _rt=new pc.Vec3();
 function panelTap(cx,cy){
   const camPos=camE.getPosition();
-  const scale=app.graphicsDevice.width/innerWidth;
+  const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
   camE.camera.screenToWorld(cx*scale, cy*scale, camE.camera.farClip, _rd);
   _rd.sub(camPos).normalize();
   _nrm.set(camPos.x-PANEL_POS.x, 0, camPos.z-PANEL_POS.z).normalize();
@@ -852,7 +855,7 @@ addEventListener('pointerup', e=>{
   if(EDIT){ editPlace(e.clientX, e.clientY); return; }
   if(termTap(e.clientX, e.clientY)) return;       // PET markers zoom their screen
   if(panelTap(e.clientX, e.clientY)) return;      // the terminal soaks its taps
-  const scale=app.graphicsDevice.width/innerWidth;   // css px -> device px
+  const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)   // css px -> device px
   let best=null, bd=48*scale;
   for(const c of clueMeshes){
     if(c.found) continue;
@@ -932,10 +935,10 @@ window.__dream = {
   get panelText(){ return panelLines.join(' '); },
   get panelChoices(){ return panelChoices.slice(); },
   tap(i){ collect(clueMeshes[i]); },
-  proj(i){ const scale=app.graphicsDevice.width/innerWidth;
+  proj(i){ const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
     camE.camera.worldToScreen(clueMeshes[i].grp.getPosition(), _scr);
     return { x:_scr.x/scale, y:_scr.y/scale }; },
-  panelRect(){ const scale=app.graphicsDevice.width/innerWidth;
+  panelRect(){ const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
     camE.camera.worldToScreen(PANEL_POS, _scr);
     return { x:Math.round(_scr.x/scale), y:Math.round(_scr.y/scale) }; },
   btnScreen(i){ const r=choiceRects[i]; if(!r) return null;
@@ -943,7 +946,7 @@ window.__dream = {
     _rt.cross(_nrm, pc.Vec3.UP).normalize();
     const lx=(0.5-(r.x+r.w/2)/PANEL_W)*PW, ly=(0.5-(r.y+r.h/2)/PANEL_H)*PH;
     const wp=new pc.Vec3().copy(_rt).mulScalar(lx); wp.y+=ly; wp.add(PANEL_POS);
-    const scale=app.graphicsDevice.width/innerWidth;
+    const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
     camE.camera.worldToScreen(wp,_scr);
     return { x:_scr.x/scale, y:_scr.y/scale }; },
   choose(i){ chooseChoice(i); },
