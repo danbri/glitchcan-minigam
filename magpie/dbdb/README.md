@@ -85,3 +85,24 @@ a hands-off headless run that lit a beacon with zero input.
 `canarywharf.html` — a one-thumb dusk flight over a stylised Docklands
 (TSL curtain-wall towers, sky dome, murmuration, DLR loop, peregrine;
 Satie on triangle waves). Four levels from full-assist to no-net.
+
+### Ink as the bus (Aug 2026)
+- The game is a FINK minigame: `inklet/minigames/canarywharf/` (manifest +
+  redirect wrapper, waterworld pattern); reachable from the TOC
+  (`# MINIGAME: canarywharf mode=firstlight`). Speaks the finkgame SDK
+  natively — ready/init/setVariable/complete with wharf_* variables.
+- The story ("The Lamplighters' Dispute") is compiled at boot with the
+  REAL inkjs compiler from `third_party/ink/` and plays on an IN-WORLD
+  screen: live, tappable DOM perspective-matched onto One Canada Square's
+  face via a hand-rolled CSS3DRenderer composition (camera-div row-flip +
+  object column-flip matrix3d). Choices grant flight boons (ink drives
+  the game); beacons feed ink variables (the game drives ink).
+- Splat-look layer: ~4200 procedural gaussian points sampled on the tower
+  skins; a swirl uniform scatters/reforms them as the transition into and
+  out of story mode. (True 3DGS needs scan assets; this ships the
+  aesthetic self-contained. No browser API exists yet for interactive DOM
+  surfaces inside WebGL/WebXR — CSS matrix3d compositing is the honest
+  working equivalent.)
+- The floor is no longer an afterthought: flag-stone paving with joints
+  and tone variation, warm promenade edge strips on every quay lip, and a
+  pocket park of lime trees.

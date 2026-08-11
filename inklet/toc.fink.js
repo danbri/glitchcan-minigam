@@ -41,6 +41,7 @@ Minigames and experiments, eventually for integration into story-based episodes.
 + [BoidWars] -> boidwars_selected
 + [GridLuck] -> gridluck_selected
 + [Waterworld] -> waterworld_selected
++ [Canary Wharf] -> canarywharf_selected
 + [Ukrainian Language] -> ukrainian_selected
 
 
@@ -184,6 +185,18 @@ Pilot a submarine through a flooded London dock in picoCAD-style 3D. Sonar-ping 
 
 + [Play Waterworld]
     # MINIGAME: waterworld
+    -> minigame_return
+
+=== canarywharf_selected ===
+
+# IMAGE: glitchcan-grey-portrait-web.jpg
+
+CANARY WHARF — one small bird, one big skyline
+
+A one-thumb dusk flight over the Docklands. Light the rooftop beacons; the tower screens tell the lamplighters' story in ink, in the world, on the glass.
+
++ [Play Canary Wharf]
+    # MINIGAME: canarywharf mode=firstlight
     -> minigame_return
 
 === minigame_return ===

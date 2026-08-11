@@ -1,0 +1,27 @@
+{
+  "name": "canarywharf",
+  "title": "CANARY WHARF — one small bird, one big skyline",
+  "description": "A one-thumb dusk flight over the Docklands. Light the rooftop beacons; the tower screens tell the lamplighters' story in ink.",
+  "version": "1.0.0",
+  "author": "glitchcan",
+  "entry": "index.html",
+
+  "sandbox": {
+    "permissions": ["allow-scripts"],
+    "timeout": 600000
+  },
+
+  "variables": {
+    "read": ["wharf_level", "wharf_beacons_lit"],
+    "write": ["wharf_beacons_lit", "wharf_seeds", "wharf_story_ending", "minigame_played"]
+  },
+
+  "modes": {
+    "firstlight": { "description": "Three beacons, full assist", "level": 0 },
+    "longround":  { "description": "The far towers, gusts",      "level": 1 },
+    "rushhour":   { "description": "All seven on the clock",     "level": 2 },
+    "peregrine":  { "description": "No net",                     "level": 3 }
+  },
+
+  "ui": { "width": "100%", "height": "100%" }
+}

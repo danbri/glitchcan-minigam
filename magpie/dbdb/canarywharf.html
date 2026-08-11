@@ -86,6 +86,37 @@
   @keyframes bob { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-12px) rotate(4deg)} }
   .hidden { display:none !important; }
   #err { position:fixed; inset:auto 0 0 0; z-index:50; color:#ff9a9a; background:rgba(40,0,0,.9); padding:8px; font-size:12px; display:none; white-space:pre-wrap; }
+  /* ---------- the in-world tower screen ---------- */
+  #css3d { position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:5; }
+  #css3dCam { width:100%; height:100%; transform-style:preserve-3d; pointer-events:none; }
+  .towerScreen {
+    position:absolute; left:0; top:0; transform-origin:50% 50%;
+    width:340px; height:310px; padding:16px 20px;
+    background:linear-gradient(160deg, rgba(16,10,34,.94), rgba(40,18,52,.94));
+    border:2px solid rgba(255,196,94,.55); border-radius:6px;
+    box-shadow:0 0 40px rgba(255,180,80,.25), inset 0 0 60px rgba(255,150,60,.08);
+    color:#ffe9c4; font-size:13.5px; line-height:1.45;
+    pointer-events:none; overflow:hidden;
+    transition:filter .6s, opacity .6s;
+  }
+  .towerScreen.live { pointer-events:auto; }
+  .towerScreen.dormant { filter:blur(1px) brightness(.55) saturate(.6); }
+  .towerScreen .inkText { min-height:96px; letter-spacing:.02em; }
+  .towerScreen .inkText p { margin:0 0 8px 0; animation:inkIn .7s ease both; }
+  @keyframes inkIn { from{opacity:0; transform:translateY(8px) scale(.98); filter:blur(4px);}
+                     to{opacity:1; transform:none; filter:none;} }
+  .towerScreen .choice {
+    display:block; width:100%; margin-top:8px; padding:9px 12px; text-align:left;
+    background:rgba(255,196,94,.12); border:1px solid rgba(255,196,94,.5);
+    border-radius:5px; color:#ffd45e; font-family:inherit; font-size:14px;
+    letter-spacing:.05em; cursor:pointer; animation:inkIn .7s ease both;
+  }
+  .towerScreen .choice:active { background:rgba(255,196,94,.35); }
+  .towerScreen .scanline {
+    position:absolute; inset:0; pointer-events:none; mix-blend-mode:overlay;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, transparent 1px 3px);
+  }
+  .towerScreen .crest { font-size:11px; letter-spacing:.3em; color:rgba(255,196,94,.6); margin-bottom:8px; }
 </style>
 </head>
 <body>
@@ -124,6 +155,11 @@
 
 <pre id="err"></pre>
 
+<!-- in-world DOM layer: perspective-matched, holds the tower screens -->
+<div id="css3d"><div id="css3dCam"></div></div>
+
+<script src="../../third_party/ink/ink-full.min.js"></script>
+<script src="../../packages/finkgame/src/minigame-sdk.js"></script>
 <script type="module">
 async function loadThree(){
   const CDN   = 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.webgpu.min.js';
@@ -318,15 +354,57 @@ const towerMat = new THREE.MeshBasicNodeMaterial();
 }
 scene.add(new THREE.Mesh(buildTowers(), towerMat));
 
-/* quays — dark stone platforms beneath the tower clusters */
+/* quays — paved civic ground, not an afterthought: flag-stone grid with
+   subtle tone variation, warm pools under the promenade lights */
 const quayMat = new THREE.MeshBasicNodeMaterial();
-quayMat.colorNode = duskFade(vec3(0.10,0.09,0.13).add(
-  fract(sin(floor(positionWorld.x.mul(0.5)).add(floor(positionWorld.z.mul(0.5)).mul(7.0))).mul(437.5)).mul(0.02)));
+quayMat.colorNode = Fn(()=>{
+  const wp = positionWorld;
+  const gx = wp.x.mul(0.45), gz = wp.z.mul(0.45);
+  const fx = fract(gx), fz = fract(gz);
+  const joint = min(min(fx, float(1.0).sub(fx)), min(fz, float(1.0).sub(fz)));
+  const line = smoothstep(0.0, 0.06, joint).mul(0.35).add(0.65);        // paving joints
+  const tone = fract(sin(floor(gx).mul(12.9898).add(floor(gz).mul(78.233))).mul(437.5)).mul(0.05);
+  let paving = vec3(0.13,0.115,0.16).add(tone).mul(line);
+  // herringbone hint: alternate rows shift warmth
+  const row = mod(floor(gz), 2.0).mul(0.02);
+  paving = paving.add(vec3(row, row.mul(0.6), 0.0));
+  return duskFade(paving);
+})();
 const quayGeo = new THREE.BoxGeometry(1,1,1);
-for(const [qx,qz,qw,qd] of [[0,8,110,70],[-2,-58,80,60],[46,-56,60,60],[64,10,50,40],[-70,10,40,50]]){
+const QUAYS = [[0,8,110,70],[-2,-58,80,60],[46,-56,60,60],[64,10,50,40],[-70,10,40,50]];
+for(const [qx,qz,qw,qd] of QUAYS){
   const m=new THREE.Mesh(quayGeo, quayMat);
   m.scale.set(qw,3,qd); m.position.set(qx,-1.35,qz);   // top rides 0.15 proud of the water
   scene.add(m);
+}
+/* promenade edge: a warm lit strip along every quay lip (dockside rail) */
+{
+  const edgeMat = new THREE.MeshBasicNodeMaterial({ transparent:true,
+    blending:THREE.AdditiveBlending, depthWrite:false });
+  edgeMat.colorNode = vec3(1.0,0.62,0.28).mul(sin(positionWorld.x.add(positionWorld.z).mul(0.7).add(time.mul(0.6))).mul(0.12).add(0.5));
+  edgeMat.opacityNode = float(0.5);
+  for(const [qx,qz,qw,qd] of QUAYS){
+    for(const [ex,ez,ew,ed] of [[qx, qz-qd/2, qw, 0.5],[qx, qz+qd/2, qw, 0.5],
+                                 [qx-qw/2, qz, 0.5, qd],[qx+qw/2, qz, 0.5, qd]]){
+      const m=new THREE.Mesh(quayGeo, edgeMat);
+      m.scale.set(ew, 0.35, ed); m.position.set(ex, 0.30, ez);
+      scene.add(m);
+    }
+  }
+}
+/* Jubilee pocket park: a stand of little lime trees west of the square */
+{
+  const trunkMat = new THREE.MeshBasicNodeMaterial({ color:new THREE.Color(0x3a2b20) });
+  const leafMat = new THREE.MeshBasicNodeMaterial();
+  leafMat.colorNode = duskFade(vec3(0.10,0.20,0.12).add(
+    sin(positionWorld.x.mul(2.0).add(positionWorld.y.mul(3.0))).mul(0.02)));
+  const coneG = new THREE.ConeGeometry(2.2, 5.5, 7);
+  for(const [tx,tz] of [[-16,26],[-10,30],[-20,32],[-14,36],[-24,26],[-8,24],[-18,22]]){
+    const tr=new THREE.Mesh(quayGeo, trunkMat);
+    tr.scale.set(0.5,2.2,0.5); tr.position.set(tx,1.1,tz); scene.add(tr);
+    const lf=new THREE.Mesh(coneG, leafMat);
+    lf.position.set(tx,4.6,tz); scene.add(lf);
+  }
 }
 
 /* dock water — dusk mirror with ripples and streak reflections */
@@ -338,7 +416,7 @@ const waterMat = new THREE.MeshBasicNodeMaterial();
         .add(sin(wp.z.mul(1.9).sub(time.mul(0.8))))
         .add(sin(wp.x.add(wp.z).mul(0.8).add(time.mul(0.5))));
     const base = mix(vec3(0.07,0.06,0.16), vec3(0.85,0.45,0.22),
-                     smoothstep(-2.5, 3.0, rip).mul(0.13).add(smoothstep(60.0,240.0,length(wp.sub(camPosU))).mul(0.4)));
+                     smoothstep(-2.5, 3.0, rip).mul(0.13).add(smoothstep(60.0,240.0,length(wp.sub(camPosU))).mul(0.22)));
     // vertical light streaks under towers (cheap bake per famous tower)
     let streak = float(0);
     const spts = [[0,0],[-34,8],[34,8],[-20,-56],[52,-44]];
@@ -610,6 +688,9 @@ function lightBeacon(b){
   b.pad.material = padLitMat; b.crown.visible=true;
   sfx.beacon(); updateHUD();
   toast(state.lit<state.need ? 'BEACON LIT — '+(state.need-state.lit)+' TO GO' : 'THE LAST BEACON!');
+  if(inkStory){ try{ inkStory.variablesState.$('beacons', state.lit); }catch(e){} }
+  reportOut(null);
+  if(state.lit===1) setTimeout(enterStoryMode, 700);
 }
 function flight(dt){
   if(P.stun>0) P.stun-=dt;
@@ -741,6 +822,7 @@ function flight(dt){
    ========================================================= */
 let touchX0=null, activeTouch=null;
 addEventListener('touchstart', e=>{
+  if(typeof storyMode!=='undefined' && storyMode) return;   // panel taps stay panel taps
   const t=e.changedTouches[0];
   activeTouch=t.identifier; touchX0=t.clientX;
   input.hold=true;
@@ -770,7 +852,9 @@ addEventListener('keyup', e=>{
   if(e.code==='ArrowLeft'||e.code==='KeyA') keys.l=false;
   if(e.code==='ArrowRight'||e.code==='KeyD') keys.r=false;
 });
-addEventListener('mousedown', ()=>{ input.hold=true; });
+addEventListener('mousedown', e=>{ if(typeof storyMode!=='undefined' && storyMode) return;
+  if(e.target.closest && e.target.closest('.towerScreen')) return;
+  input.hold=true; });
 addEventListener('mouseup', ()=>{ input.hold=false; });
 
 /* =========================================================
@@ -918,10 +1002,11 @@ function startGame(level=0){
   for(const s of seeds){ s.taken=false; s.m.visible=true; }
   for(const r of rings){ r.taken=false; r.m.visible=L.rings; }
   P.pos.set(0, 50, 70); P.yaw=Math.PI; P.vy=0; P.speed=10; P.stun=0;
+  camPos.copy(P.pos).add(fwd().multiplyScalar(-11.5)).add(new THREE.Vector3(0,3.8,0));
   updateHUD();
 }
 function lose(){
-  state.running=false;
+  state.running=false; reportOut('lose');
   toast('');
   $('victory').classList.remove('hidden');
   $('victory').querySelector('h1').innerHTML='MIDNIGHT<br>CAME FIRST';
@@ -929,8 +1014,22 @@ function lose(){
   $('againBtn').textContent='TRY AGAIN';
   $('hud').style.display='none'; $('hint').style.display='none';
 }
+let pendingWin=false;
 function win(){
   state.running=false; sfx.win();
+  if(inkStory){
+    try{
+      inkStory.ChoosePathString('finale');
+      pendingWin=true;
+      enterStoryMode();
+      reportOut('win');
+      return;
+    }catch(e){}
+  }
+  reportOut('win');
+  showWinOverlay();
+}
+function showWinOverlay(){
   const secs=Math.round((performance.now()-state.t0)/1000);
   const next = state.level+1;
   if(next<LEVELS.length && next+1>unlocked){
@@ -1001,7 +1100,7 @@ function animate(){
   const dt=Math.min(clock.getDelta(), 1/30);
   const t=clock.elapsedTime;
 
-  if(state.running) flight(dt);
+  if(state.running && !storyMode) flight(dt);
   music.update();
   if(state.toastT>0){ state.toastT-=dt; if(state.toastT<=0) $('toast').style.opacity=0; }
   if(keys.l) input.steer=-1; else if(keys.r) input.steer=1;
@@ -1015,14 +1114,25 @@ function animate(){
   canary.wr.rotation.z = -flap*0.7;
   if(input.hold) sfx.flap();
 
-  // camera: behind and above, looking past the bird at the skyline
-  const back = fwd().multiplyScalar(-11.5);
-  const target = new THREE.Vector3().copy(P.pos).add(back).add(new THREE.Vector3(0, 3.8-P.pitch*3, 0));
-  camPos.lerp(target, Math.min(1, dt*3.2));
-  camera.position.copy(camPos);
-  const look = new THREE.Vector3().copy(P.pos).add(fwd().multiplyScalar(9));
-  camera.lookAt(look.x, look.y+3.6, look.z);
+  // camera: behind and above — or, in story mode, drawn to the screen
+  if(storyMode){
+    camPos.lerp(new THREE.Vector3(1, 44.5, 40), Math.min(1, dt*2.2));
+    camera.position.copy(camPos);
+    camera.lookAt(0, 44, 11);
+  } else {
+    const back = fwd().multiplyScalar(-11.5);
+    const target = new THREE.Vector3().copy(P.pos).add(back).add(new THREE.Vector3(0, 3.8-P.pitch*3, 0));
+    camPos.lerp(target, Math.min(1, dt*3.2));
+    camera.position.copy(camPos);
+    const look = new THREE.Vector3().copy(P.pos).add(fwd().multiplyScalar(9));
+    camera.lookAt(look.x, look.y+3.6, look.z);
+  }
   camPosU.value.copy(camera.position);
+  // splat swirl envelope (bell) for transitions + a whisper at rest
+  if(swirlPhase>0){ swirlPhase=Math.max(0,swirlPhase-dt); }
+  swirlU.value = Math.sin(Math.PI*Math.min(1, 1-swirlPhase/1.6))* (swirlPhase>0?1:0);
+  swirlU.value = swirlPhase>0 ? Math.sin(Math.PI*(1-swirlPhase/1.6)) : 0;
+  updateScreens();
   scene.children.forEach(o=>{ if(o.geometry&&o.geometry.type==='SphereGeometry') o.position.copy(camera.position); });
 
   // DLR
@@ -1079,6 +1189,255 @@ function animate(){
     errBox.textContent='Renderer failed: '+err.message;
   }
 })();
+
+/* =========================================================
+   12. THE INK BUS — the story lives on the tower screens.
+   Real inkjs compiler only (house rule); the FINK SDK carries
+   results out to any hosting story.
+   ========================================================= */
+const INK_SOURCE = `
+VAR beacons = 0
+VAR mood = "hopeful"
+VAR boon = "none"
+-> vespers
+== vespers ==
+The screen flickers awake. THE LAMPLIGHTERS' COOPERATIVE regrets to announce it is on strike, pending "recognition of the essential poetry of the role."
+A canary appears on the ledger as: UNPAID VOLUNTEER (1).
++ [Sing back at the screen] -> sing
++ [Get to work] -> work
+== sing ==
+~ mood = "charmed"
+The towers hum your note back, a fifth higher. Somewhere a trading floor looks up.
+The wind decides it likes you.
+~ boon = "wind"
+-> work
+== work ==
+{mood == "charmed": The beacons are listed on the departures board, like trains that never left.|The beacons wait, dark as unpaid invoices.}
+{beacons == 0: None are lit.|{beacons} now burn.}
++ [Ask about the peregrine] -> falcon
++ [Just fly] -> fly
+== falcon ==
+"Item 4b," says the screen. "The peregrine has declined to join the strike, citing professional appetite."
+~ boon = "warning"
+-> fly
+== fly ==
+The screen dims to a patient amber. It will keep the score.
+-> DONE
+== finale ==
+{mood == "charmed": The wharf glows, and the towers sing your note back in seven colours.|The wharf glows. The Cooperative, grudgingly, applauds.}
+The strike is settled: the canary is appointed LAMPLIGHTER LAUREATE, salary one sunflower seed per annum.
++ [Accept graciously] -> done_g
++ [Demand two seeds] -> done_d
+== done_g ==
+~ mood = "gracious"
+-> END
+== done_d ==
+~ mood = "bold"
+The board approves it unanimously. Scandalous. Historic.
+-> END
+`;
+let inkStory = null;
+try {
+  inkStory = new inkjs.Compiler(INK_SOURCE).Compile();
+} catch(e){ console.warn('ink compile failed', e); }
+
+/* the FINK guest side: only when actually embedded */
+const FINK = (Q.get('fink')==='1' || window.parent!==window) && window.MinigameSDK
+  ? new MinigameSDK() : null;
+if(FINK){
+  FINK.onInit((config)=>{
+    const lv = config && config.mode && ({firstlight:0,longround:1,rushhour:2,peregrine:3})[config.mode];
+    if(lv!==undefined){ startGame(lv); }
+  });
+  FINK.onPause(()=>{ state.running=false; });
+  FINK.onResume(()=>{ state.running=true; });
+}
+function reportOut(final){
+  if(!FINK) return;
+  FINK.setVariable('wharf_beacons_lit', state.lit);
+  FINK.setVariable('wharf_seeds', state.seeds);
+  if(final){
+    FINK.complete({ success: final==='win', score: state.seeds + state.lit*10,
+      variables: { wharf_beacons_lit: state.lit, wharf_seeds: state.seeds,
+                   wharf_story_ending: inkStory ? String(inkStory.variablesState.$('mood')) : 'untold',
+                   minigame_played: true } });
+  }
+}
+
+/* ---------- the in-world screen: live DOM on a 3D surface ----------
+   Perspective-matched with a hand-rolled CSS matrix3d (the CSS3DRenderer
+   technique, minimal form): fov -> perspective px, then cameraInverse *
+   objectMatrix -> matrix3d on the element. Fully interactive web content
+   standing in the scene. */
+const css3d = document.getElementById('css3d');
+const css3dCam = document.getElementById('css3dCam');
+const screens = [];
+function makeTowerScreen(x,y,z, ry, w=17){
+  const el = document.createElement('div');
+  el.className='towerScreen dormant';
+  el.innerHTML = '<div class="crest">CANARY WHARF CO-OPERATIVE CHANNEL 7</div>'
+    + '<div class="inkText"></div><div class="choices"></div><div class="scanline"></div>';
+  css3dCam.appendChild(el);
+  const obj = new THREE.Object3D();
+  obj.position.set(x,y,z); obj.rotation.y=ry;
+  obj.scale.setScalar(w/340);           // world width = w units
+  scene.add(obj);
+  const sc = { el, obj, live:false };
+  el.querySelector('.inkText').innerHTML='<p>· · · CHANNEL 7 · · ·</p>';
+  screens.push(sc);
+  return sc;
+}
+/* one great screen on One Canada Square's south face, over the approach */
+const mainScreen = makeTowerScreen(0, 44, 11.35, 0, 18);
+
+/* exact CSS3DRenderer composition, minimal form: camera div gets the
+   row-flipped inverse camera matrix behind a translateZ(fov); each panel
+   gets its column-flipped world matrix. */
+function eps(v){ return Math.abs(v)<1e-10 ? 0 : v; }
+function camCSS(m){
+  const e=m.elements;
+  return 'matrix3d('+eps(e[0])+','+eps(-e[1])+','+eps(e[2])+','+eps(e[3])+','
+    +eps(e[4])+','+eps(-e[5])+','+eps(e[6])+','+eps(e[7])+','
+    +eps(e[8])+','+eps(-e[9])+','+eps(e[10])+','+eps(e[11])+','
+    +eps(e[12])+','+eps(-e[13])+','+eps(e[14])+','+eps(e[15])+')';
+}
+function objCSS(m){
+  const e=m.elements;
+  return 'matrix3d('+eps(e[0])+','+eps(e[1])+','+eps(e[2])+','+eps(e[3])+','
+    +eps(-e[4])+','+eps(-e[5])+','+eps(-e[6])+','+eps(-e[7])+','
+    +eps(e[8])+','+eps(e[9])+','+eps(e[10])+','+eps(e[11])+','
+    +eps(e[12])+','+eps(e[13])+','+eps(e[14])+','+eps(e[15])+')';
+}
+const _m = new THREE.Matrix4();
+function updateScreens(){
+  const h = innerHeight, wdt = innerWidth;
+  const fovPx = camera.projectionMatrix.elements[5] * h/2;
+  css3d.style.perspective = fovPx+'px';
+  camera.updateMatrixWorld();
+  css3dCam.style.transform = 'translateZ('+fovPx+'px)'
+    + camCSS(_m.copy(camera.matrixWorld).invert())
+    + 'translate('+(wdt/2)+'px,'+(h/2)+'px)';
+  for(const sc of screens){
+    sc.obj.updateMatrixWorld();
+    const facing = new THREE.Vector3(0,0,1).applyQuaternion(sc.obj.quaternion)
+      .dot(new THREE.Vector3().subVectors(camera.position, sc.obj.position).normalize());
+    const vis = facing>0.05;
+    sc.el.style.display = vis?'block':'none';
+    if(!vis) continue;
+    sc.el.style.transform = 'translate(-50%,-50%)' + objCSS(sc.obj.matrixWorld);
+  }
+}
+
+/* ink -> screen: render current passage + choices; choices feed BOONS back
+   into flight. The game feeds beacons back into ink. Two-way bus. */
+let storyMode=false;
+function renderInk(){
+  if(!inkStory) return;
+  const txt = mainScreen.el.querySelector('.inkText');
+  const ch  = mainScreen.el.querySelector('.choices');
+  let html='';
+  while(inkStory.canContinue){
+    const line = inkStory.Continue().trim();
+    if(line) html += '<p>'+line.replace(/</g,'&lt;')+'</p>';
+  }
+  if(html) txt.innerHTML = html;
+  ch.innerHTML='';
+  inkStory.currentChoices.forEach((c,i)=>{
+    const b=document.createElement('button');
+    b.type='button'; b.className='choice'; b.textContent='▸ '+c.text;
+    b.style.animationDelay=(0.15*i)+'s';
+    b.addEventListener('click', ()=>{
+      inkStory.ChooseChoiceIndex(i);
+      renderInk();
+      applyBoon();
+      if(inkStory.currentChoices.length===0 && !inkStory.canContinue) exitStoryMode();
+    });
+    ch.appendChild(b);
+  });
+  if(inkStory.currentChoices.length===0 && !inkStory.canContinue && storyMode)
+    setTimeout(exitStoryMode, 1600);
+}
+function applyBoon(){
+  if(!inkStory) return;
+  const boon = String(inkStory.variablesState.$('boon'));
+  if(boon==='wind' && !applyBoon._wind){ applyBoon._wind=true;
+    toast('THE WIND IS WITH YOU'); LEVELS.forEach(L=>L.magnet=Math.min(1,L.magnet*1.5)); }
+  if(boon==='warning' && !applyBoon._warn){ applyBoon._warn=true;
+    toast('THE PEREGRINE HAS BEEN NOTED'); }
+}
+function enterStoryMode(){
+  if(!inkStory || storyMode) return;
+  storyMode=true;
+  mainScreen.el.classList.remove('dormant'); mainScreen.el.classList.add('live');
+  splatBurst();
+  renderInk();
+}
+function exitStoryMode(){
+  if(!storyMode) return;
+  storyMode=false;
+  mainScreen.el.classList.add('dormant'); mainScreen.el.classList.remove('live');
+  mainScreen.el.querySelector('.inkText').innerHTML =
+    '<p>BEACONS '+state.lit+' / '+state.need+' · THE WHARF IS WATCHING</p>';
+  mainScreen.el.querySelector('.choices').innerHTML='';
+  splatBurst();
+  if(pendingWin){ pendingWin=false; showWinOverlay(); }
+}
+
+/* =========================================================
+   13. SPLAT LAYER — procedural gaussian-splat aesthetic:
+   soft points sampled on the tower skins; a swirl uniform
+   scatters and reforms them for transitions.
+   ========================================================= */
+const SPLATS = 4200;
+const swirlU = uniform(0);          // 0 = formed on surfaces, 1 = full swirl
+let swirlTarget=0, swirlPhase=0;
+function splatBurst(){ swirlPhase = 1.6; }
+{
+  const pos=new Float32Array(SPLATS*3), col=new Float32Array(SPLATS*3), sd=new Float32Array(SPLATS);
+  let i=0;
+  while(i<SPLATS){
+    const t = TOWERS[Math.floor(Math.random()*TOWERS.length)];
+    const h = Math.random()*t.h;
+    const side = Math.floor(Math.random()*4);
+    const hw=t.w/2, hd=t.d/2;
+    let x=t.x, z=t.z;
+    if(side===0){ x+= (Math.random()*2-1)*hw; z+=hd; }
+    else if(side===1){ x+= (Math.random()*2-1)*hw; z-=hd; }
+    else if(side===2){ x+=hw; z+=(Math.random()*2-1)*hd; }
+    else { x-=hw; z+=(Math.random()*2-1)*hd; }
+    pos[i*3]=x; pos[i*3+1]=h; pos[i*3+2]=z;
+    const warm = Math.random()<0.4;
+    col[i*3]  = warm?1.0:0.45+Math.random()*0.2;
+    col[i*3+1]= warm?0.78:0.55+Math.random()*0.2;
+    col[i*3+2]= warm?0.42:0.85;
+    sd[i]=Math.random()*100;
+    i++;
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  g.setAttribute('color', new THREE.BufferAttribute(col,3));
+  g.setAttribute('seed', new THREE.BufferAttribute(sd,1));
+  const pm = new THREE.PointsNodeMaterial({ transparent:true, depthWrite:false,
+    blending:THREE.AdditiveBlending });
+  const seedA = attribute('seed','float');
+  const swirl = Fn(()=>{
+    const a = seedA.mul(0.13).add(time.mul(0.35)).add(seedA);
+    const r = seedA.mul(0.9).add(24.0);
+    const sw = vec3(sin(a).mul(r), seedA.mul(0.7).add(20.0).add(sin(time.mul(0.5).add(seedA)).mul(8.0)), cos(a.mul(1.3)).mul(r).sub(20.0));
+    return mix(positionWorld, sw, swirlU);
+  });
+  pm.positionNode = mix(attribute('position','vec3'),
+    vec3(sin(seedA.mul(0.13).add(time.mul(0.35))).mul(seedA.mul(0.5).add(24.0)),
+         seedA.mul(0.6).add(16.0).add(sin(time.mul(0.5).add(seedA)).mul(9.0)),
+         cos(seedA.mul(0.17).add(time.mul(0.28))).mul(seedA.mul(0.5).add(24.0)).sub(20.0)),
+    swirlU);
+  pm.colorNode = attribute('color','vec3').mul(swirlU.mul(1.6).add(0.35));
+  pm.sizeNode = swirlU.mul(5.0).add(2.5);
+  pm.opacityNode = swirlU.mul(0.5).add(0.10);
+  const pts = new THREE.Points(g, pm);
+  pts.frustumCulled = false;
+  scene.add(pts);
+}
 
 /* headless-test hook */
 window.__cw = {
