@@ -679,6 +679,14 @@ function buildDistrict(){
   /* street lamps on the parade */
   for(const lz of [-18,-8]){ fill(-19,1,lz, -19,2,lz, P.darkGrey); lamps.push([-18.5,3.4,lz+0.5]); }
 
+  /* THE PLAYTEST ROW — four PETs right at the spawn, one per splat
+     place (carshop/forest/garden/tree), so testing the dream ports
+     needs zero walking */
+  setCell(-3,1,1, P.darkGrey);
+  setCell(-1,1,1, P.darkGrey);
+  setCell(1,1,1, P.darkGrey);
+  setCell(3,1,1, P.darkGrey);
+
   /* candy-PET desks around the world — the dream has more than one door */
   setCell(55,6,-7, P.darkGrey);      // the Library
   setCell(40,11,-17, P.darkGrey);    // the Attic
@@ -1746,6 +1754,12 @@ makePET('grape',      0x8f63cc, 55.5,7,-6.5, 0,          55.5,6,-5.6);   // the 
 makePET('strawberry', 0xe8546e, 40.5,12,-16.5, 0,        40.5,11,-15.6); // the Attic
 makePET('lime',       0x8fc43a, 56.5,2,10.5, -Math.PI/2, 55.4,1,10.5);   // the Conservatory
 makePET('tangerine',  0xe8863a, -11.5,7,2.5, Math.PI,    -11.5,6,1.2);   // the maglev platform
+/* the playtest row at the spawn (bondi=carshop, strawberry=forest,
+   lime=garden, grape=tree via the dream's tint map) */
+makePET('bondi',      0x1f9bb5, -2.5,2,1.5, 0, -2.5,1,2.6);
+makePET('strawberry', 0xe8546e, -0.5,2,1.5, 0, -0.5,1,2.6);
+makePET('lime',       0x8fc43a,  1.5,2,1.5, 0,  1.5,1,2.6);
+makePET('grape',      0x8f63cc,  3.5,2,1.5, 0,  3.5,1,2.6);
 
 /* --- district dressing (visual only) --- */
 {

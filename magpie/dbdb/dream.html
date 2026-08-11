@@ -520,6 +520,12 @@ function rayBlockCount(ro,rd,pts,stride,maxT){
 const _vro=new pc.Vec3(), _vrd=new pc.Vec3(), _vp=new pc.Vec3();
 function computeVis(){
   window.__visDbg={};
+  /* field report (owner, iPhone): the DOM twin and the engine plate
+     diverge off the boot bearing — matrix handedness only agreed at one
+     angle. The unified experience is the engine plate alone; the HTML
+     overlay hides behind ?html=1 until the mapping is proven from all
+     bearings. */
+  if(!Q.has('html')) return false;
   if(!loaded) return (__visDbg.loaded=false);
   _vro.copy(camE.getPosition());
   /* facing: are we in front of the fixed screen? */
@@ -726,6 +732,11 @@ try{ inkStory=new inkjs.Compiler(INK_SOURCE).Compile(); }
 catch(e){ console.warn('ink compile failed', e); }
 
 /* choices choreograph the camera */
+/* the tour: four stations around the scan — ink choices carry you
+   from area to area, showing the place off on the way */
+const TOUR=[[0.55,0.05,0],[0,0.02,0.55],[-0.55,0.08,0],[0,0.05,-0.55]]
+  .map(o=>new pc.Vec3(C.x+o[0]*R, C.y+o[1]*R, C.z+o[2]*R));
+let tourI=0;
 function choiceFlight(label){
   const L=label.toLowerCase();
   if(L.includes('listen')) fly({ dYaw:40, toPitch:4, toDist:0.72, dur:3.5 });
@@ -733,7 +744,10 @@ function choiceFlight(label){
     const c=clueMeshes.find(cm=>!cm.found);
     if(c) fly({ dYaw:120, toPitch:10, toDist:0.55, tgt:c.grp.getPosition(), dur:3.8 });
   }
-  else if(L.includes('drift')) fly({ dYaw:360, toDist:1.15, tgt:CAM_TGT, dur:8 });
+  else if(L.includes('drift')){
+    tourI=(tourI+1)%TOUR.length;
+    fly({ dYaw:150, toPitch:6, toDist:0.7, tgt:TOUR[tourI], dur:6 });
+  }
   else if(L.includes('wake')) return 'wake';    // handled by the caller
   return null;
 }
