@@ -559,7 +559,7 @@ if(EDIT){
     if(!lastPlace) return;
     const data=JSON.stringify({ scene:SCENEKEY, label:'NEW PORT',
       pos:[+lastPlace.x.toFixed(3),+lastPlace.y.toFixed(3),+lastPlace.z.toFixed(3)],
-      yaw:+lastYaw.toFixed(1) });
+      yaw:+lastYaw.toFixed(1), pit:+lastPit.toFixed(1), d:+lastD.toFixed(3) });
     if(navigator.clipboard) navigator.clipboard.writeText(data).catch(()=>{});
     document.getElementById('ebInfo').textContent=data;
   });
@@ -582,12 +582,18 @@ function splatHit(cx,cy){
   if(best===Infinity) return null;
   return new pc.Vec3().copy(rd).mulScalar(best).add(ro);
 }
-let lastYaw=0;
+let lastYaw=0, lastPit=0, lastD=0.68;
 function editPlace(cx,cy){
   const h=splatHit(cx,cy);
   if(!h) return false;
   lastPlace=h;
-  lastYaw=Math.atan2(camE.getPosition().x-h.x, camE.getPosition().z-h.z)*180/Math.PI;
+  const cp=camE.getPosition();
+  lastYaw=Math.atan2(cp.x-h.x, cp.z-h.z)*180/Math.PI;
+  /* pitch and distance of the CURRENT view of the placed point, in the
+     orbit rig's own terms — so arrival reproduces the owner's exact view */
+  const baseElev=Math.atan2(base.y, Math.hypot(base.x,base.z))*180/Math.PI;
+  lastPit=Math.atan2(cp.y-h.y, Math.hypot(cp.x-h.x,cp.z-h.z))*180/Math.PI - baseElev;
+  lastD=Math.min(1.5, Math.max(0.45, cp.distance(h)/base.length()));
   if(!ghost) ghost=makePETmarker([h.x,h.y,h.z]);
   ghost.setPosition(h.x,h.y,h.z);
   ghost.setEulerAngles(0,lastYaw,0);
@@ -940,10 +946,13 @@ function flyStation(sti, opts={}){
   const aim=STN[sti]?STN[sti].yaw:(sti*90+40);
   let want=aim-bAng-yaw;
   while(want>180) want-=360; while(want<-180) want+=360;
+  const s=STN[sti]||{};
+  const pit=(s.pit!==undefined)?s.pit:(4+sti*3);
+  const dst=s.d||0.68;
   const there = !opts.arrive && Math.abs(want)<12 && TGT_CUR.distance(TOUR[sti])<0.25*R;
   fly(there
-    ? { dYaw:360, toPitch:4+sti*3, toDist:0.68, tgt:TOUR[sti], dur:6 }
-    : { dYaw:want+(opts.arrive?-360:0), toPitch:4+sti*3, toDist:0.68,
+    ? { dYaw:360, toPitch:pit, toDist:dst, tgt:TOUR[sti], dur:6 }
+    : { dYaw:want+(opts.arrive?-360:0), toPitch:pit, toDist:dst,
         tgt:TOUR[sti], dur:opts.arrive?5.5:5, quiet:!!opts.arrive });
 }
 function choiceFlight(label){
