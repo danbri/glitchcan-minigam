@@ -1362,7 +1362,21 @@ function npcStep(n, dt){
   const dx=wp[0]-n.x, dz=wp[2]-n.z, d=Math.hypot(dx,dz);
   if(d<0.14){ n.y=wp[1]; n.pi++; return n.pi>=n.path.length; }
   const st=Math.min(d, n.speed*dt);
-  n.x+=dx/d*st; n.z+=dz/d*st;
+  let nx=n.x+dx/d*st, nz=n.z+dz/d*st;
+  /* on level ground, do not ghost through furniture: slide around it,
+     and if truly cornered for a while, give up on this waypoint */
+  if(Math.abs(wp[1]-n.y)<0.2){
+    const fy=Math.floor(n.y+0.01);
+    const blocked=(X,Z)=>cellSolid(Math.floor(X),fy,Math.floor(Z));
+    if(blocked(nx,nz)){
+      if(!blocked(nx,n.z)) nz=n.z;
+      else if(!blocked(n.x,nz)) nx=n.x;
+      else { n.stall=(n.stall||0)+dt;
+        if(n.stall>1.5){ n.stall=0; n.pi++; return n.pi>=n.path.length; }
+        n.gait+=st*1.2; return false; }
+    } else n.stall=0;
+  }
+  n.x=nx; n.z=nz;
   n.y+=(wp[1]-n.y)*Math.min(1,dt*7);
   n.facing=Math.atan2(dx,dz);
   n.gait+=st*2.35;
@@ -1747,6 +1761,17 @@ makePET('tangerine',  0xe8863a, -11.5,7,2.5, Math.PI,    -11.5,6,1.2);   // the 
   for(let i=0;i<6;i++) shelf(-29.5+i*0.55, 2.0, -2.5, 0.42,0.2,0.24, i%2?0xb07c3e:0xd9a865); // loaves
   const of1=new THREE.Mesh(flameGeo, flameMat);    // the oven glows
   of1.position.set(-31.3,1.5,-5.2); of1.scale.setScalar(1.4); scene.add(of1);
+  /* sub-block scale: hardcoded half/third-height pieces (kerbs, steps,
+     stools) to break the one-size grid without re-engineering the mesher */
+  shelf(-18,1,7, 1.4,0.5,2.2, 0x787878);            // the Newt's doorstep (half)
+  shelf(-27,1,6.05, 8,0.34,0.35, 0x574200);         // counter foot-rail (third)
+  shelf(-28.1,1,9.5, 0.55,0.5,0.55, 0x8b5429);      // stools at the tables
+  shelf(-29.3,1,8.4, 0.55,0.5,0.55, 0x8b5429);
+  shelf(-24.1,1,9.6, 0.55,0.5,0.55, 0x8b5429);
+  shelf(-23.2,1,8.5, 0.55,0.5,0.55, 0x8b5429);
+  shelf(-25.2,1,-12.5, 0.7,0.34,5.5, 0x9f9f9f);     // greengrocer street step
+  shelf(-25.2,1,-2.5, 0.7,0.34,5.5, 0x9f9f9f);      // bakery street step
+  shelf(-9.6,6,1.5, 0.3,0.34,3.6, 0xbfce72);        // platform kerb strip
 }
 
 /* game-object meshes: crates, locks, levers, springs, lamp heads */
@@ -1828,6 +1853,29 @@ const chip = {
       const src=this.ctx.createBufferSource(); src.buffer=buf; src.loop=true;
       this.noiseGain=this.ctx.createGain(); this.noiseGain.gain.value=0;
       src.connect(this.noiseGain); this.noiseGain.connect(this.master); src.start();
+      /* THE UNDERTOW — a deep bassy rumble under everything. Mobile-lean
+         WebAudio: ~10 nodes built once, breathing via audio-rate LFOs on
+         gain params — zero per-frame JS, zero timers. */
+      this.drone=this.ctx.createGain(); this.drone.gain.value=0.05;
+      this.drone.connect(this.master);
+      for(const f of [41.2, 41.9, 82.4]){
+        const o=this.ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=f;
+        const lp=this.ctx.createBiquadFilter(); lp.type='lowpass';
+        lp.frequency.value=f<60?95:130; lp.Q.value=0.7;
+        const og=this.ctx.createGain(); og.gain.value=f<60?0.5:0.14;
+        o.connect(lp); lp.connect(og); og.connect(this.drone); o.start();
+      }
+      { const lfo=this.ctx.createOscillator(); lfo.frequency.value=0.07;
+        const lg=this.ctx.createGain(); lg.gain.value=0.02;
+        lfo.connect(lg); lg.connect(this.drone.gain); lfo.start(); }
+      { const wind=this.ctx.createBufferSource(); wind.buffer=buf; wind.loop=true;
+        const bp=this.ctx.createBiquadFilter(); bp.type='bandpass';
+        bp.frequency.value=240; bp.Q.value=0.6;
+        const wg=this.ctx.createGain(); wg.gain.value=0.012;
+        const lfo2=this.ctx.createOscillator(); lfo2.frequency.value=0.045;
+        const lg2=this.ctx.createGain(); lg2.gain.value=0.007;
+        lfo2.connect(lg2); lg2.connect(wg.gain); lfo2.start();
+        wind.connect(bp); bp.connect(wg); wg.connect(this.drone); wind.start(); }
     }
     if(this.ctx.state==='suspended') this.ctx.resume();
   },
@@ -2411,7 +2459,8 @@ function physics(dt){
   // the bedtime clock ticks (Prince of Persia rules: the deadline is real)
   const clockWas=state.clock;
   state.clock-=dt;
-  if(clockWas>=120 && state.clock<120) music.playTag('danger');   // the wireless knows
+  if(clockWas>=120 && state.clock<120){ music.playTag('danger');   // the wireless knows
+    if(chip.drone) chip.drone.gain.setTargetAtTime(0.1, chip.ctx.currentTime, 3); }
   if(state.clock<=0){ midnight(); return; }
 
   readInput();

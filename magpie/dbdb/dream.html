@@ -21,7 +21,6 @@
     background:
       radial-gradient(120% 100% at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,20,8,.55) 100%),
       repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, rgba(0,0,0,0) 1px 3px);
-    mix-blend-mode:normal;
   }
   #head {
     position:fixed; top:0; left:0; right:0; z-index:8; display:flex;
@@ -41,13 +40,18 @@
     font-size:12px; letter-spacing:.28em; color:rgba(159,232,176,.8);
     text-shadow:0 0 10px rgba(80,255,140,.6);
   }
+  /* the mini terminal IN the world (CSS matrix3d over the canvas) */
+  #css3d { position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:7; }
+  #css3dCam { width:100%; height:100%; transform-style:preserve-3d; pointer-events:none; }
   #panel {
-    position:fixed; left:8px; right:8px; bottom:8px; z-index:8;
-    max-height:44%; overflow-y:auto; padding:12px 14px;
-    background:rgba(1,8,4,.82); border:1px solid rgba(159,232,176,.4);
-    border-radius:6px; box-shadow:0 0 30px rgba(80,255,140,.12) inset;
-    font-size:13px; line-height:1.55;
+    position:absolute; left:0; top:0; transform-origin:50% 50%;
+    width:300px; min-height:180px; max-height:340px; overflow-y:auto;
+    padding:12px 14px;
+    background:rgba(1,10,5,.9); border:2px solid rgba(159,232,176,.55);
+    border-radius:8px; box-shadow:0 0 40px rgba(80,255,140,.22), inset 0 0 30px rgba(0,0,0,.7);
+    font-size:13px; line-height:1.5; pointer-events:auto;
   }
+  #panel .crest { font-size:9px; letter-spacing:.3em; opacity:.65; margin-bottom:6px; }
   #panel p { margin:0 0 8px; animation:inkIn .7s ease both;
     text-shadow:0 0 6px rgba(80,255,140,.35); }
   @keyframes inkIn { from{opacity:0; transform:translateY(6px); filter:blur(4px);}
@@ -69,7 +73,9 @@
 <div id="head"><span>PORT/7 · DREAM SHELL</span><span id="clueTally">CLUES 0/3</span></div>
 <button type="button" id="exitBtn">✕ SURFACE</button>
 <div id="loadLine">TUNING THE STATIC…</div>
-<div id="panel"><div class="inkText"></div><div class="choices"></div></div>
+<div id="css3d"><div id="css3dCam">
+  <div id="panel"><div class="crest">PORT/7 TERMINAL</div><div class="inkText"></div><div class="choices"></div></div>
+</div></div>
 <pre id="err"></pre>
 
 <script src="../../third_party/ink/ink-full.min.js"></script>
@@ -92,9 +98,41 @@ document.getElementById('panel').style.borderColor=tint;
 document.getElementById('exitBtn').style.borderColor=tint;
 
 /* =========================================================
-   PlayCanvas — REAL gaussian splatting, including on iOS
-   Safari, where GaussianSplats3D drew a black screen. CDN
-   first, vendored third_party/ fallback (house pattern).
+   THE PORTS — every scan CC-permissive, every scan shown
+   upright: the scene root is rotated so the scan's own up
+   becomes world +y, and everything else lives in y-up space.
+   ========================================================= */
+const SCENES={
+  tree:  { ply:'splats/christmas-tree-150k.compressed.ply',
+           hq:'splats/christmas-tree-400k.compressed.ply',
+           up:[-0.522,0.836,0.168], c:[-0.4,-0.1,0.9], r:2.6,
+           pal:['#d8d8d8','#f0f0f0','#a8a8a8','#55a049','#b83932','#e8b48c'],
+           what:"a pine tree standing in somebody's scanned-in winter, holding its breath",
+           credit:'ChristmasTree · keijiro-tk/splat-data · The Unlicense' },
+  guitar:{ ply:'splats/guitar.compressed.ply',
+           up:[0,-1,0], c:[0.15,-1.62,0.22], r:2.0,
+           pal:['#a87848','#d8a878','#784818','#a8a8a8','#e8d8b0','#787878'],
+           what:'a guitar, still holding its last chord',
+           credit:'guitar · playcanvas/engine examples · MIT' },
+  skull: { ply:'splats/skull-120k.compressed.ply',
+           up:[0,-1,0], c:[-0.05,-0.82,-0.10], r:1.4,
+           pal:['#d8a878','#a87848','#f0e0c0','#784818','#484818','#181818'],
+           what:'a skull, grinning politely at the drift',
+           credit:'skull · playcanvas/engine examples · MIT' },
+  biker: { ply:'splats/biker.compressed.ply',
+           up:[0,-1,0], c:[-0.03,-1.60,0.02], r:1.8,
+           pal:['#a8a8a8','#d8d8d8','#787878','#784848','#f0e8d8','#484848'],
+           what:'a motorcycle, parked forever in the static',
+           credit:'biker · playcanvas/engine examples · MIT' },
+};
+const TINT2SCENE={ bondi:'guitar', grape:'tree', strawberry:'skull',
+                   lime:'tree', tangerine:'biker' };
+const SCENE=SCENES[Q.get('scene')] || SCENES[TINT2SCENE[Q.get('tint')]] || SCENES.tree;
+const SPLAT_PATH=(Q.has('hq') && SCENE.hq) ? SCENE.hq : SCENE.ply;
+
+/* =========================================================
+   PlayCanvas — REAL gaussian splatting, including on iOS.
+   CDN first, vendored third_party/ fallback (house pattern).
    ========================================================= */
 async function loadPC(){
   const CDN='https://cdn.jsdelivr.net/npm/playcanvas@2.21.3/build/playcanvas.min.mjs';
@@ -105,9 +143,6 @@ async function loadPC(){
 }
 const pc = await loadPC();
 
-const HQ=Q.has('hq');
-const SPLAT_PATH='splats/christmas-tree-'+(HQ?'400k':'150k')+'.compressed.ply';
-
 const canvas=document.createElement('canvas');
 document.getElementById('stage').appendChild(canvas);
 const app=new pc.Application(canvas, { graphicsDeviceOptions:{ antialias:false } });
@@ -116,36 +151,70 @@ app.setCanvasResolution(pc.RESOLUTION_AUTO);
 app.graphicsDevice.maxPixelRatio=Math.min(devicePixelRatio,2);
 app.start();
 
-/* camera on the scan's own tilted vertical (PCA of the core) */
-const CAM_UP =new pc.Vec3(-0.522,0.836,0.168).normalize();
-const CAM_POS=new pc.Vec3(-0.88,0.83,-5.5);
-const CAM_TGT=new pc.Vec3(-0.4,-0.1,0.9);
+/* scene root: rotate scan-up onto world +y — up is up, always */
+function rotationTo(a,b){                      // quat rotating unit vec a -> b
+  const d=a.dot(b);
+  if(d>0.9999) return new pc.Quat();
+  if(d<-0.9999) return new pc.Quat().setFromAxisAngle(new pc.Vec3(1,0,0),180);
+  const axis=new pc.Vec3().cross(a,b).normalize();
+  return new pc.Quat().setFromAxisAngle(axis, Math.acos(d)*180/Math.PI);
+}
+const upQ=rotationTo(new pc.Vec3(...SCENE.up).normalize(), new pc.Vec3(0,1,0));
+const sceneRoot=new pc.Entity('sceneRoot');
+sceneRoot.setRotation(upQ);
+app.root.addChild(sceneRoot);
+/* the scan centre, in upright world space */
+const C=new pc.Vec3(); upQ.transformVector(new pc.Vec3(...SCENE.c), C);
+const R=SCENE.r;
+
+/* camera: y-up, orbiting the scan centre */
+const CAM_TGT=C.clone();
+const CAM_POS=new pc.Vec3(C.x+0.35*R, C.y+0.42*R, C.z-2.1*R);
 const camE=new pc.Entity('cam');
 camE.addComponent('camera', { clearColor:new pc.Color(0.004,0.008,0.016),
-  fov:60, nearClip:0.05, farClip:100 });
+  fov:60, nearClip:0.05, farClip:200 });
 app.root.addChild(camE);
-camE.setPosition(CAM_POS);
-camE.lookAt(CAM_TGT, CAM_UP);
+camE.setPosition(CAM_POS); camE.lookAt(CAM_TGT, pc.Vec3.UP);
 
-/* one-finger orbit about the scan's up-axis + a slow idle drift */
-let dragging=false,lx=0,ly=0, yaw=0, pitch=0, idle=0;
+/* orbit state: yaw/pitch/dist factor + a lerping look target */
+let dragging=false,lx=0,ly=0, yaw=0, pitch=0, distF=1, idle=0;
+const TGT_CUR=CAM_TGT.clone();
+let tgtGoal=CAM_TGT.clone();
 addEventListener('pointerdown',e=>{ dragging=true; lx=e.clientX; ly=e.clientY; });
 addEventListener('pointermove',e=>{ if(!dragging) return;
+  flight=null;                                  // your thumb outranks the choreography
   yaw-=(e.clientX-lx)*0.28; pitch+=(e.clientY-ly)*0.22;
-  pitch=Math.max(-45,Math.min(45,pitch)); idle=0;
+  pitch=Math.max(-45,Math.min(60,pitch)); idle=0;
   lx=e.clientX; ly=e.clientY; });
 addEventListener('pointerup',()=>{ dragging=false; });
 const base=new pc.Vec3().sub2(CAM_POS,CAM_TGT);
-const side=new pc.Vec3().cross(CAM_UP,base).normalize();
+const side=new pc.Vec3().cross(pc.Vec3.UP,base).normalize();
 const _q1=new pc.Quat(), _q2=new pc.Quat(), _off=new pc.Vec3(), _pos=new pc.Vec3();
 
 /* =========================================================
-   the three clues, hidden in the drift
+   choreographed flights: choices move the CAMERA through the
+   world, eased, with a synth riser timed to the flight
+   ========================================================= */
+let flight=null;
+function fly(o){  // {dYaw, toPitch, toDist, tgt, dur, onDone, quiet}
+  flight={ t:0, dur:o.dur||3,
+    yaw0:yaw, yaw1:yaw+(o.dYaw||0),
+    p0:pitch, p1:(o.toPitch!==undefined?o.toPitch:pitch),
+    d0:distF, d1:(o.toDist!==undefined?o.toDist:distF),
+    onDone:o.onDone||null };
+  if(o.tgt) tgtGoal=o.tgt.clone();
+  if(!o.quiet) riser(flight.dur);
+}
+const ease=k=>k*k*(3-2*k);
+
+/* =========================================================
+   the three clues: low / heart / high along world-up, so the
+   dream's hints stay true in every port
    ========================================================= */
 const CLUES=[
-  { pos:[-1.30, 0.45,-1.10], name:'a paper crown' },
-  { pos:[ 0.25,-0.45, 0.30], name:'a brass key'   },
-  { pos:[ 0.55, 1.05, 1.60], name:'a working bulb'},
+  { off:[ 0.30,-0.36, 0.10], name:'a paper crown' },
+  { off:[-0.24, 0.02, 0.18], name:'a brass key'   },
+  { off:[ 0.12, 0.46,-0.22], name:'a working bulb'},
 ];
 const clueMeshes=[];
 function glowMat(hex, opacity){
@@ -161,60 +230,125 @@ for(const c of CLUES){
   const core=new pc.Entity('core');
   core.addComponent('render',{ type:'box' });
   core.render.meshInstances[0].material=glowMat('#aaffc4',1);
-  core.setLocalScale(0.13,0.13,0.13);
+  core.setLocalScale(0.1*R,0.1*R,0.1*R);
   core.setLocalEulerAngles(45,0,45);
   grp.addChild(core);
   const halo=new pc.Entity('halo');
   halo.addComponent('render',{ type:'box' });
   halo.render.meshInstances[0].material=glowMat('#66ff99',0.22);
-  halo.setLocalScale(0.24,0.24,0.24);
+  halo.setLocalScale(0.18*R,0.18*R,0.18*R);
   halo.setLocalEulerAngles(45,0,45);
   grp.addChild(halo);
-  grp.setPosition(c.pos[0],c.pos[1],c.pos[2]);
+  grp.setPosition(C.x+c.off[0]*R, C.y+c.off[1]*R, C.z+c.off[2]*R);
   app.root.addChild(grp);
   clueMeshes.push({ grp, core, halo, found:false, name:c.name });
 }
 
-/* clue pulse + camera orbit, one update hook */
+/* motes: the scan's own colours infect the drifting particles */
+const motes=[];
+for(let i=0;i<44;i++){
+  const e=new pc.Entity('mote');
+  e.addComponent('render',{ type:'box' });
+  e.render.meshInstances[0].material=glowMat(SCENE.pal[i%SCENE.pal.length], 0.55);
+  const s=0.008*R*(1+Math.random()*1.6);
+  e.setLocalScale(s,s,s);
+  app.root.addChild(e);
+  motes.push({ e, a:Math.random()*Math.PI*2, rr:R*(0.5+Math.random()*1.1),
+    h:(Math.random()*2-1)*R*0.8, sp:0.05+Math.random()*0.12, ph:Math.random()*6 });
+}
+
+/* the in-world mini terminal: anchored beside the scan, facing you */
+const panel=document.getElementById('panel');
+const css3d=document.getElementById('css3d'), css3dCam=document.getElementById('css3dCam');
+const PANEL_POS=new pc.Vec3();
+const PANEL_SCALE=(0.72*R)/300;
+function eps(v){ return Math.abs(v)<1e-10?0:v; }
+function camCSS(e){
+  return 'matrix3d('+eps(e[0])+','+eps(-e[1])+','+eps(e[2])+','+eps(e[3])+','+eps(e[4])+','+eps(-e[5])+','+eps(e[6])+','+eps(e[7])+','+eps(e[8])+','+eps(-e[9])+','+eps(e[10])+','+eps(e[11])+','+eps(e[12])+','+eps(-e[13])+','+eps(e[14])+','+eps(e[15])+')';
+}
+function objCSS(e){
+  return 'matrix3d('+eps(e[0])+','+eps(e[1])+','+eps(e[2])+','+eps(e[3])+','+eps(-e[4])+','+eps(-e[5])+','+eps(-e[6])+','+eps(-e[7])+','+eps(e[8])+','+eps(e[9])+','+eps(e[10])+','+eps(e[11])+','+eps(e[12])+','+eps(e[13])+','+eps(e[14])+','+eps(e[15])+')';
+}
+const _inv=new pc.Mat4(), _f=new pc.Vec3(), _r=new pc.Vec3(), _u=new pc.Vec3();
+function updatePanel(){
+  /* the terminal floats IN the world but keeps station: left of the
+     subject as seen from wherever you are (parallax without loss) */
+  const camR=camE.right;
+  PANEL_POS.set(TGT_CUR.x - camR.x*0.28*R,
+                TGT_CUR.y + 0.06*R,
+                TGT_CUR.z - camR.z*0.28*R);
+  const h=innerHeight, w=innerWidth;
+  const fovPx=camE.camera.projectionMatrix.data[5]*h/2;
+  css3d.style.perspective=fovPx+'px';
+  _inv.copy(camE.getWorldTransform()).invert();
+  css3dCam.style.transform='translateZ('+fovPx+'px)'+camCSS(_inv.data)
+    +'translate('+(w/2)+'px,'+(h/2)+'px)';
+  /* billboard matrix: +z toward the camera, world-up-ish, uniform scale */
+  _f.sub2(camE.getPosition(), PANEL_POS).normalize();
+  _r.cross(pc.Vec3.UP,_f).normalize();
+  _u.cross(_f,_r);
+  const s=PANEL_SCALE;
+  const m=[ _r.x*s,_r.y*s,_r.z*s,0, _u.x*s,_u.y*s,_u.z*s,0,
+            _f.x*s,_f.y*s,_f.z*s,0, PANEL_POS.x,PANEL_POS.y,PANEL_POS.z,1 ];
+  panel.style.transform='translate(-50%,-50%)'+objCSS(m);
+}
+
+/* one update hook: orbit, flights, clue pulse, motes, panel */
 let t=0;
 app.on('update', dt=>{
   t+=dt; idle+=dt;
-  if(idle>2.5) yaw+=dt*3.5;                       // the dream drifts (degrees)
-  _q1.setFromAxisAngle(CAM_UP, yaw);
+  if(flight){
+    flight.t+=dt;
+    const k=ease(Math.min(1,flight.t/flight.dur));
+    yaw=flight.yaw0+(flight.yaw1-flight.yaw0)*k;
+    pitch=flight.p0+(flight.p1-flight.p0)*k;
+    distF=flight.d0+(flight.d1-flight.d0)*k;
+    idle=0;
+    if(flight.t>=flight.dur){ const f=flight.onDone; flight=null; if(f) f(); }
+  } else if(idle>2.5) yaw+=dt*3.5;              // the dream drifts
+  TGT_CUR.lerp(TGT_CUR, tgtGoal, Math.min(1,dt*2.5));
+  _q1.setFromAxisAngle(pc.Vec3.UP, yaw);
   _q2.setFromAxisAngle(side, pitch);
   _q1.transformVector(base,_off); _q2.transformVector(_off,_off);
-  _pos.add2(CAM_TGT,_off);
+  _off.mulScalar(distF);
+  _pos.add2(TGT_CUR,_off);
   camE.setPosition(_pos);
-  camE.lookAt(CAM_TGT, CAM_UP);
+  camE.lookAt(TGT_CUR, pc.Vec3.UP);
   clueMeshes.forEach((c,i)=>{
     if(c.found) return;
     const s=1+Math.sin(t*3+i*2.1)*0.25;
-    c.core.setLocalScale(0.13*s,0.13*s,0.13*s);
-    const h=1+Math.sin(t*2.2+i)*0.4;
-    c.halo.setLocalScale(0.24*h,0.24*h,0.24*h);
+    c.core.setLocalScale(0.1*R*s,0.1*R*s,0.1*R*s);
+    const hh=1+Math.sin(t*2.2+i)*0.4;
+    c.halo.setLocalScale(0.18*R*hh,0.18*R*hh,0.18*R*hh);
     c.grp.setEulerAngles(0,(t*(40+i*12))%360,0);
   });
+  for(const m of motes){
+    m.a+=dt*m.sp;
+    m.e.setPosition(C.x+Math.cos(m.a)*m.rr,
+      C.y+m.h+Math.sin(t*0.4+m.ph)*0.06*R,
+      C.z+Math.sin(m.a)*m.rr);
+  }
+  updatePanel();
 });
 
 /* =========================================================
-   the splat itself — compressed.ply via the gsplat component
+   the splat itself
    ========================================================= */
 let loaded=false, splatOk=false, mode='none';
 const loadLine=document.getElementById('loadLine');
 function boot(){
   if(loaded) return;
   loaded=true; loadLine.classList.add('hidden');
-  console.log('dream renderer:', mode);
+  console.log('dream renderer:', mode, '· scene:', SCENE.credit);
   renderInk();
 }
 function loadSplat(attempt=0){
   const bust = attempt>0 ? '?r='+attempt+'-'+Date.now() : '';
-  const asset=new pc.Asset('tree','gsplat',{ url:SPLAT_PATH+bust });
+  const asset=new pc.Asset('scan','gsplat',{ url:SPLAT_PATH+bust });
   asset.on('load', ()=>{
-    const e=new pc.Entity('tree');
+    const e=new pc.Entity('scan');
     e.addComponent('gsplat',{ asset });
-    app.root.addChild(e);
-    window.__tree=e;
+    sceneRoot.addChild(e);
     splatOk=true; mode='playcanvas-gsplat'; boot();
   });
   asset.on('error', err=>{
@@ -235,7 +369,7 @@ const INK_SOURCE = `
 VAR clues = 0
 -> port
 == port ==
-The terminal dreamed you a place: a pine tree standing in somebody's scanned-in winter, holding its breath.
+The terminal dreamed you a place: ${SCENE.what}.
 Three bright things are hidden in the drift. Tap them when you find them. Drag to look around.
 + [Listen to the static] -> listening
 == listening ==
@@ -248,23 +382,23 @@ The needles hum at fifty hertz. The snow is made of other people's photographs.
 + [Ask the dream for a hint] -> hint
 + [Just drift a while] -> drift
 == hint ==
-{clues == 0: "Low, and left of the tree," the static says. "Something that once sat on a head."}
-{clues == 1: "Near the heart of the scan," it hums. "Small, brass, patient. Drag the view."}
-{clues == 2: "Higher," it crackles. "Past the tree-top, out in the drift. It still has light in it."}
+{clues == 0: "Low, near the base," the static says. "Something that once sat on a head."}
+{clues == 1: "At the heart of the scan," it hums. "Small, brass, patient."}
+{clues == 2: "Higher," it crackles. "Up past the top, out in the drift. It still has light in it."}
 {clues == 3: "You have them all. Why are we whispering?"}
 -> hub
 == drift ==
-{~The snow tilts, considering.|A photograph of a photograph goes by.|Somebody's living room breathes in.|The tree adjusts its shadow, like a coat.}
+{~The snow tilts, considering.|A photograph of a photograph goes by.|Somebody's room breathes in.|The scan adjusts its shadow, like a coat.}
 -> hub
 == found_1 ==
-ONE. A paper crown, folded by somebody's grandmother. The tree remembers being decorated.
+ONE. A paper crown, folded by somebody's grandmother. The scan remembers being loved.
 -> hub
 == found_2 ==
 TWO. A brass key on red thread. It opens nothing here. It opens something THERE.
 -> hub
 == found_3 ==
-THREE. A bulb that still works. The tree lights from the inside, once, just for you.
-The dream is satisfied. It presses the key into your hand and lets go.
+THREE. A bulb that still works. The dream lights from the inside, once, just for you.
+It presses the key into your hand and lets go.
 + [WAKE] -> wake
 == wake ==
 You surface through the static, grinning like a fool.
@@ -274,7 +408,18 @@ let inkStory=null;
 try{ inkStory=new inkjs.Compiler(INK_SOURCE).Compile(); }
 catch(e){ console.warn('ink compile failed', e); }
 
-const panel=document.getElementById('panel');
+/* choices choreograph the camera */
+function choiceFlight(label){
+  const L=label.toLowerCase();
+  if(L.includes('listen')) fly({ dYaw:40, toPitch:4, toDist:0.72, dur:3.5 });
+  else if(L.includes('hint')){
+    const c=clueMeshes.find(cm=>!cm.found);
+    if(c) fly({ dYaw:120, toPitch:10, toDist:0.55, tgt:c.grp.getPosition(), dur:3.8 });
+  }
+  else if(L.includes('drift')) fly({ dYaw:360, toDist:1.15, tgt:CAM_TGT, dur:8 });
+  else if(L.includes('wake')) return 'wake';    // handled by the caller
+  return null;
+}
 function renderInk(){
   if(!inkStory) return;
   const txt=panel.querySelector('.inkText'), ch=panel.querySelector('.choices');
@@ -290,12 +435,13 @@ function renderInk(){
     b.type='button'; b.className='choice'; b.textContent='▸ '+c.text;
     b.style.animationDelay=(0.1*i)+'s';
     b.addEventListener('click',()=>{
+      const kind=choiceFlight(c.text);
       inkStory.ChooseChoiceIndex(i); renderInk();
       /* completion ONLY when the hunt is done AND the story has ended —
-         a mid-story knot with no choices must never surface the player
-         (the "Listen to the static exits the game" bug) */
-      if(!inkStory.canContinue && inkStory.currentChoices.length===0
-         && found()===3) finish();
+         the WAKE flight pulls up and away, then surfaces you */
+      if(kind==='wake' && !inkStory.canContinue
+         && inkStory.currentChoices.length===0 && found()===3)
+        fly({ dYaw:180, toPitch:42, toDist:2.4, tgt:CAM_TGT, dur:3.2, onDone:finish });
     });
     ch.appendChild(b);
   });
@@ -336,15 +482,18 @@ function collect(c){
   const n=found();
   document.getElementById('clueTally').textContent='CLUES '+n+'/3';
   ping(n);
+  fly({ dYaw:70, toDist:0.85, tgt:c.grp.getPosition(), dur:2.0, quiet:true });
   if(inkStory){
     inkStory.variablesState.$('clues', n);
     try{ inkStory.ChoosePathString('found_'+n); }catch(e){}
     renderInk();
   }
-  setTimeout(()=>{ c.grp.enabled=false; }, 900);
+  setTimeout(()=>{ c.grp.enabled=false; tgtGoal=CAM_TGT.clone(); }, 1400);
 }
 
-/* one soft chime per clue (the tap itself is the gesture) */
+/* audio: one chime per clue + a riser under each flight.
+   Mobile-lean WebAudio: a handful of nodes, audio-rate ramps,
+   no per-frame JS scheduling. The tap itself is the gesture. */
 let actx=null;
 function ping(n){
   try{
@@ -360,6 +509,24 @@ function ping(n){
     });
   }catch(e){}
 }
+function riser(dur){
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    const t0=actx.currentTime+0.02;
+    const o=actx.createOscillator(), f=actx.createBiquadFilter(), g=actx.createGain();
+    o.type='sawtooth';
+    o.frequency.setValueAtTime(55, t0);
+    o.frequency.exponentialRampToValueAtTime(220, t0+dur*0.9);
+    f.type='lowpass'; f.Q.value=6;
+    f.frequency.setValueAtTime(180, t0);
+    f.frequency.exponentialRampToValueAtTime(1400, t0+dur*0.9);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.05, t0+dur*0.35);
+    g.gain.setTargetAtTime(0.0001, t0+dur*0.9, 0.2);
+    o.connect(f); f.connect(g); g.connect(actx.destination);
+    o.start(t0); o.stop(t0+dur+0.6);
+  }catch(e){}
+}
 
 document.getElementById('exitBtn').addEventListener('click', ()=>{
   parent.postMessage({ jsdDream:'exit' }, '*');
@@ -370,15 +537,16 @@ window.__dream = {
   get loaded(){ return loaded; },
   get splatOk(){ return splatOk; },
   get mode(){ return mode; },
+  get scene(){ return SCENE.credit; },
+  get flying(){ return !!flight; },
   get found(){ return found(); },
   get panelText(){ return panel.querySelector('.inkText').textContent; },
   tap(i){ collect(clueMeshes[i]); },
   proj(i){ const scale=app.graphicsDevice.width/innerWidth;
     camE.camera.worldToScreen(clueMeshes[i].grp.getPosition(), _scr);
     return { x:_scr.x/scale, y:_scr.y/scale }; },
-  setCam(px,py,pz,tx,ty,tz){ CAM_POS.set(px,py,pz); CAM_TGT.set(tx,ty,tz);
-    base.sub2(CAM_POS,CAM_TGT); side.cross(CAM_UP,base).normalize();
-    yaw=0; pitch=0; },
+  panelRect(){ const r=panel.getBoundingClientRect();
+    return { x:Math.round(r.x), y:Math.round(r.y), w:Math.round(r.width), h:Math.round(r.height) }; },
   choose(i){ const b=panel.querySelectorAll('.choice')[i]; if(b) b.click(); },
   exit(){ document.getElementById('exitBtn').click(); },
 };

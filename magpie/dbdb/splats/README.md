@@ -15,3 +15,10 @@
 with `npx @playcanvas/splat-transform` for the PlayCanvas gsplat renderer
 (`dream.html`). Coordinates verified byte-identical to the .splat sources
 (no axis change). Smaller than the .splat originals (2.3MB / 6.2MB).
+
+## More ports (Aug 2026, all CC-permissive)
+- `guitar.compressed.ply`, `biker.compressed.ply`, `skull-120k.compressed.ply`
+  — from the PlayCanvas engine examples (github.com/playcanvas/engine,
+  MIT). The skull was subsampled 247k→123k gaussians for mobile weight.
+  Wired as dream destinations in `dream.html` (SCENES table: per-scene
+  up-axis, centre, radius, palette); each candy PET dials a different port.
