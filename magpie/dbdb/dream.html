@@ -40,38 +40,36 @@
     font-size:12px; letter-spacing:.28em; color:rgba(159,232,176,.8);
     text-shadow:0 0 10px rgba(80,255,140,.6);
   }
-  /* the mini terminal IN the world (CSS matrix3d over the canvas) */
-  #css3d { position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:7; }
-  #css3dCam { width:100%; height:100%; transform-style:preserve-3d; pointer-events:none; }
+  /* THE TERMINAL: screen-filling, NOT in the world — pure ink UI */
   #panel {
-    position:fixed; left:0; top:0; transform-origin:50% 50%;
-    width:300px; min-height:180px; max-height:340px; overflow-y:auto;
-    padding:12px 14px;
-    background:rgba(1,10,5,.9); border:2px solid rgba(159,232,176,.55);
-    border-radius:8px; box-shadow:0 0 40px rgba(80,255,140,.22), inset 0 0 30px rgba(0,0,0,.7);
-    font-size:13px; line-height:1.5; pointer-events:auto;
+    position:fixed; left:4vw; right:4vw; top:9vh; z-index:22;
+    max-height:76vh; overflow-y:auto; padding:16px 16px 14px;
+    background:rgba(1,10,5,.96); border:2px solid rgba(159,232,176,.55);
+    border-radius:10px; box-shadow:0 0 60px rgba(80,255,140,.28), inset 0 0 40px rgba(0,0,0,.7);
+    font-size:17px; line-height:1.55;
   }
-  #panel .crest { font-size:9px; letter-spacing:.3em; opacity:.65; margin-bottom:6px; }
-  #readBtn { position:fixed; bottom:12px; right:10px; z-index:9;
-    background:rgba(0,30,12,.7); border:2px solid rgba(159,232,176,.6);
-    color:#9fe8b0; font-family:inherit; font-size:15px; font-weight:bold;
-    padding:9px 13px; border-radius:8px; cursor:pointer; }
-  #panel.read { position:fixed !important; left:4vw !important; right:4vw !important;
-    top:11vh !important; width:auto !important; max-height:72vh !important;
-    transform:none !important; font-size:17px !important; }
-  #panel.read .choice { font-size:16px; padding:12px 14px; }
-  #panel.read p { font-size:17px; }
-  #panel p { margin:0 0 8px; animation:inkIn .7s ease both;
+  #panel .crest { font-size:10px; letter-spacing:.3em; opacity:.65; margin-bottom:8px; }
+  #panel p { margin:0 0 9px; animation:inkIn .7s ease both;
     text-shadow:0 0 6px rgba(80,255,140,.35); }
   @keyframes inkIn { from{opacity:0; transform:translateY(6px); filter:blur(4px);}
                      to{opacity:1; transform:none; filter:none;} }
   #panel .choice {
-    display:block; width:100%; margin-top:6px; padding:8px 10px; text-align:left;
+    display:block; width:100%; margin-top:8px; padding:12px 14px; text-align:left;
     background:rgba(80,255,140,.08); border:1px solid rgba(159,232,176,.45);
-    border-radius:4px; color:#c9ffd6; font-family:inherit; font-size:12.5px;
+    border-radius:4px; color:#c9ffd6; font-family:inherit; font-size:15.5px;
     letter-spacing:.06em; cursor:pointer; animation:inkIn .7s ease both;
   }
   #panel .choice:active { background:rgba(80,255,140,.28); }
+  /* dbdb2's controls, verbatim paradigm: floating stick + spin + snaps */
+  #stickBase, #stickNub {
+    position:fixed; z-index:8; border-radius:50%; pointer-events:none; display:none; }
+  #stickBase { width:110px; height:110px; border:3px solid; opacity:.55; }
+  #stickNub  { width:48px;  height:48px;  border:3px solid; opacity:.8; }
+  #rotL, #rotR { position:fixed; bottom:12px; z-index:9;
+    background:rgba(2,16,8,.72); border:1px solid; border-radius:6px;
+    font:bold 15px monospace; padding:8px 12px; }
+  #rotR { right:10px; } #rotL { right:64px; }
+  body.edit #rotL, body.edit #rotR { bottom:64px; }
   #err { position:fixed; inset:auto 0 0 0; z-index:50; color:#ff9a9a; background:rgba(30,0,0,.92); padding:8px; font-size:11px; display:none; white-space:pre-wrap; }
   #menuBtn { position:fixed; bottom:12px; left:10px; z-index:9;
     background:rgba(2,16,8,.72); border:1px solid; border-radius:6px;
@@ -87,20 +85,20 @@
   #menu .mLbl { opacity:.6; font-size:10px; letter-spacing:.2em; }
   #menu .mCred { opacity:.5; font-size:9px; max-width:260px; }
   /* the edit bar docks at the very bottom: lift the corner buttons over it */
-  body.edit #readBtn, body.edit #menuBtn { bottom:64px; }
+  body.edit #menuBtn { bottom:64px; }
   .hidden { display:none !important; }
 </style>
 </head>
 <body>
 <div id="stage"></div>
 <div id="phos"></div>
-<div id="head"><span id="hudLoc">PORT/7 · DREAM SHELL</span><span id="clueTally">CLUES 0/3</span></div>
+<div id="head"><span id="hudLoc">PORT/7 · DREAM SHELL</span><span id="clueTally">◆ 0 · ◇ 0</span></div>
 <button type="button" id="exitBtn">✕ SURFACE</button>
 <div id="loadLine">TUNING THE STATIC…</div>
-<button type="button" id="readBtn" aria-label="toggle large reading mode">⤢ READ</button>
-<div id="css3d"><div id="css3dCam">
-  <div id="panel"><div class="crest">PORT/7 TERMINAL</div><div class="inkText"></div><div class="choices"></div></div>
-</div></div>
+<div id="stickBase"></div><div id="stickNub"></div>
+<button type="button" id="rotL" aria-label="spin left">⟲</button>
+<button type="button" id="rotR" aria-label="spin right">⟳</button>
+<div id="panel" class="hidden"><div class="crest">PORT/7 TERMINAL</div><div class="inkText"></div><div class="choices"></div></div>
 <pre id="err"></pre>
 
 <script src="../../third_party/ink/ink-full.min.js"></script>
@@ -120,38 +118,16 @@ for(const id of ['head','exitBtn','loadLine']){
   const el=document.getElementById(id); if(el) el.style.color=tint;
 }
 document.getElementById('exitBtn').style.borderColor=tint;
-const readBtn=document.getElementById('readBtn');
-readBtn.style.color=tint; readBtn.style.borderColor=tint;
-let readMode=false;
-readBtn.addEventListener('click',()=>{
-  readMode=!readMode;
-  readBtn.textContent=readMode?'⤢ WORLD':'⤢ READ';
-});
+for(const id of ['stickBase','stickNub','rotL','rotR']){
+  const el=document.getElementById(id);
+  el.style.borderColor=tint; el.style.color=tint;
+}
 if(parent!==window)                        // framed in dbdb2: clear its EJECT button
   document.getElementById('head').style.paddingLeft='104px';
 
-/* =========================================================
-   HTML-IN-CANVAS probe — the emerging web API family that
-   would retire our hand-drawn plate: 2D ctx.drawElement()
-   and WebGPU queue.copyElementImageToTexture(). When either
-   ships where we run, the live DOM renders INTO the scene.
-   ?hic=1 shows the report on-screen and, if drawElement
-   exists, uses it live for the plate texture.
-   ========================================================= */
-const HIC2D = typeof CanvasRenderingContext2D!=='undefined'
-  && 'drawElement' in CanvasRenderingContext2D.prototype;
-const HICGPU = !!(navigator.gpu && typeof GPUQueue!=='undefined'
-  && 'copyElementImageToTexture' in GPUQueue.prototype);
-let hicLive = HIC2D && Q.has('hic');   // opt-in until testable in the field
-console.log('html-in-canvas: drawElement', HIC2D, '· copyElementImageToTexture', HICGPU);
-if(Q.has('hic')){
-  const d=document.createElement('div');
-  d.style.cssText='position:fixed;bottom:12px;left:10px;z-index:9;font:11px monospace;'
-    +'color:'+tint+';background:rgba(0,20,8,.7);padding:6px 9px;border:1px solid '+tint+';border-radius:6px;';
-  d.textContent='HIC drawElement:'+(HIC2D?'YES':'no')+' gpuCopy:'+(HICGPU?'YES':'no')
-    +(hicLive?' · LIVE DOM PLATE':'');
-  document.body.appendChild(d);
-}
+/* (The html-in-canvas probe and the in-world DOM billboard eco-system
+   were retired 2026-08-11: the ink UI is a screen-filling terminal now,
+   plain DOM, and the world holds GEMS instead of pages of text.) */
 
 /* =========================================================
    THE PORTS — every scan CC-permissive, every scan shown
@@ -245,7 +221,8 @@ menuBtn.setAttribute('aria-label','menu');
 document.body.appendChild(menuBtn);
 const menu=document.createElement('div');
 menu.id='menu'; menu.classList.add('hidden');
-menu.innerHTML='<button type="button" id="mEdit">EDIT PLACEMENT: OFF</button>'
+menu.innerHTML='<button type="button" id="mTerm">OPEN TERMINAL</button>'
+ +'<button type="button" id="mEdit">EDIT PLACEMENT: OFF</button>'
  +'<div class="mLbl">FAST PORT</div><div class="prow" id="mPorts"></div>'
  +'<div class="mCred"></div>';
 document.body.appendChild(menu);
@@ -260,7 +237,9 @@ menu.style.color=tint; menu.style.borderColor=tint;
       const u=new URL(location.href);
       u.searchParams.set('scene',k);
       u.searchParams.delete('far'); u.searchParams.delete('st');
-      location.href=u.toString();      // tint + edit ride along
+      u.searchParams.set('g',String(vs('gems')));       // the economy
+      u.searchParams.set('di',String(vs('diamonds')));  // rides along
+      location.href=u.toString();      // tint + edit ride along too
     });
     row.appendChild(b);
   }
@@ -268,6 +247,11 @@ menu.style.color=tint; menu.style.borderColor=tint;
 }
 menuBtn.addEventListener('click',()=>menu.classList.toggle('hidden'));
 menu.querySelector('#mEdit').addEventListener('click',()=>setEdit(!editOn));
+menu.querySelector('#mTerm').addEventListener('click',()=>{
+  menu.classList.add('hidden');
+  if(inkStory){ try{ inkStory.ChoosePathString('hub'); }catch(e){}
+    renderInk(); termOpen(); }
+});
 const SPLAT_PATH=(Q.has('hq') && SCENE.hq) ? SCENE.hq : SCENE.ply;
 
 /* =========================================================
@@ -329,34 +313,87 @@ camE.addComponent('camera', { clearColor:new pc.Color(0.004,0.008,0.016),
 app.root.addChild(camE);
 camE.setPosition(CAM_POS); camE.lookAt(CAM_TGT, pc.Vec3.UP);
 
-/* mansion-consistent controls: LEFT thumb walks the dream (translate),
-   RIGHT thumb turns it (orbit) — the same split as dbdb2's stick+spin */
-let dragging=null,lx=0,ly=0, yaw=0, pitch=0, distF=1, idle=0;
+/* CONTROLS — the Jet Set Ducky 2 paradigm, verbatim: a floating
+   joystick where the LEFT thumb lands walks you; the RIGHT half spins
+   (drag: yaw, vertical: look); ⟲⟳ (or Q/E) snap the view a quarter
+   turn. Same hands, same habits, both worlds. */
+let dragging=null, yaw=0, pitch=0, distF=1, idle=0;
 const TGT_CUR=CAM_TGT.clone();
 let tgtGoal=CAM_TGT.clone();
-addEventListener('pointerdown',e=>{
-  dragging = e.clientX < innerWidth*0.45 ? 'walk' : 'orbit';
-  lx=e.clientX; ly=e.clientY; });
-addEventListener('pointermove',e=>{ if(!dragging) return;
-  flight=null;                                  // your thumb outranks the choreography
-  const dx=e.clientX-lx, dy=e.clientY-ly;
-  if(dragging==='walk'){
-    const yr=yaw*Math.PI/180;
-    const fl=Math.hypot(base.x,base.z)||1;
-    const f0x=-base.x/fl, f0z=-base.z/fl;        // boot forward, on the ground
-    const fx=f0x*Math.cos(yr)+f0z*Math.sin(yr);
-    const fz=f0z*Math.cos(yr)-f0x*Math.sin(yr);
-    const rx=-fz, rz=fx;                         // camera-right on the ground
-    const k=0.0022*R;
-    TGT_CUR.x += rx*dx*k + fx*(-dy)*k;
-    TGT_CUR.z += rz*dx*k + fz*(-dy)*k;
-    tgtGoal=TGT_CUR.clone();
-  } else {
-    yaw-=dx*0.28; pitch+=dy*0.22;
-    pitch=Math.max(-45,Math.min(60,pitch));
+const input={ jx:0, jy:0 };
+const keys={};
+const KEYMAP={ ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down',
+               ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
+addEventListener('keydown',e=>{
+  if(KEYMAP[e.code]!==undefined){ e.preventDefault(); keys[KEYMAP[e.code]]=true; }
+  if(e.code==='KeyQ') snapYaw(90);
+  if(e.code==='KeyE') snapYaw(-90);
+});
+addEventListener('keyup',e=>{ if(KEYMAP[e.code]!==undefined) keys[KEYMAP[e.code]]=false; });
+const stickBase=document.getElementById('stickBase'), stickNub=document.getElementById('stickNub');
+let stickId=null, stickOrigin=[0,0];
+const touchVec=[0,0];
+function showStick(x,y){ stickBase.style.display=stickNub.style.display='block';
+  stickBase.style.left=(x-55)+'px'; stickBase.style.top=(y-55)+'px'; moveNub(x,y); }
+function moveNub(x,y){ stickNub.style.left=(x-24)+'px'; stickNub.style.top=(y-24)+'px'; }
+function hideStick(){ stickBase.style.display=stickNub.style.display='none'; touchVec[0]=touchVec[1]=0; }
+const CTL_GUARD='#exitBtn,#ebCopy,#panel,#menuBtn,#menu,#ebar,#rotL,#rotR,#mEdit';
+let rotId=null, rotLast=[0,0];
+addEventListener('touchstart',e=>{
+  for(const t of e.changedTouches){
+    if(t.target && t.target.closest && t.target.closest(CTL_GUARD)) continue;
+    if(t.clientX < innerWidth*0.55 && stickId===null){
+      stickId=t.identifier; stickOrigin=[t.clientX,t.clientY]; showStick(t.clientX,t.clientY);
+    } else if(t.clientX >= innerWidth*0.55 && rotId===null){
+      rotId=t.identifier; rotLast=[t.clientX,t.clientY];
+    }
   }
-  idle=0; lx=e.clientX; ly=e.clientY; });
-addEventListener('pointerup',()=>{ dragging=null; });
+},{passive:true});
+addEventListener('touchmove',e=>{
+  for(const t of e.changedTouches){
+    if(t.identifier===rotId){
+      yaw-=(t.clientX-rotLast[0])*0.28; pitch+=(t.clientY-rotLast[1])*0.22;
+      pitch=Math.max(-45,Math.min(60,pitch));
+      rotLast=[t.clientX,t.clientY]; flight=null; idle=0;
+    }
+    if(t.identifier===stickId){
+      let dx=t.clientX-stickOrigin[0], dy=t.clientY-stickOrigin[1];
+      const len=Math.hypot(dx,dy);
+      if(len>46){ dx*=46/len; dy*=46/len; }
+      moveNub(stickOrigin[0]+dx, stickOrigin[1]+dy);
+      touchVec[0]=Math.abs(dx)>7?dx/46:0;
+      touchVec[1]=Math.abs(dy)>7?-dy/46:0;
+    }
+  }
+},{passive:true});
+function touchEnd(e){
+  for(const t of e.changedTouches){
+    if(t.identifier===stickId){ stickId=null; hideStick(); }
+    if(t.identifier===rotId) rotId=null;
+  }
+}
+addEventListener('touchend',touchEnd,{passive:true});
+addEventListener('touchcancel',touchEnd,{passive:true});
+/* desktop mouse: drag spins (dbdb2's mouse path) */
+let mouseDrag=null;
+addEventListener('mousedown',e=>{
+  if(e.target.closest && e.target.closest(CTL_GUARD)) return;
+  mouseDrag=[e.clientX,e.clientY]; });
+addEventListener('mousemove',e=>{ if(!mouseDrag) return;
+  yaw-=(e.clientX-mouseDrag[0])*0.28; pitch+=(e.clientY-mouseDrag[1])*0.22;
+  pitch=Math.max(-45,Math.min(60,pitch));
+  mouseDrag=[e.clientX,e.clientY]; flight=null; idle=0; });
+addEventListener('mouseup',()=>{ mouseDrag=null; });
+function readInput(){
+  let jx=touchVec[0], jy=touchVec[1];
+  if(keys.left) jx-=1; if(keys.right) jx+=1;
+  if(keys.up) jy+=1; if(keys.down) jy-=1;
+  const l=Math.hypot(jx,jy); if(l>1){ jx/=l; jy/=l; }
+  input.jx=jx; input.jy=jy;
+}
+function snapYaw(d){ fly({ dYaw:d, dur:0.55, quiet:true }); }
+document.getElementById('rotL').addEventListener('click',()=>snapYaw(90));
+document.getElementById('rotR').addEventListener('click',()=>snapYaw(-90));
 const base=new pc.Vec3().sub2(CAM_POS,CAM_TGT);
 const side=new pc.Vec3().cross(pc.Vec3.UP,base).normalize();
 const _q1=new pc.Quat(), _q2=new pc.Quat(), _off=new pc.Vec3(), _pos=new pc.Vec3();
@@ -378,15 +415,11 @@ function fly(o){  // {dYaw, toPitch, toDist, tgt, dur, onDone, quiet}
 const ease=k=>k*k*(3-2*k);
 
 /* =========================================================
-   the three clues: low / heart / high along world-up, so the
-   dream's hints stay true in every port
+   GEMS — the locations themselves, as collectibles. They
+   shimmer, they drink the ambient colours of their own corner
+   of the scan (sampled from the rendered frame), and they are
+   mostly just beautiful. Tapping one opens the terminal.
    ========================================================= */
-const CLUES=[
-  { off:[ 0.30,-0.36, 0.10], name:'a paper crown' },
-  { off:[-0.24, 0.02, 0.18], name:'a brass key'   },
-  { off:[ 0.12, 0.46,-0.22], name:'a working bulb'},
-];
-const clueMeshes=[];
 function glowMat(hex, opacity){
   const m=new pc.StandardMaterial();
   m.emissive=new pc.Color().fromString(hex);
@@ -395,26 +428,59 @@ function glowMat(hex, opacity){
   if(opacity<1){ m.opacity=opacity; m.blendType=pc.BLEND_NORMAL; m.depthWrite=false; }
   m.update(); return m;
 }
-for(const c of CLUES){
-  const grp=new pc.Entity('clue');
+const gems=[];
+const GEM_WILD=[[0.30,-0.10,0.10],[-0.24,0.12,0.18]];   // 2 wild spots off-centre
+function spawnGem(x,y,z){
+  const i=gems.length;
+  const grp=new pc.Entity('gem');
   const core=new pc.Entity('core');
   core.addComponent('render',{ type:'box' });
-  core.render.meshInstances[0].material=glowMat('#aaffc4',1);
-  core.setLocalScale(0.1*R,0.1*R,0.1*R);
+  core.render.meshInstances[0].material=glowMat(SCENE.pal[i%SCENE.pal.length],1);
+  core.setLocalScale(0.06*R,0.10*R,0.06*R);
   core.setLocalEulerAngles(45,0,45);
   grp.addChild(core);
   const halo=new pc.Entity('halo');
   halo.addComponent('render',{ type:'box' });
-  halo.render.meshInstances[0].material=glowMat('#66ff99',0.22);
-  halo.setLocalScale(0.18*R,0.18*R,0.18*R);
+  halo.render.meshInstances[0].material=glowMat(SCENE.pal[(i+2)%SCENE.pal.length],0.18);
+  halo.setLocalScale(0.13*R,0.20*R,0.13*R);
   halo.setLocalEulerAngles(45,0,45);
   grp.addChild(halo);
-  grp.setPosition(C.x+c.off[0]*R, C.y+c.off[1]*R, C.z+c.off[2]*R);
+  grp.setPosition(x,y,z);
   app.root.addChild(grp);
-  clueMeshes.push({ grp, core, halo, found:false, name:c.name });
+  gems.push({ grp, core, halo, found:false, baseY:y,
+    amb:new pc.Color().fromString(SCENE.pal[i%SCENE.pal.length]) });
 }
+/* ambient drink: a ring of frame pixels around each gem, every ~1.5s
+   (WebGL path; on WebGPU the palette colours simply remain) */
+const glDev=app.graphicsDevice.gl||null;
+let sampT=0; const _px=new Uint8Array(4);
+app.on('postrender',()=>{
+  if(!glDev||!loaded) return;
+  if(++sampT%90) return;
+  const gd=app.graphicsDevice;
+  const kx=gd.width/innerWidth, ky=gd.height/innerHeight;
+  for(const g of gems){
+    if(g.found) continue;
+    camE.camera.worldToScreen(g.grp.getPosition(), _scr);
+    if(_scr.z<0) continue;
+    let r=0,gg=0,b=0,n=0;
+    for(const [ox,oy] of [[-38,0],[38,0],[0,-38],[0,38]]){
+      const dx=Math.round((_scr.x+ox)*kx), dy=Math.round(gd.height-(_scr.y+oy)*ky);
+      if(dx<0||dy<0||dx>=gd.width||dy>=gd.height) continue;
+      try{ glDev.readPixels(dx,dy,1,1,glDev.RGBA,glDev.UNSIGNED_BYTE,_px); }
+      catch(e){ return; }
+      if(_px[0]+_px[1]+_px[2]<24) continue;      // the night void is not a colour
+      r+=_px[0]; gg+=_px[1]; b+=_px[2]; n++;
+    }
+    if(!n) continue;
+    const inv=1.35/(255*n);                       // a little brighter than life
+    g.amb.r=g.amb.r*0.7+r*inv*0.3;
+    g.amb.g=g.amb.g*0.7+gg*inv*0.3;
+    g.amb.b=g.amb.b*0.7+b*inv*0.3;
+  }
+});
 
-/* motes: the scan's own colours infect the drifting particles */
+/* motes: the scan's own colours infect the drifting particles *//* motes: the scan's own colours infect the drifting particles */
 const motes=[];
 for(let i=0;i<44;i++){
   const e=new pc.Entity('mote');
@@ -428,122 +494,27 @@ for(let i=0;i<44;i++){
 }
 
 /* =========================================================
-   the in-world terminal — an OPAQUE canvas-textured plate
-   rendered INSIDE the engine. Because it writes depth and the
-   gaussians depth-test, the splat itself occludes the panel
-   per-gaussian, automatically. It is anchored in the WORLD
-   (parallax when you move) and billboards yaw-only to stay
-   readable. Taps are raycast onto the plate.
+   THE TERMINAL — screen-filling ink UI, plain DOM, never in the
+   world. The world keeps its beauty; the words get a whole screen.
    ========================================================= */
-const PANEL_W=384, PANEL_H=460;
-const pcv=document.createElement('canvas'); pcv.width=PANEL_W; pcv.height=PANEL_H;
-const pctx=pcv.getContext('2d');
-const panelTex=new pc.Texture(app.graphicsDevice,{ width:PANEL_W, height:PANEL_H,
-  format:pc.PIXELFORMAT_R8_G8_B8_A8, mipmaps:false });
-panelTex.minFilter=pc.FILTER_LINEAR; panelTex.magFilter=pc.FILTER_LINEAR;
-const panelMat=new pc.StandardMaterial();
-panelMat.useLighting=false; panelMat.diffuse=new pc.Color(0,0,0);
-panelMat.emissive=new pc.Color(1,1,1); panelMat.emissiveMap=panelTex;
-panelMat.update();
-const PW=0.95*R, PH=PW*PANEL_H/PANEL_W;
-const panelE=new pc.Entity('terminal');
-const plate=new pc.Entity('plate');
-plate.addComponent('render',{ type:'plane' });
-plate.render.meshInstances[0].material=panelMat;
-plate.setLocalEulerAngles(90,0,0);            // plane +y -> facing +z
-plate.setLocalScale(PW,1,PH);
-panelE.addChild(plate);
-/* anchored in the WORLD, placed once using the boot camera's left */
-const camR0=camE.right.clone(); camR0.y=0; camR0.normalize();
-const PANEL_POS=new pc.Vec3(C.x-camR0.x*0.5*R, C.y+0.05*R, C.z-camR0.z*0.5*R);
-/* the plate is MOUNTED: a neck drops to its PET below — one machine,
-   fixed in the world with a fixed facing captured at placement */
-{ const neck=new pc.Entity('neck');
-  neck.addComponent('render',{ type:'box' });
-  neck.render.meshInstances[0].material=glowMat('#2a3a30',1);
-  neck.setLocalScale(0.05*R, PH*0.55, 0.05*R);
-  neck.setLocalPosition(0,-PH*0.72,0);
-  panelE.addChild(neck); }
-panelE.setPosition(PANEL_POS);
-app.root.addChild(panelE);
-
-let panelLines=['TUNING…'], panelChoices=[], choiceRects=[];
-function wrapText(s, max){
-  const words=s.split(' '), out=[]; let line='';
-  for(const w of words){
-    if((line+' '+w).trim().length>max){ out.push(line.trim()); line=w; }
-    else line+=' '+w;
-  }
-  if(line.trim()) out.push(line.trim());
-  return out;
-}
-function panelDraw(){
-  const g=pctx;
-  g.setTransform(1,0,0,1,0,0);
-  g.fillStyle='#020c05'; g.fillRect(0,0,PANEL_W,PANEL_H);
-  g.strokeStyle=tint; g.lineWidth=3; g.strokeRect(5,5,PANEL_W-10,PANEL_H-10);
-  g.font='11px monospace'; g.fillStyle=tint; g.globalAlpha=0.65;
-  g.fillText('P O R T / 7   T E R M I N A L', 18, 26);
-  g.font='8px monospace'; g.globalAlpha=0.5;
-  g.fillText(SCENE.credit.slice(0,74), 18, 38);   // CC attribution, on the machine itself
-  g.globalAlpha=1;
-  let y=52; g.font='15px monospace';
-  for(const para of panelLines){
-    for(const line of wrapText(para, 42)){
-      if(y>PANEL_H-60) break;
-      g.fillText(line, 18, y); y+=20;
-    }
-    y+=8;
-  }
-  choiceRects=[];
+let panelLines=['TUNING…'], panelChoices=[];
+const domPanel=document.getElementById('panel');
+domPanel.style.color=tint; domPanel.style.borderColor=tint;
+let termIsOpen=false;
+function termOpen(){ termIsOpen=true; domPanel.classList.remove('hidden'); domRender(); }
+function termClose(){ termIsOpen=false; domPanel.classList.add('hidden'); }
+function domRender(){
+  domPanel.querySelector('.inkText').innerHTML=
+    panelLines.map(l=>'<p>'+l.replace(/</g,'&lt;')+'</p>').join('');
+  const ch=domPanel.querySelector('.choices'); ch.innerHTML='';
   panelChoices.forEach((c,i)=>{
-    y+=8; const r={x:14,y:y-2,w:PANEL_W-28,h:34};
-    g.globalAlpha=0.16; g.fillStyle=tint; g.fillRect(r.x,r.y,r.w,r.h);
-    g.globalAlpha=1; g.strokeStyle=tint; g.lineWidth=1.5; g.strokeRect(r.x,r.y,r.w,r.h);
-    g.fillStyle='#c9ffd6'; g.fillText('▸ '+c, 24, y+21);
-    choiceRects.push(r); y+=40;
+    const b=document.createElement('button');
+    b.type='button'; b.className='choice'; b.textContent='\u25b8 '+c;
+    b.addEventListener('click',()=>chooseChoice(i));
+    ch.appendChild(b);
   });
-  if(hicLive){
-    /* the real thing: blit the live DOM panel into the plate texture,
-       and take the button hit-rects from the DOM's own layout */
-    try{
-      g.setTransform(PANEL_W/300,0,0,PANEL_W/300,0,0);
-      g.drawElement(document.getElementById('panel'), 0, 0);
-      const s2=PANEL_W/300;
-      choiceRects=[...document.querySelectorAll('#panel .choice')].map(b2=>({
-        x:b2.offsetLeft*s2, y:b2.offsetTop*s2,
-        w:b2.offsetWidth*s2, h:b2.offsetHeight*s2 }));
-      g.setTransform(1,0,0,1,0,0);
-    }catch(err){ hicLive=false; console.warn('drawElement failed, hand-drawn plate resumes:', err.message); }
-  }
-  g.fillStyle='rgba(0,0,0,0.18)';
-  for(let sy=0; sy<PANEL_H; sy+=3) g.fillRect(0,sy,PANEL_W,1);
-  panelTex.setSource(pcv);
-  if(typeof domRender==='function') domRender();
 }
-panelDraw();
-
-/* =========================================================
-   TERMINALS — named places in the scan where the screen can
-   live. Tap a PET marker to zoom its screen near-fullscreen;
-   the HUD breadcrumb says where you are. New spots are found
-   with the game itself: ?edit=1 flies the scan, taps place a
-   PET on the splat surface (ray vs the actual gaussian data),
-   COPY DATA yields JSON to paste back into the chat.
-   ========================================================= */
-const bootYaw=Math.atan2(camE.getPosition().x-PANEL_POS.x,
-                         camE.getPosition().z-PANEL_POS.z)*180/Math.PI;
-const TERMINALS=[
-  { id:'port7', label:'BY '+((SCENE.names||['THE SCAN'])[0]),
-    pos:[PANEL_POS.x, PANEL_POS.y-PH*0.72-0.14*R, PANEL_POS.z], yaw:bootYaw },
-];
-let activeTerm=TERMINALS[0];
-function applyTermPose(T){
-  PANEL_POS.set(T.pos[0], T.pos[1]+PH*0.72+0.14*R, T.pos[2]);
-  panelE.setPosition(PANEL_POS);
-  panelE.setEulerAngles(0, T.yaw||0, 0);
-}
-applyTermPose(TERMINALS[0]);
+/* (kept for edit ghosts + station gems) a candy-PET marker */
 function makePETmarker(p){
   const g2=new pc.Entity('pet');
   const s=0.14*R;
@@ -559,27 +530,8 @@ function makePETmarker(p){
   g2.setPosition(p[0],p[1],p[2]);
   app.root.addChild(g2); return g2;
 }
-for(const T of TERMINALS) T.marker=makePETmarker(T.pos);
-function flyToTerm(T){
-  activeTerm=T;
-  applyTermPose(T);
-  document.getElementById('hudLoc').textContent='PORT/7 · '+T.label;
-  /* land on the screen's own normal so the plate reads head-on */
-  const bAng=Math.atan2(base.x,base.z)*180/Math.PI;
-  let want=(T.yaw||0)-bAng-yaw;
-  while(want>180) want-=360; while(want<-180) want+=360;
-  fly({ dYaw:want+(Math.abs(want)<40?360:0), toPitch:2, toDist:0.55,
-        tgt:PANEL_POS.clone(), dur:3.0 });
-}
-function termTap(cx,cy){
-  const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
-  for(const T of TERMINALS){
-    camE.camera.worldToScreen(T.marker.getPosition(), _scr);
-    if(Math.hypot(_scr.x-cx*scale,_scr.y-cy*scale)<52*scale){ flyToTerm(T); return true; }
-  }
-  return false;
-}
 
+/* ---- EDIT MODE
 /* ---- EDIT MODE — a runtime TOGGLE in the ☰ menu, not a separate
    page: the dream with and without edit is the same dream, READ and
    all. ?edit=1 merely presets the toggle ON, and the toggle keeps the
@@ -673,153 +625,7 @@ function editPlace(cx,cy){
   return true;
 }
 
-/* =========================================================
-   HYBRID HTML: while the screen zone is mostly VISIBLE (facing
-   us, on screen, not swallowed by the scan) the REAL html panel
-   overlays the plate, matrix-matched — crisp text, native
-   buttons. The moment the splat mostly covers it, the overlay
-   yields to the engine plate, which the gaussians occlude
-   per-splat. Occlusion is judged against the scan's own data:
-   a ~30k-gaussian sample (HTTP range request, ~1MB).
-   ========================================================= */
-const css3d=document.getElementById('css3d'), css3dCam=document.getElementById('css3dCam');
-const domPanel=document.getElementById('panel');
-domPanel.style.color=tint; domPanel.style.borderColor=tint;
-/* the real-HTML screen is the default (owner: "we want DOM on every
-   billboard"); ?nohtml=1 falls back to the engine plate alone */
-if(Q.has('nohtml')) css3d.remove();
-let occPts=null, domVis=false, visTick=0, domForce=null, lastMotion=0;
-if(SCENE.raw){
-  fetch(SCENE.raw, { headers:{ Range:'bytes=0-959999' } })
-    .then(r2=>r2.arrayBuffer()).then(b2=>{
-      const n=Math.min(30000, Math.floor(b2.byteLength/32));
-      const dv=new DataView(b2), pts=new Float32Array(n*3);
-      const v=new pc.Vec3();
-      for(let i=0;i<n;i++){
-        if(dv.getUint8(i*32+27)<90){ pts[i*3]=1e9; continue; }
-        v.set(dv.getFloat32(i*32,true),dv.getFloat32(i*32+4,true),dv.getFloat32(i*32+8,true));
-        upQ.transformVector(v,v);
-        pts[i*3]=v.x; pts[i*3+1]=v.y; pts[i*3+2]=v.z;
-      }
-      occPts=pts;
-    }).catch(()=>{});
-}
-/* a ray is blocked only by a DENSE cluster in front of the plate —
-   stray dust motes in a room scan must not count as walls */
-function rayBlockCount(ro,rd,pts,stride,maxT){
-  const rad2=0.008*R*R; let hits=0;
-  for(let i=0;i<pts.length;i+=stride){
-    const px2=pts[i]-ro.x, py2=pts[i+1]-ro.y, pz2=pts[i+2]-ro.z;
-    const t3=px2*rd.x+py2*rd.y+pz2*rd.z;
-    if(t3<0.1*R||t3>maxT) continue;
-    const dx=px2-rd.x*t3, dy=py2-rd.y*t3, dz=pz2-rd.z*t3;
-    if(dx*dx+dy*dy+dz*dz<rad2 && ++hits>=4) return hits;
-  }
-  return hits;
-}
-const _vro=new pc.Vec3(), _vrd=new pc.Vec3(), _vp=new pc.Vec3();
-function computeVis(){
-  window.__visDbg={};
-  if(domForce!==null) return domForce;
-  if(Q.has('nohtml')) return false;
-  if(!loaded) return (__visDbg.loaded=false);
-  _vro.copy(camE.getPosition());
-  /* facing: are we in front of the fixed screen? */
-  const py=(activeTerm.yaw||0)*Math.PI/180;
-  const nz=new pc.Vec3(Math.sin(py),0,Math.cos(py));
-  _vp.sub2(_vro,PANEL_POS); _vp.y=0;
-  __visDbg.facing=_vp.normalize().dot(nz);
-  if(__visDbg.facing<0.3) return false;
-  /* on screen? */
-  const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
-  camE.camera.worldToScreen(PANEL_POS,_scr);
-  __visDbg.scr=[Math.round(_scr.x/scale),Math.round(_scr.y/scale),+_scr.z.toFixed(2)];
-  if(_scr.z<0 || _scr.x<-40*scale || _scr.x>(innerWidth+40)*scale
-     || _scr.y<-40*scale || _scr.y>(innerHeight+40)*scale) return false;
-  /* mostly unoccluded? sample centre + 4 corners against the scan */
-  if(occPts){
-    const rt=new pc.Vec3().cross(pc.Vec3.UP,nz).normalize();
-    let blocked=0;
-    for(const [ox,oy] of [[0,0],[-0.35,0.3],[0.35,0.3],[-0.35,-0.3],[0.35,-0.3]]){
-      _vrd.copy(PANEL_POS);
-      _vrd.x+=rt.x*ox*PW; _vrd.z+=rt.z*ox*PW; _vrd.y+=oy*PH;
-      const dist=_vrd.distance(_vro);
-      _vrd.sub(_vro).normalize();
-      if(rayBlockCount(_vro,_vrd,occPts,9,dist-0.12*R)>=4) blocked++;
-    }
-    __visDbg.blocked=blocked; __visDbg.occ=occPts.length;
-    if(blocked>=3) return false;
-  }
-  return true;
-}
-const _v2=new pc.Vec3(), _v3=new pc.Vec3();
-function domUpdate(vis){
-  if(!css3d.isConnected) return;
-  if(readMode){                              // accessibility: big flat card
-    css3d.style.display='block'; plate.enabled=true;
-    domPanel.classList.add('read');
-    return;
-  }
-  domPanel.classList.remove('read');
-  if(!vis){ css3d.style.display='none'; plate.enabled=true; return; }
-  css3d.style.display='block';
-  plate.enabled=false;                    // one screen at a time: DOM speaks
-  /* anchored by construction: position, scale and tilt all derive from
-     the SAME worldToScreen projection the engine uses for the plate —
-     the DOM cannot drift from the scene, at any bearing */
-  const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
-  camE.camera.worldToScreen(PANEL_POS,_scr);
-  if(_scr.z<0){ css3d.style.display='none'; return; }
-  const sx=_scr.x/scale, sy=_scr.y/scale;
-  const py2=(activeTerm.yaw||0)*Math.PI/180;
-  const nz=new pc.Vec3(Math.sin(py2),0,Math.cos(py2));         // plate normal
-  const rt=new pc.Vec3().cross(pc.Vec3.UP,nz).normalize();     // plate right
-  _v3.set(PANEL_POS.x+rt.x*PW/2, PANEL_POS.y, PANEL_POS.z+rt.z*PW/2);
-  camE.camera.worldToScreen(_v3,_v2);
-  const halfPx=Math.hypot(_v2.x/scale-sx, _v2.y/scale-sy);
-  const k=Math.max(0.05,(halfPx*2)/300);                       // dom width 300px
-  _v3.sub2(camE.getPosition(),PANEL_POS); _v3.y=0; _v3.normalize();
-  const angY=Math.atan2(_v3.dot(rt), _v3.dot(nz));             // signed bearing
-  domPanel.style.transform='translate('+sx+'px,'+sy+'px) translate(-50%,-50%) '
-    +'perspective(900px) rotateY('+(-angY)+'rad) scale('+k+')';
-}
-function domRender(){
-  const domPanel=document.getElementById('panel');
-  if(!domPanel) return;
-  domPanel.querySelector('.inkText').innerHTML=
-    panelLines.map(l=>'<p>'+l.replace(/</g,'&lt;')+'</p>').join('');
-  const ch=domPanel.querySelector('.choices'); ch.innerHTML='';
-  panelChoices.forEach((c,i)=>{
-    const b=document.createElement('button');
-    b.type='button'; b.className='choice'; b.textContent='▸ '+c;
-    b.addEventListener('click',()=>chooseChoice(i));
-    ch.appendChild(b);
-  });
-}
-
-/* raycast a css-pixel tap onto the plate; true = consumed */
-const _rd=new pc.Vec3(), _hit=new pc.Vec3(), _nrm=new pc.Vec3(), _rt=new pc.Vec3();
-function panelTap(cx,cy){
-  const camPos=camE.getPosition();
-  const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
-  camE.camera.screenToWorld(cx*scale, cy*scale, camE.camera.farClip, _rd);
-  _rd.sub(camPos).normalize();
-  _nrm.set(camPos.x-PANEL_POS.x, 0, camPos.z-PANEL_POS.z).normalize();
-  const den=_rd.dot(_nrm); if(Math.abs(den)<1e-5) return false;
-  const t2=new pc.Vec3().sub2(PANEL_POS,camPos).dot(_nrm)/den;
-  if(t2<=0) return false;
-  _hit.copy(_rd).mulScalar(t2).add(camPos).sub(PANEL_POS);
-  _rt.cross(_nrm, pc.Vec3.UP).normalize();       // viewer-right on the plate
-  const lx=_hit.dot(_rt), ly=_hit.y;
-  if(Math.abs(lx)>PW/2 || Math.abs(ly)>PH/2) return false;
-  const px=(0.5 - lx/PW)*PANEL_W, py=(0.5 - ly/PH)*PANEL_H;
-  choiceRects.forEach((r,i)=>{
-    if(px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h) chooseChoice(i);
-  });
-  return true;                                    // the plate soaks the tap
-}
-
-/* one update hook: orbit, flights, clue pulse, motes, panel */
+/* one update hook: orbit, flights, gem shimmer, motes *//* one update hook: orbit, flights, clue pulse, motes, panel */
 let t=0;
 app.on('update', dt=>{
   t+=dt; idle+=dt;
@@ -832,6 +638,19 @@ app.on('update', dt=>{
     idle=0;
     if(flight.t>=flight.dur){ const f=flight.onDone; flight=null; if(f) f(); }
   } else if(idle>2.5) yaw+=dt*3.5;              // the dream drifts
+  /* the stick walks the drift, dbdb2-style: screen-relative, rotating
+     with the CURRENT camera bearing (last frame's offset is fine) */
+  readInput();
+  if(input.jx||input.jy){
+    flight=null; idle=0;
+    const fl=Math.hypot(_off.x,_off.z)||1;
+    const fx=-_off.x/fl, fz=-_off.z/fl;
+    const rx=-fz, rz=fx;
+    const sp=0.5*R*dt;
+    TGT_CUR.x += (rx*input.jx + fx*input.jy)*sp;
+    TGT_CUR.z += (rz*input.jx + fz*input.jy)*sp;
+    tgtGoal=TGT_CUR.clone();
+  }
   TGT_CUR.lerp(TGT_CUR, tgtGoal, Math.min(1,dt*2.5));
   /* stay inside the scan's dense core (R is the per-scene 70th-pct
      density radius — our heuristic for "the realistic zone"): the
@@ -853,13 +672,20 @@ app.on('update', dt=>{
   _pos.add2(TGT_CUR,_off);
   camE.setPosition(_pos);
   camE.lookAt(TGT_CUR, pc.Vec3.UP);
-  clueMeshes.forEach((c,i)=>{
-    if(c.found) return;
-    const s=1+Math.sin(t*3+i*2.1)*0.25;
-    c.core.setLocalScale(0.1*R*s,0.1*R*s,0.1*R*s);
-    const hh=1+Math.sin(t*2.2+i)*0.4;
-    c.halo.setLocalScale(0.18*R*hh,0.18*R*hh,0.18*R*hh);
-    c.grp.setEulerAngles(0,(t*(40+i*12))%360,0);
+  gems.forEach((g,i)=>{
+    g.grp.setEulerAngles(0,(t*(26+i*8))%360,0);
+    const p=g.grp.getPosition();
+    g.grp.setPosition(p.x, g.baseY+Math.sin(t*1.3+i*1.9)*0.02*R, p.z);
+    if(g.found) return;
+    const s=1+Math.sin(t*2.7+i*1.7)*0.16;
+    g.core.setLocalScale(0.06*R*s,0.10*R*s,0.06*R*s);
+    const hh=1+Math.sin(t*2.1+i)*0.35;
+    g.halo.setLocalScale(0.13*R*hh,0.20*R*hh,0.13*R*hh);
+    /* shimmer: the drunk ambient colour, breathing, with a white glint */
+    const w=0.62+0.5*Math.sin(t*3.1+i*2.3);
+    const gl2=Math.max(0,Math.sin(t*5.3+i*4.1)-0.92)*9;
+    g.core.render.meshInstances[0].setParameter('material_emissive',
+      [Math.min(1,g.amb.r*w+gl2), Math.min(1,g.amb.g*w+gl2), Math.min(1,g.amb.b*w+gl2)]);
   });
   for(const m of motes){
     m.a+=dt*m.sp;
@@ -867,18 +693,6 @@ app.on('update', dt=>{
       C.y+m.h+Math.sin(t*0.4+m.ph)*0.06*R,
       C.z+Math.sin(m.a)*m.rr);
   }
-  if(dragging||flight) lastMotion=t;
-  if(++visTick>=10){ visTick=0;
-    /* the DOM twin only speaks when the camera has SETTLED — during a
-       drag or flight the engine plate carries the screen, because it is
-       scene geometry and cannot lag or skew apart from the splat (the
-       CSS layer composites a frame behind WebGL on iOS and only
-       approximates the tilt: visibly a sticker while moving) */
-    domVis = (domForce!==null) ? domForce
-           : (dragging||flight||t-lastMotion<0.7) ? false
-           : computeVis();
-  }
-  domUpdate(domVis);
 });
 
 /* =========================================================
@@ -894,7 +708,7 @@ function boot(){
   if(Q.has('far')){                    // arriving from another splat: sweep
     const sti=Math.min(3,Math.max(0,parseInt(Q.get('st')||'0',10)||0));
     flyStation(sti,{arrive:true});       // …down into the CHOSEN station
-  }
+  } else termOpen();                     // first boot: the intro, fullscreen
 }
 function loadSplat(attempt=0){
   const bust = attempt>0 ? '?r='+attempt+'-'+Date.now() : '';
@@ -939,64 +753,95 @@ FKEYS.forEach((k,ki)=>{
     farKnots+='+ [\u21d2 '+nameOf(k,i)+' \u00b7 '+k+'] -> go_'+k+'_'+i+'\n';
   farKnots+='+ [Back to the far ports] -> farhub\n';
   for(let i=0;i<4;i++)
-    goKnots+='== go_'+k+'_'+i+' ==\n'+GO_LINES[(ki+i)%GO_LINES.length]+'\n-> DONE\n';
+    goKnots+='== go_'+k+'_'+i+' ==\n~ gems = gems - 1\n'
+      +GO_LINES[(ki+i)%GO_LINES.length]+'\n-> DONE\n';
 });
+const GEM_TOTAL=6;
 const INK_SOURCE = `
-VAR clues = 0
--> port
-== port ==
+VAR gems = 0
+VAR diamonds = 0
+-> drift
+== drift ==
 The terminal dreamed you a place: ${SCENE.what}.
-Its named corners: ${NAMES.join(', ')}. You drift here without a body — LEFT thumb walks, RIGHT thumb turns. Three bright lights hide in the drift: tap them when you see them.
-+ [Open the port map] -> hub
+Gems glitter in the drift — ${GEM_TOTAL} of them, wearing this place's own colours. LEFT thumb walks. RIGHT thumb spins. ⟲ ⟳ snap the view. Tap a gem when its shimmer finds you.
++ [Into the drift] -> away
+== away ==
+The screen folds away. The drift is yours.
+-> DONE
+== gem ==
+A gem, warm as a struck match{gems == 1: — your first|}. It hums with the colours of this corner of the scan.
+How do you spend it?
++ [Teleport — burn it to travel] -> tp
++ [Bank it — cut it to a diamond] -> bank
++ [Bribe the static — buy a whisper] -> bribe
++ [Pocket it for later] -> pocket
 == hub ==
-{clues == 0: Nothing found yet. The lights are out there.}
-{clues == 1: One found. Two lights still out there.}
-{clues == 2: Two found. One light still out there.}
-{clues == 3: All three found. The key is warm in your hand.}
-+ [Port → ${NAMES[0]}] -> st_0
-+ [Port → ${NAMES[1]}] -> st_1
-+ [Port → ${NAMES[2]}] -> st_2
-+ [Port → ${NAMES[3]}] -> st_3
+Business. Gems {gems} · diamonds {diamonds}.
+{diamonds >= 3: The diamonds weigh enough to WAKE on.}
++ {gems > 0} [Spend a gem: teleport] -> tp
++ {gems > 0} [Bank a gem] -> bank
++ {gems > 0} [Bribe the static] -> bribe
++ {diamonds >= 3} [WAKE — cash out] -> wake
++ [Back to the drift] -> away
+== tp ==
+Where does this gem burn down to?
++ [Port → ${NAMES[0]}] -> tp_0
++ [Port → ${NAMES[1]}] -> tp_1
++ [Port → ${NAMES[2]}] -> tp_2
++ [Port → ${NAMES[3]}] -> tp_3
 + [FAR PORTS — the other scans] -> farhub
-+ [Ask the dream for a hint] -> hint
-== farhub ==
-${FKEYS.length} other places hum behind the static. Pick one; then pick where in it to surface.
-${farMenu}+ [Back to this place] -> hub
-== st_0 ==
-The dream slides you along the drift to ${NAMES[0]}.
--> hub
-== st_1 ==
++ [Keep the gem instead] -> away
+== tp_0 ==
+~ gems = gems - 1
+The gem goes to light. The drift slides you to ${NAMES[0]}.
+-> away
+== tp_1 ==
+~ gems = gems - 1
 ${NAMES[1]} assembles itself around you, point by point.
--> hub
-== st_2 ==
+-> away
+== tp_2 ==
+~ gems = gems - 1
 The static parts. ${NAMES[2]}.
--> hub
-== st_3 ==
+-> away
+== tp_3 ==
+~ gems = gems - 1
 You arrive at ${NAMES[3]} before the sound of leaving fades.
--> hub
-${farKnots}${goKnots}== hint ==
-{clues == 0: "Low, near the base," the static says. "Something that once sat on a head."}
-{clues == 1: "At the heart of the scan," it hums. "Small, brass, patient."}
-{clues == 2: "Higher," it crackles. "Up past the top, out in the drift. It still has light in it."}
-{clues == 3: "You have them all. WAKE when ready — or keep porting."}
--> hub
-== found_1 ==
-ONE. A paper crown, folded by somebody's grandmother. The scan remembers being loved.
--> hub
-== found_2 ==
-TWO. A brass key on red thread. It opens nothing here. It opens something THERE.
--> hub
-== found_3 ==
-THREE. A bulb that still works. The dream lights from the inside, once, just for you.
-+ [WAKE] -> wake
-+ [Keep drifting] -> hub
+-> away
+== farhub ==
+${FKEYS.length} other places hum behind the static. A far port burns the gem.
+${farMenu}+ [Keep the gem instead] -> away
+${farKnots}${goKnots}== bank ==
+~ gems = gems - 1
+~ diamonds = diamonds + 1
+A clean cut. Diamonds: {diamonds} — convertible on waking.
+{diamonds >= 3: They weigh enough to WAKE on.}
++ {diamonds >= 3} [WAKE — cash out] -> wake
++ [Back to the drift] -> away
+== bribe ==
+~ gems = gems - 1
+The static takes it greedily, and whispers where another shimmer waits.
++ [Follow the whisper] -> away
+== pocket ==
+It clicks, satisfied, into your pocket.
+-> away
 == wake ==
-You surface through the static, grinning like a fool.
+You surface through the static, rich in impossible stones.
 -> END
 `;
 let inkStory=null;
 try{ inkStory=new inkjs.Compiler(INK_SOURCE).Compile(); }
 catch(e){ console.warn('ink compile failed', e); }
+/* the economy rides ACROSS far ports in the URL (g gems, di diamonds) */
+function vs(k2){ try{ return inkStory?(inkStory.variablesState.$(k2)|0):0; }catch(e){ return 0; } }
+if(inkStory){
+  try{
+    inkStory.variablesState.$('gems', Math.max(0,parseInt(Q.get('g')||'0',10)||0));
+    inkStory.variablesState.$('diamonds', Math.max(0,parseInt(Q.get('di')||'0',10)||0));
+  }catch(e){}
+}
+function updateTally(){
+  document.getElementById('clueTally').textContent='\u25c6 '+vs('gems')+' \u00b7 \u25c7 '+vs('diamonds');
+}
 
 /* choices choreograph the camera */
 /* the tour: four stations around the scan — ink choices carry you
@@ -1011,19 +856,10 @@ STN.forEach((s,i)=>{ if(i>=TOUR.length) return;
   /* a curated point is authoritative: the walk fence grows to reach it */
   WALKMAX=Math.max(WALKMAX, Math.hypot(s.p[0]-C.x,s.p[2]-C.z)+0.15*R);
 });
-/* every station is also a BILLBOARD spot: a PET marker stands there,
-   and porting there (or tapping the PET) brings the one screen to it —
-   still a single unified screen, with several places it can live */
-NAMES.forEach((n,i)=>{
-  const aim=(STN[i]&&STN[i].yaw!==undefined)?STN[i].yaw:(i*90+40);
-  /* the kiosk stands to the arriving viewer's RIGHT, not centre-frame */
-  const ar=aim*Math.PI/180;
-  const T={ id:'st'+i, label:n,
-    pos:[TOUR[i].x+Math.cos(ar)*0.24*R, TOUR[i].y, TOUR[i].z-Math.sin(ar)*0.24*R],
-    yaw:aim };
-  T.marker=makePETmarker(T.pos);
-  TERMINALS.push(T);
-});
+/* every station IS a gem: the pretty places are the collectibles.
+   Two wild gems drift off the beaten track. */
+TOUR.forEach(p=>spawnGem(p.x,p.y,p.z));
+for(const o of GEM_WILD) spawnGem(C.x+o[0]*R, C.y+o[1]*R, C.z+o[2]*R);
 let tourI=0;
 /* the one true port flight: absolute per-station bearing (hand-placed
    yaw wins over the computed corner), so the same port always lands in
@@ -1031,8 +867,6 @@ let tourI=0;
    opts.arrive: the quiet sweep-in when surfacing from another scan. */
 function flyStation(sti, opts={}){
   document.getElementById('hudLoc').textContent='PORT/7 · '+NAMES[sti];
-  const TT=TERMINALS.find(t2=>t2.id==='st'+sti);
-  if(TT){ activeTerm=TT; applyTermPose(TT); }   // the screen ports with you
   const bAng=Math.atan2(base.x,base.z)*180/Math.PI;
   const aim=STN[sti]?STN[sti].yaw:(sti*90+40);
   let want=aim-bAng-yaw;
@@ -1049,28 +883,30 @@ function flyStation(sti, opts={}){
 function choiceFlight(label){
   const L=label.toLowerCase();
   const sti=NAMES.findIndex(n=>label.includes(n));
-  /* a far station: "⇒ NAME · scenekey" — leave this scan, surface at
-     that exact station of the other one */
+  /* a far station: "⇒ NAME · scenekey" — burn the gem, surface there */
   const fm=label.match(/^\u21d2 (.+) \u00b7 ([a-z]+)$/);
   if(fm && SCENES[fm[2]]){
     const k=fm[2];
     const fsti=Math.max(0,[0,1,2,3].map(i=>nameOf(k,i)).indexOf(fm[1]));
+    termClose();
     fly({ dYaw:200, toPitch:26, toDist:1.9, tgt:CAM_TGT, dur:2.6, onDone:()=>{
       const u=new URL(location.href);
       u.searchParams.set('scene',k); u.searchParams.set('far','1');
       u.searchParams.set('st',String(fsti));
+      u.searchParams.set('g',String(vs('gems')));       // post-burn values:
+      u.searchParams.set('di',String(vs('diamonds')));  // the go knot ran first
       location.href=u.toString();
     }});
     return 'far';
   }
-  if(L.startsWith('port') && sti>=0){ flyStation(sti); return null; }
-  if(L.includes('hint')){
-    const c=clueMeshes.find(cm=>!cm.found);
-    if(c) fly({ dYaw:120, toPitch:10, toDist:0.55, tgt:c.grp.getPosition(), dur:3.8 });
+  if(L.startsWith('port') && sti>=0){ flyStation(sti); return 'close'; }
+  if(L.includes('whisper')){
+    const g=gems.find(g2=>!g2.found);
+    if(g) fly({ dYaw:120, toPitch:8, toDist:0.6, tgt:g.grp.getPosition(), dur:4 });
+    return 'close';
   }
-  else if(L.includes('map')) fly({ dYaw:45, toPitch:18, toDist:1.25, tgt:CAM_TGT, dur:3 });
-  else if(L.includes('drifting')) fly({ dYaw:150, toPitch:6, toDist:0.8, tgt:CAM_TGT, dur:5 });
-  else if(L.includes('wake')) return 'wake';    // handled by the caller
+  if(L.includes('wake')) return 'wake';
+  if(L.includes('drift')||L.includes('keep the gem')||L.includes('pocket')) return 'close';
   return null;
 }
 function renderInk(){
@@ -1082,22 +918,24 @@ function renderInk(){
   }
   if(out.length) panelLines=out;
   panelChoices=inkStory.currentChoices.map(c=>c.text);
-  panelDraw();
+  updateTally();
+  domRender();
 }
 function chooseChoice(i){
   const c=inkStory && inkStory.currentChoices[i]; if(!c) return;
   const kind=choiceFlight(c.text);
   inkStory.ChooseChoiceIndex(i); renderInk();
-  /* completion ONLY when the hunt is done AND the story has ended —
-     the WAKE flight pulls up and away, then surfaces you */
+  if(kind==='close') termClose();
+  /* WAKE cashes out: needs the banked diamonds, ends the story */
   if(kind==='wake' && !inkStory.canContinue
-     && inkStory.currentChoices.length===0 && found()===3)
+     && inkStory.currentChoices.length===0 && vs('diamonds')>=3){
+    termClose();
     fly({ dYaw:180, toPitch:42, toDist:2.4, tgt:CAM_TGT, dur:3.2, onDone:finish });
+  }
 }
 function finish(){
-  parent.postMessage({ jsdDream:'complete', clues:found() }, '*');
+  parent.postMessage({ jsdDream:'complete', clues:3, diamonds:vs('diamonds') }, '*');
 }
-function found(){ return clueMeshes.filter(c=>c.found).length; }
 
 /* =========================================================
    clue hunting — precise screen-space taps
@@ -1110,36 +948,32 @@ addEventListener('pointerup', e=>{
   const moved=Math.hypot(e.clientX-downAt[0], e.clientY-downAt[1]);
   downAt=null;
   if(moved>8 || !loaded) return;
-  if(e.target.closest && e.target.closest('#exitBtn,#ebCopy,#panel,#readBtn,#menuBtn,#menu,#ebar')) return;
+  if(e.target.closest && e.target.closest(CTL_GUARD)) return;
+  if(termIsOpen) return;                          // the terminal owns the screen
   if(editOn){ editPlace(e.clientX, e.clientY); return; }
-  if(termTap(e.clientX, e.clientY)) return;       // PET markers zoom their screen
-  if(panelTap(e.clientX, e.clientY)) return;      // the terminal soaks its taps
-  const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)   // css px -> device px
-  let best=null, bd=48*scale;
-  for(const c of clueMeshes){
-    if(c.found) continue;
-    _to.sub2(c.grp.getPosition(), camE.getPosition());
+  const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
+  let best=null, bd=52*scale;
+  for(const g of gems){
+    if(g.found) continue;
+    _to.sub2(g.grp.getPosition(), camE.getPosition());
     if(_to.dot(camE.forward)<=0) continue;           // behind the camera
-    camE.camera.worldToScreen(c.grp.getPosition(), _scr);
+    camE.camera.worldToScreen(g.grp.getPosition(), _scr);
     const d=Math.hypot(_scr.x-e.clientX*scale, _scr.y-e.clientY*scale);
-    if(d<bd){ bd=d; best=c; }
+    if(d<bd){ bd=d; best=g; }
   }
   if(best) collect(best);
 });
-function collect(c){
-  c.found=true;
-  c.halo.enabled=false;
-  c.core.render.meshInstances[0].material=glowMat('#ffffff',1);
-  const n=found();
-  document.getElementById('clueTally').textContent='CLUES '+n+'/3';
-  ping(n);
-  fly({ dYaw:70, toDist:0.85, tgt:c.grp.getPosition(), dur:2.0, quiet:true });
-  if(inkStory){
-    inkStory.variablesState.$('clues', n);
-    try{ inkStory.ChoosePathString('found_'+n); }catch(e){}
-    renderInk();
-  }
-  setTimeout(()=>{ c.grp.enabled=false; tgtGoal=CAM_TGT.clone(); }, 1400);
+function collect(g){
+  g.found=true;
+  g.halo.enabled=false;
+  g.core.render.meshInstances[0].setParameter('material_emissive',[1,1,1]);
+  if(inkStory){ try{ inkStory.variablesState.$('gems', vs('gems')+1); }catch(e){} }
+  updateTally();
+  ping(vs('gems'));
+  /* a short savouring flight, then the terminal takes the screen */
+  fly({ dYaw:50, toDist:Math.max(MINDF,0.55), tgt:g.grp.getPosition(), dur:1.6, quiet:true,
+    onDone:()=>{ if(inkStory){ try{ inkStory.ChoosePathString('gem'); }catch(e){}
+      renderInk(); termOpen(); } } });
 }
 
 /* audio: one chime per clue + a riser under each flight.
@@ -1188,34 +1022,23 @@ window.__dream = {
   get loaded(){ return loaded; },
   get splatOk(){ return splatOk; },
   get mode(){ return mode; },
-  get hic(){ return { drawElement:HIC2D, gpuCopy:HICGPU, live:hicLive }; },
   get scene(){ return SCENE.credit; },
   get flying(){ return !!flight; },
-  get found(){ return found(); },
   get panelText(){ return panelLines.join(' '); },
   get panelChoices(){ return panelChoices.slice(); },
-  tap(i){ collect(clueMeshes[i]); },
+  get termOpen(){ return termIsOpen; },
+  get econ(){ return { gems:vs('gems'), diamonds:vs('diamonds') }; },
+  get gemStates(){ return gems.map(g=>g.found); },
+  tap(i){ collect(gems[i]); },
   proj(i){ const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
-    camE.camera.worldToScreen(clueMeshes[i].grp.getPosition(), _scr);
-    return { x:_scr.x/scale, y:_scr.y/scale }; },
-  panelRect(){ const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
-    camE.camera.worldToScreen(PANEL_POS, _scr);
-    return { x:Math.round(_scr.x/scale), y:Math.round(_scr.y/scale) }; },
-  btnScreen(i){ const r=choiceRects[i]; if(!r) return null;
-    _nrm.set(camE.getPosition().x-PANEL_POS.x,0,camE.getPosition().z-PANEL_POS.z).normalize();
-    _rt.cross(_nrm, pc.Vec3.UP).normalize();
-    const lx=(0.5-(r.x+r.w/2)/PANEL_W)*PW, ly=(0.5-(r.y+r.h/2)/PANEL_H)*PH;
-    const wp=new pc.Vec3().copy(_rt).mulScalar(lx); wp.y+=ly; wp.add(PANEL_POS);
-    const scale=1;  // pc 2.x worldToScreen/screenToWorld speak CSS px (dpr bug, diagnosed on iPhone)
-    camE.camera.worldToScreen(wp,_scr);
+    camE.camera.worldToScreen(gems[i].grp.getPosition(), _scr);
     return { x:_scr.x/scale, y:_scr.y/scale }; },
   choose(i){ chooseChoice(i); },
-  get terms(){ return TERMINALS.map(T=>T.label); },
+  openTerm(){ if(inkStory){ try{ inkStory.ChoosePathString('hub'); }catch(e){}
+    renderInk(); termOpen(); } },
+  closeTerm(){ termClose(); },
   editPlace(x,y){ return editPlace(x,y); },
   get lastPlace(){ return lastPlace?[+lastPlace.x.toFixed(3),+lastPlace.y.toFixed(3),+lastPlace.z.toFixed(3)]:null; },
-  flyToTerm(i){ flyToTerm(TERMINALS[i]); },
-  get domVis(){ return domVis; },
-  setDomForce(v){ domForce=v; domVis=(v===null)?domVis:v; },
   setCam(px,py,pz,tx,ty,tz){ CAM_POS.set(px,py,pz); CAM_TGT.set(tx,ty,tz);
     tgtGoal=CAM_TGT.clone(); TGT_CUR.copy(CAM_TGT);
     base.sub2(CAM_POS,CAM_TGT); side.cross(pc.Vec3.UP,base).normalize();
@@ -1225,8 +1048,7 @@ window.__dream = {
     WALKMAX=Math.max(WALKMAX, Math.hypot(tx-C.x,tz-C.z)+0.05*R);
     yaw=0; pitch=0; distF=1; flight=null; },
   mats(){ return { cam:[...camE.getWorldTransform().data],
-    proj:[...camE.camera.projectionMatrix.data],
-    panel:[...panelE.getWorldTransform().data], pw:PW }; },
+    proj:[...camE.camera.projectionMatrix.data] }; },
   get lastYaw(){ return +lastYaw.toFixed(1); },
   get centers(){ return editPts; },   // world-space scan points (edit mode)
   get frame(){ return { C:[C.x,C.y,C.z], R:R, baseLen:base.length(),
