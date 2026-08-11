@@ -68,3 +68,20 @@ interpolating then snapping; controls are screen-relative and rotate too.
 `window.__jsd` hook: `.start()`, `.press(name,down)`, `.teleport(x,y,z)`,
 `.mute()`, `.player`, `.state`. Playwright + SwiftShader works (WebGL2
 fallback path — the WebGPU path needs a real browser, per repo CLAUDE.md).
+
+## Design doctrine (owner, Aug 2026)
+When games can be wished into existence, nobody will invest in mastering a
+one-off's obscure physics. The scarce resource is player patience, not
+content. Therefore: **controls must be nearly free at entry — instant
+competence — and fun must arrive through level escalation, not control
+mastery.** A level-1 player touching nothing should still make progress;
+assists (guides, magnets, auto-recovery) are stripped away level by level
+until mastery is optional flavor at the top. Applied first to CANARY WHARF
+(`canarywharf.html`): guide beam + beacon magnet + water auto-pullup at
+level 1, four levels ending in "Peregrine Nights" with no net. Verified by
+a hands-off headless run that lit a beacon with zero input.
+
+## Also in this folder: CANARY WHARF
+`canarywharf.html` — a one-thumb dusk flight over a stylised Docklands
+(TSL curtain-wall towers, sky dome, murmuration, DLR loop, peregrine;
+Satie on triangle waves). Four levels from full-assist to no-net.

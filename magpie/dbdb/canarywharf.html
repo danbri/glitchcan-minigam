@@ -75,6 +75,13 @@
     box-shadow:0 6px 30px rgba(255,190,80,.45);
   }
   .overlay .btn:disabled { opacity:.55; }
+  #levelRow { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; z-index:1; }
+  .chip {
+    padding:8px 14px; border-radius:20px; border:1px solid rgba(255,233,196,.5);
+    background:rgba(20,12,40,.4); color:#ffe9c4; font-family:inherit;
+    font-size:clamp(10px,2.8vw,13px); letter-spacing:.12em; cursor:pointer;
+  }
+  .chip.locked { opacity:.35; }
   .bird { font-size:56px; z-index:1; animation:bob 3s ease-in-out infinite; }
   @keyframes bob { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-12px) rotate(4deg)} }
   .hidden { display:none !important; }
@@ -99,9 +106,10 @@
   <p>Dusk over the docks. Seven rooftop beacons have gone dark, and the
      lamplighters are on strike. You are a canary. Obviously this is now
      your problem.<br><br>
-     <b>Hold</b> anywhere to climb · <b>release</b> to glide ·
-     <b>drag</b> left / right to bank. Land softly on a beacon to light it.
-     Mind the peregrine.</p>
+     <b>Hold</b> anywhere to climb · <b>release</b> to glide level ·
+     <b>drag</b> to bank. A pillar of light marks your next beacon, and the
+     wind will help you onto it. Higher levels take the help away —
+     and wake the peregrine.</p>
   <button type="button" class="btn" id="startBtn" disabled>WARMING UP…</button>
 </div>
 
@@ -385,8 +393,16 @@ for(const ti of BEACON_TOWERS){
     crown.add(fm);
   }
   crown.visible=false; scene.add(crown);
-  beacons.push({ tower:t, pos, lit:false, pad, crown });
+  beacons.push({ tower:t, pos, lit:false, active:true, pad, crown });
 }
+/* the guide: a pillar of light on the current target — you can never be lost */
+const beamMat = new THREE.MeshBasicNodeMaterial({ transparent:true, depthWrite:false,
+  blending:THREE.AdditiveBlending, side:THREE.DoubleSide });
+beamMat.colorNode = vec3(1.0,0.82,0.4);
+beamMat.opacityNode = smoothstep(1.0,0.0,abs(uv().x.sub(0.5)).mul(2.0))
+  .mul(smoothstep(1.0,0.2,uv().y)).mul(sin(time.mul(2.2)).mul(0.15).add(0.4));
+const beam = new THREE.Mesh(new THREE.CylinderGeometry(2.2,2.2,150,10,1,true), beamMat);
+beam.visible=false; scene.add(beam);
 
 /* seeds — glowing motes strung in arcs between the towers */
 const seeds = [];
@@ -415,6 +431,24 @@ function arc(a, b, peak, n){
   arc(new V(-6,18,44),  new V(0,40,20),  8, 6);
   arc(new V(56,20,34),  new V(34,50,8),  8, 7);
   arc(new V(-52,22,28), new V(-34,50,8), 8, 7);
+}
+
+/* speed rings (level 3+): fly the chain, keep the pace */
+const rings=[];
+{
+  const rm = new THREE.MeshBasicNodeMaterial({ transparent:true, depthWrite:false,
+    blending:THREE.AdditiveBlending });
+  rm.colorNode = vec3(0.4,0.9,1.0).mul(sin(time.mul(3.0)).mul(0.2).add(0.8));
+  rm.opacityNode = float(0.55);
+  const rg = new THREE.TorusGeometry(4.2, 0.35, 8, 24);
+  const spots = [[ -17,52,10,0.6],[ 17,52,10,-0.6],[ 0,58,-18,0],[ -40,50,-10,0.8],
+                 [ 30,46,-28,-0.5],[ 5,50,-50,0.1],[ -30,54,-40,0.4],[ 45,42,-60,-0.3]];
+  for(const [rx,ry,rz,ryaw] of spots){
+    const m=new THREE.Mesh(rg, rm);
+    m.position.set(rx,ry,rz); m.rotation.y=ryaw;
+    m.visible=false; scene.add(m);
+    rings.push({m, taken:false});
+  }
 }
 
 /* DLR — a lit train gliding its elevated loop forever */
@@ -530,8 +564,34 @@ const P = {
   speed: 0, vy: 0, grounded: true,
   stun: 0,
 };
-const state = { running:false, lit:0, seeds:0, t0:0, toastT:0, bonks:0 };
+/* Design doctrine (owner, Aug 2026): infinite wishable games mean nobody
+   will master a one-off's obscure physics. Controls must be nearly free at
+   entry; fun arrives through LEVELS, not through control mastery. */
+const LEVELS = [
+  { name:'FIRST LIGHT',   beacons:[0,1,2],       magnet:1.0, pullup:true,  falcon:false, clock:0,   gusts:false, rings:false,
+    blurb:'Three beacons. The wind itself is on your side.' },
+  { name:'THE LONG ROUND',beacons:[3,4,5,7],     magnet:0.6, pullup:true,  falcon:false, clock:0,   gusts:true,  rings:false,
+    blurb:'Four far towers. Gusts have opinions.' },
+  { name:'RUSH HOUR',     beacons:[0,1,2,3,4,5,7], magnet:0.35, pullup:true, falcon:true, clock:240, gusts:true, rings:true,
+    blurb:'All seven before the clock. Rings give speed. The peregrine is awake.' },
+  { name:'PEREGRINE NIGHTS', beacons:[0,1,2,3,4,5,7], magnet:0.15, pullup:false, falcon:true, clock:170, gusts:true, rings:true,
+    blurb:'No net. No mercy. The wharf remembers your name.' },
+];
+let unlocked = 1;
+try{ unlocked = Math.min(LEVELS.length, parseInt(localStorage.getItem('cw-unlocked')||'1')); }catch(e){}
+const state = { running:false, level:0, lit:0, need:0, seeds:0, t0:0, toastT:0, bonks:0, clock:0 };
+function LV(){ return LEVELS[state.level]; }
 const input = { hold:false, steer:0 };
+let gustT=6, gustDir=1, gustPow=0;
+function nearestBeacon(){
+  let best=null, bd=1e9;
+  for(const b of beacons){
+    if(b.lit || !b.active) continue;
+    const d=(b.pos.x-P.pos.x)**2+(b.pos.z-P.pos.z)**2;
+    if(d<bd){ bd=d; best=b; }
+  }
+  return best;
+}
 
 function fwd(){ return new THREE.Vector3(Math.sin(P.yaw), 0, Math.cos(P.yaw)); }
 
@@ -549,7 +609,7 @@ function lightBeacon(b){
   b.lit=true; state.lit++;
   b.pad.material = padLitMat; b.crown.visible=true;
   sfx.beacon(); updateHUD();
-  toast(state.lit<7 ? 'BEACON LIT — '+(7-state.lit)+' TO GO' : 'THE LAST BEACON!');
+  toast(state.lit<state.need ? 'BEACON LIT — '+(state.need-state.lit)+' TO GO' : 'THE LAST BEACON!');
 }
 function flight(dt){
   if(P.stun>0) P.stun-=dt;
@@ -561,10 +621,34 @@ function flight(dt){
     P.vy += dt*26;
     P.speed += dt*6;
   } else {
-    P.vy -= dt*10;                       // soft gravity — a soar, not a plummet
-    P.speed += dt*3*(P.vy<0?1:0.2);      // shallow dives convert to speed
+    // instant competence: released, the bird settles into LEVEL flight
+    P.vy += (-1.6 - P.vy)*Math.min(1, dt*2.2);
+    P.speed += dt*2*(P.vy<0?1:0.2);
   }
+  // ground effect: the air itself refuses to let a beginner drown
+  if(LV().pullup && P.pos.y<10 && P.vy<0) P.vy += dt*40*(1-P.pos.y/10);
   P.vy = Math.max(-9.5, Math.min(11, P.vy));
+
+  // beacon magnet: near an unlit target, the wind leans you onto it
+  const tgt = nearestBeacon();
+  if(tgt && LV().magnet>0){
+    const d = Math.hypot(tgt.pos.x-P.pos.x, tgt.pos.z-P.pos.z);
+    if(d<46 && Math.abs(input.steer)<0.25){
+      const want = Math.atan2(tgt.pos.x-P.pos.x, tgt.pos.z-P.pos.z);
+      let dy2 = want-P.yaw;
+      dy2 = ((dy2+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
+      P.yaw += dy2*Math.min(1, dt*1.6*LV().magnet);
+      if(d<26) P.vy += ((tgt.pos.y+2-P.pos.y)*0.8 - P.vy)*Math.min(1, dt*2.0*LV().magnet);
+    }
+  }
+
+  // gusts (level 2+): the wharf breathes sideways now and then
+  if(LV().gusts){
+    gustT -= dt;
+    if(gustT<=0){ gustT = 7+Math.random()*8; gustDir = Math.random()<0.5?-1:1;
+      gustPow = 1.6; toast('GUST!'); }
+    if(gustPow>0){ gustPow -= dt*0.8; P.yaw += gustDir*gustPow*dt*0.5; }
+  }
   P.speed = Math.max(7, Math.min(26, P.speed*Math.pow(0.995, dt*60)));
   P.pitch += ((P.vy/26*0.8)-P.pitch)*Math.min(1,dt*5);
 
@@ -575,10 +659,11 @@ function flight(dt){
 
   // beacon perch first — a generous touch-and-go, checked before any bonk
   for(const b of beacons){
+    if(!b.active) continue;
     const dx=nx-b.pos.x, dz=nz-b.pos.z, dy=ny-b.pos.y;
     if(!b.lit && dx*dx+dz*dz<36 && dy>-2.5 && dy<6 && P.vy<=3){
       lightBeacon(b);
-      if(state.lit===7){ win(); }
+      if(state.lit===state.need){ win(); }
       return;
     }
   }
@@ -587,10 +672,10 @@ function flight(dt){
   const hitT = towerHit(nx,ny,nz);
   if(hitT && !hitT._graced){
     // clipping the very top of a beacon tower counts as a scrappy landing
-    const hb = beacons.find(b=>b.tower===hitT && !b.lit);
+    const hb = beacons.find(b=>b.tower===hitT && !b.lit && b.active);
     if(hb && ny > hitT.h - 3.5){
       lightBeacon(hb);
-      if(state.lit===7){ win(); }
+      if(state.lit===state.need){ win(); }
       return;
     }
   }
@@ -609,13 +694,11 @@ function flight(dt){
   if(R>230){ P.pos.x*=0.995; P.pos.z*=0.995; toastOnce('THE ESTUARY IS NOT YOURS TONIGHT'); }
   if(ny>110){ ny=110; P.vy=Math.min(P.vy,0); }
 
-  // water
+  // water: a skim and a scare, never a hard reset
   if(ny < 1.2){
     sfx.splash(); state.bonks++;
-    const b = beacons[0];
-    P.pos.set(b.pos.x, b.pos.y+1.5, b.pos.z);
-    P.vy=0; P.speed=8; toast('SOGGY. BACK TO THE TOP.');
-    return;
+    P.vy=8; ny=2.5; P.speed=Math.max(7,P.speed*0.7);
+    toast('SPLASH! UP, UP!');
   }
   P.pos.y = ny;
 
@@ -629,9 +712,25 @@ function flight(dt){
     }
   }
 
+  // rings: pass through for a burst of speed and seeds
+  if(LV().rings) for(const r of rings){
+    if(r.taken || !r.m.visible) continue;
+    if(P.pos.distanceToSquared(r.m.position)<20){
+      r.taken=true; r.m.visible=false;
+      P.speed=Math.min(30, P.speed+7);
+      state.seeds+=3; sfx.seed(); updateHUD(); toast('RING! +SPEED');
+    }
+  }
+
+  // the level clock
+  if(LV().clock>0){
+    state.clock-=dt;
+    if(state.clock<=0){ lose(); return; }
+  }
+
   // the peregrine disapproves of visitors near its pyramid
   const fd = P.pos.distanceTo(falcon.g.position);
-  if(fd<3 && P.stun<=0){
+  if(LV().falcon && fd<3 && P.stun<=0){
     P.stun=0.6; P.speed=8; P.vy=-6;
     state.bonks++; sfx.bonk(); toast('PEREGRINE! FLY!');
   }
@@ -790,38 +889,83 @@ try{ if(localStorage.getItem('cw-mute')==='1'){ chip.muted=true;
    ========================================================= */
 const $=id=>document.getElementById(id);
 function updateHUD(){
-  $('hudBeacons').textContent = '✦ '+state.lit+'/7';
-  $('hudSeeds').textContent = '◦ '+state.seeds;
+  $('hudBeacons').textContent = '✦ '+state.lit+'/'+state.need;
+  const clk = LV().clock>0 ? ' · '+Math.max(0,Math.ceil(state.clock))+'s' : '';
+  $('hudSeeds').textContent = '◦ '+state.seeds+clk;
 }
 function toast(msg){
   const el=$('toast'); el.textContent=msg; el.style.opacity=1; state.toastT=2.4;
 }
 let lastOnce='';
 function toastOnce(msg){ if(lastOnce!==msg){ lastOnce=msg; toast(msg); } }
-function startGame(){
+function startGame(level=0){
   chip.ensure(); music.play();
+  state.level=Math.min(level, LEVELS.length-1);
+  const L=LV();
   $('title').classList.add('hidden'); $('victory').classList.add('hidden');
   $('hud').style.display='flex'; $('muteBtn').style.display='flex';
   $('hint').style.display='block';
-  $('hint').textContent='HOLD TO CLIMB · RELEASE TO GLIDE · DRAG TO BANK';
-  setTimeout(()=>{ $('hint').style.display='none'; }, 6000);
+  $('hint').textContent=L.name+' — '+L.blurb;
+  setTimeout(()=>{ $('hint').style.display='none'; }, 6500);
   state.running=true; state.lit=0; state.seeds=0; state.bonks=0;
+  state.clock=L.clock; state.need=L.beacons.length;
   state.t0=performance.now();
-  for(const b of beacons){ b.lit=false; b.pad.material=padMat; b.crown.visible=false; }
+  beacons.forEach((b,i)=>{
+    b.active = L.beacons.includes(i);
+    b.lit=false; b.pad.material=padMat; b.crown.visible=false;
+    b.pad.visible=b.active;
+  });
   for(const s of seeds){ s.taken=false; s.m.visible=true; }
+  for(const r of rings){ r.taken=false; r.m.visible=L.rings; }
   P.pos.set(0, 50, 70); P.yaw=Math.PI; P.vy=0; P.speed=10; P.stun=0;
   updateHUD();
+}
+function lose(){
+  state.running=false;
+  toast('');
+  $('victory').classList.remove('hidden');
+  $('victory').querySelector('h1').innerHTML='MIDNIGHT<br>CAME FIRST';
+  $('winStats').textContent=state.lit+'/'+state.need+' BEACONS — SO CLOSE';
+  $('againBtn').textContent='TRY AGAIN';
+  $('hud').style.display='none'; $('hint').style.display='none';
 }
 function win(){
   state.running=false; sfx.win();
   const secs=Math.round((performance.now()-state.t0)/1000);
-  $('winStats').textContent = Math.floor(secs/60)+'M '+String(secs%60).padStart(2,'0')+'S · '
+  const next = state.level+1;
+  if(next<LEVELS.length && next+1>unlocked){
+    unlocked=next+1;
+    try{ localStorage.setItem('cw-unlocked', String(unlocked)); }catch(e){}
+  }
+  $('victory').querySelector('h1').innerHTML = next<LEVELS.length ? 'LEVEL<br>COMPLETE' : 'THE WHARF<br>IS LIT';
+  $('winStats').textContent = LV().name+' · '+Math.floor(secs/60)+'M '+String(secs%60).padStart(2,'0')+'S · '
     +state.seeds+' SEEDS · '+state.bonks+' BUMPS';
+  $('againBtn').textContent = next<LEVELS.length ? 'NEXT: '+LEVELS[next].name : 'FLY AGAIN';
+  $('againBtn').dataset.level = next<LEVELS.length ? next : 0;
   $('victory').classList.remove('hidden');
   $('hud').style.display='none'; $('hint').style.display='none';
 }
-$('startBtn').addEventListener('click', startGame);
-$('againBtn').addEventListener('click', startGame);
+$('startBtn').addEventListener('click', ()=>startGame(unlocked-1));
+$('againBtn').addEventListener('click', ()=>startGame(parseInt($('againBtn').dataset.level||'0')));
+/* level chips on the title screen */
+{
+  const row=document.createElement('p');
+  row.id='levelRow';
+  $('title').insertBefore(row, $('startBtn'));
+  function renderChips(){
+    row.innerHTML='';
+    LEVELS.forEach((L,i)=>{
+      const b=document.createElement('button');
+      b.type='button'; b.className='chip'+(i<unlocked?'':' locked');
+      b.textContent=(i+1)+'. '+L.name;
+      b.disabled = i>=unlocked;
+      b.addEventListener('click', ()=>startGame(i));
+      row.appendChild(b);
+    });
+  }
+  renderChips();
+  window.__cwRenderChips = renderChips;
+}
 
 /* =========================================================
    9. POST — golden glow + vignette
@@ -911,6 +1055,11 @@ function animate(){
 
   seeds.forEach((s,i)=>{ if(!s.taken){ s.m.rotation.y=t*2+i; } });
 
+  // the guide beam stands on the nearest target beacon
+  const gb = state.running ? nearestBeacon() : null;
+  beam.visible = !!gb;
+  if(gb){ beam.position.set(gb.pos.x, gb.pos.y+72, gb.pos.z); }
+
   if(post) post.render(); else renderer.render(scene,camera);
 }
 
@@ -933,7 +1082,9 @@ function animate(){
 
 /* headless-test hook */
 window.__cw = {
-  version:'1.0.0',
+  version:'2.0.0',
+  get level(){ return {i:state.level, name:LEVELS[state.level].name, unlocked}; },
+  startLevel(i){ startGame(i); },
   get bird(){ return {x:P.pos.x,y:P.pos.y,z:P.pos.z,yaw:P.yaw,speed:P.speed}; },
   get state(){ return {running:state.running, lit:state.lit, seeds:state.seeds, bonks:state.bonks}; },
   start(){ startGame(); },
