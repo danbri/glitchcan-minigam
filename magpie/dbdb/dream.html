@@ -73,6 +73,9 @@
 <div id="head"><span id="hudLoc">PORT/7 · DREAM SHELL</span><span id="clueTally">CLUES 0/3</span></div>
 <button type="button" id="exitBtn">✕ SURFACE</button>
 <div id="loadLine">TUNING THE STATIC…</div>
+<div id="css3d"><div id="css3dCam">
+  <div id="panel"><div class="crest">PORT/7 TERMINAL</div><div class="inkText"></div><div class="choices"></div></div>
+</div></div>
 <pre id="err"></pre>
 
 <script src="../../third_party/ink/ink-full.min.js"></script>
@@ -101,6 +104,7 @@ document.getElementById('exitBtn').style.borderColor=tint;
 const SCENES={
   tree:  { ply:'splats/christmas-tree-150k.compressed.ply',
            hq:'splats/christmas-tree-400k.compressed.ply',
+           raw:'splats/christmas-tree-150k.splat',
            up:[-0.522,0.836,0.168], c:[-0.4,-0.1,0.9], r:2.6,
            pal:['#d8d8d8','#f0f0f0','#a8a8a8','#55a049','#b83932','#e8b48c'],
            what:"a pine tree standing in somebody's scanned-in winter, holding its breath",
@@ -285,6 +289,14 @@ panelE.addChild(plate);
 /* anchored in the WORLD, placed once using the boot camera's left */
 const camR0=camE.right.clone(); camR0.y=0; camR0.normalize();
 const PANEL_POS=new pc.Vec3(C.x-camR0.x*0.5*R, C.y+0.05*R, C.z-camR0.z*0.5*R);
+/* the plate is MOUNTED: a neck drops to its PET below — one machine,
+   fixed in the world with a fixed facing captured at placement */
+{ const neck=new pc.Entity('neck');
+  neck.addComponent('render',{ type:'box' });
+  neck.render.meshInstances[0].material=glowMat('#2a3a30',1);
+  neck.setLocalScale(0.05*R, PH*0.55, 0.05*R);
+  neck.setLocalPosition(0,-PH*0.72,0);
+  panelE.addChild(neck); }
 panelE.setPosition(PANEL_POS);
 app.root.addChild(panelE);
 
@@ -325,6 +337,7 @@ function panelDraw(){
   g.fillStyle='rgba(0,0,0,0.18)';
   for(let sy=0; sy<PANEL_H; sy+=3) g.fillRect(0,sy,PANEL_W,1);
   panelTex.setSource(pcv);
+  if(typeof domRender==='function') domRender();
 }
 panelDraw();
 
@@ -336,11 +349,19 @@ panelDraw();
    PET on the splat surface (ray vs the actual gaussian data),
    COPY DATA yields JSON to paste back into the chat.
    ========================================================= */
+const bootYaw=Math.atan2(camE.getPosition().x-PANEL_POS.x,
+                         camE.getPosition().z-PANEL_POS.z)*180/Math.PI;
 const TERMINALS=[
   { id:'port7', label:'BY THE WINTER TREE',
-    pos:[PANEL_POS.x, PANEL_POS.y, PANEL_POS.z] },
+    pos:[PANEL_POS.x, PANEL_POS.y-PH*0.72-0.14*R, PANEL_POS.z], yaw:bootYaw },
 ];
 let activeTerm=TERMINALS[0];
+function applyTermPose(T){
+  PANEL_POS.set(T.pos[0], T.pos[1]+PH*0.72+0.14*R, T.pos[2]);
+  panelE.setPosition(PANEL_POS);
+  panelE.setEulerAngles(0, T.yaw||0, 0);
+}
+applyTermPose(TERMINALS[0]);
 function makePETmarker(p){
   const g2=new pc.Entity('pet');
   const s=0.14*R;
@@ -359,11 +380,14 @@ function makePETmarker(p){
 for(const T of TERMINALS) T.marker=makePETmarker(T.pos);
 function flyToTerm(T){
   activeTerm=T;
-  PANEL_POS.set(T.pos[0],T.pos[1]+0.3*R,T.pos[2]);
-  panelE.setPosition(PANEL_POS);
+  applyTermPose(T);
   document.getElementById('hudLoc').textContent='PORT/7 · '+T.label;
-  fly({ dYaw:55, toPitch:2, toDist:0.6,
-        tgt:new pc.Vec3(T.pos[0],T.pos[1]+0.3*R,T.pos[2]), dur:2.8 });
+  /* land on the screen's own normal so the plate reads head-on */
+  const bAng=Math.atan2(base.x,base.z)*180/Math.PI;
+  let want=(T.yaw||0)-bAng-yaw;
+  while(want>180) want-=360; while(want<-180) want+=360;
+  fly({ dYaw:want+(Math.abs(want)<40?360:0), toPitch:2, toDist:0.55,
+        tgt:PANEL_POS.clone(), dur:3.0 });
 }
 function termTap(cx,cy){
   const scale=app.graphicsDevice.width/innerWidth;
@@ -397,7 +421,8 @@ if(EDIT){
   document.getElementById('ebCopy').addEventListener('click',()=>{
     if(!lastPlace) return;
     const data=JSON.stringify({ scene:(Q.get('scene')||'tree'), label:'NEW PORT',
-      pos:[+lastPlace.x.toFixed(3),+lastPlace.y.toFixed(3),+lastPlace.z.toFixed(3)] });
+      pos:[+lastPlace.x.toFixed(3),+lastPlace.y.toFixed(3),+lastPlace.z.toFixed(3)],
+      yaw:+lastYaw.toFixed(1) });
     if(navigator.clipboard) navigator.clipboard.writeText(data).catch(()=>{});
     document.getElementById('ebInfo').textContent=data;
   });
@@ -420,15 +445,129 @@ function splatHit(cx,cy){
   if(best===Infinity) return null;
   return new pc.Vec3().copy(rd).mulScalar(best).add(ro);
 }
+let lastYaw=0;
 function editPlace(cx,cy){
   const h=splatHit(cx,cy);
   if(!h) return false;
   lastPlace=h;
-  if(ghost) ghost.setPosition(h); else ghost=makePETmarker([h.x,h.y,h.z]);
-  if(ghost) ghost.setPosition(h.x,h.y,h.z);
+  lastYaw=Math.atan2(camE.getPosition().x-h.x, camE.getPosition().z-h.z)*180/Math.PI;
+  if(!ghost) ghost=makePETmarker([h.x,h.y,h.z]);
+  ghost.setPosition(h.x,h.y,h.z);
+  ghost.setEulerAngles(0,lastYaw,0);
   document.getElementById('ebInfo').textContent=
     'PET at '+h.x.toFixed(2)+', '+h.y.toFixed(2)+', '+h.z.toFixed(2)+' — COPY DATA when happy';
   return true;
+}
+
+/* =========================================================
+   HYBRID HTML: while the screen zone is mostly VISIBLE (facing
+   us, on screen, not swallowed by the scan) the REAL html panel
+   overlays the plate, matrix-matched — crisp text, native
+   buttons. The moment the splat mostly covers it, the overlay
+   yields to the engine plate, which the gaussians occlude
+   per-splat. Occlusion is judged against the scan's own data:
+   a ~30k-gaussian sample (HTTP range request, ~1MB).
+   ========================================================= */
+const css3d=document.getElementById('css3d'), css3dCam=document.getElementById('css3dCam');
+const domPanel=document.getElementById('panel');
+domPanel.style.color=tint; domPanel.style.borderColor=tint;
+let occPts=null, domVis=false, visTick=0;
+if(SCENE.raw){
+  fetch(SCENE.raw, { headers:{ Range:'bytes=0-959999' } })
+    .then(r2=>r2.arrayBuffer()).then(b2=>{
+      const n=Math.min(30000, Math.floor(b2.byteLength/32));
+      const dv=new DataView(b2), pts=new Float32Array(n*3);
+      const v=new pc.Vec3();
+      for(let i=0;i<n;i++){
+        if(dv.getUint8(i*32+27)<90){ pts[i*3]=1e9; continue; }
+        v.set(dv.getFloat32(i*32,true),dv.getFloat32(i*32+4,true),dv.getFloat32(i*32+8,true));
+        upQ.transformVector(v,v);
+        pts[i*3]=v.x; pts[i*3+1]=v.y; pts[i*3+2]=v.z;
+      }
+      occPts=pts;
+    }).catch(()=>{});
+}
+/* a ray is blocked only by a DENSE cluster in front of the plate —
+   stray dust motes in a room scan must not count as walls */
+function rayBlockCount(ro,rd,pts,stride,maxT){
+  const rad2=0.008*R*R; let hits=0;
+  for(let i=0;i<pts.length;i+=stride){
+    const px2=pts[i]-ro.x, py2=pts[i+1]-ro.y, pz2=pts[i+2]-ro.z;
+    const t3=px2*rd.x+py2*rd.y+pz2*rd.z;
+    if(t3<0.1*R||t3>maxT) continue;
+    const dx=px2-rd.x*t3, dy=py2-rd.y*t3, dz=pz2-rd.z*t3;
+    if(dx*dx+dy*dy+dz*dz<rad2 && ++hits>=4) return hits;
+  }
+  return hits;
+}
+const _vro=new pc.Vec3(), _vrd=new pc.Vec3(), _vp=new pc.Vec3();
+function computeVis(){
+  window.__visDbg={};
+  if(!loaded) return (__visDbg.loaded=false);
+  _vro.copy(camE.getPosition());
+  /* facing: are we in front of the fixed screen? */
+  const py=(activeTerm.yaw||0)*Math.PI/180;
+  const nz=new pc.Vec3(Math.sin(py),0,Math.cos(py));
+  _vp.sub2(_vro,PANEL_POS); _vp.y=0;
+  __visDbg.facing=_vp.normalize().dot(nz);
+  if(__visDbg.facing<0.3) return false;
+  /* on screen? */
+  const scale=app.graphicsDevice.width/innerWidth;
+  camE.camera.worldToScreen(PANEL_POS,_scr);
+  __visDbg.scr=[Math.round(_scr.x/scale),Math.round(_scr.y/scale),+_scr.z.toFixed(2)];
+  if(_scr.z<0 || _scr.x<-40*scale || _scr.x>(innerWidth+40)*scale
+     || _scr.y<-40*scale || _scr.y>(innerHeight+40)*scale) return false;
+  /* mostly unoccluded? sample centre + 4 corners against the scan */
+  if(occPts){
+    const rt=new pc.Vec3().cross(pc.Vec3.UP,nz).normalize();
+    let blocked=0;
+    for(const [ox,oy] of [[0,0],[-0.35,0.3],[0.35,0.3],[-0.35,-0.3],[0.35,-0.3]]){
+      _vrd.copy(PANEL_POS);
+      _vrd.x+=rt.x*ox*PW; _vrd.z+=rt.z*ox*PW; _vrd.y+=oy*PH;
+      const dist=_vrd.distance(_vro);
+      _vrd.sub(_vro).normalize();
+      if(rayBlockCount(_vro,_vrd,occPts,9,dist-0.12*R)>=4) blocked++;
+    }
+    __visDbg.blocked=blocked; __visDbg.occ=occPts.length;
+    if(blocked>=3) return false;
+  }
+  return true;
+}
+function eps(v){ return Math.abs(v)<1e-10?0:v; }
+function camCSS(e){
+  return 'matrix3d('+eps(e[0])+','+eps(-e[1])+','+eps(e[2])+','+eps(e[3])+','+eps(e[4])+','+eps(-e[5])+','+eps(e[6])+','+eps(e[7])+','+eps(e[8])+','+eps(-e[9])+','+eps(e[10])+','+eps(e[11])+','+eps(e[12])+','+eps(-e[13])+','+eps(e[14])+','+eps(e[15])+')';
+}
+function objCSS(e){
+  return 'matrix3d('+eps(e[0])+','+eps(e[1])+','+eps(e[2])+','+eps(e[3])+','+eps(-e[4])+','+eps(-e[5])+','+eps(-e[6])+','+eps(-e[7])+','+eps(e[8])+','+eps(e[9])+','+eps(e[10])+','+eps(e[11])+','+eps(e[12])+','+eps(e[13])+','+eps(e[14])+','+eps(e[15])+')';
+}
+const _inv=new pc.Mat4();
+function domUpdate(vis){
+  if(!vis){ css3d.style.display='none'; return; }
+  css3d.style.display='block';
+  const h=innerHeight, w=innerWidth;
+  const fovPx=camE.camera.projectionMatrix.data[5]*h/2;
+  css3d.style.perspective=fovPx+'px';
+  _inv.copy(camE.getWorldTransform()).invert();
+  css3dCam.style.transform='translateZ('+fovPx+'px)'+camCSS(_inv.data)
+    +'translate('+(w/2)+'px,'+(h/2)+'px)';
+  const s2=PW/300;
+  const M=panelE.getWorldTransform().data;
+  const m=[M[0]*s2,M[1]*s2,M[2]*s2,0, M[4]*s2,M[5]*s2,M[6]*s2,0,
+           M[8]*s2,M[9]*s2,M[10]*s2,0, M[12],M[13],M[14],1];
+  domPanel.style.transform='translate(-50%,-50%)'+objCSS(m);
+}
+function domRender(){
+  const domPanel=document.getElementById('panel');
+  if(!domPanel) return;
+  domPanel.querySelector('.inkText').innerHTML=
+    panelLines.map(l=>'<p>'+l.replace(/</g,'&lt;')+'</p>').join('');
+  const ch=domPanel.querySelector('.choices'); ch.innerHTML='';
+  panelChoices.forEach((c,i)=>{
+    const b=document.createElement('button');
+    b.type='button'; b.className='choice'; b.textContent='▸ '+c;
+    b.addEventListener('click',()=>chooseChoice(i));
+    ch.appendChild(b);
+  });
 }
 
 /* raycast a css-pixel tap onto the plate; true = consumed */
@@ -488,8 +627,8 @@ app.on('update', dt=>{
       C.y+m.h+Math.sin(t*0.4+m.ph)*0.06*R,
       C.z+Math.sin(m.a)*m.rr);
   }
-  { const pd=camE.getPosition();
-    panelE.setEulerAngles(0, Math.atan2(pd.x-PANEL_POS.x, pd.z-PANEL_POS.z)*180/Math.PI, 0); }
+  if(++visTick>=10){ visTick=0; domVis=computeVis(); }
+  domUpdate(domVis);
 });
 
 /* =========================================================
@@ -618,7 +757,7 @@ addEventListener('pointerup', e=>{
   const moved=Math.hypot(e.clientX-downAt[0], e.clientY-downAt[1]);
   downAt=null;
   if(moved>8 || !loaded) return;
-  if(e.target.closest && e.target.closest('#exitBtn,#ebCopy')) return;
+  if(e.target.closest && e.target.closest('#exitBtn,#ebCopy,#panel')) return;
   if(EDIT){ editPlace(e.clientX, e.clientY); return; }
   if(termTap(e.clientX, e.clientY)) return;       // PET markers zoom their screen
   if(panelTap(e.clientX, e.clientY)) return;      // the terminal soaks its taps
@@ -721,6 +860,8 @@ window.__dream = {
   editPlace(x,y){ return editPlace(x,y); },
   get lastPlace(){ return lastPlace?[+lastPlace.x.toFixed(3),+lastPlace.y.toFixed(3),+lastPlace.z.toFixed(3)]:null; },
   flyToTerm(i){ flyToTerm(TERMINALS[i]); },
+  get domVis(){ return domVis; },
+  get lastYaw(){ return +lastYaw.toFixed(1); },
   exit(){ document.getElementById('exitBtn').click(); },
 };
 </script>
