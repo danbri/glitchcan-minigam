@@ -21,6 +21,9 @@ Play: `dbdb2.html` (rev 2, "The Moonlight Shift") or `dbdb.html`
   (wobbled radius, radial hue rings, hash sparkle). You see the hero AND
   you unmistakably see the wall is still there. Replaces both the rev-1
   x-ray ("hero everywhere") and the plain cut-out ("mistaken for absence").
+  Retuned in 2.1: a 2.2-unit depth margin keeps floor/bushes at the hero's
+  own depth solid (was: dirt-speckle), survivors keep ~45% density and go
+  bright pastel (never muddy), and a breathing rim marks the curtain edge.
 - Full-360 camera: drag anywhere (right half on touch) to spin freely;
   Q/E or the buttons snap to the nearest diagonal station.
 - THE PUZZLE CITY: 200 generated courts south of the manor, 5 puzzle
@@ -51,9 +54,12 @@ against the C64 blocks, each with procedural behavioural loops:
   (carried two-handed), walk to the kerb, HAIL (arm straight up) — and a
   low glowing car slides in, collects them, and zooms off with a
   motion-stretch. Riders recycle onto the next carriage.
-- **THE DREAM TERMINAL** — in the Newt's corner booth stands a curved
-  keyboard-monitor, screen rolling with TSL static. Stand at it and jump
-  to JACK IN: the screen swallows the view (CSS bezel zoom) and boots
+- **THE DREAM DOORS** — five Commodore-PET-shaped terminals in early-iMac
+  candy plastic (bondi in the Newt's booth, grape in the Library,
+  strawberry in the Attic, lime in the Conservatory, tangerine on the
+  maglev platform), screens rolling with TSL static. Each tints the
+  dream shell its own phosphor (`dream.html?tint=`). Stand at any and
+  jump to JACK IN: the screen swallows the view (CSS bezel zoom) and boots
   `dream.html` in an iframe — a NESTED ink scene (real inkjs compile)
   set INSIDE a real Gaussian splat (the SPLATPORT tree scan). You drift
   in the scan hunting three glowing clues; each tap advances the ink
@@ -104,6 +110,9 @@ Pressure plates run timed mechanisms (pond bridge, hearth douse). Jumping
 and clonking an item's supporting block claims the item (Mario-style).
 Camera rotates through the four diagonals (Q/E or the ⟲⟳ buttons),
 interpolating then snapping; controls are screen-relative and rotate too.
+Rev 2.1 walk assist: input within ~17° of a world cardinal snaps to it,
+and a soft lane-centering nudge (capped at 1.3 u/s) pulls you onto the
+cell centre — so walking a wall-top no longer needs a perfect thumb.
 
 ## Headless testing
 `window.__jsd` hook: `.start()`, `.press(name,down)`, `.teleport(x,y,z)`,

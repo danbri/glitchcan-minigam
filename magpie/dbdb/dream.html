@@ -129,6 +129,15 @@ for(const c of CLUES){
    ========================================================= */
 const Q=new URLSearchParams(location.search);
 const HQ=Q.has('hq');
+/* each candy PET tints the dream shell its own phosphor */
+const TINTS={ bondi:'#8fd8e8', strawberry:'#ffa8b6', tangerine:'#ffc896',
+              lime:'#c8f0a0', grape:'#cfaef5' };
+const tint=TINTS[Q.get('tint')]||'#9fe8b0';
+for(const id of ['panel','head','exitBtn','loadLine']){
+  const el=document.getElementById(id); if(el) el.style.color=tint;
+}
+document.getElementById('panel').style.borderColor=tint;
+document.getElementById('exitBtn').style.borderColor=tint;
 const SPLAT_PATH='splats/christmas-tree-'+(HQ?'400k':'150k')+'.splat';
 const viewer = new GS3D.Viewer({
   rootElement: document.getElementById('stage'),
