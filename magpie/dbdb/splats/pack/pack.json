@@ -17,15 +17,75 @@
           1.2,
           0.5
         ],
-        "trim": 0.08
+        "trim": 0.08,
+        "band": 0.4
       },
-      "count": 14634,
+      "hq": true,
+      "count": 38737,
       "dims": [
         1.8,
         1.07,
-        0.49
+        0.5
       ],
       "credit": "ChristmasTree · keijiro-tk/splat-data · The Unlicense"
+    },
+    {
+      "id": "fern",
+      "file": "fern.compressed.ply",
+      "scene": "garden",
+      "mode": "solid",
+      "box": {
+        "c": [
+          3.5,
+          0.6,
+          3.5
+        ],
+        "yaw": -135,
+        "size": [
+          1.8,
+          1.7,
+          1.8
+        ],
+        "trim": 0.08,
+        "band": 0.35
+      },
+      "hq": true,
+      "count": 50001,
+      "dims": [
+        1.8,
+        0.88,
+        1.03
+      ],
+      "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0"
+    },
+    {
+      "id": "fern2",
+      "file": "fern2.compressed.ply",
+      "scene": "garden",
+      "mode": "solid",
+      "box": {
+        "c": [
+          3.5,
+          0.6,
+          3.5
+        ],
+        "yaw": -135,
+        "size": [
+          1.8,
+          1.7,
+          1.8
+        ],
+        "trim": 0.08,
+        "band": 0.35
+      },
+      "hq": true,
+      "count": 50001,
+      "dims": [
+        1.8,
+        0.88,
+        1.03
+      ],
+      "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0"
     },
     {
       "id": "grass",
@@ -44,15 +104,104 @@
           4,
           3
         ],
-        "trim": 0
+        "trim": 0,
+        "band": 0.4
       },
-      "count": 37580,
+      "hq": true,
+      "count": 115162,
       "dims": [
         3,
         0.4,
         3
       ],
       "credit": "Forest path · Pavel Tanhauser · superspl.at/scene/2be1a75a · CC BY 4.0"
+    },
+    {
+      "id": "hedge",
+      "file": "hedge.compressed.ply",
+      "scene": "garden",
+      "mode": "solid",
+      "box": {
+        "c": [
+          -3.36,
+          1.3,
+          5.88
+        ],
+        "yaw": 106.3,
+        "size": [
+          2.4,
+          2.1,
+          1.2
+        ],
+        "trim": 0.1,
+        "band": 0.35
+      },
+      "hq": true,
+      "count": 60000,
+      "dims": [
+        2.4,
+        1.58,
+        1.2
+      ],
+      "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0"
+    },
+    {
+      "id": "hedge2",
+      "file": "hedge2.compressed.ply",
+      "scene": "garden",
+      "mode": "solid",
+      "box": {
+        "c": [
+          -3.36,
+          1.3,
+          5.88
+        ],
+        "yaw": 106.3,
+        "size": [
+          2.4,
+          2.1,
+          1.2
+        ],
+        "trim": 0.1,
+        "band": 0.35
+      },
+      "hq": true,
+      "count": 60000,
+      "dims": [
+        2.4,
+        1.58,
+        1.2
+      ],
+      "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0"
+    },
+    {
+      "id": "plantbed",
+      "file": "plantbed.compressed.ply",
+      "scene": "garden",
+      "mode": "solid",
+      "box": {
+        "c": [
+          -2.1,
+          0.9,
+          0.7
+        ],
+        "yaw": 108.4,
+        "size": [
+          2.2,
+          2.4,
+          2.2
+        ],
+        "trim": 0.1,
+        "band": 0.35
+      },
+      "hq": true,
+      "count": 60000,
+      "dims": [
+        1.76,
+        1.92,
+        2.2
+      ],
+      "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0"
     },
     {
       "id": "pump",
@@ -71,12 +220,14 @@
           2.8,
           1.7
         ],
-        "trim": 0.12
+        "trim": 0.12,
+        "band": 0.4
       },
-      "count": 8026,
+      "hq": true,
+      "count": 140000,
       "dims": [
         1.7,
-        1.96,
+        1.95,
         1.7
       ],
       "credit": "Nelson Ghost Town Car Shop · Paolo Tosolini · superspl.at/scene/dd8d9c8b · CC BY 4.0"
@@ -98,12 +249,14 @@
           2.6,
           3.4
         ],
-        "trim": 0.15
+        "trim": 0.15,
+        "band": 0.4
       },
-      "count": 5777,
+      "hq": true,
+      "count": 140001,
       "dims": [
-        3.67,
-        1.95,
+        3.57,
+        1.93,
         3.4
       ],
       "credit": "Nelson Ghost Town Water Tower · Paolo Tosolini · superspl.at/scene/fb3b5ed5 · CC BY 4.0"
@@ -125,12 +278,14 @@
           2.4,
           3.4
         ],
-        "trim": 0.15
+        "trim": 0.15,
+        "band": 0.4
       },
-      "count": 31558,
+      "hq": true,
+      "count": 140000,
       "dims": [
-        3.91,
-        1.62,
+        3.98,
+        1.69,
         3.4
       ],
       "credit": "Nelson Ghost Town Car Shop · Paolo Tosolini · superspl.at/scene/dd8d9c8b · CC BY 4.0"
@@ -152,12 +307,14 @@
           3.2,
           0.8
         ],
-        "trim": 0.1
+        "trim": 0.1,
+        "band": 0.4
       },
-      "count": 2824,
+      "hq": true,
+      "count": 140000,
       "dims": [
         2.8,
-        2.4,
+        2.54,
         0.8
       ],
       "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0"
