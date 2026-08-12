@@ -27,8 +27,15 @@
   #bar button { background:none; border:1px solid #9fe8b0; color:#9fe8b0;
     font:12px monospace; padding:8px 10px; border-radius:4px; }
   #bar button.on { background:rgba(80,255,140,.22); }
+  #elDrawer { position:fixed; bottom:52px; left:0; right:0; z-index:10;
+    max-height:44vh; overflow-y:auto; padding:10px;
+    background:rgba(1,10,5,.94); border-top:1px solid rgba(159,232,176,.4);
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(108px,1fr)); gap:6px; }
+  #elDrawer button { background:none; border:1px solid #9fe8b0; color:#9fe8b0;
+    font:11px monospace; padding:9px 6px; border-radius:4px; }
   #cred { position:fixed; bottom:52px; left:10px; right:10px; z-index:8;
     font-size:8.5px; opacity:.55; pointer-events:none; line-height:1.5; }
+  .hidden { display:none !important; }
   #err { position:fixed; inset:auto 0 0 0; z-index:50; color:#ff9a9a;
     background:rgba(30,0,0,.92); padding:8px; font-size:11px; display:none;
     white-space:pre-wrap; }
@@ -39,6 +46,7 @@
 <div id="phos"></div>
 <div id="head"><span>SPLATPACK · STAMP CATALOG</span><span id="hInfo"></span></div>
 <div id="cred"></div>
+<div id="elDrawer" class="hidden"></div>
 <div id="bar"></div>
 <pre id="err"></pre>
 
@@ -125,6 +133,7 @@ const mulberry32=a=>()=>{ a|=0; a=a+0x6D2B79F5|0;
 /* PAC-MAZE — hedge blocks grown from a handful of plant clips, each
    stamp varied in rotation, scale and colour-variant: a maze that
    exists in no scan, grown from one glasshouse's plants */
+let MAZE_INFO=null;
 function mazeLayout(){
   const M=[
     '###########',
@@ -138,6 +147,7 @@ function mazeLayout(){
     '###########'];
   const CS=1.15, W=M[0].length, H=M.length;
   const ox=-(W-1)/2*CS, oz=-(H-1)/2*CS;
+  MAZE_INFO={ M, CS, ox, oz, W, H };      // the roamers read the bitmap
   const rnd=mulberry32(7261);
   const out=[];
   for(let gx=0; gx<=Math.ceil(W*CS/2.9); gx++)
@@ -223,9 +233,116 @@ const LAYOUTS={
     { el:'redtruck',at:[ 2.3,-1.0], yaw:150, s:0.55, y:0.1 },
   ],
 };
+/* =========================================================
+   ROAMERS — dbdb2 citizens as alpha-tested billboard sprites.
+   Cutout alpha writes DEPTH, so the scan's gaussians occlude them
+   per-leaf for free (the writings trick, walking). Sheets baked
+   from the game's own rotoscope rigs by tools/sprite-bake.mjs.
+   ========================================================= */
+let SPR=null;
+fetch('sprites/sprites.json').then(r=>r.json()).then(j=>{ SPR=j; }).catch(()=>{});
+const sprAssets={};
+function sprAsset(kind){
+  if(sprAssets[kind]) return sprAssets[kind];
+  const a=new pc.Asset('spr-'+kind,'texture',{ url:'sprites/'+kind+'.png' });
+  app.assets.add(a); app.assets.load(a);
+  sprAssets[kind]=a; return a;
+}
+const roamers=[];
+function spawnRoamer(kind, x, z, ai){
+  const e=new pc.Entity('roamer');
+  const pl=new pc.Entity('pl');
+  pl.addComponent('render',{ type:'plane' });
+  const m=new pc.StandardMaterial();
+  m.useLighting=false; m.diffuse=new pc.Color(0,0,0);
+  m.emissive=new pc.Color(1,1,1);
+  m.blendType=pc.BLEND_NONE; m.alphaTest=0.5; m.depthWrite=true;
+  m.cull=pc.CULLFACE_NONE;
+  m.update();
+  pl.render.meshInstances[0].material=m;
+  const a=sprAsset(kind);
+  const apply=()=>{ if(!SPR) return setTimeout(apply,300);
+    m.emissiveMap=a.resource; m.opacityMap=a.resource;
+    m.opacityMapChannel='a';
+    m.emissiveMapTiling=new pc.Vec2(1/SPR.phases, 1/SPR.bearings);
+    m.opacityMapTiling=new pc.Vec2(1/SPR.phases, 1/SPR.bearings);
+    m.update(); };
+  if(a.loaded) apply(); else a.on('load',apply);
+  pl.setLocalEulerAngles(90,0,0);            // plane +y -> facing +z
+  pl.setLocalScale(1.6,1,1.6);               // the bake cell is 2.4u; ~1.2u person
+  pl.setLocalPosition(0,0.83,0);
+  e.addChild(pl);
+  e.setPosition(x,0,z);
+  app.root.addChild(e);
+  const r={ e, m, kind, x, z, ai, heading:0, phase:Math.random()*4,
+    dir:[0,1], speed: ai==='ghost'?0.85:0.32, cool:0 };
+  roamers.push(r); return r;
+}
+function clearRoamers(){ for(const r of roamers) r.e.destroy(); roamers.length=0; }
+function mazeOpen(cx,cz){
+  const I=MAZE_INFO; if(!I) return false;
+  if(cx<0||cz<0||cx>=I.W||cz>=I.H) return false;
+  return I.M[cz][cx]!=='#';
+}
+function upRoamers(dt){
+  if(!SPR || !roamers.length) return;
+  const cp=camE.getPosition();
+  for(const r of roamers){
+    if(r.ai==='ghost' && MAZE_INFO){
+      /* corridor wander: at each cell centre pick an open direction,
+         never reversing unless dead-ended — the ghost habit */
+      const I=MAZE_INFO;
+      const cx=Math.round((r.x-I.ox)/I.CS), cz=Math.round((r.z-I.oz)/I.CS);
+      const ctrX=I.ox+cx*I.CS, ctrZ=I.oz+cz*I.CS;
+      if(Math.hypot(r.x-ctrX,r.z-ctrZ)<0.06){
+        const opts=[[1,0],[-1,0],[0,1],[0,-1]]
+          .filter(d=>mazeOpen(cx+d[0],cz+d[1]))
+          .filter(d=>!(d[0]===-r.dir[0]&&d[1]===-r.dir[1]));
+        if(opts.length) r.dir=opts[Math.floor(Math.random()*opts.length)];
+        else r.dir=[-r.dir[0],-r.dir[1]];
+        r.x=ctrX; r.z=ctrZ;
+      }
+      r.x+=r.dir[0]*r.speed*dt; r.z+=r.dir[1]*r.speed*dt;
+      r.heading=Math.atan2(r.dir[0],r.dir[1]);
+      r.phase+=dt*5.5;
+    } else if(r.ai==='zombie'){
+      /* the horde: shamble toward a slow-roving attractor, shoulder
+         to shoulder but never stacking */
+      const ax=Math.sin(t*0.11)*3.2, az=Math.cos(t*0.15)*2.4;
+      let dx=ax-r.x, dz=az-r.z;
+      const d=Math.hypot(dx,dz)||1; dx/=d; dz/=d;
+      for(const o of roamers){ if(o===r) continue;
+        const sx=r.x-o.x, sz=r.z-o.z, sd=Math.hypot(sx,sz);
+        if(sd<0.55&&sd>0.001){ dx+=sx/sd*0.7; dz+=sz/sd*0.7; } }
+      const l=Math.hypot(dx,dz)||1;
+      const wob=Math.sin(t*1.7+r.phase*3)*0.35;   // the lurch
+      r.x+=(dx/l)*r.speed*dt; r.z+=(dz/l)*r.speed*dt;
+      r.heading=Math.atan2(dx/l,dz/l)+wob*0.3;
+      r.phase+=dt*2.1;
+    }
+    /* billboard toward the camera; pick the sheet row for the
+       viewer's bearing relative to the character's heading */
+    const camB=Math.atan2(cp.x-r.x, cp.z-r.z)*180/Math.PI;
+    r.e.setPosition(r.x,0,r.z);
+    r.e.setEulerAngles(0,camB,0);
+    let rel=camB - r.heading*180/Math.PI;
+    rel=((rel%360)+360)%360;
+    const row=Math.round(rel/45)%SPR.bearings;
+    const col=Math.floor(r.phase)%SPR.phases;
+    const u=col/SPR.phases, v=1-(row+1)/SPR.bearings;
+    if(m0x(r.m,u,v)) r.m.update();
+  }
+}
+function m0x(m,u,v){
+  if(m.emissiveMapOffset.x===u && m.emissiveMapOffset.y===v) return false;
+  m.emissiveMapOffset.set(u,v); m.opacityMapOffset.set(u,v);
+  return true;
+}
+
 let bounds=6;
 function build(name){
   clearStamps();
+  clearRoamers();
   if(name==='catalog'){
     let x=-4;
     for(const el of pack.elements){
@@ -240,6 +357,17 @@ function build(name){
     bounds=name==='maze'?7:(name==='jungle'?8:6);
     document.getElementById('hInfo').textContent='LAY · '+name.toUpperCase()
       +' · '+lay.length+' stamps';
+    /* the citizens arrive: ghosts wander the maze corridors, the
+       horde shambles the jungle */
+    if(name==='maze'){
+      spawnRoamer('walker1',-2.3,-1.15*3,'ghost');
+      spawnRoamer('walker2', 2.3, 1.15*2,'ghost');
+      spawnRoamer('walker3', 0,   1.15*3,'ghost');
+    } else if(name==='jungle'){
+      const rr=mulberry32(66);
+      for(let i=0;i<6;i++)
+        spawnRoamer('zombie', (rr()-0.5)*9, (rr()-0.5)*7, 'zombie');
+    }
   }
 }
 
@@ -267,31 +395,46 @@ app.on('update',dt=>{
   const d=bounds*2.2*dist;
   camE.setPosition(Math.sin(yr)*Math.cos(pr)*d, 1+Math.sin(pr)*d, Math.cos(yr)*Math.cos(pr)*d);
   camE.lookAt(0,0.9,0);
+  upRoamers(dt);
 });
 
-/* bar: catalog + layouts + each element solo */
+/* bar: four scenes + one ELEMENTS drawer (the pack outgrew a
+   button-per-element row) */
 const bar=document.getElementById('bar');
+const drawer=document.getElementById('elDrawer');
 const mk=(label,fn)=>{ const b=document.createElement('button');
   b.type='button'; b.textContent=label;
   b.addEventListener('click',()=>{ [...bar.children].forEach(x=>x.classList.remove('on'));
     b.classList.add('on'); fn(); });
   bar.appendChild(b); return b; };
-const bCat=mk('CATALOG',()=>build('catalog'));
-mk('YARD (derived scene)',()=>build('yard'));
-mk('PAC-MAZE (grown)',()=>build('maze'));
-mk('SABRE JUNGLE',()=>build('jungle'));
-for(const el of pack.elements)
-  mk(el.id.toUpperCase(),()=>{ window.__pack.solo(el.id); });
+const bCat=mk('CATALOG',()=>{ drawer.classList.add('hidden'); build('catalog'); });
+mk('YARD',()=>{ drawer.classList.add('hidden'); build('yard'); });
+mk('PAC-MAZE',()=>{ drawer.classList.add('hidden'); build('maze'); });
+mk('JUNGLE',()=>{ drawer.classList.add('hidden'); build('jungle'); });
+const bEl=mk('ELEMENTS \u25be',()=>{ drawer.classList.toggle('hidden'); });
+for(const el of pack.elements){
+  const b=document.createElement('button');
+  b.type='button'; b.textContent=el.id.toUpperCase();
+  b.addEventListener('click',()=>{
+    drawer.classList.add('hidden');
+    [...bar.children].forEach(x=>x.classList.remove('on'));
+    bEl.classList.add('on');
+    window.__pack.solo(el.id);
+  });
+  drawer.appendChild(b);
+}
 
 const start=Q.get('lay');
 (start && LAYOUTS[start] ? mk : ()=>{})   // unknown lay -> ignore
-const b0=start&&LAYOUTS[start]? [...bar.children][1] : bCat;
+const b0=({yard:1,maze:2,jungle:3})[start]!==undefined
+  ? [...bar.children][({yard:1,maze:2,jungle:3})[start]] : bCat;
 b0.classList.add('on');
 build(start&&LAYOUTS[start]?start:'catalog');
 
 /* headless hook */
 window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Object.keys(assets).length>0; },
   build, get els(){ return pack.elements.map(e=>e.id); },
+  get roamers(){ return roamers.map(r=>({kind:r.kind,x:+r.x.toFixed(2),z:+r.z.toFixed(2)})); },
   solo(id){ clearStamps();
     const el=EL[id]; stamp(id,0,0,0,1);
     bounds=Math.max(2.2,Math.max(el.dims[0],el.dims[2])*0.9);

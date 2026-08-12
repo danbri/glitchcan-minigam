@@ -3007,11 +3007,14 @@ function animate(){
     it.mesh.position.y=it.y+Math.sin(t*3+it.x)*0.08;
   }
 
-  // camera follow + yaw interpolation
-  updateCamOff(dt);
-  camTarget.lerp(new THREE.Vector3(p.x,p.y+1.2,p.z), Math.min(1,dt*5));
-  camera.position.copy(camTarget).add(CAM_OFF);
-  camera.lookAt(camTarget);
+  // camera follow + yaw interpolation (sprite-bake mode drives its own)
+  if(window.__bakeCam) window.__bakeCam();
+  else {
+    updateCamOff(dt);
+    camTarget.lerp(new THREE.Vector3(p.x,p.y+1.2,p.z), Math.min(1,dt*5));
+    camera.position.copy(camTarget).add(CAM_OFF);
+    camera.lookAt(camTarget);
+  }
 
   if(post && CRT_ON) post.render();
   else renderer.render(scene,camera);
@@ -3116,6 +3119,40 @@ window.__jsd = {
   playTag(t){ music.playTag(t); },
   get dream(){ return { active:dream.active, done:dream.done }; },
   jackIn(i=0){ dreamEnter(TERMS[i]); },
+  /* SPRITE BAKE (tools/sprite-bake.mjs): pose one rig in isolation at
+     y=300 against chroma magenta; ortho camera frames a 2.4u cell.
+     bearing: viewer bearing deg (0 = looking at the character's front) */
+  bakeSpawn(opts={}){
+    if(this._bakeN){ this._bakeN.r.g.removeFromParent(); }
+    const n={ r:makeNPC(opts), gait:0, phase:0, mode:'walk',
+      x:0,y:300,z:0, facing:0, stagger:0, laugh:0 };
+    n.r.g.position.set(0,300,0);
+    this._bakeN=n;
+    scene.fog=null;
+    scene.background=new THREE.Color(0xff00ff);
+    return true;
+  },
+  bakeFrame(bearing, gait, kind){
+    const n=this._bakeN; if(!n) return false;
+    n.gait=gait; n.mode='walk';
+    npcPose(n, 0, 10);                        // dt 10: lerps snap
+    const r=n.r;
+    if(kind==='zombie'){                       // the shamble, on top of the stride
+      r.shL.rotation.x=r.shR.rotation.x=-1.5;
+      r.elL.rotation.x=r.elR.rotation.x=-0.12;
+      r.headJ.rotation.z=0.16; r.headJ.rotation.x=0.12;
+      r.body.rotation.x=0.26;
+    }
+    r.g.rotation.y=0;                          // character faces +z
+    const a=bearing*Math.PI/180, D=6;
+    window.__bakeCam=()=>{
+      camera.left=-1.2; camera.right=1.2; camera.top=1.5; camera.bottom=-0.9;
+      camera.updateProjectionMatrix();
+      camera.position.set(Math.sin(a)*D, 300+0.95, Math.cos(a)*D);
+      camera.lookAt(0, 300+0.95, 0);
+    };
+    return true;
+  },
   get terms(){ return TERMS.map(T=>T.name); },
   get residents(){ return npcs.map(n=>n.mode); },
   get maglev(){ return { state:maglev.state, z:Math.round(maglev.z*10)/10 }; },
