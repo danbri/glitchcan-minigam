@@ -40,6 +40,20 @@
     display:none; border:3px solid #9fe8b0; }
   #stickBase { width:110px; height:110px; opacity:.55; }
   #stickNub  { width:48px;  height:48px;  opacity:.8; }
+  #avSel { position:fixed; bottom:58px; left:0; right:0; z-index:22;
+    display:flex; gap:10px; overflow-x:auto; padding:12px 14px;
+    background:rgba(1,10,5,.94); border-top:1px solid rgba(159,232,176,.4);
+    -webkit-overflow-scrolling:touch; }
+  #avSel button { font-size:36px; line-height:1; background:none;
+    border:1px solid rgba(159,232,176,.4); border-radius:12px;
+    padding:8px 12px; flex:0 0 auto; }
+  #avSel button.on { border-color:#9fe8b0; background:rgba(80,255,140,.18); }
+  #avSel .lbl { color:#9fe8b0; font:11px monospace; letter-spacing:.2em;
+    align-self:center; flex:0 0 auto; padding-right:4px; }
+  #avBtn { position:fixed; bottom:64px; right:10px; z-index:9;
+    font-size:26px; background:rgba(2,16,8,.72);
+    border:1px solid rgba(159,232,176,.5); border-radius:10px;
+    padding:6px 10px; display:none; }
   #flash { position:fixed; left:0; right:0; top:38%; z-index:12; text-align:center;
     font:bold 26px monospace; letter-spacing:.25em; color:#ffe28a;
     text-shadow:0 0 18px rgba(255,200,80,.8); pointer-events:none; opacity:0;
@@ -56,6 +70,8 @@
 <div id="head"><span>SPLATPACK · STAMP CATALOG</span><span id="hInfo"></span></div>
 <div id="cred"></div>
 <div id="stickBase"></div><div id="stickNub"></div>
+<div id="avSel" class="hidden"></div>
+<button type="button" id="avBtn" aria-label="choose your animal"></button>
 <div id="flash"></div>
 <div id="elDrawer" class="hidden"></div>
 <div id="bar"></div>
@@ -450,6 +466,41 @@ function m0x(m,u,v){
    ========================================================= */
 let playMode=false, curLay='catalog';
 const player={ e:null, x:0, z:0, heading:0, caught:0, spawn:[0,0], iframes:0 };
+/* choose your animal: a carousel of dot-matrix beasts */
+const ANIMALS=['\ud83d\udc25','\ud83d\udc30','\ud83e\udd8a','\ud83d\udc38',
+  '\ud83d\udc31','\ud83d\udc36','\ud83d\udc3c','\ud83e\udd84',
+  '\ud83d\udc22','\ud83d\udc19','\ud83e\udd94','\ud83d\udc3a'];
+let avatar=null;
+try{ avatar=localStorage.getItem('packAvatar'); }catch(e){}
+if(!ANIMALS.includes(avatar)) avatar=ANIMALS[0];
+const avSel=document.getElementById('avSel');
+const avBtn=document.getElementById('avBtn');
+function swapAvatar(){
+  if(!player.e) return;
+  const px2=player.x, pz2=player.z;
+  player.e.destroy();
+  player.e=emojiBillboard(avatar, 0.9);
+  player.e.setPosition(px2,0.08,pz2);
+  avBtn.textContent=avatar;
+}
+{ const lbl=document.createElement('span');
+  lbl.className='lbl'; lbl.textContent='PICK\u00a0YOUR\u00a0BEAST';
+  avSel.appendChild(lbl);
+  for(const a of ANIMALS){
+    const b2=document.createElement('button');
+    b2.type='button'; b2.textContent=a;
+    if(a===avatar) b2.classList.add('on');
+    b2.addEventListener('click',()=>{
+      avatar=a;
+      try{ localStorage.setItem('packAvatar',a); }catch(e){}
+      [...avSel.querySelectorAll('button')].forEach(x=>x.classList.remove('on'));
+      b2.classList.add('on');
+      swapAvatar();
+      avSel.classList.add('hidden');
+    });
+    avSel.appendChild(b2);
+  } }
+avBtn.addEventListener('click',()=>avSel.classList.toggle('hidden'));
 const pinput={ jx:0, jy:0 };
 const pkeys={};
 const PKEYMAP={ ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down',
@@ -521,8 +572,10 @@ function setPlay(on){
   if(on && curLay!=='maze' && curLay!=='jungle') build('maze');
   playMode=on;
   if(on){
-    if(!player.e) player.e=emojiBillboard('\ud83d\udc25', 0.9);
+    if(!player.e) player.e=emojiBillboard(avatar, 0.9);
     player.e.enabled=true;
+    avBtn.textContent=avatar; avBtn.style.display='block';
+    avSel.classList.remove('hidden');       // pick your beast on entry
     if(curLay==='maze' && MAZE_INFO){
       player.spawn=[MAZE_INFO.ox+1*MAZE_INFO.CS, MAZE_INFO.oz+1*MAZE_INFO.CS];
     } else if(JUNGLE_INFO){
@@ -530,9 +583,13 @@ function setPlay(on){
     }
     player.x=player.spawn[0]; player.z=player.spawn[1];
     player.caught=0; player.iframes=2;
-    dist=0.5; pitch=16;
+    dist=1.15; pitch=15;                     // start wide, take the scene in
     flash('FIND THE GEMS');
-  } else if(player.e) player.e.enabled=false;
+  } else {
+    if(player.e) player.e.enabled=false;
+    avBtn.style.display='none';
+    avSel.classList.add('hidden');
+  }
   const pb=document.getElementById('playBtn');
   if(pb) pb.textContent=on?'\u25a0 ORBIT':'\u25b6 PLAY';
 }
@@ -633,14 +690,17 @@ function build(name){
 let yaw=25, pitch=14, dist=1.0, idle=0;
 let drag=null, pinch0=0;
 addEventListener('pointerdown',e=>{
-  if(e.target.closest('#bar,#elDrawer')) return;
+  if(e.target.closest('#bar,#elDrawer,#avSel,#avBtn')) return;
   if(playMode && e.clientX<innerWidth*0.55) return;   // left half is the stick
   drag=[e.clientX,e.clientY]; });
+let lastCamDrag=-9;
 addEventListener('pointermove',e=>{ if(!drag) return;
   yaw-=(e.clientX-drag[0])*0.3; pitch+=(e.clientY-drag[1])*0.25;
-  pitch=Math.max(2,Math.min(70,pitch)); drag=[e.clientX,e.clientY]; idle=0; });
+  pitch=Math.max(2,Math.min(70,pitch)); drag=[e.clientX,e.clientY];
+  idle=0; lastCamDrag=t; });
 addEventListener('pointerup',()=>{ drag=null; });
-addEventListener('wheel',e=>{ dist*=e.deltaY>0?1.08:0.93; dist=Math.max(0.35,Math.min(2.5,dist)); idle=0; });
+addEventListener('wheel',e=>{ dist*=e.deltaY>0?1.08:0.93;
+  dist=Math.max(0.35,Math.min(2.5,dist)); idle=0; lastCamDrag=t; });
 addEventListener('touchmove',e=>{ if(e.touches.length===2){
   const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,
                      e.touches[0].clientY-e.touches[1].clientY);
@@ -653,8 +713,32 @@ app.on('update',dt=>{
   t+=dt; idle+=dt;
   upPlayer(dt);
   if(playMode){
+    /* auto-cinematics: follow behind the walk, and when a citizen
+       closes in, ease the camera round so the THREAT shares the
+       frame — with a slow pull-back for drama. A manual drag takes
+       over; auto resumes three seconds after the thumb lets go. */
+    if(t-lastCamDrag>3){
+      let want=player.heading*180/Math.PI+180;
+      let thr=null, td=4.2;
+      for(const r of roamers){
+        const d2=Math.hypot(r.x-player.x, r.z-player.z);
+        if(d2<td){ td=d2; thr=r; }
+      }
+      if(thr){
+        const tw=Math.atan2(player.x-thr.x, player.z-thr.z)*180/Math.PI;
+        const mix=Math.min(1,(4.2-td)/2.6);
+        let dd=tw-want; while(dd>180)dd-=360; while(dd<-180)dd+=360;
+        want+=dd*mix;
+      }
+      let dy=want-yaw; while(dy>180)dy-=360; while(dy<-180)dy+=360;
+      yaw+=dy*Math.min(1,dt*1.6);
+      const wp=(thr&&td<2.6)?21:15;
+      pitch+=(wp-pitch)*Math.min(1,dt*2);
+      const wd=(thr&&td<2.6)?1.35:1.15;
+      dist+=(wd-dist)*Math.min(1,dt*1.2);
+    }
     const yr=yaw*Math.PI/180, pr=pitch*Math.PI/180;
-    const d=3.4*Math.max(0.5,dist);
+    const d=4.2*Math.max(0.5,dist);
     camE.setPosition(player.x+Math.sin(yr)*Math.cos(pr)*d,
       0.6+Math.sin(pr)*d, player.z+Math.cos(yr)*Math.cos(pr)*d);
     camE.lookAt(player.x, 0.7, player.z);
@@ -681,7 +765,7 @@ addEventListener('pointerup',e=>{
   const moved=Math.hypot(e.clientX-downAt2[0], e.clientY-downAt2[1]);
   downAt2=null;
   if(moved>8) return;
-  if(e.target.closest('#bar,#elDrawer')) return;
+  if(e.target.closest('#bar,#elDrawer,#avSel,#avBtn')) return;
   const scr=new pc.Vec3();
   let best=null, bd=44;
   for(const p2 of pellets){
@@ -754,6 +838,8 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
     gems:pelGot, total:pellets.length, caught:player.caught }; },
   setPlay(v){ setPlay(v); },
   stick(jx,jy){ touchVec[0]=jx; touchVec[1]=jy; },
+  get avatar(){ return avatar; },
+  setAvatar(a){ avatar=a; swapAvatar(); },
   solo(id){ clearStamps();
     const el=EL[id]; stamp(id,0,0,0,1);
     bounds=Math.max(2.2,Math.max(el.dims[0],el.dims[2])*0.9);
