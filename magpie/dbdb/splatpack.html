@@ -632,6 +632,7 @@ function spawnRoamer(kind, x, z, ai){
   m.cull=pc.CULLFACE_NONE;
   m.update();
   pl.render.meshInstances[0].material=m;
+  pl.enabled=false;                          // no white quad while it loads
   const a=sprAsset(kind);
   const apply=()=>{ if(!SPR) return setTimeout(apply,300);
     const mm=sprMeta(kind);
@@ -639,7 +640,8 @@ function spawnRoamer(kind, x, z, ai){
     m.opacityMapChannel='a';
     m.emissiveMapTiling=new pc.Vec2(1/mm.phases, 1/SPR.bearings);
     m.opacityMapTiling=new pc.Vec2(1/mm.phases, 1/SPR.bearings);
-    m.update(); };
+    m.update();
+    pl.enabled=true; };
   if(a.loaded) apply(); else a.on('load',apply);
   pl.setLocalEulerAngles(90,0,0);            // plane +y -> facing +z
   pl.setLocalScale(1.6,1,1.6);               // the bake cell is 2.4u; ~1.2u person
@@ -785,7 +787,8 @@ function setHeroSheet(kind, m){
     m.opacityMapChannel='a';
     m.emissiveMapTiling=new pc.Vec2(1/mm.grid, 1/pvis.rows);
     m.opacityMapTiling=new pc.Vec2(1/mm.grid, 1/pvis.rows);
-    m.update(); };
+    m.update();
+    if(player.e) for(const ch of player.e.children) ch.enabled=true; };
   if(a.loaded) apply(); else { a.on('load',apply);
     a.on('error',()=>{ if(kind!=='hero'){ pvis.sheet=null; setHeroSheet('hero',m); } });
   }
@@ -804,6 +807,12 @@ function setPlayerVisual(kind){
     m.blendType=pc.BLEND_NONE; m.alphaTest=0.5; m.depthWrite=true;
     m.cull=pc.CULLFACE_NONE; m.update();
     pl.render.meshInstances[0].material=m;
+    /* AN UNTEXTURED QUAD IS A WHITE HOLE IN THE WORLD. The material is
+       built emissive-white with no maps and the atlas arrives later —
+       ~1MB per sheet, seconds on a phone — so the sprite showed as a
+       big white rectangle over the scan (field screenshot, 23:19).
+       Nothing is drawn until its texture is actually on. */
+    pl.enabled=false;
     pvis.sheet=null;
     setHeroSheet(gait.mode==='run'?'herorun':(gait.variant?'hero2':'hero'), m);
     pl.setLocalEulerAngles(90,0,0);

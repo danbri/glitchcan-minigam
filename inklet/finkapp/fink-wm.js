@@ -52,6 +52,17 @@ window.FinkWM = {
         this._initPipGestures();
         this._applyDock(this._loadDock());
         window.addEventListener('resize', () => { this._applyDock(this._loadDock()); this._layoutSplit(); });
+        // THE VISIBLE HEIGHT, FROM THE ONLY THING THAT KNOWS IT.
+        //
+        // Field screenshots (iOS Chrome): a full-screen game ended ~15%
+        // short of the bottom with the host's white page below it. The
+        // view is `top:0; bottom:0` AND `height:100dvh !important` — an
+        // over-constrained box, so height wins and `bottom` is ignored;
+        // whenever the engine's dvh disagrees with what is actually on
+        // screen (mobile toolbars mid-transition), the gap is real.
+        // visualViewport reports the truth, so publish it as a custom
+        // property and let the CSS prefer it. dvh stays the fallback.
+        this._trackVisualViewport();
 
         this.log('window manager ready');
     },
@@ -152,6 +163,17 @@ window.FinkWM = {
     //
     // So tell guests when the geometry has SETTLED, once per burst, and
     // let them do the expensive rebuild then instead of on every step.
+    _trackVisualViewport() {
+        const vv = window.visualViewport;
+        if (!vv) return;                       // desktop/older: dvh is fine
+        const push = () => {
+            document.documentElement.style.setProperty('--fink-vvh', `${vv.height}px`);
+        };
+        push();
+        vv.addEventListener('resize', push);
+        vv.addEventListener('scroll', push);
+    },
+
     _scheduleSettle() {
         clearTimeout(this._settleTimer);
         this._settleTimer = setTimeout(() => {

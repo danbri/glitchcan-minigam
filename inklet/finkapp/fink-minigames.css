@@ -115,8 +115,15 @@ body[data-wm-mode="full"] #wm-chrome { top: 84px; }
        which is what pushed guest d-pads off screen. */
     height: 100vh !important;
     height: 100dvh !important;
+    /* …and, where the browser will tell us, the height it is ACTUALLY
+       showing (FinkWM._trackVisualViewport). */
+    height: var(--fink-vvh, 100dvh) !important;
     z-index: 2000;
     border-radius: 0;
+    /* A gap must never be WHITE. If the measurements still disagree by a
+       few pixels on some browser, the seam should read as the night the
+       games are set in, not as a broken page. */
+    background: #000;
 }
 
 /* Split: the story keeps the top of the column, the game holds a real
