@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>Jet Set Ducky II — The Moonlight Shift</title>
+<title>Skydock Scuttlebutt</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body {
@@ -170,20 +170,15 @@
 <!-- ---------- title ---------- -->
 <div class="overlay" id="title">
   <div class="stripe"></div>
-  <h1>JET SET<br>DUCKY II</h1>
-  <h2>THE MOONLIGHT SHIFT</h2>
+  <h1>SKYDOCK<br>SCUTTLEBUTT</h1>
   <p id="setLabel"></p>
-  <p>Ducky held one wild party. The housekeeper blames <i>you</i>.
-     With Ducky on your shoulder, collect <b>every flashing item</b> in the
-     manor, then get to <b>bed</b> in the Master Bedroom —
-     <b>before the clock strikes midnight</b>. Beyond the garden wall lies
-     the <b>Puzzle City</b>: one thousand moonlit contraptions — crates,
-     keys, levers, springs — for the brave and the sleepless. Drag to spin
-     the world. Mind the residents — and mind the west end: down
-     <b>Moonfall Parade</b> the maglev hisses in, THE JOVIAL NEWT pours,
-     and the corner-booth terminal dreams in static.</p>
+  <p>Gossip is the true fuel of the post-terrestrial economy. That and
+     gemstones. Stock up on the shiny crystals and see if you can buy a
+     few minutes at a half-decent terminal to audit the latest lies and
+     whispers doing the rounds. Maybe there&rsquo;s a ticket home in it
+     somehow&hellip;?</p>
   <p><b>Touch:</b> left thumb = walk &nbsp;·&nbsp; right button = jump<br>
-     <b>Keys:</b> arrows / WASD = walk &nbsp;·&nbsp; SPACE / Z = jump &nbsp;·&nbsp; M = mute</p>
+     <b>Keys:</b> arrows / WASD &nbsp;·&nbsp; SPACE = jump &nbsp;·&nbsp; M = mute</p>
   <button type="button" class="btn" id="startBtn" disabled>LOADING…</button>
   <div id="piano"><div id="willyFoot">🦶</div></div>
   <p class="fine">A loving homage to Matthew Smith's <i>Jet Set Willy</i> (1984)
@@ -2722,6 +2717,64 @@ function physics(dt){
 }
 
 /* =========================================================
+   FINK GUEST — Skydock Scuttlebutt can run as a minigame inside
+   the Glitch Canary player (skydock.fink.js). The host sends the
+   recent story thread in init; the in-world PET terminals ECHO it
+   while the shift runs. Dream rewards flow back as variables.
+   ========================================================= */
+let finkHost=false, finkLines=null, echoPlanes=[], echoIdx=0;
+let skydockDiamonds=0;
+const echoCv=document.createElement('canvas');
+echoCv.width=256; echoCv.height=96;
+const echoCtx=echoCv.getContext('2d');
+let echoTex=null;
+function echoDraw(){
+  if(!finkLines || !finkLines.length) return;
+  const g=echoCtx;
+  g.fillStyle='rgba(2,12,6,0.92)'; g.fillRect(0,0,256,96);
+  g.strokeStyle='#7ef0c0'; g.lineWidth=2; g.strokeRect(2,2,252,92);
+  g.fillStyle='#7ef0c0'; g.font='10px monospace'; g.globalAlpha=0.7;
+  g.fillText('SCUTTLEBUTT FEED', 10, 16); g.globalAlpha=1;
+  g.font='11px monospace';
+  const line=finkLines[echoIdx%finkLines.length]||'';
+  const words=line.split(' '); let ln='', y=34;
+  for(const w of words){
+    if((ln+' '+w).trim().length>38){ g.fillText(ln.trim(),10,y); y+=14; ln=w;
+      if(y>88) break; }
+    else ln+=' '+w;
+  }
+  if(y<=88 && ln.trim()) g.fillText(ln.trim(),10,y);
+  if(echoTex) echoTex.needsUpdate=true;
+}
+function petEcho(lines){
+  finkLines=lines.filter(l=>l && l.length>2);
+  if(!finkLines.length) return;
+  if(!echoTex){
+    echoTex=new THREE.CanvasTexture(echoCv);
+    const mat=new THREE.MeshBasicNodeMaterial({ map:echoTex, transparent:true, opacity:0.94 });
+    for(const T of TERMS){
+      const pl=new THREE.Mesh(new THREE.PlaneGeometry(1.7,0.64), mat);
+      pl.position.set(T.x, T.y+1.55, T.z);
+      scene.add(pl); echoPlanes.push(pl);
+    }
+    setInterval(()=>{ echoIdx++; echoDraw(); }, 4200);
+  }
+  echoDraw();
+}
+addEventListener('message', e=>{
+  const d=e.data||{};
+  if(d.type==='init'){
+    finkHost=true;
+    try{ parent.postMessage({ type:'set-variable', name:'minigame_played', value:1 }, '*'); }catch(err){}
+    const rec=d.config && d.config.story && d.config.story.recent;
+    if(rec && rec.length) petEcho(rec);
+  }
+});
+if(parent!==window){
+  try{ parent.postMessage({ type:'ready' }, '*'); }catch(err){}
+}
+
+/* =========================================================
    11. FLOW — title / run / game over / victory
    ========================================================= */
 const $=id=>document.getElementById(id);
@@ -3003,6 +3056,7 @@ function animate(){
     }
     updateShadow(gu.shadow, gu.g.position.x, gu.g.position.y, gu.g.position.z);
   }
+  for(const pl of echoPlanes) pl.rotation.y=camYaw;
   updateShadow(duckShadow, p.x, p.y, p.z);
   if(p.dead) duckShadow.visible=false;
 
@@ -3096,7 +3150,16 @@ function dreamExit(reward){
 }
 addEventListener('message', e=>{
   const d=e.data||{};
-  if(d.jsdDream==='complete') dreamExit(true);
+  if(d.jsdDream==='complete'){
+    dreamExit(true);
+    if(finkHost){
+      skydockDiamonds += (d.diamonds|0)||3;
+      try{
+        parent.postMessage({ type:'set-variable', name:'skydock_diamonds', value:skydockDiamonds }, '*');
+        parent.postMessage({ type:'set-variable', name:'skydock_gems', value:(d.gems|0)||0 }, '*');
+      }catch(err){}
+    }
+  }
   else if(d.jsdDream==='exit') dreamExit(false);
 });
 $('dreamEject').addEventListener('click', ()=>dreamExit(false));
@@ -3125,6 +3188,8 @@ window.__jsd = {
   nextSong(){ music.pickNext(); },
   playTag(t){ music.playTag(t); },
   get dream(){ return { active:dream.active, done:dream.done }; },
+  get fink(){ return { host:finkHost, lines:finkLines?finkLines.length:0,
+                       planes:echoPlanes.length }; },
   jackIn(i=0){ dreamEnter(TERMS[i]); },
   /* SPRITE BAKE (tools/sprite-bake.mjs): pose one rig in isolation at
      y=300 against chroma magenta; ortho camera frames a 2.4u cell.

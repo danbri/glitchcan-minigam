@@ -31,7 +31,7 @@ window.FinkMinigames = {
     },
 
     // Known iframe-based minigames
-    iframeMinigames: ['mudslider', 'battleboids', 'gridluck', 'chess', 'robbin', 'waterworld'],
+    iframeMinigames: ['mudslider', 'battleboids', 'gridluck', 'chess', 'robbin', 'waterworld', 'skydock'],
 
     // Minigame metadata for splash screens and controls
     // controls: 'dpad' (full d-pad + A/B), 'lite' (simplified), 'none' (tap only)
@@ -53,7 +53,8 @@ window.FinkMinigames = {
         gridluck: { icon: '👻', title: 'GridLuck', subtitle: 'Pac-Man style maze chase', controls: 'none', silent: true },
         chess: { icon: '♟️', title: 'Chess', subtitle: 'Classic strategy game', controls: 'none', silent: true },
         robbin: { icon: '🐦', title: 'Robbin', subtitle: 'Grow the flock across the Underground', controls: 'dpad' },
-        waterworld: { icon: '🫧', title: 'Waterworld', subtitle: 'Submarine salvage in the drowned dock', controls: 'dpad' }
+        waterworld: { icon: '🫧', title: 'Waterworld', subtitle: 'Submarine salvage in the drowned dock', controls: 'dpad' },
+        skydock: { icon: '🛰️', title: 'Skydock Scuttlebutt', subtitle: 'Gemstones and gossip on the night shift', controls: 'none' }
     },
 
     // Active inline minigames (keyed by container ID)
@@ -882,7 +883,7 @@ window.FinkMinigames = {
             iframe.id = `minigame-iframe-${type}`;
 
             const inst = this._registerInstance({
-                type, kind: 'window', iframe,
+                type, kind: 'window', iframe, mode,
                 lastSync: { gameGems: 0, storyDiamonds: currentDiamonds },
             });
             this.windowInstance = inst;
@@ -946,8 +947,29 @@ window.FinkMinigames = {
             // Wait for iframe to load, then send init
             iframe.onload = () => {
                 this.log('Iframe loaded, sending init');
-                const config = {
-                    mode,
+                this._sendInit(inst);
+                // Hand back whatever it left last time. Sent right after
+                // init so a guest that registers onRestore inside onInit
+                // still catches it — and the SDK holds it if not.
+                this._loadSnapshots();
+                const saved = this._snapshots[inst.type];
+                if (saved !== undefined) {
+                    this._sendToIframe({ type: 'restore', state: saved }, inst);
+                    window.FoafOS?.bus.publish('minigame.restore', {
+                        summary: `${inst.type} restored from a snapshot`, type: inst.type,
+                    });
+                }
+                this._probeConformance(inst, this._buildInitConfig(inst));
+                // D-pad visibility is handled in startMinigame based on controls param
+            };
+        }
+    },
+
+    // The init payload, buildable at any time — iframe onload AND a late
+    // `ready` (see _handleIframeMessage) both need it.
+    _buildInitConfig(inst) {
+        return {
+                    mode: inst.mode,
                     // Input is an OS service: the host owns the on-screen
                     // pad (it alone sees the real viewport + safe areas).
                     // SAFETY RULE: only claim the input when we will
@@ -972,27 +994,28 @@ window.FinkMinigames = {
                     // guest its grants beats letting it discover them by
                     // being denied.
                     bus: inst.busGrants || null,
-                };
-                this._sendToIframe({
-                    type: 'init',
-                    config,
-                    variables: this._getStoryVariables(this._guestActor(inst))
-                });
-                // Hand back whatever it left last time. Sent right after
-                // init so a guest that registers onRestore inside onInit
-                // still catches it — and the SDK holds it if not.
-                this._loadSnapshots();
-                const saved = this._snapshots[inst.type];
-                if (saved !== undefined) {
-                    this._sendToIframe({ type: 'restore', state: saved }, inst);
-                    window.FoafOS?.bus.publish('minigame.restore', {
-                        summary: `${inst.type} restored from a snapshot`, type: inst.type,
-                    });
-                }
-                this._probeConformance(inst, config);
-                // D-pad visibility is handled in startMinigame based on controls param
-            };
-        }
+                    // The recent story thread, so a guest can ECHO the
+                    // narrative it interrupted (Skydock's in-world PET
+                    // terminals scroll it while the shift runs).
+                    story: (() => { try {
+                        const out = document.getElementById('story-output');
+                        if (!out) return null;
+                        const ps = [...out.querySelectorAll('p')]
+                            .map(p => p.textContent.trim()).filter(Boolean);
+                        return ps.length ? { recent: ps.slice(-8) } : null;
+                    } catch (e) { return null; } })(),
+        };
+    },
+
+    /** Send (or re-send) init to a window guest. Marks the instance so a
+     *  late `ready` can tell "init already went out" from "not yet". */
+    _sendInit(inst) {
+        inst._initSent = true;
+        this._sendToIframe({
+            type: 'init',
+            config: this._buildInitConfig(inst),
+            variables: this._getStoryVariables(this._guestActor(inst))
+        }, inst);
     },
 
     // ── snapshots ─────────────────────────────────────────────────────
@@ -1096,6 +1119,16 @@ window.FinkMinigames = {
                 // slowed too, or debugging only works for the first game
                 if (this.debug.timeScale !== 1) {
                     this._sendToIframe({ type: 'debug', timeScale: this.debug.timeScale }, inst);
+                }
+                // A guest whose module has a top-level await (Skydock's
+                // dbdb2 awaits three.js) registers its listener AFTER the
+                // iframe load event, so the onload init sailed past it.
+                // Its `ready` is the signal it can hear now — re-send.
+                // Guests that post ready BEFORE load (the SDK pattern)
+                // have _initSent false here and are not double-inited.
+                if (inst.kind === 'window' && inst._initSent) {
+                    this.log('ready after init — re-sending init');
+                    this._sendInit(inst);
                 }
                 break;
 

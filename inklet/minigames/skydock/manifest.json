@@ -1,0 +1,30 @@
+{
+  "name": "skydock",
+  "version": "1.0.0",
+  "title": "Skydock Scuttlebutt",
+  "description": "Gemstones and gossip on the moonlit night shift: a manor, a parade, candy dream terminals, and grown worlds beyond them.",
+  "entry": "index.html",
+  "sandbox": {
+    "timeout": 2400000
+  },
+  "controls": "none",
+  "variables": {
+    "read": [
+      "diamonds",
+      "score"
+    ],
+    "write": [
+      "skydock_gems",
+      "skydock_diamonds",
+      "minigame_played"
+    ]
+  },
+  "modes": [
+    "normal"
+  ],
+  "ui": {
+    "width": "100%",
+    "height": "100%",
+    "background": "#0a0a1e"
+  }
+}

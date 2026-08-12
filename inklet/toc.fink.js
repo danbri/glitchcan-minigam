@@ -31,6 +31,7 @@ Choose your adventure! Each episode is half-finished in a different way.
 + [Maple Hollow] -> maple_hollow_selected
 + [Mudslide Mines] -> mudslidemines_selected
 + [Riverbend] -> riverbend_selected
++ [Skydock Scuttlebutt] -> skydock_selected
 
 === minigames_menu ===
 
@@ -108,6 +109,17 @@ Navigate the challenging social dynamics of 1980s London. A few scenes inspired 
 # IMAGE: coverart/hamstead_img_9432.jpeg
 
 + [enter Hampstead] -> external_story
+
+=== skydock_selected ===
+# FINK: /glitchcan-minigam/inklet/skydock.fink.js
+
+Skydock Scuttlebutt
+
+Gossip is the true fuel of the post-terrestrial economy. That and gemstones. A moonlit manor, candy dream terminals, and maybe a ticket home.
+
+# IMAGE: glitchcan-grey-portrait-web.jpg
+
++ [enter the Skydock] -> external_story
 
 === mudslidemines_selected ===
 # FINK: /glitchcan-minigam/inklet/mudslidemines.fink.js
