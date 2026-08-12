@@ -4,11 +4,37 @@
      after this redirect it re-sends init to the real game page — which
      speaks the minigame SDK protocol natively (ready / set-variable, and
      echoes the story thread from init onto its in-world PET terminals).
-     Relative on purpose: a hard-coded origin breaks local servers. -->
+     Relative on purpose: a hard-coded origin breaks local servers.
+
+     This page stays ON SCREEN while the browser fetches the real game
+     (a large document plus modules — many seconds on a weak phone
+     signal), so it is dressed as a loading screen rather than the blank
+     white rectangle a field report caught. -->
 <html lang="en">
-<head><meta charset="UTF-8"><title>Skydock Scuttlebutt</title></head>
+<head><meta charset="UTF-8"><title>Skydock Scuttlebutt</title>
+<style>
+  html,body { height:100%; margin:0; background:#010204; color:#7ef0c0;
+    font-family:"Courier New",ui-monospace,monospace; }
+  .wrap { height:100%; display:flex; flex-direction:column; gap:14px;
+    align-items:center; justify-content:center; text-align:center;
+    letter-spacing:.2em; }
+  .t { font-size:15px; font-weight:bold; }
+  .s { font-size:11px; opacity:.65; letter-spacing:.3em;
+    animation:pulse 1.6s ease-in-out infinite; }
+  .slow { font-size:10px; opacity:0; letter-spacing:.15em;
+    transition:opacity 1s; max-width:26em; line-height:1.7; }
+  @keyframes pulse { 0%,100%{opacity:.35} 50%{opacity:.9} }
+</style>
+</head>
 <body>
+<div class="wrap">
+  <div class="t">SKYDOCK SCUTTLEBUTT</div>
+  <div class="s">CLOCKING ON&hellip; TUNING THE STATIC&hellip;</div>
+  <div class="slow" id="slow">still loading &mdash; the dock is a big place.
+    a weak signal makes for a slow lift up.</div>
+</div>
 <script>
+  setTimeout(function(){ document.getElementById('slow').style.opacity=1; }, 9000);
   location.replace('../../../magpie/dbdb/dbdb2.html');
 </script>
 </body>
