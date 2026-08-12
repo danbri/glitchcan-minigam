@@ -29,11 +29,14 @@ const KINDS = {
   walker2: { shirt: 0x8a3a2c, trouser: 0x2e3a2e, hair: 0x101010, skin: 0xb97a4e, bun: 1 },
   walker3: { shirt: 0x557a3a, trouser: 0x44341f, hair: 0x5a3a1a, skin: 0xe0b58a, mous: 1 },
   zombie:  { shirt: 0x4a4438, trouser: 0x33382e, hair: 0x222a1c, skin: 0x86a05a, zombie: true },
-  /* hero: reference-grade cycle at DOUBLE framerate (32 frames) and a
-     4x-supersampled 1024px source, folded into a 16x16 bank grid so the
-     atlas stays 4096x4096 — the largest universally safe GPU texture.
-     grid = columns; rows = bearings x (phases/grid) phase-banks. */
-  hero:    { hero: true, phases: 32, cell: 256, grid: 16, src: 1024 },
+  /* the hero gait family: two WALK variants (alternated per stride at
+     runtime, so steps never repeat exactly) and a RUN, each 32 frames
+     from a 4x-supersampled 1024px source at 224px cells, folded 16x2
+     banks -> 3584x3584 atlases (three of them: quality over VRAM,
+     the field HUD will arbitrate). */
+  hero:    { hero: 'A',   phases: 32, cell: 224, grid: 16, src: 512 },
+  hero2:   { hero: 'B',   phases: 32, cell: 224, grid: 16, src: 512 },
+  herorun: { hero: 'run', phases: 32, cell: 224, grid: 16, src: 512 },
 };
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
@@ -76,7 +79,8 @@ for (const [kind, opts] of Object.entries(KINDS)) {
     for (let ph = 0; ph < PH; ph++) {
       await pg.evaluate(([bear, g, k]) => __jsd.bakeFrame(bear, g, k),
         [b * 45, ph * 2 * Math.PI / PH,
-         opts.hero ? 'hero' : (opts.zombie ? 'zombie' : 'walk')]);
+         opts.hero ? ({A:'hero',B:'heroB',run:'herorun'})[opts.hero]
+                   : (opts.zombie ? 'zombie' : 'walk')]);
       await pg.waitForTimeout(140);
       const buf = await pg.screenshot();
       cells.push(buf.toString('base64'));

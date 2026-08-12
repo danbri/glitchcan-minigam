@@ -3219,53 +3219,77 @@ addEventListener('message', e=>{
 });
 
 /* headless-test hook */
-/* --- HERO WALK — the reference-grade cycle for the sprite bake ---
-   The generic npcPose walk is two sine waves; this one is built from
-   the animator's checklist, each term a real gait event:
-   - timing asymmetry: the swing leg travels faster than the stance
-     leg loads (a shaped sine, not a pure one)
-   - knee LOAD RESPONSE: a small flex right after heel strike, then
-     the big swing flexion — never a straight pole-vault leg
-   - ankles: heel STRIKES toe-up, the foot ROLLS, the toe pushes off
-     down, the swing foot lifts to clear the ground
-   - pelvis drops toward the swing side, weight shifts over the
-     stance foot, the body bobs TWICE per cycle (lowest at double
-     support, highest at mid-stance)
-   - torso counter-rotates the pelvis; the head counter-rotates the
-     torso and stays LEVEL (the skull is the camera)
-   - arms swing opposite the legs with elbow follow-through (the
-     forearm lags the upper arm) */
-function heroWalkPose(r, th){
-  const wrap=(a)=>Math.atan2(Math.sin(a),Math.cos(a));
-  const bump=(a,c,w)=>Math.exp(-Math.pow(wrap(a-c)/w,2));   // smooth gait event
-  const sw=a=>Math.sin(a+0.15*Math.sin(2*a));               // asymmetric swing
-  const s1=sw(th), s2=sw(th+Math.PI);
-  // legs
-  r.hipL.rotation.x=-0.62*s1;
-  r.hipR.rotation.x=-0.62*s2;
-  r.kneeL.rotation.x=1.05*Math.pow(Math.max(0,Math.sin(th-0.65)),1.25)
+/* --- HERO GAITS — the reference cycles for the sprite bake ---
+   Three styles from one rig. The old cycle leaned forward and
+   floated ("ghostly sliding" — field verdict); these are built to
+   read CHEERFUL and grounded:
+   - upright chest, chin level, big springy bounce, arms that swing
+     from the shoulder with elbow follow-through
+   - two WALK variants (A/B) with different timing shapes, arm
+     amplitudes, head habits and a slight skip in B — the runtime
+     alternates them per stride so no two steps repeat exactly
+   - a RUN: deep knee drive, pumping bent arms, real flight moments
+   Ankles articulate through heel-strike / roll / toe-off in all
+   three. */
+function heroWalkPose(r, th, style){
+  style=style||'A';
+  const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
+  const bump=(a,c,w)=>Math.exp(-Math.pow(wrap(a-c)/w,2));
+  const PI=Math.PI;
+  if(style==='run'){
+    const s1=Math.sin(th), s2=Math.sin(th+PI);
+    r.hipL.rotation.x=-0.95*s1; r.hipR.rotation.x=-0.95*s2;
+    r.kneeL.rotation.x=1.5*Math.pow(Math.max(0,Math.sin(th-0.5)),1.1)+0.22;
+    r.kneeR.rotation.x=1.5*Math.pow(Math.max(0,Math.sin(th+PI-0.5)),1.1)+0.22;
+    r.ankL.rotation.x=0.7*bump(th,2.3,0.7)-0.3*bump(th,0.1,0.5);
+    r.ankR.rotation.x=0.7*bump(th+PI,2.3,0.7)-0.3*bump(th+PI,0.1,0.5);
+    r.body.position.x=0.02*s1;
+    /* flight: twice a cycle both feet leave the ground */
+    r.body.position.y=0.05*(0.5-0.5*Math.cos(2*th))
+      +0.055*Math.pow(Math.max(0,Math.sin(2*th+0.6)),1.4)-0.03;
+    r.body.rotation.x=0.16+0.02*Math.cos(2*th);
+    r.body.rotation.z=0.035*s1;
+    r.pelvis.rotation.y=-0.13*s1;
+    r.torso.rotation.y=0.17*s1;
+    r.headJ.rotation.y=-0.05*s1; r.headJ.rotation.x=-0.04;
+    r.headJ.rotation.z=-r.body.rotation.z*0.8;
+    r.shL.rotation.x=0.85*s1+0.1; r.shR.rotation.x=0.85*s2+0.1;
+    r.elL.rotation.x=-1.35-0.15*s1; r.elR.rotation.x=-1.35-0.15*s2;
+    return;
+  }
+  const P= style==='B'
+    ? { hip:0.66, knee:1.15, arm:0.60, elb:0.42, bounce:0.075, lean:0.045,
+        sway:0.05, headTilt:0.055, tA:0.20, tF:1.85, skip:1 }
+    : { hip:0.62, knee:1.05, arm:0.74, elb:0.32, bounce:0.065, lean:0.030,
+        sway:0.045, headTilt:0.030, tA:0.15, tF:2.0, skip:0 };
+  const sw=a=>Math.sin(a+P.tA*Math.sin(P.tF*a));
+  const s1=sw(th), s2=sw(th+PI);
+  r.hipL.rotation.x=-P.hip*s1;
+  r.hipR.rotation.x=-P.hip*s2;
+  r.kneeL.rotation.x=P.knee*Math.pow(Math.max(0,Math.sin(th-0.65)),1.25)
                     +0.16*Math.pow(Math.max(0,Math.sin(th+2.7)),2)+0.05;
-  r.kneeR.rotation.x=1.05*Math.pow(Math.max(0,Math.sin(th+Math.PI-0.65)),1.25)
-                    +0.16*Math.pow(Math.max(0,Math.sin(th+Math.PI+2.7)),2)+0.05;
+  r.kneeR.rotation.x=P.knee*Math.pow(Math.max(0,Math.sin(th+PI-0.65)),1.25)
+                    +0.16*Math.pow(Math.max(0,Math.sin(th+PI+2.7)),2)+0.05;
   r.ankL.rotation.x=-0.30*bump(th,0.15,0.55)+0.55*bump(th,2.45,0.6)-0.18*bump(th,4.3,0.7);
-  r.ankR.rotation.x=-0.30*bump(th+Math.PI,0.15,0.55)+0.55*bump(th+Math.PI,2.45,0.6)
-                    -0.18*bump(th+Math.PI,4.3,0.7);
-  // pelvis + trunk
-  r.pelvis.rotation.y=-0.10*s1;
-  r.body.position.x=0.028*Math.sin(th);
-  r.body.position.y=0.045*(0.5-0.5*Math.cos(2*th))-0.022;
-  r.body.rotation.z=0.045*Math.sin(th);
-  r.body.rotation.x=0.07+0.015*Math.cos(2*th);
-  r.torso.rotation.y=0.13*s1;
-  // the level head
-  r.headJ.rotation.y=-0.045*s1;
-  r.headJ.rotation.z=-r.body.rotation.z*0.8;
-  r.headJ.rotation.x=0.02*Math.cos(2*th+0.6);
-  // arms, with follow-through
-  r.shL.rotation.x=0.50*s1+0.03;
-  r.shR.rotation.x=0.50*s2+0.03;
-  r.elL.rotation.x=-0.32-0.30*Math.max(0,sw(th-0.5));
-  r.elR.rotation.x=-0.32-0.30*Math.max(0,sw(th+Math.PI-0.5));
+  r.ankR.rotation.x=-0.30*bump(th+PI,0.15,0.55)+0.55*bump(th+PI,2.45,0.6)
+                    -0.18*bump(th+PI,4.3,0.7);
+  r.pelvis.rotation.y=-0.12*s1;
+  r.body.position.x=(P.sway*0.6)*Math.sin(th);
+  /* the SPRING: tall bounce, lowest at double support — and in B a
+     slight skip that makes the two steps of the cycle unequal */
+  r.body.position.y=P.bounce*(0.5-0.5*Math.cos(2*th))
+    +(P.skip?0.014*Math.sin(th+0.9):0)-P.bounce*0.42;
+  r.body.rotation.z=0.05*Math.sin(th);
+  /* UPRIGHT — the old 0.07 constant lean read as a ghost mid-glide */
+  r.body.rotation.x=P.lean+0.014*Math.cos(2*th);
+  r.torso.rotation.y=0.15*s1;
+  r.headJ.rotation.y=-0.05*s1;
+  r.headJ.rotation.z=-r.body.rotation.z*0.8+P.headTilt*Math.sin(th*0.5);
+  r.headJ.rotation.x=-0.025+0.02*Math.cos(2*th+0.6);   // chin LEVEL, tiny nod
+  r.shL.rotation.x=P.arm*s1+0.06;
+  r.shR.rotation.x=P.arm*s2+0.06;
+  r.elL.rotation.x=-P.elb-0.30*Math.max(0,sw(th-0.5));
+  r.elR.rotation.x=-P.elb-0.30*Math.max(0,sw(th+PI-0.5));
 }
 
 window.__jsd = {
@@ -3316,7 +3340,9 @@ window.__jsd = {
   bakeFrame(bearing, gait, kind){
     const n=this._bakeN; if(!n) return false;
     n.gait=gait; n.mode='walk';
-    if(kind==='hero') heroWalkPose(n.r, gait);
+    if(kind==='hero') heroWalkPose(n.r, gait, 'A');
+    else if(kind==='heroB') heroWalkPose(n.r, gait, 'B');
+    else if(kind==='herorun') heroWalkPose(n.r, gait, 'run');
     else npcPose(n, 0, 10);                   // dt 10: lerps snap
     const r=n.r;
     if(kind==='zombie'){                       // the shamble, on top of the stride

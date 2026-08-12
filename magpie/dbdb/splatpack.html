@@ -756,7 +756,39 @@ const avSel=document.getElementById('avSel');
    rotoscoped hero from the enclosing game, and a morph gem turns you
    into the chosen animal for two minutes */
 let beastT=0;
-const pvis={ mode:null, m:null, phases:16, grid:16, banks:1, rows:8 };
+const pvis={ mode:null, m:null, phases:32, grid:16, banks:2, rows:16, sheet:null };
+/* THE GAIT ENGINE — feet that own the ground:
+   - phase advances by DISTANCE covered (stride-calibrated), so a
+     heel strike pins to the land instead of sliding over it
+   - ground speed surges twice per cycle (push-off) and eases at
+     heel strike — the body moves the way the legs say it does
+   - each completed stride flips between walk sheets A and B, so no
+     two steps draw identically
+   - hold one direction ~1.6s and the walk BREAKS INTO A RUN
+     (longer stride, faster, its own sheet); any turn drops back
+   - turns bank the body into the corner; a dead-end stop gives a
+     little check instead of a freeze */
+const gait={ mode:'walk', variant:0, runT:0, spd:0, turnLean:0, lastKey:'' };
+const STRIDE={ walk:1.05, run:1.7 };
+const GSPEED={ walk:1.8, run:3.0 };
+function setHeroSheet(kind, m){
+  m=m||pvis.m; if(!m) return;
+  if(pvis.sheet===kind) return;
+  const a=sprAsset(kind);
+  const apply=()=>{ if(!SPR) return setTimeout(apply,300);
+    const mm=sprMeta(kind);
+    pvis.phases=mm.phases; pvis.grid=mm.grid;
+    pvis.banks=mm.phases/mm.grid; pvis.rows=SPR.bearings*pvis.banks;
+    m.emissiveMap=a.resource; m.opacityMap=a.resource;
+    m.opacityMapChannel='a';
+    m.emissiveMapTiling=new pc.Vec2(1/mm.grid, 1/pvis.rows);
+    m.opacityMapTiling=new pc.Vec2(1/mm.grid, 1/pvis.rows);
+    m.update(); };
+  if(a.loaded) apply(); else { a.on('load',apply);
+    a.on('error',()=>{ if(kind!=='hero'){ pvis.sheet=null; setHeroSheet('hero',m); } });
+  }
+  pvis.sheet=kind;
+}
 function setPlayerVisual(kind){
   const px2=player.x, pz2=player.z;
   if(player.e){ player.e.destroy(); player.e=null; }
@@ -770,17 +802,8 @@ function setPlayerVisual(kind){
     m.blendType=pc.BLEND_NONE; m.alphaTest=0.5; m.depthWrite=true;
     m.cull=pc.CULLFACE_NONE; m.update();
     pl.render.meshInstances[0].material=m;
-    const a=sprAsset('hero');
-    const apply=()=>{ if(!SPR) return setTimeout(apply,300);
-      const mm=sprMeta('hero');
-      pvis.phases=mm.phases; pvis.grid=mm.grid;
-      pvis.banks=mm.phases/mm.grid; pvis.rows=SPR.bearings*pvis.banks;
-      m.emissiveMap=a.resource; m.opacityMap=a.resource;
-      m.opacityMapChannel='a';
-      m.emissiveMapTiling=new pc.Vec2(1/mm.grid, 1/pvis.rows);
-      m.opacityMapTiling=new pc.Vec2(1/mm.grid, 1/pvis.rows);
-      m.update(); };
-    if(a.loaded) apply(); else a.on('load',apply);
+    pvis.sheet=null;
+    setHeroSheet(gait.mode==='run'?'herorun':(gait.variant?'hero2':'hero'), m);
     pl.setLocalEulerAngles(90,0,0);
     pl.setLocalScale(1.5,1,1.5);            // 2.4u bake cell -> ~1.05u person
     pl.setLocalPosition(0,0.78,0);
@@ -942,6 +965,13 @@ function upPlayer(dt){
   if(pkeys.up) jy+=1; if(pkeys.down) jy-=1;
   const l=Math.hypot(jx,jy); if(l>1){ jx/=l; jy/=l; }
   let mov=false;
+  const grounded0=player.y<=0.001;
+  const x0=player.x, z0=player.z;
+  /* gait speed: ease toward the mode's pace; surge with the step */
+  const th0=2*Math.PI*((player.phase||0)%pvis.phases)/pvis.phases;
+  const surge=1+0.13*Math.sin(2*th0+0.4);
+  const tgtSpd=GSPEED[gait.mode];
+  gait.spd += (tgtSpd-gait.spd)*Math.min(1,dt*3.5);
   if(curLay==='maze' && MAZE_INFO){
     const I=MAZE_INFO;
     if(l>0.05){
@@ -965,7 +995,7 @@ function upPlayer(dt){
       }
     }
     if(pac.dir){
-      const sp=1.7*dt;
+      const sp=gait.spd*surge*dt;
       if(pac.dir[0]) player.z+=(ctrZ-player.z)*Math.min(1,dt*10);
       else player.x+=(ctrX-player.x)*Math.min(1,dt*10);
       const along=(player.x-ctrX)*pac.dir[0]+(player.z-ctrZ)*pac.dir[1];
@@ -982,7 +1012,7 @@ function upPlayer(dt){
     const yr=yaw*Math.PI/180;
     const fx=-Math.sin(yr), fz=-Math.cos(yr);       // camera-forward on ground
     const rx=-fz, rz=fx;
-    const sp=2.6*dt;
+    const sp=gait.spd*surge*dt;
     let nx=player.x+(rx*jx+fx*jy)*sp, nz=player.z+(rz*jx+fz*jy)*sp;
     if(layoutBlocked(nx,nz)){                        // slide along walls
       if(!layoutBlocked(nx,player.z)) nz=player.z;
@@ -992,6 +1022,48 @@ function upPlayer(dt){
     player.x=nx; player.z=nz;
     player.heading=Math.atan2(fx*jy+rx*jx, fz*jy+rz*jx);
     mov=true;
+  }
+  /* gait bookkeeping: distance drives the cycle; direction holds
+     build the run; turns bank the body and drop back to a walk */
+  {
+    const dMoved=Math.hypot(player.x-x0, player.z-z0);
+    const key=pac.dir?pac.dir[0]+','+pac.dir[1]
+      :(mov?String(Math.round(player.heading*4/Math.PI)):'');
+    if(mov && key===gait.lastKey) gait.runT+=dt;
+    else {
+      if(mov && gait.lastKey && key!==gait.lastKey){
+        /* banked turn: lean into the new direction */
+        gait.turnLean=(Math.random()<0.5?1:-1)*0.3;
+        if(pac.dir && gait.lastKey.includes(',')){
+          const od=gait.lastKey.split(',').map(Number);
+          const cross=od[0]*pac.dir[1]-od[1]*pac.dir[0];
+          if(cross) gait.turnLean=0.3*Math.sign(cross);
+        }
+      }
+      gait.runT=0;
+    }
+    gait.lastKey=mov?key:'';
+    const wantMode=(gait.runT>1.6 && mov)?'run':'walk';
+    if(wantMode!==gait.mode){
+      gait.mode=wantMode;
+      if(pvis.mode==='hero')
+        setHeroSheet(wantMode==='run'?'herorun':(gait.variant?'hero2':'hero'));
+    }
+    if(mov && grounded0){
+      const before=Math.floor((player.phase||0)/pvis.phases);
+      player.phase=(player.phase||0)+(dMoved/STRIDE[gait.mode])*pvis.phases;
+      const after=Math.floor(player.phase/pvis.phases);
+      if(after>before && gait.mode==='walk'){
+        gait.variant=1-gait.variant;             // a fresh stride, drawn anew
+        if(pvis.mode==='hero') setHeroSheet(gait.variant?'hero2':'hero');
+      }
+    }
+    gait.turnLean*=Math.max(0,1-dt*3);
+    /* a dead-end CHECK: the lane just ended against a wall — a
+       little pull-up instead of a dead freeze */
+    if(!pac.dir && gait.wasDir && grounded0)
+      player.vy=Math.max(player.vy,1.1);
+    gait.wasDir=!!pac.dir;
   }
   /* the hop: a real escape move — you cannot be caught mid-air */
   player.jumpBuf=Math.max(0,player.jumpBuf-dt);
@@ -1008,10 +1080,9 @@ function upPlayer(dt){
     /* the rotoscoped stride: pick the sheet row for the viewer's
        bearing, march the gait when moving — no cartoon bounce */
     player.e.setPosition(player.x, 0.02+player.y, player.z);
-    player.e.setEulerAngles(0,camB2,0);
-    /* one full cycle ~1.15s of walking, whatever the sheet's frame
-       count — 16 frames plays as a smooth reference-grade stride */
-    if(mov&&grounded) player.phase=(player.phase||0)+dt*(pvis.phases/1.15);
+    player.e.setEulerAngles(0,camB2,gait.turnLean*26);   // bank into turns
+    /* the phase is driven by DISTANCE in the gait block above —
+       nothing to add here: feet cannot slide by construction */
     if(pvis.m && SPR){
       let rel=camB2 - player.heading*180/Math.PI;
       rel=((rel%360)+360)%360;
@@ -1384,6 +1455,9 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
   setAvatar(a){ avatar=a; swapAvatar(); },
   morph(sec=120){ beastT=sec; setPlayerVisual(avatar); },
   get pacState(){ return { dir:pac.dir&&[...pac.dir], want:pac.want&&[...pac.want] }; },
+  get gait(){ return { mode:gait.mode, variant:gait.variant, sheet:pvis.sheet,
+    spd:+gait.spd.toFixed(2), runT:+gait.runT.toFixed(2),
+    phase:+((player.phase||0)%pvis.phases).toFixed(1) }; },
   get perf(){ return { trimLevel, decor:DECOR.length,
     decorOn:DECOR.filter(e=>e.enabled).length,
     dprCap:app.graphicsDevice.maxPixelRatio, lite:LITE }; },
