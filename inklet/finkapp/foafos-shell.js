@@ -2071,6 +2071,7 @@ function buildUI() {
         const appW = Math.min(720, Math.max(380, Math.round(window.innerWidth * 0.55)));
         const appH = Math.min(680, Math.max(460, Math.round(window.innerHeight * 0.72)));
         const win = makeWindow(`${app.icon} ${app.name}`, appW, appH);
+        win.dataset.appId = app.id;   // lets CSS treat the story window as a place, not a window
         const frame = document.createElement('iframe');
         frame.title = app.name;
         frame.setAttribute('sandbox', sandboxFor(app));
