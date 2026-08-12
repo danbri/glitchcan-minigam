@@ -289,7 +289,10 @@ let SPR=null;
 fetch('sprites/sprites.json').then(r=>r.json()).then(j=>{ SPR=j; }).catch(()=>{});
 const sprAssets={};
 /* per-kind sheet meta: the hero bakes finer (8 phases, 192px cells) */
-const sprMeta=k=>(SPR&&SPR.meta&&SPR.meta[k])||{ phases:SPR?SPR.phases:4, cell:SPR?SPR.cell:128 };
+const sprMeta=k=>{
+  const m=(SPR&&SPR.meta&&SPR.meta[k])||{ phases:SPR?SPR.phases:4, cell:SPR?SPR.cell:128 };
+  return { ...m, grid:m.grid||m.phases };   // grid = atlas columns (bank fold)
+};
 function sprAsset(kind){
   if(sprAssets[kind]) return sprAssets[kind];
   const a=new pc.Asset('spr-'+kind,'texture',{ url:'sprites/'+kind+'.png' });
@@ -662,7 +665,7 @@ const avSel=document.getElementById('avSel');
    rotoscoped hero from the enclosing game, and a morph gem turns you
    into the chosen animal for two minutes */
 let beastT=0;
-const pvis={ mode:null, m:null, phases:8 };
+const pvis={ mode:null, m:null, phases:16, grid:16, banks:1, rows:8 };
 function setPlayerVisual(kind){
   const px2=player.x, pz2=player.z;
   if(player.e){ player.e.destroy(); player.e=null; }
@@ -678,11 +681,13 @@ function setPlayerVisual(kind){
     pl.render.meshInstances[0].material=m;
     const a=sprAsset('hero');
     const apply=()=>{ if(!SPR) return setTimeout(apply,300);
-      const mm=sprMeta('hero'); pvis.phases=mm.phases;
+      const mm=sprMeta('hero');
+      pvis.phases=mm.phases; pvis.grid=mm.grid;
+      pvis.banks=mm.phases/mm.grid; pvis.rows=SPR.bearings*pvis.banks;
       m.emissiveMap=a.resource; m.opacityMap=a.resource;
       m.opacityMapChannel='a';
-      m.emissiveMapTiling=new pc.Vec2(1/mm.phases, 1/SPR.bearings);
-      m.opacityMapTiling=new pc.Vec2(1/mm.phases, 1/SPR.bearings);
+      m.emissiveMapTiling=new pc.Vec2(1/mm.grid, 1/pvis.rows);
+      m.opacityMapTiling=new pc.Vec2(1/mm.grid, 1/pvis.rows);
       m.update(); };
     if(a.loaded) apply(); else a.on('load',apply);
     pl.setLocalEulerAngles(90,0,0);
@@ -828,6 +833,7 @@ function setPlay(on){
   }
   const pb=document.getElementById('mPlay');
   if(pb) pb.textContent=on?'\u25a0 ORBIT':'\u25b6 PLAY';
+  if(typeof updPhos==='function') try{ updPhos(); }catch(e){}
 }
 /* PAC-LANES — in the maze you commit to a corridor and KEEP MOVING,
    Pac-Man style: the stick only picks the next turn, the lane keeps
@@ -920,9 +926,11 @@ function upPlayer(dt){
     if(pvis.m && SPR){
       let rel=camB2 - player.heading*180/Math.PI;
       rel=((rel%360)+360)%360;
-      const row=Math.round(rel/45)%SPR.bearings;
-      const col=mov?Math.floor(player.phase||0)%pvis.phases:0;
-      const u=col/pvis.phases, v=1-(row+1)/SPR.bearings;
+      const bearing=Math.round(rel/45)%SPR.bearings;
+      const cn=mov?Math.floor(player.phase||0)%pvis.phases:0;
+      const grid=pvis.grid||pvis.phases, banks=pvis.banks||1;
+      const col=cn%grid, row=bearing*banks+Math.floor(cn/grid);
+      const u=col/grid, v=1-(row+1)/(pvis.rows||SPR.bearings);
       if(m0x(pvis.m,u,v)) pvis.m.update();
     }
   } else {
@@ -1167,9 +1175,20 @@ if(EMBED){
   xb.addEventListener('click',()=>parent.postMessage({ jsdDream:'exit' },'*'));
   document.body.appendChild(xb);
 }
+/* CRT overlay policy: dbdb2 keeps its shader CRT — that is its face.
+   The dreams are the CONTRAST: the scans are photographs, and the
+   scanline comb + green vignette measurably degrade them (A/B held).
+   So the phos sheet defaults OFF when playing or embedded, stays on
+   for the workbench feel, and ?crt=1 / ?crt=0 forces either way. */
+const CRTQ=Q.get('crt');
+function updPhos(){
+  const on = CRTQ==='1' ? true : CRTQ==='0' ? false : !(playMode||EMBED);
+  document.getElementById('phos').style.display = on ? '' : 'none';
+}
 const start=Q.get('lay');
 build(start&&LAYOUTS[start]?start:'catalog');
 if(Q.has('play')) setPlay(true);
+updPhos();
 
 /* headless hook */
 window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Object.keys(assets).length>0; },

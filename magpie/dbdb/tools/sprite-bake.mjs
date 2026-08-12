@@ -29,7 +29,11 @@ const KINDS = {
   walker2: { shirt: 0x8a3a2c, trouser: 0x2e3a2e, hair: 0x101010, skin: 0xb97a4e, bun: 1 },
   walker3: { shirt: 0x557a3a, trouser: 0x44341f, hair: 0x5a3a1a, skin: 0xe0b58a, mous: 1 },
   zombie:  { shirt: 0x4a4438, trouser: 0x33382e, hair: 0x222a1c, skin: 0x86a05a, zombie: true },
-  hero:    { hero: true, phases: 16, cell: 192 },   // reference-grade cycle, 16 frames
+  /* hero: reference-grade cycle at DOUBLE framerate (32 frames) and a
+     4x-supersampled 1024px source, folded into a 16x16 bank grid so the
+     atlas stays 4096x4096 — the largest universally safe GPU texture.
+     grid = columns; rows = bearings x (phases/grid) phase-banks. */
+  hero:    { hero: true, phases: 32, cell: 256, grid: 16, src: 1024 },
 };
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
@@ -62,6 +66,8 @@ const only = process.argv.slice(2);
 for (const [kind, opts] of Object.entries(KINDS)) {
   if (only.length && !only.includes(kind)) continue;
   const PH = opts.phases || PHASES, CE = opts.cell || CELL;
+  const GRID = opts.grid || PH, SRC = opts.src || 512;
+  await pg.setViewportSize({ width: SRC, height: SRC });
   const spawnOpts = { shirt: opts.shirt, trouser: opts.trouser, hair: opts.hair,
     skin: opts.skin, mous: opts.mous, bun: opts.bun, hero: opts.hero };
   await pg.evaluate(o => __jsd.bakeSpawn(o), spawnOpts);
@@ -78,28 +84,30 @@ for (const [kind, opts] of Object.entries(KINDS)) {
     }
   }
   /* assemble: key out magenta, downscale into the atlas grid */
-  const durl = await comp.evaluate(async ([cellsB64, CELL2, BE, PH]) => {
+  const durl = await comp.evaluate(async ([cellsB64, CELL2, BE, PH, GRID2, SRC2]) => {
+    const banks = PH / GRID2;
     const cv = document.createElement('canvas');
-    cv.width = CELL2 * PH; cv.height = CELL2 * BE;
+    cv.width = CELL2 * GRID2; cv.height = CELL2 * BE * banks;
     const g = cv.getContext('2d');
     for (let i = 0; i < cellsB64.length; i++) {
       const img = new Image();
       await new Promise((res, rej) => { img.onload = res; img.onerror = rej;
         img.src = 'data:image/png;base64,' + cellsB64[i]; });
-      const c2 = document.createElement('canvas'); c2.width = c2.height = 512;
+      const c2 = document.createElement('canvas'); c2.width = c2.height = SRC2;
       const g2 = c2.getContext('2d');
       g2.drawImage(img, 0, 0);
-      const d = g2.getImageData(0, 0, 512, 512);
-      for (let px = 0; px < 512 * 512; px++) {
+      const d = g2.getImageData(0, 0, SRC2, SRC2);
+      for (let px = 0; px < SRC2 * SRC2; px++) {
         const r = d.data[px * 4], gg = d.data[px * 4 + 1], bl = d.data[px * 4 + 2];
         if (r > 160 && bl > 160 && gg < 120) d.data[px * 4 + 3] = 0;   // the magenta void
       }
       g2.putImageData(d, 0, 0);
       const b = Math.floor(i / PH), ph2 = i % PH;
-      g.drawImage(c2, ph2 * CELL2, b * CELL2, CELL2, CELL2);
+      const col = ph2 % GRID2, row = b * banks + Math.floor(ph2 / GRID2);
+      g.drawImage(c2, col * CELL2, row * CELL2, CELL2, CELL2);
     }
     return cv.toDataURL('image/png');
-  }, [cells, CE, BEARINGS, PH]);
+  }, [cells, CE, BEARINGS, PH, GRID, SRC]);
   fs.writeFileSync(path.join(OUT, kind + '.png'),
     Buffer.from(durl.split(',')[1], 'base64'));
   console.log('\n✓', kind, '→ sprites/' + kind + '.png');
@@ -109,7 +117,8 @@ fs.writeFileSync(path.join(OUT, 'sprites.json'), JSON.stringify({
   kinds: Object.keys(KINDS),
   /* per-kind overrides; absent kind -> the top-level defaults */
   meta: Object.fromEntries(Object.entries(KINDS).map(([k, o]) =>
-    [k, { phases: o.phases || PHASES, cell: o.cell || CELL }])),
+    [k, { phases: o.phases || PHASES, cell: o.cell || CELL,
+          grid: o.grid || o.phases || PHASES }])),
   note: 'baked from dbdb2 rotoscope rigs (tools/sprite-bake.mjs); rows=viewer bearing (0=front, +45 steps), cols=gait phase',
 }, null, 2));
 await browser.close(); srv.close();

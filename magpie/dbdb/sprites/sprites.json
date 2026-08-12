@@ -12,23 +12,28 @@
   "meta": {
     "walker1": {
       "phases": 4,
-      "cell": 128
+      "cell": 128,
+      "grid": 4
     },
     "walker2": {
       "phases": 4,
-      "cell": 128
+      "cell": 128,
+      "grid": 4
     },
     "walker3": {
       "phases": 4,
-      "cell": 128
+      "cell": 128,
+      "grid": 4
     },
     "zombie": {
       "phases": 4,
-      "cell": 128
+      "cell": 128,
+      "grid": 4
     },
     "hero": {
-      "phases": 16,
-      "cell": 192
+      "phases": 32,
+      "cell": 256,
+      "grid": 16
     }
   },
   "note": "baked from dbdb2 rotoscope rigs (tools/sprite-bake.mjs); rows=viewer bearing (0=front, +45 steps), cols=gait phase"
