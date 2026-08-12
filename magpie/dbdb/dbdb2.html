@@ -1363,24 +1363,42 @@ function npcStep(n, dt){
   const wp=n.path && n.path[n.pi];
   if(!wp) return true;
   const dx=wp[0]-n.x, dz=wp[2]-n.z, d=Math.hypot(dx,dz);
-  if(d<0.14){ n.y=wp[1]; n.pi++; return n.pi>=n.path.length; }
-  const st=Math.min(d, n.speed*dt);
+  if(d<0.14){ n.y=wp[1]; n.slope=0; n.pi++; return n.pi>=n.path.length; }
+  /* stairs: shorter, more careful steps — real legs, not conveyor belts */
+  const slope=wp[1]-n.y;
+  const stair=Math.abs(slope)>0.25;
+  const st=Math.min(d, n.speed*(stair?0.55:1)*dt);
   let nx=n.x+dx/d*st, nz=n.z+dz/d*st;
-  /* on level ground, do not ghost through furniture: slide around it,
-     and if truly cornered for a while, give up on this waypoint */
-  if(Math.abs(wp[1]-n.y)<0.2){
-    const fy=Math.floor(n.y+0.01);
-    const blocked=(X,Z)=>cellSolid(Math.floor(X),fy,Math.floor(Z));
-    if(blocked(nx,nz)){
-      if(!blocked(nx,n.z)) nz=n.z;
-      else if(!blocked(n.x,nz)) nx=n.x;
-      else { n.stall=(n.stall||0)+dt;
-        if(n.stall>1.5){ n.stall=0; n.pi++; return n.pi>=n.path.length; }
-        n.gait+=st*1.2; return false; }
-    } else n.stall=0;
-  }
+  /* never ghost through geometry — check the whole BODY (foot + head),
+     everywhere, stairs included: slide around obstacles, and a truly
+     cornered walker steps back onto the waypoint it came for (a spot
+     the route curated as open ground) instead of skipping ahead and
+     sinking through whatever stood in between. */
+  const yNew=n.y+(wp[1]-n.y)*Math.min(1,dt*7);
+  /* probe at the HIGHER of old/new height: a descending walker's lerp
+     must not dip the probe into the step it is still standing on */
+  const yPro=Math.max(n.y,yNew);
+  const inside=(X,Z)=>cellSolid(Math.floor(X),Math.floor(yPro+0.01),Math.floor(Z))
+                    ||cellSolid(Math.floor(X),Math.floor(yPro+1.1),Math.floor(Z));
+  if(inside(nx,nz)){
+    if(!inside(nx,n.z)) nz=n.z;
+    else if(!inside(n.x,nz)) nx=n.x;
+    else { n.stall=(n.stall||0)+dt;
+      if(n.stall>2.2){ n.stall=0;
+        n.x=wp[0]; n.y=wp[1]; n.z=wp[2];
+        n.pi++; return n.pi>=n.path.length; }
+      n.gait+=st*1.2; return false; }
+  } else n.stall=0;
   n.x=nx; n.z=nz;
-  n.y+=(wp[1]-n.y)*Math.min(1,dt*7);
+  /* feet stay ON the ground: on a descent the y-lerp races ahead of the
+     horizontal step, dipping the feet INTO the stair block — snap up to
+     the top of whatever is underfoot, so a walker rides each step's top
+     until they cross its edge (a real stair descent, and never inside) */
+  let yFix=yNew;
+  for(let g2=0; g2<3 && cellSolid(Math.floor(nx),Math.floor(yFix+0.01),Math.floor(nz)); g2++)
+    yFix=Math.floor(yFix+0.01)+1;
+  n.y=yFix;
+  n.slope=slope;
   n.facing=Math.atan2(dx,dz);
   n.gait+=st*2.35;
   return false;
@@ -1406,7 +1424,11 @@ function npcPose(n, t, dt){
       else { r.shL.rotation.x=s*0.42; r.shR.rotation.x=-s*0.42;
         r.elL.rotation.x=-0.4-s*0.12; r.elR.rotation.x=-0.4+s*0.12; }
       r.body.position.y=(Math.abs(Math.cos(n.gait))*0.05-0.025);
-      r.body.rotation.x=0.1; r.body.rotation.z=s*0.03;
+      /* stairs read in the spine: lean into a climb, sit back on a
+         descent, knees a little deeper either way */
+      const sl=Math.max(-1,Math.min(1,(n.slope||0)*1.6));
+      r.body.rotation.x=0.1+sl*0.14; r.body.rotation.z=s*0.03;
+      if(sl<-0.1){ r.kneeL.rotation.x+=0.18; r.kneeR.rotation.x+=0.18; }
       r.torso.rotation.y=carry?0:s*0.08; r.headJ.rotation.y=carry?0:-s*0.05;
       r.headJ.rotation.x=0;
       break; }
@@ -1476,7 +1498,7 @@ for(let i=0;i<5;i++){
   const n=spawnNPC({}, QUEUE_X[i],1,6.3, Math.PI, 'jostle');
   n.slot=i; patrons.push(n);
 }
-let slapT=9, serveT=5, shuffleT=4, slapAct=-1;
+let slapT=9, serveT=5, shuffleT=4, slapAct=-1, strollT=14;
 function updateBar(dt,t){
   for(const k of BK){
     k.timer-=dt;
@@ -1517,11 +1539,31 @@ function updateBar(dt,t){
       }
     }
     if(q.path){ if(npcStep(q,dt)){ q.path=null; q.mode=q.data.next||'jostle';
-        if(q.mode==='jostle') q.facing=Math.PI; } }
+        if(q.mode==='jostle') q.facing=Math.PI;
+        if(q.mode==='browse') q.timer=3+Math.random()*3; } }
     else if(q.mode==='drink'){
       q.data.drinkT-=dt; q.facing=Math.atan2(-26.5-q.x, 5-q.z);
       if(q.data.drinkT<=0){ dropProp(q);
         npcSetPath(q,[[QUEUE_X[q.slot],1,6.3]],'walk'); q.data.next='jostle'; }
+    }
+  }
+  // the daily round: now and then a patron stretches their legs —
+  // a look at the bakery, a squeeze of the tomatoes, back to the queue
+  strollT-=dt;
+  if(strollT<=0){ strollT=22+Math.random()*18;
+    const q=patrons.find(p2=>p2.mode==='jostle'&&!p2.path&&p2.data.served==null);
+    if(q){
+      const stop=Math.random()<0.5?[-27,1,-1.6]:[-27,1,-11.5];
+      npcSetPath(q,[[q.x,1,3.4],[-22,1,0.5],stop],'walk');
+      q.data.next='browse'; q.data.stroller=1;
+    }
+  }
+  for(const q of patrons){
+    if(q.data.stroller && q.mode==='browse' && !q.path){
+      q.timer-=dt; q.facing=Math.PI;
+      if(q.timer<=0){ delete q.data.stroller;
+        npcSetPath(q,[[-22,1,0.5],[q.x,1,3.4],[QUEUE_X[q.slot],1,6.3]],'walk');
+        q.data.next='jostle'; }
     }
   }
   // queue jostling: neighbours swap places, shoulders first
@@ -1629,6 +1671,7 @@ function updateShoppers(dt){
         const nx=s.data.next; delete s.data.next;
         if(nx==='browse'){ s.mode='browse'; s.timer=4+Math.random()*3; s.facing=Math.PI; }
         else if(nx==='hail'){ s.mode='hail'; s.facing=Math.PI/2; summonCar(s); }
+        else if(nx==='pint'){ s.mode='pint'; s.timer=4+Math.random()*4; }
         else s.mode=nx||'idle';
       }
     } else if(s.mode==='browse'){
@@ -1638,7 +1681,19 @@ function updateShoppers(dt){
         const back = s.data.shop==='veg'
           ? [[-24,1,-11.5],[-18.3,1,-11]]
           : [[-24,1,-1.6],[-18.3,1,-2]];
-        npcSetPath(s, back, 'carry'); s.data.next='hail';
+        /* the sensible daily routine allows for a pint: some shoppers
+           swing by the Newt on the way to the taxi rank */
+        if(Math.random()<0.45){
+          npcSetPath(s, back.concat([[-22,1,3.4],[-24.2,1,6.9]]), 'carry');
+          s.data.next='pint';
+        } else {
+          npcSetPath(s, back, 'carry'); s.data.next='hail';
+        }
+      }
+    } else if(s.mode==='pint'){
+      s.timer-=dt; s.facing=Math.atan2(-26.5-s.x, 4-s.z);
+      if(s.timer<=0){
+        npcSetPath(s, [[-22,1,3.4],[-18.3,1,-2]], 'carry'); s.data.next='hail';
       }
     }
   }
@@ -1748,16 +1803,14 @@ makePET('bondi',      0x1f9bb5, -31.4,2,10.5, Math.PI/2, -30.6,1,10.5);  // the 
 makePET('grape',      0x8f63cc, 55.5,7,-6.5, 0,          55.5,6,-5.6);   // the Library
 makePET('strawberry', 0xe8546e, 40.5,12,-16.5, 0,        40.5,11,-15.6); // the Attic
 makePET('lime',       0x8fc43a, 56.5,2,10.5, -Math.PI/2, 55.4,1,10.5);   // the Conservatory
-makePET('tangerine',  0xe8863a, -11.5,7,2.5, Math.PI,    -11.5,6,1.2);   // the maglev platform
-/* the playtest row at the spawn (bondi=carshop, strawberry=forest,
-   lime=garden, grape=tree via the dream's tint map) */
 /* the GROWN worlds: derived scenes stamped from the splatpack.
-   Their PETs loiter NEAR THE NEWT, scattered like regulars who
-   never quite made it to the counter — banana runs PAC-MAZE, jade
-   the SABRE JUNGLE. (The old spawn-row playtest PETs are retired:
-   the arcade lives by the bar now, and only the thematic dream
-   doors elsewhere open the scans.) */
-makePET('banana', 0xe8c83a, -27.5,2,8.0, 0.55, -26.9,1,8.8,
+   banana runs PAC-MAZE from the top of the maglev stairs (it
+   replaced the old tangerine dream door there — arrivals walk
+   straight off the carriage into the arcade); jade runs the
+   SABRE JUNGLE from the Newt, a regular who never quite made
+   it to the counter. (The old spawn-row playtest PETs are
+   retired; the thematic dream doors elsewhere open the scans.) */
+makePET('banana', 0xe8c83a, -11.5,7,2.5, Math.PI, -11.5,6,1.2,
   'splatpack.html?lay=maze&play=1&embed=1');
 makePET('jade',   0x2fae7a, -25.0,2,13.0, -0.85, -25.6,1,12.2,
   'splatpack.html?lay=jungle&play=1&embed=1');
@@ -3196,7 +3249,13 @@ window.__jsd = {
      bearing: viewer bearing deg (0 = looking at the character's front) */
   bakeSpawn(opts={}){
     if(this._bakeN){ this._bakeN.r.g.removeFromParent(); }
-    const n={ r:makeNPC(opts), gait:0, phase:0, mode:'walk',
+    /* opts.hero: bake the ACTUAL hero rig (makeHuman, Ducky on the
+       shoulder) rather than a generic resident */
+    const rig = opts.hero
+      ? (()=>{ const h=makeHuman(); scene.add(h.g);   // makeNPC self-adds; makeHuman doesn't
+               return { g:h.g, ...h.r }; })()
+      : makeNPC(opts);
+    const n={ r:rig, gait:0, phase:0, mode:'walk',
       x:0,y:300,z:0, facing:0, stagger:0, laugh:0 };
     n.r.g.position.set(0,300,0);
     this._bakeN=n;
@@ -3227,6 +3286,13 @@ window.__jsd = {
   },
   get terms(){ return TERMS.map(T=>T.name); },
   get residents(){ return npcs.map(n=>n.mode); },
+  /* headless audits: no walker may ever end a frame inside geometry */
+  get residentAudit(){ return npcs.map(n=>({ mode:n.mode,
+    x:+n.x.toFixed(1), y:+n.y.toFixed(1), z:+n.z.toFixed(1),
+    vis:n.r.g.visible,
+    inSolid:n.r.g.visible && !!cellSolid(Math.floor(n.x),Math.floor(n.y+0.01),Math.floor(n.z)) })); },
+  npcSoak(sec=60){ let ts=0;
+    for(let i=0;i<sec*30;i++){ ts+=1/30; updateNPCs(1/30, ts); } },
   get maglev(){ return { state:maglev.state, z:Math.round(maglev.z*10)/10 }; },
   get carCount(){ return cars.length; },
   get pushDbg(){ return {...pushDbg}; },

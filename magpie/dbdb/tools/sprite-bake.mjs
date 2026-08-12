@@ -20,12 +20,16 @@ const OUT = path.join(ROOT, 'magpie/dbdb/sprites');
 const PORT = +(process.env.PORT || 8961);
 const CELL = 128, BEARINGS = 8, PHASES = 4;
 
-/* the cast — explicit outfits so bakes are reproducible */
+/* the cast — explicit outfits so bakes are reproducible.
+   hero: the ACTUAL makeHuman rig (Ducky on the shoulder), baked
+   finer — 8 gait phases at 192px cells — for the playable sprite.
+   Pass kind names as argv to bake a subset: node sprite-bake.mjs hero */
 const KINDS = {
   walker1: { shirt: 0x2c6e8a, trouser: 0x3a3a55, hair: 0x2a1c10, skin: 0xd9a06b },
   walker2: { shirt: 0x8a3a2c, trouser: 0x2e3a2e, hair: 0x101010, skin: 0xb97a4e, bun: 1 },
   walker3: { shirt: 0x557a3a, trouser: 0x44341f, hair: 0x5a3a1a, skin: 0xe0b58a, mous: 1 },
   zombie:  { shirt: 0x4a4438, trouser: 0x33382e, hair: 0x222a1c, skin: 0x86a05a, zombie: true },
+  hero:    { hero: true, phases: 8, cell: 192 },
 };
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
@@ -52,17 +56,20 @@ await pg.addStyleTag({ content: 'body>div:not(#stage),body>button,body>pre{displ
 await pg.waitForTimeout(1500);
 
 /* compositor page: chroma-key + atlas assembly */
-const comp = await browser.newPage({ viewport: { width: CELL * PHASES, height: CELL * BEARINGS } });
+const comp = await browser.newPage({ viewport: { width: 512, height: 512 } });
 
+const only = process.argv.slice(2);
 for (const [kind, opts] of Object.entries(KINDS)) {
+  if (only.length && !only.includes(kind)) continue;
+  const PH = opts.phases || PHASES, CE = opts.cell || CELL;
   const spawnOpts = { shirt: opts.shirt, trouser: opts.trouser, hair: opts.hair,
-    skin: opts.skin, mous: opts.mous, bun: opts.bun };
+    skin: opts.skin, mous: opts.mous, bun: opts.bun, hero: opts.hero };
   await pg.evaluate(o => __jsd.bakeSpawn(o), spawnOpts);
   const cells = [];
   for (let b = 0; b < BEARINGS; b++) {
-    for (let ph = 0; ph < PHASES; ph++) {
+    for (let ph = 0; ph < PH; ph++) {
       await pg.evaluate(([bear, g, k]) => __jsd.bakeFrame(bear, g, k),
-        [b * 45, ph * Math.PI / 2, opts.zombie ? 'zombie' : 'walk']);
+        [b * 45, ph * 2 * Math.PI / PH, opts.zombie ? 'zombie' : 'walk']);
       await pg.waitForTimeout(140);
       const buf = await pg.screenshot();
       cells.push(buf.toString('base64'));
@@ -91,7 +98,7 @@ for (const [kind, opts] of Object.entries(KINDS)) {
       g.drawImage(c2, ph2 * CELL2, b * CELL2, CELL2, CELL2);
     }
     return cv.toDataURL('image/png');
-  }, [cells, CELL, BEARINGS, PHASES]);
+  }, [cells, CE, BEARINGS, PH]);
   fs.writeFileSync(path.join(OUT, kind + '.png'),
     Buffer.from(durl.split(',')[1], 'base64'));
   console.log('\n✓', kind, '→ sprites/' + kind + '.png');
@@ -99,6 +106,9 @@ for (const [kind, opts] of Object.entries(KINDS)) {
 fs.writeFileSync(path.join(OUT, 'sprites.json'), JSON.stringify({
   cell: CELL, bearings: BEARINGS, phases: PHASES,
   kinds: Object.keys(KINDS),
+  /* per-kind overrides; absent kind -> the top-level defaults */
+  meta: Object.fromEntries(Object.entries(KINDS).map(([k, o]) =>
+    [k, { phases: o.phases || PHASES, cell: o.cell || CELL }])),
   note: 'baked from dbdb2 rotoscope rigs (tools/sprite-bake.mjs); rows=viewer bearing (0=front, +45 steps), cols=gait phase',
 }, null, 2));
 await browser.close(); srv.close();

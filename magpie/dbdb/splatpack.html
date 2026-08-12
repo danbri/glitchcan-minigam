@@ -18,22 +18,32 @@
       radial-gradient(120% 100% at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,20,8,.55) 100%),
       repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, rgba(0,0,0,0) 1px 3px); }
   #head { position:fixed; top:0; left:0; right:0; z-index:8; display:flex;
-    justify-content:space-between; padding:10px 14px 8px; pointer-events:none;
+    justify-content:space-between; padding:10px 14px 8px 56px; pointer-events:none;
     font-size:11px; letter-spacing:.3em; color:rgba(159,232,176,.75);
     text-shadow:0 0 8px rgba(80,255,140,.5); }
-  #bar { position:fixed; bottom:0; left:0; right:0; z-index:9; display:flex;
-    flex-wrap:wrap; gap:6px; padding:10px; align-items:center;
-    background:rgba(1,10,5,.85); border-top:1px solid rgba(159,232,176,.4); }
-  #bar button { background:none; border:1px solid #9fe8b0; color:#9fe8b0;
-    font:12px monospace; padding:8px 10px; border-radius:4px; }
-  #bar button.on { background:rgba(80,255,140,.22); }
-  #elDrawer { position:fixed; bottom:52px; left:0; right:0; z-index:10;
-    max-height:44vh; overflow-y:auto; padding:10px;
-    background:rgba(1,10,5,.94); border-top:1px solid rgba(159,232,176,.4);
+  /* the ☰: everything that is not GAMEPLAY lives behind it */
+  #menuBtn { position:fixed; top:6px; left:8px; z-index:24;
+    background:rgba(1,10,5,.7); border:1px solid rgba(159,232,176,.5);
+    color:#9fe8b0; font:16px monospace; padding:6px 11px; border-radius:4px; }
+  #menu { position:fixed; top:44px; left:8px; z-index:23; width:210px;
+    max-height:78vh; overflow-y:auto; display:flex; flex-direction:column;
+    gap:6px; padding:10px; background:rgba(1,10,5,.94);
+    border:1px solid rgba(159,232,176,.4); border-radius:6px; }
+  #menu button { background:none; border:1px solid #9fe8b0; color:#9fe8b0;
+    font:12px monospace; padding:9px 10px; border-radius:4px; text-align:left; }
+  #menu button.on { background:rgba(80,255,140,.22); }
+  #menu .sec { font:10px monospace; letter-spacing:.3em; opacity:.6;
+    padding:6px 2px 0; }
+  #devSub { display:flex; flex-direction:column; gap:6px;
+    border-left:2px solid rgba(159,232,176,.3); padding-left:8px; }
+  #elDrawer { position:fixed; top:44px; left:228px; right:8px; z-index:23;
+    max-height:60vh; overflow-y:auto; padding:10px;
+    background:rgba(1,10,5,.94); border:1px solid rgba(159,232,176,.4);
+    border-radius:6px;
     display:grid; grid-template-columns:repeat(auto-fill,minmax(108px,1fr)); gap:6px; }
   #elDrawer button { background:none; border:1px solid #9fe8b0; color:#9fe8b0;
     font:11px monospace; padding:9px 6px; border-radius:4px; }
-  #cred { position:fixed; bottom:52px; left:10px; right:10px; z-index:8;
+  #cred { position:fixed; bottom:8px; left:10px; right:10px; z-index:8;
     font-size:8.5px; opacity:.55; pointer-events:none; line-height:1.5; }
   #stickBase, #stickNub {
     position:fixed; z-index:8; border-radius:50%; pointer-events:none;
@@ -50,14 +60,14 @@
   #avSel button.on { border-color:#9fe8b0; background:rgba(80,255,140,.18); }
   #avSel .lbl { color:#9fe8b0; font:11px monospace; letter-spacing:.2em;
     align-self:center; flex:0 0 auto; padding-right:4px; }
-  #jumpBtn { position:fixed; bottom:120px; right:12px; z-index:9;
+  #jumpBtn { position:fixed; bottom:84px; right:12px; z-index:9;
     width:64px; height:64px; border-radius:50%; display:none;
     background:rgba(2,16,8,.72); border:2px solid rgba(159,232,176,.6);
     color:#9fe8b0; font:bold 13px monospace; }
-  #avBtn { position:fixed; bottom:64px; right:10px; z-index:9;
-    font-size:26px; background:rgba(2,16,8,.72);
-    border:1px solid rgba(159,232,176,.5); border-radius:10px;
-    padding:6px 10px; display:none; }
+  #resetBtn2 { position:fixed; bottom:36px; right:22px; z-index:9;
+    display:none; background:rgba(2,16,8,.72);
+    border:1px solid rgba(159,232,176,.5); border-radius:8px;
+    color:#9fe8b0; font:11px monospace; padding:6px 10px; }
   #flash { position:fixed; left:0; right:0; top:38%; z-index:12; text-align:center;
     font:bold 26px monospace; letter-spacing:.25em; color:#ffe28a;
     text-shadow:0 0 18px rgba(255,200,80,.8); pointer-events:none; opacity:0;
@@ -75,11 +85,12 @@
 <div id="cred"></div>
 <div id="stickBase"></div><div id="stickNub"></div>
 <div id="avSel" class="hidden"></div>
-<button type="button" id="avBtn" aria-label="choose your animal"></button>
+<button type="button" id="menuBtn" aria-label="menu">&#9776;</button>
+<div id="menu" class="hidden"></div>
 <button type="button" id="jumpBtn" aria-label="jump">JUMP</button>
+<button type="button" id="resetBtn2" aria-label="reset run">&#8634; RESET</button>
 <div id="flash"></div>
 <div id="elDrawer" class="hidden"></div>
-<div id="bar"></div>
 <pre id="err"></pre>
 
 <script type="module">
@@ -277,6 +288,8 @@ const LAYOUTS={
 let SPR=null;
 fetch('sprites/sprites.json').then(r=>r.json()).then(j=>{ SPR=j; }).catch(()=>{});
 const sprAssets={};
+/* per-kind sheet meta: the hero bakes finer (8 phases, 192px cells) */
+const sprMeta=k=>(SPR&&SPR.meta&&SPR.meta[k])||{ phases:SPR?SPR.phases:4, cell:SPR?SPR.cell:128 };
 function sprAsset(kind){
   if(sprAssets[kind]) return sprAssets[kind];
   const a=new pc.Asset('spr-'+kind,'texture',{ url:'sprites/'+kind+'.png' });
@@ -289,7 +302,7 @@ function sprAsset(kind){
    phosphor sprite. Colour emoji fonts carry their own colours;
    where the platform draws monochrome glyphs, pass a tint.
    ========================================================= */
-function emojiDots(emoji, opts={}){
+function emojiDotData(emoji, opts={}){
   const res=opts.res||18, gap=opts.gap||10, tint=opts.tint||null;
   const s=res;
   const cv=document.createElement('canvas'); cv.width=cv.height=s;
@@ -299,52 +312,108 @@ function emojiDots(emoji, opts={}){
   g.fillStyle='#fff';
   g.fillText(emoji, s/2, s/2+1);
   const d=g.getImageData(0,0,s,s).data;
-  const out=document.createElement('canvas'); out.width=out.height=s*gap;
-  const og=out.getContext('2d');
+  const dots=[];
   for(let y=0;y<s;y++) for(let x=0;x<s;x++){
     const i=(y*s+x)*4, a=d[i+3];
     if(a<40) continue;
     let r=d[i], gg=d[i+1], b=d[i+2];
-    if(tint || (r>235&&gg>235&&b>235) || (r+gg+b<40)){
-      const tc=tint||'#7ef0c0';
-      og.fillStyle=tc;
-    } else og.fillStyle='rgb('+r+','+gg+','+b+')';
-    og.globalAlpha=Math.pow(a/255,0.6);
-    og.beginPath();
-    og.arc(x*gap+gap/2, y*gap+gap/2, gap*0.34, 0, 6.2832);
-    og.fill();
+    const fill=(tint || (r>235&&gg>235&&b>235) || (r+gg+b<40))
+      ? (tint||'#7ef0c0') : 'rgb('+r+','+gg+','+b+')';
+    dots.push({ px:x*gap+gap/2, py:y*gap+gap/2, x, y,
+      fill, alpha:Math.pow(a/255,0.6), ph:Math.random()*6.2832 });
   }
-  og.globalAlpha=1;
-  return out;
+  const out=document.createElement('canvas'); out.width=out.height=s*gap;
+  return { cvs:out, dots, gap, res };
+}
+/* one drawing routine, two moods: tGlow=null renders the crisp static
+   sprite; a time renders the LIVE frame — every dot breathing on its
+   own smooth noise (summed drifting sines: perlin's cheap cousin),
+   radius and brightness together, with a soft halo underneath */
+function drawDots(g, data, tGlow){
+  g.clearRect(0,0,data.cvs.width,data.cvs.height);
+  for(const d of data.dots){
+    let rad=data.gap*0.34, al=d.alpha;
+    if(tGlow!=null){
+      const n=0.5+0.25*Math.sin(tGlow*0.8+d.x*0.52+d.y*0.31)
+             +0.25*Math.sin(tGlow*1.17+d.x*0.23-d.y*0.43+d.ph);
+      rad=data.gap*(0.24+0.17*n); al=d.alpha*(0.55+0.45*n);
+      g.globalAlpha=al*0.4; g.fillStyle=d.fill;
+      g.beginPath(); g.arc(d.px,d.py,rad*1.9,0,6.2832); g.fill();
+    }
+    g.globalAlpha=al; g.fillStyle=d.fill;
+    g.beginPath(); g.arc(d.px,d.py,rad,0,6.2832); g.fill();
+  }
+  g.globalAlpha=1;
+}
+function mkTex(cvs){
+  const tex=new pc.Texture(app.graphicsDevice,{ width:cvs.width, height:cvs.height,
+    format:pc.PIXELFORMAT_R8_G8_B8_A8, mipmaps:false });
+  tex.minFilter=pc.FILTER_LINEAR; tex.magFilter=pc.FILTER_LINEAR;
+  tex.setSource(cvs);
+  return tex;
 }
 const emojiTexCache={};
 function emojiTexture(emoji, opts){
   const k=emoji+JSON.stringify(opts||{});
   if(emojiTexCache[k]) return emojiTexCache[k];
-  const cvs=emojiDots(emoji, opts);
-  const tex=new pc.Texture(app.graphicsDevice,{ width:cvs.width, height:cvs.height,
-    format:pc.PIXELFORMAT_R8_G8_B8_A8, mipmaps:false });
-  tex.minFilter=pc.FILTER_LINEAR; tex.magFilter=pc.FILTER_LINEAR;
-  tex.setSource(cvs);
+  const data=emojiDotData(emoji, opts);
+  drawDots(data.cvs.getContext('2d'), data, null);
+  const tex=mkTex(data.cvs);
   emojiTexCache[k]=tex; return tex;
 }
-function emojiBillboard(emoji, size, opts){
-  const e=new pc.Entity('emoji');
+/* live textures re-draw ~11fps; every plane sharing one throbs in step */
+const liveTexes={};
+function liveEmojiTexture(emoji, opts){
+  const k=emoji+JSON.stringify(opts||{});
+  if(liveTexes[k]) return liveTexes[k];
+  const data=emojiDotData(emoji, opts);
+  const g=data.cvs.getContext('2d');
+  drawDots(g, data, 0);
+  const item={ tex:mkTex(data.cvs), g, data, ph:Math.random()*7 };
+  liveTexes[k]=item; return item;
+}
+let liveAt=0;
+function tickLive(t2){
+  if(t2-liveAt<0.09) return;
+  liveAt=t2;
+  for(const k in liveTexes){ const it=liveTexes[k];
+    drawDots(it.g, it.data, t2*0.55+it.ph);
+    it.tex.setSource(it.data.cvs);
+  }
+}
+function dotPlane(tex, size, sc, zoff, live){
   const pl=new pc.Entity('pl');
   pl.addComponent('render',{ type:'plane' });
   const m=new pc.StandardMaterial();
   m.useLighting=false; m.diffuse=new pc.Color(0,0,0);
   m.emissive=new pc.Color(1,1,1);
-  m.blendType=pc.BLEND_NONE; m.alphaTest=0.35; m.depthWrite=true;
+  m.blendType=pc.BLEND_NONE; m.alphaTest=live?0.2:0.35; m.depthWrite=true;
   m.cull=pc.CULLFACE_NONE;
-  const tex=emojiTexture(emoji, opts);
   m.emissiveMap=tex; m.opacityMap=tex; m.opacityMapChannel='a';
   m.update();
   pl.render.meshInstances[0].material=m;
   pl.setLocalEulerAngles(90,0,0);
-  pl.setLocalScale(size,1,size);
-  pl.setLocalPosition(0,size/2,0);
-  e.addChild(pl);
+  pl.setLocalScale(size*sc,1,size*sc);
+  pl.setLocalPosition(0,size/2,zoff);
+  return pl;
+}
+function emojiBillboard(emoji, size, opts){
+  const e=new pc.Entity('emoji');
+  e.addChild(dotPlane(emojiTexture(emoji,opts), size, 1, 0, false));
+  app.root.addChild(e);
+  return e;
+}
+/* THE SOLID ONE — three plies of the same dot-matrix, full-size sheet
+   sandwiched by two slightly smaller ones, layer gap = one dot pitch:
+   from any angle there is DEPTH between the dots, and the live texture
+   makes the whole stack breathe together */
+function emojiPly(emoji, size, opts={}){
+  const e=new pc.Entity('emoji3');
+  const item=liveEmojiTexture(emoji, opts);
+  const g=size/(opts.res||18);              // one dot pitch, in world units
+  e.addChild(dotPlane(item.tex, size, 0.93, -g, true));
+  e.addChild(dotPlane(item.tex, size, 1.00,  0, true));
+  e.addChild(dotPlane(item.tex, size, 0.93,  g, true));
   app.root.addChild(e);
   return e;
 }
@@ -357,12 +426,105 @@ function spawnPellet(x,z,big){
   e.setPosition(x,0.05,z);
   pellets.push({ e, x, z, got:false, big, ph:Math.random()*6 });
 }
+/* morph gems: walk into one and BECOME your chosen beast for two
+   minutes — the citizens lose your scent while it lasts */
+function spawnMorph(x,z){
+  const e=emojiBillboard('\ud83d\udd2e', 0.5);
+  e.setPosition(x,0.05,z);
+  pellets.push({ e, x, z, got:false, big:false, morph:true, ph:Math.random()*6 });
+}
 function clearPellets(){ for(const p2 of pellets) p2.e.destroy();
   pellets.length=0; pelGot=0; }
 function pelletTally(){
   const el=document.getElementById('hInfo');
+  const total=pellets.filter(p2=>!p2.morph).length;
   el.textContent=el.textContent.replace(/ · \ud83d\udc8e.*$/,'')
-    +' · \ud83d\udc8e '+pelGot+'/'+pellets.length;
+    +' · \ud83d\udc8e '+pelGot+'/'+total
+    +(beastT>0?' · '+avatar+' '+Math.ceil(beastT)+'s':'');
+}
+
+/* =========================================================
+   CLAIM FEEDBACK — a chime, a scatter of dot-matrix stars, a
+   buzz in the hand. All three fire from one place.
+   ========================================================= */
+const sfx={ ctx:null };
+function sfxCtx(){
+  if(!sfx.ctx){ try{ sfx.ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(sfx.ctx && sfx.ctx.state==='suspended') sfx.ctx.resume().catch(()=>{});
+  return sfx.ctx;
+}
+function chime(kind){
+  const c=sfxCtx(); if(!c) return;
+  const t0=c.currentTime;
+  const note=(f,at,dur,vol)=>{
+    const o=c.createOscillator(), g=c.createGain();
+    o.type='triangle'; o.frequency.value=f;
+    g.gain.setValueAtTime(0.0001,t0+at);
+    g.gain.linearRampToValueAtTime(vol,t0+at+0.012);
+    g.gain.exponentialRampToValueAtTime(0.0008,t0+at+dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t0+at); o.stop(t0+at+dur+0.03);
+  };
+  if(kind==='gem'){ note(1318,0,0.15,0.16); note(1760,0.06,0.2,0.12); }
+  else if(kind==='star'){ note(880,0,0.12,0.18); note(1174,0.07,0.12,0.16);
+    note(1568,0.14,0.16,0.14); note(2093,0.21,0.3,0.11); }
+  else if(kind==='morph'){ note(392,0,0.5,0.18); note(523,0.12,0.5,0.15);
+    note(659,0.24,0.55,0.13); note(784,0.36,0.8,0.11); }
+  else if(kind==='ouch'){ note(220,0,0.25,0.2); note(165,0.1,0.3,0.16); }
+}
+function buzz(pat){ try{ navigator.vibrate && navigator.vibrate(pat); }catch(e){} }
+const sparks=[];
+function starBurst(x,z,big){
+  const n=big?10:6;
+  for(let i=0;i<n;i++){
+    const base=0.16+Math.random()*0.15;
+    const e=emojiBillboard(i%3?'\u2b50':'\u2728', base);
+    e.setPosition(x,0.25,z);
+    const a=Math.random()*6.2832, v=1.1+Math.random()*1.7;
+    sparks.push({ e, base, x, y:0.25, z, vx:Math.sin(a)*v,
+      vy:2.2+Math.random()*1.7, vz:Math.cos(a)*v,
+      life:0.8+Math.random()*0.3, rot:Math.random()*360 });
+  }
+}
+function upSparks(dt){
+  if(!sparks.length) return;
+  const cp=camE.getPosition();
+  for(let i=sparks.length-1;i>=0;i--){
+    const s=sparks[i];
+    s.life-=dt;
+    if(s.life<=0){ s.e.destroy(); sparks.splice(i,1); continue; }
+    s.vy-=7.5*dt;
+    s.x+=s.vx*dt; s.y=Math.max(0.04,s.y+s.vy*dt); s.z+=s.vz*dt;
+    s.rot+=dt*420;
+    s.e.setPosition(s.x,s.y,s.z);
+    const camB=Math.atan2(cp.x-s.x,cp.z-s.z)*180/Math.PI;
+    s.e.setEulerAngles(0,camB+Math.sin(s.rot*0.03)*35,0);
+    const sc=Math.min(1,s.life*3.2);
+    s.e.children[0].setLocalScale(s.base*sc,1,s.base*sc);
+  }
+}
+function claimGem(p2){
+  if(p2.got) return;
+  p2.got=true; p2.e.enabled=false;
+  if(p2.morph){
+    beastT=120;
+    setPlayerVisual(avatar);
+    flash(avatar+' FOR TWO MINUTES');
+    chime('morph'); buzz([30,40,30,40,70]);
+    starBurst(p2.x,p2.z,true);
+    pelletTally();
+    return;
+  }
+  pelGot++; pelletTally();
+  chime(p2.big?'star':'gem');
+  buzz(p2.big?[20,30,45]:18);
+  starBurst(p2.x,p2.z,p2.big);
+  const total=pellets.filter(q=>!q.morph).length;
+  if(pelGot===total){
+    flash('\u2b50 MAZE CLEARED \u2b50');
+    if(EMBED) setTimeout(()=>parent.postMessage(
+      { jsdDream:'complete', clues:3, gems:pelGot },'*'), 1800);
+  }
 }
 const roamers=[];
 function spawnRoamer(kind, x, z, ai){
@@ -385,10 +547,11 @@ function spawnRoamer(kind, x, z, ai){
   pl.render.meshInstances[0].material=m;
   const a=sprAsset(kind);
   const apply=()=>{ if(!SPR) return setTimeout(apply,300);
+    const mm=sprMeta(kind);
     m.emissiveMap=a.resource; m.opacityMap=a.resource;
     m.opacityMapChannel='a';
-    m.emissiveMapTiling=new pc.Vec2(1/SPR.phases, 1/SPR.bearings);
-    m.opacityMapTiling=new pc.Vec2(1/SPR.phases, 1/SPR.bearings);
+    m.emissiveMapTiling=new pc.Vec2(1/mm.phases, 1/SPR.bearings);
+    m.opacityMapTiling=new pc.Vec2(1/mm.phases, 1/SPR.bearings);
     m.update(); };
   if(a.loaded) apply(); else a.on('load',apply);
   pl.setLocalEulerAngles(90,0,0);            // plane +y -> facing +z
@@ -421,7 +584,19 @@ function upRoamers(dt){
         const opts=[[1,0],[-1,0],[0,1],[0,-1]]
           .filter(d=>mazeOpen(cx+d[0],cz+d[1]))
           .filter(d=>!(d[0]===-r.dir[0]&&d[1]===-r.dir[1]));
-        if(opts.length) r.dir=opts[Math.floor(Math.random()*opts.length)];
+        if(opts.length){
+          /* a transformed player spooks the ghosts: at junctions they
+             pick whatever leads AWAY from the beast */
+          if(playMode && beastT>0 && Math.hypot(player.x-r.x,player.z-r.z)<3.2){
+            let best=opts[0], bd=-1;
+            for(const d of opts){
+              const dd=Math.hypot(I.ox+(cx+d[0])*I.CS-player.x,
+                                  I.oz+(cz+d[1])*I.CS-player.z);
+              if(dd>bd){ bd=dd; best=d; }
+            }
+            r.dir=best;
+          } else r.dir=opts[Math.floor(Math.random()*opts.length)];
+        }
         else r.dir=[-r.dir[0],-r.dir[1]];
         r.x=ctrX; r.z=ctrZ;
       }
@@ -431,8 +606,10 @@ function upRoamers(dt){
     } else if(r.ai==='zombie'){
       /* the horde: shamble toward a slow-roving attractor, shoulder
          to shoulder but never stacking */
-      const ax=playMode?player.x:Math.sin(t*0.11)*3.2,
-            az=playMode?player.z:Math.cos(t*0.15)*2.4;
+      /* a beast is not on the menu: the horde reverts to its rove */
+      const hunt=playMode && beastT<=0;
+      const ax=hunt?player.x:Math.sin(t*0.11)*3.2,
+            az=hunt?player.z:Math.cos(t*0.15)*2.4;
       let dx=ax-r.x, dz=az-r.z;
       const d=Math.hypot(dx,dz)||1; dx/=d; dz/=d;
       for(const o of roamers){ if(o===r) continue;
@@ -452,9 +629,10 @@ function upRoamers(dt){
     if(r.emoji) continue;                       // one face, every bearing
     let rel=camB - r.heading*180/Math.PI;
     rel=((rel%360)+360)%360;
+    const mm=sprMeta(r.kind);
     const row=Math.round(rel/45)%SPR.bearings;
-    const col=Math.floor(r.phase)%SPR.phases;
-    const u=col/SPR.phases, v=1-(row+1)/SPR.bearings;
+    const col=Math.floor(r.phase)%mm.phases;
+    const u=col/mm.phases, v=1-(row+1)/SPR.bearings;
     if(m0x(r.m,u,v)) r.m.update();
   }
 }
@@ -480,14 +658,48 @@ let avatar=null;
 try{ avatar=localStorage.getItem('packAvatar'); }catch(e){}
 if(!ANIMALS.includes(avatar)) avatar=ANIMALS[0];
 const avSel=document.getElementById('avSel');
-const avBtn=document.getElementById('avBtn');
+/* the beast is a TRANSFORM now, not the default skin: you play as the
+   rotoscoped hero from the enclosing game, and a morph gem turns you
+   into the chosen animal for two minutes */
+let beastT=0;
+const pvis={ mode:null, m:null, phases:8 };
+function setPlayerVisual(kind){
+  const px2=player.x, pz2=player.z;
+  if(player.e){ player.e.destroy(); player.e=null; }
+  if(kind==='hero'){
+    const e=new pc.Entity('heroSpr');
+    const pl=new pc.Entity('pl');
+    pl.addComponent('render',{ type:'plane' });
+    const m=new pc.StandardMaterial();
+    m.useLighting=false; m.diffuse=new pc.Color(0,0,0);
+    m.emissive=new pc.Color(1,1,1);
+    m.blendType=pc.BLEND_NONE; m.alphaTest=0.5; m.depthWrite=true;
+    m.cull=pc.CULLFACE_NONE; m.update();
+    pl.render.meshInstances[0].material=m;
+    const a=sprAsset('hero');
+    const apply=()=>{ if(!SPR) return setTimeout(apply,300);
+      const mm=sprMeta('hero'); pvis.phases=mm.phases;
+      m.emissiveMap=a.resource; m.opacityMap=a.resource;
+      m.opacityMapChannel='a';
+      m.emissiveMapTiling=new pc.Vec2(1/mm.phases, 1/SPR.bearings);
+      m.opacityMapTiling=new pc.Vec2(1/mm.phases, 1/SPR.bearings);
+      m.update(); };
+    if(a.loaded) apply(); else a.on('load',apply);
+    pl.setLocalEulerAngles(90,0,0);
+    pl.setLocalScale(1.5,1,1.5);            // 2.4u bake cell -> ~1.05u person
+    pl.setLocalPosition(0,0.78,0);
+    e.addChild(pl);
+    app.root.addChild(e);
+    player.e=e; pvis.mode='hero'; pvis.m=m;
+  } else {
+    player.e=emojiPly(kind, 0.9);           // the 3-ply solid, breathing
+    pvis.mode='beast'; pvis.m=null;
+  }
+  player.e.setPosition(px2,0.08,pz2);
+}
 function swapAvatar(){
   if(!player.e) return;
-  const px2=player.x, pz2=player.z;
-  player.e.destroy();
-  player.e=emojiBillboard(avatar, 0.9);
-  player.e.setPosition(px2,0.08,pz2);
-  avBtn.textContent=avatar;
+  if(beastT>0) setPlayerVisual(avatar);     // mid-transform reskin
 }
 { const lbl=document.createElement('span');
   lbl.className='lbl'; lbl.textContent='PICK\u00a0YOUR\u00a0BEAST';
@@ -506,7 +718,6 @@ function swapAvatar(){
     });
     avSel.appendChild(b2);
   } }
-avBtn.addEventListener('click',()=>avSel.classList.toggle('hidden'));
 const jumpBtn=document.getElementById('jumpBtn');
 jumpBtn.addEventListener('touchstart',e=>{ e.preventDefault(); player.jumpBuf=0.15; },{passive:false});
 jumpBtn.addEventListener('mousedown',()=>{ player.jumpBuf=0.15; });
@@ -527,7 +738,7 @@ function hideStick(){ stickBase.style.display=stickNub.style.display='none'; tou
 addEventListener('touchstart',e=>{
   if(!playMode) return;
   for(const tt of e.changedTouches){
-    if(tt.target.closest && tt.target.closest('#bar,#elDrawer')) continue;
+    if(tt.target.closest && tt.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn,#resetBtn2')) continue;
     if(tt.clientX<innerWidth*0.55 && stickId===null){
       stickId=tt.identifier; stickOrigin=[tt.clientX,tt.clientY]; showStick(tt.clientX,tt.clientY);
     }
@@ -584,19 +795,17 @@ function resetRun(){
   build(l);                                  // pellets + citizens respawn
   player.x=player.spawn[0]; player.z=player.spawn[1];
   player.y=0; player.vy=0; player.caught=0; player.iframes=2;
+  pac.dir=null; pac.want=null;
   flash('\u21ba RESET');
 }
 function setPlay(on){
   if(on && curLay!=='maze' && curLay!=='jungle') build('maze');
   playMode=on;
   if(on){
-    if(!player.e) player.e=emojiBillboard(avatar, 0.9);
+    if(!player.e) setPlayerVisual(beastT>0?avatar:'hero');
     player.e.enabled=true;
-    avBtn.textContent=avatar; avBtn.style.display='block';
     jumpBtn.style.display='block';
-    const rb=document.getElementById('resetBtn');
-    if(rb) rb.style.display='';
-    avSel.classList.remove('hidden');       // pick your beast on entry
+    resetBtn2.style.display='block';
     if(curLay==='maze' && MAZE_INFO){
       player.spawn=[MAZE_INFO.ox+1*MAZE_INFO.CS, MAZE_INFO.oz+1*MAZE_INFO.CS];
     } else if(JUNGLE_INFO){
@@ -608,26 +817,73 @@ function setPlay(on){
     }
     player.x=player.spawn[0]; player.z=player.spawn[1];
     player.caught=0; player.iframes=2;
+    pac.dir=null; pac.want=null;
     dist=1.15; pitch=15;                     // start wide, take the scene in
     flash('FIND THE GEMS');
   } else {
     if(player.e) player.e.enabled=false;
-    avBtn.style.display='none';
     jumpBtn.style.display='none';
-    const rb=document.getElementById('resetBtn');
-    if(rb) rb.style.display='none';
+    resetBtn2.style.display='none';
     avSel.classList.add('hidden');
   }
-  const pb=document.getElementById('playBtn');
+  const pb=document.getElementById('mPlay');
   if(pb) pb.textContent=on?'\u25a0 ORBIT':'\u25b6 PLAY';
 }
+/* PAC-LANES — in the maze you commit to a corridor and KEEP MOVING,
+   Pac-Man style: the stick only picks the next turn, the lane keeps
+   you centred, and a wall is the only brake. One thumb-flick per
+   junction — the cinematic camera can do what it likes meanwhile. */
+const pac={ dir:null, want:null };
 function upPlayer(dt){
   if(!playMode || !player.e) return;
+  if(beastT>0){
+    beastT-=dt;
+    if(beastT<=0){ beastT=0; setPlayerVisual('hero');
+      flash('THE CHANGE WEARS OFF'); pelletTally(); }
+    else if(Math.abs(beastT-10)<dt) flash('10s LEFT');
+  }
   let jx=touchVec[0], jy=touchVec[1];
   if(pkeys.left) jx-=1; if(pkeys.right) jx+=1;
   if(pkeys.up) jy+=1; if(pkeys.down) jy-=1;
   const l=Math.hypot(jx,jy); if(l>1){ jx/=l; jy/=l; }
-  if(l>0.05){
+  let mov=false;
+  if(curLay==='maze' && MAZE_INFO){
+    const I=MAZE_INFO;
+    if(l>0.05){
+      const yr=yaw*Math.PI/180;
+      const fx=-Math.sin(yr), fz=-Math.cos(yr);
+      const rx=-fz, rz=fx;
+      const wx=rx*jx+fx*jy, wz=rz*jx+fz*jy;   // desired dir, world frame
+      pac.want=Math.abs(wx)>Math.abs(wz)?[Math.sign(wx),0]:[0,Math.sign(wz)];
+    }
+    const cx=Math.round((player.x-I.ox)/I.CS), cz=Math.round((player.z-I.oz)/I.CS);
+    const ctrX=I.ox+cx*I.CS, ctrZ=I.oz+cz*I.CS;
+    if(pac.want){
+      const w=pac.want, d0=pac.dir;
+      if(d0 && w[0]===-d0[0] && w[1]===-d0[1]){
+        pac.dir=[w[0],w[1]]; pac.want=null;   // about-face, any time
+      } else if((!d0 || w[0]!==d0[0] || w[1]!==d0[1])
+          && mazeOpen(cx+w[0],cz+w[1])
+          && Math.abs(player.x-ctrX)<0.3 && Math.abs(player.z-ctrZ)<0.3){
+        player.x=ctrX; player.z=ctrZ;         // snap onto the junction
+        pac.dir=[w[0],w[1]]; pac.want=null;
+      }
+    }
+    if(pac.dir){
+      const sp=1.55*dt;
+      if(pac.dir[0]) player.z+=(ctrZ-player.z)*Math.min(1,dt*10);
+      else player.x+=(ctrX-player.x)*Math.min(1,dt*10);
+      const along=(player.x-ctrX)*pac.dir[0]+(player.z-ctrZ)*pac.dir[1];
+      if(mazeOpen(cx+pac.dir[0],cz+pac.dir[1])){
+        player.x+=pac.dir[0]*sp; player.z+=pac.dir[1]*sp; mov=true;
+      } else {
+        const adv=Math.min(sp, Math.max(0,-along));  // roll up to the centre
+        if(adv>1e-4){ player.x+=pac.dir[0]*adv; player.z+=pac.dir[1]*adv; mov=true; }
+        else { player.x=ctrX; player.z=ctrZ; pac.dir=null; }
+      }
+      if(pac.dir) player.heading=Math.atan2(pac.dir[0],pac.dir[1]);
+    }
+  } else if(l>0.05){
     const yr=yaw*Math.PI/180;
     const fx=-Math.sin(yr), fz=-Math.cos(yr);       // camera-forward on ground
     const rx=-fz, rz=fx;
@@ -640,6 +896,7 @@ function upPlayer(dt){
     }
     player.x=nx; player.z=nz;
     player.heading=Math.atan2(fx*jy+rx*jx, fz*jy+rz*jx);
+    mov=true;
   }
   /* the hop: a real escape move — you cannot be caught mid-air */
   player.jumpBuf=Math.max(0,player.jumpBuf-dt);
@@ -652,31 +909,42 @@ function upPlayer(dt){
   }
   const cp2=camE.getPosition();
   const camB2=Math.atan2(cp2.x-player.x, cp2.z-player.z)*180/Math.PI;
-  player.e.setPosition(player.x,
-    0.08+player.y+Math.abs(Math.sin(t*8))*(l>0.05&&grounded?0.06:0.015), player.z);
-  player.e.setEulerAngles(0,camB2,l>0.05&&grounded?Math.sin(t*10)*6:0);
-  const sq=grounded?1:1.12;                       // a little stretch in flight
-  player.e.children[0].setLocalScale(0.9/sq,1,0.9*sq);
+  if(pvis.mode==='hero'){
+    /* the rotoscoped stride: pick the sheet row for the viewer's
+       bearing, march the gait when moving — no cartoon bounce */
+    player.e.setPosition(player.x, 0.02+player.y, player.z);
+    player.e.setEulerAngles(0,camB2,0);
+    if(mov&&grounded) player.phase=(player.phase||0)+dt*10;
+    if(pvis.m && SPR){
+      let rel=camB2 - player.heading*180/Math.PI;
+      rel=((rel%360)+360)%360;
+      const row=Math.round(rel/45)%SPR.bearings;
+      const col=mov?Math.floor(player.phase||0)%pvis.phases:0;
+      const u=col/pvis.phases, v=1-(row+1)/SPR.bearings;
+      if(m0x(pvis.m,u,v)) pvis.m.update();
+    }
+  } else {
+    player.e.setPosition(player.x,
+      0.08+player.y+Math.abs(Math.sin(t*8))*(mov&&grounded?0.06:0.015), player.z);
+    player.e.setEulerAngles(0,camB2,mov&&grounded?Math.sin(t*10)*6:0);
+    const sq=grounded?1:1.12;                       // a little stretch in flight
+    player.e.setLocalScale(1/sq, sq, 1);            // squash the whole ply stack
+  }
   /* walk over a gem to take it */
   for(const p2 of pellets){
     if(p2.got) continue;
-    if(Math.hypot(p2.x-player.x, p2.z-player.z)<0.42){
-      p2.got=true; p2.e.enabled=false; pelGot++; pelletTally();
-      if(pelGot===pellets.length){
-        flash('\u2b50 MAZE CLEARED \u2b50');
-        if(EMBED) setTimeout(()=>parent.postMessage(
-          { jsdDream:'complete', clues:3, gems:pelGot },'*'), 1800);
-      }
-    }
+    if(Math.hypot(p2.x-player.x, p2.z-player.z)<0.42) claimGem(p2);
   }
   /* the citizens catch you — grounded only (the hop escapes), with
-     mercy frames after each catch */
+     mercy frames after each catch; a transformed beast walks unseen */
   player.iframes=Math.max(0,player.iframes-dt);
-  if(player.iframes<=0 && player.y<0.35) for(const r of roamers){
+  if(player.iframes<=0 && beastT<=0 && player.y<0.35) for(const r of roamers){
     if(Math.hypot(r.x-player.x, r.z-player.z)<0.45){
       player.caught++; player.iframes=2.5;
       flash(r.ai==='zombie'?'\ud83e\udddf CAUGHT!':'\ud83d\udc7b CAUGHT!');
+      chime('ouch'); buzz([60,40,60]);
       player.x=player.spawn[0]; player.z=player.spawn[1];
+      pac.dir=null; pac.want=null;
       break;
     }
   }
@@ -718,11 +986,17 @@ function build(name){
           ||(rz===I.H-2&&cx2===1)||(rz===I.H-2&&cx2===I.W-2);
         spawnPellet(I.ox+cx2*I.CS, I.oz+rz*I.CS, big);
       }
+      /* two morph gems on the middle row: drink me */
+      spawnMorph(I.ox+2*I.CS, I.oz+4*I.CS);
+      spawnMorph(I.ox+8*I.CS, I.oz+4*I.CS);
       pelletTally();
     } else if(name==='jungle'){
       const rr=mulberry32(66);
       for(let i=0;i<6;i++)
         spawnRoamer('zombie', (rr()-0.5)*9, (rr()-0.5)*7, 'zombie');
+      const JI=JUNGLE_INFO;
+      spawnMorph(-JI.W2/2, -JI.H2/2);
+      spawnMorph( JI.W2/2,  JI.H2/2);
     }
   }
 }
@@ -731,7 +1005,7 @@ function build(name){
 let yaw=25, pitch=14, dist=1.0, idle=0;
 let drag=null, pinch0=0;
 addEventListener('pointerdown',e=>{
-  if(e.target.closest('#bar,#elDrawer,#avSel,#avBtn,#jumpBtn')) return;
+  if(e.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn,#resetBtn2')) return;
   if(playMode && e.clientX<innerWidth*0.55) return;   // left half is the stick
   drag=[e.clientX,e.clientY]; });
 let lastCamDrag=-9;
@@ -791,10 +1065,11 @@ app.on('update',dt=>{
     camE.lookAt(0,0.9,0);
   }
   upRoamers(dt);
+  upSparks(dt);
+  tickLive(t);
   for(const p2 of pellets){
     if(p2.got) continue;
     p2.e.setEulerAngles(0,(t*(p2.big?90:50)+p2.ph*60)%360,0);
-    const pp=p2.e.getPosition();
     p2.e.setPosition(p2.x, 0.06+Math.sin(t*2.2+p2.ph)*0.04, p2.z);
   }
 });
@@ -806,7 +1081,7 @@ addEventListener('pointerup',e=>{
   const moved=Math.hypot(e.clientX-downAt2[0], e.clientY-downAt2[1]);
   downAt2=null;
   if(moved>8) return;
-  if(e.target.closest('#bar,#elDrawer,#avSel,#avBtn,#jumpBtn')) return;
+  if(e.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn,#resetBtn2')) return;
   const scr=new pc.Vec3();
   let best=null, bd=44;
   for(const p2 of pellets){
@@ -816,39 +1091,61 @@ addEventListener('pointerup',e=>{
     const d2=Math.hypot(scr.x-e.clientX, scr.y-e.clientY);
     if(d2<bd){ bd=d2; best=p2; }
   }
-  if(best){ best.got=true; best.e.enabled=false; pelGot++; pelletTally(); }
+  if(best) claimGem(best);
 });
 
-/* bar: four scenes + one ELEMENTS drawer (the pack outgrew a
-   button-per-element row) */
-const bar=document.getElementById('bar');
+/* THE MENU — gameplay stays on the glass (stick, jump, reset); every
+   scene/dev control folds behind the \u2630. The worlds are meant to be
+   entered from a PET terminal jack-in (?lay=..&play=1); the DEV
+   submenu is the workbench route to the same places. */
+const menuBtn=document.getElementById('menuBtn');
+const menu=document.getElementById('menu');
 const drawer=document.getElementById('elDrawer');
-const mk=(label,fn)=>{ const b=document.createElement('button');
+const resetBtn2=document.getElementById('resetBtn2');
+resetBtn2.addEventListener('click',resetRun);
+menuBtn.addEventListener('click',()=>{
+  menu.classList.toggle('hidden');
+  if(menu.classList.contains('hidden')){ drawer.classList.add('hidden'); avSel.classList.add('hidden'); }
+});
+function menuAdd(parent2,label,fn){
+  const b=document.createElement('button');
   b.type='button'; b.textContent=label;
-  b.addEventListener('click',()=>{ [...bar.children].forEach(x=>x.classList.remove('on'));
-    b.classList.add('on'); fn(); });
-  bar.appendChild(b); return b; };
-const bCat=mk('CATALOG',()=>{ drawer.classList.add('hidden'); build('catalog'); });
-mk('YARD',()=>{ drawer.classList.add('hidden'); build('yard'); });
-mk('PAC-MAZE',()=>{ drawer.classList.add('hidden'); build('maze'); });
-mk('JUNGLE',()=>{ drawer.classList.add('hidden'); build('jungle'); });
-const bEl=mk('ELEMENTS \u25be',()=>{ drawer.classList.toggle('hidden'); });
-const bPlay=document.createElement('button');
-bPlay.type='button'; bPlay.id='playBtn'; bPlay.textContent='\u25b6 PLAY';
-bPlay.addEventListener('click',()=>setPlay(!playMode));
-bar.appendChild(bPlay);
-const bReset=document.createElement('button');
-bReset.type='button'; bReset.id='resetBtn'; bReset.textContent='\u21ba RESET';
-bReset.style.display='none';
-bReset.addEventListener('click',resetRun);
-bar.appendChild(bReset);
+  b.addEventListener('click',fn);
+  parent2.appendChild(b); return b;
+}
+const mBeast=menuAdd(menu,'\ud83d\udd2e PICK YOUR BEAST',()=>{
+  avSel.classList.toggle('hidden');
+});
+menuAdd(menu,'\u21ba RESET RUN',()=>{ resetRun(); menu.classList.add('hidden'); });
+{ const sec=document.createElement('div');
+  sec.className='sec'; sec.textContent='DEV'; menu.appendChild(sec); }
+const devToggle=menuAdd(menu,'\u2699 WORKBENCH \u25be',()=>{
+  devSub.classList.toggle('hidden');
+});
+const devSub=document.createElement('div');
+devSub.id='devSub'; devSub.className='hidden'; menu.appendChild(devSub);
+const devMk=(label,fn)=>{
+  const b=document.createElement('button');
+  b.type='button'; b.textContent=label;
+  b.addEventListener('click',()=>{
+    [...devSub.children].forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    fn();
+  });
+  devSub.appendChild(b); return b;
+};
+const bPlay=devMk('\u25b6 PLAY',()=>setPlay(!playMode));
+bPlay.id='mPlay';
+const bCat=devMk('CATALOG',()=>{ drawer.classList.add('hidden'); build('catalog'); });
+devMk('YARD',()=>{ drawer.classList.add('hidden'); build('yard'); });
+devMk('PAC-MAZE',()=>{ drawer.classList.add('hidden'); build('maze'); });
+devMk('JUNGLE',()=>{ drawer.classList.add('hidden'); build('jungle'); });
+devMk('ELEMENTS \u25be',()=>{ drawer.classList.toggle('hidden'); });
 for(const el of pack.elements){
   const b=document.createElement('button');
   b.type='button'; b.textContent=el.id.toUpperCase();
   b.addEventListener('click',()=>{
     drawer.classList.add('hidden');
-    [...bar.children].forEach(x=>x.classList.remove('on'));
-    bEl.classList.add('on');
     window.__pack.solo(el.id);
   });
   drawer.appendChild(b);
@@ -869,10 +1166,6 @@ if(EMBED){
   document.body.appendChild(xb);
 }
 const start=Q.get('lay');
-(start && LAYOUTS[start] ? mk : ()=>{})   // unknown lay -> ignore
-const b0=({yard:1,maze:2,jungle:3})[start]!==undefined
-  ? [...bar.children][({yard:1,maze:2,jungle:3})[start]] : bCat;
-b0.classList.add('on');
 build(start&&LAYOUTS[start]?start:'catalog');
 if(Q.has('play')) setPlay(true);
 
@@ -881,11 +1174,14 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
   build, get els(){ return pack.elements.map(e=>e.id); },
   get roamers(){ return roamers.map(r=>({kind:r.kind,x:+r.x.toFixed(2),z:+r.z.toFixed(2)})); },
   get play(){ return { on:playMode, x:+player.x.toFixed(2), z:+player.z.toFixed(2),
-    gems:pelGot, total:pellets.length, caught:player.caught }; },
+    gems:pelGot, total:pellets.filter(q=>!q.morph).length,
+    caught:player.caught, beast:+beastT.toFixed(1), visual:pvis.mode }; },
   setPlay(v){ setPlay(v); },
   stick(jx,jy){ touchVec[0]=jx; touchVec[1]=jy; },
   get avatar(){ return avatar; },
   setAvatar(a){ avatar=a; swapAvatar(); },
+  morph(sec=120){ beastT=sec; setPlayerVisual(avatar); },
+  get pacState(){ return { dir:pac.dir&&[...pac.dir], want:pac.want&&[...pac.want] }; },
   jump(){ player.jumpBuf=0.15; },
   get py(){ return +player.y.toFixed(2); },
   reset(){ resetRun(); },

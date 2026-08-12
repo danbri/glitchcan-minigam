@@ -6,7 +6,30 @@
     "walker1",
     "walker2",
     "walker3",
-    "zombie"
+    "zombie",
+    "hero"
   ],
+  "meta": {
+    "walker1": {
+      "phases": 4,
+      "cell": 128
+    },
+    "walker2": {
+      "phases": 4,
+      "cell": 128
+    },
+    "walker3": {
+      "phases": 4,
+      "cell": 128
+    },
+    "zombie": {
+      "phases": 4,
+      "cell": 128
+    },
+    "hero": {
+      "phases": 8,
+      "cell": 192
+    }
+  },
   "note": "baked from dbdb2 rotoscope rigs (tools/sprite-bake.mjs); rows=viewer bearing (0=front, +45 steps), cols=gait phase"
 }
