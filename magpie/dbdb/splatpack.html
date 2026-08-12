@@ -339,6 +339,7 @@ function sprAsset(kind){
    ========================================================= */
 function emojiDotData(emoji, opts={}){
   const res=opts.res||18, gap=opts.gap||10, tint=opts.tint||null;
+  const boost=opts.boost||1;
   const s=res;
   const cv=document.createElement('canvas'); cv.width=cv.height=s;
   const g=cv.getContext('2d');
@@ -358,7 +359,7 @@ function emojiDotData(emoji, opts={}){
       fill, alpha:Math.pow(a/255,0.6), ph:Math.random()*6.2832 });
   }
   const out=document.createElement('canvas'); out.width=out.height=s*gap;
-  return { cvs:out, dots, gap, res };
+  return { cvs:out, dots, gap, res, boost };
 }
 /* one drawing routine, two moods: tGlow=null renders the crisp static
    sprite; a time renders the LIVE frame — every dot breathing on its
@@ -366,8 +367,9 @@ function emojiDotData(emoji, opts={}){
    radius and brightness together, with a soft halo underneath */
 function drawDots(g, data, tGlow){
   g.clearRect(0,0,data.cvs.width,data.cvs.height);
+  const bo=data.boost||1;
   for(const d of data.dots){
-    let rad=data.gap*0.34, al=d.alpha;
+    let rad=data.gap*0.34*bo, al=Math.min(1,d.alpha*bo);
     if(tGlow!=null){
       const n=0.5+0.25*Math.sin(tGlow*0.8+d.x*0.52+d.y*0.31)
              +0.25*Math.sin(tGlow*1.17+d.x*0.23-d.y*0.43+d.ph);
@@ -487,11 +489,11 @@ function gemHalo(parent, size, col){
   return h;
 }
 function spawnPellet(x,z,big){
-  const e=emojiBillboard(big?'\u2b50':'\ud83d\udc8e', big?0.55:0.34);
-  const halo=gemHalo(e, big?0.55:0.34,
-    big?new pc.Color(1,0.85,0.42):new pc.Color(0.5,0.82,1));
+  const e=emojiBillboard(big?'\u2b50':'\ud83d\udc8e', big?0.55:0.34,
+    big?undefined:{ boost:1.3 });        // diamonds sparkle in the texture
+  const halo=big?gemHalo(e, 0.55, new pc.Color(1,0.85,0.42)):null;
   e.setPosition(x,0.05,z);
-  pellets.push({ e, halo, hbase:(big?0.55:0.34)*1.5,
+  pellets.push({ e, halo, hbase:0.55*1.5,
     x, z, got:false, big, ph:Math.random()*6 });
 }
 /* morph gems: walk into one and BECOME your chosen beast for two
@@ -1178,7 +1180,6 @@ function build(name){
     if(name==='maze'){
       spawnRoamer('walker1',-2.3,-1.15*3,'ghost');
       spawnRoamer('walker2', 2.3, 1.15*2,'ghost');
-      spawnRoamer('walker3', 0,   1.15*3,'ghost');
       spawnRoamer('emoji:\ud83d\udc7b', -2.3, 1.15*3, 'ghost');  // the dot-matrix ghost
       /* pellets on every open corridor cell; stars at the corners */
       const I=MAZE_INFO;
@@ -1195,7 +1196,7 @@ function build(name){
       pelletTally();
     } else if(name==='jungle'){
       const rr=mulberry32(66);
-      for(let i=0;i<5;i++)
+      for(let i=0;i<4;i++)
         spawnRoamer('zombie', (rr()-0.5)*9, (rr()-0.5)*7, 'zombie');
       const JI=JUNGLE_INFO;
       spawnMorph(-JI.W2/2, -JI.H2/2);

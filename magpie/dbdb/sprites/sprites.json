@@ -7,7 +7,9 @@
     "walker2",
     "walker3",
     "zombie",
-    "hero"
+    "hero",
+    "hero2",
+    "herorun"
   ],
   "meta": {
     "walker1": {
@@ -32,7 +34,17 @@
     },
     "hero": {
       "phases": 32,
-      "cell": 256,
+      "cell": 224,
+      "grid": 16
+    },
+    "hero2": {
+      "phases": 32,
+      "cell": 224,
+      "grid": 16
+    },
+    "herorun": {
+      "phases": 32,
+      "cell": 224,
       "grid": 16
     }
   },
