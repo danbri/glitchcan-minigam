@@ -145,6 +145,13 @@ camE.addComponent('camera',{ clearColor:new pc.Color(0.004,0.008,0.016),
   fov:60, nearClip:0.05, farClip:80 });
 app.root.addChild(camE);
 
+/* pack tier: phones get HALF the Gaussians (tools/pack-lite.mjs).
+   Splat COUNT is the vertex+sort budget the DPR cap cannot touch.
+   ?pack=full / ?pack=lite override the sniff either way. */
+const PACKQ=Q.get('pack');
+const LITE = PACKQ==='full' ? false : PACKQ==='lite' ? true
+  : /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+const PACKDIR='splats/pack/'+(LITE?'lite/':'');
 const pack=await (await fetch('splats/pack/pack.json')).json();
 const EL=Object.fromEntries(pack.elements.map(e=>[e.id,e]));
 const CREDITS=[...new Set(pack.elements.map(e=>e.credit))].join('  ·  ');
@@ -153,7 +160,7 @@ const CREDITS=[...new Set(pack.elements.map(e=>e.credit))].join('  ·  ');
 const assets={};
 function assetFor(id){
   if(assets[id]) return assets[id];
-  const a=new pc.Asset(id,'gsplat',{ url:'splats/pack/'+EL[id].file });
+  const a=new pc.Asset(id,'gsplat',{ url:PACKDIR+EL[id].file });
   app.assets.add(a); app.assets.load(a);
   assets[id]=a; return a;
 }
@@ -1083,7 +1090,14 @@ app.on('update',dt=>{
     fpsAcc+=wdt; fpsN++;
     if(fpsAcc>4){
       const fps=fpsN/fpsAcc; fpsAcc=0; fpsN=0;
-      if(fps<32 && trimLevel<2){ trimLevel++; trimDecor(trimLevel); }
+      if(fps<32 && trimLevel<3){
+        trimLevel++;
+        if(trimLevel<=2) trimDecor(trimLevel);
+        else { /* last resort: fewer pixels */
+          app.graphicsDevice.maxPixelRatio=Math.min(app.graphicsDevice.maxPixelRatio,1.15);
+          app.resizeCanvas();
+        }
+      }
     }
   }
   t+=dt; idle+=dt;
@@ -1263,7 +1277,7 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
   get pacState(){ return { dir:pac.dir&&[...pac.dir], want:pac.want&&[...pac.want] }; },
   get perf(){ return { trimLevel, decor:DECOR.length,
     decorOn:DECOR.filter(e=>e.enabled).length,
-    dprCap:app.graphicsDevice.maxPixelRatio }; },
+    dprCap:app.graphicsDevice.maxPixelRatio, lite:LITE }; },
   trim(l){ trimLevel=l; trimDecor(l); },
   get cine(){ return cineOn; },
   setCine(v){ cineOn=!!v; },
