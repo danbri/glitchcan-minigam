@@ -600,7 +600,11 @@ function setPlay(on){
     if(curLay==='maze' && MAZE_INFO){
       player.spawn=[MAZE_INFO.ox+1*MAZE_INFO.CS, MAZE_INFO.oz+1*MAZE_INFO.CS];
     } else if(JUNGLE_INFO){
-      player.spawn=[0, JUNGLE_INFO.H2-0.6];
+      /* NOT [0, H2-0.6]: x=0 is the inner wall's own line — spawning
+         there wedged the player inside its collision band (field bug:
+         "could not move anywhere, except jumping"). The SW room is
+         clear ground. */
+      player.spawn=[-JUNGLE_INFO.W2/2, JUNGLE_INFO.H2-1.2];
     }
     player.x=player.spawn[0]; player.z=player.spawn[1];
     player.caught=0; player.iframes=2;
