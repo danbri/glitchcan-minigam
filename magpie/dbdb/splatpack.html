@@ -108,15 +108,22 @@ const Q=new URLSearchParams(location.search);
 
 const canvas=document.createElement('canvas');
 document.getElementById('stage').appendChild(canvas);
-const app=new pc.Application(canvas, { graphicsDeviceOptions:{ antialias:false } });
+const app=new pc.Application(canvas, { graphicsDeviceOptions:{
+  antialias:false, powerPreference:'high-performance' } });
 app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
 app.setCanvasResolution(pc.RESOLUTION_AUTO);
+/* fill-rate is the phone's whole budget: an uncapped canvas renders at
+   DPR 3 = NINE times the pixels of 1x. Splats are soft — cap at 1.5
+   (2.25x) and nobody's eye can tell. ?dpr= overrides for testing. */
+app.graphicsDevice.maxPixelRatio=Math.min(devicePixelRatio,
+  parseFloat(Q_early_dpr()||'1.5'));
+function Q_early_dpr(){ try{ return new URLSearchParams(location.search).get('dpr'); }catch(e){ return null; } }
 addEventListener('resize',()=>app.resizeCanvas());
 app.start();
 
 const camE=new pc.Entity('cam');
 camE.addComponent('camera',{ clearColor:new pc.Color(0.004,0.008,0.016),
-  fov:60, nearClip:0.05, farClip:400 });
+  fov:60, nearClip:0.05, farClip:80 });
 app.root.addChild(camE);
 
 const pack=await (await fetch('splats/pack/pack.json')).json();
@@ -201,7 +208,7 @@ function mazeLayout(){
       if(rnd()<0.4)
         out.push({ el:TUFTS[Math.floor(rnd()*3)],
                    at:[x+(rnd()-0.5)*0.45, z+(rnd()-0.5)*0.45],
-                   yaw:rnd()*360, s:0.3+rnd()*0.18, y:0.12 });
+                   yaw:rnd()*360, s:0.3+rnd()*0.18, y:0.12, decor:1 });
     }
     if(ch==='P') out.push({ el:'pump', at:[x,z], yaw:180, s:0.55, y:0.1 });
     if(ch==='R') out.push({ el:'redtruck', at:[x,z], yaw:160, s:0.4, y:0.1 });
@@ -229,10 +236,10 @@ function jungleLayout(){
       const bk=BACK[Math.floor(rnd()*BACK.length)];
       out.push({ el:bk, at:[x+(rnd()-.5)*.25, z+(rnd()-.5)*.25],
                  yaw:rnd()*360, s:(bk==='palmfan'?0.42:0.55)+rnd()*0.18, y:0.05 });
-      if(rnd()<0.45)
+      if(rnd()<0.32)
         out.push({ el:FRONT[Math.floor(rnd()*FRONT.length)],
                    at:[x+(rnd()-.5)*.6, z+(rnd()-.5)*.6],
-                   yaw:rnd()*360, s:0.3+rnd()*0.18, y:0.1 });
+                   yaw:rnd()*360, s:0.3+rnd()*0.18, y:0.1, decor:1 });
     }
   }
   /* 2x2 rooms: outer hull (south door), inner cross with doorways */
@@ -961,6 +968,15 @@ function upPlayer(dt){
   }
 }
 let bounds=6;
+/* ADAPTIVE QUALITY — measured on the WALL clock (game dt is clamped).
+   If four seconds of play average under 32fps, shed the decorative
+   stamps in two steps: first every other tuft, then all of them.
+   Gameplay geometry (walls, floors, props) never sheds. */
+const DECOR=[];
+let trimLevel=0, fpsAcc=0, fpsN=0, lastWall=performance.now();
+function trimDecor(level){
+  DECOR.forEach((e,i)=>{ if(level>=2 || (i%2===0)) e.enabled=false; });
+}
 function build(name){
   curLay=name;
   if(playMode && name!=='maze' && name!=='jungle') setPlay(false);
@@ -977,7 +993,12 @@ function build(name){
     document.getElementById('hInfo').textContent=pack.elements.length+' ELEMENTS';
   } else {
     const lay=typeof LAYOUTS[name]==='function' ? LAYOUTS[name]() : LAYOUTS[name];
-    for(const s of lay) stamp(s.el, s.at[0], s.at[1], s.yaw||0, s.s||1, s.y||0);
+    DECOR.length=0;
+    for(const s of lay){
+      const e=stamp(s.el, s.at[0], s.at[1], s.yaw||0, s.s||1, s.y||0);
+      if(s.decor) DECOR.push(e);
+    }
+    if(trimLevel) trimDecor(trimLevel);
     bounds=name==='maze'?7:(name==='jungle'?8:6);
     document.getElementById('hInfo').textContent='LAY · '+name.toUpperCase()
       +' · '+lay.length+' stamps';
@@ -1036,6 +1057,15 @@ addEventListener('touchend',()=>{ pinch0=0; });
 
 let t=0;
 app.on('update',dt=>{
+  const nowW=performance.now();
+  const wdt=(nowW-lastWall)/1000; lastWall=nowW;
+  if(playMode && wdt<0.5){
+    fpsAcc+=wdt; fpsN++;
+    if(fpsAcc>4){
+      const fps=fpsN/fpsAcc; fpsAcc=0; fpsN=0;
+      if(fps<32 && trimLevel<2){ trimLevel++; trimDecor(trimLevel); }
+    }
+  }
   t+=dt; idle+=dt;
   upPlayer(dt);
   if(playMode){
@@ -1197,6 +1227,10 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
   setAvatar(a){ avatar=a; swapAvatar(); },
   morph(sec=120){ beastT=sec; setPlayerVisual(avatar); },
   get pacState(){ return { dir:pac.dir&&[...pac.dir], want:pac.want&&[...pac.want] }; },
+  get perf(){ return { trimLevel, decor:DECOR.length,
+    decorOn:DECOR.filter(e=>e.enabled).length,
+    dprCap:app.graphicsDevice.maxPixelRatio }; },
+  trim(l){ trimLevel=l; trimDecor(l); },
   jump(){ player.jumpBuf=0.15; },
   get py(){ return +player.y.toFixed(2); },
   reset(){ resetRun(); },

@@ -274,7 +274,10 @@ document.getElementById('stage').appendChild(canvas);
 const app=new pc.Application(canvas, { graphicsDeviceOptions:{ antialias:false } });
 app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
 app.setCanvasResolution(pc.RESOLUTION_AUTO);
-app.graphicsDevice.maxPixelRatio=Math.min(devicePixelRatio,2);
+/* splat fill-rate owns the frame: 1.5 (2.25x pixels) over 2 (4x) buys
+   a third of the frame back and the soft scans hide it. ?dpr= overrides. */
+app.graphicsDevice.maxPixelRatio=Math.min(devicePixelRatio,
+  parseFloat(Q.get('dpr')||'1.5'));
 app.start();
 /* distance fog: the scan's frayed edge dissolves into the night
    instead of ending in ragged space (set once R is known, below) */
