@@ -7,15 +7,15 @@
       "mode": "solid",
       "box": {
         "c": [
-          3.5,
-          0.6,
-          3.5
+          -1,
+          0.55,
+          -1
         ],
-        "yaw": -135,
+        "yaw": 0,
         "size": [
-          1.8,
-          1.7,
-          1.8
+          1.5,
+          1.6,
+          1.5
         ],
         "trim": 0.08,
         "band": 0.35
@@ -23,20 +23,20 @@
       "hq": true,
       "count": 50001,
       "dims": [
-        1.8,
-        0.88,
-        1.03
+        1.5,
+        1.26,
+        1.07
       ],
       "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0",
       "sides": {
-        "face": 90,
+        "face": 0,
         "weak": [
           [
-            250,
-            290
+            80,
+            150
           ]
         ],
-        "note": "fronds fullest broadside; thin edge-on"
+        "note": "shade-grown cluster with two rustic support posts; fence-free re-clip"
       }
     },
     {
@@ -46,15 +46,15 @@
       "mode": "solid",
       "box": {
         "c": [
-          3.5,
-          0.6,
-          3.5
+          -1,
+          0.55,
+          -1
         ],
-        "yaw": -135,
+        "yaw": 0,
         "size": [
-          1.8,
-          1.7,
-          1.8
+          1.5,
+          1.6,
+          1.5
         ],
         "trim": 0.08,
         "band": 0.35
@@ -62,17 +62,17 @@
       "hq": true,
       "count": 50001,
       "dims": [
-        1.8,
-        0.88,
-        1.03
+        1.5,
+        1.26,
+        1.07
       ],
       "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0",
       "sides": {
-        "face": 90,
+        "face": 0,
         "weak": [
           [
-            250,
-            290
+            80,
+            150
           ]
         ],
         "note": "tinted variant of fern"
@@ -99,7 +99,7 @@
         "band": 0.4
       },
       "hq": true,
-      "count": 115162,
+      "count": 100000,
       "dims": [
         3,
         0.4,
@@ -107,9 +107,14 @@
       ],
       "credit": "Forest path · Pavel Tanhauser · superspl.at/scene/2be1a75a · CC BY 4.0",
       "sides": {
-        "face": 0,
-        "weak": [],
-        "note": "isotropic ground tile"
+        "face": 180,
+        "weak": [
+          [
+            290,
+            340
+          ]
+        ],
+        "note": "forest-centre moss, shadow lifted at clip (--shadowlift); residual dark corner at 315 — rotate into overlaps"
       }
     },
     {
@@ -187,15 +192,15 @@
       "mode": "solid",
       "box": {
         "c": [
-          -2.1,
-          0.9,
-          0.7
+          -6,
+          0.8,
+          -1
         ],
-        "yaw": 108.4,
+        "yaw": 0,
         "size": [
+          2,
           2.2,
-          2.4,
-          2.2
+          2
         ],
         "trim": 0.1,
         "band": 0.35
@@ -203,20 +208,20 @@
       "hq": true,
       "count": 60000,
       "dims": [
-        1.76,
-        1.92,
-        2.2
+        1.41,
+        1.63,
+        1.42
       ],
       "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0",
       "sides": {
-        "face": 270,
+        "face": 315,
         "weak": [
           [
-            340,
-            20
+            100,
+            145
           ]
         ],
-        "note": "fullest from 270; sparse toward 0"
+        "note": "potted cluster, terracotta pot visible from 315; sign-free re-clip; fog wisps around 100-145"
       }
     },
     {
@@ -333,6 +338,40 @@
           ]
         ],
         "note": "both profiles strong; front arc has an undercut void, rear window is a hole with a gravel skirt"
+      }
+    },
+    {
+      "id": "trail",
+      "file": "trail.compressed.ply",
+      "scene": "forest",
+      "mode": "floor",
+      "box": {
+        "c": [
+          0,
+          0.6,
+          -4
+        ],
+        "yaw": 0,
+        "size": [
+          3,
+          4,
+          3
+        ],
+        "trim": 0,
+        "band": 0.4
+      },
+      "hq": true,
+      "count": 61459,
+      "dims": [
+        3,
+        0.4,
+        3
+      ],
+      "credit": "Forest path · Pavel Tanhauser · superspl.at/scene/2be1a75a · CC BY 4.0",
+      "sides": {
+        "face": 0,
+        "weak": [],
+        "note": "sunlit gravel trail through moss — stamp in runs to draw paths; sun/shade contrast is its charm"
       }
     },
     {

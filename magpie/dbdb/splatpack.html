@@ -86,16 +86,32 @@ function assetFor(id){
   app.assets.add(a); app.assets.load(a);
   assets[id]=a; return a;
 }
+/* stamps are POOLED, never destroyed: destroying a gsplat entity
+   releases the shared asset's resource, and the next stamp of the
+   same element reads a dead sorter (hasCenters of null). Disable
+   and reuse instead. */
+const pool={}, used={};
 function stamp(id, x, z, yaw=0, s=1, y=0){
-  const e=new pc.Entity('stamp-'+id);
-  const a=assetFor(id);
-  const attach=()=>{ e.addComponent('gsplat',{ asset:a }); };
-  if(a.loaded) attach(); else a.on('load',attach);
+  used[id]=used[id]||0;
+  const list=pool[id]=pool[id]||[];
+  let e=list[used[id]++];
+  if(!e){
+    e=new pc.Entity('stamp-'+id);
+    const a=assetFor(id);
+    const attach=()=>{ e.addComponent('gsplat',{ asset:a }); };
+    if(a.loaded) attach(); else a.on('load',attach);
+    app.root.addChild(e);
+    list.push(e);
+  }
+  e.enabled=true;
   e.setPosition(x,y,z);
   e.setEulerAngles(0,yaw,0);
   e.setLocalScale(s,s,s);
-  app.root.addChild(e);
   return e;
+}
+function clearStamps(){
+  for(const k in used) used[k]=0;
+  for(const k in pool) for(const e of pool[k]) e.enabled=false;
 }
 
 /* ---- LAYOUTS ----
@@ -168,8 +184,7 @@ const LAYOUTS={
 };
 let bounds=6;
 function build(name){
-  for(const e of app.root.children.slice())
-    if(e.name && e.name.startsWith('stamp-')) e.destroy();
+  clearStamps();
   if(name==='catalog'){
     let x=-4;
     for(const el of pack.elements){
@@ -224,12 +239,7 @@ const bCat=mk('CATALOG',()=>build('catalog'));
 mk('YARD (derived scene)',()=>build('yard'));
 mk('PAC-MAZE (grown)',()=>build('maze'));
 for(const el of pack.elements)
-  mk(el.id.toUpperCase(),()=>{
-    for(const e2 of app.root.children.slice())
-      if(e2.name && e2.name.startsWith('stamp-')) e2.destroy();
-    stamp(el.id,0,0,0,1); bounds=Math.max(3,el.dims[0]);
-    document.getElementById('hInfo').textContent=el.id.toUpperCase()+' · '+el.count+' g · '+el.scene;
-  });
+  mk(el.id.toUpperCase(),()=>{ window.__pack.solo(el.id); });
 
 const start=Q.get('lay');
 (start && LAYOUTS[start] ? mk : ()=>{})   // unknown lay -> ignore
@@ -240,8 +250,7 @@ build(start&&LAYOUTS[start]?start:'catalog');
 /* headless hook */
 window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Object.keys(assets).length>0; },
   build, get els(){ return pack.elements.map(e=>e.id); },
-  solo(id){ for(const e2 of app.root.children.slice())
-      if(e2.name && e2.name.startsWith('stamp-')) e2.destroy();
+  solo(id){ clearStamps();
     const el=EL[id]; stamp(id,0,0,0,1);
     bounds=Math.max(2.2,Math.max(el.dims[0],el.dims[2])*0.9);
     if(el.sides){ yaw=el.sides.face; idle=-6; }   // open on the good side

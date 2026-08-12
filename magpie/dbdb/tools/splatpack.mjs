@@ -44,7 +44,7 @@ const SRC = {
             credit: 'Nelson Ghost Town Car Shop · Paolo Tosolini · superspl.at/scene/dd8d9c8b · CC BY 4.0' },
   forest: { src: 'splats/forest.sog', up: [0, -1, 0], cdn: '2be1a75a',
             credit: 'Forest path · Pavel Tanhauser · superspl.at/scene/2be1a75a · CC BY 4.0' },
-  museum: { src: 'splats/museum.sog', up: [0, -1, 0],
+  museum: { src: 'splats/museum.sog', up: [0, -1, 0], cdn: 'fadf93a0',
             credit: 'Buffalo AKG Art Museum · Justin Eastman · superspl.at/scene/fadf93a0 · CC BY 4.0' },
   pool:   { src: 'splats/pool.sog', up: [0, -1, 0],
             credit: 'Apartment Pool · paul · superspl.at/scene/9d145adb · CC BY 4.0' },
@@ -169,7 +169,7 @@ function ensureWorkSplat(sceneKey) {
 
 function clip(opts) {
   const { scene, id, c, yaw, size, trim = 0, mode = 'solid', band = 0.35,
-          hq = false, max = 140000, tint = null } = opts;
+          hq = false, max = 140000, tint = null, shadowlift = 0 } = opts;
   const meta = SRC[scene];
   let raw = null;
   const u0 = meta.up, ul0 = Math.hypot(...u0);
@@ -234,6 +234,15 @@ function clip(opts) {
     if (tint)                                   // colour variants for stamping
       for (let m = 0; m < 3; m++)
         out[j * 32 + 24 + m] = Math.max(0, Math.min(255, Math.round(out[j * 32 + 24 + m] * tint[m])));
+    if (shadowlift > 0) {                       // de-bake shadows: lift dark
+      const L = 0.299 * out[j * 32 + 24] + 0.587 * out[j * 32 + 25] + 0.114 * out[j * 32 + 26];
+      const T = 128 * shadowlift + 60;          // lift toward this luma floor
+      if (L < T) {
+        const f = Math.min(2.4, Math.pow(T / Math.max(L, 10), 0.6));
+        for (let m = 0; m < 3; m++)
+          out[j * 32 + 24 + m] = Math.max(0, Math.min(255, Math.round(out[j * 32 + 24 + m] * f)));
+      }
+    }
     /* rotate the gaussian's own quaternion (stored w,x,y,z as u8*128+128) */
     const q = [out[j * 32 + 28], out[j * 32 + 29], out[j * 32 + 30], out[j * 32 + 31]]
       .map(b => (b - 128) / 128);
@@ -276,7 +285,8 @@ if (cmd === 'clip') {
     band: +opt('band', 0.35),
     hq: argv.includes('--hq'),
     max: +opt('max', 140000),
-    tint: opt('tint') ? opt('tint').split(',').map(Number) : null });
+    tint: opt('tint') ? opt('tint').split(',').map(Number) : null,
+    shadowlift: +opt('shadowlift', 0) });
 } else if (cmd === 'reclip') {
   /* the point of storing the box metadata: go back to the SOURCE.
      Re-cuts every element from the full-resolution scans. */
