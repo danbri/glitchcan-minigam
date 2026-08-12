@@ -374,6 +374,49 @@ body.foaf-pad-on #foafos-dock {
 .foafos-window-btn:hover,
 .foafos-window-close:hover { background: rgba(0, 229, 255, 0.18); }
 
+/* ── THE READING IS NOT A WINDOW (phone) ──────────────────────────────
+   Field report: "impossible to see top and bottom of screen
+   simultaneously … wastes precious vertical space on windowing bling
+   befitting a desktop os." On a narrow screen the story surface takes
+   the WHOLE viewport: no border, no radius, no title bar row. The bar
+   collapses to a small floating chip (overview + close) overlaying the
+   frame's top-right corner, so the runner underneath gets every pixel.
+   Desktop is untouched; minimize/maximize mean nothing at full bleed. */
+@media (max-width: 700px) {
+  /* the .maximized selector also lists these offsets !important at 8px,
+     later in this file — the doubled-up selector out-specifies it */
+  .foafos-window[data-app-id="storyrunner"],
+  .foafos-window[data-app-id="storyrunner"].maximized {
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: none;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    resize: none;
+  }
+  .foafos-window[data-app-id="storyrunner"] > .foafos-window-bar {
+    position: absolute;
+    top: 0; right: 0; left: auto;
+    z-index: 2;
+    background: rgba(4, 10, 20, 0.62);
+    border: 0;
+    border-radius: 0 0 0 10px;
+    padding: 0.2em 0.4em;
+  }
+  .foafos-window[data-app-id="storyrunner"] > .foafos-window-bar > span:first-child {
+    display: none;                    /* the story names itself in its prose */
+  }
+  .foafos-window[data-app-id="storyrunner"] .foafos-window-min,
+  .foafos-window[data-app-id="storyrunner"] .foafos-window-max {
+    display: none;
+  }
+}
+
 /* ── CAROUSEL ──────────────────────────────────────────────────────────
    The mobile shell. One deck owns the screen; you swipe between decks.
    A deck is a top-level subtree, so a story and the game it launched are
