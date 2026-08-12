@@ -32,15 +32,15 @@
       <li>Do not look through a camera, binoculars or a telescope.</li>
       <li>Only look through real eclipse glasses. A grown-up must check them first.</li>
     </ul>
-    <button class="btn btn-big" id="gate-ok">I understand</button>
-    <button class="btn btn-quiet" id="gate-read" hidden>🔊 Read this to me</button>
+    <button type="button" class="btn btn-big" id="gate-ok">I understand</button>
+    <button type="button" class="btn btn-quiet" id="gate-read" hidden>🔊 Read this to me</button>
   </div>
 </div>
 
 <header class="top">
   <div class="top-row">
     <h1 class="brand"><span aria-hidden="true">🌒</span> Eclipse Watch</h1>
-    <button class="place-btn" id="place-btn" aria-haspopup="dialog">
+    <button type="button" class="place-btn" id="place-btn" aria-haspopup="dialog">
       <span aria-hidden="true">📍</span> <span id="place-name">London</span>
     </button>
   </div>
@@ -52,7 +52,7 @@
   <!-- ================= NOW ================= -->
   <section class="screen" id="screen-now" aria-labelledby="tab-now">
     <div class="sky-wrap">
-      <canvas id="sky" class="sky" aria-label="A picture of the Sun with the Moon in front of it"></canvas>
+      <canvas id="sky" class="sky" role="img" aria-label="A picture of the Sun with the Moon in front of it"></canvas>
       <div class="sky-badge" id="sky-badge">0% covered</div>
     </div>
 
@@ -68,8 +68,8 @@
              aria-label="Move through the eclipse to see what happens">
       <p class="scrub-time" id="scrub-time">now</p>
       <div class="row">
-        <button class="btn" id="play-btn">▶︎ Play it fast</button>
-        <button class="btn btn-quiet" id="now-btn">Back to now</button>
+        <button type="button" class="btn" id="play-btn">▶︎ Play it fast</button>
+        <button type="button" class="btn btn-quiet" id="now-btn">Back to now</button>
       </div>
     </div>
 
@@ -85,9 +85,9 @@
     <div class="card">
       <h2>Which way?</h2>
       <p class="big-answer" id="look-answer">Look west</p>
-      <canvas id="compass" class="compass" aria-label="A dial showing which way the Sun is"></canvas>
+      <canvas id="compass" class="compass" role="img" aria-label="A dial showing which way the Sun is"></canvas>
       <p class="hint" id="look-height">The Sun is low down.</p>
-      <button class="btn" id="compass-btn">Use my phone compass</button>
+      <button type="button" class="btn" id="compass-btn">Use my phone compass</button>
       <p class="fineprint" id="compass-note">A phone compass can be wrong near cars and buildings. The word above is always right.</p>
     </div>
 
@@ -114,7 +114,7 @@
       <h2>The one big rule</h2>
       <p class="danger-line">Never look straight at the Sun.</p>
       <p>Your eyes have no pain sensor at the back. The Sun can burn the back of your eye and you will feel nothing until later.</p>
-      <button class="btn btn-quiet" id="safe-read">🔊 Read this to me</button>
+      <button type="button" class="btn btn-quiet" id="safe-read">🔊 Read this to me</button>
     </div>
 
     <div class="card">
@@ -139,7 +139,7 @@
         <li>Hold the card up and let the light go through the hole on to the path.</li>
         <li>Look at the little Sun on the ground. It is upside down.</li>
       </ol>
-      <canvas id="pinhole" class="demo" aria-label="A card with a hole makes a picture of the Sun on the ground"></canvas>
+      <canvas id="pinhole" class="demo" role="img" aria-label="A card with a hole makes a picture of the Sun on the ground"></canvas>
       <p class="hint">Move the card away from the ground to make the picture bigger and fainter.</p>
     </div>
 
@@ -147,7 +147,7 @@
       <h2>Two more tricks</h2>
       <p><b>A kitchen colander.</b> Every hole makes a little Sun. You get a whole shower of them.</p>
       <p><b>A tree.</b> The gaps between the leaves work the same way. The ground under a tree fills up with little crescent Suns. This is the best thing to look for, and most people walk over it and never notice.</p>
-      <canvas id="dapple" class="demo" aria-label="Little crescent shapes of light under a tree"></canvas>
+      <canvas id="dapple" class="demo" role="img" aria-label="Little crescent shapes of light under a tree"></canvas>
     </div>
   </section>
 
@@ -155,14 +155,14 @@
   <section class="screen" id="screen-why" hidden aria-labelledby="tab-why">
     <div class="card">
       <h2>Why does this happen?</h2>
-      <canvas id="why" class="demo tall" aria-label="A picture of the Sun, the Moon and the Earth in a line"></canvas>
+      <canvas id="why" class="demo tall" role="img" aria-label="A picture of the Sun, the Moon and the Earth in a line"></canvas>
       <ol class="steps big-steps">
         <li>The Moon goes around the Earth. It takes about one month.</li>
         <li>Sometimes the Moon goes right in front of the Sun.</li>
         <li>The Moon then makes a shadow. The shadow falls on the Earth.</li>
         <li>If you stand in the shadow, you see the Sun go dark.</li>
       </ol>
-      <button class="btn btn-quiet" id="why-read">🔊 Read this to me</button>
+      <button type="button" class="btn btn-quiet" id="why-read">🔊 Read this to me</button>
     </div>
 
     <div class="card">
@@ -185,7 +185,7 @@
       <p>Tick them when you see them. You do not need to look at the Sun for any of these.</p>
       <p class="score" id="score">0 of 8</p>
       <ul class="spotlist" id="spotlist"></ul>
-      <button class="btn btn-quiet" id="reset-spots">Start again</button>
+      <button type="button" class="btn btn-quiet" id="reset-spots">Start again</button>
     </div>
     <div class="card">
       <h2>Feel it too</h2>
@@ -198,27 +198,27 @@
 </main>
 
 <nav class="tabs" id="tabs" role="tablist" aria-label="Sections">
-  <button class="tab active" id="tab-now"  role="tab" aria-selected="true"  data-screen="now"><span aria-hidden="true">🌒</span>Now</button>
-  <button class="tab"        id="tab-look" role="tab" aria-selected="false" data-screen="look"><span aria-hidden="true">🧭</span>Look</button>
-  <button class="tab"        id="tab-safe" role="tab" aria-selected="false" data-screen="safe"><span aria-hidden="true">🛡️</span>Safe</button>
-  <button class="tab"        id="tab-why"  role="tab" aria-selected="false" data-screen="why"><span aria-hidden="true">💡</span>Why</button>
-  <button class="tab"        id="tab-spot" role="tab" aria-selected="false" data-screen="spot"><span aria-hidden="true">✅</span>Spot</button>
+  <button type="button" class="tab active" id="tab-now"  role="tab" aria-selected="true"  data-screen="now"><span aria-hidden="true">🌒</span>Now</button>
+  <button type="button" class="tab"        id="tab-look" role="tab" aria-selected="false" data-screen="look"><span aria-hidden="true">🧭</span>Look</button>
+  <button type="button" class="tab"        id="tab-safe" role="tab" aria-selected="false" data-screen="safe"><span aria-hidden="true">🛡️</span>Safe</button>
+  <button type="button" class="tab"        id="tab-why"  role="tab" aria-selected="false" data-screen="why"><span aria-hidden="true">💡</span>Why</button>
+  <button type="button" class="tab"        id="tab-spot" role="tab" aria-selected="false" data-screen="spot"><span aria-hidden="true">✅</span>Spot</button>
 </nav>
 
 <!-- Place chooser -->
 <div class="sheet" id="place-sheet" role="dialog" aria-modal="true" aria-labelledby="place-title" hidden>
   <div class="sheet-card">
     <h2 id="place-title">Where are you?</h2>
-    <button class="btn" id="locate-btn">📍 Use where I am</button>
+    <button type="button" class="btn" id="locate-btn">📍 Use where I am</button>
     <p class="fineprint" id="locate-note">Your phone will ask first. Nothing is sent anywhere. The whole app works on your device.</p>
     <ul class="places" id="places"></ul>
-    <button class="btn btn-quiet" id="place-close">Close</button>
+    <button type="button" class="btn btn-quiet" id="place-close">Close</button>
   </div>
 </div>
 
 <script type="module" src="js/eclipse-app.js"></script>
 <noscript>
-  <p style="padding:1rem;color:#fff">This guide needs JavaScript to work out the eclipse times for where you are.
+  <p class="noscript-note">This guide needs JavaScript to work out the eclipse times for where you are.
   The one rule that matters without it: <b>never look straight at the Sun</b>.</p>
 </noscript>
 </body>

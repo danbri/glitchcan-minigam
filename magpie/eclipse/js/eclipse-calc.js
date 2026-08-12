@@ -201,8 +201,11 @@ export class EclipseCalc {
       sunAltitude: sunApparent.altitude,
       sunAzimuth: sunApparent.azimuth,
       sunIsUp: sunApparent.altitude > -0.5,
-      // Below this the Sun is behind most rooftops and trees.
-      sunIsLow: sunApparent.altitude < 10
+      // A two-storey house across a street covers roughly the first 20
+      // degrees of sky. From London this eclipse never gets above 20,
+      // so the "find a low view" advice stays on for the whole event —
+      // which is correct, and is the single most useful tip here.
+      sunIsLow: sunApparent.altitude < 20
     };
   }
 

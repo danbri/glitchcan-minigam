@@ -380,6 +380,14 @@ canvas:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
 .places button.current { border-color: var(--sun); color: var(--sun); font-weight: 700; }
 .sheet-card > .btn { width: 100%; }
 
+.noscript-note {
+  padding: 1rem;
+  color: var(--ink);
+  background: var(--danger-bg);
+  border-radius: var(--radius);
+  margin: 1rem;
+}
+
 /* ---------------- respect the user's settings ---------------- */
 
 @media (prefers-reduced-motion: reduce) {
