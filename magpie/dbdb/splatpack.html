@@ -914,7 +914,9 @@ function upPlayer(dt){
        bearing, march the gait when moving — no cartoon bounce */
     player.e.setPosition(player.x, 0.02+player.y, player.z);
     player.e.setEulerAngles(0,camB2,0);
-    if(mov&&grounded) player.phase=(player.phase||0)+dt*10;
+    /* one full cycle ~1.15s of walking, whatever the sheet's frame
+       count — 16 frames plays as a smooth reference-grade stride */
+    if(mov&&grounded) player.phase=(player.phase||0)+dt*(pvis.phases/1.15);
     if(pvis.m && SPR){
       let rel=camB2 - player.heading*180/Math.PI;
       rel=((rel%360)+360)%360;

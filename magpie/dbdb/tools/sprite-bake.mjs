@@ -29,7 +29,7 @@ const KINDS = {
   walker2: { shirt: 0x8a3a2c, trouser: 0x2e3a2e, hair: 0x101010, skin: 0xb97a4e, bun: 1 },
   walker3: { shirt: 0x557a3a, trouser: 0x44341f, hair: 0x5a3a1a, skin: 0xe0b58a, mous: 1 },
   zombie:  { shirt: 0x4a4438, trouser: 0x33382e, hair: 0x222a1c, skin: 0x86a05a, zombie: true },
-  hero:    { hero: true, phases: 8, cell: 192 },
+  hero:    { hero: true, phases: 16, cell: 192 },   // reference-grade cycle, 16 frames
 };
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
@@ -69,7 +69,8 @@ for (const [kind, opts] of Object.entries(KINDS)) {
   for (let b = 0; b < BEARINGS; b++) {
     for (let ph = 0; ph < PH; ph++) {
       await pg.evaluate(([bear, g, k]) => __jsd.bakeFrame(bear, g, k),
-        [b * 45, ph * 2 * Math.PI / PH, opts.zombie ? 'zombie' : 'walk']);
+        [b * 45, ph * 2 * Math.PI / PH,
+         opts.hero ? 'hero' : (opts.zombie ? 'zombie' : 'walk')]);
       await pg.waitForTimeout(140);
       const buf = await pg.screenshot();
       cells.push(buf.toString('base64'));

@@ -27,7 +27,7 @@
       "cell": 128
     },
     "hero": {
-      "phases": 8,
+      "phases": 16,
       "cell": 192
     }
   },

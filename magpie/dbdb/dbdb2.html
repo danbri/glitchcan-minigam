@@ -1202,10 +1202,13 @@ function makeHuman(){
   const hipR = seg(body, -0.09,0.86,0, 0.13,0.42,0.16, TROUSER);
   const kneeL = seg(hipL, 0,-0.42,0, 0.11,0.40,0.13, TROUSER);
   const kneeR = seg(hipR, 0,-0.42,0, 0.11,0.40,0.13, TROUSER);
-  for(const k of [kneeL,kneeR]){                                    // boots
-    const f = new THREE.Mesh(boxGeo, M(BOOT));
-    f.position.set(-0.06,-0.46,-0.05); f.scale.set(0.12,0.07,0.24); k.add(f);
-  }
+  // ankles: real joints, so a stride can strike the heel and roll off
+  // the toe (rest pose is identical to the old fixed boots)
+  const mkAnk = k=>{ const a=new THREE.Group(); a.position.set(0,-0.40,0); k.add(a);
+    const f=new THREE.Mesh(boxGeo, M(BOOT));
+    f.position.set(-0.06,-0.06,-0.05); f.scale.set(0.12,0.07,0.24); a.add(f);
+    return a; };
+  const ankL = mkAnk(kneeL), ankR = mkAnk(kneeR);
   const shL = seg(body,  0.27,1.44,0, 0.10,0.30,0.14, SHIRT);
   const shR = seg(body, -0.27,1.44,0, 0.10,0.30,0.14, SHIRT);
   shL.rotation.z = 0.10; shR.rotation.z = -0.10;      // arms rest clear of the torso
@@ -1216,7 +1219,8 @@ function makeHuman(){
   mini.g.scale.setScalar(0.22); mini.g.position.set(-0.24,1.45,0.03);
   mini.g.rotation.y = -0.4;
   body.add(mini.g);
-  return { g, r:{ body, pelvis, torso, headJ, hipL, hipR, kneeL, kneeR, shL, shR, elL, elR }, mini };
+  return { g, r:{ body, pelvis, torso, headJ, hipL, hipR, kneeL, kneeR,
+                  ankL, ankR, shL, shR, elL, elR }, mini };
 }
 
 const hero = HERO==='duck'
@@ -3218,6 +3222,55 @@ addEventListener('message', e=>{
 $('dreamEject').addEventListener('click', ()=>dreamExit(false));
 
 /* headless-test hook */
+/* --- HERO WALK — the reference-grade cycle for the sprite bake ---
+   The generic npcPose walk is two sine waves; this one is built from
+   the animator's checklist, each term a real gait event:
+   - timing asymmetry: the swing leg travels faster than the stance
+     leg loads (a shaped sine, not a pure one)
+   - knee LOAD RESPONSE: a small flex right after heel strike, then
+     the big swing flexion — never a straight pole-vault leg
+   - ankles: heel STRIKES toe-up, the foot ROLLS, the toe pushes off
+     down, the swing foot lifts to clear the ground
+   - pelvis drops toward the swing side, weight shifts over the
+     stance foot, the body bobs TWICE per cycle (lowest at double
+     support, highest at mid-stance)
+   - torso counter-rotates the pelvis; the head counter-rotates the
+     torso and stays LEVEL (the skull is the camera)
+   - arms swing opposite the legs with elbow follow-through (the
+     forearm lags the upper arm) */
+function heroWalkPose(r, th){
+  const wrap=(a)=>Math.atan2(Math.sin(a),Math.cos(a));
+  const bump=(a,c,w)=>Math.exp(-Math.pow(wrap(a-c)/w,2));   // smooth gait event
+  const sw=a=>Math.sin(a+0.15*Math.sin(2*a));               // asymmetric swing
+  const s1=sw(th), s2=sw(th+Math.PI);
+  // legs
+  r.hipL.rotation.x=-0.62*s1;
+  r.hipR.rotation.x=-0.62*s2;
+  r.kneeL.rotation.x=1.05*Math.pow(Math.max(0,Math.sin(th-0.65)),1.25)
+                    +0.16*Math.pow(Math.max(0,Math.sin(th+2.7)),2)+0.05;
+  r.kneeR.rotation.x=1.05*Math.pow(Math.max(0,Math.sin(th+Math.PI-0.65)),1.25)
+                    +0.16*Math.pow(Math.max(0,Math.sin(th+Math.PI+2.7)),2)+0.05;
+  r.ankL.rotation.x=-0.30*bump(th,0.15,0.55)+0.55*bump(th,2.45,0.6)-0.18*bump(th,4.3,0.7);
+  r.ankR.rotation.x=-0.30*bump(th+Math.PI,0.15,0.55)+0.55*bump(th+Math.PI,2.45,0.6)
+                    -0.18*bump(th+Math.PI,4.3,0.7);
+  // pelvis + trunk
+  r.pelvis.rotation.y=-0.10*s1;
+  r.body.position.x=0.028*Math.sin(th);
+  r.body.position.y=0.045*(0.5-0.5*Math.cos(2*th))-0.022;
+  r.body.rotation.z=0.045*Math.sin(th);
+  r.body.rotation.x=0.07+0.015*Math.cos(2*th);
+  r.torso.rotation.y=0.13*s1;
+  // the level head
+  r.headJ.rotation.y=-0.045*s1;
+  r.headJ.rotation.z=-r.body.rotation.z*0.8;
+  r.headJ.rotation.x=0.02*Math.cos(2*th+0.6);
+  // arms, with follow-through
+  r.shL.rotation.x=0.50*s1+0.03;
+  r.shR.rotation.x=0.50*s2+0.03;
+  r.elL.rotation.x=-0.32-0.30*Math.max(0,sw(th-0.5));
+  r.elR.rotation.x=-0.32-0.30*Math.max(0,sw(th+Math.PI-0.5));
+}
+
 window.__jsd = {
   version:'2.0.0',
   get objects(){ return {
@@ -3266,7 +3319,8 @@ window.__jsd = {
   bakeFrame(bearing, gait, kind){
     const n=this._bakeN; if(!n) return false;
     n.gait=gait; n.mode='walk';
-    npcPose(n, 0, 10);                        // dt 10: lerps snap
+    if(kind==='hero') heroWalkPose(n.r, gait);
+    else npcPose(n, 0, 10);                   // dt 10: lerps snap
     const r=n.r;
     if(kind==='zombie'){                       // the shamble, on top of the stride
       r.shL.rotation.x=r.shR.rotation.x=-1.5;
