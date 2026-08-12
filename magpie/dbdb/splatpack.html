@@ -565,7 +565,11 @@ function upPlayer(dt){
     if(p2.got) continue;
     if(Math.hypot(p2.x-player.x, p2.z-player.z)<0.42){
       p2.got=true; p2.e.enabled=false; pelGot++; pelletTally();
-      if(pelGot===pellets.length) flash('\u2b50 MAZE CLEARED \u2b50');
+      if(pelGot===pellets.length){
+        flash('\u2b50 MAZE CLEARED \u2b50');
+        if(EMBED) setTimeout(()=>parent.postMessage(
+          { jsdDream:'complete', clues:3, gems:pelGot },'*'), 1800);
+      }
     }
   }
   /* the citizens catch you — with mercy frames after each catch */
@@ -720,6 +724,20 @@ for(const el of pack.elements){
   drawer.appendChild(b);
 }
 
+/* framed in dbdb2: speak the dream bus — SURFACE ejects, a cleared
+   maze completes (the manor pays the same reward as a dream WAKE) */
+const EMBED = Q.has('embed') || parent!==window;
+if(EMBED){
+  const xb=document.createElement('button');
+  xb.type='button';
+  xb.textContent='\u2715 SURFACE';
+  xb.style.cssText='position:fixed;top:6px;right:8px;z-index:30;'
+    +'background:rgba(0,30,12,.6);border:1px solid rgba(159,232,176,.5);'
+    +'color:#9fe8b0;font:11px monospace;letter-spacing:.2em;'
+    +'padding:6px 10px;border-radius:4px;';
+  xb.addEventListener('click',()=>parent.postMessage({ jsdDream:'exit' },'*'));
+  document.body.appendChild(xb);
+}
 const start=Q.get('lay');
 (start && LAYOUTS[start] ? mk : ()=>{})   // unknown lay -> ignore
 const b0=({yard:1,maze:2,jungle:3})[start]!==undefined

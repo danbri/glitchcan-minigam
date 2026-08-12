@@ -824,8 +824,16 @@ You arrive at ${NAMES[3]} before the sound of leaving fades.
 -> away
 == farhub ==
 ${FKEYS.length} other places hum behind the static. A far port burns the gem.
-${farMenu}+ [Keep the gem instead] -> away
-${farKnots}${goKnots}== bank ==
+${farMenu}+ [GROWN PORT \u2192 PAC-MAZE \u00b7 grown] -> grown_0
++ [GROWN PORT \u2192 SABRE JUNGLE \u00b7 grown] -> grown_1
++ [Keep the gem instead] -> away
+${farKnots}${goKnots}== grown_0 ==
+The static folds into corridors that never grew anywhere. Hedges close overhead.
+-> DONE
+== grown_1 ==
+The drift thickens to jungle. Something shambles between the rooms.
+-> DONE
+== bank ==
 ~ gems = gems - 1
 ~ diamonds = diamonds + 1
 A clean cut. Diamonds: {diamonds} — convertible on waking.
@@ -965,6 +973,15 @@ function flyStation(sti, opts={}){
 function choiceFlight(label){
   const L=label.toLowerCase();
   const sti=NAMES.findIndex(n=>label.includes(n));
+  /* a grown port: leave the scans for a STAMPED world (splatpack) */
+  if(L.startsWith('grown port')){
+    const lay=label.includes('JUNGLE')?'jungle':'maze';
+    termClose();
+    fly({ dYaw:200, toPitch:26, toDist:1.9, tgt:CAM_TGT, dur:2.6, onDone:()=>{
+      location.href='splatpack.html?lay='+lay+'&play=1&embed=1';
+    }});
+    return 'far';
+  }
   /* a far station: "⇒ NAME · scenekey" — burn the gem, surface there */
   const fm=label.match(/^\u21d2 (.+) \u00b7 ([a-z]+)$/);
   if(fm && SCENES[fm[2]]){

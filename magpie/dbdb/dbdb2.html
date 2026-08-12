@@ -1722,7 +1722,7 @@ const petScreenMat=(()=>{
   m.side=THREE.DoubleSide;
   return m;
 })();
-function makePET(name, colHex, x,y,z, rotY, px,py,pz){
+function makePET(name, colHex, x,y,z, rotY, px,py,pz, url){
   const grp=new THREE.Group();
   const shell=new THREE.MeshBasicNodeMaterial({ color:srgb(colHex),
     transparent:true, opacity:0.88 });
@@ -1747,7 +1747,7 @@ function makePET(name, colHex, x,y,z, rotY, px,py,pz){
     grp.add(s);
   }
   grp.position.set(x,y,z); grp.rotation.y=rotY; scene.add(grp);
-  TERMS.push({ name, x:px, y:py, z:pz });
+  TERMS.push({ name, x:px, y:py, z:pz, url });
 }
 makePET('bondi',      0x1f9bb5, -31.4,2,10.5, Math.PI/2, -30.6,1,10.5);  // the Newt's booth
 makePET('grape',      0x8f63cc, 55.5,7,-6.5, 0,          55.5,6,-5.6);   // the Library
@@ -1760,6 +1760,12 @@ makePET('bondi',      0x1f9bb5, -2.5,2,1.5, 0, -2.5,1,2.6);
 makePET('strawberry', 0xe8546e, -0.5,2,1.5, 0, -0.5,1,2.6);
 makePET('lime',       0x8fc43a,  1.5,2,1.5, 0,  1.5,1,2.6);
 makePET('grape',      0x8f63cc,  3.5,2,1.5, 0,  3.5,1,2.6);
+/* the GROWN worlds: derived scenes stamped from the splatpack —
+   banana PET runs PAC-MAZE, jade PET runs the SABRE JUNGLE */
+makePET('banana', 0xe8c83a,  5.5,2,1.5, 0,  5.5,1,2.6,
+  'splatpack.html?lay=maze&play=1&embed=1');
+makePET('jade',   0x2fae7a, -4.5,2,1.5, 0, -4.5,1,2.6,
+  'splatpack.html?lay=jungle&play=1&embed=1');
 
 /* --- district dressing (visual only) --- */
 {
@@ -3067,7 +3073,8 @@ function dreamEnter(T){
   w.classList.remove('hidden');
   /* forward edit / hic flags from our own URL into the dream, so
      dbdb2.html?edit=1 places stations through the integrated door */
-  { const q=new URLSearchParams(location.search); let extra='';
+  if(T&&T.url) $('dreamFrame').src=T.url;
+  else { const q=new URLSearchParams(location.search); let extra='';
     for(const k of ['edit','hic']) if(q.get(k)) extra+='&'+k+'='+q.get(k);
     $('dreamFrame').src='dream.html?tint='+((T&&T.name)||'bondi')+extra; }
   requestAnimationFrame(()=>requestAnimationFrame(()=>w.classList.add('in')));
