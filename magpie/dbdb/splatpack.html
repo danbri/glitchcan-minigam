@@ -453,20 +453,55 @@ function emojiPly(emoji, size, opts={}){
   return e;
 }
 
-/* GEM PELLETS — the maze dots, as dot-matrix gems */
+/* GEM PELLETS — the maze dots, as dot-matrix gems, each with an
+   ADDITIVE glow halo pulsing behind it: vivid from across the maze */
 const pellets=[];
 let pelGot=0;
+let glowTex=null;
+function glowTexture(){
+  if(glowTex) return glowTex;
+  const cv=document.createElement('canvas'); cv.width=cv.height=64;
+  const g=cv.getContext('2d');
+  const gr=g.createRadialGradient(32,32,2,32,32,30);
+  gr.addColorStop(0,'rgba(255,255,255,0.5)');
+  gr.addColorStop(0.3,'rgba(255,255,255,0.1)');
+  gr.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=gr; g.fillRect(0,0,64,64);
+  glowTex=mkTex(cv); return glowTex;
+}
+function gemHalo(parent, size, col){
+  const h=new pc.Entity('halo');
+  h.addComponent('render',{ type:'plane' });
+  const m=new pc.StandardMaterial();
+  m.useLighting=false; m.diffuse=new pc.Color(0,0,0);
+  m.emissive=col;
+  m.blendType=pc.BLEND_ADDITIVE; m.depthWrite=false;
+  m.cull=pc.CULLFACE_NONE;
+  m.emissiveMap=glowTexture(); m.opacityMap=glowTexture(); m.opacityMapChannel='r';
+  m.update();
+  h.render.meshInstances[0].material=m;
+  h.setLocalEulerAngles(90,0,0);
+  h.setLocalScale(size*1.5,1,size*1.5);
+  h.setLocalPosition(0,size/2,-0.012);
+  parent.addChild(h);
+  return h;
+}
 function spawnPellet(x,z,big){
   const e=emojiBillboard(big?'\u2b50':'\ud83d\udc8e', big?0.55:0.34);
+  const halo=gemHalo(e, big?0.55:0.34,
+    big?new pc.Color(1,0.85,0.42):new pc.Color(0.5,0.82,1));
   e.setPosition(x,0.05,z);
-  pellets.push({ e, x, z, got:false, big, ph:Math.random()*6 });
+  pellets.push({ e, halo, hbase:(big?0.55:0.34)*1.5,
+    x, z, got:false, big, ph:Math.random()*6 });
 }
 /* morph gems: walk into one and BECOME your chosen beast for two
    minutes — the citizens lose your scent while it lasts */
 function spawnMorph(x,z){
   const e=emojiBillboard('\ud83d\udd2e', 0.5);
+  const halo=gemHalo(e, 0.5, new pc.Color(0.8,0.5,1));
   e.setPosition(x,0.05,z);
-  pellets.push({ e, x, z, got:false, big:false, morph:true, ph:Math.random()*6 });
+  pellets.push({ e, halo, hbase:0.5*1.5,
+    x, z, got:false, big:false, morph:true, ph:Math.random()*6 });
 }
 function clearPellets(){ for(const p2 of pellets) p2.e.destroy();
   pellets.length=0; pelGot=0; }
@@ -483,7 +518,21 @@ function pelletTally(){
    buzz in the hand. All three fire from one place.
    ========================================================= */
 const sfx={ ctx:null };
-addEventListener('pointerdown',()=>{ sfxCtx(); },{ once:false, passive:true });
+/* iOS routes WebAudio through the RINGER category: mute switch on =
+   silent game. A playing (silent) <audio> element flips the session
+   to playback category, which the switch does not gag. */
+let iosAudioEl=null;
+function unlockAudio(){
+  sfxCtx();
+  if(!iosAudioEl){
+    iosAudioEl=document.createElement('audio');
+    iosAudioEl.loop=true;
+    iosAudioEl.src='data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAACAgICA';
+    iosAudioEl.play().catch(()=>{});
+  }
+}
+addEventListener('pointerdown',unlockAudio,{ once:false, passive:true });
+addEventListener('touchstart',unlockAudio,{ once:false, passive:true });
 function sfxCtx(){
   if(!sfx.ctx){ try{ sfx.ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
   if(sfx.ctx && sfx.ctx.state==='suspended') sfx.ctx.resume().catch(()=>{});
@@ -501,9 +550,9 @@ function chime(kind){
     o.connect(g); g.connect(c.destination);
     o.start(t0+at); o.stop(t0+at+dur+0.03);
   };
-  if(kind==='gem'){ note(1318,0,0.15,0.16); note(1760,0.06,0.2,0.12); }
-  else if(kind==='star'){ note(880,0,0.12,0.18); note(1174,0.07,0.12,0.16);
-    note(1568,0.14,0.16,0.14); note(2093,0.21,0.3,0.11); }
+  if(kind==='gem'){ note(1318,0,0.18,0.3); note(1760,0.06,0.24,0.24); note(2637,0.11,0.2,0.12); }
+  else if(kind==='star'){ note(880,0,0.12,0.3); note(1174,0.07,0.12,0.27);
+    note(1568,0.14,0.16,0.24); note(2093,0.21,0.34,0.2); }
   else if(kind==='morph'){ note(392,0,0.5,0.18); note(523,0.12,0.5,0.15);
     note(659,0.24,0.55,0.13); note(784,0.36,0.8,0.11); }
   else if(kind==='ouch'){ note(220,0,0.25,0.2); note(165,0.1,0.3,0.16); }
@@ -694,7 +743,7 @@ let playMode=false, curLay='catalog';
 let cineOn=false;
 try{ cineOn=localStorage.getItem('packCine')==='1'; }catch(e){}
 const player={ e:null, x:0, z:0, y:0, vy:0, heading:0, caught:0,
-  spawn:[0,0], iframes:0, jumpBuf:0 };
+  spawn:[0,0], iframes:0, jumpBuf:0, bx:0, bz:0 };
 /* choose your animal: a carousel of dot-matrix beasts */
 const ANIMALS=['\ud83d\udc25','\ud83d\udc30','\ud83e\udd8a','\ud83d\udc38',
   '\ud83d\udc31','\ud83d\udc36','\ud83d\udc3c','\ud83e\udd84',
@@ -985,19 +1034,38 @@ function upPlayer(dt){
     if(p2.got) continue;
     if(Math.hypot(p2.x-player.x, p2.z-player.z)<0.42) claimGem(p2);
   }
-  /* the citizens catch you — grounded only (the hop escapes), with
-     mercy frames after each catch; a transformed beast walks unseen */
+  /* the citizens BUMP you — no instant fail, no teleport home: a
+     shove away from the contact (with a little pop off the ground),
+     a knock off your lane, and on you play. Grounded only (the hop
+     still sails over); a transformed beast walks unseen; a short
+     cooldown stops machine-gun bumping. */
   player.iframes=Math.max(0,player.iframes-dt);
   if(player.iframes<=0 && beastT<=0 && player.y<0.35) for(const r of roamers){
     if(Math.hypot(r.x-player.x, r.z-player.z)<0.45){
-      player.caught++; player.iframes=2.5;
-      flash(r.ai==='zombie'?'\ud83e\udddf CAUGHT!':'\ud83d\udc7b CAUGHT!');
-      chime('ouch'); buzz([60,40,60]);
-      player.x=player.spawn[0]; player.z=player.spawn[1];
+      player.caught++;                       // now counts BUMPS
+      player.iframes=0.8;
+      const d=Math.hypot(player.x-r.x, player.z-r.z)||1;
+      player.bx=(player.x-r.x)/d*3.4;
+      player.bz=(player.z-r.z)/d*3.4;
+      player.vy=Math.max(player.vy,2.4);
       pac.dir=null; pac.want=null;
+      flash(r.ai==='zombie'?'\ud83e\udddf BUMP!':'\ud83d\udc7b BUMP!');
+      chime('ouch'); buzz(45);
       break;
     }
   }
+  /* the shove plays out with decay, sliding along walls like a walk */
+  if(Math.abs(player.bx)+Math.abs(player.bz)>0.02){
+    let nx=player.x+player.bx*dt, nz=player.z+player.bz*dt;
+    if(layoutBlocked(nx,nz)){
+      if(!layoutBlocked(nx,player.z)) nz=player.z;
+      else if(!layoutBlocked(player.x,nz)) nx=player.x;
+      else { nx=player.x; nz=player.z; }
+    }
+    player.x=nx; player.z=nz;
+    const dec=Math.max(0,1-dt*3.4);
+    player.bx*=dec; player.bz*=dec;
+  } else { player.bx=0; player.bz=0; }
 }
 let bounds=6;
 /* ADAPTIVE QUALITY — measured on the WALL clock (game dt is clamped).
@@ -1164,6 +1232,10 @@ app.on('update',dt=>{
     if(p2.got) continue;
     p2.e.setEulerAngles(0,(t*(p2.big?90:50)+p2.ph*60)%360,0);
     p2.e.setPosition(p2.x, 0.06+Math.sin(t*2.2+p2.ph)*0.04, p2.z);
+    if(p2.halo){
+      const k=1+0.3*Math.sin(t*3.1+p2.ph*2);
+      p2.halo.setLocalScale(p2.hbase*k,1,p2.hbase*k);
+    }
   }
 });
 /* tap a pellet to take it — small-move taps only, drags stay drags */
@@ -1319,6 +1391,8 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
   get cine(){ return cineOn; },
   setCine(v){ cineOn=!!v; },
   jump(){ player.jumpBuf=0.15; },
+  place(x,z){ player.x=x; player.z=z; player.bx=player.bz=0;
+    pac.dir=null; pac.want=null; },
   get py(){ return +player.y.toFixed(2); },
   reset(){ resetRun(); },
   solo(id){ clearStamps();
