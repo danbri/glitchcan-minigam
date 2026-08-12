@@ -374,6 +374,15 @@ body.foaf-pad-on #foafos-dock {
 .foafos-window-btn:hover,
 .foafos-window-close:hover { background: rgba(0, 229, 255, 0.18); }
 
+/* A story that launched a game stands aside for it (see yieldScreenTo).
+   Hidden, not closed: the runner is paused mid-beat and comes back with
+   its place intact. pointer-events too, or an invisible window still
+   eats the taps meant for the game underneath. */
+.foafos-window.foafos-yielded {
+    visibility: hidden;
+    pointer-events: none;
+}
+
 /* ── THE READING IS NOT A WINDOW (phone) ──────────────────────────────
    Field report: "impossible to see top and bottom of screen
    simultaneously … wastes precious vertical space on windowing bling

@@ -701,6 +701,31 @@ bus.subscribe('minigame.complete', (e) => {
 // the result across. Frame-scoped so one runner's game cannot resume a
 // different runner's story.
 let _storyLauncher = null;
+// A BOXED STORY MUST YIELD THE SCREEN TO THE GAME IT LAUNCHED.
+//
+// Field report, twice: "Clock on" and then a blank white page, then the
+// story text with the game apparently missing. MEASURED (390x740):
+// #minigame-view was `active state-full` at z-index 2000, running — and
+// the runner's own window sat over it at 2620, full height. On a phone an
+// app window auto-MAXIMIZES, so this predates the full-bleed reading
+// layout: the game has been playing underneath the story all along, and
+// what the reader saw was the runner's background.
+//
+// `visibility` rather than `display`: the runner is PAUSED mid-beat
+// waiting for its result, and a display:none frame is a frame that may be
+// reflowed to nothing and lose its scroll position. Hidden, not stopped.
+let _yieldedWin = null;
+function yieldScreenTo(win) {
+  if (!win || _yieldedWin === win) return;
+  restoreYieldedScreen();
+  win.classList.add('foafos-yielded');
+  _yieldedWin = win;
+}
+function restoreYieldedScreen() {
+  if (!_yieldedWin) return;
+  _yieldedWin.classList.remove('foafos-yielded');
+  _yieldedWin = null;
+}
 
 // Window-app snapshots (spec §5.5.4). The bytes live in the SHELL's own
 // namespace, keyed by app id — a guest can neither read another app's save
@@ -791,11 +816,18 @@ window.addEventListener('popstate', () => {
   }, { retain: true });
 });
 
+// A game window closing for ANY reason gives the screen back. Completion
+// is the happy path; ✕, quit and terminate are the ones that would
+// otherwise strand a hidden story with no way to reveal it.
+bus.subscribe('wm.close', () => restoreYieldedScreen());
+bus.subscribe('minigame.end', () => restoreYieldedScreen());
+
 // Completion travels back to whoever launched. The variables have ALREADY
 // been governed (the guest's manifest was checked when it wrote them),
 // so what the runner receives is the accepted economy, not a request.
 bus.subscribe('minigame.complete', (e) => {
   if (e.source !== 'local') return;
+  restoreYieldedScreen();
   const waiting = _storyLauncher;
   _storyLauncher = null;
   if (!waiting) return;
@@ -2351,6 +2383,8 @@ function buildUI() {
             // makes belongs to the boxed story that launched it.
             FoafOS.storyVars._own(app.id);
             window.FinkMinigames?.startMinigame?.(game);
+            // The runner asked for a game; the game needs the glass.
+            yieldScreenTo(win);
             reply({ ok: true, launched: game, awaiting: 'minigame.complete' });
           } else if (verb === 'story.session') {
             // A PLAYTHROUGH ANNOUNCES ITSELF and the shell gives it a node
