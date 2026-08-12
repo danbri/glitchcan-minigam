@@ -130,6 +130,14 @@ export const APPS = [
     capabilities: ['vars:read', 'vars:write'], silent: true },
   { id: 'gems', family: 'play', icon: '💎', name: 'Gem Hunt', surface: 'stage', game: 'gems',
     capabilities: ['vars:read', 'vars:write'], silent: true },
+  // Skydock ran unregistered: the switcher showed it as a bare lowercase
+  // "skydock" with a window glyph and CAPABILITIES none, because
+  // appById() had nothing to answer with. It still WORKED — the legacy
+  // FinkMinigames path is not capability-gated — which is exactly the
+  // shape the tree exists to make visible rather than convenient.
+  { id: 'skydock', family: 'play', icon: '🛰️', name: 'Skydock Scuttlebutt',
+    surface: 'stage', game: 'skydock',
+    capabilities: ['input', 'vars:read', 'vars:write', 'audio'] },
   { id: 'waterworld', family: 'play', icon: '🫧', name: 'Waterworld', surface: 'stage', game: 'waterworld',
     capabilities: ['input', 'vars:read', 'vars:write', 'audio'],
     // its scoped bus view: speak in its own namespace, hear the shell

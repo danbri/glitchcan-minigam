@@ -3106,6 +3106,18 @@ function buildUI() {
       ? 'keeps its place' : 'closing loses it';
   }
 
+  // Which runner window owns this story SESSION, if any. storySessions is
+  // keyed by runner node id, so the answer is a search, not a field — and
+  // a session with no entry is a legacy host-side story, which is the
+  // distinction the caller needs.
+  function boxedSessionWindow(sessionId) {
+    for (const [runnerNodeId, sessions] of storySessions) {
+      if (!sessions.includes(sessionId)) continue;
+      return document.querySelector(`.foafos-window[data-instance="${runnerNodeId}"]`);
+    }
+    return null;
+  }
+
   // How to bring a node to the front, per surface. Presentation only.
   function focusNode(node) {
     if (node.surface === 'stage') { window.FinkWM?.setMode('full'); return; }
@@ -3119,6 +3131,19 @@ function buildUI() {
       return;
     }
     if (node.surface === 'story') {
+      // A BOXED session is not in the legacy narrative pane — it lives in
+      // its runner's window, which yieldScreenTo() hid when the story
+      // launched a game. Splitting here gave a phone half a screen of
+      // EMPTY host surface (field report: switcher read "stage · split"
+      // over a story nobody could see). Revealing a boxed story means
+      // giving its window the screen back.
+      const runnerWin = boxedSessionWindow(node.id);
+      if (runnerWin) {
+        restoreYieldedScreen();
+        document.querySelectorAll('.foafos-window').forEach(w => { w.style.zIndex = 2620; });
+        runnerWin.style.zIndex = 2630;
+        return;
+      }
       if (window.FinkWM?.active && window.FinkWM.mode === 'full') window.FinkWM.setMode('split');
       return;
     }
