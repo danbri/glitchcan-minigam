@@ -140,7 +140,7 @@ function mazeLayout(){
                    yaw:rnd()*360, s:0.3+rnd()*0.18, y:0.12 });
     }
     if(ch==='P') out.push({ el:'pump', at:[x,z], yaw:180, s:0.55, y:0.1 });
-    if(ch==='R') out.push({ el:'redtruck', at:[x,z], yaw:90, s:0.4, y:0.1 });
+    if(ch==='R') out.push({ el:'redtruck', at:[x,z], yaw:160, s:0.4, y:0.1 });
   }
   return out;
 }
@@ -153,13 +153,17 @@ const LAYOUTS={
     /* the glasshouse facade at the back */
     { el:'windowwall', at:[-0.9,-2.7], yaw:0, s:0.8, y:0.08 },
     { el:'windowwall', at:[ 1.3,-2.7], yaw:0, s:0.8, y:0.08 },
-    /* a low brick boundary on the west side */
-    { el:'brickwall', at:[-2.9,-1.0], yaw:90, y:0.08 },
-    { el:'brickwall', at:[-2.9, 0.7], yaw:90, y:0.08 },
-    /* furniture: the pump by the wall, two trucks parked */
+    /* a hedge boundary on the west side (brickwall retired: it was
+       a roof slab in denial — the turntable showed no good angle) */
+    { el:'hedge',  at:[-2.9,-1.4], yaw:90, s:0.7, y:0.08 },
+    { el:'hedge2', at:[-2.9, 0.1], yaw:270, s:0.72, y:0.08 },
+    { el:'hedge',  at:[-2.9, 1.6], yaw:120, s:0.68, y:0.08 },
+    /* furniture, oriented by their sides verdicts: rustcar shows its
+       full profile south; redtruck hides its unscanned smear (0-45
+       viewer arc) against the north facade */
     { el:'pump',    at:[-2.1,-1.9], yaw:30,  s:0.85, y:0.1 },
-    { el:'rustcar', at:[ 0.5, 0.7], yaw:-20, s:0.5,  y:0.1 },
-    { el:'redtruck',at:[ 2.3,-1.0], yaw:14,  s:0.55, y:0.1 },
+    { el:'rustcar', at:[ 0.5, 0.7], yaw:0,   s:0.5,  y:0.1 },
+    { el:'redtruck',at:[ 2.3,-1.0], yaw:150, s:0.55, y:0.1 },
   ],
 };
 let bounds=6;
@@ -236,6 +240,13 @@ build(start&&LAYOUTS[start]?start:'catalog');
 /* headless hook */
 window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Object.keys(assets).length>0; },
   build, get els(){ return pack.elements.map(e=>e.id); },
+  solo(id){ for(const e2 of app.root.children.slice())
+      if(e2.name && e2.name.startsWith('stamp-')) e2.destroy();
+    const el=EL[id]; stamp(id,0,0,0,1);
+    bounds=Math.max(2.2,Math.max(el.dims[0],el.dims[2])*0.9);
+    if(el.sides){ yaw=el.sides.face; idle=-6; }   // open on the good side
+    document.getElementById('hInfo').textContent=id.toUpperCase()
+      +(el.sides&&el.sides.weak.length?' · weak '+el.sides.weak.map(w=>w.join('-')+'\u00b0').join(', '):''); },
   setCam(y2,p2,d2){ yaw=y2; pitch=p2; dist=d2; idle=0; } };
 </script>
 </body>
