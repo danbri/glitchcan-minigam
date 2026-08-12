@@ -1,6 +1,45 @@
 {
   "elements": [
     {
+      "id": "cistern",
+      "file": "cistern.compressed.ply",
+      "scene": "watertower",
+      "mode": "solid",
+      "box": {
+        "c": [
+          -17.6,
+          2.5,
+          29.4
+        ],
+        "yaw": -162,
+        "size": [
+          5.5,
+          4.5,
+          5.5
+        ],
+        "trim": 0.2,
+        "band": 0.35
+      },
+      "hq": true,
+      "count": 93557,
+      "dims": [
+        4.33,
+        2.18,
+        5.5
+      ],
+      "credit": "Nelson Ghost Town Water Tower · Paolo Tosolini · superspl.at/scene/fb3b5ed5 · CC BY 4.0",
+      "sides": {
+        "face": 45,
+        "weak": [
+          [
+            160,
+            240
+          ]
+        ],
+        "note": "rusty round water tank on rubble (hunted as a shack, better than one); bald smeared side 160-240"
+      }
+    },
+    {
       "id": "fern",
       "file": "fern.compressed.ply",
       "scene": "garden",
@@ -77,6 +116,35 @@
         ],
         "note": "tinted variant of fern"
       }
+    },
+    {
+      "id": "fern3",
+      "file": "fern3.compressed.ply",
+      "scene": "garden",
+      "mode": "solid",
+      "box": {
+        "c": [
+          -1,
+          0.55,
+          -1
+        ],
+        "yaw": 0,
+        "size": [
+          1.5,
+          1.6,
+          1.5
+        ],
+        "trim": 0.08,
+        "band": 0.35
+      },
+      "hq": true,
+      "count": 35001,
+      "dims": [
+        1.5,
+        1.26,
+        1.07
+      ],
+      "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0"
     },
     {
       "id": "grass",
@@ -186,6 +254,74 @@
       }
     },
     {
+      "id": "hedge3",
+      "file": "hedge3.compressed.ply",
+      "scene": "garden",
+      "mode": "solid",
+      "box": {
+        "c": [
+          -3.36,
+          1.3,
+          5.88
+        ],
+        "yaw": 106.3,
+        "size": [
+          2.4,
+          2.1,
+          1.2
+        ],
+        "trim": 0.1,
+        "band": 0.35
+      },
+      "hq": true,
+      "count": 40000,
+      "dims": [
+        2.4,
+        1.58,
+        1.2
+      ],
+      "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0"
+    },
+    {
+      "id": "palmfan",
+      "file": "palmfan.compressed.ply",
+      "scene": "garden",
+      "mode": "solid",
+      "box": {
+        "c": [
+          -7.6,
+          1.2,
+          0.6
+        ],
+        "yaw": 59.6,
+        "size": [
+          2.6,
+          2.8,
+          2.6
+        ],
+        "trim": 0.1,
+        "band": 0.35
+      },
+      "hq": true,
+      "count": 70001,
+      "dims": [
+        2.6,
+        2.49,
+        2.6
+      ],
+      "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0",
+      "sides": {
+        "face": 180,
+        "weak": [
+          [
+            315,
+            45
+          ]
+        ],
+        "note": "dark jungle bed with a specimen sign and floating leaf fragments — back-row density only"
+      }
+    },
+    {
       "id": "plantbed",
       "file": "plantbed.compressed.ply",
       "scene": "garden",
@@ -222,6 +358,69 @@
           ]
         ],
         "note": "potted cluster, terracotta pot visible from 315; sign-free re-clip; fog wisps around 100-145"
+      }
+    },
+    {
+      "id": "plantbed2",
+      "file": "plantbed2.compressed.ply",
+      "scene": "garden",
+      "mode": "solid",
+      "box": {
+        "c": [
+          -6,
+          0.8,
+          -1
+        ],
+        "yaw": 0,
+        "size": [
+          2,
+          2.2,
+          2
+        ],
+        "trim": 0.1,
+        "band": 0.35
+      },
+      "hq": true,
+      "count": 40000,
+      "dims": [
+        1.4,
+        1.63,
+        1.42
+      ],
+      "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0"
+    },
+    {
+      "id": "pond",
+      "file": "pond.compressed.ply",
+      "scene": "garden",
+      "mode": "floor",
+      "box": {
+        "c": [
+          4.8,
+          0.4,
+          4.8
+        ],
+        "yaw": -135,
+        "size": [
+          2.6,
+          1.6,
+          2.6
+        ],
+        "trim": 0,
+        "band": 0.35
+      },
+      "hq": true,
+      "count": 60000,
+      "dims": [
+        2.6,
+        0.13,
+        2.6
+      ],
+      "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0",
+      "sides": {
+        "face": 270,
+        "weak": [],
+        "note": "lilypads incl. giant rimmed Victoria pads; water is transparent — stamp on dark ground"
       }
     },
     {
@@ -372,6 +571,40 @@
         "face": 0,
         "weak": [],
         "note": "sunlit gravel trail through moss — stamp in runs to draw paths; sun/shade contrast is its charm"
+      }
+    },
+    {
+      "id": "trestle",
+      "file": "trestle.compressed.ply",
+      "scene": "watertower",
+      "mode": "solid",
+      "box": {
+        "c": [
+          -11.8,
+          3.2,
+          11.8
+        ],
+        "yaw": -32,
+        "size": [
+          4.5,
+          6,
+          4.5
+        ],
+        "trim": 0.15,
+        "band": 0.35
+      },
+      "hq": true,
+      "count": 100001,
+      "dims": [
+        4.5,
+        5.68,
+        4.5
+      ],
+      "credit": "Nelson Ghost Town Water Tower · Paolo Tosolini · superspl.at/scene/fb3b5ed5 · CC BY 4.0",
+      "sides": {
+        "face": 315,
+        "weak": [],
+        "note": "watertower timber legs, red ladder, wagon cart at the foot — the temple ruin of the pack"
       }
     },
     {

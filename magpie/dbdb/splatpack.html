@@ -160,8 +160,49 @@ function mazeLayout(){
   }
   return out;
 }
+/* SABRE WULF JUNGLE — connected rooms walled with exuberant foliage,
+   narrow doorways between them, a swamp corner, a ruin. Walls are
+   double rows: big hedges behind, vivid tufts in front — the vivid
+   tinted variants give the Spectrum-palette punch. */
+function jungleLayout(){
+  const rnd=mulberry32(1985);
+  const out=[];
+  const W2=6.4, H2=5.0;
+  const BACK=['hedge','hedge2','hedge3','palmfan'];
+  const FRONT=['fern','fern2','fern3','plantbed','plantbed2'];
+  function wallRun(x0,z0,x1,z1,doors){
+    const len=Math.hypot(x1-x0,z1-z0), n=Math.max(2,Math.round(len/1.1));
+    for(let i=0;i<=n;i++){
+      const t=i/n, x=x0+(x1-x0)*t, z=z0+(z1-z0)*t;
+      if((doors||[]).some(d=>Math.abs(t-d)<0.11)) continue;   // a doorway
+      const bk=BACK[Math.floor(rnd()*BACK.length)];
+      out.push({ el:bk, at:[x+(rnd()-.5)*.25, z+(rnd()-.5)*.25],
+                 yaw:rnd()*360, s:(bk==='palmfan'?0.42:0.55)+rnd()*0.18, y:0.05 });
+      if(rnd()<0.45)
+        out.push({ el:FRONT[Math.floor(rnd()*FRONT.length)],
+                   at:[x+(rnd()-.5)*.6, z+(rnd()-.5)*.6],
+                   yaw:rnd()*360, s:0.3+rnd()*0.18, y:0.1 });
+    }
+  }
+  /* 2x2 rooms: outer hull (south door), inner cross with doorways */
+  wallRun(-W2,-H2,  W2,-H2, []);            // north hull
+  wallRun(-W2, H2,  W2, H2, [0.5]);         // south hull + entrance
+  wallRun(-W2,-H2, -W2, H2, []);            // west hull
+  wallRun( W2,-H2,  W2, H2, []);            // east hull
+  wallRun(   0,-H2,   0, H2, [0.25,0.75]);  // inner vertical, 2 doors
+  wallRun(-W2,  0,  W2,  0, [0.25,0.75]);   // inner horizontal, 2 doors
+  /* floors: a trail patch in each room */
+  for(const [rx,rz] of [[-W2/2,-H2/2],[W2/2,-H2/2],[-W2/2,H2/2],[W2/2,H2/2]])
+    out.push({ el:'trail', at:[rx,rz], yaw:[0,90,180,270][Math.floor(rnd()*4)], s:0.85 });
+  /* the swamp room and the ruin room */
+  out.push({ el:'pond', at:[-W2/2, H2/2+0.6], yaw:0, s:0.9, y:0.02 });
+  out.push({ el:'trestle', at:[ W2/2+0.8,-H2/2], yaw:225, s:0.42, y:0.05 });
+  out.push({ el:'cistern', at:[-W2/2-0.8,-H2/2-0.4], yaw:45, s:0.5, y:0.05 });
+  return out;
+}
 const LAYOUTS={
   maze: mazeLayout,
+  jungle: jungleLayout,
   yard: [
     /* ground first: forest-moss tiles as FILLER between the stamps */
     { el:'grass', at:[-1.5,-1.5] }, { el:'grass', at:[ 1.5,-1.5] },
@@ -196,7 +237,7 @@ function build(name){
   } else {
     const lay=typeof LAYOUTS[name]==='function' ? LAYOUTS[name]() : LAYOUTS[name];
     for(const s of lay) stamp(s.el, s.at[0], s.at[1], s.yaw||0, s.s||1, s.y||0);
-    bounds=name==='maze'?7:6;
+    bounds=name==='maze'?7:(name==='jungle'?8:6);
     document.getElementById('hInfo').textContent='LAY · '+name.toUpperCase()
       +' · '+lay.length+' stamps';
   }
@@ -238,6 +279,7 @@ const mk=(label,fn)=>{ const b=document.createElement('button');
 const bCat=mk('CATALOG',()=>build('catalog'));
 mk('YARD (derived scene)',()=>build('yard'));
 mk('PAC-MAZE (grown)',()=>build('maze'));
+mk('SABRE JUNGLE',()=>build('jungle'));
 for(const el of pack.elements)
   mk(el.id.toUpperCase(),()=>{ window.__pack.solo(el.id); });
 
