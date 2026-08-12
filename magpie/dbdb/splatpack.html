@@ -50,6 +50,10 @@
   #avSel button.on { border-color:#9fe8b0; background:rgba(80,255,140,.18); }
   #avSel .lbl { color:#9fe8b0; font:11px monospace; letter-spacing:.2em;
     align-self:center; flex:0 0 auto; padding-right:4px; }
+  #jumpBtn { position:fixed; bottom:120px; right:12px; z-index:9;
+    width:64px; height:64px; border-radius:50%; display:none;
+    background:rgba(2,16,8,.72); border:2px solid rgba(159,232,176,.6);
+    color:#9fe8b0; font:bold 13px monospace; }
   #avBtn { position:fixed; bottom:64px; right:10px; z-index:9;
     font-size:26px; background:rgba(2,16,8,.72);
     border:1px solid rgba(159,232,176,.5); border-radius:10px;
@@ -72,6 +76,7 @@
 <div id="stickBase"></div><div id="stickNub"></div>
 <div id="avSel" class="hidden"></div>
 <button type="button" id="avBtn" aria-label="choose your animal"></button>
+<button type="button" id="jumpBtn" aria-label="jump">JUMP</button>
 <div id="flash"></div>
 <div id="elDrawer" class="hidden"></div>
 <div id="bar"></div>
@@ -465,7 +470,8 @@ function m0x(m,u,v){
    gems to take them; the citizens are the hazard.
    ========================================================= */
 let playMode=false, curLay='catalog';
-const player={ e:null, x:0, z:0, heading:0, caught:0, spawn:[0,0], iframes:0 };
+const player={ e:null, x:0, z:0, y:0, vy:0, heading:0, caught:0,
+  spawn:[0,0], iframes:0, jumpBuf:0 };
 /* choose your animal: a carousel of dot-matrix beasts */
 const ANIMALS=['\ud83d\udc25','\ud83d\udc30','\ud83e\udd8a','\ud83d\udc38',
   '\ud83d\udc31','\ud83d\udc36','\ud83d\udc3c','\ud83e\udd84',
@@ -501,11 +507,15 @@ function swapAvatar(){
     avSel.appendChild(b2);
   } }
 avBtn.addEventListener('click',()=>avSel.classList.toggle('hidden'));
+const jumpBtn=document.getElementById('jumpBtn');
+jumpBtn.addEventListener('touchstart',e=>{ e.preventDefault(); player.jumpBuf=0.15; },{passive:false});
+jumpBtn.addEventListener('mousedown',()=>{ player.jumpBuf=0.15; });
 const pinput={ jx:0, jy:0 };
 const pkeys={};
 const PKEYMAP={ ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down',
                 ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
-addEventListener('keydown',e=>{ if(PKEYMAP[e.code]){ e.preventDefault(); pkeys[PKEYMAP[e.code]]=true; } });
+addEventListener('keydown',e=>{ if(PKEYMAP[e.code]){ e.preventDefault(); pkeys[PKEYMAP[e.code]]=true; }
+  if(e.code==='Space' && playMode){ e.preventDefault(); player.jumpBuf=0.15; } });
 addEventListener('keyup',e=>{ if(PKEYMAP[e.code]) pkeys[PKEYMAP[e.code]]=false; });
 const stickBase=document.getElementById('stickBase'), stickNub=document.getElementById('stickNub');
 let stickId=null, stickOrigin=[0,0];
@@ -568,6 +578,14 @@ function layoutBlocked(x,z){
   }
   return false;
 }
+function resetRun(){
+  if(!playMode) return;
+  const l=curLay;
+  build(l);                                  // pellets + citizens respawn
+  player.x=player.spawn[0]; player.z=player.spawn[1];
+  player.y=0; player.vy=0; player.caught=0; player.iframes=2;
+  flash('\u21ba RESET');
+}
 function setPlay(on){
   if(on && curLay!=='maze' && curLay!=='jungle') build('maze');
   playMode=on;
@@ -575,6 +593,9 @@ function setPlay(on){
     if(!player.e) player.e=emojiBillboard(avatar, 0.9);
     player.e.enabled=true;
     avBtn.textContent=avatar; avBtn.style.display='block';
+    jumpBtn.style.display='block';
+    const rb=document.getElementById('resetBtn');
+    if(rb) rb.style.display='';
     avSel.classList.remove('hidden');       // pick your beast on entry
     if(curLay==='maze' && MAZE_INFO){
       player.spawn=[MAZE_INFO.ox+1*MAZE_INFO.CS, MAZE_INFO.oz+1*MAZE_INFO.CS];
@@ -588,6 +609,9 @@ function setPlay(on){
   } else {
     if(player.e) player.e.enabled=false;
     avBtn.style.display='none';
+    jumpBtn.style.display='none';
+    const rb=document.getElementById('resetBtn');
+    if(rb) rb.style.display='none';
     avSel.classList.add('hidden');
   }
   const pb=document.getElementById('playBtn');
@@ -613,10 +637,22 @@ function upPlayer(dt){
     player.x=nx; player.z=nz;
     player.heading=Math.atan2(fx*jy+rx*jx, fz*jy+rz*jx);
   }
+  /* the hop: a real escape move — you cannot be caught mid-air */
+  player.jumpBuf=Math.max(0,player.jumpBuf-dt);
+  const grounded=player.y<=0.001;
+  if(player.jumpBuf>0 && grounded){ player.jumpBuf=0; player.vy=4.6; }
+  if(!grounded || player.vy>0){
+    player.vy-=11*dt;
+    player.y=Math.max(0, player.y+player.vy*dt);
+    if(player.y===0) player.vy=0;
+  }
   const cp2=camE.getPosition();
   const camB2=Math.atan2(cp2.x-player.x, cp2.z-player.z)*180/Math.PI;
-  player.e.setPosition(player.x, 0.08+Math.abs(Math.sin(t*8))*(l>0.05?0.06:0.015), player.z);
-  player.e.setEulerAngles(0,camB2,l>0.05?Math.sin(t*10)*6:0);
+  player.e.setPosition(player.x,
+    0.08+player.y+Math.abs(Math.sin(t*8))*(l>0.05&&grounded?0.06:0.015), player.z);
+  player.e.setEulerAngles(0,camB2,l>0.05&&grounded?Math.sin(t*10)*6:0);
+  const sq=grounded?1:1.12;                       // a little stretch in flight
+  player.e.children[0].setLocalScale(0.9/sq,1,0.9*sq);
   /* walk over a gem to take it */
   for(const p2 of pellets){
     if(p2.got) continue;
@@ -629,9 +665,10 @@ function upPlayer(dt){
       }
     }
   }
-  /* the citizens catch you — with mercy frames after each catch */
+  /* the citizens catch you — grounded only (the hop escapes), with
+     mercy frames after each catch */
   player.iframes=Math.max(0,player.iframes-dt);
-  if(player.iframes<=0) for(const r of roamers){
+  if(player.iframes<=0 && player.y<0.35) for(const r of roamers){
     if(Math.hypot(r.x-player.x, r.z-player.z)<0.45){
       player.caught++; player.iframes=2.5;
       flash(r.ai==='zombie'?'\ud83e\udddf CAUGHT!':'\ud83d\udc7b CAUGHT!');
@@ -690,7 +727,7 @@ function build(name){
 let yaw=25, pitch=14, dist=1.0, idle=0;
 let drag=null, pinch0=0;
 addEventListener('pointerdown',e=>{
-  if(e.target.closest('#bar,#elDrawer,#avSel,#avBtn')) return;
+  if(e.target.closest('#bar,#elDrawer,#avSel,#avBtn,#jumpBtn')) return;
   if(playMode && e.clientX<innerWidth*0.55) return;   // left half is the stick
   drag=[e.clientX,e.clientY]; });
 let lastCamDrag=-9;
@@ -765,7 +802,7 @@ addEventListener('pointerup',e=>{
   const moved=Math.hypot(e.clientX-downAt2[0], e.clientY-downAt2[1]);
   downAt2=null;
   if(moved>8) return;
-  if(e.target.closest('#bar,#elDrawer,#avSel,#avBtn')) return;
+  if(e.target.closest('#bar,#elDrawer,#avSel,#avBtn,#jumpBtn')) return;
   const scr=new pc.Vec3();
   let best=null, bd=44;
   for(const p2 of pellets){
@@ -796,6 +833,11 @@ const bPlay=document.createElement('button');
 bPlay.type='button'; bPlay.id='playBtn'; bPlay.textContent='\u25b6 PLAY';
 bPlay.addEventListener('click',()=>setPlay(!playMode));
 bar.appendChild(bPlay);
+const bReset=document.createElement('button');
+bReset.type='button'; bReset.id='resetBtn'; bReset.textContent='\u21ba RESET';
+bReset.style.display='none';
+bReset.addEventListener('click',resetRun);
+bar.appendChild(bReset);
 for(const el of pack.elements){
   const b=document.createElement('button');
   b.type='button'; b.textContent=el.id.toUpperCase();
@@ -840,6 +882,9 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
   stick(jx,jy){ touchVec[0]=jx; touchVec[1]=jy; },
   get avatar(){ return avatar; },
   setAvatar(a){ avatar=a; swapAvatar(); },
+  jump(){ player.jumpBuf=0.15; },
+  get py(){ return +player.y.toFixed(2); },
+  reset(){ resetRun(); },
   solo(id){ clearStamps();
     const el=EL[id]; stamp(id,0,0,0,1);
     bounds=Math.max(2.2,Math.max(el.dims[0],el.dims[2])*0.9);
