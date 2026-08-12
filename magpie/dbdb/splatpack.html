@@ -43,8 +43,13 @@
     display:grid; grid-template-columns:repeat(auto-fill,minmax(108px,1fr)); gap:6px; }
   #elDrawer button { background:none; border:1px solid #9fe8b0; color:#9fe8b0;
     font:11px monospace; padding:9px 6px; border-radius:4px; }
-  #cred { position:fixed; bottom:8px; left:10px; right:10px; z-index:8;
-    font-size:8.5px; opacity:.55; pointer-events:none; line-height:1.5; }
+  #help { position:fixed; inset:8vh 6vw; z-index:26; overflow-y:auto;
+    background:rgba(1,10,5,.97); border:1px solid rgba(159,232,176,.5);
+    border-radius:8px; padding:16px; font:12px monospace; line-height:1.7; }
+  #help h2 { font:bold 13px monospace; letter-spacing:.25em; margin:12px 0 4px; }
+  #help .cred { font-size:9.5px; opacity:.7; line-height:1.6; }
+  #help button { background:none; border:1px solid #9fe8b0; color:#9fe8b0;
+    font:12px monospace; padding:8px 12px; border-radius:4px; margin-top:12px; }
   #stickBase, #stickNub {
     position:fixed; z-index:8; border-radius:50%; pointer-events:none;
     display:none; border:3px solid #9fe8b0; }
@@ -60,7 +65,7 @@
   #avSel button.on { border-color:#9fe8b0; background:rgba(80,255,140,.18); }
   #avSel .lbl { color:#9fe8b0; font:11px monospace; letter-spacing:.2em;
     align-self:center; flex:0 0 auto; padding-right:4px; }
-  #jumpBtn { position:fixed; bottom:84px; right:12px; z-index:9;
+  #jumpBtn { position:fixed; bottom:26px; right:12px; z-index:9;
     width:64px; height:64px; border-radius:50%; display:none;
     background:rgba(2,16,8,.72); border:2px solid rgba(159,232,176,.6);
     color:#9fe8b0; font:bold 13px monospace; }
@@ -78,13 +83,27 @@
 <div id="stage"></div>
 <div id="phos"></div>
 <div id="head"><span>SPLATPACK · STAMP CATALOG</span><span id="hInfo"></span></div>
-<div id="cred"></div>
 <div id="stickBase"></div><div id="stickNub"></div>
 <div id="avSel" class="hidden"></div>
 <button type="button" id="menuBtn" aria-label="menu">&#9776;</button>
 <div id="menu" class="hidden"></div>
 <button type="button" id="jumpBtn" aria-label="jump">JUMP</button>
 <div id="flash"></div>
+<div id="help" class="hidden">
+  <h2>HOW TO PLAY</h2>
+  <div>Left half of the screen: touch and drag — a floating stick walks
+  you down the lanes. In the maze you KEEP moving, Pac-Man style: flick
+  a direction at a junction to turn; a wall is the only brake.</div>
+  <div>Right half: drag to spin the camera. Pinch to zoom.</div>
+  <div>JUMP hops — you cannot be caught mid-air. Walk over 💎 to bank
+  gems; ⭐ at the corners are worth a fanfare; 🔮 turns you into your
+  chosen beast for two minutes and the citizens lose your scent.</div>
+  <div>The ☰ menu holds your beast, reset, this screen, and the
+  workbench. ✕ SURFACE returns to the Skydock.</div>
+  <h2>CLIP CREDITS</h2>
+  <div class="cred" id="helpCred"></div>
+  <button type="button" id="helpClose">CLOSE</button>
+</div>
 <div id="elDrawer" class="hidden"></div>
 <pre id="err"></pre>
 
@@ -128,8 +147,7 @@ app.root.addChild(camE);
 
 const pack=await (await fetch('splats/pack/pack.json')).json();
 const EL=Object.fromEntries(pack.elements.map(e=>[e.id,e]));
-document.getElementById('cred').textContent=
-  'clips: '+[...new Set(pack.elements.map(e=>e.credit))].join('  ·  ');
+const CREDITS=[...new Set(pack.elements.map(e=>e.credit))].join('  ·  ');
 
 /* asset per element, shared by every stamp of it */
 const assets={};
@@ -661,6 +679,8 @@ function m0x(m,u,v){
    gems to take them; the citizens are the hazard.
    ========================================================= */
 let playMode=false, curLay='catalog';
+let cineOn=false;
+try{ cineOn=localStorage.getItem('packCine')==='1'; }catch(e){}
 const player={ e:null, x:0, z:0, y:0, vy:0, heading:0, caught:0,
   spawn:[0,0], iframes:0, jumpBuf:0 };
 /* choose your animal: a carousel of dot-matrix beasts */
@@ -753,7 +773,7 @@ function hideStick(){ stickBase.style.display=stickNub.style.display='none'; tou
 addEventListener('touchstart',e=>{
   if(!playMode) return;
   for(const tt of e.changedTouches){
-    if(tt.target.closest && tt.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn')) continue;
+    if(tt.target.closest && tt.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn,#help')) continue;
     if(tt.clientX<innerWidth*0.55 && stickId===null){
       stickId=tt.identifier; stickOrigin=[tt.clientX,tt.clientY]; showStick(tt.clientX,tt.clientY);
     }
@@ -1037,7 +1057,7 @@ function build(name){
 let yaw=25, pitch=14, dist=1.0, idle=0;
 let drag=null, pinch0=0;
 addEventListener('pointerdown',e=>{
-  if(e.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn')) return;
+  if(e.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn,#help')) return;
   if(playMode && e.clientX<innerWidth*0.55) return;   // left half is the stick
   drag=[e.clientX,e.clientY]; });
 let lastCamDrag=-9;
@@ -1069,11 +1089,12 @@ app.on('update',dt=>{
   t+=dt; idle+=dt;
   upPlayer(dt);
   if(playMode){
-    /* auto-cinematics: follow behind the walk, and when a citizen
-       closes in, ease the camera round so the THREAT shares the
-       frame — with a slow pull-back for drama. A manual drag takes
-       over; auto resumes three seconds after the thumb lets go. */
-    if(t-lastCamDrag>3){
+    /* auto-cinematics (Dev toggle, OFF by default — field verdict:
+       it fought the thumb): follow behind the walk, and when a
+       citizen closes in, ease the camera round so the THREAT shares
+       the frame. A manual drag takes over; auto resumes three
+       seconds after the thumb lets go. */
+    if(cineOn && t-lastCamDrag>3){
       let want=player.heading*180/Math.PI+180;
       let thr=null, td=4.2;
       for(const r of roamers){
@@ -1122,7 +1143,7 @@ addEventListener('pointerup',e=>{
   const moved=Math.hypot(e.clientX-downAt2[0], e.clientY-downAt2[1]);
   downAt2=null;
   if(moved>8) return;
-  if(e.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn')) return;
+  if(e.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn,#help')) return;
   const scr=new pc.Vec3();
   let best=null, bd=44;
   for(const p2 of pellets){
@@ -1152,10 +1173,17 @@ function menuAdd(parent2,label,fn){
   b.addEventListener('click',fn);
   parent2.appendChild(b); return b;
 }
+document.getElementById('helpCred').textContent='clips: '+CREDITS;
+document.getElementById('helpClose').addEventListener('click',
+  ()=>document.getElementById('help').classList.add('hidden'));
 const mBeast=menuAdd(menu,'\ud83d\udd2e PICK YOUR BEAST',()=>{
   avSel.classList.toggle('hidden');
 });
 menuAdd(menu,'\u21ba RESET RUN',()=>{ resetRun(); menu.classList.add('hidden'); });
+menuAdd(menu,'? HELP & CREDITS',()=>{
+  document.getElementById('help').classList.remove('hidden');
+  menu.classList.add('hidden');
+});
 { const sec=document.createElement('div');
   sec.className='sec'; sec.textContent='DEV'; menu.appendChild(sec); }
 const devToggle=menuAdd(menu,'\u2699 WORKBENCH \u25be',()=>{
@@ -1180,6 +1208,12 @@ devMk('YARD',()=>{ drawer.classList.add('hidden'); build('yard'); });
 devMk('PAC-MAZE',()=>{ drawer.classList.add('hidden'); build('maze'); });
 devMk('JUNGLE',()=>{ drawer.classList.add('hidden'); build('jungle'); });
 devMk('ELEMENTS \u25be',()=>{ drawer.classList.toggle('hidden'); });
+const bCine=menuAdd(devSub,'CINE CAM: OFF',()=>{
+  cineOn=!cineOn;
+  try{ localStorage.setItem('packCine',cineOn?'1':'0'); }catch(e){}
+  bCine.textContent='CINE CAM: '+(cineOn?'ON':'OFF');
+});
+bCine.textContent='CINE CAM: '+(cineOn?'ON':'OFF');
 for(const el of pack.elements){
   const b=document.createElement('button');
   b.type='button'; b.textContent=el.id.toUpperCase();
@@ -1231,6 +1265,8 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
     decorOn:DECOR.filter(e=>e.enabled).length,
     dprCap:app.graphicsDevice.maxPixelRatio }; },
   trim(l){ trimLevel=l; trimDecor(l); },
+  get cine(){ return cineOn; },
+  setCine(v){ cineOn=!!v; },
   jump(){ player.jumpBuf=0.15; },
   get py(){ return +player.y.toFixed(2); },
   reset(){ resetRun(); },
