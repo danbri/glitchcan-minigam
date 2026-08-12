@@ -539,6 +539,7 @@ You have {mega_diamonds} mega diamonds. Your old life feels very far away now.
 + Examine the misty pool (manor silhouette, ravens) -> pool_manor
 + Study the gentle pool (autumn leaves, chimney smoke) -> pool_maple
 + Look into the rippling pool (flowing water, reeds) -> pool_riverbend
++ Gaze into the neon pool (candy terminals, gantry lights) -> pool_skydock
 + Rest here a while -> world_rest
 
 === pool_bagend ===
@@ -580,6 +581,20 @@ A tarnished plaque reads: "Shane Manor — Visitors by Appointment Only"
 + Enter the pool
     # FINK: shane-manor.fink.js
     The mist closes around you...
+    -> END
++ Return to the glade -> world_between_worlds
+
+=== pool_skydock ===
+#BG:#021
+The neon pool shows a dock hanging in the night: gantry lights, a maglev whispering in, and a row of candy-coloured terminals glowing like sweets in a jar.
+
+Somebody down there is trading in whispers. The still surface carries a faint smell of static and spilt beer.
+
+A flickering sign reads: "SKYDOCK — gossip is the true fuel. Clock on."
+
++ Step onto the dock
+    # FINK: skydock.fink.js
+    The night shift takes you...
     -> END
 + Return to the glade -> world_between_worlds
 
