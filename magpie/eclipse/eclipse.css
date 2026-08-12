@@ -1,0 +1,397 @@
+/* eclipse.css — mobile first, thumb first, dark because the show is at dusk.
+ *
+ * Sizing rules for the young audience:
+ *   - body text never below 17px
+ *   - every tap target at least 48px tall
+ *   - the safety colour (red) is used for nothing else, ever
+ */
+
+:root {
+  --bg: #0d1024;
+  --bg-2: #151a34;
+  --card: #1a2040;
+  --card-2: #212a52;
+  --ink: #f2f4ff;
+  --ink-dim: #a9b1d6;
+  --sun: #ffd257;
+  --sun-deep: #ff9d2e;
+  --danger: #ff5d5d;
+  --danger-bg: #3a1526;
+  --safe: #59d99b;
+  --safe-bg: #10312a;
+  --sky: #78dcff;
+  --radius: 18px;
+  --tabbar: calc(64px + env(safe-area-inset-bottom, 0px));
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: contain;
+}
+
+body {
+  min-height: 100dvh;
+  padding-bottom: var(--tabbar);
+}
+
+h1, h2 { line-height: 1.2; }
+h2 {
+  font-size: 1.2rem;
+  margin: 0 0 .6rem;
+  letter-spacing: .01em;
+}
+p { margin: 0 0 .7rem; }
+b { color: #fff; }
+
+/* ---------------- header ---------------- */
+
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: calc(env(safe-area-inset-top, 0px) + .6rem) .9rem .55rem;
+  background: linear-gradient(180deg, var(--bg) 70%, rgba(13,16,36,.86));
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+.brand {
+  font-size: 1.15rem;
+  margin: 0;
+  font-weight: 700;
+}
+.place-btn {
+  min-height: 40px;
+  padding: .35rem .7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: .92rem;
+  cursor: pointer;
+}
+.status {
+  margin: .35rem 0 0;
+  font-size: .95rem;
+  color: var(--sun);
+  font-weight: 600;
+}
+
+/* ---------------- layout ---------------- */
+
+main { padding: .8rem .9rem 1.4rem; max-width: 720px; margin: 0 auto; }
+
+.card {
+  background: var(--card);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin: 0 0 .9rem;
+}
+.card.danger { background: var(--danger-bg); border-color: rgba(255,93,93,.45); }
+.card.safe   { background: var(--safe-bg);   border-color: rgba(89,217,155,.35); }
+.card.warn   { background: #33260f;          border-color: rgba(255,210,87,.35); }
+
+.danger-line {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--danger);
+  margin-bottom: .5rem;
+}
+.hint { color: var(--ink-dim); font-size: .95rem; }
+.fineprint { color: var(--ink-dim); font-size: .85rem; margin-bottom: 0; }
+
+.row { display: flex; gap: .55rem; flex-wrap: wrap; }
+.row .btn { flex: 1 1 auto; }
+
+/* ---------------- sky ---------------- */
+
+.sky-wrap {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: .9rem;
+  border: 1px solid rgba(255,255,255,.08);
+}
+.sky {
+  display: block;
+  width: 100%;
+  height: 46vh;
+  min-height: 240px;
+  max-height: 380px;
+}
+.sky-badge {
+  position: absolute;
+  left: .7rem;
+  bottom: .7rem;
+  padding: .4rem .75rem;
+  border-radius: 999px;
+  background: rgba(10,12,26,.72);
+  border: 1px solid rgba(255,255,255,.16);
+  font-weight: 700;
+  font-size: 1rem;
+  backdrop-filter: blur(6px);
+}
+
+/* ---------------- countdown ---------------- */
+
+.countdown-card { text-align: center; }
+.count-label { color: var(--ink-dim); margin-bottom: .15rem; font-size: 1rem; }
+.count-clock {
+  font-size: clamp(2.6rem, 15vw, 3.6rem);
+  font-weight: 800;
+  line-height: 1;
+  margin: .1rem 0 .3rem;
+  color: var(--sun);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .01em;
+}
+.count-sub { color: var(--ink-dim); margin: 0; font-size: .95rem; }
+
+/* ---------------- controls ---------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  min-height: 48px;
+  padding: .6rem 1rem;
+  border-radius: 14px;
+  border: none;
+  background: var(--sun);
+  color: #241a00;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.btn:active { transform: translateY(1px); }
+.btn-quiet {
+  background: var(--card-2);
+  color: var(--ink);
+  border: 1px solid rgba(255,255,255,.14);
+}
+.btn-big { font-size: 1.15rem; min-height: 56px; width: 100%; }
+.btn:focus-visible,
+.tab:focus-visible,
+.place-btn:focus-visible,
+canvas:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+
+.scrub {
+  width: 100%;
+  height: 44px;
+  margin: .2rem 0 0;
+  accent-color: var(--sun);
+  background: transparent;
+}
+.scrub-time {
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin: .1rem 0 .7rem;
+  color: var(--sun);
+}
+
+/* ---------------- lists ---------------- */
+
+.times { list-style: none; margin: 0; padding: 0; }
+.times li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .8rem;
+  padding: .6rem 0;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.times li:last-child { border-bottom: none; }
+.times .t-name { font-weight: 600; }
+.times .t-when {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: var(--sun);
+  white-space: nowrap;
+}
+.times li.done { opacity: .45; }
+.times li.next .t-when { color: var(--safe); }
+
+.ticks, .steps, .spotlist { margin: 0 0 .6rem; padding-left: 1.25rem; }
+.ticks li, .steps li { margin-bottom: .45rem; }
+.big-steps li { margin-bottom: .7rem; font-size: 1.05rem; }
+
+.spotlist { list-style: none; padding: 0; }
+.spotlist li { margin: 0 0 .5rem; }
+.spotlist label {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  min-height: 52px;
+  padding: .5rem .8rem;
+  background: var(--card-2);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px;
+  cursor: pointer;
+}
+.spotlist input { width: 26px; height: 26px; accent-color: var(--safe); flex: none; }
+.spotlist label.got { background: var(--safe-bg); border-color: rgba(89,217,155,.5); }
+.score { font-size: 1.3rem; font-weight: 800; color: var(--safe); margin: 0 0 .6rem; }
+
+/* ---------------- look ---------------- */
+
+.big-answer {
+  font-size: clamp(2rem, 11vw, 2.6rem);
+  font-weight: 800;
+  text-align: center;
+  color: var(--sun);
+  margin: .2rem 0 .5rem;
+  text-transform: capitalize;
+}
+.compass {
+  display: block;
+  width: 100%;
+  height: 250px;
+  margin: 0 auto .6rem;
+}
+.fists {
+  display: flex;
+  gap: .3rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  font-size: 1.9rem;
+  margin: .5rem 0;
+}
+
+/* ---------------- demo canvases ---------------- */
+
+.demo {
+  display: block;
+  width: 100%;
+  height: 200px;
+  border-radius: 14px;
+  background: #12162b;
+  border: 1px solid rgba(255,255,255,.08);
+  margin: .5rem 0;
+  touch-action: none;
+}
+.demo.tall { height: 220px; }
+
+/* ---------------- tab bar ---------------- */
+
+.tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  background: rgba(16,20,42,.96);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255,255,255,.1);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.tab {
+  flex: 1;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .15rem;
+  border: none;
+  background: none;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tab span { font-size: 1.35rem; line-height: 1; }
+.tab.active { color: var(--sun); }
+.tab.active span { transform: scale(1.08); }
+
+/* ---------------- gate and sheet ---------------- */
+
+.gate, .sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(6,8,20,.9);
+  backdrop-filter: blur(6px);
+}
+.gate[hidden], .sheet[hidden] { display: none; }
+.gate-card, .sheet-card {
+  background: var(--card);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 22px;
+  padding: 1.3rem 1.1rem;
+  max-width: 480px;
+  width: 100%;
+  max-height: 88dvh;
+  overflow-y: auto;
+  text-align: center;
+}
+.sheet-card { text-align: left; }
+.gate-icon { margin-bottom: .3rem; }
+.gate-card h1 { font-size: 1.6rem; color: var(--danger); margin: .2rem 0 .5rem; }
+.gate-lead { font-size: 1.05rem; }
+.gate-rules {
+  text-align: left;
+  margin: 0 0 1rem;
+  padding-left: 1.2rem;
+  color: var(--ink);
+}
+.gate-rules li { margin-bottom: .4rem; }
+.gate-card .btn-quiet { margin-top: .5rem; width: 100%; }
+
+.places { list-style: none; margin: .8rem 0; padding: 0; }
+.places li { margin-bottom: .45rem; }
+.places button {
+  width: 100%;
+  min-height: 50px;
+  text-align: left;
+  padding: .6rem .9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: var(--card-2);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.places button.current { border-color: var(--sun); color: var(--sun); font-weight: 700; }
+.sheet-card > .btn { width: 100%; }
+
+/* ---------------- respect the user's settings ---------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+@media (min-width: 620px) {
+  .sky { height: 340px; max-height: none; }
+  main { padding: 1.2rem 1.2rem 2rem; }
+}
+
+/* A wide phone held sideways: keep the sky from eating the screen. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .sky { height: 60vh; min-height: 160px; }
+}

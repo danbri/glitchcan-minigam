@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192" role="img" aria-label="An eclipsed sun">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="45%" stop-color="#ffd257" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#ffd257" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="face" cx="38%" cy="34%" r="70%">
+      <stop offset="0%" stop-color="#fff6d8"/>
+      <stop offset="65%" stop-color="#ffd257"/>
+      <stop offset="100%" stop-color="#ff9d2e"/>
+    </radialGradient>
+  </defs>
+  <rect width="192" height="192" rx="42" fill="#0d1024"/>
+  <circle cx="96" cy="96" r="82" fill="url(#glow)"/>
+  <circle cx="96" cy="96" r="52" fill="url(#face)"/>
+  <circle cx="124" cy="78" r="50" fill="#0d1024"/>
+</svg>
