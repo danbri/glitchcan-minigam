@@ -29,12 +29,6 @@
     text-shadow:0 0 8px rgba(80,255,140,.5);
   }
   #clueTally { pointer-events:none; }
-  #exitBtn {
-    position:fixed; top:6px; right:8px; z-index:9;
-    background:rgba(0,30,12,.6); border:1px solid rgba(159,232,176,.5);
-    color:#9fe8b0; font-family:inherit; font-size:11px; letter-spacing:.2em;
-    padding:6px 10px; border-radius:4px; cursor:pointer;
-  }
   #loadLine {
     position:fixed; left:14%; right:14%; top:52%; z-index:7; text-align:center;
     font-size:12px; letter-spacing:.28em; color:rgba(159,232,176,.8);
@@ -93,7 +87,6 @@
 <div id="stage"></div>
 <div id="phos"></div>
 <div id="head"><span id="hudLoc">PORT/7 · DREAM SHELL</span><span id="clueTally">◆ 0 · ◇ 0</span></div>
-<button type="button" id="exitBtn">✕ SURFACE</button>
 <div id="loadLine">TUNING THE STATIC…</div>
 <div id="stickBase"></div><div id="stickNub"></div>
 <button type="button" id="rotL" aria-label="spin left">⟲</button>
@@ -114,10 +107,9 @@ const Q=new URLSearchParams(location.search);
 const TINTS={ bondi:'#8fd8e8', strawberry:'#ffa8b6', tangerine:'#ffc896',
               lime:'#c8f0a0', grape:'#cfaef5' };
 const tint=TINTS[Q.get('tint')]||'#9fe8b0';
-for(const id of ['head','exitBtn','loadLine']){
+for(const id of ['head','loadLine']){
   const el=document.getElementById(id); if(el) el.style.color=tint;
 }
-document.getElementById('exitBtn').style.borderColor=tint;
 for(const id of ['stickBase','stickNub','rotL','rotR']){
   const el=document.getElementById(id);
   el.style.borderColor=tint; el.style.color=tint;
@@ -230,7 +222,8 @@ menuBtn.setAttribute('aria-label','menu');
 document.body.appendChild(menuBtn);
 const menu=document.createElement('div');
 menu.id='menu'; menu.classList.add('hidden');
-menu.innerHTML='<button type="button" id="mTerm">OPEN TERMINAL</button>'
+menu.innerHTML='<button type="button" id="mExit">\u2715 SURFACE</button>'
+ +'<button type="button" id="mTerm">OPEN TERMINAL</button>'
  +'<button type="button" id="mEdit">EDIT PLACEMENT: OFF</button>'
  +'<div class="mLbl">FAST PORT</div><div class="prow" id="mPorts"></div>'
  +'<div class="mCred"></div>';
@@ -346,7 +339,7 @@ function showStick(x,y){ stickBase.style.display=stickNub.style.display='block';
   stickBase.style.left=(x-55)+'px'; stickBase.style.top=(y-55)+'px'; moveNub(x,y); }
 function moveNub(x,y){ stickNub.style.left=(x-24)+'px'; stickNub.style.top=(y-24)+'px'; }
 function hideStick(){ stickBase.style.display=stickNub.style.display='none'; touchVec[0]=touchVec[1]=0; }
-const CTL_GUARD='#exitBtn,#ebCopy,#panel,#menuBtn,#menu,#ebar,#rotL,#rotR,#mEdit';
+const CTL_GUARD='#ebCopy,#panel,#menuBtn,#menu,#ebar,#rotL,#rotR,#mEdit';
 let rotId=null, rotLast=[0,0];
 addEventListener('touchstart',e=>{
   for(const t of e.changedTouches){
@@ -638,6 +631,7 @@ function editPlace(cx,cy){
 let t=0;
 app.on('update', dt=>{
   t+=dt; idle+=dt;
+  upSparks(dt);
   if(flight){
     flight.t+=dt;
     const k=ease(Math.min(1,flight.t/flight.dur));
@@ -1069,10 +1063,72 @@ function collect(g){
   if(inkStory){ try{ inkStory.variablesState.$('gems', vs('gems')+1); }catch(e){} }
   updateTally();
   ping(vs('gems'));
+  try{ navigator.vibrate && navigator.vibrate([18,26,40]); }catch(e){}
+  starBurst(g.grp.getPosition());
   /* a short savouring flight, then the terminal takes the screen */
   fly({ dYaw:50, toDist:Math.max(MINDF,0.55), tgt:g.grp.getPosition(), dur:1.6, quiet:true,
     onDone:()=>{ if(inkStory){ try{ inkStory.ChoosePathString('gem'); }catch(e){}
       renderInk(); termOpen(); } } });
+}
+
+/* STAR BURST — a handful of glittering, SPINNING stars out of every
+   claimed gem: canvas-glyph billboards with gravity, camera-facing
+   with a roll, shrinking away as they die */
+let starTex=null;
+function starTexture(){
+  if(starTex) return starTex;
+  const cv=document.createElement('canvas'); cv.width=cv.height=64;
+  const g=cv.getContext('2d');
+  g.font='52px "Noto Color Emoji","Apple Color Emoji",sans-serif';
+  g.textAlign='center'; g.textBaseline='middle';
+  g.fillText('\u2b50', 32, 36);
+  starTex=new pc.Texture(app.graphicsDevice,{ width:64, height:64,
+    format:pc.PIXELFORMAT_R8_G8_B8_A8, mipmaps:false });
+  starTex.minFilter=pc.FILTER_LINEAR; starTex.magFilter=pc.FILTER_LINEAR;
+  starTex.setSource(cv);
+  return starTex;
+}
+const sparks=[];
+function starBurst(at){
+  for(let i=0;i<8;i++){
+    const e=new pc.Entity('spark');
+    const pl=new pc.Entity('pl');
+    pl.addComponent('render',{ type:'plane' });
+    const m=new pc.StandardMaterial();
+    m.useLighting=false; m.diffuse=new pc.Color(0,0,0);
+    m.emissive=new pc.Color(1,1,1);
+    m.blendType=pc.BLEND_NONE; m.alphaTest=0.3; m.depthWrite=true;
+    m.cull=pc.CULLFACE_NONE;
+    m.emissiveMap=starTexture(); m.opacityMap=starTexture(); m.opacityMapChannel='a';
+    m.update();
+    pl.render.meshInstances[0].material=m;
+    pl.setLocalEulerAngles(90,0,0);
+    e.addChild(pl);
+    app.root.addChild(e);
+    e.setPosition(at.x,at.y,at.z);
+    const a=Math.random()*6.2832, v=0.5+Math.random()*0.8;
+    sparks.push({ e, x:at.x, y:at.y, z:at.z,
+      vx:Math.sin(a)*v, vy:0.9+Math.random()*0.8, vz:Math.cos(a)*v,
+      base:0.05+Math.random()*0.05, roll:Math.random()*360,
+      rollV:520+Math.random()*400, life:0.8+Math.random()*0.35 });
+  }
+}
+function upSparks(dt){
+  if(!sparks.length) return;
+  const cp=camE.getPosition();
+  for(let i=sparks.length-1;i>=0;i--){
+    const sp=sparks[i];
+    sp.life-=dt;
+    if(sp.life<=0){ sp.e.destroy(); sparks.splice(i,1); continue; }
+    sp.vy-=2.6*dt;
+    sp.x+=sp.vx*dt; sp.y+=sp.vy*dt; sp.z+=sp.vz*dt;
+    sp.roll+=sp.rollV*dt;
+    sp.e.setPosition(sp.x,sp.y,sp.z);
+    const camB=Math.atan2(cp.x-sp.x,cp.z-sp.z)*180/Math.PI;
+    sp.e.setEulerAngles(0,camB,sp.roll%360);        // the SPIN
+    const sc=sp.base*Math.min(1,sp.life*3);
+    sp.e.children[0].setLocalScale(sc,1,sc);
+  }
 }
 
 /* audio: one chime per clue + a riser under each flight.
@@ -1112,7 +1168,7 @@ function riser(dur){
   }catch(e){}
 }
 
-document.getElementById('exitBtn').addEventListener('click', ()=>{
+menu.querySelector('#mExit').addEventListener('click', ()=>{
   parent.postMessage({ jsdDream:'exit' }, '*');
 });
 
@@ -1152,7 +1208,7 @@ window.__dream = {
   get centers(){ return editPts; },   // world-space scan points (edit mode)
   get frame(){ return { C:[C.x,C.y,C.z], R:R, baseLen:base.length(),
     baseElev:Math.atan2(base.y,Math.hypot(base.x,base.z))*180/Math.PI }; },
-  exit(){ document.getElementById('exitBtn').click(); },
+  exit(){ menu.querySelector('#mExit').click(); },
 };
 </script>
 </body>

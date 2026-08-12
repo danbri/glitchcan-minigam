@@ -142,10 +142,6 @@
     box-shadow:0 0 70px rgba(103,182,189,.45), inset 0 0 44px #000; }
   #dreamWrap.in #dreamBezel { transform:scale(1) rotate(0); opacity:1; }
   #dreamFrame { width:100%; height:100%; border:0; background:#010204; }
-  #dreamEject { position:absolute; top:8px; left:8px; z-index:2;
-    background:rgba(20,10,30,.75); border:2px solid #67b6bd; color:#67b6bd;
-    font-family:inherit; font-weight:bold; font-size:12px; letter-spacing:.18em;
-    padding:7px 12px; border-radius:6px; cursor:pointer; }
   #err { position:fixed; inset:auto 0 0 0; z-index:50; color:#ff5555; background:#200; padding:8px; font-size:12px; display:none; white-space:pre-wrap; }
 </style>
 </head>
@@ -206,7 +202,9 @@
 <!-- ---------- the dream layer (the Newt's corner terminal) ---------- -->
 <div id="dreamWrap" class="hidden">
   <div id="dreamBezel">
-    <button type="button" id="dreamEject">⏏ EJECT</button>
+    <!-- no host EJECT: it sat exactly on the guest's hamburger. Every
+         dream guest carries its own SURFACE in its menu and posts
+         jsdDream:'exit'; the host only listens. -->
     <iframe id="dreamFrame" title="the static dream" src="about:blank"></iframe>
   </div>
 </div>
@@ -3219,7 +3217,6 @@ addEventListener('message', e=>{
   }
   else if(d.jsdDream==='exit') dreamExit(false);
 });
-$('dreamEject').addEventListener('click', ()=>dreamExit(false));
 
 /* headless-test hook */
 /* --- HERO WALK — the reference-grade cycle for the sprite bake ---

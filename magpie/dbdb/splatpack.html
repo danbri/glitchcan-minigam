@@ -64,10 +64,6 @@
     width:64px; height:64px; border-radius:50%; display:none;
     background:rgba(2,16,8,.72); border:2px solid rgba(159,232,176,.6);
     color:#9fe8b0; font:bold 13px monospace; }
-  #resetBtn2 { position:fixed; bottom:36px; right:22px; z-index:9;
-    display:none; background:rgba(2,16,8,.72);
-    border:1px solid rgba(159,232,176,.5); border-radius:8px;
-    color:#9fe8b0; font:11px monospace; padding:6px 10px; }
   #flash { position:fixed; left:0; right:0; top:38%; z-index:12; text-align:center;
     font:bold 26px monospace; letter-spacing:.25em; color:#ffe28a;
     text-shadow:0 0 18px rgba(255,200,80,.8); pointer-events:none; opacity:0;
@@ -88,7 +84,6 @@
 <button type="button" id="menuBtn" aria-label="menu">&#9776;</button>
 <div id="menu" class="hidden"></div>
 <button type="button" id="jumpBtn" aria-label="jump">JUMP</button>
-<button type="button" id="resetBtn2" aria-label="reset run">&#8634; RESET</button>
 <div id="flash"></div>
 <div id="elDrawer" class="hidden"></div>
 <pre id="err"></pre>
@@ -227,7 +222,7 @@ function jungleLayout(){
   const FRONT=['fern','fern2','fern3','plantbed','plantbed2'];
   function wallRun(x0,z0,x1,z1,doors){
     JUNGLE_INFO.segs.push({ x0,z0,x1,z1, doors:doors||[] });
-    const len=Math.hypot(x1-x0,z1-z0), n=Math.max(2,Math.round(len/1.1));
+    const len=Math.hypot(x1-x0,z1-z0), n=Math.max(2,Math.round(len/1.35));
     for(let i=0;i<=n;i++){
       const t=i/n, x=x0+(x1-x0)*t, z=z0+(z1-z0)*t;
       if((doors||[]).some(d=>Math.abs(t-d)<0.11)) continue;   // a doorway
@@ -451,6 +446,7 @@ function pelletTally(){
    buzz in the hand. All three fire from one place.
    ========================================================= */
 const sfx={ ctx:null };
+addEventListener('pointerdown',()=>{ sfxCtx(); },{ once:false, passive:true });
 function sfxCtx(){
   if(!sfx.ctx){ try{ sfx.ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
   if(sfx.ctx && sfx.ctx.state==='suspended') sfx.ctx.resume().catch(()=>{});
@@ -619,9 +615,8 @@ function upRoamers(dt){
         const sx=r.x-o.x, sz=r.z-o.z, sd=Math.hypot(sx,sz);
         if(sd<0.55&&sd>0.001){ dx+=sx/sd*0.7; dz+=sz/sd*0.7; } }
       const l=Math.hypot(dx,dz)||1;
-      const wob=Math.sin(t*1.7+r.phase*3)*0.35;   // the lurch
       r.x+=(dx/l)*r.speed*dt; r.z+=(dz/l)*r.speed*dt;
-      r.heading=Math.atan2(dx/l,dz/l)+wob*0.3;
+      r.heading=Math.atan2(dx/l,dz/l);        // pure — the row must not lurch
       r.phase+=dt*2.1;
     }
     /* billboard toward the camera; pick the sheet row for the
@@ -633,9 +628,17 @@ function upRoamers(dt){
     let rel=camB - r.heading*180/Math.PI;
     rel=((rel%360)+360)%360;
     const mm=sprMeta(r.kind);
-    const row=Math.round(rel/45)%SPR.bearings;
+    /* row HYSTERESIS: only re-pick the bearing row once the relative
+       angle is well past the boundary — kills the frame-to-frame
+       flicker when a walker sits near a 22.5-degree seam */
+    const cand=Math.round(rel/45)%SPR.bearings;
+    if(r.row===undefined) r.row=cand;
+    else if(cand!==r.row){
+      let dRow=rel-r.row*45; while(dRow>180)dRow-=360; while(dRow<-180)dRow+=360;
+      if(Math.abs(dRow)>32) r.row=cand;
+    }
     const col=Math.floor(r.phase)%mm.phases;
-    const u=col/mm.phases, v=1-(row+1)/SPR.bearings;
+    const u=col/mm.phases, v=1-(r.row+1)/SPR.bearings;
     if(m0x(r.m,u,v)) r.m.update();
   }
 }
@@ -743,7 +746,7 @@ function hideStick(){ stickBase.style.display=stickNub.style.display='none'; tou
 addEventListener('touchstart',e=>{
   if(!playMode) return;
   for(const tt of e.changedTouches){
-    if(tt.target.closest && tt.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn,#resetBtn2')) continue;
+    if(tt.target.closest && tt.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn')) continue;
     if(tt.clientX<innerWidth*0.55 && stickId===null){
       stickId=tt.identifier; stickOrigin=[tt.clientX,tt.clientY]; showStick(tt.clientX,tt.clientY);
     }
@@ -810,7 +813,6 @@ function setPlay(on){
     if(!player.e) setPlayerVisual(beastT>0?avatar:'hero');
     player.e.enabled=true;
     jumpBtn.style.display='block';
-    resetBtn2.style.display='block';
     if(curLay==='maze' && MAZE_INFO){
       player.spawn=[MAZE_INFO.ox+1*MAZE_INFO.CS, MAZE_INFO.oz+1*MAZE_INFO.CS];
     } else if(JUNGLE_INFO){
@@ -828,7 +830,6 @@ function setPlay(on){
   } else {
     if(player.e) player.e.enabled=false;
     jumpBtn.style.display='none';
-    resetBtn2.style.display='none';
     avSel.classList.add('hidden');
   }
   const pb=document.getElementById('mPlay');
@@ -876,7 +877,7 @@ function upPlayer(dt){
       }
     }
     if(pac.dir){
-      const sp=1.55*dt;
+      const sp=1.7*dt;
       if(pac.dir[0]) player.z+=(ctrZ-player.z)*Math.min(1,dt*10);
       else player.x+=(ctrX-player.x)*Math.min(1,dt*10);
       const along=(player.x-ctrX)*pac.dir[0]+(player.z-ctrZ)*pac.dir[1];
@@ -893,7 +894,7 @@ function upPlayer(dt){
     const yr=yaw*Math.PI/180;
     const fx=-Math.sin(yr), fz=-Math.cos(yr);       // camera-forward on ground
     const rx=-fz, rz=fx;
-    const sp=1.6*dt;
+    const sp=2.6*dt;
     let nx=player.x+(rx*jx+fx*jy)*sp, nz=player.z+(rz*jx+fz*jy)*sp;
     if(layoutBlocked(nx,nz)){                        // slide along walls
       if(!layoutBlocked(nx,player.z)) nz=player.z;
@@ -907,7 +908,7 @@ function upPlayer(dt){
   /* the hop: a real escape move — you cannot be caught mid-air */
   player.jumpBuf=Math.max(0,player.jumpBuf-dt);
   const grounded=player.y<=0.001;
-  if(player.jumpBuf>0 && grounded){ player.jumpBuf=0; player.vy=4.6; }
+  if(player.jumpBuf>0 && grounded){ player.jumpBuf=0; player.vy=7.5; }
   if(!grounded || player.vy>0){
     player.vy-=11*dt;
     player.y=Math.max(0, player.y+player.vy*dt);
@@ -1002,7 +1003,7 @@ function build(name){
       pelletTally();
     } else if(name==='jungle'){
       const rr=mulberry32(66);
-      for(let i=0;i<6;i++)
+      for(let i=0;i<5;i++)
         spawnRoamer('zombie', (rr()-0.5)*9, (rr()-0.5)*7, 'zombie');
       const JI=JUNGLE_INFO;
       spawnMorph(-JI.W2/2, -JI.H2/2);
@@ -1015,7 +1016,7 @@ function build(name){
 let yaw=25, pitch=14, dist=1.0, idle=0;
 let drag=null, pinch0=0;
 addEventListener('pointerdown',e=>{
-  if(e.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn,#resetBtn2')) return;
+  if(e.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn')) return;
   if(playMode && e.clientX<innerWidth*0.55) return;   // left half is the stick
   drag=[e.clientX,e.clientY]; });
 let lastCamDrag=-9;
@@ -1091,7 +1092,7 @@ addEventListener('pointerup',e=>{
   const moved=Math.hypot(e.clientX-downAt2[0], e.clientY-downAt2[1]);
   downAt2=null;
   if(moved>8) return;
-  if(e.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn,#resetBtn2')) return;
+  if(e.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn')) return;
   const scr=new pc.Vec3();
   let best=null, bd=44;
   for(const p2 of pellets){
@@ -1111,8 +1112,6 @@ addEventListener('pointerup',e=>{
 const menuBtn=document.getElementById('menuBtn');
 const menu=document.getElementById('menu');
 const drawer=document.getElementById('elDrawer');
-const resetBtn2=document.getElementById('resetBtn2');
-resetBtn2.addEventListener('click',resetRun);
 menuBtn.addEventListener('click',()=>{
   menu.classList.toggle('hidden');
   if(menu.classList.contains('hidden')){ drawer.classList.add('hidden'); avSel.classList.add('hidden'); }
@@ -1166,14 +1165,9 @@ for(const el of pack.elements){
 const EMBED = Q.has('embed') || parent!==window;
 if(EMBED){
   const xb=document.createElement('button');
-  xb.type='button';
-  xb.textContent='\u2715 SURFACE';
-  xb.style.cssText='position:fixed;top:6px;right:8px;z-index:30;'
-    +'background:rgba(0,30,12,.6);border:1px solid rgba(159,232,176,.5);'
-    +'color:#9fe8b0;font:11px monospace;letter-spacing:.2em;'
-    +'padding:6px 10px;border-radius:4px;';
+  xb.type='button'; xb.textContent='\u2715 SURFACE';
   xb.addEventListener('click',()=>parent.postMessage({ jsdDream:'exit' },'*'));
-  document.body.appendChild(xb);
+  menu.insertBefore(xb, menu.firstChild);
 }
 /* CRT overlay policy: dbdb2 keeps its shader CRT — that is its face.
    The dreams are the CONTRAST: the scans are photographs, and the
