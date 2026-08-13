@@ -346,12 +346,103 @@ const sprMeta=k=>{
   const m=(SPR&&SPR.meta&&SPR.meta[k])||{ phases:SPR?SPR.phases:4, cell:SPR?SPR.cell:128 };
   return { ...m, grid:m.grid||m.phases };   // grid = atlas columns (bank fold)
 };
+const sprErr={};
+/* VERSIONED SPRITE URLS. A device that has been loading these files for
+   days holds cached copies, and two things can then go wrong that no
+   fresh browser ever shows:
+   · a 404 cached during the minutes between a page deploying and its
+     new asset deploying, served long after the file exists;
+   · a copy cached from a NON-CORS request, which a later crossOrigin
+     request may not reuse — WebKit (so every browser on iOS) is strict
+     here, and the sprite loader started asking for CORS on 13 Aug.
+   Both are stale-entry problems, and a new URL has no stale entry. Bump
+   this whenever the atlases are rebaked. */
+const SPRV='3';
+/* LOAD THE ATLAS OURSELVES. Proven under WebKit — the engine every iOS
+   browser uses — inside a sandboxed guest frame:
+     plain <img>                 -> texImage2D THREW SecurityError
+                                    ("The operation is insecure.")
+     <img crossOrigin=anonymous> -> upload ok
+     fetch -> createImageBitmap  -> upload ok
+   A guest runs at an OPAQUE ORIGIN, so its own files are cross-origin
+   to it and an <img> fetched without CORS is tainted. That is the white
+   cards, and then the invisible player. Asking the engine's loader for
+   CORS did not reach it, so the fetch path is taken directly here: it
+   is a dozen lines, it is the path WebKit accepts, and it cannot be
+   changed underneath us by an engine upgrade. */
+async function loadAtlasTexture(url){
+  const tex=new pc.Texture(app.graphicsDevice,{ mipmaps:false });
+  tex.minFilter=pc.FILTER_LINEAR; tex.magFilter=pc.FILTER_LINEAR;
+  tex.addressU=pc.ADDRESS_CLAMP_TO_EDGE; tex.addressV=pc.ADDRESS_CLAMP_TO_EDGE;
+  let src=null;
+  try{
+    const r=await fetch(url, { mode:'cors' });
+    if(!r.ok) throw new Error('http '+r.status);
+    src=await createImageBitmap(await r.blob());
+  }catch(e){
+    src=await new Promise((res,rej)=>{ const im=new Image();
+      im.crossOrigin='anonymous';                 // the other path WebKit accepts
+      im.onload=()=>res(im); im.onerror=()=>rej(new Error('img failed'));
+      im.src=url; });
+  }
+  tex.setSource(src);
+  return tex;
+}
 function sprAsset(kind){
   if(sprAssets[kind]) return sprAssets[kind];
-  const a=new pc.Asset('spr-'+kind,'texture',{ url:SPRDIR+kind+'.png' },
-    { crossOrigin:'anonymous' });
-  app.assets.add(a); app.assets.load(a);
-  sprAssets[kind]=a; return a;
+  /* a tiny asset-shaped record, so every call site keeps working */
+  const a={ loaded:false, resource:null, _cbs:[],
+    on(ev,cb){ if(ev==='load') this._cbs.push(cb); else if(ev==='error') this._err=cb; } };
+  sprAssets[kind]=a;
+  const ok=t=>{ a.resource=t; a.loaded=true;
+    a._cbs.forEach(cb=>{ try{ cb(a); }catch(e){} }); };
+  loadAtlasTexture(SPRDIR+kind+'.png?v='+SPRV)
+    .catch(e=>{
+      /* ONE HONEST RETRY, from the other tier's URL. If the phone-sized
+         sheet cannot be had, a heavier one that renders beats a hero
+         nobody can see; and it is a different URL, so a poisoned cache
+         entry cannot follow us. */
+      const alt=(SPRDIR==='sprites/lite/'?'sprites/':'sprites/lite/')+kind+'.png?v='+SPRV+'r';
+      sprErr[kind]=String(e&&e.message||e).slice(0,48);
+      return loadAtlasTexture(alt);
+    })
+    .then(ok)
+    .catch(e=>{ sprErr[kind]=String(e&&e.message||e).slice(0,48);
+      if(a._err) try{ a._err(e); }catch(x){} });
+  return a;
+}
+/* SELF-TEST, RUN ON THE DEVICE. This machine renders every build
+   correctly, so the phone has to answer for itself: can it fetch the
+   atlas at all, decode it as an image, decode it as an ImageBitmap,
+   and upload each to a texture? Runs once, cheaply, only when asked. */
+const sprProbe={ state:'idle' };
+async function runSprProbe(){
+  if(sprProbe.state!=='idle') return sprProbe;
+  sprProbe.state='running';
+  const url=SPRDIR+'hero.png?v='+SPRV+'p';
+  const gl=document.createElement('canvas').getContext('webgl');
+  const up=src=>{ try{ const t=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,t);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
+      const e=gl.getError(); gl.deleteTexture(t);
+      return e===0?'ok':'gl'+e; }
+    catch(e){ return 'THREW '+e.name; } };
+  try{
+    const r=await fetch(url); sprProbe.http=r.status;
+    const blob=await r.blob(); sprProbe.bytes=blob.size;
+    try{ const bm=await createImageBitmap(blob);
+      sprProbe.bitmap=bm.width+'>'+up(bm); }
+    catch(e){ sprProbe.bitmap='THREW '+e.name; }
+  }catch(e){ sprProbe.http='fetch '+e.name; }
+  await new Promise(res=>{ const im=new Image();
+    im.onload=()=>{ sprProbe.img=im.naturalWidth+'>'+up(im); res(); };
+    im.onerror=()=>{ sprProbe.img='LOAD FAILED'; res(); };
+    im.src=url; });
+  await new Promise(res=>{ const im=new Image(); im.crossOrigin='anonymous';
+    im.onload=()=>{ sprProbe.imgCors=im.naturalWidth+'>'+up(im); res(); };
+    im.onerror=()=>{ sprProbe.imgCors='LOAD FAILED'; res(); };
+    im.src=url+'?c=1'; });
+  sprProbe.state='done';
+  return sprProbe;
 }
 /* =========================================================
    EMOJI DOTS — render any emoji to an offscreen canvas, scan its
@@ -1278,7 +1369,17 @@ app.on('update',dt=>{
             +' a:'+(S.assetW||'-')
             +' m:'+(S.heroTextured?'y':'n')
             +' v:'+(S.heroShown?'y':'n')+'/'+S.roamersShown
-            +'<br>'+S.loaderPath+' gl'+S.maxTex):'');
+            +'<br>'+S.loaderPath+' gl'+S.maxTex
+            +(S.err?('<br>err '+S.err):'')
+            +((S.probe&&S.probe.state==='done')
+               ? ('<br>http '+S.probe.http+' '+((S.probe.bytes/1024)|0)+'k'
+                 +'<br>bm '+(S.probe.bitmap||'-')
+                 +'<br>img '+(S.probe.img||'-')
+                 +'<br>cors '+(S.probe.imgCors||'-'))
+               : '')
+          ):'');
+      // a broken chain asks the device to explain itself, once
+      if(S && !S.heroTextured) runSprProbe();
       hudAcc=0; hudN=0; hudLast=nowW;
     }
   }
@@ -1514,6 +1615,8 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
       roamersShown:roamers.filter(r=>r.e.children[0]&&r.e.children[0].enabled).length,
       // which decode path this browser gives PlayCanvas: an ImageBitmap
       // is never origin-tainted, a plain <img> in a guest frame IS
+      err:sprErr.hero||sprErr.hero2||sprErr.herorun||null,
+      probe:sprProbe,
       loaderPath:(typeof createImageBitmap==='function'?'bitmap':'img'),
       maxTex:(()=>{ try{ return app.graphicsDevice.maxTextureSize; }catch(e){ return '?'; } })() }; },
   get perf(){ return { trimLevel, decor:DECOR.length,
