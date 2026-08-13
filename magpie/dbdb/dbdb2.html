@@ -1490,6 +1490,56 @@ function npcPose(n, t, dt){
     r.body.position.y+=Math.abs(Math.sin(t*9))*0.045; }
 }
 
+/* --- SPEECH: a pooled bubble that follows a head ---
+   Four canvases, reused. The world already ACTS its life (a slap, a
+   pour, a shrug); a line now and then says what the act is about, and
+   two of them together are a transaction the player can read from
+   across the parade. Sparse on purpose: a talkative crowd is noise. --- */
+const BUBBLES=[];
+for(let i=0;i<4;i++){
+  const cv=document.createElement('canvas'); cv.width=384; cv.height=96;
+  const tex=new THREE.CanvasTexture(cv);
+  /* sized to be READ from the isometric camera: the first pass drew a
+     1.5-unit bubble that arrived on screen as a dark hyphen */
+  const pl=new THREE.Mesh(new THREE.PlaneGeometry(2.8,0.7),
+    new THREE.MeshBasicNodeMaterial({ map:tex, transparent:true }));
+  pl.visible=false; scene.add(pl);
+  BUBBLES.push({ cv, g:cv.getContext('2d'), tex, pl, npc:null, t:0 });
+}
+function say(n, text, secs){
+  if(!n) return;
+  /* one bubble per speaker; else a free one; else steal the oldest */
+  const b=BUBBLES.find(x=>x.npc===n) || BUBBLES.find(x=>!x.npc)
+        || BUBBLES.reduce((a,c)=>a.t<c.t?a:c);
+  b.npc=n; b.t=secs||2.8;
+  const g=b.g;
+  g.clearRect(0,0,384,96);
+  g.fillStyle='rgba(3,12,7,0.94)'; g.strokeStyle='#7ef0c0'; g.lineWidth=3;
+  g.beginPath();
+  if(g.roundRect) g.roundRect(4,4,376,64,12); else g.rect(4,4,376,64);
+  g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(172,66); g.lineTo(186,92); g.lineTo(206,66);
+  g.closePath(); g.fill(); g.stroke();
+  g.fillStyle='#e6fff2'; g.textAlign='center'; g.textBaseline='middle';
+  const line=String(text).slice(0,26);
+  /* shrink to fit rather than clip: a cut-off line reads as a bug */
+  let px=30; g.font='bold '+px+'px monospace';
+  while(g.measureText(line).width>352 && px>16){ px-=2; g.font='bold '+px+'px monospace'; }
+  g.fillText(line, 192, 37);
+  b.tex.needsUpdate=true; b.pl.visible=true;
+}
+function updateBubbles(dt){
+  for(const b of BUBBLES){
+    if(!b.npc){ if(b.pl.visible) b.pl.visible=false; continue; }
+    b.t-=dt;
+    if(b.t<=0 || !b.npc.r.g.visible){ b.npc=null; b.pl.visible=false; continue; }
+    const n=b.npc;
+    b.pl.position.set(n.x, n.y+2.5, n.z);
+    b.pl.rotation.y=camYaw;
+    b.pl.material.opacity=Math.min(1, b.t*3.5);
+  }
+}
+
 /* --- THE JOVIAL NEWT: cast --- */
 const BK=[
   spawnNPC({skin:0xe8b48c, shirt:0xf6f4ec, trouser:0x3a3630, hair:0x8a4b2a,
@@ -1509,6 +1559,9 @@ let slapT=9, serveT=5, shuffleT=4, slapAct=-1, strollT=14;
 function updateBar(dt,t){
   for(const k of BK){
     k.timer-=dt;
+    /* goods do not stay in a hand for ever: behind the counter they go */
+    if(k.data.holdT!=null){ k.data.holdT-=dt;
+      if(k.data.holdT<=0){ dropProp(k); delete k.data.holdT; } }
     if(k.path){ if(npcStep(k,dt)){ k.path=null; k.mode=k.data.next||'idle';
         k.timer=1.5+Math.random()*3; } }
     else if(k.mode!=='slapping' && k.timer<=0){
@@ -1537,6 +1590,7 @@ function updateBar(dt,t){
       q.data.served-=dt;
       if(q.data.served<=0){ delete q.data.served;
         giveProp(q,'mug');
+        if(Math.random()<0.4) say(q, chatPick(['CHEERS','THAT IS THE ONE','GO ON THEN']));
         const k=q.data.keeper; delete q.data.keeper;
         if(k && Math.random()<0.5){ k.laugh=1.4; q.stagger=1; q.laugh=1.2;
           if(chip.ctx&&!chip.muted) chip.hit(chip.ctx.currentTime,0.16,0.45); }
@@ -1560,16 +1614,22 @@ function updateBar(dt,t){
   if(strollT<=0){ strollT=22+Math.random()*18;
     const q=patrons.find(p2=>p2.mode==='jostle'&&!p2.path&&p2.data.served==null);
     if(q){
-      const stop=Math.random()<0.5?[-27,1,-1.6]:[-27,1,-11.5];
-      npcSetPath(q,[[q.x,1,3.4],[-22,1,0.5],stop],'walk');
-      q.data.next='browse'; q.data.stroller=1;
+      /* the shops are open to the STREET and walled everywhere else, so
+         a stroll goes down the lane and turns in along the aisle. The
+         diagonal short cut walked into the greengrocer's south wall. */
+      const aisle=Math.random()<0.5?-1.6:-11.5;
+      npcSetPath(q,[[q.x,1,7.2],[-20,1,7.2],[LANE_X,1,7.2],
+                    [LANE_X,1,aisle],[-24,1,aisle],[-27,1,aisle]],'walk');
+      q.data.next='browse'; q.data.stroller=1; q.data.aisleZ=aisle;
     }
   }
   for(const q of patrons){
     if(q.data.stroller && q.mode==='browse' && !q.path){
       q.timer-=dt; q.facing=Math.PI;
-      if(q.timer<=0){ delete q.data.stroller;
-        npcSetPath(q,[[-22,1,0.5],[q.x,1,3.4],[QUEUE_X[q.slot],1,6.3]],'walk');
+      if(q.timer<=0){ const az=q.data.aisleZ||-1.6;
+        delete q.data.stroller; delete q.data.aisleZ;
+        npcSetPath(q,[[-24,1,az],[LANE_X,1,az],[LANE_X,1,7.2],[-20,1,7.2],
+                      [QUEUE_X[q.slot],1,6.3]],'walk');
         q.data.next='jostle'; }
     }
   }
@@ -1602,6 +1662,7 @@ function updateBar(dt,t){
     if(was<0.5 && slapAct>=0.5){
       BK[0].stagger=0.7; BK[1].stagger=0.7;
       BK[0].laugh=1.6; BK[1].laugh=1.6;
+      say(BK[Math.random()<0.5?0:1], 'HAAAA!', 1.6);
       if(chip.ctx&&!chip.muted) chip.hit(chip.ctx.currentTime,0.2,0.5);
     }
     if(slapAct>2.6){ slapAct=-1;
@@ -1652,14 +1713,34 @@ for(let i=0;i<6;i++){
   const s=spawnNPC({}, -12,6,1, 0, 'aboard');
   s.r.g.visible=false; shoppers.push(s);
 }
+/* ROUTES ARE DRAWN WITH A BODY IN MIND. The step probe is a POINT at the
+   walker's centre, so a route that merely misses a wall still buries half
+   a walker in it — the field report ("walks half into a block") and a
+   frame-by-frame audit agree, and the audit named the places:
+     · the stair foot ran west at z 3.0-3.15, grazing the stair columns
+       (which end at z 3.0) for twelve units
+     · the pub errands cut the corner through the NORTH WALL instead of
+       using the door carved at z 6-9
+     · the shop run at x -18.3 clipped the street lamp at (-19, -8)
+   Every leg below now keeps a 0.4-unit skin off the geometry. Keep it
+   that way: tools/test-npc-routes.mjs fails if a route drifts back. */
 const STAIRS_DOWN=[[-10.8,6,1.2],[-8.5,6,1.2],[-7.5,5,1.2],[-6.5,4,1.2],
-  [-5.5,3,1.2],[-4.5,2,1.2],[-3.9,1,2.4],[-16,1,3.4]];
+  [-5.5,3,1.2],[-4.5,2,1.2],[-3.4,1,1.6],[-3.4,1,3.4],[-16,1,3.4]];
+/* the pub has ONE door (carved at x -19, z 6-9). Walkers use it. */
+/* the lane keeps HALF A CELL off the pub's north-east corner. At -17.6
+   a walker on the line was clear, but the slide-and-stall recovery in
+   npcStep makes small excursions, and those clipped the corner. Margin
+   is cheaper than a perfect step function. */
+const LANE_X=-17.2;                      // the north-south street lane
+const TO_NEWT=[[LANE_X,1,4],[LANE_X,1,7.2],[-20,1,7.2],[-24.6,1,6.4]];
+const FROM_NEWT=[[-20,1,7.2],[LANE_X,1,7.2],[LANE_X,1,-2]];
 function unloadShoppers(){
   const aboard=shoppers.filter(s=>s.mode==='aboard');
   const nOut=Math.min(aboard.length, 1+Math.floor(Math.random()*3));
   for(let i=0;i<nOut;i++){
     const s=aboard[i];
-    s.x=-12.4; s.y=6; s.z=0.4+Math.random()*1.6;
+    /* the spread stops short of the platform's PET desk at (-12,6,2) */
+    s.x=-12.4; s.y=6; s.z=0.4+Math.random()*1.0;
     s.r.g.visible=true;
     const shop = Math.random()<0.5 ? 'veg' : 'bread';
     s.data.shop=shop;
@@ -1670,6 +1751,41 @@ function unloadShoppers(){
     s.data.next='browse';
   }
 }
+/* --- A DELIVERY IS A TRANSACTION, AND A TRANSACTION IS NEWS ---
+   The docker hands the shop order across the counter; the keeper takes
+   it and pours for them. Then it goes OUT: the count reaches the story
+   as a variable, and the line reaches the world's own PET terminals as
+   gossip. The story feeds the terminals, the terminals feed the story
+   back — the same bus, running both ways. --- */
+let skydockTrades=0;
+const DELIVERY_LINE={
+  veg:  ['GREENGROCER SENT THESE', 'STILL WET FROM THE STALL', 'SPUDS, AS ASKED'],
+  bread:['ONE LOAF, STILL WARM',   'BAKERY OWES YOU NOTHING NOW', 'BREAD FOR THE NEWT'],
+};
+const THANKS=['YOU ARE A MARVEL','ON THE HOUSE, THEN','GOOD LAD. SIT DOWN'];
+/* NOT `pick`: that name is taken by the SEEDED world generator.
+   Chatter is unseeded — it must not move the level's stream. */
+const chatPick=a=>a[Math.floor(Math.random()*a.length)];
+function completeDelivery(s){
+  const k=s.data.keeper; delete s.data.keeper;
+  dropProp(s);
+  if(k){
+    giveProp(k, s.data.shop==='veg'?'veg':'loaf', 'L');
+    k.data.holdT=7; k.laugh=1.4;
+    say(k, chatPick(THANKS));
+  }
+  giveProp(s,'mug');                       // paid in beer, as is traditional
+  s.laugh=1.1;
+  if(chip.ctx&&!chip.muted) chip.tone(2,76,chip.ctx.currentTime,0.09,0.5);
+  skydockTrades++;
+  gossip((s.data.shop==='veg'?'VEG':'BREAD')+' RAN TO THE NEWT. THAT IS '
+    +skydockTrades+' TODAY.');
+  if(finkHost){ try{ parent.postMessage(
+    { type:'set-variable', name:'skydock_trades', value:skydockTrades }, '*');
+  }catch(err){} }
+  s.mode='pint'; s.timer=5+Math.random()*4;
+}
+
 function updateShoppers(dt){
   for(const s of shoppers){
     if(s.mode==='aboard') continue;
@@ -1679,6 +1795,11 @@ function updateShoppers(dt){
         if(nx==='browse'){ s.mode='browse'; s.timer=4+Math.random()*3; s.facing=Math.PI; }
         else if(nx==='hail'){ s.mode='hail'; s.facing=Math.PI/2; summonCar(s); }
         else if(nx==='pint'){ s.mode='pint'; s.timer=4+Math.random()*4; }
+        else if(nx==='deliver'){
+          s.mode='deliver'; s.timer=2.4; s.facing=0;
+          s.data.keeper=BK.reduce((a,b)=>Math.abs(a.x-s.x)<Math.abs(b.x-s.x)?a:b);
+          say(s, chatPick(DELIVERY_LINE[s.data.shop]||DELIVERY_LINE.bread));
+        }
         else s.mode=nx||'idle';
       }
     } else if(s.mode==='browse'){
@@ -1686,22 +1807,30 @@ function updateShoppers(dt){
       if(s.timer<=0){
         giveProp(s, s.data.shop==='veg'?'veg':'loaf', s.data.shop==='veg'?'L':'R');
         const back = s.data.shop==='veg'
-          ? [[-24,1,-11.5],[-18.3,1,-11]]
-          : [[-24,1,-1.6],[-18.3,1,-2]];
+          ? [[-24,1,-11.5],[LANE_X,1,-11]]
+          : [[-24,1,-1.6],[LANE_X,1,-2]];
         /* the sensible daily routine allows for a pint: some shoppers
            swing by the Newt on the way to the taxi rank */
-        if(Math.random()<0.45){
-          npcSetPath(s, back.concat([[-22,1,3.4],[-24.2,1,6.9]]), 'carry');
-          s.data.next='pint';
+        /* the shop order does not always go home. Some of it is a
+           DELIVERY: the Newt buys its bread and veg like anyone else,
+           and a docker who carries it in drinks on the house. */
+        const roll=Math.random();
+        if(roll<0.34){
+          npcSetPath(s, back.concat(TO_NEWT), 'carry'); s.data.next='deliver';
+        } else if(roll<0.62){
+          npcSetPath(s, back.concat(TO_NEWT), 'carry'); s.data.next='pint';
         } else {
           npcSetPath(s, back, 'carry'); s.data.next='hail';
         }
       }
     } else if(s.mode==='pint'){
-      s.timer-=dt; s.facing=Math.atan2(-26.5-s.x, 4-s.z);
+      s.timer-=dt; s.facing=0;                       // face the counter
       if(s.timer<=0){
-        npcSetPath(s, [[-22,1,3.4],[-18.3,1,-2]], 'carry'); s.data.next='hail';
+        npcSetPath(s, FROM_NEWT, 'carry'); s.data.next='hail';
       }
+    } else if(s.mode==='deliver'){
+      s.timer-=dt; s.facing=0;
+      if(s.timer<=0) completeDelivery(s);
     }
   }
 }
@@ -1817,7 +1946,8 @@ function rideArrive(){
     /* the story is the entry point, so the story is the destination */
     try{ parent.postMessage({ type:'complete', result:{
       success:true, score:skydockDiamonds,
-      variables:{ skydock_diamonds:skydockDiamonds, skydock_gems:skydockGems }
+      variables:{ skydock_diamonds:skydockDiamonds, skydock_gems:skydockGems,
+                  skydock_trades:skydockTrades }
     } }, '*'); }catch(err){}
   } else {
     backToTitle();
@@ -2901,6 +3031,13 @@ function echoDraw(){
   if(y<=88 && ln.trim()) g.fillText(ln.trim(),10,y);
   if(echoTex) echoTex.needsUpdate=true;
 }
+/* THE WORLD TALKS BACK. petEcho carries the STORY onto the terminals;
+   gossip carries the WORLD onto the same screens. Standalone there is no
+   story thread, so the first piece of gossip is what lights them up. */
+function gossip(line){
+  finkLines=(finkLines||[]).concat([line]).slice(-12);
+  if(!echoTex) petEcho(finkLines); else { echoIdx=finkLines.length-1; echoDraw(); }
+}
 function petEcho(lines){
   finkLines=lines.filter(l=>l && l.length>2);
   if(!finkLines.length) return;
@@ -3224,6 +3361,7 @@ function animate(){
     updateShadow(gu.shadow, gu.g.position.x, gu.g.position.y, gu.g.position.z);
   }
   for(const pl of echoPlanes) pl.rotation.y=camYaw;
+  updateBubbles(dt);
   updateShadow(duckShadow, p.x, p.y, p.z);
   if(p.dead) duckShadow.visible=false;
 
@@ -3488,12 +3626,17 @@ window.__jsd = {
     inSolid:n.r.g.visible && !!cellSolid(Math.floor(n.x),Math.floor(n.y+0.01),Math.floor(n.z)) })); },
   npcSoak(sec=60){ let ts=0;
     for(let i=0;i<sec*30;i++){ ts+=1/30; updateNPCs(1/30, ts); } },
+  get trades(){ return skydockTrades; },
+  get speech(){ return BUBBLES.filter(b=>b.npc).length; },
   get maglev(){ return { state:maglev.state, z:Math.round(maglev.z*10)/10 }; },
   get carCount(){ return cars.length; },
   get pushDbg(){ return {...pushDbg}; },
   push(dx,dz){ pushCd=0; tryPushCrate(dx,dz); },
   teleport(x,y,z){ p.x=x; p.y=y; p.z=z; p.vx=p.vy=p.vz=0; p.fallFrom=y; },
   mute(){ chip.muted=true; if(chip.master) chip.master.gain.value=0; },
+  __cellSolid:(x,y,z)=>!!cellSolid(x,y,z),
+  __stepNPCs:(dt,t)=>updateNPCs(dt,t),
+  get __npcs(){ return npcs; },
 };
 </script>
 </body>

@@ -5,6 +5,7 @@
 oooOO`
 
 VAR skydock_gems = 0
+VAR skydock_trades = 0
 VAR skydock_diamonds = 0
 
 -> skydock
@@ -27,6 +28,8 @@ The mess-hall veterans lean in, delighted to be asked.
 
 "The candy terminals by THE JOVIAL NEWT? Jacked straight into somebody's dreams. Dreams of PLACES. Old places. Earth places."
 
+"Watch the dockers, too. Half the shop orders never go home — they go over the Newt's counter for a pint. That trade is older than the station."
+
 "Bank three diamonds in there and the static owes you a favour. That's not a rumour, that's ECONOMICS."
 
 "And the grown worlds — the maze, the jungle — they say the gems in those were never mined. They were STAMPED."
@@ -47,6 +50,10 @@ Jack into the candy terminals for the dreams. When you have had enough, the car 
 The shuttle sets you down and the mess hall takes you back. The veterans look up from their tea.
 
 + [Report what you heard]
+    {skydock_trades > 0:
+        "And the Newt got its bread off the dock again," you add. "{skydock_trades} runs, I counted."
+        A veteran taps the table. "That is the only economy on this station that WORKS. Bread for beer, and no terminal takes a cut."
+    }
     {skydock_diamonds >= 3:
         You lay {skydock_diamonds} dream-cut diamonds on the table. The room goes quiet.
         "That," says the oldest veteran, "is ticket-shaped." She slides one back to you. "Keep auditing. The whispers are adding up to a route home."
