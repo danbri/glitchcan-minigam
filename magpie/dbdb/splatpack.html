@@ -154,6 +154,11 @@ app.setCanvasResolution(pc.RESOLUTION_AUTO);
    (2.25x) and nobody's eye can tell. ?dpr= overrides for testing. */
 app.graphicsDevice.maxPixelRatio=Math.min(devicePixelRatio,
   parseFloat(Q_early_dpr()||'1.5'));
+/* ?q=0..4 pins a quality rung and turns the governor off, so a field
+   report can be reproduced exactly rather than described */
+const QPIN=(()=>{ try{ const v=new URLSearchParams(location.search).get('q');
+  return v==null?null:Math.max(0,Math.min(4,parseInt(v,10)||0)); }catch(e){ return null; } })();
+let QAUTO = QPIN===null;
 function Q_early_dpr(){ try{ return new URLSearchParams(location.search).get('dpr'); }catch(e){ return null; } }
 addEventListener('resize',()=>app.resizeCanvas());
 app.start();
@@ -177,9 +182,21 @@ app.root.addChild(camE);
 /* pack tier: phones get HALF the Gaussians (tools/pack-lite.mjs).
    Splat COUNT is the vertex+sort budget the DPR cap cannot touch.
    ?pack=full / ?pack=lite override the sniff either way. */
+/* A USER-AGENT IS NOT A GPU. The sniff gave a MacBook Air the full
+   pack because it is not a phone — and an integrated laptop GPU
+   driving a Retina panel is far closer to a phone than to a
+   workstation. Field report: the swamp ran at 5-12 fps there.
+   So the sniff is only the FIRST GUESS, and the machine's own frame
+   times overrule it: once the governor has had to drop quality on
+   this device, the choice is remembered and the next load starts
+   lite. localStorage THROWS at an opaque origin (every guest frame),
+   so every touch of it is guarded. */
 const PACKQ=Q.get('pack');
+function prefGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function prefSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 const LITE = PACKQ==='full' ? false : PACKQ==='lite' ? true
-  : /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+  : prefGet('splatpack-tier')==='lite'
+  || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 const PACKDIR='splats/pack/'+(LITE?'lite/':'');
 const pack=await (await fetch('splats/pack/pack.json')).json();
 const EL=Object.fromEntries(pack.elements.map(e=>[e.id,e]));
@@ -781,6 +798,15 @@ function spawnRoamer(kind, x, z, ai){
   roamers.push(r); return r;
 }
 function clearRoamers(){ for(const r of roamers) r.e.destroy(); roamers.length=0; }
+/* HIDE the last n citizens, never destroy them: the governor steps back
+   up when the machine recovers, and the horde has to be able to return */
+function trimRoamers(n){
+  roamers.forEach((r,i)=>{
+    const on = i < roamers.length-n;
+    if(r.hidden===!on) return;
+    r.hidden=!on; r.e.enabled=on;
+  });
+}
 function mazeOpen(cx,cz){
   const I=MAZE_INFO; if(!I) return false;
   if(cx<0||cz<0||cx>=I.W||cz>=I.H) return false;
@@ -1073,6 +1099,8 @@ function setPlay(on){
       player.spawn=[-JUNGLE_INFO.W2/2, JUNGLE_INFO.H2-1.2];
     }
     player.x=player.spawn[0]; player.z=player.spawn[1];
+    /* the cull is anchored to the player, who has just moved to spawn */
+    if(trimLevel>=3) applyQuality();
     player.caught=0; player.iframes=2;
     pac.dir=null; pac.want=null;
     dist=1.15; pitch=15;                     // start wide, take the scene in
@@ -1251,6 +1279,7 @@ function upPlayer(dt){
      cooldown stops machine-gun bumping. */
   player.iframes=Math.max(0,player.iframes-dt);
   if(player.iframes<=0 && beastT<=0 && player.y<0.35) for(const r of roamers){
+    if(r.hidden) continue;          // a citizen you cannot see cannot bump you
     if(Math.hypot(r.x-player.x, r.z-player.z)<0.45){
       player.caught++;                       // now counts BUMPS
       player.iframes=0.8;
@@ -1283,10 +1312,57 @@ let bounds=6;
    stamps in two steps: first every other tuft, then all of them.
    Gameplay geometry (walls, floors, props) never sheds. */
 const DECOR=[];
+/* ─────────── THE QUALITY GOVERNOR ───────────
+   The old one measured over FOUR seconds, could only turn decor off
+   and then clamp DPR to 1.15, never came back up, and only ran in
+   play mode. On a laptop at 8 fps it took twelve seconds to do its
+   whole repertoire and the scene was still unplayable.
+
+   What a splat scene actually costs is PIXELS x OVERDRAW: soft,
+   overlapping blobs, four million of them in the swamp. So the ladder
+   spends the cheap, invisible currency first (resolution), then the
+   scene's own depth (far stamps the player is not looking at), and
+   only then things they would notice.
+
+   It measures over 1.2s, steps DOWN one rung at a time, and steps
+   back UP when the machine has been comfortable for a while — a
+   laptop that struggles in the swamp should not stay crippled in the
+   maze. */
+const QUALITY=[
+  /* 0 */ { dpr:1.5,  decor:1,   cull:99, roam:0 },
+  /* 1 */ { dpr:1.25, decor:1,   cull:99, roam:0 },
+  /* 2 */ { dpr:1.0,  decor:0.5, cull:99, roam:0 },
+  /* 3 */ { dpr:1.0,  decor:0,   cull:7.5, roam:1 },
+  /* 4 */ { dpr:0.85, decor:0,   cull:5.5, roam:2 },
+];
 let trimLevel=0, fpsAcc=0, fpsN=0, lastWall=performance.now();
-function trimDecor(level){
-  DECOR.forEach((e,i)=>{ if(level>=2 || (i%2===0)) e.enabled=false; });
+let goodFor=0, cullT=0;
+const DPR_MAX=parseFloat(Q_early_dpr()||'1.5');
+const ALLST=[];                        // every stamp: entity + where it stands
+function applyQuality(){
+  const q=QUALITY[Math.min(trimLevel,QUALITY.length-1)];
+  const want=Math.min(devicePixelRatio, Math.min(DPR_MAX, q.dpr));
+  if(app.graphicsDevice.maxPixelRatio!==want){
+    app.graphicsDevice.maxPixelRatio=want; app.resizeCanvas();
+  }
+  /* FAR STAMPS FIRST. Punching holes in a hedge wall looks broken;
+     dropping the quarter of the arena behind the player does not, and
+     a gsplat entity costs its sort whether or not it is on screen. */
+  const px=player.x, pz=player.z;
+  for(const st of ALLST){
+    let on=true;
+    if(st.decor) on = q.decor===1 ? true : (q.decor===0 ? false : (st.i%2===0));
+    /* the cull is anchored to the PLAYER, so it only means anything in
+       play. In the catalog the stamps run off along x and a 7.5 radius
+       would blank the very thing being looked at. */
+    if(on && q.cull<90 && playMode)
+      on = Math.hypot(st.x-px, st.z-pz) < q.cull;
+    if(st.e.enabled!==on) st.e.enabled=on;
+  }
+  trimRoamers(q.roam);
 }
+function trimDecor(level){ trimLevel=level; applyQuality(); }
+if(QPIN!==null) trimLevel=QPIN;                 // ?q=N reproduces a report
 function build(name){
   curLay=name;
   if(playMode && name!=='maze' && name!=='jungle') setPlay(false);
@@ -1303,12 +1379,13 @@ function build(name){
     document.getElementById('hInfo').textContent=pack.elements.length+' ELEMENTS';
   } else {
     const lay=typeof LAYOUTS[name]==='function' ? LAYOUTS[name]() : LAYOUTS[name];
-    DECOR.length=0;
+    DECOR.length=0; ALLST.length=0;
     for(const s of lay){
       const e=stamp(s.el, s.at[0], s.at[1], s.yaw||0, s.s||1, s.y||0);
       if(s.decor) DECOR.push(e);
+      ALLST.push({ e, x:s.at[0], z:s.at[1], decor:!!s.decor, i:ALLST.length });
     }
-    if(trimLevel) trimDecor(trimLevel);
+    if(trimLevel) applyQuality();
     bounds=name==='maze'?7:(name==='jungle'?8:6);
     document.getElementById('hInfo').textContent='LAY · '+name.toUpperCase()
       +' · '+lay.length+' stamps';
@@ -1373,11 +1450,13 @@ app.on('update',dt=>{
     if(nowW-hudLast>500){
       const f=hudN/hudAcc, ms=1000*hudAcc/hudN;
       const S=window.__pack?window.__pack.sprites:null;
+      const SC=window.__pack?window.__pack.splats:null;
       hudBody.innerHTML=f.toFixed(1)+' fps · '+ms.toFixed(0)+'ms'
         +'<br>'+(LITE?'LITE':'FULL')+' pack · dpr '
         +app.graphicsDevice.maxPixelRatio
-        +'<br>trim '+trimLevel+' · '
+        +'<br>q'+trimLevel+(QAUTO?'':' PIN')+' · '
         +(canvas.width)+'\u00d7'+(canvas.height)
+        +(SC?('<br>'+(SC.total/1e6).toFixed(2)+'M splats · '+SC.stamps+' stamps'):'')
         +(S?('<br>spr '+(S.tier||'?')+' '+(S.cell||'?')+'px'
             +' a:'+(S.assetW||'-')
             +' m:'+(S.heroTextured?'y':'n')
@@ -1396,19 +1475,27 @@ app.on('update',dt=>{
       hudAcc=0; hudN=0; hudLast=nowW;
     }
   }
-  if(playMode && wdt<0.5){
+  if(wdt<0.5 && QAUTO){
     fpsAcc+=wdt; fpsN++;
-    if(fpsAcc>4){
+    if(fpsAcc>1.2){
       const fps=fpsN/fpsAcc; fpsAcc=0; fpsN=0;
-      if(fps<32 && trimLevel<3){
-        trimLevel++;
-        if(trimLevel<=2) trimDecor(trimLevel);
-        else { /* last resort: fewer pixels */
-          app.graphicsDevice.maxPixelRatio=Math.min(app.graphicsDevice.maxPixelRatio,1.15);
-          app.resizeCanvas();
-        }
-      }
+      if(fps<34 && trimLevel<QUALITY.length-1){
+        trimLevel++; goodFor=0; applyQuality();
+        /* a machine that needed this much help should not be asked the
+           same question tomorrow: start it lite next time */
+        if(trimLevel>=2 && !LITE) prefSet('splatpack-tier','lite');
+      } else if(fps>52 && trimLevel>0){
+        goodFor+=1.2;
+        if(goodFor>6){ trimLevel--; goodFor=0; applyQuality(); }
+      } else goodFor=0;
     }
+  }
+  /* The cull follows the player, so it needs refreshing as they walk —
+     and OUTSIDE the auto branch, or a pinned rung (?q=, the Dev menu)
+     would never cull at all. That is how the ladder measured as doing
+     almost nothing to the Gaussian count. */
+  if(wdt<0.5 && trimLevel>=3){
+    cullT+=wdt; if(cullT>0.4){ cullT=0; applyQuality(); }
   }
   t+=dt; idle+=dt;
   upPlayer(dt);
@@ -1422,6 +1509,7 @@ app.on('update',dt=>{
       let want=player.heading*180/Math.PI+180;
       let thr=null, td=4.2;
       for(const r of roamers){
+        if(r.hidden) continue;      // nor frame itself as the threat
         const d2=Math.hypot(r.x-player.x, r.z-player.z);
         if(d2<td){ td=d2; thr=r; }
       }
@@ -1576,6 +1664,17 @@ menuAdd(devSub,'PACK: '+(LITE?'LITE':'FULL')+' \u21c4',()=>{
   u.searchParams.set('pack', LITE?'full':'lite');
   location.href=u.toString();
 });
+/* QUALITY, by hand. AUTO is the governor; the numbered rungs pin it,
+   which is how a "it was slow on my laptop" report becomes a thing
+   two people can look at together. */
+const bQ=menuAdd(devSub,'QUALITY: AUTO',()=>{
+  if(QAUTO){ QAUTO=false; trimLevel=0; }
+  else if(trimLevel<QUALITY.length-1){ trimLevel++; }
+  else { QAUTO=true; trimLevel=0; }
+  applyQuality();
+  bQ.textContent='QUALITY: '+(QAUTO?'AUTO':('q'+trimLevel
+    +' · dpr '+QUALITY[trimLevel].dpr));
+});
 const bDpr=menuAdd(devSub,'DPR CAP: '+app.graphicsDevice.maxPixelRatio,()=>{
   const seq=[1.5,1.0,2.0];
   const cur=app.graphicsDevice.maxPixelRatio;
@@ -1660,6 +1759,15 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
       probe:sprProbe,
       loaderPath:(typeof createImageBitmap==='function'?'bitmap':'img'),
       maxTex:(()=>{ try{ return app.graphicsDevice.maxTextureSize; }catch(e){ return '?'; } })() }; },
+  /* THE SIZE OF THE SCENE, in the only unit that matters to a GPU.
+     Splats are soft and overlapping, so this number and the pixel
+     count together ARE the frame cost. Reported so a slow machine can
+     say what it was asked to draw. */
+  get splats(){
+    let n=0, k=0;
+    for(const id in pool) for(const e of pool[id])
+      if(e.enabled){ n += ((EL[id]&&EL[id].count)||0) * (LITE?0.5:1); k++; }
+    return { total:n, stamps:k, lay:curLay, lite:LITE }; },
   get perf(){ return { trimLevel, decor:DECOR.length,
     decorOn:DECOR.filter(e=>e.enabled).length,
     dprCap:app.graphicsDevice.maxPixelRatio, lite:LITE }; },
