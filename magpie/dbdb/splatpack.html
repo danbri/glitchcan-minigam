@@ -174,6 +174,28 @@ app.start();
    Set BEFORE any asset is created. */
 try { app.loader.getHandler('texture').crossOrigin = 'anonymous'; } catch (e) {}
 
+/* ─── USE THE ENGINE'S OWN SPLAT MACHINERY ───
+   PlayCanvas 2.21 renders unified gsplats (one world sorter, not one
+   per entity — that part we already had, by default) and ships a
+   scene-level budget/LOD system for exactly our problem: many stamps,
+   most of them far away. Every knob of it is OFF out of the box —
+   splatBudget 0 means "no limit" — and we had hand-rolled a cruder
+   version on top: a binary on/off distance cull. This is the engine's
+   version, which degrades smoothly instead.
+     splatBudget       a hard cap on splats drawn, spent by LOD
+     lodBehindPenalty  demote what is behind the camera
+     minPixelSize      drop splats too small to see (fill-rate)
+   The governor drives splatBudget as a continuous knob. */
+const GS=app.scene.gsplat||null;     // pc.Scene#gsplat (GSplatParams)
+if(GS){
+  GS.lodBehindPenalty=3;      // behind you is worth a third of in front
+  GS.minPixelSize=2.5;        // default 2; sub-pixel splats blend for nothing
+}
+/* the sort runs on a worker and reports its own time — device-side
+   truth about the half of the cost that is not fill-rate */
+let sortMs=0;
+try{ app.scene.on('gsplat:sorted', t=>{ sortMs=sortMs*0.8+(t||0)*0.2; }); }catch(e){}
+
 const camE=new pc.Entity('cam');
 camE.addComponent('camera',{ clearColor:new pc.Color(0.004,0.008,0.016),
   fov:60, nearClip:0.05, farClip:80 });
@@ -199,6 +221,13 @@ const LITE = PACKQ==='full' ? false : PACKQ==='lite' ? true
   || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 const PACKDIR='splats/pack/'+(LITE?'lite/':'');
 const pack=await (await fetch('splats/pack/pack.json')).json();
+/* LOD IS THE DEFAULT, and it makes the hand-cut lite pack redundant:
+   the same saving, chosen per stamp per frame by the engine instead of
+   once for everybody. ?pack=full / ?pack=lite still force the flat
+   compressed plys — which is also the fallback if the LOD pack is not
+   deployed beside the page. */
+const LODPACK = (PACKQ!=='full' && PACKQ!=='lite') && !!(pack.lod && pack.lod.ids);
+const LODSET = new Set((pack.lod && pack.lod.ids) || []);
 const EL=Object.fromEntries(pack.elements.map(e=>[e.id,e]));
 const CREDITS=[...new Set(pack.elements.map(e=>e.credit))].join('  ·  ');
 
@@ -206,7 +235,10 @@ const CREDITS=[...new Set(pack.elements.map(e=>e.credit))].join('  ·  ');
 const assets={};
 function assetFor(id){
   if(assets[id]) return assets[id];
-  const a=new pc.Asset(id,'gsplat',{ url:PACKDIR+EL[id].file });
+  const url = (LODPACK && LODSET.has(id))
+    ? 'splats/pack/lod/'+id+'/lod-meta.json'
+    : PACKDIR+EL[id].file;
+  const a=new pc.Asset(id,'gsplat',{ url });
   app.assets.add(a); app.assets.load(a);
   assets[id]=a; return a;
 }
@@ -1099,8 +1131,6 @@ function setPlay(on){
       player.spawn=[-JUNGLE_INFO.W2/2, JUNGLE_INFO.H2-1.2];
     }
     player.x=player.spawn[0]; player.z=player.spawn[1];
-    /* the cull is anchored to the player, who has just moved to spawn */
-    if(trimLevel>=3) applyQuality();
     player.caught=0; player.iframes=2;
     pac.dir=null; pac.want=null;
     dist=1.15; pitch=15;                     // start wide, take the scene in
@@ -1328,15 +1358,39 @@ const DECOR=[];
    back UP when the machine has been comfortable for a while — a
    laptop that struggles in the swamp should not stay crippled in the
    maze. */
+/* RATIOS, NOT NUMBERS. splatBudget turned out to be a TARGET, not just
+   a ceiling: the engine spends up to it, raising LOD levels until it
+   is used. Measured, that bit — the swamp draws 1.14M under the plain
+   distance rule, and a fixed 2.5M "budget" pushed it UP to 2.49M. A
+   quality rung that makes the picture heavier is not a quality rung.
+   So each rung is a fraction of what rung 0 actually draws on THIS
+   scene, on THIS machine, which the governor measures as it goes.
+   ratio 0 means no cap at all. */
 const QUALITY=[
-  /* 0 */ { dpr:1.5,  decor:1,   cull:99, roam:0 },
-  /* 1 */ { dpr:1.25, decor:1,   cull:99, roam:0 },
-  /* 2 */ { dpr:1.0,  decor:0.5, cull:99, roam:0 },
-  /* 3 */ { dpr:1.0,  decor:0,   cull:7.5, roam:1 },
-  /* 4 */ { dpr:0.85, decor:0,   cull:5.5, roam:2 },
+  /* 0 */ { dpr:1.5,  decor:1,   ratio:0,    minPx:2.5, roam:0 },
+  /* 1 */ { dpr:1.25, decor:1,   ratio:0.72, minPx:2.5, roam:0 },
+  /* 2 */ { dpr:1.0,  decor:1,   ratio:0.46, minPx:3.0, roam:0 },
+  /* 3 */ { dpr:1.0,  decor:0.5, ratio:0.29, minPx:3.5, roam:1 },
+  /* 4 */ { dpr:0.85, decor:0,   ratio:0.18, minPx:4.0, roam:2 },
 ];
+/* what the scene costs with no cap — the yardstick every rung is cut
+   from, re-measured whenever the layout changes.
+   It SETTLES, it does not take a maximum. A running max latched onto a
+   spike while the assets were still arriving, and 0.18 of a wrong big
+   number is a budget ABOVE what the scene would draw anyway — which
+   the engine then spends by RAISING detail. Measured: the maze's
+   bottom rung drew 2.27M, more than the rung above it. */
+let baseDrawn=0, baseT=0, sinceBuild=0, startApplied=false;
+/* where this machine ended up last time it played */
+const START_Q=(()=>{ const v=parseInt(prefGet('splatpack-q')||'0',10);
+  return Number.isFinite(v)?Math.max(0,Math.min(4,v)):0; })();
+const drawnNow=()=>(app.stats&&app.stats.frame&&app.stats.frame.gsplats)||0;
+/* NOT gated on asset.loaded: a streamed LOD asset never reports it the
+   way a flat ply does, and the gate simply never opened — every rung
+   then measured as rung 0. Time, and a moving average that keeps
+   tracking, is the honest way to wait for a scene to settle. */
 let trimLevel=0, fpsAcc=0, fpsN=0, lastWall=performance.now();
-let goodFor=0, cullT=0;
+let goodFor=0;
 const DPR_MAX=parseFloat(Q_early_dpr()||'1.5');
 const ALLST=[];                        // every stamp: entity + where it stands
 function applyQuality(){
@@ -1345,24 +1399,26 @@ function applyQuality(){
   if(app.graphicsDevice.maxPixelRatio!==want){
     app.graphicsDevice.maxPixelRatio=want; app.resizeCanvas();
   }
-  /* FAR STAMPS FIRST. Punching holes in a hedge wall looks broken;
-     dropping the quarter of the arena behind the player does not, and
-     a gsplat entity costs its sort whether or not it is on screen. */
-  const px=player.x, pz=player.z;
+  /* THE ENGINE DOES THE HARD PART. A splat budget plus LOD beats an
+     entity cull on every count: it degrades smoothly, it spends the
+     budget nearest-first, and it needs no idea of where the player is.
+     Decor is still ours — that is content, not level of detail. */
+  if(GS){
+    /* no yardstick yet means no cap yet: capping against a guess would
+       be the fixed-number mistake again */
+    const want = (q.ratio && baseDrawn) ? Math.round(baseDrawn*q.ratio) : 0;
+    if(GS.splatBudget!==want) GS.splatBudget=want;
+    if(GS.minPixelSize!==q.minPx) GS.minPixelSize=q.minPx;
+  }
   for(const st of ALLST){
-    let on=true;
-    if(st.decor) on = q.decor===1 ? true : (q.decor===0 ? false : (st.i%2===0));
-    /* the cull is anchored to the PLAYER, so it only means anything in
-       play. In the catalog the stamps run off along x and a 7.5 radius
-       would blank the very thing being looked at. */
-    if(on && q.cull<90 && playMode)
-      on = Math.hypot(st.x-px, st.z-pz) < q.cull;
+    const on = !st.decor || (q.decor===1 ? true
+      : (q.decor===0 ? false : (st.i%2===0)));
     if(st.e.enabled!==on) st.e.enabled=on;
   }
   trimRoamers(q.roam);
 }
 function trimDecor(level){ trimLevel=level; applyQuality(); }
-if(QPIN!==null) trimLevel=QPIN;                 // ?q=N reproduces a report
+/* ?q=N is applied in the loop, once a yardstick exists — see above */
 function build(name){
   curLay=name;
   if(playMode && name!=='maze' && name!=='jungle') setPlay(false);
@@ -1385,7 +1441,8 @@ function build(name){
       if(s.decor) DECOR.push(e);
       ALLST.push({ e, x:s.at[0], z:s.at[1], decor:!!s.decor, i:ALLST.length });
     }
-    if(trimLevel) applyQuality();
+    baseDrawn=0; baseT=0; sinceBuild=0;   // a new layout costs a new amount
+    applyQuality();
     bounds=name==='maze'?7:(name==='jungle'?8:6);
     document.getElementById('hInfo').textContent='LAY · '+name.toUpperCase()
       +' · '+lay.length+' stamps';
@@ -1421,6 +1478,11 @@ function build(name){
 
 /* orbit: drag spins, wheel/pinch zooms, idle drifts */
 let yaw=25, pitch=14, dist=1.0, idle=0;
+/* MEASUREMENT NEEDS A STILL CAMERA. LOD is chosen by distance, so a
+   drifting orbit makes two rungs incomparable — the swamp read 1.14M
+   at full quality and 2.47M one rung down, purely because the camera
+   was somewhere else. tools/test-quality-ladder.mjs freezes it. */
+let camFrozen=false;
 let drag=null, pinch0=0;
 addEventListener('pointerdown',e=>{
   if(e.target.closest('#menu,#menuBtn,#elDrawer,#avSel,#jumpBtn,#help')) return;
@@ -1452,11 +1514,14 @@ app.on('update',dt=>{
       const S=window.__pack?window.__pack.sprites:null;
       const SC=window.__pack?window.__pack.splats:null;
       hudBody.innerHTML=f.toFixed(1)+' fps · '+ms.toFixed(0)+'ms'
-        +'<br>'+(LITE?'LITE':'FULL')+' pack · dpr '
+        +'<br>'+(LODPACK?'LOD':(LITE?'LITE':'FULL'))+' pack · dpr '
         +app.graphicsDevice.maxPixelRatio
         +'<br>q'+trimLevel+(QAUTO?'':' PIN')+' · '
         +(canvas.width)+'\u00d7'+(canvas.height)
-        +(SC?('<br>'+(SC.total/1e6).toFixed(2)+'M splats · '+SC.stamps+' stamps'):'')
+        +(SC?('<br>'+(SC.total/1e6).toFixed(2)+'M in scene · '+SC.stamps+' stamps'):'')
+        +(GS?('<br>drew '+(((app.stats&&app.stats.frame&&app.stats.frame.gsplats)||0)/1e6).toFixed(2)
+            +'M · sort '+sortMs.toFixed(0)+'ms'
+            +'<br>budget '+(GS.splatBudget?(GS.splatBudget/1e6).toFixed(1)+'M':'none')):'')
         +(S?('<br>spr '+(S.tier||'?')+' '+(S.cell||'?')+'px'
             +' a:'+(S.assetW||'-')
             +' m:'+(S.heroTextured?'y':'n')
@@ -1475,28 +1540,54 @@ app.on('update',dt=>{
       hudAcc=0; hudN=0; hudLast=nowW;
     }
   }
-  if(wdt<0.5 && QAUTO){
+  /* the yardstick, taken while nothing is capped, once the pack has
+     finished arriving and the scene has had a couple of seconds */
+  /* CLAMP, DO NOT DISCARD. The old guard threw away any frame longer
+     than half a second — which on a machine slow enough to need this
+     code is nearly every frame. Thirty seconds of wall clock advanced
+     this timer by 1.4s and the yardstick was never taken. */
+  if(GS && !GS.splatBudget){
+    const cw=Math.min(wdt,0.5);
+    sinceBuild+=cw;
+    if(sinceBuild>4){
+      baseT+=cw;
+      if(baseT>0.25){ baseT=0; const d=drawnNow();
+        if(d>0) baseDrawn = baseDrawn ? baseDrawn*0.7+d*0.3 : d; }
+    }
+    /* a pinned rung (?q=, the Dev menu) waits for that measurement
+       rather than acting on a guess; so does a remembered one */
+    if(baseDrawn>0){
+      if(QPIN!==null && trimLevel!==QPIN){ trimLevel=QPIN; applyQuality(); }
+      else if(QPIN===null && !startApplied){
+        startApplied=true;
+        if(START_Q>trimLevel){ trimLevel=START_Q; applyQuality(); }
+      }
+    }
+  }
+  /* 2s, not 0.5s: a tab-switch spike is many seconds, but a frame that
+     merely took 700ms is the very thing being governed and must count */
+  if(wdt<2 && QAUTO){
     fpsAcc+=wdt; fpsN++;
     if(fpsAcc>1.2){
       const fps=fpsN/fpsAcc; fpsAcc=0; fpsN=0;
       if(fps<34 && trimLevel<QUALITY.length-1){
         trimLevel++; goodFor=0; applyQuality();
-        /* a machine that needed this much help should not be asked the
-           same question tomorrow: start it lite next time */
-        if(trimLevel>=2 && !LITE) prefSet('splatpack-tier','lite');
+        /* A MACHINE THAT NEEDED THIS MUCH HELP SHOULD NOT BE ASKED THE
+           SAME QUESTION TOMORROW. What is worth remembering is the
+           RUNG, not the old lite/full pack split — LOD has replaced
+           that, and the rung is the thing that was actually earned.
+           It is still automatic, so a remembered rung can climb back
+           up if the machine turns out to be having a good day. */
+        prefSet('splatpack-q', String(trimLevel));
+        if(trimLevel>=3 && !LITE) prefSet('splatpack-tier','lite');   // sprite atlases
       } else if(fps>52 && trimLevel>0){
         goodFor+=1.2;
         if(goodFor>6){ trimLevel--; goodFor=0; applyQuality(); }
       } else goodFor=0;
     }
   }
-  /* The cull follows the player, so it needs refreshing as they walk —
-     and OUTSIDE the auto branch, or a pinned rung (?q=, the Dev menu)
-     would never cull at all. That is how the ladder measured as doing
-     almost nothing to the Gaussian count. */
-  if(wdt<0.5 && trimLevel>=3){
-    cullT+=wdt; if(cullT>0.4){ cullT=0; applyQuality(); }
-  }
+  /* No per-frame cull refresh any more: the budget is spent by the
+     engine's own LOD every frame, from wherever the camera is. */
   t+=dt; idle+=dt;
   upPlayer(dt);
   if(playMode){
@@ -1532,7 +1623,7 @@ app.on('update',dt=>{
       0.6+Math.sin(pr)*d, player.z+Math.cos(yr)*Math.cos(pr)*d);
     camE.lookAt(player.x, 0.7, player.z);
   } else {
-    if(idle>4) yaw+=dt*4;
+    if(idle>4 && !camFrozen) yaw+=dt*4;
     const yr=yaw*Math.PI/180, pr=pitch*Math.PI/180;
     const d=bounds*2.2*dist;
     camE.setPosition(Math.sin(yr)*Math.cos(pr)*d, 1+Math.sin(pr)*d, Math.cos(yr)*Math.cos(pr)*d);
@@ -1659,7 +1750,7 @@ const bHud=menuAdd(devSub,'PERF HUD: OFF',()=>{
   perfHud.classList.toggle('hidden',!hudOn);
   bHud.textContent='PERF HUD: '+(hudOn?'ON':'OFF');
 });
-menuAdd(devSub,'PACK: '+(LITE?'LITE':'FULL')+' \u21c4',()=>{
+menuAdd(devSub,'PACK: '+(LODPACK?'LOD':(LITE?'LITE':'FULL'))+' \u21c4',()=>{
   const u=new URL(location.href);
   u.searchParams.set('pack', LITE?'full':'lite');
   location.href=u.toString();
@@ -1674,6 +1765,10 @@ const bQ=menuAdd(devSub,'QUALITY: AUTO',()=>{
   applyQuality();
   bQ.textContent='QUALITY: '+(QAUTO?'AUTO':('q'+trimLevel
     +' · dpr '+QUALITY[trimLevel].dpr));
+});
+menuAdd(devSub,'FORGET QUALITY MEMORY',()=>{
+  prefSet('splatpack-q','0'); prefSet('splatpack-tier','');
+  flash('QUALITY MEMORY CLEARED');
 });
 const bDpr=menuAdd(devSub,'DPR CAP: '+app.graphicsDevice.maxPixelRatio,()=>{
   const seq=[1.5,1.0,2.0];
@@ -1766,11 +1861,20 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
   get splats(){
     let n=0, k=0;
     for(const id in pool) for(const e of pool[id])
-      if(e.enabled){ n += ((EL[id]&&EL[id].count)||0) * (LITE?0.5:1); k++; }
-    return { total:n, stamps:k, lay:curLay, lite:LITE }; },
+      if(e.enabled){ n += ((EL[id]&&EL[id].count)||0) * ((LITE&&!LODPACK)?0.5:1); k++; }
+    return { total:n, stamps:k, lay:curLay, lite:LITE, lod:LODPACK }; },
+  /* the ENGINE's own view of the frame, not ours */
+  get gsplat(){ if(!GS) return null;
+    const F=(app.stats&&app.stats.frame)||{};
+    return { budget:GS.splatBudget, minPx:GS.minPixelSize,
+             behind:GS.lodBehindPenalty, minContrib:GS.minContribution,
+             /* the ENGINE's count of splats it actually drew this frame,
+                and its own sort time — neither is our arithmetic */
+             drawn:F.gsplats||0, sortMs:+sortMs.toFixed(2),
+             base:Math.round(baseDrawn), since:+sinceBuild.toFixed(1), q:trimLevel }; },
   get perf(){ return { trimLevel, decor:DECOR.length,
     decorOn:DECOR.filter(e=>e.enabled).length,
-    dprCap:app.graphicsDevice.maxPixelRatio, lite:LITE }; },
+    dprCap:app.graphicsDevice.maxPixelRatio, lite:LITE, lod:LODPACK }; },
   trim(l){ trimLevel=l; trimDecor(l); },
   get cine(){ return cineOn; },
   setCine(v){ cineOn=!!v; },
@@ -1785,7 +1889,9 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
     if(el.sides){ yaw=el.sides.face; idle=-6; }   // open on the good side
     document.getElementById('hInfo').textContent=id.toUpperCase()
       +(el.sides&&el.sides.weak.length?' · weak '+el.sides.weak.map(w=>w.join('-')+'\u00b0').join(', '):''); },
-  setCam(y2,p2,d2){ yaw=y2; pitch=p2; dist=d2; idle=0; } };
+  setCam(y2,p2,d2){ yaw=y2; pitch=p2; dist=d2; idle=0; },
+  freezeCam(y2=30,p2=16,d2=1.0){ yaw=y2; pitch=p2; dist=d2; idle=0;
+    camFrozen=true; } };
 </script>
 </body>
 </html>
