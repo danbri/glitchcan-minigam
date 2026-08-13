@@ -162,17 +162,29 @@ await pg.waitForTimeout(4000);
 const back=await gf.evaluate(()=>({ dream:__jsd.dream.active, run:__jsd.state.running })).catch(()=>({}));
 console.log('   back in the manor:',JSON.stringify(back));
 T(back.dream===false,'STEP 10 SURFACE returns you to the Skydock');
-/* END the shift: the story must resume where it paused */
-await pg.evaluate(()=>window.FinkMinigames?.endMinigame?.());
-await pg.waitForTimeout(4000);
+/* END THE SHIFT FROM INSIDE THE WORLD. The host's own chrome can always
+   stop a game, but a reader should be able to LEAVE — so the exit under
+   test is the diegetic one: walk to the car rank the shoppers use, ride
+   out, and let the game's own `complete` bring the story back. */
+gf=pg.frames().find(x=>/dbdb2/.test(x.url()));
+T(!!gf,'STEP 11 the game frame is reachable for the ride home');
+await gf.evaluate(()=>window.__jsd.toRank());
+/* a toast holds the screen for 2.2s and the kerb prompt only speaks
+   into silence, so outlast the "BACK IN THE NEWT" one from surfacing */
+await gf.waitForTimeout(3400);
+const kerb=await gf.evaluate(()=>document.getElementById('toast').textContent);
+console.log('   kerb prompt:',JSON.stringify(kerb));
+T(/RIDE BACK UP/.test(kerb),'STEP 12 the kerb offers the ride back to the story');
+await gf.evaluate(()=>window.__jsd.rideOut());
+await pg.waitForTimeout(9000);
 const resumed=await fr.evaluate(()=>({
   choices:[...document.querySelectorAll('#choices button')].map(x=>x.textContent.trim()),
   vis:true })).catch(e=>({choices:['<gone>']}));
 const winVis=await pg.evaluate(()=>{ const w=document.querySelector('.foafos-window[data-app-id="storyrunner"]');
   return w?getComputedStyle(w).visibility:'missing'; });
 console.log('   story after the shift:',JSON.stringify(resumed),'window:',winVis);
-T(winVis==='visible','STEP 11 the story is visible again after the shift');
-T(resumed.choices.length>0,'STEP 12 the story RESUMES with choices: '+JSON.stringify(resumed.choices));
+T(winVis==='visible','STEP 13 the story is visible again after the ride');
+T(resumed.choices.length>0,'STEP 14 the story RESUMES with choices: '+JSON.stringify(resumed.choices));
 await pg.screenshot({path:SP+'play-4-resumed.png'});
 console.log('pageerrors:',errs.length?errs.slice(0,4):['none']);
 await ctx.close(); await b.close(); srv.close();

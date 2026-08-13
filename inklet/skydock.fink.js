@@ -36,13 +36,15 @@ The mess-hall veterans lean in, delighted to be asked.
 
 === shift ===
 
-The dock lights dim to moonlight. Your shift begins. # MINIGAME: skydock controls=none
+The dock lights dim to moonlight. Your shift begins.
+
+Jack into the candy terminals for the dreams. When you have had enough, the car rank down by the bakery runs a shuttle back up here. # MINIGAME: skydock controls=none
 
 -> debrief
 
 === debrief ===
 
-Back in the mess hall, the veterans look up from their tea.
+The shuttle sets you down and the mess hall takes you back. The veterans look up from their tea.
 
 + [Report what you heard]
     {skydock_diamonds >= 3:
