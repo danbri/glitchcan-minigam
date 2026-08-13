@@ -145,6 +145,17 @@ function Q_early_dpr(){ try{ return new URLSearchParams(location.search).get('dp
 addEventListener('resize',()=>app.resizeCanvas());
 app.start();
 
+/* CORS ON EVERY TEXTURE — the white cards, then the invisible player.
+   PROVEN in a sandboxed frame (tools note: t-opaque): the atlas image
+   LOADS fine, and then `texImage2D` with it THROWS SecurityError,
+   because a guest runs at an OPAQUE ORIGIN and an <img> fetched
+   without crossOrigin is cross-origin-tainted there. Loaded with
+   crossOrigin='anonymous' the same upload succeeds. Every earlier
+   test missed it by running this page top-level, same-origin, where
+   nothing is tainted and everything works.
+   Set BEFORE any asset is created. */
+try { app.loader.getHandler('texture').crossOrigin = 'anonymous'; } catch (e) {}
+
 const camE=new pc.Entity('cam');
 camE.addComponent('camera',{ clearColor:new pc.Color(0.004,0.008,0.016),
   fov:60, nearClip:0.05, farClip:80 });
@@ -337,7 +348,8 @@ const sprMeta=k=>{
 };
 function sprAsset(kind){
   if(sprAssets[kind]) return sprAssets[kind];
-  const a=new pc.Asset('spr-'+kind,'texture',{ url:SPRDIR+kind+'.png' });
+  const a=new pc.Asset('spr-'+kind,'texture',{ url:SPRDIR+kind+'.png' },
+    { crossOrigin:'anonymous' });
   app.assets.add(a); app.assets.load(a);
   sprAssets[kind]=a; return a;
 }
@@ -1481,7 +1493,9 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
     spd:+gait.spd.toFixed(2), runT:+gait.runT.toFixed(2),
     phase:+((player.phase||0)%pvis.phases).toFixed(1) }; },
   get sprites(){ return { dir:SPRDIR, cell:SPR&&SPR.meta&&SPR.meta.hero&&SPR.meta.hero.cell,
-    tier:SPR&&SPR.tier }; },
+    tier:SPR&&SPR.tier, heroTextured:!!(pvis.m&&pvis.m.emissiveMap),
+    heroShown:!!(player.e&&player.e.children[0]&&player.e.children[0].enabled),
+    roamersShown:roamers.filter(r=>r.e.children[0]&&r.e.children[0].enabled).length }; },
   get perf(){ return { trimLevel, decor:DECOR.length,
     decorOn:DECOR.filter(e=>e.enabled).length,
     dprCap:app.graphicsDevice.maxPixelRatio, lite:LITE }; },
