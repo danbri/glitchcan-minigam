@@ -77,6 +77,19 @@
     background:rgba(1,10,5,.85); border:1px solid rgba(159,232,176,.5);
     border-radius:6px; padding:8px 10px; font:11px monospace;
     color:#9fe8b0; text-align:right; pointer-events:none; line-height:1.6; }
+  /* The readout is inert; only the copy control takes a thumb. A field
+     report is worth more typed by nobody: one tap puts the whole HUD,
+     the URL and the user agent on the clipboard. */
+  #hudCopy { pointer-events:auto; float:left; margin:-2px 8px 0 -2px;
+    background:rgba(159,232,176,.14); border:1px solid rgba(159,232,176,.45);
+    color:#9fe8b0; border-radius:5px; font:12px monospace; line-height:1;
+    padding:5px 6px; cursor:pointer; -webkit-user-select:none; user-select:none; }
+  #hudCopy:active { background:rgba(159,232,176,.35); }
+  /* Where the clipboard is refused (a sandboxed guest may forbid it),
+     the text is shown selected instead, ready for a long press. */
+  #hudGrab { pointer-events:auto; display:none; width:100%; margin-top:6px;
+    background:#02150b; color:#9fe8b0; border:1px solid rgba(159,232,176,.45);
+    border-radius:4px; font:10px monospace; padding:4px; resize:none; }
   .hidden { display:none !important; }
   #err { position:fixed; inset:auto 0 0 0; z-index:50; color:#ff9a9a;
     background:rgba(30,0,0,.92); padding:8px; font-size:11px; display:none;
@@ -93,7 +106,7 @@
 <div id="menu" class="hidden"></div>
 <button type="button" id="jumpBtn" aria-label="jump">JUMP</button>
 <div id="flash"></div>
-<div id="perfHud" class="hidden"></div>
+<div id="perfHud" class="hidden"><button id="hudCopy" type="button" title="copy this readout">⧉</button><div id="hudBody"></div><textarea id="hudGrab" rows="4" readonly></textarea></div>
 <div id="help" class="hidden">
   <h2>HOW TO PLAY</h2>
   <div>Left half of the screen: touch and drag — a floating stick walks
@@ -1360,7 +1373,7 @@ app.on('update',dt=>{
     if(nowW-hudLast>500){
       const f=hudN/hudAcc, ms=1000*hudAcc/hudN;
       const S=window.__pack?window.__pack.sprites:null;
-      perfHud.innerHTML=f.toFixed(1)+' fps · '+ms.toFixed(0)+'ms'
+      hudBody.innerHTML=f.toFixed(1)+' fps · '+ms.toFixed(0)+'ms'
         +'<br>'+(LITE?'LITE':'FULL')+' pack · dpr '
         +app.graphicsDevice.maxPixelRatio
         +'<br>trim '+trimLevel+' · '
@@ -1525,6 +1538,34 @@ devMk('JUNGLE',()=>{ drawer.classList.add('hidden'); build('jungle'); });
 devMk('ELEMENTS \u25be',()=>{ drawer.classList.toggle('hidden'); });
 let hudOn=false, hudAcc=0, hudN=0, hudLast=performance.now();
 const perfHud=document.getElementById('perfHud');
+const hudBody=document.getElementById('hudBody');
+const hudGrab=document.getElementById('hudGrab');
+/* COPY THE READOUT. A photograph of a phone screen is how this bug was
+   reported for two days: legible, but not searchable and not exact. One
+   tap now yields the numbers, the URL, the renderer and the user agent
+   as text. The clipboard API can be refused in a sandboxed guest, so a
+   pre-selected box is the second path — a long press finishes it. */
+function hudReport(){
+  const S=window.__pack?window.__pack.sprites:null;
+  const gd=app.graphicsDevice;
+  return [ hudBody.innerText.replace(/\n+/g,' | '),
+    'spr ' + (S?JSON.stringify(S):'n/a'),
+    'gpu ' + (gd.isWebGPU?'webgpu':(gd.isWebGL2?'webgl2':'webgl1'))
+      + ' · ' + ((gd.unmaskedRenderer||gd.renderer||'?')+'').slice(0,64),
+    'url ' + location.href,
+    'ua  ' + navigator.userAgent ].join('\n');
+}
+document.getElementById('hudCopy').addEventListener('click',async e=>{
+  e.stopPropagation();
+  const txt=hudReport(), btn=e.currentTarget;
+  let done=false;
+  try{ await navigator.clipboard.writeText(txt); done=true; }catch(err){}
+  if(!done){ hudGrab.value=txt; hudGrab.style.display='block';
+    hudGrab.focus(); hudGrab.setSelectionRange(0,txt.length);
+    try{ done=document.execCommand('copy'); }catch(err){} }
+  btn.textContent=done?'\u2713':'\u21e7';
+  setTimeout(()=>{ btn.textContent='\u29c9'; }, 1400);
+});
 const bHud=menuAdd(devSub,'PERF HUD: OFF',()=>{
   hudOn=!hudOn;
   perfHud.classList.toggle('hidden',!hudOn);
