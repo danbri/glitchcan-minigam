@@ -1268,11 +1268,17 @@ app.on('update',dt=>{
     hudAcc+=wdt; hudN++;
     if(nowW-hudLast>500){
       const f=hudN/hudAcc, ms=1000*hudAcc/hudN;
+      const S=window.__pack?window.__pack.sprites:null;
       perfHud.innerHTML=f.toFixed(1)+' fps · '+ms.toFixed(0)+'ms'
         +'<br>'+(LITE?'LITE':'FULL')+' pack · dpr '
         +app.graphicsDevice.maxPixelRatio
         +'<br>trim '+trimLevel+' · '
-        +(canvas.width)+'\u00d7'+(canvas.height);
+        +(canvas.width)+'\u00d7'+(canvas.height)
+        +(S?('<br>spr '+(S.tier||'?')+' '+(S.cell||'?')+'px'
+            +' a:'+(S.assetW||'-')
+            +' m:'+(S.heroTextured?'y':'n')
+            +' v:'+(S.heroShown?'y':'n')+'/'+S.roamersShown
+            +'<br>'+S.loaderPath+' gl'+S.maxTex):'');
       hudAcc=0; hudN=0; hudLast=nowW;
     }
   }
@@ -1492,10 +1498,24 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
   get gait(){ return { mode:gait.mode, variant:gait.variant, sheet:pvis.sheet,
     spd:+gait.spd.toFixed(2), runT:+gait.runT.toFixed(2),
     phase:+((player.phase||0)%pvis.phases).toFixed(1) }; },
-  get sprites(){ return { dir:SPRDIR, cell:SPR&&SPR.meta&&SPR.meta.hero&&SPR.meta.hero.cell,
-    tier:SPR&&SPR.tier, heroTextured:!!(pvis.m&&pvis.m.emissiveMap),
-    heroShown:!!(player.e&&player.e.children[0]&&player.e.children[0].enabled),
-    roamersShown:roamers.filter(r=>r.e.children[0]&&r.e.children[0].enabled).length }; },
+  /* THE DEVICE REPORTS ITS OWN TRUTH. This container renders every
+     historical build correctly, in a real opaque-origin sandbox, so
+     the white cards and the invisible player are something only the
+     phone can see. Each field here is one link in the chain from
+     "file fetched" to "pixels drawn"; whichever one reads wrong on
+     the device names the bug without another guess. */
+  get sprites(){
+    const a=sprAssets['hero'];
+    return { dir:SPRDIR, cell:SPR&&SPR.meta&&SPR.meta.hero&&SPR.meta.hero.cell,
+      tier:SPR&&SPR.tier,
+      assetLoaded:!!(a&&a.loaded), assetW:(a&&a.resource&&a.resource.width)||0,
+      heroTextured:!!(pvis.m&&pvis.m.emissiveMap),
+      heroShown:!!(player.e&&player.e.children[0]&&player.e.children[0].enabled),
+      roamersShown:roamers.filter(r=>r.e.children[0]&&r.e.children[0].enabled).length,
+      // which decode path this browser gives PlayCanvas: an ImageBitmap
+      // is never origin-tainted, a plain <img> in a guest frame IS
+      loaderPath:(typeof createImageBitmap==='function'?'bitmap':'img'),
+      maxTex:(()=>{ try{ return app.graphicsDevice.maxTextureSize; }catch(e){ return '?'; } })() }; },
   get perf(){ return { trimLevel, decor:DECOR.length,
     decorOn:DECOR.filter(e=>e.enabled).length,
     dprCap:app.graphicsDevice.maxPixelRatio, lite:LITE }; },
