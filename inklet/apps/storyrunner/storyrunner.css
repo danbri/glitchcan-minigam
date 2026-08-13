@@ -13,8 +13,15 @@ html, body {
 }
 #stage {
   height: 100dvh; display: flex; flex-direction: column;
-  padding: max(0.8em, env(safe-area-inset-top)) 1em 1em;
+  /* The bottom padding RESERVES the Subtree bar's strip. That bar is
+     position:fixed by design (it must not move the story when it grows)
+     — which meant it sat ON TOP of the last choice, and a fixed overlay
+     over a control is a control you cannot press. Reserve, don't
+     overlap. */
+  padding: max(0.8em, env(safe-area-inset-top)) 1em
+           calc(2.2rem + env(safe-area-inset-bottom));
   gap: 0.8em; overflow-y: auto;
+  scroll-padding-bottom: 2.2rem;
 }
 #prose { display: flex; flex-direction: column; gap: 0.7em; font-size: clamp(15px, 4vw, 19px); line-height: 1.4; }
 #prose p { white-space: pre-wrap; }

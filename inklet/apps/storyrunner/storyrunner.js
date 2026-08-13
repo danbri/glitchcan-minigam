@@ -109,6 +109,39 @@ function renderChoices() {
     ul.appendChild(li);
     state.choices.push(choice.text);
   });
+  // THE CHOICES ARE THE ONLY THING A READER CAN ACT ON, so they must be
+  // ON SCREEN. addProse() scrolls to the end, but that runs BEFORE the
+  // choices exist, so a long hand (7 episodes) rendered its last button
+  // past the fold — measured at 390x740: "Skydock Scuttlebutt" spanned
+  // 733-777px in a 740px viewport, and elementFromPoint returned the
+  // Subtree bar. A tap on it did nothing, which is not a UI blemish, it
+  // is a story you cannot enter. Scroll after the hand is dealt.
+  if (ul.lastElementChild) keepChoicesInView();
+}
+
+// Keep the hand on screen — including AFTER the beat's picture arrives.
+// Measured at 390x740: scrolling once on the next frame did nothing,
+// because at that moment the media had no height yet; the image then
+// decoded, the column grew by exactly the 85px that had been cut off,
+// and the last choice sat under the fixed Subtree bar for good. So the
+// scroll is re-run when the media settles, and again on a viewport
+// change (a phone toolbar sliding away is the same problem).
+function keepChoicesInView() {
+  const st = $('stage');
+  const toEnd = () => { st.scrollTop = st.scrollHeight; };
+  requestAnimationFrame(toEnd);
+  for (const el of $('media').querySelectorAll('img, video, iframe')) {
+    el.addEventListener('load', () => requestAnimationFrame(toEnd), { once: true });
+    if (el.tagName === 'VIDEO') {
+      el.addEventListener('loadedmetadata', () => requestAnimationFrame(toEnd), { once: true });
+    }
+  }
+  if (window.visualViewport && !keepChoicesInView._vv) {
+    keepChoicesInView._vv = true;
+    window.visualViewport.addEventListener('resize', () => {
+      if ($('choices').lastElementChild) requestAnimationFrame(toEnd);
+    });
+  }
 }
 
 // A story tag becomes: a CONTAINED effect (styles this frame) or a
