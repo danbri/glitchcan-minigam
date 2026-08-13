@@ -317,8 +317,20 @@ const LAYOUTS={
    per-leaf for free (the writings trick, walking). Sheets baked
    from the game's own rotoscope rigs by tools/sprite-bake.mjs.
    ========================================================= */
+/* SPRITE TIER — phones get 128px cells (2048x2048 atlases, 16MB each);
+   desktop keeps the 224px sheets (3584x3584, 49MB each). Three full
+   sheets are 147MB of texture memory, which a phone uploads and then
+   loses inside a nested iframe: the image decodes, the material takes
+   it, and the quad draws WHITE (field report, twice). ?sprites=full /
+   ?sprites=lite override. */
+const SPRQ=Q.get('sprites');
+// OPT-IN until the lite atlases are baked and committed; the line below
+// becomes `: LITE` (phones by default) in the same commit as the files.
+const SPRLITE = SPRQ==='lite';
+const SPRDIR = SPRLITE ? 'sprites/lite/' : 'sprites/';
 let SPR=null;
-fetch('sprites/sprites.json').then(r=>r.json()).then(j=>{ SPR=j; }).catch(()=>{});
+fetch(SPRDIR+'sprites.json').then(r=>r.json()).then(j=>{ SPR=j; })
+  .catch(()=>fetch('sprites/sprites.json').then(r=>r.json()).then(j=>{ SPR=j; }).catch(()=>{}));
 const sprAssets={};
 /* per-kind sheet meta: the hero bakes finer (8 phases, 192px cells) */
 const sprMeta=k=>{
@@ -327,7 +339,7 @@ const sprMeta=k=>{
 };
 function sprAsset(kind){
   if(sprAssets[kind]) return sprAssets[kind];
-  const a=new pc.Asset('spr-'+kind,'texture',{ url:'sprites/'+kind+'.png' });
+  const a=new pc.Asset('spr-'+kind,'texture',{ url:SPRDIR+kind+'.png' });
   app.assets.add(a); app.assets.load(a);
   sprAssets[kind]=a; return a;
 }
@@ -635,6 +647,7 @@ function spawnRoamer(kind, x, z, ai){
   pl.enabled=false;                          // no white quad while it loads
   const a=sprAsset(kind);
   const apply=()=>{ if(!SPR) return setTimeout(apply,300);
+    if(!a.resource || !a.resource.width) return;   // never dress a quad in nothing
     const mm=sprMeta(kind);
     m.emissiveMap=a.resource; m.opacityMap=a.resource;
     m.opacityMapChannel='a';
@@ -780,6 +793,7 @@ function setHeroSheet(kind, m){
   if(pvis.sheet===kind) return;
   const a=sprAsset(kind);
   const apply=()=>{ if(!SPR) return setTimeout(apply,300);
+    if(!a.resource || !a.resource.width) return;   // never dress a quad in nothing
     const mm=sprMeta(kind);
     pvis.phases=mm.phases; pvis.grid=mm.grid;
     pvis.banks=mm.phases/mm.grid; pvis.rows=SPR.bearings*pvis.banks;
@@ -1468,6 +1482,8 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
   get gait(){ return { mode:gait.mode, variant:gait.variant, sheet:pvis.sheet,
     spd:+gait.spd.toFixed(2), runT:+gait.runT.toFixed(2),
     phase:+((player.phase||0)%pvis.phases).toFixed(1) }; },
+  get sprites(){ return { dir:SPRDIR, cell:SPR&&SPR.meta&&SPR.meta.hero&&SPR.meta.hero.cell,
+    tier:SPR&&SPR.tier }; },
   get perf(){ return { trimLevel, decor:DECOR.length,
     decorOn:DECOR.filter(e=>e.enabled).length,
     dprCap:app.graphicsDevice.maxPixelRatio, lite:LITE }; },

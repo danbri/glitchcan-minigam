@@ -16,7 +16,14 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const OUT = path.join(ROOT, 'magpie/dbdb/sprites');
+/* --lite bakes the PHONE tier: same 32 frames and 8 bearings, 128px
+   cells -> 2048x2048 atlases. The full sheets are 3584x3584 = 49MB of
+   texture memory EACH, 147MB for the three, and a phone running these
+   inside a nested iframe (alongside dbdb2's context and a splat scene)
+   uploads them and then loses them — the image decodes, the material
+   takes it, and the quad draws WHITE. 2048 is 16MB: a quarter. */
+const LITE = process.argv.includes('--lite');
+const OUT = path.join(ROOT, LITE ? 'magpie/dbdb/sprites/lite' : 'magpie/dbdb/sprites');
 const PORT = +(process.env.PORT || 8961);
 const CELL = 128, BEARINGS = 8, PHASES = 4;
 
@@ -65,10 +72,11 @@ await pg.waitForTimeout(1500);
 /* compositor page: chroma-key + atlas assembly */
 const comp = await browser.newPage({ viewport: { width: 512, height: 512 } });
 
-const only = process.argv.slice(2);
+const only = process.argv.slice(2).filter(a => !a.startsWith('--'));
 for (const [kind, opts] of Object.entries(KINDS)) {
   if (only.length && !only.includes(kind)) continue;
-  const PH = opts.phases || PHASES, CE = opts.cell || CELL;
+  const PH = opts.phases || PHASES;
+  const CE = LITE ? Math.min(128, opts.cell || CELL) : (opts.cell || CELL);
   const GRID = opts.grid || PH, SRC = opts.src || 512;
   await pg.setViewportSize({ width: SRC, height: SRC });
   const spawnOpts = { shirt: opts.shirt, trouser: opts.trouser, hair: opts.hair,
@@ -120,8 +128,10 @@ fs.writeFileSync(path.join(OUT, 'sprites.json'), JSON.stringify({
   cell: CELL, bearings: BEARINGS, phases: PHASES,
   kinds: Object.keys(KINDS),
   /* per-kind overrides; absent kind -> the top-level defaults */
+  tier: LITE ? 'lite' : 'full',
   meta: Object.fromEntries(Object.entries(KINDS).map(([k, o]) =>
-    [k, { phases: o.phases || PHASES, cell: o.cell || CELL,
+    [k, { phases: o.phases || PHASES,
+          cell: LITE ? Math.min(128, o.cell || CELL) : (o.cell || CELL),
           grid: o.grid || o.phases || PHASES }])),
   note: 'baked from dbdb2 rotoscope rigs (tools/sprite-bake.mjs); rows=viewer bearing (0=front, +45 steps), cols=gait phase',
 }, null, 2));
