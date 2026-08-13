@@ -1,0 +1,53 @@
+{
+  "cell": 128,
+  "bearings": 8,
+  "phases": 4,
+  "kinds": [
+    "walker1",
+    "walker2",
+    "walker3",
+    "zombie",
+    "hero",
+    "hero2",
+    "herorun"
+  ],
+  "tier": "lite",
+  "meta": {
+    "walker1": {
+      "phases": 4,
+      "cell": 128,
+      "grid": 4
+    },
+    "walker2": {
+      "phases": 4,
+      "cell": 128,
+      "grid": 4
+    },
+    "walker3": {
+      "phases": 4,
+      "cell": 128,
+      "grid": 4
+    },
+    "zombie": {
+      "phases": 4,
+      "cell": 128,
+      "grid": 4
+    },
+    "hero": {
+      "phases": 32,
+      "cell": 128,
+      "grid": 16
+    },
+    "hero2": {
+      "phases": 32,
+      "cell": 128,
+      "grid": 16
+    },
+    "herorun": {
+      "phases": 32,
+      "cell": 128,
+      "grid": 16
+    }
+  },
+  "note": "baked from dbdb2 rotoscope rigs (tools/sprite-bake.mjs); rows=viewer bearing (0=front, +45 steps), cols=gait phase"
+}

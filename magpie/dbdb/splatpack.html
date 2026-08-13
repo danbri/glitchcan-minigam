@@ -324,9 +324,7 @@ const LAYOUTS={
    it, and the quad draws WHITE (field report, twice). ?sprites=full /
    ?sprites=lite override. */
 const SPRQ=Q.get('sprites');
-// OPT-IN until the lite atlases are baked and committed; the line below
-// becomes `: LITE` (phones by default) in the same commit as the files.
-const SPRLITE = SPRQ==='lite';
+const SPRLITE = SPRQ==='full' ? false : SPRQ==='lite' ? true : LITE;
 const SPRDIR = SPRLITE ? 'sprites/lite/' : 'sprites/';
 let SPR=null;
 fetch(SPRDIR+'sprites.json').then(r=>r.json()).then(j=>{ SPR=j; })
