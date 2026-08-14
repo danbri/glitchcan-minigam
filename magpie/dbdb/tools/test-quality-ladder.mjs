@@ -82,10 +82,17 @@ for(const [lay,pack] of [['jungle','lod'],['maze','lod']]){
     `${lay}/${pack}: LOD is live at full quality (${(a.drawn/1e6).toFixed(2)}M of ${(a.splats/1e6).toFixed(2)}M)`);
   T(cutD>0.5, `${lay}/${pack}: the ladder halves the drawn splats or better`);
   T(cutP>0.5, `${lay}/${pack}: the ladder removes most of the pixels`);
-  /* every rung must actually move: a ladder whose lower steps land on
-     each other is a ladder with nowhere to go */
-  T(rows.every((r,i)=>i===0||r.drawn<rows[i-1].drawn*0.95),
-    `${lay}/${pack}: every rung draws meaningfully less than the last`);
+  /* Every rung must cost less than the one above — and COST is splats
+     TIMES pixels, not splats alone. The bottom rungs can land on the
+     same splat count because the coarsest pyramid level is a floor the
+     budget cannot go under; what they still buy at that point is
+     resolution. Judging on splats alone called that a broken ladder. */
+  const cost=r=>r.drawn*r.px;
+  T(rows.every((r,i)=>i===0||cost(r)<cost(rows[i-1])*0.96),
+    `${lay}/${pack}: every rung costs meaningfully less than the last`);
+  const floored=rows.findIndex((r,i)=>i>0 && r.drawn>rows[i-1].drawn*0.95);
+  if(floored>0) console.log(`  note: rung ${floored} reaches the LOD floor `
+    +`(${(rows[floored].drawn/1e6).toFixed(2)}M); below it only pixels are left to spend`);
 }
 
 await b.close(); srv.close();

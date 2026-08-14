@@ -77,9 +77,16 @@ for (const el of els) {
 }
 fs.rmSync(TMP, { recursive: true, force: true });
 
-/* a manifest flag, so the page can prefer LOD and fall back without
-   probing the network for something that may not be there */
-manifest.lod = { dir: 'lod', levels: 4, ids: rows.map(r => r.id) };
+/* A manifest flag, so the page can prefer LOD and fall back without
+   probing the network for something that may not be there.
+   READ FROM DISK, not from this run: building a few elements by name
+   used to REPLACE the list, which quietly dropped the other eighteen
+   back to flat plys and turned the whole budget system off for them.
+   What is on disk is the truth, and it self-corrects on deletion. */
+const built = fs.readdirSync(OUT, { withFileTypes: true })
+  .filter(d => d.isDirectory() && fs.existsSync(path.join(OUT, d.name, 'lod-meta.json')))
+  .map(d => d.name).sort();
+manifest.lod = { dir: 'lod', levels: 4, ids: built };
 fs.writeFileSync(path.join(PACK, 'pack.json'), JSON.stringify(manifest, null, 1));
 
 const was = rows.reduce((a, r) => a + r.was, 0), now = rows.reduce((a, r) => a + r.now, 0);

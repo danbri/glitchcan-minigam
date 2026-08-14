@@ -359,6 +359,17 @@ function jungleLayout(){
   out.push({ el:'pond', at:[-W2/2, H2/2+0.6], yaw:0, s:0.9, y:0.02 });
   out.push({ el:'trestle', at:[ W2/2+0.8,-H2/2], yaw:225, s:0.42, y:0.05 });
   out.push({ el:'cistern', at:[-W2/2-0.8,-H2/2-0.4], yaw:45, s:0.5, y:0.05 });
+  /* SOMETHING CAME THROUGH HERE AND DIED. A pickup rusting in the
+     swamp room and a caved-in hut in the ruin room: the jungle is a
+     place people left, not a hedge maze with zombies in it. */
+  out.push({ el:'pickup', at:[-W2/2+1.6, H2/2-1.4], yaw:200, s:0.55, y:0.05 });
+  out.push({ el:'hut',    at:[ W2/2-1.4,-H2/2+1.2], yaw:40,  s:0.6,  y:0.05 });
+  /* climbing green, hung high enough to walk under */
+  for(const [vx,vz,vy] of [[-W2+0.7,-1.2,0.1],[W2-0.7,1.4,0.1],[1.1,-H2+0.8,0.1],
+                           [-1.3,H2-0.7,0.1]])
+    out.push({ el:'vine', at:[vx,vz], yaw:rnd()*360, s:0.5+rnd()*0.2, y:vy, decor:1 });
+  for(const [cx2,cz2] of [[-W2/2,-H2+0.6],[W2/2,H2-0.6],[0,-1.0]])
+    out.push({ el:'canopy', at:[cx2,cz2], yaw:rnd()*360, s:0.55, y:1.15, decor:1 });
   return out;
 }
 const LAYOUTS={
@@ -382,6 +393,14 @@ const LAYOUTS={
     { el:'pump',    at:[-2.1,-1.9], yaw:30,  s:0.85, y:0.1 },
     { el:'rustcar', at:[ 0.5, 0.7], yaw:0,   s:0.5,  y:0.1 },
     { el:'redtruck',at:[ 2.3,-1.0], yaw:150, s:0.55, y:0.1 },
+    /* the Nelson ghost-town harvest: a shop that is falling down, the
+       water tower behind it, and two more dead cars in the weeds */
+    { el:'shed',    at:[-4.6, 3.4], yaw:35,  s:0.34, y:0.05 },
+    { el:'tower',   at:[ 4.4, 3.2], yaw:200, s:0.30, y:0.05 },
+    { el:'pickup',  at:[-1.4, 2.4], yaw:250, s:0.55, y:0.1, decor:1 },
+    { el:'chassis', at:[ 2.6, 1.9], yaw:110, s:0.5,  y:0.1, decor:1 },
+    { el:'hut',     at:[-3.6, 0.6], yaw:20,  s:0.6,  y:0.08, decor:1 },
+    { el:'ruin',    at:[ 4.0,-2.2], yaw:300, s:0.55, y:0.08, decor:1 },
   ],
 };
 /* =========================================================
@@ -1858,6 +1877,20 @@ window.__pack={ get ready(){ return Object.values(assets).every(a=>a.loaded)&&Ob
      Splats are soft and overlapping, so this number and the pixel
      count together ARE the frame cost. Reported so a slow machine can
      say what it was asked to draw. */
+  /* ONE ELEMENT, ALONE, CENTRED. Reviewing a fresh clip meant hunting
+     it in the catalogue strip; the ABCD rule is that eyes decide, so
+     the eyes need it framed. */
+  only(id, yaw=0){
+    setPlay(false); clearStamps(); clearRoamers(); clearPellets();
+    DECOR.length=0; ALLST.length=0;
+    const e=stamp(id, 0, 0, yaw, 1, 0);
+    ALLST.push({ e, x:0, z:0, decor:false, i:0 });
+    curLay='one:'+id;
+    bounds=Math.max(2,(EL[id]?Math.max(...EL[id].dims):3));
+    document.getElementById('hInfo').textContent=id.toUpperCase()+' · '
+      +((EL[id]&&EL[id].count)||0)+' splats';
+    return EL[id]?EL[id].dims:null;
+  },
   get splats(){
     let n=0, k=0;
     for(const id in pool) for(const e of pool[id])

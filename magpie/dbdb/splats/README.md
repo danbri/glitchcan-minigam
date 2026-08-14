@@ -63,3 +63,31 @@ splat-transform + random subsample:
 Scene centres/radii use median + 70th-percentile distance (plain stdev
 was blown up 5x by stray far splats). museum/pool boot framings still
 want an in-game ?edit=1 pass.
+
+## The ghost-town and glasshouse harvest (Aug 2026)
+Eight new pack elements, all cropped from scenes ALREADY here — no new
+downloads, and so no new attribution beyond the three scenes' existing
+CC BY credits, which pack.json carries per element:
+
+- from `carshop.sog` (Nelson Ghost Town Car Shop · Paolo Tosolini):
+  **shed** — the whole falling-down shop, 120k gaussians, a landmark
+  rather than a tile.
+- from `watertower.sog` (Nelson Ghost Town Water Tower · Paolo
+  Tosolini): **tower** (the timber tower on its rubble pad),
+  **pickup** (a rusted flatbed truck), **chassis** (a flattened car
+  body), **hut** and **ruin** (two collapsing outbuildings).
+- from `garden-sog` (Botanical Garden Victoria House · Simon Bethke):
+  **vine** and **canopy** — climbing green for the swamp, hung high
+  enough to walk under.
+
+Found with `tools/object-scout.mjs`, which voxelises a scan, removes the
+ground band per column and returns connected components as candidate
+clip boxes. It shortlists; eyes decide. Four candidates were rejected on
+sight (smears, glasshouse framing, scrub) and are not in the pack.
+
+`tools/splat-scout.mjs` searches the superspl.at catalogue for new source
+scenes and records the licence each page declares. It found plenty of
+usable CC BY material (tractors, wrecks, ruins, rainforest) — but the
+site's download endpoint requires an account bearer token, so nothing
+new was fetched. If more sources are wanted, that is the step a human
+has to take.

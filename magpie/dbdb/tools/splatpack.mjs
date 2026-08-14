@@ -208,7 +208,12 @@ function clip(opts) {
     let kept2;
     if (mode === 'floor') kept2 = keep.filter(k => k.p[1] >= fl && k.p[1] <= fl + band);
     else if (trim > 0)    kept2 = keep.filter(k => k.p[1] >= fl + trim);
-    else kept2 = keep;
+    /* .slice(), NOT the same array. With the default --trim 0 this read
+       `kept2 = keep`, and then `keep.length = 0` emptied kept2 as well —
+       the copy loop had nothing left to copy and the clip wrote a
+       ZERO-BYTE .splat. Every clip that took the default trim was
+       silently lost; only trimmed and floor-mode clips ever worked. */
+    else kept2 = keep.slice();
     if (kept2.length >= 500) { keep.length = 0; for (const k of kept2) keep.push(k); }
     else console.log('! trim/band left', kept2.length, 'gaussians — keeping untrimmed'); }
   /* density cap: HQ clips can be huge — thin uniformly, deterministic */
