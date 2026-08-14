@@ -65,6 +65,13 @@ const finkContent = uniqueData.join('\\n');
 ## Project Overview
 Browser-based minigames collection with WebGL fluid dynamics, interactive fiction (FINK), SDF rendering (Lucid), and research artifacts. Mobile/touch-focused interfaces. GitHub Pages deployment at https://danbri.github.io/glitchcan-minigam/
 
+**Splat performance (Aug 2026, measured):** PlayCanvas's splat budget/LOD
+system is driven by an octree that only the LOD format carries — with
+`.compressed.ply` assets every knob of it is inert. `magpie/dbdb/splats/pack/lod/`
+holds four-level pyramids; `npm run pack:lod` rebuilds. See the
+`splat-discovery` skill before touching splat assets or blaming a scene for
+being slow.
+
 **THE FOCUS (owner's direction, July 2026):** the FINK game platform, the
 minigames (drafts and sketches included), and the office suite — wrapped
 behind **foafos** and the kernels in `packages/`: **`finkcore`** (story/data —
@@ -101,6 +108,7 @@ verified July 2026.
 | `glitchcanary` | `.claude/skills/` | story/game CONTENT — authoring `.fink.js`, episode linking, `# MINIGAME:` |
 | `edot-suite` | `magpie/edot/skills/` | the office suite at suite level — kernel capabilities, the 13 apps, 9 storage backends, auth, the 53-suite harness |
 | `tanks-for-the-trees` | `trees/skills/` | `trees/` — the Bristol data pipeline, BNG↔world coordinates, `host.api`/`__tftt`. **Read its data-ethics section first** |
+| `splat-discovery` | `magpie/dbdb/skills/` | Gaussian splats for `magpie/dbdb`: licence-checking source scans, cutting pack elements, LOD pyramids, honest cost measurement. **Read its licence section first** |
 | `lucid-scene-authoring` | `lucid/skills/` | scene JSON — primitives, CSG, transforms, `defs`/`ref`, params |
 | `lucid-renderer-interop` | `lucid/skills/` | across Mayfly (WebGL/GLSL) and Stinkyfish (WebGPU/WGSL) |
 | `lucid-rigging-and-physics` | `lucid/skills/` | `rig-evaluator.js`, the XPBD stacks, param uniforms |
