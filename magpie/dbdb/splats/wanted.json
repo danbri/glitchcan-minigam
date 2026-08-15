@@ -1,0 +1,71 @@
+{
+ "note": "A WANT-LIST, NOT A SHOPPING BASKET. Each entry says what a Fink story needs to be BUILT as a place, and which catalogue searches find candidates. It deliberately names subjects, not uses: 'watermill' and 'standing stone', never 'Riverbend wall tile'. The asset store stays free of intended use; the wanting lives here, and the placing lives in the game.",
+ "sources": {
+  "catalogue": "https://playcanvas.com/api/splats/explore (public)",
+  "gate": "downloads.enabled must be true (the author's own switch) AND downloads.license must be by | by-sa | cc0",
+  "fetch": "the file endpoint is 401 without a PlayCanvas account; a signed-in human downloads, then splat-ingest.mjs takes over"
+ },
+ "wants": [
+  {
+   "story": "hampstead",
+   "place": "a north London street and its shops",
+   "needs": ["terraced house frontage", "shop front", "pub exterior", "phone box", "pillar box", "bus stop", "tube entrance", "brick wall", "iron railings", "pavement"],
+   "search": ["terraced house", "shop front", "pub", "phone box", "london street", "brick wall", "railings"]
+  },
+  {
+   "story": "hampstead",
+   "place": "the bedsit and the jobcentre",
+   "needs": ["wardrobe", "single bed", "desk", "office chair", "strip light", "worn carpet"],
+   "search": ["wardrobe", "bedsit", "office desk", "abandoned room"]
+  },
+  {
+   "story": "hampstead",
+   "place": "the gallery and the mansion",
+   "needs": ["gallery interior", "picture frame", "plinth", "grand staircase", "fireplace", "chandelier"],
+   "search": ["art gallery", "museum interior", "staircase", "fireplace", "mansion"]
+  },
+  {
+   "story": "riverbend",
+   "place": "the mill (31 mentions — the story's centre)",
+   "needs": ["watermill", "mill wheel", "millstone", "sluice", "timber frame", "mill pond"],
+   "search": ["watermill", "mill", "water wheel", "millstone", "weir"]
+  },
+  {
+   "story": "riverbend",
+   "place": "the river, the grove and the stone",
+   "needs": ["riverbank", "standing stone", "stone circle", "old tree", "woodland clearing", "footbridge", "well"],
+   "search": ["standing stone", "stone circle", "riverbank", "ancient tree", "woodland", "footbridge", "old well"]
+  },
+  {
+   "story": "riverbend",
+   "place": "the village",
+   "needs": ["cottage", "thatched roof", "village lane", "dry stone wall", "gate"],
+   "search": ["cottage", "thatch", "village", "dry stone wall", "farm gate"]
+  },
+  {
+   "story": "bagend",
+   "place": "the hobbit-hole parody — a hill you live inside",
+   "needs": ["round door", "earth bank", "grass roof", "pantry shelves", "hearth", "hedge-lined path"],
+   "search": ["round door", "hobbit", "earth house", "root cellar", "pantry", "hedgerow", "grassy bank"]
+  },
+  {
+   "story": "mudslidemines",
+   "place": "the gem mines",
+   "needs": ["mine adit", "timber pit prop", "ore cart", "narrow gauge rail", "rock face", "crystal", "lantern", "spoil heap"],
+   "search": ["mine", "quarry", "tunnel", "ore cart", "mine entrance", "crystal", "cave", "rock face"]
+  },
+  {
+   "story": "shane-manor",
+   "place": "the country house murder",
+   "needs": ["study", "safe", "chess table", "portrait wall", "library shelves", "panelled door", "conservatory"],
+   "search": ["library", "study", "manor interior", "wood panelling", "conservatory", "chess"]
+  },
+  {
+   "story": "skydock",
+   "place": "already served, and the reason this list exists",
+   "needs": ["rusted vehicles", "derelict timber buildings", "jungle overgrowth"],
+   "search": ["abandoned car", "ghost town", "rainforest", "derelict"],
+   "status": "held: carshop, watertower, garden, forest"
+  }
+ ]
+}

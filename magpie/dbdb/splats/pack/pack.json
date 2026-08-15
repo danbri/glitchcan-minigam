@@ -27,7 +27,26 @@
     2.18,
     3
    ],
-   "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0"
+   "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0",
+   "subject": {
+    "what": "hanging broad leaves on a rail",
+    "kind": "plant",
+    "condition": "living",
+    "materials": [
+     "foliage"
+    ],
+    "standing": false,
+    "enclosing": false,
+    "note": "reads as overhead greenery; needs mounting above head height"
+   },
+   "licence": {
+    "work": "Botanical Garden Kiel, Victoria House",
+    "author": "Simon Bethke",
+    "source": "superspl.at/scene/6f697c4d",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
   },
   {
    "id": "chassis",
@@ -56,7 +75,27 @@
     1.11,
     4.17
    ],
-   "credit": "Nelson Ghost Town Water Tower · Paolo Tosolini · superspl.at/scene/fb3b5ed5 · CC BY 4.0"
+   "credit": "Nelson Ghost Town Water Tower · Paolo Tosolini · superspl.at/scene/fb3b5ed5 · CC BY 4.0",
+   "subject": {
+    "what": "flattened car body, roof collapsed",
+    "kind": "vehicle",
+    "condition": "ruined",
+    "materials": [
+     "steel",
+     "rust",
+     "paint"
+    ],
+    "standing": true,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Nelson Ghost Town Water Tower",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/fb3b5ed5",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
   },
   {
    "id": "cistern",
@@ -95,6 +134,27 @@
      ]
     ],
     "note": "rusty round water tank on rubble (hunted as a shack, better than one); bald smeared side 160-240"
+   },
+   "subject": {
+    "what": "round riveted water tank on rubble",
+    "kind": "structure",
+    "condition": "derelict",
+    "materials": [
+     "steel",
+     "rust",
+     "stone"
+    ],
+    "standing": true,
+    "enclosing": false,
+    "note": "one smeared side, 160-240 degrees, from a face the scanner never saw"
+   },
+   "licence": {
+    "work": "Nelson Ghost Town Water Tower",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/fb3b5ed5",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
    }
   },
   {
@@ -134,6 +194,25 @@
      ]
     ],
     "note": "shade-grown cluster with two rustic support posts; fence-free re-clip"
+   },
+   "subject": {
+    "what": "fern clump",
+    "kind": "plant",
+    "condition": "living",
+    "materials": [
+     "foliage"
+    ],
+    "standing": true,
+    "enclosing": false,
+    "note": "fern/fern2/fern3 are one cut at three densities"
+   },
+   "licence": {
+    "work": "Botanical Garden Kiel, Victoria House",
+    "author": "Simon Bethke",
+    "source": "superspl.at/scene/6f697c4d",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
    }
   },
   {
@@ -173,6 +252,24 @@
      ]
     ],
     "note": "tinted variant of fern"
+   },
+   "subject": {
+    "what": "fern clump",
+    "kind": "plant",
+    "condition": "living",
+    "materials": [
+     "foliage"
+    ],
+    "standing": true,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Botanical Garden Kiel, Victoria House",
+    "author": "Simon Bethke",
+    "source": "superspl.at/scene/6f697c4d",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
    }
   },
   {
@@ -202,7 +299,25 @@
     1.26,
     1.07
    ],
-   "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0"
+   "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0",
+   "subject": {
+    "what": "fern clump",
+    "kind": "plant",
+    "condition": "living",
+    "materials": [
+     "foliage"
+    ],
+    "standing": true,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Botanical Garden Kiel, Victoria House",
+    "author": "Simon Bethke",
+    "source": "superspl.at/scene/6f697c4d",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
   },
   {
    "id": "grass",
@@ -241,6 +356,26 @@
      ]
     ],
     "note": "forest-centre moss, shadow lifted at clip (--shadowlift); residual dark corner at 315 — rotate into overlaps"
+   },
+   "subject": {
+    "what": "mossy forest floor",
+    "kind": "ground",
+    "condition": "living",
+    "materials": [
+     "moss",
+     "leaf litter"
+    ],
+    "standing": false,
+    "enclosing": false,
+    "note": "cut as a floor band; tiles edge to edge"
+   },
+   "licence": {
+    "work": "Forest path",
+    "author": "Pavel Tanhauser",
+    "source": "superspl.at/scene/2be1a75a",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
    }
   },
   {
@@ -275,6 +410,25 @@
     "face": 45,
     "weak": [],
     "note": "roughly isotropic foliage; slightly fuller toward 45"
+   },
+   "subject": {
+    "what": "dense leafy hedge section",
+    "kind": "plant",
+    "condition": "living",
+    "materials": [
+     "foliage"
+    ],
+    "standing": true,
+    "enclosing": false,
+    "note": "hedge/hedge2/hedge3 are one cut at three densities"
+   },
+   "licence": {
+    "work": "Botanical Garden Kiel, Victoria House",
+    "author": "Simon Bethke",
+    "source": "superspl.at/scene/6f697c4d",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
    }
   },
   {
@@ -309,6 +463,24 @@
     "face": 45,
     "weak": [],
     "note": "tinted variant of hedge"
+   },
+   "subject": {
+    "what": "dense leafy hedge section",
+    "kind": "plant",
+    "condition": "living",
+    "materials": [
+     "foliage"
+    ],
+    "standing": true,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Botanical Garden Kiel, Victoria House",
+    "author": "Simon Bethke",
+    "source": "superspl.at/scene/6f697c4d",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
    }
   },
   {
@@ -338,7 +510,25 @@
     1.58,
     1.2
    ],
-   "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0"
+   "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0",
+   "subject": {
+    "what": "dense leafy hedge section",
+    "kind": "plant",
+    "condition": "living",
+    "materials": [
+     "foliage"
+    ],
+    "standing": true,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Botanical Garden Kiel, Victoria House",
+    "author": "Simon Bethke",
+    "source": "superspl.at/scene/6f697c4d",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
   },
   {
    "id": "hut",
@@ -367,7 +557,26 @@
     1.31,
     2.77
    ],
-   "credit": "Nelson Ghost Town Water Tower · Paolo Tosolini · superspl.at/scene/fb3b5ed5 · CC BY 4.0"
+   "credit": "Nelson Ghost Town Water Tower · Paolo Tosolini · superspl.at/scene/fb3b5ed5 · CC BY 4.0",
+   "subject": {
+    "what": "small timber outbuilding with a sagging roof",
+    "kind": "building",
+    "condition": "derelict",
+    "materials": [
+     "timber",
+     "corrugated iron"
+    ],
+    "standing": true,
+    "enclosing": true
+   },
+   "licence": {
+    "work": "Nelson Ghost Town Water Tower",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/fb3b5ed5",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
   },
   {
    "id": "palmfan",
@@ -406,6 +615,24 @@
      ]
     ],
     "note": "dark jungle bed with a specimen sign and floating leaf fragments — back-row density only"
+   },
+   "subject": {
+    "what": "fan palm",
+    "kind": "plant",
+    "condition": "living",
+    "materials": [
+     "foliage"
+    ],
+    "standing": true,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Botanical Garden Kiel, Victoria House",
+    "author": "Simon Bethke",
+    "source": "superspl.at/scene/6f697c4d",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
    }
   },
   {
@@ -435,7 +662,27 @@
     1.37,
     2.63
    ],
-   "credit": "Nelson Ghost Town Water Tower · Paolo Tosolini · superspl.at/scene/fb3b5ed5 · CC BY 4.0"
+   "credit": "Nelson Ghost Town Water Tower · Paolo Tosolini · superspl.at/scene/fb3b5ed5 · CC BY 4.0",
+   "subject": {
+    "what": "flatbed pickup truck, rusted through, still on its wheels",
+    "kind": "vehicle",
+    "condition": "derelict",
+    "materials": [
+     "steel",
+     "rust",
+     "paint"
+    ],
+    "standing": true,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Nelson Ghost Town Water Tower",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/fb3b5ed5",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
   },
   {
    "id": "plantbed",
@@ -474,6 +721,25 @@
      ]
     ],
     "note": "potted cluster, terracotta pot visible from 315; sign-free re-clip; fog wisps around 100-145"
+   },
+   "subject": {
+    "what": "low planting bed with mixed foliage",
+    "kind": "plant",
+    "condition": "living",
+    "materials": [
+     "foliage",
+     "soil"
+    ],
+    "standing": true,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Botanical Garden Kiel, Victoria House",
+    "author": "Simon Bethke",
+    "source": "superspl.at/scene/6f697c4d",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
    }
   },
   {
@@ -503,7 +769,26 @@
     1.63,
     1.42
    ],
-   "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0"
+   "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0",
+   "subject": {
+    "what": "low planting bed with mixed foliage",
+    "kind": "plant",
+    "condition": "living",
+    "materials": [
+     "foliage",
+     "soil"
+    ],
+    "standing": true,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Botanical Garden Kiel, Victoria House",
+    "author": "Simon Bethke",
+    "source": "superspl.at/scene/6f697c4d",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
   },
   {
    "id": "pond",
@@ -537,6 +822,26 @@
     "face": 270,
     "weak": [],
     "note": "lilypads incl. giant rimmed Victoria pads; water is transparent — stamp on dark ground"
+   },
+   "subject": {
+    "what": "still water with a planted rim",
+    "kind": "ground",
+    "condition": "living",
+    "materials": [
+     "water",
+     "foliage"
+    ],
+    "standing": false,
+    "enclosing": false,
+    "note": "cut as a floor band; sits flush"
+   },
+   "licence": {
+    "work": "Botanical Garden Kiel, Victoria House",
+    "author": "Simon Bethke",
+    "source": "superspl.at/scene/6f697c4d",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
    }
   },
   {
@@ -571,6 +876,26 @@
     "face": 0,
     "weak": [],
     "note": "full-360 star: scanner circled it; desert bush hugs its back (135-225), charming"
+   },
+   "subject": {
+    "what": "kerbside fuel pump",
+    "kind": "fixture",
+    "condition": "derelict",
+    "materials": [
+     "steel",
+     "enamel",
+     "rust"
+    ],
+    "standing": true,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Nelson Ghost Town Car Shop",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/dd8d9c8b",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
    }
   },
   {
@@ -610,6 +935,27 @@
      ]
     ],
     "note": "gorgeous rear-driver three-quarter; 0-45 side is unscanned smear and missing panels — keep it to a wall"
+   },
+   "subject": {
+    "what": "red truck cab and bed",
+    "kind": "vehicle",
+    "condition": "derelict",
+    "materials": [
+     "steel",
+     "rust",
+     "paint"
+    ],
+    "standing": true,
+    "enclosing": false,
+    "note": "unscanned smear across a 0-45 degree viewer arc"
+   },
+   "licence": {
+    "work": "Nelson Ghost Town Water Tower",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/fb3b5ed5",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
    }
   },
   {
@@ -639,7 +985,27 @@
     3.05,
     6.98
    ],
-   "credit": "Nelson Ghost Town Water Tower · Paolo Tosolini · superspl.at/scene/fb3b5ed5 · CC BY 4.0"
+   "credit": "Nelson Ghost Town Water Tower · Paolo Tosolini · superspl.at/scene/fb3b5ed5 · CC BY 4.0",
+   "subject": {
+    "what": "collapsing cabin, roof caved in",
+    "kind": "building",
+    "condition": "ruined",
+    "materials": [
+     "timber",
+     "corrugated iron"
+    ],
+    "standing": true,
+    "enclosing": true,
+    "note": "sparse at 877 gaussians — a silhouette, not a close-up"
+   },
+   "licence": {
+    "work": "Nelson Ghost Town Water Tower",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/fb3b5ed5",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
   },
   {
    "id": "rustcar",
@@ -682,6 +1048,25 @@
      ]
     ],
     "note": "both profiles strong; front arc has an undercut void, rear window is a hole with a gravel skirt"
+   },
+   "subject": {
+    "what": "rusted sedan, wheels gone",
+    "kind": "vehicle",
+    "condition": "derelict",
+    "materials": [
+     "steel",
+     "rust"
+    ],
+    "standing": true,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Nelson Ghost Town Car Shop",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/dd8d9c8b",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
    }
   },
   {
@@ -711,7 +1096,28 @@
     6.8,
     14.1
    ],
-   "credit": "Nelson Ghost Town Car Shop · Paolo Tosolini · superspl.at/scene/dd8d9c8b · CC BY 4.0"
+   "credit": "Nelson Ghost Town Car Shop · Paolo Tosolini · superspl.at/scene/dd8d9c8b · CC BY 4.0",
+   "subject": {
+    "what": "clapboard shop building with a chimney and piled junk",
+    "kind": "building",
+    "condition": "derelict",
+    "materials": [
+     "timber",
+     "shingle",
+     "glass"
+    ],
+    "standing": true,
+    "enclosing": true,
+    "note": "the largest element in the store at 120k gaussians; a landmark rather than a repeatable piece"
+   },
+   "licence": {
+    "work": "Nelson Ghost Town Car Shop",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/dd8d9c8b",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
   },
   {
    "id": "tower",
@@ -740,7 +1146,28 @@
     7.67,
     13.92
    ],
-   "credit": "Nelson Ghost Town Water Tower · Paolo Tosolini · superspl.at/scene/fb3b5ed5 · CC BY 4.0"
+   "credit": "Nelson Ghost Town Water Tower · Paolo Tosolini · superspl.at/scene/fb3b5ed5 · CC BY 4.0",
+   "subject": {
+    "what": "timber-framed water tower on a rubble pad",
+    "kind": "structure",
+    "condition": "derelict",
+    "materials": [
+     "timber",
+     "steel",
+     "stone"
+    ],
+    "standing": true,
+    "enclosing": true,
+    "note": "13.9m tall; the tallest element held"
+   },
+   "licence": {
+    "work": "Nelson Ghost Town Water Tower",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/fb3b5ed5",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
   },
   {
    "id": "trail",
@@ -774,6 +1201,26 @@
     "face": 0,
     "weak": [],
     "note": "sunlit gravel trail through moss — stamp in runs to draw paths; sun/shade contrast is its charm"
+   },
+   "subject": {
+    "what": "bare earth path through leaf litter",
+    "kind": "ground",
+    "condition": "worn",
+    "materials": [
+     "earth",
+     "leaf litter"
+    ],
+    "standing": false,
+    "enclosing": false,
+    "note": "cut as a floor band; tiles edge to edge"
+   },
+   "licence": {
+    "work": "Forest path",
+    "author": "Pavel Tanhauser",
+    "source": "superspl.at/scene/2be1a75a",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
    }
   },
   {
@@ -808,6 +1255,24 @@
     "face": 315,
     "weak": [],
     "note": "watertower timber legs, red ladder, wagon cart at the foot — the temple ruin of the pack"
+   },
+   "subject": {
+    "what": "open timber trestle frame",
+    "kind": "structure",
+    "condition": "derelict",
+    "materials": [
+     "timber"
+    ],
+    "standing": true,
+    "enclosing": true
+   },
+   "licence": {
+    "work": "Nelson Ghost Town Water Tower",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/fb3b5ed5",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
    }
   },
   {
@@ -837,7 +1302,26 @@
     2.85,
     2.2
    ],
-   "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0"
+   "credit": "Botanical Garden Kiel, Victoria House · Simon Bethke · superspl.at/scene/6f697c4d · CC BY 4.0",
+   "subject": {
+    "what": "climbing greenery on a stump",
+    "kind": "plant",
+    "condition": "overgrown",
+    "materials": [
+     "foliage",
+     "timber"
+    ],
+    "standing": true,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Botanical Garden Kiel, Victoria House",
+    "author": "Simon Bethke",
+    "source": "superspl.at/scene/6f697c4d",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
   },
   {
    "id": "windowwall",
@@ -880,6 +1364,26 @@
      ]
     ],
     "note": "read face-on; edge-on vanishes (any wall does); back side carries white fog blobs — front out"
+   },
+   "subject": {
+    "what": "glasshouse wall panel with glazing bars",
+    "kind": "building",
+    "condition": "worn",
+    "materials": [
+     "glass",
+     "painted steel"
+    ],
+    "standing": true,
+    "enclosing": false,
+    "note": "flat; one good face"
+   },
+   "licence": {
+    "work": "Botanical Garden Kiel, Victoria House",
+    "author": "Simon Bethke",
+    "source": "superspl.at/scene/6f697c4d",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
    }
   }
  ],
@@ -914,5 +1418,10 @@
    "vine",
    "windowwall"
   ]
+ },
+ "store": {
+  "describes": "what each element IS",
+  "excludes": "what any element is FOR — intended use lives in the game layouts and in splats/wanted.json",
+  "checkedBy": "tools/asset-index.mjs"
  }
 }

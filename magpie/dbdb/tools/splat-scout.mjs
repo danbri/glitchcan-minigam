@@ -1,90 +1,128 @@
 #!/usr/bin/env node
-/* splat-scout.mjs — FIND CC-LICENSED SCENES, AND PROVE THE LICENCE.
+/* splat-scout.mjs — FIND SOURCE SCANS, AND PROVE YOU MAY USE THEM.
  *
- * The pack's source scenes were originally found by hand: a headless
- * browser at the superspl.at gallery, reading every scene page's
- * rel=license link. That worked and then vanished, so the next hunt
- * started from nothing. This is that hunt, written down.
+ * The pack's source scenes were originally found by hand and the method
+ * was lost. This is that hunt, written down, and it now asks the
+ * catalogue rather than scraping its HTML: superspl.at is a front end
+ * for `https://playcanvas.com/api`, whose `splats/explore` endpoint is
+ * public and returns everything that matters.
  *
- * It searches the catalogue for a topic, opens every result, and
- * records the licence THE PAGE DECLARES — not one inferred from a
- * gallery that mixes licences freely. Nothing is downloaded here; this
- * only produces a shortlist a human can look at.
+ * TWO GATES, AND BOTH ARE THE AUTHOR'S, NOT OURS:
  *
- * A scene with no rel=license is reported as UNKNOWN and must not be
- * used. "Probably fine" is not a licence.
+ *   downloads.enabled   the creator's own switch. false means they did
+ *                       not offer the file. That is an answer.
+ *   downloads.license   the licence they attached to that offer.
+ *
+ * Only `by`, `by-sa`, `cc0`/`zero` are usable here: `nd` forbids
+ * derivatives and a crop is emphatically a derivative; `nc` is a live
+ * risk for a published game. Those are reported separately, never
+ * promoted.
+ *
+ * IT DOWNLOADS NOTHING. The file endpoint answers 401 Unauthorized to
+ * everyone without a PlayCanvas account, including for scenes whose
+ * authors enabled downloads — measured on every format. Working around
+ * that is not this tool's business. What it produces is a shortlist
+ * with hashes and view links, so a person who is logged in can fetch
+ * them, and `splat-ingest.mjs` takes them from there.
  *
  * Usage:
- *   node magpie/dbdb/tools/splat-scout.mjs jungle "abandoned car" ruin
- *   node magpie/dbdb/tools/splat-scout.mjs --json jungle > hits.json
+ *   node magpie/dbdb/tools/splat-scout.mjs jungle "abandoned car" ruins
+ *   node magpie/dbdb/tools/splat-scout.mjs --json --limit 100 mill grove
+ *   node magpie/dbdb/tools/splat-scout.mjs --wants        # the story want-list
  */
-const args = process.argv.slice(2);
-const asJson = args.includes('--json');
-const terms = args.filter(a => a !== '--json');
-if (!terms.length) { console.error('usage: splat-scout.mjs [--json] <term> ...'); process.exit(2); }
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const UA = { 'User-Agent': 'glitchcan-minigam splat scout (github.com/danbri/glitchcan-minigam)' };
-const get = async url => {
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const API = 'https://playcanvas.com/api';
+const argv = process.argv.slice(2);
+const asJson = argv.includes('--json');
+const useWants = argv.includes('--wants');
+const li = argv.indexOf('--limit');
+const LIMIT = li < 0 ? 100 : Math.min(100, parseInt(argv[li + 1], 10) || 100);
+
+const WANTS = JSON.parse(
+  fs.readFileSync(path.join(HERE, '../splats/wanted.json'), 'utf8'));
+
+let terms = argv.filter((a, i) => !a.startsWith('--') && argv[i - 1] !== '--limit');
+if (useWants) terms = [...new Set(WANTS.wants.flatMap(w => w.search))];
+if (!terms.length) {
+  console.error('usage: splat-scout.mjs [--json] [--limit N] <term> ...   |   --wants');
+  process.exit(2);
+}
+
+const UA = { 'User-Agent': 'glitchcan-minigam splat scout (github.com/danbri/glitchcan-minigam)',
+             Accept: 'application/json' };
+async function api(url) {
   for (let i = 0; i < 3; i++) {
     try {
       const r = await fetch(url, { headers: UA });
-      if (r.ok) return await r.text();
+      if (r.ok) return await r.json();
+      if (r.status === 401 || r.status === 403) return { _denied: r.status };
     } catch (e) { /* retry */ }
-    await new Promise(r => setTimeout(r, 800 * (i + 1)));
+    await new Promise(r => setTimeout(r, 700 * (i + 1)));
   }
   return null;
+}
+
+/* RELEVANCE. The catalogue's search is generous: "mill" returned a
+   millipede, "grove" a Mazda MX-5. Keep a hit only if a word of the
+   term actually appears in the title or description — the caller can
+   turn that off with --loose when trawling for surprises. */
+const loose = argv.includes('--loose');
+const relevant = (r, term) => {
+  if (loose) return true;
+  const hay = ((r.title || '') + ' ' + (r.description || '')).toLowerCase();
+  return term.toLowerCase().split(/\s+/).filter(w => w.length > 2)
+    .some(w => hay.includes(w));
 };
 
-/* the gallery is server-rendered, so the listing is in the HTML */
-const ids = new Map();                       // id -> {title, user, terms:Set}
+const seen = new Map();                       // hash -> record (+ terms)
 for (const term of terms) {
-  const html = await get('https://superspl.at/?q=' + encodeURIComponent(term));
-  if (!html) { console.error('search failed:', term); continue; }
-  const re = /href="\/scene\/([a-f0-9]{8})"[^>]*>([^<]{1,120})</g;
-  let m;
-  while ((m = re.exec(html))) {
-    const [, id, label] = m;
-    const title = label.trim();
-    if (!title) continue;                    // the thumbnail anchor has no text
-    const rec = ids.get(id) || { title, terms: new Set() };
+  const d = await api(`${API}/splats/explore?limit=${LIMIT}&search=${encodeURIComponent(term)}`);
+  if (!d || !d.result) { console.error('search failed:', term); continue; }
+  for (const r of d.result) {
+    if (!relevant(r, term)) continue;
+    const rec = seen.get(r.hash) || { ...r, terms: new Set() };
     rec.terms.add(term);
-    ids.set(id, rec);
+    seen.set(r.hash, rec);
   }
 }
 
-const rows = [];
-for (const [id, rec] of ids) {
-  const html = await get('https://superspl.at/scene/' + id);
-  if (!html) { rows.push({ id, ...rec, licence: 'FETCH-FAILED' }); continue; }
-  const lic = /rel="license"\s+href="([^"]+)"/.exec(html);
-  const ttl = /<title>([^<]*)<\/title>/.exec(html);
-  const usr = /href="\/user\/([^"]+)"/.exec(html);
-  rows.push({
-    id,
-    title: ttl ? ttl[1].replace(/ - SuperSplat$/, '').trim() : rec.title,
-    user: usr ? usr[1] : '?',
-    licence: lic ? lic[1] : 'UNKNOWN',
-    terms: [...rec.terms],
-  });
+const OPEN = /^(by|by-sa|cc0|zero)$/;
+const rows = [...seen.values()].map(r => {
+  const dl = r.downloads || {};
+  return {
+    hash: r.hash, title: (r.title || '').trim(), user: r.user?.username || '?',
+    licence: dl.license || null, offered: !!dl.enabled,
+    format: r.format, mb: +(r.size / 1e6).toFixed(1),
+    view: 'https://superspl.at/scene/' + r.hash,
+    thumb: r.thumbnails?.m || r.thumbnails?.s || null,   // judge it by eye
+    terms: [...r.terms],
+  };
+});
+const usable = rows.filter(r => r.offered && r.licence && OPEN.test(r.licence));
+const restricted = rows.filter(r => r.offered && r.licence && !OPEN.test(r.licence));
+const notOffered = rows.filter(r => !r.offered);
+
+if (asJson) {
+  console.log(JSON.stringify({ usable, restricted, notOffered: notOffered.length }, null, 1));
+  process.exit(0);
 }
 
-const ok = rows.filter(r => /creativecommons\.org\/(licenses|publicdomain)/.test(r.licence));
-const no = rows.filter(r => !ok.includes(r));
+console.log('\nUSABLE — the author enabled downloads under an open licence\n');
+for (const r of usable.sort((a, b) => a.mb - b.mb))
+  console.log('  ' + r.hash + '  ' + ('CC ' + r.licence.toUpperCase()).padEnd(9)
+    + String(r.mb).padStart(7) + 'MB ' + r.format.padEnd(5) + ' '
+    + r.user.padEnd(17) + r.title.slice(0, 52) + '   [' + r.terms.join(',') + ']');
 
-if (asJson) { console.log(JSON.stringify({ ok, rejected: no }, null, 1)); process.exit(0); }
+console.log('\nOFFERED BUT RESTRICTED — nc/nd; not for this pack without the owner saying so\n');
+for (const r of restricted)
+  console.log('  ' + r.hash + '  ' + ('CC ' + r.licence.toUpperCase()).padEnd(12)
+    + r.user.padEnd(17) + r.title.slice(0, 48));
 
-console.log('\nUSABLE — the page declares a Creative Commons licence\n');
-for (const r of ok)
-  console.log('  ' + r.id + '  ' + shortLic(r.licence).padEnd(10)
-    + r.user.padEnd(18) + r.title.slice(0, 64) + '   [' + r.terms.join(',') + ']');
-console.log('\nNOT USABLE — no licence declared on the page (do not download)\n');
-for (const r of no)
-  console.log('  ' + r.id + '  ' + r.licence.slice(0, 14).padEnd(16)
-    + r.user.padEnd(18) + r.title.slice(0, 60));
-console.log('\n' + ok.length + ' usable of ' + rows.length + ' found');
-
-function shortLic(u) {
-  const m = /licenses\/([a-z-]+)\//.exec(u); if (m) return 'CC ' + m[1].toUpperCase();
-  if (/publicdomain\/zero/.test(u)) return 'CC0';
-  return u.slice(0, 10);
-}
+console.log(`\n${usable.length} usable · ${restricted.length} restricted · `
+  + `${notOffered.length} not offered for download by their author · ${rows.length} seen`);
+console.log('\nNothing was downloaded. The file endpoint is 401 without a PlayCanvas');
+console.log('account; open a view link, sign in, download, then run splat-ingest.mjs.');

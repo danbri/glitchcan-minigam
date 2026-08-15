@@ -1,0 +1,40 @@
+{
+ "note": "WHAT EACH ELEMENT IS — never what it is for. This file is the human judgement behind the asset store: a hand-written description of the thing that was scanned. It contains no game, no layout, no level, no 'wall tile' and no 'decor'. A hedge is a hedge whether it walls a maze, hides a body or fills a garden, and the store must not decide which. Intended use lives in the game (splatpack.html layouts, decor flags) and in the wanting (wanted.json) — never here.",
+ "fields": {
+  "what": "plain-language noun phrase for the object",
+  "kind": "broad class: vehicle | building | structure | plant | ground | furniture | fixture",
+  "condition": "intact | worn | derelict | ruined | overgrown | living",
+  "materials": "what it appears to be made of",
+  "standing": "true if it reads correctly upright on flat ground",
+  "enclosing": "true if it is big enough to be entered or sheltered under",
+  "note": "anything a person choosing it should know, including scan defects"
+ },
+ "subjects": {
+  "canopy":    { "what": "hanging broad leaves on a rail", "kind": "plant", "condition": "living", "materials": ["foliage"], "standing": false, "enclosing": false, "note": "reads as overhead greenery; needs mounting above head height" },
+  "chassis":   { "what": "flattened car body, roof collapsed", "kind": "vehicle", "condition": "ruined", "materials": ["steel", "rust", "paint"], "standing": true, "enclosing": false },
+  "cistern":   { "what": "round riveted water tank on rubble", "kind": "structure", "condition": "derelict", "materials": ["steel", "rust", "stone"], "standing": true, "enclosing": false, "note": "one smeared side, 160-240 degrees, from a face the scanner never saw" },
+  "fern":      { "what": "fern clump", "kind": "plant", "condition": "living", "materials": ["foliage"], "standing": true, "enclosing": false, "note": "fern/fern2/fern3 are one cut at three densities" },
+  "fern2":     { "what": "fern clump", "kind": "plant", "condition": "living", "materials": ["foliage"], "standing": true, "enclosing": false },
+  "fern3":     { "what": "fern clump", "kind": "plant", "condition": "living", "materials": ["foliage"], "standing": true, "enclosing": false },
+  "grass":     { "what": "mossy forest floor", "kind": "ground", "condition": "living", "materials": ["moss", "leaf litter"], "standing": false, "enclosing": false, "note": "cut as a floor band; tiles edge to edge" },
+  "hedge":     { "what": "dense leafy hedge section", "kind": "plant", "condition": "living", "materials": ["foliage"], "standing": true, "enclosing": false, "note": "hedge/hedge2/hedge3 are one cut at three densities" },
+  "hedge2":    { "what": "dense leafy hedge section", "kind": "plant", "condition": "living", "materials": ["foliage"], "standing": true, "enclosing": false },
+  "hedge3":    { "what": "dense leafy hedge section", "kind": "plant", "condition": "living", "materials": ["foliage"], "standing": true, "enclosing": false },
+  "hut":       { "what": "small timber outbuilding with a sagging roof", "kind": "building", "condition": "derelict", "materials": ["timber", "corrugated iron"], "standing": true, "enclosing": true },
+  "palmfan":   { "what": "fan palm", "kind": "plant", "condition": "living", "materials": ["foliage"], "standing": true, "enclosing": false },
+  "pickup":    { "what": "flatbed pickup truck, rusted through, still on its wheels", "kind": "vehicle", "condition": "derelict", "materials": ["steel", "rust", "paint"], "standing": true, "enclosing": false },
+  "plantbed":  { "what": "low planting bed with mixed foliage", "kind": "plant", "condition": "living", "materials": ["foliage", "soil"], "standing": true, "enclosing": false },
+  "plantbed2": { "what": "low planting bed with mixed foliage", "kind": "plant", "condition": "living", "materials": ["foliage", "soil"], "standing": true, "enclosing": false },
+  "pond":      { "what": "still water with a planted rim", "kind": "ground", "condition": "living", "materials": ["water", "foliage"], "standing": false, "enclosing": false, "note": "cut as a floor band; sits flush" },
+  "pump":      { "what": "kerbside fuel pump", "kind": "fixture", "condition": "derelict", "materials": ["steel", "enamel", "rust"], "standing": true, "enclosing": false },
+  "redtruck":  { "what": "red truck cab and bed", "kind": "vehicle", "condition": "derelict", "materials": ["steel", "rust", "paint"], "standing": true, "enclosing": false, "note": "unscanned smear across a 0-45 degree viewer arc" },
+  "ruin":      { "what": "collapsing cabin, roof caved in", "kind": "building", "condition": "ruined", "materials": ["timber", "corrugated iron"], "standing": true, "enclosing": true, "note": "sparse at 877 gaussians — a silhouette, not a close-up" },
+  "rustcar":   { "what": "rusted sedan, wheels gone", "kind": "vehicle", "condition": "derelict", "materials": ["steel", "rust"], "standing": true, "enclosing": false },
+  "shed":      { "what": "clapboard shop building with a chimney and piled junk", "kind": "building", "condition": "derelict", "materials": ["timber", "shingle", "glass"], "standing": true, "enclosing": true, "note": "the largest element in the store at 120k gaussians; a landmark rather than a repeatable piece" },
+  "tower":     { "what": "timber-framed water tower on a rubble pad", "kind": "structure", "condition": "derelict", "materials": ["timber", "steel", "stone"], "standing": true, "enclosing": true, "note": "13.9m tall; the tallest element held" },
+  "trail":     { "what": "bare earth path through leaf litter", "kind": "ground", "condition": "worn", "materials": ["earth", "leaf litter"], "standing": false, "enclosing": false, "note": "cut as a floor band; tiles edge to edge" },
+  "trestle":   { "what": "open timber trestle frame", "kind": "structure", "condition": "derelict", "materials": ["timber"], "standing": true, "enclosing": true },
+  "vine":      { "what": "climbing greenery on a stump", "kind": "plant", "condition": "overgrown", "materials": ["foliage", "timber"], "standing": true, "enclosing": false },
+  "windowwall": { "what": "glasshouse wall panel with glazing bars", "kind": "building", "condition": "worn", "materials": ["glass", "painted steel"], "standing": true, "enclosing": false, "note": "flat; one good face" }
+ }
+}

@@ -10,8 +10,9 @@ description: >-
   pyramids that PlayCanvas needs before its splat budget does anything
   (pack-lod.mjs), and registering elements in pack.json + the layouts. Use this
   when adding or re-cutting a pack element, hunting new source scans, debugging
-  an empty or wrong-looking clip, regenerating the LOD pack, or reasoning about
-  splat cost on weak hardware. READ THE LICENCE SECTION FIRST — every scene in
+  an empty or wrong-looking clip, regenerating the LOD pack, describing an
+  element in the use-neutral asset store, or reasoning about splat cost on weak
+  hardware. READ THE LICENCE SECTION FIRST — every scene in
   this pack is Creative Commons and carries a required attribution, and the
   catalogue mixes CC BY with NC/ND and with no-licence-at-all.
 ---
@@ -48,14 +49,65 @@ Rules, not preferences:
   own data path is public and is how the existing scenes were obtained, but if
   the route in front of you is the authenticated one, stop and say so.
 
+The catalogue is not the web page: superspl.at is a front end for
+**`https://playcanvas.com/api`**, and `splats/explore?limit=100&search=…` is
+public and returns everything — including the two fields that decide this:
+
+    downloads.enabled   the author's own switch. false is an answer.
+    downloads.license   the licence they attached to that offer.
+
     npm run splat:sources jungle "abandoned car" ruins tractor
-    # 26 usable CC BY of 125 found (Aug 2026): tractors, plane wrecks,
-    # castle ruins, Amazon rainforest — shortlist only, nothing fetched.
+    npm run splat:wanted            # every need in splats/wanted.json
+    # Aug 2026 sweep: 800 scenes seen, 83 usable, 34 nc/nd, 654 not offered.
+
+**You cannot download them, and should not try.** The file endpoint answers
+`401 Unauthorized` to everyone without a PlayCanvas account — measured on GET
+and POST, for `sog`, `compressed-ply` and `ply`, *including for scenes whose
+authors switched downloads on*. A signed-in human fetches the file, drops it in
+`splats/incoming/` (git-ignored — the originals are other people's work; the
+repo keeps the derived clips and the credit), and:
+
+    npm run splat:ingest <hash> <name>
+
+which re-reads the licence off the scene page, refuses anything not
+`by`/`by-sa`/`cc0`, thins the scan to a working weight, and prints the `SRC`
+and `SCENES` entries for a person to paste — the up-axis and the name are
+judgements, so it stops there.
 
 **Field note (Aug 2026):** headless Chromium in this container cannot reach
 superspl.at (`ERR_CONNECTION_RESET`, with or without the proxy) while `curl`
 can. Scouting is therefore plain HTTP; anything needing the live viewer needs a
 human or a different machine.
+
+## 1b. THE STORE HAS NO PRECONCEPTIONS ABOUT USE
+
+**`pack.json` says what a thing IS. It never says what it is for.**
+
+An element named for its use is one nobody reaches for twice: a hedge cut as
+"maze wall" does not get planted in a garden, and a shack filed under "swamp
+decor" never becomes a mine head. Three separable things, three homes:
+
+| what | where | who writes it |
+|---|---|---|
+| measured facts — counts, dims, the cut box, which side the scanner saw | `pack.json`, from the clipper | tools |
+| **subject** — "flatbed pickup truck, rusted through, still on its wheels" | `splats/subjects.json` | a person; a machine guessing this would be inventing |
+| licence — author, work, terms, source | `pack.json`, parsed from the credit | tools |
+| **intended use** | `splatpack.html` layouts, `decor:1`, and `splats/wanted.json` | a person |
+
+    npm run splat:index          # check
+    node magpie/dbdb/tools/asset-index.mjs --fix   # merge subjects + licences
+
+It FAILS on a use-word in a description. Note what is NOT a use-word: **wall**.
+A wall is an object — a glasshouse wall panel is a real thing with a real
+thickness, and the first version of that list rejected it, which was the list
+being wrong rather than the description. The test is whether the word names a
+role in a game: "tile", "decor", "prop", "spawn" do; "wall", "path", "roof"
+do not.
+
+`splats/wanted.json` is the other side of the same rule — it records what the
+STORIES need (Hampstead's street, Riverbend's mill, Bag End's round door, the
+gem mines) as subjects to look for, so the wanting never leaks into the store.
+`splats/candidates.json` is the sweep's answer, with thumbnails, for eyes.
 
 ## 2. THE CHAIN
 

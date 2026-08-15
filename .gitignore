@@ -36,3 +36,7 @@ npm-debug.log*
 _tmp_review_*.mjs
 magpie/dbdb/tools/scout-out/
 magpie/dbdb/tools/pack-work/
+
+# downloaded source scans: fetched by hand, not committed
+magpie/dbdb/splats/incoming/*
+!magpie/dbdb/splats/incoming/.gitkeep

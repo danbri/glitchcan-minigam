@@ -1,0 +1,1090 @@
+{
+ "note": "Candidates only. Licence and the AUTHOR'S OWN download switch are already filtered; relevance and looks are not. Judge by thumbnail before fetching anything.",
+ "gate": "downloads.enabled must be true (the author's own switch) AND downloads.license must be by | by-sa | cc0",
+ "totals": {
+  "usable": 83,
+  "restricted": 32,
+  "notOffered": 395
+ },
+ "byWant": [
+  {
+   "story": "hampstead",
+   "place": "a north London street and its shops",
+   "needs": [
+    "terraced house frontage",
+    "shop front",
+    "pub exterior",
+    "phone box",
+    "pillar box",
+    "bus stop",
+    "tube entrance",
+    "brick wall",
+    "iron railings",
+    "pavement"
+   ],
+   "candidates": [
+    {
+     "hash": "80dba0aa",
+     "title": "Radio Tower - Funaokayama Park, Kyoto",
+     "user": "scokobro",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 6.2,
+     "view": "https://superspl.at/scene/80dba0aa",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/80dba0aa/v1/m.webp",
+     "terms": [
+      "pub"
+     ]
+    },
+    {
+     "hash": "8d646e17",
+     "title": "Public Room (Insta Ace2Pro)",
+     "user": "ethan3111",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 31.5,
+     "view": "https://superspl.at/scene/8d646e17",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/8d646e17/v1/m.webp",
+     "terms": [
+      "pub"
+     ]
+    },
+    {
+     "hash": "2aa8e696",
+     "title": "YACIMIENTO ARQUEOLÓGICO DE HUERTA RUFINO",
+     "user": "patrimonioculturalceuta",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 44.1,
+     "view": "https://superspl.at/scene/2aa8e696",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/2aa8e696/v1/m.webp",
+     "terms": [
+      "pub"
+     ]
+    },
+    {
+     "hash": "992452dd",
+     "title": "New Maia Health Centre (Ribeira Grande, São Miguel, Azores, Portugal)",
+     "user": "alexandre_picanco",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 56.5,
+     "view": "https://superspl.at/scene/992452dd",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/992452dd/v1/m.webp",
+     "terms": [
+      "pub"
+     ]
+    },
+    {
+     "hash": "f9d2bfa1",
+     "title": "Nobody Lives By The Grid (Ivan Morison)",
+     "user": "naturalai",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 86.5,
+     "view": "https://superspl.at/scene/f9d2bfa1",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/f9d2bfa1/v1/m.webp",
+     "terms": [
+      "pub"
+     ]
+    },
+    {
+     "hash": "c64631e0",
+     "title": "Nobody Lives By The Grid",
+     "user": "naturalai",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 86.6,
+     "view": "https://superspl.at/scene/c64631e0",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/c64631e0/v3/m.webp",
+     "terms": [
+      "pub"
+     ]
+    },
+    {
+     "hash": "7e90ec10",
+     "title": "Schiller Lookout Tower, Kryry, Czech republic",
+     "user": "jackdown3csr",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 96.6,
+     "view": "https://superspl.at/scene/7e90ec10",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/7e90ec10/v1/m.webp",
+     "terms": [
+      "pub"
+     ]
+    },
+    {
+     "hash": "5f41cc74",
+     "title": "Utlida 1:80",
+     "user": "overblickstudio",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 149.3,
+     "view": "https://superspl.at/scene/5f41cc74",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/5f41cc74/v3/m.webp",
+     "terms": [
+      "pub",
+      "cottage"
+     ]
+    },
+    {
+     "hash": "0df7f21e",
+     "title": "Lithuania Trakai Island Castle (ESRI Drone Sample) - Reconstructe by Seeget3D",
+     "user": "seeget3d",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 151.8,
+     "view": "https://superspl.at/scene/0df7f21e",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/0df7f21e/v1/m.webp",
+     "terms": [
+      "pub"
+     ]
+    },
+    {
+     "hash": "7a10fa81",
+     "title": "[See the World] Vajont Dam",
+     "user": "ethan3111",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 179,
+     "view": "https://superspl.at/scene/7a10fa81",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/7a10fa81/v1/m.webp",
+     "terms": [
+      "pub",
+      "village"
+     ]
+    },
+    {
+     "hash": "8f4d8e05",
+     "title": "Garage - High Detail Test",
+     "user": "ethan3111",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 187.1,
+     "view": "https://superspl.at/scene/8f4d8e05",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/8f4d8e05/v1/m.webp",
+     "terms": [
+      "pub"
+     ]
+    },
+    {
+     "hash": "1c7ac632",
+     "title": "Kulturlokschuppen",
+     "user": "simonbethke",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 292.5,
+     "view": "https://superspl.at/scene/1c7ac632",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/1c7ac632/v1/m.webp",
+     "terms": [
+      "pub"
+     ]
+    }
+   ]
+  },
+  {
+   "story": "hampstead",
+   "place": "the bedsit and the jobcentre",
+   "needs": [
+    "wardrobe",
+    "single bed",
+    "desk",
+    "office chair",
+    "strip light",
+    "worn carpet"
+   ],
+   "candidates": []
+  },
+  {
+   "story": "hampstead",
+   "place": "the gallery and the mansion",
+   "needs": [
+    "gallery interior",
+    "picture frame",
+    "plinth",
+    "grand staircase",
+    "fireplace",
+    "chandelier"
+   ],
+   "candidates": [
+    {
+     "hash": "eb423db6",
+     "title": "Sculpture at entrance of Art Gallery of NSW",
+     "user": "eggman",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 13.9,
+     "view": "https://superspl.at/scene/eb423db6",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/eb423db6/v1/m.webp",
+     "terms": [
+      "art gallery"
+     ]
+    },
+    {
+     "hash": "4fc17f06",
+     "title": "Grand Courts, Art Gallery of NSW",
+     "user": "eggman",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 14.1,
+     "view": "https://superspl.at/scene/4fc17f06",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/4fc17f06/v1/m.webp",
+     "terms": [
+      "art gallery"
+     ]
+    },
+    {
+     "hash": "29de02cb",
+     "title": "art museum",
+     "user": "ethan3111",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 19.4,
+     "view": "https://superspl.at/scene/29de02cb",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/29de02cb/v1/m.webp",
+     "terms": [
+      "art gallery"
+     ]
+    },
+    {
+     "hash": "71849df6",
+     "title": "Elegant_Fireplace_Living_Room_2",
+     "user": "adamassets",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 44.7,
+     "view": "https://superspl.at/scene/71849df6",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/71849df6/v1/m.webp",
+     "terms": [
+      "fireplace"
+     ]
+    },
+    {
+     "hash": "fadf93a0",
+     "title": "Buffalo AKG Art Museum",
+     "user": "jeastaman",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 71.7,
+     "view": "https://superspl.at/scene/fadf93a0",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/fadf93a0/v1/m.webp",
+     "terms": [
+      "art gallery"
+     ]
+    },
+    {
+     "hash": "18e6d72d",
+     "title": "Norman Constables House",
+     "user": "nebulousflynn",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 71.7,
+     "view": "https://superspl.at/scene/18e6d72d",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/18e6d72d/v1/m.webp",
+     "terms": [
+      "staircase",
+      "mill"
+     ]
+    },
+    {
+     "hash": "663fbcd3",
+     "title": "Art Gallery Interior",
+     "user": "alexzzz",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 82,
+     "view": "https://superspl.at/scene/663fbcd3",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/663fbcd3/v1/m.webp",
+     "terms": [
+      "art gallery"
+     ]
+    },
+    {
+     "hash": "ef9e44c1",
+     "title": "The Bowes Museum",
+     "user": "ethan3111",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 197,
+     "view": "https://superspl.at/scene/ef9e44c1",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/ef9e44c1/v1/m.webp",
+     "terms": [
+      "art gallery"
+     ]
+    }
+   ]
+  },
+  {
+   "story": "riverbend",
+   "place": "the mill (31 mentions — the story's centre)",
+   "needs": [
+    "watermill",
+    "mill wheel",
+    "millstone",
+    "sluice",
+    "timber frame",
+    "mill pond"
+   ],
+   "candidates": [
+    {
+     "hash": "3d5482d4",
+     "title": "millipede spec.",
+     "user": "scant3d",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 4.2,
+     "view": "https://superspl.at/scene/3d5482d4",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/3d5482d4/v1/m.webp",
+     "terms": [
+      "mill"
+     ]
+    },
+    {
+     "hash": "55792704",
+     "title": "Bunker - Unreal to Gaussian splat Plugin",
+     "user": "walhargohar",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 14.2,
+     "view": "https://superspl.at/scene/55792704",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/55792704/v1/m.webp",
+     "terms": [
+      "mill"
+     ]
+    },
+    {
+     "hash": "8b599966",
+     "title": "Kaliurang Valley - D.I Yogyakarta",
+     "user": "droneku_id",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 17.9,
+     "view": "https://superspl.at/scene/8b599966",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/8b599966/v1/m.webp",
+     "terms": [
+      "mill"
+     ]
+    },
+    {
+     "hash": "aa557542",
+     "title": "Minecraft Oak Tree (CROP)",
+     "user": "kikooooo2",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 31,
+     "view": "https://superspl.at/scene/aa557542",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/aa557542/v1/m.webp",
+     "terms": [
+      "weir",
+      "mine"
+     ]
+    },
+    {
+     "hash": "d5f14e49",
+     "title": "S Windmill in Golden Gate Park",
+     "user": "azadbal",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 35.7,
+     "view": "https://superspl.at/scene/d5f14e49",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/d5f14e49/v1/m.webp",
+     "terms": [
+      "mill"
+     ]
+    },
+    {
+     "hash": "64b35ff0",
+     "title": "Roslyn Gristmill",
+     "user": "afine76",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 36.9,
+     "view": "https://superspl.at/scene/64b35ff0",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/64b35ff0/v1/m.webp",
+     "terms": [
+      "mill"
+     ]
+    },
+    {
+     "hash": "e502f6ce",
+     "title": "Bradwell Windmill",
+     "user": "naturalai",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 37.3,
+     "view": "https://superspl.at/scene/e502f6ce",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/e502f6ce/v1/m.webp",
+     "terms": [
+      "mill"
+     ]
+    },
+    {
+     "hash": "bf0dc575",
+     "title": "Rolex Day-Date",
+     "user": "nathanar",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 41.9,
+     "view": "https://superspl.at/scene/bf0dc575",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/bf0dc575/v1/m.webp",
+     "terms": [
+      "mill"
+     ]
+    },
+    {
+     "hash": "237210f6",
+     "title": "Archviz Scene Unreal Engine",
+     "user": "walhargohar",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 44.2,
+     "view": "https://superspl.at/scene/237210f6",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/237210f6/v1/m.webp",
+     "terms": [
+      "mill"
+     ]
+    },
+    {
+     "hash": "c889f806",
+     "title": "Minecraft Oak Tree (VR Ready ✅)",
+     "user": "kikooooo2",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 56.4,
+     "view": "https://superspl.at/scene/c889f806",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/c889f806/v1/m.webp",
+     "terms": [
+      "weir",
+      "mine"
+     ]
+    },
+    {
+     "hash": "18e6d72d",
+     "title": "Norman Constables House",
+     "user": "nebulousflynn",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 71.7,
+     "view": "https://superspl.at/scene/18e6d72d",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/18e6d72d/v1/m.webp",
+     "terms": [
+      "staircase",
+      "mill"
+     ]
+    },
+    {
+     "hash": "581c7799",
+     "title": "Backyard - Pre Renovation",
+     "user": "jeastaman",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 72.2,
+     "view": "https://superspl.at/scene/581c7799",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/581c7799/v1/m.webp",
+     "terms": [
+      "mill"
+     ]
+    }
+   ]
+  },
+  {
+   "story": "riverbend",
+   "place": "the river, the grove and the stone",
+   "needs": [
+    "riverbank",
+    "standing stone",
+    "stone circle",
+    "old tree",
+    "woodland clearing",
+    "footbridge",
+    "well"
+   ],
+   "candidates": []
+  },
+  {
+   "story": "riverbend",
+   "place": "the village",
+   "needs": [
+    "cottage",
+    "thatched roof",
+    "village lane",
+    "dry stone wall",
+    "gate"
+   ],
+   "candidates": [
+    {
+     "hash": "6c6b4c8d",
+     "title": "Whimsical Crooked Fantasy Wooden House - Reconstructed with Seeget3D",
+     "user": "seeget3d",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 4.9,
+     "view": "https://superspl.at/scene/6c6b4c8d",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/6c6b4c8d/v1/m.webp",
+     "terms": [
+      "cottage"
+     ]
+    },
+    {
+     "hash": "df9a93b1",
+     "title": "Carrs Cottage Museum",
+     "user": "eggman",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 7,
+     "view": "https://superspl.at/scene/df9a93b1",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/df9a93b1/v1/m.webp",
+     "terms": [
+      "cottage"
+     ]
+    },
+    {
+     "hash": "9a344e66",
+     "title": "Whimsical Sakura Teacup Mini World  - Reconstructed with Seeget3D",
+     "user": "seeget3d",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 7,
+     "view": "https://superspl.at/scene/9a344e66",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/9a344e66/v1/m.webp",
+     "terms": [
+      "village"
+     ]
+    },
+    {
+     "hash": "75664331",
+     "title": "Minecraft_village",
+     "user": "aaahhh",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 8,
+     "view": "https://superspl.at/scene/75664331",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/75664331/v1/m.webp",
+     "terms": [
+      "village",
+      "mine"
+     ]
+    },
+    {
+     "hash": "60e7b4fd",
+     "title": "Bartestree Village Hall",
+     "user": "dicktonyboy",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 9.1,
+     "view": "https://superspl.at/scene/60e7b4fd",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/60e7b4fd/v1/m.webp",
+     "terms": [
+      "village"
+     ]
+    },
+    {
+     "hash": "0ca240b9",
+     "title": "Credo Mutwa Cultural Village - King Khandakhulu",
+     "user": "zartan_3dfpv",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 14.4,
+     "view": "https://superspl.at/scene/0ca240b9",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/0ca240b9/v1/m.webp",
+     "terms": [
+      "village"
+     ]
+    },
+    {
+     "hash": "f90fd697",
+     "title": "Urban Street Indonesia",
+     "user": "droneku_id",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 15.9,
+     "view": "https://superspl.at/scene/f90fd697",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/f90fd697/v1/m.webp",
+     "terms": [
+      "village"
+     ]
+    },
+    {
+     "hash": "56496eab",
+     "title": "Bolton Priory",
+     "user": "dok11",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 24.4,
+     "view": "https://superspl.at/scene/56496eab",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/56496eab/v1/m.webp",
+     "terms": [
+      "village"
+     ]
+    },
+    {
+     "hash": "1278e99d",
+     "title": "Anciolina: 3D Hilltop Village Scan, Snowy",
+     "user": "dok11",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 29.4,
+     "view": "https://superspl.at/scene/1278e99d",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/1278e99d/v1/m.webp",
+     "terms": [
+      "village"
+     ]
+    },
+    {
+     "hash": "33bfc51a",
+     "title": "Hobbit Village",
+     "user": "monoporfiado",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 31.4,
+     "view": "https://superspl.at/scene/33bfc51a",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/33bfc51a/v1/m.webp",
+     "terms": [
+      "village",
+      "hobbit"
+     ]
+    },
+    {
+     "hash": "5a6a5e4e",
+     "title": "Credo Mutwa Cultural Village - Grave",
+     "user": "zartan_3dfpv",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 37.2,
+     "view": "https://superspl.at/scene/5a6a5e4e",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/5a6a5e4e/v1/m.webp",
+     "terms": [
+      "village"
+     ]
+    },
+    {
+     "hash": "4c2fbd16",
+     "title": "St Nicholas Church, Roxby",
+     "user": "muckshifter",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 37.5,
+     "view": "https://superspl.at/scene/4c2fbd16",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/4c2fbd16/v1/m.webp",
+     "terms": [
+      "village"
+     ]
+    }
+   ]
+  },
+  {
+   "story": "bagend",
+   "place": "the hobbit-hole parody — a hill you live inside",
+   "needs": [
+    "round door",
+    "earth bank",
+    "grass roof",
+    "pantry shelves",
+    "hearth",
+    "hedge-lined path"
+   ],
+   "candidates": [
+    {
+     "hash": "33bfc51a",
+     "title": "Hobbit Village",
+     "user": "monoporfiado",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 31.4,
+     "view": "https://superspl.at/scene/33bfc51a",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/33bfc51a/v1/m.webp",
+     "terms": [
+      "village",
+      "hobbit"
+     ]
+    },
+    {
+     "hash": "902f19c3",
+     "title": "Loughton Stepping Stones",
+     "user": "naturalai",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 92.2,
+     "view": "https://superspl.at/scene/902f19c3",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/902f19c3/v1/m.webp",
+     "terms": [
+      "grassy bank"
+     ]
+    }
+   ]
+  },
+  {
+   "story": "mudslidemines",
+   "place": "the gem mines",
+   "needs": [
+    "mine adit",
+    "timber pit prop",
+    "ore cart",
+    "narrow gauge rail",
+    "rock face",
+    "crystal",
+    "lantern",
+    "spoil heap"
+   ],
+   "candidates": [
+    {
+     "hash": "56155c3f",
+     "title": "Lion",
+     "user": "rohls",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 4.2,
+     "view": "https://superspl.at/scene/56155c3f",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/56155c3f/v1/m.webp",
+     "terms": [
+      "cave"
+     ]
+    },
+    {
+     "hash": "928247c9",
+     "title": "Gargoyle Candle Holder",
+     "user": "raitch",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 6.6,
+     "view": "https://superspl.at/scene/928247c9",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/928247c9/v1/m.webp",
+     "terms": [
+      "mine"
+     ]
+    },
+    {
+     "hash": "75664331",
+     "title": "Minecraft_village",
+     "user": "aaahhh",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 8,
+     "view": "https://superspl.at/scene/75664331",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/75664331/v1/m.webp",
+     "terms": [
+      "village",
+      "mine"
+     ]
+    },
+    {
+     "hash": "9c202a76",
+     "title": "Clematis 'Nelly Moser'",
+     "user": "naturalai",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 8.4,
+     "view": "https://superspl.at/scene/9c202a76",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/9c202a76/v2/m.webp",
+     "terms": [
+      "mine"
+     ]
+    },
+    {
+     "hash": "33fe7c9f",
+     "title": "2026-07-17 soybean root nodulation",
+     "user": "dmsam",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 8.6,
+     "view": "https://superspl.at/scene/33fe7c9f",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/33fe7c9f/v1/m.webp",
+     "terms": [
+      "mine"
+     ]
+    },
+    {
+     "hash": "8b4c1470",
+     "title": "subaru wrx imprezia",
+     "user": "pxi",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 15.6,
+     "view": "https://superspl.at/scene/8b4c1470",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/8b4c1470/v1/m.webp",
+     "terms": [
+      "mine"
+     ]
+    },
+    {
+     "hash": "90c4f099",
+     "title": "Please help! My plant is sick. 🌿",
+     "user": "zartan_3dfpv",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 16,
+     "view": "https://superspl.at/scene/90c4f099",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/90c4f099/v1/m.webp",
+     "terms": [
+      "mine"
+     ]
+    },
+    {
+     "hash": "5f03cdcb",
+     "title": "Sumela Monastery Cliffside",
+     "user": "dok11",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 24.7,
+     "view": "https://superspl.at/scene/5f03cdcb",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/5f03cdcb/v1/m.webp",
+     "terms": [
+      "cave",
+      "rock face"
+     ]
+    },
+    {
+     "hash": "aa557542",
+     "title": "Minecraft Oak Tree (CROP)",
+     "user": "kikooooo2",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 31,
+     "view": "https://superspl.at/scene/aa557542",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/aa557542/v1/m.webp",
+     "terms": [
+      "weir",
+      "mine"
+     ]
+    },
+    {
+     "hash": "0cf1e5f0",
+     "title": "Vitrail église Notre-Dame de Royan",
+     "user": "pxi",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 41,
+     "view": "https://superspl.at/scene/0cf1e5f0",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/0cf1e5f0/v1/m.webp",
+     "terms": [
+      "mine"
+     ]
+    },
+    {
+     "hash": "c889f806",
+     "title": "Minecraft Oak Tree (VR Ready ✅)",
+     "user": "kikooooo2",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 56.4,
+     "view": "https://superspl.at/scene/c889f806",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/c889f806/v1/m.webp",
+     "terms": [
+      "weir",
+      "mine"
+     ]
+    },
+    {
+     "hash": "de67a02f",
+     "title": "Leake Street Graffiti Tunnel",
+     "user": "artfletch",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 58.3,
+     "view": "https://superspl.at/scene/de67a02f",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/de67a02f/v1/m.webp",
+     "terms": [
+      "tunnel"
+     ]
+    }
+   ]
+  },
+  {
+   "story": "shane-manor",
+   "place": "the country house murder",
+   "needs": [
+    "study",
+    "safe",
+    "chess table",
+    "portrait wall",
+    "library shelves",
+    "panelled door",
+    "conservatory"
+   ],
+   "candidates": [
+    {
+     "hash": "e35cf36b",
+     "title": "TEDDY BEAR – STUDY",
+     "user": "sa3d",
+     "licence": "by",
+     "offered": true,
+     "format": "sog",
+     "mb": 6.6,
+     "view": "https://superspl.at/scene/e35cf36b",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/e35cf36b/v2/m.webp",
+     "terms": [
+      "study"
+     ]
+    },
+    {
+     "hash": "6e49c284",
+     "title": "MK Library Bench",
+     "user": "naturalai",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 16.2,
+     "view": "https://superspl.at/scene/6e49c284",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/6e49c284/v1/m.webp",
+     "terms": [
+      "library"
+     ]
+    },
+    {
+     "hash": "36bd90f0",
+     "title": "Milton Keynes Library",
+     "user": "naturalai",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 16.7,
+     "view": "https://superspl.at/scene/36bd90f0",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/36bd90f0/v1/m.webp",
+     "terms": [
+      "library"
+     ]
+    },
+    {
+     "hash": "712d5b78",
+     "title": "Classroom of Class 6 Grade 9, China",
+     "user": "hite404",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 33.9,
+     "view": "https://superspl.at/scene/712d5b78",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/712d5b78/v1/m.webp",
+     "terms": [
+      "study"
+     ]
+    },
+    {
+     "hash": "6f697c4d",
+     "title": "Botanical Garden - Victoria House (VR Ready)",
+     "user": "simonbethke",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 320.3,
+     "view": "https://superspl.at/scene/6f697c4d",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/6f697c4d/v1/m.webp",
+     "terms": [
+      "conservatory"
+     ]
+    }
+   ]
+  },
+  {
+   "story": "skydock",
+   "place": "already served, and the reason this list exists",
+   "needs": [
+    "rusted vehicles",
+    "derelict timber buildings",
+    "jungle overgrowth"
+   ],
+   "candidates": [
+    {
+     "hash": "bc739e22",
+     "title": "Nelson Ghost Town, Vintage Microcar Towing a Cannon, Las Vegas NV (XGRIDS PortalCam)",
+     "user": "tosolini",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 72.9,
+     "view": "https://superspl.at/scene/bc739e22",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/bc739e22/v1/m.webp",
+     "terms": [
+      "ghost town"
+     ]
+    },
+    {
+     "hash": "fb3b5ed5",
+     "title": "Nelson Ghost Town, Water Tower, Las Vegas NV (XGRIDS PortalCam)",
+     "user": "tosolini",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 190.7,
+     "view": "https://superspl.at/scene/fb3b5ed5",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/fb3b5ed5/v1/m.webp",
+     "terms": [
+      "ghost town"
+     ]
+    },
+    {
+     "hash": "dd8d9c8b",
+     "title": "Nelson Ghost Town, Car Shop - Las Vegas NV (XGRIDS PortalCam)",
+     "user": "tosolini",
+     "licence": "by",
+     "offered": true,
+     "format": "ssog",
+     "mb": 209.2,
+     "view": "https://superspl.at/scene/dd8d9c8b",
+     "thumb": "https://s3-eu-west-1.amazonaws.com/images.playcanvas.com/splat/dd8d9c8b/v1/m.webp",
+     "terms": [
+      "ghost town"
+     ]
+    }
+   ]
+  }
+ ]
+}
