@@ -79,6 +79,40 @@ superspl.at (`ERR_CONNECTION_RESET`, with or without the proxy) while `curl`
 can. Scouting is therefore plain HTTP; anything needing the live viewer needs a
 human or a different machine.
 
+## 1a. SUPERSPL.AT IS NOT THE ONLY REPOSITORY
+
+It is the one with the account gate. **Hugging Face has none**: a public repo
+serves its files to anyone, declares a licence as a tag, and
+
+    npm run splat:sources -- --source hf splat 3dgs "gaussian splatting"
+    npm run splat:ingest hf:<owner>/<repo>/<file>.splat <name> --keep 170000
+
+really does fetch. Aug 2026: 78 repos holding splat files, **13 declaring an
+open licence** — `aleatorydialogue/trained_splats` (apache-2.0, 59 scans:
+cabin, shed, bridge, stones, market, stairs, lighthouse, winery, marsh, ford),
+`trent-spivey/splat-data` (mit), `keijiro-tk/splat-data` (unlicense — already
+the ChristmasTree source).
+
+**The catch is a different one and it matters.** On superspl.at the author
+scanned the thing, so the licence is theirs to give. On Hugging Face the
+uploader may be redistributing somebody else's dataset under a tag they picked
+— several of these are recognisably the Tanks-and-Temples research scenes.
+Treat an HF licence as a CLAIM. Prefer repos where the uploader is plausibly
+the maker, and record the repo in the credit so the claim is traceable.
+
+Others exist and are unexplored: Sketchfab's API answers (`downloadable=true`
+filters by licence), Polycam and Scaniverse have public galleries, and the
+academic 3DGS datasets are downloadable but usually research-only — read that
+licence before assuming.
+
+**A SOURCE IS NOT VERIFIED UNTIL SOMEONE HAS SEEN IT.** `splats/sources.json`
+carries provenance, licence and a `verified` flag for every raw scan, and the
+six HF fetches sit there as `verified: false` on purpose. Verifying means
+choosing the up-axis (in `SRC` and `SCENES`) and looking. A quick viewer that
+guesses the axis is worthless: mine rendered the **known-good carshop** as
+coloured mush, which is exactly how it proved itself wrong rather than proving
+the new scans bad.
+
 ## 1b. THE STORE HAS NO PRECONCEPTIONS ABOUT USE
 
 **`pack.json` says what a thing IS. It never says what it is for.**

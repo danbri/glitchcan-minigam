@@ -38,10 +38,65 @@ const ki = argv.indexOf('--keep');
 const KEEP = ki < 0 ? 200000 : parseInt(argv[ki + 1], 10);
 
 if (!hash || !name) {
-  console.error('usage: splat-ingest.mjs <hash> <name> [--keep N]');
+  console.error('usage: splat-ingest.mjs <hash|hf:repo/file> <name> [--keep N]');
   process.exit(2);
 }
 fs.mkdirSync(IN, { recursive: true });
+
+const st = a => execFileSync('npx', ['-y', '@playcanvas/splat-transform', '-w', '-q', '-g', 'cpu', ...a],
+  { stdio: ['ignore', 'pipe', 'pipe'] });
+
+/* ─────────── HUGGING FACE: no gate, so this one really fetches ───────────
+   A public HF repo serves its files to anyone and declares a licence as
+   a tag. The catch is different from superspl.at's and worth keeping in
+   mind: there the author scanned the thing, so the licence is theirs to
+   give; here the uploader may be redistributing somebody else's dataset
+   under a tag they picked. The tag is recorded as a CLAIM, with the repo
+   named, so the credit says who to ask. */
+if (hash.startsWith('hf:')) {
+  const spec = hash.slice(3);
+  const m = /^([^/]+\/[^/]+)\/(.+)$/.exec(spec);
+  if (!m) { console.error('expected hf:<owner>/<repo>/<path>'); process.exit(2); }
+  const [, repo, file] = m;
+  const meta = await fetch(`https://huggingface.co/api/models/${repo}`,
+    { headers: { 'User-Agent': 'glitchcan-minigam splat ingest' } })
+    .then(r => r.ok ? r.json() : null).catch(() => null);
+  const lic = (meta?.tags || []).find(t => t.startsWith('license:'))?.slice(8) || null;
+  const OPEN = /^(mit|apache-2\.0|bsd-[23]-clause|unlicense|cc0-1\.0|cc-by-4\.0|cc-by-sa-4\.0)$/;
+  console.log(`${repo} · ${file}`);
+  console.log(`licence claimed by the uploader: ${lic || 'NONE'}`);
+  if (!lic || !OPEN.test(lic) || meta?.gated || meta?.private) {
+    console.error('\nREFUSED. No open licence declared on that repo.');
+    process.exit(1);
+  }
+  const url = `https://huggingface.co/${repo}/resolve/main/${file.split('/').map(encodeURIComponent).join('/')}`;
+  const dst = path.join(IN, name + path.extname(file));
+  const res = await fetch(url, { headers: { 'User-Agent': 'glitchcan-minigam splat ingest' } });
+  if (!res.ok) { console.error('fetch failed: HTTP ' + res.status); process.exit(1); }
+  fs.writeFileSync(dst, Buffer.from(await res.arrayBuffer()));
+  console.log(`fetched ${(fs.statSync(dst).size / 1e6).toFixed(1)}MB -> incoming/${path.basename(dst)}`);
+
+  const out = path.join(SPLATS, name + '.sog');
+  const tmp = path.join(IN, name + '.tmp.ply');
+  st([dst, tmp]);
+  const head = fs.readFileSync(tmp, { encoding: 'latin1' }).slice(0, 4096);
+  const total = +(/element vertex (\d+)/.exec(head)?.[1] || 0);
+  /* decimation must WRITE a .ply — splat-transform refuses "-d ... x.sog"
+     with "output must be .ply". So thin first, then convert. */
+  if (total > KEEP) {
+    const thin = path.join(IN, name + '.thin.ply');
+    st([tmp, '-d', String(KEEP), thin]); st([thin, out]); fs.unlinkSync(thin);
+  } else st([tmp, out]);
+  fs.unlinkSync(tmp);
+  console.log(`${total} -> ${Math.min(total, KEEP)} gaussians · `
+    + `${(fs.statSync(out).size / 1e6).toFixed(1)}MB -> splats/${name}.sog`);
+  console.log(`
+SRC entry for splatpack.mjs (the up-axis is a judgement — look first):
+   ${name}: { src: 'splats/${name}.sog', up: [0, -1, 0],
+     credit: '${file.replace(/\.[^.]+$/, '')} · ${repo} (Hugging Face) · ${lic} (uploader's claim)' },
+`);
+  process.exit(0);
+}
 
 /* 1. THE TERMS, FROM THE SCENE PAGE ITSELF.
    The explore API carries a structured `downloads.enabled` but is only
@@ -87,13 +142,13 @@ console.log('ingesting', cand[0]);
       a 200MB streaming scene */
 const out = path.join(SPLATS, name + '.sog');
 const tmp = path.join(IN, name + '.tmp.ply');
-const st = a => execFileSync('npx', ['-y', '@playcanvas/splat-transform', '-w', '-q', '-g', 'cpu', ...a],
-  { stdio: ['ignore', 'pipe', 'pipe'] });
 st([src, tmp]);
 const head = fs.readFileSync(tmp, { encoding: 'latin1', flag: 'r' }).slice(0, 4096);
 const total = +(/element vertex (\d+)/.exec(head)?.[1] || 0);
-if (total > KEEP) st([tmp, '-d', String(KEEP), out]);
-else st([tmp, out]);
+if (total > KEEP) {
+  const thin = path.join(IN, name + '.thin.ply');
+  st([tmp, '-d', String(KEEP), thin]); st([thin, out]); fs.unlinkSync(thin);
+} else st([tmp, out]);
 fs.unlinkSync(tmp);
 console.log(`${total} -> ${Math.min(total, KEEP)} gaussians · ${(fs.statSync(out).size / 1e6).toFixed(1)}MB`
   + ` -> splats/${name}.sog`);

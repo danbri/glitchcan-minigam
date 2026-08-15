@@ -1,0 +1,164 @@
+{
+ "note": "RAW SOURCE SCANS, not store elements. Everything here is fetched material a clip can be cut FROM. The asset store (pack/pack.json) only ever holds elements someone has looked at; these are earlier in the chain and carry an explicit verified flag so the difference cannot blur.",
+ "verifying": "A source is verified by registering it in splatpack.mjs SRC and dream.html SCENES with its up-axis, then looking at it. The up-axis is a judgement and a scene cannot be framed without it — a viewer that guesses renders even the known-good carshop as mush, which is how these came to be unverified.",
+ "sources": [
+  {
+   "name": "carshop",
+   "licence": "CC BY 4.0",
+   "author": "Paolo Tosolini",
+   "work": "Nelson Ghost Town, Car Shop",
+   "from": "superspl.at/scene/dd8d9c8b",
+   "verified": true,
+   "elements": [
+    "pump",
+    "rustcar",
+    "windowwall",
+    "shed"
+   ]
+  },
+  {
+   "name": "watertower",
+   "licence": "CC BY 4.0",
+   "author": "Paolo Tosolini",
+   "work": "Nelson Ghost Town, Water Tower",
+   "from": "superspl.at/scene/fb3b5ed5",
+   "verified": true,
+   "elements": [
+    "cistern",
+    "redtruck",
+    "trestle",
+    "tower",
+    "pickup",
+    "chassis",
+    "hut",
+    "ruin"
+   ]
+  },
+  {
+   "name": "garden",
+   "licence": "CC BY 4.0",
+   "author": "Simon Bethke",
+   "work": "Botanical Garden, Victoria House",
+   "from": "superspl.at/scene/6f697c4d",
+   "verified": true,
+   "elements": [
+    "fern",
+    "fern2",
+    "fern3",
+    "hedge",
+    "hedge2",
+    "hedge3",
+    "palmfan",
+    "plantbed",
+    "plantbed2",
+    "pond",
+    "windowwall",
+    "vine",
+    "canopy"
+   ]
+  },
+  {
+   "name": "forest",
+   "licence": "CC BY 4.0",
+   "author": "Pavel Tanhauser",
+   "work": "Forest path",
+   "from": "superspl.at/scene/2be1a75a",
+   "verified": true,
+   "elements": [
+    "grass",
+    "trail"
+   ]
+  },
+  {
+   "name": "museum",
+   "licence": "CC BY 4.0",
+   "author": "Justin Eastman",
+   "work": "Buffalo AKG Art Museum",
+   "from": "superspl.at/scene/fadf93a0",
+   "verified": true,
+   "elements": []
+  },
+  {
+   "name": "pool",
+   "licence": "CC BY 4.0",
+   "author": "paul",
+   "work": "Apartment Pool",
+   "from": "superspl.at/scene/9d145adb",
+   "verified": true,
+   "elements": []
+  },
+  {
+   "name": "calico",
+   "licence": "CC BY 4.0",
+   "author": "Paolo Tosolini",
+   "work": "Calico Tanks Trail",
+   "from": "superspl.at/scene/19312f07",
+   "verified": true,
+   "elements": []
+  },
+  {
+   "name": "tree",
+   "licence": "The Unlicense",
+   "author": "Keijiro Takahashi",
+   "work": "ChristmasTree",
+   "from": "huggingface.co/keijiro-tk/splat-data",
+   "verified": true,
+   "elements": []
+  }
+ ],
+ "fetched_unverified": {
+  "note": "Fetched from Hugging Face, which has NO account gate: a public repo serves its files to anyone. The licence is the UPLOADER'S CLAIM, not proof they made the scan — prefer repos where the uploader is plausibly the maker. NOT YET LOOKED AT: no up-axis chosen, so no honest picture taken. Re-fetch or replace freely.",
+  "from": "huggingface.co/aleatorydialogue/trained_splats (apache-2.0) and huggingface.co/trent-spivey/splat-data (mit)",
+  "refetch": "npm run splat:ingest hf:<repo>/<file>.splat <name> --keep 170000",
+  "items": [
+   {
+    "name": "lagerhaus",
+    "repo": "trent-spivey/splat-data",
+    "file": "lagerhaus.splat",
+    "licence": "mit",
+    "kept": 180000,
+    "verified": false
+   },
+   {
+    "name": "cabin",
+    "repo": "aleatorydialogue/trained_splats",
+    "file": "cabin.splat",
+    "licence": "apache-2.0",
+    "kept": 170000,
+    "verified": false
+   },
+   {
+    "name": "stones",
+    "repo": "aleatorydialogue/trained_splats",
+    "file": "stones.splat",
+    "licence": "apache-2.0",
+    "kept": 170000,
+    "verified": false
+   },
+   {
+    "name": "bridge",
+    "repo": "aleatorydialogue/trained_splats",
+    "file": "bridge.splat",
+    "licence": "apache-2.0",
+    "kept": 170000,
+    "verified": false
+   },
+   {
+    "name": "market",
+    "repo": "aleatorydialogue/trained_splats",
+    "file": "market.splat",
+    "licence": "apache-2.0",
+    "kept": 170000,
+    "verified": false
+   },
+   {
+    "name": "stairs",
+    "repo": "aleatorydialogue/trained_splats",
+    "file": "stairs.splat",
+    "licence": "apache-2.0",
+    "kept": 170000,
+    "verified": false
+   }
+  ]
+ }
+}

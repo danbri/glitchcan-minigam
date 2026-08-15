@@ -25,8 +25,21 @@
  * with hashes and view links, so a person who is logged in can fetch
  * them, and `splat-ingest.mjs` takes them from there.
  *
+ * SECOND SOURCE: HUGGING FACE. superspl.at is not the only place splats
+ * live, and it is the only one with the account gate. A public HF repo
+ * declares a licence as a tag and serves its files to anyone —
+ * `--source hf` searches those instead, and `splat-ingest.mjs` can
+ * actually FETCH them.
+ *
+ * The catch is a different one, and it matters: on superspl.at the
+ * author scanned the thing themselves, so their licence is theirs to
+ * give. On Hugging Face the uploader may be redistributing somebody
+ * else's dataset with a licence tag they chose. Treat an HF licence as
+ * a CLAIM, and prefer repos where the uploader is plausibly the maker.
+ *
  * Usage:
  *   node magpie/dbdb/tools/splat-scout.mjs jungle "abandoned car" ruins
+ *   node magpie/dbdb/tools/splat-scout.mjs --source hf splat 3dgs
  *   node magpie/dbdb/tools/splat-scout.mjs --json --limit 100 mill grove
  *   node magpie/dbdb/tools/splat-scout.mjs --wants        # the story want-list
  */
@@ -77,6 +90,42 @@ const relevant = (r, term) => {
   return term.toLowerCase().split(/\s+/).filter(w => w.length > 2)
     .some(w => hay.includes(w));
 };
+
+const si = argv.indexOf('--source');
+const SOURCE = si < 0 ? 'superspl' : argv[si + 1];
+
+/* ─────────── Hugging Face ─────────── */
+const SPLAT_EXT = /\.(ply|splat|sog|ksplat|spz)$/i;
+const HF_OPEN = /^(mit|apache-2\.0|bsd-3-clause|bsd-2-clause|unlicense|cc0-1\.0|cc-by-4\.0|cc-by-sa-4\.0)$/;
+if (SOURCE === 'hf') {
+  const repos = new Map();
+  for (const kind of ['models', 'datasets']) for (const term of terms) {
+    const d = await api(`https://huggingface.co/api/${kind}`
+      + `?search=${encodeURIComponent(term)}&limit=${LIMIT}&full=true`);
+    if (!Array.isArray(d)) continue;
+    for (const r of d) repos.set(kind + '/' + r.id, { ...r, _kind: kind });
+  }
+  const rows = [];
+  for (const r of repos.values()) {
+    const files = (r.siblings || []).map(s => s.rfilename).filter(f => SPLAT_EXT.test(f));
+    if (!files.length) continue;
+    const lic = (r.tags || []).find(t => t.startsWith('license:'))?.slice(8) || null;
+    rows.push({ repo: r.id, kind: r._kind, licence: lic, files: files.length,
+      gated: !!r.gated, sample: files.slice(0, 8),
+      open: !!lic && HF_OPEN.test(lic) && !r.gated && !r.private });
+  }
+  const ok = rows.filter(r => r.open), no = rows.filter(r => !r.open);
+  if (asJson) { console.log(JSON.stringify({ usable: ok, rejected: no.length }, null, 1)); process.exit(0); }
+  console.log('\nHUGGING FACE — public repos declaring an open licence\n');
+  for (const r of ok.sort((a, b) => b.files - a.files))
+    console.log('  ' + (r.licence || '').padEnd(14) + String(r.files).padStart(3) + ' files  '
+      + r.repo.padEnd(42) + r.sample.map(f => f.split('/').pop().replace(SPLAT_EXT, '')).slice(0, 4).join(', '));
+  console.log(`\n${ok.length} usable · ${no.length} without an open licence or gated · ${rows.length} with splat files`);
+  console.log('\nAn HF licence tag is the UPLOADER\'S CLAIM, not proof they made it.');
+  console.log('Prefer repos where the uploader is plausibly the maker. Fetch with:');
+  console.log('  npm run splat:ingest hf:<repo>/<file> <name>');
+  process.exit(0);
+}
 
 const seen = new Map();                       // hash -> record (+ terms)
 for (const term of terms) {
