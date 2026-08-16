@@ -46,6 +46,23 @@ fs.mkdirSync(IN, { recursive: true });
 const st = a => execFileSync('npx', ['-y', '@playcanvas/splat-transform', '-w', '-q', '-g', 'cpu', ...a],
   { stdio: ['ignore', 'pipe', 'pipe'] });
 
+/* LOOK AT IT WITH PLAYCANVAS'S OWN VIEWER, NOT A HAND-ROLLED ONE.
+   splat-transform emits a self-contained .html viewer — it is in its
+   --help, and it was there all along. I wrote a throwaway viewer
+   instead: guessed the up-axis, framed from percentile bounds of the
+   centres, and rendered the KNOWN-GOOD carshop scan as coloured mush.
+   That nearly condemned six perfectly good scans. The official viewer
+   put the same carshop on screen as two old trucks on gravel.
+   The rule this leaves behind: never judge a scan through a viewer you
+   have not first pointed at a scene you already trust. */
+function makeViewer(sog, name) {
+  const dir = path.join(SPLATS, 'view');
+  fs.mkdirSync(dir, { recursive: true });
+  const html = path.join(dir, name + '.html');
+  st([sog, html]);
+  return html;
+}
+
 /* ─────────── HUGGING FACE: no gate, so this one really fetches ───────────
    A public HF repo serves its files to anyone and declares a licence as
    a tag. The catch is different from superspl.at's and worth keeping in
@@ -90,6 +107,8 @@ if (hash.startsWith('hf:')) {
   fs.unlinkSync(tmp);
   console.log(`${total} -> ${Math.min(total, KEEP)} gaussians · `
     + `${(fs.statSync(out).size / 1e6).toFixed(1)}MB -> splats/${name}.sog`);
+  console.log('look at it: splats/view/' + name + '.html  (PlayCanvas\'s own viewer)');
+  makeViewer(out, name);
   console.log(`
 SRC entry for splatpack.mjs (the up-axis is a judgement — look first):
    ${name}: { src: 'splats/${name}.sog', up: [0, -1, 0],
@@ -152,6 +171,8 @@ if (total > KEEP) {
 fs.unlinkSync(tmp);
 console.log(`${total} -> ${Math.min(total, KEEP)} gaussians · ${(fs.statSync(out).size / 1e6).toFixed(1)}MB`
   + ` -> splats/${name}.sog`);
+console.log('look at it: splats/view/' + name + '.html  (PlayCanvas\'s own viewer)');
+makeViewer(out, name);
 
 /* 4. the judgements left to a person */
 const credit = `${title} · ${user} · superspl.at/scene/${hash} · `

@@ -105,13 +105,24 @@ filters by licence), Polycam and Scaniverse have public galleries, and the
 academic 3DGS datasets are downloadable but usually research-only — read that
 licence before assuming.
 
-**A SOURCE IS NOT VERIFIED UNTIL SOMEONE HAS SEEN IT.** `splats/sources.json`
-carries provenance, licence and a `verified` flag for every raw scan, and the
-six HF fetches sit there as `verified: false` on purpose. Verifying means
-choosing the up-axis (in `SRC` and `SCENES`) and looking. A quick viewer that
-guesses the axis is worthless: mine rendered the **known-good carshop** as
-coloured mush, which is exactly how it proved itself wrong rather than proving
-the new scans bad.
+**A SOURCE IS NOT VERIFIED UNTIL SOMEONE HAS SEEN IT — AND USE PLAYCANVAS'S
+OWN VIEWER TO SEE IT.** `splat-transform` emits a self-contained HTML viewer
+from any scan. It is in its `--help`. It handles the up-axis and the framing,
+which are exactly the things a hand-rolled viewer gets wrong.
+
+    npm run splat:view -- magpie/dbdb/splats/cabin.sog splats/view/cabin.html
+    # or free with every ingest: splats/view/<name>.html
+
+I wrote my own instead — guessed the axis, framed from percentile bounds — and
+it rendered the **known-good carshop** as coloured mush. I nearly filed six
+sound scans as bad on that evidence. The official viewer put the same carshop
+on screen as two old trucks on gravel, and then showed the truth about the
+others: `cabin` is a real cabin interior at Christmas, `stones` is painted
+pebbles on a garden step, `market` is smeared, `bridge` is doubtful.
+
+**The rule: never judge a scan through a viewer you have not first pointed at
+a scene you already trust.** `splats/sources.json` records, per scan, whether
+anyone has looked and what they saw.
 
 ## 1b. THE STORE HAS NO PRECONCEPTIONS ABOUT USE
 

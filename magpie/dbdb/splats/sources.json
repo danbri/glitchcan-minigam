@@ -1,6 +1,6 @@
 {
  "note": "RAW SOURCE SCANS, not store elements. Everything here is fetched material a clip can be cut FROM. The asset store (pack/pack.json) only ever holds elements someone has looked at; these are earlier in the chain and carry an explicit verified flag so the difference cannot blur.",
- "verifying": "A source is verified by registering it in splatpack.mjs SRC and dream.html SCENES with its up-axis, then looking at it. The up-axis is a judgement and a scene cannot be framed without it — a viewer that guesses renders even the known-good carshop as mush, which is how these came to be unverified.",
+ "verifying": "A source is verified by LOOKING at it in PlayCanvas's own viewer: splat-transform emits a self-contained .html from any .sog (npm run splat:view <name>). Never judge a scan through a viewer you have not first pointed at a scene you already trust — a hand-rolled one here rendered the known-good carshop as coloured mush and nearly condemned six good scans.",
  "sources": [
   {
    "name": "carshop",
@@ -107,7 +107,7 @@
   }
  ],
  "fetched_unverified": {
-  "note": "Fetched from Hugging Face, which has NO account gate: a public repo serves its files to anyone. The licence is the UPLOADER'S CLAIM, not proof they made the scan — prefer repos where the uploader is plausibly the maker. NOT YET LOOKED AT: no up-axis chosen, so no honest picture taken. Re-fetch or replace freely.",
+  "note": "Fetched from Hugging Face, which has NO account gate: a public repo serves its files to anyone. The licence is the UPLOADER'S CLAIM, not proof they made the scan — prefer repos where the uploader is plausibly the maker. LOOKED AT in PlayCanvas's own viewer where marked; cabin and stones are good, market is poor, bridge is doubtful. Re-fetch or replace freely.",
   "from": "huggingface.co/aleatorydialogue/trained_splats (apache-2.0) and huggingface.co/trent-spivey/splat-data (mit)",
   "refetch": "npm run splat:ingest hf:<repo>/<file>.splat <name> --keep 170000",
   "items": [
@@ -117,7 +117,9 @@
     "file": "lagerhaus.splat",
     "licence": "mit",
     "kept": 180000,
-    "verified": false
+    "verified": false,
+    "looked": false,
+    "seen": "not yet looked at."
    },
    {
     "name": "cabin",
@@ -125,7 +127,9 @@
     "file": "cabin.splat",
     "licence": "apache-2.0",
     "kept": 170000,
-    "verified": false
+    "verified": true,
+    "looked": true,
+    "seen": "a cabin interior at Christmas — tree, TV cabinet, patterned rug, hearth. Real and usable."
    },
    {
     "name": "stones",
@@ -133,7 +137,9 @@
     "file": "stones.splat",
     "licence": "apache-2.0",
     "kept": 170000,
-    "verified": false
+    "verified": true,
+    "looked": true,
+    "seen": "painted pebbles on a garden step under flowers. Small subject, clean."
    },
    {
     "name": "bridge",
@@ -141,7 +147,9 @@
     "file": "bridge.splat",
     "licence": "apache-2.0",
     "kept": 170000,
-    "verified": false
+    "verified": false,
+    "looked": true,
+    "seen": "close, soft and largely featureless from the default camera; needs a proper look before use."
    },
    {
     "name": "market",
@@ -149,7 +157,9 @@
     "file": "market.splat",
     "licence": "apache-2.0",
     "kept": 170000,
-    "verified": false
+    "verified": false,
+    "looked": true,
+    "seen": "soft and smeared; the poorest of the six."
    },
    {
     "name": "stairs",
@@ -157,7 +167,9 @@
     "file": "stairs.splat",
     "licence": "apache-2.0",
     "kept": 170000,
-    "verified": false
+    "verified": false,
+    "looked": false,
+    "seen": "not yet looked at."
    }
   ]
  }

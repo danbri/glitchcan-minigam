@@ -40,3 +40,6 @@ magpie/dbdb/tools/pack-work/
 # downloaded source scans: fetched by hand, not committed
 magpie/dbdb/splats/incoming/*
 !magpie/dbdb/splats/incoming/.gitkeep
+
+# generated viewers: rebuildable from the .sog in one command
+magpie/dbdb/splats/view/
