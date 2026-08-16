@@ -172,5 +172,68 @@
     "seen": "not yet looked at."
    }
   ]
+ },
+ "catalogues": {
+  "note": "Seven catalogues tested by hand with real HTTP requests. 'open' means a file came down with no account at all — verified, with byte counts. Nothing here was worked around: where a login is required that is the finding, and a signed-in human does that step.",
+  "tested": [
+   {
+    "name": "Hugging Face",
+    "access": "open",
+    "search": "https://huggingface.co/api/models?search=TERM&full=true",
+    "file": "https://huggingface.co/<repo>/resolve/main/<path>",
+    "licence": "repo tag, the UPLOADER'S CLAIM not proof of authorship",
+    "evidence": "files fetched with no account; 13 repos under open licences",
+    "fit": "mixed test scans; cabin and stones verified good"
+   },
+   {
+    "name": "Kaggle",
+    "access": "open",
+    "search": "https://www.kaggle.com/api/v1/datasets/list?search=gaussian+splatting",
+    "file": "https://www.kaggle.com/api/v1/datasets/download/<owner>/<slug>",
+    "licence": "licenseNameNullable per dataset; genuinely mixed",
+    "evidence": "802,978 bytes fetched with no account at all; unzipped to a real trained .ply",
+    "fit": "STRONG — Simon Bethke (our garden scan's author) also publishes here: 'Garage' (old vehicles, CC BY-SA) and 'Botanical Garden - Tropics'. Caveat: some of his Kaggle items are raw COLMAP photos, not finished splats — check the file list first."
+   },
+   {
+    "name": "Zenodo",
+    "access": "open",
+    "search": "https://zenodo.org/api/records?q=gaussian+splatting+AND+resource_type.type:dataset",
+    "file": "https://zenodo.org/api/records/<id>/files/<name>/content",
+    "licence": "metadata.license.id, mostly cc-by-4.0",
+    "evidence": "500,001 bytes fetched with no account",
+    "fit": "WEAK — academic and synthetic subjects (lego, hotdog, campus scans); no mills, cottages or mines"
+   },
+   {
+    "name": "superspl.at / PlayCanvas",
+    "access": "gated",
+    "search": "https://playcanvas.com/api/splats/explore?search=TERM",
+    "file": "/api/splats/<hash>/downloads/<format>/file",
+    "licence": "downloads.enabled + downloads.license, the author's own switch",
+    "evidence": "401 on GET and POST, every format, even where the author enabled downloads",
+    "fit": "STRONG — 83 open-licensed matches against the story want-list"
+   },
+   {
+    "name": "Sketchfab",
+    "access": "gated",
+    "search": "https://api.sketchfab.com/v3/search?type=models&q=TERM&downloadable=true",
+    "file": "/v3/models/<uid>/download",
+    "licence": "license.slug per model",
+    "evidence": "401 without an API token even for CC-BY downloadable models",
+    "fit": "BEST SUBJECT MATCH FOUND — Project ETERNAL heritage scans: Constable's House and Christchurch Castle, both CC BY. English cottage and Norman ruin."
+   },
+   {
+    "name": "Polycam",
+    "access": "closed",
+    "evidence": "captures API answers 401; explore page is client-rendered with no embedded JSON; sitemap lists no captures",
+    "fit": "unknown"
+   },
+   {
+    "name": "Luma AI",
+    "access": "closed",
+    "evidence": "dashboard is login-gated; api.lumalabs.ai returns a placeholder",
+    "fit": "unknown"
+   }
+  ],
+  "warning": "huggingface.co/cakewalk/splat-data — the repo the popular splat viewers fetch their demos from — carries NO licence tag, and its files are the recognisable Mip-NeRF360 and Tanks-and-Temples research scenes reposted without a rights grant. Do not take from it."
  }
 }

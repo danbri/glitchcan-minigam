@@ -43,3 +43,6 @@ magpie/dbdb/splats/incoming/*
 
 # generated viewers: rebuildable from the .sog in one command
 magpie/dbdb/splats/view/
+
+# generated turnaround sheets: rebuildable with npm run splat:sheet
+magpie/dbdb/tools/sheets/

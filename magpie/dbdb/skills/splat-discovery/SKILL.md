@@ -100,10 +100,34 @@ uploader may be redistributing somebody else's dataset under a tag they picked
 Treat an HF licence as a CLAIM. Prefer repos where the uploader is plausibly
 the maker, and record the repo in the credit so the claim is traceable.
 
-Others exist and are unexplored: Sketchfab's API answers (`downloadable=true`
-filters by licence), Polycam and Scaniverse have public galleries, and the
-academic 3DGS datasets are downloadable but usually research-only — read that
-licence before assuming.
+**Seven catalogues, tested by hand** (`splats/sources.json` → `catalogues`
+carries the URLs and the byte counts). Three serve files to anyone:
+
+| catalogue | access | what settles it |
+|---|---|---|
+| Hugging Face | **open** | files served with no account; licence is a repo tag |
+| **Kaggle** | **open** | 802,978 bytes fetched with *no account at all*; `licenseNameNullable` per dataset |
+| Zenodo | **open** | direct file download, `cc-by-4.0` per record — but academic subjects |
+| superspl.at | gated | 401 on every format, even where the author enabled downloads |
+| Sketchfab | gated | 401 without a token — and it holds the best subject match found |
+| Polycam · Luma | closed | captures API 401s; no public index found |
+
+**Kaggle is the best new lead.** Simon Bethke — the author of our own `garden`
+scan — also publishes there, including *Garage* (old vehicles, CC BY-SA) and
+*Botanical Garden – Tropics*. Caveat learned the hard way: some of his Kaggle
+items are raw COLMAP **photographs**, not a finished splat. Read the file list
+before assuming a `.ply`.
+
+**Sketchfab holds Project ETERNAL** — `Constable's House` and `Christchurch
+Castle`, both CC BY: an English cottage and a Norman ruin, which is Riverbend
+and Bag End in one campaign. Gated, so it needs the same signed-in-human step
+as superspl.at.
+
+**Do not take from `huggingface.co/cakewalk/splat-data`** — the repo the popular
+splat viewers fetch their demos from. It carries **no licence tag**, and its
+files are the recognisable Mip-NeRF360 and Tanks-and-Temples research scenes
+reposted without a rights grant. It is the exact risk this section warns about,
+sitting in the most-linked place.
 
 **A SOURCE IS NOT VERIFIED UNTIL SOMEONE HAS SEEN IT — AND USE PLAYCANVAS'S
 OWN VIEWER TO SEE IT.** `splat-transform` emits a self-contained HTML viewer
@@ -217,12 +241,24 @@ before keeping it.
 
 ## 5. LOOKING AT WHAT YOU CUT
 
-Never keep a clip you have not seen.
+Never keep a clip you have not seen — and look at it properly.
 
-    // in splatpack.html's headless hook
-    window.__pack.only('pickup')      // one element, alone, centred
+    npm run splat:sheet                          # every element, 4 bearings
+    npm run splat:sheet -- pickup --angles 9     # one element, full turnaround
 
-Screenshot that. `side-scout.mjs` turntables an element to find its photogenic
+`element-sheet.mjs` renders a character sheet: the same object from four or
+nine bearings, at twice device resolution, on a bare page with no game chrome.
+**The framing is arithmetic, not guesswork** — the clipper canonicalises every
+element (centred on x/z, base floored to y=0) and records its dims, so the
+camera is placed from the numbers. That is the difference between this and the
+hand-rolled viewer that guessed and rendered known-good scans as mush.
+
+One angle is not enough for a scan: every clip has a side the scanner never
+saw, and the turnaround is where you find it. (`side-scout.mjs` scores those
+arcs and writes the verdict into `pack.json` as `sides`.)
+
+A single game screenshot — 352px, one bearing, through the play page — is a
+picture of a game, not of an object. Do not catalogue with those. `side-scout.mjs` turntables an element to find its photogenic
 side and writes the verdict into `pack.json` as `sides`, so compositions can
 point the unscanned smear at a wall.
 
