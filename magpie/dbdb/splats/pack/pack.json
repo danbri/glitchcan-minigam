@@ -1,6 +1,53 @@
 {
  "elements": [
   {
+   "id": "boulder",
+   "file": "boulder.compressed.ply",
+   "scene": "calico",
+   "mode": "solid",
+   "box": {
+    "c": [
+     85.59,
+     2.92,
+     -4.63
+    ],
+    "yaw": 0,
+    "size": [
+     9.1,
+     5.4,
+     8.1
+    ],
+    "trim": 0.1,
+    "band": 0.35
+   },
+   "hq": false,
+   "count": 9268,
+   "dims": [
+    9.1,
+    5.21,
+    8.08
+   ],
+   "credit": "Calico Tanks Trail, Red Rock Canyon · Paolo Tosolini · superspl.at/scene/19312f07 · CC BY 4.0",
+   "subject": {
+    "what": "weathered sandstone boulder",
+    "kind": "ground",
+    "condition": "worn",
+    "materials": [
+     "sandstone"
+    ],
+    "standing": true,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Calico Tanks Trail, Red Rock Canyon",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/19312f07",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
+  },
+  {
    "id": "canopy",
    "file": "canopy.compressed.ply",
    "scene": "garden",
@@ -152,6 +199,53 @@
     "work": "Nelson Ghost Town Water Tower",
     "author": "Paolo Tosolini",
     "source": "superspl.at/scene/fb3b5ed5",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
+  },
+  {
+   "id": "crag",
+   "file": "crag.compressed.ply",
+   "scene": "calico",
+   "mode": "solid",
+   "box": {
+    "c": [
+     8.19,
+     2.02,
+     -3.13
+    ],
+    "yaw": 0,
+    "size": [
+     9.7,
+     4.7,
+     5.4
+    ],
+    "trim": 0.1,
+    "band": 0.35
+   },
+   "hq": false,
+   "count": 2918,
+   "dims": [
+    9.69,
+    4.24,
+    5.36
+   ],
+   "credit": "Calico Tanks Trail, Red Rock Canyon · Paolo Tosolini · superspl.at/scene/19312f07 · CC BY 4.0",
+   "subject": {
+    "what": "broken rock outcrop with a shadowed overhang",
+    "kind": "ground",
+    "condition": "worn",
+    "materials": [
+     "sandstone"
+    ],
+    "standing": true,
+    "enclosing": true
+   },
+   "licence": {
+    "work": "Calico Tanks Trail, Red Rock Canyon",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/19312f07",
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
@@ -320,6 +414,54 @@
    }
   },
   {
+   "id": "gallery",
+   "file": "gallery.compressed.ply",
+   "scene": "museum",
+   "mode": "solid",
+   "box": {
+    "c": [
+     7.58,
+     1.91,
+     0.34
+    ],
+    "yaw": 0,
+    "size": [
+     6,
+     2.4,
+     7.4
+    ],
+    "trim": 0.1,
+    "band": 0.35
+   },
+   "hq": false,
+   "count": 12053,
+   "dims": [
+    5.98,
+    1.75,
+    7.4
+   ],
+   "credit": "Buffalo AKG Art Museum · Justin Eastman · superspl.at/scene/fadf93a0 · CC BY 4.0",
+   "subject": {
+    "what": "section of polished gallery floor with a bench",
+    "kind": "ground",
+    "condition": "intact",
+    "materials": [
+     "stone",
+     "timber"
+    ],
+    "standing": false,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Buffalo AKG Art Museum",
+    "author": "Justin Eastman",
+    "source": "superspl.at/scene/fadf93a0",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
+  },
+  {
    "id": "grass",
    "file": "grass.compressed.ply",
    "scene": "forest",
@@ -373,6 +515,53 @@
     "work": "Forest path",
     "author": "Pavel Tanhauser",
     "source": "superspl.at/scene/2be1a75a",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
+  },
+  {
+   "id": "hall",
+   "file": "hall.compressed.ply",
+   "scene": "museum",
+   "mode": "solid",
+   "box": {
+    "c": [
+     -2.92,
+     1.61,
+     -0.71
+    ],
+    "yaw": 0,
+    "size": [
+     8.7,
+     1.7,
+     8.4
+    ],
+    "trim": 0.1,
+    "band": 0.35
+   },
+   "hq": false,
+   "count": 18310,
+   "dims": [
+    8.69,
+    1.45,
+    8.39
+   ],
+   "credit": "Buffalo AKG Art Museum · Justin Eastman · superspl.at/scene/fadf93a0 · CC BY 4.0",
+   "subject": {
+    "what": "wide museum floor with a skylight cast",
+    "kind": "ground",
+    "condition": "intact",
+    "materials": [
+     "stone"
+    ],
+    "standing": false,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Buffalo AKG Art Museum",
+    "author": "Justin Eastman",
+    "source": "superspl.at/scene/fadf93a0",
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
@@ -685,6 +874,55 @@
    }
   },
   {
+   "id": "pine",
+   "file": "pine.compressed.ply",
+   "scene": "tree",
+   "mode": "solid",
+   "box": {
+    "c": [
+     -0.62,
+     1.53,
+     1.1
+    ],
+    "yaw": 0,
+    "size": [
+     11.1,
+     8.7,
+     8.1
+    ],
+    "trim": 0.1,
+    "band": 0.35
+   },
+   "hq": false,
+   "count": 130637,
+   "dims": [
+    11.1,
+    7.78,
+    8.1
+   ],
+   "credit": "ChristmasTree · keijiro-tk/splat-data · The Unlicense",
+   "subject": {
+    "what": "whole conifer, dressed",
+    "kind": "plant",
+    "condition": "living",
+    "materials": [
+     "foliage",
+     "tinsel"
+    ],
+    "standing": true,
+    "enclosing": false,
+    "note": "130k gaussians; the source is a Polycam capture of a decorated tree"
+   },
+   "licence": {
+    "work": "ChristmasTree",
+    "author": "keijiro-tk/splat-data",
+    "source": null,
+    "id": "Unlicense",
+    "url": "https://unlicense.org/",
+    "attribution": false
+   }
+  },
+  {
    "id": "plantbed",
    "file": "plantbed.compressed.ply",
    "scene": "garden",
@@ -959,6 +1197,101 @@
    }
   },
   {
+   "id": "rockface",
+   "file": "rockface.compressed.ply",
+   "scene": "calico",
+   "mode": "solid",
+   "box": {
+    "c": [
+     4.74,
+     2.02,
+     2.57
+    ],
+    "yaw": 0,
+    "size": [
+     8.7,
+     4.7,
+     5.4
+    ],
+    "trim": 0.1,
+    "band": 0.35
+   },
+   "hq": false,
+   "count": 2472,
+   "dims": [
+    8.69,
+    4.24,
+    4.98
+   ],
+   "credit": "Calico Tanks Trail, Red Rock Canyon · Paolo Tosolini · superspl.at/scene/19312f07 · CC BY 4.0",
+   "subject": {
+    "what": "steep canyon rock face",
+    "kind": "ground",
+    "condition": "worn",
+    "materials": [
+     "sandstone"
+    ],
+    "standing": true,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Calico Tanks Trail, Red Rock Canyon",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/19312f07",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
+  },
+  {
+   "id": "rockshelf",
+   "file": "rockshelf.compressed.ply",
+   "scene": "calico",
+   "mode": "solid",
+   "box": {
+    "c": [
+     48.99,
+     1.87,
+     4.97
+    ],
+    "yaw": 0,
+    "size": [
+     14.4,
+     3.7,
+     4.7
+    ],
+    "trim": 0.1,
+    "band": 0.35
+   },
+   "hq": false,
+   "count": 7379,
+   "dims": [
+    14.39,
+    3.46,
+    4.69
+   ],
+   "credit": "Calico Tanks Trail, Red Rock Canyon · Paolo Tosolini · superspl.at/scene/19312f07 · CC BY 4.0",
+   "subject": {
+    "what": "long shelf of layered desert sandstone",
+    "kind": "ground",
+    "condition": "worn",
+    "materials": [
+     "sandstone"
+    ],
+    "standing": false,
+    "enclosing": false,
+    "note": "14m across — the widest element held"
+   },
+   "licence": {
+    "work": "Calico Tanks Trail, Red Rock Canyon",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/19312f07",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
+  },
+  {
    "id": "ruin",
    "file": "ruin.compressed.ply",
    "scene": "watertower",
@@ -1064,6 +1397,54 @@
     "work": "Nelson Ghost Town Car Shop",
     "author": "Paolo Tosolini",
     "source": "superspl.at/scene/dd8d9c8b",
+    "id": "CC-BY-4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": true
+   }
+  },
+  {
+   "id": "scree",
+   "file": "scree.compressed.ply",
+   "scene": "calico",
+   "mode": "solid",
+   "box": {
+    "c": [
+     -3.66,
+     1.12,
+     0.62
+    ],
+    "yaw": 0,
+    "size": [
+     8.7,
+     2.7,
+     3.7
+    ],
+    "trim": 0.1,
+    "band": 0.35
+   },
+   "hq": false,
+   "count": 2038,
+   "dims": [
+    8.7,
+    2.5,
+    3.3
+   ],
+   "credit": "Calico Tanks Trail, Red Rock Canyon · Paolo Tosolini · superspl.at/scene/19312f07 · CC BY 4.0",
+   "subject": {
+    "what": "low run of loose broken stone",
+    "kind": "ground",
+    "condition": "worn",
+    "materials": [
+     "stone",
+     "grit"
+    ],
+    "standing": false,
+    "enclosing": false
+   },
+   "licence": {
+    "work": "Calico Tanks Trail, Red Rock Canyon",
+    "author": "Paolo Tosolini",
+    "source": "superspl.at/scene/19312f07",
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
@@ -1391,26 +1772,34 @@
   "dir": "lod",
   "levels": 4,
   "ids": [
+   "boulder",
    "canopy",
    "chassis",
    "cistern",
+   "crag",
    "fern",
    "fern2",
    "fern3",
+   "gallery",
    "grass",
+   "hall",
    "hedge",
    "hedge2",
    "hedge3",
    "hut",
    "palmfan",
    "pickup",
+   "pine",
    "plantbed",
    "plantbed2",
    "pond",
    "pump",
    "redtruck",
+   "rockface",
+   "rockshelf",
    "ruin",
    "rustcar",
+   "scree",
    "shed",
    "tower",
    "trail",
