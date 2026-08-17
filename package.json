@@ -48,6 +48,7 @@
     "splat:wanted": "node magpie/dbdb/tools/splat-scout.mjs --wants",
     "splat:ingest": "node magpie/dbdb/tools/splat-ingest.mjs",
     "splat:index": "node magpie/dbdb/tools/asset-index.mjs",
+    "splat:looks": "node magpie/dbdb/tools/appearance.mjs",
     "splat:view": "npx -y @playcanvas/splat-transform -w -q -g cpu",
     "splat:sheet": "node magpie/dbdb/tools/element-sheet.mjs",
     "splat:thumbs": "node magpie/dbdb/tools/element-sheet.mjs --angles 1 --cell 400 --format webp --out magpie/dbdb/splats/pack/thumbs",

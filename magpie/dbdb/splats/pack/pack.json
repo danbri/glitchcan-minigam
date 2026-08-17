@@ -45,6 +45,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "grey",
+    "tone": "mid",
+    "form": "squat",
+    "mass": "sparse",
+    "light": 0.342,
+    "sat": 0.011,
+    "perM3": 24,
+    "cover": 0.155,
+    "topHeavy": 0.29,
+    "hash": "a305060f35cf0f0f"
    }
   },
   {
@@ -93,6 +105,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "green",
+    "tone": "mid",
+    "form": "squat",
+    "mass": "sparse",
+    "light": 0.361,
+    "sat": 0.393,
+    "perM3": 233,
+    "cover": 0.084,
+    "topHeavy": 0.2,
+    "hash": "872559273b5b0f0f"
    }
   },
   {
@@ -142,6 +166,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "violet",
+    "tone": "mid",
+    "form": "flat",
+    "mass": "sparse",
+    "light": 0.537,
+    "sat": 0.149,
+    "perM3": 279,
+    "cover": 0.127,
+    "topHeavy": 0.31,
+    "hash": "a30502af1d0f0f0f"
    }
   },
   {
@@ -202,6 +238,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "grey",
+    "tone": "bright",
+    "form": "squat",
+    "mass": "medium",
+    "light": 0.582,
+    "sat": 0.047,
+    "perM3": 1802,
+    "cover": 0.242,
+    "topHeavy": 0.28,
+    "hash": "a305160705130f0f"
    }
   },
   {
@@ -249,6 +297,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "grey",
+    "tone": "mid",
+    "form": "squat",
+    "mass": "sparse",
+    "light": 0.34,
+    "sat": 0.084,
+    "perM3": 13,
+    "cover": 0.246,
+    "topHeavy": 0.37,
+    "hash": "a305111b1915090f"
    }
   },
   {
@@ -307,6 +367,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "green",
+    "tone": "dark",
+    "form": "upright",
+    "mass": "dense",
+    "light": 0.262,
+    "sat": 0.315,
+    "perM3": 24725,
+    "cover": 0.098,
+    "topHeavy": 0.34,
+    "hash": "8745160e125d650f"
    }
   },
   {
@@ -364,6 +436,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "green",
+    "tone": "dark",
+    "form": "upright",
+    "mass": "dense",
+    "light": 0.255,
+    "sat": 0.447,
+    "perM3": 24725,
+    "cover": 0.095,
+    "topHeavy": 0.34,
+    "hash": "1245160e1255650f"
    }
   },
   {
@@ -411,6 +495,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "brown",
+    "tone": "dark",
+    "form": "upright",
+    "mass": "dense",
+    "light": 0.253,
+    "sat": 0.679,
+    "perM3": 17308,
+    "cover": 0.091,
+    "topHeavy": 0.37,
+    "hash": "1205161e199db50f"
    }
   },
   {
@@ -459,6 +555,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "grey",
+    "tone": "dark",
+    "form": "flat",
+    "mass": "sparse",
+    "light": 0.253,
+    "sat": 0.071,
+    "perM3": 156,
+    "cover": 0.013,
+    "topHeavy": 0.08,
+    "hash": "a30502059d1f0f0f"
    }
   },
   {
@@ -518,6 +626,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "brown",
+    "tone": "mid",
+    "form": "flat",
+    "mass": "dense",
+    "light": 0.327,
+    "sat": 0.369,
+    "perM3": 27778,
+    "cover": 0.122,
+    "topHeavy": 0.3,
+    "hash": "8305020f230f0f0f"
    }
   },
   {
@@ -565,6 +685,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "green",
+    "tone": "mid",
+    "form": "flat",
+    "mass": "sparse",
+    "light": 0.318,
+    "sat": 0.13,
+    "perM3": 173,
+    "cover": 0.067,
+    "topHeavy": 0.01,
+    "hash": "a305026faf0b0f0f"
    }
   },
   {
@@ -618,6 +750,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "brown",
+    "tone": "dark",
+    "form": "squat",
+    "mass": "dense",
+    "light": 0.299,
+    "sat": 0.501,
+    "perM3": 13186,
+    "cover": 0.215,
+    "topHeavy": 0.47,
+    "hash": "362d2215256b130d"
    }
   },
   {
@@ -670,6 +814,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "green",
+    "tone": "dark",
+    "form": "squat",
+    "mass": "dense",
+    "light": 0.283,
+    "sat": 0.564,
+    "perM3": 13186,
+    "cover": 0.2,
+    "topHeavy": 0.48,
+    "hash": "362d2215256b130d"
    }
   },
   {
@@ -717,6 +873,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "green",
+    "tone": "dark",
+    "form": "squat",
+    "mass": "dense",
+    "light": 0.271,
+    "sat": 0.692,
+    "perM3": 8790,
+    "cover": 0.172,
+    "topHeavy": 0.5,
+    "hash": "362d2d152927030d"
    }
   },
   {
@@ -765,6 +933,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "grey",
+    "tone": "mid",
+    "form": "squat",
+    "mass": "medium",
+    "light": 0.367,
+    "sat": 0.1,
+    "perM3": 427,
+    "cover": 0.247,
+    "topHeavy": 0.37,
+    "hash": "83050a3b55350f0f"
    }
   },
   {
@@ -822,6 +1002,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "green",
+    "tone": "dark",
+    "form": "upright",
+    "mass": "dense",
+    "light": 0.274,
+    "sat": 0.203,
+    "perM3": 4159,
+    "cover": 0.053,
+    "topHeavy": 0.31,
+    "hash": "8315160b1d4a470f"
    }
   },
   {
@@ -871,6 +1063,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "brown",
+    "tone": "mid",
+    "form": "squat",
+    "mass": "medium",
+    "light": 0.447,
+    "sat": 0.203,
+    "perM3": 543,
+    "cover": 0.204,
+    "topHeavy": 0.27,
+    "hash": "83050227660d0f0f"
    }
   },
   {
@@ -920,6 +1124,18 @@
     "id": "Unlicense",
     "url": "https://unlicense.org/",
     "attribution": false
+   },
+   "appearance": {
+    "palette": "grey",
+    "tone": "mid",
+    "form": "squat",
+    "mass": "sparse",
+    "light": 0.508,
+    "sat": 0.062,
+    "perM3": 187,
+    "cover": 0.59,
+    "topHeavy": 0.44,
+    "hash": "8307096a1557630b"
    }
   },
   {
@@ -978,6 +1194,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "green",
+    "tone": "dark",
+    "form": "upright",
+    "mass": "dense",
+    "light": 0.291,
+    "sat": 0.308,
+    "perM3": 18385,
+    "cover": 0.133,
+    "topHeavy": 0.53,
+    "hash": "350312060e0d0f0b"
    }
   },
   {
@@ -1026,6 +1254,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "brown",
+    "tone": "dark",
+    "form": "upright",
+    "mass": "dense",
+    "light": 0.269,
+    "sat": 0.38,
+    "perM3": 12344,
+    "cover": 0.105,
+    "topHeavy": 0.53,
+    "hash": "91030b07290f0d0d"
    }
   },
   {
@@ -1080,6 +1320,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "orange",
+    "tone": "bright",
+    "form": "flat",
+    "mass": "dense",
+    "light": 0.642,
+    "sat": 0.382,
+    "perM3": 68275,
+    "cover": 0.034,
+    "topHeavy": 0.66,
+    "hash": "a305021f4b0f0f0f"
    }
   },
   {
@@ -1134,6 +1386,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "grey",
+    "tone": "mid",
+    "form": "upright",
+    "mass": "dense",
+    "light": 0.473,
+    "sat": 0.05,
+    "perM3": 24843,
+    "cover": 0.247,
+    "topHeavy": 0.34,
+    "hash": "a30d0a1f1f1f5f0f"
    }
   },
   {
@@ -1194,6 +1458,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "brown",
+    "tone": "mid",
+    "form": "squat",
+    "mass": "dense",
+    "light": 0.405,
+    "sat": 0.202,
+    "perM3": 5976,
+    "cover": 0.183,
+    "topHeavy": 0.27,
+    "hash": "8305022f57070d0f"
    }
   },
   {
@@ -1241,6 +1517,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "grey",
+    "tone": "mid",
+    "form": "squat",
+    "mass": "sparse",
+    "light": 0.334,
+    "sat": 0.11,
+    "perM3": 13,
+    "cover": 0.139,
+    "topHeavy": 0.38,
+    "hash": "a3050a0f63010f0f"
    }
   },
   {
@@ -1289,6 +1577,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "grey",
+    "tone": "mid",
+    "form": "flat",
+    "mass": "sparse",
+    "light": 0.389,
+    "sat": 0.027,
+    "perM3": 32,
+    "cover": 0.119,
+    "topHeavy": 0.36,
+    "hash": "a305025f27090f0f"
    }
   },
   {
@@ -1338,6 +1638,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "grey",
+    "tone": "mid",
+    "form": "squat",
+    "mass": "sparse",
+    "light": 0.458,
+    "sat": 0.075,
+    "perM3": 6,
+    "cover": 0.107,
+    "topHeavy": 0.74,
+    "hash": "a3050a151b0f0f0f"
    }
   },
   {
@@ -1400,6 +1712,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "grey",
+    "tone": "mid",
+    "form": "squat",
+    "mass": "dense",
+    "light": 0.396,
+    "sat": 0.06,
+    "perM3": 6122,
+    "cover": 0.193,
+    "topHeavy": 0.3,
+    "hash": "a30502371137070f"
    }
   },
   {
@@ -1448,6 +1772,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "grey",
+    "tone": "mid",
+    "form": "squat",
+    "mass": "sparse",
+    "light": 0.341,
+    "sat": 0.097,
+    "perM3": 28,
+    "cover": 0.14,
+    "topHeavy": 0.31,
+    "hash": "a305020f55190d0f"
    }
   },
   {
@@ -1498,6 +1834,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "cyan",
+    "tone": "mid",
+    "form": "squat",
+    "mass": "sparse",
+    "light": 0.338,
+    "sat": 0.159,
+    "perM3": 98,
+    "cover": 0.258,
+    "topHeavy": 0.21,
+    "hash": "8305022b2b6b2b0f"
    }
   },
   {
@@ -1548,6 +1896,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "grey",
+    "tone": "mid",
+    "form": "squat",
+    "mass": "sparse",
+    "light": 0.367,
+    "sat": 0.103,
+    "perM3": 39,
+    "cover": 0.262,
+    "topHeavy": 0.18,
+    "hash": "8315220f2b3b070f"
    }
   },
   {
@@ -1602,6 +1962,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "brown",
+    "tone": "mid",
+    "form": "flat",
+    "mass": "dense",
+    "light": 0.44,
+    "sat": 0.429,
+    "perM3": 17072,
+    "cover": 0.165,
+    "topHeavy": 0.24,
+    "hash": "8305020d6f070f0f"
    }
   },
   {
@@ -1654,6 +2026,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "grey",
+    "tone": "mid",
+    "form": "upright",
+    "mass": "medium",
+    "light": 0.313,
+    "sat": 0.09,
+    "perM3": 869,
+    "cover": 0.108,
+    "topHeavy": 0.24,
+    "hash": "a703090d163f5b0f"
    }
   },
   {
@@ -1702,6 +2086,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "brown",
+    "tone": "mid",
+    "form": "upright",
+    "mass": "medium",
+    "light": 0.371,
+    "sat": 0.464,
+    "perM3": 319,
+    "cover": 0.22,
+    "topHeavy": 0.4,
+    "hash": "972b11153d1b2506"
    }
   },
   {
@@ -1765,6 +2161,18 @@
     "id": "CC-BY-4.0",
     "url": "https://creativecommons.org/licenses/by/4.0/",
     "attribution": true
+   },
+   "appearance": {
+    "palette": "green",
+    "tone": "mid",
+    "form": "upright",
+    "mass": "dense",
+    "light": 0.324,
+    "sat": 0.233,
+    "perM3": 24606,
+    "cover": 0.233,
+    "topHeavy": 0.26,
+    "hash": "01051b150b262b0e"
    }
   }
  ],
@@ -1812,5 +2220,6 @@
   "describes": "what each element IS",
   "excludes": "what any element is FOR — intended use lives in the game layouts and in splats/wanted.json",
   "checkedBy": "tools/asset-index.mjs"
- }
+ },
+ "appearanceNote": "DERIVED, not judged: measured from the thumbnail render and the recorded dims by tools/appearance.mjs. Rewritable at any time. The hand-written judgement lives in subjects.json and is never touched by this tool."
 }

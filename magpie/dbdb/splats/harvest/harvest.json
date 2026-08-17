@@ -195,6 +195,58 @@
    "mb": 2.1,
    "verified": false,
    "looked": false
+  },
+  {
+   "name": "fish",
+   "repo": "aleatorydialogue/trained_splats",
+   "file": "fish.splat",
+   "kind": "models",
+   "licence": "apache-2.0",
+   "claim": "uploader tag, unverified",
+   "splats": 160000,
+   "source": 83.2,
+   "mb": 2,
+   "verified": false,
+   "looked": false
+  },
+  {
+   "name": "galaxy",
+   "repo": "aleatorydialogue/trained_splats",
+   "file": "galaxy.splat",
+   "kind": "models",
+   "licence": "apache-2.0",
+   "claim": "uploader tag, unverified",
+   "splats": 160000,
+   "source": 26.4,
+   "mb": 2,
+   "verified": false,
+   "looked": false
+  },
+  {
+   "name": "garage",
+   "repo": "aleatorydialogue/trained_splats",
+   "file": "garage.splat",
+   "kind": "models",
+   "licence": "apache-2.0",
+   "claim": "uploader tag, unverified",
+   "splats": 160000,
+   "source": 12.8,
+   "mb": 2,
+   "verified": false,
+   "looked": false
+  },
+  {
+   "name": "grit",
+   "repo": "aleatorydialogue/trained_splats",
+   "file": "grit.splat",
+   "kind": "models",
+   "licence": "apache-2.0",
+   "claim": "uploader tag, unverified",
+   "splats": 160000,
+   "source": 39.7,
+   "mb": 2,
+   "verified": false,
+   "looked": false
   }
  ]
 }

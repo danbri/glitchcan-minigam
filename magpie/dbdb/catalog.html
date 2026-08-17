@@ -149,6 +149,13 @@ const facets = [
   { key:'kind',      of: e => [e.subject?.kind] },
   { key:'condition', of: e => [e.subject?.condition] },
   { key:'material',  of: e => e.subject?.materials || [] },
+  /* appearance facets are DERIVED (tools/appearance.mjs), measured off the
+     thumbnail render and the recorded dims — how a thing LOOKS, next to the
+     hand-written what it IS. Still nothing about what it is for. */
+  { key:'palette',   of: e => [e.appearance?.palette] },
+  { key:'tone',      of: e => [e.appearance?.tone] },
+  { key:'form',      of: e => [e.appearance?.form] },
+  { key:'mass',      of: e => [e.appearance?.mass] },
   { key:'scene',     of: e => [e.scene] }
 ];
 const active = new Map();          // facet key -> Set of chosen values
@@ -183,8 +190,10 @@ function matches(e) {
   }
   const s = q.value.trim().toLowerCase();
   if (!s) return true;
+  const a = e.appearance || {};
   const hay = [e.id, e.scene, e.subject?.what, e.subject?.kind, e.subject?.condition,
-    e.subject?.note, ...(e.subject?.materials || []), e.credit].join(' ').toLowerCase();
+    e.subject?.note, ...(e.subject?.materials || []), e.credit,
+    a.palette, a.tone, a.form, a.mass].join(' ').toLowerCase();
   return s.split(/\s+/).every(w => hay.includes(w));
 }
 
@@ -331,6 +340,10 @@ function open(e) {
     ['reads as', [s.standing ? 'stands upright' : 'lies flat',
                   s.enclosing ? 'can be entered or sheltered under' : null]
                  .filter(Boolean).join(' · ')],
+    ['looks', e.appearance
+      ? `${e.appearance.palette} · ${e.appearance.tone} · ${e.appearance.form}`
+        + ` · ${e.appearance.mass} (${e.appearance.perM3}/m³)`
+      : 'not measured'],
     ['LOD', lodIds.has(e.id) ? 'four-level pyramid' : 'flat — no pyramid'],
     ['file', e.file],
     ['cut from', e.scene + (e.hq ? ' (high-quality source)' : '')],

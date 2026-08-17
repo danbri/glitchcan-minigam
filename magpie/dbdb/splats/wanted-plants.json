@@ -1,0 +1,587 @@
+{
+ "note": "PLANT AND TREE SOURCES ON SUPERSPL.AT — licence-checked, and offered for download by their own authors. This is a SHOPPING LIST FOR A SIGNED-IN HUMAN: the file endpoint answers 401 without a PlayCanvas account, so open the url, download, drop the file in splats/incoming/ and run npm run splat:ingest <hash> <name>.",
+ "whyThisExists": "Hugging Face — the one channel that fetches without an account — holds ZERO open-licensed tree or plant scans; a targeted search over eight terms returned nothing. Trees cannot be harvested. They have to be fetched by hand from here.",
+ "flags": "memorial: a real memorial to real people. Off-limits as game material, in the spirit of the Bristol tree rule. ip: a recognisable brand or franchise; a CC licence on the capture does not license the thing captured.",
+ "refresh": "node magpie/dbdb/tools/splat-scout.mjs --json --limit 100 tree oak pine palm bonsai shrub hedge forest woodland garden plant fern",
+ "usable": [
+  {
+   "title": "Palm tree",
+   "author": "vancocs",
+   "licence": "CC BY",
+   "mb": 18.3,
+   "terms": [
+    "tree",
+    "palm"
+   ],
+   "url": "https://superspl.at/scene/8669ddb2",
+   "ingest": "npm run splat:ingest 8669ddb2 <name>"
+  },
+  {
+   "title": "Old Twisted Tree",
+   "author": "naturalai",
+   "licence": "CC BY",
+   "mb": 17.7,
+   "terms": [
+    "tree"
+   ],
+   "url": "https://superspl.at/scene/8b9029eb",
+   "ingest": "npm run splat:ingest 8b9029eb <name>"
+  },
+  {
+   "title": "出町桝形商店街(Demachi Masugata Shopping Street)",
+   "author": "geopon",
+   "licence": "CC BY",
+   "mb": 315.1,
+   "terms": [
+    "tree"
+   ],
+   "url": "https://superspl.at/scene/b43b8007",
+   "ingest": "npm run splat:ingest b43b8007 <name>"
+  },
+  {
+   "title": "Roman Ruins (MK)",
+   "author": "naturalai",
+   "licence": "CC BY",
+   "mb": 18.6,
+   "terms": [
+    "tree"
+   ],
+   "url": "https://superspl.at/scene/dd2f066a",
+   "ingest": "npm run splat:ingest dd2f066a <name>"
+  },
+  {
+   "title": "Shenley Church",
+   "author": "naturalai",
+   "licence": "CC BY",
+   "mb": 85,
+   "terms": [
+    "tree"
+   ],
+   "url": "https://superspl.at/scene/aa451b94",
+   "ingest": "npm run splat:ingest aa451b94 <name>"
+  },
+  {
+   "title": "Bartestree Village Hall",
+   "author": "dicktonyboy",
+   "licence": "CC BY",
+   "mb": 9.1,
+   "terms": [
+    "tree"
+   ],
+   "url": "https://superspl.at/scene/60e7b4fd",
+   "ingest": "npm run splat:ingest 60e7b4fd <name>"
+  },
+  {
+   "title": "A beautifully preserved stone arch bridge",
+   "author": "ethan3111",
+   "licence": "CC BY",
+   "mb": 99.1,
+   "terms": [
+    "tree"
+   ],
+   "url": "https://superspl.at/scene/0da683d4",
+   "ingest": "npm run splat:ingest 0da683d4 <name>"
+  },
+  {
+   "title": "Frog Bench",
+   "author": "naturalai",
+   "licence": "CC BY",
+   "mb": 51.7,
+   "terms": [
+    "oak",
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/3f248121",
+   "ingest": "npm run splat:ingest 3f248121 <name>"
+  },
+  {
+   "title": "Minecraft Oak Tree (VR Ready ✅)",
+   "author": "kikooooo2",
+   "licence": "CC BY",
+   "mb": 56.4,
+   "terms": [
+    "oak"
+   ],
+   "url": "https://superspl.at/scene/c889f806",
+   "ingest": "npm run splat:ingest c889f806 <name>",
+   "flags": [
+    "ip"
+   ]
+  },
+  {
+   "title": "Minecraft Oak Tree (CROP)",
+   "author": "kikooooo2",
+   "licence": "CC BY",
+   "mb": 31,
+   "terms": [
+    "oak"
+   ],
+   "url": "https://superspl.at/scene/aa557542",
+   "ingest": "npm run splat:ingest aa557542 <name>",
+   "flags": [
+    "ip"
+   ]
+  },
+  {
+   "title": "Nobody Lives By The Grid (Ivan Morison)",
+   "author": "naturalai",
+   "licence": "CC BY",
+   "mb": 86.5,
+   "terms": [
+    "oak"
+   ],
+   "url": "https://superspl.at/scene/f9d2bfa1",
+   "ingest": "npm run splat:ingest f9d2bfa1 <name>"
+  },
+  {
+   "title": "Nobody Lives By The Grid",
+   "author": "naturalai",
+   "licence": "CC BY",
+   "mb": 86.6,
+   "terms": [
+    "oak"
+   ],
+   "url": "https://superspl.at/scene/c64631e0",
+   "ingest": "npm run splat:ingest c64631e0 <name>"
+  },
+  {
+   "title": "Knightwood Oak",
+   "author": "nebulousflynn",
+   "licence": "CC BY",
+   "mb": 122.6,
+   "terms": [
+    "oak",
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/cfda45bc",
+   "ingest": "npm run splat:ingest cfda45bc <name>"
+  },
+  {
+   "title": "Lobaria pulmonaria",
+   "author": "kingkapusta",
+   "licence": "CC BY",
+   "mb": 70.3,
+   "terms": [
+    "oak",
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/212eb1fd",
+   "ingest": "npm run splat:ingest 212eb1fd <name>"
+  },
+  {
+   "title": "Torrey Pines High School: Back Parking: 14 Stair",
+   "author": "ralusek",
+   "licence": "CC BY",
+   "mb": 16.5,
+   "terms": [
+    "pine"
+   ],
+   "url": "https://superspl.at/scene/392cebfa",
+   "ingest": "npm run splat:ingest 392cebfa <name>"
+  },
+  {
+   "title": "Red lionfish (Pterois volitans) | Aquarium San Sebastian 2026",
+   "author": "madeyechi",
+   "licence": "CC BY",
+   "mb": 2.7,
+   "terms": [
+    "pine"
+   ],
+   "url": "https://superspl.at/scene/5dc9d609",
+   "ingest": "npm run splat:ingest 5dc9d609 <name>"
+  },
+  {
+   "title": "[See the World] Lago di Barcis",
+   "author": "ethan3111",
+   "licence": "CC BY",
+   "mb": 172.6,
+   "terms": [
+    "pine"
+   ],
+   "url": "https://superspl.at/scene/94a939d7",
+   "ingest": "npm run splat:ingest 94a939d7 <name>"
+  },
+  {
+   "title": "Porodaedalea pini",
+   "author": "kingkapusta",
+   "licence": "CC BY",
+   "mb": 18.7,
+   "terms": [
+    "pine",
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/22d49954",
+   "ingest": "npm run splat:ingest 22d49954 <name>"
+  },
+  {
+   "title": "Botanical Garden - Victoria House (VR Ready)",
+   "author": "simonbethke",
+   "licence": "CC BY",
+   "mb": 320.3,
+   "terms": [
+    "palm"
+   ],
+   "url": "https://superspl.at/scene/6f697c4d",
+   "ingest": "npm run splat:ingest 6f697c4d <name>"
+  },
+  {
+   "title": "test bonsai",
+   "author": "zunho",
+   "licence": "CC BY",
+   "mb": 42.1,
+   "terms": [
+    "bonsai"
+   ],
+   "url": "https://superspl.at/scene/fd8c5fb2",
+   "ingest": "npm run splat:ingest fd8c5fb2 <name>"
+  },
+  {
+   "title": "Bonsai Tree",
+   "author": "garrettknelli",
+   "licence": "CC BY",
+   "mb": 4.6,
+   "terms": [
+    "bonsai"
+   ],
+   "url": "https://superspl.at/scene/4c461e7c",
+   "ingest": "npm run splat:ingest 4c461e7c <name>"
+  },
+  {
+   "title": "Mip-NeRF 360 \"Bonsai\"",
+   "author": "transkatgirl",
+   "licence": "CC BY",
+   "mb": 38.8,
+   "terms": [
+    "bonsai"
+   ],
+   "url": "https://superspl.at/scene/ef7d5444",
+   "ingest": "npm run splat:ingest ef7d5444 <name>"
+  },
+  {
+   "title": "Bonsai Tree",
+   "author": "nazarskalskyi",
+   "licence": "CC BY",
+   "mb": 3.7,
+   "terms": [
+    "bonsai"
+   ],
+   "url": "https://superspl.at/scene/e720a778",
+   "ingest": "npm run splat:ingest e720a778 <name>"
+  },
+  {
+   "title": "Shrubbery",
+   "author": "v_icto_r",
+   "licence": "CC BY",
+   "mb": 6.1,
+   "terms": [
+    "shrub"
+   ],
+   "url": "https://superspl.at/scene/21fb62b2",
+   "ingest": "npm run splat:ingest 21fb62b2 <name>"
+  },
+  {
+   "title": "Daphne mezereum",
+   "author": "kingkapusta",
+   "licence": "CC BY",
+   "mb": 0.7,
+   "terms": [
+    "shrub",
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/26d31db2",
+   "ingest": "npm run splat:ingest 26d31db2 <name>"
+  },
+  {
+   "title": "Forest path",
+   "author": "tanha",
+   "licence": "CC BY",
+   "mb": 18.7,
+   "terms": [
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/2be1a75a",
+   "ingest": "npm run splat:ingest 2be1a75a <name>"
+  },
+  {
+   "title": "3D Model of Faculty of Forestry (Kastamonu University)",
+   "author": "eakturk",
+   "licence": "CC BY",
+   "mb": 47.5,
+   "terms": [
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/ea5864b8",
+   "ingest": "npm run splat:ingest ea5864b8 <name>"
+  },
+  {
+   "title": "Krnjevo, Serbia - Church and the oldest Serbian schools from 1779.",
+   "author": "kwisatz1984",
+   "licence": "CC BY",
+   "mb": 187.4,
+   "terms": [
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/b1b83433",
+   "ingest": "npm run splat:ingest b1b83433 <name>"
+  },
+  {
+   "title": "Ancient Ent Tree Giant Guardian Statue - Reconstructed with Seeget3D",
+   "author": "seeget3d",
+   "licence": "CC BY",
+   "mb": 6.2,
+   "terms": [
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/6b2e10c2",
+   "ingest": "npm run splat:ingest 6b2e10c2 <name>"
+  },
+  {
+   "title": "Memorial stone",
+   "author": "alfred2010",
+   "licence": "CC BY",
+   "mb": 10,
+   "terms": [
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/309b004d",
+   "ingest": "npm run splat:ingest 309b004d <name>",
+   "flags": [
+    "memorial"
+   ]
+  },
+  {
+   "title": "Amazon Rain Forest",
+   "author": "james111222333",
+   "licence": "CC BY",
+   "mb": 32.4,
+   "terms": [
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/3fabe798",
+   "ingest": "npm run splat:ingest 3fabe798 <name>"
+  },
+  {
+   "title": "Forest Scan",
+   "author": "draftmode",
+   "licence": "CC BY",
+   "mb": 31.5,
+   "terms": [
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/259c0051",
+   "ingest": "npm run splat:ingest 259c0051 <name>"
+  },
+  {
+   "title": "Sumela Monastery Cliffside",
+   "author": "dok11",
+   "licence": "CC BY",
+   "mb": 24.7,
+   "terms": [
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/5f03cdcb",
+   "ingest": "npm run splat:ingest 5f03cdcb <name>"
+  },
+  {
+   "title": "New Forest Test",
+   "author": "nebulousflynn",
+   "licence": "CC BY",
+   "mb": 122.3,
+   "terms": [
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/dbcaefa5",
+   "ingest": "npm run splat:ingest dbcaefa5 <name>"
+  },
+  {
+   "title": "Petrol Pump",
+   "author": "oh_scar",
+   "licence": "CC BY",
+   "mb": 14.3,
+   "terms": [
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/b8ca09fa",
+   "ingest": "npm run splat:ingest b8ca09fa <name>"
+  },
+  {
+   "title": "Cypripedium calceolus",
+   "author": "kingkapusta",
+   "licence": "CC BY",
+   "mb": 16.3,
+   "terms": [
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/98b492fa",
+   "ingest": "npm run splat:ingest 98b492fa <name>"
+  },
+  {
+   "title": "Cypripedium calceolus",
+   "author": "kingkapusta",
+   "licence": "CC BY",
+   "mb": 49.8,
+   "terms": [
+    "forest"
+   ],
+   "url": "https://superspl.at/scene/b46fcc5b",
+   "ingest": "npm run splat:ingest b46fcc5b <name>"
+  },
+  {
+   "title": "Garden test 6",
+   "author": "scbenoit",
+   "licence": "CC BY",
+   "mb": 63.1,
+   "terms": [
+    "garden"
+   ],
+   "url": "https://superspl.at/scene/6908201a",
+   "ingest": "npm run splat:ingest 6908201a <name>"
+  },
+  {
+   "title": "Small Garden",
+   "author": "scbenoit",
+   "licence": "CC BY",
+   "mb": 13.1,
+   "terms": [
+    "garden"
+   ],
+   "url": "https://superspl.at/scene/108dd868",
+   "ingest": "npm run splat:ingest 108dd868 <name>"
+  },
+  {
+   "title": "Masha & Timur in The Garden Maze",
+   "author": "prostor3d",
+   "licence": "CC BY",
+   "mb": 366.9,
+   "terms": [
+    "garden"
+   ],
+   "url": "https://superspl.at/scene/ad3534ee",
+   "ingest": "npm run splat:ingest ad3534ee <name>"
+  },
+  {
+   "title": "Karlsruhe Eulen",
+   "author": "mstitus",
+   "licence": "CC BY",
+   "mb": 191.8,
+   "terms": [
+    "garden"
+   ],
+   "url": "https://superspl.at/scene/7935e2a0",
+   "ingest": "npm run splat:ingest 7935e2a0 <name>"
+  },
+  {
+   "title": "Memorial aos Viscondes da Praia",
+   "author": "jorangutan",
+   "licence": "CC BY",
+   "mb": 99.8,
+   "terms": [
+    "garden"
+   ],
+   "url": "https://superspl.at/scene/77378282",
+   "ingest": "npm run splat:ingest 77378282 <name>",
+   "flags": [
+    "memorial"
+   ]
+  },
+  {
+   "title": "Holy Trinity , Church Bench",
+   "author": "naturalai",
+   "licence": "CC BY",
+   "mb": 56.7,
+   "terms": [
+    "garden"
+   ],
+   "url": "https://superspl.at/scene/7125d1af",
+   "ingest": "npm run splat:ingest 7125d1af <name>"
+  },
+  {
+   "title": "A table reserved for the regulars in a Bavarian beer garden",
+   "author": "alfred2010",
+   "licence": "CC BY",
+   "mb": 14.4,
+   "terms": [
+    "garden"
+   ],
+   "url": "https://superspl.at/scene/5be6e916",
+   "ingest": "npm run splat:ingest 5be6e916 <name>"
+  },
+  {
+   "title": "Botanical Garden - America v3 (VR Ready)",
+   "author": "simonbethke",
+   "licence": "CC BY-SA",
+   "mb": 597,
+   "terms": [
+    "garden"
+   ],
+   "url": "https://superspl.at/scene/7e49cd8d",
+   "ingest": "npm run splat:ingest 7e49cd8d <name>"
+  },
+  {
+   "title": "Glengall Stairs",
+   "author": "artfletch",
+   "licence": "CC BY",
+   "mb": 169.5,
+   "terms": [
+    "garden"
+   ],
+   "url": "https://superspl.at/scene/600e1166",
+   "ingest": "npm run splat:ingest 600e1166 <name>"
+  },
+  {
+   "title": "Mip-NeRF 360 \"Garden\"",
+   "author": "transkatgirl",
+   "licence": "CC BY",
+   "mb": 118.9,
+   "terms": [
+    "garden"
+   ],
+   "url": "https://superspl.at/scene/bc0906cd",
+   "ingest": "npm run splat:ingest bc0906cd <name>"
+  },
+  {
+   "title": "Clematis 'Nelly Moser'",
+   "author": "naturalai",
+   "licence": "CC BY",
+   "mb": 8.4,
+   "terms": [
+    "garden"
+   ],
+   "url": "https://superspl.at/scene/9c202a76",
+   "ingest": "npm run splat:ingest 9c202a76 <name>"
+  },
+  {
+   "title": "Chatsworth House",
+   "author": "dok11",
+   "licence": "CC BY",
+   "mb": 25.2,
+   "terms": [
+    "garden"
+   ],
+   "url": "https://superspl.at/scene/5cde122e",
+   "ingest": "npm run splat:ingest 5cde122e <name>"
+  },
+  {
+   "title": "Santa Barbara Botanical Garden low",
+   "author": "jaynef1080",
+   "licence": "CC BY",
+   "mb": 18.4,
+   "terms": [
+    "garden"
+   ],
+   "url": "https://superspl.at/scene/f357cad3",
+   "ingest": "npm run splat:ingest f357cad3 <name>"
+  },
+  {
+   "title": "plant_01",
+   "author": "jazmorow",
+   "licence": "CC BY",
+   "mb": 16.9,
+   "terms": [
+    "plant"
+   ],
+   "url": "https://superspl.at/scene/1a5b9d3d",
+   "ingest": "npm run splat:ingest 1a5b9d3d <name>"
+  }
+ ]
+}
