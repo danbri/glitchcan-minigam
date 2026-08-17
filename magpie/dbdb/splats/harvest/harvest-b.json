@@ -1,0 +1,18 @@
+{
+ "note": "Raw scans fetched from Hugging Face. The licence is the UPLOADER'S CLAIM, not proof they made the capture, so every entry starts verified:false and looked:false. Nothing here is an asset until somebody has looked at it.",
+ "scans": [
+  {
+   "name": "goku",
+   "repo": "VinayRevanuru/Gaussian_splats",
+   "file": "Goku.splat",
+   "kind": "models",
+   "licence": "mit",
+   "claim": "uploader tag, unverified",
+   "splats": 160000,
+   "source": 30.7,
+   "mb": 2.1,
+   "verified": false,
+   "looked": false
+  }
+ ]
+}

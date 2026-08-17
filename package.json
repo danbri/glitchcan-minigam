@@ -43,6 +43,8 @@
     "pack:lod": "node magpie/dbdb/tools/pack-lod.mjs",
     "splat:objects": "node magpie/dbdb/tools/object-scout.mjs",
     "splat:sources": "node magpie/dbdb/tools/splat-scout.mjs",
+    "splat:harvest": "node magpie/dbdb/tools/hf-harvest.mjs",
+    "splat:contact": "node magpie/dbdb/tools/scan-contact.mjs",
     "splat:wanted": "node magpie/dbdb/tools/splat-scout.mjs --wants",
     "splat:ingest": "node magpie/dbdb/tools/splat-ingest.mjs",
     "splat:index": "node magpie/dbdb/tools/asset-index.mjs",

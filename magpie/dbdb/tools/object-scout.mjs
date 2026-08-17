@@ -162,3 +162,21 @@ objs.forEach((o, i) => {
 });
 console.log('\nSizes are padded 12% so a box does not shave its own object.');
 console.log('Pick by eye, name them, then clip. Nothing here decides anything.');
+
+/* --json <file>: the same shortlist, machine-readable, so a scan of a
+   dozen scenes can be collected in one place and clipped in a batch. It
+   is still a shortlist — the naming and the keeping are eyes-only. */
+const ji = argv.indexOf('--json');
+if (ji >= 0) {
+  const out = argv[ji + 1];
+  const all = fs.existsSync(out) ? JSON.parse(fs.readFileSync(out, 'utf8')) : { note:
+    'object-scout shortlists, per scene. Candidates, not elements: nothing here has been looked at.',
+    scenes: {} };
+  all.scenes[scene] = objs.map((o, i) => ({
+    n: i, pts: o.pts,
+    c: o.c.map(v => +v.toFixed(2)),
+    size: o.size.map(v => +(v * 1.12).toFixed(1))
+  }));
+  fs.writeFileSync(out, JSON.stringify(all, null, 1) + '\n');
+  console.log(`wrote ${objs.length} candidates for ${scene} -> ${out}`);
+}

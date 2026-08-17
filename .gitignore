@@ -52,3 +52,11 @@ magpie/dbdb/tools/styles/
 
 # catalogue check screenshot: rebuildable with npm run test:catalog
 magpie/dbdb/tools/catalog-check.png
+
+# harvested raw scans: 2MB each and unjudged. The manifest is committed and
+# hf-harvest.mjs re-fetches from it; a scan earns a place in the repo when an
+# element is cut from it.
+magpie/dbdb/splats/harvest/*.sog
+magpie/dbdb/tools/contact/
+magpie/dbdb/tools/contact-check/
+magpie/dbdb/splats/harvest/*.tmp
