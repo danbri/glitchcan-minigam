@@ -39,7 +39,7 @@
     overflow:hidden; text-align:left; color:inherit; font:inherit; cursor:pointer;
     display:flex; flex-direction:column; }
   .card:focus-visible { outline:2px solid var(--hot); outline-offset:2px; }
-  .card img { width:100%; aspect-ratio:1; object-fit:cover; background:#000;
+  .card img { width:100%; aspect-ratio:1; object-fit:cover; background:#0b0f12;
     display:block; }
   .card .body { padding:8px 9px 10px; }
   .card .id { color:var(--hot); font-size:12px; letter-spacing:.06em; }
@@ -52,7 +52,8 @@
   dialog { width:min(940px,96vw); max-height:92vh; padding:0; border:1px solid var(--line);
     border-radius:10px; background:var(--panel); color:var(--ink); overflow:auto; }
   dialog::backdrop { background:rgba(0,0,0,.82); }
-  .view { position:relative; background:#000; aspect-ratio:4/3; max-height:52vh; }
+  .view { position:relative; aspect-ratio:4/3; max-height:52vh;
+    background:radial-gradient(120% 95% at 50% 88%, #1b2228 0%, #0d1114 55%, #070a0c 100%); }
   .view canvas { width:100%; height:100%; display:block; touch-action:none; }
   .view .note { position:absolute; left:10px; bottom:8px; font-size:10px;
     color:var(--dim); pointer-events:none; }
@@ -208,12 +209,12 @@ function card(e) {
   b.className = 'card'; b.type = 'button';
   const s = e.subject || {};
   b.innerHTML = `<img loading="lazy" alt="${e.id}: ${s.what || ''}"
-      src="splats/pack/thumbs/${e.id}.jpg">
+      src="splats/pack/thumbs/${e.id}.webp">
     <span class="body"><span class="id">${e.id}</span>
     <span class="what">${s.what || ''}</span>
     <span class="meta">${[s.kind, s.condition].filter(Boolean).join(' · ')}<br>
     ${fmt(e.count)} gaussians · ${Math.max(...e.dims).toFixed(1)} m${
-      s.note ? ' · <span style="color:var(--hot)">note</span>' : ''}</span></span>`;
+      s.note ? '<br><span style="color:var(--hot)">note</span>' : ''}</span></span>`;
   b.onclick = () => open(e);
   return b;
 }
@@ -236,12 +237,14 @@ async function loadPC() {   /* house pattern: CDN first, vendored fallback */
 async function ensureApp() {
   if (app) return;
   pc = await loadPC();
-  app = new pc.Application(canvas, { graphicsDeviceOptions: { antialias: false } });
+  /* alpha:true so the panel's charcoal backdrop shows through — a dark scan
+     cleared to opaque black has no ground to sit on and reads as a smudge */
+  app = new pc.Application(canvas, { graphicsDeviceOptions: { alpha: true, antialias: false } });
   app.setCanvasFillMode(pc.FILLMODE_NONE);
   app.setCanvasResolution(pc.RESOLUTION_AUTO);
   app.start();
   cam = new pc.Entity();
-  cam.addComponent('camera', { clearColor: new pc.Color(0, 0, 0, 1), fov: 32, farClip: 500 });
+  cam.addComponent('camera', { clearColor: new pc.Color(0, 0, 0, 0), fov: 32, farClip: 500 });
   app.root.addChild(cam);
   app.on('update', dt => {
     if (spin) yaw = (yaw + dt * 14) % 360;
@@ -268,7 +271,21 @@ async function show(e) {
   if (asset) { app.assets.remove(asset); asset.unload(); asset = null; }
   const [W, H, D] = e.dims;
   target = new pc.Vec3(0, H * 0.45, 0);
-  dist = Math.max(W, D, H) * 0.5 / Math.tan(32 * Math.PI / 360) * 1.35;
+  /* FIT THE BOX, NOT ITS BOUNDING SPHERE. A sphere fit marooned every wide
+     flat element in empty space — the shelf, the hut, the truck. This takes
+     the distance the worst bearing needs from the box projected onto the
+     camera's right and up axes, so the element fills the panel and keeps one
+     scale as it turns. */
+  const t = Math.tan(32 * Math.PI / 360);
+  dist = 0;
+  for (let a = 0; a < 360; a += 30) {
+    const r = a * Math.PI / 180, p = 16 * Math.PI / 180;
+    const halfRight = 0.5 * (W * Math.abs(Math.cos(r)) + D * Math.abs(Math.sin(r)));
+    const foot = W * Math.abs(Math.sin(r)) + D * Math.abs(Math.cos(r));
+    const halfUp = 0.55 * H * Math.cos(p) + 0.5 * foot * Math.sin(p);
+    dist = Math.max(dist, halfRight / t, halfUp / t);
+  }
+  dist *= 1.06;
   yaw = 35; pitch = 16;
   asset = new pc.Asset(e.id, 'gsplat', { url: 'splats/pack/' + e.file });
   app.assets.add(asset);

@@ -253,11 +253,26 @@ Never keep a clip you have not seen — and look at it properly.
     npm run splat:sheet -- pickup --angles 9     # one element, full turnaround
 
 `element-sheet.mjs` renders a character sheet: the same object from four or
-nine bearings, at twice device resolution, on a bare page with no game chrome.
-**The framing is arithmetic, not guesswork** — the clipper canonicalises every
-element (centred on x/z, base floored to y=0) and records its dims, so the
-camera is placed from the numbers. That is the difference between this and the
-hand-rolled viewer that guessed and rendered known-good scans as mush.
+nine bearings, on a bare page with no game chrome.
+
+**Framing is computed, then measured and corrected.** The camera distance is
+derived from the box projected onto the camera's right and up axes — not from
+its bounding SPHERE, which marooned every wide flat element in black. Then the
+tool renders once, measures the silhouette that really appears, and corrects,
+because `dims` is the *cut* box: padded, and not always ordered the way you
+assume. `hut` filled 59% of its thumbnail before that second pass. Most of what
+reads as "low resolution" in a thumbnail is empty frame.
+
+Two more things that make the difference between a murky thumbnail and a sharp
+one, both learned Aug 2026:
+
+- **Supersample.** Render at `--dpr 3` and compose down to 2x. Splats have no
+  MSAA to lean on; this is where crispness comes from.
+- **WebP, and not on pure black.** JPEG blocking is very visible on a dark
+  noisy scan, and a dark timber scan on `#000` has no ground to sit on. The
+  page paints a charcoal radial backdrop and the app is created with
+  `graphicsDeviceOptions: { alpha: true }` — without that the canvas clears to
+  opaque black and the backdrop never shows.
 
 One angle is not enough for a scan: every clip has a side the scanner never
 saw, and the turnaround is where you find it. (`side-scout.mjs` scores those

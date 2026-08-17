@@ -21,7 +21,7 @@ const PORT = 8977;
 const pack = JSON.parse(fs.readFileSync(path.join(HERE, '../splats/pack/pack.json'), 'utf8'));
 
 const MIME = { '.html': 'text/html', '.mjs': 'text/javascript', '.js': 'text/javascript',
-  '.json': 'application/json', '.jpg': 'image/jpeg', '.png': 'image/png',
+  '.json': 'application/json', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.png': 'image/png',
   '.ply': 'application/octet-stream', '.sog': 'application/octet-stream' };
 const srv = http.createServer((q, r) => {
   const u = decodeURIComponent(q.url.split('?')[0]);
@@ -40,7 +40,7 @@ const ok = (cond, msg) => { console.log((cond ? '  ok   ' : '  FAIL ') + msg); i
    a broken <img> is invisible in a headless screenshot */
 const thumbs = path.join(HERE, '../splats/pack/thumbs');
 const missing = pack.elements.filter(e => {
-  const f = path.join(thumbs, e.id + '.jpg');
+  const f = path.join(thumbs, e.id + '.webp');
   return !fs.existsSync(f) || fs.statSync(f).size < 2000;
 });
 ok(missing.length === 0, `thumbnails present for all ${pack.elements.length} elements`
@@ -123,8 +123,10 @@ for (let i = 0; i < 30 && litPct < 1; i++) {
     const cv = new OffscreenCanvas(im.width, im.height), g = cv.getContext('2d');
     g.drawImage(im, 0, 0);
     const d = g.getImageData(0, 0, im.width, im.height).data;
+    /* threshold above the charcoal backdrop (its brightest is 27+34+40),
+       or an EMPTY view passes this check */
     let lit = 0, n = 0;
-    for (let i = 0; i < d.length; i += 4) { n++; if (d[i] + d[i+1] + d[i+2] > 48) lit++; }
+    for (let i = 0; i < d.length; i += 4) { n++; if (d[i] + d[i+1] + d[i+2] > 150) lit++; }
     return 100 * lit / n;
   }, png);
 }

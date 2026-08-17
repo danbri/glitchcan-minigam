@@ -48,7 +48,7 @@
     "splat:index": "node magpie/dbdb/tools/asset-index.mjs",
     "splat:view": "npx -y @playcanvas/splat-transform -w -q -g cpu",
     "splat:sheet": "node magpie/dbdb/tools/element-sheet.mjs",
-    "splat:thumbs": "node magpie/dbdb/tools/element-sheet.mjs --angles 1 --cell 240 --format jpeg --out magpie/dbdb/splats/pack/thumbs",
+    "splat:thumbs": "node magpie/dbdb/tools/element-sheet.mjs --angles 1 --cell 400 --format webp --out magpie/dbdb/splats/pack/thumbs",
     "splat:style": "node magpie/dbdb/tools/style-probe.mjs",
     "test:fink:e2e": "node inklet/finkapp/test/e2e.mjs && node inklet/finkapp/test/e2e-wm.mjs && node inklet/finkapp/test/e2e-robbin.mjs && node inklet/finkapp/test/e2e-waterworld.mjs && node inklet/finkapp/test/e2e-bus.mjs && node inklet/finkapp/test/e2e-storyrunner.mjs && node inklet/finkapp/test/e2e-foafos.mjs && node inklet/finkapp/test/e2e-dream.mjs && node inklet/finkapp/test/e2e-vars.mjs && node inklet/finkapp/test/e2e-boidwars.mjs && node inklet/finkapp/test/e2e-input.mjs && node inklet/finkapp/test/e2e-audio-leak.mjs && node inklet/finkapp/test/e2e-caps.mjs && node inklet/finkapp/test/e2e-root.mjs && node inklet/finkapp/test/e2e-snapshot.mjs && node inklet/finkapp/test/e2e-chrome.mjs && node inklet/finkapp/test/e2e-desktop.mjs && node inklet/finkapp/test/e2e-conformance.mjs && node inklet/finkapp/test/e2e-instances.mjs && node inklet/finkapp/test/skins-a11y.mjs && node inklet/finkapp/test/aria-audit.mjs && node inklet/finkapp/test/play-skydock.mjs",
     "test:fink:qa": "node inklet/finkapp/test/qa-journey.mjs && node inklet/finkapp/test/qa-games.mjs"
