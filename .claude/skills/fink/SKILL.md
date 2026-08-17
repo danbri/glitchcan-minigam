@@ -98,6 +98,18 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   a sandboxed iframe). The DESIGNED path is `inklet/minigames/`
   (`MinigameHost` + guest `minigame-sdk.js` + per-game manifest.json with
   variables.read/write allowlists) — loaded but not yet routed.
+- **THE INIT RACE, and it bites every new guest.** A guest that posts
+  `ready` at PARSE time — top-level, before its own async setup — can
+  beat the host's iframe `load` handler to the punch, and its `init`
+  never arrives: no variables, no story thread, no capabilities. dbdb2
+  hit this exactly (a top-level `await` moved its listener after `load`).
+  The host therefore RE-SENDS init whenever a `ready` arrives late, and
+  a guest must tolerate receiving init twice. Symptom to recognise: the
+  guest boots and plays fine but behaves as though it has no host —
+  `__jsd.fink.host === false` while everything else works.
+- **A test can lose this race too.** A harness that reads the guest's
+  host-state immediately after boot samples before the handshake lands
+  and reports a failure that is not there. Poll for it.
 - postMessage protocol (both): host→guest `init {config,variables}`,
   `pause`, `resume`, `terminate`, `key`; guest→host `ready`, `progress`,
   `set-variable`, `complete {result}`, `error`. Minigames cannot divert
@@ -820,6 +832,27 @@ it is drawn and confers NO authority; `capabilities` say what it may do.
 - Without the capability the shim throws a named `FoafCapabilityError`
   saying which capability is missing — a debuggable message beats a bare
   SecurityError.
+- **AND SO DOES EVERY TEXTURE.** The same opaque origin makes a guest
+  cross-origin to ITS OWN FILES, so an `<img>` fetched without CORS is
+  tainted and `texImage2D` with it **throws SecurityError**. Measured
+  inside a sandboxed frame:
+
+      plain <img>                 -> THREW SecurityError
+      <img crossOrigin=anonymous> -> upload ok
+      fetch -> createImageBitmap  -> upload ok
+
+  This cost two days as "white cards, then an invisible player". Three
+  things made it expensive and all three are the lesson:
+  · **only WebKit reproduced it.** Chromium rendered every build
+    correctly, top-level AND in a guest frame, so the whole test suite
+    said the game was fine. iOS is WebKit; test there
+    (`tools/test-webkit-sprites.mjs`).
+  · **asking the engine for CORS was not enough** — the setting did not
+    reach PlayCanvas's loader. The page loads its atlases itself now.
+  · **a cached non-CORS copy poisons a later CORS request**, so bump the
+    asset URL when the loader starts asking for CORS.
+  Any guest that uploads an image to WebGL needs `crossOrigin` or a
+  `fetch`; a plain `<img>` is a latent iOS-only failure.
 - **`same-origin` is a declared capability**, not a default: the escape
   hatch for apps not yet migrated (edot/sheets/calendar/files/robbamp use
   localStorage+indexedDB ~120×). Announced on `sys.app.ambient` and

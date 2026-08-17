@@ -148,6 +148,12 @@ pebbles on a garden step, `market` is smeared, `bridge` is doubtful.
 a scene you already trust.** `splats/sources.json` records, per scan, whether
 anyone has looked and what they saw.
 
+It generalises past viewers, and this project keeps relearning it: an
+instrument you have not calibrated will confidently tell you the subject is
+broken. The white-cards saga ended the same way — a test suite that rendered
+every historical build correctly, on the one engine that could not reproduce
+the fault. **Point the instrument at a known answer first.**
+
 ## 1b. THE STORE HAS NO PRECONCEPTIONS ABOUT USE
 
 **`pack.json` says what a thing IS. It never says what it is for.**
@@ -261,6 +267,30 @@ A single game screenshot — 352px, one bearing, through the play page — is a
 picture of a game, not of an object. Do not catalogue with those. `side-scout.mjs` turntables an element to find its photogenic
 side and writes the verdict into `pack.json` as `sides`, so compositions can
 point the unscanned smear at a wall.
+
+## 5b. SPLAT-TRANSFORM: THE FLAGS THAT BITE
+
+Read its `--help` before reaching for a workaround — twice now the thing
+needed was already in there.
+
+- **Decimation writes `.ply` only.** `-d N out.sog` fails with *"output
+  must be .ply"*. Thin to a `.ply`, then convert. Two steps, always.
+- **It emits a viewer** (`out.html`) and **an LOD pyramid**
+  (`lod-meta.json`) and **SOG** — all CPU-only with `-g cpu`. The note in
+  `pack-lite.mjs` claiming `--decimate` needs WebGPU is stale: true of an
+  older build, not of v3.3.0.
+- **`-l N` tags a LOD level**, which is how the pyramid is assembled from
+  decimated copies.
+
+## 5c. THIS CONTAINER HAS NO IMAGE TOOLS
+
+No imagemagick, no ffmpeg, no Python PIL — whatever the root CLAUDE.md
+says. Do not plan a pipeline around them. What works instead:
+
+- **crop at render time** with Playwright's `screenshot({ clip })`;
+- **compose and re-encode in the page** — draw onto a `<canvas>` and
+  `toDataURL('image/jpeg', 0.86)`. That is how the 34 turnaround sheets
+  went from 35MB of PNG to 5MB of JPEG without a single native binary.
 
 ## 6. LOD: WITHOUT IT, PLAYCANVAS'S WHOLE BUDGET SYSTEM IS INERT
 

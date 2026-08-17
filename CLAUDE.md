@@ -185,7 +185,12 @@ GitHub Pages serves static files; no dynamic image selection.
 - **Local server:** `python -m http.server 8080` — the user usually arranges their own server; don't start servers for them unprompted.
 - **Validate HTML:** `npx html-validate **/*.html` · **Lint:** `npx eslint`
 - **Tests:** `npm test` (Playwright), `npm run test:core` (Vitest). Note: `tests/glsl-codegen.test.js` and `tests/dsl-parser.test.js` are @playwright/test files — don't point vitest at the whole tests/ dir.
-- Useful: imagemagick, libimage-exiftool-perl, webp, ffmpeg
+- Image tooling: **the remote container has NO imagemagick, ffmpeg or Python
+  PIL** (verified Aug 2026) — do not plan a pipeline around them. Crop with
+  Playwright's `screenshot({clip})` and re-encode on a `<canvas>` via
+  `toDataURL('image/jpeg', q)`; that took 34 render sheets from 35MB to 5MB
+  with no native binary. `libimage-exiftool-perl` and `webp` may still be
+  present locally; check before relying on any of them.
 
 ### Headless browser in the remote execution environment (verified June 2026)
 A Chromium exists at `/opt/pw-browsers/`. Playwright works with:

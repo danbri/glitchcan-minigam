@@ -86,9 +86,21 @@ platform grows a slot and the content fills it.
 4. Remember: guest iframes have opaque origins — ES modules/fetches need
    CORS (fine on GitHub Pages, needs a CORS server locally), and
    localStorage THROWS there — shim it (robbin.html head shows how).
-5. Reactions to minigame results go BEHIND a choice in the return knot,
+5. **GIVE THE GAME A WAY OUT THAT IS INSIDE THE GAME.** The shell can
+   always stop a guest, but a reader who wants to leave should be able
+   to WALK out. Skydock's car rank is the pattern: the world already
+   showed NPCs hailing cars away all shift, so the exit needed no
+   explaining — stand at the kerb, jump, ride up, and the game posts
+   `complete` with its variables. Two rules learned building it:
+   - **An exit nobody is told about is not an exit.** The story names
+     it in the beat before the `# MINIGAME:` tag ("the car rank down by
+     the bakery runs a shuttle back up here").
+   - **The way out must work in BOTH lives.** The same game runs
+     standalone; there the car returns the player to the title card it
+     came in from. Whatever the guest came from is where it goes back.
+6. Reactions to minigame results go BEHIND a choice in the return knot,
    and the MINIGAME tag goes INLINE on a text line — a bare tag line
    attaches forward through the divert and the destination's first line
    (with any conditionals) evaluates before the game runs. INK-GOTCHAS §8.
-6. Worked example: hampstead_tube/tube_return in hampstead.fink.js;
+7. Worked example: hampstead_tube/tube_return in hampstead.fink.js;
    full-loop test: node inklet/finkapp/test/e2e-robbin.mjs.
