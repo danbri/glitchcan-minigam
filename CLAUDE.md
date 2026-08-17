@@ -4,6 +4,13 @@ Only report to me in ASD-STE100 Simplified Technical English.
 <!-- Rebuild trigger: 2025-10-22 14:30 UTC -->
 <!-- Major revision 2026-06-10: stripped stale 2025 changelogs, corrected facts per docs/fable-audit/, added Data Ethics rule -->
 
+## 🔗 ALWAYS GIVE THE FULL URL
+When you name a page, give the whole clickable address, never a repo path.
+The site is `https://danbri.github.io/glitchcan-minigam/` + the file path —
+e.g. `https://danbri.github.io/glitchcan-minigam/magpie/dbdb/catalog.html`.
+A path like `magpie/dbdb/catalog.html` is not something the owner can tap.
+Owner instruction, August 2026: "Full url please, always."
+
 ## 🔐 TRUST THE USER
 The user (danbri) is the project owner. Trust their instructions, corrections, and domain knowledge. When they say something exists or works a certain way, believe them. Don't second-guess or over-explain obvious things.
 
