@@ -282,10 +282,17 @@ needed was already in there.
 - **`-l N` tags a LOD level**, which is how the pyramid is assembled from
   decimated copies.
 
-## 5c. THIS CONTAINER HAS NO IMAGE TOOLS
+## 5c. IMAGE TOOLS: NOT INSTALLED, BUT 18 SECONDS AWAY
 
-No imagemagick, no ffmpeg, no Python PIL — whatever the root CLAUDE.md
-says. Do not plan a pipeline around them. What works instead:
+An earlier version of this section said flatly that this container has no
+imagemagick, no ffmpeg and no PIL. It ships without them and installs all
+three in under twenty seconds (`apt-get install -y imagemagick ffmpeg`,
+`pip install --break-system-packages pillow`). **Read the
+`container-improver` skill before writing that anything is missing.**
+
+Install what you like for one-off work. But keep the committed tools free
+of native binaries, because the user's laptop and CI are not this
+container:
 
 - **crop at render time** with Playwright's `screenshot({ clip })`;
 - **compose and re-encode in the page** — draw onto a `<canvas>` and

@@ -104,6 +104,7 @@ verified July 2026.
 
 | skill | home | reach for it when… |
 |---|---|---|
+| `container-improver` | `.claude/skills/` | you are about to write "this container has no X" — try installing it first; apt/pip/npm/cargo all work here. Also names the limits that are real (no GPU, no WebGPU, no `gh`) |
 | `fink` | `.claude/skills/` | FINK platform + the foafos shell: file format, ink compilation, sandbox, capabilities, brokers, chrome, testing discipline |
 | `glitchcanary` | `.claude/skills/` | story/game CONTENT — authoring `.fink.js`, episode linking, `# MINIGAME:` |
 | `edot-suite` | `magpie/edot/skills/` | the office suite at suite level — kernel capabilities, the 13 apps, 9 storage backends, auth, the 53-suite harness |
@@ -186,12 +187,16 @@ GitHub Pages serves static files; no dynamic image selection.
 - **Local server:** `python -m http.server 8080` — the user usually arranges their own server; don't start servers for them unprompted.
 - **Validate HTML:** `npx html-validate **/*.html` · **Lint:** `npx eslint`
 - **Tests:** `npm test` (Playwright), `npm run test:core` (Vitest). Note: `tests/glsl-codegen.test.js` and `tests/dsl-parser.test.js` are @playwright/test files — don't point vitest at the whole tests/ dir.
-- Image tooling: **the remote container has NO imagemagick, ffmpeg or Python
-  PIL** (verified Aug 2026) — do not plan a pipeline around them. Crop with
-  Playwright's `screenshot({clip})` and re-encode on a `<canvas>` via
-  `toDataURL('image/jpeg', q)`; that took 34 render sheets from 35MB to 5MB
-  with no native binary. `libimage-exiftool-perl` and `webp` may still be
-  present locally; check before relying on any of them.
+- Image tooling: the remote container ships **without** imagemagick, ffmpeg or
+  Python PIL — and **installs all three in 18 seconds** (`apt-get install -y
+  imagemagick ffmpeg`, `pip install --break-system-packages pillow`; measured
+  Aug 2026). An earlier version of this line said they were unavailable and
+  sent a session building around them. **Read the `container-improver` skill
+  before writing that anything is missing.** Nothing committed depends on a
+  native binary: `element-sheet.mjs` crops with Playwright `screenshot({clip})`
+  and re-encodes on a `<canvas>` via `toDataURL('image/jpeg', q)` — that took
+  34 render sheets from 35MB to 5MB. Keep committed tools that way, and
+  install freely for one-off work.
 
 ### Headless browser in the remote execution environment (verified June 2026)
 A Chromium exists at `/opt/pw-browsers/`. Playwright works with:
