@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04070a">
+<title>Splat catalogue — what is in the pack</title>
+<style>
+  :root {
+    --ink:#cfe8d8; --dim:#7f9c8c; --line:rgba(159,232,176,.22);
+    --panel:#080d10; --bg:#04070a; --hot:#7fffb0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { background:var(--bg); color:var(--ink);
+    font:14px/1.55 ui-monospace,"SF Mono","Courier New",monospace;
+    -webkit-text-size-adjust:100%; }
+  a { color:var(--hot); }
+  header { position:sticky; top:0; z-index:5; background:rgba(4,7,10,.96);
+    border-bottom:1px solid var(--line); padding:12px 14px 10px;
+    backdrop-filter:blur(6px); }
+  h1 { font-size:13px; letter-spacing:.28em; font-weight:400; color:var(--hot); }
+  .tally { font-size:11px; color:var(--dim); margin-top:4px; }
+  .tally b { color:var(--ink); font-weight:400; }
+  .tools { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; align-items:center; }
+  input[type=search], select { background:var(--panel); color:var(--ink);
+    border:1px solid var(--line); border-radius:4px; padding:8px 10px;
+    font:12px ui-monospace,monospace; min-width:0; }
+  input[type=search] { flex:1 1 190px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; }
+  .chip { background:none; color:var(--dim); border:1px solid var(--line);
+    border-radius:999px; padding:5px 11px; font:11px ui-monospace,monospace;
+    cursor:pointer; }
+  .chip[aria-pressed=true] { color:#04070a; background:var(--hot); border-color:var(--hot); }
+
+  main { padding:14px; }
+  .grid { display:grid; gap:12px;
+    grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    overflow:hidden; text-align:left; color:inherit; font:inherit; cursor:pointer;
+    display:flex; flex-direction:column; }
+  .card:focus-visible { outline:2px solid var(--hot); outline-offset:2px; }
+  .card img { width:100%; aspect-ratio:1; object-fit:cover; background:#000;
+    display:block; }
+  .card .body { padding:8px 9px 10px; }
+  .card .id { color:var(--hot); font-size:12px; letter-spacing:.06em; }
+  .card .what { font-size:11px; color:var(--ink); margin-top:2px;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+    overflow:hidden; }
+  .card .meta { font-size:10px; color:var(--dim); margin-top:5px; }
+  .empty { color:var(--dim); font-size:12px; padding:30px 4px; }
+
+  dialog { width:min(940px,96vw); max-height:92vh; padding:0; border:1px solid var(--line);
+    border-radius:10px; background:var(--panel); color:var(--ink); overflow:auto; }
+  dialog::backdrop { background:rgba(0,0,0,.82); }
+  .view { position:relative; background:#000; aspect-ratio:4/3; max-height:52vh; }
+  .view canvas { width:100%; height:100%; display:block; touch-action:none; }
+  .view .note { position:absolute; left:10px; bottom:8px; font-size:10px;
+    color:var(--dim); pointer-events:none; }
+  .view .spin { position:absolute; right:8px; top:8px; }
+  .det { padding:14px; }
+  .det h2 { font-size:15px; color:var(--hot); font-weight:400; letter-spacing:.08em; }
+  .det .what { color:var(--ink); font-size:13px; margin:2px 0 12px; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th,td { text-align:left; padding:5px 0; vertical-align:top;
+    border-bottom:1px solid rgba(159,232,176,.10); }
+  th { color:var(--dim); font-weight:400; width:8.5em; }
+  .credit { margin-top:12px; font-size:11px; color:var(--dim); line-height:1.7; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .row button, .row a.btn { background:none; border:1px solid var(--line);
+    color:var(--ink); border-radius:4px; padding:8px 12px;
+    font:12px ui-monospace,monospace; cursor:pointer; text-decoration:none; }
+  footer { padding:22px 14px 40px; color:var(--dim); font-size:11px; line-height:1.8;
+    border-top:1px solid var(--line); margin-top:26px; }
+  footer h2 { font-size:11px; letter-spacing:.24em; color:var(--ink);
+    font-weight:400; margin-bottom:6px; }
+  @media (prefers-reduced-motion:reduce) { .view .spin { display:none; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>SPLAT CATALOGUE</h1>
+  <p class="tally" id="tally">reading pack.json…</p>
+  <div class="tools" role="search">
+    <label for="q" hidden>Search elements</label>
+    <input id="q" type="search" placeholder="search: rust, timber, hedge, ruined…"
+           autocomplete="off">
+    <label for="sort" hidden>Sort order</label>
+    <select id="sort">
+      <option value="id">name</option>
+      <option value="count">gaussians</option>
+      <option value="size">size</option>
+      <option value="scene">source scene</option>
+    </select>
+  </div>
+  <div class="chips" id="chips"></div>
+</header>
+
+<main>
+  <div class="grid" id="grid"></div>
+  <p class="empty" id="empty" hidden>Nothing matches that.</p>
+</main>
+
+<dialog id="detail" aria-label="Element detail">
+  <div class="view">
+    <canvas id="viewCanvas"></canvas>
+    <button class="chip spin" type="button" id="spinBtn" aria-pressed="true">turntable</button>
+    <span class="note" id="viewNote">drag to orbit</span>
+  </div>
+  <div class="det">
+    <h2 id="dTitle">—</h2>
+    <p class="what" id="dWhat"></p>
+    <table id="dTable"></table>
+    <p class="credit" id="dCredit"></p>
+    <div class="row">
+      <button type="button" id="copyId">copy id</button>
+      <a class="btn" id="dSource" href="#" rel="noreferrer">source scene</a>
+      <a class="btn" id="dLicence" href="#" rel="license noreferrer">licence</a>
+      <button type="button" id="closeBtn">close</button>
+    </div>
+  </div>
+</dialog>
+
+<footer>
+  <h2>CREDITS</h2>
+  <p>Every element is cut from a Creative Commons scan and carries its
+     attribution. The list below is the whole of it, and it ships with the
+     pack.</p>
+  <div id="credits"></div>
+</footer>
+
+<script type="module">
+/* The catalogue reads the SAME pack.json the game reads. No second copy of
+   the truth: if an element is here it is in the pack, and if its credit is
+   missing here it is missing there too. */
+const pack = await (await fetch('splats/pack/pack.json')).json();
+const els = pack.elements.slice();
+const lodIds = new Set(pack.lod?.ids || []);
+
+const fmt = n => n >= 1000 ? (n/1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(n);
+const dim = d => d.map(v => v.toFixed(1)).join(' × ') + ' m';
+
+/* Facets come from the DATA, never from a hand-kept list — a new `kind` in
+   subjects.json appears here without an edit. And they are facets of what a
+   thing IS: kind, condition, material, scene. Nothing about what it is for;
+   that judgement lives in the game, not in the store. */
+const facets = [
+  { key:'kind',      of: e => [e.subject?.kind] },
+  { key:'condition', of: e => [e.subject?.condition] },
+  { key:'material',  of: e => e.subject?.materials || [] },
+  { key:'scene',     of: e => [e.scene] }
+];
+const active = new Map();          // facet key -> Set of chosen values
+
+const chipBox = document.getElementById('chips');
+for (const f of facets) {
+  const vals = [...new Set(els.flatMap(f.of).filter(Boolean))].sort();
+  active.set(f.key, new Set());
+  for (const v of vals) {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.type = 'button'; b.textContent = v;
+    b.setAttribute('aria-pressed', 'false');
+    b.onclick = () => {
+      const set = active.get(f.key);
+      set.has(v) ? set.delete(v) : set.add(v);
+      b.setAttribute('aria-pressed', String(set.has(v)));
+      draw();
+    };
+    chipBox.appendChild(b);
+  }
+}
+
+const grid = document.getElementById('grid');
+const q = document.getElementById('q');
+const sortSel = document.getElementById('sort');
+q.oninput = draw; sortSel.onchange = draw;
+
+function matches(e) {
+  for (const f of facets) {
+    const want = active.get(f.key);
+    if (want.size && !f.of(e).some(v => want.has(v))) return false;
+  }
+  const s = q.value.trim().toLowerCase();
+  if (!s) return true;
+  const hay = [e.id, e.scene, e.subject?.what, e.subject?.kind, e.subject?.condition,
+    e.subject?.note, ...(e.subject?.materials || []), e.credit].join(' ').toLowerCase();
+  return s.split(/\s+/).every(w => hay.includes(w));
+}
+
+function draw() {
+  const by = sortSel.value;
+  const rows = els.filter(matches).sort((a, b) =>
+    by === 'count' ? b.count - a.count
+    : by === 'size' ? Math.max(...b.dims) - Math.max(...a.dims)
+    : by === 'scene' ? (a.scene + a.id).localeCompare(b.scene + b.id)
+    : a.id.localeCompare(b.id));
+  grid.replaceChildren(...rows.map(card));
+  document.getElementById('empty').hidden = rows.length > 0;
+  document.getElementById('tally').innerHTML =
+    `<b>${rows.length}</b> of <b>${els.length}</b> elements · `
+    + `<b>${fmt(els.reduce((a, e) => a + e.count, 0))}</b> gaussians · `
+    + `<b>${new Set(els.map(e => e.scene)).size}</b> source scenes · `
+    + `<b>${lodIds.size}</b> with LOD pyramids`;
+}
+
+function card(e) {
+  const b = document.createElement('button');
+  b.className = 'card'; b.type = 'button';
+  const s = e.subject || {};
+  b.innerHTML = `<img loading="lazy" alt="${e.id}: ${s.what || ''}"
+      src="splats/pack/thumbs/${e.id}.jpg">
+    <span class="body"><span class="id">${e.id}</span>
+    <span class="what">${s.what || ''}</span>
+    <span class="meta">${[s.kind, s.condition].filter(Boolean).join(' · ')}<br>
+    ${fmt(e.count)} gaussians · ${Math.max(...e.dims).toFixed(1)} m${
+      s.note ? ' · <span style="color:var(--hot)">note</span>' : ''}</span></span>`;
+  b.onclick = () => open(e);
+  return b;
+}
+
+/* ── the detail view: a LIVE element, not a picture of one ────────────── */
+const dlg = document.getElementById('detail');
+const canvas = document.getElementById('viewCanvas');
+let pc = null, app = null, cam = null, ent = null, asset = null;
+let yaw = 35, pitch = 16, dist = 8, target = null, spin = true;
+
+async function loadPC() {   /* house pattern: CDN first, vendored fallback */
+  const CDN = 'https://cdn.jsdelivr.net/npm/playcanvas@2.21.3/build/playcanvas.min.mjs';
+  const LOCAL = '../../third_party/playcanvas/playcanvas.min.mjs';
+  try {
+    return await Promise.race([import(CDN),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('cdn timeout')), 3500))]);
+  } catch (err) { return import(LOCAL); }
+}
+
+async function ensureApp() {
+  if (app) return;
+  pc = await loadPC();
+  app = new pc.Application(canvas, { graphicsDeviceOptions: { antialias: false } });
+  app.setCanvasFillMode(pc.FILLMODE_NONE);
+  app.setCanvasResolution(pc.RESOLUTION_AUTO);
+  app.start();
+  cam = new pc.Entity();
+  cam.addComponent('camera', { clearColor: new pc.Color(0, 0, 0, 1), fov: 32, farClip: 500 });
+  app.root.addChild(cam);
+  app.on('update', dt => {
+    if (spin) yaw = (yaw + dt * 14) % 360;
+    place();
+  });
+  const ro = new ResizeObserver(() => app.resizeCanvas());
+  ro.observe(canvas.parentElement);
+}
+
+/* framing is arithmetic, not a guess: the clipper canonicalises every
+   element (centred on x/z, base at y=0) and records its dims in pack.json */
+function place() {
+  if (!cam || !target) return;
+  const y = yaw * Math.PI / 180, p = pitch * Math.PI / 180;
+  cam.setPosition(target.x + dist * Math.cos(p) * Math.sin(y),
+                  target.y + dist * Math.sin(p),
+                  target.z + dist * Math.cos(p) * Math.cos(y));
+  cam.lookAt(target);
+}
+
+async function show(e) {
+  await ensureApp();
+  if (ent) { ent.destroy(); ent = null; }
+  if (asset) { app.assets.remove(asset); asset.unload(); asset = null; }
+  const [W, H, D] = e.dims;
+  target = new pc.Vec3(0, H * 0.45, 0);
+  dist = Math.max(W, D, H) * 0.5 / Math.tan(32 * Math.PI / 360) * 1.35;
+  yaw = 35; pitch = 16;
+  asset = new pc.Asset(e.id, 'gsplat', { url: 'splats/pack/' + e.file });
+  app.assets.add(asset);
+  asset.once('load', () => {
+    ent = new pc.Entity(e.id);
+    ent.addComponent('gsplat', { asset });
+    app.root.addChild(ent);
+    place();
+  });
+  asset.once('error', err => {
+    document.getElementById('viewNote').textContent = 'could not load: ' + err;
+  });
+  app.assets.load(asset);
+}
+
+let drag = null;
+canvas.addEventListener('pointerdown', ev => {
+  drag = { x: ev.clientX, y: ev.clientY }; spin = false;
+  document.getElementById('spinBtn').setAttribute('aria-pressed', 'false');
+  canvas.setPointerCapture(ev.pointerId);
+});
+canvas.addEventListener('pointermove', ev => {
+  if (!drag) return;
+  yaw -= (ev.clientX - drag.x) * 0.4;
+  pitch = Math.max(-12, Math.min(78, pitch + (ev.clientY - drag.y) * 0.3));
+  drag = { x: ev.clientX, y: ev.clientY };
+  place();
+});
+addEventListener('pointerup', () => { drag = null; });
+document.getElementById('spinBtn').onclick = ev => {
+  spin = !spin; ev.currentTarget.setAttribute('aria-pressed', String(spin));
+};
+
+function open(e) {
+  const s = e.subject || {}, l = e.licence || {};
+  document.getElementById('dTitle').textContent = e.id;
+  document.getElementById('dWhat').textContent = s.what || '';
+  const rows = [
+    ['kind', [s.kind, s.condition].filter(Boolean).join(' · ')],
+    ['made of', (s.materials || []).join(', ')],
+    ['size', dim(e.dims)],
+    ['gaussians', e.count.toLocaleString('en-GB')],
+    ['reads as', [s.standing ? 'stands upright' : 'lies flat',
+                  s.enclosing ? 'can be entered or sheltered under' : null]
+                 .filter(Boolean).join(' · ')],
+    ['LOD', lodIds.has(e.id) ? 'four-level pyramid' : 'flat — no pyramid'],
+    ['file', e.file],
+    ['cut from', e.scene + (e.hq ? ' (high-quality source)' : '')],
+    ['note', s.note || '—']
+  ];
+  document.getElementById('dTable').innerHTML = rows
+    .map(([k, v]) => `<tr><th scope="row">${k}</th><td>${v || '—'}</td></tr>`).join('');
+  document.getElementById('dCredit').textContent = e.credit || '';
+  const src = document.getElementById('dSource');
+  src.href = l.source ? 'https://' + l.source.replace(/^https?:\/\//, '') : '#';
+  src.hidden = !l.source;
+  const lic = document.getElementById('dLicence');
+  lic.href = l.url || '#'; lic.textContent = l.id || 'licence'; lic.hidden = !l.url;
+  document.getElementById('copyId').onclick = () =>
+    navigator.clipboard?.writeText(e.id);
+  dlg.showModal();
+  show(e);
+}
+document.getElementById('closeBtn').onclick = () => dlg.close();
+dlg.addEventListener('close', () => {
+  if (ent) { ent.destroy(); ent = null; }
+  if (asset) { app.assets.remove(asset); asset.unload(); asset = null; }
+});
+
+/* the attribution list, built from the same records */
+const seen = new Map();
+for (const e of els) if (e.credit && !seen.has(e.credit)) seen.set(e.credit, []);
+for (const e of els) if (e.credit) seen.get(e.credit).push(e.id);
+document.getElementById('credits').innerHTML = [...seen]
+  .map(([c, ids]) => `<p>${c} — <span style="opacity:.75">${ids.join(', ')}</span></p>`)
+  .join('');
+
+draw();
+</script>
+</body>
+</html>

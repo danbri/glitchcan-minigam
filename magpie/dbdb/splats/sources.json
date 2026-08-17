@@ -12,7 +12,6 @@
    "elements": [
     "pump",
     "rustcar",
-    "windowwall",
     "shed"
    ]
   },
@@ -76,7 +75,10 @@
    "work": "Buffalo AKG Art Museum",
    "from": "superspl.at/scene/fadf93a0",
    "verified": true,
-   "elements": []
+   "elements": [
+    "gallery",
+    "hall"
+   ]
   },
   {
    "name": "pool",
@@ -94,7 +96,13 @@
    "work": "Calico Tanks Trail",
    "from": "superspl.at/scene/19312f07",
    "verified": true,
-   "elements": []
+   "elements": [
+    "boulder",
+    "crag",
+    "rockface",
+    "rockshelf",
+    "scree"
+   ]
   },
   {
    "name": "tree",
@@ -103,7 +111,9 @@
    "work": "ChristmasTree",
    "from": "huggingface.co/keijiro-tk/splat-data",
    "verified": true,
-   "elements": []
+   "elements": [
+    "pine"
+   ]
   }
  ],
  "fetched_unverified": {

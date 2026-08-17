@@ -263,6 +263,29 @@ One angle is not enough for a scan: every clip has a side the scanner never
 saw, and the turnaround is where you find it. (`side-scout.mjs` scores those
 arcs and writes the verdict into `pack.json` as `sides`.)
 
+### The catalogue page
+
+`magpie/dbdb/catalog.html` is the browsable store: a thumbnail grid off
+`pack.json`, faceted by what a thing IS (kind, condition, material, source
+scene), with a **live PlayCanvas view** behind each card and the credits in the
+footer. It reads the same `pack.json` the game reads, so it cannot drift.
+
+    npm run splat:thumbs     # 1-up JPEG thumbnails (element-sheet --angles 1)
+    npm run test:catalog     # asserts the page against pack.json
+
+The test is not decoration. A catalogue that silently drops an element or a
+credit becomes the thing people trust, so it checks every element carded, every
+thumbnail decoded, every credit shown, the facets filtering, and the live view
+putting lit pixels on screen. Two traps it encodes: count pixels from a
+Playwright **screenshot**, never from `drawImage` on the WebGL canvas (blank
+without `preserveDrawingBuffer`), and treat the jsdelivr failure as expected —
+the CDN-first-vendored-fallback is the house pattern and this container cannot
+reach the CDN.
+
+The catalogue immediately earned itself: `pine` reads as a coloured blob from
+all four bearings, which nobody had noticed. It is now marked UNUSABLE AS CUT
+in `subjects.json` rather than quietly placed.
+
 A single game screenshot — 352px, one bearing, through the play page — is a
 picture of a game, not of an object. Do not catalogue with those. `side-scout.mjs` turntables an element to find its photogenic
 side and writes the verdict into `pack.json` as `sides`, so compositions can

@@ -23,6 +23,7 @@
  *   node magpie/dbdb/tools/element-sheet.mjs                 # all, 4-up
  *   node magpie/dbdb/tools/element-sheet.mjs pickup --angles 9
  *   node magpie/dbdb/tools/element-sheet.mjs --cell 520 --out /tmp/sheets
+ *   npm run splat:thumbs      # 1-up JPEG thumbnails for catalog.html
  */
 import { chromium } from 'playwright';
 import http from 'http';
@@ -34,9 +35,14 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../..');
 const argv = process.argv.slice(2);
 const opt = (k, d) => { const i = argv.indexOf('--' + k); return i < 0 ? d : argv[i + 1]; };
-const ANGLES = +opt('angles', 4);          // 4 => 2x2, 9 => 3x3
+const ANGLES = +opt('angles', 4);          // 1 => a thumbnail, 4 => 2x2, 9 => 3x3
 const CELL = +opt('cell', 460);            // css px per cell; rendered at 2x
 const OUT = opt('out', path.join(HERE, 'sheets'));
+/* JPEG for the catalogue grid: 34 sheets of PNG is 35MB and no page wants
+   that. The re-encode happens on a <canvas> in the page — no native binary,
+   so the tool runs the same on a laptop as in the container. */
+const FORMAT = opt('format', 'png') === 'jpeg' ? 'jpeg' : 'png';
+const QUALITY = +opt('quality', 0.82);
 const only = argv.filter((a, i) => !a.startsWith('--') && !argv[i - 1]?.startsWith('--'));
 const PORT = 8973;
 
@@ -104,8 +110,10 @@ await new Promise(r => srv.listen(PORT, r));
    is the one a person actually judges an object from */
 const BEARINGS = ANGLES === 9
   ? [[35,16],[80,16],[125,16],[170,16],[215,16],[260,16],[305,16],[350,16],[35,62]]
-  : [[35,16],[125,16],[215,16],[305,16]];
-const COLS = ANGLES === 9 ? 3 : 2;
+  : ANGLES === 1
+    ? [[35,16]]
+    : [[35,16],[125,16],[215,16],[305,16]];
+const COLS = ANGLES === 9 ? 3 : ANGLES === 1 ? 1 : 2;
 
 const b = await chromium.launch({ headless: true,
   executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
@@ -129,7 +137,7 @@ for (const el of els) {
     shots.push((await pg.screenshot({ type: 'png' })).toString('base64'));
   }
   /* compose the sheet in the page, so it stays one file per element */
-  const sheet = await pg.evaluate(async ({ shots, cols, cell }) => {
+  const sheet = await pg.evaluate(async ({ shots, cols, cell, format, quality }) => {
     const rows = Math.ceil(shots.length / cols);
     const cv = document.createElement('canvas');
     cv.width = cols * cell; cv.height = rows * cell;
@@ -142,11 +150,12 @@ for (const el of els) {
     g.strokeStyle = 'rgba(255,255,255,0.10)'; g.lineWidth = 2;
     for (let c = 1; c < cols; c++) { g.beginPath(); g.moveTo(c * cell, 0); g.lineTo(c * cell, cv.height); g.stroke(); }
     for (let r = 1; r < rows; r++) { g.beginPath(); g.moveTo(0, r * cell); g.lineTo(cv.width, r * cell); g.stroke(); }
-    return cv.toDataURL('image/png').split(',')[1];
-  }, { shots, cols: COLS, cell: CELL * 2 });
+    return cv.toDataURL('image/' + format, quality).split(',')[1];
+  }, { shots, cols: COLS, cell: CELL * 2, format: FORMAT, quality: QUALITY });
 
-  fs.writeFileSync(path.join(OUT, el.id + '.png'), Buffer.from(sheet, 'base64'));
-  const kb = (fs.statSync(path.join(OUT, el.id + '.png')).size / 1024) | 0;
+  const file = path.join(OUT, el.id + (FORMAT === 'jpeg' ? '.jpg' : '.png'));
+  fs.writeFileSync(file, Buffer.from(sheet, 'base64'));
+  const kb = (fs.statSync(file).size / 1024) | 0;
   console.log(el.id.padEnd(12), BEARINGS.length + ' bearings', String(kb).padStart(5) + 'K');
   await pg.close();
 }

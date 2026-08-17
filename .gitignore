@@ -49,3 +49,6 @@ magpie/dbdb/tools/sheets/
 
 # style probe renders: rebuildable with npm run splat:style
 magpie/dbdb/tools/styles/
+
+# catalogue check screenshot: rebuildable with npm run test:catalog
+magpie/dbdb/tools/catalog-check.png
