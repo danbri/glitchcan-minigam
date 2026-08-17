@@ -109,6 +109,7 @@ verified July 2026.
 | `edot-suite` | `magpie/edot/skills/` | the office suite at suite level — kernel capabilities, the 13 apps, 9 storage backends, auth, the 53-suite harness |
 | `tanks-for-the-trees` | `trees/skills/` | `trees/` — the Bristol data pipeline, BNG↔world coordinates, `host.api`/`__tftt`. **Read its data-ethics section first** |
 | `splat-discovery` | `magpie/dbdb/skills/` | Gaussian splats for `magpie/dbdb`: licence-checking source scans, cutting pack elements, LOD pyramids, honest cost measurement. **Read its licence section first** |
+| `splat-style` | `magpie/dbdb/skills/` | how a splat LOOKS: runtime grades/stylisation, floater cull, crisping via `setWorkBufferModifier`; and what is offline-only (style transfer, upscaling, gap fill, densification). **Read its silent-failure section first** |
 | `lucid-scene-authoring` | `lucid/skills/` | scene JSON — primitives, CSG, transforms, `defs`/`ref`, params |
 | `lucid-renderer-interop` | `lucid/skills/` | across Mayfly (WebGL/GLSL) and Stinkyfish (WebGPU/WGSL) |
 | `lucid-rigging-and-physics` | `lucid/skills/` | `rig-evaluator.js`, the XPBD stacks, param uniforms |

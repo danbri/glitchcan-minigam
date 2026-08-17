@@ -367,15 +367,22 @@ only reachable through the catalogue.
 
 ## 9. THE CORPUS (Aug 2026)
 
-26 elements from four scenes, all CC BY 4.0:
+34 elements from seven scenes. Six scenes are CC BY 4.0; `pine` comes from a
+Hugging Face repo under The Unlicense, which is why its credit reads
+differently (see §1a — a redistributor's licence tag is a claim, not the
+scanner's grant).
 
 - **carshop** — Nelson Ghost Town Car Shop · Paolo Tosolini: `pump`,
-  `rustcar`, `windowwall`, `shed`
+  `rustcar`, `shed`
 - **watertower** — Nelson Ghost Town Water Tower · Paolo Tosolini: `cistern`,
   `redtruck`, `trestle`, `tower`, `pickup`, `chassis`, `hut`, `ruin`
-- **garden** — Botanical Garden Victoria House · Simon Bethke: the fern /
-  hedge / plantbed / palmfan / pond family, `vine`, `canopy`
+- **garden** — Botanical Garden Kiel, Victoria House · Simon Bethke: the fern /
+  hedge / plantbed / palmfan / pond family, `vine`, `canopy`, `windowwall`
 - **forest** — Forest path · Pavel Tanhäuser: `grass`, `trail`
+- **calico** — desert rock, not ruin: `rockshelf`, `boulder`, `crag`, `scree`,
+  `rockface`
+- **museum** — Buffalo AKG Art Museum · Justin Eastman: `gallery`, `hall`
+- **tree** — a decorated conifer: `pine`
 
-Unmined and available: `museum`, `pool`, `calico`, `tree` (the last has an HQ
-source registered). `calico` scouted as mostly rock shelves — desert, not ruin.
+`pool` remains unmined. What each element *is* — never what it is for — lives
+in `splats/subjects.json`; how it should LOOK is the **splat-style** skill.

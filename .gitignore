@@ -46,3 +46,6 @@ magpie/dbdb/splats/view/
 
 # generated turnaround sheets: rebuildable with npm run splat:sheet
 magpie/dbdb/tools/sheets/
+
+# style probe renders: rebuildable with npm run splat:style
+magpie/dbdb/tools/styles/
