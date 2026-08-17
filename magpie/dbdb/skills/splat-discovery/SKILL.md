@@ -263,6 +263,26 @@ because `dims` is the *cut* box: padded, and not always ordered the way you
 assume. `hut` filled 59% of its thumbnail before that second pass. Most of what
 reads as "low resolution" in a thumbnail is empty frame.
 
+**This container has no GPU at all** — no `/dev/dri`, nothing on the PCI bus,
+and Chromium reports `SwiftShader driver`. Rendering is therefore the slow step
+in every pipeline here, and the fix was to stop guessing at it (Aug 2026):
+
+- **The wait after moving the camera was 3200ms and 600ms is enough.** Byte
+  identical output for `pickup`, `fern` and the 120k-gaussian `shed`.
+- **Probe cheaply.** The silhouette measurement took a full DPR-3 PNG and
+  looped over 1.4M pixels; at `scale:'css'` as JPEG it is a ninth of that.
+  Measuring cost nearly as much as rendering.
+- **Use the other cores.** `--jobs 3` on a 4-core box.
+- Together: **34 thumbnails in 116 seconds, 3.4s each**, against roughly 40s
+  each before. Same pictures.
+- An `--wait auto` mode that polls for two identical frames exists and is NOT
+  the default: it first declared convergence on frames the renderer had not
+  redrawn yet, and once tightened it waited 10s+ for pixel noise that never
+  reached the encoded image. Fixed-and-verified beat clever.
+- On a machine with a real GPU these tools need no change — they are plain
+  Playwright. Run `npm run splat:thumbs` there and everything above is simply
+  faster still.
+
 Two more things that make the difference between a murky thumbnail and a sharp
 one, both learned Aug 2026:
 

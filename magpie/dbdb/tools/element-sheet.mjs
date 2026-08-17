@@ -57,6 +57,22 @@ const QUALITY = +opt('quality', 0.92);
    every output pixel is an average of (DPR/2)^2 rendered ones. Splats have no
    MSAA to lean on, so this is where the crispness comes from. */
 const DPR = +opt('dpr', 3);
+/* This container has NO GPU — no /dev/dri, nothing on the PCI bus, and
+   Chromium reports "SwiftShader driver". So the render is a CPU pretending
+   to be one, and the two things that make it bearable are: wait for the
+   picture to STOP CHANGING rather than for a guessed number of seconds,
+   and use more than one of the four cores. On a machine with a real GPU
+   both still apply and everything below is simply faster. */
+const JOBS = Math.max(1, +opt('jobs', 3));
+const SETTLE_CAP = +opt('settlecap', 30000);
+/* HOW LONG TO WAIT AFTER MOVING THE CAMERA.
+   Measured, not guessed: at 600ms the output is BYTE-IDENTICAL to a 3200ms
+   wait for pickup, fern and the 120k-gaussian shed, and the whole run is
+   2.2x faster. An 'auto' mode that polls for two identical frames is kept
+   but is NOT the default — it declared convergence on frames that had not
+   been redrawn yet, and when tightened it waited 10s+ for pixel noise that
+   never reached the encoded image. Fixed and verified beats clever here. */
+const WAIT = opt('wait', '600');    // ms, or 'auto' to poll for convergence
 const only = argv.filter((a, i) => !a.startsWith('--') && !argv[i - 1]?.startsWith('--'));
 const PORT = 8973;
 
@@ -168,7 +184,12 @@ function fitDistance([W, H, D]) {
    anything over 125 is splat. Screenshot, not drawImage on the canvas —
    a WebGL canvas without preserveDrawingBuffer reads back blank. */
 async function silhouette(pg) {
-  const png = 'data:image/png;base64,' + (await pg.screenshot({ type: 'png' })).toString('base64');
+  /* the probe only needs a fraction, so take it at CSS scale as jpeg: a
+     ninth of the pixels of the real capture, and the JS loop over them is
+     a ninth of the work. Measuring cost nearly as much as rendering until
+     this changed. */
+  const png = 'data:image/jpeg;base64,'
+    + (await pg.screenshot({ type: 'jpeg', quality: 80, scale: 'css' })).toString('base64');
   return pg.evaluate(async u => {
     const im = await createImageBitmap(await (await fetch(u)).blob());
     const cv = new OffscreenCanvas(im.width, im.height), g = cv.getContext('2d');
@@ -187,20 +208,50 @@ async function silhouette(pg) {
   }, png);
 }
 
+/* SETTLE: poll until two consecutive frames are byte-identical.
+   A gsplat scene converges as the sorter finishes and LOD stops moving,
+   and how long that takes depends on the element: measured here, pickup
+   settles in 3.6s, a fern in 5.2s, and the 120k-gaussian shed takes 11.3s
+   — which means the old fixed 3.2s wait was both wasteful on the small
+   ones AND CAPTURED THE BIG ONES BEFORE THEY HAD FINISHED. The poll shot
+   is jpeg at scale:'css', a ninth of the pixels of the real capture, so
+   watching costs far less than the thing being watched. */
+async function settle(pg, cap = SETTLE_CAP) {
+  if (WAIT !== 'auto') { await pg.waitForTimeout(+WAIT); return +WAIT; }
+  const t0 = Date.now();
+  let prev = null, same = 0, changes = 0;
+  while (Date.now() - t0 < cap) {
+    const shot = await pg.screenshot({ type: 'jpeg', quality: 70, scale: 'css' });
+    if (prev && shot.equals(prev)) same++; else { same = 0; if (prev) changes++; }
+    prev = shot;
+    /* TWO IDENTICAL FRAMES IS NOT CONVERGENCE. On a CPU renderer the page
+       may simply not have redrawn between polls, and an early version of
+       this declared a scene settled in 1.5s that actually needed 11. So
+       demand three identical polls AND evidence that the picture moved at
+       least twice first — proof the renderer is alive and has finished,
+       not proof it never started. */
+    if (same >= 3 && changes >= 2) return Date.now() - t0;
+    await pg.waitForTimeout(400);
+  }
+  return cap;
+}
+
 const b = await chromium.launch({ headless: true,
   executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
   args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 
-for (const el of els) {
+const t0 = Date.now();
+let settleTotal = 0;
+async function render(el) {
   const pg = await b.newPage({ viewport: { width: CELL, height: CELL }, deviceScaleFactor: DPR });
   const url = `http://localhost:${PORT}/sheet.html`
     + `?u=/magpie/dbdb/splats/pack/${el.file}`
     + `&h=${el.dims[1]}&dist=${fitDistance(el.dims).toFixed(3)}`;
   await pg.goto(url);
   try { await pg.waitForFunction(() => window.__ok || window.__err, null, { timeout: 180000 }); }
-  catch (e) { console.log(el.id, 'TIMEOUT'); await pg.close(); continue; }
+  catch (e) { console.log(el.id, 'TIMEOUT'); await pg.close(); return; }
   const err = await pg.evaluate(() => window.__err);
-  if (err) { console.log(el.id, 'ERROR', err); await pg.close(); continue; }
+  if (err) { console.log(el.id, 'ERROR', err); await pg.close(); return; }
 
   /* SECOND PASS: measure, then zoom. The box in pack.json is the CUT box,
      which is padded and can be ordered differently from the cloud that ends
@@ -213,7 +264,7 @@ for (const el of els) {
   let fill = 0;
   for (const [yaw, pitch] of probes) {
     await pg.evaluate(([y, p]) => window.__frame(y, p), [yaw, pitch]);
-    await pg.waitForTimeout(2600);
+    settleTotal += await settle(pg);
     fill = Math.max(fill, await silhouette(pg));
   }
   if (fill > 0.02) {
@@ -224,7 +275,7 @@ for (const el of els) {
   const shots = [];
   for (const [yaw, pitch] of BEARINGS) {
     await pg.evaluate(([y, p]) => window.__frame(y, p), [yaw, pitch]);
-    await pg.waitForTimeout(3200);                       // let the sorter settle
+    settleTotal += await settle(pg);
     shots.push((await pg.screenshot({ type: 'png' })).toString('base64'));
   }
   /* compose the sheet in the page, so it stays one file per element */
@@ -251,5 +302,18 @@ for (const el of els) {
   console.log(el.id.padEnd(12), BEARINGS.length + ' bearings', String(kb).padStart(5) + 'K');
   await pg.close();
 }
+
+/* a pool, not a queue of one: four cores, and one page render leaves three
+   of them idle. Pages are independent, so this is the cheapest parallelism
+   there is. */
+const queue = els.slice();
+await Promise.all(Array.from({ length: Math.min(JOBS, queue.length) }, async () => {
+  while (queue.length) await render(queue.shift());
+}));
+
 await b.close(); srv.close();
-console.log('\nsheets ->', OUT);
+const secs = (Date.now() - t0) / 1000;
+console.log(`\n${els.length} in ${secs.toFixed(1)}s`
+  + ` (${(secs / Math.max(1, els.length)).toFixed(1)}s each, ${JOBS} jobs,`
+  + ` ${(settleTotal / 1000).toFixed(0)}s of that waiting for frames to settle)`);
+console.log('sheets ->', OUT);
