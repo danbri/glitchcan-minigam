@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-/* test-catalog.mjs — the catalogue page, checked against the pack.
+/* test-catalog.mjs — the catalogue page, asserted against the pack.
  *
- * A catalogue that quietly shows 33 of 34 elements, or loses a credit,
- * is worse than none: it becomes the thing people trust. So this asserts
- * the page against pack.json itself — every element carded, every
- * thumbnail present and non-empty, every credit rendered, the facets
- * filtering, and the detail view actually putting a splat on screen.
+ * Every element carded, every thumbnail decoded, every credit rendered, the
+ * facets narrowing, and the live view putting lit pixels on screen.
+ *
+ * The two traps this encodes — screenshot rather than drawImage, and the
+ * expected jsdelivr failure — are explained in the splat-catalogue skill (§7).
  *
  * Usage: node magpie/dbdb/tools/test-catalog.mjs      (npm run test:catalog)
  */
@@ -36,8 +36,7 @@ await new Promise(r => srv.listen(PORT, r));
 const fails = [];
 const ok = (cond, msg) => { console.log((cond ? '  ok   ' : '  FAIL ') + msg); if (!cond) fails.push(msg); };
 
-/* every thumbnail exists on disk before the browser is even started —
-   a broken <img> is invisible in a headless screenshot */
+/* on disk first: a broken <img> is invisible in a headless screenshot */
 const thumbs = path.join(HERE, '../splats/pack/thumbs');
 const missing = pack.elements.filter(e => {
   const f = path.join(thumbs, e.id + '.webp');
@@ -51,9 +50,7 @@ const b = await chromium.launch({ headless: true,
   args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const pg = await b.newPage({ viewport: { width: 900, height: 1000 } });
 const errs = [];
-/* the CDN-first-vendored-fallback is the house pattern, and this container
-   cannot reach jsdelivr. That failure is EXPECTED and is not a page error;
-   everything else is. */
+/* the jsdelivr failure is expected here; everything else is a page error */
 const expected = u => (u || '').includes('cdn.jsdelivr.net');
 pg.on('pageerror', e => errs.push(e.message.slice(0, 200)));
 pg.on('console', m => {
@@ -109,10 +106,7 @@ ok(pack.elements.some(e => e.id === title.trim()), `detail opened for "${title.t
 const rows = await pg.$$eval('#dTable tr', rs => rs.length);
 ok(rows >= 8, `detail table has ${rows} rows`);
 
-/* Count lit pixels from a SCREENSHOT of the view, not from the canvas.
-   drawImage() on a WebGL canvas without preserveDrawingBuffer comes back
-   blank once the frame is composited — a check written that way reports
-   "nothing rendered" about a picture the user can plainly see. */
+/* count lit pixels from a SCREENSHOT, not drawImage on the canvas */
 const view = pg.locator('.view');
 let litPct = 0;
 for (let i = 0; i < 30 && litPct < 1; i++) {
@@ -123,8 +117,7 @@ for (let i = 0; i < 30 && litPct < 1; i++) {
     const cv = new OffscreenCanvas(im.width, im.height), g = cv.getContext('2d');
     g.drawImage(im, 0, 0);
     const d = g.getImageData(0, 0, im.width, im.height).data;
-    /* threshold above the charcoal backdrop (its brightest is 27+34+40),
-       or an EMPTY view passes this check */
+    /* above the backdrop's brightest pixel, or an empty view passes */
     let lit = 0, n = 0;
     for (let i = 0; i < d.length; i += 4) { n++; if (d[i] + d[i+1] + d[i+2] > 150) lit++; }
     return 100 * lit / n;

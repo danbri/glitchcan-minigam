@@ -1,30 +1,12 @@
 #!/usr/bin/env node
-/* pack-lod.mjs — GIVE THE ENGINE SOMETHING IT CAN ACTUALLY LOD.
+/* pack-lod.mjs — four-level LOD pyramids for the pack.
  *
- * PlayCanvas 2.21 has a whole scene-level budget and level-of-detail
- * system for unified gsplats: app.scene.gsplat.splatBudget caps how
- * many Gaussians are DRAWN, and the engine spends that budget through
- * LOD, nearest first. We were setting it and nothing happened.
+ * PlayCanvas's splat budget and LOD system are driven by an octree that
+ * only the LOD format carries; with plain .compressed.ply every knob of it
+ * is inert. This builds lod-meta.json pyramids so those knobs do something.
  *
- * The reason is in the engine: LOD is driven by `octree.lodLevels`,
- * and a `.compressed.ply` has no octree. Measured, in a nine-stamp
- * scene:
- *
- *     .compressed.ply   budget ignored — every splat drawn, always
- *     lod-meta.json     budget 120k -> 135k drawn (honoured)
- *
- * So the pack is converted to PlayCanvas's LOD format. Each element
- * becomes a four-level pyramid — full, half, quarter, eighth — as
- * splats/pack/lod/<id>/lod-meta.json. The engine then picks a level
- * per placement by distance and spends the frame budget across the
- * whole scene, smoothly, instead of us switching whole hedges off.
- *
- * This also makes the hand-cut `lite` pack redundant: LOD is the same
- * saving, chosen per stamp per frame rather than once for everybody.
- *
- * splat-transform v3.3.0 does decimation on the CPU. (An older note in
- * pack-lite.mjs says --decimate needs WebGPU; that was true of an
- * earlier version and is no longer.)
+ * The measurements behind that, and what the budget actually does, are in
+ * the splat-discovery skill.
  *
  * Usage: node magpie/dbdb/tools/pack-lod.mjs [id ...]   (default: all)
  */
@@ -77,12 +59,8 @@ for (const el of els) {
 }
 fs.rmSync(TMP, { recursive: true, force: true });
 
-/* A manifest flag, so the page can prefer LOD and fall back without
-   probing the network for something that may not be there.
-   READ FROM DISK, not from this run: building a few elements by name
-   used to REPLACE the list, which quietly dropped the other eighteen
-   back to flat plys and turned the whole budget system off for them.
-   What is on disk is the truth, and it self-corrects on deletion. */
+/* the manifest list is READ FROM DISK, never from this run — building a few
+   by name used to replace it and silently un-LOD the rest (skill) */
 const built = fs.readdirSync(OUT, { withFileTypes: true })
   .filter(d => d.isDirectory() && fs.existsSync(path.join(OUT, d.name, 'lod-meta.json')))
   .map(d => d.name).sort();

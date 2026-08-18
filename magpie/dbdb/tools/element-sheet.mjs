@@ -1,30 +1,13 @@
 #!/usr/bin/env node
-/* element-sheet.mjs — A TURNAROUND, NOT A GAME SCREENSHOT.
+/* element-sheet.mjs — turnaround sheets and catalogue thumbnails.
  *
- * The first pass at showing the pack took 352x248 grabs off the game
- * page: one angle, game chrome, the renderer's own look. That is a
- * screenshot of a game, not a picture of an object. What a catalogue
- * needs is a character sheet — the same object from several bearings,
- * big enough to judge.
+ * Renders one pack element from 1, 4 or 9 bearings on a bare page and
+ * composes the cells into a single image. Framing is fitted to the box and
+ * then corrected against the silhouette that actually appears.
  *
- * Framing is computed, then MEASURED AND CORRECTED. The box in pack.json
- * is the cut box: padded, and not always ordered the way you assume. A
- * distance derived from it alone left `hut` filling 59% of its frame and
- * the rest black — which is most of what "low resolution" turns out to
- * mean in a thumbnail. So the tool renders once, measures the silhouette
- * that actually appears, corrects the distance, and only then shoots.
- * All bearings share one distance, so sizes stay comparable across a
- * sheet.
- *
- * The other half of looking sharp: render at DPR 3 and compose down to
- * 2x. Splats have no MSAA to lean on, and that supersample is where the
- * crispness comes from. WebP, not JPEG — blocking is very visible on a
- * dark noisy scan.
- *
- * The renderer is still SwiftShader in this container — a CPU
- * pretending to be a GPU. That costs SPEED, not correctness: it is the
- * same PlayCanvas gsplat path, and the output is a real image. Slow is
- * fine for a catalogue.
+ * WHY it works the way it does — framing, supersampling, format, wait
+ * timings, --jobs — is in the splat-catalogue skill. Do not re-derive it
+ * here; add what you learn there.
  *
  * Usage:
  *   node magpie/dbdb/tools/element-sheet.mjs                 # all, 4-up
@@ -45,33 +28,16 @@ const opt = (k, d) => { const i = argv.indexOf('--' + k); return i < 0 ? d : arg
 const ANGLES = +opt('angles', 4);          // 1 => a thumbnail, 4 => 2x2, 9 => 3x3
 const CELL = +opt('cell', 460);            // css px per cell; rendered at 2x
 const OUT = opt('out', path.join(HERE, 'sheets'));
-/* WebP or JPEG for the catalogue grid: 34 sheets of PNG is 35MB and no page
-   wants that. WebP holds a dark, noisy splat far better than JPEG at the same
-   weight — JPEG blocking is most of what "murky" means on these. The
-   re-encode happens on a <canvas> in the page — no native binary, so the tool
-   runs the same on a laptop as in the container. */
+/* WebP or JPEG; re-encoded on a <canvas> in the page, so no native binary */
 const FORMAT = ['jpeg', 'webp'].includes(opt('format', 'png')) ? opt('format', 'png') : 'png';
 const EXT = { jpeg: '.jpg', webp: '.webp', png: '.png' }[FORMAT];
 const QUALITY = +opt('quality', 0.92);
-/* SUPERSAMPLING. The page is rendered at DPR x and composed down to 2x, so
-   every output pixel is an average of (DPR/2)^2 rendered ones. Splats have no
-   MSAA to lean on, so this is where the crispness comes from. */
+/* render at DPR x, compose down to 2x — the supersample (skill §6) */
 const DPR = +opt('dpr', 3);
-/* This container has NO GPU — no /dev/dri, nothing on the PCI bus, and
-   Chromium reports "SwiftShader driver". So the render is a CPU pretending
-   to be one, and the two things that make it bearable are: wait for the
-   picture to STOP CHANGING rather than for a guessed number of seconds,
-   and use more than one of the four cores. On a machine with a real GPU
-   both still apply and everything below is simply faster. */
+/* no GPU in this container; jobs and wait are the two levers (skill §5) */
 const JOBS = Math.max(1, +opt('jobs', 3));
 const SETTLE_CAP = +opt('settlecap', 30000);
-/* HOW LONG TO WAIT AFTER MOVING THE CAMERA.
-   Measured, not guessed: at 600ms the output is BYTE-IDENTICAL to a 3200ms
-   wait for pickup, fern and the 120k-gaussian shed, and the whole run is
-   2.2x faster. An 'auto' mode that polls for two identical frames is kept
-   but is NOT the default — it declared convergence on frames that had not
-   been redrawn yet, and when tightened it waited 10s+ for pixel noise that
-   never reached the encoded image. Fixed and verified beats clever here. */
+/* 600ms is verified byte-identical to 3200ms; 'auto' is slower (skill §5) */
 const WAIT = opt('wait', '600');    // ms, or 'auto' to poll for convergence
 const only = argv.filter((a, i) => !a.startsWith('--') && !argv[i - 1]?.startsWith('--'));
 const PORT = 8973;
@@ -84,20 +50,16 @@ const MIME = { '.html': 'text/html', '.mjs': 'text/javascript', '.js': 'text/jav
   '.json': 'application/json', '.webp': 'image/webp', '.png': 'image/png',
   '.ply': 'application/octet-stream', '.sog': 'application/octet-stream' };
 
-/* The page is deliberately bare: one gsplat, one camera, a flat ground
-   shadow, nothing else. No HUD, no post-processing, no game. */
+/* deliberately bare: one gsplat, one camera, no HUD, no game */
 const VIEW = `<!doctype html><meta charset="utf-8"><title>sheet</title>
 <style>html,body{margin:0;height:100%;overflow:hidden;
-  /* not pure black: a scan of dark timber against #000 reads as a smudge.
-     A charcoal ground with a soft lift under the object gives it an edge
-     without touching a single colour in the splat. */
+  /* charcoal, not #000 — dark timber on black reads as a smudge */
   background:radial-gradient(120% 95% at 50% 88%, #1b2228 0%, #0d1114 55%, #070a0c 100%)}
 canvas{display:block;width:100%;height:100%}</style><canvas id="c"></canvas>
 <script type="module">
 import * as pc from '/third_party/playcanvas/playcanvas.min.mjs';
 const q = new URLSearchParams(location.search);
-/* alpha:true, or the canvas clears to opaque black and the page's charcoal
-   backdrop never shows — an object on #000 with no ground reads as a smudge */
+/* alpha:true, or the canvas clears opaque and the backdrop never shows */
 const app = new pc.Application(document.getElementById('c'),
   { graphicsDeviceOptions: { alpha: true, antialias: false } });
 app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
@@ -110,10 +72,7 @@ cam.addComponent('camera', { clearColor: new pc.Color(0,0,0,0), fov: 32, farClip
 app.root.addChild(cam);
 const a = new pc.Asset('e', 'gsplat', { url: q.get('u') });
 app.assets.add(a);
-/* dims come from pack.json — the clip is canonical, so this is arithmetic.
-   The distance is computed in the tool, once, from the silhouette the box
-   casts at every bearing, so all cells share one scale and a wide flat
-   object is not marooned in black. */
+/* one distance for every bearing, computed in the tool, so cells share a scale */
 const H = +q.get('h');
 const target = new pc.Vec3(0, H * 0.45, 0);
 const dist = +q.get('dist');
@@ -156,13 +115,8 @@ const BEARINGS = ANGLES === 9
     : [[35,16],[125,16],[215,16],[305,16]];
 const COLS = ANGLES === 9 ? 3 : ANGLES === 1 ? 1 : 2;
 
-/* FIT THE FRAME, DO NOT GUESS AT IT.
-   The old distance came from the bounding SPHERE, which wastes most of the
-   cell on anything that is not a ball: `hut` filled barely half its
-   thumbnail and the rest was black. This projects the box onto the camera's
-   right and up axes at each bearing and takes the distance the worst bearing
-   needs, so the object is as large as it can be while every cell keeps the
-   same scale — which is what makes sizes comparable across a sheet. */
+/* fit the BOX projected onto the camera axes, not its bounding sphere;
+   worst bearing wins so every cell keeps one scale (skill §6) */
 const FOV = 32, PAD = 1.06;
 function fitDistance([W, H, D]) {
   const t = Math.tan(FOV * Math.PI / 360);
@@ -179,15 +133,10 @@ function fitDistance([W, H, D]) {
   return worst * PAD;
 }
 
-/* how much of the frame the object actually covers, 0..1, measured from a
-   screenshot: the brightest the charcoal backdrop ever gets is 27+34+40, so
-   anything over 125 is splat. Screenshot, not drawImage on the canvas —
-   a WebGL canvas without preserveDrawingBuffer reads back blank. */
+/* silhouette coverage 0..1; >125 summed is splat, not backdrop. Screenshot,
+   not drawImage: a WebGL canvas reads back blank (skill §7) */
 async function silhouette(pg) {
-  /* the probe only needs a fraction, so take it at CSS scale as jpeg: a
-     ninth of the pixels of the real capture, and the JS loop over them is
-     a ninth of the work. Measuring cost nearly as much as rendering until
-     this changed. */
+  /* CSS-scale jpeg: a ninth of the pixels, and of the loop over them */
   const png = 'data:image/jpeg;base64,'
     + (await pg.screenshot({ type: 'jpeg', quality: 80, scale: 'css' })).toString('base64');
   return pg.evaluate(async u => {
@@ -208,14 +157,7 @@ async function silhouette(pg) {
   }, png);
 }
 
-/* SETTLE: poll until two consecutive frames are byte-identical.
-   A gsplat scene converges as the sorter finishes and LOD stops moving,
-   and how long that takes depends on the element: measured here, pickup
-   settles in 3.6s, a fern in 5.2s, and the 120k-gaussian shed takes 11.3s
-   — which means the old fixed 3.2s wait was both wasteful on the small
-   ones AND CAPTURED THE BIG ONES BEFORE THEY HAD FINISHED. The poll shot
-   is jpeg at scale:'css', a ninth of the pixels of the real capture, so
-   watching costs far less than the thing being watched. */
+/* fixed wait by default; 'auto' polls for a stable frame (skill §5) */
 async function settle(pg, cap = SETTLE_CAP) {
   if (WAIT !== 'auto') { await pg.waitForTimeout(+WAIT); return +WAIT; }
   const t0 = Date.now();
@@ -224,12 +166,8 @@ async function settle(pg, cap = SETTLE_CAP) {
     const shot = await pg.screenshot({ type: 'jpeg', quality: 70, scale: 'css' });
     if (prev && shot.equals(prev)) same++; else { same = 0; if (prev) changes++; }
     prev = shot;
-    /* TWO IDENTICAL FRAMES IS NOT CONVERGENCE. On a CPU renderer the page
-       may simply not have redrawn between polls, and an early version of
-       this declared a scene settled in 1.5s that actually needed 11. So
-       demand three identical polls AND evidence that the picture moved at
-       least twice first — proof the renderer is alive and has finished,
-       not proof it never started. */
+    /* three identical polls AND two observed changes: two identical
+       frames alone can mean the page never redrew (skill §5) */
     if (same >= 3 && changes >= 2) return Date.now() - t0;
     await pg.waitForTimeout(400);
   }
@@ -253,13 +191,8 @@ async function render(el) {
   const err = await pg.evaluate(() => window.__err);
   if (err) { console.log(el.id, 'ERROR', err); await pg.close(); return; }
 
-  /* SECOND PASS: measure, then zoom. The box in pack.json is the CUT box,
-     which is padded and can be ordered differently from the cloud that ends
-     up inside it, so a distance derived from it alone left `hut` filling 59%
-     of its frame. Rendering once, measuring the silhouette that actually
-     appears, and correcting the distance removes every assumption about what
-     the numbers mean. Measured on the two bearings furthest apart, so one
-     distance still serves the whole sheet. */
+  /* second pass: measure the real silhouette, then correct the distance.
+     dims is the padded CUT box, so it cannot be trusted alone (skill §6) */
   const probes = BEARINGS.length > 1 ? [BEARINGS[0], BEARINGS[1]] : [BEARINGS[0]];
   let fill = 0;
   for (const [yaw, pitch] of probes) {
@@ -303,9 +236,7 @@ async function render(el) {
   await pg.close();
 }
 
-/* a pool, not a queue of one: four cores, and one page render leaves three
-   of them idle. Pages are independent, so this is the cheapest parallelism
-   there is. */
+/* a pool: pages are independent, so this is the cheapest parallelism */
 const queue = els.slice();
 await Promise.all(Array.from({ length: Math.min(JOBS, queue.length) }, async () => {
   while (queue.length) await render(queue.shift());

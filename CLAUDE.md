@@ -117,6 +117,7 @@ verified July 2026.
 | `edot-suite` | `magpie/edot/skills/` | the office suite at suite level — kernel capabilities, the 13 apps, 9 storage backends, auth, the 53-suite harness |
 | `tanks-for-the-trees` | `trees/skills/` | `trees/` — the Bristol data pipeline, BNG↔world coordinates, `host.api`/`__tftt`. **Read its data-ethics section first** |
 | `splat-discovery` | `magpie/dbdb/skills/` | Gaussian splats for `magpie/dbdb`: licence-checking source scans, cutting pack elements, LOD pyramids, honest cost measurement. **Read its licence section first** |
+| `splat-catalogue` | `magpie/dbdb/skills/` | the asset store and the tools that fill it: pack.json vs subjects.json, hand-written vs derived, appearance tags, near-duplicate detection, catalog.html, and rendering fast with no GPU |
 | `splat-style` | `magpie/dbdb/skills/` | how a splat LOOKS: runtime grades/stylisation, floater cull, crisping via `setWorkBufferModifier`; and what is offline-only (style transfer, upscaling, gap fill, densification). **Read its silent-failure section first** |
 | `lucid-scene-authoring` | `lucid/skills/` | scene JSON — primitives, CSG, transforms, `defs`/`ref`, params |
 | `lucid-renderer-interop` | `lucid/skills/` | across Mayfly (WebGL/GLSL) and Stinkyfish (WebGPU/WGSL) |
@@ -124,6 +125,13 @@ verified July 2026.
 | `lucid-animation-and-interaction` | `lucid/skills/` | time, looping, the timeline scrubber, camera/gesture |
 
 **Edit the file at its HOME, never through the symlink's path in the index.**
+
+**Lessons go in skills, not in code comments.** Owner instruction, August 2026:
+"Don't store your lessons in code, use agentskills with frontmatter." A tool
+header says what the tool does, how to run it, and which skill explains why;
+the reasoning, the measurements and the mistakes live in the SKILL.md, where
+they are discoverable, searchable and editable in one place. A 30-line essay at
+the top of a .mjs is read by whoever opens that file and by nobody else.
 
 Still with no skill, and deliberately not given a thin one: `magpie/edot`'s
 editor internals (`magpie/edot/README.md` is thorough — the skill points at it

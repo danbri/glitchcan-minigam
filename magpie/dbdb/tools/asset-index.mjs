@@ -1,30 +1,13 @@
 #!/usr/bin/env node
-/* asset-index.mjs — THE ASSET STORE, AND ITS ONE RULE.
+/* asset-index.mjs — merge the store's records and check them.
  *
- * The store says WHAT a thing is. It never says what it is for.
+ * Joins the measured clip data, the hand-written subject from
+ * subjects.json and the licence from sources.json into pack.json, and
+ * fails when an element is undescribed, unlicensed, or carries a word that
+ * states intended USE rather than what the thing is.
  *
- * That is not tidiness. An element named for its use is an element
- * nobody reaches for twice: a hedge cut as "maze wall" does not get
- * planted in a garden, and a shack filed under "swamp decor" never
- * becomes a mine head. The pack is a clone stamp for reality, and
- * reality does not come pre-assigned.
- *
- * So this tool merges three separable things into pack.json and then
- * checks the boundary held:
- *
- *   measured   what the clip actually is — counts, dims, the box it was
- *              cut with, which side the scanner saw. From the clipper.
- *   subject    what the object IS, in plain language. Hand-written in
- *              splats/subjects.json, because a machine guessing "this
- *              is a pickup truck" would be inventing.
- *   licence    who made it, under what terms, and where it came from.
- *              Structured, not a prose blob, so it can be checked.
- *
- * Intended use lives elsewhere and is welcome there: layouts and decor
- * flags in splatpack.html, and the wanting in splats/wanted.json.
- *
- * It FAILS if an element carries a use-word, has no subject, or has no
- * licence — the three ways this drifts.
+ * The rule it enforces — the store describes what an element IS, never what
+ * it is for — is in the splat-catalogue skill (§1, §2).
  *
  * Usage:  node magpie/dbdb/tools/asset-index.mjs [--fix]
  */
@@ -60,13 +43,8 @@ function parseCredit(credit) {
   };
 }
 
-/* The words that mean "what it is FOR" rather than "what it IS".
-   Note what is NOT here: "wall". A wall is an object — a glasshouse
-   wall panel is a real thing with a real thickness, and the first
-   version of this list rejected it, which was the list being wrong
-   rather than the description. The test is whether the word names a
-   role in a game or a composition; "tile", "decor" and "prop" do,
-   "wall", "path" and "roof" do not. */
+/* words that name a ROLE rather than a thing. "wall" is deliberately absent
+   — a glasshouse wall panel is an object (splat-discovery skill). */
 const USE_WORDS = /\b(tile|decor|prop|filler|maze|jungle|swamp|yard|level|stage|background|foreground|obstacle|collectible|spawn|checkpoint)\b/i;
 
 let bad = 0;

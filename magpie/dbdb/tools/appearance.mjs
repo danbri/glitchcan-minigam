@@ -1,27 +1,13 @@
 #!/usr/bin/env node
-/* appearance.mjs — WHAT AN ELEMENT LOOKS LIKE, AND WHICH ONES ARE THE SAME.
+/* appearance.mjs — derived appearance tags, and near-duplicate detection.
  *
- * The store has described every element by hand — what it is, what it is
- * made of, whether it stands up. None of that says what it LOOKS like,
- * and none of it catches a duplicate. `fern`, `fern2` and `fern3` are one
- * cut at three densities and nothing in the data said so; only a comment
- * in subjects.json did.
+ * Measures every pack element off its thumbnail and its recorded dims and
+ * writes a `appearance` block into pack.json: palette, tone, form, mass,
+ * cover, and a dHash used to flag near-duplicate pairs.
  *
- * So: measure appearance from the thumbnail, which is a real render of
- * the element on a known backdrop, and from the geometry already in
- * pack.json. Everything here is DERIVED and rewritable — it is not the
- * hand-written judgement in subjects.json and must never overwrite it.
- *
- *   palette   dominant hue family of the lit pixels
- *   tone      dark | mid | bright
- *   form      tall | upright | squat | flat  (from the real dims)
- *   mass      sparse | medium | dense  (gaussians per cubic metre)
- *   cover     how much of the frame the silhouette fills
- *   hash      64-bit dHash of the render, for near-duplicate detection
- *
- * Near-duplicates are REPORTED, never deleted. Two cuts of one hedge at
- * different densities are a legitimate pair; two cuts of one hedge nobody
- * meant to make twice are not, and only a person can tell them apart.
+ * DERIVED, never judged: this tool must not touch subjects.json, which is
+ * human judgement. That rule, the hue calibration, the duplicate thresholds
+ * and what they caught are in the splat-catalogue skill (§2-§4).
  *
  * Usage:
  *   node magpie/dbdb/tools/appearance.mjs            # report only
@@ -45,8 +31,7 @@ const b = await chromium.launch({ headless: true,
   args: ['--no-sandbox'] });
 const pg = await b.newPage();
 
-/* the measurement runs in the page because Node cannot decode a webp;
-   the same reason element-sheet composes there */
+/* in the page, because Node cannot decode a webp */
 const measure = async (file) => {
   const u = 'data:image/webp;base64,' + fs.readFileSync(file).toString('base64');
   return pg.evaluate(async (url) => {
@@ -56,7 +41,7 @@ const measure = async (file) => {
     const d = g.getImageData(0, 0, im.width, im.height).data;
     const W = im.width, H = im.height;
 
-    /* LIT means above the backdrop, whose brightest pixel is 27+34+40 */
+    /* lit = above the backdrop, whose brightest pixel is 27+34+40 */
     let lit = 0, sr = 0, sg = 0, sb = 0, topMass = 0, x0 = W, x1 = -1, y0 = H, y1 = -1;
     const hues = new Array(12).fill(0);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -77,8 +62,7 @@ const measure = async (file) => {
     }
     if (!lit) return null;
 
-    /* dHash: 9x8 grey, compare each pixel with its right neighbour. Small,
-       robust to the encoder, and enough to catch "this is the same cut". */
+    /* dHash: 9x8, each pixel against its right neighbour */
     const s = new OffscreenCanvas(9, 8), sg2 = s.getContext('2d');
     sg2.drawImage(im, 0, 0, 9, 8);
     const sd = sg2.getImageData(0, 0, 9, 8).data;
@@ -99,10 +83,8 @@ const measure = async (file) => {
   }, u);
 };
 
-/* Foliage in these renders sits at hue ~1.5-2.5 of 6 — yellow-green, not
-   pure green — so a naive 12-bucket naming calls a fern "yellow", which is
-   true of the pixels and wrong to a person. Green therefore starts at the
-   yellow-green bucket. */
+/* green starts at the yellow-green bucket — foliage renders at hue
+   ~1.5-2.5 of 6, and a naive naming calls a fern "yellow" (skill §3) */
 const HUE_NAME = ['red', 'orange', 'yellow', 'green', 'green', 'green',
   'cyan', 'cyan', 'blue', 'violet', 'magenta', 'red'];
 
@@ -141,10 +123,7 @@ for (const el of pack.elements) {
     + `${mass.padEnd(7)} ${String(Math.round(perM3)).padStart(6)}/m3  ${m.hash}`);
 }
 
-/* NEAR-DUPLICATES. Two tests, and a pair must fail both to be worth a
-   person's time: the render is nearly the same picture, AND the box is
-   nearly the same box. Either alone is noisy — a hedge and a fern shot
-   from the same bearing share a lot of pixels. */
+/* near-duplicates: a pair must fail BOTH tests, picture and box (skill §4) */
 const bits = h => BigInt('0x' + h);
 const dist = (a, b) => { let x = bits(a) ^ bits(b), n = 0; while (x) { n += Number(x & 1n); x >>= 1n; } return n; };
 const near = [];

@@ -1,25 +1,14 @@
 #!/usr/bin/env node
-/* hf-harvest.mjs — BULK SOURCE SCANS FROM HUGGING FACE, LICENCE FIRST.
+/* hf-harvest.mjs — bulk source scans from Hugging Face, licence first.
  *
- * The store grew one scan at a time because superspl.at answers 401 to
- * anyone without an account: a signed-in human has to press download.
- * Hugging Face has no such gate — a public repo serves its files to
- * anyone — so this is the channel that can actually multiply the corpus.
+ * Surveys the open-licensed repos holding splat files, downloads what is
+ * offered, converts to a working .sog and records provenance in
+ * harvest/harvest.json. It does not register scenes, cut elements, or
+ * decide that anything is good.
  *
- * WHAT IT WILL AND WILL NOT TAKE:
- *   - the repo must carry an OPEN licence tag. No tag is not permission;
- *     59 of the 78 repos carrying splat files declare nothing, and they
- *     are all skipped.
- *   - gated or private repos are skipped even when the tag looks open.
- *   - the tag is recorded as the UPLOADER'S CLAIM, with the repo named,
- *     because a licence tag proves what the uploader asserts, not that
- *     they made the capture. Every harvested scan carries `verified:
- *     false` until somebody has looked at it and said otherwise.
- *
- * It downloads, converts to a working .sog, thins to a workable weight,
- * and writes a manifest. It does NOT register scenes, cut elements, or
- * decide that anything is good — a scan nobody has looked at is not an
- * asset.
+ * The gates it applies and WHY — open tag only, tag-as-claim, size check,
+ * research dumps last, and the two judgements only a person can make — are
+ * in the splat-catalogue skill (§8).
  *
  * Usage:
  *   node magpie/dbdb/tools/hf-harvest.mjs --survey        # what is out there
@@ -68,8 +57,7 @@ async function survey() {
 const st = a => execFileSync('npx', ['-y', '@playcanvas/splat-transform', '-w', '-q', '-g', 'cpu', ...a],
   { stdio: ['ignore', 'pipe', 'pipe'] });
 
-/* a scan name that stays a filename: the repo's own name for the thing,
-   lowercased, with the owner kept only when two repos collide */
+/* the repo's own name for the thing, as a filename */
 const slug = f => path.basename(f).replace(/\.[^.]+$/, '')
   .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 28);
 
@@ -79,9 +67,7 @@ async function take(repo, file, lic, kind) {
   if (fs.existsSync(out)) return { name, skipped: 'already held' };
   const url = `https://huggingface.co/${kind === 'datasets' ? 'datasets/' : ''}${repo}`
     + `/resolve/main/${file.split('/').map(encodeURIComponent).join('/')}`;
-  /* ASK THE SIZE FIRST. One repo in this survey holds a 265MB LiDAR dump;
-     downloading it cost ten minutes and produced nothing a game can use.
-     A scene worth cutting elements from is a few tens of MB. */
+  /* ask the size first: one repo holds a 265MB LiDAR dump (skill §8) */
   const head = await fetch(url, { method: 'HEAD', headers: UA }).catch(() => null);
   const bytes = +(head?.headers.get('content-length') || 0);
   if (bytes > MAXMB * 1e6) return { name, skipped: `too big (${(bytes / 1e6) | 0}MB)` };
@@ -125,18 +111,14 @@ if (has('survey')) {
 
 fs.mkdirSync(HARVEST, { recursive: true });
 fs.mkdirSync(INCOMING, { recursive: true });
-/* order matters when the budget is time: personal-capture repos first,
-   research dumps (nuscenes, vkitti, SLAM sequences) last — they are big,
-   slow, and almost never a thing you can cut a prop out of */
+/* personal-capture repos first, research dumps last (skill §8) */
 const RESEARCH = /3dgs_viewer|SplaTAM|nuscenes|vkitti/i;
 const want = (has('all') ? usable : usable.filter(r => r.id === opt('repo', '')))
   .sort((a, b) => (RESEARCH.test(a.id) ? 1 : 0) - (RESEARCH.test(b.id) ? 1 : 0)
                 || b.files.length - a.files.length);
 if (!want.length) { console.error('nothing selected — try --survey, --repo <id>, or --all'); process.exit(2); }
 
-/* --manifest lets two harvesters run side by side without clobbering
-   each other's record; the files on disk are the truth, the manifests
-   merge later */
+/* --manifest lets two harvesters run side by side without clobbering */
 const manifestPath = path.join(HARVEST, opt('manifest', 'harvest.json'));
 const manifest = fs.existsSync(manifestPath)
   ? JSON.parse(fs.readFileSync(manifestPath, 'utf8'))

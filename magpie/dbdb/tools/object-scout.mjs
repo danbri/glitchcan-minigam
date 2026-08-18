@@ -1,27 +1,18 @@
 #!/usr/bin/env node
-/* object-scout.mjs — FIND THE THINGS IN A SCAN.
+/* object-scout.mjs — find the things in a scan.
  *
- * The wall scout hunts flat surfaces and the view scout hunts pretty
- * cameras. Neither finds OBJECTS, and objects are what the clone-stamp
- * pack is made of: a rusted car, a shack, a fern. Picking those boxes
- * by hand meant flying around a scene guessing coordinates.
+ * Voxelises a registered scene, drops the ground band, runs connected
+ * components over what is left, and prints a ready-to-paste clip line for
+ * each object-sized component. It decides nothing; it turns "fly around and
+ * guess" into a list to look at.
  *
- * Method — shortlist by heuristic, eyes decide (the ABCD doctrine):
- *   1. Load dream.html?scene=K&edit=1 headless and take the scan's
- *      world points from __dream.centers.
- *   2. Voxelise. Drop the GROUND: the lowest occupied band over most
- *      of the footprint, or every object stays welded to the floor and
- *      the whole scene comes back as one blob.
- *   3. Connected components over the remaining voxels (26-neighbour).
- *   4. Keep components of plausible object size and print a ready-to-
- *      paste `splatpack.mjs clip` line for each, biggest first.
- *
- * It does not decide anything. It turns "fly around and guess" into a
- * list to look at.
+ * What it is bad at — dense foliage welds into one blob, which is why the
+ * garden's elements were cut by hand — is in the splat-discovery skill.
  *
  * Usage:
  *   node magpie/dbdb/tools/object-scout.mjs carshop
  *   node magpie/dbdb/tools/object-scout.mjs watertower --voxel 0.3 --min 400
+ *   node magpie/dbdb/tools/object-scout.mjs museum --json splats/scout.json
  */
 import { chromium } from 'playwright';
 import http from 'http';

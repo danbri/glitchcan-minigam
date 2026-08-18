@@ -131,9 +131,7 @@
 </footer>
 
 <script type="module">
-/* The catalogue reads the SAME pack.json the game reads. No second copy of
-   the truth: if an element is here it is in the pack, and if its credit is
-   missing here it is missing there too. */
+/* reads the SAME pack.json the game reads — no second copy of the truth */
 const pack = await (await fetch('splats/pack/pack.json')).json();
 const els = pack.elements.slice();
 const lodIds = new Set(pack.lod?.ids || []);
@@ -141,17 +139,13 @@ const lodIds = new Set(pack.lod?.ids || []);
 const fmt = n => n >= 1000 ? (n/1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(n);
 const dim = d => d.map(v => v.toFixed(1)).join(' × ') + ' m';
 
-/* Facets come from the DATA, never from a hand-kept list — a new `kind` in
-   subjects.json appears here without an edit. And they are facets of what a
-   thing IS: kind, condition, material, scene. Nothing about what it is for;
-   that judgement lives in the game, not in the store. */
+/* facets are built from the DATA, and describe what a thing IS — never
+   what it is for (splat-catalogue skill §1, §3) */
 const facets = [
   { key:'kind',      of: e => [e.subject?.kind] },
   { key:'condition', of: e => [e.subject?.condition] },
   { key:'material',  of: e => e.subject?.materials || [] },
-  /* appearance facets are DERIVED (tools/appearance.mjs), measured off the
-     thumbnail render and the recorded dims — how a thing LOOKS, next to the
-     hand-written what it IS. Still nothing about what it is for. */
+  /* derived by tools/appearance.mjs — how a thing LOOKS */
   { key:'palette',   of: e => [e.appearance?.palette] },
   { key:'tone',      of: e => [e.appearance?.tone] },
   { key:'form',      of: e => [e.appearance?.form] },
@@ -246,8 +240,7 @@ async function loadPC() {   /* house pattern: CDN first, vendored fallback */
 async function ensureApp() {
   if (app) return;
   pc = await loadPC();
-  /* alpha:true so the panel's charcoal backdrop shows through — a dark scan
-     cleared to opaque black has no ground to sit on and reads as a smudge */
+  /* alpha:true so the panel's charcoal backdrop shows through */
   app = new pc.Application(canvas, { graphicsDeviceOptions: { alpha: true, antialias: false } });
   app.setCanvasFillMode(pc.FILLMODE_NONE);
   app.setCanvasResolution(pc.RESOLUTION_AUTO);
@@ -263,8 +256,7 @@ async function ensureApp() {
   ro.observe(canvas.parentElement);
 }
 
-/* framing is arithmetic, not a guess: the clipper canonicalises every
-   element (centred on x/z, base at y=0) and records its dims in pack.json */
+/* framing is arithmetic: the clip is canonical and its dims are recorded */
 function place() {
   if (!cam || !target) return;
   const y = yaw * Math.PI / 180, p = pitch * Math.PI / 180;
@@ -280,11 +272,7 @@ async function show(e) {
   if (asset) { app.assets.remove(asset); asset.unload(); asset = null; }
   const [W, H, D] = e.dims;
   target = new pc.Vec3(0, H * 0.45, 0);
-  /* FIT THE BOX, NOT ITS BOUNDING SPHERE. A sphere fit marooned every wide
-     flat element in empty space — the shelf, the hut, the truck. This takes
-     the distance the worst bearing needs from the box projected onto the
-     camera's right and up axes, so the element fills the panel and keeps one
-     scale as it turns. */
+  /* fit the box projected onto the camera axes, not its bounding sphere */
   const t = Math.tan(32 * Math.PI / 360);
   dist = 0;
   for (let a = 0; a < 360; a += 30) {

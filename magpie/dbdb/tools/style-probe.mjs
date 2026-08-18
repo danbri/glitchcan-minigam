@@ -1,21 +1,13 @@
 #!/usr/bin/env node
-/* style-probe.mjs — PROVE A SPLAT STYLE, DON'T HOPE FOR ONE.
+/* style-probe.mjs — prove a splat style, do not hope for one.
  *
- * A work-buffer modifier that fails to compile changes nothing and
- * says nothing: no console error, no exception, an image identical to
- * the one before. That silence cost an evening. So every style in this
- * repo is checked the same way — render the element plain, apply the
- * chunk, render again, and COUNT THE PIXELS THAT MOVED. A style that
- * moves no pixels did not run.
+ * Renders a pack element plain, applies each work-buffer modifier in STYLES,
+ * renders again, and reports the share of lit pixels that moved. Exits
+ * non-zero if a style moved under 1% — which is the same as "it did not run".
  *
- * The styles below are the shipping set; add one to STYLES and it is
- * covered by the same check.
- *
- * The renderer here is SwiftShader — a CPU pretending to be a GPU. That
- * costs SPEED, not correctness: the colours and the pixel counts are
- * real, the frame rate is not. WebGPU is NOT available headless, so the
- * WGSL half of each style is COMPILED NOWHERE in this container. Never
- * report a WGSL style as verified from this tool.
+ * WHY a style can fail in total silence, why all three entry points must be
+ * declared, how uniforms reach the shader, and what each style is for: the
+ * splat-style skill. Add a style to STYLES and it is covered by this check.
  *
  * Usage:
  *   node magpie/dbdb/tools/style-probe.mjs                 # every style, on pickup
@@ -42,11 +34,8 @@ const el = pack.elements.find(e => e.id === ELEMENT);
 if (!el) { console.error('no such element: ' + ELEMENT); process.exit(2); }
 fs.mkdirSync(OUT, { recursive: true });
 
-/* THE THREE ENTRY POINTS ARE NOT OPTIONAL.
-   The user chunk REPLACES the engine's stock gsplatModifyVS whole, so a
-   chunk that declares only the one function it cares about leaves the
-   other two undeclared — and the shader that calls them fails to build,
-   silently. Every style here therefore carries all three. */
+/* all three entry points, always: the chunk REPLACES the stock one and a
+   missing declaration fails the build in silence (splat-style skill) */
 const HEAD_GLSL = `
 void modifySplatCenter(inout vec3 center) {}
 void modifySplatRotationScale(vec3 oc, vec3 mc, inout vec4 rotation, inout vec3 scale) {}
@@ -57,9 +46,7 @@ fn modifySplatRotationScale(oc: vec3f, mc: vec3f, rotation: ptr<function, vec4f>
 `;
 
 const STYLES = {
-  /* A two-colour ramp over luminance. The cheapest honest "style": it
-     reads as a deliberate palette rather than a filter, and it costs
-     one dot product and one mix per splat, once. */
+  /* two-colour ramp over luminance: a palette, not a filter */
   duotone: {
     params: { uShadow: [0.06, 0.10, 0.22], uLight: [1.00, 0.86, 0.55], uAmount: 0.95 },
     glsl: `uniform vec3 uShadow; uniform vec3 uLight; uniform float uAmount;` + HEAD_GLSL + `
@@ -75,10 +62,7 @@ fn modifySplatColor(center: vec3f, color: ptr<function, vec4f>) {
 }`
   },
 
-  /* Floater removal at render time. Photogrammetric scans carry a haze
-     of faint gaussians — the wisps above a roofline, the smoke off a
-     wheel arch. Dropping them by opacity is free and reversible, which
-     is exactly what a destructive re-clip is not. */
+  /* floater removal by opacity: free, and reversible unlike a re-clip */
   cull: {
     params: { uMinAlpha: 0.55 },
     glsl: `uniform float uMinAlpha;` + HEAD_GLSL + `
@@ -91,9 +75,7 @@ fn modifySplatColor(center: vec3f, color: ptr<function, vec4f>) {
 }`
   },
 
-  /* Shrinking every gaussian sharpens the silhouette and opens the
-     blur; overdone it turns the scan into gravel. Here to prove the
-     GEOMETRY entry points run from the same chunk as the colour one. */
+  /* shrink every gaussian; also proves the geometry entry points run */
   crisp: {
     params: { uShrink: 0.55 },
     glsl: `uniform float uShrink;
@@ -108,9 +90,8 @@ fn modifySplatRotationScale(oc: vec3f, mc: vec3f, rotation: ptr<function, vec4f>
 fn modifySplatColor(center: vec3f, color: ptr<function, vec4f>) {}`
   },
 
-  /* A height fog that belongs to the OBJECT, not the camera: the work
-     buffer sees world centres, so this grades the same whichever way
-     the player walks around it. */
+  /* world-height fog: the work buffer sees world centres, so it belongs
+     to the object rather than the camera */
   fog: {
     params: { uFog: [0.35, 0.42, 0.55], uTop: 3.0 },
     glsl: `uniform vec3 uFog; uniform float uTop;` + HEAD_GLSL + `
@@ -212,10 +193,7 @@ for (const name of names) {
   const s = STYLES[name];
   await pg.evaluate(({ glsl, wgsl, params }) => {
     const c = window.__ent.gsplat;
-    /* uniforms go on the COMPONENT — they reach the modifier through the
-       placement's parameter map, which the work-buffer pass applies per
-       placement. setParameter also marks the placement dirty, so the
-       buffer is recomputed; no workBufferUpdate change is needed. */
+    /* uniforms go on the COMPONENT; setParameter also marks it dirty */
     for (const k in params) {
       const v = params[k];
       c.setParameter(k, Array.isArray(v) ? new Float32Array(v) : v);
@@ -233,8 +211,7 @@ for (const name of names) {
   await pg.waitForTimeout(4000);
 }
 
-/* removing the modifier must give the original back, byte for byte —
-   the proof that a style is a view of the asset, not an edit to it */
+/* removing the modifier must give the original back, byte for byte */
 const back = path.join(OUT, `${ELEMENT}-back.png`);
 await pg.screenshot({ path: back });
 const rev = await diff(plain, back);

@@ -1,27 +1,18 @@
 #!/usr/bin/env node
-/* splat-ingest.mjs — TAKE A DOWNLOADED SCAN AND MAKE IT CLIPPABLE.
+/* splat-ingest.mjs — take a downloaded scan and make it clippable.
  *
- * The scout finds scenes and proves the licence; it cannot fetch them,
- * because the catalogue's file endpoint answers 401 to anyone without a
- * PlayCanvas account — measured, on every format, including for scenes
- * whose authors switched downloads ON. So a signed-in human does that
- * one step, drops the file in splats/incoming/, and this picks it up.
+ * Reads the licence off the scene page (or the HF repo tag), refuses
+ * anything not open, thins the scan to a working weight, writes
+ * splats/<name>.sog and a PlayCanvas viewer, and prints the entries a
+ * person must paste. It stops before registering the scene: the up-axis and
+ * the name are judgements.
  *
- * What it does:
- *   1. reads the licence, title and author from the SCENE PAGE, so the
- *      terms are recorded from the source rather than typed in from
- *      memory (the API is searchable by text, not by hash);
- *   2. refuses anything not offered under an open licence — the same
- *      gate the scout applies, applied again at the door;
- *   3. thins the scan to a working weight and writes splats/<name>.sog;
- *   4. prints the three lines to paste: the SRC entry for splatpack.mjs,
- *      the dream.html registry entry, and the first object-scout call.
- *
- * It deliberately stops there. Registering a scene means choosing an
- * up-axis and a name, and those are judgements.
+ * WHY the gate is applied twice, and why the official viewer rather than a
+ * hand-rolled one: the splat-discovery skill.
  *
  * Usage:
  *   node magpie/dbdb/tools/splat-ingest.mjs <hash> <name> [--keep 200000]
+ *   node magpie/dbdb/tools/splat-ingest.mjs hf:<owner>/<repo>/<file> <name>
  *   # after: put the downloaded file at splats/incoming/<hash>.<ext>
  */
 import fs from 'fs';
@@ -46,15 +37,7 @@ fs.mkdirSync(IN, { recursive: true });
 const st = a => execFileSync('npx', ['-y', '@playcanvas/splat-transform', '-w', '-q', '-g', 'cpu', ...a],
   { stdio: ['ignore', 'pipe', 'pipe'] });
 
-/* LOOK AT IT WITH PLAYCANVAS'S OWN VIEWER, NOT A HAND-ROLLED ONE.
-   splat-transform emits a self-contained .html viewer — it is in its
-   --help, and it was there all along. I wrote a throwaway viewer
-   instead: guessed the up-axis, framed from percentile bounds of the
-   centres, and rendered the KNOWN-GOOD carshop scan as coloured mush.
-   That nearly condemned six perfectly good scans. The official viewer
-   put the same carshop on screen as two old trucks on gravel.
-   The rule this leaves behind: never judge a scan through a viewer you
-   have not first pointed at a scene you already trust. */
+/* PlayCanvas's own viewer, not a hand-rolled one (splat-discovery skill) */
 function makeViewer(sog, name) {
   const dir = path.join(SPLATS, 'view');
   fs.mkdirSync(dir, { recursive: true });
@@ -63,13 +46,8 @@ function makeViewer(sog, name) {
   return html;
 }
 
-/* ─────────── HUGGING FACE: no gate, so this one really fetches ───────────
-   A public HF repo serves its files to anyone and declares a licence as
-   a tag. The catch is different from superspl.at's and worth keeping in
-   mind: there the author scanned the thing, so the licence is theirs to
-   give; here the uploader may be redistributing somebody else's dataset
-   under a tag they picked. The tag is recorded as a CLAIM, with the repo
-   named, so the credit says who to ask. */
+/* Hugging Face: no account gate, so this branch really fetches. The tag is
+   recorded as the uploader's CLAIM, with the repo named (skill §1a). */
 if (hash.startsWith('hf:')) {
   const spec = hash.slice(3);
   const m = /^([^/]+\/[^/]+)\/(.+)$/.exec(spec);

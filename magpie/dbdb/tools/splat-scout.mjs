@@ -1,41 +1,14 @@
 #!/usr/bin/env node
-/* splat-scout.mjs — FIND SOURCE SCANS, AND PROVE YOU MAY USE THEM.
+/* splat-scout.mjs — find source scans and prove you may use them.
  *
- * The pack's source scenes were originally found by hand and the method
- * was lost. This is that hunt, written down, and it now asks the
- * catalogue rather than scraping its HTML: superspl.at is a front end
- * for `https://playcanvas.com/api`, whose `splats/explore` endpoint is
- * public and returns everything that matters.
+ * Searches the superspl.at catalogue (the public playcanvas.com/api behind
+ * it) or Hugging Face, applies the author's own two gates —
+ * downloads.enabled and downloads.license — and prints a shortlist with
+ * view links. It downloads nothing from superspl.at; that endpoint is 401
+ * without an account.
  *
- * TWO GATES, AND BOTH ARE THE AUTHOR'S, NOT OURS:
- *
- *   downloads.enabled   the creator's own switch. false means they did
- *                       not offer the file. That is an answer.
- *   downloads.license   the licence they attached to that offer.
- *
- * Only `by`, `by-sa`, `cc0`/`zero` are usable here: `nd` forbids
- * derivatives and a crop is emphatically a derivative; `nc` is a live
- * risk for a published game. Those are reported separately, never
- * promoted.
- *
- * IT DOWNLOADS NOTHING. The file endpoint answers 401 Unauthorized to
- * everyone without a PlayCanvas account, including for scenes whose
- * authors enabled downloads — measured on every format. Working around
- * that is not this tool's business. What it produces is a shortlist
- * with hashes and view links, so a person who is logged in can fetch
- * them, and `splat-ingest.mjs` takes them from there.
- *
- * SECOND SOURCE: HUGGING FACE. superspl.at is not the only place splats
- * live, and it is the only one with the account gate. A public HF repo
- * declares a licence as a tag and serves its files to anyone —
- * `--source hf` searches those instead, and `splat-ingest.mjs` can
- * actually FETCH them.
- *
- * The catch is a different one, and it matters: on superspl.at the
- * author scanned the thing themselves, so their licence is theirs to
- * give. On Hugging Face the uploader may be redistributing somebody
- * else's dataset with a licence tag they chose. Treat an HF licence as
- * a CLAIM, and prefer repos where the uploader is plausibly the maker.
+ * WHICH licences are usable, why an HF licence tag is a claim rather than a
+ * grant, and the whole seven-catalogue picture: the splat-discovery skill.
  *
  * Usage:
  *   node magpie/dbdb/tools/splat-scout.mjs jungle "abandoned car" ruins

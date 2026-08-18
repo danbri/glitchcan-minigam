@@ -1,20 +1,13 @@
 #!/usr/bin/env node
-/* scan-contact.mjs — TRIAGE SHEETS FOR RAW SCANS.
+/* scan-contact.mjs — labelled triage sheets for raw scans.
  *
- * Harvesting is cheap and looking is not. A hundred scans at one page
- * each is a hundred page-loads to judge; a hundred scans at twelve to a
- * contact sheet is nine images. This renders every scan in
- * splats/harvest/ (or any directory of .sog/.ply) into labelled grids,
- * so the "somebody looked at it" rule can actually be kept at scale.
+ * Renders every scan in splats/harvest/ (or any directory of .sog/.ply) at
+ * one bearing and composes them twelve to a sheet, so a hundred harvested
+ * scans can be judged from nine pictures.
  *
- * Framing comes from the ENGINE's own bounding box for the asset
- * (resource.aabb), not from a percentile guess at the point cloud — the
- * hand-rolled viewer that guessed rendered known-good scans as mush and
- * nearly condemned six good ones.
- *
- * Every cell is one bearing. That is enough to answer the only question
- * at this stage: is there a THING in here worth cutting up? The
- * turnaround (element-sheet.mjs) comes later, for elements.
+ * WHY the flip, the percentile framing and the floater cull are there — and
+ * the rule about validating a viewer against a scan you already trust — is
+ * in the splat-catalogue skill (§6). Add what you learn there, not here.
  *
  * Usage:
  *   node magpie/dbdb/tools/scan-contact.mjs                 # all of harvest/
@@ -36,11 +29,7 @@ const OUT = path.resolve(HERE, opt('out', 'contact'));
 const PER = +opt('per', 12);             // cells per sheet
 const CELL = +opt('cell', 300);
 const ONLY = (opt('only', '') || '').split(',').filter(Boolean);
-/* EVERY scan met so far is y-down — the pack's SRC entries all carry
-   up:[0,-1,0]. Rendered the other way up you are looking at the underside
-   of the ground, and a known-good scene comes back as mush; that is
-   exactly how the first validation run failed. Default to flipping, and
-   keep the switch for the scan that proves otherwise. */
+/* every scan met so far is y-down; flip by default (skill §6) */
 const FLIP = opt('flip', '1') !== '0';
 const PORT = 8979;
 
@@ -76,14 +65,11 @@ window.__load = (url, flip) => new Promise(res => {
   const a = new pc.Asset('s', 'gsplat', { url });
   a.once('load', () => {
     const e = new pc.Entity(); e.addComponent('gsplat', { asset: a });
-    /* the common convention in these files is y-down; flipping is a
-       judgement the sheet is there to inform, so it is a parameter */
+    /* a parameter, because the sheet is what informs the judgement */
     if (flip) e.setLocalEulerAngles(180, 0, 0);
     app.root.addChild(e);
-    /* FLOATER CULL, the verified work-buffer modifier from the splat-style
-       skill. A raw training output is wrapped in a haze of faint gaussians
-       that hides the thing you are trying to judge. All three entry points
-       must be declared or the chunk silently does nothing. */
+    /* floater cull — the work-buffer modifier from the splat-style skill.
+       All three entry points must be declared or it silently does nothing. */
     e.gsplat.setParameter('uMinAlpha', 0.5);
     const cullGLSL = [
       'uniform float uMinAlpha;',
@@ -99,13 +85,8 @@ window.__load = (url, flip) => new Promise(res => {
     ].join('\\n');
     e.gsplat.setWorkBufferModifier({ glsl: cullGLSL, wgsl: cullWGSL });
     window.__ent = e;
-    /* THE ENGINE'S BOX IS THE WHOLE CLOUD, FLOATERS INCLUDED, and a raw
-       training output is mostly floaters: bouquet's aabb spans 191m for a
-       vase of flowers, so fitting it renders a dot. So take the engine's
-       box AND a robust one from the centres (2nd-98th percentile per
-       axis), and frame on the robust one. Percentile framing is what the
-       old hand-rolled viewer got wrong, so this tool is validated against
-       a scan already known to be good before it is trusted on new ones. */
+    /* the engine's aabb spans the floater halo, so frame on a percentile
+       box of the centres instead (skill §6) */
     const bb = a.resource.aabb;
     const ctr = a.resource.centers;
     const pick = (k) => {
@@ -161,8 +142,7 @@ for (const f of files) {
     /* fit the engine's box: worst of the two in-plane half-extents and
        the vertical one, at this bearing */
     const t = Math.tan(34 * Math.PI / 360);
-    /* the centres come from the UNFLIPPED cloud; a 180-degree turn about X
-       negates y and z, so the aim point has to turn with it */
+    /* centres are from the unflipped cloud; the 180° turn negates y and z */
     if (FLIP) { fit.c[1] = -fit.c[1]; fit.c[2] = -fit.c[2]; }
     const [hx, hy, hz] = fit.h;
     const dist = Math.max(Math.hypot(hx, hz), hy) / t * 1.02;
@@ -179,8 +159,7 @@ for (const f of files) {
   if (cell) cells.push(cell);
 }
 
-/* compose the sheets, labelled — an unlabelled contact sheet is useless
-   the moment you want to act on one of its cells */
+/* labelled: an unlabelled sheet is useless the moment you act on a cell */
 const pg = await b.newPage({ viewport: { width: 400, height: 400 } });
 await pg.goto(`http://localhost:${PORT}/contact.html`);
 const sheets = [];
