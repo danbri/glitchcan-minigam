@@ -820,6 +820,67 @@ describe('s-expression surface (core/sexpr.js)', () => {
   });
 });
 
+describe('sdf template VM (core/sdf-vm.js + quadruped-template.js)', () => {
+  it('compiled bear program matches the independent proven path at all fed levels', async () => {
+    const { buildQuadrupedProgram, templateEditData, referenceEditData, bearParams } =
+      await import('../lucid/core/quadruped-template.js');
+    const prog = buildQuadrupedProgram();
+    expect(prog.count).toBe(12);
+    expect(prog.maxRegs).toBeLessThanOrEqual(512);
+    for (const fed of [0, 0.5, 1]) {
+      const P = bearParams(fed);
+      const vm = templateEditData(prog, P);
+      const ref = await referenceEditData(P);
+      expect(vm.length).toBe(ref.length);
+      let maxErr = 0;
+      for (let i = 0; i < vm.length; i++) maxErr = Math.max(maxErr, Math.abs(vm[i] - ref[i]));
+      expect(maxErr).toBeLessThan(1e-4); // f32 const rounding only
+    }
+  });
+
+  it('feeding grows the belly (live morph is monotone)', async () => {
+    const { buildQuadrupedProgram, templateEditData, bearParams } =
+      await import('../lucid/core/quadruped-template.js');
+    const prog = buildQuadrupedProgram();
+    // belly is the last edit; its sphere radius lives in slot 16 (pr.x)
+    const r0 = templateEditData(prog, bearParams(0))[11 * 23 + 16];
+    const r1 = templateEditData(prog, bearParams(1))[11 * 23 + 16];
+    expect(r1).toBeGreaterThan(r0 * 1.5);
+  });
+
+  it('bytecode is straight-line and SEL predicates both ways', async () => {
+    const vm = await import('../lucid/core/sdf-vm.js');
+    const S = vm.makeSym();
+    // out = sel(flag, a*2, a-1), padded to a full 23-output edit
+    const a = S.param('a'), flag = S.param('flag');
+    const picked = S.sel(flag, a.mul(2), a.sub(1));
+    const outs = [picked, ...Array.from({ length: 22 }, () => S.k(0))];
+    const prog = vm.compileTemplate(S, [outs]);
+    for (const ins of Array.from({ length: prog.code.length / 4 }, (_, i) => prog.code[i * 4])) {
+      expect(ins).toBeLessThanOrEqual(vm.OPS.OUT); // no jump opcodes exist at all
+    }
+    expect(vm.interpretEdits(prog, { a: 5, flag: 1 })[0]).toBe(10);
+    expect(vm.interpretEdits(prog, { a: 5, flag: 0 })[0]).toBe(4);
+    const wgsl = vm.generateVmWgsl(prog);
+    expect(wgsl).toContain('@compute @workgroup_size(16)');
+    expect(wgsl).toContain('select(regs[c], regs[b], regs[a] > 0.0)');
+    expect((wgsl.match(/\{/g) || []).length).toBe((wgsl.match(/\}/g) || []).length);
+  });
+
+  it('interpreted splice patches all engine seams', async () => {
+    const { buildInterpretedEngine } = await import('../lucid/clipclop/splice-lib.js');
+    const { buildQuadrupedProgram, bearParams } = await import('../lucid/core/quadruped-template.js');
+    const engine = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../lucid/clipclop/index.html'), 'utf8');
+    const { html, count } = buildInterpretedEngine(engine, buildQuadrupedProgram(), bearParams(0));
+    expect(count).toBe(12);
+    expect(html).toContain('let v=lx_editField(p);return CacheSample(v.x,v.yzw);');
+    expect(html).toContain('window.__lxSetParams=function(o)');
+    expect(html).toContain('window.__lxDirty=function(){forceFull=true};function setAuto(v){');
+    expect((html.match(/,window\.__lxBGL\]/g) || []).length).toBe(3);
+    expect((html.match(/setBindGroup\(1,window\.__lxBind\)/g) || []).length).toBe(3);
+  });
+});
+
 describe('spatial edit binning (core/sdf-editbins.js)', () => {
   // A spread-out union: 30 spheres on a ring, so most bricks touch only a few.
   function ringScene(n = 30) {

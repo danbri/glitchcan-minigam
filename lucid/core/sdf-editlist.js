@@ -471,7 +471,34 @@ export function generateEditListWgsl(scene, opts = {}) {
             `var<private> ${P('chunkData')}: array<f32, ${Math.max(1, NCHUNK * 4)}> = array<f32, ${Math.max(1, NCHUNK * 4)}>(${NCHUNK ? chunkArr : '0.0'});`;
   }
 
-  const wgsl = `// ===== Lucid → edit list (generated, data-driven) =====
+  const wgsl = emitFoldWgsl(P, N, CHUNK, NCHUNK, decls);
+  const result = { wgsl, count: N, unsupported, chunks: NCHUNK };
+  if (opts.storage) {
+    // Flat typed arrays the engine uploads to the two storage buffers.
+    result.editData = Float32Array.from(data);
+    result.chunkData = Float32Array.from(chunks.flat());
+  }
+  return result;
+}
+
+/**
+ * The fold WGSL for N storage-buffer edits, scene-free — for callers whose
+ * edit buffer is written at RUNTIME (the template VM). One conservative chunk
+ * (radius 1e9, never skipped) so the fold stays correct wherever live params
+ * move the geometry; the per-edit cull still trims with the live bounds.
+ * Bind chunkData = [0,0,0,1e9].
+ */
+export function generateStorageFoldWgsl(count, opts = {}) {
+  const P = (n) => (opts.prefix || 'lx_') + n;
+  const g = opts.group != null ? opts.group : 1;
+  const b = opts.binding != null ? opts.binding : 0;
+  const decls = `@group(${g}) @binding(${b}) var<storage, read> ${P('editData')}: array<f32>;\n` +
+                `@group(${g}) @binding(${b + 1}) var<storage, read> ${P('chunkData')}: array<f32>;`;
+  return emitFoldWgsl(P, count, Math.max(1, count), 1, decls);
+}
+
+function emitFoldWgsl(P, N, CHUNK, NCHUNK, decls) {
+  return `// ===== Lucid → edit list (generated, data-driven) =====
 // ${N} edits, stride ${STRIDE}, in ${NCHUNK} chunk(s) of ${CHUNK}. Two-level fold:
 // skip a whole chunk whose bounding sphere cannot lower d, else fold its edits.
 const ${P('EDITS')}: u32 = ${N}u;
@@ -539,11 +566,4 @@ fn ${P('editField')}(p: vec3f) -> vec4f {
   return vec4f(d, col);
 }
 `;
-  const result = { wgsl, count: N, unsupported, chunks: NCHUNK };
-  if (opts.storage) {
-    // Flat typed arrays the engine uploads to the two storage buffers.
-    result.editData = Float32Array.from(data);
-    result.chunkData = Float32Array.from(chunks.flat());
-  }
-  return result;
 }

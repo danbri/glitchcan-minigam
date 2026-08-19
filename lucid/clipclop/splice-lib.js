@@ -22,8 +22,9 @@
 
 import { loadJsonScene } from '../core/json-loader.js';
 import { generateWgslSceneSDF } from '../core/wgsl-codegen.js';
-import { generateEditListWgsl } from '../core/sdf-editlist.js';
+import { generateEditListWgsl, generateStorageFoldWgsl } from '../core/sdf-editlist.js';
 import { buildBinnedFieldData } from '../core/sdf-editbins.js';
+import { generateVmWgsl, interpretEdits } from '../core/sdf-vm.js';
 
 // ---- storage-buffer edit list (uncapped scale) --------------------------
 // The baked edit list is a WGSL const array capped at 2047 elements (~88 edits).
@@ -116,6 +117,112 @@ export function buildStorageEngine(engineHtml, sceneJson, opts = {}) {
   for (const [call, enc] of A_SETBIND) html = html.replace(call, call + ';' + enc + '.setBindGroup(1,window.__lxBind)');
 
   return { html, ...info };
+}
+
+// ---- interpreted templates (the VM path) ----------------------------------
+// The scene is a compiled TEMPLATE PROGRAM (sdf-vm.js) plus a live parameter
+// vector. A separate compute module — created in injected JS, so it never
+// touches the engine's shader modules or their bind groups — interprets one
+// edit per thread and writes the same edit storage buffer the group-1 fold
+// reads. Changing a parameter is then:
+//   window.__lxSetParams({fed: 0.6})
+// = one small buffer write + one dispatch + a forceFull re-bake mark.
+// No shader recompile, no CPU re-flatten, no geometry rebuild.
+
+const A_SETAUTO = 'function setAuto(v){';
+
+/**
+ * @param {string} engineHtml - fetched clipclop index.html
+ * @param {object} prog - compiled template (compileTemplate output)
+ * @param {object} paramValues - initial named parameter values
+ * @returns {{ html:string, count:number, instructions:number }}
+ */
+export function buildInterpretedEngine(engineHtml, prog, paramValues, opts = {}) {
+  const prefix = opts.prefix || 'lx_';
+  const foldWgsl = generateStorageFoldWgsl(prog.count, { prefix, group: LX_GROUP, binding: 0 });
+  const vmWgsl = generateVmWgsl(prog, { prefix: 'lxvm_', group: 0 });
+  const params = prog.paramNames.map((n) => {
+    if (!(n in paramValues)) throw new Error('missing param: ' + n);
+    return paramValues[n];
+  });
+
+  if (!engineHtml.includes(CACHESAMPLE_STRUCT)) throw new Error('splice: CacheSample anchor not found');
+  if (!engineHtml.includes(CACHE_FN_HEADER)) throw new Error('splice: cacheSceneSample header not found');
+  if (!engineHtml.includes(A_SCENEBUFFER)) throw new Error('splice: sceneBuffer anchor not found');
+  if (!engineHtml.includes(A_SETAUTO)) throw new Error('splice: setAuto anchor not found');
+  for (const a of A_LAYOUTS) if (!engineHtml.includes(a)) throw new Error('splice: layout anchor not found: ' + a);
+  for (const [a] of A_SETBIND) if (!engineHtml.includes(a)) throw new Error('splice: setBindGroup anchor not found: ' + a);
+
+  let html = engineHtml;
+
+  // 1) The FOLD goes into the shared fragment (classify/generate/render read it).
+  html = html.replace(CACHESAMPLE_STRUCT, CACHESAMPLE_STRUCT + '\n/* ===== Lucid storage edit list (spliced, VM-written) ===== */\n' + foldWgsl + '\n');
+  html = replaceFnBody(html, CACHE_FN_HEADER, `let v=${prefix}editField(p);return CacheSample(v.x,v.yzw);`);
+
+  // 2) Program + params as globals. The VM WGSL rides along as a JS string.
+  const dataScript = '<script>window.__LX={' +
+    `code:[${Array.from(prog.code).join(',')}],` +
+    `table:[${Array.from(prog.table).join(',')}],` +
+    `consts:[${Array.from(prog.consts).join(',')}],` +
+    `params:[${params.join(',')}],` +
+    `names:${JSON.stringify(Object.fromEntries(prog.paramNames.map((n, i) => [n, i])))},` +
+    `count:${prog.count},vm:${JSON.stringify(vmWgsl)}};<\/script>`;
+  html = html.replace('</title>', '</title>\n<meta name="lucid-splice" content="interpreted">\n' + dataScript);
+
+  // 3) Dirty hook: expose a forceFull setter from inside the engine's scope,
+  //    planted just before setAuto (same module scope as forceFull).
+  html = html.replace(A_SETAUTO, 'window.__lxDirty=function(){forceFull=true};' + A_SETAUTO);
+
+  // 4) Buffers + the VM pipeline (its OWN module and layout — the engine's
+  //    pipelines never see it) + the live-param API. Boot dispatch included:
+  //    the animal on screen is GPU-interpreted from frame one, not uploaded.
+  const bufInit = A_SCENEBUFFER + ';(function(){' +
+    'const LX=window.__LX;const SB=GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST;' +
+    'const editBuf=device.createBuffer({size:Math.max(16,LX.count*92),usage:SB});' +
+    'const chunkBuf=device.createBuffer({size:16,usage:SB});device.queue.writeBuffer(chunkBuf,0,new Float32Array([0,0,0,1e9]));' +
+    'window.__lxBGL=device.createBindGroupLayout({entries:[' +
+    '{binding:0,visibility:GPUShaderStage.COMPUTE|GPUShaderStage.FRAGMENT,buffer:{type:"read-only-storage"}},' +
+    '{binding:1,visibility:GPUShaderStage.COMPUTE|GPUShaderStage.FRAGMENT,buffer:{type:"read-only-storage"}}]});' +
+    'window.__lxBind=device.createBindGroup({layout:window.__lxBGL,entries:[{binding:0,resource:{buffer:editBuf}},{binding:1,resource:{buffer:chunkBuf}}]});' +
+    'const mkU32=(a)=>{const b=device.createBuffer({size:Math.max(16,a.length*4),usage:SB});device.queue.writeBuffer(b,0,Uint32Array.from(a));return b;};' +
+    'const codeBuf=mkU32(LX.code),tableBuf=mkU32(LX.table);' +
+    'const constBuf=device.createBuffer({size:Math.max(16,LX.consts.length*4),usage:SB});device.queue.writeBuffer(constBuf,0,new Float32Array(LX.consts));' +
+    'const paramBuf=device.createBuffer({size:Math.max(16,LX.params.length*4),usage:SB});' +
+    'const vmModule=device.createShaderModule({label:"lucid-template-vm",code:LX.vm});' +
+    'const ro={buffer:{type:"read-only-storage"}},rw={buffer:{type:"storage"}};' +
+    'const vmBGL=device.createBindGroupLayout({entries:[0,1,2,3].map(i=>({binding:i,visibility:GPUShaderStage.COMPUTE,...ro})).concat([{binding:4,visibility:GPUShaderStage.COMPUTE,...rw}])});' +
+    'const vmPipe=device.createComputePipeline({label:"lucid-template-vm",layout:device.createPipelineLayout({bindGroupLayouts:[vmBGL]}),compute:{module:vmModule,entryPoint:"lxvm_main"}});' +
+    'const vmBind=device.createBindGroup({layout:vmBGL,entries:[{binding:0,resource:{buffer:codeBuf}},{binding:1,resource:{buffer:tableBuf}},{binding:2,resource:{buffer:constBuf}},{binding:3,resource:{buffer:paramBuf}},{binding:4,resource:{buffer:editBuf}}]});' +
+    'window.__lxParams=Float32Array.from(LX.params);' +
+    'window.__lxRun=function(){device.queue.writeBuffer(paramBuf,0,window.__lxParams);' +
+    'const enc=device.createCommandEncoder();const p=enc.beginComputePass();p.setPipeline(vmPipe);p.setBindGroup(0,vmBind);' +
+    'p.dispatchWorkgroups(Math.ceil(LX.count/16));p.end();device.queue.submit([enc.finish()]);' +
+    'if(window.__lxDirty)window.__lxDirty();};' +
+    'window.__lxSetParams=function(o){for(const k in o){const i=LX.names[k];if(i!=null)window.__lxParams[i]=o[k];}window.__lxRun();};' +
+    'window.__lxRun();' +
+    '})()';
+  html = html.replace(A_SCENEBUFFER, bufInit);
+
+  // 5) Group 1 on the three field pipelines, bound on the three passes.
+  for (const a of A_LAYOUTS) html = html.replace(a, a.replace(']', ',window.__lxBGL]'));
+  for (const [call, enc] of A_SETBIND) html = html.replace(call, call + ';' + enc + '.setBindGroup(1,window.__lxBind)');
+
+  return { html, count: prog.count, instructions: prog.code.length / 4 };
+}
+
+/** Interpreted splice, booted top-level (replaces the page). */
+export function bootInterpretedTopLevel(engineHtml, prog, paramValues, opts = {}) {
+  // sanity: the CPU twin must produce finite edits before we commit the page
+  const twin = interpretEdits(prog, paramValues);
+  for (const v of twin) if (!Number.isFinite(v)) throw new Error('template produced a non-finite edit value');
+  const { html, ...info } = buildInterpretedEngine(engineHtml, prog, paramValues, opts);
+  const overlay = opts.overlay || buildOverlay(opts);
+  let out = html.replace('let auto=true,', 'let auto=false,');
+  if (overlay) out = out.replace('</body>', overlay + '\n</body>');
+  document.open();
+  document.write(out);
+  document.close();
+  return info;
 }
 
 /** Splice with storage buffers and boot top-level (replaces the page). */

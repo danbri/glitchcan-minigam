@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lucid — a bear you can feed (GPU-interpreted SDF)</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin:0; height:100%; background:#05080d; color:#cfe3ff; font:14px/1.5 ui-monospace, Menlo, monospace; }
+  #boot { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; }
+  #boot.err { color:#ff6b6b; }
+</style>
+</head>
+<body>
+<div id="boot">compiling the bear template and booting clipclop (WebGPU)…</div>
+
+<!--
+  The model is NOT generated code. The quadruped template compiles to register
+  bytecode (core/sdf-vm.js) that a WGSL compute pass interprets — one edit per
+  thread, straight-line, branching by select(). Feeding the bear writes ONE
+  float (fed) into the live param buffer, redispatches the 12-thread pass, and
+  marks the clipmap dirty. No shader recompile, no CPU geometry, ever.
+-->
+<script type="module">
+  import { bootInterpretedTopLevel } from './clipclop/splice-lib.js';
+  import { buildQuadrupedProgram, bearParams } from './core/quadruped-template.js';
+
+  const boot = document.getElementById('boot');
+
+  // The feed/reset controls live in the engine page, driving the param vector
+  // through window.__lxSetParams. All state is one float: fed ∈ [0,1].
+  const overlay =
+    `<div id="lxov" style="position:fixed;left:8px;bottom:8px;z-index:99;padding:6px 10px;border-radius:10px;` +
+    `font:12px ui-monospace,monospace;color:#9fb4cc;background:rgba(5,8,13,.55)">` +
+    `bear · GPU-interpreted · ` +
+    `<button id="lxfeed" style="font:inherit;background:#132030;color:#39c0ff;border:1px solid #39c0ff;border-radius:8px;padding:3px 10px;margin:0 4px">feed 🍯</button>` +
+    `<button id="lxreset" style="font:inherit;background:#132030;color:#9fb4cc;border:1px solid #2a3a4e;border-radius:8px;padding:3px 10px">reset</button>` +
+    ` <span id="lxfill"></span></div>` +
+    `<script>(function(){var fed=0;var fill=document.getElementById('lxfill');` +
+    `function show(){fill.textContent='fullness '+Math.round(fed*100)+'%';}` +
+    `document.getElementById('lxfeed').onclick=function(){fed=Math.min(1,fed+0.2);window.__lxSetParams({fed:fed});show();};` +
+    `document.getElementById('lxreset').onclick=function(){fed=0;window.__lxSetParams({fed:0});show();};` +
+    `show();})();<\/script>`;
+
+  try {
+    const prog = buildQuadrupedProgram();
+    const engineHtml = await fetch('./clipclop/index.html', { cache: 'no-store' }).then((r) => {
+      if (!r.ok) throw new Error('cannot fetch clipclop engine (' + r.status + ')');
+      return r.text();
+    });
+    bootInterpretedTopLevel(engineHtml, prog, bearParams(0), { overlay });
+  } catch (e) {
+    boot.className = 'err';
+    boot.textContent = 'error: ' + e.message;
+  }
+</script>
+</body>
+</html>
