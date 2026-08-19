@@ -871,11 +871,36 @@ describe('spatial edit binning (core/sdf-editbins.js)', () => {
   });
 
   it('emits storage-buffer WGSL with the binned field entry', () => {
-    const wgsl = editbins.generateBinnedEditWgsl({ group: 3, binding: 0 });
-    expect(wgsl).toContain('var<storage, read> lx_editData');
-    expect(wgsl).toContain('var<storage, read> lx_binStart');
-    expect(wgsl).toContain('var<storage, read> lx_binEdits');
-    expect(wgsl).toContain('fn lx_binnedField(p: vec3f) -> vec4f');
-    expect((wgsl.match(/\{/g) || []).length).toBe((wgsl.match(/\}/g) || []).length);
+    const scene = ringScene(12);
+    const b = editbins.buildBinnedFieldData(scene, { group: 1, binding: 0 });
+    expect(b.wgsl).toContain('@group(1) @binding(0) var<storage, read> lx_editData');
+    expect(b.wgsl).toContain('var<storage, read> lx_binStart');
+    expect(b.wgsl).toContain('var<storage, read> lx_binEdits');
+    expect(b.wgsl).toContain('var<storage, read> lx_gridData');
+    expect(b.wgsl).toContain('fn lx_editField(p: vec3f) -> vec4f'); // same seam as the flat fold
+    expect((b.wgsl.match(/\{/g) || []).length).toBe((b.wgsl.match(/\}/g) || []).length);
+    // typed arrays sized consistently
+    expect(b.editData.length).toBe(b.count * 23);
+    expect(b.binStart.length).toBe(b.cells + 1);
+    expect(b.gridData.length).toBe(8 + b.chunks.length * 4);
+  });
+
+  // The safe binned field: exact within the band, and NEVER above the true
+  // distance beyond it (an over-estimate would make a sphere-tracer overstep).
+  it('safe binned field is exact in-band and a lower bound out-of-band', () => {
+    const scene = ringScene(30);
+    const { edits } = flattenToEdits(scene);
+    const b = editbins.buildBinnedFieldData(scene, { cell: 1.0, band: 0.75 });
+    let inBand = 0, inErr = 0, outBand = 0, overShoot = 0;
+    for (let s = 0; s < 6000; s++) {
+      const p = [(Math.random() * 2 - 1) * 8, Math.random() * 5 - 1, (Math.random() * 2 - 1) * 8];
+      const truth = evalEdits(edits, p).d;
+      const safe = editbins.evalBinnedSafe(edits, b.binned, b.chunks, p).d;
+      if (truth <= 0.75) { inBand++; inErr = Math.max(inErr, Math.abs(safe - truth)); }
+      else { outBand++; if (safe > truth + 1e-9) overShoot++; }
+    }
+    expect(inBand).toBeGreaterThan(100);
+    expect(inErr).toBe(0);          // exact where the surface is
+    expect(overShoot).toBe(0);      // never oversteps beyond the band
   });
 });

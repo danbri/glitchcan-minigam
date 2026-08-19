@@ -22,7 +22,7 @@
  * seed-uniform evalEdits(edits, p, idx) folds an arbitrary subset).
  */
 
-import { flattenToEdits, evalEdits } from './sdf-editlist.js';
+import { flattenToEdits, evalEdits, chunkEdits, packEditData } from './sdf-editlist.js';
 
 const OP_SMOOTH_UNION = 2, OP_SMOOTH_SUBTRACT = 3;
 const STRIDE = 23; // must match sdf-editlist.js
@@ -149,25 +149,51 @@ export function binScene(scene, opts = {}) {
 }
 
 /**
- * WGSL for the storage-buffer, per-brick binned field. Unlike the spliced
- * edit-list (a baked private array), this reads three storage buffers, so the
- * scene is live data the bake pass indexes by brick. Emitted as an integration
- * target: the engine binds editData/binStart/binEdits + a grid uniform. Group
- * and binding numbers are parameters so they slot into the engine's layout.
+ * The safe binned field, JS twin of the WGSL below — verification only.
+ *
+ * Near the surface (|d| ≤ band) the cell fold is EXACT: every edit whose
+ * surface can come within `band` of p is binned in p's cell by construction.
+ * Beyond the band the cell fold OVER-estimates (missing far edits), and an
+ * over-estimated SDF makes a sphere-tracer overstep. So when the cell fold
+ * finds nothing within the band, return a conservative LOWER bound instead:
+ * max(band, min over chunks of (|p−centre| − radius)). Both terms provably
+ * never exceed the true distance there — safe to march, exact where it counts.
  */
-export function generateBinnedEditWgsl(opts = {}) {
+export function evalBinnedSafe(edits, binned, chunks, p) {
+  const band = binned.grid.band;
+  const near = evalBinnedField(edits, binned, p);
+  if (near.d <= band) return near;
+  let lb = 1e9;
+  for (const [cx, cy, cz, cr] of chunks) {
+    lb = Math.min(lb, Math.hypot(p[0] - cx, p[1] - cy, p[2] - cz) - cr);
+  }
+  return { d: Math.max(band, lb), color: near.color };
+}
+
+/**
+ * WGSL for the storage-buffer, per-brick binned field — the production form.
+ * Four read-only storage buffers on one bind group: the packed edit data, the
+ * CSR bin index (binStart/binEdits), and gridData = [origin.xyz, cell,
+ * dims.xyz, band] followed by NCHUNK chunk spheres (centre.xyz, radius) for
+ * the far-field lower bound. Entry is ${prefix}editField(p)->vec4f so it
+ * drops into the same cacheSceneSample seam as the flat fold.
+ * Per-sample cost: the handful of edits in p's cell — O(edits-near-brick).
+ */
+export function generateBinnedFieldWgsl(nChunks, opts = {}) {
   const P = (n) => (opts.prefix || 'lx_') + n;
-  const g = opts.group != null ? opts.group : 3;
+  const g = opts.group != null ? opts.group : 1;
   const b = opts.binding != null ? opts.binding : 0;
   return `// ===== Lucid → binned edit list (storage buffers, per-brick trim) =====
-struct ${P('Grid')} { origin: vec3f, cell: f32, dims: vec3i, band: f32 };
+const ${P('NCHUNK')}: u32 = ${nChunks}u;
 @group(${g}) @binding(${b}) var<storage, read> ${P('editData')}: array<f32>;
 @group(${g}) @binding(${b + 1}) var<storage, read> ${P('binStart')}: array<u32>;
 @group(${g}) @binding(${b + 2}) var<storage, read> ${P('binEdits')}: array<u32>;
-@group(${g}) @binding(${b + 3}) var<uniform> ${P('grid')}: ${P('Grid')};
+@group(${g}) @binding(${b + 3}) var<storage, read> ${P('gridData')}: array<f32>;
 fn ${P('cellIndex')}(p: vec3f) -> i32 {
-  let c = vec3i(floor((p - ${P('grid')}.origin) / ${P('grid')}.cell));
-  let d = ${P('grid')}.dims;
+  let o = vec3f(${P('gridData')}[0], ${P('gridData')}[1], ${P('gridData')}[2]);
+  let cell = ${P('gridData')}[3];
+  let d = vec3i(i32(${P('gridData')}[4]), i32(${P('gridData')}[5]), i32(${P('gridData')}[6]));
+  let c = vec3i(floor((p - o) / cell));
   if (any(c < vec3i(0)) || any(c >= d)) { return -1; }
   return (c.z * d.y + c.y) * d.x + c.x;
 }
@@ -180,47 +206,91 @@ fn ${P('editPrim')}(pl: vec3f, prim: i32, pr: vec3f) -> f32 {
   if (prim == 5) { let k0 = length(pl / pr); let k1 = length(pl / (pr * pr)); return k0 * (k0 - 1.0) / k1; }
   return 1e9;
 }
-fn ${P('binnedField')}(p: vec3f) -> vec4f {
+fn ${P('editField')}(p: vec3f) -> vec4f {
   var d = 1e9;
   var col = vec3f(0.6, 0.6, 0.6);
+  let band = ${P('gridData')}[7];
   let ci = ${P('cellIndex')}(p);
-  if (ci < 0) { return vec4f(d, col); }
-  let s = ${P('binStart')}[ci];
-  let e = ${P('binStart')}[ci + 1];
-  for (var j = s; j < e; j = j + 1u) {
-    let o = ${P('binEdits')}[j] * ${STRIDE}u;
-    let prim = i32(${P('editData')}[o]);
-    let op = i32(${P('editData')}[o + 1u]);
-    let k = ${P('editData')}[o + 2u];
-    let sc = ${P('editData')}[o + 3u];
-    let r0 = vec3f(${P('editData')}[o + 4u], ${P('editData')}[o + 5u], ${P('editData')}[o + 6u]);
-    let r1 = vec3f(${P('editData')}[o + 7u], ${P('editData')}[o + 8u], ${P('editData')}[o + 9u]);
-    let r2 = vec3f(${P('editData')}[o + 10u], ${P('editData')}[o + 11u], ${P('editData')}[o + 12u]);
-    let t = vec3f(${P('editData')}[o + 13u], ${P('editData')}[o + 14u], ${P('editData')}[o + 15u]);
-    let pr = vec3f(${P('editData')}[o + 16u], ${P('editData')}[o + 17u], ${P('editData')}[o + 18u]);
-    let c = vec3f(${P('editData')}[o + 19u], ${P('editData')}[o + 20u], ${P('editData')}[o + 21u]);
-    let bound = ${P('editData')}[o + 22u];
-    if (op == 0 || op == 2) {
-      let margin = select(0.0, k, op == 2);
-      if (length(p - t) - bound - margin > d) { continue; }
+  if (ci >= 0) {
+    let s = ${P('binStart')}[u32(ci)];
+    let e = ${P('binStart')}[u32(ci) + 1u];
+    for (var j = s; j < e; j = j + 1u) {
+      let o = ${P('binEdits')}[j] * ${STRIDE}u;
+      let prim = i32(${P('editData')}[o]);
+      let op = i32(${P('editData')}[o + 1u]);
+      let k = ${P('editData')}[o + 2u];
+      let sc = ${P('editData')}[o + 3u];
+      let r0 = vec3f(${P('editData')}[o + 4u], ${P('editData')}[o + 5u], ${P('editData')}[o + 6u]);
+      let r1 = vec3f(${P('editData')}[o + 7u], ${P('editData')}[o + 8u], ${P('editData')}[o + 9u]);
+      let r2 = vec3f(${P('editData')}[o + 10u], ${P('editData')}[o + 11u], ${P('editData')}[o + 12u]);
+      let t = vec3f(${P('editData')}[o + 13u], ${P('editData')}[o + 14u], ${P('editData')}[o + 15u]);
+      let pr = vec3f(${P('editData')}[o + 16u], ${P('editData')}[o + 17u], ${P('editData')}[o + 18u]);
+      let c = vec3f(${P('editData')}[o + 19u], ${P('editData')}[o + 20u], ${P('editData')}[o + 21u]);
+      let bound = ${P('editData')}[o + 22u];
+      if (op == 0 || op == 2) {
+        let margin = select(0.0, k, op == 2);
+        if (length(p - t) - bound - margin > d) { continue; }
+      }
+      let rel = p - t;
+      let local = vec3f(dot(r0, rel), dot(r1, rel), dot(r2, rel)) / sc;
+      let ed = ${P('editPrim')}(local, prim, pr) * sc;
+      if (op == 0) {
+        if (ed < d) { d = ed; col = c; }
+      } else if (op == 2) {
+        let h = clamp(0.5 + 0.5 * (ed - d) / k, 0.0, 1.0);
+        d = mix(ed, d, h) - k * h * (1.0 - h);
+        col = mix(c, col, h);
+      } else if (op == 1) {
+        d = max(d, -ed);
+      } else if (op == 3) {
+        let h = clamp(0.5 - 0.5 * (d + ed) / k, 0.0, 1.0);
+        d = mix(d, -ed, h) + k * h * (1.0 - h);
+      }
     }
-    let rel = p - t;
-    let local = vec3f(dot(r0, rel), dot(r1, rel), dot(r2, rel)) / sc;
-    let ed = ${P('editPrim')}(local, prim, pr) * sc;
-    if (op == 0) {
-      if (ed < d) { d = ed; col = c; }
-    } else if (op == 2) {
-      let h = clamp(0.5 + 0.5 * (ed - d) / k, 0.0, 1.0);
-      d = mix(ed, d, h) - k * h * (1.0 - h);
-      col = mix(c, col, h);
-    } else if (op == 1) {
-      d = max(d, -ed);
-    } else if (op == 3) {
-      let h = clamp(0.5 - 0.5 * (d + ed) / k, 0.0, 1.0);
-      d = mix(d, -ed, h) + k * h * (1.0 - h);
+  }
+  // Beyond the band the cell fold over-estimates (missing far edits) and a
+  // sphere-tracer would overstep. Swap in a conservative lower bound from the
+  // chunk spheres: max(band, min |p-centre|-radius) never exceeds true d there.
+  if (d > band) {
+    var lb = 1e9;
+    for (var ch = 0u; ch < ${P('NCHUNK')}; ch = ch + 1u) {
+      let co = 8u + ch * 4u;
+      let cc = vec3f(${P('gridData')}[co], ${P('gridData')}[co + 1u], ${P('gridData')}[co + 2u]);
+      lb = min(lb, length(p - cc) - ${P('gridData')}[co + 3u]);
     }
+    d = max(band, lb);
   }
   return vec4f(d, col);
 }
 `;
+}
+
+/**
+ * Everything the splice needs to run a scene binned: the WGSL (entry
+ * ${prefix}editField, group-1 storage bindings) plus the four typed arrays to
+ * upload. `cell`/`band` size the bin grid (default 1.0/0.75 — a few edits per
+ * cell at animal scale; the safety fallback makes any choice correct).
+ */
+export function buildBinnedFieldData(scene, opts = {}) {
+  const { edits, binned, grid, unsupported } = binScene(scene, {
+    cell: opts.cell != null ? opts.cell : 1.0,
+    band: opts.band != null ? opts.band : 0.75
+  });
+  const chunks = chunkEdits(edits, opts.chunk || 16);
+  const wgsl = generateBinnedFieldWgsl(chunks.length, opts);
+  const gridData = Float32Array.from([
+    ...grid.origin, grid.cell, ...grid.dims, grid.band, ...chunks.flat()
+  ]);
+  return {
+    wgsl,
+    editData: Float32Array.from(packEditData(edits)),
+    binStart: binned.cellStart,          // Uint32Array, nCells+1
+    binEdits: binned.cellEdits,          // Uint32Array
+    gridData,
+    count: edits.length,
+    cells: grid.nCells,
+    avgPerCell: binned.avgPerCell,
+    maxPerCell: binned.maxPerCell,
+    edits, binned, chunks, unsupported
+  };
 }

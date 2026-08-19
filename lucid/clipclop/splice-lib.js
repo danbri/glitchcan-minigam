@@ -23,6 +23,7 @@
 import { loadJsonScene } from '../core/json-loader.js';
 import { generateWgslSceneSDF } from '../core/wgsl-codegen.js';
 import { generateEditListWgsl } from '../core/sdf-editlist.js';
+import { buildBinnedFieldData } from '../core/sdf-editbins.js';
 
 // ---- storage-buffer edit list (uncapped scale) --------------------------
 // The baked edit list is a WGSL const array capped at 2047 elements (~88 edits).
@@ -51,8 +52,25 @@ const A_SETBIND = [
 export function buildStorageEngine(engineHtml, sceneJson, opts = {}) {
   const prefix = opts.prefix || 'lx_';
   const scene = loadJsonScene(sceneJson);
-  const { wgsl, editData, chunkData, count, chunks } =
-    generateEditListWgsl(scene, { prefix, storage: true, group: LX_GROUP, binding: 0, chunk: opts.chunk || 16 });
+
+  // Two field forms, same seam and same group-1 wiring:
+  //  flat   (default)     — the two-level chunked fold over ALL edits.
+  //  binned (opts.binned) — per-brick trim: a CSR bin grid so each sample folds
+  //                         only the handful of edits near its cell; exact in
+  //                         the surface band, conservative lower bound beyond.
+  // buffers: [key, TypedArray, 'f32'|'u32'] in binding order.
+  let wgsl, buffers, info;
+  if (opts.binned) {
+    const b = buildBinnedFieldData(scene, { prefix, group: LX_GROUP, binding: 0, cell: opts.cell, band: opts.band, chunk: opts.chunk });
+    wgsl = b.wgsl;
+    buffers = [['e', b.editData, 'f32'], ['s', b.binStart, 'u32'], ['i', b.binEdits, 'u32'], ['g', b.gridData, 'f32']];
+    info = { count: b.count, cells: b.cells, avgPerCell: b.avgPerCell, maxPerCell: b.maxPerCell };
+  } else {
+    const r = generateEditListWgsl(scene, { prefix, storage: true, group: LX_GROUP, binding: 0, chunk: opts.chunk || 16 });
+    wgsl = r.wgsl;
+    buffers = [['e', r.editData, 'f32'], ['c', r.chunkData, 'f32']];
+    info = { count: r.count, chunks: r.chunks };
+  }
 
   if (!engineHtml.includes(CACHESAMPLE_STRUCT)) throw new Error('splice: CacheSample anchor not found');
   if (!engineHtml.includes(CACHE_FN_HEADER)) throw new Error('splice: cacheSceneSample header not found');
@@ -69,21 +87,25 @@ export function buildStorageEngine(engineHtml, sceneJson, opts = {}) {
   // 2) Point the bake seam at the edit-list field.
   html = replaceFnBody(html, CACHE_FN_HEADER, `let v=${prefix}editField(p);return CacheSample(v.x,v.yzw);`);
 
-  // 3) Prepend the edit + chunk data as a plain global, before the engine module.
-  const dataScript = `<script>window.__LX={e:[${Array.from(editData).join(',')}],c:[${Array.from(chunkData).join(',')}]};<\/script>`;
-  html = html.replace('</title>', '</title>\n<meta name="lucid-splice" content="storage">\n' + dataScript);
+  // 3) Prepend the buffer data as a plain global, before the engine module.
+  const dataJs = buffers.map(([k, arr]) => `${k}:[${Array.from(arr).join(',')}]`).join(',');
+  const dataScript = `<script>window.__LX={${dataJs}};<\/script>`;
+  html = html.replace('</title>', '</title>\n<meta name="lucid-splice" content="' + (opts.binned ? 'binned' : 'storage') + '">\n' + dataScript);
 
-  // 4) Create the two storage buffers + a group-1 layout/bind, right after the
+  // 4) Create the storage buffers + a group-1 layout/bind, right after the
   //    scene buffer (runs before pipeline layouts are built). window globals so
   //    the later pipeline/frame code can reference them regardless of scope.
-  const bufInit = A_SCENEBUFFER + ';(function(){' +
-    'const E=new Float32Array(window.__LX.e),C=new Float32Array(window.__LX.c);' +
-    'const eb=device.createBuffer({size:Math.max(16,E.byteLength),usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});device.queue.writeBuffer(eb,0,E);' +
-    'const cb=device.createBuffer({size:Math.max(16,C.byteLength),usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});device.queue.writeBuffer(cb,0,C);' +
-    'window.__lxBGL=device.createBindGroupLayout({entries:[' +
-    '{binding:0,visibility:GPUShaderStage.COMPUTE|GPUShaderStage.FRAGMENT,buffer:{type:"read-only-storage"}},' +
-    '{binding:1,visibility:GPUShaderStage.COMPUTE|GPUShaderStage.FRAGMENT,buffer:{type:"read-only-storage"}}]});' +
-    'window.__lxBind=device.createBindGroup({layout:window.__lxBGL,entries:[{binding:0,resource:{buffer:eb}},{binding:1,resource:{buffer:cb}}]});' +
+  const mk = buffers.map(([k, _a, ty], j) => {
+    const T = ty === 'u32' ? 'Uint32Array' : 'Float32Array';
+    return `const a${j}=${T}.from(window.__LX.${k});` +
+      `const b${j}=device.createBuffer({size:Math.max(16,a${j}.byteLength),usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});` +
+      `device.queue.writeBuffer(b${j},0,a${j});`;
+  }).join('');
+  const entriesL = buffers.map((_b, j) => `{binding:${j},visibility:GPUShaderStage.COMPUTE|GPUShaderStage.FRAGMENT,buffer:{type:"read-only-storage"}}`).join(',');
+  const entriesB = buffers.map((_b, j) => `{binding:${j},resource:{buffer:b${j}}}`).join(',');
+  const bufInit = A_SCENEBUFFER + ';(function(){' + mk +
+    `window.__lxBGL=device.createBindGroupLayout({entries:[${entriesL}]});` +
+    `window.__lxBind=device.createBindGroup({layout:window.__lxBGL,entries:[${entriesB}]});` +
     '})()';
   html = html.replace(A_SCENEBUFFER, bufInit);
 
@@ -93,19 +115,19 @@ export function buildStorageEngine(engineHtml, sceneJson, opts = {}) {
   // 6) Bind group 1 on each of the three passes (right after group 0).
   for (const [call, enc] of A_SETBIND) html = html.replace(call, call + ';' + enc + '.setBindGroup(1,window.__lxBind)');
 
-  return { html, count, chunks };
+  return { html, ...info };
 }
 
 /** Splice with storage buffers and boot top-level (replaces the page). */
 export function bootStorageTopLevel(engineHtml, sceneJson, opts = {}) {
-  const { html, count, chunks } = buildStorageEngine(engineHtml, sceneJson, opts);
+  const { html, ...info } = buildStorageEngine(engineHtml, sceneJson, opts);
   const overlay = opts.overlay || buildOverlay(opts);
   let out = html.replace('let auto=true,', 'let auto=false,');
   if (overlay) out = out.replace('</body>', overlay + '\n</body>');
   document.open();
   document.write(out);
   document.close();
-  return { count, chunks };
+  return info;
 }
 
 /** Prefix every function the bridge declares, at declaration and call sites. */

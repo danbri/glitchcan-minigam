@@ -27,9 +27,11 @@
 
   const boot = document.getElementById('boot');
   const params = new URLSearchParams(location.search);
-  // Default: storage-buffer edit list (no size cap). ?baked=1 uses the older
-  // baked path (self-contained, but caps at ~12 animals).
+  // Default: BINNED storage field — each bake sample folds only the edits near
+  // its bin cell (per-brick trim). ?flat=1 keeps the chunked fold over all
+  // edits; ?baked=1 the self-contained baked path (caps at ~8 animals).
   const baked = params.get('baked') === '1';
+  const flat = params.get('flat') === '1';
   let n = parseInt(params.get('n'), 10);
   if (!Number.isFinite(n)) n = 10;
   // Baked path caps at ~8 (2047 const-array limit / 10 parts). Storage has no
@@ -72,8 +74,9 @@
 
   const scene = buildHerd(n);
   const counts = baked ? [4, 6, 8] : [8, 14, 20];
-  const links = counts.map((c) => ({ label: String(c), href: `?n=${c}${baked ? '&baked=1' : ''}`, on: c === n }));
-  const title = `herd · ${n}` + (baked ? ' · baked' : '');
+  const variant = baked ? '&baked=1' : (flat ? '&flat=1' : '');
+  const links = counts.map((c) => ({ label: String(c), href: `?n=${c}${variant}`, on: c === n }));
+  const title = `herd · ${n}` + (baked ? ' · baked' : (flat ? ' · flat' : ' · binned'));
 
   try {
     const engineHtml = await fetch('./clipclop/index.html', { cache: 'no-store' }).then((r) => {
@@ -81,7 +84,7 @@
       return r.text();
     });
     if (baked) bootSplicedTopLevel(engineHtml, scene, { mode: 'editlist', title, links });
-    else bootStorageTopLevel(engineHtml, scene, { title, links });
+    else bootStorageTopLevel(engineHtml, scene, { binned: !flat, title, links });
   } catch (e) {
     boot.className = 'err';
     boot.textContent = 'error: ' + e.message;

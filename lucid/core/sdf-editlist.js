@@ -421,11 +421,8 @@ export function foldChunked(edits, p, chunk = 16) {
   return { d, color };
 }
 
-/** @returns {{ wgsl:string, count:number, unsupported:string[], chunks:number }} */
-export function generateEditListWgsl(scene, opts = {}) {
-  const prefix = opts.prefix || 'lx_';
-  const CHUNK = opts.chunk || 16;
-  const { edits, unsupported } = flattenToEdits(scene);
+/** Pack the edit list into the flat STRIDE-float layout the WGSL folds read. */
+export function packEditData(edits) {
   const data = [];
   for (const e of edits) {
     const RT = transpose3(e.xf.R); // store R^T rows so local = R^T*(p-t)/s
@@ -436,6 +433,15 @@ export function generateEditListWgsl(scene, opts = {}) {
       e.color[0], e.color[1], e.color[2],
       e.bound);
   }
+  return data;
+}
+
+/** @returns {{ wgsl:string, count:number, unsupported:string[], chunks:number }} */
+export function generateEditListWgsl(scene, opts = {}) {
+  const prefix = opts.prefix || 'lx_';
+  const CHUNK = opts.chunk || 16;
+  const { edits, unsupported } = flattenToEdits(scene);
+  const data = packEditData(edits);
   const N = edits.length;
   const P = (n) => prefix + n;
   // Chunk bounds: 4 floats (centre.xyz, radius) per contiguous group of CHUNK.
