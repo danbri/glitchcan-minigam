@@ -116,6 +116,9 @@ export function buildStorageEngine(engineHtml, sceneJson, opts = {}) {
   // 6) Bind group 1 on each of the three passes (right after group 0).
   for (const [call, enc] of A_SETBIND) html = html.replace(call, call + ';' + enc + '.setBindGroup(1,window.__lxBind)');
 
+  // 7) Single-eval surface refinement — the per-frame render cost with a heavy field.
+  html = patchCheapRefine(html);
+
   return { html, ...info };
 }
 
@@ -130,6 +133,23 @@ export function buildStorageEngine(engineHtml, sceneJson, opts = {}) {
 // No shader recompile, no CPU re-flatten, no geometry rebuild.
 
 const A_SETAUTO = 'function setAuto(v){';
+
+// The render pass refines every hit pixel with TWO analytic field evaluations
+// per frame (refineGuided d0+d1) — cheap for the engine's 3-shape demo fields,
+// but a spliced edit fold makes this the frame cost (measured 19Hz on device
+// with an 80-edit fold). Cut it to ONE guided correction; the bounded clamp
+// keeps it stable and the cached surface is the fallback either way.
+const A_REFINE = 'fn refineGuided(ro:vec3<f32>,rd:vec3<f32>,guess:f32,cell:f32,cachedN:vec3<f32>)->vec2<f32>{';
+function patchCheapRefine(html) {
+  if (!html.includes(A_REFINE)) return html; // engine changed — leave refinement alone
+  return replaceFnBody(html, A_REFINE,
+    '/* lucid splice: single-eval refinement (heavy analytic field) */' +
+    'let slope=dot(cachedN,rd);' +
+    'let safeSlope=select(slope,select(-0.22,0.22,slope>=0.0),abs(slope)<0.22);' +
+    'let d0=cacheSceneSDF(ro+rd*guess,scene);' +
+    'let t=max(0.0,guess-clamp(d0/safeSlope,-cell*0.36,cell*0.36));' +
+    'return vec2<f32>(t,abs(d0));');
+}
 
 /**
  * @param {string} engineHtml - fetched clipclop index.html
@@ -207,6 +227,9 @@ export function buildInterpretedEngine(engineHtml, prog, paramValues, opts = {})
   for (const a of A_LAYOUTS) html = html.replace(a, a.replace(']', ',window.__lxBGL]'));
   for (const [call, enc] of A_SETBIND) html = html.replace(call, call + ';' + enc + '.setBindGroup(1,window.__lxBind)');
 
+  // Single-eval surface refinement — the per-frame render cost with a heavy field.
+  html = patchCheapRefine(html);
+
   return { html, count: prog.count, instructions: prog.code.length / 4 };
 }
 
@@ -217,7 +240,7 @@ export function bootInterpretedTopLevel(engineHtml, prog, paramValues, opts = {}
   for (const v of twin) if (!Number.isFinite(v)) throw new Error('template produced a non-finite edit value');
   const { html, ...info } = buildInterpretedEngine(engineHtml, prog, paramValues, opts);
   const overlay = opts.overlay || buildOverlay(opts);
-  let out = html.replace('let auto=true,', 'let auto=false,');
+  let out = patchCheapRefine(html).replace('let auto=true,', 'let auto=false,');
   if (overlay) out = out.replace('</body>', overlay + '\n</body>');
   document.open();
   document.write(out);
@@ -229,7 +252,7 @@ export function bootInterpretedTopLevel(engineHtml, prog, paramValues, opts = {}
 export function bootStorageTopLevel(engineHtml, sceneJson, opts = {}) {
   const { html, ...info } = buildStorageEngine(engineHtml, sceneJson, opts);
   const overlay = opts.overlay || buildOverlay(opts);
-  let out = html.replace('let auto=true,', 'let auto=false,');
+  let out = patchCheapRefine(html).replace('let auto=true,', 'let auto=false,');
   if (overlay) out = out.replace('</body>', overlay + '\n</body>');
   document.open();
   document.write(out);
@@ -367,7 +390,7 @@ function buildOverlay(opts) {
  */
 export function bootSplicedTopLevel(engineHtml, sceneJson, opts = {}) {
   const { html, bridge } = spliceEngine(engineHtml, sceneJson, { mode: opts.mode || 'editlist' });
-  let out = html.replace('let auto=true,', 'let auto=false,'); // bake once, hold — no idle-orbit re-bake
+  let out = patchCheapRefine(html).replace('let auto=true,', 'let auto=false,'); // bake once, hold — no idle-orbit re-bake
   const overlay = opts.overlay || buildOverlay(opts);
   if (overlay) out = out.replace('</body>', overlay + '\n</body>');
   document.open();
