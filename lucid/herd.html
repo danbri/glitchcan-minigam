@@ -49,7 +49,9 @@
       headUp: q.headSize * 0.7, headFwd: q.neckLength + q.headSize * 0.4,
       tailBack: Math.max(0.4, q.tailLength) });
     for (let i = 0; i < 180; i++) stepXPBD(rig.bodies, rig.constraints, cfg, 18);
-    return poseQuadrupedFromRig(rig, sp, { simple: true }); // 10 parts (with snout + ears) — lighter than the full 15
+    // Leg floor: sub-voxel legs erode to dark drips at the clipmap's 0.375m
+    // cell — keep herd legs at least ~0.4 cell thick.
+    return poseQuadrupedFromRig(rig, { ...q, legRadius: Math.max(q.legRadius, 0.15) }, { simple: true });
   }
 
   // Scatter the animals on a grid with a deterministic per-row jitter and a
@@ -83,8 +85,9 @@
       if (!r.ok) throw new Error('cannot fetch clipclop engine (' + r.status + ')');
       return r.text();
     });
+    const ground = { y: 1.6 + 0.15 * 1.15, color: [0.16, 0.2, 0.16] }; // feet level
     if (baked) bootSplicedTopLevel(engineHtml, scene, { mode: 'editlist', title, links });
-    else bootStorageTopLevel(engineHtml, scene, { binned: !flat, title, links });
+    else bootStorageTopLevel(engineHtml, scene, { binned: !flat, ground, title, links });
   } catch (e) {
     boot.className = 'err';
     boot.textContent = 'error: ' + e.message;

@@ -946,6 +946,28 @@ describe('spatial edit binning (core/sdf-editbins.js)', () => {
     expect(b.gridData.length).toBe(8 + b.chunks.length * 4);
   });
 
+  // Ground plane: an exact analytic term, present in all three field forms,
+  // and the safe twin with ground still never over-estimates the true field.
+  it('ground plane term is exact and safe', () => {
+    const scene = ringScene(20);
+    const { edits } = flattenToEdits(scene);
+    const ground = { y: -0.2, color: [0.2, 0.2, 0.2] };
+    const b = editbins.buildBinnedFieldData(scene, { cell: 1.0, band: 0.75, ground });
+    expect(b.wgsl).toContain('let gd = p.y - -0.2');
+    expect(b.wgsl).toContain('var lb = gd;');
+    let bad = 0, checked = 0;
+    for (let s = 0; s < 4000; s++) {
+      const p = [(Math.random() * 2 - 1) * 8, Math.random() * 6 - 2, (Math.random() * 2 - 1) * 8];
+      const truth = Math.min(evalEdits(edits, p).d, p[1] - ground.y);
+      const safe = editbins.evalBinnedSafe(edits, b.binned, b.chunks, p, { ground }).d;
+      checked++;
+      if (Math.abs(truth) <= 0.75) { if (Math.abs(safe - truth) > 0) bad++; }   // exact in band
+      else if (safe > truth + 1e-9) bad++;                                       // lower bound out
+    }
+    expect(checked).toBeGreaterThan(1000);
+    expect(bad).toBe(0);
+  });
+
   // The safe binned field: exact within the band, and NEVER above the true
   // distance beyond it (an over-estimate would make a sphere-tracer overstep).
   it('safe binned field is exact in-band and a lower bound out-of-band', () => {

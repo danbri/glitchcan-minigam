@@ -62,12 +62,12 @@ export function buildStorageEngine(engineHtml, sceneJson, opts = {}) {
   // buffers: [key, TypedArray, 'f32'|'u32'] in binding order.
   let wgsl, buffers, info;
   if (opts.binned) {
-    const b = buildBinnedFieldData(scene, { prefix, group: LX_GROUP, binding: 0, cell: opts.cell, band: opts.band, chunk: opts.chunk });
+    const b = buildBinnedFieldData(scene, { prefix, group: LX_GROUP, binding: 0, cell: opts.cell, band: opts.band, chunk: opts.chunk, ground: opts.ground });
     wgsl = b.wgsl;
     buffers = [['e', b.editData, 'f32'], ['s', b.binStart, 'u32'], ['i', b.binEdits, 'u32'], ['g', b.gridData, 'f32']];
     info = { count: b.count, cells: b.cells, avgPerCell: b.avgPerCell, maxPerCell: b.maxPerCell };
   } else {
-    const r = generateEditListWgsl(scene, { prefix, storage: true, group: LX_GROUP, binding: 0, chunk: opts.chunk || 16 });
+    const r = generateEditListWgsl(scene, { prefix, storage: true, group: LX_GROUP, binding: 0, chunk: opts.chunk || 16, ground: opts.ground });
     wgsl = r.wgsl;
     buffers = [['e', r.editData, 'f32'], ['c', r.chunkData, 'f32']];
     info = { count: r.count, chunks: r.chunks };
@@ -159,7 +159,7 @@ function patchCheapRefine(html) {
  */
 export function buildInterpretedEngine(engineHtml, prog, paramValues, opts = {}) {
   const prefix = opts.prefix || 'lx_';
-  const foldWgsl = generateStorageFoldWgsl(prog.count, { prefix, group: LX_GROUP, binding: 0 });
+  const foldWgsl = generateStorageFoldWgsl(prog.count, { prefix, group: LX_GROUP, binding: 0, ground: opts.ground });
   const vmWgsl = generateVmWgsl(prog, { prefix: 'lxvm_', group: 0 });
   const params = prog.paramNames.map((n) => {
     if (!(n in paramValues)) throw new Error('missing param: ' + n);

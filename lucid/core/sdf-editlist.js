@@ -471,7 +471,7 @@ export function generateEditListWgsl(scene, opts = {}) {
             `var<private> ${P('chunkData')}: array<f32, ${Math.max(1, NCHUNK * 4)}> = array<f32, ${Math.max(1, NCHUNK * 4)}>(${NCHUNK ? chunkArr : '0.0'});`;
   }
 
-  const wgsl = emitFoldWgsl(P, N, CHUNK, NCHUNK, decls);
+  const wgsl = emitFoldWgsl(P, N, CHUNK, NCHUNK, decls, opts.ground);
   const result = { wgsl, count: N, unsupported, chunks: NCHUNK };
   if (opts.storage) {
     // Flat typed arrays the engine uploads to the two storage buffers.
@@ -494,10 +494,21 @@ export function generateStorageFoldWgsl(count, opts = {}) {
   const b = opts.binding != null ? opts.binding : 0;
   const decls = `@group(${g}) @binding(${b}) var<storage, read> ${P('editData')}: array<f32>;\n` +
                 `@group(${g}) @binding(${b + 1}) var<storage, read> ${P('chunkData')}: array<f32>;`;
-  return emitFoldWgsl(P, count, Math.max(1, count), 1, decls);
+  return emitFoldWgsl(P, count, Math.max(1, count), 1, decls, opts.ground);
 }
 
-function emitFoldWgsl(P, N, CHUNK, NCHUNK, decls) {
+/** Exact analytic ground-plane term, appended after the fold. An infinite
+ *  plane is one subtraction — cheaper and crisper through the bake than any
+ *  giant box edit, and it never touches the bins or chunk bounds. */
+export function groundWgsl(ground) {
+  if (!ground) return '';
+  const c = ground.color || [0.2, 0.22, 0.18];
+  return `  let gd = p.y - ${f(ground.y)};
+  if (gd < d) { d = gd; col = vec3f(${f(c[0])}, ${f(c[1])}, ${f(c[2])}); }
+`;
+}
+
+function emitFoldWgsl(P, N, CHUNK, NCHUNK, decls, ground) {
   return `// ===== Lucid → edit list (generated, data-driven) =====
 // ${N} edits, stride ${STRIDE}, in ${NCHUNK} chunk(s) of ${CHUNK}. Two-level fold:
 // skip a whole chunk whose bounding sphere cannot lower d, else fold its edits.
@@ -563,7 +574,7 @@ fn ${P('editField')}(p: vec3f) -> vec4f {
     }
     }
   }
-  return vec4f(d, col);
+${groundWgsl(ground)}  return vec4f(d, col);
 }
 `;
 }

@@ -48,7 +48,8 @@
       if (!r.ok) throw new Error('cannot fetch clipclop engine (' + r.status + ')');
       return r.text();
     });
-    bootInterpretedTopLevel(engineHtml, prog, bearParams(0), { overlay });
+    const ground = { y: 1.2 + 0.15 * 1.6, color: [0.18, 0.22, 0.16] }; // feet level
+    bootInterpretedTopLevel(engineHtml, prog, bearParams(0), { ground, overlay });
   } catch (e) {
     boot.className = 'err';
     boot.textContent = 'error: ' + e.message;

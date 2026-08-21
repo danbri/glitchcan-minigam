@@ -22,7 +22,7 @@
  * seed-uniform evalEdits(edits, p, idx) folds an arbitrary subset).
  */
 
-import { flattenToEdits, evalEdits, chunkEdits, packEditData } from './sdf-editlist.js';
+import { flattenToEdits, evalEdits, chunkEdits, packEditData, groundWgsl } from './sdf-editlist.js';
 
 const OP_SMOOTH_UNION = 2, OP_SMOOTH_SUBTRACT = 3;
 const STRIDE = 23; // must match sdf-editlist.js
@@ -159,15 +159,20 @@ export function binScene(scene, opts = {}) {
  * max(band, min over chunks of (|p−centre| − radius)). Both terms provably
  * never exceed the true distance there — safe to march, exact where it counts.
  */
-export function evalBinnedSafe(edits, binned, chunks, p) {
+export function evalBinnedSafe(edits, binned, chunks, p, opts = {}) {
   const band = binned.grid.band;
   const near = evalBinnedField(edits, binned, p);
-  if (near.d <= band) return near;
-  let lb = 1e9;
+  let d = near.d, color = near.color;
+  if (opts.ground) {
+    const gd = p[1] - opts.ground.y;   // exact plane joins the fold everywhere
+    if (gd < d) { d = gd; color = opts.ground.color || [0.2, 0.22, 0.18]; }
+  }
+  if (d <= band) return { d, color };
+  let lb = opts.ground ? p[1] - opts.ground.y : 1e9;
   for (const [cx, cy, cz, cr] of chunks) {
     lb = Math.min(lb, Math.hypot(p[0] - cx, p[1] - cy, p[2] - cz) - cr);
   }
-  return { d: Math.max(band, lb), color: near.color };
+  return { d: Math.max(band, lb), color };
 }
 
 /**
@@ -248,11 +253,13 @@ fn ${P('editField')}(p: vec3f) -> vec4f {
       }
     }
   }
-  // Beyond the band the cell fold over-estimates (missing far edits) and a
+${opts.ground ? groundWgsl(opts.ground) : ''}  // Beyond the band the cell fold over-estimates (missing far edits) and a
   // sphere-tracer would overstep. Swap in a conservative lower bound from the
   // chunk spheres: max(band, min |p-centre|-radius) never exceeds true d there.
+  // (The ground plane is exact everywhere, so it both joins the fold above and
+  // seeds the lower bound here.)
   if (d > band) {
-    var lb = 1e9;
+    var lb = ${opts.ground ? 'gd' : '1e9'};
     for (var ch = 0u; ch < ${P('NCHUNK')}; ch = ch + 1u) {
       let co = 8u + ch * 4u;
       let cc = vec3f(${P('gridData')}[co], ${P('gridData')}[co + 1u], ${P('gridData')}[co + 2u]);
