@@ -12,6 +12,8 @@ export class PoseDriver {
   constructor() {
     this.auto = true;
     this.talking = false;         // held button forces talk
+    this.mirror = true;           // drag right → face looks screen-right (like a mirror)
+    this._voice = null;           // real mic jaw level (0..1) when a VoiceJaw feeds us
     this.pose = makePose();
     this.seq = 0;
     this._yaw = 0; this._pitch = 0; this._roll = 0;
@@ -28,12 +30,15 @@ export class PoseDriver {
   setPointer(x, y, active) {
     this._pointerActive = active;
     if (active) {
-      this._tYaw = clamp(-x, -1, 1) * 0.7;
+      this._tYaw = clamp(this.mirror ? -x : x, -1, 1) * 0.7;
       this._tPitch = clamp(y, -1, 1) * 0.45;
     }
   }
   setTalking(on) { this.talking = on; }
   setSmile(v) { this._tSmile = clamp(v, 0, 1); }
+  // real mic level 0..1 overrides simulated talk; null returns to simulation
+  setVoiceLevel(v) { this._voice = v; }
+  setNeutral() { this._tYaw = 0; this._tPitch = 0; }
 
   // dt seconds; returns the current pose (same object, mutated)
   tick(dt, nowMs) {
@@ -65,10 +70,14 @@ export class PoseDriver {
       this._nextTalk -= dt;
       if (this._nextTalk <= 0) { this._talkUntil = t + 1.2 + Math.random() * 2.2; this._nextTalk = 3 + Math.random() * 4; }
     }
-    const talking = this.talking || (this.auto && t < this._talkUntil);
-    const jaw = talking
+    let talking = this.talking || (this.auto && t < this._talkUntil);
+    let jaw = talking
       ? Math.max(0, 0.28 + 0.32 * Math.sin(t * 17) + 0.2 * Math.sin(t * 41 + 2))
       : 0.02;
+    if (this._voice != null) {         // real speech energy wins over simulation
+      jaw = this._voice * 0.9;
+      talking = this._voice > 0.12;
+    }
 
     this._smile = lerp(this._smile, this._tSmile, 1 - Math.exp(-dt * 3));
 

@@ -48,7 +48,7 @@ const target = [0, 1.1, 0];
 function applyCamera() {
   theta = Math.max(-1.2, Math.min(1.2, theta));
   phi = Math.max(0.15, Math.min(1.5, phi));
-  radius = Math.max(1.5, Math.min(12, radius));
+  radius = Math.max(0.5, Math.min(12, radius));
   renderer.setCamera([
     target[0] + radius * Math.sin(theta) * Math.sin(phi),
     target[1] + radius * Math.cos(phi),

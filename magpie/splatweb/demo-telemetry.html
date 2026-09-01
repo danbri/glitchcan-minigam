@@ -25,6 +25,7 @@
       <div class="ctl" style="margin-top:0.5rem">
         <button class="hold" id="talkBtn">TALK (hold)</button>
         <label style="flex:0 0 auto"><input type="checkbox" id="autoChk" checked> auto-perform</label>
+        <label style="flex:0 0 auto"><input type="checkbox" id="mirrorChk" checked> mirror</label>
       </div>
       <div class="ctl"><label>smile</label>
         <input type="range" id="smile" min="0" max="100" value="15"><output id="smileOut">0.15</output></div>
@@ -69,7 +70,8 @@ const talkBtn = $('talkBtn');
 const setTalk = on => { driver.setTalking(on); talkBtn.classList.toggle('on', on); };
 talkBtn.addEventListener('pointerdown', e => { e.preventDefault(); setTalk(true); });
 addEventListener('pointerup', () => setTalk(false));
-$('autoChk').addEventListener('change', e => { driver.auto = e.target.checked; });
+$('autoChk').addEventListener('change', e => { driver.auto = e.target.checked; if (!driver.auto) driver.setNeutral(); });
+$('mirrorChk').addEventListener('change', e => { driver.mirror = e.target.checked; });
 $('smile').addEventListener('input', e => {
   driver.setSmile(e.target.value / 100);
   $('smileOut').textContent = (e.target.value / 100).toFixed(2);
