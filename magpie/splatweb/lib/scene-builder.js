@@ -8,6 +8,14 @@ import { BLENDSHAPES } from './telemetry-codec.js';
 const BI = {};
 BLENDSHAPES.forEach((n, i) => { BI[n] = i; });
 
+// quaternion rotating local +z onto unit vector n (for surface-tangent splats)
+function qFromZTo(n) {
+  const w = 1 + n[2];
+  if (w < 1e-6) return [1, 0, 0, 0];
+  const l = Math.hypot(n[1], n[0], w);
+  return [-n[1] / l, n[0] / l, 0, w / l];
+}
+
 class SplatList {
   constructor() { this.arr = []; }
   // pos[3], scale[3], color[3], alpha, quat (optional)
@@ -128,41 +136,62 @@ export function buildAvatarSplats(pose, at = [0, 0, 0]) {
     local.push([pos, scale, color, alpha, quat]);
 
   const rnd = mulberry32(7);
-  // skull shell
-  for (let i = 0; i < 90; i++) {
-    const th = Math.acos(1 - 2 * rnd()), ph = rnd() * Math.PI * 2;
-    const nx = Math.sin(th) * Math.cos(ph), ny = Math.cos(th), nz = Math.sin(th) * Math.sin(ph);
-    const isHair = ny > 0.35 || nz < -0.55;
-    addL([nx * 0.095, 0.13 + ny * 0.11, nz * 0.09],
-      [0.045, 0.045, 0.045], isHair ? HAIR : SKIN, 0.95);
+  // skull — fibonacci-sampled ellipsoid shell, each splat oriented TANGENT
+  // to the surface (thin along the normal). Even coverage + flat splats is
+  // what keeps the silhouette crisp; fat random blobs average into blur.
+  const RX = 0.095, RY = 0.115, RZ = 0.10, CY = 0.13;
+  const N_SKULL = 260, GA = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < N_SKULL; i++) {
+    const ny = 1 - 2 * (i + 0.5) / N_SKULL;
+    const rr = Math.sqrt(Math.max(0, 1 - ny * ny));
+    const ph = i * GA;
+    const nx = Math.cos(ph) * rr, nz = Math.sin(ph) * rr;
+    // hairline: full top, back of the head; forehead and face stay skin
+    const isHair = (ny > 0.42 && !(nz > 0.3 && ny < 0.62)) || (nz < -0.3 && ny > -0.25);
+    const puff = isHair ? 1.05 : 1.0;
+    const tone = (rnd() - 0.5) * 0.05;
+    const col = isHair
+      ? [HAIR[0] + tone * 0.5, HAIR[1] + tone * 0.4, HAIR[2] + tone * 0.3]
+      : [SKIN[0] + tone, SKIN[1] + tone * 0.8, SKIN[2] + tone * 0.7];
+    addL([nx * RX * puff, CY + ny * RY * puff, nz * RZ * puff],
+      isHair ? [0.022, 0.022, 0.009] : [0.02, 0.02, 0.007],
+      col, 1, qFromZTo([nx, ny, nz]));
+  }
+  // neck
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    addL([Math.cos(a) * 0.032, 0.02 + (i % 2) * 0.025, Math.sin(a) * 0.032 + 0.005],
+      [0.02, 0.025, 0.02], SKIN);
   }
   // ears
-  for (const sx of [-1, 1]) addL([sx * 0.1, 0.12, -0.01], [0.02, 0.03, 0.02], SKIN);
-  // nose
-  addL([0, 0.1, 0.1], [0.018, 0.025, 0.02], [SKIN[0] * 0.96, SKIN[1] * 0.9, SKIN[2] * 0.88]);
-  // eyes: white + pupil; blink squashes vertically
+  for (const sx of [-1, 1]) addL([sx * 0.098, CY, -0.005], [0.014, 0.024, 0.012], SKIN);
+  // eyes: white + pupil, proud of the surface so they never sink into skin;
+  // blink squashes vertically
   for (const [sx, blink] of [[-1, blinkL], [1, blinkR]]) {
-    const open = clamp(1 - blink, 0.06, 1);
-    addL([sx * 0.038, 0.145, 0.085], [0.017, 0.014 * open, 0.008], [0.97, 0.97, 0.95]);
-    addL([sx * 0.038 + lookX * 0.008, 0.145 + lookY * 0.006, 0.093],
-      [0.007, 0.008 * open, 0.004], [0.1, 0.08, 0.07]);
+    const open = clamp(1 - blink, 0.08, 1);
+    addL([sx * 0.042, CY + 0.025, 0.094], [0.02, 0.015 * open, 0.006], [0.98, 0.98, 0.96]);
+    addL([sx * 0.042 + lookX * 0.009, CY + 0.025 + lookY * 0.007, 0.1],
+      [0.0085, 0.0095 * open, 0.004], [0.15, 0.1, 0.08]);
   }
   // brows raise with browInnerUp
   for (const sx of [-1, 1]) {
-    addL([sx * 0.04, 0.175 + brow * 0.012, 0.088], [0.022, 0.005, 0.006], HAIR, 1,
-      qFromEuler(0, 0, sx * -0.15));
+    addL([sx * 0.045, CY + 0.055 + brow * 0.012, 0.085], [0.026, 0.006, 0.006], HAIR, 1,
+      qFromEuler(0, 0, sx * -0.18));
   }
+  // nose
+  addL([0, CY - 0.005, 0.104], [0.015, 0.022, 0.012],
+    [SKIN[0] * 0.97, SKIN[1] * 0.9, SKIN[2] * 0.88]);
   // mouth: dark opening scaled by jaw; lip bar; smile corners lift
-  const mouthY = 0.055 - jaw * 0.018;
-  const mouthW = clamp(0.03 - pucker * 0.012 + (smL + smR) * 0.004, 0.012, 0.04);
-  addL([0, mouthY, 0.088], [mouthW, 0.004 + jaw * 0.022, 0.008], [0.32, 0.1, 0.1]);
-  addL([0, mouthY + 0.008 + jaw * 0.01, 0.09], [mouthW * 1.05, 0.004, 0.006], [0.75, 0.42, 0.4]);
+  const mouthY = CY - 0.062 - jaw * 0.02;
+  const mouthW = clamp(0.034 - pucker * 0.014 + (smL + smR) * 0.005, 0.014, 0.046);
+  addL([0, mouthY, 0.088], [mouthW, 0.005 + jaw * 0.026, 0.008], [0.35, 0.12, 0.12]);
+  addL([0, mouthY + 0.01 + jaw * 0.012, 0.09], [mouthW * 1.05, 0.0045, 0.006], [0.78, 0.45, 0.42]);
   for (const [sx, sm] of [[-1, smL], [1, smR]]) {
-    addL([sx * (mouthW + 0.006), mouthY + sm * 0.014, 0.086], [0.007, 0.006, 0.006],
-      [0.72, 0.45, 0.42]);
+    addL([sx * (mouthW + 0.007), mouthY + 0.004 + sm * 0.016, 0.086], [0.008, 0.007, 0.006],
+      [0.75, 0.47, 0.44]);
   }
   // chin/jaw mass follows jawOpen
-  addL([0, 0.02 - jaw * 0.02, 0.055], [0.05, 0.04, 0.045], SKIN, 0.95);
+  addL([0, 0.035 - jaw * 0.025, 0.06], [0.04, 0.032, 0.035], SKIN, 0.95);
 
   // rotate head-locals by pose quat about the neck (y = 0.02); HS scales the
   // whole head up so it reads at room distance

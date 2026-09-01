@@ -95,8 +95,8 @@ wire('rate', 'Hz', () => {});
 wire('buffer', 'ms', v => { buffer.bufferMs = v; });
 
 // orbit
-let theta = 0.0, phi = 1.35, radius = 3.4;
-const target = [0, 1.25, -1.0];
+let theta = 0.0, phi = 1.4, radius = 1.9;
+const target = [0, 1.5, -1.0];
 function applyCamera() {
   theta = Math.max(-1.1, Math.min(1.1, theta));
   phi = Math.max(0.3, Math.min(1.5, phi));
