@@ -33,10 +33,13 @@
       <div class="ctl" style="margin-top:0.4rem">
         <button class="hold" id="talkBtn">TALK</button>
         <button class="hold" id="micBtn">🎤 MIC</button>
+        <button class="hold" id="camBtn">📷 CAM</button>
         <label style="flex:0 0 auto"><input type="checkbox" id="autoChk" checked> auto</label>
         <label style="flex:0 0 auto"><input type="checkbox" id="mirrorChk" checked> mirror</label>
       </div>
-      <div class="note" id="micNote">MIC uses Web Audio speech energy to drive the jaw — real capture, stays on this page.</div>
+      <div class="note" id="micNote">MIC: Web Audio speech energy drives the jaw. CAM: MediaPipe FaceLandmarker
+      (Apache-2.0, loaded from CDN on demand) drives head pose + all ten expression channels from your webcam.
+      Both process locally; nothing leaves the page. If CAM head turns read backwards, toggle mirror.</div>
       <h2 style="margin-top:0.8rem">Network</h2>
       <div class="ctl"><label>latency</label><input type="range" id="latency" min="0" max="500" value="80"><output id="latencyOut">80 ms</output></div>
       <div class="ctl"><label>jitter</label><input type="range" id="jitter" min="0" max="200" value="30"><output id="jitterOut">30 ms</output></div>
@@ -55,6 +58,7 @@ import { SplatRenderer, FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
 import { buildRoom, buildAvatarSplats } from './lib/scene-builder.js';
 import { drawFace } from './lib/face2d.js';
 import { VoiceJaw } from './lib/voice-jaw.js';
+import { FaceCapture } from './lib/face-capture.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('gl');
@@ -110,6 +114,26 @@ micBtn.addEventListener('click', async () => {
   }
 });
 
+// real webcam capture: FaceLandmarker → head pose + blendshapes
+const cam = new FaceCapture();
+const camBtn = $('camBtn');
+camBtn.addEventListener('click', async () => {
+  if (cam.active) {
+    cam.stop();
+    driver.setFacePose(null);
+    camBtn.classList.remove('on');
+    micNote.textContent = 'CAM off — back to simulated pose.';
+    return;
+  }
+  try {
+    await cam.start(msg => { micNote.textContent = msg; });
+    camBtn.classList.add('on');
+    micNote.textContent = 'CAM live — looking for a face…';
+  } catch {
+    micNote.textContent = 'CAM unavailable: ' + (cam.error || 'unknown error');
+  }
+});
+
 const wire = (id, unit, apply) => {
   const el = $(id), out = $(id + 'Out');
   const f = () => { out.textContent = el.value + ' ' + unit; apply(+el.value); };
@@ -158,6 +182,7 @@ function frame(now) {
 
   // SENDER: capture + encode + send at the chosen rate
   if (voice.active) driver.setVoiceLevel(voice.tick(dt));
+  if (cam.active) driver.setFacePose(cam.tick(now));
   const pose = driver.tick(dt, now);
   sendAcc += dt;
   const interval = 1 / +$('rate').value;
@@ -192,6 +217,11 @@ function frame(now) {
       `${net.kbps(now).toFixed(1)} kbit/s wire · loss ${net.lossActualPct().toFixed(1)}% ` +
       `(${net.dropped}/${net.sent}) · glass-to-glass ≈ ${rx ? eff.toFixed(0) : '–'} ms · ` +
       `extrapolation events ${extrapEvents}`;
+    if (cam.active) {
+      micNote.textContent = cam.faceSeen
+        ? 'CAM live — face tracked, pose + expressions from webcam.'
+        : 'CAM live — no face in view (simulated pose meanwhile).';
+    }
     const badge = $('linkBadge');
     if (buffer.frozen) { badge.className = 'badge bad'; badge.textContent = 'FROZEN (feed stale > 200 ms)'; }
     else if (buffer.extrapolating) { badge.className = 'badge warn'; badge.textContent = 'extrapolating'; }

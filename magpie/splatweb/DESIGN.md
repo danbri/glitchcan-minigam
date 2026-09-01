@@ -220,9 +220,12 @@ Live URLs once deployed:
 - `https://danbri.github.io/glitchcan-minigam/magpie/splatweb/demo-stage.html`
 
 **Honesty box — what the demos do NOT prove:**
-- No real camera capture. The pose driver simulates a face tracker. (The
-  packet format is the risky interface; capture is a known-solved problem
-  via MediaPipe.)
+- Capture is real but young: the MIC button (Web Audio speech energy → jaw)
+  and the CAM button (MediaPipe FaceLandmarker from CDN → head pose + all
+  ten blendshape channels) are wired in demo 3; without them the pose
+  driver simulates. The FaceLandmarker transformation-matrix axis
+  conventions have NOT been verified against a live face — the mirror
+  checkbox is the correction if turns read backwards.
 - No real network. `network-sim.js` models latency/jitter/loss inside one
   page. Real WebRTC DataChannel plumbing is Phase 2.
 - No XMPP. Control plane is out of scope for the sketch.
@@ -255,11 +258,13 @@ Live URLs once deployed:
    end-to-end simulated pipeline. *Done.*
 2. **Real transport:** two-tab WebRTC DataChannel (manual copy-paste
    signalling first, then a signalling relay). Measure real latency.
-3. **Real capture:** MediaPipe FaceLandmarker in a worker → the same
-   encoder. Compare wire format v0 sufficiency; spec v1 (44-byte, 20
-   channels) if needed. *(Speech-energy jaw via Web Audio already landed —
-   the MIC button in demo 3.)* Candidate stacks and openly licensed avatar
-   models, with verified licences: [`catalogue.html`](catalogue.html).
+3. **Real capture:** *landed in demo 3* — MIC (Web Audio speech energy →
+   jaw) and CAM (MediaPipe FaceLandmarker → head pose + 10 blendshape
+   channels through the unchanged packet). Remaining: verify axis
+   conventions on a live face, move detection into a worker, judge whether
+   v0's 10 channels suffice or spec v1 (44-byte, 20 channels). Candidate
+   stacks and openly licensed avatar models, with verified licences:
+   [`catalogue.html`](catalogue.html).
 4. **Real rooms:** load a dbdb `.compressed.ply` / pack element as the room
    bundle; avatar from a splat cutout.
 5. **Broadcast:** fan-out relay experiment; 1 sender → many read-only tabs.

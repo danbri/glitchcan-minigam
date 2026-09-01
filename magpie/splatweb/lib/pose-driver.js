@@ -2,7 +2,7 @@
 // face tracker; see DESIGN.md §6 honesty box). Two inputs blended:
 //   - pointer: drag on a pad sets head yaw/pitch targets
 //   - auto "performer" mode: wander, periodic blinks, talk bursts
-import { qFromEuler, lerp, clamp } from './pose-math.js';
+import { qFromEuler, qSlerp, lerp, clamp } from './pose-math.js';
 import { makePose, BLENDSHAPES } from './telemetry-codec.js';
 
 const BI = {};
@@ -38,6 +38,9 @@ export class PoseDriver {
   setSmile(v) { this._tSmile = clamp(v, 0, 1); }
   // real mic level 0..1 overrides simulated talk; null returns to simulation
   setVoiceLevel(v) { this._voice = v; }
+  // real webcam face pose {quat, pos, blend} overrides the simulation
+  // entirely; null returns to simulation (e.g. face out of view)
+  setFacePose(fp) { this._face = fp; }
   setNeutral() { this._tYaw = 0; this._tPitch = 0; }
   // flips the current yaw too, so toggling gives instant visible feedback
   setMirror(m) { if (m !== this.mirror) { this.mirror = m; this._tYaw = -this._tYaw; } }
@@ -99,6 +102,34 @@ export class PoseDriver {
     b[BI.eyeLookX] = clamp(this._tYaw * -0.8, -1, 1);
     b[BI.eyeLookY] = clamp(this._tPitch * -0.8, -1, 1);
     b[BI.cheekPuff] = 0;
+
+    // real webcam face capture overrides everything simulated above.
+    // NOTE: the transformation-matrix axis conventions were not verified
+    // against a live face — if yaw/roll read backwards, the mirror
+    // checkbox applies the horizontal reflection.
+    if (this._face) {
+      let fq = this._face.quat;
+      if (this.mirror) fq = [fq[0], -fq[1], -fq[2], fq[3]];   // reflect across x
+      this._faceQuat = this._faceQuat
+        ? qSlerp(this._faceQuat, fq, 1 - Math.exp(-dt * 20))
+        : fq.slice();
+      p.quat = this._faceQuat;
+      const mx = this.mirror ? -1 : 1;
+      p.pos = [this._face.pos[0] * mx, this._face.pos[1], this._face.pos[2]];
+      const fb = this._face.blend;
+      for (let i = 0; i < 10; i++) {
+        const signed = i === BI.eyeLookX || i === BI.eyeLookY;
+        b[i] = signed ? clamp(fb[i], -1, 1) : clamp(fb[i], 0, 1);
+      }
+      if (this.mirror) {
+        b[BI.eyeLookX] = -b[BI.eyeLookX];
+        const t = b[BI.eyeBlinkLeft]; b[BI.eyeBlinkLeft] = b[BI.eyeBlinkRight]; b[BI.eyeBlinkRight] = t;
+        const u = b[BI.mouthSmileLeft]; b[BI.mouthSmileLeft] = b[BI.mouthSmileRight]; b[BI.mouthSmileRight] = u;
+      }
+      if (this._voice != null) b[BI.jawOpen] = clamp(this._voice * 0.9, 0, 1);
+    } else {
+      this._faceQuat = null;
+    }
     return p;
   }
 }
