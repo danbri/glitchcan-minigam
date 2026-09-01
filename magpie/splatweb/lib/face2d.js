@@ -18,8 +18,9 @@ export function drawFace(ctx, pose, { label = '', staleness = 0 } = {}) {
   const brow = b[BI.browInnerUp], smile = (b[BI.mouthSmileLeft] + b[BI.mouthSmileRight]) / 2;
   const lookX = b[BI.eyeLookX], lookY = b[BI.eyeLookY];
 
-  // head shifts with yaw/pitch (cheap parallax), tilts with roll
-  const hx = cx + Math.sin(-yaw) * R * 0.45;
+  // head shifts with yaw/pitch (cheap parallax), tilts with roll.
+  // Sign convention matches the 3D renderer: positive yaw ⇒ screen-right.
+  const hx = cx + Math.sin(yaw) * R * 0.45;
   const hy = cy + Math.sin(pitch) * R * 0.35;
 
   ctx.save();
@@ -38,7 +39,7 @@ export function drawFace(ctx, pose, { label = '', staleness = 0 } = {}) {
   ctx.ellipse(0, -R * 0.55, R * 0.95, R * 0.6, 0, Math.PI, 0);
   ctx.fill();
 
-  const faceShift = Math.sin(-yaw) * R * 0.28;   // features slide across the head
+  const faceShift = Math.sin(yaw) * R * 0.28;   // features slide across the head
   const eyeY = -R * 0.15 + Math.sin(pitch) * R * 0.12;
   const eyeOpen = clamp(1 - blink, 0.05, 1);
   for (const sx of [-1, 1]) {

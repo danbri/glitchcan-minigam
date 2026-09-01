@@ -26,11 +26,15 @@ export class PoseDriver {
     this._t = 0;
   }
 
-  // x, y in [-1, 1] from a pointer pad
+  // x, y in [-1, 1] from a pointer pad.
+  // mirror ON: drag left ⇒ the avatar looks screen-LEFT (your reflection).
+  // mirror OFF: drag left ⇒ the avatar turns to THEIR left (screen-right),
+  // like a person facing you copying your instruction.
+  // (Positive yaw renders screen-right in both the 3D and 2D views.)
   setPointer(x, y, active) {
     this._pointerActive = active;
     if (active) {
-      this._tYaw = clamp(this.mirror ? -x : x, -1, 1) * 0.7;
+      this._tYaw = clamp(this.mirror ? x : -x, -1, 1) * 0.7;
       this._tPitch = clamp(y, -1, 1) * 0.45;
     }
   }
