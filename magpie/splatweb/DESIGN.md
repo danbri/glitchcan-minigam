@@ -210,7 +210,11 @@ blending. ~250 lines, zero dependencies.
 | `lib/face2d.js` | Tier-3 Canvas-2D puppet renderer |
 | `demo-telemetry.html` | **Demo 1** — codec inspector: live 32-byte hex view, decoded fields, quantization error, bandwidth-vs-video meter; sender and decoded-receiver faces side by side (Tier 3) |
 | `demo-splat-room.html` | **Demo 2** — the room avatar: procedural splat room, orbit/zoom, stylisation slider (palette quantization), splat count + FPS |
-| `demo-stage.html` | **Demo 3** — the whole thesis: sender pose → encoder → simulated lossy network (sliders for latency/jitter/loss/rate) → jitter buffer → splat room + splat avatar. Live stats: kbit/s, loss, effective latency, extrapolation events |
+| `demo-stage.html` | **Demo 3** — the whole thesis: sender pose → encoder → simulated lossy network (sliders for latency/jitter/loss/rate) → jitter buffer → splat room + splat avatar. Live stats: kbit/s, loss, effective latency, extrapolation events. Real capture via 🎤 MIC and 📷 CAM; a vendored CC BY avatar stands in the room as a second (static) participant |
+| `lib/gltf-splats.js` | minimal in-browser GLB/VRM → splat sampler: area-sampled triangles, per-point base-color texture reads, surface-tangent splats with baked lambert |
+| `lib/models-manifest.js` + `third_party/` | vendored open models with licences (`third_party/ATTRIBUTION.md`): Lee Perry-Smith head (CC BY 3.0), three 100Avatars VRMs (CC BY 4.0 — the repo's own licence file; not CC0 as some indexes claim) |
+| `demo-gallery.html` | **Demo 4** — the vendored models splat-ified live: model picker, density slider, stylise, per-model attribution |
+| `catalogue.html` | the borrowing catalogue: capture stacks + model sources with verified licences |
 
 Live URLs once deployed:
 

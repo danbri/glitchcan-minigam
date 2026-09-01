@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>splatweb demo 4 — borrowed models, splat-ified</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫧</text></svg>">
+<link rel="stylesheet" href="demo.css">
+</head>
+<body>
+<header class="demo">
+  <h1>Demo 4 — borrowed models, splat-ified live</h1>
+  <nav><a href="index.html">hub</a> · <a href="catalogue.html">catalogue</a> · <a href="demo-stage.html">stage</a></nav>
+</header>
+<main>
+  <p class="note">Openly licensed models vendored in
+  <code>third_party/</code>, converted to Gaussian splats <b>in the
+  browser at load time</b>: the GLB/VRM triangles are area-sampled, the
+  base-color texture is read at each point, and each sample becomes a
+  surface-tangent splat with baked lighting — rendered by the same
+  renderer as everything else. Drag to orbit, wheel to zoom.</p>
+
+  <div class="panel">
+    <div class="ctl">
+      <label>model</label>
+      <select id="model" style="flex:1; background:#0a0b10; color:#d8dae2; border:1px solid #3a5580; border-radius:6px; padding:0.3rem;"></select>
+    </div>
+    <div class="ctl"><label>splat density</label>
+      <input type="range" id="density" min="4000" max="60000" step="2000" value="24000"><output id="densityOut">24k</output></div>
+    <canvas class="gl" id="gl"></canvas>
+    <div class="ctl" style="margin-top:0.5rem"><label>stylise</label>
+      <input type="range" id="style" min="0" max="8" value="0"><output id="styleOut">off</output></div>
+    <div class="stat" id="stats">loading…</div>
+    <p class="note" id="attribution"></p>
+  </div>
+</main>
+<script type="module">
+import { SplatRenderer, FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { loadGlbSplats } from './lib/gltf-splats.js';
+import { MODELS } from './lib/models-manifest.js';
+import { mulberry32 } from './lib/pose-math.js';
+
+const $ = id => document.getElementById(id);
+const canvas = $('gl'), statsEl = $('stats');
+let renderer;
+try { renderer = new SplatRenderer(canvas, { background: [0.07, 0.075, 0.1] }); }
+catch (e) { statsEl.textContent = 'WebGL2 not available: ' + e.message; throw e; }
+
+for (const m of MODELS) {
+  const o = document.createElement('option');
+  o.value = m.id; o.textContent = m.name;
+  $('model').appendChild(o);
+}
+
+// soft ground disc so models don't float in the void
+function groundSplats() {
+  const rnd = mulberry32(3);
+  const n = 350, out = new Float32Array(n * FLOATS_PER_SPLAT);
+  let w = 0;
+  for (let i = 0; i < n; i++) {
+    const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * 1.4;
+    const c = 0.16 + rnd() * 0.03;
+    out[w++] = Math.cos(a) * r; out[w++] = -0.01; out[w++] = Math.sin(a) * r;
+    out[w++] = 0; out[w++] = 0; out[w++] = 0; out[w++] = 1;
+    out[w++] = 0.14; out[w++] = 0.015; out[w++] = 0.14;
+    out[w++] = c; out[w++] = c * 1.05; out[w++] = c * 1.2; out[w++] = 0.9;
+  }
+  return { data: out, count: n };
+}
+const ground = groundSplats();
+
+let theta = 0.4, phi = 1.35, radius = 2.2, targetY = 0.8;
+function applyCamera() {
+  theta = Math.max(-3.2, Math.min(3.2, theta));
+  phi = Math.max(0.2, Math.min(1.55, phi));
+  radius = Math.max(0.25, Math.min(8, radius));
+  renderer.setCamera([
+    radius * Math.sin(theta) * Math.sin(phi),
+    targetY + radius * Math.cos(phi),
+    radius * Math.cos(theta) * Math.sin(phi),
+  ], [0, targetY, 0]);
+}
+let drag = null;
+canvas.addEventListener('pointerdown', e => { drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', e => {
+  if (!drag) return;
+  theta -= (e.clientX - drag[0]) * 0.006;
+  phi -= (e.clientY - drag[1]) * 0.006;
+  drag = [e.clientX, e.clientY]; applyCamera();
+});
+canvas.addEventListener('pointerup', () => { drag = null; });
+canvas.addEventListener('wheel', e => { e.preventDefault(); radius *= Math.exp(e.deltaY * 0.001); applyCamera(); }, { passive: false });
+
+$('style').addEventListener('input', () => {
+  const v = +$('style').value;
+  renderer.styleLevels = v;
+  $('styleOut').textContent = v ? v + ' levels' : 'off';
+});
+
+let generation = 0;
+async function load() {
+  const gen = ++generation;
+  const m = MODELS.find(x => x.id === $('model').value) || MODELS[0];
+  const count = +$('density').value;
+  $('densityOut').textContent = (count / 1000) + 'k';
+  statsEl.textContent = `loading ${m.name}…`;
+  $('attribution').textContent = m.attribution;
+  try {
+    const t0 = performance.now();
+    const res = await loadGlbSplats(m.url, {
+      count, targetHeight: m.targetHeight, yaw: m.yaw, at: [0, 0, 0], tint: m.tint || null,
+    });
+    if (gen !== generation) return;   // superseded by a newer request
+    const data = new Float32Array((ground.count + res.count) * FLOATS_PER_SPLAT);
+    data.set(ground.data);
+    data.set(res.data, ground.count * FLOATS_PER_SPLAT);
+    renderer.setData(data, ground.count + res.count);
+    targetY = res.heightM * 0.55;
+    radius = Math.max(1.2, res.heightM * 1.6);
+    applyCamera();
+    statsEl.textContent =
+      `${res.count.toLocaleString()} splats from ${res.sourceTris.toLocaleString()} triangles · ` +
+      `converted in ${(performance.now() - t0).toFixed(0)} ms`;
+  } catch (e) {
+    if (gen === generation) statsEl.textContent = 'load failed: ' + e.message;
+  }
+}
+$('model').addEventListener('change', load);
+$('density').addEventListener('change', load);
+load();
+
+(function frame() { renderer.render(); requestAnimationFrame(frame); })();
+</script>
+</body>
+</html>

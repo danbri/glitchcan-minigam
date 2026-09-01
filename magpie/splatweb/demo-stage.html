@@ -18,7 +18,9 @@
   viewer decodes, jitter-buffers, interpolates and (briefly) extrapolates,
   and renders the splat room + splat avatar. Turn the loss and jitter up and
   watch the avatar stay coherent. Network and capture are simulated in-page
-  (DESIGN.md §6).</p>
+  (DESIGN.md §6). The second figure in the room is
+  <a href="catalogue.html" style="color:#7fb4ff">100Avatars “Froggy” by Polygonal Mind (CC BY 4.0)</a>,
+  splat-ified from its VRM at load time.</p>
 
   <div class="row">
     <div class="panel" style="flex:2 1 420px">
@@ -59,6 +61,7 @@ import { buildRoom, buildAvatarSplats } from './lib/scene-builder.js';
 import { drawFace } from './lib/face2d.js';
 import { VoiceJaw } from './lib/voice-jaw.js';
 import { FaceCapture } from './lib/face-capture.js';
+import { loadGlbSplats } from './lib/gltf-splats.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('gl');
@@ -67,15 +70,28 @@ let renderer;
 try { renderer = new SplatRenderer(canvas); }
 catch (e) { statsEl.textContent = 'WebGL2 not available: ' + e.message; throw e; }
 
-// scene: room + avatar block appended after it
+// scene: room + (optional guest) + avatar block last, so the avatar region
+// can be rewritten every frame at avatarOffset
 const AV_AT = [0, 0, -1.0];
 const room = buildRoom();
 const avatarRest = buildAvatarSplats(null, AV_AT);
 const avatarCount = avatarRest.count;
-const data = new Float32Array((room.count + avatarCount) * FLOATS_PER_SPLAT);
-data.set(room.toFloat32());
-data.set(avatarRest.toFloat32(), room.count * FLOATS_PER_SPLAT);
-renderer.setData(data, room.count + avatarCount);
+let avatarOffset = room.count;
+function rebuildScene(guest) {
+  const gCount = guest ? guest.count : 0;
+  avatarOffset = room.count + gCount;
+  const data = new Float32Array((avatarOffset + avatarCount) * FLOATS_PER_SPLAT);
+  data.set(room.toFloat32());
+  if (guest) data.set(guest.data, room.count * FLOATS_PER_SPLAT);
+  data.set(avatarRest.toFloat32(), avatarOffset * FLOATS_PER_SPLAT);
+  renderer.setData(data, avatarOffset + avatarCount);
+}
+rebuildScene(null);
+// a second participant from third_party/ (see catalogue + ATTRIBUTION.md),
+// splat-ified in the browser; static — it has no telemetry feed
+loadGlbSplats('third_party/100avatars/100Avatars_010_Froggy.vrm', {
+  count: 14000, targetHeight: 1.45, at: [-1.6, 0, -2.1], yaw: Math.PI + 0.7,
+}).then(g => rebuildScene(g)).catch(() => {});
 
 // pipeline pieces
 const driver = new PoseDriver();
@@ -204,7 +220,7 @@ function frame(now) {
     // dead feed → fade to statue, never fake liveness (DESIGN.md §9)
     for (let i = 13; i < av.length; i += FLOATS_PER_SPLAT) av[i] *= 0.45;
   }
-  renderer.writeRegion(room.count, av);
+  renderer.writeRegion(avatarOffset, av);
   renderer.render();
 
   drawFace(senderCtx, pose, { label: 'sender truth' });
