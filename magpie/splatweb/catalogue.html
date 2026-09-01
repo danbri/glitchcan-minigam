@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>splatweb — borrowing catalogue</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫧</text></svg>">
+<link rel="stylesheet" href="demo.css">
+<style>
+  table.cat { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  table.cat th { text-align: left; color: #8b8fa3; font-weight: 600; padding: 0.3rem 0.6rem 0.3rem 0;
+    border-bottom: 1px solid #23252f; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  table.cat td { padding: 0.45rem 0.6rem 0.45rem 0; border-bottom: 1px solid #1b1d26; vertical-align: top; }
+  table.cat a { color: #7fb4ff; text-decoration: none; }
+  table.cat a:hover { text-decoration: underline; }
+  .lic { font-family: ui-monospace, Menlo, monospace; white-space: nowrap; }
+  .wrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+<header class="demo">
+  <h1>Borrowing catalogue — capture stacks &amp; open avatars</h1>
+  <nav><a href="index.html">hub</a> · <a href="demo-stage.html">stage</a> · <a href="DESIGN.md">design</a></nav>
+</header>
+<main>
+  <p class="note">What we can borrow instead of building: webcam face/skeleton
+  capture with permissive licences, and openly licensed avatar/head models to
+  replace the procedural cartoon. Licences verified against the linked pages,
+  September 2026 — <b>re-check at the source before shipping anything</b>, and
+  keep every attribution. Splat scans follow the dbdb <i>splat-discovery</i>
+  licence discipline (superspl.at mixes CC&nbsp;BY with NC/ND and no-licence).</p>
+
+  <div class="panel">
+    <h2>Webcam capture — face pose + blendshapes + skeleton</h2>
+    <div class="wrap"><table class="cat">
+      <tr><th>stack</th><th>licence</th><th>what you get</th><th>fit for splatweb</th></tr>
+      <tr>
+        <td><a href="https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker/web_js">MediaPipe Tasks — FaceLandmarker</a><br>
+            <span class="note">npm <code>@mediapipe/tasks-vision</code> · <a href="https://github.com/google-ai-edge/mediapipe">repo</a></span></td>
+        <td class="lic">Apache-2.0<br><span class="note">code + model, verified</span></td>
+        <td>478 3D landmarks, <b>52 blendshapes</b>, facial transformation matrix (= head pose). WASM+GPU, webcam LIVE_STREAM mode, runs in a worker.</td>
+        <td><b>The pick.</b> Our 32-byte packet's 10 channels are named from this exact blendshape set — wiring is: matrix → quat+pos, pick 10 scores → encodePose(). No format change.</td>
+      </tr>
+      <tr>
+        <td><a href="https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker">MediaPipe Tasks — PoseLandmarker</a></td>
+        <td class="lic">Apache-2.0</td>
+        <td>33-keypoint body skeleton (BlazePose), webcam, browser.</td>
+        <td>The skeleton half of the original proposal — feeds a future v1 packet (bone rotations). Same runtime as FaceLandmarker.</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/tensorflow/tfjs-models/tree/master/pose-detection">TensorFlow.js pose-detection (MoveNet)</a></td>
+        <td class="lic">Apache-2.0</td>
+        <td>17-keypoint skeleton, 50+ fps on laptops/phones, fully client-side.</td>
+        <td>Lighter fallback if MediaPipe's bundle is too heavy for a target device.</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/vladmandic/human">vladmandic/human</a></td>
+        <td class="lic">MIT<br><span class="note">bundled models: check each</span></td>
+        <td>Face + body + hands + gestures in one library.</td>
+        <td>Convenient all-in-one; verify the per-model licences before shipping — not checked by us.</td>
+      </tr>
+    </table></div>
+  </div>
+
+  <div class="panel" style="margin-top:0.8rem">
+    <h2>Open avatar &amp; head models</h2>
+    <div class="wrap"><table class="cat">
+      <tr><th>source</th><th>licence</th><th>what it is</th><th>fit for splatweb</th></tr>
+      <tr>
+        <td><a href="https://github.com/polygonalmind/100Avatars">Polygonal Mind — 100Avatars R1/R2/R3</a></td>
+        <td class="lic">CC0<br><span class="note">verified</span></td>
+        <td>~300 stylised rigged avatars, VRM + FBX, one-a-day releases 2020/2021/2024.</td>
+        <td>Tier-2 mesh avatars: VRM humanoid rig + morphs driven by our packet. Big variety for an avatar picker.</td>
+      </tr>
+      <tr>
+        <td><a href="https://quaternius.com/">Quaternius packs</a><br><span class="note">e.g. <a href="https://quaternius.com/packs/universalbasecharacters.html">Universal Base Characters</a></span></td>
+        <td class="lic">CC0<br><span class="note">verified</span></td>
+        <td>Rigged low-poly humanoids and modular outfits, glTF + FBX, animated.</td>
+        <td>Clean low-poly Tier-2 bodies; pairs with a separate head.</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/mrdoob/three.js/tree/master/examples/models/gltf/LeePerrySmith">Lee Perry-Smith head scan</a></td>
+        <td class="lic">CC&nbsp;BY&nbsp;3.0<br><span class="note">verified; credit Infinite Realities / triplegangers.com</span></td>
+        <td>The classic photoreal scanned head, .glb, lives in the three.js examples.</td>
+        <td>The realism benchmark: displace/animate its vertices — or splat-ify it — and drive jaw/blink regions from the packet. Attribution required.</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/madjin/awesome-cc0">madjin/awesome-cc0</a></td>
+        <td class="lic">index<br><span class="note">per-item licences</span></td>
+        <td>Curated index of CC0 sources: 300 CC0 VRM avatars, base meshes, textures.</td>
+        <td>Where to look next; treat each entry's licence as unverified until read.</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/madjin/vrm-samples">madjin/vrm-samples (VRoid)</a></td>
+        <td class="lic">⚠ VRoid terms<br><span class="note">NOT CC0 — read before use</span></td>
+        <td>VRoid sample models in VRM.</td>
+        <td>Good for local experiments; do not redistribute without reading the VRoid licence.</td>
+      </tr>
+      <tr>
+        <td><a href="https://superspl.at/">superspl.at</a> (via <code>magpie/dbdb</code>)</td>
+        <td class="lic">per-scene CC<br><span class="note">BY / NC / ND mixed</span></td>
+        <td>Gaussian splat scans, including head/person scans.</td>
+        <td>The real endgame: a scanned splat head as the avatar. Follow the <i>splat-discovery</i> skill's licence-proof process — every scene needs its licence proven and its attribution shipped.</td>
+      </tr>
+    </table></div>
+  </div>
+
+  <p class="note" style="margin-top:0.8rem">Integration sketch (DESIGN.md phase 3):
+  FaceLandmarker runs in a worker → its transformation matrix becomes head
+  quat+position, 10 of its 52 blendshape scores fill the packet → the
+  existing encoder, network, buffer and renderers are untouched. A VRM
+  avatar (Tier 2) consumes the same packet through its humanoid bone +
+  morph-target names. The wire format is the contract; everything else is
+  swappable.</p>
+</main>
+</body>
+</html>

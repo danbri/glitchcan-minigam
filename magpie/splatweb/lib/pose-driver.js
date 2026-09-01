@@ -39,6 +39,8 @@ export class PoseDriver {
   // real mic level 0..1 overrides simulated talk; null returns to simulation
   setVoiceLevel(v) { this._voice = v; }
   setNeutral() { this._tYaw = 0; this._tPitch = 0; }
+  // flips the current yaw too, so toggling gives instant visible feedback
+  setMirror(m) { if (m !== this.mirror) { this.mirror = m; this._tYaw = -this._tYaw; } }
 
   // dt seconds; returns the current pose (same object, mutated)
   tick(dt, nowMs) {

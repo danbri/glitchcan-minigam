@@ -257,7 +257,9 @@ Live URLs once deployed:
    signalling first, then a signalling relay). Measure real latency.
 3. **Real capture:** MediaPipe FaceLandmarker in a worker → the same
    encoder. Compare wire format v0 sufficiency; spec v1 (44-byte, 20
-   channels) if needed.
+   channels) if needed. *(Speech-energy jaw via Web Audio already landed —
+   the MIC button in demo 3.)* Candidate stacks and openly licensed avatar
+   models, with verified licences: [`catalogue.html`](catalogue.html).
 4. **Real rooms:** load a dbdb `.compressed.ply` / pack element as the room
    bundle; avatar from a splat cutout.
 5. **Broadcast:** fan-out relay experiment; 1 sender → many read-only tabs.

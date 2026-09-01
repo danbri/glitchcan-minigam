@@ -71,7 +71,7 @@ const setTalk = on => { driver.setTalking(on); talkBtn.classList.toggle('on', on
 talkBtn.addEventListener('pointerdown', e => { e.preventDefault(); setTalk(true); });
 addEventListener('pointerup', () => setTalk(false));
 $('autoChk').addEventListener('change', e => { driver.auto = e.target.checked; if (!driver.auto) driver.setNeutral(); });
-$('mirrorChk').addEventListener('change', e => { driver.mirror = e.target.checked; });
+$('mirrorChk').addEventListener('change', e => driver.setMirror(e.target.checked));
 $('smile').addEventListener('input', e => {
   driver.setSmile(e.target.value / 100);
   $('smileOut').textContent = (e.target.value / 100).toFixed(2);
