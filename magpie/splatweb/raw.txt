@@ -1,0 +1,198 @@
+Initial proposal (danbri):
+"""how about a compression framework basd on gaussian splat "room avatars" that participants choose instead of pointing their camera at least messy bit of their room, and then massive cleanup / simplification / stylisation of that. And then same with their own presence, it could be a gaussian avatar but the realtime comms are skeleton moves and face/exression/gesture tracking, with some (ai? physics?) smarts to anticipate likely next frames. That way instead of spamming 10,000+ recipients with a series of 2D frames you give them realtime or controlled lag view of your chosen space and presentation. And if that includes media objects from the wider web they can be streamed directly from external sources via CDNs/cloudflare etc to viewers, not part of your own content stream. """
+
+
+Draft design (gemini):
+
+
+# Technical Specification: Web-Native Telemetry & Avatar Framework (XMPP MIX Suite)
+
+## 1. System Vision & Stack Architecture
+
+This architecture defines a zero-framework, 100% web-native spatial audio and telemetry-driven avatar system. It runs in any modern browser across mobile and desktop without requiring heavy third-party UI dependencies (e.g., React, Svelte, or Tailwind). The system encapsulates network, rendering, and capture logic into modular **Native Web Components (Custom Elements with Shadow DOM)** designed for seamless embedding into XMPP MIX-backed virtual offices, games, or collaboration suites.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        XMPP MIX Office / Game Suite                         │
+│                                                                             │
+│  ┌───────────────────────┐ ┌──────────────────────┐ ┌────────────────────┐ │
+│  │ <xmpp-mix-provider>   │ │ <telemetry-streamer> │ │ <avatar-viewport>  │ │
+│  │ (Auth, MIX, Presence) │ │ (WASM / Worker Ext.) │ │ (WebGPU/WASM Render│ │
+│  └───────────┬───────────┘ └──────────┬───────────┘ └─────────▲──────────┘ │
+└──────────────┼────────────────────────┼────────────────────────┼────────────┘
+               │ (WebSocket)            │ (MediaStream)          │ (DataChannel)
+               ▼                        ▼                        │
+      [ XMPP MIX Server ]   [ WebRTC Audio / P2P Mesh ] ───────────┘
+
+```
+
+---
+
+## 2. Core Technology Matrix
+
+| Layer | Standard / Technology | Implementation Details |
+| --- | --- | --- |
+| **UI & Encapsulation** | Native Web Components | Standard Custom Elements, Shadow DOM v1, CSS Custom Properties. Zero UI framework dependencies. |
+| **Compute & Capture** | WASM (C++/Rust) + Web Workers | Threaded pose/expression vector extraction via WASM SIMD; off-main-thread processing. |
+| **Rendering** | WebGPU (WGSL) / WebGL2 Fallback | Native WGSL compute shaders for 3D Gaussian Splats; WASM-based low-poly GLTF renderer fallback. |
+| **Media & Telemetry** | WebRTC Native API | `RTCPeerConnection` for Opus Audio (32–64 kbps) and un-ordered `RTCDataChannel` (telemetry packets). |
+| **Control & Signal** | XMPP over Secure WebSockets | Minimal native JS WebSocket parser for SASL2 (OIDC), MIX (XEP-0369), and MAM (XEP-0313). |
+
+---
+
+## 3. Web Component Suite Definition
+
+The system exposes five standalone, dependency-free Web Components:
+
+### `<xmpp-mix-provider>`
+
+Context provider and event bus handling server state, authentication, and room membership.
+
+* **Attributes:** `jid`, `token`, `ws-url`, `mix-channel`
+* **Events Emitted:** `mix:connected`, `mix:user-joined`, `mix:user-left`, `mix:spatial-update`
+
+### `<telemetry-streamer>`
+
+Captures local camera/microphone inputs, runs WASM landmark extraction in a Web Worker, and outputs encoded binary telemetry buffers.
+
+* **Attributes:** `fps="30"`, `bitrate="low"`, `active-avatar="mesh_01"`
+* **Methods:** `startCapture()`, `stopCapture()`, `getTelemetryStream()`
+
+### `<avatar-viewport>`
+
+WebGPU/WebGL canvas that subscribes to local or remote telemetry channels and renders the 3D room/avatar environment.
+
+* **Attributes:** `tier="auto|webgpu|webgl|2d"`, `src="room_bundle.splat"`, `view="spatial"`
+* **Public API:** `feedTelemetry(peerId, ArrayBuffer)`
+
+### `<webrtc-stage>`
+
+Manages multi-peer audio mixing and P2P DataChannel mesh topology for telemetry fan-out.
+
+* **Attributes:** `sfu-url`, `p2p-mesh="true"`, `buffer-ms="100"`
+
+### `<mix-spatial-map>`
+
+Optional 2D/3D tilemap element for game/office suites that tracks spatial coordinates ($x, y, z$) and binds proximity audio/telemetry streams.
+
+---
+
+## 4. Telemetry & Media Pipeline
+
+### Off-Thread WASM Extraction
+
+1. Camera video feed is passed directly to a `OffscreenCanvas` inside a dedicated `Web Worker`.
+2. A lightweight WASM module (compiled C++/Rust using SIMD instructions) extracts 52 ARKit facial blendshapes and head orientation quaternions in $< 5\text{ ms}$.
+3. Telemetry is serialized using a fixed-width binary ArrayBuffer (zero-copy ArrayBuffer transfer) to avoid JSON stringification overhead.
+
+### Binary Telemetry Packet Layout (32 Bytes Fixed Payload)
+
+```
+[ 0..3: Timestamp (uint32) ] 
+[ 4..7: Sequence (uint32) ]
+[ 8..15: Head Quaternion (4 x int16 normalized) ]
+[ 16..21: Head Position (3 x int16 quantized) ]
+[ 22..31: Top 20 Facial Blendshapes (20 x uint8 normalized) ]
+
+```
+
+### Network Distribution & Sync
+
+* **Audio Track:** Transported via standard WebRTC audio track (Opus codec, prioritized).
+* **Telemetry Channel:** Transported via un-reliable, un-ordered WebRTC `RTCDataChannel` to achieve lowest possible latency ($<30\text{ ms}$).
+* **Lip-Sync Alignment:** Web Audio API `AudioContext.currentTime` is cross-referenced with packet timestamps to interpolate pose matrices in sync with audio output buffers.
+
+---
+
+## 5. WebGPU / Multi-Tier Rendering Architecture
+
+```javascript
+// Dependency-Free Renderer Engine Lifecycle (Inside <avatar-viewport>)
+class AvatarViewport extends HTMLElement {
+  connectedCallback() {
+    this.attachShadow({ mode: 'open' });
+    this.canvas = document.createElement('canvas');
+    this.shadowRoot.appendChild(this.canvas);
+    this.initRenderer();
+  }
+
+  async initRenderer() {
+    if (navigator.gpu && this.getAttribute('tier') !== 'webgl') {
+      const adapter = await navigator.gpu.requestAdapter();
+      const device = await adapter.requestDevice();
+      this.renderer = new WebGPUSplatRenderer(this.canvas, device);
+    } else if (window.WebGL2RenderingContext) {
+      this.renderer = new WASMGLTFMeshRenderer(this.canvas);
+    } else {
+      this.renderer = new VectorCanvas2DRenderer(this.canvas);
+    }
+  }
+}
+customElements.define('avatar-viewport', AvatarViewport);
+
+```
+
+### Tier 1: WebGPU Compute-Shader Splatting
+
+* **Target:** High-end mobile (iOS/Android with WebGPU enabled) and Desktop.
+* **Technique:** Custom WGSL compute shaders perform tile-based sorting of 3D Gaussian Splats on the GPU.
+* **Asset Loading:** Pre-fetched `.splat` scene bundles parsed via Web Workers directly into GPU buffers.
+
+### Tier 2: WASM Low-Poly Mesh (GLTF/VRM)
+
+* **Target:** Standard mobile devices, browsers without WebGPU.
+* **Technique:** Lightweight C++/WASM rasterizer or WebGL2 shader applying bone matrix IK and morph target weights based on the 32-byte binary pose packet.
+
+### Tier 3: 2D Canvas Sprite / Vector Fallback
+
+* **Target:** Low-power mobile devices, background tabs, battery-saver modes.
+* **Technique:** Zero WebGL usage. Canvas 2D draws vector keyframe interpolations driven by `jawOpen` and `eyeBlink` parameters.
+
+---
+
+## 6. XMPP MIX Integration Pattern
+
+### MIX Channel Control Flow
+
+1. `<xmpp-mix-provider>` connects via native `WebSocket` to the XMPP server (e.g., ejabberd / Prosody).
+2. Authenticates using OIDC SASL2 token: `<auth mechanism="OAUTHBEARER">`.
+3. Joins MIX channel (XEP-0369) and queries MAM (XEP-0313) for text history.
+4. Broadcasts spatial coordinate packets via MIX presence node (`<presence>`) or PubSub (XEP-0060) to declare 3D office/game positions.
+
+```xml
+<!-- XMPP MIX Presence with Spatial & WebRTC Signaling Metadata -->
+<presence to='office-lounge@mix.server.org'>
+  <mix xmlns='urn:xmpp:mix:core:1'/>
+  <spatial xmlns='urn:app:spatial'>
+    <pos x='12.5' y='0.0' z='-3.2'/>
+    <orient yaw='180'/>
+  </spatial>
+  <webrtc xmlns='urn:app:webrtc' peer-id='user-node-99'/>
+</presence>
+
+```
+
+---
+
+## 7. Implementation Blueprint for AI Coding Tools
+
+Prompting instructions for generating the codebase:
+
+### Phase 1: Native Custom Elements Framework
+
+* Build `<xmpp-mix-provider>` as a pure ES Module class extending `HTMLElement`. Implement native WebSocket handling for XMPP stanzas without external dependencies.
+* Construct Shadow DOM styles using CSS Custom Properties for embedding inside virtual office themes.
+
+### Phase 2: WASM & Worker Telemetry Extractor
+
+* Implement a C++/Rust WASM module compiling SIMD operations for landmark array quantization down to a 32-byte binary ArrayBuffer.
+* Write the `OffscreenCanvas` worker pipeline to process video frames and transfer `ArrayBuffer` objects back to the main thread with zero copy.
+
+### Phase 3: Native WebGPU/WGSL Engine
+
+* Write a raw WGSL compute shader for sorting and rendering 3D Gaussian point clouds on a WebGPU canvas context.
+* Implement a Three.js-free GLTF parser in JS/WASM targeting WebGL2 as Tier 2 fallback.
+
+### Phase 4: WebRTC DataChannel Mesh Component
+
+* Build `<webrtc-stage>` to negotiate P2P mesh connections for low-latency telemetry transport, complete with NTP time synchronization between Opus audio frames and pose ArrayBuffers.

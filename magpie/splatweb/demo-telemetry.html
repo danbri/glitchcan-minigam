@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>splatweb demo 1 — the 32-byte presence packet</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫧</text></svg>">
+<link rel="stylesheet" href="demo.css">
+</head>
+<body>
+<header class="demo">
+  <h1>Demo 1 — the 32-byte presence packet</h1>
+  <nav><a href="index.html">hub</a> · <a href="demo-splat-room.html">room</a> · <a href="demo-stage.html">stage</a></nav>
+</header>
+<main>
+  <p class="note">Drag on the left face to move the head. Hold TALK to speak.
+  The left face is the sender's raw pose. The right face is drawn ONLY from
+  the decoded 32-byte packet — Tier-3 rendering from the wire format.
+  Capture is simulated (no camera); see DESIGN.md.</p>
+
+  <div class="row">
+    <div class="panel">
+      <h2>Sender (raw pose — drag me)</h2>
+      <canvas class="face" id="senderFace" width="400" height="400"></canvas>
+      <div class="ctl" style="margin-top:0.5rem">
+        <button class="hold" id="talkBtn">TALK (hold)</button>
+        <label style="flex:0 0 auto"><input type="checkbox" id="autoChk" checked> auto-perform</label>
+      </div>
+      <div class="ctl"><label>smile</label>
+        <input type="range" id="smile" min="0" max="100" value="15"><output id="smileOut">0.15</output></div>
+    </div>
+    <div class="panel">
+      <h2>Receiver (decoded from packet only)</h2>
+      <canvas class="face" id="rxFace" width="400" height="400"></canvas>
+      <table class="kv" style="margin-top:0.5rem">
+        <tr><td>quat error</td><td id="errQuat">–</td></tr>
+        <tr><td>position error</td><td id="errPos">–</td></tr>
+        <tr><td>blendshape error</td><td id="errBlend">–</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:0.8rem">
+    <div class="panel">
+      <h2>The packet (live hex, 32 bytes)</h2>
+      <pre class="hex" id="hex"></pre>
+      <table class="kv" style="margin-top:0.5rem" id="decoded"></table>
+    </div>
+    <div class="panel">
+      <h2>Bandwidth</h2>
+      <div class="ctl"><label>packet rate</label>
+        <input type="range" id="rate" min="10" max="60" value="30"><output id="rateOut">30 Hz</output></div>
+      <div id="bars"></div>
+      <p class="note" id="bwSummary"></p>
+    </div>
+  </div>
+</main>
+<script type="module">
+import { encodePose, decodePose, hexDump, bandwidthStats, BLENDSHAPES, makePose } from './lib/telemetry-codec.js';
+import { qAngleDeg, qToEuler } from './lib/pose-math.js';
+import { PoseDriver, bindPointerPad } from './lib/pose-driver.js';
+import { drawFace } from './lib/face2d.js';
+
+const $ = id => document.getElementById(id);
+const driver = new PoseDriver();
+bindPointerPad($('senderFace'), driver);
+
+const talkBtn = $('talkBtn');
+const setTalk = on => { driver.setTalking(on); talkBtn.classList.toggle('on', on); };
+talkBtn.addEventListener('pointerdown', e => { e.preventDefault(); setTalk(true); });
+addEventListener('pointerup', () => setTalk(false));
+$('autoChk').addEventListener('change', e => { driver.auto = e.target.checked; });
+$('smile').addEventListener('input', e => {
+  driver.setSmile(e.target.value / 100);
+  $('smileOut').textContent = (e.target.value / 100).toFixed(2);
+});
+
+function refreshBandwidth() {
+  const hz = +$('rate').value;
+  $('rateOut').textContent = hz + ' Hz';
+  const s = bandwidthStats(hz);
+  const rows = [
+    ['telemetry payload', s.payloadKbps, ''],
+    ['telemetry on the wire', s.wireKbps, ''],
+    ['presence total (+ Opus voice)', s.withOpusKbps, ''],
+    ['720p30 video call', s.videoKbps, 'video'],
+  ];
+  const max = s.videoKbps;
+  $('bars').innerHTML = rows.map(([label, v, cls]) =>
+    `<div class="barlabel">${label} — ${v < 100 ? v.toFixed(1) : Math.round(v)} kbit/s</div>
+     <div class="bar ${cls}" style="width:${Math.max(0.3, 100 * v / max)}%"></div>`).join('');
+  $('bwSummary').textContent =
+    `Presence is ${(s.videoKbps / s.withOpusKbps).toFixed(0)}× cheaper than the video call — ` +
+    `and the room, avatar and wall media are cached CDN assets, not stream.`;
+}
+$('rate').addEventListener('input', refreshBandwidth);
+refreshBandwidth();
+
+const senderCtx = $('senderFace').getContext('2d');
+const rxCtx = $('rxFace').getContext('2d');
+const rxPose = makePose();
+const packet = new ArrayBuffer(32);
+let last = performance.now(), uiTimer = 0;
+
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  const pose = driver.tick(dt, now);
+  encodePose(pose, packet);
+  decodePose(packet, rxPose);
+
+  drawFace(senderCtx, pose, { label: 'raw' });
+  drawFace(rxCtx, rxPose, { label: 'decoded' });
+
+  uiTimer -= dt;
+  if (uiTimer <= 0) {
+    uiTimer = 0.12;
+    $('hex').textContent = hexDump(packet);
+    $('errQuat').textContent = qAngleDeg(pose.quat, rxPose.quat).toFixed(4) + ' °';
+    const pe = Math.max(...pose.pos.map((v, i) => Math.abs(v - rxPose.pos[i])));
+    $('errPos').textContent = (pe * 1000).toFixed(2) + ' mm';
+    const be = Math.max(...[...pose.blend].map((v, i) => Math.abs(v - rxPose.blend[i])));
+    $('errBlend').textContent = be.toFixed(4);
+
+    const e = qToEuler(rxPose.quat);
+    const deg = r => (r * 180 / Math.PI).toFixed(1) + '°';
+    let html = `<tr><td>t / seq</td><td>${rxPose.tMs} ms / #${rxPose.seq}</td></tr>
+      <tr><td>head yaw·pitch·roll</td><td>${deg(e.yaw)} · ${deg(e.pitch)} · ${deg(e.roll)}</td></tr>
+      <tr><td>head pos (m)</td><td>${rxPose.pos.map(v => v.toFixed(3)).join(', ')}</td></tr>`;
+    for (let i = 0; i < BLENDSHAPES.length; i++) {
+      html += `<tr><td>${BLENDSHAPES[i]}</td><td>${rxPose.blend[i].toFixed(3)}</td></tr>`;
+    }
+    $('decoded').innerHTML = html;
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

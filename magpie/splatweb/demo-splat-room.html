@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>splatweb demo 2 — the room avatar</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫧</text></svg>">
+<link rel="stylesheet" href="demo.css">
+</head>
+<body>
+<header class="demo">
+  <h1>Demo 2 — the room avatar (WebGL2 splats)</h1>
+  <nav><a href="index.html">hub</a> · <a href="demo-telemetry.html">packet</a> · <a href="demo-stage.html">stage</a></nav>
+</header>
+<main>
+  <p class="note">A procedural stand-in for a scanned + stylised room bundle:
+  ~3,000 Gaussian splats, rendered by a dependency-free WebGL2 rasterizer
+  (covariance projection, eigen ellipses, CPU depth sort). Drag to orbit,
+  wheel/pinch to zoom. The stylise slider quantizes the palette in-shader —
+  a taste of the runtime end of the clean/simplify/stylise pipeline.</p>
+
+  <div class="panel">
+    <canvas class="gl" id="gl"></canvas>
+    <div class="ctl" style="margin-top:0.5rem"><label>stylise</label>
+      <input type="range" id="style" min="0" max="8" value="0"><output id="styleOut">off</output></div>
+    <div class="stat" id="stats">–</div>
+  </div>
+</main>
+<script type="module">
+import { SplatRenderer } from './lib/splat-renderer.js';
+import { buildRoom } from './lib/scene-builder.js';
+
+const canvas = document.getElementById('gl');
+const statsEl = document.getElementById('stats');
+let renderer;
+try {
+  renderer = new SplatRenderer(canvas);
+} catch (e) {
+  statsEl.textContent = 'WebGL2 not available: ' + e.message;
+  throw e;
+}
+const room = buildRoom();
+renderer.setData(room.toFloat32(), room.count);
+
+// orbit camera
+let theta = 0.35, phi = 1.25, radius = 6.5;
+const target = [0, 1.1, 0];
+function applyCamera() {
+  theta = Math.max(-1.2, Math.min(1.2, theta));
+  phi = Math.max(0.15, Math.min(1.5, phi));
+  radius = Math.max(1.5, Math.min(12, radius));
+  renderer.setCamera([
+    target[0] + radius * Math.sin(theta) * Math.sin(phi),
+    target[1] + radius * Math.cos(phi),
+    target[2] + radius * Math.cos(theta) * Math.sin(phi),
+  ], target);
+}
+applyCamera();
+
+const pointers = new Map();
+let lastPinch = 0;
+canvas.addEventListener('pointerdown', e => { pointers.set(e.pointerId, [e.clientX, e.clientY]); canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', e => {
+  if (!pointers.has(e.pointerId)) return;
+  const prev = pointers.get(e.pointerId);
+  pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pointers.size === 1) {
+    theta -= (e.clientX - prev[0]) * 0.005;
+    phi -= (e.clientY - prev[1]) * 0.005;
+  } else if (pointers.size === 2) {
+    const pts = [...pointers.values()];
+    const d = Math.hypot(pts[0][0] - pts[1][0], pts[0][1] - pts[1][1]);
+    if (lastPinch) radius *= lastPinch / d;
+    lastPinch = d;
+  }
+  applyCamera();
+});
+const endPtr = e => { pointers.delete(e.pointerId); lastPinch = 0; };
+canvas.addEventListener('pointerup', endPtr);
+canvas.addEventListener('pointercancel', endPtr);
+canvas.addEventListener('wheel', e => { e.preventDefault(); radius *= Math.exp(e.deltaY * 0.001); applyCamera(); }, { passive: false });
+
+const styleEl = document.getElementById('style');
+styleEl.addEventListener('input', () => {
+  const v = +styleEl.value;
+  renderer.styleLevels = v;
+  document.getElementById('styleOut').textContent = v ? v + ' levels' : 'off';
+});
+
+let frames = 0, fpsT = performance.now(), fps = 0;
+function frame(now) {
+  renderer.render();
+  frames++;
+  if (now - fpsT > 1000) {
+    fps = frames * 1000 / (now - fpsT); frames = 0; fpsT = now;
+    statsEl.textContent = `${room.count.toLocaleString()} splats · ${fps.toFixed(0)} fps · ${canvas.width}×${canvas.height}`;
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

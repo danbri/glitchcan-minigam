@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>splatweb demo 3 — the stage (full pipeline)</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫧</text></svg>">
+<link rel="stylesheet" href="demo.css">
+</head>
+<body>
+<header class="demo">
+  <h1>Demo 3 — the stage: pose → packet → lossy net → splat viewer</h1>
+  <nav><a href="index.html">hub</a> · <a href="demo-telemetry.html">packet</a> · <a href="demo-splat-room.html">room</a></nav>
+</header>
+<main>
+  <p class="note">The whole thesis in one page. The sender's pose is encoded
+  into 32-byte packets and pushed through a simulated lossy channel; the
+  viewer decodes, jitter-buffers, interpolates and (briefly) extrapolates,
+  and renders the splat room + splat avatar. Turn the loss and jitter up and
+  watch the avatar stay coherent. Network and capture are simulated in-page
+  (DESIGN.md §6).</p>
+
+  <div class="row">
+    <div class="panel" style="flex:2 1 420px">
+      <h2>Viewer (drag to orbit) — reconstructed from packets only</h2>
+      <canvas class="gl" id="gl"></canvas>
+      <div class="stat" id="stats" style="margin-top:0.4rem">–</div>
+      <div style="margin-top:0.3rem"><span class="badge ok" id="linkBadge">live</span></div>
+    </div>
+    <div class="panel" style="flex:1 1 260px">
+      <h2>Sender (truth — drag the face)</h2>
+      <canvas class="face" id="senderFace" width="300" height="300"></canvas>
+      <div class="ctl" style="margin-top:0.4rem">
+        <button class="hold" id="talkBtn">TALK</button>
+        <label style="flex:0 0 auto"><input type="checkbox" id="autoChk" checked> auto</label>
+      </div>
+      <h2 style="margin-top:0.8rem">Network</h2>
+      <div class="ctl"><label>latency</label><input type="range" id="latency" min="0" max="500" value="80"><output id="latencyOut">80 ms</output></div>
+      <div class="ctl"><label>jitter</label><input type="range" id="jitter" min="0" max="200" value="30"><output id="jitterOut">30 ms</output></div>
+      <div class="ctl"><label>packet loss</label><input type="range" id="loss" min="0" max="50" value="5"><output id="lossOut">5 %</output></div>
+      <div class="ctl"><label>send rate</label><input type="range" id="rate" min="5" max="60" value="30"><output id="rateOut">30 Hz</output></div>
+      <div class="ctl"><label>jitter buffer</label><input type="range" id="buffer" min="0" max="300" value="100"><output id="bufferOut">100 ms</output></div>
+    </div>
+  </div>
+</main>
+<script type="module">
+import { encodePose, decodePose, makePose } from './lib/telemetry-codec.js';
+import { PoseDriver, bindPointerPad } from './lib/pose-driver.js';
+import { NetworkSim } from './lib/network-sim.js';
+import { PoseBuffer } from './lib/pose-buffer.js';
+import { SplatRenderer, FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { buildRoom, buildAvatarSplats } from './lib/scene-builder.js';
+import { drawFace } from './lib/face2d.js';
+
+const $ = id => document.getElementById(id);
+const canvas = $('gl');
+const statsEl = $('stats');
+let renderer;
+try { renderer = new SplatRenderer(canvas); }
+catch (e) { statsEl.textContent = 'WebGL2 not available: ' + e.message; throw e; }
+
+// scene: room + avatar block appended after it
+const AV_AT = [0, 0, -1.0];
+const room = buildRoom();
+const avatarRest = buildAvatarSplats(null, AV_AT);
+const avatarCount = avatarRest.count;
+const data = new Float32Array((room.count + avatarCount) * FLOATS_PER_SPLAT);
+data.set(room.toFloat32());
+data.set(avatarRest.toFloat32(), room.count * FLOATS_PER_SPLAT);
+renderer.setData(data, room.count + avatarCount);
+
+// pipeline pieces
+const driver = new PoseDriver();
+bindPointerPad($('senderFace'), driver);
+const net = new NetworkSim();
+const buffer = new PoseBuffer();
+const packet = new ArrayBuffer(32);
+const rxScratch = makePose();
+
+// controls
+const talkBtn = $('talkBtn');
+const setTalk = on => { driver.setTalking(on); talkBtn.classList.toggle('on', on); };
+talkBtn.addEventListener('pointerdown', e => { e.preventDefault(); setTalk(true); });
+addEventListener('pointerup', () => setTalk(false));
+$('autoChk').addEventListener('change', e => { driver.auto = e.target.checked; });
+const wire = (id, unit, apply) => {
+  const el = $(id), out = $(id + 'Out');
+  const f = () => { out.textContent = el.value + ' ' + unit; apply(+el.value); };
+  el.addEventListener('input', f); f();
+};
+wire('latency', 'ms', v => { net.latencyMs = v; });
+wire('jitter', 'ms', v => { net.jitterMs = v; });
+wire('loss', '%', v => { net.lossPct = v; });
+wire('rate', 'Hz', () => {});
+wire('buffer', 'ms', v => { buffer.bufferMs = v; });
+
+// orbit
+let theta = 0.0, phi = 1.35, radius = 3.4;
+const target = [0, 1.25, -1.0];
+function applyCamera() {
+  theta = Math.max(-1.1, Math.min(1.1, theta));
+  phi = Math.max(0.3, Math.min(1.5, phi));
+  radius = Math.max(1.2, Math.min(9, radius));
+  renderer.setCamera([
+    target[0] + radius * Math.sin(theta) * Math.sin(phi),
+    target[1] + radius * Math.cos(phi),
+    target[2] + radius * Math.cos(theta) * Math.sin(phi),
+  ], target);
+}
+applyCamera();
+let drag = null;
+canvas.addEventListener('pointerdown', e => { drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', e => {
+  if (!drag) return;
+  theta -= (e.clientX - drag[0]) * 0.005;
+  phi -= (e.clientY - drag[1]) * 0.005;
+  drag = [e.clientX, e.clientY];
+  applyCamera();
+});
+canvas.addEventListener('pointerup', () => { drag = null; });
+canvas.addEventListener('wheel', e => { e.preventDefault(); radius *= Math.exp(e.deltaY * 0.001); applyCamera(); }, { passive: false });
+
+const senderCtx = $('senderFace').getContext('2d');
+let last = performance.now(), sendAcc = 0, statTimer = 0, extrapEvents = 0, wasExtrap = false;
+
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000);
+  const dtMs = now - last; last = now;
+
+  // SENDER: capture + encode + send at the chosen rate
+  const pose = driver.tick(dt, now);
+  sendAcc += dt;
+  const interval = 1 / +$('rate').value;
+  while (sendAcc >= interval) {
+    sendAcc -= interval;
+    net.send(encodePose(pose, packet).slice(0), now);
+  }
+
+  // NETWORK → RECEIVER
+  for (const payload of net.drain(now)) buffer.push(decodePose(payload, rxScratch));
+  const rx = buffer.sample(dtMs);
+
+  if (buffer.extrapolating && !wasExtrap) extrapEvents++;
+  wasExtrap = buffer.extrapolating;
+
+  // rebuild the avatar block from the RECEIVED pose only
+  const av = buildAvatarSplats(rx, AV_AT).toFloat32();
+  if (buffer.frozen) {
+    // dead feed → fade to statue, never fake liveness (DESIGN.md §9)
+    for (let i = 13; i < av.length; i += FLOATS_PER_SPLAT) av[i] *= 0.45;
+  }
+  renderer.writeRegion(room.count, av);
+  renderer.render();
+
+  drawFace(senderCtx, pose, { label: 'sender truth' });
+
+  statTimer -= dt;
+  if (statTimer <= 0) {
+    statTimer = 0.25;
+    const eff = now - (rx ? rx.tMs : now);
+    statsEl.textContent =
+      `${net.kbps(now).toFixed(1)} kbit/s wire · loss ${net.lossActualPct().toFixed(1)}% ` +
+      `(${net.dropped}/${net.sent}) · glass-to-glass ≈ ${rx ? eff.toFixed(0) : '–'} ms · ` +
+      `extrapolation events ${extrapEvents}`;
+    const badge = $('linkBadge');
+    if (buffer.frozen) { badge.className = 'badge bad'; badge.textContent = 'FROZEN (feed stale > 200 ms)'; }
+    else if (buffer.extrapolating) { badge.className = 'badge warn'; badge.textContent = 'extrapolating'; }
+    else { badge.className = 'badge ok'; badge.textContent = 'live · interpolating'; }
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

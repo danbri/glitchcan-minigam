@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>splatweb — telemetry-driven splat telepresence</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫧</text></svg>">
+<link rel="stylesheet" href="demo.css">
+<style>
+  .hero { padding: 1.2rem 1rem 0.4rem; max-width: 1100px; margin: 0 auto; }
+  .hero h1 { font-size: 1.4rem; margin: 0 0 0.4rem; }
+  .hero p { color: #a7abbd; max-width: 60em; }
+  a.card { display: block; text-decoration: none; color: inherit; }
+  a.card:hover .panel { border-color: #3a5580; }
+  .panel h3 { margin: 0 0 0.3rem; font-size: 1rem; color: #cfe0ff; }
+  .num { font-family: ui-monospace, Menlo, monospace; color: #7fb4ff; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+<div class="hero">
+  <h1>splatweb — presence, not pixels</h1>
+  <p>Instead of streaming video of your room and face, stream a <b>32-byte
+  pose packet</b> at 30&nbsp;Hz plus voice, and let viewers reconstruct you
+  inside a cached, CDN-served Gaussian-splat "room avatar". ~40&nbsp;kbit/s
+  of live traffic instead of ~1,500 — and fan-out to thousands without a
+  video transcode in sight. Design doc: <a href="DESIGN.md">DESIGN.md</a>
+  (original draft: <a href="raw.txt">raw.txt</a>).</p>
+</div>
+<main>
+  <div class="row">
+    <a class="card" href="demo-telemetry.html" style="flex:1 1 300px">
+      <div class="panel">
+        <div class="num">DEMO 1</div>
+        <h3>The 32-byte packet</h3>
+        <p class="note">Live hex view of the wire format. Drive a face,
+        watch it encode, decode it into a second face, read the
+        quantization error and the bandwidth-vs-video meter. Includes the
+        Tier-3 Canvas-2D renderer.</p>
+      </div>
+    </a>
+    <a class="card" href="demo-splat-room.html" style="flex:1 1 300px">
+      <div class="panel">
+        <div class="num">DEMO 2</div>
+        <h3>The room avatar</h3>
+        <p class="note">A ~3,000-splat procedural room rendered by a
+        dependency-free WebGL2 Gaussian-splat rasterizer (Tier 1). Orbit,
+        zoom, and try the in-shader stylise slider.</p>
+      </div>
+    </a>
+    <a class="card" href="demo-stage.html" style="flex:1 1 300px">
+      <div class="panel">
+        <div class="num">DEMO 3</div>
+        <h3>The stage — full pipeline</h3>
+        <p class="note">Pose → packet → simulated lossy network (latency /
+        jitter / loss sliders) → jitter buffer with interpolation and
+        capped dead-reckoning → splat room + splat avatar. Crank the loss
+        and watch presence survive.</p>
+      </div>
+    </a>
+  </div>
+  <p class="note" style="margin-top:1rem">Honesty box: capture and network
+  are simulated in-page; the room is procedural, not a scan; no XMPP yet.
+  What is real: the wire format, the receiver model, and the splat
+  renderer. See DESIGN.md §6.</p>
+</main>
+</body>
+</html>
