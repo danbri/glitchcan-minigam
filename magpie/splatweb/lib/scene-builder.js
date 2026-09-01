@@ -146,12 +146,26 @@ function basisToQuat(x, y, z) {
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
+// Appearance presets for the procedural avatar. hairLine is the ny
+// threshold where hair starts (higher = receding; >0.85 ≈ bald).
+export const AVATAR_PRESETS = [
+  { id: 'hazel', name: 'Hazel', skin: [0.85, 0.64, 0.52], hair: [0.23, 0.16, 0.11], shirt: [0.24, 0.33, 0.45], hairLine: 0.40 },
+  { id: 'kofi', name: 'Kofi', skin: [0.45, 0.30, 0.22], hair: [0.09, 0.07, 0.06], shirt: [0.72, 0.55, 0.20], hairLine: 0.40 },
+  { id: 'saoirse', name: 'Saoirse', skin: [0.93, 0.76, 0.66], hair: [0.65, 0.35, 0.16], shirt: [0.25, 0.45, 0.30], hairLine: 0.40 },
+  { id: 'nadia', name: 'Nadia', skin: [0.72, 0.52, 0.40], hair: [0.12, 0.10, 0.09], shirt: [0.50, 0.20, 0.25], hairLine: 0.40 },
+  { id: 'silas', name: 'Silas', skin: [0.55, 0.38, 0.30], hair: [0.60, 0.60, 0.62], shirt: [0.18, 0.42, 0.42], hairLine: 0.55 },
+  { id: 'bjorn', name: 'Björn', skin: [0.90, 0.72, 0.60], hair: [0.78, 0.68, 0.45], shirt: [0.40, 0.30, 0.55], hairLine: 0.88 },
+];
+
 export function avatarSplatCount() { return buildAvatarSplats(null).count; }
 
 // pose: decoded telemetry pose, or null for rest. Returns a SplatList in
 // WORLD space (head rotated by pose.quat around the neck, then translated
 // so the neck sits at pose.pos + at).
-export function buildAvatarSplats(pose, at = [0, 0, 0]) {
+export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim = {}) {
+  const A = appearance || AVATAR_PRESETS[0];
+  // shadow the module colour constants with this avatar's appearance
+  const SKIN = A.skin, HAIR = A.hair, SHIRT = A.shirt;
   const s = new SplatList();
   const b = pose ? pose.blend : new Float32Array(10);
   const q = pose ? pose.quat : [0, 0, 0, 1];
@@ -184,7 +198,7 @@ export function buildAvatarSplats(pose, at = [0, 0, 0]) {
     const backB = 1 + Math.max(0, -nz) * 0.10;          // occipital bulge
     const faceF = nz > 0 ? 0.94 : 1.0;                  // flatter face plane
     // hairline: full top and back; forehead and face stay skin
-    const isHair = (ny > 0.40 && !(nz > 0.32 && ny < 0.60)) || (nz < -0.28 && ny > -0.3);
+    const isHair = (ny > A.hairLine && !(nz > 0.32 && ny < A.hairLine + 0.2)) || (A.hairLine < 0.8 && nz < -0.28 && ny > -0.3);
     const sh = lambert(n);
     const tone = (rnd() - 0.5) * 0.05;
     const pos = [nx * RX * taper * (isHair ? 1.05 : 1), CY + ny * RY * (isHair ? 1.04 : 1),
@@ -294,12 +308,51 @@ export function buildAvatarSplats(pose, at = [0, 0, 0]) {
         [0.05, 0.045, 0.04], shirt([Math.cos(a), 0.15, Math.sin(a)], 0.94 + rnd() * 0.12));
     }
   }
+  // arms + hands: shoulder → elbow → wrist → palm + fingers, short
+  // sleeves. LOCAL animation only — the 32-byte packet carries no arm
+  // telemetry yet (that is packet v1 + PoseLandmarker, DESIGN.md §8);
+  // idle sway and talk gesticulation are synthesised viewer-side so the
+  // rig is ready for real skeleton data.
+  const skinW = (n, mul = 1) => {
+    const sh = (0.55 + 0.5 * Math.max(0, dot(normalize(n), LIGHT))) * mul;
+    return [SKIN[0] * sh, SKIN[1] * sh, SKIN[2] * sh];
+  };
+  const tA = anim.t || 0;
+  const gest = jaw > 0.15 ? 1 : 0;
+  const v3 = (a, d, k) => [a[0] + d[0] * k, a[1] + d[1] * k, a[2] + d[2] * k];
   for (const sx of [-1, 1]) {
     addWorld(s, base, [sx * 0.205, 1.41, 0], [0.062, 0.034, 0.048], shirt([sx * 0.5, 1, 0.2]));
-    for (let yi = 0; yi < 5; yi++) {
-      addWorld(s, base, [sx * 0.235, 1.18 + yi * 0.05, 0.01], [0.034, 0.048, 0.034],
-        shirt([sx, 0.1, 0.3], 0.92 + rnd() * 0.12));
+    const sway = Math.sin(tA * 0.9 + sx * 1.7) * 0.05;
+    const lift = gest * (0.35 + 0.25 * Math.sin(tA * 3.1 + sx * 2.1));
+    const outA = 0.16 + sway + lift * 0.6;
+    const shoulder = [sx * 0.215, 1.395, 0.0];
+    const ud = normalize([sx * Math.sin(outA), -Math.cos(outA), 0.03]);
+    const elbow = v3(shoulder, ud, 0.25);
+    const bend = 0.35 + lift * 1.5 + 0.06 * Math.sin(tA * 1.3 + sx);
+    const fd = normalize([ud[0] * 0.85, ud[1] * Math.cos(bend), Math.sin(bend) * 0.9 + 0.05]);
+    const wrist = v3(elbow, fd, 0.22);
+    for (let i = 0; i <= 4; i++) {   // upper arm — sleeve
+      addWorld(s, base, v3(shoulder, ud, 0.05 + i * 0.05), [0.036, 0.036, 0.032],
+        shirt([sx, 0.2, 0.4], 0.9 + i * 0.02));
     }
+    for (let i = 0; i <= 4; i++) {   // forearm — skin
+      const r = 0.03 - i * 0.002;
+      addWorld(s, base, v3(elbow, fd, 0.03 + i * 0.048), [r, r, r * 0.9],
+        skinW([sx, 0.2, 0.5], 0.95));
+    }
+    // hand: palm, four fingers, thumb — enough articulation points for
+    // future skeleton gesture matching to have somewhere to land
+    const palm = v3(wrist, fd, 0.045);
+    addWorld(s, base, palm, [0.032, 0.018, 0.04], skinW([sx, 0.1, 0.6]));
+    const side = normalize([fd[2] * sx, 0, -fd[0] * sx]);   // across the palm
+    for (let f = 0; f < 4; f++) {
+      const spread = (f - 1.5) * 0.014;
+      const fpos = v3(v3(palm, fd, 0.045), side, spread);
+      addWorld(s, base, fpos, [0.008, 0.008, 0.02], skinW([sx, 0.1, 0.7], 0.97));
+      addWorld(s, base, v3(fpos, fd, 0.02), [0.007, 0.007, 0.014], skinW([sx, 0.1, 0.7], 0.94));
+    }
+    addWorld(s, base, v3(v3(palm, side, -0.032), fd, 0.012),
+      [0.009, 0.009, 0.016], skinW([sx, 0.2, 0.6], 0.96));
   }
   return s;
 }

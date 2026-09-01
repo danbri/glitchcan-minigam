@@ -10,6 +10,14 @@ version of this list, with licence links: [`../catalogue.html`](../catalogue.htm
 | `100avatars/100Avatars_004_OldMoustache.vrm` | rigged avatar | Polygonal Mind | **CC BY 4.0** — see `CCLicense.md` (the repo's own licence file; some catalogues wrongly say CC0) | https://github.com/polygonalmind/100Avatars |
 | `100avatars/100Avatars_010_Froggy.vrm` | rigged avatar | Polygonal Mind | CC BY 4.0 | https://github.com/polygonalmind/100Avatars |
 | `100avatars/100Avatars_042_Scarecrow.vrm` | rigged avatar | Polygonal Mind | CC BY 4.0 | https://github.com/polygonalmind/100Avatars |
+| `100avatars/100Avatars_007_Observer.vrm` | rigged avatar | Polygonal Mind | CC BY 4.0 | https://github.com/polygonalmind/100Avatars |
+| `100avatars/100Avatars_013_Mint.vrm` | rigged avatar | Polygonal Mind | CC BY 4.0 | https://github.com/polygonalmind/100Avatars |
+| `100avatars/100Avatars_019_Wizzir.vrm` | rigged avatar | Polygonal Mind | CC BY 4.0 | https://github.com/polygonalmind/100Avatars |
+| `100avatars/100Avatars_027_Astrodisco.vrm` | rigged avatar | Polygonal Mind | CC BY 4.0 | https://github.com/polygonalmind/100Avatars |
+| `100avatars/100Avatars_048_Astronaut.vrm` | rigged avatar | Polygonal Mind | CC BY 4.0 | https://github.com/polygonalmind/100Avatars |
+| `100avatars/100Avatars_069_Kyle.vrm` | rigged avatar | Polygonal Mind | CC BY 4.0 | https://github.com/polygonalmind/100Avatars |
+| `100avatars/100Avatars_081_Toothpaste.vrm` | rigged avatar | Polygonal Mind | CC BY 4.0 | https://github.com/polygonalmind/100Avatars |
+| `100avatars/100Avatars_088_Avocado.vrm` | rigged avatar | Polygonal Mind | CC BY 4.0 | https://github.com/polygonalmind/100Avatars |
 
 Not vendored (no direct-download link to automate): Quaternius packs
 (CC0, https://quaternius.com/) — add manually if wanted.

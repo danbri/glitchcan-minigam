@@ -18,9 +18,9 @@
   viewer decodes, jitter-buffers, interpolates and (briefly) extrapolates,
   and renders the splat room + splat avatar. Turn the loss and jitter up and
   watch the avatar stay coherent. Network and capture are simulated in-page
-  (DESIGN.md §6). The second figure in the room is
-  <a href="catalogue.html" style="color:#7fb4ff">100Avatars “Froggy” by Polygonal Mind (CC BY 4.0)</a>,
-  splat-ified from its VRM at load time.</p>
+  (DESIGN.md §6). <span id="guestCredit">The second figure in the room is a
+  <a href="catalogue.html" style="color:#7fb4ff">100Avatars model by Polygonal Mind (CC BY 4.0)</a>,
+  splat-ified from its VRM at load time.</span></p>
 
   <div class="row">
     <div class="panel" style="flex:2 1 420px">
@@ -38,6 +38,9 @@
         <button class="hold" id="camBtn">📷 CAM</button>
         <label style="flex:0 0 auto"><input type="checkbox" id="autoChk" checked> auto</label>
         <label style="flex:0 0 auto"><input type="checkbox" id="mirrorChk" checked> mirror</label>
+      </div>
+      <div class="ctl"><label>avatar</label>
+        <select id="avatarSel" style="flex:1; background:#0a0b10; color:#d8dae2; border:1px solid #3a5580; border-radius:6px; padding:0.25rem;"></select>
       </div>
       <div class="note" id="micNote">MIC: Web Audio speech energy drives the jaw. CAM: MediaPipe FaceLandmarker
       (Apache-2.0, loaded from CDN on demand) drives head pose + all ten expression channels from your webcam.
@@ -57,7 +60,8 @@ import { PoseDriver, bindPointerPad } from './lib/pose-driver.js';
 import { NetworkSim } from './lib/network-sim.js';
 import { PoseBuffer } from './lib/pose-buffer.js';
 import { SplatRenderer, FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
-import { buildRoom, buildAvatarSplats } from './lib/scene-builder.js';
+import { buildRoom, buildAvatarSplats, AVATAR_PRESETS } from './lib/scene-builder.js';
+import { MODELS } from './lib/models-manifest.js';
 import { drawFace } from './lib/face2d.js';
 import { VoiceJaw } from './lib/voice-jaw.js';
 import { FaceCapture } from './lib/face-capture.js';
@@ -87,11 +91,29 @@ function rebuildScene(guest) {
   renderer.setData(data, avatarOffset + avatarCount);
 }
 rebuildScene(null);
-// a second participant from third_party/ (see catalogue + ATTRIBUTION.md),
-// splat-ified in the browser; static — it has no telemetry feed
-loadGlbSplats('third_party/100avatars/100Avatars_010_Froggy.vrm', {
-  count: 14000, targetHeight: 1.45, at: [-1.6, 0, -2.1], yaw: Math.PI + 0.7,
-}).then(g => rebuildScene(g)).catch(() => {});
+// a second participant, randomly picked from the vendored VRM roster
+// (see catalogue + ATTRIBUTION.md); static — it has no telemetry feed
+const guests = MODELS.filter(m => m.id !== 'lps');
+const guest = guests[Math.floor(Math.random() * guests.length)];
+loadGlbSplats(guest.url, {
+  count: 14000, targetHeight: guest.targetHeight, at: [-1.6, 0, -2.1], yaw: guest.yaw + 0.7,
+}).then(g => {
+  rebuildScene(g);
+  document.getElementById('guestCredit').innerHTML =
+    `The second figure is <a href="catalogue.html" style="color:#7fb4ff">${guest.name}` +
+    ` — ${guest.attribution}</a>, splat-ified from its VRM at load time.`;
+}).catch(() => {});
+
+// procedural avatar appearance presets
+let appearance = AVATAR_PRESETS[0];
+for (const pr of AVATAR_PRESETS) {
+  const o = document.createElement('option');
+  o.value = pr.id; o.textContent = pr.name;
+  $('avatarSel').appendChild(o);
+}
+$('avatarSel').addEventListener('change', () => {
+  appearance = AVATAR_PRESETS.find(x => x.id === $('avatarSel').value) || AVATAR_PRESETS[0];
+});
 
 // pipeline pieces
 const driver = new PoseDriver();
@@ -215,7 +237,7 @@ function frame(now) {
   wasExtrap = buffer.extrapolating;
 
   // rebuild the avatar block from the RECEIVED pose only
-  const av = buildAvatarSplats(rx, AV_AT).toFloat32();
+  const av = buildAvatarSplats(rx, AV_AT, appearance, { t: now / 1000 }).toFloat32();
   if (buffer.frozen) {
     // dead feed → fade to statue, never fake liveness (DESIGN.md §9)
     for (let i = 13; i < av.length; i += FLOATS_PER_SPLAT) av[i] *= 0.45;
