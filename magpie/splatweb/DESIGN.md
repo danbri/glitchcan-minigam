@@ -211,6 +211,7 @@ blending. ~250 lines, zero dependencies.
 | `demo-telemetry.html` | **Demo 1** — codec inspector: live 32-byte hex view, decoded fields, quantization error, bandwidth-vs-video meter; sender and decoded-receiver faces side by side (Tier 3) |
 | `demo-splat-room.html` | **Demo 2** — the room avatar: procedural splat room, orbit/zoom, stylisation slider (palette quantization), splat count + FPS |
 | `demo-stage.html` | **Demo 3** — the whole thesis: sender pose → encoder → simulated lossy network (sliders for latency/jitter/loss/rate) → jitter buffer → splat room + splat avatar. Live stats: kbit/s, loss, effective latency, extrapolation events. Real capture via 🎤 MIC and 📷 CAM; a vendored CC BY avatar stands in the room as a second (static) participant |
+| `lib/text-talker.js` | generated-speech lipsync: stream ASCII in (AI-token style), clauses are spoken via speechSynthesis, visemes derived from the characters being said ride the normal blendshape channels |
 | `lib/gltf-splats.js` | minimal in-browser GLB/VRM → splat sampler: area-sampled triangles, per-point base-color texture reads, surface-tangent splats with baked lambert |
 | `lib/models-manifest.js` + `third_party/` | vendored open models with licences (`third_party/ATTRIBUTION.md`): Lee Perry-Smith head (CC BY 3.0), three 100Avatars VRMs (CC BY 4.0 — the repo's own licence file; not CC0 as some indexes claim) |
 | `demo-gallery.html` | **Demo 4** — the vendored models splat-ified live: model picker, density slider, stylise, per-model attribution |
@@ -283,7 +284,12 @@ Live URLs once deployed:
   never keep animating a dead feed as if live.
 - **Ethics/consent:** an avatar that impersonates presence needs an
   unambiguous live/replay/synthetic indicator. Prediction smooths ~100 ms;
-  it must not be allowed to grow into "AI keeps talking for you".
+  it must not be allowed to grow into "AI keeps talking for you". This got
+  concrete with `text-talker.js` (demo 3's SAY / AI STREAM): synthetic
+  speech is explicitly user-triggered today, but the moment a text stream
+  can drive a person's avatar, the live/synthetic indicator stops being
+  theoretical — a viewer must always be able to tell which one they are
+  watching.
 - **Audio spatialisation:** Web Audio PannerNode fed by the same position
   telemetry — cheap win, not sketched here.
 - **Blendshape channel choice:** is 10 enough? Demo 3's talk mode looks

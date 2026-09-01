@@ -39,6 +39,15 @@
         <label style="flex:0 0 auto"><input type="checkbox" id="autoChk" checked> auto</label>
         <label style="flex:0 0 auto"><input type="checkbox" id="mirrorChk" checked> mirror</label>
       </div>
+      <div class="ctl">
+        <input id="sayText" type="text" value="Hello! I am a stream of text becoming a talking splat."
+          style="flex:1; min-width:0; background:#0a0b10; color:#d8dae2; border:1px solid #3a5580; border-radius:6px; padding:0.35rem;">
+      </div>
+      <div class="ctl">
+        <button class="act" id="sayBtn">SAY</button>
+        <button class="act" id="streamBtn">▶ AI STREAM</button>
+        <span class="note" style="flex:1">TTS + text-derived visemes → the same packet</span>
+      </div>
       <div class="ctl"><label>avatar</label>
         <select id="avatarSel" style="flex:1; background:#0a0b10; color:#d8dae2; border:1px solid #3a5580; border-radius:6px; padding:0.25rem;"></select>
       </div>
@@ -65,6 +74,7 @@ import { MODELS } from './lib/models-manifest.js';
 import { drawFace } from './lib/face2d.js';
 import { VoiceJaw } from './lib/voice-jaw.js';
 import { FaceCapture } from './lib/face-capture.js';
+import { TextTalker } from './lib/text-talker.js';
 import { loadGlbSplats } from './lib/gltf-splats.js';
 
 const $ = id => document.getElementById(id);
@@ -103,6 +113,30 @@ loadGlbSplats(guest.url, {
     `The second figure is <a href="catalogue.html" style="color:#7fb4ff">${guest.name}` +
     ` — ${guest.attribution}</a>, splat-ified from its VRM at load time.`;
 }).catch(() => {});
+
+// generated speech: text (typed, or streamed in like AI tokens) → TTS +
+// visemes → the avatar's mouth, through the unchanged packet
+const talker = new TextTalker();
+$('sayBtn').addEventListener('click', () => {
+  talker.feed($('sayText').value + ' ');
+  talker.flush();
+});
+const STREAM_TEXT = 'Imagine this text arriving token by token from a model. ' +
+  'Each clause is spoken as soon as it completes; the mouth shapes come from ' +
+  'the letters being said. No video is transmitted: just thirty two bytes of ' +
+  'presence, thirty times a second. The room you see is cached; the words are ' +
+  'the only thing that is live.';
+let streamTimer = null;
+$('streamBtn').addEventListener('click', () => {
+  if (streamTimer) { clearInterval(streamTimer); streamTimer = null; talker.stop(); driver.setTalkTrack(null); $('streamBtn').textContent = '▶ AI STREAM'; return; }
+  let i = 0;
+  $('streamBtn').textContent = '■ STOP';
+  streamTimer = setInterval(() => {
+    talker.feed(STREAM_TEXT.slice(i, i + 4));
+    i += 4;
+    if (i >= STREAM_TEXT.length) { talker.flush(); clearInterval(streamTimer); streamTimer = null; $('streamBtn').textContent = '▶ AI STREAM'; }
+  }, 55);
+});
 
 // procedural avatar appearance presets
 let appearance = AVATAR_PRESETS[0];
@@ -221,6 +255,7 @@ function frame(now) {
   // SENDER: capture + encode + send at the chosen rate
   if (voice.active) driver.setVoiceLevel(voice.tick(dt));
   if (cam.active) driver.setFacePose(cam.tick(now));
+  driver.setTalkTrack(talker.tick(dt));
   const pose = driver.tick(dt, now);
   sendAcc += dt;
   const interval = 1 / +$('rate').value;

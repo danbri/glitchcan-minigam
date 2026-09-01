@@ -45,6 +45,9 @@ export class PoseDriver {
   // real webcam face pose {quat, pos, blend} overrides the simulation
   // entirely; null returns to simulation (e.g. face out of view)
   setFacePose(fp) { this._face = fp; }
+  // generated-speech visemes {jaw, pucker, smile} (TextTalker); wins the
+  // mouth over everything — the avatar is saying this text
+  setTalkTrack(v) { this._talk = v; }
   setNeutral() { this._tYaw = 0; this._tPitch = 0; }
   // flips the current yaw too, so toggling gives instant visible feedback
   setMirror(m) { if (m !== this.mirror) { this.mirror = m; this._tYaw = -this._tYaw; } }
@@ -133,6 +136,13 @@ export class PoseDriver {
       if (this._voice != null) b[BI.jawOpen] = clamp(this._voice * 0.9, 0, 1);
     } else {
       this._faceQuat = null;
+    }
+    if (this._talk) {
+      b[BI.jawOpen] = clamp(this._talk.jaw, 0, 1);
+      b[BI.mouthPucker] = clamp(this._talk.pucker, 0, 1);
+      const sm = clamp(this._talk.smile * 0.6 + this._smile * 0.5, 0, 1);
+      b[BI.mouthSmileLeft] = sm;
+      b[BI.mouthSmileRight] = sm * 0.94;
     }
     return p;
   }
