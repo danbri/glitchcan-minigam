@@ -48,6 +48,9 @@ export class PoseDriver {
   // generated-speech visemes {jaw, pucker, smile} (TextTalker); wins the
   // mouth over everything — the avatar is saying this text
   setTalkTrack(v) { this._talk = v; }
+  // real skeleton capture: per-arm wrist offsets {l:{t,vis}, r:{t,vis}}
+  // in avatar-local metres; null = no arm telemetry (arms idle-animate)
+  setArmTargets(arms) { this._armsRaw = arms; }
   setNeutral() { this._tYaw = 0; this._tPitch = 0; }
   // flips the current yaw too, so toggling gives instant visible feedback
   setMirror(m) { if (m !== this.mirror) { this.mirror = m; this._tYaw = -this._tYaw; } }
@@ -137,6 +140,14 @@ export class PoseDriver {
     } else {
       this._faceQuat = null;
     }
+    // attach arm telemetry (mirror swaps sides and flips x)
+    let arms = this._armsRaw || null;
+    if (arms && this.mirror) {
+      const mx = (a) => ({ t: [-a.t[0], a.t[1], a.t[2]], vis: a.vis });
+      arms = { l: mx(arms.r), r: mx(arms.l) };
+    }
+    p.arms = arms;
+
     if (this._talk) {
       b[BI.jawOpen] = clamp(this._talk.jaw, 0, 1);
       b[BI.mouthPucker] = clamp(this._talk.pucker, 0, 1);

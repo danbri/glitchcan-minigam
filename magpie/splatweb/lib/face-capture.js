@@ -9,6 +9,7 @@
 const VERSION = '0.10.14';
 const CDN = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}`;
 const MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
+const POSE_MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
 
 // 4x4 column-major → quaternion (rotation part)
 function matToQuat(m) {
@@ -38,6 +39,8 @@ export class FaceCapture {
   constructor() {
     this.active = false;
     this.faceSeen = false;
+    this.armsSeen = false;
+    this.arms = null;     // { l: {t:[x,y,z], vis}, r: {...} } avatar-local wrist offsets
     this.error = null;
     this._lastVideoT = -1;
     this._out = { quat: [0, 0, 0, 1], pos: [0, 1.45, 0], blend: new Float32Array(10) };
@@ -46,8 +49,8 @@ export class FaceCapture {
   async start(onStatus = () => {}) {
     this.error = null;
     try {
-      onStatus('loading FaceLandmarker (CDN)…');
-      const { FaceLandmarker, FilesetResolver } = await import(`${CDN}/+esm`);
+      onStatus('loading FaceLandmarker + PoseLandmarker (CDN)…');
+      const { FaceLandmarker, PoseLandmarker, FilesetResolver } = await import(`${CDN}/+esm`);
       const files = await FilesetResolver.forVisionTasks(`${CDN}/wasm`);
       const opts = (delegate) => ({
         baseOptions: { modelAssetPath: MODEL, delegate },
@@ -58,6 +61,13 @@ export class FaceCapture {
       });
       try { this.lm = await FaceLandmarker.createFromOptions(files, opts('GPU')); }
       catch { this.lm = await FaceLandmarker.createFromOptions(files, opts('CPU')); }
+      // skeleton for the arms — optional: face capture still works without it
+      const pOpts = (delegate) => ({
+        baseOptions: { modelAssetPath: POSE_MODEL, delegate },
+        runningMode: 'VIDEO', numPoses: 1,
+      });
+      try { this.pl = await PoseLandmarker.createFromOptions(files, pOpts('GPU')); }
+      catch { try { this.pl = await PoseLandmarker.createFromOptions(files, pOpts('CPU')); } catch { this.pl = null; } }
 
       onStatus('asking for camera…');
       this.stream = await navigator.mediaDevices.getUserMedia({
@@ -80,6 +90,9 @@ export class FaceCapture {
   stop() {
     this.active = false;
     this.faceSeen = false;
+    this.armsSeen = false;
+    this.arms = null;
+    if (this.pl) { this.pl.close?.(); this.pl = null; }
     if (this.stream) { for (const t of this.stream.getTracks()) t.stop(); this.stream = null; }
     if (this.lm) { this.lm.close?.(); this.lm = null; }
     this.video = null;
@@ -94,6 +107,7 @@ export class FaceCapture {
     let res;
     try { res = this.lm.detectForVideo(this.video, nowMs); }
     catch { return null; }
+    this._tickArms(nowMs);
     const cats = res.faceBlendshapes?.[0]?.categories;
     const mat = res.facialTransformationMatrixes?.[0]?.data;
     if (!cats || !mat) { this.faceSeen = false; return null; }
@@ -125,5 +139,31 @@ export class FaceCapture {
       - (by.eyeLookDownLeft || 0) - (by.eyeLookDownRight || 0)) / 2;
     b[9] = by.cheekPuff || 0;
     return o;
+  }
+
+  // PoseLandmarker world landmarks → per-arm wrist offsets from the
+  // shoulder, scaled by this person's arm length onto the avatar's reach.
+  // NOTE: world-landmark axis signs were not verified against a live body;
+  // the mirror checkbox swaps sides/flips x if it reads backwards.
+  _tickArms(nowMs) {
+    if (!this.pl) { this.arms = null; return; }
+    let res;
+    try { res = this.pl.detectForVideo(this.video, nowMs); }
+    catch { this.arms = null; return; }
+    const wl = res.worldLandmarks?.[0], il = res.landmarks?.[0];
+    if (!wl || !il) { this.armsSeen = false; this.arms = null; return; }
+    const AVATAR_REACH = 0.45;   // avatar shoulder→wrist, slightly under L1+L2
+    const armFor = (S, E, W) => {
+      const vis = Math.min(il[S].visibility ?? 1, il[E].visibility ?? 1, il[W].visibility ?? 1);
+      const seg = (a, b2) => Math.hypot(wl[a].x - wl[b2].x, wl[a].y - wl[b2].y, wl[a].z - wl[b2].z);
+      const human = (seg(S, E) + seg(E, W)) || 0.55;
+      // camera space → avatar-local: x stays, y down → up, z toward camera → back
+      const rel = [wl[W].x - wl[S].x, -(wl[W].y - wl[S].y), -(wl[W].z - wl[S].z)];
+      const k = AVATAR_REACH / human;
+      return { t: [rel[0] * k, rel[1] * k, rel[2] * k], vis: vis > 0.5 ? 1 : 0 };
+    };
+    // MediaPipe indices: L shoulder/elbow/wrist 11/13/15, R 12/14/16
+    this.arms = { l: armFor(11, 13, 15), r: armFor(12, 14, 16) };
+    this.armsSeen = this.arms.l.vis > 0 || this.arms.r.vis > 0;
   }
 }

@@ -163,6 +163,22 @@ Quantization error is negligible for presence: worst-case quat error
 ~0.003°, position 0.5 mm, blendshape 0.4%. The codec demo shows round-trip
 error live.
 
+### Packet v1 — arms (40 bytes)
+
+```
+32..35  left arm    wrist offset from shoulder, avatar-local metres,
+36..39  right arm   3 × int8 (±0.75 m, ~6 mm steps) + visibility uint8
+```
+
+Sent only while skeleton capture (PoseLandmarker) runs; receivers detect
+v1 by packet length, so v0-only receivers keep working. The viewer solves
+**two-bone analytic IK** from the wrist target (bone lengths are the
+avatar's own; the sender's arm length is normalized out at capture). An
+arm with visibility 0 — off-camera — falls back to the synthesized idle
+animation instead of freezing or guessing. Full skeletal telemetry (bone
+quaternions) remains future work; wrist-target-plus-IK buys most of the
+expressiveness for 8 bytes.
+
 **Receiver model** (implemented in [`lib/pose-buffer.js`](lib/pose-buffer.js)):
 a jitter buffer holds recent packets; a playhead trails the newest packet by
 a configurable buffer (default 100 ms) and slews smoothly rather than

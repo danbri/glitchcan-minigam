@@ -5,7 +5,8 @@
 //   [22..31] 10 blendshapes uint8
 import { qNormalize, clamp } from './pose-math.js';
 
-export const PACKET_BYTES = 32;
+export const PACKET_BYTES = 32;        // v0
+export const PACKET_BYTES_V1 = 40;     // v0 + per-arm wrist offset + visibility
 export const PACKET_HZ_DEFAULT = 30;
 
 export const BLENDSHAPES = [
@@ -17,11 +18,14 @@ export const BLENDSHAPES = [
 const SIGNED = new Set(['eyeLookX', 'eyeLookY']);
 
 export function makePose() {
-  return { tMs: 0, seq: 0, quat: [0, 0, 0, 1], pos: [0, 0, 0], blend: new Float32Array(10) };
+  // arms (packet v1): { l: { t: [x,y,z], vis }, r: {...} } — wrist offset
+  // from the shoulder in avatar-local metres — or null (v0, no arm data)
+  return { tMs: 0, seq: 0, quat: [0, 0, 0, 1], pos: [0, 0, 0], blend: new Float32Array(10), arms: null };
 }
 
 export function encodePose(pose, buf) {
-  const ab = buf || new ArrayBuffer(PACKET_BYTES);
+  const size = pose.arms ? PACKET_BYTES_V1 : PACKET_BYTES;
+  const ab = (buf && buf.byteLength === size) ? buf : new ArrayBuffer(size);
   const dv = new DataView(ab);
   dv.setUint32(0, pose.tMs >>> 0, true);
   dv.setUint32(4, pose.seq >>> 0, true);
@@ -31,6 +35,14 @@ export function encodePose(pose, buf) {
   for (let i = 0; i < 10; i++) {
     const v = SIGNED.has(BLENDSHAPES[i]) ? pose.blend[i] * 0.5 + 0.5 : pose.blend[i];
     dv.setUint8(22 + i, Math.round(clamp(v, 0, 1) * 255));
+  }
+  if (pose.arms) {
+    const enc = (off, a) => {
+      for (let i = 0; i < 3; i++) dv.setInt8(off + i, Math.round(clamp(a.t[i] / 0.75, -1, 1) * 127));
+      dv.setUint8(off + 3, a.vis > 0.5 ? 255 : 0);
+    };
+    enc(32, pose.arms.l);
+    enc(36, pose.arms.r);
   }
   return ab;
 }
@@ -46,6 +58,15 @@ export function decodePose(ab, out) {
   for (let i = 0; i < 10; i++) {
     const raw = dv.getUint8(22 + i) / 255;
     pose.blend[i] = SIGNED.has(BLENDSHAPES[i]) ? raw * 2 - 1 : raw;
+  }
+  if (ab.byteLength >= PACKET_BYTES_V1) {
+    const dec = (off) => ({
+      t: [dv.getInt8(off) / 127 * 0.75, dv.getInt8(off + 1) / 127 * 0.75, dv.getInt8(off + 2) / 127 * 0.75],
+      vis: dv.getUint8(off + 3) > 127 ? 1 : 0,
+    });
+    pose.arms = { l: dec(32), r: dec(36) };
+  } else {
+    pose.arms = null;
   }
   return pose;
 }

@@ -367,19 +367,50 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   const tA = anim.t || 0;
   const gest = jaw > 0.15 ? 1 : 0;
   const v3 = (a, d, k) => [a[0] + d[0] * k, a[1] + d[1] * k, a[2] + d[2] * k];
+  const L1 = 0.25, L2 = 0.22;   // upper arm, forearm bone lengths
+  const armPose = pose && pose.arms ? pose.arms : null;
   for (const sx of [-1, 1]) {
     addWorld(s, base, [sx * 0.205 * F.build, 1.41, 0], [0.062 * F.build, 0.034, 0.048], shirt([sx * 0.5, 1, 0.2]));
-    const sway = Math.sin(tA * 0.9 + sx * 1.7) * 0.05;
-    const lift = gest * (0.35 + 0.25 * Math.sin(tA * 3.1 + sx * 2.1));
-    const outA = 0.16 + sway + lift * 0.6;
     const shoulder = [sx * 0.215 * F.build, 1.395, 0.0];
-    const ud = normalize([sx * Math.sin(outA), -Math.cos(outA), 0.03]);
-    const elbow = v3(shoulder, ud, 0.25);
-    const bend = 0.35 + lift * 1.5 + 0.06 * Math.sin(tA * 1.3 + sx);
-    const fd = normalize([ud[0] * 0.85, ud[1] * Math.cos(bend), Math.sin(bend) * 0.9 + 0.05]);
-    const wrist = v3(elbow, fd, 0.22);
+    const ap = armPose ? (sx < 0 ? armPose.l : armPose.r) : null;
+    let elbow, wrist;
+    if (ap && ap.vis > 0.5) {
+      // two-bone analytic IK to the telemetry wrist target. Offscreen
+      // arms (vis 0) never reach here — they idle-animate below.
+      let dvec = [ap.t[0], ap.t[1], ap.t[2]];
+      let d = Math.hypot(dvec[0], dvec[1], dvec[2]);
+      const dir = d > 1e-4 ? [dvec[0] / d, dvec[1] / d, dvec[2] / d] : [sx, -0.5, 0.2];
+      d = clamp(d, 0.08, L1 + L2 - 0.01);
+      wrist = v3(shoulder, dir, d);
+      const cosA = clamp((d * d + L1 * L1 - L2 * L2) / (2 * d * L1), -1, 1);
+      const a1 = Math.acos(cosA);
+      // elbow pole: down, out, slightly back — orthogonalized against dir
+      let pole = [sx * 0.35, -1, -0.3];
+      const pd = dot(pole, dir);
+      pole = [pole[0] - dir[0] * pd, pole[1] - dir[1] * pd, pole[2] - dir[2] * pd];
+      const pl = Math.hypot(pole[0], pole[1], pole[2]);
+      pole = pl > 1e-4 ? [pole[0] / pl, pole[1] / pl, pole[2] / pl] : [0, 0, -1];
+      elbow = [
+        shoulder[0] + dir[0] * L1 * Math.cos(a1) + pole[0] * L1 * Math.sin(a1),
+        shoulder[1] + dir[1] * L1 * Math.cos(a1) + pole[1] * L1 * Math.sin(a1),
+        shoulder[2] + dir[2] * L1 * Math.cos(a1) + pole[2] * L1 * Math.sin(a1),
+      ];
+    } else {
+      // no telemetry for this arm — synthesized idle sway + talk gestures
+      const sway = Math.sin(tA * 0.9 + sx * 1.7) * 0.05;
+      const lift = gest * (0.35 + 0.25 * Math.sin(tA * 3.1 + sx * 2.1));
+      const outA = 0.16 + sway + lift * 0.6;
+      const ud = normalize([sx * Math.sin(outA), -Math.cos(outA), 0.03]);
+      elbow = v3(shoulder, ud, L1);
+      const bend = 0.35 + lift * 1.5 + 0.06 * Math.sin(tA * 1.3 + sx);
+      const fd = normalize([ud[0] * 0.85, ud[1] * Math.cos(bend), Math.sin(bend) * 0.9 + 0.05]);
+      wrist = v3(elbow, fd, L2);
+    }
+    // draw along the solved joints (same splat count on both paths)
+    const uv = normalize([elbow[0] - shoulder[0], elbow[1] - shoulder[1], elbow[2] - shoulder[2]]);
+    const fd = normalize([wrist[0] - elbow[0], wrist[1] - elbow[1], wrist[2] - elbow[2]]);
     for (let i = 0; i <= 6; i++) {   // upper arm — sleeve
-      addWorld(s, base, v3(shoulder, ud, 0.04 + i * 0.035), [0.028, 0.028, 0.026],
+      addWorld(s, base, v3(shoulder, uv, 0.04 + i * 0.035), [0.028, 0.028, 0.026],
         shirt([sx, 0.2, 0.4], 0.9 + i * 0.015));
     }
     for (let i = 0; i <= 6; i++) {   // forearm — skin

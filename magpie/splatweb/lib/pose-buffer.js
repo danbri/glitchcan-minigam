@@ -23,6 +23,10 @@ export class PoseBuffer {
       tMs: pose.tMs, seq: pose.seq,
       quat: pose.quat.slice(), pos: pose.pos.slice(),
       blend: Float32Array.from(pose.blend),
+      arms: pose.arms ? {
+        l: { t: pose.arms.l.t.slice(), vis: pose.arms.l.vis },
+        r: { t: pose.arms.r.t.slice(), vis: pose.arms.r.vis },
+      } : null,
     };
     if (this.playhead !== null && p.tMs < this.playhead - 1000) { this.stale++; return; }
     // insert sorted (jitter reorders; usually appends)
@@ -76,6 +80,7 @@ export class PoseBuffer {
     // (extrapolated jaw flapping looks worse than a held mouth)
     const bf = f > 1 ? 1 : f;
     for (let i = 0; i < 10; i++) o.blend[i] = lerp(a.blend[i], b.blend[i], bf);
+    o.arms = blendArms(a.arms, b.arms, bf);
     return o;
   }
 
@@ -84,6 +89,18 @@ export class PoseBuffer {
     o.tMs = p.tMs; o.seq = p.seq;
     o.quat = p.quat.slice(); o.pos = p.pos.slice();
     o.blend.set(p.blend);
+    o.arms = p.arms;
     return o;
   }
+}
+
+function blendArms(A, B, f) {
+  if (!A && !B) return null;
+  if (!A) return B;
+  if (!B) return A;
+  const m = (x, y) => ({
+    t: [lerp(x.t[0], y.t[0], f), lerp(x.t[1], y.t[1], f), lerp(x.t[2], y.t[2], f)],
+    vis: f > 0.5 ? y.vis : x.vis,
+  });
+  return { l: m(A.l, B.l), r: m(A.r, B.r) };
 }
