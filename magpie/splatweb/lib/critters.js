@@ -23,6 +23,39 @@ export const CRITTER_LINES = [
   'is it snack time?', 'the floor is springy today.', 'I like this room.',
 ];
 
+// tiny value noise (hashed lattice, smooth bilinear) — perlin-style
+// coherent randomness for gusts: nearby critters get similar-but-not-
+// identical impulses
+function vnoise(x, y) {
+  const h = (ix, iy) => {
+    let n = ix * 374761393 + iy * 668265263;
+    n = (n ^ (n >> 13)) * 1274126177;
+    return ((n ^ (n >> 16)) >>> 0) / 4294967296;
+  };
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  return (h(ix, iy) * (1 - sx) + h(ix + 1, iy) * sx) * (1 - sy)
+    + (h(ix, iy + 1) * (1 - sx) + h(ix + 1, iy + 1) * sx) * sy;
+}
+
+// fling everyone skyward on a coherent noise field; heavier critters
+// (bigger, or a raised weight slider) fly less
+export function throwCritters(critters, power = 3.2, weight = 1) {
+  const t0 = performance.now() * 0.0007;
+  for (const c of critters) {
+    const mass = weight * Math.pow(c.r / 0.18, 1.4);
+    const nUp = vnoise(c.pos[0] * 0.8 + t0, c.pos[2] * 0.8 - t0);
+    const nX = vnoise(c.pos[0] * 0.6 + 31.7, c.pos[2] * 0.6 + t0);
+    const nZ = vnoise(c.pos[2] * 0.6 + 77.3 + t0, c.pos[0] * 0.6);
+    c.vel[1] += power * (0.9 + nUp * 1.1) / mass;
+    c.vel[0] += power * (nX - 0.5) * 1.4 / mass;
+    c.vel[2] += power * (nZ - 0.5) * 1.4 / mass;
+    c.squash = 0.65;
+    c.facing = Math.atan2(c.vel[0], c.vel[2]);
+  }
+}
+
 export class Critter {
   constructor(seed, bounds = 2.4) {
     const rnd = mulberry32(seed);
@@ -51,7 +84,7 @@ export class Critter {
   tick(dt, critters, env = {}) {
     const floorY = env.floorY || 0;
     const p = this.pos, v = this.vel;
-    v[1] -= 6.5 * dt;                        // floaty jelly gravity
+    v[1] -= (env.gravity ?? 6.5) * (env.weight ?? 1) * dt;
     p[0] += v[0] * dt; p[1] += v[1] * dt; p[2] += v[2] * dt;
     let squashT = 1;
     if (p[1] <= this.r + floorY) {           // ground contact
@@ -66,7 +99,7 @@ export class Critter {
         const toC = Math.atan2(-p[2], -p[0]);
         const dir = Math.hypot(p[0], p[2]) > this.bounds * 0.75
           ? toC : this.rnd() * Math.PI * 2;
-        const power = 1.4 + this.rnd() * 1.3;
+        const power = (1.4 + this.rnd() * 1.3) * (env.jumpMul ?? 1);
         v[0] = Math.cos(dir) * power * 0.55;
         v[2] = Math.sin(dir) * power * 0.55;
         v[1] = power;

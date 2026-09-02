@@ -30,7 +30,11 @@ function parseHeader(bytes) {
 // alphaMin drops near-transparent splats.
 // stride N keeps every Nth splat, scaling the survivors up by √N so
 // coverage holds — the cheap client-side LOD for heavy elements.
-export function decodeCompressedPly(ab, { at = [0, 0, 0], yaw = 0, scale = 1, alphaMin = 0.02, stride = 1 } = {}) {
+// maxScale / maxAspect suppress the needle splats that low-density scan
+// regions decode into (the "triangular spikey" look): each axis is capped,
+// and any axis more than maxAspect× the smallest is pulled back.
+export function decodeCompressedPly(ab, { at = [0, 0, 0], yaw = 0, scale = 1, alphaMin = 0.02, stride = 1,
+  maxScale = 0.3, maxAspect = 7 } = {}) {
   const bytes = new Uint8Array(ab);
   const { headerLen, chunks, verts } = parseHeader(bytes);
   // header length is not guaranteed 4-aligned — slice to aligned copies
@@ -86,11 +90,15 @@ export function decodeCompressedPly(ab, { at = [0, 0, 0], yaw = 0, scale = 1, al
     out[o + 4] = cw * q[1] + cy * q[3];
     out[o + 5] = cw * q[2] - cy * q[0];
     out[o + 6] = cw * q[3] - cy * q[1];
-    // scale: log-space lerp then exp
+    // scale: log-space lerp then exp, with needle suppression
     const sw = vertU[i * 4 + 2];
-    out[o + 7] = Math.exp(chunkF[c + 6] + ((sw >>> 21) & 0x7ff) / 2047 * (chunkF[c + 9] - chunkF[c + 6])) * scale * sizeUp;
-    out[o + 8] = Math.exp(chunkF[c + 7] + ((sw >>> 11) & 0x3ff) / 1023 * (chunkF[c + 10] - chunkF[c + 7])) * scale * sizeUp;
-    out[o + 9] = Math.exp(chunkF[c + 8] + (sw & 0x7ff) / 2047 * (chunkF[c + 11] - chunkF[c + 8])) * scale * sizeUp;
+    let s0 = Math.min(maxScale, Math.exp(chunkF[c + 6] + ((sw >>> 21) & 0x7ff) / 2047 * (chunkF[c + 9] - chunkF[c + 6])) * scale * sizeUp);
+    let s1 = Math.min(maxScale, Math.exp(chunkF[c + 7] + ((sw >>> 11) & 0x3ff) / 1023 * (chunkF[c + 10] - chunkF[c + 7])) * scale * sizeUp);
+    let s2 = Math.min(maxScale, Math.exp(chunkF[c + 8] + (sw & 0x7ff) / 2047 * (chunkF[c + 11] - chunkF[c + 8])) * scale * sizeUp);
+    const smin = Math.max(1e-4, Math.min(s0, s1, s2)), cap = smin * maxAspect;
+    out[o + 7] = Math.min(s0, cap);
+    out[o + 8] = Math.min(s1, cap);
+    out[o + 9] = Math.min(s2, cap);
     // colour: chunk-ranged rgb + absolute alpha
     out[o + 10] = chunkF[c + 12] + ((colw >>> 24) & 0xff) / 255 * (chunkF[c + 15] - chunkF[c + 12]);
     out[o + 11] = chunkF[c + 13] + ((colw >>> 16) & 0xff) / 255 * (chunkF[c + 16] - chunkF[c + 13]);

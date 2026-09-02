@@ -23,6 +23,21 @@
     padding: 0.35rem 0.7rem; cursor: pointer; font-size: 0.8rem; }
   .tr button.on { background: #3563ad; }
   .tr input[type=range] { width: 90px; accent-color: #7fb4ff; }
+  .drawer { position: fixed; top: 0; right: 0; height: 100%; width: min(280px, 80vw);
+    padding: 3rem 1rem 1rem; overflow-y: auto; border-radius: 0; z-index: 10;
+    border-right: 0; border-top: 0; border-bottom: 0;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+  .drawer:not(.open) { transform: translateX(calc(100% + 2px)); }
+  .drawer h2 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
+    color: #7fb4ff; margin: 0 0 0.5rem; font-weight: 600; }
+  .tab { position: fixed; z-index: 11; top: 50%; right: 0; transform: translateY(-50%);
+    writing-mode: vertical-rl; letter-spacing: 0.18em; font-size: 0.68rem; color: #cfe0ff;
+    background: rgba(20, 30, 50, 0.85); border: 1px solid rgba(110, 170, 255, 0.4);
+    border-right: 0; border-radius: 8px 0 0 8px; cursor: pointer; padding: 0.9rem 0.35rem;
+    user-select: none; }
+  .throw { width: 100%; padding: 0.6rem; font-size: 1rem; background: #3a2a55;
+    color: #e8dcff; border: 1px solid #7a5ab0; border-radius: 8px; cursor: pointer; }
+  .throw:active { background: #5a3f85; }
 </style>
 </head>
 <body>
@@ -34,6 +49,16 @@
   <span class="note" id="countOut">10</span>
 </div>
 <div class="hud chip bl stat" id="stats">loading room…</div>
+<button class="tab" id="physTab">PHYSICS</button>
+<div class="hud drawer open" id="physPanel">
+  <h2>Physics</h2>
+  <button class="throw" id="throwBtn">🌪 THROW THEM UP</button>
+  <div class="ctl" style="margin-top:0.7rem"><label>gravity</label><input type="range" id="grav" min="15" max="120" value="48"><output id="gravOut">4.8</output></div>
+  <div class="ctl"><label>weight</label><input type="range" id="weight" min="40" max="220" value="100"><output id="weightOut">1.0</output></div>
+  <div class="ctl"><label>jump</label><input type="range" id="jump" min="50" max="230" value="135"><output id="jumpOut">1.35</output></div>
+  <p class="note">The throw rides a perlin-style noise field — nearby
+  critters catch similar gusts. Heavier (and bigger) critters fly less.</p>
+</div>
 <div class="hud chip br" id="creditsChip">© credits</div>
 <div class="hud" id="creditsPanel"></div>
 
@@ -41,7 +66,7 @@
 import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
 import { createSplatRenderer } from './lib/splat-renderer-auto.js';
 import { loadCompressedPly } from './lib/cply.js';
-import { Critter, SPLATS_PER_CRITTER, CRITTER_LINES } from './lib/critters.js';
+import { Critter, SPLATS_PER_CRITTER, CRITTER_LINES, throwCritters } from './lib/critters.js';
 import { TextTalker } from './lib/text-talker.js';
 import { mulberry32 } from './lib/pose-math.js';
 
@@ -69,17 +94,19 @@ addCredit('renderer', 'splatweb — WebGPU/WebGL2 Gaussian splat rasterizer');
 const DBDB = '../dbdb/splats/pack/';
 async function loadRoom() {
   try {
-    const [g1, g2, hut, meta] = await Promise.all([
+    const parts = await Promise.all([
       loadCompressedPly(DBDB + 'grass.compressed.ply', { at: [0, 0.02, 0], yaw: 0.3, stride: 5 }),
       loadCompressedPly(DBDB + 'grass.compressed.ply', { at: [-1.7, 0.02, -2.1], yaw: 1.4, stride: 5 }),
-      loadCompressedPly(DBDB + 'hut.compressed.ply', { at: [2.0, 0, -2.6], yaw: -0.4 }),
-      fetch(DBDB + 'pack.json').then(r => r.json()),
+      loadCompressedPly(DBDB + 'hedge.compressed.ply', { at: [0.2, 0, -3.1], yaw: 0, stride: 5 }),
+      loadCompressedPly(DBDB + 'vine.compressed.ply', { at: [2.1, 0, -1.7], yaw: 0.3 }),
+      loadCompressedPly(DBDB + 'fern.compressed.ply', { at: [-2.4, 0, -0.5], yaw: 0, stride: 6 }),
     ]);
-    const total = g1.count + g2.count + hut.count;
+    const meta = await fetch(DBDB + 'pack.json').then(r => r.json());
+    const total = parts.reduce((a, x) => a + x.count, 0);
     const data = new Float32Array(total * FLOATS_PER_SPLAT);
-    data.set(g1.data); data.set(g2.data, g1.data.length);
-    data.set(hut.data, g1.data.length + g2.data.length);
-    const credits = [...new Set(['grass', 'hut'].map(id =>
+    let off = 0;
+    for (const pt of parts) { data.set(pt.data, off); off += pt.data.length; }
+    const credits = [...new Set(['grass', 'hedge', 'vine', 'fern'].map(id =>
       (meta.elements.find(e => e.id === id) || {}).credit || id))];
     addCredit('room stamps', credits);
     return { data, count: total };
@@ -151,9 +178,26 @@ canvas.addEventListener('pointerup', () => { drag = null; });
 canvas.addEventListener('wheel', e => { e.preventDefault(); radius *= Math.exp(e.deltaY * 0.001); applyCamera(); }, { passive: false });
 
 // physics environment: critters rest on TOP of the tall grass (its
-// blades are ~0.4 m — ground level would bury them), and the hut is a
-// bouncy cylinder collider
-const ENV = { floorY: 0.12, obstacles: [{ x: 2.0, z: -2.6, r: 1.8 }] };
+// blades are ~0.4 m); the vine stump, fern clump and hedge line are
+// bouncy cylinder colliders. Sliders mutate this live.
+const ENV = {
+  floorY: 0.12, gravity: 4.8, weight: 1, jumpMul: 1.35,
+  obstacles: [
+    { x: 2.1, z: -1.7, r: 1.0 },    // vine stump
+    { x: -2.4, z: -0.5, r: 0.8 },   // fern
+    { x: -0.6, z: -3.1, r: 0.95 }, { x: 1.0, z: -3.1, r: 0.95 },  // hedge
+  ],
+};
+$('physTab').addEventListener('click', () => $('physPanel').classList.toggle('open'));
+const wirePhys = (id, out, k, div) => {
+  const el = $(id);
+  const f = () => { ENV[k] = +el.value / div; $(out).textContent = ENV[k].toFixed(k === 'gravity' ? 1 : 2); };
+  el.addEventListener('input', f); f();
+};
+wirePhys('grav', 'gravOut', 'gravity', 10);
+wirePhys('weight', 'weightOut', 'weight', 100);
+wirePhys('jump', 'jumpOut', 'jumpMul', 100);
+$('throwBtn').addEventListener('click', () => throwCritters(critters, 3.4, ENV.weight));
 
 let last = performance.now(), frames = 0, fpsT = last, fps = 0;
 function frame(now) {
