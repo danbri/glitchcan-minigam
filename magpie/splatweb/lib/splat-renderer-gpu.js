@@ -2,9 +2,14 @@
 // same interface and 14-float splat layout as the WebGL2 renderer
 // (splat-renderer.js). Same math: covariance → perspective Jacobian →
 // eigen ellipse → instanced quad, exp(−½d²), premultiplied over.
-// The per-frame depth sort stays on the CPU and is SHARED with the WebGL
-// backend; moving it to a WGSL compute radix sort is the next step.
-import { FLOATS_PER_SPLAT, sortSplats, lookAt, perspective } from './splat-renderer.js';
+//
+// Efficiency over the WebGL path: splat data lives in a GPU storage
+// buffer uploaded ONCE (writeRegion patches just its dirty range); the
+// vertex stage pulls splats through a per-frame sorted index buffer, so
+// each frame uploads count×4 bytes instead of count×56. The depth sort
+// itself is still CPU (shared with WebGL); a WGSL compute sort is the
+// remaining step.
+import { FLOATS_PER_SPLAT, lookAt, perspective } from './splat-renderer.js';
 
 const WGSL = /* wgsl */`
 struct Uniforms {
@@ -13,6 +18,9 @@ struct Uniforms {
   vfs: vec4f,        // viewport.xy, focal px, styleLevels
 };
 @group(0) @binding(0) var<uniform> U: Uniforms;
+
+@group(0) @binding(1) var<storage, read> S: array<f32>;   // 14 floats per splat
+@group(0) @binding(2) var<storage, read> ORD: array<u32>; // back-to-front order
 
 struct VSOut {
   @builtin(position) pos: vec4f,
@@ -29,9 +37,12 @@ fn quatToMat(q: vec4f) -> mat3x3f {
 }
 
 @vertex
-fn vs(@location(0) corner: vec2f,
-      @location(1) iPos: vec3f, @location(2) iQuat: vec4f,
-      @location(3) iScale: vec3f, @location(4) iColor: vec4f) -> VSOut {
+fn vs(@location(0) corner: vec2f, @builtin(instance_index) inst: u32) -> VSOut {
+  let bi = ORD[inst] * 14u;
+  let iPos = vec3f(S[bi], S[bi + 1u], S[bi + 2u]);
+  let iQuat = vec4f(S[bi + 3u], S[bi + 4u], S[bi + 5u], S[bi + 6u]);
+  let iScale = vec3f(S[bi + 7u], S[bi + 8u], S[bi + 9u]);
+  let iColor = vec4f(S[bi + 10u], S[bi + 11u], S[bi + 12u], S[bi + 13u]);
   var out: VSOut;
   let viewPos = U.view * vec4f(iPos, 1.0);
   if (viewPos.z > -0.05) {
@@ -39,8 +50,8 @@ fn vs(@location(0) corner: vec2f,
     return out;
   }
   let R = quatToMat(normalize(iQuat));
-  let S = mat3x3f(vec3f(iScale.x, 0.0, 0.0), vec3f(0.0, iScale.y, 0.0), vec3f(0.0, 0.0, iScale.z));
-  let M = R * S;
+  let Sm = mat3x3f(vec3f(iScale.x, 0.0, 0.0), vec3f(0.0, iScale.y, 0.0), vec3f(0.0, 0.0, iScale.z));
+  let M = R * Sm;
   let cov3 = M * transpose(M);
 
   let viewport = U.vfs.xy;
@@ -118,13 +129,6 @@ export class WebGPUSplatRenderer {
         buffers: [
           { arrayStride: 8, stepMode: 'vertex',
             attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }] },
-          { arrayStride: FLOATS_PER_SPLAT * 4, stepMode: 'instance',
-            attributes: [
-              { shaderLocation: 1, offset: 0, format: 'float32x3' },
-              { shaderLocation: 2, offset: 12, format: 'float32x4' },
-              { shaderLocation: 3, offset: 28, format: 'float32x3' },
-              { shaderLocation: 4, offset: 40, format: 'float32x4' },
-            ] },
         ],
       },
       fragment: {
@@ -143,11 +147,8 @@ export class WebGPUSplatRenderer {
     r.quadBuf = device.createBuffer({ size: 32, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     device.queue.writeBuffer(r.quadBuf, 0, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]));
     r.uniformBuf = device.createBuffer({ size: 160, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-    r.bindGroup = device.createBindGroup({
-      layout: r.pipeline.getBindGroupLayout(0),
-      entries: [{ binding: 0, resource: { buffer: r.uniformBuf } }],
-    });
     r.uniformData = new Float32Array(40);
+    r.bindGroup = null;   // built in setData once the storage buffers exist
 
     r.count = 0;
     r.data = null;
@@ -163,18 +164,34 @@ export class WebGPUSplatRenderer {
   setData(f32, count) {
     this.count = count;
     this.data = f32;
-    this.sorted = new Float32Array(count * FLOATS_PER_SPLAT);
     this.order = new Uint32Array(count);
     this.depths = new Float32Array(count);
-    if (this.instBuf) this.instBuf.destroy();
-    this.instBuf = this.device.createBuffer({
-      size: this.sorted.byteLength || 4,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    if (this.splatBuf) this.splatBuf.destroy();
+    if (this.orderBuf) this.orderBuf.destroy();
+    // splat data uploaded ONCE; per-frame traffic is just the order buffer
+    this.splatBuf = this.device.createBuffer({
+      size: Math.max(f32.byteLength, 16),
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    this.device.queue.writeBuffer(this.splatBuf, 0, f32, 0, count * FLOATS_PER_SPLAT);
+    this.orderBuf = this.device.createBuffer({
+      size: Math.max(count * 4, 16),
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    this.bindGroup = this.device.createBindGroup({
+      layout: this.pipeline.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: this.uniformBuf } },
+        { binding: 1, resource: { buffer: this.splatBuf } },
+        { binding: 2, resource: { buffer: this.orderBuf } },
+      ],
     });
   }
 
   writeRegion(startSplat, f32) {
     this.data.set(f32, startSplat * FLOATS_PER_SPLAT);
+    // patch only the dirty range of the resident storage buffer
+    this.device.queue.writeBuffer(this.splatBuf, startSplat * FLOATS_PER_SPLAT * 4, f32);
   }
 
   setCamera(pos, target, fovY) {
@@ -198,8 +215,16 @@ export class WebGPUSplatRenderer {
     const view = lookAt(pos, target, [0, 1, 0]);
     const proj = perspective(fovY, c.width / c.height, 0.05, 100);
 
-    sortSplats(this.data, this.count, view, this.depths, this.order, this.sorted);
-    this.device.queue.writeBuffer(this.instBuf, 0, this.sorted);
+    // CPU depth sort of INDICES only (no data reorder, no data upload)
+    const d = this.data, n = this.count, depths = this.depths, order = this.order;
+    const r20 = view[2], r21 = view[6], r22 = view[10], r23 = view[14];
+    for (let i = 0; i < n; i++) {
+      const o = i * FLOATS_PER_SPLAT;
+      depths[i] = r20 * d[o] + r21 * d[o + 1] + r22 * d[o + 2] + r23;
+      order[i] = i;
+    }
+    order.sort((a, b) => depths[a] - depths[b]);
+    this.device.queue.writeBuffer(this.orderBuf, 0, order, 0, n);
 
     const u = this.uniformData;
     u.set(view, 0);
@@ -221,7 +246,6 @@ export class WebGPUSplatRenderer {
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
     pass.setVertexBuffer(0, this.quadBuf);
-    pass.setVertexBuffer(1, this.instBuf);
     pass.draw(4, this.count);
     pass.end();
     this.device.queue.submit([encoder.finish()]);

@@ -103,9 +103,8 @@
   <span class="badge ok" id="linkBadge">live</span>
 </div>
 
-<div class="hud chip bc"><span id="guestCredit">The second figure is a
-  <a href="catalogue.html">100Avatars model by Polygonal Mind (CC BY 4.0)</a>,
-  splat-ified from its VRM at load time.</span></div>
+<div class="hud chip bc" id="creditsChip" style="cursor:pointer; user-select:none">© credits</div>
+<div class="hud" id="creditsPanel" style="bottom:56px; right:14px; max-width:360px; max-height:42vh; overflow-y:auto; padding:0.6rem 0.9rem; display:none; font-size:0.72rem; color:#a7abbd; z-index:11"></div>
 
 <button class="tab" id="ctrlTab">SENDER</button>
 <div class="hud drawer open" id="ctrlDrawer">
@@ -131,6 +130,9 @@
   <h2>Avatar</h2>
   <div id="avatarCar" class="carousel" tabindex="0" role="listbox" aria-label="avatar picker"></div>
   <div class="note" style="margin-top:2px">←/→ or A/D to browse · space to wear</div>
+  <h2>Room</h2>
+  <div class="ctl"><select id="roomSel" style="flex:1"></select></div>
+  <div class="note" id="roomCredit"></div>
   <div class="note" id="micNote" style="margin-top:0.6rem">MIC: Web Audio speech energy drives the jaw.
   CAM: MediaPipe FaceLandmarker + PoseLandmarker (Apache-2.0, CDN on demand) drive head pose, all ten
   expression channels, AND your arms — wrist positions ride a 40-byte packet and the avatar solves
@@ -189,8 +191,20 @@ import { FaceCapture } from './lib/face-capture.js';
 import { TextTalker } from './lib/text-talker.js';
 import { loadGlbSplats } from './lib/gltf-splats.js';
 import { loadScanHead, buildScanHeadSplats, FACECAP_CREDIT } from './lib/scan-head.js';
+import { loadCompressedPly } from './lib/cply.js';
 
 const $ = id => document.getElementById(id);
+// central attribution registry — everything rendered registers here; the
+// © chip toggles the list (there may eventually be hundreds of entries)
+const CREDITS = new Map();
+function addCredit(key, lines) {
+  CREDITS.set(key, Array.isArray(lines) ? lines : [lines]);
+  const n = [...CREDITS.values()].reduce((a, l) => a + l.length, 0);
+  document.getElementById('creditsChip').textContent = `© credits (${n})`;
+  document.getElementById('creditsPanel').innerHTML =
+    [...CREDITS.entries()].map(([k, l]) =>
+      `<div style="margin-bottom:0.4rem"><b style="color:#7fb4ff">${k}</b><br>${l.join('<br>')}</div>`).join('');
+}
 const canvas = $('gl');
 const statsEl = $('stats');
 let renderer;
@@ -219,6 +233,43 @@ for (const [tabId, drawerId] of [['ctrlTab', 'ctrlDrawer'], ['netTab', 'netDrawe
 // can be rewritten every frame at avatarOffset
 const AV_AT = [0, 0, -1.0];
 const room = buildRoom();
+// room registry: the procedural studio, plus rooms COMPOSED from the
+// licence-proven dbdb stamp pack (each element ships its own credit)
+const DBDB = '../dbdb/splats/pack/';
+const ROOMS = [
+  { id: 'proc', name: 'Studio (procedural)' },
+  { id: 'museum', name: 'Conservatory (dbdb stamps)', parts: [
+    // one floor + the same greenhouse wall stamped three times = a room
+    { el: 'hall', at: [0, -0.05, 0], yaw: 0 },
+    { el: 'windowwall', at: [0, 0, -3.2], yaw: 0, stride: 6 },
+    { el: 'windowwall', at: [-3.2, 0, -1.2], yaw: Math.PI / 2, stride: 6 },
+    { el: 'windowwall', at: [3.2, 0, -1.2], yaw: -Math.PI / 2, stride: 6 },
+  ] },
+  { id: 'ghost', name: 'Ghost garden (dbdb stamps)', parts: [
+    { el: 'grass', at: [0, 0.02, 0], yaw: 0.3, stride: 4 },
+    { el: 'grass', at: [-1.6, 0.02, -2.2], yaw: 1.4, stride: 4 },
+    { el: 'hut', at: [1.9, 0, -2.6], yaw: -0.4 },
+  ] },
+];
+let roomData = { data: room.toFloat32(), count: room.count };
+const roomCache = new Map();
+let packMeta = null;
+async function loadDbdbRoom(def) {
+  if (roomCache.has(def.id)) return roomCache.get(def.id);
+  if (!packMeta) packMeta = (await (await fetch(DBDB + 'pack.json')).json()).elements;
+  const parts = await Promise.all(def.parts.map(pp =>
+    loadCompressedPly(DBDB + pp.el + '.compressed.ply', pp)));
+  let total = 0;
+  for (const pt of parts) total += pt.count;
+  const data = new Float32Array(total * FLOATS_PER_SPLAT);
+  let off = 0;
+  for (const pt of parts) { data.set(pt.data, off); off += pt.data.length; }
+  const credits = [...new Set(def.parts.map(pp =>
+    (packMeta.find(e => e.id === pp.el) || {}).credit || pp.el))];
+  const res = { data, count: total, credits };
+  roomCache.set(def.id, res);
+  return res;
+}
 let appearance = AVATAR_PRESETS[0];
 // debug rig state — declared before the first rebuildScene() (which
 // consults it via buildAvatarF32)
@@ -270,10 +321,10 @@ function rebuildScene(guest) {
   const avatarRest = buildAvatarF32(null, 0);
   const avCount = avatarRest.length / FLOATS_PER_SPLAT;
   const gCount = g ? g.count : 0;
-  avatarOffset = room.count + gCount;
+  avatarOffset = roomData.count + gCount;
   const data = new Float32Array((avatarOffset + avCount) * FLOATS_PER_SPLAT);
-  data.set(room.toFloat32());
-  if (g) data.set(g.data, room.count * FLOATS_PER_SPLAT);
+  data.set(roomData.data);
+  if (g) data.set(g.data, roomData.count * FLOATS_PER_SPLAT);
   data.set(avatarRest, avatarOffset * FLOATS_PER_SPLAT);
   renderer.setData(data, avatarOffset + avCount);
 }
@@ -286,13 +337,17 @@ loadGlbSplats(guest.url, {
   count: 18000, targetHeight: guest.targetHeight, at: [-1.6, 0, -2.1], yaw: guest.yaw + 0.7,
 }).then(g => {
   rebuildScene(g);
-  document.getElementById('guestCredit').innerHTML =
-    `The second figure is <a href="catalogue.html">${guest.name}` +
-    ` — ${guest.attribution}</a>, splat-ified from its VRM at load time.`;
+  addCredit('guest', `${guest.name} — ${guest.attribution}, splat-ified from its VRM`);
 }).catch(() => {});
 
 // generated speech: text (typed, or streamed in like AI tokens) → TTS +
 // visemes → the avatar's mouth, through the unchanged packet
+$('creditsChip').addEventListener('click', () => {
+  const pnl = $('creditsPanel');
+  pnl.style.display = pnl.style.display === 'none' ? 'block' : 'none';
+});
+addCredit('renderer', 'splatweb — WebGPU/WebGL2 Gaussian splat rasterizer');
+
 const talker = new TextTalker();
 $('sayBtn').addEventListener('click', () => {
   talker.feed($('sayText').value + ' ');
@@ -335,9 +390,8 @@ function selectAvatar(id) {
         rebuildScene();
         makeScanThumb();
         micNote.textContent = `Realistic head live: ${h.count.toLocaleString()} splats, ` +
-          `driven by the same 10 packet channels. ${FACECAP_CREDIT}.`;
-        document.getElementById('guestCredit').innerHTML +=
-          ' Head: “Face Cap” model by <a href="https://www.bannaflak.com/face-cap">bannaflak.com</a> via three.js (linked, not redistributed).';
+          `driven by the same 10 packet channels.`;
+        addCredit('avatar head', FACECAP_CREDIT);
       }).catch(e => {
         micNote.textContent = 'realistic head failed to load: ' + (e.message || e);
         headMode = 'proc';
@@ -394,6 +448,34 @@ car.addEventListener('keydown', (e) => {
 });
 updateCursor();
 selectAvatar('hazel');
+
+// room picker
+for (const rdef of ROOMS) {
+  const o = document.createElement('option');
+  o.value = rdef.id; o.textContent = rdef.name;
+  $('roomSel').appendChild(o);
+}
+$('roomSel').addEventListener('change', async () => {
+  const rdef = ROOMS.find(x => x.id === $('roomSel').value) || ROOMS[0];
+  if (!rdef.parts) {
+    roomData = { data: room.toFloat32(), count: room.count };
+    $('roomCredit').textContent = '';
+    CREDITS.delete('room stamps');
+    addCredit('renderer', 'splatweb — WebGPU/WebGL2 Gaussian splat rasterizer');
+    rebuildScene();
+    return;
+  }
+  $('roomCredit').textContent = 'loading stamps…';
+  try {
+    const res = await loadDbdbRoom(rdef);
+    roomData = res;
+    rebuildScene();
+    $('roomCredit').textContent = 'stamps loaded ✓ (see © credits)';
+    addCredit('room stamps', res.credits);
+  } catch (e) {
+    $('roomCredit').textContent = 'room failed: ' + (e.message || e);
+  }
+});
 
 // thumbnails: neutral head-and-shoulders of each preset, rendered by a
 // small offscreen WebGL splat renderer, one per animation frame
