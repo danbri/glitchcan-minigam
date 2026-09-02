@@ -49,24 +49,30 @@
   <span class="note" id="countOut">10</span>
 </div>
 <div class="hud chip bl stat" id="stats">loading room…</div>
-<button class="tab" id="physTab">PHYSICS</button>
+<button class="tab" id="physTab">WORLD</button>
 <div class="hud drawer open" id="physPanel">
-  <h2>Physics</h2>
+  <h2>World</h2>
   <button class="throw" id="throwBtn">🌪 THROW THEM UP</button>
   <div class="ctl" style="margin-top:0.7rem"><label>gravity</label><input type="range" id="grav" min="15" max="120" value="48"><output id="gravOut">4.8</output></div>
   <div class="ctl"><label>weight</label><input type="range" id="weight" min="40" max="220" value="100"><output id="weightOut">1.0</output></div>
   <div class="ctl"><label>jump</label><input type="range" id="jump" min="50" max="230" value="135"><output id="jumpOut">1.35</output></div>
+  <label class="note" style="display:block;margin-top:0.6rem"><input type="checkbox" id="heli"> 🚁 helicopter — fly the camera around the glade</label>
   <p class="note">The throw rides a perlin-style noise field — nearby
-  critters catch similar gusts. Heavier (and bigger) critters fly less.</p>
+  critters catch similar gusts. Heavier (and bigger) critters fly less.
+  Dragging the view lands the helicopter.</p>
 </div>
+<div class="hud chip br" id="shroomChip" style="right: 168px; display: none"
+  title="on: critters stay in the glade · off: in XR they roam and hop onto detected tables and chairs">🍄</div>
+<div class="hud chip br" id="xrChip" style="right: 118px; display: none"
+  title="place the glade on your floor (WebXR)">🥽</div>
 <div class="hud chip br" id="creditsChip">© credits</div>
 <div class="hud" id="creditsPanel"></div>
 
 <script type="module">
-import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { FLOATS_PER_SPLAT, SplatRenderer } from './lib/splat-renderer.js';
 import { createSplatRenderer } from './lib/splat-renderer-auto.js';
 import { loadCompressedPly } from './lib/cply.js';
-import { Critter, SPLATS_PER_CRITTER, CRITTER_LINES, throwCritters } from './lib/critters.js';
+import { Critter, SPLATS_PER_CRITTER, CRITTER_LINES, throwCritters, vnoise } from './lib/critters.js';
 import { TextTalker } from './lib/text-talker.js';
 import { ClipVoice, loadClipManifest } from './lib/clip-voice.js';
 import { mulberry32 } from './lib/pose-math.js';
@@ -129,6 +135,8 @@ const room = await loadRoom();
 // Voices: pre-generated ElevenLabs clips when media/critter-voices/
 // exists (run tools/gen-critter-voices.mjs once with an API key),
 // otherwise the browser's speechSynthesis.
+let xrSession = null, xrRend = null, xrRef = null, xrModel = null, xrLast = 0;
+let shroomOn = true;
 const clipManifest = await loadClipManifest('media/critter-voices/');
 let critters = [];
 let voicesOn = false;
@@ -150,9 +158,12 @@ function makeCritters(n) {
   }
   const data = new Float32Array((room.count + n * SPLATS_PER_CRITTER) * FLOATS_PER_SPLAT);
   data.set(room.data);
-  renderer.setData(data, room.count + n * SPLATS_PER_CRITTER);
+  sceneCount = room.count + n * SPLATS_PER_CRITTER;
+  renderer.setData(data, sceneCount);
+  if (xrRend) xrRend.setData(data.slice(), sceneCount);
   critterBlock = new Float32Array(n * SPLATS_PER_CRITTER * FLOATS_PER_SPLAT);
 }
+let sceneCount = 0;
 let critterBlock;
 makeCritters(10);
 
@@ -179,8 +190,13 @@ function applyCamera() {
   ], [0, 0.6, 0]);
 }
 applyCamera();
+let heliOn = false, heliT = 0;
+$('heli').addEventListener('change', () => { heliOn = $('heli').checked; });
 let drag = null;
-canvas.addEventListener('pointerdown', e => { drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointerdown', e => {
+  if (heliOn) { heliOn = false; $('heli').checked = false; }
+  drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId);
+});
 canvas.addEventListener('pointermove', e => {
   if (!drag) return;
   theta -= (e.clientX - drag[0]) * 0.005;
@@ -218,8 +234,7 @@ $('throwBtn').addEventListener('click', () => {
 });
 
 let last = performance.now(), frames = 0, fpsT = last, fps = 0;
-function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+function simulate(dt) {
   for (const c of critters) {
     c.tick(dt, critters, ENV);
     // chirping: each critter occasionally says a line in its own voice
@@ -246,16 +261,142 @@ function frame(now) {
   for (let i = 0; i < critters.length; i++) {
     critters[i].build(critterBlock, i * SPLATS_PER_CRITTER * FLOATS_PER_SPLAT);
   }
-  renderer.writeRegion(room.count, critterBlock);
-  renderer.render();
-  frames++;
-  if (now - fpsT > 1000) {
-    fps = frames * 1000 / (now - fpsT); frames = 0; fpsT = now;
-    statsEl.textContent = `${critters.length} critters · ${(room.count + critters.length * SPLATS_PER_CRITTER).toLocaleString()} splats · ${fps.toFixed(0)} fps · ${renderer.backend}`;
+}
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!xrSession) {
+    if (heliOn) {
+      // helicopter: a slow noisy orbit — radius, height, heading and the
+      // look-at point all drift on value noise, so no two passes match;
+      // height clamps keep the floor plane low in frame, radius keeps the
+      // glade filling the screen without getting claustrophobic
+      heliT += dt;
+      const ang = heliT * 0.16 + (vnoise(heliT * 0.05, 3.7) - 0.5) * 1.4;
+      const rad = 4.7 + (vnoise(heliT * 0.07, 11.1) - 0.5) * 2.0;
+      const hgt = Math.max(1.0, 1.7 + (vnoise(heliT * 0.06, 27.4) - 0.5) * 1.8);
+      renderer.setCamera(
+        [Math.cos(ang) * rad, hgt, Math.sin(ang) * rad],
+        [(vnoise(heliT * 0.045, 51.2) - 0.5) * 1.2, 0.55, (vnoise(heliT * 0.045, 63.9) - 0.5) * 1.2]);
+    }
+    simulate(dt);
+    renderer.writeRegion(room.count, critterBlock);
+    renderer.render();
+    frames++;
+    if (now - fpsT > 1000) {
+      fps = frames * 1000 / (now - fpsT); frames = 0; fpsT = now;
+      statsEl.textContent = `${critters.length} critters · ${(room.count + critters.length * SPLATS_PER_CRITTER).toLocaleString()} splats · ${fps.toFixed(0)} fps · ${renderer.backend}`;
+    }
   }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+// ---- WebXR: place the glade on the real floor, passthrough everywhere
+// else. A separate WebGL2 renderer serves the session (the main canvas
+// may be WebGPU, which WebXR does not take). 🍄 on = critters stay in
+// the glade; 🍄 off = they roam and hop onto detected real-world
+// horizontal surfaces (plane-detection: tables, chairs — whatever the
+// device exposes).
+const XR_SCALE = 0.8;
+$('shroomChip').addEventListener('click', () => {
+  shroomOn = !shroomOn;
+  $('shroomChip').style.opacity = shroomOn ? '1' : '0.35';
+  if (!shroomOn) addCredit('webxr', 'plane detection: your device\'s room scan, used live, never stored');
+});
+async function xrSetup() {
+  if (!navigator.xr) return;
+  let mode = null;
+  for (const m of ['immersive-ar', 'immersive-vr']) {
+    try { if (await navigator.xr.isSessionSupported(m)) { mode = m; break; } } catch { /* blocked */ }
+  }
+  if (!mode) return;
+  $('xrChip').style.display = 'block';
+  $('shroomChip').style.display = 'block';
+  $('xrChip').addEventListener('click', () => enterXR(mode).catch(e => {
+    statsEl.textContent = 'XR failed: ' + e.message;
+  }));
+}
+async function enterXR(mode) {
+  if (xrSession) { xrSession.end(); return; }
+  if (!xrRend) {
+    const c = document.createElement('canvas');
+    xrRend = new SplatRenderer(c, { background: [0, 0, 0] });
+    xrRend.setData(renderer.data ? renderer.data.slice() : new Float32Array(0), sceneCount);
+    // the WebGPU backend keeps its own copy — rebuild from room + block
+    if (!renderer.data) {
+      const d = new Float32Array(sceneCount * FLOATS_PER_SPLAT);
+      d.set(room.data); d.set(critterBlock, room.count * FLOATS_PER_SPLAT);
+      xrRend.setData(d, sceneCount);
+    }
+  }
+  await xrRend.gl.makeXRCompatible();
+  xrSession = await navigator.xr.requestSession(mode, {
+    requiredFeatures: ['local-floor'],
+    optionalFeatures: ['plane-detection', 'dom-overlay'],
+    domOverlay: { root: document.body },
+  });
+  const layer = new XRWebGLLayer(xrSession, xrRend.gl);
+  xrSession.updateRenderState({ baseLayer: layer });
+  xrRef = await xrSession.requestReferenceSpace('local-floor');
+  xrModel = null; xrLast = 0;
+  $('xrChip').style.opacity = '0.5';
+  xrSession.addEventListener('end', () => {
+    xrSession = null; xrModel = null;
+    ENV.platforms = []; ENV.roamBounds = undefined;
+    $('xrChip').style.opacity = '1';
+  });
+  xrSession.requestAnimationFrame(xrFrame);
+}
+function xrPlanes(frame) {
+  // free-roam only: turn the device's detected horizontal surfaces into
+  // landable platforms, in scene coordinates
+  ENV.roamBounds = shroomOn ? undefined : 6;
+  if (shroomOn || !frame.detectedPlanes) { ENV.platforms = []; return; }
+  const plats = [];
+  for (const plane of frame.detectedPlanes) {
+    if (plane.orientation !== 'horizontal') continue;
+    const pose = frame.getPose(plane.planeSpace, xrRef);
+    if (!pose) continue;
+    const wp = pose.transform.position;
+    if (wp.y < 0.15) continue;               // the floor itself — already have it
+    let r = 0;
+    for (const pt of plane.polygon) r = Math.max(r, Math.hypot(pt.x, pt.z));
+    plats.push({
+      x: (wp.x - xrModel[12]) / XR_SCALE,
+      z: (wp.z - xrModel[14]) / XR_SCALE,
+      y: wp.y / XR_SCALE,
+      r: Math.min(r, 1.5) / XR_SCALE,
+    });
+    if (plats.length >= 12) break;
+  }
+  ENV.platforms = plats;
+}
+function xrFrame(t, frame) {
+  if (!xrSession) return;
+  xrSession.requestAnimationFrame(xrFrame);
+  const dt = xrLast ? Math.min(0.05, (t - xrLast) / 1000) : 0.016; xrLast = t;
+  const pose = frame.getViewerPose(xrRef);
+  if (!pose) return;
+  if (!xrModel) {
+    // place the glade ~2.2 m ahead of where the player looks on entry —
+    // on the floor, clear of their feet
+    const m = pose.transform.matrix;
+    const fl = Math.hypot(m[8], m[10]) || 1;
+    xrModel = new Float32Array([XR_SCALE, 0, 0, 0, 0, XR_SCALE, 0, 0, 0, 0, XR_SCALE, 0,
+      pose.transform.position.x - m[8] / fl * 2.2, 0, pose.transform.position.z - m[10] / fl * 2.2, 1]);
+  }
+  xrPlanes(frame);
+  simulate(dt);
+  xrRend.writeRegion(room.count, critterBlock);
+  const layer = xrSession.renderState.baseLayer;
+  const views = pose.views.map(v => ({
+    viewport: layer.getViewport(v),
+    view: v.transform.inverse.matrix,
+    proj: v.projectionMatrix,
+  }));
+  xrRend.renderXR(layer.framebuffer, views, xrModel);
+}
+xrSetup();
 </script>
 </body>
 </html>

@@ -199,6 +199,50 @@ export class SplatRenderer {
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.count);
     gl.bindVertexArray(null);
   }
+
+  // WebXR path: draw into an XRWebGLLayer framebuffer, once per eye.
+  // views: [{ viewport: {x,y,width,height}, view: mat4, proj: mat4 }];
+  // model places/scales the scene in the XR reference space (uniform
+  // scale in the view matrix flows through the covariance math intact).
+  // Clears to transparent so immersive-ar composites camera passthrough.
+  renderXR(framebuffer, views, model) {
+    if (!this.count || !views.length) return;
+    const gl = this.gl;
+    const eyeViews = views.map(v => mul4(v.view, model));
+    sortSplats(this.data, this.count, eyeViews[0], this.depths, this.order, this.sorted);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.instBuf);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.sorted);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.useProgram(this.prog);
+    gl.bindVertexArray(this.vao);
+    for (let i = 0; i < views.length; i++) {
+      const vp = views[i].viewport;
+      gl.viewport(vp.x, vp.y, vp.width, vp.height);
+      gl.uniformMatrix4fv(this.u.uView, false, eyeViews[i]);
+      gl.uniformMatrix4fv(this.u.uProj, false, views[i].proj);
+      gl.uniform1f(this.u.uFocal, views[i].proj[5] * vp.height / 2);
+      gl.uniform2f(this.u.uViewport, vp.width, vp.height);
+      gl.uniform1f(this.u.uStyleLevels, this.styleLevels);
+      gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.count);
+    }
+    gl.bindVertexArray(null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+}
+
+// column-major mat4 multiply, a * b (for XR view ∘ scene-model composition)
+export function mul4(a, b) {
+  const r = new Float32Array(16);
+  for (let c = 0; c < 4; c++) for (let i = 0; i < 4; i++) {
+    r[c * 4 + i] = a[i] * b[c * 4] + a[4 + i] * b[c * 4 + 1]
+      + a[8 + i] * b[c * 4 + 2] + a[12 + i] * b[c * 4 + 3];
+  }
+  return r;
 }
 
 // CPU back-to-front depth sort, shared by both backends (view-space z;

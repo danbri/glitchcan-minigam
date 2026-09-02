@@ -26,7 +26,7 @@ export const CRITTER_LINES = [
 // tiny value noise (hashed lattice, smooth bilinear) — perlin-style
 // coherent randomness for gusts: nearby critters get similar-but-not-
 // identical impulses
-function vnoise(x, y) {
+export function vnoise(x, y) {
   const h = (ix, iy) => {
     let n = ix * 374761393 + iy * 668265263;
     n = (n ^ (n >> 13)) * 1274126177;
@@ -85,16 +85,26 @@ export class Critter {
   }
 
   // env: { floorY (rest height — sit ON tall grass, not inside it),
-  //        obstacles: [{x, z, r}] — bouncy cylinder colliders (the hut) }
+  //        obstacles: [{x, z, r}] — bouncy cylinder colliders (the hut),
+  //        platforms: [{x, z, r, y}] — landable tops (XR tables/chairs),
+  //        roamBounds — widens the home range (XR free-roam) }
   tick(dt, critters, env = {}) {
     const floorY = env.floorY || 0;
+    const B = env.roamBounds ?? this.bounds;
     const p = this.pos, v = this.vel;
     v[1] -= (env.gravity ?? 6.5) * (env.weight ?? 1) * dt;
     p[0] += v[0] * dt; p[1] += v[1] * dt; p[2] += v[2] * dt;
+    // effective ground: the floor, or the top of a platform we are over
+    // and above — jumping up from below passes through, falling lands
+    let ground = floorY;
+    for (const pf of env.platforms || []) {
+      if (Math.hypot(p[0] - pf.x, p[2] - pf.z) < pf.r && v[1] <= 0.01
+        && p[1] >= pf.y - 0.05) ground = Math.max(ground, pf.y);
+    }
     let squashT = 1;
-    if (p[1] <= this.r + floorY) {           // ground contact
+    if (p[1] <= this.r + ground) {           // ground contact
       const impact = Math.max(0, -v[1]);
-      p[1] = this.r + floorY;
+      p[1] = this.r + ground;
       v[1] = impact > 0.4 ? impact * 0.35 : 0;   // damped bounce
       v[0] *= 0.85; v[2] *= 0.85;
       squashT = Math.max(0.35, 1 - impact * 0.16 * this.elasticity);
@@ -105,11 +115,26 @@ export class Critter {
         const toC = Math.atan2(-p[2], -p[0]);
         // cautious about the edges: the further out, the more the next
         // hop points home
-        const edge = Math.hypot(p[0], p[2]) / this.bounds;
-        const dir = this.rnd() < Math.max(0, (edge - 0.45) * 1.8)
+        const edge = Math.hypot(p[0], p[2]) / B;
+        let dir = this.rnd() < Math.max(0, (edge - 0.45) * 1.8)
           ? toC + (this.rnd() - 0.5) * 0.6
           : this.rnd() * Math.PI * 2;
-        const power = (1.4 + this.rnd() * 1.3) * (env.jumpMul ?? 1) * this.jumpTalent;
+        let power = (1.4 + this.rnd() * 1.3) * (env.jumpMul ?? 1) * this.jumpTalent;
+        // free-roam: sometimes aim at a nearby platform (a real-world
+        // table/chair top in XR) and jump hard enough to clear it
+        if (env.platforms?.length && this.rnd() < 0.4) {
+          let best = null, bd = 3;
+          for (const pf of env.platforms) {
+            const dd = Math.hypot(pf.x - p[0], pf.z - p[2]);
+            if (dd < bd && pf.y > p[1] - 0.1) { bd = dd; best = pf; }
+          }
+          if (best) {
+            dir = Math.atan2(best.z - p[2], best.x - p[0]);
+            const rise = Math.max(0.2, best.y - p[1] + this.r + 0.15);
+            const need = Math.sqrt(2 * (env.gravity ?? 6.5) * (env.weight ?? 1) * rise) * 1.06;
+            power = Math.min(Math.max(power, need), 7);
+          }
+        }
         v[0] = Math.cos(dir) * power * 0.55;
         v[2] = Math.sin(dir) * power * 0.55;
         v[1] = power;
@@ -137,15 +162,15 @@ export class Critter {
     // edge caution: a continuous homeward pull grows near the boundary —
     // straying far feels effortful, so they cluster in the middle
     const dc = Math.hypot(p[0], p[2]);
-    if (dc > this.bounds * 0.55) {
-      const pull = (dc / this.bounds - 0.55) * 4.5 * dt;
+    if (dc > B * 0.55) {
+      const pull = (dc / B - 0.55) * 4.5 * dt;
       v[0] -= p[0] / dc * pull; v[2] -= p[2] / dc * pull;
     }
     // soft walls
     const d = Math.hypot(p[0], p[2]);
-    if (d > this.bounds) {
+    if (d > B) {
       const nx = p[0] / d, nz = p[2] / d;
-      p[0] = nx * this.bounds; p[2] = nz * this.bounds;
+      p[0] = nx * B; p[2] = nz * B;
       const vn = v[0] * nx + v[2] * nz;
       if (vn > 0) { v[0] -= 2 * vn * nx; v[2] -= 2 * vn * nz; }
     }
