@@ -98,6 +98,13 @@ export function buildRoom(seed = 42) {
   for (let z = -1.55; z <= -0.25; z += 0.09) {
     s.add([-3.86, 1.53, z], [0.02, 0.1, 0.035], [0.3 + rnd() * 0.5, 0.25 + rnd() * 0.4, 0.3 + rnd() * 0.4], 1);
   }
+  // ceiling — closes the void seen from low angles
+  for (let x = -4; x <= 4; x += 0.2) {
+    for (let z = -3; z <= 3; z += 0.2) {
+      const c = 0.5 + (rnd() - 0.5) * 0.03;
+      s.add([jitter(x, 0.08), 2.86, jitter(z, 0.08)], [0.13, 0.02, 0.13], [c, c, c * 1.04], 1);
+    }
+  }
   // two warm ceiling light glows
   for (const lx of [-1.5, 1.5]) {
     for (let i = 0; i < 24; i++) {
@@ -201,7 +208,7 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   // skull — fibonacci-sampled shell, splats TANGENT to the surface (thin
   // along the normal), shaped: jaw tapers, face is flatter, back bulges
   const RX = 0.092 * F.headW, RY = 0.115 * F.headH, RZ = 0.10, CY = 0.13;
-  const N_SKULL = 1300, GA = Math.PI * (3 - Math.sqrt(5));
+  const N_SKULL = 1900, GA = Math.PI * (3 - Math.sqrt(5));
   for (let i = 0; i < N_SKULL; i++) {
     const ny = 1 - 2 * (i + 0.5) / N_SKULL;
     const rr = Math.sqrt(Math.max(0, 1 - ny * ny));
@@ -225,12 +232,12 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
         : normalize([Math.cos(ph + 1.57), 0, Math.sin(ph + 1.57)]);
       const bt = cross(n, t);
       const gl = 0.8 + rnd() * 0.45;                    // per-strand sheen variation
-      addL(pos, [0.018, 0.0065, 0.005],
+      addL(pos, [0.015, 0.0058, 0.0045],
         [HAIR[0] * sh * gl, HAIR[1] * sh * gl, HAIR[2] * sh * gl], 1, basisToQuat(t, bt, n));
     } else {
       // cheeks get a touch of red
       const cheek = (Math.abs(nx) > 0.45 && ny < 0.05 && ny > -0.4 && nz > 0.3) ? 0.05 : 0;
-      addL(pos, [0.0102, 0.0102, 0.0038],
+      addL(pos, [0.0086, 0.0086, 0.0034],
         [(SKIN[0] + tone + cheek) * sh, (SKIN[1] + tone * 0.8) * sh, (SKIN[2] + tone * 0.7) * sh],
         1, qFromZTo(n));
     }
@@ -254,11 +261,11 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   for (const [sx, blink] of [[-1, blinkL], [1, blinkR]]) {
     const open = clamp(1 - blink, 0.08, 1);
     const ex = sx * F.eyeX, ey = CY + 0.025;
-    addL([ex, ey, 0.094], [0.019 * F.eyeSize, 0.014 * open * F.eyeSize, 0.006], [0.9, 0.89, 0.87]);
-    addL([ex + lookX * 0.009, ey + lookY * 0.007, 0.1],
-      [0.0095 * F.eyeSize, 0.0105 * open * F.eyeSize, 0.004], [0.32, 0.2, 0.11]);   // iris
-    addL([ex + lookX * 0.009, ey + lookY * 0.007, 0.103],
-      [0.0045 * F.eyeSize, 0.005 * open * F.eyeSize, 0.003], [0.05, 0.04, 0.04]);   // pupil
+    addL([ex, ey, 0.092], [0.019 * F.eyeSize, 0.014 * open * F.eyeSize, 0.011], [0.9, 0.89, 0.87]);
+    addL([ex + lookX * 0.009, ey + lookY * 0.007, 0.098],
+      [0.0095 * F.eyeSize, 0.0105 * open * F.eyeSize, 0.008], [0.32, 0.2, 0.11]);   // iris
+    addL([ex + lookX * 0.009, ey + lookY * 0.007, 0.101],
+      [0.0045 * F.eyeSize, 0.005 * open * F.eyeSize, 0.005], [0.05, 0.04, 0.04]);   // pupil
     addL([ex + lookX * 0.009 + 0.004, ey + lookY * 0.007 + 0.004, 0.106],
       [0.0022, 0.0022 * open, 0.002], [1, 1, 1], 0.9);              // highlight
     // upper lid crease
@@ -268,7 +275,7 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   // brows raise with browInnerUp
   for (const sx of [-1, 1]) {
     addL([sx * (F.eyeX + 0.003), CY + 0.055 + brow * 0.012, 0.085],
-      [0.025 * (0.85 + 0.25 * F.browTh), 0.0055 * F.browTh, 0.006],
+      [0.025 * (0.85 + 0.25 * F.browTh), 0.0055 * F.browTh, 0.01],
       [HAIR[0] * 0.9, HAIR[1] * 0.9, HAIR[2] * 0.9], 1, qFromEuler(0, 0, sx * -0.18));
   }
   // nose: lit bridge, warm tip, side + under shadows so it reads in 3D
@@ -286,13 +293,13 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   // mouth: dark opening scaled by jaw; muted lips; smile corners lift
   const mouthY = CY - 0.062 - jaw * 0.02;
   const mouthW = clamp(0.026 * F.mouth - pucker * 0.011 + (smL + smR) * 0.005, 0.012, 0.042);
-  addL([0, mouthY, 0.088], [mouthW, 0.004 + jaw * 0.026, 0.008], [0.28, 0.11, 0.11]);
-  addL([0, mouthY + 0.009 + jaw * 0.012, 0.09], [mouthW * 1.02, 0.004, 0.006],
+  addL([0, mouthY, 0.088], [mouthW, 0.004 + jaw * 0.026, 0.012], [0.28, 0.11, 0.11]);
+  addL([0, mouthY + 0.009 + jaw * 0.012, 0.089], [mouthW * 0.96, 0.0035, 0.01],
     [0.68, 0.42, 0.4]);
-  addL([0, mouthY - 0.008 - jaw * 0.012, 0.09], [mouthW * 0.9, 0.0045, 0.006],
+  addL([0, mouthY - 0.007 - jaw * 0.012, 0.089], [mouthW * 0.82, 0.004, 0.01],
     [0.72, 0.44, 0.42]);
   for (const [sx, sm] of [[-1, smL], [1, smR]]) {
-    addL([sx * (mouthW + 0.006), mouthY + 0.004 + sm * 0.016, 0.086], [0.007, 0.006, 0.006],
+    addL([sx * (mouthW + 0.005), mouthY + 0.009 + sm * 0.016, 0.086], [0.006, 0.005, 0.009],
       [0.7, 0.45, 0.43]);
   }
   // chin/jaw mass follows jawOpen
