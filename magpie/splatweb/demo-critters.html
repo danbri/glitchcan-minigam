@@ -137,7 +137,14 @@ function makeCritters(n) {
   critters = [];
   for (let i = 0; i < n; i++) {
     const c = new Critter(i * 7 + 3);
-    if (clipManifest) c.clip = new ClipVoice(clipManifest, i, 0.5);
+    if (clipManifest) {
+      // adult source voices pitched into critter register: the deep British
+      // premades (george=3, daniel=4) get the biggest lift; smaller critters
+      // squeak higher still
+      const base = [1.08, 1.18, 1.1, 1.32, 1.38][i % 5];
+      const size = c.r / 0.18;               // ~0.6 small … ~1.2 big
+      c.clip = new ClipVoice(clipManifest, i, 0.5, base * (1.28 - size * 0.22));
+    }
     else c.talker = new TextTalker({ pitch: c.voicePitch, rate: c.voiceRate, volume: 0.55 });
     critters.push(c);
   }

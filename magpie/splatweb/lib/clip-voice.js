@@ -16,10 +16,13 @@ export async function loadClipManifest(baseUrl) {
 }
 
 export class ClipVoice {
-  constructor(manifest, voiceIdx, volume = 0.5) {
+  // rate > 1 with preservesPitch off chipmunks the clip up — the squishy-
+  // critter register lives here, not in the (adult) source voices
+  constructor(manifest, voiceIdx, volume = 0.5, rate = 1) {
     this.m = manifest;
     this.vi = voiceIdx % manifest.voices.length;
     this.volume = volume;
+    this.rate = rate;
     this.jaw = 0;
     this._text = null;
   }
@@ -38,6 +41,8 @@ export class ClipVoice {
     this._textPool = pool;
     const a = new Audio(this.m.base + `v${this.vi}-${kind}${li}.mp3`);
     a.volume = this.volume;
+    a.preservesPitch = false;
+    a.playbackRate = this.rate;
     this._text = pool[li];
     this._audio = a;
     this._start = 0;
@@ -55,7 +60,7 @@ export class ClipVoice {
     let target = 0;
     const a = this._audio;
     if (a && this._start && !a.ended && a.duration > 0) {
-      const idx = Math.floor(((performance.now() - this._start) / 1000)
+      const idx = Math.floor(((performance.now() - this._start) / 1000 * this.rate)
         / a.duration * this._text.length);
       const ch = (this._text[Math.min(idx, this._text.length - 1)] || ' ').toLowerCase();
       target = visemeFor(ch).jaw;
