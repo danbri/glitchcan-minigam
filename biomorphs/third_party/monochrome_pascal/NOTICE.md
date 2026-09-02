@@ -34,8 +34,8 @@ mid-1980s for classic Mac OS, accompanying the book *The Blind Watchmaker*
 
 ## Status in This Project
 
-These files are **reference material only**. The runtime WebAssembly module in
-`biomorphs/` is an independent clean-room implementation of the
-publicly-documented biomorph concept (recursive symmetric tree drawing
-parameterised by N integer genes, as described in *The Blind Watchmaker*); it
-does not embed or translate this Pascal source.
+These files are **reference material only**. The runtime in `biomorphs/`
+(`biomorph.js`) is a behaviour-faithful JavaScript port of the `Develop`,
+`Tree` and `PlugIn` procedures from the `Biomorphs` unit, preserving the
+v1.1 genome structure and rendering semantics. The Pascal source is not
+consumed by the runtime; it is kept here for archival/reference purposes only.
