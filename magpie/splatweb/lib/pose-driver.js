@@ -51,8 +51,11 @@ export class PoseDriver {
   // mouth over everything — the avatar is saying this text
   setTalkTrack(v) { this._talk = v; }
   // real skeleton capture: per-arm wrist offsets {l:{t,vis}, r:{t,vis}}
-  // in avatar-local metres; null = no arm telemetry (arms idle-animate)
-  setArmTargets(arms) { this._armsRaw = arms; }
+  // in CAMERA space with anatomical sides (MediaPipe convention); null =
+  // no arm telemetry (arms idle-animate). Pass local=true for targets
+  // already in avatar-local screen space (e.g. ?armdemo) to skip the
+  // capture-space handedness transform.
+  setArmTargets(arms, local = false) { this._armsRaw = arms; this._armsLocal = local; }
   setNeutral() { this._tYaw = 0; this._tPitch = 0; }
   // flips the current yaw too, so toggling gives instant visible feedback
   setMirror(m) { if (m !== this.mirror) { this.mirror = m; this._tYaw = -this._tYaw; } }
@@ -146,7 +149,9 @@ export class PoseDriver {
         const signed = i === BI.eyeLookX || i === BI.eyeLookY;
         b[i] = signed ? clamp(fb[i], -1, 1) : clamp(fb[i], 0, 1);
       }
-      if (this.mirror) {
+      // same handedness rule as the arms: anatomical sides map straight
+      // through in mirror view; third-person swaps them (and flips gaze)
+      if (!this.mirror) {
         b[BI.eyeLookX] = -b[BI.eyeLookX];
         const t = b[BI.eyeBlinkLeft]; b[BI.eyeBlinkLeft] = b[BI.eyeBlinkRight]; b[BI.eyeBlinkRight] = t;
         const u = b[BI.mouthSmileLeft]; b[BI.mouthSmileLeft] = b[BI.mouthSmileRight]; b[BI.mouthSmileRight] = u;
@@ -155,11 +160,18 @@ export class PoseDriver {
     } else {
       this._faceQuat = null;
     }
-    // attach arm telemetry (mirror swaps sides and flips x)
+    // attach arm telemetry. Handedness rule (verified against the head
+    // path so head and arms agree): MediaPipe sides are ANATOMICAL, and a
+    // mirror view keeps your left on screen-left — so mirror = negate x,
+    // KEEP sides; third-person = SWAP sides, keep x. (Getting this
+    // backwards is invisible to the mirror toggle: both modes stay wrong
+    // by the same relative reflection.)
     let arms = this._armsRaw || null;
-    if (arms && this.mirror) {
-      const mx = (a) => ({ t: [-a.t[0], a.t[1], a.t[2]], vis: a.vis });
-      arms = { l: mx(arms.r), r: mx(arms.l) };
+    if (arms && !this._armsLocal) {
+      const neg = (a) => ({ t: [-a.t[0], a.t[1], a.t[2]], vis: a.vis });
+      arms = this.mirror
+        ? { l: neg(arms.l), r: neg(arms.r) }
+        : { l: arms.r, r: arms.l };
     }
     p.arms = arms;
 
