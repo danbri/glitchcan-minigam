@@ -88,17 +88,22 @@ catch (e) { statsEl.textContent = 'WebGL2 not available: ' + e.message; throw e;
 // can be rewritten every frame at avatarOffset
 const AV_AT = [0, 0, -1.0];
 const room = buildRoom();
-const avatarRest = buildAvatarSplats(null, AV_AT);
-const avatarCount = avatarRest.count;
+let appearance = AVATAR_PRESETS[0];
 let avatarOffset = room.count;
+let currentGuest = null;
+// presets differ in splat COUNT (beard, glasses…), so a preset switch
+// rebuilds the whole instance buffer, not just the avatar region
 function rebuildScene(guest) {
-  const gCount = guest ? guest.count : 0;
+  if (guest !== undefined) currentGuest = guest;
+  const g = currentGuest;
+  const avatarRest = buildAvatarSplats(null, AV_AT, appearance);
+  const gCount = g ? g.count : 0;
   avatarOffset = room.count + gCount;
-  const data = new Float32Array((avatarOffset + avatarCount) * FLOATS_PER_SPLAT);
+  const data = new Float32Array((avatarOffset + avatarRest.count) * FLOATS_PER_SPLAT);
   data.set(room.toFloat32());
-  if (guest) data.set(guest.data, room.count * FLOATS_PER_SPLAT);
+  if (g) data.set(g.data, room.count * FLOATS_PER_SPLAT);
   data.set(avatarRest.toFloat32(), avatarOffset * FLOATS_PER_SPLAT);
-  renderer.setData(data, avatarOffset + avatarCount);
+  renderer.setData(data, avatarOffset + avatarRest.count);
 }
 rebuildScene(null);
 // a second participant, randomly picked from the vendored VRM roster
@@ -138,8 +143,8 @@ $('streamBtn').addEventListener('click', () => {
   }, 55);
 });
 
-// procedural avatar appearance presets
-let appearance = AVATAR_PRESETS[0];
+// procedural avatar appearance presets (appearance is declared above,
+// before the first rebuildScene)
 for (const pr of AVATAR_PRESETS) {
   const o = document.createElement('option');
   o.value = pr.id; o.textContent = pr.name;
@@ -147,6 +152,7 @@ for (const pr of AVATAR_PRESETS) {
 }
 $('avatarSel').addEventListener('change', () => {
   appearance = AVATAR_PRESETS.find(x => x.id === $('avatarSel').value) || AVATAR_PRESETS[0];
+  rebuildScene();   // splat count changed with the preset
 });
 
 // pipeline pieces
