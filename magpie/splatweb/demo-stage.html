@@ -41,7 +41,7 @@
     top: 0; height: 100%; width: min(340px, 88vw);
     padding: 3.2rem 1rem 1rem; overflow-y: auto;
     border-radius: 0;
-    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .drawer h2 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
     color: #7fb4ff; margin: 1rem 0 0.4rem; font-weight: 600; }
@@ -57,7 +57,7 @@
     color: #cfe0ff; background: rgba(20, 30, 50, 0.85);
     border: 1px solid rgba(110, 170, 255, 0.4); cursor: pointer;
     padding: 0.9rem 0.35rem; user-select: none;
-    transition: background 0.2s, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: background 0.2s, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .tab:hover { background: rgba(40, 70, 120, 0.9); }
   #ctrlTab { right: 0; transform: translateY(-50%); border-radius: 8px 0 0 8px; border-right: 0; }
@@ -97,11 +97,6 @@
 <body>
 <canvas id="gl"></canvas>
 <div class="frame"><span></span><span></span><span></span><span></span></div>
-
-<div class="hud chip tl">
-  <b>SPLATWEB · STAGE</b>
-  <a href="index.html">hub</a><a href="demo-telemetry.html">packet</a><a href="demo-splat-room.html">room</a><a href="demo-gallery.html">gallery</a>
-</div>
 
 <div class="hud chip bl">
   <span class="stat" id="stats">–</span><br>
@@ -143,8 +138,29 @@
   Expressions auto-calibrate to your personal range while CAM runs. If turns read backwards, toggle mirror. No webcam? Try <a href="?armdemo" style="color:#7fb4ff">?armdemo</a>.</div>
 </div>
 
-<button class="tab" id="netTab">NETWORK</button>
+<div class="hud chip" id="camMirror" style="top:14px; left:14px; padding:6px; display:none">
+  <canvas id="camDebug" width="200" height="150" style="display:block; border-radius:6px; background:#06080c"></canvas>
+  <div class="note" style="font-size:0.62rem; text-align:center">detected mesh (local only)</div>
+</div>
+
+<button class="tab" id="netTab">DEBUG</button>
 <div class="hud drawer open" id="netDrawer">
+  <h2>Rig debug</h2>
+  <div class="ctl">
+    <label style="flex:0 0 auto"><input type="checkbox" id="showCP"> control points</label>
+    <label style="flex:0 0 auto"><input type="checkbox" id="xray"> x-ray structure</label>
+  </div>
+  <div class="ctl"><label>expression</label><input type="range" id="gainAll" min="0" max="200" value="100"><output id="gainAllOut">100 %</output></div>
+  <div class="ctl"><label>jaw</label><input type="range" id="gainJaw" min="0" max="200" value="100"><output id="gainJawOut">100 %</output></div>
+  <div class="ctl"><label>brows</label><input type="range" id="gainBrow" min="0" max="200" value="100"><output id="gainBrowOut">100 %</output></div>
+  <div class="ctl"><label>smile</label><input type="range" id="gainSmile" min="0" max="200" value="100"><output id="gainSmileOut">100 %</output></div>
+  <div class="ctl"><label>mouth pos</label><input type="range" id="offMouth" min="-100" max="100" value="0"><output id="offMouthOut">0</output></div>
+  <div class="ctl"><label>eye pos</label><input type="range" id="offEyes" min="-100" max="100" value="0"><output id="offEyesOut">0</output></div>
+  <div class="ctl"><label>density</label><input type="range" id="density" min="30" max="250" value="100"><output id="densityOut">100 %</output></div>
+  <p class="note">Gains exaggerate (&gt;100%) or suppress (&lt;100%) the received
+  expression channels, viewer-side. Position sliders move the procedural
+  face's rig anchors. Density resamples the procedural avatar live. With
+  CAM on, the detected face/arm mesh mirrors top-left.</p>
   <h2>Network (simulated)</h2>
   <div class="ctl"><label>latency</label><input type="range" id="latency" min="0" max="500" value="80"><output id="latencyOut">80 ms</output></div>
   <div class="ctl"><label>jitter</label><input type="range" id="jitter" min="0" max="200" value="30"><output id="jitterOut">30 ms</output></div>
@@ -188,8 +204,15 @@ for (const [tabId, drawerId] of [['ctrlTab', 'ctrlDrawer'], ['netTab', 'netDrawe
   let timer = setTimeout(() => drawer.classList.remove('open'), 6000);
   const keep = () => { clearTimeout(timer); };
   tab.addEventListener('click', () => { keep(); drawer.classList.toggle('open'); });
-  drawer.addEventListener('pointerdown', keep);
   drawer.addEventListener('pointerenter', keep);
+  // clicking dead space (not a control) slides the drawer away too
+  drawer.addEventListener('click', (e) => {
+    keep();
+    const tag = e.target.tagName;
+    if (e.target === drawer || tag === 'H2' || tag === 'P' || (tag === 'DIV' && !e.target.closest('.carousel'))) {
+      drawer.classList.remove('open');
+    }
+  });
 }
 
 // scene: room + (optional guest) + avatar block last, so the avatar region
@@ -197,22 +220,47 @@ for (const [tabId, drawerId] of [['ctrlTab', 'ctrlDrawer'], ['netTab', 'netDrawe
 const AV_AT = [0, 0, -1.0];
 const room = buildRoom();
 let appearance = AVATAR_PRESETS[0];
+// debug rig state — declared before the first rebuildScene() (which
+// consults it via buildAvatarF32)
+const dbg = { all: 1, jaw: 1, brow: 1, smile: 1, mouth: 0, eyes: 0, density: 1, cp: false, xray: false };
 let avatarOffset = room.count;
 let currentGuest = null;
 // realistic pre-rigged head (lazy-loaded on selection)
 let headMode = 'proc';
 let scanHead = null;
 let avScratch = null;
+const CP_COLOR = [1, 0.25, 0.85];
+function withDebug(list, f32) {
+  // x-ray: ghost every splat so hidden structure (teeth, cavity, layers)
+  // shows through; control points: bright markers at the rig joints
+  if (dbg.xray) for (let i = 13; i < f32.length; i += FLOATS_PER_SPLAT) f32[i] *= 0.3;
+  if (!dbg.cp) return f32;
+  const joints = (list && list.joints) || [];
+  const out = new Float32Array(f32.length + joints.length * FLOATS_PER_SPLAT);
+  out.set(f32);
+  let o = f32.length;
+  for (const j of joints) {
+    out[o] = j[0]; out[o + 1] = j[1]; out[o + 2] = j[2];
+    out[o + 6] = 1; out[o + 7] = 0.013; out[o + 8] = 0.013; out[o + 9] = 0.013;
+    out[o + 10] = CP_COLOR[0]; out[o + 11] = CP_COLOR[1]; out[o + 12] = CP_COLOR[2]; out[o + 13] = 1;
+    o += FLOATS_PER_SPLAT;
+  }
+  return out;
+}
 function buildAvatarF32(rx, tSec) {
+  applyGains(rx);
+  const anim = { t: tSec, density: dbg.density, rig: { mouth: dbg.mouth, eyes: dbg.eyes } };
   if (headMode === 'scan' && scanHead) {
-    const torso = buildAvatarSplats(rx, AV_AT, appearance, { t: tSec, noHead: true }).toFloat32();
+    const torsoList = buildAvatarSplats(rx, AV_AT, appearance, { ...anim, noHead: true });
+    const torso = torsoList.toFloat32();
     const total = torso.length + scanHead.count * FLOATS_PER_SPLAT;
     if (!avScratch || avScratch.length !== total) avScratch = new Float32Array(total);
     avScratch.set(torso, 0);
     buildScanHeadSplats(scanHead, rx, AV_AT, avScratch, torso.length);
-    return avScratch;
+    return withDebug(torsoList, avScratch);
   }
-  return buildAvatarSplats(rx, AV_AT, appearance, { t: tSec }).toFloat32();
+  const list = buildAvatarSplats(rx, AV_AT, appearance, anim);
+  return withDebug(list, list.toFloat32());
 }
 // presets differ in splat COUNT (beard, glasses…), so a preset switch
 // rebuilds the whole instance buffer, not just the avatar region
@@ -485,6 +533,66 @@ canvas.addEventListener('wheel', e => { e.preventDefault(); radius *= Math.exp(e
 const senderCtx = $('senderFace').getContext('2d');
 let last = performance.now(), sendAcc = 0, statTimer = 0, extrapEvents = 0, wasExtrap = false;
 
+// ---- debug rig controls (state object declared at boot, above)
+const wireDbg = (id, out, fmt, apply) => {
+  const el = $(id);
+  const f = () => { $(out).textContent = fmt(+el.value); apply(+el.value); };
+  el.addEventListener('input', f); f();
+};
+wireDbg('gainAll', 'gainAllOut', v => v + ' %', v => { dbg.all = v / 100; });
+wireDbg('gainJaw', 'gainJawOut', v => v + ' %', v => { dbg.jaw = v / 100; });
+wireDbg('gainBrow', 'gainBrowOut', v => v + ' %', v => { dbg.brow = v / 100; });
+wireDbg('gainSmile', 'gainSmileOut', v => v + ' %', v => { dbg.smile = v / 100; });
+wireDbg('offMouth', 'offMouthOut', v => String(v), v => { dbg.mouth = v / 100 * 0.02; });
+wireDbg('offEyes', 'offEyesOut', v => String(v), v => { dbg.eyes = v / 100 * 0.012; });
+wireDbg('density', 'densityOut', v => v + ' %', v => { dbg.density = v / 100; rebuildScene(); });
+$('showCP').addEventListener('change', e => { dbg.cp = e.target.checked; rebuildScene(); });
+$('xray').addEventListener('change', e => { dbg.xray = e.target.checked; });
+
+function applyGains(rx) {
+  if (!rx) return rx;
+  const b2 = rx.blend, g = dbg.all;
+  const gc = (i, extra) => { b2[i] = Math.max(0, Math.min(1, b2[i] * g * extra)); };
+  gc(0, dbg.jaw); gc(1, 1); gc(2, 1); gc(3, dbg.brow);
+  gc(4, dbg.smile); gc(5, dbg.smile); gc(6, 1); gc(9, 1);
+  return rx;
+}
+
+// ---- webcam mesh mirror (top-left)
+const camDbgCv = $('camDebug'), camDbgCtx = camDbgCv.getContext('2d');
+function drawCamMirror() {
+  const on = cam.active;
+  $('camMirror').style.display = on ? 'block' : 'none';
+  if (!on) return;
+  const w = camDbgCv.width, h = camDbgCv.height;
+  camDbgCtx.fillStyle = '#06080c';
+  camDbgCtx.fillRect(0, 0, w, h);
+  const face = cam.debugFace;
+  if (face) {
+    camDbgCtx.fillStyle = 'rgba(120,255,160,0.85)';
+    for (const lm of face) camDbgCtx.fillRect(lm.x * w, lm.y * h, 1.3, 1.3);
+  }
+  const pl = cam.debugPose;
+  if (pl) {
+    camDbgCtx.strokeStyle = 'rgba(80,200,255,0.9)';
+    camDbgCtx.lineWidth = 2;
+    for (const [a, b2, c] of [[11, 13, 15], [12, 14, 16]]) {
+      camDbgCtx.beginPath();
+      camDbgCtx.moveTo(pl[a].x * w, pl[a].y * h);
+      camDbgCtx.lineTo(pl[b2].x * w, pl[b2].y * h);
+      camDbgCtx.lineTo(pl[c].x * w, pl[c].y * h);
+      camDbgCtx.stroke();
+    }
+    camDbgCtx.fillStyle = '#ffd166';
+    for (const i of [11, 12, 13, 14, 15, 16]) camDbgCtx.fillRect(pl[i].x * w - 2, pl[i].y * h - 2, 4, 4);
+  }
+  if (!face && !pl) {
+    camDbgCtx.fillStyle = '#5a6070';
+    camDbgCtx.font = '11px system-ui';
+    camDbgCtx.fillText('no face / body detected', 38, h / 2);
+  }
+}
+
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000);
   const dtMs = now - last; last = now;
@@ -541,6 +649,7 @@ function frame(now) {
       const arms = cam.pl ? (cam.armsSeen ? 'arms ✓ (IK)' : 'arms off-camera → idle') : 'no skeleton model';
       micNote.textContent = `CAM live — ${face} · ${arms}. Packet: ${cam.armsSeen ? '40' : '32'} bytes.`;
     }
+    drawCamMirror();
     const badge = $('linkBadge');
     if (buffer.frozen) { badge.className = 'badge bad'; badge.textContent = 'FROZEN (feed stale > 200 ms)'; }
     else if (buffer.extrapolating) { badge.className = 'badge warn'; badge.textContent = 'extrapolating'; }

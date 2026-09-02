@@ -173,6 +173,15 @@ export const AVATAR_PRESETS = [
     moustache: true, ear: 1.3, browTh: 1.45, nose: 1.12, jawTaper: 0.46, build: 0.92 },
   { id: 'bjorn', name: 'Björn', skin: [0.90, 0.72, 0.60], hair: [0.78, 0.68, 0.45], shirt: [0.40, 0.30, 0.55], hairLine: 0.88,
     headW: 1.07, jawTaper: 0.28, nose: 1.15, beard: true, browTh: 1.2, build: 1.18 },
+  // different visual FORMS — same telemetry, different dialects
+  { id: 'vex', name: 'Vector', form: 'phosphor', unlit: true, hairLine: 0.4,
+    skin: [0.35, 1.0, 0.5], hair: [0.2, 0.9, 0.4], shirt: [0.06, 0.3, 0.16] },
+  { id: 'blok', name: 'Blok', form: 'voxel', hairLine: 0.4,
+    skin: [0.85, 0.6, 0.42], hair: [0.32, 0.2, 0.5], shirt: [0.9, 0.5, 0.15] },
+  { id: 'papier', name: 'Papier', form: 'cutout', unlit: true, hairLine: 0.4,
+    skin: [0.98, 0.8, 0.64], hair: [0.16, 0.16, 0.22], shirt: [0.93, 0.32, 0.25] },
+  { id: 'volt', name: 'Volt', form: 'bot', hairLine: 1,
+    skin: [0.6, 0.63, 0.68], hair: [0.3, 0.32, 0.36], shirt: [0.2, 0.22, 0.28] },
 ];
 
 export function avatarSplatCount() { return buildAvatarSplats(null).count; }
@@ -207,6 +216,9 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   // so a smile lifts the cheeks and narrows the eyes instead of only
   // bending the mouth (the "big false smile" fix)
   const smile = (smL + smR) / 2;
+  // debug density factor: more/fewer samples, sizes scaled to keep coverage
+  const DEN = clamp(anim.density || 1, 0.3, 2.5);
+  const DSZ = 1 / Math.sqrt(DEN);
   const cheekLift = smile * 0.7;
   const eyeNarrow = smile * 0.30;
   const eyeWiden = brow * 0.25;
@@ -218,18 +230,130 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   if (!anim.noHead) {
   const addL = (pos, scale, color, alpha = 1, quat = [0, 0, 0, 1]) =>
     local.push([pos, scale, color, alpha, quat]);
+  // VISUAL FORMS — same telemetry, different visual language. 'painterly'
+  // is the soft humanoid; the others are deliberately different dialects.
+  const FORM = A.form || 'painterly';
+  const smile2 = (smL + smR) / 2;
+  if (FORM === 'phosphor') {
+    // CRT vector wireframe (the trees/ phosphor heritage): dark occluder
+    // core + glowing latitude/meridian strokes + luminous features
+    const G = SKIN;
+    for (let i = 0; i < 46; i++) {   // dark core (hidden-line occlusion)
+      const th = Math.acos(1 - 2 * (i + 0.5) / 46), ph2 = i * 2.4;
+      addL([Math.sin(th) * Math.cos(ph2) * 0.078, 0.13 + Math.cos(th) * 0.098, Math.sin(th) * Math.sin(ph2) * 0.083],
+        [0.05, 0.05, 0.05], [0.01, 0.035, 0.02], 0.92);
+    }
+    for (let li = 0; li < 7; li++) {   // latitude rings
+      const ny = -0.78 + li * 0.26, r = Math.sqrt(Math.max(0.02, 1 - ny * ny));
+      for (let k = 0; k < 22; k++) {
+        const a = (k / 22) * Math.PI * 2;
+        const n = normalize([Math.cos(a) * r, ny, Math.sin(a) * r]);
+        const tg = [-Math.sin(a), 0, Math.cos(a)];
+        addL([Math.cos(a) * r * 0.095, 0.13 + ny * 0.115, Math.sin(a) * r * 0.1],
+          [0.015, 0.0022, 0.0022], G, 0.85, basisToQuat(tg, cross(n, tg), n));
+      }
+    }
+    for (let m = 0; m < 4; m++) {   // meridian arcs
+      const az = (m / 4) * Math.PI;
+      for (let k = 0; k < 18; k++) {
+        const th = -1.25 + (2.5 * k) / 17;
+        const r = Math.cos(th), ny = Math.sin(th);
+        addL([Math.cos(az) * r * 0.095, 0.13 + ny * 0.115, Math.sin(az) * r * 0.1],
+          [0.0022, 0.013, 0.0022], G, 0.7);
+      }
+    }
+    for (const [sx, blink] of [[-1, blinkL], [1, blinkR]]) {   // eyes
+      const open = clamp(1 - blink, 0.06, 1);
+      addL([sx * 0.042 + lookX * 0.008, 0.155 + lookY * 0.006, 0.096],
+        [0.008, 0.008 * open, 0.005], [0.85, 1, 0.9], 1);
+      addL([sx * 0.042, 0.155, 0.09], [0.016, 0.014 * open, 0.008], G, 0.3);
+    }
+    for (const sx of [-1, 1]) {   // brows
+      addL([sx * 0.045, 0.185 + brow * 0.014, 0.093], [0.02, 0.0022, 0.003], G, 0.9,
+        qFromEuler(0, 0, sx * (-0.2 - brow * 0.15)));
+    }
+    // mouth: two glowing lines that separate with the jaw
+    const g2 = 0.002 + jaw * 0.02;
+    addL([0, 0.068 + g2, 0.096], [0.026 + smile2 * 0.008, 0.0022, 0.003], G, 0.95);
+    addL([0, 0.068 - g2, 0.096], [0.024 + smile2 * 0.006, 0.0022, 0.003], G, 0.95);
+  } else if (FORM === 'voxel') {
+    // chunky blocks on a grid, two-tone shaded, features as block swaps
+    const cell = 0.023;
+    for (let xi = -4; xi <= 4; xi++) for (let yi = -5; yi <= 5; yi++) for (let zi = -4; zi <= 4; zi++) {
+      const px = xi * cell, py = yi * cell, pz = zi * cell;
+      const rr = (px / 0.095) ** 2 + (py / 0.118) ** 2 + (pz / 0.1) ** 2;
+      if (rr > 1 || rr < 0.5) continue;
+      const ny = py / 0.118, nzn = pz / 0.1;
+      const isHair = (ny > A.hairLine && !(nzn > 0.3 && ny < A.hairLine + 0.25));
+      const c = isHair ? HAIR : SKIN;
+      const shade = 1 + (((xi + yi + zi) % 2) ? -0.07 : 0.05) + ny * 0.06;
+      addL([px, 0.13 + py, pz], [cell * 0.52, cell * 0.52, cell * 0.52],
+        [c[0] * shade, c[1] * shade, c[2] * shade], 1);
+    }
+    for (const [sx, blink] of [[-1, blinkL], [1, blinkR]]) {
+      const open = clamp(1 - blink, 0.1, 1);
+      addL([sx * 2 * cell, 0.13 + cell, 0.093], [cell * 0.55, cell * 0.55 * open, cell * 0.4], [0.08, 0.08, 0.1], 1);
+    }
+    for (const sx of [-1, 1]) {
+      addL([sx * 2 * cell, 0.13 + (2.1 + brow) * cell, 0.093], [cell * 0.6, cell * 0.28, cell * 0.4], HAIR, 1);
+    }
+    addL([0, 0.13 - cell, 0.098], [cell * 0.4, cell * 0.4, cell * 0.4], [SKIN[0] * 0.8, SKIN[1] * 0.7, SKIN[2] * 0.65], 1);
+    // mouth rows: lower row fades in as the jaw opens
+    addL([0, 0.13 - 2.6 * cell, 0.095], [cell * (0.9 + smile2 * 0.5), cell * 0.3, cell * 0.4], [0.45, 0.15, 0.15], 1);
+    addL([0, 0.13 - (3.1 + jaw * 1.6) * cell, 0.095], [cell * 0.9, cell * (0.3 + jaw * 0.8), cell * 0.4], [0.3, 0.1, 0.1], clamp(jaw * 2.5, 0, 1));
+  } else if (FORM === 'cutout') {
+    // flat paper puppet: a few big bold unlit shapes
+    addL([0, 0.125, 0.02], [0.088, 0.11, 0.004], SKIN, 1);
+    addL([0, 0.185, 0.005], [0.098, 0.07, 0.004], HAIR, 1);
+    addL([0, 0.215, 0.026], [0.082, 0.022, 0.004], HAIR, 1);   // fringe
+    for (const sx of [-1, 1]) addL([sx * 0.088, 0.12, 0.008], [0.018, 0.028, 0.004], SKIN, 1);  // ears
+    for (const [sx, blink] of [[-1, blinkL], [1, blinkR]]) {
+      const open = clamp(1 - blink, 0.08, 1);
+      addL([sx * 0.04, 0.15, 0.028], [0.02, 0.016 * open, 0.004], [1, 1, 1], 1);
+      addL([sx * 0.04 + lookX * 0.009, 0.15 + lookY * 0.006, 0.032], [0.008, 0.01 * open, 0.004], [0.1, 0.1, 0.12], 1);
+      addL([sx * 0.04, 0.178 + brow * 0.014, 0.03], [0.024, 0.006, 0.004], HAIR, 1,
+        qFromEuler(0, 0, sx * -0.2));
+    }
+    addL([0.008, 0.125, 0.03], [0.007, 0.02, 0.004], [SKIN[0] * 0.82, SKIN[1] * 0.75, SKIN[2] * 0.7], 1);  // nose
+    for (const sx of [-1, 1]) addL([sx * 0.055, 0.105, 0.028], [0.013, 0.009, 0.004], [1, 0.55, 0.5], 0.8); // blush
+    addL([0, 0.075 - jaw * 0.012, 0.03], [0.022 + smile2 * 0.01, 0.005 + jaw * 0.028, 0.004], [0.75, 0.2, 0.2], 1);
+  } else if (FORM === 'bot') {
+    // sleek robot: metal shell, glowing visor eyes, dot-matrix mouth
+    const GA2 = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < 320; i++) {
+      const ny = 1 - 2 * (i + 0.5) / 320;
+      const rr = Math.sqrt(Math.max(0, 1 - ny * ny)), ph2 = i * GA2;
+      const n = [Math.cos(ph2) * rr, ny, Math.sin(ph2) * rr];
+      const sh = 0.45 + 0.6 * Math.max(0, dot(n, lightL));
+      addL([n[0] * 0.088, 0.13 + ny * 0.105, n[2] * 0.092],
+        [0.016, 0.016, 0.006], [SKIN[0] * sh, SKIN[1] * sh, SKIN[2] * sh * 1.05], 1, qFromZTo(n));
+    }
+    addL([0, 0.155, 0.085], [0.078, 0.024, 0.008], [0.04, 0.05, 0.07], 1);   // visor band
+    for (const [sx, blink] of [[-1, blinkL], [1, blinkR]]) {
+      const open = clamp(1 - blink, 0.05, 1);
+      addL([sx * 0.038 + lookX * 0.008, 0.155 + lookY * 0.005, 0.093],
+        [0.017 + brow * 0.004, 0.006 * open, 0.004], [0.25, 0.85, 1], 1);
+    }
+    for (let d2 = -3; d2 <= 3; d2++) {   // dot-matrix mouth, lit by the jaw
+      const lit = clamp(0.18 + jaw * 1.2 - Math.abs(d2) * 0.08, 0.05, 1);
+      addL([d2 * 0.0105, 0.07 + smile2 * (0.5 - Math.abs(d2) / 6) * 0.02, 0.09],
+        [0.0042, 0.0042 + jaw * 0.006, 0.003], [0.25 * lit, 0.85 * lit, 1 * lit], 1);
+    }
+    for (let k = 0; k < 4; k++) addL([0, 0.245 + k * 0.012, 0], [0.0035, 0.008, 0.0035], [0.35, 0.37, 0.42], 1);
+    addL([0, 0.3, 0], [0.009, 0.009, 0.009], [1, 0.35, 0.3], 0.9);           // antenna beacon
+  } else {
   // hairstyle parameters (len/wid = strand shape, jit = direction chaos,
   // side = comb bias, curtain = hanging bob edge)
   const HSY = {
-    crop: { len: 0.015, wid: 0.0058, jit: 0.1 },
-    side: { len: 0.019, wid: 0.0052, jit: 0.12, side: 0.8 },
-    bob: { len: 0.028, wid: 0.006, jit: 0.16, curtain: true },
-    wild: { len: 0.012, wid: 0.0078, jit: 0.9 },
+    crop: { len: 0.014, wid: 0.005, jit: 0.1 },
+    side: { len: 0.018, wid: 0.0046, jit: 0.12, side: 0.8 },
+    bob: { len: 0.026, wid: 0.0053, jit: 0.16, curtain: true },
+    wild: { len: 0.011, wid: 0.0068, jit: 0.9 },
   }[A.hairStyle || 'crop'];
   // skull — fibonacci-sampled shell, splats TANGENT to the surface (thin
   // along the normal), shaped: jaw tapers, back bulges
   const RX = 0.092 * F.headW, RY = 0.115 * F.headH, RZ = 0.10, CY = 0.13;
-  const N_SKULL = 1900, GA = Math.PI * (3 - Math.sqrt(5));
+  const N_SKULL = Math.round(2700 * DEN), GA = Math.PI * (3 - Math.sqrt(5));
   for (let i = 0; i < N_SKULL; i++) {
     const ny = 1 - 2 * (i + 0.5) / N_SKULL;
     const rr = Math.sqrt(Math.max(0, 1 - ny * ny));
@@ -263,7 +387,7 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
       const gl = 0.8 + rnd() * 0.45;                    // per-strand sheen variation
       // bobs keep the fringe short so it doesn't drape over the eyes
       const sLen = (HSY.curtain && nz > 0.05) ? HSY.len * 0.5 : HSY.len;
-      addL(pos, [sLen, HSY.wid, 0.0045],
+      addL(pos, [sLen * DSZ, HSY.wid * DSZ, 0.0045],
         [HAIR[0] * sh * gl, HAIR[1] * sh * gl, HAIR[2] * sh * gl], 1, basisToQuat(t, bt, n));
     } else {
       // cheeks: blush + the smile chord (lift + out) and jaw stretch
@@ -274,7 +398,7 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
         pos[1] += cheekLift * 0.007 - jaw * 0.004;
         pos[0] += Math.sign(nx) * cheekLift * 0.0025;
       }
-      addL(pos, [0.0086, 0.0086, 0.0034],
+      addL(pos, [0.0071 * DSZ, 0.0071 * DSZ, 0.0028],
         [(SKIN[0] + tone + blush) * sh, (SKIN[1] + tone * 0.8) * sh, (SKIN[2] + tone * 0.7) * sh],
         1, qFromZTo(n));
     }
@@ -308,7 +432,7 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   for (const [sx, blink] of [[-1, blinkL], [1, blinkR]]) {
     // chords: smiles narrow the eyes, raised brows widen them
     const open = clamp((1 - blink) * (1 - eyeNarrow) * (1 + eyeWiden), 0.08, 1.15);
-    const ex = sx * F.eyeX, ey = CY + 0.025;
+    const ex = sx * F.eyeX, ey = CY + 0.025 + ((anim.rig && anim.rig.eyes) || 0);
     addL([ex, ey, 0.092], [0.019 * F.eyeSize, 0.014 * open * F.eyeSize, 0.011], [0.9, 0.89, 0.87]);
     addL([ex + lookX * 0.009, ey + lookY * 0.007, 0.098],
       [0.0095 * F.eyeSize, 0.0105 * open * F.eyeSize, 0.008], [0.32, 0.2, 0.11]);   // iris
@@ -355,7 +479,9 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   // philtrum groove
   addL([0, CY - 0.045, 0.0915], [0.0022, 0.007, 0.004], SHAD, 0.4);
   // mouth: dark opening scaled by jaw; muted lips; smile corners lift
-  const mouthY = CY - 0.062 - jaw * 0.02;
+  // (anim.rig.mouth/eyes are debug repositioning offsets)
+  const RIGO = anim.rig || {};
+  const mouthY = CY - 0.062 - jaw * 0.02 + (RIGO.mouth || 0);
   const mouthW = clamp(0.026 * F.mouth - pucker * 0.011 + (smL + smR) * 0.005, 0.012, 0.042);
   addL([0, mouthY, 0.088], [mouthW, 0.004 + jaw * 0.026, 0.012], LIPD);
   addL([0, mouthY + 0.009 + jaw * 0.012, 0.089], [mouthW * 0.96, 0.0035, 0.01], LIP);
@@ -406,6 +532,8 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
     addL([0, CY + 0.031, 0.099], [0.013, 0.0025, 0.0025], DARK);                   // bridge
   }
 
+  }   // end form branch
+
   // rotate head-locals by pose quat about the neck (y = 0.02); HS scales the
   // whole head up so it reads at room distance
   const HS = 1.3;
@@ -419,16 +547,18 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   // torso — does not rotate with the head; shaded in WORLD space.
   // Chest rings + shoulders + upper-arm stubs (no more weeble egg).
   const shirt = (n, mul = 1) => {
-    const sh = (0.55 + 0.5 * Math.max(0, dot(normalize(n), LIGHT))) * mul;
+    const sh = A.unlit ? mul : (0.55 + 0.5 * Math.max(0, dot(normalize(n), LIGHT))) * mul;
     return [SHIRT[0] * sh, SHIRT[1] * sh, SHIRT[2] * sh];
   };
-  for (let yi = 0; yi < 9; yi++) {
-    const y = 1.13 + yi * 0.038;
+  const TR = Math.max(6, Math.round(12 * Math.sqrt(DEN)));
+  const TC = Math.max(10, Math.round(20 * Math.sqrt(DEN)));
+  for (let yi = 0; yi < TR; yi++) {
+    const y = 1.128 + yi * (0.342 / TR);
     const r = (0.115 + (1.42 - y) * 0.22) * F.build;
-    for (let j = 0; j < 16; j++) {
-      const a = (j / 16) * Math.PI * 2 + (yi % 2) * 0.2;
+    for (let j = 0; j < TC; j++) {
+      const a = (j / TC) * Math.PI * 2 + (yi % 2) * 0.16;
       addWorld(s, base, [Math.cos(a) * r * 1.25, y, Math.sin(a) * r * 0.5],
-        [0.033, 0.028, 0.026], shirt([Math.cos(a), 0.15, Math.sin(a)], 0.94 + rnd() * 0.12));
+        [0.026 * DSZ, 0.022 * DSZ, 0.02], shirt([Math.cos(a), 0.15, Math.sin(a)], 0.94 + rnd() * 0.12));
     }
   }
   // arms + hands: shoulder → elbow → wrist → palm + fingers, short
@@ -437,13 +567,15 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   // idle sway and talk gesticulation are synthesised viewer-side so the
   // rig is ready for real skeleton data.
   const skinW = (n, mul = 1) => {
-    const sh = (0.55 + 0.5 * Math.max(0, dot(normalize(n), LIGHT))) * mul;
+    const sh = A.unlit ? mul : (0.55 + 0.5 * Math.max(0, dot(normalize(n), LIGHT))) * mul;
     return [SKIN[0] * sh, SKIN[1] * sh, SKIN[2] * sh];
   };
   const tA = anim.t || 0;
   const gest = jaw > 0.15 ? 1 : 0;
   const v3 = (a, d, k) => [a[0] + d[0] * k, a[1] + d[1] * k, a[2] + d[2] * k];
   const L1 = 0.25, L2 = 0.22;   // upper arm, forearm bone lengths
+  // rig control points, exported for the debug overlay
+  s.joints = [[base[0], base[1] + 1.47, base[2]]];
   const armPose = pose && pose.arms ? pose.arms : null;
   for (const sx of [-1, 1]) {
     addWorld(s, base, [sx * 0.205 * F.build, 1.41, 0], [0.062 * F.build, 0.034, 0.048], shirt([sx * 0.5, 1, 0.2]));
@@ -482,6 +614,10 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
       const fd = normalize([ud[0] * 0.85, ud[1] * Math.cos(bend), Math.sin(bend) * 0.9 + 0.05]);
       wrist = v3(elbow, fd, L2);
     }
+    s.joints.push(
+      [base[0] + shoulder[0], base[1] + shoulder[1], base[2] + shoulder[2]],
+      [base[0] + elbow[0], base[1] + elbow[1], base[2] + elbow[2]],
+      [base[0] + wrist[0], base[1] + wrist[1], base[2] + wrist[2]]);
     // draw along the solved joints (same splat count on both paths)
     const uv = normalize([elbow[0] - shoulder[0], elbow[1] - shoulder[1], elbow[2] - shoulder[2]]);
     const fd = normalize([wrist[0] - elbow[0], wrist[1] - elbow[1], wrist[2] - elbow[2]]);

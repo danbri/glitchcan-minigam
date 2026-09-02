@@ -130,6 +130,7 @@ export class FaceCapture {
     try { res = this.lm.detectForVideo(this.video, nowMs); }
     catch { return null; }
     this._tickArms(nowMs);
+    this.debugFace = res.faceLandmarks?.[0] || null;
     const cats = res.faceBlendshapes?.[0]?.categories;
     const mat = res.facialTransformationMatrixes?.[0]?.data;
     if (!cats || !mat) { this.faceSeen = false; return null; }
@@ -173,6 +174,7 @@ export class FaceCapture {
     try { res = this.pl.detectForVideo(this.video, nowMs); }
     catch { this.arms = null; return; }
     const wl = res.worldLandmarks?.[0], il = res.landmarks?.[0];
+    this.debugPose = il || null;
     if (!wl || !il) { this.armsSeen = false; this.arms = null; return; }
     const AVATAR_REACH = 0.45;   // avatar shoulder→wrist, slightly under L1+L2
     const armFor = (S, E, W) => {
