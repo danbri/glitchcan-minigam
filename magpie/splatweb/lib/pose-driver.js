@@ -23,6 +23,8 @@ export class PoseDriver {
     this._blinkPhase = 1;         // >=1 means not blinking
     this._talkUntil = 0; this._nextTalk = 2;
     this._smile = 0; this._tSmile = 0.15;
+    this._sacT = 0.5; this._sacX = 0; this._sacY = 0;   // gaze saccades
+    this._browFlash = 0; this._wasTalking = false;
     this._t = 0;
   }
 
@@ -105,12 +107,25 @@ export class PoseDriver {
     b[BI.jawOpen] = clamp(jaw, 0, 1);
     b[BI.eyeBlinkLeft] = blink;
     b[BI.eyeBlinkRight] = blink;
-    b[BI.browInnerUp] = clamp(0.15 + (talking ? 0.25 * Math.sin(t * 5) : 0) - this._pitch * 0.4, 0, 1);
+    // eyebrow flash at utterance onset — a strong conversational cue
+    if (talking && !this._wasTalking) this._browFlash = 0.55;
+    this._browFlash = Math.max(0, this._browFlash - dt * 1.5);
+    this._wasTalking = talking;
+    b[BI.browInnerUp] = clamp(0.15 + this._browFlash + (talking ? 0.2 * Math.sin(t * 5) : 0) - this._pitch * 0.4, 0, 1);
     b[BI.mouthSmileLeft] = this._smile;
     b[BI.mouthSmileRight] = this._smile * 0.92;
     b[BI.mouthPucker] = talking ? clamp(0.2 * Math.sin(t * 13 + 1), 0, 1) : 0;
-    b[BI.eyeLookX] = clamp(this._tYaw * -0.8, -1, 1);
-    b[BI.eyeLookY] = clamp(this._tPitch * -0.8, -1, 1);
+    // gaze: hold eye contact with the viewer, flick away in saccades,
+    // lead head turns slightly
+    this._sacT -= dt;
+    if (this._sacT <= 0) {
+      this._sacT = 0.7 + Math.random() * 2.2;
+      const away = Math.random() < 0.3;   // mostly return to camera
+      this._sacX = away ? (Math.random() - 0.5) * 0.7 : 0;
+      this._sacY = away ? (Math.random() - 0.5) * 0.35 : 0;
+    }
+    b[BI.eyeLookX] = clamp(this._tYaw * -0.55 + this._sacX, -1, 1);
+    b[BI.eyeLookY] = clamp(this._tPitch * -0.55 + this._sacY, -1, 1);
     b[BI.cheekPuff] = 0;
 
     // real webcam face capture overrides everything simulated above.

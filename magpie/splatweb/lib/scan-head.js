@@ -27,30 +27,103 @@ const WANTED = [
   'mouthSmile_L', 'mouthSmile_R', 'mouthPucker', 'cheekPuff',
   'eyeLookIn_L', 'eyeLookOut_L', 'eyeLookUp_L', 'eyeLookDown_L',
   'eyeLookIn_R', 'eyeLookOut_R', 'eyeLookUp_R', 'eyeLookDown_R',
+  // chord targets — driven indirectly so single packet channels expand
+  // into full expressions (see weightsFor)
+  'cheekSquint_L', 'cheekSquint_R', 'eyeSquint_L', 'eyeSquint_R',
+  'mouthDimple_L', 'mouthDimple_R', 'browOuterUp_L', 'browOuterUp_R',
+  'eyeWide_L', 'eyeWide_R', 'mouthStretch_L', 'mouthStretch_R',
+  'mouthLowerDown_L', 'mouthLowerDown_R', 'mouthUpperUp_L', 'mouthUpperUp_R',
 ];
 const LIGHT = (() => { const v = [0.3, 0.75, 0.6]; const l = Math.hypot(...v); return v.map(x => x / l); })();
 const ZERO10 = new Float32Array(10);
 
-export async function loadScanHead(url = FACECAP_URL, { count = 9000, headHeight = 0.34, yaw = 0 } = {}) {
+export async function loadScanHead(url = FACECAP_URL, { count = 9000, headHeight = 0.34, yaw = 0, hair = [0.17, 0.12, 0.09] } = {}) {
   const res = await loadGlbSplats(url, {
     count, targetHeight: headHeight, yaw, at: [0, 0, 0], light: null, morphNames: WANTED,
     // facecap's texture is KTX2/basisu — undecodable without a transcoder,
     // so the head renders as a skin-toned sculpture (shape + rig intact)
     tint: [0.92, 0.72, 0.6],
   });
-  return { count: res.count, base: res.data, morphs: res.morphs, normals: res.normals, heightM: res.heightM };
+  return addHair(res, hair);
 }
 
-// packet channels → facecap morph weights
+// procedural hair strands fitted to the scan's scalp: identity comes more
+// from a hairline than from pores — a bald scan reads mannequin. Strands
+// sit on scalp splats and inherit their morph deltas (so they track the
+// head's motion exactly).
+function addHair(res, hairColor) {
+  const b0 = res.data, n0 = res.count, nor = res.normals;
+  const scalpMinY = res.heightM * 0.6;
+  const picks = [];
+  for (let i = 0; i < n0; i++) {
+    const j = i * 3;
+    if (nor[j + 1] > 0.25 && b0[i * FLOATS_PER_SPLAT + 1] > scalpMinY
+      && nor[j + 2] < 0.75) picks.push(i);
+  }
+  const hc = picks.length;
+  const base = new Float32Array((n0 + hc) * FLOATS_PER_SPLAT);
+  base.set(b0);
+  const normals = new Float32Array((n0 + hc) * 3);
+  normals.set(nor);
+  const morphs = {};
+  for (const name of Object.keys(res.morphs)) {
+    const m = new Float32Array((n0 + hc) * 3);
+    m.set(res.morphs[name]);
+    morphs[name] = m;
+  }
+  let seed = 5;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (let k = 0; k < hc; k++) {
+    const i = picks[k], o = i * FLOATS_PER_SPLAT, oo = (n0 + k) * FLOATS_PER_SPLAT, j = i * 3;
+    const nx = nor[j], ny = nor[j + 1], nz = nor[j + 2];
+    // strand base: scalp point pushed slightly out along the normal
+    base[oo] = b0[o] + nx * 0.005;
+    base[oo + 1] = b0[o + 1] + ny * 0.005;
+    base[oo + 2] = b0[o + 2] + nz * 0.005;
+    // downhill tangent for strand direction
+    let tx = -nx * -ny, ty = -1 - ny * -ny, tz = -nz * -ny;
+    const tl = Math.hypot(tx, ty, tz) || 1;
+    tx /= tl; ty /= tl; tz /= tl;
+    // orientation: reuse the base splat's quat (tangent frame is close
+    // enough at strand scale); elongate along local x via the scales
+    base[oo + 3] = b0[o + 3]; base[oo + 4] = b0[o + 4]; base[oo + 5] = b0[o + 5]; base[oo + 6] = b0[o + 6];
+    base[oo + 7] = 0.0085 + rnd() * 0.004; base[oo + 8] = 0.0035; base[oo + 9] = 0.0028;
+    const gl = 0.75 + rnd() * 0.5;
+    base[oo + 10] = hairColor[0] * gl; base[oo + 11] = hairColor[1] * gl; base[oo + 12] = hairColor[2] * gl;
+    base[oo + 13] = 0.98;
+    normals[(n0 + k) * 3] = nx; normals[(n0 + k) * 3 + 1] = ny; normals[(n0 + k) * 3 + 2] = nz;
+    // strands ride their scalp splat's morph deltas
+    for (const name of Object.keys(morphs)) {
+      const m = morphs[name];
+      m[(n0 + k) * 3] = m[j]; m[(n0 + k) * 3 + 1] = m[j + 1]; m[(n0 + k) * 3 + 2] = m[j + 2];
+    }
+  }
+  return { count: n0 + hc, base, morphs, normals, heightM: res.heightM };
+}
+
+// packet channels → facecap morph weights, expanded as EXPRESSION
+// CHORDS: a real smile is smile + cheek raise + eye narrowing + dimples;
+// a real brow-raise lifts the whole brow and widens the eyes; an open
+// jaw stretches the mouth. Driving single morphs 1:1 read as weak and
+// false — this table is what fixed that.
 function weightsFor(blend) {
   const lx = blend[BI.eyeLookX], ly = blend[BI.eyeLookY];
+  const jaw = blend[BI.jawOpen], sL = blend[BI.mouthSmileLeft], sR = blend[BI.mouthSmileRight];
+  const brow = blend[BI.browInnerUp];
   return [
-    ['jawOpen', blend[BI.jawOpen]],
+    ['jawOpen', jaw],
+    ['mouthLowerDown_L', jaw * 0.4], ['mouthLowerDown_R', jaw * 0.4],
+    ['mouthUpperUp_L', jaw * 0.25], ['mouthUpperUp_R', jaw * 0.25],
+    ['mouthStretch_L', jaw * 0.2], ['mouthStretch_R', jaw * 0.2],
     ['eyeBlink_L', blend[BI.eyeBlinkLeft]],
     ['eyeBlink_R', blend[BI.eyeBlinkRight]],
-    ['browInnerUp', blend[BI.browInnerUp]],
-    ['mouthSmile_L', blend[BI.mouthSmileLeft]],
-    ['mouthSmile_R', blend[BI.mouthSmileRight]],
+    ['browInnerUp', brow],
+    ['browOuterUp_L', brow * 0.75], ['browOuterUp_R', brow * 0.75],
+    ['eyeWide_L', brow * 0.5], ['eyeWide_R', brow * 0.5],
+    ['mouthSmile_L', sL], ['mouthSmile_R', sR],
+    ['cheekSquint_L', sL * 0.7], ['cheekSquint_R', sR * 0.7],
+    ['eyeSquint_L', sL * 0.35], ['eyeSquint_R', sR * 0.35],
+    ['mouthDimple_L', sL * 0.5], ['mouthDimple_R', sR * 0.5],
     ['mouthPucker', blend[BI.mouthPucker]],
     ['cheekPuff', blend[BI.cheekPuff]],
     ['eyeLookOut_R', Math.max(lx, 0)], ['eyeLookIn_L', Math.max(lx, 0)],

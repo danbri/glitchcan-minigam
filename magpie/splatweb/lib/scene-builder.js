@@ -162,14 +162,14 @@ const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 // features: beard, moustache, glasses. Splat count varies per preset —
 // consumers must rebuild buffers on switch.
 export const AVATAR_PRESETS = [
-  { id: 'hazel', name: 'Hazel', skin: [0.85, 0.64, 0.52], hair: [0.23, 0.16, 0.11], shirt: [0.24, 0.33, 0.45], hairLine: 0.40 },
-  { id: 'kofi', name: 'Kofi', skin: [0.45, 0.30, 0.22], hair: [0.09, 0.07, 0.06], shirt: [0.72, 0.55, 0.20], hairLine: 0.52,
+  { id: 'hazel', name: 'Hazel', skin: [0.85, 0.64, 0.52], hair: [0.23, 0.16, 0.11], shirt: [0.24, 0.33, 0.45], hairLine: 0.40, hairStyle: 'crop' },
+  { id: 'kofi', name: 'Kofi', skin: [0.45, 0.30, 0.22], hair: [0.09, 0.07, 0.06], shirt: [0.72, 0.55, 0.20], hairLine: 0.52, hairStyle: 'wild',
     headW: 1.08, jawTaper: 0.30, nose: 1.2, mouth: 1.1, beard: true, build: 1.12, puff: 1.0 },
-  { id: 'saoirse', name: 'Saoirse', skin: [0.93, 0.76, 0.66], hair: [0.65, 0.35, 0.16], shirt: [0.25, 0.45, 0.30], hairLine: 0.34,
+  { id: 'saoirse', name: 'Saoirse', skin: [0.93, 0.76, 0.66], hair: [0.65, 0.35, 0.16], shirt: [0.25, 0.45, 0.30], hairLine: 0.34, hairStyle: 'bob',
     headW: 0.92, headH: 1.04, jawTaper: 0.52, nose: 0.78, mouth: 0.88, browTh: 0.65, puff: 1.16, build: 0.88 },
-  { id: 'nadia', name: 'Nadia', skin: [0.72, 0.52, 0.40], hair: [0.12, 0.10, 0.09], shirt: [0.50, 0.20, 0.25], hairLine: 0.38,
+  { id: 'nadia', name: 'Nadia', skin: [0.72, 0.52, 0.40], hair: [0.12, 0.10, 0.09], shirt: [0.50, 0.20, 0.25], hairLine: 0.38, hairStyle: 'bob',
     glasses: true, eyeSize: 1.15, eyeX: 0.045, nose: 0.9, puff: 1.1, build: 0.94 },
-  { id: 'silas', name: 'Silas', skin: [0.55, 0.38, 0.30], hair: [0.60, 0.60, 0.62], shirt: [0.18, 0.42, 0.42], hairLine: 0.60,
+  { id: 'silas', name: 'Silas', skin: [0.55, 0.38, 0.30], hair: [0.60, 0.60, 0.62], shirt: [0.18, 0.42, 0.42], hairLine: 0.60, hairStyle: 'side',
     moustache: true, ear: 1.3, browTh: 1.45, nose: 1.12, jawTaper: 0.46, build: 0.92 },
   { id: 'bjorn', name: 'Björn', skin: [0.90, 0.72, 0.60], hair: [0.78, 0.68, 0.45], shirt: [0.40, 0.30, 0.55], hairLine: 0.88,
     headW: 1.07, jawTaper: 0.28, nose: 1.15, beard: true, browTh: 1.2, build: 1.18 },
@@ -197,6 +197,19 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   const jaw = b[BI.jawOpen], blinkL = b[BI.eyeBlinkLeft], blinkR = b[BI.eyeBlinkRight];
   const brow = b[BI.browInnerUp], smL = b[BI.mouthSmileLeft], smR = b[BI.mouthSmileRight];
   const pucker = b[BI.mouthPucker], lookX = b[BI.eyeLookX], lookY = b[BI.eyeLookY];
+  // DERIVED palette — lips, brows, lids, shadows are computed from the
+  // preset's skin + hair so every preset stays colour-harmonised
+  const LIP = [SKIN[0] * 0.88 + 0.05, SKIN[1] * 0.62, SKIN[2] * 0.6];
+  const LIPD = [LIP[0] * 0.55, LIP[1] * 0.45, LIP[2] * 0.45];
+  const BROWC = [HAIR[0] * 0.85, HAIR[1] * 0.85, HAIR[2] * 0.85];
+  const SHAD = [SKIN[0] * 0.62, SKIN[1] * 0.52, SKIN[2] * 0.48];
+  // EXPRESSION CHORDS — single channels expand into correlated motion,
+  // so a smile lifts the cheeks and narrows the eyes instead of only
+  // bending the mouth (the "big false smile" fix)
+  const smile = (smL + smR) / 2;
+  const cheekLift = smile * 0.7;
+  const eyeNarrow = smile * 0.30;
+  const eyeWiden = brow * 0.25;
 
   // head-local splats collected first, then rotated. anim.noHead skips the
   // whole procedural head (a scan head replaces it — lib/scan-head.js).
@@ -205,8 +218,16 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   if (!anim.noHead) {
   const addL = (pos, scale, color, alpha = 1, quat = [0, 0, 0, 1]) =>
     local.push([pos, scale, color, alpha, quat]);
+  // hairstyle parameters (len/wid = strand shape, jit = direction chaos,
+  // side = comb bias, curtain = hanging bob edge)
+  const HSY = {
+    crop: { len: 0.015, wid: 0.0058, jit: 0.1 },
+    side: { len: 0.019, wid: 0.0052, jit: 0.12, side: 0.8 },
+    bob: { len: 0.028, wid: 0.006, jit: 0.16, curtain: true },
+    wild: { len: 0.012, wid: 0.0078, jit: 0.9 },
+  }[A.hairStyle || 'crop'];
   // skull — fibonacci-sampled shell, splats TANGENT to the surface (thin
-  // along the normal), shaped: jaw tapers, face is flatter, back bulges
+  // along the normal), shaped: jaw tapers, back bulges
   const RX = 0.092 * F.headW, RY = 0.115 * F.headH, RZ = 0.10, CY = 0.13;
   const N_SKULL = 1900, GA = Math.PI * (3 - Math.sqrt(5));
   for (let i = 0; i < N_SKULL; i++) {
@@ -225,21 +246,47 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
     const pos = [nx * RX * taper * (isHair ? F.puff : 1), CY + ny * RY * (isHair ? F.puff * 0.99 : 1),
       nz * RZ * backB * faceF * (isHair ? F.puff : 1)];
     if (isHair) {
-      // strand: elongated along the surface's downhill direction
+      // strand: elongated along the surface's downhill direction, shaped
+      // by the preset's hairStyle (crop / side / bob / wild)
       let t = [0 - n[0] * -n[1], -1 - n[1] * -n[1], 0 - n[2] * -n[1]];   // d − n(d·n), d = down
       const tl = Math.hypot(t[0], t[1], t[2]);
       t = tl > 0.15 ? [t[0] / tl, t[1] / tl, t[2] / tl]
         : normalize([Math.cos(ph + 1.57), 0, Math.sin(ph + 1.57)]);
-      const bt = cross(n, t);
+      if (HSY.side) t = normalize([t[0] + HSY.side, t[1] * 0.5, t[2]]);
+      let bt = cross(n, t);
+      if (HSY.jit) {
+        const th = (rnd() - 0.5) * 2 * HSY.jit;
+        const ct = Math.cos(th), st = Math.sin(th);
+        t = normalize([t[0] * ct + bt[0] * st, t[1] * ct + bt[1] * st, t[2] * ct + bt[2] * st]);
+        bt = cross(n, t);
+      }
       const gl = 0.8 + rnd() * 0.45;                    // per-strand sheen variation
-      addL(pos, [0.015, 0.0058, 0.0045],
+      // bobs keep the fringe short so it doesn't drape over the eyes
+      const sLen = (HSY.curtain && nz > 0.05) ? HSY.len * 0.5 : HSY.len;
+      addL(pos, [sLen, HSY.wid, 0.0045],
         [HAIR[0] * sh * gl, HAIR[1] * sh * gl, HAIR[2] * sh * gl], 1, basisToQuat(t, bt, n));
     } else {
-      // cheeks get a touch of red
-      const cheek = (Math.abs(nx) > 0.45 && ny < 0.05 && ny > -0.4 && nz > 0.3) ? 0.05 : 0;
+      // cheeks: blush + the smile chord (lift + out) and jaw stretch
+      const isCheek = Math.abs(nx) > 0.4 && ny < 0.05 && ny > -0.45 && nz > 0.25;
+      let blush = 0;
+      if (isCheek) {
+        blush = 0.05 + cheekLift * 0.03;
+        pos[1] += cheekLift * 0.007 - jaw * 0.004;
+        pos[0] += Math.sign(nx) * cheekLift * 0.0025;
+      }
       addL(pos, [0.0086, 0.0086, 0.0034],
-        [(SKIN[0] + tone + cheek) * sh, (SKIN[1] + tone * 0.8) * sh, (SKIN[2] + tone * 0.7) * sh],
+        [(SKIN[0] + tone + blush) * sh, (SKIN[1] + tone * 0.8) * sh, (SKIN[2] + tone * 0.7) * sh],
         1, qFromZTo(n));
+    }
+  }
+  // hairstyle: bob adds a hanging curtain around the back and sides
+  if (HSY.curtain && A.hairLine < 0.8) {
+    for (let i = 0; i < 36; i++) {
+      const u = 1.9 + (2 * Math.PI - 3.8) * (i / 35);   // back + sides only
+      const dxs = Math.sin(u), dzs = Math.cos(u);
+      const gl = 0.75 + rnd() * 0.45;
+      addL([dxs * RX * F.puff * 1.03, CY - 0.045 - rnd() * 0.02, dzs * RZ * F.puff * 1.05],
+        [0.006, 0.028, 0.005], [HAIR[0] * gl, HAIR[1] * gl, HAIR[2] * gl], 0.95);
     }
   }
   // neck (shaded cylinder)
@@ -259,7 +306,8 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   // eyes: white + iris + pupil + a specular highlight (the highlight is
   // what makes an eye read as wet rather than painted-on)
   for (const [sx, blink] of [[-1, blinkL], [1, blinkR]]) {
-    const open = clamp(1 - blink, 0.08, 1);
+    // chords: smiles narrow the eyes, raised brows widen them
+    const open = clamp((1 - blink) * (1 - eyeNarrow) * (1 + eyeWiden), 0.08, 1.15);
     const ex = sx * F.eyeX, ey = CY + 0.025;
     addL([ex, ey, 0.092], [0.019 * F.eyeSize, 0.014 * open * F.eyeSize, 0.011], [0.9, 0.89, 0.87]);
     addL([ex + lookX * 0.009, ey + lookY * 0.007, 0.098],
@@ -268,15 +316,25 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
       [0.0045 * F.eyeSize, 0.005 * open * F.eyeSize, 0.005], [0.05, 0.04, 0.04]);   // pupil
     addL([ex + lookX * 0.009 + 0.004, ey + lookY * 0.007 + 0.004, 0.106],
       [0.0022, 0.0022 * open, 0.002], [1, 1, 1], 0.9);              // highlight
-    // upper lid crease
-    addL([ex, ey + 0.016, 0.092], [0.02, 0.0035, 0.005],
-      [SKIN[0] * 0.82, SKIN[1] * 0.78, SKIN[2] * 0.76], 0.85);
+    // upper eyelid — a skin shelf that actually descends over the eye
+    const lidDrop = blink * 0.017;
+    addL([ex, ey + 0.015 - lidDrop, 0.097],
+      [0.02 * F.eyeSize, 0.006 + blink * 0.007, 0.009],
+      [SKIN[0] * 0.93, SKIN[1] * 0.88, SKIN[2] * 0.85], 0.98);
+    // lid crease + lower lid line
+    addL([ex, ey + 0.018, 0.092], [0.019, 0.0028, 0.005],
+      [SHAD[0], SHAD[1], SHAD[2]], 0.6);
+    addL([ex, ey - 0.013, 0.094], [0.016 * F.eyeSize, 0.0022, 0.005],
+      [SHAD[0] * 1.15, SHAD[1] * 1.15, SHAD[2] * 1.15], 0.55);
   }
-  // brows raise with browInnerUp
+  // brows: whole brow rises with the chord (inner more than outer), and
+  // arches slightly when raised
   for (const sx of [-1, 1]) {
-    addL([sx * (F.eyeX + 0.003), CY + 0.055 + brow * 0.012, 0.085],
+    addL([sx * (F.eyeX + 0.003), CY + 0.055 + brow * 0.014, 0.085],
       [0.025 * (0.85 + 0.25 * F.browTh), 0.0055 * F.browTh, 0.01],
-      [HAIR[0] * 0.9, HAIR[1] * 0.9, HAIR[2] * 0.9], 1, qFromEuler(0, 0, sx * -0.18));
+      BROWC, 1, qFromEuler(0, 0, sx * (-0.18 - brow * 0.12)));
+    addL([sx * (F.eyeX + 0.019), CY + 0.051 + brow * 0.009, 0.08],
+      [0.009, 0.0045 * F.browTh, 0.008], BROWC, 0.95, qFromEuler(0, 0, sx * -0.42));
   }
   // nose: lit bridge, warm tip, side + under shadows so it reads in 3D
   const NZ = 0.103 + (F.nose - 1) * 0.008;
@@ -290,17 +348,26 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   }
   addL([0, CY - 0.031, NZ - 0.004], [0.01 * F.nose, 0.0035, 0.005],
     [SKIN[0] * 0.6, SKIN[1] * 0.5, SKIN[2] * 0.46], 0.7);
+  for (const sx of [-1, 1]) {   // nostrils
+    addL([sx * 0.0068 * F.nose, CY - 0.029, NZ - 0.002], [0.0028, 0.002, 0.003],
+      [SHAD[0] * 0.6, SHAD[1] * 0.6, SHAD[2] * 0.6], 0.85);
+  }
+  // philtrum groove
+  addL([0, CY - 0.045, 0.0915], [0.0022, 0.007, 0.004], SHAD, 0.4);
   // mouth: dark opening scaled by jaw; muted lips; smile corners lift
   const mouthY = CY - 0.062 - jaw * 0.02;
   const mouthW = clamp(0.026 * F.mouth - pucker * 0.011 + (smL + smR) * 0.005, 0.012, 0.042);
-  addL([0, mouthY, 0.088], [mouthW, 0.004 + jaw * 0.026, 0.012], [0.28, 0.11, 0.11]);
-  addL([0, mouthY + 0.009 + jaw * 0.012, 0.089], [mouthW * 0.96, 0.0035, 0.01],
-    [0.68, 0.42, 0.4]);
+  addL([0, mouthY, 0.088], [mouthW, 0.004 + jaw * 0.026, 0.012], LIPD);
+  addL([0, mouthY + 0.009 + jaw * 0.012, 0.089], [mouthW * 0.96, 0.0035, 0.01], LIP);
+  for (const sx of [-1, 1]) {   // cupid's bow peaks
+    addL([sx * mouthW * 0.35, mouthY + 0.0115 + jaw * 0.012, 0.0895],
+      [0.005, 0.0028, 0.008], [LIP[0] * 1.08, LIP[1] * 1.08, LIP[2] * 1.08]);
+  }
   addL([0, mouthY - 0.007 - jaw * 0.012, 0.089], [mouthW * 0.82, 0.004, 0.01],
-    [0.72, 0.44, 0.42]);
+    [LIP[0] * 1.05, LIP[1] * 1.05, LIP[2] * 1.05]);
+  addL([0, mouthY - 0.015 - jaw * 0.014, 0.087], [mouthW * 0.6, 0.0025, 0.005], SHAD, 0.45);
   for (const [sx, sm] of [[-1, smL], [1, smR]]) {
-    addL([sx * (mouthW + 0.005), mouthY + 0.009 + sm * 0.016, 0.086], [0.006, 0.005, 0.009],
-      [0.7, 0.45, 0.43]);
+    addL([sx * (mouthW + 0.005), mouthY + 0.009 + sm * 0.016, 0.086], [0.006, 0.005, 0.009], LIP);
   }
   // chin/jaw mass follows jawOpen
   const chSh = lambert([0, -0.4, 0.9]);
