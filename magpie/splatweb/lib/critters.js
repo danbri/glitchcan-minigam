@@ -1,0 +1,160 @@
+// critters.js — jelly critters: procedural splat creatures that hop and
+// tumble around a room with squash-and-stretch physics, each with its own
+// voice (TextTalker pitch/rate) and a viseme-driven mouth. The group-scene
+// seed: every critter is an entity = a splat block rewritten per frame,
+// exactly the mechanism the telepresence avatar uses.
+import { FLOATS_PER_SPLAT } from './splat-renderer.js';
+import { mulberry32 } from './pose-math.js';
+
+export const SPLATS_PER_CRITTER = 196;
+
+const PALETTES = [
+  { body: [0.95, 0.5, 0.6], ear: [0.85, 0.35, 0.5], belly: [1.0, 0.85, 0.88] },   // pink
+  { body: [0.55, 0.85, 0.5], ear: [0.4, 0.7, 0.35], belly: [0.85, 1.0, 0.8] },    // lime
+  { body: [0.55, 0.68, 0.98], ear: [0.4, 0.5, 0.85], belly: [0.82, 0.88, 1.0] },  // blue
+  { body: [0.98, 0.85, 0.35], ear: [0.85, 0.7, 0.2], belly: [1.0, 0.95, 0.7] },   // banana
+  { body: [0.98, 0.65, 0.35], ear: [0.85, 0.5, 0.22], belly: [1.0, 0.85, 0.68] }, // orange
+  { body: [0.8, 0.6, 0.95], ear: [0.65, 0.45, 0.85], belly: [0.92, 0.85, 1.0] },  // lavender
+];
+
+export const CRITTER_LINES = [
+  'boing!', 'hello hello.', 'I am a small jelly.', 'wheee!', 'banana?',
+  'bounce with me!', 'ooh, a visitor.', 'splat splat.', 'tiny thoughts, big hops.',
+  'is it snack time?', 'the floor is springy today.', 'I like this room.',
+];
+
+export class Critter {
+  constructor(seed, bounds = 2.4) {
+    const rnd = mulberry32(seed);
+    this.rnd = rnd;
+    this.pal = PALETTES[seed % PALETTES.length];
+    this.r = 0.15 + rnd() * 0.09;            // body radius
+    this.earLen = 0.7 + rnd() * 1.3;         // bunny ↔ blob spectrum
+    this.bounds = bounds;
+    const a = rnd() * Math.PI * 2, d = 0.6 + rnd() * (bounds - 0.8);
+    this.pos = [Math.cos(a) * d, this.r + rnd() * 0.8, Math.sin(a) * d];
+    this.vel = [0, 0, 0];
+    this.facing = rnd() * Math.PI * 2;
+    this.squash = 1;
+    this.hopT = 0.4 + rnd() * 2;
+    this.chirpT = 2 + rnd() * 12;
+    this.jaw = 0;
+    // per-critter voice: smaller critters squeak
+    this.voicePitch = Math.max(0.3, 2.1 - this.r * 7 + (rnd() - 0.5) * 0.3);
+    this.voiceRate = 0.9 + rnd() * 0.5;
+  }
+
+  tick(dt, critters) {
+    const p = this.pos, v = this.vel;
+    v[1] -= 6.5 * dt;                        // floaty jelly gravity
+    p[0] += v[0] * dt; p[1] += v[1] * dt; p[2] += v[2] * dt;
+    let squashT = 1;
+    if (p[1] <= this.r) {                    // ground contact
+      const impact = Math.max(0, -v[1]);
+      p[1] = this.r;
+      v[1] = impact > 0.4 ? impact * 0.35 : 0;   // damped bounce
+      v[0] *= 0.85; v[2] *= 0.85;
+      squashT = Math.max(0.55, 1 - impact * 0.14);
+      this.hopT -= dt;
+      if (this.hopT <= 0) {                  // hop somewhere (centre-biased)
+        this.hopT = 0.8 + this.rnd() * 2.4;
+        const toC = Math.atan2(-p[2], -p[0]);
+        const dir = Math.hypot(p[0], p[2]) > this.bounds * 0.75
+          ? toC : this.rnd() * Math.PI * 2;
+        const power = 1.4 + this.rnd() * 1.3;
+        v[0] = Math.cos(dir) * power * 0.55;
+        v[2] = Math.sin(dir) * power * 0.55;
+        v[1] = power;
+        this.facing = dir;
+      }
+    } else {
+      squashT = 1 + Math.min(0.35, Math.abs(v[1]) * 0.07);  // airborne stretch
+    }
+    // soft walls
+    const d = Math.hypot(p[0], p[2]);
+    if (d > this.bounds) {
+      const nx = p[0] / d, nz = p[2] / d;
+      p[0] = nx * this.bounds; p[2] = nz * this.bounds;
+      const vn = v[0] * nx + v[2] * nz;
+      if (vn > 0) { v[0] -= 2 * vn * nx; v[2] -= 2 * vn * nz; }
+    }
+    // critter-critter jelly repulsion
+    for (const o of critters) {
+      if (o === this) continue;
+      const dx = p[0] - o.pos[0], dy = p[1] - o.pos[1], dz = p[2] - o.pos[2];
+      const dist = Math.hypot(dx, dy, dz), min = this.r + o.r;
+      if (dist > 1e-4 && dist < min) {
+        const push = (min - dist) * 3 * dt;
+        v[0] += dx / dist * push * 8; v[1] += Math.max(0, dy / dist) * push * 4; v[2] += dz / dist * push * 8;
+        this.squash = Math.min(this.squash, 0.8);
+      }
+    }
+    this.squash += (squashT - this.squash) * (1 - Math.exp(-dt * 14));
+  }
+
+  // writes SPLATS_PER_CRITTER splats at out[off..]; jaw 0..1 opens the mouth
+  build(out, off) {
+    const rnd = mulberry32(99);              // stable per-frame body noise
+    const { body, ear, belly } = this.pal;
+    const s = this.squash, r = this.r;
+    const sy = s, sxz = 1 / Math.sqrt(s);
+    const fx = Math.sin(this.facing), fz = Math.cos(this.facing);
+    const rx = fz, rzz = -fx;                 // right vector
+    const P = this.pos;
+    let o = off;
+    const put = (lx, ly, lz, sc, col, alpha = 1) => {
+      // local → world: squash, face rotation, translate (splat quats stay
+      // identity — jelly critters are all soft rounded shapes)
+      const wx = (rx * lx + fx * lz) * sxz, wz = (rzz * lx + fz * lz) * sxz;
+      out[o] = P[0] + wx; out[o + 1] = P[1] + ly * sy - r * (1 - sy) * 0.5; out[o + 2] = P[2] + wz;
+      out[o + 3] = 0; out[o + 4] = 0; out[o + 5] = 0; out[o + 6] = 1;
+      out[o + 7] = sc * sxz; out[o + 8] = sc * sy; out[o + 9] = sc;
+      out[o + 10] = col[0]; out[o + 11] = col[1]; out[o + 12] = col[2]; out[o + 13] = alpha;
+      o += FLOATS_PER_SPLAT;
+    };
+    // body — pear-ish shell, belly-lit front
+    const GA = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < 150; i++) {
+      const ny = 1 - 2 * (i + 0.5) / 150;
+      const rr = Math.sqrt(Math.max(0, 1 - ny * ny)) * (1 - ny * 0.18);
+      const ph = i * GA;
+      const nx = Math.cos(ph) * rr, nz = Math.sin(ph) * rr;
+      const isBelly = nz > 0.45 && ny < 0.35;
+      const c = isBelly ? belly : body;
+      const tone = 0.92 + rnd() * 0.16 + ny * 0.06;
+      put(nx * r, ny * r * 0.95, nz * r, r * 0.22,
+        [c[0] * tone, c[1] * tone, c[2] * tone]);
+    }
+    // ears (length varies per critter; flop against vertical velocity)
+    const flop = Math.max(-0.5, Math.min(0.5, -this.vel[1] * 0.12));
+    for (const sx of [-1, 1]) {
+      for (let k = 0; k < 8; k++) {
+        const t = k / 7;
+        put(sx * r * 0.38 + sx * t * flop * r * 0.3,
+          r * (0.8 + t * this.earLen * 0.55),
+          -r * 0.1 + t * flop * r * 0.5,
+          r * (0.14 - t * 0.06), k > 5 ? [ear[0] * 1.1, ear[1] * 0.9, ear[2] * 0.95] : ear);
+      }
+    }
+    // eyes + pupils (face forward)
+    for (const sx of [-1, 1]) {
+      put(sx * r * 0.32, r * 0.28, r * 0.82, r * 0.13, [0.98, 0.98, 0.96]);
+      put(sx * r * 0.32, r * 0.28, r * 0.93, r * 0.055, [0.08, 0.07, 0.08]);
+      put(sx * r * 0.30, r * 0.33, r * 0.97, r * 0.025, [1, 1, 1]);
+    }
+    // mouth — opens with the viseme jaw
+    put(0, r * 0.02 - this.jaw * r * 0.1, r * 0.92, r * (0.06 + this.jaw * 0.12), [0.45, 0.15, 0.18]);
+    put(0, r * 0.1, r * 0.9, r * 0.045, [body[0] * 0.75, body[1] * 0.6, body[2] * 0.6]);
+    // feet
+    for (const sx of [-1, 1]) {
+      for (let k = 0; k < 6; k++) {
+        put(sx * r * (0.35 + k * 0.02), -r * 0.88, r * (0.15 + k * 0.06),
+          r * 0.09, [body[0] * 0.85, body[1] * 0.8, body[2] * 0.8]);
+      }
+    }
+    // pad to the fixed budget with invisible splats (count stays constant)
+    while (o < off + SPLATS_PER_CRITTER * FLOATS_PER_SPLAT) {
+      out[o + 13] = 0; out[o + 6] = 1; o += FLOATS_PER_SPLAT;
+    }
+  }
+}

@@ -233,6 +233,8 @@ blending. ~250 lines, zero dependencies.
 | `lib/models-manifest.js` + `third_party/` | vendored open models with licences (`third_party/ATTRIBUTION.md`): Lee Perry-Smith head (CC BY 3.0), three 100Avatars VRMs (CC BY 4.0 — the repo's own licence file; not CC0 as some indexes claim) |
 | `demo-gallery.html` | **Demo 4** — the vendored models splat-ified live: model picker, density slider, stylise, per-model attribution |
 | `catalogue.html` | the borrowing catalogue: capture stacks + model sources with verified licences |
+| `lib/cply.js` | decoder for splat-transform compressed PLY (the dbdb stamp-pack format): chunked quantization, largest-component quats, stride LOD |
+| `lib/critters.js` + `demo-critters.html` | **Demo 5** — the group-scene seed: jelly critters with squash-and-stretch physics and per-critter TextTalker voices, hopping in a room composed from dbdb stamps |
 
 Live URLs once deployed:
 

@@ -23,7 +23,10 @@ function visemeFor(ch) {
 const CHAR_MS = 62;          // spoken-character pace estimate
 
 export class TextTalker {
-  constructor() {
+  // voice: { pitch 0..2, rate 0.1..10, volume 0..1 } — per-instance voice
+  // character, so a room of critters doesn't speak in one voice
+  constructor(voice = {}) {
+    this.voice = { pitch: 1, rate: 1, volume: 1, ...voice };
     this.speaking = false;
     this.mode = 'idle';      // 'tts' | 'silent' | 'idle'
     this.viseme = { jaw: 0, pucker: 0, smile: 0 };
@@ -68,7 +71,9 @@ export class TextTalker {
     let ttsStarted = false;
     if (typeof speechSynthesis !== 'undefined') {
       const u = new SpeechSynthesisUtterance(text);
-      u.rate = 1.0;
+      u.pitch = this.voice.pitch;
+      u.rate = this.voice.rate;
+      u.volume = this.voice.volume;
       u.onstart = () => { ttsStarted = true; this.mode = 'tts'; cur.at = performance.now(); cur.boundaryAt = cur.at; };
       u.onboundary = (e) => {
         if (e.charIndex != null) { cur.charIndex = e.charIndex; cur.boundaryAt = performance.now(); }

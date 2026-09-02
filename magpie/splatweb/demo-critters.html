@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>splatweb demo 5 — critter room</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫧</text></svg>">
+<link rel="stylesheet" href="demo.css">
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  #gl { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; z-index: 0; }
+  .hud { position: fixed; z-index: 10; background: rgba(10, 13, 20, 0.72);
+    backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3);
+    border: 1px solid rgba(110, 170, 255, 0.28); border-radius: 10px; }
+  .chip { padding: 0.45rem 0.8rem; font-size: 0.8rem; }
+  .tl { top: 14px; left: 14px; }
+  .tr { top: 14px; right: 14px; display: flex; gap: 0.5rem; align-items: center; }
+  .bl { bottom: 14px; left: 14px; }
+  .br { bottom: 14px; right: 14px; cursor: pointer; user-select: none; }
+  #creditsPanel { bottom: 56px; right: 14px; max-width: 360px; max-height: 42vh; overflow-y: auto;
+    padding: 0.6rem 0.9rem; display: none; font-size: 0.72rem; color: #a7abbd; z-index: 11; }
+  .tr button { background: #22304a; color: #cfe0ff; border: 1px solid #3a5580; border-radius: 6px;
+    padding: 0.35rem 0.7rem; cursor: pointer; font-size: 0.8rem; }
+  .tr button.on { background: #3563ad; }
+  .tr input[type=range] { width: 90px; accent-color: #7fb4ff; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div class="hud chip tl note" id="hint">jelly critters · drag to orbit · wheel to zoom</div>
+<div class="hud chip tr">
+  <button id="voicesBtn">🔇 voices off</button>
+  <label class="note">critters <input type="range" id="countSl" min="2" max="12" value="7"></label>
+  <span class="note" id="countOut">7</span>
+</div>
+<div class="hud chip bl stat" id="stats">loading room…</div>
+<div class="hud chip br" id="creditsChip">© credits</div>
+<div class="hud" id="creditsPanel"></div>
+
+<script type="module">
+import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { createSplatRenderer } from './lib/splat-renderer-auto.js';
+import { loadCompressedPly } from './lib/cply.js';
+import { Critter, SPLATS_PER_CRITTER, CRITTER_LINES } from './lib/critters.js';
+import { TextTalker } from './lib/text-talker.js';
+import { mulberry32 } from './lib/pose-math.js';
+
+const $ = id => document.getElementById(id);
+const canvas = $('gl'), statsEl = $('stats');
+let renderer;
+try { renderer = await createSplatRenderer(canvas, { background: [0.05, 0.06, 0.09] }); }
+catch (e) { statsEl.textContent = 'no GPU backend: ' + e.message; throw e; }
+
+// credits
+const CREDITS = new Map();
+function addCredit(k, lines) {
+  CREDITS.set(k, Array.isArray(lines) ? lines : [lines]);
+  $('creditsPanel').innerHTML = [...CREDITS.entries()].map(([k2, l]) =>
+    `<div style="margin-bottom:0.4rem"><b style="color:#7fb4ff">${k2}</b><br>${l.join('<br>')}</div>`).join('');
+  $('creditsChip').textContent = `© credits (${[...CREDITS.values()].reduce((a, l) => a + l.length, 0)})`;
+}
+$('creditsChip').addEventListener('click', () => {
+  const p = $('creditsPanel');
+  p.style.display = p.style.display === 'none' || !p.style.display ? 'block' : 'none';
+});
+addCredit('renderer', 'splatweb — WebGPU/WebGL2 Gaussian splat rasterizer');
+
+// room: dbdb ghost-garden stamps; procedural ground disc as fallback
+const DBDB = '../dbdb/splats/pack/';
+async function loadRoom() {
+  try {
+    const [g1, g2, hut, meta] = await Promise.all([
+      loadCompressedPly(DBDB + 'grass.compressed.ply', { at: [0, 0.02, 0], yaw: 0.3, stride: 4 }),
+      loadCompressedPly(DBDB + 'grass.compressed.ply', { at: [-1.7, 0.02, -2.1], yaw: 1.4, stride: 4 }),
+      loadCompressedPly(DBDB + 'hut.compressed.ply', { at: [2.0, 0, -2.6], yaw: -0.4 }),
+      fetch(DBDB + 'pack.json').then(r => r.json()),
+    ]);
+    const total = g1.count + g2.count + hut.count;
+    const data = new Float32Array(total * FLOATS_PER_SPLAT);
+    data.set(g1.data); data.set(g2.data, g1.data.length);
+    data.set(hut.data, g1.data.length + g2.data.length);
+    const credits = [...new Set(['grass', 'hut'].map(id =>
+      (meta.elements.find(e => e.id === id) || {}).credit || id))];
+    addCredit('room stamps', credits);
+    return { data, count: total };
+  } catch {
+    // offline fallback: a soft ground disc
+    const rnd = mulberry32(3);
+    const n = 500, data = new Float32Array(n * FLOATS_PER_SPLAT);
+    for (let i = 0; i < n; i++) {
+      const o = i * FLOATS_PER_SPLAT, a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * 3;
+      const c = 0.2 + rnd() * 0.06;
+      data.set([Math.cos(a) * r, -0.01, Math.sin(a) * r, 0, 0, 0, 1, 0.16, 0.02, 0.16, c * 0.8, c, c * 0.7, 1], o);
+    }
+    return { data, count: n };
+  }
+}
+const room = await loadRoom();
+
+// critters — each an entity: physics body + splat block + voice
+let critters = [];
+let voicesOn = false;
+function makeCritters(n) {
+  for (const c of critters) c.talker?.stop();
+  critters = [];
+  for (let i = 0; i < n; i++) {
+    const c = new Critter(i * 7 + 3);
+    c.talker = new TextTalker({ pitch: c.voicePitch, rate: c.voiceRate, volume: 0.55 });
+    critters.push(c);
+  }
+  const data = new Float32Array((room.count + n * SPLATS_PER_CRITTER) * FLOATS_PER_SPLAT);
+  data.set(room.data);
+  renderer.setData(data, room.count + n * SPLATS_PER_CRITTER);
+  critterBlock = new Float32Array(n * SPLATS_PER_CRITTER * FLOATS_PER_SPLAT);
+}
+let critterBlock;
+makeCritters(7);
+
+$('countSl').addEventListener('change', () => {
+  $('countOut').textContent = $('countSl').value;
+  makeCritters(+$('countSl').value);
+});
+$('voicesBtn').addEventListener('click', () => {
+  voicesOn = !voicesOn;
+  $('voicesBtn').textContent = voicesOn ? '🔊 voices on' : '🔇 voices off';
+  $('voicesBtn').classList.toggle('on', voicesOn);
+  if (!voicesOn) for (const c of critters) c.talker.stop();
+});
+
+// orbit
+let theta = 0.3, phi = 1.15, radius = 5.2;
+function applyCamera() {
+  phi = Math.max(0.25, Math.min(1.5, phi));
+  radius = Math.max(1, Math.min(12, radius));
+  renderer.setCamera([
+    radius * Math.sin(theta) * Math.sin(phi),
+    0.6 + radius * Math.cos(phi),
+    radius * Math.cos(theta) * Math.sin(phi),
+  ], [0, 0.6, 0]);
+}
+applyCamera();
+let drag = null;
+canvas.addEventListener('pointerdown', e => { drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', e => {
+  if (!drag) return;
+  theta -= (e.clientX - drag[0]) * 0.005;
+  phi -= (e.clientY - drag[1]) * 0.005;
+  drag = [e.clientX, e.clientY]; applyCamera();
+});
+canvas.addEventListener('pointerup', () => { drag = null; });
+canvas.addEventListener('wheel', e => { e.preventDefault(); radius *= Math.exp(e.deltaY * 0.001); applyCamera(); }, { passive: false });
+
+let last = performance.now(), frames = 0, fpsT = last, fps = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  for (const c of critters) {
+    c.tick(dt, critters);
+    // chirping: each critter occasionally says a line in its own voice
+    c.chirpT -= dt;
+    if (c.chirpT <= 0) {
+      c.chirpT = 5 + Math.random() * 14;
+      if (voicesOn) {
+        const line = CRITTER_LINES[Math.floor(Math.random() * CRITTER_LINES.length)];
+        c.talker.feed(line + ' ');
+        c.talker.flush();
+      }
+    }
+    const v = c.talker.tick(dt);
+    c.jaw = v ? v.jaw : Math.max(0, c.jaw - dt * 3);
+  }
+  for (let i = 0; i < critters.length; i++) {
+    critters[i].build(critterBlock, i * SPLATS_PER_CRITTER * FLOATS_PER_SPLAT);
+  }
+  renderer.writeRegion(room.count, critterBlock);
+  renderer.render();
+  frames++;
+  if (now - fpsT > 1000) {
+    fps = frames * 1000 / (now - fpsT); frames = 0; fpsT = now;
+    statsEl.textContent = `${critters.length} critters · ${(room.count + critters.length * SPLATS_PER_CRITTER).toLocaleString()} splats · ${fps.toFixed(0)} fps · ${renderer.backend}`;
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
