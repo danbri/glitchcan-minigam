@@ -146,6 +146,7 @@ import { VoiceJaw } from './lib/voice-jaw.js';
 import { FaceCapture } from './lib/face-capture.js';
 import { TextTalker } from './lib/text-talker.js';
 import { loadGlbSplats } from './lib/gltf-splats.js';
+import { loadScanHead, buildScanHeadSplats, FACECAP_CREDIT } from './lib/scan-head.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('gl');
@@ -172,19 +173,35 @@ const room = buildRoom();
 let appearance = AVATAR_PRESETS[0];
 let avatarOffset = room.count;
 let currentGuest = null;
+// realistic pre-rigged head (lazy-loaded on selection)
+let headMode = 'proc';
+let scanHead = null;
+let avScratch = null;
+function buildAvatarF32(rx, tSec) {
+  if (headMode === 'scan' && scanHead) {
+    const torso = buildAvatarSplats(rx, AV_AT, appearance, { t: tSec, noHead: true }).toFloat32();
+    const total = torso.length + scanHead.count * FLOATS_PER_SPLAT;
+    if (!avScratch || avScratch.length !== total) avScratch = new Float32Array(total);
+    avScratch.set(torso, 0);
+    buildScanHeadSplats(scanHead, rx, AV_AT, avScratch, torso.length);
+    return avScratch;
+  }
+  return buildAvatarSplats(rx, AV_AT, appearance, { t: tSec }).toFloat32();
+}
 // presets differ in splat COUNT (beard, glasses…), so a preset switch
 // rebuilds the whole instance buffer, not just the avatar region
 function rebuildScene(guest) {
   if (guest !== undefined) currentGuest = guest;
   const g = currentGuest;
-  const avatarRest = buildAvatarSplats(null, AV_AT, appearance);
+  const avatarRest = buildAvatarF32(null, 0);
+  const avCount = avatarRest.length / FLOATS_PER_SPLAT;
   const gCount = g ? g.count : 0;
   avatarOffset = room.count + gCount;
-  const data = new Float32Array((avatarOffset + avatarRest.count) * FLOATS_PER_SPLAT);
+  const data = new Float32Array((avatarOffset + avCount) * FLOATS_PER_SPLAT);
   data.set(room.toFloat32());
   if (g) data.set(g.data, room.count * FLOATS_PER_SPLAT);
-  data.set(avatarRest.toFloat32(), avatarOffset * FLOATS_PER_SPLAT);
-  renderer.setData(data, avatarOffset + avatarRest.count);
+  data.set(avatarRest, avatarOffset * FLOATS_PER_SPLAT);
+  renderer.setData(data, avatarOffset + avCount);
 }
 rebuildScene(null);
 // a second participant, randomly picked from the vendored VRM roster
@@ -231,8 +248,34 @@ for (const pr of AVATAR_PRESETS) {
   o.value = pr.id; o.textContent = pr.name;
   $('avatarSel').appendChild(o);
 }
+{
+  const o = document.createElement('option');
+  o.value = 'facecap'; o.textContent = '★ Realistic head (Face Cap, linked)';
+  $('avatarSel').appendChild(o);
+}
 $('avatarSel').addEventListener('change', () => {
-  appearance = AVATAR_PRESETS.find(x => x.id === $('avatarSel').value) || AVATAR_PRESETS[0];
+  const v = $('avatarSel').value;
+  if (v === 'facecap') {
+    headMode = 'scan';
+    if (!scanHead) {
+      micNote.textContent = 'loading rigged realistic head (three.js CDN)…';
+      loadScanHead().then(h => {
+        scanHead = h;
+        rebuildScene();
+        micNote.textContent = `Realistic head live: ${h.count.toLocaleString()} splats, ` +
+          `driven by the same 10 packet channels. ${FACECAP_CREDIT}.`;
+        document.getElementById('guestCredit').innerHTML +=
+          ' Head: “Face Cap” model by <a href="https://www.bannaflak.com/face-cap">bannaflak.com</a> via three.js (linked, not redistributed).';
+      }).catch(e => {
+        micNote.textContent = 'realistic head failed to load: ' + (e.message || e);
+        headMode = 'proc';
+        $('avatarSel').value = appearance.id;
+      });
+    } else rebuildScene();
+    return;
+  }
+  headMode = 'proc';
+  appearance = AVATAR_PRESETS.find(x => x.id === v) || AVATAR_PRESETS[0];
   rebuildScene();   // splat count changed with the preset
 });
 
@@ -371,7 +414,7 @@ function frame(now) {
   wasExtrap = buffer.extrapolating;
 
   // rebuild the avatar block from the RECEIVED pose only
-  const av = buildAvatarSplats(rx, AV_AT, appearance, { t: now / 1000 }).toFloat32();
+  const av = buildAvatarF32(rx, now / 1000);
   if (buffer.frozen) {
     // dead feed → fade to statue, never fake liveness (DESIGN.md §9)
     for (let i = 13; i < av.length; i += FLOATS_PER_SPLAT) av[i] *= 0.45;

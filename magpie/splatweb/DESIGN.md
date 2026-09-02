@@ -228,7 +228,8 @@ blending. ~250 lines, zero dependencies.
 | `demo-splat-room.html` | **Demo 2** — the room avatar: procedural splat room, orbit/zoom, stylisation slider (palette quantization), splat count + FPS |
 | `demo-stage.html` | **Demo 3** — the whole thesis: sender pose → encoder → simulated lossy network (sliders for latency/jitter/loss/rate) → jitter buffer → splat room + splat avatar. Live stats: kbit/s, loss, effective latency, extrapolation events. Real capture via 🎤 MIC and 📷 CAM; a vendored CC BY avatar stands in the room as a second (static) participant |
 | `lib/text-talker.js` | generated-speech lipsync: stream ASCII in (AI-token style), clauses are spoken via speechSynthesis, visemes derived from the characters being said ride the normal blendshape channels |
-| `lib/gltf-splats.js` | minimal in-browser GLB/VRM → splat sampler: area-sampled triangles, per-point base-color texture reads, surface-tangent splats with baked lambert |
+| `lib/gltf-splats.js` | minimal in-browser GLB/VRM → splat sampler: area-sampled triangles, per-point base-color texture reads, surface-tangent splats with baked lambert, optional tint; morph-target delta sampling and EXT_meshopt_compression (MIT decoder from CDN, on demand) |
+| `lib/scan-head.js` | a pre-rigged realistic head as the avatar's head: the three.js "Face Cap" model (⚠ no explicit licence — linked at runtime, not vendored) splat-ified with its ARKit morph deltas; the packet's 10 channels drive the morphs every frame |
 | `lib/models-manifest.js` + `third_party/` | vendored open models with licences (`third_party/ATTRIBUTION.md`): Lee Perry-Smith head (CC BY 3.0), three 100Avatars VRMs (CC BY 4.0 — the repo's own licence file; not CC0 as some indexes claim) |
 | `demo-gallery.html` | **Demo 4** — the vendored models splat-ified live: model picker, density slider, stylise, per-model attribution |
 | `catalogue.html` | the borrowing catalogue: capture stacks + model sources with verified licences |

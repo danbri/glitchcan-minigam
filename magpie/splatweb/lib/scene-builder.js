@@ -191,12 +191,13 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   const brow = b[BI.browInnerUp], smL = b[BI.mouthSmileLeft], smR = b[BI.mouthSmileRight];
   const pucker = b[BI.mouthPucker], lookX = b[BI.eyeLookX], lookY = b[BI.eyeLookY];
 
-  // head-local splats collected first, then rotated
+  // head-local splats collected first, then rotated. anim.noHead skips the
+  // whole procedural head (a scan head replaces it — lib/scan-head.js).
   const local = [];
+  const rnd = mulberry32(7);
+  if (!anim.noHead) {
   const addL = (pos, scale, color, alpha = 1, quat = [0, 0, 0, 1]) =>
     local.push([pos, scale, color, alpha, quat]);
-
-  const rnd = mulberry32(7);
   // skull — fibonacci-sampled shell, splats TANGENT to the surface (thin
   // along the normal), shaped: jaw tapers, face is flatter, back bulges
   const RX = 0.092 * F.headW, RY = 0.115 * F.headH, RZ = 0.10, CY = 0.13;
@@ -339,6 +340,7 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
     s.add([base[0] + p[0], base[1] + 1.45 + 0.02 + p[1], base[2] + p[2]],
       [scale[0] * HS, scale[1] * HS, scale[2] * HS], color, alpha, qMul(q, quat));
   }
+  }   // end !anim.noHead
 
   // torso — does not rotate with the head; shaded in WORLD space.
   // Chest rings + shoulders + upper-arm stubs (no more weeble egg).
