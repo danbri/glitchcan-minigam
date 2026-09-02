@@ -64,6 +64,30 @@
   #netTab { left: 0; transform: translateY(-50%) rotate(180deg); border-radius: 8px 0 0 8px; border-right: 0; }
 
   canvas.face { width: 100%; aspect-ratio: 1; background: #0a0b10; border-radius: 8px; touch-action: none; display: block; }
+  .carousel {
+    display: flex; gap: 6px; overflow-x: auto; padding: 6px 4px;
+    border-radius: 8px; outline: none; scrollbar-width: thin;
+  }
+  .carousel:focus-visible, .carousel:focus {
+    box-shadow: 0 0 0 2px rgba(127, 180, 255, 0.7);
+  }
+  .car-tile {
+    flex: 0 0 64px; width: 64px; cursor: pointer; text-align: center;
+    border: 2px solid transparent; border-radius: 8px; padding: 2px;
+    user-select: none;
+  }
+  .car-tile img, .car-tile .glyph {
+    width: 56px; height: 56px; border-radius: 6px; display: block;
+    margin: 0 auto; background: #141824; object-fit: cover;
+  }
+  .car-tile .glyph { font-size: 34px; line-height: 56px; color: #cfe0ff; }
+  .car-tile .nm {
+    font-size: 0.58rem; color: #a7abbd; margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .car-tile.cursor { border-color: rgba(127, 180, 255, 0.8); }
+  .car-tile.selected { background: rgba(60, 110, 190, 0.35); }
+  .car-tile.selected .nm { color: #cfe0ff; }
   .drawer .ctl label { flex: 0 0 6.2em; }
   .drawer input[type=text], .drawer select {
     background: #0a0b10; color: #d8dae2; border: 1px solid #3a5580; border-radius: 6px; padding: 0.32rem;
@@ -110,7 +134,8 @@
     <button class="act" id="streamBtn">▶ AI STREAM</button>
   </div>
   <h2>Avatar</h2>
-  <div class="ctl"><select id="avatarSel" style="flex:1"></select></div>
+  <div id="avatarCar" class="carousel" tabindex="0" role="listbox" aria-label="avatar picker"></div>
+  <div class="note" style="margin-top:2px">←/→ or A/D to browse · space to wear</div>
   <div class="note" id="micNote" style="margin-top:0.6rem">MIC: Web Audio speech energy drives the jaw.
   CAM: MediaPipe FaceLandmarker + PoseLandmarker (Apache-2.0, CDN on demand) drive head pose, all ten
   expression channels, AND your arms — wrist positions ride a 40-byte packet and the avatar solves
@@ -138,7 +163,7 @@ import { encodePose, decodePose, makePose } from './lib/telemetry-codec.js';
 import { PoseDriver, bindPointerPad } from './lib/pose-driver.js';
 import { NetworkSim } from './lib/network-sim.js';
 import { PoseBuffer } from './lib/pose-buffer.js';
-import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { FLOATS_PER_SPLAT, SplatRenderer } from './lib/splat-renderer.js';
 import { createSplatRenderer } from './lib/splat-renderer-auto.js';
 import { buildRoom, buildAvatarSplats, AVATAR_PRESETS } from './lib/scene-builder.js';
 import { MODELS } from './lib/models-manifest.js';
@@ -242,27 +267,25 @@ $('streamBtn').addEventListener('click', () => {
   }, 55);
 });
 
-// procedural avatar appearance presets (appearance is declared above,
-// before the first rebuildScene)
-for (const pr of AVATAR_PRESETS) {
-  const o = document.createElement('option');
-  o.value = pr.id; o.textContent = pr.name;
-  $('avatarSel').appendChild(o);
-}
-{
-  const o = document.createElement('option');
-  o.value = 'facecap'; o.textContent = '★ Realistic head (Face Cap, linked)';
-  $('avatarSel').appendChild(o);
-}
-$('avatarSel').addEventListener('change', () => {
-  const v = $('avatarSel').value;
-  if (v === 'facecap') {
+// avatar carousel — thumbnail tiles rendered by an offscreen splat
+// renderer; keyboard-first: ←/→ (or A/D, W/S) browses, space/enter wears
+const AVATAR_OPTIONS = [
+  ...AVATAR_PRESETS.map(pr => ({ id: pr.id, name: pr.name, preset: pr })),
+  { id: 'facecap', name: '★ Face Cap', preset: null },
+];
+const car = $('avatarCar');
+let carCursor = 0, carSelected = 0;
+function selectAvatar(id) {
+  carSelected = AVATAR_OPTIONS.findIndex(o => o.id === id);
+  AVATAR_OPTIONS.forEach((o, i) => o.tile.classList.toggle('selected', i === carSelected));
+  if (id === 'facecap') {
     headMode = 'scan';
     if (!scanHead) {
       micNote.textContent = 'loading rigged realistic head (three.js CDN)…';
       loadScanHead().then(h => {
         scanHead = h;
         rebuildScene();
+        makeScanThumb();
         micNote.textContent = `Realistic head live: ${h.count.toLocaleString()} splats, ` +
           `driven by the same 10 packet channels. ${FACECAP_CREDIT}.`;
         document.getElementById('guestCredit').innerHTML +=
@@ -270,15 +293,95 @@ $('avatarSel').addEventListener('change', () => {
       }).catch(e => {
         micNote.textContent = 'realistic head failed to load: ' + (e.message || e);
         headMode = 'proc';
-        $('avatarSel').value = appearance.id;
+        selectAvatar(appearance.id);
       });
     } else rebuildScene();
     return;
   }
   headMode = 'proc';
-  appearance = AVATAR_PRESETS.find(x => x.id === v) || AVATAR_PRESETS[0];
+  appearance = AVATAR_PRESETS.find(x => x.id === id) || AVATAR_PRESETS[0];
   rebuildScene();   // splat count changed with the preset
+}
+function updateCursor() {
+  AVATAR_OPTIONS.forEach((o, i) => o.tile.classList.toggle('cursor', i === carCursor));
+  AVATAR_OPTIONS[carCursor].tile.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+}
+AVATAR_OPTIONS.forEach((opt, i) => {
+  const tile = document.createElement('div');
+  tile.className = 'car-tile';
+  tile.setAttribute('role', 'option');
+  if (opt.preset) {
+    const img = document.createElement('img');
+    img.alt = opt.name;
+    opt.imgEl = img;
+    tile.appendChild(img);
+  } else {
+    const g = document.createElement('div');
+    g.className = 'glyph';
+    g.textContent = '★';
+    opt.glyphEl = g;
+    tile.appendChild(g);
+  }
+  const nm = document.createElement('div');
+  nm.className = 'nm';
+  nm.textContent = opt.name;
+  tile.appendChild(nm);
+  tile.addEventListener('click', () => { carCursor = i; updateCursor(); selectAvatar(opt.id); car.focus(); });
+  opt.tile = tile;
+  car.appendChild(tile);
 });
+car.addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  let d = 0;
+  if (k === 'arrowleft' || k === 'a' || k === 'arrowup' || k === 'w') d = -1;
+  else if (k === 'arrowright' || k === 'd' || k === 'arrowdown' || k === 's') d = 1;
+  else if (k === ' ' || k === 'enter') {
+    e.preventDefault();
+    selectAvatar(AVATAR_OPTIONS[carCursor].id);
+    return;
+  } else return;
+  e.preventDefault();
+  carCursor = (carCursor + d + AVATAR_OPTIONS.length) % AVATAR_OPTIONS.length;
+  updateCursor();
+});
+updateCursor();
+selectAvatar('hazel');
+
+// thumbnails: neutral head-and-shoulders of each preset, rendered by a
+// small offscreen WebGL splat renderer, one per animation frame
+const thumbCanvas = document.createElement('canvas');
+thumbCanvas.style.cssText = 'position:fixed;left:-9999px;top:0;width:140px;height:140px;';
+document.body.appendChild(thumbCanvas);
+let thumbRenderer = null;
+function renderThumb(splatsF32, count) {
+  if (!thumbRenderer) {
+    thumbRenderer = new SplatRenderer(thumbCanvas, { background: [0.08, 0.09, 0.13] });
+    thumbRenderer.setCamera([0, 1.66, 0.52], [0, 1.6, 0], 50 * Math.PI / 180);
+  }
+  thumbRenderer.setData(splatsF32, count);
+  thumbRenderer.render();
+  return thumbCanvas.toDataURL('image/png');
+}
+async function makeThumbs() {
+  for (const opt of AVATAR_OPTIONS) {
+    if (!opt.preset) continue;
+    const av = buildAvatarSplats(null, [0, 0, 0], opt.preset);
+    opt.imgEl.src = renderThumb(av.toFloat32(), av.count);
+    await new Promise(r => requestAnimationFrame(r));
+  }
+}
+function makeScanThumb() {
+  const opt = AVATAR_OPTIONS.find(o => o.id === 'facecap');
+  if (!scanHead || !opt || opt.imgEl) return;
+  const out = new Float32Array(scanHead.count * FLOATS_PER_SPLAT);
+  buildScanHeadSplats(scanHead, null, [0, 1.45, 0], out, 0);
+  const img = document.createElement('img');
+  img.alt = opt.name;
+  img.src = renderThumb(out, scanHead.count);
+  opt.glyphEl.replaceWith(img);
+  opt.imgEl = img;
+}
+makeThumbs();
 
 // pipeline pieces
 const driver = new PoseDriver();
