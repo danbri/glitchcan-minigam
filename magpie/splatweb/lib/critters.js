@@ -145,6 +145,7 @@ export class Critter {
     }
     // obstacle colliders: bounce OFF the big things instead of through
     for (const ob of env.obstacles || []) {
+      if (ob.h && p[1] - this.r * 0.3 > ob.h) continue;   // above its top
       const dx = p[0] - ob.x, dz = p[2] - ob.z;
       const d2 = Math.hypot(dx, dz), min2 = ob.r + this.r * 0.8;
       if (d2 > 1e-4 && d2 < min2) {
