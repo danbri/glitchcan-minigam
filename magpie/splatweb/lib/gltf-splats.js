@@ -194,7 +194,7 @@ export async function loadGlbSplats(url, opts = {}) {
   let total = 0;
   for (let i = 0; i < tris.length; i++) { total += tris[i].area; cum[i] = total; }
   const rnd = mulberry32(seed);
-  const sSize = Math.sqrt((total * scale * scale) / count) * 0.9;
+  const sSize = Math.sqrt((total * scale * scale) / count) * 0.72;
   const L = light ? (() => { const l = Math.hypot(...light); return [light[0] / l, light[1] / l, light[2] / l]; })() : null;
 
   const out = new Float32Array(count * FLOATS_PER_SPLAT);

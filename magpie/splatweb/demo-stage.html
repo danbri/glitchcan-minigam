@@ -6,63 +6,132 @@
 <title>splatweb demo 3 — the stage (full pipeline)</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫧</text></svg>">
 <link rel="stylesheet" href="demo.css">
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  #gl {
+    position: fixed; inset: 0; width: 100vw; height: 100vh;
+    display: block; touch-action: none; z-index: 0;
+  }
+  /* HUD frame — decorative corner brackets */
+  .frame { position: fixed; inset: 10px; pointer-events: none; z-index: 5; }
+  .frame span { position: absolute; width: 26px; height: 26px; border: 0 solid rgba(127,180,255,0.55); }
+  .frame span:nth-child(1) { top: 0; left: 0; border-top-width: 2px; border-left-width: 2px; }
+  .frame span:nth-child(2) { top: 0; right: 0; border-top-width: 2px; border-right-width: 2px; }
+  .frame span:nth-child(3) { bottom: 0; left: 0; border-bottom-width: 2px; border-left-width: 2px; }
+  .frame span:nth-child(4) { bottom: 0; right: 0; border-bottom-width: 2px; border-right-width: 2px; }
+
+  .hud {
+    position: fixed; z-index: 10;
+    background: rgba(10, 13, 20, 0.72);
+    backdrop-filter: blur(14px) saturate(1.3);
+    -webkit-backdrop-filter: blur(14px) saturate(1.3);
+    border: 1px solid rgba(110, 170, 255, 0.28);
+    border-radius: 10px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.3);
+  }
+  .chip { padding: 0.45rem 0.8rem; font-size: 0.8rem; }
+  .chip.tl { top: 14px; left: 14px; }
+  .chip.tl b { color: #cfe0ff; letter-spacing: 0.08em; }
+  .chip.tl a { color: #7fb4ff; text-decoration: none; margin-left: 0.6rem; }
+  .chip.bl { bottom: 14px; left: 14px; max-width: min(60vw, 640px); }
+  .chip.bc { bottom: 14px; right: 14px; max-width: 34vw; font-size: 0.72rem; color: #8b8fa3; }
+  .chip.bc a { color: #7fb4ff; }
+
+  .drawer {
+    top: 0; height: 100%; width: min(340px, 88vw);
+    padding: 3.2rem 1rem 1rem; overflow-y: auto;
+    border-radius: 0;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .drawer h2 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
+    color: #7fb4ff; margin: 1rem 0 0.4rem; font-weight: 600; }
+  .drawer h2:first-child { margin-top: 0; }
+  #ctrlDrawer { right: 0; border-left: 1px solid rgba(110,170,255,0.28); border-top: 0; border-right: 0; border-bottom: 0; }
+  #ctrlDrawer:not(.open) { transform: translateX(calc(100% + 2px)); }
+  #netDrawer { left: 0; width: min(300px, 82vw); border-right: 1px solid rgba(110,170,255,0.28); border-top: 0; border-left: 0; border-bottom: 0; }
+  #netDrawer:not(.open) { transform: translateX(calc(-100% - 2px)); }
+
+  .tab {
+    position: fixed; z-index: 11; top: 50%;
+    writing-mode: vertical-rl; letter-spacing: 0.18em; font-size: 0.68rem;
+    color: #cfe0ff; background: rgba(20, 30, 50, 0.85);
+    border: 1px solid rgba(110, 170, 255, 0.4); cursor: pointer;
+    padding: 0.9rem 0.35rem; user-select: none;
+    transition: background 0.2s, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .tab:hover { background: rgba(40, 70, 120, 0.9); }
+  #ctrlTab { right: 0; transform: translateY(-50%); border-radius: 8px 0 0 8px; border-right: 0; }
+  #netTab { left: 0; transform: translateY(-50%) rotate(180deg); border-radius: 8px 0 0 8px; border-right: 0; }
+
+  canvas.face { width: 100%; aspect-ratio: 1; background: #0a0b10; border-radius: 8px; touch-action: none; display: block; }
+  .drawer .ctl label { flex: 0 0 6.2em; }
+  .drawer input[type=text], .drawer select {
+    background: #0a0b10; color: #d8dae2; border: 1px solid #3a5580; border-radius: 6px; padding: 0.32rem;
+  }
+</style>
 </head>
 <body>
-<header class="demo">
-  <h1>Demo 3 — the stage: pose → packet → lossy net → splat viewer</h1>
-  <nav><a href="index.html">hub</a> · <a href="demo-telemetry.html">packet</a> · <a href="demo-splat-room.html">room</a></nav>
-</header>
-<main>
-  <p class="note">The whole thesis in one page. The sender's pose is encoded
-  into 32-byte packets and pushed through a simulated lossy channel; the
-  viewer decodes, jitter-buffers, interpolates and (briefly) extrapolates,
-  and renders the splat room + splat avatar. Turn the loss and jitter up and
-  watch the avatar stay coherent. Network and capture are simulated in-page
-  (DESIGN.md §6). <span id="guestCredit">The second figure in the room is a
-  <a href="catalogue.html" style="color:#7fb4ff">100Avatars model by Polygonal Mind (CC BY 4.0)</a>,
-  splat-ified from its VRM at load time.</span></p>
+<canvas id="gl"></canvas>
+<div class="frame"><span></span><span></span><span></span><span></span></div>
 
-  <div class="row">
-    <div class="panel" style="flex:2 1 420px">
-      <h2>Viewer (drag to orbit) — reconstructed from packets only</h2>
-      <canvas class="gl" id="gl"></canvas>
-      <div class="stat" id="stats" style="margin-top:0.4rem">–</div>
-      <div style="margin-top:0.3rem"><span class="badge ok" id="linkBadge">live</span></div>
-    </div>
-    <div class="panel" style="flex:1 1 260px">
-      <h2>Sender (truth — drag the face)</h2>
-      <canvas class="face" id="senderFace" width="300" height="300"></canvas>
-      <div class="ctl" style="margin-top:0.4rem">
-        <button class="hold" id="talkBtn">TALK</button>
-        <button class="hold" id="micBtn">🎤 MIC</button>
-        <button class="hold" id="camBtn">📷 CAM</button>
-        <label style="flex:0 0 auto"><input type="checkbox" id="autoChk" checked> auto</label>
-        <label style="flex:0 0 auto"><input type="checkbox" id="mirrorChk" checked> mirror</label>
-      </div>
-      <div class="ctl">
-        <input id="sayText" type="text" value="Hello! I am a stream of text becoming a talking splat."
-          style="flex:1; min-width:0; background:#0a0b10; color:#d8dae2; border:1px solid #3a5580; border-radius:6px; padding:0.35rem;">
-      </div>
-      <div class="ctl">
-        <button class="act" id="sayBtn">SAY</button>
-        <button class="act" id="streamBtn">▶ AI STREAM</button>
-        <span class="note" style="flex:1">TTS + text-derived visemes → the same packet</span>
-      </div>
-      <div class="ctl"><label>avatar</label>
-        <select id="avatarSel" style="flex:1; background:#0a0b10; color:#d8dae2; border:1px solid #3a5580; border-radius:6px; padding:0.25rem;"></select>
-      </div>
-      <div class="note" id="micNote">MIC: Web Audio speech energy drives the jaw. CAM: MediaPipe FaceLandmarker
-      (Apache-2.0, loaded from CDN on demand) drives head pose + all ten expression channels from your webcam.
-      Both process locally; nothing leaves the page. If CAM head turns read backwards, toggle mirror.</div>
-      <h2 style="margin-top:0.8rem">Network</h2>
-      <div class="ctl"><label>latency</label><input type="range" id="latency" min="0" max="500" value="80"><output id="latencyOut">80 ms</output></div>
-      <div class="ctl"><label>jitter</label><input type="range" id="jitter" min="0" max="200" value="30"><output id="jitterOut">30 ms</output></div>
-      <div class="ctl"><label>packet loss</label><input type="range" id="loss" min="0" max="50" value="5"><output id="lossOut">5 %</output></div>
-      <div class="ctl"><label>send rate</label><input type="range" id="rate" min="5" max="60" value="30"><output id="rateOut">30 Hz</output></div>
-      <div class="ctl"><label>jitter buffer</label><input type="range" id="buffer" min="0" max="300" value="100"><output id="bufferOut">100 ms</output></div>
-    </div>
+<div class="hud chip tl">
+  <b>SPLATWEB · STAGE</b>
+  <a href="index.html">hub</a><a href="demo-telemetry.html">packet</a><a href="demo-splat-room.html">room</a><a href="demo-gallery.html">gallery</a>
+</div>
+
+<div class="hud chip bl">
+  <span class="stat" id="stats">–</span><br>
+  <span class="badge ok" id="linkBadge">live</span>
+</div>
+
+<div class="hud chip bc"><span id="guestCredit">The second figure is a
+  <a href="catalogue.html">100Avatars model by Polygonal Mind (CC BY 4.0)</a>,
+  splat-ified from its VRM at load time.</span></div>
+
+<button class="tab" id="ctrlTab">SENDER</button>
+<div class="hud drawer open" id="ctrlDrawer">
+  <h2>Sender — truth (drag the face)</h2>
+  <canvas class="face" id="senderFace" width="300" height="300"></canvas>
+  <div class="ctl" style="margin-top:0.5rem">
+    <button class="hold" id="talkBtn">TALK</button>
+    <button class="hold" id="micBtn">🎤 MIC</button>
+    <button class="hold" id="camBtn">📷 CAM</button>
   </div>
-</main>
+  <div class="ctl">
+    <label style="flex:0 0 auto"><input type="checkbox" id="autoChk" checked> auto</label>
+    <label style="flex:0 0 auto"><input type="checkbox" id="mirrorChk" checked> mirror</label>
+  </div>
+  <h2>Generated speech</h2>
+  <div class="ctl">
+    <input id="sayText" type="text" value="Hello! I am a stream of text becoming a talking splat." style="flex:1; min-width:0;">
+  </div>
+  <div class="ctl">
+    <button class="act" id="sayBtn">SAY</button>
+    <button class="act" id="streamBtn">▶ AI STREAM</button>
+  </div>
+  <h2>Avatar</h2>
+  <div class="ctl"><select id="avatarSel" style="flex:1"></select></div>
+  <div class="note" id="micNote" style="margin-top:0.6rem">MIC: Web Audio speech energy drives the jaw.
+  CAM: MediaPipe FaceLandmarker (Apache-2.0, CDN on demand) drives head pose + all ten expression
+  channels from your webcam. Both process locally; nothing leaves the page. If CAM head turns read
+  backwards, toggle mirror.</div>
+</div>
+
+<button class="tab" id="netTab">NETWORK</button>
+<div class="hud drawer open" id="netDrawer">
+  <h2>Network (simulated)</h2>
+  <div class="ctl"><label>latency</label><input type="range" id="latency" min="0" max="500" value="80"><output id="latencyOut">80 ms</output></div>
+  <div class="ctl"><label>jitter</label><input type="range" id="jitter" min="0" max="200" value="30"><output id="jitterOut">30 ms</output></div>
+  <div class="ctl"><label>packet loss</label><input type="range" id="loss" min="0" max="50" value="5"><output id="lossOut">5 %</output></div>
+  <div class="ctl"><label>send rate</label><input type="range" id="rate" min="5" max="60" value="30"><output id="rateOut">30 Hz</output></div>
+  <div class="ctl"><label>jitter buffer</label><input type="range" id="buffer" min="0" max="300" value="100"><output id="bufferOut">100 ms</output></div>
+  <p class="note">The whole thesis in one page: the sender's pose is encoded into 32-byte packets and
+  pushed through a simulated lossy channel; the viewer decodes, jitter-buffers, interpolates and
+  (briefly) extrapolates, and renders the splat room + splat avatar — reconstructed from packets
+  only. Turn the loss and jitter up and watch presence survive. Drag the room to orbit; wheel to
+  zoom in close. (DESIGN.md §6.)</p>
+</div>
+
 <script type="module">
 import { encodePose, decodePose, makePose } from './lib/telemetry-codec.js';
 import { PoseDriver, bindPointerPad } from './lib/pose-driver.js';
@@ -83,6 +152,17 @@ const statsEl = $('stats');
 let renderer;
 try { renderer = new SplatRenderer(canvas); }
 catch (e) { statsEl.textContent = 'WebGL2 not available: ' + e.message; throw e; }
+
+// HUD drawers: open on load, slide away after a few idle seconds, come
+// back from their edge tabs
+for (const [tabId, drawerId] of [['ctrlTab', 'ctrlDrawer'], ['netTab', 'netDrawer']]) {
+  const tab = $(tabId), drawer = $(drawerId);
+  let timer = setTimeout(() => drawer.classList.remove('open'), 6000);
+  const keep = () => { clearTimeout(timer); };
+  tab.addEventListener('click', () => { keep(); drawer.classList.toggle('open'); });
+  drawer.addEventListener('pointerdown', keep);
+  drawer.addEventListener('pointerenter', keep);
+}
 
 // scene: room + (optional guest) + avatar block last, so the avatar region
 // can be rewritten every frame at avatarOffset
@@ -111,11 +191,11 @@ rebuildScene(null);
 const guests = MODELS.filter(m => m.id !== 'lps');
 const guest = guests[Math.floor(Math.random() * guests.length)];
 loadGlbSplats(guest.url, {
-  count: 14000, targetHeight: guest.targetHeight, at: [-1.6, 0, -2.1], yaw: guest.yaw + 0.7,
+  count: 18000, targetHeight: guest.targetHeight, at: [-1.6, 0, -2.1], yaw: guest.yaw + 0.7,
 }).then(g => {
   rebuildScene(g);
   document.getElementById('guestCredit').innerHTML =
-    `The second figure is <a href="catalogue.html" style="color:#7fb4ff">${guest.name}` +
+    `The second figure is <a href="catalogue.html">${guest.name}` +
     ` — ${guest.attribution}</a>, splat-ified from its VRM at load time.`;
 }).catch(() => {});
 

@@ -51,9 +51,9 @@ void main(){
   mat3 T = J * W;
   mat3 cov = T * cov3 * transpose(T);
 
-  float a = cov[0][0] + 0.3;
+  float a = cov[0][0] + 0.15;
   float b = cov[1][0];
-  float d = cov[1][1] + 0.3;
+  float d = cov[1][1] + 0.15;
   float mid = 0.5 * (a + d);
   float disc = sqrt(max(0.0, mid*mid - (a*d - b*b)));
   float l1 = mid + disc;
@@ -185,11 +185,10 @@ export class SplatRenderer {
       depths[i] = r20 * d[o] + r21 * d[o + 1] + r22 * d[o + 2] + r23;
       order[i] = i;
     }
-    const idx = Array.from(order);
-    idx.sort((a, b) => depths[a] - depths[b]);
+    order.sort((a, b) => depths[a] - depths[b]);   // TypedArray sort, no allocation
     const s = this.sorted;
     for (let i = 0; i < n; i++) {
-      s.set(d.subarray(idx[i] * FLOATS_PER_SPLAT, (idx[i] + 1) * FLOATS_PER_SPLAT), i * FLOATS_PER_SPLAT);
+      s.set(d.subarray(order[i] * FLOATS_PER_SPLAT, (order[i] + 1) * FLOATS_PER_SPLAT), i * FLOATS_PER_SPLAT);
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instBuf);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, s);

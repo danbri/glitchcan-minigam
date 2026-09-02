@@ -35,20 +35,21 @@ export function buildRoom(seed = 42) {
   const jitter = (v, j) => v + (rnd() - 0.5) * j;
 
   // floor — warm wood, plank-ish hue banding
-  for (let x = -4; x <= 4; x += 0.22) {
-    for (let z = -3; z <= 3; z += 0.22) {
+  for (let x = -4; x <= 4; x += 0.13) {
+    for (let z = -3; z <= 3; z += 0.13) {
       const plank = Math.floor((x + 4) / 0.6) % 2 ? 0.03 : -0.02;
       const c = 0.42 + plank + (rnd() - 0.5) * 0.05;
-      s.add([jitter(x, 0.1), 0, jitter(z, 0.1)], [0.16, 0.02, 0.16], [c, c * 0.72, c * 0.5], 0.95);
+      s.add([jitter(x, 0.06), 0, jitter(z, 0.06)], [0.08, 0.012, 0.08], [c, c * 0.72, c * 0.5], 1);
     }
   }
   // walls — plaster, slightly cool
   const wall = (px, pz, nx, nz, len) => {
-    for (let u = -len; u <= len; u += 0.24) {
-      for (let y = 0.1; y <= 2.8; y += 0.24) {
+    for (let u = -len; u <= len; u += 0.15) {
+      for (let y = 0.08; y <= 2.8; y += 0.15) {
         const c = 0.62 + (rnd() - 0.5) * 0.04 + y * 0.02;
-        s.add([px + nx * 0 + (nz !== 0 ? u : 0), jitter(y, 0.08), pz + (nx !== 0 ? u : 0)],
-          [nz !== 0 ? 0.18 : 0.03, 0.18, nx !== 0 ? 0.18 : 0.03], [c * 0.93, c * 0.94, c], 0.95);
+        const uj = jitter(u, 0.08);
+        s.add([px + (nz !== 0 ? uj : 0), jitter(y, 0.08), pz + (nx !== 0 ? uj : 0)],
+          [nz !== 0 ? 0.105 : 0.022, 0.105, nx !== 0 ? 0.105 : 0.022], [c * 0.93, c * 0.94, c], 1);
       }
     }
   };
@@ -57,21 +58,21 @@ export function buildRoom(seed = 42) {
   wall(4, 0, -1, 0, 3);    // right wall
 
   // window on back wall — cool daylight glow
-  for (let x = -1.1; x <= 1.1; x += 0.14) {
-    for (let y = 1.2; y <= 2.3; y += 0.14) {
-      s.add([jitter(x + 1.6, 0.04), jitter(y, 0.04), -2.93], [0.1, 0.1, 0.02], [0.75, 0.85, 1.0], 0.9);
+  for (let x = -1.1; x <= 1.1; x += 0.09) {
+    for (let y = 1.2; y <= 2.3; y += 0.09) {
+      s.add([jitter(x + 1.6, 0.04), jitter(y, 0.04), -2.93], [0.07, 0.07, 0.015], [0.75, 0.85, 1.0], 0.95);
     }
   }
   // rug
-  for (let i = 0; i < 220; i++) {
+  for (let i = 0; i < 480; i++) {
     const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd());
     s.add([Math.cos(a) * r * 1.3, 0.03, Math.sin(a) * r * 0.9 + 0.4],
-      [0.12, 0.02, 0.12], [0.55 + rnd() * 0.1, 0.2, 0.22], 0.9);
+      [0.07, 0.014, 0.07], [0.55 + rnd() * 0.1, 0.2, 0.22], 1);
   }
   // table — top + 4 legs
-  for (let x = -0.55; x <= 0.55; x += 0.11) {
-    for (let z = -0.3; z <= 0.3; z += 0.11) {
-      s.add([jitter(x - 1.8, 0.02), 0.74, jitter(z - 0.8, 0.02)], [0.09, 0.02, 0.09], [0.3, 0.2, 0.13], 1);
+  for (let x = -0.55; x <= 0.55; x += 0.065) {
+    for (let z = -0.3; z <= 0.3; z += 0.065) {
+      s.add([jitter(x - 1.8, 0.012), 0.74, jitter(z - 0.8, 0.012)], [0.048, 0.014, 0.048], [0.3, 0.2, 0.13], 1);
     }
   }
   for (const [lx, lz] of [[-0.5, -0.25], [0.5, -0.25], [-0.5, 0.25], [0.5, 0.25]]) {
@@ -87,10 +88,10 @@ export function buildRoom(seed = 42) {
     }
   }
   for (let y = 0.35; y <= 0.8; y += 0.09) s.add([2.9, y, -2.2], [0.02, 0.06, 0.02], [0.24, 0.34, 0.15], 1);
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 200; i++) {
     const a = rnd() * Math.PI * 2, r = rnd() * 0.35, h = 0.7 + rnd() * 0.6;
     s.add([2.9 + Math.cos(a) * r, h, -2.2 + Math.sin(a) * r],
-      [0.09, 0.06, 0.09], [0.15 + rnd() * 0.15, 0.4 + rnd() * 0.2, 0.14], 0.85);
+      [0.055, 0.04, 0.055], [0.15 + rnd() * 0.15, 0.4 + rnd() * 0.2, 0.14], 0.9);
   }
   // shelf with books on left wall
   for (let z = -1.6; z <= -0.2; z += 0.1) s.add([-3.9, 1.4, z], [0.03, 0.02, 0.08], [0.32, 0.22, 0.14], 1);
@@ -199,7 +200,7 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
   // skull — fibonacci-sampled shell, splats TANGENT to the surface (thin
   // along the normal), shaped: jaw tapers, face is flatter, back bulges
   const RX = 0.092 * F.headW, RY = 0.115 * F.headH, RZ = 0.10, CY = 0.13;
-  const N_SKULL = 900, GA = Math.PI * (3 - Math.sqrt(5));
+  const N_SKULL = 1300, GA = Math.PI * (3 - Math.sqrt(5));
   for (let i = 0; i < N_SKULL; i++) {
     const ny = 1 - 2 * (i + 0.5) / N_SKULL;
     const rr = Math.sqrt(Math.max(0, 1 - ny * ny));
@@ -223,12 +224,12 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
         : normalize([Math.cos(ph + 1.57), 0, Math.sin(ph + 1.57)]);
       const bt = cross(n, t);
       const gl = 0.8 + rnd() * 0.45;                    // per-strand sheen variation
-      addL(pos, [0.022, 0.008, 0.006],
+      addL(pos, [0.018, 0.0065, 0.005],
         [HAIR[0] * sh * gl, HAIR[1] * sh * gl, HAIR[2] * sh * gl], 1, basisToQuat(t, bt, n));
     } else {
       // cheeks get a touch of red
       const cheek = (Math.abs(nx) > 0.45 && ny < 0.05 && ny > -0.4 && nz > 0.3) ? 0.05 : 0;
-      addL(pos, [0.012, 0.012, 0.0045],
+      addL(pos, [0.0102, 0.0102, 0.0038],
         [(SKIN[0] + tone + cheek) * sh, (SKIN[1] + tone * 0.8) * sh, (SKIN[2] + tone * 0.7) * sh],
         1, qFromZTo(n));
     }
@@ -345,13 +346,13 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
     const sh = (0.55 + 0.5 * Math.max(0, dot(normalize(n), LIGHT))) * mul;
     return [SHIRT[0] * sh, SHIRT[1] * sh, SHIRT[2] * sh];
   };
-  for (let yi = 0; yi < 6; yi++) {
-    const y = 1.13 + yi * 0.058;
+  for (let yi = 0; yi < 9; yi++) {
+    const y = 1.13 + yi * 0.038;
     const r = (0.115 + (1.42 - y) * 0.22) * F.build;
-    for (let j = 0; j < 12; j++) {
-      const a = (j / 12) * Math.PI * 2 + (yi % 2) * 0.26;
+    for (let j = 0; j < 16; j++) {
+      const a = (j / 16) * Math.PI * 2 + (yi % 2) * 0.2;
       addWorld(s, base, [Math.cos(a) * r * 1.25, y, Math.sin(a) * r * 0.5],
-        [0.05, 0.045, 0.04], shirt([Math.cos(a), 0.15, Math.sin(a)], 0.94 + rnd() * 0.12));
+        [0.033, 0.028, 0.026], shirt([Math.cos(a), 0.15, Math.sin(a)], 0.94 + rnd() * 0.12));
     }
   }
   // arms + hands: shoulder → elbow → wrist → palm + fingers, short
@@ -377,13 +378,13 @@ export function buildAvatarSplats(pose, at = [0, 0, 0], appearance = null, anim 
     const bend = 0.35 + lift * 1.5 + 0.06 * Math.sin(tA * 1.3 + sx);
     const fd = normalize([ud[0] * 0.85, ud[1] * Math.cos(bend), Math.sin(bend) * 0.9 + 0.05]);
     const wrist = v3(elbow, fd, 0.22);
-    for (let i = 0; i <= 4; i++) {   // upper arm — sleeve
-      addWorld(s, base, v3(shoulder, ud, 0.05 + i * 0.05), [0.036, 0.036, 0.032],
-        shirt([sx, 0.2, 0.4], 0.9 + i * 0.02));
+    for (let i = 0; i <= 6; i++) {   // upper arm — sleeve
+      addWorld(s, base, v3(shoulder, ud, 0.04 + i * 0.035), [0.028, 0.028, 0.026],
+        shirt([sx, 0.2, 0.4], 0.9 + i * 0.015));
     }
-    for (let i = 0; i <= 4; i++) {   // forearm — skin
-      const r = 0.03 - i * 0.002;
-      addWorld(s, base, v3(elbow, fd, 0.03 + i * 0.048), [r, r, r * 0.9],
+    for (let i = 0; i <= 6; i++) {   // forearm — skin
+      const r = 0.026 - i * 0.0013;
+      addWorld(s, base, v3(elbow, fd, 0.025 + i * 0.033), [r, r, r * 0.9],
         skinW([sx, 0.2, 0.5], 0.95));
     }
     // hand: palm, four fingers, thumb — enough articulation points for
