@@ -177,21 +177,9 @@ export class SplatRenderer {
     const view = lookAt(pos, target, [0, 1, 0]);
     const proj = perspective(fovY, c.width / c.height, 0.05, 100);
 
-    // depth sort (view-space z; camera looks down −z, farthest first)
-    const d = this.data, n = this.count, depths = this.depths, order = this.order;
-    const r20 = view[2], r21 = view[6], r22 = view[10], r23 = view[14];
-    for (let i = 0; i < n; i++) {
-      const o = i * FLOATS_PER_SPLAT;
-      depths[i] = r20 * d[o] + r21 * d[o + 1] + r22 * d[o + 2] + r23;
-      order[i] = i;
-    }
-    order.sort((a, b) => depths[a] - depths[b]);   // TypedArray sort, no allocation
-    const s = this.sorted;
-    for (let i = 0; i < n; i++) {
-      s.set(d.subarray(order[i] * FLOATS_PER_SPLAT, (order[i] + 1) * FLOATS_PER_SPLAT), i * FLOATS_PER_SPLAT);
-    }
+    sortSplats(this.data, this.count, view, this.depths, this.order, this.sorted);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instBuf);
-    gl.bufferSubData(gl.ARRAY_BUFFER, 0, s);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.sorted);
 
     gl.viewport(0, 0, c.width, c.height);
     const [br, bg, bb] = this.background;
@@ -208,8 +196,23 @@ export class SplatRenderer {
     gl.uniform2f(this.u.uViewport, c.width, c.height);
     gl.uniform1f(this.u.uStyleLevels, this.styleLevels);
     gl.bindVertexArray(this.vao);
-    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, n);
+    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.count);
     gl.bindVertexArray(null);
+  }
+}
+
+// CPU back-to-front depth sort, shared by both backends (view-space z;
+// camera looks down −z, farthest first)
+export function sortSplats(d, n, view, depths, order, sorted) {
+  const r20 = view[2], r21 = view[6], r22 = view[10], r23 = view[14];
+  for (let i = 0; i < n; i++) {
+    const o = i * FLOATS_PER_SPLAT;
+    depths[i] = r20 * d[o] + r21 * d[o + 1] + r22 * d[o + 2] + r23;
+    order[i] = i;
+  }
+  order.sort((a, b) => depths[a] - depths[b]);   // TypedArray sort, no allocation
+  for (let i = 0; i < n; i++) {
+    sorted.set(d.subarray(order[i] * FLOATS_PER_SPLAT, (order[i] + 1) * FLOATS_PER_SPLAT), i * FLOATS_PER_SPLAT);
   }
 }
 

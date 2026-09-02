@@ -27,16 +27,16 @@
   </div>
 </main>
 <script type="module">
-import { SplatRenderer } from './lib/splat-renderer.js';
+import { createSplatRenderer } from './lib/splat-renderer-auto.js';
 import { buildRoom } from './lib/scene-builder.js';
 
 const canvas = document.getElementById('gl');
 const statsEl = document.getElementById('stats');
 let renderer;
 try {
-  renderer = new SplatRenderer(canvas);
+  renderer = await createSplatRenderer(canvas);
 } catch (e) {
-  statsEl.textContent = 'WebGL2 not available: ' + e.message;
+  statsEl.textContent = 'no GPU backend available: ' + e.message;
   throw e;
 }
 const room = buildRoom();
@@ -93,7 +93,7 @@ function frame(now) {
   frames++;
   if (now - fpsT > 1000) {
     fps = frames * 1000 / (now - fpsT); frames = 0; fpsT = now;
-    statsEl.textContent = `${room.count.toLocaleString()} splats · ${fps.toFixed(0)} fps · ${canvas.width}×${canvas.height}`;
+    statsEl.textContent = `${room.count.toLocaleString()} splats · ${fps.toFixed(0)} fps · ${canvas.width}×${canvas.height} · ${renderer.backend}`;
   }
   requestAnimationFrame(frame);
 }

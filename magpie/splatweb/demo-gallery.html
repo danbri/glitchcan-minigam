@@ -35,7 +35,8 @@
   </div>
 </main>
 <script type="module">
-import { SplatRenderer, FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { createSplatRenderer } from './lib/splat-renderer-auto.js';
 import { loadGlbSplats } from './lib/gltf-splats.js';
 import { MODELS } from './lib/models-manifest.js';
 import { mulberry32 } from './lib/pose-math.js';
@@ -43,8 +44,8 @@ import { mulberry32 } from './lib/pose-math.js';
 const $ = id => document.getElementById(id);
 const canvas = $('gl'), statsEl = $('stats');
 let renderer;
-try { renderer = new SplatRenderer(canvas, { background: [0.07, 0.075, 0.1] }); }
-catch (e) { statsEl.textContent = 'WebGL2 not available: ' + e.message; throw e; }
+try { renderer = await createSplatRenderer(canvas, { background: [0.07, 0.075, 0.1] }); }
+catch (e) { statsEl.textContent = 'no GPU backend available: ' + e.message; throw e; }
 
 for (const m of MODELS) {
   const o = document.createElement('option');
@@ -120,7 +121,7 @@ async function load() {
     applyCamera();
     statsEl.textContent =
       `${res.count.toLocaleString()} splats from ${res.sourceTris.toLocaleString()} triangles · ` +
-      `converted in ${(performance.now() - t0).toFixed(0)} ms`;
+      `converted in ${(performance.now() - t0).toFixed(0)} ms · ${renderer.backend}`;
   } catch (e) {
     if (gen === generation) statsEl.textContent = 'load failed: ' + e.message;
   }

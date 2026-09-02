@@ -138,7 +138,8 @@ import { encodePose, decodePose, makePose } from './lib/telemetry-codec.js';
 import { PoseDriver, bindPointerPad } from './lib/pose-driver.js';
 import { NetworkSim } from './lib/network-sim.js';
 import { PoseBuffer } from './lib/pose-buffer.js';
-import { SplatRenderer, FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { createSplatRenderer } from './lib/splat-renderer-auto.js';
 import { buildRoom, buildAvatarSplats, AVATAR_PRESETS } from './lib/scene-builder.js';
 import { MODELS } from './lib/models-manifest.js';
 import { drawFace } from './lib/face2d.js';
@@ -152,8 +153,8 @@ const $ = id => document.getElementById(id);
 const canvas = $('gl');
 const statsEl = $('stats');
 let renderer;
-try { renderer = new SplatRenderer(canvas); }
-catch (e) { statsEl.textContent = 'WebGL2 not available: ' + e.message; throw e; }
+try { renderer = await createSplatRenderer(canvas); }
+catch (e) { statsEl.textContent = 'no GPU backend available: ' + e.message; throw e; }
 
 // HUD drawers: open on load, slide away after a few idle seconds, come
 // back from their edge tabs
@@ -431,7 +432,7 @@ function frame(now) {
     statsEl.textContent =
       `${net.kbps(now).toFixed(1)} kbit/s wire · loss ${net.lossActualPct().toFixed(1)}% ` +
       `(${net.dropped}/${net.sent}) · glass-to-glass ≈ ${rx ? eff.toFixed(0) : '–'} ms · ` +
-      `extrapolation events ${extrapEvents}`;
+      `extrapolation events ${extrapEvents} · ${renderer.backend}`;
     if (cam.active) {
       const face = cam.faceSeen ? 'face ✓' : 'no face';
       const arms = cam.pl ? (cam.armsSeen ? 'arms ✓ (IK)' : 'arms off-camera → idle') : 'no skeleton model';
