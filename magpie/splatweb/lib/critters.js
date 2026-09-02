@@ -74,6 +74,7 @@ export class Critter {
     this.hopT = 0.4 + rnd() * 2;
     this.chirpT = 2 + rnd() * 12;
     this.jaw = 0;
+    this.jumpTalent = 0.7 + rnd() * 0.9;     // some jump much higher than others
     // per-critter voice: smaller critters squeak
     this.voicePitch = Math.max(0.3, 2.1 - this.r * 7 + (rnd() - 0.5) * 0.3);
     this.voiceRate = 0.9 + rnd() * 0.5;
@@ -97,9 +98,13 @@ export class Critter {
       if (this.hopT <= 0) {                  // hop somewhere (centre-biased)
         this.hopT = 0.8 + this.rnd() * 2.4;
         const toC = Math.atan2(-p[2], -p[0]);
-        const dir = Math.hypot(p[0], p[2]) > this.bounds * 0.75
-          ? toC : this.rnd() * Math.PI * 2;
-        const power = (1.4 + this.rnd() * 1.3) * (env.jumpMul ?? 1);
+        // cautious about the edges: the further out, the more the next
+        // hop points home
+        const edge = Math.hypot(p[0], p[2]) / this.bounds;
+        const dir = this.rnd() < Math.max(0, (edge - 0.45) * 1.8)
+          ? toC + (this.rnd() - 0.5) * 0.6
+          : this.rnd() * Math.PI * 2;
+        const power = (1.4 + this.rnd() * 1.3) * (env.jumpMul ?? 1) * this.jumpTalent;
         v[0] = Math.cos(dir) * power * 0.55;
         v[2] = Math.sin(dir) * power * 0.55;
         v[1] = power;
@@ -123,6 +128,13 @@ export class Critter {
           this.facing = Math.atan2(v[0], v[2]);
         }
       }
+    }
+    // edge caution: a continuous homeward pull grows near the boundary —
+    // straying far feels effortful, so they cluster in the middle
+    const dc = Math.hypot(p[0], p[2]);
+    if (dc > this.bounds * 0.55) {
+      const pull = (dc / this.bounds - 0.55) * 4.5 * dt;
+      v[0] -= p[0] / dc * pull; v[2] -= p[2] / dc * pull;
     }
     // soft walls
     const d = Math.hypot(p[0], p[2]);

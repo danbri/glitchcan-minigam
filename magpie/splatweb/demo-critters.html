@@ -23,9 +23,9 @@
     padding: 0.35rem 0.7rem; cursor: pointer; font-size: 0.8rem; }
   .tr button.on { background: #3563ad; }
   .tr input[type=range] { width: 90px; accent-color: #7fb4ff; }
-  .drawer { position: fixed; top: 0; right: 0; height: 100%; width: min(280px, 80vw);
-    padding: 3rem 1rem 1rem; overflow-y: auto; border-radius: 0; z-index: 10;
-    border-right: 0; border-top: 0; border-bottom: 0;
+  .drawer { position: fixed; top: 64px; right: 0; height: auto; max-height: calc(100vh - 90px);
+    width: min(270px, 80vw); padding: 0.9rem 1rem; overflow-y: auto;
+    border-radius: 10px 0 0 10px; z-index: 9; border-right: 0;
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
   .drawer:not(.open) { transform: translateX(calc(100% + 2px)); }
   .drawer h2 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
@@ -68,6 +68,7 @@ import { createSplatRenderer } from './lib/splat-renderer-auto.js';
 import { loadCompressedPly } from './lib/cply.js';
 import { Critter, SPLATS_PER_CRITTER, CRITTER_LINES, throwCritters } from './lib/critters.js';
 import { TextTalker } from './lib/text-talker.js';
+import { ClipVoice, loadClipManifest } from './lib/clip-voice.js';
 import { mulberry32 } from './lib/pose-math.js';
 
 const $ = id => document.getElementById(id);
@@ -124,15 +125,20 @@ async function loadRoom() {
 }
 const room = await loadRoom();
 
-// critters — each an entity: physics body + splat block + voice
+// critters — each an entity: physics body + splat block + voice.
+// Voices: pre-generated ElevenLabs clips when media/critter-voices/
+// exists (run tools/gen-critter-voices.mjs once with an API key),
+// otherwise the browser's speechSynthesis.
+const clipManifest = await loadClipManifest('media/critter-voices/');
 let critters = [];
 let voicesOn = false;
 function makeCritters(n) {
-  for (const c of critters) c.talker?.stop();
+  for (const c of critters) { c.talker?.stop(); c.clip?.stop(); }
   critters = [];
   for (let i = 0; i < n; i++) {
     const c = new Critter(i * 7 + 3);
-    c.talker = new TextTalker({ pitch: c.voicePitch, rate: c.voiceRate, volume: 0.55 });
+    if (clipManifest) c.clip = new ClipVoice(clipManifest, i, 0.5);
+    else c.talker = new TextTalker({ pitch: c.voicePitch, rate: c.voiceRate, volume: 0.55 });
     critters.push(c);
   }
   const data = new Float32Array((room.count + n * SPLATS_PER_CRITTER) * FLOATS_PER_SPLAT);
@@ -151,7 +157,7 @@ $('voicesBtn').addEventListener('click', () => {
   voicesOn = !voicesOn;
   $('voicesBtn').textContent = voicesOn ? '🔊 voices on' : '🔇 voices off';
   $('voicesBtn').classList.toggle('on', voicesOn);
-  if (!voicesOn) for (const c of critters) c.talker.stop();
+  if (!voicesOn) for (const c of critters) { c.talker?.stop(); c.clip?.stop(); }
 });
 
 // orbit
@@ -209,13 +215,17 @@ function frame(now) {
     if (c.chirpT <= 0) {
       c.chirpT = 5 + Math.random() * 14;
       if (voicesOn) {
-        const line = CRITTER_LINES[Math.floor(Math.random() * CRITTER_LINES.length)];
-        c.talker.feed(line + ' ');
-        c.talker.flush();
+        const li = Math.floor(Math.random() * CRITTER_LINES.length);
+        if (c.clip) c.clip.say(li);
+        else { c.talker.feed(CRITTER_LINES[li] + ' '); c.talker.flush(); }
       }
     }
-    const v = c.talker.tick(dt);
-    c.jaw = v ? v.jaw : Math.max(0, c.jaw - dt * 3);
+    if (c.clip) {
+      c.jaw = c.clip.tick(dt);
+    } else {
+      const v = c.talker.tick(dt);
+      c.jaw = v ? v.jaw : Math.max(0, c.jaw - dt * 3);
+    }
   }
   for (let i = 0; i < critters.length; i++) {
     critters[i].build(critterBlock, i * SPLATS_PER_CRITTER * FLOATS_PER_SPLAT);

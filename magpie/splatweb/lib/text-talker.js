@@ -7,7 +7,7 @@
 //
 // If TTS is unavailable (no voices, headless), it degrades to SILENT
 // lipsync on an estimated clock — the mouth still moves.
-function visemeFor(ch) {
+export function visemeFor(ch) {
   if ('a'.includes(ch)) return { jaw: 0.7, pucker: 0.0, smile: 0.1 };
   if ('eiy'.includes(ch)) return { jaw: 0.35, pucker: 0.0, smile: 0.5 };
   if ('o'.includes(ch)) return { jaw: 0.5, pucker: 0.6, smile: 0.0 };

@@ -1,0 +1,5 @@
+{
+ "voices": [],
+ "lines": [],
+ "note": "placeholder — run tools/gen-critter-voices.mjs with ELEVENLABS_API_KEY to fill this folder with real clips; the page auto-switches from robo-TTS when voices is non-empty"
+}
