@@ -37,14 +37,83 @@ const WANTED = [
 const LIGHT = (() => { const v = [0.3, 0.75, 0.6]; const l = Math.hypot(...v); return v.map(x => x / l); })();
 const ZERO10 = new Float32Array(10);
 
-export async function loadScanHead(url = FACECAP_URL, { count = 9000, headHeight = 0.34, yaw = 0, hair = [0.17, 0.12, 0.09] } = {}) {
+export async function loadScanHead(url = FACECAP_URL, { count = 14000, headHeight = 0.34, yaw = 0, hair = [0.17, 0.12, 0.09] } = {}) {
   const res = await loadGlbSplats(url, {
     count, targetHeight: headHeight, yaw, at: [0, 0, 0], light: null, morphNames: WANTED,
     // facecap's texture is KTX2/basisu — undecodable without a transcoder,
     // so the head renders as a skin-toned sculpture (shape + rig intact)
     tint: [0.92, 0.72, 0.6],
   });
+  refineMouth(res);
   return addHair(res, hair);
+}
+
+// make the mouth actually WORK when the jaw opens:
+// 1. the model's teeth and eyes are separate sub-meshes — the face mesh
+//    is the one carrying morph deltas; classify the rest by centroid
+//    height and recolour: teeth back to tooth-white (the skin tint had
+//    painted them flesh — an open mouth showed a skin void), eyes to
+//    sclera off-white (they were the blue speckle artifact).
+// 2. splats in the jaw/lip region — found via the model's own jawOpen
+//    deltas, so this self-calibrates to the rig — are shrunk, letting the
+//    lips visually separate instead of big Gaussians bridging the gap.
+function refineMouth(res) {
+  const { data: b, count: n, meshIds, morphs, normals: nor } = res;
+  // face mesh = the id owning the largest total jawOpen motion; the two
+  // small meshes at eye height are the eyeballs; the low frontal one is
+  // the teeth (verified against the model: meshes 0/1 eyes, 3 teeth).
+  const jd = morphs.jawOpen;
+  const motion = new Map(), centY = new Map(), cnt = new Map();
+  let maxDelta = 0;
+  for (let i = 0; i < n; i++) {
+    const id = meshIds[i], j = i * 3;
+    const m = Math.abs(jd[j]) + Math.abs(jd[j + 1]) + Math.abs(jd[j + 2]);
+    motion.set(id, (motion.get(id) || 0) + m);
+    centY.set(id, (centY.get(id) || 0) + b[i * FLOATS_PER_SPLAT + 1]);
+    cnt.set(id, (cnt.get(id) || 0) + 1);
+    if (m > maxDelta) maxDelta = m;
+  }
+  let faceId = -1, best = -1;
+  for (const [id, m] of motion) if (m > best) { best = m; faceId = id; }
+  let teethId = -1, teethY = Infinity;
+  for (const id of cnt.keys()) {
+    if (id === faceId) continue;
+    const y = centY.get(id) / cnt.get(id);
+    if (y < teethY) { teethY = y; teethId = id; }
+  }
+  const headCY = res.heightM * 0.55;
+  for (let i = 0; i < n; i++) {
+    const o = i * FLOATS_PER_SPLAT, id = meshIds[i], j = i * 3;
+    if (id === teethId) {
+      // teeth: tooth-white, smaller so individual teeth read
+      b[o + 10] = 0.93; b[o + 11] = 0.9; b[o + 12] = 0.84;
+      b[o + 7] *= 0.6; b[o + 8] *= 0.6; b[o + 9] *= 0.6;
+    } else if (id !== faceId) {
+      // eyeballs: paint iris/pupil by surface direction (frontal cap of
+      // the sphere = pupil, ring around it = iris, rest = sclera)
+      const nz = nor[j + 2];
+      if (nz > 0.9) { b[o + 10] = 0.07; b[o + 11] = 0.05; b[o + 12] = 0.05; }
+      else if (nz > 0.74) { b[o + 10] = 0.31; b[o + 11] = 0.2; b[o + 12] = 0.12; }
+      else { b[o + 10] = 0.93; b[o + 11] = 0.92; b[o + 12] = 0.9; }
+      b[o + 7] *= 0.75; b[o + 8] *= 0.75; b[o + 9] *= 0.75;
+    } else {
+      const m = (Math.abs(jd[j]) + Math.abs(jd[j + 1]) + Math.abs(jd[j + 2])) / (maxDelta || 1);
+      const px = b[o], py = b[o + 1], pz = b[o + 2];
+      // mouth-bag interior: normals point back toward the head centre —
+      // paint it as dark cavity (only visible when the jaw opens)
+      const inward = nor[j] * px + nor[j + 1] * (py - headCY) + nor[j + 2] * pz < -0.02;
+      const mouthZone = py > res.heightM * 0.22 && py < res.heightM * 0.47
+        && Math.abs(px) < res.heightM * 0.22 && pz > 0;
+      if (inward && mouthZone) {
+        b[o + 10] = 0.3; b[o + 11] = 0.13; b[o + 12] = 0.11;
+      } else if (m > 0.3 && m < 0.62 && mouthZone && pz > 0.05) {
+        // the lip seam only — the transition band between moving jaw and
+        // static upper face; a gentle shrink lets the lips separate
+        // without opening pinholes in the chin
+        b[o + 7] *= 0.8; b[o + 8] *= 0.8; b[o + 9] *= 0.8;
+      }
+    }
+  }
 }
 
 // procedural hair strands fitted to the scan's scalp: identity comes more
@@ -53,6 +122,7 @@ export async function loadScanHead(url = FACECAP_URL, { count = 9000, headHeight
 // head's motion exactly).
 function addHair(res, hairColor) {
   const b0 = res.data, n0 = res.count, nor = res.normals;
+  const mid0 = res.meshIds;
   const scalpMinY = res.heightM * 0.6;
   const picks = [];
   for (let i = 0; i < n0; i++) {

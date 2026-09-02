@@ -35,9 +35,31 @@ function matToQuat(m) {
   return [q[0] / l, q[1] / l, q[2] / l, q[3] / l];
 }
 
+// Automatic expression calibration: everyone's raw blendshape scores sit
+// in a different sub-range (a resting jaw reads ~0.08, a big grin may
+// only reach 0.6). Track a decaying per-channel min/max while capture
+// runs and remap onto the full 0..1 range, so the avatar reaches full
+// expressions calibrated to the person actually on camera.
+class AutoCal {
+  constructor(nCh) {
+    this.min = new Float32Array(nCh).fill(0.25);
+    this.max = new Float32Array(nCh).fill(0.45);
+  }
+  map(i, v) {
+    // fast expand, slow contract — the range learns in a few seconds
+    if (v < this.min[i]) this.min[i] = v; else this.min[i] += (v - this.min[i]) * 0.0004;
+    if (v > this.max[i]) this.max[i] = v; else this.max[i] += (v - this.max[i]) * 0.0004;
+    const lo = Math.min(this.min[i], 0.3);
+    const hi = Math.max(this.max[i], lo + 0.25);
+    const out = (v - lo) / (hi - lo);
+    return out < 0 ? 0 : out > 1 ? 1 : out;
+  }
+}
+
 export class FaceCapture {
   constructor() {
     this.active = false;
+    this.cal = new AutoCal(8);   // the 8 unsigned expression channels
     this.faceSeen = false;
     this.armsSeen = false;
     this.arms = null;     // { l: {t:[x,y,z], vis}, r: {...} } avatar-local wrist offsets
@@ -125,19 +147,19 @@ export class FaceCapture {
     const by = {};
     for (const c of cats) by[c.categoryName] = c.score;
     const b = o.blend;
-    b[0] = by.jawOpen || 0;
-    b[1] = by.eyeBlinkLeft || 0;
-    b[2] = by.eyeBlinkRight || 0;
-    b[3] = by.browInnerUp || 0;
-    b[4] = by.mouthSmileLeft || 0;
-    b[5] = by.mouthSmileRight || 0;
-    b[6] = by.mouthPucker || 0;
+    b[0] = this.cal.map(0, by.jawOpen || 0);
+    b[1] = this.cal.map(1, by.eyeBlinkLeft || 0);
+    b[2] = this.cal.map(2, by.eyeBlinkRight || 0);
+    b[3] = this.cal.map(3, by.browInnerUp || 0);
+    b[4] = this.cal.map(4, by.mouthSmileLeft || 0);
+    b[5] = this.cal.map(5, by.mouthSmileRight || 0);
+    b[6] = this.cal.map(6, by.mouthPucker || 0);
     // gaze: fold the four per-eye look scores into signed x/y
     b[7] = ((by.eyeLookOutRight || 0) + (by.eyeLookInLeft || 0)
       - (by.eyeLookOutLeft || 0) - (by.eyeLookInRight || 0)) / 2;
     b[8] = ((by.eyeLookUpLeft || 0) + (by.eyeLookUpRight || 0)
       - (by.eyeLookDownLeft || 0) - (by.eyeLookDownRight || 0)) / 2;
-    b[9] = by.cheekPuff || 0;
+    b[9] = this.cal.map(7, by.cheekPuff || 0);
     return o;
   }
 

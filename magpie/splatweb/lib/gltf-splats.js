@@ -173,6 +173,7 @@ export async function loadGlbSplats(url, opts = {}) {
       : matFromTRS(node.translation, node.rotation, node.scale);
     const world = matMul(parent, local);
     if (node.mesh != null) {
+      const meshIdx = node.mesh;
       const mesh = gltf.meshes[node.mesh];
       for (const prim of mesh.primitives) {
         if ((prim.mode ?? 4) !== 4 || prim.attributes.POSITION == null) continue;
@@ -208,7 +209,7 @@ export async function loadGlbSplats(url, opts = {}) {
           const uvAt = (i) => uv ? [uv.data[i * 2], uv.data[i * 2 + 1]] : [0, 0];
           tris.push({ p0, p1, p2, n0: nAt(ia), n1: nAt(ib), n2: nAt(ic),
             uv0: uvAt(ia), uv1: uvAt(ib), uv2: uvAt(ic), mat: prim.material, area,
-            ia, ib, ic, morphData, world });
+            ia, ib, ic, morphData, world, meshIdx });
         }
       }
     }
@@ -248,6 +249,7 @@ export async function loadGlbSplats(url, opts = {}) {
   const out = new Float32Array(count * FLOATS_PER_SPLAT);
   const morphOut = morphNames ? morphNames.map(() => new Float32Array(count * 3)) : null;
   const normalsOut = morphNames ? new Float32Array(count * 3) : null;
+  const meshIdOut = morphNames ? new Uint16Array(count) : null;
   let w = 0, made = 0;
   for (let i = 0; i < count; i++) {
     const r = rnd() * total;
@@ -283,6 +285,7 @@ export async function loadGlbSplats(url, opts = {}) {
     }
     if (normalsOut) {
       normalsOut[made * 3] = n[0]; normalsOut[made * 3 + 1] = n[1]; normalsOut[made * 3 + 2] = n[2];
+      meshIdOut[made] = t.meshIdx;
     }
     const sh = L ? 0.55 + 0.5 * Math.max(0, n[0] * L[0] + n[1] * L[1] + n[2] * L[2]) : 1;
     const q = qFromZTo(n);
@@ -298,6 +301,7 @@ export async function loadGlbSplats(url, opts = {}) {
     res.morphs = {};
     morphNames.forEach((nm, wi) => { res.morphs[nm] = morphOut[wi].subarray(0, made * 3); });
     res.normals = normalsOut.subarray(0, made * 3);
+    res.meshIds = meshIdOut.subarray(0, made);
   }
   return res;
 }
