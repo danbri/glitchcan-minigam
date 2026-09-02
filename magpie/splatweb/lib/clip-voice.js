@@ -24,12 +24,21 @@ export class ClipVoice {
     this._text = null;
   }
 
-  say(lineIdx) {
-    if (this._audio && !this._audio.ended) return;   // still talking
-    const li = lineIdx % this.m.lines.length;
-    const a = new Audio(this.m.base + `v${this.vi}-l${li}.mp3`);
+  // kind: 'l' (chatter line), 't' (thrown exclamation), 'd' (landing),
+  // 'k' (toki pona chatter)
+  say(lineIdx, kind = 'l') {
+    if (this._audio && !this._audio.ended) {
+      if (kind === 'l') return;                      // don't interrupt for chatter
+      this._audio.pause();                           // effects DO interrupt
+    }
+    const pool = kind === 't' ? (this.m.throws || []) : kind === 'd' ? (this.m.lands || [])
+      : kind === 'k' ? (this.m.toki || []) : this.m.lines;
+    if (!pool.length) return;
+    const li = lineIdx % pool.length;
+    this._textPool = pool;
+    const a = new Audio(this.m.base + `v${this.vi}-${kind}${li}.mp3`);
     a.volume = this.volume;
-    this._text = this.m.lines[li];
+    this._text = pool[li];
     this._audio = a;
     this._start = 0;
     a.addEventListener('playing', () => { this._start = performance.now(); });

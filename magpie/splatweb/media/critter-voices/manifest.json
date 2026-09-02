@@ -1,5 +1,42 @@
 {
- "voices": [],
- "lines": [],
- "note": "placeholder — run tools/gen-critter-voices.mjs with ELEVENLABS_API_KEY to fill this folder with real clips; the page auto-switches from robo-TTS when voices is non-empty"
+ "voices": [
+  "elli",
+  "dorothy",
+  "bella",
+  "george",
+  "daniel"
+ ],
+ "lines": [
+  "boing!",
+  "hello hello.",
+  "I am a small jelly.",
+  "wheee!",
+  "banana?",
+  "bounce with me!",
+  "ooh, a visitor.",
+  "splat splat.",
+  "tiny thoughts, big hops.",
+  "is it snack time?",
+  "the floor is springy today.",
+  "I like this room."
+ ],
+ "throws": [
+  "Wheeee!",
+  "Waaah!",
+  "Eeeep!"
+ ],
+ "lands": [
+  "Oof!",
+  "Boing.",
+  "Ouf, hello ground."
+ ],
+ "toki": [
+  "toki!",
+  "pona!",
+  "mi tawa!",
+  "musi pona!",
+  "sina pona.",
+  "mi pilin pona."
+ ],
+ "format": "v{voice}-l{line}.mp3, v{voice}-t{i}.mp3, v{voice}-d{i}.mp3, v{voice}-k{i}.mp3"
 }

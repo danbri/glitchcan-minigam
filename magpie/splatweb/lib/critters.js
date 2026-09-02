@@ -52,6 +52,8 @@ export function throwCritters(critters, power = 3.2, weight = 1) {
     c.vel[0] += power * (nX - 0.5) * 1.4 / mass;
     c.vel[2] += power * (nZ - 0.5) * 1.4 / mass;
     c.squash = 0.65;
+    c.squashV = -2;                          // anticipation snap
+    c.justThrown = true;                     // page may play a flung yelp
     c.facing = Math.atan2(c.vel[0], c.vel[2]);
   }
 }
@@ -75,6 +77,8 @@ export class Critter {
     this.chirpT = 2 + rnd() * 12;
     this.jaw = 0;
     this.jumpTalent = 0.7 + rnd() * 0.9;     // some jump much higher than others
+    this.elasticity = 0.6 + rnd() * 1.0;     // how jelly: squash depth + wobble
+    this.squashV = 0;                        // squash spring velocity
     // per-critter voice: smaller critters squeak
     this.voicePitch = Math.max(0.3, 2.1 - this.r * 7 + (rnd() - 0.5) * 0.3);
     this.voiceRate = 0.9 + rnd() * 0.5;
@@ -93,7 +97,8 @@ export class Critter {
       p[1] = this.r + floorY;
       v[1] = impact > 0.4 ? impact * 0.35 : 0;   // damped bounce
       v[0] *= 0.85; v[2] *= 0.85;
-      squashT = Math.max(0.55, 1 - impact * 0.14);
+      squashT = Math.max(0.35, 1 - impact * 0.16 * this.elasticity);
+      if (impact > 1.1) this.justLanded = true;   // page may play a landing yelp
       this.hopT -= dt;
       if (this.hopT <= 0) {                  // hop somewhere (centre-biased)
         this.hopT = 0.8 + this.rnd() * 2.4;
@@ -111,7 +116,7 @@ export class Critter {
         this.facing = dir;
       }
     } else {
-      squashT = 1 + Math.min(0.35, Math.abs(v[1]) * 0.07);  // airborne stretch
+      squashT = 1 + Math.min(0.55, Math.abs(v[1]) * 0.09 * this.elasticity);  // airborne stretch
     }
     // obstacle colliders: bounce OFF the big things instead of through
     for (const ob of env.obstacles || []) {
@@ -161,7 +166,12 @@ export class Critter {
         this.squash = Math.min(this.squash, 0.8);
       }
     }
-    this.squash += (squashT - this.squash) * (1 - Math.exp(-dt * 14));
+    // damped-spring squash: underdamped, so impacts OVERSHOOT and jiggle —
+    // jellier critters wobble longer
+    const stiff = 150, zeta = 0.55 - this.elasticity * 0.2;
+    this.squashV += ((squashT - this.squash) * stiff - this.squashV * 2 * Math.sqrt(stiff) * zeta) * dt;
+    this.squash += this.squashV * dt;
+    this.squash = Math.max(0.3, Math.min(1.65, this.squash));
   }
 
   // writes SPLATS_PER_CRITTER splats at out[off..]; jaw 0..1 opens the mouth

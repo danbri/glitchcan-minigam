@@ -203,7 +203,12 @@ const wirePhys = (id, out, k, div) => {
 wirePhys('grav', 'gravOut', 'gravity', 10);
 wirePhys('weight', 'weightOut', 'weight', 100);
 wirePhys('jump', 'jumpOut', 'jumpMul', 100);
-$('throwBtn').addEventListener('click', () => throwCritters(critters, 3.4, ENV.weight));
+$('throwBtn').addEventListener('click', () => {
+  throwCritters(critters, 3.4, ENV.weight);
+  if (voicesOn) for (const c of critters) {
+    if (c.clip && Math.random() < 0.8) c.clip.say(Math.floor(Math.random() * 3), 't');
+  }
+});
 
 let last = performance.now(), frames = 0, fpsT = last, fps = 0;
 function frame(now) {
@@ -216,9 +221,13 @@ function frame(now) {
       c.chirpT = 5 + Math.random() * 14;
       if (voicesOn) {
         const li = Math.floor(Math.random() * CRITTER_LINES.length);
-        if (c.clip) c.clip.say(li);
+        if (c.clip) c.clip.say(li, Math.random() < 0.3 ? 'k' : 'l');
         else { c.talker.feed(CRITTER_LINES[li] + ' '); c.talker.flush(); }
       }
+    }
+    if (c.justLanded) {
+      c.justLanded = false;
+      if (voicesOn && c.clip && Math.random() < 0.45) c.clip.say(Math.floor(Math.random() * 3), 'd');
     }
     if (c.clip) {
       c.jaw = c.clip.tick(dt);
