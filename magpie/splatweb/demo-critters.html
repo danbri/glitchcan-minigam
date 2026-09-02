@@ -30,8 +30,8 @@
 <div class="hud chip tl note" id="hint">jelly critters · drag to orbit · wheel to zoom</div>
 <div class="hud chip tr">
   <button id="voicesBtn">🔇 voices off</button>
-  <label class="note">critters <input type="range" id="countSl" min="2" max="12" value="7"></label>
-  <span class="note" id="countOut">7</span>
+  <label class="note">critters <input type="range" id="countSl" min="2" max="16" value="10"></label>
+  <span class="note" id="countOut">10</span>
 </div>
 <div class="hud chip bl stat" id="stats">loading room…</div>
 <div class="hud chip br" id="creditsChip">© credits</div>
@@ -70,8 +70,8 @@ const DBDB = '../dbdb/splats/pack/';
 async function loadRoom() {
   try {
     const [g1, g2, hut, meta] = await Promise.all([
-      loadCompressedPly(DBDB + 'grass.compressed.ply', { at: [0, 0.02, 0], yaw: 0.3, stride: 4 }),
-      loadCompressedPly(DBDB + 'grass.compressed.ply', { at: [-1.7, 0.02, -2.1], yaw: 1.4, stride: 4 }),
+      loadCompressedPly(DBDB + 'grass.compressed.ply', { at: [0, 0.02, 0], yaw: 0.3, stride: 5 }),
+      loadCompressedPly(DBDB + 'grass.compressed.ply', { at: [-1.7, 0.02, -2.1], yaw: 1.4, stride: 5 }),
       loadCompressedPly(DBDB + 'hut.compressed.ply', { at: [2.0, 0, -2.6], yaw: -0.4 }),
       fetch(DBDB + 'pack.json').then(r => r.json()),
     ]);
@@ -114,7 +114,7 @@ function makeCritters(n) {
   critterBlock = new Float32Array(n * SPLATS_PER_CRITTER * FLOATS_PER_SPLAT);
 }
 let critterBlock;
-makeCritters(7);
+makeCritters(10);
 
 $('countSl').addEventListener('change', () => {
   $('countOut').textContent = $('countSl').value;
@@ -150,11 +150,16 @@ canvas.addEventListener('pointermove', e => {
 canvas.addEventListener('pointerup', () => { drag = null; });
 canvas.addEventListener('wheel', e => { e.preventDefault(); radius *= Math.exp(e.deltaY * 0.001); applyCamera(); }, { passive: false });
 
+// physics environment: critters rest on TOP of the tall grass (its
+// blades are ~0.4 m — ground level would bury them), and the hut is a
+// bouncy cylinder collider
+const ENV = { floorY: 0.12, obstacles: [{ x: 2.0, z: -2.6, r: 1.8 }] };
+
 let last = performance.now(), frames = 0, fpsT = last, fps = 0;
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   for (const c of critters) {
-    c.tick(dt, critters);
+    c.tick(dt, critters, ENV);
     // chirping: each critter occasionally says a line in its own voice
     c.chirpT -= dt;
     if (c.chirpT <= 0) {

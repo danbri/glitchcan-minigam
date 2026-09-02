@@ -28,7 +28,9 @@ export class Critter {
     const rnd = mulberry32(seed);
     this.rnd = rnd;
     this.pal = PALETTES[seed % PALETTES.length];
-    this.r = 0.15 + rnd() * 0.09;            // body radius
+    // size classes: most medium, some chonkers (+1/3), some littles
+    const sizeMul = [1, 1, 1.33, 0.75, 1, 1.18, 0.8][seed % 7];
+    this.r = (0.14 + rnd() * 0.08) * sizeMul;
     this.earLen = 0.7 + rnd() * 1.3;         // bunny ↔ blob spectrum
     this.bounds = bounds;
     const a = rnd() * Math.PI * 2, d = 0.6 + rnd() * (bounds - 0.8);
@@ -44,14 +46,17 @@ export class Critter {
     this.voiceRate = 0.9 + rnd() * 0.5;
   }
 
-  tick(dt, critters) {
+  // env: { floorY (rest height — sit ON tall grass, not inside it),
+  //        obstacles: [{x, z, r}] — bouncy cylinder colliders (the hut) }
+  tick(dt, critters, env = {}) {
+    const floorY = env.floorY || 0;
     const p = this.pos, v = this.vel;
     v[1] -= 6.5 * dt;                        // floaty jelly gravity
     p[0] += v[0] * dt; p[1] += v[1] * dt; p[2] += v[2] * dt;
     let squashT = 1;
-    if (p[1] <= this.r) {                    // ground contact
+    if (p[1] <= this.r + floorY) {           // ground contact
       const impact = Math.max(0, -v[1]);
-      p[1] = this.r;
+      p[1] = this.r + floorY;
       v[1] = impact > 0.4 ? impact * 0.35 : 0;   // damped bounce
       v[0] *= 0.85; v[2] *= 0.85;
       squashT = Math.max(0.55, 1 - impact * 0.14);
@@ -70,6 +75,22 @@ export class Critter {
     } else {
       squashT = 1 + Math.min(0.35, Math.abs(v[1]) * 0.07);  // airborne stretch
     }
+    // obstacle colliders: bounce OFF the big things instead of through
+    for (const ob of env.obstacles || []) {
+      const dx = p[0] - ob.x, dz = p[2] - ob.z;
+      const d2 = Math.hypot(dx, dz), min2 = ob.r + this.r * 0.8;
+      if (d2 > 1e-4 && d2 < min2) {
+        const nx = dx / d2, nz = dz / d2;
+        p[0] = ob.x + nx * min2; p[2] = ob.z + nz * min2;
+        const vn = v[0] * nx + v[2] * nz;
+        if (vn < 0) {                        // lively elastic bounce + a hop
+          v[0] -= 2 * vn * nx; v[2] -= 2 * vn * nz;
+          v[1] += 0.6;
+          this.squash = Math.min(this.squash, 0.75);
+          this.facing = Math.atan2(v[0], v[2]);
+        }
+      }
+    }
     // soft walls
     const d = Math.hypot(p[0], p[2]);
     if (d > this.bounds) {
@@ -78,14 +99,20 @@ export class Critter {
       const vn = v[0] * nx + v[2] * nz;
       if (vn > 0) { v[0] -= 2 * vn * nx; v[2] -= 2 * vn * nz; }
     }
-    // critter-critter jelly repulsion
+    // critter-critter: HARD positional separation (no shared space) plus
+    // a jelly velocity push; each moves half the overlap, so a pair
+    // resolves symmetrically
     for (const o of critters) {
       if (o === this) continue;
       const dx = p[0] - o.pos[0], dy = p[1] - o.pos[1], dz = p[2] - o.pos[2];
-      const dist = Math.hypot(dx, dy, dz), min = this.r + o.r;
+      const dist = Math.hypot(dx, dy, dz), min = (this.r + o.r) * 0.92;
       if (dist > 1e-4 && dist < min) {
+        const nx = dx / dist, ny = dy / dist, nz = dz / dist;
+        const half = (min - dist) * 0.5;
+        p[0] += nx * half; p[2] += nz * half;
+        if (ny > 0.3) p[1] += ny * half;      // pushed off the top of another
         const push = (min - dist) * 3 * dt;
-        v[0] += dx / dist * push * 8; v[1] += Math.max(0, dy / dist) * push * 4; v[2] += dz / dist * push * 8;
+        v[0] += nx * push * 8; v[1] += Math.max(0, ny) * push * 4; v[2] += nz * push * 8;
         this.squash = Math.min(this.squash, 0.8);
       }
     }
