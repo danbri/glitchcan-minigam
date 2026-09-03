@@ -54,9 +54,14 @@
         <h3>The stage — full pipeline</h3>
         <p class="note">Pose → packet → simulated lossy network (latency /
         jitter / loss sliders) → jitter buffer with interpolation and
-        capped dead-reckoning → splat room + splat avatar. Real capture:
-        🎤 MIC (speech energy → jaw) and 📷 CAM (MediaPipe face tracking →
-        pose + expressions). Crank the loss and watch presence survive.</p>
+        capped dead-reckoning → splat room + <b>rigged splat avatar</b>
+        (skinned VRM, walks on the packet's position, stored gesture
+        clips). Thirteen rooms: six drawn procedurally (a library with a
+        mezzanine full of hopping critters, a rooftop, a beach pier, a
+        theatre, a grotto…) and seven composed from dbdb splat stamps.
+        Real capture: 🎤 MIC and 📷 CAM (face + arms + elbows + torso,
+        OneEuro-filtered, spring-damped IK). Crank the loss and watch
+        presence survive.</p>
       </div>
     </a>
     <a class="card" href="demo-gallery.html" style="flex:1 1 300px">
@@ -67,6 +72,17 @@
         CC BY, 100Avatars CC BY) converted to Gaussian splats in the
         browser at load time — triangles area-sampled, textures read per
         point, rendered by the same splat renderer.</p>
+      </div>
+    </a>
+    <a class="card" href="demo-rigs.html" style="flex:1 1 300px">
+      <div class="panel">
+        <div class="num">DEMO 6</div>
+        <h3>Rig lab — skinned splat avatars</h3>
+        <p class="note">The vendored VRM roster as live splat rigs: linear-
+        blend skinning + VRM expression morphs on the CPU every frame,
+        stored clips (idle, walk, wave, nod, shrug, dance, talk, sit),
+        two-bone arm IK, a roaming walk, and the skeleton's control points
+        on demand. Where the avatar aesthetic gets decided.</p>
       </div>
     </a>
     <a class="card" href="demo-critters.html" style="flex:1 1 300px">

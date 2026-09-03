@@ -189,13 +189,36 @@ instead of spinning off.
 
 ---
 
+### Packet v2 — elbows + torso (52 bytes)
+
+```
+40..42  left elbow    offset from shoulder, 3 × int8 (±0.75 m)
+43..45  right elbow
+46..48  torso         yaw / pitch / roll, 3 × int8 (±90°)
+49      torso visibility uint8      50..51 reserved
+```
+
+Why elbows: two-bone IK from a wrist alone has to *guess* the elbow
+(a fixed pole vector), and a guessed elbow is what makes captured arms
+look wrong even when the hand is right. Why torso: shoulder-line turn and
+lean are half of body language and cost three bytes. Sender side the
+landmarks go through a OneEuro filter (`lib/arm-filter.js`) before
+quantization; viewer side each wrist target is chased by a critically
+damped spring with a 3 m/s ceiling and visibility hysteresis, so a lost
+frame relaxes the arm toward the idle clip over ~400 ms instead of
+snapping it. The pose model is MediaPipe's `pose_landmarker_full` (the
+lite model's z is too noisy for IK; heavy costs ~3× for little gain).
+Receivers detect v0/v1/v2 by packet length. **Not yet verified against a
+live webcam in this pass** — the filtering and IK are exercised with
+synthetic targets (`?armdemo`, rig lab).
+
 ## 5. Rendering tiers
 
 | Tier | Tech | Target | Status in this sketch |
 |---|---|---|---|
 | 1 | WebGL2 instanced Gaussian splatting, CPU depth sort | desktop + modern mobile | **built** — [`lib/splat-renderer.js`](lib/splat-renderer.js) |
 | 1+ | WebGPU/WGSL compute tile sort | high-end, later | deferred (see §2.4) |
-| 2 | low-poly mesh avatar (GLTF/VRM morphs) | mid mobile | not built; same pose packet drives it |
+| 2 | **rigged VRM → skinned splats** — the vendored 100Avatars roster, linear-blend skinned + VRM expression morphs on the CPU each frame, re-lit, written as a splat block | every device with the renderer | **built** — [`lib/rigged-splats.js`](lib/rigged-splats.js) + [`lib/skeleton-anim.js`](lib/skeleton-anim.js) (clips, IK, composer); the stage's default avatar since 2026-09-03 |
 | 3 | Canvas-2D vector puppet | low-power, background tabs | **built** — [`lib/face2d.js`](lib/face2d.js), used by the telemetry demo |
 
 The point proven by building 1 and 3 against the *same packet stream*: the
@@ -224,8 +247,13 @@ blending. ~250 lines, zero dependencies.
 | `lib/splat-renderer.js` | dependency-free WebGL2 Gaussian splat renderer |
 | `lib/scene-builder.js` | procedural splat content: a stylised room (~3k splats) and a blendshape-driven head avatar (~200 splats) |
 | `lib/face2d.js` | Tier-3 Canvas-2D puppet renderer |
+| `lib/rigged-splats.js` | VRM/GLB → skinned, morphing splat avatar: samples the mesh once keeping joints/weights/normals/base colour/expression deltas; `pose()` runs FK + LBS + morphs + relight per frame (~3–6 ms for 18k splats) |
+| `lib/skeleton-anim.js` | model-agnostic humanoid animation: relaxed stance, stored clips (idle, walk, wave, nod, shrug, dance, talk, sit), pose blending, two-bone arm IK against the rig's own bone lengths, and the composer that layers packet → head/neck split, arms, torso, VRM mouth/blink morphs over the locomotion clip |
+| `lib/arm-filter.js` | OneEuro (sender) + critically damped, speed-capped, hysteretic wrist smoother (viewer) |
+| `lib/rooms.js` | the room catalogue: a tangent-splat toolkit (rect/box/cylinder/sphere/glow/sky), six procedural rooms (studio, library with mezzanine + stairs, rooftop, beach pier, theatre, grotto) and seven composed from dbdb stamps at varied scales (conservatory, ghost garden, ghost town, hedge maze, glasshouse, forest path, winter grove, garage yard); rooms export platforms/obstacles so the critters can hop their levels |
 | `demo-telemetry.html` | **Demo 1** — codec inspector: live 32-byte hex view, decoded fields, quantization error, bandwidth-vs-video meter; sender and decoded-receiver faces side by side (Tier 3) |
 | `demo-splat-room.html` | **Demo 2** — the room avatar: procedural splat room, orbit/zoom, stylisation slider (palette quantization), splat count + FPS |
+| `demo-rigs.html` | **Demo 6** — rig lab: pick a VRM, pick a clip, roam, synthetic arm telemetry → IK, expression sliders, skeleton control points (the body goes translucent so the joints show — splats blend back-to-front) |
 | `demo-stage.html` | **Demo 3** — the whole thesis: sender pose → encoder → simulated lossy network (sliders for latency/jitter/loss/rate) → jitter buffer → splat room + splat avatar. Live stats: kbit/s, loss, effective latency, extrapolation events. Real capture via 🎤 MIC and 📷 CAM; a vendored CC BY avatar stands in the room as a second (static) participant |
 | `lib/text-talker.js` | generated-speech lipsync: stream ASCII in (AI-token style), clauses are spoken via speechSynthesis, visemes derived from the characters being said ride the normal blendshape channels |
 | `lib/gltf-splats.js` | minimal in-browser GLB/VRM → splat sampler: area-sampled triangles, per-point base-color texture reads, surface-tangent splats with baked lambert, optional tint; morph-target delta sampling and EXT_meshopt_compression (MIT decoder from CDN, on demand) |
@@ -313,3 +341,25 @@ Live URLs once deployed:
   telemetry — cheap win, not sketched here.
 - **Blendshape channel choice:** is 10 enough? Demo 3's talk mode looks
   alive with 4. Real capture data should decide v1.
+
+---
+
+## 10. Avatar aesthetic — decision of 2026-09-03
+
+The procedural head+torso avatar (`scene-builder.js`) read as soft
+plasticine — "1970s UK kids' TV" — while the splat-ified VRM roster in
+the gallery read crisp and appealing. So the roster is now the
+platform-wide avatar: rigged (skinning, VRM mouth/blink presets, stored
+clips, IK, walking on the packet's position field), picked from the same
+carousel as the procedural presets and the Face Cap head, which stay as
+options. Photo-realism stays off the table (it was against the original
+hypothesis and the realistic head is the least convincing thing on the
+stage); the winning register is *stylised, crisp, in motion*. The rig lab
+is where that keeps being tested.
+
+Known limits of the rigged path: no finger animation (the VRM finger
+bones exist but nothing drives them), no gaze (100Avatars ship no eye
+bones), the upper-arm twist under IK is the minimal rotation (hand
+orientation can look off), feet are not planted (no foot IK — they drift
+slightly on the walk cycle), and walking direction is inferred viewer-side
+from position deltas, so a very laggy link turns late.
