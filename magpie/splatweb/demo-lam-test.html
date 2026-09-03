@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAM test (throwaway)</title>
+<style>html,body{margin:0;height:100%;background:#0a0b10;color:#d8dae2;font:13px monospace}
+#gl{width:100%;height:80vh;display:block}
+#stats{padding:0.5rem}</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="stats">loading…</div>
+<script type="module">
+import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { createSplatRenderer } from './lib/splat-renderer-auto.js';
+import { loadLamAvatar } from './lib/lam-splats.js';
+import { qMul, qNormalize } from './lib/pose-math.js';
+
+const canvas = document.getElementById('gl');
+const statsEl = document.getElementById('stats');
+canvas.width = canvas.clientWidth * devicePixelRatio;
+canvas.height = canvas.clientHeight * devicePixelRatio;
+
+const renderer = await createSplatRenderer(canvas, { background: [0.07, 0.075, 0.1] });
+window.__renderer = renderer;
+
+// theta=0 initially showed the BACK of the head (hollow/transparent —
+// LAM only reconstructs what the source photo shows, there's no real
+// back-of-head geometry) — start face-on instead.
+let theta = Math.PI, phi = 1.35, radius = 0.55, targetY = 0.18;
+function applyCamera() {
+  renderer.setCamera([
+    radius * Math.sin(theta) * Math.sin(phi),
+    targetY + radius * Math.cos(phi),
+    radius * Math.cos(theta) * Math.sin(phi),
+  ], [0, targetY, 0]);
+}
+window.__setCam = (t, p, r, y) => { theta = t; phi = p; radius = r; if (y != null) targetY = y; applyCamera(); };
+let drag = null;
+canvas.addEventListener('pointerdown', e => { drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', e => {
+  if (!drag) return;
+  theta -= (e.clientX - drag[0]) * 0.006;
+  phi -= (e.clientY - drag[1]) * 0.006;
+  drag = [e.clientX, e.clientY]; applyCamera();
+});
+canvas.addEventListener('pointerup', () => { drag = null; });
+canvas.addEventListener('wheel', e => { e.preventDefault(); radius *= Math.exp(e.deltaY * 0.001); applyCamera(); }, { passive: false });
+
+let avatar = null;
+const buf = new Float32Array(20200 * FLOATS_PER_SPLAT);
+let curPose = { at: [0, 0, 0], bones: {}, morph: {} };
+let dirty = true;
+window.__setMorph = (obj) => { curPose = { ...curPose, morph: obj }; dirty = true; };
+window.__setBone = (name, quat) => { curPose = { ...curPose, bones: { ...curPose.bones, [name]: quat } }; dirty = true; };
+window.__resetPose = () => { curPose = { at: [0, 0, 0], bones: {}, morph: {} }; dirty = true; };
+window.__getPose = () => curPose;
+
+// idle animation: continuous blink + gentle head sway, to check the
+// pipeline holds up over TIME (not just single discrete pose changes).
+// Angles kept modest (~0.12 rad sway) — 0.3 rad read as "alarming" in
+// manual testing, 0.2 rad "less alarming".
+let idleOn = true;
+let statCounter = 0, statLastT = performance.now(), statFps = 0;
+window.__idle = (on) => { idleOn = on; if (!on) dirty = true; };
+function idlePose(t) {
+  const blinkPhase = (t % 3.4) / 3.4;                  // blink every 3.4s
+  const blink = blinkPhase < 0.06 ? Math.sin((blinkPhase / 0.06) * Math.PI) : 0;
+  const yaw = Math.sin(t / 5.3) * 0.12;
+  const pitch = Math.sin(t / 7.1 + 1) * 0.05;
+  const qYaw = [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)];
+  const qPitch = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
+  const headQ = qNormalize(qMul(qYaw, qPitch));
+  const talk = Math.max(0, Math.sin(t * 1.7)) * 0.18;   // faint idle mouth motion
+  return {
+    at: [0, 0, 0], bones: { head: headQ },
+    morph: { eyeBlinkLeft: blink, eyeBlinkRight: blink, jawOpen: talk },
+  };
+}
+
+try {
+  const t0 = performance.now();
+  avatar = await loadLamAvatar('./third_party/lam-sample/', { yaw: Math.PI });
+  window.__avatar = avatar;
+  targetY = avatar.heightM * 0.5;
+  radius = Math.max(0.3, avatar.heightM * 1.8);
+  applyCamera();
+  // allocate GPU buffers once at the (fixed, pose-independent) splat
+  // count, then patch per-frame via writeRegion — setData every frame
+  // destroys+recreates the WebGPU storage buffer & bind group, which is
+  // wasteful and was the initial suspect for an early "morph did nothing"
+  // symptom (it turned out to be a false alarm — the effect was just
+  // subtle — but per-frame setData is still worth avoiding for a real
+  // animation loop).
+  renderer.setData(avatar.pose(curPose, buf, 0), avatar.lastCount);
+  window.__lamLoaded = true;
+} catch (e) {
+  statsEl.textContent = 'load failed: ' + e.message;
+  console.error(e);
+  window.__lamError = e.message;
+}
+
+(function frame(t) {
+  if (avatar) {
+    if (idleOn) { curPose = idlePose(t / 1000); dirty = true; }
+    if (dirty) {
+      dirty = false;
+      const out = avatar.pose(curPose, buf, 0);
+      renderer.writeRegion(0, out.subarray(0, avatar.lastCount * FLOATS_PER_SPLAT));
+    }
+    statCounter++;
+    if (t - statLastT > 500) {
+      statFps = Math.round(statCounter * 1000 / (t - statLastT));
+      statCounter = 0; statLastT = t;
+      statsEl.textContent =
+        `${avatar.count.toLocaleString()} verts · ${avatar.morphNames.length} morph targets · ` +
+        `bone 'head'? ${avatar.hasBone('head')} · backend ${renderer.backend} · ` +
+        `${statFps} fps · idle ${idleOn ? 'ON (window.__idle(false) to stop)' : 'off'}`;
+    }
+  }
+  renderer.render();
+  requestAnimationFrame(frame);
+})(performance.now());
+</script>
+</body>
+</html>

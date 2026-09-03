@@ -54,19 +54,38 @@ export async function prepareViews(gltf, bin) {
 
 export function readAccessor(gltf, views, idx) {
   const acc = gltf.accessors[idx];
-  const v = views[acc.bufferView];
   const T = COMP[acc.componentType];
   const n = NCOMP[acc.type];
-  const stride = (v.stride || n * T.BYTES_PER_ELEMENT) / T.BYTES_PER_ELEMENT;
-  const base = v.offset + (acc.byteOffset || 0);
-  const avail = Math.floor((v.buffer.byteLength - base) / T.BYTES_PER_ELEMENT);
-  const want = acc.count === 0 ? 0 : stride * (acc.count - 1) + n;
-  const src = new T(v.buffer, base, Math.min(want, avail));
-  const out = new Float32Array(acc.count * n);
   const norm = acc.normalized ? (T === Uint8Array ? 255 : T === Uint16Array ? 65535
     : T === Int8Array ? 127 : T === Int16Array ? 32767 : 1) : 1;
-  for (let i = 0; i < acc.count; i++) {
-    for (let c = 0; c < n; c++) out[i * n + c] = (src[i * stride + c] || 0) / norm;
+  const out = new Float32Array(acc.count * n);
+  // dense base values (glTF sparse accessors may omit bufferView entirely,
+  // meaning "all zero" until the sparse overlay below is applied)
+  if (acc.bufferView != null) {
+    const v = views[acc.bufferView];
+    const stride = (v.stride || n * T.BYTES_PER_ELEMENT) / T.BYTES_PER_ELEMENT;
+    const base = v.offset + (acc.byteOffset || 0);
+    const avail = Math.floor((v.buffer.byteLength - base) / T.BYTES_PER_ELEMENT);
+    const want = acc.count === 0 ? 0 : stride * (acc.count - 1) + n;
+    const src = new T(v.buffer, base, Math.min(want, avail));
+    for (let i = 0; i < acc.count; i++) {
+      for (let c = 0; c < n; c++) out[i * n + c] = (src[i * stride + c] || 0) / norm;
+    }
+  }
+  // sparse overlay: only the listed element indices differ from the base
+  if (acc.sparse) {
+    const { count, indices, values } = acc.sparse;
+    const IT = COMP[indices.componentType];
+    const iv = views[indices.bufferView];
+    const ib = iv.offset + (indices.byteOffset || 0);
+    const idxArr = new IT(iv.buffer, ib, count);
+    const vv = views[values.bufferView];
+    const vb = vv.offset + (values.byteOffset || 0);
+    const valArr = new T(vv.buffer, vb, count * n);
+    for (let i = 0; i < count; i++) {
+      const vi = idxArr[i];
+      for (let c = 0; c < n; c++) out[vi * n + c] = valArr[i * n + c] / norm;
+    }
   }
   return { data: out, count: acc.count, n };
 }
