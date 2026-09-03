@@ -1,0 +1,42 @@
+
+The stamp rooms render but look spiky due to sparse sampling and missing skies. I'll add skies and denser sampling, wire up head-camera/overlay parameters for face checks, and investigate why the control-point markers aren't showing. · summarized
+
+  Ran 2 shell commands
+
+Now taking the verification shots: the face close-up with the mouth morph forced open, the skeleton overlay, and the five reworked stamp rooms.
+
+  Searched for 1 pattern, read 12 files, ran 8 shell commands
+
+Maze and forest render correctly now. I'll finish by checking the bones overlay, updating docs/memory, and smoke-testing the other demos for console errors from the shared-module changes. · summarized
+
+  Read 1 file, ran 2 shell commands, wrote 1 memory
+
+Bones overlay now displays the full joint chain, and the other four demos load without console errors. Wrapping up with memory index updates, a git status check, and stopping the local server. · summarized
+
+  Ran 1 shell command
+
+The work is done and verified with screenshots. The changes are not committed. Tell me if you want a commit and push.
+
+What changed
+
+- The rigged VRM roster is now the stage avatar. New module lib/rigged-splats.js samples a VRM once, keeps joints, weights, normals and the VRM mouth and blink morphs, and skins all splats on the CPU each frame. Cost is 3 to 6 ms for 18,000 splats at 60 fps with WebGPU.
+- Stored animations and IK. New module lib/skeleton-anim.js has clips for idle, walk, wave, nod, shrug, dance, talk and sit, pose blending, two-bone arm IK against the rig's own bone lengths, and a composer that layers the packet over the clip. The head splits 35 percent neck and 65 percent head. The mouth and blinks drive the VRM presets.
+- Walking. The sender wanders in auto mode. The packet position field moves the avatar. The viewer turns position deltas into a stride and a heading. No new bytes on the wire.
+- The cartoony guest is gone. All eleven VRMs are in the avatar carousel. The procedural presets and Face Cap stay as options. Kyle is the default.
+- The stats chip is hideable. The small ⓘ chip at bottom left toggles it. The choice is remembered. Use ?stats=0 to start hidden.
+- 13 rooms in lib/rooms.js. Six procedural: studio, library, rooftop, beach pier, theatre, grotto. Seven from dbdb stamps at varied scales: conservatory, ghost garden, ghost town, hedge maze, glasshouse, forest path, winter grove, garage yard. The library has a mezzanine, a staircase, tables and an armchair. Critters hop between the levels there, and in the theatre tiers, the grotto ledges and the rooftop.
+- Arms. Capture now uses the full MediaPipe pose model, sends elbows and torso in a 52-byte packet v2, filters landmarks with a OneEuro filter, and the viewer chases each wrist with a critically damped spring, a 3 m/s speed cap, and fade-in and fade-out when tracking drops. This is not verified with a live webcam. I tested it with synthetic targets only.
+- Rig lab page for experiments. Gestures also have buttons on the stage sender panel.
+
+Pages (after a push to master):
+
+- https://danbri.github.io/glitchcan-minigam/magpie/splatweb/demo-stage.html
+- https://danbri.github.io/glitchcan-minigam/magpie/splatweb/demo-rigs.html
+- https://danbri.github.io/glitchcan-minigam/magpie/splatweb/index.html
+
+Why not a different arm library. MediaPipe Pose is the standard in-browser skeleton. The visible problems came from the lite model's poor depth, a guessed elbow, and no filtering. Those three are fixed. A different library gives no better data.
+
+Known limits. No finger or gaze animation. Feet are not planted. The upper-arm twist under IK is the minimal rotation. The Calico Tanks rock stamps and the museum floors are too sparse to make good rooms, so I did not use them.
+
+✻ Churned for 34m 10s · done 6:48
+

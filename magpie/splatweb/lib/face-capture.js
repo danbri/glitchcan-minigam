@@ -6,10 +6,14 @@
 // names were taken from — see DESIGN.md §4).
 //
 // Frames are processed locally; no video leaves the page.
+import { Vec3Euro } from './arm-filter.js';
 const VERSION = '0.10.14';
 const CDN = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}`;
 const MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
-const POSE_MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+// the FULL pose model: noticeably better 3D world landmarks than lite
+// (the arm's z is what makes IK plausible), still real-time on a laptop
+// GPU; heavy is available but ~3× the cost for little visible gain here
+const POSE_MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task';
 
 // 4x4 column-major → quaternion (rotation part)
 function matToQuat(m) {
@@ -62,7 +66,11 @@ export class FaceCapture {
     this.cal = new AutoCal(8);   // the 8 unsigned expression channels
     this.faceSeen = false;
     this.armsSeen = false;
-    this.arms = null;     // { l: {t:[x,y,z], vis}, r: {...} } avatar-local wrist offsets
+    this.arms = null;     // { l: {t:[x,y,z], e:[x,y,z], vis}, r: {...} } avatar-local wrist + elbow offsets
+    this.torso = null;    // { yaw, pitch, roll, vis } from the shoulder/hip lines
+    // OneEuro on the world landmarks we use (shoulders, elbows, wrists, hips)
+    this._euro = {};
+    this._lastPoseT = 0;
     this.error = null;
     this._lastVideoT = -1;
     this._out = { quat: [0, 0, 0, 1], pos: [0, 1.45, 0], blend: new Float32Array(10) };
@@ -114,6 +122,7 @@ export class FaceCapture {
     this.faceSeen = false;
     this.armsSeen = false;
     this.arms = null;
+    this.torso = null;
     if (this.pl) { this.pl.close?.(); this.pl = null; }
     if (this.stream) { for (const t of this.stream.getTracks()) t.stop(); this.stream = null; }
     if (this.lm) { this.lm.close?.(); this.lm = null; }
@@ -164,30 +173,58 @@ export class FaceCapture {
     return o;
   }
 
-  // PoseLandmarker world landmarks → per-arm wrist offsets from the
-  // shoulder, scaled by this person's arm length onto the avatar's reach.
+  // PoseLandmarker world landmarks → per-arm wrist AND elbow offsets from
+  // the shoulder (scaled by this person's arm length onto a nominal 0.47 m
+  // reach; the viewer rescales to its avatar's own bones), plus the torso:
+  // shoulder-line yaw/roll and the lean of the shoulder-mid above the
+  // hip-mid. Landmarks are OneEuro-filtered first (arm-filter.js) so the
+  // wire carries a steady signal rather than detector jitter.
   // NOTE: world-landmark axis signs were not verified against a live body;
   // the mirror checkbox swaps sides/flips x if it reads backwards.
   _tickArms(nowMs) {
-    if (!this.pl) { this.arms = null; return; }
+    if (!this.pl) { this.arms = null; this.torso = null; return; }
     let res;
     try { res = this.pl.detectForVideo(this.video, nowMs); }
-    catch { this.arms = null; return; }
+    catch { this.arms = null; this.torso = null; return; }
     const wl = res.worldLandmarks?.[0], il = res.landmarks?.[0];
     this.debugPose = il || null;
-    if (!wl || !il) { this.armsSeen = false; this.arms = null; return; }
-    const AVATAR_REACH = 0.45;   // avatar shoulder→wrist, slightly under L1+L2
-    const armFor = (S, E, W) => {
-      const vis = Math.min(il[S].visibility ?? 1, il[E].visibility ?? 1, il[W].visibility ?? 1);
-      const seg = (a, b2) => Math.hypot(wl[a].x - wl[b2].x, wl[a].y - wl[b2].y, wl[a].z - wl[b2].z);
-      const human = (seg(S, E) + seg(E, W)) || 0.55;
-      // camera space → avatar-local: x stays, y down → up, z toward camera → back
-      const rel = [wl[W].x - wl[S].x, -(wl[W].y - wl[S].y), -(wl[W].z - wl[S].z)];
-      const k = AVATAR_REACH / human;
-      return { t: [rel[0] * k, rel[1] * k, rel[2] * k], vis: vis > 0.5 ? 1 : 0 };
+    if (!wl || !il) { this.armsSeen = false; this.arms = null; this.torso = null; return; }
+    const dt = this._lastPoseT ? Math.min(0.2, (nowMs - this._lastPoseT) / 1000) : 0.033;
+    this._lastPoseT = nowMs;
+    // camera space → avatar-local: x stays, y down → up, z toward camera → back
+    const P = (i) => {
+      const f = this._euro[i] || (this._euro[i] = new Vec3Euro({ minCutoff: 1.0, beta: 0.08 }));
+      return f.filter([wl[i].x, -wl[i].y, -wl[i].z], dt);
     };
-    // MediaPipe indices: L shoulder/elbow/wrist 11/13/15, R 12/14/16
+    const vis = (...ids) => Math.min(...ids.map(i => il[i].visibility ?? 1));
+    const NOMINAL = 0.47;
+    const armFor = (S, E, W) => {
+      const s = P(S), e = P(E), w = P(W);
+      const seg = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+      const human = (seg(s, e) + seg(e, w)) || 0.55;
+      const k = NOMINAL / human;
+      return {
+        t: [(w[0] - s[0]) * k, (w[1] - s[1]) * k, (w[2] - s[2]) * k],
+        e: [(e[0] - s[0]) * k, (e[1] - s[1]) * k, (e[2] - s[2]) * k],
+        vis: vis(S, E, W) > 0.5 ? 1 : 0,
+      };
+    };
+    // MediaPipe indices: L shoulder/elbow/wrist 11/13/15, R 12/14/16, hips 23/24
     this.arms = { l: armFor(11, 13, 15), r: armFor(12, 14, 16) };
     this.armsSeen = this.arms.l.vis > 0 || this.arms.r.vis > 0;
+    // torso: shoulder line (left − right) gives yaw + roll; hips give lean
+    const ls = P(11), rs = P(12);
+    const sh = [ls[0] - rs[0], ls[1] - rs[1], ls[2] - rs[2]];
+    const shVis = vis(11, 12) > 0.5;
+    let yaw = Math.atan2(-sh[2], Math.abs(sh[0]) + 1e-6);
+    let roll = Math.atan2(sh[1], Math.abs(sh[0]) + 1e-6);
+    let pitch = 0;
+    if (vis(23, 24) > 0.4) {
+      const lh = P(23), rh = P(24);
+      const up = [(ls[0] + rs[0] - lh[0] - rh[0]) / 2, (ls[1] + rs[1] - lh[1] - rh[1]) / 2, (ls[2] + rs[2] - lh[2] - rh[2]) / 2];
+      pitch = Math.atan2(-up[2], Math.abs(up[1]) + 1e-6);   // forward lean = toward camera
+    }
+    const clampA = (a) => Math.max(-Math.PI / 2, Math.min(Math.PI / 2, a));
+    this.torso = { yaw: clampA(yaw), pitch: clampA(pitch), roll: clampA(roll), vis: shVis ? 1 : 0 };
   }
 }

@@ -16,7 +16,7 @@ const COMP = {
 };
 const NCOMP = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 };
 
-function parseGlb(ab) {
+export function parseGlb(ab) {
   const dv = new DataView(ab);
   if (dv.getUint32(0, true) !== 0x46546C67) throw new Error('not a GLB');
   let off = 12, json = null, bin = null;
@@ -34,7 +34,7 @@ function parseGlb(ab) {
 // views point into the BIN chunk; EXT_meshopt_compression views are
 // decoded up-front (official MIT meshoptimizer decoder, loaded from CDN
 // only when a model actually uses the extension).
-async function prepareViews(gltf, bin) {
+export async function prepareViews(gltf, bin) {
   const views = (gltf.bufferViews || []).map(bv => ({
     buffer: bin, offset: bv.byteOffset || 0, stride: bv.byteStride || 0, byteLength: bv.byteLength,
   }));
@@ -52,7 +52,7 @@ async function prepareViews(gltf, bin) {
   return views;
 }
 
-function readAccessor(gltf, views, idx) {
+export function readAccessor(gltf, views, idx) {
   const acc = gltf.accessors[idx];
   const v = views[acc.bufferView];
   const T = COMP[acc.componentType];
@@ -72,14 +72,14 @@ function readAccessor(gltf, views, idx) {
 }
 
 // column-major mat4 helpers
-function matMul(a, b) {
+export function matMul(a, b) {
   const o = new Float32Array(16);
   for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
     o[c * 4 + r] = a[r] * b[c * 4] + a[4 + r] * b[c * 4 + 1] + a[8 + r] * b[c * 4 + 2] + a[12 + r] * b[c * 4 + 3];
   }
   return o;
 }
-function matFromTRS(t = [0, 0, 0], q = [0, 0, 0, 1], s = [1, 1, 1]) {
+export function matFromTRS(t = [0, 0, 0], q = [0, 0, 0, 1], s = [1, 1, 1]) {
   const [x, y, z, w] = q;
   return new Float32Array([
     (1 - 2 * (y * y + z * z)) * s[0], (2 * (x * y + w * z)) * s[0], (2 * (x * z - w * y)) * s[0], 0,
@@ -88,12 +88,12 @@ function matFromTRS(t = [0, 0, 0], q = [0, 0, 0, 1], s = [1, 1, 1]) {
     t[0], t[1], t[2], 1,
   ]);
 }
-const xfmPoint = (m, p) => [
+export const xfmPoint = (m, p) => [
   m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12],
   m[1] * p[0] + m[5] * p[1] + m[9] * p[2] + m[13],
   m[2] * p[0] + m[6] * p[1] + m[10] * p[2] + m[14],
 ];
-const xfmNormal = (m, p) => {
+export const xfmNormal = (m, p) => {
   const v = [
     m[0] * p[0] + m[4] * p[1] + m[8] * p[2],
     m[1] * p[0] + m[5] * p[1] + m[9] * p[2],
@@ -109,7 +109,7 @@ function qFromZTo(n) {
   return [-n[1] / l, n[0] / l, 0, w / l];
 }
 
-async function textureFor(gltf, views, matIdx, cache) {
+export async function textureFor(gltf, views, matIdx, cache) {
   if (matIdx == null) return null;
   if (cache.has(matIdx)) return cache.get(matIdx);
   const mat = gltf.materials?.[matIdx] || {};
@@ -135,7 +135,7 @@ async function textureFor(gltf, views, matIdx, cache) {
   return entry;
 }
 
-function sampleColor(tex, u, v) {
+export function sampleColor(tex, u, v) {
   if (!tex) return [0.75, 0.75, 0.75, 1];
   const f = tex.factor;
   if (!tex.img) return [f[0], f[1], f[2], f[3]];

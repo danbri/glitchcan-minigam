@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>splatweb demo 6 — rig lab (skinned splat avatars)</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫧</text></svg>">
+<link rel="stylesheet" href="demo.css">
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  #gl { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; z-index: 0; }
+  .hud { position: fixed; z-index: 10; background: rgba(10, 13, 20, 0.74);
+    backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3);
+    border: 1px solid rgba(110, 170, 255, 0.28); border-radius: 10px; }
+  .chip { padding: 0.45rem 0.8rem; font-size: 0.8rem; }
+  .tl { top: 14px; left: 14px; }
+  .tl a { color: #7fb4ff; text-decoration: none; margin-left: 0.5rem; }
+  .bl { bottom: 14px; left: 14px; max-width: 60vw; }
+  .panel { top: 14px; right: 14px; width: min(300px, 86vw); max-height: calc(100vh - 28px);
+    overflow-y: auto; padding: 0.8rem 1rem; }
+  .panel h2 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: #7fb4ff;
+    margin: 0.9rem 0 0.4rem; font-weight: 600; }
+  .panel h2:first-child { margin-top: 0; }
+  .panel select, .panel input[type=text] { width: 100%; background: #0a0b10; color: #d8dae2;
+    border: 1px solid #3a5580; border-radius: 6px; padding: 0.32rem; }
+  .clips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .clips button { background: #22304a; color: #cfe0ff; border: 1px solid #3a5580; border-radius: 6px;
+    padding: 0.35rem 0.6rem; cursor: pointer; font-size: 0.78rem; }
+  .clips button.on { background: #3563ad; }
+  .panel .ctl label { flex: 0 0 5.5em; }
+  .row { display: flex; gap: 0.6rem; align-items: center; margin: 0.3rem 0; font-size: 0.78rem; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div class="hud chip tl"><b>RIG LAB</b> <a href="index.html">hub</a><a href="demo-stage.html">stage</a><a href="demo-gallery.html">gallery</a></div>
+<div class="hud chip bl stat" id="stats">loading…</div>
+<div class="hud panel">
+  <h2>Model (rigged VRM → splats)</h2>
+  <select id="model"></select>
+  <div class="ctl" style="margin-top:0.4rem"><label>splats</label><input type="range" id="density" min="6000" max="40000" step="2000" value="18000"><output id="densityOut">18k</output></div>
+  <h2>Clip</h2>
+  <div class="clips" id="clips"></div>
+  <div class="ctl" style="margin-top:0.5rem"><label>walk speed</label><input type="range" id="speed" min="0" max="140" value="70"><output id="speedOut">0.7 m/s</output></div>
+  <div class="ctl"><label>time</label><input type="range" id="rate" min="0" max="200" value="100"><output id="rateOut">1.0×</output></div>
+  <h2>Drive</h2>
+  <div class="row"><label><input type="checkbox" id="tele" checked> telemetry (simulated performer: head + face + mouth)</label></div>
+  <div class="row"><label><input type="checkbox" id="armdemo"> arm telemetry (synthetic wrists → IK)</label></div>
+  <div class="row"><label><input type="checkbox" id="roam" checked> roam — walk around the mat</label></div>
+  <div class="row"><label><input type="checkbox" id="bones"> show bones (control points)</label></div>
+  <h2>Expressions (VRM presets)</h2>
+  <div id="morphs"></div>
+  <p class="note" id="attr"></p>
+  <p class="note">Every frame: expression morphs → linear-blend skinning on the CPU
+  → re-light → 14 floats per splat, written into the renderer like any other
+  entity. Clips are stored procedural poses in a model-agnostic humanoid
+  space; the same packet stream that drives the procedural avatar drives
+  these.</p>
+</div>
+
+<script type="module">
+import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { createSplatRenderer } from './lib/splat-renderer-auto.js';
+import { loadRiggedSplats } from './lib/rigged-splats.js';
+import { Rig, PoseComposer, CLIPS, CLIP_NAMES } from './lib/skeleton-anim.js';
+import { MODELS } from './lib/models-manifest.js';
+import { PoseDriver } from './lib/pose-driver.js';
+import { ArmSmoother } from './lib/arm-filter.js';
+import { mulberry32 } from './lib/pose-math.js';
+
+const $ = id => document.getElementById(id);
+const canvas = $('gl'), statsEl = $('stats');
+let renderer;
+try { renderer = await createSplatRenderer(canvas, { background: [0.07, 0.075, 0.1] }); }
+catch (e) { statsEl.textContent = 'no GPU backend available: ' + e.message; throw e; }
+
+const RIGGED = MODELS.filter(m => m.url.endsWith('.vrm'));
+for (const m of RIGGED) {
+  const o = document.createElement('option'); o.value = m.id; o.textContent = m.name; $('model').appendChild(o);
+}
+const params = new URLSearchParams(location.search);
+if (params.get('model')) $('model').value = params.get('model');
+// ?bones=1 ?armdemo=1 ?roam=0 ?cam=head — screenshot-friendly presets
+if (params.get('bones') === '1') $('bones').checked = true;
+if (params.get('armdemo') === '1') $('armdemo').checked = true;
+if (params.get('roam') === '0') $('roam').checked = false;
+const HEAD_CAM = params.get('cam') === 'head';
+
+// mat + a few boxes to walk around (so movement reads against something)
+function groundSplats() {
+  const rnd = mulberry32(3);
+  const arr = [];
+  const put = (x, y, z, sx, sy, sz, c, a = 1) => arr.push(x, y, z, 0, 0, 0, 1, sx, sy, sz, c[0], c[1], c[2], a);
+  for (let i = 0; i < 900; i++) {
+    const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * 2.6;
+    const c = 0.17 + rnd() * 0.03;
+    put(Math.cos(a) * r, -0.01, Math.sin(a) * r, 0.14, 0.015, 0.14, [c, c * 1.05, c * 1.2], 0.9);
+  }
+  // a low plinth and a post: landmarks
+  for (let x = -0.3; x <= 0.3; x += 0.1) for (let z = -0.3; z <= 0.3; z += 0.1) put(1.6 + x, 0.2, -1.2 + z, 0.06, 0.2, 0.06, [0.35, 0.3, 0.28]);
+  for (let y = 0.1; y < 1.6; y += 0.12) put(-1.7, y, 0.8, 0.05, 0.07, 0.05, [0.5, 0.45, 0.4]);
+  return { data: new Float32Array(arr), count: arr.length / FLOATS_PER_SPLAT };
+}
+const ground = groundSplats();
+
+// orbit
+let theta = 0.35, phi = 1.32, radius = 3.2, targetY = 0.85;
+let camAt = [0, 0, 0];
+function applyCamera() {
+  phi = Math.max(0.2, Math.min(1.55, phi));
+  radius = Math.max(0.3, Math.min(9, radius));
+  renderer.setCamera([
+    camAt[0] + radius * Math.sin(theta) * Math.sin(phi),
+    targetY + radius * Math.cos(phi),
+    camAt[2] + radius * Math.cos(theta) * Math.sin(phi),
+  ], [camAt[0], targetY, camAt[2]]);
+}
+let drag = null;
+canvas.addEventListener('pointerdown', e => { drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', e => {
+  if (!drag) return;
+  theta -= (e.clientX - drag[0]) * 0.006; phi -= (e.clientY - drag[1]) * 0.006;
+  drag = [e.clientX, e.clientY]; applyCamera();
+});
+canvas.addEventListener('pointerup', () => { drag = null; });
+canvas.addEventListener('wheel', e => { e.preventDefault(); radius *= Math.exp(e.deltaY * 0.001); applyCamera(); }, { passive: false });
+
+// clip buttons
+let clipName = params.get('clip') || 'idle';
+for (const n of CLIP_NAMES) {
+  const b = document.createElement('button'); b.textContent = n; b.dataset.clip = n;
+  b.addEventListener('click', () => { clipName = n; refreshClipButtons(); if (composer) composer.play(n === 'idle' || n === 'walk' ? null : n); });
+  $('clips').appendChild(b);
+}
+function refreshClipButtons() { for (const b of $('clips').children) b.classList.toggle('on', b.dataset.clip === clipName); }
+refreshClipButtons();
+const wire = (id, out, fmt) => { const el = $(id); const f = () => { $(out).textContent = fmt(+el.value); }; el.addEventListener('input', f); f(); };
+wire('speed', 'speedOut', v => (v / 100).toFixed(1) + ' m/s');
+wire('rate', 'rateOut', v => (v / 100).toFixed(1) + '×');
+wire('density', 'densityOut', v => (v / 1000) + 'k');
+
+// telemetry: the same simulated performer the stage uses (no network here)
+const driver = new PoseDriver();
+const arms = { left: new ArmSmoother(), right: new ArmSmoother() };
+
+let avatar = null, rig = null, composer = null, block = null, avatarOffset = 0, generation = 0;
+let morphSliders = {};
+async function load() {
+  const gen = ++generation;
+  const m = RIGGED.find(x => x.id === $('model').value) || RIGGED[0];
+  const count = +$('density').value;
+  statsEl.textContent = `loading ${m.name}…`;
+  $('attr').textContent = m.attribution;
+  try {
+    const t0 = performance.now();
+    const av = await loadRiggedSplats(m.url, { count, targetHeight: m.targetHeight, yaw: m.yaw });
+    if (gen !== generation) return;
+    avatar = av; rig = new Rig(av); composer = new PoseComposer(rig);
+    if (clipName !== 'idle' && clipName !== 'walk') composer.play(clipName);
+    avatarOffset = ground.count;
+    const data = new Float32Array((ground.count + av.count) * FLOATS_PER_SPLAT);
+    data.set(ground.data);
+    renderer.setData(data, ground.count + av.count);
+    block = new Float32Array(av.count * FLOATS_PER_SPLAT);
+    targetY = HEAD_CAM ? av.heightM * 0.9 : av.heightM * 0.55;
+    if (HEAD_CAM) { radius = 0.75; phi = 1.45; theta = 0.2; }
+    applyCamera();
+    // expression sliders
+    $('morphs').innerHTML = '';
+    morphSliders = {};
+    for (const nm of av.morphNames) {
+      const row = document.createElement('div'); row.className = 'ctl';
+      row.innerHTML = `<label>${nm}</label><input type="range" min="0" max="100" value="0"><output>0</output>`;
+      const sl = row.querySelector('input');
+      sl.addEventListener('input', () => { row.querySelector('output').textContent = sl.value; });
+      $('morphs').appendChild(row);
+      morphSliders[nm] = sl;
+    }
+    statsEl.textContent = `${av.count.toLocaleString()} splats · ${av.sourceTris.toLocaleString()} tris · ` +
+      `morphs: ${av.morphNames.join(' ')} · loaded in ${(performance.now() - t0).toFixed(0)} ms · ${renderer.backend}`;
+  } catch (e) {
+    if (gen === generation) statsEl.textContent = 'load failed: ' + e.message;
+    console.error(e);
+  }
+}
+$('model').addEventListener('change', load);
+$('density').addEventListener('change', load);
+await load();
+
+// roaming: pick spots on the mat, walk there, pause, repeat
+const roam = { pos: [0, 0], target: [0, 0], wait: 1.5, speed: 0 };
+const BONE_CP = ['hips', 'spine', 'chest', 'upperChest', 'neck', 'head',
+  'leftShoulder', 'leftUpperArm', 'leftLowerArm', 'leftHand', 'rightShoulder', 'rightUpperArm', 'rightLowerArm', 'rightHand',
+  'leftUpperLeg', 'leftLowerLeg', 'leftFoot', 'leftToes', 'rightUpperLeg', 'rightLowerLeg', 'rightFoot', 'rightToes'];
+let cpBlock = null;
+
+let last = performance.now(), poseMs = 0, frames = 0, fpsT = last, fps = 0;
+function frame(now) {
+  const dtReal = Math.min(0.05, (now - last) / 1000); last = now;
+  const dt = dtReal * (+$('rate').value / 100);
+  if (avatar) {
+    // sender simulation (head/face/mouth), optional synthetic arm targets
+    const useTele = $('tele').checked;
+    if ($('armdemo').checked) {
+      const tt = now / 1000;
+      driver.setArmTargets({
+        l: { t: [0.22 + 0.08 * Math.sin(tt * 1.7), 0.1 + 0.28 * Math.sin(tt * 2.3), 0.24 + 0.1 * Math.cos(tt * 1.7)], vis: 1 },
+        r: { t: [-0.18 - 0.14 * Math.cos(tt * 1.3), -0.05 + 0.4 * Math.abs(Math.sin(tt * 1.3)), 0.26], vis: 1 },
+      }, true);
+    } else driver.setArmTargets(null);
+    const rx = useTele ? driver.tick(dt, now) : null;
+    // locomotion
+    let speed = 0;
+    const maxSpeed = +$('speed').value / 100;
+    if (clipName === 'walk' && !$('roam').checked) {
+      speed = maxSpeed;
+    } else if ($('roam').checked && clipName !== 'sit' && clipName !== 'dance') {
+      const dx = roam.target[0] - roam.pos[0], dz = roam.target[1] - roam.pos[1];
+      const dist = Math.hypot(dx, dz);
+      if (dist < 0.08) {
+        roam.wait -= dt;
+        if (roam.wait <= 0) {
+          const a = Math.random() * Math.PI * 2, r = 0.8 + Math.random() * 1.5;
+          roam.target = [Math.cos(a) * r, Math.sin(a) * r]; roam.wait = 2 + Math.random() * 4;
+        }
+        roam.speed = Math.max(0, roam.speed - dt * 2.5);
+      } else {
+        roam.speed = Math.min(maxSpeed, roam.speed + dt * 1.6);
+        const want = Math.atan2(dx, dz);
+        let d = want - composer.facing; d = Math.atan2(Math.sin(d), Math.cos(d));
+        composer.facing += d * Math.min(1, dt * 5);
+        const step = Math.min(dist, roam.speed * dt);
+        roam.pos[0] += Math.sin(composer.facing) * step; roam.pos[1] += Math.cos(composer.facing) * step;
+      }
+      speed = roam.speed;
+    } else {
+      // face the camera again when standing
+      let d = -composer.facing; d = Math.atan2(Math.sin(d), Math.cos(d));
+      composer.facing += d * Math.min(1, dt * 1.5);
+    }
+    composer.tick(dt);
+    const armW = {};
+    const armTargets = {};
+    for (const side of ['left', 'right']) {
+      const a = rx && rx.arms ? (side === 'left' ? rx.arms.l : rx.arms.r) : null;
+      const st = arms[side].update(a ? a.t : null, a ? a.vis : 0, dt);
+      armW[side] = st.w; armTargets[side] = st.t;
+    }
+    const pose = composer.compose(rx, { speed, dt, armW, armTargets });
+    // manual expression sliders add on top
+    for (const nm of Object.keys(morphSliders)) {
+      const v = +morphSliders[nm].value / 100;
+      if (v > 0) pose.morph[nm] = Math.max(pose.morph[nm] || 0, v);
+    }
+    const t0 = performance.now();
+    // bones on: the body goes translucent so the joint markers (which sit
+    // INSIDE the mesh) show through — splats blend back-to-front, so an
+    // opaque body would hide them
+    const showBones = $('bones').checked;
+    avatar.pose({ at: [roam.pos[0], 0, roam.pos[1]], bones: pose.bones, hipsOffset: pose.hips, morph: pose.morph, alpha: showBones ? 0.28 : 1 }, block, 0);
+    poseMs = poseMs * 0.9 + (performance.now() - t0) * 0.1;
+    if (showBones) {
+      // control points: magenta markers at the joints (appended block)
+      if (!cpBlock || cpBlock.length !== (avatar.count + BONE_CP.length) * FLOATS_PER_SPLAT) {
+        cpBlock = new Float32Array((avatar.count + BONE_CP.length) * FLOATS_PER_SPLAT);
+        const data = new Float32Array((ground.count + avatar.count + BONE_CP.length) * FLOATS_PER_SPLAT);
+        data.set(ground.data);
+        renderer.setData(data, ground.count + avatar.count + BONE_CP.length);
+      }
+      cpBlock.set(block);
+      let o = avatar.count * FLOATS_PER_SPLAT;
+      for (const b of BONE_CP) {
+        const j = avatar.joint(b) || [0, -9, 0];
+        cpBlock.set([j[0], j[1], j[2], 0, 0, 0, 1, 0.022, 0.022, 0.022, 1, 0.25, 0.85, 1], o);
+        o += FLOATS_PER_SPLAT;
+      }
+      renderer.writeRegion(avatarOffset, cpBlock);
+    } else {
+      if (cpBlock) {
+        cpBlock = null;
+        const data = new Float32Array((ground.count + avatar.count) * FLOATS_PER_SPLAT);
+        data.set(ground.data);
+        renderer.setData(data, ground.count + avatar.count);
+      }
+      renderer.writeRegion(avatarOffset, block);
+    }
+    // camera follows the walker gently
+    camAt[0] += (roam.pos[0] - camAt[0]) * Math.min(1, dtReal * 2);
+    camAt[2] += (roam.pos[1] - camAt[2]) * Math.min(1, dtReal * 2);
+    applyCamera();
+  }
+  renderer.render();
+  frames++;
+  if (now - fpsT > 1000) {
+    fps = frames * 1000 / (now - fpsT); frames = 0; fpsT = now;
+    if (avatar) statsEl.textContent = `${avatar.count.toLocaleString()} splats · skin+morph ${poseMs.toFixed(1)} ms/frame · ` +
+      `${fps.toFixed(0)} fps · morphs: ${avatar.morphNames.join(' ')} · ${renderer.backend}`;
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

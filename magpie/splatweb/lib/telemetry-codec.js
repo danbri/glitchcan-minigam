@@ -7,6 +7,11 @@ import { qNormalize, clamp } from './pose-math.js';
 
 export const PACKET_BYTES = 32;        // v0
 export const PACKET_BYTES_V1 = 40;     // v0 + per-arm wrist offset + visibility
+// v2 (52 bytes): v1 + per-arm ELBOW offset (3×int8, same ±0.75 m scale) +
+// torso yaw/pitch/roll (3×int8, ±90°) + torso visibility + 2 reserved.
+// Elbows let the viewer's IK put the elbow where the real one is instead
+// of guessing a pole; the torso carries shoulder-line turn/tilt and lean.
+export const PACKET_BYTES_V2 = 52;
 export const PACKET_HZ_DEFAULT = 30;
 
 export const BLENDSHAPES = [
@@ -20,11 +25,13 @@ const SIGNED = new Set(['eyeLookX', 'eyeLookY']);
 export function makePose() {
   // arms (packet v1): { l: { t: [x,y,z], vis }, r: {...} } — wrist offset
   // from the shoulder in avatar-local metres — or null (v0, no arm data)
-  return { tMs: 0, seq: 0, quat: [0, 0, 0, 1], pos: [0, 0, 0], blend: new Float32Array(10), arms: null };
+  // torso (packet v2): { yaw, pitch, roll (radians), vis } or null
+  return { tMs: 0, seq: 0, quat: [0, 0, 0, 1], pos: [0, 0, 0], blend: new Float32Array(10), arms: null, torso: null };
 }
 
 export function encodePose(pose, buf) {
-  const size = pose.arms ? PACKET_BYTES_V1 : PACKET_BYTES;
+  const v2 = pose.arms && (pose.torso || pose.arms.l.e || pose.arms.r.e);
+  const size = v2 ? PACKET_BYTES_V2 : pose.arms ? PACKET_BYTES_V1 : PACKET_BYTES;
   const ab = (buf && buf.byteLength === size) ? buf : new ArrayBuffer(size);
   const dv = new DataView(ab);
   dv.setUint32(0, pose.tMs >>> 0, true);
@@ -43,6 +50,15 @@ export function encodePose(pose, buf) {
     };
     enc(32, pose.arms.l);
     enc(36, pose.arms.r);
+    if (v2) {
+      const enc3 = (off, v, k) => { for (let i = 0; i < 3; i++) dv.setInt8(off + i, Math.round(clamp((v ? v[i] : 0) / k, -1, 1) * 127)); };
+      enc3(40, pose.arms.l.e, 0.75);
+      enc3(43, pose.arms.r.e, 0.75);
+      const T = pose.torso;
+      enc3(46, T ? [T.yaw, T.pitch, T.roll] : null, Math.PI / 2);
+      dv.setUint8(49, T && T.vis > 0.5 ? 255 : 0);
+      dv.setUint8(50, 0); dv.setUint8(51, 0);
+    }
   }
   return ab;
 }
@@ -65,8 +81,16 @@ export function decodePose(ab, out) {
       vis: dv.getUint8(off + 3) > 127 ? 1 : 0,
     });
     pose.arms = { l: dec(32), r: dec(36) };
+    if (ab.byteLength >= PACKET_BYTES_V2) {
+      const dec3 = (off, k) => [dv.getInt8(off) / 127 * k, dv.getInt8(off + 1) / 127 * k, dv.getInt8(off + 2) / 127 * k];
+      pose.arms.l.e = dec3(40, 0.75);
+      pose.arms.r.e = dec3(43, 0.75);
+      const t = dec3(46, Math.PI / 2);
+      pose.torso = dv.getUint8(49) > 127 ? { yaw: t[0], pitch: t[1], roll: t[2], vis: 1 } : null;
+    } else pose.torso = null;
   } else {
     pose.arms = null;
+    pose.torso = null;
   }
   return pose;
 }

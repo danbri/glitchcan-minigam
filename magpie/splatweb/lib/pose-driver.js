@@ -26,7 +26,16 @@ export class PoseDriver {
     this._sacT = 0.5; this._sacX = 0; this._sacY = 0;   // gaze saccades
     this._browFlash = 0; this._wasTalking = false;
     this._t = 0;
+    // wander: in auto mode the performer walks to spots within `roam`
+    // metres of home (0 = stand still). The packet's position field
+    // carries it; the viewer turns position deltas into a walk cycle.
+    this.roam = 0;
+    this._walk = { pos: [0, 0], target: [0, 0], wait: 3, speed: 0 };
+    this._torso = null;
   }
+  setRoam(r) { this.roam = r; if (!r) { this._walk.pos = [0, 0]; this._walk.target = [0, 0]; } }
+  // torso from capture (packet v2): { yaw, pitch, roll, vis } or null
+  setTorso(t) { this._torso = t; }
 
   // x, y in [-1, 1] from a pointer pad.
   // mirror ON: drag left ⇒ the avatar looks screen-LEFT (your reflection).
@@ -105,7 +114,24 @@ export class PoseDriver {
     p.tMs = nowMs >>> 0;
     p.seq = this.seq++;
     p.quat = qFromEuler(this._yaw, this._pitch, this._roll);
-    p.pos = [Math.sin(t * 0.2) * 0.02, 1.45 + Math.sin(t * 0.9) * 0.008, 0];
+    // wander (auto + roam radius): head position = body position
+    const wk = this._walk;
+    if (this.auto && this.roam > 0 && !this._face) {
+      const dx = wk.target[0] - wk.pos[0], dz = wk.target[1] - wk.pos[1], dist = Math.hypot(dx, dz);
+      if (dist < 0.06) {
+        wk.wait -= dt;
+        wk.speed = Math.max(0, wk.speed - dt * 2);
+        if (wk.wait <= 0) {
+          const a = Math.random() * Math.PI * 2, r = 0.4 + Math.random() * (this.roam - 0.4);
+          wk.target = [Math.cos(a) * r, Math.sin(a) * r * 0.7]; wk.wait = 3 + Math.random() * 6;
+        }
+      } else {
+        wk.speed = Math.min(0.75, wk.speed + dt * 1.2);
+        const step = Math.min(dist, wk.speed * dt);
+        wk.pos[0] += dx / dist * step; wk.pos[1] += dz / dist * step;
+      }
+    }
+    p.pos = [wk.pos[0] + Math.sin(t * 0.2) * 0.02, 1.45 + Math.sin(t * 0.9) * 0.008, wk.pos[1]];
     const b = p.blend;
     b[BI.jawOpen] = clamp(jaw, 0, 1);
     b[BI.eyeBlinkLeft] = blink;
@@ -167,13 +193,18 @@ export class PoseDriver {
     // backwards is invisible to the mirror toggle: both modes stay wrong
     // by the same relative reflection.)
     let arms = this._armsRaw || null;
+    let torso = this._torso || null;
     if (arms && !this._armsLocal) {
-      const neg = (a) => ({ t: [-a.t[0], a.t[1], a.t[2]], vis: a.vis });
+      const negV = (v) => v ? [-v[0], v[1], v[2]] : undefined;
+      const neg = (a) => ({ t: negV(a.t), e: negV(a.e), vis: a.vis });
       arms = this.mirror
         ? { l: neg(arms.l), r: neg(arms.r) }
         : { l: arms.r, r: arms.l };
+      // a reflection flips yaw and roll, keeps the lean
+      if (torso && this.mirror) torso = { yaw: -torso.yaw, pitch: torso.pitch, roll: -torso.roll, vis: torso.vis };
     }
     p.arms = arms;
+    p.torso = arms ? torso : null;
 
     if (this._talk) {
       b[BI.jawOpen] = clamp(this._talk.jaw, 0, 1);

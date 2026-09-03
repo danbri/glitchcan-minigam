@@ -9,14 +9,14 @@ const BI = {};
 BLENDSHAPES.forEach((n, i) => { BI[n] = i; });
 
 // quaternion rotating local +z onto unit vector n (for surface-tangent splats)
-function qFromZTo(n) {
+export function qFromZTo(n) {
   const w = 1 + n[2];
   if (w < 1e-6) return [1, 0, 0, 0];
   const l = Math.hypot(n[1], n[0], w);
   return [-n[1] / l, n[0] / l, 0, w / l];
 }
 
-class SplatList {
+export class SplatList {
   constructor() { this.arr = []; }
   // pos[3], scale[3], color[3], alpha, quat (optional)
   add(pos, scale, color, alpha = 1, quat = [0, 0, 0, 1]) {
