@@ -30,12 +30,14 @@
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.3);
   }
   .chip { padding: 0.45rem 0.8rem; font-size: 0.8rem; }
-  .chip.tl { top: 14px; left: 14px; }
-  .chip.tl b { color: #cfe0ff; letter-spacing: 0.08em; }
-  .chip.tl a { color: #7fb4ff; text-decoration: none; margin-left: 0.6rem; }
-  .chip.bl { bottom: 14px; left: 14px; max-width: min(60vw, 640px); }
+  .chip.bl { bottom: 14px; left: 54px; max-width: min(60vw, 640px); }
+  .chip.bl.hidden { display: none; }
   .chip.bc { bottom: 14px; right: 14px; max-width: 34vw; font-size: 0.72rem; color: #8b8fa3; }
   .chip.bc a { color: #7fb4ff; }
+  /* the stats toggle: a small round chip that stays put */
+  #statsToggle { bottom: 14px; left: 14px; width: 30px; height: 30px; padding: 0; text-align: center;
+    line-height: 28px; cursor: pointer; user-select: none; font-size: 0.85rem; color: #7fb4ff; }
+  #statsToggle.off { color: #5a6070; }
 
   .drawer {
     top: 0; height: 100%; width: min(340px, 88vw);
@@ -92,13 +94,17 @@
   .drawer input[type=text], .drawer select {
     background: #0a0b10; color: #d8dae2; border: 1px solid #3a5580; border-radius: 6px; padding: 0.32rem;
   }
+  .gest { display: flex; flex-wrap: wrap; gap: 5px; }
+  .gest button { background: #22304a; color: #cfe0ff; border: 1px solid #3a5580; border-radius: 6px;
+    padding: 0.3rem 0.55rem; cursor: pointer; font-size: 0.78rem; }
 </style>
 </head>
 <body>
 <canvas id="gl"></canvas>
 <div class="frame"><span></span><span></span><span></span><span></span></div>
 
-<div class="hud chip bl">
+<div class="hud" id="statsToggle" title="show / hide the wire statistics">ⓘ</div>
+<div class="hud chip bl" id="statsChip">
   <span class="stat" id="stats">–</span><br>
   <span class="badge ok" id="linkBadge">live</span>
 </div>
@@ -118,7 +124,10 @@
   <div class="ctl">
     <label style="flex:0 0 auto"><input type="checkbox" id="autoChk" checked> auto</label>
     <label style="flex:0 0 auto"><input type="checkbox" id="mirrorChk" checked> mirror</label>
+    <label style="flex:0 0 auto"><input type="checkbox" id="roamChk" checked> roam</label>
   </div>
+  <h2>Gestures (stored clips)</h2>
+  <div class="gest" id="gestures"></div>
   <h2>Generated speech</h2>
   <div class="ctl">
     <input id="sayText" type="text" value="Hello! I am a stream of text becoming a talking splat." style="flex:1; min-width:0;">
@@ -129,15 +138,16 @@
   </div>
   <h2>Avatar</h2>
   <div id="avatarCar" class="carousel" tabindex="0" role="listbox" aria-label="avatar picker"></div>
-  <div class="note" style="margin-top:2px">←/→ or A/D to browse · space to wear</div>
+  <div class="note" style="margin-top:2px">←/→ or A/D to browse · space to wear · <a href="demo-rigs.html" style="color:#7fb4ff">rig lab</a></div>
   <h2>Room</h2>
   <div id="roomCar" class="carousel" tabindex="0" role="listbox" aria-label="room picker"></div>
   <div class="note" id="roomCredit"></div>
   <div class="note" id="micNote" style="margin-top:0.6rem">MIC: Web Audio speech energy drives the jaw.
-  CAM: MediaPipe FaceLandmarker + PoseLandmarker (Apache-2.0, CDN on demand) drive head pose, all ten
-  expression channels, AND your arms — wrist positions ride a 40-byte packet and the avatar solves
-  two-bone IK; an arm the camera cannot see relaxes to idle. All local; nothing leaves the page.
-  Expressions auto-calibrate to your personal range while CAM runs. If turns read backwards, toggle mirror. No webcam? Try <a href="?armdemo" style="color:#7fb4ff">?armdemo</a>.</div>
+  CAM: MediaPipe FaceLandmarker + PoseLandmarker (full model; Apache-2.0, CDN on demand) drive head pose, all ten
+  expression channels, your arms (wrists AND elbows, OneEuro-filtered) and your torso — a 52-byte packet; the
+  avatar solves two-bone IK behind a critically damped spring with a speed ceiling, so a lost frame relaxes the arm
+  instead of snapping it. All local; nothing leaves the page. If turns read backwards, toggle mirror.
+  No webcam? Try <a href="?armdemo" style="color:#7fb4ff">?armdemo</a>.</div>
 </div>
 
 <div class="hud chip" id="camMirror" style="top:14px; left:14px; padding:6px; display:none">
@@ -149,8 +159,8 @@
 <div class="hud drawer open" id="netDrawer">
   <h2>Rig debug</h2>
   <div class="ctl">
-    <label style="flex:0 0 auto"><input type="checkbox" id="showCP"> control points</label>
-    <label style="flex:0 0 auto"><input type="checkbox" id="xray"> x-ray structure</label>
+    <label style="flex:0 0 auto" title="joint markers; a rigged body goes translucent so they show"><input type="checkbox" id="showCP"> control points</label>
+    <label style="flex:0 0 auto"><input type="checkbox" id="xray"> x-ray</label>
   </div>
   <div class="ctl"><label>expression</label><input type="range" id="gainAll" min="0" max="200" value="100"><output id="gainAllOut">100 %</output></div>
   <div class="ctl"><label>jaw</label><input type="range" id="gainJaw" min="0" max="200" value="100"><output id="gainJawOut">100 %</output></div>
@@ -161,8 +171,10 @@
   <div class="ctl"><label>density</label><input type="range" id="density" min="30" max="250" value="100"><output id="densityOut">100 %</output></div>
   <p class="note">Gains exaggerate (&gt;100%) or suppress (&lt;100%) the received
   expression channels, viewer-side. Position sliders move the procedural
-  face's rig anchors. Density resamples the procedural avatar live. With
-  CAM on, the detected face/arm mesh mirrors top-left.</p>
+  face's rig anchors; density resamples the procedural avatar. Control
+  points show the skeleton joints of a rigged avatar (22) or the
+  procedural rig's anchors. With CAM on, the detected face/arm mesh
+  mirrors top-left.</p>
   <h2>Network (simulated)</h2>
   <div class="ctl"><label>latency</label><input type="range" id="latency" min="0" max="500" value="80"><output id="latencyOut">80 ms</output></div>
   <div class="ctl"><label>jitter</label><input type="range" id="jitter" min="0" max="200" value="30"><output id="jitterOut">30 ms</output></div>
@@ -172,8 +184,9 @@
   <p class="note">The whole thesis in one page: the sender's pose is encoded into 32-byte packets and
   pushed through a simulated lossy channel; the viewer decodes, jitter-buffers, interpolates and
   (briefly) extrapolates, and renders the splat room + splat avatar — reconstructed from packets
-  only. Turn the loss and jitter up and watch presence survive. Drag the room to orbit; wheel to
-  zoom in close. (DESIGN.md §6.)</p>
+  only. The packet's position field makes the avatar WALK: the viewer turns position deltas into
+  a stride. Turn the loss and jitter up and watch presence survive. Drag the room to orbit; wheel
+  to zoom in close. (DESIGN.md §6.)</p>
 </div>
 
 <script type="module">
@@ -183,26 +196,30 @@ import { NetworkSim } from './lib/network-sim.js';
 import { PoseBuffer } from './lib/pose-buffer.js';
 import { FLOATS_PER_SPLAT, SplatRenderer } from './lib/splat-renderer.js';
 import { createSplatRenderer } from './lib/splat-renderer-auto.js';
-import { buildRoom, buildAvatarSplats, AVATAR_PRESETS } from './lib/scene-builder.js';
+import { buildAvatarSplats, AVATAR_PRESETS } from './lib/scene-builder.js';
 import { MODELS } from './lib/models-manifest.js';
 import { drawFace } from './lib/face2d.js';
 import { VoiceJaw } from './lib/voice-jaw.js';
 import { FaceCapture } from './lib/face-capture.js';
 import { TextTalker } from './lib/text-talker.js';
-import { loadGlbSplats } from './lib/gltf-splats.js';
 import { loadScanHead, buildScanHeadSplats, FACECAP_CREDIT } from './lib/scan-head.js';
-import { loadCompressedPly } from './lib/cply.js';
 import { makeCarousel } from './lib/carousel.js';
+import { loadRiggedSplats } from './lib/rigged-splats.js';
+import { Rig, PoseComposer, CLIPS } from './lib/skeleton-anim.js';
+import { ArmSmoother } from './lib/arm-filter.js';
+import { ROOM_DEFS, loadRoom } from './lib/rooms.js';
+import { Critter, SPLATS_PER_CRITTER } from './lib/critters.js';
 
 const $ = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
 // central attribution registry — everything rendered registers here; the
 // © chip toggles the list (there may eventually be hundreds of entries)
 const CREDITS = new Map();
 function addCredit(key, lines) {
   CREDITS.set(key, Array.isArray(lines) ? lines : [lines]);
   const n = [...CREDITS.values()].reduce((a, l) => a + l.length, 0);
-  document.getElementById('creditsChip').textContent = `© credits (${n})`;
-  document.getElementById('creditsPanel').innerHTML =
+  $('creditsChip').textContent = `© credits (${n})`;
+  $('creditsPanel').innerHTML =
     [...CREDITS.entries()].map(([k, l]) =>
       `<div style="margin-bottom:0.4rem"><b style="color:#7fb4ff">${k}</b><br>${l.join('<br>')}</div>`).join('');
 }
@@ -212,6 +229,16 @@ let renderer;
 try { renderer = await createSplatRenderer(canvas); }
 catch (e) { statsEl.textContent = 'no GPU backend available: ' + e.message; throw e; }
 
+// stats chip: optional. ?stats=0 hides it; the ⓘ toggles; choice remembered
+let statsOn = params.get('stats') !== '0' && (localStorage.getItem('splatweb.stats') ?? '1') !== '0';
+function applyStats() {
+  $('statsChip').classList.toggle('hidden', !statsOn);
+  $('statsToggle').classList.toggle('off', !statsOn);
+  try { localStorage.setItem('splatweb.stats', statsOn ? '1' : '0'); } catch { /* private mode */ }
+}
+$('statsToggle').addEventListener('click', () => { statsOn = !statsOn; applyStats(); });
+applyStats();
+
 // HUD drawers: open on load, slide away after a few idle seconds, come
 // back from their edge tabs
 for (const [tabId, drawerId] of [['ctrlTab', 'ctrlDrawer'], ['netTab', 'netDrawer']]) {
@@ -220,140 +247,317 @@ for (const [tabId, drawerId] of [['ctrlTab', 'ctrlDrawer'], ['netTab', 'netDrawe
   const keep = () => { clearTimeout(timer); };
   tab.addEventListener('click', () => { keep(); drawer.classList.toggle('open'); });
   drawer.addEventListener('pointerenter', keep);
-  // clicking dead space (not a control) slides the drawer away too
   drawer.addEventListener('click', (e) => {
     keep();
     const tag = e.target.tagName;
-    if (e.target === drawer || tag === 'H2' || tag === 'P' || (tag === 'DIV' && !e.target.closest('.carousel'))) {
+    if (e.target === drawer || tag === 'H2' || tag === 'P' || (tag === 'DIV' && !e.target.closest('.carousel') && !e.target.closest('.gest'))) {
       drawer.classList.remove('open');
     }
   });
 }
 
-// scene: room + (optional guest) + avatar block last, so the avatar region
-// can be rewritten every frame at avatarOffset
-const AV_AT = [0, 0, -1.0];
-const room = buildRoom();
-// room registry: the procedural studio, plus rooms COMPOSED from the
-// licence-proven dbdb stamp pack (each element ships its own credit)
-const DBDB = '../dbdb/splats/pack/';
-const ROOMS = [
-  { id: 'proc', name: 'Studio (procedural)' },
-  { id: 'museum', name: 'Conservatory (dbdb stamps)', parts: [
-    // one floor + the same greenhouse wall stamped three times = a room
-    { el: 'hall', at: [0, -0.05, 0], yaw: 0 },
-    { el: 'windowwall', at: [0, 0, -3.2], yaw: 0, stride: 6 },
-    { el: 'windowwall', at: [-3.2, 0, -1.2], yaw: Math.PI / 2, stride: 6 },
-    { el: 'windowwall', at: [3.2, 0, -1.2], yaw: -Math.PI / 2, stride: 6 },
-  ] },
-  { id: 'ghost', name: 'Ghost garden (dbdb stamps)', parts: [
-    { el: 'grass', at: [0, 0.02, 0], yaw: 0.3, stride: 4 },
-    { el: 'grass', at: [-1.6, 0.02, -2.2], yaw: 1.4, stride: 4 },
-    { el: 'hut', at: [1.9, 0, -2.6], yaw: -0.4 },
-  ] },
-];
-let roomData = { data: room.toFloat32(), count: room.count };
-const roomCache = new Map();
-let packMeta = null;
-async function loadDbdbRoom(def) {
-  if (roomCache.has(def.id)) return roomCache.get(def.id);
-  if (!packMeta) packMeta = (await (await fetch(DBDB + 'pack.json')).json()).elements;
-  const parts = await Promise.all(def.parts.map(pp =>
-    loadCompressedPly(DBDB + pp.el + '.compressed.ply', pp)));
-  let total = 0;
-  for (const pt of parts) total += pt.count;
-  const data = new Float32Array(total * FLOATS_PER_SPLAT);
-  let off = 0;
-  for (const pt of parts) { data.set(pt.data, off); off += pt.data.length; }
-  const credits = [...new Set(def.parts.map(pp =>
-    (packMeta.find(e => e.id === pp.el) || {}).credit || pp.el))];
-  const res = { data, count: total, credits };
-  roomCache.set(def.id, res);
-  return res;
-}
-let appearance = AVATAR_PRESETS[0];
-// debug rig state — declared before the first rebuildScene() (which
-// consults it via buildAvatarF32)
-const dbg = { all: 1, jaw: 1, brow: 1, smile: 1, mouth: 0, eyes: 0, density: 1, cp: false, xray: false };
-let avatarOffset = room.count;
-let currentGuest = null;
-// realistic pre-rigged head (lazy-loaded on selection)
-let headMode = 'proc';
-let scanHead = null;
-let avScratch = null;
+// ---------------------------------------------------------------- scene layout
+// [ room ][ critters ][ avatar (+ control points) ] — the avatar block is
+// rewritten every frame at avatarOffset; critters likewise at critterOffset
+let AV_AT = [0, 0, -1.0];
+let roomData = null;        // { data, count, platforms, obstacles, floorY, bounds, credits, def, cam }
+let critters = [], critterBlock = null, critterOffset = 0;
+let avatarOffset = 0, avatarSlots = 0;
+const CP_COUNT = 22;        // control-point markers reserved after the avatar
 const CP_COLOR = [1, 0.25, 0.85];
-function withDebug(list, f32) {
-  // x-ray: ghost every splat so hidden structure (teeth, cavity, layers)
-  // shows through; control points: bright markers at the rig joints
-  if (dbg.xray) for (let i = 13; i < f32.length; i += FLOATS_PER_SPLAT) f32[i] *= 0.3;
-  if (!dbg.cp) return f32;
-  const joints = (list && list.joints) || [];
-  const out = new Float32Array(f32.length + joints.length * FLOATS_PER_SPLAT);
-  out.set(f32);
-  let o = f32.length;
-  for (const j of joints) {
-    out[o] = j[0]; out[o + 1] = j[1]; out[o + 2] = j[2];
-    out[o + 6] = 1; out[o + 7] = 0.013; out[o + 8] = 0.013; out[o + 9] = 0.013;
-    out[o + 10] = CP_COLOR[0]; out[o + 11] = CP_COLOR[1]; out[o + 12] = CP_COLOR[2]; out[o + 13] = 1;
+let appearance = AVATAR_PRESETS[0];
+const dbg = { all: 1, jaw: 1, brow: 1, smile: 1, mouth: 0, eyes: 0, density: 1, cp: false, xray: false };
+// avatar modes: 'rig' (skinned VRM), 'proc' (procedural head+torso), 'scan' (Face Cap head on the proc torso)
+let headMode = 'rig';
+let scanHead = null, avScratch = null;
+let rigAv = null, rig = null, composer = null, rigBlock = null;
+const armSm = { left: new ArmSmoother(), right: new ArmSmoother() };
+const BONE_CP = ['hips', 'spine', 'chest', 'upperChest', 'neck', 'head',
+  'leftShoulder', 'leftUpperArm', 'leftLowerArm', 'leftHand', 'rightShoulder', 'rightUpperArm', 'rightLowerArm', 'rightHand',
+  'leftUpperLeg', 'leftLowerLeg', 'leftFoot', 'leftToes', 'rightUpperLeg', 'rightLowerLeg', 'rightFoot', 'rightToes'];
+
+function applyGains(rx) {
+  if (!rx) return rx;
+  const b2 = rx.blend, g = dbg.all;
+  const gc = (i, extra) => { b2[i] = Math.max(0, Math.min(1, b2[i] * g * extra)); };
+  gc(0, dbg.jaw); gc(1, 1); gc(2, 1); gc(3, dbg.brow);
+  gc(4, dbg.smile); gc(5, dbg.smile); gc(6, 1); gc(9, 1);
+  return rx;
+}
+// control-point overlay: bright markers appended to the avatar block
+function writeCP(out, off, joints) {
+  let o = off;
+  for (let k = 0; k < CP_COUNT; k++) {
+    const j = joints && joints[k];
+    if (j) out.set([j[0], j[1], j[2], 0, 0, 0, 1, 0.022, 0.022, 0.022, CP_COLOR[0], CP_COLOR[1], CP_COLOR[2], 1], o);
+    else out.set([0, -9, 0, 0, 0, 0, 1, 0.001, 0.001, 0.001, 0, 0, 0, 0], o);
     o += FLOATS_PER_SPLAT;
   }
-  return out;
 }
-function buildAvatarF32(rx, tSec) {
+// locomotion from the received position: speed + heading, viewer-side
+const walk = { prev: null, speed: 0, heading: 0, vx: 0, vz: 0 };
+function trackWalk(rx, dt) {
+  if (!rx) { walk.speed = Math.max(0, walk.speed - dt * 2); return; }
+  const p = rx.pos;
+  if (walk.prev) {
+    const vx = (p[0] - walk.prev[0]) / Math.max(dt, 1e-3), vz = (p[2] - walk.prev[2]) / Math.max(dt, 1e-3);
+    const k = 1 - Math.exp(-dt * 8);
+    walk.vx += (vx - walk.vx) * k; walk.vz += (vz - walk.vz) * k;
+    const sp = Math.hypot(walk.vx, walk.vz);
+    walk.speed += (sp - walk.speed) * k;
+    if (sp > 0.08) walk.heading = Math.atan2(walk.vx, walk.vz);
+  }
+  walk.prev = [p[0], p[1], p[2]];
+}
+// build the avatar block for this frame from the RECEIVED pose only
+function buildAvatarF32(rx, tSec, dt) {
   applyGains(rx);
   const anim = { t: tSec, density: dbg.density, rig: { mouth: dbg.mouth, eyes: dbg.eyes } };
+  if (headMode === 'rig' && rigAv) {
+    trackWalk(rx, dt);
+    composer.tick(dt);
+    // face the walk heading while moving; drift back to the camera when still
+    const want = walk.speed > 0.12 ? walk.heading : 0;
+    let d = want - composer.facing; d = Math.atan2(Math.sin(d), Math.cos(d));
+    composer.facing += d * Math.min(1, dt * (walk.speed > 0.12 ? 6 : 1.2));
+    const armW = {}, armTargets = {};
+    for (const side of ['left', 'right']) {
+      const a = rx && rx.arms ? (side === 'left' ? rx.arms.l : rx.arms.r) : null;
+      const st = armSm[side].update(a ? a.t : null, a ? a.vis : 0, dt);
+      armW[side] = st.w; armTargets[side] = st.t;
+    }
+    const pose = composer.compose(rx, { speed: walk.speed, dt, armW, armTargets, talking: talker.speaking });
+    const at = rx ? [AV_AT[0] + rx.pos[0], AV_AT[1], AV_AT[2] + rx.pos[2]] : AV_AT;
+    rigAv.pose({ at, bones: pose.bones, hipsOffset: pose.hips, morph: pose.morph, alpha: (dbg.xray || dbg.cp) ? 0.3 : 1 }, rigBlock, 0);
+    writeCP(rigBlock, rigAv.count * FLOATS_PER_SPLAT, dbg.cp ? BONE_CP.map(b => rigAv.joint(b)) : null);
+    return rigBlock;
+  }
+  let list, f32;
   if (headMode === 'scan' && scanHead) {
-    const torsoList = buildAvatarSplats(rx, AV_AT, appearance, { ...anim, noHead: true });
-    const torso = torsoList.toFloat32();
+    list = buildAvatarSplats(rx, AV_AT, appearance, { ...anim, noHead: true });
+    const torso = list.toFloat32();
     const total = torso.length + scanHead.count * FLOATS_PER_SPLAT;
     if (!avScratch || avScratch.length !== total) avScratch = new Float32Array(total);
     avScratch.set(torso, 0);
     buildScanHeadSplats(scanHead, rx, AV_AT, avScratch, torso.length);
-    return withDebug(torsoList, avScratch);
+    f32 = avScratch;
+  } else {
+    list = buildAvatarSplats(rx, AV_AT, appearance, anim);
+    f32 = list.toFloat32();
   }
-  const list = buildAvatarSplats(rx, AV_AT, appearance, anim);
-  return withDebug(list, list.toFloat32());
+  if (dbg.xray) for (let i = 13; i < f32.length; i += FLOATS_PER_SPLAT) f32[i] *= 0.3;
+  const out = new Float32Array(f32.length + CP_COUNT * FLOATS_PER_SPLAT);
+  out.set(f32);
+  writeCP(out, f32.length, dbg.cp ? list.joints : null);
+  return out;
 }
-// presets differ in splat COUNT (beard, glasses…), so a preset switch
-// rebuilds the whole instance buffer, not just the avatar region
-function rebuildScene(guest) {
-  if (guest !== undefined) currentGuest = guest;
-  const g = currentGuest;
-  const avatarRest = buildAvatarF32(null, 0);
-  const avCount = avatarRest.length / FLOATS_PER_SPLAT;
-  const gCount = g ? g.count : 0;
-  avatarOffset = roomData.count + gCount;
-  const data = new Float32Array((avatarOffset + avCount) * FLOATS_PER_SPLAT);
+// (re)compose the whole instance buffer: room + critters + avatar slots
+function rebuildScene() {
+  if (!roomData) return;
+  const avatarRest = buildAvatarF32(null, 0, 0.016);
+  avatarSlots = avatarRest.length / FLOATS_PER_SPLAT;
+  critterOffset = roomData.count;
+  avatarOffset = critterOffset + critters.length * SPLATS_PER_CRITTER;
+  const data = new Float32Array((avatarOffset + avatarSlots) * FLOATS_PER_SPLAT);
   data.set(roomData.data);
-  if (g) data.set(g.data, roomData.count * FLOATS_PER_SPLAT);
   data.set(avatarRest, avatarOffset * FLOATS_PER_SPLAT);
-  renderer.setData(data, avatarOffset + avCount);
+  renderer.setData(data, avatarOffset + avatarSlots);
+  critterBlock = new Float32Array(critters.length * SPLATS_PER_CRITTER * FLOATS_PER_SPLAT);
 }
-rebuildScene(null);
-// a second participant, randomly picked from the vendored VRM roster
-// (see catalogue + ATTRIBUTION.md); static — it has no telemetry feed
-const guests = MODELS.filter(m => m.id !== 'lps');
-const guest = guests[Math.floor(Math.random() * guests.length)];
-loadGlbSplats(guest.url, {
-  count: 18000, targetHeight: guest.targetHeight, at: [-1.6, 0, -2.1], yaw: guest.yaw + 0.7,
-}).then(g => {
-  rebuildScene(g);
-  addCredit('guest', `${guest.name} — ${guest.attribution}, splat-ified from its VRM`);
-}).catch(() => {});
 
-// generated speech: text (typed, or streamed in like AI tokens) → TTS +
-// visemes → the avatar's mouth, through the unchanged packet
+// ---------------------------------------------------------------- avatars
+const RIGGED = MODELS.filter(m => m.url.endsWith('.vrm'));
+const AVATAR_OPTIONS = [
+  ...RIGGED.map(m => ({ id: m.id, name: m.name.replace(/^100Avatars — /, ''), model: m, glyph: '🧍' })),
+  ...AVATAR_PRESETS.map(pr => ({ id: pr.id, name: pr.name, preset: pr })),
+  { id: 'facecap', name: '★ Face Cap', preset: null, glyph: '★' },
+];
+const rigCache = new Map();
+const RIG_SPLATS = +(params.get('splats') || 18000);
+async function loadRig(m) {
+  if (!rigCache.has(m.id)) {
+    rigCache.set(m.id, loadRiggedSplats(m.url, { count: RIG_SPLATS, targetHeight: m.targetHeight, yaw: m.yaw }));
+  }
+  return rigCache.get(m.id);
+}
+let avatarGen = 0;
+async function selectAvatar(id) {
+  const gen = ++avatarGen;
+  const opt = AVATAR_OPTIONS.find(o => o.id === id);
+  CREDITS.delete('avatar');
+  if (opt && opt.model) {
+    micNote.textContent = `loading ${opt.name} (rigged VRM → splats)…`;
+    try {
+      const av = await loadRig(opt.model);
+      if (gen !== avatarGen) return;
+      rigAv = av; rig = new Rig(av); composer = new PoseComposer(rig);
+      rigBlock = new Float32Array((av.count + CP_COUNT) * FLOATS_PER_SPLAT);
+      headMode = 'rig';
+      rebuildScene();
+      makeRigThumb(opt.id, av);
+      addCredit('avatar', `${opt.model.name} — ${opt.model.attribution}, splat-ified from its VRM (${av.count.toLocaleString()} splats, morphs: ${av.morphNames.join(' ')})`);
+      micNote.textContent = `${opt.name}: skinned splats, driven by the packet — head, mouth, blinks, arms by IK, walking from the position field.`;
+    } catch (e) {
+      micNote.textContent = 'rigged avatar failed: ' + (e.message || e);
+      console.error(e);
+    }
+    return;
+  }
+  if (id === 'facecap') {
+    headMode = 'scan';
+    if (!scanHead) {
+      micNote.textContent = 'loading rigged realistic head (three.js CDN)…';
+      loadScanHead().then(h => {
+        if (headMode !== 'scan') return;
+        scanHead = h;
+        rebuildScene();
+        makeScanThumb();
+        micNote.textContent = `Realistic head live: ${h.count.toLocaleString()} splats, driven by the same 10 packet channels.`;
+        addCredit('avatar', FACECAP_CREDIT);
+      }).catch(e => {
+        micNote.textContent = 'realistic head failed to load: ' + (e.message || e);
+        headMode = 'proc';
+        avatarCar.select(appearance.id);
+      });
+    } else { rebuildScene(); addCredit('avatar', FACECAP_CREDIT); }
+    return;
+  }
+  headMode = 'proc';
+  appearance = AVATAR_PRESETS.find(x => x.id === id) || AVATAR_PRESETS[0];
+  rebuildScene();
+}
+const avatarCar = makeCarousel($('avatarCar'), AVATAR_OPTIONS, selectAvatar);
+
+// gestures: stored clips layered over the packet (locally triggered here;
+// on the wire this is a one-byte event, packet v3)
+for (const g of ['wave', 'nod', 'shrug', 'dance', 'sit']) {
+  const b = document.createElement('button'); b.textContent = g;
+  b.addEventListener('click', () => { if (composer) composer.play(composer.gesture?.clip.name === g ? null : g); });
+  $('gestures').appendChild(b);
+}
+
+// ---------------------------------------------------------------- rooms
+const roomCar = makeCarousel($('roomCar'),
+  ROOM_DEFS.map(r => ({ id: r.id, name: r.name, glyph: r.glyph })), selectRoom);
+let roomGen = 0;
+async function selectRoom(id) {
+  const gen = ++roomGen;
+  $('roomCredit').textContent = 'building room…';
+  try {
+    const room = await loadRoom(id);
+    if (gen !== roomGen) return;
+    roomData = room;
+    // critters: a room with levels gets a few hoppers
+    critters = [];
+    const n = room.def.critters || 0;
+    for (let i = 0; i < n; i++) {
+      const c = new Critter(i * 7 + 3, room.bounds);
+      c.pos[1] = 1 + c.r;
+      critters.push(c);
+    }
+    AV_AT = room.avatarAt ? room.avatarAt.slice() : [0, room.floorY || 0, -1.0];
+    walk.prev = null;
+    if (room.cam) { target[0] = room.cam.target[0]; target[1] = room.cam.target[1]; target[2] = room.cam.target[2]; radius = room.cam.radius; applyCamera(); }
+    rebuildScene();
+    $('roomCredit').textContent = room.credits.length ? 'stamps loaded ✓ (see © credits)' : (n ? `${n} critters hopping the levels` : '');
+    if (room.credits.length) addCredit('room stamps', room.credits); else CREDITS.delete('room stamps');
+    addCredit('renderer', 'splatweb — WebGPU/WebGL2 Gaussian splat rasterizer');
+    if (!thumbDone.has(id)) roomCar.setThumb(id, renderThumb(room.data, room.count, roomCamFor(room)));
+  } catch (e) {
+    $('roomCredit').textContent = 'room failed: ' + (e.message || e);
+    console.error(e);
+  }
+}
+
+// thumbnails: rendered by a small offscreen WebGL splat renderer
+const thumbCanvas = document.createElement('canvas');
+thumbCanvas.style.cssText = 'position:fixed;left:-9999px;top:0;width:140px;height:140px;';
+document.body.appendChild(thumbCanvas);
+let thumbRenderer = null;
+const thumbDone = new Set();
+function renderThumb(splatsF32, count, cam) {
+  if (!thumbRenderer) thumbRenderer = new SplatRenderer(thumbCanvas, { background: [0.08, 0.09, 0.13] });
+  thumbRenderer.setCamera(cam.pos, cam.target, cam.fov || 50 * Math.PI / 180);
+  thumbRenderer.setData(splatsF32, count);
+  thumbRenderer.render();
+  return thumbCanvas.toDataURL('image/png');
+}
+const HEAD_CAM = { pos: [0, 1.66, 0.52], target: [0, 1.6, 0] };
+const roomCamFor = (room) => {
+  const c = room.cam || { target: [0, 0.8, -0.5], radius: 4.2 };
+  return { pos: [c.target[0] + c.radius * 0.6, c.target[1] + c.radius * 0.45, c.target[2] + c.radius * 0.95], target: c.target, fov: 55 * Math.PI / 180 };
+};
+function makeRigThumb(id, av) {
+  if (thumbDone.has(id)) return;
+  thumbDone.add(id);
+  const out = av.toFloat32([0, 0, 0]);
+  const hy = av.heightM * 0.86;
+  avatarCar.setThumb(id, renderThumb(out, av.count, { pos: [0, hy + 0.04, 0.5], target: [0, hy - 0.02, 0] }));
+}
+async function makeThumbs() {
+  for (const opt of AVATAR_OPTIONS) {
+    if (!opt.preset) continue;
+    const av = buildAvatarSplats(null, [0, 0, 0], opt.preset);
+    avatarCar.setThumb(opt.id, renderThumb(av.toFloat32(), av.count, HEAD_CAM));
+    await new Promise(r => requestAnimationFrame(r));
+  }
+  // rigged thumbs: small samplings, one at a time in the background
+  for (const opt of AVATAR_OPTIONS) {
+    if (!opt.model || thumbDone.has(opt.id)) continue;
+    try {
+      const av = await loadRiggedSplats(opt.model.url, { count: 5000, targetHeight: opt.model.targetHeight, yaw: opt.model.yaw });
+      makeRigThumb(opt.id, av);
+    } catch { /* glyph stays */ }
+    await new Promise(r => requestAnimationFrame(r));
+  }
+  // rooms: procedural ones are cheap; stamp rooms prefetch lazily
+  for (const rdef of ROOM_DEFS) {
+    if (thumbDone.has(rdef.id)) continue;
+    try {
+      const room = await loadRoom(rdef.id);
+      thumbDone.add(rdef.id);
+      roomCar.setThumb(rdef.id, renderThumb(room.data, room.count, roomCamFor(room)));
+    } catch { /* offline — glyph stays */ }
+    await new Promise(r => requestAnimationFrame(r));
+  }
+}
+let scanThumbDone = false;
+function makeScanThumb() {
+  if (!scanHead || scanThumbDone) return;
+  scanThumbDone = true;
+  const out = new Float32Array(scanHead.count * FLOATS_PER_SPLAT);
+  buildScanHeadSplats(scanHead, null, [0, 1.45, 0], out, 0);
+  avatarCar.setThumb('facecap', renderThumb(out, scanHead.count, HEAD_CAM));
+}
+
+// ---------------------------------------------------------------- pipeline pieces
+const driver = new PoseDriver();
+driver.setRoam(1.4);
+bindPointerPad($('senderFace'), driver);
+const net = new NetworkSim();
+const buffer = new PoseBuffer();
+const rxScratch = makePose();
+const armDemo = params.has('armdemo');
+
+// controls
+const talkBtn = $('talkBtn');
+const setTalk = on => { driver.setTalking(on); talkBtn.classList.toggle('on', on); };
+talkBtn.addEventListener('pointerdown', e => { e.preventDefault(); setTalk(true); });
+addEventListener('pointerup', () => setTalk(false));
+$('autoChk').addEventListener('change', e => { driver.auto = e.target.checked; if (!driver.auto) driver.setNeutral(); });
+$('mirrorChk').addEventListener('change', e => driver.setMirror(e.target.checked));
+$('roamChk').addEventListener('change', e => driver.setRoam(e.target.checked ? 1.4 : 0));
+
 $('creditsChip').addEventListener('click', () => {
   const pnl = $('creditsPanel');
   pnl.style.display = pnl.style.display === 'none' ? 'block' : 'none';
 });
 addCredit('renderer', 'splatweb — WebGPU/WebGL2 Gaussian splat rasterizer');
 
+// generated speech: text (typed, or streamed in like AI tokens) → TTS +
+// visemes → the avatar's mouth, through the unchanged packet
 const talker = new TextTalker();
-$('sayBtn').addEventListener('click', () => {
-  talker.feed($('sayText').value + ' ');
-  talker.flush();
-});
+$('sayBtn').addEventListener('click', () => { talker.feed($('sayText').value + ' '); talker.flush(); });
 const STREAM_TEXT = 'Imagine this text arriving token by token from a model. ' +
   'Each clause is spoken as soon as it completes; the mouth shapes come from ' +
   'the letters being said. No video is transmitted: just thirty two bytes of ' +
@@ -371,155 +575,28 @@ $('streamBtn').addEventListener('click', () => {
   }, 55);
 });
 
-// avatar carousel — thumbnail tiles rendered by an offscreen splat
-// renderer; keyboard-first: ←/→ (or A/D, W/S) browses, space/enter wears
-const AVATAR_OPTIONS = [
-  ...AVATAR_PRESETS.map(pr => ({ id: pr.id, name: pr.name, preset: pr })),
-  { id: 'facecap', name: '★ Face Cap', preset: null, glyph: '★' },
-];
-function selectAvatar(id) {
-  if (id === 'facecap') {
-    headMode = 'scan';
-    if (!scanHead) {
-      micNote.textContent = 'loading rigged realistic head (three.js CDN)…';
-      loadScanHead().then(h => {
-        scanHead = h;
-        rebuildScene();
-        makeScanThumb();
-        micNote.textContent = `Realistic head live: ${h.count.toLocaleString()} splats, ` +
-          `driven by the same 10 packet channels.`;
-        addCredit('avatar head', FACECAP_CREDIT);
-      }).catch(e => {
-        micNote.textContent = 'realistic head failed to load: ' + (e.message || e);
-        headMode = 'proc';
-        avatarCar.select(appearance.id);
-      });
-    } else rebuildScene();
-    return;
-  }
-  headMode = 'proc';
-  appearance = AVATAR_PRESETS.find(x => x.id === id) || AVATAR_PRESETS[0];
-  rebuildScene();   // splat count changed with the preset
-}
-const avatarCar = makeCarousel($('avatarCar'), AVATAR_OPTIONS, selectAvatar);
-avatarCar.select('hazel');
-
-// room picker — same carousel component, glyphs until thumbs render
-const ROOM_GLYPHS = { proc: '🎨', museum: '🏛', ghost: '🌿' };
-async function selectRoom(id) {
-  const rdef = ROOMS.find(x => x.id === id) || ROOMS[0];
-  if (!rdef.parts) {
-    roomData = { data: room.toFloat32(), count: room.count };
-    $('roomCredit').textContent = '';
-    CREDITS.delete('room stamps');
-    addCredit('renderer', 'splatweb — WebGPU/WebGL2 Gaussian splat rasterizer');
-    rebuildScene();
-    return;
-  }
-  $('roomCredit').textContent = 'loading stamps…';
-  try {
-    const res = await loadDbdbRoom(rdef);
-    roomData = res;
-    rebuildScene();
-    $('roomCredit').textContent = 'stamps loaded ✓ (see © credits)';
-    addCredit('room stamps', res.credits);
-  } catch (e) {
-    $('roomCredit').textContent = 'room failed: ' + (e.message || e);
-  }
-}
-const roomCar = makeCarousel($('roomCar'),
-  ROOMS.map(r => ({ id: r.id, name: r.name.replace(/ \(.*\)/, ''), glyph: ROOM_GLYPHS[r.id] })),
-  selectRoom);
-
-// thumbnails: rendered by a small offscreen WebGL splat renderer
-const thumbCanvas = document.createElement('canvas');
-thumbCanvas.style.cssText = 'position:fixed;left:-9999px;top:0;width:140px;height:140px;';
-document.body.appendChild(thumbCanvas);
-let thumbRenderer = null;
-function renderThumb(splatsF32, count, cam) {
-  if (!thumbRenderer) thumbRenderer = new SplatRenderer(thumbCanvas, { background: [0.08, 0.09, 0.13] });
-  thumbRenderer.setCamera(cam.pos, cam.target, cam.fov || 50 * Math.PI / 180);
-  thumbRenderer.setData(splatsF32, count);
-  thumbRenderer.render();
-  return thumbCanvas.toDataURL('image/png');
-}
-const HEAD_CAM = { pos: [0, 1.66, 0.52], target: [0, 1.6, 0] };
-const ROOM_CAM = { pos: [2.6, 2.4, 4.2], target: [0, 0.8, -0.5], fov: 55 * Math.PI / 180 };
-async function makeThumbs() {
-  for (const opt of AVATAR_OPTIONS) {
-    if (!opt.preset) continue;
-    const av = buildAvatarSplats(null, [0, 0, 0], opt.preset);
-    avatarCar.setThumb(opt.id, renderThumb(av.toFloat32(), av.count, HEAD_CAM));
-    await new Promise(r => requestAnimationFrame(r));
-  }
-  // procedural room thumb, then lazily prefetch the stamp rooms for theirs
-  roomCar.setThumb('proc', renderThumb(room.toFloat32(), room.count, ROOM_CAM));
-  for (const rdef of ROOMS) {
-    if (!rdef.parts) continue;
-    try {
-      const res = await loadDbdbRoom(rdef);
-      roomCar.setThumb(rdef.id, renderThumb(res.data, res.count, ROOM_CAM));
-    } catch { /* offline — glyph stays */ }
-    await new Promise(r => requestAnimationFrame(r));
-  }
-}
-let scanThumbDone = false;
-function makeScanThumb() {
-  if (!scanHead || scanThumbDone) return;
-  scanThumbDone = true;
-  const out = new Float32Array(scanHead.count * FLOATS_PER_SPLAT);
-  buildScanHeadSplats(scanHead, null, [0, 1.45, 0], out, 0);
-  avatarCar.setThumb('facecap', renderThumb(out, scanHead.count, HEAD_CAM));
-}
-makeThumbs();
-
-// pipeline pieces
-const driver = new PoseDriver();
-bindPointerPad($('senderFace'), driver);
-const net = new NetworkSim();
-const buffer = new PoseBuffer();
-const rxScratch = makePose();
-// ?armdemo — synthetic wrist targets wave around so the two-bone IK is
-// visible without a webcam
-const armDemo = new URLSearchParams(location.search).has('armdemo');
-
-// controls
-const talkBtn = $('talkBtn');
-const setTalk = on => { driver.setTalking(on); talkBtn.classList.toggle('on', on); };
-talkBtn.addEventListener('pointerdown', e => { e.preventDefault(); setTalk(true); });
-addEventListener('pointerup', () => setTalk(false));
-$('autoChk').addEventListener('change', e => { driver.auto = e.target.checked; if (!driver.auto) driver.setNeutral(); });
-$('mirrorChk').addEventListener('change', e => driver.setMirror(e.target.checked));
-
 // real speech capture: mic energy → jawOpen
 const voice = new VoiceJaw();
 const micBtn = $('micBtn'), micNote = $('micNote');
 micBtn.addEventListener('click', async () => {
   if (voice.active) {
-    voice.stop();
-    driver.setVoiceLevel(null);
-    micBtn.classList.remove('on');
+    voice.stop(); driver.setVoiceLevel(null); micBtn.classList.remove('on');
     micNote.textContent = 'MIC off — jaw back to simulation.';
     return;
   }
   micNote.textContent = 'asking for microphone…';
   try {
-    await voice.start();
-    micBtn.classList.add('on');
+    await voice.start(); micBtn.classList.add('on');
     micNote.textContent = 'MIC live — speak and the avatar speaks. Audio stays on this page.';
-  } catch {
-    micNote.textContent = 'MIC unavailable: ' + (voice.error || 'unknown error');
-  }
+  } catch { micNote.textContent = 'MIC unavailable: ' + (voice.error || 'unknown error'); }
 });
 
-// real webcam capture: FaceLandmarker → head pose + blendshapes
+// real webcam capture: FaceLandmarker → head pose + blendshapes; PoseLandmarker → arms + torso
 const cam = new FaceCapture();
 const camBtn = $('camBtn');
 camBtn.addEventListener('click', async () => {
   if (cam.active) {
-    cam.stop();
-    driver.setFacePose(null);
-    driver.setArmTargets(null);
+    cam.stop(); driver.setFacePose(null); driver.setArmTargets(null); driver.setTorso(null);
     camBtn.classList.remove('on');
     micNote.textContent = 'CAM off — back to simulated pose.';
     return;
@@ -528,9 +605,7 @@ camBtn.addEventListener('click', async () => {
     await cam.start(msg => { micNote.textContent = msg; });
     camBtn.classList.add('on');
     micNote.textContent = 'CAM live — looking for a face…';
-  } catch {
-    micNote.textContent = 'CAM unavailable: ' + (cam.error || 'unknown error');
-  }
+  } catch { micNote.textContent = 'CAM unavailable: ' + (cam.error || 'unknown error'); }
 });
 
 const wire = (id, unit, apply) => {
@@ -545,14 +620,13 @@ wire('rate', 'Hz', () => {});
 wire('buffer', 'ms', v => { buffer.bufferMs = v; });
 
 // orbit
-let theta = 0.0, phi = 1.4, radius = 1.9;
-const target = [0, 1.5, -1.0];
+let theta = 0.0, phi = 1.35, radius = 3.0;
+const target = [0, 1.1, -1.0];
 function applyCamera() {
-  theta = Math.max(-1.1, Math.min(1.1, theta));
+  theta = Math.max(-1.4, Math.min(1.4, theta));
   phi = Math.max(0.3, Math.min(1.5, phi));
-  radius = Math.max(0.35, Math.min(9, radius));   // 0.35 m ⇒ portrait-close
-  // dolly the aim point up to eye level as the camera closes in
-  const ty = target[1] + Math.max(0, 1.9 - radius) * 0.09;
+  radius = Math.max(0.35, Math.min(12, radius));   // 0.35 m ⇒ portrait-close
+  const ty = target[1] + Math.max(0, 1.9 - radius) * 0.25;
   renderer.setCamera([
     target[0] + radius * Math.sin(theta) * Math.sin(phi),
     ty + radius * Math.cos(phi),
@@ -575,7 +649,7 @@ canvas.addEventListener('wheel', e => { e.preventDefault(); radius *= Math.exp(e
 const senderCtx = $('senderFace').getContext('2d');
 let last = performance.now(), sendAcc = 0, statTimer = 0, extrapEvents = 0, wasExtrap = false;
 
-// ---- debug rig controls (state object declared at boot, above)
+// ---- debug rig controls
 const wireDbg = (id, out, fmt, apply) => {
   const el = $(id);
   const f = () => { $(out).textContent = fmt(+el.value); apply(+el.value); };
@@ -587,18 +661,9 @@ wireDbg('gainBrow', 'gainBrowOut', v => v + ' %', v => { dbg.brow = v / 100; });
 wireDbg('gainSmile', 'gainSmileOut', v => v + ' %', v => { dbg.smile = v / 100; });
 wireDbg('offMouth', 'offMouthOut', v => String(v), v => { dbg.mouth = v / 100 * 0.02; });
 wireDbg('offEyes', 'offEyesOut', v => String(v), v => { dbg.eyes = v / 100 * 0.012; });
-wireDbg('density', 'densityOut', v => v + ' %', v => { dbg.density = v / 100; rebuildScene(); });
-$('showCP').addEventListener('change', e => { dbg.cp = e.target.checked; rebuildScene(); });
+wireDbg('density', 'densityOut', v => v + ' %', v => { dbg.density = v / 100; if (headMode !== 'rig') rebuildScene(); });
+$('showCP').addEventListener('change', e => { dbg.cp = e.target.checked; });
 $('xray').addEventListener('change', e => { dbg.xray = e.target.checked; });
-
-function applyGains(rx) {
-  if (!rx) return rx;
-  const b2 = rx.blend, g = dbg.all;
-  const gc = (i, extra) => { b2[i] = Math.max(0, Math.min(1, b2[i] * g * extra)); };
-  gc(0, dbg.jaw); gc(1, 1); gc(2, 1); gc(3, dbg.brow);
-  gc(4, dbg.smile); gc(5, dbg.smile); gc(6, 1); gc(9, 1);
-  return rx;
-}
 
 // ---- webcam mesh mirror (top-left)
 const camDbgCv = $('camDebug'), camDbgCtx = camDbgCv.getContext('2d');
@@ -618,7 +683,7 @@ function drawCamMirror() {
   if (pl) {
     camDbgCtx.strokeStyle = 'rgba(80,200,255,0.9)';
     camDbgCtx.lineWidth = 2;
-    for (const [a, b2, c] of [[11, 13, 15], [12, 14, 16]]) {
+    for (const [a, b2, c] of [[11, 13, 15], [12, 14, 16], [11, 12, 24], [12, 11, 23]]) {
       camDbgCtx.beginPath();
       camDbgCtx.moveTo(pl[a].x * w, pl[a].y * h);
       camDbgCtx.lineTo(pl[b2].x * w, pl[b2].y * h);
@@ -626,7 +691,7 @@ function drawCamMirror() {
       camDbgCtx.stroke();
     }
     camDbgCtx.fillStyle = '#ffd166';
-    for (const i of [11, 12, 13, 14, 15, 16]) camDbgCtx.fillRect(pl[i].x * w - 2, pl[i].y * h - 2, 4, 4);
+    for (const i of [11, 12, 13, 14, 15, 16, 23, 24]) camDbgCtx.fillRect(pl[i].x * w - 2, pl[i].y * h - 2, 4, 4);
   }
   if (!face && !pl) {
     camDbgCtx.fillStyle = '#5a6070';
@@ -634,6 +699,13 @@ function drawCamMirror() {
     camDbgCtx.fillText('no face / body detected', 38, h / 2);
   }
 }
+
+// ---------------------------------------------------------------- boot
+await selectRoom(params.get('room') || 'proc');
+roomCar.select(roomData.def.id);
+await selectAvatar(params.get('avatar') || 'kyle');
+avatarCar.select(headMode === 'rig' ? (params.get('avatar') || 'kyle') : 'hazel');
+makeThumbs();
 
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000);
@@ -644,20 +716,24 @@ function frame(now) {
   if (cam.active) {
     driver.setFacePose(cam.tick(now));
     driver.setArmTargets(cam.arms);
+    driver.setTorso(cam.torso);
   } else if (armDemo) {
     const tt = now / 1000;
     driver.setArmTargets({
-      l: { t: [-0.22 - 0.08 * Math.sin(tt * 1.7), 0.1 + 0.28 * Math.sin(tt * 2.3), 0.24 + 0.1 * Math.cos(tt * 1.7)], vis: 1 },
-      r: { t: [0.18 + 0.14 * Math.cos(tt * 1.3), -0.05 + 0.4 * Math.abs(Math.sin(tt * 1.3)), 0.26], vis: 1 },
+      l: { t: [0.22 + 0.08 * Math.sin(tt * 1.7), 0.1 + 0.28 * Math.sin(tt * 2.3), 0.24 + 0.1 * Math.cos(tt * 1.7)], vis: 1 },
+      r: { t: [-0.18 - 0.14 * Math.cos(tt * 1.3), -0.05 + 0.4 * Math.abs(Math.sin(tt * 1.3)), 0.26], vis: 1 },
     }, true);   // already avatar-local — skip the capture handedness transform
   }
   driver.setTalkTrack(talker.tick(dt));
   const pose = driver.tick(dt, now);
   sendAcc += dt;
   const interval = 1 / +$('rate').value;
+  let lastBytes = 32;
   while (sendAcc >= interval) {
     sendAcc -= interval;
-    net.send(encodePose(pose), now);   // 32 bytes, or 40 with arm telemetry
+    const pkt = encodePose(pose);   // 32 bytes; 40 with arms; 52 with elbows + torso
+    lastBytes = pkt.byteLength;
+    net.send(pkt, now);
   }
 
   // NETWORK → RECEIVER
@@ -667,8 +743,17 @@ function frame(now) {
   if (buffer.extrapolating && !wasExtrap) extrapEvents++;
   wasExtrap = buffer.extrapolating;
 
+  // critters (local entities: no telemetry) hop the room's levels
+  if (critters.length && roomData) {
+    const env = { floorY: roomData.floorY || 0, gravity: 4.8, weight: 1, jumpMul: 1.35,
+      platforms: roomData.platforms, obstacles: roomData.obstacles, roamBounds: roomData.bounds };
+    for (const c of critters) { c.tick(Math.min(dt, 0.05), critters, env); c.jaw = Math.max(0, c.jaw - dt * 3); }
+    for (let i = 0; i < critters.length; i++) critters[i].build(critterBlock, i * SPLATS_PER_CRITTER * FLOATS_PER_SPLAT);
+    renderer.writeRegion(critterOffset, critterBlock);
+  }
+
   // rebuild the avatar block from the RECEIVED pose only
-  const av = buildAvatarF32(rx, now / 1000);
+  const av = buildAvatarF32(rx, now / 1000, dt);
   if (buffer.frozen) {
     // dead feed → fade to statue, never fake liveness (DESIGN.md §9)
     for (let i = 13; i < av.length; i += FLOATS_PER_SPLAT) av[i] *= 0.45;
@@ -683,13 +768,14 @@ function frame(now) {
     statTimer = 0.25;
     const eff = now - (rx ? rx.tMs : now);
     statsEl.textContent =
-      `${net.kbps(now).toFixed(1)} kbit/s wire · loss ${net.lossActualPct().toFixed(1)}% ` +
+      `${net.kbps(now).toFixed(1)} kbit/s wire (${lastBytes} B pkts) · loss ${net.lossActualPct().toFixed(1)}% ` +
       `(${net.dropped}/${net.sent}) · glass-to-glass ≈ ${rx ? eff.toFixed(0) : '–'} ms · ` +
-      `extrapolation events ${extrapEvents} · ${renderer.backend}`;
+      `extrapolation events ${extrapEvents} · walk ${walk.speed.toFixed(2)} m/s · ${renderer.backend}`;
     if (cam.active) {
       const face = cam.faceSeen ? 'face ✓' : 'no face';
       const arms = cam.pl ? (cam.armsSeen ? 'arms ✓ (IK)' : 'arms off-camera → idle') : 'no skeleton model';
-      micNote.textContent = `CAM live — ${face} · ${arms}. Packet: ${cam.armsSeen ? '40' : '32'} bytes.`;
+      const torso = cam.torso && cam.torso.vis ? ' · torso ✓' : '';
+      micNote.textContent = `CAM live — ${face} · ${arms}${torso}. Packet: ${lastBytes} bytes.`;
     }
     drawCamMirror();
     const badge = $('linkBadge');

@@ -14,18 +14,19 @@
   a.card:hover .panel { border-color: #3a5580; }
   .panel h3 { margin: 0 0 0.3rem; font-size: 1rem; color: #cfe0ff; }
   .num { font-family: ui-monospace, Menlo, monospace; color: #7fb4ff; font-size: 0.8rem; }
+  .tag { font-size: 0.7rem; color: #e0a95a; border: 1px solid #5a4a2a; border-radius: 3px; padding: 0 0.3em; margin-left: 0.4em; }
 </style>
 </head>
 <body>
 <div class="hero">
   <h1>splatweb — presence, not pixels</h1>
-  <p>Instead of streaming video of your room and face, stream a <b>32-byte
-  pose packet</b> at 30&nbsp;Hz plus voice, and let viewers reconstruct you
-  inside a cached, CDN-served Gaussian-splat "room avatar". ~40&nbsp;kbit/s
-  of live traffic instead of ~1,500 — and fan-out to thousands without a
-  video transcode in sight. Design doc: <a href="DESIGN.md">DESIGN.md</a>
-  (original draft: <a href="raw.txt">raw.txt</a>) ·
-  <a href="catalogue.html">borrowing catalogue</a> (capture stacks &amp; open avatars, licences checked).</p>
+  <p>Stream a <b>32-byte pose packet</b> at 30&nbsp;Hz plus voice, instead
+  of video, and let viewers reconstruct you inside a cached Gaussian-splat
+  room. ~40&nbsp;kbit/s instead of ~1,500 — and fan-out to thousands with no
+  transcode. <a href="DESIGN.md">DESIGN.md</a> has the full design
+  (<a href="raw.txt">original draft</a>); <a href="catalogue.html">the
+  catalogue</a> lists every borrowed model and capture stack with its
+  licence checked.</p>
 </div>
 <main>
   <div class="row">
@@ -33,57 +34,72 @@
       <div class="panel">
         <div class="num">DEMO 1</div>
         <h3>The 32-byte packet</h3>
-        <p class="note">Live hex view of the wire format. Drive a face,
-        watch it encode, decode it into a second face, read the
-        quantization error and the bandwidth-vs-video meter. Includes the
-        Tier-3 Canvas-2D renderer.</p>
+        <p class="note">Live hex view of the wire format: drive a face,
+        watch it encode and decode, read the quantization error and the
+        bandwidth-vs-video meter.</p>
       </div>
     </a>
     <a class="card" href="demo-splat-room.html" style="flex:1 1 300px">
       <div class="panel">
         <div class="num">DEMO 2</div>
         <h3>The room avatar</h3>
-        <p class="note">A ~3,000-splat procedural room rendered by a
-        dependency-free WebGL2 Gaussian-splat rasterizer (Tier 1). Orbit,
-        zoom, and try the in-shader stylise slider.</p>
+        <p class="note">A procedural room rendered by the dependency-free
+        WebGL2 Gaussian-splat rasterizer. Orbit, zoom, try the stylise
+        slider.</p>
       </div>
     </a>
     <a class="card" href="demo-stage.html" style="flex:1 1 300px">
       <div class="panel">
         <div class="num">DEMO 3</div>
         <h3>The stage — full pipeline</h3>
-        <p class="note">Pose → packet → simulated lossy network (latency /
-        jitter / loss sliders) → jitter buffer with interpolation and
-        capped dead-reckoning → splat room + splat avatar. Real capture:
-        🎤 MIC (speech energy → jaw) and 📷 CAM (MediaPipe face tracking →
-        pose + expressions). Crank the loss and watch presence survive.</p>
+        <p class="note">Pose → packet → simulated lossy network → jitter
+        buffer → splat room + rigged splat avatar. Thirteen rooms. Real
+        capture via 🎤 MIC and 📷 CAM. Crank the loss and watch presence
+        survive.</p>
       </div>
     </a>
     <a class="card" href="demo-gallery.html" style="flex:1 1 300px">
       <div class="panel">
         <div class="num">DEMO 4</div>
         <h3>Borrowed models, splat-ified</h3>
-        <p class="note">Vendored open models (Lee Perry-Smith head scan
-        CC BY, 100Avatars CC BY) converted to Gaussian splats in the
-        browser at load time — triangles area-sampled, textures read per
-        point, rendered by the same splat renderer.</p>
+        <p class="note">Open models (a CC BY head scan, the CC BY
+        100Avatars roster) converted to Gaussian splats in-browser at
+        load time.</p>
       </div>
     </a>
     <a class="card" href="demo-critters.html" style="flex:1 1 300px">
       <div class="panel">
         <div class="num">DEMO 5</div>
         <h3>Critter room</h3>
-        <p class="note">Jelly critters hopping around a room built from
-        licence-proven dbdb splat stamps — squash-and-stretch physics,
-        per-critter voices (toggleable), every critter a splat entity on
-        the shared renderer. The group-scene seed.</p>
+        <p class="note">Jelly critters with squash-and-stretch physics and
+        per-critter voices, hopping around a room built from licence-proven
+        splat stamps.</p>
+      </div>
+    </a>
+    <a class="card" href="demo-rigs.html" style="flex:1 1 300px">
+      <div class="panel">
+        <div class="num">DEMO 6</div>
+        <h3>Rig lab — skinned splat avatars</h3>
+        <p class="note">The VRM roster as live splat rigs: CPU skinning +
+        expression morphs, stored clips, two-bone arm IK, skeleton control
+        points. Where the avatar look gets decided.</p>
+      </div>
+    </a>
+    <a class="card" href="demo-lam-test.html" style="flex:1 1 300px">
+      <div class="panel">
+        <div class="num">DEMO 7 <span class="tag">experimental</span></div>
+        <h3>LAM Gaussian head avatar</h3>
+        <p class="note">A real trained head — genuine per-splat rotation,
+        scale and colour instead of area-sampled fake splats — skinned and
+        driven by 51 ARKit expression morphs. Local test page: console-only
+        controls, no UI yet, front-facing only (no back-of-head data).</p>
       </div>
     </a>
   </div>
   <p class="note" style="margin-top:1rem">Honesty box: capture and network
-  are simulated in-page; the room is procedural, not a scan; no XMPP yet.
-  What is real: the wire format, the receiver model, and the splat
-  renderer. See DESIGN.md §6.</p>
+  are simulated in-page; most rooms are procedural, not scans; no XMPP yet.
+  Real: the wire format, the receiver model, the splat renderer, and (new)
+  the LAM avatar's splat data. See DESIGN.md §6.</p>
 </main>
 </body>
 </html>
