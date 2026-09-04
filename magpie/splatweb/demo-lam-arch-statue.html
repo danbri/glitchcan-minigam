@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAM statue-bust treatment (prototype, throwaway)</title>
+<style>html,body{margin:0;height:100%;background:#0a0a0c;color:#d8dae2;font:13px monospace}
+#gl{width:100%;height:100vh;display:block;touch-action:none}
+.hud{position:fixed;top:10px;left:10px;background:rgba(10,13,20,.82);border:1px solid #3a5580;border-radius:8px;padding:0.6rem 0.8rem;max-width:min(300px,88vw);max-height:94vh;overflow:auto;transition:transform .25s ease;z-index:10}
+.hud.collapsed{transform:translateX(-120%)}
+#hudToggle{position:fixed;top:10px;left:10px;z-index:20;width:2.2rem;height:2.2rem;line-height:2.2rem;text-align:center;padding:0}
+.hud select{width:100%;margin-top:0.2rem}
+.hud label{display:block;margin-top:0.5rem;font-size:12px;color:#9fb3d8}
+button{background:#22304a;color:#cfe0ff;border:1px solid #3a5580;border-radius:6px;padding:0.3rem 0.5rem;cursor:pointer;margin:2px 2px 0 0}
+#stats{position:fixed;bottom:10px;left:10px;background:rgba(10,13,20,.8);border:1px solid #3a5580;border-radius:8px;padding:0.4rem 0.7rem;max-width:90vw}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<button id="hudToggle">☰</button>
+<div class="hud">
+  <b>statue-bust treatment — prototype</b><br>
+  <small>drag to orbit (clamped), wheel to zoom</small>
+  <label>face <span id="faceLabel"></span></label>
+  <div><button id="facePrev">◀ face</button><button id="faceNext">face ▶</button></div>
+  <label>material
+    <select id="material">
+      <option value="marble">white marble</option>
+      <option value="bronze">weathered bronze</option>
+    </select>
+  </label>
+  <div style="margin-top:0.5rem">
+    <button id="front">front</button><button id="wideside">wide side</button>
+  </div>
+</div>
+<div id="stats">loading…</div>
+<script type="module">
+import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js?v=arch1';
+import { createSplatRenderer } from './lib/splat-renderer-auto.js?v=arch1';
+import { loadLamAvatar } from './lib/lam-splats.js?v=arch1';
+import { qMul, qNormalize } from './lib/pose-math.js?v=arch1';
+import { FACES, resolveFace } from './lib/lam-face-roster.js?v=arch1';
+
+const $ = (id) => document.getElementById(id);
+const canvas = $('gl'), statsEl = $('stats');
+canvas.width = canvas.clientWidth * devicePixelRatio;
+canvas.height = canvas.clientHeight * devicePixelRatio;
+const renderer = await createSplatRenderer(canvas, { background: [0.04, 0.04, 0.045] });
+
+// mobile: controls default to a collapsed slide-out drawer so the 3D view
+// is what's visible, not a panel eating most of a phone screen.
+const hud = document.querySelector('.hud');
+if (window.innerWidth < 640) hud.classList.add('collapsed');
+$('hudToggle').onclick = () => hud.classList.toggle('collapsed');
+
+const params = new URLSearchParams(location.search);
+let faceIdx = Math.max(0, FACES.findIndex((f) => f.id === params.get('face')));
+if (faceIdx < 0) faceIdx = FACES.findIndex((f) => f.id === 'tpdne-02');
+function currentFaceId() { return FACES[faceIdx].id; }
+function updateFaceLabel() { $('faceLabel').textContent = `${FACES[faceIdx].label} (${faceIdx+1}/${FACES.length})`; }
+updateFaceLabel();
+$('material').value = params.get('material') || 'marble';
+
+const THETA_FRONT = Math.PI, THETA_CLAMP = 1.15;
+let theta = THETA_FRONT, phi = 1.3, radius = 1.0, targetY = 0.15;
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function applyCamera() {
+  renderer.setCamera([
+    radius * Math.sin(theta) * Math.sin(phi),
+    targetY + radius * Math.cos(phi),
+    radius * Math.cos(theta) * Math.sin(phi),
+  ], [0, targetY, 0]);
+}
+let drag = null;
+canvas.addEventListener('pointerdown', (e) => { drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  theta = clamp(theta - (e.clientX - drag[0]) * 0.006, THETA_FRONT - THETA_CLAMP, THETA_FRONT + THETA_CLAMP);
+  phi = clamp(phi - (e.clientY - drag[1]) * 0.006, 0.7, 2.2);
+  drag = [e.clientX, e.clientY]; applyCamera();
+});
+canvas.addEventListener('pointerup', () => { drag = null; });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); radius = clamp(radius * Math.exp(e.deltaY * 0.001), 0.3, 3); applyCamera(); }, { passive: false });
+
+function idlePose(t) {
+  const yaw = Math.sin(t / 6) * 0.05, pitch = Math.sin(t / 8 + 1) * 0.02;
+  const qYaw = [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)];
+  const qPitch = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
+  return { at: [0, 0, 0], bones: { head: qNormalize(qMul(qYaw, qPitch)) }, morph: {} };
+}
+
+function fibonacciSphere(n) {
+  const pts = []; const golden = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < n; i++) {
+    const yFrac = 1 - (i / Math.max(1, n - 1)) * 2;
+    const r = Math.sqrt(Math.max(0, 1 - yFrac * yFrac)); const th = golden * i;
+    pts.push([Math.cos(th) * r, yFrac, Math.sin(th) * r]);
+  }
+  return pts;
+}
+function pushSplat(arr, o, x, y, z, r, g, b, a, s) {
+  arr[o]=x; arr[o+1]=y; arr[o+2]=z; arr[o+3]=0; arr[o+4]=0; arr[o+5]=0; arr[o+6]=1;
+  arr[o+7]=s; arr[o+8]=s; arr[o+9]=s; arr[o+10]=r; arr[o+11]=g; arr[o+12]=b; arr[o+13]=a;
+  return o + FLOATS_PER_SPLAT;
+}
+
+// Bust plinth + shoulders-cap dome, colour driven by material choice. Same
+// occlusion-dome technique as demo-lam-jar.html (hides LAM's hollow/near-
+// zero-thickness back, which has no real fix) but recoloured/desaturated to
+// read as the SAME material as the recoloured face, not bare-metal sci-fi.
+// NOTE: the first version of this used only `shade` (a smooth function of
+// height alone) as the sole input to a high-frequency sin() for veining —
+// every point at the same height got the same vein value, so it rendered as
+// clean horizontal latitude STRIPES, not marble veining. Fixed by mixing in
+// wx/wz at incommensurate frequencies so no two axes agree, breaking the
+// banding into something that actually reads as irregular veining.
+function materialColor(kind, shade, wx = 0, wz = 0) {
+  if (kind === 'bronze') {
+    // weathered bronze: warm dark base + pale-green patina streaks, patchy
+    // (position-driven, not a pure height gradient) so it reads as
+    // irregular oxidation, not a dip-dyed gradient.
+    const base = [0.32, 0.22, 0.12];
+    const patina = [0.25, 0.45, 0.35];
+    const patch = 0.5 + 0.5 * Math.sin(wx * 37.1 + wz * 29.7 + shade * 11.3);
+    const t = clamp((shade - 0.45) * 1.8, 0, 1) * (0.3 + 0.5 * patch);
+    return [base[0] + (patina[0]-base[0])*t, base[1] + (patina[1]-base[1])*t, base[2] + (patina[2]-base[2])*t].map((v)=>v*(0.75+0.35*shade));
+  }
+  // marble: near-white with faint cool veining, irregular in all 3 axes
+  const vein = 0.5 + 0.5 * Math.sin(wx * 41.3 + wz * 53.7 + shade * 19.1)
+                    * Math.cos(wx * 17.9 - wz * 23.1 + shade * 8.3);
+  const v = vein > 0.86 ? 0.66 : 0.93;
+  return [v*0.98, v, v*1.03].map((x)=>x*(0.85+0.2*shade));
+}
+
+function buildBust(bounds, material) {
+  const { mnx, mxx, mny, mxy, mnz, mxz } = bounds;
+  const cx = (mnx + mxx) / 2, cz = (mnz + mxz) / 2;
+  const topY = mxy, botY = mny;
+  const headW = mxx - mnx, headH = topY - botY;
+  const headR = Math.max(headW, headH) * 0.5 * 1.15;
+  const midY = (topY + botY) / 2;
+  const depthPush = headR * 0.55;
+  const domeCx = cx, domeCy = midY, domeCz = cz + depthPush, domeR = headR * 1.15;
+  const faceFrontZ = mnz;
+
+  const MAX = 9000 + 3000 + 1200;
+  const out = new Float32Array(MAX * FLOATS_PER_SPLAT);
+  let o = 0;
+
+  const domePts = fibonacciSphere(8500);
+  for (const [px, py, pz] of domePts) {
+    const wx = domeCx + px*domeR, wy = domeCy + py*domeR*1.05, wz = domeCz + pz*domeR*0.85;
+    if (wz < faceFrontZ + 0.012) continue;
+    const shade = 0.6 + 0.35 * py;
+    const [r,g,b] = materialColor(material, shade, wx, wz);
+    o = pushSplat(out, o, wx, wy, wz, r, g, b, 1, 0.0125);
+  }
+
+  // shoulders/plinth: a stone/bronze bust base widening below the neck
+  const baseTopY = botY, baseBotY = botY - headR * 2.0;
+  const topR = headW * 0.62, botR = headW * 1.15;
+  const rings = 3000;
+  for (let i = 0; i < rings; i++) {
+    const t = i / rings;
+    const y = baseTopY + (baseBotY - baseTopY) * t;
+    const rr = topR + (botR - topR) * t * t;
+    const a = i * 2.399963;
+    const wx = cx + Math.cos(a) * rr, wz = cz + Math.sin(a) * rr;
+    const shade = 0.5 + 0.3 * (1 - t);
+    const [r,g,b] = materialColor(material, shade, wx, wz);
+    o = pushSplat(out, o, wx, y, wz, r, g, b, 1, 0.02 + 0.01*t);
+  }
+  // flat plinth top disc (seals the shoulders opening)
+  const capN = 1000;
+  for (let i = 0; i < capN; i++) {
+    const rr = topR * Math.sqrt((i+0.5)/capN);
+    const a = i * 2.399963;
+    const wx = cx + Math.cos(a)*rr, wz = cz + Math.sin(a)*rr;
+    const [r,g,b] = materialColor(material, 0.55, wx, wz);
+    o = pushSplat(out, o, wx, baseTopY - 0.01, wz, r, g, b, 1, 0.018);
+  }
+
+  return { data: out.subarray(0, o), count: o / FLOATS_PER_SPLAT, headR, midY, domeR };
+}
+
+// recolour the LAM face splats themselves toward the chosen material
+// (desaturate + tint), keeping their real geometry/detail so the likeness
+// still reads — this is the actual "statue" read, not just a coloured cap.
+function tintFaceInPlace(buf, n, material) {
+  for (let i = 0; i < n; i++) {
+    const o = i * FLOATS_PER_SPLAT;
+    const r = buf[o+10], g = buf[o+11], b = buf[o+12];
+    const lum = 0.3*r + 0.59*g + 0.11*b;
+    if (material === 'bronze') {
+      buf[o+10] = lum*0.55 + 0.10; buf[o+11] = lum*0.42 + 0.06; buf[o+12] = lum*0.22 + 0.02;
+    } else {
+      const cool = lum*0.9 + 0.06;
+      buf[o+10] = cool; buf[o+11] = cool*1.01; buf[o+12] = cool*1.05;
+    }
+  }
+}
+
+let avatar = null, lamBuf = null, lamBufTinted = null, lamN = 0;
+async function loadFace(id, material) {
+  statsEl.textContent = `loading ${id}…`;
+  const { base, meshBase } = resolveFace(id);
+  avatar = await loadLamAvatar(base, { meshBase, yaw: Math.PI });
+  lamBuf = new Float32Array(avatar.count * FLOATS_PER_SPLAT);
+  avatar.pose({ at: [0,0,0], bones: {}, morph: {} }, lamBuf, 0);
+  const n = avatar.lastCount; lamN = n;
+  let mnx=Infinity,mxx=-Infinity,mny=Infinity,mxy=-Infinity,mnz=Infinity,mxz=-Infinity;
+  for (let i=0;i<n;i++){const o=i*FLOATS_PER_SPLAT;const x=lamBuf[o],y=lamBuf[o+1],z=lamBuf[o+2];
+    if(x<mnx)mnx=x; if(x>mxx)mxx=x; if(y<mny)mny=y; if(y>mxy)mxy=y; if(z<mnz)mnz=z; if(z>mxz)mxz=z;}
+  const bust = buildBust({mnx,mxx,mny,mxy,mnz,mxz}, material);
+
+  lamBufTinted = lamBuf.slice();
+  tintFaceInPlace(lamBufTinted, n, material);
+
+  const combined = new Float32Array((n + bust.count) * FLOATS_PER_SPLAT);
+  combined.set(lamBufTinted.subarray(0, n*FLOATS_PER_SPLAT), 0);
+  combined.set(bust.data, n*FLOATS_PER_SPLAT);
+  renderer.setData(combined, n + bust.count);
+
+  targetY = bust.midY;
+  const aspect = canvas.clientWidth / canvas.clientHeight;
+  radius = bust.domeR * 2.1 * (aspect < 1 ? 1 / aspect : 1); // portrait: pull back
+  applyCamera();
+  statsEl.textContent = `face ${n.toLocaleString()} + bust ${bust.count.toLocaleString()} = ${(n+bust.count).toLocaleString()} splats · ${material} · ${renderer.backend}`;
+  window.__lamLoaded = true;
+}
+$('material').addEventListener('change', () => loadFace(currentFaceId(), $('material').value));
+$('facePrev').onclick = () => { faceIdx = (faceIdx - 1 + FACES.length) % FACES.length; updateFaceLabel(); loadFace(currentFaceId(), $('material').value); };
+$('faceNext').onclick = () => { faceIdx = (faceIdx + 1) % FACES.length; updateFaceLabel(); loadFace(currentFaceId(), $('material').value); };
+$('front').onclick = () => { theta = THETA_FRONT; phi = 1.3; applyCamera(); };
+$('wideside').onclick = () => { theta = THETA_FRONT - THETA_CLAMP; phi = 1.3; applyCamera(); };
+
+await loadFace(currentFaceId(), $('material').value);
+
+(function frame(t){
+  if (avatar) {
+    const pose = idlePose(t/1000);
+    avatar.pose(pose, lamBuf, 0);
+    const n = avatar.lastCount;
+    const tinted = lamBuf.slice(0, n*FLOATS_PER_SPLAT);
+    tintFaceInPlace(tinted, n, $('material').value);
+    renderer.writeRegion(0, tinted);
+  }
+  renderer.render();
+  requestAnimationFrame(frame);
+})(performance.now());
+</script>
+</body>
+</html>

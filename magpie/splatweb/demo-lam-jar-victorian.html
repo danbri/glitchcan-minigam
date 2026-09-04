@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAM head in a Victorian bell jar (prototype, throwaway)</title>
+<style>
+html,body{margin:0;height:100%;background:#0a0806;color:#e8d9b0;font:13px monospace}
+#stage{position:relative;width:100%;height:100vh;touch-action:none;overflow:hidden}
+#gl,#glass{position:absolute;inset:0;width:100%;height:100%;display:block}
+#glass{pointer-events:none}
+.hud{position:fixed;top:10px;left:10px;background:rgba(18,14,8,.88);border:1px solid #5a4a30;border-radius:8px;padding:2.7rem 0.8rem 0.6rem;max-width:min(300px,88vw);max-height:94vh;overflow:auto;transition:transform .25s ease;z-index:10}
+.hud.collapsed{transform:translateX(-120%)}
+#hudToggle{position:fixed;top:10px;left:10px;z-index:20;width:2.2rem;height:2.2rem;line-height:2.2rem;text-align:center;padding:0}
+.hud select{width:100%;margin-top:0.2rem}
+.hud label{display:block;margin-top:0.5rem;font-size:11px;color:#c8b98a}
+.hud input[type=range]{width:100%;vertical-align:middle}
+.hud span.v{float:right;color:#8fa8c8}
+#stats{position:fixed;bottom:10px;left:10px;background:rgba(18,14,8,.85);border:1px solid #5a4a30;border-radius:8px;padding:0.4rem 0.7rem;max-width:90vw}
+button{background:#3a2f1c;color:#e8d9b0;border:1px solid #5a4a30;border-radius:6px;padding:0.3rem 0.5rem;cursor:pointer;margin:2px 2px 0 0}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="gl"></canvas>
+  <canvas id="glass"></canvas>
+</div>
+<button id="hudToggle">☰</button>
+<div class="hud">
+  <b>head in a Victorian bell jar — prototype</b><br>
+  <small>drag to orbit (clamped), wheel to zoom</small>
+  <label>face
+    <select id="face">
+      <option value="boy1">boy1</option>
+      <option value="man2">man2</option>
+      <option value="woman1" selected>woman1</option>
+      <option value="lightbrownhairwoman">lightbrownhairwoman</option>
+    </select>
+  </label>
+  <div style="margin-top:0.5rem">
+    <button id="front">front</button><button id="wideside">wide side</button><button id="talk">talk burst</button>
+  </div>
+  <label>jar scale <span class="v" id="jarScaleV"></span><input id="jarScale" type="range" min="0.85" max="2.0" step="0.01" value="1.25"></label>
+  <label>jar height offset <span class="v" id="jarYV"></span><input id="jarY" type="range" min="-0.25" max="0.25" step="0.005" value="0"></label>
+  <label>sway amplitude <span class="v" id="swayAmpV"></span><input id="swayAmp" type="range" min="0" max="2" step="0.01" value="1"></label>
+  <label>sway speed <span class="v" id="swaySpeedV"></span><input id="swaySpeed" type="range" min="0.1" max="3" step="0.01" value="1"></label>
+  <label>blink interval s <span class="v" id="blinkRateV"></span><input id="blinkRate" type="range" min="1" max="8" step="0.1" value="3.4"></label>
+  <label>manual jaw open <span class="v" id="jawV"></span><input id="jawManual" type="range" min="0" max="1" step="0.01" value="0"></label>
+</div>
+<div id="stats">loading…</div>
+<script type="importmap">
+{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { createSplatRenderer } from './lib/splat-renderer-auto.js';
+import { loadLamAvatar } from './lib/lam-splats.js';
+import { qMul, qNormalize } from './lib/pose-math.js';
+
+const $ = (id) => document.getElementById(id);
+
+// mobile fix: the controls panel was eating ~90% of a phone screen — now a
+// slide-out drawer, collapsed by default under 640px so the 3D view is what
+// you actually see first.
+const hud = document.querySelector('.hud');
+if (window.innerWidth < 640) hud.classList.add('collapsed');
+$('hudToggle').onclick = () => hud.classList.toggle('collapsed');
+
+const glCanvas = $('gl'), glassCanvas = $('glass'), statsEl = $('stats');
+glCanvas.width = glCanvas.clientWidth * devicePixelRatio;
+glCanvas.height = glCanvas.clientHeight * devicePixelRatio;
+const renderer = await createSplatRenderer(glCanvas, { background: [0.03, 0.025, 0.02] });
+window.__renderer = renderer;
+
+// --- shared camera state, drives BOTH the splat renderer and the three.js
+// overlay every frame from the same spherical formula, so their
+// perspectives line up pixel-for-pixel (needed for the screen-space
+// "refraction" trick below, which samples the splat canvas's own pixels).
+const FOVY = 50 * Math.PI / 180;
+const THETA_FRONT = Math.PI;
+const THETA_CLAMP = 1.15; // ~66 degrees either side of front — same reason
+// as demo-lam-jar.html: the raw LAM head has zero real geometry behind the
+// photo-visible front, so the camera is never allowed to reach an angle
+// that would expose it unobstructed. Opaque dome/collar are the real fix;
+// this is belt-and-braces.
+let theta = THETA_FRONT, phi = 1.3, radius = 1.0, targetY = 0.15;
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function camPos() {
+  return [
+    radius * Math.sin(theta) * Math.sin(phi),
+    targetY + radius * Math.cos(phi),
+    radius * Math.cos(theta) * Math.sin(phi),
+  ];
+}
+function applyCamera() { renderer.setCamera(camPos(), [0, targetY, 0], FOVY); }
+window.__setCam = (t, p, r, y) => { theta = t; phi = p; radius = r; if (y != null) targetY = y; applyCamera(); };
+let drag = null;
+$('stage').addEventListener('pointerdown', (e) => { drag = [e.clientX, e.clientY]; $('stage').setPointerCapture(e.pointerId); });
+$('stage').addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  theta = clamp(theta - (e.clientX - drag[0]) * 0.006, THETA_FRONT - THETA_CLAMP, THETA_FRONT + THETA_CLAMP);
+  phi = clamp(phi - (e.clientY - drag[1]) * 0.006, 0.7, 2.2);
+  drag = [e.clientX, e.clientY]; applyCamera();
+});
+$('stage').addEventListener('pointerup', () => { drag = null; });
+$('stage').addEventListener('wheel', (e) => { e.preventDefault(); radius = clamp(radius * Math.exp(e.deltaY * 0.001), 0.35, 3); applyCamera(); }, { passive: false });
+
+// --- idle rig demo, now with live slider controls (owner asked for more
+// than the original 3-button set): sway amplitude/speed, blink interval,
+// and a manual jaw-open slider that adds on top of the idle talk cycle.
+let talkBurstUntil = 0;
+let swayAmp = 1, swaySpeed = 1, blinkInterval = 3.4, manualJaw = 0;
+function idlePose(t) {
+  const bi = Math.max(0.3, blinkInterval);
+  const blinkPhase = (t % bi) / bi;
+  const blink = blinkPhase < 0.06 ? Math.sin((blinkPhase / 0.06) * Math.PI) : 0;
+  const st = t * swaySpeed;
+  const yaw = Math.sin(st / 5.3) * 0.12 * swayAmp;
+  const pitch = Math.sin(st / 7.1 + 1) * 0.05 * swayAmp;
+  const qYaw = [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)];
+  const qPitch = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
+  const headQ = qNormalize(qMul(qYaw, qPitch));
+  let talk = Math.max(0, Math.sin(t * 1.7)) * 0.18;
+  if (t < talkBurstUntil) talk = Math.max(0, Math.sin(t * 9)) * 0.55;
+  const jawOpen = Math.min(1, talk + manualJaw);
+  return { at: [0, 0, 0], bones: { head: headQ }, morph: { eyeBlinkLeft: blink, eyeBlinkRight: blink, jawOpen } };
+}
+window.__talkBurst = () => { talkBurstUntil = performance.now() / 1000 + 2.5; };
+$('talk').onclick = window.__talkBurst;
+
+function bindSlider(id, valId, fmt, apply) {
+  const el = $(id), v = $(valId);
+  const upd = () => { v.textContent = fmt(+el.value); apply(+el.value); };
+  el.addEventListener('input', upd); upd();
+}
+bindSlider('swayAmp', 'swayAmpV', (x) => x.toFixed(2), (x) => swayAmp = x);
+bindSlider('swaySpeed', 'swaySpeedV', (x) => x.toFixed(2), (x) => swaySpeed = x);
+bindSlider('blinkRate', 'blinkRateV', (x) => x.toFixed(1) + 's', (x) => blinkInterval = x);
+bindSlider('jawManual', 'jawV', (x) => x.toFixed(2), (x) => manualJaw = x);
+
+// --- occluder splats: brain-case dome (hides the hollow back of the LAM
+// head) + a slim brass collar sealing the neck seam. No sci-fi tubes here
+// (owner: a Victorian jar reads wrong with visible life-support hardware) —
+// the "something to hide the cut-off" job is now shared with the wood
+// plinth built in three.js below.
+function fibonacciSphere(n) {
+  const pts = [];
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < n; i++) {
+    const yFrac = 1 - (i / Math.max(1, n - 1)) * 2;
+    const r = Math.sqrt(Math.max(0, 1 - yFrac * yFrac));
+    const th = golden * i;
+    pts.push([Math.cos(th) * r, yFrac, Math.sin(th) * r]);
+  }
+  return pts;
+}
+function pushSplat(arr, o, x, y, z, r, g, b, a, s) {
+  arr[o] = x; arr[o + 1] = y; arr[o + 2] = z;
+  arr[o + 3] = 0; arr[o + 4] = 0; arr[o + 5] = 0; arr[o + 6] = 1;
+  arr[o + 7] = s; arr[o + 8] = s; arr[o + 9] = s;
+  arr[o + 10] = r; arr[o + 11] = g; arr[o + 12] = b; arr[o + 13] = a;
+  return o + FLOATS_PER_SPLAT;
+}
+function buildOccluders(bounds) {
+  const { mnx, mxx, mny, mxy, mnz, mxz } = bounds;
+  const cx = (mnx + mxx) / 2, cz = (mnz + mxz) / 2;
+  const topY = mxy, botY = mny;
+  const headW = mxx - mnx, headH = topY - botY;
+  const headR = Math.max(headW, headH) * 0.5 * 1.15;
+  const midY = (topY + botY) / 2;
+  const depthPush = headR * 0.55;
+  const domeCx = cx, domeCy = midY, domeCz = cz + depthPush, domeR = headR * 1.2;
+  const faceFrontZ = mnz;
+
+  const MAX = 9500 + 260;
+  const out = new Float32Array(MAX * FLOATS_PER_SPLAT);
+  let o = 0;
+
+  // aged-ivory dome, not brushed metal — sits behind the face, warm bone
+  // tone rather than sci-fi grey so it reads as "specimen mount", not hardware.
+  const domePts = fibonacciSphere(9000);
+  for (const [px, py, pz] of domePts) {
+    const wx = domeCx + px * domeR, wy = domeCy + py * domeR * 1.05, wz = domeCz + pz * domeR * 0.85;
+    if (wz < faceFrontZ + 0.012) continue;
+    const shade = 0.75 + 0.18 * py;
+    o = pushSplat(out, o, wx, wy, wz, 0.62 * shade, 0.56 * shade, 0.46 * shade, 1, 0.0125);
+  }
+
+  // slim brass collar band at the neck seam
+  const collarR = headW * 0.58;
+  for (const dy of [-0.012, 0, 0.012]) {
+    const n = 46;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const wx = cx + Math.cos(a) * collarR, wz = cz + Math.sin(a) * collarR;
+      o = pushSplat(out, o, wx, botY + dy, wz, 0.72, 0.58, 0.28, 1, 0.012);
+    }
+  }
+  const capN = 220;
+  for (let i = 0; i < capN; i++) {
+    const rr = collarR * Math.sqrt((i + 0.5) / capN);
+    const a = i * 2.399963;
+    const wx = cx + Math.cos(a) * rr, wz = cz + Math.sin(a) * rr;
+    o = pushSplat(out, o, wx, botY - 0.02, wz, 0.10, 0.08, 0.06, 1, 0.014);
+  }
+
+  return { data: out.subarray(0, o), count: o / FLOATS_PER_SPLAT, headR, midY, cx, cz, botY, domeR, domeCz, headW };
+}
+
+// --- three.js overlay: real glass shading via a fresnel rim + a
+// screen-space "refraction" that samples the ACTUAL just-rendered splat
+// frame (the head) through a texture, offset by the fresnel/normal term —
+// not a true multi-pass transmission (no shared depth buffer between the
+// two renderers to do that properly), but a legitimate real-time glass
+// approximation and a world away from a translucent point-cloud blob.
+const threeRenderer = new THREE.WebGLRenderer({ canvas: glassCanvas, alpha: true, antialias: true });
+threeRenderer.setClearColor(0x000000, 0);
+const scene = new THREE.Scene();
+scene.add(new THREE.AmbientLight(0xfff2df, 0.55));
+const keyLight = new THREE.DirectionalLight(0xfff4e0, 1.3);
+keyLight.position.set(1.4, 2.2, 1.8);
+scene.add(keyLight);
+const fillLight = new THREE.DirectionalLight(0xcfe0ff, 0.35);
+fillLight.position.set(-1.6, 0.6, -1.0);
+scene.add(fillLight);
+const camera3 = new THREE.PerspectiveCamera(FOVY * 180 / Math.PI, 1, 0.05, 100);
+
+const bgTex = new THREE.CanvasTexture(glCanvas);
+bgTex.flipY = false;
+bgTex.minFilter = THREE.LinearFilter;
+bgTex.magFilter = THREE.LinearFilter;
+
+const glassUniforms = {
+  uBgTex: { value: bgTex },
+  uResolution: { value: new THREE.Vector2(1, 1) },
+  uTint: { value: new THREE.Color(0x8fae96) }, // faint aged-glass green
+};
+const glassMaterial = new THREE.ShaderMaterial({
+  uniforms: glassUniforms,
+  transparent: true,
+  side: THREE.FrontSide,
+  depthWrite: false,
+  vertexShader: `
+    varying vec3 vNormalV;
+    varying vec3 vViewDir;
+    void main() {
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      vNormalV = normalize(normalMatrix * normal);
+      vViewDir = normalize(-mv.xyz);
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `
+    uniform sampler2D uBgTex;
+    uniform vec2 uResolution;
+    uniform vec3 uTint;
+    varying vec3 vNormalV;
+    varying vec3 vViewDir;
+    void main() {
+      vec3 N = normalize(vNormalV);
+      vec3 V = normalize(vViewDir);
+      float ndotv = clamp(dot(N, V), 0.0, 1.0);
+      // Schlick fresnel: near-invisible face-on, bright silvery rim at grazing angle
+      float fresnel = pow(1.0 - ndotv, 3.2);
+      vec2 screenUv = gl_FragCoord.xy / uResolution;
+      vec2 refractOffset = N.xy * (0.028 + 0.05 * fresnel);
+      vec2 sampleUv = clamp(screenUv - refractOffset, 0.001, 0.999);
+      vec3 seen = texture2D(uBgTex, sampleUv).rgb;
+      vec3 glassColor = mix(seen, uTint, 0.10);
+      float specular = pow(max(0.0, dot(reflect(-V, N), normalize(vec3(0.4, 0.7, 0.6)))), 40.0);
+      vec3 rimColor = mix(uTint * 1.3, vec3(1.0), 0.6);
+      vec3 color = mix(glassColor, rimColor, fresnel * 0.85) + specular * 0.9;
+      float alpha = mix(0.16, 0.85, fresnel);
+      gl_FragColor = vec4(color, alpha);
+    }`,
+});
+
+const woodCanvas = document.createElement('canvas');
+woodCanvas.width = woodCanvas.height = 512;
+function paintWoodTexture() {
+  const ctx = woodCanvas.getContext('2d');
+  const w = woodCanvas.width, h = woodCanvas.height, cx = w * 0.54, cy = h * 0.47;
+  ctx.fillStyle = '#8a6437'; ctx.fillRect(0, 0, w, h);
+  const rings = 30;
+  for (let i = 0; i < rings; i++) {
+    const r = (i / rings) * w * 0.85 + 4;
+    ctx.beginPath();
+    for (let a = 0; a <= 64; a++) {
+      const ang = (a / 64) * Math.PI * 2;
+      const jitter = (Math.sin(ang * 5 + i) + Math.sin(ang * 11.3 - i * 2)) * 3.5;
+      const rr = r + jitter;
+      const x = cx + Math.cos(ang) * rr, y = cy + Math.sin(ang) * rr * 0.98;
+      if (a === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = i % 3 === 0 ? 'rgba(58,36,14,0.55)' : 'rgba(120,84,42,0.35)';
+    ctx.lineWidth = i % 3 === 0 ? 2 : 1;
+    ctx.stroke();
+  }
+  // fine radial fibre streaks
+  for (let i = 0; i < 220; i++) {
+    const ang = Math.random() * Math.PI * 2, r0 = Math.random() * w * 0.48;
+    const len = 6 + Math.random() * 16;
+    const x0 = cx + Math.cos(ang) * r0, y0 = cy + Math.sin(ang) * r0 * 0.98;
+    ctx.strokeStyle = `rgba(40,24,10,${0.05 + Math.random() * 0.08})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x0, y0);
+    ctx.lineTo(x0 + Math.cos(ang) * len, y0 + Math.sin(ang) * len * 0.98);
+    ctx.stroke();
+  }
+}
+paintWoodTexture();
+const woodTex = new THREE.CanvasTexture(woodCanvas);
+
+function bellJarProfile() {
+  // unit profile: radius vs. height, bottom (y=0) to top (y=1)
+  const pts = [
+    [1.08, 0.000], [1.08, 0.014], [0.98, 0.035], [0.98, 0.60],
+    [0.94, 0.71], [0.78, 0.815], [0.55, 0.895], [0.30, 0.95],
+    [0.13, 0.982], [0.075, 0.998], [0.075, 1.028], [0.0, 1.05],
+  ];
+  return pts.map(([r, y]) => new THREE.Vector2(r, y));
+}
+function roughDiscGeometry(baseR, height, jitterAmt, segs) {
+  const positions = [], normals = [], indices = [];
+  const rTop = [], rBot = [];
+  for (let i = 0; i < segs; i++) {
+    const n1 = Math.sin(i * 12.9898) * 43758.5453 % 1;
+    const n2 = Math.sin(i * 78.233 + 4.1) * 12543.231 % 1;
+    rTop.push(baseR * (1 + jitterAmt * (n1 - 0.5)));
+    rBot.push(baseR * (1 + jitterAmt * (n2 - 0.5)));
+  }
+  const ringStart = { top: 0, bot: segs };
+  for (let i = 0; i < segs; i++) {
+    const a = (i / segs) * Math.PI * 2;
+    positions.push(Math.cos(a) * rTop[i], height, Math.sin(a) * rTop[i]);
+    normals.push(0, 1, 0);
+  }
+  for (let i = 0; i < segs; i++) {
+    const a = (i / segs) * Math.PI * 2;
+    positions.push(Math.cos(a) * rBot[i], 0, Math.sin(a) * rBot[i]);
+    normals.push(0, -1, 0);
+  }
+  const topCenter = positions.length / 3;
+  positions.push(0, height, 0); normals.push(0, 1, 0);
+  const botCenter = topCenter + 1;
+  positions.push(0, 0, 0); normals.push(0, -1, 0);
+  for (let i = 0; i < segs; i++) {
+    const j = (i + 1) % segs;
+    indices.push(topCenter, ringStart.top + i, ringStart.top + j);
+    indices.push(botCenter, ringStart.bot + j, ringStart.bot + i);
+  }
+  const sideStart = positions.length / 3;
+  for (let i = 0; i < segs; i++) {
+    const a = (i / segs) * Math.PI * 2;
+    const nx = Math.cos(a), nz = Math.sin(a);
+    positions.push(Math.cos(a) * rTop[i], height, Math.sin(a) * rTop[i]); normals.push(nx, 0.15, nz);
+    positions.push(Math.cos(a) * rBot[i], 0, Math.sin(a) * rBot[i]); normals.push(nx, 0.15, nz);
+  }
+  for (let i = 0; i < segs; i++) {
+    const j = (i + 1) % segs;
+    const a0 = sideStart + i * 2, b0 = sideStart + i * 2 + 1, a1 = sideStart + j * 2, b1 = sideStart + j * 2 + 1;
+    indices.push(a0, b0, a1, a1, b0, b1);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  const uvs = [];
+  for (let i = 0; i < positions.length / 3; i++) {
+    const x = positions[i * 3], z = positions[i * 3 + 2];
+    uvs.push(x / (baseR * 2) + 0.5, z / (baseR * 2) + 0.5);
+  }
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setIndex(indices);
+  return geo;
+}
+
+let jarGroup = null;
+function rebuildJarGroup(occ, jarScale, jarYOffset) {
+  if (jarGroup) { scene.remove(jarGroup); jarGroup.traverse((o) => { o.geometry?.dispose?.(); }); }
+  jarGroup = new THREE.Group();
+
+  const woodR = occ.domeR * 1.3 * jarScale;
+  const woodH = occ.domeR * 0.3;
+  const woodTopY = occ.botY - occ.headR * 0.38;
+  const woodGeo = roughDiscGeometry(woodR, woodH, 0.10, 40);
+  const woodMat = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.88, metalness: 0.02 });
+  const woodMesh = new THREE.Mesh(woodGeo, woodMat);
+  woodMesh.position.set(occ.cx, woodTopY - woodH, occ.cz);
+  jarGroup.add(woodMesh);
+
+  const jarBaseR = occ.domeR * 1.38 * jarScale;
+  const jarBaseH = jarBaseR * 1.85;
+  const profile = bellJarProfile();
+  const jarGeo = new THREE.LatheGeometry(profile, 48);
+  jarGeo.scale(jarBaseR, jarBaseH, jarBaseR);
+  const jarMesh = new THREE.Mesh(jarGeo, glassMaterial);
+  jarMesh.position.set(occ.cx, woodTopY + jarYOffset, occ.cz);
+  jarGroup.add(jarMesh);
+
+  scene.add(jarGroup);
+}
+
+// --- load / rebuild ---
+let avatar = null, lamBuf = null, occ = null;
+async function loadFace(name) {
+  statsEl.textContent = `loading ${name}…`;
+  avatar = await loadLamAvatar(`third_party/lam-synth-faces/${name}/`, { yaw: Math.PI });
+  lamBuf = new Float32Array(avatar.count * FLOATS_PER_SPLAT);
+
+  avatar.pose({ at: [0, 0, 0], bones: {}, morph: {} }, lamBuf, 0);
+  const n = avatar.lastCount;
+  let mnx = Infinity, mxx = -Infinity, mny = Infinity, mxy = -Infinity, mnz = Infinity, mxz = -Infinity;
+  for (let i = 0; i < n; i++) {
+    const o = i * FLOATS_PER_SPLAT;
+    const x = lamBuf[o], y = lamBuf[o + 1], z = lamBuf[o + 2];
+    if (x < mnx) mnx = x; if (x > mxx) mxx = x;
+    if (y < mny) mny = y; if (y > mxy) mxy = y;
+    if (z < mnz) mnz = z; if (z > mxz) mxz = z;
+  }
+  occ = buildOccluders({ mnx, mxx, mny, mxy, mnz, mxz });
+
+  const combined = new Float32Array((n + occ.count) * FLOATS_PER_SPLAT);
+  combined.set(lamBuf.subarray(0, n * FLOATS_PER_SPLAT), 0);
+  combined.set(occ.data, n * FLOATS_PER_SPLAT);
+  renderer.setData(combined, n + occ.count);
+
+  targetY = occ.midY;
+  radius = occ.domeR * 1.38 * (+$('jarScale').value) * 2.5;
+  applyCamera();
+  rebuildJarGroup(occ, +$('jarScale').value, +$('jarY').value);
+  statsEl.textContent = `face ${n.toLocaleString()} + occluders ${occ.count.toLocaleString()} splats + glass/wood mesh · ${renderer.backend}`;
+  window.__lamLoaded = true;
+}
+$('face').addEventListener('change', () => loadFace($('face').value));
+$('front').onclick = () => window.__setCam(THETA_FRONT, 1.3, targetY ? radius : 1, targetY);
+$('wideside').onclick = () => window.__setCam(THETA_FRONT - THETA_CLAMP, 1.3, radius, targetY);
+bindSlider('jarScale', 'jarScaleV', (x) => x.toFixed(2), () => { if (occ) rebuildJarGroup(occ, +$('jarScale').value, +$('jarY').value); });
+bindSlider('jarY', 'jarYV', (x) => x.toFixed(3), () => { if (occ) rebuildJarGroup(occ, +$('jarScale').value, +$('jarY').value); });
+
+await loadFace($('face').value);
+
+function syncThreeSize() {
+  const w = glCanvas.width, h = glCanvas.height;
+  if (glassCanvas.width !== w || glassCanvas.height !== h) {
+    threeRenderer.setSize(w, h, false);
+    glassUniforms.uResolution.value.set(w, h);
+    camera3.aspect = w / h;
+    camera3.updateProjectionMatrix();
+  }
+}
+
+(function frame(t) {
+  if (avatar) {
+    const pose = idlePose(t / 1000);
+    window.__lastPose = pose;
+    avatar.pose(pose, lamBuf, 0);
+    const n = avatar.lastCount;
+    renderer.writeRegion(0, lamBuf.subarray(0, n * FLOATS_PER_SPLAT));
+  }
+  renderer.render();
+  bgTex.needsUpdate = true;
+  syncThreeSize();
+  const [px, py, pz] = camPos();
+  camera3.position.set(px, py, pz);
+  camera3.lookAt(0, targetY, 0);
+  threeRenderer.render(scene, camera3);
+  requestAnimationFrame(frame);
+})(performance.now());
+</script>
+</body>
+</html>

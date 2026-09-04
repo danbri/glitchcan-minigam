@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAM + generic body composite (prototype, throwaway)</title>
+<style>html,body{margin:0;height:100%;background:#0a0b10;color:#d8dae2;font:13px monospace}
+#gl{width:100%;height:100vh;display:block}
+.hud{position:fixed;top:10px;left:10px;background:rgba(10,13,20,.8);border:1px solid #3a5580;border-radius:8px;padding:0.6rem 0.8rem;max-width:320px}
+.hud label{display:block;margin-top:0.5rem}
+.hud select,.hud input[type=range]{width:100%}
+#stats{position:fixed;bottom:10px;left:10px;background:rgba(10,13,20,.8);border:1px solid #3a5580;border-radius:8px;padding:0.4rem 0.7rem}
+button{background:#22304a;color:#cfe0ff;border:1px solid #3a5580;border-radius:6px;padding:0.3rem 0.5rem;cursor:pointer;margin:2px}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div class="hud">
+  <b>LAM + generic body — prototype</b>
+  <label>face
+    <select id="face">
+      <option value="boy1">boy1</option>
+      <option value="man2">man2</option>
+      <option value="woman1" selected>woman1</option>
+      <option value="lightbrownhairwoman">lightbrownhairwoman</option>
+    </select>
+  </label>
+  <label>neck cut Y <output id="cutOut"></output>
+    <input type="range" id="cutY" min="1.00" max="1.35" step="0.005" value="1.15">
+  </label>
+  <label>LAM vertical offset <output id="dyOut"></output>
+    <input type="range" id="dy" min="-0.35" max="0.1" step="0.002" value="-0.16">
+  </label>
+  <label>LAM scale <output id="scaleOut"></output>
+    <input type="range" id="scaleS" min="0.6" max="1.4" step="0.01" value="1.0">
+  </label>
+  <label>skull depth (z push-back) <output id="skullZOut"></output>
+    <input type="range" id="skullZ" min="0" max="0.15" step="0.002" value="0.06">
+  </label>
+  <label>skull radius <output id="skullROut"></output>
+    <input type="range" id="skullR" min="0.04" max="0.14" step="0.002" value="0.09">
+  </label>
+  <div style="margin-top:0.6rem">
+    <button id="front">front</button><button id="side">side</button>
+    <button id="threeq">3/4</button><button id="back">back</button>
+    <button id="spin">spin</button>
+  </div>
+</div>
+<div id="stats">loading…</div>
+<script type="module">
+import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { createSplatRenderer } from './lib/splat-renderer-auto.js';
+import { loadRiggedSplats } from './lib/rigged-splats.js';
+import { loadLamAvatar } from './lib/lam-splats.js';
+
+const $ = (id) => document.getElementById(id);
+const canvas = $('gl'), statsEl = $('stats');
+canvas.width = canvas.clientWidth * devicePixelRatio;
+canvas.height = canvas.clientHeight * devicePixelRatio;
+const renderer = await createSplatRenderer(canvas, { background: [0.07, 0.075, 0.1] });
+window.__renderer = renderer;
+
+let theta = 0, phi = 1.3, radius = 1.3, targetY = 1.4;
+function applyCamera() {
+  renderer.setCamera([radius * Math.sin(theta) * Math.sin(phi), targetY + radius * Math.cos(phi), radius * Math.cos(theta) * Math.sin(phi)], [0, targetY, 0]);
+}
+window.__setCam = (t, p, r, y) => { theta = t; phi = p; radius = r; if (y != null) targetY = y; applyCamera(); };
+let drag = null;
+canvas.addEventListener('pointerdown', (e) => { drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', (e) => { if (!drag) return; theta -= (e.clientX - drag[0]) * 0.006; phi -= (e.clientY - drag[1]) * 0.006; drag = [e.clientX, e.clientY]; applyCamera(); });
+canvas.addEventListener('pointerup', () => { drag = null; });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); radius *= Math.exp(e.deltaY * 0.001); applyCamera(); }, { passive: false });
+
+// --- load the generic body (VRM, Kyle — the stage's default) ONCE, rest pose ---
+const bodyAvatar = await loadRiggedSplats('third_party/100avatars/100Avatars_069_Kyle.vrm', {
+  count: 20000, targetHeight: 1.55, yaw: Math.PI,
+});
+const bodyFull = bodyAvatar.toFloat32([0, 0, 0]); // world-space rest pose, count = bodyAvatar.count
+console.log('body neck', bodyAvatar.restJoint('neck'), 'head', bodyAvatar.restJoint('head'), 'chest', bodyAvatar.restJoint('chest'));
+
+let lamAvatar = null, lamBuf = null, combined = null;
+
+function rebuildCombined() {
+  const cutY = +$('cutY').value;
+  const dy = +$('dy').value;
+  const s = +$('scaleS').value;
+  const skullZ = +$('skullZ').value;
+  const skullR = +$('skullR').value;
+  $('cutOut').textContent = cutY.toFixed(3);
+  $('dyOut').textContent = dy.toFixed(3);
+  $('scaleOut').textContent = s.toFixed(2);
+  $('skullZOut').textContent = skullZ.toFixed(3);
+  $('skullROut').textContent = skullR.toFixed(3);
+
+  // clip the body: drop any splat whose Y is above the cut plane (removes
+  // the VRM's own head/face; the LAM bust sits in the gap)
+  const bodyKept = [];
+  for (let i = 0; i < bodyAvatar.count; i++) {
+    const o = i * FLOATS_PER_SPLAT;
+    if (bodyFull[o + 1] <= cutY) bodyKept.push(i);
+  }
+  const bodyOut = new Float32Array(bodyKept.length * FLOATS_PER_SPLAT);
+  bodyKept.forEach((srcI, dstI) => bodyOut.set(bodyFull.subarray(srcI * FLOATS_PER_SPLAT, srcI * FLOATS_PER_SPLAT + FLOATS_PER_SPLAT), dstI * FLOATS_PER_SPLAT));
+
+  if (!lamAvatar) { statsEl.textContent = 'loading face…'; return; }
+  // LAM bust: pose() places its LOWEST point (chest cut) at at[1]=0, so
+  // placing it at neckY (plus a manual offset for fine alignment) puts the
+  // bust base roughly at the body's neck/chest gap. scale s stretches
+  // around that same base point (cheap: just scale the WHOLE avatar via
+  // opts is not re-runnable per-frame, so scale here post-hoc on lamBuf).
+  const neckY = bodyAvatar.restJoint('neck')[1];
+  const at = [0, neckY + dy, 0];
+  lamAvatar.pose({ at: [0, 0, 0], bones: {}, morph: {} }, lamBuf, 0);
+  const n = lamAvatar.lastCount;
+  const lamOut = new Float32Array(n * FLOATS_PER_SPLAT);
+  for (let i = 0; i < n; i++) {
+    const o = i * FLOATS_PER_SPLAT;
+    // scale position around (0, 0, 0) local bust space, then translate to `at`
+    lamOut[o] = lamBuf[o] * s + at[0];
+    lamOut[o + 1] = lamBuf[o + 1] * s + at[1];
+    lamOut[o + 2] = lamBuf[o + 2] * s + at[2];
+    for (let k = 3; k < 7; k++) lamOut[o + k] = lamBuf[o + k]; // quat unchanged
+    lamOut[o + 7] = lamBuf[o + 7] * s; lamOut[o + 8] = lamBuf[o + 8] * s; lamOut[o + 9] = lamBuf[o + 9] * s;
+    for (let k = 10; k < 14; k++) lamOut[o + k] = lamBuf[o + k];
+  }
+
+  // skull fill: LAM's head is a near-planar shell (real depth from a single
+  // photo is ~0) — from the side it reads as a paper-thin wedge. Fill the
+  // volume behind it with a plain fibonacci-sphere "skull", coloured from
+  // the face's OWN upper/hair-region average so it blends instead of
+  // reading as a bald dome.
+  let cx = 0, cy2 = 0, cz = 0, hr = 0, hg = 0, hb = 0, hn = 0, topY = -Infinity, botY = Infinity;
+  for (let i = 0; i < n; i++) { const o = i * FLOATS_PER_SPLAT; cx += lamOut[o]; cy2 += lamOut[o + 1]; cz += lamOut[o + 2]; if (lamOut[o + 1] > topY) topY = lamOut[o + 1]; if (lamOut[o + 1] < botY) botY = lamOut[o + 1]; }
+  cx /= n; cy2 /= n; cz /= n;
+  const hairCut = topY - (topY - botY) * 0.28; // top ~28% of the bust ≈ hair region
+  for (let i = 0; i < n; i++) { const o = i * FLOATS_PER_SPLAT; if (lamOut[o + 1] >= hairCut) { hr += lamOut[o + 10]; hg += lamOut[o + 11]; hb += lamOut[o + 12]; hn++; } }
+  const hairCol = hn ? [hr / hn, hg / hn, hb / hn] : [0.25, 0.17, 0.12];
+
+  // silhouette grid: bin the face's (x,y) footprint so the skull-fill can
+  // be clipped to it — without this, any fill sphere/ellipsoid pokes out
+  // past the face's own outline as a visible "halo" from the front
+  // (found empirically — see report).
+  const GRID = 0.008;
+  const occupied = new Set();
+  for (let i = 0; i < n; i++) {
+    const o = i * FLOATS_PER_SPLAT;
+    occupied.add(`${Math.round(lamOut[o] / GRID)},${Math.round(lamOut[o + 1] / GRID)}`);
+  }
+  const inSilhouette = (x, y) => {
+    const gx = Math.round(x / GRID), gy = Math.round(y / GRID);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      if (occupied.has(`${gx + dx},${gy + dy}`)) return true;
+    }
+    return false;
+  };
+
+  const SKULL_N = 3000;
+  const skull = new Float32Array(SKULL_N * FLOATS_PER_SPLAT);
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  // centre at mid-face height (not crown) — an ellipsoid, flattened in z
+  // (shallow — sits close behind the face plane) but full width in x/y,
+  // so it fills cheek/jaw depth without poking past the face's own
+  // front-view silhouette as much as a true sphere would.
+  const sphCx = cx, sphCy = (topY + botY) / 2, sphCz = cz + skullZ;
+  let so = 0;
+  for (let i = 0; i < SKULL_N; i++) {
+    const yFrac = 1 - (i / (SKULL_N - 1)) * 2; // 1..-1
+    const r = Math.sqrt(Math.max(0, 1 - yFrac * yFrac));
+    const theta2 = golden * i;
+    const px = Math.cos(theta2) * r, py = yFrac, pz = Math.sin(theta2) * r;
+    // keep only the back hemisphere-ish (pz > -0.1) — front half would sit
+    // in front of the face plane and is discarded
+    if (pz < -0.1) continue;
+    const wx = sphCx + px * skullR * 1.15, wy = sphCy + py * skullR * 1.5, wz = sphCz + pz * skullR * 0.6;
+    if (!inSilhouette(wx, wy)) continue; // clip to the face's own outline
+    skull[so] = wx; skull[so + 1] = wy; skull[so + 2] = wz;
+    skull[so + 3] = 0; skull[so + 4] = 0; skull[so + 5] = 0; skull[so + 6] = 1;
+    skull[so + 7] = 0.014; skull[so + 8] = 0.014; skull[so + 9] = 0.014;
+    const shade = 0.85 + 0.15 * py;
+    skull[so + 10] = hairCol[0] * shade; skull[so + 11] = hairCol[1] * shade; skull[so + 12] = hairCol[2] * shade;
+    skull[so + 13] = 1;
+    so += FLOATS_PER_SPLAT;
+  }
+  const skullOut = skull.subarray(0, so);
+  const skullCount = so / FLOATS_PER_SPLAT;
+
+  combined = new Float32Array(bodyOut.length + lamOut.length + skullOut.length);
+  combined.set(bodyOut); combined.set(lamOut, bodyOut.length); combined.set(skullOut, bodyOut.length + lamOut.length);
+  renderer.setData(combined, bodyKept.length + n + skullCount);
+  statsEl.textContent = `body ${bodyKept.length.toLocaleString()} + face ${n.toLocaleString()} + skull ${skullCount.toLocaleString()} = ${(bodyKept.length + n + skullCount).toLocaleString()} splats · cutY=${cutY.toFixed(3)} neckY=${neckY.toFixed(3)} · ${renderer.backend}`;
+}
+
+async function loadFace(name) {
+  statsEl.textContent = `loading ${name}…`;
+  lamAvatar = await loadLamAvatar(`third_party/lam-synth-faces/${name}/`, { yaw: Math.PI });
+  lamBuf = new Float32Array(lamAvatar.count * FLOATS_PER_SPLAT);
+  rebuildCombined();
+}
+$('face').addEventListener('change', () => loadFace($('face').value));
+$('cutY').addEventListener('input', rebuildCombined);
+$('dy').addEventListener('input', rebuildCombined);
+$('scaleS').addEventListener('input', rebuildCombined);
+$('skullZ').addEventListener('input', rebuildCombined);
+$('skullR').addEventListener('input', rebuildCombined);
+
+window.__setCut = (v) => { $('cutY').value = v; rebuildCombined(); };
+window.__setDy = (v) => { $('dy').value = v; rebuildCombined(); };
+window.__setScale = (v) => { $('scaleS').value = v; rebuildCombined(); };
+window.__setSkullZ = (v) => { $('skullZ').value = v; rebuildCombined(); };
+window.__setSkullR = (v) => { $('skullR').value = v; rebuildCombined(); };
+window.__rebuild = rebuildCombined;
+
+$('front').onclick = () => window.__setCam(Math.PI, 1.35, 1.1, 1.4);
+$('side').onclick = () => window.__setCam(Math.PI / 2, 1.35, 1.1, 1.4);
+$('threeq').onclick = () => window.__setCam(Math.PI * 0.75, 1.35, 1.1, 1.4);
+$('back').onclick = () => window.__setCam(0, 1.35, 1.1, 1.4);
+let spinning = false;
+$('spin').onclick = () => { spinning = !spinning; };
+
+applyCamera();
+await loadFace($('face').value);
+
+(function frame(t) {
+  if (spinning) { theta += 0.01; applyCamera(); }
+  renderer.render();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
