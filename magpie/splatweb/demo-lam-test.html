@@ -81,7 +81,8 @@ function idlePose(t) {
 
 try {
   const t0 = performance.now();
-  avatar = await loadLamAvatar('./third_party/lam-sample/', { yaw: Math.PI });
+  const base = new URLSearchParams(location.search).get('base') || './third_party/lam-sample/';
+  avatar = await loadLamAvatar(base, { yaw: Math.PI });
   window.__avatar = avatar;
   targetY = avatar.heightM * 0.5;
   radius = Math.max(0.3, avatar.heightM * 1.8);
