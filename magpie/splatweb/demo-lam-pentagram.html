@@ -40,15 +40,15 @@ button.smallbtn.active{background:#3a5a3a;border-color:#5aa55a}
   <div class="grp">
     <button class="smallbtn" id="front" style="width:auto">recentre on live face</button>
     <button class="smallbtn" id="lips" style="width:auto">lips</button>
-    <button class="smallbtn" id="speak" style="width:auto">speak</button>
+    <button class="smallbtn active" id="speak" style="width:auto">speak</button>
     <button class="smallbtn" id="autoRotate" style="width:auto">▶ rotate faces (3-5s)</button>
     <label style="display:block;margin-top:0.5rem;font-size:11px;color:#9fb3d8">FX intensity (mouth clarity) <span id="fxV"></span>
-      <input id="fx" type="range" min="0" max="1.3" step="0.05" value="0.15" style="width:100%">
+      <input id="fx" type="range" min="0" max="1.3" step="0.05" value="1.0" style="width:100%">
     </label>
   </div>
   <div class="grp">
-    <label style="display:block;font-size:11px;color:#9fb3d8"><input type="checkbox" id="subTPToggle"> Toki Pona subtitles</label>
-    <label style="display:block;font-size:11px;color:#9fb3d8"><input type="checkbox" id="subENToggle"> English subtitles</label>
+    <label style="display:block;font-size:11px;color:#9fb3d8"><input type="checkbox" id="subTPToggle" checked> Toki Pona subtitles</label>
+    <label style="display:block;font-size:11px;color:#9fb3d8"><input type="checkbox" id="subENToggle" checked> English subtitles</label>
   </div>
   <div class="grp" id="stats">loading…</div>
 </div>
@@ -295,13 +295,30 @@ canvas.addEventListener('pointerup', () => { drag = null; });
 canvas.addEventListener('wheel', (e) => { e.preventDefault(); radius = clamp(radius * Math.exp(e.deltaY * 0.001), 0.35, 3); applyCamera(); }, { passive: false });
 window.addEventListener('resize', applyCamera);
 window.__setCam = (t, p, r, y) => { theta = t; phi = p ?? phi; radius = r ?? radius; if (y != null) targetY = y; applyCamera(); };
+// spring/overshoot ease: fast approach dominates the first 82% of the
+// duration (cubic ease-out, flattens to the target value by u=1 — reads
+// as "stops abruptly"), then an 18%-of-duration damped-sine tail kicks
+// ~9% past the target and springs back to rest — ONE overshoot-and-settle,
+// not a multi-bounce oscillation (owner: "slightly bouncy/abrupt", singular).
+// The tail is a SINE, not a cosine: sin(0)=0 so its envelope starts at
+// zero amplitude, matching the ease-out branch's value exactly at the
+// u=0.82 join. An earlier cosine-based version started the tail at full
+// amplitude (cos(0)=1), producing a hard 9% value DISCONTINUITY at the
+// join — a one-frame teleport, not a spring — caught by sampling theta
+// across the join, not by reading the code (see fork verification notes).
+function spinEase(t) {
+  if (t < 0.82) { const u = t / 0.82; return 1 - Math.pow(1 - u, 3); }
+  const u = (t - 0.82) / 0.18;
+  const overshoot = 0.29;
+  return 1 + overshoot * Math.exp(-u * 5) * Math.sin(u * Math.PI * 1.5);
+}
 function tweenTheta(target, ms) {
   // shortest angular path
   let d = target - theta; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
   const from = theta, to = theta + d, start = performance.now();
   return new Promise((resolve) => (function step(now) {
     const t = Math.min(1, (now - start) / ms);
-    theta = from + (to - from) * (t * t * (3 - 2 * t));
+    theta = from + (to - from) * spinEase(t);
     applyCamera();
     if (t < 1) requestAnimationFrame(step); else resolve();
   })(start));
@@ -360,7 +377,7 @@ $('lips').onclick = () => {
   $('lips').classList.toggle('active', lipsOn);
   if (lipsOn) talkBurstStart = performance.now() / 1000;
 };
-let speakOn = false;
+let speakOn = true; // on by default per owner request; button HTML also starts with class="active" to match
 $('speak').onclick = () => {
   speakOn = !speakOn;
   $('speak').classList.toggle('active', speakOn);
@@ -617,6 +634,27 @@ renderer.setData(combined, TOTAL);
 // =========================================================================
 let liveIdx = 0;
 let transition = null; // {from, to, start, dur}
+// secondary particle "mop/medusa fling" energy: a single shared scalar,
+// NOT per-facet, driving an outward-radial + equator-flattening
+// displacement on peripheral splats across every facet at once (applied
+// in the main frame loop). Ramps up fast when a spin starts, plateaus
+// through the primary rotation, then — per owner request — the settle
+// window EXTENDS PAST the rotation's own settle point (SPIN_TOTAL >
+// spin's own duration) with its own damped-oscillation overshoot, so the
+// "flailing particles" genuinely lag behind and outlast the head-turn
+// itself rather than snapping off in sync with it.
+let lastSpinStart = -1, lastSpinDur = 0.9;
+function spinEnergy(tt) {
+  if (lastSpinStart < 0) return 0;
+  const el = tt - lastSpinStart;
+  const rampDur = 0.12; // fast ramp-up
+  const totalDur = lastSpinDur + 0.5; // secondary settle runs ~0.5s past the primary spin's own duration
+  if (el < 0 || el > totalDur) return 0;
+  if (el < rampDur) { const u = el / rampDur; return u * u * (3 - 2 * u); }
+  if (el < lastSpinDur) return 1; // plateau through the primary rotation
+  const u = (el - lastSpinDur) / (totalDur - lastSpinDur); // 0..1 across the extra "flail and settle" window
+  return Math.exp(-u * 4.2) * Math.cos(u * Math.PI * 1.6); // damped oscillation — can dip slightly negative (spring past rest) before settling, by design
+}
 function lerpParams(a, b, t) {
   const out = {};
   for (const k of Object.keys(a)) out[k] = a[k] + (b[k] - a[k]) * t;
@@ -654,9 +692,20 @@ async function switchPersona(target) {
   if (target === liveIdx || transition) return;
   playCrunch();
   const from = liveIdx;
-  transition = { from, to: target, start: performance.now() / 1000, dur: 1.0 };
-  tweenTheta(angleOf(target), 900);
-  await new Promise((r) => setTimeout(r, 1000));
+  // any-to-any: with N=5 every target is either 1 or 2 steps away (the
+  // shortest-angular-path math in tweenTheta already picks the 2-step
+  // direction correctly, never routing the "long way" through 3 facets).
+  // A 2-step spin gets proportionally more real time than a 1-step one —
+  // same rough angular speed, not the same fixed duration for double the
+  // angle — so it doesn't feel rushed.
+  let stepDelta = target - from; while (stepDelta > N / 2) stepDelta -= N; while (stepDelta < -N / 2) stepDelta += N;
+  const steps = Math.abs(stepDelta); // 1 or 2 for N=5
+  const spinMs = 900 + (steps - 1) * 500; // 900ms (1 step), 1400ms (2 steps)
+  const spinSec = spinMs / 1000;
+  transition = { from, to: target, start: performance.now() / 1000, dur: spinSec };
+  lastSpinStart = transition.start; lastSpinDur = spinSec;
+  tweenTheta(angleOf(target), spinMs);
+  await new Promise((r) => setTimeout(r, spinMs));
   liveIdx = target;
   transition = null;
   renderNow(liveIdx);
@@ -705,7 +754,13 @@ $('autoRotate').onclick = () => {
   if (autoRotateOn) scheduleNextRotate();
   else if (autoRotateTimer) { clearTimeout(autoRotateTimer); autoRotateTimer = null; }
 };
-theta = angleOf(0); radius = headR * 3.2; applyCamera();
+// targetY was a stale hardcoded guess (0.12) from before the per-avatar
+// Y-alignment work — every avatar's own face-centre now actually sits at
+// world Y = avgCenterY + headR/6 (see yOffsets above), so point the
+// camera there instead of the old guess. Root cause of "dead space at
+// the foot of the page, forehead cut off at the top" — the camera was
+// literally aimed at the wrong height.
+theta = angleOf(0); radius = headR * 2.9; targetY = avgCenterY - headR * 0.15; applyCamera();
 
 // arrow keys turn the heads (left = previous persona, right = next) —
 // switchPersona() itself already no-ops mid-transition, so rapid key
@@ -718,7 +773,10 @@ document.addEventListener('keydown', (e) => {
 statsEl.textContent = `${TOTAL.toLocaleString()} splats · loaded`;
 
 // debug hooks for verification
-window.__pentagram = { PERSONAS, liveIdx: () => liveIdx, transition: () => transition, switchPersona };
+window.__pentagram = { PERSONAS, N, liveIdx: () => liveIdx, transition: () => transition, switchPersona,
+  liveWeight: (i, tt) => liveWeight(i, tt ?? performance.now() / 1000),
+  currentParams: (i, tt) => currentParams(i, tt ?? performance.now() / 1000),
+  theta: () => theta };
 
 // "big head, not a 5-lobed cauliflower": the live facet's own face geometry
 // reads larger, the other four shrink theirs — WITHOUT moving where any
@@ -769,6 +827,33 @@ const LIVE_SCALE = 1.15, RETRACT_SCALE = 0.78;
     // legible (never fully swirls away).
     const swirl = Math.min(0.85, params.dissolve / 0.75);
     ghosts[i].update(lamBufs[i], styleBufs[i], tt, { ...params, tintTarget: PERSONAS[i].tint, coreWeight: coreWeights[i], swirl });
+    // secondary "mop/medusa fling": peripheral splats (low coreWeight) get
+    // an ADDITIONAL displacement on top of whatever swirl already did —
+    // flung further outward from the shared vertical core axis (world
+    // x=0,z=0 — the same axis swirl pulls peripheries TOWARD, this pushes
+    // the opposite direction) and flattened toward the shared equator
+    // (targetY, the same reference the camera looks at). Driven by ONE
+    // shared spinEnergy(tt) scalar (not per-facet), so all 5 facets react
+    // in sync to a single head-turn, not 5 independent animations. Energy
+    // can dip slightly negative during its damped-oscillation settle tail
+    // (see spinEnergy) — that reads as a brief spring-past-rest snap
+    // before the final settle, which is the intended "sproing back".
+    const spinE = spinEnergy(tt);
+    if (spinE !== 0) {
+      const buf = styleBufs[i], cw = coreWeights[i];
+      const OUTWARD_MAX = headR * 0.55, FLATTEN_AMT = 0.6;
+      for (let k = 0; k < n; k++) {
+        const peri = 1 - cw[k];
+        if (peri <= 0) continue;
+        const o = k * FLOATS_PER_SPLAT;
+        const x = buf[o], y = buf[o + 1], z = buf[o + 2];
+        const rXZ = Math.hypot(x, z) || 1e-4;
+        const outAmt = peri * spinE * OUTWARD_MAX;
+        buf[o] = x + (x / rXZ) * outAmt;
+        buf[o + 2] = z + (z / rXZ) * outAmt;
+        buf[o + 1] = y + (targetY - y) * (peri * spinE * FLATTEN_AMT);
+      }
+    }
     // FX intensity: a direct, guaranteed-linear post-multiply on this
     // facet's final alpha, applied only to non-live facets. Scaling the
     // individual stylize PARAMS (dissolve/particle/roundness/twinkle/
@@ -791,7 +876,7 @@ const LIVE_SCALE = 1.15, RETRACT_SCALE = 0.78;
   combined.set(mistData, mistOffset * FLOATS_PER_SPLAT);
 
   window.__lastFrameSample = { t: tt, liveIdx, transition: transition ? { ...transition } : null,
-    params0: currentParams(0, tt) };
+    params0: currentParams(0, tt), spinEnergy: spinEnergy(tt), lastSpinStart, lastSpinDur };
 
   renderer.writeRegion(0, combined);
   renderer.render();
