@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pentulpa Capulet — five-persona pentagram creature (prototype, throwaway)</title>
+<style>
+html,body{margin:0;height:100%;background:#020204;color:#d8dae2;font:13px monospace}
+#gl{width:100%;height:100vh;display:block;touch-action:none}
+.hud{position:fixed;top:10px;left:10px;background:rgba(10,13,20,.87);border:1px solid #3a5580;border-radius:8px;padding:2.7rem 0.8rem 0.8rem;max-width:min(320px,88vw);max-height:94vh;overflow:auto;transition:transform .25s ease;z-index:10}
+.hud.collapsed{transform:translateX(-120%)}
+#hudToggle{position:fixed;top:10px;left:10px;z-index:20;width:2.2rem;height:2.2rem;line-height:2.2rem;text-align:center;padding:0}
+h1{font-size:1.05rem;margin:0 0 0.2rem;color:#e8d9ff}
+.sub{font-size:11px;color:#8fa2c4;margin-bottom:0.6rem}
+button{background:#22304a;color:#cfe0ff;border:1px solid #3a5580;border-radius:6px;padding:0.4rem 0.6rem;cursor:pointer;margin:2px 3px 2px 0;font:12px monospace;display:block;width:100%;text-align:left}
+button.persona{border-left:4px solid var(--pc,#3a5580)}
+button.persona.active{background:#33456e;font-weight:bold}
+.grp{border-top:1px solid #2a3a56;margin-top:0.6rem;padding-top:0.5rem}
+#now{font-size:12px;margin-top:0.3rem;padding:0.4rem;border-radius:5px;background:#0d1220;border:1px solid #2a3a56}
+#now b{color:var(--pc,#cfe0ff)}
+#now .tag{display:block;color:#93a3c4;margin-top:0.2rem;font-size:11px}
+#stats{position:fixed;bottom:10px;left:10px;background:rgba(10,13,20,.8);border:1px solid #3a5580;border-radius:8px;padding:0.4rem 0.7rem;max-width:90vw;font-size:11px}
+#credit{position:fixed;bottom:10px;right:10px;background:rgba(10,13,20,.8);border:1px solid #3a5580;border-radius:8px;padding:0.4rem 0.7rem;max-width:46vw;font-size:10px;color:#8fa2c4;line-height:1.4}
+.smallbtn{display:inline-block;width:auto}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<button id="hudToggle">☰</button>
+<div class="hud">
+  <h1>Pentulpa Capulet</h1>
+  <div class="sub">five-persona pentagram creature — prototype</div>
+  <div id="now">loading…</div>
+  <div class="grp" id="personaButtons"></div>
+  <div class="grp">
+    <button class="smallbtn" id="front" style="width:auto">recentre on live face</button>
+    <button class="smallbtn" id="talk" style="width:auto">talk burst</button>
+    <button class="smallbtn" id="autoRotate" style="width:auto">▶ rotate faces (3-5s)</button>
+  </div>
+</div>
+<div id="stats">loading…</div>
+<div id="credit">
+  LAM synthetic faces (public domain, not real people). Stylize pass:
+  lib/lam-ghost-stylize.js (this session). No body/spine yet — shrouded in
+  cloud per brief. Mechanical crunch SFX is synthesized (Web Audio), no
+  audio file.
+</div>
+<script type="module">
+import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { createSplatRenderer } from './lib/splat-renderer-auto.js';
+import { loadLamAvatar } from './lib/lam-splats.js';
+import { qMul, qNormalize } from './lib/pose-math.js';
+import { resolveFace } from './lib/lam-face-roster.js';
+import { GhostStylizer } from './lib/lam-ghost-stylize.js';
+import { sampleTalkBurst } from './lib/lam-visemes.js';
+
+const $ = (id) => document.getElementById(id);
+const canvas = $('gl'), statsEl = $('stats');
+
+const hud = document.querySelector('.hud');
+if (window.innerWidth < 640) hud.classList.add('collapsed');
+$('hudToggle').onclick = () => hud.classList.toggle('collapsed');
+
+canvas.width = canvas.clientWidth * devicePixelRatio;
+canvas.height = canvas.clientHeight * devicePixelRatio;
+const renderer = await createSplatRenderer(canvas, { background: [0.01, 0.01, 0.015] });
+window.__renderer = renderer;
+
+function pushSplat(arr, o, x, y, z, r, g, b, a, s) {
+  arr[o] = x; arr[o + 1] = y; arr[o + 2] = z;
+  arr[o + 3] = 0; arr[o + 4] = 0; arr[o + 5] = 0; arr[o + 6] = 1;
+  arr[o + 7] = s; arr[o + 8] = s; arr[o + 9] = s;
+  arr[o + 10] = r; arr[o + 11] = g; arr[o + 12] = b; arr[o + 13] = a;
+  return o + FLOATS_PER_SPLAT;
+}
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// =========================================================================
+// PERSONAS — five faces, five personalities. Each has: which of the 54 LAM
+// faces to wear, a tint colour (fed into GhostStylizer's new `tintTarget`
+// param — added this session specifically so each persona can have its own
+// hue instead of the one hardcoded cool tint), a LIVE stylize profile (the
+// "sparkle ghost" register, tuned per personality) and a DISSOLVED profile
+// (heavy particle/dissolve — barely-there shimmer, still tinted so you get
+// a colour hint of which ghost is which even unfocused).
+// =========================================================================
+const PERSONAS = [
+  {
+    id: 'architect', name: 'The Architect — Machiavellianism', tag: 'cold, strategic, unemotional control', color: '#7fb4ff',
+    faceId: 'tpdne-05', tint: [0.85, 0.95, 1.30],
+    live: { lag: 0.08, dissolve: 0.04, particle: 0, roundness: 0.65, ghost: 0.1, twinkle: 0.35, jitter: 0.04 },
+    dissolved: { lag: 0.35, dissolve: 0.78, particle: 0.6, roundness: 0.8, ghost: 0.8, twinkle: 0.5, jitter: 0.15 },
+    idle: { yawAmp: 0.07, yawFreq: 4.5, pitchAmp: 0.03, pitchFreq: 5.5, blinkPeriod: 4.2 },
+  },
+  {
+    id: 'executioner', name: 'The Executioner — Psychopathy', tag: 'pure impulse, zero calculation', color: '#ff6a3a',
+    faceId: 'tpdne-09', tint: [1.35, 0.5, 0.32],
+    live: { lag: 0.12, dissolve: 0.08, particle: 0.12, roundness: 0.35, ghost: 0.1, twinkle: 0.8, jitter: 0.75 },
+    dissolved: { lag: 0.3, dissolve: 0.75, particle: 0.62, roundness: 0.55, ghost: 0.85, twinkle: 1.1, jitter: 1.0 },
+    idle: { yawAmp: 0.30, yawFreq: 1.6, pitchAmp: 0.14, pitchFreq: 1.3, blinkPeriod: 2.1, jerk: true },
+  },
+  {
+    id: 'corruptor', name: 'The Corruptor — Narcissism', tag: 'cruelty that craves adoration', color: '#e05aff',
+    faceId: 'tpdne-17', tint: [1.15, 0.5, 1.25],
+    live: { lag: 0.5, dissolve: 0.06, particle: 0, roundness: 0.7, ghost: 0.12, twinkle: 1.2, jitter: 0.04 },
+    dissolved: { lag: 0.55, dissolve: 0.72, particle: 0.55, roundness: 0.8, ghost: 0.8, twinkle: 1.3, jitter: 0.2 },
+    idle: { yawAmp: 0.16, yawFreq: 2.2, pitchAmp: 0.08, pitchFreq: 1.8, blinkPeriod: 5.5 },
+  },
+  {
+    id: 'mourner', name: 'The Mourner — Sadism', tag: 'weeping that savors your despair', color: '#8fa0c4',
+    faceId: 'tpdne-30', tint: [0.72, 0.8, 0.95],
+    live: { lag: 0.85, dissolve: 0.14, particle: 0.04, roundness: 0.6, ghost: 0.1, twinkle: 0.2, jitter: 0.04 },
+    dissolved: { lag: 0.85, dissolve: 0.8, particle: 0.55, roundness: 0.75, ghost: 0.85, twinkle: 0.15, jitter: 0.08 },
+    idle: { yawAmp: 0.05, yawFreq: 0.9, pitchAmp: 0.16, pitchFreq: 0.7, blinkPeriod: 6.5, droop: true },
+  },
+  {
+    id: 'prophet', name: 'The Prophet — Spite', tag: 'chaos with no payoff, not even to itself', color: '#ffe45a',
+    faceId: 'tpdne-40', tint: [1.1, 1.0, 0.4],
+    live: { lag: 0.28, dissolve: 0.15, particle: 0.1, roundness: 0.55, ghost: 0.12, twinkle: 1.8, jitter: 0.5 },
+    dissolved: { lag: 0.35, dissolve: 0.8, particle: 0.6, roundness: 0.7, ghost: 0.85, twinkle: 1.8, jitter: 0.9 },
+    idle: { yawAmp: 0.20, yawFreq: 3.0, pitchAmp: 0.14, pitchFreq: 3.7, blinkPeriod: 1.6, erratic: true },
+  },
+];
+const N = PERSONAS.length;
+const angleOf = (i) => (i / N) * Math.PI * 2;
+
+// =========================================================================
+// audio: synthesized mechanical crunch on persona switch. No sound file —
+// filtered noise burst (grinding) + a low wobbling oscillator (mechanical
+// growl), gated with a choppy stepped envelope so it reads as crunching
+// rather than musical.
+// =========================================================================
+let actx = null;
+function ensureAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); return actx; }
+function playCrunch() {
+  const ctx = ensureAudio();
+  const dur = 0.55;
+  const now = ctx.currentTime;
+  // noise burst -> bandpass sweeping down -> grind texture
+  const bufLen = Math.floor(ctx.sampleRate * dur);
+  const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1);
+  const noise = ctx.createBufferSource(); noise.buffer = buf;
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 6;
+  bp.frequency.setValueAtTime(1400, now);
+  bp.frequency.exponentialRampToValueAtTime(90, now + dur);
+  const noiseGain = ctx.createGain();
+  // stepped/choppy envelope for a mechanical "crunch crunch crunch" feel
+  const steps = 7;
+  noiseGain.gain.setValueAtTime(0, now);
+  for (let s = 0; s < steps; s++) {
+    const t0 = now + (s / steps) * dur;
+    const on = (s % 2 === 0);
+    noiseGain.gain.setValueAtTime(on ? 0.5 * (1 - s / steps) : 0.05, t0);
+  }
+  noiseGain.gain.linearRampToValueAtTime(0, now + dur);
+  noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(ctx.destination);
+
+  // low grinding oscillator, pitch wobbling
+  const osc = ctx.createOscillator(); osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(70, now);
+  osc.frequency.exponentialRampToValueAtTime(38, now + dur);
+  const lfo = ctx.createOscillator(); lfo.frequency.value = 22;
+  const lfoGain = ctx.createGain(); lfoGain.gain.value = 12;
+  lfo.connect(lfoGain); lfoGain.connect(osc.frequency);
+  const oscGain = ctx.createGain(); oscGain.gain.setValueAtTime(0.25, now);
+  oscGain.gain.linearRampToValueAtTime(0, now + dur);
+  osc.connect(oscGain); oscGain.connect(ctx.destination);
+
+  noise.start(now); noise.stop(now + dur);
+  osc.start(now); osc.stop(now + dur);
+  lfo.start(now); lfo.stop(now + dur);
+}
+
+// =========================================================================
+// camera — full free orbit (theta unclamped): unlike the single-face demos
+// earlier this session, there is no one "hollow back" to hide here — every
+// facet always shows EITHER a clear face or an already-heavily-dissolved
+// shimmer (which doesn't need to hide anything, it's supposed to look
+// incomplete), and the solid core occludes sightlines through the middle.
+// Verified by wide-angle screenshot, not just assumed (see report).
+// =========================================================================
+let theta = 0, phi = 1.3, radius = 1.0, targetY = 0.12;
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function aspectBoost() { const a = canvas.clientWidth / canvas.clientHeight; return a < 1 ? 1 / a : 1; }
+function applyCamera() {
+  const r = radius * aspectBoost();
+  renderer.setCamera([r * Math.sin(theta) * Math.sin(phi), targetY + r * Math.cos(phi), r * Math.cos(theta) * Math.sin(phi)], [0, targetY, 0]);
+}
+let drag = null;
+canvas.addEventListener('pointerdown', (e) => { drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  theta = theta - (e.clientX - drag[0]) * 0.006;
+  phi = clamp(phi - (e.clientY - drag[1]) * 0.006, 0.6, 2.4);
+  drag = [e.clientX, e.clientY]; applyCamera();
+});
+canvas.addEventListener('pointerup', () => { drag = null; });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); radius = clamp(radius * Math.exp(e.deltaY * 0.001), 0.35, 3); applyCamera(); }, { passive: false });
+window.addEventListener('resize', applyCamera);
+window.__setCam = (t, p, r, y) => { theta = t; phi = p ?? phi; radius = r ?? radius; if (y != null) targetY = y; applyCamera(); };
+function tweenTheta(target, ms) {
+  // shortest angular path
+  let d = target - theta; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+  const from = theta, to = theta + d, start = performance.now();
+  return new Promise((resolve) => (function step(now) {
+    const t = Math.min(1, (now - start) / ms);
+    theta = from + (to - from) * (t * t * (3 - 2 * t));
+    applyCamera();
+    if (t < 1) requestAnimationFrame(step); else resolve();
+  })(start));
+}
+
+// =========================================================================
+// idle pose per persona — same base formula as demo-lam-ghost.html, but
+// amplitude/frequency come from each persona's `idle` block so there's at
+// least a hint of personality in the motion, not just the stylize params.
+// =========================================================================
+let talkBurstStart = -1;
+function idlePoseFor(persona, t) {
+  const idle = persona.idle;
+  const blinkPeriod = idle.blinkPeriod || 4;
+  const blinkPhase = (t % blinkPeriod) / blinkPeriod;
+  const blink = blinkPhase < 0.06 ? Math.sin((blinkPhase / 0.06) * Math.PI) : 0;
+  let yaw = Math.sin(t / idle.yawFreq) * idle.yawAmp;
+  let pitch = Math.sin(t / idle.pitchFreq + 1) * idle.pitchAmp;
+  if (idle.jerk) { // Executioner: abrupt snaps rather than smooth sway
+    const snap = Math.sign(Math.sin(t * 1.7)) * 0.5;
+    yaw += snap * idle.yawAmp * 0.6 * (Math.abs(Math.sin(t * 1.7)) > 0.92 ? 1 : 0);
+  }
+  if (idle.droop) pitch += 0.12; // Mourner: head bowed
+  if (idle.erratic) { // Prophet: chaotic micro-jitter on top of the base sway
+    yaw += (Math.sin(t * 11.3) * 0.5 + Math.sin(t * 7.1) * 0.3) * 0.05;
+    pitch += Math.sin(t * 13.7) * 0.04;
+  }
+  const qYaw = [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)];
+  const qPitch = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
+  const headQ = qNormalize(qMul(qYaw, qPitch));
+  const idleJaw = Math.max(0, Math.sin(t * 1.7)) * 0.12;
+  const talkMorph = talkBurstStart >= 0 ? sampleTalkBurst(t - talkBurstStart) : {};
+  const morph = { eyeBlinkLeft: blink, eyeBlinkRight: blink, jawOpen: idleJaw, ...talkMorph };
+  return { at: [0, 0, 0], bones: { head: headQ }, morph };
+}
+$('talk').onclick = () => { talkBurstStart = performance.now() / 1000; };
+
+// =========================================================================
+// load the five avatars, one per facet, yaw'd to face outward at its
+// facet's angle (derived from LamHeadAvatar's place() transform: forward
+// direction after yaw theta is (sin theta, cos theta) — verified by
+// reading lib/lam-splats.js's pose() math, not guessed).
+// =========================================================================
+statsEl.textContent = 'loading five faces…';
+const avatars = [], ghosts = [], lamBufs = [], styleBufs = [], offsets = [];
+let headR = 0.14; // fallback until we measure the first avatar's real bounds
+{
+  const { base, meshBase } = resolveFace(PERSONAS[0].faceId);
+  const probe = await loadLamAvatar(base, { meshBase, yaw: 0 });
+  const buf = new Float32Array(probe.count * FLOATS_PER_SPLAT);
+  probe.pose({ at: [0, 0, 0], bones: {}, morph: {} }, buf, 0);
+  let mnx = Infinity, mxx = -Infinity, mny = Infinity, mxy = -Infinity;
+  for (let i = 0; i < probe.lastCount; i++) {
+    const o = i * FLOATS_PER_SPLAT;
+    if (buf[o] < mnx) mnx = buf[o]; if (buf[o] > mxx) mxx = buf[o];
+    if (buf[o + 1] < mny) mny = buf[o + 1]; if (buf[o + 1] > mxy) mxy = buf[o + 1];
+  }
+  headR = Math.max(mxx - mnx, mxy - mny) * 0.5 * 1.15;
+  avatars.push(probe); lamBufs.push(buf);
+}
+for (let i = 1; i < N; i++) {
+  const { base, meshBase } = resolveFace(PERSONAS[i].faceId);
+  const av = await loadLamAvatar(base, { meshBase, yaw: angleOf(i) });
+  avatars.push(av);
+  lamBufs.push(new Float32Array(av.count * FLOATS_PER_SPLAT));
+}
+// re-yaw avatar 0 now we know headR was only for scale, not orientation —
+// it was loaded with yaw:0 for the bounds probe; reload with correct yaw.
+avatars[0] = await loadLamAvatar(resolveFace(PERSONAS[0].faceId).base, { meshBase: resolveFace(PERSONAS[0].faceId).meshBase, yaw: angleOf(0) });
+lamBufs[0] = new Float32Array(avatars[0].count * FLOATS_PER_SPLAT);
+
+const FACET_R = headR * 0.62; // outward placement radius — close enough that facets read as one head, not five separate floating faces
+for (let i = 0; i < N; i++) {
+  ghosts.push(new GhostStylizer(avatars[i].count));
+  styleBufs.push(new Float32Array(avatars[i].count * FLOATS_PER_SPLAT));
+}
+
+// =========================================================================
+// core — "soft cornered extruded pentagram": a 5-lobed radius function
+// r(phi) = R0*(0.8 + 0.2*cos(5*phi)) puts smooth outward bulges exactly at
+// each facet's angle (cos(5*phi) peaks every 72 degrees when phi=0 aligns
+// with facet 0) and soft recessed "corners" between them — closed-form,
+// no sharp edges, matches "soft cornered" directly rather than approximating
+// a rounded polygon with chamfers.
+// =========================================================================
+function buildCore() {
+  const R0 = FACET_R * 1.05;
+  const yTop = headR * 0.62, yBot = -headR * 0.55;
+  const rings = 14, perRing = 48;
+  const out = new Float32Array(rings * perRing * FLOATS_PER_SPLAT);
+  let o = 0;
+  for (let ry = 0; ry < rings; ry++) {
+    const v = ry / (rings - 1);
+    const y = yTop + (yBot - yTop) * v;
+    // taper top and bottom slightly so it reads as a rounded totem, not a cylinder
+    const taper = 1 - 0.25 * Math.pow(Math.abs(v - 0.5) * 2, 2);
+    for (let a = 0; a < perRing; a++) {
+      const phi = (a / perRing) * Math.PI * 2;
+      const r = R0 * (0.78 + 0.22 * Math.cos(5 * phi)) * taper;
+      const x = r * Math.sin(phi), z = r * Math.cos(phi);
+      const shade = 0.14 + 0.05 * Math.sin(phi * 5) + 0.03 * v;
+      o = pushSplat(out, o, x, y, z, shade, shade * 0.95, shade * 1.05, 1, 0.022);
+    }
+  }
+  return { data: out.subarray(0, o), count: o / FLOATS_PER_SPLAT };
+}
+const coreData = buildCore();
+
+// =========================================================================
+// mist shroud — "we do not consider its body at this stage, it is shrouded
+// in clouds": a soft low-density puff below the core instead of a modelled
+// spine/body. Gently drifts (gets re-jittered each frame via a small ghost
+// stylizer of its own, cheap since it's only a few hundred splats).
+// =========================================================================
+function buildMist(seedN) {
+  const rnd = mulberry32(seedN);
+  const n = 700;
+  const out = new Float32Array(n * FLOATS_PER_SPLAT);
+  let o = 0;
+  const cy = -headR * 0.95;
+  for (let i = 0; i < n; i++) {
+    const a = rnd() * Math.PI * 2, rr = (0.3 + rnd() * 0.9) * FACET_R * 1.6;
+    const x = Math.cos(a) * rr, z = Math.sin(a) * rr;
+    const y = cy - rnd() * headR * 0.9 + Math.sin(rr) * 0.02;
+    const shade = 0.7 + rnd() * 0.25;
+    o = pushSplat(out, o, x, y, z, shade, shade, shade * 1.02, 0.22 + rnd() * 0.18, 0.05 + rnd() * 0.05);
+  }
+  return { data: out, count: n, seedBase: seedN };
+}
+const mist = buildMist(777);
+const mistGhost = new GhostStylizer(mist.count);
+const mistBuf = new Float32Array(mist.data);
+
+// prime lastCount on every avatar (only set inside pose()) before using
+// it to size fixed offsets below — this was the actual bug in first draft:
+// offsets computed from `undefined` lastCount -> NaN -> "offset out of
+// bounds" on the very first combined.set() in the frame loop.
+for (let i = 0; i < N; i++) avatars[i].pose({ at: [0, 0, 0], bones: {}, morph: {} }, lamBufs[i], 0);
+
+// per-splat coreWeight (1 = this splat sits near ITS OWN face's centroid,
+// 0 = out at the periphery — hairline/jaw/ears) for the swirl-into-shared-
+// mass effect (owner feedback: dissolved faces should intermix into one
+// writhing central tangle rather than sit as five separate blobs, while
+// each face's own core stays solid enough to still read as a face).
+// Computed once from each avatar's own rest-pose splat cloud (at:[0,0,0],
+// so this is in the avatar's OWN local frame, independent of which facet
+// it's later placed on) — a smoothstep falloff from centroid distance.
+function computeCoreWeight(buf, count) {
+  let cx = 0, cy = 0, cz = 0;
+  for (let i = 0; i < count; i++) { const o = i * FLOATS_PER_SPLAT; cx += buf[o]; cy += buf[o + 1]; cz += buf[o + 2]; }
+  cx /= count; cy /= count; cz /= count;
+  const r = new Float32Array(count);
+  let maxR = 0;
+  for (let i = 0; i < count; i++) {
+    const o = i * FLOATS_PER_SPLAT;
+    const dx = buf[o] - cx, dy = buf[o + 1] - cy, dz = buf[o + 2] - cz;
+    const d = Math.hypot(dx, dy, dz);
+    r[i] = d; if (d > maxR) maxR = d;
+  }
+  const w = new Float32Array(count);
+  const loT = maxR * 0.32, hiT = maxR * 0.8; // inner 32% stays fully core, outer past 80% fully periphery
+  for (let i = 0; i < count; i++) {
+    const t = Math.min(1, Math.max(0, (r[i] - loT) / Math.max(1e-6, hiT - loT)));
+    const s = t * t * (3 - 2 * t);
+    w[i] = 1 - s; // 1 near centroid, 0 at/past periphery threshold
+  }
+  return w;
+}
+const coreWeights = avatars.map((av, i) => computeCoreWeight(lamBufs[i], av.lastCount));
+
+// compute fixed offsets now that all lastCounts are known
+let running = 0;
+for (let i = 0; i < N; i++) { offsets[i] = running; running += avatars[i].lastCount; }
+const coreOffset = running; running += coreData.count;
+const mistOffset = running; running += mist.count;
+const TOTAL = running;
+const combined = new Float32Array(TOTAL * FLOATS_PER_SPLAT);
+combined.set(coreData.data, coreOffset * FLOATS_PER_SPLAT);
+renderer.setData(combined, TOTAL);
+
+// =========================================================================
+// persona switching + transition — outgoing facet ramps LIVE->DISSOLVED,
+// incoming ramps DISSOLVED->LIVE, over ~1s. A real per-frame lerp of the
+// whole param set (not a hard cut) — verified in the report via a param
+// sample across frames, same discipline as the rest of this session.
+// =========================================================================
+let liveIdx = 0;
+let transition = null; // {from, to, start, dur}
+function lerpParams(a, b, t) {
+  const out = {};
+  for (const k of Object.keys(a)) out[k] = a[k] + (b[k] - a[k]) * t;
+  return out;
+}
+function currentParams(i, tt) {
+  const p = PERSONAS[i];
+  if (!transition) return i === liveIdx ? p.live : p.dissolved;
+  const t = Math.min(1, (tt - transition.start) / transition.dur);
+  const smooth = t * t * (3 - 2 * t);
+  if (i === transition.from) return lerpParams(p.live, p.dissolved, smooth);
+  if (i === transition.to) return lerpParams(PERSONAS[i].dissolved, PERSONAS[i].live, smooth);
+  return p.dissolved;
+}
+function renderNow(i) {
+  const p = PERSONAS[i];
+  $('now').innerHTML = `<b>${p.name}</b><span class="tag">${p.tag}</span>`;
+  $('now').style.setProperty('--pc', p.color);
+  [...document.querySelectorAll('button.persona')].forEach((b, k) => b.classList.toggle('active', k === i));
+}
+async function switchPersona(target) {
+  if (target === liveIdx || transition) return;
+  playCrunch();
+  const from = liveIdx;
+  transition = { from, to: target, start: performance.now() / 1000, dur: 1.0 };
+  tweenTheta(angleOf(target), 900);
+  await new Promise((r) => setTimeout(r, 1000));
+  liveIdx = target;
+  transition = null;
+  renderNow(liveIdx);
+}
+const btnWrap = $('personaButtons');
+PERSONAS.forEach((p, i) => {
+  const b = document.createElement('button');
+  b.className = 'persona' + (i === 0 ? ' active' : '');
+  b.style.setProperty('--pc', p.color);
+  b.textContent = p.name;
+  b.onclick = () => switchPersona(i);
+  btnWrap.appendChild(b);
+});
+renderNow(0);
+$('front').onclick = () => tweenTheta(angleOf(liveIdx), 500);
+
+// auto-rotate: cycle to the next persona every 3-5s (randomized per-cycle,
+// not a fixed metronome). Recursive setTimeout, not setInterval, so each
+// wait is freshly randomized and it naturally pauses itself while a
+// transition is already running (switchPersona no-ops mid-transition, and
+// we skip scheduling the next hop until the current one's had time to
+// finish: transition dur is 900ms, well under the 3s floor).
+let autoRotateOn = false, autoRotateTimer = null;
+function scheduleNextRotate() {
+  if (!autoRotateOn) return;
+  const delay = 3000 + Math.random() * 2000;
+  autoRotateTimer = setTimeout(() => {
+    switchPersona((liveIdx + 1) % N);
+    scheduleNextRotate();
+  }, delay);
+}
+$('autoRotate').onclick = () => {
+  autoRotateOn = !autoRotateOn;
+  $('autoRotate').textContent = autoRotateOn ? '■ stop rotating' : '▶ rotate faces (3-5s)';
+  if (autoRotateOn) scheduleNextRotate();
+  else if (autoRotateTimer) { clearTimeout(autoRotateTimer); autoRotateTimer = null; }
+};
+theta = angleOf(0); radius = headR * 3.2; applyCamera();
+
+statsEl.textContent = `${TOTAL.toLocaleString()} splats · loaded`;
+
+// debug hooks for verification
+window.__pentagram = { PERSONAS, liveIdx: () => liveIdx, transition: () => transition, switchPersona };
+
+(function frame(t) {
+  const tt = t / 1000;
+  for (let i = 0; i < N; i++) {
+    const pose = idlePoseFor(PERSONAS[i], tt);
+    pose.at = [FACET_R * Math.sin(angleOf(i)), 0, FACET_R * Math.cos(angleOf(i))];
+    avatars[i].pose(pose, lamBufs[i], 0);
+    const n = avatars[i].lastCount;
+    const params = currentParams(i, tt);
+    // tint always comes from the persona itself — dissolved OR live, so
+    // the colour hint survives the whole transition, only the OTHER
+    // params (ghost amount, dissolve, etc.) interpolate.
+    // swirl strength tracks the SAME interpolated `dissolve` value already
+    // driving this facet's transition — near-zero for the live face
+    // (dissolve ~0.04-0.3), rises naturally as a face dissolves, no extra
+    // state to track. Capped so even a fully-dissolved face's core stays
+    // legible (never fully swirls away).
+    const swirl = Math.min(0.85, params.dissolve / 0.75);
+    ghosts[i].update(lamBufs[i], styleBufs[i], tt, { ...params, tintTarget: PERSONAS[i].tint, coreWeight: coreWeights[i], swirl });
+    combined.set(styleBufs[i].subarray(0, n * FLOATS_PER_SPLAT), offsets[i] * FLOATS_PER_SPLAT);
+  }
+  // mist: gentle drift via a cheap dissolve+jitter pass, no lag needed (mist has no fixed target motion)
+  mistGhost.update(mist.data, mistBuf, tt, { dissolve: 0.15, jitter: 0.35, twinkle: 0.3, tintTarget: [1, 1, 1.05] });
+  combined.set(mistBuf, mistOffset * FLOATS_PER_SPLAT);
+
+  window.__lastFrameSample = { t: tt, liveIdx, transition: transition ? { ...transition } : null,
+    params0: currentParams(0, tt) };
+
+  renderer.writeRegion(0, combined);
+  renderer.render();
+  requestAnimationFrame(frame);
+})(performance.now());
+</script>
+</body>
+</html>

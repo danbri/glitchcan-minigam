@@ -78,6 +78,7 @@ import { qMul, qNormalize } from './lib/pose-math.js';
 import { FACES, resolveFace } from './lib/lam-face-roster.js';
 import { ORGANIC_TREATMENTS, preloadAllOrganicElements } from './lib/lam-organic-treatments.js';
 import { GhostStylizer } from './lib/lam-ghost-stylize.js';
+import { sampleTalkBurst } from './lib/lam-visemes.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('gl'), statsEl = $('stats');
@@ -129,7 +130,10 @@ window.addEventListener('resize', applyCamera);
 // --- idle rig demo — same formula verified live earlier this session.
 // Sway needs to be genuinely happening for the lag/secondary-action effect
 // to be visible at all: without motion there's nothing to lag behind.
-let talkBurstUntil = 0;
+// talk burst now drives the rig's full mouth-shape range (funnel, pucker,
+// stretch, smile, press, roll, lower-down, upper-up — not just jawOpen)
+// via lib/lam-visemes.js's canned viseme sequencer.
+let talkBurstStart = -1;
 function idlePose(t) {
   const blinkPhase = (t % 3.4) / 3.4;
   const blink = blinkPhase < 0.06 ? Math.sin((blinkPhase / 0.06) * Math.PI) : 0;
@@ -138,11 +142,12 @@ function idlePose(t) {
   const qYaw = [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)];
   const qPitch = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
   const headQ = qNormalize(qMul(qYaw, qPitch));
-  let talk = Math.max(0, Math.sin(t * 1.7)) * 0.16;
-  if (t < talkBurstUntil) talk = Math.max(0, Math.sin(t * 9)) * 0.5;
-  return { at: [0, 0, 0], bones: { head: headQ }, morph: { eyeBlinkLeft: blink, eyeBlinkRight: blink, jawOpen: talk } };
+  const idleJaw = Math.max(0, Math.sin(t * 1.7)) * 0.16;
+  const talkMorph = talkBurstStart >= 0 ? sampleTalkBurst(t - talkBurstStart) : {};
+  const morph = { eyeBlinkLeft: blink, eyeBlinkRight: blink, jawOpen: idleJaw, ...talkMorph };
+  return { at: [0, 0, 0], bones: { head: headQ }, morph };
 }
-window.__talkBurst = () => { talkBurstUntil = performance.now() / 1000 + 2.5; };
+window.__talkBurst = () => { talkBurstStart = performance.now() / 1000; };
 $('talk').onclick = window.__talkBurst;
 
 function fibonacciSphere(n) {

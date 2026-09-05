@@ -69,7 +69,27 @@ export class GhostStylizer {
   //   noiseFreq  — spatial frequency for dissolve noise (default ~14)
   //   sliceSpeed — how fast the dissolve "slice" bands sweep (default ~1.1)
   update(target, out, t, params = {}) {
-    const { lag = 0, dissolve = 0, particle = 0, ghost = 0, noiseFreq = 14, sliceSpeed = 1.1, twinkle = 0, jitter = 0, roundness = 0 } = params;
+    const { lag = 0, dissolve = 0, particle = 0, ghost = 0, noiseFreq = 14, sliceSpeed = 1.1, twinkle = 0, jitter = 0, roundness = 0,
+      // tintTarget: optional [r,g,b] multiplier the `ghost` blend moves
+      // toward (default matches the ORIGINAL hardcoded cool-CRT constants
+      // exactly, so every existing caller that doesn't pass this is
+      // unaffected) — lets each caller pick its own persona/mood colour
+      // instead of always the one cool tint.
+      tintTarget = [0.72, 0.95, 1.12],
+      // coreWeight (optional Float32Array, per-splat, 0..1, 1=core/center,
+      // 0=periphery) + swirl (0..1 scalar): when BOTH omitted, behaviour is
+      // byte-for-byte identical to before this addition, for every existing
+      // caller. When present: peripheral splats (low coreWeight) get an
+      // EXTRA fade/rounding on top of whatever dissolve/particle/roundness
+      // the caller already set, AND get pulled toward the world Y-axis
+      // (x=0,z=0) with a slow per-splat swirl rotation around it. Built for
+      // a specific creature (demo-lam-pentagram.html) where several
+      // dissolved faces share one central mass and should read as one
+      // writhing intermixed tangle at their edges rather than separate
+      // blobs each sitting rigidly on its own facet, while each face's own
+      // core (eyes/nose/mouth) stays comparatively solid so it still reads
+      // as a face at a glance.
+      coreWeight = null, swirl = 0 } = params;
     const n = this.count;
     if (!this.curPos) {
       this.curPos = new Float32Array(n * 3);
@@ -174,6 +194,38 @@ export class GhostStylizer {
         qx /= qlen; qy /= qlen; qz /= qlen; qw /= qlen;
       }
 
+      // peripheral swirl-into-shared-mass: only active when the caller
+      // supplies coreWeight (per-splat core/edge weight) AND swirl>0.
+      // peri=0 at this splat's own face-center (coreWeight=1) -> no change
+      // at all, so a face's core stays exactly as solid as dissolve/
+      // particle/roundness already made it. peri approaches 1 at the
+      // face's own periphery (hairline/jaw/ears, coreWeight->0) -> pulled
+      // toward the shared world Y-axis and rotated around it (a stable,
+      // non-accumulating function of absolute time t, not a running
+      // integrator, so it can't run away frame to frame) plus an extra
+      // fade/rounding on top of whatever the scalar params already did.
+      if (coreWeight && swirl > 0) {
+        const peri = 1 - coreWeight[i];
+        if (peri > 0) {
+          const pullAmt = peri * swirl * 0.55;
+          const px2 = jx * (1 - pullAmt), pz2 = jz * (1 - pullAmt);
+          const ang = t * 0.6 * peri * swirl + this.noiseSeed[i] * 0.01;
+          const ca = Math.cos(ang), sa = Math.sin(ang);
+          jx = px2 * ca - pz2 * sa;
+          jz = px2 * sa + pz2 * ca;
+          alpha *= 1 - peri * swirl * 0.5;
+          const extraRound = peri * swirl * 0.6;
+          const avgS2 = (sx + sy + sz) / 3;
+          sx = sx * (1 - extraRound) + avgS2 * extraRound * 1.4;
+          sy = sy * (1 - extraRound) + avgS2 * extraRound * 1.4;
+          sz = sz * (1 - extraRound) + avgS2 * extraRound * 1.4;
+          qx *= (1 - extraRound); qy *= (1 - extraRound); qz *= (1 - extraRound);
+          qw = qw * (1 - extraRound) + extraRound;
+          const qlen2 = Math.hypot(qx, qy, qz, qw) || 1;
+          qx /= qlen2; qy /= qlen2; qz /= qlen2; qw /= qlen2;
+        }
+      }
+
       out[o] = jx; out[o + 1] = jy; out[o + 2] = jz;
       out[o + 3] = qx; out[o + 4] = qy; out[o + 5] = qz; out[o + 6] = qw;
       out[o + 7] = sx; out[o + 8] = sy; out[o + 9] = sz;
@@ -182,7 +234,7 @@ export class GhostStylizer {
       if (ghost > 0) {
         const lum = r * 0.3 + g * 0.59 + b * 0.11;
         const scan = 0.85 + 0.15 * Math.sin(ty * 140 + t * 2.2);
-        const gr = lum * 0.72 * scan, gg = lum * 0.95 * scan, gb = lum * 1.12 * scan; // cool CRT/radio tint
+        const gr = lum * tintTarget[0] * scan, gg = lum * tintTarget[1] * scan, gb = lum * tintTarget[2] * scan;
         r += (gr - r) * ghost; g += (gg - g) * ghost; b += (gb - b) * ghost;
       }
       out[o + 10] = r; out[o + 11] = g; out[o + 12] = b; out[o + 13] = alpha;

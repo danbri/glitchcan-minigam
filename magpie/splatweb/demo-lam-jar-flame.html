@@ -131,7 +131,11 @@ for (const id of ['domeScale', 'orbScale', 'offX', 'offY', 'offZ', 'swayAmp', 's
     sliders[id].addEventListener('input', upd); upd();
   }
 }
-let talkBurstUntil = 0;
+// talk burst now drives the rig's full mouth-shape range (funnel, pucker,
+// stretch, smile, press, roll, lower-down, upper-up — not just jawOpen)
+// via lib/lam-visemes.js's canned viseme sequencer. Manual-mouth override
+// still wins over both idle and burst, unchanged.
+let talkBurstStart = -1;
 function idlePose(t) {
   const rate = Number(sliders.blinkRate.value); // blinks per 10s
   const period = rate > 0 ? 10 / rate : 1e9;
@@ -143,12 +147,17 @@ function idlePose(t) {
   const qYaw = [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)];
   const qPitch = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
   const headQ = qNormalize(qMul(qYaw, qPitch));
-  let talk = Math.max(0, Math.sin(t * 1.7)) * 0.18;
-  if ($('manualMouth').checked) talk = Number(sliders.mouth.value);
-  else if (t < talkBurstUntil) talk = Math.max(0, Math.sin(t * 9)) * 0.55; // exaggerated burst, for verification
-  return { at: [0, 0, 0], bones: { head: headQ }, morph: { eyeBlinkLeft: blink, eyeBlinkRight: blink, jawOpen: talk } };
+  let morph;
+  if ($('manualMouth').checked) {
+    morph = { eyeBlinkLeft: blink, eyeBlinkRight: blink, jawOpen: Number(sliders.mouth.value) };
+  } else {
+    const idleJaw = Math.max(0, Math.sin(t * 1.7)) * 0.18;
+    const talkMorph = talkBurstStart >= 0 ? sampleTalkBurst(t - talkBurstStart) : {};
+    morph = { eyeBlinkLeft: blink, eyeBlinkRight: blink, jawOpen: idleJaw, ...talkMorph };
+  }
+  return { at: [0, 0, 0], bones: { head: headQ }, morph };
 }
-window.__talkBurst = () => { talkBurstUntil = performance.now() / 1000 + 2.5; };
+window.__talkBurst = () => { talkBurstStart = performance.now() / 1000; };
 $('talk').onclick = window.__talkBurst;
 
 function fibonacciSphere(n) {
