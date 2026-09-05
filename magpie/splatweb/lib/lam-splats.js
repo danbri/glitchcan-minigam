@@ -143,10 +143,9 @@ export async function loadLamHead(base, opts = {}) {
 // ---------------------------------------------------------------- posable avatar
 // column-major 3x3 helpers (same conventions as rigged-splats.js's private
 // ones — duplicated rather than imported since that module doesn't export
-// them; see mat3ToQuat below for the one genuinely new piece: rigged-splats
-// never needed matrix→quaternion because it fakes orientation from the
-// surface normal each frame, but LAM splats carry a REAL trained rotation
-// that must be composed with the skinning joint's rotation).
+// them). The matrix→quaternion step (Shepperd's method) that used to live
+// here as `mat3ToQuat` is now inlined as scalar math directly in the
+// per-splat loop in pose() below, to avoid allocating a JS array per splat.
 const rot3 = (m) => [m[0], m[1], m[2], m[4], m[5], m[6], m[8], m[9], m[10]];
 const quatToMat3 = (q) => {
   const [x, y, z, w] = q;
@@ -159,26 +158,6 @@ const mul3 = (a, b) => [
   a[0] * b[3] + a[3] * b[4] + a[6] * b[5], a[1] * b[3] + a[4] * b[4] + a[7] * b[5], a[2] * b[3] + a[5] * b[4] + a[8] * b[5],
   a[0] * b[6] + a[3] * b[7] + a[6] * b[8], a[1] * b[6] + a[4] * b[7] + a[7] * b[8], a[2] * b[6] + a[5] * b[7] + a[8] * b[8],
 ];
-// Shepperd's method, column-major 3x3 → (x,y,z,w)
-function mat3ToQuat(m) {
-  const m00 = m[0], m10 = m[1], m20 = m[2], m01 = m[3], m11 = m[4], m21 = m[5], m02 = m[6], m12 = m[7], m22 = m[8];
-  const tr = m00 + m11 + m22;
-  let x, y, z, w;
-  if (tr > 0) {
-    const s = Math.sqrt(tr + 1) * 2;
-    w = 0.25 * s; x = (m21 - m12) / s; y = (m02 - m20) / s; z = (m10 - m01) / s;
-  } else if (m00 > m11 && m00 > m22) {
-    const s = Math.sqrt(1 + m00 - m11 - m22) * 2;
-    w = (m21 - m12) / s; x = 0.25 * s; y = (m01 + m10) / s; z = (m02 + m20) / s;
-  } else if (m11 > m22) {
-    const s = Math.sqrt(1 + m11 - m00 - m22) * 2;
-    w = (m02 - m20) / s; x = (m01 + m10) / s; y = 0.25 * s; z = (m12 + m21) / s;
-  } else {
-    const s = Math.sqrt(1 + m22 - m00 - m11) * 2;
-    w = (m10 - m01) / s; x = (m02 + m20) / s; y = (m12 + m21) / s; z = 0.25 * s;
-  }
-  return qNormalize([x, y, z, w]);
-}
 
 // Full asset load: mesh + skeleton + morph targets + real splat params,
 // ready for per-frame pose(). base: URL prefix ending in '/'.
@@ -330,15 +309,19 @@ export class LamHeadAvatar {
     const alpha = p.alpha ?? 1;
     const cy = Math.cos(yaw), sy = Math.sin(yaw);
     const M = new Float32Array(12);
+    // qYaw is the same for every splat in this call — read its 4 scalars
+    // once outside the loop instead of re-touching the array per splat.
+    const [yqx, yqy, yqz, yqw] = this.qYaw;
     let o = off, made = 0;
     for (let i = 0; i < count; i++) {
       if (ply.op[i] < alphaMin) continue;
       const i3 = i * 3, i4 = i * 4;
       let px = pos[i3] + ply.off[i3], py = pos[i3 + 1] + ply.off[i3 + 1], pz = pos[i3 + 2] + ply.off[i3 + 2];
       for (const [d, w] of mw) { px += d[i3] * w; py += d[i3 + 1] * w; pz += d[i3 + 2] * w; }
-      let qLocal = [ply.rot[i4], ply.rot[i4 + 1], ply.rot[i4 + 2], ply.rot[i4 + 3]];
+      const lqx = ply.rot[i4], lqy = ply.rot[i4 + 1], lqz = ply.rot[i4 + 2], lqw = ply.rot[i4 + 3];
       const w0 = jw[i4];
-      let qSkin = IDENTITY_Q;
+      // qSkin, identity unless this splat is actually skinned (w0 > 0)
+      let sqx = 0, sqy = 0, sqz = 0, sqw = 1;
       if (w0 > 0) {
         M.fill(0);
         for (let k = 0; k < 4; k++) {
@@ -351,16 +334,51 @@ export class LamHeadAvatar {
         const qy = M[1] * px + M[4] * py + M[7] * pz + M[10];
         const qz = M[2] * px + M[5] * py + M[8] * pz + M[11];
         px = qx; py = qy; pz = qz;
-        qSkin = mat3ToQuat([M[0], M[1], M[2], M[3], M[4], M[5], M[6], M[7], M[8]]);
+        // mat3ToQuat, inlined scalar (Shepperd's method) — this and every
+        // quaternion combine below used to go through pose-math.js's
+        // array-returning helpers, allocating up to 6 short-lived JS
+        // arrays PER SPLAT (qLocal, the mat3ToQuat result, two qMul
+        // results, two qNormalize results). At ~13.5k splats × 5 avatars
+        // that was ~400k avoidable array allocations every frame. Same
+        // math, scalars only, no allocation.
+        const m00 = M[0], m10 = M[1], m20 = M[2], m01 = M[3], m11 = M[4], m21 = M[5], m02 = M[6], m12 = M[7], m22 = M[8];
+        const tr = m00 + m11 + m22;
+        if (tr > 0) {
+          const s = Math.sqrt(tr + 1) * 2;
+          sqw = 0.25 * s; sqx = (m21 - m12) / s; sqy = (m02 - m20) / s; sqz = (m10 - m01) / s;
+        } else if (m00 > m11 && m00 > m22) {
+          const s = Math.sqrt(1 + m00 - m11 - m22) * 2;
+          sqw = (m21 - m12) / s; sqx = 0.25 * s; sqy = (m01 + m10) / s; sqz = (m02 + m20) / s;
+        } else if (m11 > m22) {
+          const s = Math.sqrt(1 + m11 - m00 - m22) * 2;
+          sqw = (m02 - m20) / s; sqx = (m01 + m10) / s; sqy = 0.25 * s; sqz = (m12 + m21) / s;
+        } else {
+          const s = Math.sqrt(1 + m22 - m00 - m11) * 2;
+          sqw = (m10 - m01) / s; sqx = (m02 + m20) / s; sqy = (m12 + m21) / s; sqz = 0.25 * s;
+        }
+        const sl = Math.hypot(sqx, sqy, sqz, sqw) || 1;
+        sqx /= sl; sqy /= sl; sqz /= sl; sqw /= sl;
       }
-      const q = qNormalize(qMul(qSkin, qLocal));
+      // q = normalize(qSkin * qLocal), Hamilton product inlined
+      let qx = sqw * lqx + sqx * lqw + sqy * lqz - sqz * lqy;
+      let qy = sqw * lqy - sqx * lqz + sqy * lqw + sqz * lqx;
+      let qz = sqw * lqz + sqx * lqy - sqy * lqx + sqz * lqw;
+      let qs = sqw * lqw - sqx * lqx - sqy * lqy - sqz * lqz;
+      let ql = Math.hypot(qx, qy, qz, qs) || 1;
+      qx /= ql; qy /= ql; qz /= ql; qs /= ql;
       // place: recentre, scale, yaw, at
       const lx = (px - centre[0]) * scale, ly = (py - centre[1]) * scale, lz = (pz - centre[2]) * scale;
       const wx = at[0] + lx * cy + lz * sy, wy = at[1] + ly, wz = at[2] - lx * sy + lz * cy;
-      const qw = qNormalize(qMul(this.qYaw, q));
+      // qw = normalize(qYaw * q), same inlined product
+      let owx = yqw * qx + yqx * qs + yqy * qz - yqz * qy;
+      let owy = yqw * qy - yqx * qz + yqy * qs + yqz * qx;
+      let owz = yqw * qz + yqx * qy - yqy * qx + yqz * qs;
+      let oww = yqw * qs - yqx * qx - yqy * qy - yqz * qz;
+      const owl = Math.hypot(owx, owy, owz, oww) || 1;
+      owx /= owl; owy /= owl; owz /= owl; oww /= owl;
       const oo = off + made * FLOATS_PER_SPLAT;
       out[oo] = wx; out[oo + 1] = wy; out[oo + 2] = wz;
-      out[oo + 3] = qw[0]; out[oo + 4] = qw[1]; out[oo + 5] = qw[2]; out[oo + 6] = qw[3];
+      out[oo + 3] = owx; out[oo + 4] = owy; out[oo + 5] = owz; out[oo + 6] = oww;
       let s0 = ply.scl[i3] * scale, s1 = ply.scl[i3 + 1] * scale, s2 = ply.scl[i3 + 2] * scale;
       const smin = Math.max(1e-5, Math.min(s0, s1, s2)), cap = Math.min(maxScale, smin * maxAspect);
       out[oo + 7] = Math.min(s0, cap); out[oo + 8] = Math.min(s1, cap); out[oo + 9] = Math.min(s2, cap);

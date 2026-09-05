@@ -782,6 +782,22 @@ document.addEventListener('keydown', (e) => {
 
 statsEl.textContent = `${TOTAL.toLocaleString()} splats · loaded`;
 
+// Frame-time HUD — added because this demo had no way to check a
+// performance claim against a real number (every "is it slow?" question
+// was a guess). Updated once a second from a rolling average, not every
+// frame, so the readout itself doesn't add per-frame overhead/noise.
+let fpsFrames = 0, fpsAccMs = 0, fpsLastT = performance.now();
+function reportFrameTime(nowMs) {
+  fpsFrames++;
+  fpsAccMs += nowMs - fpsLastT;
+  fpsLastT = nowMs;
+  if (fpsAccMs >= 1000) {
+    const avgMs = fpsAccMs / fpsFrames;
+    statsEl.textContent = `${TOTAL.toLocaleString()} splats · ${(1000 / avgMs).toFixed(0)} fps (${avgMs.toFixed(1)} ms/frame) · ${renderer.backend}`;
+    fpsFrames = 0; fpsAccMs = 0;
+  }
+}
+
 // debug hooks for verification
 window.__pentagram = { PERSONAS, N, liveIdx: () => liveIdx, transition: () => transition, switchPersona,
   liveWeight: (i, tt) => liveWeight(i, tt ?? performance.now() / 1000),
@@ -848,8 +864,14 @@ const LIVE_SCALE = 1.15, RETRACT_SCALE = 0.78;
     // can dip slightly negative during its damped-oscillation settle tail
     // (see spinEnergy) — that reads as a brief spring-past-rest snap
     // before the final settle, which is the intended "sproing back".
+    // Fling (spin-driven outward flare) and FX-intensity dimming used to
+    // be two separate full passes over this facet's splats. They touch
+    // disjoint fields (position+scale vs. alpha) and neither depends on
+    // the other's output, so they're fused into ONE pass here — same
+    // per-splat work, one fewer full iteration over up to ~13.5k splats.
     const spinE = spinEnergy(tt);
-    if (spinE !== 0) {
+    const dimAlpha = i !== liveIdx;
+    if (spinE !== 0 || dimAlpha) {
       const buf = styleBufs[i], cw = coreWeights[i];
       // Saturn's-rings, not a shrinking puffball: the camera sits close to
       // eye-level (phi keeps it near-horizontal), so a ring flattened all
@@ -864,31 +886,33 @@ const LIVE_SCALE = 1.15, RETRACT_SCALE = 0.78;
       // keeps the wider ring from reading as thinner/sparser than rest.
       const OUTWARD_MAX = headR * 0.85, FLATTEN_AMT = 0.4, SIZE_BOOST = 0.35;
       for (let k = 0; k < n; k++) {
-        const peri = 1 - cw[k];
-        if (peri <= 0) continue;
         const o = k * FLOATS_PER_SPLAT;
-        const x = buf[o], y = buf[o + 1], z = buf[o + 2];
-        const rXZ = Math.hypot(x, z) || 1e-4;
-        const outAmt = peri * spinE * OUTWARD_MAX;
-        buf[o] = x + (x / rXZ) * outAmt;
-        buf[o + 2] = z + (z / rXZ) * outAmt;
-        buf[o + 1] = y + (targetY - y) * (peri * spinE * FLATTEN_AMT);
-        const sizeMult = 1 + peri * Math.max(0, spinE) * SIZE_BOOST;
-        buf[o + 7] *= sizeMult; buf[o + 8] *= sizeMult; buf[o + 9] *= sizeMult;
+        if (spinE !== 0) {
+          const peri = 1 - cw[k];
+          if (peri > 0) {
+            const x = buf[o], y = buf[o + 1], z = buf[o + 2];
+            const rXZ = Math.hypot(x, z) || 1e-4;
+            const outAmt = peri * spinE * OUTWARD_MAX;
+            buf[o] = x + (x / rXZ) * outAmt;
+            buf[o + 2] = z + (z / rXZ) * outAmt;
+            buf[o + 1] = y + (targetY - y) * (peri * spinE * FLATTEN_AMT);
+            const sizeMult = 1 + peri * Math.max(0, spinE) * SIZE_BOOST;
+            buf[o + 7] *= sizeMult; buf[o + 8] *= sizeMult; buf[o + 9] *= sizeMult;
+          }
+        }
+        // FX intensity: a direct, guaranteed-linear post-multiply on this
+        // facet's final alpha, applied only to non-live facets. Scaling
+        // the individual stylize PARAMS (dissolve/particle/roundness/
+        // twinkle/jitter/swirl, tried first) barely moved the picture —
+        // with ~13k splats per facet heavily overlapping in screen space
+        // at this camera distance, alpha-compositing overdraw (cumulative
+        // opacity of many stacked low-alpha layers approaches 1 regardless
+        // of small per-splat changes) dominated over any single
+        // parameter's effect. A flat alpha scale sidesteps that entirely —
+        // it's the one thing that composites linearly no matter how many
+        // layers stack.
+        if (dimAlpha) buf[o + 13] *= fxIntensity;
       }
-    }
-    // FX intensity: a direct, guaranteed-linear post-multiply on this
-    // facet's final alpha, applied only to non-live facets. Scaling the
-    // individual stylize PARAMS (dissolve/particle/roundness/twinkle/
-    // jitter/swirl, tried first) barely moved the picture — with ~13k
-    // splats per facet heavily overlapping in screen space at this camera
-    // distance, alpha-compositing overdraw (cumulative opacity of many
-    // stacked low-alpha layers approaches 1 regardless of small per-splat
-    // changes) dominated over any single parameter's effect. A flat alpha
-    // scale sidesteps that entirely — it's the one thing that composites
-    // linearly no matter how many layers stack.
-    if (i !== liveIdx) {
-      for (let k = 0; k < n; k++) styleBufs[i][k * FLOATS_PER_SPLAT + 13] *= fxIntensity;
     }
     combined.set(styleBufs[i].subarray(0, n * FLOATS_PER_SPLAT), offsets[i] * FLOATS_PER_SPLAT);
   }
@@ -903,6 +927,7 @@ const LIVE_SCALE = 1.15, RETRACT_SCALE = 0.78;
 
   renderer.writeRegion(0, combined);
   renderer.render();
+  reportFrameTime(t);
   requestAnimationFrame(frame);
 })(performance.now());
 </script>

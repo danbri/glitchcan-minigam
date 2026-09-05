@@ -9,7 +9,7 @@
 // each frame uploads count×4 bytes instead of count×56. The depth sort
 // itself is still CPU (shared with WebGL); a WGSL compute sort is the
 // remaining step.
-import { FLOATS_PER_SPLAT, lookAt, perspective } from './splat-renderer.js';
+import { FLOATS_PER_SPLAT, lookAt, perspective, sortIndicesApprox, makeSortScratch } from './splat-renderer.js';
 
 const WGSL = /* wgsl */`
 struct Uniforms {
@@ -107,7 +107,10 @@ fn fs(in: VSOut) -> @location(0) vec4f {
 `;
 
 export class WebGPUSplatRenderer {
-  static async create(canvas, { background = [0.06, 0.06, 0.09] } = {}) {
+  // alpha: true — see the same option on SplatRenderer (splat-renderer.js):
+  // clears transparent instead of opaque, so this can sit in a compositor
+  // graph as one layer among others.
+  static async create(canvas, { background = [0.06, 0.06, 0.09], alpha = false } = {}) {
     if (!navigator.gpu) throw new Error('WebGPU not available');
     const adapter = await navigator.gpu.requestAdapter();
     if (!adapter) throw new Error('no WebGPU adapter');
@@ -116,10 +119,11 @@ export class WebGPUSplatRenderer {
     r.canvas = canvas;
     r.device = device;
     r.background = background;
+    r.alpha = alpha;
     r.ctx = canvas.getContext('webgpu');
     if (!r.ctx) throw new Error('no webgpu canvas context');
     r.format = navigator.gpu.getPreferredCanvasFormat();
-    r.ctx.configure({ device, format: r.format, alphaMode: 'opaque' });
+    r.ctx.configure({ device, format: r.format, alphaMode: alpha ? 'premultiplied' : 'opaque' });
 
     const module = device.createShaderModule({ code: WGSL });
     r.pipeline = device.createRenderPipeline({
@@ -166,6 +170,7 @@ export class WebGPUSplatRenderer {
     this.data = f32;
     this.order = new Uint32Array(count);
     this.depths = new Float32Array(count);
+    this.sortScratch = makeSortScratch(count);
     if (this.splatBuf) this.splatBuf.destroy();
     if (this.orderBuf) this.orderBuf.destroy();
     // splat data uploaded ONCE; per-frame traffic is just the order buffer
@@ -200,8 +205,12 @@ export class WebGPUSplatRenderer {
     if (fovY) this.camera.fovY = fovY;
   }
 
+  // See the same method in splat-renderer.js for why this checks for a
+  // detached (no CSS layout) canvas first.
   _resize() {
-    const c = this.canvas, dpr = Math.min(devicePixelRatio || 1, 2);
+    const c = this.canvas;
+    if (c.clientWidth === 0 && c.clientHeight === 0) return;
+    const dpr = Math.min(devicePixelRatio || 1, 2);
     const w = Math.max(1, Math.round(c.clientWidth * dpr));
     const h = Math.max(1, Math.round(c.clientHeight * dpr));
     if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
@@ -215,16 +224,14 @@ export class WebGPUSplatRenderer {
     const view = lookAt(pos, target, [0, 1, 0]);
     const proj = perspective(fovY, c.width / c.height, 0.05, 100);
 
-    // CPU depth sort of INDICES only (no data reorder, no data upload)
-    const d = this.data, n = this.count, depths = this.depths, order = this.order;
-    const r20 = view[2], r21 = view[6], r22 = view[10], r23 = view[14];
-    for (let i = 0; i < n; i++) {
-      const o = i * FLOATS_PER_SPLAT;
-      depths[i] = r20 * d[o] + r21 * d[o + 1] + r22 * d[o + 2] + r23;
-      order[i] = i;
-    }
-    order.sort((a, b) => depths[a] - depths[b]);
-    this.device.queue.writeBuffer(this.orderBuf, 0, order, 0, n);
+    // CPU depth sort of INDICES only (no data reorder, no data upload) —
+    // an O(n) bucket sort (see sortIndicesApprox in splat-renderer.js) in
+    // place of a comparator sort. Measured on this project's own 5-avatar
+    // demo: the comparator sort was a bigger per-frame cost than the
+    // entire GPU upload + draw combined.
+    const n = this.count;
+    sortIndicesApprox(this.data, n, view, this.depths, this.order, this.sortScratch);
+    this.device.queue.writeBuffer(this.orderBuf, 0, this.order, 0, n);
 
     const u = this.uniformData;
     u.set(view, 0);
@@ -235,12 +242,12 @@ export class WebGPUSplatRenderer {
     this.device.queue.writeBuffer(this.uniformBuf, 0, u);
 
     const [br, bg, bb] = this.background;
+    const clearValue = this.alpha ? { r: 0, g: 0, b: 0, a: 0 } : { r: br, g: bg, b: bb, a: 1 };
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
       colorAttachments: [{
         view: this.ctx.getCurrentTexture().createView(),
-        clearValue: { r: br, g: bg, b: bb, a: 1 },
-        loadOp: 'clear', storeOp: 'store',
+        clearValue, loadOp: 'clear', storeOp: 'store',
       }],
     });
     pass.setPipeline(this.pipeline);

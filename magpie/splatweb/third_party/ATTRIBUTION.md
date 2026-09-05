@@ -52,3 +52,8 @@ pronunciation-quality assessment: `pentulpa-voices/README.md`.
 
 Not vendored (no direct-download link to automate): Quaternius packs
 (CC0, https://quaternius.com/) — add manually if wanted.
+
+`lib/three-layer.js` (the compositor's three.js layer, `demo-compositor.html`)
+imports the repo-shared `third_party/three/three.module.min.js` (three.js,
+MIT licence, Three.js Authors) — not duplicated into this folder; same
+vendored copy `trees/vendor/` and others already use.

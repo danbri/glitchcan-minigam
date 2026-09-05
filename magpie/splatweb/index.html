@@ -117,6 +117,18 @@
         slab. Both hide LAM's hollow back-of-head by design, not by luck.</p>
       </div>
     </a>
+    <a class="card" href="demo-compositor.html" style="flex:1 1 300px">
+      <div class="panel">
+        <div class="num">DEMO 10 <span class="tag">experimental</span></div>
+        <h3>Layer compositor — splats + SDF + three.js</h3>
+        <p class="note">A small node-edge dataflow graph
+        (<code>lib/layer-compositor.js</code>) for combining heterogeneous
+        layers into one frame: a raymarched SDF pass, a three.js mesh, and
+        a splat avatar, blended together. Webcam and media-file layers are
+        implemented too (<code>lib/layers.js</code>) — this demo just
+        doesn't force a camera grant on load.</p>
+      </div>
+    </a>
   </div>
   <p class="note" style="margin-top:1rem">Honesty box: capture and network
   are simulated in-page; most rooms are procedural, not scans; no XMPP yet.

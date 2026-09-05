@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layer Compositor — splats + SDF + three.js + webcam (prototype)</title>
+<style>
+html,body{margin:0;height:100%;background:#020204;color:#d8dae2;font:13px monospace}
+#wrap{display:flex;align-items:center;justify-content:center;height:100vh}
+#out{max-width:100%;max-height:100%;border:1px solid #2a3a56;background:#000}
+.hud{position:fixed;top:10px;left:10px;background:rgba(10,13,20,.87);border:1px solid #3a5580;
+  border-radius:8px;padding:0.8rem;max-width:280px;font-size:12px;line-height:1.5}
+.hud h1{font-size:1rem;margin:0 0 0.3rem;color:#e8d9ff}
+.hud .note{color:#8fa2c4;font-size:11px;margin-bottom:0.6rem}
+.row{display:flex;align-items:center;gap:0.4rem;margin:0.25rem 0}
+.row label{flex:1}
+select,button{background:#22304a;color:#cfe0ff;border:1px solid #3a5580;border-radius:4px;
+  padding:0.2rem 0.4rem;font:12px monospace;cursor:pointer}
+input[type=range]{width:90px}
+#stats{margin-top:0.5rem;color:#8fa2c4;font-size:11px}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="out"></canvas></div>
+<div class="hud">
+  <h1>Layer Compositor</h1>
+  <div class="note">Node-edge dataflow demo: an SDF raymarch layer, a
+  three.js mesh layer, and a splat-avatar layer, blended together —
+  see the actual graph wiring in this file's &lt;script&gt;.</div>
+  <div class="row"><label for="threeOp">three.js opacity</label><input id="threeOp" type="range" min="0" max="1" step="0.05" value="0.9"></div>
+  <div class="row"><label for="splatMode">splat blend</label>
+    <select id="splatMode"><option value="over">over</option><option value="screen">screen</option><option value="add">add</option></select>
+  </div>
+  <div class="row"><button id="camBtn">enable webcam (picture-in-picture)</button></div>
+  <div id="stats">loading…</div>
+</div>
+<script type="module">
+import { CompositorGraph, BlendNode, present } from './lib/layer-compositor.js';
+import { createSplatLayer, createWebcamLayer, createSDFLayer } from './lib/layers.js';
+import { createThreeLayer } from './lib/three-layer.js';
+import { buildAvatarSplats, AVATAR_PRESETS } from './lib/scene-builder.js';
+
+const W = 960, H = 600;
+const outCanvas = document.getElementById('out');
+outCanvas.width = W; outCanvas.height = H;
+const statsEl = document.getElementById('stats');
+
+// --------------------------------------------------------------- layers
+// Background: a raymarched SDF scene (default sphere-over-plane — swap
+// `sceneGLSL` for a real Lucid-generated scene body to try that fit).
+const sdfLayer = createSDFLayer({ width: W, height: H });
+
+// A three.js mesh, sharing the frame with everything else here — proves
+// three.js slots in as just another layer, no special-casing needed.
+let threeMesh; // set in setup(), animated in update() — see below
+const threeLayer = createThreeLayer({
+  width: W, height: H,
+  setup({ THREE, scene, camera }) {
+    camera.position.set(0, 0.6, 2.6);
+    scene.add(new THREE.HemisphereLight(0xbcd4ff, 0x201020, 1.1));
+    const key = new THREE.DirectionalLight(0xffffff, 1.2);
+    key.position.set(2, 3, 2);
+    scene.add(key);
+    threeMesh = new THREE.Mesh(
+      new THREE.TorusKnotGeometry(0.45, 0.14, 128, 24),
+      new THREE.MeshStandardMaterial({ color: 0x7fb4ff, roughness: 0.35, metalness: 0.4 }),
+    );
+    threeMesh.position.set(0.9, 0.5, -0.3);
+    scene.add(threeMesh);
+  },
+  update(time) { threeMesh.rotation.y = time * 0.6; threeMesh.rotation.x = time * 0.25; },
+});
+
+// A procedural splat avatar (lib/scene-builder.js) — this is the SAME
+// splat-renderer.js/lam-splats.js pipeline the pentagram/LAM demos use;
+// any of those could be dropped in here as this one node instead.
+const splatLayer = await createSplatLayer({
+  width: W, height: H,
+  setup(renderer) {
+    const appearance = AVATAR_PRESETS[0];
+    const splats = buildAvatarSplats(null, [-0.7, 0, 0], appearance);
+    renderer.setData(splats.toFloat32(), splats.count);
+    renderer.setCamera([0, 1.55, 2.2], [-0.55, 1.35, 0], 45 * Math.PI / 180);
+  },
+});
+
+// --------------------------------------------------------- the graph
+// This IS the node-edge description: three source nodes, two blend
+// (combinator) nodes, wired with .connect(from, to, port). Re-reading
+// this block should tell you the whole compositing pipeline — that's the
+// point of building it as a graph instead of imperative draw calls.
+const graph = new CompositorGraph();
+graph.addNode('sdf', sdfLayer);
+graph.addNode('three', threeLayer);
+graph.addNode('splat', splatLayer);
+
+const bg = new BlendNode({ width: W, height: H, mode: 'over', opacity: 0.9 });
+graph.addNode('bg', bg);
+graph.connect('sdf', 'bg', 'a');   // SDF raymarch is the backdrop
+graph.connect('three', 'bg', 'b'); // three.js mesh drawn over it
+
+const main = new BlendNode({ width: W, height: H, mode: 'over', opacity: 1 });
+graph.addNode('main', main);
+graph.connect('bg', 'main', 'a');
+graph.connect('splat', 'main', 'b'); // splat avatar drawn over that
+
+graph.setOutput('main');
+window.__debug = { sdfLayer, threeLayer, splatLayer, graph, bg, main };
+
+document.getElementById('threeOp').addEventListener('input', (e) => { bg.opacity = +e.target.value; });
+document.getElementById('splatMode').addEventListener('change', (e) => { main.mode = e.target.value; });
+
+// Webcam is opt-in (getUserMedia needs a user gesture in most browsers,
+// and may simply not be available in a sandboxed/headless environment) —
+// added to the graph live, on click, to show the graph can be edited
+// while running, not just built once at startup.
+document.getElementById('camBtn').addEventListener('click', async (e) => {
+  e.target.disabled = true;
+  try {
+    const cam = await createWebcamLayer();
+    graph.addNode('cam', cam);
+    const pip = new BlendNode({ width: W, height: H, mode: 'over', opacity: 1 });
+    graph.addNode('pip', pip);
+    graph.connect('main', 'pip', 'a');
+    graph.connect('cam', 'pip', 'b'); // NOTE: drawn full-frame on top for
+    // simplicity — a real picture-in-picture would draw `cam`'s frame
+    // into a small corner canvas first; left as an easy follow-up.
+    graph.setOutput('pip');
+    e.target.textContent = 'webcam on';
+  } catch (err) {
+    e.target.textContent = 'webcam unavailable: ' + err.message;
+  }
+});
+
+// --------------------------------------------------------------- run
+let frames = 0, accMs = 0, lastT = performance.now();
+(function frame(t) {
+  const time = t / 1000;
+  const out = graph.run(time);
+  present(outCanvas, out);
+
+  frames++; accMs += t - lastT; lastT = t;
+  if (accMs >= 1000) {
+    statsEl.textContent = `${(1000 / (accMs / frames)).toFixed(0)} fps · nodes: ${graph.nodes.size}`;
+    frames = 0; accMs = 0;
+  }
+  requestAnimationFrame(frame);
+})(performance.now());
+</script>
+</body>
+</html>

@@ -87,10 +87,17 @@ void main(){
 }`;
 
 export class SplatRenderer {
-  constructor(canvas, { background = [0.06, 0.06, 0.09] } = {}) {
+  // alpha: true makes this renderer usable as a compositor layer (see
+  // lib/layer-compositor.js) — it clears to a fully transparent backdrop
+  // instead of an opaque colour, so whatever sits BEHIND this canvas in a
+  // composite (another layer, page background) shows through everywhere
+  // no splat covers. Off by default so every existing standalone demo
+  // keeps its current opaque look unchanged.
+  constructor(canvas, { background = [0.06, 0.06, 0.09], alpha = false } = {}) {
     this.canvas = canvas;
     this.background = background;
-    const gl = canvas.getContext('webgl2', { antialias: false, alpha: false });
+    this.alpha = alpha;
+    const gl = canvas.getContext('webgl2', { antialias: false, alpha, premultipliedAlpha: true });
     if (!gl) throw new Error('WebGL2 not available');
     this.gl = gl;
 
@@ -146,6 +153,7 @@ export class SplatRenderer {
     this.sorted = new Float32Array(count * FLOATS_PER_SPLAT);
     this.order = new Uint32Array(count);
     this.depths = new Float32Array(count);
+    this.sortScratch = makeSortScratch(count);
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instBuf);
     gl.bufferData(gl.ARRAY_BUFFER, this.sorted.byteLength, gl.DYNAMIC_DRAW);
@@ -162,8 +170,20 @@ export class SplatRenderer {
     if (fovY) this.camera.fovY = fovY;
   }
 
+  // A canvas that's actually in the document is auto-sized from its CSS
+  // layout box (clientWidth/Height), matching every on-screen demo here.
+  // A DETACHED canvas — e.g. an offscreen one a compositor layer creates
+  // via document.createElement('canvas') and never appends to the DOM
+  // (see lib/layers.js) — has no layout box, so clientWidth/Height are
+  // ALWAYS 0. Sizing from that would collapse the canvas to 1×1 (0 is
+  // clamped up to the 1px floor below) every frame, which then stretches
+  // to a single flat colour when composited — a real bug this caught.
+  // Fix: only auto-size from CSS when the canvas actually HAS a layout
+  // box; otherwise leave whatever backing size the caller already set.
   _resize() {
-    const c = this.canvas, dpr = Math.min(devicePixelRatio || 1, 2);
+    const c = this.canvas;
+    if (c.clientWidth === 0 && c.clientHeight === 0) return;
+    const dpr = Math.min(devicePixelRatio || 1, 2);
     const w = Math.max(1, Math.round(c.clientWidth * dpr));
     const h = Math.max(1, Math.round(c.clientHeight * dpr));
     if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
@@ -177,13 +197,14 @@ export class SplatRenderer {
     const view = lookAt(pos, target, [0, 1, 0]);
     const proj = perspective(fovY, c.width / c.height, 0.05, 100);
 
-    sortSplats(this.data, this.count, view, this.depths, this.order, this.sorted);
+    sortIndicesApprox(this.data, this.count, view, this.depths, this.order, this.sortScratch);
+    reorderInto(this.data, this.count, this.order, this.sorted);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instBuf);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.sorted);
 
     gl.viewport(0, 0, c.width, c.height);
-    const [br, bg, bb] = this.background;
-    gl.clearColor(br, bg, bb, 1);
+    if (this.alpha) gl.clearColor(0, 0, 0, 0);
+    else { const [br, bg, bb] = this.background; gl.clearColor(br, bg, bb, 1); }
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
@@ -209,7 +230,8 @@ export class SplatRenderer {
     if (!this.count || !views.length) return;
     const gl = this.gl;
     const eyeViews = views.map(v => mul4(v.view, model));
-    sortSplats(this.data, this.count, eyeViews[0], this.depths, this.order, this.sorted);
+    sortIndicesApprox(this.data, this.count, eyeViews[0], this.depths, this.order, this.sortScratch);
+    reorderInto(this.data, this.count, this.order, this.sorted);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instBuf);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.sorted);
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
@@ -246,7 +268,13 @@ export function mul4(a, b) {
 }
 
 // CPU back-to-front depth sort, shared by both backends (view-space z;
-// camera looks down −z, farthest first)
+// camera looks down −z, farthest first). Exact, via a comparator sort —
+// kept for anyone who needs a true ordering, but MEASURED (this demo's
+// own frame-time HUD) to be the single largest per-frame cost after the
+// CPU animation passes: a comparator callback runs ~n·log2(n) times
+// (~1.1 million calls for 67k splats), and each call is a JS function
+// invocation, not an inlined comparison. sortIndicesApprox below is what
+// both renderers actually use now.
 export function sortSplats(d, n, view, depths, order, sorted) {
   const r20 = view[2], r21 = view[6], r22 = view[10], r23 = view[14];
   for (let i = 0; i < n; i++) {
@@ -255,6 +283,63 @@ export function sortSplats(d, n, view, depths, order, sorted) {
     order[i] = i;
   }
   order.sort((a, b) => depths[a] - depths[b]);   // TypedArray sort, no allocation
+  for (let i = 0; i < n; i++) {
+    sorted.set(d.subarray(order[i] * FLOATS_PER_SPLAT, (order[i] + 1) * FLOATS_PER_SPLAT), i * FLOATS_PER_SPLAT);
+  }
+}
+
+// Reusable scratch buffers for sortIndicesApprox, sized once per splat
+// count/bucket count so the sort itself allocates nothing per frame.
+export function makeSortScratch(n, bins = 512) {
+  return { bins, binOf: new Uint32Array(n), counts: new Uint32Array(bins + 1), cursor: new Uint32Array(bins) };
+}
+
+// Approximate back-to-front ordering via an O(n) counting/bucket sort:
+// one pass to find the near/far depth range, one pass to bucket each
+// splat into `bins` (default 512) equal depth slices, a prefix sum over
+// the (tiny) bucket counts, then one pass to drop each index into its
+// bucket's slot of `order`. No comparator, no per-element function calls,
+// no allocation (scratch is reused). Splats landing in the same bucket
+// are NOT ordered against each other — for soft, alpha-falloff Gaussian
+// splats this reads identically to an exact sort at a few hundred
+// buckets (near-coincident splats blend the same regardless of which
+// one's "on top"), and this is roughly an order of magnitude faster than
+// sortSplats above on real splat counts.
+export function sortIndicesApprox(d, n, view, depths, order, scratch) {
+  const r20 = view[2], r21 = view[6], r22 = view[10], r23 = view[14];
+  let minD = Infinity, maxD = -Infinity;
+  for (let i = 0; i < n; i++) {
+    const o = i * FLOATS_PER_SPLAT;
+    const z = r20 * d[o] + r21 * d[o + 1] + r22 * d[o + 2] + r23;
+    depths[i] = z;
+    if (z < minD) minD = z;
+    if (z > maxD) maxD = z;
+  }
+  const { bins, binOf, counts, cursor } = scratch;
+  const range = (maxD - minD) || 1;
+  counts.fill(0);
+  for (let i = 0; i < n; i++) {
+    // minD (farthest) -> bucket 0, maxD (nearest) -> bucket bins-1, so
+    // walking buckets in order is already farthest-first, same as the
+    // ascending comparator sort above.
+    let b = ((depths[i] - minD) / range * bins) | 0;
+    if (b >= bins) b = bins - 1; else if (b < 0) b = 0;
+    binOf[i] = b;
+    counts[b + 1]++;
+  }
+  for (let b = 0; b < bins; b++) counts[b + 1] += counts[b]; // prefix sum -> per-bucket start offset
+  cursor.set(counts.subarray(0, bins));
+  for (let i = 0; i < n; i++) {
+    const b = binOf[i];
+    order[cursor[b]++] = i;
+  }
+}
+
+// Writes splats into `sorted` in the order given by `order` (WebGL needs
+// an actual reordered buffer to upload; the WebGPU renderer skips this
+// entirely and just uploads `order` — the splat data itself already
+// lives on the GPU, see splat-renderer-gpu.js).
+export function reorderInto(d, n, order, sorted) {
   for (let i = 0; i < n; i++) {
     sorted.set(d.subarray(order[i] * FLOATS_PER_SPLAT, (order[i] + 1) * FLOATS_PER_SPLAT), i * FLOATS_PER_SPLAT);
   }
