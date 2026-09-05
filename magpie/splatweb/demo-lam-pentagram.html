@@ -34,7 +34,8 @@ button.smallbtn.active{background:#3a5a3a;border-color:#5aa55a}
   <div class="grp" id="personaButtons"></div>
   <div class="grp">
     <button class="smallbtn" id="front" style="width:auto">recentre on live face</button>
-    <button class="smallbtn" id="talk" style="width:auto">talk</button>
+    <button class="smallbtn" id="lips" style="width:auto">lips</button>
+    <button class="smallbtn" id="speak" style="width:auto">speak</button>
     <button class="smallbtn" id="autoRotate" style="width:auto">▶ rotate faces (3-5s)</button>
     <label style="display:block;margin-top:0.5rem;font-size:11px;color:#9fb3d8">FX intensity (mouth clarity) <span id="fxV"></span>
       <input id="fx" type="range" min="0" max="1.3" step="0.05" value="0.15" style="width:100%">
@@ -194,6 +195,36 @@ function playCrunch() {
 }
 
 // =========================================================================
+// voice lines: real ElevenLabs Toki Pona clips, third_party/pentulpa-voices/
+// <persona-id>/01..05.mp3 (see lib/pentulpa-voice-lines.js for the script).
+// One random line per activation when the "speak" toggle is on — wired
+// from switchPersona() below. Decoded buffers cached like the turn-sfx.
+// =========================================================================
+const VOICE_DIR = 'third_party/pentulpa-voices/';
+const voiceBuffers = {};
+async function loadVoiceLine(personaId, n) {
+  const key = personaId + '/' + n;
+  if (voiceBuffers[key]) return voiceBuffers[key];
+  const ctx = ensureAudio();
+  const ab = await fetch(`${VOICE_DIR}${personaId}/0${n}.mp3`).then((r) => r.arrayBuffer());
+  const buf = await ctx.decodeAudioData(ab);
+  voiceBuffers[key] = buf;
+  return buf;
+}
+function playPersonaLine(personaId) {
+  const n = 1 + Math.floor(Math.random() * 5);
+  loadVoiceLine(personaId, n).then((buf) => {
+    const ctx = ensureAudio();
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const gain = ctx.createGain(); gain.gain.value = 0.9;
+    src.connect(gain); gain.connect(ctx.destination);
+    src.start();
+    speakBurstStart = performance.now() / 1000;
+    speakBurstDur = buf.duration;
+  }).catch((e) => console.warn('[pentulpa] voice line failed to load:', personaId, n, e));
+}
+
+// =========================================================================
 // camera — full free orbit (theta unclamped): unlike the single-face demos
 // earlier this session, there is no one "hollow back" to hide here — every
 // facet always shows EITHER a clear face or an already-heavily-dissolved
@@ -237,7 +268,16 @@ function tweenTheta(target, ms) {
 // amplitude/frequency come from each persona's `idle` block so there's at
 // least a hint of personality in the motion, not just the stylize params.
 // =========================================================================
+// "lips" (was "talk"): manual toggle, continuous viseme animation, no
+// audio — purely visual, unchanged behaviour from before.
+// "speak": separate toggle, gates whether persona ACTIVATION (a completed
+// switchPersona) auto-plays one of that persona's 5 real voice lines —
+// see playPersonaLine() near the audio section below. When a line plays,
+// the mouth also moves for exactly that clip's real duration (not a fixed
+// guess), via the separate speakBurstStart/speakBurstDur pair below so it
+// can coexist with (and takes lower priority than) the "lips" toggle.
 let talkBurstStart = -1;
+let speakBurstStart = -1, speakBurstDur = 0;
 function idlePoseFor(persona, t) {
   const idle = persona.idle;
   const blinkPeriod = idle.blinkPeriod || 4;
@@ -258,17 +298,28 @@ function idlePoseFor(persona, t) {
   const qPitch = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
   const headQ = qNormalize(qMul(qYaw, qPitch));
   const idleJaw = Math.max(0, Math.sin(t * 1.7)) * 0.12;
-  // toggle, not a fixed-length burst: durationSec huge so sampleTalkBurst
-  // never auto-expires it, talkOn itself gates whether we sample at all.
-  const talkMorph = talkOn ? sampleTalkBurst(t - talkBurstStart, { durationSec: 1e9 }) : {};
+  // "lips" toggle takes priority (continuous, durationSec huge so it never
+  // auto-expires); otherwise a real voice-line playback drives a BOUNDED
+  // burst for exactly that clip's duration.
+  let talkMorph = {};
+  if (lipsOn) talkMorph = sampleTalkBurst(t - talkBurstStart, { durationSec: 1e9 });
+  else if (speakBurstStart >= 0) {
+    const el = t - speakBurstStart;
+    if (el <= speakBurstDur) talkMorph = sampleTalkBurst(el, { durationSec: speakBurstDur });
+  }
   const morph = { eyeBlinkLeft: blink, eyeBlinkRight: blink, jawOpen: idleJaw, ...talkMorph };
   return { at: [0, 0, 0], bones: { head: headQ }, morph };
 }
-let talkOn = false;
-$('talk').onclick = () => {
-  talkOn = !talkOn;
-  $('talk').classList.toggle('active', talkOn);
-  if (talkOn) talkBurstStart = performance.now() / 1000;
+let lipsOn = false;
+$('lips').onclick = () => {
+  lipsOn = !lipsOn;
+  $('lips').classList.toggle('active', lipsOn);
+  if (lipsOn) talkBurstStart = performance.now() / 1000;
+};
+let speakOn = false;
+$('speak').onclick = () => {
+  speakOn = !speakOn;
+  $('speak').classList.toggle('active', speakOn);
 };
 
 // =========================================================================
@@ -565,6 +616,7 @@ async function switchPersona(target) {
   liveIdx = target;
   transition = null;
   renderNow(liveIdx);
+  if (speakOn) playPersonaLine(PERSONAS[liveIdx].id);
 }
 const btnWrap = $('personaButtons');
 PERSONAS.forEach((p, i) => {
