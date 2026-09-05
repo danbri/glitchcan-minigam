@@ -28,6 +28,10 @@ LED light strip simulators for bookshelves with various patterns and animations.
 ### Sandpit
 A code sandbox for running Python and JavaScript snippets with a helpful chat interface.
 
+### Pool/Forest Graphics Test
+A graphics test artifact exploring pool and forest rendering.
+- [Artifact](https://claude.ai/public/artifacts/433e4680-d4d6-476e-8118-c8b969e94548)
+
 ## Ink Standard Compliance
 
 - Inklet stories use the Ink language unmodified within FINK wrappers (see `inklet/`).
