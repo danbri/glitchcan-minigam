@@ -15,6 +15,7 @@ h1{font-size:1.05rem;margin:0 0 0.2rem;color:#e8d9ff}
 button{background:#22304a;color:#cfe0ff;border:1px solid #3a5580;border-radius:6px;padding:0.4rem 0.6rem;cursor:pointer;margin:2px 3px 2px 0;font:12px monospace;display:block;width:100%;text-align:left}
 button.persona{border-left:4px solid var(--pc,#3a5580)}
 button.persona.active{background:#33456e;font-weight:bold}
+button.smallbtn.active{background:#3a5a3a;border-color:#5aa55a}
 .grp{border-top:1px solid #2a3a56;margin-top:0.6rem;padding-top:0.5rem}
 #now{font-size:12px;margin-top:0.3rem;padding:0.4rem;border-radius:5px;background:#0d1220;border:1px solid #2a3a56}
 #now b{color:var(--pc,#cfe0ff)}
@@ -34,8 +35,11 @@ button.persona.active{background:#33456e;font-weight:bold}
   <div class="grp" id="personaButtons"></div>
   <div class="grp">
     <button class="smallbtn" id="front" style="width:auto">recentre on live face</button>
-    <button class="smallbtn" id="talk" style="width:auto">talk burst</button>
+    <button class="smallbtn" id="talk" style="width:auto">talk</button>
     <button class="smallbtn" id="autoRotate" style="width:auto">▶ rotate faces (3-5s)</button>
+    <label style="display:block;margin-top:0.5rem;font-size:11px;color:#9fb3d8">FX intensity (mouth clarity) <span id="fxV"></span>
+      <input id="fx" type="range" min="0" max="1.3" step="0.05" value="0.15" style="width:100%">
+    </label>
   </div>
 </div>
 <div id="stats">loading…</div>
@@ -245,11 +249,18 @@ function idlePoseFor(persona, t) {
   const qPitch = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
   const headQ = qNormalize(qMul(qYaw, qPitch));
   const idleJaw = Math.max(0, Math.sin(t * 1.7)) * 0.12;
-  const talkMorph = talkBurstStart >= 0 ? sampleTalkBurst(t - talkBurstStart) : {};
+  // toggle, not a fixed-length burst: durationSec huge so sampleTalkBurst
+  // never auto-expires it, talkOn itself gates whether we sample at all.
+  const talkMorph = talkOn ? sampleTalkBurst(t - talkBurstStart, { durationSec: 1e9 }) : {};
   const morph = { eyeBlinkLeft: blink, eyeBlinkRight: blink, jawOpen: idleJaw, ...talkMorph };
   return { at: [0, 0, 0], bones: { head: headQ }, morph };
 }
-$('talk').onclick = () => { talkBurstStart = performance.now() / 1000; };
+let talkOn = false;
+$('talk').onclick = () => {
+  talkOn = !talkOn;
+  $('talk').classList.toggle('active', talkOn);
+  if (talkOn) talkBurstStart = performance.now() / 1000;
+};
 
 // =========================================================================
 // load the five avatars, one per facet, yaw'd to face outward at its
@@ -445,6 +456,16 @@ PERSONAS.forEach((p, i) => {
 renderNow(0);
 $('front').onclick = () => tweenTheta(angleOf(liveIdx), 500);
 
+// FX intensity: scales roundness/twinkle/jitter/particle only (NOT dissolve,
+// lag, or the tint/ghost colour blend) — those four are what can round-blob
+// or sparkle-obscure fine mouth-shape detail exactly when talk visemes are
+// trying to show it off. Default 0.7, down from the effective 1.0 baseline,
+// per the owner's report that mouths were slightly too FX-covered.
+let fxIntensity = 0.15;
+const fxSlider = $('fx');
+const fxUpd = () => { fxIntensity = Number(fxSlider.value); $('fxV').textContent = fxIntensity.toFixed(2); };
+fxSlider.addEventListener('input', fxUpd); fxUpd();
+
 // auto-rotate: cycle to the next persona every 3-5s (randomized per-cycle,
 // not a fixed metronome). Recursive setTimeout, not setInterval, so each
 // wait is freshly randomized and it naturally pauses itself while a
@@ -491,6 +512,19 @@ window.__pentagram = { PERSONAS, liveIdx: () => liveIdx, transition: () => trans
     // legible (never fully swirls away).
     const swirl = Math.min(0.85, params.dissolve / 0.75);
     ghosts[i].update(lamBufs[i], styleBufs[i], tt, { ...params, tintTarget: PERSONAS[i].tint, coreWeight: coreWeights[i], swirl });
+    // FX intensity: a direct, guaranteed-linear post-multiply on this
+    // facet's final alpha, applied only to non-live facets. Scaling the
+    // individual stylize PARAMS (dissolve/particle/roundness/twinkle/
+    // jitter/swirl, tried first) barely moved the picture — with ~13k
+    // splats per facet heavily overlapping in screen space at this camera
+    // distance, alpha-compositing overdraw (cumulative opacity of many
+    // stacked low-alpha layers approaches 1 regardless of small per-splat
+    // changes) dominated over any single parameter's effect. A flat alpha
+    // scale sidesteps that entirely — it's the one thing that composites
+    // linearly no matter how many layers stack.
+    if (i !== liveIdx) {
+      for (let k = 0; k < n; k++) styleBufs[i][k * FLOATS_PER_SPLAT + 13] *= fxIntensity;
+    }
     combined.set(styleBufs[i].subarray(0, n * FLOATS_PER_SPLAT), offsets[i] * FLOATS_PER_SPLAT);
   }
   // mist: gentle drift via a cheap dissolve+jitter pass, no lag needed (mist has no fixed target motion)
