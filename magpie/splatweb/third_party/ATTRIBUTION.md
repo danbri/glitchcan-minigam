@@ -42,5 +42,13 @@ converted from the dbdb pack's `garden` scene:
 |---|---|---|---|
 | Botanical Garden Kiel, Victoria House (garden scene) | Simon Bethke | CC BY 4.0 | via `magpie/dbdb/splats/pack/` — see `magpie/dbdb/skills/splat-discovery` for full scene licensing |
 
+`pentulpa-voices/` — 25 ElevenLabs text-to-speech clips (5 personas × 5
+Toki Pona lines) for the Pentulpa Capulet character, generated (not
+vendored third-party media, but AI-generated and documented the same
+way): synthetic voices via ElevenLabs voice design + `eleven_multilingual_v2`
+TTS, from the script at `../lib/pentulpa-voice-lines.js`. Not wired into
+any demo yet. Full method, voice IDs, settings, and an honest
+pronunciation-quality assessment: `pentulpa-voices/README.md`.
+
 Not vendored (no direct-download link to automate): Quaternius packs
 (CC0, https://quaternius.com/) — add manually if wanted.

@@ -20,8 +20,7 @@ button.smallbtn.active{background:#3a5a3a;border-color:#5aa55a}
 #now{font-size:12px;margin-top:0.3rem;padding:0.4rem;border-radius:5px;background:#0d1220;border:1px solid #2a3a56}
 #now b{color:var(--pc,#cfe0ff)}
 #now .tag{display:block;color:#93a3c4;margin-top:0.2rem;font-size:11px}
-#stats{position:fixed;bottom:10px;left:10px;background:rgba(10,13,20,.8);border:1px solid #3a5580;border-radius:8px;padding:0.4rem 0.7rem;max-width:90vw;font-size:11px}
-#credit{position:fixed;bottom:10px;right:10px;background:rgba(10,13,20,.8);border:1px solid #3a5580;border-radius:8px;padding:0.4rem 0.7rem;max-width:46vw;font-size:10px;color:#8fa2c4;line-height:1.4}
+#stats{font-size:11px;color:#8fa2c4}
 .smallbtn{display:inline-block;width:auto}
 </style>
 </head>
@@ -41,13 +40,7 @@ button.smallbtn.active{background:#3a5a3a;border-color:#5aa55a}
       <input id="fx" type="range" min="0" max="1.3" step="0.05" value="0.15" style="width:100%">
     </label>
   </div>
-</div>
-<div id="stats">loading…</div>
-<div id="credit">
-  LAM synthetic faces (public domain, not real people). Stylize pass:
-  lib/lam-ghost-stylize.js (this session). No body/spine yet — shrouded in
-  cloud per brief. Mechanical crunch SFX is synthesized (Web Audio), no
-  audio file.
+  <div class="grp" id="stats">loading…</div>
 </div>
 <script type="module">
 import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
@@ -136,69 +129,68 @@ const N = PERSONAS.length;
 const angleOf = (i) => (i / N) * Math.PI * 2;
 
 // =========================================================================
-// audio: synthesized "winding then breaking" sound on persona switch. No
-// sound file. Owner feedback on the first version (a descending grind):
-// "more like a rubbery fart or door slamming echo... think a noise you
-// might make from twisting spaghetti til it breaks or over-winding a
-// clockwork device" — the fix is RISING tension, not falling: a ratcheting
-// pitch climb (like winding a spring tighter click by click) plus a
-// creaky noise texture rising in brightness, then a single sharp SNAP at
-// the climax instead of a fade-out.
+// audio: real recorded "neck turn" sounds on persona switch, replacing the
+// earlier synthesized winding/snap tone entirely (owner: "replace the
+// current crappy sound with this"). Source: owner-supplied clips at
+// third_party/pentulpa-turn-sfx/, 8 distinct takes ("Gristly organic
+// crunch") split into two pools —
+//   FIXED    = the 4 clips the owner pre-picked into their own better/
+//              folder, plus one more from the remainder (fixed-5) added
+//              to round out the default pool.
+//   REMAINDER = the other 3 clips, held back as the "or something
+//              different" option rather than folded into the default mix.
+// Same sound pool for ANY transition regardless of which two faces or
+// which direction — not per-face-pair. Each switch randomly does ONE of:
+// play a single fixed-pool clip (most common), play a single remainder
+// clip (a deliberate change-up), or blend two clips together (from
+// anywhere in the combined pool) layered at once. All 8 are decoded once
+// on first use and cached; playback is fire-and-forget (no gain envelope
+// shaping — these are already mixed/mastered takes, unlike the old
+// synthesized tone).
 // =========================================================================
 let actx = null;
 function ensureAudio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); return actx; }
-function playCrunch() {
+const TURN_SFX_DIR = 'third_party/pentulpa-turn-sfx/';
+const TURN_SFX_FIXED = ['fixed-1', 'fixed-2', 'fixed-3', 'fixed-4', 'fixed-5'];
+const TURN_SFX_REMAINDER = ['remainder-1', 'remainder-2', 'remainder-3'];
+const turnSfxBuffers = {}; // name -> AudioBuffer, filled lazily
+async function loadTurnSfx(name) {
+  if (turnSfxBuffers[name]) return turnSfxBuffers[name];
   const ctx = ensureAudio();
-  const windDur = 0.5, snapDur = 0.14;
-  const now = ctx.currentTime;
-
-  // winding: a ratcheting, rising-pitch square wave — each "click" jumps
-  // higher than the last, like a clockwork spring being wound tighter.
-  const steps = 9;
-  const osc = ctx.createOscillator(); osc.type = 'square';
-  const oscGain = ctx.createGain();
-  osc.connect(oscGain); oscGain.connect(ctx.destination);
-  oscGain.gain.setValueAtTime(0.0001, now);
-  for (let s = 0; s < steps; s++) {
-    const frac = s / steps;
-    const t0 = now + frac * windDur;
-    const freq = 170 + frac * frac * 700 + (Math.random() * 30 - 15); // accelerating rise, slightly irregular clicks
-    osc.frequency.setValueAtTime(freq, t0);
-    oscGain.gain.setValueAtTime(0.16 + 0.14 * frac, t0);
-    oscGain.gain.exponentialRampToValueAtTime(0.02, t0 + (windDur / steps) * 0.55); // gap between clicks
+  const ab = await fetch(TURN_SFX_DIR + name + '.mp3').then((r) => r.arrayBuffer());
+  const buf = await ctx.decodeAudioData(ab);
+  turnSfxBuffers[name] = buf;
+  return buf;
+}
+// kick off loading all 8 immediately at page load so the FIRST switch
+// doesn't stall on a fetch+decode — playTurnSound() still awaits per-clip
+// if a load hasn't finished yet, this is just a warm-start.
+Promise.all([...TURN_SFX_FIXED, ...TURN_SFX_REMAINDER].map(loadTurnSfx)).catch(() => {});
+function playOneTurnClip(name, gainVal = 0.36) { // 0.9 * 0.4 — owner: "40% as loud as we currently have it"
+  loadTurnSfx(name).then((buf) => {
+    const ctx = ensureAudio();
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const gain = ctx.createGain(); gain.gain.value = gainVal;
+    src.connect(gain); gain.connect(ctx.destination);
+    src.start();
+  }).catch((e) => console.warn('[pentulpa] turn sfx failed to load:', name, e));
+}
+function playCrunch() {
+  const roll = Math.random();
+  if (roll < 0.55) {
+    // single fixed-pool clip — the default, most common case
+    playOneTurnClip(TURN_SFX_FIXED[Math.floor(Math.random() * TURN_SFX_FIXED.length)]);
+  } else if (roll < 0.8) {
+    // single remainder clip — a deliberate change-up
+    playOneTurnClip(TURN_SFX_REMAINDER[Math.floor(Math.random() * TURN_SFX_REMAINDER.length)]);
+  } else {
+    // blend: two distinct clips from the full combined pool, layered
+    const all = [...TURN_SFX_FIXED, ...TURN_SFX_REMAINDER];
+    const a = all[Math.floor(Math.random() * all.length)];
+    let b = all[Math.floor(Math.random() * all.length)];
+    while (b === a) b = all[Math.floor(Math.random() * all.length)];
+    playOneTurnClip(a, 0.3); playOneTurnClip(b, 0.3); // 0.75 * 0.4
   }
-
-  // creaky strain texture: bandpass noise sweeping UP (twisting/straining),
-  // brightening and thinning as tension builds toward the break.
-  const bufLen = Math.floor(ctx.sampleRate * windDur);
-  const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
-  const d = buf.getChannelData(0);
-  for (let i = 0; i < bufLen; i++) d[i] = Math.random() * 2 - 1;
-  const noise = ctx.createBufferSource(); noise.buffer = buf;
-  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 9;
-  bp.frequency.setValueAtTime(350, now);
-  bp.frequency.exponentialRampToValueAtTime(2800, now + windDur);
-  const noiseGain = ctx.createGain();
-  noiseGain.gain.setValueAtTime(0.05, now);
-  noiseGain.gain.linearRampToValueAtTime(0.24, now + windDur);
-  noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(ctx.destination);
-
-  // the break: a single sharp decaying click at the climax, not a fade —
-  // the "snap" moment itself.
-  const snapStart = now + windDur;
-  const snapLen = Math.floor(ctx.sampleRate * snapDur);
-  const snapBuf = ctx.createBuffer(1, snapLen, ctx.sampleRate);
-  const sd = snapBuf.getChannelData(0);
-  for (let i = 0; i < snapLen; i++) sd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / snapLen, 2);
-  const snapSrc = ctx.createBufferSource(); snapSrc.buffer = snapBuf;
-  const snapHp = ctx.createBiquadFilter(); snapHp.type = 'highpass'; snapHp.frequency.value = 1500;
-  const snapGain = ctx.createGain(); snapGain.gain.setValueAtTime(0.7, snapStart);
-  snapGain.gain.exponentialRampToValueAtTime(0.001, snapStart + snapDur);
-  snapSrc.connect(snapHp); snapHp.connect(snapGain); snapGain.connect(ctx.destination);
-
-  osc.start(now); osc.stop(snapStart);
-  noise.start(now); noise.stop(snapStart);
-  snapSrc.start(snapStart); snapSrc.stop(snapStart + snapDur);
 }
 
 // =========================================================================
@@ -361,24 +353,78 @@ const coreData = buildCore();
 // jittered each frame via its own small ghost stylizer, cheap at a few
 // hundred splats) with more shimmer than before (see mistGhost.update call).
 // =========================================================================
-function buildMist(seedN) {
-  const rnd = mulberry32(seedN);
-  const n = 700;
-  const out = new Float32Array(n * FLOATS_PER_SPLAT);
-  let o = 0;
-  const cy = -headR * 0.70; // was -0.95: raised ~1/4 headR toward the viewer/neck
-  for (let i = 0; i < n; i++) {
-    const a = rnd() * Math.PI * 2, rr = (0.3 + rnd() * 0.9) * FACET_R * 1.6;
-    const x = Math.cos(a) * rr, z = Math.sin(a) * rr;
-    const y = cy - rnd() * headR * 0.18 + Math.sin(rr) * 0.02; // was *0.9: flattened to a shallow layer
-    const shade = 0.7 + rnd() * 0.25;
-    o = pushSplat(out, o, x, y, z, shade, shade, shade * 1.02, 0.22 + rnd() * 0.18, 0.05 + rnd() * 0.05);
-  }
-  return { data: out, count: n, seedBase: seedN };
+// cheap smooth 3D value-noise (trilinear-interpolated hash lattice) — same
+// technique as lib/lam-ghost-stylize.js's internal noise, reimplemented
+// here standalone since that one isn't exported. Good enough for organic-
+// looking swirl/wobble at this particle count; not a "real" gradient
+// Perlin implementation, but visually indistinguishable at this scale.
+function hashN(x, y, z) {
+  let n = (x * 374761393 + y * 668265263 + z * 2147483647) | 0;
+  n = (n ^ (n >>> 13)) * 1274126177;
+  n = n ^ (n >>> 16);
+  return (n >>> 0) / 4294967295;
 }
-const mist = buildMist(777);
-const mistGhost = new GhostStylizer(mist.count);
-const mistBuf = new Float32Array(mist.data);
+function noise3(x, y, z) {
+  const x0 = Math.floor(x), y0 = Math.floor(y), z0 = Math.floor(z);
+  const fx = x - x0, fy = y - y0, fz = z - z0;
+  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy), sz = fz * fz * (3 - 2 * fz);
+  const c000 = hashN(x0, y0, z0), c100 = hashN(x0 + 1, y0, z0);
+  const c010 = hashN(x0, y0 + 1, z0), c110 = hashN(x0 + 1, y0 + 1, z0);
+  const c001 = hashN(x0, y0, z0 + 1), c101 = hashN(x0 + 1, y0, z0 + 1);
+  const c011 = hashN(x0, y0 + 1, z0 + 1), c111 = hashN(x0 + 1, y0 + 1, z0 + 1);
+  const x00 = c000 + (c100 - c000) * sx, x10 = c010 + (c110 - c010) * sx;
+  const x01 = c001 + (c101 - c001) * sx, x11 = c011 + (c111 - c011) * sx;
+  const y0v = x00 + (x10 - x00) * sy, y1v = x01 + (x11 - x01) * sy;
+  return y0v + (y1v - y0v) * sz;
+}
+
+// mist shroud — restored per owner request ("restore the cloud and make it
+// more murky and organic and perlin and swirling"), AND doubling as the
+// thing that hides the plain grey core-base cylinder that turned out to
+// be visible once the mist was dropped. Each particle keeps a fixed base
+// (angle, radius, height, per-particle noise offset) computed once; the
+// SWIRL, wobble and murky colour drift are recomputed every frame from
+// noise3(), not GhostStylizer's generic per-splat stylize pass — this
+// needed actual coherent orbital motion + noise-driven density, not
+// independent per-splat jitter.
+const MIST_N = 1400;
+function buildMistParticles(seedN) {
+  const rnd = mulberry32(seedN);
+  const cy = -headR * 0.70;
+  const parts = [];
+  for (let i = 0; i < MIST_N; i++) {
+    parts.push({
+      a0: rnd() * Math.PI * 2,
+      rr0: (0.25 + rnd() * 1.0) * FACET_R * 1.7,
+      yFrac: rnd(),
+      nSeed: rnd() * 1000,
+      swirlRate: 0.08 + rnd() * 0.18, // independent per-particle orbital speed -> shear, not rigid rotation
+    });
+  }
+  return { parts, cy };
+}
+const mistDef = buildMistParticles(777);
+const mistData = new Float32Array(MIST_N * FLOATS_PER_SPLAT);
+function updateMist(tt) {
+  const buf = mistData;
+  let o = 0;
+  for (const p of mistDef.parts) {
+    const nX = noise3(p.nSeed, tt * 0.15, 0) - 0.5;
+    const nY = noise3(p.nSeed + 50, tt * 0.15, 0) - 0.5;
+    const nZ = noise3(p.nSeed + 90, tt * 0.15, 0) - 0.5;
+    const angle = p.a0 + tt * p.swirlRate + nX * 0.6; // orbital swirl + noise-driven shear
+    const rr = p.rr0 * (0.75 + 0.4 * noise3(p.nSeed + 20, tt * 0.1, 1)); // breathing radius, organic not uniform
+    const x = Math.cos(angle) * rr, z = Math.sin(angle) * rr;
+    const y = mistDef.cy - p.yFrac * headR * 0.2 + nY * headR * 0.1;
+    // murky: dark desaturated grey-green, NOT the previous pale near-white
+    const base = 0.16 + 0.14 * noise3(p.nSeed + 40, tt * 0.12, 2);
+    const r = base * 0.9, g = base * 1.05, b = base * 0.95;
+    const alpha = 0.25 + 0.35 * Math.max(0, nZ + 0.3); // patchy density, some particles near-invisible
+    const scale = 0.06 + 0.05 * noise3(p.nSeed + 60, tt * 0.1, 3);
+    o = pushSplat(buf, o, x, y, z, r, g, b, alpha, scale);
+  }
+}
+const mist = { count: MIST_N };
 
 // prime lastCount on every avatar (only set inside pose()) before using
 // it to size fixed offsets below — this was the actual bug in first draft:
@@ -565,6 +611,14 @@ $('autoRotate').onclick = () => {
 };
 theta = angleOf(0); radius = headR * 3.2; applyCamera();
 
+// arrow keys turn the heads (left = previous persona, right = next) —
+// switchPersona() itself already no-ops mid-transition, so rapid key
+// presses can't stack/corrupt a switch in progress.
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') switchPersona((liveIdx + 1) % N);
+  else if (e.key === 'ArrowLeft') switchPersona((liveIdx - 1 + N) % N);
+});
+
 statsEl.textContent = `${TOTAL.toLocaleString()} splats · loaded`;
 
 // debug hooks for verification
@@ -634,9 +688,11 @@ const LIVE_SCALE = 1.15, RETRACT_SCALE = 0.78;
     }
     combined.set(styleBufs[i].subarray(0, n * FLOATS_PER_SPLAT), offsets[i] * FLOATS_PER_SPLAT);
   }
-  // mist: gentle drift via a cheap dissolve+jitter pass, no lag needed (mist has no fixed target motion)
-  mistGhost.update(mist.data, mistBuf, tt, { dissolve: 0.15, jitter: 0.4, twinkle: 0.9, roundness: 0.3, tintTarget: [1, 1, 1.05] });
-  combined.set(mistBuf, mistOffset * FLOATS_PER_SPLAT);
+  // mist: restored (murky/organic/noise-swirl rebuild — see updateMist),
+  // also doubling as cover for the plain grey core-base cylinder that was
+  // visible with the mist dropped.
+  updateMist(tt);
+  combined.set(mistData, mistOffset * FLOATS_PER_SPLAT);
 
   window.__lastFrameSample = { t: tt, liveIdx, transition: transition ? { ...transition } : null,
     params0: currentParams(0, tt) };
