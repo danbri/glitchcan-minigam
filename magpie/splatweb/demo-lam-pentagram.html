@@ -466,6 +466,19 @@ function currentParams(i, tt) {
   if (i === transition.to) return lerpParams(PERSONAS[i].dissolved, PERSONAS[i].live, smooth);
   return p.dissolved;
 }
+// 1 = fully live, 0 = fully dissolved, smoothly interpolated during a
+// transition using the SAME timing as currentParams (so size and stylize
+// both land in sync). Drives the "big head, not a 5-lobed cauliflower"
+// shape: the live facet reads slightly larger and more prominent, the
+// other four shrink and pull in toward the shared core.
+function liveWeight(i, tt) {
+  if (!transition) return i === liveIdx ? 1 : 0;
+  const t = Math.min(1, (tt - transition.start) / transition.dur);
+  const smooth = t * t * (3 - 2 * t);
+  if (i === transition.from) return 1 - smooth;
+  if (i === transition.to) return smooth;
+  return 0;
+}
 function renderNow(i) {
   const p = PERSONAS[i];
   $('now').innerHTML = `<b>${p.name}</b><span class="tag">${p.tag}</span>`;
@@ -533,13 +546,42 @@ statsEl.textContent = `${TOTAL.toLocaleString()} splats · loaded`;
 // debug hooks for verification
 window.__pentagram = { PERSONAS, liveIdx: () => liveIdx, transition: () => transition, switchPersona };
 
+// "big head, not a 5-lobed cauliflower": the live facet reads larger/more
+// prominent, the other four shrink and retract toward the shared core.
+// RADIUS_* moves the whole facet closer to/further from the centre axis
+// (retraction reads as "flattened" too, since a face pulled toward the
+// core no longer protrudes as its own separate lobe); SCALE_* is a true
+// uniform scale of that facet's own splats about its placement point
+// (position spread AND splat size together, so shrinking doesn't just
+// leave gaps). Both driven by the same liveWeight() as the stylize
+// transition, so size and stylize change in lockstep, not two separate
+// animations racing each other.
+const LIVE_RADIUS_MULT = 1.08, RETRACT_RADIUS_MULT = 0.68;
+const LIVE_SCALE = 1.15, RETRACT_SCALE = 0.78;
+
 (function frame(t) {
   const tt = t / 1000;
   for (let i = 0; i < N; i++) {
+    const lw = liveWeight(i, tt);
+    const radiusMult = RETRACT_RADIUS_MULT + (LIVE_RADIUS_MULT - RETRACT_RADIUS_MULT) * lw;
+    const scaleMult = RETRACT_SCALE + (LIVE_SCALE - RETRACT_SCALE) * lw;
     const pose = idlePoseFor(PERSONAS[i], tt);
-    pose.at = [FACET_R * Math.sin(angleOf(i)), yOffsets[i], FACET_R * Math.cos(angleOf(i))];
+    const atX = FACET_R * radiusMult * Math.sin(angleOf(i));
+    const atZ = FACET_R * radiusMult * Math.cos(angleOf(i));
+    const atY = yOffsets[i];
+    pose.at = [atX, atY, atZ];
     avatars[i].pose(pose, lamBufs[i], 0);
     const n = avatars[i].lastCount;
+    if (scaleMult !== 1) {
+      const buf = lamBufs[i];
+      for (let k = 0; k < n; k++) {
+        const o = k * FLOATS_PER_SPLAT;
+        buf[o] = atX + (buf[o] - atX) * scaleMult;
+        buf[o + 1] = atY + (buf[o + 1] - atY) * scaleMult;
+        buf[o + 2] = atZ + (buf[o + 2] - atZ) * scaleMult;
+        buf[o + 7] *= scaleMult; buf[o + 8] *= scaleMult; buf[o + 9] *= scaleMult;
+      }
+    }
     const params = currentParams(i, tt);
     // tint always comes from the persona itself — dissolved OR live, so
     // the colour hint survives the whole transition, only the OTHER
