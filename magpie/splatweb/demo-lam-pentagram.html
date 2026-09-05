@@ -394,6 +394,16 @@ for (let i = 0; i < N; i++) avatars[i].pose({ at: [0, 0, 0], bones: {}, morph: {
 // higher than the others. Fix: measure each avatar's own centre-Y from
 // the SAME local-frame pose already computed above, then offset each to
 // match the group average.
+// Same pass also measures each avatar's own SIZE — the 5 source photos are
+// framed at genuinely different zoom levels (measured: Executioner's own
+// reconstruction is ~26% bigger than Architect's, Corruptor ~8% smaller),
+// but headR/FACET_R/camera were all calibrated from Architect's bounds
+// alone. Switching to a persona whose own head is a different size than
+// whatever was previously on screen, THEN also animating a live/dissolved
+// scale on top of that pre-existing mismatch, compounds into an
+// unpredictable size jump on every switch — reported as "the whole thing
+// kind of shrinks and ducks." Fix: normalize every avatar to read as the
+// same size, same as yOffsets normalizes position.
 const centerYs = avatars.map((av, i) => {
   const n = av.lastCount, buf = lamBufs[i];
   let mny = Infinity, mxy = -Infinity;
@@ -401,7 +411,21 @@ const centerYs = avatars.map((av, i) => {
   return (mny + mxy) / 2;
 });
 const avgCenterY = centerYs.reduce((s, y) => s + y, 0) / N;
-const yOffsets = centerYs.map((y) => avgCenterY - y);
+// +headR/6 global bump: owner reported mouths sitting too low in frame
+// across several personas even after cross-persona alignment — the whole
+// normalized group needed to move up, not just relative to each other.
+const yOffsets = centerYs.map((y) => avgCenterY - y + headR / 6);
+const ownSizes = avatars.map((av, i) => {
+  const n = av.lastCount, buf = lamBufs[i];
+  let mnx = Infinity, mxx = -Infinity, mny = Infinity, mxy = -Infinity;
+  for (let k = 0; k < n; k++) {
+    const o = k * FLOATS_PER_SPLAT, x = buf[o], y = buf[o + 1];
+    if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y;
+  }
+  return Math.max(mxx - mnx, mxy - mny);
+});
+const avgSize = ownSizes.reduce((s, v) => s + v, 0) / N;
+const sizeNorms = ownSizes.map((s) => avgSize / s);
 
 // per-splat coreWeight (1 = this splat sits near ITS OWN face's centroid,
 // 0 = out at the periphery — hairline/jaw/ears) for the swirl-into-shared-
@@ -562,7 +586,11 @@ const LIVE_SCALE = 1.15, RETRACT_SCALE = 0.78;
   const tt = t / 1000;
   for (let i = 0; i < N; i++) {
     const lw = liveWeight(i, tt);
-    const scaleMult = RETRACT_SCALE + (LIVE_SCALE - RETRACT_SCALE) * lw;
+    // sizeNorms[i] cancels out this avatar's own reconstruction size vs the
+    // group average FIRST, so the animated live/dissolved scale is the
+    // only thing that varies across a persona switch — not that PLUS a
+    // pre-existing, uncorrected size mismatch between avatars.
+    const scaleMult = sizeNorms[i] * (RETRACT_SCALE + (LIVE_SCALE - RETRACT_SCALE) * lw);
     const pose = idlePoseFor(PERSONAS[i], tt);
     const atX = FACET_R * Math.sin(angleOf(i));
     const atZ = FACET_R * Math.cos(angleOf(i));
