@@ -546,28 +546,26 @@ statsEl.textContent = `${TOTAL.toLocaleString()} splats · loaded`;
 // debug hooks for verification
 window.__pentagram = { PERSONAS, liveIdx: () => liveIdx, transition: () => transition, switchPersona };
 
-// "big head, not a 5-lobed cauliflower": the live facet reads larger/more
-// prominent, the other four shrink and retract toward the shared core.
-// RADIUS_* moves the whole facet closer to/further from the centre axis
-// (retraction reads as "flattened" too, since a face pulled toward the
-// core no longer protrudes as its own separate lobe); SCALE_* is a true
-// uniform scale of that facet's own splats about its placement point
+// "big head, not a 5-lobed cauliflower": the live facet's own face geometry
+// reads larger, the other four shrink theirs — WITHOUT moving where any
+// facet is anchored. An earlier version also pulled the whole facet's
+// placement radius inward/outward, which made the entire creature look
+// like it was shrinking/growing (owner: "the whole thing shrinks, I just
+// want the facey part to shrink") — removed; FACET_R placement is fixed
+// again, exactly as it always was. SCALE_* is a true uniform scale of
+// just that facet's own splats about its OWN fixed placement point
 // (position spread AND splat size together, so shrinking doesn't just
-// leave gaps). Both driven by the same liveWeight() as the stylize
-// transition, so size and stylize change in lockstep, not two separate
-// animations racing each other.
-const LIVE_RADIUS_MULT = 1.08, RETRACT_RADIUS_MULT = 0.68;
+// leave gaps), driven by the same liveWeight() as the stylize transition.
 const LIVE_SCALE = 1.15, RETRACT_SCALE = 0.78;
 
 (function frame(t) {
   const tt = t / 1000;
   for (let i = 0; i < N; i++) {
     const lw = liveWeight(i, tt);
-    const radiusMult = RETRACT_RADIUS_MULT + (LIVE_RADIUS_MULT - RETRACT_RADIUS_MULT) * lw;
     const scaleMult = RETRACT_SCALE + (LIVE_SCALE - RETRACT_SCALE) * lw;
     const pose = idlePoseFor(PERSONAS[i], tt);
-    const atX = FACET_R * radiusMult * Math.sin(angleOf(i));
-    const atZ = FACET_R * radiusMult * Math.cos(angleOf(i));
+    const atX = FACET_R * Math.sin(angleOf(i));
+    const atZ = FACET_R * Math.cos(angleOf(i));
     const atY = yOffsets[i];
     pose.at = [atX, atY, atZ];
     avatars[i].pose(pose, lamBufs[i], 0);
