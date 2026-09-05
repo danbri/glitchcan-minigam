@@ -26,20 +26,23 @@
 // Loosely Preston-Blair/Oculus-viseme inspired, but composed only from
 // shapes actually present in this rig (no tongue/teeth shapes exist in
 // ARKit's 51, so TH/L/RR are approximations, not phonetically precise).
+// Weights bumped ~1.4x from an initial pass that read as too subtle to
+// clearly see (owner feedback) — these are meant to be UNMISSABLE mouth
+// shapes demonstrating the rig's range, not a naturalistic murmur.
 export const VISEMES = {
   sil: {},
-  AA: { jawOpen: 0.75, mouthFunnel: 0.15 }, // "father", "hot"
-  E: { mouthStretchLeft: 0.5, mouthStretchRight: 0.5, jawOpen: 0.15 }, // "bed"
-  I: { mouthSmileLeft: 0.4, mouthSmileRight: 0.4, jawOpen: 0.1 }, // "see"
-  O: { mouthFunnel: 0.55, mouthPucker: 0.35, jawOpen: 0.45 }, // "go"
-  U: { mouthPucker: 0.75, mouthFunnel: 0.3, jawOpen: 0.1 }, // "boot"
-  FV: { mouthLowerDownLeft: 0.4, mouthLowerDownRight: 0.4, mouthRollUpper: 0.3 }, // "five"
-  MBP: { mouthClose: 0.7, mouthPressLeft: 0.4, mouthPressRight: 0.4 }, // "mama", "boy", "pat"
-  L: { jawOpen: 0.25, mouthStretchLeft: 0.2, mouthStretchRight: 0.2, mouthUpperUpLeft: 0.15, mouthUpperUpRight: 0.15 }, // "la"
-  WQ: { mouthPucker: 0.6, mouthFunnel: 0.4, jawOpen: 0.05 }, // "we", "queen"
-  CH_SH: { mouthFunnel: 0.45, mouthPucker: 0.2, jawOpen: 0.2 }, // "church", "she"
-  TH: { jawOpen: 0.2, mouthLowerDownLeft: 0.25, mouthLowerDownRight: 0.25 }, // "think"
-  RR: { mouthFunnel: 0.25, mouthPucker: 0.15, jawOpen: 0.25 }, // "red"
+  AA: { jawOpen: 1.0, mouthFunnel: 0.2 }, // "father", "hot"
+  E: { mouthStretchLeft: 0.7, mouthStretchRight: 0.7, jawOpen: 0.2 }, // "bed"
+  I: { mouthSmileLeft: 0.55, mouthSmileRight: 0.55, jawOpen: 0.15 }, // "see"
+  O: { mouthFunnel: 0.75, mouthPucker: 0.5, jawOpen: 0.6 }, // "go"
+  U: { mouthPucker: 1.0, mouthFunnel: 0.4, jawOpen: 0.15 }, // "boot"
+  FV: { mouthLowerDownLeft: 0.55, mouthLowerDownRight: 0.55, mouthRollUpper: 0.4 }, // "five"
+  MBP: { mouthClose: 0.9, mouthPressLeft: 0.55, mouthPressRight: 0.55 }, // "mama", "boy", "pat"
+  L: { jawOpen: 0.35, mouthStretchLeft: 0.3, mouthStretchRight: 0.3, mouthUpperUpLeft: 0.2, mouthUpperUpRight: 0.2 }, // "la"
+  WQ: { mouthPucker: 0.85, mouthFunnel: 0.55, jawOpen: 0.08 }, // "we", "queen"
+  CH_SH: { mouthFunnel: 0.6, mouthPucker: 0.3, jawOpen: 0.3 }, // "church", "she"
+  TH: { jawOpen: 0.3, mouthLowerDownLeft: 0.35, mouthLowerDownRight: 0.35 }, // "think"
+  RR: { mouthFunnel: 0.35, mouthPucker: 0.2, jawOpen: 0.35 }, // "red"
 };
 const VISEME_NAMES = Object.keys(VISEMES).filter((n) => n !== 'sil');
 
