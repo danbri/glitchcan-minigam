@@ -129,6 +129,21 @@
         doesn't force a camera grant on load.</p>
       </div>
     </a>
+    <a class="card" href="demo-gpu-splats.html" style="flex:1 1 300px">
+      <div class="panel">
+        <div class="num">DEMO 11 <span class="tag">experimental</span></div>
+        <h3>GPU splat compute — avatar + critters, one pipeline</h3>
+        <p class="note">A skinned LAM head and 14 physics-driven jelly
+        critters, animated entirely by WGSL compute shaders instead of
+        the CPU per-splat loops the rest of this project uses —
+        <code>lib/gpu-splat-compute.js</code> is the shared scaffolding
+        both content types plug into. Same asset loaders and same render
+        shader as everywhere else, unmodified; only the per-frame
+        transform moved to GPU. Not full parity with the CPU path yet
+        (no morph-target facial expression, no jaw/mouth animation) — see
+        the file header for the honest scope.</p>
+      </div>
+    </a>
   </div>
   <p class="note" style="margin-top:1rem">Honesty box: capture and network
   are simulated in-page; most rooms are procedural, not scans; no XMPP yet.

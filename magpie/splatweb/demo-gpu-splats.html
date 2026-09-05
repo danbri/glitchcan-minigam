@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPU Splat Compute — avatar + critters, one pipeline</title>
+<style>
+html,body{margin:0;height:100%;background:#020204;color:#d8dae2;font:13px monospace}
+#gl{width:100%;height:100vh;display:block}
+.hud{position:fixed;top:10px;left:10px;background:rgba(10,13,20,.87);border:1px solid #3a5580;
+  border-radius:8px;padding:0.8rem;max-width:320px;font-size:12px;line-height:1.5}
+.hud h1{font-size:1rem;margin:0 0 0.3rem;color:#e8d9ff}
+.hud .note{color:#8fa2c4;font-size:11px;margin-bottom:0.4rem}
+#stats{margin-top:0.4rem;color:#9fdca0;font-size:11px;white-space:pre-line}
+button{background:#22304a;color:#cfe0ff;border:1px solid #3a5580;border-radius:4px;
+  padding:0.3rem 0.6rem;font:12px monospace;cursor:pointer;margin-top:0.3rem}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div class="hud">
+  <h1>GPU Splat Compute</h1>
+  <div class="note">One skinned LAM avatar and a dozen jelly critters,
+  animated entirely by WGSL compute shaders instead of the CPU per-splat
+  loops the rest of this project uses — same content-generation code
+  (loadLamAvatar, Critter), same render shader, only the per-frame
+  transform moved to GPU. See lib/gpu-splat-compute.js for what's in and
+  out of scope.</div>
+  <button id="throwBtn">throw the critters</button>
+  <div id="stats">loading…</div>
+</div>
+<script type="module">
+import { qNormalize, qMul } from './lib/pose-math.js';
+import { loadLamAvatar } from './lib/lam-splats.js';
+import { Critter, throwCritters, SPLATS_PER_CRITTER } from './lib/critters.js';
+import { requestComputeDevice, GpuSplatScene } from './lib/gpu-splat-compute.js';
+import { createGpuSkinnedAvatar } from './lib/gpu-skinned-avatar.js';
+import { createGpuCritter } from './lib/gpu-critter.js';
+
+const canvas = document.getElementById('gl');
+const statsEl = document.getElementById('stats');
+
+let device;
+try {
+  device = await requestComputeDevice();
+} catch (e) {
+  statsEl.textContent = 'WebGPU compute not available: ' + e.message;
+  throw e;
+}
+
+const scene = new GpuSplatScene(device, canvas, { background: [0.03, 0.03, 0.055] });
+scene.setCamera([0, 1.55, 3.3], [0, 1.3, 0], 45 * Math.PI / 180);
+
+// --------------------------------------------------------- the avatar
+// Same loader every CPU-driven LAM demo uses, unmodified.
+const avatar = await loadLamAvatar('third_party/lam-sample/', { yaw: 0 });
+const avatarObj = scene.addObject(avatar.count, [0, 1.35, 0]);
+const gpuAvatar = createGpuSkinnedAvatar(device, avatar, avatarObj.outBuf);
+
+// --------------------------------------------------------- the critters
+// Same class every CPU-driven critters demo uses, unmodified — only the
+// per-frame "turn state into splats" step is replaced (build() is still
+// called ONCE, up front, to derive the GPU rest template — see
+// lib/gpu-critter.js).
+const N_CRITTERS = 14;
+const critters = [];
+const gpuCritters = [];
+for (let i = 0; i < N_CRITTERS; i++) {
+  const c = new Critter(i * 7 + 3, 2.0);
+  c.pos[0] += 0.9; // keep the cluster clear of the avatar at x=0
+  critters.push(c);
+  const obj = scene.addObject(SPLATS_PER_CRITTER, c.pos); // live reference — see gpu-splat-compute.js render()
+  gpuCritters.push(createGpuCritter(device, c, obj.outBuf));
+}
+document.getElementById('throwBtn').addEventListener('click', () => throwCritters(critters, 3.0, 1));
+
+const totalSplats = avatar.count + N_CRITTERS * SPLATS_PER_CRITTER;
+
+// --------------------------------------------------------------- run
+let frames = 0, accMs = 0, lastFpsT = performance.now(), lastT = performance.now();
+(function frame(t) {
+  const time = t / 1000;
+  const dt = Math.min(0.05, (t - lastT) / 1000);
+  lastT = t;
+
+  for (const c of critters) c.tick(dt, critters, {});
+  for (const gc of gpuCritters) gc.dispatch();
+
+  // gentle head-turn idle, entirely to show the skin pipeline is really
+  // live — same idea as the pentagram demo's idlePoseFor, simplified
+  const yaw = Math.sin(time * 0.35) * 0.5;
+  const pitch = Math.sin(time * 0.5 + 1) * 0.12;
+  const qYaw = [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)];
+  const qPitch = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
+  const headQ = qNormalize(qMul(qYaw, qPitch));
+  gpuAvatar.dispatch(time, {
+    bones: { head: headQ },
+    dissolve: 0, twinkle: 0.15, roundness: 0,
+    at: [0, 0, 0], yaw: 0,
+  });
+
+  scene.render();
+
+  frames++; accMs += t - lastFpsT; lastFpsT = t;
+  if (accMs >= 1000) {
+    statsEl.textContent = `${totalSplats.toLocaleString()} splats (1 avatar + ${N_CRITTERS} critters)\n${(1000 / (accMs / frames)).toFixed(0)} fps · all per-splat work on GPU`;
+    frames = 0; accMs = 0;
+  }
+  requestAnimationFrame(frame);
+})(performance.now());
+
+window.__gpuSplats = { device, scene, avatar, critters };
+</script>
+</body>
+</html>

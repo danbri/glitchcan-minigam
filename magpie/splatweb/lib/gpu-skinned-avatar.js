@@ -1,0 +1,261 @@
+// gpu-skinned-avatar.js — a LamHeadAvatar (lib/lam-splats.js, UNCHANGED,
+// loaded exactly as any CPU demo would via loadLamAvatar()) driven by a
+// WGSL compute shader instead of its own pose()'s per-splat JS loop.
+//
+// Scope, disclosed: skinning (bone rotation) and a subset of the
+// pentagram demo's stylize params (dissolve, twinkle, roundness, ghost
+// tint) run on GPU. Morph-target facial expression and the CPU pipeline's
+// "lag"/particle/swirl effects are NOT ported here — see
+// lib/gpu-splat-compute.js's header for the full disclosed scope.
+import { qMul } from './pose-math.js';
+import { SplatComputePass } from './gpu-splat-compute.js';
+
+const REST_STRIDE = 24;
+const IDENTITY_Q = [0, 0, 0, 1];
+
+// Duplicated from lam-splats.js's own private helpers (not exported
+// there) rather than risking a change to that file — these are the
+// exact same three small pure functions, used the exact same way, only
+// to recompute avatar.J (the joint matrix palette) each frame WITHOUT
+// running pose()'s big per-splat loop.
+const quatToMat3 = (q) => {
+  const [x, y, z, w] = q;
+  return [1 - 2 * (y * y + z * z), 2 * (x * y + w * z), 2 * (x * z - w * y),
+    2 * (x * y - w * z), 1 - 2 * (x * x + z * z), 2 * (y * z + w * x),
+    2 * (x * z + w * y), 2 * (y * z - w * x), 1 - 2 * (x * x + y * y)];
+};
+const mul3 = (a, b) => [
+  a[0] * b[0] + a[3] * b[1] + a[6] * b[2], a[1] * b[0] + a[4] * b[1] + a[7] * b[2], a[2] * b[0] + a[5] * b[1] + a[8] * b[2],
+  a[0] * b[3] + a[3] * b[4] + a[6] * b[5], a[1] * b[3] + a[4] * b[4] + a[7] * b[5], a[2] * b[3] + a[5] * b[4] + a[8] * b[5],
+  a[0] * b[6] + a[3] * b[7] + a[6] * b[8], a[1] * b[6] + a[4] * b[7] + a[7] * b[8], a[2] * b[6] + a[5] * b[7] + a[8] * b[8],
+];
+
+// Mirrors the FK half of LamHeadAvatar.pose() (lam-splats.js) — walks the
+// node tree, composes bone rotations, rebuilds the joint matrix palette
+// into avatar.J. Reuses the avatar's OWN scratch arrays (accum/newRot/
+// newPos/J), exactly as pose() itself does, so this allocates nothing
+// per frame. Deliberately NOT calling pose() itself — that would also
+// run the expensive per-splat loop this whole module exists to avoid.
+function updateJointPalette(avatar, bones = {}) {
+  const { parent, order, restRot, restPos, accum, newRot, newPos, nodeName, skin, J } = avatar;
+  for (const nd of order) {
+    const qa = bones[nodeName[nd]];
+    const pa = parent[nd];
+    const accP = pa < 0 ? IDENTITY_Q : accum[pa];
+    accum[nd] = qa ? qMul(accP, qa) : accP;
+    newRot[nd] = mul3(quatToMat3(accum[nd]), restRot[nd]);
+    if (pa < 0) newPos[nd] = restPos[nd].slice();
+    else {
+      const dlt = [restPos[nd][0] - restPos[pa][0], restPos[nd][1] - restPos[pa][1], restPos[nd][2] - restPos[pa][2]];
+      const [qx, qy, qz, qw] = accP;
+      const tx = 2 * (qy * dlt[2] - qz * dlt[1]), ty = 2 * (qz * dlt[0] - qx * dlt[2]), tz = 2 * (qx * dlt[1] - qy * dlt[0]);
+      const rx = dlt[0] + qw * tx + (qy * tz - qz * ty), ry = dlt[1] + qw * ty + (qz * tx - qx * tz), rz = dlt[2] + qw * tz + (qx * ty - qy * tx);
+      newPos[nd] = [newPos[pa][0] + rx, newPos[pa][1] + ry, newPos[pa][2] + rz];
+    }
+  }
+  const sk = skin;
+  for (let k = 0; k < sk.joints.length; k++) {
+    const nd = sk.joints[k], R = newRot[nd], t = newPos[nd], m = sk.ibm, mo = k * 16, jo = nd * 12;
+    for (let c = 0; c < 4; c++) {
+      const b0 = m[mo + c * 4], b1 = m[mo + c * 4 + 1], b2 = m[mo + c * 4 + 2], b3 = m[mo + c * 4 + 3];
+      J[jo + c * 3] = R[0] * b0 + R[3] * b1 + R[6] * b2 + t[0] * b3;
+      J[jo + c * 3 + 1] = R[1] * b0 + R[4] * b1 + R[7] * b2 + t[1] * b3;
+      J[jo + c * 3 + 2] = R[2] * b0 + R[5] * b1 + R[8] * b2 + t[2] * b3;
+    }
+  }
+}
+
+const hash1 = (n) => { const s = Math.sin(n * 12.9898) * 43758.5453; return s - Math.floor(s); };
+
+const WGSL_TRANSFORM = /* wgsl */`
+fn quatMul(a: vec4<f32>, b: vec4<f32>) -> vec4<f32> {
+  return vec4<f32>(
+    a.w*b.x + a.x*b.w + a.y*b.z - a.z*b.y,
+    a.w*b.y - a.x*b.z + a.y*b.w + a.z*b.x,
+    a.w*b.z + a.x*b.y - a.y*b.x + a.z*b.w,
+    a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z);
+}
+fn quatNorm(q: vec4<f32>) -> vec4<f32> { return q / max(length(q), 1e-6); }
+
+// Shepperd's method, inlined scalar — same approach (and same reasoning:
+// avoid a per-splat allocation) as the CPU version's inlined equivalent
+// in lam-splats.js pose().
+fn mat3ToQuat(m0:f32,m1:f32,m2:f32,m3:f32,m4:f32,m5:f32,m6:f32,m7:f32,m8:f32) -> vec4<f32> {
+  let tr = m0 + m4 + m8;
+  var x: f32; var y: f32; var z: f32; var w: f32;
+  if (tr > 0.0) {
+    let s = sqrt(tr + 1.0) * 2.0;
+    w = 0.25*s; x = (m5-m7)/s; y = (m6-m2)/s; z = (m1-m3)/s;
+  } else if (m0 > m4 && m0 > m8) {
+    let s = sqrt(1.0 + m0 - m4 - m8) * 2.0;
+    w = (m5-m7)/s; x = 0.25*s; y = (m3+m1)/s; z = (m6+m2)/s;
+  } else if (m4 > m8) {
+    let s = sqrt(1.0 + m4 - m0 - m8) * 2.0;
+    w = (m6-m2)/s; x = (m3+m1)/s; y = 0.25*s; z = (m7+m5)/s;
+  } else {
+    let s = sqrt(1.0 + m8 - m0 - m4) * 2.0;
+    w = (m1-m3)/s; x = (m6+m2)/s; y = (m7+m5)/s; z = 0.25*s;
+  }
+  return quatNorm(vec4<f32>(x,y,z,w));
+}
+
+fn hash1(n: f32) -> f32 { return fract(sin(n * 12.9898) * 43758.5453); }
+fn hash3(p: vec3<f32>) -> f32 { return hash1(dot(p, vec3<f32>(374.16, 668.26, 2147.48))); }
+fn noise3(p: vec3<f32>) -> f32 {
+  let i = floor(p); let f = fract(p); let u = f*f*(3.0-2.0*f);
+  let c000=hash3(i); let c100=hash3(i+vec3<f32>(1,0,0));
+  let c010=hash3(i+vec3<f32>(0,1,0)); let c110=hash3(i+vec3<f32>(1,1,0));
+  let c001=hash3(i+vec3<f32>(0,0,1)); let c101=hash3(i+vec3<f32>(1,0,1));
+  let c011=hash3(i+vec3<f32>(0,1,1)); let c111=hash3(i+vec3<f32>(1,1,1));
+  let x00=mix(c000,c100,u.x); let x10=mix(c010,c110,u.x);
+  let x01=mix(c001,c101,u.x); let x11=mix(c011,c111,u.x);
+  let y0=mix(x00,x10,u.y); let y1=mix(x01,x11,u.y);
+  return mix(y0,y1,u.z);
+}
+
+// OBJ layout (all per-frame, re-uploaded every dispatch — see
+// updateJointPalette above for where the joint matrices come from):
+//   0 time, 1 dissolve, 2 twinkle, 3 roundness, 4 ghost,
+//   5..7 tint rgb, 8..10 at xyz, 11 yaw,
+//   12..14 centre xyz, 15 scale,
+//   16.. joint palette, 12 floats per NODE (matches lam-splats.js's own
+//        J layout exactly, indexed by the REST buffer's raw node index —
+//        see gpu-skinned-avatar.js's buildRestBuffer for why this isn't
+//        compacted to just the used joints).
+fn transform(i: u32) -> array<f32, 14> {
+  let b = i * 24u;
+  let restPos = vec3<f32>(REST[b], REST[b+1u], REST[b+2u]);
+  let restRot = vec4<f32>(REST[b+3u], REST[b+4u], REST[b+5u], REST[b+6u]);
+  let restScale = vec3<f32>(REST[b+7u], REST[b+8u], REST[b+9u]);
+  let restColor = vec3<f32>(REST[b+10u], REST[b+11u], REST[b+12u]);
+  let baseAlpha = REST[b+13u];
+  let jIdx = vec4<f32>(REST[b+14u], REST[b+15u], REST[b+16u], REST[b+17u]);
+  let jW = vec4<f32>(REST[b+18u], REST[b+19u], REST[b+20u], REST[b+21u]);
+  let noiseSeed = REST[b+22u];
+  let pSeed = REST[b+23u];
+
+  let time = OBJ[0]; let dissolve = OBJ[1]; let twinkle = OBJ[2]; let roundness = OBJ[3];
+  let ghost = OBJ[4]; let tint = vec3<f32>(OBJ[5], OBJ[6], OBJ[7]);
+  let at = vec3<f32>(OBJ[8], OBJ[9], OBJ[10]); let yaw = OBJ[11];
+  let centre = vec3<f32>(OBJ[12], OBJ[13], OBJ[14]); let avScale = OBJ[15];
+  let jointBase = 16u;
+
+  var skinnedPos = restPos;
+  var qSkin = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+  // matches lam-splats.js pose()'s own gate exactly: it checks only the
+  // FIRST weight component (glTF WEIGHTS_0 is conventionally sorted
+  // descending, so a zero first weight means unweighted), not the sum.
+  if (jW.x > 0.0) {
+    var m = array<f32,12>();
+    for (var e = 0u; e < 12u; e = e + 1u) { m[e] = 0.0; }
+    for (var j = 0u; j < 4u; j = j + 1u) {
+      let w = jW[j];
+      if (w <= 0.0) { continue; }
+      let jo = jointBase + u32(jIdx[j]) * 12u;
+      for (var e = 0u; e < 12u; e = e + 1u) { m[e] = m[e] + OBJ[jo + e] * w; }
+    }
+    skinnedPos = vec3<f32>(
+      m[0]*restPos.x + m[3]*restPos.y + m[6]*restPos.z + m[9],
+      m[1]*restPos.x + m[4]*restPos.y + m[7]*restPos.z + m[10],
+      m[2]*restPos.x + m[5]*restPos.y + m[8]*restPos.z + m[11]);
+    qSkin = mat3ToQuat(m[0],m[1],m[2],m[3],m[4],m[5],m[6],m[7],m[8]);
+  }
+  let q = quatNorm(quatMul(qSkin, restRot));
+
+  let lx = (skinnedPos.x - centre.x) * avScale;
+  let ly = (skinnedPos.y - centre.y) * avScale;
+  let lz = (skinnedPos.z - centre.z) * avScale;
+  let cy = cos(yaw); let sy = sin(yaw);
+  let wx = at.x + lx*cy + lz*sy;
+  let wy = at.y + ly;
+  let wz = at.z - lx*sy + lz*cy;
+  let qYaw = vec4<f32>(0.0, sin(yaw*0.5), 0.0, cos(yaw*0.5));
+  var outQuat = quatNorm(quatMul(qYaw, q));
+
+  var scale = restScale;
+  if (roundness > 0.0) {
+    let avgS = (scale.x + scale.y + scale.z) / 3.0;
+    scale = mix(scale, vec3<f32>(avgS), roundness);
+    outQuat = quatNorm(mix(outQuat, vec4<f32>(0.0,0.0,0.0,1.0), roundness));
+  }
+
+  var alpha = baseAlpha;
+  if (twinkle > 0.0) {
+    let ph = sin(time * (2.2 + pSeed * 3.1) + noiseSeed);
+    alpha = clamp(alpha + twinkle * ph, 0.0, 1.0);
+  }
+  if (dissolve > 0.0) {
+    let nz = noise3(vec3<f32>(wx*14.0 + noiseSeed*0.37, wy*14.0, wz*14.0 + time*0.35));
+    let cutoff = dissolve * 0.92;
+    if (nz <= cutoff) { alpha = alpha * pow(clamp(nz/(cutoff+1e-4), 0.0, 1.0), 2.0); } else { alpha = alpha; }
+  }
+  var color = restColor;
+  if (ghost > 0.0) {
+    let lum = color.x*0.3 + color.y*0.59 + color.z*0.11;
+    color = mix(color, tint*lum, ghost);
+  }
+
+  var out: array<f32, 14>;
+  out[0]=wx; out[1]=wy; out[2]=wz;
+  out[3]=outQuat.x; out[4]=outQuat.y; out[5]=outQuat.z; out[6]=outQuat.w;
+  out[7]=scale.x; out[8]=scale.y; out[9]=scale.z;
+  out[10]=color.x; out[11]=color.y; out[12]=color.z; out[13]=alpha;
+  return out;
+}
+`;
+
+// Builds the static (upload-once) REST buffer straight from the already-
+// loaded avatar's own public fields — parseLamPly/loadLamAvatar in
+// lam-splats.js are untouched and do all the actual asset parsing.
+function buildRestBuffer(avatar) {
+  const { count, pos, ply, jidx, jw, scale, maxScale, maxAspect } = avatar;
+  const rest = new Float32Array(count * REST_STRIDE);
+  for (let i = 0; i < count; i++) {
+    const i3 = i * 3, i4 = i * 4, o = i * REST_STRIDE;
+    rest[o] = pos[i3] + ply.off[i3];
+    rest[o + 1] = pos[i3 + 1] + ply.off[i3 + 1];
+    rest[o + 2] = pos[i3 + 2] + ply.off[i3 + 2];
+    rest[o + 3] = ply.rot[i4]; rest[o + 4] = ply.rot[i4 + 1]; rest[o + 5] = ply.rot[i4 + 2]; rest[o + 6] = ply.rot[i4 + 3];
+    let s0 = ply.scl[i3] * scale, s1 = ply.scl[i3 + 1] * scale, s2 = ply.scl[i3 + 2] * scale;
+    const smin = Math.max(1e-5, Math.min(s0, s1, s2)), cap = Math.min(maxScale, smin * maxAspect);
+    rest[o + 7] = Math.min(s0, cap); rest[o + 8] = Math.min(s1, cap); rest[o + 9] = Math.min(s2, cap);
+    rest[o + 10] = ply.col[i3]; rest[o + 11] = ply.col[i3 + 1]; rest[o + 12] = ply.col[i3 + 2];
+    rest[o + 13] = ply.op[i] < avatar.alphaMin ? 0 : ply.op[i]; // bake culling as invisible, not a shorter array
+    rest[o + 14] = jidx[i4]; rest[o + 15] = jidx[i4 + 1]; rest[o + 16] = jidx[i4 + 2]; rest[o + 17] = jidx[i4 + 3];
+    rest[o + 18] = jw[i4]; rest[o + 19] = jw[i4 + 1]; rest[o + 20] = jw[i4 + 2]; rest[o + 21] = jw[i4 + 3];
+    rest[o + 22] = hash1(i * 37.719 + 17.3) * 1000;
+    rest[o + 23] = hash1(i * 78.233 + 91.1);
+  }
+  return rest;
+}
+
+// device: from requestComputeDevice(). avatar: a loaded LamHeadAvatar
+// (loadLamAvatar() from lam-splats.js — unmodified). outBuffer: the GPU
+// storage buffer to write into (pass a GpuSplatScene drawable's outBuf).
+export function createGpuSkinnedAvatar(device, avatar, outBuffer) {
+  const N = avatar.nodes.N;
+  const objFloats = 16 + N * 12;
+  const pass = new SplatComputePass(device, { restStride: REST_STRIDE, wgslTransform: WGSL_TRANSFORM, maxObjFloats: objFloats });
+  const rest = buildRestBuffer(avatar);
+  pass.setData(rest, avatar.count, outBuffer);
+  const obj = new Float32Array(objFloats);
+
+  // params: { dissolve, twinkle, roundness, ghost, tint:[r,g,b], at:[x,y,z],
+  //           yaw, bones:{nodeName: quat} }
+  return {
+    splatCount: avatar.count,
+    dispatch(time, params = {}) {
+      updateJointPalette(avatar, params.bones || {});
+      obj[0] = time;
+      obj[1] = params.dissolve || 0; obj[2] = params.twinkle || 0; obj[3] = params.roundness || 0; obj[4] = params.ghost || 0;
+      const tint = params.tint || [0.72, 0.95, 1.12];
+      obj[5] = tint[0]; obj[6] = tint[1]; obj[7] = tint[2];
+      const at = params.at || [0, 0, 0];
+      obj[8] = at[0]; obj[9] = at[1]; obj[10] = at[2];
+      obj[11] = params.yaw || 0;
+      obj[12] = avatar.centre[0]; obj[13] = avatar.centre[1]; obj[14] = avatar.centre[2]; obj[15] = avatar.scale;
+      obj.set(avatar.J.subarray(0, N * 12), 16);
+      pass.dispatch(obj);
+    },
+  };
+}

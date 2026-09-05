@@ -11,7 +11,11 @@
 // remaining step.
 import { FLOATS_PER_SPLAT, lookAt, perspective, sortIndicesApprox, makeSortScratch } from './splat-renderer.js';
 
-const WGSL = /* wgsl */`
+// Exported (purely additive — every existing importer keeps working
+// unchanged) so lib/gpu-splat-compute.js can reuse this exact, already-
+// working render shader for GPU-compute-driven objects instead of
+// duplicating it and risking drift between two copies.
+export const WGSL = /* wgsl */`
 struct Uniforms {
   view: mat4x4f,
   proj: mat4x4f,
