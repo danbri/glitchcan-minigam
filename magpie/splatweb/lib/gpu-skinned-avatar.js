@@ -118,7 +118,15 @@ fn noise3(p: vec3<f32>) -> f32 {
 //   0 time, 1 dissolve, 2 twinkle, 3 roundness, 4 ghost,
 //   5..7 tint rgb, 8..10 at xyz, 11 yaw,
 //   12..14 centre xyz, 15 scale,
-//   16.. joint palette, 12 floats per NODE (matches lam-splats.js's own
+//   16 sizeMult (uniform scale about the "at" placement point — the
+//      pentagram demo's "big when live, small when dissolved" effect;
+//      1.0 = no change, fully backward compatible with callers that
+//      don't set it), 17 fxIntensity (a flat post-multiply on final
+//      alpha — the pentagram demo's overdraw fix: many stacked
+//      semi-transparent dissolved splats approach full opacity
+//      regardless of small per-splat alpha changes, so a flat scale is
+//      the one thing that composites linearly; 1.0 = no change),
+//   18.. joint palette, 12 floats per NODE (matches lam-splats.js's own
 //        J layout exactly, indexed by the REST buffer's raw node index —
 //        see gpu-skinned-avatar.js's buildRestBuffer for why this isn't
 //        compacted to just the used joints).
@@ -138,7 +146,8 @@ fn transform(i: u32) -> array<f32, 14> {
   let ghost = OBJ[4]; let tint = vec3<f32>(OBJ[5], OBJ[6], OBJ[7]);
   let at = vec3<f32>(OBJ[8], OBJ[9], OBJ[10]); let yaw = OBJ[11];
   let centre = vec3<f32>(OBJ[12], OBJ[13], OBJ[14]); let avScale = OBJ[15];
-  let jointBase = 16u;
+  let sizeMult = OBJ[16]; let fxIntensity = OBJ[17];
+  let jointBase = 18u;
 
   var skinnedPos = restPos;
   var qSkin = vec4<f32>(0.0, 0.0, 0.0, 1.0);
@@ -166,13 +175,17 @@ fn transform(i: u32) -> array<f32, 14> {
   let ly = (skinnedPos.y - centre.y) * avScale;
   let lz = (skinnedPos.z - centre.z) * avScale;
   let cy = cos(yaw); let sy = sin(yaw);
-  let wx = at.x + lx*cy + lz*sy;
-  let wy = at.y + ly;
-  let wz = at.z - lx*sy + lz*cy;
+  // sizeMult scales the OFFSET from "at", not the final world position —
+  // a true uniform scale about the facet's own placement point (same
+  // trick the CPU pentagram demo's scaleMult loop uses), so a facet
+  // shrinking/growing never looks like the whole scene shrinking.
+  let wx = at.x + (lx*cy + lz*sy) * sizeMult;
+  let wy = at.y + ly * sizeMult;
+  let wz = at.z + (-lx*sy + lz*cy) * sizeMult;
   let qYaw = vec4<f32>(0.0, sin(yaw*0.5), 0.0, cos(yaw*0.5));
   var outQuat = quatNorm(quatMul(qYaw, q));
 
-  var scale = restScale;
+  var scale = restScale * sizeMult;
   if (roundness > 0.0) {
     let avgS = (scale.x + scale.y + scale.z) / 3.0;
     scale = mix(scale, vec3<f32>(avgS), roundness);
@@ -189,6 +202,10 @@ fn transform(i: u32) -> array<f32, 14> {
     let cutoff = dissolve * 0.92;
     if (nz <= cutoff) { alpha = alpha * pow(clamp(nz/(cutoff+1e-4), 0.0, 1.0), 2.0); } else { alpha = alpha; }
   }
+  // fxIntensity LAST, same order as the CPU pentagram demo — it's meant
+  // to be a flat post-multiply on whatever twinkle/dissolve produced,
+  // not an input to them (see the OBJ layout comment above).
+  alpha = alpha * fxIntensity;
   var color = restColor;
   if (ghost > 0.0) {
     let lum = color.x*0.3 + color.y*0.59 + color.z*0.11;
@@ -234,14 +251,14 @@ function buildRestBuffer(avatar) {
 // storage buffer to write into (pass a GpuSplatScene drawable's outBuf).
 export function createGpuSkinnedAvatar(device, avatar, outBuffer) {
   const N = avatar.nodes.N;
-  const objFloats = 16 + N * 12;
+  const objFloats = 18 + N * 12;
   const pass = new SplatComputePass(device, { restStride: REST_STRIDE, wgslTransform: WGSL_TRANSFORM, maxObjFloats: objFloats });
   const rest = buildRestBuffer(avatar);
   pass.setData(rest, avatar.count, outBuffer);
   const obj = new Float32Array(objFloats);
 
   // params: { dissolve, twinkle, roundness, ghost, tint:[r,g,b], at:[x,y,z],
-  //           yaw, bones:{nodeName: quat} }
+  //           yaw, sizeMult, fxIntensity, bones:{nodeName: quat} }
   return {
     splatCount: avatar.count,
     dispatch(time, params = {}) {
@@ -254,7 +271,8 @@ export function createGpuSkinnedAvatar(device, avatar, outBuffer) {
       obj[8] = at[0]; obj[9] = at[1]; obj[10] = at[2];
       obj[11] = params.yaw || 0;
       obj[12] = avatar.centre[0]; obj[13] = avatar.centre[1]; obj[14] = avatar.centre[2]; obj[15] = avatar.scale;
-      obj.set(avatar.J.subarray(0, N * 12), 16);
+      obj[16] = params.sizeMult ?? 1; obj[17] = params.fxIntensity ?? 1;
+      obj.set(avatar.J.subarray(0, N * 12), 18);
       pass.dispatch(obj);
     },
   };

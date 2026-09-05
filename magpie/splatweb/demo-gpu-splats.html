@@ -24,8 +24,9 @@ button{background:#22304a;color:#cfe0ff;border:1px solid #3a5580;border-radius:4
   animated entirely by WGSL compute shaders instead of the CPU per-splat
   loops the rest of this project uses — same content-generation code
   (loadLamAvatar, Critter), same render shader, only the per-frame
-  transform moved to GPU. See lib/gpu-splat-compute.js for what's in and
-  out of scope.</div>
+  transform moved to GPU. Critters' ear-flop and mouth/jaw now run on GPU
+  too (the bobbing mouths are a placeholder animation, not real speech).
+  See lib/gpu-splat-compute.js for what's in and out of scope.</div>
   <button id="throwBtn">throw the critters</button>
   <div id="stats">loading…</div>
 </div>
@@ -83,7 +84,14 @@ let frames = 0, accMs = 0, lastFpsT = performance.now(), lastT = performance.now
   const dt = Math.min(0.05, (t - lastT) / 1000);
   lastT = t;
 
-  for (const c of critters) c.tick(dt, critters, {});
+  for (const c of critters) {
+    c.tick(dt, critters, {});
+    // placeholder mouth animation, purely to demonstrate the jaw/ear-flop
+    // GPU path is real — demo-critters.html drives this same `.jaw`
+    // field from a TextTalker viseme clip instead; either works, since
+    // gpu-critter.js just reads whatever critter.jaw currently is.
+    c.jaw = Math.max(0, Math.sin(time * 4 + c.pos[0] * 3));
+  }
   for (const gc of gpuCritters) gc.dispatch();
 
   // gentle head-turn idle, entirely to show the skin pipeline is really

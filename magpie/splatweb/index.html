@@ -134,14 +134,27 @@
         <div class="num">DEMO 11 <span class="tag">experimental</span></div>
         <h3>GPU splat compute — avatar + critters, one pipeline</h3>
         <p class="note">A skinned LAM head and 14 physics-driven jelly
-        critters, animated entirely by WGSL compute shaders instead of
-        the CPU per-splat loops the rest of this project uses —
-        <code>lib/gpu-splat-compute.js</code> is the shared scaffolding
-        both content types plug into. Same asset loaders and same render
-        shader as everywhere else, unmodified; only the per-frame
-        transform moved to GPU. Not full parity with the CPU path yet
-        (no morph-target facial expression, no jaw/mouth animation) — see
-        the file header for the honest scope.</p>
+        critters — including live ear-flop and mouth/jaw — animated
+        entirely by WGSL compute shaders instead of the CPU per-splat
+        loops the rest of this project uses. <code>lib/gpu-splat-
+        compute.js</code> is the shared scaffolding both content types
+        plug into; same asset loaders and same render shader as
+        everywhere else, unmodified. See the file header for the honest
+        scope of what's not ported yet.</p>
+      </div>
+    </a>
+    <a class="card" href="demo-lam-pentagram-gpu.html" style="flex:1 1 300px">
+      <div class="panel">
+        <div class="num">DEMO 12 <span class="tag">experimental</span></div>
+        <h3>Pentulpa Capulet, rebuilt on GPU compute</h3>
+        <p class="note">A "safe copy" of demo-lam-pentagram.html's
+        five-persona creature — the CPU original is untouched — running
+        on the WGSL compute
+        pipeline: real persona switching, per-persona tint/dissolve/
+        twinkle/roundness, voices, subtitles, and turn SFX all reused.
+        100,090 splats at 60fps here, versus the CPU version's ~20fps at
+        67,489 splats. Not ported: the spring-overshoot spin, the
+        medusa-fling secondary motion, and the mist/core shroud.</p>
       </div>
     </a>
   </div>
