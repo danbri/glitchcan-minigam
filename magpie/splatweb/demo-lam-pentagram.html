@@ -21,6 +21,11 @@ button.smallbtn.active{background:#3a5a3a;border-color:#5aa55a}
 #now b{color:var(--pc,#cfe0ff)}
 #now .tag{display:block;color:#93a3c4;margin-top:0.2rem;font-size:11px}
 #stats{font-size:11px;color:#8fa2c4}
+#subtitles{position:fixed;left:0;right:0;bottom:14px;text-align:center;pointer-events:none;z-index:15;padding:0 1rem}
+#subtitles svg{width:100%;max-width:900px;display:none;margin:0 auto}
+#subtitles svg.show{display:block}
+#subtitles text{font:bold 34px monospace;fill:#fff;stroke:#000;stroke-width:6px;stroke-linejoin:round;paint-order:stroke}
+#subENWrap text{font-size:26px}
 .smallbtn{display:inline-block;width:auto}
 </style>
 </head>
@@ -41,7 +46,19 @@ button.smallbtn.active{background:#3a5a3a;border-color:#5aa55a}
       <input id="fx" type="range" min="0" max="1.3" step="0.05" value="0.15" style="width:100%">
     </label>
   </div>
+  <div class="grp">
+    <label style="display:block;font-size:11px;color:#9fb3d8"><input type="checkbox" id="subTPToggle"> Toki Pona subtitles</label>
+    <label style="display:block;font-size:11px;color:#9fb3d8"><input type="checkbox" id="subENToggle"> English subtitles</label>
+  </div>
   <div class="grp" id="stats">loading…</div>
+</div>
+<div id="subtitles">
+  <svg id="subTPWrap" viewBox="0 0 1000 60" preserveAspectRatio="xMidYMid meet">
+    <text id="subTPText" x="500" y="44" text-anchor="middle"></text>
+  </svg>
+  <svg id="subENWrap" viewBox="0 0 1000 50" preserveAspectRatio="xMidYMid meet">
+    <text id="subENText" x="500" y="37" text-anchor="middle"></text>
+  </svg>
 </div>
 <script type="module">
 import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
@@ -51,6 +68,7 @@ import { qMul, qNormalize } from './lib/pose-math.js';
 import { resolveFace } from './lib/lam-face-roster.js';
 import { GhostStylizer } from './lib/lam-ghost-stylize.js';
 import { sampleTalkBurst } from './lib/lam-visemes.js';
+import { VOICE_LINES } from './lib/pentulpa-voice-lines.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('gl'), statsEl = $('stats');
@@ -211,6 +229,31 @@ async function loadVoiceLine(personaId, n) {
   voiceBuffers[key] = buf;
   return buf;
 }
+// subtitles: independent Toki Pona / English toggles, both can show at
+// once ("there should be room for both") — Toki Pona above English,
+// standard subtitle convention. SVG text with a stroke outline (white
+// fill, black outline) so it stays legible over any background colour
+// the creature happens to be at that moment.
+let subtitleTimer = null;
+function updateSubtitleVisibility() {
+  $('subTPWrap').classList.toggle('show', $('subTPToggle').checked && $('subTPText').textContent !== '');
+  $('subENWrap').classList.toggle('show', $('subENToggle').checked && $('subENText').textContent !== '');
+}
+$('subTPToggle').onchange = updateSubtitleVisibility;
+$('subENToggle').onchange = updateSubtitleVisibility;
+function showSubtitleFor(personaId, lineIdx, durationSec) {
+  const persona = VOICE_LINES.find((p) => p.id === personaId);
+  const line = persona ? persona.lines[lineIdx] : null;
+  $('subTPText').textContent = line ? line.tokiPona : '';
+  $('subENText').textContent = line ? line.english : '';
+  updateSubtitleVisibility();
+  clearTimeout(subtitleTimer);
+  subtitleTimer = setTimeout(() => {
+    $('subTPText').textContent = '';
+    $('subENText').textContent = '';
+    updateSubtitleVisibility();
+  }, durationSec * 1000);
+}
 function playPersonaLine(personaId) {
   const n = 1 + Math.floor(Math.random() * 5);
   loadVoiceLine(personaId, n).then((buf) => {
@@ -221,6 +264,7 @@ function playPersonaLine(personaId) {
     src.start();
     speakBurstStart = performance.now() / 1000;
     speakBurstDur = buf.duration;
+    showSubtitleFor(personaId, n - 1, buf.duration);
   }).catch((e) => console.warn('[pentulpa] voice line failed to load:', personaId, n, e));
 }
 
