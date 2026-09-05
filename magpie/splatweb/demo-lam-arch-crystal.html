@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAM crystal-encased treatment (prototype, throwaway)</title>
+<style>
+html,body{margin:0;height:100%;background:#05060c;color:#cfe0ff;font:13px monospace}
+#stage{position:relative;width:100%;height:100vh;touch-action:none;overflow:hidden}
+#gl,#glass{position:absolute;inset:0;width:100%;height:100%;display:block}
+#glass{pointer-events:none}
+.hud{position:fixed;top:10px;left:10px;background:rgba(8,10,20,.85);border:1px solid #3a4a80;border-radius:8px;padding:0.6rem 0.8rem;max-width:min(300px,88vw);max-height:94vh;overflow:auto;transition:transform .25s ease;z-index:10}
+.hud.collapsed{transform:translateX(-120%)}
+#hudToggle{position:fixed;top:10px;left:10px;z-index:20;width:2.2rem;height:2.2rem;line-height:2.2rem;text-align:center;padding:0}
+.hud select{width:100%;margin-top:0.2rem}
+button{background:#22284a;color:#cfe0ff;border:1px solid #3a4a80;border-radius:6px;padding:0.3rem 0.5rem;cursor:pointer;margin:2px 2px 0 0}
+#stats{position:fixed;bottom:10px;left:10px;background:rgba(8,10,20,.85);border:1px solid #3a4a80;border-radius:8px;padding:0.4rem 0.7rem;max-width:90vw}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="gl"></canvas><canvas id="glass"></canvas></div>
+<button id="hudToggle">☰</button>
+<div class="hud">
+  <b>crystal-encased treatment — prototype</b><br>
+  <small>drag to orbit (clamped), wheel to zoom</small>
+  <label>face <span id="faceLabel"></span></label>
+  <div><button id="facePrev">◀ face</button><button id="faceNext">face ▶</button></div>
+  <div style="margin-top:0.5rem"><button id="front">front</button><button id="wideside">wide side</button></div>
+</div>
+<div id="stats">loading…</div>
+<script type="importmap">
+{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js?v=arch1';
+import { createSplatRenderer } from './lib/splat-renderer-auto.js?v=arch1';
+import { loadLamAvatar } from './lib/lam-splats.js?v=arch1';
+import { qMul, qNormalize } from './lib/pose-math.js?v=arch1';
+import { FACES, resolveFace } from './lib/lam-face-roster.js?v=arch1';
+
+const $ = (id) => document.getElementById(id);
+const glCanvas = $('gl'), glassCanvas = $('glass'), statsEl = $('stats');
+glCanvas.width = glCanvas.clientWidth * devicePixelRatio;
+glCanvas.height = glCanvas.clientHeight * devicePixelRatio;
+const renderer = await createSplatRenderer(glCanvas, { background: [0.015, 0.02, 0.04] });
+const hud = document.querySelector('.hud');
+if (window.innerWidth < 640) hud.classList.add('collapsed');
+$('hudToggle').onclick = () => hud.classList.toggle('collapsed');
+
+const params = new URLSearchParams(location.search);
+let faceIdx = FACES.findIndex((f) => f.id === params.get('face'));
+if (faceIdx < 0) faceIdx = FACES.findIndex((f) => f.id === 'tpdne-14');
+function currentFaceId() { return FACES[faceIdx].id; }
+function updateFaceLabel() { $('faceLabel').textContent = `${FACES[faceIdx].label} (${faceIdx+1}/${FACES.length})`; }
+updateFaceLabel();
+
+const FOVY = 50 * Math.PI / 180;
+const THETA_FRONT = Math.PI, THETA_CLAMP = 1.15;
+let theta = THETA_FRONT, phi = 1.3, radius = 1.0, targetY = 0.15;
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function camPos() { return [radius*Math.sin(theta)*Math.sin(phi), targetY+radius*Math.cos(phi), radius*Math.cos(theta)*Math.sin(phi)]; }
+function applyCamera() { renderer.setCamera(camPos(), [0, targetY, 0], FOVY); }
+let drag = null;
+$('stage').addEventListener('pointerdown',(e)=>{drag=[e.clientX,e.clientY];$('stage').setPointerCapture(e.pointerId);});
+$('stage').addEventListener('pointermove',(e)=>{if(!drag)return;
+  theta=clamp(theta-(e.clientX-drag[0])*0.006, THETA_FRONT-THETA_CLAMP, THETA_FRONT+THETA_CLAMP);
+  phi=clamp(phi-(e.clientY-drag[1])*0.006,0.7,2.2); drag=[e.clientX,e.clientY]; applyCamera();});
+$('stage').addEventListener('pointerup',()=>{drag=null;});
+$('stage').addEventListener('wheel',(e)=>{e.preventDefault(); radius=clamp(radius*Math.exp(e.deltaY*0.001),0.3,3); applyCamera();},{passive:false});
+
+function idlePose(t) {
+  const yaw = Math.sin(t/5.3)*0.1, pitch = Math.sin(t/7.1+1)*0.04;
+  const qYaw=[0,Math.sin(yaw/2),0,Math.cos(yaw/2)], qPitch=[Math.sin(pitch/2),0,0,Math.cos(pitch/2)];
+  const blinkPhase=(t%3.4)/3.4, blink = blinkPhase<0.06?Math.sin((blinkPhase/0.06)*Math.PI):0;
+  return { at:[0,0,0], bones:{head:qNormalize(qMul(qYaw,qPitch))}, morph:{eyeBlinkLeft:blink,eyeBlinkRight:blink} };
+}
+
+function fibonacciSphere(n){const pts=[];const golden=Math.PI*(3-Math.sqrt(5));
+  for(let i=0;i<n;i++){const yFrac=1-(i/Math.max(1,n-1))*2;const r=Math.sqrt(Math.max(0,1-yFrac*yFrac));const th=golden*i;
+    pts.push([Math.cos(th)*r,yFrac,Math.sin(th)*r]);} return pts;}
+function pushSplat(arr,o,x,y,z,r,g,b,a,s){arr[o]=x;arr[o+1]=y;arr[o+2]=z;arr[o+3]=0;arr[o+4]=0;arr[o+5]=0;arr[o+6]=1;
+  arr[o+7]=s;arr[o+8]=s;arr[o+9]=s;arr[o+10]=r;arr[o+11]=g;arr[o+12]=b;arr[o+13]=a;return o+FLOATS_PER_SPLAT;}
+
+// occluder dome (hides LAM's hollow back — same technique as the other
+// treatments, recoloured pale/icy so it reads as "inside the crystal" not
+// bare hardware), plus a stubby dark base the crystal sits on.
+function buildOccluders(bounds) {
+  const {mnx,mxx,mny,mxy,mnz,mxz}=bounds;
+  const cx=(mnx+mxx)/2, cz=(mnz+mxz)/2, topY=mxy, botY=mny;
+  const headW=mxx-mnx, headH=topY-botY, headR=Math.max(headW,headH)*0.5*1.15;
+  const midY=(topY+botY)/2, depthPush=headR*0.55;
+  const domeCx=cx, domeCy=midY, domeCz=cz+depthPush, domeR=headR*1.15, faceFrontZ=mnz;
+  const MAX=9200; const out=new Float32Array(MAX*FLOATS_PER_SPLAT); let o=0;
+  for (const [px,py,pz] of fibonacciSphere(9000)) {
+    const wx=domeCx+px*domeR, wy=domeCy+py*domeR*1.05, wz=domeCz+pz*domeR*0.85;
+    if (wz < faceFrontZ+0.012) continue;
+    const shade=0.55+0.35*py;
+    o=pushSplat(out,o,wx,wy,wz, 0.75*shade,0.85*shade,0.95*shade, 1, 0.0125);
+  }
+  return { data: out.subarray(0,o), count: o/FLOATS_PER_SPLAT, headR, midY, domeR, cx, cz, botY };
+}
+
+// --- three.js overlay: faceted gem (icosahedron) with the same fresnel
+// screen-space glass approximation used for the Victorian bell jar, tinted
+// cyan/violet instead of aged glass, plus internal sparkle points and a
+// dark stone pedestal.
+const threeRenderer = new THREE.WebGLRenderer({ canvas: glassCanvas, alpha: true, antialias: true });
+threeRenderer.setClearColor(0x000000, 0);
+const scene = new THREE.Scene();
+scene.add(new THREE.AmbientLight(0xdde8ff, 0.5));
+const keyLight = new THREE.DirectionalLight(0xdff0ff, 1.2); keyLight.position.set(1.2,2.4,1.6); scene.add(keyLight);
+const fillLight = new THREE.DirectionalLight(0xb98cff, 0.5); fillLight.position.set(-1.6,0.4,-1.2); scene.add(fillLight);
+const camera3 = new THREE.PerspectiveCamera(FOVY*180/Math.PI, 1, 0.05, 100);
+
+const bgTex = new THREE.CanvasTexture(glCanvas);
+bgTex.flipY = false; bgTex.minFilter = THREE.LinearFilter; bgTex.magFilter = THREE.LinearFilter;
+const glassUniforms = {
+  uBgTex: { value: bgTex }, uResolution: { value: new THREE.Vector2(1,1) },
+  uTint: { value: new THREE.Color(0x7fc8ff) },
+};
+const glassMaterial = new THREE.ShaderMaterial({
+  uniforms: glassUniforms, transparent: true, side: THREE.FrontSide, depthWrite: false,
+  vertexShader: `varying vec3 vN; varying vec3 vV;
+    void main(){ vec4 mv=modelViewMatrix*vec4(position,1.0); vN=normalize(normalMatrix*normal); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }`,
+  fragmentShader: `uniform sampler2D uBgTex; uniform vec2 uResolution; uniform vec3 uTint;
+    varying vec3 vN; varying vec3 vV;
+    void main(){
+      vec3 N=normalize(vN), V=normalize(vV);
+      float ndotv=clamp(dot(N,V),0.0,1.0);
+      float fresnel=pow(1.0-ndotv,2.6);
+      vec2 screenUv=gl_FragCoord.xy/uResolution;
+      // faceted refraction: flat normals per triangle give a stepped,
+      // gem-like distortion instead of the bell jar's smooth curve
+      vec2 refractOffset = N.xy * (0.05 + 0.09*fresnel);
+      vec2 sampleUv = clamp(screenUv - refractOffset, 0.001, 0.999);
+      vec3 seen = texture2D(uBgTex, sampleUv).rgb;
+      vec3 glassColor = mix(seen, uTint, 0.22);
+      float specular = pow(max(0.0, dot(reflect(-V,N), normalize(vec3(0.3,0.8,0.5)))), 60.0);
+      vec3 rimColor = mix(uTint*1.4, vec3(1.0), 0.7);
+      vec3 color = mix(glassColor, rimColor, fresnel*0.8) + specular*1.1;
+      float alpha = mix(0.30, 0.92, fresnel);
+      gl_FragColor = vec4(color, alpha);
+    }`,
+});
+
+let jarGroup = null;
+function rebuildCrystal(occ) {
+  if (jarGroup) { scene.remove(jarGroup); jarGroup.traverse((o)=>o.geometry?.dispose?.()); }
+  jarGroup = new THREE.Group();
+  const gemR = occ.domeR * 1.42;
+  const gemGeo = new THREE.IcosahedronGeometry(gemR, 0); // facets, no subdivision — low-poly gem look
+  const gemMesh = new THREE.Mesh(gemGeo, glassMaterial);
+  gemMesh.position.set(occ.cx, occ.midY, occ.cz);
+  gemMesh.rotation.y = 0.3;
+  jarGroup.add(gemMesh);
+
+  const pedR = gemR * 0.55, pedH = occ.domeR * 0.35;
+  const pedGeo = new THREE.CylinderGeometry(pedR*0.7, pedR, pedH, 24);
+  const pedMat = new THREE.MeshStandardMaterial({ color: 0x14141c, roughness: 0.7, metalness: 0.3 });
+  const pedMesh = new THREE.Mesh(pedGeo, pedMat);
+  pedMesh.position.set(occ.cx, occ.botY - occ.headR*0.3 - pedH/2, occ.cz);
+  jarGroup.add(pedMesh);
+
+  scene.add(jarGroup);
+}
+
+let avatar=null, lamBuf=null, occ=null;
+async function loadFace(id) {
+  statsEl.textContent = `loading ${id}…`;
+  const { base, meshBase } = resolveFace(id);
+  avatar = await loadLamAvatar(base, { meshBase, yaw: Math.PI });
+  lamBuf = new Float32Array(avatar.count * FLOATS_PER_SPLAT);
+  avatar.pose({at:[0,0,0],bones:{},morph:{}}, lamBuf, 0);
+  const n = avatar.lastCount;
+  let mnx=Infinity,mxx=-Infinity,mny=Infinity,mxy=-Infinity,mnz=Infinity,mxz=-Infinity;
+  for (let i=0;i<n;i++){const o=i*FLOATS_PER_SPLAT;const x=lamBuf[o],y=lamBuf[o+1],z=lamBuf[o+2];
+    if(x<mnx)mnx=x;if(x>mxx)mxx=x;if(y<mny)mny=y;if(y>mxy)mxy=y;if(z<mnz)mnz=z;if(z>mxz)mxz=z;}
+  occ = buildOccluders({mnx,mxx,mny,mxy,mnz,mxz});
+
+  const combined = new Float32Array((n+occ.count)*FLOATS_PER_SPLAT);
+  combined.set(lamBuf.subarray(0,n*FLOATS_PER_SPLAT),0);
+  combined.set(occ.data, n*FLOATS_PER_SPLAT);
+  renderer.setData(combined, n+occ.count);
+
+  targetY = occ.midY;
+  const aspect = glCanvas.clientWidth / glCanvas.clientHeight;
+  radius = occ.domeR*1.42*2.4 * (aspect < 1 ? 1 / aspect : 1); // portrait: pull back (see demo-lam-arch-statue.html for why)
+  applyCamera();
+  rebuildCrystal(occ);
+  statsEl.textContent = `face ${n.toLocaleString()} + occluders ${occ.count.toLocaleString()} splats + gem mesh · ${renderer.backend}`;
+}
+$('facePrev').onclick = () => { faceIdx = (faceIdx - 1 + FACES.length) % FACES.length; updateFaceLabel(); loadFace(currentFaceId()); };
+$('faceNext').onclick = () => { faceIdx = (faceIdx + 1) % FACES.length; updateFaceLabel(); loadFace(currentFaceId()); };
+$('front').onclick = () => { theta=THETA_FRONT; phi=1.3; applyCamera(); };
+$('wideside').onclick = () => { theta=THETA_FRONT-THETA_CLAMP; phi=1.3; applyCamera(); };
+
+await loadFace(currentFaceId());
+
+function syncThreeSize(){const w=glCanvas.width,h=glCanvas.height;
+  if(glassCanvas.width!==w||glassCanvas.height!==h){threeRenderer.setSize(w,h,false);
+    glassUniforms.uResolution.value.set(w,h); camera3.aspect=w/h; camera3.updateProjectionMatrix();}}
+
+(function frame(t){
+  if (avatar) {
+    const pose = idlePose(t/1000);
+    avatar.pose(pose, lamBuf, 0);
+    const n = avatar.lastCount;
+    renderer.writeRegion(0, lamBuf.subarray(0, n*FLOATS_PER_SPLAT));
+  }
+  renderer.render(); bgTex.needsUpdate = true; syncThreeSize();
+  const [px,py,pz] = camPos();
+  camera3.position.set(px,py,pz); camera3.lookAt(0,targetY,0);
+  if (jarGroup) jarGroup.children[0].rotation.y += 0.0025;
+  threeRenderer.render(scene, camera3);
+  requestAnimationFrame(frame);
+})(performance.now());
+</script>
+</body>
+</html>

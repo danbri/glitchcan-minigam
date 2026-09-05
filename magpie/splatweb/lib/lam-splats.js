@@ -183,9 +183,14 @@ function mat3ToQuat(m) {
 // Full asset load: mesh + skeleton + morph targets + real splat params,
 // ready for per-frame pose(). base: URL prefix ending in '/'.
 export async function loadLamAvatar(base, opts = {}) {
-  const { targetHeight = null, yaw = 0, alphaMin = 0.05, maxScale = 0.006, maxAspect = 4 } = opts;
+  const { targetHeight = null, yaw = 0, alphaMin = 0.05, maxScale = 0.006, maxAspect = 4, meshBase = base } = opts;
+  // meshBase defaults to base (skin.glb + offset.ply co-located, as the
+  // original sample/synth-face folders do) but can point elsewhere so many
+  // offset.ply files can share ONE skin.glb instead of each carrying its
+  // own 3.6MB copy of an identical mesh — real saving once you're past a
+  // handful of avatars (50 duplicated copies would be ~180MB for nothing).
   const [glbAb, plyAb] = await Promise.all([
-    fetch(base + 'skin.glb').then((r) => r.arrayBuffer()),
+    fetch(meshBase + 'skin.glb').then((r) => r.arrayBuffer()),
     fetch(base + 'offset.ply').then((r) => r.arrayBuffer()),
   ]);
   const { json: gltf, bin } = parseGlb(glbAb);

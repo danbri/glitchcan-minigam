@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAM head-in-a-jar — art direction carousel (prototype, throwaway)</title>
+<style>
+html,body{margin:0;height:100%;background:#05060a;color:#d8dae2;font:13px monospace}
+#wrap{position:relative;width:100%;height:100vh;overflow:hidden}
+iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0;background:#05060a}
+.bar{position:fixed;top:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:0.6rem;
+  background:rgba(10,13,20,.85);border:1px solid #3a5580;border-radius:8px;padding:0.5rem 0.8rem;z-index:10}
+button{background:#22304a;color:#cfe0ff;border:1px solid #3a5580;border-radius:6px;padding:0.35rem 0.7rem;cursor:pointer;font:13px monospace}
+button:hover{background:#2c3e60}
+#label{min-width:14rem;text-align:center}
+#dots{display:flex;gap:5px}
+.dot{width:7px;height:7px;border-radius:50%;background:#3a5580;cursor:pointer}
+.dot.active{background:#cfe0ff}
+</style>
+</head>
+<body>
+<div class="bar">
+  <button id="prev">◀ prev</button>
+  <span id="label">—</span>
+  <div id="dots"></div>
+  <button id="next">next ▶</button>
+</div>
+<div id="wrap"></div>
+<script>
+// Carousel comparing the two art-direction prototypes built to replace the
+// original "translucent point-cloud jar" (demo-lam-jar.html — kept as a
+// baseline elsewhere, deliberately not offered as an option here since it
+// was the rejected "fuzzy blue ball" direction).
+const VARIANTS = [
+  { file: 'demo-lam-jar-flame.html', label: 'shimmering cold-flame orb' },
+  { file: 'demo-lam-jar-victorian.html', label: 'Victorian glass bell jar' },
+];
+
+const wrap = document.getElementById('wrap');
+const label = document.getElementById('label');
+const dotsEl = document.getElementById('dots');
+let idx = 0;
+
+const frames = VARIANTS.map((v, i) => {
+  const f = document.createElement('iframe');
+  f.src = v.file;
+  f.style.visibility = i === 0 ? 'visible' : 'hidden';
+  f.style.pointerEvents = i === 0 ? 'auto' : 'none';
+  wrap.appendChild(f);
+  return f;
+});
+
+VARIANTS.forEach((v, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  d.onclick = () => show(i);
+  dotsEl.appendChild(d);
+});
+
+function show(i) {
+  idx = (i + VARIANTS.length) % VARIANTS.length;
+  frames.forEach((f, k) => {
+    f.style.visibility = k === idx ? 'visible' : 'hidden';
+    f.style.pointerEvents = k === idx ? 'auto' : 'none';
+  });
+  [...dotsEl.children].forEach((d, k) => d.classList.toggle('active', k === idx));
+  label.textContent = `${idx + 1}/${VARIANTS.length} — ${VARIANTS[idx].label}`;
+}
+document.getElementById('prev').onclick = () => show(idx - 1);
+document.getElementById('next').onclick = () => show(idx + 1);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') show(idx - 1);
+  if (e.key === 'ArrowRight') show(idx + 1);
+});
+show(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAM head-in-a-jar (prototype, throwaway)</title>
+<style>html,body{margin:0;height:100%;background:#05060a;color:#d8dae2;font:13px monospace}
+#gl{width:100%;height:100vh;display:block;touch-action:none}
+.hud{position:fixed;top:10px;left:10px;background:rgba(10,13,20,.82);border:1px solid #3a5580;border-radius:8px;padding:0.6rem 0.8rem;max-width:280px}
+.hud select{width:100%;margin-top:0.2rem}
+#stats{position:fixed;bottom:10px;left:10px;background:rgba(10,13,20,.8);border:1px solid #3a5580;border-radius:8px;padding:0.4rem 0.7rem;max-width:90vw}
+button{background:#22304a;color:#cfe0ff;border:1px solid #3a5580;border-radius:6px;padding:0.3rem 0.5rem;cursor:pointer;margin:2px 2px 0 0}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div class="hud">
+  <b>head in a jar — prototype</b><br>
+  <small>drag to orbit (clamped), wheel to zoom</small>
+  <label>face
+    <select id="face">
+      <option value="boy1">boy1</option>
+      <option value="man2">man2</option>
+      <option value="woman1" selected>woman1</option>
+      <option value="lightbrownhairwoman">lightbrownhairwoman</option>
+    </select>
+  </label>
+  <div style="margin-top:0.5rem">
+    <button id="front">front</button><button id="wideside">wide side</button><button id="talk">talk burst</button>
+  </div>
+</div>
+<div id="stats">loading…</div>
+<script type="module">
+import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { createSplatRenderer } from './lib/splat-renderer-auto.js';
+import { loadLamAvatar } from './lib/lam-splats.js';
+import { qMul, qNormalize } from './lib/pose-math.js';
+
+const $ = (id) => document.getElementById(id);
+const canvas = $('gl'), statsEl = $('stats');
+canvas.width = canvas.clientWidth * devicePixelRatio;
+canvas.height = canvas.clientHeight * devicePixelRatio;
+const renderer = await createSplatRenderer(canvas, { background: [0.02, 0.025, 0.04] });
+window.__renderer = renderer;
+
+// --- camera: orbit deliberately CLAMPED so the raw hollow back of the LAM
+// head (a near-zero-thickness shell — real trained data only exists for
+// what the source photo showed) can never be viewed unobstructed. Belt +
+// braces with the opaque dome/jar/collar geometry below, which is the
+// real fix; the clamp is a second line of defence, not the fix itself.
+const THETA_FRONT = Math.PI; // matches lam-splats' yaw=Math.PI convention
+const THETA_CLAMP = 1.15;    // ~66 degrees either side of front
+let theta = THETA_FRONT, phi = 1.3, radius = 1.0, targetY = 0.15;
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function applyCamera() {
+  renderer.setCamera([
+    radius * Math.sin(theta) * Math.sin(phi),
+    targetY + radius * Math.cos(phi),
+    radius * Math.cos(theta) * Math.sin(phi),
+  ], [0, targetY, 0]);
+}
+window.__setCam = (t, p, r, y) => { theta = t; phi = p; radius = r; if (y != null) targetY = y; applyCamera(); };
+let drag = null;
+canvas.addEventListener('pointerdown', (e) => { drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  theta = clamp(theta - (e.clientX - drag[0]) * 0.006, THETA_FRONT - THETA_CLAMP, THETA_FRONT + THETA_CLAMP);
+  phi = clamp(phi - (e.clientY - drag[1]) * 0.006, 0.7, 2.2);
+  drag = [e.clientX, e.clientY]; applyCamera();
+});
+canvas.addEventListener('pointerup', () => { drag = null; });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); radius = clamp(radius * Math.exp(e.deltaY * 0.001), 0.35, 3); applyCamera(); }, { passive: false });
+
+// --- idle rig demo: reused verbatim from demo-lam-test.html's verified
+// idle loop (continuous blink + gentle head sway + faint mouth motion) so
+// the rig is unmistakably live, not a static pose.
+let talkBurstUntil = 0;
+function idlePose(t) {
+  const blinkPhase = (t % 3.4) / 3.4;
+  const blink = blinkPhase < 0.06 ? Math.sin((blinkPhase / 0.06) * Math.PI) : 0;
+  const yaw = Math.sin(t / 5.3) * 0.12;
+  const pitch = Math.sin(t / 7.1 + 1) * 0.05;
+  const qYaw = [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)];
+  const qPitch = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
+  const headQ = qNormalize(qMul(qYaw, qPitch));
+  let talk = Math.max(0, Math.sin(t * 1.7)) * 0.18;
+  if (t < talkBurstUntil) talk = Math.max(0, Math.sin(t * 9)) * 0.55; // exaggerated burst, for verification
+  return { at: [0, 0, 0], bones: { head: headQ }, morph: { eyeBlinkLeft: blink, eyeBlinkRight: blink, jawOpen: talk } };
+}
+window.__talkBurst = () => { talkBurstUntil = performance.now() / 1000 + 2.5; };
+$('talk').onclick = window.__talkBurst;
+
+// --- procedural jar/dome/collar/tube geometry, built ONCE per face from
+// that face's own rest-pose bounds. Static (does not re-pose per frame) —
+// idle head sway is modest (~0.12rad yaw / 0.05rad pitch) so a slightly
+// oversized static dome tolerates it without a visible gap; a head-bone-
+// rotation-following dome would be the correct fix for a bigger range of
+// motion, not implemented here (see report).
+function fibonacciSphere(n) {
+  const pts = [];
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < n; i++) {
+    const yFrac = 1 - (i / Math.max(1, n - 1)) * 2;
+    const r = Math.sqrt(Math.max(0, 1 - yFrac * yFrac));
+    const th = golden * i;
+    pts.push([Math.cos(th) * r, yFrac, Math.sin(th) * r]);
+  }
+  return pts;
+}
+function pushSplat(arr, o, x, y, z, r, g, b, a, s) {
+  arr[o] = x; arr[o + 1] = y; arr[o + 2] = z;
+  arr[o + 3] = 0; arr[o + 4] = 0; arr[o + 5] = 0; arr[o + 6] = 1; // identity quat (x,y,z,w)
+  arr[o + 7] = s; arr[o + 8] = s; arr[o + 9] = s;
+  arr[o + 10] = r; arr[o + 11] = g; arr[o + 12] = b; arr[o + 13] = a;
+  return o + FLOATS_PER_SPLAT;
+}
+
+function buildProps(bounds) {
+  const { mnx, mxx, mny, mxy, mnz, mxz } = bounds;
+  const cx = (mnx + mxx) / 2, cz = (mnz + mxz) / 2;
+  const topY = mxy, botY = mny;
+  const headW = mxx - mnx, headH = topY - botY;
+  const headR = Math.max(headW, headH) * 0.5 * 1.15;
+  const midY = (topY + botY) / 2;
+  const depthPush = headR * 0.55;
+  const domeCx = cx, domeCy = midY, domeCz = cz + depthPush, domeR = headR * 1.2;
+  const faceFrontZ = mnz; // most-negative z = closest to camera at front view
+
+  // budget an upper bound, trim to actual count used
+  const MAX = 9500 + 260 + 2 * 190 + 2600 + 500;
+  const out = new Float32Array(MAX * FLOATS_PER_SPLAT);
+  let o = 0;
+
+  // 1) brain-case dome: opaque brushed-metal sphere behind the head,
+  // clipped so it never pokes in front of the face's own frontmost point.
+  // Denser + smaller-radius points than a first pass used, so the dome
+  // reads as a continuous surface at the same viewing distance the
+  // (much higher point-density, photographic) face is seen at, instead
+  // of visibly sparse dots next to a sharp face.
+  const domePts = fibonacciSphere(9000);
+  for (const [px, py, pz] of domePts) {
+    const wx = domeCx + px * domeR, wy = domeCy + py * domeR * 1.05, wz = domeCz + pz * domeR * 0.85;
+    if (wz < faceFrontZ + 0.012) continue;
+    const shade = 0.75 + 0.18 * py;
+    o = pushSplat(out, o, wx, wy, wz, 0.50 * shade, 0.53 * shade, 0.58 * shade, 1, 0.0125);
+  }
+
+  // 2) neck collar: a short opaque metal band right at the bust's bottom
+  // edge (hides the raw LAM cut-off seam) plus a sealed bottom cap disc.
+  const collarR = headW * 0.58;
+  for (const dy of [-0.018, 0, 0.014]) {
+    const n = 46;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const wx = cx + Math.cos(a) * collarR, wz = cz + Math.sin(a) * collarR;
+      o = pushSplat(out, o, wx, botY + dy, wz, 0.62, 0.55, 0.30, 1, 0.012);
+    }
+  }
+  const capN = 220;
+  for (let i = 0; i < capN; i++) {
+    const rr = collarR * Math.sqrt((i + 0.5) / capN);
+    const a = i * 2.399963; // golden angle spiral fill
+    const wx = cx + Math.cos(a) * rr, wz = cz + Math.sin(a) * rr;
+    o = pushSplat(out, o, wx, botY - 0.02, wz, 0.10, 0.11, 0.13, 1, 0.014);
+  }
+
+  // 3) two life-support tubes, collar down to a fixed base anchor
+  const baseY = botY - headR * 3.1;
+  const tubeDefs = [
+    { a0: 0.7, col: [0.75, 0.35, 0.15] },
+    { a0: -2.1, col: [0.20, 0.55, 0.30] },
+  ];
+  for (const { a0, col } of tubeDefs) {
+    const steps = 26;
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      const y = botY - t * (botY - baseY);
+      const wob = Math.sin(t * 3.1 + a0) * headR * 0.35;
+      const wx = cx + Math.cos(a0) * collarR * 1.05 + wob;
+      const wz = cz + Math.sin(a0) * collarR * 1.05;
+      const ring = 6;
+      for (let k = 0; k < ring; k++) {
+        const ra = (k / ring) * Math.PI * 2;
+        o = pushSplat(out, o, wx + Math.cos(ra) * 0.012, y, wz + Math.sin(ra) * 0.012, col[0], col[1], col[2], 1, 0.010);
+      }
+    }
+  }
+
+  // 4) jar: translucent shell fully enclosing head + dome. Sparse + low
+  // per-point opacity — a shell viewed near its own silhouette stacks many
+  // points along one view ray, so even a "faint" per-point alpha reads as
+  // near-opaque fog at the edges unless both count and alpha are kept low.
+  // jar hugs the dome closely (small margin, not a big surrounding void) so
+  // the face reads as the main subject, not a small feature buried deep
+  // inside a large apparatus.
+  const jarCy = midY, jarR = domeR + headR * 0.4;
+  const jarPts = fibonacciSphere(900);
+  for (const [px, py, pz] of jarPts) {
+    const wx = cx + px * jarR, wy = jarCy + py * jarR, wz = cz + pz * jarR;
+    o = pushSplat(out, o, wx, wy, wz, 0.55, 0.85, 0.80, 0.035, 0.028);
+  }
+
+  // 5) base/stand beneath the jar
+  const standY = jarCy - jarR * 1.02, standR = jarR * 0.62;
+  for (let layer = 0; layer < 2; layer++) {
+    const n = 250;
+    for (let i = 0; i < n; i++) {
+      const rr = standR * Math.sqrt((i + 0.5) / n);
+      const a = i * 2.399963;
+      const wx = cx + Math.cos(a) * rr, wz = cz + Math.sin(a) * rr;
+      o = pushSplat(out, o, wx, standY - layer * 0.04, wz, 0.09, 0.10, 0.12, 1, 0.02);
+    }
+  }
+
+  return { data: out.subarray(0, o), count: o / FLOATS_PER_SPLAT, headR, midY, jarR };
+}
+
+// --- load / rebuild ---
+let avatar = null, lamBuf = null, propsData = null, propsCount = 0;
+async function loadFace(name) {
+  statsEl.textContent = `loading ${name}…`;
+  avatar = await loadLamAvatar(`third_party/lam-synth-faces/${name}/`, { yaw: Math.PI });
+  lamBuf = new Float32Array(avatar.count * FLOATS_PER_SPLAT);
+
+  // rest pose once, to get bounds for the prop geometry
+  avatar.pose({ at: [0, 0, 0], bones: {}, morph: {} }, lamBuf, 0);
+  const n = avatar.lastCount;
+  let mnx = Infinity, mxx = -Infinity, mny = Infinity, mxy = -Infinity, mnz = Infinity, mxz = -Infinity;
+  for (let i = 0; i < n; i++) {
+    const o = i * FLOATS_PER_SPLAT;
+    const x = lamBuf[o], y = lamBuf[o + 1], z = lamBuf[o + 2];
+    if (x < mnx) mnx = x; if (x > mxx) mxx = x;
+    if (y < mny) mny = y; if (y > mxy) mxy = y;
+    if (z < mnz) mnz = z; if (z > mxz) mxz = z;
+  }
+  const props = buildProps({ mnx, mxx, mny, mxy, mnz, mxz });
+  propsData = props.data; propsCount = props.count;
+
+  const combined = new Float32Array((n + propsCount) * FLOATS_PER_SPLAT);
+  combined.set(lamBuf.subarray(0, n * FLOATS_PER_SPLAT), 0);
+  combined.set(propsData, n * FLOATS_PER_SPLAT);
+  renderer.setData(combined, n + propsCount);
+
+  targetY = props.midY;
+  radius = props.jarR * 1.85;
+  applyCamera();
+  statsEl.textContent = `face ${n.toLocaleString()} + jar/dome/collar/tubes ${propsCount.toLocaleString()} = ${(n + propsCount).toLocaleString()} splats · ${renderer.backend}`;
+  window.__lamLoaded = true;
+}
+$('face').addEventListener('change', () => loadFace($('face').value));
+$('front').onclick = () => window.__setCam(THETA_FRONT, 1.3, targetY ? radius : 1, targetY);
+$('wideside').onclick = () => window.__setCam(THETA_FRONT - THETA_CLAMP, 1.3, radius, targetY);
+
+await loadFace($('face').value);
+
+(function frame(t) {
+  if (avatar) {
+    const pose = idlePose(t / 1000);
+    window.__lastPose = pose;
+    avatar.pose(pose, lamBuf, 0);
+    const n = avatar.lastCount;
+    renderer.writeRegion(0, lamBuf.subarray(0, n * FLOATS_PER_SPLAT));
+  }
+  renderer.render();
+  requestAnimationFrame(frame);
+})(performance.now());
+</script>
+</body>
+</html>

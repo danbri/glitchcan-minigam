@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAM ghost/particle stylize (prototype, throwaway)</title>
+<style>
+html,body{margin:0;height:100%;background:#05060a;color:#d8dae2;font:13px monospace}
+#gl{width:100%;height:100vh;display:block;touch-action:none}
+.hud{position:fixed;top:10px;left:10px;background:rgba(10,13,20,.85);border:1px solid #3a5580;border-radius:8px;padding:0.6rem 0.8rem;max-width:min(340px,88vw);max-height:94vh;overflow:auto;transition:transform .25s ease;z-index:10}
+.hud.collapsed{transform:translateX(-120%)}
+#hudToggle{position:fixed;top:10px;left:10px;z-index:20;width:2.2rem;height:2.2rem;line-height:2.2rem;text-align:center;padding:0}
+button{background:#22304a;color:#cfe0ff;border:1px solid #3a5580;border-radius:6px;padding:0.35rem 0.6rem;cursor:pointer;margin:2px 2px 0 0;font:13px monospace}
+.carousel{margin-top:0.6rem;border-top:1px solid #2a3a56;padding-top:0.5rem}
+.carousel .row{display:flex;align-items:center;gap:0.4rem;justify-content:space-between}
+.carousel .label{flex:1;text-align:center;font-size:12px;color:#cfe0ff}
+.grp{border-top:1px solid #2a3a56;margin-top:0.6rem;padding-top:0.4rem}
+label{display:block;margin-top:0.45rem;font-size:12px;color:#9fb3d8}
+input[type=range]{width:100%}
+.v{float:right;color:#7fd0e0}
+.preset{font-size:11px;padding:0.25rem 0.5rem}
+#stats{position:fixed;bottom:10px;left:10px;background:rgba(10,13,20,.8);border:1px solid #3a5580;border-radius:8px;padding:0.4rem 0.7rem;max-width:90vw;font-size:11px}
+#credit{position:fixed;bottom:10px;right:10px;background:rgba(10,13,20,.8);border:1px solid #3a5580;border-radius:8px;padding:0.4rem 0.7rem;max-width:46vw;font-size:10px;color:#8fa2c4;line-height:1.4}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<button id="hudToggle">☰</button>
+<div class="hud">
+  <b>LAM ghost/particle stylize</b><br>
+  <small>drag to orbit (clamped), wheel to zoom</small>
+
+  <div class="carousel">
+    <div style="font-size:11px;color:#7f93b8">FACE</div>
+    <div class="row"><button id="facePrev">◀</button><span class="label" id="faceLabel">—</span><button id="faceNext">▶</button></div>
+  </div>
+  <div class="carousel">
+    <div style="font-size:11px;color:#7f93b8">FOLIAGE TREATMENT (optional — this is the real test)</div>
+    <div class="row"><button id="treatPrev">◀</button><span class="label" id="treatLabel">—</span><button id="treatNext">▶</button></div>
+  </div>
+
+  <div class="grp">
+    <div style="font-size:11px;color:#7f93b8">PRESETS</div>
+    <button class="preset" id="pReal">photoreal (off)</button><button class="preset" id="pSubtle">subtle ghost</button><button class="preset" id="pParticle">particle cloud</button><button class="preset" id="pFull">full dissolve</button><button class="preset" id="pSparkle">sparkle ghost</button>
+  </div>
+
+  <div class="grp">
+    <label>secondary-action lag <span class="v" id="lagV"></span><input id="lag" type="range" min="0" max="1" step="0.01" value="0"></label>
+    <label>noise dissolve / slices <span class="v" id="dissolveV"></span><input id="dissolve" type="range" min="0" max="1" step="0.01" value="0"></label>
+    <label>particle-ify (lowpoly — drop &amp; enlarge) <span class="v" id="particleV"></span><input id="particle" type="range" min="0" max="1" step="0.01" value="0"></label>
+    <label>ghost / radio tint <span class="v" id="ghostV"></span><input id="ghost" type="range" min="0" max="1" step="0.01" value="0"></label>
+  </div>
+
+  <div class="grp">
+    <div style="font-size:11px;color:#7f93b8">CANDIDATE EFFECTS (new)</div>
+    <label>roundness (classic ball particles) <span class="v" id="roundnessV"></span><input id="roundness" type="range" min="0" max="1" step="0.01" value="0"></label>
+    <label>twinkle (brightness sparkle) <span class="v" id="twinkleV"></span><input id="twinkle" type="range" min="0" max="3" step="0.01" value="0"></label>
+    <label>jitter (buzz/static) <span class="v" id="jitterV"></span><input id="jitter" type="range" min="0" max="1" step="0.01" value="0"></label>
+  </div>
+
+  <div style="margin-top:0.6rem">
+    <button id="front">front</button><button id="wideside">wide side</button><button id="talk">talk burst</button>
+  </div>
+</div>
+<div id="stats">loading…</div>
+<div id="credit">
+  Foliage (when shown): Botanical Garden Kiel, Victoria House · Simon Bethke · CC BY 4.0
+  (fern/vine/hedge/canopy/pond, via magpie/dbdb splat pack)
+</div>
+<script type="module">
+import { FLOATS_PER_SPLAT } from './lib/splat-renderer.js';
+import { createSplatRenderer } from './lib/splat-renderer-auto.js';
+import { loadLamAvatar } from './lib/lam-splats.js';
+import { qMul, qNormalize } from './lib/pose-math.js';
+import { FACES, resolveFace } from './lib/lam-face-roster.js';
+import { ORGANIC_TREATMENTS, preloadAllOrganicElements } from './lib/lam-organic-treatments.js';
+import { GhostStylizer } from './lib/lam-ghost-stylize.js';
+
+const $ = (id) => document.getElementById(id);
+const canvas = $('gl'), statsEl = $('stats');
+
+// mobile fix: collapsible drawer, collapsed by default under 640px — see
+// demo-lam-jar-flame.html for the pattern this copies.
+const hud = document.querySelector('.hud');
+if (window.innerWidth < 640) hud.classList.add('collapsed');
+$('hudToggle').onclick = () => hud.classList.toggle('collapsed');
+
+canvas.width = canvas.clientWidth * devicePixelRatio;
+canvas.height = canvas.clientHeight * devicePixelRatio;
+const renderer = await createSplatRenderer(canvas, { background: [0.02, 0.025, 0.04] });
+window.__renderer = renderer;
+
+// --- camera: orbit CLAMPED so LAM's hollow/near-zero-thickness back-of-head
+// shell (no real fix, only occlusion) is never exposed unobstructed. Also
+// empirically boost radius at portrait aspect (<1) — a real bug found in
+// the shared renderer last round where portrait framing goes extreme-close;
+// this is a local workaround, not a fix to lib/splat-renderer*.js.
+const THETA_FRONT = Math.PI, THETA_CLAMP = 1.15;
+let theta = THETA_FRONT, phi = 1.3, radius = 1.0, targetY = 0.15;
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function aspectBoost() {
+  const a = canvas.clientWidth / canvas.clientHeight;
+  return a < 1 ? 1 / a : 1;
+}
+function applyCamera() {
+  const r = radius * aspectBoost();
+  renderer.setCamera([
+    r * Math.sin(theta) * Math.sin(phi),
+    targetY + r * Math.cos(phi),
+    r * Math.cos(theta) * Math.sin(phi),
+  ], [0, targetY, 0]);
+}
+window.__setCam = (t, p, r, y) => { theta = t; phi = p; radius = r; if (y != null) targetY = y; applyCamera(); };
+let drag = null;
+canvas.addEventListener('pointerdown', (e) => { drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  theta = clamp(theta - (e.clientX - drag[0]) * 0.006, THETA_FRONT - THETA_CLAMP, THETA_FRONT + THETA_CLAMP);
+  phi = clamp(phi - (e.clientY - drag[1]) * 0.006, 0.7, 2.2);
+  drag = [e.clientX, e.clientY]; applyCamera();
+});
+canvas.addEventListener('pointerup', () => { drag = null; });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); radius = clamp(radius * Math.exp(e.deltaY * 0.001), 0.35, 3); applyCamera(); }, { passive: false });
+window.addEventListener('resize', applyCamera);
+
+// --- idle rig demo — same formula verified live earlier this session.
+// Sway needs to be genuinely happening for the lag/secondary-action effect
+// to be visible at all: without motion there's nothing to lag behind.
+let talkBurstUntil = 0;
+function idlePose(t) {
+  const blinkPhase = (t % 3.4) / 3.4;
+  const blink = blinkPhase < 0.06 ? Math.sin((blinkPhase / 0.06) * Math.PI) : 0;
+  const yaw = Math.sin(t / 3.1) * 0.22;   // faster/wider than other demos —
+  const pitch = Math.sin(t / 4.3 + 1) * 0.09; // lag is the point here, make it visible
+  const qYaw = [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)];
+  const qPitch = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
+  const headQ = qNormalize(qMul(qYaw, qPitch));
+  let talk = Math.max(0, Math.sin(t * 1.7)) * 0.16;
+  if (t < talkBurstUntil) talk = Math.max(0, Math.sin(t * 9)) * 0.5;
+  return { at: [0, 0, 0], bones: { head: headQ }, morph: { eyeBlinkLeft: blink, eyeBlinkRight: blink, jawOpen: talk } };
+}
+window.__talkBurst = () => { talkBurstUntil = performance.now() / 1000 + 2.5; };
+$('talk').onclick = window.__talkBurst;
+
+function fibonacciSphere(n) {
+  const pts = [];
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < n; i++) {
+    const yFrac = 1 - (i / Math.max(1, n - 1)) * 2;
+    const r = Math.sqrt(Math.max(0, 1 - yFrac * yFrac));
+    const th = golden * i;
+    pts.push([Math.cos(th) * r, yFrac, Math.sin(th) * r]);
+  }
+  return pts;
+}
+function pushSplat(arr, o, x, y, z, r, g, b, a, s) {
+  arr[o] = x; arr[o + 1] = y; arr[o + 2] = z;
+  arr[o + 3] = 0; arr[o + 4] = 0; arr[o + 5] = 0; arr[o + 6] = 1;
+  arr[o + 7] = s; arr[o + 8] = s; arr[o + 9] = s;
+  arr[o + 10] = r; arr[o + 11] = g; arr[o + 12] = b; arr[o + 13] = a;
+  return o + FLOATS_PER_SPLAT;
+}
+// occlusion dome — the real safety mechanism against exposing LAM's hollow
+// back, independent of stylize/foliage settings (same approach as the jar
+// and organic demos).
+function buildOcclusionDome(bounds) {
+  const { mnx, mxx, mny, mxy, mnz, mxz } = bounds;
+  const cx = (mnx + mxx) / 2, cz = (mnz + mxz) / 2;
+  const headW = mxx - mnx, headH = mxy - mny;
+  const headR = Math.max(headW, headH) * 0.5 * 1.15;
+  const midY = (mxy + mny) / 2;
+  const depthPush = headR * 0.55;
+  const domeCz = cz + depthPush, domeR = headR * 0.92;
+  const faceFrontZ = mnz;
+  const pts = fibonacciSphere(4000);
+  const out = new Float32Array(pts.length * FLOATS_PER_SPLAT);
+  let o = 0;
+  for (const [px, py, pz] of pts) {
+    const wx = cx + px * domeR, wy = midY + py * domeR * 1.05, wz = domeCz + pz * domeR * 0.85;
+    if (wz < faceFrontZ + 0.012) continue;
+    const shade = 0.4 + 0.15 * py;
+    o = pushSplat(out, o, wx, wy, wz, shade, shade, shade * 1.05, 1, 0.016);
+  }
+  return { data: out.subarray(0, o), count: o / FLOATS_PER_SPLAT, headR, midY, cx, cz };
+}
+
+// --- treatments: index 0 = "none" (no foliage — pure stylize test)
+const TREATMENTS = [{ id: 'none', label: 'none (bare face)' }, ...ORGANIC_TREATMENTS];
+
+// --- state ---
+let faceIdx = FACES.findIndex((f) => f.id === 'tpdne-01'); if (faceIdx < 0) faceIdx = 0;
+let treatIdx = 0;
+let avatar = null, lamBuf = null, styleBuf = null, ghost = null, domeProps = null;
+
+function setFaceLabel() { $('faceLabel').textContent = `${faceIdx + 1}/${FACES.length} — ${FACES[faceIdx].label}`; }
+function setTreatLabel() { $('treatLabel').textContent = `${treatIdx + 1}/${TREATMENTS.length} — ${TREATMENTS[treatIdx].label}`; }
+setFaceLabel(); setTreatLabel();
+
+const sliders = {};
+for (const id of ['lag', 'dissolve', 'particle', 'ghost', 'twinkle', 'jitter', 'roundness']) {
+  sliders[id] = $(id);
+  const vEl = $(id + 'V');
+  const upd = () => { vEl.textContent = Number(sliders[id].value).toFixed(2); };
+  sliders[id].addEventListener('input', upd); upd();
+}
+const ALL_PARAMS = ['lag', 'dissolve', 'particle', 'ghost', 'roundness', 'twinkle', 'jitter'];
+function setPreset(vals) {
+  // always fills every param (defaulting to 0), not just the ones named —
+  // otherwise a preset click after manual fiddling leaves stale values
+  // sitting on whatever sliders it doesn't mention (bit us during testing).
+  for (const k of ALL_PARAMS) { sliders[k].value = vals[k] ?? 0; }
+  for (const id of ALL_PARAMS) $(id + 'V').textContent = Number(sliders[id].value).toFixed(2);
+}
+$('pReal').onclick = () => setPreset({ lag: 0, dissolve: 0, particle: 0, ghost: 0 });
+$('pSubtle').onclick = () => setPreset({ lag: 0.35, dissolve: 0.15, particle: 0.15, ghost: 0.25 });
+$('pParticle').onclick = () => setPreset({ lag: 0.5, dissolve: 0.1, particle: 0.55, ghost: 0.1 });
+$('pFull').onclick = () => setPreset({ lag: 0.8, dissolve: 0.55, particle: 0.4, ghost: 0.6 });
+// owner's live discovery: maxing roundness+twinkle+jitter while keeping
+// lag/dissolve/particle/ghost low/off "works remarkably well".
+$('pSparkle').onclick = () => setPreset({ roundness: 1, twinkle: 3, jitter: 1 });
+
+let domeData = null, foliageData = null; // static regions rebuilt on face/treatment change
+let foliageGhost = null, styledFoliageBuf = null;
+
+async function rebuild() {
+  const face = FACES[faceIdx];
+  const { base, meshBase } = resolveFace(face.id);
+  statsEl.textContent = `loading ${face.label}…`;
+  avatar = await loadLamAvatar(base, { meshBase, yaw: Math.PI });
+  const nMax = avatar.count;
+  lamBuf = new Float32Array(nMax * FLOATS_PER_SPLAT);
+  styleBuf = new Float32Array(nMax * FLOATS_PER_SPLAT);
+  avatar.pose({ at: [0, 0, 0], bones: {}, morph: {} }, lamBuf, 0);
+  const n = avatar.lastCount;
+  ghost = new GhostStylizer(n);
+
+  let mnx = Infinity, mxx = -Infinity, mny = Infinity, mxy = -Infinity, mnz = Infinity, mxz = -Infinity;
+  for (let i = 0; i < n; i++) {
+    const o = i * FLOATS_PER_SPLAT;
+    const x = lamBuf[o], y = lamBuf[o + 1], z = lamBuf[o + 2];
+    if (x < mnx) mnx = x; if (x > mxx) mxx = x;
+    if (y < mny) mny = y; if (y > mxy) mxy = y;
+    if (z < mnz) mnz = z; if (z > mxz) mxz = z;
+  }
+  const bounds = { mnx, mxx, mny, mxy, mnz, mxz };
+  domeProps = buildOcclusionDome(bounds);
+  domeData = domeProps.data;
+
+  const treat = TREATMENTS[treatIdx];
+  foliageData = treat.id === 'none' ? new Float32Array(0) : treat.recipe(bounds).data;
+  const foliageN = foliageData.length / FLOATS_PER_SPLAT;
+  // stylize the foliage too, per owner feedback — was previously copied in
+  // raw/untouched every frame, which is exactly why it kept clashing with
+  // the (now-stylized) face. Separate instance: its per-splat seed arrays
+  // are sized to foliageN, not the face's n.
+  foliageGhost = foliageN > 0 ? new GhostStylizer(foliageN) : null;
+  styledFoliageBuf = foliageN > 0 ? new Float32Array(foliageData.length) : null;
+
+  targetY = domeProps.midY - domeProps.headR * 0.1;
+  radius = domeProps.headR * 2.2;
+  applyCamera();
+  window.__lamN = n;
+  window.__domeN = domeProps.count;
+  window.__foliageN = foliageData.length / FLOATS_PER_SPLAT;
+}
+
+$('facePrev').onclick = () => { faceIdx = (faceIdx - 1 + FACES.length) % FACES.length; setFaceLabel(); rebuild(); };
+$('faceNext').onclick = () => { faceIdx = (faceIdx + 1) % FACES.length; setFaceLabel(); rebuild(); };
+$('treatPrev').onclick = () => { treatIdx = (treatIdx - 1 + TREATMENTS.length) % TREATMENTS.length; setTreatLabel(); rebuild(); };
+$('treatNext').onclick = () => { treatIdx = (treatIdx + 1) % TREATMENTS.length; setTreatLabel(); rebuild(); };
+$('front').onclick = () => window.__setCam(THETA_FRONT, 1.3, radius, targetY);
+$('wideside').onclick = () => window.__setCam(THETA_FRONT - THETA_CLAMP, 1.3, radius, targetY);
+
+await preloadAllOrganicElements();
+await rebuild();
+
+(function frame(t) {
+  const tt = t / 1000;
+  if (avatar && ghost) {
+    const pose = idlePose(tt);
+    avatar.pose(pose, lamBuf, 0);
+    const n = avatar.lastCount;
+    const params = {
+      lag: Number(sliders.lag.value), dissolve: Number(sliders.dissolve.value),
+      particle: Number(sliders.particle.value), ghost: Number(sliders.ghost.value),
+      twinkle: Number(sliders.twinkle.value), jitter: Number(sliders.jitter.value),
+      roundness: Number(sliders.roundness.value),
+    };
+    ghost.update(lamBuf, styleBuf, tt, params);
+    // debug: max |target - styled| position delta across a spread of splat
+    // indices, to verify the lag mechanism is genuinely creating a gap
+    // between the pose target and the rendered (lagged) position — not
+    // just implemented but inert.
+    let maxDelta = 0, maxIdx = -1;
+    for (let k = 0; k < n; k += 137) {
+      const o = k * 14;
+      const dx = lamBuf[o] - styleBuf[o], dy = lamBuf[o + 1] - styleBuf[o + 1], dz = lamBuf[o + 2] - styleBuf[o + 2];
+      const d = Math.hypot(dx, dy, dz);
+      if (d > maxDelta) { maxDelta = d; maxIdx = k; }
+    }
+    window.__lastGhostSample = { t: tt, maxDelta, maxIdx, n };
+
+    const domeN = domeProps.count, foliageN = foliageData.length / FLOATS_PER_SPLAT;
+    let foliageOut = foliageData;
+    if (foliageGhost && foliageN > 0) {
+      foliageGhost.update(foliageData, styledFoliageBuf, tt, params);
+      foliageOut = styledFoliageBuf;
+    }
+    const total = n + domeN + foliageN;
+    if (!window.__combined || window.__combined.length !== total * FLOATS_PER_SPLAT) {
+      window.__combined = new Float32Array(total * FLOATS_PER_SPLAT);
+    }
+    const combined = window.__combined;
+    combined.set(styleBuf.subarray(0, n * FLOATS_PER_SPLAT), 0);
+    combined.set(domeData, n * FLOATS_PER_SPLAT);
+    if (foliageN > 0) combined.set(foliageOut, (n + domeN) * FLOATS_PER_SPLAT);
+    if (renderer.count !== total) renderer.setData(combined, total);
+    else renderer.writeRegion(0, combined);
+    statsEl.textContent = `face ${n.toLocaleString()} + dome ${domeN.toLocaleString()} + foliage ${foliageN.toLocaleString()} = ${total.toLocaleString()} splats · ${renderer.backend}`;
+  }
+  renderer.render();
+  requestAnimationFrame(frame);
+})(performance.now());
+</script>
+</body>
+</html>
