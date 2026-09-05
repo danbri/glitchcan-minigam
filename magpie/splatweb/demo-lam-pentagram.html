@@ -9,7 +9,7 @@ html,body{margin:0;height:100%;background:#020204;color:#d8dae2;font:13px monosp
 #gl{width:100%;height:100vh;display:block;touch-action:none}
 .hud{position:fixed;top:10px;left:10px;background:rgba(10,13,20,.87);border:1px solid #3a5580;border-radius:8px;padding:2.7rem 0.8rem 0.8rem;max-width:min(320px,88vw);max-height:94vh;overflow:auto;transition:transform .25s ease;z-index:10}
 .hud.collapsed{transform:translateX(-120%)}
-#hudToggle{position:fixed;top:10px;left:10px;z-index:20;width:2.2rem;height:2.2rem;line-height:2.2rem;text-align:center;padding:0}
+#hudToggle{position:fixed;top:10px;left:10px;z-index:9999;width:2.6rem;height:2.6rem;line-height:2.6rem;text-align:center;padding:0;font-size:1.3rem;background:#182338;border:1px solid #5a7ab0;box-shadow:0 1px 6px rgba(0,0,0,.6);pointer-events:auto}
 h1{font-size:1.05rem;margin:0 0 0.2rem;color:#e8d9ff}
 .sub{font-size:11px;color:#8fa2c4;margin-bottom:0.6rem}
 button{background:#22304a;color:#cfe0ff;border:1px solid #3a5580;border-radius:6px;padding:0.4rem 0.6rem;cursor:pointer;margin:2px 3px 2px 0;font:12px monospace;display:block;width:100%;text-align:left}
@@ -647,7 +647,7 @@ let lastSpinStart = -1, lastSpinDur = 0.9;
 function spinEnergy(tt) {
   if (lastSpinStart < 0) return 0;
   const el = tt - lastSpinStart;
-  const rampDur = 0.12; // fast ramp-up
+  const rampDur = 0.3; // gradual ramp — a near-instant pop read as a discontinuity/reset instead of a spin reacting to motion
   const totalDur = lastSpinDur + 0.5; // secondary settle runs ~0.5s past the primary spin's own duration
   if (el < 0 || el > totalDur) return 0;
   if (el < rampDur) { const u = el / rampDur; return u * u * (3 - 2 * u); }
@@ -739,7 +739,10 @@ fxSlider.addEventListener('input', fxUpd); fxUpd();
 // transition is already running (switchPersona no-ops mid-transition, and
 // we skip scheduling the next hop until the current one's had time to
 // finish: transition dur is 900ms, well under the 3s floor).
-let autoRotateOn = false, autoRotateTimer = null;
+// on by default (owner request, mobile): if the HUD is ever hard to reach
+// on a real device, the creature still demonstrates itself without
+// requiring a tap first.
+let autoRotateOn = true, autoRotateTimer = null;
 function scheduleNextRotate() {
   if (!autoRotateOn) return;
   const delay = 3000 + Math.random() * 2000;
@@ -748,19 +751,26 @@ function scheduleNextRotate() {
     scheduleNextRotate();
   }, delay);
 }
+$('autoRotate').textContent = '■ stop rotating';
 $('autoRotate').onclick = () => {
   autoRotateOn = !autoRotateOn;
   $('autoRotate').textContent = autoRotateOn ? '■ stop rotating' : '▶ rotate faces (3-5s)';
   if (autoRotateOn) scheduleNextRotate();
   else if (autoRotateTimer) { clearTimeout(autoRotateTimer); autoRotateTimer = null; }
 };
+scheduleNextRotate();
+// mobile browsers require a real user gesture before audio can play —
+// unlock on the FIRST touch/click anywhere on the page (not just a HUD
+// button), so auto-rotate's speech still plays even if someone only ever
+// drags the canvas to look around and never opens the HUD.
+document.addEventListener('pointerdown', () => { ensureAudio(); if (actx.state === 'suspended') actx.resume(); }, { once: true, passive: true });
 // targetY was a stale hardcoded guess (0.12) from before the per-avatar
 // Y-alignment work — every avatar's own face-centre now actually sits at
 // world Y = avgCenterY + headR/6 (see yOffsets above), so point the
 // camera there instead of the old guess. Root cause of "dead space at
 // the foot of the page, forehead cut off at the top" — the camera was
 // literally aimed at the wrong height.
-theta = angleOf(0); radius = headR * 2.9; targetY = avgCenterY - headR * 0.15; applyCamera();
+theta = angleOf(0); radius = headR * 3.25; targetY = avgCenterY - headR * 0.15; applyCamera();
 
 // arrow keys turn the heads (left = previous persona, right = next) —
 // switchPersona() itself already no-ops mid-transition, so rapid key
@@ -841,7 +851,18 @@ const LIVE_SCALE = 1.15, RETRACT_SCALE = 0.78;
     const spinE = spinEnergy(tt);
     if (spinE !== 0) {
       const buf = styleBufs[i], cw = coreWeights[i];
-      const OUTWARD_MAX = headR * 0.55, FLATTEN_AMT = 0.6;
+      // Saturn's-rings, not a shrinking puffball: the camera sits close to
+      // eye-level (phi keeps it near-horizontal), so a ring flattened all
+      // the way to paper-thin at the equator is nearly edge-on and reads
+      // as the whole creature getting SMALLER, not as a flung-out ring —
+      // the opposite of the brief ("top and bottom should remain
+      // substantial"). Fix: flare the radius out moderately (visibly wider
+      // than the resting silhouette, but NOT so far it swallows the camera
+      // — an earlier pass at headR*1.6 + a heavy size boost filled the
+      // whole frame with an abstract blur) and only partially flatten
+      // (keep a thick band, not a blade); the modest per-splat size bump
+      // keeps the wider ring from reading as thinner/sparser than rest.
+      const OUTWARD_MAX = headR * 0.85, FLATTEN_AMT = 0.4, SIZE_BOOST = 0.35;
       for (let k = 0; k < n; k++) {
         const peri = 1 - cw[k];
         if (peri <= 0) continue;
@@ -852,6 +873,8 @@ const LIVE_SCALE = 1.15, RETRACT_SCALE = 0.78;
         buf[o] = x + (x / rXZ) * outAmt;
         buf[o + 2] = z + (z / rXZ) * outAmt;
         buf[o + 1] = y + (targetY - y) * (peri * spinE * FLATTEN_AMT);
+        const sizeMult = 1 + peri * Math.max(0, spinE) * SIZE_BOOST;
+        buf[o + 7] *= sizeMult; buf[o + 8] *= sizeMult; buf[o + 9] *= sizeMult;
       }
     }
     // FX intensity: a direct, guaranteed-linear post-multiply on this
