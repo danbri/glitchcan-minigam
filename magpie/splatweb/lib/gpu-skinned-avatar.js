@@ -2,15 +2,31 @@
 // loaded exactly as any CPU demo would via loadLamAvatar()) driven by a
 // WGSL compute shader instead of its own pose()'s per-splat JS loop.
 //
-// Scope, disclosed: skinning (bone rotation) and a subset of the
+// Scope, disclosed: skinning (bone rotation), morph-target blending
+// (visemes + blink — see MORPH_NAMES below), and a subset of the
 // pentagram demo's stylize params (dissolve, twinkle, roundness, ghost
-// tint) run on GPU. Morph-target facial expression and the CPU pipeline's
-// "lag"/particle/swirl effects are NOT ported here — see
-// lib/gpu-splat-compute.js's header for the full disclosed scope.
+// tint) run on GPU. The CPU pipeline's "lag"/particle/swirl effects are
+// NOT ported here — see lib/gpu-splat-compute.js's header for the full
+// disclosed scope.
 import { qMul } from './pose-math.js';
 import { SplatComputePass } from './gpu-splat-compute.js';
 
-const REST_STRIDE = 24;
+// The 15 ARKit morphs lib/lam-visemes.js's VISEMES table actually
+// combines (grep the file for the full list — jawOpen/mouthFunnel/
+// mouthPucker/etc.), plus the two blink channels idle poses use. LAM
+// avatars carry all 51 ARKit targets, but baking all 51 as static
+// per-splat GPU buffers would be ~8MB/avatar for channels nothing in
+// this project ever drives; this 17-name subset is ~2MB/avatar and
+// covers everything sampleTalkBurst()/idle blink actually produce.
+const MORPH_NAMES = [
+  'jawOpen', 'mouthFunnel', 'mouthPucker', 'mouthStretchLeft', 'mouthStretchRight',
+  'mouthSmileLeft', 'mouthSmileRight', 'mouthLowerDownLeft', 'mouthLowerDownRight',
+  'mouthRollUpper', 'mouthClose', 'mouthPressLeft', 'mouthPressRight',
+  'mouthUpperUpLeft', 'mouthUpperUpRight', 'eyeBlinkLeft', 'eyeBlinkRight',
+];
+const N_MORPHS = MORPH_NAMES.length; // 17
+
+const REST_STRIDE = 24 + N_MORPHS * 3; // base 24 + one xyz delta per morph
 const IDENTITY_Q = [0, 0, 0, 1];
 
 // Duplicated from lam-splats.js's own private helpers (not exported
@@ -126,13 +142,19 @@ fn noise3(p: vec3<f32>) -> f32 {
 //      semi-transparent dissolved splats approach full opacity
 //      regardless of small per-splat alpha changes, so a flat scale is
 //      the one thing that composites linearly; 1.0 = no change),
-//   18.. joint palette, 12 floats per NODE (matches lam-splats.js's own
+//   18..34 morph weights, one per MORPH_NAMES entry (0..1 each),
+//   35.. joint palette, 12 floats per NODE (matches lam-splats.js's own
 //        J layout exactly, indexed by the REST buffer's raw node index —
 //        see gpu-skinned-avatar.js's buildRestBuffer for why this isn't
 //        compacted to just the used joints).
+const N_MORPHS: u32 = ${N_MORPHS}u;
+const REST_STRIDE: u32 = ${REST_STRIDE}u;
+const MORPH_OBJ_BASE: u32 = 18u;
+const JOINT_OBJ_BASE: u32 = 18u + ${N_MORPHS}u;
+
 fn transform(i: u32) -> array<f32, 14> {
-  let b = i * 24u;
-  let restPos = vec3<f32>(REST[b], REST[b+1u], REST[b+2u]);
+  let b = i * REST_STRIDE;
+  var restPos = vec3<f32>(REST[b], REST[b+1u], REST[b+2u]);
   let restRot = vec4<f32>(REST[b+3u], REST[b+4u], REST[b+5u], REST[b+6u]);
   let restScale = vec3<f32>(REST[b+7u], REST[b+8u], REST[b+9u]);
   let restColor = vec3<f32>(REST[b+10u], REST[b+11u], REST[b+12u]);
@@ -147,7 +169,19 @@ fn transform(i: u32) -> array<f32, 14> {
   let at = vec3<f32>(OBJ[8], OBJ[9], OBJ[10]); let yaw = OBJ[11];
   let centre = vec3<f32>(OBJ[12], OBJ[13], OBJ[14]); let avScale = OBJ[15];
   let sizeMult = OBJ[16]; let fxIntensity = OBJ[17];
-  let jointBase = 18u;
+  let jointBase = JOINT_OBJ_BASE;
+
+  // morph blend — applied to the REST position BEFORE skinning, same
+  // order as lam-splats.js pose()'s "for (const [d,w] of mw) px+=d*w"
+  // loop. 17 static per-splat deltas × a live weight each, same shape
+  // as the CPU morph loop just moved onto GPU.
+  let morphRestBase = b + 24u;
+  for (var m = 0u; m < N_MORPHS; m = m + 1u) {
+    let w = OBJ[MORPH_OBJ_BASE + m];
+    if (w <= 0.0) { continue; }
+    let mo = morphRestBase + m * 3u;
+    restPos = restPos + vec3<f32>(REST[mo], REST[mo+1u], REST[mo+2u]) * w;
+  }
 
   var skinnedPos = restPos;
   var qSkin = vec4<f32>(0.0, 0.0, 0.0, 1.0);
@@ -225,7 +259,12 @@ fn transform(i: u32) -> array<f32, 14> {
 // loaded avatar's own public fields — parseLamPly/loadLamAvatar in
 // lam-splats.js are untouched and do all the actual asset parsing.
 function buildRestBuffer(avatar) {
-  const { count, pos, ply, jidx, jw, scale, maxScale, maxAspect } = avatar;
+  const { count, pos, ply, jidx, jw, scale, maxScale, maxAspect, morphs } = avatar;
+  // Missing-morph arrays (an avatar without every ARKit target — shouldn't
+  // happen for LAM assets, but defensive) contribute a zero delta rather
+  // than throwing.
+  const ZERO3 = new Float32Array(count * 3);
+  const morphArrays = MORPH_NAMES.map((nm) => morphs[nm] || ZERO3);
   const rest = new Float32Array(count * REST_STRIDE);
   for (let i = 0; i < count; i++) {
     const i3 = i * 3, i4 = i * 4, o = i * REST_STRIDE;
@@ -242,6 +281,11 @@ function buildRestBuffer(avatar) {
     rest[o + 18] = jw[i4]; rest[o + 19] = jw[i4 + 1]; rest[o + 20] = jw[i4 + 2]; rest[o + 21] = jw[i4 + 3];
     rest[o + 22] = hash1(i * 37.719 + 17.3) * 1000;
     rest[o + 23] = hash1(i * 78.233 + 91.1);
+    const mo0 = o + 24;
+    for (let m = 0; m < N_MORPHS; m++) {
+      const d = morphArrays[m], mo = mo0 + m * 3;
+      rest[mo] = d[i3]; rest[mo + 1] = d[i3 + 1]; rest[mo + 2] = d[i3 + 2];
+    }
   }
   return rest;
 }
@@ -251,14 +295,19 @@ function buildRestBuffer(avatar) {
 // storage buffer to write into (pass a GpuSplatScene drawable's outBuf).
 export function createGpuSkinnedAvatar(device, avatar, outBuffer) {
   const N = avatar.nodes.N;
-  const objFloats = 18 + N * 12;
+  const JOINT_OBJ_BASE = 18 + N_MORPHS;
+  const objFloats = JOINT_OBJ_BASE + N * 12;
   const pass = new SplatComputePass(device, { restStride: REST_STRIDE, wgslTransform: WGSL_TRANSFORM, maxObjFloats: objFloats });
   const rest = buildRestBuffer(avatar);
   pass.setData(rest, avatar.count, outBuffer);
   const obj = new Float32Array(objFloats);
 
   // params: { dissolve, twinkle, roundness, ghost, tint:[r,g,b], at:[x,y,z],
-  //           yaw, sizeMult, fxIntensity, bones:{nodeName: quat} }
+  //           yaw, sizeMult, fxIntensity, bones:{nodeName: quat},
+  //           morph:{arkitName: 0..1} } — same {arkitName: weight} shape
+  // pose()'s own "morph" argument takes; anything not in MORPH_NAMES is
+  // silently ignored (see the module header for why only 17 of the 51
+  // ARKit targets are wired up).
   return {
     splatCount: avatar.count,
     dispatch(time, params = {}) {
@@ -272,7 +321,9 @@ export function createGpuSkinnedAvatar(device, avatar, outBuffer) {
       obj[11] = params.yaw || 0;
       obj[12] = avatar.centre[0]; obj[13] = avatar.centre[1]; obj[14] = avatar.centre[2]; obj[15] = avatar.scale;
       obj[16] = params.sizeMult ?? 1; obj[17] = params.fxIntensity ?? 1;
-      obj.set(avatar.J.subarray(0, N * 12), 18);
+      const morph = params.morph || {};
+      for (let m = 0; m < N_MORPHS; m++) obj[18 + m] = morph[MORPH_NAMES[m]] || 0;
+      obj.set(avatar.J.subarray(0, N * 12), JOINT_OBJ_BASE);
       pass.dispatch(obj);
     },
   };

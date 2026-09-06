@@ -38,10 +38,11 @@ button.smallbtn.active{background:#3a5a3a;border-color:#5aa55a}
   <div class="sub">same five-persona creature, WGSL compute pipeline</div>
   <div class="note">A "safe copy" — this is a NEW file, demo-lam-pentagram.html
   (the CPU version) is untouched. Persona switching, per-persona tint/
-  stylize, voices, subtitles, and turn SFX are all real and reused
-  verbatim. NOT ported: the spring/overshoot spin animation, the medusa-
-  fling secondary motion, and the mist shroud — a plain cross-fade
-  replaces the spin, and there's no cloud/core base under the heads yet.</div>
+  stylize, voices, subtitles, turn SFX, and now real blink + speech
+  lipsync (17 ARKit morph targets blended on GPU) are all real. NOT
+  ported: the spring/overshoot spin animation, the medusa-fling secondary
+  motion, and the mist shroud — a plain cross-fade replaces the spin, and
+  there's no cloud/core base under the heads yet.</div>
   <div id="now">loading…</div>
   <div class="grp" id="personaButtons"></div>
   <div class="grp">
@@ -70,6 +71,7 @@ import { loadLamAvatar } from './lib/lam-splats.js';
 import { qMul, qNormalize } from './lib/pose-math.js';
 import { resolveFace } from './lib/lam-face-roster.js';
 import { VOICE_LINES } from './lib/pentulpa-voice-lines.js';
+import { sampleTalkBurst } from './lib/lam-visemes.js';
 import { requestComputeDevice, GpuSplatScene } from './lib/gpu-splat-compute.js';
 import { createGpuSkinnedAvatar } from './lib/gpu-skinned-avatar.js';
 
@@ -91,27 +93,27 @@ const PERSONAS = [
     faceId: 'tpdne-05', tint: [0.85, 0.95, 1.30],
     live: { dissolve: 0.04, roundness: 0.32, ghost: 0.1, twinkle: 0.4 },
     dissolved: { dissolve: 0.78, roundness: 0.8, ghost: 0.8, twinkle: 0.5 },
-    idle: { yawAmp: 0.07, yawFreq: 4.5, pitchAmp: 0.03, pitchFreq: 5.5 } },
+    idle: { yawAmp: 0.07, yawFreq: 4.5, pitchAmp: 0.03, pitchFreq: 5.5, blinkPeriod: 4.2 } },
   { id: 'executioner', name: 'The Executioner — Psychopathy', tag: 'pure impulse, zero calculation', color: '#ff6a3a',
     faceId: 'tpdne-09', tint: [1.35, 0.5, 0.32],
     live: { dissolve: 0.08, roundness: 0.35, ghost: 0.1, twinkle: 0.8 },
     dissolved: { dissolve: 0.75, roundness: 0.55, ghost: 0.85, twinkle: 1.1 },
-    idle: { yawAmp: 0.30, yawFreq: 1.6, pitchAmp: 0.14, pitchFreq: 1.3 } },
+    idle: { yawAmp: 0.30, yawFreq: 1.6, pitchAmp: 0.14, pitchFreq: 1.3, blinkPeriod: 2.1 } },
   { id: 'corruptor', name: 'The Corruptor — Narcissism', tag: 'cruelty that craves adoration', color: '#e05aff',
     faceId: 'tpdne-17', tint: [1.15, 0.5, 1.25],
     live: { dissolve: 0.06, roundness: 0.38, ghost: 0.12, twinkle: 1.3 },
     dissolved: { dissolve: 0.72, roundness: 0.8, ghost: 0.8, twinkle: 1.3 },
-    idle: { yawAmp: 0.16, yawFreq: 2.2, pitchAmp: 0.08, pitchFreq: 1.8 } },
+    idle: { yawAmp: 0.16, yawFreq: 2.2, pitchAmp: 0.08, pitchFreq: 1.8, blinkPeriod: 5.5 } },
   { id: 'mourner', name: 'The Mourner — Sadism', tag: 'weeping that savors your despair', color: '#8fa0c4',
     faceId: 'tpdne-30', tint: [0.72, 0.8, 0.95],
     live: { dissolve: 0.14, roundness: 0.32, ghost: 0.1, twinkle: 0.25 },
     dissolved: { dissolve: 0.8, roundness: 0.75, ghost: 0.85, twinkle: 0.15 },
-    idle: { yawAmp: 0.05, yawFreq: 0.9, pitchAmp: 0.16, pitchFreq: 0.7 } },
+    idle: { yawAmp: 0.05, yawFreq: 0.9, pitchAmp: 0.16, pitchFreq: 0.7, blinkPeriod: 6.5 } },
   { id: 'prophet', name: 'The Prophet — Spite', tag: 'chaos with no payoff, not even to itself', color: '#ffe45a',
     faceId: 'tpdne-40', tint: [1.1, 1.0, 0.4],
     live: { dissolve: 0.1, roundness: 0.32, ghost: 0.12, twinkle: 1.9 },
     dissolved: { dissolve: 0.8, roundness: 0.7, ghost: 0.85, twinkle: 1.8 },
-    idle: { yawAmp: 0.20, yawFreq: 3.0, pitchAmp: 0.14, pitchFreq: 3.7 } },
+    idle: { yawAmp: 0.20, yawFreq: 3.0, pitchAmp: 0.14, pitchFreq: 3.7, blinkPeriod: 1.6 } },
 ];
 const N = PERSONAS.length;
 const angleOf = (i) => (i / N) * Math.PI * 2;
@@ -185,6 +187,9 @@ function showSubtitleFor(personaId, lineIdx, durationSec) {
     updateSubtitleVisibility();
   }, durationSec * 1000);
 }
+// speakBurstStart/Dur drive the lipsync viseme burst below — same global
+// (not per-persona) state as demo-lam-pentagram.html's own speak burst.
+let speakBurstStart = -1, speakBurstDur = 0;
 function playPersonaLine(personaId) {
   const n = 1 + Math.floor(Math.random() * 5);
   loadVoiceLine(personaId, n).then((buf) => {
@@ -193,6 +198,8 @@ function playPersonaLine(personaId) {
     const gain = ctx.createGain(); gain.gain.value = 0.9;
     src.connect(gain); gain.connect(ctx.destination);
     src.start();
+    speakBurstStart = performance.now() / 1000;
+    speakBurstDur = buf.duration;
     showSubtitleFor(personaId, n - 1, buf.duration);
   }).catch((e) => console.warn('[pentulpa-gpu] voice line failed to load:', personaId, n, e));
 }
@@ -338,9 +345,7 @@ let frames = 0, accMs = 0, lastFpsT = performance.now();
     const params = lw === 1 ? p.live : lw === 0 ? p.dissolved
       : Object.fromEntries(Object.keys(p.live).map((k) => [k, p.live[k] + (p.dissolved[k] - p.live[k]) * (1 - lw)]));
     // idle sway — cheap (a couple of sin() calls per avatar, not per
-    // splat), gives each persona its own idle character like the CPU
-    // demo, minus blink/talk-viseme morphs (not ported — no morph
-    // support in the GPU pipeline yet, see gpu-skinned-avatar.js header)
+    // splat), gives each persona its own idle character like the CPU demo
     const idle = p.idle;
     const yaw = Math.sin(tt / idle.yawFreq) * idle.yawAmp;
     const pitch = Math.sin(tt / idle.pitchFreq + 1) * idle.pitchAmp;
@@ -348,12 +353,24 @@ let frames = 0, accMs = 0, lastFpsT = performance.now();
     const qPitch = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
     const headQ = qNormalize(qMul(qYaw, qPitch));
 
+    // blink + talk-burst visemes, same global (not per-persona) speak
+    // state as the CPU demo — see gpu-skinned-avatar.js's MORPH_NAMES for
+    // which 17 ARKit targets are actually wired up on the GPU side.
+    const blinkPhase = (tt % idle.blinkPeriod) / idle.blinkPeriod;
+    const blink = blinkPhase < 0.06 ? Math.sin((blinkPhase / 0.06) * Math.PI) : 0;
+    let talkMorph = {};
+    if (speakBurstStart >= 0) {
+      const el = tt - speakBurstStart;
+      if (el <= speakBurstDur) talkMorph = sampleTalkBurst(el, { durationSec: speakBurstDur });
+    }
+    const morph = { eyeBlinkLeft: blink, eyeBlinkRight: blink, ...talkMorph };
+
     const { gpu, at } = gpuAvatars[i];
     gpu.dispatch(tt, {
       ...params, tint: p.tint, at, yaw: angleOf(i),
       sizeMult: sizeNorms[i] * (RETRACT_SCALE + (LIVE_SCALE - RETRACT_SCALE) * lw),
       fxIntensity: i === liveIdx ? 1 : fxIntensity,
-      bones: { head: headQ },
+      bones: { head: headQ }, morph,
     });
   }
   scene.render();

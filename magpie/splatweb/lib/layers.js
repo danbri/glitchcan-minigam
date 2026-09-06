@@ -5,6 +5,7 @@
 // See lib/three-layer.js for the three.js node (kept separate since it
 // pulls in the vendored three.js module).
 import { createSplatRenderer } from './splat-renderer-auto.js';
+import { requestComputeDevice, GpuSplatScene } from './gpu-splat-compute.js';
 
 // Wraps the existing splat renderer (WebGPU/WebGL2 auto-selected) on its
 // OWN offscreen canvas, with `alpha: true` so it composites over whatever
@@ -21,6 +22,33 @@ export async function createSplatLayer({ width, height, setup, update }) {
     render(time) {
       if (update) update(time, renderer);
       renderer.render();
+      return canvas;
+    },
+  };
+}
+
+// The GPU-compute-driven counterpart to createSplatLayer above: a
+// GpuSplatScene (lib/gpu-splat-compute.js — WGSL compute animates the
+// splats, not a CPU per-splat loop) on its own offscreen canvas, with
+// `alpha: true` for the same compositing reason. Use this one when the
+// content is a gpu-skinned-avatar.js avatar or a gpu-critter.js critter
+// instead of the CPU scene-builder.js content createSplatLayer expects —
+// see demo-compositor.html for a real example (a lipsynced LAM head
+// composited over an SDF backdrop and a three.js mesh).
+//   setup({device, scene})        — runs once: scene.addObject(...) + createGpuSkinnedAvatar(...)/createGpuCritter(...)
+//   update(time, {device, scene}) — runs every frame, before scene.render(): call each object's .dispatch(...)
+export async function createGpuSplatComputeLayer({ width, height, background, setup, update }) {
+  const canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  const device = await requestComputeDevice();
+  const scene = new GpuSplatScene(device, canvas, { background, alpha: true });
+  const ctx = { device, scene };
+  if (setup) await setup(ctx);
+  return {
+    canvas, device, scene,
+    render(time) {
+      if (update) update(time, ctx);
+      scene.render();
       return canvas;
     },
   };

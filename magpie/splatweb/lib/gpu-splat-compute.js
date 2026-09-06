@@ -183,13 +183,19 @@ export function createGpuDrawable(device, pipeline, uniformBuf, count, worldPos)
 // depth-sorts objects (CHEAPLY — one vec3 each, not per splat) and
 // issues one draw call per object, back-to-front.
 export class GpuSplatScene {
-  constructor(device, canvas, { background = [0.05, 0.05, 0.08] } = {}) {
+  // alpha: true — same meaning as SplatRenderer/WebGPUSplatRenderer's own
+  // `alpha` option (splat-renderer.js, splat-renderer-gpu.js): clears
+  // transparent instead of opaque, so this scene can be one layer in
+  // lib/layer-compositor.js instead of always painting a solid
+  // background. See lib/layers.js's createGpuSplatComputeLayer.
+  constructor(device, canvas, { background = [0.05, 0.05, 0.08], alpha = false } = {}) {
     this.device = device;
     this.canvas = canvas;
     this.background = background;
+    this.alpha = alpha;
     this.ctx = canvas.getContext('webgpu');
     this.format = navigator.gpu.getPreferredCanvasFormat();
-    this.ctx.configure({ device, format: this.format, alphaMode: 'opaque' });
+    this.ctx.configure({ device, format: this.format, alphaMode: alpha ? 'premultiplied' : 'opaque' });
     this.pipeline = createGpuRenderPipeline(device, this.format);
     this.quadBuf = device.createBuffer({ size: 32, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     device.queue.writeBuffer(this.quadBuf, 0, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]));
@@ -240,9 +246,10 @@ export class GpuSplatScene {
     });
 
     const [br, bg, bb] = this.background;
+    const clearValue = this.alpha ? { r: 0, g: 0, b: 0, a: 0 } : { r: br, g: bg, b: bb, a: 1 };
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
-      colorAttachments: [{ view: this.ctx.getCurrentTexture().createView(), clearValue: { r: br, g: bg, b: bb, a: 1 }, loadOp: 'clear', storeOp: 'store' }],
+      colorAttachments: [{ view: this.ctx.getCurrentTexture().createView(), clearValue, loadOp: 'clear', storeOp: 'store' }],
     });
     pass.setPipeline(this.pipeline);
     pass.setVertexBuffer(0, this.quadBuf);
