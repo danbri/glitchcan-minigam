@@ -26,7 +26,7 @@ const MORPH_NAMES = [
 ];
 const N_MORPHS = MORPH_NAMES.length; // 17
 
-const REST_STRIDE = 24 + N_MORPHS * 3; // base 24 + one xyz delta per morph
+const REST_STRIDE = 24 + N_MORPHS * 3 + 1; // base 24 + one xyz delta per morph + 1 sizeSeed
 const IDENTITY_Q = [0, 0, 0, 1];
 
 // Duplicated from lam-splats.js's own private helpers (not exported
@@ -82,6 +82,25 @@ function updateJointPalette(avatar, bones = {}) {
 }
 
 const hash1 = (n) => { const s = Math.sin(n * 12.9898) * 43758.5453; return s - Math.floor(s); };
+// JS mirror of the WGSL hash3/noise3 below (identical dot-product
+// constants and hash1), used once at REST-buffer build time to bake a
+// genuinely spatially-coherent (not per-splat-independent salt-and-
+// pepper) "how big does THIS splat get" seed for the orbit-particle
+// effect — see buildRestBuffer's sizeSeed and the WGSL PARTICLE FX block.
+const hash3JS = (x, y, z) => hash1(x * 374.16 + y * 668.26 + z * 2147.48);
+function noise3JS(x, y, z) {
+  const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+  const fx = x - ix, fy = y - iy, fz = z - iz;
+  const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy), uz = fz * fz * (3 - 2 * fz);
+  const c000 = hash3JS(ix, iy, iz), c100 = hash3JS(ix + 1, iy, iz);
+  const c010 = hash3JS(ix, iy + 1, iz), c110 = hash3JS(ix + 1, iy + 1, iz);
+  const c001 = hash3JS(ix, iy, iz + 1), c101 = hash3JS(ix + 1, iy, iz + 1);
+  const c011 = hash3JS(ix, iy + 1, iz + 1), c111 = hash3JS(ix + 1, iy + 1, iz + 1);
+  const x00 = c000 + (c100 - c000) * ux, x10 = c010 + (c110 - c010) * ux;
+  const x01 = c001 + (c101 - c001) * ux, x11 = c011 + (c111 - c011) * ux;
+  const y0 = x00 + (x10 - x00) * uy, y1 = x01 + (x11 - x01) * uy;
+  return y0 + (y1 - y0) * uz;
+}
 
 const WGSL_TRANSFORM = /* wgsl */`
 fn quatMul(a: vec4<f32>, b: vec4<f32>) -> vec4<f32> {
@@ -142,15 +161,34 @@ fn noise3(p: vec3<f32>) -> f32 {
 //      semi-transparent dissolved splats approach full opacity
 //      regardless of small per-splat alpha changes, so a flat scale is
 //      the one thing that composites linearly; 1.0 = no change),
-//   18..34 morph weights, one per MORPH_NAMES entry (0..1 each),
-//   35.. joint palette, 12 floats per NODE (matches lam-splats.js's own
+//   18 particleFx (master intensity for the orbit-particle effect below,
+//      0 = fully off/identical to every existing caller, 1 = full
+//      effect), 19..20 pole xz (world-space axis the particles orbit —
+//      for a ring of avatars placed by FACET_R*sin/cos(angleOf(i)) around
+//      the origin, as the pentagram demo does, that pole is (0,0)),
+//   21..37 morph weights, one per MORPH_NAMES entry (0..1 each),
+//   38.. joint palette, 12 floats per NODE (matches lam-splats.js's own
 //        J layout exactly, indexed by the REST buffer's raw node index —
 //        see gpu-skinned-avatar.js's buildRestBuffer for why this isn't
 //        compacted to just the used joints).
 const N_MORPHS: u32 = ${N_MORPHS}u;
 const REST_STRIDE: u32 = ${REST_STRIDE}u;
-const MORPH_OBJ_BASE: u32 = 18u;
-const JOINT_OBJ_BASE: u32 = 18u + ${N_MORPHS}u;
+const MORPH_OBJ_BASE: u32 = 21u;
+const JOINT_OBJ_BASE: u32 = 21u + ${N_MORPHS}u;
+// orbit-particle effect shape constants — see the PARTICLE FX block below
+const PARTICLE_PERIOD: f32 = 2.0;       // seconds per splat's launch/return cycle
+const PARTICLE_ORBIT_TURNS: f32 = 1.0;   // full turns around the pole at peak envelope
+// LAM heads load at whatever scale their source GLB used — for these
+// faces that's roughly 0.2-0.3 world units across (see gpu-skinned-
+// avatar.js's own "sample" measurement: bbox ~0.43 tall). A first pass
+// at ORBIT_RADIUS=0.5 / SIZE_BOOST=2.5 was sized for a ~human-scale (1-2
+// unit) object and instead blew the whole creature out into an
+// unrecognizable full-frame cloud at these small sizes — same class of
+// mistake as the CPU demo's first medusa-fling pass overshooting before
+// being dialled back. These are ~6-8x smaller, tuned by looking at an
+// actual screenshot, not guessed twice.
+const PARTICLE_ORBIT_RADIUS: f32 = 0.05; // world units of outward launch at peak, before sizeSeed/particleFx scaling
+const PARTICLE_SIZE_BOOST: f32 = 0.4;    // extra scale at peak, scaled by each splat's own perlin sizeSeed
 
 fn transform(i: u32) -> array<f32, 14> {
   let b = i * REST_STRIDE;
@@ -163,12 +201,14 @@ fn transform(i: u32) -> array<f32, 14> {
   let jW = vec4<f32>(REST[b+18u], REST[b+19u], REST[b+20u], REST[b+21u]);
   let noiseSeed = REST[b+22u];
   let pSeed = REST[b+23u];
+  let sizeSeed = REST[b+24u + ${N_MORPHS}u * 3u]; // right after the morph-delta block
 
   let time = OBJ[0]; let dissolve = OBJ[1]; let twinkle = OBJ[2]; let roundness = OBJ[3];
   let ghost = OBJ[4]; let tint = vec3<f32>(OBJ[5], OBJ[6], OBJ[7]);
   let at = vec3<f32>(OBJ[8], OBJ[9], OBJ[10]); let yaw = OBJ[11];
   let centre = vec3<f32>(OBJ[12], OBJ[13], OBJ[14]); let avScale = OBJ[15];
   let sizeMult = OBJ[16]; let fxIntensity = OBJ[17];
+  let particleFx = OBJ[18]; let poleX = OBJ[19]; let poleZ = OBJ[20];
   let jointBase = JOINT_OBJ_BASE;
 
   // morph blend — applied to the REST position BEFORE skinning, same
@@ -213,9 +253,9 @@ fn transform(i: u32) -> array<f32, 14> {
   // a true uniform scale about the facet's own placement point (same
   // trick the CPU pentagram demo's scaleMult loop uses), so a facet
   // shrinking/growing never looks like the whole scene shrinking.
-  let wx = at.x + (lx*cy + lz*sy) * sizeMult;
-  let wy = at.y + ly * sizeMult;
-  let wz = at.z + (-lx*sy + lz*cy) * sizeMult;
+  var wx = at.x + (lx*cy + lz*sy) * sizeMult;
+  var wy = at.y + ly * sizeMult;
+  var wz = at.z + (-lx*sy + lz*cy) * sizeMult;
   let qYaw = vec4<f32>(0.0, sin(yaw*0.5), 0.0, cos(yaw*0.5));
   var outQuat = quatNorm(quatMul(qYaw, q));
 
@@ -244,6 +284,70 @@ fn transform(i: u32) -> array<f32, 14> {
   if (ghost > 0.0) {
     let lum = color.x*0.3 + color.y*0.59 + color.z*0.11;
     color = mix(color, tint*lum, ghost);
+  }
+
+  // ---------------------------------------------------------- PARTICLE FX
+  // "each splat over a 2-second period launches into an orbit of [the
+  // shared] pole, grows to a size set by perlin-per-splat, and shrinks
+  // back down again, swirling back to its home location" — applied AFTER
+  // everything above, on top of wherever the splat's skin/place/stylize
+  // pipeline already put it, so "home" is wherever it's ALREADY animating
+  // to this frame (a mid-transition or head-turned position included),
+  // not a fixed rest point.
+  //
+  // Every splat runs the SAME 2-second cycle but at its own PHASE (via
+  // noiseSeed, already a per-splat static random value baked at load
+  // time), so the population is continuously, unsynchronizedly launching
+  // and returning rather than all popping at once. The envelope is 0 at
+  // both ends of the ACTIVE WINDOW by construction (sin(0)=sin(pi)=0), so
+  // the orbit angle and radial offset are ALSO exactly 0 there — "swirls
+  // back to its home location" falls out of the math rather than needing
+  // a separate return step.
+  //
+  // ACTIVE_WINDOW matters more than it looks: a first pass used
+  // sin(cyclePos*pi) directly over the FULL cycle — but that's nonzero
+  // almost everywhere in (0,1), so with phases spread uniformly across
+  // the population, EVERY splat was partially displaced ALL the time,
+  // with no genuine at-rest moment for any of them — the creature never
+  // resolved into a recognisable face at any instant, just constant
+  // noise. Confining the launch to a fraction of the cycle gives most of
+  // the population a real "at home, undisplaced" majority of the time.
+  if (particleFx > 0.0) {
+    let cyclePos = fract((time + noiseSeed) / PARTICLE_PERIOD);
+    let ACTIVE_WINDOW = 0.35;
+    var env = 0.0;
+    if (cyclePos < ACTIVE_WINDOW) {
+      env = sin((cyclePos / ACTIVE_WINDOW) * 3.14159265) * particleFx;
+    }
+
+    // orbit: rotate (wx,wz) around the shared vertical pole axis, and
+    // push outward along the same radius — one splat's whole launch arc
+    // is a spiral out-and-around then back, not just a spin-in-place.
+    let dx = wx - poleX; let dz = wz - poleZ;
+    let r = length(vec2<f32>(dx, dz));
+    let baseAngle = atan2(dz, dx);
+    let newAngle = baseAngle + env * PARTICLE_ORBIT_TURNS * 6.283185;
+    let newR = r + env * PARTICLE_ORBIT_RADIUS;
+    wx = poleX + newR * cos(newAngle);
+    wz = poleZ + newR * sin(newAngle);
+
+    // size: "grown to a size determined by perlin-per-splat" — sizeSeed
+    // is a spatially-coherent (not per-splat-independent) noise value
+    // baked once from this splat's rest position, so nearby splats swell
+    // together in patches rather than popcorn-popping individually.
+    scale = scale * (1.0 + env * sizeSeed * PARTICLE_SIZE_BOOST);
+
+    // colour/luminosity: a LIVE (not baked) noise field, so the shimmer
+    // itself drifts over time instead of being a fixed per-splat tint —
+    // "screw with colours, luminosity... following perlin dynamics and
+    // time functions". Two independent samples: one drives brightness,
+    // one drives a hue-ish push toward a shifting accent colour.
+    let shimmer = noise3(vec3<f32>(restPos.x*5.0, restPos.y*5.0, restPos.z*5.0 + time*0.5));
+    let brightness = 1.0 + env * (shimmer - 0.5) * 1.1;
+    color = color * brightness;
+    let hueN = noise3(vec3<f32>(restPos.z*5.0 + 19.0, time*0.35, restPos.x*5.0 + 7.0));
+    let accent = vec3<f32>(0.5 + 0.5*sin(hueN*6.283185), 0.5 + 0.5*sin(hueN*6.283185 + 2.094), 0.5 + 0.5*sin(hueN*6.283185 + 4.189));
+    color = mix(color, accent, env * 0.25);
   }
 
   var out: array<f32, 14>;
@@ -286,6 +390,15 @@ function buildRestBuffer(avatar) {
       const d = morphArrays[m], mo = mo0 + m * 3;
       rest[mo] = d[i3]; rest[mo + 1] = d[i3 + 1]; rest[mo + 2] = d[i3 + 2];
     }
+    // Spatially-coherent (real Perlin-style, not per-splat white noise)
+    // "how big does this splat get" seed for the orbit-particle effect —
+    // sampled from the splat's own rest position, so nearby splats swell
+    // together in patches. Frequency 5 was picked empirically: high
+    // enough that a face-sized region sees several patches, low enough
+    // that neighbouring splats still clearly agree with each other.
+    rest[mo0 + N_MORPHS * 3] = noise3JS(
+      (pos[i3] + ply.off[i3]) * 5, (pos[i3 + 1] + ply.off[i3 + 1]) * 5, (pos[i3 + 2] + ply.off[i3 + 2]) * 5,
+    );
   }
   return rest;
 }
@@ -295,7 +408,8 @@ function buildRestBuffer(avatar) {
 // storage buffer to write into (pass a GpuSplatScene drawable's outBuf).
 export function createGpuSkinnedAvatar(device, avatar, outBuffer) {
   const N = avatar.nodes.N;
-  const JOINT_OBJ_BASE = 18 + N_MORPHS;
+  const MORPH_OBJ_BASE = 21;
+  const JOINT_OBJ_BASE = MORPH_OBJ_BASE + N_MORPHS;
   const objFloats = JOINT_OBJ_BASE + N * 12;
   const pass = new SplatComputePass(device, { restStride: REST_STRIDE, wgslTransform: WGSL_TRANSFORM, maxObjFloats: objFloats });
   const rest = buildRestBuffer(avatar);
@@ -303,11 +417,14 @@ export function createGpuSkinnedAvatar(device, avatar, outBuffer) {
   const obj = new Float32Array(objFloats);
 
   // params: { dissolve, twinkle, roundness, ghost, tint:[r,g,b], at:[x,y,z],
-  //           yaw, sizeMult, fxIntensity, bones:{nodeName: quat},
-  //           morph:{arkitName: 0..1} } — same {arkitName: weight} shape
-  // pose()'s own "morph" argument takes; anything not in MORPH_NAMES is
-  // silently ignored (see the module header for why only 17 of the 51
-  // ARKit targets are wired up).
+  //           yaw, sizeMult, fxIntensity, particleFx, pole:[x,z],
+  //           bones:{nodeName: quat}, morph:{arkitName: 0..1} } —
+  // particleFx (0..1, default 0 — off, byte-identical to every existing
+  // caller) is the master intensity for the orbit-launch-and-return
+  // particle effect (see the WGSL PARTICLE FX block); pole is the
+  // world-space (x,z) axis those particles orbit, default [0,0] (the
+  // natural centre of a ring of avatars placed by FACET_R*sin/cos as the
+  // pentagram demo does).
   return {
     splatCount: avatar.count,
     dispatch(time, params = {}) {
@@ -321,8 +438,11 @@ export function createGpuSkinnedAvatar(device, avatar, outBuffer) {
       obj[11] = params.yaw || 0;
       obj[12] = avatar.centre[0]; obj[13] = avatar.centre[1]; obj[14] = avatar.centre[2]; obj[15] = avatar.scale;
       obj[16] = params.sizeMult ?? 1; obj[17] = params.fxIntensity ?? 1;
+      obj[18] = params.particleFx || 0;
+      const pole = params.pole || [0, 0];
+      obj[19] = pole[0]; obj[20] = pole[1];
       const morph = params.morph || {};
-      for (let m = 0; m < N_MORPHS; m++) obj[18 + m] = morph[MORPH_NAMES[m]] || 0;
+      for (let m = 0; m < N_MORPHS; m++) obj[MORPH_OBJ_BASE + m] = morph[MORPH_NAMES[m]] || 0;
       obj.set(avatar.J.subarray(0, N * 12), JOINT_OBJ_BASE);
       pass.dispatch(obj);
     },
