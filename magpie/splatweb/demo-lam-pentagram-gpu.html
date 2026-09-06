@@ -41,10 +41,11 @@ button.smallbtn.active{background:#3a5a3a;border-color:#5aa55a}
   stylize, voices, subtitles, turn SFX, and real blink + speech lipsync
   (17 ARKit morph targets blended on GPU) are all real. New: an
   orbit-particle effect — every splat, at its own phase, spirals out
-  around the shared pole the five faces are arranged around, grows by a
-  perlin-per-splat amount, shimmers colour/brightness from a live noise
-  field, then swirls back home — entirely computed in the same compute
-  shader (lib/gpu-skinned-avatar.js). NOT ported: the CPU version's
+  around the shared pole the five faces are arranged around on a slow,
+  noise-wobbled path (not a perfect circle, not a fixed altitude), grows
+  by a perlin-per-splat amount (occasionally much more, some cycles),
+  sparkles, then swirls back home — entirely computed in the same
+  compute shader (lib/gpu-skinned-avatar.js). NOT ported: the CPU version's
   spring/overshoot spin animation, its medusa-fling secondary motion, and
   the mist shroud — a plain cross-fade replaces the spin, and
   there's no cloud/core base under the heads yet.</div>
@@ -56,7 +57,7 @@ button.smallbtn.active{background:#3a5a3a;border-color:#5aa55a}
       <input id="fx" type="range" min="0" max="1.3" step="0.05" value="1.0" style="width:100%">
     </label>
     <label style="display:block;margin-top:0.5rem;font-size:11px;color:#9fb3d8">orbit particles <span id="particleV"></span>
-      <input id="particleFx" type="range" min="0" max="1" step="0.05" value="0.6" style="width:100%">
+      <input id="particleFx" type="range" min="0" max="1" step="0.05" value="1.0" style="width:100%">
     </label>
   </div>
   <div class="grp">
@@ -313,7 +314,7 @@ fxSlider.addEventListener('input', fxUpd); fxUpd();
 // orbit-particle FX (lib/gpu-skinned-avatar.js's PARTICLE FX block) — the
 // shared pole is world (0,0), the natural centre of this pentagon of
 // avatars (each placed by FACET_R*sin/cos(angleOf(i)) around the origin).
-let particleFx = 0.6;
+let particleFx = 1.0;
 const particleSlider = $('particleFx');
 function particleUpd() { particleFx = +particleSlider.value; $('particleV').textContent = particleFx.toFixed(2); }
 particleSlider.addEventListener('input', particleUpd); particleUpd();

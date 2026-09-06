@@ -176,7 +176,7 @@ const REST_STRIDE: u32 = ${REST_STRIDE}u;
 const MORPH_OBJ_BASE: u32 = 21u;
 const JOINT_OBJ_BASE: u32 = 21u + ${N_MORPHS}u;
 // orbit-particle effect shape constants — see the PARTICLE FX block below
-const PARTICLE_PERIOD: f32 = 2.0;       // seconds per splat's launch/return cycle
+const PARTICLE_PERIOD: f32 = 4.5;       // seconds per splat's launch/return cycle — slow, unhurried
 const PARTICLE_ORBIT_TURNS: f32 = 1.0;   // full turns around the pole at peak envelope
 // LAM heads load at whatever scale their source GLB used — for these
 // faces that's roughly 0.2-0.3 world units across (see gpu-skinned-
@@ -323,19 +323,57 @@ fn transform(i: u32) -> array<f32, 14> {
     // orbit: rotate (wx,wz) around the shared vertical pole axis, and
     // push outward along the same radius — one splat's whole launch arc
     // is a spiral out-and-around then back, not just a spin-in-place.
+    //
+    // WANDER: the orbit above is otherwise a perfect, identical arc every
+    // single cycle — same shape, same altitude, every time. A live noise
+    // field (not a fixed per-splat offset, so it keeps drifting rather
+    // than just being "a different but still-fixed circle") nudges the
+    // angle, radius, AND altitude, so real orbits wobble off a perfect
+    // circle and don't all sit at the same height. wobT walks forward
+    // with time but at each splat's OWN rate (noiseSeed offsets it), so
+    // neighbouring splats wander independently, not in lockstep.
+    let wobT = time * 0.22 + noiseSeed;
+    let angleWobble = (noise3(vec3<f32>(wobT, sizeSeed * 9.0, 0.0)) - 0.5) * 0.35;
+    let radiusWobble = (noise3(vec3<f32>(wobT, sizeSeed * 9.0, 5.0)) - 0.5) * PARTICLE_ORBIT_RADIUS * 0.4;
+    let altWobble = (noise3(vec3<f32>(wobT, sizeSeed * 9.0, 9.0)) - 0.5) * PARTICLE_ORBIT_RADIUS * 0.6;
+
     let dx = wx - poleX; let dz = wz - poleZ;
     let r = length(vec2<f32>(dx, dz));
     let baseAngle = atan2(dz, dx);
-    let newAngle = baseAngle + env * PARTICLE_ORBIT_TURNS * 6.283185;
-    let newR = r + env * PARTICLE_ORBIT_RADIUS;
+    let newAngle = baseAngle + env * (PARTICLE_ORBIT_TURNS * 6.283185 + angleWobble);
+    let newR = max(0.0, r + env * (PARTICLE_ORBIT_RADIUS + radiusWobble));
     wx = poleX + newR * cos(newAngle);
     wz = poleZ + newR * sin(newAngle);
+    wy = wy + env * altWobble;
 
     // size: "grown to a size determined by perlin-per-splat" — sizeSeed
     // is a spatially-coherent (not per-splat-independent) noise value
     // baked once from this splat's rest position, so nearby splats swell
     // together in patches rather than popcorn-popping individually.
-    scale = scale * (1.0 + env * sizeSeed * PARTICLE_SIZE_BOOST);
+    //
+    // "sometimes big": sizeSeed alone gives each splat a FIXED personal
+    // ceiling, so the same splats are always the big ones, cycle after
+    // cycle — boring. cycleIndex (this splat's OWN cycle counter, via its
+    // own phase-shifted time) picks a FRESH random roll each 2-second
+    // cycle; most cycles are unboosted, but roughly the top quarter roll
+    // into a real growth spurt (up to 4x the normal peak).
+    let cycleIndex = floor((time + noiseSeed) / PARTICLE_PERIOD);
+    let bigRoll = noise3(vec3<f32>(noiseSeed * 3.1, cycleIndex, 4.7));
+    let bigBoost = 1.0 + smoothstep(0.75, 0.97, bigRoll) * 1.2;
+    scale = scale * (1.0 + env * sizeSeed * PARTICLE_SIZE_BOOST * bigBoost);
+
+    // twinkle: a fast, mostly-off sparkle that only fires while a splat
+    // is actually launched (scaled by env) — positive-only flashes
+    // (max(0,...)) so it reads as glints, not a smooth pulse. Bumps
+    // alpha (matching how the pipeline's OTHER twinkle param works —
+    // see the "twinkle > 0.0" block above; additive, not multiplicative,
+    // for the same reason documented there) and gives colour a small
+    // matching brighten so a glint doesn't look like invisible extra
+    // opacity on an unlit splat.
+    let sparklePhase = sin(time * 16.0 + noiseSeed * 6.0);
+    let sparkle = env * max(0.0, sparklePhase);
+    alpha = clamp(alpha + sparkle * 0.55, 0.0, 1.0);
+    color = color + vec3<f32>(sparkle * 0.5);
 
     // colour/luminosity: a LIVE (not baked) noise field, so the shimmer
     // itself drifts over time instead of being a fixed per-splat tint —
