@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jelly Critter (GPU) — one player-controlled jelly, WGSL compute</title>
+<style>
+html,body{margin:0;height:100%;background:#020204;color:#d8dae2;font:13px monospace}
+#gl{width:100%;height:100vh;display:block;touch-action:none}
+.hud{position:fixed;top:10px;left:10px;background:rgba(10,13,20,.87);border:1px solid #3a5580;border-radius:8px;padding:2.7rem 0.8rem 0.8rem;max-width:min(320px,88vw);max-height:94vh;overflow:auto;transition:transform .25s ease;z-index:10}
+.hud.collapsed{transform:translateX(-120%)}
+#hudToggle{position:fixed;top:10px;left:10px;z-index:9999;width:2.6rem;height:2.6rem;line-height:2.6rem;text-align:center;padding:0;font-size:1.3rem;background:#182338;border:1px solid #5a7ab0;box-shadow:0 1px 6px rgba(0,0,0,.6);pointer-events:auto}
+#fpsBadge{position:fixed;top:10px;right:10px;z-index:9999;background:rgba(10,13,20,.87);border:1px solid #3a5580;border-radius:6px;padding:0.3rem 0.6rem;font:12px monospace;color:#9fdca0;pointer-events:none}
+h1{font-size:1.05rem;margin:0 0 0.2rem;color:#e8d9ff}
+.note{font-size:10.5px;color:#7a8bab;margin-bottom:0.6rem;line-height:1.4}
+.grp{border-top:1px solid #2a3a56;margin-top:0.6rem;padding-top:0.5rem}
+button{background:#22304a;color:#cfe0ff;border:1px solid #3a5580;border-radius:6px;padding:0.4rem 0.6rem;cursor:pointer;margin:2px 3px 2px 0;font:12px monospace}
+button.flavor.active{background:#3a5a3a;border-color:#5aa55a}
+#stats{font-size:11px;color:#9fdca0;white-space:pre-line}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<button id="hudToggle">☰</button>
+<div id="fpsBadge">loading…</div>
+<div class="hud">
+  <h1>Jelly Critter — GPU</h1>
+  <div class="note">A "safe copy" reimplementation of the CORE INTERACTION
+  IDEA behind scottstts/Jelly-Baby (wander + hop + grab-drag-throw a soft
+  bouncy creature) — NOT its code, which carries no LICENSE file and so
+  cannot legally be vendored. Everything here is built fresh on this
+  project's OWN, already-existing, UNMODIFIED critter pipeline
+  (lib/critters.js's damped-spring squash-and-stretch physics — the
+  overshoot/jiggle "jelly" feel was already real — and lib/gpu-critter.js's
+  WGSL compute skinning). New in this file only: player control (WASD/
+  arrows to wander, Space to hop, both camera-relative), drag-to-grab the
+  critter directly (screen-projected hit test, not a raycaster) and throw
+  it (velocity computed from the drag's own recent motion, not a random
+  fling), a live flavor/colour picker, and a translucency slider (a flat
+  alpha multiply — gpu-critter.js's new alphaMult param) for the jelly-
+  candy see-through look the inspiration has. No tabletop world, swing,
+  trampoline, or facilities — this is the bounce mechanic alone.</div>
+  <div class="grp">
+    <div style="font-size:11px;color:#9fb3d8;margin-bottom:0.3rem">flavor</div>
+    <button class="flavor active" data-flavor="lime">lime</button>
+    <button class="flavor" data-flavor="strawberry">strawberry</button>
+    <button class="flavor" data-flavor="blueberry">blueberry</button>
+    <button class="flavor" data-flavor="lemon">lemon</button>
+  </div>
+  <div class="grp">
+    <label style="display:block;font-size:11px;color:#9fb3d8">translucency (jelly-candy look) <span id="translucencyV"></span>
+      <input id="translucency" type="range" min="0.35" max="1" step="0.05" value="0.72" style="width:100%">
+    </label>
+  </div>
+  <div class="note" style="margin-top:0.6rem">WASD / arrows to wander (camera-relative),
+  Space to hop, drag the jelly itself to stretch-and-throw it, drag empty
+  space to orbit the camera, wheel/pinch to zoom, R to reset.</div>
+  <div class="grp" id="stats">loading…</div>
+</div>
+<script type="module">
+import { FLOATS_PER_SPLAT, lookAt, perspective } from './lib/splat-renderer.js';
+import { Critter, SPLATS_PER_CRITTER } from './lib/critters.js';
+import { requestComputeDevice, GpuSplatScene } from './lib/gpu-splat-compute.js';
+import { createGpuCritter } from './lib/gpu-critter.js';
+
+const $ = (id) => document.getElementById(id);
+const canvas = $('gl'), statsEl = $('stats');
+
+const hud = document.querySelector('.hud');
+hud.classList.add('collapsed'); // default closed, matching this project's other GPU demos
+$('hudToggle').onclick = () => hud.classList.toggle('collapsed');
+
+let device;
+try {
+  device = await requestComputeDevice();
+} catch (e) {
+  statsEl.textContent = 'WebGPU compute not available: ' + e.message;
+  throw e;
+}
+const scene = new GpuSplatScene(device, canvas, { background: [0.02, 0.02, 0.03], resolutionScale: 0.85 });
+
+// -------------------------------------------------------- the flavors
+// New palettes local to this demo — critters.js's own PALETTES array is
+// untouched (its names/values don't match Jelly Baby's flavor names, and
+// this stays a self-contained "safe copy" rather than growing the shared
+// file for one demo's naming choice).
+const FLAVORS = {
+  lime: { body: [0.55, 0.85, 0.5], ear: [0.4, 0.7, 0.35], belly: [0.85, 1.0, 0.8] },
+  strawberry: { body: [0.95, 0.35, 0.42], ear: [0.8, 0.22, 0.3], belly: [1.0, 0.75, 0.78] },
+  blueberry: { body: [0.42, 0.4, 0.85], ear: [0.3, 0.28, 0.7], belly: [0.75, 0.75, 1.0] },
+  lemon: { body: [0.98, 0.88, 0.28], ear: [0.85, 0.72, 0.15], belly: [1.0, 0.97, 0.7] },
+};
+
+// ------------------------------------------------------ the critter
+// Same Critter class every CPU-driven critters demo uses, unmodified —
+// bounds widened a touch since this is a single free-roaming pet, not a
+// tight cluster.
+const critter = new Critter(11, 2.6);
+critter.pal = FLAVORS.lime;
+const startPos = critter.pos.slice();
+const obj = scene.addObject(SPLATS_PER_CRITTER, critter.pos);
+// gpuCritter is REASSIGNED (not mutated) on flavor change — createGpuCritter
+// bakes REST colours once at creation (critter.build() is only ever called
+// up front to derive the GPU template, never per-frame — see gpu-critter.js),
+// so picking a new flavor means rebuilding that template, not editing it.
+let gpuCritter = createGpuCritter(device, critter, obj.outBuf);
+function setFlavor(name) {
+  critter.pal = FLAVORS[name];
+  gpuCritter = createGpuCritter(device, critter, obj.outBuf);
+  document.querySelectorAll('button.flavor').forEach((b) => b.classList.toggle('active', b.dataset.flavor === name));
+}
+document.querySelectorAll('button.flavor').forEach((b) => b.addEventListener('click', () => setFlavor(b.dataset.flavor)));
+
+let alphaMult = 0.72; // default: a jelly-candy translucent look, not fully opaque
+const translucencySlider = $('translucency');
+function translucencyUpd() { alphaMult = +translucencySlider.value; $('translucencyV').textContent = alphaMult.toFixed(2); }
+translucencySlider.addEventListener('input', translucencyUpd); translucencyUpd();
+
+// -------------------------------------------------------- orbit camera
+// Same drag-to-rotate/wheel-to-zoom pattern as demo-lam-pentagram-gpu.html.
+let theta = 0.6, phi = 1.15, radius = 3.2;
+const targetY = 0.5;
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function applyCamera() {
+  scene.setCamera([radius * Math.sin(theta) * Math.sin(phi), targetY + radius * Math.cos(phi), radius * Math.cos(theta) * Math.sin(phi)], [0, targetY, 0], 48 * Math.PI / 180);
+}
+applyCamera();
+
+// ------------------------------------------------- grab / throw / drag
+// Hit-testing without a real raycaster: project the critter's CURRENT
+// world position through the SAME view/proj matrices GpuSplatScene.render
+// builds, compare to the pointerdown screen position. Cheap and honest
+// for a single soft round creature — a full ray-vs-splat-cloud raycaster
+// would be real work for no real benefit here.
+function mul4(m, v) {
+  const o = [0, 0, 0, 0];
+  for (let i = 0; i < 4; i++) o[i] = m[i] * v[0] + m[4 + i] * v[1] + m[8 + i] * v[2] + m[12 + i] * v[3];
+  return o;
+}
+function worldToScreen(pos) {
+  const { pos: eye, target, fovY } = scene.camera;
+  const view = lookAt(eye, target, [0, 1, 0]);
+  const proj = perspective(fovY, canvas.width / canvas.height, 0.05, 100);
+  const clip = mul4(proj, mul4(view, [pos[0], pos[1], pos[2], 1]));
+  if (clip[3] <= 0) return null;
+  const ndcX = clip[0] / clip[3], ndcY = clip[1] / clip[3];
+  const rect = canvas.getBoundingClientRect();
+  return [rect.left + (ndcX * 0.5 + 0.5) * rect.width, rect.top + (1 - (ndcY * 0.5 + 0.5)) * rect.height];
+}
+
+let drag = null; // camera-orbit drag anchor, null while grabbing the critter
+let grabbed = false;
+let grabHistory = []; // [{x,y,z,t}] recent world positions, for release velocity
+const HIT_RADIUS_PX = 70; // generous — easy to grab on both mouse and touch
+const DRAG_SENS = 0.0028; // world units per screen px per unit camera radius
+
+canvas.addEventListener('pointerdown', (e) => {
+  canvas.setPointerCapture(e.pointerId);
+  const screen = worldToScreen(critter.pos);
+  const dx = screen ? e.clientX - screen[0] : Infinity, dy = screen ? e.clientY - screen[1] : Infinity;
+  if (screen && Math.hypot(dx, dy) < HIT_RADIUS_PX) {
+    grabbed = true; drag = null;
+    grabHistory = [{ x: critter.pos[0], y: critter.pos[1], z: critter.pos[2], t: performance.now() }];
+  } else {
+    drag = [e.clientX, e.clientY];
+  }
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (grabbed) {
+    // camera right/up vectors (world space) — drag right moves the jelly
+    // along camera-right, drag up lifts it, so "pull it up and toss" (the
+    // described Jelly Baby interaction) works from any camera angle.
+    const rightX = Math.cos(theta), rightZ = -Math.sin(theta);
+    const dx = (e.movementX ?? 0) * DRAG_SENS * radius;
+    const dy = (e.movementY ?? 0) * DRAG_SENS * radius;
+    critter.pos[0] += rightX * dx;
+    critter.pos[2] += rightZ * dx;
+    critter.pos[1] = Math.max(critter.r, critter.pos[1] - dy);
+    const now = performance.now();
+    grabHistory.push({ x: critter.pos[0], y: critter.pos[1], z: critter.pos[2], t: now });
+    if (grabHistory.length > 8) grabHistory.shift();
+    // visual stretch while dragging, proportional to how fast it's moving —
+    // reuses critter.squash directly (>1 = elongated, same field tick()'s
+    // own damped spring animates once released, so the wobble-back is the
+    // SAME physics as a normal landing, not a separate effect).
+    const speed = Math.hypot(dx, dy) / Math.max(1, now - (grabHistory[grabHistory.length - 2]?.t ?? now - 16));
+    critter.squash = clamp(1 + speed * 18, 1, 1.6);
+  } else if (drag) {
+    theta -= (e.clientX - drag[0]) * 0.006;
+    phi = clamp(phi - (e.clientY - drag[1]) * 0.006, 0.6, 2.4);
+    drag = [e.clientX, e.clientY]; applyCamera();
+  }
+});
+function releaseGrab() {
+  if (!grabbed) return;
+  grabbed = false;
+  const h = grabHistory;
+  const a = h[0], b = h[h.length - 1];
+  const dt = Math.max(0.02, (b.t - a.t) / 1000);
+  // THROW VELOCITY FROM THE DRAG'S OWN MOTION — the actual improvement
+  // over critters.js's throwCritters() (which flings on a random noise
+  // field): this is a real sling, timing and direction both read from
+  // how the pointer actually moved.
+  critter.vel[0] = (b.x - a.x) / dt;
+  critter.vel[1] = (b.y - a.y) / dt + 1.2; // a little extra lift — a limp drop rarely feels good
+  critter.vel[2] = (b.z - a.z) / dt;
+  critter.facing = Math.atan2(critter.vel[0], critter.vel[2]);
+  critter.squash = 0.75; critter.squashV = -2; // anticipation snap, same as critters.js's throwCritters()
+}
+canvas.addEventListener('pointerup', (e) => { releaseGrab(); drag = null; });
+canvas.addEventListener('pointercancel', () => { releaseGrab(); drag = null; });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); radius = clamp(radius * Math.exp(e.deltaY * 0.001), 1.0, 8); applyCamera(); }, { passive: false });
+
+// --------------------------------------------------------- keyboard
+const keys = new Set();
+document.addEventListener('keydown', (e) => {
+  keys.add(e.key.toLowerCase());
+  if (e.key.toLowerCase() === 'r') {
+    critter.pos = startPos.slice(); critter.vel = [0, 0, 0];
+    critter.squash = 1; critter.squashV = 0; grabbed = false;
+  }
+});
+document.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
+const MOVE_ACCEL = 3.2, MOVE_MAX = 1.6, HOP_POWER = 2.6;
+
+statsEl.textContent = `${SPLATS_PER_CRITTER} splats · loaded`;
+window.__jellyCritter = { device, scene, critter, setFlavor, worldToScreen, releaseGrab, isGrabbed: () => grabbed };
+
+// --------------------------------------------------------------- run
+let frames = 0, accMs = 0, lastFpsT = performance.now(), lastT = performance.now();
+(function frame(t) {
+  const dt = Math.min(0.05, (t - lastT) / 1000);
+  lastT = t;
+
+  if (!grabbed) {
+    // camera-relative wander: forward = camera's own forward vector
+    // projected to the ground plane, so "forward" always means "away
+    // from wherever you're currently looking from" — the intuitive
+    // convention for a player-controlled toy like this.
+    const fwdX = -Math.sin(theta), fwdZ = -Math.cos(theta);
+    const rightX = Math.cos(theta), rightZ = -Math.sin(theta);
+    let mx = 0, mz = 0;
+    if (keys.has('w') || keys.has('arrowup')) { mx += fwdX; mz += fwdZ; }
+    if (keys.has('s') || keys.has('arrowdown')) { mx -= fwdX; mz -= fwdZ; }
+    if (keys.has('a') || keys.has('arrowleft')) { mx -= rightX; mz -= rightZ; }
+    if (keys.has('d') || keys.has('arrowright')) { mx += rightX; mz += rightZ; }
+    const mlen = Math.hypot(mx, mz);
+    if (mlen > 0.01) {
+      critter.vel[0] += (mx / mlen) * MOVE_ACCEL * dt;
+      critter.vel[2] += (mz / mlen) * MOVE_ACCEL * dt;
+      const hlen = Math.hypot(critter.vel[0], critter.vel[2]);
+      if (hlen > MOVE_MAX) { critter.vel[0] = critter.vel[0] / hlen * MOVE_MAX; critter.vel[2] = critter.vel[2] / hlen * MOVE_MAX; }
+      critter.facing = Math.atan2(critter.vel[0], critter.vel[2]);
+    }
+    const grounded = critter.pos[1] <= critter.r + 0.02;
+    if (keys.has(' ') && grounded) { critter.vel[1] = HOP_POWER; keys.delete(' '); }
+    critter.tick(dt, [critter], {});
+  }
+  gpuCritter.dispatch({ alphaMult });
+  scene.render();
+
+  frames++; accMs += t - lastFpsT; lastFpsT = t;
+  if (accMs >= 1000) {
+    const fps = (1000 / (accMs / frames)).toFixed(0);
+    statsEl.textContent = `${SPLATS_PER_CRITTER} splats · ${fps} fps${grabbed ? ' · holding' : ''}`;
+    $('fpsBadge').textContent = `${fps} fps`; // always visible, even with the HUD collapsed
+    frames = 0; accMs = 0;
+  }
+  requestAnimationFrame(frame);
+})(performance.now());
+</script>
+</body>
+</html>

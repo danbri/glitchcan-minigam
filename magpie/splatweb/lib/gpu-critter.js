@@ -30,7 +30,10 @@ const JAW_PROBE = 1.0;  // jaw's own natural range is 0..1
 
 const WGSL_TRANSFORM = /* wgsl */`
 // OBJ layout: 0..2 pos xyz, 3 facing, 4 squash, 5 critter radius r,
-// 6 flop (from live vel[1]), 7 jaw (live talk/viseme state)
+// 6 flop (from live vel[1]), 7 jaw (live talk/viseme state), 8 alphaMult
+// (flat post-multiply on final alpha — default 1.0 via dispatch()'s own
+// default, so every existing caller renders byte-identical; a jelly-candy
+// translucent look is just alphaMult<1, no new blend/material system)
 fn transform(i: u32) -> array<f32, 14> {
   let b = i * 12u;
   var lx = REST[b]; var lz = REST[b+2u];
@@ -41,7 +44,7 @@ fn transform(i: u32) -> array<f32, 14> {
 
   let px = OBJ[0]; let py = OBJ[1]; let pz = OBJ[2];
   let facing = OBJ[3]; let s = max(OBJ[4], 0.05); let r = OBJ[5];
-  let flop = OBJ[6]; let jaw = OBJ[7];
+  let flop = OBJ[6]; let jaw = OBJ[7]; let alphaMult = OBJ[8];
 
   // apply the live-driven local deltas BEFORE squash/facing, matching
   // Critter.build()'s own order (flop/jaw shift the LOCAL point, put()
@@ -60,7 +63,7 @@ fn transform(i: u32) -> array<f32, 14> {
   out[0] = px + wx; out[1] = py + ly*s - r*(1.0-s)*0.5; out[2] = pz + wz;
   out[3] = 0.0; out[4] = 0.0; out[5] = 0.0; out[6] = 1.0;
   out[7] = sc * sxz; out[8] = sc * s; out[9] = sc;
-  out[10] = col.x; out[11] = col.y; out[12] = col.z; out[13] = alpha;
+  out[10] = col.x; out[11] = col.y; out[12] = col.z; out[13] = alpha * alphaMult;
   return out;
 }
 `;
@@ -108,16 +111,19 @@ function buildRestTemplate(critter) {
 // outBuffer: the GPU storage buffer to write into.
 export function createGpuCritter(device, critter, outBuffer) {
   const { rest, count } = buildRestTemplate(critter);
-  const pass = new SplatComputePass(device, { restStride: REST_STRIDE, wgslTransform: WGSL_TRANSFORM, maxObjFloats: 8 });
+  const pass = new SplatComputePass(device, { restStride: REST_STRIDE, wgslTransform: WGSL_TRANSFORM, maxObjFloats: 9 });
   pass.setData(rest, count, outBuffer);
-  const obj = new Float32Array(8);
+  const obj = new Float32Array(9);
   return {
     splatCount: count,
-    dispatch() {
+    // alphaMult (0..1, default 1 — identical to every existing caller):
+    // a flat post-multiply on final alpha, for a translucent/jelly-candy
+    // look without a new material system.
+    dispatch({ alphaMult = 1 } = {}) {
       obj[0] = critter.pos[0]; obj[1] = critter.pos[1]; obj[2] = critter.pos[2];
       obj[3] = critter.facing; obj[4] = critter.squash; obj[5] = critter.r;
       obj[6] = Math.max(-0.5, Math.min(0.5, -critter.vel[1] * 0.12)); // same formula as Critter.build()'s own `flop`
-      obj[7] = critter.jaw;
+      obj[7] = critter.jaw; obj[8] = alphaMult;
       pass.dispatch(obj);
     },
   };
