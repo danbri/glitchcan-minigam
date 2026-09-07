@@ -36,9 +36,10 @@ button.flavor.active{background:#3a5a3a;border-color:#5aa55a}
   arrows to wander, Space to hop, both camera-relative), drag-to-grab the
   critter directly (screen-projected hit test, not a raycaster) and throw
   it (velocity computed from the drag's own recent motion, not a random
-  fling), a live flavor/colour picker, and a translucency slider (a flat
-  alpha multiply — gpu-critter.js's new alphaMult param) for the jelly-
-  candy see-through look the inspiration has. No tabletop world, swing,
+  fling), a live flavor/colour picker, and a translucency slider — a
+  fresnel/rim effect (gpu-critter.js's alphaMult+camPos), not a flat alpha
+  fade: see-through facing the camera, more solid at the silhouette edge,
+  the actual glass/jelly-candy cue. No tabletop world, swing,
   trampoline, or facilities — this is the bounce mechanic alone.</div>
   <div class="grp">
     <div style="font-size:11px;color:#9fb3d8;margin-bottom:0.3rem">flavor</div>
@@ -49,7 +50,7 @@ button.flavor.active{background:#3a5a3a;border-color:#5aa55a}
   </div>
   <div class="grp">
     <label style="display:block;font-size:11px;color:#9fb3d8">translucency (jelly-candy look) <span id="translucencyV"></span>
-      <input id="translucency" type="range" min="0.35" max="1" step="0.05" value="0.72" style="width:100%">
+      <input id="translucency" type="range" min="0.02" max="0.6" step="0.02" value="0.1" style="width:100%">
     </label>
   </div>
   <div class="note" style="margin-top:0.6rem">WASD / arrows to wander (camera-relative),
@@ -91,6 +92,38 @@ const FLAVORS = {
   lemon: { body: [0.98, 0.88, 0.28], ear: [0.85, 0.72, 0.15], belly: [1.0, 0.97, 0.7] },
 };
 
+// ------------------------------------------------------- backdrop floor
+// A translucent object blending toward a flat clear colour just reads as
+// "darker", not "see-through" — there has to be something recognizable
+// behind it for transparency to actually be visible (the Jelly Baby
+// reference has its wooden tabletop for exactly this reason). Static, so
+// no compute shader or per-frame dispatch at all: a plain splat buffer
+// (identity quats, flattened scale.y for a tile look) written ONCE.
+// worldPos is a sentinel [0,-999,0], not the floor's real position — that
+// field is ONLY read by GpuSplatScene's coarse per-object sort (see its
+// header), so this forces the floor to always sort as "farthest" and draw
+// first, guaranteeing the critter (drawn after) never gets hidden behind
+// opaque floor tiles regardless of camera angle.
+const FLOOR_N = 9, FLOOR_STEP = 0.55, FLOOR_Y = -0.02;
+const floorSplats = new Float32Array(FLOOR_N * FLOOR_N * FLOATS_PER_SPLAT);
+{
+  const checkerColors = [[0.82, 0.52, 0.24], [0.94, 0.78, 0.48]]; // warm tabletop checker
+  let o = 0;
+  for (let iz = 0; iz < FLOOR_N; iz++) {
+    for (let ix = 0; ix < FLOOR_N; ix++) {
+      const x = (ix - (FLOOR_N - 1) / 2) * FLOOR_STEP, z = (iz - (FLOOR_N - 1) / 2) * FLOOR_STEP;
+      const c = checkerColors[(ix + iz) % 2];
+      floorSplats[o] = x; floorSplats[o + 1] = FLOOR_Y; floorSplats[o + 2] = z;
+      floorSplats[o + 3] = 0; floorSplats[o + 4] = 0; floorSplats[o + 5] = 0; floorSplats[o + 6] = 1; // identity quat
+      floorSplats[o + 7] = FLOOR_STEP * 0.48; floorSplats[o + 8] = 0.02; floorSplats[o + 9] = FLOOR_STEP * 0.48;
+      floorSplats[o + 10] = c[0]; floorSplats[o + 11] = c[1]; floorSplats[o + 12] = c[2]; floorSplats[o + 13] = 1;
+      o += FLOATS_PER_SPLAT;
+    }
+  }
+}
+const floorObj = scene.addObject(FLOOR_N * FLOOR_N, [0, -999, 0]);
+device.queue.writeBuffer(floorObj.outBuf, 0, floorSplats);
+
 // ------------------------------------------------------ the critter
 // Same Critter class every CPU-driven critters demo uses, unmodified —
 // bounds widened a touch since this is a single free-roaming pet, not a
@@ -111,7 +144,13 @@ function setFlavor(name) {
 }
 document.querySelectorAll('button.flavor').forEach((b) => b.addEventListener('click', () => setFlavor(b.dataset.flavor)));
 
-let alphaMult = 0.72; // default: a jelly-candy translucent look, not fully opaque
+// default 0.1, NOT close to 1: the body is ~150 densely overlapping
+// splats, and naive sequential "over" alpha blending COMPOUNDS opacity
+// across overlapping layers (1-(1-a)^N for N overlapping splats) — values
+// above ~0.3 are visually indistinguishable from fully opaque here,
+// confirmed by direct testing. The slider's range (0.02-0.6) reflects
+// that reality rather than the usual 0-1 assumption.
+let alphaMult = 0.1;
 const translucencySlider = $('translucency');
 function translucencyUpd() { alphaMult = +translucencySlider.value; $('translucencyV').textContent = alphaMult.toFixed(2); }
 translucencySlider.addEventListener('input', translucencyUpd); translucencyUpd();
@@ -256,7 +295,7 @@ let frames = 0, accMs = 0, lastFpsT = performance.now(), lastT = performance.now
     if (keys.has(' ') && grounded) { critter.vel[1] = HOP_POWER; keys.delete(' '); }
     critter.tick(dt, [critter], {});
   }
-  gpuCritter.dispatch({ alphaMult });
+  gpuCritter.dispatch({ alphaMult, camPos: scene.camera.pos });
   scene.render();
 
   frames++; accMs += t - lastFpsT; lastFpsT = t;

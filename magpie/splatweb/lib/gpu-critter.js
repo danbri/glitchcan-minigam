@@ -30,10 +30,29 @@ const JAW_PROBE = 1.0;  // jaw's own natural range is 0..1
 
 const WGSL_TRANSFORM = /* wgsl */`
 // OBJ layout: 0..2 pos xyz, 3 facing, 4 squash, 5 critter radius r,
-// 6 flop (from live vel[1]), 7 jaw (live talk/viseme state), 8 alphaMult
-// (flat post-multiply on final alpha — default 1.0 via dispatch()'s own
-// default, so every existing caller renders byte-identical; a jelly-candy
-// translucent look is just alphaMult<1, no new blend/material system)
+// 6 flop (from live vel[1]), 7 jaw (live talk/viseme state), 8 alphaMult,
+// 9..11 camPos xyz.
+//
+// GLASSY TRANSPARENCY: a flat alphaMult multiply looked wrong (user's own
+// read: "nothing like the glassy transparency in the reference" —
+// scottstts/Jelly-Baby's candy-like material) — because in THIS shader's
+// premultiplied-alpha output (color.rgb * alpha, see splat-renderer-gpu.js
+// fs()), scaling alpha down ALSO dims the colour contribution
+// proportionally, so the whole critter just fades toward grey/black
+// instead of reading as vivid see-through material.
+//
+// Real glass/jelly reads as "see-through facing the camera, more solid at
+// the silhouette rim" — a fresnel term. Cheap to fake here with no
+// lighting model at all: jelly critters are round, so each REST local
+// point's OWN direction from the body centre already approximates its
+// surface normal. rimAlpha = mix(alphaMult, 1.0, fresnel) — centre-facing
+// splats (fresnel≈0) get the full translucent alphaMult; edge-on splats
+// (fresnel≈1, dot(normal,viewDir)≈0) stay opaque, exactly the glass-
+// sphere rim look. Backward compatible BY CONSTRUCTION: at alphaMult=1,
+// mix(1,1,fresnel)=1 always regardless of view angle — zero change for
+// every existing caller. Colour is boosted as rimAlpha drops, compensating
+// for the same premultiplied dimming so the see-through parts stay vivid
+// rather than washed out.
 fn transform(i: u32) -> array<f32, 14> {
   let b = i * 12u;
   var lx = REST[b]; var lz = REST[b+2u];
@@ -45,6 +64,11 @@ fn transform(i: u32) -> array<f32, 14> {
   let px = OBJ[0]; let py = OBJ[1]; let pz = OBJ[2];
   let facing = OBJ[3]; let s = max(OBJ[4], 0.05); let r = OBJ[5];
   let flop = OBJ[6]; let jaw = OBJ[7]; let alphaMult = OBJ[8];
+  let camPos = vec3<f32>(OBJ[9], OBJ[10], OBJ[11]);
+
+  // local direction BEFORE flop/jaw/squash distort it — the least-noisy
+  // approximation of "which way does this splat's patch of surface face"
+  let nLocal = normalize(vec3<f32>(lx, ly0, lz) + vec3<f32>(1e-5, 0.0, 0.0));
 
   // apply the live-driven local deltas BEFORE squash/facing, matching
   // Critter.build()'s own order (flop/jaw shift the LOCAL point, put()
@@ -59,11 +83,19 @@ fn transform(i: u32) -> array<f32, 14> {
   let wx = (fz*lx + fx*lz) * sxz;
   let wz = (-fx*lx + fz*lz) * sxz;
 
+  let worldX = px + wx; let worldY = py + ly*s - r*(1.0-s)*0.5; let worldZ = pz + wz;
+  let nWorld = normalize(vec3<f32>(fz*nLocal.x + fx*nLocal.z, nLocal.y, -fx*nLocal.x + fz*nLocal.z));
+  let viewDir = normalize(camPos - vec3<f32>(worldX, worldY, worldZ));
+  let fresnel = pow(clamp(1.0 - abs(dot(nWorld, viewDir)), 0.0, 1.0), 1.8);
+  let rimAlpha = mix(alphaMult, 1.0, fresnel);
+  let colorBoost = 1.0 + (1.0 - rimAlpha) * 0.8;
+
   var out: array<f32, 14>;
-  out[0] = px + wx; out[1] = py + ly*s - r*(1.0-s)*0.5; out[2] = pz + wz;
+  out[0] = worldX; out[1] = worldY; out[2] = worldZ;
   out[3] = 0.0; out[4] = 0.0; out[5] = 0.0; out[6] = 1.0;
   out[7] = sc * sxz; out[8] = sc * s; out[9] = sc;
-  out[10] = col.x; out[11] = col.y; out[12] = col.z; out[13] = alpha * alphaMult;
+  out[10] = col.x * colorBoost; out[11] = col.y * colorBoost; out[12] = col.z * colorBoost;
+  out[13] = alpha * rimAlpha;
   return out;
 }
 `;
@@ -111,19 +143,23 @@ function buildRestTemplate(critter) {
 // outBuffer: the GPU storage buffer to write into.
 export function createGpuCritter(device, critter, outBuffer) {
   const { rest, count } = buildRestTemplate(critter);
-  const pass = new SplatComputePass(device, { restStride: REST_STRIDE, wgslTransform: WGSL_TRANSFORM, maxObjFloats: 9 });
+  const pass = new SplatComputePass(device, { restStride: REST_STRIDE, wgslTransform: WGSL_TRANSFORM, maxObjFloats: 12 });
   pass.setData(rest, count, outBuffer);
-  const obj = new Float32Array(9);
+  const obj = new Float32Array(12);
   return {
     splatCount: count,
     // alphaMult (0..1, default 1 — identical to every existing caller):
-    // a flat post-multiply on final alpha, for a translucent/jelly-candy
-    // look without a new material system.
-    dispatch({ alphaMult = 1 } = {}) {
+    // the glassy/fresnel-rim translucency strength (see the WGSL comment
+    // above) — 1 disables it entirely regardless of camPos. camPos
+    // (default [0,0,3], only read when alphaMult<1) should be the
+    // caller's actual camera world position for the rim to face the
+    // right way; harmless if approximate for a small critter.
+    dispatch({ alphaMult = 1, camPos = [0, 0, 3] } = {}) {
       obj[0] = critter.pos[0]; obj[1] = critter.pos[1]; obj[2] = critter.pos[2];
       obj[3] = critter.facing; obj[4] = critter.squash; obj[5] = critter.r;
       obj[6] = Math.max(-0.5, Math.min(0.5, -critter.vel[1] * 0.12)); // same formula as Critter.build()'s own `flop`
       obj[7] = critter.jaw; obj[8] = alphaMult;
+      obj[9] = camPos[0]; obj[10] = camPos[1]; obj[11] = camPos[2];
       pass.dispatch(obj);
     },
   };
