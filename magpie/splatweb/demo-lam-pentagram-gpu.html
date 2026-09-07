@@ -393,7 +393,7 @@ function resScaleUpd() { scene.resolutionScale = +resScaleSlider.value; $('resSc
 resScaleSlider.addEventListener('input', resScaleUpd); resScaleUpd();
 
 // persona switching — the persona-param cross-fade (dissolve/roundness/
-// etc, `transition` below) PLUS a real creature-spin: the whole pentagon
+// etc, per-avatar liveW below) PLUS a real creature-spin: the whole pentagon
 // rigidly rotates around the shared pole so the newly-selected face ends
 // up facing wherever the camera currently is, via a damped-cosine
 // spring-overshoot-judder curve (spinEase below) — "spin to face camera,
@@ -432,61 +432,48 @@ function spinValueAt(tt) {
   if (u >= 1) return spin.to;
   return spin.from + (spin.to - spin.from) * spinEase(u);
 }
+// PERSONA CROSSFADE — was a two-slot {from,to} transition object with
+// liveWeight() interpolating between exactly those two indices. Real bug
+// (reported: "faces/heads seem to vanish", reproducible on any platform,
+// not a GPU/driver quirk): redirecting mid-flight (the arrow-key/flick
+// "jump over the neighbor" feature) always set the NEW transition's
+// `from` to the stale `liveIdx`, not to whichever avatar the OLD
+// transition had actually faded partway INTO — that orphaned avatar was
+// suddenly neither `from` nor `to`, so liveWeight() returned 0 for it
+// INSTANTLY: a hard pop to fully-dissolved (invisible), not a fade. This
+// happens on ANY quick double-switch (double-tap an arrow key, two quick
+// flicks, two quick button clicks) — which is a completely normal thing
+// to do, explaining "sometimes" on every platform identically (pure JS
+// logic, nothing GPU/device-specific).
+//
+// Fixed by replacing the two-slot model entirely: every avatar keeps its
+// OWN continuously-eased weight (liveW[i], updated every frame below,
+// easing toward 1 for whichever is liveIdx and 0 otherwise). liveIdx now
+// updates IMMEDIATELY on switchPersona (no more async/await/switchSeq
+// race-guarding needed) — the visual crossfade is just liveW chasing
+// wherever liveIdx currently points, which is correct and pop-free no
+// matter how many times the target changes mid-flight, by construction.
 let lastSwitchStart = -Infinity;
-let liveIdx = 0, transition = null, switchSeq = 0;
-// A second switchPersona call while one is already in flight REDIRECTS it
-// (jumps over whichever face was mid-fade-in) instead of being dropped —
-// "hit -> twice and it jumps over the neighbouring face". Two things make
-// that work correctly instead of popping:
-//  - the target is computed relative to `transition.to` (where we're
-//    ALREADY heading), not the stale `liveIdx` (which only updates once a
-//    transition fully completes) — see the keydown handler below, which
-//    is the other half of this fix (it was always requesting the SAME
-//    neighbor twice, so the redirect never even got a new target to
-//    aim at).
-//  - the new spin animation starts from spinValueAt(now) — the ACTUAL
-//    current interpolated rotation — not the stale `creatureSpin`
-//    variable (only updated when a switch completes), so redirecting
-//    mid-spin continues smoothly instead of snapping backward first.
-// switchSeq guards the race: if press A gets redirected by press B before
-// A's own timer fires, A's completion must NOT overwrite what B set up.
-async function switchPersona(target) {
-  const fromIdx = transition ? transition.to : liveIdx;
-  if (target === fromIdx) return;
+let liveIdx = 0;
+const liveW = new Float32Array(N); liveW[0] = 1;
+function switchPersona(target) {
+  if (target === liveIdx) return;
   const nowSec = performance.now() / 1000;
-  const redirecting = !!transition;
-  const steps = hopSteps(fromIdx, target);
+  const steps = hopSteps(liveIdx, target);
   const rapid = (nowSec - lastSwitchStart) < 0.6;
-  const violent = steps >= 2 || rapid || redirecting;
+  const violent = steps >= 2 || rapid;
   lastSwitchStart = nowSec;
-  const mySeq = ++switchSeq;
   playCrunch();
   const dur = violent ? 0.4 : 0.9;
   const curSpin = spinValueAt(nowSec);
-  transition = { from: liveIdx, to: target, start: nowSec, dur };
   const spinTarget = curSpin + shortestDelta(curSpin, theta - angleOf(target));
   spin = { from: curSpin, to: spinTarget, start: nowSec, dur, violent };
-  await new Promise((r) => setTimeout(r, dur * 1000));
-  if (mySeq !== switchSeq) return; // superseded by a later redirect
-  liveIdx = target; transition = null;
+  liveIdx = target;
   renderNow(liveIdx);
   if (speakOn) playPersonaLine(PERSONAS[liveIdx].id);
 }
-function liveWeight(i, tt) {
-  if (!transition) return i === liveIdx ? 1 : 0;
-  const t = Math.min(1, (tt - transition.start) / transition.dur);
-  const s = t * t * (3 - 2 * t);
-  if (i === transition.from) return 1 - s;
-  if (i === transition.to) return s;
-  return 0;
-}
-// shared by the arrow keys AND the canvas flick-gesture above — computes
-// the target relative to wherever we're ALREADY heading (transition.to)
-// when one's in flight, not the stale liveIdx, so a second quick input in
-// the same direction jumps over the neighbor instead of re-requesting it.
 function stepPersona(dir) {
-  const base = transition ? transition.to : liveIdx;
-  switchPersona((base + dir + N) % N);
+  switchPersona((liveIdx + dir + N) % N);
 }
 document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') stepPersona(1);
@@ -498,14 +485,16 @@ statsEl.textContent = `${avatars.reduce((s, a) => s + a.count, 0).toLocaleString
 // debug hook, matching this project's convention (window.__renderer,
 // window.__pentagram, window.__gpuSplats elsewhere in this session)
 window.__pentagramGpu = {
-  PERSONAS, N, liveIdx: () => liveIdx, transition: () => transition, switchPersona, device, scene,
+  PERSONAS, N, liveIdx: () => liveIdx, liveW: () => liveW, switchPersona, device, scene,
   spin: () => spin, theta: () => theta, spinValueAt, stepPersona,
 };
 
 // --------------------------------------------------------------- run
-let frames = 0, accMs = 0, lastFpsT = performance.now(), jsMs = 0, submitMs = 0;
+let frames = 0, accMs = 0, lastFpsT = performance.now(), jsMs = 0, submitMs = 0, lastFrameT = performance.now();
 (function frame(t) {
   const tt = t / 1000;
+  const dt = Math.min(0.05, (t - lastFrameT) / 1000);
+  lastFrameT = t;
 
   // creature-spin: one shared rigid rotation, applied to every facet's
   // placement AND its own yaw (so the whole pentagon turns together, not
@@ -519,9 +508,24 @@ let frames = 0, accMs = 0, lastFpsT = performance.now(), jsMs = 0, submitMs = 0;
   const spinning = su >= 0 && su < 1.3;
   const distortion = spinning ? Math.exp(-3 * Math.max(0, su)) * (spin.violent ? 1 : 0.45) : 0;
 
+  // ease every avatar's OWN weight toward 1 (live) or 0 (dissolved) —
+  // see the big comment above switchPersona for why this replaced the old
+  // two-slot transition object. Exponential decay, rate matched to feel
+  // like the old fixed-duration fade (reaches ~95% of the way there after
+  // ~3/rate seconds): faster for a violent switch. Snapped to exactly 0/1
+  // once close enough so steady-state avatars take the cheap lw===0/1
+  // branch below instead of reallocating an interpolated params object
+  // forever on an asymptote that never quite reaches it.
+  const easeRate = spin.violent ? 7.5 : 3.3;
+  for (let i = 0; i < HEADS; i++) {
+    const targetW = i === liveIdx ? 1 : 0;
+    liveW[i] += (targetW - liveW[i]) * Math.min(1, easeRate * dt);
+    if (Math.abs(liveW[i] - targetW) < 0.002) liveW[i] = targetW;
+  }
+
   const tJsStart = performance.now();
   for (let i = 0; i < HEADS; i++) {
-    const lw = liveWeight(i, tt);
+    const lw = liveW[i];
     const p = PERSONAS[i];
     const params = lw === 1 ? p.live : lw === 0 ? p.dissolved
       : Object.fromEntries(Object.keys(p.live).map((k) => [k, p.live[k] + (p.dissolved[k] - p.live[k]) * (1 - lw)]));
