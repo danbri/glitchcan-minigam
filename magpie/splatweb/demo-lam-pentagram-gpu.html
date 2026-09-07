@@ -10,6 +10,7 @@ html,body{margin:0;height:100%;background:#020204;color:#d8dae2;font:13px monosp
 .hud{position:fixed;top:10px;left:10px;background:rgba(10,13,20,.87);border:1px solid #3a5580;border-radius:8px;padding:2.7rem 0.8rem 0.8rem;max-width:min(320px,88vw);max-height:94vh;overflow:auto;transition:transform .25s ease;z-index:10}
 .hud.collapsed{transform:translateX(-120%)}
 #hudToggle{position:fixed;top:10px;left:10px;z-index:9999;width:2.6rem;height:2.6rem;line-height:2.6rem;text-align:center;padding:0;font-size:1.3rem;background:#182338;border:1px solid #5a7ab0;box-shadow:0 1px 6px rgba(0,0,0,.6);pointer-events:auto}
+#fpsBadge{position:fixed;top:10px;right:10px;z-index:9999;background:rgba(10,13,20,.87);border:1px solid #3a5580;border-radius:6px;padding:0.3rem 0.6rem;font:12px monospace;color:#9fdca0;pointer-events:none}
 h1{font-size:1.05rem;margin:0 0 0.2rem;color:#e8d9ff}
 .sub{font-size:11px;color:#8fa2c4;margin-bottom:0.6rem}
 .note{font-size:10.5px;color:#7a8bab;margin-bottom:0.6rem;line-height:1.4}
@@ -33,22 +34,28 @@ button.smallbtn.active{background:#3a5a3a;border-color:#5aa55a}
 <body>
 <canvas id="gl"></canvas>
 <button id="hudToggle">☰</button>
+<div id="fpsBadge">loading…</div>
 <div class="hud">
   <h1>Pentulpa Capulet — GPU</h1>
   <div class="sub">same five-persona creature, WGSL compute pipeline</div>
   <div class="note">A "safe copy" — this is a NEW file, demo-lam-pentagram.html
   (the CPU version) is untouched. Persona switching, per-persona tint/
   stylize, voices, subtitles, turn SFX, and real blink + speech lipsync
-  (17 ARKit morph targets blended on GPU) are all real. New: an
-  orbit-particle effect — every splat, at its own phase, spirals out
-  around the shared pole the five faces are arranged around on a slow,
-  noise-wobbled path (not a perfect circle, not a fixed altitude), grows
-  by a perlin-per-splat amount (occasionally much more, some cycles),
-  sparkles, then swirls back home — entirely computed in the same
-  compute shader (lib/gpu-skinned-avatar.js). NOT ported: the CPU version's
-  spring/overshoot spin animation, its medusa-fling secondary motion, and
-  the mist shroud — a plain cross-fade replaces the spin, and
-  there's no cloud/core base under the heads yet.</div>
+  (17 ARKit morph targets blended on GPU, active-face only) are all real.
+  Arrow keys move between faces. Switching spins the whole pentagon to
+  face wherever the camera currently is, with a spring overshoot-and-
+  judder settle; two hops at once (or firing another switch within 0.6s)
+  makes the spin quicker and more violent, with a temporary twinkle/
+  orbit-particle boost on every facet while it's in flight. The orbit-
+  particle effect: every splat, at its own phase, spirals out around the
+  shared pole on a slow, noise-wobbled path, grows by a perlin-per-splat
+  amount (occasionally much more), sparkles, and while the creature is
+  mid-spin the currently-launched ("free") splats lag the rigid rotation
+  by a perlin-varied ~200ms before catching up — a cheap hair-like
+  secondary-motion trail — then swirls back home. All of this is computed
+  in the same compute shader (lib/gpu-skinned-avatar.js). NOT ported: the
+  CPU version's medusa-fling secondary motion and the mist shroud — no
+  cloud/core base under the heads yet.</div>
   <div id="now">loading…</div>
   <div class="grp" id="personaButtons"></div>
   <div class="grp">
@@ -58,6 +65,9 @@ button.smallbtn.active{background:#3a5a3a;border-color:#5aa55a}
     </label>
     <label style="display:block;margin-top:0.5rem;font-size:11px;color:#9fb3d8">orbit particles <span id="particleV"></span>
       <input id="particleFx" type="range" min="0" max="1" step="0.05" value="1.0" style="width:100%">
+    </label>
+    <label style="display:block;margin-top:0.5rem;font-size:11px;color:#9fb3d8">render scale (fps vs sharpness) <span id="resScaleV"></span>
+      <input id="resScale" type="range" min="0.4" max="1" step="0.05" value="0.7" style="width:100%">
     </label>
   </div>
   <div class="grp">
@@ -88,7 +98,7 @@ const $ = (id) => document.getElementById(id);
 const canvas = $('gl'), statsEl = $('stats');
 
 const hud = document.querySelector('.hud');
-if (window.innerWidth < 640) hud.classList.add('collapsed');
+hud.classList.add('collapsed'); // default closed on every screen size
 $('hudToggle').onclick = () => hud.classList.toggle('collapsed');
 
 // Same five personas, same face IDs/tints/live-dissolved profiles as
@@ -214,6 +224,25 @@ function playPersonaLine(personaId) {
 }
 document.addEventListener('pointerdown', () => { ensureAudio(); if (actx.state === 'suspended') actx.resume(); }, { once: true, passive: true });
 
+// ================================================== perf bisection ====
+// Diagnostic-only, query-param-gated, default-off — for answering "is the
+// fps ceiling GPU fill-rate/overdraw, or per-avatar dispatch overhead, or
+// the particle-noise compute cost" WITHOUT needing a live-connected
+// browser session: reload with these params and read the stats line.
+//   ?heads=N     only load/animate/draw the first N of the 5 facets
+//                (isolates splat-count/fill-rate scaling — compare
+//                ?heads=1 vs ?heads=5 fps)
+//   ?particles=0 force the orbit-particle effect off regardless of the
+//                slider (isolates the particle-noise compute cost —
+//                compare against the same ?heads value with particles on)
+// The stats line also always shows a CPU-side ms breakdown (JS per-avatar
+// prep vs compute+render submit) — if that's a small fraction of the
+// frame budget (16.7ms@60fps / 8.3ms@120fps), the ceiling is GPU
+// execution time (fill-rate/ALU), not CPU orchestration.
+const perfParams = new URLSearchParams(location.search);
+const HEADS = Math.min(N, parseInt(perfParams.get('heads'), 10) || N);
+const FORCE_PARTICLES_OFF = perfParams.get('particles') === '0';
+
 // ====================================================== GPU pipeline ====
 statsEl.textContent = 'loading five faces…';
 let device;
@@ -223,7 +252,14 @@ try {
   statsEl.textContent = 'WebGPU compute not available: ' + e.message;
   throw e;
 }
-const scene = new GpuSplatScene(device, canvas, { background: [0.01, 0.01, 0.015] });
+// resolutionScale 0.7 default: MEASURED (see gpu-splat-compute.js's
+// GpuSplatScene constructor comment) a real Retina MacBook Air goes from
+// 22fps to 56fps between resolutionScale 1 and 0.5 at this demo's 100K
+// alpha-blended splats — the fps ceiling here is GPU fill-rate, not CPU
+// or command-submission overhead. 0.7 trades a little sharpness for
+// meaningfully more headroom out of the box; the slider below lets you
+// retune live.
+const scene = new GpuSplatScene(device, canvas, { background: [0.01, 0.01, 0.015], resolutionScale: 0.7 });
 
 // Load all five with yaw:0 — the per-facet outward yaw is applied as a
 // live GPU dispatch parameter instead of being baked in at load time
@@ -261,12 +297,18 @@ const FACET_R = headR * 0.62;
 
 const LIVE_SCALE = 1.15, RETRACT_SCALE = 0.78;
 
-// One GpuSplatScene object + GPU skinned-avatar per facet.
+// One GpuSplatScene object + GPU skinned-avatar per facet. `at` is
+// recomputed every frame now (see the frame loop's creatureSpinNow), not
+// fixed here — but addObject still needs a starting worldPos for its
+// initial depth-sort entry, so seed it with the un-spun placement.
+// Only the first HEADS facets get a GPU object at all (see the perf
+// bisection block above) — the rest are loaded (for calibration/measure
+// above) but never dispatched, encoded, or drawn under ?heads=N.
 const gpuAvatars = [];
-for (let i = 0; i < N; i++) {
+for (let i = 0; i < HEADS; i++) {
   const atX = FACET_R * Math.sin(angleOf(i)), atZ = FACET_R * Math.cos(angleOf(i)), atY = yOffsets[i];
   const drawable = scene.addObject(avatars[i].count, [atX, atY, atZ]);
-  gpuAvatars.push({ gpu: createGpuSkinnedAvatar(device, avatars[i], drawable.outBuf), at: [atX, atY, atZ] });
+  gpuAvatars.push({ gpu: createGpuSkinnedAvatar(device, avatars[i], drawable.outBuf), drawable, atY });
 }
 // orbit camera — same drag-to-rotate/wheel-to-zoom pattern as
 // demo-lam-pentagram.html, adapted to GpuSplatScene.setCamera
@@ -276,15 +318,36 @@ function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function applyCamera() {
   scene.setCamera([radius * Math.sin(theta) * Math.sin(phi), targetY + radius * Math.cos(phi), radius * Math.cos(theta) * Math.sin(phi)], [0, targetY, 0]);
 }
-let drag = null;
-canvas.addEventListener('pointerdown', (e) => { drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+let drag = null, dragStartX = 0, dragStartY = 0, dragLastX = 0, dragLastT = 0, dragVX = 0;
+canvas.addEventListener('pointerdown', (e) => {
+  drag = [e.clientX, e.clientY];
+  dragStartX = dragLastX = e.clientX; dragStartY = e.clientY;
+  dragLastT = performance.now(); dragVX = 0;
+  canvas.setPointerCapture(e.pointerId);
+});
 canvas.addEventListener('pointermove', (e) => {
   if (!drag) return;
   theta -= (e.clientX - drag[0]) * 0.006;
   phi = clamp(phi - (e.clientY - drag[1]) * 0.006, 0.6, 2.4);
   drag = [e.clientX, e.clientY]; applyCamera();
+  // short-window velocity (px/ms), not the whole drag's average — a
+  // slow-drag-then-fast-flick-at-the-end should still read as a flick.
+  const now = performance.now(); const dt = now - dragLastT;
+  if (dt > 0) dragVX = (e.clientX - dragLastX) / dt;
+  dragLastX = e.clientX; dragLastT = now;
 });
-canvas.addEventListener('pointerup', () => { drag = null; });
+canvas.addEventListener('pointerup', (e) => {
+  drag = null;
+  // a fast horizontal flick (mouse OR touch — pointer events cover both)
+  // ALSO switches persona, same "jump over" redirect logic as the arrow
+  // keys (stepPersona below) — a slow drag still just orbits the camera,
+  // as before.
+  const totalDX = e.clientX - dragStartX, totalDY = e.clientY - dragStartY;
+  const FLICK_VX = 0.6, MIN_DX = 24; // px/ms, px — ignore slow drags/tiny taps
+  if (Math.abs(dragVX) > FLICK_VX && Math.abs(totalDX) > MIN_DX && Math.abs(totalDX) > Math.abs(totalDY)) {
+    stepPersona(dragVX < 0 ? 1 : -1); // flick left -> next, flick right -> previous
+  }
+});
 canvas.addEventListener('wheel', (e) => { e.preventDefault(); radius = clamp(radius * Math.exp(e.deltaY * 0.001), headR * 1.2, headR * 8); applyCamera(); }, { passive: false });
 applyCamera();
 
@@ -320,16 +383,91 @@ function particleUpd() { particleFx = +particleSlider.value; $('particleV').text
 particleSlider.addEventListener('input', particleUpd); particleUpd();
 const POLE = [0, 0];
 
-// persona switching — a plain smoothstep cross-fade over 900ms, NOT the
-// CPU demo's spring-overshoot spin + medusa-fling (disclosed in the HUD
-// note above; that's real per-splat secondary motion this GPU pipeline
-// doesn't compute yet, not a small tweak to bolt on here).
-let liveIdx = 0, transition = null;
+// render-scale slider — see the GpuSplatScene constructor comment in
+// lib/gpu-splat-compute.js for the measured fps-vs-resolution numbers
+// that motivated this. Reading the slider's OWN value on init (rather
+// than re-deriving 0.7) keeps the HTML attribute and this code from
+// silently disagreeing if one gets edited without the other.
+const resScaleSlider = $('resScale');
+function resScaleUpd() { scene.resolutionScale = +resScaleSlider.value; $('resScaleV').textContent = (+resScaleSlider.value).toFixed(2); }
+resScaleSlider.addEventListener('input', resScaleUpd); resScaleUpd();
+
+// persona switching — the persona-param cross-fade (dissolve/roundness/
+// etc, `transition` below) PLUS a real creature-spin: the whole pentagon
+// rigidly rotates around the shared pole so the newly-selected face ends
+// up facing wherever the camera currently is, via a damped-cosine
+// spring-overshoot-judder curve (spinEase below) — "spin to face camera,
+// overshoot a little, schooch back, judder" in one formula: it starts at
+// 0, swings past 1 and back a few times as the decay shrinks, settles at
+// 1. Two hops around the pentagon (or a switch fired quickly after the
+// last one) makes it "violent": shorter duration (so the same or a
+// bigger angular sweep happens faster) plus a temporary boost to
+// twinkle/orbit-particle intensity on EVERY facet while the spin is in
+// flight — the "attendant distortions to everything" the motion causes.
+function spinEase(u) {
+  if (u <= 0) return 0;
+  if (u >= 1) return 1;
+  const decay = Math.exp(-4.5 * u);
+  return 1 - decay * Math.cos(u * 14);
+}
+function shortestDelta(from, to) {
+  let d = (to - from) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
+function hopSteps(a, b) {
+  const d = Math.abs(a - b) % N;
+  return Math.min(d, N - d);
+}
+// spin.from/to/start/dur drive BOTH the JS-side rigid rotation (below,
+// spinValueAt) and, unchanged, the GPU's own delayed re-evaluation for the
+// particle hair-lag (see gpu-skinned-avatar.js's creatureSpinAt) — the two
+// must use identical constants, which is why spinEase lives in exactly one
+// place per side (this function, and its WGSL mirror).
+let spin = { from: 0, to: 0, start: -999, dur: 1, violent: false };
+function spinValueAt(tt) {
+  const u = (tt - spin.start) / spin.dur;
+  if (u <= 0) return spin.from;
+  if (u >= 1) return spin.to;
+  return spin.from + (spin.to - spin.from) * spinEase(u);
+}
+let lastSwitchStart = -Infinity;
+let liveIdx = 0, transition = null, switchSeq = 0;
+// A second switchPersona call while one is already in flight REDIRECTS it
+// (jumps over whichever face was mid-fade-in) instead of being dropped —
+// "hit -> twice and it jumps over the neighbouring face". Two things make
+// that work correctly instead of popping:
+//  - the target is computed relative to `transition.to` (where we're
+//    ALREADY heading), not the stale `liveIdx` (which only updates once a
+//    transition fully completes) — see the keydown handler below, which
+//    is the other half of this fix (it was always requesting the SAME
+//    neighbor twice, so the redirect never even got a new target to
+//    aim at).
+//  - the new spin animation starts from spinValueAt(now) — the ACTUAL
+//    current interpolated rotation — not the stale `creatureSpin`
+//    variable (only updated when a switch completes), so redirecting
+//    mid-spin continues smoothly instead of snapping backward first.
+// switchSeq guards the race: if press A gets redirected by press B before
+// A's own timer fires, A's completion must NOT overwrite what B set up.
 async function switchPersona(target) {
-  if (target === liveIdx || transition) return;
+  const fromIdx = transition ? transition.to : liveIdx;
+  if (target === fromIdx) return;
+  const nowSec = performance.now() / 1000;
+  const redirecting = !!transition;
+  const steps = hopSteps(fromIdx, target);
+  const rapid = (nowSec - lastSwitchStart) < 0.6;
+  const violent = steps >= 2 || rapid || redirecting;
+  lastSwitchStart = nowSec;
+  const mySeq = ++switchSeq;
   playCrunch();
-  transition = { from: liveIdx, to: target, start: performance.now() / 1000, dur: 0.9 };
-  await new Promise((r) => setTimeout(r, 900));
+  const dur = violent ? 0.4 : 0.9;
+  const curSpin = spinValueAt(nowSec);
+  transition = { from: liveIdx, to: target, start: nowSec, dur };
+  const spinTarget = curSpin + shortestDelta(curSpin, theta - angleOf(target));
+  spin = { from: curSpin, to: spinTarget, start: nowSec, dur, violent };
+  await new Promise((r) => setTimeout(r, dur * 1000));
+  if (mySeq !== switchSeq) return; // superseded by a later redirect
   liveIdx = target; transition = null;
   renderNow(liveIdx);
   if (speakOn) playPersonaLine(PERSONAS[liveIdx].id);
@@ -342,22 +480,47 @@ function liveWeight(i, tt) {
   if (i === transition.to) return s;
   return 0;
 }
+// shared by the arrow keys AND the canvas flick-gesture above — computes
+// the target relative to wherever we're ALREADY heading (transition.to)
+// when one's in flight, not the stale liveIdx, so a second quick input in
+// the same direction jumps over the neighbor instead of re-requesting it.
+function stepPersona(dir) {
+  const base = transition ? transition.to : liveIdx;
+  switchPersona((base + dir + N) % N);
+}
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowRight') switchPersona((liveIdx + 1) % N);
-  else if (e.key === 'ArrowLeft') switchPersona((liveIdx - 1 + N) % N);
+  if (e.key === 'ArrowRight') stepPersona(1);
+  else if (e.key === 'ArrowLeft') stepPersona(-1);
 });
 
 statsEl.textContent = `${avatars.reduce((s, a) => s + a.count, 0).toLocaleString()} splats · loaded`;
 
 // debug hook, matching this project's convention (window.__renderer,
 // window.__pentagram, window.__gpuSplats elsewhere in this session)
-window.__pentagramGpu = { PERSONAS, N, liveIdx: () => liveIdx, transition: () => transition, switchPersona, device, scene };
+window.__pentagramGpu = {
+  PERSONAS, N, liveIdx: () => liveIdx, transition: () => transition, switchPersona, device, scene,
+  spin: () => spin, theta: () => theta, spinValueAt, stepPersona,
+};
 
 // --------------------------------------------------------------- run
-let frames = 0, accMs = 0, lastFpsT = performance.now();
+let frames = 0, accMs = 0, lastFpsT = performance.now(), jsMs = 0, submitMs = 0;
 (function frame(t) {
   const tt = t / 1000;
-  for (let i = 0; i < N; i++) {
+
+  // creature-spin: one shared rigid rotation, applied to every facet's
+  // placement AND its own yaw (so the whole pentagon turns together, not
+  // just one facet) — see the spinEase comment above switchPersona. su<0
+  // (no spin ever fired) or su>=~1.3 (long settled) both read as
+  // "not spinning" for the distortion pulse below; the pulse itself peaks
+  // at spin start (highest angular velocity) and decays across the flight,
+  // scaled up for a violent (2-hop / rapid-fire) switch.
+  const spinNow = spinValueAt(tt);
+  const su = (tt - spin.start) / spin.dur;
+  const spinning = su >= 0 && su < 1.3;
+  const distortion = spinning ? Math.exp(-3 * Math.max(0, su)) * (spin.violent ? 1 : 0.45) : 0;
+
+  const tJsStart = performance.now();
+  for (let i = 0; i < HEADS; i++) {
     const lw = liveWeight(i, tt);
     const p = PERSONAS[i];
     const params = lw === 1 ? p.live : lw === 0 ? p.dissolved
@@ -371,34 +534,55 @@ let frames = 0, accMs = 0, lastFpsT = performance.now();
     const qPitch = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
     const headQ = qNormalize(qMul(qYaw, qPitch));
 
-    // blink + talk-burst visemes, same global (not per-persona) speak
-    // state as the CPU demo — see gpu-skinned-avatar.js's MORPH_NAMES for
-    // which 17 ARKit targets are actually wired up on the GPU side.
+    // blink for everyone, but lipsync (talk-burst visemes) ONLY for the
+    // currently-live face — the dissolved facets keep blinking idly but
+    // no longer flap their mouths along with whichever persona is talking.
     const blinkPhase = (tt % idle.blinkPeriod) / idle.blinkPeriod;
     const blink = blinkPhase < 0.06 ? Math.sin((blinkPhase / 0.06) * Math.PI) : 0;
     let talkMorph = {};
-    if (speakBurstStart >= 0) {
+    if (i === liveIdx && speakBurstStart >= 0) {
       const el = tt - speakBurstStart;
       if (el <= speakBurstDur) talkMorph = sampleTalkBurst(el, { durationSec: speakBurstDur });
     }
     const morph = { eyeBlinkLeft: blink, eyeBlinkRight: blink, ...talkMorph };
 
-    const { gpu, at } = gpuAvatars[i];
-    gpu.dispatch(tt, {
-      ...params, tint: p.tint, at, yaw: angleOf(i),
+    const { gpu, drawable, atY } = gpuAvatars[i];
+    const eff = angleOf(i) + spinNow;
+    const at = [FACET_R * Math.sin(eff), atY, FACET_R * Math.cos(eff)];
+    drawable.worldPos = at; // keep the cheap per-object depth sort correct while spinning
+
+    gpu.update(tt, {
+      ...params, tint: p.tint, at, yaw: eff,
+      twinkle: (params.twinkle || 0) + distortion * 0.5,
       sizeMult: sizeNorms[i] * (RETRACT_SCALE + (LIVE_SCALE - RETRACT_SCALE) * lw),
       fxIntensity: i === liveIdx ? 1 : fxIntensity,
-      particleFx, pole: POLE,
+      particleFx: FORCE_PARTICLES_OFF ? 0 : particleFx * (1 + distortion), pole: POLE, spin,
       bones: { head: headQ }, morph,
     });
   }
-  scene.render();
+  const tJsEnd = performance.now();
+  // batch all HEADS avatars' compute dispatches + the render pass into ONE
+  // command encoder / ONE device.queue.submit() per frame, instead of 6
+  // separate submits (see lib/gpu-splat-compute.js's SplatComputePass.encode
+  // and GpuSplatScene.render's preEncode parameter) — real, measured
+  // per-submit overhead this demo was paying 5x more of than it needed to.
+  scene.render((encoder) => { for (const { gpu } of gpuAvatars) gpu.encode(encoder); });
+  const tSubmitEnd = performance.now();
+  jsMs += tJsEnd - tJsStart; submitMs += tSubmitEnd - tJsEnd;
 
   frames++; accMs += t - lastFpsT; lastFpsT = t;
   if (accMs >= 1000) {
-    const total = avatars.reduce((s, a) => s + a.count, 0);
-    statsEl.textContent = `${total.toLocaleString()} splats · ${(1000 / (accMs / frames)).toFixed(0)} fps · all per-splat work on GPU`;
-    frames = 0; accMs = 0;
+    const total = gpuAvatars.reduce((s, g, i) => s + avatars[i].count, 0);
+    // js/submit are CPU-side wall-clock only (encoding + queue.submit
+    // return immediately — actual GPU execution time isn't visible without
+    // timestamp-query, which isn't wired up here) — but if these are a
+    // small slice of the frame budget, the ceiling is GPU execution
+    // (fill-rate/ALU), not CPU orchestration. See the perf bisection
+    // block above for ?heads=N / ?particles=0 to isolate further.
+    const fps = (1000 / (accMs / frames)).toFixed(0);
+    statsEl.textContent = `${total.toLocaleString()} splats (${HEADS} heads) · ${fps} fps · cpu js ${(jsMs / frames).toFixed(2)}ms + submit ${(submitMs / frames).toFixed(2)}ms · all per-splat work on GPU`;
+    $('fpsBadge').textContent = `${fps} fps`; // always visible, even with the HUD collapsed
+    frames = 0; accMs = 0; jsMs = 0; submitMs = 0;
   }
   requestAnimationFrame(frame);
 })(performance.now());

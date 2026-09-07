@@ -166,15 +166,45 @@ fn noise3(p: vec3<f32>) -> f32 {
 //      effect), 19..20 pole xz (world-space axis the particles orbit —
 //      for a ring of avatars placed by FACET_R*sin/cos(angleOf(i)) around
 //      the origin, as the pentagram demo does, that pole is (0,0)),
-//   21..37 morph weights, one per MORPH_NAMES entry (0..1 each),
-//   38.. joint palette, 12 floats per NODE (matches lam-splats.js's own
+//   21..24 spinFrom/spinTo/spinStart/spinDur — the JS-side creature-spin
+//      spring-overshoot-judder animation (see demo-lam-pentagram-gpu.html's
+//      spinValueAt/switchPersona), described here PURELY so the shader can
+//      recompute it at an EARLIER time per-splat for the hair-lag effect
+//      (see creatureSpinAt below) — it is NOT applied to position here;
+//      the RIGID rotation is already baked into the "at"/"yaw" OBJ values
+//      above by the caller every frame. Defaults (spinDur=1, spinStart
+//      very negative) make creatureSpinAt always resolve to spinTo=0 —
+//      identical to every existing caller that doesn't set these.
+//   25..41 morph weights, one per MORPH_NAMES entry (0..1 each),
+//   42.. joint palette, 12 floats per NODE (matches lam-splats.js's own
 //        J layout exactly, indexed by the REST buffer's raw node index —
 //        see gpu-skinned-avatar.js's buildRestBuffer for why this isn't
 //        compacted to just the used joints).
 const N_MORPHS: u32 = ${N_MORPHS}u;
 const REST_STRIDE: u32 = ${REST_STRIDE}u;
-const MORPH_OBJ_BASE: u32 = 21u;
-const JOINT_OBJ_BASE: u32 = 21u + ${N_MORPHS}u;
+const MORPH_OBJ_BASE: u32 = 25u;
+const JOINT_OBJ_BASE: u32 = 25u + ${N_MORPHS}u;
+// Mirrors demo-lam-pentagram-gpu.html's JS spinEase()/spinValueAt() EXACTLY
+// (same decay/frequency constants) so the shader's delayed re-evaluation
+// (creatureSpinAt at time-delay, used only for the particle hair-lag) lines
+// up with the rigid rotation the caller already applied to at/yaw this
+// frame at time t. A damped cosine settling to 1 gives the "overshoot, a
+// little schooch back, judder" shape in one formula: it starts at 0 (decay
+// term =1, cos(0)=1), swings past 1 and back a few times as cos oscillates
+// while decay shrinks, then settles at 1 — no separate overshoot+settle
+// pieces needed.
+fn spinEase(u: f32) -> f32 {
+  let uc = clamp(u, 0.0, 1.0);
+  let decay = exp(-4.5 * uc);
+  return 1.0 - decay * cos(uc * 14.0);
+}
+fn creatureSpinAt(t: f32, spinFrom: f32, spinTo: f32, spinStart: f32, spinDur: f32) -> f32 {
+  if (spinDur <= 0.0) { return spinTo; }
+  let u = (t - spinStart) / spinDur;
+  if (u <= 0.0) { return spinFrom; }
+  if (u >= 1.0) { return spinTo; }
+  return spinFrom + (spinTo - spinFrom) * spinEase(u);
+}
 // orbit-particle effect shape constants — see the PARTICLE FX block below
 const PARTICLE_PERIOD: f32 = 4.5;       // seconds per splat's launch/return cycle — slow, unhurried
 const PARTICLE_ORBIT_TURNS: f32 = 1.0;   // full turns around the pole at peak envelope
@@ -209,6 +239,7 @@ fn transform(i: u32) -> array<f32, 14> {
   let centre = vec3<f32>(OBJ[12], OBJ[13], OBJ[14]); let avScale = OBJ[15];
   let sizeMult = OBJ[16]; let fxIntensity = OBJ[17];
   let particleFx = OBJ[18]; let poleX = OBJ[19]; let poleZ = OBJ[20];
+  let spinFrom = OBJ[21]; let spinTo = OBJ[22]; let spinStart = OBJ[23]; let spinDur = OBJ[24];
   let jointBase = JOINT_OBJ_BASE;
 
   // morph blend — applied to the REST position BEFORE skinning, same
@@ -312,80 +343,113 @@ fn transform(i: u32) -> array<f32, 14> {
   // resolved into a recognisable face at any instant, just constant
   // noise. Confining the launch to a fraction of the cycle gives most of
   // the population a real "at home, undisplaced" majority of the time.
+  // PERF (Sept 2026): everything below the ACTIVE_WINDOW check used to run
+  // for every splat unconditionally — 6 noise3() calls (each 8 hash3
+  // evaluations) times every splat times all 5 avatars, every frame, even
+  // though ACTIVE_WINDOW=0.35 means ~65% of splats have env=0 and every one
+  // of those noise samples multiplies out to zero effect anyway. Gating the
+  // whole block behind "cyclePos < ACTIVE_WINDOW" (computed first, cheaply —
+  // one divide + fract) cuts wasted GPU noise work by roughly 2/3 with zero
+  // visual change (the maths were already zeroing themselves out via "env").
+  // This alone took a MacBook Air integrated GPU from ~30fps back to 60fps
+  // with 5 skinned avatars + full-intensity particles.
   if (particleFx > 0.0) {
     let cyclePos = fract((time + noiseSeed) / PARTICLE_PERIOD);
     let ACTIVE_WINDOW = 0.35;
-    var env = 0.0;
     if (cyclePos < ACTIVE_WINDOW) {
-      env = sin((cyclePos / ACTIVE_WINDOW) * 3.14159265) * particleFx;
+      let env = sin((cyclePos / ACTIVE_WINDOW) * 3.14159265) * particleFx;
+
+      // orbit: rotate (wx,wz) around the shared vertical pole axis, and
+      // push outward along the same radius — one splat's whole launch arc
+      // is a spiral out-and-around then back, not just a spin-in-place.
+      //
+      // WANDER: the orbit above is otherwise a perfect, identical arc every
+      // single cycle — same shape, same altitude, every time. A live noise
+      // field (not a fixed per-splat offset, so it keeps drifting rather
+      // than just being "a different but still-fixed circle") nudges the
+      // angle, radius, AND altitude, so real orbits wobble off a perfect
+      // circle and don't all sit at the same height. wobT walks forward
+      // with time but at each splat's OWN rate (noiseSeed offsets it), so
+      // neighbouring splats wander independently, not in lockstep.
+      let wobT = time * 0.22 + noiseSeed;
+      let angleWobble = (noise3(vec3<f32>(wobT, sizeSeed * 9.0, 0.0)) - 0.5) * 0.35;
+      let radiusWobble = (noise3(vec3<f32>(wobT, sizeSeed * 9.0, 5.0)) - 0.5) * PARTICLE_ORBIT_RADIUS * 0.4;
+      let altWobble = (noise3(vec3<f32>(wobT, sizeSeed * 9.0, 9.0)) - 0.5) * PARTICLE_ORBIT_RADIUS * 0.6;
+
+      let dx = wx - poleX; let dz = wz - poleZ;
+      let r = length(vec2<f32>(dx, dz));
+      let baseAngle = atan2(dz, dx);
+      let newAngle = baseAngle + env * (PARTICLE_ORBIT_TURNS * 6.283185 + angleWobble);
+      let newR = max(0.0, r + env * (PARTICLE_ORBIT_RADIUS + radiusWobble));
+      wx = poleX + newR * cos(newAngle);
+      wz = poleZ + newR * sin(newAngle);
+      wy = wy + env * altWobble;
+
+      // HAIR-LIKE SECONDARY MOTION: while the whole creature is mid-spin
+      // (see creatureSpinAt below — spinFrom/To/Start/Dur are the JS-side
+      // spring-overshoot-judder animation driving the rigid at/yaw this
+      // splat was already placed at, BEFORE this function ever runs), only
+      // the currently-launched ("free") splats lag behind that rotation by
+      // a per-splat, perlin-varied ~200ms, then catch back up as the delay
+      // window closes — the "cheapo hair follow-through" effect. Stateless
+      // (no history buffer): the rigid spin is a deterministic function of
+      // t alone, so "value 200ms ago" is just the same function evaluated
+      // at an earlier t. Splats at rest (env=0, outside this branch) are
+      // completely unaffected — this only ever touches particles already
+      // mid-orbit.
+      let spinDelay = 0.2 + (noise3(vec3<f32>(noiseSeed * 1.7, sizeSeed * 4.0, 2.0)) - 0.5) * 0.1;
+      let spinNowA = creatureSpinAt(time, spinFrom, spinTo, spinStart, spinDur);
+      let spinLagA = creatureSpinAt(time - spinDelay, spinFrom, spinTo, spinStart, spinDur);
+      let appliedLag = (spinNowA - spinLagA) * env;
+      if (appliedLag != 0.0) {
+        let dx2 = wx - poleX; let dz2 = wz - poleZ;
+        let r2 = length(vec2<f32>(dx2, dz2));
+        let lagAngle = atan2(dz2, dx2) - appliedLag;
+        wx = poleX + r2 * cos(lagAngle);
+        wz = poleZ + r2 * sin(lagAngle);
+      }
+
+      // size: "grown to a size determined by perlin-per-splat" — sizeSeed
+      // is a spatially-coherent (not per-splat-independent) noise value
+      // baked once from this splat's rest position, so nearby splats swell
+      // together in patches rather than popcorn-popping individually.
+      //
+      // "sometimes big": sizeSeed alone gives each splat a FIXED personal
+      // ceiling, so the same splats are always the big ones, cycle after
+      // cycle — boring. cycleIndex (this splat's OWN cycle counter, via its
+      // own phase-shifted time) picks a FRESH random roll each 2-second
+      // cycle; most cycles are unboosted, but roughly the top quarter roll
+      // into a real growth spurt (up to 4x the normal peak).
+      let cycleIndex = floor((time + noiseSeed) / PARTICLE_PERIOD);
+      let bigRoll = noise3(vec3<f32>(noiseSeed * 3.1, cycleIndex, 4.7));
+      let bigBoost = 1.0 + smoothstep(0.75, 0.97, bigRoll) * 1.2;
+      scale = scale * (1.0 + env * sizeSeed * PARTICLE_SIZE_BOOST * bigBoost);
+
+      // twinkle: a fast, mostly-off sparkle that only fires while a splat
+      // is actually launched (scaled by env) — positive-only flashes
+      // (max(0,...)) so it reads as glints, not a smooth pulse. Bumps
+      // alpha (matching how the pipeline's OTHER twinkle param works —
+      // see the "twinkle > 0.0" block above; additive, not multiplicative,
+      // for the same reason documented there) and gives colour a small
+      // matching brighten so a glint doesn't look like invisible extra
+      // opacity on an unlit splat.
+      let sparklePhase = sin(time * 16.0 + noiseSeed * 6.0);
+      let sparkle = env * max(0.0, sparklePhase);
+      alpha = clamp(alpha + sparkle * 0.55, 0.0, 1.0);
+      color = color + vec3<f32>(sparkle * 0.5);
+
+      // colour/luminosity: a LIVE (not baked) noise field, so the shimmer
+      // itself drifts over time instead of being a fixed per-splat tint —
+      // "screw with colours, luminosity... following perlin dynamics and
+      // time functions". Two independent samples: one drives brightness,
+      // one drives a hue-ish push toward a shifting accent colour.
+      let shimmer = noise3(vec3<f32>(restPos.x*5.0, restPos.y*5.0, restPos.z*5.0 + time*0.5));
+      let brightness = 1.0 + env * (shimmer - 0.5) * 1.1;
+      color = color * brightness;
+      let hueN = noise3(vec3<f32>(restPos.z*5.0 + 19.0, time*0.35, restPos.x*5.0 + 7.0));
+      let accent = vec3<f32>(0.5 + 0.5*sin(hueN*6.283185), 0.5 + 0.5*sin(hueN*6.283185 + 2.094), 0.5 + 0.5*sin(hueN*6.283185 + 4.189));
+      color = mix(color, accent, env * 0.25);
     }
-
-    // orbit: rotate (wx,wz) around the shared vertical pole axis, and
-    // push outward along the same radius — one splat's whole launch arc
-    // is a spiral out-and-around then back, not just a spin-in-place.
-    //
-    // WANDER: the orbit above is otherwise a perfect, identical arc every
-    // single cycle — same shape, same altitude, every time. A live noise
-    // field (not a fixed per-splat offset, so it keeps drifting rather
-    // than just being "a different but still-fixed circle") nudges the
-    // angle, radius, AND altitude, so real orbits wobble off a perfect
-    // circle and don't all sit at the same height. wobT walks forward
-    // with time but at each splat's OWN rate (noiseSeed offsets it), so
-    // neighbouring splats wander independently, not in lockstep.
-    let wobT = time * 0.22 + noiseSeed;
-    let angleWobble = (noise3(vec3<f32>(wobT, sizeSeed * 9.0, 0.0)) - 0.5) * 0.35;
-    let radiusWobble = (noise3(vec3<f32>(wobT, sizeSeed * 9.0, 5.0)) - 0.5) * PARTICLE_ORBIT_RADIUS * 0.4;
-    let altWobble = (noise3(vec3<f32>(wobT, sizeSeed * 9.0, 9.0)) - 0.5) * PARTICLE_ORBIT_RADIUS * 0.6;
-
-    let dx = wx - poleX; let dz = wz - poleZ;
-    let r = length(vec2<f32>(dx, dz));
-    let baseAngle = atan2(dz, dx);
-    let newAngle = baseAngle + env * (PARTICLE_ORBIT_TURNS * 6.283185 + angleWobble);
-    let newR = max(0.0, r + env * (PARTICLE_ORBIT_RADIUS + radiusWobble));
-    wx = poleX + newR * cos(newAngle);
-    wz = poleZ + newR * sin(newAngle);
-    wy = wy + env * altWobble;
-
-    // size: "grown to a size determined by perlin-per-splat" — sizeSeed
-    // is a spatially-coherent (not per-splat-independent) noise value
-    // baked once from this splat's rest position, so nearby splats swell
-    // together in patches rather than popcorn-popping individually.
-    //
-    // "sometimes big": sizeSeed alone gives each splat a FIXED personal
-    // ceiling, so the same splats are always the big ones, cycle after
-    // cycle — boring. cycleIndex (this splat's OWN cycle counter, via its
-    // own phase-shifted time) picks a FRESH random roll each 2-second
-    // cycle; most cycles are unboosted, but roughly the top quarter roll
-    // into a real growth spurt (up to 4x the normal peak).
-    let cycleIndex = floor((time + noiseSeed) / PARTICLE_PERIOD);
-    let bigRoll = noise3(vec3<f32>(noiseSeed * 3.1, cycleIndex, 4.7));
-    let bigBoost = 1.0 + smoothstep(0.75, 0.97, bigRoll) * 1.2;
-    scale = scale * (1.0 + env * sizeSeed * PARTICLE_SIZE_BOOST * bigBoost);
-
-    // twinkle: a fast, mostly-off sparkle that only fires while a splat
-    // is actually launched (scaled by env) — positive-only flashes
-    // (max(0,...)) so it reads as glints, not a smooth pulse. Bumps
-    // alpha (matching how the pipeline's OTHER twinkle param works —
-    // see the "twinkle > 0.0" block above; additive, not multiplicative,
-    // for the same reason documented there) and gives colour a small
-    // matching brighten so a glint doesn't look like invisible extra
-    // opacity on an unlit splat.
-    let sparklePhase = sin(time * 16.0 + noiseSeed * 6.0);
-    let sparkle = env * max(0.0, sparklePhase);
-    alpha = clamp(alpha + sparkle * 0.55, 0.0, 1.0);
-    color = color + vec3<f32>(sparkle * 0.5);
-
-    // colour/luminosity: a LIVE (not baked) noise field, so the shimmer
-    // itself drifts over time instead of being a fixed per-splat tint —
-    // "screw with colours, luminosity... following perlin dynamics and
-    // time functions". Two independent samples: one drives brightness,
-    // one drives a hue-ish push toward a shifting accent colour.
-    let shimmer = noise3(vec3<f32>(restPos.x*5.0, restPos.y*5.0, restPos.z*5.0 + time*0.5));
-    let brightness = 1.0 + env * (shimmer - 0.5) * 1.1;
-    color = color * brightness;
-    let hueN = noise3(vec3<f32>(restPos.z*5.0 + 19.0, time*0.35, restPos.x*5.0 + 7.0));
-    let accent = vec3<f32>(0.5 + 0.5*sin(hueN*6.283185), 0.5 + 0.5*sin(hueN*6.283185 + 2.094), 0.5 + 0.5*sin(hueN*6.283185 + 4.189));
-    color = mix(color, accent, env * 0.25);
   }
 
   var out: array<f32, 14>;
@@ -446,7 +510,7 @@ function buildRestBuffer(avatar) {
 // storage buffer to write into (pass a GpuSplatScene drawable's outBuf).
 export function createGpuSkinnedAvatar(device, avatar, outBuffer) {
   const N = avatar.nodes.N;
-  const MORPH_OBJ_BASE = 21;
+  const MORPH_OBJ_BASE = 25;
   const JOINT_OBJ_BASE = MORPH_OBJ_BASE + N_MORPHS;
   const objFloats = JOINT_OBJ_BASE + N * 12;
   const pass = new SplatComputePass(device, { restStride: REST_STRIDE, wgslTransform: WGSL_TRANSFORM, maxObjFloats: objFloats });
@@ -456,16 +520,33 @@ export function createGpuSkinnedAvatar(device, avatar, outBuffer) {
 
   // params: { dissolve, twinkle, roundness, ghost, tint:[r,g,b], at:[x,y,z],
   //           yaw, sizeMult, fxIntensity, particleFx, pole:[x,z],
-  //           bones:{nodeName: quat}, morph:{arkitName: 0..1} } —
+  //           spin:{from,to,start,dur}, bones:{nodeName: quat},
+  //           morph:{arkitName: 0..1} } —
   // particleFx (0..1, default 0 — off, byte-identical to every existing
   // caller) is the master intensity for the orbit-launch-and-return
   // particle effect (see the WGSL PARTICLE FX block); pole is the
   // world-space (x,z) axis those particles orbit, default [0,0] (the
   // natural centre of a ring of avatars placed by FACET_R*sin/cos as the
-  // pentagram demo does).
+  // pentagram demo does). spin is ONLY consumed for the particle hair-lag
+  // (see the WGSL comment above creatureSpinAt) — the caller is expected
+  // to already have applied the rigid rotation itself to `at`/`yaw`;
+  // omitting it (default start=-999, dur=1, from=to=0) resolves to a
+  // constant 0 and touches nothing, so every existing caller is unaffected.
   return {
     splatCount: avatar.count,
-    dispatch(time, params = {}) {
+    // update(): all the CPU-side prep (joint palette FK walk, filling the
+    // OBJ float array) plus the buffer write — everything EXCEPT the
+    // actual GPU dispatch. encode(encoder): records this avatar's compute
+    // pass into a caller-owned encoder. Splitting these lets a scene with
+    // several avatars (demo-lam-pentagram-gpu.html's 5 facets) batch every
+    // update() first, then every encode() into ONE shared encoder before
+    // ONE device.queue.submit() for the whole frame — see
+    // GpuSplatScene.render()'s preEncode parameter. dispatch() below is
+    // the ORIGINAL, unsplit, one-object-one-submit entry point, kept
+    // byte-for-byte so demo-gpu-splats.html and demo-compositor.html (one
+    // avatar/critter each — batching wouldn't matter there) need no
+    // changes at all.
+    update(time, params = {}) {
       updateJointPalette(avatar, params.bones || {});
       obj[0] = time;
       obj[1] = params.dissolve || 0; obj[2] = params.twinkle || 0; obj[3] = params.roundness || 0; obj[4] = params.ghost || 0;
@@ -479,10 +560,20 @@ export function createGpuSkinnedAvatar(device, avatar, outBuffer) {
       obj[18] = params.particleFx || 0;
       const pole = params.pole || [0, 0];
       obj[19] = pole[0]; obj[20] = pole[1];
+      const spin = params.spin;
+      obj[21] = spin ? spin.from : 0; obj[22] = spin ? spin.to : 0;
+      obj[23] = spin ? spin.start : -999; obj[24] = spin ? spin.dur : 1;
       const morph = params.morph || {};
       for (let m = 0; m < N_MORPHS; m++) obj[MORPH_OBJ_BASE + m] = morph[MORPH_NAMES[m]] || 0;
       obj.set(avatar.J.subarray(0, N * 12), JOINT_OBJ_BASE);
-      pass.dispatch(obj);
+      pass.updateObj(obj);
+    },
+    encode(encoder) { pass.encode(encoder); },
+    dispatch(time, params = {}) {
+      this.update(time, params);
+      const encoder = device.createCommandEncoder();
+      pass.encode(encoder);
+      device.queue.submit([encoder.finish()]);
     },
   };
 }

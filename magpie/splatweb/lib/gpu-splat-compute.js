@@ -113,16 +113,37 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   // squash/facing, dissolve/twinkle/roundness/ghost...) — cheap to
   // re-upload every frame (this is dozens to a few hundred floats, not
   // per-splat).
-  dispatch(objData) {
-    const device = this.device;
-    device.queue.writeBuffer(this.objBuf, 0, objData);
-    const encoder = device.createCommandEncoder();
+  updateObj(objData) {
+    this.device.queue.writeBuffer(this.objBuf, 0, objData);
+  }
+
+  // Records this object's compute pass into a CALLER-OWNED encoder,
+  // without submitting — lets a scene with several objects (e.g. the
+  // pentagram demo's 5 avatars) batch every compute dispatch AND the
+  // render pass into ONE command buffer / one device.queue.submit() per
+  // frame instead of one submit() per object. Each submit() is a real,
+  // measured cost (command buffer creation + driver validation + kernel
+  // scheduling) — going from 6 submits/frame (5 avatars + render) to 1
+  // was worth doing before touching splat counts or fill rate at all.
+  // See GpuSplatScene.render()'s `preEncode` parameter for the call site.
+  encode(encoder) {
     const pass = encoder.beginComputePass();
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
     pass.dispatchWorkgroups(Math.ceil(this.count / 64));
     pass.end();
-    device.queue.submit([encoder.finish()]);
+  }
+
+  // Convenience one-shot: update + encode + submit its own single-use
+  // encoder. Kept as the ORIGINAL entry point so every existing caller
+  // (gpu-critter.js, demo-gpu-splats.html, demo-compositor.html) needs no
+  // changes — only demo-lam-pentagram-gpu.html, which actually has enough
+  // objects for batching to matter, uses updateObj()+encode() directly.
+  dispatch(objData) {
+    this.updateObj(objData);
+    const encoder = this.device.createCommandEncoder();
+    this.encode(encoder);
+    this.device.queue.submit([encoder.finish()]);
   }
 }
 
@@ -188,11 +209,26 @@ export class GpuSplatScene {
   // transparent instead of opaque, so this scene can be one layer in
   // lib/layer-compositor.js instead of always painting a solid
   // background. See lib/layers.js's createGpuSplatComputeLayer.
-  constructor(device, canvas, { background = [0.05, 0.05, 0.08], alpha = false } = {}) {
+  // resolutionScale: multiplies the capped-at-2 devicePixelRatio the
+  // canvas renders at (default 1 — byte-identical to every existing
+  // caller). MEASURED (Sept 2026, real Metal-backed WebGPU on a MacBook
+  // Air, demo-lam-pentagram-gpu.html's 100K alpha-blended splats across 5
+  // avatars): 22fps at a Retina window's native 3024x1888 buffer
+  // (resolutionScale=1, dpr=2) vs 56fps at the SAME window rendered at
+  // dpr=1 (1512x944 — a quarter the pixels) — CPU-side cost was
+  // unchanged (~1ms either way). That's a GPU fill-rate/overdraw
+  // bottleneck (fragment shader cost scaling with rendered pixel count),
+  // not something command-buffer batching or splat-count tricks fix —
+  // it's the single highest-leverage knob for hitting a higher fps
+  // target (e.g. WebXR headset refresh rates) with this many
+  // alpha-blended splats. Public and mutable — a caller can retune it
+  // live (see demo-lam-pentagram-gpu.html's "render scale" slider).
+  constructor(device, canvas, { background = [0.05, 0.05, 0.08], alpha = false, resolutionScale = 1 } = {}) {
     this.device = device;
     this.canvas = canvas;
     this.background = background;
     this.alpha = alpha;
+    this.resolutionScale = resolutionScale;
     this.ctx = canvas.getContext('webgpu');
     this.format = navigator.gpu.getPreferredCanvasFormat();
     this.ctx.configure({ device, format: this.format, alphaMode: alpha ? 'premultiplied' : 'opaque' });
@@ -220,12 +256,18 @@ export class GpuSplatScene {
   _resize() {
     const c = this.canvas;
     if (c.clientWidth === 0 && c.clientHeight === 0) return; // detached offscreen canvas — keep caller's explicit size
-    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const dpr = Math.min(devicePixelRatio || 1, 2) * this.resolutionScale;
     const w = Math.max(1, Math.round(c.clientWidth * dpr)), h = Math.max(1, Math.round(c.clientHeight * dpr));
     if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
   }
 
-  render() {
+  // preEncode(encoder), if given, runs AFTER the encoder is created but
+  // BEFORE the render pass is recorded — the batching hook for a caller
+  // with several compute-driven objects (SplatComputePass.encode() above)
+  // to fold every avatar's compute dispatch into this SAME command buffer,
+  // so the whole frame (N computes + 1 render) is exactly one
+  // device.queue.submit(). Omit it and this behaves exactly as before.
+  render(preEncode) {
     this._resize();
     const c = this.canvas, { pos, target, fovY } = this.camera;
     const view = lookAt(pos, target, [0, 1, 0]);
@@ -248,6 +290,7 @@ export class GpuSplatScene {
     const [br, bg, bb] = this.background;
     const clearValue = this.alpha ? { r: 0, g: 0, b: 0, a: 0 } : { r: br, g: bg, b: bb, a: 1 };
     const encoder = this.device.createCommandEncoder();
+    if (preEncode) preEncode(encoder);
     const pass = encoder.beginRenderPass({
       colorAttachments: [{ view: this.ctx.getCurrentTexture().createView(), clearValue, loadOp: 'clear', storeOp: 'store' }],
     });
