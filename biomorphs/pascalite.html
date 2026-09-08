@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Biomorphs (Pascal-lite) — running Dawkins' source</title>
+<style>
+  :root {
+    --bg: #111;
+    --fg: #eee;
+    --paper: #1a1a22;
+    --paper-border: #333;
+    --paper-hover: #2a2a35;
+    --accent: #f43f5e;
+    --muted: #888;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+    min-height: 100vh;
+    overscroll-behavior: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .breeder, .breeder * { touch-action: manipulation; }
+  header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #222;
+  }
+  header h1 { margin: 0 0 0.25rem 0; font-size: 1.05rem; }
+  header p  { margin: 0; color: var(--muted); font-size: 0.82rem; }
+  header a  { color: var(--accent); }
+  header code { background: #181820; padding: 1px 4px; border-radius: 3px; }
+
+  main {
+    padding: 1rem;
+    max-width: 980px;
+    margin: 0 auto;
+    display: grid;
+    gap: 1rem;
+  }
+  .breeder {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 0.5rem;
+    aspect-ratio: 1 / 1;
+  }
+  .cell {
+    background: var(--paper);
+    border: 1px solid var(--paper-border);
+    border-radius: 6px;
+    padding: 4px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cell:hover { background: var(--paper-hover); border-color: #555; }
+  .cell.parent { border-color: var(--accent); cursor: default; }
+  .cell.parent::after {
+    content: "parent";
+    position: absolute; bottom: 4px; right: 6px;
+    font-size: 0.65rem; color: var(--accent);
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .cell .label {
+    position: absolute; top: 4px; left: 6px;
+    font-size: 0.65rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    pointer-events: none;
+  }
+  .cell canvas { width: 100%; height: 100%; display: block; }
+
+  .controls { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+  button {
+    background: #222; color: var(--fg);
+    border: 1px solid #333; padding: 0.5rem 0.85rem;
+    border-radius: 4px; font: inherit; cursor: pointer;
+  }
+  button:hover { background: #2c2c2c; border-color: #555; }
+  button:active { transform: translateY(1px); }
+  button:disabled { opacity: 0.5; cursor: default; }
+
+  .status {
+    color: var(--muted); font-size: 0.8rem; min-height: 1.2em;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.5rem;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.75rem;
+  }
+  .stats .stat { background: #181820; border: 1px solid #2a2a30;
+                 border-radius: 4px; padding: 0.5rem 0.75rem; }
+  .stats .stat .k { color: var(--muted); font-size: 0.65rem;
+                    text-transform: uppercase; letter-spacing: 0.04em; }
+  .stats .stat .v { color: var(--fg); }
+
+  details.genome-pane {
+    background: #181820; border: 1px solid #2a2a30;
+    border-radius: 6px; padding: 0.5rem 0.75rem;
+  }
+  details.genome-pane summary { cursor: pointer; color: var(--muted); font-size: 0.8rem; }
+  pre.genome {
+    margin: 0.5rem 0 0 0;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.7rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    -webkit-user-select: text;
+    user-select: text;
+    color: var(--fg);
+  }
+  footer {
+    padding: 1rem 1.25rem;
+    color: var(--muted); font-size: 0.75rem;
+    border-top: 1px solid #222; margin-top: 2rem;
+  }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Biomorphs (Pascal-lite — Dawkins' Pascal source executed live)</h1>
+  <p>
+    The runtime here is <a href="pascalite.js">pascalite.js</a>, a small Pascal
+    interpreter written in JS. On load it <code>fetch()</code>es
+    <a href="third_party/monochrome_pascal/Globals">Globals</a> and
+    <a href="third_party/monochrome_pascal/Biomorphs">Biomorphs</a> verbatim
+    from <code>third_party/monochrome_pascal/</code> and executes
+    <code>Develop()</code> directly. Drawing routes through a host stub for
+    <code>PicLine</code> straight onto a canvas. Click any non-parent cell
+    to make it the new parent.
+  </p>
+</header>
+
+<main>
+  <div class="breeder" id="breeder" aria-label="Biomorph breeder grid"></div>
+
+  <div class="controls">
+    <button id="btn-rebreed">Rebreed</button>
+    <button id="btn-chess">Chess</button>
+    <button id="btn-tree">BasicTree</button>
+    <button id="btn-insect">Insect</button>
+    <button id="btn-monster">Hopeful Monster</button>
+    <a href="index.html"><button>JS port (cross-validate)</button></a>
+    <a href="canonical.html"><button>Canonical (JS)</button></a>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <details class="genome-pane">
+    <summary>Parent genome (as a Pascal <code>person</code> record)</summary>
+    <pre class="genome" id="genome"></pre>
+  </details>
+
+  <div class="status" id="status">Loading Pascal source…</div>
+</main>
+
+<footer>
+  Source: <a href="pascalite.js">pascalite.js</a> ·
+  Pascal: <a href="third_party/monochrome_pascal/Biomorphs">Biomorphs</a> ·
+  <a href="third_party/monochrome_pascal/Globals">Globals</a> ·
+  attribution at <code>third_party/monochrome_pascal/NOTICE.md</code>.
+</footer>
+
+<script type="module">
+  import { parse, makeInterpreter, defaultHost } from './pascalite.js';
+
+  const breederEl = document.getElementById('breeder');
+  const statsEl   = document.getElementById('stats');
+  const genomeEl  = document.getElementById('genome');
+  const statusEl  = document.getElementById('status');
+
+  // ---- Pascal source loader ----
+  // Mac classic line endings (CR) survive fetch fine — pascalite.js's lexer
+  // accepts CR / LF / CRLF interchangeably.
+  async function fetchSrc(name) {
+      const r = await fetch(`third_party/monochrome_pascal/${name}`, { cache: 'force-cache' });
+      if (!r.ok) throw new Error(`fetch ${name}: ${r.status}`);
+      return await r.text();
+  }
+
+  let interp = null;       // shared interpreter (one Pascal world for all cells)
+  let parentName = 'topan';
+
+  async function bootInterpreter() {
+      const t0 = performance.now();
+      const [globalsSrc, biomorphsSrc] = await Promise.all([
+          fetchSrc('Globals'),
+          fetchSrc('Biomorphs'),
+      ]);
+      // Build a fresh interpreter; reuse the parsed ASTs across renders.
+      const host = defaultHost(null);                  // ctx swapped per render
+      const i = makeInterpreter(host);
+      i._host = host;
+      i.load(parse(globalsSrc, 'Globals'));
+      i.load(parse(biomorphsSrc, 'Biomorphs'));
+      // Initialise the few globals the algorithmic procedures actually read.
+      i.global.get('mypensize').ref.value = 1;
+      // The 'topan' / 'leftan' / 'rightan' / 'target' Persons are declared in
+      // Globals; seed them with the canonical engineered defaults from
+      // Biomorphs.pas (matching Main.pas's startup code exactly).
+      i.invoke('basictree', [{ kind: 'ident', name: 'topan'    }], i.global);
+      i.invoke('insect',    [{ kind: 'ident', name: 'leftan'   }], i.global);
+      i.invoke('chess',     [{ kind: 'ident', name: 'rightan'  }], i.global);
+      const t1 = performance.now();
+      statusEl.textContent =
+          `Pascal interpreter loaded ${Math.round(t1 - t0)}ms · ` +
+          `${(globalsSrc.length + biomorphsSrc.length).toLocaleString()} bytes of Pascal · ` +
+          `${Object.keys(i.procs).length} procedures registered`;
+      return i;
+  }
+
+  // ---- breeder grid ----
+  //
+  // Centre cell is the parent; the other 8 are random siblings produced by
+  // Dawkins' own Reproduce procedure (from the Pascal source). Each click of
+  // a non-parent cell promotes that sibling to parent and draws 8 fresh
+  // siblings of it. This matches the original Watchmaker breeder UX.
+
+  function buildCells() {
+      breederEl.innerHTML = '';
+      for (let i = 0; i < 9; i++) {
+          const isParent = (i === 4);
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.idx = String(i);
+          if (isParent) {
+              cell.classList.add('parent');
+              cell.setAttribute('aria-label', 'Parent biomorph');
+          } else {
+              cell.setAttribute('role', 'button');
+              cell.setAttribute('tabindex', '0');
+              cell.setAttribute('aria-label', `Random sibling of parent`);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = 320;
+          canvas.height = 320;
+          cell.appendChild(canvas);
+          breederEl.appendChild(cell);
+      }
+  }
+
+  // ---- genome read/clone/mutate at the Pascal `person` level ----
+
+  function readPerson(name) {
+      const p = interp.global.get(name).ref.value;
+      const genes = (p.gene && p.gene.items) ? p.gene.items.slice() : [];
+      const dgene = (p.dgene && p.dgene.items) ? p.dgene.items.slice() : [];
+      return {
+          gene: genes,
+          dgene,
+          segNoGene: p.segnogene, segDistGene: p.segdistgene,
+          completeness: p.completenessgene, spokes: p.spokesgene,
+          trickle: p.tricklegene, mutSize: p.mutsizegene, mutProb: p.mutprobgene,
+      };
+  }
+
+  function copyPerson(srcName, dstName) {
+      const src = interp.global.get(srcName).ref.value;
+      const dst = interp.global.get(dstName).ref.value;
+      // Field-by-field deep copy (the interpreter uses one record object per slot).
+      for (const k of Object.keys(src)) {
+          const v = src[k];
+          if (v && v.__isArray) {
+              dst[k] = { __isArray: true, lo: v.lo, hi: v.hi, items: v.items.slice() };
+          } else if (v && typeof v === 'object') {
+              dst[k] = JSON.parse(JSON.stringify(v));
+          } else {
+              dst[k] = v;
+          }
+      }
+  }
+
+  // Generate one random sibling of `parentName` into `childName` by calling
+  // Dawkins' Reproduce procedure straight out of the loaded Pascal source.
+  function reproduceInto(parentName, childName) {
+      interp.invoke('reproduce',
+          [{ kind: 'ident', name: parentName },
+           { kind: 'ident', name: childName  }],
+          interp.global);
+  }
+
+  function hopefulMonster(name) {
+      const p = interp.global.get(name).ref.value;
+      const g = p.gene.items;
+      for (let i = 0; i < 8; i++) g[i] = Math.floor(Math.random() * 26) - 13;
+      g[8] = 3 + Math.floor(Math.random() * 6);
+      const dg = p.dgene.items;
+      for (let i = 0; i < 10; i++) dg[i] = Math.floor(Math.random() * 3);
+      p.segnogene = 1 + Math.floor(Math.random() * 5);
+      p.segdistgene = 60 + Math.floor(Math.random() * 120);
+  }
+
+  // ---- render via Pascal Develop ----
+
+  function renderToCanvas(srcName, canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#1a1a22';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Two-pass fit-to-cell: first a measure pass with a fresh host,
+      // then re-render at the right scale.
+      const measure = newHost(null);
+      runDevelop(srcName, measure, canvas.width / 2, canvas.height / 2);
+      const m = measure.margin;
+      const w = Math.max(1, m.right - m.left);
+      const h = Math.max(1, m.bottom - m.top);
+      const pad = 12;
+      const scale = Math.min(
+          (canvas.width  - pad * 2) / w,
+          (canvas.height - pad * 2) / h,
+          3,
+      );
+      const fcx = (m.left + m.right) / 2;
+      const fcy = (m.top  + m.bottom) / 2;
+
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.scale(scale, scale);
+      ctx.translate(-fcx, -fcy);
+      const draw = newHost(ctx);
+      runDevelop(srcName, draw, fcx, fcy);
+      ctx.restore();
+      return draw.getSegs().length;
+  }
+
+  function newHost(ctx) {
+      const margin = { left: 0, right: 0, top: 0, bottom: 0 };
+      const host = defaultHost(ctx, { margin });
+      host.margin = margin;
+      // Swap the host's collaborator with the live interpreter's after init.
+      return host;
+  }
+
+  function runDevelop(personName, host, cx, cy) {
+      // Hot-swap the interpreter's host for this render.
+      const prev = interp._host;
+      interp._host = host;
+      // Re-install host bindings against the new host (only redo natives
+      // that need the host — randint, randswell, picline, toolboxStub).
+      interp.procs['picline']  = { kind: 'native', fn: (...a) => host.picline(...a) };
+      interp.procs['randint']  = { kind: 'native', fn: (n) => host.randint(n) };
+      interp.procs['randswell']= { kind: 'native', fn: (s) => host.randswell(s) };
+
+      // Reset margin
+      const margin = interp.global.get('margin').ref.value;
+      margin.left = cx; margin.right = cx; margin.top = cy; margin.bottom = cy;
+      host.margin.left = cx; host.margin.right = cx;
+      host.margin.top  = cy; host.margin.bottom = cy;
+
+      // Build a Point literal in scratch global slot.
+      interp.global.define('__here', {
+          type: { kind: 'named', name: 'point' },
+          ref: { value: { v: cy, h: cx } },
+      });
+
+      try {
+          interp.invoke('develop',
+              [{ kind: 'ident', name: personName },
+               { kind: 'ident', name: '__here'   }],
+              interp.global);
+      } finally {
+          interp._host = prev;
+      }
+  }
+
+  // ---- breeder driver ----
+
+  function paintParentMeta() {
+      const p = readPerson(parentName);
+      genomeEl.textContent = JSON.stringify({
+          gene: p.gene,
+          dgene: p.dgene,
+          segCount: p.segNoGene, segDist: p.segDistGene,
+          completeness: p.completeness, spokes: p.spokes,
+          trickle: p.trickle, mutSize: p.mutSize, mutProb: p.mutProb,
+      }, null, 2);
+      const stats = [
+          ['parent', parentName],
+          ['classic', p.gene.slice(0, 8).join(', ')],
+          ['depth (g9)', String(p.gene[8])],
+          ['segs', `${p.segNoGene} × ${p.segDistGene}`],
+      ];
+      statsEl.innerHTML = stats.map(([k, v]) =>
+          `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`
+      ).join('');
+  }
+
+  function rebreed() {
+      const cells = breederEl.querySelectorAll('.cell');
+      let totalLines = 0;
+      cells.forEach((cell, i) => {
+          const isParent = (i === 4);
+          const childName = isParent ? parentName : `__c${i}`;
+          if (!isParent) reproduceInto(parentName, childName);
+          totalLines += renderToCanvas(childName, cell.querySelector('canvas'));
+          cell._personName = childName;
+      });
+      paintParentMeta();
+      statusEl.textContent =
+          `Pascal Reproduce() spawned 8 siblings · Develop() drew ${totalLines} lines`;
+  }
+
+  // Pre-create 8 scratch person slots so reproduce() has room to write into.
+  function ensureScratchPersons() {
+      for (let i = 0; i < 9; i++) {
+          if (i === 4) continue;
+          const name = `__c${i}`;
+          if (!interp.global.has(name)) {
+              interp.global.define(name, {
+                  type: { kind: 'named', name: 'person' },
+                  ref: { value: JSON.parse(JSON.stringify(interp.global.get('topan').ref.value)) },
+              });
+          }
+      }
+  }
+
+  // Enable all 9 mutation channels (the global `Mut` boolean array) so
+  // Dawkins' Reproduce procedure mutates everything by default. MutProbGene
+  // is the per-gene mutation probability percent — the canonical genomes
+  // default to 10, which gives near-identical siblings; 50 gives the visible
+  // diversity the breeder UX depends on.
+  function enableAllMutations() {
+      const mut = interp.global.get('mut').ref.value;
+      for (let k = 1; k <= 9; k++) mut.items[k - mut.lo] = true;
+      for (const name of ['topan', 'leftan', 'rightan']) {
+          interp.global.get(name).ref.value.mutprobgene = 50;
+      }
+  }
+
+  // ---- interactions ----
+
+  breederEl.addEventListener('click', (ev) => {
+      const cell = ev.target.closest('.cell');
+      if (!cell || cell.classList.contains('parent')) return;
+      ev.stopPropagation();
+      copyPerson(cell._personName, parentName);
+      rebreed();
+  });
+
+  breederEl.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Enter' && ev.key !== ' ') return;
+      const cell = ev.target.closest('.cell');
+      if (!cell || cell.classList.contains('parent')) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      copyPerson(cell._personName, parentName);
+      rebreed();
+  });
+
+  document.getElementById('btn-rebreed').addEventListener('click', rebreed);
+
+  for (const [id, proc] of [['btn-chess','chess'], ['btn-tree','basictree'], ['btn-insect','insect']]) {
+      document.getElementById(id).addEventListener('click', () => {
+          interp.invoke(proc, [{ kind: 'ident', name: parentName }], interp.global);
+          rebreed();
+      });
+  }
+  document.getElementById('btn-monster').addEventListener('click', () => {
+      hopefulMonster(parentName);
+      rebreed();
+  });
+
+  // ---- boot ----
+
+  buildCells();
+  try {
+      interp = await bootInterpreter();
+      ensureScratchPersons();
+      enableAllMutations();
+      rebreed();
+  } catch (e) {
+      statusEl.textContent = `Pascal-lite bootstrap failed: ${e.message}`;
+      throw e;
+  }
+</script>
+
+</body>
+</html>

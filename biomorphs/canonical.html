@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Biomorphs — canonical genomes</title>
+<style>
+  :root {
+    --bg: #111;
+    --fg: #eee;
+    --paper: #1a1a22;
+    --paper-border: #333;
+    --accent: #f43f5e;
+    --muted: #888;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+    min-height: 100vh;
+    overscroll-behavior: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #222;
+  }
+  header h1 { margin: 0 0 0.25rem 0; font-size: 1.1rem; }
+  header p { margin: 0; color: var(--muted); font-size: 0.85rem; }
+  header a { color: var(--accent); }
+  main {
+    padding: 1rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--paper-border);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .card .canvas-wrap {
+    aspect-ratio: 1 / 1;
+    background: #1a1a22;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .card .meta {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #2a2a32;
+  }
+  .card h2 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    color: var(--accent);
+  }
+  .card .notes {
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin: 0 0 0.5rem 0;
+  }
+  .card .genome {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.7rem;
+    color: var(--fg);
+    background: #14141a;
+    padding: 0.5rem;
+    border-radius: 4px;
+    word-break: break-all;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  .toolbar {
+    display: flex;
+    gap: 0.5rem;
+    margin: 0.5rem 0 1rem 0;
+    flex-wrap: wrap;
+  }
+  button {
+    background: #222;
+    color: var(--fg);
+    border: 1px solid #333;
+    padding: 0.5rem 0.85rem;
+    border-radius: 4px;
+    font: inherit;
+    cursor: pointer;
+  }
+  button:hover { background: #2c2c2c; border-color: #555; }
+  footer {
+    padding: 1rem 1.25rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    border-top: 1px solid #222;
+    margin-top: 2rem;
+  }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Canonical biomorphs</h1>
+  <p>
+    Visual ground truth for verifying the JS port. These three genomes are
+    extracted from the Pascal constructors <code>Chess</code> /
+    <code>BasicTree</code> / <code>Insect</code> in
+    <a href="third_party/monochrome_pascal/Biomorphs">third_party/monochrome_pascal/Biomorphs</a>.
+    Each renders below at the same scale our breeder UI uses. Mismatches with
+    the names suggest specific fidelity gaps in the JS port.
+  </p>
+</header>
+
+<main>
+  <div class="toolbar">
+    <a href="index.html"><button>← Back to breeder</button></a>
+    <button id="btn-copy-all">Copy all genomes as JSON</button>
+  </div>
+
+  <div class="gallery" id="gallery"></div>
+</main>
+
+<footer>
+  Validation page · <a href="canonical.js">canonical.js</a> ·
+  <a href="biomorph.js">biomorph.js</a> ·
+  <a href="third_party/monochrome_pascal/Biomorphs">Pascal source</a>
+</footer>
+
+<script type="module">
+  import { CANONICAL } from './canonical.js';
+  import { renderInto } from './biomorph.js';
+
+  const galleryEl = document.getElementById('gallery');
+
+  function renderCard(key, entry) {
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const wrap = document.createElement('div');
+      wrap.className = 'canvas-wrap';
+      const canvas = document.createElement('canvas');
+      canvas.width = 480;
+      canvas.height = 480;
+      canvas.dataset.canonicalKey = key;
+      wrap.appendChild(canvas);
+
+      // Background
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#1a1a22';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Two-pass fit-to-canvas, mirroring the breeder's auto-fit logic.
+      const measure = document.createElement('canvas');
+      measure.width = canvas.width;
+      measure.height = canvas.height;
+      const mctx = measure.getContext('2d');
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const bbox = renderInto(entry.genome, mctx, cx, cy, { penSize: 1 });
+      const w = Math.max(1, bbox.right - bbox.left);
+      const h = Math.max(1, bbox.bottom - bbox.top);
+      const pad = 24;
+      const scale = Math.min(
+          (canvas.width  - pad * 2) / w,
+          (canvas.height - pad * 2) / h,
+          3,
+      );
+      const fbcx = (bbox.left + bbox.right) / 2;
+      const fbcy = (bbox.top  + bbox.bottom) / 2;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(scale, scale);
+      ctx.translate(-fbcx, -fbcy);
+      renderInto(entry.genome, ctx, fbcx, fbcy, { penSize: 1 });
+      ctx.restore();
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.innerHTML =
+          `<h2>${entry.name}</h2>` +
+          `<p class="notes">${entry.notes}</p>` +
+          `<div class="genome">${JSON.stringify(entry.genome)}</div>`;
+
+      card.appendChild(wrap);
+      card.appendChild(meta);
+      galleryEl.appendChild(card);
+  }
+
+  for (const [key, entry] of Object.entries(CANONICAL)) {
+      renderCard(key, entry);
+  }
+
+  document.getElementById('btn-copy-all').addEventListener('click', async () => {
+      const payload = Object.fromEntries(
+          Object.entries(CANONICAL).map(([k, v]) => [k, v.genome])
+      );
+      const text = JSON.stringify(payload, null, 2);
+      try {
+          await navigator.clipboard.writeText(text);
+          alert('Canonical genomes copied to clipboard.');
+      } catch {
+          // Clipboard might be blocked (insecure context, e.g. raw.githack)
+          // — show the text for manual copy.
+          prompt('Copy the JSON below:', text);
+      }
+  });
+</script>
+
+</body>
+</html>

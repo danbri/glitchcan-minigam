@@ -100,9 +100,9 @@ export function develop(genome, ctx, cx, cy, opts = {}) {
     ctx.strokeStyle = inkStyle;
     ctx.lineCap = 'round';
 
-    const trickle = Math.max(1, genome.trickle | 0);
+    const trickle = Math.max(1, Math.trunc(genome.trickle) || 1);
     let order = clampOrder(genome.classic[8]);
-    const segCount = Math.max(1, genome.segCount | 0);
+    const segCount = Math.max(1, Math.trunc(genome.segCount) || 1);
 
     // Margin tracker: grows as we draw, used by post-render symmetry passes.
     const margin = { left: cx, right: cx, top: cy, bottom: cy };
@@ -131,7 +131,7 @@ export function develop(genome, ctx, cx, cy, opts = {}) {
             const oldHere = here;
             here = {
                 x: oldHere.x,
-                y: oldHere.y + ((genome.segDist + incDistance) / trickle) | 0,
+                y: oldHere.y + Math.trunc((genome.segDist + incDistance) / trickle),
             };
             incDistance += extraDistance;
 
@@ -175,20 +175,37 @@ export function develop(genome, ctx, cx, cy, opts = {}) {
         if (upExtent > downExtent) margin.bottom = cy + upExtent;
         else                       margin.top    = cy - downExtent;
     }
-    if (genome.completeness === COMPLETENESS.DOUBLE) {
-        // The dx mirror in plugIn already gives bilateral symmetry on every
-        // branch step, but for SINGLE we want only one half — so DOUBLE is
-        // effectively the default. We keep this branch explicit so callers
-        // can flip it if they ever want a one-sided plant-like figure.
-    }
+
+    // NOTE: `completeness` (single vs double) is currently informational.
+    // The plugIn mirror entries (dx[0]/dx[1]/dx[7] = -dx[4]/-dx[3]/-dx[5])
+    // already give bilateral symmetry intrinsically, so the JS port always
+    // renders the equivalent of "double". A true SINGLE pass (one-sided,
+    // plant-like) would need a non-mirrored plugIn variant; not yet
+    // implemented.
 
     return margin;
 }
 
+// Bound classic genes to a reasonable range. The original Pascal stored
+// genes as 16-bit Integers; we bound a bit tighter to keep both the recursion
+// step deltas and the running-gene mutation pass well-behaved over many
+// generations of breeding.
+const CLASSIC_MIN = -127;
+const CLASSIC_MAX =  127;
+
 function clampOrder(v) {
-    if (v < 1)  return 1;
-    if (v > 12) return 12;       // MaxGene9 from Globals
-    return v | 0;
+    const n = Math.trunc(v);
+    if (!Number.isFinite(n) || n < 1) return 1;
+    if (n > 12) return 12;       // MaxGene9 from Globals
+    return n;
+}
+
+function clampClassic(v) {
+    const n = Math.trunc(v);
+    if (!Number.isFinite(n)) return 0;
+    if (n < CLASSIC_MIN) return CLASSIC_MIN;
+    if (n > CLASSIC_MAX) return CLASSIC_MAX;
+    return n;
 }
 
 // Recursive tree procedure. Splits at every step into "outer" (dir-1) and
@@ -204,8 +221,8 @@ function renderTree(ctx, x, y, lgth, dir, env) {
     const { dx, dy, trickle, penSize, thicknessRule, geneNine,
             oddOne, order, margin } = env;
 
-    const xnew = x + ((lgth * dx[dir]) / trickle) | 0;
-    const ynew = y + ((lgth * dy[dir]) / trickle) | 0;
+    const xnew = x + Math.trunc((lgth * dx[dir]) / trickle);
+    const ynew = y + Math.trunc((lgth * dy[dir]) / trickle);
 
     let thick;
     switch (thicknessRule) {
@@ -304,11 +321,11 @@ export const MUT_TYPE = {
 // Returns a new mutated genome.
 export function mutateGene(genome, typeKey, idx = 0, sign = +1) {
     const child = cloneGenome(genome);
-    const step = Math.max(1, child.mutSize | 0) * (sign < 0 ? -1 : +1);
+    const step = Math.max(1, Math.trunc(child.mutSize) || 1) * (sign < 0 ? -1 : +1);
     switch (typeKey) {
         case MUT_TYPE.CLASSIC_GENE: {
             const i = Math.max(0, Math.min(7, idx));
-            child.classic[i] += step;
+            child.classic[i] = clampClassic(child.classic[i] + step);
             break;
         }
         case MUT_TYPE.ORDER:
@@ -344,8 +361,8 @@ export function mutateGene(genome, typeKey, idx = 0, sign = +1) {
             child.trickle = Math.max(1, child.trickle + (sign < 0 ? -1 : +1));
             break;
         case MUT_TYPE.HOPEFUL_MONSTER: {
-            for (let i = 0; i < 9; i++) {
-                child.classic[i] = Math.floor(Math.random() * 13) - 6;
+            for (let i = 0; i < 8; i++) {
+                child.classic[i] = clampClassic(Math.floor(Math.random() * 13) - 6);
             }
             child.classic[8] = clampOrder(2 + Math.floor(Math.random() * 7));
             const states = [SHRINK, SAME, SWELL];

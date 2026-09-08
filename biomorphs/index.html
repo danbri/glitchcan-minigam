@@ -22,7 +22,15 @@
     color: var(--fg);
     font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
     min-height: 100vh;
+    /* iOS Safari: kill pull-to-refresh / scroll-chaining out to the host page. */
+    overscroll-behavior: none;
+    /* Disable long-press "look up" callout and text-selection on the whole UI. */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
+  /* Avoid double-tap zoom and the 300ms tap delay on the interactive grid. */
+  .breeder, .breeder * { touch-action: manipulation; }
   header {
     padding: 1rem 1.25rem;
     border-bottom: 1px solid #222;
@@ -238,12 +246,17 @@
   function buildCells() {
       breederEl.innerHTML = '';
       for (let i = 0; i < 9; i++) {
+          const slot = CHILD_SLOTS[i];
           const cell = document.createElement('div');
           cell.className = 'cell';
           cell.dataset.idx = String(i);
-          const slot = CHILD_SLOTS[i];
-          if (!slot) cell.classList.add('parent');
-          if (slot) {
+          if (!slot) {
+              cell.classList.add('parent');
+              cell.setAttribute('aria-label', 'Parent biomorph');
+          } else {
+              cell.setAttribute('role', 'button');
+              cell.setAttribute('tabindex', '0');
+              cell.setAttribute('aria-label', `Mutant ${slot.label} — activate to breed from this`);
               const lbl = document.createElement('span');
               lbl.className = 'label';
               lbl.textContent = slot.label;
@@ -258,6 +271,20 @@
       }
   }
 
+  // Single shared offscreen canvas for bbox measurement, reused across every
+  // paintCell call to avoid GC churn on rebreed.
+  let _measureCanvas = null;
+  let _measureCtx = null;
+  function measureCtx(w, h) {
+      if (!_measureCanvas) {
+          _measureCanvas = document.createElement('canvas');
+          _measureCtx = _measureCanvas.getContext('2d');
+      }
+      if (_measureCanvas.width !== w)  _measureCanvas.width  = w;
+      if (_measureCanvas.height !== h) _measureCanvas.height = h;
+      return _measureCtx;
+  }
+
   function paintCell(cell, genome) {
       const canvas = cell.querySelector('canvas');
       const ctx = canvas.getContext('2d');
@@ -267,12 +294,7 @@
       // re-render scaled to fit the cell.
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
-      // First pass: measure on a throwaway offscreen context so the on-screen
-      // canvas only shows the final, fitted figure.
-      const measure = document.createElement('canvas');
-      measure.width = canvas.width;
-      measure.height = canvas.height;
-      const mctx = measure.getContext('2d');
+      const mctx = measureCtx(canvas.width, canvas.height);
       const bbox = renderInto(genome, mctx, cx, cy, { penSize: 1 });
       const w = Math.max(1, bbox.right - bbox.left);
       const h = Math.max(1, bbox.bottom - bbox.top);
@@ -338,13 +360,33 @@
 
   // ---- interactions ----
 
+  function selectCell(cell) {
+      if (!cell || cell.classList.contains('parent')) return;
+      parentGenome = cloneGenome(cell._genome);
+      rebreed();
+  }
+
   breederEl.addEventListener('click', (ev) => {
       const cell = ev.target.closest('.cell');
       if (!cell) return;
-      if (cell.classList.contains('parent')) return;
-      parentGenome = cloneGenome(cell._genome);
-      rebreed();
+      ev.stopPropagation();
+      selectCell(cell);
   });
+
+  breederEl.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Enter' && ev.key !== ' ') return;
+      const cell = ev.target.closest('.cell');
+      if (!cell || cell.classList.contains('parent')) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      selectCell(cell);
+  });
+
+  // Swallow the touchend that precedes the click so iOS Safari doesn't fire
+  // both the synthetic click *and* whatever the embedding/host page wires up.
+  breederEl.addEventListener('touchend', (ev) => {
+      if (ev.target.closest('.cell')) ev.stopPropagation();
+  }, { passive: true });
 
   document.getElementById('btn-rebreed').addEventListener('click', rebreed);
 
