@@ -119,6 +119,7 @@ verified July 2026.
 | `splat-discovery` | `magpie/dbdb/skills/` | Gaussian splats for `magpie/dbdb`: licence-checking source scans, cutting pack elements, LOD pyramids, honest cost measurement. **Read its licence section first** |
 | `splat-catalogue` | `magpie/dbdb/skills/` | the asset store and the tools that fill it: pack.json vs subjects.json, hand-written vs derived, appearance tags, near-duplicate detection, catalog.html, and rendering fast with no GPU |
 | `splat-style` | `magpie/dbdb/skills/` | how a splat LOOKS: runtime grades/stylisation, floater cull, crisping via `setWorkBufferModifier`; and what is offline-only (style transfer, upscaling, gap fill, densification). **Read its silent-failure section first** |
+| `lam-face-pipeline` | `magpie/splatweb/skills/` | the LAM avatar face roster behind Pentulpa and the `demo-lam-*` treatments: converting a photo to a riggable Gaussian-splat head via a self-hosted LAM Space (`tools/lam-generate.py`), where source photos come from, roster wiring, attribution. **Read its ethics section first — synthetic faces only, never a real identifiable person** |
 | `lucid-scene-authoring` | `lucid/skills/` | scene JSON — primitives, CSG, transforms, `defs`/`ref`, params |
 | `lucid-renderer-interop` | `lucid/skills/` | across Mayfly (WebGL/GLSL) and Stinkyfish (WebGPU/WGSL) |
 | `lucid-rigging-and-physics` | `lucid/skills/` | `rig-evaluator.js`, the XPBD stacks, param uniforms |
