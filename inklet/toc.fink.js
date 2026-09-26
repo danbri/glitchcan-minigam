@@ -27,6 +27,7 @@ Choose your adventure! Each episode is half-finished in a different way.
 
 + [Burrow's End] -> hobbit_selected
 + [Diamond Cave] -> diamond_cave_selected
++ [Drift City] -> drift_city_selected
 + [Hampstead] -> hampstead_selected
 + [Maple Hollow] -> maple_hollow_selected
 + [Mudslide Mines] -> mudslidemines_selected
@@ -98,6 +99,15 @@ Awaken in a shimmering underground cavern. Collect gems, solve puzzles, and esca
 # IMAGE: glitchcan-grey-portrait-web.jpg
 
 + [enter Diamond Cave] -> external_story
+
+=== drift_city_selected ===
+# FINK: /glitchcan-minigam/drift-city/story/lamplighter.fink.js
+
+Drift City: The Lamplighter's Last Round
+
+A cosy mystery on Titan, on the night of the vote. The last flame-keeper of Chinatown has gone missing, and you send your old delivery drone out into the methane snow to find her. Made to be played inside a raymarched city; some clues are found by looking around it.
+
++ [enter Drift City] -> external_story
 
 === hampstead_selected ===
 # FINK: /glitchcan-minigam/inklet/hampstead.fink.js
