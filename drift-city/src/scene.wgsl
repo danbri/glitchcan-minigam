@@ -1079,7 +1079,8 @@ fn pedGait(kind: i32, dist: f32, key: i32) -> f32 { return dist / gaitLen(kind) 
 // one foot: (forward offset from the hip line, height above the ground) at leg phase lp
 fn gaitFoot(lp: f32, S: f32, sf: f32, lift: f32) -> vec2f {
   let u = fract(lp / 6.2831853);
-  if (u < sf) { return vec2f(S - 2.0 * S * u / sf, 0.0); }
+  // on methane ice, under a seventh of Earth's weight, a landing foot skids on a few centimetres before it grips
+  if (u < sf) { let k = clamp(u / (0.18 * sf), 0.0, 1.0); return vec2f(S - 2.0 * S * u / sf + 0.05 * S * sin(3.14159 * k), 0.0); }
   let w = (u - sf) / (1.0 - sf);
   return vec2f(-S + 2.0 * S * w * w * (3.0 - 2.0 * w), lift * sin(3.14159 * w));
 }
@@ -1127,7 +1128,7 @@ fn ik2(h: vec3f, f: vec3f, l1: f32, l2: f32, bend: vec3f) -> vec3f {
   let pr = normalize(bend - dir * dot(bend, dir) + vec3f(0.0, 1e-4, 0.0));
   return h + dir * a + pr * r;
 }
-struct HP { ph: f32, stride: f32, fl: f32, arm: f32, bulk: f32, lean: f32, spread: f32, trail: f32, armOut: f32, reach: f32, sf: f32, bob: f32 };
+struct HP { ph: f32, stride: f32, fl: f32, arm: f32, bulk: f32, lean: f32, spread: f32, trail: f32, armOut: f32, reach: f32, sf: f32, bob: f32, roll: f32, lag: f32 };
 // where a foot is: planted-foot gait when hp.sf > 0, else the old sine sweep (gliders and skaters, who are not walking)
 fn pedFoot(hp: HP, lg: i32) -> vec3f {
   let sg = select(-1.0, 1.0, lg == 1);
@@ -1153,13 +1154,23 @@ fn pedHuman(q: vec3f, hp: HP) -> f32 {
     leg = smin(leg, sdEll(q - mix(knee, foot, 0.28) - vec3f(0.0, 0.0, -0.012), vec3f(0.052, 0.09, 0.056) * b), 0.04);
     leg = min(leg, sdEll(q - knee - vec3f(0.0, 0.0, 0.035), vec3f(0.05, 0.05, 0.03) * b));
     d = min(d, pp(leg, 1));
-    let fq = q - foot - vec3f(0.0, -0.035, 0.065);
+    // the foot rolls: heel first at touchdown, heel up at push-off, toes raised through the swing
+    var fa = 0.0;
+    if (hp.sf > 0.0) {
+      let fu = fract((hp.ph + select(3.14159, 0.0, lg == 1)) / 6.2831853);
+      fa = 0.22 * (1.0 - smoothstep(0.0, 0.12, fu)) - 0.55 * smoothstep(hp.sf - 0.14, hp.sf, fu) * (1.0 - smoothstep(hp.sf, hp.sf + 0.2, fu)) + 0.25 * smoothstep(hp.sf + 0.2, 0.9, fu) * (1.0 - smoothstep(0.9, 1.0, fu));
+    }
+    let fv = q - foot;
+    let fyz = rot2(fv.yz, fa);
+    let fq = vec3f(fv.x, fyz.x, fyz.y) - vec3f(0.0, -0.035, 0.065);
     d = min(d, pp(sdBox(fq, vec3f(0.04 * b, 0.028 * b, 0.1)) - 0.022 * b, 2));
   }
   // the upper body, leaned forward about the hips, and turned a little against the stride (shoulders counter the hips)
   let yz = rot2(vec2f(q.y - 0.93, q.z), -hp.lean);
   let tw = rot2(vec2f(q.x, yz.y), 0.12 * sin(hp.ph) * step(0.001, hp.stride - 0.09));
-  let ub = vec3f(tw.x, yz.x + 0.93, tw.y);
+  // and rolled over whichever leg is carrying the weight
+  let rl = rot2(vec2f(tw.x, yz.x), hp.roll * sin(hp.ph));
+  let ub = vec3f(rl.x, rl.y + 0.93, tw.y);
   let pel = sdEll(ub - vec3f(0.0, 0.97, 0.0), vec3f(0.15, 0.1, 0.1) * b);
   let abd = sdRC(ub, vec3f(0.0, 1.0, 0.0), vec3f(0.0, 1.2, 0.01), 0.11 * b, 0.125 * b);
   let chest = sdEll(ub - vec3f(0.0, 1.3, 0.015), vec3f(0.165, 0.135, 0.105) * b);
@@ -1167,9 +1178,10 @@ fn pedHuman(q: vec3f, hp: HP) -> f32 {
   d = min(d, pp(sdRC(ub, vec3f(0.0, 1.4, 0.0), vec3f(0.0, 1.52, 0.012), 0.05, 0.042), 0));
   for (var lg = 0; lg < 2; lg++) {
     let sg = select(-1.0, 1.0, lg == 1);
-    let ap = hp.ph + select(0.0, 3.14159, lg == 1);
+    // arms swing against the legs, lagging behind them in the thick air, and bend as they come forward
+    let ap = hp.ph + select(0.0, 3.14159, lg == 1) - hp.lag;
     let sh = vec3f(0.175 * sg * b, 1.385, 0.0);
-    var hand = sh + vec3f(0.045 * sg, -0.52, -hp.arm * sin(ap) + 0.05);
+    var hand = sh + vec3f(0.045 * sg + 0.05 * hp.lag, -0.52 + 0.1 * max(0.0, -sin(ap)) * hp.arm / 0.22, -hp.arm * sin(ap) + 0.05);
     hand = mix(hand, vec3f(0.74 * sg, 1.34 + 0.06 * sin(hp.ph * 1.7), -0.06), hp.armOut);
     if (lg == 1) { hand = mix(hand, vec3f(0.04, 2.2, 0.2), hp.reach); }
     let elbow = ik2(sh, hand, 0.29, 0.27, normalize(vec3f(0.25 * sg, -0.2, -1.0)));
@@ -1219,8 +1231,8 @@ fn pedFigure(q: vec3f, kind: i32, ph: f32, key: i32) -> f32 {
     dd = min(dd, pp(min(sdRC(q, vec3f(-0.23, 1.1, -0.1), vec3f(-0.21, 1.74, -0.1), 0.03, 0.022), sdRC(q, vec3f(0.23, 1.1, -0.1), vec3f(0.21, 1.74, -0.1), 0.03, 0.022)), 10));
     dd = min(dd, pp(sdBox(q - vec3f(0.0, 1.42, -0.23), vec3f(0.15, 0.2, 0.07)) - 0.03, 4));
     dd = min(dd, pp(length(vec2f(length(q.xz) - 0.2, q.y - 1.9)) - 0.02, 6));
-    // the rider, waist up
-    let r = q - vec3f(0.0, 0.18, 0.0);
+    // the rider, waist up, riding the machine's steps a moment late (loosely strapped, in thick air)
+    let r = q - vec3f(0.0, 0.18 + 0.025 * sin(ph * 2.0 - 0.9), 0.0);
     dd = min(dd, pp(smin(sdRC(r, vec3f(0.0, 1.0, 0.0), vec3f(0.0, 1.2, 0.01), 0.12, 0.13), sdEll(r - vec3f(0.0, 1.3, 0.015), vec3f(0.17, 0.14, 0.11)), 0.06), 1));
     dd = min(dd, pp(sdRC(r, vec3f(0.0, 1.4, 0.0), vec3f(0.0, 1.52, 0.012), 0.05, 0.042), 0));
     dd = min(dd, pp(sdEll(r - vec3f(0.0, 1.62, 0.01), vec3f(0.085, 0.105, 0.095)), 0));
@@ -1240,7 +1252,8 @@ fn pedFigure(q: vec3f, kind: i32, ph: f32, key: i32) -> f32 {
     // an android in the old style, a head taller than the people around it: polished shell cinched at the waist,
     // a keel down the chest, lit rings at neck and waist, a masked face with a lit visor slit and a crest. It is
     // over-built for the gravity, so it shuffles in short, exact steps and turns its head in small jerks.
-    let q1 = q / 1.12;
+    let q1r = rot2(vec2f(q.x, q.y - 0.95), 0.025 * sin(ph));
+    let q1 = vec3f(q1r.x, q1r.y + 0.95, q.z) / 1.12;
     for (var lg = 0; lg < 2; lg++) {
       let sg = select(-1.0, 1.0, lg == 1);
       let lp = ph + select(3.14159, 0.0, lg == 1);
@@ -1282,11 +1295,12 @@ fn pedFigure(q: vec3f, kind: i32, ph: f32, key: i32) -> f32 {
     // a loper: a pressure suit, a bubble helmet, a life-support pack and weighted boots, bounding along with a hang
     // in every stride; the well-off bring a drone
     // the body rises between steps (both feet off the ground: the low-gravity lope); the feet stay planted
-    let h = gaitBob(ph, gaitSf(2), 0.07);
+    // a crouch at mid-stance (knees take the landing), a float between steps
+    let h = gaitBob(ph, gaitSf(2), 0.12) - 0.05;
     let ql = q - vec3f(0.0, h, 0.0);
     var hp: HP;
     hp.ph = ph; hp.stride = gaitS(2); hp.fl = 0.12; hp.arm = 0.22; hp.bulk = 1.3; hp.lean = 0.1; hp.spread = 0.0; hp.trail = 0.0; hp.armOut = 0.15; hp.reach = 0.0;
-    hp.sf = gaitSf(2); hp.bob = h;
+    hp.sf = gaitSf(2); hp.bob = h; hp.roll = 0.05; hp.lag = 0.6;
     dd = min(dd, pedHuman(ql, hp));
     let ub = pedUpper(ql, 0.1);
     dd = min(dd, pp(length(ub - vec3f(0.0, 1.64, 0.02)) - 0.165, 3));
@@ -1306,11 +1320,16 @@ fn pedFigure(q: vec3f, kind: i32, ph: f32, key: i32) -> f32 {
   } else if (kind == 3) {
     // a cape glider: thin enough, in air this thick, to hang on a cape between long, low hops; pitched forward,
     // arms out, legs trailing, a sleek helmet
-    let lift = 0.55 + 0.3 * sin(ph * 0.5);
+    // a real hop: a short touchdown (knees bent), then a long arc that rises fast and sinks slowly on the cape, the
+    // drag of the thick air stretching the fall; legs trail and arms spread only in the air
+    let hu = fract(ph / 12.566371);
+    var lift = -0.06 * sin(3.14159 * hu / 0.18);
+    if (hu >= 0.18) { let w = pow((hu - 0.18) / 0.82, 0.65); lift = 0.9 * 4.0 * w * (1.0 - w); }
+    let fly = smoothstep(0.0, 0.2, lift);
     let ql = q - vec3f(0.0, lift, 0.0);
-    let lean = 0.55;
+    let lean = 0.2 + 0.38 * fly;
     var hp: HP;
-    hp.ph = ph; hp.stride = 0.08; hp.fl = 0.0; hp.arm = 0.0; hp.bulk = 0.85; hp.lean = lean; hp.spread = 0.0; hp.trail = 0.32; hp.armOut = 1.0; hp.reach = 0.0;
+    hp.ph = ph; hp.stride = 0.08; hp.fl = 0.0; hp.arm = 0.0; hp.bulk = 0.85; hp.lean = lean; hp.spread = 0.0; hp.trail = 0.32 * fly; hp.armOut = 0.35 + 0.65 * fly; hp.reach = 0.0;
     dd = min(dd, pedHuman(ql, hp));
     let ub = pedUpper(ql, lean);
     dd = min(dd, pp(sdEll(ub - vec3f(0.0, 1.63, -0.02), vec3f(0.1, 0.115, 0.14)), 1));
@@ -1326,6 +1345,7 @@ fn pedFigure(q: vec3f, kind: i32, ph: f32, key: i32) -> f32 {
     // a skater towed along by a tether from the cable overhead, leaning into it, pushing off side to side
     var hp: HP;
     hp.ph = ph; hp.stride = 0.1; hp.fl = 0.05; hp.arm = 0.3; hp.bulk = 1.15; hp.lean = 0.3; hp.spread = 0.16; hp.trail = 0.0; hp.armOut = 0.0; hp.reach = 1.0;
+    hp.roll = 0.1; hp.lag = 0.3;
     dd = min(dd, pedHuman(q, hp));
     let ub = pedUpper(q, 0.3);
     dd = min(dd, pp(sdEll(ub - vec3f(0.0, 1.64, 0.0), vec3f(0.12, 0.12, 0.13)), 1));

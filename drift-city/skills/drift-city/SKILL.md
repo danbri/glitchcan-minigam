@@ -81,6 +81,23 @@ included, rose 0.3 m off it every step: "figures float around". Only the body bo
 `tests/walkers.html` walks the figures at the ground stripes' 1.1 m/s, so a planted foot must hold still on a stripe;
 `?zoom=0.45` comes closer.
 
+### Moving like Titan: low gravity, thick air, ice
+
+Gravity is a seventh of Earth's, the air four times as dense, the ground often methane ice. What the figures do
+about it (all in `pedHuman` / `pedFigure`, driven by the planted-foot gait above):
+
+- **Skid then grip**: `gaitFoot` slides a landing foot on a few centimetres before it locks (the planted-foot rule
+  still holds for the rest of the stance).
+- **Heel-toe roll**: the foot box rotates about the ankle: heel first at touchdown, heel up at push-off, toes raised
+  in the swing.
+- **Crouch and float**: the loper's body dips 5 cm at mid-stance (knees take the landing) and rises between steps
+  (`gaitBob`, `hp.bob`, which `pedFoot` takes off the foot height so the feet stay on the ground).
+- **Thick air**: arms lag behind the legs (`hp.lag`, radians of phase) and bend as they come forward; the torso rolls
+  over the standing leg (`hp.roll`); an exoskeleton's rider rides its steps a moment late.
+- **Cape gliders hop for real**: a short touchdown with bent knees, then a long arc that rises fast and sinks slowly
+  (`pow(w, 0.65)`), legs trailing and arms spread only in the air. Their footfall sound plays at each landing
+  (`floor(ph / 4 pi)` in `audioFeet`). Known: at touchdown the cape stands up as a flat sheet behind the glider.
+
 ## Titan design brief
 
 - Gravity is about a seventh of Earth's; the air is four times as dense and at -179 °C. People outdoors wear pressure

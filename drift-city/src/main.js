@@ -306,7 +306,7 @@ function audioFeet(dt) {
   for (const w0 of FEET.list) {
     // re-place each walker now: they move between the lists' updates
     const w = walkerAt(w0.cx, w0.cz, w0.ln, w0.ki, clock, w0.dens) || w0;
-    const step = w.kind === 3 ? Math.floor((w.ph * 0.5 + Math.PI / 2) / (2 * Math.PI)) : Math.floor(w.ph / Math.PI);
+    const step = w.kind === 3 ? Math.floor(w.ph / (4 * Math.PI)) : Math.floor(w.ph / Math.PI);
     const prev = FEET.last.get(w.id);
     seen.set(w.id, step);
     if (prev === undefined || step === prev || made >= 4) continue;
