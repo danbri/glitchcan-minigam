@@ -1220,7 +1220,8 @@ fn pedQ(p: vec3f) -> vec4f {
     let n = floor(per / 4.4);
     let spacing = per / n;
     let pace = pedPace(c, ln);
-    let sp = sP - dir * (u.time * pace + 3.0 * (vnoise(vec2f(u.time * 0.07, f32(c.x * 13 + c.y * 7 + ln)), 181) - 0.5));
+    // the drift and the sway below scale with the pace, so no walker ever slides backwards (at most 0.77 of the pace)
+    let sp = sP - dir * (u.time * pace + 3.0 * pace * (vnoise(vec2f(u.time * 0.07, f32(c.x * 13 + c.y * 7 + ln)), 181) - 0.5));
     let k = floor(sp / spacing);
     let ki = i32(((k % n) + n) % n);
     let key = ki * 2 + ln;
@@ -1232,7 +1233,8 @@ fn pedQ(p: vec3f) -> vec4f {
     if (hsh(c.x * 31 + key, c.y, 95) < dens) {
       let kind = pedKind(c, ln, key);
       // the walker's own frame faces the way it moves: +z along the ring for one lane, -z for the other
-      let sway = select(0.8 * sin(u.time * (0.3 + 0.4 * hsh(key, c.x + c.y * 7, 182)) + f32(key)), 0.0, kind == 4);
+      let sw = 0.3 + 0.4 * hsh(key, c.x + c.y * 7, 182);
+      let sway = select(min(0.8, 0.45 * pace / sw) * sin(u.time * sw + f32(key)), 0.0, kind == 4);
       let q = vec3f(m - R, p.y, dir * (ds - sway));
       let dd = pedFigure(q, kind, pedPhase(kind, pace, key), key);
       d = min(d, dd * 0.9);

@@ -41,6 +41,13 @@ the same way in both lanes, so the local z must be `dir * ds`. The original code
 walker on the outer ring moved backwards. Any new kind of figure must face +z, and any change to the lane maths must
 keep `q.z = dir * (ds - sway)`.
 
+A second way to walk backwards: each walker's place in the line drifts (a slow noise) and sways (a sine), and both
+move it along the ring. Before September 2026 they did not scale with the pace, so a slow walker (0.5 m/s) could be
+overtaken by its own wobble (up to 0.88 m/s) and slide backwards while facing forwards: 8% of walkers, 0.17% of the
+time, measured with a copy of the formula in JS. Both now scale with the pace, so the wobble can never exceed 0.77 of
+it. Keep any new motion term below the pace, and check facing numerically rather than from screenshots: at walker
+scale a still frame cannot show which way a figure moves.
+
 Kinds (`pedKind`): 0 exoskeleton with rider, 1 android, 2 loper in weighted boots, 3 cape glider, 4 skater on a
 cable. Lanes where `pedPulley` is true have a cable at 4.4 m and only skaters, each on a tether and pulley, at 2.6 times the pace. The material
 (`case 24` in the surface switch) recomputes kind, phase and lift from the same functions, and keys colours on height
