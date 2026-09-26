@@ -107,21 +107,22 @@ The pattern Drift city uses:
 VAR in_world = false          // the game page sets this true before every Continue()
 
 === stall ===
-# hotspot: ticket @ a ferry ticket frozen into a puddle @ 38 @ -18
+# hotspot: ticket @ a ferry ticket frozen in a puddle @ 38 @ -18
 ...
-+ {not in_world and not ticket} [Look around carefully] -> look_ticket
++ {not in_world and not ticket} [Look around] -> look_ticket
 * {not heard_bo} [Ask Auntie Bo what she saw] -> bo
 
 === look_ticket ===
 ~ ticket = true
-You look around carefully, and notice a ferry ticket frozen into a puddle.
+You find a ferry ticket frozen in a puddle.
 -> stall
 ```
 
 Rules:
 
 - The text route does exactly what the world does: set the same VAR, re-enter
-  the same scene. Do not write a second plot.
+  the same scene. Do not write a second plot. Its line reuses the hotspot label
+  (the page shows "You notice <label>."), so the two routes read the same.
 - Guard it with the flag, so players in the world are not offered a shortcut.
   Set the flag in the page before every `Continue()`, because `ResetState()`
   resets it.

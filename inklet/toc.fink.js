@@ -105,7 +105,7 @@ Awaken in a shimmering underground cavern. Collect gems, solve puzzles, and esca
 
 Drift City: The Lamplighter's Last Round
 
-A cosy mystery on Titan, on the night of the vote. The last flame-keeper of Chinatown has gone missing, and you send your old delivery drone out into the methane snow to find her. Made to be played inside a raymarched city; some clues are found by looking around it.
+Titan, the night before the vote. The last flame-keeper is missing. Send your drone into the methane snow to find her.
 
 + [enter Drift City] -> external_story
 
