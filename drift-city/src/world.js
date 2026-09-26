@@ -219,7 +219,18 @@ function zoneAt(cx, cz) {
 }
 // Landmarks are placed, not scattered: one Lumen pyramid and one ringed spire in the financial core, one plain
 // megatower over the dorms (big-block coordinates, 8 x 8 cells). Mirrored in scene.wgsl (giantHasW, the ring).
-const PYRAMID_CELL = [-6, -3], PAGODA_CELL = [-35, 16], SPIRE_BLOCK = [0, -1], GIANT_BLOCKS = [[0, -1], [3, 3]];
+const PYRAMID_CELL = [-6, -3], PAGODA_CELL = [-35, 16], SPIRE_BLOCK = [0, -1], GIANT_BLOCKS = [[0, -1]];
+// The Hive: the cattle-class pod block, a patched, hulking castle 620 x 420 m and 240 m tall on the dorms' outer edge,
+// looming over the nicer city. Big blocks x 2..4, z 5..6 (centre HIVE_C); mirrored as isHive and hiveSDF in scene.wgsl.
+const HIVE_C = [728, 1248], HIVE_H = 240;
+function hiveHas(bx, bz) { const wx = wrapN(bx, 96), wz = wrapN(bz, 96); return !!REG.city && wx >= 2 && wx <= 4 && wz >= 5 && wz <= 6; }
+// its silhouette for the distant skyline: plinth, body, corner towers and the off-centre keep (local metres)
+function hiveTopAt(lx, lz) {
+  const ax = Math.abs(lx), az = Math.abs(lz);
+  if ((ax > 217 && ax < 293 && az > 112 && az < 188) || (Math.abs(lx + 40) < 60 && Math.abs(lz - 10) < 50)) return HIVE_H;
+  if (ax < 270 && az < 170) return 190;
+  return ax < 300 && az < 196 ? 60 : 0;
+}
 // Hillside letters spelling DRIFT CITY on the first hill north of the city, facing it.
 const SIGN = (() => {
   for (const dir of [-1, 1]) for (const x0 of [0, -20, 20, -40, 40, -60, 60]) {
@@ -288,11 +299,11 @@ function treeDens(x, z) { return sstep(0.12, 0.55, forestF(x, z)); }
 // the Assembly Hall stands on one giant cell about 1 km south-east of the centre
 function hallAt(bx, bz) { return REG.city && wrapN(bx, 96) === 3 && wrapN(bz, 96) === -4 && Math.hypot(repX((bx + 0.5) * BIG) + REG.ox, repZ((bz + 0.5) * BIG) + REG.oz) < 14000; }
 function giantHas(bx, bz) {
-  if (hallAt(bx, bz)) return true;
+  if (hallAt(bx, bz) || hiveHas(bx, bz)) return true;
   const wx = wrapN(bx, 96), wz = wrapN(bz, 96);
   return REG.city && GIANT_BLOCKS.some((g) => g[0] === wx && g[1] === wz);
 }
-function giantH(bx, bz) { return hallAt(bx, bz) ? 96 : 150 + 110 * hsh(wrapN(bx, 96), wrapN(bz, 96), 21); }
+function giantH(bx, bz) { return hallAt(bx, bz) ? 96 : hiveHas(bx, bz) ? HIVE_H : 150 + 110 * hsh(wrapN(bx, 96), wrapN(bz, 96), 21); }
 
 function computeBase(cx0, cz0, lite) {
   const cx = wrapS(cx0), cz = wrapS(cz0);
@@ -313,6 +324,7 @@ function computeBase(cx0, cz0, lite) {
   }
   const bx = Math.floor((cx + 0.5) / 8), bz = Math.floor((cz + 0.5) / 8);
   const ax = cx - bx * 8, az = cz - bz * 8;
+  if (hiveHas(bx, bz)) { o.typ = 6; o.treeTop = 0; return fin(0); }
   if (ax >= 1 && ax <= 6 && az >= 1 && az <= 6 && hallAt(bx, bz)) { o.typ = 6; o.treeTop = 0; return fin(0); }
   if ((ax === 3 || ax === 4) && (az === 3 || az === 4) && giantHas(bx, bz)) { o.typ = 6; return fin(0); }
   const F = forestF(ccx, ccz);
@@ -447,7 +459,7 @@ function farInfo(cx, cz) {
     case 3: return [o.h, 3.5, 3.5, st];
     case 4: return [o.h, 6, 6, st];
     case 5: return [14, 12.5, 12.5, st];
-    case 6: { const w = wrapS(cx), z = wrapS(cz); return [giantH(Math.floor((w + 0.5) / 8), Math.floor((z + 0.5) / 8)), 13, 13, st]; }
+    case 6: { const w = wrapS(cx), z = wrapS(cz), bx = Math.floor((w + 0.5) / 8), bz = Math.floor((z + 0.5) / 8); if (hiveHas(bx, bz)) { const t = hiveTopAt((w + 0.5) * C - HIVE_C[0], (z + 0.5) * C - HIVE_C[1]); return t > 0 ? [t, 13, 13, st] : null; } return [giantH(bx, bz), 13, 13, st]; }
     case 8: return [o.h, 6.5, 6.5, st];
     case 9: return v < 0.22 ? [o.h, 3.5, 3.5, st] : v < 0.4 ? [o.h, 2.5, 2.5, st] : [o.h, v < 0.75 ? 8.5 : 9, v < 0.75 ? 8.5 : 9, st];
     case 10: return v < 0.28 ? [o.h, 3, 3, st] : v < 0.43 ? [2, 9, 9, st] : v < 0.63 ? [18, 9, 6, st] : v < 0.78 ? [15, 9, 9, st] : v < 0.9 ? [20, 5, 5, st] : [34, 3, 3, st];

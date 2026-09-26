@@ -32,6 +32,12 @@ function buildPlaces() {
   // scan the city in rings outward from the centre, collecting one of each kind per district
   const seen = new Set();
   const want = (key) => { if (seen.has(key)) return false; seen.add(key); return true; };
+  // the Hive, from a Lumen roof across the way: the view that says which side of town you are on
+  {
+    const cam = roofView(28, 28, 0);
+    cam.yaw = Math.atan2(HIVE_C[1] - cam.z, HIVE_C[0] - cam.x); cam.pitch = 0.08;
+    add("hive", "Facing the Hive, Lumen roofs", "Across the gap, the pod block fills the sky: patched walls, a million little windows, and the boards telling everyone inside to sleep more.", cam);
+  }
   // Chinatown's pagoda: placed (PAGODA_CELL in world.js), so its view is too
   {
     const cx = wrapS(PAGODA_CELL[0]), cz = wrapS(PAGODA_CELL[1]);
@@ -54,7 +60,7 @@ function buildPlaces() {
       else if (o.typ === 13 && want("pyramid")) add("pyramid", "Corporate pyramid, " + dn, "A stepped pyramid of glass and stone on " + st + "; security drones idle at its apex.", facing(cx, cz, side));
       else if (o.typ === 9 && want("works" + zn)) { add("works_" + zn, "The works, " + dn, "Pipes, stacks and pressure domes on " + st + ": the city's heat and air are made here.", facing(cx, cz, side)); }
       else if (o.typ === 10 && want("apron")) add("spaceport_apron", "Spaceport apron", "Landing pads and fuel lines off " + st + ", under the long light of Saturn.", facing(cx, cz, side));
-      else if (o.typ === 6 && giantHas(Math.floor(cx / 8), Math.floor(cz / 8)) && !hallAt(Math.floor(cx / 8), Math.floor(cz / 8)) && want("giant" + zn)) add("giant_" + zn, "Foot of a megatower, " + dn, "The plaza at the base of a tower that vanishes into the haze above " + st + ".", facing(cx, cz, side));
+      else if (o.typ === 6 && giantHas(Math.floor(cx / 8), Math.floor(cz / 8)) && !hallAt(Math.floor(cx / 8), Math.floor(cz / 8)) && !hiveHas(Math.floor(cx / 8), Math.floor(cz / 8)) && want("giant" + zn)) add("giant_" + zn, "Foot of a megatower, " + dn, "The plaza at the base of a tower that vanishes into the haze above " + st + ".", facing(cx, cz, side));
       else if ((o.typ === 1 || o.typ === 2) && o.h > 20 && want("street" + zn)) add("street_" + zn, st + ", " + dn, "A street corner in the " + dn + ": tube traffic humming past, windows stacked up into the haze.", facing(cx, cz, side));
       else if ((o.typ === 1 || o.typ === 2) && o.h > 60 && want("roof" + zn)) add("roof_" + zn, "Rooftop above " + (zn === 3 ? "" : "the ") + dn, "A rooftop high over " + st + ", " + (zn === 3 ? "" : "the ") + dn + " spread out below.", roofView(cx, cz, a + Math.PI));
       else if (o.egg >= 21 && o.egg <= 23 && want("roofegg")) add("roof_oddity", "A rooftop garden", "Someone keeps a garden up here, with a view across the " + dn + ".", roofView(cx, cz, a));
