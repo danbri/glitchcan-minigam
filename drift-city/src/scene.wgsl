@@ -33,7 +33,7 @@ const TN: i32 = 384;
 struct EV { beamPos: array<vec4f, 4>, beamDir: array<vec4f, 4>, smoke: array<vec4f, 4>, koi: vec4f, koiDir: vec4f, blimp: vec4f, blimpDir: vec4f, bo: vec4f,
   sky: vec4f, meteorA: vec4f, meteorB: vec4f, fw: array<vec4f, 3>, fwCol: array<vec4f, 3>, launch: vec4f, balloon: array<vec4f, 3>,
   sat: vec4f, ringN: vec4f, moonA: vec4f, moonB: vec4f,
-  blk: vec4f, steam: vec4f };
+  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8> };
 struct EscG { ok: bool, a: vec3f, b: vec3f };
 @group(0) @binding(11) var<uniform> ev: EV;
 // flocking creatures: count in n.x; per creature a[2i] = position (m) and size, a[2i+1] = heading and flap phase
@@ -328,13 +328,17 @@ fn isHall(b: vec2i) -> bool {
   let bw = vec2i(wrapN(b.x, 96), wrapN(b.y, 96));
   return u.reg.w > 0.5 && bw.x == 3 && bw.y == -4 && length(repP((vec2f(b) + 0.5) * BIG) + u.reg.xy) < 14000.0;
 }
+fn isFab(b: vec2i) -> bool { return u.reg.w > 0.5 && wrapN(b.x, 96) == 5 && wrapN(b.y, 96) == 5; }
+// the beam from the orbital power station, pointing up it (BEAM_DIR in world.js), and its receiver cup
+const BEAM_B: vec3f = vec3f(-0.3215, 0.9186, 0.2297);
+const FAB_W: vec2f = vec2f(1144.0, 1144.0);
 fn giantHasW(b: vec2i) -> bool {
-  if (isHall(b) || isHive(b)) { return true; }
+  if (isHall(b) || isHive(b) || isFab(b)) { return true; }
   let bw = vec2i(wrapN(b.x, 96), wrapN(b.y, 96));
-  // placed, not scattered (GIANT_BLOCKS in world.js): the ringed spire in the core, a plain one over the dorms
-  return u.reg.w > 0.5 && ((bw.x == 0 && bw.y == -1) || (bw.x == 3 && bw.y == 3));
+  // placed, not scattered (GIANT_BLOCKS in world.js): the ringed spire in the core
+  return u.reg.w > 0.5 && bw.x == 0 && bw.y == -1;
 }
-fn giantTop(b: vec2i) -> f32 { if (isHall(b)) { return 96.0; } if (isHive(b)) { return 272.0; } return 150.0 + 110.0 * hsh(wrapN(b.x, 96), wrapN(b.y, 96), 21); }
+fn giantTop(b: vec2i) -> f32 { if (isHall(b)) { return 96.0; } if (isHive(b)) { return 272.0; } if (isFab(b)) { return 124.0; } return 150.0 + 110.0 * hsh(wrapN(b.x, 96), wrapN(b.y, 96), 21); }
 
 // terrain samples: one texel per block corner, bilinear between them
 fn terrV(v: vec2i) -> vec4f { return textureLoad(terrTex, wrapT(v), 0); }
@@ -2536,6 +2540,81 @@ fn holoFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
   return col;
 }
 
+// ---------- the pod fab ----------
+// Where the Hive's capsule homes are made: two long sawtooth-roofed sheds, a yard of finished pods stacked three
+// high, two cooling towers, and in the middle a tapering 100 m tower carrying the receiver cup that catches the beam
+// from the orbital power station. Block-local metres. Parts: 57 metal, 58 receiver (glowing), 59 concrete, 63 pods.
+fn fabSDF(q: vec3f) -> vec2f {
+  // sheds at x = +-70, 30 m wide, 160 m long, 16 m walls under a sawtooth roof
+  let sq = vec3f(abs(q.x) - 70.0, q.y, q.z);
+  let saw = 16.0 + 5.0 * fract(q.z / 12.0);
+  var r = vec2f(max(sdBox(sq - vec3f(0.0, 11.0, 0.0), vec3f(15.0, 11.0, 80.0)), q.y - saw) * 0.8, 57.0);
+  // the pod yard: capsules 2.4 x 2.4 x 4.4 m in rows, three high
+  let yb = sdBox(q - vec3f(0.0, 3.6, -75.0), vec3f(40.0, 3.6, 13.0));
+  if (yb < r.x + 2.0) {
+    let pc = vec3f(q.x - 3.0 * round(q.x / 3.0), q.y - 1.2 - 2.4 * clamp(round((q.y - 1.2) / 2.4), 0.0, 2.0), q.z + 75.0 - 5.2 * clamp(round((q.z + 75.0) / 5.2), -2.0, 2.0));
+    let pod = max(sdBox(pc, vec3f(1.15, 1.12, 2.1)) - 0.25, yb);
+    if (pod < r.x) { r = vec2f(pod, 63.0); }
+  }
+  // cooling towers: hyperbolic shells, open at the top
+  let ct = vec3f(abs(q.x) - 36.0, q.y, q.z - 70.0);
+  let cr = 11.0 + 0.0035 * (q.y - 38.0) * (q.y - 38.0);
+  let cool = max(abs(length(ct.xz) - cr) - 0.9, max(-q.y, q.y - 56.0)) * 0.8;
+  if (cool < r.x) { r = vec2f(cool, 59.0); }
+  // the receiver tower: tapering, cross-braced faces, and the cup at the top turned to face the beam
+  let w = 8.0 - 4.5 * clamp(q.y / 96.0, 0.0, 1.0);
+  let tw = max(max(abs(q.x), abs(q.z)) - w, max(-q.y, q.y - 96.0)) * 0.7;
+  if (tw < r.x) { r = vec2f(tw, 57.0); }
+  let cq = q - vec3f(0.0, 104.0, 0.0);
+  let al = dot(cq, BEAM_B);
+  let rr = length(cq - BEAM_B * al);
+  let cup = max(abs(al - rr * rr / 55.0 + 1.5) - 0.7, rr - 17.0) * 0.6;
+  if (cup < r.x) { r = vec2f(cup, 57.0); }
+  let core = length(cq - BEAM_B * 5.5) - 2.6;
+  if (core < r.x) { r = vec2f(core, 58.0); }
+  return r;
+}
+
+// The power beam: from the station in orbit down through the cloud deck to the receiver cup, day and night. A white
+// core, a violet halo where the haze scatters it, pulses of energy running down it, a lit patch where it pierces the
+// cloud deck (1.5 km up), and the station itself, a hard glint where the beam meets the sky.
+fn beamFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
+  var col = colIn;
+  if (u.reg.w < 0.5) { return col; }
+  // the fab nearest the camera (the city repeats every 96 big blocks)
+  let per = 96.0 * BIG;
+  let R0 = vec3f(FAB_W.x + per * round((ro.x - FAB_W.x) / per), 104.0, FAB_W.y + per * round((ro.z - FAB_W.y) / per)) + BEAM_B * 5.5;
+  let B = BEAM_B;
+  let w0 = ro - R0;
+  let b = dot(rd, B);
+  let den = max(1.0 - b * b, 1e-5);
+  var t = clamp((b * dot(B, w0) - dot(rd, w0)) / den, 0.0, tEnd);
+  let sB = max(dot(ro + rd * t - R0, B), 0.0);
+  t = clamp(dot(R0 + B * sB - ro, rd), 0.0, tEnd);
+  let dist = length(ro + rd * t - (R0 + B * sB));
+  let pulse = 0.75 + 0.25 * sin((sB + u.time * 700.0) / 45.0);
+  let fade = exp(-t * u.fogDen * 0.25);
+  let core = exp(-dist * dist / 3.0) * 3.0 + exp(-dist * dist / 40.0) * 0.8;
+  let halo = exp(-dist / 30.0) * (0.12 + 3.0 * u.fogDen);
+  col += (vec3f(1.0, 0.95, 1.0) * core * pulse + vec3f(0.62, 0.5, 1.0) * halo) * fade;
+  // where it pierces the cloud deck: the underside of the cloud lit for a few hundred metres round
+  let H = 1500.0;
+  if (rd.y > 0.0 && ro.y < H) {
+    let tc = (H - ro.y) / rd.y;
+    if (tc < tEnd) {
+      let pc = R0 + B * ((H - R0.y) / B.y);
+      let dd = length((ro + rd * tc).xz - pc.xz);
+      col += vec3f(0.75, 0.65, 1.0) * (exp(-dd / 180.0) * 0.5 + exp(-dd / 40.0) * 0.8) * exp(-tc * u.fogDen * 0.15);
+    }
+  }
+  // the station: where the beam meets the sky
+  if (tEnd >= FARMAX * 0.99) {
+    let g = dot(rd, B);
+    col += vec3f(1.0, 0.95, 0.9) * (smoothstep(0.99996, 0.99999, g) * 6.0 + pow(max(g, 0.0), 4000.0) * 1.5);
+  }
+  return col;
+}
+
 fn hallSDF(lp: vec3f) -> vec2f {
   let r = length(lp.xz);
   let ang = atan2(lp.z, lp.x);
@@ -2597,6 +2676,7 @@ fn giantSDF(p: vec3f, b: vec2i) -> vec2f {
   let gl = p.xz - (vec2f(b) + 0.5) * BIG;
   let lp = vec3f(gl.x, p.y, gl.y);
   if (isHall(b)) { return hallSDF(lp); }
+  if (isFab(b)) { return fabSDF(lp); }
   let bw = vec2i(wrapN(b.x, 96), wrapN(b.y, 96));
   let gh = 150.0 + 110.0 * hsh(bw.x, bw.y, 21);
   let s1 = hsh(bw.x, bw.y, 22);
@@ -2753,7 +2833,7 @@ fn traceGiants(ro: vec3f, rd: vec3f, tStart: f32, tEnd: f32, maxSteps: i32, sh: 
           b = (-B + sq) / A;
         }
       }
-      if (isHive(c)) { a = tIn; b = min(tMax.x, tMax.y); }
+      if (isHive(c) || isFab(c)) { a = tIn; b = min(tMax.x, tMax.y); }
       a = max(a, tStart);
       b = min(b, tEnd);
       if (rd.y < -1e-5) { a = max(a, (top - ro.y) / rd.y); }
@@ -3006,7 +3086,9 @@ fn tracePrimary(ro: vec3f, rd: vec3f, tProxy: f32) -> Hit {
     tEnd = ha.x;
   }
   let tbl = traceBlimp(ro, rd, tEnd);
-  if (tbl >= 0.0) { best.t = tbl; best.m = 29.0; best.kind = 4; tEnd = tbl; }
+  if (tbl >= 0.0) { best.t = tbl; best.m = 29.0; best.kind = 4; best.c = vec2i(0); tEnd = tbl; }
+  let tsh = traceShips(ro, rd, tEnd);
+  if (tsh.x >= 0.0) { best.t = tsh.x; best.m = 70.0; best.kind = 4; best.c = vec2i(i32(tsh.y) + 1, 0); tEnd = tsh.x; }
   let tbb = traceBalloons(ro, rd, tEnd);
   if (tbb >= 0.0) { best.t = tbb; best.m = 47.0; best.kind = 5; tEnd = tbb; }
   let hv = traceBand(ro, rd, clipY(ro, rd, 0.0, tEnd, TUBE_Y - 4.5, TUBE_Y + 5.0), 4);
@@ -3041,7 +3123,7 @@ fn terrNormal(p: vec3f) -> vec3f {
 
 fn sdfFor(p: vec3f, kind: i32, c: vec2i, cell: Cell) -> f32 {
   if (kind == 3) { return giantSDF(p, c).x; }
-  if (kind == 4) { return blimpSDF(p); }
+  if (kind == 4) { if (c.x > 0) { return shipSDF(p, c.x - 1).x; } return blimpSDF(p); }
   return cellSDF(p, c, cell).x;
 }
 
@@ -3683,6 +3765,101 @@ fn blimpSDF(p: vec3f) -> f32 {
   let finH = max(max(abs(q.y) - 0.012, abs(q.x) - 0.45), max(-(q.z + 1.0), q.z + 0.7));
   let gond = sdBox(q - vec3f(0.0, -0.31, 0.08), vec3f(0.05, 0.035, 0.13)) - 0.01;
   return min(min(body, gond), min(finV, finH)) * K.w;
+}
+
+// ---------- skyboats ----------
+// Craft on fixed routes over the city (main.js fills ev.ship: position and half-length s; ev.shipDir: heading and
+// kind). Kinds: 0 cargo zeppelin, 1 skyboat (a boat hull hung under a flat gas envelope, with side sails), 2 balloon
+// glider, 3 ad dirigible, 4 hover barge. Local frame: x right, y up, z forward, in units of s. Returns (distance in
+// metres, part): 0 envelope, 1 hull and metal, 2 windows, 3 screen, 4 rotor, 5 cargo.
+fn shipLocal(p: vec3f, i: i32) -> vec3f {
+  let fw = normalize(ev.shipDir[i].xyz);
+  let rt = normalize(cross(fw, vec3f(0.0, 1.0, 0.0)));
+  let q0 = p - ev.ship[i].xyz;
+  return vec3f(dot(q0, rt), q0.y, dot(q0, fw)) / ev.ship[i].w;
+}
+fn shipSDF(p: vec3f, i: i32) -> vec2f {
+  let q = shipLocal(p, i);
+  let kind = i32(ev.shipDir[i].w + 0.5);
+  var r = vec2f(1e5, 0.0);
+  if (kind == 0 || kind == 3) {
+    // a long rigid envelope with shallow ribs, cross fins, a gondola; the zeppelin carries cargo pods, the ad
+    // dirigible screens along both sides
+    let rib = 0.004 * sin(q.z * 60.0) * step(abs(q.z), 0.9);
+    r = vec2f((length(q / vec3f(0.22, 0.2, 1.0)) - 1.0) * 0.2 + rib, 0.0);
+    let fin = min(max(max(abs(q.x) - 0.01, abs(q.y) - 0.34), max(-(q.z + 0.98), q.z + 0.72)), max(max(abs(q.y) - 0.01, abs(q.x) - 0.34), max(-(q.z + 0.98), q.z + 0.72)));
+    if (fin < r.x) { r = vec2f(fin, 1.0); }
+    let gond = sdBox(q - vec3f(0.0, -0.22, 0.45), vec3f(0.045, 0.03, 0.14)) - 0.01;
+    if (gond < r.x) { r = vec2f(gond, 2.0); }
+    if (kind == 0) {
+      for (var k = 0; k < 3; k++) {
+        let c = sdBox(q - vec3f(0.0, -0.27, -0.35 + f32(k) * 0.3), vec3f(0.08, 0.05, 0.12)) - 0.006;
+        if (c < r.x) { r = vec2f(c, 5.0); }
+      }
+      let eng = length(vec2f(length(vec2f(abs(q.x) - 0.26, q.y + 0.05)) - 0.035, max(abs(q.z + 0.2) - 0.05, 0.0))) - 0.012;
+      if (eng < r.x) { r = vec2f(eng, 4.0); }
+    } else {
+      let scr = sdBox(vec3f(abs(q.x) - 0.2, q.y, q.z), vec3f(0.012, 0.11, 0.55));
+      if (scr < r.x) { r = vec2f(scr, 3.0); }
+    }
+  } else if (kind == 1) {
+    // a skyboat: flat envelope above, a keeled hull below on struts, a deckhouse, and a wing-sail each side
+    r = vec2f((length((q - vec3f(0.0, 0.34, 0.0)) / vec3f(0.3, 0.13, 0.85)) - 1.0) * 0.13, 0.0);
+    var hull = sdEll(q - vec3f(0.0, -0.08, 0.02), vec3f(0.16, 0.13, 0.7));
+    hull = max(hull, q.y + 0.02);
+    hull = min(hull, sdBox(q - vec3f(0.0, -0.04, -0.1), vec3f(0.08, 0.05, 0.18)) - 0.01);
+    if (hull < r.x) { r = vec2f(hull, 1.0); }
+    let win = sdBox(q - vec3f(0.0, -0.035, -0.1), vec3f(0.082, 0.018, 0.16));
+    if (win < r.x + 0.002 && win < 0.004) { r = vec2f(max(win, r.x), 2.0); }
+    let strut = min(sdSeg(vec3f(abs(q.x), q.y, q.z), vec3f(0.1, 0.0, 0.4), vec3f(0.18, 0.26, 0.35)), sdSeg(vec3f(abs(q.x), q.y, q.z), vec3f(0.1, 0.0, -0.4), vec3f(0.18, 0.26, -0.35))) - 0.008;
+    if (strut < r.x) { r = vec2f(strut, 1.0); }
+    let sail = max(sdBox(vec3f(abs(q.x) - 0.36, q.y - 0.12 + 0.3 * (abs(q.x) - 0.2), q.z + 0.05), vec3f(0.18, 0.006, 0.28 - 0.5 * max(abs(q.x) - 0.25, 0.0))), 0.0);
+    if (sail < r.x) { r = vec2f(sail, 0.0); }
+  } else if (kind == 2) {
+    // a personal balloon glider: a round envelope over a narrow wing and a one-seat pod
+    r = vec2f(length(q - vec3f(0.0, 0.62, 0.0)) - 0.5, 0.0);
+    let wing = sdBox(q - vec3f(0.0, -0.02, 0.05), vec3f(0.9, 0.012, 0.13 - 0.05 * abs(q.x))) - 0.004;
+    if (wing < r.x) { r = vec2f(wing, 1.0); }
+    let pod = sdEll(q - vec3f(0.0, -0.12, 0.05), vec3f(0.09, 0.1, 0.22));
+    if (pod < r.x) { r = vec2f(pod, 2.0); }
+    let line = sdSeg(vec3f(abs(q.x), q.y, q.z), vec3f(0.05, -0.05, 0.05), vec3f(0.3, 0.3, 0.0)) - 0.004;
+    if (line < r.x) { r = vec2f(line, 1.0); }
+  } else {
+    // a hover barge: a flat hull with four ducted rotors at the corners and containers stacked on deck
+    r = vec2f(sdBox(q, vec3f(0.42, 0.06, 0.95)) - 0.03, 1.0);
+    let cq = vec3f(abs(q.x) - 0.5, q.y - 0.02, abs(q.z) - 0.75);
+    let duct = length(vec2f(length(cq.xz) - 0.16, cq.y)) - 0.035;
+    if (duct < r.x) { r = vec2f(duct, 4.0); }
+    for (var k = 0; k < 3; k++) {
+      let c = sdBox(q - vec3f(0.0, 0.16 + 0.05 * f32(k % 2), -0.55 + f32(k) * 0.55), vec3f(0.3, 0.1 + 0.05 * f32(k % 2), 0.22)) - 0.01;
+      if (c < r.x) { r = vec2f(c, 5.0); }
+    }
+  }
+  return vec2f(r.x * ev.ship[i].w, r.y);
+}
+// the nearest skyboat along a ray: (t, index), or t < 0
+fn traceShips(ro: vec3f, rd: vec3f, tEnd: f32) -> vec2f {
+  var best = vec2f(-1.0, 0.0);
+  var te = tEnd;
+  for (var i = 0; i < 8; i++) {
+    let S = ev.ship[i];
+    if (S.w <= 0.0) { continue; }
+    let R = S.w * 1.25;
+    let oc = ro - S.xyz;
+    let b = dot(oc, rd);
+    let h = b * b - (dot(oc, oc) - R * R);
+    if (h < 0.0) { continue; }
+    let sq = sqrt(h);
+    var t = max(-b - sq, 0.0);
+    let t1 = min(-b + sq, te);
+    for (var k = 0; k < 72; k++) {
+      if (t > t1) { break; }
+      let d = shipSDF(ro + rd * t, i).x;
+      if (d < 0.002 * t + 0.01) { best = vec2f(t, f32(i)); te = t; break; }
+      t += d * 0.9;
+    }
+  }
+  return best;
 }
 
 fn traceBlimp(ro: vec3f, rd: vec3f, tEnd: f32) -> f32 {
@@ -4425,6 +4602,82 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       }
       if (!police && abs(cq.z) < 0.5) { s.emi += vec3f(0.1, 0.8, 1.0) * 0.6; }
     }
+    case 57: {
+      // the fab's metal: corrugated sheds and the tower's braced faces, stained
+      let fu = select(p.x, p.z, abs(n.x) > abs(n.z));
+      let cor = 0.5 + 0.5 * sin(fu * 6.0);
+      let brace = step(abs(abs(fract(fu / 8.0 + p.y / 8.0) - 0.5) - 0.25), 0.03) + step(abs(abs(fract(fu / 8.0 - p.y / 8.0) - 0.5) - 0.25), 0.03);
+      s.alb = mix(vec3f(0.36, 0.38, 0.38), vec3f(0.3, 0.2, 0.12), 0.35 * vnoise(vec2f(fu, p.y) * 0.1, 570)) * (0.85 + 0.15 * cor) * (1.0 - 0.4 * min(brace, 1.0) * step(28.0, p.y));
+      s.spec = 0.5;
+      s.refl = 0.05;
+      // lit roof glazing along the sawtooth, and hazard lights up the tower
+      if (n.y > 0.3 && n.y < 0.95 && p.y < 30.0) { s.alb = vec3f(0.12, 0.14, 0.16); s.refl = 0.3; s.emi = vec3f(1.0, 0.85, 0.6) * 1.2 * u.windows; }
+      if (p.y > 30.0 && fract(p.y / 20.0) < 0.03) { s.emi = vec3f(1.0, 0.1, 0.05) * 3.0 * step(0.5, fract(u.time * 0.8)); }
+    }
+    case 58: {
+      s.alb = vec3f(0.9, 0.85, 1.0);
+      s.emi = vec3f(1.0, 0.9, 1.0) * (6.0 + 2.0 * sin(u.time * 30.0));
+    }
+    case 59: {
+      s.alb = vec3f(0.5, 0.48, 0.45) * (0.8 + 0.2 * vnoise(vec2f(atan2(p.z, p.x) * 20.0, p.y * 0.3), 571));
+      s.spec = 0.1;
+    }
+    case 63: {
+      // finished pods: white shells with one round window each, a shipping number, some still in wrap
+      let id = hsh(i32(floor(p.x / 3.0)), i32(floor(p.z / 5.2)) * 7 + i32(floor(p.y / 2.4)), 572);
+      s.alb = mix(vec3f(0.82, 0.8, 0.76), vec3f(0.35, 0.55, 0.6), step(0.8, id));
+      let fz = fract(p.z / 5.2) - 0.5;
+      let fy = fract((p.y - 1.2) / 2.4 + 0.5) - 0.5;
+      if (abs(n.z) < 0.5 && length(vec2f(fz * 5.2, fy * 2.4)) < 0.5) { s.alb = vec3f(0.05, 0.08, 0.1); s.refl = 0.3; }
+      s.spec = 0.6;
+    }
+    case 70: {
+      // skyboats: envelope fabric by kind, painted hulls, lit windows, emigration screens, running lights
+      var si = 0;
+      var sd = 1e5;
+      for (var k = 0; k < 8; k++) { if (ev.ship[k].w > 0.0) { let d = abs(shipSDF(p, k).x); if (d < sd) { sd = d; si = k; } } }
+      let sp = shipSDF(p, si);
+      let q = shipLocal(p, si);
+      let kind = i32(ev.shipDir[si].w + 0.5);
+      let part = i32(sp.y + 0.5);
+      let hs = hsh(si, kind, 700);
+      let nav = select(vec3f(0.1, 1.0, 0.2), vec3f(1.0, 0.08, 0.05), q.x < 0.0);
+      s.spec = 0.4;
+      s.rough = 0.1;
+      switch part {
+        case 0: {
+          // envelopes: silvered for cargo, patched colour for skyboats and gliders, with panel seams
+          var env = vec3f(0.62, 0.63, 0.66);
+          if (kind == 1) { env = mix(vec3f(0.62, 0.22, 0.12), vec3f(0.85, 0.72, 0.45), step(0.5, fract(q.z * 4.0 + hs))); }
+          if (kind == 2) { env = mix(neonColor(hs), vec3f(0.9, 0.88, 0.8), step(0.5, fract(atan2(q.x, q.z) * 1.91 + 0.25))); }
+          if (kind == 3) { env = vec3f(0.12, 0.2, 0.42); }
+          s.alb = env * (1.0 - 0.2 * step(0.94, fract(q.z * 14.0)));
+          s.refl = 0.06 + 0.3 * pow(1.0 - ndv, 4.0);
+          // a nav light each side at the widest point, and a white one at the tail
+          if (abs(abs(q.x) - 0.22) < 0.03 && abs(q.y) < 0.03 && abs(q.z) < 0.04) { s.emi = nav * (1.0 + 3.0 * step(0.5, fract(u.time * 0.9 + hs))); }
+        }
+        case 1: { s.alb = mix(vec3f(0.18, 0.12, 0.08), vec3f(0.35, 0.36, 0.38), f32(kind != 1)); s.spec = 0.6; s.refl = 0.1; }
+        case 2: {
+          s.alb = vec3f(0.03);
+          s.refl = 0.3;
+          let wl = step(0.4, fract(q.z * 40.0)) * step(0.35, hsh(i32(floor(q.z * 40.0)), si, 701));
+          s.emi = vec3f(1.0, 0.78, 0.45) * wl * (0.3 + 1.2 * u.windows);
+        }
+        case 3: {
+          // the ad dirigible's screens: the emigration campaign, a line at a time
+          let bslot = i32(floor(u.time / 5.0)) + si;
+          let pk = 7 + ((bslot / 3) % 3 + 3) % 3;
+          let L = posterLine(pk, ((bslot % 3) + 3) % 3);
+          let uv = vec2f(q.z * sign(q.x) / 0.55, q.y / 0.11);
+          let txt = lineText(L, vec2f(uv.x * 40.0, (0.5 - uv.y) * 8.0 + 0.5));
+          s.alb = vec3f(0.02);
+          s.refl = 0.04;
+          s.emi = posterLook(pk, uv, txt) * (1.3 + 1.0 * u.windows);
+        }
+        case 4: { s.alb = vec3f(0.08); s.spec = 0.8; s.emi = vec3f(0.3, 0.7, 1.0) * 0.4 * (0.4 + u.windows) * step(0.6, fract(u.time * 7.0 + q.x * 3.0)); }
+        default: { s.alb = mix(vec3f(0.7, 0.3, 0.1), vec3f(0.15, 0.35, 0.6), step(0.5, hsh(i32(floor(q.z * 6.0)), si, 702))); s.spec = 0.3; }
+      }
+    }
     case 29: {
       let K = ev.blimp;
       let fw = normalize(ev.blimpDir.xyz);
@@ -5059,7 +5312,7 @@ fn boxVertex(vi: u32, lo: vec3f, hi: vec3f) -> PxOut {
   if (!giantHasW(b)) { return o; }
   let cen = (vec2f(b) + 0.5) * BIG;
   let top = giantTop(b) + 8.0;
-  let hw = select(82.0, 104.5, isHive(b));
+  let hw = select(82.0, 104.5, isHive(b) || isFab(b));
   return boxVertex(vi, vec3f(cen.x - hw, -0.5, cen.y - hw), vec3f(cen.x + hw, top, cen.y + hw));
 }
 
@@ -5153,6 +5406,7 @@ fn rnd3(fc: vec2f, k: i32) -> vec3f {
   col = smokeFx(ro, rd, tOut, col);
   col = tubesFx(ro, rd, tOut, col);
   col = holoFx(ro, rd, tEv, col);
+  col = beamFx(ro, rd, tEv, col);
   col = flockFx(ro, rd, tOut, col);
   col = propsFx(ro, rd, tOut, col);
   // a power cut: everything in the area goes dark (with a flicker as it fails and comes back)

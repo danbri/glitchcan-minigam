@@ -38,6 +38,13 @@ function buildPlaces() {
     cam.yaw = Math.atan2(HIVE_C[1] - cam.z, HIVE_C[0] - cam.x); cam.pitch = 0.08;
     add("hive", "Facing the Hive, Lumen roofs", "Across the gap, the pod block fills the sky: patched walls, a million little windows, and the boards telling everyone inside to sleep more.", cam);
   }
+  // the pod fab beside the Hive, and the power beam coming down to it, from the battlements of the Hive's
+  // north-east tower (240 m up)
+  {
+    const x = HIVE_C[0] + 255, z = HIVE_C[1] - 150;
+    add("fab", "Hive battlements, over the pod fab", "Below, the fab that makes the Hive's capsule homes, fed by a beam from the power station in orbit: a white line through the clouds, day and night.",
+      { x, y: 252, z, yaw: Math.atan2(FAB_C[1] - z, FAB_C[0] - x), pitch: -0.42 });
+  }
   // Chinatown's pagoda: placed (PAGODA_CELL in world.js), so its view is too
   {
     const cx = wrapS(PAGODA_CELL[0]), cz = wrapS(PAGODA_CELL[1]);
@@ -60,7 +67,7 @@ function buildPlaces() {
       else if (o.typ === 13 && want("pyramid")) add("pyramid", "Corporate pyramid, " + dn, "A stepped pyramid of glass and stone on " + st + "; security drones idle at its apex.", facing(cx, cz, side));
       else if (o.typ === 9 && want("works" + zn)) { add("works_" + zn, "The works, " + dn, "Pipes, stacks and pressure domes on " + st + ": the city's heat and air are made here.", facing(cx, cz, side)); }
       else if (o.typ === 10 && want("apron")) add("spaceport_apron", "Spaceport apron", "Landing pads and fuel lines off " + st + ", under the long light of Saturn.", facing(cx, cz, side));
-      else if (o.typ === 6 && giantHas(Math.floor(cx / 8), Math.floor(cz / 8)) && !hallAt(Math.floor(cx / 8), Math.floor(cz / 8)) && !hiveHas(Math.floor(cx / 8), Math.floor(cz / 8)) && want("giant" + zn)) {
+      else if (o.typ === 6 && giantHas(Math.floor(cx / 8), Math.floor(cz / 8)) && !hallAt(Math.floor(cx / 8), Math.floor(cz / 8)) && !hiveHas(Math.floor(cx / 8), Math.floor(cz / 8)) && !fabHas(Math.floor(cx / 8), Math.floor(cz / 8)) && want("giant" + zn)) {
         // the tower stands in a park: look from above the trees, 140 m out, on the side of the cell that found it
         const bx = (Math.floor(cx / 8) + 0.5) * BIG, bz = (Math.floor(cz / 8) + 0.5) * BIG;
         const a0 = Math.atan2((cz + 0.5) * C - bz, (cx + 0.5) * C - bx);

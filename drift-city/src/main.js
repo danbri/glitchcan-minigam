@@ -214,6 +214,8 @@ function audioWorld(dt) {
       const hx = clampv(st.x, HIVE_C[0] - 310, HIVE_C[0] + 310), hz = clampv(st.z, HIVE_C[1] - 210, HIVE_C[1] + 210);
       if (Math.hypot(hx - st.x, hz - st.z) < 900) P.hive = [hx, clampv(st.y, 5, 230), hz];
     }
+    // the pod fab's receiver: a high-voltage hum from the top of its tower
+    if (Math.hypot(FAB_C[0] - st.x, FAB_C[1] - st.z) < 800) P.fab = [FAB_C[0], 104, FAB_C[1]];
     // the tubes overhead: the nearest street line in each direction, if it borders the city
     if (city > 3) {
       const kx = Math.round(st.x / C), kz = Math.round(st.z / C);
@@ -319,6 +321,30 @@ function audioFeet(dt) {
     if (w.drone && step % 6 === 0) auBuzz([w.x, 2.1, w.z], 0.6);
   }
   FEET.last = seen;
+}
+// The skyboats' routes, fixed in the world so they become part of the city's geography: a cargo zeppelin shuttling
+// between the spaceport and the pod fab, the emigration ad dirigible circling the core, three skyboats (old town,
+// Chinatown, over the dorms), two balloon gliders wandering over the core, a hover barge working along the strip.
+function skyboats(t) {
+  const put = (i, x, y, z, hx, hz, s, kind) => { const l = Math.hypot(hx, hz) || 1; EVN.set([x, y, z, s], 144 + i * 4); EVN.set([hx / l, 0, hz / l, kind], 176 + i * 4); };
+  // back and forth on a line, turning at the ends (a smooth ping-pong), facing the way it goes
+  const line = (i, a, b, y, per, s, kind, ph) => {
+    const u = 0.5 - 0.5 * Math.cos((t / per + ph) * 2 * Math.PI), v = Math.sin((t / per + ph) * 2 * Math.PI);
+    const x = a[0] + (b[0] - a[0]) * u, z = a[1] + (b[1] - a[1]) * u, sg = v >= 0 ? 1 : -1;
+    put(i, x, y, z, (b[0] - a[0]) * sg, (b[1] - a[1]) * sg, s, kind);
+  };
+  const circ = (i, cx, cz, r, y, per, s, kind, ph) => {
+    const a = (t / per + ph) * 2 * Math.PI, d = per > 0 ? 1 : -1;
+    put(i, cx + Math.cos(a) * r, y + 6 * Math.sin(t * 0.07 + i), cz + Math.sin(a) * r, -Math.sin(a) * d, Math.cos(a) * d, s, kind);
+  };
+  line(0, [CITY_ARM[0] * 0.85, CITY_ARM[1] * 0.85], [FAB_C[0], FAB_C[1]], 280, 900, 90, 0, 0.1);
+  circ(1, 0, 0, 720, 330, 520, 60, 3, 0.3);
+  circ(2, 3.5 * BIG, -3.5 * BIG, 380, 175, 260, 28, 1, 0);
+  circ(3, (PAGODA_CELL[0] + 0.5) * C, (PAGODA_CELL[1] + 0.5) * C, 330, 150, -300, 26, 1, 0.5);
+  circ(4, HIVE_C[0], HIVE_C[1] - 150, 520, 300, 420, 30, 1, 0.2);
+  circ(5, -120 + 90 * Math.sin(t * 0.01), 80, 240, 110, 190, 6, 2, 0);
+  circ(6, 260, -140 + 70 * Math.cos(t * 0.013), 200, 95, -170, 6, 2, 0.6);
+  line(7, [-1150, 40], [1150, 40], 34, 480, 18, 4, 0);
 }
 // props in the world: the story's scene, the events director's, and your own drone when the view follows it
 let FOLLOW = false;
@@ -708,7 +734,7 @@ function halton(i, b) { let f = 1, r = 0; while (i > 0) { f /= b; r += f * (i % 
 
 const SN = 1024, STS = 0.8, AIR_Y = 96;
 // Per-frame events for the shader: searchlight beams from the nearest air taxis, smoke plumes, the holographic koi.
-const EVN = new Float32Array(144);
+const EVN = new Float32Array(208);
 const CHASE_Y = 64;
 const WX = { rain: 0, wet: 0 };
 let boState = null;
@@ -778,6 +804,8 @@ function computeEvents(tod, dt) {
   if (bd < 90) { const k = 90 / Math.max(bd, 1); bp = [st.x + (bp[0] - st.x) * k, st.y + (bp[1] - st.y) * k, st.z + (bp[2] - st.z) * k]; }
   EVN.set([bp[0], bp[1], bp[2], 32], 56);
   EVN.set([-Math.sin(ba), 0, Math.cos(ba), 1], 60);
+  // skyboats on fixed routes: one line of [x, y, z, half-length] at 144, one of [heading, kind] at 176
+  skyboats(clock);
   // district blackout every few minutes near the camera
   const bcy = 150, bk = Math.floor(clock / bcy), bt = clock - bk * bcy;
   if (bt >= 50 && bt <= 78 && hsh(bk, 3, 160) < 0.75) {
@@ -1032,8 +1060,9 @@ function camInsideProxy() {
     if (Math.abs(st.x - cx) < ext + m && Math.abs(st.z - cz) < ext + m) return true;
   }
   const bx = Math.floor(st.x / BIG), bz = Math.floor(st.z / BIG);
-  const gw = hiveHas(bx, bz) ? 104 : 84;
-  if (giantHas(bx, bz) && Math.abs(st.x - (bx + 0.5) * BIG) < gw && Math.abs(st.z - (bz + 0.5) * BIG) < gw && st.y < giantH(bx, bz) + 10) return true;
+  const gw = hiveHas(bx, bz) || fabHas(bx, bz) ? 104 : 84;
+  const gh = fabHas(bx, bz) ? fabTopAt(st.x - (bx + 0.5) * BIG, st.z - (bz + 0.5) * BIG) : giantH(bx, bz);
+  if (giantHas(bx, bz) && Math.abs(st.x - (bx + 0.5) * BIG) < gw && Math.abs(st.z - (bz + 0.5) * BIG) < gw && st.y < gh + 10) return true;
   return false;
 }
 
@@ -1164,7 +1193,7 @@ async function init() {
   const rectData = new Int32Array(64 * 12);
   const propBuf = device.createBuffer({ size: PROP_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const flockBuf = device.createBuffer({ size: FLOCK_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-  const evBuf = device.createBuffer({ size: 576, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const evBuf = device.createBuffer({ size: 832, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   // the whole world: terrain per block corner, distant blocks per block, and a max-height pyramid over both
   const NWJ = 768;
   const terrTex = device.createTexture({ size: [NWJ, NWJ], format: "rgba32float", usage: TU.STORAGE_BINDING | TU.TEXTURE_BINDING });

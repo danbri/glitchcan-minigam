@@ -377,7 +377,7 @@ function audioDepart() {
 function auLoop(kind) {
   const c = AU.ctx;
   const out = c.createGain(); out.gain.value = 0;
-  const p = auPanner([0, 0, 0], kind === "water" ? 10 : kind === "industry" ? 30 : kind === "hive" ? 90 : 15, 0.9);
+  const p = auPanner([0, 0, 0], kind === "water" ? 10 : kind === "industry" ? 30 : kind === "hive" ? 90 : kind === "beam" ? 60 : 15, 0.9);
   out.connect(p); p.connect(AU.bus.env);
   const n = c.createBufferSource(); n.buffer = kind === "rumble" || kind === "industry" || kind === "dorm" || kind === "hive" ? AU.brown : AU.white; n.loop = true;
   const f = c.createBiquadFilter();
@@ -397,6 +397,12 @@ function auLoop(kind) {
     f.type = "bandpass"; f.frequency.value = 520; f.Q.value = 1.2;
     for (const [fq, a] of [[50, 0.12], [100, 0.06], [150.5, 0.03]]) { const o = c.createOscillator(); o.frequency.value = fq; const og = c.createGain(); og.gain.value = a; o.connect(og); og.connect(mod); o.start(); }
     const am = c.createOscillator(); am.frequency.value = 0.7; const ag = c.createGain(); ag.gain.value = 0.3; am.connect(ag); ag.connect(mod.gain); am.start();
+  }
+  else if (kind === "beam") {
+    // the receiver taking the beam: a high-voltage buzz with a crackle in it
+    f.type = "highpass"; f.frequency.value = 2500;
+    for (const [fq, a] of [[100, 0.12], [200, 0.08], [300, 0.05]]) { const o = c.createOscillator(); o.type = "sawtooth"; o.frequency.value = fq; const og = c.createGain(); og.gain.value = a; o.connect(og); og.connect(mod); o.start(); }
+    const cr = c.createOscillator(); cr.type = "square"; cr.frequency.value = 7.3; const cg = c.createGain(); cg.gain.value = 0.25; cr.connect(cg); cg.connect(mod.gain); cr.start();
   }
   else if (kind === "hive") {
     // the Hive: a building-sized air handler, mains hum, and the slow beat of its fans
@@ -578,6 +584,7 @@ function audioStep(dt, w) {
   auLoopSet("river", P.river, space ? 0 : 0.18);
   auLoopSet("industry", P.industry, space ? 0 : 0.35);
   auLoopSet("hive", P.hive, space ? 0 : 0.3);
+  auLoopSet("beam", P.fab, space ? 0 : 0.35);
   auLoopSet("rumble", P.spaceport, space ? 0 : 0.4);
   auLoopSet("hiss", P.lamps && P.lamps.length ? P.lamps[0] : null, space ? 0 : 0.08 + 0.1 * w.snow);
   if (P.pagoda && due("bell", 0.035)) auBell(P.pagoda, 0.35);
