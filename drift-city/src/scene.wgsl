@@ -2238,7 +2238,10 @@ fn treeParams(id: vec2i, ownTyp: i32, wild: bool) -> array<vec4f, 2> {
     }
   } else if (!inner || ownTyp == 5) {
     let dens = smoothstep(0.12, 0.55, forestF(wrapP(pos)));
-    if (hsh(iw.x, iw.y, 58) < dens * 1.1) {
+    // the Assembly Hall avenue is kept open (world.js: the civic axis, cells x 27-28, z -24 to -6)
+    let wp = wrapP(pos);
+    let avenue = u.reg.w > 0.5 && abs(wp.x - 728.0) < 40.0 && wp.y > -640.0 && wp.y < -140.0;
+    if (!avenue && hsh(iw.x, iw.y, 58) < dens * 1.1) {
       R = mix(2.3, 4.0, h59) * (0.72 + 0.28 * dens);
       th = 2.2 + 3.0 * h55 * (0.6 + 0.4 * dens);
     }

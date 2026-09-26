@@ -1478,7 +1478,11 @@ async function init() {
     U.set(tod.sun, 20); U[23] = wind.z;
     U.set(tod.sunCol, 24); U[27] = tod.win;
     U.set(tod.skyTop, 28); U[31] = tod.stars; U.set(tod.skyHor, 32); U[35] = camInsideProxy() ? 1 : 0;
-    U.set(tod.fog, 36); U[39] = tod.den * (1 + 2.4 * DIR.fog);
+    // Chinatown's streets are steamy: denser air at street level there
+    const zc = cellAt(Math.floor(st.x / C), Math.floor(st.z / C));
+    const steamy = !zc.wild && zc.zone === 3 ? Math.max(0, 1 - Math.max(st.y - 20, 0) / 60) : 0;
+    MAPCAM.steam = (MAPCAM.steam || 0) + (steamy - (MAPCAM.steam || 0)) * Math.min(1, dt * 0.5);
+    U.set(tod.fog, 36); U[39] = tod.den * (1 + 2.4 * DIR.fog) * (1 + 1.2 * MAPCAM.steam);
     U[40] = halton(j, 2) - 0.5; U[41] = halton(j, 3) - 0.5; U[42] = canvas.width; U[43] = canvas.height;
     const pv = prev || { pos: [U[4], U[5], U[6]], f: cam.f, r: cam.r, up: cam.up };
     U.set(pv.pos, 44); U.set(pv.f, 48); U.set(pv.r, 52); U.set(pv.up, 56);
