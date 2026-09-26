@@ -188,6 +188,12 @@ shows only one or two choices at a time. Menu > Story > "Feel the choices" switc
   its analytic gradient: one call gives the pattern and the bump). Glass gets a film only; lit signs and screens are
   skipped; walkers get only a fabric weave and creases. Tree crowns near the camera are displaced by `vn3` into
   clumps of leaves (`treesSDF`), which broke the smooth-blob silhouettes more than any shading did.
+- **Settled snow** (`frostify`, from `WX.cover` in main.js via `ev.wx.x`): builds over a couple of minutes of
+  snowfall, melts over about five after; lies on whatever faces up in patches that grow and join; melts off lit
+  surfaces (lamp pools, signs, glazing), goes to slush on wet streets, thins on glass, stays off the ground round the
+  pod fab, and is never put on moving things (the patches are fixed in the world). Order matters: `weathering`
+  runs first and `frostify` after it, or the tholin dust browns the snow; and `computeEvents` clears `EVN` every
+  frame, so the cover is written just before the upload. Test: `COVER=0.5` in the scratch Dawn runner.
 - **Crystals and rings** were everywhere; they now mark places. Crystal towers are three times rarer outside the
   crystal gardens (zone 7), crystal crowns on roofs rarer, plaza crystals only in zone 7. Megatowers (giants) went
   from 28% to 12% of 8x8 regions, and only about a third wear a ring. `giantHas` exists in `world.js` AND as

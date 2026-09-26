@@ -734,7 +734,7 @@ function halton(i, b) { let f = 1, r = 0; while (i > 0) { f /= b; r += f * (i % 
 
 const SN = 1024, STS = 0.8, AIR_Y = 96;
 // Per-frame events for the shader: searchlight beams from the nearest air taxis, smoke plumes, the holographic koi.
-const EVN = new Float32Array(208);
+const EVN = new Float32Array(212);
 const CHASE_Y = 64;
 const WX = { rain: 0, wet: 0 };
 let boState = null;
@@ -982,6 +982,9 @@ function updateWeather(dt) {
   // a passing snow squall
   if (DIR.squall > 0) WX.rain = Math.max(WX.rain, 0.9 * Math.min(1, DIR.squall * 3));
   WX.wet = Math.min(1, Math.max(0, WX.wet + dt * (WX.rain * 0.06 - (1 - WX.rain) * 0.012)));
+  // snow cover: settles over a couple of minutes of steady snowfall, melts away over five or so after it stops
+  WX.cover = Math.min(1, Math.max(0, (WX.cover || 0) + dt * (WX.rain > 0.15 ? 0.012 * WX.rain : -0.0035)));
+  if (WX.coverForced !== undefined) WX.cover = WX.coverForced;
   // frost builds during snowfall and fades slowly
   WX.frost = Math.min(WX.forced !== undefined && WX.forced !== null ? 0.5 : 1, Math.max(0.2, (WX.frost || 0.3) + dt * (WX.rain * 0.05 - (1 - WX.rain) * 0.006)));
 }
@@ -1193,7 +1196,7 @@ async function init() {
   const rectData = new Int32Array(64 * 12);
   const propBuf = device.createBuffer({ size: PROP_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const flockBuf = device.createBuffer({ size: FLOCK_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-  const evBuf = device.createBuffer({ size: 832, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const evBuf = device.createBuffer({ size: 848, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   // the whole world: terrain per block corner, distant blocks per block, and a max-height pyramid over both
   const NWJ = 768;
   const terrTex = device.createTexture({ size: [NWJ, NWJ], format: "rgba32float", usage: TU.STORAGE_BINDING | TU.TEXTURE_BINDING });
@@ -1501,6 +1504,7 @@ async function init() {
     }
     computeEvents(tod, dt);
     computeExtras(tod, dt);
+    EVN[208] = WX.cover || 0; // settled snow (after computeEvents clears the array)
     device.queue.writeBuffer(evBuf, 0, EVN);
     const pyr = !inSpace && ffStep(frameNo < 2 ? 1 : 3);
     const measure = hasTS && !qBusy && frameNo % 6 === 0;
