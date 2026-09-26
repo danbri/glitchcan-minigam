@@ -32,7 +32,9 @@ Building from this tree reproduces the published page exactly.
   `packages/backticks` and compiles it with inkjs for the Node tools
 - `tests/` harnesses used during development; their paths to Dawn, wgpu-py and node modules need adjusting
   - `dawn-run.mjs` runs the page headless on Dawn (Node WebGPU) with a fake DOM; environment variables choose the
-    scenario (TALE, INTRO, GATEONLY, HOP, GO, LITE, FAILFULL, FOLLOW, MENU)
+    scenario (TALE, INTRO, GATEONLY, HOP, GO, LITE, FAILFULL, FOLLOW, MENU), the size (W, H, DPR), FREEZE (stop the
+    clock after frame 12 so anti-aliasing settles on a still scene) and OUT (where the raw frame goes)
+  - `walkers.html` draws the five kinds of walker from `scene.wgsl`, side and three-quarter views (WebGPU)
   - `render3.py` renders single views of the scene shader with wgpu-py (with `gencells.js`, `ffgen.js`, `presets.py`)
   - `inkwalk.mjs` plays the story 400 times with random choices and discoveries, checking endings and dead ends
   - `audiotest2.mjs` renders the sound engine offline (node-web-audio-api) and measures levels

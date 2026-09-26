@@ -1,7 +1,7 @@
 // ---------- Tales: 50 room-scale places in and around Drift city, and an Ink story that moves between them ----------
 // Places are picked from the generated city itself (so each is really there), in a fixed order, so a story can refer
 // to them by id. Each has a camera at eye height (or on a roof), a heading and a pitch.
-const DISTRICTS = ["financial district", "neon quarter", "old town", "Chinatown", "industrial belt", "spaceport", "megablocks", "crystal quarter"];
+const DISTRICTS = ["financial district", "neon quarter", "old town", "Chinatown", "industrial belt", "spaceport", "dorms", "crystal quarter"];
 const STREET_A = ["Amber", "Tholin", "Methane", "Lantern", "Kraken", "Haze", "Cassini", "Huygens", "Saturnlight", "Ethane", "Dune", "Glass", "Cryo", "Orchid", "Ferry", "Halo"];
 const STREET_B = ["Street", "Lane", "Row", "Walk", "Arcade", "Passage", "Parade", "Wynd"];
 function streetName(k) { return STREET_A[Math.floor(hsh(k, 3, 901) * STREET_A.length)] + " " + STREET_B[Math.floor(hsh(k, 5, 902) * STREET_B.length)]; }

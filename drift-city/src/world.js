@@ -193,7 +193,7 @@ function wildTreeDens(H, W, dry, elev, x, z) {
   return d;
 }
 // Districts: Voronoi cells on a 24-block lattice. 0 financial core, 1 neon entertainment, 2 old town,
-// 3 Chinatown, 4 industrial, 5 spaceport, 6 residential megablocks, 7 crystal gardens.
+// 3 Chinatown, 4 industrial, 5 spaceport, 6 dorms (residential megablocks), 7 crystal gardens.
 function zoneType(hx, hz, x, z) {
   const r = cityDist(x, z) / cityR(x, z), h = hsh(hx, hz, 302);
   if (r < 0.22) return h < 0.75 ? 0 : 1;
@@ -354,7 +354,7 @@ function computeBase(cx0, cz0, lite) {
   } else {
     o.typ = 1;
     if (zone === 6) {
-      // residential megablocks: broad slabs with regular window grids
+      // the dorms: broad residential slabs of capsule homes, where most people are, under their headsets
       v = 0.4 + 0.31 * v; o.v = v;
       wx = 8 + r2; wz = 8 + r3; o.wx = wx; o.wz = wz;
       o.offx = (r3 - 0.5) * 2 * (9 - wx); o.offz = (r4 - 0.5) * 2 * (9 - wz);
