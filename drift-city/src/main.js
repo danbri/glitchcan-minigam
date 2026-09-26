@@ -1048,7 +1048,7 @@ async function init() {
     catch (e2) { startFallback("This device's graphics driver could not build the city's shaders", describe(e2) + "\n(The full version failed first: " + describe(e1) + ")"); return; }
   }
   const { sceneMod, postMod, spaceMod, pScene, pTaa, pDown, pBH, pBV, pComp, pProxyC, pProxyG, pShadow, pTree, spBGL, pSpace, pTerr, pMipB, pMipD } = PL;
-  if (PL.lite && !forceLite) setTimeout(() => showHint("Running a lighter version of the city for this device's graphics.", 6000), 1500);
+  if (PL.lite && !forceLite) setTimeout(() => showHint("Lighter graphics for this device.", 6000), 1500);
   globalThis.__driftGPU = { gpuInfo, lite: PL.lite };
 
   const TU = GPUTextureUsage;
@@ -1560,6 +1560,6 @@ statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = 
 syncLabels();
 globalThis.__drift = { goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
-showHint("Landing on Titan: building the city and the land around it\u2026", 600000);
+showHint("Landing on Titan\u2026", 600000);
 
 init().catch((e) => startFallback("WebGPU failed to start", String((e && e.message) || e)));

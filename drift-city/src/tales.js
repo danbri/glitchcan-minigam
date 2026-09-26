@@ -225,12 +225,12 @@ function taleOpen() {
           TALE.paras = saved.paras || []; TALE.scene = saved.scene; TALE.hot = saved.hot || []; TALE.props = saved.props || [];
           taleSay(TALE.paras, TALE.story.currentChoices);
           if (saved.place) taleGo(saved.place);
-          showHint("Picking up the story where you left it.", 4000);
+          showHint("Story resumed.", 4000);
           return;
         } catch (e) { TALE.story.ResetState(); }
       }
       taleAdvance();
-      showHint("Drag to look around. Things worth noticing glint faintly when you look their way.", 7000);
+      showHint("Drag to look around. Clues glint.", 7000);
     } catch (e) { taleSay(["The story could not be compiled: " + e.message], []); }
   }, (e) => { TALE.loading = false; taleSay([e.message], []); });
 }

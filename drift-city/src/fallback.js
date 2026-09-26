@@ -584,7 +584,7 @@ function initGL(reason) {
     upPyramid();
   };
   statusEl.title = "WebGL fallback: " + reason;
-  showHint("WebGPU is not available here, so this is a simpler WebGL version of the city: the same map and flight, drawn as plain blocks.", 7000);
+  showHint("No WebGPU here: showing a simpler city.", 7000);
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   let scale = 0.5, last = performance.now(), ema = 16.7, lastChange = 0, dtS = 1 / 60, hud = 0, shadows = 1, slowT = 0;
   const resize = () => {

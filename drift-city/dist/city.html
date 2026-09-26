@@ -6716,7 +6716,7 @@ function initGL(reason) {
     upPyramid();
   };
   statusEl.title = "WebGL fallback: " + reason;
-  showHint("WebGPU is not available here, so this is a simpler WebGL version of the city: the same map and flight, drawn as plain blocks.", 7000);
+  showHint("No WebGPU here: showing a simpler city.", 7000);
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   let scale = 0.5, last = performance.now(), ema = 16.7, lastChange = 0, dtS = 1 / 60, hud = 0, shadows = 1, slowT = 0;
   const resize = () => {
@@ -8450,12 +8450,12 @@ function taleOpen() {
           TALE.paras = saved.paras || []; TALE.scene = saved.scene; TALE.hot = saved.hot || []; TALE.props = saved.props || [];
           taleSay(TALE.paras, TALE.story.currentChoices);
           if (saved.place) taleGo(saved.place);
-          showHint("Picking up the story where you left it.", 4000);
+          showHint("Story resumed.", 4000);
           return;
         } catch (e) { TALE.story.ResetState(); }
       }
       taleAdvance();
-      showHint("Drag to look around. Things worth noticing glint faintly when you look their way.", 7000);
+      showHint("Drag to look around. Clues glint.", 7000);
     } catch (e) { taleSay(["The story could not be compiled: " + e.message], []); }
   }, (e) => { TALE.loading = false; taleSay([e.message], []); });
 }
@@ -9756,7 +9756,7 @@ async function init() {
     catch (e2) { startFallback("This device's graphics driver could not build the city's shaders", describe(e2) + "\n(The full version failed first: " + describe(e1) + ")"); return; }
   }
   const { sceneMod, postMod, spaceMod, pScene, pTaa, pDown, pBH, pBV, pComp, pProxyC, pProxyG, pShadow, pTree, spBGL, pSpace, pTerr, pMipB, pMipD } = PL;
-  if (PL.lite && !forceLite) setTimeout(() => showHint("Running a lighter version of the city for this device's graphics.", 6000), 1500);
+  if (PL.lite && !forceLite) setTimeout(() => showHint("Lighter graphics for this device.", 6000), 1500);
   globalThis.__driftGPU = { gpuInfo, lite: PL.lite };
 
   const TU = GPUTextureUsage;
@@ -10268,7 +10268,7 @@ statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = 
 syncLabels();
 globalThis.__drift = { goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
-showHint("Landing on Titan: building the city and the land around it\u2026", 600000);
+showHint("Landing on Titan\u2026", 600000);
 
 init().catch((e) => startFallback("WebGPU failed to start", String((e && e.message) || e)));
 
