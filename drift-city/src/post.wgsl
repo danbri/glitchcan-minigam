@@ -100,6 +100,67 @@ fn aces(x: vec3f) -> vec3f {
   return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), vec3f(0.0), vec3f(1.0));
 }
 
+// One layer of falling snow, as flakes fixed in a moving 3D grid of cells of size s: the ray steps cell to cell
+// (to tMax, or the scene depth), and each cell holds at most one flake. The grid falls and drifts with the wind, so
+// flakes keep their place in the world as the camera moves, with true parallax, and nothing is tied to the view.
+// A flake is a disc of world radius r (no smaller than a pixel, with its light spread out) drawn along mv, the
+// camera's travel this frame; very near flakes are out of focus. Returns the light the layer lets through.
+fn snowLayer(ro: vec3f, rd: vec3f, dep: f32, s: f32, tMax: f32, r: f32, dens: f32, fall: f32, k: i32, mv: vec3f, pw: f32, n: i32) -> f32 {
+  let T = u.time;
+  let off = vec3f(u.p6 / 3.0, -fall * T, u.p7 / 3.0) + vec3f(f32(k) * 0.37 * s);
+  let o = ro - off;
+  let tEnd = min(tMax, dep);
+  // streaks stay inside a flake's own cell, or they would be cut off square
+  var m = mv;
+  let ml = length(m);
+  if (ml > 0.3 * s) { m *= 0.3 * s / ml; }
+  var cell = floor(o / s);
+  let st = sign(rd);
+  let ird = 1.0 / max(abs(rd), vec3f(1e-6));
+  var tn = ((cell + max(st, vec3f(0.0))) * s - o) * st * ird;
+  let td = s * ird;
+  var tr = 1.0;
+  var t = 0.0;
+  for (var i = 0; i < n; i++) {
+    if (t > tEnd) { break; }
+    let ci = vec3i(cell);
+    if (hsh(ci.x * 7 + ci.y * 131, ci.z, 160 + k) < dens) {
+      let h1 = hsh(ci.x, ci.y * 7 + ci.z, 161 + k);
+      let h2 = hsh(ci.y, ci.z * 7 + ci.x, 162 + k);
+      let h3 = hsh(ci.z, ci.x * 7 + ci.y, 163 + k);
+      // a flake near the middle of its cell, swaying and tumbling as it falls
+      var fc = (cell + vec3f(h1, h2, h3) * 0.4 + 0.3) * s;
+      fc += vec3f(sin(T * (0.7 + h2) + h1 * 6.3), 0.0, cos(T * (0.6 + h3) + h2 * 6.3)) * 0.1 * s;
+      // closest approach of the ray to the segment fc .. fc + m
+      let w0 = o - fc;
+      let bb = dot(rd, m);
+      let cc = max(dot(m, m), 1e-8);
+      let dd = dot(rd, w0);
+      let ee = dot(m, w0);
+      let den = cc - bb * bb;
+      var sc = select(clamp((ee - bb * dd) / den, 0.0, 1.0), 0.0, den < 1e-6);
+      if (cc < 1e-7) { sc = 0.0; }
+      let tc = max(dot(fc + m * sc - o, rd), 0.0);
+      let dist = length(o + rd * tc - (fc + m * sc));
+      if (tc > 0.05 && tc < tEnd) {
+        let rr = r * (0.6 + 0.8 * h1);
+        // out of focus close to the lens; at least half a pixel far away
+        let blur = rr * 1.6 / max(tc, 0.25);
+        let re = max(max(rr, pw * tc * 0.6), rr + blur * 0.12);
+        var a = (rr * rr) / (re * re) * (1.0 - smoothstep(re * 0.35, re, dist));
+        a /= 1.0 + length(m - rd * dot(m, rd)) / (2.0 * re);
+        a *= 0.9 * (1.0 - smoothstep(tMax * 0.6, tMax, tc));
+        tr *= 1.0 - clamp(a, 0.0, 0.95);
+      }
+    }
+    // step to the next cell
+    if (tn.x < tn.y && tn.x < tn.z) { t = tn.x; tn.x += td.x; cell.x += st.x; }
+    else if (tn.y < tn.z) { t = tn.y; tn.y += td.y; cell.y += st.y; }
+    else { t = tn.z; tn.z += td.z; cell.z += st.z; }
+  }
+  return tr;
+}
+
 @fragment fn comp(@builtin(position) fc: vec4f) -> @location(0) vec4f {
   let uv = fc.xy / u.outRes;
   let ts = 1.0 / u.res;
@@ -152,59 +213,23 @@ fn aces(x: vec3f) -> vec3f {
   c = mix(c, c * vec3f(0.82, 0.95, 1.08) + vec3f(0.015, 0.03, 0.045), 1.0 - smoothstep(0.0, 0.45, lum));
   c = mix(c, c * vec3f(1.08, 0.98, 0.86), smoothstep(0.45, 1.0, lum));
   c = c * 0.93 + vec3f(0.035, 0.03, 0.045);
-  // methane snowfall in the dense air, six layers deep: big soft flakes drifting past the lens, then clumps and
-  // single flakes of every size, tumbling as they fall, down to far specks. Drawn after anti-aliasing.
+  // methane snowfall: flakes in the world (see snowLayer), drawn after anti-aliasing
   if (u.p8 > 0.0) {
     let sv = vec2f((2.0 * fc.x - u.outRes.x) / u.outRes.y, (u.outRes.y - 2.0 * fc.y) / u.outRes.y);
     let rdr = normalize(u.camFwd + (sv.x * u.camRight + sv.y * u.camUp) * u.fov);
-    let ang = atan2(rdr.z, rdr.x) / 6.2831853;
-    var snow = 0.0;
-    // at speed the near flakes streak: sideways with the drone's sideways motion, outward from the centre with its
-    // forward motion (camera travel this frame, in screen units)
-    let vel = select(vec3f(0.0), u.camPos - u.prevPos, u.histValid > 0.5);
-    let stv = vec2f(dot(vel, u.camRight), dot(vel, u.camUp)) / u.fov + sv * dot(vel, u.camFwd) * 0.35;
-    let sl = length(stv);
-    let sdir = select(vec2f(0.0, 1.0), stv / max(sl, 1e-5), sl > 1e-5);
-    for (var l = 0; l < 6; l++) {
-      let fl = f32(l);
-      let sc = vec2f(24.0 + 34.0 * fl, 4.0 + 6.0 * fl);
-      let k = 4.0 * sc.y / sc.x;
-      let gust = 0.25 * sin(u.time * 0.21 + fl) * sin(u.time * 0.13 + 1.3);
-      let g0 = vec2f(ang, rdr.y) * sc + vec2f(0.4 * sin(u.time * (0.3 + 0.05 * fl) + fl * 1.7 + rdr.y * 5.0) + gust * sc.x * 0.02, u.time * (0.32 + 0.17 * fl));
-      let ci = vec2i(floor(g0));
-      let f = fract(g0);
-      if (hsh(ci.x, ci.y, 111 + l) < 0.22 + 0.05 * fl) {
-        let h1 = hsh(ci.x, ci.y, 120 + l);
-        let h2 = hsh(ci.x, ci.y, 130 + l);
-        let h3 = hsh(ci.x, ci.y, 140 + l);
-        let cp = vec2f(h1, h2) * 0.6 + 0.2;
-        // and shorter than the cell it is drawn in, or it is cut off square
-        let r = (0.17 - 0.02 * fl) * (0.45 + 0.9 * h3) / (1.0 + 0.35 * clamp(sl * (3.0 - 0.45 * fl) * 6.0, 0.0, 2.5));
-        // a tumbling flake: an ellipse that turns as it falls, sometimes a clump of two or three
-        let tb = u.time * (0.6 + 1.4 * h1) + h2 * 6.28;
-        let dv = f - cp;
-        // stretch along the streak (more for the nearer layers), then tumble (less, the faster we go)
-        let sk = clamp(sl * (3.0 - 0.45 * fl) * 6.0, 0.0, 2.5);
-        let dc0 = dv * vec2f(k, 1.0);
-        let al = dot(dc0, sdir);
-        // a streak is thin: widen the distance across it, so the mark narrows as it lengthens
-        let dc = (dc0 - sdir * al) * (1.0 + 0.8 * sk) + sdir * al / (1.0 + sk);
-        let tbs = tb / (1.0 + sk);
-        let dr = vec2f(dc.x * cos(tbs) - dc.y * sin(tbs), dc.x * sin(tbs) + dc.y * cos(tbs)) * vec2f(1.0, 1.0 + 0.9 * h2 / (1.0 + sk));
-        var dd = length(dr);
-        if (h3 > 0.45) { dd = min(dd, length(dr - vec2f(r * 0.55, r * 0.2)) * 1.15); }
-        if (h3 > 0.8) { dd = min(dd, length(dr + vec2f(r * 0.3, r * 0.5)) * 1.3); }
-        // the nearest layer is out of focus: bigger, softer, fainter
-        let soft = select(0.3, 0.05, l == 0);
-        // a streak spreads the same light over a longer mark, so it is fainter; and a flake is drawn only inside its
-        // own cell, so fade it out before the cell's edge (unfaded, a long streak was cut off square into a rectangle)
-        let ew = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));
-        let edge = mix(1.0, smoothstep(0.0, 0.3, ew), min(sk, 1.0));
-        let a = select(1.0 - 0.13 * fl, 0.35, l == 0) * edge / (1.0 + 0.25 * sk);
-        snow += (1.0 - smoothstep(r * soft, r, dd)) * a;
-      }
-    }
-    c = mix(c, vec3f(0.97, 0.92, 0.84), clamp(snow * u.p8 * 0.7, 0.0, 0.85));
+    // camera travel this frame: each flake is drawn along it, so fast flight streaks the near snow
+    var mv = select(vec3f(0.0), u.camPos - u.prevPos, u.histValid > 0.5);
+    if (length(mv) > 20.0) { mv = vec3f(0.0); }
+    let pw = 2.0 * u.fov / u.outRes.y;
+    let dens = clamp(u.p8, 0.0, 1.0);
+    // four nested grids: flakes by the lens (0.6 m cells, to 4 m), near (1.3 m, to 12 m), middle (5 m, to 50 m) and
+    // far specks (16 m, to 200 m); a ray crosses about 1.7 cells per cell size it travels, which sets each loop
+    var tr = snowLayer(u.camPos, rdr, dep, 0.6, 4.0, 0.025, 0.5 * dens, 0.9, 3, mv, pw, 12);
+    tr *= snowLayer(u.camPos, rdr, dep, 1.3, 12.0, 0.045, 0.8 * dens, 1.0, 0, mv, pw, 16);
+    tr *= snowLayer(u.camPos, rdr, dep, 5.0, 50.0, 0.12, 0.9 * dens, 1.25, 1, mv, pw, 17);
+    tr *= snowLayer(u.camPos, rdr, dep, 16.0, 200.0, 0.35, 0.9 * dens, 1.5, 2, mv, pw, 21);
+    let lit = mix(vec3f(0.55, 0.52, 0.5), vec3f(0.97, 0.92, 0.84), clamp(luma(u.skyHor) * 2.2, 0.35, 1.0));
+    c = mix(c, lit, 1.0 - tr);
   }
   let q = uv;
   c *= 0.74 + 0.26 * pow(16.0 * q.x * q.y * (1.0 - q.x) * (1.0 - q.y), 0.2);
