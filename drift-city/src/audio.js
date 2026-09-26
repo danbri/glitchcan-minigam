@@ -172,9 +172,13 @@ function audioVoice(who, words, from) {
   const c = AU.ctx, now = c.currentTime;
   const start = Math.max(now + 0.15, AU.vEnd || 0);
   const n = Math.max(3, Math.min(26, Math.round(words * 0.9)));
-  const pos = from || [AU.lpos[0], AU.lpos[1] - 0.3, AU.lpos[2]];
   AU.vEnd = start + n * 0.15 * v[1] + 0.8;
-  setTimeout(() => { if (AU.ready && AU.on) auPhrase(pos, 0.9, v[0], n, v[2], v[1]); }, (start - now) * 1000);
+  // `from` is a position, or a function giving one when the line is spoken; none means inside your own helmet
+  setTimeout(() => {
+    if (!AU.ready || !AU.on) return;
+    const at = (typeof from === "function" ? from() : from) || [AU.lpos[0], AU.lpos[1] - 0.3, AU.lpos[2]];
+    auPhrase(at, 0.9, v[0], n, v[2], v[1]);
+  }, (start - now) * 1000);
 }
 // a vendor's call: long sung vowels with a falling tune
 function auVendor(pos) {
@@ -373,9 +377,9 @@ function audioDepart() {
 function auLoop(kind) {
   const c = AU.ctx;
   const out = c.createGain(); out.gain.value = 0;
-  const p = auPanner([0, 0, 0], kind === "water" ? 10 : kind === "industry" ? 30 : 15, 0.9);
+  const p = auPanner([0, 0, 0], kind === "water" ? 10 : kind === "industry" ? 30 : kind === "hive" ? 90 : 15, 0.9);
   out.connect(p); p.connect(AU.bus.env);
-  const n = c.createBufferSource(); n.buffer = kind === "rumble" || kind === "industry" || kind === "dorm" ? AU.brown : AU.white; n.loop = true;
+  const n = c.createBufferSource(); n.buffer = kind === "rumble" || kind === "industry" || kind === "dorm" || kind === "hive" ? AU.brown : AU.white; n.loop = true;
   const f = c.createBiquadFilter();
   const mod = c.createGain(); mod.gain.value = 1;
   if (kind === "water") { f.type = "lowpass"; f.frequency.value = 800; }
@@ -393,6 +397,12 @@ function auLoop(kind) {
     f.type = "bandpass"; f.frequency.value = 520; f.Q.value = 1.2;
     for (const [fq, a] of [[50, 0.12], [100, 0.06], [150.5, 0.03]]) { const o = c.createOscillator(); o.frequency.value = fq; const og = c.createGain(); og.gain.value = a; o.connect(og); og.connect(mod); o.start(); }
     const am = c.createOscillator(); am.frequency.value = 0.7; const ag = c.createGain(); ag.gain.value = 0.3; am.connect(ag); ag.connect(mod.gain); am.start();
+  }
+  else if (kind === "hive") {
+    // the Hive: a building-sized air handler, mains hum, and the slow beat of its fans
+    f.type = "lowpass"; f.frequency.value = 220;
+    for (const [fq, a] of [[50, 0.18], [100, 0.1], [150, 0.05], [37.5, 0.12]]) { const o = c.createOscillator(); o.frequency.value = fq; const og = c.createGain(); og.gain.value = a; o.connect(og); og.connect(mod); o.start(); }
+    const am = c.createOscillator(); am.frequency.value = 0.35; const ag = c.createGain(); ag.gain.value = 0.35; am.connect(ag); ag.connect(mod.gain); am.start();
   }
   else if (kind === "industry") { f.type = "lowpass"; f.frequency.value = 300; const o = c.createOscillator(); o.frequency.value = 55; const og = c.createGain(); og.gain.value = 0.2; o.connect(og); og.connect(mod); o.start(); const o2 = c.createOscillator(); o2.frequency.value = 110.5; const og2 = c.createGain(); og2.gain.value = 0.08; o2.connect(og2); og2.connect(mod); o2.start(); }
   else if (kind === "shimmer") {
@@ -545,14 +555,13 @@ function audioStep(dt, w) {
   T(AU.bus.radio.gain, space ? 0 : 0.5, 1.0);
   const due = (k, rate) => { AU.t[k] = (AU.t[k] || rr(0, 1)) - dt * rate; if (AU.t[k] <= 0) { AU.t[k] = rr(0.5, 1.5); return true; } return false; };
   const near = (arr) => arr && arr.length ? pick(arr) : null;
-  if (people > 0.02 && due("phrase", 3.5 * people)) { const at = near(P.busy) || near(P.sidewalks); if (at) auPhrase(at, rr(0.4, 1)); }
-  // footfalls, by the share of each kind of walker: exoskeletons, androids, weighted boots, capes, pet drones
-  const foot = w.people * ground > 0.03;
-  if (foot && due("clank", 2.2 * w.people)) { const at = near(P.sidewalks); if (at) auClank(at, rr(0.3, 0.8)); }
-  if (foot && due("servo", 1.4 * w.people)) { const at = near(P.sidewalks); if (at) auServo(at, rr(0.4, 0.9)); }
-  if (foot && due("boots", 2.6 * w.people)) { const at = near(P.sidewalks); if (at) auBoots(at, rr(0.4, 0.9)); }
-  if (foot && due("cape", 0.5 * w.people)) { const at = near(P.sidewalks); if (at) auCape([at[0], at[1] + 0.8, at[2]], rr(0.4, 0.9)); }
-  if (foot && due("buzz", 0.35 * w.people)) { const at = near(P.sidewalks); if (at) auBuzz([at[0], 2.1, at[2]], rr(0.5, 1)); }
+  // people talking over their suit radios: from a walker you can see (not an android), else from a busy pavement.
+  // Footfalls are placed and timed by the walkers themselves (audioFeet in main.js).
+  if (people > 0.02 && due("phrase", 3.5 * people)) {
+    const hs = (FEET.list || []).filter((q) => q.kind !== 1);
+    const at = hs.length ? (() => { const q = pick(hs); return [q.x, 1.6, q.z]; })() : near(P.busy) || near(P.sidewalks);
+    if (at) auPhrase(at, rr(0.4, 1));
+  }
   auLoopSet("cable", P.cable, space ? 0 : 0.1);
   auLoopSet("dorm", P.dorm, space ? 0 : 0.22);
   if (P.dorm && !space && due("dormvoice", 0.25)) auPhrase([P.dorm[0] + rr(-8, 8), P.dorm[1] + rr(-6, 10), P.dorm[2] + rr(-8, 8)], rr(0.2, 0.4));
@@ -568,6 +577,7 @@ function audioStep(dt, w) {
   auLoopSet("water", P.water, space ? 0 : 0.25);
   auLoopSet("river", P.river, space ? 0 : 0.18);
   auLoopSet("industry", P.industry, space ? 0 : 0.35);
+  auLoopSet("hive", P.hive, space ? 0 : 0.3);
   auLoopSet("rumble", P.spaceport, space ? 0 : 0.4);
   auLoopSet("hiss", P.lamps && P.lamps.length ? P.lamps[0] : null, space ? 0 : 0.08 + 0.1 * w.snow);
   if (P.pagoda && due("bell", 0.035)) auBell(P.pagoda, 0.35);

@@ -209,6 +209,11 @@ function audioWorld(dt) {
       if (o.typ === 9) nearest("industry", [mx, 8, mz]);
       if (o.typ === 10) nearest("spaceport", [mx, 5, mz]);
     }
+    // the Hive: the nearest point of its walls (620 x 420 m, 240 m high), when within earshot
+    {
+      const hx = clampv(st.x, HIVE_C[0] - 310, HIVE_C[0] + 310), hz = clampv(st.z, HIVE_C[1] - 210, HIVE_C[1] + 210);
+      if (Math.hypot(hx - st.x, hz - st.z) < 900) P.hive = [hx, clampv(st.y, 5, 230), hz];
+    }
     // the tubes overhead: the nearest street line in each direction, if it borders the city
     if (city > 3) {
       const kx = Math.round(st.x / C), kz = Math.round(st.z / C);
@@ -246,6 +251,74 @@ function audioWorld(dt) {
   if (DIR.radio) P.radios.unshift(DIR.radio);
   AUW.places = P;
   return AUW;
+}
+// The walkers near a point, placed exactly as pedQ in scene.wgsl places them (same hashes, same noise, same ring
+// maths), so their sounds come from the figures you see. Each: world x, z, kind, gait phase, key.
+const GAIT_S = [0.3, 0.13, 0.28], GAIT_SF = [0.56, 0.6, 0.4];
+// one walker (cell cx, cz; lane ln; slot ki) at time t, or null if that slot is empty
+function walkerAt(cx, cz, ln, ki, t, dens) {
+  const R = ln ? 10.45 : 9.95, dir = ln ? -1 : 1, per = 8 * R, n = Math.floor(per / 4.4), spacing = per / n, key = ki * 2 + ln;
+  if (hsh(cx * 31 + key, cz, 95) >= dens) return null;
+  const pulley = hsh(cx * 11 + ln, cz * 5, 183) < 0.22;
+  const pace = (0.5 + 1.1 * hsh(cx * 5 + ln, cz * 3, 180)) * (pulley ? 2.6 : 1);
+  const A = t * pace + 3 * pace * (vnoise(t * 0.07, cx * 13 + cz * 7 + ln, 181) - 0.5);
+  const h = hsh(key, cx * 7 + cz, 98), kind = pulley ? 4 : h < 0.28 ? 0 : h < 0.46 ? 1 : h < 0.82 ? 2 : 3;
+  const sw = 0.3 + 0.4 * hsh(key, cx + cz * 7, 182);
+  const sway = kind === 4 ? 0 : Math.min(0.8, 0.45 * pace / sw) * Math.sin(t * sw + key);
+  const s = (((ki + 0.5) * spacing + sway + dir * A) % per + per) % per;
+  // back from the ring coordinate to the block: bottom edge, right, top, left (the inverse of pedQ's sP)
+  const lp = s < 2 * R ? [s - R, -R] : s < 4 * R ? [R, s - 3 * R] : s < 6 * R ? [5 * R - s, R] : [-R, 7 * R - s];
+  const f = kind === 1 ? 3.1 : kind === 2 ? 2.2 : kind === 3 ? 1.3 : kind === 4 ? 2.4 : 4.2 * (0.6 + 0.5 * pace);
+  const ph = kind <= 2 ? (A + dir * sway) / (2 * GAIT_S[kind] / GAIT_SF[kind]) * 2 * Math.PI + key : t * f + key;
+  return { x: (cx + 0.5) * C + lp[0], z: (cz + 0.5) * C + lp[1], kind, ph, key, cx, cz, ln, ki, dens,
+    id: cx * 7919 + cz * 104729 + key * 3 + ln, drone: kind === 2 && hsh(key, key * 3 + 2, 99) < 0.3 };
+}
+function walkersNear(x0, z0, rad, t) {
+  const out = [];
+  for (let cz = Math.floor((z0 - rad) / C); cz <= Math.floor((z0 + rad) / C); cz++) for (let cx = Math.floor((x0 - rad) / C); cx <= Math.floor((x0 + rad) / C); cx++) {
+    const o = cellAt(cx, cz);
+    if (o.wild) continue;
+    const ty = o.typ;
+    if (!(ty <= 3 || ty === 8 || ty === 9 || ty === 10 || ty === 11 || ty === 13)) continue;
+    const dens = 0.16 + 0.45 * ((o.fl >> 10) & 1) + (o.fl & 16 ? 0.3 : 0);
+    for (let ln = 0; ln < 2; ln++) {
+      const n = Math.floor(8 * (ln ? 10.45 : 9.95) / 4.4);
+      for (let ki = 0; ki < n; ki++) {
+        const w = walkerAt(cx, cz, ln, ki, t, dens);
+        if (w && Math.hypot(w.x - x0, w.z - z0) <= rad) out.push(w);
+      }
+    }
+  }
+  return out;
+}
+// footfalls, each from the foot that lands, when it lands: a walking kind's foot comes down at every half cycle of
+// its gait; a cape glider lands once per hop; a skater pushes off at every half cycle
+const FEET = { last: new Map(), list: [], t: 0, count: 0 };
+function audioFeet(dt) {
+  if (NAV.spaceMix > 0.5 || AUW.alt > 120) { FEET.list = []; return; }
+  const l = AU.ready ? AU.lpos : [st.x, st.y, st.z], play = AU.ready && AU.on;
+  FEET.t -= dt;
+  if (FEET.t <= 0) { FEET.t = 0.25; FEET.list = walkersNear(l[0], l[2], 30, clock).sort((a, b) => Math.hypot(a.x - l[0], a.z - l[2]) - Math.hypot(b.x - l[0], b.z - l[2])).slice(0, 16); }
+  const seen = new Map();
+  let made = 0;
+  for (const w0 of FEET.list) {
+    // re-place each walker now: they move between the lists' updates
+    const w = walkerAt(w0.cx, w0.cz, w0.ln, w0.ki, clock, w0.dens) || w0;
+    const step = w.kind === 3 ? Math.floor((w.ph * 0.5 + Math.PI / 2) / (2 * Math.PI)) : Math.floor(w.ph / Math.PI);
+    const prev = FEET.last.get(w.id);
+    seen.set(w.id, step);
+    if (prev === undefined || step === prev || made >= 4) continue;
+    made++; FEET.count++;
+    if (!play) continue;
+    const at = [w.x, 0.05, w.z], g = 0.35 + 0.25 * hsh(w.id, step, 7);
+    if (w.kind === 0) auClank(at, g);
+    else if (w.kind === 1) auServo([w.x, 0.6, w.z], g);
+    else if (w.kind === 2) auBoots(at, g);
+    else if (w.kind === 3) auCape([w.x, 1.2, w.z], g);
+    else if (step % 2 === 0) auClank(at, g * 0.4);
+    if (w.drone && step % 6 === 0) auBuzz([w.x, 2.1, w.z], 0.6);
+  }
+  FEET.last = seen;
 }
 // props in the world: the story's scene, the events director's, and your own drone when the view follows it
 let FOLLOW = false;
@@ -1328,8 +1401,11 @@ async function init() {
     taleHotspots(dtS, cam, 0.72);
     taleSync(dtS);
     directorStep(dtS);
-    audioListener([st.x, st.y, st.z], cam.f, cam.up);
+    // the listener is where the camera is: behind the drone when the view follows it
+    const earAt = FOLLOW && NAV.spaceMix < 0.01 ? [st.x - Math.cos(st.yaw) * 3.5, st.y + 1.1, st.z - Math.sin(st.yaw) * 3.5] : [st.x, st.y, st.z];
+    audioListener(earAt, cam.f, cam.up);
     audioStep(dtS, audioWorld(dtS));
+    audioFeet(dtS);
     audioCity(dtS, AUW);
     const fo = document.getElementById("bFlyOn");
     if (fo) fo.hidden = !(NAV.mode === "visit" && !TALE.on);
@@ -1596,7 +1672,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { WX, FEEL, mapOpen, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { WX, FEEL, FEET, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

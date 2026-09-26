@@ -8697,9 +8697,13 @@ function audioVoice(who, words, from) {
   const c = AU.ctx, now = c.currentTime;
   const start = Math.max(now + 0.15, AU.vEnd || 0);
   const n = Math.max(3, Math.min(26, Math.round(words * 0.9)));
-  const pos = from || [AU.lpos[0], AU.lpos[1] - 0.3, AU.lpos[2]];
   AU.vEnd = start + n * 0.15 * v[1] + 0.8;
-  setTimeout(() => { if (AU.ready && AU.on) auPhrase(pos, 0.9, v[0], n, v[2], v[1]); }, (start - now) * 1000);
+  // `from` is a position, or a function giving one when the line is spoken; none means inside your own helmet
+  setTimeout(() => {
+    if (!AU.ready || !AU.on) return;
+    const at = (typeof from === "function" ? from() : from) || [AU.lpos[0], AU.lpos[1] - 0.3, AU.lpos[2]];
+    auPhrase(at, 0.9, v[0], n, v[2], v[1]);
+  }, (start - now) * 1000);
 }
 // a vendor's call: long sung vowels with a falling tune
 function auVendor(pos) {
@@ -8898,9 +8902,9 @@ function audioDepart() {
 function auLoop(kind) {
   const c = AU.ctx;
   const out = c.createGain(); out.gain.value = 0;
-  const p = auPanner([0, 0, 0], kind === "water" ? 10 : kind === "industry" ? 30 : 15, 0.9);
+  const p = auPanner([0, 0, 0], kind === "water" ? 10 : kind === "industry" ? 30 : kind === "hive" ? 90 : 15, 0.9);
   out.connect(p); p.connect(AU.bus.env);
-  const n = c.createBufferSource(); n.buffer = kind === "rumble" || kind === "industry" || kind === "dorm" ? AU.brown : AU.white; n.loop = true;
+  const n = c.createBufferSource(); n.buffer = kind === "rumble" || kind === "industry" || kind === "dorm" || kind === "hive" ? AU.brown : AU.white; n.loop = true;
   const f = c.createBiquadFilter();
   const mod = c.createGain(); mod.gain.value = 1;
   if (kind === "water") { f.type = "lowpass"; f.frequency.value = 800; }
@@ -8918,6 +8922,12 @@ function auLoop(kind) {
     f.type = "bandpass"; f.frequency.value = 520; f.Q.value = 1.2;
     for (const [fq, a] of [[50, 0.12], [100, 0.06], [150.5, 0.03]]) { const o = c.createOscillator(); o.frequency.value = fq; const og = c.createGain(); og.gain.value = a; o.connect(og); og.connect(mod); o.start(); }
     const am = c.createOscillator(); am.frequency.value = 0.7; const ag = c.createGain(); ag.gain.value = 0.3; am.connect(ag); ag.connect(mod.gain); am.start();
+  }
+  else if (kind === "hive") {
+    // the Hive: a building-sized air handler, mains hum, and the slow beat of its fans
+    f.type = "lowpass"; f.frequency.value = 220;
+    for (const [fq, a] of [[50, 0.18], [100, 0.1], [150, 0.05], [37.5, 0.12]]) { const o = c.createOscillator(); o.frequency.value = fq; const og = c.createGain(); og.gain.value = a; o.connect(og); og.connect(mod); o.start(); }
+    const am = c.createOscillator(); am.frequency.value = 0.35; const ag = c.createGain(); ag.gain.value = 0.35; am.connect(ag); ag.connect(mod.gain); am.start();
   }
   else if (kind === "industry") { f.type = "lowpass"; f.frequency.value = 300; const o = c.createOscillator(); o.frequency.value = 55; const og = c.createGain(); og.gain.value = 0.2; o.connect(og); og.connect(mod); o.start(); const o2 = c.createOscillator(); o2.frequency.value = 110.5; const og2 = c.createGain(); og2.gain.value = 0.08; o2.connect(og2); og2.connect(mod); o2.start(); }
   else if (kind === "shimmer") {
@@ -9070,14 +9080,13 @@ function audioStep(dt, w) {
   T(AU.bus.radio.gain, space ? 0 : 0.5, 1.0);
   const due = (k, rate) => { AU.t[k] = (AU.t[k] || rr(0, 1)) - dt * rate; if (AU.t[k] <= 0) { AU.t[k] = rr(0.5, 1.5); return true; } return false; };
   const near = (arr) => arr && arr.length ? pick(arr) : null;
-  if (people > 0.02 && due("phrase", 3.5 * people)) { const at = near(P.busy) || near(P.sidewalks); if (at) auPhrase(at, rr(0.4, 1)); }
-  // footfalls, by the share of each kind of walker: exoskeletons, androids, weighted boots, capes, pet drones
-  const foot = w.people * ground > 0.03;
-  if (foot && due("clank", 2.2 * w.people)) { const at = near(P.sidewalks); if (at) auClank(at, rr(0.3, 0.8)); }
-  if (foot && due("servo", 1.4 * w.people)) { const at = near(P.sidewalks); if (at) auServo(at, rr(0.4, 0.9)); }
-  if (foot && due("boots", 2.6 * w.people)) { const at = near(P.sidewalks); if (at) auBoots(at, rr(0.4, 0.9)); }
-  if (foot && due("cape", 0.5 * w.people)) { const at = near(P.sidewalks); if (at) auCape([at[0], at[1] + 0.8, at[2]], rr(0.4, 0.9)); }
-  if (foot && due("buzz", 0.35 * w.people)) { const at = near(P.sidewalks); if (at) auBuzz([at[0], 2.1, at[2]], rr(0.5, 1)); }
+  // people talking over their suit radios: from a walker you can see (not an android), else from a busy pavement.
+  // Footfalls are placed and timed by the walkers themselves (audioFeet in main.js).
+  if (people > 0.02 && due("phrase", 3.5 * people)) {
+    const hs = (FEET.list || []).filter((q) => q.kind !== 1);
+    const at = hs.length ? (() => { const q = pick(hs); return [q.x, 1.6, q.z]; })() : near(P.busy) || near(P.sidewalks);
+    if (at) auPhrase(at, rr(0.4, 1));
+  }
   auLoopSet("cable", P.cable, space ? 0 : 0.1);
   auLoopSet("dorm", P.dorm, space ? 0 : 0.22);
   if (P.dorm && !space && due("dormvoice", 0.25)) auPhrase([P.dorm[0] + rr(-8, 8), P.dorm[1] + rr(-6, 10), P.dorm[2] + rr(-8, 8)], rr(0.2, 0.4));
@@ -9093,6 +9102,7 @@ function audioStep(dt, w) {
   auLoopSet("water", P.water, space ? 0 : 0.25);
   auLoopSet("river", P.river, space ? 0 : 0.18);
   auLoopSet("industry", P.industry, space ? 0 : 0.35);
+  auLoopSet("hive", P.hive, space ? 0 : 0.3);
   auLoopSet("rumble", P.spaceport, space ? 0 : 0.4);
   auLoopSet("hiss", P.lamps && P.lamps.length ? P.lamps[0] : null, space ? 0 : 0.08 + 0.1 * w.snow);
   if (P.pagoda && due("bell", 0.035)) auBell(P.pagoda, 0.35);
@@ -9524,6 +9534,23 @@ function taleSay(paras, choices) {
   const n = document.getElementById("taleCount");
   if (n) n.textContent = choices.length ? choices.length + (choices.length === 1 ? " choice" : " choices") : "";
 }
+// where a speaker's voice comes from: your own ("you") from inside your helmet; each other speaker from one person
+// in the scene, the same one for as long as the scene lasts (the nearest one not already speaking for someone else).
+// Looked up when the line is spoken, so a scene's people are in place by then.
+function taleVoiceAt(who) {
+  if (who === "you") return null;
+  if (TALE.voiceScene !== TALE.scene) { TALE.voiceScene = TALE.scene; TALE.voiceOf = {}; }
+  const ps = (TALE.props || []).filter((p) => p.kind === 0 && Math.hypot(p.x - st.x, p.z - st.z) < 40);
+  const taken = new Set(Object.values(TALE.voiceOf));
+  let q = TALE.voiceOf[who] !== undefined ? ps[TALE.voiceOf[who]] : null;
+  if (!q) {
+    let best = -1, bd = 1e9;
+    ps.forEach((p, i) => { const d = Math.hypot(p.x - st.x, p.z - st.z); if (!taken.has(i) && d < bd) { bd = d; best = i; } });
+    if (best < 0) return null;
+    TALE.voiceOf[who] = best; q = ps[best];
+  }
+  return [q.x, q.y + 1.55, q.z];
+}
 function taleChoose(i) {
   TALE.story.ChooseChoiceIndex(i);
   taleAdvance();
@@ -9536,12 +9563,7 @@ function taleTags(tags, line) {
     else if (k === "prop") taleAddProp(v);
     else if (k === "live") TALE.live = true;
     // "# voice: <who>": the line is spoken, over the speaker's radio, from the nearest person in the scene
-    else if (k === "voice") {
-      const ps = (AUW.places && AUW.places.persons) || [];
-      let from = null, best = 30;
-      for (const q of ps) { const d = Math.hypot(q[0] - st.x, q[2] - st.z); if (d < best) { best = d; from = q; } }
-      audioVoice(v, (line || "").split(/\s+/).length, from);
-    }
+    else if (k === "voice") audioVoice(v, (line || "").split(/\s+/).length, () => taleVoiceAt(v));
     else if (k === "place") taleGo(v);
     else if (k === "time") { const idx = { day: 0, dusk: 1, dawn: 1, night: 2, snow: 3 }[v]; if (idx !== undefined && idx !== todIdx) { todFrom = currentTod(); todIdx = idx; todT = 0; todAuto = 0; NAV.sunOverride = null; syncLabels(); } }
     else if (k === "weather") { WX.forced = v === "snow" ? 0.75 : v === "clear" ? 0 : null; }
@@ -10212,6 +10234,11 @@ function audioWorld(dt) {
       if (o.typ === 9) nearest("industry", [mx, 8, mz]);
       if (o.typ === 10) nearest("spaceport", [mx, 5, mz]);
     }
+    // the Hive: the nearest point of its walls (620 x 420 m, 240 m high), when within earshot
+    {
+      const hx = clampv(st.x, HIVE_C[0] - 310, HIVE_C[0] + 310), hz = clampv(st.z, HIVE_C[1] - 210, HIVE_C[1] + 210);
+      if (Math.hypot(hx - st.x, hz - st.z) < 900) P.hive = [hx, clampv(st.y, 5, 230), hz];
+    }
     // the tubes overhead: the nearest street line in each direction, if it borders the city
     if (city > 3) {
       const kx = Math.round(st.x / C), kz = Math.round(st.z / C);
@@ -10249,6 +10276,74 @@ function audioWorld(dt) {
   if (DIR.radio) P.radios.unshift(DIR.radio);
   AUW.places = P;
   return AUW;
+}
+// The walkers near a point, placed exactly as pedQ in scene.wgsl places them (same hashes, same noise, same ring
+// maths), so their sounds come from the figures you see. Each: world x, z, kind, gait phase, key.
+const GAIT_S = [0.3, 0.13, 0.28], GAIT_SF = [0.56, 0.6, 0.4];
+// one walker (cell cx, cz; lane ln; slot ki) at time t, or null if that slot is empty
+function walkerAt(cx, cz, ln, ki, t, dens) {
+  const R = ln ? 10.45 : 9.95, dir = ln ? -1 : 1, per = 8 * R, n = Math.floor(per / 4.4), spacing = per / n, key = ki * 2 + ln;
+  if (hsh(cx * 31 + key, cz, 95) >= dens) return null;
+  const pulley = hsh(cx * 11 + ln, cz * 5, 183) < 0.22;
+  const pace = (0.5 + 1.1 * hsh(cx * 5 + ln, cz * 3, 180)) * (pulley ? 2.6 : 1);
+  const A = t * pace + 3 * pace * (vnoise(t * 0.07, cx * 13 + cz * 7 + ln, 181) - 0.5);
+  const h = hsh(key, cx * 7 + cz, 98), kind = pulley ? 4 : h < 0.28 ? 0 : h < 0.46 ? 1 : h < 0.82 ? 2 : 3;
+  const sw = 0.3 + 0.4 * hsh(key, cx + cz * 7, 182);
+  const sway = kind === 4 ? 0 : Math.min(0.8, 0.45 * pace / sw) * Math.sin(t * sw + key);
+  const s = (((ki + 0.5) * spacing + sway + dir * A) % per + per) % per;
+  // back from the ring coordinate to the block: bottom edge, right, top, left (the inverse of pedQ's sP)
+  const lp = s < 2 * R ? [s - R, -R] : s < 4 * R ? [R, s - 3 * R] : s < 6 * R ? [5 * R - s, R] : [-R, 7 * R - s];
+  const f = kind === 1 ? 3.1 : kind === 2 ? 2.2 : kind === 3 ? 1.3 : kind === 4 ? 2.4 : 4.2 * (0.6 + 0.5 * pace);
+  const ph = kind <= 2 ? (A + dir * sway) / (2 * GAIT_S[kind] / GAIT_SF[kind]) * 2 * Math.PI + key : t * f + key;
+  return { x: (cx + 0.5) * C + lp[0], z: (cz + 0.5) * C + lp[1], kind, ph, key, cx, cz, ln, ki, dens,
+    id: cx * 7919 + cz * 104729 + key * 3 + ln, drone: kind === 2 && hsh(key, key * 3 + 2, 99) < 0.3 };
+}
+function walkersNear(x0, z0, rad, t) {
+  const out = [];
+  for (let cz = Math.floor((z0 - rad) / C); cz <= Math.floor((z0 + rad) / C); cz++) for (let cx = Math.floor((x0 - rad) / C); cx <= Math.floor((x0 + rad) / C); cx++) {
+    const o = cellAt(cx, cz);
+    if (o.wild) continue;
+    const ty = o.typ;
+    if (!(ty <= 3 || ty === 8 || ty === 9 || ty === 10 || ty === 11 || ty === 13)) continue;
+    const dens = 0.16 + 0.45 * ((o.fl >> 10) & 1) + (o.fl & 16 ? 0.3 : 0);
+    for (let ln = 0; ln < 2; ln++) {
+      const n = Math.floor(8 * (ln ? 10.45 : 9.95) / 4.4);
+      for (let ki = 0; ki < n; ki++) {
+        const w = walkerAt(cx, cz, ln, ki, t, dens);
+        if (w && Math.hypot(w.x - x0, w.z - z0) <= rad) out.push(w);
+      }
+    }
+  }
+  return out;
+}
+// footfalls, each from the foot that lands, when it lands: a walking kind's foot comes down at every half cycle of
+// its gait; a cape glider lands once per hop; a skater pushes off at every half cycle
+const FEET = { last: new Map(), list: [], t: 0, count: 0 };
+function audioFeet(dt) {
+  if (NAV.spaceMix > 0.5 || AUW.alt > 120) { FEET.list = []; return; }
+  const l = AU.ready ? AU.lpos : [st.x, st.y, st.z], play = AU.ready && AU.on;
+  FEET.t -= dt;
+  if (FEET.t <= 0) { FEET.t = 0.25; FEET.list = walkersNear(l[0], l[2], 30, clock).sort((a, b) => Math.hypot(a.x - l[0], a.z - l[2]) - Math.hypot(b.x - l[0], b.z - l[2])).slice(0, 16); }
+  const seen = new Map();
+  let made = 0;
+  for (const w0 of FEET.list) {
+    // re-place each walker now: they move between the lists' updates
+    const w = walkerAt(w0.cx, w0.cz, w0.ln, w0.ki, clock, w0.dens) || w0;
+    const step = w.kind === 3 ? Math.floor((w.ph * 0.5 + Math.PI / 2) / (2 * Math.PI)) : Math.floor(w.ph / Math.PI);
+    const prev = FEET.last.get(w.id);
+    seen.set(w.id, step);
+    if (prev === undefined || step === prev || made >= 4) continue;
+    made++; FEET.count++;
+    if (!play) continue;
+    const at = [w.x, 0.05, w.z], g = 0.35 + 0.25 * hsh(w.id, step, 7);
+    if (w.kind === 0) auClank(at, g);
+    else if (w.kind === 1) auServo([w.x, 0.6, w.z], g);
+    else if (w.kind === 2) auBoots(at, g);
+    else if (w.kind === 3) auCape([w.x, 1.2, w.z], g);
+    else if (step % 2 === 0) auClank(at, g * 0.4);
+    if (w.drone && step % 6 === 0) auBuzz([w.x, 2.1, w.z], 0.6);
+  }
+  FEET.last = seen;
 }
 // props in the world: the story's scene, the events director's, and your own drone when the view follows it
 let FOLLOW = false;
@@ -11331,8 +11426,11 @@ async function init() {
     taleHotspots(dtS, cam, 0.72);
     taleSync(dtS);
     directorStep(dtS);
-    audioListener([st.x, st.y, st.z], cam.f, cam.up);
+    // the listener is where the camera is: behind the drone when the view follows it
+    const earAt = FOLLOW && NAV.spaceMix < 0.01 ? [st.x - Math.cos(st.yaw) * 3.5, st.y + 1.1, st.z - Math.sin(st.yaw) * 3.5] : [st.x, st.y, st.z];
+    audioListener(earAt, cam.f, cam.up);
     audioStep(dtS, audioWorld(dtS));
+    audioFeet(dtS);
     audioCity(dtS, AUW);
     const fo = document.getElementById("bFlyOn");
     if (fo) fo.hidden = !(NAV.mode === "visit" && !TALE.on);
@@ -11599,7 +11697,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { WX, FEEL, mapOpen, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { WX, FEEL, FEET, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 
