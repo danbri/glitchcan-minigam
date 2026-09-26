@@ -115,9 +115,17 @@ description of the surroundings that `audioWorld` in `main.js` builds twice a se
   depth of field during navigation hurts judging where you are. In-focus pixels get a harder unsharp mask; out of
   focus an 8-tap blur that down-weights sharper foreground taps. `u.reg.z`, `u.reg2.z/w` were the last free uniform
   slots; `u.reg2.z` and `u.reg2.w` are now taken.
-- **Snow** is drawn in `comp` too: six layers from big out-of-focus flakes at the lens to far specks, each flake a
-  tumbling ellipse, some in clumps of two or three. At speed the near layers streak along the camera's own motion
-  (sideways travel, and outward from the centre with forward travel), from `u.camPos - u.prevPos`.
+- **Snow** is drawn in `comp` too, as flakes in the WORLD (`snowLayer`): four nested 3D grids (0.6, 1.3, 5 and 16 m
+  cells, out to 4, 12, 50 and 200 m) that the view ray steps through cell by cell, at most one flake per cell. The
+  grids fall and drift with the wind (`u.p6`, `u.p7`, the page's accumulated wind), so flakes keep their place as the
+  camera moves, and the scene depth (`srcTex.a`) hides flakes behind things. Each flake is drawn along the camera's
+  travel this frame (`u.camPos - u.prevPos`), which gives streaks in flight with no screen-space rule.
+  What went wrong before (September 2026, seen on a phone): the snow was layers in view-direction space (azimuth,
+  elevation). Flakes stayed put on screen when the camera moved, streaks were cut off square at their grid cells into
+  rectangles ("sheets of ice"), and the grid pinched to a point looking straight up or down, which read as lens
+  distortion. Two rules from that: never map a world effect by view angle; and a mark drawn in a grid cell must stay
+  inside that cell (clamp streaks to 0.3 of the cell). Reproduce headless: `SNOW=1 MOVE=0,-2 CAM=...` in
+  `tests/dawn-run.mjs`.
 - **Crystals and rings** were everywhere; they now mark places. Crystal towers are three times rarer outside the
   crystal gardens (zone 7), crystal crowns on roofs rarer, plaza crystals only in zone 7. Megatowers (giants) went
   from 28% to 12% of 8x8 regions, and only about a third wear a ring. `giantHas` exists in `world.js` AND as
