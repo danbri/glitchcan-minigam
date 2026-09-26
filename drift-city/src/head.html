@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Drift city</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #f2f4f8;
+  --ink-dim: rgba(242, 244, 248, 0.66);
+  --glass: rgba(10, 14, 24, 0.5);
+  --edge: rgba(255, 255, 255, 0.16);
+  --accent: #8fe6ff;
+  --bg: #05070c;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #05070c; } }
+:root[data-theme="dark"] { --bg: #05070c; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+html, body { margin: 0; background: var(--bg); overflow: hidden; }
+body { height: 100%; font-family: "Chakra Petch", "Segoe UI", system-ui, sans-serif; color: var(--ink); -webkit-tap-highlight-color: transparent; }
+canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; touch-action: none; cursor: grab; }
+canvas:active { cursor: grabbing; }
+.ui { position: fixed; left: 0; right: 0; bottom: 0; padding: 0 12px calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; transition: opacity .35s, transform .35s; }
+.ui.hidden { opacity: 0; transform: translateY(12px); }
+.ui.hidden .bar, .ui.hidden .status { pointer-events: none; }
+.status { display: flex; gap: 14px; font: inherit; font-size: 13px; letter-spacing: .02em; color: var(--ink-dim); text-shadow: 0 1px 8px rgba(0,0,0,.7); background: none; border: 0; padding: 4px 8px; border-radius: 8px; cursor: pointer; pointer-events: auto; }
+.status:focus-visible { outline: 2px solid var(--accent); }
+.stats { max-width: min(94vw, 560px); font-size: 12px; line-height: 1.45; color: var(--ink); background: var(--glass); border: 1px solid var(--edge); border-radius: 10px; padding: 7px 11px; font-variant-numeric: tabular-nums; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.stats[hidden] { display: none; }
+.status b { color: var(--ink); font-weight: 600; }
+.bar { display: flex; gap: 8px; padding: 6px; background: var(--glass); border: 1px solid var(--edge); border-radius: 16px; backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2); pointer-events: auto; max-width: 100%; }
+.bar button { font: inherit; color: var(--ink); background: transparent; border: 0; border-radius: 12px; padding: 9px 16px 10px; min-width: 104px; min-height: 56px; justify-content: center; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; cursor: pointer; text-align: left; }
+.bar button:hover { background: rgba(255,255,255,.07); }
+.bar button:active { background: rgba(255,255,255,.12); }
+.bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.bar .k { font-size: 12px; color: var(--ink-dim); letter-spacing: .03em; }
+.bar .v { font-size: 16px; font-weight: 600; white-space: nowrap; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; }
+.bar .v::after { content: ""; display: inline-block; width: 6px; height: 6px; margin-left: 7px; border-right: 1.5px solid var(--ink-dim); border-bottom: 1.5px solid var(--ink-dim); transform: rotate(-45deg) translateY(-2px); }
+.bar #bHide .v::after { display: none; }
+.goPanel { pointer-events: auto; background: var(--glass); border: 1px solid var(--edge); border-radius: 16px; padding: 8px 10px 10px; backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2); max-width: min(94vw, 560px); max-height: 52vh; overflow-y: auto; }
+.goPanel .gh { font-size: 11px; color: var(--ink-dim); letter-spacing: .03em; margin: 4px 4px 4px; }
+.goPanel .gg { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.goPanel button { font: inherit; font-size: 14px; color: var(--ink); background: rgba(255,255,255,.06); border: 1px solid var(--edge); border-radius: 10px; padding: 6px 11px; cursor: pointer; }
+.goPanel button:hover { background: rgba(255,255,255,.12); }
+.goPanel button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.climb { position: fixed; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(132px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 12px; z-index: 2; transition: opacity .35s; }
+.climb button { width: 60px; height: 60px; border-radius: 30px; font-size: 20px; color: var(--ink); background: var(--glass); border: 1px solid var(--edge); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); cursor: pointer; touch-action: none; -webkit-user-select: none; user-select: none; }
+.climb button:active { background: rgba(255,255,255,.18); }
+body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
+.climb[hidden] { display: flex !important; }
+.tale { position: fixed; z-index: 4; display: flex; flex-direction: column; background: rgba(12, 10, 18, 0.46); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 14px; backdrop-filter: blur(7px) saturate(1.15); -webkit-backdrop-filter: blur(7px) saturate(1.15); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3); color: var(--ink); overflow: hidden; opacity: 0; transition: opacity .22s ease; }
+.tale.open { opacity: 1; }
+.tale.min .taleBody, .tale.min .taleGrip { display: none; }
+.taleHead { display: flex; align-items: center; gap: 4px; padding: 5px 6px 5px 12px; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.taleHead:active { cursor: grabbing; }
+.taleTitle { font-size: 12.5px; letter-spacing: .03em; color: #e8b979; flex: 0 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.taleCount { font-size: 11px; color: var(--ink-dim); flex: 1 1 auto; padding-left: 6px; white-space: nowrap; }
+.taleHead button { font: inherit; font-size: 17px; line-height: 1; min-width: 32px; height: 30px; color: var(--ink); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; cursor: pointer; }
+.taleHead button:hover { background: rgba(255, 255, 255, 0.14); }
+.taleHead button:focus-visible { outline: 2px solid #e8b979; outline-offset: 1px; }
+.taleBody { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 0 12px 12px; }
+.taleText { flex: 1 1 auto; min-height: 2.5em; overflow-y: auto; font-size: 15px; line-height: 1.45; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65); -webkit-overflow-scrolling: touch; }
+.taleText p { margin: 0 0 .7em; }
+.taleChoices { flex: 0 1 auto; max-height: 48%; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-top: 6px; }
+.taleChoices button { font: inherit; font-size: 14.5px; text-align: left; color: var(--ink); background: rgba(232, 185, 121, 0.1); border: 1px solid rgba(232, 185, 121, 0.35); border-radius: 10px; padding: 8px 11px; cursor: pointer; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+.taleChoices button:hover { background: rgba(232, 185, 121, 0.2); }
+.taleChoices button:focus-visible { outline: 2px solid #e8b979; outline-offset: 1px; }
+.taleGrip { position: absolute; right: 0; bottom: 0; width: 22px; height: 22px; cursor: nwse-resize; touch-action: none; background: linear-gradient(135deg, transparent 0 55%, rgba(255, 255, 255, 0.35) 55% 62%, transparent 62% 72%, rgba(255, 255, 255, 0.35) 72% 79%, transparent 79%); }
+.flyOn { position: fixed; left: 50%; bottom: calc(104px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 3; min-height: 48px; font: inherit; font-size: 16px; color: var(--ink); background: var(--glass); border: 1px solid var(--edge); border-radius: 18px; padding: 8px 16px; cursor: pointer; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+@media (prefers-reduced-motion: reduce) { .tale { transition: none; } }
+@media (pointer: coarse) {
+  .taleChoices button { min-height: 48px; font-size: 16px; padding: 11px 13px; }
+  .taleHead { padding: 6px 6px 6px 12px; }
+  .taleHead button { min-width: 44px; height: 42px; font-size: 19px; }
+  .taleGrip { width: 36px; height: 36px; }
+  .taleText { font-size: 16px; }
+}
+.glint { position: fixed; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; z-index: 3; cursor: pointer; background: radial-gradient(circle, rgba(255, 236, 190, 0.95) 0 3px, rgba(255, 220, 150, 0.35) 5px, rgba(255, 210, 140, 0) 17px); animation: glintPulse 1.8s ease-in-out infinite; }
+@keyframes glintPulse { 0%, 100% { transform: scale(0.8); } 50% { transform: scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .glint { animation: none; } .tale { transition: none; } }
+.burger { position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); left: calc(10px + env(safe-area-inset-left, 0px)); z-index: 5; width: 44px; height: 44px; border-radius: 12px; font-size: 20px; line-height: 1; color: var(--ink); background: var(--glass); border: 1px solid var(--edge); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); cursor: pointer; transition: opacity .35s; }
+body.uiHidden .burger { opacity: 0; pointer-events: none; }
+.drawer { position: fixed; top: 0; left: 0; bottom: 0; width: min(330px, 86vw); z-index: 6; overflow-y: auto; background: rgba(14, 12, 20, 0.84); border-right: 1px solid var(--edge); backdrop-filter: blur(12px) saturate(1.1); -webkit-backdrop-filter: blur(12px) saturate(1.1); transform: translateX(-104%); transition: transform .32s ease; padding: calc(12px + env(safe-area-inset-top, 0px)) 14px calc(16px + env(safe-area-inset-bottom, 0px)) calc(14px + env(safe-area-inset-left, 0px)); color: var(--ink); }
+.drawer.open { transform: none; }
+.drawerHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.drawerTitle { font-size: 13px; letter-spacing: .04em; color: var(--ink-dim); }
+.drawerHead button { font: inherit; font-size: 26px; line-height: 1; color: var(--ink); background: none; border: 0; cursor: pointer; min-width: 48px; min-height: 48px; }
+.drawer details { margin: 4px 0; }
+.drawer summary { font-size: 15px; color: var(--ink); cursor: pointer; padding: 13px 4px; min-height: 48px; box-sizing: border-box; list-style: none; }
+.drawer summary::-webkit-details-marker { display: none; }
+.drawer summary::before { content: "\25b8"; display: inline-block; width: 1.1em; color: var(--ink-dim); transition: transform .15s; }
+.drawer details[open] > summary::before { transform: rotate(90deg); }
+.drawer .dev details { margin-left: 10px; }
+.drawer .dev summary { font-size: 12.5px; color: var(--ink-dim); }
+.drawer .gh { font-size: 11px; color: var(--ink-dim); letter-spacing: .03em; margin: 12px 2px 6px; }
+.drawer .gg { display: flex; flex-direction: column; gap: 8px; padding-bottom: 6px; }
+.drawer .gg button { font: inherit; font-size: 16px; text-align: left; color: var(--ink); background: rgba(255,255,255,.05); border: 1px solid var(--edge); border-radius: 12px; padding: 12px 14px; min-height: 48px; cursor: pointer; }
+.drawer .gg button:hover { background: rgba(255,255,255,.12); }
+.drawer .gg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) { .drawer { transition: none; } }
+.bar { display: none !important; }
+.climb { display: none !important; }
+.burger { width: 52px; height: 52px; font-size: 24px; border-radius: 14px; }
+/* the drill-down menu */
+.drawer { display: flex; flex-direction: column; }
+.drawerHead { gap: 4px; min-height: 52px; }
+.drawerHead .back { font-size: 30px; }
+.drawerHead .back[hidden] { display: inline-block !important; visibility: hidden; }
+.drawerTitle { flex: 1 1 auto; font-size: 15px; color: var(--ink); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rows { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding: 4px 0 8px; animation: rowsIn .18s ease; }
+@keyframes rowsIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+.row { display: flex; align-items: center; gap: 10px; min-height: 52px; font: inherit; font-size: 16px; text-align: left; color: var(--ink); background: rgba(255,255,255,.05); border: 1px solid var(--edge); border-radius: 12px; padding: 10px 14px; cursor: pointer; }
+.row:hover { background: rgba(255,255,255,.1); }
+.row:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.row .rl { flex: 1 1 auto; }
+.row .rd { font-size: 13px; color: var(--ink-dim); }
+.row.more::after { content: "\203a"; font-size: 22px; line-height: 1; color: var(--ink-dim); }
+.row.on::before { content: "\2713"; color: var(--accent); font-weight: 700; }
+/* the on-screen gamepad */
+.pad { position: fixed; left: 0; right: 0; bottom: calc(40px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: space-between; padding: 0 calc(18px + env(safe-area-inset-right, 0px)) 0 calc(18px + env(safe-area-inset-left, 0px)); pointer-events: none; z-index: 5; }
+.pad[hidden] { display: none; }
+.stick { position: relative; width: 132px; height: 132px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.22); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); pointer-events: auto; touch-action: none; }
+.stick .knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: rgba(255,255,255,0.22); border: 1.5px solid rgba(255,255,255,0.45); transition: transform .12s ease-out; }
+.stick.active .knob { transition: none; background: rgba(255,255,255,0.32); }
+.stick .sl { position: absolute; left: 0; right: 0; bottom: -20px; text-align: center; font-size: 12px; color: var(--ink-dim); text-shadow: 0 1px 4px rgba(0,0,0,.7); }
+.intro { position: fixed; inset: 0; z-index: 8; pointer-events: none; }
+.gate { position: fixed; inset: 0; z-index: 9; display: flex; align-items: center; justify-content: center; background: rgba(6, 5, 10, 0.62); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); padding: 24px; }
+.gate[hidden] { display: none; }
+.gateIn { max-width: 440px; text-align: center; color: #efe3cc; }
+.gt { font-size: clamp(30px, 8vw, 54px); font-weight: 300; letter-spacing: .45em; padding-left: .45em; margin-bottom: 18px; }
+.gateIn p { font-size: 16px; line-height: 1.55; color: rgba(239, 227, 204, 0.86); margin: 0 0 12px; }
+.gateGo { display: block; width: 100%; min-height: 58px; margin-top: 18px; font: inherit; font-size: 18px; letter-spacing: .06em; color: #1a1208; background: #e8b979; border: 0; border-radius: 16px; cursor: pointer; }
+.gateQuiet { display: block; width: 100%; min-height: 48px; margin-top: 10px; font: inherit; font-size: 15px; color: rgba(239, 227, 204, 0.8); background: transparent; border: 1px solid rgba(239, 227, 204, 0.3); border-radius: 14px; cursor: pointer; }
+.gateGo:focus-visible, .gateQuiet:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.gh { margin-top: 12px; font-size: 12px; color: rgba(239, 227, 204, 0.55); letter-spacing: .08em; }
+body.gateOn .burger, body.gateOn .ui, body.gateOn .pad, body.gateOn .tale { opacity: 0; pointer-events: none; }
+.introCap { position: absolute; left: 8%; right: 8%; bottom: calc(11vh + 36px); text-align: center; font-size: clamp(15px, 3.6vw, 20px); letter-spacing: .04em; color: #f3e6cf; text-shadow: 0 2px 12px rgba(0,0,0,.8); opacity: 0; transition: opacity .9s ease; }
+.introCap.show { opacity: 1; }
+.introSkipBtn { position: absolute; right: 14px; bottom: calc(11vh + 8px); pointer-events: auto; min-width: 72px; min-height: 44px; font: inherit; font-size: 14px; color: rgba(255,255,255,.8); background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.25); border-radius: 12px; cursor: pointer; }
+.intro[hidden] { display: none; }
+.intro .lb { position: absolute; left: 0; right: 0; height: 11vh; background: #000; transition: transform 1.2s ease; }
+.intro .lb.top { top: 0; } .intro .lb.bot { bottom: 0; }
+.intro.done .lb.top { transform: translateY(-100%); } .intro.done .lb.bot { transform: translateY(100%); }
+.introBlack { position: absolute; inset: 0; background: #000; opacity: 0; }
+.intro.play .introBlack { animation: introFade 3.5s ease forwards; }
+@keyframes introFade { 0% { opacity: 1; } 100% { opacity: 0; } }
+.introCard { position: absolute; left: 0; right: 0; top: 36%; text-align: center; opacity: 0; color: #f3e6cf; text-shadow: 0 2px 18px rgba(0,0,0,.7); }
+.introCard { transition: opacity 1.4s ease, letter-spacing 9s ease; }
+.introCard.show { opacity: 1; }
+.introCard.show .it { letter-spacing: .62em; }
+@keyframes introCard { 0% { opacity: 0; letter-spacing: .5em; } 20% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; letter-spacing: .62em; } }
+.introCard .it { font-size: clamp(28px, 7vw, 56px); font-weight: 300; letter-spacing: .5em; padding-left: .5em; }
+.introCard .is { margin-top: 10px; font-size: clamp(13px, 2.6vw, 17px); letter-spacing: .18em; color: #e8b979; }
+.introSkip { position: absolute; right: 16px; bottom: calc(11vh + 10px); font-size: 13px; color: rgba(255,255,255,.55); }
+.intro.done .introCard, .intro.done .introSkipBtn, .intro.done .introCap { opacity: 0; transition: opacity .6s; }
+body.introOn .burger, body.introOn .ui, body.introOn .pad, body.introOn .tale { opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .introCard, .introCard .it { transition: none; } }
+.hint { position: fixed; left: 50%; transform: translateX(-50%); top: calc(12px + env(safe-area-inset-top, 0px)); max-width: min(92vw, 520px); text-align: center; font-size: 15px; cursor: pointer; z-index: 5; line-height: 1.45; color: var(--ink); background: var(--glass); border: 1px solid var(--edge); border-radius: 12px; padding: 9px 14px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); pointer-events: none; transition: opacity .8s; }
+.hint.hidden { opacity: 0; pointer-events: none; }
+.hint:not(.hidden) { pointer-events: auto; }
+@media (max-width: 420px) { .bar button { min-width: 0; flex: 1 1 0; padding: 9px 10px 10px; } .bar .v { font-size: 15px; max-width: 30vw; } .bar { width: 100%; } }
+.err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 24px; }
+.err > div { max-width: 520px; font-size: 15px; line-height: 1.6; background: #0e1422; border: 1px solid var(--edge); border-radius: 12px; padding: 20px 22px; }
+.err pre { white-space: pre-wrap; font-size: 11px; max-height: 40vh; overflow: auto; color: #ffb3a8; }
+@media (prefers-reduced-motion: reduce) { .ui, .hint { transition: none; } }
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Autonomous drone flight over a procedural city"></canvas>
+<div class="ui" id="ui">
+  <div class="stats" id="stats" hidden></div>
+  <button class="status" id="status" type="button" aria-pressed="false" title="Show performance stats"></button>
+  <div class="bar" role="toolbar" aria-label="Flight controls">
+    <button id="bGo" type="button" aria-controls="goPanel" aria-label="Menu: travel, story places, view and developer options"><span class="k">&#9776;&nbsp; Menu</span><span class="v" id="vGo">Drift city</span></button>
+    <button id="bTale" type="button" aria-controls="tale"><span class="k">Story</span><span class="v" id="vTale">Play</span></button>
+    <button id="bTime" type="button"><span class="k">Time of day</span><span class="v" id="vTime">Golden hour</span></button>
+    <button id="bRoute" type="button" hidden><span class="k">Route</span><span class="v" id="vRoute">Automatic</span></button>
+    <button id="bHide" type="button" hidden><span class="k">Controls</span><span class="v">Hide</span></button>
+  </div>
+</div>
+<div class="pad" id="pad" hidden aria-label="On-screen gamepad">
+  <div class="stick" id="stickL" role="group" aria-label="Left stick: up and down to climb and descend, left and right to turn"><div class="knob"></div><span class="sl">Climb &middot; turn</span></div>
+  <div class="stick" id="stickR" role="group" aria-label="Right stick: up and down for speed, left and right to slide sideways"><div class="knob"></div><span class="sl">Speed &middot; slide</span></div>
+</div>
+<div class="climb" id="climb" role="group" aria-label="Climb and descend" hidden><button id="bUp" type="button" aria-label="Climb (hold)">&#9650;</button><button id="bDn" type="button" aria-label="Descend (hold)">&#9660;</button></div>
+<button class="burger" id="bMenu" type="button" aria-label="Open the menu" aria-controls="goPanel">&#9776;</button>
+<div class="hint" id="hint"></div>
+<div class="gate" id="gate" hidden>
+  <div class="gateIn">
+    <div class="gt">DRIFT CITY</div>
+    <p>Two hundred years after the settlement corporation founded it, the colony on Titan is failing slowly. Heat costs more every quarter, the Org that runs the city's heat and breath is showing its age, and most people no longer leave their homes.</p>
+    <p>Tonight the Assembly votes to cut Chinatown over to the Org's grid and put out the city's last open flames. And old Wren, the last flame-keeper, has gone missing.</p>
+    <button class="gateGo" id="gateGo" type="button">Enter the city</button>
+    <button class="gateQuiet" id="gateQuiet" type="button">Enter without sound</button>
+    <div class="gh">Best with headphones</div>
+  </div>
+</div>
+<div class="intro" id="intro" hidden aria-label="Opening sequence">
+  <div class="lb top"></div><div class="lb bot"></div>
+  <div class="introBlack"></div>
+  <div class="introCap" id="introCap" aria-live="polite"></div>
+  <div class="introCard" id="introCard"><div class="it">DRIFT CITY</div><div class="is">The Lamplighter's Last Round</div></div>
+  <button class="introSkipBtn" id="introSkipBtn" type="button">Skip</button>
+</div>
+<aside class="tale" id="tale" hidden aria-live="polite" aria-label="Story">
+  <div class="taleHead" id="taleHead" title="Drag to move; double-click to minimise">
+    <span class="taleTitle">The Lamplighter's Last Round</span><span class="taleCount" id="taleCount"></span>
+    <button id="taleRestart" type="button" aria-label="Restart the story" title="Restart">&#8634;</button>
+    <button id="taleMin" type="button" aria-label="Minimise the story" title="Minimise">&ndash;</button>
+    <button id="taleClose" type="button" aria-label="Close the story (it keeps its place)" title="Close">&times;</button>
+  </div>
+  <div class="taleBody">
+    <div class="taleText" id="taleText"></div>
+    <div class="taleChoices" id="taleChoices"></div>
+  </div>
+  <div class="taleGrip" id="taleGrip" aria-hidden="true" title="Drag to resize"></div>
+</aside>
+<button class="flyOn" id="bFlyOn" type="button" hidden>Fly on</button>
+<div class="glint" id="glint" hidden role="button" aria-label="Something worth a closer look"></div>
+<div class="err" id="err"><div id="errMsg"></div></div>
