@@ -126,6 +126,11 @@ Rules:
 - Guard it with the flag, so players in the world are not offered a shortcut.
   Set the flag in the page before every `Continue()`, because `ResetState()`
   resets it.
+- **"The world is rendering" is not "the player can use it".** A screen-reader
+  user can have WebGPU, and no browser reports that a screen reader is running.
+  So the flag must also be switchable by the player: Drift city has Menu > Story
+  > "Clues as choices", stored per device, which leaves `in_world` false with the
+  city on (outside review, September 2026). The spatial route stays open too.
 - Test BOTH modes by playing, not by reading. `drift-city/tests/inkwalk.mjs`
   plays 400 random runs with `in_world = true` (clues found by simulated
   looking) and 400 with `in_world = false` (clues only from the story's own
