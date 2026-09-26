@@ -348,6 +348,11 @@ function skyboats(t) {
 }
 // props in the world: the story's scene, the events director's, and your own drone when the view follows it
 let FOLLOW = false;
+// loose things with Titan physics (phys.wgsl): on unless switched off in the menu
+let PHYS_ON = true;
+// the GPU objects the headless tests read back (set once the WebGPU path has started)
+const GPUREF = { phys: null, device: null };
+try { PHYS_ON = localStorage.getItem("drift.phys") !== "0"; } catch (e) {}
 try { FOLLOW = localStorage.getItem("drift.follow") === "1"; } catch (e) {}
 function worldProps() {
   const list = [];
@@ -1183,6 +1188,25 @@ async function init() {
   }
   const { sceneMod, postMod, spaceMod, pScene, pTaa, pDown, pBH, pBV, pComp, pProxyC, pProxyG, pShadow, pTree, spBGL, pSpace, pTerr, pMipB, pMipD } = PL;
   if (PL.lite && !forceLite) setTimeout(() => showHint("Lighter graphics for this device.", 6000), 1500);
+  // Titan physics (phys.wgsl): optional; without it the city runs as before
+  let PHYS = null;
+  try {
+    const physMod = device.createShaderModule({ label: "phys", code: common + src("wgsl-phys") });
+    const pinfo = await physMod.getCompilationInfo();
+    if (pinfo.messages.some((x) => x.type === "error")) throw new Error(pinfo.messages.map((x) => x.lineNum + ": " + x.message).join("; "));
+    const phBGL = bgl([{ binding: 0, visibility: CO, buffer: { type: "uniform" } }, { binding: 1, visibility: CO, texture: uf },
+      { binding: 23, visibility: CO, buffer: { type: "storage" } }, { binding: 24, visibility: CO, buffer: { type: "uniform" } }]);
+    const pdBGL = bgl([{ binding: 0, visibility: VX | FR, buffer: { type: "uniform" } }, { binding: 5, visibility: FR, texture: uf },
+      { binding: 25, visibility: VX, buffer: { type: "read-only-storage" } }]);
+    const [step, draw] = await Promise.all([
+      device.createComputePipelineAsync({ label: "physics", layout: pl(phBGL), compute: { module: physMod, entryPoint: "physStep" } }),
+      device.createRenderPipelineAsync({ label: "particles", layout: pl(pdBGL), vertex: { module: physMod, entryPoint: "physVs" },
+        fragment: { module: physMod, entryPoint: "physFs", targets: [{ format, blend: { color: { srcFactor: "src-alpha", dstFactor: "one-minus-src-alpha", operation: "add" }, alpha: { srcFactor: "zero", dstFactor: "one", operation: "add" } } }] },
+        primitive: { topology: "triangle-list" } }),
+    ]);
+    PHYS = { step, draw, phBGL, pdBGL, n: 2048 };
+    GPUREF.phys = PHYS; GPUREF.device = device;
+  } catch (e) { console.warn("physics off:", e && e.message); }
   globalThis.__driftGPU = { gpuInfo, lite: PL.lite };
 
   const TU = GPUTextureUsage;
@@ -1197,6 +1221,13 @@ async function init() {
   const propBuf = device.createBuffer({ size: PROP_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const flockBuf = device.createBuffer({ size: FLOCK_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const evBuf = device.createBuffer({ size: 848, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  if (PHYS) {
+    PHYS.buf = device.createBuffer({ size: PHYS.n * 48, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+    PHYS.ubuf = device.createBuffer({ size: 64, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    PHYS.u = new Float32Array(16);
+    PHYS.bg = device.createBindGroup({ layout: PHYS.phBGL, entries: [{ binding: 0, resource: { buffer: ubuf } }, { binding: 1, resource: cellTex.createView() },
+      { binding: 23, resource: { buffer: PHYS.buf } }, { binding: 24, resource: { buffer: PHYS.ubuf } }] });
+  }
   // the whole world: terrain per block corner, distant blocks per block, and a max-height pyramid over both
   const NWJ = 768;
   const terrTex = device.createTexture({ size: [NWJ, NWJ], format: "rgba32float", usage: TU.STORAGE_BINDING | TU.TEXTURE_BINDING });
@@ -1279,7 +1310,7 @@ async function init() {
   const bgOf = (p, ents) => device.createBindGroup({ layout: p.getBindGroupLayout(0), entries: ents.map(([binding, resource]) => ({ binding, resource })) });
 
   // GPU timing (where the browser exposes timestamp queries)
-  const passNames = ["trees", "shadow map", "proxies", "scene", "taa", "bloom down", "blur h", "blur v", "composite"];
+  const passNames = ["trees", "shadow map", "proxies", "scene", "taa", "bloom down", "blur h", "blur v", "composite", "physics", "particles"];
   let qs = null, qResolve = null, qRead = null, qBusy = false;
   const gpuMs = new Float64Array(passNames.length);
   if (hasTS) {
@@ -1354,6 +1385,7 @@ async function init() {
     T.bh = bgOf(pBH, [[4, samp], [5, T.bA.createView()]]);
     T.bv = bgOf(pBV, [[4, samp], [5, T.bB.createView()]]);
     T.comp = [0, 1].map((i) => bgOf(pComp, [[0, ures], [4, samp], [5, hist[i].createView()], [6, T.bA.createView()]]));
+    if (PHYS) T.pd = [0, 1].map((i) => device.createBindGroup({ layout: PHYS.pdBGL, entries: [{ binding: 0, resource: ures }, { binding: 5, resource: hist[i].createView() }, { binding: 25, resource: { buffer: PHYS.buf } }] }));
     carry = keep;
     carryBG = keep ? bgOf(pTaa, [[0, ures], [2, T.scene.createView()], [3, keep.createView()], [4, samp]]) : null;
     if (!keep) histValid = false;
@@ -1368,7 +1400,7 @@ async function init() {
 
   const U = new Float32Array(68);
   let prev = null, frameNo = 0;
-  const ran = new Uint8Array(9);
+  const ran = new Uint8Array(passNames.length);
   let last = performance.now(), ema = 16.7, lastChange = 0, lastIncrease = -1e9, goodTime = 0, hudTick = 0, dtS = 1 / 60;
   const dtHist = new Float32Array(120);
   let dtIdx = 0, refreshMs = 16.7, gpuFresh = 0, displayMs = 16.67, missE = 0;
@@ -1544,6 +1576,20 @@ async function init() {
       p.setPipeline(pProxyG); p.draw(36, 169);
       p.end(); ran[2] = 1;
     }
+    const physOn = PHYS && !inSpace && PHYS_ON;
+    if (physOn) {
+      // the drone's downdraft: while flying, strongest low over the ground
+      const flying = (NAV.mode === "surface" || NAV.mode === "free") && NAV.spaceMix < 0.01;
+      const alt = st.y - Math.max(terrSurfAt(st.x, st.z), 0);
+      const dr = PHYS.forceDraft || [st.x, st.y - 0.5, st.z, flying ? Math.max(0, 1 - alt / 14) : 0];
+      PHYS.u.set([dr[0], dr[1], dr[2], dr[3],
+        wind.x * 0.6, 0, wind.z * 0.6, wind.gust,
+        U[4], U[6], 38, WX.cover || 0,
+        Math.min(dt, 1 / 30), 2, PHYS.n, WX.rain || 0]);
+      device.queue.writeBuffer(PHYS.ubuf, 0, PHYS.u);
+      const c = enc.beginComputePass({ timestampWrites: tsw(9, measure) });
+      c.setPipeline(PHYS.step); c.setBindGroup(0, PHYS.bg); c.dispatchWorkgroups(PHYS.n / 64); c.end(); ran[9] = 1;
+    }
     if (!inSpace) rpass(enc, pScene, T.sc[smActive], T.scene.createView(), 3, measure);
     if (NAV.spaceMix > 0.001) {
       const p = enc.beginRenderPass({ colorAttachments: [{ view: T.scene.createView(), loadOp: inSpace ? "clear" : "load", storeOp: "store", clearValue: { r: 0, g: 0, b: 0, a: 1 } }] });
@@ -1553,7 +1599,12 @@ async function init() {
     rpass(enc, pDown, T.down[cur], T.bA.createView(), 5, measure);
     rpass(enc, pBH, T.bh, T.bB.createView(), 6, measure);
     rpass(enc, pBV, T.bv, T.bA.createView(), 7, measure);
-    rpass(enc, pComp, T.comp[cur], ctx.getCurrentTexture().createView(), 8, measure);
+    const outView = ctx.getCurrentTexture().createView();
+    rpass(enc, pComp, T.comp[cur], outView, 8, measure);
+    if (physOn) {
+      const p = enc.beginRenderPass({ colorAttachments: [{ view: outView, loadOp: "load", storeOp: "store" }], timestampWrites: tsw(10, measure) });
+      p.setPipeline(PHYS.draw); p.setBindGroup(0, T.pd[cur]); p.draw(6, PHYS.n); p.end(); ran[10] = 1;
+    }
     for (let i = 3; i < 9; i++) ran[i] = 1;
     if (measure) {
       enc.resolveQuerySet(qs, 0, passNames.length * 2, qResolve, 0);
@@ -1709,7 +1760,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { WX, FEEL, FEET, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { WX, FEEL, FEET, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 
