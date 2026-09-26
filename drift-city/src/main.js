@@ -1364,6 +1364,7 @@ async function init() {
     } else { U[4] = st.x; U[5] = st.y; U[6] = st.z; }
     U[7] = 0.72;
     U.set(cam.f, 8); U[11] = frameNo % 1024;
+    MAPCAM.x = U[4]; MAPCAM.z = U[6]; MAPCAM.fx = cam.f[0]; MAPCAM.fz = cam.f[2]; MAPCAM.space = inSpace;
     U.set(cam.r, 12); U[15] = histValid && prev ? 1 : 0;
     U.set(cam.up, 16); U[19] = wind.x;
     U.set(tod.sun, 20); U[23] = wind.z;
@@ -1595,7 +1596,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { WX, FEEL, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { WX, FEEL, mapOpen, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

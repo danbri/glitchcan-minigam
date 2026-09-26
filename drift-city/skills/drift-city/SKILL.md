@@ -204,6 +204,11 @@ now laid out by hand. Everything below is in `world.js` unless named; the shape 
   `posterLook` is the shared style for each kind (government blue with a red band and a small Earth; a pale screen
   with a grey chequered border for the Org). The blimp and the strip hologram run the emigration lines; an Earth
   hologram turns 440 m over the core. Keep a line to about 12 characters: the boards are sized for that.
+- **Map** (`src/map.js`, Menu > City map): districts, water, forest and highland sampled once from `world.js`
+  (about 150 ms), north (-z) up, framed on `MAP.cx, MAP.cz, MAP.R`; landmarks from `mapMarks()` (keep it in step
+  with the placed landmarks); your arrow from `MAPCAM`, which `main.js` fills each frame. Under it the same in words
+  (district, then each landmark's distance and compass direction), for screen readers. Tapping a landmark hops to its
+  place. A global `canvas {position: fixed; inset: 0}` rule in `head.html` catches every canvas: override it.
 - **Places**: `buildPlaces` in `tales.js` adds the placed ones directly; its ring scans sample cells and can miss a
   single one. `node tools/bakeplaces.mjs` fails if a place the story uses is missing: run it after any change here.
 - **Map for thinking**: an ASCII map of zones, liquid, forest and highland from `world.js` in Node (load it with
