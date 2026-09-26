@@ -63,7 +63,7 @@ let tTail = 0;
 for (let f = 0; f < N; f++) {
   const cb = rafCb; rafCb = null; if (!(process.env.FREEZE && f > 12)) now += 1000 / 60;
   if (f === N - 20) tTail = performance.now();
-  if (f === 25 && handlers['bTime:click']) { handlers['bTime:click'](); console.log('time of day switched at frame 25'); }
+  if (!process.env.TOD && f === 25 && handlers['bTime:click']) { handlers['bTime:click'](); console.log('time of day switched at frame 25'); }
   if (process.env.GO && f === 3) { globalThis.__drift.goTo(process.env.GO); }
   if (f === 6) console.log('GPULOG', JSON.stringify(globalThis.__driftGPU || null));
   if (process.env.INTRO) {
@@ -96,6 +96,10 @@ for (let f = 0; f < N; f++) {
   if (process.env.HOP && f === 3) { const D = globalThis.__drift; if (process.env.HOP.startsWith('place:')) D.hopPlace(process.env.HOP.slice(6)); else D.hop(D.destById(process.env.HOP)); }
   // CAM=x,y,z,yaw,pitch: after a HOP, look from there instead
   if (process.env.CAM && f === 3) { const D = globalThis.__drift, [x, y, z, yaw, pitch] = process.env.CAM.split(',').map(Number), c = { ...D.NAV.visit.to, x, y, z, yaw, pitch }; D.NAV.visit.from = c; D.NAV.visit.to = c; }
+  // SNOW=0..1 forces snowfall; TOD=n steps the time of day n times; MOVE=dx,dz moves the camera each frame (streaks)
+  if (process.env.SNOW) globalThis.__drift.WX.forced = +process.env.SNOW;
+  if (process.env.TOD && f === 3) for (let i = 0; i < +process.env.TOD; i++) handlers['bTime:click']();
+  if (process.env.MOVE && f > 3 && globalThis.__drift.NAV.visit) { const [mx, mz] = process.env.MOVE.split(',').map(Number), v = globalThis.__drift.NAV.visit; const c = { ...v.to, x: v.to.x + mx, z: v.to.z + mz }; v.from = c; v.to = c; }
   if (process.env.FREEALT && f === 3) { const D = globalThis.__drift; D.startFree(D.flatCamTitan()); const P = D.NAV.free.P, l = Math.hypot(...P), a = 2575 + (+process.env.FREEALT); D.NAV.free.P = P.map((v) => v * a / l); }
   if (process.env.GO && f === 4 && globalThis.__drift.NAV.trip) { const tr = globalThis.__drift.NAV.trip; tr.t = tr.T * (+process.env.GOAT || 0.985); }
   cb(now);
