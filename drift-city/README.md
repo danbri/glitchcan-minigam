@@ -7,7 +7,13 @@ Ink, procedural spatial audio, and the Saturn system around it.
 
     python3 tools/assemble.py        # bakes the story places, then writes dist/city.html
 
-Requires Python 3 and Node. The page loads inkjs 2.4.0 from jsDelivr at run time; everything else is inlined.
+Requires Python 3 and Node, with the repo's `npm ci` done (the tools use `inkjs` and `packages/backticks`).
+
+The story is not inlined. When the story panel opens, the page fetches `story/lamplighter.fink.js`, runs it in a
+sandboxed iframe with the frozen capture from `packages/backticks` (the same capture the Finkosphere story runner
+uses), and compiles the ink it gets back. The ink runtime comes from `third_party/ink/ink-full.js`, with jsDelivr
+(inkjs 2.4.0) as a fallback. So the page needs the repo around it and an HTTP server; the story does not work from
+`file://`. Everything else is inlined.
 Building from this tree reproduces the published page exactly.
 
 ## Layout
@@ -18,16 +24,17 @@ Building from this tree reproduces the published page exactly.
   - `world.js` the procedural world: city blocks (`cellAt`), megatowers, terrain on the sphere (mirrored in WGSL)
   - `titan.js` navigation (trips, orbit, free flight, visits), the menu, quick hops, the opening page and sequence
   - `tales.js` the 50 story places, the Ink story panel, props, hotspots, the live bridge to the story
-  - `tales.ink` the story, "The Lamplighter's Last Round"
   - `audio.js` synthesised, placed (HRTF) sound; `main.js` WebGPU setup, the frame loop, the events director
   - `fallback.js` the WebGL fallback; `head.html` markup and styles; `tables.js` glyphs and words for lettering
   - `geo_*.json` anchor frames for regions of Titan
-- `tools/` the build (`assemble.py`, `bakeplaces.js`)
+- `story/lamplighter.fink.js` the story, "The Lamplighter's Last Round", as a FINK file (Ink inside an `oooOO` block)
+- `tools/` the build (`assemble.py`, `bakeplaces.mjs`) and `story.mjs`, which captures the story's ink with
+  `packages/backticks` and compiles it with inkjs for the Node tools
 - `tests/` harnesses used during development; their paths to Dawn, wgpu-py and node modules need adjusting
   - `dawn-run.mjs` runs the page headless on Dawn (Node WebGPU) with a fake DOM; environment variables choose the
     scenario (TALE, INTRO, GATEONLY, HOP, GO, LITE, FAILFULL, FOLLOW, MENU)
   - `render3.py` renders single views of the scene shader with wgpu-py (with `gencells.js`, `ffgen.js`, `presets.py`)
-  - `inkwalk.js` plays the story 400 times with random choices and discoveries, checking endings and dead ends
+  - `inkwalk.mjs` plays the story 400 times with random choices and discoveries, checking endings and dead ends
   - `audiotest2.mjs` renders the sound engine offline (node-web-audio-api) and measures levels
   - `smooth.js` measures per-frame camera jolts on trips
 - `docs/` design notes by development wave

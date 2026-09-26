@@ -5,6 +5,7 @@ import { createRequire as __cr } from 'module';
 if (process.env.TALE) globalThis.inkjs = __cr(import.meta.url)('/home/claude/ink/node_modules/inkjs/dist/ink-full.js');
 import { create, globals } from 'webgpu';
 import fs from 'fs';
+import { storyInk } from '../tools/story.mjs';
 import vm from 'vm';
 Object.assign(globalThis, globals);
 const gpu = create([]);
@@ -76,7 +77,7 @@ for (let f = 0; f < N; f++) {
     if (f === 16) console.log('INTROLOG end: mode', D.NAV.mode, 'intro on', D.INTRO.on, 'story on', D.TALE.on, 'place', D.NAV.visit && D.NAV.visit.to.id);
   }
   if (process.env.FOLLOW && f === 2) { globalThis.__drift.setFollow(true); }
-  if (process.env.TALE && f === 3) { const D = globalThis.__drift; D.TALE.story = new globalThis.inkjs.Compiler(globalThis.document.getElementById('ink-tale').textContent).Compile(); D.TALE.on = true; try { D.taleAdvance(); } catch (e) { console.log('ADVANCE ERROR', e.stack.split('\n').slice(0, 6).join(' | ')); } console.log('choices', D.TALE.story.currentChoices.map((c) => c.text).join(' / '), '| scene', D.TALE.scene, '| visit to', D.NAV.visit && D.NAV.visit.to.id, '| hotspots', D.TALE.hot.length); }
+  if (process.env.TALE && f === 3) { const D = globalThis.__drift; D.TALE.story = new globalThis.inkjs.Compiler(storyInk()).Compile(); D.TALE.on = true; try { D.taleAdvance(); } catch (e) { console.log('ADVANCE ERROR', e.stack.split('\n').slice(0, 6).join(' | ')); } console.log('choices', D.TALE.story.currentChoices.map((c) => c.text).join(' / '), '| scene', D.TALE.scene, '| visit to', D.NAV.visit && D.NAV.visit.to.id, '| hotspots', D.TALE.hot.length); }
   if (process.env.TALE && f === 5) { const D = globalThis.__drift; if (D.TALE.story) D.taleChoose(+process.env.TALE); }
   if (process.env.TALE && f === 6) { const V = globalThis.__drift.NAV.visit; if (V) V.t = V.T; }
   if (process.env.TALE && f === 6) { const D = globalThis.__drift; console.log('PROPLOG scene', D.TALE.scene, 'place', D.TALE.place, 'props', (D.TALE.props || []).map((p) => p.kind + (p.clue ? '(' + p.clue + ')' : '')).join(',')); }

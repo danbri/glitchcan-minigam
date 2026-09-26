@@ -122,10 +122,16 @@ function buildPlaces() {
 }
 function placeById(id) { if (!PLACES) buildPlaces(); return PLACES.find((p) => p.id === id); }
 
-// ---------- the story panel: Ink, loaded from a CDN and compiled in the page ----------
+// ---------- the story panel: Ink from a FINK file, compiled in the page ----------
+// The story is story/lamplighter.fink.js. Its ink is captured with the repo's frozen backticks kernel
+// (packages/backticks), inside a throwaway sandboxed iframe, the same way the Finkosphere story runner does it:
+// the .fink.js runs in the box and only the captured strings come back. The ink runtime is the repo's vendored copy
+// (third_party/ink), with jsDelivr as a fallback. Paths are relative to dist/city.html.
 // The story keeps its place when the panel is closed, and across reloads (browser storage). The panel floats over the
 // world: drag its header to move it, its corner to resize it, minimise it to a slim bar.
-const INK_CDN = "https://cdn.jsdelivr.net/npm/inkjs@2.4.0/dist/ink-full.js";
+const TALE_URL = "../story/lamplighter.fink.js";
+const BACKTICKS_URL = "../../packages/backticks/src/index.js";
+const INK_URLS = ["../../third_party/ink/ink-full.js", "https://cdn.jsdelivr.net/npm/inkjs@2.4.0/dist/ink-full.js"];
 const TALE_KEY = "drift.tale.v1", TALE_GEOM_KEY = "drift.taleGeom.v1";
 const TALE = { story: null, on: false, scene: null, place: null, paras: [], hot: [], dwell: 0, dwellOn: null, loading: false, min: false };
 if (typeof PLACES_BAKED !== "undefined") PLACES = PLACES_BAKED;
@@ -135,16 +141,62 @@ function taleFetch(k) { try { return JSON.parse(localStorage.getItem(k) || "null
 function taleSave() { if (TALE.story) taleStore(TALE_KEY, { state: TALE.story.state.toJson(), paras: TALE.paras, scene: TALE.scene, place: TALE.place, hot: TALE.hot, props: TALE.props }); }
 function taleForget() { taleStore(TALE_KEY, null); }
 
-function loadInk(cb) {
-  if (globalThis.inkjs) { cb(); return; }
-  if (TALE.loading) return;
-  TALE.loading = true;
-  const s = document.createElement("script");
-  s.src = INK_CDN;
-  s.crossOrigin = "anonymous";
-  s.onload = () => { TALE.loading = false; cb(); };
-  s.onerror = () => { TALE.loading = false; taleSay(["The story engine could not be loaded. Check the connection and try again."], []); };
-  (document.head || document.body)?.appendChild?.(s);
+function loadScript(url) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = url;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error("could not load " + url));
+    (document.head || document.body).appendChild(s);
+  });
+}
+async function loadInkRuntime() {
+  for (const url of INK_URLS) {
+    if (globalThis.inkjs) return;
+    try { await loadScript(url); } catch (e) { /* try the next one */ }
+  }
+  if (!globalThis.inkjs) throw new Error("The story engine could not be loaded. Check the connection and try again.");
+}
+// run the .fink.js in a sandboxed iframe (opaque origin) with the frozen capture installed; get back its first ink block
+function extractInBox(src, installSource) {
+  return new Promise((resolve, reject) => {
+    const frame = document.createElement("iframe");
+    frame.setAttribute("sandbox", "allow-scripts");
+    frame.style.display = "none";
+    frame.srcdoc = '<!DOCTYPE html><meta charset="utf-8"><script>' +
+      "var install = " + installSource + ";\n" +
+      "var harvest = install(window, { oooOO: 'text/x-ink' });\n" +
+      "addEventListener('message', function (e) {\n" +
+      "  if (!e.data || e.data.type !== 'fink-exec') return;\n" +
+      "  try { (new Function(e.data.src))(); } catch (err) {}\n" +
+      "  parent.postMessage({ type: 'fink-harvested', result: harvest() }, '*');\n" +
+      "});\n" +
+      "parent.postMessage({ type: 'fink-box-ready' }, '*');\n" +
+      "<\/script>";
+    let done = false;
+    const finish = (err, ink) => {
+      if (done) return;
+      done = true;
+      removeEventListener("message", onMsg);
+      frame.remove();
+      if (err) reject(err); else resolve(ink);
+    };
+    const onMsg = (e) => {
+      if (e.source !== frame.contentWindow || !e.data) return;
+      if (e.data.type === "fink-box-ready") frame.contentWindow.postMessage({ type: "fink-exec", src }, "*");
+      else if (e.data.type === "fink-harvested") finish(null, (e.data.result && e.data.result.firstInk) || "");
+    };
+    addEventListener("message", onMsg);
+    setTimeout(() => finish(new Error("the story file did not answer")), 8000);
+    document.body.appendChild(frame);
+  });
+}
+async function loadTaleInk() {
+  const [res, kernel] = await Promise.all([fetch(TALE_URL), import(new URL(BACKTICKS_URL, location.href).href), loadInkRuntime()]);
+  if (!res.ok) throw new Error("the story file could not be fetched (" + res.status + ")");
+  const ink = await extractInBox(await res.text(), kernel.INSTALL_CAPTURE_SOURCE);
+  if (!ink) throw new Error("no ink found in " + TALE_URL);
+  return ink;
 }
 function taleToggle() { if (TALE.on) taleClose(); else taleOpen(); }
 function taleOpen() {
@@ -160,9 +212,11 @@ function taleOpen() {
     return;
   }
   taleSay(["Loading the story\u2026"], []);
-  loadInk(() => {
+  if (TALE.loading) return;
+  TALE.loading = true;
+  loadTaleInk().then((src) => {
+    TALE.loading = false;
     try {
-      const src = document.getElementById("ink-tale").textContent;
       TALE.story = new inkjs.Compiler(src).Compile();
       const saved = taleFetch(TALE_KEY);
       if (saved && saved.state) {
@@ -178,7 +232,7 @@ function taleOpen() {
       taleAdvance();
       showHint("Drag to look around. Things worth noticing glint faintly when you look their way.", 7000);
     } catch (e) { taleSay(["The story could not be compiled: " + e.message], []); }
-  });
+  }, (e) => { TALE.loading = false; taleSay([e.message], []); });
 }
 function taleClose() {
   TALE.on = false;

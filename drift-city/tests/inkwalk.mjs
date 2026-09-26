@@ -1,11 +1,10 @@
 // plays the story many times with random choices (and random discoveries), checking every run ends and counting endings
-const { Compiler } = require('inkjs/dist/ink-full.js');
-const fs = require('fs');
-const c = new Compiler(fs.readFileSync('../src/tales.ink', 'utf8'));
-let story;
-try { story = c.Compile(); } catch (e) { console.log('COMPILE ERROR', (c.errors || []).join('\n')); process.exit(1); }
-if (c.warnings && c.warnings.length) console.log('warnings:', c.warnings.slice(0, 6).join(' | '));
-const places = new Set(JSON.parse(fs.readFileSync('../src/places.json', 'utf8')).map((p) => p.id));
+import fs from 'node:fs';
+import { compileStory } from '../tools/story.mjs';
+let story, warnings;
+try { ({ story, warnings } = compileStory()); } catch (e) { console.log('COMPILE ERROR', e.message); process.exit(1); }
+if (warnings.length) console.log('warnings:', warnings.slice(0, 6).join(' | '));
+const places = new Set(JSON.parse(fs.readFileSync(new URL('../src/places.json', import.meta.url), 'utf8')).map((p) => p.id));
 const endings = {}, lens = [];
 let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 for (let run = 0; run < 400; run++) {

@@ -1,3 +1,4 @@
+oooOO`
 // The Lamplighter's Last Round: a cosy mystery in Drift city, on the night of the vote.
 // Tags drive the world:
 //   # scene: <knot>        re-entered when something is found, so the text and choices refresh
@@ -416,3 +417,4 @@ THE END: THE SPOTLIGHT.
 === restart ===
 # restart
 -> END
+`;
