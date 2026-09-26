@@ -69,6 +69,18 @@ Height limits that must agree: `pedQ` returns early above 4.6 m, the map calls i
 band in the primary trace clips at 4.7 m. The cable was first at 2.9 m and showed as a black bar across any view
 from a place under it. A taller figure needs all three raised.
 
+### Planted feet: the gait runs on distance, not time
+
+Walking kinds (exoskeleton, android, loper) take their gait phase from the distance walked (`pedGait`), not the
+clock: one cycle is `gaitLen` metres, each foot is down for the first `gaitSf` of its cycle and sweeps back
+`2 * gaitS` in that time, so the planted foot moves back exactly as fast as the body goes on, whatever the speed.
+The distance is the ring drift plus `dir * sway` (the same terms that move the walker in `pedQ`). Before September
+2026 the feet followed `sin(phase)` on a fixed clock, so they slid on the ground, and the loper's whole body, feet
+included, rose 0.3 m off it every step: "figures float around". Only the body bobs now (`gaitBob`, `hp.bob`, which
+`pedFoot` takes off the foot height). Gliders and skaters are not walking and keep the old sweep (`hp.sf = 0`).
+`tests/walkers.html` walks the figures at the ground stripes' 1.1 m/s, so a planted foot must hold still on a stripe;
+`?zoom=0.45` comes closer.
+
 ## Titan design brief
 
 - Gravity is about a seventh of Earth's; the air is four times as dense and at -179 °C. People outdoors wear pressure
@@ -126,6 +138,11 @@ description of the surroundings that `audioWorld` in `main.js` builds twice a se
   distortion. Two rules from that: never map a world effect by view angle; and a mark drawn in a grid cell must stay
   inside that cell (clamp streaks to 0.3 of the cell). Reproduce headless: `SNOW=1 MOVE=0,-2 CAM=...` in
   `tests/dawn-run.mjs`.
+- **Weathering** (`weathering`, after `frostify`, first hit only, fading out by 170 m): tone mottling, tholin dust on
+  whatever faces up, streaks down walls, grime at street level, and a bumped normal from `vn3` (3D value noise with
+  its analytic gradient: one call gives the pattern and the bump). Glass gets a film only; lit signs and screens are
+  skipped; walkers get only a fabric weave and creases. Tree crowns near the camera are displaced by `vn3` into
+  clumps of leaves (`treesSDF`), which broke the smooth-blob silhouettes more than any shading did.
 - **Crystals and rings** were everywhere; they now mark places. Crystal towers are three times rarer outside the
   crystal gardens (zone 7), crystal crowns on roofs rarer, plaza crystals only in zone 7. Megatowers (giants) went
   from 28% to 12% of 8x8 regions, and only about a third wear a ring. `giantHas` exists in `world.js` AND as

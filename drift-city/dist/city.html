@@ -1326,10 +1326,25 @@ fn pedPhase(kind: i32, pace: f32, key: i32) -> f32 {
   if (kind == 4) { f = 2.4; }
   return u.time * f + f32(key);
 }
-fn pedLift(kind: i32, ph: f32) -> f32 {
-  if (kind == 2) { return 0.3 * abs(sin(ph)); }
-  if (kind == 3) { return 0.55 + 0.3 * sin(ph * 0.5); }
-  return 0.0;
+// Walking kinds (0 exoskeleton, 1 android, 2 loper) take their phase from the DISTANCE walked, not the clock: a
+// full gait cycle is gaitLen metres, so the foot on the ground moves back exactly as fast as the body moves on and
+// stays planted, whatever the walker's speed. The cycle: each foot is down for the first `sf` of its half of the
+// cycle, sweeping back 2 * gaitS, then swings forward and lifts.
+fn gaitS(kind: i32) -> f32 { return array<f32, 3>(0.3, 0.13, 0.28)[clamp(kind, 0, 2)]; }
+fn gaitSf(kind: i32) -> f32 { return array<f32, 3>(0.56, 0.6, 0.4)[clamp(kind, 0, 2)]; }
+fn gaitLen(kind: i32) -> f32 { return 2.0 * gaitS(kind) / gaitSf(kind); }
+fn pedGait(kind: i32, dist: f32, key: i32) -> f32 { return dist / gaitLen(kind) * 6.2831853 + f32(key); }
+// one foot: (forward offset from the hip line, height above the ground) at leg phase lp
+fn gaitFoot(lp: f32, S: f32, sf: f32, lift: f32) -> vec2f {
+  let u = fract(lp / 6.2831853);
+  if (u < sf) { return vec2f(S - 2.0 * S * u / sf, 0.0); }
+  let w = (u - sf) / (1.0 - sf);
+  return vec2f(-S + 2.0 * S * w * w * (3.0 - 2.0 * w), lift * sin(3.14159 * w));
+}
+// the body's rise between steps: highest when both feet are off the ground (lopers), lowest mid-stance
+fn gaitBob(ph: f32, sf: f32, h: f32) -> f32 {
+  let u = fract(ph / 6.2831853);
+  return h * (0.5 - 0.5 * cos(12.566371 * (u - sf * 0.5)));
 }
 
 // ---------- the walkers' bodies ----------
@@ -1370,7 +1385,17 @@ fn ik2(h: vec3f, f: vec3f, l1: f32, l2: f32, bend: vec3f) -> vec3f {
   let pr = normalize(bend - dir * dot(bend, dir) + vec3f(0.0, 1e-4, 0.0));
   return h + dir * a + pr * r;
 }
-struct HP { ph: f32, stride: f32, fl: f32, arm: f32, bulk: f32, lean: f32, spread: f32, trail: f32, armOut: f32, reach: f32 };
+struct HP { ph: f32, stride: f32, fl: f32, arm: f32, bulk: f32, lean: f32, spread: f32, trail: f32, armOut: f32, reach: f32, sf: f32, bob: f32 };
+// where a foot is: planted-foot gait when hp.sf > 0, else the old sine sweep (gliders and skaters, who are not walking)
+fn pedFoot(hp: HP, lg: i32) -> vec3f {
+  let sg = select(-1.0, 1.0, lg == 1);
+  let lp = hp.ph + select(3.14159, 0.0, lg == 1);
+  if (hp.sf > 0.0) {
+    let g = gaitFoot(lp, hp.stride, hp.sf, hp.fl);
+    return vec3f(0.1 * sg + hp.spread * sg * step(hp.sf, fract(lp / 6.2831853)), 0.09 + g.y - hp.bob, g.x);
+  }
+  return vec3f(0.1 * sg + hp.spread * sg * max(0.0, sin(lp)), 0.09 + hp.fl * max(0.0, cos(lp)) + hp.trail * 0.5, hp.stride * sin(lp) - hp.trail);
+}
 // a person: legs placed by the gait and reached with a knee, the body above leaned about the hips, arms swinging
 // against the legs (or held out, or one reaching up). q is already lifted: its y = 0 is under the feet in the air.
 fn pedHuman(q: vec3f, hp: HP) -> f32 {
@@ -1378,17 +1403,21 @@ fn pedHuman(q: vec3f, hp: HP) -> f32 {
   let b = hp.bulk;
   for (var lg = 0; lg < 2; lg++) {
     let sg = select(-1.0, 1.0, lg == 1);
-    let lp = hp.ph + select(3.14159, 0.0, lg == 1);
-    let foot = vec3f(0.1 * sg + hp.spread * sg * max(0.0, sin(lp)), 0.09 + hp.fl * max(0.0, cos(lp)) + hp.trail * 0.5, hp.stride * sin(lp) - hp.trail);
+    let foot = pedFoot(hp, lg);
     let hip = vec3f(0.095 * sg, 0.93, 0.0);
     let knee = ik2(hip, foot, 0.45, 0.44, vec3f(0.0, 0.1, 1.0));
-    d = min(d, pp(smin(sdRC(q, hip, knee, 0.078 * b, 0.056 * b), sdRC(q, knee, foot, 0.054 * b, 0.04 * b), 0.03), 1));
+    // thigh and shin blended into one leg, with a knee pad and a calf that swells below the knee
+    var leg = smin(sdRC(q, hip, knee, 0.078 * b, 0.056 * b), sdRC(q, knee, foot, 0.054 * b, 0.04 * b), 0.05);
+    leg = smin(leg, sdEll(q - mix(knee, foot, 0.28) - vec3f(0.0, 0.0, -0.012), vec3f(0.052, 0.09, 0.056) * b), 0.04);
+    leg = min(leg, sdEll(q - knee - vec3f(0.0, 0.0, 0.035), vec3f(0.05, 0.05, 0.03) * b));
+    d = min(d, pp(leg, 1));
     let fq = q - foot - vec3f(0.0, -0.035, 0.065);
     d = min(d, pp(sdBox(fq, vec3f(0.04 * b, 0.028 * b, 0.1)) - 0.022 * b, 2));
   }
-  // the upper body, leaned forward about the hips
+  // the upper body, leaned forward about the hips, and turned a little against the stride (shoulders counter the hips)
   let yz = rot2(vec2f(q.y - 0.93, q.z), -hp.lean);
-  let ub = vec3f(q.x, yz.x + 0.93, yz.y);
+  let tw = rot2(vec2f(q.x, yz.y), 0.12 * sin(hp.ph) * step(0.001, hp.stride - 0.09));
+  let ub = vec3f(tw.x, yz.x + 0.93, tw.y);
   let pel = sdEll(ub - vec3f(0.0, 0.97, 0.0), vec3f(0.15, 0.1, 0.1) * b);
   let abd = sdRC(ub, vec3f(0.0, 1.0, 0.0), vec3f(0.0, 1.2, 0.01), 0.11 * b, 0.125 * b);
   let chest = sdEll(ub - vec3f(0.0, 1.3, 0.015), vec3f(0.165, 0.135, 0.105) * b);
@@ -1432,7 +1461,8 @@ fn pedFigure(q: vec3f, kind: i32, ph: f32, key: i32) -> f32 {
       let sx = select(-0.15, 0.15, lg == 1);
       let pg = select(sw, -sw, lg == 1);
       let hip = vec3f(sx, 1.08, 0.0);
-      let foot = vec3f(sx, 0.07 + 0.08 * max(0.0, select(co, -co, lg == 1)), pg * 0.85);
+      let gf = gaitFoot(ph + select(3.14159, 0.0, lg == 1), gaitS(0), gaitSf(0), 0.1);
+      let foot = vec3f(sx, 0.07 + gf.y, gf.x);
       let knee = ik2(hip, foot, 0.52, 0.56, vec3f(0.0, 0.0, 1.0));
       dd = min(dd, pp(sdRC(q, hip, knee, 0.07, 0.05), 10));
       dd = min(dd, pp(sdRC(q, knee, foot, 0.05, 0.035), 10));
@@ -1472,7 +1502,8 @@ fn pedFigure(q: vec3f, kind: i32, ph: f32, key: i32) -> f32 {
     for (var lg = 0; lg < 2; lg++) {
       let sg = select(-1.0, 1.0, lg == 1);
       let lp = ph + select(3.14159, 0.0, lg == 1);
-      let foot = vec3f(0.1 * sg, 0.08 + 0.035 * max(0.0, cos(lp)), 0.13 * sin(lp));
+      let gf = gaitFoot(lp, gaitS(1), gaitSf(1), 0.035);
+      let foot = vec3f(0.1 * sg, 0.08 + gf.y, gf.x);
       let hip = vec3f(0.1 * sg, 0.92, 0.0);
       let knee = ik2(hip, foot, 0.43, 0.43, vec3f(0.0, 0.0, 1.0));
       dd = min(dd, pp(sdRC(q1, hip, knee, 0.085, 0.058), 7));
@@ -1508,10 +1539,12 @@ fn pedFigure(q: vec3f, kind: i32, ph: f32, key: i32) -> f32 {
   } else if (kind == 2) {
     // a loper: a pressure suit, a bubble helmet, a life-support pack and weighted boots, bounding along with a hang
     // in every stride; the well-off bring a drone
-    let h = 0.3 * abs(s);
+    // the body rises between steps (both feet off the ground: the low-gravity lope); the feet stay planted
+    let h = gaitBob(ph, gaitSf(2), 0.07);
     let ql = q - vec3f(0.0, h, 0.0);
     var hp: HP;
-    hp.ph = ph; hp.stride = 0.34; hp.fl = 0.1; hp.arm = 0.22; hp.bulk = 1.3; hp.lean = 0.1; hp.spread = 0.04; hp.trail = 0.0; hp.armOut = 0.15; hp.reach = 0.0;
+    hp.ph = ph; hp.stride = gaitS(2); hp.fl = 0.12; hp.arm = 0.22; hp.bulk = 1.3; hp.lean = 0.1; hp.spread = 0.0; hp.trail = 0.0; hp.armOut = 0.15; hp.reach = 0.0;
+    hp.sf = gaitSf(2); hp.bob = h;
     dd = min(dd, pedHuman(ql, hp));
     let ub = pedUpper(ql, 0.1);
     dd = min(dd, pp(length(ub - vec3f(0.0, 1.64, 0.02)) - 0.165, 3));
@@ -1520,9 +1553,7 @@ fn pedFigure(q: vec3f, kind: i32, ph: f32, key: i32) -> f32 {
     dd = min(dd, pp(sdSeg(ub, vec3f(0.08, 1.4, -0.2), vec3f(0.1, 1.5, -0.07)) - 0.018, 2));
     dd = min(dd, pp(sdBox(ub - vec3f(0.0, 1.3, 0.14), vec3f(0.05, 0.02, 0.01)), 6));
     for (var lg = 0; lg < 2; lg++) {
-      let sg = select(-1.0, 1.0, lg == 1);
-      let lp = ph + select(3.14159, 0.0, lg == 1);
-      let foot = vec3f(0.1 * sg + 0.04 * sg * max(0.0, sin(lp)), 0.09 + 0.1 * max(0.0, cos(lp)), 0.34 * sin(lp));
+      let foot = pedFoot(hp, lg);
       dd = min(dd, pp(sdBox(ql - foot - vec3f(0.0, -0.075, 0.07), vec3f(0.065, 0.02, 0.13)) - 0.012, 4));
     }
     if (hsh(key, key * 3 + 2, 99) < 0.3) {
@@ -1613,7 +1644,13 @@ fn pedQ(p: vec3f) -> vec4f {
       let hy = select(1.4, 2.3, kind == 4);
       let bnd = length(max(abs(q - vec3f(0.0, hy, 0.0)) - vec3f(0.95, hy + 0.1, 1.0), vec3f(0.0)));
       var dd = bnd + 0.05;
-      if (bnd < 0.25) { dd = pedFigure(q, kind, pedPhase(kind, pace, key), key); }
+      if (bnd < 0.25) {
+        // distance walked so far: the ring's drift plus this walker's own sway, in its walking direction
+        let dist = u.time * pace + 3.0 * pace * (vnoise(vec2f(u.time * 0.07, f32(c.x * 13 + c.y * 7 + ln)), 181) - 0.5) + dir * sway;
+        var ph = pedPhase(kind, pace, key);
+        if (kind <= 2) { ph = pedGait(kind, dist, key); }
+        dd = pedFigure(q, kind, ph, key);
+      }
       d = min(d, dd * 0.9);
       if (d < best.x) { best = vec4f(d, ds, q.x, f32(key + 1)); }
     }
@@ -2383,7 +2420,14 @@ fn treesSDF(p: vec3f, ownTyp: i32) -> vec2f {
         let crown2 = length(e - vec3f(t.z * 0.25, t.z * 0.55 * t2.x, -t.z * 0.15)) - t.z * 0.62;
         let crown3 = length(e - vec3f(-t.z * 0.35, t.z * 0.2 * t2.x, t.z * 0.3)) - t.z * 0.55;
         let lump = sin(e.x * 1.6 + ph) * sin(e.y * 1.9) * sin(e.z * 1.7 - ph) * 0.22;
-        d = min(d, (smin(smin(crown, crown2, t.z * 0.45), crown3, t.z * 0.4) + lump) * 0.8);
+        var cd = (smin(smin(crown, crown2, t.z * 0.45), crown3, t.z * 0.4) + lump) * 0.8;
+        // near the camera and near the crown's skin, break the outline into clumps of leaves
+        if (cd < 1.6 && length(p - u.camPos) < 140.0) {
+          let n1 = vn3(e * 0.8 + vec3f(ph), 311).x;
+          let n2 = vn3(e * 2.4 + vec3f(ph), 312).x;
+          cd = (cd + (n1 - 0.5) * 1.0 + (n2 - 0.5) * 0.45) * 0.72;
+        }
+        d = min(d, cd);
         dt = min(dt, max(length(rel.xz) - (0.22 + 0.06 * t.z), rel.y - t.w - 0.45 * t.z));
         continue;
       }
@@ -5071,6 +5115,80 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
 }
 
 // methane frost settles on up-facing surfaces, heavier during and after snowfall
+// 3D value noise with its gradient (x: value 0..1, yzw: d/dp), for weathering and bump
+fn vn3(q: vec3f, k: i32) -> vec4f {
+  let i = floor(q);
+  let f = q - i;
+  let w = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+  let dw = 30.0 * f * f * (f * (f - 2.0) + 1.0);
+  let x = i32(i.x);
+  let y = i32(i.y);
+  let z = i32(i.z) * 1013;
+  let a = hsh(x + z, y, k);
+  let b = hsh(x + 1 + z, y, k);
+  let c = hsh(x + z, y + 1, k);
+  let d = hsh(x + 1 + z, y + 1, k);
+  let e = hsh(x + z + 1013, y, k);
+  let f1 = hsh(x + 1 + z + 1013, y, k);
+  let g = hsh(x + z + 1013, y + 1, k);
+  let h = hsh(x + 1 + z + 1013, y + 1, k);
+  let k1 = b - a;
+  let k2 = c - a;
+  let k3 = e - a;
+  let k4 = a - b - c + d;
+  let k5 = a - c - e + g;
+  let k6 = a - b - e + f1;
+  let k7 = -a + b + c - d + e - f1 - g + h;
+  let v = a + k1 * w.x + k2 * w.y + k3 * w.z + k4 * w.x * w.y + k5 * w.y * w.z + k6 * w.z * w.x + k7 * w.x * w.y * w.z;
+  let gr = dw * vec3f(k1 + k4 * w.y + k6 * w.z + k7 * w.y * w.z, k2 + k5 * w.z + k4 * w.x + k7 * w.z * w.x,
+    k3 + k6 * w.x + k5 * w.y + k7 * w.x * w.y);
+  return vec4f(v, gr);
+}
+
+// Weathering for every surface near the camera (first hit only): patchy tone, tholin dust (the orange-brown fallout
+// of Titan's haze) settling on whatever faces up, dark streaks running down walls, grime at street level, and a
+// bumped normal so flat faces stop reading as clean planes. Glass gets a dirt film only; lit signs and screens, and
+// the walkers, are left alone.
+fn weathering(sIn: Surf, nIn: vec3f, p: vec3f, m: i32, t: f32, nOut: ptr<function, vec3f>) -> Surf {
+  var s = sIn;
+  *nOut = nIn;
+  let det = 1.0 - smoothstep(50.0, 170.0, t);
+  if (det <= 0.0 || m == 56 || m == 62 || m == 16 || luma(s.emi) > 2.0 * luma(s.alb) + 0.05 || s.wet >= 1.0) { return s; }
+  let n = nIn;
+  if (m == 24) {
+    // walkers: no dirt, only the weave and creases of their suits, fine and close up
+    let wv = vn3(p * 40.0, 305);
+    let cr = vn3(p * vec3f(6.0, 22.0, 6.0), 306);
+    let gw = wv.yzw * 0.004 + cr.yzw * 0.01;
+    *nOut = normalize(n - (gw - n * dot(gw, n)) * 6.0 * det * (1.0 - smoothstep(0.3, 0.8, s.spec)));
+    s.alb *= 0.9 + 0.2 * cr.x;
+    return s;
+  }
+  let big = vn3(p * 0.3, 301);
+  let mid = vn3(p * 1.9, 302);
+  let fine = vn3(p * 9.0, 303);
+  let mot = big.x * 0.65 + mid.x * 0.35;
+  let glass = smoothstep(0.25, 0.5, s.refl);
+  let vert = 1.0 - smoothstep(0.35, 0.7, abs(n.y));
+  let facU = select(p.x, p.z, abs(n.x) > abs(n.z));
+  // streaks: long thin runs down walls, strongest just under where something sticks out
+  let run = smoothstep(0.55, 0.85, vnoise(vec2f(facU * 1.6, p.y * 0.06), 304)) * vert;
+  let dust = smoothstep(0.35, 0.95, n.y) * (0.45 + 0.55 * mot);
+  let low = exp(-max(p.y, 0.0) * 0.45) * vert;
+  var a = s.alb * (0.68 + 0.64 * mot) * (1.0 - 0.45 * run) * (1.0 - 0.45 * low * (0.6 + 0.4 * mid.x)) * (0.85 + 0.3 * fine.x);
+  a = mix(a, vec3f(0.3, 0.19, 0.1) * (0.8 + 0.4 * fine.x), dust * 0.6);
+  a = mix(a, a * vec3f(0.85, 0.72, 0.55), run * 0.4);
+  s.alb = mix(s.alb, mix(a, s.alb * (0.9 + 0.2 * mot), glass), det);
+  s.refl *= 1.0 - 0.35 * det * (dust + 0.5 * run) * (1.0 - 0.4 * glass);
+  s.spec *= 1.0 - 0.4 * det * mot;
+  // bump: the gradient of the middle and fine noise, less on glass and metal-smooth surfaces
+  let amp = 0.2 * det * (1.0 - glass) * (1.0 - 0.6 * smoothstep(0.3, 0.9, s.spec));
+  let gv = mid.yzw * 0.06 + fine.yzw * 0.012;
+  let gt = gv - n * dot(gv, n);
+  *nOut = normalize(n - gt * amp * 8.0);
+  return s;
+}
+
 fn frostify(sfIn: Surf, n: vec3f, p: vec3f) -> Surf {
   var s = sfIn;
   let f = ev.sky.w * sstepJ(0.5, 0.92, n.y) * (0.7 + 0.3 * vnoise(p.xz * 0.7, 132));
@@ -5246,7 +5364,8 @@ fn rnd3(fc: vec2f, k: i32) -> vec3f {
     let p = cro + crd * h.t;
     if (first) { tOut = h.t; }
     var n = hitNormal(p, h);
-    let sf = frostify(surface(p, n, h.m, crd, h.t + tBase), n, p);
+    var sf = frostify(surface(p, n, h.m, crd, h.t + tBase), n, p);
+    if (first) { var nb = n; sf = weathering(sf, n, p, i32(h.m + 0.5), h.t, &nb); n = nb; }
     var sha = 0.75;
     var occ = 0.85;
     if (first) {
