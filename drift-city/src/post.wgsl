@@ -115,14 +115,14 @@ fn aces(x: vec3f) -> vec3f {
   // centre of the view; u.reg2.w switches the effect on.
   let dep = min(textureSampleLevel(srcTex, samp, uv, 0.0).a, 1200.0);
   var coc = 0.0;
-  if (u.reg2.w > 0.5) {
+  if (u.reg2.w > 0.01) {
     var fd = u.reg2.z;
     if (fd <= 0.0) {
       let cd = vec4f(textureSampleLevel(srcTex, samp, vec2f(0.5, 0.5), 0.0).a, textureSampleLevel(srcTex, samp, vec2f(0.46, 0.5), 0.0).a,
         textureSampleLevel(srcTex, samp, vec2f(0.54, 0.5), 0.0).a, textureSampleLevel(srcTex, samp, vec2f(0.5, 0.55), 0.0).a);
       fd = clamp(min(min(cd.x, cd.y), min(cd.z, cd.w)), 3.0, 900.0);
     }
-    coc = clamp(abs(1.0 / max(dep, 0.3) - 1.0 / fd) * fd * 0.75 - 0.12, 0.0, 1.0);
+    coc = clamp(abs(1.0 / max(dep, 0.3) - 1.0 / fd) * fd * 0.75 - 0.12, 0.0, 1.0) * u.reg2.w;
   }
   c = clamp(c + (c - (n0 + n1 + n2 + n3) * 0.25) * (0.3 + 0.5 * (1.0 - coc)), lo, hi);
   if (coc > 0.02) {
@@ -159,6 +159,12 @@ fn aces(x: vec3f) -> vec3f {
     let rdr = normalize(u.camFwd + (sv.x * u.camRight + sv.y * u.camUp) * u.fov);
     let ang = atan2(rdr.z, rdr.x) / 6.2831853;
     var snow = 0.0;
+    // at speed the near flakes streak: sideways with the drone's sideways motion, outward from the centre with its
+    // forward motion (camera travel this frame, in screen units)
+    let vel = select(vec3f(0.0), u.camPos - u.prevPos, u.histValid > 0.5);
+    let stv = vec2f(dot(vel, u.camRight), dot(vel, u.camUp)) / u.fov + sv * dot(vel, u.camFwd) * 0.35;
+    let sl = length(stv);
+    let sdir = select(vec2f(0.0, 1.0), stv / max(sl, 1e-5), sl > 1e-5);
     for (var l = 0; l < 6; l++) {
       let fl = f32(l);
       let sc = vec2f(24.0 + 34.0 * fl, 4.0 + 6.0 * fl);
@@ -176,7 +182,13 @@ fn aces(x: vec3f) -> vec3f {
         // a tumbling flake: an ellipse that turns as it falls, sometimes a clump of two or three
         let tb = u.time * (0.6 + 1.4 * h1) + h2 * 6.28;
         let dv = f - cp;
-        let dr = vec2f(dv.x * k * cos(tb) - dv.y * sin(tb), dv.x * k * sin(tb) + dv.y * cos(tb)) * vec2f(1.0, 1.0 + 0.9 * h2);
+        // stretch along the streak (more for the nearer layers), then tumble (less, the faster we go)
+        let sk = clamp(sl * (3.0 - 0.45 * fl) * 6.0, 0.0, 5.0);
+        let dc0 = dv * vec2f(k, 1.0);
+        let al = dot(dc0, sdir);
+        let dc = dc0 + sdir * (al / (1.0 + sk) - al);
+        let tbs = tb / (1.0 + sk);
+        let dr = vec2f(dc.x * cos(tbs) - dc.y * sin(tbs), dc.x * sin(tbs) + dc.y * cos(tbs)) * vec2f(1.0, 1.0 + 0.9 * h2 / (1.0 + sk));
         var dd = length(dr);
         if (h3 > 0.45) { dd = min(dd, length(dr - vec2f(r * 0.55, r * 0.2)) * 1.15); }
         if (h3 > 0.8) { dd = min(dd, length(dr + vec2f(r * 0.3, r * 0.5)) * 1.3); }

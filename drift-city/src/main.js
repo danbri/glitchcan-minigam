@@ -71,8 +71,9 @@ function statusHTML(autoOn) {
   if (NAV.mode === "free") { const a = len3(NAV.free.P) - TR; return "<b>Flying by hand</b><span>" + regionAt(norm3(NAV.free.P)).name + "</span><span>" + fmtAlt(a) + "</span>"; }
   if (NAV.mode === "space") { const k = NAV.space.kind; return "<b>" + (clock - lastInput > 4.5 ? "Drifting" : "Steering by hand") + "</b><span>" + spaceName() + "</span><span>" + (k === 1 ? fmtAlt(NAV.spaceAlt) + " up" : k === 3 ? fmtAlt(len3(sub3(NAV.cam.P, MOONS[NAV.space.moon].pos)) - MOONS[NAV.space.moon].r) + " up" : k === 4 ? fmtAlt(NAV.space.h) + " above the ring plane" : k === 5 ? fmtAlt(NAV.space.alt) + " above the clouds" : fmtAlt(len3(sub3(NAV.cam.P, SAT_POS))) + " from Saturn") + "</span>"; }
   const lead = NAV.tour ? (autoOn ? "Grand tour" : "Tour paused") : autoOn ? "Autopilot" : "Steering by hand";
-  if (!NAV.tour) return (autoOn ? "" : "<b>By hand</b>") + "<span>" + placeName() + "</span><span>" + (st.mode === "low" ? "Street level" : st.y.toFixed(0) + " m") + "</span>";
-  return "<b>" + lead + "</b><span>" + placeName() + "</span><span>" + (st.mode === "low" ? "Street level" : st.y.toFixed(0) + " m") + "</span>";
+  // in the city, a place name you could give someone, not the drone's state
+  if (!NAV.tour) return (autoOn ? "" : "<b>By hand</b>") + "<span>" + placeLabel() + "</span>";
+  return "<b>" + lead + "</b><span>" + placeLabel() + "</span>";
 }
 // ---------- flocks of manta-like fliers (boids): cohesion, alignment, separation, a wandering goal near the camera ----------
 const FLOCK_N = 96;
@@ -156,7 +157,7 @@ const AUW = { mode: "surface", alt: 0, people: 0, tubes: 0, flierDist: 1e9, stor
 let auT = 0;
 // depth of field: what the lens is focused on. The story's scene when a person or clue of it is near the middle of
 // the view, else 0, which tells the composite pass to focus on whatever is at the centre.
-const FOCUS = { d: 0, on: true };
+const FOCUS = { d: 0, s: 0, on: true };
 try { FOCUS.on = localStorage.getItem("drift.focus") !== "0"; } catch (e) {}
 function focusTarget(pos, f) {
   if (!TALE.on || !TALE.props || !TALE.props.length) return 0;
@@ -929,6 +930,12 @@ function smRects(S, budgetRows) {
 }
 // Is the camera inside (or within a margin of) any proxy box? Then rays must start at the camera.
 const ZONE_NAMES = ["Financial core", "Neon strip", "Old town", "Chinatown", "Industrial works", "Spaceport", "Dorms", "Crystal gardens"];
+function placeLabel() {
+  const n = placeName();
+  if (NAV.site.id !== "home" || st.mode !== "low") return n;
+  const cx = Math.floor(st.x / C), cz = Math.floor(st.z / C), c = cellAt(cx, cz);
+  return c.wild ? n : streetName(cx * 131 + cz * 7) + ", " + n;
+}
 function placeName() {
   if (NAV.site.id !== "home") return NAV.siteName;
   const c = cellAt(Math.floor(st.x / C), Math.floor(st.z / C));
@@ -1372,7 +1379,10 @@ async function init() {
     // the lens: on the story's scene when there is one in view, otherwise (0) on the centre of the view
     const ft = inSpace ? 0 : focusTarget([U[4], U[5], U[6]], cam.f);
     FOCUS.d = ft > 0 ? (FOCUS.d > 0 ? FOCUS.d + (ft - FOCUS.d) * Math.min(1, dt * 3) : ft) : 0;
-    U[66] = FOCUS.d; U[67] = FOCUS.on && !inSpace ? 1 : 0;
+    // shallow focus is for story moments; in flight the lens goes deep, so you can judge where you are going
+    const fs = !FOCUS.on || inSpace ? 0 : NAV.mode === "visit" || FOCUS.d > 0 ? 1 : NAV.mode === "surface" ? 0.3 * clampv(1 - (AUW.speed || 0) / 25, 0, 1) : 0;
+    FOCUS.s += (fs - FOCUS.s) * Math.min(1, dt * 2);
+    U[66] = FOCUS.d; U[67] = FOCUS.s;
     device.queue.writeBuffer(ubuf, 0, U);
     if (!inSpace) device.queue.writeBuffer(propBuf, 0, worldProps());
     if (!inSpace) { stepFlock(dtS); if (!FLOCKS_ON) FLOCK_DATA[0] = 0; device.queue.writeBuffer(flockBuf, 0, FLOCK_DATA); }

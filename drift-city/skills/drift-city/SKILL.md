@@ -106,16 +106,59 @@ description of the surroundings that `audioWorld` in `main.js` builds twice a se
 
 - **Focus** (`comp` in `post.wgsl`): depth is in the alpha of the anti-aliased image. `u.reg2.z` is the focus
   distance the page asks for (`focusTarget` in `main.js`: the nearest story person or clue near the middle of the
-  view), 0 means "whatever is at the centre"; `u.reg2.w` switches it on (Menu > View). In-focus pixels get a harder
-  unsharp mask; out-of-focus ones an 8-tap blur that down-weights sharper foreground taps. The aim, from an outside
-  review: the thing you are looking for is crisp, the city behind it can stay dreamlike. `u.reg.z`, `u.reg2.z/w`
-  were the last free uniform slots; `u.reg2.w` and `u.reg2.z` are now taken.
+  view), 0 means "whatever is at the centre"; `u.reg2.w` is the strength. Shallow focus is for story moments
+  (strength 1 in a visit or with a story subject in view); in flight it goes deep (0.3 when slow, 0 at 25 m/s), because
+  depth of field during navigation hurts judging where you are. In-focus pixels get a harder unsharp mask; out of
+  focus an 8-tap blur that down-weights sharper foreground taps. `u.reg.z`, `u.reg2.z/w` were the last free uniform
+  slots; `u.reg2.z` and `u.reg2.w` are now taken.
 - **Snow** is drawn in `comp` too: six layers from big out-of-focus flakes at the lens to far specks, each flake a
-  tumbling ellipse, some in clumps of two or three.
+  tumbling ellipse, some in clumps of two or three. At speed the near layers streak along the camera's own motion
+  (sideways travel, and outward from the centre with forward travel), from `u.camPos - u.prevPos`.
 - **Crystals and rings** were everywhere; they now mark places. Crystal towers are three times rarer outside the
   crystal gardens (zone 7), crystal crowns on roofs rarer, plaza crystals only in zone 7. Megatowers (giants) went
   from 28% to 12% of 8x8 regions, and only about a third wear a ring. `giantHas` exists in `world.js` AND as
   `giantHasW` in `scene.wgsl`, plus the ground glow at `hsh(bg, 20)`: change all three together.
+
+## Art direction (owner-endorsed, September 2026)
+
+From two outside reviews the owner agreed with. Read before adding anything visual.
+
+**Stop adding new visual motifs.** The city has more than enough vocabulary. The next gains come from composition,
+rarity, spatial organisation, material consistency, weather interaction and authored geography.
+
+1. **One dominant idea per view.** Each district: one dominant visual idea, two supporting motifs, and a lot of
+   ordinary fabric. Weirdness has value only against the ordinary.
+2. **Rarity makes landmarks.** One ringed tower seen across half the city is geography; many ringed towers are
+   noise. Same for crystals, pagodas, dishes, giant trees.
+3. **Accumulated, not generated.** Repetition shows the generator (the banded cylindrical towers most of all). Prefer
+   asymmetry: rebuilt blocks, one-off additions, utility structures, bridges, small things attached to big ones.
+4. **Scale anchors.** Storey heights, windows, lamps, railings, vehicles and people make big things read as big. Keep
+   the vertical scale; it is one of the strongest features.
+5. **Street level needs more density than altitude**: signage, awnings, pipes, doors, cables, steam, snow drifts,
+   puddles, parked drones, heat shelters.
+6. **Timing gives scale.** Snowflake 0.1-1 s; small flier gesture 0.2-0.8 s; Pip manoeuvre 0.5-3 s; local vehicle
+   2-10 s; airship 10-60 s; weather 30-180 s; sky minutes. If everything moves at one speed, scale collapses.
+7. **Anticipate and settle.** Things signal before they move (a flier banks before it turns) and do not stop all at
+   once (roll settles, snow keeps streaming). Ease almost everything; keep a few things abrupt for contrast.
+8. **Arcs, not rails**, for organic motion and assisted camera moves.
+9. **Secondary action has a budget**: per view, one primary action, one or two secondary, ambient texture.
+10. **Exaggerate what is Titan and the story**: heat against cold, dense slow air, low gravity, methane weather,
+    enormous distance, small fragile warmth, Saturn's size. Do NOT mainly exaggerate neon, rings, crystals, glow.
+11. **Atmospheric perspective before blur**: with distance, lower contrast, saturation, emissive strength and fine
+    detail; keep silhouettes clean.
+12. **Light states need depth planes.** Night works (cyan infrastructure, warm windows, pink fliers, deep blue air).
+    Day pushes everything into one honey-brown range; foreground local colour and contrast must survive the orange.
+13. **Restraint with the sky**: Saturn, airships and searchlights are events, not wallpaper. Occlusion, haze and time
+    of day should ration them.
+14. **Appeal test** for every asset family: would someone remember one silhouette of it tomorrow? Wren, the nest, the
+    radio, the pagoda, the tea stall and the fliers pass; a generic banded tower does not.
+15. **Labels**: give a place name you could tell someone ("Amber Walk, Chinatown"), not drone state.
+
+Open work the reviews name, not done yet: the smaller authored city on Kraken Mare's shore (districts told apart by
+form, not palette: market tight and steamy, civic centre axial, Lumen severe, forest edge overgrown, dish district
+sparse and windy); the tube network's structure (supports, junctions, stations); snow settling on ledges and melting
+round warm things (heat as a visual language); clouds as weather masses rather than floating props; day-light tonal
+separation; a weak composition assist (candidate subjects ahead, gentle bias of pitch and focus, never a lock-on).
 
 ## Size and the lite variant
 
