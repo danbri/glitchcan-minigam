@@ -10,8 +10,9 @@ description: >-
   CLAUDE.md note had told three sessions they were impossible. Use this skill
   whenever a tool is missing, a `which` comes back empty, an import fails, a
   build needs a compiler, or you are about to describe an environment limit —
-  and use it to tell a real limit (no GPU, no WebGPU, no `gh`) from a limit
-  that is one command wide.
+  and use it to tell a real limit (no GPU, no `gh`) from a limit
+  that is one command wide. Also: how to run WebGPU/WGSL headless here, in
+  software, when a page would otherwise fall back to WebGL.
 ---
 
 # Do not give up on the container
@@ -101,8 +102,24 @@ Verified in this environment, and NOT fixable by installing anything:
 - **No GPU.** Chromium renders through SwiftShader — a CPU pretending to be a
   GPU. Colours, pixel counts, splat counts and sort times are real; frame
   rates are worthless.
-- **No WebGPU headless.** A "visual check" of WGSL silently tests the WebGL
-  path instead. Never claim a WGSL fix is verified from a headless capture.
+- **WebGPU headless is software only, and never by default.** Plain headless
+  Chromium has no `navigator.gpu`, and a page with a WebGL fallback then
+  silently tests the fallback. Corrected September 2026: two software paths
+  DO run WGSL here (Drift city's 4,700-line ubershader included), so a WGSL
+  change can be checked visually. Frame rates stay meaningless.
+  - Chromium with Dawn's SwiftShader adapter, on an http:// page (not
+    about:blank, which is not a secure context):
+    `--enable-unsafe-webgpu --use-webgpu-adapter=swiftshader
+    --enable-features=Vulkan --use-vulkan=swiftshader --enable-unsafe-swiftshader`.
+    Shader compile checks (`createShaderModule` + `getCompilationInfo`) take
+    seconds. A WebGPU canvas is NOT captured by `page.screenshot` (it comes back
+    transparent): render to a texture, `copyTextureToBuffer`, and draw the
+    pixels on a 2D canvas (`drift-city/tests/walkers.html?t=3` does this).
+  - Node Dawn (`npm i webgpu` in a scratch dir) on Mesa lavapipe
+    (`apt-get install -y mesa-vulkan-drivers`): `drift-city/tests/dawn-run.mjs`
+    renders the whole city at 800x500 in about 1 s per frame and writes the
+    final frame as raw RGB. The full page in Chromium on SwiftShader, by
+    contrast, did not produce a frame in ten minutes.
 - **No `gh` and no `hub`** in the remote execution environment. GitHub work
   goes through the `mcp__github__*` tools.
 - **Headless Chromium cannot reach every host `curl` can.** superspl.at

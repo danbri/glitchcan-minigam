@@ -906,7 +906,7 @@ function smRects(S, budgetRows) {
   return rects;
 }
 // Is the camera inside (or within a margin of) any proxy box? Then rays must start at the camera.
-const ZONE_NAMES = ["Financial core", "Neon strip", "Old town", "Chinatown", "Industrial works", "Spaceport", "Megablocks", "Crystal gardens"];
+const ZONE_NAMES = ["Financial core", "Neon strip", "Old town", "Chinatown", "Industrial works", "Spaceport", "Dorms", "Crystal gardens"];
 function placeName() {
   if (NAV.site.id !== "home") return NAV.siteName;
   const c = cellAt(Math.floor(st.x / C), Math.floor(st.z / C));

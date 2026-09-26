@@ -115,6 +115,7 @@ verified July 2026.
 | `fink` | `.claude/skills/` | FINK platform + the foafos shell: file format, ink compilation, sandbox, capabilities, brokers, chrome, testing discipline |
 | `glitchcanary` | `.claude/skills/` | story/game CONTENT — authoring `.fink.js`, episode linking, `# MINIGAME:` |
 | `story-game-sync` | `inklet/minigames/skills/` | a story depends on an attached game: pause/play/resume `# MINIGAME:` guests vs Drift city's live in-page sync, what each cannot do yet, and the text route every world-only clue needs (no GPU, screen readers) |
+| `drift-city` | `drift-city/skills/` | `drift-city/` — the Titan city: build, seeing WGSL changes headless (Dawn on lavapipe, `tests/walkers.html`), the walker frame rule, the Titan design brief, the dorms |
 | `edot-suite` | `magpie/edot/skills/` | the office suite at suite level — kernel capabilities, the 13 apps, 9 storage backends, auth, the 53-suite harness |
 | `tanks-for-the-trees` | `trees/skills/` | `trees/` — the Bristol data pipeline, BNG↔world coordinates, `host.api`/`__tftt`. **Read its data-ethics section first** |
 | `splat-discovery` | `magpie/dbdb/skills/` | Gaussian splats for `magpie/dbdb`: licence-checking source scans, cutting pack elements, LOD pyramids, honest cost measurement. **Read its licence section first** |
@@ -222,7 +223,7 @@ chromium.launch({ headless: true,
   executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
   args: ['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader'] })
 ```
-WebGL renders via SwiftShader at ~2 FPS on heavy scenes — fine for screenshots and functional playtests, useless for performance feel. **WebGPU is NOT available headless** — headless "visual verification" of WGSL/Stinkyfish silently tests the WebGL path instead. Never claim WGSL fixes are verified from headless captures.
+WebGL renders via SwiftShader at ~2 FPS on heavy scenes — fine for screenshots and functional playtests, useless for performance feel. **WebGPU is not on by default headless**, so a page with a WebGL fallback silently tests the fallback. It CAN be switched on in software (September 2026): Chromium with Dawn's SwiftShader adapter, or Node Dawn on Mesa lavapipe — see the `container-improver` skill, §5. Say which path a capture came from.
 
 ## Code Style
 - **HTML:** semantic elements, accessibility attributes, responsive viewport meta

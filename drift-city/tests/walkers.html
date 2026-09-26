@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drift city walkers</title>
+<style>
+  html, body { margin: 0; background: #111; color: #ddd; font: 14px system-ui, sans-serif; }
+  canvas { display: block; width: 100vw; height: 80vh; }
+  p { margin: 8px 12px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<p id="msg">Walkers from src/scene.wgsl (pedFigure and its helpers), one kind per column: exoskeleton, android, loper,
+cape glider, cable skater. Top row from the side, bottom row from three-quarters front. Each figure walks toward the
+right of the top row; the ground stripes move the other way, as the pavement does under a walker.
+Add ?t=12.5 to freeze the clock.</p>
+<script type="module">
+// Dev harness for the pedestrian figures. Needs WebGPU; serve the repo over HTTP and open drift-city/tests/walkers.html.
+const src = async (f) => (await fetch('../src/' + f)).text();
+const [common, scene] = await Promise.all([src('common.wgsl'), src('scene.wgsl')]);
+// take whole functions out of scene.wgsl by name, matching braces
+const fnSrc = (name) => {
+  const i = scene.indexOf('fn ' + name + '(');
+  if (i < 0) throw new Error('no fn ' + name);
+  let j = scene.indexOf('{', i), depth = 0;
+  for (let k = j; k < scene.length; k++) {
+    if (scene[k] === '{') depth++;
+    else if (scene[k] === '}' && --depth === 0) return scene.slice(i, k + 1);
+  }
+  throw new Error('unbalanced ' + name);
+};
+const names = ['rot2', 'smin', 'sdBox', 'sdSeg', 'sdEll', 'rotY', 'neonColor', 'pedPulley', 'pedPace', 'pedKind', 'pedPhase', 'pedLift', 'pedFigure', 'vehicleSDF'];
+// ?set=vehicles draws the tube vehicles instead (kinds 0, 2, 3, 5, 6)
+const VEH = new URLSearchParams(location.search).get('set') === 'vehicles';
+const code = common + '\n' + names.map(fnSrc).join('\n') + `
+const COLS: f32 = 5.0;
+const VEH: bool = ` + VEH + `;
+fn figMap(q: vec3f, kind: i32) -> f32 {
+  if (VEH) { return vehicleSDF(q, array<i32, 5>(0, 2, 3, 5, 6)[kind]); }
+  return pedFigure(q, kind, pedPhase(kind, 1.0, kind * 2 + 1), kind * 2 + 1);
+}
+fn kindCol(kind: i32) -> vec3f {
+  switch kind { case 0: { return vec3f(0.55, 0.55, 0.6); } case 1: { return vec3f(0.85, 0.65, 0.3); }
+    case 2: { return vec3f(0.3, 0.6, 0.62); } case 3: { return neonColor(0.3); } default: { return neonColor(0.7); } }
+}
+@fragment fn fs(@builtin(position) fc: vec4f) -> @location(0) vec4f {
+  let cw = u.res.x / COLS;
+  let ch = u.res.y * 0.5;
+  let col = floor(fc.x / cw);
+  let row = floor(fc.y / ch);
+  let kind = i32(col);
+  let uv = vec2f((fc.x - col * cw) / cw * 2.0 - 1.0, 1.0 - (fc.y - row * ch) / ch * 2.0) * vec2f(cw / ch, 1.0);
+  let zoom = select(1.0, 2.6, VEH);
+  var ro = vec3f(-3.2, 1.3, 0.0) * zoom;
+  var tgt = vec3f(0.0, select(1.2, 0.9, VEH), 0.0);
+  if (row > 0.5) { ro = vec3f(2.2, 1.6, 2.4) * zoom; }
+  let fw = normalize(tgt - ro);
+  let rt = normalize(cross(fw, vec3f(0.0, 1.0, 0.0)));
+  let up = cross(rt, fw);
+  let rd = normalize(fw * 1.9 + rt * uv.x + up * uv.y);
+  var t = 0.0;
+  var hit = false;
+  for (var i = 0; i < 160; i++) {
+    let d = figMap(ro + rd * t, kind);
+    if (d < 0.0015) { hit = true; break; }
+    t += d * 0.9;
+    if (t > 30.0) { break; }
+  }
+  // ground: stripes moving toward -z at walking pace
+  var c = vec3f(0.07, 0.07, 0.08) + 0.05 * uv.y;
+  if (rd.y < 0.0) {
+    let tg = -ro.y / rd.y;
+    if (!hit || tg < t) {
+      let g = ro + rd * tg;
+      let stripe = step(0.5, fract((g.z + u.time * 1.1) * 1.5));
+      c = mix(vec3f(0.12, 0.11, 0.1), vec3f(0.2, 0.18, 0.15), stripe) * exp(-0.08 * tg);
+    }
+  }
+  if (hit) {
+    let p = ro + rd * t;
+    let e = 0.002;
+    let n = normalize(vec3f(figMap(p + vec3f(e, 0.0, 0.0), kind) - figMap(p - vec3f(e, 0.0, 0.0), kind),
+      figMap(p + vec3f(0.0, e, 0.0), kind) - figMap(p - vec3f(0.0, e, 0.0), kind),
+      figMap(p + vec3f(0.0, 0.0, e), kind) - figMap(p - vec3f(0.0, 0.0, e), kind)));
+    let l = normalize(vec3f(0.5, 0.8, 0.3));
+    let base = kindCol(kind);
+    c = base * (0.15 + 0.85 * max(dot(n, l), 0.0)) + vec3f(0.35) * pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
+    // mark the front of each figure (+z) so facing can be checked at a glance
+    if (n.z > 0.7) { c += vec3f(0.25, 0.05, 0.0); }
+  }
+  return vec4f(pow(c, vec3f(0.4545)), 1.0);
+}
+`;
+const cv = document.getElementById('c');
+const msg = document.getElementById('msg');
+try {
+  if (!navigator.gpu) throw new Error('WebGPU is not available in this browser.');
+  const dev = await (await navigator.gpu.requestAdapter()).requestDevice();
+  const mod = dev.createShaderModule({ code });
+  const info = await mod.getCompilationInfo();
+  const errs = info.messages.filter((m) => m.type === 'error');
+  if (errs.length) throw new Error(errs.map((m) => m.lineNum + ': ' + m.message).join('\n'));
+  const fixed = new URLSearchParams(location.search).get('t');
+  // with a fixed time, draw once into a texture and copy the pixels to a 2D canvas (headless browsers capture that)
+  const still = fixed !== null;
+  const fmt = still ? 'rgba8unorm' : navigator.gpu.getPreferredCanvasFormat();
+  const ctx = still ? null : cv.getContext('webgpu');
+  if (ctx) ctx.configure({ device: dev, format: fmt });
+  const pipe = dev.createRenderPipeline({ layout: 'auto', vertex: { module: mod, entryPoint: 'vs' }, fragment: { module: mod, entryPoint: 'fs', targets: [{ format: fmt }] } });
+  const ubuf = dev.createBuffer({ size: 288, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const bg = dev.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: ubuf } }] });
+  const U = new Float32Array(72);
+  const W = cv.clientWidth, H = cv.clientHeight;
+  const draw = (view, time) => {
+    U[0] = W; U[1] = H; U[2] = time; U[27] = 1;
+    dev.queue.writeBuffer(ubuf, 0, U);
+    const enc = dev.createCommandEncoder();
+    const pass = enc.beginRenderPass({ colorAttachments: [{ view, loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 1] }] });
+    pass.setPipeline(pipe); pass.setBindGroup(0, bg); pass.draw(3); pass.end();
+    return enc;
+  };
+  cv.width = W; cv.height = H;
+  if (still) {
+    const tex = dev.createTexture({ size: [W, H], format: fmt, usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC });
+    const bpr = Math.ceil(W * 4 / 256) * 256;
+    const buf = dev.createBuffer({ size: bpr * H, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
+    const enc = draw(tex.createView(), +fixed);
+    enc.copyTextureToBuffer({ texture: tex }, { buffer: buf, bytesPerRow: bpr }, [W, H]);
+    dev.queue.submit([enc.finish()]);
+    await buf.mapAsync(GPUMapMode.READ);
+    const src8 = new Uint8Array(buf.getMappedRange());
+    const img = new ImageData(W, H);
+    for (let y = 0; y < H; y++) img.data.set(src8.subarray(y * bpr, y * bpr + W * 4), y * W * 4);
+    cv.getContext('2d').putImageData(img, 0, 0);
+    document.body.dataset.drawn = '1';
+  } else {
+    const frame = (ms) => { dev.queue.submit([draw(ctx.getCurrentTexture().createView(), ms / 1000).finish()]); requestAnimationFrame(frame); };
+    requestAnimationFrame(frame);
+  }
+} catch (e) { msg.textContent = e.message; document.body.dataset.drawn = 'error'; }
+</script>
+</body>
+</html>

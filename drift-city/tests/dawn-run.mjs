@@ -2,14 +2,15 @@ if (process.env.LITE) globalThis.__forceLite = true;
 if (process.env.FAILFULL) globalThis.__failFull = true;
 if (!process.env.INTRO) globalThis.__noIntro = true;
 import { createRequire as __cr } from 'module';
-if (process.env.TALE) globalThis.inkjs = __cr(import.meta.url)('/home/claude/ink/node_modules/inkjs/dist/ink-full.js');
+if (process.env.TALE) globalThis.inkjs = __cr(import.meta.url)('inkjs/full');
 import { create, globals } from 'webgpu';
 import fs from 'fs';
 import { storyInk } from '../tools/story.mjs';
 import vm from 'vm';
 Object.assign(globalThis, globals);
 const gpu = create([]);
-const html = fs.readFileSync(process.env.PAGE || '/mnt/user-data/outputs/city.html', 'utf8');
+const html = fs.readFileSync(process.env.PAGE || new URL('../dist/city.html', import.meta.url), 'utf8');
+const OUT = process.env.OUT || '.';
 const wg = {};
 for (const m of html.matchAll(/<script type="text\/(?:wgsl|ink)" id="([^"]+)">\n([\s\S]*?)<\/script>/g)) wg[m[1]] = m[2];
 const main = html.match(/<script>\n([\s\S]*?)<\/script>/)[1];
@@ -21,7 +22,7 @@ GPUAdapter.prototype.requestDevice = async function (d) {
   dev.onuncapturederror = (e) => { errors.push(e.error.message); };
   theDevice = dev; return dev;
 };
-const W = +(process.env.W || 390), H = +(process.env.H || 844), DPR = 2;
+const W = +(process.env.W || 390), H = +(process.env.H || 844), DPR = +(process.env.DPR || 2);
 const handlers = {};
 function el(id) {
   return { id, style: {}, hidden: true, textContent: wg[id] || '', innerHTML: '', classList: { _s: new Set(), add(c) { this._s.add(c); }, remove(c) { this._s.delete(c); }, toggle(c, f) { (f ?? !this._s.has(c)) ? this._s.add(c) : this._s.delete(c); }, contains(c) { return this._s.has(c); } },
@@ -60,7 +61,7 @@ let now = performance.now();
 const tStart = performance.now();
 let tTail = 0;
 for (let f = 0; f < N; f++) {
-  const cb = rafCb; rafCb = null; now += 1000 / 60;
+  const cb = rafCb; rafCb = null; if (!(process.env.FREEZE && f > 12)) now += 1000 / 60;
   if (f === N - 20) tTail = performance.now();
   if (f === 25 && handlers['bTime:click']) { handlers['bTime:click'](); console.log('time of day switched at frame 25'); }
   if (process.env.GO && f === 3) { globalThis.__drift.goTo(process.env.GO); }
@@ -112,10 +113,10 @@ await buf.mapAsync(GPUMapMode.READ);
 const src = new Uint8Array(buf.getMappedRange());
 const out = Buffer.alloc(w * h * 3);
 for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * bpr + x * 4, o = (y * w + x) * 3; out[o] = src[i + 2]; out[o + 1] = src[i + 1]; out[o + 2] = src[i]; }
-fs.writeFileSync('/home/claude/dawn/frame.rgb', out);
+fs.writeFileSync(OUT + '/frame.rgb', out);
 { const N = globalThis.__drift && globalThis.__drift.NAV; if (N) { const c = N.cam; const sp = [1221870, 0, 0]; let info = 'nav mode ' + N.mode + ' spaceMix ' + N.spaceMix.toFixed(2);
   if (N.trip) info += ' trip s ' + (N.trip.t / N.trip.T).toFixed(3);
   if (c) { const d = [sp[0] - c.P[0], sp[1] - c.P[1], sp[2] - c.P[2]]; const l = Math.hypot(...d); info += ' F.sat ' + ((c.F[0] * d[0] + c.F[1] * d[1] + c.F[2] * d[2]) / l).toFixed(4) + ' P ' + c.P.map((v) => v.toFixed(0)).join(','); }
   console.log(info); const S = globalThis.__drift.SPACE_DATA; console.log('SP pos', Array.from(S.slice(0,3)).map(v=>v.toFixed(0)).join(','), 'F', Array.from(S.slice(4,7)).map(v=>v.toFixed(3)).join(','), 'R', Array.from(S.slice(8,11)).map(v=>v.toFixed(3)).join(','), 'Up', Array.from(S.slice(12,15)).map(v=>v.toFixed(3)).join(','), 'fov', S[7], 'sat', Array.from(S.slice(20,23)).join(',')); } }
-fs.writeFileSync('/home/claude/dawn/frame.json', JSON.stringify({ w, h }));
+fs.writeFileSync(OUT + '/frame.json', JSON.stringify({ w, h }));
 process.exit(0);
