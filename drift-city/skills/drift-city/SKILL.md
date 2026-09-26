@@ -78,6 +78,10 @@ from a place under it. A taller figure needs all three raised.
   vehicle. Vehicles are streamlined in the old style: teardrop bodies, canopies, tail fins, chrome speed stripes.
 - Robots are expensive and meant to be seen: lacquer, chrome, brass or porcelain, lit seams, a ring behind the head
   on the grander ones. They are over-built for the gravity, so they move in small exact steps.
+- Work is one of two kinds. Physical work on Titan is hard, and most affordable bots and exos cannot do it: it goes
+  to the few with the good machines (hence "EXO HIRE", "HEAVY LIFT"). The rest is nominal: checking spreadsheets
+  and signing them off for the Org, for legal compliance nobody remembers the reason for, done from bed ("WORK FROM
+  BED", "SIGN OFF", "ORG APPROVED").
 - Most people stay home under headsets. They live in the dorms (zone 6, `ZONE_NAMES` "Dorms"): residential slabs of
   capsule homes, two to a floor, each with one round window lit by a flickering headset screen at any hour.
 
@@ -147,12 +151,19 @@ now laid out by hand. Everything below is in `world.js` unless named; the shape 
   the far silhouette; the WebGL fallback draws its blocks as plain 240 m slabs. Place "hive" views it from a Lumen roof.
 - **Holograms** (`holoFx`, after `tubesFx`): five camera-facing projections with a ground beam: a spinning toke coin
   over the Hive, a headset face, slogan panels over the strip and the dorms. Stubbed in the lite variant.
-- **Lettering**: glyphs and words live in `tables.js`, the one copy (`tools/assemble.py` puts it first in the page;
-  there was a stale copy in `main.js` once, and the GPU buffer came out too small for the grown `struct TB`). Glyph
-  ids: A0 B1 C2 D3 E4 F5 H6 I7 L8 M9 N10 O11 P12 R13 S14 T15 U16 V17 W18 X19, digits 20-29, G37 Y38 K42. A word is
-  `(glyphs 0-3 as bytes, glyphs 4-7, length, 0)`; a wrong glyph id draws a blank, not an error, so decode the table in
-  Node after adding words. Growing it means growing `struct TB` in `scene.wgsl` to match. `posterLine` kinds 0-3 are
-  the old posters, 4-6 the tokes trade.
+- **Lettering**: `tools/tables.mjs` draws the glyphs (ASCII art) and lists the words, and writes `src/tables.js`;
+  edit the tool, never the output. `tools/assemble.py` puts `tables.js` first in the page. (A stale copy of the table
+  once sat in `main.js`; the GPU buffer came out too small for the grown `struct TB` and nothing drew.) The letters
+  are square capitals in the style of a ZX81 screen, drawn for this project, and `neonText` draws each cell as a solid
+  square so strokes join (it used to be a dot matrix). Glyph ids: A0 B1 C2 D3 E4 F5 H6 I7 L8 M9 N10 O11 P12 R13 S14
+  T15 U16 V17 W18 X19, digits 20-29, katakana 30-36, G37 Y38 J39 ?40 K42. Words are referred to by index in
+  `scene.wgsl`, so append new ones only, and grow `struct TB`'s `word` array to the count the tool prints.
+- **Posters**: `posterLine(kind, line)` gives up to four words per line; kinds 0, 1, 7, 8, 9 are the government's
+  emigration campaign, 2 and 3 the cult, 4-6 the tokes trade, 10 the Org's sign-off jobs, 11 exo hire. `posterPick`
+  sets the mix (emigration half the time) for megatower screens and the 60% of billboards that show a poster;
+  `posterLook` is the shared style for each kind (government blue with a red band and a small Earth; a pale screen
+  with a grey chequered border for the Org). The blimp and the strip hologram run the emigration lines; an Earth
+  hologram turns 440 m over the core. Keep a line to about 12 characters: the boards are sized for that.
 - **Places**: `buildPlaces` in `tales.js` adds the placed ones directly; its ring scans sample cells and can miss a
   single one. `node tools/bakeplaces.mjs` fails if a place the story uses is missing: run it after any change here.
 - **Map for thinking**: an ASCII map of zones, liquid, forest and highland from `world.js` in Node (load it with

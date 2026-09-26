@@ -1,0 +1,358 @@
+// Writes src/tables.js: the glyphs and the words the in-world signs spell with them.
+//   node drift-city/tools/tables.mjs
+// Glyphs are 5 x 7 cells (the letters use the top six rows: square, ZX81-like capitals). A word is a list of glyph ids;
+// scene.wgsl refers to words by index, so add new words at the END. Why and how: the drift-city skill, "Lettering".
+import fs from 'node:fs';
+
+// id order is fixed: scene.wgsl uses these numbers directly (glyphBit(15u, ...) is the T on the toke coin)
+const GLYPHS = [
+  ['A', `
+#####
+#...#
+#...#
+#####
+#...#
+#...#`],
+  ['B', `
+####.
+#...#
+####.
+#...#
+#...#
+####.`],
+  ['C', `
+#####
+#....
+#....
+#....
+#....
+#####`],
+  ['D', `
+####.
+#...#
+#...#
+#...#
+#...#
+####.`],
+  ['E', `
+#####
+#....
+####.
+#....
+#....
+#####`],
+  ['F', `
+#####
+#....
+####.
+#....
+#....
+#....`],
+  ['H', `
+#...#
+#...#
+#####
+#...#
+#...#
+#...#`],
+  ['I', `
+#####
+..#..
+..#..
+..#..
+..#..
+#####`],
+  ['L', `
+#....
+#....
+#....
+#....
+#....
+#####`],
+  ['M', `
+#...#
+##.##
+#.#.#
+#...#
+#...#
+#...#`],
+  ['N', `
+#...#
+##..#
+#.#.#
+#..##
+#...#
+#...#`],
+  ['O', `
+#####
+#...#
+#...#
+#...#
+#...#
+#####`],
+  ['P', `
+#####
+#...#
+#####
+#....
+#....
+#....`],
+  ['R', `
+#####
+#...#
+#####
+#.#..
+#..#.
+#...#`],
+  ['S', `
+#####
+#....
+#####
+....#
+....#
+#####`],
+  ['T', `
+#####
+..#..
+..#..
+..#..
+..#..
+..#..`],
+  ['U', `
+#...#
+#...#
+#...#
+#...#
+#...#
+#####`],
+  ['V', `
+#...#
+#...#
+#...#
+#...#
+.#.#.
+..#..`],
+  ['W', `
+#...#
+#...#
+#...#
+#.#.#
+##.##
+#...#`],
+  ['X', `
+#...#
+.#.#.
+..#..
+..#..
+.#.#.
+#...#`],
+  ['0', `
+#####
+#..##
+#.#.#
+#.#.#
+##..#
+#####`],
+  ['1', `
+..#..
+.##..
+..#..
+..#..
+..#..
+#####`],
+  ['2', `
+#####
+....#
+#####
+#....
+#....
+#####`],
+  ['3', `
+#####
+....#
+.####
+....#
+....#
+#####`],
+  ['4', `
+#....
+#..#.
+#..#.
+#####
+...#.
+...#.`],
+  ['5', `
+#####
+#....
+#####
+....#
+....#
+#####`],
+  ['6', `
+#####
+#....
+#####
+#...#
+#...#
+#####`],
+  ['7', `
+#####
+....#
+...#.
+..#..
+..#..
+..#..`],
+  ['8', `
+#####
+#...#
+#####
+#...#
+#...#
+#####`],
+  ['9', `
+#####
+#...#
+#####
+....#
+....#
+#####`],
+  // 30-36: katakana for the ramen and karaoke signs (words 16, 17)
+  ['{30}', `
+.#...
+#####
+.#..#
+.#..#
+#...#
+....#
+..##.`],
+  ['{31}', `
+.###.
+.....
+#####
+....#
+...#.
+..#..
+##...`],
+  ['{32}', `
+...#.
+#####
+...#.
+..##.
+.#.#.
+#..#.
+..##.`],
+  ['{33}', `
+.#...
+.####
+#..#.
+...#.
+..#..
+..#..
+.#...`],
+  ['{34}', `
+..#..
+#####
+..#..
+#.#.#
+#.#.#
+..#..
+.##..`],
+  ['{35}', `
+.###.
+.....
+#####
+..#..
+..#..
+.#...
+#....`],
+  ['{36}', `
+.#.#.
+.#.#.
+.#.#.
+.#.#.
+.#.##
+#.##.
+#.#..`],
+  ['G', `
+#####
+#....
+#....
+#.###
+#...#
+#####`],
+  ['Y', `
+#...#
+#...#
+.#.#.
+..#..
+..#..
+..#..`],
+  ['J', `
+....#
+....#
+....#
+....#
+#...#
+#####`],
+  ['?', `
+#####
+....#
+..###
+..#..
+.....
+..#..`],
+  ['{41}', ``],
+  ['K', `
+#...#
+#..#.
+###..
+#..#.
+#...#
+#...#`],
+  ['{43}', ``],
+];
+
+// index = word id used in scene.wgsl. Append only.
+const WORDS = [
+  'BAR', 'HOTEL', 'RAMEN', 'OPEN', '24H', 'SUSHI', 'CLUB', 'BOWL', 'TAXI', 'CAFE', 'NOODLE', 'LIVE', 'SALE', 'ARCADE',
+  'NEON', 'DINER', '{30}{31}{32}{33}', '{34}{35}{36}', 'P', 'BOWLING',
+  // 20-36: the government's emigration campaign
+  'A', 'NEW', 'LIFE', 'IN', 'THE', 'MOTHER', 'OF', 'ALL', 'COLONIES', 'DREAMING', 'THAT', 'GOOD', 'OLD', 'LIFE?',
+  'EARTH', 'TAX', 'CREDIT',
+  // 37-43: the Org, the cult's graffiti
+  'ORG', 'HOTBEF1', 'HEAT', 'STARS', 'ARE', 'CALLING', 'BREATHE',
+  // 44-67: the Hive and the tokes trade
+  'TOKES', 'WIN', 'SPIN', 'LUCKY', 'CLAW', 'SLOTS', 'BET', 'PODS', 'SLEEP', 'MORE', 'LOANS', 'FAST', 'BONUS', 'XR',
+  'NOW', 'HIVE', 'TOKE', 'SPEND', 'DREAM', 'PLAY', 'FREE', '2X', 'BED', 'LESS',
+  // 68-: emigration, second wave; and work (the Org's sign-off jobs, heavy work for exos)
+  'LEAVE', 'TITAN', 'GO', 'HOME', 'TO', 'SHIPS', 'DAILY', 'SEATS', 'LEFT', 'BOOK', 'YOUR', 'FUTURE', 'IS', 'PASSAGE',
+  'PAID', 'WORK', 'FROM', 'SIGN', 'OFF', 'JOBS', 'APPROVED', 'EXO', 'HIRE', 'HEAVY', 'LIFT', 'LEGAL',
+];
+
+const id = new Map(GLYPHS.map(([k], i) => [k, i]));
+if (GLYPHS.length !== 44) throw new Error('need 44 glyph slots, have ' + GLYPHS.length);
+const out = [];
+for (const [k, art] of GLYPHS) {
+  const rows = art.trim() ? art.trim().split('\n') : [];
+  let a = 0, b = 0;
+  rows.forEach((row, r) => {
+    if (row.length !== 5 || r > 6) throw new Error('glyph ' + k + ': rows must be 5 wide, at most 7');
+    for (let c = 0; c < 5; c++) if (row[c] === '#') { const bit = r * 5 + c; if (bit < 32) a |= 1 << bit; else b |= 1 << (bit - 32); }
+  });
+  out.push(a >>> 0, b >>> 0);
+}
+for (const w of WORDS) {
+  const g = w.match(/\{\d+\}|./g).map((ch) => { if (!id.has(ch)) throw new Error('no glyph ' + ch + ' in ' + w); return id.get(ch); });
+  if (g.length > 8) throw new Error('word too long: ' + w);
+  const pack = (s) => s.reduce((v, x, i) => v | (x << (i * 8)), 0) >>> 0;
+  out.push(pack(g.slice(0, 4)), pack(g.slice(4, 8)), g.length, 0);
+}
+const lines = [];
+for (let i = 0; i < WORDS.length; i += 12) lines.push('//   ' + WORDS.slice(i, i + 12).map((w, j) => (i + j) + ' ' + w).join(', '));
+const js = `// Generated by tools/tables.mjs: edit that, not this. Glyphs (5 x 7, 44 slots) then words (${WORDS.length}).
+// Word ids (scene.wgsl uses these numbers; struct TB there must have word: array<vec4u, ${WORDS.length}>):
+${lines.join('\n')}
+const GLYPH_TABLE = new Uint32Array([${out.join(',')}]);
+`;
+fs.writeFileSync(new URL('../src/tables.js', import.meta.url), js);
+console.log('tables.js:', GLYPHS.length, 'glyphs,', WORDS.length, 'words,', out.length * 4, 'bytes');
