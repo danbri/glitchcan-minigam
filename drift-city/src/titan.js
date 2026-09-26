@@ -640,6 +640,7 @@ function menuRoot() {
       { label: "View", sub: () => ({ title: "View", items: () => [
         ...[["Route: automatic", null], ["Route: street level", "low"], ["Route: over the rooftops", "high"]].map(([n, v]) => ({ label: n, check: st.forced === v, act: () => { st.forced = v; if (v === null) st.modeT = 20; st.realign = true; syncLabels(); renderMenu(); } })),
         { label: "Opening sequence when the page loads", check: introEnabled(), act: () => { try { localStorage.setItem("drift.intro", introEnabled() ? "0" : "1"); } catch (e) {} renderMenu(); } },
+        { label: "Loose things with Titan physics (grit, litter, snow)", check: PHYS_ON, act: () => { PHYS_ON = !PHYS_ON; try { localStorage.setItem("drift.phys", PHYS_ON ? "1" : "0"); } catch (e) {} renderMenu(); } },
         { label: "Focus on what matters (depth of field)", check: FOCUS.on, act: () => { FOCUS.on = !FOCUS.on; try { localStorage.setItem("drift.focus", FOCUS.on ? "1" : "0"); } catch (e) {} renderMenu(); } },
         { label: "Follow the drone (see yourself)", check: FOLLOW, act: () => { FOLLOW = !FOLLOW; try { localStorage.setItem("drift.follow", FOLLOW ? "1" : "0"); } catch (e) {} renderMenu(); } },
         { label: "On-screen gamepad", check: PAD.on, act: () => { padShow(!PAD.on); renderMenu(); } },

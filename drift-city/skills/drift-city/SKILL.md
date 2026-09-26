@@ -98,6 +98,36 @@ about it (all in `pedHuman` / `pedFigure`, driven by the planted-foot gait above
   (`pow(w, 0.65)`), legs trailing and arms spread only in the air. Their footfall sound plays at each landing
   (`floor(ph / 4 pi)` in `audioFeet`). Known: at touchdown the cape stands up as a flat sheet behind the glider.
 
+## Physics (`src/phys.wgsl`, September 2026)
+
+Everything else in the city is a pure function of the clock, which is why it looks scripted: nothing has state,
+so nothing has weight or inertia or can be pushed. The physics pass gives a first set of things real state.
+
+- **What**: 2,048 loose things near the camera (grit, snow clumps, litter, ice chips), in a storage buffer (three
+  vec4s each), stepped every frame by the `physStep` compute pass: Titan gravity 1.352 m/s^2, quadratic drag
+  `a = -K |v - air| (v - air)` with `K = rho Cd A / 2m` for air at 5.3 kg/m^3, through the page's wind, a little
+  turbulence, and the drone's downdraft (straight down under it, outward along the ground, rolling up at the rim).
+  Terminal speeds: grit 2.9 m/s, ice chips 1.9, snow clumps 0.9, litter 0.35.
+- **Touch**: the pass has its own small world function (`world`: the city floor and each building's footprint
+  box from the cell table), a normal by differences, push-out, bounce and Coulomb friction (0.05 on ice chips).
+  It does NOT call the scene's full distance function: a pipeline layout must list every binding its entry point
+  uses, and the scene's SDF reaches most of them. `pcell` mirrors `cellHead`/`cellFull`.
+- **Live area**: a disc of 38 m round the camera; anything that leaves it, or is spawned where there is no city,
+  starts again inside it. Snow clumps fall from the sky while it snows and lie about under a snow cover.
+- **Drawn** by `physVs`/`physFs` as small discs over the finished frame (after the composite), hidden by the
+  scene depth in the history texture's alpha, with plain fog and a soft tone curve. A vertex shader may not bind
+  read-write storage, so the same buffer is bound twice (23 read-write for the step, 25 read-only for drawing).
+- **Optional**: if the module fails to build, the city runs without it; Menu > View switches it off
+  (`drift.phys`). The WebGL fallback has none. GPU time shows as "physics" and "particles" in the stats panel
+  where timestamps exist.
+- **Checked** (Dawn/lavapipe, buffer read back, `PHYSLOG=1` in the scratch runner): snow falls at 0.74 m/s,
+  litter drifts at 0.38 m/s in the wind, grit rests; a forced downdraft (`DRAFT=1 DRAFTF=8`) moves grit, litter and
+  ice outward. `tests/physics.html` drops the same things side by side under Earth and Titan values with the same
+  equations: a person falls 12 m in 1.57 s on Earth and 4.33 s on Titan, and the same jump push reaches 0.45 m and
+  3.18 m.
+- **Next**: physical parts for the walkers (torso and head on springs, swinging packs, cloth capes, feet on the
+  real ground), the drone as a collider, and a phone measurement of the cost.
+
 ## Titan design brief
 
 - Gravity is about a seventh of Earth's; the air is four times as dense and at -179 °C. People outdoors wear pressure

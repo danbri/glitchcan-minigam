@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drift city drop test</title>
+<style>
+  :root { --bg: #15120f; --ink: #eadfce; --dim: #a8998a; --edge: #4a4038; --titan: #e8b979; --earth: #79b4e8; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, sans-serif; }
+  main { max-width: 900px; margin: 0 auto; padding: 12px 16px 32px; }
+  h1 { font-size: 18px; margin: 4px 0 6px; font-weight: 600; }
+  p { color: var(--dim); margin: 4px 0 10px; }
+  canvas { display: block; width: 100%; height: auto; background: #0e0c0a; border: 1px solid var(--edge); border-radius: 10px; }
+  button { font: inherit; color: var(--ink); background: #2a241e; border: 1px solid var(--edge); border-radius: 8px; padding: 7px 14px; margin: 10px 8px 6px 0; cursor: pointer; }
+  table { border-collapse: collapse; margin-top: 10px; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--edge); }
+  th { color: var(--dim); font-weight: 500; }
+</style>
+</head>
+<body>
+<main>
+<h1>Drop test: Titan against Earth</h1>
+<p>The same four things dropped from 12 m, stepped by the equations the city's physics pass uses (src/phys.wgsl):
+gravity, and air drag a = -K |v| v with K = &rho; C<sub>d</sub> A / 2m. Left of each pair, Earth (g 9.81, air 1.2 kg/m&sup3;);
+right, Titan (g 1.352, air 5.3 kg/m&sup3;). Last, a person jumps with the same push on both worlds.</p>
+<canvas id="c" width="900" height="520" aria-hidden="true"></canvas>
+<button id="again" type="button">Drop again</button>
+<table id="t"><thead><tr><th>Thing</th><th>Earth: time to land</th><th>Titan: time to land</th><th>Titan: top speed</th></tr></thead><tbody></tbody></table>
+</main>
+<script type="module">
+// K on Titan, per kind, as in phys.wgsl; on Earth the same thing has K scaled by the air density ratio 1.2 / 5.3
+const TITAN = { g: 1.352, rho: 5.3 }, EARTH = { g: 9.81, rho: 1.2 };
+const THINGS = [
+  { name: 'Grit', K: 0.16, col: '#8a7f73', r: 4 },
+  { name: 'Snow clump', K: 1.7, col: '#f2efe9', r: 6 },
+  { name: 'Litter', K: 11.0, col: '#e0a060', r: 5 },
+  { name: 'Person (falling)', K: 0.0135, col: '#c9a0ff', r: 8 },
+];
+const H = 12, JUMP = 3.0; // drop height in metres; jump take-off speed in m/s
+const cv = document.getElementById('c'), g = cv.getContext('2d');
+let sims = [], t0 = 0;
+function start() {
+  sims = [];
+  THINGS.forEach((th, i) => {
+    for (const [w, world] of [[0, EARTH], [1, TITAN]]) sims.push({ th, i, w, world, K: th.K * world.rho / TITAN.rho, y: H, v: 0, t: 0, land: null, vmax: 0, trail: [] });
+  });
+  for (const [w, world] of [[0, EARTH], [1, TITAN]]) sims.push({ th: { name: 'Person (jump, 3 m/s)', col: '#7fe0a0', r: 8 }, i: 4, w, world, K: 0.0135 * world.rho / TITAN.rho, y: 0, v: JUMP, t: 0, land: null, vmax: 0, top: 0, trail: [], jump: true });
+  t0 = performance.now();
+}
+function step(s, dt) {
+  if (s.land !== null) return;
+  for (let k = 0; k < 8; k++) {
+    const h = dt / 8;
+    s.v += (-s.world.g - s.K * Math.abs(s.v) * s.v) * h;
+    s.y += s.v * h; s.t += h;
+    s.vmax = Math.max(s.vmax, Math.abs(s.v)); if (s.jump) s.top = Math.max(s.top, s.y);
+    if (s.y <= 0 && (s.v < 0)) { s.y = 0; s.land = s.t; break; }
+  }
+  s.trail.push(s.y);
+}
+function draw() {
+  const W = cv.width, Hc = cv.height, top = 30, bot = Hc - 30, sc = (bot - top) / H;
+  g.fillStyle = '#0e0c0a'; g.fillRect(0, 0, W, Hc);
+  g.strokeStyle = '#4a4038'; g.beginPath(); g.moveTo(0, bot + 0.5); g.lineTo(W, bot + 0.5); g.stroke();
+  const colW = W / 5;
+  g.font = '13px system-ui'; g.textAlign = 'center';
+  for (const s of sims) {
+    const x = colW * s.i + colW * (s.w ? 0.68 : 0.32), y = bot - s.y * sc;
+    g.fillStyle = s.w ? '#e8b979' : '#79b4e8';
+    g.fillText(s.w ? 'Titan' : 'Earth', x, bot + 18);
+    g.fillStyle = s.th.col; g.beginPath(); g.arc(x, y - s.th.r, s.th.r, 0, 6.283); g.fill();
+    g.fillStyle = '#a8998a';
+    g.fillText((s.land ?? s.t).toFixed(2) + ' s', x, top - 10 + (s.w ? 0 : 0));
+  }
+  g.fillStyle = '#eadfce';
+  THINGS.concat([{ name: 'Person jumps' }]).forEach((th, i) => g.fillText(th.name, colW * i + colW / 2, top + 6));
+}
+function table() {
+  const tb = document.querySelector('#t tbody'); tb.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const e = sims.find((s) => s.i === i && s.w === 0), ti = sims.find((s) => s.i === i && s.w === 1);
+    const tr = document.createElement('tr');
+    const cell = (s) => s.land === null ? 'falling…' : s.land.toFixed(2) + ' s' + (s.jump ? ' (top ' + s.top.toFixed(2) + ' m)' : '');
+    for (const txt of [e.th.name, cell(e), cell(ti), ti.vmax.toFixed(1) + ' m/s']) { const td = document.createElement('td'); td.textContent = txt; tr.appendChild(td); }
+    tb.appendChild(tr);
+  }
+}
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  for (const s of sims) step(s, dt);
+  draw();
+  if (Math.floor(now / 250) !== Math.floor((now - dt * 1000) / 250) || sims.every((s) => s.land !== null)) table();
+  requestAnimationFrame(frame);
+}
+document.getElementById('again').addEventListener('click', start);
+// ?instant: run to the end at once (for tests), then show the result
+start();
+if (new URLSearchParams(location.search).has('instant')) { for (let k = 0; k < 4000 && !sims.every((s) => s.land !== null); k++) for (const s of sims) step(s, 1 / 60); draw(); table(); document.body.dataset.done = '1'; }
+else requestAnimationFrame(frame);
+</script>
+</body>
+</html>
