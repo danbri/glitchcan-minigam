@@ -19,9 +19,10 @@ about `scene.wgsl`. Three checks that do work here (September 2026):
 1. **Compile** (seconds): Chromium with `--enable-unsafe-webgpu --use-webgpu-adapter=swiftshader
    --enable-features=Vulkan --use-vulkan=swiftshader --enable-unsafe-swiftshader`, on an http:// page, then
    `createShaderModule({code: common + scene})` and `getCompilationInfo()`. Line numbers count from the start of
-   `common.wgsl`.
+   `common.wgsl`. A local variable named `u` hides the uniform block `u` (and `u.time` then fails to compile).
 2. **Figures** (seconds): `drift-city/tests/walkers.html?t=3` in that browser. It takes `pedFigure` and its helpers
-   out of `scene.wgsl`, draws the five kinds of walker from the side (forward = right) and from three-quarters front,
+   out of `scene.wgsl`, draws the five kinds of walker, coloured by part, from the side (forward = right) and from
+   three-quarters front,
    and copies the pixels to a 2D canvas, because `page.screenshot` returns a WebGPU canvas as transparent.
 3. **The whole city** (1 to 4 minutes): `tests/dawn-run.mjs` on Node Dawn. In a scratch directory run
    `npm i webgpu`, install Mesa's software Vulkan (`apt-get install -y mesa-vulkan-drivers`), and run the harness
@@ -49,10 +50,20 @@ it. Keep any new motion term below the pace, and check facing numerically rather
 scale a still frame cannot show which way a figure moves.
 
 Kinds (`pedKind`): 0 exoskeleton with rider, 1 android, 2 loper in weighted boots, 3 cape glider, 4 skater on a
-cable. Lanes where `pedPulley` is true have a cable at 4.4 m and only skaters, each on a tether and pulley, at 2.6 times the pace. The material
-(`case 24` in the surface switch) recomputes kind, phase and lift from the same functions, and keys colours on height
-above the pavement minus `pedLift`. If a figure's proportions change, change the material's height bands with it.
-The android is built at 1.12 scale, so its bands divide by 1.12.
+cable. Lanes where `pedPulley` is true have a cable at 4.4 m and only skaters, each on a tether and pulley, at 2.6
+times the pace.
+
+The people share one rig, `pedHuman`: tapered limbs (`sdRC`, a round cone), knees and elbows placed by two-bone
+reach (`ik2`) from where the gait puts the feet and hands, a shaped pelvis, abdomen and chest, and the upper body
+leaned about the hips (`pedUpper` / `pedUnlean` convert to and from that frame). `HP` holds the pose: stride, foot
+lift, arm swing, bulk (a suit is 1.3), lean, sideways push, trailing legs, arms out, one arm reaching up. Each kind
+dresses it: helmets, packs, boots, cape, skates, tether. The android and the exoskeleton build their own bodies.
+
+Materials go by part, not by height: every piece is wrapped in `pp(distance, id)`, and the material sets `gPT`,
+calls `pedQ` and reads the id of the nearest piece from `gPP` (ids listed above `pedHuman`). A new piece needs an id,
+or it takes the colour of whatever is nearest. `pedQ` skips the body entirely unless the point is within 0.25 m of a
+box round the figure, so the richer bodies cost nothing measurable: 273 ms against 262 to 272 ms per frame at
+`market_3`, 800x500, on lavapipe.
 
 Height limits that must agree: `pedQ` returns early above 4.6 m, the map calls it below 4.7 m, and the walker trace
 band in the primary trace clips at 4.7 m. The cable was first at 2.9 m and showed as a black bar across any view

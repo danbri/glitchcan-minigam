@@ -1062,141 +1062,244 @@ fn pedLift(kind: i32, ph: f32) -> f32 {
   return 0.0;
 }
 
+// ---------- the walkers' bodies ----------
+// Parts, so the material can dress each piece: pedPart() returns the id of the nearest one when gPT is set.
+// 0 skin, 1 suit, 2 boots and gloves, 3 visor glass, 4 pack and fittings, 5 cape, 6 suit light, 7 android shell,
+// 8 android light, 9 cable and tether, 10 exoskeleton frame, 11 skate wheels
+var<private> gPT: bool = false;
+var<private> gPB: f32 = 1e5;
+var<private> gPP: i32 = 0;
+fn pp(d: f32, id: i32) -> f32 { if (gPT && d < gPB) { gPB = d; gPP = id; } return d; }
+// a capsule whose radius tapers from r1 at a to r2 at b
+fn sdRC(p: vec3f, a: vec3f, b: vec3f, r1: f32, r2: f32) -> f32 {
+  let ba = b - a;
+  let l2 = dot(ba, ba);
+  let rr = r1 - r2;
+  let a2 = l2 - rr * rr;
+  let il2 = 1.0 / l2;
+  let pa = p - a;
+  let y = dot(pa, ba);
+  let z = y - l2;
+  let xv = pa * l2 - ba * y;
+  let x2 = dot(xv, xv);
+  let y2 = y * y * l2;
+  let z2 = z * z * l2;
+  let k = sign(rr) * rr * rr * x2;
+  if (sign(z) * a2 * z2 > k) { return sqrt(x2 + z2) * il2 - r2; }
+  if (sign(y) * a2 * y2 < k) { return sqrt(x2 + y2) * il2 - r1; }
+  return (sqrt(x2 * a2 * il2) + y * rr) * il2 - r1;
+}
+// two-bone reach: where the middle joint goes, bending toward `bend`
+fn ik2(h: vec3f, f: vec3f, l1: f32, l2: f32, bend: vec3f) -> vec3f {
+  let d = f - h;
+  let dl = max(length(d), 1e-4);
+  let L = clamp(dl, 0.05, l1 + l2 - 0.002);
+  let dir = d / dl;
+  let a = (l1 * l1 - l2 * l2 + L * L) / (2.0 * L);
+  let r = sqrt(max(l1 * l1 - a * a, 0.0));
+  let pr = normalize(bend - dir * dot(bend, dir) + vec3f(0.0, 1e-4, 0.0));
+  return h + dir * a + pr * r;
+}
+struct HP { ph: f32, stride: f32, fl: f32, arm: f32, bulk: f32, lean: f32, spread: f32, trail: f32, armOut: f32, reach: f32 };
+// a person: legs placed by the gait and reached with a knee, the body above leaned about the hips, arms swinging
+// against the legs (or held out, or one reaching up). q is already lifted: its y = 0 is under the feet in the air.
+fn pedHuman(q: vec3f, hp: HP) -> f32 {
+  var d = 1e5;
+  let b = hp.bulk;
+  for (var lg = 0; lg < 2; lg++) {
+    let sg = select(-1.0, 1.0, lg == 1);
+    let lp = hp.ph + select(3.14159, 0.0, lg == 1);
+    let foot = vec3f(0.1 * sg + hp.spread * sg * max(0.0, sin(lp)), 0.09 + hp.fl * max(0.0, cos(lp)) + hp.trail * 0.5, hp.stride * sin(lp) - hp.trail);
+    let hip = vec3f(0.095 * sg, 0.93, 0.0);
+    let knee = ik2(hip, foot, 0.45, 0.44, vec3f(0.0, 0.1, 1.0));
+    d = min(d, pp(smin(sdRC(q, hip, knee, 0.078 * b, 0.056 * b), sdRC(q, knee, foot, 0.054 * b, 0.04 * b), 0.03), 1));
+    let fq = q - foot - vec3f(0.0, -0.035, 0.065);
+    d = min(d, pp(sdBox(fq, vec3f(0.04 * b, 0.028 * b, 0.1)) - 0.022 * b, 2));
+  }
+  // the upper body, leaned forward about the hips
+  let yz = rot2(vec2f(q.y - 0.93, q.z), -hp.lean);
+  let ub = vec3f(q.x, yz.x + 0.93, yz.y);
+  let pel = sdEll(ub - vec3f(0.0, 0.97, 0.0), vec3f(0.15, 0.1, 0.1) * b);
+  let abd = sdRC(ub, vec3f(0.0, 1.0, 0.0), vec3f(0.0, 1.2, 0.01), 0.11 * b, 0.125 * b);
+  let chest = sdEll(ub - vec3f(0.0, 1.3, 0.015), vec3f(0.165, 0.135, 0.105) * b);
+  d = min(d, pp(smin(smin(pel, abd, 0.06), chest, 0.06), 1));
+  d = min(d, pp(sdRC(ub, vec3f(0.0, 1.4, 0.0), vec3f(0.0, 1.52, 0.012), 0.05, 0.042), 0));
+  for (var lg = 0; lg < 2; lg++) {
+    let sg = select(-1.0, 1.0, lg == 1);
+    let ap = hp.ph + select(0.0, 3.14159, lg == 1);
+    let sh = vec3f(0.175 * sg * b, 1.385, 0.0);
+    var hand = sh + vec3f(0.045 * sg, -0.52, -hp.arm * sin(ap) + 0.05);
+    hand = mix(hand, vec3f(0.74 * sg, 1.34 + 0.06 * sin(hp.ph * 1.7), -0.06), hp.armOut);
+    if (lg == 1) { hand = mix(hand, vec3f(0.04, 2.2, 0.2), hp.reach); }
+    let elbow = ik2(sh, hand, 0.29, 0.27, normalize(vec3f(0.25 * sg, -0.2, -1.0)));
+    d = min(d, pp(smin(sdRC(ub, sh, elbow, 0.052 * b, 0.042 * b), sdRC(ub, elbow, hand, 0.04 * b, 0.031 * b), 0.02), 1));
+    d = min(d, pp(sdEll(ub - hand - vec3f(0.0, -0.045, 0.0), vec3f(0.032, 0.055, 0.026) * b), 2));
+    d = min(d, pp(length(ub - sh) - 0.062 * b, 1));
+  }
+  return d;
+}
+// the head frame of a leaned body (for helmets and packs worn on it)
+fn pedUpper(q: vec3f, lean: f32) -> vec3f {
+  let yz = rot2(vec2f(q.y - 0.93, q.z), -lean);
+  return vec3f(q.x, yz.x + 0.93, yz.y);
+}
+// and back: a point on the leaned body, in the figure's frame
+fn pedUnlean(v: vec3f, lean: f32) -> vec3f {
+  let yz = rot2(vec2f(v.y - 0.93, v.z), lean);
+  return vec3f(v.x, yz.x + 0.93, yz.y);
+}
+
 // One figure in its own frame: x across the ring, y up from the pavement, z the way it is walking.
 fn pedFigure(q: vec3f, kind: i32, ph: f32, key: i32) -> f32 {
   var dd = 1e5;
   let s = sin(ph);
   let co = cos(ph);
   if (kind == 0) {
-    // an exoskeleton walker carrying its rider: backward-bending mechanical legs, a pelvis plate, side struts,
-    // a power pack, and a helmet ring around the rider's head
+    // an exoskeleton carrying its rider: long mechanical legs with pistons and two-toed feet, a hip frame, side
+    // struts up to a helmet ring, a power pack; the rider sits in it from the waist up
     let sw = s * 0.3;
     for (var lg = 0; lg < 2; lg++) {
-      let sx = select(-0.14, 0.14, lg == 1);
+      let sx = select(-0.15, 0.15, lg == 1);
       let pg = select(sw, -sw, lg == 1);
-      let knee = vec3f(sx, 0.64 + 0.05 * abs(pg), 0.2 + pg * 0.45);
-      let ankle = vec3f(sx, 0.2, -0.12 + pg * 0.85);
-      let toe = vec3f(sx, 0.03, 0.14 + pg * 0.85);
-      dd = min(dd, sdSeg(q, vec3f(sx, 1.08, 0.0), knee) - 0.075);
-      dd = min(dd, sdSeg(q, knee, ankle) - 0.055);
-      dd = min(dd, sdSeg(q, ankle, toe) - 0.04);
-      dd = min(dd, length(q - knee) - 0.09);
+      let hip = vec3f(sx, 1.08, 0.0);
+      let foot = vec3f(sx, 0.07 + 0.08 * max(0.0, select(co, -co, lg == 1)), pg * 0.85);
+      let knee = ik2(hip, foot, 0.52, 0.56, vec3f(0.0, 0.0, 1.0));
+      dd = min(dd, pp(sdRC(q, hip, knee, 0.07, 0.05), 10));
+      dd = min(dd, pp(sdRC(q, knee, foot, 0.05, 0.035), 10));
+      dd = min(dd, pp(sdSeg(q, mix(hip, knee, 0.2) + vec3f(0.0, 0.0, -0.07), mix(knee, foot, 0.35) + vec3f(0.0, 0.0, -0.06)) - 0.02, 4));
+      dd = min(dd, pp(length(q - knee) - 0.075, 6));
+      for (var t = 0; t < 2; t++) {
+        let tx = select(-0.035, 0.035, t == 1);
+        dd = min(dd, pp(sdRC(q, foot, foot + vec3f(tx, -0.05, 0.17), 0.035, 0.022), 10));
+      }
     }
-    dd = min(dd, sdBox(q - vec3f(0.0, 1.08, 0.0), vec3f(0.2, 0.05, 0.12)) - 0.02);
-    let rider = length(vec3f(q.x, max(abs(q.y - 1.4) - 0.2, 0.0), q.z)) - 0.15;
-    let head = length(q - vec3f(0.0, 1.84, 0.0)) - 0.115;
-    let struts = min(sdSeg(q, vec3f(-0.22, 1.1, -0.08), vec3f(-0.2, 1.72, -0.1)), sdSeg(q, vec3f(0.22, 1.1, -0.08), vec3f(0.2, 1.72, -0.1))) - 0.032;
-    let pack = sdBox(q - vec3f(0.0, 1.42, -0.22), vec3f(0.16, 0.2, 0.07)) - 0.02;
-    let ring = length(vec2f(length(q.xz) - 0.19, q.y - 1.88)) - 0.022;
-    dd = min(dd, min(min(rider, head), min(min(struts, pack), ring)));
+    dd = min(dd, pp(sdBox(q - vec3f(0.0, 1.08, 0.0), vec3f(0.21, 0.045, 0.11)) - 0.025, 10));
+    dd = min(dd, pp(min(sdRC(q, vec3f(-0.23, 1.1, -0.1), vec3f(-0.21, 1.74, -0.1), 0.03, 0.022), sdRC(q, vec3f(0.23, 1.1, -0.1), vec3f(0.21, 1.74, -0.1), 0.03, 0.022)), 10));
+    dd = min(dd, pp(sdBox(q - vec3f(0.0, 1.42, -0.23), vec3f(0.15, 0.2, 0.07)) - 0.03, 4));
+    dd = min(dd, pp(length(vec2f(length(q.xz) - 0.2, q.y - 1.9)) - 0.02, 6));
+    // the rider, waist up
+    let r = q - vec3f(0.0, 0.18, 0.0);
+    dd = min(dd, pp(smin(sdRC(r, vec3f(0.0, 1.0, 0.0), vec3f(0.0, 1.2, 0.01), 0.12, 0.13), sdEll(r - vec3f(0.0, 1.3, 0.015), vec3f(0.17, 0.14, 0.11)), 0.06), 1));
+    dd = min(dd, pp(sdRC(r, vec3f(0.0, 1.4, 0.0), vec3f(0.0, 1.52, 0.012), 0.05, 0.042), 0));
+    dd = min(dd, pp(sdEll(r - vec3f(0.0, 1.62, 0.01), vec3f(0.085, 0.105, 0.095)), 0));
+    dd = min(dd, pp(sdEll(r - vec3f(0.0, 1.66, -0.01), vec3f(0.092, 0.08, 0.1)), 2));
+    for (var lg = 0; lg < 2; lg++) {
+      let sg = select(-1.0, 1.0, lg == 1);
+      let sh = vec3f(0.17 * sg, 1.385, 0.0);
+      let hand = vec3f(0.2 * sg, 1.0, 0.18);
+      let el = ik2(sh, hand, 0.29, 0.27, vec3f(0.3 * sg, -0.2, -1.0));
+      dd = min(dd, pp(smin(sdRC(r, sh, el, 0.05, 0.04), sdRC(r, el, hand, 0.038, 0.03), 0.02), 1));
+    }
     if (hsh(key, key * 7 + 3, 96) < 0.18) {
-      let shaft = sdSeg(q, vec3f(0.0, 1.6, -0.2), vec3f(0.0, 2.25, -0.2)) - 0.02;
-      let canopy = max(length(q.xz - vec2f(0.0, -0.2)) - 0.6, abs(q.y - 2.26) - 0.03);
-      dd = min(dd, min(shaft, canopy));
+      dd = min(dd, pp(sdSeg(q, vec3f(0.0, 1.6, -0.22), vec3f(0.0, 2.25, -0.22)) - 0.018, 4));
+      dd = min(dd, pp(max(length(q.xz - vec2f(0.0, -0.22)) - 0.6, abs(q.y - 2.26 + 0.25 * length(q.xz - vec2f(0.0, -0.22))) - 0.02), 5));
     }
   } else if (kind == 1) {
-    // an android in the old style: polished, cinched at the waist, ringed at neck and waist, a keel down the chest and
-    // a crest over the helmet. It is over-built for the gravity, so it shuffles in short, exact steps, arms held
-    // just so, and turns its head in small jerks. It stands a head taller than the people around it.
+    // an android in the old style, a head taller than the people around it: polished shell cinched at the waist,
+    // a keel down the chest, lit rings at neck and waist, a masked face with a lit visor slit and a crest. It is
+    // over-built for the gravity, so it shuffles in short, exact steps and turns its head in small jerks.
     let q1 = q / 1.12;
     for (var lg = 0; lg < 2; lg++) {
       let sg = select(-1.0, 1.0, lg == 1);
-      let fz = 0.13 * s * sg;
-      let foot = vec3f(0.1 * sg, 0.09 + 0.035 * max(0.0, co * sg), fz);
-      let hip = vec3f(0.1 * sg, 0.9, 0.0);
-      let knee = mix(hip, foot, 0.5) + vec3f(0.0, 0.0, 0.035);
-      dd = min(dd, smin(sdSeg(q1, hip, knee) - 0.085, length(q1 - knee) - 0.065, 0.03));
-      dd = min(dd, sdSeg(q1, knee, foot) - 0.05);
-      dd = min(dd, sdBox(q1 - foot - vec3f(0.0, -0.05, 0.05), vec3f(0.055, 0.025, 0.1)) - 0.015);
-      let sh = vec3f(0.21 * sg, 1.38, 0.0);
-      let el = vec3f(0.23 * sg, 1.13, 0.03 - 0.025 * s * sg);
-      let hand = vec3f(0.17 * sg, 1.06 + 0.006 * sin(u.time * 23.0 + f32(key)), 0.22);
-      dd = min(dd, length(q1 - sh) - 0.075);
-      dd = min(dd, sdSeg(q1, sh, el) - 0.042);
-      dd = min(dd, sdSeg(q1, el, hand) - 0.034);
+      let lp = ph + select(3.14159, 0.0, lg == 1);
+      let foot = vec3f(0.1 * sg, 0.08 + 0.035 * max(0.0, cos(lp)), 0.13 * sin(lp));
+      let hip = vec3f(0.1 * sg, 0.92, 0.0);
+      let knee = ik2(hip, foot, 0.43, 0.43, vec3f(0.0, 0.0, 1.0));
+      dd = min(dd, pp(sdRC(q1, hip, knee, 0.085, 0.058), 7));
+      dd = min(dd, pp(length(q1 - knee) - 0.06, 8));
+      dd = min(dd, pp(sdRC(q1, knee, foot, 0.06, 0.038), 7));
+      dd = min(dd, pp(sdBox(q1 - foot - vec3f(0.0, -0.05, 0.05), vec3f(0.045, 0.02, 0.095)) - 0.02, 7));
+      let sh = vec3f(0.2 * sg, 1.38, 0.0);
+      let hand = vec3f(0.16 * sg, 1.05 + 0.005 * sin(u.time * 23.0 + f32(key)), 0.2);
+      let el = ik2(sh, hand, 0.27, 0.26, vec3f(0.2 * sg, 0.0, -1.0));
+      dd = min(dd, pp(length(q1 - sh) - 0.078, 7));
+      dd = min(dd, pp(sdRC(q1, sh, el, 0.048, 0.04), 7));
+      dd = min(dd, pp(sdRC(q1, el, hand, 0.038, 0.03), 7));
+      dd = min(dd, pp(sdEll(q1 - hand - vec3f(0.0, -0.03, 0.03), vec3f(0.03, 0.05, 0.04)), 7));
     }
-    let hips = sdEll(q1 - vec3f(0.0, 0.95, 0.0), vec3f(0.2, 0.12, 0.14));
-    let waist = sdEll(q1 - vec3f(0.0, 1.1, 0.0), vec3f(0.1, 0.1, 0.085));
-    let chest = sdEll(q1 - vec3f(0.0, 1.3, 0.01), vec3f(0.2, 0.17, 0.13));
-    let keel = sdBox(q1 - vec3f(0.0, 1.28, 0.12), vec3f(0.012, 0.13, 0.03)) - 0.01;
-    dd = min(dd, min(smin(smin(hips, waist, 0.06), chest, 0.06), keel));
-    dd = min(dd, length(vec2f(length(q1.xz * vec2f(1.0, 1.25)) - 0.118, q1.y - 1.1)) - 0.016);
-    dd = min(dd, sdSeg(q1, vec3f(0.0, 1.44, 0.0), vec3f(0.0, 1.56, 0.0)) - 0.045);
-    dd = min(dd, length(vec2f(length(q1.xz) - 0.058, q1.y - 1.5)) - 0.013);
+    let hips = sdEll(q1 - vec3f(0.0, 0.95, 0.0), vec3f(0.19, 0.12, 0.13));
+    let waist = sdRC(q1, vec3f(0.0, 1.02, 0.0), vec3f(0.0, 1.16, 0.0), 0.1, 0.09);
+    let chest = sdEll(q1 - vec3f(0.0, 1.3, 0.01), vec3f(0.195, 0.165, 0.125));
+    dd = min(dd, pp(smin(smin(hips, waist, 0.05), chest, 0.05), 7));
+    dd = min(dd, pp(sdBox(q1 - vec3f(0.0, 1.28, 0.125), vec3f(0.01, 0.12, 0.025)) - 0.008, 8));
+    dd = min(dd, pp(length(vec2f(length(q1.xz * vec2f(1.0, 1.25)) - 0.11, q1.y - 1.1)) - 0.014, 8));
+    dd = min(dd, pp(sdRC(q1, vec3f(0.0, 1.44, 0.0), vec3f(0.0, 1.57, 0.0), 0.045, 0.04), 7));
+    dd = min(dd, pp(length(vec2f(length(q1.xz) - 0.052, q1.y - 1.5)) - 0.012, 8));
     let yaw = 0.35 * floor(sin(u.time * 0.31 + f32(key)) * 2.5 + 0.5);
     let hq = rotY(q1 - vec3f(0.0, 1.68, 0.0), yaw);
-    let skull = smin(sdEll(hq, vec3f(0.1, 0.13, 0.11)), sdEll(hq - vec3f(0.0, -0.05, 0.03), vec3f(0.07, 0.08, 0.09)), 0.04);
-    let crest = sdBox(hq - vec3f(0.0, 0.1, -0.02), vec3f(0.01, 0.05, 0.1)) - 0.012;
-    dd = min(dd, min(skull, crest));
-    // the grander ones carry a ring behind the head
+    let skull = smin(sdEll(hq, vec3f(0.095, 0.125, 0.105)), sdEll(hq - vec3f(0.0, -0.06, 0.03), vec3f(0.065, 0.07, 0.085)), 0.04);
+    dd = min(dd, pp(skull, 7));
+    dd = min(dd, pp(max(sdEll(hq - vec3f(0.0, 0.0, 0.004), vec3f(0.097, 0.127, 0.107)), abs(hq.y - 0.012) - 0.012), 8));
+    dd = min(dd, pp(sdBox(hq - vec3f(0.0, 0.1, -0.02), vec3f(0.008, 0.05, 0.1)) - 0.01, 7));
     if (hsh(key, key * 5 + 1, 99) < 0.5) {
-      dd = min(dd, length(vec2f(length(q1.xy - vec2f(0.0, 1.68)) - 0.26, q1.z + 0.14)) - 0.013);
+      dd = min(dd, pp(length(vec2f(length(q1.xy - vec2f(0.0, 1.68)) - 0.26, q1.z + 0.14)) - 0.012, 8));
     }
     dd *= 1.12;
   } else if (kind == 2) {
-    // a loper: pressure suit, bubble helmet and weighted boots, bounding along with a hang in every stride
+    // a loper: a pressure suit, a bubble helmet, a life-support pack and weighted boots, bounding along with a hang
+    // in every stride; the well-off bring a drone
     let h = 0.3 * abs(s);
+    let ql = q - vec3f(0.0, h, 0.0);
+    var hp: HP;
+    hp.ph = ph; hp.stride = 0.34; hp.fl = 0.1; hp.arm = 0.22; hp.bulk = 1.3; hp.lean = 0.1; hp.spread = 0.04; hp.trail = 0.0; hp.armOut = 0.15; hp.reach = 0.0;
+    dd = min(dd, pedHuman(ql, hp));
+    let ub = pedUpper(ql, 0.1);
+    dd = min(dd, pp(length(ub - vec3f(0.0, 1.64, 0.02)) - 0.165, 3));
+    dd = min(dd, pp(length(vec2f(length(ub.xz - vec2f(0.0, 0.0)) - 0.13, ub.y - 1.49)) - 0.035, 4));
+    dd = min(dd, pp(sdBox(ub - vec3f(0.0, 1.27, -0.2), vec3f(0.13, 0.17, 0.06)) - 0.04, 4));
+    dd = min(dd, pp(sdSeg(ub, vec3f(0.08, 1.4, -0.2), vec3f(0.1, 1.5, -0.07)) - 0.018, 2));
+    dd = min(dd, pp(sdBox(ub - vec3f(0.0, 1.3, 0.14), vec3f(0.05, 0.02, 0.01)), 6));
     for (var lg = 0; lg < 2; lg++) {
       let sg = select(-1.0, 1.0, lg == 1);
-      let foot = vec3f(0.12 * sg, 0.1 + 0.85 * h, 0.32 * s * sg);
-      let hip = vec3f(0.1 * sg, 0.9 + h, 0.0);
-      let knee = mix(hip, foot, 0.5) + vec3f(0.0, 0.03, 0.12);
-      dd = min(dd, sdSeg(q, hip, knee) - 0.075);
-      dd = min(dd, sdSeg(q, knee, foot) - 0.06);
-      dd = min(dd, sdBox(q - foot - vec3f(0.0, -0.02, 0.04), vec3f(0.08, 0.075, 0.13)) - 0.025);
-      let sh = vec3f(0.22 * sg, 1.38 + h, 0.0);
-      let hand = vec3f(0.42 * sg, 1.12 + h, -0.15 * s * sg);
-      dd = min(dd, sdSeg(q, sh, hand) - 0.05);
+      let lp = ph + select(3.14159, 0.0, lg == 1);
+      let foot = vec3f(0.1 * sg + 0.04 * sg * max(0.0, sin(lp)), 0.09 + 0.1 * max(0.0, cos(lp)), 0.34 * sin(lp));
+      dd = min(dd, pp(sdBox(ql - foot - vec3f(0.0, -0.075, 0.07), vec3f(0.065, 0.02, 0.13)) - 0.012, 4));
     }
-    dd = min(dd, sdSeg(q, vec3f(0.0, 0.97 + h, 0.0), vec3f(0.0, 1.38 + h, 0.03)) - 0.17);
-    dd = min(dd, sdBox(q - vec3f(0.0, 1.25 + h, -0.21), vec3f(0.14, 0.17, 0.07)) - 0.03);
-    dd = min(dd, length(q - vec3f(0.0, 1.66 + h, 0.02)) - 0.16);
-    // the well-off bring a drone
     if (hsh(key, key * 3 + 2, 99) < 0.3) {
       let dq = q - vec3f(0.55, 2.05 + 0.07 * sin(u.time * 2.1 + f32(key)), 0.15);
-      dd = min(dd, min(sdEll(dq, vec3f(0.1, 0.06, 0.1)), length(vec2f(length(dq.xz) - 0.14, dq.y - 0.05)) - 0.012));
+      dd = min(dd, pp(sdEll(dq, vec3f(0.1, 0.055, 0.1)), 7));
+      dd = min(dd, pp(length(vec2f(length(dq.xz) - 0.14, dq.y - 0.04)) - 0.011, 8));
     }
   } else if (kind == 3) {
-    // a cape glider: thin enough, in air this thick, to hang on the cape between long, low hops
+    // a cape glider: thin enough, in air this thick, to hang on a cape between long, low hops; pitched forward,
+    // arms out, legs trailing, a sleek helmet
     let lift = 0.55 + 0.3 * sin(ph * 0.5);
-    var g = q - vec3f(0.0, lift, 0.0);
-    let pyz = rot2(vec2f(g.y - 0.9, g.z), -0.45) + vec2f(0.9, 0.0);
-    g = vec3f(g.x, pyz.x, pyz.y);
+    let ql = q - vec3f(0.0, lift, 0.0);
+    let lean = 0.55;
+    var hp: HP;
+    hp.ph = ph; hp.stride = 0.08; hp.fl = 0.0; hp.arm = 0.0; hp.bulk = 0.85; hp.lean = lean; hp.spread = 0.0; hp.trail = 0.32; hp.armOut = 1.0; hp.reach = 0.0;
+    dd = min(dd, pedHuman(ql, hp));
+    let ub = pedUpper(ql, lean);
+    dd = min(dd, pp(sdEll(ub - vec3f(0.0, 1.63, -0.02), vec3f(0.1, 0.115, 0.14)), 1));
+    dd = min(dd, pp(sdEll(ub - vec3f(0.0, 1.62, 0.045), vec3f(0.085, 0.06, 0.07)), 3));
+    // the cape: from the wrists down to the ankles, billowing behind, scalloped along its hem
     let fl = 0.08 * sin(ph * 1.7);
-    dd = min(dd, sdSeg(g, vec3f(0.0, 0.9, 0.0), vec3f(0.0, 1.42, 0.0)) - 0.085);
-    dd = min(dd, length(g - vec3f(0.0, 1.6, 0.02)) - 0.12);
-    for (var lg = 0; lg < 2; lg++) {
-      let sg = select(-1.0, 1.0, lg == 1);
-      dd = min(dd, sdSeg(g, vec3f(0.07 * sg, 0.9, 0.0), vec3f(0.1 * sg, 0.2, -0.2 + 0.05 * s * sg)) - 0.045);
-      dd = min(dd, sdSeg(g, vec3f(0.14 * sg, 1.36, 0.0), vec3f(0.68 * sg, 1.3 + fl, -0.05)) - 0.03);
-    }
-    // the cape: a wing from the wrists down to the ankles, billowing behind, scalloped along its hem
+    let g = ub;
     let hem = 0.3 + 0.07 * abs(sin(g.x * 9.0));
-    let span = 0.34 + 0.36 * clamp((g.y - 0.3) / 1.0, 0.0, 1.0);
+    let span = 0.3 + 0.42 * clamp((g.y - 0.3) / 1.0, 0.0, 1.0);
     let bil = 0.1 + 0.18 * (1.0 - clamp((g.y - 0.3) / 1.0, 0.0, 1.0)) + 0.2 * g.x * g.x;
-    let cape = max(max(abs(g.z + bil) - 0.015, abs(g.x) - span), max(hem - g.y, g.y - 1.32 - fl * abs(g.x)));
-    dd = min(dd, cape);
+    dd = min(dd, pp(max(max(abs(g.z + bil) - 0.012, abs(g.x) - span), max(hem - g.y, g.y - 1.36 - fl * abs(g.x))), 5));
   } else {
-    // a skater hooked onto the street's cable, towed along, pushing off side to side
+    // a skater towed along by a tether from the cable overhead, leaning into it, pushing off side to side
+    var hp: HP;
+    hp.ph = ph; hp.stride = 0.1; hp.fl = 0.05; hp.arm = 0.3; hp.bulk = 1.15; hp.lean = 0.3; hp.spread = 0.16; hp.trail = 0.0; hp.armOut = 0.0; hp.reach = 1.0;
+    dd = min(dd, pedHuman(q, hp));
+    let ub = pedUpper(q, 0.3);
+    dd = min(dd, pp(sdEll(ub - vec3f(0.0, 1.64, 0.0), vec3f(0.12, 0.12, 0.13)), 1));
+    dd = min(dd, pp(sdEll(ub - vec3f(0.0, 1.62, 0.06), vec3f(0.1, 0.055, 0.08)), 3));
     for (var lg = 0; lg < 2; lg++) {
       let sg = select(-1.0, 1.0, lg == 1);
-      let push = max(0.0, s * sg);
-      let foot = vec3f((0.13 + 0.16 * push) * sg, 0.12, -0.1 - 0.1 * push);
-      let hip = vec3f(0.1 * sg, 0.86, 0.0);
-      let knee = vec3f(0.12 * sg, 0.5, 0.14);
-      dd = min(dd, sdSeg(q, hip, knee) - 0.07);
-      dd = min(dd, sdSeg(q, knee, foot) - 0.055);
-      dd = min(dd, sdBox(q - foot - vec3f(0.0, -0.03, 0.04), vec3f(0.055, 0.06, 0.13)) - 0.02);
-      dd = min(dd, sdBox(q - foot - vec3f(0.0, -0.1, 0.04), vec3f(0.03, 0.02, 0.16)) - 0.02);
+      let lp = ph + select(3.14159, 0.0, lg == 1);
+      let foot = vec3f(0.1 * sg + 0.16 * sg * max(0.0, sin(lp)), 0.09 + 0.05 * max(0.0, cos(lp)), 0.1 * sin(lp));
+      let wq = q - foot - vec3f(0.0, -0.1, 0.065);
+      dd = min(dd, pp(max(length(vec2f(fract(wq.z / 0.075 + 0.5) - 0.5, wq.y / 0.075)) * 0.075 - 0.024, max(abs(wq.x) - 0.014, abs(wq.z) - 0.12)), 11));
     }
-    dd = min(dd, sdSeg(q, vec3f(0.0, 0.9, 0.0), vec3f(0.0, 1.34, 0.2)) - 0.14);
-    dd = min(dd, length(q - vec3f(0.0, 1.56, 0.28)) - 0.14);
-    // one arm up to the handle of a tether that runs to a pulley on the cable overhead
-    dd = min(dd, sdSeg(q, vec3f(0.12, 1.33, 0.18), vec3f(0.04, 2.15, 0.22)) - 0.04);
-    dd = min(dd, sdBox(q - vec3f(0.03, 2.2, 0.22), vec3f(0.1, 0.018, 0.018)));
-    dd = min(dd, sdSeg(q, vec3f(0.03, 2.2, 0.22), vec3f(0.0, 4.36, 0.22)) - 0.01);
-    dd = min(dd, length(vec2f(length(q.yz - vec2f(4.36, 0.22)) - 0.06, q.x)) - 0.015);
-    dd = min(dd, sdSeg(q, vec3f(-0.14, 1.33, 0.18), vec3f(-0.32, 1.0, -0.2 - 0.1 * s)) - 0.045);
+    // the handle, the tether and a pulley on the cable
+    let hw = ub - vec3f(0.04, 2.2, 0.2);
+    dd = min(dd, pp(sdBox(hw - vec3f(0.0, 0.03, 0.0), vec3f(0.09, 0.012, 0.012)) - 0.006, 9));
+    let top = vec3f(0.0, 4.36, 0.22);
+    dd = min(dd, pp(sdSeg(q, pedUnlean(vec3f(0.04, 2.23, 0.2), 0.3), top) - 0.008, 9));
+    dd = min(dd, pp(length(vec2f(length(vec2f(q.y - top.y, q.z - top.z)) - 0.06, q.x)) - 0.014, 9));
   }
   return dd;
 }
@@ -1236,7 +1339,11 @@ fn pedQ(p: vec3f) -> vec4f {
       let sw = 0.3 + 0.4 * hsh(key, c.x + c.y * 7, 182);
       let sway = select(min(0.8, 0.45 * pace / sw) * sin(u.time * sw + f32(key)), 0.0, kind == 4);
       let q = vec3f(m - R, p.y, dir * (ds - sway));
-      let dd = pedFigure(q, kind, pedPhase(kind, pace, key), key);
+      // a box round the figure: only rays that reach it pay for the body
+      let hy = select(1.4, 2.3, kind == 4);
+      let bnd = length(max(abs(q - vec3f(0.0, hy, 0.0)) - vec3f(0.95, hy + 0.1, 1.0), vec3f(0.0)));
+      var dd = bnd + 0.05;
+      if (bnd < 0.25) { dd = pedFigure(q, kind, pedPhase(kind, pace, key), key); }
       d = min(d, dd * 0.9);
       if (d < best.x) { best = vec4f(d, ds, q.x, f32(key + 1)); }
     }
@@ -3920,86 +4027,67 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       s.emi = vec3f(1.0, 0.3, 0.1) * (0.4 + 2.0 * u.windows);
     }
     case 24: {
+      // the walkers, dressed part by part (see pedFigure for the ids)
+      gPT = true;
+      gPB = 1e5;
       let pq = pedQ(p);
+      gPT = false;
       let key = i32(pq.w) - 1;
       let ln = key & 1;
       let kind = pedKind(ci, ln, key);
-      let lift = pedLift(kind, pedPhase(kind, pedPace(ci, ln), key));
-      let y = p.y - lift;
       let hs = hsh(key, ci.x * 7 + ci.y, 97);
-      if (p.y > 3.0 || key < 0 || (kind == 4 && p.y > 2.18)) {
-        // the skaters' cable, tethers, pulleys and handles
-        s.alb = vec3f(0.08, 0.08, 0.09);
-        s.spec = 0.9;
-        s.rough = 0.3;
-      } else if (kind == 1) {
-        // lacquer, chrome, brass or porcelain, with lit seams
-        var shell = vec3f(0.75, 0.76, 0.78);
-        if (hs < 0.25) { shell = vec3f(0.03, 0.03, 0.035); } else if (hs < 0.55) { shell = vec3f(0.72, 0.52, 0.25); } else if (hs < 0.75) { shell = vec3f(0.82, 0.8, 0.74); }
-        s.alb = shell;
-        s.spec = 1.3;
-        s.rough = 0.12;
-        s.refl = 0.2 + 0.6 * pow(1.0 - ndv, 3.0);
-        let glow = mix(vec3f(1.0, 0.75, 0.35), vec3f(0.5, 0.9, 1.0), step(0.5, fract(hs * 7.3)));
-        let lit = 0.6 + 1.4 * u.windows;
-        let y1 = y / 1.12;
-        let lx = pq.z / 1.12;
-        if (abs(y1 - 1.1) < 0.035 || abs(y1 - 1.5) < 0.025 || abs(y1 - 1.69) < 0.02) { s.emi = glow * lit; }
-        if (abs(lx) < 0.028 && y1 > 1.15 && y1 < 1.42) { s.emi = glow * lit * 1.3; }
-        if (y1 > 1.4 && length(vec2f(lx, y1 - 1.68)) > 0.2) { s.alb = vec3f(0.75, 0.6, 0.3); s.emi = glow * lit * 0.8; }
-      } else if (kind == 2) {
-        // pressure suits in dusty workwear colours, a glass helmet with the face lit inside, weighted boots
-        var suit = vec3f(0.62, 0.42, 0.2);
-        if (hs < 0.25) { suit = vec3f(0.16, 0.36, 0.38); } else if (hs < 0.5) { suit = vec3f(0.7, 0.68, 0.62); } else if (hs < 0.7) { suit = vec3f(0.5, 0.12, 0.08); }
-        s.alb = suit;
-        s.rough = 0.7;
-        if (pq.z > 0.4) {
-          s.alb = vec3f(0.8);
-          s.spec = 0.8;
-          if (abs(y - 2.1 + lift) < 0.03) { s.emi = vec3f(0.4, 0.9, 1.0) * (0.3 + 1.2 * u.windows); }
-        } else if (y > 1.5) {
-          s.alb = vec3f(0.02);
-          s.refl = 0.3 + 0.6 * pow(1.0 - ndv, 3.0);
-          s.spec = 1.5;
-          s.emi = vec3f(1.0, 0.7, 0.45) * (0.05 + 0.25 * u.windows);
-        } else if (p.y < 0.24 + 0.85 * lift) {
-          s.alb = vec3f(0.1, 0.1, 0.11);
-          s.spec = 0.9;
-          s.rough = 0.35;
+      let lit = 0.35 + 1.4 * u.windows;
+      let fr = pow(1.0 - ndv, 3.0);
+      s.rough = 0.55;
+      s.spec = 0.4;
+      switch gPP {
+        case 0: { s.alb = mix(vec3f(0.55, 0.38, 0.28), vec3f(0.28, 0.18, 0.13), fract(hs * 3.7)); s.rough = 0.6; }
+        case 1: {
+          // suits: dusty workwear for the lopers, dark for the gliders, bright for the fast lane, coats on the riders
+          var suit = vec3f(0.62, 0.42, 0.2);
+          if (hs < 0.25) { suit = vec3f(0.16, 0.36, 0.38); } else if (hs < 0.5) { suit = vec3f(0.7, 0.68, 0.62); } else if (hs < 0.7) { suit = vec3f(0.5, 0.12, 0.08); }
+          if (kind == 3) { suit = vec3f(0.07, 0.07, 0.08); }
+          if (kind == 4) { suit = neonColor(fract(hs * 3.1)) * 0.45 + vec3f(0.1); }
+          if (kind == 0) { suit = mix(vec3f(0.05, 0.05, 0.06), vec3f(0.25, 0.22, 0.2), hs); if (hs > 0.8) { suit = neonColor(fract(hs * 9.1)) * 0.35; } }
+          s.alb = suit;
+          s.rough = 0.7;
+          s.spec = 0.3;
         }
-      } else if (kind == 3) {
-        // a dark flight suit under a bright, thin cape
-        s.alb = vec3f(0.06, 0.06, 0.07);
-        if (abs(pq.z) > 0.17) {
+        case 2: { s.alb = vec3f(0.05, 0.05, 0.055); s.rough = 0.45; s.spec = 0.5; }
+        case 3: {
+          // visors: black glass with the sky in it, the face faintly lit inside; gold for the gliders and skaters
+          s.alb = vec3f(0.012);
+          s.refl = 0.3 + 0.6 * fr;
+          s.spec = 1.6;
+          s.rough = 0.02;
+          if (kind >= 3) { s.tint = vec3f(1.0, 0.78, 0.4); }
+          s.emi = vec3f(1.0, 0.7, 0.45) * (0.03 + 0.18 * u.windows);
+        }
+        case 4: { s.alb = vec3f(0.34, 0.35, 0.37); s.spec = 0.9; s.rough = 0.3; }
+        case 5: {
           let cc = neonColor(fract(hs * 5.7));
           s.alb = cc * 0.6;
           s.trans = 0.45;
-          s.emi = cc * (0.05 + 0.35 * u.windows);
-        } else if (y > 1.45) {
-          s.alb = vec3f(0.02);
-          s.refl = 0.3 + 0.6 * pow(1.0 - ndv, 3.0);
-          s.spec = 1.5;
+          s.emi = cc * (0.05 + 0.4 * u.windows);
         }
-      } else if (kind == 4) {
-        // bright suits for the fast lane, with lit wheels
-        s.alb = neonColor(fract(hs * 3.1)) * 0.45 + vec3f(0.1);
-        s.rough = 0.5;
-        if (y > 1.42 && y < 1.72) { s.alb = vec3f(0.02); s.refl = 0.3 + 0.6 * pow(1.0 - ndv, 3.0); s.spec = 1.5; }
-        if (y < 0.06) { s.emi = neonColor(fract(hs * 11.3)) * (0.5 + 1.5 * u.windows); }
-      } else {
-        var cloth = mix(vec3f(0.05, 0.05, 0.06), vec3f(0.25, 0.22, 0.2), hs);
-        if (hs > 0.8) { cloth = neonColor(fract(hs * 9.1)) * 0.35; }
-        // brushed-metal legs and frame, the rider's coat, face and helmet ring, glowing knee joints
-        let metal = mix(vec3f(0.34, 0.36, 0.4), vec3f(0.55, 0.5, 0.42), step(0.6, hs));
-        s.alb = select(select(metal, cloth, p.y > 1.2 && p.y < 1.66), vec3f(0.5, 0.36, 0.27), p.y > 1.72 && p.y < 1.97);
-        s.spec = select(0.25, 0.85, p.y < 1.14);
-        s.rough = select(0.5, 0.25, p.y < 1.14);
-        if (abs(p.y - 0.66) < 0.06) { s.emi = vec3f(1.0, 0.55, 0.2) * (0.3 + 1.2 * u.windows); }
-        if (abs(p.y - 1.88) < 0.028) { s.emi = vec3f(0.35, 0.9, 1.0) * (0.3 + 1.3 * u.windows); }
-        if (p.y > 2.1) {
-          s.alb = vec3f(0.03);
-          s.emi = neonColor(fract(hs * 13.7)) * (0.4 + 1.4 * u.windows) * 0.8;
+        case 6: { s.alb = vec3f(0.1); s.emi = select(vec3f(1.0, 0.55, 0.2), vec3f(0.35, 0.9, 1.0), p.y > 1.5 || kind == 2) * lit; }
+        case 7: {
+          // android shells: lacquer, chrome, brass or porcelain
+          var shell = vec3f(0.75, 0.76, 0.78);
+          if (hs < 0.25) { shell = vec3f(0.03, 0.03, 0.035); } else if (hs < 0.55) { shell = vec3f(0.72, 0.52, 0.25); } else if (hs < 0.75) { shell = vec3f(0.82, 0.8, 0.74); }
+          s.alb = shell;
+          s.spec = 1.3;
+          s.rough = 0.12;
+          s.refl = 0.2 + 0.6 * fr;
         }
+        case 8: {
+          let glow = mix(vec3f(1.0, 0.75, 0.35), vec3f(0.5, 0.9, 1.0), step(0.5, fract(hs * 7.3)));
+          s.alb = vec3f(0.75, 0.6, 0.3);
+          s.emi = glow * (0.6 + 1.4 * u.windows);
+        }
+        case 9: { s.alb = vec3f(0.08, 0.08, 0.09); s.spec = 0.9; s.rough = 0.3; }
+        case 10: { s.alb = mix(vec3f(0.34, 0.36, 0.4), vec3f(0.55, 0.5, 0.42), step(0.6, hs)); s.spec = 0.85; s.rough = 0.25; }
+        default: { s.alb = vec3f(0.05); s.emi = neonColor(fract(hs * 11.3)) * (0.5 + 1.5 * u.windows); }
       }
     }
     case 25: {
