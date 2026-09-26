@@ -8,6 +8,7 @@ oooOO`
 //          kinds: person (parameter > 0.5: a hat), stall, ladder, radio, lamp (1 lit, 0 cold), ferry, crates, nest, item
 //   # hotspot: <var> @ <label> @ <bearing deg> @ <elevation deg>   something to notice by looking around
 //   # fly: <destination id>
+//   # voice: <who>         the line is spoken over that person's suit radio (who: bo, tam, obi, castellane, mei, sato, wren, you)
 // Shared with the world: the page writes here, hour and snowing; the story may set want_time and want_weather.
 VAR here = ""
 VAR hour = ""
@@ -97,10 +98,10 @@ You pour a cup. What would Wren do? Look around properly.
 # scene: bo
 ~ heard_bo = true
 ~ favours = favours + 1
-"Wren came by at dusk with her pole and flask," Auntie Bo tells Pip. "The Org's log says she's home asleep. She wasn't lighting lamps. She was watching the fliers, with a bundle under her coat glowing like a coal."
-She lowers her voice. "Castellane from Lumen was asking after her. Says she took something of theirs."
+"Wren came by at dusk with her pole and flask," Auntie Bo tells Pip. "The Org's log says she's home asleep. She wasn't lighting lamps. She was watching the fliers, with a bundle under her coat glowing like a coal." # voice: bo
+She lowers her voice. "Castellane from Lumen was asking after her. Says she took something of theirs." # voice: bo
 ~ know_castellane = true
-She nods at the sky. "The fliers came in low tonight. All heading the same way."
+She nods at the sky. "The fliers came in low tonight. All heading the same way." # voice: bo
 + [Thank her] -> stall
 + [Watch the fliers from a rooftop] -> roof
 
@@ -124,8 +125,8 @@ She nods at the sky. "The fliers came in low tonight. All heading the same way."
 
 === tam ===
 # scene: tam
-"Wren borrowed the radio this afternoon," Tam says. "To listen. The fliers call below hearing, and this old thing hears them. She tuned it to one of their scales, then left in a hurry."
-"Find a scale if you want to follow her. They shed them on the roofs."
+"Wren borrowed the radio this afternoon," Tam says. "To listen. The fliers call below hearing, and this old thing hears them. She tuned it to one of their scales, then left in a hurry." # voice: tam
+"Find a scale if you want to follow her. They shed them on the roofs." # voice: tam
 {not know_sato: "And see Sato at the dish. She listens to them too, for science."}
 ~ know_sato = true
 + [Go up to the rooftops] -> roof
@@ -133,13 +134,14 @@ She nods at the sky. "The fliers came in low tonight. All heading the same way."
 
 === tune ===
 # scene: tune
-Tam holds the humming scale to the speaker. "Turn the dial until the radio sings its note."
+Tam holds the humming scale to the speaker. "Turn the dial until the radio sings its note." # voice: tam
 * [A low, steady drone] -> tune_wrong
 * [A slow note, rising and falling like breathing] -> tune_right
 * [A quick, bright chirping] -> tune_wrong
 
 === tune_wrong ===
-Static and a whine. Tam winces. "Listen to the scale, not your hopes." -> tune_again
+Static and a whine. Tam winces. "Listen to the scale, not your hopes." # voice: tam
+-> tune_again
 
 === tune_again ===
 * [Try the slow, breathing note] -> tune_right
@@ -153,7 +155,7 @@ The drone slides into the breathing note by itself. -> tune_right
 ~ tuned = true
 ~ bearing = true
 The static parts. Beneath it, hundreds of voices breathe together. Tam turns the aerial until they are loudest: north-east, past the city's edge, toward the stone circle and the forest.
-"They're gathering," he says. "Something is hatching."
+"They're gathering," he says. "Something is hatching." # voice: tam
 + [Go north-east, to the stones] -> stones
 + [Back to your stall] -> stall
 
@@ -177,14 +179,14 @@ The static parts. Beneath it, hundreds of voices breathe together. Tam turns the
 + [Back to your stall] -> stall
 
 === obi ===
-"The vote's at dawn," Obi says. "Lumen puts Chinatown on the Org's grid, puts out the last flames, retires the flame-keeper. The grid is two hundred years old and patched with tape, but it's cheaper on paper. It'll pass. Nobody argues in person any more."
-He looks at Pip. "Unless someone does."
+"The vote's at dawn," Obi says. "Lumen puts Chinatown on the Org's grid, puts out the last flames, retires the flame-keeper. The grid is two hundred years old and patched with tape, but it's cheaper on paper. It'll pass. Nobody argues in person any more." # voice: obi
+He looks at Pip. "Unless someone does." # voice: obi
 ~ know_castellane = true
 + [Back to your stall] -> stall
 + {not ledger} [See what Lumen is up to] -> pyramid
 
 === obi_note ===
-Obi reads it twice. "Off-world buyers. Lumen means to sell the lamp-hearts, not scrap them." He hands you the page. "Prove it by dawn and the vote fails."
+Obi reads it twice. "Off-world buyers. Lumen means to sell the lamp-hearts, not scrap them." He hands you the page. "Prove it by dawn and the vote fails." # voice: obi
 ~ know_castellane = true
 + [Go to the Lumen pyramid] -> pyramid
 + [Back to your stall] -> stall
@@ -199,7 +201,7 @@ Obi reads it twice. "Off-world buyers. Lumen means to sell the lamp-hearts, not 
 # hotspot: ledger @ a ledger page on a shipping crate @ 30 @ -22
 {pyramid == 1:
     The Lumen pyramid. Crates by the loading door. Mr Castellane waits outside in a good hat, as if expecting you.
-    "Looking for the old flame-keeper?" he asks Pip. "So am I. She stole a lamp-heart: a pre-Org flame core that burns without the grid. Bring it to me and you'll have a heat allowance for life, and a stall in the financial district."
+    "Looking for the old flame-keeper?" he asks Pip. "So am I. She stole a lamp-heart: a pre-Org flame core that burns without the grid. Bring it to me and you'll have a heat allowance for life, and a stall in the financial district." # voice: castellane
 - else:
     The Lumen pyramid. Castellane, smiling.
 }
@@ -211,13 +213,13 @@ Obi reads it twice. "Off-world buyers. Lumen means to sell the lamp-hearts, not 
 
 === deal ===
 ~ castellane_deal = true
-"Splendid." Castellane hands you a Lumen card. "Bring the heart to the Assembly at dawn." Walking away, you wonder: why the Assembly, not his works?
+"Splendid." Castellane hands you a Lumen card. "Bring the heart to the Assembly at dawn." Walking away, you wonder: why the Assembly, not his works? # voice: castellane
 + [Back to your stall] -> stall
 
 === confront ===
-Castellane studies the manifest. The smile stays; the eyes change. "A clerical matter. Nobody at dawn cares about crates."
+Castellane studies the manifest. The smile stays; the eyes change. "A clerical matter. Nobody at dawn cares about crates." # voice: castellane
 ~ castellane_deal = false
-"We'll see," you say.
+"We'll see," you say. # voice: you
 + [Back to your stall] -> stall
 
 === roof ===
@@ -247,19 +249,20 @@ Castellane studies the manifest. The smile stays; the eyes change. "A clerical m
 - else:
     The river. Mei and her ferry.
 }
-"Last stop," Mei says, reading your ticket. "Wren had the same one at dusk. Warm bundle under her coat. Asked me to take her across and tell no one."
+"Last stop," Mei says, reading your ticket. "Wren had the same one at dusk. Warm bundle under her coat. Asked me to take her across and tell no one." # voice: mei
 * {favours > 0} [Tell her Auntie Bo sent you] -> mei_trust
 * [Ask her to take you across] -> mei_ask
 + [Back to your stall] -> stall
 
 === mei_trust ===
-Mei grins. "Bo's noodles got me through a winter. All right." -> mei_ask
+Mei grins. "Bo's noodles got me through a winter. All right." # voice: mei
+-> mei_ask
 
 === mei_ask ===
 ~ ferried = true
 ~ know_sato = true
-{mei_trust: "I'll take you, and tell you something else." |"Across, yes. Price of a ticket." }
-"Dr Sato at the radio dish pays me to watch the fliers. She thinks there's a nest. If she's right, she'll tell the world."
+{mei_trust: "I'll take you, and tell you something else." |"Across, yes. Price of a ticket." } # voice: mei
+"Dr Sato at the radio dish pays me to watch the fliers. She thinks there's a nest. If she's right, she'll tell the world." # voice: mei
 + [Cross, and follow the bank to the stones] -> stones
 + [Find Dr Sato] -> dish
 
@@ -273,7 +276,7 @@ Mei grins. "Bo's noodles got me through a winter. All right." -> mei_ask
 # hotspot: card @ a recording card in the snow @ -25 @ -24
 {dish == 1:
     The great dish tilts into the haze. Dr Ines Sato works at her instruments beneath it, with a flask that isn't tea.
-    "You've heard them too," she tells Pip. "The fliers are nesting north-east. The eggs need steady, tended warmth, like the old lamps gave. Nobody has ever recorded a hatching. I will."
+    "You've heard them too," she tells Pip. "The fliers are nesting north-east. The eggs need steady, tended warmth, like the old lamps gave. Nobody has ever recorded a hatching. I will." # voice: sato
 - else:
     The dish. Dr Sato.
 }
@@ -285,12 +288,12 @@ Mei grins. "Bo's noodles got me through a winter. All right." -> mei_ask
 
 === sato_promise ===
 ~ sato_deal = true
-"Done. Quiet till dawn. After that, the whole solar system." She means it kindly, which is worse.
+"Done. Quiet till dawn. After that, the whole solar system." She means it kindly, which is worse. # voice: sato
 + [Back to your stall] -> stall
 + {bearing} [Go north-east] -> stones
 
 === sato_proof ===
-"That the fliers need the city," Sato says. "Their eggs hatch in tended warmth. Take the lamps away and no new generation comes. Show your Assembly that."
+"That the fliers need the city," Sato says. "Their eggs hatch in tended warmth. Take the lamps away and no new generation comes. Show your Assembly that." # voice: sato
 ~ bearing = true
 + [Go north-east] -> stones
 + [Back to your stall] -> stall
@@ -322,7 +325,7 @@ Mei grins. "Bo's noodles got me through a winter. All right." -> mei_ask
 - else:
     A treehouse in the dark forest, lit from within. Hundreds of fliers settle in the branches, wings glowing.
     At its foot sits Wren in three scarves. Beside her: a nest of lamp-wick and knitting holding five pale eggs, and a lamp on a pole with the lamp-heart glowing inside.
-    She squints at Pip. "Is that you in there? Took you long enough. Set down. Quietly. They're close."
+    She squints at Pip. "Is that you in there? Took you long enough. Set down. Quietly. They're close." # voice: wren
     ~ met_wren = true
 }
 * [Ask why she took the lamp-heart] -> wren_why
@@ -331,15 +334,15 @@ Mei grins. "Bo's noodles got me through a winter. All right." -> mei_ask
 + [Decide what to do with the lamp-heart] -> decide
 
 === wren_why ===
-"Lumen is selling them, forty, off to the rings," Wren says. "This one was stamped for scrap. I took it out of a bin." She looks at the eggs. "Fliers have nested by the lamps as long as there have been lamps. No lamps, no fliers. Nobody asked the fliers."
+"Lumen is selling them, forty, off to the rings," Wren says. "This one was stamped for scrap. I took it out of a bin." She looks at the eggs. "Fliers have nested by the lamps as long as there have been lamps. No lamps, no fliers. Nobody asked the fliers." # voice: wren
 -> forest
 
 === wren_deal ===
-Wren laughs. "A stall in the financial district. That's what I'm worth to him, and them." She doesn't tell you what to do.
+Wren laughs. "A stall in the financial district. That's what I'm worth to him, and them." She doesn't tell you what to do. # voice: wren
 -> forest
 
 === wren_sato ===
-"Sato's all right. Loud. Bring the whole solar system here and they'll never nest near the city again." She shrugs. "Or the solar system falls in love with them. People surprise you."
+"Sato's all right. Loud. Bring the whole solar system here and they'll never nest near the city again." She shrugs. "Or the solar system falls in love with them. People surprise you." # voice: wren
 -> forest
 
 === decide ===
@@ -351,7 +354,7 @@ The eggs glow brighter. Decide now.
 === hatching_then_vote ===
 # time: dusk
 Pip hovers until the first egg cracks. A small, damp, glowing thing unfolds, blinks at the lamp, and tries its wings. Wren cries and pretends not to.
-"Go on," she says. "Tell them what you saw."
+"Go on," she says. "Tell them what you saw." # voice: wren
 -> vote
 
 === vote ===
@@ -380,7 +383,7 @@ Sato's recording fills the dome: the fliers' breathing call, and at the end, sma
 -> vote_more
 
 === vote_minutes ===
-You read Wren's note: "They will need warm lamps when the eggs come." Someone at the back asks, "Well, do they?" Heads turn to you.
+You read Wren's note: "They will need warm lamps when the eggs come." Someone at the back asks, "Well, do they?" Heads turn to you. # voice: you
 -> vote_more
 
 === vote_more ===
