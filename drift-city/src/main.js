@@ -1594,7 +1594,8 @@ document.getElementById("bRoute").addEventListener("click", cycleMode);
 document.getElementById("bHide").addEventListener("click", () => setUiHidden(true));
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
-globalThis.__drift = { WX, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+feelInit();
+globalThis.__drift = { WX, FEEL, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

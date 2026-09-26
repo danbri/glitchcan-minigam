@@ -71,6 +71,8 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 .taleChoices button { font: inherit; font-size: 14.5px; text-align: left; color: var(--ink); background: rgba(232, 185, 121, 0.1); border: 1px solid rgba(232, 185, 121, 0.35); border-radius: 10px; padding: 8px 11px; cursor: pointer; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
 .taleChoices button:hover { background: rgba(232, 185, 121, 0.2); }
 .taleChoices button:focus-visible { outline: 2px solid #e8b979; outline-offset: 1px; }
+.taleChoices.feelOn { touch-action: none; }
+.taleChoices button.feel { background: rgba(232, 185, 121, 0.34); border-color: #e8b979; }
 .taleGrip { position: absolute; right: 0; bottom: 0; width: 22px; height: 22px; cursor: nwse-resize; touch-action: none; background: linear-gradient(135deg, transparent 0 55%, rgba(255, 255, 255, 0.35) 55% 62%, transparent 62% 72%, rgba(255, 255, 255, 0.35) 72% 79%, transparent 79%); }
 .flyOn { position: fixed; left: 50%; bottom: calc(104px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 3; min-height: 48px; font: inherit; font-size: 16px; color: var(--ink); background: var(--glass); border: 1px solid var(--edge); border-radius: 18px; padding: 8px 16px; cursor: pointer; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 @media (prefers-reduced-motion: reduce) { .tale { transition: none; } }
