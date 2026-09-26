@@ -231,6 +231,13 @@ function hiveTopAt(lx, lz) {
   if (ax < 270 && az < 170) return 190;
   return ax < 300 && az < 196 ? 60 : 0;
 }
+// The pod fab: where the Hive's capsule homes are made, on big block (5, 5) beside it, powered by a beam from an orbital
+// power station (the receiver cup tops a 100 m tower). Mirrored as isFab / fabSDF / beamFx in scene.wgsl.
+const FAB_C = [5.5 * BIG, 5.5 * BIG], FAB_H = 110;
+// the beam comes down from the station along this direction (unit vector, pointing up the beam)
+const BEAM_DIR = (() => { const v = [-0.35, 1, 0.25], l = Math.hypot(...v); return v.map((x) => x / l); })();
+function fabHas(bx, bz) { return !!REG.city && wrapN(bx, 96) === 5 && wrapN(bz, 96) === 5; }
+function fabTopAt(lx, lz) { return Math.abs(lx) < 14 && Math.abs(lz) < 14 ? FAB_H : 26; }
 // Hillside letters spelling DRIFT CITY on the first hill north of the city, facing it.
 const SIGN = (() => {
   for (const dir of [-1, 1]) for (const x0 of [0, -20, 20, -40, 40, -60, 60]) {
@@ -299,11 +306,11 @@ function treeDens(x, z) { return sstep(0.12, 0.55, forestF(x, z)); }
 // the Assembly Hall stands on one giant cell about 1 km south-east of the centre
 function hallAt(bx, bz) { return REG.city && wrapN(bx, 96) === 3 && wrapN(bz, 96) === -4 && Math.hypot(repX((bx + 0.5) * BIG) + REG.ox, repZ((bz + 0.5) * BIG) + REG.oz) < 14000; }
 function giantHas(bx, bz) {
-  if (hallAt(bx, bz) || hiveHas(bx, bz)) return true;
+  if (hallAt(bx, bz) || hiveHas(bx, bz) || fabHas(bx, bz)) return true;
   const wx = wrapN(bx, 96), wz = wrapN(bz, 96);
   return REG.city && GIANT_BLOCKS.some((g) => g[0] === wx && g[1] === wz);
 }
-function giantH(bx, bz) { return hallAt(bx, bz) ? 96 : hiveHas(bx, bz) ? HIVE_H : 150 + 110 * hsh(wrapN(bx, 96), wrapN(bz, 96), 21); }
+function giantH(bx, bz) { return hallAt(bx, bz) ? 96 : hiveHas(bx, bz) ? HIVE_H : fabHas(bx, bz) ? FAB_H : 150 + 110 * hsh(wrapN(bx, 96), wrapN(bz, 96), 21); }
 
 function computeBase(cx0, cz0, lite) {
   const cx = wrapS(cx0), cz = wrapS(cz0);
@@ -324,7 +331,7 @@ function computeBase(cx0, cz0, lite) {
   }
   const bx = Math.floor((cx + 0.5) / 8), bz = Math.floor((cz + 0.5) / 8);
   const ax = cx - bx * 8, az = cz - bz * 8;
-  if (hiveHas(bx, bz)) { o.typ = 6; o.treeTop = 0; return fin(0); }
+  if (hiveHas(bx, bz) || fabHas(bx, bz)) { o.typ = 6; o.treeTop = 0; return fin(0); }
   if (ax >= 1 && ax <= 6 && az >= 1 && az <= 6 && hallAt(bx, bz)) { o.typ = 6; o.treeTop = 0; return fin(0); }
   if ((ax === 3 || ax === 4) && (az === 3 || az === 4) && giantHas(bx, bz)) { o.typ = 6; return fin(0); }
   const F = forestF(ccx, ccz);
@@ -459,7 +466,7 @@ function farInfo(cx, cz) {
     case 3: return [o.h, 3.5, 3.5, st];
     case 4: return [o.h, 6, 6, st];
     case 5: return [14, 12.5, 12.5, st];
-    case 6: { const w = wrapS(cx), z = wrapS(cz), bx = Math.floor((w + 0.5) / 8), bz = Math.floor((z + 0.5) / 8); if (hiveHas(bx, bz)) { const t = hiveTopAt((w + 0.5) * C - HIVE_C[0], (z + 0.5) * C - HIVE_C[1]); return t > 0 ? [t, 13, 13, st] : null; } return [giantH(bx, bz), 13, 13, st]; }
+    case 6: { const w = wrapS(cx), z = wrapS(cz), bx = Math.floor((w + 0.5) / 8), bz = Math.floor((z + 0.5) / 8); if (hiveHas(bx, bz)) { const t = hiveTopAt((w + 0.5) * C - HIVE_C[0], (z + 0.5) * C - HIVE_C[1]); return t > 0 ? [t, 13, 13, st] : null; } if (fabHas(bx, bz)) return [fabTopAt((w + 0.5) * C - FAB_C[0], (z + 0.5) * C - FAB_C[1]), 13, 13, st]; return [giantH(bx, bz), 13, 13, st]; }
     case 8: return [o.h, 6.5, 6.5, st];
     case 9: return v < 0.22 ? [o.h, 3.5, 3.5, st] : v < 0.4 ? [o.h, 2.5, 2.5, st] : [o.h, v < 0.75 ? 8.5 : 9, v < 0.75 ? 8.5 : 9, st];
     case 10: return v < 0.28 ? [o.h, 3, 3, st] : v < 0.43 ? [2, 9, 9, st] : v < 0.63 ? [18, 9, 6, st] : v < 0.78 ? [15, 9, 9, st] : v < 0.9 ? [20, 5, 5, st] : [34, 3, 3, st];

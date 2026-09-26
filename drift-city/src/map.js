@@ -10,6 +10,7 @@ const MAP_ZONE_COL = ["#c9a46a", "#e0569a", "#b98a5e", "#d0523c", "#7d7468", "#9
 function mapMarks() {
   return [
     ["The Hive", HIVE_C[0], HIVE_C[1], "hive"],
+    ["Pod fab and power beam", FAB_C[0], FAB_C[1], "fab"],
     ["Assembly Hall", 3.5 * BIG, -3.5 * BIG, "hall_steps"],
     ["The ringed spire", (SPIRE_BLOCK[0] + 0.5) * BIG, (SPIRE_BLOCK[1] + 0.5) * BIG, "giant_0"],
     ["Lumen pyramid", (PYRAMID_CELL[0] + 0.5) * C, (PYRAMID_CELL[1] + 0.5) * C, "pyramid"],

@@ -202,6 +202,17 @@ now laid out by hand. Everything below is in `world.js` unless named; the shape 
   below 62 m, or they cover the text. In `scene.wgsl` it is a giant (`giantHasW`, `giantTop` 272, `giantSDF` via
   `hiveQ`); the traversal bounds it by the block square, not the 80 m circle. `farInfo` case 6 uses `hiveTopAt` for
   the far silhouette; the WebGL fallback draws its blocks as plain 240 m slabs. Place "hive" views it from a Lumen roof.
+- **The pod fab and the power beam**: big block (5, 5), beside the Hive (`FAB_C`, `fabHas` in world.js; `isFab`,
+  `fabSDF`, materials 57/58/59/63 in scene.wgsl): sheds, a pod yard, cooling towers, and a 100 m tower with the
+  receiver cup. `beamFx` draws the beam from the orbital station down to the cup (`BEAM_B` must equal the normalised
+  `BEAM_DIR`), its lit patch in the cloud deck at 1.5 km, and the station's glint where the beam meets the sky. Place
+  "fab" looks down on it from the Hive's battlements. Big block (3, 3) had a stale megatower in `giantHasW` after
+  world.js dropped it; world.js and scene.wgsl must list the same giants.
+- **Skyboats** (`skyboats` in main.js, `shipSDF` / `traceShips` / material 70 in scene.wgsl): eight craft on fixed
+  routes (`ev.ship`, `ev.shipDir`, EVN floats 144-207, so the EV buffer is 832 bytes): a cargo zeppelin between the
+  spaceport and the fab, the emigration ad dirigible round the core, three skyboats (old town, Chinatown, the
+  dorms), two balloon gliders, a hover barge along the strip. Traced like the blimp: a bounding sphere, then a march;
+  a hit is kind 4 with `c.x` = ship index + 1 (0 is the blimp).
 - **Holograms** (`holoFx`, after `tubesFx`): five camera-facing projections with a ground beam: a spinning toke coin
   over the Hive, a headset face, slogan panels over the strip and the dorms. Stubbed in the lite variant.
 - **Lettering**: `tools/tables.mjs` draws the glyphs (ASCII art) and lists the words, and writes `src/tables.js`;

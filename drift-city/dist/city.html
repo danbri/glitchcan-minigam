@@ -304,7 +304,7 @@ const TN: i32 = 384;
 struct EV { beamPos: array<vec4f, 4>, beamDir: array<vec4f, 4>, smoke: array<vec4f, 4>, koi: vec4f, koiDir: vec4f, blimp: vec4f, blimpDir: vec4f, bo: vec4f,
   sky: vec4f, meteorA: vec4f, meteorB: vec4f, fw: array<vec4f, 3>, fwCol: array<vec4f, 3>, launch: vec4f, balloon: array<vec4f, 3>,
   sat: vec4f, ringN: vec4f, moonA: vec4f, moonB: vec4f,
-  blk: vec4f, steam: vec4f };
+  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8> };
 struct EscG { ok: bool, a: vec3f, b: vec3f };
 @group(0) @binding(11) var<uniform> ev: EV;
 // flocking creatures: count in n.x; per creature a[2i] = position (m) and size, a[2i+1] = heading and flap phase
@@ -599,13 +599,17 @@ fn isHall(b: vec2i) -> bool {
   let bw = vec2i(wrapN(b.x, 96), wrapN(b.y, 96));
   return u.reg.w > 0.5 && bw.x == 3 && bw.y == -4 && length(repP((vec2f(b) + 0.5) * BIG) + u.reg.xy) < 14000.0;
 }
+fn isFab(b: vec2i) -> bool { return u.reg.w > 0.5 && wrapN(b.x, 96) == 5 && wrapN(b.y, 96) == 5; }
+// the beam from the orbital power station, pointing up it (BEAM_DIR in world.js), and its receiver cup
+const BEAM_B: vec3f = vec3f(-0.3215, 0.9186, 0.2297);
+const FAB_W: vec2f = vec2f(1144.0, 1144.0);
 fn giantHasW(b: vec2i) -> bool {
-  if (isHall(b) || isHive(b)) { return true; }
+  if (isHall(b) || isHive(b) || isFab(b)) { return true; }
   let bw = vec2i(wrapN(b.x, 96), wrapN(b.y, 96));
-  // placed, not scattered (GIANT_BLOCKS in world.js): the ringed spire in the core, a plain one over the dorms
-  return u.reg.w > 0.5 && ((bw.x == 0 && bw.y == -1) || (bw.x == 3 && bw.y == 3));
+  // placed, not scattered (GIANT_BLOCKS in world.js): the ringed spire in the core
+  return u.reg.w > 0.5 && bw.x == 0 && bw.y == -1;
 }
-fn giantTop(b: vec2i) -> f32 { if (isHall(b)) { return 96.0; } if (isHive(b)) { return 272.0; } return 150.0 + 110.0 * hsh(wrapN(b.x, 96), wrapN(b.y, 96), 21); }
+fn giantTop(b: vec2i) -> f32 { if (isHall(b)) { return 96.0; } if (isHive(b)) { return 272.0; } if (isFab(b)) { return 124.0; } return 150.0 + 110.0 * hsh(wrapN(b.x, 96), wrapN(b.y, 96), 21); }
 
 // terrain samples: one texel per block corner, bilinear between them
 fn terrV(v: vec2i) -> vec4f { return textureLoad(terrTex, wrapT(v), 0); }
@@ -2807,6 +2811,81 @@ fn holoFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
   return col;
 }
 
+// ---------- the pod fab ----------
+// Where the Hive's capsule homes are made: two long sawtooth-roofed sheds, a yard of finished pods stacked three
+// high, two cooling towers, and in the middle a tapering 100 m tower carrying the receiver cup that catches the beam
+// from the orbital power station. Block-local metres. Parts: 57 metal, 58 receiver (glowing), 59 concrete, 63 pods.
+fn fabSDF(q: vec3f) -> vec2f {
+  // sheds at x = +-70, 30 m wide, 160 m long, 16 m walls under a sawtooth roof
+  let sq = vec3f(abs(q.x) - 70.0, q.y, q.z);
+  let saw = 16.0 + 5.0 * fract(q.z / 12.0);
+  var r = vec2f(max(sdBox(sq - vec3f(0.0, 11.0, 0.0), vec3f(15.0, 11.0, 80.0)), q.y - saw) * 0.8, 57.0);
+  // the pod yard: capsules 2.4 x 2.4 x 4.4 m in rows, three high
+  let yb = sdBox(q - vec3f(0.0, 3.6, -75.0), vec3f(40.0, 3.6, 13.0));
+  if (yb < r.x + 2.0) {
+    let pc = vec3f(q.x - 3.0 * round(q.x / 3.0), q.y - 1.2 - 2.4 * clamp(round((q.y - 1.2) / 2.4), 0.0, 2.0), q.z + 75.0 - 5.2 * clamp(round((q.z + 75.0) / 5.2), -2.0, 2.0));
+    let pod = max(sdBox(pc, vec3f(1.15, 1.12, 2.1)) - 0.25, yb);
+    if (pod < r.x) { r = vec2f(pod, 63.0); }
+  }
+  // cooling towers: hyperbolic shells, open at the top
+  let ct = vec3f(abs(q.x) - 36.0, q.y, q.z - 70.0);
+  let cr = 11.0 + 0.0035 * (q.y - 38.0) * (q.y - 38.0);
+  let cool = max(abs(length(ct.xz) - cr) - 0.9, max(-q.y, q.y - 56.0)) * 0.8;
+  if (cool < r.x) { r = vec2f(cool, 59.0); }
+  // the receiver tower: tapering, cross-braced faces, and the cup at the top turned to face the beam
+  let w = 8.0 - 4.5 * clamp(q.y / 96.0, 0.0, 1.0);
+  let tw = max(max(abs(q.x), abs(q.z)) - w, max(-q.y, q.y - 96.0)) * 0.7;
+  if (tw < r.x) { r = vec2f(tw, 57.0); }
+  let cq = q - vec3f(0.0, 104.0, 0.0);
+  let al = dot(cq, BEAM_B);
+  let rr = length(cq - BEAM_B * al);
+  let cup = max(abs(al - rr * rr / 55.0 + 1.5) - 0.7, rr - 17.0) * 0.6;
+  if (cup < r.x) { r = vec2f(cup, 57.0); }
+  let core = length(cq - BEAM_B * 5.5) - 2.6;
+  if (core < r.x) { r = vec2f(core, 58.0); }
+  return r;
+}
+
+// The power beam: from the station in orbit down through the cloud deck to the receiver cup, day and night. A white
+// core, a violet halo where the haze scatters it, pulses of energy running down it, a lit patch where it pierces the
+// cloud deck (1.5 km up), and the station itself, a hard glint where the beam meets the sky.
+fn beamFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
+  var col = colIn;
+  if (u.reg.w < 0.5) { return col; }
+  // the fab nearest the camera (the city repeats every 96 big blocks)
+  let per = 96.0 * BIG;
+  let R0 = vec3f(FAB_W.x + per * round((ro.x - FAB_W.x) / per), 104.0, FAB_W.y + per * round((ro.z - FAB_W.y) / per)) + BEAM_B * 5.5;
+  let B = BEAM_B;
+  let w0 = ro - R0;
+  let b = dot(rd, B);
+  let den = max(1.0 - b * b, 1e-5);
+  var t = clamp((b * dot(B, w0) - dot(rd, w0)) / den, 0.0, tEnd);
+  let sB = max(dot(ro + rd * t - R0, B), 0.0);
+  t = clamp(dot(R0 + B * sB - ro, rd), 0.0, tEnd);
+  let dist = length(ro + rd * t - (R0 + B * sB));
+  let pulse = 0.75 + 0.25 * sin((sB + u.time * 700.0) / 45.0);
+  let fade = exp(-t * u.fogDen * 0.25);
+  let core = exp(-dist * dist / 3.0) * 3.0 + exp(-dist * dist / 40.0) * 0.8;
+  let halo = exp(-dist / 30.0) * (0.12 + 3.0 * u.fogDen);
+  col += (vec3f(1.0, 0.95, 1.0) * core * pulse + vec3f(0.62, 0.5, 1.0) * halo) * fade;
+  // where it pierces the cloud deck: the underside of the cloud lit for a few hundred metres round
+  let H = 1500.0;
+  if (rd.y > 0.0 && ro.y < H) {
+    let tc = (H - ro.y) / rd.y;
+    if (tc < tEnd) {
+      let pc = R0 + B * ((H - R0.y) / B.y);
+      let dd = length((ro + rd * tc).xz - pc.xz);
+      col += vec3f(0.75, 0.65, 1.0) * (exp(-dd / 180.0) * 0.5 + exp(-dd / 40.0) * 0.8) * exp(-tc * u.fogDen * 0.15);
+    }
+  }
+  // the station: where the beam meets the sky
+  if (tEnd >= FARMAX * 0.99) {
+    let g = dot(rd, B);
+    col += vec3f(1.0, 0.95, 0.9) * (smoothstep(0.99996, 0.99999, g) * 6.0 + pow(max(g, 0.0), 4000.0) * 1.5);
+  }
+  return col;
+}
+
 fn hallSDF(lp: vec3f) -> vec2f {
   let r = length(lp.xz);
   let ang = atan2(lp.z, lp.x);
@@ -2868,6 +2947,7 @@ fn giantSDF(p: vec3f, b: vec2i) -> vec2f {
   let gl = p.xz - (vec2f(b) + 0.5) * BIG;
   let lp = vec3f(gl.x, p.y, gl.y);
   if (isHall(b)) { return hallSDF(lp); }
+  if (isFab(b)) { return fabSDF(lp); }
   let bw = vec2i(wrapN(b.x, 96), wrapN(b.y, 96));
   let gh = 150.0 + 110.0 * hsh(bw.x, bw.y, 21);
   let s1 = hsh(bw.x, bw.y, 22);
@@ -3024,7 +3104,7 @@ fn traceGiants(ro: vec3f, rd: vec3f, tStart: f32, tEnd: f32, maxSteps: i32, sh: 
           b = (-B + sq) / A;
         }
       }
-      if (isHive(c)) { a = tIn; b = min(tMax.x, tMax.y); }
+      if (isHive(c) || isFab(c)) { a = tIn; b = min(tMax.x, tMax.y); }
       a = max(a, tStart);
       b = min(b, tEnd);
       if (rd.y < -1e-5) { a = max(a, (top - ro.y) / rd.y); }
@@ -3277,7 +3357,9 @@ fn tracePrimary(ro: vec3f, rd: vec3f, tProxy: f32) -> Hit {
     tEnd = ha.x;
   }
   let tbl = traceBlimp(ro, rd, tEnd);
-  if (tbl >= 0.0) { best.t = tbl; best.m = 29.0; best.kind = 4; tEnd = tbl; }
+  if (tbl >= 0.0) { best.t = tbl; best.m = 29.0; best.kind = 4; best.c = vec2i(0); tEnd = tbl; }
+  let tsh = traceShips(ro, rd, tEnd);
+  if (tsh.x >= 0.0) { best.t = tsh.x; best.m = 70.0; best.kind = 4; best.c = vec2i(i32(tsh.y) + 1, 0); tEnd = tsh.x; }
   let tbb = traceBalloons(ro, rd, tEnd);
   if (tbb >= 0.0) { best.t = tbb; best.m = 47.0; best.kind = 5; tEnd = tbb; }
   let hv = traceBand(ro, rd, clipY(ro, rd, 0.0, tEnd, TUBE_Y - 4.5, TUBE_Y + 5.0), 4);
@@ -3312,7 +3394,7 @@ fn terrNormal(p: vec3f) -> vec3f {
 
 fn sdfFor(p: vec3f, kind: i32, c: vec2i, cell: Cell) -> f32 {
   if (kind == 3) { return giantSDF(p, c).x; }
-  if (kind == 4) { return blimpSDF(p); }
+  if (kind == 4) { if (c.x > 0) { return shipSDF(p, c.x - 1).x; } return blimpSDF(p); }
   return cellSDF(p, c, cell).x;
 }
 
@@ -3954,6 +4036,101 @@ fn blimpSDF(p: vec3f) -> f32 {
   let finH = max(max(abs(q.y) - 0.012, abs(q.x) - 0.45), max(-(q.z + 1.0), q.z + 0.7));
   let gond = sdBox(q - vec3f(0.0, -0.31, 0.08), vec3f(0.05, 0.035, 0.13)) - 0.01;
   return min(min(body, gond), min(finV, finH)) * K.w;
+}
+
+// ---------- skyboats ----------
+// Craft on fixed routes over the city (main.js fills ev.ship: position and half-length s; ev.shipDir: heading and
+// kind). Kinds: 0 cargo zeppelin, 1 skyboat (a boat hull hung under a flat gas envelope, with side sails), 2 balloon
+// glider, 3 ad dirigible, 4 hover barge. Local frame: x right, y up, z forward, in units of s. Returns (distance in
+// metres, part): 0 envelope, 1 hull and metal, 2 windows, 3 screen, 4 rotor, 5 cargo.
+fn shipLocal(p: vec3f, i: i32) -> vec3f {
+  let fw = normalize(ev.shipDir[i].xyz);
+  let rt = normalize(cross(fw, vec3f(0.0, 1.0, 0.0)));
+  let q0 = p - ev.ship[i].xyz;
+  return vec3f(dot(q0, rt), q0.y, dot(q0, fw)) / ev.ship[i].w;
+}
+fn shipSDF(p: vec3f, i: i32) -> vec2f {
+  let q = shipLocal(p, i);
+  let kind = i32(ev.shipDir[i].w + 0.5);
+  var r = vec2f(1e5, 0.0);
+  if (kind == 0 || kind == 3) {
+    // a long rigid envelope with shallow ribs, cross fins, a gondola; the zeppelin carries cargo pods, the ad
+    // dirigible screens along both sides
+    let rib = 0.004 * sin(q.z * 60.0) * step(abs(q.z), 0.9);
+    r = vec2f((length(q / vec3f(0.22, 0.2, 1.0)) - 1.0) * 0.2 + rib, 0.0);
+    let fin = min(max(max(abs(q.x) - 0.01, abs(q.y) - 0.34), max(-(q.z + 0.98), q.z + 0.72)), max(max(abs(q.y) - 0.01, abs(q.x) - 0.34), max(-(q.z + 0.98), q.z + 0.72)));
+    if (fin < r.x) { r = vec2f(fin, 1.0); }
+    let gond = sdBox(q - vec3f(0.0, -0.22, 0.45), vec3f(0.045, 0.03, 0.14)) - 0.01;
+    if (gond < r.x) { r = vec2f(gond, 2.0); }
+    if (kind == 0) {
+      for (var k = 0; k < 3; k++) {
+        let c = sdBox(q - vec3f(0.0, -0.27, -0.35 + f32(k) * 0.3), vec3f(0.08, 0.05, 0.12)) - 0.006;
+        if (c < r.x) { r = vec2f(c, 5.0); }
+      }
+      let eng = length(vec2f(length(vec2f(abs(q.x) - 0.26, q.y + 0.05)) - 0.035, max(abs(q.z + 0.2) - 0.05, 0.0))) - 0.012;
+      if (eng < r.x) { r = vec2f(eng, 4.0); }
+    } else {
+      let scr = sdBox(vec3f(abs(q.x) - 0.2, q.y, q.z), vec3f(0.012, 0.11, 0.55));
+      if (scr < r.x) { r = vec2f(scr, 3.0); }
+    }
+  } else if (kind == 1) {
+    // a skyboat: flat envelope above, a keeled hull below on struts, a deckhouse, and a wing-sail each side
+    r = vec2f((length((q - vec3f(0.0, 0.34, 0.0)) / vec3f(0.3, 0.13, 0.85)) - 1.0) * 0.13, 0.0);
+    var hull = sdEll(q - vec3f(0.0, -0.08, 0.02), vec3f(0.16, 0.13, 0.7));
+    hull = max(hull, q.y + 0.02);
+    hull = min(hull, sdBox(q - vec3f(0.0, -0.04, -0.1), vec3f(0.08, 0.05, 0.18)) - 0.01);
+    if (hull < r.x) { r = vec2f(hull, 1.0); }
+    let win = sdBox(q - vec3f(0.0, -0.035, -0.1), vec3f(0.082, 0.018, 0.16));
+    if (win < r.x + 0.002 && win < 0.004) { r = vec2f(max(win, r.x), 2.0); }
+    let strut = min(sdSeg(vec3f(abs(q.x), q.y, q.z), vec3f(0.1, 0.0, 0.4), vec3f(0.18, 0.26, 0.35)), sdSeg(vec3f(abs(q.x), q.y, q.z), vec3f(0.1, 0.0, -0.4), vec3f(0.18, 0.26, -0.35))) - 0.008;
+    if (strut < r.x) { r = vec2f(strut, 1.0); }
+    let sail = max(sdBox(vec3f(abs(q.x) - 0.36, q.y - 0.12 + 0.3 * (abs(q.x) - 0.2), q.z + 0.05), vec3f(0.18, 0.006, 0.28 - 0.5 * max(abs(q.x) - 0.25, 0.0))), 0.0);
+    if (sail < r.x) { r = vec2f(sail, 0.0); }
+  } else if (kind == 2) {
+    // a personal balloon glider: a round envelope over a narrow wing and a one-seat pod
+    r = vec2f(length(q - vec3f(0.0, 0.62, 0.0)) - 0.5, 0.0);
+    let wing = sdBox(q - vec3f(0.0, -0.02, 0.05), vec3f(0.9, 0.012, 0.13 - 0.05 * abs(q.x))) - 0.004;
+    if (wing < r.x) { r = vec2f(wing, 1.0); }
+    let pod = sdEll(q - vec3f(0.0, -0.12, 0.05), vec3f(0.09, 0.1, 0.22));
+    if (pod < r.x) { r = vec2f(pod, 2.0); }
+    let line = sdSeg(vec3f(abs(q.x), q.y, q.z), vec3f(0.05, -0.05, 0.05), vec3f(0.3, 0.3, 0.0)) - 0.004;
+    if (line < r.x) { r = vec2f(line, 1.0); }
+  } else {
+    // a hover barge: a flat hull with four ducted rotors at the corners and containers stacked on deck
+    r = vec2f(sdBox(q, vec3f(0.42, 0.06, 0.95)) - 0.03, 1.0);
+    let cq = vec3f(abs(q.x) - 0.5, q.y - 0.02, abs(q.z) - 0.75);
+    let duct = length(vec2f(length(cq.xz) - 0.16, cq.y)) - 0.035;
+    if (duct < r.x) { r = vec2f(duct, 4.0); }
+    for (var k = 0; k < 3; k++) {
+      let c = sdBox(q - vec3f(0.0, 0.16 + 0.05 * f32(k % 2), -0.55 + f32(k) * 0.55), vec3f(0.3, 0.1 + 0.05 * f32(k % 2), 0.22)) - 0.01;
+      if (c < r.x) { r = vec2f(c, 5.0); }
+    }
+  }
+  return vec2f(r.x * ev.ship[i].w, r.y);
+}
+// the nearest skyboat along a ray: (t, index), or t < 0
+fn traceShips(ro: vec3f, rd: vec3f, tEnd: f32) -> vec2f {
+  var best = vec2f(-1.0, 0.0);
+  var te = tEnd;
+  for (var i = 0; i < 8; i++) {
+    let S = ev.ship[i];
+    if (S.w <= 0.0) { continue; }
+    let R = S.w * 1.25;
+    let oc = ro - S.xyz;
+    let b = dot(oc, rd);
+    let h = b * b - (dot(oc, oc) - R * R);
+    if (h < 0.0) { continue; }
+    let sq = sqrt(h);
+    var t = max(-b - sq, 0.0);
+    let t1 = min(-b + sq, te);
+    for (var k = 0; k < 72; k++) {
+      if (t > t1) { break; }
+      let d = shipSDF(ro + rd * t, i).x;
+      if (d < 0.002 * t + 0.01) { best = vec2f(t, f32(i)); te = t; break; }
+      t += d * 0.9;
+    }
+  }
+  return best;
 }
 
 fn traceBlimp(ro: vec3f, rd: vec3f, tEnd: f32) -> f32 {
@@ -4696,6 +4873,82 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       }
       if (!police && abs(cq.z) < 0.5) { s.emi += vec3f(0.1, 0.8, 1.0) * 0.6; }
     }
+    case 57: {
+      // the fab's metal: corrugated sheds and the tower's braced faces, stained
+      let fu = select(p.x, p.z, abs(n.x) > abs(n.z));
+      let cor = 0.5 + 0.5 * sin(fu * 6.0);
+      let brace = step(abs(abs(fract(fu / 8.0 + p.y / 8.0) - 0.5) - 0.25), 0.03) + step(abs(abs(fract(fu / 8.0 - p.y / 8.0) - 0.5) - 0.25), 0.03);
+      s.alb = mix(vec3f(0.36, 0.38, 0.38), vec3f(0.3, 0.2, 0.12), 0.35 * vnoise(vec2f(fu, p.y) * 0.1, 570)) * (0.85 + 0.15 * cor) * (1.0 - 0.4 * min(brace, 1.0) * step(28.0, p.y));
+      s.spec = 0.5;
+      s.refl = 0.05;
+      // lit roof glazing along the sawtooth, and hazard lights up the tower
+      if (n.y > 0.3 && n.y < 0.95 && p.y < 30.0) { s.alb = vec3f(0.12, 0.14, 0.16); s.refl = 0.3; s.emi = vec3f(1.0, 0.85, 0.6) * 1.2 * u.windows; }
+      if (p.y > 30.0 && fract(p.y / 20.0) < 0.03) { s.emi = vec3f(1.0, 0.1, 0.05) * 3.0 * step(0.5, fract(u.time * 0.8)); }
+    }
+    case 58: {
+      s.alb = vec3f(0.9, 0.85, 1.0);
+      s.emi = vec3f(1.0, 0.9, 1.0) * (6.0 + 2.0 * sin(u.time * 30.0));
+    }
+    case 59: {
+      s.alb = vec3f(0.5, 0.48, 0.45) * (0.8 + 0.2 * vnoise(vec2f(atan2(p.z, p.x) * 20.0, p.y * 0.3), 571));
+      s.spec = 0.1;
+    }
+    case 63: {
+      // finished pods: white shells with one round window each, a shipping number, some still in wrap
+      let id = hsh(i32(floor(p.x / 3.0)), i32(floor(p.z / 5.2)) * 7 + i32(floor(p.y / 2.4)), 572);
+      s.alb = mix(vec3f(0.82, 0.8, 0.76), vec3f(0.35, 0.55, 0.6), step(0.8, id));
+      let fz = fract(p.z / 5.2) - 0.5;
+      let fy = fract((p.y - 1.2) / 2.4 + 0.5) - 0.5;
+      if (abs(n.z) < 0.5 && length(vec2f(fz * 5.2, fy * 2.4)) < 0.5) { s.alb = vec3f(0.05, 0.08, 0.1); s.refl = 0.3; }
+      s.spec = 0.6;
+    }
+    case 70: {
+      // skyboats: envelope fabric by kind, painted hulls, lit windows, emigration screens, running lights
+      var si = 0;
+      var sd = 1e5;
+      for (var k = 0; k < 8; k++) { if (ev.ship[k].w > 0.0) { let d = abs(shipSDF(p, k).x); if (d < sd) { sd = d; si = k; } } }
+      let sp = shipSDF(p, si);
+      let q = shipLocal(p, si);
+      let kind = i32(ev.shipDir[si].w + 0.5);
+      let part = i32(sp.y + 0.5);
+      let hs = hsh(si, kind, 700);
+      let nav = select(vec3f(0.1, 1.0, 0.2), vec3f(1.0, 0.08, 0.05), q.x < 0.0);
+      s.spec = 0.4;
+      s.rough = 0.1;
+      switch part {
+        case 0: {
+          // envelopes: silvered for cargo, patched colour for skyboats and gliders, with panel seams
+          var env = vec3f(0.62, 0.63, 0.66);
+          if (kind == 1) { env = mix(vec3f(0.62, 0.22, 0.12), vec3f(0.85, 0.72, 0.45), step(0.5, fract(q.z * 4.0 + hs))); }
+          if (kind == 2) { env = mix(neonColor(hs), vec3f(0.9, 0.88, 0.8), step(0.5, fract(atan2(q.x, q.z) * 1.91 + 0.25))); }
+          if (kind == 3) { env = vec3f(0.12, 0.2, 0.42); }
+          s.alb = env * (1.0 - 0.2 * step(0.94, fract(q.z * 14.0)));
+          s.refl = 0.06 + 0.3 * pow(1.0 - ndv, 4.0);
+          // a nav light each side at the widest point, and a white one at the tail
+          if (abs(abs(q.x) - 0.22) < 0.03 && abs(q.y) < 0.03 && abs(q.z) < 0.04) { s.emi = nav * (1.0 + 3.0 * step(0.5, fract(u.time * 0.9 + hs))); }
+        }
+        case 1: { s.alb = mix(vec3f(0.18, 0.12, 0.08), vec3f(0.35, 0.36, 0.38), f32(kind != 1)); s.spec = 0.6; s.refl = 0.1; }
+        case 2: {
+          s.alb = vec3f(0.03);
+          s.refl = 0.3;
+          let wl = step(0.4, fract(q.z * 40.0)) * step(0.35, hsh(i32(floor(q.z * 40.0)), si, 701));
+          s.emi = vec3f(1.0, 0.78, 0.45) * wl * (0.3 + 1.2 * u.windows);
+        }
+        case 3: {
+          // the ad dirigible's screens: the emigration campaign, a line at a time
+          let bslot = i32(floor(u.time / 5.0)) + si;
+          let pk = 7 + ((bslot / 3) % 3 + 3) % 3;
+          let L = posterLine(pk, ((bslot % 3) + 3) % 3);
+          let uv = vec2f(q.z * sign(q.x) / 0.55, q.y / 0.11);
+          let txt = lineText(L, vec2f(uv.x * 40.0, (0.5 - uv.y) * 8.0 + 0.5));
+          s.alb = vec3f(0.02);
+          s.refl = 0.04;
+          s.emi = posterLook(pk, uv, txt) * (1.3 + 1.0 * u.windows);
+        }
+        case 4: { s.alb = vec3f(0.08); s.spec = 0.8; s.emi = vec3f(0.3, 0.7, 1.0) * 0.4 * (0.4 + u.windows) * step(0.6, fract(u.time * 7.0 + q.x * 3.0)); }
+        default: { s.alb = mix(vec3f(0.7, 0.3, 0.1), vec3f(0.15, 0.35, 0.6), step(0.5, hsh(i32(floor(q.z * 6.0)), si, 702))); s.spec = 0.3; }
+      }
+    }
     case 29: {
       let K = ev.blimp;
       let fw = normalize(ev.blimpDir.xyz);
@@ -5330,7 +5583,7 @@ fn boxVertex(vi: u32, lo: vec3f, hi: vec3f) -> PxOut {
   if (!giantHasW(b)) { return o; }
   let cen = (vec2f(b) + 0.5) * BIG;
   let top = giantTop(b) + 8.0;
-  let hw = select(82.0, 104.5, isHive(b));
+  let hw = select(82.0, 104.5, isHive(b) || isFab(b));
   return boxVertex(vi, vec3f(cen.x - hw, -0.5, cen.y - hw), vec3f(cen.x + hw, top, cen.y + hw));
 }
 
@@ -5424,6 +5677,7 @@ fn rnd3(fc: vec2f, k: i32) -> vec3f {
   col = smokeFx(ro, rd, tOut, col);
   col = tubesFx(ro, rd, tOut, col);
   col = holoFx(ro, rd, tEv, col);
+  col = beamFx(ro, rd, tEv, col);
   col = flockFx(ro, rd, tOut, col);
   col = propsFx(ro, rd, tOut, col);
   // a power cut: everything in the area goes dark (with a flicker as it fails and comes back)
@@ -6638,6 +6892,13 @@ function hiveTopAt(lx, lz) {
   if (ax < 270 && az < 170) return 190;
   return ax < 300 && az < 196 ? 60 : 0;
 }
+// The pod fab: where the Hive's capsule homes are made, on big block (5, 5) beside it, powered by a beam from an orbital
+// power station (the receiver cup tops a 100 m tower). Mirrored as isFab / fabSDF / beamFx in scene.wgsl.
+const FAB_C = [5.5 * BIG, 5.5 * BIG], FAB_H = 110;
+// the beam comes down from the station along this direction (unit vector, pointing up the beam)
+const BEAM_DIR = (() => { const v = [-0.35, 1, 0.25], l = Math.hypot(...v); return v.map((x) => x / l); })();
+function fabHas(bx, bz) { return !!REG.city && wrapN(bx, 96) === 5 && wrapN(bz, 96) === 5; }
+function fabTopAt(lx, lz) { return Math.abs(lx) < 14 && Math.abs(lz) < 14 ? FAB_H : 26; }
 // Hillside letters spelling DRIFT CITY on the first hill north of the city, facing it.
 const SIGN = (() => {
   for (const dir of [-1, 1]) for (const x0 of [0, -20, 20, -40, 40, -60, 60]) {
@@ -6706,11 +6967,11 @@ function treeDens(x, z) { return sstep(0.12, 0.55, forestF(x, z)); }
 // the Assembly Hall stands on one giant cell about 1 km south-east of the centre
 function hallAt(bx, bz) { return REG.city && wrapN(bx, 96) === 3 && wrapN(bz, 96) === -4 && Math.hypot(repX((bx + 0.5) * BIG) + REG.ox, repZ((bz + 0.5) * BIG) + REG.oz) < 14000; }
 function giantHas(bx, bz) {
-  if (hallAt(bx, bz) || hiveHas(bx, bz)) return true;
+  if (hallAt(bx, bz) || hiveHas(bx, bz) || fabHas(bx, bz)) return true;
   const wx = wrapN(bx, 96), wz = wrapN(bz, 96);
   return REG.city && GIANT_BLOCKS.some((g) => g[0] === wx && g[1] === wz);
 }
-function giantH(bx, bz) { return hallAt(bx, bz) ? 96 : hiveHas(bx, bz) ? HIVE_H : 150 + 110 * hsh(wrapN(bx, 96), wrapN(bz, 96), 21); }
+function giantH(bx, bz) { return hallAt(bx, bz) ? 96 : hiveHas(bx, bz) ? HIVE_H : fabHas(bx, bz) ? FAB_H : 150 + 110 * hsh(wrapN(bx, 96), wrapN(bz, 96), 21); }
 
 function computeBase(cx0, cz0, lite) {
   const cx = wrapS(cx0), cz = wrapS(cz0);
@@ -6731,7 +6992,7 @@ function computeBase(cx0, cz0, lite) {
   }
   const bx = Math.floor((cx + 0.5) / 8), bz = Math.floor((cz + 0.5) / 8);
   const ax = cx - bx * 8, az = cz - bz * 8;
-  if (hiveHas(bx, bz)) { o.typ = 6; o.treeTop = 0; return fin(0); }
+  if (hiveHas(bx, bz) || fabHas(bx, bz)) { o.typ = 6; o.treeTop = 0; return fin(0); }
   if (ax >= 1 && ax <= 6 && az >= 1 && az <= 6 && hallAt(bx, bz)) { o.typ = 6; o.treeTop = 0; return fin(0); }
   if ((ax === 3 || ax === 4) && (az === 3 || az === 4) && giantHas(bx, bz)) { o.typ = 6; return fin(0); }
   const F = forestF(ccx, ccz);
@@ -6866,7 +7127,7 @@ function farInfo(cx, cz) {
     case 3: return [o.h, 3.5, 3.5, st];
     case 4: return [o.h, 6, 6, st];
     case 5: return [14, 12.5, 12.5, st];
-    case 6: { const w = wrapS(cx), z = wrapS(cz), bx = Math.floor((w + 0.5) / 8), bz = Math.floor((z + 0.5) / 8); if (hiveHas(bx, bz)) { const t = hiveTopAt((w + 0.5) * C - HIVE_C[0], (z + 0.5) * C - HIVE_C[1]); return t > 0 ? [t, 13, 13, st] : null; } return [giantH(bx, bz), 13, 13, st]; }
+    case 6: { const w = wrapS(cx), z = wrapS(cz), bx = Math.floor((w + 0.5) / 8), bz = Math.floor((z + 0.5) / 8); if (hiveHas(bx, bz)) { const t = hiveTopAt((w + 0.5) * C - HIVE_C[0], (z + 0.5) * C - HIVE_C[1]); return t > 0 ? [t, 13, 13, st] : null; } if (fabHas(bx, bz)) return [fabTopAt((w + 0.5) * C - FAB_C[0], (z + 0.5) * C - FAB_C[1]), 13, 13, st]; return [giantH(bx, bz), 13, 13, st]; }
     case 8: return [o.h, 6.5, 6.5, st];
     case 9: return v < 0.22 ? [o.h, 3.5, 3.5, st] : v < 0.4 ? [o.h, 2.5, 2.5, st] : [o.h, v < 0.75 ? 8.5 : 9, v < 0.75 ? 8.5 : 9, st];
     case 10: return v < 0.28 ? [o.h, 3, 3, st] : v < 0.43 ? [2, 9, 9, st] : v < 0.63 ? [18, 9, 6, st] : v < 0.78 ? [15, 9, 9, st] : v < 0.9 ? [20, 5, 5, st] : [34, 3, 3, st];
@@ -8902,7 +9163,7 @@ function audioDepart() {
 function auLoop(kind) {
   const c = AU.ctx;
   const out = c.createGain(); out.gain.value = 0;
-  const p = auPanner([0, 0, 0], kind === "water" ? 10 : kind === "industry" ? 30 : kind === "hive" ? 90 : 15, 0.9);
+  const p = auPanner([0, 0, 0], kind === "water" ? 10 : kind === "industry" ? 30 : kind === "hive" ? 90 : kind === "beam" ? 60 : 15, 0.9);
   out.connect(p); p.connect(AU.bus.env);
   const n = c.createBufferSource(); n.buffer = kind === "rumble" || kind === "industry" || kind === "dorm" || kind === "hive" ? AU.brown : AU.white; n.loop = true;
   const f = c.createBiquadFilter();
@@ -8922,6 +9183,12 @@ function auLoop(kind) {
     f.type = "bandpass"; f.frequency.value = 520; f.Q.value = 1.2;
     for (const [fq, a] of [[50, 0.12], [100, 0.06], [150.5, 0.03]]) { const o = c.createOscillator(); o.frequency.value = fq; const og = c.createGain(); og.gain.value = a; o.connect(og); og.connect(mod); o.start(); }
     const am = c.createOscillator(); am.frequency.value = 0.7; const ag = c.createGain(); ag.gain.value = 0.3; am.connect(ag); ag.connect(mod.gain); am.start();
+  }
+  else if (kind === "beam") {
+    // the receiver taking the beam: a high-voltage buzz with a crackle in it
+    f.type = "highpass"; f.frequency.value = 2500;
+    for (const [fq, a] of [[100, 0.12], [200, 0.08], [300, 0.05]]) { const o = c.createOscillator(); o.type = "sawtooth"; o.frequency.value = fq; const og = c.createGain(); og.gain.value = a; o.connect(og); og.connect(mod); o.start(); }
+    const cr = c.createOscillator(); cr.type = "square"; cr.frequency.value = 7.3; const cg = c.createGain(); cg.gain.value = 0.25; cr.connect(cg); cg.connect(mod.gain); cr.start();
   }
   else if (kind === "hive") {
     // the Hive: a building-sized air handler, mains hum, and the slow beat of its fans
@@ -9103,6 +9370,7 @@ function audioStep(dt, w) {
   auLoopSet("river", P.river, space ? 0 : 0.18);
   auLoopSet("industry", P.industry, space ? 0 : 0.35);
   auLoopSet("hive", P.hive, space ? 0 : 0.3);
+  auLoopSet("beam", P.fab, space ? 0 : 0.35);
   auLoopSet("rumble", P.spaceport, space ? 0 : 0.4);
   auLoopSet("hiss", P.lamps && P.lamps.length ? P.lamps[0] : null, space ? 0 : 0.08 + 0.1 * w.snow);
   if (P.pagoda && due("bell", 0.035)) auBell(P.pagoda, 0.35);
@@ -9241,7 +9509,7 @@ function audioCity(dt, w) {
   if (city > 0.2 && w.alt < 250 && due("spinner", 0.03)) auSpinner();
 }
 
-const PLACES_BAKED = [{"id":"hall_floor","name":"Assembly Hall, the floor","blurb":"Under the great glass dome, where the city's assembly meets: tier on tier of seats around the rostrum. Light falls through the ribs in long amber bars.","x":720,"y":2.8,"z":-725,"yaw":2.8416,"pitch":0.28},{"id":"hall_steps","name":"Assembly Hall, the steps","blurb":"The broad stone steps below the arcade, a place to wait, to argue, to be seen.","x":644,"y":4.4,"z":-728,"yaw":0,"pitch":0.2},{"id":"hive","name":"Facing the Hive, Lumen roofs","blurb":"Across the gap, the pod block fills the sky: patched walls, a million little windows, and the boards telling everyone inside to sleep more.","x":741,"y":124.01,"z":741,"yaw":1.5964,"pitch":0.08},{"id":"pagoda_3","name":"Pagoda, Chinatown","blurb":"Tiers of curved roofs on Orchid Street; incense and methane frost on the eaves.","x":-880.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.18},{"id":"street_0","name":"Ferry Row, financial district","blurb":"A street corner in the financial district: tube traffic humming past, windows stacked up into the haze.","x":-39,"y":1.7,"z":-100.4,"yaw":-1.5708,"pitch":0.18},{"id":"giant_0","name":"Below a megatower, financial district","blurb":"Over the park at its foot, a tower that vanishes into the haze above Halo Row.","x":5.01,"y":26,"z":-5.01,"yaw":-0.7854,"pitch":0.38},{"id":"street_1","name":"Ferry Street, neon quarter","blurb":"A street corner in the neon quarter: tube traffic humming past, windows stacked up into the haze.","x":-143,"y":1.7,"z":81.6,"yaw":-1.5708,"pitch":0.18},{"id":"roof_0","name":"Rooftop above the financial district","blurb":"A rooftop high over Ferry Lane, the financial district spread out below.","x":-117,"y":173.13,"z":-65,"yaw":6.8068,"pitch":-0.12},{"id":"pyramid","name":"Corporate pyramid, financial district","blurb":"A stepped pyramid of glass and stone on Ferry Lane; security drones idle at its apex.","x":-143,"y":1.7,"z":-81.6,"yaw":1.5708,"pitch":0.18},{"id":"roof_1","name":"Rooftop above the neon quarter","blurb":"A rooftop high over Dune Passage, the neon quarter spread out below.","x":-169,"y":67.5,"z":91,"yaw":5.8905,"pitch":-0.12},{"id":"roof_oddity","name":"A rooftop garden","blurb":"Someone keeps a garden up here, with a view across the financial district.","x":-143,"y":34.57,"z":-143,"yaw":3.927,"pitch":-0.12},{"id":"market_1","name":"Night market, neon quarter","blurb":"Stalls under strings of light on Orchid Walk: noodles, cold-weather gear, spare parts, rumours.","x":-221,"y":1.7,"z":48.4,"yaw":1.5708,"pitch":0.18},{"id":"tower_0","name":"Signal tower, financial district","blurb":"A lattice tower on Halo Wynd, blinking out to the ships.","x":-377,"y":1.7,"z":-263.6,"yaw":1.5708,"pitch":0.18},{"id":"street_6","name":"Haze Row, dorms","blurb":"A street corner in the dorms: tube traffic humming past, windows stacked up into the haze.","x":429,"y":1.7,"z":341.6,"yaw":-1.5708,"pitch":0.18},{"id":"roof_6","name":"Rooftop above the dorms","blurb":"A rooftop high over Haze Row, the dorms spread out below.","x":429,"y":67.88,"z":325,"yaw":3.8092,"pitch":-0.12},{"id":"street_3","name":"Glass Walk, Chinatown","blurb":"A street corner in the Chinatown: tube traffic humming past, windows stacked up into the haze.","x":-282.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.18},{"id":"market_3","name":"Night market, Chinatown","blurb":"Stalls under strings of light on Huygens Passage: noodles, cold-weather gear, spare parts, rumours.","x":-523.6,"y":1.7,"z":-117,"yaw":0,"pitch":0.18},{"id":"street_7","name":"Saturnlight Lane, crystal quarter","blurb":"A street corner in the crystal quarter: tube traffic humming past, windows stacked up into the haze.","x":-464.4,"y":1.7,"z":-221,"yaw":3.1416,"pitch":0.18},{"id":"roof_7","name":"Rooftop above the crystal quarter","blurb":"A rooftop high over Methane Row, the crystal quarter spread out below.","x":-403,"y":68.87,"z":-351,"yaw":6.9938,"pitch":-0.12},{"id":"roof_3","name":"Rooftop above Chinatown","blurb":"A rooftop high over Dune Wynd, Chinatown spread out below.","x":-585,"y":100.8,"z":-143,"yaw":6.545,"pitch":-0.12},{"id":"street_2","name":"Cryo Street, old town","blurb":"A street corner in the old town: tube traffic humming past, windows stacked up into the haze.","x":100.4,"y":1.7,"z":-637,"yaw":0,"pitch":0.18},{"id":"roof_2","name":"Rooftop above the old town","blurb":"A rooftop high over Kraken Lane, the old town spread out below.","x":247,"y":67.71,"z":-793,"yaw":8.124,"pitch":-0.12},{"id":"works_4","name":"The works, industrial belt","blurb":"Pipes, stacks and pressure domes on Huygens Parade: the city's heat and air are made here.","x":871,"y":1.7,"z":-1244.4,"yaw":-1.5708,"pitch":0.18},{"id":"street_4","name":"Cryo Row, industrial belt","blurb":"A street corner in the industrial belt: tube traffic humming past, windows stacked up into the haze.","x":897,"y":1.7,"z":-1277.6,"yaw":1.5708,"pitch":0.18},{"id":"spaceport_apron","name":"Spaceport apron","blurb":"Landing pads and fuel lines off Orchid Wynd, under the long light of Saturn.","x":2353,"y":1.7,"z":-2421.6,"yaw":1.5708,"pitch":0.18},{"id":"street_5","name":"Dune Wynd, spaceport","blurb":"A street corner in the spaceport: tube traffic humming past, windows stacked up into the haze.","x":2509,"y":1.7,"z":-2265.6,"yaw":1.5708,"pitch":0.18},{"id":"sign","name":"Below the hillside letters","blurb":"The letters DRIFT CITY stand on the hill above, each taller than a house.","x":52,"y":8.71,"z":-2479,"yaw":-1.5708,"pitch":0.0798},{"id":"stones","name":"The stone circle","blurb":"Standing stones on a rise, older than the city, nobody agrees whose.","x":1157,"y":54.48,"z":-3228.16,"yaw":1.5708,"pitch":0.12},{"id":"treehouse","name":"The treehouse","blurb":"A cabin in the crown of a great tree, reached by a swaying ladder.","x":1443,"y":12,"z":-3982.16,"yaw":1.5708,"pitch":0.12},{"id":"cabin","name":"The mountain cabin","blurb":"A cabin high on the slopes, smoke from its heat vent.","x":4242.16,"y":86.24,"z":1469,"yaw":3.1416,"pitch":0.12},{"id":"dish","name":"The radio dish","blurb":"A dish in the hills, listening for Earth.","x":6435,"y":89.19,"z":-1824.16,"yaw":1.5708,"pitch":0.12},{"id":"lander","name":"The lander","blurb":"An old probe, its parachute collapsed beside it on the pebbles.","x":-5213,"y":70.84,"z":-6712.16,"yaw":1.5708,"pitch":0.12},{"id":"riverbank","name":"A river bank","blurb":"A methane river slides past, silent and dark, between low banks.","x":-3177.04,"y":21.02,"z":-7068.87,"yaw":5.8608,"pitch":0.05},{"id":"lakeshore","name":"The lake shore","blurb":"The edge of a methane lake; tiny waves, and the city's glow far off across it.","x":2471.14,"y":1.7,"z":6549.31,"yaw":2.7808,"pitch":0.05},{"id":"glade","name":"A forest glade","blurb":"A clearing in the dark forest; the fronds glow faintly after dark.","x":7000,"y":31.84,"z":0,"yaw":1.5708,"pitch":0.05},{"id":"summit","name":"A summit","blurb":"A bare summit of ice rock above the haze layer, the city a smudge of light below.","x":-4283.64,"y":504.32,"z":-5724.77,"yaw":5.6408,"pitch":0.05},{"id":"dunes","name":"Among the dunes","blurb":"Dark dunes of organic sand, rippled by the wind.","x":-6137.73,"y":20.43,"z":3365.76,"yaw":4.2108,"pitch":0.05},{"id":"corner_-8_-5","name":"Cassini Parade, financial district","blurb":"A corner on Cassini Parade: steam from a vent, the tubes' glass humming with traffic.","x":-211.6,"y":1.7,"z":-117,"yaw":0,"pitch":0.18},{"id":"corner_0_-10","name":"Amber Walk, financial district","blurb":"A corner on Amber Walk: steam from a vent, the tubes' glass humming with traffic.","x":13,"y":1.7,"z":-230.4,"yaw":-1.5708,"pitch":0.18},{"id":"corner_-9_5","name":"Saturnlight Wynd, financial district","blurb":"A corner on Saturnlight Wynd: steam from a vent, the tubes' glass humming with traffic.","x":-237.6,"y":1.7,"z":143,"yaw":0,"pitch":0.18},{"id":"corner_-21_-12","name":"Tholin Street, crystal quarter","blurb":"A corner on Tholin Street: steam from a vent, the tubes' glass humming with traffic.","x":-516.4,"y":1.7,"z":-299,"yaw":3.1416,"pitch":0.18},{"id":"corner_21_12","name":"Dune Walk, dorms","blurb":"A corner on Dune Walk: steam from a vent, the tubes' glass humming with traffic.","x":542.4,"y":1.7,"z":325,"yaw":0,"pitch":0.18},{"id":"corner_14_-28","name":"Lantern Parade, old town","blurb":"A corner on Lantern Parade: steam from a vent, the tubes' glass humming with traffic.","x":360.4,"y":1.7,"z":-715,"yaw":0,"pitch":0.18},{"id":"corner_17_26","name":"Tholin Street, dorms","blurb":"A corner on Tholin Street: steam from a vent, the tubes' glass humming with traffic.","x":471.6,"y":1.7,"z":689,"yaw":3.1416,"pitch":0.18},{"id":"corner_-14_28","name":"Dune Arcade, dorms","blurb":"A corner on Dune Arcade: steam from a vent, the tubes' glass humming with traffic.","x":-334.4,"y":1.7,"z":741,"yaw":3.1416,"pitch":0.18},{"id":"corner_-31_2","name":"Halo Arcade, neon quarter","blurb":"A corner on Halo Arcade: steam from a vent, the tubes' glass humming with traffic.","x":-793,"y":1.7,"z":48.4,"yaw":1.5708,"pitch":0.18},{"id":"corner_-17_-26","name":"Ferry Parade, crystal quarter","blurb":"A corner on Ferry Parade: steam from a vent, the tubes' glass humming with traffic.","x":-445.6,"y":1.7,"z":-663,"yaw":0,"pitch":0.18},{"id":"corner_3_38","name":"Ferry Wynd, dorms","blurb":"A corner on Ferry Wynd: steam from a vent, the tubes' glass humming with traffic.","x":74.4,"y":1.7,"z":1001,"yaw":0,"pitch":0.18},{"id":"corner_-34_-16","name":"Saturnlight Wynd, Chinatown","blurb":"A corner on Saturnlight Wynd: steam from a vent, the tubes' glass humming with traffic.","x":-887.6,"y":1.7,"z":-403,"yaw":0,"pitch":0.18},{"id":"corner_26_36","name":"Methane Walk, dorms","blurb":"A corner on Methane Walk: steam from a vent, the tubes' glass humming with traffic.","x":672.4,"y":1.7,"z":949,"yaw":0,"pitch":0.18}];
+const PLACES_BAKED = [{"id":"hall_floor","name":"Assembly Hall, the floor","blurb":"Under the great glass dome, where the city's assembly meets: tier on tier of seats around the rostrum. Light falls through the ribs in long amber bars.","x":720,"y":2.8,"z":-725,"yaw":2.8416,"pitch":0.28},{"id":"hall_steps","name":"Assembly Hall, the steps","blurb":"The broad stone steps below the arcade, a place to wait, to argue, to be seen.","x":644,"y":4.4,"z":-728,"yaw":0,"pitch":0.2},{"id":"hive","name":"Facing the Hive, Lumen roofs","blurb":"Across the gap, the pod block fills the sky: patched walls, a million little windows, and the boards telling everyone inside to sleep more.","x":741,"y":124.01,"z":741,"yaw":1.5964,"pitch":0.08},{"id":"fab","name":"Hive battlements, over the pod fab","blurb":"Below, the fab that makes the Hive's capsule homes, fed by a beam from the power station in orbit: a white line through the clouds, day and night.","x":983,"y":252,"z":1098,"yaw":0.2783,"pitch":-0.42},{"id":"pagoda_3","name":"Pagoda, Chinatown","blurb":"Tiers of curved roofs on Orchid Street; incense and methane frost on the eaves.","x":-880.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.18},{"id":"street_0","name":"Ferry Row, financial district","blurb":"A street corner in the financial district: tube traffic humming past, windows stacked up into the haze.","x":-39,"y":1.7,"z":-100.4,"yaw":-1.5708,"pitch":0.18},{"id":"giant_0","name":"Below a megatower, financial district","blurb":"Over the park at its foot, a tower that vanishes into the haze above Halo Row.","x":5.01,"y":26,"z":-5.01,"yaw":-0.7854,"pitch":0.38},{"id":"street_1","name":"Ferry Street, neon quarter","blurb":"A street corner in the neon quarter: tube traffic humming past, windows stacked up into the haze.","x":-143,"y":1.7,"z":81.6,"yaw":-1.5708,"pitch":0.18},{"id":"roof_0","name":"Rooftop above the financial district","blurb":"A rooftop high over Ferry Lane, the financial district spread out below.","x":-117,"y":173.13,"z":-65,"yaw":6.8068,"pitch":-0.12},{"id":"pyramid","name":"Corporate pyramid, financial district","blurb":"A stepped pyramid of glass and stone on Ferry Lane; security drones idle at its apex.","x":-143,"y":1.7,"z":-81.6,"yaw":1.5708,"pitch":0.18},{"id":"roof_1","name":"Rooftop above the neon quarter","blurb":"A rooftop high over Dune Passage, the neon quarter spread out below.","x":-169,"y":67.5,"z":91,"yaw":5.8905,"pitch":-0.12},{"id":"roof_oddity","name":"A rooftop garden","blurb":"Someone keeps a garden up here, with a view across the financial district.","x":-143,"y":34.57,"z":-143,"yaw":3.927,"pitch":-0.12},{"id":"market_1","name":"Night market, neon quarter","blurb":"Stalls under strings of light on Orchid Walk: noodles, cold-weather gear, spare parts, rumours.","x":-221,"y":1.7,"z":48.4,"yaw":1.5708,"pitch":0.18},{"id":"tower_0","name":"Signal tower, financial district","blurb":"A lattice tower on Halo Wynd, blinking out to the ships.","x":-377,"y":1.7,"z":-263.6,"yaw":1.5708,"pitch":0.18},{"id":"street_6","name":"Haze Row, dorms","blurb":"A street corner in the dorms: tube traffic humming past, windows stacked up into the haze.","x":429,"y":1.7,"z":341.6,"yaw":-1.5708,"pitch":0.18},{"id":"roof_6","name":"Rooftop above the dorms","blurb":"A rooftop high over Haze Row, the dorms spread out below.","x":429,"y":67.88,"z":325,"yaw":3.8092,"pitch":-0.12},{"id":"street_3","name":"Glass Walk, Chinatown","blurb":"A street corner in the Chinatown: tube traffic humming past, windows stacked up into the haze.","x":-282.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.18},{"id":"market_3","name":"Night market, Chinatown","blurb":"Stalls under strings of light on Huygens Passage: noodles, cold-weather gear, spare parts, rumours.","x":-523.6,"y":1.7,"z":-117,"yaw":0,"pitch":0.18},{"id":"street_7","name":"Saturnlight Lane, crystal quarter","blurb":"A street corner in the crystal quarter: tube traffic humming past, windows stacked up into the haze.","x":-464.4,"y":1.7,"z":-221,"yaw":3.1416,"pitch":0.18},{"id":"roof_7","name":"Rooftop above the crystal quarter","blurb":"A rooftop high over Methane Row, the crystal quarter spread out below.","x":-403,"y":68.87,"z":-351,"yaw":6.9938,"pitch":-0.12},{"id":"roof_3","name":"Rooftop above Chinatown","blurb":"A rooftop high over Dune Wynd, Chinatown spread out below.","x":-585,"y":100.8,"z":-143,"yaw":6.545,"pitch":-0.12},{"id":"street_2","name":"Cryo Street, old town","blurb":"A street corner in the old town: tube traffic humming past, windows stacked up into the haze.","x":100.4,"y":1.7,"z":-637,"yaw":0,"pitch":0.18},{"id":"roof_2","name":"Rooftop above the old town","blurb":"A rooftop high over Kraken Lane, the old town spread out below.","x":247,"y":67.71,"z":-793,"yaw":8.124,"pitch":-0.12},{"id":"works_4","name":"The works, industrial belt","blurb":"Pipes, stacks and pressure domes on Huygens Parade: the city's heat and air are made here.","x":871,"y":1.7,"z":-1244.4,"yaw":-1.5708,"pitch":0.18},{"id":"street_4","name":"Cryo Row, industrial belt","blurb":"A street corner in the industrial belt: tube traffic humming past, windows stacked up into the haze.","x":897,"y":1.7,"z":-1277.6,"yaw":1.5708,"pitch":0.18},{"id":"spaceport_apron","name":"Spaceport apron","blurb":"Landing pads and fuel lines off Orchid Wynd, under the long light of Saturn.","x":2353,"y":1.7,"z":-2421.6,"yaw":1.5708,"pitch":0.18},{"id":"street_5","name":"Dune Wynd, spaceport","blurb":"A street corner in the spaceport: tube traffic humming past, windows stacked up into the haze.","x":2509,"y":1.7,"z":-2265.6,"yaw":1.5708,"pitch":0.18},{"id":"sign","name":"Below the hillside letters","blurb":"The letters DRIFT CITY stand on the hill above, each taller than a house.","x":52,"y":8.71,"z":-2479,"yaw":-1.5708,"pitch":0.0798},{"id":"stones","name":"The stone circle","blurb":"Standing stones on a rise, older than the city, nobody agrees whose.","x":1157,"y":54.48,"z":-3228.16,"yaw":1.5708,"pitch":0.12},{"id":"treehouse","name":"The treehouse","blurb":"A cabin in the crown of a great tree, reached by a swaying ladder.","x":1443,"y":12,"z":-3982.16,"yaw":1.5708,"pitch":0.12},{"id":"cabin","name":"The mountain cabin","blurb":"A cabin high on the slopes, smoke from its heat vent.","x":4242.16,"y":86.24,"z":1469,"yaw":3.1416,"pitch":0.12},{"id":"dish","name":"The radio dish","blurb":"A dish in the hills, listening for Earth.","x":6435,"y":89.19,"z":-1824.16,"yaw":1.5708,"pitch":0.12},{"id":"lander","name":"The lander","blurb":"An old probe, its parachute collapsed beside it on the pebbles.","x":-5213,"y":70.84,"z":-6712.16,"yaw":1.5708,"pitch":0.12},{"id":"riverbank","name":"A river bank","blurb":"A methane river slides past, silent and dark, between low banks.","x":-3177.04,"y":21.02,"z":-7068.87,"yaw":5.8608,"pitch":0.05},{"id":"lakeshore","name":"The lake shore","blurb":"The edge of a methane lake; tiny waves, and the city's glow far off across it.","x":2471.14,"y":1.7,"z":6549.31,"yaw":2.7808,"pitch":0.05},{"id":"glade","name":"A forest glade","blurb":"A clearing in the dark forest; the fronds glow faintly after dark.","x":7000,"y":31.84,"z":0,"yaw":1.5708,"pitch":0.05},{"id":"summit","name":"A summit","blurb":"A bare summit of ice rock above the haze layer, the city a smudge of light below.","x":-4283.64,"y":504.32,"z":-5724.77,"yaw":5.6408,"pitch":0.05},{"id":"dunes","name":"Among the dunes","blurb":"Dark dunes of organic sand, rippled by the wind.","x":-6137.73,"y":20.43,"z":3365.76,"yaw":4.2108,"pitch":0.05},{"id":"corner_-8_-5","name":"Cassini Parade, financial district","blurb":"A corner on Cassini Parade: steam from a vent, the tubes' glass humming with traffic.","x":-211.6,"y":1.7,"z":-117,"yaw":0,"pitch":0.18},{"id":"corner_0_-10","name":"Amber Walk, financial district","blurb":"A corner on Amber Walk: steam from a vent, the tubes' glass humming with traffic.","x":13,"y":1.7,"z":-230.4,"yaw":-1.5708,"pitch":0.18},{"id":"corner_-9_5","name":"Saturnlight Wynd, financial district","blurb":"A corner on Saturnlight Wynd: steam from a vent, the tubes' glass humming with traffic.","x":-237.6,"y":1.7,"z":143,"yaw":0,"pitch":0.18},{"id":"corner_-21_-12","name":"Tholin Street, crystal quarter","blurb":"A corner on Tholin Street: steam from a vent, the tubes' glass humming with traffic.","x":-516.4,"y":1.7,"z":-299,"yaw":3.1416,"pitch":0.18},{"id":"corner_21_12","name":"Dune Walk, dorms","blurb":"A corner on Dune Walk: steam from a vent, the tubes' glass humming with traffic.","x":542.4,"y":1.7,"z":325,"yaw":0,"pitch":0.18},{"id":"corner_14_-28","name":"Lantern Parade, old town","blurb":"A corner on Lantern Parade: steam from a vent, the tubes' glass humming with traffic.","x":360.4,"y":1.7,"z":-715,"yaw":0,"pitch":0.18},{"id":"corner_17_26","name":"Tholin Street, dorms","blurb":"A corner on Tholin Street: steam from a vent, the tubes' glass humming with traffic.","x":471.6,"y":1.7,"z":689,"yaw":3.1416,"pitch":0.18},{"id":"corner_-14_28","name":"Dune Arcade, dorms","blurb":"A corner on Dune Arcade: steam from a vent, the tubes' glass humming with traffic.","x":-334.4,"y":1.7,"z":741,"yaw":3.1416,"pitch":0.18},{"id":"corner_-31_2","name":"Halo Arcade, neon quarter","blurb":"A corner on Halo Arcade: steam from a vent, the tubes' glass humming with traffic.","x":-793,"y":1.7,"z":48.4,"yaw":1.5708,"pitch":0.18},{"id":"corner_-17_-26","name":"Ferry Parade, crystal quarter","blurb":"A corner on Ferry Parade: steam from a vent, the tubes' glass humming with traffic.","x":-445.6,"y":1.7,"z":-663,"yaw":0,"pitch":0.18},{"id":"corner_3_38","name":"Ferry Wynd, dorms","blurb":"A corner on Ferry Wynd: steam from a vent, the tubes' glass humming with traffic.","x":74.4,"y":1.7,"z":1001,"yaw":0,"pitch":0.18},{"id":"corner_-34_-16","name":"Saturnlight Wynd, Chinatown","blurb":"A corner on Saturnlight Wynd: steam from a vent, the tubes' glass humming with traffic.","x":-887.6,"y":1.7,"z":-403,"yaw":0,"pitch":0.18}];
 // ---------- Tales: 50 room-scale places in and around Drift city, and an Ink story that moves between them ----------
 // Places are picked from the generated city itself (so each is really there), in a fixed order, so a story can refer
 // to them by id. Each has a camera at eye height (or on a roof), a heading and a pitch.
@@ -9282,6 +9550,13 @@ function buildPlaces() {
     cam.yaw = Math.atan2(HIVE_C[1] - cam.z, HIVE_C[0] - cam.x); cam.pitch = 0.08;
     add("hive", "Facing the Hive, Lumen roofs", "Across the gap, the pod block fills the sky: patched walls, a million little windows, and the boards telling everyone inside to sleep more.", cam);
   }
+  // the pod fab beside the Hive, and the power beam coming down to it, from the battlements of the Hive's
+  // north-east tower (240 m up)
+  {
+    const x = HIVE_C[0] + 255, z = HIVE_C[1] - 150;
+    add("fab", "Hive battlements, over the pod fab", "Below, the fab that makes the Hive's capsule homes, fed by a beam from the power station in orbit: a white line through the clouds, day and night.",
+      { x, y: 252, z, yaw: Math.atan2(FAB_C[1] - z, FAB_C[0] - x), pitch: -0.42 });
+  }
   // Chinatown's pagoda: placed (PAGODA_CELL in world.js), so its view is too
   {
     const cx = wrapS(PAGODA_CELL[0]), cz = wrapS(PAGODA_CELL[1]);
@@ -9304,7 +9579,7 @@ function buildPlaces() {
       else if (o.typ === 13 && want("pyramid")) add("pyramid", "Corporate pyramid, " + dn, "A stepped pyramid of glass and stone on " + st + "; security drones idle at its apex.", facing(cx, cz, side));
       else if (o.typ === 9 && want("works" + zn)) { add("works_" + zn, "The works, " + dn, "Pipes, stacks and pressure domes on " + st + ": the city's heat and air are made here.", facing(cx, cz, side)); }
       else if (o.typ === 10 && want("apron")) add("spaceport_apron", "Spaceport apron", "Landing pads and fuel lines off " + st + ", under the long light of Saturn.", facing(cx, cz, side));
-      else if (o.typ === 6 && giantHas(Math.floor(cx / 8), Math.floor(cz / 8)) && !hallAt(Math.floor(cx / 8), Math.floor(cz / 8)) && !hiveHas(Math.floor(cx / 8), Math.floor(cz / 8)) && want("giant" + zn)) {
+      else if (o.typ === 6 && giantHas(Math.floor(cx / 8), Math.floor(cz / 8)) && !hallAt(Math.floor(cx / 8), Math.floor(cz / 8)) && !hiveHas(Math.floor(cx / 8), Math.floor(cz / 8)) && !fabHas(Math.floor(cx / 8), Math.floor(cz / 8)) && want("giant" + zn)) {
         // the tower stands in a park: look from above the trees, 140 m out, on the side of the cell that found it
         const bx = (Math.floor(cx / 8) + 0.5) * BIG, bz = (Math.floor(cz / 8) + 0.5) * BIG;
         const a0 = Math.atan2((cz + 0.5) * C - bz, (cx + 0.5) * C - bx);
@@ -9900,6 +10175,7 @@ const MAP_ZONE_COL = ["#c9a46a", "#e0569a", "#b98a5e", "#d0523c", "#7d7468", "#9
 function mapMarks() {
   return [
     ["The Hive", HIVE_C[0], HIVE_C[1], "hive"],
+    ["Pod fab and power beam", FAB_C[0], FAB_C[1], "fab"],
     ["Assembly Hall", 3.5 * BIG, -3.5 * BIG, "hall_steps"],
     ["The ringed spire", (SPIRE_BLOCK[0] + 0.5) * BIG, (SPIRE_BLOCK[1] + 0.5) * BIG, "giant_0"],
     ["Lumen pyramid", (PYRAMID_CELL[0] + 0.5) * C, (PYRAMID_CELL[1] + 0.5) * C, "pyramid"],
@@ -10239,6 +10515,8 @@ function audioWorld(dt) {
       const hx = clampv(st.x, HIVE_C[0] - 310, HIVE_C[0] + 310), hz = clampv(st.z, HIVE_C[1] - 210, HIVE_C[1] + 210);
       if (Math.hypot(hx - st.x, hz - st.z) < 900) P.hive = [hx, clampv(st.y, 5, 230), hz];
     }
+    // the pod fab's receiver: a high-voltage hum from the top of its tower
+    if (Math.hypot(FAB_C[0] - st.x, FAB_C[1] - st.z) < 800) P.fab = [FAB_C[0], 104, FAB_C[1]];
     // the tubes overhead: the nearest street line in each direction, if it borders the city
     if (city > 3) {
       const kx = Math.round(st.x / C), kz = Math.round(st.z / C);
@@ -10344,6 +10622,30 @@ function audioFeet(dt) {
     if (w.drone && step % 6 === 0) auBuzz([w.x, 2.1, w.z], 0.6);
   }
   FEET.last = seen;
+}
+// The skyboats' routes, fixed in the world so they become part of the city's geography: a cargo zeppelin shuttling
+// between the spaceport and the pod fab, the emigration ad dirigible circling the core, three skyboats (old town,
+// Chinatown, over the dorms), two balloon gliders wandering over the core, a hover barge working along the strip.
+function skyboats(t) {
+  const put = (i, x, y, z, hx, hz, s, kind) => { const l = Math.hypot(hx, hz) || 1; EVN.set([x, y, z, s], 144 + i * 4); EVN.set([hx / l, 0, hz / l, kind], 176 + i * 4); };
+  // back and forth on a line, turning at the ends (a smooth ping-pong), facing the way it goes
+  const line = (i, a, b, y, per, s, kind, ph) => {
+    const u = 0.5 - 0.5 * Math.cos((t / per + ph) * 2 * Math.PI), v = Math.sin((t / per + ph) * 2 * Math.PI);
+    const x = a[0] + (b[0] - a[0]) * u, z = a[1] + (b[1] - a[1]) * u, sg = v >= 0 ? 1 : -1;
+    put(i, x, y, z, (b[0] - a[0]) * sg, (b[1] - a[1]) * sg, s, kind);
+  };
+  const circ = (i, cx, cz, r, y, per, s, kind, ph) => {
+    const a = (t / per + ph) * 2 * Math.PI, d = per > 0 ? 1 : -1;
+    put(i, cx + Math.cos(a) * r, y + 6 * Math.sin(t * 0.07 + i), cz + Math.sin(a) * r, -Math.sin(a) * d, Math.cos(a) * d, s, kind);
+  };
+  line(0, [CITY_ARM[0] * 0.85, CITY_ARM[1] * 0.85], [FAB_C[0], FAB_C[1]], 280, 900, 90, 0, 0.1);
+  circ(1, 0, 0, 720, 330, 520, 60, 3, 0.3);
+  circ(2, 3.5 * BIG, -3.5 * BIG, 380, 175, 260, 28, 1, 0);
+  circ(3, (PAGODA_CELL[0] + 0.5) * C, (PAGODA_CELL[1] + 0.5) * C, 330, 150, -300, 26, 1, 0.5);
+  circ(4, HIVE_C[0], HIVE_C[1] - 150, 520, 300, 420, 30, 1, 0.2);
+  circ(5, -120 + 90 * Math.sin(t * 0.01), 80, 240, 110, 190, 6, 2, 0);
+  circ(6, 260, -140 + 70 * Math.cos(t * 0.013), 200, 95, -170, 6, 2, 0.6);
+  line(7, [-1150, 40], [1150, 40], 34, 480, 18, 4, 0);
 }
 // props in the world: the story's scene, the events director's, and your own drone when the view follows it
 let FOLLOW = false;
@@ -10733,7 +11035,7 @@ function halton(i, b) { let f = 1, r = 0; while (i > 0) { f /= b; r += f * (i % 
 
 const SN = 1024, STS = 0.8, AIR_Y = 96;
 // Per-frame events for the shader: searchlight beams from the nearest air taxis, smoke plumes, the holographic koi.
-const EVN = new Float32Array(144);
+const EVN = new Float32Array(208);
 const CHASE_Y = 64;
 const WX = { rain: 0, wet: 0 };
 let boState = null;
@@ -10803,6 +11105,8 @@ function computeEvents(tod, dt) {
   if (bd < 90) { const k = 90 / Math.max(bd, 1); bp = [st.x + (bp[0] - st.x) * k, st.y + (bp[1] - st.y) * k, st.z + (bp[2] - st.z) * k]; }
   EVN.set([bp[0], bp[1], bp[2], 32], 56);
   EVN.set([-Math.sin(ba), 0, Math.cos(ba), 1], 60);
+  // skyboats on fixed routes: one line of [x, y, z, half-length] at 144, one of [heading, kind] at 176
+  skyboats(clock);
   // district blackout every few minutes near the camera
   const bcy = 150, bk = Math.floor(clock / bcy), bt = clock - bk * bcy;
   if (bt >= 50 && bt <= 78 && hsh(bk, 3, 160) < 0.75) {
@@ -11057,8 +11361,9 @@ function camInsideProxy() {
     if (Math.abs(st.x - cx) < ext + m && Math.abs(st.z - cz) < ext + m) return true;
   }
   const bx = Math.floor(st.x / BIG), bz = Math.floor(st.z / BIG);
-  const gw = hiveHas(bx, bz) ? 104 : 84;
-  if (giantHas(bx, bz) && Math.abs(st.x - (bx + 0.5) * BIG) < gw && Math.abs(st.z - (bz + 0.5) * BIG) < gw && st.y < giantH(bx, bz) + 10) return true;
+  const gw = hiveHas(bx, bz) || fabHas(bx, bz) ? 104 : 84;
+  const gh = fabHas(bx, bz) ? fabTopAt(st.x - (bx + 0.5) * BIG, st.z - (bz + 0.5) * BIG) : giantH(bx, bz);
+  if (giantHas(bx, bz) && Math.abs(st.x - (bx + 0.5) * BIG) < gw && Math.abs(st.z - (bz + 0.5) * BIG) < gw && st.y < gh + 10) return true;
   return false;
 }
 
@@ -11189,7 +11494,7 @@ async function init() {
   const rectData = new Int32Array(64 * 12);
   const propBuf = device.createBuffer({ size: PROP_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const flockBuf = device.createBuffer({ size: FLOCK_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-  const evBuf = device.createBuffer({ size: 576, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const evBuf = device.createBuffer({ size: 832, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   // the whole world: terrain per block corner, distant blocks per block, and a max-height pyramid over both
   const NWJ = 768;
   const terrTex = device.createTexture({ size: [NWJ, NWJ], format: "rgba32float", usage: TU.STORAGE_BINDING | TU.TEXTURE_BINDING });
