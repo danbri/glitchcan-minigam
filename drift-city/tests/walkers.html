@@ -15,7 +15,7 @@
 <p id="msg">Walkers from src/scene.wgsl (pedFigure and its helpers), one kind per column: exoskeleton, android, loper,
 cape glider, cable skater. Top row from the side, bottom row from three-quarters front. Each figure walks toward the
 right of the top row; the ground stripes move the other way, as the pavement does under a walker.
-Add ?t=12.5 to freeze the clock.</p>
+Add ?t=12.5 to freeze the clock, ?zoom=0.5 to come closer.</p>
 <script type="module">
 // Dev harness for the pedestrian figures. Needs WebGPU; serve the repo over HTTP and open drift-city/tests/walkers.html.
 const src = async (f) => (await fetch('../src/' + f)).text();
@@ -31,8 +31,9 @@ const fnSrc = (name) => {
   }
   throw new Error('unbalanced ' + name);
 };
-const names = ['rot2', 'smin', 'sdBox', 'sdSeg', 'sdEll', 'rotY', 'neonColor', 'pedPulley', 'pedPace', 'pedKind', 'pedPhase', 'pedLift',
-  'pp', 'sdRC', 'ik2', 'struct HP', 'pedHuman', 'pedUpper', 'pedUnlean', 'pedFigure', 'vehicleSDF'];
+const names = ['rot2', 'smin', 'sdBox', 'sdSeg', 'sdEll', 'rotY', 'neonColor', 'pedPulley', 'pedPace', 'pedKind', 'pedPhase',
+  'gaitS', 'gaitSf', 'gaitLen', 'pedGait', 'gaitFoot', 'gaitBob', 'pp', 'sdRC', 'ik2', 'struct HP', 'pedFoot', 'pedHuman', 'pedUpper',
+  'pedUnlean', 'pedFigure', 'vehicleSDF'];
 // the private variables the part tracker uses, as declared in scene.wgsl
 const privs = scene.split('\n').filter((l) => /^var<private> gP[TBP]\b/.test(l)).join('\n');
 // ?set=vehicles draws the tube vehicles instead (kinds 0, 2, 3, 5, 6)
@@ -40,9 +41,13 @@ const VEH = new URLSearchParams(location.search).get('set') === 'vehicles';
 const code = common + '\n' + privs + '\n' + names.map(fnSrc).join('\n') + `
 const COLS: f32 = 5.0;
 const VEH: bool = ` + VEH + `;
+const ZOOM: f32 = ` + (+(new URLSearchParams(location.search).get('zoom') || 1)).toFixed(3) + `;
 fn figMap(q: vec3f, kind: i32) -> f32 {
   if (VEH) { return vehicleSDF(q, array<i32, 5>(0, 2, 3, 5, 6)[kind]); }
-  return pedFigure(q, kind, pedPhase(kind, 1.0, kind * 2 + 1), kind * 2 + 1);
+  // walking kinds step by the distance walked: here the ground's 1.1 m/s, so planted feet hold still on the stripes
+  var ph = pedPhase(kind, 1.0, kind * 2 + 1);
+  if (kind <= 2) { ph = pedGait(kind, u.time * 1.1, kind * 2 + 1); }
+  return pedFigure(q, kind, ph, kind * 2 + 1);
 }
 fn kindCol(kind: i32) -> vec3f {
   switch kind { case 0: { return vec3f(0.55, 0.55, 0.6); } case 1: { return vec3f(0.85, 0.65, 0.3); }
@@ -55,7 +60,7 @@ fn kindCol(kind: i32) -> vec3f {
   let row = floor(fc.y / ch);
   let kind = i32(col);
   let uv = vec2f((fc.x - col * cw) / cw * 2.0 - 1.0, 1.0 - (fc.y - row * ch) / ch * 2.0) * vec2f(cw / ch, 1.0);
-  let zoom = select(1.0, 2.6, VEH);
+  let zoom = select(1.0, 2.6, VEH) * ZOOM;
   var ro = vec3f(-3.2, 1.3, 0.0) * zoom;
   var tgt = vec3f(0.0, select(1.2, 0.9, VEH), 0.0);
   if (row > 0.5) { ro = vec3f(2.2, 1.6, 2.4) * zoom; }
