@@ -286,6 +286,7 @@ function taleSay(paras, choices) {
     ch.appendChild(b);
   });
   tx.scrollTop = 0;
+  requestAnimationFrame(feelArm);
   const n = document.getElementById("taleCount");
   if (n) n.textContent = choices.length ? choices.length + (choices.length === 1 ? " choice" : " choices") : "";
 }

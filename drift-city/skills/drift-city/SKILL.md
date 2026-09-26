@@ -118,6 +118,21 @@ description of the surroundings that `audioWorld` in `main.js` builds twice a se
   `setTimeout` fires in real time and the render misses it (September 2026: added to the harness). Compare loudness
   against the previous `audio.js` before and after a change; the radio chain first made the street 3.7 dB louder.
 
+## Feeling the choices (`src/feel.js`)
+
+A thumb slid over the story's choices feels which one it is on, so a player can choose while watching the city:
+four haptic textures (a rhythm of ticks per choice: slow single, double, fast grain, triple burst), a quiet tone
+for each on the cue bus, a short buzz when the thumb crosses into the next choice, and lifting the thumb on a choice
+takes it. A quick tap is left to the button's own click (and the click after a slide is swallowed, so nothing is
+chosen twice). The list scrolls while the thumb rests near its top or bottom edge; on a phone the default panel
+shows only one or two choices at a time. Menu > Story > "Feel the choices" switches it off (`drift.feel`).
+
+- Android has `navigator.vibrate`; iOS Safari does not. On iOS each tick is the system haptic of a hidden
+  `<input type="checkbox" switch>` being toggled (`feelSwitch`), which iOS 18 Safari plays; older iPhones get
+  only the tones. NOT verified on a device from this container.
+- Test: a touch slide dispatched on `#taleChoices` with `navigator.vibrate` stubbed to a log (synthetic events are
+  not captured, so dispatch moves on the list itself, as pointer capture does on a real device).
+
 ## Look: focus, snow, what the city is made of
 
 - **Focus** (`comp` in `post.wgsl`): depth is in the alpha of the anti-aliased image. `u.reg2.z` is the focus
