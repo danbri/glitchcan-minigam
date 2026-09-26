@@ -32,17 +32,11 @@ function buildPlaces() {
   // scan the city in rings outward from the centre, collecting one of each kind per district
   const seen = new Set();
   const want = (key) => { if (seen.has(key)) return false; seen.add(key); return true; };
-  // Chinatown's pagoda first: the story needs it and it lies further out than the other city places
-  for (let r = 2, done = false; r < 240 && !done; r++) {
-    for (let k = 0; k < 8 * r && !done; k++) {
-      const a = (k / (8 * r)) * Math.PI * 2, cx = Math.round(Math.cos(a) * r), cz = Math.round(Math.sin(a) * r);
-      const o = cellAt(cx, cz);
-      if (!o.wild && o.zone === 3 && o.typ === 11 && (o.fl & 3) === 1) {
-        seen.add("pagoda3");
-        add("pagoda_3", "Pagoda, Chinatown", "Tiers of curved roofs on " + streetName(cx * 131 + cz * 7) + "; incense and methane frost on the eaves.", facing(cx, cz, Math.floor(hsh(cx, cz, 903) * 4)));
-        done = true;
-      }
-    }
+  // Chinatown's pagoda: placed (PAGODA_CELL in world.js), so its view is too
+  {
+    const cx = wrapS(PAGODA_CELL[0]), cz = wrapS(PAGODA_CELL[1]);
+    seen.add("pagoda3");
+    add("pagoda_3", "Pagoda, Chinatown", "Tiers of curved roofs on " + streetName(cx * 131 + cz * 7) + "; incense and methane frost on the eaves.", facing(cx, cz, Math.floor(hsh(cx, cz, 903) * 4)));
   }
   const kinds = [];
   for (let r = 2; r < 240 && P.length < 34; r += 1) {
@@ -75,19 +69,23 @@ function buildPlaces() {
   const wildNames = { 1: ["lighthouse", "The lighthouse", "A lighthouse on the shore, its beam sweeping the methane sea."], 3: ["stones", "The stone circle", "Standing stones on a rise, older than the city, nobody agrees whose."],
     5: ["lander", "The lander", "An old probe, its parachute collapsed beside it on the pebbles."], 7: ["treehouse", "The treehouse", "A cabin in the crown of a great tree, reached by a swaying ladder."],
     15: ["dish", "The radio dish", "A dish in the hills, listening for Earth."], 17: ["cabin", "The mountain cabin", "A cabin high on the slopes, smoke from its heat vent."], 18: ["wreck", "The shipwreck", "A hull stranded in the shallows, its ribs rimed with frost."] };
+  const addWild = (cx, cz, wn) => {
+    const cam = facing(cx, cz, Math.floor(hsh(cx, cz, 904) * 4));
+    cam.x += (cam.x - (cx + 0.5) * C) * 1.6; cam.z += (cam.z - (cz + 0.5) * C) * 1.6;
+    cam.y = Math.max(terrSurfAt(cam.x, cam.z), 0) + 1.7;
+    cam.yaw = Math.atan2((cz + 0.5) * C - cam.z, (cx + 0.5) * C - cam.x); cam.pitch = 0.12;
+    add(wn[0], wn[1], wn[2], cam);
+  };
+  // the story's stones and treehouse are placed (world.js), so their views are too
+  for (const [egg, at] of [[3, STONES_AT], [7, TREEHOUSE_AT]]) { want("egg" + egg); addWild(wrapS(Math.floor(at[0] / C)), wrapS(Math.floor(at[1] / C)), wildNames[egg]); }
   for (let r = 150; r < 360 && P.length < 50; r += 2) {
     for (let k = 0; k < 8 * r && P.length < 50; k += 3) {
       const a = (k / (8 * r)) * Math.PI * 2;
       const cx = Math.round(Math.cos(a) * r), cz = Math.round(Math.sin(a) * r);
       const o = cellAt(cx, cz);
       if (o.typ !== 14 || !wildNames[o.egg]) continue;
-      const wn = wildNames[o.egg];
       if (!want("egg" + o.egg)) continue;
-      const cam = facing(cx, cz, Math.floor(hsh(cx, cz, 904) * 4));
-      cam.x += (cam.x - (cx + 0.5) * C) * 1.6; cam.z += (cam.z - (cz + 0.5) * C) * 1.6;
-      cam.y = Math.max(terrSurfAt(cam.x, cam.z), 0) + 1.7;
-      cam.yaw = Math.atan2((cz + 0.5) * C - cam.z, (cx + 0.5) * C - cam.x); cam.pitch = 0.12;
-      add(wn[0], wn[1], wn[2], cam);
+      addWild(cx, cz, wildNames[o.egg]);
     }
   }
   // fill with the land itself: a river bank, a lake shore, a forest glade, a summit, a dune crest

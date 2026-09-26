@@ -50,7 +50,14 @@ float pvn(vec2 p, float s, int k) {
   return mix(mix(hsh(x0, z0, k), hsh(x1, z0, k), w.x), mix(hsh(x0, z1, k), hsh(x1, z1, k), w.x), w.y);
 }
 float cityDist(vec2 p) { return length(wrapP(p)); }
-float cityR(vec2 p) { return 6000.0 + 2000.0 * (pvn(p, 4992.0, 201) - 0.5) + 1000.0 * (pvn(p, 1248.0, 202) - 0.5); }
+// the city's shape: a core and the harbour arm (as citySdf in world.js)
+float citySdf(vec2 p) {
+  vec2 q = wrapP(p), a = vec2(3300.0, -3300.0);
+  float core = 1700.0 + 380.0 * (pvn(p, 1248.0, 201) - 0.5) + 200.0 * (pvn(p, 624.0, 202) - 0.5);
+  float t = clamp(dot(q, a) / dot(a, a), 0.0, 1.0);
+  return min(length(q) - core, length(q - a * t) - 380.0);
+}
+float cityR(vec2 p) { return cityDist(p) - citySdf(p); }
 
 vec4 terrV(ivec2 v) { return texelFetch(terrT, ivec2(wrapI(v.x, NT), wrapI(v.y, NT)), 0); }
 vec4 terrAt(vec2 xz) {
