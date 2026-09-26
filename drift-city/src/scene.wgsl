@@ -42,7 +42,7 @@ struct Flock { n: vec4f, g: array<vec4f, 4>, a: array<vec4f, 192> };
 // story props: count in n.x; per prop a[2i] = position (m) and kind, a[2i+1] = yaw, scale, hue, parameter
 struct Props { n: vec4f, a: array<vec4f, 64> };
 @group(0) @binding(22) var<uniform> pr: Props;
-struct TB { glyph: array<vec4u, 21>, word: array<vec4u, 44> };
+struct TB { glyph: array<vec4u, 22>, word: array<vec4u, 68> };
 @group(0) @binding(12) var<uniform> tb: TB;
 @group(0) @binding(13) var terrTex: texture_2d<f32>;
 @group(0) @binding(14) var ffBTex: texture_2d<f32>;
@@ -329,12 +329,12 @@ fn isHall(b: vec2i) -> bool {
   return u.reg.w > 0.5 && bw.x == 3 && bw.y == -4 && length(repP((vec2f(b) + 0.5) * BIG) + u.reg.xy) < 14000.0;
 }
 fn giantHasW(b: vec2i) -> bool {
-  if (isHall(b)) { return true; }
+  if (isHall(b) || isHive(b)) { return true; }
   let bw = vec2i(wrapN(b.x, 96), wrapN(b.y, 96));
   // placed, not scattered (GIANT_BLOCKS in world.js): the ringed spire in the core, a plain one over the dorms
   return u.reg.w > 0.5 && ((bw.x == 0 && bw.y == -1) || (bw.x == 3 && bw.y == 3));
 }
-fn giantTop(b: vec2i) -> f32 { if (isHall(b)) { return 96.0; } return 150.0 + 110.0 * hsh(wrapN(b.x, 96), wrapN(b.y, 96), 21); }
+fn giantTop(b: vec2i) -> f32 { if (isHall(b)) { return 96.0; } if (isHive(b)) { return 272.0; } return 150.0 + 110.0 * hsh(wrapN(b.x, 96), wrapN(b.y, 96), 21); }
 
 // terrain samples: one texel per block corner, bilinear between them
 fn terrV(v: vec2i) -> vec4f { return textureLoad(terrTex, wrapT(v), 0); }
@@ -2345,6 +2345,130 @@ fn cellSDF(p: vec3f, c: vec2i, cell: Cell) -> vec2f {
 // ---------- giants ----------
 // The Assembly Hall: a stone drum ringed with tall arches, a shallow ribbed glass dome 140 m across, a crown ring
 // and a needle spire rising to 96 m
+// ---------- the Hive ----------
+// The cattle-class pod block (HIVE_C in world.js): a patched, hulking castle 620 x 420 m and 240 m tall on the dorms'
+// outer edge. Plinth, body, upper storey, four crenellated corner towers, an off-centre keep, annexes bolted on
+// wherever there was room, exhaust stacks, and the boards facing the nicer city (north and west). Local metres.
+fn isHive(b: vec2i) -> bool {
+  let bw = vec2i(wrapN(b.x, 96), wrapN(b.y, 96));
+  return u.reg.w > 0.5 && bw.x >= 2 && bw.x <= 4 && bw.y >= 5 && bw.y <= 6;
+}
+// the boards: centre (u, y) and half size (w, h) in their wall's own axes
+fn hiveBoardC(i: i32) -> vec4f {
+  switch i {
+    case 0: { return vec4f(-150.0, 125.0, 55.0, 42.0); }
+    case 1: { return vec4f(20.0, 150.0, 65.0, 30.0); }
+    case 2: { return vec4f(150.0, 115.0, 45.0, 50.0); }
+    case 3: { return vec4f(-50.0, 120.0, 55.0, 45.0); }
+    default: { return vec4f(65.0, 150.0, 40.0, 30.0); }
+  }
+}
+// the nearest board as (distance, u, v in metres from its centre, index)
+fn hiveBoard(q: vec3f) -> vec4f {
+  var best = vec4f(1e5, 0.0, 0.0, 0.0);
+  for (var i = 0; i < 5; i++) {
+    let c = hiveBoardC(i);
+    // 0-2 on the north face (z = -171), 3-4 on the west face (x = -271)
+    var l = vec3f(q.x - c.x, q.y - c.y, q.z + 171.5);
+    if (i >= 3) { l = vec3f(q.z - c.x, q.y - c.y, q.x + 271.5); }
+    let d = sdBox(l, vec3f(c.z, c.w, 1.0));
+    // u runs left to right for someone facing the board (the north face is seen looking south)
+    if (d < best.x) { best = vec4f(d, select(1.0, -1.0, i < 3) * l.x, l.y, f32(i)); }
+  }
+  return best;
+}
+fn hiveSDF(q: vec3f) -> vec2f {
+  var d = sdBox(q - vec3f(0.0, 30.0, 0.0), vec3f(300.0, 30.0, 196.0));
+  d = min(d, sdBox(q - vec3f(0.0, 125.0, 0.0), vec3f(270.0, 65.0, 170.0)));
+  d = min(d, sdBox(q - vec3f(-20.0, 200.0, -5.0), vec3f(200.0, 12.0, 130.0)));
+  let tq = vec3f(abs(q.x) - 255.0, q.y, abs(q.z) - 150.0);
+  var tw = sdBox(tq - vec3f(0.0, 120.0, 0.0), vec3f(38.0, 120.0, 38.0));
+  tw = max(tw, -max(232.0 - q.y, 4.0 - abs(fract((q.x + q.z) / 16.0) - 0.5) * 16.0));
+  d = min(d, tw);
+  d = min(d, sdBox(q - vec3f(-40.0, 190.0, 10.0), vec3f(60.0, 50.0, 50.0)));
+  for (var i = 0; i < 8; i++) {
+    let h1 = hsh(i, 1, 500);
+    let h2 = hsh(i, 2, 500);
+    let h3 = hsh(i, 3, 500);
+    // annexes on the board faces (north, west) stay below the boards
+    let low = i % 2 == 0;
+    let sz = vec3f(14.0 + 22.0 * h3, select(10.0 + 20.0 * h2, 8.0 + 12.0 * h2, low), 8.0 + 10.0 * h1);
+    let y = select(70.0 + 100.0 * h2, 28.0 + 14.0 * h2, low);
+    var pos = vec3f((h1 - 0.5) * 460.0, y, -170.0 - sz.z);
+    if (i % 4 == 1) { pos = vec3f((h1 - 0.5) * 460.0, y, 170.0 + sz.z); }
+    if (i % 4 == 2) { pos = vec3f(-270.0 - sz.z, y, (h1 - 0.5) * 280.0); }
+    if (i % 4 == 3) { pos = vec3f(270.0 + sz.z, y, (h1 - 0.5) * 280.0); }
+    var bq = q - pos;
+    if (i % 4 >= 2) { bq = vec3f(bq.z, bq.y, bq.x); }
+    d = min(d, sdBox(bq, sz));
+  }
+  for (var i = 0; i < 3; i++) {
+    let sx = -150.0 + f32(i) * 120.0 + 20.0 * hsh(i, 5, 500);
+    d = min(d, sdCyl(q - vec3f(sx, 0.0, 40.0 * (hsh(i, 6, 500) - 0.5)), 7.0, 190.0, 272.0));
+  }
+  let bd = hiveBoard(q).x;
+  if (bd < d) { return vec2f(bd, 56.0); }
+  return vec2f(d, 55.0);
+}
+
+// ---------- advertosplats ----------
+// Projected advertising: camera-facing images hung in the air over the Hive and the neon strip, with scanlines,
+// flicker and a faint beam down to the projector. 0 a spinning toke coin, 1 a grinning headset face, 2 slogans.
+fn holoFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
+  var col = colIn;
+  for (var i = 0; i < 5; i++) {
+    var c = vec4f(728.0, 330.0, 1010.0, 90.0);
+    var kind = 0;
+    var hue = vec3f(1.0, 0.75, 0.2);
+    if (i == 1) { c = vec4f(400.0, 170.0, 1250.0, 60.0); kind = 1; hue = vec3f(0.3, 0.95, 1.0); }
+    if (i == 2) { c = vec4f(-520.0, 62.0, 40.0, 24.0); kind = 2; hue = vec3f(1.0, 0.3, 0.8); }
+    if (i == 3) { c = vec4f(620.0, 58.0, 40.0, 20.0); kind = 0; hue = vec3f(1.0, 0.8, 0.3); }
+    if (i == 4) { c = vec4f(420.0, 95.0, 620.0, 34.0); kind = 2; hue = vec3f(0.5, 0.8, 1.0); }
+    let cen = c.xyz;
+    let nh = vec3f(ro.x - cen.x, 0.0, ro.z - cen.z);
+    let ln = length(nh);
+    if (ln < 1.0) { continue; }
+    let n = nh / ln;
+    let dn = dot(rd, n);
+    if (abs(dn) < 1e-4) { continue; }
+    let t = dot(cen - ro, n) / dn;
+    if (t <= 0.0 || t > tEnd) { continue; }
+    let hp = ro + rd * t;
+    let rt = vec3f(n.z, 0.0, -n.x);
+    let uv = vec2f(dot(hp - cen, rt), hp.y - cen.y) / c.w;
+    // the beam from the projector on the ground
+    let bd = length((ro + rd * max(dot(vec3f(cen.x, 0.0, cen.z) - ro, rd), 0.0)).xz - cen.xz);
+    col += hue * 0.012 * exp(-bd * bd / (c.w * 0.4)) * (0.4 + u.windows);
+    if (abs(uv.x) > 1.2 || abs(uv.y) > 1.2) { continue; }
+    var a = 0.0;
+    if (kind == 0) {
+      let w = cos(u.time * 1.3 + f32(i));
+      let cu = vec2f(uv.x / max(abs(w), 0.06), uv.y);
+      let r = length(cu);
+      a = step(r, 1.0) * (0.35 + 0.65 * step(0.82, r));
+      // the T of TOKE on its face
+      let g = glyphBit(15u, i32(floor((cu.x * sign(w) + 0.5) * 5.0)), i32(floor((0.6 - cu.y) * 5.8)));
+      a = max(a, g);
+    } else if (kind == 1) {
+      let r = length(uv);
+      a = step(abs(r - 0.95), 0.05);
+      a = max(a, step(abs(uv.y - 0.15), 0.16) * step(abs(uv.x), 0.8));
+      let sm = length(uv - vec2f(0.0, 0.1));
+      a = max(a, step(abs(sm - 0.55), 0.05) * step(uv.y, -0.2) * (0.6 + 0.4 * sin(u.time * 2.0)));
+    } else {
+      let slot = i32(floor(u.time / 5.0)) + i;
+      let pk = 4 + ((slot % 3) + 3) % 3;
+      let l = ((slot / 3) % 3 + 3) % 3;
+      let L = posterLine(pk, l);
+      a = lineText(L, vec2f(uv.x * 22.0, (0.5 - uv.y) * 11.0));
+    }
+    let scan = 0.55 + 0.45 * step(0.45, fract(uv.y * 28.0 - u.time * 2.0));
+    let flick = 0.8 + 0.2 * sin(u.time * 31.0 + f32(i) * 7.0);
+    col += hue * a * scan * flick * 0.9 * exp(-t * u.fogDen * 0.4) * (0.5 + u.windows);
+  }
+  return col;
+}
+
 fn hallSDF(lp: vec3f) -> vec2f {
   let r = length(lp.xz);
   let ang = atan2(lp.z, lp.x);
@@ -2394,7 +2518,15 @@ fn adScreenUV(lp: vec3f, gh: f32, s1: f32, s2: f32) -> vec4f {
   return best;
 }
 fn adScreen(lp: vec3f, gh: f32, s1: f32, s2: f32) -> vec2f { return vec2f(adScreenUV(lp, gh, s1, s2).x, 0.0); }
+// world point to Hive-local metres (the Hive spans several blocks, so go through the wrapped block)
+fn hiveQ(p: vec3f) -> vec3f {
+  let b = vec2i(floor(p.xz / BIG));
+  let bw = vec2i(wrapN(b.x, 96), wrapN(b.y, 96));
+  let hq = p.xz - (vec2f(b) + 0.5) * BIG + (vec2f(bw) + 0.5) * BIG - vec2f(728.0, 1248.0);
+  return vec3f(hq.x, p.y, hq.y);
+}
 fn giantSDF(p: vec3f, b: vec2i) -> vec2f {
+  if (isHive(b)) { return hiveSDF(hiveQ(p)); }
   let gl = p.xz - (vec2f(b) + 0.5) * BIG;
   let lp = vec3f(gl.x, p.y, gl.y);
   if (isHall(b)) { return hallSDF(lp); }
@@ -2535,6 +2667,7 @@ fn traceGiants(ro: vec3f, rd: vec3f, tStart: f32, tEnd: f32, maxSteps: i32, sh: 
     ((f32(c.y) + select(0.0, 1.0, stp.y > 0)) * BIG - ro.z) * inv.y);
   let tDelta = abs(inv) * BIG;
   let A = dot(rd.xz, rd.xz);
+  var tIn = tStart;
   for (var i = 0; i < 12; i++) {
     if (giantHasW(c)) {
       let top = giantTop(c) + 6.0;
@@ -2553,6 +2686,7 @@ fn traceGiants(ro: vec3f, rd: vec3f, tStart: f32, tEnd: f32, maxSteps: i32, sh: 
           b = (-B + sq) / A;
         }
       }
+      if (isHive(c)) { a = tIn; b = min(tMax.x, tMax.y); }
       a = max(a, tStart);
       b = min(b, tEnd);
       if (rd.y < -1e-5) { a = max(a, (top - ro.y) / rd.y); }
@@ -2576,6 +2710,7 @@ fn traceGiants(ro: vec3f, rd: vec3f, tStart: f32, tEnd: f32, maxSteps: i32, sh: 
       }
     }
     let tp = min(tMax.x, tMax.y);
+    tIn = tp;
     if (tp >= tEnd) { break; }
     if (rd.y > 0.0 && ro.y + rd.y * tp > 350.0) { break; }
     if (tMax.x < tMax.y) { tMax.x += tDelta.x; c.x += stp.x; } else { tMax.y += tDelta.y; c.y += stp.y; }
@@ -3215,7 +3350,11 @@ fn posterLine(pk: i32, l: i32) -> vec4i {
     case 0: { switch l { case 0: { return vec4i(20, 21, 22, -1); } case 1: { return vec4i(23, 24, 25, -1); } case 2: { return vec4i(26, 27, 28, -1); } default: { return vec4i(34, 35, 36, -1); } } }
     case 1: { switch l { case 0: { return vec4i(29, -1, -1, -1); } case 1: { return vec4i(26, 30, -1, -1); } case 2: { return vec4i(31, 32, -1, -1); } default: { return vec4i(33, -1, -1, -1); } } }
     case 2: { switch l { case 0: { return vec4i(24, 37, -1, -1); } case 1: { return vec4i(39, -1, -1, -1); } case 2: { return vec4i(43, -1, -1, -1); } default: { return vec4i(38, -1, -1, -1); } } }
-    default: { switch l { case 0: { return vec4i(40, -1, -1, -1); } case 1: { return vec4i(41, -1, -1, -1); } default: { return vec4i(42, -1, -1, -1); } } }
+    case 3: { switch l { case 0: { return vec4i(40, -1, -1, -1); } case 1: { return vec4i(41, -1, -1, -1); } default: { return vec4i(42, -1, -1, -1); } } }
+    // the Hive's own boards and the tokes trade (words 44 on, see tables.js)
+    case 4: { switch l { case 0: { return vec4i(52, 53, -1, -1); } case 1: { return vec4i(61, 67, -1, -1); } default: { return vec4i(59, 51, -1, -1); } } }
+    case 5: { switch l { case 0: { return vec4i(47, 44, -1, -1); } case 1: { return vec4i(65, 56, -1, -1); } default: { return vec4i(64, 46, -1, -1); } } }
+    default: { switch l { case 0: { return vec4i(62, 55, -1, -1); } case 1: { return vec4i(60, 54, -1, -1); } default: { return vec4i(63, 58, -1, -1); } } }
   }
 }
 fn neonText(word: u32, q: vec2f, vertical: bool) -> f32 {
@@ -3305,8 +3444,8 @@ fn facadeFx(s: ptr<function, Surf>, p: vec3f, n: vec3f, ci: vec2i, lq: vec2f, de
     (*s).refl = mix((*s).refl, 0.12 + 0.5 * fres, win);
     (*s).trans = 0.0;
     if (p.y > 3.3 && p.y < 4.15) {
-      var sw = array<u32, 12>(0u, 2u, 3u, 4u, 5u, 6u, 9u, 10u, 11u, 12u, 13u, 15u);
-      let word = sw[min(u32(sh * 12.0), 11u)];
+      var sw = array<u32, 16>(0u, 2u, 3u, 4u, 5u, 6u, 9u, 10u, 11u, 12u, 13u, 15u, 44u, 48u, 49u, 47u);
+      let word = sw[min(u32(sh * 16.0), 15u)];
       let txt = neonText(word, vec2f((sl - 0.5) / 0.1, (4.1 - p.y) / 0.1), false);
       (*s).alb = vec3f(0.03);
       (*s).emi = neonColor(fract(sh * 7.3)) * mix(0.3, txt, detail) * 2.2 * fritz(cf.seed + i32(sidx)) * (0.25 + u.windows);
@@ -3366,8 +3505,8 @@ fn facadeFx(s: ptr<function, Surf>, p: vec3f, n: vec3f, ci: vec2i, lq: vec2f, de
       var bq = vec2f((lu + bw) / (2.0 * bw), (p.y - yb) / 12.0);
       if (hsh(cf.seed, i32(floor(u.time * 7.0)), 93) < 0.05) { bq.x = fract(bq.x + 0.08 * step(0.5, fract(bq.y * 9.0))); }
       let bg = 0.5 + 0.5 * cos(6.2831 * (vec3f(0.0, 0.33, 0.67) + fract(u.time * 0.04 + f32(cf.seed & 255) * 0.01) + bq.y * 0.35 + bq.x * 0.15));
-      var aw = array<u32, 6>(14u, 13u, 1u, 11u, 6u, 5u);
-      let word = aw[min(u32(hsh(cf.seed, 7, 46) * 6.0), 5u)];
+      var aw = array<u32, 9>(14u, 13u, 1u, 11u, 6u, 5u, 44u, 56u, 46u);
+      let word = aw[min(u32(hsh(cf.seed, 7, 46) * 9.0), 8u)];
       let pxW = (2.0 * bw) / (f32(tb.word[word].z) * 6.0 + 2.0);
       let txt = neonText(word, vec2f(bq.x * 2.0 * bw / pxW - 1.0, (yb + 7.5 - p.y) / pxW), false);
       let scan = 0.8 + 0.2 * sin(p.y * 14.0 - u.time * 3.0);
@@ -3977,8 +4116,8 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       if (select(fN > 0.0, fN < 0.0, g.axisX)) { uu = wdt - uu; }
       let vv = g.half.y - lc.y;
       let pxs = wdt / 7.0;
-      var bw = array<u32, 8>(16u, 17u, 0u, 1u, 6u, 11u, 2u, 5u);
-      let word = bw[min(u32(hsh(cf.seed, 6, 45) * 8.0), 7u)];
+      var bw = array<u32, 10>(16u, 17u, 0u, 1u, 6u, 11u, 2u, 5u, 44u, 50u);
+      let word = bw[min(u32(hsh(cf.seed, 6, 45) * 10.0), 9u)];
       let txt = mix(0.35, neonText(word, vec2f(uu / pxs - 1.0, vv / pxs - 0.6), true), detail);
       let border = 1.0 - smoothstep(0.0, pxs * 0.35, min(min(uu, wdt - uu), min(vv, 2.0 * g.half.y - vv)));
       let colr = neonColor(hsh(cf.seed, 5, 44));
@@ -4285,6 +4424,57 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       s.emi = vec3f(1.0, 0.25, 0.08) * (0.3 + 1.8 * u.windows) * fk * (1.0 - cap);
       s.trans = 0.5;
     }
+    case 55: {
+      // the Hive's shell: patched panels in odd tints, rust streaks, and a grid of round pod windows, each one lit
+      // by whatever its sleeper's headset is showing
+      let q = hiveQ(p);
+      let fu = select(q.x, q.z, abs(n.x) > abs(n.z));
+      let pc = floor(vec2f(fu / 9.0, q.y / 6.5));
+      let ph = hsh(i32(pc.x), i32(pc.y), 560);
+      var tint = mix(vec3f(0.2, 0.19, 0.17), vec3f(0.3, 0.24, 0.18), ph);
+      if (ph > 0.82) { tint = vec3f(0.34, 0.16, 0.1); }
+      if (ph < 0.1) { tint = vec3f(0.16, 0.2, 0.2); }
+      let seam = sstepJ(0.12, 0.0, min(abs(fract(fu / 9.0) - 0.5), abs(fract(q.y / 6.5) - 0.5)) - 0.46);
+      let rust = vnoise(vec2f(fu * 0.08, q.y * 0.02), 561) * sstepJ(0.0, 1.0, vnoise(vec2f(fu * 0.3, 1.0), 562));
+      s.alb = mix(tint * (0.8 + 0.3 * vnoise(vec2f(fu, q.y) * 0.4, 563)), vec3f(0.08, 0.05, 0.03), seam * 0.8 + rust * 0.5 * detail);
+      s.spec = 0.15;
+      s.rough = 0.8;
+      if (abs(n.y) < 0.5) {
+        let wc = vec2f(fu / 4.0, q.y / 4.2);
+        let wi = floor(wc);
+        let r = length(fract(wc) - 0.5);
+        let occ = step(0.62, hsh(i32(wi.x), i32(wi.y), 564));
+        let hue = hsh(i32(wi.x), i32(wi.y) + i32(floor(u.time * 0.7 + hsh(i32(wi.y), i32(wi.x), 565) * 5.0)), 566);
+        let glow = mix(vec3f(0.3, 0.5, 1.0), select(vec3f(1.0, 0.25, 0.7), vec3f(0.3, 1.0, 0.6), hue > 0.7), step(0.55, hue));
+        let win = sstepJ(0.3, 0.24, r) * step(8.0, q.y);
+        s.alb = mix(s.alb, vec3f(0.03), win * (1.0 - occ) * 0.6);
+        s.emi = glow * win * occ * (0.15 + 0.7 * u.windows) * (0.8 + 0.2 * sin(u.time * 9.0 + hue * 40.0)) * mix(1.0, 0.4, 1.0 - detail);
+      }
+    }
+    case 56: {
+      // the Hive's boards: the tokes trade in flashing colours, three lines of it, cycling
+      let hb = hiveBoard(hiveQ(p));
+      let bc = hiveBoardC(i32(hb.w));
+      let uv = hb.yz / bc.zw;
+      // glyph size: three lines of up to eleven characters, as large as the board allows
+      let gu = min(bc.z * 2.0 / 74.0, bc.w * 2.0 / 42.0);
+      let slot = i32(floor(u.time / 7.0)) + i32(hb.w);
+      let pk = 4 + ((slot % 3) + 3) % 3;
+      let fl2 = step(0.5, fract(u.time * 1.3 + hb.w * 0.37));
+      var txt = 0.0;
+      for (var l = 0; l < 3; l++) {
+        let qy = 17.0 - f32(l) * 13.0 - hb.z / gu;
+        if (qy >= 0.0 && qy < 8.0) { txt = max(txt, lineText(posterLine(pk, l), vec2f(hb.y / gu, qy))); }
+      }
+      let bg = mix(vec3f(0.45, 0.0, 0.3), vec3f(0.9, 0.55, 0.0), fl2 * step(0.0, sin(uv.x * 3.0 + u.time * 2.0)));
+      let edge = step(0.94, max(abs(uv.x), abs(uv.y)));
+      let chase = step(0.5, fract((uv.x + uv.y) * 12.0 - u.time * 4.0)) * edge;
+      s.alb = vec3f(0.02);
+      s.spec = 0.5;
+      s.refl = 0.05;
+      s.emi = (bg * 0.6 * (1.0 - edge) + mix(vec3f(1.0, 0.95, 0.3), vec3f(0.2, 1.0, 1.0), fl2) * txt * 1.6 + vec3f(1.0, 0.9, 0.5) * chase)
+        * (1.2 + 1.3 * u.windows) * mix(0.6, 1.0, detail);
+    }
     case 62: {
       // the megatower's screen: one of four kinds of ad, changing every dozen seconds or so
       let bb = vec2i(floor(p.xz / BIG));
@@ -4301,8 +4491,8 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       var e = vec3f(0.0);
       if (kind >= 4) {
         // a poster: centred lines of words in glyph units, square glyphs across the 28 x 40 m screen
-        let pk = i32(hsh(bw.y * 5 + i32(slot), bw.x, 198) * 4.0);
-        let nl = select(4, 3, pk == 3);
+        let pk = i32(hsh(bw.y * 5 + i32(slot), bw.x, 198) * 7.0);
+        let nl = select(4, 3, pk >= 3);
         let gx = uv.x * 50.0;
         let gy = uv.y * 50.0 * (20.0 / 14.0);
         let top = f32(nl) * 6.5;
@@ -4315,6 +4505,10 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         if (pk <= 1) {
           let band = sstepJ(-0.68, -0.72, uv.y);
           e = mix(mix(vec3f(0.03, 0.07, 0.24), vec3f(0.08, 0.16, 0.42), 0.5 + 0.5 * uv.y), vec3f(0.55, 0.05, 0.06), band) + vec3f(1.0, 0.97, 0.9) * txt;
+        } else if (pk >= 4) {
+          // the tokes trade: loud, flashing, never subtle
+          let fl2 = step(0.5, fract(u.time * 1.7));
+          e = mix(vec3f(0.5, 0.0, 0.35), vec3f(0.95, 0.75, 0.0), fl2 * step(0.0, uv.y)) + mix(vec3f(1.0, 0.95, 0.2), vec3f(1.0, 0.2, 0.8), fl2) * txt * 1.3;
         } else if (pk == 2) {
           let ring = sstepJ(0.06, 0.0, abs(length(uv - vec2f(0.0, 0.72)) - 0.16));
           e = vec3f(0.02) + vec3f(1.0, 0.62, 0.2) * (txt + ring * 0.8);
@@ -4668,7 +4862,8 @@ fn boxVertex(vi: u32, lo: vec3f, hi: vec3f) -> PxOut {
   if (!giantHasW(b)) { return o; }
   let cen = (vec2f(b) + 0.5) * BIG;
   let top = giantTop(b) + 8.0;
-  return boxVertex(vi, vec3f(cen.x - 82.0, -0.5, cen.y - 82.0), vec3f(cen.x + 82.0, top, cen.y + 82.0));
+  let hw = select(82.0, 104.5, isHive(b));
+  return boxVertex(vi, vec3f(cen.x - hw, -0.5, cen.y - hw), vec3f(cen.x + hw, top, cen.y + hw));
 }
 
 @fragment fn fsProxy(i: PxOut) -> @location(0) vec4f {
@@ -4759,6 +4954,7 @@ fn rnd3(fc: vec2f, k: i32) -> vec3f {
   col = launchFx(ro, rd, tEv, col);
   col = smokeFx(ro, rd, tOut, col);
   col = tubesFx(ro, rd, tOut, col);
+  col = holoFx(ro, rd, tEv, col);
   col = flockFx(ro, rd, tOut, col);
   col = propsFx(ro, rd, tOut, col);
   // a power cut: everything in the area goes dark (with a flicker as it fails and comes back)

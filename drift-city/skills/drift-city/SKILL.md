@@ -134,9 +134,25 @@ now laid out by hand. Everything below is in `world.js` unless named; the shape 
   (115-205), Chinatown south-west (205-290), crystal gardens north-west (290-360); industry then the spaceport along the
   arm. Borders wobble by up to 25 degrees of noise.
 - **Placed landmarks**: `PYRAMID_CELL` (the one Lumen pyramid), `PAGODA_CELL` (the one pagoda), `GIANT_BLOCKS` (the
-  ringed spire at big block (0, -1) and a plain megatower over the dorms at (3, 3)), the Hall (big block (3, -4)),
+  ringed spire at big block (0, -1)), the Hive (below), the Hall (big block (3, -4)),
   and in the wild `STONES_AT` and `TREEHOUSE_AT`, north-north-east where the story's fliers go. Lattice towers only
   in the core and old town, Ferris wheels and markets only on the strip (and markets in Chinatown), rarely.
+- **The Hive**: the cattle-class pod block, the city's main orientation mark. A patched castle 620 x 420 m and 240 m
+  tall centred on `HIVE_C` (728, 1248), on the dorms' outer edge, filling big blocks x 2-4, z 5-6 (`hiveHas`). Its
+  north and west faces, the ones the nicer city sees, carry five flashing tokes boards (`hiveBoardC`, `hiveBoard`,
+  material 56); the shell is material 55 (patched panels, round pod windows lit by headset flicker). Rules for
+  changing it: keep the boards clear of the corner towers (x ±255, z ±150, half 38) and keep annexes on those two faces
+  below 62 m, or they cover the text. In `scene.wgsl` it is a giant (`giantHasW`, `giantTop` 272, `giantSDF` via
+  `hiveQ`); the traversal bounds it by the block square, not the 80 m circle. `farInfo` case 6 uses `hiveTopAt` for
+  the far silhouette; the WebGL fallback draws its blocks as plain 240 m slabs. Place "hive" views it from a Lumen roof.
+- **Holograms** (`holoFx`, after `tubesFx`): five camera-facing projections with a ground beam: a spinning toke coin
+  over the Hive, a headset face, slogan panels over the strip and the dorms. Stubbed in the lite variant.
+- **Lettering**: glyphs and words live in `tables.js`, the one copy (`tools/assemble.py` puts it first in the page;
+  there was a stale copy in `main.js` once, and the GPU buffer came out too small for the grown `struct TB`). Glyph
+  ids: A0 B1 C2 D3 E4 F5 H6 I7 L8 M9 N10 O11 P12 R13 S14 T15 U16 V17 W18 X19, digits 20-29, G37 Y38 K42. A word is
+  `(glyphs 0-3 as bytes, glyphs 4-7, length, 0)`; a wrong glyph id draws a blank, not an error, so decode the table in
+  Node after adding words. Growing it means growing `struct TB` in `scene.wgsl` to match. `posterLine` kinds 0-3 are
+  the old posters, 4-6 the tokes trade.
 - **Places**: `buildPlaces` in `tales.js` adds the placed ones directly; its ring scans sample cells and can miss a
   single one. `node tools/bakeplaces.mjs` fails if a place the story uses is missing: run it after any change here.
 - **Map for thinking**: an ASCII map of zones, liquid, forest and highland from `world.js` in Node (load it with
