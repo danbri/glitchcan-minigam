@@ -186,7 +186,15 @@ fn pvn(p: vec2f, s: f32, k: i32) -> f32 {
 }
 fn cityDist(p: vec2f) -> f32 { return length(wrapP(p)); }
 fn repP(p: vec2f) -> vec2f { return u.reg2.xy + wrapP(p - u.reg2.xy); }
-fn cityR(p: vec2f) -> f32 { if (u.reg.w < 0.5 || length(repP(p) + u.reg.xy) > 14000.0) { return -1e9; } return 6000.0 + 2000.0 * (pvn(p, 4992.0, 201) - 0.5) + 1000.0 * (pvn(p, 1248.0, 202) - 0.5); }
+// the city's shape: a core and the harbour arm to the shore (as citySdf in world.js); cityDist - cityR = citySdf
+fn citySdf(p: vec2f) -> f32 {
+  let q = wrapP(p);
+  let a = vec2f(3300.0, -3300.0);
+  let core = 1700.0 + 380.0 * (pvn(p, 1248.0, 201) - 0.5) + 200.0 * (pvn(p, 624.0, 202) - 0.5);
+  let t = clamp(dot(q, a) / dot(a, a), 0.0, 1.0);
+  return min(length(q) - core, length(q - a * t) - 380.0);
+}
+fn cityR(p: vec2f) -> f32 { if (u.reg.w < 0.5 || length(repP(p) + u.reg.xy) > 14000.0) { return -1e9; } return cityDist(p) - citySdf(p); }
 fn oasisAt(p: vec2f) -> vec2f {
   let g = vec2i(floor(p / 1248.0));
   let h = vec2i(((g.x % 16) + 16) % 16, ((g.y % 16) + 16) % 16);
@@ -323,8 +331,8 @@ fn isHall(b: vec2i) -> bool {
 fn giantHasW(b: vec2i) -> bool {
   if (isHall(b)) { return true; }
   let bw = vec2i(wrapN(b.x, 96), wrapN(b.y, 96));
-  let cen = (vec2f(bw) + 0.5) * BIG;
-  return hsh(bw.x, bw.y, 20) < 0.12 && cityDist(cen) < cityR(cen) - 400.0;
+  // placed, not scattered (GIANT_BLOCKS in world.js): the ringed spire in the core, a plain one over the dorms
+  return u.reg.w > 0.5 && ((bw.x == 0 && bw.y == -1) || (bw.x == 3 && bw.y == 3));
 }
 fn giantTop(b: vec2i) -> f32 { if (isHall(b)) { return 96.0; } return 150.0 + 110.0 * hsh(wrapN(b.x, 96), wrapN(b.y, 96), 21); }
 
@@ -2408,8 +2416,8 @@ fn giantSDF(p: vec3f, b: vec2i) -> vec2f {
   q = vec3f(rxy.x, rxy.y, q.z);
   let ringW = 0.7 + 0.0025 * length(u.camPos.xz - (vec2f(b) + 0.5) * BIG);
   let ring = length(vec2f(length(q.xz) - 42.0, q.y)) - ringW;
-  // only some megatowers wear a ring
-  if (!gNoDyn && ring < d && hsh(bw.x, bw.y, 24) < 0.35) { m = 9.0; d = ring; }
+  // only the spire in the core wears a ring: one landmark seen across the city
+  if (!gNoDyn && ring < d && bw.x == 0 && bw.y == -1) { m = 9.0; d = ring; }
   return vec2f(d, m);
 }
 
@@ -3718,7 +3726,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         }
       }
       let bg = vec2i(floor(p.xz / BIG));
-      if (hsh(bg.x, bg.y, 20) < 0.12) {
+      if (giantHasW(bg) && !isHall(bg)) {
         let gd = length(p.xz - (vec2f(bg) + 0.5) * BIG);
         let vein = 1.0 - smoothstep(0.0, 0.025, abs(vnoise(p.xz * 0.1, 13) - 0.5));
         s.emi += glowColor(p) * vein * (1.0 - smoothstep(30.0, 85.0, gd)) * (0.25 + 0.8 * u.windows) * detail;

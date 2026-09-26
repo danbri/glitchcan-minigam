@@ -50,9 +50,20 @@ const GEO = (() => {
 const TITAN_RM = 2575000;
 function repX(x) { return REG.cx + wrapP(x - REG.cx); }
 function repZ(z) { return REG.cz + wrapP(z - REG.cz); }
+// The city's shape: a core about 3.4 km across round the origin, and the harbour arm, a strip 760 m wide running
+// north-east from the core to the shore of Kraken Mare. citySdf is negative inside (a union of a disc and a capsule);
+// cityR is written so that cityDist - cityR = citySdf, which every "am I in the city, how far past its edge" test
+// already uses. Mirrored in scene.wgsl and fallback.js.
+const CITY_CORE = 1700, CITY_ARM = [3300, -3300], CITY_ARM_W = 380;
+function citySdf(x, z) {
+  const px = wrapP(x), pz = wrapP(z);
+  const core = CITY_CORE + 380 * (pvn(x, z, 1248, 201) - 0.5) + 200 * (pvn(x, z, 624, 202) - 0.5);
+  const ax = CITY_ARM[0], az = CITY_ARM[1], t = Math.max(0, Math.min(1, (px * ax + pz * az) / (ax * ax + az * az)));
+  return Math.min(Math.hypot(px, pz) - core, Math.hypot(px - ax * t, pz - az * t) - CITY_ARM_W);
+}
 function cityR(x, z) {
   if (!REG.city || Math.hypot(repX(x) + REG.ox, repZ(z) + REG.oz) > 14000) return -1e9;
-  return 6000 + 2000 * (pvn(x, z, 4992, 201) - 0.5) + 1000 * (pvn(x, z, 1248, 202) - 0.5); }
+  return cityDist(x, z) - citySdf(x, z); }
 // 3D value noise on the sphere, for the irregular edges of the large features
 function gn3(x, y, z, k) {
   const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z), fx = x - ix, fy = y - iy, fz = z - iz;
@@ -192,33 +203,23 @@ function wildTreeDens(H, W, dry, elev, x, z) {
   if (w.des > 0.3) { const oa = oasisAt(x, z); if (oa[0] < 120) d = Math.max(d, 0.9 * sstep(120, 70, oa[0])); }
   return d;
 }
-// Districts: Voronoi cells on a 24-block lattice. 0 financial core, 1 neon entertainment, 2 old town,
-// 3 Chinatown, 4 industrial, 5 spaceport, 6 dorms (residential megablocks), 7 crystal gardens.
-function zoneType(hx, hz, x, z) {
-  const r = cityDist(x, z) / cityR(x, z), h = hsh(hx, hz, 302);
-  if (r < 0.22) return h < 0.75 ? 0 : 1;
-  if (r < 0.62) return [1, 1, 2, 2, 3, 3, 3, 6, 6, 7, 0, 1][Math.floor(h * 12)];
-  return [4, 4, 4, 5, 5, 6, 6, 7, 1, 2, 3][Math.floor(h * 11)];
-}
-const zoneSeeds = new Map();
-function zoneSeed(hx, hz) {
-  const key = hx * 64 + hz;
-  let v = zoneSeeds.get(key);
-  if (v === undefined) { v = [0.2 + 0.6 * hsh(hx, hz, 300), 0.2 + 0.6 * hsh(hx, hz, 301), -1]; zoneSeeds.set(key, v); }
-  return v;
-}
+// Districts, laid out by hand so the city has a geography you can learn. From the centre: the financial core, with
+// the neon strip along the main east-west avenue through it; then by compass bearing, the old town round the
+// Assembly Hall (north-east), the dorms (south-east), Chinatown (south-west) and the crystal gardens (north-west);
+// the industrial works and then the spaceport along the harbour arm to the shore. Borders wobble a little.
+// Ids: 0 financial core, 1 neon strip, 2 old town, 3 Chinatown, 4 industrial, 5 spaceport, 6 dorms, 7 crystal gardens.
 function zoneAt(cx, cz) {
-  const gx = Math.floor(cx / 48), gz = Math.floor(cz / 48);
-  let best = 1e18, bi = 0, bj = 0, bs = null;
-  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
-    const ax = gx + i, az = gz + j, sd = zoneSeed(wrapN(ax, 16), wrapN(az, 16));
-    const px = (ax + sd[0]) * 48, pz = (az + sd[1]) * 48;
-    const d = (px - cx) * (px - cx) + (pz - cz) * (pz - cz);
-    if (d < best) { best = d; bi = ax; bj = az; bs = sd; }
-  }
-  if (bs[2] < 0) bs[2] = zoneType(wrapN(bi, 16), wrapN(bj, 16), (bi + bs[0]) * 48 * C, (bj + bs[1]) * 48 * C);
-  return bs[2];
+  const x = (cx + 0.5) * C, z = (cz + 0.5) * C, px = wrapP(x), pz = wrapP(z), r = Math.hypot(px, pz);
+  const ax = CITY_ARM[0], az = CITY_ARM[1], t = Math.max(0, Math.min(1, (px * ax + pz * az) / (ax * ax + az * az)));
+  if (Math.hypot(px - ax * t, pz - az * t) < CITY_ARM_W + 80 && r > CITY_CORE * 0.9) return t < 0.72 ? 4 : 5;
+  if (Math.abs(pz - 40) < 95 && Math.abs(px) < 1250) return 1;
+  if (r < 480 + 120 * (pvn(x, z, 624, 211) - 0.5)) return 0;
+  const b = ((Math.atan2(px, -pz) * 180 / Math.PI) + 360 + 50 * (pvn(x, z, 624, 210) - 0.5)) % 360;
+  return b < 115 ? 2 : b < 205 ? 6 : b < 290 ? 3 : 7;
 }
+// Landmarks are placed, not scattered: one Lumen pyramid and one ringed spire in the financial core, one plain
+// megatower over the dorms (big-block coordinates, 8 x 8 cells). Mirrored in scene.wgsl (giantHasW, the ring).
+const PYRAMID_CELL = [-6, -3], PAGODA_CELL = [-35, 16], SPIRE_BLOCK = [0, -1], GIANT_BLOCKS = [[0, -1], [3, 3]];
 // Hillside letters spelling DRIFT CITY on the first hill north of the city, facing it.
 const SIGN = (() => {
   for (const dir of [-1, 1]) for (const x0 of [0, -20, 20, -40, 40, -60, 60]) {
@@ -242,7 +243,12 @@ const SIGN = (() => {
   return null;
 })();
 const EGG_TOP = { 1: 30, 2: 9, 3: 6, 4: 5, 5: 14, 6: 22, 7: 17, 8: 4, 9: 2.5, 10: 3.5, 11: 7, 12: 15, 15: 21, 17: 8, 18: 7, 19: 14, 20: 4 };
+// The story's stone circle, on a rise north-north-east of the city, and the treehouse in the forest below it:
+// placed, so the fliers' bearing in the story points at them. Nowhere else has either.
+const STONES_AT = [1162, -3194], TREEHOUSE_AT = [1436, -3946];
 function wildEgg(cx, cz, t, relief, x, z) {
+  if (cx === wrapS(Math.floor(STONES_AT[0] / C)) && cz === wrapS(Math.floor(STONES_AT[1] / C))) return 3;
+  if (cx === wrapS(Math.floor(TREEHOUSE_AT[0] / C)) && cz === wrapS(Math.floor(TREEHOUSE_AT[1] / C))) return 7;
   if (hsh(cx, cz, 400) > 0.0025 || relief > 6) return 0;
   const k = hsh(cx, cz, 401), H = t[0], W = t[1], w = biomeW(t[2], t[3]);
   if (W > H + 0.3) {
@@ -257,7 +263,7 @@ function wildEgg(cx, cz, t, relief, x, z) {
   if (w.des * w.mid > 0.5) { const oa = oasisAt(x, z); if (oa[0] < 130) return 9; return k < 0.35 ? 8 : k < 0.6 ? 19 : k < 0.75 ? 15 : 0; }
   if (w.bad * w.mid > 0.5) return k < 0.45 ? 5 : k < 0.75 ? 15 : 0;
   if (w.swp * w.mid > 0.5) return k < 0.4 ? 17 : 0;
-  return k < 0.3 ? 3 : k < 0.55 ? 6 : k < 0.75 ? 7 : k < 0.9 ? 17 : 0;
+  return k < 0.55 ? 6 : k < 0.9 ? 17 : 0;
 }
 function wildCell(o, cx, cz, ccx, ccz, lite) {
   o.wild = true; o.typ = 5; o.h = 0; o.offx = 0; o.offz = 0; o.top = 0; o.treeTop = 0;
@@ -284,7 +290,7 @@ function hallAt(bx, bz) { return REG.city && wrapN(bx, 96) === 3 && wrapN(bz, 96
 function giantHas(bx, bz) {
   if (hallAt(bx, bz)) return true;
   const wx = wrapN(bx, 96), wz = wrapN(bz, 96);
-  return hsh(wx, wz, 20) < 0.12 && cityDist((wx + 0.5) * BIG, (wz + 0.5) * BIG) < cityR((wx + 0.5) * BIG, (wz + 0.5) * BIG) - 400;
+  return REG.city && GIANT_BLOCKS.some((g) => g[0] === wx && g[1] === wz);
 }
 function giantH(bx, bz) { return hallAt(bx, bz) ? 96 : 150 + 110 * hsh(wrapN(bx, 96), wrapN(bz, 96), 21); }
 
@@ -331,7 +337,7 @@ function computeBase(cx0, cz0, lite) {
     else { o.h = 34; o.top = 42; }
     return fin(0);
   }
-  if (zone === 0 && r0 > 0.92) { o.typ = 13; o.offx = 0; o.offz = 0; o.h = 45 + 55 * r1; o.top = o.h + 3; return fin(0); }
+  if (cx === wrapS(PYRAMID_CELL[0]) && cz === wrapS(PYRAMID_CELL[1])) { o.typ = 13; o.offx = 0; o.offz = 0; o.h = 80; o.top = o.h + 3; return fin(0); }
   const cb = vnoise(ccx / 420, ccz / 420, 9), hb = vnoise(ccx / 310, ccz / 310, 10);
   let pc = 0.02 + 0.14 * cb * cb, po = 0.06 + 0.22 * cb, ph = 0.12 + 0.45 * hb, hs = 1;
   if (zone === 0) { pc *= 0.5; po *= 0.7; ph *= 0.3; hs = 1.35; }
@@ -370,11 +376,14 @@ function computeBase(cx0, cz0, lite) {
     if (o.typ === 1) o.top = Math.max(o.top, o.h * h0(1) - 2 + 5 + 0.12 * o.h + 0.5);
     else o.top = Math.max(o.top, o.h * 1.1 + 6.5);
   }
+  // the pagoda: one, in the middle of Chinatown
+  if (cx === wrapS(PAGODA_CELL[0]) && cz === wrapS(PAGODA_CELL[1])) { o.typ = 11; o.roof = 0; o.h = 0; o.offx = 0; o.offz = 0; o.top = 47; return fin(1); }
   // one landmark per 32 x 32 block region: a pagoda (always in Chinatown) or a lattice tower
   const rgx = Math.floor(cx / 32), rgz = Math.floor(cz / 32);
   if (cx === rgx * 32 + 4 + Math.floor(hsh(rgx, rgz, 140) * 24) && cz === rgz * 32 + 4 + Math.floor(hsh(rgx, rgz, 141) * 24)
-      && o.typ <= 2 && hsh(rgx, rgz, 142) < 0.85) {
-    const id = zone === 3 ? 1 : zone === 0 ? 2 : 1 + Math.floor(hsh(rgx, rgz, 143) * 2);
+      && o.typ <= 2 && (zone === 2 || zone === 0) && hsh(rgx, rgz, 144) < 0.4) {
+    // lattice towers only in the old town and the core, and not in every region
+    const id = 2;
     o.typ = 11; o.roof = 0; o.h = 0; o.offx = 0; o.offz = 0; o.top = id === 1 ? 47 : 134;
     return fin(id);
   }
@@ -401,8 +410,9 @@ function computeBase(cx0, cz0, lite) {
   }
   if (o.typ === 0) {
     const r = hsh(cx, cz, 52);
-    if (r < 0.25) { fl |= 8; o.top = 19.3; }
-    else if (r < 0.6) { fl |= 16; o.top = 2.8; }
+    // a Ferris wheel or two on the neon strip; night markets in Chinatown and on the strip
+    if (r < 0.25 && zone === 1 && hsh(cx, cz, 59) < 0.12) { fl |= 8; o.top = 19.3; }
+    else if (r >= 0.25 && r < 0.6 && (zone === 3 || zone === 1) && hsh(cx, cz, 60) < 0.4) { fl |= 16; o.top = 2.8; }
     else if (r < 0.8) { fl |= 32; o.top = 0; }
   }
   // small city easter eggs

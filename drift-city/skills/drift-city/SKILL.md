@@ -119,6 +119,30 @@ description of the surroundings that `audioWorld` in `main.js` builds twice a se
   from 28% to 12% of 8x8 regions, and only about a third wear a ring. `giantHas` exists in `world.js` AND as
   `giantHasW` in `scene.wgsl`, plus the ground glow at `hsh(bg, 20)`: change all three together.
 
+## Geography (authored, September 2026)
+
+The city was about 12 km across with hashed districts that repeated every 20 km, so nothing could be learned. It is
+now laid out by hand. Everything below is in `world.js` unless named; the shape is mirrored in `scene.wgsl`
+(`citySdf`, `giantHasW`, the ring) and `fallback.js` (`citySdf`).
+
+- **Shape**: `citySdf` = a core of radius `CITY_CORE` (1700 m, wobbling by a few hundred metres) round the origin,
+  united with the harbour arm, a capsule 760 m wide from the origin to `CITY_ARM` (3300, -3300) on the shore of Kraken
+  Mare. `cityR` is defined so `cityDist - cityR = citySdf`, which is what every existing "inside the city / how far
+  past its edge" test uses; terrain flattens inside and rises over 1400 m outside. Sea lies about 2 km south as well.
+- **Districts** (`zoneAt`): financial core in the middle (r < ~480 m), the neon strip along the east-west avenue at
+  z of about 40, then by compass bearing: old town and the Assembly Hall north-east (0-115 degrees), dorms south-east
+  (115-205), Chinatown south-west (205-290), crystal gardens north-west (290-360); industry then the spaceport along the
+  arm. Borders wobble by up to 25 degrees of noise.
+- **Placed landmarks**: `PYRAMID_CELL` (the one Lumen pyramid), `PAGODA_CELL` (the one pagoda), `GIANT_BLOCKS` (the
+  ringed spire at big block (0, -1) and a plain megatower over the dorms at (3, 3)), the Hall (big block (3, -4)),
+  and in the wild `STONES_AT` and `TREEHOUSE_AT`, north-north-east where the story's fliers go. Lattice towers only
+  in the core and old town, Ferris wheels and markets only on the strip (and markets in Chinatown), rarely.
+- **Places**: `buildPlaces` in `tales.js` adds the placed ones directly; its ring scans sample cells and can miss a
+  single one. `node tools/bakeplaces.mjs` fails if a place the story uses is missing: run it after any change here.
+- **Map for thinking**: an ASCII map of zones, liquid, forest and highland from `world.js` in Node (load it with
+  `new Function(src + '; return {...}')`, sample `terrainAt`, `cellAt`, `cityDist`, `cityR`) is the quickest way to
+  see a layout change before rendering anything.
+
 ## Art direction (owner-endorsed, September 2026)
 
 From two outside reviews the owner agreed with. Read before adding anything visual.
@@ -154,9 +178,8 @@ rarity, spatial organisation, material consistency, weather interaction and auth
     radio, the pagoda, the tea stall and the fliers pass; a generic banded tower does not.
 15. **Labels**: give a place name you could tell someone ("Amber Walk, Chinatown"), not drone state.
 
-Open work the reviews name, not done yet: the smaller authored city on Kraken Mare's shore (districts told apart by
-form, not palette: market tight and steamy, civic centre axial, Lumen severe, forest edge overgrown, dish district
-sparse and windy); the tube network's structure (supports, junctions, stations); snow settling on ledges and melting
+Open work the reviews name, not done yet: districts told apart by form, not only by building mix (market tight and
+steamy, civic centre axial, Lumen severe, forest edge overgrown, dish district sparse and windy); a map in the menu; the tube network's structure (supports, junctions, stations); snow settling on ledges and melting
 round warm things (heat as a visual language); clouds as weather masses rather than floating props; day-light tonal
 separation; a weak composition assist (candidate subjects ahead, gentle bias of pitch and focus, never a lock-on).
 
