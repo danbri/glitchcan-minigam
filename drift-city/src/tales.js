@@ -29,6 +29,7 @@ function buildPlaces() {
   const hx = 3.5 * BIG, hz = -3.5 * BIG;
   add("hall_floor", "Assembly Hall, the floor", "Under the great glass dome, where the city's assembly meets: tier on tier of seats around the rostrum. Light falls through the ribs in long amber bars.", { x: hx - 8, y: 2.8, z: hz + 3, yaw: Math.PI - 0.3, pitch: 0.28 });
   add("hall_steps", "Assembly Hall, the steps", "The broad stone steps below the arcade, a place to wait, to argue, to be seen.", { x: hx - 84, y: 1.7 + 2.7, z: hz, yaw: 0, pitch: 0.2 });
+  add("civic_axis", "The Assembly Hall avenue, old town", "The long reflecting pools up the avenue, between two walls of stone, to the dome of the Assembly Hall.", { x: 728, y: 3.2, z: -175, yaw: -Math.PI / 2, pitch: 0.1 });
   // scan the city in rings outward from the centre, collecting one of each kind per district
   const seen = new Set();
   const want = (key) => { if (seen.has(key)) return false; seen.add(key); return true; };
@@ -76,7 +77,7 @@ function buildPlaces() {
           { x, y: Math.max(terrSurfAt(x, z), 0) + 26, z, yaw: Math.atan2(bz - z, bx - x), pitch: 0.38 });
       }
       else if ((o.typ === 1 || o.typ === 2) && o.h > 20 && want("street" + zn)) add("street_" + zn, st + ", " + dn, "A street corner in the " + dn + ": tube traffic humming past, windows stacked up into the haze.", facing(cx, cz, side));
-      else if ((o.typ === 1 || o.typ === 2) && o.h > 60 && want("roof" + zn)) add("roof_" + zn, "Rooftop above " + (zn === 3 ? "" : "the ") + dn, "A rooftop high over " + st + ", " + (zn === 3 ? "" : "the ") + dn + " spread out below.", roofView(cx, cz, a + Math.PI));
+      else if ((o.typ === 1 || o.typ === 2) && o.h > (zn === 3 ? 20 : 60) && want("roof" + zn)) add("roof_" + zn, "Rooftop above " + (zn === 3 ? "" : "the ") + dn, "A rooftop high over " + st + ", " + (zn === 3 ? "" : "the ") + dn + " spread out below.", roofView(cx, cz, a + Math.PI));
       else if (o.egg >= 21 && o.egg <= 23 && want("roofegg")) add("roof_oddity", "A rooftop garden", "Someone keeps a garden up here, with a view across the " + dn + ".", roofView(cx, cz, a));
     }
   }

@@ -334,6 +334,16 @@ function computeBase(cx0, cz0, lite) {
   if (hiveHas(bx, bz) || fabHas(bx, bz)) { o.typ = 6; o.treeTop = 0; return fin(0); }
   if (ax >= 1 && ax <= 6 && az >= 1 && az <= 6 && hallAt(bx, bz)) { o.typ = 6; o.treeTop = 0; return fin(0); }
   if ((ax === 3 || ax === 4) && (az === 3 || az === 4) && giantHas(bx, bz)) { o.typ = 6; return fin(0); }
+  // the old town's civic axis: an open avenue two cells wide running south from the Assembly Hall along x = 728,
+  // walled on both sides by unbroken rows of crowned stone blocks of one height
+  if (zone === 2 && cz >= -24 && cz <= -6) {
+    if (cx === 27 || cx === 28) { o.typ = 5; o.h = 0; o.top = 0; o.treeTop = 0; return fin(32); }
+    if (cx === 26 || cx === 29) {
+      o.typ = 1; o.wx = o.wz = 8.8; o.offx = 0; o.offz = 0;
+      o.v = 0.5; o.h = 38; o.roof = 1; o.top = 38 + 5 + 0.12 * 38 + 0.5;
+      return fin(1024);
+    }
+  }
   const F = forestF(ccx, ccz);
   if (F > (zone === 7 ? 0.47 : 0.55)) {
     if (r0 < 0.3) { o.typ = 4; o.h = 14 + 24 * r1; o.offx = 0; o.offz = 0; o.top = o.h + 4.5; }
@@ -362,7 +372,7 @@ function computeBase(cx0, cz0, lite) {
   if (zone === 0) { pc *= 0.5; po *= 0.7; ph *= 0.3; hs = 1.35; }
   else if (zone === 1) { pc *= 0.3; po *= 0.4; ph = 0.35; hs = 0.55; }
   else if (zone === 2) { pc *= 0.3; po *= 0.3; ph = 0.72; hs = 0.5; }
-  else if (zone === 3) { pc *= 0.2; po *= 0.2; ph = 0.62; hs = 0.6; }
+  else if (zone === 3) { pc = 0; po = 0; ph = 0.62; hs = 0.6; }
   else if (zone === 4) { pc = 0; po *= 0.3; ph = 0.2; hs = 0.3; }
   else if (zone === 5) { pc *= 0.3; po *= 0.5; ph = 0.1; hs = 0.4; }
   else if (zone === 6) { pc *= 0.2; po *= 0.3; ph = 0.08; }
@@ -389,12 +399,25 @@ function computeBase(cx0, cz0, lite) {
     } else o.h = Math.max(12, (18 + 130 * r1 * r1 * r1) * hs);
     o.top = o.h * h0(1) + 0.3 + (o.h > 80 ? 15 : 0);
   }
+  // districts by their form, not only their signs:
+  // Lumen, the financial core: severe. Full-footprint slabs, all tall, one dark-glass style, no crowns, few signs.
+  if (zone === 0 && o.typ === 1) {
+    wx = wz = 8.6; o.wx = wx; o.wz = wz; o.offx = 0; o.offz = 0;
+    v = 0.05 + 0.3 * v; o.v = v;
+    o.h = 70 + 50 * r1; o.top = o.h * h0(1) + 0.3 + 15;
+  }
+  // Chinatown: tight. Low blocks that fill their lots, so the streets between them are alleys.
+  if (zone === 3 && (o.typ === 1 || o.typ === 2)) {
+    wx = 8.4 + 0.5 * r2; wz = 8.4 + 0.5 * r3; o.wx = wx; o.wz = wz; o.offx = 0; o.offz = 0;
+    if (o.typ === 1) { o.h = 12 + 18 * r1; o.top = o.h * h0(1) + 0.3; }
+  }
   const crown = zone === 7 ? 0 : 0.1;
   if ((o.typ === 1 && r4 > 0.86 - 0.2 * cb + crown) || (o.typ === 2 && r4 > 0.92 + crown * 0.5)) {
     o.roof = 1;
     if (o.typ === 1) o.top = Math.max(o.top, o.h * h0(1) - 2 + 5 + 0.12 * o.h + 0.5);
     else o.top = Math.max(o.top, o.h * 1.1 + 6.5);
   }
+  if (zone === 0 && o.typ === 1) o.roof = 0;
   // the pagoda: one, in the middle of Chinatown
   if (cx === wrapS(PAGODA_CELL[0]) && cz === wrapS(PAGODA_CELL[1])) { o.typ = 11; o.roof = 0; o.h = 0; o.offx = 0; o.offz = 0; o.top = 47; return fin(1); }
   // one landmark per 32 x 32 block region: a pagoda (always in Chinatown) or a lattice tower
@@ -407,7 +430,7 @@ function computeBase(cx0, cz0, lite) {
     return fin(id);
   }
   // feature flags: signs, shops and set pieces, dense in the neon district and Chinatown
-  const nd = zone === 1 ? 1 : zone === 3 ? 0.7 : zone === 0 ? 0.3 : 0.12 + 0.3 * sstep(0.42, 0.7, vnoise(ccx / 350, ccz / 350, 33));
+  const nd = zone === 1 ? 1 : zone === 3 ? 0.85 : zone === 0 ? 0.05 : 0.12 + 0.3 * sstep(0.42, 0.7, vnoise(ccx / 350, ccz / 350, 33));
   let fl = 0;
   const seed = (Math.imul(cx, 7919) + Math.imul(cz, 104729)) | 0;
   const s0 = Math.floor(hsh(seed, 1, 40) * 4);
@@ -431,7 +454,7 @@ function computeBase(cx0, cz0, lite) {
     const r = hsh(cx, cz, 52);
     // a Ferris wheel or two on the neon strip; night markets in Chinatown and on the strip
     if (r < 0.25 && zone === 1 && hsh(cx, cz, 59) < 0.12) { fl |= 8; o.top = 19.3; }
-    else if (r >= 0.25 && r < 0.6 && (zone === 3 || zone === 1) && hsh(cx, cz, 60) < 0.4) { fl |= 16; o.top = 2.8; }
+    else if (r >= 0.25 && r < 0.6 && (zone === 3 || zone === 1) && hsh(cx, cz, 60) < (zone === 3 ? 0.75 : 0.4)) { fl |= 16; o.top = 2.8; }
     else if (r < 0.8) { fl |= 32; o.top = 0; }
   }
   // small city easter eggs

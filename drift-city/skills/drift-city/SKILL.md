@@ -217,6 +217,14 @@ now laid out by hand. Everything below is in `world.js` unless named; the shape 
   ringed spire at big block (0, -1)), the Hive (below), the Hall (big block (3, -4)),
   and in the wild `STONES_AT` and `TREEHOUSE_AT`, north-north-east where the story's fliers go. Lattice towers only
   in the core and old town, Ferris wheels and markets only on the strip (and markets in Chinatown), rarely.
+- **District forms** (`computeBase` in world.js; the shader builds whatever the cell table says):
+  Lumen, the financial core, is severe (full-footprint stepped slabs 70-120 m, style value under 0.4, no crowns,
+  almost no signs); Chinatown is tight (low blocks filling their lots, 12-30 m, no crystal or cylinder towers, more
+  market stalls) and steamy (fog up to 2.2 times denser at street level there, `MAPCAM.steam` in main.js); the old
+  town has a civic axis, an open avenue of reflecting pools (cell flag 32) along x = 728 from the core to the
+  Assembly Hall between unbroken rows of 38 m towers, kept free of trees in `treeParams` (place "civic_axis"). The
+  avenue code runs before the forest check, or forest cells break the rows. Chinatown's rooftop place takes a roof
+  over 20 m (60 m elsewhere): the story needs `roof_3`.
 - **The Hive**: the cattle-class pod block, the city's main orientation mark. A patched castle 620 x 420 m and 240 m
   tall centred on `HIVE_C` (728, 1248), on the dorms' outer edge, filling big blocks x 2-4, z 5-6 (`hiveHas`). Its
   north and west faces, the ones the nicer city sees, carry five flashing tokes boards (`hiveBoardC`, `hiveBoard`,
