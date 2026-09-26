@@ -102,6 +102,19 @@ included, rose 0.3 m off it every step: "figures float around". Only the body bo
 `src/audio.js` synthesises everything live and places it with HRTF panners; `audioStep` runs the mix from a
 description of the surroundings that `audioWorld` in `main.js` builds twice a second.
 
+- **Sounds come from what you see.** Footfalls are placed and timed by the walkers themselves: `walkerAt` /
+  `walkersNear` in `main.js` mirror `pedQ` exactly (same hashes, same drift noise, the inverse of its ring
+  coordinate), and `audioFeet` plays a step at the walker when its gait phase crosses a half cycle (a walking kind's
+  foot landing; a glider's landing once per hop). Before September 2026 steps played at random pavement points, so
+  what you heard never matched what you saw. Checked by projecting the JS walkers onto a Dawn frame (`WALKERS=1` in
+  the scratch runner): within about a metre of the drawn figures. Change `pedQ`'s placement and you must change
+  `walkerAt` with it.
+- Story voices: each speaker is tied to one person in the scene for as long as the scene lasts, looked up when the
+  line is spoken (`taleVoiceAt`); "you" is inside your own helmet. Before, every speaker came from the nearest
+  figure, from a person list up to half a second stale.
+- The listener is at the camera: behind the drone in the follow view, not at the drone.
+- The WebGL fallback runs no audio at all (it never did).
+
 - **All speech is radio.** Everyone outdoors is in a pressure suit, so voices reach Pip over suit radios: the babble
   input `AU.babbleF` is a radio chain (330 Hz to 3 kHz, a presence peak, soft clipping, then a gain of 0.5 because the
   clipper's curve lifts quiet speech about 2.6 times). `auPhrase` keys up with squelch (`auKey`), loses syllables to

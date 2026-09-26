@@ -290,6 +290,23 @@ function taleSay(paras, choices) {
   const n = document.getElementById("taleCount");
   if (n) n.textContent = choices.length ? choices.length + (choices.length === 1 ? " choice" : " choices") : "";
 }
+// where a speaker's voice comes from: your own ("you") from inside your helmet; each other speaker from one person
+// in the scene, the same one for as long as the scene lasts (the nearest one not already speaking for someone else).
+// Looked up when the line is spoken, so a scene's people are in place by then.
+function taleVoiceAt(who) {
+  if (who === "you") return null;
+  if (TALE.voiceScene !== TALE.scene) { TALE.voiceScene = TALE.scene; TALE.voiceOf = {}; }
+  const ps = (TALE.props || []).filter((p) => p.kind === 0 && Math.hypot(p.x - st.x, p.z - st.z) < 40);
+  const taken = new Set(Object.values(TALE.voiceOf));
+  let q = TALE.voiceOf[who] !== undefined ? ps[TALE.voiceOf[who]] : null;
+  if (!q) {
+    let best = -1, bd = 1e9;
+    ps.forEach((p, i) => { const d = Math.hypot(p.x - st.x, p.z - st.z); if (!taken.has(i) && d < bd) { bd = d; best = i; } });
+    if (best < 0) return null;
+    TALE.voiceOf[who] = best; q = ps[best];
+  }
+  return [q.x, q.y + 1.55, q.z];
+}
 function taleChoose(i) {
   TALE.story.ChooseChoiceIndex(i);
   taleAdvance();
@@ -302,12 +319,7 @@ function taleTags(tags, line) {
     else if (k === "prop") taleAddProp(v);
     else if (k === "live") TALE.live = true;
     // "# voice: <who>": the line is spoken, over the speaker's radio, from the nearest person in the scene
-    else if (k === "voice") {
-      const ps = (AUW.places && AUW.places.persons) || [];
-      let from = null, best = 30;
-      for (const q of ps) { const d = Math.hypot(q[0] - st.x, q[2] - st.z); if (d < best) { best = d; from = q; } }
-      audioVoice(v, (line || "").split(/\s+/).length, from);
-    }
+    else if (k === "voice") audioVoice(v, (line || "").split(/\s+/).length, () => taleVoiceAt(v));
     else if (k === "place") taleGo(v);
     else if (k === "time") { const idx = { day: 0, dusk: 1, dawn: 1, night: 2, snow: 3 }[v]; if (idx !== undefined && idx !== todIdx) { todFrom = currentTod(); todIdx = idx; todT = 0; todAuto = 0; NAV.sunOverride = null; syncLabels(); } }
     else if (k === "weather") { WX.forced = v === "snow" ? 0.75 : v === "clear" ? 0 : null; }
