@@ -22,7 +22,7 @@ const src = async (f) => (await fetch('../src/' + f)).text();
 const [common, scene] = await Promise.all([src('common.wgsl'), src('scene.wgsl')]);
 // take whole functions out of scene.wgsl by name, matching braces
 const fnSrc = (name) => {
-  const i = scene.indexOf('fn ' + name + '(');
+  const i = name.startsWith('struct ') ? scene.indexOf(name + ' {') : scene.indexOf('fn ' + name + '(');
   if (i < 0) throw new Error('no fn ' + name);
   let j = scene.indexOf('{', i), depth = 0;
   for (let k = j; k < scene.length; k++) {
@@ -31,10 +31,13 @@ const fnSrc = (name) => {
   }
   throw new Error('unbalanced ' + name);
 };
-const names = ['rot2', 'smin', 'sdBox', 'sdSeg', 'sdEll', 'rotY', 'neonColor', 'pedPulley', 'pedPace', 'pedKind', 'pedPhase', 'pedLift', 'pedFigure', 'vehicleSDF'];
+const names = ['rot2', 'smin', 'sdBox', 'sdSeg', 'sdEll', 'rotY', 'neonColor', 'pedPulley', 'pedPace', 'pedKind', 'pedPhase', 'pedLift',
+  'pp', 'sdRC', 'ik2', 'struct HP', 'pedHuman', 'pedUpper', 'pedUnlean', 'pedFigure', 'vehicleSDF'];
+// the private variables the part tracker uses, as declared in scene.wgsl
+const privs = scene.split('\n').filter((l) => /^var<private> gP[TBP]\b/.test(l)).join('\n');
 // ?set=vehicles draws the tube vehicles instead (kinds 0, 2, 3, 5, 6)
 const VEH = new URLSearchParams(location.search).get('set') === 'vehicles';
-const code = common + '\n' + names.map(fnSrc).join('\n') + `
+const code = common + '\n' + privs + '\n' + names.map(fnSrc).join('\n') + `
 const COLS: f32 = 5.0;
 const VEH: bool = ` + VEH + `;
 fn figMap(q: vec3f, kind: i32) -> f32 {
@@ -85,10 +88,14 @@ fn kindCol(kind: i32) -> vec3f {
       figMap(p + vec3f(0.0, e, 0.0), kind) - figMap(p - vec3f(0.0, e, 0.0), kind),
       figMap(p + vec3f(0.0, 0.0, e), kind) - figMap(p - vec3f(0.0, 0.0, e), kind)));
     let l = normalize(vec3f(0.5, 0.8, 0.3));
-    let base = kindCol(kind);
+    var base = kindCol(kind);
+    if (!VEH) {
+      // colour by part, as the material sees it
+      gPT = true; gPB = 1e5; let _d = figMap(p, kind); gPT = false;
+      base = array<vec3f, 12>(vec3f(0.8, 0.6, 0.45), base, vec3f(0.12), vec3f(0.05, 0.08, 0.12), vec3f(0.5, 0.5, 0.52), neonColor(0.8),
+        vec3f(1.0, 0.8, 0.3), vec3f(0.8, 0.62, 0.3), vec3f(0.4, 0.9, 1.0), vec3f(0.1), vec3f(0.45, 0.47, 0.5), neonColor(0.1))[gPP];
+    }
     c = base * (0.15 + 0.85 * max(dot(n, l), 0.0)) + vec3f(0.35) * pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
-    // mark the front of each figure (+z) so facing can be checked at a glance
-    if (n.z > 0.7) { c += vec3f(0.25, 0.05, 0.0); }
   }
   return vec4f(pow(c, vec3f(0.4545)), 1.0);
 }
