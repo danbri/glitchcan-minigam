@@ -114,6 +114,7 @@ verified July 2026.
 | `container-improver` | `.claude/skills/` | you are about to write "this container has no X" — try installing it first; apt/pip/npm/cargo all work here. Also names the limits that are real (no GPU, no WebGPU, no `gh`) |
 | `fink` | `.claude/skills/` | FINK platform + the foafos shell: file format, ink compilation, sandbox, capabilities, brokers, chrome, testing discipline |
 | `glitchcanary` | `.claude/skills/` | story/game CONTENT — authoring `.fink.js`, episode linking, `# MINIGAME:` |
+| `story-game-sync` | `inklet/minigames/skills/` | a story depends on an attached game: pause/play/resume `# MINIGAME:` guests vs Drift city's live in-page sync, what each cannot do yet, and the text route every world-only clue needs (no GPU, screen readers) |
 | `edot-suite` | `magpie/edot/skills/` | the office suite at suite level — kernel capabilities, the 13 apps, 9 storage backends, auth, the 53-suite harness |
 | `tanks-for-the-trees` | `trees/skills/` | `trees/` — the Bristol data pipeline, BNG↔world coordinates, `host.api`/`__tftt`. **Read its data-ethics section first** |
 | `splat-discovery` | `magpie/dbdb/skills/` | Gaussian splats for `magpie/dbdb`: licence-checking source scans, cutting pack elements, LOD pyramids, honest cost measurement. **Read its licence section first** |
