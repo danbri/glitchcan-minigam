@@ -33,7 +33,7 @@ const TN: i32 = 384;
 struct EV { beamPos: array<vec4f, 4>, beamDir: array<vec4f, 4>, smoke: array<vec4f, 4>, koi: vec4f, koiDir: vec4f, blimp: vec4f, blimpDir: vec4f, bo: vec4f,
   sky: vec4f, meteorA: vec4f, meteorB: vec4f, fw: array<vec4f, 3>, fwCol: array<vec4f, 3>, launch: vec4f, balloon: array<vec4f, 3>,
   sat: vec4f, ringN: vec4f, moonA: vec4f, moonB: vec4f,
-  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8> };
+  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f };
 struct EscG { ok: bool, a: vec3f, b: vec3f };
 @group(0) @binding(11) var<uniform> ev: EV;
 // flocking creatures: count in n.x; per creature a[2i] = position (m) and size, a[2i+1] = heading and flap phase
@@ -5352,8 +5352,32 @@ fn weathering(sIn: Surf, nIn: vec3f, p: vec3f, m: i32, t: f32, nOut: ptr<functio
   return s;
 }
 
-fn frostify(sfIn: Surf, n: vec3f, p: vec3f) -> Surf {
+fn frostify(sfIn: Surf, n: vec3f, p: vec3f, m: f32) -> Surf {
   var s = sfIn;
+  // settled snow (ev.wx.x, 0..1, built up by the page while it snows): on whatever faces up, first in patches that
+  // grow and join as it deepens. It melts off anything warm: lit surfaces (lamp pools, signs, glazing), wet streets
+  // (they go to slush), glass, the ground round the pod fab.
+  let cov0 = ev.wx.x;
+  let mi = i32(m + 0.5);
+  // not on things that move (walkers, vehicles, drones, craft): the patches are fixed in the world
+  let moving = mi == 24 || mi == 12 || mi == 14 || mi == 17 || mi == 28 || mi == 29 || mi == 70;
+  if (cov0 > 0.001 && !moving) {
+    let up = smoothstep(0.55, 0.85, n.y);
+    let nz = vnoise(p.xz * 0.35, 590) * 0.6 + vnoise(p.xz * 1.7, 591) * 0.4;
+    var cov = up * smoothstep(1.05 - cov0, 1.2 - cov0, nz + 0.15 * cov0);
+    cov *= 1.0 - smoothstep(0.04, 0.35, luma(s.emi));
+    cov *= 1.0 - 0.3 * smoothstep(0.3, 0.6, s.refl);
+    cov *= 1.0 - smoothstep(60.0, 20.0, length(p.xz - FAB_W - vec2f(0.0, 0.0)) - 90.0);
+    let slush = s.wet;
+    if (cov > 0.001 && s.trans < 0.5) {
+      let snow = mix(vec3f(0.95, 0.93, 0.9), vec3f(0.36, 0.33, 0.3), slush);
+      s.alb = mix(s.alb, snow * (0.92 + 0.08 * vnoise(p.xz * 9.0, 592)), cov);
+      s.spec = mix(s.spec, 0.35, cov);
+      s.refl = mix(s.refl, 0.02 + 0.2 * slush, cov);
+      s.rough = mix(s.rough, 0.2, cov);
+      s.emi *= 1.0 - 0.5 * cov;
+    }
+  }
   let f = ev.sky.w * sstepJ(0.5, 0.92, n.y) * (0.7 + 0.3 * vnoise(p.xz * 0.7, 132));
   if (f > 0.001 && s.refl < 0.5 && s.trans < 0.5) {
     s.alb = mix(s.alb, vec3f(0.86, 0.82, 0.74), f);
@@ -5527,8 +5551,10 @@ fn rnd3(fc: vec2f, k: i32) -> vec3f {
     let p = cro + crd * h.t;
     if (first) { tOut = h.t; }
     var n = hitNormal(p, h);
-    var sf = frostify(surface(p, n, h.m, crd, h.t + tBase), n, p);
+    // weathering first, then frost and settled snow on top of it (the tholin dust would brown fresh snow)
+    var sf = surface(p, n, h.m, crd, h.t + tBase);
     if (first) { var nb = n; sf = weathering(sf, n, p, i32(h.m + 0.5), h.t, &nb); n = nb; }
+    sf = frostify(sf, n, p, h.m);
     var sha = 0.75;
     var occ = 0.85;
     if (first) {
