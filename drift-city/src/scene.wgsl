@@ -324,7 +324,7 @@ fn giantHasW(b: vec2i) -> bool {
   if (isHall(b)) { return true; }
   let bw = vec2i(wrapN(b.x, 96), wrapN(b.y, 96));
   let cen = (vec2f(bw) + 0.5) * BIG;
-  return hsh(bw.x, bw.y, 20) < 0.28 && cityDist(cen) < cityR(cen) - 400.0;
+  return hsh(bw.x, bw.y, 20) < 0.12 && cityDist(cen) < cityR(cen) - 400.0;
 }
 fn giantTop(b: vec2i) -> f32 { if (isHall(b)) { return 96.0; } return 150.0 + 110.0 * hsh(wrapN(b.x, 96), wrapN(b.y, 96), 21); }
 
@@ -2236,7 +2236,7 @@ fn cellSDF(p: vec3f, c: vec2i, cell: Cell) -> vec2f {
       if ((cell.fl & 8) != 0) { r = wheelSDF(vec3f(lq.x, p.y, lq.y), cell.seed); }
       else if ((cell.fl & 16) != 0) { r = marketSDF(vec3f(lq.x, p.y, lq.y)); }
       else if (eg0 == 24 || eg0 == 25) { r = vec2f(eggSDF(eg0, vec3f(lq.x, p.y, lq.y), cell.seed), 45.0); }
-      else if ((cell.fl & 32) == 0) { r = vec2f(cluster(lp, cell.h, 1.3, 3, 1.0, 0.15, cell.h * 0.6, cell.seed, 0.0, false), 3.0); }
+      else if ((cell.fl & 32) == 0 && ((cell.fl >> 15) & 7) == 7) { r = vec2f(cluster(lp, cell.h, 1.3, 3, 1.0, 0.15, cell.h * 0.6, cell.seed, 0.0, false), 3.0); }
       if (eg0 == 26) { let dk = eggSDF(26, vec3f(lq.x, p.y, lq.y), cell.seed); if (dk < r.x) { r = vec2f(dk, 45.0); } }
     }
     default: {}
@@ -2408,7 +2408,8 @@ fn giantSDF(p: vec3f, b: vec2i) -> vec2f {
   q = vec3f(rxy.x, rxy.y, q.z);
   let ringW = 0.7 + 0.0025 * length(u.camPos.xz - (vec2f(b) + 0.5) * BIG);
   let ring = length(vec2f(length(q.xz) - 42.0, q.y)) - ringW;
-  if (!gNoDyn && ring < d) { m = 9.0; d = ring; }
+  // only some megatowers wear a ring
+  if (!gNoDyn && ring < d && hsh(bw.x, bw.y, 24) < 0.35) { m = 9.0; d = ring; }
   return vec2f(d, m);
 }
 
@@ -3717,7 +3718,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         }
       }
       let bg = vec2i(floor(p.xz / BIG));
-      if (hsh(bg.x, bg.y, 20) < 0.28) {
+      if (hsh(bg.x, bg.y, 20) < 0.12) {
         let gd = length(p.xz - (vec2f(bg) + 0.5) * BIG);
         let vein = 1.0 - smoothstep(0.0, 0.025, abs(vnoise(p.xz * 0.1, 13) - 0.5));
         s.emi += glowColor(p) * vein * (1.0 - smoothstep(30.0, 85.0, gd)) * (0.25 + 0.8 * u.windows) * detail;
