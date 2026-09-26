@@ -5,10 +5,14 @@ let story, warnings;
 try { ({ story, warnings } = compileStory()); } catch (e) { console.log('COMPILE ERROR', e.message); process.exit(1); }
 if (warnings.length) console.log('warnings:', warnings.slice(0, 6).join(' | '));
 const places = new Set(JSON.parse(fs.readFileSync(new URL('../src/places.json', import.meta.url), 'utf8')).map((p) => p.id));
+// Two modes. World: the page sets in_world and clues are found by looking (hotspots). Text: no city (the FINK player,
+// a screen reader, no GPU), so in_world stays false and clues can only come from the story's own "Look around" choices.
+for (const world of [true, false]) {
 const endings = {}, lens = [];
 let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 for (let run = 0; run < 400; run++) {
   story.ResetState();
+  story.variablesState.in_world = world;
   let steps = 0, scene = null, hots = [], ended = null, badPlace = null;
   while (steps < 250) {
     while (story.canContinue) {
@@ -23,7 +27,7 @@ for (let run = 0; run < 400; run++) {
     }
     if (ended || !story.currentChoices.length) break;
     // sometimes look around and find this scene's clue, which refreshes the scene
-    if (hots.length && rnd() < 0.6 && scene) { story.variablesState[hots[0]] = true; hots.shift(); story.ChoosePathString(scene); continue; }
+    if (world && hots.length && rnd() < 0.6 && scene) { story.variablesState[hots[0]] = true; hots.shift(); story.ChoosePathString(scene); continue; }
     story.ChooseChoiceIndex(Math.floor(rnd() * story.currentChoices.length));
     steps++;
   }
@@ -32,5 +36,7 @@ for (let run = 0; run < 400; run++) {
   lens.push(steps);
 }
 lens.sort((a, b) => a - b);
-console.log('endings over 400 random runs:', JSON.stringify(endings), '| choices per run: median', lens[200], ', 90th percentile', lens[360]);
+console.log(world ? 'world' : 'text ', 'endings over 400 random runs:', JSON.stringify(endings), '| choices per run: median', lens[200], ', 90th percentile', lens[360]);
+if (Object.keys(endings).some((e) => !/^[A-Z ]+$/.test(e)) || Object.keys(endings).length < 4) process.exitCode = 1;
+}
 console.log('compiled story JSON', story.ToJson().length, 'bytes');

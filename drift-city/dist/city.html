@@ -8477,6 +8477,7 @@ function taleRestart() {
 }
 function taleAdvance() {
   const s = TALE.story;
+  taleSetVar("in_world", true); // after every reset too: the story offers text routes to its clues only without the city
   const paras = [];
   while (s.canContinue) {
     const t = s.Continue();

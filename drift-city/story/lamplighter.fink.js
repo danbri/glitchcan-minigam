@@ -14,6 +14,9 @@ VAR hour = ""
 VAR snowing = false
 VAR want_time = ""
 VAR want_weather = ""
+// The page sets in_world to true. Without the city (the FINK player, a screen reader, a device with no WebGL or WebGPU)
+// it stays false, and each hotspot is also offered as a "Look around carefully" choice.
+VAR in_world = false
 
 // things found by looking around
 VAR ticket = false
@@ -64,6 +67,7 @@ VAR heart = ""
     {met_wren: The sky is paling. It is nearly time for the vote.}
 }
 {ticket and stall > 1: The ticket dries on your counter: tonight, the river line, one way, punched at the last stop.}
++ {not in_world and not ticket} [Look around carefully] -> look_ticket
 * {not heard_bo} [Ask Auntie Bo what she saw] -> bo
 + {not tuned and (pagoda == 0 or tam == 0 or scale)} [Walk up to the pagoda, where Wren keeps her ladder] -> pagoda
 + {heard_bo and not scale} [Climb to a rooftop to watch the fliers] -> roof
@@ -113,6 +117,7 @@ She nods at the sky. "The fliers came in low tonight. They're all heading the sa
     The pagoda, the ladder, the radio's patient hiss, and Brother Tam, listening.
 }
 {oilcan: The oil can's serial is stamped with a red D: decommissioned. Whatever Wren carried, the Lumen works had already thrown it away.}
++ {not in_world and not oilcan} [Look around carefully] -> look_oilcan
 * [Ask Tam about Wren] -> tam
 + {scale and not tuned} [Hold the wing-scale to the radio and tune it] -> tune
 + [Back to your stall] -> stall
@@ -166,6 +171,7 @@ The static parts like a curtain. Under it: a slow, rising, falling sound, hundre
     The Assembly Hall. Clerk Obi at the rostrum, the dome dark above.
 }
 {minutes: The torn page is tonight's: "Lumen proposal: all lamps automated from next season; the lamplighter's post to lapse." In the margin, in lamp oil, in Wren's hand: "They will need warm lamps when the eggs come. Ask the fliers." And below it a second signature, crisp and new: Castellane, and a note about "off-world buyers".}
++ {not in_world and not minutes} [Look around carefully] -> look_minutes
 * [Ask Obi about the vote] -> obi
 * {minutes} [Show Obi the note in the margin] -> obi_note
 + [Back to your stall] -> stall
@@ -198,6 +204,7 @@ Obi reads the margin twice. "Off-world buyers," he says. "Lumen means to sell th
     The Lumen pyramid. Castellane, smiling.
 }
 {ledger: The ledger page is a shipping manifest: forty lamp-hearts, "decommissioned", booked on a freighter to the rings at dawn, bound for Earth. Priced very high. Somebody in Lumen means to take the emigration posters at their word.}
++ {not in_world and not ledger} [Look around carefully] -> look_ledger
 * {not castellane_deal} [Accept his offer] -> deal
 * {ledger} [Show him the manifest] -> confront
 + [Leave] -> stall
@@ -224,6 +231,7 @@ Castellane looks at the manifest for a long moment. The smile stays; the eyes ch
     The rooftop, the fliers wheeling north-east.
 }
 {scale: The scale is warm in your glove and hums, very faintly: a slow note, rising and falling like breathing.}
++ {not in_world and not scale} [Look around carefully] -> look_scale
 + {scale and not tuned} [Take the scale to Brother Tam's radio] -> pagoda
 + [Climb back down to your stall] -> stall
 
@@ -270,6 +278,7 @@ Mei grins. "Bo's noodles saved my life one winter. All right." -> mei_ask
     The dish, the instruments, Dr Sato.
 }
 {card: The recording card holds a week of flier calls. On the last night the calls change: they come from one place, and they are answered by something smaller.}
++ {not in_world and not card} [Look around carefully] -> look_card
 * {not sato_deal} [Promise her the first look, if she keeps quiet till dawn] -> sato_promise
 * {card} [Ask her what the recording proves] -> sato_proof
 + [Back to your stall] -> stall
@@ -297,6 +306,7 @@ Mei grins. "Bo's noodles saved my life one winter. All right." -> mei_ask
     The stones, warm in the snow.
 }
 {stone: The small stone is warm as a teacup, wrapped in knitting you would know anywhere: Wren's. A thread trails off toward the trees.}
++ {not in_world and not stone} [Look around carefully] -> look_stone
 + {stone or bearing} [Follow the fliers down into the forest] -> forest
 + [Back to the city] -> stall
 
@@ -417,4 +427,41 @@ THE END: THE SPOTLIGHT.
 === restart ===
 # restart
 -> END
+
+// text route to the clues, when there is no city to look around (see in_world)
+=== look_ticket ===
+~ ticket = true
+You look around carefully, and notice a ferry ticket frozen into a puddle.
+-> stall
+
+=== look_oilcan ===
+~ oilcan = true
+You look around carefully, and notice a battered oil can by the ladder, stamped with a Lumen serial number.
+-> pagoda
+
+=== look_minutes ===
+~ minutes = true
+You look around carefully, and notice a torn page of the evening's minutes under a bench.
+-> hall
+
+=== look_ledger ===
+~ ledger = true
+You look around carefully, and notice a ledger page fluttering from a shipping crate.
+-> pyramid
+
+=== look_scale ===
+~ scale = true
+You look around carefully, and notice a flier's wing-scale caught on a vent, glowing faintly.
+-> roof
+
+=== look_card ===
+~ card = true
+You look around carefully, and notice a recording card dropped in the snow.
+-> dish
+
+=== look_stone ===
+~ stone = true
+You look around carefully, and notice a small stone at the circle's edge, warm enough to melt the snow around it.
+-> stones
+
 `;
