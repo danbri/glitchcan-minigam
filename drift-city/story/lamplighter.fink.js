@@ -59,6 +59,7 @@ VAR heart = ""
 # hotspot: ticket @ a ferry ticket frozen in a puddle @ 38 @ -18
 {stall == 1:
     Dusk. Methane snow hisses on the heat lamps over your tea stall. Auntie Bo ladles noodles next door. Everyone else stays home under headsets and sends drones to your counter.
+    The heat tariff went up again this quarter. Up on the megatower screens the Org's posters cycle between the notices about heat and breath and the emigration campaign: A NEW LIFE IN THE MOTHER OF ALL COLONIES. DREAMING OF THAT GOOD OLD LIFE?
     Half the street lamps are cold. Old Wren, the last flame-keeper, hasn't come for her ginger tea. At dawn the Assembly votes on Lumen's plan to put out the city's last open flames.
     You can't leave the stall. You wake Pip, your old delivery drone, and send it instead: its eye is yours, its speaker your voice.
 - else:
@@ -202,7 +203,7 @@ Obi reads it twice. "Off-world buyers. Lumen means to sell the lamp-hearts, not 
 - else:
     The Lumen pyramid. Castellane, smiling.
 }
-{ledger: The page is a shipping manifest: forty "decommissioned" lamp-hearts on a freighter to the rings at dawn, bound for Earth, priced very high.}
+{ledger: The page is a shipping manifest: forty "decommissioned" lamp-hearts on a freighter to the rings at dawn, bound for Earth, priced very high. Somebody in Lumen means to take the emigration posters at their word.}
 + {not in_world and not ledger} [Look around] -> look_ledger
 * {not castellane_deal} [Accept his offer] -> deal
 * {ledger} [Show him the manifest] -> confront
