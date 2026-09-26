@@ -179,7 +179,14 @@ function audioWorld(dt) {
           P.sidewalks.push(sp);
           if (o.fl & 1024) { busy++; P.busy.push([sp[0], 1.6, sp[2]]); }
           if (hsh(cx, cz, 950) < 0.1 && P.radios.length < 2) P.radios.push([mx, 5 + hsh(cx, cz, 953) * 12, mz]);
+          // the skaters' cables (the same test as pedPulley in the scene shader): the nearest point on each ring
+          for (let ln = 0; ln < 2; ln++) if (hsh(cx * 11 + ln, cz * 5, 183) < 0.22) {
+            const R = ln ? 10.45 : 9.95, lx = st.x - mx, lz = st.z - mz;
+            const q = Math.abs(lx) >= Math.abs(lz) ? [Math.sign(lx) * R, clampv(lz, -R, R)] : [clampv(lx, -R, R), Math.sign(lz) * R];
+            nearest("cable", [mx + q[0], 4.4, mz + q[1]]);
+          }
         }
+        if (o.zone === 6 && o.typ === 1) nearest("dorm", [mx, 14, mz]);
         if (o.fl & 8) nearest("wheel", [mx, 30, mz]);
         if (o.fl & 16) nearest("market", [mx, 3, mz]);
         if (o.typ === 11 && (o.fl & 3) === 1) nearest("pagoda", [mx, 16, mz]);

@@ -256,7 +256,7 @@ function taleAdvance() {
   const paras = [];
   while (s.canContinue) {
     const t = s.Continue();
-    taleTags(s.currentTags);
+    taleTags(s.currentTags, t);
     if (t.trim()) paras.push(t.trim());
   }
   TALE.paras = paras;
@@ -283,12 +283,19 @@ function taleChoose(i) {
   taleAdvance();
 }
 // tags from the story drive the world
-function taleTags(tags) {
+function taleTags(tags, line) {
   for (const tag of tags) {
     const k = tag.split(":")[0].trim(), v = tag.slice(tag.indexOf(":") + 1).trim();
     if (k === "scene") { TALE.scene = v; TALE.hot = []; TALE.live = false; TALE.props = (TALE.props || []).filter((p) => !p.clue); }
     else if (k === "prop") taleAddProp(v);
     else if (k === "live") TALE.live = true;
+    // "# voice: <who>": the line is spoken, over the speaker's radio, from the nearest person in the scene
+    else if (k === "voice") {
+      const ps = (AUW.places && AUW.places.persons) || [];
+      let from = null, best = 30;
+      for (const q of ps) { const d = Math.hypot(q[0] - st.x, q[2] - st.z); if (d < best) { best = d; from = q; } }
+      audioVoice(v, (line || "").split(/\s+/).length, from);
+    }
     else if (k === "place") taleGo(v);
     else if (k === "time") { const idx = { day: 0, dusk: 1, night: 2, snow: 3 }[v]; if (idx !== undefined && idx !== todIdx) { todFrom = currentTod(); todIdx = idx; todT = 0; todAuto = 0; NAV.sunOverride = null; syncLabels(); } }
     else if (k === "weather") { WX.forced = v === "snow" ? 0.75 : v === "clear" ? 0 : null; }

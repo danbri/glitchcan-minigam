@@ -37,7 +37,8 @@ Building from this tree reproduces the published page exactly.
   - `walkers.html` draws the five kinds of walker from `scene.wgsl`, side and three-quarter views (WebGPU)
   - `render3.py` renders single views of the scene shader with wgpu-py (with `gencells.js`, `ffgen.js`, `presets.py`)
   - `inkwalk.mjs` plays the story 400 times with random choices and discoveries, checking endings and dead ends
-  - `audiotest2.mjs` renders the sound engine offline (node-web-audio-api) and measures levels
+  - `audiotest2.mjs` renders the sound engine offline (node-web-audio-api) and measures levels; AUDIO= another
+    audio.js to compare against, WAV= a file to write the render to
   - `smooth.js` measures per-frame camera jolts on trips
 - `docs/` design notes by development wave
 - `dist/city.html` the current built page (ignored by git; rebuild with the command above)

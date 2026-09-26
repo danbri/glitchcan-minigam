@@ -63,6 +63,27 @@ from a place under it. A taller figure needs all three raised.
 - Most people stay home under headsets. They live in the dorms (zone 6, `ZONE_NAMES` "Dorms"): residential slabs of
   capsule homes, two to a floor, each with one round window lit by a flickering headset screen at any hour.
 
+## Sound
+
+`src/audio.js` synthesises everything live and places it with HRTF panners; `audioStep` runs the mix from a
+description of the surroundings that `audioWorld` in `main.js` builds twice a second.
+
+- **All speech is radio.** Everyone outdoors is in a pressure suit, so voices reach Pip over suit radios: the babble
+  input `AU.babbleF` is a radio chain (330 Hz to 3 kHz, a presence peak, soft clipping, then a gain of 0.5 because the
+  clipper's curve lifts quiet speech about 2.6 times). `auPhrase` keys up with squelch (`auKey`), loses syllables to
+  crackle on a poor set, and keys down, sometimes with a roger beep. Put any new speech through `AU.babbleF`.
+- **Story dialogue** is tagged in the story: `# voice: <who>` at the end of the line. `AU_VOICES` holds each
+  speaker's pitch, pace and radio set (0 clean, 1 old): Castellane's set is clean, Wren's and Tam's are not. The line
+  is queued after the one before it and comes from the nearest story person, or from just in front of Pip.
+  A line ending in a divert needs the divert on the next line, or it becomes part of the tag.
+- **Footfalls by kind**, at rates in proportion to the walker mix: `auClank` (exoskeleton), `auServo` (android),
+  `auBoots` (weighted boots), `auCape` (glider), `auBuzz` (pet drone). The skaters' cables and the dorms are looping
+  sources; `audioWorld` finds the real cables with the same hash as `pedPulley`, and the nearest dorm block (zone 6).
+- **Check offline:** `tests/audiotest2.mjs` renders 36 seconds with node-web-audio-api and reports loudness, peak and
+  which events fired per scene. It needs `setTimeout` mapped to the offline clock, or every syllable scheduled with
+  `setTimeout` fires in real time and the render misses it (September 2026: added to the harness). Compare loudness
+  against the previous `audio.js` before and after a change; the radio chain first made the street 3.7 dB louder.
+
 ## Size and the lite variant
 
 `scene.wgsl` is an ubershader of about 4,700 lines. Some mobile drivers fail to build it; the page then retries with

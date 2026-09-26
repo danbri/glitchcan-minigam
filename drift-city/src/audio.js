@@ -48,7 +48,16 @@ function audioInit() {
     lfo.connect(lg); lg.connect(o.detune); lfo.start(); o.connect(g); g.connect(AU.padF); o.start();
     AU.pad.push(o);
   }
-  AU.babbleF = c.createBiquadFilter(); AU.babbleF.type = "lowpass"; AU.babbleF.frequency.value = 2600; AU.babbleF.connect(AU.bus.babble);
+  // everyone outdoors is in a pressure suit, so all speech reaches us over suit radios: a narrow band, a little
+  // clipping, and the squelch of each key-up (auKey)
+  AU.babbleF = c.createBiquadFilter(); AU.babbleF.type = "highpass"; AU.babbleF.frequency.value = 330;
+  const rlp = c.createBiquadFilter(); rlp.type = "lowpass"; rlp.frequency.value = 3000; rlp.Q.value = 1.2;
+  const rpk = c.createBiquadFilter(); rpk.type = "peaking"; rpk.frequency.value = 1700; rpk.gain.value = 5;
+  const rclip = c.createWaveShaper(), rc = new Float32Array(512);
+  for (let i = 0; i < 512; i++) { const x = (i / 511) * 2 - 1; rc[i] = Math.tanh(x * 2.6) / Math.tanh(2.6); }
+  rclip.curve = rc;
+  const rout = c.createGain(); rout.gain.value = 0.5; // the clipper's curve lifts quiet speech 2.6 times; take that back
+  AU.babbleF.connect(rpk); rpk.connect(rlp); rlp.connect(rclip); rclip.connect(rout); rout.connect(AU.bus.babble);
   // our own drone: a faint rotor hum that follows airspeed
   const r1 = c.createOscillator(); r1.type = "sawtooth"; r1.frequency.value = 118;
   const r2 = c.createOscillator(); r2.type = "sawtooth"; r2.frequency.value = 121.5;
@@ -116,10 +125,56 @@ function auSyllable(pos, voice, gain) {
   auOut(mix, pos, AU.babbleF, 4, 1.3);
   o.start(t); o.stop(t + dur + 0.2);
 }
-// a phrase: several syllables from one speaker, rising or falling like a sentence
-function auPhrase(pos, gain) {
-  const voice = pick([100, 115, 130, 185, 205, 230, 270]), n = Math.floor(rr(3, 9));
-  for (let i = 0; i < n; i++) setTimeout(() => { if (AU.ready) auSyllable(pos, voice * (1 + 0.08 * Math.sin(i * 0.9)), gain); }, i * rr(110, 190));
+// a radio key-up or key-down: a burst of squelch, and sometimes a roger beep at the end
+function auKey(pos, gain, end, rig) {
+  const c = AU.ctx, t = c.currentTime, len = end ? rr(0.12, 0.22) : rr(0.03, 0.06);
+  const n = c.createBufferSource(); n.buffer = AU.white;
+  const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = rr(1500, 2600); bp.Q.value = 0.9;
+  const g = c.createGain(); g.gain.setValueAtTime(gain * (0.25 + 0.35 * rig), t); g.gain.exponentialRampToValueAtTime(0.001, t + len);
+  n.connect(bp); bp.connect(g); auOut(g, pos, AU.babbleF, 4, 1.3);
+  n.start(t, Math.random() * 2, len + 0.05);
+  if (end && Math.random() < 0.3) {
+    const o = c.createOscillator(); o.frequency.setValueAtTime(1250, t + len); o.frequency.setValueAtTime(950, t + len + 0.05);
+    const og = c.createGain(); og.gain.setValueAtTime(0, t + len); og.gain.linearRampToValueAtTime(gain * 0.12, t + len + 0.01); og.gain.setValueAtTime(gain * 0.12, t + len + 0.09); og.gain.linearRampToValueAtTime(0, t + len + 0.1);
+    o.connect(og); auOut(og, pos, AU.babbleF, 4, 1.3); o.start(t + len); o.stop(t + len + 0.12);
+  }
+}
+// a phrase over a suit radio: key-up, syllables rising or falling like a sentence (a few lost to crackle on a poor
+// rig), key-down. rig: 0 a clean, expensive set; 1 an old one. Returns how long it lasts, in seconds.
+function auPhrase(pos, gain, voice, n, rig, rate) {
+  voice = voice || pick([100, 115, 130, 185, 205, 230, 270]);
+  n = n || Math.floor(rr(3, 9));
+  rig = rig === undefined ? rr(0.2, 0.7) : rig;
+  rate = rate || 1;
+  auKey(pos, gain, false, rig);
+  const step = () => rr(110, 190) * rate;
+  let at = 70;
+  for (let i = 0; i < n; i++) {
+    const lost = Math.random() < 0.08 * rig;
+    setTimeout(() => { if (!AU.ready) return; if (lost) auKey(pos, gain * 0.6, false, 1); else auSyllable(pos, voice * (1 + 0.08 * Math.sin(i * 0.9)), gain); }, at);
+    at += step();
+  }
+  setTimeout(() => { if (AU.ready) auKey(pos, gain, true, rig); }, at + 60);
+  return (at + 300) / 1000;
+}
+// the story's people, each with a voice, a pace and a radio set that says what they can afford
+const AU_VOICES = {
+  bo: [195, 1.2, 0.6], tam: [100, 1.3, 0.85], obi: [122, 1.1, 0.4], castellane: [112, 1.0, 0.05],
+  mei: [215, 0.85, 0.5], sato: [205, 0.8, 0.25], wren: [182, 1.35, 0.9],
+  you: [150, 1.0, 0.3],
+};
+// a line of dialogue: queued after the line before it, as long as the line is, from the nearest story person
+// (or, with nobody placed, from just in front of Pip, whose receiver picks it up)
+function audioVoice(who, words, from) {
+  if (!AU.ready || !AU.on) return;
+  const v = AU_VOICES[who];
+  if (!v) return;
+  const c = AU.ctx, now = c.currentTime;
+  const start = Math.max(now + 0.15, AU.vEnd || 0);
+  const n = Math.max(3, Math.min(26, Math.round(words * 0.9)));
+  const pos = from || [AU.lpos[0], AU.lpos[1] - 0.3, AU.lpos[2]];
+  AU.vEnd = start + n * 0.15 * v[1] + 0.8;
+  setTimeout(() => { if (AU.ready && AU.on) auPhrase(pos, 0.9, v[0], n, v[2], v[1]); }, (start - now) * 1000);
 }
 // a vendor's call: long sung vowels with a falling tune
 function auVendor(pos) {
@@ -156,6 +211,57 @@ function auClank(pos, gain) {
     const sf = c.createBiquadFilter(); sf.type = "lowpass"; sf.frequency.value = 2500;
     s.connect(sf); sf.connect(sg); auOut(sg, pos, AU.bus.clank, 3, 1.4); s.start(t + 0.05); s.stop(t + 0.3);
   }
+}
+// an android's step: a clean servo glide and a small, exact click, no thud (it weighs what it should)
+function auServo(pos, gain) {
+  const c = AU.ctx, t = c.currentTime;
+  const o = c.createOscillator(); o.type = "triangle"; const f0 = rr(620, 880);
+  o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * 1.5, t + 0.16); o.frequency.linearRampToValueAtTime(f0 * 1.45, t + 0.22);
+  const g = c.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain * 0.07, t + 0.03); g.gain.linearRampToValueAtTime(0, t + 0.24);
+  o.connect(g); auOut(g, pos, AU.bus.clank, 2.5, 1.5); o.start(t); o.stop(t + 0.26);
+  const n = c.createBufferSource(); n.buffer = AU.white;
+  const hp = c.createBiquadFilter(); hp.type = "bandpass"; hp.frequency.value = rr(3500, 5000); hp.Q.value = 4;
+  const cg = c.createGain(); cg.gain.setValueAtTime(gain * 0.5, t + 0.24); cg.gain.exponentialRampToValueAtTime(0.001, t + 0.27);
+  n.connect(hp); hp.connect(cg); auOut(cg, pos, AU.bus.clank, 2.5, 1.5); n.start(t + 0.24, Math.random() * 2, 0.05);
+}
+// weighted boots landing after a long, slow stride: two soft, heavy thuds, and a suit valve's breath now and then
+function auBoots(pos, gain) {
+  const c = AU.ctx, t = c.currentTime;
+  [0, rr(0.05, 0.09)].forEach((dt, i) => {
+    const o = c.createOscillator(); o.frequency.setValueAtTime(rr(62, 80), t + dt); o.frequency.exponentialRampToValueAtTime(38, t + dt + 0.18);
+    const g = c.createGain(); g.gain.setValueAtTime(gain * (i ? 0.45 : 0.6), t + dt); g.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.22);
+    o.connect(g); auOut(g, pos, AU.bus.clank, 3, 1.4); o.start(t + dt); o.stop(t + dt + 0.25);
+  });
+  const n = c.createBufferSource(); n.buffer = AU.brown;
+  const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 500;
+  const ng = c.createGain(); ng.gain.setValueAtTime(gain * 0.5, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+  n.connect(lp); lp.connect(ng); auOut(ng, pos, AU.bus.clank, 3, 1.4); n.start(t, Math.random() * 2, 0.15);
+  if (Math.random() < 0.3) {
+    const v = c.createBufferSource(); v.buffer = AU.white;
+    const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = rr(2500, 4000); bp.Q.value = 2;
+    const vg = c.createGain(); vg.gain.setValueAtTime(0, t + 0.3); vg.gain.linearRampToValueAtTime(gain * 0.08, t + 0.45); vg.gain.linearRampToValueAtTime(0, t + 0.9);
+    v.connect(bp); bp.connect(vg); auOut(vg, pos, AU.bus.clank, 3, 1.4); v.start(t + 0.3, Math.random() * 2, 0.7);
+  }
+}
+// a glider's cape catching the thick air: a soft flutter that rises and falls with the hop
+function auCape(pos, gain) {
+  const c = AU.ctx, t = c.currentTime, dur = rr(0.8, 1.4);
+  const n = c.createBufferSource(); n.buffer = AU.white;
+  const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.setValueAtTime(rr(350, 500), t); bp.frequency.linearRampToValueAtTime(rr(700, 1000), t + dur * 0.5); bp.frequency.linearRampToValueAtTime(rr(300, 450), t + dur); bp.Q.value = 1.4;
+  const g = c.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain * 0.25, t + dur * 0.4); g.gain.linearRampToValueAtTime(0, t + dur);
+  const fl = c.createOscillator(); fl.frequency.value = rr(11, 19); const fg = c.createGain(); fg.gain.value = gain * 0.12; fl.connect(fg); fg.connect(g.gain);
+  n.connect(bp); bp.connect(g); auOut(g, pos, AU.bus.whoosh, 3, 1.3);
+  n.start(t, Math.random() * 2, dur + 0.05); fl.start(t); fl.stop(t + dur + 0.05);
+}
+// somebody's pet drone passing close: a small, high, wavering buzz
+function auBuzz(pos, gain) {
+  const c = AU.ctx, t = c.currentTime, dur = rr(1.2, 2.2);
+  const o = c.createOscillator(); o.type = "sawtooth"; o.frequency.value = rr(290, 380);
+  const vib = c.createOscillator(); vib.frequency.value = rr(5, 9); const vg = c.createGain(); vg.gain.value = rr(8, 20); vib.connect(vg); vg.connect(o.frequency);
+  const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1400; bp.Q.value = 1.5;
+  const g = c.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain * 0.06, t + dur * 0.4); g.gain.linearRampToValueAtTime(0, t + dur);
+  o.connect(bp); bp.connect(g); auOut(g, pos, AU.bus.clank, 3, 1.3);
+  o.start(t); o.stop(t + dur + 0.05); vib.start(t); vib.stop(t + dur + 0.05);
 }
 // a pod passing in its tube overhead: the source really moves along the tube
 function auWhoosh(from, to, gain, dur) {
@@ -269,13 +375,25 @@ function auLoop(kind) {
   const out = c.createGain(); out.gain.value = 0;
   const p = auPanner([0, 0, 0], kind === "water" ? 10 : kind === "industry" ? 30 : 15, 0.9);
   out.connect(p); p.connect(AU.bus.env);
-  const n = c.createBufferSource(); n.buffer = kind === "rumble" || kind === "industry" ? AU.brown : AU.white; n.loop = true;
+  const n = c.createBufferSource(); n.buffer = kind === "rumble" || kind === "industry" || kind === "dorm" ? AU.brown : AU.white; n.loop = true;
   const f = c.createBiquadFilter();
   const mod = c.createGain(); mod.gain.value = 1;
   if (kind === "water") { f.type = "lowpass"; f.frequency.value = 800; }
   else if (kind === "river") { f.type = "bandpass"; f.frequency.value = 900; f.Q.value = 1.5; }
   else if (kind === "hiss") { f.type = "highpass"; f.frequency.value = 4500; }
   else if (kind === "rumble") { f.type = "lowpass"; f.frequency.value = 140; }
+  else if (kind === "cable") {
+    // the skaters' cable running over its pulleys: a hum with a roller's flutter
+    f.type = "bandpass"; f.frequency.value = 1100; f.Q.value = 3;
+    const o = c.createOscillator(); o.type = "sawtooth"; o.frequency.value = 96; const og = c.createGain(); og.gain.value = 0.05; o.connect(og); og.connect(mod); o.start();
+    const trem = c.createOscillator(); trem.frequency.value = 6.5; const tg = c.createGain(); tg.gain.value = 0.35; trem.connect(tg); tg.connect(mod.gain); trem.start();
+  }
+  else if (kind === "dorm") {
+    // the dorms: ventilation, and thousands of people murmuring into their headsets behind the walls
+    f.type = "bandpass"; f.frequency.value = 520; f.Q.value = 1.2;
+    for (const [fq, a] of [[50, 0.12], [100, 0.06], [150.5, 0.03]]) { const o = c.createOscillator(); o.frequency.value = fq; const og = c.createGain(); og.gain.value = a; o.connect(og); og.connect(mod); o.start(); }
+    const am = c.createOscillator(); am.frequency.value = 0.7; const ag = c.createGain(); ag.gain.value = 0.3; am.connect(ag); ag.connect(mod.gain); am.start();
+  }
   else if (kind === "industry") { f.type = "lowpass"; f.frequency.value = 300; const o = c.createOscillator(); o.frequency.value = 55; const og = c.createGain(); og.gain.value = 0.2; o.connect(og); og.connect(mod); o.start(); const o2 = c.createOscillator(); o2.frequency.value = 110.5; const og2 = c.createGain(); og2.gain.value = 0.08; o2.connect(og2); og2.connect(mod); o2.start(); }
   else if (kind === "shimmer") {
     // a flock's soft shimmer: slowly beating high partials
@@ -427,8 +545,17 @@ function audioStep(dt, w) {
   T(AU.bus.radio.gain, space ? 0 : 0.5, 1.0);
   const due = (k, rate) => { AU.t[k] = (AU.t[k] || rr(0, 1)) - dt * rate; if (AU.t[k] <= 0) { AU.t[k] = rr(0.5, 1.5); return true; } return false; };
   const near = (arr) => arr && arr.length ? pick(arr) : null;
-  if (people > 0.02 && due("phrase", 3.5 * people)) { const at = w.story > 0.05 && P.persons && P.persons.length ? pick(P.persons) : near(P.busy) || near(P.sidewalks); if (at) auPhrase(at, rr(0.4, 1)); }
-  if (w.people * ground > 0.03 && due("clank", 6 * w.people)) { const at = near(P.sidewalks); if (at) auClank(at, rr(0.3, 0.8)); }
+  if (people > 0.02 && due("phrase", 3.5 * people)) { const at = near(P.busy) || near(P.sidewalks); if (at) auPhrase(at, rr(0.4, 1)); }
+  // footfalls, by the share of each kind of walker: exoskeletons, androids, weighted boots, capes, pet drones
+  const foot = w.people * ground > 0.03;
+  if (foot && due("clank", 2.2 * w.people)) { const at = near(P.sidewalks); if (at) auClank(at, rr(0.3, 0.8)); }
+  if (foot && due("servo", 1.4 * w.people)) { const at = near(P.sidewalks); if (at) auServo(at, rr(0.4, 0.9)); }
+  if (foot && due("boots", 2.6 * w.people)) { const at = near(P.sidewalks); if (at) auBoots(at, rr(0.4, 0.9)); }
+  if (foot && due("cape", 0.5 * w.people)) { const at = near(P.sidewalks); if (at) auCape([at[0], at[1] + 0.8, at[2]], rr(0.4, 0.9)); }
+  if (foot && due("buzz", 0.35 * w.people)) { const at = near(P.sidewalks); if (at) auBuzz([at[0], 2.1, at[2]], rr(0.5, 1)); }
+  auLoopSet("cable", P.cable, space ? 0 : 0.1);
+  auLoopSet("dorm", P.dorm, space ? 0 : 0.22);
+  if (P.dorm && !space && due("dormvoice", 0.25)) auPhrase([P.dorm[0] + rr(-8, 8), P.dorm[1] + rr(-6, 10), P.dorm[2] + rr(-8, 8)], rr(0.2, 0.4));
   if (w.tubes * ground > 0.05 && due("whoosh", 0.4 * w.tubes) && P.tubeLines && P.tubeLines.length) {
     const L = pick(P.tubeLines), s = Math.random() < 0.5 ? -1 : 1, len = rr(90, 160);
     auWhoosh([L[0] - L[3] * s * len, L[1], L[2] - L[4] * s * len], [L[0] + L[3] * s * len, L[1], L[2] + L[4] * s * len], rr(0.3, 0.6), rr(2.2, 3.6));
