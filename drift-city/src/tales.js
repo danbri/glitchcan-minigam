@@ -60,7 +60,14 @@ function buildPlaces() {
       else if (o.typ === 13 && want("pyramid")) add("pyramid", "Corporate pyramid, " + dn, "A stepped pyramid of glass and stone on " + st + "; security drones idle at its apex.", facing(cx, cz, side));
       else if (o.typ === 9 && want("works" + zn)) { add("works_" + zn, "The works, " + dn, "Pipes, stacks and pressure domes on " + st + ": the city's heat and air are made here.", facing(cx, cz, side)); }
       else if (o.typ === 10 && want("apron")) add("spaceport_apron", "Spaceport apron", "Landing pads and fuel lines off " + st + ", under the long light of Saturn.", facing(cx, cz, side));
-      else if (o.typ === 6 && giantHas(Math.floor(cx / 8), Math.floor(cz / 8)) && !hallAt(Math.floor(cx / 8), Math.floor(cz / 8)) && !hiveHas(Math.floor(cx / 8), Math.floor(cz / 8)) && want("giant" + zn)) add("giant_" + zn, "Foot of a megatower, " + dn, "The plaza at the base of a tower that vanishes into the haze above " + st + ".", facing(cx, cz, side));
+      else if (o.typ === 6 && giantHas(Math.floor(cx / 8), Math.floor(cz / 8)) && !hallAt(Math.floor(cx / 8), Math.floor(cz / 8)) && !hiveHas(Math.floor(cx / 8), Math.floor(cz / 8)) && want("giant" + zn)) {
+        // the tower stands in a park: look from above the trees, 140 m out, on the side of the cell that found it
+        const bx = (Math.floor(cx / 8) + 0.5) * BIG, bz = (Math.floor(cz / 8) + 0.5) * BIG;
+        const a0 = Math.atan2((cz + 0.5) * C - bz, (cx + 0.5) * C - bx);
+        const x = bx + Math.cos(a0) * 140, z = bz + Math.sin(a0) * 140;
+        add("giant_" + zn, "Below a megatower, " + dn, "Over the park at its foot, a tower that vanishes into the haze above " + st + ".",
+          { x, y: Math.max(terrSurfAt(x, z), 0) + 26, z, yaw: Math.atan2(bz - z, bx - x), pitch: 0.38 });
+      }
       else if ((o.typ === 1 || o.typ === 2) && o.h > 20 && want("street" + zn)) add("street_" + zn, st + ", " + dn, "A street corner in the " + dn + ": tube traffic humming past, windows stacked up into the haze.", facing(cx, cz, side));
       else if ((o.typ === 1 || o.typ === 2) && o.h > 60 && want("roof" + zn)) add("roof_" + zn, "Rooftop above " + (zn === 3 ? "" : "the ") + dn, "A rooftop high over " + st + ", " + (zn === 3 ? "" : "the ") + dn + " spread out below.", roofView(cx, cz, a + Math.PI));
       else if (o.egg >= 21 && o.egg <= 23 && want("roofegg")) add("roof_oddity", "A rooftop garden", "Someone keeps a garden up here, with a view across the " + dn + ".", roofView(cx, cz, a));

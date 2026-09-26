@@ -94,6 +94,8 @@ for (let f = 0; f < N; f++) {
     D.padShow(true); D.PAD.lx = 0.6; D.PAD.ry = 0.8; console.log('PAD on', D.PAD.on);
   }
   if (process.env.HOP && f === 3) { const D = globalThis.__drift; if (process.env.HOP.startsWith('place:')) D.hopPlace(process.env.HOP.slice(6)); else D.hop(D.destById(process.env.HOP)); }
+  // CAM=x,y,z,yaw,pitch: after a HOP, look from there instead
+  if (process.env.CAM && f === 3) { const D = globalThis.__drift, [x, y, z, yaw, pitch] = process.env.CAM.split(',').map(Number), c = { ...D.NAV.visit.to, x, y, z, yaw, pitch }; D.NAV.visit.from = c; D.NAV.visit.to = c; }
   if (process.env.FREEALT && f === 3) { const D = globalThis.__drift; D.startFree(D.flatCamTitan()); const P = D.NAV.free.P, l = Math.hypot(...P), a = 2575 + (+process.env.FREEALT); D.NAV.free.P = P.map((v) => v * a / l); }
   if (process.env.GO && f === 4 && globalThis.__drift.NAV.trip) { const tr = globalThis.__drift.NAV.trip; tr.t = tr.T * (+process.env.GOAT || 0.985); }
   cb(now);

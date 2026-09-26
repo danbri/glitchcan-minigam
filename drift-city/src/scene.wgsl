@@ -42,7 +42,7 @@ struct Flock { n: vec4f, g: array<vec4f, 4>, a: array<vec4f, 192> };
 // story props: count in n.x; per prop a[2i] = position (m) and kind, a[2i+1] = yaw, scale, hue, parameter
 struct Props { n: vec4f, a: array<vec4f, 64> };
 @group(0) @binding(22) var<uniform> pr: Props;
-struct TB { glyph: array<vec4u, 22>, word: array<vec4u, 68> };
+struct TB { glyph: array<vec4u, 22>, word: array<vec4u, 94> };
 @group(0) @binding(12) var<uniform> tb: TB;
 @group(0) @binding(13) var terrTex: texture_2d<f32>;
 @group(0) @binding(14) var ffBTex: texture_2d<f32>;
@@ -2416,7 +2416,7 @@ fn hiveSDF(q: vec3f) -> vec2f {
 // flicker and a faint beam down to the projector. 0 a spinning toke coin, 1 a grinning headset face, 2 slogans.
 fn holoFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
   var col = colIn;
-  for (var i = 0; i < 5; i++) {
+  for (var i = 0; i < 6; i++) {
     var c = vec4f(728.0, 330.0, 1010.0, 90.0);
     var kind = 0;
     var hue = vec3f(1.0, 0.75, 0.2);
@@ -2424,6 +2424,8 @@ fn holoFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
     if (i == 2) { c = vec4f(-520.0, 62.0, 40.0, 24.0); kind = 2; hue = vec3f(1.0, 0.3, 0.8); }
     if (i == 3) { c = vec4f(620.0, 58.0, 40.0, 20.0); kind = 0; hue = vec3f(1.0, 0.8, 0.3); }
     if (i == 4) { c = vec4f(420.0, 95.0, 620.0, 34.0); kind = 2; hue = vec3f(0.5, 0.8, 1.0); }
+    // the government's Earth, turning over the financial core, GO HOME TO EARTH beneath it
+    if (i == 5) { c = vec4f(40.0, 440.0, -60.0, 80.0); kind = 3; hue = vec3f(0.4, 0.7, 1.0); }
     let cen = c.xyz;
     let nh = vec3f(ro.x - cen.x, 0.0, ro.z - cen.z);
     let ln = length(nh);
@@ -2439,8 +2441,9 @@ fn holoFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
     // the beam from the projector on the ground
     let bd = length((ro + rd * max(dot(vec3f(cen.x, 0.0, cen.z) - ro, rd), 0.0)).xz - cen.xz);
     col += hue * 0.012 * exp(-bd * bd / (c.w * 0.4)) * (0.4 + u.windows);
-    if (abs(uv.x) > 1.2 || abs(uv.y) > 1.2) { continue; }
+    if (abs(uv.x) > 1.2 || uv.y > 1.2 || uv.y < select(-1.2, -1.9, kind == 3)) { continue; }
     var a = 0.0;
+    var hc = hue;
     if (kind == 0) {
       let w = cos(u.time * 1.3 + f32(i));
       let cu = vec2f(uv.x / max(abs(w), 0.06), uv.y);
@@ -2455,16 +2458,36 @@ fn holoFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
       a = max(a, step(abs(uv.y - 0.15), 0.16) * step(abs(uv.x), 0.8));
       let sm = length(uv - vec2f(0.0, 0.1));
       a = max(a, step(abs(sm - 0.55), 0.05) * step(uv.y, -0.2) * (0.6 + 0.4 * sin(u.time * 2.0)));
-    } else {
+    } else if (kind == 2) {
       let slot = i32(floor(u.time / 5.0)) + i;
-      let pk = 4 + ((slot % 3) + 3) % 3;
+      // over the strip, the emigration campaign; over the dorms, the tokes trade and sign-off work
+      var pk = 7 + ((slot % 3) + 3) % 3;
+      if (i == 4) { pk = array<i32, 4>(4, 5, 10, 6)[((slot % 4) + 4) % 4]; }
       let l = ((slot / 3) % 3 + 3) % 3;
       let L = posterLine(pk, l);
       a = lineText(L, vec2f(uv.x * 22.0, (0.5 - uv.y) * 11.0));
+    } else {
+      // a globe: oceans and continents on a turning sphere, a lit limb, then two lines of text below
+      let r = length(uv);
+      if (r < 1.0) {
+        let z = sqrt(1.0 - r * r);
+        let lon = atan2(uv.x, z) + u.time * 0.12;
+        let lat = asin(clamp(uv.y, -1.0, 1.0));
+        let land = step(0.56, vnoise(vec2f(lon * 1.6, lat * 2.2), 572));
+        hc = mix(vec3f(0.04, 0.2, 1.0), vec3f(0.25, 0.9, 0.3), land);
+        a = 0.35 + 0.45 * z + 0.6 * step(r, 1.0) * step(0.93, r);
+      } else if (uv.y < -1.05) {
+        let l = select(0, 1, uv.y < -1.45);
+        a = lineText(posterLine(9, l), vec2f(uv.x * 26.0, (-1.08 - uv.y - f32(l) * 0.4) * 22.0));
+        hc = vec3f(1.0, 0.97, 0.9);
+      }
     }
     let scan = 0.55 + 0.45 * step(0.45, fract(uv.y * 28.0 - u.time * 2.0));
     let flick = 0.8 + 0.2 * sin(u.time * 31.0 + f32(i) * 7.0);
-    col += hue * a * scan * flick * 0.9 * exp(-t * u.fogDen * 0.4) * (0.5 + u.windows);
+    let fade = exp(-t * u.fogDen * 0.4);
+    // the globe covers what is behind it, so its blue reads against the orange sky
+    if (kind == 3 && length(uv) < 1.0) { col = mix(col, hc * (0.7 + 0.6 * u.windows) * scan, min(a, 1.0) * 0.8 * fade); continue; }
+    col += hc * a * scan * flick * 0.9 * fade * (0.5 + u.windows);
   }
   return col;
 }
@@ -3354,8 +3377,61 @@ fn posterLine(pk: i32, l: i32) -> vec4i {
     // the Hive's own boards and the tokes trade (words 44 on, see tables.js)
     case 4: { switch l { case 0: { return vec4i(52, 53, -1, -1); } case 1: { return vec4i(61, 67, -1, -1); } default: { return vec4i(59, 51, -1, -1); } } }
     case 5: { switch l { case 0: { return vec4i(47, 44, -1, -1); } case 1: { return vec4i(65, 56, -1, -1); } default: { return vec4i(64, 46, -1, -1); } } }
-    default: { switch l { case 0: { return vec4i(62, 55, -1, -1); } case 1: { return vec4i(60, 54, -1, -1); } default: { return vec4i(63, 58, -1, -1); } } }
+    case 6: { switch l { case 0: { return vec4i(62, 55, -1, -1); } case 1: { return vec4i(60, 54, -1, -1); } default: { return vec4i(63, 58, -1, -1); } } }
+    // emigration, second wave: LEAVE TITAN / PASSAGE PAID / BOOK NOW; YOUR FUTURE / IS EARTH / SEATS LEFT;
+    // GO HOME / TO EARTH / SHIPS DAILY
+    case 7: { switch l { case 0: { return vec4i(68, 69, -1, -1); } case 1: { return vec4i(81, 82, -1, -1); } default: { return vec4i(77, 58, -1, -1); } } }
+    case 8: { switch l { case 0: { return vec4i(78, 79, -1, -1); } case 1: { return vec4i(80, 34, -1, -1); } default: { return vec4i(75, 76, -1, -1); } } }
+    case 9: { switch l { case 0: { return vec4i(70, 71, -1, -1); } case 1: { return vec4i(72, 34, -1, -1); } default: { return vec4i(73, 74, -1, -1); } } }
+    // work: WORK FROM BED / SIGN OFF / ORG APPROVED; EXO HIRE / HEAVY LIFT / LEGAL JOBS
+    case 10: { switch l { case 0: { return vec4i(83, 84, 66, -1); } case 1: { return vec4i(85, 86, -1, -1); } default: { return vec4i(37, 88, -1, -1); } } }
+    default: { switch l { case 0: { return vec4i(89, 90, -1, -1); } case 1: { return vec4i(91, 92, -1, -1); } default: { return vec4i(93, 87, -1, -1); } } }
   }
+}
+// which poster a screen shows, from a hash: emigration half the time (0, 1, 7, 8, 9), the tokes trade (4-6),
+// work (10, 11), the cult's graffiti (2, 3)
+fn posterPick(h: f32) -> i32 {
+  if (h < 0.5) { return array<i32, 5>(0, 1, 7, 8, 9)[min(i32(h * 10.0), 4)]; }
+  if (h < 0.72) { return 4 + min(i32((h - 0.5) / 0.22 * 3.0), 2); }
+  if (h < 0.88) { return select(10, 11, h > 0.8); }
+  return select(2, 3, h > 0.94);
+}
+fn isEmig(pk: i32) -> bool { return pk <= 1 || (pk >= 7 && pk <= 9); }
+// a poster's look: uv in -1..1 across the panel, txt the lettering (0..1)
+fn posterLook(pk: i32, uv: vec2f, txt: f32) -> vec3f {
+  if (isEmig(pk)) {
+    // the government's campaign: deep blue, a red band, white letters, and a small Earth, blue and green
+    let band = sstepJ(-0.68, -0.72, uv.y);
+    var e = mix(mix(vec3f(0.03, 0.07, 0.24), vec3f(0.08, 0.16, 0.42), 0.5 + 0.5 * uv.y), vec3f(0.55, 0.05, 0.06), band);
+    let ed = length(uv - vec2f(0.72, 0.78)) / 0.16;
+    if (ed < 1.0) {
+      let land = step(0.55, vnoise(vec2f(uv.x * 9.0 + u.time * 0.05, uv.y * 9.0), 571));
+      e = mix(vec3f(0.1, 0.35, 0.9), vec3f(0.25, 0.6, 0.2), land) * (0.5 + 0.5 * sqrt(1.0 - ed * ed));
+    }
+    return e + vec3f(1.0, 0.97, 0.9) * txt;
+  }
+  if (pk >= 4 && pk <= 6) {
+    // the tokes trade: loud, flashing, never subtle
+    let fl2 = step(0.5, fract(u.time * 1.7));
+    return mix(vec3f(0.5, 0.0, 0.35), vec3f(0.95, 0.75, 0.0), fl2 * step(0.0, uv.y)) + mix(vec3f(1.0, 0.95, 0.2), vec3f(1.0, 0.2, 0.8), fl2) * txt * 1.3;
+  }
+  if (pk == 10) {
+    // the Org's sign-off jobs: a pale screen, black letters, the grey chequered border of an old home computer
+    let edge = step(0.86, max(abs(uv.x), abs(uv.y)));
+    let chk = step(0.5, fract((floor(uv.x * 40.0) + floor(uv.y * 40.0)) * 0.5));
+    return mix(vec3f(0.62, 0.64, 0.6) * (1.0 - txt), vec3f(0.35) * chk, edge);
+  }
+  if (pk == 11) {
+    // exo hire: black on yellow inside hazard stripes
+    let edge = step(0.84, max(abs(uv.x), abs(uv.y)));
+    let stripe = step(0.5, fract((uv.x + uv.y) * 6.0));
+    return mix(vec3f(0.9, 0.7, 0.05) * (1.0 - txt), vec3f(0.9, 0.7, 0.05) * stripe, edge);
+  }
+  if (pk == 2) {
+    let ring = sstepJ(0.06, 0.0, abs(length(uv - vec2f(0.0, 0.72)) - 0.16));
+    return vec3f(0.02) + vec3f(1.0, 0.62, 0.2) * (txt + ring * 0.8);
+  }
+  return vec3f(0.01, 0.02, 0.03) + vec3f(0.3, 1.0, 0.95) * txt * (0.7 + 0.3 * step(0.1, fract(u.time * 2.3 + uv.y)));
 }
 fn neonText(word: u32, q: vec2f, vertical: bool) -> f32 {
   if (q.x < 0.0 || q.y < 0.0) { return 0.0; }
@@ -3367,7 +3443,8 @@ fn neonText(word: u32, q: vec2f, vertical: bool) -> f32 {
   if (ci >= i32(wd.z)) { return 0.0; }
   let g = (select(wd.x, wd.y, ci >= 4) >> (u32(ci & 3) * 8u)) & 255u;
   let f = fract(lp) - 0.5;
-  return glyphBit(g, i32(floor(lp.x)), i32(floor(lp.y))) * (1.0 - smoothstep(0.3, 0.5, max(abs(f.x), abs(f.y))));
+  // solid square pixels that join up, as on a ZX81 screen (the old look was a dot matrix)
+  return glyphBit(g, i32(floor(lp.x)), i32(floor(lp.y))) * (1.0 - 0.15 * smoothstep(0.42, 0.5, max(abs(f.x), abs(f.y))));
 }
 
 // Signs that misbehave: now and then a sign stutters for a few seconds.
@@ -3510,8 +3587,21 @@ fn facadeFx(s: ptr<function, Surf>, p: vec3f, n: vec3f, ci: vec2i, lq: vec2f, de
       let pxW = (2.0 * bw) / (f32(tb.word[word].z) * 6.0 + 2.0);
       let txt = neonText(word, vec2f(bq.x * 2.0 * bw / pxW - 1.0, (yb + 7.5 - p.y) / pxW), false);
       let scan = 0.8 + 0.2 * sin(p.y * 14.0 - u.time * 3.0);
+      var e = bg * 0.5 + vec3f(1.0) * mix(0.2, txt, detail) * 1.6;
+      if (hsh(cf.seed, 8, 47) < 0.6) {
+        // a poster instead: three lines, changing every 15 s
+        let pk = posterPick(hsh(cf.seed + i32(floor(u.time / 15.0)), 9, 48));
+        let gu = min(2.0 * bw / 78.0, 12.0 / 44.0);
+        let pu = vec2f(lu, p.y - yb - 6.0);
+        var t3 = 0.0;
+        for (var l = 0; l < 3; l++) {
+          let qy = 19.0 - f32(l) * 13.0 - pu.y / gu;
+          if (qy >= 0.0 && qy < 8.0) { t3 = max(t3, lineText(posterLine(pk, l), vec2f(pu.x / gu, qy))); }
+        }
+        e = posterLook(pk, vec2f(lu / bw, pu.y / 6.0), mix(0.2, t3, detail)) * 1.3;
+      }
       (*s).alb = vec3f(0.02);
-      (*s).emi = (bg * 0.5 + vec3f(1.0) * mix(0.2, txt, detail) * 1.6) * scan * fritz(cf.seed + 9) * (0.35 + 0.9 * u.windows);
+      (*s).emi = e * scan * fritz(cf.seed + 9) * (0.35 + 0.9 * u.windows);
       (*s).refl = 0.03;
     }
   }
@@ -4306,11 +4396,11 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         let sh = 0.28 * K.w;
         let sx = ((q.z + 0.05) * sgnS + 0.52) * K.w;
         let sy = (0.14 - q.y) * K.w;
-        var aw = array<u32, 5>(14u, 16u, 13u, 1u, 11u);
-        let word = aw[u32(floor(u.time / 8.0)) % 5u];
-        let len = f32(tb.word[word].z);
-        let pxm = min(sw / (len * 6.0 + 2.0), sh / 9.0);
-        let txt = neonText(word, vec2f((sx - (sw - len * 6.0 * pxm) * 0.5) / pxm, (sy - (sh - 7.0 * pxm) * 0.5) / pxm), false);
+        // the emigration campaign, a line at a time
+        let bslot = i32(floor(u.time / 4.0));
+        let L = posterLine(7 + ((bslot / 3) % 3), bslot % 3);
+        let pxm = min(sw / 78.0, sh / 10.0);
+        let txt = lineText(L, vec2f((sx - sw * 0.5) / pxm, (sy - (sh - 7.0 * pxm) * 0.5) / pxm));
         let bg = 0.5 + 0.5 * cos(6.2831 * (vec3f(0.0, 0.33, 0.67) + u.time * 0.05 + sx / sw * 0.4));
         s.alb = vec3f(0.02);
         s.refl = 0.03;
@@ -4459,7 +4549,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       // glyph size: three lines of up to eleven characters, as large as the board allows
       let gu = min(bc.z * 2.0 / 74.0, bc.w * 2.0 / 42.0);
       let slot = i32(floor(u.time / 7.0)) + i32(hb.w);
-      let pk = 4 + ((slot % 3) + 3) % 3;
+      let pk = array<i32, 4>(4, 5, 10, 6)[((slot % 4) + 4) % 4];
       let fl2 = step(0.5, fract(u.time * 1.3 + hb.w * 0.37));
       var txt = 0.0;
       for (var l = 0; l < 3; l++) {
@@ -4474,6 +4564,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       s.refl = 0.05;
       s.emi = (bg * 0.6 * (1.0 - edge) + mix(vec3f(1.0, 0.95, 0.3), vec3f(0.2, 1.0, 1.0), fl2) * txt * 1.6 + vec3f(1.0, 0.9, 0.5) * chase)
         * (1.2 + 1.3 * u.windows) * mix(0.6, 1.0, detail);
+      if (pk == 10) { s.emi = posterLook(pk, uv, txt) * (0.9 + 0.8 * u.windows) * mix(0.6, 1.0, detail); }
     }
     case 62: {
       // the megatower's screen: one of four kinds of ad, changing every dozen seconds or so
@@ -4489,10 +4580,10 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       let ca = hue3(h1);
       let cb = hue3(fract(h1 + 0.35 + 0.3 * hsh(bw.y, i32(slot), 193)));
       var e = vec3f(0.0);
-      if (kind >= 4) {
+      if (kind >= 2) {
         // a poster: centred lines of words in glyph units, square glyphs across the 28 x 40 m screen
-        let pk = i32(hsh(bw.y * 5 + i32(slot), bw.x, 198) * 7.0);
-        let nl = select(4, 3, pk >= 3);
+        let pk = posterPick(hsh(bw.y * 5 + i32(slot), bw.x, 198));
+        let nl = select(3, 4, pk <= 1);
         let gx = uv.x * 50.0;
         let gy = uv.y * 50.0 * (20.0 / 14.0);
         let top = f32(nl) * 6.5;
@@ -4502,19 +4593,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
           let qy = top - f32(l) * 13.0 - gy;
           if (qy >= 0.0 && qy < 8.0) { txt = max(txt, lineText(posterLine(pk, l), vec2f(gx, qy))); }
         }
-        if (pk <= 1) {
-          let band = sstepJ(-0.68, -0.72, uv.y);
-          e = mix(mix(vec3f(0.03, 0.07, 0.24), vec3f(0.08, 0.16, 0.42), 0.5 + 0.5 * uv.y), vec3f(0.55, 0.05, 0.06), band) + vec3f(1.0, 0.97, 0.9) * txt;
-        } else if (pk >= 4) {
-          // the tokes trade: loud, flashing, never subtle
-          let fl2 = step(0.5, fract(u.time * 1.7));
-          e = mix(vec3f(0.5, 0.0, 0.35), vec3f(0.95, 0.75, 0.0), fl2 * step(0.0, uv.y)) + mix(vec3f(1.0, 0.95, 0.2), vec3f(1.0, 0.2, 0.8), fl2) * txt * 1.3;
-        } else if (pk == 2) {
-          let ring = sstepJ(0.06, 0.0, abs(length(uv - vec2f(0.0, 0.72)) - 0.16));
-          e = vec3f(0.02) + vec3f(1.0, 0.62, 0.2) * (txt + ring * 0.8);
-        } else {
-          e = vec3f(0.01, 0.02, 0.03) + vec3f(0.3, 1.0, 0.95) * txt * (0.7 + 0.3 * step(0.1, fract(u.time * 2.3 + uv.y)));
-        }
+        e = posterLook(pk, uv, txt);
       } else {
       switch kind {
         case 0: {
