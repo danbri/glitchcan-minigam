@@ -1362,8 +1362,8 @@ fn propsFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
       let tg = max(dot(gp - ro, rd), 0.0);
       if (tg < bestT) {
         let dd = length(ro + rd * tg - gp);
-        let gc = select(vec3f(1.0, 0.72, 0.4), hue3(Q.z) * 0.8 + 0.3, kind == 8);
-        glow += gc * exp(-dd * dd / select(0.9, 0.02, kind == 8)) * select(0.35, 0.6 * (0.6 + 0.4 * sin(u.time * 3.0)), kind == 8);
+        let gc = select(vec3f(1.0, 0.72, 0.4), specCycle(0.0, 0.0) * 0.8 + 0.3, kind == 8);
+        glow += gc * exp(-dd * dd / select(0.9, 0.09, kind == 8)) * select(0.35, 1.1 * (0.6 + 0.4 * step(0.5, fract(u.time * 3.5))), kind == 8);
       }
     }
     if (d2 < 0.0) { continue; }
@@ -1417,8 +1417,16 @@ fn propsFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
   let dif = max(dot(nw, u.sunDir), 0.0) * 0.8 + 0.2;
   let hv = normalize(u.sunDir - rd);
   var c = alb * (u.sunCol * dif * 0.6 + u.skyTop * 0.5 + u.skyHor * 0.25) + u.sunCol * pow(max(dot(nw, hv), 0.0), 40.0) * spec * 0.3 + emi;
+  // findable things shimmer like a collectable in an old home-computer platform game: the hue wheel turned in eight
+  // hard steps, bands rolling up the object, bright whatever the light
+  if (kind == 8) { c = mix(c, specCycle(bq.y * 2.5 + bq.x * 0.8, f32(bi)) * (0.75 + 0.25 * dif), 0.85); }
   c = fogApply(c, ro, rd, bestT);
   return c + glow * 0.5;
+}
+// the colour wheel stepped round: eight hues, a new one about seven times a second, offset by position along the thing
+fn specCycle(along: f32, k: f32) -> vec3f {
+  let step8 = floor(u.time * 7.0 + along * 8.0 + k * 3.0);
+  return hue3(fract(step8 / 8.0)) * 1.3 + 0.08;
 }
 
 fn pedDensity(c: vec2i) -> f32 {
