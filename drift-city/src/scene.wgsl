@@ -42,7 +42,7 @@ struct Flock { n: vec4f, g: array<vec4f, 4>, a: array<vec4f, 192> };
 // story props: count in n.x; per prop a[2i] = position (m) and kind, a[2i+1] = yaw, scale, hue, parameter
 struct Props { n: vec4f, a: array<vec4f, 64> };
 @group(0) @binding(22) var<uniform> pr: Props;
-struct TB { glyph: array<vec4u, 22>, word: array<vec4u, 94> };
+struct TB { glyph: array<vec4u, 22>, word: array<vec4u, 95> };
 @group(0) @binding(12) var<uniform> tb: TB;
 @group(0) @binding(13) var terrTex: texture_2d<f32>;
 @group(0) @binding(14) var ffBTex: texture_2d<f32>;
@@ -682,6 +682,127 @@ fn carsQ(p: vec3f) -> CarQ {
     }
   } else {
     best.d = min(best.d, abs(dz) - 2.3);
+  }
+  return best;
+}
+
+// ---------- what holds the tubes up ----------
+// At every crossing of two street lines, a junction drum on a column: the tubes span the 26 m between them (a
+// pylon at mid-block stood where the street views' cameras do). At some crossings (tubeStation) the junction is a
+// station, a wider glazed drum with a glass lift shaft down to the street. Traced analytically (tubeStructTrace), like the tubes themselves; tubeStructSDF is the
+// same shapes as a distance, for normals and occlusion.
+fn tubeStation(i: i32, j: i32) -> bool { return hsh(i, j, 880) < 0.07; }
+fn tubeStructSDF(p: vec3f) -> vec2f {
+  var r = vec2f(1e5, 64.0);
+  for (var ax = 0; ax < 2; ax++) {
+    let a = select(p.x, p.z, ax == 1);
+    let b = select(p.z, p.x, ax == 1);
+    let li = round(a / CS);
+    let da = a - li * CS;
+    // the junction at the crossing, or a station
+    let bj = round(b / CS);
+    let jc = vec2f(da, b - bj * CS);
+    let st = tubeStation(select(i32(li), i32(bj), ax == 1), select(i32(bj), i32(li), ax == 1));
+    let dr = select(3.2, 6.2, st);
+    let drum = max(length(jc) - dr, abs(p.y - TUBE_Y - select(0.0, 0.6, st)) - select(2.3, 3.4, st));
+    let col = max(length(jc) - select(0.7, 1.5, st), p.y - TUBE_Y);
+    if (drum < r.x) { r = vec2f(drum, select(64.0, 65.0, st)); }
+    if (col < r.x) { r = vec2f(col, select(64.0, 66.0, st)); }
+  }
+  return r;
+}
+// a vertical cylinder (centre c in xz, radius rad, from y0 to y1, with its caps): entry distance or -1
+fn cylV(ro: vec3f, rd: vec3f, c: vec2f, rad: f32, y0: f32, y1: f32) -> f32 {
+  let o = ro.xz - c;
+  let A = dot(rd.xz, rd.xz);
+  var best = -1.0;
+  if (A > 1e-8) {
+    let B = dot(o, rd.xz);
+    let C = dot(o, o) - rad * rad;
+    let disc = B * B - A * C;
+    if (disc >= 0.0) {
+      let t = (-B - sqrt(disc)) / A;
+      let y = ro.y + rd.y * t;
+      if (t > 0.0 && y >= y0 && y <= y1) { best = t; }
+    }
+  }
+  if (abs(rd.y) > 1e-6) {
+    for (var k = 0; k < 2; k++) {
+      let yc = select(y0, y1, k == 1);
+      let t = (yc - ro.y) / rd.y;
+      if (t > 0.0 && (best < 0.0 || t < best) && length(o + rd.xz * t) <= rad) { best = t; }
+    }
+  }
+  return best;
+}
+fn boxHit(ro: vec3f, rd: vec3f, lo: vec3f, hi: vec3f) -> f32 {
+  let inv = 1.0 / select(rd, vec3f(1e-6), abs(rd) < vec3f(1e-6));
+  let t0 = (lo - ro) * inv;
+  let t1 = (hi - ro) * inv;
+  let tn = max(max(min(t0.x, t1.x), min(t0.y, t1.y)), min(t0.z, t1.z));
+  let tf = min(min(max(t0.x, t1.x), max(t0.y, t1.y)), max(t0.z, t1.z));
+  if (tf < max(tn, 0.0)) { return -1.0; }
+  return select(tn, -1.0, tn <= 0.0);
+}
+// nearest tube structure along a ray (within 220 m): (t, material), t < 0 for none
+fn tubeStructTrace(ro: vec3f, rd: vec3f, tEnd: f32) -> vec2f {
+  var best = vec2f(-1.0, 0.0);
+  var te = min(tEnd, 220.0);
+  let yHi = TUBE_Y + 4.2;
+  var t0 = 0.0;
+  var t1 = te;
+  if (abs(rd.y) < 1e-5) { if (ro.y > yHi) { return best; } }
+  else { let ta = (0.0 - ro.y) / rd.y; let tb = (yHi - ro.y) / rd.y; t0 = max(t0, min(ta, tb)); t1 = min(t1, max(ta, tb)); }
+  if (t1 <= t0) { return best; }
+  // every crossing lies on an x street line, so walking those finds them all
+  for (var ax = 0; ax < 1; ax++) {
+    let a = select(ro.x, ro.z, ax == 1);
+    let da = select(rd.x, rd.z, ax == 1);
+    let b0 = select(ro.z, ro.x, ax == 1);
+    let db = select(rd.z, rd.x, ax == 1);
+    let aA = a + da * t0;
+    let aB = a + da * t1;
+    let k0 = i32(floor((min(aA, aB) - 7.0) / CS)) + 1;
+    let k1 = i32(ceil((max(aA, aB) + 7.0) / CS)) - 1;
+    var kk = k0;
+    for (var it = 0; it < 10; it++) {
+      if (kk > k1) { break; }
+      let lc = f32(kk) * CS;
+      // the stretch of the ray within 7 m of this line, and the street elements along it there
+      var sa = t0;
+      var sb = t1;
+      if (abs(da) > 1e-4) { let ta = (lc - 7.0 - a) / da; let tb = (lc + 7.0 - a) / da; sa = max(sa, min(ta, tb)); sb = min(sb, max(ta, tb)); }
+      if (sa < sb) {
+        let bA = b0 + db * sa;
+        let bB = b0 + db * sb;
+        let m0 = i32(floor(min(bA, bB) / CS));
+        let m1 = i32(ceil(max(bA, bB) / CS));
+        var mm = m0;
+        for (var j = 0; j < 8; j++) {
+          if (mm > m1) { break; }
+          // only where the street has the city on one side
+          let ce = select(vec2i(kk, mm), vec2i(mm, kk), ax == 1);
+          let cw = select(vec2i(kk - 1, mm), vec2i(mm, kk - 1), ax == 1);
+          if (isCityTyp(cellHead(ce).typ) || isCityTyp(cellHead(cw).typ)) {
+            // the crossing at the start of this block (each crossing is tested once, from the x lines)
+            var t = -1.0;
+            if (ax == 0) {
+              let jc = vec2f(lc, f32(mm) * CS);
+              let st = tubeStation(kk, mm);
+              let dr = select(3.2, 6.2, st);
+              let yc = TUBE_Y + select(0.0, 0.6, st);
+              let hh = select(2.3, 3.4, st);
+              t = cylV(ro, rd, jc, dr, yc - hh, yc + hh);
+              if (t > 0.0 && (best.x < 0.0 || t < best.x) && t < te) { best = vec2f(t, select(64.0, 65.0, st)); }
+              t = cylV(ro, rd, jc, select(0.7, 1.5, st), 0.0, yc - hh);
+              if (t > 0.0 && (best.x < 0.0 || t < best.x) && t < te) { best = vec2f(t, select(64.0, 66.0, st)); }
+            }
+          }
+          mm += 1;
+        }
+      }
+      kk += 1;
+    }
   }
   return best;
 }
@@ -3107,6 +3228,8 @@ fn tracePrimary(ro: vec3f, rd: vec3f, tProxy: f32) -> Hit {
   }
   let tbl = traceBlimp(ro, rd, tEnd);
   if (tbl >= 0.0) { best.t = tbl; best.m = 29.0; best.kind = 4; best.c = vec2i(0); tEnd = tbl; }
+  let tts = tubeStructTrace(ro, rd, tEnd);
+  if (tts.x >= 0.0) { best.t = tts.x; best.m = tts.y; best.kind = 7; best.c = vec2i(floor((ro.xz + rd.xz * tts.x) / CS)); tEnd = tts.x; }
   let tsh = traceShips(ro, rd, tEnd);
   if (tsh.x >= 0.0) { best.t = tsh.x; best.m = 70.0; best.kind = 4; best.c = vec2i(i32(tsh.y) + 1, 0); tEnd = tsh.x; }
   let tbb = traceBalloons(ro, rd, tEnd);
@@ -3144,6 +3267,7 @@ fn terrNormal(p: vec3f) -> vec3f {
 fn sdfFor(p: vec3f, kind: i32, c: vec2i, cell: Cell) -> f32 {
   if (kind == 3) { return giantSDF(p, c).x; }
   if (kind == 4) { if (c.x > 0) { return shipSDF(p, c.x - 1).x; } return blimpSDF(p); }
+  if (kind == 7) { return tubeStructSDF(p).x; }
   return cellSDF(p, c, cell).x;
 }
 
@@ -4621,6 +4745,34 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         s.emi = select(vec3f(0.1, 0.3, 1.0), vec3f(1.0, 0.08, 0.06), (cq.z < 0.0) != (fract(u.time * 3.2) > 0.5)) * 3.5;
       }
       if (!police && abs(cq.z) < 0.5) { s.emi += vec3f(0.1, 0.8, 1.0) * 0.6; }
+    }
+    case 64: {
+      // the tube structure: bronze-green paint in the old style, a brass band under each drum, rivets, rust at the base
+      s.alb = mix(vec3f(0.16, 0.26, 0.22), vec3f(0.3, 0.2, 0.12), 0.5 * smoothstep(3.0, 0.0, p.y) * vnoise(p.xz * 3.0 + vec2f(p.y), 580));
+      s.spec = 0.5;
+      s.refl = 0.05;
+      if (abs(p.y - (TUBE_Y - 2.35)) < 0.18) { s.alb = vec3f(0.62, 0.48, 0.22); s.spec = 0.9; s.refl = 0.2; }
+      if (abs(p.y - (TUBE_Y + 2.1)) < 0.12) { s.emi = vec3f(0.35, 0.85, 1.0) * (0.15 + 1.2 * u.windows); }
+    }
+    case 65: {
+      // a station: glazed drum, lit inside, a band of lettering (TUBE) round it
+      let a = atan2(p.z - round(p.z / CS) * CS, p.x - round(p.x / CS) * CS);
+      let lit = step(0.18, fract(a * 6.0));
+      s.alb = vec3f(0.04, 0.06, 0.07);
+      s.refl = 0.25;
+      s.spec = 1.0;
+      s.emi = vec3f(1.0, 0.82, 0.55) * lit * (0.2 + 1.3 * u.windows) * step(abs(p.y - TUBE_Y - 0.6), 2.4);
+      if (abs(p.y - (TUBE_Y + 3.4)) < 0.9) {
+        let txt = neonText(94u, vec2f(fract(a / 6.2831853 * 3.0) * 24.0 - 4.0, (TUBE_Y + 4.1 - p.y) / 0.2), false);
+        s.emi = vec3f(0.3, 0.9, 1.0) * (0.15 + txt * 2.5) * (0.4 + u.windows);
+      }
+    }
+    case 66: {
+      // the lift shaft: glass round a lit car that rides up and down
+      s.alb = vec3f(0.05, 0.07, 0.08);
+      s.refl = 0.35;
+      let car = abs(p.y - (TUBE_Y - 4.0) * (0.5 + 0.5 * sin(u.time * 0.3 + p.x * 0.01)));
+      s.emi = vec3f(1.0, 0.85, 0.6) * (0.08 + 1.4 * step(car, 1.2)) * (0.3 + u.windows);
     }
     case 57: {
       // the fab's metal: corrugated sheds and the tower's braced faces, stained

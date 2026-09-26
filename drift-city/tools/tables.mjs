@@ -327,6 +327,8 @@ const WORDS = [
   // 68-: emigration, second wave; and work (the Org's sign-off jobs, heavy work for exos)
   'LEAVE', 'TITAN', 'GO', 'HOME', 'TO', 'SHIPS', 'DAILY', 'SEATS', 'LEFT', 'BOOK', 'YOUR', 'FUTURE', 'IS', 'PASSAGE',
   'PAID', 'WORK', 'FROM', 'SIGN', 'OFF', 'JOBS', 'APPROVED', 'EXO', 'HIRE', 'HEAVY', 'LIFT', 'LEGAL',
+  // 94-: the tube network
+  'TUBE',
 ];
 
 const id = new Map(GLYPHS.map(([k], i) => [k, i]));

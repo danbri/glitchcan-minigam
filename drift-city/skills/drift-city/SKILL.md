@@ -225,6 +225,11 @@ now laid out by hand. Everything below is in `world.js` unless named; the shape 
   `BEAM_DIR`), its lit patch in the cloud deck at 1.5 km, and the station's glint where the beam meets the sky. Place
   "fab" looks down on it from the Hive's battlements. Big block (3, 3) had a stale megatower in `giantHasW` after
   world.js dropped it; world.js and scene.wgsl must list the same giants.
+- **Tube structure** (`tubeStructTrace`, `tubeStructSDF`, materials 64-66): a junction drum on a column at every
+  crossing of two street lines, and at some crossings (`tubeStation`) a station with a glazed drum, a TUBE sign and a
+  glass lift shaft. Traced analytically along the x street lines (every crossing lies on one), not marched, so it
+  costs little; the SDF is only for normals and occlusion (hit kind 7). A pylon at mid-block was tried and taken out:
+  the street places' cameras stand 3.6 m from the street centre at mid-block, right where it stood.
 - **Skyboats** (`skyboats` in main.js, `shipSDF` / `traceShips` / material 70 in scene.wgsl): eight craft on fixed
   routes (`ev.ship`, `ev.shipDir`, EVN floats 144-207, so the EV buffer is 832 bytes): a cargo zeppelin between the
   spaceport and the fab, the emigration ad dirigible round the core, three skyboats (old town, Chinatown, the
