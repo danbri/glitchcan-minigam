@@ -102,6 +102,21 @@ description of the surroundings that `audioWorld` in `main.js` builds twice a se
   `setTimeout` fires in real time and the render misses it (September 2026: added to the harness). Compare loudness
   against the previous `audio.js` before and after a change; the radio chain first made the street 3.7 dB louder.
 
+## Look: focus, snow, what the city is made of
+
+- **Focus** (`comp` in `post.wgsl`): depth is in the alpha of the anti-aliased image. `u.reg2.z` is the focus
+  distance the page asks for (`focusTarget` in `main.js`: the nearest story person or clue near the middle of the
+  view), 0 means "whatever is at the centre"; `u.reg2.w` switches it on (Menu > View). In-focus pixels get a harder
+  unsharp mask; out-of-focus ones an 8-tap blur that down-weights sharper foreground taps. The aim, from an outside
+  review: the thing you are looking for is crisp, the city behind it can stay dreamlike. `u.reg.z`, `u.reg2.z/w`
+  were the last free uniform slots; `u.reg2.w` and `u.reg2.z` are now taken.
+- **Snow** is drawn in `comp` too: six layers from big out-of-focus flakes at the lens to far specks, each flake a
+  tumbling ellipse, some in clumps of two or three.
+- **Crystals and rings** were everywhere; they now mark places. Crystal towers are three times rarer outside the
+  crystal gardens (zone 7), crystal crowns on roofs rarer, plaza crystals only in zone 7. Megatowers (giants) went
+  from 28% to 12% of 8x8 regions, and only about a third wear a ring. `giantHas` exists in `world.js` AND as
+  `giantHasW` in `scene.wgsl`, plus the ground glow at `hsh(bg, 20)`: change all three together.
+
 ## Size and the lite variant
 
 `scene.wgsl` is an ubershader of about 4,700 lines. Some mobile drivers fail to build it; the page then retries with

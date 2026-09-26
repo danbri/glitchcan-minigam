@@ -133,7 +133,7 @@ const TALE_URL = "../story/lamplighter.fink.js";
 const BACKTICKS_URL = "../../packages/backticks/src/index.js";
 const INK_URLS = ["../../third_party/ink/ink-full.js", "https://cdn.jsdelivr.net/npm/inkjs@2.4.0/dist/ink-full.js"];
 const TALE_KEY = "drift.tale.v1", TALE_GEOM_KEY = "drift.taleGeom.v1";
-const TALE = { story: null, on: false, scene: null, place: null, paras: [], hot: [], dwell: 0, dwellOn: null, loading: false, min: false };
+const TALE = { textClues: taleFetch("drift.textClues") === true, story: null, on: false, scene: null, place: null, paras: [], hot: [], dwell: 0, dwellOn: null, loading: false, min: false };
 if (typeof PLACES_BAKED !== "undefined") PLACES = PLACES_BAKED;
 
 function taleStore(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
@@ -252,7 +252,7 @@ function taleRestart() {
 }
 function taleAdvance() {
   const s = TALE.story;
-  taleSetVar("in_world", true); // after every reset too: the story offers text routes to its clues only without the city
+  taleSetVar("in_world", !TALE.textClues); // after every reset too: text routes to clues only without the city, or on request
   const paras = [];
   while (s.canContinue) {
     const t = s.Continue();
@@ -297,7 +297,7 @@ function taleTags(tags, line) {
       audioVoice(v, (line || "").split(/\s+/).length, from);
     }
     else if (k === "place") taleGo(v);
-    else if (k === "time") { const idx = { day: 0, dusk: 1, night: 2, snow: 3 }[v]; if (idx !== undefined && idx !== todIdx) { todFrom = currentTod(); todIdx = idx; todT = 0; todAuto = 0; NAV.sunOverride = null; syncLabels(); } }
+    else if (k === "time") { const idx = { day: 0, dusk: 1, dawn: 1, night: 2, snow: 3 }[v]; if (idx !== undefined && idx !== todIdx) { todFrom = currentTod(); todIdx = idx; todT = 0; todAuto = 0; NAV.sunOverride = null; syncLabels(); } }
     else if (k === "weather") { WX.forced = v === "snow" ? 0.75 : v === "clear" ? 0 : null; }
     else if (k === "hotspot") {
       const f = v.split("@").map((x) => x.trim());

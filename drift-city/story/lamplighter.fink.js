@@ -3,7 +3,7 @@ oooOO`
 // Tags drive the world:
 //   # scene: <knot>        re-entered when something is found, so the text and choices refresh
 //   # place: <id>          move the view to one of the city's places
-//   # time: day | dusk | night | snow      # weather: snow | clear
+//   # time: day | dusk | dawn | night | snow (a grey snow light)      # weather: snow | clear
 //   # prop: <kind> @ <bearing deg> @ <distance m> @ <facing deg> @ <hue 0..1> @ <parameter>
 //          kinds: person (parameter > 0.5: a hat), stall, ladder, radio, lamp (1 lit, 0 cold), ferry, crates, nest, item
 //   # hotspot: <var> @ <label> @ <bearing deg> @ <elevation deg>   something to notice by looking around
@@ -16,7 +16,8 @@ VAR snowing = false
 VAR want_time = ""
 VAR want_weather = ""
 // The page sets in_world to true. Without the city (the FINK player, a screen reader, a device with no WebGL or WebGPU)
-// it stays false, and each hotspot is also offered as a "Look around" choice.
+// it stays false, and each hotspot is also offered as a "Look around" choice. The page also leaves it false when
+// the player asks for clues as choices (Menu > Story), so a screen reader user with WebGPU can play it too.
 VAR in_world = false
 
 // things found by looking around
@@ -39,6 +40,12 @@ VAR sato_deal = false
 VAR ferried = false
 VAR met_wren = false
 VAR heart = ""
+// the vote: what you actually put in front of the Assembly
+VAR shown_ledger = false
+VAR shown_card = false
+VAR shown_minutes = false
+VAR shown_oilcan = false
+VAR shown_witness = false
 
 -> stall
 
@@ -46,7 +53,7 @@ VAR heart = ""
 ~ return ticket + oilcan + minutes + scale + card + ledger + stone
 
 === function evidence() ===
-~ return ledger * 2 + card * 2 + minutes + oilcan
+~ return shown_ledger * 2 + shown_card * 2 + shown_minutes + shown_oilcan + shown_witness
 
 === stall ===
 # scene: stall
@@ -65,7 +72,7 @@ VAR heart = ""
     You can't leave the stall. You wake Pip, your old delivery drone, and send it instead: its eye is yours, its speaker your voice.
 - else:
     Your stall, the kettle ticking. {clues() > 0: Notebook: {ticket: a ferry ticket;} {oilcan: a Lumen oil can;} {minutes: torn minutes;} {scale: a glowing wing-scale;} {card: Dr Sato's recording;} {ledger: a Lumen ledger page;} {stone: a warm stone in Wren's knitting.}}
-    {met_wren: The sky is paling. Time for the vote.}
+    {met_wren: The sky is paling. Wren is waiting for you.}
 }
 {ticket and stall > 1: The ticket dries on the counter: river line, one way, punched at the last stop.}
 + {not in_world and not ticket} [Look around] -> look_ticket
@@ -77,7 +84,7 @@ VAR heart = ""
 + {know_castellane and not ledger} [Visit the Lumen pyramid] -> pyramid
 + {know_sato and not card} [Go to the radio dish] -> dish
 + {bearing or stone} [Follow the fliers north-east] -> stones
-+ {met_wren} [Go to the vote] -> vote
++ {met_wren} [Go back to Wren] -> forest
 + [Think it over] -> think
 
 === think ===
@@ -91,7 +98,7 @@ You pour a cup. What would Wren do? Look around properly.
 {know_sato and not card: Dr Sato has recorded the fliers all week.}
 {not minutes: The Assembly's minutes say what is being voted on.}
 {(bearing or stone) and not met_wren: North-east, where the fliers go.}
-{met_wren: The sky is paling. The vote.}
+{met_wren: The sky is paling. Wren is waiting.}
 + [Back to work] -> stall
 
 === bo ===
@@ -352,7 +359,7 @@ The eggs glow brighter. Decide now.
 * {sato_deal} [Signal Dr Sato to record the hatching] -> ending_spotlight
 
 === hatching_then_vote ===
-# time: dusk
+# time: dawn
 Pip hovers until the first egg cracks. A small, damp, glowing thing unfolds, blinks at the lamp, and tries its wings. Wren cries and pretends not to.
 "Go on," she says. "Tell them what you saw." # voice: wren
 -> vote
@@ -369,28 +376,40 @@ Pip hovers until the first egg cracks. A small, damp, glowing thing unfolds, bli
 # prop: person @ -40 @ 20 @ 30 @ 0.15 @ 0
 Dawn. The Assembly is fuller than Obi has ever seen it. Castellane, at the rostrum, is explaining how much the city will save.
 Obi catches your eye and gives you the floor.
+-> vote_floor
+
+=== vote_floor ===
 * {ledger} [Lay the manifest on the rostrum] -> vote_ledger
 * {card} [Play Sato's recording] -> vote_card
 * {minutes} [Read Wren's margin note] -> vote_minutes
-+ [Tell them what you saw in the forest] -> vote_tally
+* {oilcan} [Hold up the scrapped oil can] -> vote_oilcan
+* [Tell them what you saw in the forest] -> vote_witness
++ {vote_floor > 1} [Finish, and let them vote] -> vote_tally
 
 === vote_ledger ===
+~ shown_ledger = true
 The manifest passes along the front rows: forty lamp-hearts priced for the rings. The hall's murmur changes key. Castellane's smile holds, just.
--> vote_more
+-> vote_floor
 
 === vote_card ===
+~ shown_card = true
 Sato's recording fills the dome: the fliers' breathing call, and at the end, small new voices answering. Nobody moves.
--> vote_more
+-> vote_floor
 
 === vote_minutes ===
+~ shown_minutes = true
 You read Wren's note: "They will need warm lamps when the eggs come." Someone at the back asks, "Well, do they?" Heads turn to you. # voice: you
--> vote_more
+-> vote_floor
 
-=== vote_more ===
-* {ledger} [Lay the manifest on the rostrum] -> vote_ledger
-* {card} [Play Sato's recording] -> vote_card
-* {minutes} [Read Wren's margin note] -> vote_minutes
-+ [Finish, and let them vote] -> vote_tally
+=== vote_oilcan ===
+~ shown_oilcan = true
+You hold up the oil can. Lumen's own stamp on it: a red D, decommissioned. "Scrap," you say, "until someone wants to sell it." # voice: you
+-> vote_floor
+
+=== vote_witness ===
+~ shown_witness = true
+You tell them about the nest, the lamp, and the first small wing. "It hatched in warmth someone tended," you say. "Nobody asked the fliers." # voice: you
+-> vote_floor
 
 === vote_tally ===
 {evidence() >= 3: -> ending_warm}

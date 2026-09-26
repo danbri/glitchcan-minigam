@@ -154,6 +154,21 @@ function stepFlock(dt) {
 // what the sound engine hears about the world, refreshed twice a second: how busy it is, and where the sources are
 const AUW = { mode: "surface", alt: 0, people: 0, tubes: 0, flierDist: 1e9, story: 0, tod: 0, snow: 0, speed: 0, places: {} };
 let auT = 0;
+// depth of field: what the lens is focused on. The story's scene when a person or clue of it is near the middle of
+// the view, else 0, which tells the composite pass to focus on whatever is at the centre.
+const FOCUS = { d: 0, on: true };
+try { FOCUS.on = localStorage.getItem("drift.focus") !== "0"; } catch (e) {}
+function focusTarget(pos, f) {
+  if (!TALE.on || !TALE.props || !TALE.props.length) return 0;
+  let best = 0.8, bd = 0;
+  for (const p of TALE.props) {
+    const v = [p.x - pos[0], p.y + 1 - pos[1], p.z - pos[2]], l = Math.hypot(v[0], v[1], v[2]);
+    if (l < 0.5 || l > 80) continue;
+    const c = (v[0] * f[0] + v[1] * f[1] + v[2] * f[2]) / l;
+    if (c > best) { best = c; bd = l; }
+  }
+  return bd;
+}
 function audioWorld(dt) {
   AUW.speed = NAV.mode === "surface" ? Math.hypot(st.vx, st.vz) * (st.speedMul || 1) : NAV.mode === "free" ? 60 : 0;
   auT -= dt;
@@ -1354,6 +1369,10 @@ async function init() {
     updateWeather(dt);
     U[47] = wind.cx; U[51] = wind.cz; U[55] = inSpace ? 0 : WX.rain; U[59] = WX.wet;
     U.set([REG.ox, REG.oz, 0, REG.city, REG.cx, REG.cz, 0, 0], 60);
+    // the lens: on the story's scene when there is one in view, otherwise (0) on the centre of the view
+    const ft = inSpace ? 0 : focusTarget([U[4], U[5], U[6]], cam.f);
+    FOCUS.d = ft > 0 ? (FOCUS.d > 0 ? FOCUS.d + (ft - FOCUS.d) * Math.min(1, dt * 3) : ft) : 0;
+    U[66] = FOCUS.d; U[67] = FOCUS.on && !inSpace ? 1 : 0;
     device.queue.writeBuffer(ubuf, 0, U);
     if (!inSpace) device.queue.writeBuffer(propBuf, 0, worldProps());
     if (!inSpace) { stepFlock(dtS); if (!FLOCKS_ON) FLOCK_DATA[0] = 0; device.queue.writeBuffer(flockBuf, 0, FLOCK_DATA); }

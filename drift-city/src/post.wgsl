@@ -110,7 +110,37 @@ fn aces(x: vec3f) -> vec3f {
   let n3 = textureSampleLevel(srcTex, samp, uv - vec2f(0.0, ts.y), 0.0).rgb;
   let lo = min(min(min(n0, n1), min(n2, n3)), c);
   let hi = max(max(max(n0, n1), max(n2, n3)), c);
-  c = clamp(c + (c - (n0 + n1 + n2 + n3) * 0.25) * 0.3, lo, hi);
+  // focus: whatever the lens is on stays crisp (and is sharpened harder); nearer and further things soften with
+  // their distance from it. u.reg2.z is the focus distance the page asks for (the story's scene), 0 for the
+  // centre of the view; u.reg2.w switches the effect on.
+  let dep = min(textureSampleLevel(srcTex, samp, uv, 0.0).a, 1200.0);
+  var coc = 0.0;
+  if (u.reg2.w > 0.5) {
+    var fd = u.reg2.z;
+    if (fd <= 0.0) {
+      let cd = vec4f(textureSampleLevel(srcTex, samp, vec2f(0.5, 0.5), 0.0).a, textureSampleLevel(srcTex, samp, vec2f(0.46, 0.5), 0.0).a,
+        textureSampleLevel(srcTex, samp, vec2f(0.54, 0.5), 0.0).a, textureSampleLevel(srcTex, samp, vec2f(0.5, 0.55), 0.0).a);
+      fd = clamp(min(min(cd.x, cd.y), min(cd.z, cd.w)), 3.0, 900.0);
+    }
+    coc = clamp(abs(1.0 / max(dep, 0.3) - 1.0 / fd) * fd * 0.75 - 0.12, 0.0, 1.0);
+  }
+  c = clamp(c + (c - (n0 + n1 + n2 + n3) * 0.25) * (0.3 + 0.5 * (1.0 - coc)), lo, hi);
+  if (coc > 0.02) {
+    let rad = coc * 3.2 * (u.outRes.y / 720.0) / u.outRes;
+    var acc = c;
+    var wsum = 1.0;
+    for (var k = 0; k < 8; k++) {
+      let a = f32(k) * 2.3998 + 0.5;
+      let rr = sqrt((f32(k) + 0.5) / 8.0);
+      let tuv = uv + vec2f(cos(a), sin(a)) * rr * rad;
+      let tap = textureSampleLevel(srcTex, samp, tuv, 0.0);
+      // a sharp foreground must not bleed over a soft background
+      let w = select(1.0, 0.15, tap.a < dep * 0.7);
+      acc += tap.rgb * w;
+      wsum += w;
+    }
+    c = mix(c, acc / wsum, smoothstep(0.0, 0.6, coc));
+  }
   // warm halation around lights
   c += textureSampleLevel(bloomTex, samp, uv, 0.0).rgb * vec3f(0.36, 0.3, 0.24);
   c = aces(c * 1.05);
@@ -122,22 +152,38 @@ fn aces(x: vec3f) -> vec3f {
   c = mix(c, c * vec3f(0.82, 0.95, 1.08) + vec3f(0.015, 0.03, 0.045), 1.0 - smoothstep(0.0, 0.45, lum));
   c = mix(c, c * vec3f(1.08, 0.98, 0.86), smoothstep(0.45, 1.0, lum));
   c = c * 0.93 + vec3f(0.035, 0.03, 0.045);
-  // methane snowfall: big slow flakes drifting in the dense air, drawn after anti-aliasing
+  // methane snowfall in the dense air, six layers deep: big soft flakes drifting past the lens, then clumps and
+  // single flakes of every size, tumbling as they fall, down to far specks. Drawn after anti-aliasing.
   if (u.p8 > 0.0) {
     let sv = vec2f((2.0 * fc.x - u.outRes.x) / u.outRes.y, (u.outRes.y - 2.0 * fc.y) / u.outRes.y);
     let rdr = normalize(u.camFwd + (sv.x * u.camRight + sv.y * u.camUp) * u.fov);
     let ang = atan2(rdr.z, rdr.x) / 6.2831853;
     var snow = 0.0;
-    for (var l = 0; l < 4; l++) {
+    for (var l = 0; l < 6; l++) {
       let fl = f32(l);
-      let sc = vec2f(70.0 + 45.0 * fl, 11.0 + 7.0 * fl);
-      let g0 = vec2f(ang, rdr.y) * sc + vec2f(0.35 * sin(u.time * 0.35 + fl * 1.7 + rdr.y * 6.0), u.time * (0.45 + 0.2 * fl));
-      let ci = floor(g0);
+      let sc = vec2f(24.0 + 34.0 * fl, 4.0 + 6.0 * fl);
+      let k = 4.0 * sc.y / sc.x;
+      let gust = 0.25 * sin(u.time * 0.21 + fl) * sin(u.time * 0.13 + 1.3);
+      let g0 = vec2f(ang, rdr.y) * sc + vec2f(0.4 * sin(u.time * (0.3 + 0.05 * fl) + fl * 1.7 + rdr.y * 5.0) + gust * sc.x * 0.02, u.time * (0.32 + 0.17 * fl));
+      let ci = vec2i(floor(g0));
       let f = fract(g0);
-      if (hsh(i32(ci.x), i32(ci.y), 111 + l) < 0.4) {
-        let cp = vec2f(hsh(i32(ci.x), i32(ci.y), 120 + l), hsh(i32(ci.x), i32(ci.y), 130 + l)) * 0.6 + 0.2;
-        let r = 0.13 - 0.025 * fl;
-        snow += (1.0 - smoothstep(r * 0.25, r, length(f - cp))) * (1.0 - 0.18 * fl);
+      if (hsh(ci.x, ci.y, 111 + l) < 0.22 + 0.05 * fl) {
+        let h1 = hsh(ci.x, ci.y, 120 + l);
+        let h2 = hsh(ci.x, ci.y, 130 + l);
+        let h3 = hsh(ci.x, ci.y, 140 + l);
+        let cp = vec2f(h1, h2) * 0.6 + 0.2;
+        let r = (0.17 - 0.02 * fl) * (0.45 + 0.9 * h3);
+        // a tumbling flake: an ellipse that turns as it falls, sometimes a clump of two or three
+        let tb = u.time * (0.6 + 1.4 * h1) + h2 * 6.28;
+        let dv = f - cp;
+        let dr = vec2f(dv.x * k * cos(tb) - dv.y * sin(tb), dv.x * k * sin(tb) + dv.y * cos(tb)) * vec2f(1.0, 1.0 + 0.9 * h2);
+        var dd = length(dr);
+        if (h3 > 0.45) { dd = min(dd, length(dr - vec2f(r * 0.55, r * 0.2)) * 1.15); }
+        if (h3 > 0.8) { dd = min(dd, length(dr + vec2f(r * 0.3, r * 0.5)) * 1.3); }
+        // the nearest layer is out of focus: bigger, softer, fainter
+        let soft = select(0.3, 0.05, l == 0);
+        let a = select(1.0 - 0.13 * fl, 0.35, l == 0);
+        snow += (1.0 - smoothstep(r * soft, r, dd)) * a;
       }
     }
     c = mix(c, vec3f(0.97, 0.92, 0.84), clamp(snow * u.p8 * 0.7, 0.0, 0.85));

@@ -284,7 +284,7 @@ function hallAt(bx, bz) { return REG.city && wrapN(bx, 96) === 3 && wrapN(bz, 96
 function giantHas(bx, bz) {
   if (hallAt(bx, bz)) return true;
   const wx = wrapN(bx, 96), wz = wrapN(bz, 96);
-  return hsh(wx, wz, 20) < 0.28 && cityDist((wx + 0.5) * BIG, (wz + 0.5) * BIG) < cityR((wx + 0.5) * BIG, (wz + 0.5) * BIG) - 400;
+  return hsh(wx, wz, 20) < 0.12 && cityDist((wx + 0.5) * BIG, (wz + 0.5) * BIG) < cityR((wx + 0.5) * BIG, (wz + 0.5) * BIG) - 400;
 }
 function giantH(bx, bz) { return hallAt(bx, bz) ? 96 : 150 + 110 * hsh(wrapN(bx, 96), wrapN(bz, 96), 21); }
 
@@ -342,6 +342,8 @@ function computeBase(cx0, cz0, lite) {
   else if (zone === 5) { pc *= 0.3; po *= 0.5; ph = 0.1; hs = 0.4; }
   else if (zone === 6) { pc *= 0.2; po *= 0.3; ph = 0.08; }
   else { pc = 0.3; po = 0.3; ph *= 0.5; }
+  // crystal towers belong to the crystal gardens; elsewhere they are rare
+  if (zone !== 7) pc *= 0.3;
   const h0 = (typ) => typ === 1 ? (v < 0.4 ? 1.06 : 1) : 1;
   if (r0 < 0.07) { o.typ = 0; o.h = 4 + 8 * r1; o.top = o.h + 0.5; }
   else if (r0 < 0.07 + pc) { o.typ = 3; o.h = 16 + 50 * r1 * r1; o.offx = 0; o.offz = 0; o.top = o.h + 0.5; }
@@ -362,7 +364,8 @@ function computeBase(cx0, cz0, lite) {
     } else o.h = Math.max(12, (18 + 130 * r1 * r1 * r1) * hs);
     o.top = o.h * h0(1) + 0.3 + (o.h > 80 ? 15 : 0);
   }
-  if ((o.typ === 1 && r4 > 0.86 - 0.2 * cb) || (o.typ === 2 && r4 > 0.92)) {
+  const crown = zone === 7 ? 0 : 0.1;
+  if ((o.typ === 1 && r4 > 0.86 - 0.2 * cb + crown) || (o.typ === 2 && r4 > 0.92 + crown * 0.5)) {
     o.roof = 1;
     if (o.typ === 1) o.top = Math.max(o.top, o.h * h0(1) - 2 + 5 + 0.12 * o.h + 0.5);
     else o.top = Math.max(o.top, o.h * 1.1 + 6.5);

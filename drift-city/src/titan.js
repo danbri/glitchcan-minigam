@@ -625,6 +625,7 @@ function menuRoot() {
       { label: "Story", detail: story, sub: () => ({ title: "Story: The Lamplighter's Last Round", items: () => [
         { label: TALE.on ? "Close the story" : TALE.story || taleFetch(TALE_KEY) ? "Resume the story" : "Play the story", act: () => { closeGoPanel(); taleToggle(); } },
         { label: "Start again", act: () => { closeGoPanel(); taleRestart(); } },
+        { label: "Clues as choices (for reading without the view)", check: TALE.textClues, act: () => { TALE.textClues = !TALE.textClues; taleStore("drift.textClues", TALE.textClues); if (TALE.story && TALE.scene) { TALE.story.ChoosePathString(TALE.scene); taleAdvance(); } renderMenu(); } },
         { label: "Put the story panel back in its usual place", act: () => { taleResetGeom(); closeGoPanel(); } }] }) },
       { label: "Travel", detail: NAV.mode === "trip" ? "on the way" : "", sub: () => ({ ...destPages((d) => goTo(d.id), "Travel"), items: () => [...destPages((d) => goTo(d.id), "Travel").items(), { label: "Grand tour", check: !!NAV.tour, act: () => goTo("tour") }] }) },
       { label: "Places in the city", sub: () => placePages((p) => { closeGoPanel(); taleGo(p.id); if (!TALE.on) showHint(p.name + ". " + p.blurb, 6000); }, "Places in the city") },
@@ -637,6 +638,7 @@ function menuRoot() {
       { label: "View", sub: () => ({ title: "View", items: () => [
         ...[["Route: automatic", null], ["Route: street level", "low"], ["Route: over the rooftops", "high"]].map(([n, v]) => ({ label: n, check: st.forced === v, act: () => { st.forced = v; if (v === null) st.modeT = 20; st.realign = true; syncLabels(); renderMenu(); } })),
         { label: "Opening sequence when the page loads", check: introEnabled(), act: () => { try { localStorage.setItem("drift.intro", introEnabled() ? "0" : "1"); } catch (e) {} renderMenu(); } },
+        { label: "Focus on what matters (depth of field)", check: FOCUS.on, act: () => { FOCUS.on = !FOCUS.on; try { localStorage.setItem("drift.focus", FOCUS.on ? "1" : "0"); } catch (e) {} renderMenu(); } },
         { label: "Follow the drone (see yourself)", check: FOLLOW, act: () => { FOLLOW = !FOLLOW; try { localStorage.setItem("drift.follow", FOLLOW ? "1" : "0"); } catch (e) {} renderMenu(); } },
         { label: "On-screen gamepad", check: PAD.on, act: () => { padShow(!PAD.on); renderMenu(); } },
         { label: "Hide the controls (tap the scene to bring them back)", act: () => { closeGoPanel(); setUiHidden(true); } }] }) },
