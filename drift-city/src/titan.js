@@ -653,6 +653,7 @@ function menuRoot() {
         { label: "Episodes: every story in this city", act: () => { closeGoPanel(); taleLink(TALE_DOOR); } }] }) },
       { label: "Travel", detail: NAV.mode === "trip" ? "on the way" : "", sub: () => ({ ...destPages((d) => goTo(d.id), "Travel"), items: () => [...destPages((d) => goTo(d.id), "Travel").items(), { label: "Grand tour", check: !!NAV.tour, act: () => goTo("tour") }] }) },
       { label: "City map", act: () => { closeGoPanel(); mapOpen(); } },
+      { label: GUIDE.on ? "Stop the guided flight" : "Guided flight: the ship's computer shows you the city", act: () => { closeGoPanel(); if (GUIDE.on) guideStop(true); else guideStart(); } },
       { label: "Places in the city", sub: () => placePages((p) => { closeGoPanel(); taleGo(p.id); if (!TALE.on) showHint(p.name + ". " + p.blurb, 6000); }, "Places in the city") },
       { label: "Time and weather", detail: presets[todIdx].name, sub: () => ({ title: "Time and weather", items: () => [
         ...times.map(([n, i]) => ({ label: n, check: todIdx === i, act: () => { NAV.sunOverride = null; NAV.sunFrozen = false; todFrom = currentTod(); todIdx = i; todT = 0; todAuto = 0; syncLabels(); renderMenu(); } })),
