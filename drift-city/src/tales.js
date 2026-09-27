@@ -584,7 +584,33 @@ function visitStep(dt, inp) {
     st.yaw = ang(watch, b.yaw, w1);
     st.pitch = clampv((a.pitch + (lp - a.pitch) * w0) * (1 - w1) + b.pitch * w1, -1.3, 1.3);
   }
+  // walking or flying into the scene (visitMove); the offset is kept until the next visit
+  if (there && V.off) { st.x += V.off[0]; st.y += V.off[1]; st.z += V.off[2]; }
+  if (there && inp.move) visitMove(V, inp.move, dt);
   st.roll = 0; st.vx = 0; st.vy = 0; st.vz = 0;
+}
+// At eye level you walk (Titan's slow lope, the ground followed); higher up you fly along the view. Buildings
+// stop you: a step is refused when the flight code's height map rises in front of you (compared with where you
+// stand, since a street place can stand inside its coarse boxes). You stay within 150 m of the place.
+function visitMove(V, move, dt) {
+  const b = V.to;
+  if (!V.off) V.off = [0, 0, 0];
+  const eye = b.y - Math.max(terrSurfAt(b.x, b.z), 0), walk = eye < 6;
+  const cp = Math.cos(st.pitch), speed = walk ? 2.6 : 10;
+  const dir = walk ? [Math.cos(st.yaw), 0, Math.sin(st.yaw)] : [Math.cos(st.yaw) * cp, Math.sin(st.pitch), Math.sin(st.yaw) * cp];
+  const step = move * speed * dt;
+  const x0 = b.x + V.off[0], y0 = b.y + V.off[1], z0 = b.z + V.off[2];
+  const nx = x0 + dir[0] * step, nz = z0 + dir[2] * step;
+  let ny = walk ? Math.max(terrSurfAt(nx, nz), 0) + eye : y0 + dir[1] * step;
+  if (!walk) ny = Math.max(ny, Math.max(terrSurfAt(nx, nz), 0) + 2);
+  if (Math.hypot(nx - b.x, nz - b.z) > 150) return;
+  const h0 = heightAt(x0, z0, y0), h1 = heightAt(nx, nz, ny);
+  if (h1 > ny - 0.3 && h1 > h0 + 0.5) return;
+  // a gentle lope: the eye rises and falls over each long, slow stride
+  V.walked = (V.walked || 0) + Math.abs(step);
+  const bob = walk ? 0.06 * Math.abs(Math.sin(V.walked * 1.1)) : 0;
+  V.off = [nx - b.x, ny - b.y + bob, nz - b.z];
+  st.x = nx; st.y = ny + bob; st.z = nz;
 }
 // hotspots: a faint glint when you look their way; holding one near the centre of view (or tapping it) finds it
 function taleHotspots(dt, cam, fov) {

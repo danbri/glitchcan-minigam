@@ -488,6 +488,16 @@ function padWire() {
   // the sticks fade back when not touched for a few seconds
   const pd = document.getElementById("pad");
   if (pd && pd.classList) setInterval(() => pd.classList.toggle("idle", clock - lastUiTouch > 3 && !PAD.lx && !PAD.ly && !PAD.rx && !PAD.ry), 500);
+  // the sticks mean different things in a story place or picked view: say so on them
+  const padLabels = { visit: [["Look", "Left stick: look around"], ["Walk \u00b7 turn", "Right stick: up to walk or fly forwards into the scene, down to back away, left and right to turn"]],
+    fly: [["Climb \u00b7 slide", "Left stick: up and down to climb and descend, left and right to slide sideways"], ["Go \u00b7 turn", "Right stick: up to speed up, down to stop, left and right to turn"]] };
+  let padMode = "";
+  setInterval(() => {
+    const m = NAV.mode === "visit" ? "visit" : "fly";
+    if (m === padMode) return;
+    padMode = m;
+    ["stickL", "stickR"].forEach((id, i) => { const el = document.getElementById(id); if (!el || !el.querySelector) return; const sl = el.querySelector(".sl"); if (sl) sl.textContent = padLabels[m][i][0]; el.setAttribute("aria-label", padLabels[m][i][1]); });
+  }, 400);
 }
 function climbInput() {
   let c = climbBtn + PAD.ly;
@@ -497,8 +507,16 @@ function climbInput() {
 }
 function spaceInput(dt) {
   const inp = { dx: PAD.rx + PAD.lx * 0.6, dy: -PAD.ry * 0.8, zoom: 0, climb: climbInput() };
-  // in a story place both sticks just look around
-  if (NAV.mode === "visit") { inp.dx = PAD.lx + PAD.rx; inp.dy = -(PAD.ly + PAD.ry) * 0.8; inp.climb = 0; }
+  // in a story place or a picked view: the left stick looks, the right stick walks or flies you into the scene
+  // (up and down: forwards and back along the view; left and right: turn); W and S do the same
+  inp.move = 0;
+  if (NAV.mode === "visit") {
+    inp.dx = PAD.lx + PAD.rx * 0.8; inp.dy = -PAD.ly * 0.8; inp.climb = 0; inp.move = PAD.ry;
+    if (keys.has("w")) inp.move += 1;
+    if (keys.has("s")) inp.move -= 1;
+    inp.move = clampv(inp.move, -1, 1);
+    if (inp.move) lastInput = clock;
+  }
   if (inp.climb !== 0) lastInput = clock;
   if (NAV.mode !== "space" && NAV.mode !== "free" && NAV.mode !== "visit") { wheelAcc = 0; return inp; }
   const md = Math.min(innerWidth, innerHeight);

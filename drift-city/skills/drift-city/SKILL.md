@@ -355,6 +355,17 @@ The WebGL fallback only names things (it has no visits). Test: `PICK=x,y PICKF=1
   at a street place can read the roof height across the street), and the push-out moved the drone to the roof in a
   few frames. `st.soft` limits that push to 5 m/s for 15 s after the handover.
 
+## Walking into a scene (`visitMove` in tales.js)
+
+In a story place or a picked view (`NAV.mode === "visit"`) the left stick looks and the right stick moves: up
+walks (eye level, under 6 m above the ground: 2.6 m/s, the ground followed, a slow bob) or flies along the view
+(10 m/s); left and right turn; W and S do the same. The move is an offset (`V.off`) on the visit, so the place's
+props and hotspots stay where they are; a new visit starts at its place again. A step is refused when the height
+map rises ahead compared with where you stand (street places stand inside the coarse boxes, so an absolute test
+refuses everything), and you stay within 150 m. The pad's labels follow the mode ("Look" / "Walk · turn").
+Test: `PADRY=1` in the scratch runner holds the right stick forward; from street_1 the walk stops at the facade
+6.6 m ahead.
+
 ## Feeling the choices (`src/feel.js`)
 
 A thumb slid over the story's choices feels which one it is on, so a player can choose while watching the city:
