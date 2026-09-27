@@ -2,8 +2,9 @@
 // Menu > Guided flight (seven stops) or Full tour (fifteen, into four of the bars). The computer flies you over the
 // city and says what you are looking at: recorded lines (audio/computer/NN.mp3; how they were made and how to add
 // one: audio/computer/README.md) with the same words as a caption, so it works with the sound off.
-// Touching the view, a key or the pad pauses the tour: you can look, walk, fly anywhere, and "Carry on" flies you
-// back into the tour where you left it. Runs on its own timer, so it works in the WebGPU city and in the WebGL
+// A drag, a tap, the sticks or the look keys turn the view without stopping the tour. A long press or opening the menu
+// pauses it: you can look, walk, fly anywhere, and "Carry on" (at the top of the menu) flies you back into the tour
+// where you left it. The tour's controls and "Explore from here" live at the top of the menu, not on the screen. Runs on its own timer, so it works in the WebGPU city and in the WebGL
 // fallback (which hops instead of flying).
 const GUIDE_LINES = [
   "Guided flight. I will take you over the city and tell you what you are looking at. Touch the screen to stop and look around; the tour waits for you.",
@@ -80,21 +81,22 @@ const GUIDE_TOURS = {
 };
 const GUIDE = { on: false, paused: false, tour: null, stop: -1, phase: "", queue: [], until: 0, timer: 0, audio: null, cap: null };
 
-function guideCaption(text, paused) {
+function guideCaption(text) {
   if (!document.body || !document.body.appendChild || !document.createElement("div").querySelector) return;
   let c = GUIDE.cap;
   if (!c) {
     c = document.createElement("div"); c.className = "guideCap"; c.setAttribute("role", "status"); c.setAttribute("aria-live", "polite");
-    c.innerHTML = '<span class="guideText"></span><span class="guideBtns"><button type="button" class="guideGoBtn">Carry on</button><button type="button" class="guideStopBtn">End tour</button></span>';
+    c.innerHTML = '<span class="guideText"></span>';
     document.body.appendChild(c); GUIDE.cap = c;
-    c.querySelector(".guideGoBtn").addEventListener("click", (e) => { e.stopPropagation(); guideResume(); });
-    c.querySelector(".guideStopBtn").addEventListener("click", (e) => { e.stopPropagation(); guideStop(true); });
-    c.addEventListener("pointerdown", (e) => e.stopPropagation());
   }
   c.hidden = !text;
-  c.classList.toggle("paused", !!paused);
-  c.querySelector(".guideGoBtn").hidden = !paused;
   c.querySelector(".guideText").textContent = text || "";
+}
+// the stop the tour is at, for the menu
+function guideWhere() {
+  if (!GUIDE.on || !GUIDE.tour) return "";
+  const n = GUIDE.tour.stops.length, i = Math.max(0, Math.min(GUIDE.stop, n - 1));
+  return GUIDE.stop < 0 ? "starting" : (i + 1) + " of " + n;
 }
 // say one line: the recording if sound is on, the caption always; resolves the time it takes
 function guideSay(n) {
@@ -111,7 +113,6 @@ function guideSay(n) {
 }
 function guideTick() {
   if (!GUIDE.on || GUIDE.paused) return;
-  if (typeof PAD !== "undefined" && (PAD.lx || PAD.ly || PAD.rx || PAD.ry)) { guidePause(); return; }
   const now = performance.now() / 1000;
   if (GUIDE.phase === "talk") {
     if (now < GUIDE.until) return;
@@ -174,24 +175,21 @@ function guideStart(which) {
   GUIDE.phase = "intro"; GUIDE.until = performance.now() / 1000 + guideSay(GUIDE.tour.intro) - 2.5;
   clearInterval(GUIDE.timer);
   GUIDE.timer = setInterval(guideTick, 200);
-  if (!GUIDE.wired) {
-    GUIDE.wired = true;
-    document.getElementById("c")?.addEventListener?.("pointerdown", () => guidePause());
-    addEventListener("keydown", (e) => { if (!e.repeat && e.key !== "Escape") guidePause(); });
-  }
 }
-// the reader wants to look: stop talking, leave the view where it is, and wait
-function guidePause() {
+// A long press or the menu interrupts: stop talking, leave the view where it is, and wait. (Brief touches, drags,
+// the sticks and the look keys only turn the view; the tour carries on.) byMenu: closing the menu carries on.
+function guidePause(byMenu) {
   if (!GUIDE.on || GUIDE.paused) return;
-  GUIDE.paused = true;
+  GUIDE.paused = true; GUIDE.menuPaused = !!byMenu;
   GUIDE.pausedIn = GUIDE.phase;
   if (GUIDE.audio) GUIDE.audio.pause();
-  guideCaption("Tour paused. Look around, walk or fly anywhere; the tour waits.", true);
+  guideCaption("");
+  if (!byMenu) showHint("Tour paused. Carry on from the menu.", 3500);
 }
 // back into the tour: the stop you were at, from the start of its words (or the next one if they were done)
 function guideResume() {
   if (!GUIDE.on || !GUIDE.paused) return;
-  GUIDE.paused = false;
+  GUIDE.paused = false; GUIDE.menuPaused = false;
   const ph = GUIDE.pausedIn;
   if (ph === "fly" || ph === "talk") GUIDE.stop--;
   if (ph === "end") { guideStop(false); return; }
@@ -201,7 +199,7 @@ function guideResume() {
 // taken: the reader ended it (the button, the menu): stop at once, leave the view where it is
 function guideStop(taken) {
   if (!GUIDE.on) return;
-  GUIDE.on = false; GUIDE.paused = false; clearInterval(GUIDE.timer);
+  GUIDE.on = false; GUIDE.paused = false; GUIDE.menuPaused = false; clearInterval(GUIDE.timer);
   if (GUIDE.audio) GUIDE.audio.pause();
   guideCaption("");
   if (taken) { if (NAV.mode === "visit" && !roomNow()) flyOn(); showHint("You have control.", 2500); }
