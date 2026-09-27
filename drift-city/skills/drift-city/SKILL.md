@@ -178,6 +178,18 @@ description of the surroundings that `audioWorld` in `main.js` builds twice a se
   `setTimeout` fires in real time and the render misses it (September 2026: added to the harness). Compare loudness
   against the previous `audio.js` before and after a change; the radio chain first made the street 3.7 dB louder.
 
+## Long-press to go (`src/pick.js`)
+
+Hold still on the view for 0.52 s: `pickAt` follows the ray (the camera snapshot `CAMNOW`, which main.js and
+fallback.js fill each frame) through the skyboats (spheres from `EVN`), then marches it against `heightAt`, then
+names what it struck: a landmark (`pickLandmarks`, keep it in step with the map's), a building (street and
+district), or the land. `pickCompose` frames it: a distance that fits its size, 16 bearings scored for side light
+(the sun about 55 degrees off the view) and nearness to where you are, rejected if the line to it is blocked, a low
+angle (0.2 rad for tall things, 0.32 for wide), the subject on a third of the frame away from the light. The flight
+is a visit (`NAV.visit` with `look` and `subject`): `visitStep` turns to watch the subject, then settles into the
+composed view; `pickWarp` runs the world clock up to eight times as fast mid-flight; focus lands on the subject.
+The WebGL fallback only names things (it has no visits). Test: `PICK=x,y PICKF=12` in the scratch Dawn runner.
+
 ## Feeling the choices (`src/feel.js`)
 
 A thumb slid over the story's choices feels which one it is on, so a player can choose while watching the city:

@@ -493,6 +493,16 @@ function visitStep(dt, inp) {
   if (there) { V.ly += inp.dx * 1.6 * dt; V.lp = clampv(V.lp - inp.dy * 1.1 * dt, -1.0, 1.0); }
   st.yaw = a.yaw + dy * e + V.ly + (there ? 0.015 * Math.sin(clock * 0.37) : 0);
   st.pitch = clampv(a.pitch + (b.pitch - a.pitch) * e + V.lp + (there ? 0.01 * Math.sin(clock * 0.29) : 0), -1.3, 1.3);
+  // a flight to something picked (V.look): turn to watch it on the way, then settle into the composed view
+  if (V.look && !there) {
+    const lx = V.look[0] - st.x, ly = V.look[1] - st.y, lz = V.look[2] - st.z;
+    const lyaw = Math.atan2(lz, lx), lp = Math.atan2(ly, Math.hypot(lx, lz));
+    const w0 = sstep(0, 0.18, V.t / V.T), w1 = sstep(0.72, 1, V.t / V.T);
+    const ang = (from, to, w) => { let d = to - from; d = Math.atan2(Math.sin(d), Math.cos(d)); return from + d * w; };
+    const watch = ang(a.yaw, lyaw, w0);
+    st.yaw = ang(watch, b.yaw, w1);
+    st.pitch = clampv((a.pitch + (lp - a.pitch) * w0) * (1 - w1) + b.pitch * w1, -1.3, 1.3);
+  }
   st.roll = 0; st.vx = 0; st.vy = 0; st.vz = 0;
 }
 // hotspots: a faint glint when you look their way; holding one near the centre of view (or tapping it) finds it
