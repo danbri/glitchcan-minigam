@@ -3793,9 +3793,11 @@ fn posterLook(pk: i32, uv: vec2f, txt: f32) -> vec3f {
   }
   if (pk == 12) {
     // the Asters: silver lettering on black, under a cracked star
-    let a = atan2(uv.x, uv.y - 0.72);
-    let sr = length(uv - vec2f(0.0, 0.72)) / (0.13 + 0.07 * cos(a * 5.0));
-    let crack = step(abs(uv.x + (uv.y - 0.72) * 0.35 - 0.01 * sin(uv.y * 60.0)), 0.012);
+    // the star in the top-left corner, clear of the lines
+    let sc = uv - vec2f(-0.8, 0.72);
+    let a = atan2(sc.x, sc.y);
+    let sr = length(sc) / (0.09 + 0.05 * cos(a * 5.0));
+    let crack = step(abs(sc.x + sc.y * 0.35 - 0.008 * sin(uv.y * 60.0)), 0.01);
     let star = step(sr, 1.0) * (1.0 - crack);
     return vec3f(0.015) + vec3f(0.78, 0.8, 0.85) * (txt + star * 0.9);
   }
@@ -5252,7 +5254,8 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       // glyph size: three lines of up to eleven characters, as large as the board allows
       let gu = min(bc.z * 2.0 / 74.0, bc.w * 2.0 / 42.0);
       let slot = i32(floor(u.time / 7.0)) + i32(hb.w);
-      let pk = array<i32, 4>(4, 5, 10, 6)[((slot % 4) + 4) % 4];
+      // the tokes trade, the Org's jobs, and one slot in five the Asters' tag in toki pona (kind 12)
+      let pk = array<i32, 5>(4, 5, 10, 6, 12)[((slot % 5) + 5) % 5];
       let fl2 = step(0.5, fract(u.time * 1.3 + hb.w * 0.37));
       var txt = 0.0;
       for (var l = 0; l < 3; l++) {
@@ -5267,7 +5270,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       s.refl = 0.05;
       s.emi = (bg * 0.6 * (1.0 - edge) + mix(vec3f(1.0, 0.95, 0.3), vec3f(0.2, 1.0, 1.0), fl2) * txt * 1.6 + vec3f(1.0, 0.9, 0.5) * chase)
         * (1.2 + 1.3 * u.windows) * mix(0.6, 1.0, detail);
-      if (pk == 10) { s.emi = posterLook(pk, uv, txt) * (0.9 + 0.8 * u.windows) * mix(0.6, 1.0, detail); }
+      if (pk == 10 || pk == 12) { s.emi = posterLook(pk, uv, txt) * (0.9 + 0.8 * u.windows) * mix(0.6, 1.0, detail); }
     }
     case 62: {
       // the megatower's screen: one of four kinds of ad, changing every dozen seconds or so
