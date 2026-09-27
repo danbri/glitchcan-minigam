@@ -10,6 +10,7 @@ oooOO`
 //   # fly: <destination id>
 //   # voice: <who>         the line is spoken over that person's suit radio (who: bo, tam, obi, castellane, mei, sato, wren, you)
 // Shared with the world: the page writes here, hour and snowing; the story may set want_time and want_weather.
+# title: The Lamplighter's Last Round
 VAR here = ""
 VAR hour = ""
 VAR snowing = false
@@ -100,6 +101,14 @@ You pour a cup. What would Wren do? Look around properly.
 {(bearing or stone) and not met_wren: North-east, where the fliers go.}
 {met_wren: The sky is paling. Wren is waiting.}
 + [Back to work] -> stall
++ [Meanwhile, across town] -> elsewhere
+
+=== elsewhere ===
+// a light peer link: another story in the same city, with its own narrator; this one keeps its place
+# FINK: peraspera.fink.js
+# LINKREL: peer
+Across town tonight a bass player is walking the dive bars, looking for a band leader who may be leaving for Earth. That is someone else's night. Yours will wait here.
+-> stall
 
 === bo ===
 # scene: bo

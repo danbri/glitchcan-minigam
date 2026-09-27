@@ -28,6 +28,7 @@ Building from this tree reproduces the published page exactly.
   - `fallback.js` the WebGL fallback; `head.html` markup and styles; `tables.js` glyphs and words for lettering
   - `geo_*.json` anchor frames for regions of Titan
 - `story/lamplighter.fink.js` the first story, "The Lamplighter's Last Round", as a FINK file (Ink inside an `oooOO` block)
+- `story/episodes.fink.js` the front door: links to each episode (`# FINK:` tags; the page follows them)
 - `story/peraspera.fink.js` the second story, "Per Aspera": dive bars, the Asters, and a jazz club in the Warmhouse
 - `tools/` the build (`assemble.py`, `bakeplaces.mjs`) and `story.mjs`, which captures the story's ink with
   `packages/backticks` and compiles it with inkjs for the Node tools
