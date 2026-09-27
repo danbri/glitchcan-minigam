@@ -164,6 +164,8 @@ const AU_VOICES = {
   you: [150, 1.0, 0.3],
   // Per Aspera
   mags: [205, 1.15, 0.5], dex: [118, 1.25, 0.6], oskar: [108, 0.9, 0.35], nuala: [190, 0.95, 0.45], pell: [140, 0.8, 0.0], ruth: [200, 1.05, 0.2],
+  // the Org's polite public voice, and an Elder with the filters off
+  org: [235, 0.85, 0.0], elder: [172, 1.2, 0.3],
 };
 // a line of dialogue: queued after the line before it, as long as the line is, from the nearest story person
 // (or, with nobody placed, from just in front of Pip, whose receiver picks it up)

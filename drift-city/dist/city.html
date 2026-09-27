@@ -9644,6 +9644,8 @@ const AU_VOICES = {
   you: [150, 1.0, 0.3],
   // Per Aspera
   mags: [205, 1.15, 0.5], dex: [118, 1.25, 0.6], oskar: [108, 0.9, 0.35], nuala: [190, 0.95, 0.45], pell: [140, 0.8, 0.0], ruth: [200, 1.05, 0.2],
+  // the Org's polite public voice, and an Elder with the filters off
+  org: [235, 0.85, 0.0], elder: [172, 1.2, 0.3],
 };
 // a line of dialogue: queued after the line before it, as long as the line is, from the nearest story person
 // (or, with nobody placed, from just in front of Pip, whose receiver picks it up)
@@ -10661,6 +10663,8 @@ function taleTags(tags, line) {
     // "# FINK: <file>" (with "# LINKREL: peer" or none): leave for another story once this passage has been shown
     else if (k === "FINK") { TALE.link = { file: v, rel: TALE.linkRel || "" }; TALE.linkRel = ""; }
     else if (k === "LINKREL") { if (TALE.link) TALE.link.rel = v; else TALE.linkRel = v; }
+    // "# morse: <text>": the masts and the radio key the story's message; empty goes back to the usual ones
+    else if (k === "morse") { if (typeof MORSE !== "undefined") MORSE.override = v ? v.toUpperCase() : null; }
     else if (k === "restart") { TALE.story.ResetState(); TALE.scene = null; TALE.place = null; setTimeout(taleAdvance, 0); }
   }
 }
@@ -13422,7 +13426,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { WX, EVN, LIFE, taleLink, guideStart, guideStop, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { WX, EVN, LIFE, MORSE, taleLink, guideStart, guideStop, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

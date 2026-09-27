@@ -393,6 +393,8 @@ function taleTags(tags, line) {
     // "# FINK: <file>" (with "# LINKREL: peer" or none): leave for another story once this passage has been shown
     else if (k === "FINK") { TALE.link = { file: v, rel: TALE.linkRel || "" }; TALE.linkRel = ""; }
     else if (k === "LINKREL") { if (TALE.link) TALE.link.rel = v; else TALE.linkRel = v; }
+    // "# morse: <text>": the masts and the radio key the story's message; empty goes back to the usual ones
+    else if (k === "morse") { if (typeof MORSE !== "undefined") MORSE.override = v ? v.toUpperCase() : null; }
     else if (k === "restart") { TALE.story.ResetState(); TALE.scene = null; TALE.place = null; setTimeout(taleAdvance, 0); }
   }
 }
