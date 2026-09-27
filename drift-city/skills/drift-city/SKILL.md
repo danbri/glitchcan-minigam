@@ -615,6 +615,32 @@ Staging ideas the owner raised for busy scenes (not built; for the scene-staging
 - The main characters on a balcony high above the crowd: the crowd is far below, dim and repeated, and cheap.
 - An episode told as a freeze-framed graphic novel: three to five held moments.
 
+## Talking heads (`src/heads.js`, September 2026)
+
+When a story plays a recorded line (`# speech`) whose file is named for a cast member (`mags-3.mp3`,
+`elder-oxygen.mp3`), a small framed "helmet comms feed" opens top left with that person's face: a rigged
+Gaussian-splat head from `magpie/splatweb` (LAM; the lam-face-pipeline skill), mouth moved by the clip. Owner chose
+this (option 1 of 3) over splat heads on SDF bodies in the scene; holographic crowd scenes are option 2.
+
+- Casting (`HEAD_CAST`), synthetic faces only, chosen from a contact sheet rendered with the project's own renderer
+  (none of the excluded or bespectacled faces): Mags tpdne-40, Dex tpdne-21, Oskar tpdne-28, Nuala tpdne-24, Pell
+  tpdne-20, Ruth tpdne-35, Elder Harriet tpdne-04. The Org is an AI: a ring of light that swells with its voice, no
+  face. The attribution the splatweb rules ask for ("ship the attribution wherever these render") is in the feed
+  itself: "synthetic face · LAM, Apache-2.0".
+- Loading: nothing until the first line. Then `import()` of `magpie/splatweb/lib/{splat-renderer,lam-splats,
+  lam-visemes}.js` (relative to dist/city.html), the shared 3.6 MB `lam-sample/skin.glb` once, 1.3 MB per face.
+- Drawing: the WebGL2 `SplatRenderer` on the feed's own canvas (not the city's WebGPU device: no second device on a
+  phone), posed on the CPU (20,000 splats) at about 30 frames a second, only while the feed is open.
+- Mouth: the ARKit viseme bursts from `lam-visemes.js`, scaled by the clip's loudness, plus `jawOpen` from the
+  loudness. The loudness is a 60 Hz RMS envelope from a second fetch of the same mp3 (served from cache), so the
+  line still plays through its own `<audio>` element, untouched. Blinks and a slow head sway.
+- Mistakes: the first contact sheet showed blurred blobs: the camera was behind the heads (LAM heads have no back;
+  with `yaw: Math.PI` the camera goes on the -z side). The first feed filled the screen: the page styles every
+  `canvas` as a fixed full-screen layer, so the feed's canvas needs `position: absolute; inset: 0`.
+- Test: headless Chromium (WebGL on SwiftShader) with `--autoplay-policy=no-user-gesture-required`, calling
+  `__drift.headSay(audio.src, audio)` on a playing clip; `__drift.HEADS` shows the state. Not yet tested on a phone
+  for speed.
+
 ## Feeling the choices (`src/feel.js`)
 
 A thumb slid over the story's choices feels which one it is on, so a player can choose while watching the city:

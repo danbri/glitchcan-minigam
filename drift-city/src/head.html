@@ -91,6 +91,22 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 .pickCard button[hidden] { display: none; }
 .guideCap { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(150px + env(safe-area-inset-bottom, 0px)); z-index: 12; width: min(560px, calc(100vw - 32px)); box-sizing: border-box; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: var(--glass); border: 1px solid var(--edge); border-radius: 14px; color: var(--ink); font-size: 14px; line-height: 1.4; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); pointer-events: none; }
 .guideCap[hidden] { display: none; }
+/* talking heads (heads.js): a helmet comms feed, top left under the story bar */
+.headFeed { position: fixed; left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(84px + env(safe-area-inset-top, 0px)); z-index: 13; width: 128px; height: 168px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(160, 220, 255, 0.45); box-shadow: 0 0 calc(6px + 14px * var(--lvl, 0)) rgba(120, 200, 255, 0.35); background: #05080b; pointer-events: none; animation: headIn 0.3s ease-out, headFlick 7s steps(1) infinite; }
+.headFeed[hidden] { display: none; }
+.headFeed.closing { animation: headOut 0.35s ease-in forwards; }
+.headFeed canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: default; touch-action: auto; filter: saturate(0.8) contrast(1.08); }
+.headScan { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px), linear-gradient(180deg, rgba(120, 200, 255, 0.08), transparent 40%, rgba(0, 0, 0, 0.35)); mix-blend-mode: multiply; }
+.headName { position: absolute; left: 6px; right: 6px; bottom: 16px; font: 600 10px/1.2 system-ui, sans-serif; color: #cfe9ff; text-shadow: 0 1px 2px #000; letter-spacing: 0.02em; }
+.headCredit { position: absolute; left: 6px; right: 4px; bottom: 4px; font: 7px/1 system-ui, sans-serif; color: rgba(200, 225, 240, 0.55); white-space: nowrap; overflow: hidden; }
+.headFeed.org .headCredit { display: none; }
+.headOrg { display: none; position: absolute; inset: 30% 12%; border-radius: 50%; border: 2px solid rgba(255, 200, 120, calc(0.35 + 0.65 * var(--lvl, 0))); box-shadow: 0 0 calc(4px + 26px * var(--lvl, 0)) rgba(255, 190, 110, 0.6); }
+.headFeed.org .headOrg { display: block; }
+.headFeed.org canvas { visibility: hidden; }
+@keyframes headIn { from { opacity: 0; transform: scaleY(0.05); } to { opacity: 1; transform: none; } }
+@keyframes headOut { to { opacity: 0; transform: scaleY(0.05); } }
+@keyframes headFlick { 0%, 100% { opacity: 1; } 43% { opacity: 0.82; } 43.6% { opacity: 1; } 71% { opacity: 0.9; } 71.4% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .headFeed, .headFeed.closing { animation: none; } }
 .benchCard { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 40; width: min(560px, calc(100vw - 32px)); box-sizing: border-box; padding: 12px; background: var(--glass); border: 1px solid var(--edge); border-radius: 14px; color: var(--ink); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .benchCard pre { white-space: pre-wrap; font-size: 12.5px; margin: 0 0 10px; user-select: text; -webkit-user-select: text; }
 .benchCard button { font: inherit; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid var(--edge); border-radius: 10px; min-height: 44px; padding: 6px 14px; margin-right: 8px; cursor: pointer; }

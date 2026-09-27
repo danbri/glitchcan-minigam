@@ -57,3 +57,8 @@ Not vendored (no direct-download link to automate): Quaternius packs
 imports the repo-shared `third_party/three/three.module.min.js` (three.js,
 MIT licence, Three.js Authors) — not duplicated into this folder; same
 vendored copy `trees/vendor/` and others already use.
+
+## Used outside splatweb
+
+- `drift-city` (`drift-city/src/heads.js`) shows tpdne-04, -20, -21, -24, -28, -35 and -40 as the Per Aspera cast's
+  talking heads, with the line "synthetic face · LAM, Apache-2.0" in the feed itself.
