@@ -9,7 +9,7 @@ Ink, procedural spatial audio, and the Saturn system around it.
 
 Requires Python 3 and Node, with the repo's `npm ci` done (the tools use `inkjs` and `packages/backticks`).
 
-The story is not inlined. When the story panel opens, the page fetches `story/lamplighter.fink.js`, runs it in a
+The stories are not inlined. When the story panel opens, the page fetches the chosen story from `story/`, runs it in a
 sandboxed iframe with the frozen capture from `packages/backticks` (the same capture the Finkosphere story runner
 uses), and compiles the ink it gets back. The ink runtime comes from `third_party/ink/ink-full.js`, with jsDelivr
 (inkjs 2.4.0) as a fallback. So the page needs the repo around it and an HTTP server; the story does not work from
@@ -27,7 +27,8 @@ Building from this tree reproduces the published page exactly.
   - `audio.js` synthesised, placed (HRTF) sound; `main.js` WebGPU setup, the frame loop, the events director
   - `fallback.js` the WebGL fallback; `head.html` markup and styles; `tables.js` glyphs and words for lettering
   - `geo_*.json` anchor frames for regions of Titan
-- `story/lamplighter.fink.js` the story, "The Lamplighter's Last Round", as a FINK file (Ink inside an `oooOO` block)
+- `story/lamplighter.fink.js` the first story, "The Lamplighter's Last Round", as a FINK file (Ink inside an `oooOO` block)
+- `story/peraspera.fink.js` the second story, "Per Aspera": dive bars, the Asters, and a jazz club in the Warmhouse
 - `tools/` the build (`assemble.py`, `bakeplaces.mjs`) and `story.mjs`, which captures the story's ink with
   `packages/backticks` and compiles it with inkjs for the Node tools
 - `tests/` harnesses used during development; their paths to Dawn, wgpu-py and node modules need adjusting

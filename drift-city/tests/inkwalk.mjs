@@ -1,12 +1,14 @@
 // plays the story many times with random choices (and random discoveries), checking every run ends and counting endings
 import fs from 'node:fs';
-import { compileStory } from '../tools/story.mjs';
-let story, warnings;
-try { ({ story, warnings } = compileStory()); } catch (e) { console.log('COMPILE ERROR', e.message); process.exit(1); }
-if (warnings.length) console.log('warnings:', warnings.slice(0, 6).join(' | '));
+import { compileStory, STORY_FILES } from '../tools/story.mjs';
 const places = new Set(JSON.parse(fs.readFileSync(new URL('../src/places.json', import.meta.url), 'utf8')).map((p) => p.id));
 // Two modes. World: the page sets in_world and clues are found by looking (hotspots). Text: no city (the FINK player,
 // a screen reader, no GPU), so in_world stays false and clues can only come from the story's own "Look around" choices.
+for (const file of STORY_FILES) {
+console.log(file.split('/').pop());
+let story, warnings;
+try { ({ story, warnings } = compileStory(file)); } catch (e) { console.log('COMPILE ERROR', e.message); process.exitCode = 1; continue; }
+if (warnings.length) console.log('warnings:', warnings.slice(0, 6).join(' | '));
 for (const world of [true, false]) {
 const endings = {}, lens = [];
 let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -40,3 +42,4 @@ console.log(world ? 'world' : 'text ', 'endings over 400 random runs:', JSON.str
 if (Object.keys(endings).some((e) => !/^[A-Z ]+$/.test(e)) || Object.keys(endings).length < 4) process.exitCode = 1;
 }
 console.log('compiled story JSON', story.ToJson().length, 'bytes');
+}
