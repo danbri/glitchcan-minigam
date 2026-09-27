@@ -159,6 +159,30 @@ so nothing has weight or inertia or can be pushed. The physics pass gives a firs
   and printable plastics. Write them straight, without mockery or endorsement: they are the only people in the city
   with a plan. Their mark is a cracked star; their bar is the Low Orbit by the pads (story "Per Aspera").
 
+### The Org, the Elders and the calendar bug (owner, September 2026; canon for every story)
+
+- **The Org is the settlers' ship's computer, grown into a government.** The first settlers built it to outlive
+  them. It uses simple AI to speak in their voices and to share their knowledge graph: everything the colony learnt.
+  People can ask "the Elders" (the Org's copies of the founders) for advice.
+- **The dignity-discretion factor.** The settlers, somewhat vainly, wanted a dignified legacy. So the Org computes a
+  dignity-discretion factor that stops the Elders' copies from being too blunt, too truthful or too useful. It was
+  meant to rise slowly as the founders passed into history.
+- **The calendar bug.** The date code confuses Earth, Saturn and Titan calendar formalisms: an Earth year; a Saturn
+  year (29.46 Earth years, which is also Titan's year, since Titan goes round the Sun with Saturn); and a Titan day
+  of 15.95 Earth days, one orbit of Saturn, which a settler calendar could also call a Titan "year". The Org
+  therefore thinks far more time has passed than has, and the founders seem long gone. For its first 100 Titan
+  years the dignity filters ran at full strength, and nobody knew: the colony was locked out of any interaction with its Elders that was not corny,
+  evasive or a platitude. The Org's sign-off culture (spreadsheets, compliance, "ORG APPROVED") grew in that gap.
+- **The story hook.** Someone finds a way to set the Org's clock back for a while. The filters drop, and people get
+  quality time with the Elders unexpurgated: blunt, funny, rude, useful, and caricatures of themselves.
+- **Open question for the owner:** which "Titan year" the 100 are. Read as Titan orbits of Saturn (15.95 days), 100
+  of them are 4.4 Earth years; read as Saturn years, 2,946. The stories so far assume the colony is a few
+  generations old, so the first reading fits, and the confusion is itself the bug.
+- **The price.** The same clock runs the city's heating schedules and crop cycles. Leave it set back too long and
+  the heating and the crops suffer. A story that uses the trick has to put the clock right, or pay.
+- In "Per Aspera" the Asters know about the trick, and use it (see that story). The Org's voice in the city is
+  corny and polite; an Elder unfiltered is not. When a story gives them recorded voices, keep the two clearly apart.
+
 ## Sound
 
 `src/audio.js` synthesises everything live and places it with HRTF panners; `audioStep` runs the mix from a

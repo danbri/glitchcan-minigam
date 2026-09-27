@@ -33,7 +33,14 @@ const TN: i32 = 384;
 struct EV { beamPos: array<vec4f, 4>, beamDir: array<vec4f, 4>, smoke: array<vec4f, 4>, koi: vec4f, koiDir: vec4f, blimp: vec4f, blimpDir: vec4f, bo: vec4f,
   sky: vec4f, meteorA: vec4f, meteorB: vec4f, fw: array<vec4f, 3>, fwCol: array<vec4f, 3>, launch: vec4f, balloon: array<vec4f, 3>,
   sat: vec4f, ringN: vec4f, moonA: vec4f, moonB: vec4f,
-  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f };
+  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, life: array<vec4f, 64> };
+// Conway's Life (life.js): 64 columns by 40 rows from the top, 16 cells to a float
+fn lifeAt(col: i32, row: i32) -> f32 {
+  if (row < 0 || row >= 40) { return 0.0; }
+  let i = u32(row * 64 + ((col % 64) + 64) % 64);
+  let f = ev.life[i >> 6u][(i >> 4u) & 3u];
+  return f32((u32(f) >> (i & 15u)) & 1u);
+}
 struct EscG { ok: bool, a: vec3f, b: vec3f };
 @group(0) @binding(11) var<uniform> ev: EV;
 // flocking creatures: count in n.x; per creature a[2i] = position (m) and size, a[2i+1] = heading and flap phase
@@ -4513,7 +4520,10 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       } else {
         let cfz = cellFull(ci);
         let mega = ((cfz.fl >> 15) & 7) == 6;
-        let fx = facU / select(1.5, 1.1, mega);
+        // Life: about two in five round towers run the shared board in their windows, one column per window
+        let lifeT = cfz.v >= 0.4 && cfz.v < 0.72 && !mega && hsh(cseed, 5, 781) < 0.4;
+        let lang = fract(atan2(lq.y - cfz.off.y, lq.x - cfz.off.x) / 6.2831853 + 1.0);
+        let fx = select(facU / select(1.5, 1.1, mega), lang * 64.0, lifeT);
         let fy = p.y / select(3.6, 3.0, mega);
         let gx = fract(fx);
         let gy = fract(fy);
@@ -4536,6 +4546,11 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         let nearE = lit * (0.2 + 0.6 * fract(hr * 7.3));
         let farE = litP * 0.55;
         s.emi = wc * mix(farE, nearE, detail) * u.windows * 0.85;
+        if (lifeT) {
+          let alive = lifeAt(i32(floor(fx)) + (cseed & 63), i32(floor((cfz.h - p.y) / 3.6)));
+          lit = alive * (1.0 - opaque);
+          s.emi = vec3f(0.62, 1.0, 0.78) * mix(0.08, lit, detail) * (0.3 + 1.1 * u.windows);
+        }
         s.refl = (0.05 + 0.85 * pow(1.0 - ndv, 4.0)) * (1.0 - opaque * 0.75) * (1.0 - lit * 0.8);
         if (mega) {
           // the dorms, where the people are: capsule homes two to a floor, one round window each, pastel bands of
