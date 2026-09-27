@@ -4005,8 +4005,8 @@ fn posterLine(pk: i32, l: i32) -> vec4i {
     case 9: { switch l { case 0: { return vec4i(70, 71, -1, -1); } case 1: { return vec4i(72, 34, -1, -1); } default: { return vec4i(73, 74, -1, -1); } } }
     // work: WORK FROM BED / SIGN OFF / ORG APPROVED; EXO HIRE / HEAVY LIFT / LEGAL JOBS
     case 10: { switch l { case 0: { return vec4i(83, 84, 66, -1); } case 1: { return vec4i(85, 86, -1, -1); } default: { return vec4i(37, 88, -1, -1); } } }
-    // the Asters' words in katakana: O TAWA MUN (go to the stars) / KON SELI (warm air) / the language's own name (the drift-city skill names it; the page must not)
-    case 12: { switch l { case 0: { return vec4i(97, 98, 99, -1); } case 1: { return vec4i(100, 101, -1, -1); } default: { return vec4i(95, 96, -1, -1); } } }
+    // the Asters' words in katakana: O TAWA MUN (go to the stars) / KON SELI (warm air) / JAN SUNO (people of the sun). Words 95 and 96 (the language's own name) are not shown anywhere: owner, September 2026
+    case 12: { switch l { case 0: { return vec4i(97, 98, 99, -1); } case 1: { return vec4i(100, 101, -1, -1); } default: { return vec4i(102, 105, -1, -1); } } }
     default: { switch l { case 0: { return vec4i(89, 90, -1, -1); } case 1: { return vec4i(91, 92, -1, -1); } default: { return vec4i(93, 87, -1, -1); } } }
   }
 }

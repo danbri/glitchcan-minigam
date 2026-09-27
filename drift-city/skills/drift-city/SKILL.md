@@ -681,7 +681,8 @@ now laid out by hand. Everything below is in `world.js` unless named; the shape 
 - **Posters**: `posterLine(kind, line)` gives up to four words per line; kinds 0, 1, 7, 8, 9 are the government's
   emigration campaign, 2 and 3 the cult, 4-6 the tokes trade, 10 the Org's sign-off jobs, 11 exo hire, 12 the
   Asters in toki pona written in katakana (オ タワ ムン, o tawa mun, go to the stars; コン セリ, kon seli, warm air;
-  トキ ポナ), silver on black with a cracked star in the corner; it is also one slot in five on the Hive's boards
+  ヤン スノ, jan suno, people of the sun; the language's own name, once a third line, was dropped by the owner in
+  September 2026 and its word slots 95 and 96 hold spare copies), silver on black with a cracked star in the corner; it is also one slot in five on the Hive's boards
   (the place "hive" shows it). Posters on megatower screens and billboards are hard to find in a render; to check
   a poster kind, force it on the Hive boards (material 56) for one debug build. `posterPick`
   sets the mix (emigration half the time) for megatower screens and the 60% of billboards that show a poster;
