@@ -601,7 +601,9 @@ function taleGo(id) {
 function visitStep(dt, inp) {
   let V = NAV.visit;
   // a stick (or W, S) pushed during the flight there takes over at once: the view stops where it is and is yours
-  if (V.t < V.T && V.t > 0.3 && (inp.move || Math.abs(PAD.lx) > 0.3 || Math.abs(PAD.ly) > 0.3 || Math.abs(PAD.rx) > 0.3)) {
+  // (not during a guided tour: there the sticks only turn the view, and the tour flies on)
+  const touring = typeof GUIDE !== "undefined" && GUIDE.on && !GUIDE.paused;
+  if (!touring && V.t < V.T && V.t > 0.3 && (inp.move || Math.abs(PAD.lx) > 0.3 || Math.abs(PAD.ly) > 0.3 || Math.abs(PAD.rx) > 0.3)) {
     const here = { ...V.to, id: (V.to.id || "") + "~", x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch, room: 0 };
     V = NAV.visit = { from: here, to: here, t: 1, T: 1, ly: 0, lp: 0 };
   }
@@ -614,7 +616,8 @@ function visitStep(dt, inp) {
   st.y = a.y + (b.y - a.y) * e + arc;
   let dy = b.yaw - a.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
   const there = V.t >= V.T;
-  if (there) { V.ly += inp.dx * 1.6 * dt; V.lp = clampv(V.lp - inp.dy * 1.1 * dt, -1.0, 1.0); }
+  // looking about: once there, or at any time on a tour (a brush turns the view and the tour flies on)
+  if (there || touring) { V.ly += inp.dx * 1.6 * dt; V.lp = clampv(V.lp - inp.dy * 1.1 * dt, -1.0, 1.0); }
   st.yaw = a.yaw + dy * e + V.ly + (there ? 0.015 * Math.sin(clock * 0.37) : 0);
   st.pitch = clampv(a.pitch + (b.pitch - a.pitch) * e + V.lp + (there ? 0.01 * Math.sin(clock * 0.29) : 0), -1.3, 1.3);
   // a flight to something picked (V.look): turn to watch it on the way, then settle into the composed view
@@ -624,13 +627,13 @@ function visitStep(dt, inp) {
     const w0 = sstep(0, 0.18, V.t / V.T), w1 = sstep(0.72, 1, V.t / V.T);
     const ang = (from, to, w) => { let d = to - from; d = Math.atan2(Math.sin(d), Math.cos(d)); return from + d * w; };
     const watch = ang(a.yaw, lyaw, w0);
-    st.yaw = ang(watch, b.yaw, w1);
-    st.pitch = clampv((a.pitch + (lp - a.pitch) * w0) * (1 - w1) + b.pitch * w1, -1.3, 1.3);
+    st.yaw = ang(watch, b.yaw, w1) + V.ly;
+    st.pitch = clampv((a.pitch + (lp - a.pitch) * w0) * (1 - w1) + b.pitch * w1 + V.lp, -1.3, 1.3);
   }
   // walking or flying into the scene (visitMove); the offset is kept until the next visit
   if (there && V.walk) { if (inp.move || inp.dx || inp.dy) V.walk = null; else visitWalkStep(V, dt); }
   if (there && V.off) { st.x += V.off[0]; st.y += V.off[1]; st.z += V.off[2]; }
-  if (there && inp.move) visitMove(V, inp.move, dt);
+  if (there && inp.move && !(touring && GUIDE.phase === "fly")) visitMove(V, inp.move, dt);
   st.roll = 0; st.vx = 0; st.vy = 0; st.vz = 0;
 }
 // At eye level you walk (Titan's slow lope, the ground followed); higher up you fly along the view. Buildings

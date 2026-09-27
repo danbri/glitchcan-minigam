@@ -1508,8 +1508,6 @@ async function init() {
     audioFeet(dtS);
     audioCity(dtS, AUW);
     venueStep();
-    const fo = document.getElementById("bFlyOn");
-    if (fo) fo.hidden = !(NAV.mode === "visit" && !TALE.on);
     // shadow basis follows the target time of day; a change starts a new map generation
     // Shadow maps are double-buffered: a new sun direction is built in the background while the old map stays in use.
     const L = shadowDir(), key = L.map((v) => v.toFixed(4)).join(",");
@@ -1741,7 +1739,7 @@ addEventListener("keydown", (e) => {
   if (k === "h") { setUiHidden(!uiHidden); return; }
   if (k === "g") { toggleGoPanel(); return; }
   if (k === "t") { taleToggle(); return; }
-  if (k === "escape") { closeGoPanel(); return; }
+  if (k === "escape") { menuDismiss(); return; }
   keys.add(k);
   if (k.startsWith("arrow") || k === " ") e.preventDefault();
 });
@@ -1787,11 +1785,10 @@ document.getElementById("introSkipBtn").addEventListener("click", (e) => { e.sto
 document.getElementById("gateGo").addEventListener("click", (e) => { e.stopPropagation(); gateEnter(true); });
 document.getElementById("gateQuiet").addEventListener("click", (e) => { e.stopPropagation(); gateEnter(false); });
 // tapping the scene closes the travel drawer
-canvas.addEventListener("pointerdown", () => closeGoPanel());
+canvas.addEventListener("pointerdown", () => menuDismiss());
 document.getElementById("taleClose").addEventListener("click", (e) => { e.stopPropagation(); taleClose(); });
 document.getElementById("taleMin").addEventListener("click", (e) => { e.stopPropagation(); taleMinToggle(); });
 document.getElementById("taleRestart").addEventListener("click", (e) => { e.stopPropagation(); taleRestart(); });
-document.getElementById("bFlyOn").addEventListener("click", (e) => { e.stopPropagation(); flyOn(); });
 taleWirePanel();
 padWire();
 for (const [id, v] of [["bUp", 1], ["bDn", -1]]) {

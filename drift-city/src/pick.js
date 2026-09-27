@@ -221,6 +221,8 @@ function pickInit(canvas) {
       PICK.timer = 0;
       if (touches.size > 1) return;
       pointer.down = false;
+      // a long press interrupts a guided tour (a brief touch or a drag only turns the view)
+      if (typeof GUIDE !== "undefined" && GUIDE.on) guidePause();
       if (navigator.vibrate) navigator.vibrate(12);
       pickGo(PICK.x, PICK.y, false);
     }, 650);

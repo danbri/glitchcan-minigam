@@ -89,14 +89,9 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 .pickCard .pgo { flex: 1; background: rgba(232,185,121,.28); border-color: #e8b979; }
 .pickCard .pwk { flex: 1; background: rgba(121,200,232,.24); border-color: #79c8e8; }
 .pickCard button[hidden] { display: none; }
-.guideCap { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(160px + env(safe-area-inset-bottom, 0px)); z-index: 12; width: min(560px, calc(100vw - 32px)); box-sizing: border-box; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: var(--glass); border: 1px solid var(--edge); border-radius: 14px; color: var(--ink); font-size: 15px; line-height: 1.4; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); pointer-events: auto; }
+.guideCap { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(150px + env(safe-area-inset-bottom, 0px)); z-index: 12; width: min(560px, calc(100vw - 32px)); box-sizing: border-box; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: var(--glass); border: 1px solid var(--edge); border-radius: 14px; color: var(--ink); font-size: 14px; line-height: 1.4; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); pointer-events: none; }
 .guideCap[hidden] { display: none; }
 .guideCap .guideText { flex: 1; }
-.guideCap .guideBtns { display: flex; gap: 8px; flex-shrink: 0; }
-.guideCap .guideGoBtn { font: inherit; color: var(--ink); background: rgba(232,185,121,.28); border: 1px solid #e8b979; border-radius: 10px; min-height: 40px; padding: 4px 12px; cursor: pointer; }
-.guideCap button[hidden] { display: none; }
-.guideCap.paused { flex-wrap: wrap; }
-.guideCap .guideStopBtn { font: inherit; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid var(--edge); border-radius: 10px; min-height: 40px; padding: 4px 12px; cursor: pointer; }
 .pickRing.go { animation: pickGo 2.4s ease-out forwards; }
 @keyframes pickGo { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } }
 .mapHead { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin: 0 2px 6px; }
@@ -106,7 +101,6 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 .mapWords ul { margin: 4px 0 0; padding-left: 18px; }
 .taleChoices button.feel { background: rgba(232, 185, 121, 0.34); border-color: #e8b979; }
 .taleGrip { position: absolute; right: 0; bottom: 0; width: 22px; height: 22px; cursor: nwse-resize; touch-action: none; background: linear-gradient(135deg, transparent 0 55%, rgba(255, 255, 255, 0.35) 55% 62%, transparent 62% 72%, rgba(255, 255, 255, 0.35) 72% 79%, transparent 79%); }
-.flyOn { position: fixed; left: 50%; bottom: calc(104px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 3; min-height: 48px; font: inherit; font-size: 16px; color: var(--ink); background: var(--glass); border: 1px solid var(--edge); border-radius: 18px; padding: 8px 16px; cursor: pointer; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 @media (prefers-reduced-motion: reduce) { .tale { transition: none; } }
 @media (pointer: coarse) {
   .taleChoices button { min-height: 48px; font-size: 16px; padding: 11px 13px; }
@@ -153,6 +147,7 @@ body.uiHidden .burger { opacity: 0; pointer-events: none; }
 .row:hover { background: rgba(255,255,255,.1); }
 .row:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .row .rl { flex: 1 1 auto; }
+.row.now { border-color: #e8b979; background: rgba(232,185,121,.14); }
 .row .rd { font-size: 13px; color: var(--ink-dim); }
 .row.more::after { content: "\203a"; font-size: 22px; line-height: 1; color: var(--ink-dim); }
 .row.on::before { content: "\2713"; color: var(--accent); font-weight: 700; }
@@ -258,6 +253,5 @@ body.introOn .burger, body.introOn .ui, body.introOn .pad, body.introOn .tale { 
   </div>
   <div class="taleGrip" id="taleGrip" aria-hidden="true" title="Drag to resize"></div>
 </aside>
-<button class="flyOn" id="bFlyOn" type="button" hidden aria-label="Leave this view and fly on, the way you face">Explore from here</button>
 <div class="glint" id="glint" hidden role="button" aria-label="Something worth a closer look"></div>
 <div class="err" id="err"><div id="errMsg"></div></div>

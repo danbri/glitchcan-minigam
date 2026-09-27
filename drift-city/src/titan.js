@@ -649,12 +649,27 @@ function placeGroups() {
 function placePages(act, title) {
   return { title, items: () => placeGroups().map(([g, ps]) => ({ label: g, detail: String(ps.length), sub: () => ({ title: g, items: () => ps.map((p) => ({ label: p.name.split(",")[0], act: () => act(p) })) }) })) };
 }
+// What is going on now, at the top of the menu: the tour's controls and "Explore from here" live here, not on the
+// screen over the view (owner, September 2026).
+function menuNow() {
+  const rows = [];
+  if (GUIDE.on) {
+    rows.push(GUIDE.paused ? { label: "Carry on with the tour", detail: guideWhere(), now: true, act: () => { closeGoPanel(); guideResume(); } }
+      : { label: "Pause the tour", detail: guideWhere(), now: true, act: () => { GUIDE.menuPaused = false; closeGoPanel(); } });
+    rows.push({ label: "End the tour", now: true, act: () => { closeGoPanel(); guideStop(true); } });
+  }
+  if (NAV.tourHeld) rows.push({ label: "Carry on the Grand tour", now: true, act: () => { closeGoPanel(); tourResume(); } });
+  if (NAV.tour) rows.push({ label: "End the Grand tour", now: true, act: () => { NAV.tour = null; closeGoPanel(); syncGoLabel(); } });
+  if (NAV.mode === "visit" && !TALE.on) rows.push({ label: "Explore from here", now: true, act: () => { closeGoPanel(); if (GUIDE.on) guideStop(false); flyOn(); } });
+  return rows;
+}
 function menuRoot() {
   const story = TALE.on ? "open" : (TALE.story || taleFetch(taleKey())) ? "paused" : "";
   const times = [["Day", 0], ["Dusk", 1], ["Night", 2], ["Methane snow", 3]];
   return {
     title: "Menu",
     items: () => [
+      ...menuNow(),
       { label: "Return to opening", act: () => { closeGoPanel(); if (TALE.on) taleClose(); introStart(); } },
       { label: "Story", detail: story, sub: () => ({ title: TALE.title ? "Story: " + TALE.title : "Story", items: () => [
         { label: TALE.on ? "Close the story" : TALE.story || taleFetch(taleKey()) ? "Resume the story" : "Play the story", act: () => { closeGoPanel(); taleToggle(); } },
@@ -665,9 +680,7 @@ function menuRoot() {
         { label: "Episodes: every story in this city", act: () => { closeGoPanel(); taleLink(TALE_DOOR); } }] }) },
       { label: "Travel", detail: NAV.mode === "trip" ? "on the way" : "", sub: () => ({ ...destPages((d) => goTo(d.id), "Travel"), items: () => [...destPages((d) => goTo(d.id), "Travel").items(), { label: "Grand tour", check: !!NAV.tour, act: () => goTo("tour") }, ...(NAV.tourHeld ? [{ label: "Carry on the Grand tour", act: () => { closeGoPanel(); tourResume(); } }] : [])] }) },
       { label: "City map", act: () => { closeGoPanel(); mapOpen(); } },
-      ...(GUIDE.on ? [
-        ...(GUIDE.paused ? [{ label: "Carry on with the tour", act: () => { closeGoPanel(); guideResume(); } }] : []),
-        { label: "End the tour", act: () => { closeGoPanel(); guideStop(true); } }] : [
+      ...(GUIDE.on ? [] : [
         { label: "Guided flight: the ship's computer shows you the city (3 minutes)", act: () => { closeGoPanel(); guideStart("short"); } },
         { label: "Full tour: the city and four of its bars, Life towers, Morse masts (8 minutes)", act: () => { closeGoPanel(); guideStart("full"); } }]),
       { label: "Places in the city", sub: () => placePages((p) => { closeGoPanel(); taleGo(p.id); if (!TALE.on) showHint(p.name + ". " + p.blurb, 6000); }, "Places in the city") },
@@ -707,7 +720,7 @@ function renderMenu() {
   for (const it of page.items()) {
     const b = document.createElement("button");
     b.type = "button";
-    b.className = "row" + (it.sub ? " more" : "") + (it.check ? " on" : "");
+    b.className = "row" + (it.sub ? " more" : "") + (it.check ? " on" : "") + (it.now ? " now" : "");
     const l = document.createElement("span"); l.className = "rl"; l.textContent = it.label; b.appendChild(l);
     if (it.detail) { const d = document.createElement("span"); d.className = "rd"; d.textContent = it.detail; b.appendChild(d); }
     if (it.check !== undefined) b.setAttribute("aria-pressed", it.check ? "true" : "false");
@@ -719,7 +732,7 @@ function renderMenu() {
     MENU.list.appendChild(b);
   }
 }
-function menuBack() { if (MENU.stack.length > 1) { MENU.stack.pop(); renderMenu(); } else closeGoPanel(); }
+function menuBack() { if (MENU.stack.length > 1) { MENU.stack.pop(); renderMenu(); } else menuDismiss(); }
 function buildGoPanel() {
   goPanel = document.createElement("nav");
   goPanel.className = "drawer";
@@ -733,7 +746,7 @@ function buildGoPanel() {
   const ti = document.createElement("span"); ti.className = "drawerTitle";
   const cb = document.createElement("button");
   cb.type = "button"; cb.innerHTML = "&times;"; cb.setAttribute("aria-label", "Close the menu");
-  cb.addEventListener("click", (e) => { e.stopPropagation(); closeGoPanel(); });
+  cb.addEventListener("click", (e) => { e.stopPropagation(); menuDismiss(); });
   hd.appendChild(bk); hd.appendChild(ti); hd.appendChild(cb);
   const list = document.createElement("div"); list.className = "rows";
   goPanel.appendChild(hd); goPanel.appendChild(list);
@@ -743,11 +756,18 @@ function buildGoPanel() {
 function toggleGoPanel() {
   if (!goPanel) buildGoPanel();
   if (goPanel.classList.contains("open")) { closeGoPanel(); return; }
+  if (GUIDE.on && !GUIDE.paused) guidePause(true);
   MENU.stack = [menuRoot()];
   renderMenu();
   goPanel.classList.add("open"); document.body?.classList?.add("drawerOn");
 }
 function closeGoPanel() { if (goPanel) { goPanel.classList.remove("open"); document.body?.classList?.remove("drawerOn"); } }
+// the menu put away without choosing anything: a tour it paused carries on
+function menuDismiss() {
+  const was = goPanel && goPanel.classList.contains("open");
+  closeGoPanel();
+  if (was && GUIDE.menuPaused && GUIDE.paused) guideResume();
+}
 function spaceName() { const k = NAV.space.kind; return k === 1 ? "Titan orbit" : k === 3 ? MOONS[NAV.space.moon].name : k === 4 ? "Inside the rings" : k === 5 ? "Saturn's cloud tops" : "Saturn system"; }
 function syncGoLabel() {
   const v = document.getElementById("vGo");

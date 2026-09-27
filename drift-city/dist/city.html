@@ -89,14 +89,9 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 .pickCard .pgo { flex: 1; background: rgba(232,185,121,.28); border-color: #e8b979; }
 .pickCard .pwk { flex: 1; background: rgba(121,200,232,.24); border-color: #79c8e8; }
 .pickCard button[hidden] { display: none; }
-.guideCap { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(160px + env(safe-area-inset-bottom, 0px)); z-index: 12; width: min(560px, calc(100vw - 32px)); box-sizing: border-box; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: var(--glass); border: 1px solid var(--edge); border-radius: 14px; color: var(--ink); font-size: 15px; line-height: 1.4; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); pointer-events: auto; }
+.guideCap { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(150px + env(safe-area-inset-bottom, 0px)); z-index: 12; width: min(560px, calc(100vw - 32px)); box-sizing: border-box; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: var(--glass); border: 1px solid var(--edge); border-radius: 14px; color: var(--ink); font-size: 14px; line-height: 1.4; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); pointer-events: none; }
 .guideCap[hidden] { display: none; }
 .guideCap .guideText { flex: 1; }
-.guideCap .guideBtns { display: flex; gap: 8px; flex-shrink: 0; }
-.guideCap .guideGoBtn { font: inherit; color: var(--ink); background: rgba(232,185,121,.28); border: 1px solid #e8b979; border-radius: 10px; min-height: 40px; padding: 4px 12px; cursor: pointer; }
-.guideCap button[hidden] { display: none; }
-.guideCap.paused { flex-wrap: wrap; }
-.guideCap .guideStopBtn { font: inherit; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid var(--edge); border-radius: 10px; min-height: 40px; padding: 4px 12px; cursor: pointer; }
 .pickRing.go { animation: pickGo 2.4s ease-out forwards; }
 @keyframes pickGo { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } }
 .mapHead { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin: 0 2px 6px; }
@@ -106,7 +101,6 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 .mapWords ul { margin: 4px 0 0; padding-left: 18px; }
 .taleChoices button.feel { background: rgba(232, 185, 121, 0.34); border-color: #e8b979; }
 .taleGrip { position: absolute; right: 0; bottom: 0; width: 22px; height: 22px; cursor: nwse-resize; touch-action: none; background: linear-gradient(135deg, transparent 0 55%, rgba(255, 255, 255, 0.35) 55% 62%, transparent 62% 72%, rgba(255, 255, 255, 0.35) 72% 79%, transparent 79%); }
-.flyOn { position: fixed; left: 50%; bottom: calc(104px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 3; min-height: 48px; font: inherit; font-size: 16px; color: var(--ink); background: var(--glass); border: 1px solid var(--edge); border-radius: 18px; padding: 8px 16px; cursor: pointer; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 @media (prefers-reduced-motion: reduce) { .tale { transition: none; } }
 @media (pointer: coarse) {
   .taleChoices button { min-height: 48px; font-size: 16px; padding: 11px 13px; }
@@ -153,6 +147,7 @@ body.uiHidden .burger { opacity: 0; pointer-events: none; }
 .row:hover { background: rgba(255,255,255,.1); }
 .row:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .row .rl { flex: 1 1 auto; }
+.row.now { border-color: #e8b979; background: rgba(232,185,121,.14); }
 .row .rd { font-size: 13px; color: var(--ink-dim); }
 .row.more::after { content: "\203a"; font-size: 22px; line-height: 1; color: var(--ink-dim); }
 .row.on::before { content: "\2713"; color: var(--accent); font-weight: 700; }
@@ -258,7 +253,6 @@ body.introOn .burger, body.introOn .ui, body.introOn .pad, body.introOn .tale { 
   </div>
   <div class="taleGrip" id="taleGrip" aria-hidden="true" title="Drag to resize"></div>
 </aside>
-<button class="flyOn" id="bFlyOn" type="button" hidden aria-label="Leave this view and fly on, the way you face">Explore from here</button>
 <div class="glint" id="glint" hidden role="button" aria-label="Something worth a closer look"></div>
 <div class="err" id="err"><div id="errMsg"></div></div>
 <script type="text/wgsl" id="wgsl-common">
@@ -9591,12 +9585,27 @@ function placeGroups() {
 function placePages(act, title) {
   return { title, items: () => placeGroups().map(([g, ps]) => ({ label: g, detail: String(ps.length), sub: () => ({ title: g, items: () => ps.map((p) => ({ label: p.name.split(",")[0], act: () => act(p) })) }) })) };
 }
+// What is going on now, at the top of the menu: the tour's controls and "Explore from here" live here, not on the
+// screen over the view (owner, September 2026).
+function menuNow() {
+  const rows = [];
+  if (GUIDE.on) {
+    rows.push(GUIDE.paused ? { label: "Carry on with the tour", detail: guideWhere(), now: true, act: () => { closeGoPanel(); guideResume(); } }
+      : { label: "Pause the tour", detail: guideWhere(), now: true, act: () => { GUIDE.menuPaused = false; closeGoPanel(); } });
+    rows.push({ label: "End the tour", now: true, act: () => { closeGoPanel(); guideStop(true); } });
+  }
+  if (NAV.tourHeld) rows.push({ label: "Carry on the Grand tour", now: true, act: () => { closeGoPanel(); tourResume(); } });
+  if (NAV.tour) rows.push({ label: "End the Grand tour", now: true, act: () => { NAV.tour = null; closeGoPanel(); syncGoLabel(); } });
+  if (NAV.mode === "visit" && !TALE.on) rows.push({ label: "Explore from here", now: true, act: () => { closeGoPanel(); if (GUIDE.on) guideStop(false); flyOn(); } });
+  return rows;
+}
 function menuRoot() {
   const story = TALE.on ? "open" : (TALE.story || taleFetch(taleKey())) ? "paused" : "";
   const times = [["Day", 0], ["Dusk", 1], ["Night", 2], ["Methane snow", 3]];
   return {
     title: "Menu",
     items: () => [
+      ...menuNow(),
       { label: "Return to opening", act: () => { closeGoPanel(); if (TALE.on) taleClose(); introStart(); } },
       { label: "Story", detail: story, sub: () => ({ title: TALE.title ? "Story: " + TALE.title : "Story", items: () => [
         { label: TALE.on ? "Close the story" : TALE.story || taleFetch(taleKey()) ? "Resume the story" : "Play the story", act: () => { closeGoPanel(); taleToggle(); } },
@@ -9607,9 +9616,7 @@ function menuRoot() {
         { label: "Episodes: every story in this city", act: () => { closeGoPanel(); taleLink(TALE_DOOR); } }] }) },
       { label: "Travel", detail: NAV.mode === "trip" ? "on the way" : "", sub: () => ({ ...destPages((d) => goTo(d.id), "Travel"), items: () => [...destPages((d) => goTo(d.id), "Travel").items(), { label: "Grand tour", check: !!NAV.tour, act: () => goTo("tour") }, ...(NAV.tourHeld ? [{ label: "Carry on the Grand tour", act: () => { closeGoPanel(); tourResume(); } }] : [])] }) },
       { label: "City map", act: () => { closeGoPanel(); mapOpen(); } },
-      ...(GUIDE.on ? [
-        ...(GUIDE.paused ? [{ label: "Carry on with the tour", act: () => { closeGoPanel(); guideResume(); } }] : []),
-        { label: "End the tour", act: () => { closeGoPanel(); guideStop(true); } }] : [
+      ...(GUIDE.on ? [] : [
         { label: "Guided flight: the ship's computer shows you the city (3 minutes)", act: () => { closeGoPanel(); guideStart("short"); } },
         { label: "Full tour: the city and four of its bars, Life towers, Morse masts (8 minutes)", act: () => { closeGoPanel(); guideStart("full"); } }]),
       { label: "Places in the city", sub: () => placePages((p) => { closeGoPanel(); taleGo(p.id); if (!TALE.on) showHint(p.name + ". " + p.blurb, 6000); }, "Places in the city") },
@@ -9649,7 +9656,7 @@ function renderMenu() {
   for (const it of page.items()) {
     const b = document.createElement("button");
     b.type = "button";
-    b.className = "row" + (it.sub ? " more" : "") + (it.check ? " on" : "");
+    b.className = "row" + (it.sub ? " more" : "") + (it.check ? " on" : "") + (it.now ? " now" : "");
     const l = document.createElement("span"); l.className = "rl"; l.textContent = it.label; b.appendChild(l);
     if (it.detail) { const d = document.createElement("span"); d.className = "rd"; d.textContent = it.detail; b.appendChild(d); }
     if (it.check !== undefined) b.setAttribute("aria-pressed", it.check ? "true" : "false");
@@ -9661,7 +9668,7 @@ function renderMenu() {
     MENU.list.appendChild(b);
   }
 }
-function menuBack() { if (MENU.stack.length > 1) { MENU.stack.pop(); renderMenu(); } else closeGoPanel(); }
+function menuBack() { if (MENU.stack.length > 1) { MENU.stack.pop(); renderMenu(); } else menuDismiss(); }
 function buildGoPanel() {
   goPanel = document.createElement("nav");
   goPanel.className = "drawer";
@@ -9675,7 +9682,7 @@ function buildGoPanel() {
   const ti = document.createElement("span"); ti.className = "drawerTitle";
   const cb = document.createElement("button");
   cb.type = "button"; cb.innerHTML = "&times;"; cb.setAttribute("aria-label", "Close the menu");
-  cb.addEventListener("click", (e) => { e.stopPropagation(); closeGoPanel(); });
+  cb.addEventListener("click", (e) => { e.stopPropagation(); menuDismiss(); });
   hd.appendChild(bk); hd.appendChild(ti); hd.appendChild(cb);
   const list = document.createElement("div"); list.className = "rows";
   goPanel.appendChild(hd); goPanel.appendChild(list);
@@ -9685,11 +9692,18 @@ function buildGoPanel() {
 function toggleGoPanel() {
   if (!goPanel) buildGoPanel();
   if (goPanel.classList.contains("open")) { closeGoPanel(); return; }
+  if (GUIDE.on && !GUIDE.paused) guidePause(true);
   MENU.stack = [menuRoot()];
   renderMenu();
   goPanel.classList.add("open"); document.body?.classList?.add("drawerOn");
 }
 function closeGoPanel() { if (goPanel) { goPanel.classList.remove("open"); document.body?.classList?.remove("drawerOn"); } }
+// the menu put away without choosing anything: a tour it paused carries on
+function menuDismiss() {
+  const was = goPanel && goPanel.classList.contains("open");
+  closeGoPanel();
+  if (was && GUIDE.menuPaused && GUIDE.paused) guideResume();
+}
 function spaceName() { const k = NAV.space.kind; return k === 1 ? "Titan orbit" : k === 3 ? MOONS[NAV.space.moon].name : k === 4 ? "Inside the rings" : k === 5 ? "Saturn's cloud tops" : "Saturn system"; }
 function syncGoLabel() {
   const v = document.getElementById("vGo");
@@ -11459,7 +11473,9 @@ function taleGo(id) {
 function visitStep(dt, inp) {
   let V = NAV.visit;
   // a stick (or W, S) pushed during the flight there takes over at once: the view stops where it is and is yours
-  if (V.t < V.T && V.t > 0.3 && (inp.move || Math.abs(PAD.lx) > 0.3 || Math.abs(PAD.ly) > 0.3 || Math.abs(PAD.rx) > 0.3)) {
+  // (not during a guided tour: there the sticks only turn the view, and the tour flies on)
+  const touring = typeof GUIDE !== "undefined" && GUIDE.on && !GUIDE.paused;
+  if (!touring && V.t < V.T && V.t > 0.3 && (inp.move || Math.abs(PAD.lx) > 0.3 || Math.abs(PAD.ly) > 0.3 || Math.abs(PAD.rx) > 0.3)) {
     const here = { ...V.to, id: (V.to.id || "") + "~", x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch, room: 0 };
     V = NAV.visit = { from: here, to: here, t: 1, T: 1, ly: 0, lp: 0 };
   }
@@ -11472,7 +11488,8 @@ function visitStep(dt, inp) {
   st.y = a.y + (b.y - a.y) * e + arc;
   let dy = b.yaw - a.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
   const there = V.t >= V.T;
-  if (there) { V.ly += inp.dx * 1.6 * dt; V.lp = clampv(V.lp - inp.dy * 1.1 * dt, -1.0, 1.0); }
+  // looking about: once there, or at any time on a tour (a brush turns the view and the tour flies on)
+  if (there || touring) { V.ly += inp.dx * 1.6 * dt; V.lp = clampv(V.lp - inp.dy * 1.1 * dt, -1.0, 1.0); }
   st.yaw = a.yaw + dy * e + V.ly + (there ? 0.015 * Math.sin(clock * 0.37) : 0);
   st.pitch = clampv(a.pitch + (b.pitch - a.pitch) * e + V.lp + (there ? 0.01 * Math.sin(clock * 0.29) : 0), -1.3, 1.3);
   // a flight to something picked (V.look): turn to watch it on the way, then settle into the composed view
@@ -11482,13 +11499,13 @@ function visitStep(dt, inp) {
     const w0 = sstep(0, 0.18, V.t / V.T), w1 = sstep(0.72, 1, V.t / V.T);
     const ang = (from, to, w) => { let d = to - from; d = Math.atan2(Math.sin(d), Math.cos(d)); return from + d * w; };
     const watch = ang(a.yaw, lyaw, w0);
-    st.yaw = ang(watch, b.yaw, w1);
-    st.pitch = clampv((a.pitch + (lp - a.pitch) * w0) * (1 - w1) + b.pitch * w1, -1.3, 1.3);
+    st.yaw = ang(watch, b.yaw, w1) + V.ly;
+    st.pitch = clampv((a.pitch + (lp - a.pitch) * w0) * (1 - w1) + b.pitch * w1 + V.lp, -1.3, 1.3);
   }
   // walking or flying into the scene (visitMove); the offset is kept until the next visit
   if (there && V.walk) { if (inp.move || inp.dx || inp.dy) V.walk = null; else visitWalkStep(V, dt); }
   if (there && V.off) { st.x += V.off[0]; st.y += V.off[1]; st.z += V.off[2]; }
-  if (there && inp.move) visitMove(V, inp.move, dt);
+  if (there && inp.move && !(touring && GUIDE.phase === "fly")) visitMove(V, inp.move, dt);
   st.roll = 0; st.vx = 0; st.vy = 0; st.vz = 0;
 }
 // At eye level you walk (Titan's slow lope, the ground followed); higher up you fly along the view. Buildings
@@ -12121,6 +12138,8 @@ function pickInit(canvas) {
       PICK.timer = 0;
       if (touches.size > 1) return;
       pointer.down = false;
+      // a long press interrupts a guided tour (a brief touch or a drag only turns the view)
+      if (typeof GUIDE !== "undefined" && GUIDE.on) guidePause();
       if (navigator.vibrate) navigator.vibrate(12);
       pickGo(PICK.x, PICK.y, false);
     }, 650);
@@ -12134,8 +12153,9 @@ function pickInit(canvas) {
 // Menu > Guided flight (seven stops) or Full tour (fifteen, into four of the bars). The computer flies you over the
 // city and says what you are looking at: recorded lines (audio/computer/NN.mp3; how they were made and how to add
 // one: audio/computer/README.md) with the same words as a caption, so it works with the sound off.
-// Touching the view, a key or the pad pauses the tour: you can look, walk, fly anywhere, and "Carry on" flies you
-// back into the tour where you left it. Runs on its own timer, so it works in the WebGPU city and in the WebGL
+// A drag, a tap, the sticks or the look keys turn the view without stopping the tour. A long press or opening the menu
+// pauses it: you can look, walk, fly anywhere, and "Carry on" (at the top of the menu) flies you back into the tour
+// where you left it. The tour's controls and "Explore from here" live at the top of the menu, not on the screen. Runs on its own timer, so it works in the WebGPU city and in the WebGL
 // fallback (which hops instead of flying).
 const GUIDE_LINES = [
   "Guided flight. I will take you over the city and tell you what you are looking at. Touch the screen to stop and look around; the tour waits for you.",
@@ -12212,21 +12232,22 @@ const GUIDE_TOURS = {
 };
 const GUIDE = { on: false, paused: false, tour: null, stop: -1, phase: "", queue: [], until: 0, timer: 0, audio: null, cap: null };
 
-function guideCaption(text, paused) {
+function guideCaption(text) {
   if (!document.body || !document.body.appendChild || !document.createElement("div").querySelector) return;
   let c = GUIDE.cap;
   if (!c) {
     c = document.createElement("div"); c.className = "guideCap"; c.setAttribute("role", "status"); c.setAttribute("aria-live", "polite");
-    c.innerHTML = '<span class="guideText"></span><span class="guideBtns"><button type="button" class="guideGoBtn">Carry on</button><button type="button" class="guideStopBtn">End tour</button></span>';
+    c.innerHTML = '<span class="guideText"></span>';
     document.body.appendChild(c); GUIDE.cap = c;
-    c.querySelector(".guideGoBtn").addEventListener("click", (e) => { e.stopPropagation(); guideResume(); });
-    c.querySelector(".guideStopBtn").addEventListener("click", (e) => { e.stopPropagation(); guideStop(true); });
-    c.addEventListener("pointerdown", (e) => e.stopPropagation());
   }
   c.hidden = !text;
-  c.classList.toggle("paused", !!paused);
-  c.querySelector(".guideGoBtn").hidden = !paused;
   c.querySelector(".guideText").textContent = text || "";
+}
+// the stop the tour is at, for the menu
+function guideWhere() {
+  if (!GUIDE.on || !GUIDE.tour) return "";
+  const n = GUIDE.tour.stops.length, i = Math.max(0, Math.min(GUIDE.stop, n - 1));
+  return GUIDE.stop < 0 ? "starting" : (i + 1) + " of " + n;
 }
 // say one line: the recording if sound is on, the caption always; resolves the time it takes
 function guideSay(n) {
@@ -12243,7 +12264,6 @@ function guideSay(n) {
 }
 function guideTick() {
   if (!GUIDE.on || GUIDE.paused) return;
-  if (typeof PAD !== "undefined" && (PAD.lx || PAD.ly || PAD.rx || PAD.ry)) { guidePause(); return; }
   const now = performance.now() / 1000;
   if (GUIDE.phase === "talk") {
     if (now < GUIDE.until) return;
@@ -12306,24 +12326,21 @@ function guideStart(which) {
   GUIDE.phase = "intro"; GUIDE.until = performance.now() / 1000 + guideSay(GUIDE.tour.intro) - 2.5;
   clearInterval(GUIDE.timer);
   GUIDE.timer = setInterval(guideTick, 200);
-  if (!GUIDE.wired) {
-    GUIDE.wired = true;
-    document.getElementById("c")?.addEventListener?.("pointerdown", () => guidePause());
-    addEventListener("keydown", (e) => { if (!e.repeat && e.key !== "Escape") guidePause(); });
-  }
 }
-// the reader wants to look: stop talking, leave the view where it is, and wait
-function guidePause() {
+// A long press or the menu interrupts: stop talking, leave the view where it is, and wait. (Brief touches, drags,
+// the sticks and the look keys only turn the view; the tour carries on.) byMenu: closing the menu carries on.
+function guidePause(byMenu) {
   if (!GUIDE.on || GUIDE.paused) return;
-  GUIDE.paused = true;
+  GUIDE.paused = true; GUIDE.menuPaused = !!byMenu;
   GUIDE.pausedIn = GUIDE.phase;
   if (GUIDE.audio) GUIDE.audio.pause();
-  guideCaption("Tour paused. Look around, walk or fly anywhere; the tour waits.", true);
+  guideCaption("");
+  if (!byMenu) showHint("Tour paused. Carry on from the menu.", 3500);
 }
 // back into the tour: the stop you were at, from the start of its words (or the next one if they were done)
 function guideResume() {
   if (!GUIDE.on || !GUIDE.paused) return;
-  GUIDE.paused = false;
+  GUIDE.paused = false; GUIDE.menuPaused = false;
   const ph = GUIDE.pausedIn;
   if (ph === "fly" || ph === "talk") GUIDE.stop--;
   if (ph === "end") { guideStop(false); return; }
@@ -12333,7 +12350,7 @@ function guideResume() {
 // taken: the reader ended it (the button, the menu): stop at once, leave the view where it is
 function guideStop(taken) {
   if (!GUIDE.on) return;
-  GUIDE.on = false; GUIDE.paused = false; clearInterval(GUIDE.timer);
+  GUIDE.on = false; GUIDE.paused = false; GUIDE.menuPaused = false; clearInterval(GUIDE.timer);
   if (GUIDE.audio) GUIDE.audio.pause();
   guideCaption("");
   if (taken) { if (NAV.mode === "visit" && !roomNow()) flyOn(); showHint("You have control.", 2500); }
@@ -14017,8 +14034,6 @@ async function init() {
     audioFeet(dtS);
     audioCity(dtS, AUW);
     venueStep();
-    const fo = document.getElementById("bFlyOn");
-    if (fo) fo.hidden = !(NAV.mode === "visit" && !TALE.on);
     // shadow basis follows the target time of day; a change starts a new map generation
     // Shadow maps are double-buffered: a new sun direction is built in the background while the old map stays in use.
     const L = shadowDir(), key = L.map((v) => v.toFixed(4)).join(",");
@@ -14250,7 +14265,7 @@ addEventListener("keydown", (e) => {
   if (k === "h") { setUiHidden(!uiHidden); return; }
   if (k === "g") { toggleGoPanel(); return; }
   if (k === "t") { taleToggle(); return; }
-  if (k === "escape") { closeGoPanel(); return; }
+  if (k === "escape") { menuDismiss(); return; }
   keys.add(k);
   if (k.startsWith("arrow") || k === " ") e.preventDefault();
 });
@@ -14296,11 +14311,10 @@ document.getElementById("introSkipBtn").addEventListener("click", (e) => { e.sto
 document.getElementById("gateGo").addEventListener("click", (e) => { e.stopPropagation(); gateEnter(true); });
 document.getElementById("gateQuiet").addEventListener("click", (e) => { e.stopPropagation(); gateEnter(false); });
 // tapping the scene closes the travel drawer
-canvas.addEventListener("pointerdown", () => closeGoPanel());
+canvas.addEventListener("pointerdown", () => menuDismiss());
 document.getElementById("taleClose").addEventListener("click", (e) => { e.stopPropagation(); taleClose(); });
 document.getElementById("taleMin").addEventListener("click", (e) => { e.stopPropagation(); taleMinToggle(); });
 document.getElementById("taleRestart").addEventListener("click", (e) => { e.stopPropagation(); taleRestart(); });
-document.getElementById("bFlyOn").addEventListener("click", (e) => { e.stopPropagation(); flyOn(); });
 taleWirePanel();
 padWire();
 for (const [id, v] of [["bUp", 1], ["bDn", -1]]) {

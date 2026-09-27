@@ -341,10 +341,17 @@ reached only from the hamburger menu; later, perhaps, the voice of the Org's Tit
   Rooms linger 5 to 7 s after the words so the band is heard. Lines are short facts about what is in view.
 - `guideLifeTower` picks the tallest organic round tower within 30 cells that runs the board (the shader's own test,
   `hsh(cseed, 5, 781) < 0.5`); the signal tower is seen from its street place (`tower_0`, looking up): framed from the air it sits among the financial district's tall towers and the composed view looked steeply down from 150 m (Dawn render, September 2026). The Life tower's composed view is good.
-- **Pause, not stop.** A touch on the view, a key or the pad pauses the tour (owner: "let us stop to explore anywhere
-  without it breaking our tour"): the words stop, the view is yours, and the caption offers "Carry on" (back to the
-  stop you were at, words from the start; the next stop if its words were done) and "End tour". Until September
-  2026 any touch ended the tour.
+- **Brush, press, menu.** During a tour a tap, a drag, the sticks and the look keys only turn the view (`V.ly`/`V.lp`
+  also apply mid-flight and to picked flights; the stick take-over of a flight and walking mid-flight are off while
+  a tour runs); the next stop recentres it. A long press (`pickInit`) or opening the menu pauses the tour: the
+  words stop and the view is yours. Closing the menu without choosing (the close button, back from the top, Escape,
+  a tap on the view: `menuDismiss`) carries on; any menu action leaves it paused. Owner, September 2026: "simple
+  navigation brushes should move camera without stopping tour; longer presses or hamburger can interrupt". Before
+  that, any touch paused it, and before that any touch ended it.
+- **Controls live in the menu.** The tour's controls ("Pause the tour" / "Carry on with the tour" with "n of 15",
+  "End the tour"), the Grand tour's ("Carry on", "End") and "Explore from here" are rows at the top of the menu
+  (`menuNow`, marked `.row.now`), not buttons over the view: the floating "Explore from here" button and the
+  caption's buttons are gone. The caption shows the spoken words only and takes no touches.
 - The Grand tour (Menu > Travel) is held, not ended, when you leave it (a long press, a story place, a hop, flying by
   hand, a trip from the menu): `tourHold`, and Menu > Travel > "Carry on the Grand tour" (`tourResume`). Steering by
   hand already paused it.
