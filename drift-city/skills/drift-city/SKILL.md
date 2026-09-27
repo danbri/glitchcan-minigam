@@ -330,12 +330,31 @@ Figures for writing and sound design. Titan surface air: nitrogen with about 5% 
   of the pressure, 7% of the energy. The membrane's mass does the rest: at 2 kg/m² it barely stops 100 Hz and cuts
   1 kHz by roughly 18 dB (the mass law). From the ground the jazz club is a bass line and a kick drum.
 
+## Words the player sees: two rules (owner, September 2026)
+
+- Never name toki pona in anything a player reads or hears (tour lines, captions, story text, Morse). The Asters'
+  katakana is a puzzle; nothing may say what language it is. Code comments and this skill may name it.
+- Never say open flames are banned or dangerous: Titan's air has no oxygen, so there is no fire risk. The city's
+  rule is about oxygen: "an unlicensed oxygen store", "a store no licence covers", and so on. The Lamplighter vote is
+  to shut the last unlicensed oxygen stores; the flames go out as a result.
+
 ## Conway's Life in the round towers (`src/life.js`)
 
 - One 64 x 40 board (64 round, wrapping; 40 floors from the top, dead edges) stepped four times a second on the
-  CPU, reseeded every two to four minutes or when it dies or settles: a Gosper gun firing down the tower, a pulsar,
+  CPU, reseeded every two to four minutes or when it dies or settles: a glider gun firing down the tower (Gosper's,
+  period 30, or Simkin's, period 120; the guns are the most likely seed, and both were checked by simulation to keep
+  firing for 960 generations on this wrapping, dead-edged board in all four orientations), a pulsar,
   a pentadecathlon, an acorn, an R-pentomino, glider and spaceship fleets, and small blinkers and gliders all round
   the top rows (most towers are short and show only the top few floors, from one side).
+- Each cell is coloured by its live-neighbour count, which is also its fate (`lifeCol` in scene.wgsl): one or none
+  amber (dies of loneliness), two green, three blue, four or more magenta (dies of crowding); an empty cell with
+  three (born next generation) glows faint blue. Owner, September 2026: "not enough conway life, i still haven't seen
+  it in the wild". The cause: the cells faded out with the other window detail at 110 to 360 m, so from the air a
+  Life tower looked like any other. Life now has its own fade (`lifeD`, 350 to 900 m), is brighter by day, and runs
+  on seven in ten banded round towers and three in five rounded modern towers.
+- Headless check: the runner's clock barely moves, so the board is uploaded only if a step happens. Set
+  `D.LIFE.acc = 1` after changing the board (`D.lifeStamp`, `D.lifeStep` and `D.LIFE_PATTERNS` are on `__drift`).
+  Use `CAM=-490,95,-229,-2.729,-0.02 CAMF=4` with `HOP=place:roof_0` to look at the tour's Life tower.
 - Uploaded packed 16 cells to a float at byte 848 of the event buffer (`ev.life`, read by `lifeAt`).
 - Shown on half the organic round towers (type 8, material 15: the banded ones; the window band cut into 64 cells)
   and two in five rounded modern towers (material 1, `v` 0.4 to 0.72). Each tower turns the board by its own

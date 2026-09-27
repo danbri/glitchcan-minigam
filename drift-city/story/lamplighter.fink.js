@@ -69,7 +69,7 @@ VAR shown_witness = false
 {stall == 1:
     Dusk. Methane snow hisses on the heat lamps over your tea stall. Auntie Bo ladles noodles next door. Everyone else stays home under headsets and sends drones to your counter.
     The heat tariff went up again this quarter. Up on the megatower screens the Org's posters cycle between the notices about heat and breath and the emigration campaign: A NEW LIFE IN THE MOTHER OF ALL COLONIES. DREAMING OF THAT GOOD OLD LIFE?
-    Half the street lamps are cold. Old Wren, the last flame-keeper, hasn't come for her ginger tea. At dawn the Assembly votes on Lumen's plan to put out the city's last open flames.
+    Half the street lamps are cold. Old Wren, the last flame-keeper, hasn't come for her ginger tea. At dawn the Assembly votes on Lumen's plan to shut the city's last unlicensed oxygen stores, and with them the last open flames.
     You can't leave the stall. You wake Pip, your old delivery drone, and send it instead: its eye is yours, its speaker your voice.
 - else:
     Your stall, the kettle ticking. {clues() > 0: Notebook: {ticket: a ferry ticket;} {oilcan: a Lumen oil can;} {minutes: torn minutes;} {scale: a glowing wing-scale;} {card: Dr Sato's recording;} {ledger: a Lumen ledger page;} {stone: a warm stone in Wren's knitting.}}
@@ -129,7 +129,7 @@ She nods at the sky. "The fliers came in low tonight. All heading the same way."
 # prop: person @ 12 @ 6 @ 10 @ 0.09 @ 1
 # hotspot: oilcan @ a Lumen oil can by the ladder @ -20 @ -30
 {pagoda == 1:
-    The pagoda of the Flame, one of the few places fire may burn in the open. Wren's ladder leans by the door; her lamp pole is gone. Brother Tam sits by his radio, a wardrobe-sized cabinet with an amber dial, listening to static.
+    The pagoda of the Flame, where a real flame still burns, on oxygen from a store that no licence covers. Wren's ladder leans by the door; her lamp pole is gone. Brother Tam sits by his radio, a wardrobe-sized cabinet with an amber dial, listening to static.
 - else:
     The pagoda. The radio hisses; Tam listens.
 }
@@ -195,7 +195,7 @@ The static parts. Beneath it, hundreds of voices breathe together. Tam turns the
 + [Back to your stall] -> stall
 
 === obi ===
-"The vote's at dawn," Obi says. "Lumen puts Chinatown on the Org's grid, puts out the last flames, retires the flame-keeper. The grid is two hundred years old and patched with tape, but it's cheaper on paper. It'll pass. Nobody argues in person any more." # voice: obi
+"The vote's at dawn," Obi says. "Lumen puts Chinatown on the Org's grid, shuts the unlicensed oxygen, retires the flame-keeper. The grid is two hundred years old and patched with tape, but it's cheaper on paper. It'll pass. Nobody argues in person any more." # voice: obi
 He looks at Pip. "Unless someone does." # voice: obi
 ~ know_castellane = true
 + [Back to your stall] -> stall

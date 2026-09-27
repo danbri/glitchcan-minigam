@@ -234,7 +234,7 @@ You unpack the bass and sit in for one tune. Oskar opens his eyes at the first n
     ~ told_patch = true
 }
 { tenpo and not told_tenpo:
-    The card says テンポ, tenpo, "time" in toki pona, written in katakana. Under it in Morse, with a pencil note: key the date in Titan days, not years. On the far mast a red light blinks the same thing, over and over.
+    The card says テンポ, in katakana. Under it in Morse, with a pencil note: key the date in Titan days, not years. On the far mast a red light blinks the same thing, over and over.
     ~ told_tenpo = true
 }
 { tape and roof > 1 and not told_tape_roof:

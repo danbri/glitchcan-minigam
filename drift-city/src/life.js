@@ -17,7 +17,31 @@ const LIFE_PATTERNS = [
     "##........#...#.##....#.#...........",
     "..........#.....#.......#...........",
     "...........#...#....................",
-    "............##......................"], 3],
+    "............##......................"], 5],
+  // Michael Simkin's gun (2015): one glider every 120 generations, from two blocks, a pair of eaters and a small
+  // reaction between them
+  ["Simkin glider gun", [
+    "##.....##........................",
+    "##.....##........................",
+    ".................................",
+    "....##...........................",
+    "....##...........................",
+    ".................................",
+    ".................................",
+    ".................................",
+    ".................................",
+    "......................##.##......",
+    ".....................#.....#.....",
+    ".....................#......#..##",
+    ".....................###...#...##",
+    "..........................#......",
+    ".................................",
+    ".................................",
+    ".................................",
+    "....................##...........",
+    "....................#............",
+    ".....................###.........",
+    ".......................#........."], 3],
   ["pulsar", [
     "..###...###..",
     ".............",
@@ -65,20 +89,20 @@ function lifeSeed() {
   const pick = () => { let w = 0; for (const p of LIFE_PATTERNS) w += p[2]; let r = Math.random() * w; for (const p of LIFE_PATTERNS) { r -= p[2]; if (r < 0) return p; } return LIFE_PATTERNS[0]; };
   const main = pick();
   LIFE.pat = main[0];
-  if (main[0] === "Gosper glider gun") {
+  if (main[0].endsWith("glider gun")) {
     // the gun at the top, firing down the tower; a pulsar lower down for the gliders to hit, sometimes
     lifeStamp(main[1], Math.floor(Math.random() * LIFE_W), 1, Math.random() < 0.5);
-    if (Math.random() < 0.5) lifeStamp(LIFE_PATTERNS[1][1], Math.floor(Math.random() * LIFE_W), 24);
+    if (Math.random() < 0.5) lifeStamp(LIFE_PATTERNS[2][1], Math.floor(Math.random() * LIFE_W), 24);
   } else if (main[0] === "glider" || main[0] === "lightweight spaceship") {
     // a fleet
     for (let k = 0; k < 8; k++) lifeStamp(main[1], Math.floor(k * LIFE_W / 8 + Math.random() * 4), 1 + Math.floor(Math.random() * 12), Math.random() < 0.5);
   } else {
     // a few of the still-life makers and oscillators round the tower
-    for (let k = 0; k < 3; k++) { const p = k === 0 ? main : pick(); if (p[0] === "Gosper glider gun") continue; lifeStamp(p[1], Math.floor(k * LIFE_W / 3 + Math.random() * 8), 1 + Math.floor(Math.random() * 8)); }
+    for (let k = 0; k < 3; k++) { const p = k === 0 ? main : pick(); if (p[0].endsWith("glider gun")) continue; lifeStamp(p[1], Math.floor(k * LIFE_W / 3 + Math.random() * 8), 1 + Math.floor(Math.random() * 8)); }
   }
   // most towers are short and show only the top rows, from one side: put small things all round the top
   for (let k = 0; k < 6; k++) {
-    const small = [LIFE_PATTERNS[2], LIFE_PATTERNS[6], LIFE_PATTERNS[4], ["blinker", ["###"]]][Math.floor(Math.random() * 4)];
+    const small = [LIFE_PATTERNS[3], LIFE_PATTERNS[7], LIFE_PATTERNS[5], ["blinker", ["###"]]][Math.floor(Math.random() * 4)];
     lifeStamp(small[1], Math.floor(k * LIFE_W / 6 + Math.random() * 5), Math.floor(Math.random() * 5), Math.random() < 0.5);
   }
   LIFE.seedAt = LIFE.t;
@@ -117,7 +141,7 @@ function lifeUpdate(dt) {
   LIFE.acc = 0;
   const r = lifeStep();
   // the gun runs longer; everything else gets a couple of minutes, less if it dies or settles
-  const limit = LIFE.pat === "Gosper glider gun" ? 240 : 120;
+  const limit = LIFE.pat.endsWith("glider gun") ? 240 : 120;
   if (r.pop < 4 || (r.stale && LIFE.gen > 40) || LIFE.t - LIFE.seedAt > limit) lifeSeed();
   return lifePack();
 }

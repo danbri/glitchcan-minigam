@@ -12,24 +12,24 @@ const GUIDE_LINES = [
   "The old town. The building with the glass dome is the Assembly Hall, where the city meets and votes. The long pools in front of it line the civic avenue.",
   "The Hive. Capsule homes, two hundred and forty metres tall, on the edge of the dorms. Most people in there seldom go out. They live, work and play under headsets. The boards on its walls sell tokes, the Hive's game credits.",
   "The pod fab, where the Hive's capsules are made. It runs on power beamed down from a station in orbit. The white line through the clouds is that beam. It runs day and night.",
-  "Chinatown. Low buildings, tight streets, market stalls, and a lot of steam. The pagoda is one of the few places in the city where an open flame is allowed.",
+  "Chinatown. Low buildings, tight streets, market stalls, and a lot of steam. The pagoda's lamps burn real flames, fed from an oxygen store that nobody has ever quite licensed.",
   "The Warmhouse. A bubble of warm Earth air, three hundred and forty metres across, held down by four cables. It floats because warm air is lighter than Titan's cold, dense air. Inside, people can take their helmets off.",
   "The spaceport, at the end of the harbour arm on Kraken Mare. Ships leave from here for Earth, and the Org pays the fare for anyone who goes. Few ships come the other way.",
   "About the airships. Every one of them is called Hindenburg. The first settlers thought that was funny: there is no oxygen in the air here, so nothing burns. The newest is number sixteen thirty-two.",
   "That is the end of the tour. You have control. To fly or walk to anything, press and hold on it.",
   "The full tour: the city from the air, and four of its bars from the inside. About eight minutes. Touch the screen to stop and look around; the tour waits for you.",
-  "The signal tower. Its red lights, and the lights on the tallest masts, blink Morse code together. Tonight they send the Asters' words: ad astra per aspera, and the same in toki pona.",
-  "A round tower running Conway's Game of Life in its windows. Each window is a cell, and a new generation comes four times a second. Watch for gliders crossing the tower.",
+  "The signal tower. Its red lights, and the lights on the tallest masts, blink Morse code together. Tonight they send the Asters' words: ad astra per aspera.",
+  "A round tower running Conway's Game of Life in its windows. Each window is a cell, coloured by how many neighbours it has, and a new generation comes four times a second. Watch the top of the tower: a glider gun there fires gliders down it.",
   "Ferry Street, in the neon quarter, at street level. Most of the city's bars are within a few streets of here.",
   "The Cold Tap: nine stools, a heater, a jukebox, and a price list older than the dome. One of the few places left where people talk face to face.",
   "The Low Orbit, by the spaceport. Ship crews drink here between shifts, and the Asters sit along the window to watch the launches.",
   "The Lantern Cellar, forty steps under Chinatown. The late jam here does not stop; players come and go, and the tune goes on.",
   "The jazz club at the centre of the Warmhouse. The air in here is Earth air, so people take their helmets off and hear the band with their own ears.",
-  "One board in five on the Hive shows the Asters' poster: toki pona, a language of about a hundred and twenty words, written in katakana. It says: go to the stars.",
+  "One board in five on the Hive shows the Asters' poster, in katakana. The Asters will not say what it means.",
   "Standing stones on a rise outside the city. They are older than the city, and nobody agrees who put them there.",
 ];
 // seconds, measured with ffprobe: the caption's time when the sound is off or blocked
-const GUIDE_DUR = [10.0, 13.3, 10.2, 17.2, 13.6, 12.1, 19.2, 11.8, 13.7, 8.1, 12.2, 14.9, 13.2, 7.2, 11.6, 9.8, 10.4, 9.4, 13.1, 7.4];
+const GUIDE_DUR = [10.0, 13.3, 10.2, 17.2, 13.6, 14.1, 19.2, 11.8, 13.7, 8.1, 12.2, 13.8, 17.3, 7.2, 11.6, 9.8, 10.4, 9.4, 7.6, 7.4];
 const GUIDE_AUDIO = "../audio/computer/";
 // the signal tower: the lattice tower in front of its place's view
 function guideSignalTower() {

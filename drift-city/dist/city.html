@@ -337,6 +337,23 @@ fn lifeAt(col: i32, row: i32) -> f32 {
   let f = ev.life[i >> 6u][(i >> 4u) & 3u];
   return f32((u32(f) >> (i & 15u)) & 1u);
 }
+// a cell's colour by how many live neighbours it has, which is also its fate: one or none (it dies of loneliness)
+// amber, two green, three blue, four or more (it dies of crowding) magenta; an empty cell with three (born next
+// generation) glows faintly blue
+fn lifeCol(col: i32, row: i32) -> vec3f {
+  let a = lifeAt(col, row);
+  var n = 0.0;
+  for (var dy = -1; dy <= 1; dy++) {
+    for (var dx = -1; dx <= 1; dx++) {
+      if (dx != 0 || dy != 0) { n += lifeAt(col + dx, row + dy); }
+    }
+  }
+  if (a < 0.5) { return vec3f(0.2, 0.55, 1.0) * 0.14 * step(abs(n - 3.0), 0.1); }
+  if (n < 1.5) { return vec3f(1.0, 0.5, 0.12); }
+  if (n < 2.5) { return vec3f(0.35, 1.0, 0.45); }
+  if (n < 3.5) { return vec3f(0.3, 0.75, 1.0); }
+  return vec3f(1.0, 0.3, 0.85);
+}
 struct EscG { ok: bool, a: vec3f, b: vec3f };
 @group(0) @binding(11) var<uniform> ev: EV;
 // flocking creatures: count in n.x; per creature a[2i] = position (m) and size, a[2i+1] = heading and flap phase
@@ -4284,13 +4301,13 @@ fn posterLine(pk: i32, l: i32) -> vec4i {
     case 9: { switch l { case 0: { return vec4i(70, 71, -1, -1); } case 1: { return vec4i(72, 34, -1, -1); } default: { return vec4i(73, 74, -1, -1); } } }
     // work: WORK FROM BED / SIGN OFF / ORG APPROVED; EXO HIRE / HEAVY LIFT / LEGAL JOBS
     case 10: { switch l { case 0: { return vec4i(83, 84, 66, -1); } case 1: { return vec4i(85, 86, -1, -1); } default: { return vec4i(37, 88, -1, -1); } } }
-    // the Asters, in toki pona written in katakana: O TAWA MUN (go to the stars) / KON SELI (warm air) / TOKI PONA
+    // the Asters' words in katakana: O TAWA MUN (go to the stars) / KON SELI (warm air) / the language's own name (the drift-city skill names it; the page must not)
     case 12: { switch l { case 0: { return vec4i(97, 98, 99, -1); } case 1: { return vec4i(100, 101, -1, -1); } default: { return vec4i(95, 96, -1, -1); } } }
     default: { switch l { case 0: { return vec4i(89, 90, -1, -1); } case 1: { return vec4i(91, 92, -1, -1); } default: { return vec4i(93, 87, -1, -1); } } }
   }
 }
 // which poster a screen shows, from a hash: emigration half the time (0, 1, 7, 8, 9), the tokes trade (4-6),
-// work (10, 11), the Asters in toki pona (12), the cult's graffiti (2, 3)
+// work (10, 11), the Asters' katakana (12), the cult's graffiti (2, 3)
 fn posterPick(h: f32) -> i32 {
   if (h < 0.5) { return array<i32, 5>(0, 1, 7, 8, 9)[min(i32(h * 10.0), 4)]; }
   if (h < 0.7) { return 4 + min(i32((h - 0.5) / 0.2 * 3.0), 2); }
@@ -5072,7 +5089,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         let cfz = cellFull(ci);
         let mega = ((cfz.fl >> 15) & 7) == 6;
         // Life: about two in five round towers run the shared board in their windows, one column per window
-        let lifeT = cfz.v >= 0.4 && cfz.v < 0.72 && !mega && hsh(cseed, 5, 781) < 0.4;
+        let lifeT = cfz.v >= 0.4 && cfz.v < 0.72 && !mega && hsh(cseed, 5, 781) < 0.6;
         let lang = fract(atan2(lq.y - cfz.off.y, lq.x - cfz.off.x) / 6.2831853 + 1.0);
         let fx = select(facU / select(1.5, 1.1, mega), lang * 64.0, lifeT);
         let fy = p.y / select(3.6, 3.0, mega);
@@ -5098,9 +5115,12 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         let farE = litP * 0.55;
         s.emi = wc * mix(farE, nearE, detail) * u.windows * 0.85;
         if (lifeT) {
-          let alive = lifeAt(i32(floor(fx)) + (cseed & 63), i32(floor((cfz.h - p.y) / 3.6)));
-          lit = alive * (1.0 - opaque);
-          s.emi = vec3f(0.62, 1.0, 0.78) * mix(0.08, lit, detail) * (0.3 + 1.1 * u.windows);
+          // the cells stay sharp much further out than the other windows (they are what a visitor looks for), and
+          // bright enough to see by day
+          let lifeD = 1.0 - smoothstep(350.0, 900.0, t);
+          let lc = lifeCol(i32(floor(fx)) + (cseed & 63), i32(floor((cfz.h - p.y) / 3.6)));
+          lit = max(lc.x, max(lc.y, lc.z)) * (1.0 - opaque);
+          s.emi = mix(vec3f(0.06, 0.12, 0.09), lc * (1.0 - opaque), lifeD) * (1.2 + 1.0 * u.windows);
         }
         s.refl = (0.05 + 0.85 * pow(1.0 - ndv, 4.0)) * (1.0 - opaque * 0.75) * (1.0 - lit * 0.8);
         // rebuilt, not generated: on one tower in three a band of floors was redone in concrete with small windows;
@@ -5244,12 +5264,13 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       s.emi = vec3f(1.0, 0.72, 0.45) * rib * mix(litP * 0.5, step(hr, litP) * 0.8, detail) * u.windows * 0.8;
       // Life (life.js) on half the round towers: the window band cut into 64 cells round the tower, one row a floor,
       // the board's top at the tower's top, each tower turned by its own number of columns
-      if (hsh(cseed, 5, 781) < 0.5) {
+      if (hsh(cseed, 5, 781) < 0.7) {
         let cfo = cellFull(ci);
         let fxL = fract(atan2(lc.y - cfo.off.y, lc.x - cfo.off.x) / 6.2831853 + 1.0) * 64.0;
         let mullL = (1.0 - smoothstep(0.05, 0.12, min(fract(fxL), 1.0 - fract(fxL)))) * detail;
-        let alive = lifeAt(i32(floor(fxL)) + (cseed & 63), i32(floor((cfo.h - p.y) / 4.2)));
-        s.emi = vec3f(0.62, 1.0, 0.78) * rib * (1.0 - mullL) * mix(0.12, alive, detail) * (0.35 + 1.1 * u.windows);
+        let lifeD = 1.0 - smoothstep(350.0, 900.0, t);
+        let lcol = lifeCol(i32(floor(fxL)) + (cseed & 63), i32(floor((cfo.h - p.y) / 4.2)));
+        s.emi = mix(vec3f(0.06, 0.12, 0.09), lcol * (1.0 - mullL), lifeD) * rib * (1.2 + 1.0 * u.windows);
       }
     }
     case 2: {
@@ -5856,7 +5877,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       // glyph size: three lines of up to eleven characters, as large as the board allows
       let gu = min(bc.z * 2.0 / 74.0, bc.w * 2.0 / 42.0);
       let slot = i32(floor(u.time / 7.0)) + i32(hb.w);
-      // the tokes trade, the Org's jobs, and one slot in five the Asters' tag in toki pona (kind 12)
+      // the tokes trade, the Org's jobs, and one slot in five the Asters' tag in katakana (kind 12)
       let pk = array<i32, 5>(4, 5, 10, 6, 12)[((slot % 5) + 5) % 5];
       let fl2 = step(0.5, fract(u.time * 1.3 + hb.w * 0.37));
       var txt = 0.0;
@@ -10637,7 +10658,7 @@ function gateEnter(sound) {
 }
 // captions during the descent, then the title
 const INTRO_CAPS = [[0.8, 5.0, "Titan. Year 212 of the settlement."], [5.6, 10.0, "The heat tariff has risen eleven quarters running."],
-  [10.6, 15.0, "The Org still keeps the city breathing. Mostly."], [15.6, 20.5, "Tonight the Assembly votes to put out the last open flames."]];
+  [10.6, 15.0, "The Org still keeps the city breathing. Mostly."], [15.6, 20.5, "Tonight the Assembly votes to shut the last unlicensed oxygen stores."]];
 function introCaptions() {
   const a = clock - INTRO.t0, cap = document.getElementById("introCap"), card = document.getElementById("introCard");
   if (!cap || !cap.classList) return;
@@ -13084,24 +13105,24 @@ const GUIDE_LINES = [
   "The old town. The building with the glass dome is the Assembly Hall, where the city meets and votes. The long pools in front of it line the civic avenue.",
   "The Hive. Capsule homes, two hundred and forty metres tall, on the edge of the dorms. Most people in there seldom go out. They live, work and play under headsets. The boards on its walls sell tokes, the Hive's game credits.",
   "The pod fab, where the Hive's capsules are made. It runs on power beamed down from a station in orbit. The white line through the clouds is that beam. It runs day and night.",
-  "Chinatown. Low buildings, tight streets, market stalls, and a lot of steam. The pagoda is one of the few places in the city where an open flame is allowed.",
+  "Chinatown. Low buildings, tight streets, market stalls, and a lot of steam. The pagoda's lamps burn real flames, fed from an oxygen store that nobody has ever quite licensed.",
   "The Warmhouse. A bubble of warm Earth air, three hundred and forty metres across, held down by four cables. It floats because warm air is lighter than Titan's cold, dense air. Inside, people can take their helmets off.",
   "The spaceport, at the end of the harbour arm on Kraken Mare. Ships leave from here for Earth, and the Org pays the fare for anyone who goes. Few ships come the other way.",
   "About the airships. Every one of them is called Hindenburg. The first settlers thought that was funny: there is no oxygen in the air here, so nothing burns. The newest is number sixteen thirty-two.",
   "That is the end of the tour. You have control. To fly or walk to anything, press and hold on it.",
   "The full tour: the city from the air, and four of its bars from the inside. About eight minutes. Touch the screen to stop and look around; the tour waits for you.",
-  "The signal tower. Its red lights, and the lights on the tallest masts, blink Morse code together. Tonight they send the Asters' words: ad astra per aspera, and the same in toki pona.",
-  "A round tower running Conway's Game of Life in its windows. Each window is a cell, and a new generation comes four times a second. Watch for gliders crossing the tower.",
+  "The signal tower. Its red lights, and the lights on the tallest masts, blink Morse code together. Tonight they send the Asters' words: ad astra per aspera.",
+  "A round tower running Conway's Game of Life in its windows. Each window is a cell, coloured by how many neighbours it has, and a new generation comes four times a second. Watch the top of the tower: a glider gun there fires gliders down it.",
   "Ferry Street, in the neon quarter, at street level. Most of the city's bars are within a few streets of here.",
   "The Cold Tap: nine stools, a heater, a jukebox, and a price list older than the dome. One of the few places left where people talk face to face.",
   "The Low Orbit, by the spaceport. Ship crews drink here between shifts, and the Asters sit along the window to watch the launches.",
   "The Lantern Cellar, forty steps under Chinatown. The late jam here does not stop; players come and go, and the tune goes on.",
   "The jazz club at the centre of the Warmhouse. The air in here is Earth air, so people take their helmets off and hear the band with their own ears.",
-  "One board in five on the Hive shows the Asters' poster: toki pona, a language of about a hundred and twenty words, written in katakana. It says: go to the stars.",
+  "One board in five on the Hive shows the Asters' poster, in katakana. The Asters will not say what it means.",
   "Standing stones on a rise outside the city. They are older than the city, and nobody agrees who put them there.",
 ];
 // seconds, measured with ffprobe: the caption's time when the sound is off or blocked
-const GUIDE_DUR = [10.0, 13.3, 10.2, 17.2, 13.6, 12.1, 19.2, 11.8, 13.7, 8.1, 12.2, 14.9, 13.2, 7.2, 11.6, 9.8, 10.4, 9.4, 13.1, 7.4];
+const GUIDE_DUR = [10.0, 13.3, 10.2, 17.2, 13.6, 14.1, 19.2, 11.8, 13.7, 8.1, 12.2, 13.8, 17.3, 7.2, 11.6, 9.8, 10.4, 9.4, 7.6, 7.4];
 const GUIDE_AUDIO = "../audio/computer/";
 // the signal tower: the lattice tower in front of its place's view
 function guideSignalTower() {
@@ -13296,7 +13317,31 @@ const LIFE_PATTERNS = [
     "##........#...#.##....#.#...........",
     "..........#.....#.......#...........",
     "...........#...#....................",
-    "............##......................"], 3],
+    "............##......................"], 5],
+  // Michael Simkin's gun (2015): one glider every 120 generations, from two blocks, a pair of eaters and a small
+  // reaction between them
+  ["Simkin glider gun", [
+    "##.....##........................",
+    "##.....##........................",
+    ".................................",
+    "....##...........................",
+    "....##...........................",
+    ".................................",
+    ".................................",
+    ".................................",
+    ".................................",
+    "......................##.##......",
+    ".....................#.....#.....",
+    ".....................#......#..##",
+    ".....................###...#...##",
+    "..........................#......",
+    ".................................",
+    ".................................",
+    ".................................",
+    "....................##...........",
+    "....................#............",
+    ".....................###.........",
+    ".......................#........."], 3],
   ["pulsar", [
     "..###...###..",
     ".............",
@@ -13344,20 +13389,20 @@ function lifeSeed() {
   const pick = () => { let w = 0; for (const p of LIFE_PATTERNS) w += p[2]; let r = Math.random() * w; for (const p of LIFE_PATTERNS) { r -= p[2]; if (r < 0) return p; } return LIFE_PATTERNS[0]; };
   const main = pick();
   LIFE.pat = main[0];
-  if (main[0] === "Gosper glider gun") {
+  if (main[0].endsWith("glider gun")) {
     // the gun at the top, firing down the tower; a pulsar lower down for the gliders to hit, sometimes
     lifeStamp(main[1], Math.floor(Math.random() * LIFE_W), 1, Math.random() < 0.5);
-    if (Math.random() < 0.5) lifeStamp(LIFE_PATTERNS[1][1], Math.floor(Math.random() * LIFE_W), 24);
+    if (Math.random() < 0.5) lifeStamp(LIFE_PATTERNS[2][1], Math.floor(Math.random() * LIFE_W), 24);
   } else if (main[0] === "glider" || main[0] === "lightweight spaceship") {
     // a fleet
     for (let k = 0; k < 8; k++) lifeStamp(main[1], Math.floor(k * LIFE_W / 8 + Math.random() * 4), 1 + Math.floor(Math.random() * 12), Math.random() < 0.5);
   } else {
     // a few of the still-life makers and oscillators round the tower
-    for (let k = 0; k < 3; k++) { const p = k === 0 ? main : pick(); if (p[0] === "Gosper glider gun") continue; lifeStamp(p[1], Math.floor(k * LIFE_W / 3 + Math.random() * 8), 1 + Math.floor(Math.random() * 8)); }
+    for (let k = 0; k < 3; k++) { const p = k === 0 ? main : pick(); if (p[0].endsWith("glider gun")) continue; lifeStamp(p[1], Math.floor(k * LIFE_W / 3 + Math.random() * 8), 1 + Math.floor(Math.random() * 8)); }
   }
   // most towers are short and show only the top rows, from one side: put small things all round the top
   for (let k = 0; k < 6; k++) {
-    const small = [LIFE_PATTERNS[2], LIFE_PATTERNS[6], LIFE_PATTERNS[4], ["blinker", ["###"]]][Math.floor(Math.random() * 4)];
+    const small = [LIFE_PATTERNS[3], LIFE_PATTERNS[7], LIFE_PATTERNS[5], ["blinker", ["###"]]][Math.floor(Math.random() * 4)];
     lifeStamp(small[1], Math.floor(k * LIFE_W / 6 + Math.random() * 5), Math.floor(Math.random() * 5), Math.random() < 0.5);
   }
   LIFE.seedAt = LIFE.t;
@@ -13396,14 +13441,14 @@ function lifeUpdate(dt) {
   LIFE.acc = 0;
   const r = lifeStep();
   // the gun runs longer; everything else gets a couple of minutes, less if it dies or settles
-  const limit = LIFE.pat === "Gosper glider gun" ? 240 : 120;
+  const limit = LIFE.pat.endsWith("glider gun") ? 240 : 120;
   if (r.pop < 4 || (r.stale && LIFE.gen > 40) || LIFE.t - LIFE.seedAt > limit) lifeSeed();
   return lifePack();
 }
 
 // ---------- Morse: one key for the whole city ----------
 // The red lights on some masts and the faint tone on the radio layer key the same Morse, in step: the Asters'
-// messages, in English and in toki pona, round and round (a story can put its own message in MORSE.override).
+// messages, in English and in the Asters' own words, round and round (a story can put its own message in MORSE.override).
 // A dot is one unit (0.14 s, about 9 words a minute), a dash three; one unit between marks, three between letters,
 // seven between words, and a pause between messages. EVN[209] carries the key to the shader (after computeEvents).
 const MORSE_CODE = {
@@ -13412,7 +13457,7 @@ const MORSE_CODE = {
   Y: "-.--", Z: "--..", 0: "-----", 1: ".----", 2: "..---", 3: "...--", 4: "....-", 5: ".....", 6: "-....", 7: "--...",
   8: "---..", 9: "----.",
 };
-const MORSE = { unit: 0.14, messages: ["AD ASTRA PER ASPERA", "O TAWA MUN", "KON SELI", "TOKI PONA"], override: null, plan: null, key: 0, text: "" };
+const MORSE = { unit: 0.14, messages: ["AD ASTRA PER ASPERA", "O TAWA MUN", "KON SELI"], override: null, plan: null, key: 0, text: "" };
 // a message as on/off runs, in units: [[on, length], ...], ending in the pause before the next
 function morsePlan(text) {
   const runs = [];
@@ -15305,7 +15350,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { WX, EVN, LIFE, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { WX, EVN, LIFE, LIFE_PATTERNS, lifeStamp, lifeStep, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

@@ -41,6 +41,23 @@ fn lifeAt(col: i32, row: i32) -> f32 {
   let f = ev.life[i >> 6u][(i >> 4u) & 3u];
   return f32((u32(f) >> (i & 15u)) & 1u);
 }
+// a cell's colour by how many live neighbours it has, which is also its fate: one or none (it dies of loneliness)
+// amber, two green, three blue, four or more (it dies of crowding) magenta; an empty cell with three (born next
+// generation) glows faintly blue
+fn lifeCol(col: i32, row: i32) -> vec3f {
+  let a = lifeAt(col, row);
+  var n = 0.0;
+  for (var dy = -1; dy <= 1; dy++) {
+    for (var dx = -1; dx <= 1; dx++) {
+      if (dx != 0 || dy != 0) { n += lifeAt(col + dx, row + dy); }
+    }
+  }
+  if (a < 0.5) { return vec3f(0.2, 0.55, 1.0) * 0.14 * step(abs(n - 3.0), 0.1); }
+  if (n < 1.5) { return vec3f(1.0, 0.5, 0.12); }
+  if (n < 2.5) { return vec3f(0.35, 1.0, 0.45); }
+  if (n < 3.5) { return vec3f(0.3, 0.75, 1.0); }
+  return vec3f(1.0, 0.3, 0.85);
+}
 struct EscG { ok: bool, a: vec3f, b: vec3f };
 @group(0) @binding(11) var<uniform> ev: EV;
 // flocking creatures: count in n.x; per creature a[2i] = position (m) and size, a[2i+1] = heading and flap phase
@@ -3988,13 +4005,13 @@ fn posterLine(pk: i32, l: i32) -> vec4i {
     case 9: { switch l { case 0: { return vec4i(70, 71, -1, -1); } case 1: { return vec4i(72, 34, -1, -1); } default: { return vec4i(73, 74, -1, -1); } } }
     // work: WORK FROM BED / SIGN OFF / ORG APPROVED; EXO HIRE / HEAVY LIFT / LEGAL JOBS
     case 10: { switch l { case 0: { return vec4i(83, 84, 66, -1); } case 1: { return vec4i(85, 86, -1, -1); } default: { return vec4i(37, 88, -1, -1); } } }
-    // the Asters, in toki pona written in katakana: O TAWA MUN (go to the stars) / KON SELI (warm air) / TOKI PONA
+    // the Asters' words in katakana: O TAWA MUN (go to the stars) / KON SELI (warm air) / the language's own name (the drift-city skill names it; the page must not)
     case 12: { switch l { case 0: { return vec4i(97, 98, 99, -1); } case 1: { return vec4i(100, 101, -1, -1); } default: { return vec4i(95, 96, -1, -1); } } }
     default: { switch l { case 0: { return vec4i(89, 90, -1, -1); } case 1: { return vec4i(91, 92, -1, -1); } default: { return vec4i(93, 87, -1, -1); } } }
   }
 }
 // which poster a screen shows, from a hash: emigration half the time (0, 1, 7, 8, 9), the tokes trade (4-6),
-// work (10, 11), the Asters in toki pona (12), the cult's graffiti (2, 3)
+// work (10, 11), the Asters' katakana (12), the cult's graffiti (2, 3)
 fn posterPick(h: f32) -> i32 {
   if (h < 0.5) { return array<i32, 5>(0, 1, 7, 8, 9)[min(i32(h * 10.0), 4)]; }
   if (h < 0.7) { return 4 + min(i32((h - 0.5) / 0.2 * 3.0), 2); }
@@ -4776,7 +4793,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         let cfz = cellFull(ci);
         let mega = ((cfz.fl >> 15) & 7) == 6;
         // Life: about two in five round towers run the shared board in their windows, one column per window
-        let lifeT = cfz.v >= 0.4 && cfz.v < 0.72 && !mega && hsh(cseed, 5, 781) < 0.4;
+        let lifeT = cfz.v >= 0.4 && cfz.v < 0.72 && !mega && hsh(cseed, 5, 781) < 0.6;
         let lang = fract(atan2(lq.y - cfz.off.y, lq.x - cfz.off.x) / 6.2831853 + 1.0);
         let fx = select(facU / select(1.5, 1.1, mega), lang * 64.0, lifeT);
         let fy = p.y / select(3.6, 3.0, mega);
@@ -4802,9 +4819,12 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         let farE = litP * 0.55;
         s.emi = wc * mix(farE, nearE, detail) * u.windows * 0.85;
         if (lifeT) {
-          let alive = lifeAt(i32(floor(fx)) + (cseed & 63), i32(floor((cfz.h - p.y) / 3.6)));
-          lit = alive * (1.0 - opaque);
-          s.emi = vec3f(0.62, 1.0, 0.78) * mix(0.08, lit, detail) * (0.3 + 1.1 * u.windows);
+          // the cells stay sharp much further out than the other windows (they are what a visitor looks for), and
+          // bright enough to see by day
+          let lifeD = 1.0 - smoothstep(350.0, 900.0, t);
+          let lc = lifeCol(i32(floor(fx)) + (cseed & 63), i32(floor((cfz.h - p.y) / 3.6)));
+          lit = max(lc.x, max(lc.y, lc.z)) * (1.0 - opaque);
+          s.emi = mix(vec3f(0.06, 0.12, 0.09), lc * (1.0 - opaque), lifeD) * (1.2 + 1.0 * u.windows);
         }
         s.refl = (0.05 + 0.85 * pow(1.0 - ndv, 4.0)) * (1.0 - opaque * 0.75) * (1.0 - lit * 0.8);
         // rebuilt, not generated: on one tower in three a band of floors was redone in concrete with small windows;
@@ -4948,12 +4968,13 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       s.emi = vec3f(1.0, 0.72, 0.45) * rib * mix(litP * 0.5, step(hr, litP) * 0.8, detail) * u.windows * 0.8;
       // Life (life.js) on half the round towers: the window band cut into 64 cells round the tower, one row a floor,
       // the board's top at the tower's top, each tower turned by its own number of columns
-      if (hsh(cseed, 5, 781) < 0.5) {
+      if (hsh(cseed, 5, 781) < 0.7) {
         let cfo = cellFull(ci);
         let fxL = fract(atan2(lc.y - cfo.off.y, lc.x - cfo.off.x) / 6.2831853 + 1.0) * 64.0;
         let mullL = (1.0 - smoothstep(0.05, 0.12, min(fract(fxL), 1.0 - fract(fxL)))) * detail;
-        let alive = lifeAt(i32(floor(fxL)) + (cseed & 63), i32(floor((cfo.h - p.y) / 4.2)));
-        s.emi = vec3f(0.62, 1.0, 0.78) * rib * (1.0 - mullL) * mix(0.12, alive, detail) * (0.35 + 1.1 * u.windows);
+        let lifeD = 1.0 - smoothstep(350.0, 900.0, t);
+        let lcol = lifeCol(i32(floor(fxL)) + (cseed & 63), i32(floor((cfo.h - p.y) / 4.2)));
+        s.emi = mix(vec3f(0.06, 0.12, 0.09), lcol * (1.0 - mullL), lifeD) * rib * (1.2 + 1.0 * u.windows);
       }
     }
     case 2: {
@@ -5560,7 +5581,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       // glyph size: three lines of up to eleven characters, as large as the board allows
       let gu = min(bc.z * 2.0 / 74.0, bc.w * 2.0 / 42.0);
       let slot = i32(floor(u.time / 7.0)) + i32(hb.w);
-      // the tokes trade, the Org's jobs, and one slot in five the Asters' tag in toki pona (kind 12)
+      // the tokes trade, the Org's jobs, and one slot in five the Asters' tag in katakana (kind 12)
       let pk = array<i32, 5>(4, 5, 10, 6, 12)[((slot % 5) + 5) % 5];
       let fl2 = step(0.5, fract(u.time * 1.3 + hb.w * 0.37));
       var txt = 0.0;
