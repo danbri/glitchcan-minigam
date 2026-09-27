@@ -351,7 +351,11 @@ Figures for writing and sound design. Titan surface air: nitrogen with about 5% 
   three (born next generation) glows faint blue. Owner, September 2026: "not enough conway life, i still haven't seen
   it in the wild". The cause: the cells faded out with the other window detail at 110 to 360 m, so from the air a
   Life tower looked like any other. Life now has its own fade (`lifeD`, 350 to 900 m), is brighter by day, and runs
-  on seven in ten banded round towers and three in five rounded modern towers.
+  on more towers. Owner, September 2026: a board needs at least about ten cells each way to mean anything, so tall
+  towers come first ("prioritise spacious tower areas but it is not banned on the others"): a tower of twelve
+  floors or more runs Life nine times in ten (banded round towers, 4.2 m floors) or 85 in 100 (rounded modern
+  towers, 3.6 m floors); a shorter one three in ten or one in four. The board is 64 cells round, so width is never
+  the limit (about 32 columns face you); height is: a tower shows only as many rows as it has floors.
 - Headless check: the runner's clock barely moves, so the board is uploaded only if a step happens. Set
   `D.LIFE.acc = 1` after changing the board (`D.lifeStamp`, `D.lifeStep` and `D.LIFE_PATTERNS` are on `__drift`).
   Use `CAM=-490,95,-229,-2.729,-0.02 CAMF=4` with `HOP=place:roof_0` to look at the tour's Life tower.

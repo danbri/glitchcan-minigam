@@ -5089,7 +5089,10 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         let cfz = cellFull(ci);
         let mega = ((cfz.fl >> 15) & 7) == 6;
         // Life: about two in five round towers run the shared board in their windows, one column per window
-        let lifeT = cfz.v >= 0.4 && cfz.v < 0.72 && !mega && hsh(cseed, 5, 781) < 0.6;
+        // tall towers first: twelve floors or more hold a gun and room for its gliders, so most of them run it; shorter
+        // ones only now and then (not never: a few rows of blinkers and gliders still read)
+        let lifeP = select(0.25, 0.85, cfz.h >= 12.0 * 3.6);
+        let lifeT = cfz.v >= 0.4 && cfz.v < 0.72 && !mega && hsh(cseed, 5, 781) < lifeP;
         let lang = fract(atan2(lq.y - cfz.off.y, lq.x - cfz.off.x) / 6.2831853 + 1.0);
         let fx = select(facU / select(1.5, 1.1, mega), lang * 64.0, lifeT);
         let fy = p.y / select(3.6, 3.0, mega);
@@ -5264,8 +5267,8 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       s.emi = vec3f(1.0, 0.72, 0.45) * rib * mix(litP * 0.5, step(hr, litP) * 0.8, detail) * u.windows * 0.8;
       // Life (life.js) on half the round towers: the window band cut into 64 cells round the tower, one row a floor,
       // the board's top at the tower's top, each tower turned by its own number of columns
-      if (hsh(cseed, 5, 781) < 0.7) {
-        let cfo = cellFull(ci);
+      let cfo = cellFull(ci);
+      if (hsh(cseed, 5, 781) < select(0.3, 0.9, cfo.h >= 12.0 * 4.2)) {
         let fxL = fract(atan2(lc.y - cfo.off.y, lc.x - cfo.off.x) / 6.2831853 + 1.0) * 64.0;
         let mullL = (1.0 - smoothstep(0.05, 0.12, min(fract(fxL), 1.0 - fract(fxL)))) * detail;
         let lifeD = 1.0 - smoothstep(350.0, 900.0, t);
