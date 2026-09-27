@@ -82,6 +82,11 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 .pickRing { position: fixed; z-index: 30; pointer-events: none; transform: translate(-50%, -50%); opacity: 0; }
 .pickRing .pr { display: block; width: 46px; height: 46px; border-radius: 50%; border: 2px solid #e8b979; box-shadow: 0 0 12px rgba(232,185,121,.8); margin: 0 auto; }
 .pickRing .pl { display: block; margin-top: 8px; white-space: nowrap; font-size: 14px; color: var(--ink); text-shadow: 0 1px 6px rgba(0,0,0,.9); text-align: center; }
+.pickCard { position: fixed; z-index: 31; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; background: var(--glass); border: 1px solid var(--edge); border-radius: 14px; color: var(--ink); font-size: 15px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); pointer-events: auto; }
+.pickCard[hidden] { display: none; }
+.pickCard .pb { display: flex; gap: 8px; }
+.pickCard button { font: inherit; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid var(--edge); border-radius: 10px; min-height: 44px; padding: 6px 14px; cursor: pointer; }
+.pickCard .pgo { flex: 1; background: rgba(232,185,121,.28); border-color: #e8b979; }
 .pickRing.go { animation: pickGo 2.4s ease-out forwards; }
 @keyframes pickGo { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } }
 .mapHead { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin: 0 2px 6px; }
@@ -243,7 +248,7 @@ body.introOn .burger, body.introOn .ui, body.introOn .pad, body.introOn .tale { 
   </div>
   <div class="taleGrip" id="taleGrip" aria-hidden="true" title="Drag to resize"></div>
 </aside>
-<button class="flyOn" id="bFlyOn" type="button" hidden>Fly on</button>
+<button class="flyOn" id="bFlyOn" type="button" hidden aria-label="Leave this view and fly on, the way you face">Explore from here</button>
 <div class="glint" id="glint" hidden role="button" aria-label="Something worth a closer look"></div>
 <div class="err" id="err"><div id="errMsg"></div></div>
 <script type="text/wgsl" id="wgsl-common">
@@ -9123,7 +9128,29 @@ function routeName() { return st.forced === "low" ? "street level" : st.forced =
 function flyOn() {
   if (NAV.mode !== "visit") return;
   NAV.mode = "surface"; NAV.visit = null;
-  st.vx = Math.cos(st.yaw) * 10; st.vz = Math.sin(st.yaw) * 10; st.vy = 0; st.mode = "low"; st.tour = null;
+  // carry on from the view as it is: same height, the way you face, from a standstill. (It used to drop to street
+  // level, snap to a street axis and head for a random place: a lurch, then somewhere you did not choose.)
+  const hy = Math.cos(st.yaw), hz = Math.sin(st.yaw);
+  st.vx = 0; st.vz = 0; st.vy = 0; st.tour = { x: st.x + hy * 2500, z: st.z + hz * 2500, out: false, until: clock + 240 };
+  const agl = st.y - Math.max(terrSurfAt(st.x, st.z), 0);
+  // a street place can stand inside the flight code's coarse building boxes; lift out of them slowly (the push-out
+  // was instant: the lurch), and only go on at street level when the view is clear of them
+  st.soft = clock + 15;
+  const boxed = heightAt(st.x, st.z, st.y) > st.y + 2;
+  if (agl < 20 && !boxed && !cellAt(Math.floor(st.x / C), Math.floor(st.z / C)).wild) { st.mode = "low";
+    // street level: take the street direction nearest the way you face that is open (a street place faces a wall)
+    let bestA = 0, bs = -1e9;
+    for (let k = 0; k < 4; k++) {
+      const a = k * Math.PI / 2, ca = Math.cos(a), sa = Math.sin(a);
+      let blocked = 0;
+      // the same test the autopilot makes: 36 m ahead, a metre either side
+      for (let d = 0; d <= 36 && !blocked; d += 4) for (const l of [-1, 0, 1]) if (heightAt(st.x + ca * d - sa * l, st.z + sa * d + ca * l, st.y) > st.y + 2) { blocked = 1; break; }
+      const sc = Math.cos(a - st.yaw) - 3 * blocked;
+      if (sc > bs) { bs = sc; bestA = a; }
+    }
+    st.axisYaw = bestA; st.realign = false; st.altBias = clampv(st.y - 8.5, -80, 260); }
+  else { st.mode = "high"; st.altBias = boxed ? 0 : clampv(st.y - 52, -80, 260); }
+  st.modeT = 40;
   lastInput = clock;
 }
 // The menu is a drill-down: one short list at a time, with a back button, so nothing floods the screen.
@@ -11116,15 +11143,21 @@ function pickRing(px, py, text) {
   r.querySelector(".pl").textContent = text;
   r.classList.remove("go"); void r.offsetWidth; r.classList.add("go");
 }
-function pickGo(px, py) {
+// A long press names the thing under the finger and offers the flight; it never starts one by itself (a finger
+// resting on the screen used to send the view off). `now` skips the offer (tests, the map).
+function pickGo(px, py, now) {
   if (NAV.mode === "space" || NAV.mode === "trip" || NAV.spaceMix > 0.05) return;
   const S = pickAt(px, py);
   if (!S) { pickRing(px, py, "Nothing there"); return; }
+  if (S.y0 === undefined) S.y0 = 0;
   // the simpler (WebGL) city has no visits: name it, but stay
   if (!GPUREF.device) { pickRing(px, py, S.name); return; }
-  if (S.y0 === undefined) S.y0 = 0;
+  if (now) { pickLaunch(S); return; }
+  pickOffer(S, px, py);
+}
+function pickLaunch(S) {
+  pickOfferClose();
   const tod = currentTod(), V = pickCompose(S, tod.sun);
-  pickRing(px, py, S.name);
   const from = { x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch };
   const far = Math.hypot(V.x - from.x, V.z - from.z);
   NAV.tour = null; NAV.trip = null; NAV.free = null; NAV.cam = null; NAV.spaceMix = 0;
@@ -11134,6 +11167,27 @@ function pickGo(px, py) {
   showHint(S.name + (S.blurb ? ". " + S.blurb : ""), 7000);
   if (typeof syncGoLabel === "function") syncGoLabel();
 }
+// the offer: a small card by the finger with the name, "Fly there" and a close button
+function pickOffer(S, px, py) {
+  if (!document.body || !document.body.appendChild || !document.createElement("div").querySelector) return;
+  let c = PICK.card;
+  if (!c) {
+    c = document.createElement("div"); c.className = "pickCard"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Picked");
+    c.innerHTML = '<span class="pn"></span><span class="pb"><button type="button" class="pgo">Fly there</button><button type="button" class="px" aria-label="Close">\u00d7</button></span>';
+    document.body.appendChild(c); PICK.card = c;
+    c.querySelector(".pgo").addEventListener("click", (e) => { e.stopPropagation(); if (PICK.offer) pickLaunch(PICK.offer); });
+    c.querySelector(".px").addEventListener("click", (e) => { e.stopPropagation(); pickOfferClose(); });
+  }
+  PICK.offer = S;
+  c.querySelector(".pn").textContent = S.name;
+  c.hidden = false;
+  const w = Math.min(300, innerWidth - 32);
+  c.style.left = clampv(px - w / 2, 16, innerWidth - 16 - w) + "px";
+  c.style.top = clampv(py - 120, 16, innerHeight - 140) + "px";
+  c.style.width = w + "px";
+  c.querySelector(".pgo").focus({ preventScroll: true });
+}
+function pickOfferClose() { PICK.offer = null; if (PICK.card) PICK.card.hidden = true; }
 // while flying there: the city's clock runs up to eight times as fast, easing in and out
 function pickWarp() {
   const V = NAV.visit;
@@ -11146,16 +11200,17 @@ function pickInit(canvas) {
   const cancel = () => { clearTimeout(PICK.timer); PICK.timer = 0; };
   canvas.addEventListener("pointerdown", (e) => {
     cancel();
+    pickOfferClose();
     PICK.x = e.clientX; PICK.y = e.clientY;
     PICK.timer = setTimeout(() => {
       PICK.timer = 0;
       if (touches.size > 1) return;
       pointer.down = false;
       if (navigator.vibrate) navigator.vibrate(12);
-      pickGo(PICK.x, PICK.y);
-    }, 520);
+      pickGo(PICK.x, PICK.y, false);
+    }, 650);
   });
-  canvas.addEventListener("pointermove", (e) => { if (PICK.timer && Math.hypot(e.clientX - PICK.x, e.clientY - PICK.y) > 12) cancel(); });
+  canvas.addEventListener("pointermove", (e) => { if (PICK.timer && Math.hypot(e.clientX - PICK.x, e.clientY - PICK.y) > 10) cancel(); });
   canvas.addEventListener("pointerup", cancel);
   canvas.addEventListener("pointercancel", cancel);
 }
@@ -11885,7 +11940,7 @@ function update(dt) {
   // right stick left/right slides sideways
   if (PAD.lx) { st.x += -Math.sin(st.yaw) * PAD.lx * 14 * dt; st.z += Math.cos(st.yaw) * PAD.lx * 14 * dt; }
   const here = heightAt(st.x, st.z, st.y) + 2;
-  if (st.y < here) { st.y += (here - st.y) * Math.min(1, dt * 8); st.vy = Math.max(st.vy, 0); }
+  if (st.y < here) { st.y += clock < (st.soft || 0) ? Math.min(here - st.y, 5 * dt) : (here - st.y) * Math.min(1, dt * 8); st.vy = Math.max(st.vy, 0); }
 
   // camera attitude: nose dips when accelerating, banks into turns, small gust wobble
   const spd2 = Math.max(4, Math.hypot(st.vx, st.vz));
@@ -12944,7 +12999,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { WX, TALES, taleSwitch, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { WX, TALES, taleSwitch, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

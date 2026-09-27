@@ -82,6 +82,11 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 .pickRing { position: fixed; z-index: 30; pointer-events: none; transform: translate(-50%, -50%); opacity: 0; }
 .pickRing .pr { display: block; width: 46px; height: 46px; border-radius: 50%; border: 2px solid #e8b979; box-shadow: 0 0 12px rgba(232,185,121,.8); margin: 0 auto; }
 .pickRing .pl { display: block; margin-top: 8px; white-space: nowrap; font-size: 14px; color: var(--ink); text-shadow: 0 1px 6px rgba(0,0,0,.9); text-align: center; }
+.pickCard { position: fixed; z-index: 31; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; background: var(--glass); border: 1px solid var(--edge); border-radius: 14px; color: var(--ink); font-size: 15px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); pointer-events: auto; }
+.pickCard[hidden] { display: none; }
+.pickCard .pb { display: flex; gap: 8px; }
+.pickCard button { font: inherit; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid var(--edge); border-radius: 10px; min-height: 44px; padding: 6px 14px; cursor: pointer; }
+.pickCard .pgo { flex: 1; background: rgba(232,185,121,.28); border-color: #e8b979; }
 .pickRing.go { animation: pickGo 2.4s ease-out forwards; }
 @keyframes pickGo { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } }
 .mapHead { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin: 0 2px 6px; }
@@ -243,6 +248,6 @@ body.introOn .burger, body.introOn .ui, body.introOn .pad, body.introOn .tale { 
   </div>
   <div class="taleGrip" id="taleGrip" aria-hidden="true" title="Drag to resize"></div>
 </aside>
-<button class="flyOn" id="bFlyOn" type="button" hidden>Fly on</button>
+<button class="flyOn" id="bFlyOn" type="button" hidden aria-label="Leave this view and fly on, the way you face">Explore from here</button>
 <div class="glint" id="glint" hidden role="button" aria-label="Something worth a closer look"></div>
 <div class="err" id="err"><div id="errMsg"></div></div>

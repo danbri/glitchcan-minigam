@@ -226,7 +226,7 @@ Figures for writing and sound design. Titan surface air: nitrogen with about 5% 
 
 ## Long-press to go (`src/pick.js`)
 
-Hold still on the view for 0.52 s: `pickAt` follows the ray (the camera snapshot `CAMNOW`, which main.js and
+Hold still on the view for 0.65 s (moving 10 px cancels): `pickAt` follows the ray (the camera snapshot `CAMNOW`, which main.js and
 fallback.js fill each frame) through the skyboats (spheres from `EVN`), then marches it against `heightAt`, then
 names what it struck: a landmark (`pickLandmarks`, keep it in step with the map's), a building (street and
 district), or the land. `pickCompose` frames it: a distance that fits its size, 16 bearings scored for side light
@@ -235,6 +235,17 @@ angle (0.2 rad for tall things, 0.32 for wide), the subject on a third of the fr
 is a visit (`NAV.visit` with `look` and `subject`): `visitStep` turns to watch the subject, then settles into the
 composed view; `pickWarp` runs the world clock up to eight times as fast mid-flight; focus lands on the subject.
 The WebGL fallback only names things (it has no visits). Test: `PICK=x,y PICKF=12` in the scratch Dawn runner.
+
+- **A long press offers; it never flies.** Until September 2026 the press started the flight at once, so a finger
+  resting on the screen sent the view off somewhere (owner report: "sometimes it zooms off"). Now `pickOffer` shows a
+  card by the finger with the name, "Fly there" (`pickLaunch`) and a close button; any new touch on the view closes
+  it. `pickGo(x, y, true)` still flies at once, for tests.
+- **"Explore from here"** (was "Fly on", owner: "random and cryptic, begins with a lurching jump"). `flyOn` now starts
+  from a standstill at the view's height, heading the way you face (the tour target is 2.5 km ahead, not a random
+  place). Two causes of the lurch, both measured in the Dawn runner (`FLYON=<frame>`): it always switched to street
+  level, so a high view dived; and street places stand inside the flight code's coarse building boxes (`heightAt`
+  at a street place can read the roof height across the street), and the push-out moved the drone to the roof in a
+  few frames. `st.soft` limits that push to 5 m/s for 15 s after the handover.
 
 ## Feeling the choices (`src/feel.js`)
 

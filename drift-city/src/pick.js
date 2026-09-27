@@ -133,15 +133,21 @@ function pickRing(px, py, text) {
   r.querySelector(".pl").textContent = text;
   r.classList.remove("go"); void r.offsetWidth; r.classList.add("go");
 }
-function pickGo(px, py) {
+// A long press names the thing under the finger and offers the flight; it never starts one by itself (a finger
+// resting on the screen used to send the view off). `now` skips the offer (tests, the map).
+function pickGo(px, py, now) {
   if (NAV.mode === "space" || NAV.mode === "trip" || NAV.spaceMix > 0.05) return;
   const S = pickAt(px, py);
   if (!S) { pickRing(px, py, "Nothing there"); return; }
+  if (S.y0 === undefined) S.y0 = 0;
   // the simpler (WebGL) city has no visits: name it, but stay
   if (!GPUREF.device) { pickRing(px, py, S.name); return; }
-  if (S.y0 === undefined) S.y0 = 0;
+  if (now) { pickLaunch(S); return; }
+  pickOffer(S, px, py);
+}
+function pickLaunch(S) {
+  pickOfferClose();
   const tod = currentTod(), V = pickCompose(S, tod.sun);
-  pickRing(px, py, S.name);
   const from = { x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch };
   const far = Math.hypot(V.x - from.x, V.z - from.z);
   NAV.tour = null; NAV.trip = null; NAV.free = null; NAV.cam = null; NAV.spaceMix = 0;
@@ -151,6 +157,27 @@ function pickGo(px, py) {
   showHint(S.name + (S.blurb ? ". " + S.blurb : ""), 7000);
   if (typeof syncGoLabel === "function") syncGoLabel();
 }
+// the offer: a small card by the finger with the name, "Fly there" and a close button
+function pickOffer(S, px, py) {
+  if (!document.body || !document.body.appendChild || !document.createElement("div").querySelector) return;
+  let c = PICK.card;
+  if (!c) {
+    c = document.createElement("div"); c.className = "pickCard"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Picked");
+    c.innerHTML = '<span class="pn"></span><span class="pb"><button type="button" class="pgo">Fly there</button><button type="button" class="px" aria-label="Close">\u00d7</button></span>';
+    document.body.appendChild(c); PICK.card = c;
+    c.querySelector(".pgo").addEventListener("click", (e) => { e.stopPropagation(); if (PICK.offer) pickLaunch(PICK.offer); });
+    c.querySelector(".px").addEventListener("click", (e) => { e.stopPropagation(); pickOfferClose(); });
+  }
+  PICK.offer = S;
+  c.querySelector(".pn").textContent = S.name;
+  c.hidden = false;
+  const w = Math.min(300, innerWidth - 32);
+  c.style.left = clampv(px - w / 2, 16, innerWidth - 16 - w) + "px";
+  c.style.top = clampv(py - 120, 16, innerHeight - 140) + "px";
+  c.style.width = w + "px";
+  c.querySelector(".pgo").focus({ preventScroll: true });
+}
+function pickOfferClose() { PICK.offer = null; if (PICK.card) PICK.card.hidden = true; }
 // while flying there: the city's clock runs up to eight times as fast, easing in and out
 function pickWarp() {
   const V = NAV.visit;
@@ -163,16 +190,17 @@ function pickInit(canvas) {
   const cancel = () => { clearTimeout(PICK.timer); PICK.timer = 0; };
   canvas.addEventListener("pointerdown", (e) => {
     cancel();
+    pickOfferClose();
     PICK.x = e.clientX; PICK.y = e.clientY;
     PICK.timer = setTimeout(() => {
       PICK.timer = 0;
       if (touches.size > 1) return;
       pointer.down = false;
       if (navigator.vibrate) navigator.vibrate(12);
-      pickGo(PICK.x, PICK.y);
-    }, 520);
+      pickGo(PICK.x, PICK.y, false);
+    }, 650);
   });
-  canvas.addEventListener("pointermove", (e) => { if (PICK.timer && Math.hypot(e.clientX - PICK.x, e.clientY - PICK.y) > 12) cancel(); });
+  canvas.addEventListener("pointermove", (e) => { if (PICK.timer && Math.hypot(e.clientX - PICK.x, e.clientY - PICK.y) > 10) cancel(); });
   canvas.addEventListener("pointerup", cancel);
   canvas.addEventListener("pointercancel", cancel);
 }
