@@ -573,6 +573,27 @@ Owner, on a phone: the rooms were "eerily empty" and "motionless". What was adde
 - Test: `/tmp/claude-0/band.mjs`-style Node harness with a mock AudioContext (Proxy nodes that record `start`):
   a 48-bar cellar tune ended at 87.7 s, applause started, the break ran 6 s, the next tune came in faster.
 
+Noir and disco (owner, September 2026: "glitterballs and disco lighting - lasers, mood colour washes and dry ice
+plus smokey bar atmospherics, and a ceiling fan casting shadows and god rays... Can we cut enough corners?"). Each
+effect is one cheap trick, placed where it suits the room, not everywhere:
+
+- The Cold Tap's fan (`rmFan`, under a lamp in a round lightwell in the ceiling, `RM_FAN`/`RM_FANL`): the blades'
+  shadow is `rmFanMask`, which projects a point onto the fan's disc from the lamp and tests the blade sectors. No
+  shadow march. The same mask cuts the lamp's haze cone (beam 2) into turning god rays and shades the floor
+  (light 6; `rmLit` now loops over seven lights). The Cold Tap takes 16 haze samples, the others 10.
+- Smoke in the Cold Tap and the cellar: 3D noise drifting on each haze sample multiplies the beams, so they swirl.
+- The club's glitterball (`RM_BALL`, material 37: facets, grout, a few flashing): its spots are `rmBallSpots`, a
+  facet pattern on the direction from the ball, turned with the ball, added as light in `rmLit` (so people catch
+  them too). Slow colour washes turn round the dome from two stage colours.
+- Lasers (`rmLasers`): six lines from the lip of the stand, fanning and sweeping, green and red, in bars 4 to 7 of
+  every eight while the band plays. Each is the exact closest approach between the view ray and the line, with a
+  width that grows with distance so it stays about a pixel wide.
+- Dry ice: a low noisy layer (0.4 m falloff) on the club floor near the stand and at the cellar's stage end,
+  coloured by the stage light.
+- First try too bright: the fan's cone at colour 1.6 and a 0.12 falloff filled the whole view with fog. Now 1.1
+  and 0.5. Dry ice at 0.22 m and weight 0.08 did not show; 0.4 m and 0.3 does.
+- Check renders: `__bandForce` (main.js test hook) sets the band's position, for example 20.05 for lasers on.
+
 Staging ideas the owner raised for busy scenes (not built; for the scene-staging work):
 
 - More scripted scenes are fine: playable cut scenes, fixed shots.

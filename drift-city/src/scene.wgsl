@@ -6089,12 +6089,99 @@ fn rmStool(q: vec3f, k: vec2f) -> vec2f {
 // the Cold Tap: a narrow old bar. Oxblood plaster over dark panelling, a pressed-tin ceiling browned by decades of
 // heater fumes, a long bar with a brass rail and taps, a mirrored back bar full of odd bottles, green-shaded lamps,
 // a jukebox glowing in the corner, and the airlock at the far end with a porthole onto the blue street.
+// ---------- noir and disco: the Cold Tap's fan, the club's glitterball and lasers, smoke and dry ice ----------
+// All cheap by construction: the fan's shadow is found by projecting a point onto the fan's disc from the lamp above
+// it (no shadow march), the glitterball's spots are a pattern on the sphere of directions round the ball, a laser is
+// the closest approach between the view ray and a line, smoke and dry ice are noise on the haze samples already taken.
+const RM_FAN = vec3f(4.6, 2.6, -0.7);
+const RM_FANL = vec3f(4.6, 3.34, -0.7);
+const RM_BALL = vec3f(12.0, 7.4, 0.0);
+fn rmFanRot() -> f32 { return u.time * 2.3; }
+fn rmFan(q: vec3f) -> vec2f {
+  let p = q - RM_FAN;
+  let bb = sdBox(p - vec3f(0.0, 0.2, 0.0), vec3f(0.68, 0.24, 0.68));
+  if (bb > 0.05) { return vec2f(bb, 9.0); }
+  var r = vec2f(sdSeg(p, vec3f(0.0), vec3f(0.0, 0.42, 0.0)) - 0.013, 5.0);
+  r = rmU(r, vec2f(sdEll(p, vec3f(0.1, 0.05, 0.1)), 5.0));
+  let sec = 1.2566371;
+  let a = atan2(p.z, p.x) - rmFanRot();
+  let ai = a - sec * round(a / sec);
+  let rr = length(p.xz);
+  let bp = vec3f(rr * cos(ai), p.y + 0.02 * sin(ai * 8.0), rr * sin(ai));
+  r = rmU(r, vec2f(sdBox(bp - vec3f(0.38, -0.01, 0.0), vec3f(0.25, 0.006, 0.055)) - 0.003, 9.0));
+  return r;
+}
+// 1 where the fan's lamp reaches a point, less in the blades' and the hub's shadow; the penumbra widens further down
+fn rmFanMask(p: vec3f) -> f32 {
+  let L = RM_FANL;
+  let dl = normalize(p - L);
+  let cone = smoothstep(0.5, 0.62, -dl.y);
+  if (p.y > RM_FAN.y - 0.01) { return cone; }
+  let sc = (L.y - RM_FAN.y) / (L.y - p.y);
+  let c = L.xz + (p.xz - L.xz) * sc - RM_FAN.xz;
+  let r = length(c);
+  let soft = 0.01 + 0.035 * (1.0 - sc);
+  let sec = 1.2566371;
+  let a = atan2(c.y, c.x) - rmFanRot();
+  let ai = a - sec * round(a / sec);
+  let across = abs(r * sin(ai));
+  let along = r * cos(ai);
+  let blade = (1.0 - smoothstep(0.055, 0.055 + soft, across)) * smoothstep(0.12, 0.12 + soft, along) * (1.0 - smoothstep(0.63, 0.63 + soft, along));
+  let hub = 1.0 - smoothstep(0.1, 0.1 + soft, r);
+  return cone * (1.0 - 0.93 * max(blade, hub));
+}
+// the glitterball's spots: the direction from the ball, turned with it, cut into facets; one facet in two or so
+// catches the follow-spots and throws a small spot wherever that direction lands
+fn rmBallSpots(q: vec3f) -> f32 {
+  let dv = normalize(q - RM_BALL);
+  let rot = u.time * 0.35;
+  let dr = vec3f(dv.x * cos(rot) - dv.z * sin(rot), dv.y, dv.x * sin(rot) + dv.z * cos(rot));
+  let lat = acos(clamp(dr.y, -1.0, 1.0));
+  let gl = lat / 0.1;
+  let go = atan2(dr.z, dr.x) / 0.1;
+  let cl = round(gl);
+  let co = round(go);
+  let d = length(vec2f(gl - cl, (go - co) * max(sin(lat), 0.2)));
+  let on = step(0.45, hsh(i32(cl), i32(co), 955));
+  return on * (1.0 - smoothstep(0.1, 0.2, d));
+}
+// lasers from the lip of the stand, fanning and sweeping, green and red, in the second half of each eight bars
+fn rmLasers(o: vec3f, d: vec3f, tHit: f32) -> vec3f {
+  let B = rmBand();
+  let on = B.x * step(4.0, B.z - 8.0 * floor(B.z / 8.0));
+  if (on < 0.5) { return vec3f(0.0); }
+  var c = vec3f(0.0);
+  let src = vec3f(21.9, 2.2, 0.0);
+  for (var i = 0; i < 6; i++) {
+    let fi = f32(i);
+    let yaw = 3.14159 + (fi - 2.5) * 0.2 + 0.35 * sin(u.time * 0.6 + fi * 0.3);
+    let el = 0.04 + 0.16 * (0.5 + 0.5 * sin(u.time * 0.9 + fi * 1.3));
+    let L = vec3f(cos(yaw) * cos(el), sin(el), sin(yaw) * cos(el));
+    let w = o - src;
+    let b = dot(d, L);
+    let dd = dot(d, w);
+    let e = dot(L, w);
+    let den = max(1.0 - b * b, 1e-4);
+    let t = (b * e - dd) / den;
+    let sl = (e - b * dd) / den;
+    if (t < 0.0 || t > tHit || sl < 0.0 || sl > 28.0) { continue; }
+    let dist = length(w + d * t - L * sl);
+    let wd = 0.004 + 0.0012 * t;
+    let lc = select(vec3f(0.2, 1.0, 0.3), vec3f(1.0, 0.15, 0.2), (i & 1) == 1);
+    c += lc * exp(-dist * dist / (wd * wd)) * (0.004 / wd) * 5.0 * (0.6 + 0.6 * B.y);
+  }
+  return c;
+}
 fn rmColdTap(q: vec3f) -> vec2f {
-  let s = -sdBox(q - vec3f(3.75, 1.5, 0.0), vec3f(5.55, 1.5, 3.5));
+  // the room, and a round lightwell in the ceiling over the fan with a lamp at its top
+  let well = max(length(q.xz - RM_FAN.xz) - 0.45, abs(q.y - 3.2) - 0.22);
+  let s = -min(sdBox(q - vec3f(3.75, 1.5, 0.0), vec3f(5.55, 1.5, 3.5)), well);
   var m = 2.0;
   if (q.y < 0.02) { m = 1.0; } else if (q.y > 2.98) { m = 3.0; } else if (q.y < 1.05) { m = 15.0; }
   if (q.z > 3.45 && q.y > 1.2 && q.y < 2.45 && q.x > 1.0 && q.x < 8.2) { m = 16.0; }
   var r = vec2f(s, m);
+  r = rmU(r, vec2f(max(length(q.xz - RM_FAN.xz) - 0.16, abs(q.y - 3.41) - 0.012), 26.0));
+  r = rmU(r, rmFan(q));
   // dado rail and a crown moulding along every wall
   r = rmU(r, vec2f(max(s - 0.035, abs(q.y - 1.07) - 0.028), 4.0));
   r = rmU(r, vec2f(max(s - 0.07, abs(q.y - 2.92) - 0.06), 15.0));
@@ -6275,6 +6362,9 @@ fn rmClub(q: vec3f) -> vec2f {
   let az = atan2(cq.z, cq.x);
   let ra = (fract(az / 0.3491 + 0.5) - 0.5) * 0.3491 * length(cq.xz);
   r = rmU(r, vec2f(max(abs(ra) - 0.07, -dome - 0.14), 5.0));
+  // the glitterball on its cord from the top of the dome
+  r = rmU(r, vec2f(length(q - RM_BALL) - 0.38, 37.0));
+  r = rmU(r, vec2f(sdSeg(q, RM_BALL, vec3f(12.0, 11.6, 0.0)) - 0.008, 5.0));
   // the stand, footlights along its lip, the band's things
   let sq = q - vec3f(24.0, 0.0, 0.0);
   r = rmU(r, vec2f(max(sdCyl(sq, 6.2, 0.0, 0.7), -sq.x - 2.4), 9.0));
@@ -6366,6 +6456,7 @@ fn rmLight0(k: i32, i: i32) -> array<vec3f, 2> {
       if (i == 3) { return array<vec3f, 2>(vec3f(9.0, 1.4, 0.3), vec3f(0.3, 0.5, 1.0) * 2.2); }
       if (i == 4) { return array<vec3f, 2>(vec3f(7.2, 1.95, -3.1), vec3f(1.0, 0.2, 0.12) * 1.3); }
       if (i == 5) { return array<vec3f, 2>(vec3f(4.6, 1.5, 3.05), vec3f(1.0, 0.75, 0.4) * 1.4); }
+      if (i == 6) { return array<vec3f, 2>(RM_FANL, vec3f(1.0, 0.84, 0.6) * 7.0); }
       return z;
     }
     case 2: {
@@ -6427,7 +6518,8 @@ fn rmBeam0(k: i32, i: i32) -> array<vec4f, 3> {
   if (k == 1) {
     if (i == 0) { return array<vec4f, 3>(vec4f(3.0, 2.36, 1.55, 0.0), vec4f(0.0, -1.0, 0.0, 0.72), vec4f(1.0, 0.72, 0.42, 0.0)); }
     if (i == 1) { return array<vec4f, 3>(vec4f(6.2, 2.36, 1.55, 0.0), vec4f(0.0, -1.0, 0.0, 0.72), vec4f(1.0, 0.72, 0.42, 0.0)); }
-    return array<vec4f, 3>(vec4f(3.8, 2.26, -2.7, 0.0), vec4f(0.0, -1.0, 0.0, 0.72), vec4f(1.0, 0.7, 0.4, 0.0));
+    // the fan's lamp: a wide cone down through the turning blades (their shadows cut it into rays, in roomRender)
+    return array<vec4f, 3>(vec4f(RM_FANL, 0.5), vec4f(0.0, -1.0, 0.0, 0.62), vec4f(1.0, 0.84, 0.6, 0.0) * 1.1);
   }
   if (k == 2) {
     if (i == 0) { return array<vec4f, 3>(vec4f(9.0, 2.3, -4.8, 0.0), vec4f(0.25, -0.35, 0.9, 0.75), vec4f(0.2, 0.3, 0.55, 0.0)); }
@@ -6461,16 +6553,25 @@ fn rmShadow(q: vec3f, lp: vec3f, k: i32) -> f32 {
 // light arriving at a point (local position and normal): the room's lamps and a dim ambient tinted by the room
 fn rmLit(q: vec3f, n: vec3f, k: i32, occ: f32, shadowed: bool) -> vec3f {
   var c = vec3f(0.0);
-  for (var i = 0; i < 6; i++) {
+  for (var i = 0; i < 7; i++) {
     let Ld = rmLight(k, i);
     if (Ld[0].y < -40.0) { continue; }
     let d = Ld[0] - q;
     let l2 = dot(d, d);
     var sh = 1.0;
     if (i == 0 && shadowed) { sh = rmShadow(q + n * 0.02, Ld[0], k); }
+    if (i == 6) { sh = rmFanMask(q); }
     c += Ld[1] * max(dot(n, d * inverseSqrt(l2)), 0.0) * sh / (l2 * 0.45 + 0.6);
   }
   let amb = select(select(select(vec3f(0.035, 0.03, 0.04), vec3f(0.025, 0.035, 0.05), k == 2), vec3f(0.05, 0.022, 0.015), k == 3), vec3f(0.04, 0.028, 0.022), k == 1);
+  if (k == 4) {
+    // the glitterball's spots, and slow washes of colour round the dome, two stage colours turning against each other
+    let B = rmBand();
+    c += vec3f(1.0, 0.95, 0.88) * rmBallSpots(q) * (0.5 + 0.6 * B.x) * max(dot(n, normalize(RM_BALL - q)), 0.0);
+    let az = atan2(q.z, q.x - 12.0);
+    let wash = mix(rmStageCol(floor(B.z / 4.0) + 1.0), rmStageCol(floor(B.z / 4.0) + 2.0), 0.5 + 0.5 * sin(az * 2.0 + u.time * 0.25));
+    c += wash * 0.07 * occ * (0.6 + 0.4 * B.x);
+  }
   return c + amb * (0.5 + 0.5 * n.y) * occ;
 }
 fn rmAO(q: vec3f, n: vec3f, k: i32) -> f32 {
@@ -6792,6 +6893,20 @@ fn rmSurface(q: vec3f, n: vec3f, m: i32, k: i32, ld: vec3f, occ: f32) -> RmS {
       s.spec = 0.5; s.refl = 0.08;
     }
     case 36: { s.alb = vec3f(0.35, 0.18, 0.03); s.emi = vec3f(0.2, 0.1, 0.02); s.spec = 1.0; s.refl = 0.2; }
+    case 37: {
+      // the glitterball: small mirror facets, a few catching the light and flashing
+      let dv = normalize(q - RM_BALL);
+      let rot = u.time * 0.35;
+      let dr = vec3f(dv.x * cos(rot) - dv.z * sin(rot), dv.y, dv.x * sin(rot) + dv.z * cos(rot));
+      let cl = i32(round(acos(clamp(dr.y, -1.0, 1.0)) / 0.1));
+      let co = i32(round(atan2(dr.z, dr.x) / 0.1));
+      let fh = hsh(cl, co, 956);
+      let grout = step(0.42, abs(fract(acos(clamp(dr.y, -1.0, 1.0)) / 0.1) - 0.5)) + step(0.42, abs(fract(atan2(dr.z, dr.x) / 0.1) - 0.5));
+      s.alb = mix(vec3f(0.18 + 0.12 * fh), vec3f(0.03), min(grout, 1.0));
+      s.spec = 1.0;
+      s.refl = 0.7 * (1.0 - min(grout, 1.0));
+      s.emi = vec3f(1.0, 0.95, 0.9) * 4.0 * step(0.9, hsh(cl, co + i32(floor(u.time * 5.0)) * 131, 957)) * (1.0 - min(grout, 1.0));
+    }
     default: {}
   }
   return s;
@@ -6826,7 +6941,7 @@ fn roomRender(ro: vec3f, rd: vec3f, px: vec2f) -> vec4f {
   gRmJ = hsh(i32(px.x) * 3 + 1, i32(px.y), i32(u.frame) + 41);
   let h = rmTrace(lo, ld, k, 140, 60.0);
   let t = h.x;
-  let hazeK = select(select(select(0.02, 0.03, k == 2), 0.05, k == 3), 0.028, k == 4);
+  let hazeK = select(select(select(0.032, 0.03, k == 2), 0.05, k == 3), 0.028, k == 4);
   let haze = select(select(select(vec3f(0.07, 0.035, 0.025), vec3f(0.03, 0.04, 0.06), k == 2), vec3f(0.12, 0.05, 0.03), k == 3), vec3f(0.07, 0.05, 0.06), k == 4);
   var col = haze;
   if (h.y >= 0.0) {
@@ -6855,20 +6970,41 @@ fn roomRender(ro: vec3f, rd: vec3f, px: vec2f) -> vec4f {
   // haze, and light beams in it: sample along the ray, adding what each beam's cone scatters toward the eye
   col = mix(haze, col, exp(-min(t, 60.0) * hazeK));
   var beams = vec3f(0.0);
+  var ice = 0.0;
   let tb = min(t, 30.0);
   let j0 = hsh(i32(px.x), i32(px.y), i32(u.frame) + 31);
-  for (var s = 0; s < 10; s++) {
-    let sp = lo + ld * (tb * (f32(s) + j0) / 10.0);
+  // more samples in the small smoky bar, where the fan cuts its lamp's cone into rays
+  let ns = select(10, 16, k == 1);
+  let smoky = k == 1 || k == 3;
+  for (var s = 0; s < ns; s++) {
+    let sp = lo + ld * (tb * (f32(s) + j0) / f32(ns));
+    // smoke: slow layered drifts, so the beams show swirls rather than an even glow
+    var smoke = 1.0;
+    if (smoky) { smoke = 0.3 + 1.4 * vn3(sp * vec3f(0.9, 1.7, 0.9) + vec3f(u.time * 0.12, u.time * 0.03, -u.time * 0.07), 951).x; }
     for (var b = 0; b < 3; b++) {
       let B = rmBeam(k, b);
       if (B[1].w > 1.5) { continue; }
       let v = sp - B[0].xyz;
       let dl = length(v);
       let cs = dot(v / max(dl, 1e-3), B[1].xyz);
-      beams += B[2].xyz * smoothstep(B[1].w, B[1].w + 0.06, cs) / (1.0 + dl * dl * select(0.35, B[0].w, B[0].w > 0.0));
+      var bl = B[2].xyz * smoothstep(B[1].w, B[1].w + 0.06, cs) / (1.0 + dl * dl * select(0.35, B[0].w, B[0].w > 0.0));
+      if (k == 1 && b == 2) { bl *= rmFanMask(sp); }
+      beams += bl * smoke;
+    }
+    // dry ice: a low, rolling layer on the club's floor near the stand and across the cellar's stage end
+    if (k >= 3) {
+      let base = select(0.0, 0.7, (k == 4 && sp.x > 21.6) || (k == 3 && sp.x > 9.5));
+      let near = select(smoothstep(4.0, 9.0, sp.x), smoothstep(9.0, 17.0, sp.x), k == 4);
+      ice += exp(-max(sp.y - base, 0.0) / 0.4) * near * (0.3 + vn3(sp * 1.4 + vec3f(-u.time * 0.25, 0.0, u.time * 0.08), 952).x);
     }
   }
-  col += beams * tb / 10.0 * hazeK * select(3.0, 5.0, k == 3);
+  col += beams * tb / f32(ns) * hazeK * select(3.0, 5.0, k == 3);
+  if (k >= 3) {
+    let Bd = rmBand();
+    let iceC = mix(vec3f(0.5, 0.45, 0.5), rmStageCol(floor(Bd.z / 2.0) + f32(k)), 0.55) * select(0.06, 0.09, k == 4);
+    col = mix(col, iceC * 3.0, clamp(ice * tb / f32(ns) * 0.3, 0.0, 0.7));
+  }
+  if (k == 4) { col += rmLasers(lo, ld, t); }
   col = propsFx(ro, rd, t, col);
   return vec4f(max(col, vec3f(0.0)), t);
 }
