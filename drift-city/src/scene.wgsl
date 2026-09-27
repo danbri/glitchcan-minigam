@@ -1042,24 +1042,134 @@ fn flockFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
 fn propBound(kind: i32) -> f32 {
   switch kind { case 1: { return 2.8; } case 2: { return 3.2; } case 4: { return 3.9; } case 5: { return 4.6; } case 8: { return 0.35; } case 9: { return 0.9; } default: { return 1.9; } }
 }
+// ---------- story people: bodies with weight, clothes and faces ----------
+// A person placed by a story (prop kind 0). The parameter picks the pose: 0 standing, 1 standing in a hat, 2 seated
+// on a stool, 3 leaning on a bar, 4 at a drum kit, 5 seated in a hat, 6 leaning in a hat. The hue (gPH) picks the
+// clothes' colour and, through its hash, the build, hair, a beard, spectacles. Parts: 20 coat, 21 skin, 22 scarf,
+// 23 hair, 24 trousers, 25 boots, 26 hat, 27 collar, 28 eyes, 29 a glass. Front is +z. The drift-city skill,
+// "Interiors and people", says how these were built and what to keep.
+var<private> gPH: f32 = 0.0;
+fn pU(a: vec2f, b: vec2f) -> vec2f { return select(a, b, b.x < a.x); }
+fn propPerson(q0: vec3f, prm: f32) -> vec2f {
+  let pose = i32(prm + 0.5);
+  let hat = pose == 1 || pose == 5 || pose == 6;
+  let sit = pose == 2 || pose == 4 || pose == 5;
+  let lean = pose == 3 || pose == 6;
+  let hs = i32(gPH * 997.0);
+  let build = 0.92 + 0.16 * hsh(hs, 1, 901);
+  let tall = 0.95 + 0.1 * hsh(hs, 2, 902);
+  let q = vec3f(q0.x / build, q0.y / tall, q0.z / build);
+  let t = u.time + gPH * 40.0;
+  // breathing, and a slow shift of weight from foot to foot
+  let br = 0.008 * sin(t * 1.3);
+  let sway = 0.018 * sin(t * 0.23);
+  var r = vec2f(1e5, 0.0);
+  // the hips and the spine's lean for the pose
+  let hipY = select(0.93, 0.8, sit);
+  let spine = select(select(0.04, 0.12, sit), 0.42, lean);
+  let hip = vec3f(sway, hipY, select(0.0, -0.05, sit));
+  // legs: thigh and shin in trousers, a boot on each foot
+  for (var lg = 0; lg < 2; lg++) {
+    let sg = select(-1.0, 1.0, lg == 1);
+    let h = hip + vec3f(0.095 * sg, 0.0, 0.0);
+    var foot = vec3f(0.12 * sg, 0.06, select(0.02, 0.1, lg == 1));
+    if (sit) { foot = vec3f(0.14 * sg, select(0.06, 0.34, lg == 0 && pose != 4), select(0.36, 0.3, lg == 0)); }
+    if (lean) { foot = vec3f(0.12 * sg, 0.06, select(-0.18, 0.02, lg == 1)); }
+    let knee = ik2(h, foot, 0.46, 0.45, vec3f(0.0, 0.2, 1.0));
+    let leg = smin(sdRC(q, h, knee, 0.082, 0.06), sdRC(q, knee, foot + vec3f(0.0, 0.05, 0.0), 0.056, 0.045), 0.04);
+    r = pU(r, vec2f(leg, 24.0));
+    let bq = q - foot - vec3f(0.0, -0.01, 0.07);
+    let boot = smin(sdEll(bq, vec3f(0.058, 0.055, 0.13)), sdRC(q, foot + vec3f(0.0, 0.02, 0.0), foot + vec3f(0.0, 0.16, -0.01), 0.055, 0.05), 0.03);
+    r = pU(r, vec2f(max(boot, -(q.y - 0.0)), 25.0));
+  }
+  // the upper body, tipped forward about the hips by the pose
+  let rel = q - hip;
+  let yz = rot2(vec2f(rel.y, rel.z), -spine);
+  let ub = vec3f(rel.x - sway * 0.5, yz.x, yz.y);
+  // a long coat: a waisted, tapering shell from the shoulders to below the knee (seated: to the seat), with folds
+  // that hang from the waist and a turned-back front edge
+  let coatLen = select(0.62, 0.12, sit);
+  let cy = clamp((ub.y + coatLen) / (0.52 + coatLen), 0.0, 1.0);
+  let crad = mix(select(0.29, 0.24, sit), 0.2, smoothstep(0.0, 0.55, cy)) + 0.035 * smoothstep(0.7, 1.0, cy) + br;
+  let ca = atan2(ub.x, ub.z);
+  let folds = 0.012 * sin(ca * 11.0 + ub.y * 2.0) * (1.0 - smoothstep(0.35, 0.7, cy));
+  let cq = vec3f(ub.x, ub.y, ub.z * 1.28);
+  let coat = (max(length(cq.xz) - crad - folds, max(-coatLen - ub.y, ub.y - 0.5)) - 0.01) * 0.78;
+  let chest = sdEll(ub - vec3f(0.0, 0.4, 0.01), vec3f(0.19, 0.14, 0.12) + vec3f(br));
+  var body = smin(coat, chest, 0.07);
+  // the front opening: a narrow V down the chest showing the collar underneath
+  let vcut = max(abs(ub.x) - (0.03 + 0.06 * clamp((ub.y - 0.15) / 0.35, 0.0, 1.0)), -ub.z + 0.02);
+  r = pU(r, vec2f(max(body, -max(vcut, -(ub.y - 0.1))), 20.0));
+  let collar = max(sdEll(ub - vec3f(0.0, 0.42, 0.03), vec3f(0.17, 0.13, 0.11)), ub.y - 0.5);
+  r = pU(r, vec2f(collar + 0.004, 27.0));
+  // arms in sleeves, hands by the pose: in the pockets, on the bar, a drink, drumsticks
+  for (var lg = 0; lg < 2; lg++) {
+    let sg = select(-1.0, 1.0, lg == 1);
+    let sh = vec3f(0.2 * sg, 0.46, 0.0);
+    var hand = vec3f(0.19 * sg, -0.02, 0.1);
+    if (lean) { hand = vec3f(0.17 * sg, 0.12, 0.34); }
+    if (sit && pose != 4) { hand = select(vec3f(-0.12, 0.08, 0.26), vec3f(0.14, 0.2, 0.3), lg == 1); }
+    if (pose == 4) { hand = vec3f(0.2 * sg, 0.12 + 0.07 * sin(t * 9.0 + f32(lg) * 2.4), 0.3); }
+    let el = ik2(sh, hand, 0.29, 0.27, normalize(vec3f(0.4 * sg, -0.3, -1.0)));
+    let arm = smin(sdRC(ub, sh, el, 0.064, 0.056), sdRC(ub, el, hand, 0.056, 0.048), 0.03);
+    r = pU(r, vec2f(arm, 20.0));
+    let hq = ub - hand - vec3f(0.0, -0.035, 0.02);
+    r = pU(r, vec2f(sdEll(hq, vec3f(0.035, 0.05, 0.03)), 21.0));
+    if (pose == 4) { r = pU(r, vec2f(sdRC(ub, hand, hand + vec3f(0.05 * sg, 0.02, 0.3), 0.008, 0.006), 25.0)); }
+    if (sit && pose != 4 && lg == 1) {
+      let gq = ub - hand - vec3f(0.0, 0.05, 0.03);
+      r = pU(r, vec2f(max(length(gq.xz) - 0.035 - 0.006 * gq.y, abs(gq.y) - 0.06), 29.0));
+    }
+  }
+  // neck, head and face: jaw, cheekbones, nose, brow, ears; eyes set in; hair or a hat
+  let nq = ub - vec3f(0.0, 0.52, 0.0);
+  r = pU(r, vec2f(sdRC(nq, vec3f(0.0, 0.0, 0.0), vec3f(0.0, 0.11, 0.015), 0.052, 0.046), 21.0));
+  let tilt = 0.05 * sin(t * 0.4) - spine * 0.6;
+  let hy = rot2(vec2f(nq.y - 0.22, nq.z - 0.02), tilt);
+  let hq0 = vec3f(nq.x, hy.x, hy.y);
+  let turn = 0.25 * sin(t * 0.17 + gPH * 9.0);
+  let hq = rotY(hq0, turn);
+  var head = sdEll(hq, vec3f(0.082, 0.105, 0.095));
+  head = smin(head, sdEll(hq - vec3f(0.0, -0.06, 0.03), vec3f(0.062, 0.058, 0.07)), 0.04);
+  head = smin(head, sdEll(vec3f(abs(hq.x) - 0.045, hq.y + 0.01, hq.z - 0.06), vec3f(0.025, 0.02, 0.02)), 0.02);
+  head = smin(head, sdRC(hq, vec3f(0.0, 0.0, 0.085), vec3f(0.0, -0.035, 0.108), 0.012, 0.016), 0.012);
+  head = smin(head, sdEll(vec3f(hq.x, hq.y - 0.03, hq.z - 0.075), vec3f(0.06, 0.014, 0.02)), 0.015);
+  head = min(head, sdEll(vec3f(abs(hq.x) - 0.083, hq.y + 0.005, hq.z), vec3f(0.012, 0.028, 0.02)));
+  let eyes = length(vec3f(abs(hq.x) - 0.031, hq.y - 0.008, hq.z - 0.078)) - 0.012;
+  head = max(head, -eyes);
+  r = pU(r, vec2f(head, 21.0));
+  r = pU(r, vec2f(eyes + 0.004, 28.0));
+  if (hsh(hs, 3, 903) < 0.3) {
+    let beard = max(sdEll(hq - vec3f(0.0, -0.065, 0.035), vec3f(0.07, 0.06, 0.07)), -hq.y - 0.13);
+    r = pU(r, vec2f(max(beard, 0.018 - hq.z), 23.0));
+  }
+  if (hat) {
+    let hb = max(length(hq.xz - vec2f(0.0, -0.005)) - 0.17, abs(hq.y - 0.055) - 0.008);
+    let hc = max(length(hq.xz * vec2f(1.0, 0.9)) - 0.1 + 0.02 * smoothstep(0.1, 0.15, hq.y), abs(hq.y - 0.1) - 0.055);
+    let crease = length(vec2f(hq.x, hq.y - 0.16)) - 0.012;
+    r = pU(r, vec2f(max(smin(hb, hc, 0.01), -crease), 26.0));
+  } else {
+    // hair: a cap over the crown and the back, a parting, longer on some
+    let long = hsh(hs, 4, 904) < 0.35;
+    var hair = sdEll(hq - vec3f(0.0, 0.02, -0.012), vec3f(0.089, 0.103, 0.1));
+    hair = max(hair, hq.z - 0.02 - 0.6 * max(hq.y - 0.05, 0.0));
+    hair = max(hair, -hq.y - select(0.02, 0.14, long));
+    hair += 0.004 * sin(hq.x * 90.0 + hq.z * 40.0);
+    r = pU(r, vec2f(hair, 23.0));
+  }
+  // a scarf on one in two: wound round the neck, one end down the front
+  if (hsh(hs, 5, 905) < 0.5) {
+    let sc = length(vec2f(length(vec2f(nq.x, nq.z * 1.1)) - 0.07, nq.y - 0.02)) - 0.035;
+    let tail = sdBox(ub - vec3f(0.05, 0.3, 0.13), vec3f(0.035, 0.15, 0.012)) - 0.006;
+    r = pU(r, vec2f(min(sc, tail), 22.0));
+  }
+  return vec2f(r.x * min(build, tall) * 0.92, r.y);
+}
+
 fn propSDF(q: vec3f, kind: i32, prm: f32) -> vec2f {
   var d = vec2f(1e5, 0.0);
   switch kind {
-    case 0: {
-      // a person in a long coat and scarf, breathing slowly; a hat when the parameter says so
-      let br = 0.012 * sin(u.time * 1.3 + prm * 7.0);
-      let coat = sdSeg(q, vec3f(0.0, 0.25, 0.0), vec3f(0.0, 1.32 + br, 0.0)) - mix(0.33, 0.21, clamp(q.y / 1.4, 0.0, 1.0));
-      let arms = min(sdSeg(q, vec3f(-0.27, 1.25, 0.0), vec3f(-0.31, 0.78, 0.08)), sdSeg(q, vec3f(0.27, 1.25, 0.0), vec3f(0.31, 0.78, 0.08))) - 0.075;
-      d = vec2f(min(coat, arms), 0.0);
-      let head = length(q - vec3f(0.0, 1.58 + br, 0.0)) - 0.13;
-      if (head < d.x) { d = vec2f(head, 1.0); }
-      let scarf = length(vec2f(length(q.xz) - 0.15, q.y - 1.38 - br)) - 0.065;
-      if (scarf < d.x) { d = vec2f(scarf, 2.0); }
-      if (prm > 0.5) {
-        let hat = min(max(length(q.xz) - 0.26, abs(q.y - 1.68 - br) - 0.018), max(length(q.xz) - 0.14, abs(q.y - 1.78 - br) - 0.1));
-        if (hat < d.x) { d = vec2f(hat, 2.0); }
-      }
-    }
+    case 0: { d = propPerson(q, prm); }
     case 1: {
       // a tea stall: a counter under a striped awning, a glowing kettle
       d = vec2f(sdBox(q - vec3f(0.0, 0.55, 0.0), vec3f(1.3, 0.55, 0.45)) - 0.02, 5.0);
@@ -1150,6 +1260,7 @@ fn propsFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
     let Q = pr.a[i * 2 + 1];
     let kind = i32(P.w);
     let sc = Q.y;
+    gPH = Q.z;
     let rb = propBound(kind) * sc;
     let cen = P.xyz + vec3f(0.0, rb * 0.5, 0.0);
     let oc = ro - cen;
@@ -1187,6 +1298,7 @@ fn propsFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
   let P = pr.a[bi * 2];
   let Q = pr.a[bi * 2 + 1];
   let kind = i32(P.w);
+  gPH = Q.z;
   let part = i32(propSDF(bq, kind, bp).y);
   let e = 0.01;
   let nl = normalize(vec3f(propSDF(bq + vec3f(e, 0.0, 0.0), kind, bp).x - propSDF(bq - vec3f(e, 0.0, 0.0), kind, bp).x,
@@ -1212,6 +1324,32 @@ fn propsFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
     case 10: { alb = vec3f(0.02); emi = vec3f(0.3, 0.9, 1.0) * 1.4; spec = 1.0; }
     case 11: { alb = vec3f(0.2); emi = vec3f(1.0, 0.1, 0.08) * 3.0 * step(0.5, fract(u.time * 0.8)); }
     case 12: { alb = vec3f(0.2); emi = vec3f(0.1, 1.0, 0.3) * 3.0 * step(0.5, fract(u.time * 0.8 + 0.5)); }
+    // story people (propPerson): wool with a tweed fleck, skin with warmth in it, knit, hair, felt, leather
+    case 20: {
+      let wool = vn3(bq * 38.0, 910).x;
+      let base = mix(vec3f(0.1, 0.09, 0.08), hue3(Q.z) * 0.4, 0.3);
+      alb = base * (0.78 + 0.34 * wool) + vec3f(0.05) * step(0.93, hsh(i32(bq.x * 180.0), i32(bq.y * 180.0), 911));
+      spec = 0.06;
+    }
+    case 21: {
+      let tone = hsh(i32(Q.z * 997.0), 6, 906);
+      alb = mix(vec3f(0.66, 0.46, 0.36), vec3f(0.28, 0.17, 0.11), tone) * (0.92 + 0.12 * vn3(bq * 60.0, 912).x);
+      alb += vec3f(0.06, 0.0, 0.0) * sstepJ(0.02, 0.0, abs(bq.y - 1.6));
+      spec = 0.25;
+    }
+    case 22: { alb = mix(vec3f(0.3, 0.28, 0.25), hue3(fract(Q.z + 0.45)) * 0.5, 0.6) * mix(0.75, 1.05, step(0.5, fract(bq.y * 28.0 + bq.x * 6.0))); spec = 0.04; }
+    case 23: {
+      let hc = hsh(i32(Q.z * 997.0), 7, 907);
+      alb = select(select(select(vec3f(0.03, 0.022, 0.018), vec3f(0.16, 0.09, 0.04), hc > 0.45), vec3f(0.3, 0.12, 0.05), hc > 0.75), vec3f(0.42, 0.4, 0.38), hc > 0.9);
+      alb *= 0.8 + 0.4 * abs(sin(bq.x * 120.0 + bq.y * 30.0));
+      spec = 0.35;
+    }
+    case 24: { alb = mix(vec3f(0.05, 0.055, 0.07), vec3f(0.12, 0.1, 0.08), hsh(i32(Q.z * 997.0), 8, 908)) * (0.85 + 0.25 * vn3(bq * 30.0, 913).x); spec = 0.05; }
+    case 25: { alb = vec3f(0.035, 0.028, 0.024); spec = 0.6; }
+    case 26: { alb = mix(vec3f(0.06, 0.05, 0.045), hue3(fract(Q.z + 0.2)) * 0.18, 0.4) * (0.85 + 0.2 * vn3(bq * 50.0, 914).x); spec = 0.05; }
+    case 27: { alb = select(vec3f(0.7, 0.68, 0.62), vec3f(0.08, 0.08, 0.09), hsh(i32(Q.z * 997.0), 9, 909) < 0.4); spec = 0.1; }
+    case 28: { alb = vec3f(0.02); spec = 1.0; }
+    case 29: { alb = vec3f(0.3, 0.16, 0.03); emi = vec3f(0.35, 0.18, 0.03); spec = 1.0; }
     default: {}
   }
   let dif = max(dot(nw, u.sunDir), 0.0) * 0.8 + 0.2;
@@ -1220,10 +1358,28 @@ fn propsFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
   // findable things shimmer like a collectable in an old home-computer platform game: the hue wheel turned in eight
   // hard steps, bands rolling up the object, bright whatever the light
   if (kind == 8) { c = mix(c, specCycle(bq.y * 2.5 + bq.x * 0.8, f32(bi)) * (0.75 + 0.25 * dif), 0.85); }
-  // in a venue's room: lit by the room's lamps, no sky and no fog
+  // occlusion within the thing itself (armpits, under the hat brim, between the legs): three steps out along the normal
+  var occ = 1.0;
+  if (kind == 0) {
+    var o = 0.0;
+    for (var k = 1; k <= 3; k++) { let hh = 0.035 * f32(k * k); o += (hh - propSDF(bq + nl * hh, kind, bp).x) / hh; }
+    occ = clamp(1.0 - 0.28 * o, 0.3, 1.0);
+    c *= 0.5 + 0.5 * occ;
+  }
+  // in a venue's room: lit by the room's lamps (with the room's shadows), no sky and no fog
   if (ev.wx.z > 0.5) {
     let rk = i32(ev.wx.z + 0.5);
-    var rc = alb * rmLit(rmLocal(ro + rd * bestT), rmLocalDir(nw), rk, 1.0, false) + emi;
+    let hpL = rmLocal(ro + rd * bestT);
+    let nL = rmLocalDir(nw);
+    var rc = alb * rmLit(hpL, nL, rk, occ, true) * (0.55 + 0.45 * occ) + emi;
+    // an eye light: a soft fill from the viewer's side, so a face turned to you reads (a film's cheat, kept small)
+    rc += alb * vec3f(0.2, 0.17, 0.15) * max(dot(nL, -rmLocalDir(rd)), 0.0) * occ;
+    // skin: light scattered under it comes back warm and fills the shadow side (a cheap wrap term)
+    if (part == 21) { rc += alb * rmLit(hpL, vec3f(0.0, 1.0, 0.0), rk, occ, false) * vec3f(0.16, 0.07, 0.04); }
+    // a sheen on skin, leather, hair and glass from the key light
+    let Ld = rmLight(rk, 0);
+    let hv = normalize(normalize(Ld[0] - hpL) - rmLocalDir(rd));
+    rc += Ld[1] * spec * 0.05 * pow(max(dot(nL, hv), 0.0), 30.0);
     if (kind == 8) { rc = mix(rc, specCycle(bq.y * 2.5 + bq.x * 0.8, f32(bi)), 0.85); }
     return rc + glow * 0.5;
   }
@@ -1361,6 +1517,9 @@ fn pedHuman(q: vec3f, hp: HP) -> f32 {
     leg = smin(leg, sdEll(q - mix(knee, foot, 0.28) - vec3f(0.0, 0.0, -0.012), vec3f(0.052, 0.09, 0.056) * b), 0.04);
     leg = min(leg, sdEll(q - knee - vec3f(0.0, 0.0, 0.035), vec3f(0.05, 0.05, 0.03) * b));
     d = min(d, pp(leg, 1));
+    let tdir = normalize(knee - hip);
+    let pk = mix(hip, knee, 0.55) + vec3f(0.07 * sg * b, 0.0, 0.0);
+    d = min(d, pp(sdRC(q, pk - tdir * 0.06, pk + tdir * 0.06, 0.035 * b, 0.035 * b), 1));
     // the foot rolls: heel first at touchdown, heel up at push-off, toes raised through the swing
     var fa = 0.0;
     if (hp.sf > 0.0) {
@@ -1382,6 +1541,10 @@ fn pedHuman(q: vec3f, hp: HP) -> f32 {
   let abd = sdRC(ub, vec3f(0.0, 1.0, 0.0), vec3f(0.0, 1.2, 0.01), 0.11 * b, 0.125 * b);
   let chest = sdEll(ub - vec3f(0.0, 1.3, 0.015), vec3f(0.165, 0.135, 0.105) * b);
   d = min(d, pp(smin(smin(pel, abd, 0.06), chest, 0.06), 1));
+  // a utility belt with a buckle, and a cargo pocket on the outside of each thigh (flat shapes read as clothes)
+  let bq = ub - vec3f(0.0, 1.02, 0.0);
+  d = min(d, pp(max(sdEll(bq, vec3f(0.155, 0.1, 0.112) * b), abs(bq.y) - 0.022), 4));
+  d = min(d, pp(sdBox(bq - vec3f(0.0, 0.0, 0.11 * b), vec3f(0.03, 0.022, 0.01)) - 0.004, 4));
   d = min(d, pp(sdRC(ub, vec3f(0.0, 1.4, 0.0), vec3f(0.0, 1.52, 0.012), 0.05, 0.042), 0));
   for (var lg = 0; lg < 2; lg++) {
     let sg = select(-1.0, 1.0, lg == 1);
@@ -4965,11 +5128,32 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
           if (kind == 3) { suit = vec3f(0.07, 0.07, 0.08); }
           if (kind == 4) { suit = neonColor(fract(hs * 3.1)) * 0.45 + vec3f(0.1); }
           if (kind == 0) { suit = mix(vec3f(0.05, 0.05, 0.06), vec3f(0.25, 0.22, 0.2), hs); if (hs > 0.8) { suit = neonColor(fract(hs * 9.1)) * 0.35; } }
-          s.alb = suit;
-          s.rough = 0.7;
-          s.spec = 0.3;
+          // workwear, not a toy: quilted insulation in bands, a stitched seam down each side, a retroreflective band
+          // at the chest and the shins that flares when it faces you, wear and grime in the weave, and tholin dust
+          // climbing from the boots (heaviest on the lopers, who bound through it)
+          let wv = vn3(p * 55.0, 931).x;
+          let mo = vn3(p * 6.0, 932).x;
+          let quilt = 1.0 - 0.22 * pow(abs(sin(p.y * 26.0)), 12.0) * step(0.95, p.y) * step(p.y, 1.45);
+          var a = suit * quilt * (0.82 + 0.26 * wv) * (0.85 + 0.25 * mo);
+          a = mix(a, a * 0.55 + vec3f(0.03), step(0.985, fract(p.x * 3.0 + p.z * 3.0 + hs * 7.0)) * step(0.9, p.y));
+          if (kind != 3 && kind != 0) {
+            let band = max(step(abs(p.y - 1.24), 0.025), step(abs(p.y - 0.34), 0.02));
+            a = mix(a, vec3f(0.6, 0.62, 0.58), band * 0.8);
+            s.emi = vec3f(0.9, 0.95, 0.85) * band * pow(ndv, 4.0) * (0.04 + 0.35 * u.windows);
+          }
+          let dustH = select(0.35, 0.7, kind == 2) + 0.2 * mo;
+          a = mix(a, vec3f(0.32, 0.2, 0.1) * (0.8 + 0.3 * wv), smoothstep(dustH, 0.05, p.y) * 0.85);
+          s.alb = a;
+          s.rough = 0.75;
+          s.spec = 0.22 + 0.2 * mo;
         }
-        case 2: { s.alb = vec3f(0.05, 0.05, 0.055); s.rough = 0.45; s.spec = 0.5; }
+        case 2: {
+          // boots and gloves: scuffed rubber, caked with tholin at the soles
+          let sc = vn3(p * 40.0, 933).x;
+          s.alb = mix(vec3f(0.05, 0.05, 0.055) * (0.8 + 0.5 * sc), vec3f(0.28, 0.17, 0.09), smoothstep(0.14, 0.02, p.y) * 0.9);
+          s.rough = 0.45 + 0.3 * sc;
+          s.spec = 0.5;
+        }
         case 3: {
           // visors: black glass with the sky in it, the face faintly lit inside; gold for the gliders and skaters
           s.alb = vec3f(0.012);
@@ -4979,7 +5163,14 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
           if (kind >= 3) { s.tint = vec3f(1.0, 0.78, 0.4); }
           s.emi = vec3f(1.0, 0.7, 0.45) * (0.03 + 0.18 * u.windows);
         }
-        case 4: { s.alb = vec3f(0.34, 0.35, 0.37); s.spec = 0.9; s.rough = 0.3; }
+        case 4: {
+          // packs, belts and fittings: painted metal chipped to bare at the edges, a stencilled stripe on some
+          let ch = vn3(p * 30.0, 934).x;
+          s.alb = mix(mix(vec3f(0.34, 0.35, 0.37), vec3f(0.42, 0.3, 0.12), step(0.6, hs)), vec3f(0.55, 0.56, 0.58), step(0.72, ch));
+          s.alb *= 0.8 + 0.3 * vn3(p * 7.0, 935).x;
+          s.spec = 0.9;
+          s.rough = 0.3 + 0.3 * ch;
+        }
         case 5: {
           let cc = neonColor(fract(hs * 5.7));
           s.alb = cc * 0.6;
@@ -5763,205 +5954,445 @@ fn lightSurf(n: vec3f, rd: vec3f, sf: Surf, sha: f32, occ: f32) -> vec3f {
 // While you stand in a venue, ev.wx.z holds its kind (1 the Cold Tap, 2 the Low Orbit, 3 the Lantern Cellar, 4 the
 // Warmhouse club) and ev.room its origin (the floor under the place) and heading. The scene pass then draws the
 // room round the camera with its own lights and nothing of the city. Room axes: x forward along the heading, z to
-// the right, y up from the floor.
+// the right, y up from the floor. How these rooms are made, and the rules that keep them from looking like a toy
+// house: the drift-city skill, "Interiors and people".
 fn rmLocalDir(v: vec3f) -> vec3f {
   let c = cos(ev.room.w);
   let s = sin(ev.room.w);
   return vec3f(v.x * c + v.z * s, v.y, -v.x * s + v.z * c);
 }
 fn rmLocal(p: vec3f) -> vec3f { return rmLocalDir(p - ev.room.xyz); }
-// a row of n things spaced `step` apart from `start` along one axis: the offset from the nearest
+// a row of n things spaced `stp` apart from `start` along one axis: the offset from the nearest
 fn rmRep(x: f32, start: f32, stp: f32, n: f32) -> f32 { return x - start - stp * clamp(round((x - start) / stp), 0.0, n - 1.0); }
+fn rmIdx(x: f32, start: f32, stp: f32, n: f32) -> f32 { return clamp(round((x - start) / stp), 0.0, n - 1.0); }
 fn rmU(a: vec2f, b: vec2f) -> vec2f { return select(a, b, b.x < a.x); }
-// bottles on three shelves along a wall: u runs along the wall, v is out from it
-fn rmBottles(u: f32, y: f32, v: f32, u0: f32, n: f32) -> f32 {
-  let sy = y - 1.25 - 0.4 * clamp(round((y - 1.25 - 0.14) / 0.4), 0.0, 2.0);
-  let bu = rmRep(u, u0, 0.2, n);
-  let body = sdCyl(vec3f(bu, sy, v), 0.042, 0.02, 0.19);
-  let neck = sdCyl(vec3f(bu, sy, v), 0.014, 0.19, 0.27);
-  return min(body, neck);
+fn rmTorusX(p: vec3f, R: f32, r: f32) -> f32 { return length(vec2f(length(p.yz) - R, p.x)) - r; }
+fn rmTorusY(p: vec3f, R: f32, r: f32) -> f32 { return length(vec2f(length(p.xz) - R, p.y)) - r; }
+fn rmCapX(p: vec3f, x0: f32, x1: f32, r: f32) -> f32 { return length(vec3f(max(max(x0 - p.x, p.x - x1), 0.0), p.y, p.z)) - r; }
+// bottles on three shelves along a wall, each slot its own shape: u runs along the wall, v is out from it
+fn rmBottles(u: f32, y: f32, v: f32, u0: f32, n: f32, y0: f32) -> f32 {
+  let si = floor((y - y0 - 0.14) / 0.4 + 0.5);
+  let sy = y - y0 - 0.4 * clamp(si, 0.0, 2.0);
+  let bi = rmIdx(u, u0, 0.17, n);
+  let bu = u - u0 - 0.17 * bi;
+  let hk = hsh(i32(bi), i32(clamp(si, 0.0, 2.0)), 931);
+  let bh = 0.16 + 0.12 * hk;
+  let br = 0.032 + 0.018 * fract(hk * 7.3);
+  let p = vec3f(bu, sy, v);
+  let body = sdCyl(p, br, 0.02, 0.02 + bh) - 0.004;
+  let shoulder = sdEll(p - vec3f(0.0, 0.02 + bh, 0.0), vec3f(br, br * 0.9, br));
+  let neck = sdCyl(p, 0.012 + 0.004 * fract(hk * 3.1), 0.02 + bh, 0.1 + bh + 0.04 * fract(hk * 5.7));
+  return min(smin(body, shoulder, 0.01), neck);
 }
-// a drum kit, its bass drum's centre on the floor at k
+// a pendant lamp: a cord from the ceiling, a conical enamel shade open below, a bulb in it
+fn rmPendant(q: vec3f, at: vec3f, top: f32) -> vec2f {
+  let p = q - at;
+  var r = vec2f(sdCyl(p, 0.006, 0.12, top - at.y), 17.0);
+  let h = clamp(p.y / 0.26, 0.0, 1.0);
+  let cone = abs(length(p.xz) - mix(0.2, 0.035, h)) - 0.006;
+  r = rmU(r, vec2f(max(cone * 0.8, max(-p.y, p.y - 0.26)), 21.0));
+  r = rmU(r, vec2f(length(p - vec3f(0.0, 0.035, 0.0)) - 0.045, 8.0));
+  return r;
+}
+// a paper lantern: ribbed, capped top and bottom, a tassel; it sways a little on its cord
+fn rmLantern(q: vec3f, at: vec3f, rad: f32, seed: f32) -> vec2f {
+  let sw = vec3f(0.03 * sin(u.time * 0.7 + seed * 6.0), 0.0, 0.02 * sin(u.time * 0.53 + seed * 4.0));
+  let p = q - at - sw;
+  let a = atan2(p.z, p.x);
+  var body = sdEll(p, vec3f(rad, rad * 1.25, rad)) + 0.006 * abs(sin(a * 8.0));
+  body = max(body, abs(p.y) - rad * 1.1);
+  var r = vec2f(body, 22.0);
+  r = rmU(r, vec2f(max(sdCyl(p, rad * 0.45, -rad * 1.2, rad * 1.2), abs(abs(p.y) - rad * 1.12) - 0.02), 14.0));
+  r = rmU(r, vec2f(sdCyl(p - vec3f(0.0, -rad * 1.2, 0.0), 0.01, -0.22, 0.0) - 0.004, 22.0));
+  r = rmU(r, vec2f(sdCyl(p, 0.004, rad * 1.1, 3.2 - at.y), 17.0));
+  return r;
+}
+// a drum kit (the bass drum's centre on the floor at k): shells, rims, cymbals on chrome stands
 fn rmDrums(q: vec3f, k: vec3f) -> vec2f {
   let p = q - k;
   var r = vec2f(max(length(p.xy - vec2f(0.0, 0.28)) - 0.28, abs(p.z) - 0.17), 14.0);
-  r = rmU(r, vec2f(sdCyl(p - vec3f(-0.55, 0.0, -0.35), 0.17, 0.5, 0.62), 14.0));
+  r = rmU(r, vec2f(length(vec2f(length(p.xy - vec2f(0.0, 0.28)) - 0.285, abs(p.z) - 0.17)) - 0.012, 17.0));
+  let sn = p - vec3f(-0.55, 0.0, -0.35);
+  r = rmU(r, vec2f(sdCyl(sn, 0.17, 0.5, 0.62), 14.0));
+  r = rmU(r, vec2f(length(vec2f(length(sn.xz) - 0.17, sn.y - 0.62)) - 0.01, 17.0));
   r = rmU(r, vec2f(sdCyl(p - vec3f(-0.3, 0.0, 0.45), 0.2, 0.42, 0.62), 14.0));
-  // cymbals on stands
-  r = rmU(r, vec2f(sdCyl(p - vec3f(-0.5, 0.0, 0.55), 0.24, 1.05, 1.07), 5.0));
-  r = rmU(r, vec2f(sdCyl(p - vec3f(-0.75, 0.0, -0.6), 0.19, 0.88, 0.9), 5.0));
-  r = rmU(r, vec2f(sdSeg(p, vec3f(-0.5, 0.0, 0.55), vec3f(-0.5, 1.05, 0.55)) - 0.012, 5.0));
-  r = rmU(r, vec2f(sdSeg(p, vec3f(-0.75, 0.0, -0.6), vec3f(-0.75, 0.88, -0.6)) - 0.012, 5.0));
+  let c1 = p - vec3f(-0.5, 1.05, 0.55);
+  r = rmU(r, vec2f(max(length(c1.xz) - 0.25, abs(c1.y + 0.02 * length(c1.xz)) - 0.006), 29.0));
+  let c2 = p - vec3f(-0.75, 0.88, -0.6);
+  r = rmU(r, vec2f(max(length(c2.xz) - 0.19, abs(c2.y + 0.02 * length(c2.xz)) - 0.006), 29.0));
+  r = rmU(r, vec2f(min(sdSeg(p, vec3f(-0.5, 0.0, 0.55), vec3f(-0.5, 1.05, 0.55)), sdSeg(p, vec3f(-0.75, 0.0, -0.6), vec3f(-0.75, 0.88, -0.6))) - 0.011, 17.0));
   return r;
 }
-// a round table with a lamp, centre on the floor at k
-fn rmTable(q: vec3f, k: vec2f, lamp: bool) -> vec2f {
+// an upright bass on its stand, scroll up
+fn rmBass(q: vec3f, k: vec3f) -> vec2f {
+  let p = q - k;
+  var body = smin(sdEll(p - vec3f(0.0, 0.45, 0.0), vec3f(0.12, 0.34, 0.33)), sdEll(p - vec3f(0.0, 0.95, 0.0), vec3f(0.1, 0.26, 0.25)), 0.08);
+  body = max(body, -max(sdEll(p - vec3f(0.12, 0.72, 0.0), vec3f(0.05, 0.08, 0.02)), 0.0));
+  var r = vec2f(body, 33.0);
+  r = rmU(r, vec2f(sdRC(p, vec3f(0.0, 1.15, 0.0), vec3f(0.0, 1.85, 0.0), 0.025, 0.02), 14.0));
+  r = rmU(r, vec2f(length(vec2f(length(p.xy - vec2f(0.0, 1.9)) - 0.04, p.z)) - 0.014, 14.0));
+  return r;
+}
+// a round table on one leg, a cloth on some, something lit on it
+fn rmTable(q: vec3f, k: vec2f, cloth: bool) -> vec2f {
   let p = q - vec3f(k.x, 0.0, k.y);
-  var r = vec2f(min(sdCyl(p, 0.45, 0.72, 0.76), sdCyl(p, 0.05, 0.0, 0.72)), 4.0);
-  if (lamp) { r = rmU(r, vec2f(length(p - vec3f(0.0, 0.86, 0.0)) - 0.08, 8.0)); }
-  return r;
-}
-fn rmMap(q: vec3f, k: i32) -> vec2f {
-  var r = vec2f(1e5, 0.0);
-  if (k == 1) {
-    // the Cold Tap: a narrow bar, the counter along the right wall, bottles behind it, stools, a heater and the
-    // airlock at the far end, pipes along the ceiling
-    let shell = -sdBox(q - vec3f(3.75, 1.5, 0.0), vec3f(5.55, 1.5, 3.5));
-    r = vec2f(shell, select(2.0, select(3.0, 1.0, q.y < 0.05), q.y < 0.05 || q.y > 2.95));
-    r = rmU(r, vec2f(sdBox(q - vec3f(4.6, 0.52, 2.15), vec3f(3.6, 0.52, 0.32)), 4.0));
-    r = rmU(r, vec2f(sdBox(q - vec3f(4.6, 1.07, 2.1), vec3f(3.7, 0.035, 0.42)), 5.0));
-    let sy = q.y - 1.25 - 0.4 * clamp(round((q.y - 1.25) / 0.4), 0.0, 2.0);
-    r = rmU(r, vec2f(sdBox(vec3f(q.x - 4.6, sy, q.z - 3.3), vec3f(3.8, 0.018, 0.18)), 4.0));
-    r = rmU(r, vec2f(rmBottles(q.x, q.y, q.z - 3.3, 1.0, 36.0), 6.0));
-    let sx = rmRep(q.x, 1.7, 0.95, 7.0);
-    r = rmU(r, vec2f(sdCyl(vec3f(sx, q.y, q.z - 1.35), 0.2, 0.7, 0.77), 10.0));
-    r = rmU(r, vec2f(sdCyl(vec3f(sx, q.y, q.z - 1.35), 0.03, 0.0, 0.7), 5.0));
-    r = rmU(r, vec2f(sdBox(q - vec3f(9.2, 0.9, -2.2), vec3f(0.12, 0.5, 0.55)), 12.0));
-    let hq = q - vec3f(9.3, 1.1, 0.4);
-    r = rmU(r, vec2f(length(vec2f(length(hq.yz) - 0.85, hq.x)) - 0.07, 5.0));
-    r = rmU(r, vec2f(length(vec2f(length(hq.yz) - 0.3, hq.x + 0.08)) - 0.03, 5.0));
-    r = rmU(r, vec2f(sdBox(q - vec3f(4.0, 2.0, -3.47), vec3f(1.2, 0.5, 0.03)), 13.0));
-    r = rmU(r, vec2f(min(length(q.yz - vec2f(2.78, -3.1)), length(q.yz - vec2f(2.78, -2.8))) - 0.07, 5.0));
-  } else if (k == 2) {
-    // the Low Orbit: a long room, the window on the pads down the left side, tables along it, the bar across the
-    // far end, a cracked star painted on the ceiling
-    let shell = -sdBox(q - vec3f(9.15, 2.1, 0.0), vec3f(10.95, 2.1, 4.8));
-    r = vec2f(shell, select(2.0, select(3.0, 1.0, q.y < 0.05), q.y < 0.05 || q.y > 4.15));
-    let tx = rmRep(q.x, 2.5, 3.0, 5.0);
-    r = rmU(r, rmTable(vec3f(tx, q.y, q.z), vec2f(0.0, -3.6), false));
-    let cx = rmRep(q.x, 1.75, 1.5, 10.0);
-    r = rmU(r, vec2f(sdCyl(vec3f(cx, q.y, q.z + 2.55), 0.19, 0.44, 0.5), 10.0));
-    r = rmU(r, vec2f(sdCyl(vec3f(cx, q.y, q.z + 2.55), 0.03, 0.0, 0.44), 5.0));
-    r = rmU(r, vec2f(sdBox(q - vec3f(17.6, 0.55, 0.9), vec3f(0.35, 0.55, 3.2)), 4.0));
-    r = rmU(r, vec2f(sdBox(q - vec3f(17.55, 1.12, 0.9), vec3f(0.45, 0.035, 3.3)), 5.0));
-    let sy = q.y - 1.25 - 0.4 * clamp(round((q.y - 1.25) / 0.4), 0.0, 2.0);
-    r = rmU(r, vec2f(sdBox(vec3f(q.x - 19.9, sy, q.z - 0.9), vec3f(0.18, 0.018, 3.0)), 4.0));
-    r = rmU(r, vec2f(rmBottles(q.z, q.y, q.x - 19.9, -2.0, 30.0), 6.0));
-    let px = rmRep(q.x, 3.0, 4.0, 4.0);
-    r = rmU(r, vec2f(length(vec3f(px, q.y - 3.3, q.z + 0.6)) - 0.2, 8.0));
-    r = rmU(r, vec2f(sdSeg(vec3f(px, q.y, q.z + 0.6), vec3f(0.0, 3.3, 0.0), vec3f(0.0, 4.2, 0.0)) - 0.01, 5.0));
-    // the window's mullions
-    let mx = rmRep(q.x, 2.0, 3.0, 6.0);
-    r = rmU(r, vec2f(sdBox(vec3f(mx, q.y - 2.15, q.z + 4.75), vec3f(0.06, 1.3, 0.06)), 5.0));
-  } else if (k == 3) {
-    // the Lantern Cellar: a brick barrel vault under the street, paper lanterns, small tables with candles, and the
-    // stand at the far end with Oskar's kit and a bass
-    let box = sdBox(q - vec3f(5.95, 1.6, 0.0), vec3f(7.75, 1.6, 5.2));
-    let vault = length(vec2f(q.y + 8.67, q.z)) - 11.87;
-    r = vec2f(-max(box, vault), select(11.0, 1.0, q.y < 0.05));
-    r = rmU(r, vec2f(sdBox(q - vec3f(12.2, 0.15, 0.0), vec3f(1.6, 0.15, 4.6)), 9.0));
-    r = rmU(r, rmDrums(q, vec3f(12.6, 0.3, 1.0)));
-    // an upright bass on its side, waiting
-    let bq = q - vec3f(12.3, 0.3, -1.4);
-    r = rmU(r, vec2f(sdEll(bq - vec3f(0.0, 0.62, 0.0), vec3f(0.2, 0.62, 0.36)), 4.0));
-    r = rmU(r, vec2f(sdSeg(bq, vec3f(0.0, 1.1, 0.0), vec3f(0.05, 1.95, 0.0)) - 0.03, 14.0));
-    let tx = rmRep(q.x, 2.0, 3.0, 3.0);
-    let tz = q.z - 3.0 * clamp(round(q.z / 3.0), -1.0, 1.0);
-    if (abs(q.z) > 1.5) { r = rmU(r, rmTable(vec3f(tx, q.y, tz), vec2f(0.0, 0.0), true)); }
-    let lx = rmRep(q.x, 2.8, 2.4, 4.0);
-    let lz = q.z - 2.4 * clamp(round(q.z / 2.4), -1.0, 1.0);
-    r = rmU(r, vec2f(sdEll(vec3f(lx, q.y - 2.2, lz), vec3f(0.26, 0.34, 0.26)), 8.0));
-    r = rmU(r, vec2f(sdSeg(vec3f(lx, q.y, lz), vec3f(0.0, 2.5, 0.0), vec3f(0.0, 3.3, 0.0)) - 0.008, 5.0));
-  } else if (k == 4) {
-    // the Warmhouse club: a round room under a dome, tables with lamps in a ring, the stand at the far side with a
-    // piano and a kit
-    let dome = length(q - vec3f(12.0, -5.0, 0.0)) - 16.57;
-    r = vec2f(-dome, select(3.0, 1.0, q.y < 0.05));
-    let sq = q - vec3f(24.0, 0.0, 0.0);
-    r = rmU(r, vec2f(max(sdCyl(sq, 6.2, 0.0, 0.7), -sq.x - 2.4), 9.0));
-    r = rmU(r, vec2f(sdBox(q - vec3f(25.0, 1.25, -2.8), vec3f(0.35, 0.55, 0.8)), 14.0));
-    r = rmU(r, rmDrums(q, vec3f(24.8, 0.7, 2.6)));
-    // the bass on its stand, and Nuala's microphone at the front of the stand
-    let bq = q - vec3f(23.4, 0.7, 0.9);
-    r = rmU(r, vec2f(sdEll(bq - vec3f(0.0, 0.62, 0.0), vec3f(0.2, 0.62, 0.36)), 4.0));
-    r = rmU(r, vec2f(sdSeg(bq, vec3f(0.0, 1.1, 0.0), vec3f(0.05, 1.95, 0.0)) - 0.03, 14.0));
-    r = rmU(r, vec2f(sdSeg(q, vec3f(21.3, 0.7, -0.5), vec3f(21.3, 2.2, -0.5)) - 0.015, 5.0));
-    let cq = q.xz - vec2f(12.0, 0.0);
-    let a = atan2(cq.y, cq.x);
-    let n = 10.0;
-    let ai = round(a / 6.2832 * n);
-    if (abs(ai) >= 1.5) {
-      let aa = ai / n * 6.2832;
-      let tq = vec2f(cos(aa), sin(aa)) * 7.8;
-      r = rmU(r, rmTable(vec3f(cq.x, q.y, cq.y), tq, true));
-    }
-    let ai2 = round(a / 6.2832 * 14.0 + 0.5) - 0.5;
-    if (abs(ai2) >= 2.0) {
-      let aa = ai2 / 14.0 * 6.2832;
-      r = rmU(r, rmTable(vec3f(cq.x, q.y, cq.y), vec2f(cos(aa), sin(aa)) * 12.0, true));
-    }
+  var r = vec2f(min(sdCyl(p, 0.42, 0.72, 0.755), sdCyl(p, 0.045, 0.0, 0.72)), 4.0);
+  r = rmU(r, vec2f(sdCyl(p, 0.24, 0.0, 0.025), 17.0));
+  if (cloth) {
+    let a = atan2(p.z, p.x);
+    let hem = 0.5 + 0.03 * sin(a * 9.0);
+    let dr = max(abs(length(p.xz) - mix(0.43, 0.5, clamp((0.76 - p.y) / 0.3, 0.0, 1.0)) - 0.01 * sin(a * 9.0)) - 0.006, max(p.y - 0.765, hem - p.y + 0.0));
+    r = rmU(r, vec2f(min(dr, sdCyl(p, 0.44, 0.755, 0.765)), 25.0));
   }
   return r;
+}
+fn rmStool(q: vec3f, k: vec2f) -> vec2f {
+  let p = q - vec3f(k.x, 0.0, k.y);
+  var r = vec2f(sdCyl(p, 0.2, 0.0, 0.02), 17.0);
+  r = rmU(r, vec2f(sdCyl(p, 0.024, 0.0, 0.72), 17.0));
+  r = rmU(r, vec2f(rmTorusY(p - vec3f(0.0, 0.3, 0.0), 0.16, 0.012), 17.0));
+  r = rmU(r, vec2f(sdCyl(p, 0.18, 0.72, 0.8) - 0.025, 10.0));
+  return r;
+}
+
+// the Cold Tap: a narrow old bar. Oxblood plaster over dark panelling, a pressed-tin ceiling browned by decades of
+// heater fumes, a long bar with a brass rail and taps, a mirrored back bar full of odd bottles, green-shaded lamps,
+// a jukebox glowing in the corner, and the airlock at the far end with a porthole onto the blue street.
+fn rmColdTap(q: vec3f) -> vec2f {
+  let s = -sdBox(q - vec3f(3.75, 1.5, 0.0), vec3f(5.55, 1.5, 3.5));
+  var m = 2.0;
+  if (q.y < 0.02) { m = 1.0; } else if (q.y > 2.98) { m = 3.0; } else if (q.y < 1.05) { m = 15.0; }
+  if (q.z > 3.45 && q.y > 1.2 && q.y < 2.45 && q.x > 1.0 && q.x < 8.2) { m = 16.0; }
+  var r = vec2f(s, m);
+  // dado rail and a crown moulding along every wall
+  r = rmU(r, vec2f(max(s - 0.035, abs(q.y - 1.07) - 0.028), 4.0));
+  r = rmU(r, vec2f(max(s - 0.07, abs(q.y - 2.92) - 0.06), 15.0));
+  // the bar: slatted front, dark body, a thick top with a brass bullnose; a foot rail on posts
+  if (q.z > 1.4 && q.x > 0.6 && q.x < 8.6) {
+    r = rmU(r, vec2f(sdBox(q - vec3f(4.6, 0.52, 2.35), vec3f(3.6, 0.52, 0.4)), 34.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(4.6, 1.09, 2.2), vec3f(3.72, 0.035, 0.5)) - 0.005, 4.0));
+    r = rmU(r, vec2f(rmCapX(q - vec3f(0.0, 1.08, 1.72), 0.9, 8.3, 0.04), 5.0));
+    r = rmU(r, vec2f(rmCapX(q - vec3f(0.0, 0.22, 1.66), 0.9, 8.3, 0.022), 5.0));
+    let px = rmRep(q.x, 1.0, 1.2, 7.0);
+    r = rmU(r, vec2f(sdSeg(vec3f(px, q.y, q.z), vec3f(0.0, 0.0, 1.66), vec3f(0.0, 0.22, 1.66)) - 0.014, 5.0));
+    // beer taps: brass columns, black handles with a coloured top
+    if (q.y > 1.1 && q.y < 1.75 && q.z > 2.1 && q.z < 2.45) {
+      let tx = rmRep(q.x, 3.2, 0.36, 4.0);
+      let tp = vec3f(tx, q.y, q.z - 2.3);
+      r = rmU(r, vec2f(sdCyl(tp, 0.028, 1.12, 1.4), 5.0));
+      r = rmU(r, vec2f(sdSeg(tp, vec3f(0.0, 1.38, 0.0), vec3f(0.0, 1.33, -0.09)) - 0.014, 5.0));
+      r = rmU(r, vec2f(sdSeg(tp, vec3f(0.0, 1.42, 0.0), vec3f(0.0, 1.62, 0.02)) - 0.018, 32.0));
+    }
+    // a few glasses left on the bar
+    let gx = rmRep(q.x, 1.8, 1.55, 4.0);
+    r = rmU(r, vec2f(max(abs(length(vec2f(gx, q.z - 1.95)) - 0.038 - 0.004 * (q.y - 1.125)) - 0.003, max(1.125 - q.y, q.y - 1.28)), 6.0));
+    r = rmU(r, vec2f(sdCyl(vec3f(gx, q.y, q.z - 1.95), 0.035, 1.13, 1.23 - 0.05 * rmIdx(q.x, 1.8, 1.55, 4.0) * 0.3), 36.0));
+  }
+  // the back bar: a cabinet, shelves in front of the mirror, a light strip under each, the bottles
+  if (q.z > 2.7) {
+    r = rmU(r, vec2f(sdBox(q - vec3f(4.6, 0.5, 3.25), vec3f(3.8, 0.5, 0.25)), 4.0));
+    let si = clamp(round((q.y - 1.45) / 0.4), 0.0, 2.0);
+    let sy = q.y - 1.45 - 0.4 * si;
+    r = rmU(r, vec2f(sdBox(vec3f(q.x - 4.6, sy, q.z - 3.28), vec3f(3.6, 0.014, 0.2)), 6.0));
+    r = rmU(r, vec2f(sdBox(vec3f(q.x - 4.6, sy + 0.022, q.z - 3.1), vec3f(3.6, 0.006, 0.01)), 8.0));
+    r = rmU(r, vec2f(rmBottles(q.x, q.y, q.z - 3.3, 1.0, 42.0, 1.45), 6.0));
+  }
+  // stools along the bar
+  if (q.z > 0.9 && q.z < 1.7) { r = rmU(r, rmStool(vec3f(rmRep(q.x, 1.7, 0.95, 7.0), q.y, q.z), vec2f(0.0, 1.3))); }
+  // booths on the left: tables, leather benches against the panelling, framed photographs above
+  if (q.z < -1.9) {
+    let bx = rmRep(q.x, 2.2, 3.2, 2.0);
+    r = rmU(r, rmTable(vec3f(bx, q.y, q.z), vec2f(0.0, -2.75), false));
+    r = rmU(r, vec2f(sdBox(vec3f(bx, q.y - 0.24, q.z + 3.22), vec3f(1.1, 0.24, 0.26)) - 0.03, 10.0));
+    r = rmU(r, vec2f(sdBox(vec3f(bx, q.y - 0.75, q.z + 3.42), vec3f(1.1, 0.34, 0.06)) - 0.03, 10.0));
+    let fx = rmRep(q.x, 0.6, 0.72, 11.0);
+    let fi = rmIdx(q.x, 0.6, 0.72, 11.0);
+    let fh = 0.18 + 0.12 * hsh(i32(fi), 2, 932);
+    r = rmU(r, vec2f(sdBox(vec3f(fx, q.y - 1.72 - 0.1 * hsh(i32(fi), 3, 933), q.z + 3.49), vec3f(0.2, fh, 0.02)), 23.0));
+  }
+  // the price board, the neon glass on the wall, the heater, the jukebox in the corner
+  r = rmU(r, vec2f(sdBox(q - vec3f(4.0, 2.05, -3.47), vec3f(0.9, 0.34, 0.03)), 13.0));
+  {
+    let w = vec2f(q.x - 7.2, q.y - 1.95);
+    let glass = abs(max(abs(w.x) - (0.16 + 0.05 * (w.y + 0.3) / 0.6), abs(w.y) - 0.3)) - 0.0;
+    let foam = abs(length(w - vec2f(0.0, 0.34)) - 0.12);
+    let tube = min(glass, max(foam, 0.3 - w.y));
+    r = rmU(r, vec2f(length(vec2f(tube, q.z + 3.43)) - 0.012, 18.0));
+  }
+  r = rmU(r, vec2f(sdBox(q - vec3f(9.15, 0.8, -2.3), vec3f(0.12, 0.45, 0.5)) - 0.02, 12.0));
+  {
+    let j = q - vec3f(8.85, 0.0, 2.95);
+    let jb = min(sdBox(j - vec3f(0.0, 0.62, 0.0), vec3f(0.3, 0.62, 0.33)), max(length(j.yz - vec2f(1.24, 0.0)) - 0.33, abs(j.x) - 0.3)) - 0.02;
+    r = rmU(r, vec2f(jb, 19.0));
+  }
+  // the airlock: a riveted ring, the door, its wheel, a porthole of cold street light
+  {
+    let hq = q - vec3f(9.3, 1.12, 0.3);
+    r = rmU(r, vec2f(rmTorusX(hq, 0.86, 0.075), 30.0));
+    let ra = atan2(hq.z, hq.y);
+    let ri = round(ra / 0.3927) * 0.3927;
+    r = rmU(r, vec2f(length(hq - vec3f(-0.07, cos(ri) * 0.86, sin(ri) * 0.86)) - 0.022, 5.0));
+    r = rmU(r, vec2f(max(length(hq.yz) - 0.8, abs(hq.x + 0.02) - 0.03), 30.0));
+    r = rmU(r, vec2f(rmTorusX(hq + vec3f(0.07, 0.35, 0.0), 0.16, 0.014), 5.0));
+    r = rmU(r, vec2f(max(length(hq.yz - vec2f(0.28, 0.0)) - 0.17, abs(hq.x + 0.05) - 0.01), 24.0));
+  }
+  // pipes along the ceiling on brackets, and three lamps
+  let pipe = min(length(q.yz - vec2f(2.78, -3.1)), length(q.yz - vec2f(2.78, -2.84))) - 0.06;
+  r = rmU(r, vec2f(pipe, 17.0));
+  r = rmU(r, rmPendant(q, vec3f(3.0, 2.3, 1.55), 3.0));
+  r = rmU(r, rmPendant(q, vec3f(6.2, 2.3, 1.55), 3.0));
+  r = rmU(r, rmPendant(q, vec3f(3.8, 2.2, -2.7), 3.0));
+  return r;
+}
+
+// the Low Orbit: a crew bar built like a ship's mess. Riveted steel panels between ribbed frames, ducts and cable
+// trays overhead, tread-plate floor worn bright down the middle, a long window on the pads with frost at its edges,
+// steel tables with mugs, caged lamps, a departures screen over the bar.
+fn rmLowOrbit(q: vec3f) -> vec2f {
+  let s = -sdBox(q - vec3f(9.15, 2.1, 0.0), vec3f(10.95, 2.1, 4.8));
+  var m = 2.0;
+  if (q.y < 0.02) { m = 1.0; } else if (q.y > 4.15) { m = 3.0; }
+  if (q.z < -4.7 && q.x > 1.9 && q.x < 17.1 && q.y > 0.9 && q.y < 3.4) { m = 7.0; }
+  var r = vec2f(s, m);
+  // ribbed frames every three metres, round the walls and over the ceiling
+  let fx = rmRep(q.x, 0.5, 3.0, 7.0);
+  r = rmU(r, vec2f(max(abs(fx) - 0.1, s - 0.16), 30.0));
+  // ducts and a cable tray
+  r = rmU(r, vec2f(length(q.yz - vec2f(3.75, 3.2)) - 0.34, 17.0));
+  r = rmU(r, vec2f(max(sdBox(vec3f(0.0, q.y - 3.95, q.z + 1.5), vec3f(1e3, 0.05, 0.25)), -sdBox(vec3f(0.0, q.y - 4.0, q.z + 1.5), vec3f(1e3, 0.05, 0.22))), 30.0));
+  // tables along the window, bolted down, benches, mugs
+  if (q.z < -1.8) {
+    let tx = rmRep(q.x, 3.5, 3.0, 5.0);
+    let tp = vec3f(tx, q.y, q.z + 3.5);
+    r = rmU(r, vec2f(sdBox(tp - vec3f(0.0, 0.74, 0.0), vec3f(0.55, 0.025, 0.42)) - 0.01, 17.0));
+    r = rmU(r, vec2f(sdBox(tp - vec3f(0.0, 0.37, 0.0), vec3f(0.05, 0.37, 0.05)), 17.0));
+    r = rmU(r, vec2f(sdBox(vec3f(abs(tx) - 0.95, q.y - 0.45, q.z + 3.5), vec3f(0.2, 0.03, 0.45)) - 0.02, 10.0));
+    let mq = tp - vec3f(0.15, 0.765, 0.1);
+    r = rmU(r, vec2f(max(abs(length(mq.xz) - 0.042) - 0.005, max(-mq.y, mq.y - 0.1)), 31.0));
+  }
+  // the bar across the far end: steel front with a padded edge, a wooden top, bottles behind, the screen above
+  if (q.x > 16.5) {
+    r = rmU(r, vec2f(sdBox(q - vec3f(17.6, 0.55, 0.9), vec3f(0.35, 0.55, 3.2)), 17.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(17.55, 1.12, 0.9), vec3f(0.45, 0.035, 3.3)) - 0.005, 4.0));
+    r = rmU(r, vec2f(length(vec2f(q.x - 17.2, q.y - 1.02)) - 0.06, 10.0));
+    let si = clamp(round((q.y - 1.45) / 0.4), 0.0, 2.0);
+    r = rmU(r, vec2f(sdBox(vec3f(q.x - 19.9, q.y - 1.45 - 0.4 * si, q.z - 0.9), vec3f(0.18, 0.014, 3.0)), 30.0));
+    r = rmU(r, vec2f(rmBottles(q.z, q.y, q.x - 19.9, -2.0, 30.0, 1.45), 6.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(20.05, 3.0, 0.9), vec3f(0.04, 0.45, 1.5)), 28.0));
+  }
+  // the window's mullions
+  let mx = rmRep(q.x, 2.0, 3.0, 6.0);
+  r = rmU(r, vec2f(sdBox(vec3f(mx, q.y - 2.15, q.z + 4.72), vec3f(0.07, 1.3, 0.08)), 30.0));
+  r = rmU(r, vec2f(sdBox(vec3f(q.x - 9.5, abs(q.y - 2.15) - 1.28, q.z + 4.72), vec3f(7.6, 0.06, 0.1)), 30.0));
+  // caged lamps down the middle
+  let lx = rmRep(q.x, 3.0, 4.0, 4.0);
+  let lp = vec3f(lx, q.y - 3.25, q.z + 0.6);
+  r = rmU(r, vec2f(length(lp) - 0.07, 8.0));
+  let la = atan2(lp.z, lp.x);
+  let cage = max(abs(length(lp) - 0.14) - 0.006, abs(fract(la / 0.785 + 0.5) - 0.5) * 0.785 * length(lp.xz) - 0.006);
+  r = rmU(r, vec2f(max(cage, -lp.y - 0.12), 17.0));
+  r = rmU(r, vec2f(sdCyl(lp, 0.006, 0.1, 1.0), 17.0));
+  return r;
+}
+
+// the Lantern Cellar: a brick barrel vault forty steps down, sooted at the crown and damp at the foot, red paper
+// lanterns at every height, small tables with checked cloths and candles in bottles, and the stand at the far end
+// on a worn rug: Oskar's kit, a bass, an amp, a microphone.
+fn rmCellar(q: vec3f) -> vec2f {
+  let box = sdBox(q - vec3f(5.95, 1.6, 0.0), vec3f(7.75, 1.6, 5.2));
+  let vault = length(vec2f(q.y + 8.67, q.z)) - 11.87;
+  var r = vec2f(-max(box, vault), select(11.0, 1.0, q.y < 0.02));
+  // the stand, a rug on it, the band's things
+  r = rmU(r, vec2f(sdBox(q - vec3f(12.2, 0.15, 0.0), vec3f(1.6, 0.15, 4.6)), 9.0));
+  r = rmU(r, vec2f(sdBox(q - vec3f(12.3, 0.305, 0.4), vec3f(1.1, 0.006, 1.6)), 27.0));
+  if (q.x > 10.0) {
+    r = rmU(r, rmDrums(q, vec3f(12.6, 0.3, 1.0)));
+    r = rmU(r, rmBass(q, vec3f(12.4, 0.3, -1.3)));
+    r = rmU(r, vec2f(sdBox(q - vec3f(13.2, 0.62, -2.3), vec3f(0.22, 0.32, 0.3)) - 0.02, 14.0));
+    r = rmU(r, vec2f(min(sdSeg(q, vec3f(11.4, 0.3, -0.2), vec3f(11.4, 1.55, -0.2)) - 0.01, length(q - vec3f(11.36, 1.58, -0.2)) - 0.03), 17.0));
+  }
+  // tables with checked cloths, a candle in a bottle on each
+  if (abs(q.z) > 1.4 && q.x < 9.6) {
+    let tx = rmRep(q.x, 2.0, 2.8, 3.0);
+    let tz = q.z - 3.0 * sign(q.z);
+    r = rmU(r, rmTable(vec3f(tx, q.y, tz), vec2f(0.0, 0.0), true));
+    let cb = vec3f(tx - 0.1, q.y, tz + 0.05);
+    r = rmU(r, vec2f(min(sdCyl(cb, 0.035, 0.765, 0.93) - 0.005, sdCyl(cb, 0.013, 0.93, 1.0)), 6.0));
+    r = rmU(r, vec2f(sdEll(cb - vec3f(0.0, 1.035 + 0.004 * sin(u.time * 13.0 + q.x), 0.0), vec3f(0.01, 0.024, 0.01)), 26.0));
+  }
+  // lanterns at every height through the vault
+  let lxi = rmIdx(q.x, 1.6, 2.2, 5.0);
+  let lzi = clamp(round(q.z / 2.1), -2.0, 2.0);
+  if (!(abs(lxi) < 0.5 && abs(lzi) < 0.5)) {
+    let lh = hsh(i32(lxi), i32(lzi), 934);
+    let lr = 0.14 + 0.1 * lh;
+    r = rmU(r, rmLantern(q, vec3f(1.6 + 2.2 * lxi, 2.0 + 0.5 * fract(lh * 7.0), lzi * 2.1), lr, lh));
+  }
+  // gig posters pasted on the brick either side of the stand
+  let pz = abs(q.z) - 5.12;
+  r = rmU(r, vec2f(sdBox(vec3f(rmRep(q.x, 3.0, 2.6, 3.0), q.y - 1.45, pz), vec3f(0.32, 0.45, 0.012)), 23.0));
+  return r;
+}
+
+// the Warmhouse club: a round room under a ribbed dome painted as a night sky, strings of bulbs, a parquet floor
+// polished by dancing, tables in white cloths with little red lamps, a velvet curtain and footlights at the stand.
+fn rmClub(q: vec3f) -> vec2f {
+  let cq = q - vec3f(12.0, -5.0, 0.0);
+  let dome = length(cq) - 16.57;
+  var r = vec2f(-dome, select(3.0, 1.0, q.y < 0.02));
+  // gilt ribs up the dome
+  let az = atan2(cq.z, cq.x);
+  let ra = (fract(az / 0.3491 + 0.5) - 0.5) * 0.3491 * length(cq.xz);
+  r = rmU(r, vec2f(max(abs(ra) - 0.07, -dome - 0.14), 5.0));
+  // the stand, footlights along its lip, the band's things
+  let sq = q - vec3f(24.0, 0.0, 0.0);
+  r = rmU(r, vec2f(max(sdCyl(sq, 6.2, 0.0, 0.7), -sq.x - 2.4), 9.0));
+  if (q.x > 20.0) {
+    let fa = atan2(sq.z, sq.x);
+    let fl = vec3f(length(sq.xz) - 6.15, q.y - 0.72, (fract(fa / 0.12 + 0.5) - 0.5) * 0.12 * 6.15);
+    r = rmU(r, vec2f(max(length(fl) - 0.035, -sq.x - 2.4), 8.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(25.0, 1.25, -2.8), vec3f(0.35, 0.55, 0.8)) - 0.01, 14.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(24.62, 1.18, -2.8), vec3f(0.06, 0.02, 0.7)), 31.0));
+    r = rmU(r, rmDrums(q, vec3f(24.8, 0.7, 2.6)));
+    r = rmU(r, rmBass(q, vec3f(23.4, 0.7, 0.9)));
+    r = rmU(r, vec2f(min(sdSeg(q, vec3f(21.3, 0.7, -0.5), vec3f(21.3, 2.2, -0.5)) - 0.01, length(q - vec3f(21.26, 2.24, -0.5)) - 0.03), 17.0));
+  }
+  // tables in two rings, each in a white cloth with a small red-shaded lamp
+  let cz = q.xz - vec2f(12.0, 0.0);
+  let a = atan2(cz.y, cz.x);
+  let ai = round(a / 6.2832 * 10.0);
+  if (abs(ai) >= 1.5 && length(cz) < 9.5) {
+    let aa = ai / 10.0 * 6.2832;
+    let tq = vec2f(cos(aa), sin(aa)) * 7.8;
+    let p = vec3f(cz.x, q.y, cz.y);
+    r = rmU(r, rmTable(p, tq, true));
+    r = rmU(r, rmPendant(p - vec3f(tq.x, 0.0, tq.y), vec3f(0.0, 0.9, 0.0), 0.9));
+    r = rmU(r, vec2f(sdCyl(p - vec3f(tq.x, 0.0, tq.y), 0.012, 0.76, 0.95), 5.0));
+  }
+  let ai2 = round(a / 6.2832 * 14.0 + 0.5) - 0.5;
+  if (abs(ai2) >= 2.0 && length(cz) > 9.5) {
+    let aa = ai2 / 14.0 * 6.2832;
+    let tq = vec2f(cos(aa), sin(aa)) * 12.0;
+    let p = vec3f(cz.x, q.y, cz.y);
+    r = rmU(r, rmTable(p, tq, true));
+    r = rmU(r, rmPendant(p - vec3f(tq.x, 0.0, tq.y), vec3f(0.0, 0.9, 0.0), 0.9));
+    r = rmU(r, vec2f(sdCyl(p - vec3f(tq.x, 0.0, tq.y), 0.012, 0.76, 0.95), 5.0));
+  }
+  return r;
+}
+
+fn rmMap(q: vec3f, k: i32) -> vec2f {
+  if (k == 1) { return rmColdTap(q); }
+  if (k == 2) { return rmLowOrbit(q); }
+  if (k == 3) { return rmCellar(q); }
+  return rmClub(q);
 }
 fn rmNormal(q: vec3f, k: i32) -> vec3f {
-  let e = vec2f(0.0015, -0.0015);
+  let e = vec2f(0.0012, -0.0012);
   return normalize(e.xyy * rmMap(q + e.xyy, k).x + e.yyx * rmMap(q + e.yyx, k).x + e.yxy * rmMap(q + e.yxy, k).x + e.xxx * rmMap(q + e.xxx, k).x);
 }
-// the lights of each room: position (local) and colour times strength; the first one casts a shadow
+// the lights of each room: position (local) and colour times strength; the first one casts a soft shadow. Warm
+// against cold in every room: tungsten and candle against a window, a porthole or a stair.
 fn rmLight(k: i32, i: i32) -> array<vec3f, 2> {
+  let z = array<vec3f, 2>(vec3f(0.0, -50.0, 0.0), vec3f(0.0));
   switch k {
     case 1: {
-      if (i == 0) { return array<vec3f, 2>(vec3f(4.2, 2.75, 0.4), vec3f(1.0, 0.7, 0.42) * 7.0); }
-      if (i == 1) { return array<vec3f, 2>(vec3f(8.9, 0.9, -2.2), vec3f(1.0, 0.35, 0.08) * 3.0); }
-      if (i == 2) { return array<vec3f, 2>(vec3f(4.6, 1.2, 3.0), vec3f(0.9, 0.55, 0.25) * 2.5); }
-      return array<vec3f, 2>(vec3f(0.5, 2.7, -1.5), vec3f(0.6, 0.5, 0.45) * 2.0);
+      if (i == 0) { return array<vec3f, 2>(vec3f(3.0, 2.34, 1.55), vec3f(1.0, 0.72, 0.42) * 4.5); }
+      if (i == 1) { return array<vec3f, 2>(vec3f(6.2, 2.34, 1.55), vec3f(1.0, 0.72, 0.42) * 4.0); }
+      if (i == 2) { return array<vec3f, 2>(vec3f(3.8, 2.24, -2.7), vec3f(1.0, 0.7, 0.4) * 2.6); }
+      if (i == 3) { return array<vec3f, 2>(vec3f(9.0, 1.4, 0.3), vec3f(0.3, 0.5, 1.0) * 2.2); }
+      if (i == 4) { return array<vec3f, 2>(vec3f(7.2, 1.95, -3.1), vec3f(1.0, 0.2, 0.12) * 1.3); }
+      if (i == 5) { return array<vec3f, 2>(vec3f(4.6, 1.5, 3.05), vec3f(1.0, 0.75, 0.4) * 1.4); }
+      return z;
     }
     case 2: {
-      if (i == 0) { return array<vec3f, 2>(vec3f(17.4, 3.4, 0.9), vec3f(1.0, 0.75, 0.5) * 9.0); }
-      if (i == 1) { return array<vec3f, 2>(vec3f(9.0, 2.2, -4.3), vec3f(0.35, 0.5, 0.8) * 5.0); }
-      if (i == 2) { return array<vec3f, 2>(vec3f(7.0, 3.2, -0.6), vec3f(1.0, 0.82, 0.6) * 5.0); }
-      return array<vec3f, 2>(vec3f(3.0, 3.2, -0.6), vec3f(1.0, 0.82, 0.6) * 4.0);
+      if (i == 0) { return array<vec3f, 2>(vec3f(15.0, 3.25, -0.6), vec3f(1.0, 0.8, 0.55) * 4.0); }
+      if (i == 1) { return array<vec3f, 2>(vec3f(9.0, 2.2, -4.4), vec3f(0.35, 0.55, 1.0) * 4.5); }
+      if (i == 2) { return array<vec3f, 2>(vec3f(7.0, 3.25, -0.6), vec3f(1.0, 0.8, 0.55) * 3.5); }
+      if (i == 3) { return array<vec3f, 2>(vec3f(3.0, 3.25, -0.6), vec3f(1.0, 0.8, 0.55) * 3.0); }
+      if (i == 4) { return array<vec3f, 2>(vec3f(19.7, 3.0, 0.9), vec3f(0.3, 1.0, 0.5) * 1.2); }
+      if (i == 5) { return array<vec3f, 2>(vec3f(17.2, 2.4, 0.9), vec3f(1.0, 0.7, 0.4) * 2.0); }
+      return z;
     }
     case 3: {
-      if (i == 0) { return array<vec3f, 2>(vec3f(11.0, 2.7, 0.0), vec3f(1.0, 0.8, 0.55) * 7.0); }
-      if (i == 1) { return array<vec3f, 2>(vec3f(3.4, 2.1, -2.4), vec3f(1.0, 0.35, 0.15) * 3.5); }
-      if (i == 2) { return array<vec3f, 2>(vec3f(5.8, 2.1, 2.4), vec3f(1.0, 0.4, 0.15) * 3.5); }
-      return array<vec3f, 2>(vec3f(1.0, 2.1, 0.0), vec3f(1.0, 0.45, 0.2) * 3.0);
+      if (i == 0) { return array<vec3f, 2>(vec3f(10.6, 2.8, 0.2), vec3f(1.0, 0.82, 0.6) * 6.0); }
+      if (i == 1) { return array<vec3f, 2>(vec3f(3.8, 2.2, -2.1), vec3f(1.0, 0.3, 0.12) * 2.6); }
+      if (i == 2) { return array<vec3f, 2>(vec3f(6.0, 2.2, 2.1), vec3f(1.0, 0.35, 0.12) * 2.6); }
+      if (i == 3) { return array<vec3f, 2>(vec3f(-1.2, 2.4, 0.0), vec3f(0.35, 0.5, 0.9) * 0.7); }
+      if (i == 4) { return array<vec3f, 2>(vec3f(4.7, 1.05, -3.0), vec3f(1.0, 0.6, 0.25) * 0.6); }
+      if (i == 5) { return array<vec3f, 2>(vec3f(4.7, 1.05, 3.0), vec3f(1.0, 0.6, 0.25) * 0.6); }
+      return z;
     }
     default: {
-      if (i == 0) { return array<vec3f, 2>(vec3f(19.0, 6.0, 0.0), vec3f(1.0, 0.85, 0.65) * 30.0); }
-      if (i == 1) { return array<vec3f, 2>(vec3f(12.0, 1.4, -7.8), vec3f(1.0, 0.6, 0.3) * 4.0); }
-      if (i == 2) { return array<vec3f, 2>(vec3f(12.0, 1.4, 7.8), vec3f(1.0, 0.6, 0.3) * 4.0); }
-      return array<vec3f, 2>(vec3f(4.2, 1.4, 0.0), vec3f(1.0, 0.6, 0.3) * 4.0);
+      if (i == 0) { return array<vec3f, 2>(vec3f(19.0, 6.5, 0.0), vec3f(1.0, 0.88, 0.7) * 24.0); }
+      if (i == 1) { return array<vec3f, 2>(vec3f(18.5, 0.9, 0.0), vec3f(1.0, 0.7, 0.4) * 3.0); }
+      if (i == 2) { return array<vec3f, 2>(vec3f(12.0, 1.1, -7.8), vec3f(1.0, 0.35, 0.2) * 2.4); }
+      if (i == 3) { return array<vec3f, 2>(vec3f(12.0, 1.1, 7.8), vec3f(1.0, 0.35, 0.2) * 2.4); }
+      if (i == 4) { return array<vec3f, 2>(vec3f(4.2, 1.1, 0.0), vec3f(1.0, 0.35, 0.2) * 2.4); }
+      if (i == 5) { return array<vec3f, 2>(vec3f(12.0, 9.0, 0.0), vec3f(0.35, 0.4, 0.9) * 3.0); }
+      return z;
     }
   }
 }
+// beams in the haze under the lamps: apex, axis, cosine of the half angle, colour
+fn rmBeam(k: i32, i: i32) -> array<vec4f, 3> {
+  let none = array<vec4f, 3>(vec4f(0.0), vec4f(0.0, -1.0, 0.0, 2.0), vec4f(0.0));
+  if (k == 1) {
+    if (i == 0) { return array<vec4f, 3>(vec4f(3.0, 2.36, 1.55, 0.0), vec4f(0.0, -1.0, 0.0, 0.72), vec4f(1.0, 0.72, 0.42, 0.0)); }
+    if (i == 1) { return array<vec4f, 3>(vec4f(6.2, 2.36, 1.55, 0.0), vec4f(0.0, -1.0, 0.0, 0.72), vec4f(1.0, 0.72, 0.42, 0.0)); }
+    return array<vec4f, 3>(vec4f(3.8, 2.26, -2.7, 0.0), vec4f(0.0, -1.0, 0.0, 0.72), vec4f(1.0, 0.7, 0.4, 0.0));
+  }
+  if (k == 2) {
+    if (i == 0) { return array<vec4f, 3>(vec4f(9.0, 2.3, -4.8, 0.0), vec4f(0.25, -0.35, 0.9, 0.75), vec4f(0.2, 0.3, 0.55, 0.0)); }
+    if (i == 1) { return array<vec4f, 3>(vec4f(15.0, 3.25, -0.6, 0.0), vec4f(0.0, -1.0, 0.0, 0.5), vec4f(1.0, 0.8, 0.55, 0.0)); }
+    return array<vec4f, 3>(vec4f(7.0, 3.25, -0.6, 0.0), vec4f(0.0, -1.0, 0.0, 0.5), vec4f(1.0, 0.8, 0.55, 0.0));
+  }
+  if (k == 3) {
+    if (i == 0) { return array<vec4f, 3>(vec4f(10.6, 2.9, 0.2, 0.0), normalize(vec4f(1.0, -1.2, 0.0, 0.0)) + vec4f(0.0, 0.0, 0.0, 0.82), vec4f(1.0, 0.82, 0.6, 0.0)); }
+    return none;
+  }
+  if (i == 0) { return array<vec4f, 3>(vec4f(19.0, 7.5, 0.0, 0.0), normalize(vec4f(0.9, -1.0, 0.0, 0.0)) + vec4f(0.0, 0.0, 0.0, 0.93), vec4f(1.0, 0.88, 0.7, 0.0)); }
+  return none;
+}
+var<private> gRmJ: f32 = 0.0;
 fn rmShadow(q: vec3f, lp: vec3f, k: i32) -> f32 {
   let d = lp - q;
   let L = length(d);
   let dir = d / L;
-  var t = 0.05;
+  // a start jittered per pixel and frame: banding in the penumbra becomes noise the anti-aliasing averages away
+  var t = 0.02 + 0.03 * gRmJ;
   var s = 1.0;
-  for (var i = 0; i < 24; i++) {
-    if (t > L - 0.3) { break; }
+  for (var i = 0; i < 40; i++) {
+    if (t > L - 0.15) { break; }
     let h = rmMap(q + dir * t, k).x;
-    s = min(s, 10.0 * h / t);
+    s = min(s, 12.0 * h / t);
     if (s < 0.02) { break; }
-    t += clamp(h, 0.03, 0.6);
+    t += clamp(h, 0.01, 0.35);
   }
   return clamp(s, 0.0, 1.0);
 }
-// light arriving at a point (local position and normal): the room's lamps and its dim ambient
+// light arriving at a point (local position and normal): the room's lamps and a dim ambient tinted by the room
 fn rmLit(q: vec3f, n: vec3f, k: i32, occ: f32, shadowed: bool) -> vec3f {
   var c = vec3f(0.0);
-  for (var i = 0; i < 4; i++) {
+  for (var i = 0; i < 6; i++) {
     let Ld = rmLight(k, i);
+    if (Ld[0].y < -40.0) { continue; }
     let d = Ld[0] - q;
     let l2 = dot(d, d);
     var sh = 1.0;
     if (i == 0 && shadowed) { sh = rmShadow(q + n * 0.02, Ld[0], k); }
-    c += Ld[1] * max(dot(n, d * inverseSqrt(l2)), 0.0) * sh / (l2 * 0.35 + 1.0);
+    c += Ld[1] * max(dot(n, d * inverseSqrt(l2)), 0.0) * sh / (l2 * 0.45 + 0.6);
   }
-  let amb = select(select(select(vec3f(0.07, 0.06, 0.07), vec3f(0.05, 0.06, 0.09), k == 2), vec3f(0.08, 0.04, 0.03), k == 3), vec3f(0.07, 0.055, 0.045), k == 1);
-  return c + amb * (0.6 + 0.4 * n.y) * occ;
+  let amb = select(select(select(vec3f(0.035, 0.03, 0.04), vec3f(0.025, 0.035, 0.05), k == 2), vec3f(0.05, 0.022, 0.015), k == 3), vec3f(0.04, 0.028, 0.022), k == 1);
+  return c + amb * (0.5 + 0.5 * n.y) * occ;
 }
 fn rmAO(q: vec3f, n: vec3f, k: i32) -> f32 {
   var o = 0.0;
-  for (var i = 1; i <= 4; i++) {
-    let h = 0.06 * f32(i * i);
+  for (var i = 1; i <= 5; i++) {
+    let h = 0.03 * f32(i * i);
     o += (h - rmMap(q + n * h, k).x) / h * (1.0 / f32(i));
   }
-  return clamp(1.0 - 0.5 * o, 0.25, 1.0);
+  return clamp(1.0 - 0.45 * o, 0.15, 1.0);
 }
 // what the Low Orbit's window shows: the pads at night across the apron, a launch light, now and then a lift-off
 fn rmWindowView(v: vec3f) -> vec3f {
@@ -5969,12 +6400,10 @@ fn rmWindowView(v: vec3f) -> vec3f {
   var c = mix(vec3f(0.09, 0.05, 0.03), vec3f(0.02, 0.025, 0.05), sstepJ(0.0, 0.5, hz));
   if (hz < 0.0) { c = vec3f(0.015, 0.014, 0.016) + vec3f(0.08, 0.05, 0.02) * exp(hz * 30.0); }
   let az = atan2(v.x, -v.z);
-  // pad lights in a line along the horizon, and the red launch light
   let row = exp(-pow((hz + 0.012) * 180.0, 2.0));
   c += vec3f(1.0, 0.8, 0.5) * row * step(0.6, fract(az * 40.0)) * 0.8;
   let blink = step(0.55, fract(u.time * 0.7));
   c += vec3f(1.0, 0.1, 0.05) * exp(-(pow((az - 0.25) * 90.0, 2.0) + pow((hz - 0.01) * 120.0, 2.0))) * blink * 4.0;
-  // a ship lifting: a bright plume climbing from the pad every minute or so
   let lt = fract(u.time / 70.0) * 70.0;
   if (lt < 14.0) {
     let hy = lt * lt * 0.0016;
@@ -5984,114 +6413,375 @@ fn rmWindowView(v: vec3f) -> vec3f {
   }
   return c;
 }
-fn rmSurface(q: vec3f, n: vec3f, m: i32, k: i32, ld: vec3f) -> array<vec3f, 2> {
-  var alb = vec3f(0.3);
-  var emi = vec3f(0.0);
+struct RmS { alb: vec3f, emi: vec3f, spec: f32, refl: f32, bump: vec3f };
+// the distance of the point being shaded: fine patterns (tiles, grain, mortar, gaps) fade out as they shrink below a
+// few pixels, or they alias into rings and speckle (the first Cold Tap ceiling did)
+var<private> gRmT: f32 = 1.0;
+fn rmFine(size: f32) -> f32 { return 1.0 - smoothstep(size * 180.0, size * 420.0, gRmT); }
+// grime: darker into corners and low down, stains in blotches
+fn rmGrime(q: vec3f, occ: f32) -> f32 {
+  let st = vn3(q * vec3f(1.3, 0.7, 1.3), 940).x;
+  return (0.55 + 0.45 * occ) * (0.82 + 0.3 * smoothstep(0.35, 0.7, st));
+}
+fn rmSurface(q: vec3f, n: vec3f, m: i32, k: i32, ld: vec3f, occ: f32) -> RmS {
+  var s: RmS;
+  s.alb = vec3f(0.3);
+  s.emi = vec3f(0.0);
+  s.spec = 0.1;
+  s.refl = 0.0;
+  s.bump = vec3f(0.0);
+  let g = rmGrime(q, occ);
   switch m {
     case 1: {
-      // floor: boards, or flagstones in the cellar
-      if (k == 3) { let g = abs(fract(q.xz * 1.4) - 0.5); alb = vec3f(0.2, 0.17, 0.15) * (0.8 + 0.2 * hsh(i32(floor(q.x * 1.4)), i32(floor(q.z * 1.4)), 71)) * mix(0.6, 1.0, step(0.03, min(0.5 - g.x, 0.5 - g.y))); }
-      else {
-        let plank = floor(q.z * 5.0);
-        alb = mix(vec3f(0.2, 0.11, 0.06), vec3f(0.3, 0.18, 0.1), hsh(i32(plank), i32(floor(q.x * 0.6 + plank * 0.37)), 72)) * mix(0.55, 1.0, step(0.04, fract(q.z * 5.0)));
-        if (k == 4) { alb *= vec3f(1.1, 1.0, 0.95); }
+      if (k == 3) {
+        // flagstones, irregular, worn smooth where people stand
+        let cell = floor(q.xz * vec2f(1.3, 1.6) + vec2f(floor(q.z * 1.6) * 0.5, 0.0));
+        let fq = fract(q.xz * vec2f(1.3, 1.6) + vec2f(floor(q.z * 1.6) * 0.5, 0.0));
+        let edge = min(min(fq.x, 1.0 - fq.x), min(fq.y, 1.0 - fq.y));
+        let hv = hsh(i32(cell.x), i32(cell.y), 941);
+        s.alb = mix(vec3f(0.14, 0.12, 0.11), vec3f(0.24, 0.2, 0.17), hv) * mix(0.35, 1.0, smoothstep(0.0, 0.05, edge));
+        s.alb *= 0.85 + 0.3 * vn3(q * 3.0, 942).x;
+        s.bump = vn3(q * 9.0, 943).yzw * 0.04;
+        s.spec = 0.25; s.refl = 0.04;
+      } else if (k == 2) {
+        // tread plate, 1.2 m sheets, worn bright down the walkway
+        let d = fract(vec2f(q.x + q.z, q.x - q.z) * 7.0) - 0.5;
+        let dia = step(abs(d.x) + abs(d.y) * 3.0, 0.35);
+        let seam = min(abs(fract(q.x / 1.2) - 0.5), abs(fract(q.z / 1.2) - 0.5));
+        let wear = 1.0 - smoothstep(0.5, 2.2, abs(q.z + 0.4));
+        s.alb = vec3f(0.14, 0.15, 0.16) * (0.8 + 0.4 * vn3(q * 2.0, 944).x) * mix(0.4, 1.0, step(0.006, 0.5 - seam));
+        s.alb += vec3f(0.08) * dia * (0.3 + 0.7 * wear);
+        s.spec = 0.6; s.refl = 0.12 + 0.2 * wear;
+        s.bump = vec3f(0.0, 0.0, 0.0);
+      } else {
+        // planks: narrow boards, each its own tone and grain, dark in the gaps, the varnish worn where feet go
+        let bw = select(0.11, 0.075, k == 4);
+        var u2 = q.z;
+        var v2 = q.x;
+        if (k == 4) {
+          // herringbone parquet
+          let hb = floor(q.x / bw + floor(q.z / (bw * 4.0)));
+          u2 = select(q.z, q.x, (i32(hb) & 1) == 0);
+          v2 = select(q.x, q.z, (i32(hb) & 1) == 0);
+        }
+        let pi = floor(u2 / bw);
+        let pv = hsh(i32(pi), 7, 945);
+        let off = pv * 3.7;
+        let seg = floor((v2 + off) / 2.4);
+        let tone = hsh(i32(pi), i32(seg), 946);
+        let grain = 0.5 + 0.5 * sin((v2 + off) * 3.0 + vn3(vec3f(u2 * 30.0, v2 * 1.5, 0.0), 947).x * 6.0 + u2 * 40.0);
+        let gap = smoothstep(0.0, 0.006, min(fract(u2 / bw), 1.0 - fract(u2 / bw)) * bw) * smoothstep(0.0, 0.004, min(fract((v2 + off) / 2.4), 1.0 - fract((v2 + off) / 2.4)) * 2.4);
+        var base = mix(vec3f(0.11, 0.06, 0.035), vec3f(0.2, 0.11, 0.06), tone);
+        if (k == 4) { base = mix(vec3f(0.2, 0.11, 0.05), vec3f(0.3, 0.17, 0.08), tone); }
+        let fp = rmFine(0.02);
+        s.alb = base * (0.8 + 0.28 * mix(0.5, grain, fp)) * mix(0.25, 1.0, mix(0.85, gap, fp));
+        let path = select(1.0 - smoothstep(0.3, 1.2, abs(q.z - 0.9)), 1.0 - smoothstep(0.0, 3.0, abs(length(q.xz - vec2f(12.0, 0.0)) - 3.0)), k == 4);
+        s.alb *= 1.0 + 0.18 * path;
+        s.spec = 0.35; s.refl = select(0.08, 0.2, k == 4) * (1.0 - 0.6 * path) * gap;
+        s.bump = vec3f(0.0, 0.0, 0.03 * (grain - 0.5));
       }
+      s.alb *= g;
     }
     case 2: {
-      alb = select(select(vec3f(0.35, 0.2, 0.12), vec3f(0.1, 0.11, 0.14), k == 2), vec3f(0.3, 0.12, 0.1), k == 1);
-      if (k == 2) { alb = mix(alb, vec3f(0.16, 0.09, 0.05), step(q.y, 0.9)); }
-      if (k == 1) { alb = mix(alb, vec3f(0.15, 0.08, 0.05), step(q.y, 1.0)); }
-      if (k == 2 && q.z < -4.7 && q.x > 1.9 && q.x < 17.1 && q.y > 0.9 && q.y < 3.4) { alb = vec3f(0.02); emi = rmWindowView(ld) * 1.4; }
-      if (k == 2 && abs(q.x - 20.05) < 0.1 && q.y > 3.0) { alb = vec3f(0.05); }
+      if (k == 2) {
+        // riveted steel panels: pale green-grey over a darker band, stencils and patches
+        let pu = select(q.x, q.z, abs(n.z) < 0.5);
+        let seam = min(abs(fract(pu / 1.5) - 0.5), abs(fract(q.y / 1.2) - 0.5));
+        let rv = length(vec2f(fract(pu / 0.25) - 0.5, (fract(q.y / 1.2 + 0.5) - 0.5) * 4.8)) ;
+        s.alb = mix(vec3f(0.12, 0.14, 0.13), vec3f(0.36, 0.4, 0.37), step(1.1, q.y)) * (0.75 + 0.35 * vn3(q * 1.5, 948).x);
+        s.alb *= mix(0.45, 1.0, step(0.012, 0.5 - seam));
+        s.alb *= mix(0.7, 1.0, step(0.09, rv));
+        s.spec = 0.35;
+        // an Aster patch pinned every few metres: the cracked star on black
+        let px = fract(pu / 4.3 + 0.3) * 4.3 - 2.15;
+        let sq = vec2f(px, q.y - 1.75);
+        if (abs(sq.x) < 0.14 && abs(sq.y) < 0.14 && abs(n.z) > 0.5) {
+          let a = atan2(sq.y, sq.x);
+          let rr = length(sq) / (1.0 + 0.5 * pow(abs(cos(a * 2.5)), 5.0));
+          s.alb = select(vec3f(0.02), vec3f(0.75, 0.72, 0.6), rr < 0.07 && abs(sq.y - 0.3 * sq.x) > 0.006);
+        }
+      } else if (k == 1) {
+        // oxblood plaster, darkened by the heater, water stains, a patch where it has fallen away to the brick
+        s.alb = vec3f(0.24, 0.07, 0.05) * (0.8 + 0.35 * vn3(q * vec3f(0.9, 0.5, 0.9), 949).x);
+        let stain = smoothstep(0.55, 0.8, vn3(q * vec3f(0.6, 0.25, 0.6) + vec3f(0.0, q.y * 0.3, 0.0), 950).x);
+        s.alb = mix(s.alb, vec3f(0.13, 0.07, 0.04), stain * 0.7);
+        s.alb *= mix(1.0, 0.55, smoothstep(2.2, 2.95, q.y));
+        let fall = smoothstep(0.66, 0.7, vn3(q * 0.9 + vec3f(3.0), 951).x);
+        if (fall > 0.0) {
+          let yy = q.y / 0.075;
+          let u3 = select(q.z, q.x, abs(n.x) < 0.5) / 0.22 + 0.5 * floor(yy);
+          let mortar = min(abs(fract(yy) - 0.5), abs(fract(u3) - 0.5) * 0.34);
+          s.alb = mix(s.alb, mix(vec3f(0.18, 0.15, 0.12), vec3f(0.3, 0.12, 0.07), step(0.03, 0.5 - mortar)), fall);
+        }
+        s.spec = 0.08;
+      } else {
+        s.alb = vec3f(0.3, 0.2, 0.14);
+      }
+      s.alb *= g;
     }
     case 3: {
-      alb = select(vec3f(0.12, 0.1, 0.1), vec3f(0.08, 0.08, 0.1), k == 2);
-      if (k == 2) {
-        // the star on the ceiling, cracked across the middle
-        let s = q.xz - vec2f(10.0, 0.0);
-        let a = atan2(s.y, s.x);
-        let rr = length(s) / (1.0 + 0.55 * pow(abs(cos(a * 2.5)), 6.0));
-        let crack = abs(s.y - 0.25 * s.x - 0.12 * sin(s.x * 5.0)) < 0.05;
-        if (rr < 1.9 && !crack) { alb = vec3f(0.85, 0.8, 0.6); emi = vec3f(0.12, 0.1, 0.06); }
-      }
-      if (k == 4) {
-        // strings of bulbs round the dome, a warm night sky between them
+      if (k == 1) {
+        // pressed tin, brown with old fumes: a grid of raised squares with a boss in each
+        let t = fract(q.xz / 0.6) - 0.5;
+        let sq = max(abs(t.x), abs(t.y));
+        let boss = length(t);
+        let fz = rmFine(0.05);
+        s.alb = vec3f(0.17, 0.13, 0.09) * (0.8 + 0.3 * vn3(q * 2.0, 952).x);
+        s.alb *= 1.0 + fz * (0.18 * smoothstep(0.4, 0.46, sq) + 0.14 * sstepJ(0.17, 0.11, boss) - 0.12);
+        s.spec = 0.3;
+      } else if (k == 2) {
+        s.alb = vec3f(0.07, 0.075, 0.09);
+        let st = q.xz - vec2f(10.0, 0.0);
+        let a = atan2(st.y, st.x);
+        let rr = length(st) / (1.0 + 0.55 * pow(abs(cos(a * 2.5)), 6.0));
+        let crack = abs(st.y - 0.25 * st.x - 0.12 * sin(st.x * 5.0)) < 0.05;
+        if (rr < 1.9 && !crack) { s.alb = vec3f(0.8, 0.74, 0.55) * (0.75 + 0.3 * vn3(q * 4.0, 953).x); s.emi = vec3f(0.06, 0.05, 0.03); }
+      } else {
+        // the club's dome: a night sky, painted, stars in gold leaf, strings of bulbs between the ribs
         let cq = q - vec3f(12.0, -5.0, 0.0);
         let el = asin(clamp(cq.y / 16.57, -1.0, 1.0));
         let az = atan2(cq.z, cq.x);
-        alb = vec3f(0.06, 0.05, 0.07);
+        s.alb = mix(vec3f(0.05, 0.05, 0.1), vec3f(0.02, 0.02, 0.05), smoothstep(0.3, 1.2, el)) * (0.8 + 0.3 * vn3(q * 0.8, 954).x);
+        let sp = vec2f(az * 30.0, el * 30.0);
+        let si = floor(sp);
+        let sf = fract(sp) - 0.5;
+        if (hsh(i32(si.x), i32(si.y), 955) < 0.12 && length(sf) < 0.08) { s.alb = vec3f(0.8, 0.6, 0.25); s.spec = 0.9; }
         let ring = abs(fract(el * 5.0) - 0.5);
         let bulb = abs(fract(az * 11.0 * cos(el) + floor(el * 5.0) * 0.5) - 0.5);
-        if (ring < 0.025 && bulb < 0.05 && q.y > 4.0) { emi = vec3f(1.0, 0.7, 0.35) * 2.4; }
-        // the curtain behind the stand
-        if (q.x > 20.5 && q.y < 6.5) { alb = vec3f(0.32, 0.04, 0.05) * (0.6 + 0.4 * sin(az * 90.0)); }
+        if (ring < 0.02 && bulb < 0.04 && q.y > 4.0) { s.emi = vec3f(1.0, 0.72, 0.38) * 3.0; }
+        if (q.x > 20.5 && q.y < 6.5) {
+          // the curtain behind the stand: deep folds of velvet, a sheen on each crest
+          let f = sin(az * 90.0);
+          s.alb = vec3f(0.3, 0.02, 0.04) * (0.4 + 0.6 * (0.5 + 0.5 * f));
+          s.spec = 0.4 * smoothstep(0.7, 1.0, f);
+          s.bump = vec3f(0.0, 0.0, cos(az * 90.0) * 0.4);
+        }
       }
+      s.alb *= g;
     }
-    case 4: { alb = vec3f(0.16, 0.08, 0.04); }
-    case 5: { alb = vec3f(0.45, 0.33, 0.15); }
+    case 4: {
+      // dark wood, polished: long grain, a deep gloss that takes the lamps
+      let gr = 0.5 + 0.5 * sin(q.x * 5.0 + vn3(q * vec3f(1.0, 20.0, 20.0), 956).x * 5.0);
+      s.alb = mix(vec3f(0.06, 0.03, 0.018), vec3f(0.14, 0.07, 0.035), gr) * g;
+      s.spec = 0.7; s.refl = 0.22;
+    }
+    case 5: { s.alb = vec3f(0.5, 0.36, 0.14) * (0.8 + 0.3 * vn3(q * 12.0, 957).x); s.spec = 1.0; s.refl = 0.45; }
     case 6: {
-      let h = hsh(i32(floor(q.x * 5.0 + q.z * 5.0)), i32(floor(q.y * 2.5)), 73);
-      alb = hue3(h) * 0.2 + 0.05;
-      emi = mix(vec3f(0.3, 0.6, 0.2), vec3f(0.9, 0.5, 0.15), h) * 0.5;
+      // bottle glass, lit from behind by the strip under the shelf: the colour glows through, a paper label on most
+      let h = hsh(i32(floor(q.x * 5.9 + q.z * 5.9)), i32(floor(q.y * 2.5)), 958);
+      let tint = select(select(vec3f(0.15, 0.4, 0.12), vec3f(0.45, 0.22, 0.05), h > 0.35), vec3f(0.5, 0.5, 0.55), h > 0.75);
+      s.alb = tint * 0.25;
+      s.emi = tint * 0.22 * (0.5 + 0.5 * smoothstep(0.0, 0.3, fract(q.y * 2.5)));
+      let ly = fract(q.y * 2.5 - 0.1);
+      if (ly > 0.2 && ly < 0.45 && fract(h * 13.0) > 0.25) { s.alb = mix(vec3f(0.7, 0.62, 0.45), hue3(fract(h * 7.0)) * 0.5, 0.4); s.emi = vec3f(0.0); }
+      s.spec = 1.0; s.refl = 0.3;
+    }
+    case 7: {
+      // the window, frosted at its edges
+      let fr = sstepJ(0.35, 0.0, min(min(q.x - 1.9, 17.1 - q.x), min(q.y - 0.9, 3.4 - q.y)) ) * (0.6 + 0.4 * vn3(q * 6.0, 959).x);
+      s.alb = vec3f(0.02);
+      s.emi = rmWindowView(ld) * 1.4 + vec3f(0.12, 0.16, 0.22) * fr;
+      s.refl = 0.1; s.spec = 1.0;
     }
     case 8: {
-      alb = vec3f(0.5, 0.2, 0.1);
-      emi = select(vec3f(1.0, 0.35, 0.12), vec3f(1.0, 0.72, 0.4), k != 3) * select(1.6, 2.2, k == 3) * (0.9 + 0.1 * sin(u.time * 3.0 + q.x * 7.0));
-      if (k == 2) { emi = vec3f(1.0, 0.85, 0.65) * 2.5; }
+      s.alb = vec3f(0.2);
+      s.emi = select(vec3f(1.0, 0.78, 0.5), vec3f(1.0, 0.85, 0.65), k == 2) * select(4.0, 2.5, k == 4);
+      if (k == 4 && q.y < 1.0) { s.emi = vec3f(1.0, 0.7, 0.4) * 3.0; }
     }
-    case 9: { alb = vec3f(0.24, 0.13, 0.07) * mix(0.7, 1.0, step(0.05, fract(q.x * 4.0))); }
-    case 10: { alb = select(vec3f(0.35, 0.05, 0.05), vec3f(0.08, 0.2, 0.3), k == 2); }
+    case 9: { s.alb = vec3f(0.2, 0.11, 0.06) * mix(0.5, 1.0, step(0.04, fract(q.x * 6.0))) * (0.8 + 0.3 * vn3(q * 4.0, 960).x) * g; s.spec = 0.3; s.refl = 0.06; }
+    case 10: {
+      // leather: cracked, shiny on the crowns
+      let cr = vn3(q * 28.0, 961);
+      s.alb = select(select(vec3f(0.2, 0.04, 0.03), vec3f(0.08, 0.14, 0.16), k == 2), vec3f(0.12, 0.05, 0.03), k == 3) * (0.75 + 0.4 * cr.x) * g;
+      s.spec = 0.6; s.refl = 0.06;
+      s.bump = cr.yzw * 0.01;
+    }
     case 11: {
-      // brick: courses 7.5 cm high, bricks 22 cm long, each course offset by half
+      // brick: courses 7.5 cm high, each brick its own colour, the mortar set back; soot at the crown, damp below
       let yy = q.y / 0.075;
       let u2 = select(q.z, q.x, abs(n.x) < 0.5) / 0.22 + 0.5 * floor(yy);
       let mortar = min(abs(fract(yy) - 0.5), abs(fract(u2) - 0.5) * 0.34);
-      alb = mix(vec3f(0.2, 0.18, 0.16), vec3f(0.34, 0.14, 0.08) * (0.75 + 0.35 * hsh(i32(floor(u2)), i32(floor(yy)), 74)), step(0.03, 0.5 - mortar));
+      let bh = hsh(i32(floor(u2)), i32(floor(yy)), 962);
+      let brick = mix(vec3f(0.3, 0.1, 0.05), vec3f(0.42, 0.2, 0.1), bh) * (0.75 + 0.35 * vn3(q * 8.0, 963).x);
+      s.alb = mix(mix(vec3f(0.16, 0.14, 0.12), brick, 0.8), brick, mix(0.8, step(0.03, 0.5 - mortar), rmFine(0.03)));
+      s.alb *= mix(1.0, 0.35, smoothstep(2.3, 3.2, q.y));
+      let damp = sstepJ(0.6, 0.0, q.y + 0.4 * vn3(q * 2.0, 964).x);
+      s.alb *= 1.0 - 0.35 * damp;
+      s.spec = 0.1 + 0.5 * damp; s.refl = 0.05 * damp;
+      s.bump = vec3f(0.0, (0.5 - fract(yy)) * 0.3, 0.0) * step(0.5 - mortar, 0.03);
+      s.alb *= g;
     }
-    case 12: { alb = vec3f(0.2); emi = vec3f(1.0, 0.3, 0.06) * (1.1 + 0.25 * sin(u.time * 1.7)) * step(0.3, fract(q.y * 8.0)); }
+    case 12: { s.alb = vec3f(0.12); s.emi = vec3f(1.0, 0.32, 0.06) * (1.3 + 0.3 * sin(u.time * 1.7)) * step(0.35, fract(q.y * 9.0)); }
     case 13: {
-      // the price list: rows of pale letters on black
-      alb = vec3f(0.02);
+      // chalk on a slate: rows of prices, rubbed out and written over
+      s.alb = vec3f(0.035, 0.04, 0.038);
       let row = fract(q.y * 7.0);
-      let ch = hsh(i32(floor(q.x * 22.0)), i32(floor(q.y * 7.0)), 75);
-      if (row > 0.3 && row < 0.75 && ch > 0.35) { emi = vec3f(0.9, 0.85, 0.7) * 0.6; }
+      let ch = hsh(i32(floor(q.x * 22.0)), i32(floor(q.y * 7.0)), 965);
+      if (row > 0.3 && row < 0.72 && ch > 0.3) { s.alb = vec3f(0.62, 0.62, 0.58) * (0.6 + 0.4 * vn3(q * 60.0, 966).x); }
+      s.alb += vec3f(0.04) * smoothstep(0.5, 0.9, vn3(q * 3.0, 967).x);
     }
-    case 14: { alb = vec3f(0.03, 0.025, 0.03); }
+    case 14: { s.alb = vec3f(0.02, 0.018, 0.02); s.spec = 1.0; s.refl = 0.3; }
+    case 15: {
+      // panelling: raised panels in dark stained wood with a moulded edge
+      let pu = select(q.z, q.x, abs(n.x) < 0.5);
+      let pf = abs(fract(pu / 0.6) - 0.5);
+      let py = abs(q.y - 0.53) / 0.45;
+      let edge = smoothstep(0.42, 0.45, max(pf, py * 0.5));
+      s.alb = vec3f(0.08, 0.04, 0.022) * (0.8 + 0.35 * vn3(q * vec3f(4.0, 30.0, 4.0), 968).x) * (1.0 - 0.35 * edge) * g;
+      s.bump = vec3f(0.0, 0.0, 0.0);
+      s.spec = 0.5; s.refl = select(0.1, 0.0, q.y > 2.5);
+      if (q.y > 2.8) { s.alb = vec3f(0.1, 0.06, 0.035) * g; s.spec = 0.1; }
+    }
+    case 16: { s.alb = vec3f(0.04, 0.045, 0.05) * (0.7 + 0.3 * vn3(q * 5.0, 969).x); s.spec = 1.0; s.refl = 0.75 - 0.4 * smoothstep(0.55, 0.8, vn3(q * 2.0, 970).x); }
+    case 17: { s.alb = vec3f(0.3, 0.31, 0.32) * (0.75 + 0.3 * vn3(q * 6.0, 971).x) * g; s.spec = 0.8; s.refl = 0.25; }
+    case 18: { s.alb = vec3f(0.3, 0.05, 0.03); s.emi = vec3f(1.0, 0.18, 0.1) * 2.2 * (0.92 + 0.08 * step(0.5, fract(u.time * 7.3 + q.x * 0.1))); }
+    case 19: {
+      // the jukebox: walnut with bubbling colour tubes in its face
+      s.alb = vec3f(0.12, 0.05, 0.025);
+      s.spec = 0.8; s.refl = 0.2;
+      if (q.x < 8.6) {
+        let band = fract(q.y * 3.0 + q.z * 0.5);
+        s.emi = hue3(fract(q.y * 0.4 + u.time * 0.05)) * 1.6 * step(0.6, band) + vec3f(1.0, 0.7, 0.3) * 0.6 * step(band, 0.1);
+      }
+    }
+    case 21: {
+      // an enamel shade: green outside, white inside where the bulb lights it
+      let inside = step(0.0, -n.y);
+      s.alb = mix(select(vec3f(0.05, 0.18, 0.1), vec3f(0.35, 0.03, 0.03), k == 4), vec3f(0.85, 0.82, 0.75), inside);
+      s.emi = vec3f(1.0, 0.8, 0.55) * 1.2 * inside;
+      s.spec = 0.9; s.refl = 0.15;
+    }
+    case 22: {
+      // lantern paper: lit through, brighter in the middle, the ribs darker, and a few of them another colour
+      let hh = hsh(i32(floor(q.x / 2.2 + 0.5)), i32(floor(q.z / 2.1 + 0.5)), 972);
+      let col = select(vec3f(0.9, 0.12, 0.04), select(vec3f(1.0, 0.38, 0.06), vec3f(0.95, 0.75, 0.45), hh > 0.9), hh > 0.65);
+      let a = atan2(q.z, q.x);
+      s.alb = col * 0.3;
+      s.emi = col * 0.9 * (0.75 + 0.25 * abs(sin(a * 8.0 + 1.5)));
+    }
+    case 23: {
+      // pictures and posters: a frame round a print of blocks and lines, faded
+      let ph = hsh(i32(floor(q.x * 1.3)), i32(floor(q.y * 1.1)), 973);
+      let pu = select(q.z, q.x, abs(n.x) < 0.5);
+      let blocks = hue3(fract(ph + floor(pu * 3.0) * 0.21 + floor(q.y * 4.0) * 0.13)) * 0.35 + 0.1;
+      s.alb = mix(blocks, vec3f(0.5, 0.42, 0.3) * (0.7 + 0.3 * sin(q.y * 60.0)), select(0.2, 0.8, k == 1)) * 0.7;
+      s.spec = 0.4; s.refl = select(0.0, 0.2, k == 1);
+    }
+    case 24: { s.alb = vec3f(0.02, 0.03, 0.05); s.emi = vec3f(0.25, 0.45, 0.9) * 1.6; s.refl = 0.3; s.spec = 1.0; }
+    case 25: {
+      if (k == 3) {
+        let ch = step(0.5, fract(q.x * 8.0)) + step(0.5, fract(q.z * 8.0));
+        s.alb = mix(vec3f(0.55, 0.52, 0.46), vec3f(0.45, 0.05, 0.04), step(0.5, fract(ch * 0.5)) * 0.8);
+      } else { s.alb = vec3f(0.7, 0.68, 0.62) * (0.9 + 0.1 * vn3(q * 20.0, 974).x); }
+      s.alb *= g;
+      s.spec = 0.05;
+    }
+    case 26: { s.alb = vec3f(0.5); s.emi = vec3f(1.0, 0.65, 0.25) * 8.0; }
+    case 27: {
+      // a worn rug: a border and a field of medallions, the pile rubbed through in the middle
+      let ru = abs(q.xz - vec2f(12.3, 0.4)) / vec2f(1.1, 1.6);
+      let border = step(0.85, max(ru.x, ru.y));
+      let med = 0.5 + 0.5 * sin(q.x * 18.0) * sin(q.z * 14.0);
+      s.alb = mix(mix(vec3f(0.28, 0.05, 0.04), vec3f(0.35, 0.22, 0.08), med * 0.6), vec3f(0.06, 0.08, 0.16), border) * (0.7 + 0.35 * vn3(q * 25.0, 975).x);
+      s.alb *= mix(0.7, 1.0, smoothstep(0.0, 0.5, max(ru.x, ru.y)));
+    }
+    case 28: {
+      // the departures screen: rows of green text, one blinking
+      s.alb = vec3f(0.01);
+      let row = floor(q.y * 9.0);
+      let ch = hsh(i32(floor(q.z * 26.0)), i32(row), 976);
+      let on = step(0.35, fract(q.y * 9.0)) * step(fract(q.y * 9.0), 0.75) * step(0.3, ch);
+      s.emi = vec3f(0.25, 1.0, 0.45) * on * select(1.3, 1.3 * step(0.5, fract(u.time)), row == 27.0);
+    }
+    case 29: { s.alb = vec3f(0.55, 0.4, 0.12) * (0.8 + 0.2 * sin(length(q.xz) * 200.0)); s.spec = 1.0; s.refl = 0.35; }
+    case 30: { s.alb = vec3f(0.18, 0.19, 0.2) * (0.7 + 0.35 * vn3(q * 3.0, 977).x) * g; s.spec = 0.6; s.refl = 0.12; }
+    case 31: { s.alb = vec3f(0.75, 0.72, 0.65); s.spec = 0.7; s.refl = 0.1; }
+    case 32: { let tq = hsh(i32(floor(q.x / 0.36 + 0.5)), 1, 978); s.alb = select(vec3f(0.02), hue3(tq) * 0.5, q.y > 1.55); s.spec = 0.9; s.refl = 0.2; }
+    case 33: { s.alb = vec3f(0.26, 0.11, 0.04) * (0.75 + 0.25 * sin(q.y * 80.0 + vn3(q * 20.0, 979).x * 4.0)); s.spec = 0.9; s.refl = 0.2; }
+    case 34: {
+      // the bar front: vertical tongue-and-groove boards
+      let sl = abs(fract(select(q.x, q.z, abs(n.z) < 0.5) / 0.09) - 0.5);
+      s.alb = vec3f(0.1, 0.05, 0.03) * mix(0.45, 1.0, sstepJ(0.44, 0.4, sl)) * (0.8 + 0.3 * vn3(q * vec3f(4.0, 40.0, 4.0), 980).x) * g;
+      s.spec = 0.5; s.refl = 0.08;
+    }
+    case 36: { s.alb = vec3f(0.35, 0.18, 0.03); s.emi = vec3f(0.2, 0.1, 0.02); s.spec = 1.0; s.refl = 0.2; }
     default: {}
   }
-  return array<vec3f, 2>(alb, emi);
+  return s;
 }
-fn roomRender(ro: vec3f, rd: vec3f) -> vec4f {
+// the room's shading of one hit: the lamps, soft shadow, occlusion, a gloss sheen for each lamp
+fn rmShade(q: vec3f, n0: vec3f, m: f32, k: i32, ld: vec3f, shadowed: bool) -> array<vec3f, 3> {
+  let occ = rmAO(q, n0, k);
+  let sf = rmSurface(q, n0, i32(m + 0.5), k, ld, occ);
+  let n = normalize(n0 + sf.bump);
+  var col = sf.alb * rmLit(q, n, k, occ, shadowed) + sf.emi;
+  for (var i = 0; i < 3; i++) {
+    let Ld = rmLight(k, i);
+    let hv = normalize(normalize(Ld[0] - q) - ld);
+    col += Ld[1] * sf.spec * 0.045 * pow(max(dot(n, hv), 0.0), 60.0) / (1.0 + 0.2 * dot(Ld[0] - q, Ld[0] - q));
+  }
+  return array<vec3f, 3>(col, n, vec3f(sf.refl, 0.0, 0.0));
+}
+fn rmTrace(ro: vec3f, rd: vec3f, k: i32, steps: i32, tMax: f32) -> vec2f {
+  var t = 0.015;
+  for (var i = 0; i < steps; i++) {
+    let r = rmMap(ro + rd * t, k);
+    if (r.x < 0.0006 * t + 0.0008) { return vec2f(t, r.y); }
+    t += r.x * 0.9;
+    if (t > tMax) { break; }
+  }
+  return vec2f(t, -1.0);
+}
+fn roomRender(ro: vec3f, rd: vec3f, px: vec2f) -> vec4f {
   let k = i32(ev.wx.z + 0.5);
   let lo = rmLocal(ro);
   let ld = rmLocalDir(rd);
-  var t = 0.02;
-  var m = 0.0;
-  var hitOk = false;
-  for (var i = 0; i < 110; i++) {
-    let r = rmMap(lo + ld * t, k);
-    if (r.x < 0.0008 * t + 0.001) { m = r.y; hitOk = true; break; }
-    t += r.x * 0.9;
-    if (t > 60.0) { break; }
-  }
-  var col = vec3f(0.0);
-  if (hitOk) {
+  gRmJ = hsh(i32(px.x) * 3 + 1, i32(px.y), i32(u.frame) + 41);
+  let h = rmTrace(lo, ld, k, 140, 60.0);
+  let t = h.x;
+  let hazeK = select(select(select(0.02, 0.03, k == 2), 0.05, k == 3), 0.028, k == 4);
+  let haze = select(select(select(vec3f(0.07, 0.035, 0.025), vec3f(0.03, 0.04, 0.06), k == 2), vec3f(0.12, 0.05, 0.03), k == 3), vec3f(0.07, 0.05, 0.06), k == 4);
+  var col = haze;
+  if (h.y >= 0.0) {
     let q = lo + ld * t;
-    let n = rmNormal(q, k);
-    let sf = rmSurface(q, n, i32(m + 0.5), k, ld);
-    let occ = rmAO(q, n, k);
-    col = sf[0] * rmLit(q, n, k, occ, true) + sf[1];
-    // a little shine on the bar tops and the brass
-    if (m > 3.5 && m < 5.5) {
-      let Ld = rmLight(k, 0);
-      let hv = normalize(normalize(Ld[0] - q) - ld);
-      col += Ld[1] * 0.04 * pow(max(dot(n, hv), 0.0), 50.0);
+    gRmT = t;
+    let sh = rmShade(q, rmNormal(q, k), h.y, k, ld, true);
+    col = sh[0];
+    let n = sh[1];
+    // one bounce off the glossy things (bar tops, mirror, brass, varnish, the tread plate), for the lamps in them
+    let rf = sh[2].x;
+    if (rf > 0.02) {
+      let fres = rf + (1.0 - rf) * pow(1.0 - clamp(dot(-ld, n), 0.0, 1.0), 5.0) * 0.6;
+      let jit = (vec3f(hsh(i32(px.x), i32(px.y), i32(u.frame)), hsh(i32(px.y), i32(px.x), i32(u.frame) + 7), hsh(i32(px.x) + 3, i32(px.y), i32(u.frame) + 9)) - 0.5) * (0.08 * (1.0 - rf));
+      let r2 = normalize(reflect(ld, n) + jit);
+      let h2 = rmTrace(q + n * 0.012, r2, k, 60, 16.0);
+      var rc = haze;
+      if (h2.y >= 0.0) {
+        let q2 = q + n * 0.012 + r2 * h2.x;
+        gRmT = t + h2.x * 2.0;
+        let s2 = rmShade(q2, rmNormal(q2, k), h2.y, k, r2, false);
+        rc = mix(haze, s2[0], exp(-h2.x * hazeK));
+      }
+      col = mix(col, rc, clamp(fres, 0.0, 0.85));
     }
   }
-  // haze: smoke in the cellar and the club, a little in the bars
-  let hazeK = select(select(0.012, 0.035, k == 3), 0.02, k == 4);
-  let haze = select(select(vec3f(0.1, 0.07, 0.05), vec3f(0.16, 0.07, 0.04), k == 3), vec3f(0.12, 0.08, 0.05), k == 4);
-  col = mix(haze, col, exp(-t * hazeK));
+  // haze, and light beams in it: sample along the ray, adding what each beam's cone scatters toward the eye
+  col = mix(haze, col, exp(-min(t, 60.0) * hazeK));
+  var beams = vec3f(0.0);
+  let tb = min(t, 30.0);
+  let j0 = hsh(i32(px.x), i32(px.y), i32(u.frame) + 31);
+  for (var s = 0; s < 10; s++) {
+    let sp = lo + ld * (tb * (f32(s) + j0) / 10.0);
+    for (var b = 0; b < 3; b++) {
+      let B = rmBeam(k, b);
+      if (B[1].w > 1.5) { continue; }
+      let v = sp - B[0].xyz;
+      let dl = length(v);
+      let cs = dot(v / max(dl, 1e-3), B[1].xyz);
+      beams += B[2].xyz * smoothstep(B[1].w, B[1].w + 0.06, cs) / (1.0 + dl * dl * 0.35);
+    }
+  }
+  col += beams * tb / 10.0 * hazeK * select(3.0, 5.0, k == 3);
   col = propsFx(ro, rd, t, col);
   return vec4f(max(col, vec3f(0.0)), t);
 }
@@ -6220,7 +6910,7 @@ fn rnd3(fc: vec2f, k: i32) -> vec3f {
   let uv = vec2f(fj.x * 2.0 - u.res.x, u.res.y - fj.y * 2.0) / u.res.y;
   let ro = u.camPos;
   let rd = normalize(u.camFwd + (uv.x * u.camRight + uv.y * u.camUp) * u.fov);
-  if (ev.wx.z > 0.5) { return roomRender(ro, rd); }
+  if (ev.wx.z > 0.5) { return roomRender(ro, rd, px); }
   var tProxy = 0.0;
   if (u.p5 < 0.5) { tProxy = max(textureLoad(proxyTex, vec2i(i32(px.x), i32(fc.y)), 0).r - 0.5, 0.0); }
   let hit = tracePrimary(ro, rd, tProxy);

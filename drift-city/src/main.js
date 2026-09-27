@@ -1561,7 +1561,7 @@ async function init() {
     U.set(pv.pos, 44); U.set(pv.f, 48); U.set(pv.r, 52); U.set(pv.up, 56);
     updateWeather(dt);
     U[47] = wind.cx; U[51] = wind.cz; U[55] = inSpace || roomNow() ? 0 : WX.rain; U[59] = WX.wet;
-    U.set([REG.ox, REG.oz, 0, REG.city, REG.cx, REG.cz, 0, 0], 60);
+    U.set([REG.ox, REG.oz, roomNow() ? 1 : 0, REG.city, REG.cx, REG.cz, 0, 0], 60); // reg.z: in a venue's room (post.wgsl)
     // the lens: on the story's scene when there is one in view, otherwise (0) on the centre of the view
     CAMNOW.p = [U[4], U[5], U[6]]; CAMNOW.f = cam.f; CAMNOW.r = cam.r; CAMNOW.up = cam.up;
     let ft = inSpace ? 0 : focusTarget([U[4], U[5], U[6]], cam.f);
@@ -1658,7 +1658,7 @@ async function init() {
     rpass(enc, pBV, T.bv, T.bA.createView(), 7, measure);
     const outView = ctx.getCurrentTexture().createView();
     rpass(enc, pComp, T.comp[cur], outView, 8, measure);
-    if (physOn) {
+    if (physOn && !roomNow()) { // the grit and snow live in the city, not in a venue's room
       const p = enc.beginRenderPass({ colorAttachments: [{ view: outView, loadOp: "load", storeOp: "store" }], timestampWrites: tsw(10, measure) });
       p.setPipeline(PHYS.draw); p.setBindGroup(0, T.pd[cur]); p.draw(6, PHYS.n); p.end(); ran[10] = 1;
     }
@@ -1858,7 +1858,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { WX, EVN, LIFE, MORSE, ASSIST, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { WX, EVN, LIFE, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 
