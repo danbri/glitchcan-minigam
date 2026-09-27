@@ -167,7 +167,7 @@ function pickLaunch(S, quiet) {
   const tod = currentTod(), V = pickCompose(S, tod.sun);
   const from = { x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch };
   const far = Math.hypot(V.x - from.x, V.z - from.z);
-  NAV.tour = null; NAV.trip = null; NAV.free = null; NAV.cam = null; NAV.spaceMix = 0;
+  tourHold(); NAV.trip = null; NAV.free = null; NAV.cam = null; NAV.spaceMix = 0;
   NAV.visit = { from, to: V, t: 0, T: clampv(3 + far / 180, 4, 14), ly: 0, lp: 0, look: [S.x, S.y0 + S.h * 0.45, S.z], subject: V };
   NAV.mode = "visit";
   PICK.subject = V;

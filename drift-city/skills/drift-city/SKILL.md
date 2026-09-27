@@ -258,6 +258,9 @@ Owner rule (September 2026): "The story switch MUST be done Fink style. This is 
 episodes." So there is no list of stories in the page. Stories link to each other with tags, and the page follows
 the tags, as the FINK player does:
 
+- No ending leaves the city. Two endings once had `# fly: saturn` (THE SPOTLIGHT, PASSAGE PAID): the page closed the
+  story panel and flew to the Saturn system before the ending could be read, and the owner asked whether it was
+  meant. They now stay on a place (the dish; the Asters' roof). `# fly:` still works, and still closes the panel.
 - `story/episodes.fink.js` is the front door (Menu > Story > Episodes, and the "Drift City" entry in
   `inklet/toc.fink.js`): one bare `# FINK: <file>` link per episode.
 - Each episode has a light peer link to the other, in its "Think it over" knot: `# FINK: <file>` plus
@@ -328,11 +331,23 @@ Figures for writing and sound design. Titan surface air: nitrogen with about 5% 
 Owner direction (September 2026): use recorded ElevenLabs speech for a "ship's computer" role in the interface,
 reached only from the hamburger menu; later, perhaps, the voice of the Org's Titan computer if a story needs one.
 
-- Menu > "Guided flight": the computer flies to seven stops (the ringed spire, the Assembly Hall, the Hive, the pod
-  fab, the Chinatown pagoda, the Warmhouse, the spaceport), framing each with `pickLaunch` (the long-press flight,
-  clock sped up in mid-flight), and speaks a short plain description as the view comes in (at 62% of the flight).
-  The same words are shown as a caption with a Stop button. A touch on the view, a key or the pad stops it and gives
-  control back. The WebGL fallback hops to each stop's place instead of flying.
+- Two tours (`GUIDE_TOURS`): Menu > "Guided flight" (seven stops, about 3 minutes) and "Full tour" (fifteen stops,
+  about 8 minutes: the spire, the signal tower and its Morse, a Life tower, the Assembly Hall, Ferry Street, inside
+  the Cold Tap, the pagoda, inside the Lantern Cellar, the Hive and the Asters' katakana poster, the fab, inside the
+  Low Orbit, the spaceport and the airships, the stones, the Warmhouse, inside the club). Owner, September 2026:
+  "way more comprehensive... include Conway life, dive bars... keep the tour moving, on every-frame-a-painting
+  trajectories". Landmark stops fly with `pickLaunch` (the composed, side-lit view); place and room stops fly like a
+  story visit (`guideGo`); the words start when the view is 62% of the way in (97% for a room, so they start inside).
+  Rooms linger 5 to 7 s after the words so the band is heard. Lines are short facts about what is in view.
+- `guideLifeTower` picks the tallest organic round tower within 30 cells that runs the board (the shader's own test,
+  `hsh(cseed, 5, 781) < 0.5`); the signal tower is seen from its street place (`tower_0`, looking up): framed from the air it sits among the financial district's tall towers and the composed view looked steeply down from 150 m (Dawn render, September 2026). The Life tower's composed view is good.
+- **Pause, not stop.** A touch on the view, a key or the pad pauses the tour (owner: "let us stop to explore anywhere
+  without it breaking our tour"): the words stop, the view is yours, and the caption offers "Carry on" (back to the
+  stop you were at, words from the start; the next stop if its words were done) and "End tour". Until September
+  2026 any touch ended the tour.
+- The Grand tour (Menu > Travel) is held, not ended, when you leave it (a long press, a story place, a hop, flying by
+  hand, a trip from the menu): `tourHold`, and Menu > Travel > "Carry on the Grand tour" (`tourResume`). Steering by
+  hand already paused it.
 - It runs on a 200 ms timer, not in a frame loop, so both renderers share it. It calls `flyOn` at the end.
 - The clips, their voice, cost and how to redo one: `audio/computer/README.md`. Tone for new lines: facts about
   what is in view, short sentences, no adjectives for effect.
@@ -377,6 +392,14 @@ props and hotspots stay where they are; a new visit starts at its place again.
   street places stand inside the flight code's coarse building boxes and an absolute test refuses every step.
 - During the flight to a place the sticks used to do nothing (flights take up to 14 s). Now a stick, W or S pushed
   mid-flight ends the flight where the view is and hands it over (`visitStep`); a drag on the screen does not.
+- Planning a walk (`visitWalkTo`): the line is walked at eye level 1.5 m at a time, and a wall is a rise in the
+  height map from one step to the next. Neither an absolute height nor the height at the start works: a street
+  place stands inside the coarse boxes, so the first version planned a 68 m crane move for a 22 m walk along the
+  pavement, and the second walked through a facade whose box was no higher than the one at the start. A wall within
+  12 m of the goal means the goal is that building: stop 2.5 m short. A wall further off means the goal is beyond
+  buildings: rise 4 m over the highest and land at the last clear point before the goal. Checked in Node with the
+  real world.js and tales.js (a scratch harness; the Dawn runner's clock advances only 0.3 s in 70 frames, too slow
+  for a walk).
 - **Walk there**: a long press in a scene offers "Walk there" as well as "Fly there" (for things under 450 m away;
   not skyboats or the bubble). `visitWalkTo` plans it to be easy to follow: the view turns to the goal first (the
   first 18% of the time), the move eases in and out, it stops 2.5 m short of a wall, and if buildings stand in the

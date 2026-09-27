@@ -449,7 +449,7 @@ THE END: COLD LAMPS.
 
 === ending_spotlight ===
 # time: day
-# fly: saturn
+# place: dish
 Sato comes before dawn, then her colleagues, then the newsfeeds from the rings. Eleven million people watch the hatching.
 The fliers never nest near the city again. Sometimes, far past the dish, a pale wing turns in the haze.
 THE END: THE SPOTLIGHT.

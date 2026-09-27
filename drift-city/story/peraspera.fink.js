@@ -156,7 +156,7 @@ She puts a glass in front of you. "The set's still on. Midnight, in the bubble. 
 # scene: dex
 ~ heard_dex = true
 "Ad astra per aspera," Dex says. "To the stars, through hardship. Old words. We took them." # speech: ../audio/cast/dex-1.mp3
-"The Org wants everybody gone home. Posters on every tower, seats paid, Earth tax credit. Earth's the past, innit. We're not going back. We're going out: the long ships, the next moon, the next star. The hard way." # speech: ../audio/cast/dex-2.mp3
+"The Org wants everybody gone home. Posters on every tower, seats paid, Earth tax credit. Earth's the past. We're not going back. We're going out: the long ships, the next moon, the next star. The hard way." # speech: ../audio/cast/dex-2.mp3
 "So we train. Every morning, before the pads open. The kids learn at home: orbital mechanics, hydroponics, welding, cooking for forty. One of you works the pads, one of you keeps the house, and you have kids. Lots. You don't fill a star system with two-point-one." # speech: ../audio/cast/dex-3.mp3
 "The oxygen? People like a story." He doesn't say no. # speech: ../audio/cast/dex-4.mp3
 "Nuala played our first night, in the Warmhouse. She taught us the rooftop thing: every launch, lamps up on the roofs so the crews can see them go." # speech: ../audio/cast/dex-5.mp3
@@ -445,7 +445,7 @@ THE END: THE LOW NOTE.
 
 === ending_farewell ===
 # time: dawn
-# fly: saturn
+# place: roof_1
 Nuala plays like she is saying goodbye to everyone in the room one at a time, and she is. Nobody asks her to stay. At dawn you carry her horn case to gate 3.
 From the Asters' roof you watch the ship climb. The lamps go up along the parapet. She wanted rain; you hope she gets it.
 THE END: PASSAGE PAID.

@@ -589,7 +589,7 @@ function taleGo(id) {
   if (TALE.place !== id) TALE.props = [];
   TALE.place = id;
   if (NAV.site.id !== "home" || NAV.mode === "space" || NAV.mode === "trip" || NAV.mode === "free") {
-    NAV.trip = null; NAV.space = null; NAV.free = null; NAV.spaceMix = 0; NAV.cam = null; NAV.tour = null;
+    tourHold(); NAV.trip = null; NAV.space = null; NAV.free = null; NAV.spaceMix = 0; NAV.cam = null;
     if (NAV.site.id !== "home") arriveRegion(HOME_DEST, true);
   }
   const from = { x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch };
@@ -680,28 +680,36 @@ function visitWalkTo(V, gx, gz) {
   const b = V.to, R = roomOf(b);
   if (!V.off) V.off = [0, 0, 0];
   const from = V.off.slice();
-  let to;
+  let to, lift = 0;
   if (R) {
     const c = Math.cos(b.yaw), s = Math.sin(b.yaw), ox = gx - b.x, oz = gz - b.z;
     const [lx, lz] = roomClamp(R, ox * c + oz * s, -ox * s + oz * c, 0.6);
     to = [lx * c - lz * s, 0, lx * s + lz * c];
   } else {
-    // stop a couple of metres short of a wall or the thing itself
-    const dx = gx - (b.x + from[0]), dz = gz - (b.z + from[2]), L = Math.hypot(dx, dz) || 1;
-    const k = Math.max(0, L - 2.5) / L;
-    let tx = b.x + from[0] + dx * k, tz = b.z + from[2] + dz * k;
-    for (let n = 0; n < 40 && heightAt(tx, tz, Math.max(terrSurfAt(tx, tz), 0) + 1.7) > Math.max(terrSurfAt(tx, tz), 0) + 1.4; n++) { tx -= dx / L * 1.5; tz -= dz / L * 1.5; }
-    to = [tx - b.x, Math.max(terrSurfAt(tx, tz), 0) + 1.7 - b.y, tz - b.z];
+    // Walk the line at eye level, 1.5 m at a time, and find the walls on it. A wall is a rise in the height map from
+    // one step to the next (a street place stands inside the flight code's coarse boxes, so neither an absolute
+    // height nor the height at the start tells a wall from the street).
+    const x0 = b.x + from[0], z0 = b.z + from[2], dx = gx - x0, dz = gz - z0, L = Math.hypot(dx, dz) || 1;
+    const eye = (x, z) => Math.max(terrSurfAt(x, z), 0) + 1.7;
+    let hp = heightAt(x0, z0, eye(x0, z0)), wall = -1, top = 0, lastOut = 0;
+    for (let t = 1.5; t <= L; t += 1.5) {
+      const x = x0 + dx * t / L, z = z0 + dz * t / L, y = eye(x, z), h = heightAt(x, z, y);
+      if (h > y - 0.3 && h > hp + 0.5) { if (wall < 0) wall = t; top = Math.max(top, h - y); }
+      else if (h < hp - 3) lastOut = t;
+      if (h <= y - 0.3) lastOut = t;
+      hp = h;
+    }
+    // the goal is the building in front of you (the wall is near the goal): stop 2.5 m short of its face; the goal
+    // is beyond buildings: rise over them and come down at the last clear point before the goal
+    let stop = L - 2.5;
+    if (wall >= 0 && L - wall < 12) stop = wall - 2.5;
+    else if (wall >= 0) { lift = top + 4; stop = Math.max(lastOut > wall ? lastOut : wall - 2.5, 0); }
+    stop = Math.max(0, stop);
+    const tx = x0 + dx * stop / L, tz = z0 + dz * stop / L;
+    to = [tx - b.x, eye(tx, tz) - b.y, tz - b.z];
   }
   const D = Math.hypot(to[0] - from[0], to[2] - from[2]);
   if (D < 0.5) return false;
-  // is the way clear at eye level? if not, how high must the view go to clear it
-  let lift = 0;
-  if (!R) for (let t = 1; t < D; t += 1.5) {
-    const k = t / D, x = b.x + from[0] + (to[0] - from[0]) * k, z = b.z + from[2] + (to[2] - from[2]) * k;
-    const y = b.y + from[1] + (to[1] - from[1]) * k, h = heightAt(x, z, y);
-    if (h > y - 0.5) lift = Math.max(lift, h + 4 - y);
-  }
   const yawTo = Math.atan2(to[2] - from[2], to[0] - from[0]);
   const ly0 = V.ly, lp0 = V.lp;
   const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -712,8 +720,8 @@ function visitWalkStep(V, dt) {
   const W = V.walk;
   W.t = Math.min(W.t + dt, W.T);
   const k = W.t / W.T;
-  // turn first (the first 18%), then go; the move eases in and out
-  const turn = sstep(0, 0.18, k), go = sstep(0.12, 1, k);
+  // turn first (the first 18%, at most 1.2 s), then go; the move eases in and out
+  const tk = Math.min(0.18, 1.2 / W.T), turn = sstep(0, tk, k), go = sstep(tk * 0.66, 1, k);
   const arc = W.lift * Math.sin(Math.PI * go);
   V.off = [W.from[0] + (W.to[0] - W.from[0]) * go, W.from[1] + (W.to[1] - W.from[1]) * go + arc, W.from[2] + (W.to[2] - W.from[2]) * go];
   V.ly = W.ly0 + (W.lyTo - W.ly0) * turn;
