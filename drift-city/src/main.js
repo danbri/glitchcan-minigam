@@ -723,7 +723,7 @@ function update(dt) {
   // right stick left/right slides sideways
   if (PAD.lx) { st.x += -Math.sin(st.yaw) * PAD.lx * 14 * dt; st.z += Math.cos(st.yaw) * PAD.lx * 14 * dt; }
   const here = heightAt(st.x, st.z, st.y) + 2;
-  if (st.y < here) { st.y += (here - st.y) * Math.min(1, dt * 8); st.vy = Math.max(st.vy, 0); }
+  if (st.y < here) { st.y += clock < (st.soft || 0) ? Math.min(here - st.y, 5 * dt) : (here - st.y) * Math.min(1, dt * 8); st.vy = Math.max(st.vy, 0); }
 
   // camera attitude: nose dips when accelerating, banks into turns, small gust wobble
   const spd2 = Math.max(4, Math.hypot(st.vx, st.vz));
@@ -1782,7 +1782,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { WX, TALES, taleSwitch, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { WX, TALES, taleSwitch, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

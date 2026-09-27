@@ -582,7 +582,29 @@ function routeName() { return st.forced === "low" ? "street level" : st.forced =
 function flyOn() {
   if (NAV.mode !== "visit") return;
   NAV.mode = "surface"; NAV.visit = null;
-  st.vx = Math.cos(st.yaw) * 10; st.vz = Math.sin(st.yaw) * 10; st.vy = 0; st.mode = "low"; st.tour = null;
+  // carry on from the view as it is: same height, the way you face, from a standstill. (It used to drop to street
+  // level, snap to a street axis and head for a random place: a lurch, then somewhere you did not choose.)
+  const hy = Math.cos(st.yaw), hz = Math.sin(st.yaw);
+  st.vx = 0; st.vz = 0; st.vy = 0; st.tour = { x: st.x + hy * 2500, z: st.z + hz * 2500, out: false, until: clock + 240 };
+  const agl = st.y - Math.max(terrSurfAt(st.x, st.z), 0);
+  // a street place can stand inside the flight code's coarse building boxes; lift out of them slowly (the push-out
+  // was instant: the lurch), and only go on at street level when the view is clear of them
+  st.soft = clock + 15;
+  const boxed = heightAt(st.x, st.z, st.y) > st.y + 2;
+  if (agl < 20 && !boxed && !cellAt(Math.floor(st.x / C), Math.floor(st.z / C)).wild) { st.mode = "low";
+    // street level: take the street direction nearest the way you face that is open (a street place faces a wall)
+    let bestA = 0, bs = -1e9;
+    for (let k = 0; k < 4; k++) {
+      const a = k * Math.PI / 2, ca = Math.cos(a), sa = Math.sin(a);
+      let blocked = 0;
+      // the same test the autopilot makes: 36 m ahead, a metre either side
+      for (let d = 0; d <= 36 && !blocked; d += 4) for (const l of [-1, 0, 1]) if (heightAt(st.x + ca * d - sa * l, st.z + sa * d + ca * l, st.y) > st.y + 2) { blocked = 1; break; }
+      const sc = Math.cos(a - st.yaw) - 3 * blocked;
+      if (sc > bs) { bs = sc; bestA = a; }
+    }
+    st.axisYaw = bestA; st.realign = false; st.altBias = clampv(st.y - 8.5, -80, 260); }
+  else { st.mode = "high"; st.altBias = boxed ? 0 : clampv(st.y - 52, -80, 260); }
+  st.modeT = 40;
   lastInput = clock;
 }
 // The menu is a drill-down: one short list at a time, with a back button, so nothing floods the screen.
