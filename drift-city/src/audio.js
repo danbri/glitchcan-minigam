@@ -84,7 +84,9 @@ function audioSetOn(on) {
   if (on) { if (!AU.ctx) audioInit(); else AU.ctx.resume(); if (AU.ready) AU.master.gain.setTargetAtTime(0.5, AU.ctx.currentTime, 0.5); }
   else if (AU.ready) AU.master.gain.setTargetAtTime(0, AU.ctx.currentTime, 0.2);
 }
-for (const ev of ["pointerdown", "keydown"]) addEventListener(ev, () => { if (!AU.on) return; if (!AU.ctx) audioInit(); else if (AU.ctx.state !== "running") AU.ctx.resume(); }, { passive: true });
+// iOS counts only some events as a user gesture that may start or resume audio (a touch's pointerup and touchend,
+// click, keydown; not a touch's pointerdown), and it suspends audio when the app goes to the background: listen for all
+for (const ev of ["pointerdown", "pointerup", "touchend", "click", "keydown"]) addEventListener(ev, () => { if (!AU.on) return; if (!AU.ctx) audioInit(); else if (AU.ctx.state !== "running") AU.ctx.resume(); }, { passive: true });
 
 // ---------- placing sounds ----------
 function auSetPos(p, pos, tc) {

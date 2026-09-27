@@ -594,6 +594,18 @@ effect is one cheap trick, placed where it suits the room, not everywhere:
   and 0.5. Dry ice at 0.22 m and weight 0.08 did not show; 0.4 m and 0.3 does.
 - Check renders: `__bandForce` (main.js test hook) sets the band's position, for example 20.05 for lasers on.
 
+The band on the stand and the silent phone (owner, September 2026: "no music, band etc"):
+
+- The stands were empty: instruments, no players. `ROOM_BAND` in venue.js now puts a drummer (pose 4), a bassist and
+  a sax player (cellar) or a pianist (club) on the stand, in the room's own axes, pushed into the props list each
+  frame by `worldProps` (main.js) whenever `roomNow()`. They nod and hit on the beat like any story person.
+- No sound on an iPhone: probably the hidden-tab handler (guide.js) suspending the AudioContext, and resume failing.
+  iOS counts only some events as a user gesture that may start audio: a touch's `pointerup` and `touchend`,
+  `click`, `keydown`, but not a touch's `pointerdown`, which was the only touch event audio.js listened for. It now
+  listens for all five. Not confirmed on a phone. A headless Chromium test could not show it either: the page clock
+  stayed at 0 there (the WebGPU path does not advance in that run), so `roomNow()` never became true.
+- `AU`, `VENUE` and `CROWD_BUF` are on `__drift` for tests.
+
 Staging ideas the owner raised for busy scenes (not built; for the scene-staging work):
 
 - More scripted scenes are fine: playable cut scenes, fixed shots.

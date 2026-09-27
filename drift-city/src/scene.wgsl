@@ -6994,7 +6994,7 @@ fn roomRender(ro: vec3f, rd: vec3f, px: vec2f) -> vec4f {
     // dry ice: a low, rolling layer on the club's floor near the stand and across the cellar's stage end
     if (k >= 3) {
       let base = select(0.0, 0.7, (k == 4 && sp.x > 21.6) || (k == 3 && sp.x > 9.5));
-      let near = select(smoothstep(4.0, 9.0, sp.x), smoothstep(9.0, 17.0, sp.x), k == 4);
+      let near = select(smoothstep(4.0, 9.0, sp.x), smoothstep(15.0, 20.0, sp.x), k == 4);
       ice += exp(-max(sp.y - base, 0.0) / 0.4) * near * (0.3 + vn3(sp * 1.4 + vec3f(-u.time * 0.25, 0.0, u.time * 0.08), 952).x);
     }
   }
@@ -7002,7 +7002,7 @@ fn roomRender(ro: vec3f, rd: vec3f, px: vec2f) -> vec4f {
   if (k >= 3) {
     let Bd = rmBand();
     let iceC = mix(vec3f(0.5, 0.45, 0.5), rmStageCol(floor(Bd.z / 2.0) + f32(k)), 0.55) * select(0.06, 0.09, k == 4);
-    col = mix(col, iceC * 3.0, clamp(ice * tb / f32(ns) * 0.3, 0.0, 0.7));
+    col = mix(col, iceC * 3.0, clamp(ice * tb / f32(ns) * select(0.3, 0.2, k == 4), 0.0, 0.55));
   }
   if (k == 4) { col += rmLasers(lo, ld, t); }
   col = propsFx(ro, rd, t, col);
