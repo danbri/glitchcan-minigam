@@ -231,6 +231,10 @@ description of the surroundings that `audioWorld` in `main.js` builds twice a se
   air). Measured with `tests/audiotest2.mjs`: +0.1 dB on the night street, +1.7 dB in space.
 - **Morse** (`src/morse.js`): the Asters' messages in English and toki pona at 0.14 s a unit; a story can set
   `MORSE.override` to send its own.
+  Checked in a render (September 2026): `MORSEON=1` / `MORSEON=0` in the scratch runner hold the key on or off
+  (`MORSE.unit = 1e9` holds the first mark); from `CAM=-65,133,-30,-1.5708,-0.02` (level with the antenna tips of
+  the tall towers at cells z = -5 to -7) several tips are clearly brighter with the key on. A whole-frame diff is
+  no use for this: the fliers move between runs even with `FREEZE`.
 - **Check offline:** `tests/audiotest2.mjs` (needs `npm i --no-save node-web-audio-api`) renders 36 seconds with node-web-audio-api and reports loudness, peak and
   which events fired per scene. It needs `setTimeout` mapped to the offline clock, or every syllable scheduled with
   `setTimeout` fires in real time and the render misses it (September 2026: added to the harness). Compare loudness
@@ -450,7 +454,9 @@ now laid out by hand. Everything below is in `world.js` unless named; the shape 
   (hall, drum and dome, semi-domes, two minarets at diagonal corners, 1.95 times the hall height, with a balcony and a
   cone cap), cathedrals (steep nave, twin towers with spires), Orthodox churches (round apse, onion domes made as a
   smooth union of a sphere and a cone) and the old nave-and-spire church. The mosque and the cathedral are checked in
-  a render; the Orthodox form had not been seen in one as of September 2026.
+  a render. The Orthodox form: a bulbous green dome with a small tip on a yellow drum was seen from
+  `CAM=-239,48,489,-2.356,-0.38` (towards cell (-12, 16), which world.js says is kind 2), but too small to be sure
+  it is not the mosque's dome. Find kinds with `cellAt` in Node: `typ === 2 && v < 0.78`, kind `floor(s * 4)`.
 - **The Warmhouse** (`BUB_C`, `bubbleAt` in world.js; `bubbleC`, `bubbleSDF`, `traceBubble`, `bubbleFx`, materials
   71-75 in scene.wgsl; hit kind 8): a 170 m bubble of warm Earth air over the city's west edge, centre about
   (-1650, 300, 520), drifting a few metres, on four tethers. Inside, a deck at 95 m under the centre: timber boards,
