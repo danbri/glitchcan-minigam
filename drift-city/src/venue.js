@@ -15,6 +15,18 @@ const VENUE = { k: 0, out: null, g: null, verb: null, next: 0, beat: 0, bar: 0, 
 // little faster or slower. Owner, September 2026: the rooms were "eerily empty"; music that never breathes, no crowd
 // and no applause were a large part of that.
 const VENUE_SHAPE = { 1: { tune: 24, gap: 3, clap: 0 }, 2: { tune: 32, gap: 5, clap: 0.35 }, 3: { tune: 48, gap: 6, clap: 0.9 }, 4: { tune: 32, gap: 7, clap: 0.75 } };
+// the players on the stand, in the room's own axes (x forward from the door, z to the right, y up from the floor):
+// [x, y, z, facing (0 = toward the far end, pi/2 = to the right), hue, pose (propPerson: 0 stand, 2 sit, 4 drums)]
+const ROOM_BAND = {
+  3: [[12.4, 0.3, 0.15, 1.57, 0.62, 4], [12.75, 0.3, -1.05, 3.14, 0.08, 0], [11.65, 0.3, -0.2, 3.14, 0.35, 0]],
+  4: [[24.6, 0.7, 1.75, 1.57, 0.7, 4], [23.75, 0.7, 1.15, 3.14, 0.15, 0], [24.05, 0.7, -2.8, 0.0, 0.9, 2]],
+};
+function roomBand(R, out) {
+  for (const m of ROOM_BAND[R.room] || []) {
+    const c = Math.cos(R.yaw), s = Math.sin(R.yaw);
+    out.push({ kind: 0, x: R.x + c * m[0] - s * m[2], y: R.y - 1.7 + m[1], z: R.z + s * m[0] + c * m[2], rot: Math.PI / 2 - (R.yaw + m[3]), scale: 1, hue: m[4], param: m[5] });
+  }
+}
 // the crowd, from three two-second recordings (audio/crowd, ElevenLabs sound effects): grains of about a second from
 // random points, at slightly different speeds, overlapping, panned about; level while the band plays and between tunes
 const VENUE_CROWD = { 1: { set: ["bar-a", "bar-b"], lvl: 0.5, play: 0.9 }, 2: { set: ["bar-b", "club"], lvl: 0.38, play: 0.85 },
