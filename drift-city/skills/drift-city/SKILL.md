@@ -215,7 +215,14 @@ description of the surroundings that `audioWorld` in `main.js` builds twice a se
 - **Voice casting** (owner direction, September 2026): almost all voices are variations on English accents:
   English regional and plenty of Multicultural London English, Scottish, Welsh, Irish, and European-accented English;
   some Australian and New Zealand, Canadian, and US.
-- **Check offline:** `tests/audiotest2.mjs` renders 36 seconds with node-web-audio-api and reports loudness, peak and
+- **The radio layer** (`auRadioAct`, owner: "evocative hints of Kraftwerk's Radio-Activity mood, but no
+  melody, lyrics or samples"): Geiger clicks at a wandering rate, the masts' Morse as a faint 690 Hz sine keyed
+  from `MORSE.key` (morse.js; the same key lights two masts in five through `ev.wx.y`), a tuning sweep every half
+  minute or so, and a slow low call in the bass every minute or so (the whale idea: low sound carries far in dense
+  air). Measured with `tests/audiotest2.mjs`: +0.1 dB on the night street, +1.7 dB in space.
+- **Morse** (`src/morse.js`): the Asters' messages in English and toki pona at 0.14 s a unit; a story can set
+  `MORSE.override` to send its own.
+- **Check offline:** `tests/audiotest2.mjs` (needs `npm i --no-save node-web-audio-api`) renders 36 seconds with node-web-audio-api and reports loudness, peak and
   which events fired per scene. It needs `setTimeout` mapped to the offline clock, or every syllable scheduled with
   `setTimeout` fires in real time and the render misses it (September 2026: added to the harness). Compare loudness
   against the previous `audio.js` before and after a change; the radio chain first made the street 3.7 dB louder.

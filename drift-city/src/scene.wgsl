@@ -4605,7 +4605,9 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       s.alb = vec3f(0.3, 0.3, 0.31);
       s.spec = 0.3;
       if (p.y > cellHead(ci).h + 13.0) {
-        let blink = smoothstep(0.75, 0.8, fract(u.time * 0.6 + f32(cseed & 63) * 0.13));
+        var blink = smoothstep(0.75, 0.8, fract(u.time * 0.6 + f32(cseed & 63) * 0.13));
+        // two masts in five key the city's Morse (morse.js, ev.wx.y) instead of the steady beat
+        if (hsh(cseed, 9, 790) < 0.4) { blink = ev.wx.y; }
         s.emi = vec3f(1.0, 0.08, 0.04) * (0.4 + 5.0 * blink);
       }
     }

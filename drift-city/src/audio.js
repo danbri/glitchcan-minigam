@@ -723,4 +723,64 @@ function audioCity(dt, w) {
   if (city > 0.2 && due("horn", 0.012)) auHorn();
   if (city > 0.3 && due("pa", 0.014)) auAnnounce();
   if (city > 0.2 && w.alt < 250 && due("spinner", 0.03)) auSpinner();
+  auRadioAct(dt, city, night);
+}
+// The radio layer, in the mood of Kraftwerk's Radio-Activity (no melody, no words, nothing sampled): a Geiger counter
+// ticking at a slowly wandering rate, the masts' Morse as a faint sine on the air (same key as the lights,
+// morse.js), a tuning sweep now and then, and a slow low call far off, like a whale's across an ocean.
+function auRadioAct(dt, city, night) {
+  const c = AU.ctx, now = c.currentTime;
+  if (!AU.ra) {
+    const bus = c.createGain(); bus.gain.value = 0; bus.connect(AU.muffle);
+    const send = c.createGain(); send.gain.value = 0.5; bus.connect(send); send.connect(AU.verbIn);
+    const mo = c.createOscillator(); mo.frequency.value = 690;
+    const mg = c.createGain(); mg.gain.value = 0;
+    mo.connect(mg); mg.connect(bus); mo.start();
+    AU.ra = { bus, mg, geiger: 0, sweepT: rr(8, 20), callT: rr(20, 40), lastKey: 0 };
+  }
+  const R = AU.ra;
+  R.bus.gain.setTargetAtTime(0.5 * (0.35 + 0.65 * city) * (0.6 + 0.4 * night), now, 2);
+  // Morse, in step with the masts
+  const k = typeof MORSE !== "undefined" ? MORSE.key : 0;
+  if (k !== R.lastKey) { R.mg.gain.setTargetAtTime(k ? 0.028 : 0, now, 0.006); R.lastKey = k; }
+  // Geiger clicks: a Poisson process whose rate drifts between about 0.4 and 6 a second
+  const rate = 0.4 + 5.6 * Math.pow(0.5 + 0.5 * Math.sin(now * 0.037) * Math.sin(now * 0.011 + 1.3), 3);
+  R.geiger += dt * rate;
+  while (R.geiger > 0 && Math.random() < Math.min(1, R.geiger)) {
+    R.geiger -= 1;
+    const src = c.createBufferSource(); src.buffer = AU.white;
+    const hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 2500;
+    const g = c.createGain(), t0 = now + Math.random() * dt;
+    g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.09, t0 + 0.0008); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.012);
+    src.connect(hp); hp.connect(g); g.connect(R.bus);
+    src.start(t0, Math.random() * 2, 0.02);
+  }
+  if (R.geiger < 0) R.geiger = 0;
+  // a tuning sweep: band-passed noise gliding up, and the whistle of a carrier passing through
+  R.sweepT -= dt;
+  if (R.sweepT <= 0) {
+    R.sweepT = rr(25, 55);
+    const src = c.createBufferSource(); src.buffer = AU.white; src.loop = true;
+    const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 6;
+    bp.frequency.setValueAtTime(300, now); bp.frequency.exponentialRampToValueAtTime(2600, now + 3.5);
+    const g = c.createGain(); g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(0.05, now + 0.8); g.gain.linearRampToValueAtTime(0, now + 3.6);
+    const wh = c.createOscillator(); wh.frequency.setValueAtTime(1800, now + 1.2); wh.frequency.exponentialRampToValueAtTime(220, now + 2.4);
+    const wg = c.createGain(); wg.gain.setValueAtTime(0, now + 1.2); wg.gain.linearRampToValueAtTime(0.012, now + 1.7); wg.gain.linearRampToValueAtTime(0, now + 2.4);
+    src.connect(bp); bp.connect(g); g.connect(R.bus); wh.connect(wg); wg.connect(R.bus);
+    src.start(now); src.stop(now + 3.8); wh.start(now + 1.2); wh.stop(now + 2.5);
+  }
+  // the far call: a slow glide in the low bass with a few harmonics (a phone speaker hears the harmonics)
+  R.callT -= dt;
+  if (R.callT <= 0) {
+    R.callT = rr(40, 90);
+    const f0 = rr(48, 62), T = rr(4, 7);
+    const g = c.createGain(); g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(0.07, now + T * 0.35); g.gain.linearRampToValueAtTime(0, now + T);
+    const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 420;
+    for (const [h, a] of [[1, 1], [2, 0.5], [3, 0.3], [5, 0.12]]) {
+      const o = c.createOscillator(); o.type = "sine";
+      o.frequency.setValueAtTime(f0 * h, now); o.frequency.linearRampToValueAtTime(f0 * h * 0.72, now + T);
+      const og = c.createGain(); og.gain.value = a; o.connect(og); og.connect(lp); o.start(now); o.stop(now + T + 0.1);
+    }
+    lp.connect(g); g.connect(R.bus); g.connect(AU.verbIn);
+  }
 }
