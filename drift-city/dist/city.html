@@ -13300,6 +13300,23 @@ function guideStop(taken) {
   guideCaption("");
   if (taken) { if (NAV.mode === "visit" && !roomNow()) flyOn(); showHint("You have control.", 2500); }
 }
+// A hidden tab (another tab in front, the phone locked, the app in the background) draws nothing already: the
+// browser stops the frame loop. The sound does not stop by itself, so suspend it, and hold a running tour (quietly,
+// as the menu does); both come back when the tab is seen again. Only what this handler stopped is restarted.
+const HIDDEN = { audio: false, tour: false };
+if (typeof document !== "undefined" && document.addEventListener) {
+  document.addEventListener("visibilitychange", () => {
+    const au = typeof AU !== "undefined" ? AU : null;
+    if (document.hidden) {
+      if (au && au.ctx && au.ctx.state === "running") { au.ctx.suspend(); HIDDEN.audio = true; }
+      if (GUIDE.on && !GUIDE.paused) { guidePause(true); HIDDEN.tour = true; }
+    } else {
+      if (HIDDEN.audio && au && au.ctx && au.on) au.ctx.resume();
+      if (HIDDEN.tour && GUIDE.on && GUIDE.paused) guideResume();
+      HIDDEN.audio = false; HIDDEN.tour = false;
+    }
+  });
+}
 
 // ---------- Conway's Life in the windows of the round towers ----------
 // One board, 64 columns round the tower (it wraps, as a cylinder should) by 40 floors from the top down (the top and

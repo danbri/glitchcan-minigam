@@ -775,6 +775,16 @@ greys into the haze. A first, weaker version changed almost nothing visible.
   below them on screen (from the bloom texture), for things within about 450 m. Compiles; not yet judged in a
   render (the runner's night switch does not finish while the clock is frozen).
 
+## A hidden tab (September 2026)
+
+Owner asked whether forgotten tabs keep running. The browser stops `requestAnimationFrame` in a hidden tab, so no
+frames are drawn and the GPU is idle; timers are slowed to about one call a second, later one a minute. The Web
+Audio oscillators (wind, drones, brass) and the tour's narration do NOT stop by themselves. `guide.js` ends with a
+`visibilitychange` handler: hidden suspends the AudioContext and holds a running tour (quietly, like the menu);
+shown resumes both, the tour from the start of the stop's words. It restarts only what it stopped: a tour the reader
+paused, or sound the reader turned off, stays so. Tested in a Node harness with a fake document and AudioContext
+(`/tmp`-style scratch, not committed); not tested on a phone.
+
 ## Size and the lite variant
 
 `scene.wgsl` is an ubershader of about 4,700 lines. Some mobile drivers fail to build it; the page then retries with
