@@ -191,6 +191,14 @@ so nothing has weight or inertia or can be pushed. The physics pass gives a firs
   by the next choice). Not `# AUDIO:`: in the FINK player that is the single looping background track, which would
   loop a line of dialogue. The FINK player ignores `# speech:` and shows the text. The Org's voice in the city is
   corny and polite; an Elder unfiltered is not. When a story gives them recorded voices, keep the two clearly apart.
+- Acted dialogue (the Per Aspera cast, `audio/cast/`): use `eleven_v3`, not `eleven_multilingual_v2`. The owner
+  called the v2 Dex takes "wooden... doesn't get the meaning, no flow": v2 reads each sentence flat and evenly. v3
+  acts inline directions in square brackets (`[scoffs]`, `[quietly]`, `[conspiratorial]`, `[laughs]`) and follows
+  the prompt's punctuation ("..." pauses, CAPITALS stress, a dash breaks). Write the prompt as the line performed,
+  with one or two directions at the turns in its meaning; the directions are not spoken. The story text stays
+  plain. v3 costs more (about 2,000 credits for Dex's 11 lines). The connector's own transcription of a take gave
+  back the prompt word for word, so use local Whisper (`pip install faster-whisper`, model `base.en`) to check
+  what a clip says. At most 5 generations run at once; the others fail with "Too many concurrent requests".
 
 ## Sound
 

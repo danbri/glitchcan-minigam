@@ -16,7 +16,12 @@ Every line is spoken indoors (the bars, the gate shed, the Warmhouse), so none g
 - Casting follows the owner's direction: mostly variations on English accents (regional, Scottish, Irish, European).
   No Welsh voice turned up in the library search, so Ruth is Geordie.
 - Made September 2026 with the ElevenLabs connector, `eleven_multilingual_v2`, one take each; about 3,780 credits.
+- Dex was made again with `eleven_v3` (about 2,000 credits), because the owner found the v2 takes "wooden... no
+  flow". v3 reads inline directions in square brackets (`[scoffs]`, `[softer, fond]`, `[conspiratorial]`) and acts
+  them, and it follows the punctuation of the prompt: "..." gives a pause, capitals give stress, a dash gives a
+  break. The directions are not spoken (checked with a local Whisper transcript). The prompts are in the flow on
+  ElevenLabs; each is the story line with directions added.
   The text spoken is the quoted speech of each story line; "Form 11-C" is spoken "Form eleven C".
 - Re-encoded to 48 kbps mono, 32 kHz (1.8 MB for all 37).
 - To change a line: change the story text, generate it again with the same voice, and keep the file name.
-- Nobody has listened to them inside this pipeline.
+- Nobody has listened to them inside this pipeline. The Dex takes were checked only by a machine transcript.

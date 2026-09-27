@@ -150,7 +150,7 @@ She puts a glass in front of you. "The set's still on. Midnight, in the bubble. 
 "The Org?" Dex leans on the bar. "It's the old ship's computer. The settlers built it to outlive them: talk in their voices, keep everything they knew. The Elders, they called it." # speech: ../audio/cast/dex-6.mp3
 "Ask it anything and you get a fridge magnet. Every day is a gift. Home is where the heart is. A hundred years of that, and everyone thought the founders were just like that." # speech: ../audio/cast/dex-7.mp3
 "They weren't. It's the clock. It can't tell an Earth year from a Saturn year from a Titan day, so it thinks the founders are ancient history and keeps them dignified. Set its clock back and they talk straight." # speech: ../audio/cast/dex-8.mp3
-"The signal tower in the financial district is its ear. The mast lights blink how to do it, every night, in dots and dashes. And put the clock back right after, or we all freeze." # speech: ../audio/cast/dex-9.mp3
+"The signal tower, in the financial district: that's its ear. The mast lights blink how to do it, every night, in dots and dashes. And put the clock back right after, or we all freeze." # speech: ../audio/cast/dex-9.mp3
 + [Back to Ferry Street] -> street
 
 === dex_where ===
