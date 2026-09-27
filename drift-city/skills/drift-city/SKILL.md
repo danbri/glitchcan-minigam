@@ -549,6 +549,39 @@ the master.
   the key, quality], the four parts, the lead's range and how often it plays) and, if needed, a new instrument
   function beside `vSax`.
 
+## A room that breathes: tunes, applause, crowd, lights on the beat (September 2026)
+
+Owner, on a phone: the rooms were "eerily empty" and "motionless". What was added (no new geometry):
+
+- Tunes end (`VENUE_SHAPE` in venue.js): each band plays `tune` bars, stops for `gap` seconds, the room claps, the
+  talk comes up, the live bands (cellar, club) count the next tune in on the rim, at a tempo 8% either side. The
+  jukebox only changes its record (no applause).
+- Crowd sound: three two-second ElevenLabs sound effects (`audio/crowd`, model `eleven_text_to_sound_v2`) played as
+  overlapping grains of about a second, from random points, at 0.9 to 1.1 speed, panned, three a second. The
+  connector gives no length setting: asking for "20 seconds" in the prompt returned two seconds each time (three
+  tries), so a plain loop would repeat audibly; the grains hide that. Level per room in `VENUE_CROWD`; the club goes
+  quiet while the trio plays. Applause is one three-second clip played twice, the second copy slower and later.
+  Whisper hears "Thank you" / "Thanks for watching" in these: its usual hallucination on noise, not words.
+- The band's position reaches the GPU as one float, `ev.wx.w` (`EVN[211]`): beats since the room began while a tune
+  plays (mod 512), -1 to -2 through the break, -1 outside rooms. With the sound off, `venueBand` runs the same
+  shape on the page clock, so the lights still move. `rmBand()` in scene.wgsl unpacks it.
+- `rmLight` wraps the fixed lamps (`rmLight0`): the stage key takes a colour every two bars and lifts on the beat;
+  footlights pulse; house lights come up in the break while the stage dims; candles and lanterns flicker; the
+  jukebox's light turns through its colours. `rmBeam` wraps `rmBeam0`: stage beams swing; the club has two
+  follow-spots from the dome ribs, dark in the break; the cellar gets a coloured wash while the band plays.
+- Story people nod on the beat (three in four, each a little early or late); a drummer's sticks land on it.
+- Test: `/tmp/claude-0/band.mjs`-style Node harness with a mock AudioContext (Proxy nodes that record `start`):
+  a 48-bar cellar tune ended at 87.7 s, applause started, the break ran 6 s, the next tune came in faster.
+
+Staging ideas the owner raised for busy scenes (not built; for the scene-staging work):
+
+- More scripted scenes are fine: playable cut scenes, fixed shots.
+- A play within a play: the room fills with tiny drones and flickering holographic projections (the Leia kind)
+  that grow to fill the room with light and action. Being projections, they may overlap and pass through things
+  and each other; the world explains it (as if ZX Spectrum attribute clash were blamed on a virus).
+- The main characters on a balcony high above the crowd: the crowd is far below, dim and repeated, and cheap.
+- An episode told as a freeze-framed graphic novel: three to five held moments.
+
 ## Feeling the choices (`src/feel.js`)
 
 A thumb slid over the story's choices feels which one it is on, so a player can choose while watching the city:

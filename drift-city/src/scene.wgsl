@@ -1077,6 +1077,7 @@ fn propPerson(q0: vec3f, prm: f32) -> vec2f {
   let tall = 0.95 + 0.1 * hsh(hs, 2, 902);
   let q = vec3f(q0.x / build, q0.y / tall, q0.z / build);
   let t = u.time + gPH * 40.0;
+  let band = rmBand();
   // breathing, and a slow shift of weight from foot to foot
   let br = 0.008 * sin(t * 1.3);
   let sway = 0.018 * sin(t * 0.23);
@@ -1126,7 +1127,10 @@ fn propPerson(q0: vec3f, prm: f32) -> vec2f {
     var hand = vec3f(0.19 * sg, -0.02, 0.1);
     if (lean) { hand = vec3f(0.17 * sg, 0.12, 0.34); }
     if (sit && pose != 4) { hand = select(vec3f(-0.12, 0.08, 0.26), vec3f(0.14, 0.2, 0.3), lg == 1); }
-    if (pose == 4) { hand = vec3f(0.2 * sg, 0.12 + 0.07 * sin(t * 9.0 + f32(lg) * 2.4), 0.3); }
+    if (pose == 4) {
+      let hit = select(0.5 + 0.5 * sin(t * 9.0 + f32(lg) * 2.4), 1.0 - exp(-fract(band.w * 2.0 + f32(lg) * 0.5) * 6.0), band.x > 0.5);
+      hand = vec3f(0.2 * sg, 0.05 + 0.14 * hit, 0.3);
+    }
     let el = ik2(sh, hand, 0.29, 0.27, normalize(vec3f(0.4 * sg, -0.3, -1.0)));
     let arm = smin(sdRC(ub, sh, el, 0.064, 0.056), sdRC(ub, el, hand, 0.056, 0.048), 0.03);
     r = pU(r, vec2f(arm, 20.0));
@@ -1141,7 +1145,10 @@ fn propPerson(q0: vec3f, prm: f32) -> vec2f {
   // neck, head and face: jaw, cheekbones, nose, brow, ears; eyes set in; hair or a hat
   let nq = ub - vec3f(0.0, 0.52, 0.0);
   r = pU(r, vec2f(sdRC(nq, vec3f(0.0, 0.0, 0.0), vec3f(0.0, 0.11, 0.015), 0.052, 0.046), 21.0));
-  let tilt = 0.05 * sin(t * 0.4) - spine * 0.6;
+  // in a venue while the band plays, most heads nod on the beat (each a little late or early), and the drummer's
+  // sticks come down on it
+  let nod = band.x * exp(-fract(band.w + 0.08 * (hsh(hs, 12, 912) - 0.5)) * 4.0) * select(0.0, 0.09, hsh(hs, 11, 911) < 0.75);
+  let tilt = 0.05 * sin(t * 0.4) - spine * 0.6 - nod;
   let hy = rot2(vec2f(nq.y - 0.22, nq.z - 0.02), tilt);
   let hq0 = vec3f(nq.x, hy.x, hy.y);
   let turn = 0.25 * sin(t * 0.17 + gPH * 9.0);
@@ -6317,7 +6324,39 @@ fn rmNormal(q: vec3f, k: i32) -> vec3f {
 }
 // the lights of each room: position (local) and colour times strength; the first one casts a soft shadow. Warm
 // against cold in every room: tungsten and candle against a window, a porthole or a stair.
+// the band (venue.js, through ev.wx.w): x playing (0 between tunes), y a pulse on each beat, z the bar, w the beat
+fn rmBand() -> vec4f {
+  let w = ev.wx.w;
+  let play = step(0.0, w);
+  let beat = max(w, 0.0);
+  return vec4f(play, exp(-fract(beat) * 5.0) * play, floor(beat / 4.0), beat);
+}
+// the stage's colour, changed every two bars: amber, rose, deep blue, warm white
+fn rmStageCol(n: f32) -> vec3f {
+  let i = i32(n) & 3;
+  if (i == 0) { return vec3f(1.0, 0.62, 0.25); }
+  if (i == 1) { return vec3f(1.0, 0.3, 0.55); }
+  if (i == 2) { return vec3f(0.35, 0.45, 1.0); }
+  return vec3f(1.0, 0.9, 0.75);
+}
+// the lamps as the music moves them: the stage key changes colour with the tune and lifts on the beat, the
+// footlights pulse, the house lights come up between tunes while the stage dims, candles and lanterns flicker,
+// and the jukebox's light turns through its colours
 fn rmLight(k: i32, i: i32) -> array<vec3f, 2> {
+  var L = rmLight0(k, i);
+  let B = rmBand();
+  let gap = select(0.0, 1.0, ev.wx.w < -0.5);
+  if ((k == 3 || k == 4) && i == 0) {
+    let c = mix(vec3f(1.0), rmStageCol(floor(B.z / 2.0) + f32(k)) * 1.5, 0.5);
+    L[1] = L[1] * mix(vec3f(0.5), c * (0.85 + 0.4 * B.y), B.x);
+  }
+  if (k == 4 && i == 1) { L[1] *= mix(0.35, 0.9 + 0.6 * B.y, B.x); }
+  if ((k == 4 && i == 5) || (k == 3 && i == 3)) { L[1] *= 1.0 + 2.5 * gap; }
+  if ((k == 4 && i >= 2 && i <= 4) || (k == 3 && (i == 1 || i == 2))) { L[1] *= 0.9 + 0.1 * sin(u.time * (11.0 + f32(i) * 3.7)) * sin(u.time * 7.3 + f32(i)); }
+  if (k == 1 && i == 4) { L[1] = (hue3(fract(u.time * 0.04)) * 0.8 + 0.2) * 1.5 * (0.7 + 0.5 * B.y + 0.3 * B.x); }
+  return L;
+}
+fn rmLight0(k: i32, i: i32) -> array<vec3f, 2> {
   let z = array<vec3f, 2>(vec3f(0.0, -50.0, 0.0), vec3f(0.0));
   switch k {
     case 1: {
@@ -6358,8 +6397,32 @@ fn rmLight(k: i32, i: i32) -> array<vec3f, 2> {
     }
   }
 }
-// beams in the haze under the lamps: apex, axis, cosine of the half angle, colour
+// beams in the haze under the lamps: apex (w: its own distance falloff, 0 for the usual 0.35), axis, cosine of the
+// half angle, colour
+// the stage beams swing slowly and take the stage's colour while the band plays; in the club two follow-spots from
+// the dome ribs sweep the stand, and go dark between tunes
 fn rmBeam(k: i32, i: i32) -> array<vec4f, 3> {
+  var b = rmBeam0(k, i);
+  let B = rmBand();
+  if ((k == 3 || k == 4) && i == 0) {
+    let a = 0.28 * sin(u.time * 0.37) * B.x;
+    let ax = b[1].xyz;
+    b[1] = vec4f(ax.x * cos(a) - ax.z * sin(a), ax.y, ax.x * sin(a) + ax.z * cos(a), b[1].w);
+    b[2] = vec4f(b[2].xyz * mix(vec3f(0.6), mix(vec3f(1.0), rmStageCol(floor(B.z / 2.0) + f32(k)), 0.6) * (0.9 + 0.4 * B.y), B.x), 0.0);
+  }
+  if (k == 4 && (i == 1 || i == 2)) {
+    let sg = select(-1.0, 1.0, i == 2);
+    let ap = vec3f(9.0, 9.2, 6.5 * sg);
+    let aim = vec3f(18.6, 1.4, 1.8 * sin(u.time * 0.23 + sg * 1.7) + 0.6 * sg);
+    b = array<vec4f, 3>(vec4f(ap, 0.012), vec4f(normalize(aim - ap), 0.965), vec4f(select(vec3f(1.0, 0.45, 0.7), vec3f(1.0, 0.8, 0.5), i == 2) * 2.5 * B.x, 0.0));
+    if (B.x < 0.5) { b[1].w = 2.0; }
+  }
+  if (k == 3 && i == 1 && B.x > 0.5) {
+    b = array<vec4f, 3>(vec4f(7.5, 2.85, 0.0, 0.0), vec4f(normalize(vec3f(3.0, -1.6, 0.4 * sin(u.time * 0.31))), 0.93), vec4f(rmStageCol(floor(B.z / 2.0) + 1.0) * 2.5 * (0.8 + 0.4 * B.y), 0.0));
+  }
+  return b;
+}
+fn rmBeam0(k: i32, i: i32) -> array<vec4f, 3> {
   let none = array<vec4f, 3>(vec4f(0.0), vec4f(0.0, -1.0, 0.0, 2.0), vec4f(0.0));
   if (k == 1) {
     if (i == 0) { return array<vec4f, 3>(vec4f(3.0, 2.36, 1.55, 0.0), vec4f(0.0, -1.0, 0.0, 0.72), vec4f(1.0, 0.72, 0.42, 0.0)); }
@@ -6802,7 +6865,7 @@ fn roomRender(ro: vec3f, rd: vec3f, px: vec2f) -> vec4f {
       let v = sp - B[0].xyz;
       let dl = length(v);
       let cs = dot(v / max(dl, 1e-3), B[1].xyz);
-      beams += B[2].xyz * smoothstep(B[1].w, B[1].w + 0.06, cs) / (1.0 + dl * dl * 0.35);
+      beams += B[2].xyz * smoothstep(B[1].w, B[1].w + 0.06, cs) / (1.0 + dl * dl * select(0.35, B[0].w, B[0].w > 0.0));
     }
   }
   col += beams * tb / 10.0 * hazeK * select(3.0, 5.0, k == 3);
