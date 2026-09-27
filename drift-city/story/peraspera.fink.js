@@ -103,16 +103,16 @@ In the Chinatown night market tonight a tea-stall keeper has sent an old drone i
 # scene: mags
 ~ heard_mags = true
 The Cold Tap is a dive bar behind an airlock: nine stools, a heater that ticks, and a price list older than the dome. You crack your helmet seal. The air smells of hops and hot metal.
-"Nuala was in at noon," Mags says, and wipes the bar. "Sat where you're sitting. Drank one whisky, very slow, and didnae say a word." # voice: mags
-"Then an Org clerk came in with a tablet and she signed something. Folk are saying she's taken a seat home. Passage paid." # voice: mags
-She puts a glass in front of you. "The set's still on. Midnight, in the bubble. Ruth says it goes ahead with or without her." # voice: mags
-"And the Assembly votes on the lamps at dawn, so the whole street's in a mood." # voice: mags
+"Nuala was in at noon," Mags says, and wipes the bar. "Sat where you're sitting. Drank one whisky, very slow, and didnae say a word." # speech: ../audio/cast/mags-1.mp3
+"Then an Org clerk came in with a tablet and she signed something. Folk are saying she's taken a seat home. Passage paid." # speech: ../audio/cast/mags-2.mp3
+She puts a glass in front of you. "The set's still on. Midnight, in the bubble. Ruth says it goes ahead with or without her." # speech: ../audio/cast/mags-3.mp3
+"And the Assembly votes on the lamps at dawn, so the whole street's in a mood." # speech: ../audio/cast/mags-4.mp3
 + [Ask what the Asters will say] -> mags_asters
 + [Thank her and go] -> street
 
 === mags_asters ===
-"The Asters?" Mags laughs. "Half of them think Nuala hung the stars. They're up at five doing press-ups, they teach their own weans at home, and they've more kids than anybody. Folk say they've a store of oxygen and printer plastic under the Low Orbit. Dex says that's rubbish." # voice: mags
-"Ask at the Low Orbit. Dex will tell you the whole creed, whether you want it or no." # voice: mags
+"The Asters?" Mags laughs. "Half of them think Nuala hung the stars. They're up at five doing press-ups, they teach their own weans at home, and they've more kids than anybody. Folk say they've a store of oxygen and printer plastic under the Low Orbit. Dex says that's rubbish." # speech: ../audio/cast/mags-5.mp3
+"Ask at the Low Orbit. Dex will tell you the whole creed, whether you want it or no." # speech: ../audio/cast/mags-6.mp3
 + [Back to the street] -> street
 
 === low_orbit ===
@@ -137,26 +137,26 @@ She puts a glass in front of you. "The set's still on. Midnight, in the bubble. 
 === dex ===
 # scene: dex
 ~ heard_dex = true
-"Ad astra per aspera," Dex says. "To the stars, through hardship. Old words. We took them." # voice: dex
-"The Org wants everybody gone home. Posters on every tower, seats paid, Earth tax credit. Earth's the past, innit. We're not going back. We're going out: the long ships, the next moon, the next star. The hard way." # voice: dex
-"So we train. Every morning, before the pads open. The kids learn at home: orbital mechanics, hydroponics, welding, cooking for forty. One of you works the pads, one of you keeps the house, and you have kids. Lots. You don't fill a star system with two-point-one." # voice: dex
-"The oxygen? People like a story." He doesn't say no. # voice: dex
-"Nuala played our first night, in the Warmhouse. She taught us the rooftop thing: every launch, lamps up on the roofs so the crews can see them go." # voice: dex
+"Ad astra per aspera," Dex says. "To the stars, through hardship. Old words. We took them." # speech: ../audio/cast/dex-1.mp3
+"The Org wants everybody gone home. Posters on every tower, seats paid, Earth tax credit. Earth's the past, innit. We're not going back. We're going out: the long ships, the next moon, the next star. The hard way." # speech: ../audio/cast/dex-2.mp3
+"So we train. Every morning, before the pads open. The kids learn at home: orbital mechanics, hydroponics, welding, cooking for forty. One of you works the pads, one of you keeps the house, and you have kids. Lots. You don't fill a star system with two-point-one." # speech: ../audio/cast/dex-3.mp3
+"The oxygen? People like a story." He doesn't say no. # speech: ../audio/cast/dex-4.mp3
+"Nuala played our first night, in the Warmhouse. She taught us the rooftop thing: every launch, lamps up on the roofs so the crews can see them go." # speech: ../audio/cast/dex-5.mp3
 + [Ask where Nuala is] -> dex_where
 + [Back to Ferry Street] -> street
 
 === dex_org ===
 ~ know_mast = true
-"The Org?" Dex leans on the bar. "It's the old ship's computer. The settlers built it to outlive them: talk in their voices, keep everything they knew. The Elders, they called it." # voice: dex
-"Ask it anything and you get a fridge magnet. Every day is a gift. Home is where the heart is. A hundred years of that, and everyone thought the founders were just like that." # voice: dex
-"They weren't. It's the clock. It can't tell an Earth year from a Saturn year from a Titan day, so it thinks the founders are ancient history and keeps them dignified. Set its clock back and they talk straight." # voice: dex
-"The signal tower in the financial district is its ear. The mast lights blink how to do it, every night, in dots and dashes. And put the clock back right after, or we all freeze." # voice: dex
+"The Org?" Dex leans on the bar. "It's the old ship's computer. The settlers built it to outlive them: talk in their voices, keep everything they knew. The Elders, they called it." # speech: ../audio/cast/dex-6.mp3
+"Ask it anything and you get a fridge magnet. Every day is a gift. Home is where the heart is. A hundred years of that, and everyone thought the founders were just like that." # speech: ../audio/cast/dex-7.mp3
+"They weren't. It's the clock. It can't tell an Earth year from a Saturn year from a Titan day, so it thinks the founders are ancient history and keeps them dignified. Set its clock back and they talk straight." # speech: ../audio/cast/dex-8.mp3
+"The signal tower in the financial district is its ear. The mast lights blink how to do it, every night, in dots and dashes. And put the clock back right after, or we all freeze." # speech: ../audio/cast/dex-9.mp3
 + [Back to Ferry Street] -> street
 
 === dex_where ===
 ~ know_gate = true
-"If she's taken the Org's seat," Dex says quietly, "she'll be at gate 3 by now, sitting with it. That's where you go to make your mind up." # voice: dex
-"Tell her the roof's still up there. That's all." # voice: dex
+"If she's taken the Org's seat," Dex says quietly, "she'll be at gate 3 by now, sitting with it. That's where you go to make your mind up." # speech: ../audio/cast/dex-10.mp3
+"Tell her the roof's still up there. That's all." # speech: ../audio/cast/dex-11.mp3
 + [Back to Ferry Street] -> street
 
 === cellar ===
@@ -181,17 +181,17 @@ She puts a glass in front of you. "The set's still on. Midnight, in the bubble. 
 # scene: oskar
 ~ heard_oskar = true
 You unpack the bass and sit in for one tune. Oskar opens his eyes at the first note and grins.
-"Your bass is loud in here," he says afterwards. "Out in Titan air it would be louder. Thick air moves easily. The same cone, the same string, and nine decibels more bass. That is physics." # voice: oskar
-"Nuala built a horn for Titan air. A bellows that breathes the outside air and blows it through the pipe. Out there it plays nearly a seventh lower than in here. She was saving it for a tune." # voice: oskar
+"Your bass is loud in here," he says afterwards. "Out in Titan air it would be louder. Thick air moves easily. The same cone, the same string, and nine decibels more bass. That is physics." # speech: ../audio/cast/oskar-1.mp3
+"Nuala built a horn for Titan air. A bellows that breathes the outside air and blows it through the pipe. Out there it plays nearly a seventh lower than in here. She was saving it for a tune." # speech: ../audio/cast/oskar-2.mp3
 + [Ask him to play the Warmhouse] -> oskar_ask
 + [Back to Ferry Street] -> street
 
 === oskar_ask ===
 {nuala == "gone":
-    "Without Nuala?" Oskar shakes his head. "No. I play the jam. The jam doesn't leave." # voice: oskar
+    "Without Nuala?" Oskar shakes his head. "No. I play the jam. The jam doesn't leave." # speech: ../audio/cast/oskar-3.mp3
 - else:
     ~ oskar_in = true
-    "Midnight," Oskar says, and packs his brushes. "I'll be there. If she comes, she comes." # voice: oskar
+    "Midnight," Oskar says, and packs his brushes. "I'll be there. If she comes, she comes." # speech: ../audio/cast/oskar-4.mp3
 }
 + [Back to Ferry Street] -> street
 
@@ -224,8 +224,8 @@ You unpack the bass and sit in for one tune. Oskar opens his eyes at the first n
 ~ found_nuala = true
 The emigration gate is a heated shed on the apron, rows of seats, and a clerk from the Org behind glass. Through the window the ship for Earth stands on its pad under lights.
 Nuala Fenn sits in the front row with her horn case across her knees and a voucher in her hand. The torn half.
-"Clerk Pell says I can still change my mind until dawn," she says, without looking round. "He has a form for it." # voice: nuala
-"Form 11-C," says Pell, behind the glass. "Cancellation of passage, voluntary. It needs to be signed off." # voice: pell
+"Clerk Pell says I can still change my mind until dawn," she says, without looking round. "He has a form for it." # speech: ../audio/cast/nuala-1.mp3
+"Form 11-C," says Pell, behind the glass. "Cancellation of passage, voluntary. It needs to be signed off." # speech: ../audio/cast/pell-1.mp3
 -> gate_talk
 
 === gate_talk ===
@@ -240,62 +240,62 @@ Nuala Fenn sits in the front row with her horn case across her knees and a vouch
 + [Ask her to play one last set first] -> nuala_decide
 
 === nuala_why ===
-"Twenty years in a suit," Nuala says. "I want to stand in rain. I want to play in a room that isn't a bubble. My sister has a garden." # voice: nuala
-"And the Asters want me to be a star on a ceiling. I'm tired, love." # voice: nuala
+"Twenty years in a suit," Nuala says. "I want to stand in rain. I want to play in a room that isn't a bubble. My sister has a garden." # speech: ../audio/cast/nuala-2.mp3
+"And the Asters want me to be a star on a ceiling. I'm tired, love." # speech: ../audio/cast/nuala-3.mp3
 -> gate_talk
 
 === show_voucher ===
 ~ voucher = false
 ~ pull = pull + 1
-She puts the two halves together. They fit. "Keep it," she says. "Whichever way I go, somebody should keep it." # voice: nuala
+She puts the two halves together. They fit. "Keep it," she says. "Whichever way I go, somebody should keep it." # speech: ../audio/cast/nuala-4.mp3
 -> gate_talk
 
 === show_setlist ===
 ~ setlist = false
 ~ shown_setlist = true
 ~ pull = pull + 1
-She reads the last line and laughs. "Outside. Down a seventh. I wrote that at three in the morning. Is it any good?" # voice: nuala
+She reads the last line and laughs. "Outside. Down a seventh. I wrote that at three in the morning. Is it any good?" # speech: ../audio/cast/nuala-5.mp3
 "It needs a bass to lead it," you say. # voice: you
 -> gate_talk
 
 === show_reed ===
 ~ reed = false
 ~ pull = pull + 1
-She turns the reed over. "Split. I threw that away." A long breath. "Oskar kept it, didn't he." # voice: nuala
+She turns the reed over. "Split. I threw that away." A long breath. "Oskar kept it, didn't he." # speech: ../audio/cast/nuala-6.mp3
 -> gate_talk
 
 === show_patch ===
 ~ patch = false
 ~ pull = pull + 1
-She holds the patch for a long time. "First night," she says. "Forty people and a heater that kept tripping. We played till the bubble fogged up." # voice: nuala
+She holds the patch for a long time. "First night," she says. "Forty people and a heater that kept tripping. We played till the bubble fogged up." # speech: ../audio/cast/nuala-7.mp3
 -> gate_talk
 
 === show_tape ===
 ~ tape = false
 ~ pull = pull + 1
-The tape plays through both your helmets: the Warmhouse, years ago, a crowd singing along to a tune they didn't know yet. Nuala shuts her eyes. # voice: nuala
+The tape plays through both your helmets: the Warmhouse, years ago, a crowd singing along to a tune they didn't know yet. Nuala shuts her eyes.
 -> gate_talk
 
 === show_elder ===
 ~ told_elder = true
 ~ pull = pull + 1
-"Harriet said that?" Nuala laughs for the first time tonight. "A cargo slot with a chair in it. That's her. That's exactly her. I didn't know the Org could still sound like her." # voice: nuala
+"Harriet said that?" Nuala laughs for the first time tonight. "A cargo slot with a chair in it. That's her. That's exactly her. I didn't know the Org could still sound like her." # speech: ../audio/cast/nuala-8.mp3
 -> gate_talk
 
 === nuala_go ===
 ~ nuala = "gone"
-"Thank you," she says, and she means it. "Play the set. Play it well." She walks to the glass, and Pell stamps something. # voice: nuala
+"Thank you," she says, and she means it. "Play the set. Play it well." She walks to the glass, and Pell stamps something. # speech: ../audio/cast/nuala-9.mp3
 -> street
 
 === nuala_decide ===
 {pull >= 2:
     ~ nuala = "stays"
-    Nuala stands and puts the voucher on Pell's desk. "Form 11-C," she says. "I'll sign it after the set." # voice: nuala
-    "It needs a sign-off," says Pell. # voice: pell
-    "Then sign it off." She picks up the horn case. # voice: nuala
+    Nuala stands and puts the voucher on Pell's desk. "Form 11-C," she says. "I'll sign it after the set." # speech: ../audio/cast/nuala-10.mp3
+    "It needs a sign-off," says Pell. # speech: ../audio/cast/pell-2.mp3
+    "Then sign it off." She picks up the horn case. # speech: ../audio/cast/nuala-11.mp3
 - else:
     ~ nuala = "farewell"
-    "One last set," Nuala says. "Then the ship." She picks up the horn case. "Don't make it sad." # voice: nuala
+    "One last set," Nuala says. "Then the ship." She picks up the horn case. "Don't make it sad." # speech: ../audio/cast/nuala-12.mp3
 }
 + [Go up to the Warmhouse together] -> below
 
@@ -382,7 +382,7 @@ You key the date back the Org's way. Harriet has time to say "Tell them I was fu
     The car docks, the lock cycles, and you take your helmet off under the open sky. Warm air. Grass. Beer. Bulbs strung round the square, and the club's dome glowing in the middle.
     In here, sound is Earth sound: the voices, the glasses, the bass. The Asters come in with their cracked stars and fill the room.
 }
-"Midnight," Ruth says. "Room's full. Who's playing?" # voice: ruth
+"Midnight," Ruth says. "Room's full. Who's playing?" # speech: ../audio/cast/ruth-1.mp3
 {nuala == "stays" or nuala == "farewell": Nuala is on the stand with her horn. {oskar_in: Oskar is behind the kit.}}
 {nuala == "" or nuala == "gone": The front of the stand is empty where Nuala should be. {oskar_in: Oskar sits behind the kit and waits for you.}}
 + {clock_back and back_for >= 2} [Play the set] -> ending_cold
@@ -391,7 +391,7 @@ You key the date back the Org's way. Harriet has time to say "Tell them I was fu
 + {not (clock_back and back_for >= 2) and (nuala == "" or nuala == "gone")} [Play the set without her] -> ending_empty
 
 === set_stays ===
-The first set goes like a first night. When it ends, Nuala looks at you and at the setlist in her head. "The last tune," she says. "Inside, or out?" # voice: nuala
+The first set goes like a first night. When it ends, Nuala looks at you and at the setlist in her head. "The last tune," she says. "Inside, or out?" # speech: ../audio/cast/nuala-13.mp3
 + [Play it inside, for the room] -> ending_aspera
 + {pull >= 3 and shown_setlist} [Open the deck hatch and play it out into Titan air] -> ending_low
 

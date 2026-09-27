@@ -221,6 +221,10 @@ description of the surroundings that `audioWorld` in `main.js` builds twice a se
 - **Footfalls by kind**, at rates in proportion to the walker mix: `auClank` (exoskeleton), `auServo` (android),
   `auBoots` (weighted boots), `auCape` (glider), `auBuzz` (pet drone). The skaters' cables and the dorms are looping
   sources; `audioWorld` finds the real cables with the same hash as `pedPulley`, and the nearest dorm block (zone 6).
+- **Recorded voices**: Per Aspera's whole cast speaks recorded lines (`audio/cast/`, 37 clips, cast by accent, see
+  its README), and the Org and Elder Harriet theirs (`audio/org/`), all through `# speech:`. The Lamplighter still
+  uses the made-up radio syllables (`auPhrase`): they carry no words, by design, and were taken for unintelligible
+  chatter by the owner, which is what they are.
 - **Voice casting** (owner direction, September 2026): almost all voices are variations on English accents:
   English regional and plenty of Multicultural London English, Scottish, Welsh, Irish, and European-accented English;
   some Australian and New Zealand, Canadian, and US.
