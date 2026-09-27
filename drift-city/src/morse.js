@@ -1,6 +1,6 @@
 // ---------- Morse: one key for the whole city ----------
 // The red lights on some masts and the faint tone on the radio layer key the same Morse, in step: the Asters'
-// messages, in English and in toki pona, round and round (a story can put its own message in MORSE.override).
+// messages, in English and in the Asters' own words, round and round (a story can put its own message in MORSE.override).
 // A dot is one unit (0.14 s, about 9 words a minute), a dash three; one unit between marks, three between letters,
 // seven between words, and a pause between messages. EVN[209] carries the key to the shader (after computeEvents).
 const MORSE_CODE = {
@@ -9,7 +9,7 @@ const MORSE_CODE = {
   Y: "-.--", Z: "--..", 0: "-----", 1: ".----", 2: "..---", 3: "...--", 4: "....-", 5: ".....", 6: "-....", 7: "--...",
   8: "---..", 9: "----.",
 };
-const MORSE = { unit: 0.14, messages: ["AD ASTRA PER ASPERA", "O TAWA MUN", "KON SELI", "TOKI PONA"], override: null, plan: null, key: 0, text: "" };
+const MORSE = { unit: 0.14, messages: ["AD ASTRA PER ASPERA", "O TAWA MUN", "KON SELI"], override: null, plan: null, key: 0, text: "" };
 // a message as on/off runs, in units: [[on, length], ...], ending in the pause before the next
 function morsePlan(text) {
   const runs = [];

@@ -847,7 +847,7 @@ function gateEnter(sound) {
 }
 // captions during the descent, then the title
 const INTRO_CAPS = [[0.8, 5.0, "Titan. Year 212 of the settlement."], [5.6, 10.0, "The heat tariff has risen eleven quarters running."],
-  [10.6, 15.0, "The Org still keeps the city breathing. Mostly."], [15.6, 20.5, "Tonight the Assembly votes to put out the last open flames."]];
+  [10.6, 15.0, "The Org still keeps the city breathing. Mostly."], [15.6, 20.5, "Tonight the Assembly votes to shut the last unlicensed oxygen stores."]];
 function introCaptions() {
   const a = clock - INTRO.t0, cap = document.getElementById("introCap"), card = document.getElementById("introCard");
   if (!cap || !cap.classList) return;

@@ -18,5 +18,9 @@ the end), and shows the same words as a caption.
 - Checked by machine: a local Whisper transcript of lines 11, 14 and 18 matches the text. Nobody has listened to them
   inside this pipeline.
 
+- Lines 05, 11, 12 and 18 were made again (September 2026) after text changes: the pagoda's flames now come from
+  an unlicensed oxygen store, the tour no longer names the Asters' language, and the Life line names the neighbour
+  colours and the glider guns. A local Whisper transcript (faster-whisper, base.en) of the four matches the text.
+
 To change a line: change its text in `GUIDE_LINES`, generate it again with the same voice and model, re-encode, put
 it at the same number, and update its `GUIDE_DUR` entry.
