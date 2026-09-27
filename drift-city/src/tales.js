@@ -46,6 +46,15 @@ function buildPlaces() {
     add("fab", "Hive battlements, over the pod fab", "Below, the fab that makes the Hive's capsule homes, fed by a beam from the power station in orbit: a white line through the clouds, day and night.",
       { x, y: 252, z, yaw: Math.atan2(FAB_C[1] - z, FAB_C[0] - x), pitch: -0.42 });
   }
+  // the Warmhouse: inside, on its square; and from the ground to the east, the whole bubble over the city's edge
+  {
+    const c = BUB_C, a = 0.35, r = 30, x = c[0] + Math.cos(a) * r, z = c[2] + Math.sin(a) * r;
+    add("warmhouse", "The Warmhouse, the square", "Inside the bubble the air is warm and thin, and smells of Earth: grass, bread, beer. Lights are strung round the square; the club's dome glows in the middle.",
+      { x, y: c[1] - 95 + 2.5 + 1.7, z, yaw: a + 0.5, pitch: 0.2 });
+    const gx = c[0] - 620, gz = c[2] + 160;
+    add("warmhouse_below", "Under the Warmhouse", "A bubble of warm air, 340 m across, hangs over the west edge of the city ahead on four cables. It floats because it is lighter than the cold, dense air around it.",
+      { x: gx, y: Math.max(terrSurfAt(gx, gz), 0) + 1.7, z: gz, yaw: Math.atan2(c[2] - gz, c[0] - gx), pitch: 0.42 });
+  }
   // Chinatown's pagoda: placed (PAGODA_CELL in world.js), so its view is too
   {
     const cx = wrapS(PAGODA_CELL[0]), cz = wrapS(PAGODA_CELL[1]);
