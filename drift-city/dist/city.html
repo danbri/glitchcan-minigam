@@ -9157,18 +9157,19 @@ function placePages(act, title) {
   return { title, items: () => placeGroups().map(([g, ps]) => ({ label: g, detail: String(ps.length), sub: () => ({ title: g, items: () => ps.map((p) => ({ label: p.name.split(",")[0], act: () => act(p) })) }) })) };
 }
 function menuRoot() {
-  const story = TALE.on ? "open" : (TALE.story || taleFetch(TALE_KEY)) ? "paused" : "";
+  const story = TALE.on ? "open" : (TALE.story || taleFetch(taleKey())) ? "paused" : "";
   const times = [["Day", 0], ["Dusk", 1], ["Night", 2], ["Methane snow", 3]];
   return {
     title: "Menu",
     items: () => [
       { label: "Return to opening", act: () => { closeGoPanel(); if (TALE.on) taleClose(); introStart(); } },
-      { label: "Story", detail: story, sub: () => ({ title: "Story: The Lamplighter's Last Round", items: () => [
-        { label: TALE.on ? "Close the story" : TALE.story || taleFetch(TALE_KEY) ? "Resume the story" : "Play the story", act: () => { closeGoPanel(); taleToggle(); } },
+      { label: "Story", detail: story, sub: () => ({ title: "Story: " + taleDef().title, items: () => [
+        { label: TALE.on ? "Close the story" : TALE.story || taleFetch(taleKey()) ? "Resume the story" : "Play the story", act: () => { closeGoPanel(); taleToggle(); } },
         { label: "Start again", act: () => { closeGoPanel(); taleRestart(); } },
         { label: "Clues as choices (for reading without the view)", check: TALE.textClues, act: () => { TALE.textClues = !TALE.textClues; taleStore("drift.textClues", TALE.textClues); if (TALE.story && TALE.scene) { TALE.story.ChoosePathString(TALE.scene); taleAdvance(); } renderMenu(); } },
         { label: "Feel the choices: slide a thumb over them, lift to choose", check: FEEL.on, act: () => { FEEL.on = !FEEL.on; taleStore("drift.feel", FEEL.on); feelArm(); renderMenu(); } },
-        { label: "Put the story panel back in its usual place", act: () => { taleResetGeom(); closeGoPanel(); } }] }) },
+        { label: "Put the story panel back in its usual place", act: () => { taleResetGeom(); closeGoPanel(); } },
+        ...TALES.filter((t) => t.id !== TALE.cur).map((t) => ({ label: "Play another story: " + t.title, detail: taleFetch(t.key) ? "saved" : "", act: () => { closeGoPanel(); taleSwitch(t.id); } }))] }) },
       { label: "Travel", detail: NAV.mode === "trip" ? "on the way" : "", sub: () => ({ ...destPages((d) => goTo(d.id), "Travel"), items: () => [...destPages((d) => goTo(d.id), "Travel").items(), { label: "Grand tour", check: !!NAV.tour, act: () => goTo("tour") }] }) },
       { label: "City map", act: () => { closeGoPanel(); mapOpen(); } },
       { label: "Places in the city", sub: () => placePages((p) => { closeGoPanel(); taleGo(p.id); if (!TALE.on) showHint(p.name + ". " + p.blurb, 6000); }, "Places in the city") },
@@ -9571,6 +9572,8 @@ const AU_VOICES = {
   bo: [195, 1.2, 0.6], tam: [100, 1.3, 0.85], obi: [122, 1.1, 0.4], castellane: [112, 1.0, 0.05],
   mei: [215, 0.85, 0.5], sato: [205, 0.8, 0.25], wren: [182, 1.35, 0.9],
   you: [150, 1.0, 0.3],
+  // Per Aspera
+  mags: [205, 1.15, 0.5], dex: [118, 1.25, 0.6], oskar: [108, 0.9, 0.35], nuala: [190, 0.95, 0.45], pell: [140, 0.8, 0.0], ruth: [200, 1.05, 0.2],
 };
 // a line of dialogue: queued after the line before it, as long as the line is, from the nearest story person
 // (or, with nobody placed, from just in front of Pip, whose receiver picks it up)
@@ -10286,23 +10289,43 @@ function buildPlaces() {
 function placeById(id) { if (!PLACES) buildPlaces(); return PLACES.find((p) => p.id === id); }
 
 // ---------- the story panel: Ink from a FINK file, compiled in the page ----------
-// The story is story/lamplighter.fink.js. Its ink is captured with the repo's frozen backticks kernel
+// The stories are in story/ (TALES below; one plays at a time, chosen in Menu > Story or with ?tale=<id>). Their ink is captured with the repo's frozen backticks kernel
 // (packages/backticks), inside a throwaway sandboxed iframe, the same way the Finkosphere story runner does it:
 // the .fink.js runs in the box and only the captured strings come back. The ink runtime is the repo's vendored copy
 // (third_party/ink), with jsDelivr as a fallback. Paths are relative to dist/city.html.
 // The story keeps its place when the panel is closed, and across reloads (browser storage). The panel floats over the
 // world: drag its header to move it, its corner to resize it, minimise it to a slim bar.
-const TALE_URL = "../story/lamplighter.fink.js";
+const TALES = [
+  { id: "lamplighter", title: "The Lamplighter's Last Round", url: "../story/lamplighter.fink.js", key: "drift.tale.v1" },
+  { id: "peraspera", title: "Per Aspera", url: "../story/peraspera.fink.js", key: "drift.tale.peraspera.v1" },
+];
 const BACKTICKS_URL = "../../packages/backticks/src/index.js";
 const INK_URLS = ["../../third_party/ink/ink-full.js", "https://cdn.jsdelivr.net/npm/inkjs@2.4.0/dist/ink-full.js"];
-const TALE_KEY = "drift.tale.v1", TALE_GEOM_KEY = "drift.taleGeom.v1";
-const TALE = { textClues: taleFetch("drift.textClues") === true, story: null, on: false, scene: null, place: null, paras: [], hot: [], dwell: 0, dwellOn: null, loading: false, min: false };
+const TALE_GEOM_KEY = "drift.taleGeom.v1";
+const TALE = { cur: "lamplighter", textClues: taleFetch("drift.textClues") === true, story: null, on: false, scene: null, place: null, paras: [], hot: [], dwell: 0, dwellOn: null, loading: false, min: false };
 if (typeof PLACES_BAKED !== "undefined") PLACES = PLACES_BAKED;
+{
+  let want = null;
+  try { want = new URLSearchParams(location.search).get("tale"); } catch (e) {}
+  want = want || taleFetch("drift.taleCur");
+  if (TALES.find((t) => t.id === want)) TALE.cur = want;
+}
+function taleDef() { return TALES.find((t) => t.id === TALE.cur) || TALES[0]; }
+function taleKey() { return taleDef().key; }
+// put the playing story away (it keeps its saved place) and open another
+function taleSwitch(id) {
+  if (!TALES.find((t) => t.id === id) || TALE.loading) return;
+  if (id === TALE.cur) { if (!TALE.on) taleOpen(); return; }
+  taleSave();
+  TALE.cur = id; taleStore("drift.taleCur", id);
+  TALE.story = null; TALE.scene = null; TALE.place = null; TALE.hot = []; TALE.paras = []; TALE.props = [];
+  taleOpen();
+}
 
 function taleStore(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 function taleFetch(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
-function taleSave() { if (TALE.story) taleStore(TALE_KEY, { state: TALE.story.state.toJson(), paras: TALE.paras, scene: TALE.scene, place: TALE.place, hot: TALE.hot, props: TALE.props }); }
-function taleForget() { taleStore(TALE_KEY, null); }
+function taleSave() { if (TALE.story) taleStore(taleKey(), { state: TALE.story.state.toJson(), paras: TALE.paras, scene: TALE.scene, place: TALE.place, hot: TALE.hot, props: TALE.props }); }
+function taleForget() { taleStore(taleKey(), null); }
 
 function loadScript(url) {
   return new Promise((resolve, reject) => {
@@ -10355,10 +10378,10 @@ function extractInBox(src, installSource) {
   });
 }
 async function loadTaleInk() {
-  const [res, kernel] = await Promise.all([fetch(TALE_URL), import(new URL(BACKTICKS_URL, location.href).href), loadInkRuntime()]);
+  const [res, kernel] = await Promise.all([fetch(taleDef().url), import(new URL(BACKTICKS_URL, location.href).href), loadInkRuntime()]);
   if (!res.ok) throw new Error("the story file could not be fetched (" + res.status + ")");
   const ink = await extractInBox(await res.text(), kernel.INSTALL_CAPTURE_SOURCE);
-  if (!ink) throw new Error("no ink found in " + TALE_URL);
+  if (!ink) throw new Error("no ink found in " + taleDef().url);
   return ink;
 }
 function taleToggle() { if (TALE.on) taleClose(); else taleOpen(); }
@@ -10381,7 +10404,7 @@ function taleOpen() {
     TALE.loading = false;
     try {
       TALE.story = new inkjs.Compiler(src).Compile();
-      const saved = taleFetch(TALE_KEY);
+      const saved = taleFetch(taleKey());
       if (saved && saved.state) {
         try {
           TALE.story.state.LoadJson(saved.state);
@@ -12798,7 +12821,7 @@ async function init() {
       syncGoLabel();
       // the Story button says what it will do
       const vt = document.getElementById("vTale");
-      if (vt) vt.textContent = TALE.on ? "Close" : (TALE.story || taleFetch(TALE_KEY)) ? "Resume" : "Play";
+      if (vt) vt.textContent = TALE.on ? "Close" : (TALE.story || taleFetch(taleKey())) ? "Resume" : "Play";
       // climbing only where it means something; on touch screens the controls fade after a while untouched
       const cl = document.getElementById("climb");
       if (cl) cl.hidden = TALE.on || !(NAV.mode === "surface" || NAV.mode === "free" || (NAV.mode === "space" && NAV.space.kind === 1));
@@ -12921,7 +12944,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { WX, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { WX, TALES, taleSwitch, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

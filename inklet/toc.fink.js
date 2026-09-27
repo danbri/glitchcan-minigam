@@ -28,6 +28,7 @@ Choose your adventure! Each episode is half-finished in a different way.
 + [Burrow's End] -> hobbit_selected
 + [Diamond Cave] -> diamond_cave_selected
 + [Drift City] -> drift_city_selected
++ [Drift City: Per Aspera] -> drift_peraspera_selected
 + [Hampstead] -> hampstead_selected
 + [Maple Hollow] -> maple_hollow_selected
 + [Mudslide Mines] -> mudslidemines_selected
@@ -108,6 +109,15 @@ Drift City: The Lamplighter's Last Round
 Titan, the night before the vote. The last flame-keeper is missing. Send your drone into the methane snow to find her.
 
 + [enter Drift City] -> external_story
+
+=== drift_peraspera_selected ===
+# FINK: /glitchcan-minigam/drift-city/story/peraspera.fink.js
+
+Drift City: Per Aspera
+
+Titan, midnight. The band leader has taken a seat home to Earth. Crawl the dive bars with your bass, find her, and play the set in the Warmhouse.
+
++ [enter Per Aspera] -> external_story
 
 === hampstead_selected ===
 # FINK: /glitchcan-minigam/inklet/hampstead.fink.js

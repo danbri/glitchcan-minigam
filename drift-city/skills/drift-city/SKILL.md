@@ -6,8 +6,8 @@ description: Work on drift-city/ — the raymarched city on Titan (WebGPU ubersh
 # Drift city
 
 The page is `drift-city/dist/city.html`, built by `python3 drift-city/tools/assemble.py` from `src/`. The build
-inlines the shaders and scripts; the story stays outside, in `story/lamplighter.fink.js` (see the `story-game-sync`
-skill for how the page and the story talk). Rebuild and commit `dist/city.html` after every change to `src/`:
+inlines the shaders and scripts; the stories stay outside, in `story/` (see the `story-game-sync`
+skill for how the page and a story talk). Rebuild and commit `dist/city.html` after every change to `src/`:
 GitHub Pages serves the committed file.
 
 ## Seeing a shader change
@@ -180,6 +180,17 @@ description of the surroundings that `audioWorld` in `main.js` builds twice a se
   which events fired per scene. It needs `setTimeout` mapped to the offline clock, or every syllable scheduled with
   `setTimeout` fires in real time and the render misses it (September 2026: added to the harness). Compare loudness
   against the previous `audio.js` before and after a change; the radio chain first made the street 3.7 dB louder.
+
+## Stories
+
+Two stories, one playing at a time: "The Lamplighter's Last Round" (`story/lamplighter.fink.js`) and "Per Aspera"
+(`story/peraspera.fink.js`: the dive bars, the Asters, the jazz club in the Warmhouse). `TALES` in `tales.js` lists
+them with their save keys; Menu > Story offers the others, and `?tale=<id>` picks one. Each keeps its own save.
+To add a story: add the file to `TALES` and to `STORY_FILES` in `tools/story.mjs` (so `tests/inkwalk.mjs` and
+`tools/bakeplaces.mjs` check it), give each new speaker an `AU_VOICES` entry in `audio.js` (a speaker without one
+is silent), and add it to `inklet/toc.fink.js`. Every place a story names must be one of the 50 in `buildPlaces`,
+and `inkwalk` fails a story with fewer than four endings reached by random play. `node inklet/tools/fink-check.mjs`
+catches a knot that runs out of content (a `# restart` knot still needs `-> END`).
 
 ## Sound and lift in two airs (the Warmhouse, September 2026)
 

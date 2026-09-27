@@ -151,23 +151,43 @@ function buildPlaces() {
 function placeById(id) { if (!PLACES) buildPlaces(); return PLACES.find((p) => p.id === id); }
 
 // ---------- the story panel: Ink from a FINK file, compiled in the page ----------
-// The story is story/lamplighter.fink.js. Its ink is captured with the repo's frozen backticks kernel
+// The stories are in story/ (TALES below; one plays at a time, chosen in Menu > Story or with ?tale=<id>). Their ink is captured with the repo's frozen backticks kernel
 // (packages/backticks), inside a throwaway sandboxed iframe, the same way the Finkosphere story runner does it:
 // the .fink.js runs in the box and only the captured strings come back. The ink runtime is the repo's vendored copy
 // (third_party/ink), with jsDelivr as a fallback. Paths are relative to dist/city.html.
 // The story keeps its place when the panel is closed, and across reloads (browser storage). The panel floats over the
 // world: drag its header to move it, its corner to resize it, minimise it to a slim bar.
-const TALE_URL = "../story/lamplighter.fink.js";
+const TALES = [
+  { id: "lamplighter", title: "The Lamplighter's Last Round", url: "../story/lamplighter.fink.js", key: "drift.tale.v1" },
+  { id: "peraspera", title: "Per Aspera", url: "../story/peraspera.fink.js", key: "drift.tale.peraspera.v1" },
+];
 const BACKTICKS_URL = "../../packages/backticks/src/index.js";
 const INK_URLS = ["../../third_party/ink/ink-full.js", "https://cdn.jsdelivr.net/npm/inkjs@2.4.0/dist/ink-full.js"];
-const TALE_KEY = "drift.tale.v1", TALE_GEOM_KEY = "drift.taleGeom.v1";
-const TALE = { textClues: taleFetch("drift.textClues") === true, story: null, on: false, scene: null, place: null, paras: [], hot: [], dwell: 0, dwellOn: null, loading: false, min: false };
+const TALE_GEOM_KEY = "drift.taleGeom.v1";
+const TALE = { cur: "lamplighter", textClues: taleFetch("drift.textClues") === true, story: null, on: false, scene: null, place: null, paras: [], hot: [], dwell: 0, dwellOn: null, loading: false, min: false };
 if (typeof PLACES_BAKED !== "undefined") PLACES = PLACES_BAKED;
+{
+  let want = null;
+  try { want = new URLSearchParams(location.search).get("tale"); } catch (e) {}
+  want = want || taleFetch("drift.taleCur");
+  if (TALES.find((t) => t.id === want)) TALE.cur = want;
+}
+function taleDef() { return TALES.find((t) => t.id === TALE.cur) || TALES[0]; }
+function taleKey() { return taleDef().key; }
+// put the playing story away (it keeps its saved place) and open another
+function taleSwitch(id) {
+  if (!TALES.find((t) => t.id === id) || TALE.loading) return;
+  if (id === TALE.cur) { if (!TALE.on) taleOpen(); return; }
+  taleSave();
+  TALE.cur = id; taleStore("drift.taleCur", id);
+  TALE.story = null; TALE.scene = null; TALE.place = null; TALE.hot = []; TALE.paras = []; TALE.props = [];
+  taleOpen();
+}
 
 function taleStore(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 function taleFetch(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
-function taleSave() { if (TALE.story) taleStore(TALE_KEY, { state: TALE.story.state.toJson(), paras: TALE.paras, scene: TALE.scene, place: TALE.place, hot: TALE.hot, props: TALE.props }); }
-function taleForget() { taleStore(TALE_KEY, null); }
+function taleSave() { if (TALE.story) taleStore(taleKey(), { state: TALE.story.state.toJson(), paras: TALE.paras, scene: TALE.scene, place: TALE.place, hot: TALE.hot, props: TALE.props }); }
+function taleForget() { taleStore(taleKey(), null); }
 
 function loadScript(url) {
   return new Promise((resolve, reject) => {
@@ -220,10 +240,10 @@ function extractInBox(src, installSource) {
   });
 }
 async function loadTaleInk() {
-  const [res, kernel] = await Promise.all([fetch(TALE_URL), import(new URL(BACKTICKS_URL, location.href).href), loadInkRuntime()]);
+  const [res, kernel] = await Promise.all([fetch(taleDef().url), import(new URL(BACKTICKS_URL, location.href).href), loadInkRuntime()]);
   if (!res.ok) throw new Error("the story file could not be fetched (" + res.status + ")");
   const ink = await extractInBox(await res.text(), kernel.INSTALL_CAPTURE_SOURCE);
-  if (!ink) throw new Error("no ink found in " + TALE_URL);
+  if (!ink) throw new Error("no ink found in " + taleDef().url);
   return ink;
 }
 function taleToggle() { if (TALE.on) taleClose(); else taleOpen(); }
@@ -246,7 +266,7 @@ function taleOpen() {
     TALE.loading = false;
     try {
       TALE.story = new inkjs.Compiler(src).Compile();
-      const saved = taleFetch(TALE_KEY);
+      const saved = taleFetch(taleKey());
       if (saved && saved.state) {
         try {
           TALE.story.state.LoadJson(saved.state);

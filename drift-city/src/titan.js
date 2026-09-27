@@ -616,18 +616,19 @@ function placePages(act, title) {
   return { title, items: () => placeGroups().map(([g, ps]) => ({ label: g, detail: String(ps.length), sub: () => ({ title: g, items: () => ps.map((p) => ({ label: p.name.split(",")[0], act: () => act(p) })) }) })) };
 }
 function menuRoot() {
-  const story = TALE.on ? "open" : (TALE.story || taleFetch(TALE_KEY)) ? "paused" : "";
+  const story = TALE.on ? "open" : (TALE.story || taleFetch(taleKey())) ? "paused" : "";
   const times = [["Day", 0], ["Dusk", 1], ["Night", 2], ["Methane snow", 3]];
   return {
     title: "Menu",
     items: () => [
       { label: "Return to opening", act: () => { closeGoPanel(); if (TALE.on) taleClose(); introStart(); } },
-      { label: "Story", detail: story, sub: () => ({ title: "Story: The Lamplighter's Last Round", items: () => [
-        { label: TALE.on ? "Close the story" : TALE.story || taleFetch(TALE_KEY) ? "Resume the story" : "Play the story", act: () => { closeGoPanel(); taleToggle(); } },
+      { label: "Story", detail: story, sub: () => ({ title: "Story: " + taleDef().title, items: () => [
+        { label: TALE.on ? "Close the story" : TALE.story || taleFetch(taleKey()) ? "Resume the story" : "Play the story", act: () => { closeGoPanel(); taleToggle(); } },
         { label: "Start again", act: () => { closeGoPanel(); taleRestart(); } },
         { label: "Clues as choices (for reading without the view)", check: TALE.textClues, act: () => { TALE.textClues = !TALE.textClues; taleStore("drift.textClues", TALE.textClues); if (TALE.story && TALE.scene) { TALE.story.ChoosePathString(TALE.scene); taleAdvance(); } renderMenu(); } },
         { label: "Feel the choices: slide a thumb over them, lift to choose", check: FEEL.on, act: () => { FEEL.on = !FEEL.on; taleStore("drift.feel", FEEL.on); feelArm(); renderMenu(); } },
-        { label: "Put the story panel back in its usual place", act: () => { taleResetGeom(); closeGoPanel(); } }] }) },
+        { label: "Put the story panel back in its usual place", act: () => { taleResetGeom(); closeGoPanel(); } },
+        ...TALES.filter((t) => t.id !== TALE.cur).map((t) => ({ label: "Play another story: " + t.title, detail: taleFetch(t.key) ? "saved" : "", act: () => { closeGoPanel(); taleSwitch(t.id); } }))] }) },
       { label: "Travel", detail: NAV.mode === "trip" ? "on the way" : "", sub: () => ({ ...destPages((d) => goTo(d.id), "Travel"), items: () => [...destPages((d) => goTo(d.id), "Travel").items(), { label: "Grand tour", check: !!NAV.tour, act: () => goTo("tour") }] }) },
       { label: "City map", act: () => { closeGoPanel(); mapOpen(); } },
       { label: "Places in the city", sub: () => placePages((p) => { closeGoPanel(); taleGo(p.id); if (!TALE.on) showHint(p.name + ". " + p.blurb, 6000); }, "Places in the city") },
