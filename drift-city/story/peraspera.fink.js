@@ -1,7 +1,9 @@
 oooOO`
 // Per Aspera: a night crawl through Drift city's dive bars to the jazz club in the Warmhouse.
 // The same tags as The Lamplighter's Last Round (see that file's header): scene, place, time, weather, prop,
-// hotspot, fly, voice. Speakers: mags, dex, oskar, nuala, pell, ruth, you.
+// hotspot, fly, voice; and # morse: <text> (the masts and the radio key that message; empty for the usual ones).
+// Speakers: mags, dex, oskar, nuala, pell, ruth, org, elder, you.
+// The Org and its Elders: canon in drift-city/skills/drift-city/SKILL.md, "The Org, the Elders and the calendar bug".
 # title: Per Aspera
 VAR here = ""
 VAR hour = ""
@@ -16,6 +18,7 @@ VAR setlist = false
 VAR reed = false
 VAR patch = false
 VAR tape = false
+VAR tenpo = false
 // what you have learned and decided
 VAR heard_mags = false
 VAR heard_dex = false
@@ -26,11 +29,18 @@ VAR found_nuala = false
 VAR pull = 0
 VAR shown_setlist = false
 VAR nuala = ""
+// the Org's clock: set back, the Elders speak plainly; left back, the heating and the crops go wrong
+VAR know_mast = false
+VAR clock_back = false
+VAR back_for = 0
+VAR clock_fixed = false
+VAR elder_tip = false
+VAR told_elder = false
 
 -> street
 
 === function clues() ===
-~ return voucher + setlist + reed + patch + tape
+~ return voucher + setlist + reed + patch + tape + tenpo
 
 === street ===
 # scene: street
@@ -40,6 +50,9 @@ VAR nuala = ""
 # prop: person @ -20 @ 7 @ 30 @ 0.6 @ 0
 # prop: crates @ 25 @ 6 @ 0 @ 0 @ 0
 # hotspot: voucher @ a torn voucher in the gutter @ 30 @ -25
+{ clock_back:
+    ~ back_for = back_for + 1
+}
 {street == 1:
     Night on Ferry Street. Snow drifts through the neon, and your bass case bumps against your suit leg. You play upright bass: an old instrument with a spruce body, built for Titan air, where its body booms lower and louder than it ever did at home.
     At midnight you play the Warmhouse, the only room under the open sky where people take their helmets off and hear music with their own ears. Nuala Fenn leads the band. Nuala Fenn has not been seen since noon.
@@ -47,9 +60,12 @@ VAR nuala = ""
     The first settlers named every airship Hindenburg, as a joke: with no oxygen in the air, nothing here can burn. They laughed at everything, the first settlers. The count has reached 1632, and nobody laughs at it now.
     The megatower screens run the emigration campaign: LEAVE TITAN. GO HOME. PASSAGE PAID. Under the screen, someone has sprayed three words in silver: AD ASTRA PER ASPERA.
 - else:
-    Ferry Street, the snow still falling. {clues() > 0: In your case pocket: {voucher: a torn passage voucher;} {setlist: a setlist on a napkin;} {reed: a cracked reed;} {patch: an Aster patch;} {tape: a tape from the Warmhouse.}}
+    Ferry Street, the snow still falling. {clues() > 0: In your case pocket: {voucher: a torn passage voucher;} {setlist: a setlist on a napkin;} {reed: a cracked reed;} {patch: an Aster patch;} {tape: a tape from the Warmhouse;} {tenpo: a card that says テンポ.}}
     {found_nuala: Midnight is close. The Warmhouse hangs over the west edge of the city, lit from inside.}
 }
+{clock_back and back_for == 1: The street heaters flicker, and come back weaker. The Org's clock is still set back.}
+{clock_back and back_for == 2: Frost on the inside of the Cold Tap's window. Somewhere a crop hall has missed its dawn. The Org still thinks it is a hundred years ago.}
+{clock_back and back_for >= 3: The heaters are off along the whole street. Out west, the Warmhouse looks lower in the sky than it did.}
 {voucher and street > 1: The voucher is the Org's: one seat, Titan to Earth, passage paid. The name is torn off. The gate number is not: gate 3, boarding at dawn.}
 + {not in_world and not voucher} [Look around] -> look_voucher
 * {not heard_mags} [Go into the Cold Tap and ask Mags] -> mags
@@ -57,6 +73,7 @@ VAR nuala = ""
 + [Go down to the Lantern Cellar, Chinatown] -> cellar
 + {heard_dex or patch} [Climb to the Asters' roof] -> roof
 + {(voucher or know_gate) and not found_nuala} [Go to the emigration gate] -> gate
++ {know_mast} [Go to the signal tower, where the Org listens] -> mast
 + {heard_mags} [Ride up to the Warmhouse for the set] -> below
 + [Think it over] -> think
 
@@ -69,6 +86,8 @@ You stand in a doorway out of the snow and think.
 {heard_dex and not patch: The Asters watch the launches from a roof in the neon quarter.}
 {(voucher or know_gate) and not found_nuala: Gate 3. Boarding at dawn.}
 {heard_mags: The set is at midnight, in the Warmhouse.}
+{know_mast and not tenpo: The Asters leave notes on their roof. One of them might say how to talk to the Org.}
+{clock_back: The Org's clock is still set back. The heating runs on it.}
 + [Back into the snow] -> street
 + [Meanwhile, in the Chinatown market] -> elsewhere
 
@@ -110,6 +129,7 @@ She puts a glass in front of you. "The set's still on. Midnight, in the bubble. 
 {setlist: The napkin is a setlist in Nuala's hand. The last tune is new: "PER ASPERA. Outside. Titan air, down a seventh. Bass leads."}
 + {not in_world and not setlist} [Look around] -> look_setlist
 * [Ask Dex about the Asters] -> dex
+* {heard_dex} [Ask Dex about the Org] -> dex_org
 + {heard_dex and not know_gate} [Ask Dex where Nuala is] -> dex_where
 + [Back to Ferry Street] -> street
 
@@ -122,6 +142,14 @@ She puts a glass in front of you. "The set's still on. Midnight, in the bubble. 
 "The oxygen? People like a story." He doesn't say no. # voice: dex
 "Nuala played our first night, in the Warmhouse. She taught us the rooftop thing: every launch, lamps up on the roofs so the crews can see them go." # voice: dex
 + [Ask where Nuala is] -> dex_where
++ [Back to Ferry Street] -> street
+
+=== dex_org ===
+~ know_mast = true
+"The Org?" Dex leans on the bar. "It's the old ship's computer. The settlers built it to outlive them: talk in their voices, keep everything they knew. The Elders, they called it." # voice: dex
+"Ask it anything and you get a fridge magnet. Every day is a gift. Home is where the heart is. A hundred years of that, and everyone thought the founders were just like that." # voice: dex
+"They weren't. It's the clock. It can't tell an Earth year from a Saturn year from a Titan day, so it thinks the founders are ancient history and keeps them dignified. Set its clock back and they talk straight." # voice: dex
+"The signal tower in the financial district is its ear. The mast lights blink how to do it, every night, in dots and dashes. And put the clock back right after, or we all freeze." # voice: dex
 + [Back to Ferry Street] -> street
 
 === dex_where ===
@@ -173,14 +201,17 @@ You unpack the bass and sit in for one tune. Oskar opens his eyes at the first n
 # prop: lamp @ 20 @ 9 @ 0 @ 0 @ 1
 # prop: person @ 5 @ 12 @ 180 @ 0.62 @ 0
 # hotspot: patch @ a patch stitched to a blanket @ -25 @ -30
+# hotspot: tenpo @ a card pinned under a lamp @ 18 @ -28
 {roof == 1:
     The Asters' roof: a flat top over the neon quarter with a view down the harbour arm to the pads. Lamps stand along the parapet, ready for the next launch. Snow on everything.
 - else:
     The roof. The lamps wait along the parapet.
 }
 {patch: An old Aster patch, the cracked star, and under it in thread: N.F., FIRST NIGHT. She left it up here.}
+{tenpo: The card says テンポ, tenpo, "time" in toki pona, written in katakana. Under it in Morse, with a pencil note: key the date in Titan days, not years. On the far mast a red light blinks the same thing, over and over.}
 {tape and roof > 1: Ruth's tape plays in your helmet: a crowd, a saxophone, a bass line going down and down.}
 + {not in_world and not patch} [Look around] -> look_patch
++ {not in_world and not tenpo and know_mast} [Look under the lamps] -> look_tenpo
 + [Back to Ferry Street] -> street
 
 === gate ===
@@ -202,6 +233,7 @@ Nuala Fenn sits in the front row with her horn case across her knees and a vouch
 + {reed} [Give her the cracked reed] -> show_reed
 + {patch} [Give her the patch from the roof] -> show_patch
 + {tape} [Play her Ruth's tape] -> show_tape
++ {elder_tip and not told_elder} [Tell her what the Elder said about the seats] -> show_elder
 * [Ask her why] -> nuala_why
 + [Tell her to go, if she wants to] -> nuala_go
 + [Ask her to play one last set first] -> nuala_decide
@@ -243,6 +275,12 @@ She holds the patch for a long time. "First night," she says. "Forty people and 
 The tape plays through both your helmets: the Warmhouse, years ago, a crowd singing along to a tune they didn't know yet. Nuala shuts her eyes. # voice: nuala
 -> gate_talk
 
+=== show_elder ===
+~ told_elder = true
+~ pull = pull + 1
+"Harriet said that?" Nuala laughs for the first time tonight. "A cargo slot with a chair in it. That's her. That's exactly her. I didn't know the Org could still sound like her." # voice: nuala
+-> gate_talk
+
 === nuala_go ===
 ~ nuala = "gone"
 "Thank you," she says, and she means it. "Play the set. Play it well." She walks to the glass, and Pell stamps something. # voice: nuala
@@ -259,6 +297,62 @@ The tape plays through both your helmets: the Warmhouse, years ago, a crowd sing
     "One last set," Nuala says. "Then the ship." She picks up the horn case. "Don't make it sad." # voice: nuala
 }
 + [Go up to the Warmhouse together] -> below
+
+=== mast ===
+# scene: mast
+# place: tower_0
+# prop: radio @ 10 @ 5 @ 0 @ 0 @ 0
+{mast == 1:
+    The signal tower is the oldest thing in the financial district: the settlers' ship's mast, stood upright when they landed. At its foot is a terminal in a heated booth, and a sign: THE ORG IS LISTENING.
+}
+{not clock_back: "Good evening, citizen!" says the Org. "The Elders are here for you. Remember: every day is a gift!" # voice: org}
+{clock_back: The booth's lights are the wrong colour, the colour of a hundred years ago. The Org's clock is set back, and an Elder is on the screen, looking straight at you.}
++ {not clock_back} [Ask the Elders about Nuala] -> elder_filtered
++ {not clock_back and tenpo} [Key the date in Titan days, as the card says] -> clock_set
++ {clock_back} [Talk to Elder Harriet] -> elder
++ {clock_back} [Put the Org's clock right] -> clock_fix
++ [Back to Ferry Street] -> street
+
+=== elder_filtered ===
+"Elder Harriet says: home is where the heart is!" the Org announces. A picture of a kitten appears. "Have you tried a warm drink?" # voice: org
+-> mast
+
+=== clock_set ===
+# morse: TENPO PINI
+~ clock_back = true
+~ back_for = 0
+You key the date as the card says, in Titan days. The Org's calendar rolls back a hundred years. Every light in the booth changes colour, and out in the dark the mast starts blinking a new message: TENPO PINI, time past.
+The screen clears. A woman in an old flight suit looks out of it, as if she has been waiting at a window.
+"Oh, thank God," says Elder Harriet. "Do you know how long I've been saying 'every day is a gift'? I'd like to apologise to the whole colony and then say something useful." # voice: elder
+-> elder
+
+=== elder ===
++ [Ask her about Nuala] -> elder_nuala
++ [Ask her about the oxygen under the Low Orbit] -> elder_oxygen
++ [Ask her about the Warmhouse] -> elder_warm
++ [Back to the booth] -> mast
+
+=== elder_nuala ===
+~ elder_tip = true
+~ know_gate = true
+"Fenn? Gate 3, crying into a voucher, if she's anything like her grandmother." Harriet snorts. "Tell her the Earth seat is a cargo slot with a chair in it. The Org sells them because it thinks we're all dead and it's tidying up." # voice: elder
+-> elder
+
+=== elder_oxygen ===
+"Of course there's oxygen under the Low Orbit. I put it there, with the printer stock. It's for the ones who go out, not back. Tell Dex to stop being coy about it." # voice: elder
+-> elder
+
+=== elder_warm ===
+"The bubble? It runs on my clock, genius. Set me back and its heaters think it's the wrong season. Warm air is its lift. Put me right before it comes down on your heads." # voice: elder
+-> elder
+
+=== clock_fix ===
+# morse:
+~ clock_back = false
+~ clock_fixed = true
+You key the date back the Org's way. Harriet has time to say "Tell them I was funnier than this" before the screen fills with kittens again. # voice: elder
+"Good evening, citizen!" says the Org. "Every day is a gift!" Out on Ferry Street the heaters come back up. # voice: org
++ [Back to Ferry Street] -> street
 
 === below ===
 # scene: below
@@ -290,9 +384,10 @@ The tape plays through both your helmets: the Warmhouse, years ago, a crowd sing
 "Midnight," Ruth says. "Room's full. Who's playing?" # voice: ruth
 {nuala == "stays" or nuala == "farewell": Nuala is on the stand with her horn. {oskar_in: Oskar is behind the kit.}}
 {nuala == "" or nuala == "gone": The front of the stand is empty where Nuala should be. {oskar_in: Oskar sits behind the kit and waits for you.}}
-+ {nuala == "stays"} [Play the set] -> set_stays
-+ {nuala == "farewell"} [Play the set] -> ending_farewell
-+ {nuala == "" or nuala == "gone"} [Play the set without her] -> ending_empty
++ {clock_back and back_for >= 2} [Play the set] -> ending_cold
++ {not (clock_back and back_for >= 2) and nuala == "stays"} [Play the set] -> set_stays
++ {not (clock_back and back_for >= 2) and nuala == "farewell"} [Play the set] -> ending_farewell
++ {not (clock_back and back_for >= 2) and (nuala == "" or nuala == "gone")} [Play the set without her] -> ending_empty
 
 === set_stays ===
 The first set goes like a first night. When it ends, Nuala looks at you and at the setlist in her head. "The last tune," she says. "Inside, or out?" # voice: nuala
@@ -321,6 +416,15 @@ THE END: THE LOW NOTE.
 Nuala plays like she is saying goodbye to everyone in the room one at a time, and she is. Nobody asks her to stay. At dawn you carry her horn case to gate 3.
 From the Asters' roof you watch the ship climb. The lamps go up along the parapet. She wanted rain; you hope she gets it.
 THE END: PASSAGE PAID.
++ [Play again] -> restart
+
+=== ending_cold ===
+# time: dawn
+# weather: snow
+The heaters in the Warmhouse run on the Org's clock, and the Org still thinks it is a hundred years ago. By the second number the air is cooling. By the fourth, the deck is tilting and the cables are singing.
+The bubble comes down slowly, the way warm things do on Titan, and settles on its own tethers at the edge of the city. You finish the set in helmets, sitting on the grass, over the suit radios. It is the worst-sounding gig of your life, and nobody leaves.
+In the morning the Org apologises to everyone, in a voice that sounds a little like a real person. Then it says every day is a gift.
+THE END: THE COLD SET.
 + [Play again] -> restart
 
 === ending_empty ===
@@ -352,6 +456,11 @@ You find a cracked reed on the step.
 === look_patch ===
 ~ patch = true
 You find a patch stitched to a blanket.
+-> roof
+
+=== look_tenpo ===
+~ tenpo = true
+You find a card pinned under a lamp.
 -> roof
 
 === look_tape ===

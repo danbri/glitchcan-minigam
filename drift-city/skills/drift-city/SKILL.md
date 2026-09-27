@@ -180,7 +180,12 @@ so nothing has weight or inertia or can be pushed. The physics pass gives a firs
   generations old, so the first reading fits, and the confusion is itself the bug.
 - **The price.** The same clock runs the city's heating schedules and crop cycles. Leave it set back too long and
   the heating and the crops suffer. A story that uses the trick has to put the clock right, or pay.
-- In "Per Aspera" the Asters know about the trick, and use it (see that story). The Org's voice in the city is
+- In "Per Aspera" (September 2026): Dex explains the Org and the trick (`dex_org`); a card on the Asters' roof
+  says テンポ (tenpo, time) with the method in Morse; at the signal tower (place tower_0, the settlers' mast) you
+  key the date in Titan days (`clock_set`), the masts start blinking TENPO PINI (`# morse:`), and Elder Harriet
+  speaks plainly: where Nuala is, the oxygen under the Low Orbit is real and hers, and the Warmhouse runs on her
+  clock. Each walk down Ferry Street with the clock back costs heat (`back_for`); reach the Warmhouse after two and
+  the bubble cools and comes down (ending THE COLD SET). `clock_fix` puts it right. The Org's voice in the city is
   corny and polite; an Elder unfiltered is not. When a story gives them recorded voices, keep the two clearly apart.
 
 ## Sound
