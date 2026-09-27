@@ -1237,7 +1237,7 @@ async function init() {
   const rectData = new Int32Array(64 * 12);
   const propBuf = device.createBuffer({ size: PROP_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const flockBuf = device.createBuffer({ size: FLOCK_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-  const evBuf = device.createBuffer({ size: 848, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const evBuf = device.createBuffer({ size: 848 + 1024, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   if (PHYS) {
     PHYS.buf = device.createBuffer({ size: PHYS.n * 48, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
     PHYS.ubuf = device.createBuffer({ size: 64, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
@@ -1563,6 +1563,7 @@ async function init() {
     computeExtras(tod, dt);
     EVN[208] = WX.cover || 0; // settled snow (after computeEvents clears the array)
     device.queue.writeBuffer(evBuf, 0, EVN);
+    { const lg = lifeUpdate(dtS); if (lg) device.queue.writeBuffer(evBuf, 848, lg); }
     const pyr = !inSpace && ffStep(frameNo < 2 ? 1 : 3);
     const measure = hasTS && !qBusy && frameNo % 6 === 0;
     ran.fill(0);
@@ -1782,7 +1783,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { WX, EVN, taleLink, guideStart, guideStop, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { WX, EVN, LIFE, taleLink, guideStart, guideStop, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 
