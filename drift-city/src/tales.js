@@ -6,6 +6,27 @@ const STREET_A = ["Amber", "Tholin", "Methane", "Lantern", "Kraken", "Haze", "Ca
 const STREET_B = ["Street", "Lane", "Row", "Walk", "Arcade", "Passage", "Parade", "Wynd"];
 function streetName(k) { return STREET_A[Math.floor(hsh(k, 3, 901) * STREET_A.length)] + " " + STREET_B[Math.floor(hsh(k, 5, 902) * STREET_B.length)]; }
 
+// ---------- rooms: the venues' interiors ----------
+// A room place stands where its door is (on the street it belongs to), but when you arrive the shader draws the room
+// round you instead of the city (roomRender in scene.wgsl; kind in EVN[210], origin and heading in EVN[212..215]).
+// Room axes: x forward along the place's heading, z to the right, y up from the floor; the camera starts at x = 0.
+// x0..x1 and hw (half width) are the walls, for walking and for placing the story's things; scene.wgsl must match.
+const ROOMS = [
+  { id: "cold_tap", kind: 1, base: "street_1", x0: -1.3, x1: 8.8, hw: 3.0, name: "The Cold Tap, Ferry Street", blurb: "A dive bar behind an airlock: nine stools, a heater that ticks, bottles lit from below, and a price list older than the dome." },
+  { id: "low_orbit_bar", kind: 2, base: "street_5", x0: -1.3, x1: 19.6, hw: 4.3, name: "The Low Orbit, by the spaceport", blurb: "A long bar for ship crews, with a window on the pads and a cracked star painted on the ceiling." },
+  { id: "lantern_cellar", kind: 3, base: "street_3", x0: -1.3, x1: 13.2, hw: 4.8, name: "The Lantern Cellar, Chinatown", blurb: "Forty steps down: a brick vault full of paper lanterns and smoke, and a late jam that never stops." },
+  { id: "warmhouse_club", kind: 4, base: "warmhouse", x0: -2.8, x1: 26.5, hw: 14.5, round: [12, 15.2], name: "The Warmhouse club", blurb: "The jazz club under the dome in the middle of the Warmhouse: tables in rings, lamps on every table, the stand at the far side." },
+];
+// the room you are in now (a room place, arrived or nearly), or null
+function roomNow() { const V = NAV.visit; return NAV.mode === "visit" && V && V.to && V.to.room && V.t >= V.T * 0.92 ? V.to : null; }
+function roomOf(p) { return p && p.room ? ROOMS.find((r) => r.kind === p.room) : null; }
+// keep a point (local x, z) inside a room, margin m from the walls
+function roomClamp(R, x, z, m) {
+  x = clampv(x, R.x0 + m, R.x1 - m); z = clampv(z, -R.hw + m, R.hw - m);
+  if (R.round) { const dx = x - R.round[0], d = Math.hypot(dx, z), rr = R.round[1] - m; if (d > rr) { x = R.round[0] + dx * rr / d; z = z * rr / d; } }
+  return [x, z];
+}
+
 // camera on the far sidewalk across the street from a block, looking at it; side 0..3 = west, east, north, south
 function facing(cx, cz, side, eye) {
   const mx = (cx + 0.5) * C, mz = (cz + 0.5) * C;
@@ -144,6 +165,11 @@ function buildPlaces() {
       const st = streetName(cx * 131 + cz * 7);
       add("corner_" + cx + "_" + cz, st + ", " + DISTRICTS[o.zone], "A corner on " + st + ": steam from a vent, the tubes' glass humming with traffic.", facing(cx, cz, Math.floor(hsh(cx, cz, 905) * 4)));
     }
+  }
+  // the venues' rooms, beyond the fifty
+  for (const R of ROOMS) {
+    const bp = P.find((p) => p.id === R.base);
+    if (bp) P.push({ id: R.id, name: R.name, blurb: R.blurb, x: bp.x, y: bp.y, z: bp.z, yaw: bp.yaw, pitch: 0.02, room: R.kind });
   }
   PLACES = P;
   return P;
@@ -412,6 +438,12 @@ function taleTags(tags, line) {
         // the clue itself lies on the ground where you would look for it
         const dist = clampv(1.7 / Math.tan(Math.max(-(+f[3]) * DEG, 0.05)), 1.4, 14);
         taleAddProp("item @ " + f[2] + " @ " + dist.toFixed(2) + " @ 0 @ " + (hsh(f[0].length * 31 + f[0].charCodeAt(0), 7, 930)).toFixed(3) + " @ 0", f[0]);
+        // a room's walls may have moved the thing nearer: point the glint at where it lies
+        const pl = placeById(TALE.place), it = TALE.props && TALE.props[TALE.props.length - 1];
+        if (roomOf(pl) && it && it.clue === f[0]) {
+          const h = TALE.hot[TALE.hot.length - 1], dx = it.x - pl.x, dz = it.z - pl.z;
+          h.bearing = Math.atan2(dz, dx) - pl.yaw; h.elev = Math.atan2(it.y + 0.05 - pl.y, Math.hypot(dx, dz));
+        }
       }
     } else if (k === "fly") { taleClose(); goTo(v); }
     // "# FINK: <file>" (with "# LINKREL: peer" or none): leave for another story once this passage has been shown
@@ -437,7 +469,13 @@ function taleAddProp(v, clue) {
   if (!TALE.props) TALE.props = [];
   const bearing = (+f[1] || 0) * DEG, dist = +f[2] || 5, facing = (+f[3] || 0) * DEG;
   const a = p.yaw + bearing;
-  const x = p.x + Math.cos(a) * dist, z = p.z + Math.sin(a) * dist;
+  let x = p.x + Math.cos(a) * dist, z = p.z + Math.sin(a) * dist;
+  // in a room, everything stands inside its walls
+  const R = roomOf(p);
+  if (R) {
+    const [lx, lz] = roomClamp(R, Math.cos(bearing) * dist, Math.sin(bearing) * dist, kind === 8 ? 0.6 : 0.9);
+    x = p.x + Math.cos(p.yaw) * lx - Math.sin(p.yaw) * lz; z = p.z + Math.sin(p.yaw) * lx + Math.cos(p.yaw) * lz;
+  }
   let y = p.y - 1.7;
   if (kind === 5) { const tv = terrainAt(x, z); if (tv[1] > -50) y = tv[1] - 0.3; }
   const toCam = Math.atan2(p.z - z, p.x - x);
@@ -551,7 +589,7 @@ function taleGo(id) {
   if (TALE.place !== id) TALE.props = [];
   TALE.place = id;
   if (NAV.site.id !== "home" || NAV.mode === "space" || NAV.mode === "trip" || NAV.mode === "free") {
-    NAV.trip = null; NAV.space = null; NAV.free = null; NAV.spaceMix = 0; NAV.cam = null; NAV.tour = null;
+    tourHold(); NAV.trip = null; NAV.space = null; NAV.free = null; NAV.spaceMix = 0; NAV.cam = null;
     if (NAV.site.id !== "home") arriveRegion(HOME_DEST, true);
   }
   const from = { x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch };
@@ -561,7 +599,12 @@ function taleGo(id) {
   NAV.mode = "visit";
 }
 function visitStep(dt, inp) {
-  const V = NAV.visit;
+  let V = NAV.visit;
+  // a stick (or W, S) pushed during the flight there takes over at once: the view stops where it is and is yours
+  if (V.t < V.T && V.t > 0.3 && (inp.move || Math.abs(PAD.lx) > 0.3 || Math.abs(PAD.ly) > 0.3 || Math.abs(PAD.rx) > 0.3)) {
+    const here = { ...V.to, id: (V.to.id || "") + "~", x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch, room: 0 };
+    V = NAV.visit = { from: here, to: here, t: 1, T: 1, ly: 0, lp: 0 };
+  }
   V.t = Math.min(V.t + dt, V.T);
   const e = sstep(0, 1, V.t / V.T);
   const a = V.from, b = V.to;
@@ -585,32 +628,108 @@ function visitStep(dt, inp) {
     st.pitch = clampv((a.pitch + (lp - a.pitch) * w0) * (1 - w1) + b.pitch * w1, -1.3, 1.3);
   }
   // walking or flying into the scene (visitMove); the offset is kept until the next visit
+  if (there && V.walk) { if (inp.move || inp.dx || inp.dy) V.walk = null; else visitWalkStep(V, dt); }
   if (there && V.off) { st.x += V.off[0]; st.y += V.off[1]; st.z += V.off[2]; }
   if (there && inp.move) visitMove(V, inp.move, dt);
   st.roll = 0; st.vx = 0; st.vy = 0; st.vz = 0;
 }
 // At eye level you walk (Titan's slow lope, the ground followed); higher up you fly along the view. Buildings
-// stop you: a step is refused when the flight code's height map rises in front of you (compared with where you
-// stand, since a street place can stand inside its coarse boxes). You stay within 150 m of the place.
+// stop you: a step is checked against the flight code's height map rising in front of you (compared with where you
+// stand, since a street place can stand inside its coarse boxes). A blocked step slides along the wall instead of
+// stopping dead. There is no limit on how far you go. In a room you walk its floor, inside its walls.
 function visitMove(V, move, dt) {
   const b = V.to;
   if (!V.off) V.off = [0, 0, 0];
-  const eye = b.y - Math.max(terrSurfAt(b.x, b.z), 0), walk = eye < 6;
+  V.walk = null;
+  const R = roomOf(b);
+  const eye = b.y + V.off[1] - Math.max(terrSurfAt(b.x + V.off[0], b.z + V.off[2]), 0), walk = R || eye < 6;
   const cp = Math.cos(st.pitch), speed = walk ? 2.6 : 10;
   const dir = walk ? [Math.cos(st.yaw), 0, Math.sin(st.yaw)] : [Math.cos(st.yaw) * cp, Math.sin(st.pitch), Math.sin(st.yaw) * cp];
   const step = move * speed * dt;
-  const x0 = b.x + V.off[0], y0 = b.y + V.off[1], z0 = b.z + V.off[2];
-  const nx = x0 + dir[0] * step, nz = z0 + dir[2] * step;
-  let ny = walk ? Math.max(terrSurfAt(nx, nz), 0) + eye : y0 + dir[1] * step;
-  if (!walk) ny = Math.max(ny, Math.max(terrSurfAt(nx, nz), 0) + 2);
-  if (Math.hypot(nx - b.x, nz - b.z) > 150) return;
-  const h0 = heightAt(x0, z0, y0), h1 = heightAt(nx, nz, ny);
-  if (h1 > ny - 0.3 && h1 > h0 + 0.5) return;
+  if (R) {
+    // room axes: forward along the place's heading, right across it
+    const c = Math.cos(b.yaw), s = Math.sin(b.yaw);
+    const ox = V.off[0] + dir[0] * step, oz = V.off[2] + dir[2] * step;
+    const [lx, lz] = roomClamp(R, ox * c + oz * s, -ox * s + oz * c, 0.45);
+    V.off = [lx * c - lz * s, 0, lx * s + lz * c];
+  } else {
+    const x0 = b.x + V.off[0], y0 = b.y + V.off[1], z0 = b.z + V.off[2];
+    const h0 = heightAt(x0, z0, y0);
+    const tryTo = (nx, nz) => {
+      let ny = walk ? Math.max(terrSurfAt(nx, nz), 0) + 1.7 : y0 + dir[1] * step;
+      if (!walk) ny = Math.max(ny, Math.max(terrSurfAt(nx, nz), 0) + 2);
+      const h1 = heightAt(nx, nz, ny);
+      if (h1 > ny - 0.3 && h1 > h0 + 0.5) return null;
+      return [nx, ny, nz];
+    };
+    // straight on, or along the wall: whichever part of the step is free
+    const got = tryTo(x0 + dir[0] * step, z0 + dir[2] * step) || tryTo(x0 + dir[0] * step, z0) || tryTo(x0, z0 + dir[2] * step);
+    if (!got) return;
+    V.off = [got[0] - b.x, got[1] - b.y, got[2] - b.z];
+  }
   // a gentle lope: the eye rises and falls over each long, slow stride
   V.walked = (V.walked || 0) + Math.abs(step);
   const bob = walk ? 0.06 * Math.abs(Math.sin(V.walked * 1.1)) : 0;
-  V.off = [nx - b.x, ny - b.y + bob, nz - b.z];
-  st.x = nx; st.y = ny + bob; st.z = nz;
+  st.x = b.x + V.off[0]; st.y = b.y + V.off[1] + bob; st.z = b.z + V.off[2];
+}
+// "Walk there" (a long press in a scene): a planned move to a point, made to be easy to follow. The view turns to
+// the goal first, so you see where you are going; the walk eases in and out at Titan's lope; if buildings stand in
+// the way the view rises over them in a crane move, looking down at the goal, and comes down on the far side; at the
+// end you face on in the direction you came, the goal in front of you. In a room it is a straight walk.
+function visitWalkTo(V, gx, gz) {
+  const b = V.to, R = roomOf(b);
+  if (!V.off) V.off = [0, 0, 0];
+  const from = V.off.slice();
+  let to, lift = 0;
+  if (R) {
+    const c = Math.cos(b.yaw), s = Math.sin(b.yaw), ox = gx - b.x, oz = gz - b.z;
+    const [lx, lz] = roomClamp(R, ox * c + oz * s, -ox * s + oz * c, 0.6);
+    to = [lx * c - lz * s, 0, lx * s + lz * c];
+  } else {
+    // Walk the line at eye level, 1.5 m at a time, and find the walls on it. A wall is a rise in the height map from
+    // one step to the next (a street place stands inside the flight code's coarse boxes, so neither an absolute
+    // height nor the height at the start tells a wall from the street).
+    const x0 = b.x + from[0], z0 = b.z + from[2], dx = gx - x0, dz = gz - z0, L = Math.hypot(dx, dz) || 1;
+    const eye = (x, z) => Math.max(terrSurfAt(x, z), 0) + 1.7;
+    let hp = heightAt(x0, z0, eye(x0, z0)), wall = -1, top = 0, lastOut = 0;
+    for (let t = 1.5; t <= L; t += 1.5) {
+      const x = x0 + dx * t / L, z = z0 + dz * t / L, y = eye(x, z), h = heightAt(x, z, y);
+      if (h > y - 0.3 && h > hp + 0.5) { if (wall < 0) wall = t; top = Math.max(top, h - y); }
+      else if (h < hp - 3) lastOut = t;
+      if (h <= y - 0.3) lastOut = t;
+      hp = h;
+    }
+    // the goal is the building in front of you (the wall is near the goal): stop 2.5 m short of its face; the goal
+    // is beyond buildings: rise over them and come down at the last clear point before the goal
+    let stop = L - 2.5;
+    if (wall >= 0 && L - wall < 12) stop = wall - 2.5;
+    else if (wall >= 0) { lift = top + 4; stop = Math.max(lastOut > wall ? lastOut : wall - 2.5, 0); }
+    stop = Math.max(0, stop);
+    const tx = x0 + dx * stop / L, tz = z0 + dz * stop / L;
+    to = [tx - b.x, eye(tx, tz) - b.y, tz - b.z];
+  }
+  const D = Math.hypot(to[0] - from[0], to[2] - from[2]);
+  if (D < 0.5) return false;
+  const yawTo = Math.atan2(to[2] - from[2], to[0] - from[0]);
+  const ly0 = V.ly, lp0 = V.lp;
+  const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+  V.walk = { from, to, lift, t: 0, T: clampv(1.4 + D / (lift ? 9 : 3.2), 2.5, 16), ly0, lyTo: ly0 + wrap(yawTo - (b.yaw + ly0)), lp0 };
+  return true;
+}
+function visitWalkStep(V, dt) {
+  const W = V.walk;
+  W.t = Math.min(W.t + dt, W.T);
+  const k = W.t / W.T;
+  // turn first (the first 18%, at most 1.2 s), then go; the move eases in and out
+  const tk = Math.min(0.18, 1.2 / W.T), turn = sstep(0, tk, k), go = sstep(tk * 0.66, 1, k);
+  const arc = W.lift * Math.sin(Math.PI * go);
+  V.off = [W.from[0] + (W.to[0] - W.from[0]) * go, W.from[1] + (W.to[1] - W.from[1]) * go + arc, W.from[2] + (W.to[2] - W.from[2]) * go];
+  V.ly = W.ly0 + (W.lyTo - W.ly0) * turn;
+  // look a little down at the goal while lifted, level again on landing
+  const down = W.lift ? -Math.atan2(W.lift, Math.max(6, Math.hypot(W.to[0] - W.from[0], W.to[2] - W.from[2]) * 0.5)) * Math.sin(Math.PI * go) : 0;
+  V.lp = W.lp0 * (1 - turn) + (0.02 - V.to.pitch) * turn + down;
+  V.walked = (V.walked || 0) + dt * 2.6 * (1 - Math.min(1, W.lift));
+  if (W.t >= W.T) V.walk = null;
 }
 // hotspots: a faint glint when you look their way; holding one near the centre of view (or tapping it) finds it
 function taleHotspots(dt, cam, fov) {

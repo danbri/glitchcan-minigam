@@ -37,6 +37,14 @@ VAR back_for = 0
 VAR clock_fixed = false
 VAR elder_tip = false
 VAR told_elder = false
+// each found thing is described once, the first time you see it
+VAR told_voucher = false
+VAR told_setlist = false
+VAR told_reed = false
+VAR told_patch = false
+VAR told_tenpo = false
+VAR told_tape = false
+VAR told_tape_roof = false
 
 -> street
 
@@ -61,13 +69,16 @@ VAR told_elder = false
     The first settlers named every airship Hindenburg, as a joke: with no oxygen in the air, nothing here can burn. They laughed at everything, the first settlers. The count has reached 1632, and nobody laughs at it now.
     The megatower screens run the emigration campaign: LEAVE TITAN. GO HOME. PASSAGE PAID. Under the screen, someone has sprayed three words in silver: AD ASTRA PER ASPERA.
 - else:
-    Ferry Street, the snow still falling. {clues() > 0: In your case pocket: {voucher: a torn passage voucher;} {setlist: a setlist on a napkin;} {reed: a cracked reed;} {patch: an Aster patch;} {tape: a tape from the Warmhouse;} {tenpo: a card that says テンポ.}}
+    {~Ferry Street, the snow still falling.|Back on Ferry Street. The screens still say GO HOME.|Ferry Street. Snow settles on your case.|The street again. A drone hums past with a crate.}
     {found_nuala: Midnight is close. The Warmhouse hangs over the west edge of the city, lit from inside.}
 }
 {clock_back and back_for == 1: The street heaters flicker, and come back weaker. The Org's clock is still set back.}
 {clock_back and back_for == 2: Frost on the inside of the Cold Tap's window. Somewhere a crop hall has missed its dawn. The Org still thinks it is a hundred years ago.}
 {clock_back and back_for >= 3: The heaters are off along the whole street. Out west, the Warmhouse looks lower in the sky than it did.}
-{voucher and street > 1: The voucher is the Org's: one seat, Titan to Earth, passage paid. The name is torn off. The gate number is not: gate 3, boarding at dawn.}
+{ voucher and not told_voucher:
+    The voucher is the Org's: one seat, Titan to Earth, passage paid. The name is torn off. The gate number is not: gate 3, boarding at dawn.
+    ~ told_voucher = true
+}
 + {not in_world and not voucher} [Look around] -> look_voucher
 * {not heard_mags} [Go into the Cold Tap and ask Mags] -> mags
 + [Take the tube to the Low Orbit, by the spaceport] -> low_orbit
@@ -80,6 +91,7 @@ VAR told_elder = false
 
 === think ===
 You stand in a doorway out of the snow and think.
+{clues() > 0: In your case pocket: {voucher: a torn passage voucher;} {setlist: a setlist on a napkin;} {reed: a cracked reed;} {patch: an Aster patch;} {tape: a tape from the Warmhouse;} {tenpo: a card that says テンポ.}}
 {not heard_mags: Mags at the Cold Tap hears everything said in this street.}
 {not voucher: Something is caught in the gutter under the screen.}
 {not heard_dex: The Asters drink at the Low Orbit, by the spaceport.}
@@ -101,6 +113,8 @@ In the Chinatown night market tonight a tea-stall keeper has sent an old drone i
 
 === mags ===
 # scene: mags
+# place: cold_tap
+# prop: person @ 32 @ 5.3 @ 0 @ 0.9 @ 0
 ~ heard_mags = true
 The Cold Tap is a dive bar behind an airlock: nine stools, a heater that ticks, and a price list older than the dome. You crack your helmet seal. The air smells of hops and hot metal.
 "Nuala was in at noon," Mags says, and wipes the bar. "Sat where you're sitting. Drank one whisky, very slow, and didnae say a word." # speech: ../audio/cast/mags-1.mp3
@@ -117,7 +131,8 @@ She puts a glass in front of you. "The set's still on. Midnight, in the bubble. 
 
 === low_orbit ===
 # scene: low_orbit
-# place: street_5
+# place: low_orbit_bar
+# prop: person @ 3 @ 18 @ 0 @ 0.3 @ 0
 # prop: person @ 15 @ 6 @ -20 @ 0.1 @ 1
 # prop: radio @ -30 @ 7 @ 0 @ 0 @ 0
 # hotspot: setlist @ a napkin stuck to the airlock door @ -35 @ -5
@@ -127,7 +142,10 @@ She puts a glass in front of you. "The set's still on. Midnight, in the bubble. 
 - else:
     The Low Orbit. A launch light blinks on the pad. The Asters watch it.
 }
-{setlist: The napkin is a setlist in Nuala's hand. The last tune is new: "PER ASPERA. Outside. Titan air, down a seventh. Bass leads."}
+{ setlist and not told_setlist:
+    The napkin is a setlist in Nuala's hand. The last tune is new: "PER ASPERA. Outside. Titan air, down a seventh. Bass leads."
+    ~ told_setlist = true
+}
 + {not in_world and not setlist} [Look around] -> look_setlist
 * [Ask Dex about the Asters] -> dex
 * {heard_dex} [Ask Dex about the Org] -> dex_org
@@ -138,7 +156,7 @@ She puts a glass in front of you. "The set's still on. Midnight, in the bubble. 
 # scene: dex
 ~ heard_dex = true
 "Ad astra per aspera," Dex says. "To the stars, through hardship. Old words. We took them." # speech: ../audio/cast/dex-1.mp3
-"The Org wants everybody gone home. Posters on every tower, seats paid, Earth tax credit. Earth's the past, innit. We're not going back. We're going out: the long ships, the next moon, the next star. The hard way." # speech: ../audio/cast/dex-2.mp3
+"The Org wants everybody gone home. Posters on every tower, seats paid, Earth tax credit. Earth's the past. We're not going back. We're going out: the long ships, the next moon, the next star. The hard way." # speech: ../audio/cast/dex-2.mp3
 "So we train. Every morning, before the pads open. The kids learn at home: orbital mechanics, hydroponics, welding, cooking for forty. One of you works the pads, one of you keeps the house, and you have kids. Lots. You don't fill a star system with two-point-one." # speech: ../audio/cast/dex-3.mp3
 "The oxygen? People like a story." He doesn't say no. # speech: ../audio/cast/dex-4.mp3
 "Nuala played our first night, in the Warmhouse. She taught us the rooftop thing: every launch, lamps up on the roofs so the crews can see them go." # speech: ../audio/cast/dex-5.mp3
@@ -161,9 +179,9 @@ She puts a glass in front of you. "The set's still on. Midnight, in the bubble. 
 
 === cellar ===
 # scene: cellar
-# place: street_3
-# prop: person @ -10 @ 5 @ 40 @ 0.33 @ 0
-# prop: lamp @ 30 @ 6 @ 0 @ 0 @ 1
+# place: lantern_cellar
+# prop: person @ -10 @ 5 @ 40 @ 0.6 @ 0
+# prop: person @ 4 @ 13.2 @ 0 @ 0.33 @ 0
 # hotspot: reed @ a cracked reed on the step @ 20 @ -35
 {cellar == 1:
     The Lantern Cellar is under a noodle bar on Glass Walk: forty steps down, then an airlock, then a low room full of smoke and brass. The late jam never stops; players come and go and the tune goes on.
@@ -171,7 +189,10 @@ She puts a glass in front of you. "The set's still on. Midnight, in the bubble. 
 - else:
     The Lantern Cellar. The jam goes on under the street.
 }
-{reed: A saxophone reed, split along its tip. On the flat side, in tiny letters: N.F. Her lucky one. She never plays without it.}
+{ reed and not told_reed:
+    A saxophone reed, split along its tip. On the flat side, in tiny letters: N.F. Her lucky one. She never plays without it.
+    ~ told_reed = true
+}
 + {not in_world and not reed} [Look around] -> look_reed
 * [Sit in with Oskar] -> oskar
 + {heard_oskar and not oskar_in} [Ask Oskar to play the Warmhouse tonight] -> oskar_ask
@@ -208,9 +229,18 @@ You unpack the bass and sit in for one tune. Oskar opens his eyes at the first n
 - else:
     The roof. The lamps wait along the parapet.
 }
-{patch: An old Aster patch, the cracked star, and under it in thread: N.F., FIRST NIGHT. She left it up here.}
-{tenpo: The card says テンポ, tenpo, "time" in toki pona, written in katakana. Under it in Morse, with a pencil note: key the date in Titan days, not years. On the far mast a red light blinks the same thing, over and over.}
-{tape and roof > 1: Ruth's tape plays in your helmet: a crowd, a saxophone, a bass line going down and down.}
+{ patch and not told_patch:
+    An old Aster patch, the cracked star, and under it in thread: N.F., FIRST NIGHT. She left it up here.
+    ~ told_patch = true
+}
+{ tenpo and not told_tenpo:
+    The card says テンポ, tenpo, "time" in toki pona, written in katakana. Under it in Morse, with a pencil note: key the date in Titan days, not years. On the far mast a red light blinks the same thing, over and over.
+    ~ told_tenpo = true
+}
+{ tape and roof > 1 and not told_tape_roof:
+    Ruth's tape plays in your helmet: a crowd, a saxophone, a bass line going down and down.
+    ~ told_tape_roof = true
+}
 + {not in_world and not patch} [Look around] -> look_patch
 + {not in_world and not tenpo and know_mast} [Look under the lamps] -> look_tenpo
 + [Back to Ferry Street] -> street
@@ -366,18 +396,20 @@ You key the date back the Org's way. Harriet has time to say "Tell them I was fu
 - else:
     The foot of the tether. The car waits.
 }
-{tape: A tape in Ruth's handwriting: NUALA, FIRST NIGHT. "I found it in the office," Ruth says. "Thought someone should have it."}
+{ tape and not told_tape:
+    A tape in Ruth's handwriting: NUALA, FIRST NIGHT. "I found it in the office," Ruth says. "Thought someone should have it."
+    ~ told_tape = true
+}
 + {not in_world and not tape} [Look around] -> look_tape
 + {not found_nuala and nuala == ""} [Go back down into the city first] -> street
 + [Ride up] -> club
 
 === club ===
 # scene: club
-# place: warmhouse
+# place: warmhouse_club
 # time: night
 # weather: clear
 # prop: person @ 20 @ 8 @ 200 @ 0.12 @ 0
-# prop: lamp @ -10 @ 6 @ 0 @ 0 @ 1
 {club == 1:
     The car docks, the lock cycles, and you take your helmet off under the open sky. Warm air. Grass. Beer. Bulbs strung round the square, and the club's dome glowing in the middle.
     In here, sound is Earth sound: the voices, the glasses, the bass. The Asters come in with their cracked stars and fill the room.
@@ -413,7 +445,7 @@ THE END: THE LOW NOTE.
 
 === ending_farewell ===
 # time: dawn
-# fly: saturn
+# place: roof_1
 Nuala plays like she is saying goodbye to everyone in the room one at a time, and she is. Nobody asks her to stay. At dawn you carry her horn case to gate 3.
 From the Asters' roof you watch the ship climb. The lamps go up along the parapet. She wanted rain; you hope she gets it.
 THE END: PASSAGE PAID.
@@ -421,6 +453,7 @@ THE END: PASSAGE PAID.
 
 === ending_cold ===
 # time: dawn
+# place: warmhouse
 # weather: snow
 The heaters in the Warmhouse run on the Org's clock, and the Org still thinks it is a hundred years ago. By the second number the air is cooling. By the fourth, the deck is tilting and the cables are singing.
 The bubble comes down slowly, the way warm things do on Titan, and settles on its own tethers at the edge of the city. You finish the set in helmets, sitting on the grass, over the suit radios. It is the worst-sounding gig of your life, and nobody leaves.

@@ -258,6 +258,9 @@ Owner rule (September 2026): "The story switch MUST be done Fink style. This is 
 episodes." So there is no list of stories in the page. Stories link to each other with tags, and the page follows
 the tags, as the FINK player does:
 
+- No ending leaves the city. Two endings once had `# fly: saturn` (THE SPOTLIGHT, PASSAGE PAID): the page closed the
+  story panel and flew to the Saturn system before the ending could be read, and the owner asked whether it was
+  meant. They now stay on a place (the dish; the Asters' roof). `# fly:` still works, and still closes the panel.
 - `story/episodes.fink.js` is the front door (Menu > Story > Episodes, and the "Drift City" entry in
   `inklet/toc.fink.js`): one bare `# FINK: <file>` link per episode.
 - Each episode has a light peer link to the other, in its "Think it over" knot: `# FINK: <file>` plus
@@ -328,11 +331,23 @@ Figures for writing and sound design. Titan surface air: nitrogen with about 5% 
 Owner direction (September 2026): use recorded ElevenLabs speech for a "ship's computer" role in the interface,
 reached only from the hamburger menu; later, perhaps, the voice of the Org's Titan computer if a story needs one.
 
-- Menu > "Guided flight": the computer flies to seven stops (the ringed spire, the Assembly Hall, the Hive, the pod
-  fab, the Chinatown pagoda, the Warmhouse, the spaceport), framing each with `pickLaunch` (the long-press flight,
-  clock sped up in mid-flight), and speaks a short plain description as the view comes in (at 62% of the flight).
-  The same words are shown as a caption with a Stop button. A touch on the view, a key or the pad stops it and gives
-  control back. The WebGL fallback hops to each stop's place instead of flying.
+- Two tours (`GUIDE_TOURS`): Menu > "Guided flight" (seven stops, about 3 minutes) and "Full tour" (fifteen stops,
+  about 8 minutes: the spire, the signal tower and its Morse, a Life tower, the Assembly Hall, Ferry Street, inside
+  the Cold Tap, the pagoda, inside the Lantern Cellar, the Hive and the Asters' katakana poster, the fab, inside the
+  Low Orbit, the spaceport and the airships, the stones, the Warmhouse, inside the club). Owner, September 2026:
+  "way more comprehensive... include Conway life, dive bars... keep the tour moving, on every-frame-a-painting
+  trajectories". Landmark stops fly with `pickLaunch` (the composed, side-lit view); place and room stops fly like a
+  story visit (`guideGo`); the words start when the view is 62% of the way in (97% for a room, so they start inside).
+  Rooms linger 5 to 7 s after the words so the band is heard. Lines are short facts about what is in view.
+- `guideLifeTower` picks the tallest organic round tower within 30 cells that runs the board (the shader's own test,
+  `hsh(cseed, 5, 781) < 0.5`); the signal tower is seen from its street place (`tower_0`, looking up): framed from the air it sits among the financial district's tall towers and the composed view looked steeply down from 150 m (Dawn render, September 2026). The Life tower's composed view is good.
+- **Pause, not stop.** A touch on the view, a key or the pad pauses the tour (owner: "let us stop to explore anywhere
+  without it breaking our tour"): the words stop, the view is yours, and the caption offers "Carry on" (back to the
+  stop you were at, words from the start; the next stop if its words were done) and "End tour". Until September
+  2026 any touch ended the tour.
+- The Grand tour (Menu > Travel) is held, not ended, when you leave it (a long press, a story place, a hop, flying by
+  hand, a trip from the menu): `tourHold`, and Menu > Travel > "Carry on the Grand tour" (`tourResume`). Steering by
+  hand already paused it.
 - It runs on a 200 ms timer, not in a frame loop, so both renderers share it. It calls `flyOn` at the end.
 - The clips, their voice, cost and how to redo one: `audio/computer/README.md`. Tone for new lines: facts about
   what is in view, short sentences, no adjectives for effect.
@@ -363,16 +378,77 @@ The WebGL fallback only names things (it has no visits). Test: `PICK=x,y PICKF=1
   at a street place can read the roof height across the street), and the push-out moved the drone to the roof in a
   few frames. `st.soft` limits that push to 5 m/s for 15 s after the handover.
 
-## Walking into a scene (`visitMove` in tales.js)
+## Walking into a scene (`visitMove`, `visitWalkTo` in tales.js)
 
 In a story place or a picked view (`NAV.mode === "visit"`) the left stick looks and the right stick moves: up
 walks (eye level, under 6 m above the ground: 2.6 m/s, the ground followed, a slow bob) or flies along the view
 (10 m/s); left and right turn; W and S do the same. The move is an offset (`V.off`) on the visit, so the place's
-props and hotspots stay where they are; a new visit starts at its place again. A step is refused when the height
-map rises ahead compared with where you stand (street places stand inside the coarse boxes, so an absolute test
-refuses everything), and you stay within 150 m. The pad's labels follow the mode ("Look" / "Walk · turn").
-Test: `PADRY=1` in the scratch runner holds the right stick forward; from street_1 the walk stops at the facade
-6.6 m ahead.
+props and hotspots stay where they are; a new visit starts at its place again.
+
+- There is no distance limit (owner, September 2026: "walking is needlessly capped... we should be able to navigate
+  anywhere"). Until then you stayed within 150 m of the place and a step into a wall stopped you dead; from
+  street_1 that was 6.6 m. Now a blocked step tries its two axis parts and takes whichever is free, so you slide
+  along a facade. The test is still relative (the height map ahead against the height where you stand), because
+  street places stand inside the flight code's coarse building boxes and an absolute test refuses every step.
+- During the flight to a place the sticks used to do nothing (flights take up to 14 s). Now a stick, W or S pushed
+  mid-flight ends the flight where the view is and hands it over (`visitStep`); a drag on the screen does not.
+- Planning a walk (`visitWalkTo`): the line is walked at eye level 1.5 m at a time, and a wall is a rise in the
+  height map from one step to the next. Neither an absolute height nor the height at the start works: a street
+  place stands inside the coarse boxes, so the first version planned a 68 m crane move for a 22 m walk along the
+  pavement, and the second walked through a facade whose box was no higher than the one at the start. A wall within
+  12 m of the goal means the goal is that building: stop 2.5 m short. A wall further off means the goal is beyond
+  buildings: rise 4 m over the highest and land at the last clear point before the goal. Checked in Node with the
+  real world.js and tales.js (a scratch harness; the Dawn runner's clock advances only 0.3 s in 70 frames, too slow
+  for a walk).
+- **Walk there**: a long press in a scene offers "Walk there" as well as "Fly there" (for things under 450 m away;
+  not skyboats or the bubble). `visitWalkTo` plans it to be easy to follow: the view turns to the goal first (the
+  first 18% of the time), the move eases in and out, it stops 2.5 m short of a wall, and if buildings stand in the
+  way at eye level the view rises over them in a crane move (4 m above the highest thing in the way, looking down at
+  the goal) and comes down on the far side. Any stick or key input takes over at once. Test: `PICK=x,y PICKF=12
+  PICKWALK=1` in the scratch Dawn runner logs the walk's progress and lift every 5 frames.
+
+## Rooms: the venues' interiors (`ROOMS` in tales.js, `roomRender` in scene.wgsl)
+
+Owner, September 2026: "the music venues: when we fly to them we see only street scenes. No interiors." The city is
+a height-field raymarch with coarse building boxes; it has no insides to walk into. So a venue is a separate small
+scene: four room places (`cold_tap`, `low_orbit_bar`, `lantern_cellar`, `warmhouse_club`) stand at their street
+(or, for the club, the Warmhouse square) beyond the fifty generated places. When you arrive at one (`roomNow()`:
+the visit at 92% or more), `EVN[210]` carries its kind and `EVN[212..215]` its origin and heading, and the scene
+pass returns `roomRender` at once: its own SDF (`rmMap`), four lamps (`rmLight`, the first with a soft shadow),
+AO, haze, and the story's props lit by the room (`propsFx` checks `ev.wx.z`). The snow overlay is off (`U[55]`)
+and the street's sound drops behind the walls (see Music).
+
+- Room axes: x forward along the place's heading, z to the right, y up from the floor; the camera starts at x = 0.
+  `ROOMS` holds each room's walking bounds (x0, x1, half width, and a circle for the club); `rmMap` holds the walls.
+  Keep the two in step. Walking, "Walk there" and the story's props and clues are all kept inside the bounds
+  (`roomClamp`), and a clue's glint is re-aimed at where the clamp put it.
+- The ev block grew by one vec4 (`room`) before the Life board: `EVN` is 216 floats, the Life board is written at
+  byte 864, and the buffer is 864 + 1024 bytes. Change all three together.
+- The WebGL fallback has no rooms: it shows the street.
+- Seen in Dawn renders (September 2026): the Cold Tap (counter, stools, lit bottles, heater, airlock ring, price
+  list), the Low Orbit (window on the pads with a blinking launch light, cracked star on the ceiling, bar across
+  the far end), the Lantern Cellar (brick barrel vault, paper lanterns, the stand with a kit and a bass), the club
+  (dome with strings of bulbs, tables with lamps in two rings, the stand with a curtain, piano, kit and bass). The
+  first cellar render had a lantern hanging 1 m in front of the camera; the lantern grid starts at x = 2.8.
+
+## Music in the venues (`src/venue.js`)
+
+Each room has its own band, synthesised live with Web Audio (no samples, no recordings) and scheduled 0.25 s ahead
+from a chord list and simple rules per player: the Cold Tap has a jukebox (12-bar blues shuffle, organ, guitar
+lead, through a small-speaker filter); the Low Orbit has lounge (electric piano, bossa rim and bass, vibes); the
+Lantern Cellar has the late jam (132 bpm swing: ride, hat on 2 and 4, snare comping, walking bass with a chromatic
+approach into each bar, piano stabs on 1 and the "and" of 2, a tenor improvising in phrases with rests); the club
+has a piano trio ballad with brushes. The lead moves to the nearest note of the chord's scale, chord tones on the
+strong beats, inside its range, in phrases of 4 to 12 beats. In a room, `AU.outside` (the whole street mix)
+drops to 22% and the muffle filter to 420 Hz, so the city is a murmur through the walls; the band goes straight to
+the master.
+
+- Offline check: render each band in Chromium's `OfflineAudioContext` (a scratch `render.mjs` that evals venue.js
+  with a stub `AU`). September 2026: 40 s each, peaks 0.36 to 0.76, RMS 0.10 to 0.16, no clipping before the master
+  limiter. Nobody has listened to it inside this pipeline; judge it by ear before building on it.
+- To add a style: an entry in `VENUE_STYLES` (tempo, swing ratio, key as a MIDI note, chord list as [semitones from
+  the key, quality], the four parts, the lead's range and how often it plays) and, if needed, a new instrument
+  function beside `vSax`.
 
 ## Feeling the choices (`src/feel.js`)
 

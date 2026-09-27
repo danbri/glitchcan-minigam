@@ -21,6 +21,9 @@ Every line is spoken indoors (the bars, the gate shed, the Warmhouse), so none g
   them, and it follows the punctuation of the prompt: "..." gives a pause, capitals give stress, a dash gives a
   break. The directions are not spoken (checked with a local Whisper transcript). The prompts are in the flow on
   ElevenLabs; each is the story line with directions added.
+- dex-2 was made again (still `eleven_v3`) without "innit", which the owner found clumsy; the story line changed to
+  match. The owner asked for the newest model every time; `eleven_v4` is refused for this workspace (see
+  `audio/computer/README.md`).
   The text spoken is the quoted speech of each story line; "Form 11-C" is spoken "Form eleven C".
 - Re-encoded to 48 kbps mono, 32 kHz (1.8 MB for all 37).
 - To change a line: change the story text, generate it again with the same voice, and keep the file name.

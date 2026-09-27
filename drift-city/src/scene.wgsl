@@ -33,7 +33,7 @@ const TN: i32 = 384;
 struct EV { beamPos: array<vec4f, 4>, beamDir: array<vec4f, 4>, smoke: array<vec4f, 4>, koi: vec4f, koiDir: vec4f, blimp: vec4f, blimpDir: vec4f, bo: vec4f,
   sky: vec4f, meteorA: vec4f, meteorB: vec4f, fw: array<vec4f, 3>, fwCol: array<vec4f, 3>, launch: vec4f, balloon: array<vec4f, 3>,
   sat: vec4f, ringN: vec4f, moonA: vec4f, moonB: vec4f,
-  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, life: array<vec4f, 64> };
+  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, life: array<vec4f, 64> };
 // Conway's Life (life.js): 64 columns by 40 rows from the top, 16 cells to a float
 fn lifeAt(col: i32, row: i32) -> f32 {
   if (row < 0 || row >= 40) { return 0.0; }
@@ -1220,6 +1220,13 @@ fn propsFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
   // findable things shimmer like a collectable in an old home-computer platform game: the hue wheel turned in eight
   // hard steps, bands rolling up the object, bright whatever the light
   if (kind == 8) { c = mix(c, specCycle(bq.y * 2.5 + bq.x * 0.8, f32(bi)) * (0.75 + 0.25 * dif), 0.85); }
+  // in a venue's room: lit by the room's lamps, no sky and no fog
+  if (ev.wx.z > 0.5) {
+    let rk = i32(ev.wx.z + 0.5);
+    var rc = alb * rmLit(rmLocal(ro + rd * bestT), rmLocalDir(nw), rk, 1.0, false) + emi;
+    if (kind == 8) { rc = mix(rc, specCycle(bq.y * 2.5 + bq.x * 0.8, f32(bi)), 0.85); }
+    return rc + glow * 0.5;
+  }
   c = fogApply(c, ro, rd, bestT);
   return c + glow * 0.5;
 }
@@ -5640,6 +5647,343 @@ fn lightSurf(n: vec3f, rd: vec3f, sf: Surf, sha: f32, occ: f32) -> vec3f {
   return col + sf.emi;
 }
 
+// ---------- the venues' rooms (tales.js ROOMS; keep the walls in step with it) ----------
+// While you stand in a venue, ev.wx.z holds its kind (1 the Cold Tap, 2 the Low Orbit, 3 the Lantern Cellar, 4 the
+// Warmhouse club) and ev.room its origin (the floor under the place) and heading. The scene pass then draws the
+// room round the camera with its own lights and nothing of the city. Room axes: x forward along the heading, z to
+// the right, y up from the floor.
+fn rmLocalDir(v: vec3f) -> vec3f {
+  let c = cos(ev.room.w);
+  let s = sin(ev.room.w);
+  return vec3f(v.x * c + v.z * s, v.y, -v.x * s + v.z * c);
+}
+fn rmLocal(p: vec3f) -> vec3f { return rmLocalDir(p - ev.room.xyz); }
+// a row of n things spaced `step` apart from `start` along one axis: the offset from the nearest
+fn rmRep(x: f32, start: f32, stp: f32, n: f32) -> f32 { return x - start - stp * clamp(round((x - start) / stp), 0.0, n - 1.0); }
+fn rmU(a: vec2f, b: vec2f) -> vec2f { return select(a, b, b.x < a.x); }
+// bottles on three shelves along a wall: u runs along the wall, v is out from it
+fn rmBottles(u: f32, y: f32, v: f32, u0: f32, n: f32) -> f32 {
+  let sy = y - 1.25 - 0.4 * clamp(round((y - 1.25 - 0.14) / 0.4), 0.0, 2.0);
+  let bu = rmRep(u, u0, 0.2, n);
+  let body = sdCyl(vec3f(bu, sy, v), 0.042, 0.02, 0.19);
+  let neck = sdCyl(vec3f(bu, sy, v), 0.014, 0.19, 0.27);
+  return min(body, neck);
+}
+// a drum kit, its bass drum's centre on the floor at k
+fn rmDrums(q: vec3f, k: vec3f) -> vec2f {
+  let p = q - k;
+  var r = vec2f(max(length(p.xy - vec2f(0.0, 0.28)) - 0.28, abs(p.z) - 0.17), 14.0);
+  r = rmU(r, vec2f(sdCyl(p - vec3f(-0.55, 0.0, -0.35), 0.17, 0.5, 0.62), 14.0));
+  r = rmU(r, vec2f(sdCyl(p - vec3f(-0.3, 0.0, 0.45), 0.2, 0.42, 0.62), 14.0));
+  // cymbals on stands
+  r = rmU(r, vec2f(sdCyl(p - vec3f(-0.5, 0.0, 0.55), 0.24, 1.05, 1.07), 5.0));
+  r = rmU(r, vec2f(sdCyl(p - vec3f(-0.75, 0.0, -0.6), 0.19, 0.88, 0.9), 5.0));
+  r = rmU(r, vec2f(sdSeg(p, vec3f(-0.5, 0.0, 0.55), vec3f(-0.5, 1.05, 0.55)) - 0.012, 5.0));
+  r = rmU(r, vec2f(sdSeg(p, vec3f(-0.75, 0.0, -0.6), vec3f(-0.75, 0.88, -0.6)) - 0.012, 5.0));
+  return r;
+}
+// a round table with a lamp, centre on the floor at k
+fn rmTable(q: vec3f, k: vec2f, lamp: bool) -> vec2f {
+  let p = q - vec3f(k.x, 0.0, k.y);
+  var r = vec2f(min(sdCyl(p, 0.45, 0.72, 0.76), sdCyl(p, 0.05, 0.0, 0.72)), 4.0);
+  if (lamp) { r = rmU(r, vec2f(length(p - vec3f(0.0, 0.86, 0.0)) - 0.08, 8.0)); }
+  return r;
+}
+fn rmMap(q: vec3f, k: i32) -> vec2f {
+  var r = vec2f(1e5, 0.0);
+  if (k == 1) {
+    // the Cold Tap: a narrow bar, the counter along the right wall, bottles behind it, stools, a heater and the
+    // airlock at the far end, pipes along the ceiling
+    let shell = -sdBox(q - vec3f(3.75, 1.5, 0.0), vec3f(5.55, 1.5, 3.5));
+    r = vec2f(shell, select(2.0, select(3.0, 1.0, q.y < 0.05), q.y < 0.05 || q.y > 2.95));
+    r = rmU(r, vec2f(sdBox(q - vec3f(4.6, 0.52, 2.15), vec3f(3.6, 0.52, 0.32)), 4.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(4.6, 1.07, 2.1), vec3f(3.7, 0.035, 0.42)), 5.0));
+    let sy = q.y - 1.25 - 0.4 * clamp(round((q.y - 1.25) / 0.4), 0.0, 2.0);
+    r = rmU(r, vec2f(sdBox(vec3f(q.x - 4.6, sy, q.z - 3.3), vec3f(3.8, 0.018, 0.18)), 4.0));
+    r = rmU(r, vec2f(rmBottles(q.x, q.y, q.z - 3.3, 1.0, 36.0), 6.0));
+    let sx = rmRep(q.x, 1.7, 0.95, 7.0);
+    r = rmU(r, vec2f(sdCyl(vec3f(sx, q.y, q.z - 1.35), 0.2, 0.7, 0.77), 10.0));
+    r = rmU(r, vec2f(sdCyl(vec3f(sx, q.y, q.z - 1.35), 0.03, 0.0, 0.7), 5.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(9.2, 0.9, -2.2), vec3f(0.12, 0.5, 0.55)), 12.0));
+    let hq = q - vec3f(9.3, 1.1, 0.4);
+    r = rmU(r, vec2f(length(vec2f(length(hq.yz) - 0.85, hq.x)) - 0.07, 5.0));
+    r = rmU(r, vec2f(length(vec2f(length(hq.yz) - 0.3, hq.x + 0.08)) - 0.03, 5.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(4.0, 2.0, -3.47), vec3f(1.2, 0.5, 0.03)), 13.0));
+    r = rmU(r, vec2f(min(length(q.yz - vec2f(2.78, -3.1)), length(q.yz - vec2f(2.78, -2.8))) - 0.07, 5.0));
+  } else if (k == 2) {
+    // the Low Orbit: a long room, the window on the pads down the left side, tables along it, the bar across the
+    // far end, a cracked star painted on the ceiling
+    let shell = -sdBox(q - vec3f(9.15, 2.1, 0.0), vec3f(10.95, 2.1, 4.8));
+    r = vec2f(shell, select(2.0, select(3.0, 1.0, q.y < 0.05), q.y < 0.05 || q.y > 4.15));
+    let tx = rmRep(q.x, 2.5, 3.0, 5.0);
+    r = rmU(r, rmTable(vec3f(tx, q.y, q.z), vec2f(0.0, -3.6), false));
+    let cx = rmRep(q.x, 1.75, 1.5, 10.0);
+    r = rmU(r, vec2f(sdCyl(vec3f(cx, q.y, q.z + 2.55), 0.19, 0.44, 0.5), 10.0));
+    r = rmU(r, vec2f(sdCyl(vec3f(cx, q.y, q.z + 2.55), 0.03, 0.0, 0.44), 5.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(17.6, 0.55, 0.9), vec3f(0.35, 0.55, 3.2)), 4.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(17.55, 1.12, 0.9), vec3f(0.45, 0.035, 3.3)), 5.0));
+    let sy = q.y - 1.25 - 0.4 * clamp(round((q.y - 1.25) / 0.4), 0.0, 2.0);
+    r = rmU(r, vec2f(sdBox(vec3f(q.x - 19.9, sy, q.z - 0.9), vec3f(0.18, 0.018, 3.0)), 4.0));
+    r = rmU(r, vec2f(rmBottles(q.z, q.y, q.x - 19.9, -2.0, 30.0), 6.0));
+    let px = rmRep(q.x, 3.0, 4.0, 4.0);
+    r = rmU(r, vec2f(length(vec3f(px, q.y - 3.3, q.z + 0.6)) - 0.2, 8.0));
+    r = rmU(r, vec2f(sdSeg(vec3f(px, q.y, q.z + 0.6), vec3f(0.0, 3.3, 0.0), vec3f(0.0, 4.2, 0.0)) - 0.01, 5.0));
+    // the window's mullions
+    let mx = rmRep(q.x, 2.0, 3.0, 6.0);
+    r = rmU(r, vec2f(sdBox(vec3f(mx, q.y - 2.15, q.z + 4.75), vec3f(0.06, 1.3, 0.06)), 5.0));
+  } else if (k == 3) {
+    // the Lantern Cellar: a brick barrel vault under the street, paper lanterns, small tables with candles, and the
+    // stand at the far end with Oskar's kit and a bass
+    let box = sdBox(q - vec3f(5.95, 1.6, 0.0), vec3f(7.75, 1.6, 5.2));
+    let vault = length(vec2f(q.y + 8.67, q.z)) - 11.87;
+    r = vec2f(-max(box, vault), select(11.0, 1.0, q.y < 0.05));
+    r = rmU(r, vec2f(sdBox(q - vec3f(12.2, 0.15, 0.0), vec3f(1.6, 0.15, 4.6)), 9.0));
+    r = rmU(r, rmDrums(q, vec3f(12.6, 0.3, 1.0)));
+    // an upright bass on its side, waiting
+    let bq = q - vec3f(12.3, 0.3, -1.4);
+    r = rmU(r, vec2f(sdEll(bq - vec3f(0.0, 0.62, 0.0), vec3f(0.2, 0.62, 0.36)), 4.0));
+    r = rmU(r, vec2f(sdSeg(bq, vec3f(0.0, 1.1, 0.0), vec3f(0.05, 1.95, 0.0)) - 0.03, 14.0));
+    let tx = rmRep(q.x, 2.0, 3.0, 3.0);
+    let tz = q.z - 3.0 * clamp(round(q.z / 3.0), -1.0, 1.0);
+    if (abs(q.z) > 1.5) { r = rmU(r, rmTable(vec3f(tx, q.y, tz), vec2f(0.0, 0.0), true)); }
+    let lx = rmRep(q.x, 2.8, 2.4, 4.0);
+    let lz = q.z - 2.4 * clamp(round(q.z / 2.4), -1.0, 1.0);
+    r = rmU(r, vec2f(sdEll(vec3f(lx, q.y - 2.2, lz), vec3f(0.26, 0.34, 0.26)), 8.0));
+    r = rmU(r, vec2f(sdSeg(vec3f(lx, q.y, lz), vec3f(0.0, 2.5, 0.0), vec3f(0.0, 3.3, 0.0)) - 0.008, 5.0));
+  } else if (k == 4) {
+    // the Warmhouse club: a round room under a dome, tables with lamps in a ring, the stand at the far side with a
+    // piano and a kit
+    let dome = length(q - vec3f(12.0, -5.0, 0.0)) - 16.57;
+    r = vec2f(-dome, select(3.0, 1.0, q.y < 0.05));
+    let sq = q - vec3f(24.0, 0.0, 0.0);
+    r = rmU(r, vec2f(max(sdCyl(sq, 6.2, 0.0, 0.7), -sq.x - 2.4), 9.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(25.0, 1.25, -2.8), vec3f(0.35, 0.55, 0.8)), 14.0));
+    r = rmU(r, rmDrums(q, vec3f(24.8, 0.7, 2.6)));
+    // the bass on its stand, and Nuala's microphone at the front of the stand
+    let bq = q - vec3f(23.4, 0.7, 0.9);
+    r = rmU(r, vec2f(sdEll(bq - vec3f(0.0, 0.62, 0.0), vec3f(0.2, 0.62, 0.36)), 4.0));
+    r = rmU(r, vec2f(sdSeg(bq, vec3f(0.0, 1.1, 0.0), vec3f(0.05, 1.95, 0.0)) - 0.03, 14.0));
+    r = rmU(r, vec2f(sdSeg(q, vec3f(21.3, 0.7, -0.5), vec3f(21.3, 2.2, -0.5)) - 0.015, 5.0));
+    let cq = q.xz - vec2f(12.0, 0.0);
+    let a = atan2(cq.y, cq.x);
+    let n = 10.0;
+    let ai = round(a / 6.2832 * n);
+    if (abs(ai) >= 1.5) {
+      let aa = ai / n * 6.2832;
+      let tq = vec2f(cos(aa), sin(aa)) * 7.8;
+      r = rmU(r, rmTable(vec3f(cq.x, q.y, cq.y), tq, true));
+    }
+    let ai2 = round(a / 6.2832 * 14.0 + 0.5) - 0.5;
+    if (abs(ai2) >= 2.0) {
+      let aa = ai2 / 14.0 * 6.2832;
+      r = rmU(r, rmTable(vec3f(cq.x, q.y, cq.y), vec2f(cos(aa), sin(aa)) * 12.0, true));
+    }
+  }
+  return r;
+}
+fn rmNormal(q: vec3f, k: i32) -> vec3f {
+  let e = vec2f(0.0015, -0.0015);
+  return normalize(e.xyy * rmMap(q + e.xyy, k).x + e.yyx * rmMap(q + e.yyx, k).x + e.yxy * rmMap(q + e.yxy, k).x + e.xxx * rmMap(q + e.xxx, k).x);
+}
+// the lights of each room: position (local) and colour times strength; the first one casts a shadow
+fn rmLight(k: i32, i: i32) -> array<vec3f, 2> {
+  switch k {
+    case 1: {
+      if (i == 0) { return array<vec3f, 2>(vec3f(4.2, 2.75, 0.4), vec3f(1.0, 0.7, 0.42) * 7.0); }
+      if (i == 1) { return array<vec3f, 2>(vec3f(8.9, 0.9, -2.2), vec3f(1.0, 0.35, 0.08) * 3.0); }
+      if (i == 2) { return array<vec3f, 2>(vec3f(4.6, 1.2, 3.0), vec3f(0.9, 0.55, 0.25) * 2.5); }
+      return array<vec3f, 2>(vec3f(0.5, 2.7, -1.5), vec3f(0.6, 0.5, 0.45) * 2.0);
+    }
+    case 2: {
+      if (i == 0) { return array<vec3f, 2>(vec3f(17.4, 3.4, 0.9), vec3f(1.0, 0.75, 0.5) * 9.0); }
+      if (i == 1) { return array<vec3f, 2>(vec3f(9.0, 2.2, -4.3), vec3f(0.35, 0.5, 0.8) * 5.0); }
+      if (i == 2) { return array<vec3f, 2>(vec3f(7.0, 3.2, -0.6), vec3f(1.0, 0.82, 0.6) * 5.0); }
+      return array<vec3f, 2>(vec3f(3.0, 3.2, -0.6), vec3f(1.0, 0.82, 0.6) * 4.0);
+    }
+    case 3: {
+      if (i == 0) { return array<vec3f, 2>(vec3f(11.0, 2.7, 0.0), vec3f(1.0, 0.8, 0.55) * 7.0); }
+      if (i == 1) { return array<vec3f, 2>(vec3f(3.4, 2.1, -2.4), vec3f(1.0, 0.35, 0.15) * 3.5); }
+      if (i == 2) { return array<vec3f, 2>(vec3f(5.8, 2.1, 2.4), vec3f(1.0, 0.4, 0.15) * 3.5); }
+      return array<vec3f, 2>(vec3f(1.0, 2.1, 0.0), vec3f(1.0, 0.45, 0.2) * 3.0);
+    }
+    default: {
+      if (i == 0) { return array<vec3f, 2>(vec3f(19.0, 6.0, 0.0), vec3f(1.0, 0.85, 0.65) * 30.0); }
+      if (i == 1) { return array<vec3f, 2>(vec3f(12.0, 1.4, -7.8), vec3f(1.0, 0.6, 0.3) * 4.0); }
+      if (i == 2) { return array<vec3f, 2>(vec3f(12.0, 1.4, 7.8), vec3f(1.0, 0.6, 0.3) * 4.0); }
+      return array<vec3f, 2>(vec3f(4.2, 1.4, 0.0), vec3f(1.0, 0.6, 0.3) * 4.0);
+    }
+  }
+}
+fn rmShadow(q: vec3f, lp: vec3f, k: i32) -> f32 {
+  let d = lp - q;
+  let L = length(d);
+  let dir = d / L;
+  var t = 0.05;
+  var s = 1.0;
+  for (var i = 0; i < 24; i++) {
+    if (t > L - 0.3) { break; }
+    let h = rmMap(q + dir * t, k).x;
+    s = min(s, 10.0 * h / t);
+    if (s < 0.02) { break; }
+    t += clamp(h, 0.03, 0.6);
+  }
+  return clamp(s, 0.0, 1.0);
+}
+// light arriving at a point (local position and normal): the room's lamps and its dim ambient
+fn rmLit(q: vec3f, n: vec3f, k: i32, occ: f32, shadowed: bool) -> vec3f {
+  var c = vec3f(0.0);
+  for (var i = 0; i < 4; i++) {
+    let Ld = rmLight(k, i);
+    let d = Ld[0] - q;
+    let l2 = dot(d, d);
+    var sh = 1.0;
+    if (i == 0 && shadowed) { sh = rmShadow(q + n * 0.02, Ld[0], k); }
+    c += Ld[1] * max(dot(n, d * inverseSqrt(l2)), 0.0) * sh / (l2 * 0.35 + 1.0);
+  }
+  let amb = select(select(select(vec3f(0.07, 0.06, 0.07), vec3f(0.05, 0.06, 0.09), k == 2), vec3f(0.08, 0.04, 0.03), k == 3), vec3f(0.07, 0.055, 0.045), k == 1);
+  return c + amb * (0.6 + 0.4 * n.y) * occ;
+}
+fn rmAO(q: vec3f, n: vec3f, k: i32) -> f32 {
+  var o = 0.0;
+  for (var i = 1; i <= 4; i++) {
+    let h = 0.06 * f32(i * i);
+    o += (h - rmMap(q + n * h, k).x) / h * (1.0 / f32(i));
+  }
+  return clamp(1.0 - 0.5 * o, 0.25, 1.0);
+}
+// what the Low Orbit's window shows: the pads at night across the apron, a launch light, now and then a lift-off
+fn rmWindowView(v: vec3f) -> vec3f {
+  let hz = v.y;
+  var c = mix(vec3f(0.09, 0.05, 0.03), vec3f(0.02, 0.025, 0.05), sstepJ(0.0, 0.5, hz));
+  if (hz < 0.0) { c = vec3f(0.015, 0.014, 0.016) + vec3f(0.08, 0.05, 0.02) * exp(hz * 30.0); }
+  let az = atan2(v.x, -v.z);
+  // pad lights in a line along the horizon, and the red launch light
+  let row = exp(-pow((hz + 0.012) * 180.0, 2.0));
+  c += vec3f(1.0, 0.8, 0.5) * row * step(0.6, fract(az * 40.0)) * 0.8;
+  let blink = step(0.55, fract(u.time * 0.7));
+  c += vec3f(1.0, 0.1, 0.05) * exp(-(pow((az - 0.25) * 90.0, 2.0) + pow((hz - 0.01) * 120.0, 2.0))) * blink * 4.0;
+  // a ship lifting: a bright plume climbing from the pad every minute or so
+  let lt = fract(u.time / 70.0) * 70.0;
+  if (lt < 14.0) {
+    let hy = lt * lt * 0.0016;
+    let g = exp(-(pow((az + 0.3) * 60.0, 2.0) + pow((hz - hy) * 50.0, 2.0)));
+    let trail = exp(-pow((az + 0.3) * 80.0, 2.0)) * step(0.0, hz) * step(hz, hy) * 0.4;
+    c += vec3f(1.0, 0.85, 0.6) * (g * 6.0 + trail) * sstepJ(14.0, 9.0, lt);
+  }
+  return c;
+}
+fn rmSurface(q: vec3f, n: vec3f, m: i32, k: i32, ld: vec3f) -> array<vec3f, 2> {
+  var alb = vec3f(0.3);
+  var emi = vec3f(0.0);
+  switch m {
+    case 1: {
+      // floor: boards, or flagstones in the cellar
+      if (k == 3) { let g = abs(fract(q.xz * 1.4) - 0.5); alb = vec3f(0.2, 0.17, 0.15) * (0.8 + 0.2 * hsh(i32(floor(q.x * 1.4)), i32(floor(q.z * 1.4)), 71)) * mix(0.6, 1.0, step(0.03, min(0.5 - g.x, 0.5 - g.y))); }
+      else {
+        let plank = floor(q.z * 5.0);
+        alb = mix(vec3f(0.2, 0.11, 0.06), vec3f(0.3, 0.18, 0.1), hsh(i32(plank), i32(floor(q.x * 0.6 + plank * 0.37)), 72)) * mix(0.55, 1.0, step(0.04, fract(q.z * 5.0)));
+        if (k == 4) { alb *= vec3f(1.1, 1.0, 0.95); }
+      }
+    }
+    case 2: {
+      alb = select(select(vec3f(0.35, 0.2, 0.12), vec3f(0.1, 0.11, 0.14), k == 2), vec3f(0.3, 0.12, 0.1), k == 1);
+      if (k == 2) { alb = mix(alb, vec3f(0.16, 0.09, 0.05), step(q.y, 0.9)); }
+      if (k == 1) { alb = mix(alb, vec3f(0.15, 0.08, 0.05), step(q.y, 1.0)); }
+      if (k == 2 && q.z < -4.7 && q.x > 1.9 && q.x < 17.1 && q.y > 0.9 && q.y < 3.4) { alb = vec3f(0.02); emi = rmWindowView(ld) * 1.4; }
+      if (k == 2 && abs(q.x - 20.05) < 0.1 && q.y > 3.0) { alb = vec3f(0.05); }
+    }
+    case 3: {
+      alb = select(vec3f(0.12, 0.1, 0.1), vec3f(0.08, 0.08, 0.1), k == 2);
+      if (k == 2) {
+        // the star on the ceiling, cracked across the middle
+        let s = q.xz - vec2f(10.0, 0.0);
+        let a = atan2(s.y, s.x);
+        let rr = length(s) / (1.0 + 0.55 * pow(abs(cos(a * 2.5)), 6.0));
+        let crack = abs(s.y - 0.25 * s.x - 0.12 * sin(s.x * 5.0)) < 0.05;
+        if (rr < 1.9 && !crack) { alb = vec3f(0.85, 0.8, 0.6); emi = vec3f(0.12, 0.1, 0.06); }
+      }
+      if (k == 4) {
+        // strings of bulbs round the dome, a warm night sky between them
+        let cq = q - vec3f(12.0, -5.0, 0.0);
+        let el = asin(clamp(cq.y / 16.57, -1.0, 1.0));
+        let az = atan2(cq.z, cq.x);
+        alb = vec3f(0.06, 0.05, 0.07);
+        let ring = abs(fract(el * 5.0) - 0.5);
+        let bulb = abs(fract(az * 11.0 * cos(el) + floor(el * 5.0) * 0.5) - 0.5);
+        if (ring < 0.025 && bulb < 0.05 && q.y > 4.0) { emi = vec3f(1.0, 0.7, 0.35) * 2.4; }
+        // the curtain behind the stand
+        if (q.x > 20.5 && q.y < 6.5) { alb = vec3f(0.32, 0.04, 0.05) * (0.6 + 0.4 * sin(az * 90.0)); }
+      }
+    }
+    case 4: { alb = vec3f(0.16, 0.08, 0.04); }
+    case 5: { alb = vec3f(0.45, 0.33, 0.15); }
+    case 6: {
+      let h = hsh(i32(floor(q.x * 5.0 + q.z * 5.0)), i32(floor(q.y * 2.5)), 73);
+      alb = hue3(h) * 0.2 + 0.05;
+      emi = mix(vec3f(0.3, 0.6, 0.2), vec3f(0.9, 0.5, 0.15), h) * 0.5;
+    }
+    case 8: {
+      alb = vec3f(0.5, 0.2, 0.1);
+      emi = select(vec3f(1.0, 0.35, 0.12), vec3f(1.0, 0.72, 0.4), k != 3) * select(1.6, 2.2, k == 3) * (0.9 + 0.1 * sin(u.time * 3.0 + q.x * 7.0));
+      if (k == 2) { emi = vec3f(1.0, 0.85, 0.65) * 2.5; }
+    }
+    case 9: { alb = vec3f(0.24, 0.13, 0.07) * mix(0.7, 1.0, step(0.05, fract(q.x * 4.0))); }
+    case 10: { alb = select(vec3f(0.35, 0.05, 0.05), vec3f(0.08, 0.2, 0.3), k == 2); }
+    case 11: {
+      // brick: courses 7.5 cm high, bricks 22 cm long, each course offset by half
+      let yy = q.y / 0.075;
+      let u2 = select(q.z, q.x, abs(n.x) < 0.5) / 0.22 + 0.5 * floor(yy);
+      let mortar = min(abs(fract(yy) - 0.5), abs(fract(u2) - 0.5) * 0.34);
+      alb = mix(vec3f(0.2, 0.18, 0.16), vec3f(0.34, 0.14, 0.08) * (0.75 + 0.35 * hsh(i32(floor(u2)), i32(floor(yy)), 74)), step(0.03, 0.5 - mortar));
+    }
+    case 12: { alb = vec3f(0.2); emi = vec3f(1.0, 0.3, 0.06) * (1.1 + 0.25 * sin(u.time * 1.7)) * step(0.3, fract(q.y * 8.0)); }
+    case 13: {
+      // the price list: rows of pale letters on black
+      alb = vec3f(0.02);
+      let row = fract(q.y * 7.0);
+      let ch = hsh(i32(floor(q.x * 22.0)), i32(floor(q.y * 7.0)), 75);
+      if (row > 0.3 && row < 0.75 && ch > 0.35) { emi = vec3f(0.9, 0.85, 0.7) * 0.6; }
+    }
+    case 14: { alb = vec3f(0.03, 0.025, 0.03); }
+    default: {}
+  }
+  return array<vec3f, 2>(alb, emi);
+}
+fn roomRender(ro: vec3f, rd: vec3f) -> vec4f {
+  let k = i32(ev.wx.z + 0.5);
+  let lo = rmLocal(ro);
+  let ld = rmLocalDir(rd);
+  var t = 0.02;
+  var m = 0.0;
+  var hitOk = false;
+  for (var i = 0; i < 110; i++) {
+    let r = rmMap(lo + ld * t, k);
+    if (r.x < 0.0008 * t + 0.001) { m = r.y; hitOk = true; break; }
+    t += r.x * 0.9;
+    if (t > 60.0) { break; }
+  }
+  var col = vec3f(0.0);
+  if (hitOk) {
+    let q = lo + ld * t;
+    let n = rmNormal(q, k);
+    let sf = rmSurface(q, n, i32(m + 0.5), k, ld);
+    let occ = rmAO(q, n, k);
+    col = sf[0] * rmLit(q, n, k, occ, true) + sf[1];
+    // a little shine on the bar tops and the brass
+    if (m > 3.5 && m < 5.5) {
+      let Ld = rmLight(k, 0);
+      let hv = normalize(normalize(Ld[0] - q) - ld);
+      col += Ld[1] * 0.04 * pow(max(dot(n, hv), 0.0), 50.0);
+    }
+  }
+  // haze: smoke in the cellar and the club, a little in the bars
+  let hazeK = select(select(0.012, 0.035, k == 3), 0.02, k == 4);
+  let haze = select(select(vec3f(0.1, 0.07, 0.05), vec3f(0.16, 0.07, 0.04), k == 3), vec3f(0.12, 0.08, 0.05), k == 4);
+  col = mix(haze, col, exp(-t * hazeK));
+  col = propsFx(ro, rd, t, col);
+  return vec4f(max(col, vec3f(0.0)), t);
+}
+
 // ---------- sun shadow map (world-anchored, toroidal, filled incrementally) ----------
 fn smKey(id: vec2i) -> u32 {
   return u32(id.x & 0x3fff) | (u32(id.y & 0x3fff) << 14u) | (u32(sp.gen) << 28u);
@@ -5764,6 +6108,7 @@ fn rnd3(fc: vec2f, k: i32) -> vec3f {
   let uv = vec2f(fj.x * 2.0 - u.res.x, u.res.y - fj.y * 2.0) / u.res.y;
   let ro = u.camPos;
   let rd = normalize(u.camFwd + (uv.x * u.camRight + uv.y * u.camUp) * u.fov);
+  if (ev.wx.z > 0.5) { return roomRender(ro, rd); }
   var tProxy = 0.0;
   if (u.p5 < 0.5) { tProxy = max(textureLoad(proxyTex, vec2i(i32(px.x), i32(fc.y)), 0).r - 0.5, 0.0); }
   let hit = tracePrimary(ro, rd, tProxy);

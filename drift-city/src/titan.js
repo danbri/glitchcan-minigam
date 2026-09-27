@@ -387,7 +387,7 @@ function startFree(cam) {
   let H = sub3(cam.F, mul3(d, dot3(cam.F, d)));
   if (len3(H) < 1e-4) H = cross3([0, 1, 0], d);
   NAV.free = { P: cam.P.slice(), H: norm3(H), look: 0 };
-  NAV.mode = "free"; NAV.trip = null; NAV.space = null; NAV.tour = null; NAV.sunFrozen = true;
+  tourHold(); NAV.mode = "free"; NAV.trip = null; NAV.space = null; NAV.sunFrozen = true;
   showHint("Flying by hand: left stick up and down to climb, left and right to turn; right stick to look (E and Q on a keyboard).", 7000);
   syncGoLabel();
 }
@@ -505,6 +505,18 @@ function navStep(dt, input) {
   return false;
 }
 const TOUR = ["orbit", "kraken", "ligeia", "xanadu", "selk", "huygens", "shangrila", "sotra", "saturn", "rings", "clouds", "enceladus", "iapetus", "ontario", "menrva", "home"];
+// Leaving the Grand tour to look at something (a long press, a story place, a hop, flying by hand, a trip from the
+// menu) holds it rather than ending it: Menu > Travel > "Carry on the Grand tour" picks it up at the same stop.
+function tourHold() {
+  if (!NAV.tour) return;
+  NAV.tourHeld = NAV.tour; NAV.tour = null;
+  showHint("Grand tour paused. Menu > Travel > Carry on the Grand tour.", 5000);
+}
+function tourResume() {
+  const t = NAV.tourHeld;
+  if (!t) return;
+  NAV.tourHeld = null; NAV.tour = t; t.i--; tourNext(); syncGoLabel();
+}
 function tourNext() {
   const t = NAV.tour;
   t.i = (t.i + 1) % TOUR.length;
@@ -512,8 +524,8 @@ function tourNext() {
 }
 function goTo(id) {
   closeGoPanel();
-  if (id === "tour") { NAV.tour = { i: -1, stay: 50 }; tourNext(); syncGoLabel(); return; }
-  NAV.tour = null;
+  if (id === "tour") { NAV.tourHeld = null; NAV.tour = { i: -1, stay: 50 }; tourNext(); syncGoLabel(); return; }
+  tourHold();
   const d = destById(id);
   if (!d) return;
   if (NAV.mode === "surface" && !d.space && d.id === NAV.site.id) { showHint(d.note, 7000); return; }
@@ -571,7 +583,7 @@ function hopPlace(id) {
   closeGoPanel();
   const p = placeById(id);
   if (!p) return;
-  NAV.tour = null; NAV.trip = null; NAV.free = null; NAV.space = null; NAV.cam = null; NAV.spaceMix = 0;
+  tourHold(); NAV.trip = null; NAV.free = null; NAV.space = null; NAV.cam = null; NAV.spaceMix = 0;
   if (NAV.site.id !== "home") arriveRegion(HOME_DEST, true);
   NAV.visit = { from: p, to: p, t: 1, T: 1, ly: 0, lp: 0 };
   NAV.mode = "visit";
@@ -651,9 +663,13 @@ function menuRoot() {
         { label: "Feel the choices: slide a thumb over them, lift to choose", check: FEEL.on, act: () => { FEEL.on = !FEEL.on; taleStore("drift.feel", FEEL.on); feelArm(); renderMenu(); } },
         { label: "Put the story panel back in its usual place", act: () => { taleResetGeom(); closeGoPanel(); } },
         { label: "Episodes: every story in this city", act: () => { closeGoPanel(); taleLink(TALE_DOOR); } }] }) },
-      { label: "Travel", detail: NAV.mode === "trip" ? "on the way" : "", sub: () => ({ ...destPages((d) => goTo(d.id), "Travel"), items: () => [...destPages((d) => goTo(d.id), "Travel").items(), { label: "Grand tour", check: !!NAV.tour, act: () => goTo("tour") }] }) },
+      { label: "Travel", detail: NAV.mode === "trip" ? "on the way" : "", sub: () => ({ ...destPages((d) => goTo(d.id), "Travel"), items: () => [...destPages((d) => goTo(d.id), "Travel").items(), { label: "Grand tour", check: !!NAV.tour, act: () => goTo("tour") }, ...(NAV.tourHeld ? [{ label: "Carry on the Grand tour", act: () => { closeGoPanel(); tourResume(); } }] : [])] }) },
       { label: "City map", act: () => { closeGoPanel(); mapOpen(); } },
-      { label: GUIDE.on ? "Stop the guided flight" : "Guided flight: the ship's computer shows you the city", act: () => { closeGoPanel(); if (GUIDE.on) guideStop(true); else guideStart(); } },
+      ...(GUIDE.on ? [
+        ...(GUIDE.paused ? [{ label: "Carry on with the tour", act: () => { closeGoPanel(); guideResume(); } }] : []),
+        { label: "End the tour", act: () => { closeGoPanel(); guideStop(true); } }] : [
+        { label: "Guided flight: the ship's computer shows you the city (3 minutes)", act: () => { closeGoPanel(); guideStart("short"); } },
+        { label: "Full tour: the city and four of its bars, Life towers, Morse masts (8 minutes)", act: () => { closeGoPanel(); guideStart("full"); } }]),
       { label: "Places in the city", sub: () => placePages((p) => { closeGoPanel(); taleGo(p.id); if (!TALE.on) showHint(p.name + ". " + p.blurb, 6000); }, "Places in the city") },
       { label: "Time and weather", detail: presets[todIdx].name, sub: () => ({ title: "Time and weather", items: () => [
         ...times.map(([n, i]) => ({ label: n, check: todIdx === i, act: () => { NAV.sunOverride = null; NAV.sunFrozen = false; todFrom = currentTod(); todIdx = i; todT = 0; todAuto = 0; syncLabels(); renderMenu(); } })),

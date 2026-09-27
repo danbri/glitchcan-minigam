@@ -87,9 +87,15 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 .pickCard .pb { display: flex; gap: 8px; }
 .pickCard button { font: inherit; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid var(--edge); border-radius: 10px; min-height: 44px; padding: 6px 14px; cursor: pointer; }
 .pickCard .pgo { flex: 1; background: rgba(232,185,121,.28); border-color: #e8b979; }
+.pickCard .pwk { flex: 1; background: rgba(121,200,232,.24); border-color: #79c8e8; }
+.pickCard button[hidden] { display: none; }
 .guideCap { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(160px + env(safe-area-inset-bottom, 0px)); z-index: 12; width: min(560px, calc(100vw - 32px)); box-sizing: border-box; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: var(--glass); border: 1px solid var(--edge); border-radius: 14px; color: var(--ink); font-size: 15px; line-height: 1.4; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); pointer-events: auto; }
 .guideCap[hidden] { display: none; }
 .guideCap .guideText { flex: 1; }
+.guideCap .guideBtns { display: flex; gap: 8px; flex-shrink: 0; }
+.guideCap .guideGoBtn { font: inherit; color: var(--ink); background: rgba(232,185,121,.28); border: 1px solid #e8b979; border-radius: 10px; min-height: 40px; padding: 4px 12px; cursor: pointer; }
+.guideCap button[hidden] { display: none; }
+.guideCap.paused { flex-wrap: wrap; }
 .guideCap .guideStopBtn { font: inherit; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid var(--edge); border-radius: 10px; min-height: 40px; padding: 4px 12px; cursor: pointer; }
 .pickRing.go { animation: pickGo 2.4s ease-out forwards; }
 @keyframes pickGo { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } }
@@ -326,7 +332,7 @@ const TN: i32 = 384;
 struct EV { beamPos: array<vec4f, 4>, beamDir: array<vec4f, 4>, smoke: array<vec4f, 4>, koi: vec4f, koiDir: vec4f, blimp: vec4f, blimpDir: vec4f, bo: vec4f,
   sky: vec4f, meteorA: vec4f, meteorB: vec4f, fw: array<vec4f, 3>, fwCol: array<vec4f, 3>, launch: vec4f, balloon: array<vec4f, 3>,
   sat: vec4f, ringN: vec4f, moonA: vec4f, moonB: vec4f,
-  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, life: array<vec4f, 64> };
+  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, life: array<vec4f, 64> };
 // Conway's Life (life.js): 64 columns by 40 rows from the top, 16 cells to a float
 fn lifeAt(col: i32, row: i32) -> f32 {
   if (row < 0 || row >= 40) { return 0.0; }
@@ -1513,6 +1519,13 @@ fn propsFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
   // findable things shimmer like a collectable in an old home-computer platform game: the hue wheel turned in eight
   // hard steps, bands rolling up the object, bright whatever the light
   if (kind == 8) { c = mix(c, specCycle(bq.y * 2.5 + bq.x * 0.8, f32(bi)) * (0.75 + 0.25 * dif), 0.85); }
+  // in a venue's room: lit by the room's lamps, no sky and no fog
+  if (ev.wx.z > 0.5) {
+    let rk = i32(ev.wx.z + 0.5);
+    var rc = alb * rmLit(rmLocal(ro + rd * bestT), rmLocalDir(nw), rk, 1.0, false) + emi;
+    if (kind == 8) { rc = mix(rc, specCycle(bq.y * 2.5 + bq.x * 0.8, f32(bi)), 0.85); }
+    return rc + glow * 0.5;
+  }
   c = fogApply(c, ro, rd, bestT);
   return c + glow * 0.5;
 }
@@ -5933,6 +5946,343 @@ fn lightSurf(n: vec3f, rd: vec3f, sf: Surf, sha: f32, occ: f32) -> vec3f {
   return col + sf.emi;
 }
 
+// ---------- the venues' rooms (tales.js ROOMS; keep the walls in step with it) ----------
+// While you stand in a venue, ev.wx.z holds its kind (1 the Cold Tap, 2 the Low Orbit, 3 the Lantern Cellar, 4 the
+// Warmhouse club) and ev.room its origin (the floor under the place) and heading. The scene pass then draws the
+// room round the camera with its own lights and nothing of the city. Room axes: x forward along the heading, z to
+// the right, y up from the floor.
+fn rmLocalDir(v: vec3f) -> vec3f {
+  let c = cos(ev.room.w);
+  let s = sin(ev.room.w);
+  return vec3f(v.x * c + v.z * s, v.y, -v.x * s + v.z * c);
+}
+fn rmLocal(p: vec3f) -> vec3f { return rmLocalDir(p - ev.room.xyz); }
+// a row of n things spaced `step` apart from `start` along one axis: the offset from the nearest
+fn rmRep(x: f32, start: f32, stp: f32, n: f32) -> f32 { return x - start - stp * clamp(round((x - start) / stp), 0.0, n - 1.0); }
+fn rmU(a: vec2f, b: vec2f) -> vec2f { return select(a, b, b.x < a.x); }
+// bottles on three shelves along a wall: u runs along the wall, v is out from it
+fn rmBottles(u: f32, y: f32, v: f32, u0: f32, n: f32) -> f32 {
+  let sy = y - 1.25 - 0.4 * clamp(round((y - 1.25 - 0.14) / 0.4), 0.0, 2.0);
+  let bu = rmRep(u, u0, 0.2, n);
+  let body = sdCyl(vec3f(bu, sy, v), 0.042, 0.02, 0.19);
+  let neck = sdCyl(vec3f(bu, sy, v), 0.014, 0.19, 0.27);
+  return min(body, neck);
+}
+// a drum kit, its bass drum's centre on the floor at k
+fn rmDrums(q: vec3f, k: vec3f) -> vec2f {
+  let p = q - k;
+  var r = vec2f(max(length(p.xy - vec2f(0.0, 0.28)) - 0.28, abs(p.z) - 0.17), 14.0);
+  r = rmU(r, vec2f(sdCyl(p - vec3f(-0.55, 0.0, -0.35), 0.17, 0.5, 0.62), 14.0));
+  r = rmU(r, vec2f(sdCyl(p - vec3f(-0.3, 0.0, 0.45), 0.2, 0.42, 0.62), 14.0));
+  // cymbals on stands
+  r = rmU(r, vec2f(sdCyl(p - vec3f(-0.5, 0.0, 0.55), 0.24, 1.05, 1.07), 5.0));
+  r = rmU(r, vec2f(sdCyl(p - vec3f(-0.75, 0.0, -0.6), 0.19, 0.88, 0.9), 5.0));
+  r = rmU(r, vec2f(sdSeg(p, vec3f(-0.5, 0.0, 0.55), vec3f(-0.5, 1.05, 0.55)) - 0.012, 5.0));
+  r = rmU(r, vec2f(sdSeg(p, vec3f(-0.75, 0.0, -0.6), vec3f(-0.75, 0.88, -0.6)) - 0.012, 5.0));
+  return r;
+}
+// a round table with a lamp, centre on the floor at k
+fn rmTable(q: vec3f, k: vec2f, lamp: bool) -> vec2f {
+  let p = q - vec3f(k.x, 0.0, k.y);
+  var r = vec2f(min(sdCyl(p, 0.45, 0.72, 0.76), sdCyl(p, 0.05, 0.0, 0.72)), 4.0);
+  if (lamp) { r = rmU(r, vec2f(length(p - vec3f(0.0, 0.86, 0.0)) - 0.08, 8.0)); }
+  return r;
+}
+fn rmMap(q: vec3f, k: i32) -> vec2f {
+  var r = vec2f(1e5, 0.0);
+  if (k == 1) {
+    // the Cold Tap: a narrow bar, the counter along the right wall, bottles behind it, stools, a heater and the
+    // airlock at the far end, pipes along the ceiling
+    let shell = -sdBox(q - vec3f(3.75, 1.5, 0.0), vec3f(5.55, 1.5, 3.5));
+    r = vec2f(shell, select(2.0, select(3.0, 1.0, q.y < 0.05), q.y < 0.05 || q.y > 2.95));
+    r = rmU(r, vec2f(sdBox(q - vec3f(4.6, 0.52, 2.15), vec3f(3.6, 0.52, 0.32)), 4.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(4.6, 1.07, 2.1), vec3f(3.7, 0.035, 0.42)), 5.0));
+    let sy = q.y - 1.25 - 0.4 * clamp(round((q.y - 1.25) / 0.4), 0.0, 2.0);
+    r = rmU(r, vec2f(sdBox(vec3f(q.x - 4.6, sy, q.z - 3.3), vec3f(3.8, 0.018, 0.18)), 4.0));
+    r = rmU(r, vec2f(rmBottles(q.x, q.y, q.z - 3.3, 1.0, 36.0), 6.0));
+    let sx = rmRep(q.x, 1.7, 0.95, 7.0);
+    r = rmU(r, vec2f(sdCyl(vec3f(sx, q.y, q.z - 1.35), 0.2, 0.7, 0.77), 10.0));
+    r = rmU(r, vec2f(sdCyl(vec3f(sx, q.y, q.z - 1.35), 0.03, 0.0, 0.7), 5.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(9.2, 0.9, -2.2), vec3f(0.12, 0.5, 0.55)), 12.0));
+    let hq = q - vec3f(9.3, 1.1, 0.4);
+    r = rmU(r, vec2f(length(vec2f(length(hq.yz) - 0.85, hq.x)) - 0.07, 5.0));
+    r = rmU(r, vec2f(length(vec2f(length(hq.yz) - 0.3, hq.x + 0.08)) - 0.03, 5.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(4.0, 2.0, -3.47), vec3f(1.2, 0.5, 0.03)), 13.0));
+    r = rmU(r, vec2f(min(length(q.yz - vec2f(2.78, -3.1)), length(q.yz - vec2f(2.78, -2.8))) - 0.07, 5.0));
+  } else if (k == 2) {
+    // the Low Orbit: a long room, the window on the pads down the left side, tables along it, the bar across the
+    // far end, a cracked star painted on the ceiling
+    let shell = -sdBox(q - vec3f(9.15, 2.1, 0.0), vec3f(10.95, 2.1, 4.8));
+    r = vec2f(shell, select(2.0, select(3.0, 1.0, q.y < 0.05), q.y < 0.05 || q.y > 4.15));
+    let tx = rmRep(q.x, 2.5, 3.0, 5.0);
+    r = rmU(r, rmTable(vec3f(tx, q.y, q.z), vec2f(0.0, -3.6), false));
+    let cx = rmRep(q.x, 1.75, 1.5, 10.0);
+    r = rmU(r, vec2f(sdCyl(vec3f(cx, q.y, q.z + 2.55), 0.19, 0.44, 0.5), 10.0));
+    r = rmU(r, vec2f(sdCyl(vec3f(cx, q.y, q.z + 2.55), 0.03, 0.0, 0.44), 5.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(17.6, 0.55, 0.9), vec3f(0.35, 0.55, 3.2)), 4.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(17.55, 1.12, 0.9), vec3f(0.45, 0.035, 3.3)), 5.0));
+    let sy = q.y - 1.25 - 0.4 * clamp(round((q.y - 1.25) / 0.4), 0.0, 2.0);
+    r = rmU(r, vec2f(sdBox(vec3f(q.x - 19.9, sy, q.z - 0.9), vec3f(0.18, 0.018, 3.0)), 4.0));
+    r = rmU(r, vec2f(rmBottles(q.z, q.y, q.x - 19.9, -2.0, 30.0), 6.0));
+    let px = rmRep(q.x, 3.0, 4.0, 4.0);
+    r = rmU(r, vec2f(length(vec3f(px, q.y - 3.3, q.z + 0.6)) - 0.2, 8.0));
+    r = rmU(r, vec2f(sdSeg(vec3f(px, q.y, q.z + 0.6), vec3f(0.0, 3.3, 0.0), vec3f(0.0, 4.2, 0.0)) - 0.01, 5.0));
+    // the window's mullions
+    let mx = rmRep(q.x, 2.0, 3.0, 6.0);
+    r = rmU(r, vec2f(sdBox(vec3f(mx, q.y - 2.15, q.z + 4.75), vec3f(0.06, 1.3, 0.06)), 5.0));
+  } else if (k == 3) {
+    // the Lantern Cellar: a brick barrel vault under the street, paper lanterns, small tables with candles, and the
+    // stand at the far end with Oskar's kit and a bass
+    let box = sdBox(q - vec3f(5.95, 1.6, 0.0), vec3f(7.75, 1.6, 5.2));
+    let vault = length(vec2f(q.y + 8.67, q.z)) - 11.87;
+    r = vec2f(-max(box, vault), select(11.0, 1.0, q.y < 0.05));
+    r = rmU(r, vec2f(sdBox(q - vec3f(12.2, 0.15, 0.0), vec3f(1.6, 0.15, 4.6)), 9.0));
+    r = rmU(r, rmDrums(q, vec3f(12.6, 0.3, 1.0)));
+    // an upright bass on its side, waiting
+    let bq = q - vec3f(12.3, 0.3, -1.4);
+    r = rmU(r, vec2f(sdEll(bq - vec3f(0.0, 0.62, 0.0), vec3f(0.2, 0.62, 0.36)), 4.0));
+    r = rmU(r, vec2f(sdSeg(bq, vec3f(0.0, 1.1, 0.0), vec3f(0.05, 1.95, 0.0)) - 0.03, 14.0));
+    let tx = rmRep(q.x, 2.0, 3.0, 3.0);
+    let tz = q.z - 3.0 * clamp(round(q.z / 3.0), -1.0, 1.0);
+    if (abs(q.z) > 1.5) { r = rmU(r, rmTable(vec3f(tx, q.y, tz), vec2f(0.0, 0.0), true)); }
+    let lx = rmRep(q.x, 2.8, 2.4, 4.0);
+    let lz = q.z - 2.4 * clamp(round(q.z / 2.4), -1.0, 1.0);
+    r = rmU(r, vec2f(sdEll(vec3f(lx, q.y - 2.2, lz), vec3f(0.26, 0.34, 0.26)), 8.0));
+    r = rmU(r, vec2f(sdSeg(vec3f(lx, q.y, lz), vec3f(0.0, 2.5, 0.0), vec3f(0.0, 3.3, 0.0)) - 0.008, 5.0));
+  } else if (k == 4) {
+    // the Warmhouse club: a round room under a dome, tables with lamps in a ring, the stand at the far side with a
+    // piano and a kit
+    let dome = length(q - vec3f(12.0, -5.0, 0.0)) - 16.57;
+    r = vec2f(-dome, select(3.0, 1.0, q.y < 0.05));
+    let sq = q - vec3f(24.0, 0.0, 0.0);
+    r = rmU(r, vec2f(max(sdCyl(sq, 6.2, 0.0, 0.7), -sq.x - 2.4), 9.0));
+    r = rmU(r, vec2f(sdBox(q - vec3f(25.0, 1.25, -2.8), vec3f(0.35, 0.55, 0.8)), 14.0));
+    r = rmU(r, rmDrums(q, vec3f(24.8, 0.7, 2.6)));
+    // the bass on its stand, and Nuala's microphone at the front of the stand
+    let bq = q - vec3f(23.4, 0.7, 0.9);
+    r = rmU(r, vec2f(sdEll(bq - vec3f(0.0, 0.62, 0.0), vec3f(0.2, 0.62, 0.36)), 4.0));
+    r = rmU(r, vec2f(sdSeg(bq, vec3f(0.0, 1.1, 0.0), vec3f(0.05, 1.95, 0.0)) - 0.03, 14.0));
+    r = rmU(r, vec2f(sdSeg(q, vec3f(21.3, 0.7, -0.5), vec3f(21.3, 2.2, -0.5)) - 0.015, 5.0));
+    let cq = q.xz - vec2f(12.0, 0.0);
+    let a = atan2(cq.y, cq.x);
+    let n = 10.0;
+    let ai = round(a / 6.2832 * n);
+    if (abs(ai) >= 1.5) {
+      let aa = ai / n * 6.2832;
+      let tq = vec2f(cos(aa), sin(aa)) * 7.8;
+      r = rmU(r, rmTable(vec3f(cq.x, q.y, cq.y), tq, true));
+    }
+    let ai2 = round(a / 6.2832 * 14.0 + 0.5) - 0.5;
+    if (abs(ai2) >= 2.0) {
+      let aa = ai2 / 14.0 * 6.2832;
+      r = rmU(r, rmTable(vec3f(cq.x, q.y, cq.y), vec2f(cos(aa), sin(aa)) * 12.0, true));
+    }
+  }
+  return r;
+}
+fn rmNormal(q: vec3f, k: i32) -> vec3f {
+  let e = vec2f(0.0015, -0.0015);
+  return normalize(e.xyy * rmMap(q + e.xyy, k).x + e.yyx * rmMap(q + e.yyx, k).x + e.yxy * rmMap(q + e.yxy, k).x + e.xxx * rmMap(q + e.xxx, k).x);
+}
+// the lights of each room: position (local) and colour times strength; the first one casts a shadow
+fn rmLight(k: i32, i: i32) -> array<vec3f, 2> {
+  switch k {
+    case 1: {
+      if (i == 0) { return array<vec3f, 2>(vec3f(4.2, 2.75, 0.4), vec3f(1.0, 0.7, 0.42) * 7.0); }
+      if (i == 1) { return array<vec3f, 2>(vec3f(8.9, 0.9, -2.2), vec3f(1.0, 0.35, 0.08) * 3.0); }
+      if (i == 2) { return array<vec3f, 2>(vec3f(4.6, 1.2, 3.0), vec3f(0.9, 0.55, 0.25) * 2.5); }
+      return array<vec3f, 2>(vec3f(0.5, 2.7, -1.5), vec3f(0.6, 0.5, 0.45) * 2.0);
+    }
+    case 2: {
+      if (i == 0) { return array<vec3f, 2>(vec3f(17.4, 3.4, 0.9), vec3f(1.0, 0.75, 0.5) * 9.0); }
+      if (i == 1) { return array<vec3f, 2>(vec3f(9.0, 2.2, -4.3), vec3f(0.35, 0.5, 0.8) * 5.0); }
+      if (i == 2) { return array<vec3f, 2>(vec3f(7.0, 3.2, -0.6), vec3f(1.0, 0.82, 0.6) * 5.0); }
+      return array<vec3f, 2>(vec3f(3.0, 3.2, -0.6), vec3f(1.0, 0.82, 0.6) * 4.0);
+    }
+    case 3: {
+      if (i == 0) { return array<vec3f, 2>(vec3f(11.0, 2.7, 0.0), vec3f(1.0, 0.8, 0.55) * 7.0); }
+      if (i == 1) { return array<vec3f, 2>(vec3f(3.4, 2.1, -2.4), vec3f(1.0, 0.35, 0.15) * 3.5); }
+      if (i == 2) { return array<vec3f, 2>(vec3f(5.8, 2.1, 2.4), vec3f(1.0, 0.4, 0.15) * 3.5); }
+      return array<vec3f, 2>(vec3f(1.0, 2.1, 0.0), vec3f(1.0, 0.45, 0.2) * 3.0);
+    }
+    default: {
+      if (i == 0) { return array<vec3f, 2>(vec3f(19.0, 6.0, 0.0), vec3f(1.0, 0.85, 0.65) * 30.0); }
+      if (i == 1) { return array<vec3f, 2>(vec3f(12.0, 1.4, -7.8), vec3f(1.0, 0.6, 0.3) * 4.0); }
+      if (i == 2) { return array<vec3f, 2>(vec3f(12.0, 1.4, 7.8), vec3f(1.0, 0.6, 0.3) * 4.0); }
+      return array<vec3f, 2>(vec3f(4.2, 1.4, 0.0), vec3f(1.0, 0.6, 0.3) * 4.0);
+    }
+  }
+}
+fn rmShadow(q: vec3f, lp: vec3f, k: i32) -> f32 {
+  let d = lp - q;
+  let L = length(d);
+  let dir = d / L;
+  var t = 0.05;
+  var s = 1.0;
+  for (var i = 0; i < 24; i++) {
+    if (t > L - 0.3) { break; }
+    let h = rmMap(q + dir * t, k).x;
+    s = min(s, 10.0 * h / t);
+    if (s < 0.02) { break; }
+    t += clamp(h, 0.03, 0.6);
+  }
+  return clamp(s, 0.0, 1.0);
+}
+// light arriving at a point (local position and normal): the room's lamps and its dim ambient
+fn rmLit(q: vec3f, n: vec3f, k: i32, occ: f32, shadowed: bool) -> vec3f {
+  var c = vec3f(0.0);
+  for (var i = 0; i < 4; i++) {
+    let Ld = rmLight(k, i);
+    let d = Ld[0] - q;
+    let l2 = dot(d, d);
+    var sh = 1.0;
+    if (i == 0 && shadowed) { sh = rmShadow(q + n * 0.02, Ld[0], k); }
+    c += Ld[1] * max(dot(n, d * inverseSqrt(l2)), 0.0) * sh / (l2 * 0.35 + 1.0);
+  }
+  let amb = select(select(select(vec3f(0.07, 0.06, 0.07), vec3f(0.05, 0.06, 0.09), k == 2), vec3f(0.08, 0.04, 0.03), k == 3), vec3f(0.07, 0.055, 0.045), k == 1);
+  return c + amb * (0.6 + 0.4 * n.y) * occ;
+}
+fn rmAO(q: vec3f, n: vec3f, k: i32) -> f32 {
+  var o = 0.0;
+  for (var i = 1; i <= 4; i++) {
+    let h = 0.06 * f32(i * i);
+    o += (h - rmMap(q + n * h, k).x) / h * (1.0 / f32(i));
+  }
+  return clamp(1.0 - 0.5 * o, 0.25, 1.0);
+}
+// what the Low Orbit's window shows: the pads at night across the apron, a launch light, now and then a lift-off
+fn rmWindowView(v: vec3f) -> vec3f {
+  let hz = v.y;
+  var c = mix(vec3f(0.09, 0.05, 0.03), vec3f(0.02, 0.025, 0.05), sstepJ(0.0, 0.5, hz));
+  if (hz < 0.0) { c = vec3f(0.015, 0.014, 0.016) + vec3f(0.08, 0.05, 0.02) * exp(hz * 30.0); }
+  let az = atan2(v.x, -v.z);
+  // pad lights in a line along the horizon, and the red launch light
+  let row = exp(-pow((hz + 0.012) * 180.0, 2.0));
+  c += vec3f(1.0, 0.8, 0.5) * row * step(0.6, fract(az * 40.0)) * 0.8;
+  let blink = step(0.55, fract(u.time * 0.7));
+  c += vec3f(1.0, 0.1, 0.05) * exp(-(pow((az - 0.25) * 90.0, 2.0) + pow((hz - 0.01) * 120.0, 2.0))) * blink * 4.0;
+  // a ship lifting: a bright plume climbing from the pad every minute or so
+  let lt = fract(u.time / 70.0) * 70.0;
+  if (lt < 14.0) {
+    let hy = lt * lt * 0.0016;
+    let g = exp(-(pow((az + 0.3) * 60.0, 2.0) + pow((hz - hy) * 50.0, 2.0)));
+    let trail = exp(-pow((az + 0.3) * 80.0, 2.0)) * step(0.0, hz) * step(hz, hy) * 0.4;
+    c += vec3f(1.0, 0.85, 0.6) * (g * 6.0 + trail) * sstepJ(14.0, 9.0, lt);
+  }
+  return c;
+}
+fn rmSurface(q: vec3f, n: vec3f, m: i32, k: i32, ld: vec3f) -> array<vec3f, 2> {
+  var alb = vec3f(0.3);
+  var emi = vec3f(0.0);
+  switch m {
+    case 1: {
+      // floor: boards, or flagstones in the cellar
+      if (k == 3) { let g = abs(fract(q.xz * 1.4) - 0.5); alb = vec3f(0.2, 0.17, 0.15) * (0.8 + 0.2 * hsh(i32(floor(q.x * 1.4)), i32(floor(q.z * 1.4)), 71)) * mix(0.6, 1.0, step(0.03, min(0.5 - g.x, 0.5 - g.y))); }
+      else {
+        let plank = floor(q.z * 5.0);
+        alb = mix(vec3f(0.2, 0.11, 0.06), vec3f(0.3, 0.18, 0.1), hsh(i32(plank), i32(floor(q.x * 0.6 + plank * 0.37)), 72)) * mix(0.55, 1.0, step(0.04, fract(q.z * 5.0)));
+        if (k == 4) { alb *= vec3f(1.1, 1.0, 0.95); }
+      }
+    }
+    case 2: {
+      alb = select(select(vec3f(0.35, 0.2, 0.12), vec3f(0.1, 0.11, 0.14), k == 2), vec3f(0.3, 0.12, 0.1), k == 1);
+      if (k == 2) { alb = mix(alb, vec3f(0.16, 0.09, 0.05), step(q.y, 0.9)); }
+      if (k == 1) { alb = mix(alb, vec3f(0.15, 0.08, 0.05), step(q.y, 1.0)); }
+      if (k == 2 && q.z < -4.7 && q.x > 1.9 && q.x < 17.1 && q.y > 0.9 && q.y < 3.4) { alb = vec3f(0.02); emi = rmWindowView(ld) * 1.4; }
+      if (k == 2 && abs(q.x - 20.05) < 0.1 && q.y > 3.0) { alb = vec3f(0.05); }
+    }
+    case 3: {
+      alb = select(vec3f(0.12, 0.1, 0.1), vec3f(0.08, 0.08, 0.1), k == 2);
+      if (k == 2) {
+        // the star on the ceiling, cracked across the middle
+        let s = q.xz - vec2f(10.0, 0.0);
+        let a = atan2(s.y, s.x);
+        let rr = length(s) / (1.0 + 0.55 * pow(abs(cos(a * 2.5)), 6.0));
+        let crack = abs(s.y - 0.25 * s.x - 0.12 * sin(s.x * 5.0)) < 0.05;
+        if (rr < 1.9 && !crack) { alb = vec3f(0.85, 0.8, 0.6); emi = vec3f(0.12, 0.1, 0.06); }
+      }
+      if (k == 4) {
+        // strings of bulbs round the dome, a warm night sky between them
+        let cq = q - vec3f(12.0, -5.0, 0.0);
+        let el = asin(clamp(cq.y / 16.57, -1.0, 1.0));
+        let az = atan2(cq.z, cq.x);
+        alb = vec3f(0.06, 0.05, 0.07);
+        let ring = abs(fract(el * 5.0) - 0.5);
+        let bulb = abs(fract(az * 11.0 * cos(el) + floor(el * 5.0) * 0.5) - 0.5);
+        if (ring < 0.025 && bulb < 0.05 && q.y > 4.0) { emi = vec3f(1.0, 0.7, 0.35) * 2.4; }
+        // the curtain behind the stand
+        if (q.x > 20.5 && q.y < 6.5) { alb = vec3f(0.32, 0.04, 0.05) * (0.6 + 0.4 * sin(az * 90.0)); }
+      }
+    }
+    case 4: { alb = vec3f(0.16, 0.08, 0.04); }
+    case 5: { alb = vec3f(0.45, 0.33, 0.15); }
+    case 6: {
+      let h = hsh(i32(floor(q.x * 5.0 + q.z * 5.0)), i32(floor(q.y * 2.5)), 73);
+      alb = hue3(h) * 0.2 + 0.05;
+      emi = mix(vec3f(0.3, 0.6, 0.2), vec3f(0.9, 0.5, 0.15), h) * 0.5;
+    }
+    case 8: {
+      alb = vec3f(0.5, 0.2, 0.1);
+      emi = select(vec3f(1.0, 0.35, 0.12), vec3f(1.0, 0.72, 0.4), k != 3) * select(1.6, 2.2, k == 3) * (0.9 + 0.1 * sin(u.time * 3.0 + q.x * 7.0));
+      if (k == 2) { emi = vec3f(1.0, 0.85, 0.65) * 2.5; }
+    }
+    case 9: { alb = vec3f(0.24, 0.13, 0.07) * mix(0.7, 1.0, step(0.05, fract(q.x * 4.0))); }
+    case 10: { alb = select(vec3f(0.35, 0.05, 0.05), vec3f(0.08, 0.2, 0.3), k == 2); }
+    case 11: {
+      // brick: courses 7.5 cm high, bricks 22 cm long, each course offset by half
+      let yy = q.y / 0.075;
+      let u2 = select(q.z, q.x, abs(n.x) < 0.5) / 0.22 + 0.5 * floor(yy);
+      let mortar = min(abs(fract(yy) - 0.5), abs(fract(u2) - 0.5) * 0.34);
+      alb = mix(vec3f(0.2, 0.18, 0.16), vec3f(0.34, 0.14, 0.08) * (0.75 + 0.35 * hsh(i32(floor(u2)), i32(floor(yy)), 74)), step(0.03, 0.5 - mortar));
+    }
+    case 12: { alb = vec3f(0.2); emi = vec3f(1.0, 0.3, 0.06) * (1.1 + 0.25 * sin(u.time * 1.7)) * step(0.3, fract(q.y * 8.0)); }
+    case 13: {
+      // the price list: rows of pale letters on black
+      alb = vec3f(0.02);
+      let row = fract(q.y * 7.0);
+      let ch = hsh(i32(floor(q.x * 22.0)), i32(floor(q.y * 7.0)), 75);
+      if (row > 0.3 && row < 0.75 && ch > 0.35) { emi = vec3f(0.9, 0.85, 0.7) * 0.6; }
+    }
+    case 14: { alb = vec3f(0.03, 0.025, 0.03); }
+    default: {}
+  }
+  return array<vec3f, 2>(alb, emi);
+}
+fn roomRender(ro: vec3f, rd: vec3f) -> vec4f {
+  let k = i32(ev.wx.z + 0.5);
+  let lo = rmLocal(ro);
+  let ld = rmLocalDir(rd);
+  var t = 0.02;
+  var m = 0.0;
+  var hitOk = false;
+  for (var i = 0; i < 110; i++) {
+    let r = rmMap(lo + ld * t, k);
+    if (r.x < 0.0008 * t + 0.001) { m = r.y; hitOk = true; break; }
+    t += r.x * 0.9;
+    if (t > 60.0) { break; }
+  }
+  var col = vec3f(0.0);
+  if (hitOk) {
+    let q = lo + ld * t;
+    let n = rmNormal(q, k);
+    let sf = rmSurface(q, n, i32(m + 0.5), k, ld);
+    let occ = rmAO(q, n, k);
+    col = sf[0] * rmLit(q, n, k, occ, true) + sf[1];
+    // a little shine on the bar tops and the brass
+    if (m > 3.5 && m < 5.5) {
+      let Ld = rmLight(k, 0);
+      let hv = normalize(normalize(Ld[0] - q) - ld);
+      col += Ld[1] * 0.04 * pow(max(dot(n, hv), 0.0), 50.0);
+    }
+  }
+  // haze: smoke in the cellar and the club, a little in the bars
+  let hazeK = select(select(0.012, 0.035, k == 3), 0.02, k == 4);
+  let haze = select(select(vec3f(0.1, 0.07, 0.05), vec3f(0.16, 0.07, 0.04), k == 3), vec3f(0.12, 0.08, 0.05), k == 4);
+  col = mix(haze, col, exp(-t * hazeK));
+  col = propsFx(ro, rd, t, col);
+  return vec4f(max(col, vec3f(0.0)), t);
+}
+
 // ---------- sun shadow map (world-anchored, toroidal, filled incrementally) ----------
 fn smKey(id: vec2i) -> u32 {
   return u32(id.x & 0x3fff) | (u32(id.y & 0x3fff) << 14u) | (u32(sp.gen) << 28u);
@@ -6057,6 +6407,7 @@ fn rnd3(fc: vec2f, k: i32) -> vec3f {
   let uv = vec2f(fj.x * 2.0 - u.res.x, u.res.y - fj.y * 2.0) / u.res.y;
   let ro = u.camPos;
   let rd = normalize(u.camFwd + (uv.x * u.camRight + uv.y * u.camUp) * u.fov);
+  if (ev.wx.z > 0.5) { return roomRender(ro, rd); }
   var tProxy = 0.0;
   if (u.p5 < 0.5) { tProxy = max(textureLoad(proxyTex, vec2i(i32(px.x), i32(fc.y)), 0).r - 0.5, 0.0); }
   let hit = tracePrimary(ro, rd, tProxy);
@@ -8978,7 +9329,7 @@ function startFree(cam) {
   let H = sub3(cam.F, mul3(d, dot3(cam.F, d)));
   if (len3(H) < 1e-4) H = cross3([0, 1, 0], d);
   NAV.free = { P: cam.P.slice(), H: norm3(H), look: 0 };
-  NAV.mode = "free"; NAV.trip = null; NAV.space = null; NAV.tour = null; NAV.sunFrozen = true;
+  tourHold(); NAV.mode = "free"; NAV.trip = null; NAV.space = null; NAV.sunFrozen = true;
   showHint("Flying by hand: left stick up and down to climb, left and right to turn; right stick to look (E and Q on a keyboard).", 7000);
   syncGoLabel();
 }
@@ -9096,6 +9447,18 @@ function navStep(dt, input) {
   return false;
 }
 const TOUR = ["orbit", "kraken", "ligeia", "xanadu", "selk", "huygens", "shangrila", "sotra", "saturn", "rings", "clouds", "enceladus", "iapetus", "ontario", "menrva", "home"];
+// Leaving the Grand tour to look at something (a long press, a story place, a hop, flying by hand, a trip from the
+// menu) holds it rather than ending it: Menu > Travel > "Carry on the Grand tour" picks it up at the same stop.
+function tourHold() {
+  if (!NAV.tour) return;
+  NAV.tourHeld = NAV.tour; NAV.tour = null;
+  showHint("Grand tour paused. Menu > Travel > Carry on the Grand tour.", 5000);
+}
+function tourResume() {
+  const t = NAV.tourHeld;
+  if (!t) return;
+  NAV.tourHeld = null; NAV.tour = t; t.i--; tourNext(); syncGoLabel();
+}
 function tourNext() {
   const t = NAV.tour;
   t.i = (t.i + 1) % TOUR.length;
@@ -9103,8 +9466,8 @@ function tourNext() {
 }
 function goTo(id) {
   closeGoPanel();
-  if (id === "tour") { NAV.tour = { i: -1, stay: 50 }; tourNext(); syncGoLabel(); return; }
-  NAV.tour = null;
+  if (id === "tour") { NAV.tourHeld = null; NAV.tour = { i: -1, stay: 50 }; tourNext(); syncGoLabel(); return; }
+  tourHold();
   const d = destById(id);
   if (!d) return;
   if (NAV.mode === "surface" && !d.space && d.id === NAV.site.id) { showHint(d.note, 7000); return; }
@@ -9162,7 +9525,7 @@ function hopPlace(id) {
   closeGoPanel();
   const p = placeById(id);
   if (!p) return;
-  NAV.tour = null; NAV.trip = null; NAV.free = null; NAV.space = null; NAV.cam = null; NAV.spaceMix = 0;
+  tourHold(); NAV.trip = null; NAV.free = null; NAV.space = null; NAV.cam = null; NAV.spaceMix = 0;
   if (NAV.site.id !== "home") arriveRegion(HOME_DEST, true);
   NAV.visit = { from: p, to: p, t: 1, T: 1, ly: 0, lp: 0 };
   NAV.mode = "visit";
@@ -9242,9 +9605,13 @@ function menuRoot() {
         { label: "Feel the choices: slide a thumb over them, lift to choose", check: FEEL.on, act: () => { FEEL.on = !FEEL.on; taleStore("drift.feel", FEEL.on); feelArm(); renderMenu(); } },
         { label: "Put the story panel back in its usual place", act: () => { taleResetGeom(); closeGoPanel(); } },
         { label: "Episodes: every story in this city", act: () => { closeGoPanel(); taleLink(TALE_DOOR); } }] }) },
-      { label: "Travel", detail: NAV.mode === "trip" ? "on the way" : "", sub: () => ({ ...destPages((d) => goTo(d.id), "Travel"), items: () => [...destPages((d) => goTo(d.id), "Travel").items(), { label: "Grand tour", check: !!NAV.tour, act: () => goTo("tour") }] }) },
+      { label: "Travel", detail: NAV.mode === "trip" ? "on the way" : "", sub: () => ({ ...destPages((d) => goTo(d.id), "Travel"), items: () => [...destPages((d) => goTo(d.id), "Travel").items(), { label: "Grand tour", check: !!NAV.tour, act: () => goTo("tour") }, ...(NAV.tourHeld ? [{ label: "Carry on the Grand tour", act: () => { closeGoPanel(); tourResume(); } }] : [])] }) },
       { label: "City map", act: () => { closeGoPanel(); mapOpen(); } },
-      { label: GUIDE.on ? "Stop the guided flight" : "Guided flight: the ship's computer shows you the city", act: () => { closeGoPanel(); if (GUIDE.on) guideStop(true); else guideStart(); } },
+      ...(GUIDE.on ? [
+        ...(GUIDE.paused ? [{ label: "Carry on with the tour", act: () => { closeGoPanel(); guideResume(); } }] : []),
+        { label: "End the tour", act: () => { closeGoPanel(); guideStop(true); } }] : [
+        { label: "Guided flight: the ship's computer shows you the city (3 minutes)", act: () => { closeGoPanel(); guideStart("short"); } },
+        { label: "Full tour: the city and four of its bars, Life towers, Morse masts (8 minutes)", act: () => { closeGoPanel(); guideStart("full"); } }]),
       { label: "Places in the city", sub: () => placePages((p) => { closeGoPanel(); taleGo(p.id); if (!TALE.on) showHint(p.name + ". " + p.blurb, 6000); }, "Places in the city") },
       { label: "Time and weather", detail: presets[todIdx].name, sub: () => ({ title: "Time and weather", items: () => [
         ...times.map(([n, i]) => ({ label: n, check: todIdx === i, act: () => { NAV.sunOverride = null; NAV.sunFrozen = false; todFrom = currentTod(); todIdx = i; todT = 0; todAuto = 0; syncLabels(); renderMenu(); } })),
@@ -9504,7 +9871,9 @@ function audioInit() {
   const lim = c.createWaveShaper(), lc = new Float32Array(1024);
   for (let i = 0; i < 1024; i++) { const x = (i / 1023) * 4 - 2; lc[i] = Math.tanh(x) * 0.84; }
   lim.curve = lc;
-  AU.muffle.connect(AU.master); AU.master.connect(comp); comp.connect(lim); lim.connect(c.destination);
+  // the world outside; in a venue's room it drops to a murmur through the walls (venue.js)
+  AU.outside = c.createGain(); AU.outside.gain.value = 1;
+  AU.muffle.connect(AU.outside); AU.outside.connect(AU.master); AU.master.connect(comp); comp.connect(lim); lim.connect(c.destination);
   const len = c.sampleRate * 6.5, ir = c.createBuffer(2, len, c.sampleRate);
   for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6) * (i < c.sampleRate * 0.04 ? i / (c.sampleRate * 0.04) : 1); }
   AU.verb = c.createConvolver(); AU.verb.buffer = ir;
@@ -10032,7 +10401,7 @@ function audioStep(dt, w) {
   if (w.tod !== AU.chord || AU.chordT <= 0) { AU.chord = w.tod; AU.chordT = rr(14, 24); AU.chordStep = (AU.chordStep + 1) % 4; CHORDS[w.tod][AU.chordStep].forEach((f, i) => AU.pad[i].frequency.setTargetAtTime(f * 0.5, now, 3)); }
   T(AU.padG.gain, space ? 0.03 : 0.035 + 0.03 * (1 - ground), 2.0);
   T(AU.padF.frequency, 500 + 700 * (w.tod === 0 ? 1 : 0.5), 3.0);
-  T(AU.muffle.frequency, space ? 6000 : 12000 - 9000 * w.snow, 1.5);
+  T(AU.muffle.frequency, typeof roomNow === "function" && roomNow() ? 420 : space ? 6000 : 12000 - 9000 * w.snow, 1.5);
   // our drone's rotors: louder and higher with speed, silent in space and on foot in a story place
   const flying = !space && (w.mode === "surface" || w.mode === "free") ? 1 : 0;
   T(AU.rotorG.gain, flying * (0.015 + 0.025 * Math.min(w.speed / 40, 1)), 0.5);
@@ -10270,7 +10639,223 @@ function auRadioAct(dt, city, night) {
   }
 }
 
-const PLACES_BAKED = [{"id":"hall_floor","name":"Assembly Hall, the floor","blurb":"Under the great glass dome, where the city's assembly meets: tier on tier of seats around the rostrum. Light falls through the ribs in long amber bars.","x":720,"y":2.8,"z":-725,"yaw":2.8416,"pitch":0.28},{"id":"hall_steps","name":"Assembly Hall, the steps","blurb":"The broad stone steps below the arcade, a place to wait, to argue, to be seen.","x":644,"y":4.4,"z":-728,"yaw":0,"pitch":0.2},{"id":"civic_axis","name":"The Assembly Hall avenue, old town","blurb":"The long reflecting pools up the avenue, between two walls of stone, to the dome of the Assembly Hall.","x":728,"y":3.2,"z":-175,"yaw":-1.5708,"pitch":0.1},{"id":"hive","name":"Facing the Hive, Lumen roofs","blurb":"Across the gap, the pod block fills the sky: patched walls, a million little windows, and the boards telling everyone inside to sleep more.","x":741,"y":124.01,"z":741,"yaw":1.5964,"pitch":0.08},{"id":"fab","name":"Hive battlements, over the pod fab","blurb":"Below, the fab that makes the Hive's capsule homes, fed by a beam from the power station in orbit: a white line through the clouds, day and night.","x":983,"y":252,"z":1098,"yaw":0.2783,"pitch":-0.42},{"id":"warmhouse","name":"The Warmhouse, the square","blurb":"Inside the bubble the air is warm and thin, and smells of Earth: grass, bread, beer. Lights are strung round the square; the club's dome glows in the middle.","x":-1621.82,"y":209.2,"z":537.29,"yaw":0.85,"pitch":0.2},{"id":"warmhouse_below","name":"Under the Warmhouse","blurb":"A bubble of warm air, 340 m across, hangs over the west edge of the city ahead on four cables. It floats because it is lighter than the cold, dense air around it.","x":-2270,"y":16.7,"z":687,"yaw":-0.2526,"pitch":0.42},{"id":"pagoda_3","name":"Pagoda, Chinatown","blurb":"Tiers of curved roofs on Orchid Street; incense and methane frost on the eaves.","x":-880.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.18},{"id":"street_0","name":"Ferry Row, financial district","blurb":"A street corner in the financial district: tube traffic humming past, windows stacked up into the haze.","x":-39,"y":1.7,"z":-100.4,"yaw":-1.5708,"pitch":0.18},{"id":"giant_0","name":"Below a megatower, financial district","blurb":"Over the park at its foot, a tower that vanishes into the haze above Halo Row.","x":5.01,"y":26,"z":-5.01,"yaw":-0.7854,"pitch":0.38},{"id":"street_1","name":"Ferry Street, neon quarter","blurb":"A street corner in the neon quarter: tube traffic humming past, windows stacked up into the haze.","x":-143,"y":1.7,"z":81.6,"yaw":-1.5708,"pitch":0.18},{"id":"roof_0","name":"Rooftop above the financial district","blurb":"A rooftop high over Ferry Lane, the financial district spread out below.","x":-117,"y":138.28,"z":-65,"yaw":6.8068,"pitch":-0.12},{"id":"pyramid","name":"Corporate pyramid, financial district","blurb":"A stepped pyramid of glass and stone on Ferry Lane; security drones idle at its apex.","x":-143,"y":1.7,"z":-81.6,"yaw":1.5708,"pitch":0.18},{"id":"roof_1","name":"Rooftop above the neon quarter","blurb":"A rooftop high over Dune Passage, the neon quarter spread out below.","x":-169,"y":67.5,"z":91,"yaw":5.8905,"pitch":-0.12},{"id":"market_1","name":"Night market, neon quarter","blurb":"Stalls under strings of light on Orchid Walk: noodles, cold-weather gear, spare parts, rumours.","x":-221,"y":1.7,"z":48.4,"yaw":1.5708,"pitch":0.18},{"id":"roof_oddity","name":"A rooftop garden","blurb":"Someone keeps a garden up here, with a view across the neon quarter.","x":-299,"y":38.9,"z":13,"yaw":3.1416,"pitch":-0.12},{"id":"tower_0","name":"Signal tower, financial district","blurb":"A lattice tower on Halo Wynd, blinking out to the ships.","x":-377,"y":1.7,"z":-263.6,"yaw":1.5708,"pitch":0.18},{"id":"street_6","name":"Haze Row, dorms","blurb":"A street corner in the dorms: tube traffic humming past, windows stacked up into the haze.","x":429,"y":1.7,"z":341.6,"yaw":-1.5708,"pitch":0.18},{"id":"roof_6","name":"Rooftop above the dorms","blurb":"A rooftop high over Haze Row, the dorms spread out below.","x":429,"y":67.88,"z":325,"yaw":3.8092,"pitch":-0.12},{"id":"street_3","name":"Glass Walk, Chinatown","blurb":"A street corner in the Chinatown: tube traffic humming past, windows stacked up into the haze.","x":-282.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.18},{"id":"roof_3","name":"Rooftop above Chinatown","blurb":"A rooftop high over Glass Walk, Chinatown spread out below.","x":-299,"y":36.77,"z":429,"yaw":5.38,"pitch":-0.12},{"id":"market_3","name":"Night market, Chinatown","blurb":"Stalls under strings of light on Huygens Passage: noodles, cold-weather gear, spare parts, rumours.","x":-523.6,"y":1.7,"z":-117,"yaw":0,"pitch":0.18},{"id":"street_7","name":"Saturnlight Lane, crystal quarter","blurb":"A street corner in the crystal quarter: tube traffic humming past, windows stacked up into the haze.","x":-464.4,"y":1.7,"z":-221,"yaw":3.1416,"pitch":0.18},{"id":"roof_7","name":"Rooftop above the crystal quarter","blurb":"A rooftop high over Methane Row, the crystal quarter spread out below.","x":-403,"y":68.87,"z":-351,"yaw":6.9938,"pitch":-0.12},{"id":"street_2","name":"Cryo Street, old town","blurb":"A street corner in the old town: tube traffic humming past, windows stacked up into the haze.","x":100.4,"y":1.7,"z":-637,"yaw":0,"pitch":0.18},{"id":"roof_2","name":"Rooftop above the old town","blurb":"A rooftop high over Kraken Lane, the old town spread out below.","x":247,"y":67.71,"z":-793,"yaw":8.124,"pitch":-0.12},{"id":"works_4","name":"The works, industrial belt","blurb":"Pipes, stacks and pressure domes on Huygens Parade: the city's heat and air are made here.","x":871,"y":1.7,"z":-1244.4,"yaw":-1.5708,"pitch":0.18},{"id":"street_4","name":"Cryo Row, industrial belt","blurb":"A street corner in the industrial belt: tube traffic humming past, windows stacked up into the haze.","x":897,"y":1.7,"z":-1277.6,"yaw":1.5708,"pitch":0.18},{"id":"spaceport_apron","name":"Spaceport apron","blurb":"Landing pads and fuel lines off Orchid Wynd, under the long light of Saturn.","x":2353,"y":1.7,"z":-2421.6,"yaw":1.5708,"pitch":0.18},{"id":"street_5","name":"Dune Wynd, spaceport","blurb":"A street corner in the spaceport: tube traffic humming past, windows stacked up into the haze.","x":2509,"y":1.7,"z":-2265.6,"yaw":1.5708,"pitch":0.18},{"id":"sign","name":"Below the hillside letters","blurb":"The letters DRIFT CITY stand on the hill above, each taller than a house.","x":52,"y":8.71,"z":-2479,"yaw":-1.5708,"pitch":0.0798},{"id":"stones","name":"The stone circle","blurb":"Standing stones on a rise, older than the city, nobody agrees whose.","x":1157,"y":54.48,"z":-3228.16,"yaw":1.5708,"pitch":0.12},{"id":"treehouse","name":"The treehouse","blurb":"A cabin in the crown of a great tree, reached by a swaying ladder.","x":1443,"y":12,"z":-3982.16,"yaw":1.5708,"pitch":0.12},{"id":"cabin","name":"The mountain cabin","blurb":"A cabin high on the slopes, smoke from its heat vent.","x":4242.16,"y":86.24,"z":1469,"yaw":3.1416,"pitch":0.12},{"id":"dish","name":"The radio dish","blurb":"A dish in the hills, listening for Earth.","x":6435,"y":89.19,"z":-1824.16,"yaw":1.5708,"pitch":0.12},{"id":"lander","name":"The lander","blurb":"An old probe, its parachute collapsed beside it on the pebbles.","x":-5213,"y":70.84,"z":-6712.16,"yaw":1.5708,"pitch":0.12},{"id":"riverbank","name":"A river bank","blurb":"A methane river slides past, silent and dark, between low banks.","x":-3177.04,"y":21.02,"z":-7068.87,"yaw":5.8608,"pitch":0.05},{"id":"lakeshore","name":"The lake shore","blurb":"The edge of a methane lake; tiny waves, and the city's glow far off across it.","x":2471.14,"y":1.7,"z":6549.31,"yaw":2.7808,"pitch":0.05},{"id":"glade","name":"A forest glade","blurb":"A clearing in the dark forest; the fronds glow faintly after dark.","x":7000,"y":31.84,"z":0,"yaw":1.5708,"pitch":0.05},{"id":"summit","name":"A summit","blurb":"A bare summit of ice rock above the haze layer, the city a smudge of light below.","x":-4283.64,"y":504.32,"z":-5724.77,"yaw":5.6408,"pitch":0.05},{"id":"dunes","name":"Among the dunes","blurb":"Dark dunes of organic sand, rippled by the wind.","x":-6137.73,"y":20.43,"z":3365.76,"yaw":4.2108,"pitch":0.05},{"id":"corner_-8_-5","name":"Cassini Parade, financial district","blurb":"A corner on Cassini Parade: steam from a vent, the tubes' glass humming with traffic.","x":-211.6,"y":1.7,"z":-117,"yaw":0,"pitch":0.18},{"id":"corner_0_-10","name":"Amber Walk, financial district","blurb":"A corner on Amber Walk: steam from a vent, the tubes' glass humming with traffic.","x":13,"y":1.7,"z":-230.4,"yaw":-1.5708,"pitch":0.18},{"id":"corner_-9_5","name":"Saturnlight Wynd, financial district","blurb":"A corner on Saturnlight Wynd: steam from a vent, the tubes' glass humming with traffic.","x":-237.6,"y":1.7,"z":143,"yaw":0,"pitch":0.18},{"id":"corner_-21_-12","name":"Tholin Street, crystal quarter","blurb":"A corner on Tholin Street: steam from a vent, the tubes' glass humming with traffic.","x":-516.4,"y":1.7,"z":-299,"yaw":3.1416,"pitch":0.18},{"id":"corner_21_12","name":"Dune Walk, dorms","blurb":"A corner on Dune Walk: steam from a vent, the tubes' glass humming with traffic.","x":542.4,"y":1.7,"z":325,"yaw":0,"pitch":0.18},{"id":"corner_14_-28","name":"Lantern Parade, old town","blurb":"A corner on Lantern Parade: steam from a vent, the tubes' glass humming with traffic.","x":360.4,"y":1.7,"z":-715,"yaw":0,"pitch":0.18},{"id":"corner_17_26","name":"Tholin Street, dorms","blurb":"A corner on Tholin Street: steam from a vent, the tubes' glass humming with traffic.","x":471.6,"y":1.7,"z":689,"yaw":3.1416,"pitch":0.18},{"id":"corner_-14_28","name":"Dune Arcade, dorms","blurb":"A corner on Dune Arcade: steam from a vent, the tubes' glass humming with traffic.","x":-334.4,"y":1.7,"z":741,"yaw":3.1416,"pitch":0.18},{"id":"corner_-31_2","name":"Halo Arcade, neon quarter","blurb":"A corner on Halo Arcade: steam from a vent, the tubes' glass humming with traffic.","x":-793,"y":1.7,"z":48.4,"yaw":1.5708,"pitch":0.18}];
+// ---------- music in the venues: played live, a different band in each room ----------
+// When you stand in a venue's room (roomNow in tales.js), its music fades in and the street outside drops to a murmur
+// through the walls (AU.outside). Nothing is recorded or sampled: every note is synthesised here with Web Audio and
+// scheduled a quarter of a second ahead, from chord changes and simple rules for each player.
+//   1 the Cold Tap: a jukebox in the corner, a slow soul-blues shuffle through a small speaker.
+//   2 the Low Orbit: lounge for ship crews, electric piano and a soft bossa pulse from the ceiling speakers.
+//   3 the Lantern Cellar: the late jam, live and loud: swing ride, brushes, walking bass, piano comping, a tenor
+//     improvising in phrases.
+//   4 the Warmhouse club: a piano trio playing a ballad before the set, in a big warm room.
+// How it is built and how to change it: the drift-city skill, "Music in the venues".
+const VENUE = { k: 0, out: null, g: null, verb: null, next: 0, beat: 0, bar: 0, lead: null, style: null };
+const VENUE_STYLES = {
+  1: { bpm: 70, swing: 0.67, beats: 4, key: 55, verb: 0.7, chords: [[0, "7"], [0, "7"], [0, "7"], [0, "7"], [5, "7"], [5, "7"], [0, "7"], [0, "7"], [7, "7"], [5, "7"], [0, "7"], [7, "7"]],
+    parts: { bass: "two", keys: "organ", drums: "shuffle", lead: "guitar" }, lead: [52, 74], phrase: 0.55, radio: true },
+  2: { bpm: 84, swing: 0.5, beats: 4, key: 50, verb: 1.3, chords: [[0, "maj7"], [0, "maj7"], [5, "maj7"], [5, "maj7"], [9, "m9"], [2, "m9"], [7, "9"], [7, "9"]],
+    parts: { bass: "bossa", keys: "epiano", drums: "bossa", lead: "vibes" }, lead: [62, 84], phrase: 0.35 },
+  3: { bpm: 132, swing: 0.66, beats: 4, key: 58, verb: 0.9, chords: [[2, "m7"], [7, "7"], [0, "maj7"], [0, "maj7"], [2, "m7"], [7, "7"], [0, "maj7"], [9, "7"], [2, "m7"], [7, "7"], [4, "m7"], [9, "7"], [2, "m7"], [7, "7"], [0, "maj7"], [0, "maj7"]],
+    parts: { bass: "walk", keys: "comp", drums: "swing", lead: "sax" }, lead: [49, 75], phrase: 0.75 },
+  4: { bpm: 64, swing: 0.6, beats: 4, key: 51, verb: 2.4, chords: [[0, "maj7"], [9, "m7"], [2, "m7"], [7, "7"], [4, "m7"], [9, "7"], [2, "m7"], [7, "7"]],
+    parts: { bass: "two", keys: "ballad", drums: "brushes", lead: "piano" }, lead: [67, 86], phrase: 0.6 },
+};
+const VENUE_Q = { maj7: [0, 4, 7, 11, 14], m7: [0, 3, 7, 10, 14], m9: [0, 3, 7, 10, 14], 7: [0, 4, 7, 10, 14], 9: [0, 4, 7, 10, 14] };
+// the scale an improviser uses over each kind of chord
+const VENUE_SCALE = { maj7: [0, 2, 4, 7, 9, 11], m7: [0, 2, 3, 5, 7, 9, 10], m9: [0, 2, 3, 5, 7, 9, 10], 7: [0, 2, 3, 4, 7, 9, 10], 9: [0, 2, 4, 5, 7, 9, 10] };
+const vHz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+function venueIR(c, secs, bright) {
+  const len = Math.floor(c.sampleRate * secs), ir = c.createBuffer(2, len, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = ir.getChannelData(ch); let lp = 0;
+    for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; lp += (w - lp) * bright; d[i] = lp * Math.pow(1 - i / len, 3); }
+  }
+  return ir;
+}
+// the room's sound: a gain to fade the whole band, its own reverb, and for the jukebox a small speaker's band
+function venueBuild(k) {
+  const c = AU.ctx, S = VENUE_STYLES[k];
+  if (VENUE.out) { const o = VENUE.out; o.gain.setTargetAtTime(0, c.currentTime, 0.3); setTimeout(() => o.disconnect(), 2000); }
+  const out = c.createGain(); out.gain.value = 0; out.connect(AU.master);
+  const g = c.createGain(); g.gain.value = 1;
+  let last = g;
+  if (S.radio) {
+    const hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 170;
+    const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 3600;
+    const sh = c.createWaveShaper(), cv = new Float32Array(256);
+    for (let i = 0; i < 256; i++) { const x = i / 127.5 - 1; cv[i] = Math.tanh(x * 1.8) * 0.8; }
+    sh.curve = cv;
+    g.connect(hp); hp.connect(sh); sh.connect(lp); last = lp;
+  }
+  last.connect(out);
+  const verb = c.createConvolver(); verb.buffer = venueIR(c, S.verb, k === 4 ? 0.35 : 0.6);
+  const send = c.createGain(); send.gain.value = k === 4 ? 0.5 : 0.3;
+  last.connect(send); send.connect(verb); verb.connect(out);
+  Object.assign(VENUE, { k, out, g, style: S, next: c.currentTime + 0.3, beat: 0, bar: 0, lead: null });
+}
+// ---------- the players' instruments ----------
+function vEnv(g, t, a, peak, tau, end) {
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.setTargetAtTime(0, t + a, tau);
+  return end;
+}
+function vOsc(type, f, t, end, dest) { const o = AU.ctx.createOscillator(); o.type = type; o.frequency.value = f; o.connect(dest); o.start(t); o.stop(end); return o; }
+function vNoise(t, end, dest) { const s = AU.ctx.createBufferSource(); s.buffer = AU.white; s.loop = true; s.connect(dest); s.start(t, Math.random() * 2); s.stop(end); return s; }
+function vFilt(type, f, q, dest) { const b = AU.ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q; b.connect(dest); return b; }
+function vGain(dest) { const g = AU.ctx.createGain(); g.gain.value = 0; g.connect(dest); return g; }
+// an upright bass: a round low pluck with a little thump at the front
+function vBass(t, m, d, v) {
+  const G = VENUE.g, g = vGain(G), f = vHz(m), end = t + d + 0.4;
+  vEnv(g, t, 0.008, 0.5 * v, Math.max(0.18, d * 0.55), end);
+  const lp = vFilt("lowpass", 700, 0.8, g);
+  vOsc("triangle", f, t, end, lp); vOsc("sine", f, t, end, g);
+  const k = vGain(G); vEnv(k, t, 0.002, 0.12 * v, 0.02, t + 0.1); vNoise(t, t + 0.1, vFilt("lowpass", 900, 1, k));
+}
+// an electric piano: a sine struck by a sine (FM), the bell fading faster than the tone
+function vEP(t, m, d, v) {
+  const c = AU.ctx, G = VENUE.g, g = vGain(G), f = vHz(m), end = t + d + 1.2;
+  vEnv(g, t, 0.004, 0.13 * v, 0.9, end);
+  const car = c.createOscillator(); car.frequency.value = f;
+  const mod = c.createOscillator(); mod.frequency.value = f;
+  const mg = c.createGain(); mg.gain.setValueAtTime(f * 2.2, t); mg.gain.setTargetAtTime(f * 0.25, t, 0.25);
+  mod.connect(mg); mg.connect(car.frequency); car.connect(g);
+  car.start(t); mod.start(t); car.stop(end); mod.stop(end);
+}
+// an acoustic piano: a few stretched partials, the higher ones dying first, and a hammer's knock
+function vPiano(t, m, d, v) {
+  const G = VENUE.g, f = vHz(m), end = t + Math.max(d, 1.2) + 1.5;
+  [[1, 1, 1.6], [2.003, 0.45, 0.9], [3.009, 0.22, 0.55], [4.02, 0.12, 0.35]].forEach(([h, a, tau]) => {
+    const g = vGain(G); vEnv(g, t, 0.003, 0.11 * v * a, tau * Math.min(1.6, 300 / f + 0.6), end); vOsc("sine", f * h, t, end, g);
+  });
+  const k = vGain(G); vEnv(k, t, 0.001, 0.03 * v, 0.015, t + 0.06); vNoise(t, t + 0.06, vFilt("bandpass", 2500, 1, k));
+}
+// an organ, for the jukebox record: drawbars, a slow swell
+function vOrgan(t, m, d, v) {
+  const G = VENUE.g, g = vGain(G), f = vHz(m), end = t + d + 0.3;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.05 * v, t + 0.05); g.gain.setValueAtTime(0.05 * v, t + d); g.gain.linearRampToValueAtTime(0, t + d + 0.2);
+  [1, 2, 3, 4].forEach((h, i) => { const hg = vGain(g); hg.gain.value = [1, 0.6, 0.35, 0.2][i]; vOsc("sine", f * h, t, end, hg); });
+}
+// a tenor saxophone: a sawtooth through a breathy formant, the vibrato growing into long notes
+function vSax(t, m, d, v) {
+  const c = AU.ctx, G = VENUE.g, g = vGain(G), f = vHz(m), end = t + d + 0.12;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.09 * v, t + 0.035); g.gain.setValueAtTime(0.08 * v, t + d); g.gain.linearRampToValueAtTime(0, t + d + 0.1);
+  const lp = vFilt("lowpass", 1400 + 1800 * v, 0.7, g), bp = vFilt("peaking", 1100, 1.4, lp); bp.gain.value = 8;
+  const o = vOsc("sawtooth", f, t, end, bp);
+  if (d > 0.3) {
+    const lfo = c.createOscillator(); lfo.frequency.value = 5.3;
+    const lg = c.createGain(); lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * 0.012, t + d);
+    lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(end);
+  }
+  o.frequency.setValueAtTime(f * 0.985, t); o.frequency.linearRampToValueAtTime(f, t + 0.04);
+  const bg = vGain(G); vEnv(bg, t, 0.02, 0.012 * v, 0.08, t + 0.3); vNoise(t, t + 0.3, vFilt("bandpass", 2400, 0.8, bg));
+}
+// a guitar on the record: a quick bright pluck
+function vGuitar(t, m, d, v) {
+  const G = VENUE.g, g = vGain(G), f = vHz(m), end = t + d + 0.5;
+  vEnv(g, t, 0.003, 0.09 * v, Math.max(0.15, d * 0.6), end);
+  const lp = vFilt("lowpass", 2600, 2, g); lp.frequency.setValueAtTime(4200, t); lp.frequency.setTargetAtTime(1200, t, 0.15);
+  vOsc("sawtooth", f, t, end, lp); vOsc("square", f * 1.003, t, end, vFilt("lowpass", 1500, 0.5, lp));
+}
+// vibraphone: a pure bar with a slow tremolo
+function vVibes(t, m, d, v) {
+  const c = AU.ctx, G = VENUE.g, g = vGain(G), f = vHz(m), end = t + d + 1.6;
+  vEnv(g, t, 0.002, 0.07 * v, 1.1, end);
+  const tr = c.createGain(); tr.gain.value = 0.7; tr.connect(g);
+  const lfo = c.createOscillator(); lfo.frequency.value = 5.5; const lg = c.createGain(); lg.gain.value = 0.3; lfo.connect(lg); lg.connect(tr.gain); lfo.start(t); lfo.stop(end);
+  vOsc("sine", f, t, end, tr); const h = vGain(tr); vEnv(h, t, 0.002, 0.25, 0.15, end); vOsc("sine", f * 4, t, end, h);
+}
+function vDrum(kind, t, v) {
+  const G = VENUE.g, g = vGain(G);
+  if (kind === "ride") { vEnv(g, t, 0.002, 0.05 * v, 0.35, t + 1.2); const bp = vFilt("bandpass", 7200, 1.2, g); vNoise(t, t + 1.2, bp); [3160, 4830, 5920].forEach((f) => { const q = vGain(bp); q.gain.value = 0.4; vOsc("square", f * rr(0.99, 1.01), t, t + 1.2, q); }); }
+  else if (kind === "hat") { vEnv(g, t, 0.001, 0.05 * v, 0.03, t + 0.15); vNoise(t, t + 0.15, vFilt("highpass", 7500, 0.7, g)); }
+  else if (kind === "brush") { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.045 * v, t + 0.06); g.gain.setTargetAtTime(0, t + 0.07, 0.09); vNoise(t, t + 0.5, vFilt("bandpass", 3200, 0.6, g)); }
+  else if (kind === "snare") { vEnv(g, t, 0.001, 0.12 * v, 0.07, t + 0.35); vNoise(t, t + 0.35, vFilt("bandpass", 2200, 0.8, g)); const b = vGain(G); vEnv(b, t, 0.001, 0.08 * v, 0.04, t + 0.2); vOsc("triangle", 190, t, t + 0.2, b); }
+  else if (kind === "kick") { vEnv(g, t, 0.002, 0.35 * v, 0.12, t + 0.5); const o = vOsc("sine", 95, t, t + 0.5, g); o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.2); }
+  else if (kind === "rim") { vEnv(g, t, 0.001, 0.06 * v, 0.02, t + 0.1); vOsc("triangle", 1700, t, t + 0.1, g); vNoise(t, t + 0.05, vFilt("bandpass", 3000, 2, g)); }
+}
+// ---------- the players ----------
+function vChordTones(ch, base) { return VENUE_Q[ch[1]].map((i) => base + ch[0] + i); }
+function vNear(m, lo, hi) { while (m < lo) m += 12; while (m > hi) m -= 12; return m; }
+// one beat of the band: t is its start, b its number in the bar, B the beat length in seconds
+function venueBeat(t, b, B) {
+  const S = VENUE.style, P = S.parts, ch = S.chords[VENUE.bar % S.chords.length], nx = S.chords[(VENUE.bar + 1) % S.chords.length];
+  const off = t + B * S.swing, hum = () => rr(-0.008, 0.008);
+  const root = vNear(S.key - 24 + ch[0], 33, 45), tones = vChordTones(ch, S.key - 12);
+  // bass
+  if (P.bass === "walk") {
+    let m = root;
+    if (b === 1) m = vNear(root + pick([VENUE_Q[ch[1]][1], 7, 9]), 33, 50);
+    if (b === 2) m = vNear(root + 7, 33, 50);
+    if (b === 3) { const nr = vNear(S.key - 24 + nx[0], 33, 45); m = nr + (Math.random() < 0.5 ? -1 : 1); }
+    vBass(t + hum(), m, B * 0.9, b === 0 ? 1 : 0.8);
+  } else if (P.bass === "two") { if (b === 0 || b === 2) vBass(t + hum(), b === 0 ? root : vNear(root + 7, 33, 50), B * 1.8, 0.9); }
+  else if (P.bass === "bossa") { if (b === 0) vBass(t, root, B * 1.4, 0.8); if (b === 1) vBass(t + B * 0.5, vNear(root + 7, 33, 50), B * 0.4, 0.6); if (b === 2) vBass(t, vNear(root + 7, 33, 50), B * 1.4, 0.8); if (b === 3) vBass(t + B * 0.5, root, B * 0.4, 0.6); }
+  // drums
+  if (P.drums === "swing") {
+    vDrum("ride", t + hum(), b % 2 ? 0.8 : 1);
+    if (b % 2) { vDrum("hat", t, 0.7); if (Math.random() < 0.5) vDrum("ride", off, 0.55); }
+    if (Math.random() < 0.18) vDrum("snare", off, rr(0.2, 0.45));
+    if (b === 0 && Math.random() < 0.3) vDrum("kick", t, 0.3);
+  } else if (P.drums === "brushes") { vDrum("brush", t, b % 2 ? 0.9 : 0.6); if (b % 2) vDrum("hat", t, 0.35); }
+  else if (P.drums === "shuffle") { vDrum("hat", t, 0.6); vDrum("hat", off, 0.4); if (b % 2) vDrum("snare", t, 0.5); else vDrum("kick", t, 0.6); }
+  else if (P.drums === "bossa") { vDrum("hat", t, 0.35); vDrum("hat", t + B * 0.5, 0.25); if ([0, 3].includes(b) || (b === 1 && VENUE.bar % 2)) vDrum("rim", t + (b === 1 ? B * 0.5 : 0), 0.5); if (b === 0 || b === 2) vDrum("kick", t, 0.35); }
+  // chords
+  const voicing = [tones[1], tones[3], tones[4]].map((m) => vNear(m, 55, 70)).sort((a, c) => a - c);
+  if (P.keys === "comp") {
+    // Charleston and anticipations: a stab on 1, on the "and" of 2, sometimes on 4's "and" to the next chord
+    if ((b === 0 && Math.random() < 0.6) || (b === 1 && Math.random() < 0.55) || (b === 3 && Math.random() < 0.25)) {
+      const at = b === 0 ? t : off, dd = B * rr(0.3, 0.6);
+      voicing.forEach((m) => vPiano(at + hum(), m, dd, rr(0.45, 0.7)));
+    }
+  } else if (P.keys === "epiano") { if (b === 0 || (b === 2 && Math.random() < 0.5)) voicing.forEach((m, i) => vEP(t + i * 0.012, m, B * 1.8, 0.8)); }
+  else if (P.keys === "organ") { if (b === 0) voicing.forEach((m) => vOrgan(t, m, B * 3.8, 0.8)); }
+  else if (P.keys === "ballad") { if (b === 0) [...voicing, vNear(root + 12, 40, 52)].forEach((m, i) => vPiano(t + i * 0.03, m, B * 3.5, 0.55)); if (b === 2 && Math.random() < 0.5) voicing.forEach((m) => vPiano(t, m, B * 1.5, 0.35)); }
+  // the lead: phrases with rests between, chord tones on the strong beats, steps between them
+  venueLead(t, b, B, ch, off);
+}
+function venueLead(t, b, B, ch, off) {
+  const S = VENUE.style, L = VENUE.lead || (VENUE.lead = { m: Math.round((S.lead[0] + S.lead[1]) / 2), rest: 2, left: 0 });
+  if (b === 0) {
+    if (L.left <= 0 && L.rest <= 0) { L.left = Math.floor(rr(4, 12)); if (Math.random() > S.phrase) { L.rest = Math.floor(rr(2, 6)); L.left = 0; } }
+    else if (L.left <= 0) L.rest--;
+  }
+  if (L.left <= 0) return;
+  const play = (at, dur, strong) => {
+    const sc = VENUE_SCALE[ch[1]], ct = VENUE_Q[ch[1]].slice(0, 4);
+    const set = (strong ? ct : sc).map((i) => S.key + ch[0] + i);
+    // move to the nearest note of the set in a chosen direction, a step or a leap
+    const dir = L.m > S.lead[1] - 4 ? -1 : L.m < S.lead[0] + 4 ? 1 : Math.random() < 0.5 ? -1 : 1;
+    let best = L.m, bd = 99;
+    for (let o = -2; o <= 2; o++) for (const p of set) { const m = p + o * 12, dd = (m - L.m) * dir; if (dd > 0 && dd < bd && m >= S.lead[0] && m <= S.lead[1]) { bd = dd; best = m; } }
+    L.m = best;
+    const inst = { sax: vSax, guitar: vGuitar, vibes: vVibes, piano: vPiano }[S.parts.lead];
+    inst(at + rr(-0.01, 0.015), L.m, dur, strong ? rr(0.75, 1) : rr(0.5, 0.8));
+  };
+  const r = Math.random();
+  if (S.parts.lead === "sax" && r < 0.55) { play(t, B * S.swing * 0.95, true); play(off, B * (1 - S.swing) * 0.9, false); }
+  else if (r < 0.8) play(t, B * rr(0.8, 1.9), b % 2 === 0);
+  L.left -= 1 / S.beats;
+}
+// each frame: fade the band in or out with the room, and keep a quarter of a second of notes scheduled
+function venueStep() {
+  if (!AU.ready || !AU.on || !AU.outside) return;
+  const c = AU.ctx, now = c.currentTime, R = typeof roomNow === "function" ? roomNow() : null, k = R ? R.room : 0;
+  AU.outside.gain.setTargetAtTime(k ? 0.22 : 1, now, 0.6);
+  if (k && k !== VENUE.k) venueBuild(k);
+  if (!VENUE.out) return;
+  VENUE.out.gain.setTargetAtTime(k ? (k === 1 ? 0.45 : 0.55) : 0, now, k ? 0.8 : 0.4);
+  if (!k) { if (VENUE.out.gain.value < 0.01) { VENUE.out.disconnect(); VENUE.out = null; VENUE.k = 0; } return; }
+  const S = VENUE.style, B = 60 / S.bpm;
+  if (VENUE.next < now) VENUE.next = now + 0.05;
+  while (VENUE.next < now + 0.25) {
+    venueBeat(VENUE.next, VENUE.beat, B);
+    VENUE.next += B;
+    VENUE.beat = (VENUE.beat + 1) % S.beats;
+    if (VENUE.beat === 0) VENUE.bar++;
+  }
+}
+
+const PLACES_BAKED = [{"id":"hall_floor","name":"Assembly Hall, the floor","blurb":"Under the great glass dome, where the city's assembly meets: tier on tier of seats around the rostrum. Light falls through the ribs in long amber bars.","x":720,"y":2.8,"z":-725,"yaw":2.8416,"pitch":0.28},{"id":"hall_steps","name":"Assembly Hall, the steps","blurb":"The broad stone steps below the arcade, a place to wait, to argue, to be seen.","x":644,"y":4.4,"z":-728,"yaw":0,"pitch":0.2},{"id":"civic_axis","name":"The Assembly Hall avenue, old town","blurb":"The long reflecting pools up the avenue, between two walls of stone, to the dome of the Assembly Hall.","x":728,"y":3.2,"z":-175,"yaw":-1.5708,"pitch":0.1},{"id":"hive","name":"Facing the Hive, Lumen roofs","blurb":"Across the gap, the pod block fills the sky: patched walls, a million little windows, and the boards telling everyone inside to sleep more.","x":741,"y":124.01,"z":741,"yaw":1.5964,"pitch":0.08},{"id":"fab","name":"Hive battlements, over the pod fab","blurb":"Below, the fab that makes the Hive's capsule homes, fed by a beam from the power station in orbit: a white line through the clouds, day and night.","x":983,"y":252,"z":1098,"yaw":0.2783,"pitch":-0.42},{"id":"warmhouse","name":"The Warmhouse, the square","blurb":"Inside the bubble the air is warm and thin, and smells of Earth: grass, bread, beer. Lights are strung round the square; the club's dome glows in the middle.","x":-1621.82,"y":209.2,"z":537.29,"yaw":0.85,"pitch":0.2},{"id":"warmhouse_below","name":"Under the Warmhouse","blurb":"A bubble of warm air, 340 m across, hangs over the west edge of the city ahead on four cables. It floats because it is lighter than the cold, dense air around it.","x":-2270,"y":16.7,"z":687,"yaw":-0.2526,"pitch":0.42},{"id":"pagoda_3","name":"Pagoda, Chinatown","blurb":"Tiers of curved roofs on Orchid Street; incense and methane frost on the eaves.","x":-880.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.18},{"id":"street_0","name":"Ferry Row, financial district","blurb":"A street corner in the financial district: tube traffic humming past, windows stacked up into the haze.","x":-39,"y":1.7,"z":-100.4,"yaw":-1.5708,"pitch":0.18},{"id":"giant_0","name":"Below a megatower, financial district","blurb":"Over the park at its foot, a tower that vanishes into the haze above Halo Row.","x":5.01,"y":26,"z":-5.01,"yaw":-0.7854,"pitch":0.38},{"id":"street_1","name":"Ferry Street, neon quarter","blurb":"A street corner in the neon quarter: tube traffic humming past, windows stacked up into the haze.","x":-143,"y":1.7,"z":81.6,"yaw":-1.5708,"pitch":0.18},{"id":"roof_0","name":"Rooftop above the financial district","blurb":"A rooftop high over Ferry Lane, the financial district spread out below.","x":-117,"y":138.28,"z":-65,"yaw":6.8068,"pitch":-0.12},{"id":"pyramid","name":"Corporate pyramid, financial district","blurb":"A stepped pyramid of glass and stone on Ferry Lane; security drones idle at its apex.","x":-143,"y":1.7,"z":-81.6,"yaw":1.5708,"pitch":0.18},{"id":"roof_1","name":"Rooftop above the neon quarter","blurb":"A rooftop high over Dune Passage, the neon quarter spread out below.","x":-169,"y":67.5,"z":91,"yaw":5.8905,"pitch":-0.12},{"id":"market_1","name":"Night market, neon quarter","blurb":"Stalls under strings of light on Orchid Walk: noodles, cold-weather gear, spare parts, rumours.","x":-221,"y":1.7,"z":48.4,"yaw":1.5708,"pitch":0.18},{"id":"roof_oddity","name":"A rooftop garden","blurb":"Someone keeps a garden up here, with a view across the neon quarter.","x":-299,"y":38.9,"z":13,"yaw":3.1416,"pitch":-0.12},{"id":"tower_0","name":"Signal tower, financial district","blurb":"A lattice tower on Halo Wynd, blinking out to the ships.","x":-377,"y":1.7,"z":-263.6,"yaw":1.5708,"pitch":0.18},{"id":"street_6","name":"Haze Row, dorms","blurb":"A street corner in the dorms: tube traffic humming past, windows stacked up into the haze.","x":429,"y":1.7,"z":341.6,"yaw":-1.5708,"pitch":0.18},{"id":"roof_6","name":"Rooftop above the dorms","blurb":"A rooftop high over Haze Row, the dorms spread out below.","x":429,"y":67.88,"z":325,"yaw":3.8092,"pitch":-0.12},{"id":"street_3","name":"Glass Walk, Chinatown","blurb":"A street corner in the Chinatown: tube traffic humming past, windows stacked up into the haze.","x":-282.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.18},{"id":"roof_3","name":"Rooftop above Chinatown","blurb":"A rooftop high over Glass Walk, Chinatown spread out below.","x":-299,"y":36.77,"z":429,"yaw":5.38,"pitch":-0.12},{"id":"market_3","name":"Night market, Chinatown","blurb":"Stalls under strings of light on Huygens Passage: noodles, cold-weather gear, spare parts, rumours.","x":-523.6,"y":1.7,"z":-117,"yaw":0,"pitch":0.18},{"id":"street_7","name":"Saturnlight Lane, crystal quarter","blurb":"A street corner in the crystal quarter: tube traffic humming past, windows stacked up into the haze.","x":-464.4,"y":1.7,"z":-221,"yaw":3.1416,"pitch":0.18},{"id":"roof_7","name":"Rooftop above the crystal quarter","blurb":"A rooftop high over Methane Row, the crystal quarter spread out below.","x":-403,"y":68.87,"z":-351,"yaw":6.9938,"pitch":-0.12},{"id":"street_2","name":"Cryo Street, old town","blurb":"A street corner in the old town: tube traffic humming past, windows stacked up into the haze.","x":100.4,"y":1.7,"z":-637,"yaw":0,"pitch":0.18},{"id":"roof_2","name":"Rooftop above the old town","blurb":"A rooftop high over Kraken Lane, the old town spread out below.","x":247,"y":67.71,"z":-793,"yaw":8.124,"pitch":-0.12},{"id":"works_4","name":"The works, industrial belt","blurb":"Pipes, stacks and pressure domes on Huygens Parade: the city's heat and air are made here.","x":871,"y":1.7,"z":-1244.4,"yaw":-1.5708,"pitch":0.18},{"id":"street_4","name":"Cryo Row, industrial belt","blurb":"A street corner in the industrial belt: tube traffic humming past, windows stacked up into the haze.","x":897,"y":1.7,"z":-1277.6,"yaw":1.5708,"pitch":0.18},{"id":"spaceport_apron","name":"Spaceport apron","blurb":"Landing pads and fuel lines off Orchid Wynd, under the long light of Saturn.","x":2353,"y":1.7,"z":-2421.6,"yaw":1.5708,"pitch":0.18},{"id":"street_5","name":"Dune Wynd, spaceport","blurb":"A street corner in the spaceport: tube traffic humming past, windows stacked up into the haze.","x":2509,"y":1.7,"z":-2265.6,"yaw":1.5708,"pitch":0.18},{"id":"sign","name":"Below the hillside letters","blurb":"The letters DRIFT CITY stand on the hill above, each taller than a house.","x":52,"y":8.71,"z":-2479,"yaw":-1.5708,"pitch":0.0798},{"id":"stones","name":"The stone circle","blurb":"Standing stones on a rise, older than the city, nobody agrees whose.","x":1157,"y":54.48,"z":-3228.16,"yaw":1.5708,"pitch":0.12},{"id":"treehouse","name":"The treehouse","blurb":"A cabin in the crown of a great tree, reached by a swaying ladder.","x":1443,"y":12,"z":-3982.16,"yaw":1.5708,"pitch":0.12},{"id":"cabin","name":"The mountain cabin","blurb":"A cabin high on the slopes, smoke from its heat vent.","x":4242.16,"y":86.24,"z":1469,"yaw":3.1416,"pitch":0.12},{"id":"dish","name":"The radio dish","blurb":"A dish in the hills, listening for Earth.","x":6435,"y":89.19,"z":-1824.16,"yaw":1.5708,"pitch":0.12},{"id":"lander","name":"The lander","blurb":"An old probe, its parachute collapsed beside it on the pebbles.","x":-5213,"y":70.84,"z":-6712.16,"yaw":1.5708,"pitch":0.12},{"id":"riverbank","name":"A river bank","blurb":"A methane river slides past, silent and dark, between low banks.","x":-3177.04,"y":21.02,"z":-7068.87,"yaw":5.8608,"pitch":0.05},{"id":"lakeshore","name":"The lake shore","blurb":"The edge of a methane lake; tiny waves, and the city's glow far off across it.","x":2471.14,"y":1.7,"z":6549.31,"yaw":2.7808,"pitch":0.05},{"id":"glade","name":"A forest glade","blurb":"A clearing in the dark forest; the fronds glow faintly after dark.","x":7000,"y":31.84,"z":0,"yaw":1.5708,"pitch":0.05},{"id":"summit","name":"A summit","blurb":"A bare summit of ice rock above the haze layer, the city a smudge of light below.","x":-4283.64,"y":504.32,"z":-5724.77,"yaw":5.6408,"pitch":0.05},{"id":"dunes","name":"Among the dunes","blurb":"Dark dunes of organic sand, rippled by the wind.","x":-6137.73,"y":20.43,"z":3365.76,"yaw":4.2108,"pitch":0.05},{"id":"corner_-8_-5","name":"Cassini Parade, financial district","blurb":"A corner on Cassini Parade: steam from a vent, the tubes' glass humming with traffic.","x":-211.6,"y":1.7,"z":-117,"yaw":0,"pitch":0.18},{"id":"corner_0_-10","name":"Amber Walk, financial district","blurb":"A corner on Amber Walk: steam from a vent, the tubes' glass humming with traffic.","x":13,"y":1.7,"z":-230.4,"yaw":-1.5708,"pitch":0.18},{"id":"corner_-9_5","name":"Saturnlight Wynd, financial district","blurb":"A corner on Saturnlight Wynd: steam from a vent, the tubes' glass humming with traffic.","x":-237.6,"y":1.7,"z":143,"yaw":0,"pitch":0.18},{"id":"corner_-21_-12","name":"Tholin Street, crystal quarter","blurb":"A corner on Tholin Street: steam from a vent, the tubes' glass humming with traffic.","x":-516.4,"y":1.7,"z":-299,"yaw":3.1416,"pitch":0.18},{"id":"corner_21_12","name":"Dune Walk, dorms","blurb":"A corner on Dune Walk: steam from a vent, the tubes' glass humming with traffic.","x":542.4,"y":1.7,"z":325,"yaw":0,"pitch":0.18},{"id":"corner_14_-28","name":"Lantern Parade, old town","blurb":"A corner on Lantern Parade: steam from a vent, the tubes' glass humming with traffic.","x":360.4,"y":1.7,"z":-715,"yaw":0,"pitch":0.18},{"id":"corner_17_26","name":"Tholin Street, dorms","blurb":"A corner on Tholin Street: steam from a vent, the tubes' glass humming with traffic.","x":471.6,"y":1.7,"z":689,"yaw":3.1416,"pitch":0.18},{"id":"corner_-14_28","name":"Dune Arcade, dorms","blurb":"A corner on Dune Arcade: steam from a vent, the tubes' glass humming with traffic.","x":-334.4,"y":1.7,"z":741,"yaw":3.1416,"pitch":0.18},{"id":"corner_-31_2","name":"Halo Arcade, neon quarter","blurb":"A corner on Halo Arcade: steam from a vent, the tubes' glass humming with traffic.","x":-793,"y":1.7,"z":48.4,"yaw":1.5708,"pitch":0.18},{"id":"cold_tap","name":"The Cold Tap, Ferry Street","blurb":"A dive bar behind an airlock: nine stools, a heater that ticks, bottles lit from below, and a price list older than the dome.","x":-143,"y":1.7,"z":81.6,"yaw":-1.5708,"pitch":0.02,"room":1},{"id":"low_orbit_bar","name":"The Low Orbit, by the spaceport","blurb":"A long bar for ship crews, with a window on the pads and a cracked star painted on the ceiling.","x":2509,"y":1.7,"z":-2265.6,"yaw":1.5708,"pitch":0.02,"room":2},{"id":"lantern_cellar","name":"The Lantern Cellar, Chinatown","blurb":"Forty steps down: a brick vault full of paper lanterns and smoke, and a late jam that never stops.","x":-282.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.02,"room":3},{"id":"warmhouse_club","name":"The Warmhouse club","blurb":"The jazz club under the dome in the middle of the Warmhouse: tables in rings, lamps on every table, the stand at the far side.","x":-1621.82,"y":209.2,"z":537.29,"yaw":0.85,"pitch":0.02,"room":4}];
 // ---------- Tales: 50 room-scale places in and around Drift city, and an Ink story that moves between them ----------
 // Places are picked from the generated city itself (so each is really there), in a fixed order, so a story can refer
 // to them by id. Each has a camera at eye height (or on a roof), a heading and a pitch.
@@ -10278,6 +10863,27 @@ const DISTRICTS = ["financial district", "neon quarter", "old town", "Chinatown"
 const STREET_A = ["Amber", "Tholin", "Methane", "Lantern", "Kraken", "Haze", "Cassini", "Huygens", "Saturnlight", "Ethane", "Dune", "Glass", "Cryo", "Orchid", "Ferry", "Halo"];
 const STREET_B = ["Street", "Lane", "Row", "Walk", "Arcade", "Passage", "Parade", "Wynd"];
 function streetName(k) { return STREET_A[Math.floor(hsh(k, 3, 901) * STREET_A.length)] + " " + STREET_B[Math.floor(hsh(k, 5, 902) * STREET_B.length)]; }
+
+// ---------- rooms: the venues' interiors ----------
+// A room place stands where its door is (on the street it belongs to), but when you arrive the shader draws the room
+// round you instead of the city (roomRender in scene.wgsl; kind in EVN[210], origin and heading in EVN[212..215]).
+// Room axes: x forward along the place's heading, z to the right, y up from the floor; the camera starts at x = 0.
+// x0..x1 and hw (half width) are the walls, for walking and for placing the story's things; scene.wgsl must match.
+const ROOMS = [
+  { id: "cold_tap", kind: 1, base: "street_1", x0: -1.3, x1: 8.8, hw: 3.0, name: "The Cold Tap, Ferry Street", blurb: "A dive bar behind an airlock: nine stools, a heater that ticks, bottles lit from below, and a price list older than the dome." },
+  { id: "low_orbit_bar", kind: 2, base: "street_5", x0: -1.3, x1: 19.6, hw: 4.3, name: "The Low Orbit, by the spaceport", blurb: "A long bar for ship crews, with a window on the pads and a cracked star painted on the ceiling." },
+  { id: "lantern_cellar", kind: 3, base: "street_3", x0: -1.3, x1: 13.2, hw: 4.8, name: "The Lantern Cellar, Chinatown", blurb: "Forty steps down: a brick vault full of paper lanterns and smoke, and a late jam that never stops." },
+  { id: "warmhouse_club", kind: 4, base: "warmhouse", x0: -2.8, x1: 26.5, hw: 14.5, round: [12, 15.2], name: "The Warmhouse club", blurb: "The jazz club under the dome in the middle of the Warmhouse: tables in rings, lamps on every table, the stand at the far side." },
+];
+// the room you are in now (a room place, arrived or nearly), or null
+function roomNow() { const V = NAV.visit; return NAV.mode === "visit" && V && V.to && V.to.room && V.t >= V.T * 0.92 ? V.to : null; }
+function roomOf(p) { return p && p.room ? ROOMS.find((r) => r.kind === p.room) : null; }
+// keep a point (local x, z) inside a room, margin m from the walls
+function roomClamp(R, x, z, m) {
+  x = clampv(x, R.x0 + m, R.x1 - m); z = clampv(z, -R.hw + m, R.hw - m);
+  if (R.round) { const dx = x - R.round[0], d = Math.hypot(dx, z), rr = R.round[1] - m; if (d > rr) { x = R.round[0] + dx * rr / d; z = z * rr / d; } }
+  return [x, z];
+}
 
 // camera on the far sidewalk across the street from a block, looking at it; side 0..3 = west, east, north, south
 function facing(cx, cz, side, eye) {
@@ -10417,6 +11023,11 @@ function buildPlaces() {
       const st = streetName(cx * 131 + cz * 7);
       add("corner_" + cx + "_" + cz, st + ", " + DISTRICTS[o.zone], "A corner on " + st + ": steam from a vent, the tubes' glass humming with traffic.", facing(cx, cz, Math.floor(hsh(cx, cz, 905) * 4)));
     }
+  }
+  // the venues' rooms, beyond the fifty
+  for (const R of ROOMS) {
+    const bp = P.find((p) => p.id === R.base);
+    if (bp) P.push({ id: R.id, name: R.name, blurb: R.blurb, x: bp.x, y: bp.y, z: bp.z, yaw: bp.yaw, pitch: 0.02, room: R.kind });
   }
   PLACES = P;
   return P;
@@ -10685,6 +11296,12 @@ function taleTags(tags, line) {
         // the clue itself lies on the ground where you would look for it
         const dist = clampv(1.7 / Math.tan(Math.max(-(+f[3]) * DEG, 0.05)), 1.4, 14);
         taleAddProp("item @ " + f[2] + " @ " + dist.toFixed(2) + " @ 0 @ " + (hsh(f[0].length * 31 + f[0].charCodeAt(0), 7, 930)).toFixed(3) + " @ 0", f[0]);
+        // a room's walls may have moved the thing nearer: point the glint at where it lies
+        const pl = placeById(TALE.place), it = TALE.props && TALE.props[TALE.props.length - 1];
+        if (roomOf(pl) && it && it.clue === f[0]) {
+          const h = TALE.hot[TALE.hot.length - 1], dx = it.x - pl.x, dz = it.z - pl.z;
+          h.bearing = Math.atan2(dz, dx) - pl.yaw; h.elev = Math.atan2(it.y + 0.05 - pl.y, Math.hypot(dx, dz));
+        }
       }
     } else if (k === "fly") { taleClose(); goTo(v); }
     // "# FINK: <file>" (with "# LINKREL: peer" or none): leave for another story once this passage has been shown
@@ -10710,7 +11327,13 @@ function taleAddProp(v, clue) {
   if (!TALE.props) TALE.props = [];
   const bearing = (+f[1] || 0) * DEG, dist = +f[2] || 5, facing = (+f[3] || 0) * DEG;
   const a = p.yaw + bearing;
-  const x = p.x + Math.cos(a) * dist, z = p.z + Math.sin(a) * dist;
+  let x = p.x + Math.cos(a) * dist, z = p.z + Math.sin(a) * dist;
+  // in a room, everything stands inside its walls
+  const R = roomOf(p);
+  if (R) {
+    const [lx, lz] = roomClamp(R, Math.cos(bearing) * dist, Math.sin(bearing) * dist, kind === 8 ? 0.6 : 0.9);
+    x = p.x + Math.cos(p.yaw) * lx - Math.sin(p.yaw) * lz; z = p.z + Math.sin(p.yaw) * lx + Math.cos(p.yaw) * lz;
+  }
   let y = p.y - 1.7;
   if (kind === 5) { const tv = terrainAt(x, z); if (tv[1] > -50) y = tv[1] - 0.3; }
   const toCam = Math.atan2(p.z - z, p.x - x);
@@ -10824,7 +11447,7 @@ function taleGo(id) {
   if (TALE.place !== id) TALE.props = [];
   TALE.place = id;
   if (NAV.site.id !== "home" || NAV.mode === "space" || NAV.mode === "trip" || NAV.mode === "free") {
-    NAV.trip = null; NAV.space = null; NAV.free = null; NAV.spaceMix = 0; NAV.cam = null; NAV.tour = null;
+    tourHold(); NAV.trip = null; NAV.space = null; NAV.free = null; NAV.spaceMix = 0; NAV.cam = null;
     if (NAV.site.id !== "home") arriveRegion(HOME_DEST, true);
   }
   const from = { x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch };
@@ -10834,7 +11457,12 @@ function taleGo(id) {
   NAV.mode = "visit";
 }
 function visitStep(dt, inp) {
-  const V = NAV.visit;
+  let V = NAV.visit;
+  // a stick (or W, S) pushed during the flight there takes over at once: the view stops where it is and is yours
+  if (V.t < V.T && V.t > 0.3 && (inp.move || Math.abs(PAD.lx) > 0.3 || Math.abs(PAD.ly) > 0.3 || Math.abs(PAD.rx) > 0.3)) {
+    const here = { ...V.to, id: (V.to.id || "") + "~", x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch, room: 0 };
+    V = NAV.visit = { from: here, to: here, t: 1, T: 1, ly: 0, lp: 0 };
+  }
   V.t = Math.min(V.t + dt, V.T);
   const e = sstep(0, 1, V.t / V.T);
   const a = V.from, b = V.to;
@@ -10858,32 +11486,108 @@ function visitStep(dt, inp) {
     st.pitch = clampv((a.pitch + (lp - a.pitch) * w0) * (1 - w1) + b.pitch * w1, -1.3, 1.3);
   }
   // walking or flying into the scene (visitMove); the offset is kept until the next visit
+  if (there && V.walk) { if (inp.move || inp.dx || inp.dy) V.walk = null; else visitWalkStep(V, dt); }
   if (there && V.off) { st.x += V.off[0]; st.y += V.off[1]; st.z += V.off[2]; }
   if (there && inp.move) visitMove(V, inp.move, dt);
   st.roll = 0; st.vx = 0; st.vy = 0; st.vz = 0;
 }
 // At eye level you walk (Titan's slow lope, the ground followed); higher up you fly along the view. Buildings
-// stop you: a step is refused when the flight code's height map rises in front of you (compared with where you
-// stand, since a street place can stand inside its coarse boxes). You stay within 150 m of the place.
+// stop you: a step is checked against the flight code's height map rising in front of you (compared with where you
+// stand, since a street place can stand inside its coarse boxes). A blocked step slides along the wall instead of
+// stopping dead. There is no limit on how far you go. In a room you walk its floor, inside its walls.
 function visitMove(V, move, dt) {
   const b = V.to;
   if (!V.off) V.off = [0, 0, 0];
-  const eye = b.y - Math.max(terrSurfAt(b.x, b.z), 0), walk = eye < 6;
+  V.walk = null;
+  const R = roomOf(b);
+  const eye = b.y + V.off[1] - Math.max(terrSurfAt(b.x + V.off[0], b.z + V.off[2]), 0), walk = R || eye < 6;
   const cp = Math.cos(st.pitch), speed = walk ? 2.6 : 10;
   const dir = walk ? [Math.cos(st.yaw), 0, Math.sin(st.yaw)] : [Math.cos(st.yaw) * cp, Math.sin(st.pitch), Math.sin(st.yaw) * cp];
   const step = move * speed * dt;
-  const x0 = b.x + V.off[0], y0 = b.y + V.off[1], z0 = b.z + V.off[2];
-  const nx = x0 + dir[0] * step, nz = z0 + dir[2] * step;
-  let ny = walk ? Math.max(terrSurfAt(nx, nz), 0) + eye : y0 + dir[1] * step;
-  if (!walk) ny = Math.max(ny, Math.max(terrSurfAt(nx, nz), 0) + 2);
-  if (Math.hypot(nx - b.x, nz - b.z) > 150) return;
-  const h0 = heightAt(x0, z0, y0), h1 = heightAt(nx, nz, ny);
-  if (h1 > ny - 0.3 && h1 > h0 + 0.5) return;
+  if (R) {
+    // room axes: forward along the place's heading, right across it
+    const c = Math.cos(b.yaw), s = Math.sin(b.yaw);
+    const ox = V.off[0] + dir[0] * step, oz = V.off[2] + dir[2] * step;
+    const [lx, lz] = roomClamp(R, ox * c + oz * s, -ox * s + oz * c, 0.45);
+    V.off = [lx * c - lz * s, 0, lx * s + lz * c];
+  } else {
+    const x0 = b.x + V.off[0], y0 = b.y + V.off[1], z0 = b.z + V.off[2];
+    const h0 = heightAt(x0, z0, y0);
+    const tryTo = (nx, nz) => {
+      let ny = walk ? Math.max(terrSurfAt(nx, nz), 0) + 1.7 : y0 + dir[1] * step;
+      if (!walk) ny = Math.max(ny, Math.max(terrSurfAt(nx, nz), 0) + 2);
+      const h1 = heightAt(nx, nz, ny);
+      if (h1 > ny - 0.3 && h1 > h0 + 0.5) return null;
+      return [nx, ny, nz];
+    };
+    // straight on, or along the wall: whichever part of the step is free
+    const got = tryTo(x0 + dir[0] * step, z0 + dir[2] * step) || tryTo(x0 + dir[0] * step, z0) || tryTo(x0, z0 + dir[2] * step);
+    if (!got) return;
+    V.off = [got[0] - b.x, got[1] - b.y, got[2] - b.z];
+  }
   // a gentle lope: the eye rises and falls over each long, slow stride
   V.walked = (V.walked || 0) + Math.abs(step);
   const bob = walk ? 0.06 * Math.abs(Math.sin(V.walked * 1.1)) : 0;
-  V.off = [nx - b.x, ny - b.y + bob, nz - b.z];
-  st.x = nx; st.y = ny + bob; st.z = nz;
+  st.x = b.x + V.off[0]; st.y = b.y + V.off[1] + bob; st.z = b.z + V.off[2];
+}
+// "Walk there" (a long press in a scene): a planned move to a point, made to be easy to follow. The view turns to
+// the goal first, so you see where you are going; the walk eases in and out at Titan's lope; if buildings stand in
+// the way the view rises over them in a crane move, looking down at the goal, and comes down on the far side; at the
+// end you face on in the direction you came, the goal in front of you. In a room it is a straight walk.
+function visitWalkTo(V, gx, gz) {
+  const b = V.to, R = roomOf(b);
+  if (!V.off) V.off = [0, 0, 0];
+  const from = V.off.slice();
+  let to, lift = 0;
+  if (R) {
+    const c = Math.cos(b.yaw), s = Math.sin(b.yaw), ox = gx - b.x, oz = gz - b.z;
+    const [lx, lz] = roomClamp(R, ox * c + oz * s, -ox * s + oz * c, 0.6);
+    to = [lx * c - lz * s, 0, lx * s + lz * c];
+  } else {
+    // Walk the line at eye level, 1.5 m at a time, and find the walls on it. A wall is a rise in the height map from
+    // one step to the next (a street place stands inside the flight code's coarse boxes, so neither an absolute
+    // height nor the height at the start tells a wall from the street).
+    const x0 = b.x + from[0], z0 = b.z + from[2], dx = gx - x0, dz = gz - z0, L = Math.hypot(dx, dz) || 1;
+    const eye = (x, z) => Math.max(terrSurfAt(x, z), 0) + 1.7;
+    let hp = heightAt(x0, z0, eye(x0, z0)), wall = -1, top = 0, lastOut = 0;
+    for (let t = 1.5; t <= L; t += 1.5) {
+      const x = x0 + dx * t / L, z = z0 + dz * t / L, y = eye(x, z), h = heightAt(x, z, y);
+      if (h > y - 0.3 && h > hp + 0.5) { if (wall < 0) wall = t; top = Math.max(top, h - y); }
+      else if (h < hp - 3) lastOut = t;
+      if (h <= y - 0.3) lastOut = t;
+      hp = h;
+    }
+    // the goal is the building in front of you (the wall is near the goal): stop 2.5 m short of its face; the goal
+    // is beyond buildings: rise over them and come down at the last clear point before the goal
+    let stop = L - 2.5;
+    if (wall >= 0 && L - wall < 12) stop = wall - 2.5;
+    else if (wall >= 0) { lift = top + 4; stop = Math.max(lastOut > wall ? lastOut : wall - 2.5, 0); }
+    stop = Math.max(0, stop);
+    const tx = x0 + dx * stop / L, tz = z0 + dz * stop / L;
+    to = [tx - b.x, eye(tx, tz) - b.y, tz - b.z];
+  }
+  const D = Math.hypot(to[0] - from[0], to[2] - from[2]);
+  if (D < 0.5) return false;
+  const yawTo = Math.atan2(to[2] - from[2], to[0] - from[0]);
+  const ly0 = V.ly, lp0 = V.lp;
+  const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+  V.walk = { from, to, lift, t: 0, T: clampv(1.4 + D / (lift ? 9 : 3.2), 2.5, 16), ly0, lyTo: ly0 + wrap(yawTo - (b.yaw + ly0)), lp0 };
+  return true;
+}
+function visitWalkStep(V, dt) {
+  const W = V.walk;
+  W.t = Math.min(W.t + dt, W.T);
+  const k = W.t / W.T;
+  // turn first (the first 18%, at most 1.2 s), then go; the move eases in and out
+  const tk = Math.min(0.18, 1.2 / W.T), turn = sstep(0, tk, k), go = sstep(tk * 0.66, 1, k);
+  const arc = W.lift * Math.sin(Math.PI * go);
+  V.off = [W.from[0] + (W.to[0] - W.from[0]) * go, W.from[1] + (W.to[1] - W.from[1]) * go + arc, W.from[2] + (W.to[2] - W.from[2]) * go];
+  V.ly = W.ly0 + (W.lyTo - W.ly0) * turn;
+  // look a little down at the goal while lifted, level again on landing
+  const down = W.lift ? -Math.atan2(W.lift, Math.max(6, Math.hypot(W.to[0] - W.from[0], W.to[2] - W.from[2]) * 0.5)) * Math.sin(Math.PI * go) : 0;
+  V.lp = W.lp0 * (1 - turn) + (0.02 - V.to.pitch) * turn + down;
+  V.walked = (V.walked || 0) + dt * 2.6 * (1 - Math.min(1, W.lift));
+  if (W.t >= W.T) V.walk = null;
 }
 // hotspots: a faint glint when you look their way; holding one near the centre of view (or tapping it) finds it
 function taleHotspots(dt, cam, fov) {
@@ -11335,15 +12039,27 @@ function pickRing(px, py, text) {
   r.classList.remove("go"); void r.offsetWidth; r.classList.add("go");
 }
 // A long press names the thing under the finger and offers the flight; it never starts one by itself (a finger
-// resting on the screen used to send the view off). `now` skips the offer (tests, the map).
+// resting on the screen used to send the view off). `now` skips the offer (tests, the map); now = "walk" walks.
 function pickGo(px, py, now) {
   if (NAV.mode === "space" || NAV.mode === "trip" || NAV.spaceMix > 0.05) return;
+  // standing in a scene: a room offers only a walk across its floor; outside, a near thing offers a walk as well
+  const V = NAV.mode === "visit" && NAV.visit && NAV.visit.t >= NAV.visit.T ? NAV.visit : null;
+  const R = V && roomOf(V.to);
+  if (R) {
+    const o = CAMNOW.p, d = pickRay(px, py), fy = V.to.y - 1.7;
+    if (d[1] > -0.02) { pickRing(px, py, "Press on the floor to walk there"); return; }
+    const t = (fy - o[1]) / d[1];
+    const S = { name: "Walk across the room", x: o[0] + d[0] * t, z: o[2] + d[2] * t, y0: fy, walkOnly: true };
+    if (now) { visitWalkTo(V, S.x, S.z); return; }
+    pickOffer(S, px, py); return;
+  }
   const S = pickAt(px, py);
+  if (S && V && Math.hypot(S.x - st.x, S.z - st.z) < 450 && S.ship === undefined && S.name !== "The Warmhouse") S.walk = true;
   if (!S) { pickRing(px, py, "Nothing there"); return; }
   if (S.y0 === undefined) S.y0 = 0;
   // the simpler (WebGL) city has no visits: name it, but stay
   if (!GPUREF.device) { pickRing(px, py, S.name); return; }
-  if (now) { pickLaunch(S); return; }
+  if (now) { if (S.walk && now === "walk") visitWalkTo(V, S.x, S.z); else pickLaunch(S); return; }
   pickOffer(S, px, py);
 }
 function pickLaunch(S, quiet) {
@@ -11351,7 +12067,7 @@ function pickLaunch(S, quiet) {
   const tod = currentTod(), V = pickCompose(S, tod.sun);
   const from = { x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch };
   const far = Math.hypot(V.x - from.x, V.z - from.z);
-  NAV.tour = null; NAV.trip = null; NAV.free = null; NAV.cam = null; NAV.spaceMix = 0;
+  tourHold(); NAV.trip = null; NAV.free = null; NAV.cam = null; NAV.spaceMix = 0;
   NAV.visit = { from, to: V, t: 0, T: clampv(3 + far / 180, 4, 14), ly: 0, lp: 0, look: [S.x, S.y0 + S.h * 0.45, S.z], subject: V };
   NAV.mode = "visit";
   PICK.subject = V;
@@ -11364,13 +12080,21 @@ function pickOffer(S, px, py) {
   let c = PICK.card;
   if (!c) {
     c = document.createElement("div"); c.className = "pickCard"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Picked");
-    c.innerHTML = '<span class="pn"></span><span class="pb"><button type="button" class="pgo">Fly there</button><button type="button" class="px" aria-label="Close">\u00d7</button></span>';
+    c.innerHTML = '<span class="pn"></span><span class="pb"><button type="button" class="pwk">Walk there</button><button type="button" class="pgo">Fly there</button><button type="button" class="px" aria-label="Close">\u00d7</button></span>';
     document.body.appendChild(c); PICK.card = c;
     c.querySelector(".pgo").addEventListener("click", (e) => { e.stopPropagation(); if (PICK.offer) pickLaunch(PICK.offer); });
+    c.querySelector(".pwk").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const S = PICK.offer, V = NAV.visit;
+      pickOfferClose();
+      if (S && V && NAV.mode === "visit" && !visitWalkTo(V, S.x, S.z)) showHint("You are there.", 1500);
+    });
     c.querySelector(".px").addEventListener("click", (e) => { e.stopPropagation(); pickOfferClose(); });
   }
   PICK.offer = S;
   c.querySelector(".pn").textContent = S.name;
+  c.querySelector(".pwk").hidden = !(S.walk || S.walkOnly);
+  c.querySelector(".pgo").hidden = !!S.walkOnly;
   c.hidden = false;
   const w = Math.min(300, innerWidth - 32);
   c.style.left = clampv(px - w / 2, 16, innerWidth - 16 - w) + "px";
@@ -11406,13 +12130,15 @@ function pickInit(canvas) {
   canvas.addEventListener("pointercancel", cancel);
 }
 
-// ---------- the ship's computer: a guided flight with narration ----------
-// Menu > Guided flight. The computer flies you over the city and says what you are looking at: recorded lines
-// (audio/computer/NN.mp3; how they were made and how to add one: audio/computer/README.md) with the same words as
-// a caption, so it works with the sound off. Touching the view, a key or the pad hands control back.
-// Runs on its own timer, so it works in the WebGPU city and in the WebGL fallback (which hops instead of flying).
+// ---------- the ship's computer: guided flights with narration ----------
+// Menu > Guided flight (seven stops) or Full tour (fifteen, into four of the bars). The computer flies you over the
+// city and says what you are looking at: recorded lines (audio/computer/NN.mp3; how they were made and how to add
+// one: audio/computer/README.md) with the same words as a caption, so it works with the sound off.
+// Touching the view, a key or the pad pauses the tour: you can look, walk, fly anywhere, and "Carry on" flies you
+// back into the tour where you left it. Runs on its own timer, so it works in the WebGPU city and in the WebGL
+// fallback (which hops instead of flying).
 const GUIDE_LINES = [
-  "Guided flight. I will take you over the city and tell you what you are looking at. Touch the screen at any time to take control.",
+  "Guided flight. I will take you over the city and tell you what you are looking at. Touch the screen to stop and look around; the tour waits for you.",
   "Below us is Lumen, the financial core. The tower with the ring is the tallest building in the city, about two hundred and sixty metres. Most of the city's money is managed here.",
   "The old town. The building with the glass dome is the Assembly Hall, where the city meets and votes. The long pools in front of it line the civic avenue.",
   "The Hive. Capsule homes, two hundred and forty metres tall, on the edge of the dorms. Most people in there seldom go out. They live, work and play under headsets. The boards on its walls sell tokes, the Hive's game credits.",
@@ -11421,39 +12147,91 @@ const GUIDE_LINES = [
   "The Warmhouse. A bubble of warm Earth air, three hundred and forty metres across, held down by four cables. It floats because warm air is lighter than Titan's cold, dense air. Inside, people can take their helmets off.",
   "The spaceport, at the end of the harbour arm on Kraken Mare. Ships leave from here for Earth, and the Org pays the fare for anyone who goes. Few ships come the other way.",
   "About the airships. Every one of them is called Hindenburg. The first settlers thought that was funny: there is no oxygen in the air here, so nothing burns. The newest is number sixteen thirty-two.",
-  "That is the end of the guided flight. You have control. To fly to anything, press and hold on it.",
+  "That is the end of the tour. You have control. To fly or walk to anything, press and hold on it.",
+  "The full tour: the city from the air, and four of its bars from the inside. About eight minutes. Touch the screen to stop and look around; the tour waits for you.",
+  "The signal tower. Its red lights, and the lights on the tallest masts, blink Morse code together. Tonight they send the Asters' words: ad astra per aspera, and the same in toki pona.",
+  "A round tower running Conway's Game of Life in its windows. Each window is a cell, and a new generation comes four times a second. Watch for gliders crossing the tower.",
+  "Ferry Street, in the neon quarter, at street level. Most of the city's bars are within a few streets of here.",
+  "The Cold Tap: nine stools, a heater, a jukebox, and a price list older than the dome. One of the few places left where people talk face to face.",
+  "The Low Orbit, by the spaceport. Ship crews drink here between shifts, and the Asters sit along the window to watch the launches.",
+  "The Lantern Cellar, forty steps under Chinatown. The late jam here does not stop; players come and go, and the tune goes on.",
+  "The jazz club at the centre of the Warmhouse. The air in here is Earth air, so people take their helmets off and hear the band with their own ears.",
+  "One board in five on the Hive shows the Asters' poster: toki pona, a language of about a hundred and twenty words, written in katakana. It says: go to the stars.",
+  "Standing stones on a rise outside the city. They are older than the city, and nobody agrees who put them there.",
 ];
 // seconds, measured with ffprobe: the caption's time when the sound is off or blocked
-const GUIDE_DUR = [9.2, 12.7, 9.6, 18.4, 12.8, 11.2, 17.0, 11.8, 15.7, 7.6];
+const GUIDE_DUR = [10.0, 13.3, 10.2, 17.2, 13.6, 12.1, 19.2, 11.8, 13.7, 8.1, 12.2, 14.9, 13.2, 7.2, 11.6, 9.8, 10.4, 9.4, 13.1, 7.4];
 const GUIDE_AUDIO = "../audio/computer/";
-// each stop: a landmark to frame (pickLandmarks name), the place to hop to without the GPU city, and its lines
-const GUIDE_STOPS = [
-  { mark: "The ringed spire", place: "giant_0", lines: [1] },
-  { mark: "The Assembly Hall", place: "hall_steps", lines: [2] },
-  { mark: "The Hive", place: "hive", lines: [3] },
-  { mark: "The pod fab and its power beam", place: "fab", lines: [4] },
-  { mark: "The pagoda of the Flame", place: "pagoda_3", lines: [5] },
-  { mark: () => ({ name: "The Warmhouse", x: bubbleAt(clock)[0], z: bubbleAt(clock)[2], y0: bubbleAt(clock)[1] - BUB_R, r: BUB_R, h: BUB_R * 2 }), place: "warmhouse_below", lines: [6] },
-  { mark: () => ({ name: "The spaceport", x: CITY_ARM[0] * 0.9, z: CITY_ARM[1] * 0.9, y0: 0, r: 180, h: 60 }), place: "spaceport_apron", lines: [7, 8] },
-];
-const GUIDE = { on: false, stop: -1, phase: "", queue: [], until: 0, timer: 0, audio: null, cap: null };
+// the signal tower: the lattice tower in front of its place's view
+function guideSignalTower() {
+  const p = placeById("tower_0");
+  if (!p) return null;
+  const d = C * 0.5 + 3.6;
+  return { name: "The signal tower", x: p.x + Math.cos(p.yaw) * d, z: p.z + Math.sin(p.yaw) * d, y0: 0, r: 30, h: 70 };
+}
+// a Life tower: the tallest organic round tower near the centre that runs the board (scene.wgsl, material 15:
+// hsh(cseed, 5, 781) < 0.5 with cseed from the wrapped cell)
+function guideLifeTower() {
+  let best = null;
+  for (let cz = -30; cz <= 30; cz++) for (let cx = -30; cx <= 30; cx++) {
+    const o = cellAt(cx, cz);
+    if (o.wild || o.typ !== 8 || hsh(wrapS(cx) * 7919 + wrapS(cz) * 104729, 5, 781) >= 0.5) continue;
+    if (!best || o.h > best.h) best = { name: "A Life tower", x: (cx + 0.5) * C, z: (cz + 0.5) * C, y0: 0, r: 14, h: o.h };
+  }
+  return best;
+}
+// each stop: a landmark to frame (pickLandmarks name, or a function), or a place to go to (`go`, the rooms among
+// them); the place to hop to without the GPU city; its lines; `stay`, seconds to linger after the words
+const GUIDE_TOURS = {
+  short: { intro: 0, end: 9, stops: [
+    { mark: "The ringed spire", place: "giant_0", lines: [1] },
+    { mark: "The Assembly Hall", place: "hall_steps", lines: [2] },
+    { mark: "The Hive", place: "hive", lines: [3] },
+    { mark: "The pod fab and its power beam", place: "fab", lines: [4] },
+    { mark: "The pagoda of the Flame", place: "pagoda_3", lines: [5] },
+    { mark: () => ({ name: "The Warmhouse", x: bubbleAt(clock)[0], z: bubbleAt(clock)[2], y0: bubbleAt(clock)[1] - BUB_R, r: BUB_R, h: BUB_R * 2 }), place: "warmhouse_below", lines: [6] },
+    { mark: () => ({ name: "The spaceport", x: CITY_ARM[0] * 0.9, z: CITY_ARM[1] * 0.9, y0: 0, r: 180, h: 60 }), place: "spaceport_apron", lines: [7, 8] },
+  ] },
+  full: { intro: 10, end: 9, stops: [
+    { mark: "The ringed spire", place: "giant_0", lines: [1] },
+    { go: "tower_0", place: "tower_0", lines: [11] },
+    { mark: guideLifeTower, place: "roof_0", lines: [12], stay: 5 },
+    { mark: "The Assembly Hall", place: "hall_steps", lines: [2] },
+    { go: "street_1", place: "street_1", lines: [13] },
+    { go: "cold_tap", place: "cold_tap", lines: [14], stay: 5 },
+    { mark: "The pagoda of the Flame", place: "pagoda_3", lines: [5] },
+    { go: "lantern_cellar", place: "lantern_cellar", lines: [16], stay: 7 },
+    { mark: "The Hive", place: "hive", lines: [3, 18] },
+    { mark: "The pod fab and its power beam", place: "fab", lines: [4] },
+    { go: "low_orbit_bar", place: "low_orbit_bar", lines: [15], stay: 5 },
+    { mark: () => ({ name: "The spaceport", x: CITY_ARM[0] * 0.9, z: CITY_ARM[1] * 0.9, y0: 0, r: 180, h: 60 }), place: "spaceport_apron", lines: [7, 8] },
+    { mark: "The stones", place: "stones", lines: [19] },
+    { mark: () => ({ name: "The Warmhouse", x: bubbleAt(clock)[0], z: bubbleAt(clock)[2], y0: bubbleAt(clock)[1] - BUB_R, r: BUB_R, h: BUB_R * 2 }), place: "warmhouse_below", lines: [6] },
+    { go: "warmhouse_club", place: "warmhouse_club", lines: [17], stay: 7 },
+  ] },
+};
+const GUIDE = { on: false, paused: false, tour: null, stop: -1, phase: "", queue: [], until: 0, timer: 0, audio: null, cap: null };
 
-function guideCaption(text) {
+function guideCaption(text, paused) {
   if (!document.body || !document.body.appendChild || !document.createElement("div").querySelector) return;
   let c = GUIDE.cap;
   if (!c) {
     c = document.createElement("div"); c.className = "guideCap"; c.setAttribute("role", "status"); c.setAttribute("aria-live", "polite");
-    c.innerHTML = '<span class="guideText"></span><button type="button" class="guideStopBtn">Stop</button>';
+    c.innerHTML = '<span class="guideText"></span><span class="guideBtns"><button type="button" class="guideGoBtn">Carry on</button><button type="button" class="guideStopBtn">End tour</button></span>';
     document.body.appendChild(c); GUIDE.cap = c;
+    c.querySelector(".guideGoBtn").addEventListener("click", (e) => { e.stopPropagation(); guideResume(); });
     c.querySelector(".guideStopBtn").addEventListener("click", (e) => { e.stopPropagation(); guideStop(true); });
+    c.addEventListener("pointerdown", (e) => e.stopPropagation());
   }
   c.hidden = !text;
+  c.classList.toggle("paused", !!paused);
+  c.querySelector(".guideGoBtn").hidden = !paused;
   c.querySelector(".guideText").textContent = text || "";
 }
 // say one line: the recording if sound is on, the caption always; resolves the time it takes
 function guideSay(n) {
   guideCaption(GUIDE_LINES[n]);
-  let T = GUIDE_DUR[n] + 0.6;
+  const T = GUIDE_DUR[n] + 0.6;
   if (typeof AU !== "undefined" && AU.on && typeof Audio !== "undefined") {
     const a = GUIDE.audio || (GUIDE.audio = new Audio());
     a.src = GUIDE_AUDIO + String(n).padStart(2, "0") + ".mp3";
@@ -11464,67 +12242,101 @@ function guideSay(n) {
   return T;
 }
 function guideTick() {
-  if (!GUIDE.on) return;
-  if (typeof PAD !== "undefined" && (PAD.lx || PAD.ly || PAD.rx || PAD.ry)) { guideStop(true); return; }
+  if (!GUIDE.on || GUIDE.paused) return;
+  if (typeof PAD !== "undefined" && (PAD.lx || PAD.ly || PAD.rx || PAD.ry)) { guidePause(); return; }
   const now = performance.now() / 1000;
   if (GUIDE.phase === "talk") {
     if (now < GUIDE.until) return;
     if (GUIDE.queue.length) { GUIDE.until = now + guideSay(GUIDE.queue.shift()); return; }
-    GUIDE.phase = "dwell"; GUIDE.until = now + 2.5; return;
+    const s = GUIDE.tour.stops[GUIDE.stop];
+    GUIDE.phase = "dwell"; GUIDE.until = now + (s && s.stay ? s.stay : 1.5); return;
   }
   if (GUIDE.phase === "dwell" || GUIDE.phase === "intro") {
     if (now < GUIDE.until) return;
     guideNext(); return;
   }
   if (GUIDE.phase === "fly") {
-    // start talking as the view comes in to land, so the words meet the picture
-    const V = NAV.visit;
+    // start talking as the view comes in to land, so the words meet the picture (in a room: once inside)
+    const V = NAV.visit, s = GUIDE.tour.stops[GUIDE.stop];
     const k = V && V.T ? V.t / V.T : 1;
-    if (k < 0.62 && now < GUIDE.until) return;
+    if (k < (s && s.go && placeById(s.go) && placeById(s.go).room ? 0.97 : 0.62) && now < GUIDE.until) return;
     GUIDE.phase = "talk"; GUIDE.until = now; return;
   }
   if (GUIDE.phase === "end" && now >= GUIDE.until) guideStop(false);
 }
+// fly to a place the way a story does (a room shows once you arrive)
+function guideGo(id) {
+  const p = placeById(id);
+  if (!p) return false;
+  const from = { x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch };
+  const d = Math.hypot(p.x - from.x, p.z - from.z);
+  tourHold(); NAV.trip = null; NAV.free = null; NAV.cam = null; NAV.spaceMix = 0;
+  NAV.visit = { from, to: p, t: 0, T: clampv(2 + d / 380, 2.5, 12), ly: 0, lp: 0 };
+  NAV.mode = "visit";
+  return true;
+}
 function guideNext() {
+  const tour = GUIDE.tour;
   GUIDE.stop++;
-  if (GUIDE.stop >= GUIDE_STOPS.length) {
-    GUIDE.phase = "end"; GUIDE.until = performance.now() / 1000 + guideSay(9);
-    flyOn();
+  if (GUIDE.stop >= tour.stops.length) {
+    GUIDE.phase = "end"; GUIDE.until = performance.now() / 1000 + guideSay(tour.end);
+    if (!roomNow()) flyOn();
     return;
   }
-  const s = GUIDE_STOPS[GUIDE.stop];
+  const s = tour.stops[GUIDE.stop];
   GUIDE.queue = s.lines.slice();
   guideCaption("");
-  const L = typeof s.mark === "function" ? s.mark() : pickLandmarks().find((m) => m.name === s.mark);
+  const now = performance.now() / 1000;
+  if (GPUREF.device && s.go && guideGo(s.go)) { GUIDE.phase = "fly"; GUIDE.until = now + 16; return; }
+  const L = !s.mark ? null : typeof s.mark === "function" ? s.mark() : pickLandmarks().find((m) => m.name === s.mark);
   if (L && GPUREF.device) {
     pickLaunch({ ...L, y0: L.y0 !== undefined ? L.y0 : Math.max(terrSurfAt(L.x, L.z), 0) }, true);
-    GUIDE.phase = "fly"; GUIDE.until = performance.now() / 1000 + 16;
+    GUIDE.phase = "fly"; GUIDE.until = now + 16;
   } else {
     hopPlace(s.place);
-    GUIDE.phase = "talk"; GUIDE.until = performance.now() / 1000 + 1.2;
+    GUIDE.phase = "talk"; GUIDE.until = now + 1.2;
   }
 }
-function guideStart() {
-  if (GUIDE.on) return;
+function guideStart(which) {
+  if (GUIDE.on) guideStop(false);
   if (TALE.on) taleClose();
   if (typeof mapClose === "function") mapClose();
-  GUIDE.on = true; GUIDE.stop = -1; GUIDE.queue = [];
-  GUIDE.phase = "intro"; GUIDE.until = performance.now() / 1000 + guideSay(0) - 2.5;
+  GUIDE.tour = GUIDE_TOURS[which] || GUIDE_TOURS.short;
+  GUIDE.on = true; GUIDE.paused = false; GUIDE.stop = -1; GUIDE.queue = [];
+  GUIDE.phase = "intro"; GUIDE.until = performance.now() / 1000 + guideSay(GUIDE.tour.intro) - 2.5;
   clearInterval(GUIDE.timer);
   GUIDE.timer = setInterval(guideTick, 200);
   if (!GUIDE.wired) {
     GUIDE.wired = true;
-    document.getElementById("c")?.addEventListener?.("pointerdown", () => guideStop(true));
-    addEventListener("keydown", (e) => { if (!e.repeat) guideStop(true); });
+    document.getElementById("c")?.addEventListener?.("pointerdown", () => guidePause());
+    addEventListener("keydown", (e) => { if (!e.repeat && e.key !== "Escape") guidePause(); });
   }
 }
-// taken: the reader took control (a touch, a key, the pad): stop at once, leave the view where it is
+// the reader wants to look: stop talking, leave the view where it is, and wait
+function guidePause() {
+  if (!GUIDE.on || GUIDE.paused) return;
+  GUIDE.paused = true;
+  GUIDE.pausedIn = GUIDE.phase;
+  if (GUIDE.audio) GUIDE.audio.pause();
+  guideCaption("Tour paused. Look around, walk or fly anywhere; the tour waits.", true);
+}
+// back into the tour: the stop you were at, from the start of its words (or the next one if they were done)
+function guideResume() {
+  if (!GUIDE.on || !GUIDE.paused) return;
+  GUIDE.paused = false;
+  const ph = GUIDE.pausedIn;
+  if (ph === "fly" || ph === "talk") GUIDE.stop--;
+  if (ph === "end") { guideStop(false); return; }
+  if (ph === "intro") { GUIDE.stop = -1; }
+  guideNext();
+}
+// taken: the reader ended it (the button, the menu): stop at once, leave the view where it is
 function guideStop(taken) {
   if (!GUIDE.on) return;
-  GUIDE.on = false; clearInterval(GUIDE.timer);
+  GUIDE.on = false; GUIDE.paused = false; clearInterval(GUIDE.timer);
   if (GUIDE.audio) GUIDE.audio.pause();
   guideCaption("");
-  if (taken) { if (NAV.mode === "visit") flyOn(); showHint("You have control.", 2500); }
+  if (taken) { if (NAV.mode === "visit" && !roomNow()) flyOn(); showHint("You have control.", 2500); }
 }
 
 // ---------- Conway's Life in the windows of the round towers ----------
@@ -12471,7 +13283,7 @@ function halton(i, b) { let f = 1, r = 0; while (i > 0) { f /= b; r += f * (i % 
 
 const SN = 1024, STS = 0.8, AIR_Y = 96;
 // Per-frame events for the shader: searchlight beams from the nearest air taxis, smoke plumes, the holographic koi.
-const EVN = new Float32Array(212);
+const EVN = new Float32Array(216);
 const CHASE_Y = 64;
 const WX = { rain: 0, wet: 0 };
 let boState = null;
@@ -12952,7 +13764,7 @@ async function init() {
   const rectData = new Int32Array(64 * 12);
   const propBuf = device.createBuffer({ size: PROP_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const flockBuf = device.createBuffer({ size: FLOCK_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-  const evBuf = device.createBuffer({ size: 848 + 1024, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const evBuf = device.createBuffer({ size: 864 + 1024, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   if (PHYS) {
     PHYS.buf = device.createBuffer({ size: PHYS.n * 48, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
     PHYS.ubuf = device.createBuffer({ size: 64, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
@@ -13204,6 +14016,7 @@ async function init() {
     audioStep(dtS, audioWorld(dtS));
     audioFeet(dtS);
     audioCity(dtS, AUW);
+    venueStep();
     const fo = document.getElementById("bFlyOn");
     if (fo) fo.hidden = !(NAV.mode === "visit" && !TALE.on);
     // shadow basis follows the target time of day; a change starts a new map generation
@@ -13252,7 +14065,7 @@ async function init() {
     const pv = prev || { pos: [U[4], U[5], U[6]], f: cam.f, r: cam.r, up: cam.up };
     U.set(pv.pos, 44); U.set(pv.f, 48); U.set(pv.r, 52); U.set(pv.up, 56);
     updateWeather(dt);
-    U[47] = wind.cx; U[51] = wind.cz; U[55] = inSpace ? 0 : WX.rain; U[59] = WX.wet;
+    U[47] = wind.cx; U[51] = wind.cz; U[55] = inSpace || roomNow() ? 0 : WX.rain; U[59] = WX.wet;
     U.set([REG.ox, REG.oz, 0, REG.city, REG.cx, REG.cz, 0, 0], 60);
     // the lens: on the story's scene when there is one in view, otherwise (0) on the centre of the view
     CAMNOW.p = [U[4], U[5], U[6]]; CAMNOW.f = cam.f; CAMNOW.r = cam.r; CAMNOW.up = cam.up;
@@ -13278,8 +14091,9 @@ async function init() {
     computeExtras(tod, dt);
     EVN[208] = WX.cover || 0; // settled snow (after computeEvents clears the array)
     EVN[209] = morseKey(clock); // the masts' Morse (morse.js)
+    { const r = roomNow(); EVN[210] = r ? r.room : 0; if (r) EVN.set([r.x, r.y - 1.7, r.z, r.yaw], 212); } // a venue's room (tales.js)
     device.queue.writeBuffer(evBuf, 0, EVN);
-    { const lg = lifeUpdate(dtS); if (lg) device.queue.writeBuffer(evBuf, 848, lg); }
+    { const lg = lifeUpdate(dtS); if (lg) device.queue.writeBuffer(evBuf, 864, lg); }
     const pyr = !inSpace && ffStep(frameNo < 2 ? 1 : 3);
     const measure = hasTS && !qBusy && frameNo % 6 === 0;
     ran.fill(0);
@@ -13499,7 +14313,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { WX, EVN, LIFE, MORSE, taleLink, guideStart, guideStop, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { WX, EVN, LIFE, MORSE, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

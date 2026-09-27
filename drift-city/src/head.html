@@ -87,9 +87,15 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 .pickCard .pb { display: flex; gap: 8px; }
 .pickCard button { font: inherit; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid var(--edge); border-radius: 10px; min-height: 44px; padding: 6px 14px; cursor: pointer; }
 .pickCard .pgo { flex: 1; background: rgba(232,185,121,.28); border-color: #e8b979; }
+.pickCard .pwk { flex: 1; background: rgba(121,200,232,.24); border-color: #79c8e8; }
+.pickCard button[hidden] { display: none; }
 .guideCap { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(160px + env(safe-area-inset-bottom, 0px)); z-index: 12; width: min(560px, calc(100vw - 32px)); box-sizing: border-box; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: var(--glass); border: 1px solid var(--edge); border-radius: 14px; color: var(--ink); font-size: 15px; line-height: 1.4; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); pointer-events: auto; }
 .guideCap[hidden] { display: none; }
 .guideCap .guideText { flex: 1; }
+.guideCap .guideBtns { display: flex; gap: 8px; flex-shrink: 0; }
+.guideCap .guideGoBtn { font: inherit; color: var(--ink); background: rgba(232,185,121,.28); border: 1px solid #e8b979; border-radius: 10px; min-height: 40px; padding: 4px 12px; cursor: pointer; }
+.guideCap button[hidden] { display: none; }
+.guideCap.paused { flex-wrap: wrap; }
 .guideCap .guideStopBtn { font: inherit; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid var(--edge); border-radius: 10px; min-height: 40px; padding: 4px 12px; cursor: pointer; }
 .pickRing.go { animation: pickGo 2.4s ease-out forwards; }
 @keyframes pickGo { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } }

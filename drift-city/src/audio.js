@@ -21,7 +21,9 @@ function audioInit() {
   const lim = c.createWaveShaper(), lc = new Float32Array(1024);
   for (let i = 0; i < 1024; i++) { const x = (i / 1023) * 4 - 2; lc[i] = Math.tanh(x) * 0.84; }
   lim.curve = lc;
-  AU.muffle.connect(AU.master); AU.master.connect(comp); comp.connect(lim); lim.connect(c.destination);
+  // the world outside; in a venue's room it drops to a murmur through the walls (venue.js)
+  AU.outside = c.createGain(); AU.outside.gain.value = 1;
+  AU.muffle.connect(AU.outside); AU.outside.connect(AU.master); AU.master.connect(comp); comp.connect(lim); lim.connect(c.destination);
   const len = c.sampleRate * 6.5, ir = c.createBuffer(2, len, c.sampleRate);
   for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6) * (i < c.sampleRate * 0.04 ? i / (c.sampleRate * 0.04) : 1); }
   AU.verb = c.createConvolver(); AU.verb.buffer = ir;
@@ -549,7 +551,7 @@ function audioStep(dt, w) {
   if (w.tod !== AU.chord || AU.chordT <= 0) { AU.chord = w.tod; AU.chordT = rr(14, 24); AU.chordStep = (AU.chordStep + 1) % 4; CHORDS[w.tod][AU.chordStep].forEach((f, i) => AU.pad[i].frequency.setTargetAtTime(f * 0.5, now, 3)); }
   T(AU.padG.gain, space ? 0.03 : 0.035 + 0.03 * (1 - ground), 2.0);
   T(AU.padF.frequency, 500 + 700 * (w.tod === 0 ? 1 : 0.5), 3.0);
-  T(AU.muffle.frequency, space ? 6000 : 12000 - 9000 * w.snow, 1.5);
+  T(AU.muffle.frequency, typeof roomNow === "function" && roomNow() ? 420 : space ? 6000 : 12000 - 9000 * w.snow, 1.5);
   // our drone's rotors: louder and higher with speed, silent in space and on foot in a story place
   const flying = !space && (w.mode === "surface" || w.mode === "free") ? 1 : 0;
   T(AU.rotorG.gain, flying * (0.015 + 0.025 * Math.min(w.speed / 40, 1)), 0.5);
