@@ -469,9 +469,10 @@ const WORDS = [
   'PAID', 'WORK', 'FROM', 'SIGN', 'OFF', 'JOBS', 'APPROVED', 'EXO', 'HIRE', 'HEAVY', 'LIFT', 'LEGAL',
   // 94-: the tube network
   'TUBE',
-  // 95-: toki pona in katakana (the Asters): toki pona, o tawa mun (go to the stars), kon seli (warm air),
-  // jan (ヤン, as toki pona writes it in katakana), lawa, telo, suno, ma
-  'トキ', 'ポナ', 'オ', 'タワ', 'ムン', 'コン', 'セリ', 'ヤン', '{31}ワ', '{35}ロ', 'スノ', 'マ',
+  // 95-: the Asters' language in katakana: o tawa mun (go to the stars), kon seli (warm air), jan (ヤン), lawa, telo,
+  // suno, ma. Slots 95 and 96 once spelled the language's own name; the owner dropped it (September 2026), so they
+  // hold spare copies of スノ and マ to keep the later indices where scene.wgsl expects them.
+  'スノ', 'マ', 'オ', 'タワ', 'ムン', 'コン', 'セリ', 'ヤン', '{31}ワ', '{35}ロ', 'スノ', 'マ',
 ];
 
 const id = new Map(GLYPHS.map(([k], i) => [k, i]));
