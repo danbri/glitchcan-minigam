@@ -1373,6 +1373,7 @@ fn propPerson(q0: vec3f, prm: f32) -> vec2f {
   let tall = 0.95 + 0.1 * hsh(hs, 2, 902);
   let q = vec3f(q0.x / build, q0.y / tall, q0.z / build);
   let t = u.time + gPH * 40.0;
+  let band = rmBand();
   // breathing, and a slow shift of weight from foot to foot
   let br = 0.008 * sin(t * 1.3);
   let sway = 0.018 * sin(t * 0.23);
@@ -1422,7 +1423,10 @@ fn propPerson(q0: vec3f, prm: f32) -> vec2f {
     var hand = vec3f(0.19 * sg, -0.02, 0.1);
     if (lean) { hand = vec3f(0.17 * sg, 0.12, 0.34); }
     if (sit && pose != 4) { hand = select(vec3f(-0.12, 0.08, 0.26), vec3f(0.14, 0.2, 0.3), lg == 1); }
-    if (pose == 4) { hand = vec3f(0.2 * sg, 0.12 + 0.07 * sin(t * 9.0 + f32(lg) * 2.4), 0.3); }
+    if (pose == 4) {
+      let hit = select(0.5 + 0.5 * sin(t * 9.0 + f32(lg) * 2.4), 1.0 - exp(-fract(band.w * 2.0 + f32(lg) * 0.5) * 6.0), band.x > 0.5);
+      hand = vec3f(0.2 * sg, 0.05 + 0.14 * hit, 0.3);
+    }
     let el = ik2(sh, hand, 0.29, 0.27, normalize(vec3f(0.4 * sg, -0.3, -1.0)));
     let arm = smin(sdRC(ub, sh, el, 0.064, 0.056), sdRC(ub, el, hand, 0.056, 0.048), 0.03);
     r = pU(r, vec2f(arm, 20.0));
@@ -1437,7 +1441,10 @@ fn propPerson(q0: vec3f, prm: f32) -> vec2f {
   // neck, head and face: jaw, cheekbones, nose, brow, ears; eyes set in; hair or a hat
   let nq = ub - vec3f(0.0, 0.52, 0.0);
   r = pU(r, vec2f(sdRC(nq, vec3f(0.0, 0.0, 0.0), vec3f(0.0, 0.11, 0.015), 0.052, 0.046), 21.0));
-  let tilt = 0.05 * sin(t * 0.4) - spine * 0.6;
+  // in a venue while the band plays, most heads nod on the beat (each a little late or early), and the drummer's
+  // sticks come down on it
+  let nod = band.x * exp(-fract(band.w + 0.08 * (hsh(hs, 12, 912) - 0.5)) * 4.0) * select(0.0, 0.09, hsh(hs, 11, 911) < 0.75);
+  let tilt = 0.05 * sin(t * 0.4) - spine * 0.6 - nod;
   let hy = rot2(vec2f(nq.y - 0.22, nq.z - 0.02), tilt);
   let hq0 = vec3f(nq.x, hy.x, hy.y);
   let turn = 0.25 * sin(t * 0.17 + gPH * 9.0);
@@ -6613,7 +6620,39 @@ fn rmNormal(q: vec3f, k: i32) -> vec3f {
 }
 // the lights of each room: position (local) and colour times strength; the first one casts a soft shadow. Warm
 // against cold in every room: tungsten and candle against a window, a porthole or a stair.
+// the band (venue.js, through ev.wx.w): x playing (0 between tunes), y a pulse on each beat, z the bar, w the beat
+fn rmBand() -> vec4f {
+  let w = ev.wx.w;
+  let play = step(0.0, w);
+  let beat = max(w, 0.0);
+  return vec4f(play, exp(-fract(beat) * 5.0) * play, floor(beat / 4.0), beat);
+}
+// the stage's colour, changed every two bars: amber, rose, deep blue, warm white
+fn rmStageCol(n: f32) -> vec3f {
+  let i = i32(n) & 3;
+  if (i == 0) { return vec3f(1.0, 0.62, 0.25); }
+  if (i == 1) { return vec3f(1.0, 0.3, 0.55); }
+  if (i == 2) { return vec3f(0.35, 0.45, 1.0); }
+  return vec3f(1.0, 0.9, 0.75);
+}
+// the lamps as the music moves them: the stage key changes colour with the tune and lifts on the beat, the
+// footlights pulse, the house lights come up between tunes while the stage dims, candles and lanterns flicker,
+// and the jukebox's light turns through its colours
 fn rmLight(k: i32, i: i32) -> array<vec3f, 2> {
+  var L = rmLight0(k, i);
+  let B = rmBand();
+  let gap = select(0.0, 1.0, ev.wx.w < -0.5);
+  if ((k == 3 || k == 4) && i == 0) {
+    let c = mix(vec3f(1.0), rmStageCol(floor(B.z / 2.0) + f32(k)) * 1.5, 0.5);
+    L[1] = L[1] * mix(vec3f(0.5), c * (0.85 + 0.4 * B.y), B.x);
+  }
+  if (k == 4 && i == 1) { L[1] *= mix(0.35, 0.9 + 0.6 * B.y, B.x); }
+  if ((k == 4 && i == 5) || (k == 3 && i == 3)) { L[1] *= 1.0 + 2.5 * gap; }
+  if ((k == 4 && i >= 2 && i <= 4) || (k == 3 && (i == 1 || i == 2))) { L[1] *= 0.9 + 0.1 * sin(u.time * (11.0 + f32(i) * 3.7)) * sin(u.time * 7.3 + f32(i)); }
+  if (k == 1 && i == 4) { L[1] = (hue3(fract(u.time * 0.04)) * 0.8 + 0.2) * 1.5 * (0.7 + 0.5 * B.y + 0.3 * B.x); }
+  return L;
+}
+fn rmLight0(k: i32, i: i32) -> array<vec3f, 2> {
   let z = array<vec3f, 2>(vec3f(0.0, -50.0, 0.0), vec3f(0.0));
   switch k {
     case 1: {
@@ -6654,8 +6693,32 @@ fn rmLight(k: i32, i: i32) -> array<vec3f, 2> {
     }
   }
 }
-// beams in the haze under the lamps: apex, axis, cosine of the half angle, colour
+// beams in the haze under the lamps: apex (w: its own distance falloff, 0 for the usual 0.35), axis, cosine of the
+// half angle, colour
+// the stage beams swing slowly and take the stage's colour while the band plays; in the club two follow-spots from
+// the dome ribs sweep the stand, and go dark between tunes
 fn rmBeam(k: i32, i: i32) -> array<vec4f, 3> {
+  var b = rmBeam0(k, i);
+  let B = rmBand();
+  if ((k == 3 || k == 4) && i == 0) {
+    let a = 0.28 * sin(u.time * 0.37) * B.x;
+    let ax = b[1].xyz;
+    b[1] = vec4f(ax.x * cos(a) - ax.z * sin(a), ax.y, ax.x * sin(a) + ax.z * cos(a), b[1].w);
+    b[2] = vec4f(b[2].xyz * mix(vec3f(0.6), mix(vec3f(1.0), rmStageCol(floor(B.z / 2.0) + f32(k)), 0.6) * (0.9 + 0.4 * B.y), B.x), 0.0);
+  }
+  if (k == 4 && (i == 1 || i == 2)) {
+    let sg = select(-1.0, 1.0, i == 2);
+    let ap = vec3f(9.0, 9.2, 6.5 * sg);
+    let aim = vec3f(18.6, 1.4, 1.8 * sin(u.time * 0.23 + sg * 1.7) + 0.6 * sg);
+    b = array<vec4f, 3>(vec4f(ap, 0.012), vec4f(normalize(aim - ap), 0.965), vec4f(select(vec3f(1.0, 0.45, 0.7), vec3f(1.0, 0.8, 0.5), i == 2) * 2.5 * B.x, 0.0));
+    if (B.x < 0.5) { b[1].w = 2.0; }
+  }
+  if (k == 3 && i == 1 && B.x > 0.5) {
+    b = array<vec4f, 3>(vec4f(7.5, 2.85, 0.0, 0.0), vec4f(normalize(vec3f(3.0, -1.6, 0.4 * sin(u.time * 0.31))), 0.93), vec4f(rmStageCol(floor(B.z / 2.0) + 1.0) * 2.5 * (0.8 + 0.4 * B.y), 0.0));
+  }
+  return b;
+}
+fn rmBeam0(k: i32, i: i32) -> array<vec4f, 3> {
   let none = array<vec4f, 3>(vec4f(0.0), vec4f(0.0, -1.0, 0.0, 2.0), vec4f(0.0));
   if (k == 1) {
     if (i == 0) { return array<vec4f, 3>(vec4f(3.0, 2.36, 1.55, 0.0), vec4f(0.0, -1.0, 0.0, 0.72), vec4f(1.0, 0.72, 0.42, 0.0)); }
@@ -7098,7 +7161,7 @@ fn roomRender(ro: vec3f, rd: vec3f, px: vec2f) -> vec4f {
       let v = sp - B[0].xyz;
       let dl = length(v);
       let cs = dot(v / max(dl, 1e-3), B[1].xyz);
-      beams += B[2].xyz * smoothstep(B[1].w, B[1].w + 0.06, cs) / (1.0 + dl * dl * 0.35);
+      beams += B[2].xyz * smoothstep(B[1].w, B[1].w + 0.06, cs) / (1.0 + dl * dl * select(0.35, B[0].w, B[0].w > 0.0));
     }
   }
   col += beams * tb / 10.0 * hazeK * select(3.0, 5.0, k == 3);
@@ -11543,7 +11606,59 @@ function auRadioAct(dt, city, night) {
 //     improvising in phrases.
 //   4 the Warmhouse club: a piano trio playing a ballad before the set, in a big warm room.
 // How it is built and how to change it: the drift-city skill, "Music in the venues".
-const VENUE = { k: 0, out: null, g: null, verb: null, next: 0, beat: 0, bar: 0, lead: null, style: null };
+const VENUE = { k: 0, out: null, g: null, verb: null, next: 0, beat: 0, bar: 0, lead: null, style: null,
+  nb: 0, marks: [], gapFrom: -1, gapUntil: -1, bpmMul: 1, crowd: null, cNext: 0 };
+// Tunes end. Each style plays `tune` bars, then stops for `gap` seconds: the room claps (`clap`, 0 for the jukebox,
+// which only changes its record), the talk comes up, and the live bands count the next one in. The next tune is a
+// little faster or slower. Owner, September 2026: the rooms were "eerily empty"; music that never breathes, no crowd
+// and no applause were a large part of that.
+const VENUE_SHAPE = { 1: { tune: 24, gap: 3, clap: 0 }, 2: { tune: 32, gap: 5, clap: 0.35 }, 3: { tune: 48, gap: 6, clap: 0.9 }, 4: { tune: 32, gap: 7, clap: 0.75 } };
+// the crowd, from three two-second recordings (audio/crowd, ElevenLabs sound effects): grains of about a second from
+// random points, at slightly different speeds, overlapping, panned about; level while the band plays and between tunes
+const VENUE_CROWD = { 1: { set: ["bar-a", "bar-b"], lvl: 0.5, play: 0.9 }, 2: { set: ["bar-b", "club"], lvl: 0.38, play: 0.85 },
+  3: { set: ["bar-a", "bar-b", "club"], lvl: 0.55, play: 0.8 }, 4: { set: ["club", "bar-b"], lvl: 0.5, play: 0.35 } };
+const CROWD_BUF = {};
+function crowdLoad() {
+  if (CROWD_BUF.asked || typeof fetch !== "function") return;
+  CROWD_BUF.asked = true;
+  for (const n of ["bar-a", "bar-b", "club", "applause"]) {
+    fetch("../audio/crowd/" + n + ".mp3").then((r) => r.arrayBuffer()).then((b) => AU.ctx.decodeAudioData(b)).then((d) => { CROWD_BUF[n] = d; }).catch(() => {});
+  }
+}
+function crowdGrain(t, lvl) {
+  const set = VENUE_CROWD[VENUE.k].set.map((n) => CROWD_BUF[n]).filter(Boolean);
+  if (!set.length || !VENUE.crowd) return;
+  const c = AU.ctx, buf = set[Math.floor(Math.random() * set.length)], d = Math.min(1.0, buf.duration * 0.5);
+  const src = c.createBufferSource(); src.buffer = buf; src.playbackRate.value = rr(0.9, 1.1);
+  const g = c.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(lvl, t + d * 0.35); g.gain.setValueAtTime(lvl, t + d * 0.65); g.gain.linearRampToValueAtTime(0, t + d);
+  let last = g;
+  if (c.createStereoPanner) { const pn = c.createStereoPanner(); pn.pan.value = rr(-0.7, 0.7); g.connect(pn); last = pn; }
+  src.connect(g); last.connect(VENUE.crowd);
+  src.start(t, Math.random() * (buf.duration - d - 0.02)); src.stop(t + d + 0.05);
+}
+function crowdClap(t, lvl) {
+  const buf = CROWD_BUF.applause;
+  if (!buf || !VENUE.crowd || lvl <= 0) return;
+  for (const [dt, rate, v] of [[0, 1, 1], [0.35, 0.93, 0.7]]) {
+    const src = AU.ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
+    const g = AU.ctx.createGain(); g.gain.value = lvl * v; src.connect(g); g.connect(VENUE.crowd); src.start(t + dt);
+  }
+}
+// the band's position for the lights and the people (main.js puts it in ev.wx.w): beats since the room began, while a
+// tune plays; -1 to -2 through the break between tunes. Without sound, the same shape runs on the page's clock.
+function venueBand(k, clock) {
+  const Sh = VENUE_SHAPE[k], S = VENUE_STYLES[k];
+  if (!Sh) return -1;
+  if (typeof AU !== "undefined" && AU.ready && AU.on && VENUE.out && VENUE.k === k) {
+    const now = AU.ctx.currentTime;
+    if (now >= VENUE.gapFrom && now < VENUE.gapUntil) return -1 - (now - VENUE.gapFrom) / (VENUE.gapUntil - VENUE.gapFrom);
+    let m = null;
+    for (const x of VENUE.marks) if (x[0] <= now) m = x;
+    return m ? (m[1] + (now - m[0]) / m[2]) % 512 : -1;
+  }
+  const tl = Sh.tune * S.beats * 60 / S.bpm, ph = clock % (tl + Sh.gap);
+  return ph < tl ? (ph * S.bpm / 60) % 512 : -1 - (ph - tl) / Sh.gap;
+}
 const VENUE_STYLES = {
   1: { bpm: 70, swing: 0.67, beats: 4, key: 55, verb: 0.7, chords: [[0, "7"], [0, "7"], [0, "7"], [0, "7"], [5, "7"], [5, "7"], [0, "7"], [0, "7"], [7, "7"], [5, "7"], [0, "7"], [7, "7"]],
     parts: { bass: "two", keys: "organ", drums: "shuffle", lead: "guitar" }, lead: [52, 74], phrase: 0.55, radio: true },
@@ -11583,10 +11698,12 @@ function venueBuild(k) {
     g.connect(hp); hp.connect(sh); sh.connect(lp); last = lp;
   }
   last.connect(out);
+  const crowd = c.createGain(); crowd.gain.value = 1; crowd.connect(out);
+  crowdLoad();
   const verb = c.createConvolver(); verb.buffer = venueIR(c, S.verb, k === 4 ? 0.35 : 0.6);
   const send = c.createGain(); send.gain.value = k === 4 ? 0.5 : 0.3;
   last.connect(send); send.connect(verb); verb.connect(out);
-  Object.assign(VENUE, { k, out, g, style: S, next: c.currentTime + 0.3, beat: 0, bar: 0, lead: null });
+  Object.assign(VENUE, { k, out, g, crowd, style: S, next: c.currentTime + 0.3, beat: 0, bar: 0, lead: null, marks: [], gapFrom: -1, gapUntil: -1, bpmMul: 1, cNext: c.currentTime });
 }
 // ---------- the players' instruments ----------
 function vEnv(g, t, a, peak, tau, end) {
@@ -11739,14 +11856,29 @@ function venueStep() {
   if (!VENUE.out) return;
   VENUE.out.gain.setTargetAtTime(k ? (k === 1 ? 0.45 : 0.55) : 0, now, k ? 0.8 : 0.4);
   if (!k) { if (VENUE.out.gain.value < 0.01) { VENUE.out.disconnect(); VENUE.out = null; VENUE.k = 0; } return; }
-  const S = VENUE.style, B = 60 / S.bpm;
+  const S = VENUE.style, Sh = VENUE_SHAPE[k], C = VENUE_CROWD[k];
+  let B = 60 / (S.bpm * VENUE.bpmMul);
   if (VENUE.next < now) VENUE.next = now + 0.05;
   while (VENUE.next < now + 0.25) {
+    if (VENUE.beat === 0 && VENUE.bar >= Sh.tune) {
+      // the end of a tune: the break, the applause, a new tempo, and for the live bands the drummer's count-in
+      VENUE.gapFrom = VENUE.next; VENUE.gapUntil = VENUE.next + Sh.gap;
+      crowdClap(VENUE.next + 0.15, Sh.clap);
+      VENUE.bar = 0; VENUE.lead = null; VENUE.bpmMul = rr(0.92, 1.08); B = 60 / (S.bpm * VENUE.bpmMul);
+      if (k >= 3) for (let i = 0; i < 4; i++) vDrum("rim", VENUE.gapUntil - (4 - i) * B, i < 2 ? 0.35 : 0.5);
+      VENUE.next = VENUE.gapUntil;
+      continue;
+    }
+    VENUE.marks.push([VENUE.next, VENUE.nb++, B]); if (VENUE.marks.length > 12) VENUE.marks.shift();
     venueBeat(VENUE.next, VENUE.beat, B);
     VENUE.next += B;
     VENUE.beat = (VENUE.beat + 1) % S.beats;
     if (VENUE.beat === 0) VENUE.bar++;
   }
+  // the crowd: louder between tunes, and quiet in the club while the trio plays
+  const inGap = now >= VENUE.gapFrom && now < VENUE.gapUntil + 1.5;
+  if (VENUE.cNext < now) VENUE.cNext = now + 0.02;
+  while (VENUE.cNext < now + 0.3) { crowdGrain(VENUE.cNext, C.lvl * (inGap ? 1.3 : C.play)); VENUE.cNext += rr(0.25, 0.4); }
 }
 
 const PLACES_BAKED = [{"id":"hall_floor","name":"Assembly Hall, the floor","blurb":"Under the great glass dome, where the city's assembly meets: tier on tier of seats around the rostrum. Light falls through the ribs in long amber bars.","x":720,"y":2.8,"z":-725,"yaw":2.8416,"pitch":0.28},{"id":"hall_steps","name":"Assembly Hall, the steps","blurb":"The broad stone steps below the arcade, a place to wait, to argue, to be seen.","x":644,"y":4.4,"z":-728,"yaw":0,"pitch":0.2},{"id":"civic_axis","name":"The Assembly Hall avenue, old town","blurb":"The long reflecting pools up the avenue, between two walls of stone, to the dome of the Assembly Hall.","x":728,"y":3.2,"z":-175,"yaw":-1.5708,"pitch":0.1},{"id":"hive","name":"Facing the Hive, Lumen roofs","blurb":"Across the gap, the pod block fills the sky: patched walls, a million little windows, and the boards telling everyone inside to sleep more.","x":741,"y":124.01,"z":741,"yaw":1.5964,"pitch":0.08},{"id":"fab","name":"Hive battlements, over the pod fab","blurb":"Below, the fab that makes the Hive's capsule homes, fed by a beam from the power station in orbit: a white line through the clouds, day and night.","x":983,"y":252,"z":1098,"yaw":0.2783,"pitch":-0.42},{"id":"warmhouse","name":"The Warmhouse, the square","blurb":"Inside the bubble the air is warm and thin, and smells of Earth: grass, bread, beer. Lights are strung round the square; the club's dome glows in the middle.","x":-1621.82,"y":209.2,"z":537.29,"yaw":0.85,"pitch":0.2},{"id":"warmhouse_below","name":"Under the Warmhouse","blurb":"A bubble of warm air, 340 m across, hangs over the west edge of the city ahead on four cables. It floats because it is lighter than the cold, dense air around it.","x":-2270,"y":16.7,"z":687,"yaw":-0.2526,"pitch":0.42},{"id":"pagoda_3","name":"Pagoda, Chinatown","blurb":"Tiers of curved roofs on Orchid Street; incense and methane frost on the eaves.","x":-880.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.18},{"id":"street_0","name":"Ferry Row, financial district","blurb":"A street corner in the financial district: tube traffic humming past, windows stacked up into the haze.","x":-39,"y":1.7,"z":-100.4,"yaw":-1.5708,"pitch":0.18},{"id":"giant_0","name":"Below a megatower, financial district","blurb":"Over the park at its foot, a tower that vanishes into the haze above Halo Row.","x":5.01,"y":26,"z":-5.01,"yaw":-0.7854,"pitch":0.38},{"id":"street_1","name":"Ferry Street, neon quarter","blurb":"A street corner in the neon quarter: tube traffic humming past, windows stacked up into the haze.","x":-143,"y":1.7,"z":81.6,"yaw":-1.5708,"pitch":0.18},{"id":"roof_0","name":"Rooftop above the financial district","blurb":"A rooftop high over Ferry Lane, the financial district spread out below.","x":-117,"y":138.28,"z":-65,"yaw":6.8068,"pitch":-0.12},{"id":"pyramid","name":"Corporate pyramid, financial district","blurb":"A stepped pyramid of glass and stone on Ferry Lane; security drones idle at its apex.","x":-143,"y":1.7,"z":-81.6,"yaw":1.5708,"pitch":0.18},{"id":"roof_1","name":"Rooftop above the neon quarter","blurb":"A rooftop high over Dune Passage, the neon quarter spread out below.","x":-169,"y":67.5,"z":91,"yaw":5.8905,"pitch":-0.12},{"id":"market_1","name":"Night market, neon quarter","blurb":"Stalls under strings of light on Orchid Walk: noodles, cold-weather gear, spare parts, rumours.","x":-221,"y":1.7,"z":48.4,"yaw":1.5708,"pitch":0.18},{"id":"roof_oddity","name":"A rooftop garden","blurb":"Someone keeps a garden up here, with a view across the neon quarter.","x":-299,"y":38.9,"z":13,"yaw":3.1416,"pitch":-0.12},{"id":"tower_0","name":"Signal tower, financial district","blurb":"A lattice tower on Halo Wynd, blinking out to the ships.","x":-377,"y":1.7,"z":-263.6,"yaw":1.5708,"pitch":0.18},{"id":"street_6","name":"Haze Row, dorms","blurb":"A street corner in the dorms: tube traffic humming past, windows stacked up into the haze.","x":429,"y":1.7,"z":341.6,"yaw":-1.5708,"pitch":0.18},{"id":"roof_6","name":"Rooftop above the dorms","blurb":"A rooftop high over Haze Row, the dorms spread out below.","x":429,"y":67.88,"z":325,"yaw":3.8092,"pitch":-0.12},{"id":"street_3","name":"Glass Walk, Chinatown","blurb":"A street corner in the Chinatown: tube traffic humming past, windows stacked up into the haze.","x":-282.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.18},{"id":"roof_3","name":"Rooftop above Chinatown","blurb":"A rooftop high over Glass Walk, Chinatown spread out below.","x":-299,"y":36.77,"z":429,"yaw":5.38,"pitch":-0.12},{"id":"market_3","name":"Night market, Chinatown","blurb":"Stalls under strings of light on Huygens Passage: noodles, cold-weather gear, spare parts, rumours.","x":-523.6,"y":1.7,"z":-117,"yaw":0,"pitch":0.18},{"id":"street_7","name":"Saturnlight Lane, crystal quarter","blurb":"A street corner in the crystal quarter: tube traffic humming past, windows stacked up into the haze.","x":-464.4,"y":1.7,"z":-221,"yaw":3.1416,"pitch":0.18},{"id":"roof_7","name":"Rooftop above the crystal quarter","blurb":"A rooftop high over Methane Row, the crystal quarter spread out below.","x":-403,"y":68.87,"z":-351,"yaw":6.9938,"pitch":-0.12},{"id":"street_2","name":"Cryo Street, old town","blurb":"A street corner in the old town: tube traffic humming past, windows stacked up into the haze.","x":100.4,"y":1.7,"z":-637,"yaw":0,"pitch":0.18},{"id":"roof_2","name":"Rooftop above the old town","blurb":"A rooftop high over Kraken Lane, the old town spread out below.","x":247,"y":67.71,"z":-793,"yaw":8.124,"pitch":-0.12},{"id":"works_4","name":"The works, industrial belt","blurb":"Pipes, stacks and pressure domes on Huygens Parade: the city's heat and air are made here.","x":871,"y":1.7,"z":-1244.4,"yaw":-1.5708,"pitch":0.18},{"id":"street_4","name":"Cryo Row, industrial belt","blurb":"A street corner in the industrial belt: tube traffic humming past, windows stacked up into the haze.","x":897,"y":1.7,"z":-1277.6,"yaw":1.5708,"pitch":0.18},{"id":"spaceport_apron","name":"Spaceport apron","blurb":"Landing pads and fuel lines off Orchid Wynd, under the long light of Saturn.","x":2353,"y":1.7,"z":-2421.6,"yaw":1.5708,"pitch":0.18},{"id":"street_5","name":"Dune Wynd, spaceport","blurb":"A street corner in the spaceport: tube traffic humming past, windows stacked up into the haze.","x":2509,"y":1.7,"z":-2265.6,"yaw":1.5708,"pitch":0.18},{"id":"sign","name":"Below the hillside letters","blurb":"The letters DRIFT CITY stand on the hill above, each taller than a house.","x":52,"y":8.71,"z":-2479,"yaw":-1.5708,"pitch":0.0798},{"id":"stones","name":"The stone circle","blurb":"Standing stones on a rise, older than the city, nobody agrees whose.","x":1157,"y":54.48,"z":-3228.16,"yaw":1.5708,"pitch":0.12},{"id":"treehouse","name":"The treehouse","blurb":"A cabin in the crown of a great tree, reached by a swaying ladder.","x":1443,"y":12,"z":-3982.16,"yaw":1.5708,"pitch":0.12},{"id":"cabin","name":"The mountain cabin","blurb":"A cabin high on the slopes, smoke from its heat vent.","x":4242.16,"y":86.24,"z":1469,"yaw":3.1416,"pitch":0.12},{"id":"dish","name":"The radio dish","blurb":"A dish in the hills, listening for Earth.","x":6435,"y":89.19,"z":-1824.16,"yaw":1.5708,"pitch":0.12},{"id":"lander","name":"The lander","blurb":"An old probe, its parachute collapsed beside it on the pebbles.","x":-5213,"y":70.84,"z":-6712.16,"yaw":1.5708,"pitch":0.12},{"id":"riverbank","name":"A river bank","blurb":"A methane river slides past, silent and dark, between low banks.","x":-3177.04,"y":21.02,"z":-7068.87,"yaw":5.8608,"pitch":0.05},{"id":"lakeshore","name":"The lake shore","blurb":"The edge of a methane lake; tiny waves, and the city's glow far off across it.","x":2471.14,"y":1.7,"z":6549.31,"yaw":2.7808,"pitch":0.05},{"id":"glade","name":"A forest glade","blurb":"A clearing in the dark forest; the fronds glow faintly after dark.","x":7000,"y":31.84,"z":0,"yaw":1.5708,"pitch":0.05},{"id":"summit","name":"A summit","blurb":"A bare summit of ice rock above the haze layer, the city a smudge of light below.","x":-4283.64,"y":504.32,"z":-5724.77,"yaw":5.6408,"pitch":0.05},{"id":"dunes","name":"Among the dunes","blurb":"Dark dunes of organic sand, rippled by the wind.","x":-6137.73,"y":20.43,"z":3365.76,"yaw":4.2108,"pitch":0.05},{"id":"corner_-8_-5","name":"Cassini Parade, financial district","blurb":"A corner on Cassini Parade: steam from a vent, the tubes' glass humming with traffic.","x":-211.6,"y":1.7,"z":-117,"yaw":0,"pitch":0.18},{"id":"corner_0_-10","name":"Amber Walk, financial district","blurb":"A corner on Amber Walk: steam from a vent, the tubes' glass humming with traffic.","x":13,"y":1.7,"z":-230.4,"yaw":-1.5708,"pitch":0.18},{"id":"corner_-9_5","name":"Saturnlight Wynd, financial district","blurb":"A corner on Saturnlight Wynd: steam from a vent, the tubes' glass humming with traffic.","x":-237.6,"y":1.7,"z":143,"yaw":0,"pitch":0.18},{"id":"corner_-21_-12","name":"Tholin Street, crystal quarter","blurb":"A corner on Tholin Street: steam from a vent, the tubes' glass humming with traffic.","x":-516.4,"y":1.7,"z":-299,"yaw":3.1416,"pitch":0.18},{"id":"corner_21_12","name":"Dune Walk, dorms","blurb":"A corner on Dune Walk: steam from a vent, the tubes' glass humming with traffic.","x":542.4,"y":1.7,"z":325,"yaw":0,"pitch":0.18},{"id":"corner_14_-28","name":"Lantern Parade, old town","blurb":"A corner on Lantern Parade: steam from a vent, the tubes' glass humming with traffic.","x":360.4,"y":1.7,"z":-715,"yaw":0,"pitch":0.18},{"id":"corner_17_26","name":"Tholin Street, dorms","blurb":"A corner on Tholin Street: steam from a vent, the tubes' glass humming with traffic.","x":471.6,"y":1.7,"z":689,"yaw":3.1416,"pitch":0.18},{"id":"corner_-14_28","name":"Dune Arcade, dorms","blurb":"A corner on Dune Arcade: steam from a vent, the tubes' glass humming with traffic.","x":-334.4,"y":1.7,"z":741,"yaw":3.1416,"pitch":0.18},{"id":"corner_-31_2","name":"Halo Arcade, neon quarter","blurb":"A corner on Halo Arcade: steam from a vent, the tubes' glass humming with traffic.","x":-793,"y":1.7,"z":48.4,"yaw":1.5708,"pitch":0.18},{"id":"cold_tap","name":"The Cold Tap, Ferry Street","blurb":"A dive bar behind an airlock: nine stools, a heater that ticks, bottles lit from below, and a price list older than the dome.","x":-143,"y":1.7,"z":81.6,"yaw":-1.5708,"pitch":0.02,"room":1},{"id":"low_orbit_bar","name":"The Low Orbit, by the spaceport","blurb":"A long bar for ship crews, with a window on the pads and a cracked star painted on the ceiling.","x":2509,"y":1.7,"z":-2265.6,"yaw":1.5708,"pitch":0.02,"room":2},{"id":"lantern_cellar","name":"The Lantern Cellar, Chinatown","blurb":"Forty steps down: a brick vault full of paper lanterns and smoke, and a late jam that never stops.","x":-282.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.02,"room":3},{"id":"warmhouse_club","name":"The Warmhouse club","blurb":"The jazz club under the dome in the middle of the Warmhouse: tables in rings, lamps on every table, the stand at the far side.","x":-1621.82,"y":209.2,"z":537.29,"yaw":0.85,"pitch":0.02,"room":4}];
@@ -15101,7 +15233,8 @@ async function init() {
     computeExtras(tod, dt);
     EVN[208] = WX.cover || 0; // settled snow (after computeEvents clears the array)
     EVN[209] = morseKey(clock); // the masts' Morse (morse.js)
-    { const r = roomNow(); EVN[210] = r ? r.room : 0; if (r) EVN.set([r.x, r.y - 1.7, r.z, r.yaw], 212); } // a venue's room (tales.js)
+    { const r = roomNow(); EVN[210] = r ? r.room : 0; if (r) EVN.set([r.x, r.y - 1.7, r.z, r.yaw], 212); // a venue's room (tales.js)
+      EVN[211] = r ? (globalThis.__bandForce !== undefined ? globalThis.__bandForce : venueBand(r.room, clock)) : -1; } // __bandForce: a test hook // the band's beat for the room's lights and people (venue.js)
     device.queue.writeBuffer(evBuf, 0, EVN);
     { const lg = lifeUpdate(dtS); if (lg) device.queue.writeBuffer(evBuf, 864, lg); }
     const pyr = !inSpace && ffStep(frameNo < 2 ? 1 : 3);

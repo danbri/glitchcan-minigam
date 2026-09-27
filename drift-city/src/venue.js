@@ -8,7 +8,59 @@
 //     improvising in phrases.
 //   4 the Warmhouse club: a piano trio playing a ballad before the set, in a big warm room.
 // How it is built and how to change it: the drift-city skill, "Music in the venues".
-const VENUE = { k: 0, out: null, g: null, verb: null, next: 0, beat: 0, bar: 0, lead: null, style: null };
+const VENUE = { k: 0, out: null, g: null, verb: null, next: 0, beat: 0, bar: 0, lead: null, style: null,
+  nb: 0, marks: [], gapFrom: -1, gapUntil: -1, bpmMul: 1, crowd: null, cNext: 0 };
+// Tunes end. Each style plays `tune` bars, then stops for `gap` seconds: the room claps (`clap`, 0 for the jukebox,
+// which only changes its record), the talk comes up, and the live bands count the next one in. The next tune is a
+// little faster or slower. Owner, September 2026: the rooms were "eerily empty"; music that never breathes, no crowd
+// and no applause were a large part of that.
+const VENUE_SHAPE = { 1: { tune: 24, gap: 3, clap: 0 }, 2: { tune: 32, gap: 5, clap: 0.35 }, 3: { tune: 48, gap: 6, clap: 0.9 }, 4: { tune: 32, gap: 7, clap: 0.75 } };
+// the crowd, from three two-second recordings (audio/crowd, ElevenLabs sound effects): grains of about a second from
+// random points, at slightly different speeds, overlapping, panned about; level while the band plays and between tunes
+const VENUE_CROWD = { 1: { set: ["bar-a", "bar-b"], lvl: 0.5, play: 0.9 }, 2: { set: ["bar-b", "club"], lvl: 0.38, play: 0.85 },
+  3: { set: ["bar-a", "bar-b", "club"], lvl: 0.55, play: 0.8 }, 4: { set: ["club", "bar-b"], lvl: 0.5, play: 0.35 } };
+const CROWD_BUF = {};
+function crowdLoad() {
+  if (CROWD_BUF.asked || typeof fetch !== "function") return;
+  CROWD_BUF.asked = true;
+  for (const n of ["bar-a", "bar-b", "club", "applause"]) {
+    fetch("../audio/crowd/" + n + ".mp3").then((r) => r.arrayBuffer()).then((b) => AU.ctx.decodeAudioData(b)).then((d) => { CROWD_BUF[n] = d; }).catch(() => {});
+  }
+}
+function crowdGrain(t, lvl) {
+  const set = VENUE_CROWD[VENUE.k].set.map((n) => CROWD_BUF[n]).filter(Boolean);
+  if (!set.length || !VENUE.crowd) return;
+  const c = AU.ctx, buf = set[Math.floor(Math.random() * set.length)], d = Math.min(1.0, buf.duration * 0.5);
+  const src = c.createBufferSource(); src.buffer = buf; src.playbackRate.value = rr(0.9, 1.1);
+  const g = c.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(lvl, t + d * 0.35); g.gain.setValueAtTime(lvl, t + d * 0.65); g.gain.linearRampToValueAtTime(0, t + d);
+  let last = g;
+  if (c.createStereoPanner) { const pn = c.createStereoPanner(); pn.pan.value = rr(-0.7, 0.7); g.connect(pn); last = pn; }
+  src.connect(g); last.connect(VENUE.crowd);
+  src.start(t, Math.random() * (buf.duration - d - 0.02)); src.stop(t + d + 0.05);
+}
+function crowdClap(t, lvl) {
+  const buf = CROWD_BUF.applause;
+  if (!buf || !VENUE.crowd || lvl <= 0) return;
+  for (const [dt, rate, v] of [[0, 1, 1], [0.35, 0.93, 0.7]]) {
+    const src = AU.ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
+    const g = AU.ctx.createGain(); g.gain.value = lvl * v; src.connect(g); g.connect(VENUE.crowd); src.start(t + dt);
+  }
+}
+// the band's position for the lights and the people (main.js puts it in ev.wx.w): beats since the room began, while a
+// tune plays; -1 to -2 through the break between tunes. Without sound, the same shape runs on the page's clock.
+function venueBand(k, clock) {
+  const Sh = VENUE_SHAPE[k], S = VENUE_STYLES[k];
+  if (!Sh) return -1;
+  if (typeof AU !== "undefined" && AU.ready && AU.on && VENUE.out && VENUE.k === k) {
+    const now = AU.ctx.currentTime;
+    if (now >= VENUE.gapFrom && now < VENUE.gapUntil) return -1 - (now - VENUE.gapFrom) / (VENUE.gapUntil - VENUE.gapFrom);
+    let m = null;
+    for (const x of VENUE.marks) if (x[0] <= now) m = x;
+    return m ? (m[1] + (now - m[0]) / m[2]) % 512 : -1;
+  }
+  const tl = Sh.tune * S.beats * 60 / S.bpm, ph = clock % (tl + Sh.gap);
+  return ph < tl ? (ph * S.bpm / 60) % 512 : -1 - (ph - tl) / Sh.gap;
+}
 const VENUE_STYLES = {
   1: { bpm: 70, swing: 0.67, beats: 4, key: 55, verb: 0.7, chords: [[0, "7"], [0, "7"], [0, "7"], [0, "7"], [5, "7"], [5, "7"], [0, "7"], [0, "7"], [7, "7"], [5, "7"], [0, "7"], [7, "7"]],
     parts: { bass: "two", keys: "organ", drums: "shuffle", lead: "guitar" }, lead: [52, 74], phrase: 0.55, radio: true },
@@ -48,10 +100,12 @@ function venueBuild(k) {
     g.connect(hp); hp.connect(sh); sh.connect(lp); last = lp;
   }
   last.connect(out);
+  const crowd = c.createGain(); crowd.gain.value = 1; crowd.connect(out);
+  crowdLoad();
   const verb = c.createConvolver(); verb.buffer = venueIR(c, S.verb, k === 4 ? 0.35 : 0.6);
   const send = c.createGain(); send.gain.value = k === 4 ? 0.5 : 0.3;
   last.connect(send); send.connect(verb); verb.connect(out);
-  Object.assign(VENUE, { k, out, g, style: S, next: c.currentTime + 0.3, beat: 0, bar: 0, lead: null });
+  Object.assign(VENUE, { k, out, g, crowd, style: S, next: c.currentTime + 0.3, beat: 0, bar: 0, lead: null, marks: [], gapFrom: -1, gapUntil: -1, bpmMul: 1, cNext: c.currentTime });
 }
 // ---------- the players' instruments ----------
 function vEnv(g, t, a, peak, tau, end) {
@@ -204,12 +258,27 @@ function venueStep() {
   if (!VENUE.out) return;
   VENUE.out.gain.setTargetAtTime(k ? (k === 1 ? 0.45 : 0.55) : 0, now, k ? 0.8 : 0.4);
   if (!k) { if (VENUE.out.gain.value < 0.01) { VENUE.out.disconnect(); VENUE.out = null; VENUE.k = 0; } return; }
-  const S = VENUE.style, B = 60 / S.bpm;
+  const S = VENUE.style, Sh = VENUE_SHAPE[k], C = VENUE_CROWD[k];
+  let B = 60 / (S.bpm * VENUE.bpmMul);
   if (VENUE.next < now) VENUE.next = now + 0.05;
   while (VENUE.next < now + 0.25) {
+    if (VENUE.beat === 0 && VENUE.bar >= Sh.tune) {
+      // the end of a tune: the break, the applause, a new tempo, and for the live bands the drummer's count-in
+      VENUE.gapFrom = VENUE.next; VENUE.gapUntil = VENUE.next + Sh.gap;
+      crowdClap(VENUE.next + 0.15, Sh.clap);
+      VENUE.bar = 0; VENUE.lead = null; VENUE.bpmMul = rr(0.92, 1.08); B = 60 / (S.bpm * VENUE.bpmMul);
+      if (k >= 3) for (let i = 0; i < 4; i++) vDrum("rim", VENUE.gapUntil - (4 - i) * B, i < 2 ? 0.35 : 0.5);
+      VENUE.next = VENUE.gapUntil;
+      continue;
+    }
+    VENUE.marks.push([VENUE.next, VENUE.nb++, B]); if (VENUE.marks.length > 12) VENUE.marks.shift();
     venueBeat(VENUE.next, VENUE.beat, B);
     VENUE.next += B;
     VENUE.beat = (VENUE.beat + 1) % S.beats;
     if (VENUE.beat === 0) VENUE.bar++;
   }
+  // the crowd: louder between tunes, and quiet in the club while the trio plays
+  const inGap = now >= VENUE.gapFrom && now < VENUE.gapUntil + 1.5;
+  if (VENUE.cNext < now) VENUE.cNext = now + 0.02;
+  while (VENUE.cNext < now + 0.3) { crowdGrain(VENUE.cNext, C.lvl * (inGap ? 1.3 : C.play)); VENUE.cNext += rr(0.25, 0.4); }
 }

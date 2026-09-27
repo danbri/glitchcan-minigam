@@ -1589,7 +1589,8 @@ async function init() {
     computeExtras(tod, dt);
     EVN[208] = WX.cover || 0; // settled snow (after computeEvents clears the array)
     EVN[209] = morseKey(clock); // the masts' Morse (morse.js)
-    { const r = roomNow(); EVN[210] = r ? r.room : 0; if (r) EVN.set([r.x, r.y - 1.7, r.z, r.yaw], 212); } // a venue's room (tales.js)
+    { const r = roomNow(); EVN[210] = r ? r.room : 0; if (r) EVN.set([r.x, r.y - 1.7, r.z, r.yaw], 212); // a venue's room (tales.js)
+      EVN[211] = r ? (globalThis.__bandForce !== undefined ? globalThis.__bandForce : venueBand(r.room, clock)) : -1; } // __bandForce: a test hook // the band's beat for the room's lights and people (venue.js)
     device.queue.writeBuffer(evBuf, 0, EVN);
     { const lg = lifeUpdate(dtS); if (lg) device.queue.writeBuffer(evBuf, 864, lg); }
     const pyr = !inSpace && ffStep(frameNo < 2 ? 1 : 3);
