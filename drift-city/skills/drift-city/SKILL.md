@@ -185,7 +185,11 @@ so nothing has weight or inertia or can be pushed. The physics pass gives a firs
   key the date in Titan days (`clock_set`), the masts start blinking TENPO PINI (`# morse:`), and Elder Harriet
   speaks plainly: where Nuala is, the oxygen under the Low Orbit is real and hers, and the Warmhouse runs on her
   clock. Each walk down Ferry Street with the clock back costs heat (`back_for`); reach the Warmhouse after two and
-  the bubble cools and comes down (ending THE COLD SET). `clock_fix` puts it right. The Org's voice in the city is
+  the bubble cools and comes down (ending THE COLD SET). `clock_fix` puts it right.
+- Recorded voices: the Org and Elder Harriet speak their key lines with ElevenLabs clips (`audio/org/`, see its
+  README), through the `# speech: <mp3>` tag (`taleSpeech` in tales.js: relative to the story file, queued, cut off
+  by the next choice). Not `# AUDIO:`: in the FINK player that is the single looping background track, which would
+  loop a line of dialogue. The FINK player ignores `# speech:` and shows the text. The Org's voice in the city is
   corny and polite; an Elder unfiltered is not. When a story gives them recorded voices, keep the two clearly apart.
 
 ## Sound

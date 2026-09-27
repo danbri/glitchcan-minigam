@@ -1,7 +1,8 @@
 oooOO`
 // Per Aspera: a night crawl through Drift city's dive bars to the jazz club in the Warmhouse.
 // The same tags as The Lamplighter's Last Round (see that file's header): scene, place, time, weather, prop,
-// hotspot, fly, voice; and # morse: <text> (the masts and the radio key that message; empty for the usual ones).
+// hotspot, fly, voice; # morse: <text> (the masts and the radio key that message; empty for the usual ones); # speech: <mp3>, a recorded line (the Org
+// and Elder Harriet: ElevenLabs, see audio/org/README.md), played once; the FINK player ignores it and shows the text.
 // Speakers: mags, dex, oskar, nuala, pell, ruth, org, elder, you.
 // The Org and its Elders: canon in drift-city/skills/drift-city/SKILL.md, "The Org, the Elders and the calendar bug".
 # title: Per Aspera
@@ -305,7 +306,7 @@ The tape plays through both your helmets: the Warmhouse, years ago, a crowd sing
 {mast == 1:
     The signal tower is the oldest thing in the financial district: the settlers' ship's mast, stood upright when they landed. At its foot is a terminal in a heated booth, and a sign: THE ORG IS LISTENING.
 }
-{not clock_back: "Good evening, citizen!" says the Org. "The Elders are here for you. Remember: every day is a gift!" # voice: org}
+{not clock_back: "Good evening, citizen!" says the Org. "The Elders are here for you. Remember: every day is a gift!" # speech: ../audio/org/org-greet.mp3}
 {clock_back: The booth's lights are the wrong colour, the colour of a hundred years ago. The Org's clock is set back, and an Elder is on the screen, looking straight at you.}
 + {not clock_back} [Ask the Elders about Nuala] -> elder_filtered
 + {not clock_back and tenpo} [Key the date in Titan days, as the card says] -> clock_set
@@ -314,7 +315,7 @@ The tape plays through both your helmets: the Warmhouse, years ago, a crowd sing
 + [Back to Ferry Street] -> street
 
 === elder_filtered ===
-"Elder Harriet says: home is where the heart is!" the Org announces. A picture of a kitten appears. "Have you tried a warm drink?" # voice: org
+"Elder Harriet says: home is where the heart is!" the Org announces. A picture of a kitten appears. "Have you tried a warm drink?" # speech: ../audio/org/org-platitude.mp3
 -> mast
 
 === clock_set ===
@@ -323,7 +324,7 @@ The tape plays through both your helmets: the Warmhouse, years ago, a crowd sing
 ~ back_for = 0
 You key the date as the card says, in Titan days. The Org's calendar rolls back a hundred years. Every light in the booth changes colour, and out in the dark the mast starts blinking a new message: TENPO PINI, time past.
 The screen clears. A woman in an old flight suit looks out of it, as if she has been waiting at a window.
-"Oh, thank God," says Elder Harriet. "Do you know how long I've been saying 'every day is a gift'? I'd like to apologise to the whole colony and then say something useful." # voice: elder
+"Oh, thank God," says Elder Harriet. "Do you know how long I've been saying 'every day is a gift'? I'd like to apologise to the whole colony and then say something useful." # speech: ../audio/org/elder-thankgod.mp3
 -> elder
 
 === elder ===
@@ -335,23 +336,23 @@ The screen clears. A woman in an old flight suit looks out of it, as if she has 
 === elder_nuala ===
 ~ elder_tip = true
 ~ know_gate = true
-"Fenn? Gate 3, crying into a voucher, if she's anything like her grandmother." Harriet snorts. "Tell her the Earth seat is a cargo slot with a chair in it. The Org sells them because it thinks we're all dead and it's tidying up." # voice: elder
+"Fenn? Gate 3, crying into a voucher, if she's anything like her grandmother." Harriet snorts. "Tell her the Earth seat is a cargo slot with a chair in it. The Org sells them because it thinks we're all dead and it's tidying up." # speech: ../audio/org/elder-nuala.mp3
 -> elder
 
 === elder_oxygen ===
-"Of course there's oxygen under the Low Orbit. I put it there, with the printer stock. It's for the ones who go out, not back. Tell Dex to stop being coy about it." # voice: elder
+"Of course there's oxygen under the Low Orbit. I put it there, with the printer stock. It's for the ones who go out, not back. Tell Dex to stop being coy about it." # speech: ../audio/org/elder-oxygen.mp3
 -> elder
 
 === elder_warm ===
-"The bubble? It runs on my clock, genius. Set me back and its heaters think it's the wrong season. Warm air is its lift. Put me right before it comes down on your heads." # voice: elder
+"The bubble? It runs on my clock, genius. Set me back and its heaters think it's the wrong season. Warm air is its lift. Put me right before it comes down on your heads." # speech: ../audio/org/elder-warmhouse.mp3
 -> elder
 
 === clock_fix ===
 # morse:
 ~ clock_back = false
 ~ clock_fixed = true
-You key the date back the Org's way. Harriet has time to say "Tell them I was funnier than this" before the screen fills with kittens again. # voice: elder
-"Good evening, citizen!" says the Org. "Every day is a gift!" Out on Ferry Street the heaters come back up. # voice: org
+You key the date back the Org's way. Harriet has time to say "Tell them I was funnier than this" before the screen fills with kittens again. # speech: ../audio/org/elder-funnier.mp3
+"Good evening, citizen!" says the Org. "Every day is a gift!" Out on Ferry Street the heaters come back up. # speech: ../audio/org/org-gift.mp3
 + [Back to Ferry Street] -> street
 
 === below ===
