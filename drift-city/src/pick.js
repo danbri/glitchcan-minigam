@@ -150,7 +150,7 @@ function pickGo(px, py, now) {
   if (now) { pickLaunch(S); return; }
   pickOffer(S, px, py);
 }
-function pickLaunch(S) {
+function pickLaunch(S, quiet) {
   pickOfferClose();
   const tod = currentTod(), V = pickCompose(S, tod.sun);
   const from = { x: st.x, y: st.y, z: st.z, yaw: st.yaw, pitch: st.pitch };
@@ -159,7 +159,7 @@ function pickLaunch(S) {
   NAV.visit = { from, to: V, t: 0, T: clampv(3 + far / 180, 4, 14), ly: 0, lp: 0, look: [S.x, S.y0 + S.h * 0.45, S.z], subject: V };
   NAV.mode = "visit";
   PICK.subject = V;
-  showHint(S.name + (S.blurb ? ". " + S.blurb : ""), 7000);
+  if (!quiet) showHint(S.name + (S.blurb ? ". " + S.blurb : ""), 7000);
   if (typeof syncGoLabel === "function") syncGoLabel();
 }
 // the offer: a small card by the finger with the name, "Fly there" and a close button

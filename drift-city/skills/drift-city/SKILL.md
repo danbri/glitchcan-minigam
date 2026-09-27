@@ -253,6 +253,23 @@ Figures for writing and sound design. Titan surface air: nitrogen with about 5% 
   of the pressure, 7% of the energy. The membrane's mass does the rest: at 2 kg/m² it barely stops 100 Hz and cuts
   1 kHz by roughly 18 dB (the mass law). From the ground the jazz club is a bass line and a kick drum.
 
+## The ship's computer (`src/guide.js`, ElevenLabs voice)
+
+Owner direction (September 2026): use recorded ElevenLabs speech for a "ship's computer" role in the interface,
+reached only from the hamburger menu; later, perhaps, the voice of the Org's Titan computer if a story needs one.
+
+- Menu > "Guided flight": the computer flies to seven stops (the ringed spire, the Assembly Hall, the Hive, the pod
+  fab, the Chinatown pagoda, the Warmhouse, the spaceport), framing each with `pickLaunch` (the long-press flight,
+  clock sped up in mid-flight), and speaks a short plain description as the view comes in (at 62% of the flight).
+  The same words are shown as a caption with a Stop button. A touch on the view, a key or the pad stops it and gives
+  control back. The WebGL fallback hops to each stop's place instead of flying.
+- It runs on a 200 ms timer, not in a frame loop, so both renderers share it. It calls `flyOn` at the end.
+- The clips, their voice, cost and how to redo one: `audio/computer/README.md`. Tone for new lines: facts about
+  what is in view, short sentences, no adjectives for effect.
+- Test: `GUIDE=1 FRAMES=260` in the scratch Dawn runner logs the stop, phase and flight progress.
+- A class-name clash made the first caption 1,400 px tall: `.gt` is the intro title's class (54 px letters). Give
+  new UI elements prefixed class names.
+
 ## Long-press to go (`src/pick.js`)
 
 Hold still on the view for 0.65 s (moving 10 px cancels): `pickAt` follows the ray (the camera snapshot `CAMNOW`, which main.js and
