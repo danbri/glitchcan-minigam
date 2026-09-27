@@ -221,7 +221,8 @@ fn heatShift(uv0: vec2f) -> vec2f {
   c += textureSampleLevel(bloomTex, samp, uv, 0.0).rgb * vec3f(0.36, 0.3, 0.24);
   // by day, depth planes: near things keep their local colour and contrast, far ones sink into the haze (the fog does
   // the far part; this lifts the near part, the day grade used to flatten both into one honey-brown range)
-  let dayK = clamp(1.0 - (u.windows - 0.35) / 0.6, 0.0, 1.0);
+  // (not in a venue's room: it has its own light)
+  let dayK = clamp(1.0 - (u.windows - 0.35) / 0.6, 0.0, 1.0) * (1.0 - u.reg.z);
   let nearK = (1.0 - smoothstep(40.0, 700.0, dep)) * dayK;
   let farK = smoothstep(400.0, 1100.0, dep) * step(dep, 1190.0) * dayK;
   let lc = luma(c);

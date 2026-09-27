@@ -439,8 +439,8 @@ a height-field raymarch with coarse building boxes; it has no insides to walk in
 scene: four room places (`cold_tap`, `low_orbit_bar`, `lantern_cellar`, `warmhouse_club`) stand at their street
 (or, for the club, the Warmhouse square) beyond the fifty generated places. When you arrive at one (`roomNow()`:
 the visit at 92% or more), `EVN[210]` carries its kind and `EVN[212..215]` its origin and heading, and the scene
-pass returns `roomRender` at once: its own SDF (`rmMap`), four lamps (`rmLight`, the first with a soft shadow),
-AO, haze, and the story's props lit by the room (`propsFx` checks `ev.wx.z`). The snow overlay is off (`U[55]`)
+pass returns `roomRender` at once: its own SDF (`rmMap`), up to six lamps (`rmLight`, all with soft shadows), up to
+three lamp beams in the haze (`rmBeam`), one glossy reflection bounce, AO, haze, and the story's props lit by the room (`propsFx` checks `ev.wx.z`). The snow overlay is off (`U[55]`)
 and the street's sound drops behind the walls (see Music).
 
 - Room axes: x forward along the place's heading, z to the right, y up from the floor; the camera starts at x = 0.
@@ -455,6 +455,57 @@ and the street's sound drops behind the walls (see Music).
   the far end), the Lantern Cellar (brick barrel vault, paper lanterns, the stand with a kit and a bass), the club
   (dome with strings of bulbs, tables with lamps in two rings, the stand with a curtain, piano, kit and bass). The
   first cellar render had a lantern hanging 1 m in front of the camera; the lantern grid starts at x = 2.8.
+
+## Interiors and people: how to make them tell stories (September 2026)
+
+Owner, September 2026, on the first rooms: "way too bland and cartoonish ... a cheap formica kids toyhouse. And the
+pieces look worse than Monopoly player symbols. Outdoors suffers from this a bit too, primarily around bipedal
+figures." The rooms were then rebuilt (`rmColdTap`, `rmLowOrbit`, `rmCellar`, `rmClub`, `rmSurface`) and the story
+people were given bodies (`propPerson`). The method:
+
+1. Detail at three scales. Macro: the room's shape and the big furniture (bar, booths, stand, vault). Meso: the
+   fittings that say how the room is used (foot rail, taps, back-bar shelves, pendants on cords, heater, jukebox,
+   airlock with a porthole, pipes and cable trays, a departures screen). Micro: in the material (wood grain and
+   plank gaps, grout, rivets, the weave of cloth). A room with only macro shapes reads as a toy. Test each room at
+   the three distances a player sees it from.
+2. Every surface has a history. Paint over plaster with stains and brick showing through; floorboards worn where
+   people walk; soot above the heater; damp at the foot of the wall; chipped paint to bare metal at the edges
+   (`rmGrime`). Clean, one-colour albedo is the "formica" look. Use muted, dark base colours (albedo 0.05 to 0.4) and
+   let the light give the colour.
+3. Story objects. Things that imply a person or an event: photographs on the wall, a chalkboard with a price list,
+   gig posters, a mug left on a table, candles in bottles, a rug on the stand, a neon sign with a letter missing.
+   Each room needs objects that make a visitor ask a question. Do not use real people's names or records (see the
+   data-ethics rule in CLAUDE.md).
+4. Motivated light, warm against cold. Every light has a visible source (a pendant, a lantern, a lamp on a table,
+   a window, a screen). Put warm sources against one cold one (a window on the pads, a departures screen, a stair
+   light). Use pools of light and dark between them, not an even fill. Beams in the haze (`rmBeam`) and one glossy
+   reflection (bar top, brass, mirror) add depth at small cost.
+5. Fine patterns fade with distance (`rmFine(size)`). A pattern smaller than a pixel aliases: tin-ceiling tiles,
+   grain and mortar lines made concentric rings and green and orange speckle on the Cold Tap ceiling. Fade the
+   pattern and its bump, not only the colour.
+6. People are clothes and posture, not shapes. `propPerson`: a long wool coat with folds and a V opening over a
+   collar, trousers and boots, hands, a face (jaw, cheeks, nose, brow, ears, eye sockets), hair, a beard, a hat or a
+   scarf, chosen by hash; seven poses (stand, sit, lean, drums, with or without a hat). Build and height vary per
+   person. A small idle motion (breath, weight shift, head turn) makes them alive. Skin gets a warm wrap term, and
+   the room adds a small eye light from the viewer's side so a face reads.
+7. Outdoor walkers wear workwear, not a plain suit. Quilted insulation bands, a seam, a retroreflective band at the
+   chest and the shins (it flares when it faces the viewer), a belt with a buckle, thigh pockets, wear in the weave,
+   scuffed boots, and tholin dust that climbs from the boots (higher on the lopers). This is in `surface()` case 24,
+   parts 1, 2 and 4. The walker test page (`tests/walkers.html`) uses its own flat colours: see the materials in a
+   Dawn street render (`HOP=place:street_1`).
+
+Mistakes made on the way (check these first when a room or a person looks wrong):
+
+- A figure's front is +z for facing 0. A z flip in `propPerson` turned every person away from the camera.
+- The hair's cut plane had the wrong sign: the hair covered the face and left the back of the head bare. The faces
+  read as grey masks. Hair is kept where `hq.z < 0.02`, further forward only on the crown.
+- The physics particles (city grit and snow) drew over the room. The particle pass is skipped when `roomNow()`.
+- The daylight grade in `post.wgsl` gave the cellar a purple cast. It is off in rooms (`u.reg.z`, `U[62]`), and a
+  blue beam on the cellar stair was removed.
+- Rings and speckle on a ceiling are not a depth-of-field fault (they stay with `FOCUS.on = false`). Causes found:
+  sub-pixel pattern and bump (fade with `rmFine`), bright backlit bottles and neon (emission 0.22 and 2.2), and
+  banding in the soft shadow under a lamp shade (jitter the shadow's start with `gRmJ`; 40 steps, minimum step
+  0.01).
 
 ## Music in the venues (`src/venue.js`)
 
