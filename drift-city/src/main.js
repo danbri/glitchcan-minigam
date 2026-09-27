@@ -439,12 +439,22 @@ function directorStep(dt) {
   }
   else { DIR.pos = dirAhead(90, 220); DIR.len = 12 + Math.random() * 13; audioThunk(DIR.pos); }
 }
+// The page is a game surface: no pinch or double-tap zoom, no rubber-band scrolling, no text selection or long-press
+// menu (iOS Safari ignores user-scalable=no, so its gesture events are stopped here too). Only the panels that
+// scroll (menu, story text, map) let a finger pan them.
+for (const ev of ["gesturestart", "gesturechange", "gestureend", "dblclick", "contextmenu", "selectstart", "dragstart"]) {
+  addEventListener(ev, (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+}
+addEventListener("touchmove", (e) => {
+  const t = e.target, scroller = t && t.closest ? t.closest(".goPanel, .taleText, .mapPanel, .taleChoices:not(.feelOn)") : null;
+  if ((e.touches && e.touches.length > 1) || !scroller) { if (e.cancelable) e.preventDefault(); }
+}, { passive: false });
 let wheelAcc = 0;
 const touches = new Map();
 let pinchD = 0;
 let climbBtn = 0;
-// the on-screen gamepad, laid out like a drone's ("mode 2"): left stick up/down climbs and descends, left/right turns;
-// right stick up/down speeds up or slows, left/right slides sideways. All axes: -1..1, up and right positive.
+// the on-screen gamepad: the right thumb alone flies the city (up to speed up, centre to cruise, down to stop and
+// hover; left and right to turn); the left stick climbs and descends and slides sideways. Axes -1..1, up and right +.
 const PAD = { lx: 0, ly: 0, rx: 0, ry: 0, on: false };
 function padShow(on) {
   PAD.on = on;
@@ -475,6 +485,9 @@ function padWire() {
   let saved = null;
   try { saved = localStorage.getItem("drift.pad"); } catch (e) {}
   padShow(saved === "1");
+  // the sticks fade back when not touched for a few seconds
+  const pd = document.getElementById("pad");
+  if (pd && pd.classList) setInterval(() => pd.classList.toggle("idle", clock - lastUiTouch > 3 && !PAD.lx && !PAD.ly && !PAD.rx && !PAD.ry), 500);
 }
 function climbInput() {
   let c = climbBtn + PAD.ly;
@@ -483,7 +496,7 @@ function climbInput() {
   return clampv(c, -1, 1);
 }
 function spaceInput(dt) {
-  const inp = { dx: PAD.lx + PAD.rx * 0.6, dy: -PAD.ry * 0.8, zoom: 0, climb: climbInput() };
+  const inp = { dx: PAD.rx + PAD.lx * 0.6, dy: -PAD.ry * 0.8, zoom: 0, climb: climbInput() };
   // in a story place both sticks just look around
   if (NAV.mode === "visit") { inp.dx = PAD.lx + PAD.rx; inp.dy = -(PAD.ly + PAD.ry) * 0.8; inp.climb = 0; }
   if (inp.climb !== 0) lastInput = clock;
@@ -524,9 +537,13 @@ function update(dt) {
   if (keys.has("a") || keys.has("arrowleft")) kx -= 1;
   if (keys.has("d") || keys.has("arrowright")) kx += 1;
   ky += climbBtn + PAD.ly;
-  kx += PAD.lx;
-  // right stick forward flies faster, back slower
-  if (Math.abs(PAD.ry) > 0.05) st.speedMul = clampv(st.speedMul + PAD.ry * dt * 1.2, 0.2, 3);
+  kx += PAD.rx;
+  // right stick: up flies faster (to three times), down slows to a stop; let go and it eases back to cruising
+  if (PAD.ry !== 0 || st.padSpeed) {
+    const want = PAD.ry >= 0 ? 1 + 2 * PAD.ry : 1 + PAD.ry;
+    st.speedMul += (want - st.speedMul) * Math.min(1, dt * (PAD.ry !== 0 ? 4 : 0.8));
+    st.padSpeed = PAD.ry !== 0 || Math.abs(st.speedMul - 1) > 0.02;
+  }
   if (keys.has("e") || keys.has(" ")) ky += 1;
   if (keys.has("q") || keys.has("shift")) ky -= 1;
   if (keys.has("w") || keys.has("arrowup")) st.speedMul = Math.min(3, st.speedMul + dt * 0.8);
@@ -704,7 +721,7 @@ function update(dt) {
   st.vy += ay * dt;
   st.x += st.vx * dt; st.y += st.vy * dt; st.z += st.vz * dt;
   // right stick left/right slides sideways
-  if (PAD.rx) { st.x += -Math.sin(st.yaw) * PAD.rx * 14 * dt; st.z += Math.cos(st.yaw) * PAD.rx * 14 * dt; }
+  if (PAD.lx) { st.x += -Math.sin(st.yaw) * PAD.lx * 14 * dt; st.z += Math.cos(st.yaw) * PAD.lx * 14 * dt; }
   const here = heightAt(st.x, st.z, st.y) + 2;
   if (st.y < here) { st.y += (here - st.y) * Math.min(1, dt * 8); st.vy = Math.max(st.vy, 0); }
 

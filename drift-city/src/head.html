@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Drift city</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,6 +23,11 @@
 :root[data-theme="dark"] { --bg: #05070c; }
 html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
 html, body { margin: 0; background: var(--bg); overflow: hidden; }
+/* a game, not a document: the page itself never scrolls, bounces, zooms, selects text or shows the long-press menu;
+   only the panels that scroll let a finger pan them */
+html, body { position: fixed; inset: 0; overscroll-behavior: none; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+button, a, img, canvas, .taleChoices button { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.goPanel, .taleText, .mapPanel, .taleChoices:not(.feelOn) { touch-action: pan-y; overscroll-behavior: contain; }
 body { height: 100%; font-family: "Chakra Petch", "Segoe UI", system-ui, sans-serif; color: var(--ink); -webkit-tap-highlight-color: transparent; }
 canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; touch-action: none; cursor: grab; }
 canvas:active { cursor: grabbing; }
@@ -132,10 +137,13 @@ body.uiHidden .burger { opacity: 0; pointer-events: none; }
 .row.more::after { content: "\203a"; font-size: 22px; line-height: 1; color: var(--ink-dim); }
 .row.on::before { content: "\2713"; color: var(--accent); font-weight: 700; }
 /* the on-screen gamepad */
-.pad { position: fixed; left: 0; right: 0; bottom: calc(40px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: space-between; padding: 0 calc(18px + env(safe-area-inset-right, 0px)) 0 calc(18px + env(safe-area-inset-left, 0px)); pointer-events: none; z-index: 5; }
+.pad { position: fixed; left: 0; right: 0; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: space-between; padding: 0 calc(18px + env(safe-area-inset-right, 0px)) 0 calc(18px + env(safe-area-inset-left, 0px)); pointer-events: none; z-index: 5; }
 .pad[hidden] { display: none; }
-.stick { position: relative; width: 132px; height: 132px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.22); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); pointer-events: auto; touch-action: none; }
-.stick .knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: rgba(255,255,255,0.22); border: 1.5px solid rgba(255,255,255,0.45); transition: transform .12s ease-out; }
+.pad .stick { opacity: 0.55; transition: opacity .6s; }
+.pad.idle .stick { opacity: 0.28; }
+.pad .stick.active { opacity: 0.9; transition: none; }
+.stick { position: relative; width: 104px; height: 104px; border-radius: 50%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.16); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); pointer-events: auto; touch-action: none; }
+.stick .knob { position: absolute; left: 50%; top: 50%; width: 42px; height: 42px; margin: -21px 0 0 -21px; border-radius: 50%; background: rgba(255,255,255,0.22); border: 1.5px solid rgba(255,255,255,0.45); transition: transform .12s ease-out; }
 .stick.active .knob { transition: none; background: rgba(255,255,255,0.32); }
 .stick .sl { position: absolute; left: 0; right: 0; bottom: -20px; text-align: center; font-size: 12px; color: var(--ink-dim); text-shadow: 0 1px 4px rgba(0,0,0,.7); }
 .intro { position: fixed; inset: 0; z-index: 8; pointer-events: none; }
@@ -194,8 +202,8 @@ body.introOn .burger, body.introOn .ui, body.introOn .pad, body.introOn .tale { 
   </div>
 </div>
 <div class="pad" id="pad" hidden aria-label="On-screen gamepad">
-  <div class="stick" id="stickL" role="group" aria-label="Left stick: up and down to climb and descend, left and right to turn"><div class="knob"></div><span class="sl">Climb &middot; turn</span></div>
-  <div class="stick" id="stickR" role="group" aria-label="Right stick: up and down for speed, left and right to slide sideways"><div class="knob"></div><span class="sl">Speed &middot; slide</span></div>
+  <div class="stick" id="stickL" role="group" aria-label="Left stick: up and down to climb and descend, left and right to slide sideways"><div class="knob"></div><span class="sl">Climb &middot; slide</span></div>
+  <div class="stick" id="stickR" role="group" aria-label="Right stick: up to speed up, down to stop, left and right to turn"><div class="knob"></div><span class="sl">Go &middot; turn</span></div>
 </div>
 <div class="climb" id="climb" role="group" aria-label="Climb and descend" hidden><button id="bUp" type="button" aria-label="Climb (hold)">&#9650;</button><button id="bDn" type="button" aria-label="Descend (hold)">&#9660;</button></div>
 <button class="burger" id="bMenu" type="button" aria-label="Open the menu" aria-controls="goPanel">&#9776;</button>
