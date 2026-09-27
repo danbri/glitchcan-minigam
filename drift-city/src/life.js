@@ -71,10 +71,15 @@ function lifeSeed() {
     if (Math.random() < 0.5) lifeStamp(LIFE_PATTERNS[1][1], Math.floor(Math.random() * LIFE_W), 24);
   } else if (main[0] === "glider" || main[0] === "lightweight spaceship") {
     // a fleet
-    for (let k = 0; k < 6; k++) lifeStamp(main[1], Math.floor(Math.random() * LIFE_W), 2 + Math.floor(Math.random() * 30), Math.random() < 0.5);
+    for (let k = 0; k < 8; k++) lifeStamp(main[1], Math.floor(k * LIFE_W / 8 + Math.random() * 4), 1 + Math.floor(Math.random() * 12), Math.random() < 0.5);
   } else {
     // a few of the still-life makers and oscillators round the tower
-    for (let k = 0; k < 3; k++) { const p = k === 0 ? main : pick(); if (p[0] === "Gosper glider gun") continue; lifeStamp(p[1], Math.floor(k * LIFE_W / 3 + Math.random() * 8), 4 + Math.floor(Math.random() * 20)); }
+    for (let k = 0; k < 3; k++) { const p = k === 0 ? main : pick(); if (p[0] === "Gosper glider gun") continue; lifeStamp(p[1], Math.floor(k * LIFE_W / 3 + Math.random() * 8), 1 + Math.floor(Math.random() * 8)); }
+  }
+  // most towers are short and show only the top rows, from one side: put small things all round the top
+  for (let k = 0; k < 6; k++) {
+    const small = [LIFE_PATTERNS[2], LIFE_PATTERNS[6], LIFE_PATTERNS[4], ["blinker", ["###"]]][Math.floor(Math.random() * 4)];
+    lifeStamp(small[1], Math.floor(k * LIFE_W / 6 + Math.random() * 5), Math.floor(Math.random() * 5), Math.random() < 0.5);
   }
   LIFE.seedAt = LIFE.t;
 }

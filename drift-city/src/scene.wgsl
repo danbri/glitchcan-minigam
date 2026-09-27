@@ -49,7 +49,7 @@ struct Flock { n: vec4f, g: array<vec4f, 4>, a: array<vec4f, 192> };
 // story props: count in n.x; per prop a[2i] = position (m) and kind, a[2i+1] = yaw, scale, hue, parameter
 struct Props { n: vec4f, a: array<vec4f, 64> };
 @group(0) @binding(22) var<uniform> pr: Props;
-struct TB { glyph: array<vec4u, 22>, word: array<vec4u, 95> };
+struct TB { glyph: array<vec4u, 32>, word: array<vec4u, 107> };
 @group(0) @binding(12) var<uniform> tb: TB;
 @group(0) @binding(13) var terrTex: texture_2d<f32>;
 @group(0) @binding(14) var ffBTex: texture_2d<f32>;
@@ -3746,16 +3746,19 @@ fn posterLine(pk: i32, l: i32) -> vec4i {
     case 9: { switch l { case 0: { return vec4i(70, 71, -1, -1); } case 1: { return vec4i(72, 34, -1, -1); } default: { return vec4i(73, 74, -1, -1); } } }
     // work: WORK FROM BED / SIGN OFF / ORG APPROVED; EXO HIRE / HEAVY LIFT / LEGAL JOBS
     case 10: { switch l { case 0: { return vec4i(83, 84, 66, -1); } case 1: { return vec4i(85, 86, -1, -1); } default: { return vec4i(37, 88, -1, -1); } } }
+    // the Asters, in toki pona written in katakana: O TAWA MUN (go to the stars) / KON SELI (warm air) / TOKI PONA
+    case 12: { switch l { case 0: { return vec4i(97, 98, 99, -1); } case 1: { return vec4i(100, 101, -1, -1); } default: { return vec4i(95, 96, -1, -1); } } }
     default: { switch l { case 0: { return vec4i(89, 90, -1, -1); } case 1: { return vec4i(91, 92, -1, -1); } default: { return vec4i(93, 87, -1, -1); } } }
   }
 }
 // which poster a screen shows, from a hash: emigration half the time (0, 1, 7, 8, 9), the tokes trade (4-6),
-// work (10, 11), the cult's graffiti (2, 3)
+// work (10, 11), the Asters in toki pona (12), the cult's graffiti (2, 3)
 fn posterPick(h: f32) -> i32 {
   if (h < 0.5) { return array<i32, 5>(0, 1, 7, 8, 9)[min(i32(h * 10.0), 4)]; }
-  if (h < 0.72) { return 4 + min(i32((h - 0.5) / 0.22 * 3.0), 2); }
-  if (h < 0.88) { return select(10, 11, h > 0.8); }
-  return select(2, 3, h > 0.94);
+  if (h < 0.7) { return 4 + min(i32((h - 0.5) / 0.2 * 3.0), 2); }
+  if (h < 0.83) { return select(10, 11, h > 0.77); }
+  if (h < 0.92) { return 12; }
+  return select(2, 3, h > 0.96);
 }
 fn isEmig(pk: i32) -> bool { return pk <= 1 || (pk >= 7 && pk <= 9); }
 // a poster's look: uv in -1..1 across the panel, txt the lettering (0..1)
@@ -3787,6 +3790,14 @@ fn posterLook(pk: i32, uv: vec2f, txt: f32) -> vec3f {
     let edge = step(0.84, max(abs(uv.x), abs(uv.y)));
     let stripe = step(0.5, fract((uv.x + uv.y) * 6.0));
     return mix(vec3f(0.9, 0.7, 0.05) * (1.0 - txt), vec3f(0.9, 0.7, 0.05) * stripe, edge);
+  }
+  if (pk == 12) {
+    // the Asters: silver lettering on black, under a cracked star
+    let a = atan2(uv.x, uv.y - 0.72);
+    let sr = length(uv - vec2f(0.0, 0.72)) / (0.13 + 0.07 * cos(a * 5.0));
+    let crack = step(abs(uv.x + (uv.y - 0.72) * 0.35 - 0.01 * sin(uv.y * 60.0)), 0.012);
+    let star = step(sr, 1.0) * (1.0 - crack);
+    return vec3f(0.015) + vec3f(0.78, 0.8, 0.85) * (txt + star * 0.9);
   }
   if (pk == 2) {
     let ring = sstepJ(0.06, 0.0, abs(length(uv - vec2f(0.0, 0.72)) - 0.16));
@@ -4671,6 +4682,15 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       let hr = hsh(sec + cseed, fl * 131 + i32(floor(u.time / 45.0 + hsh(sec, fl, 66) * 5.0)) * 7, 65);
       let litP = 0.05 + 0.2 * u.windows;
       s.emi = vec3f(1.0, 0.72, 0.45) * rib * mix(litP * 0.5, step(hr, litP) * 0.8, detail) * u.windows * 0.8;
+      // Life (life.js) on half the round towers: the window band cut into 64 cells round the tower, one row a floor,
+      // the board's top at the tower's top, each tower turned by its own number of columns
+      if (hsh(cseed, 5, 781) < 0.5) {
+        let cfo = cellFull(ci);
+        let fxL = fract(atan2(lc.y - cfo.off.y, lc.x - cfo.off.x) / 6.2831853 + 1.0) * 64.0;
+        let mullL = (1.0 - smoothstep(0.05, 0.12, min(fract(fxL), 1.0 - fract(fxL)))) * detail;
+        let alive = lifeAt(i32(floor(fxL)) + (cseed & 63), i32(floor((cfo.h - p.y) / 4.2)));
+        s.emi = vec3f(0.62, 1.0, 0.78) * rib * (1.0 - mullL) * mix(0.12, alive, detail) * (0.35 + 1.1 * u.windows);
+      }
     }
     case 2: {
       let pick = hsh(cseed, 0, 63);
