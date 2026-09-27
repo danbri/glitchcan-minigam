@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Drift city</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,6 +23,11 @@
 :root[data-theme="dark"] { --bg: #05070c; }
 html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
 html, body { margin: 0; background: var(--bg); overflow: hidden; }
+/* a game, not a document: the page itself never scrolls, bounces, zooms, selects text or shows the long-press menu;
+   only the panels that scroll let a finger pan them */
+html, body { position: fixed; inset: 0; overscroll-behavior: none; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+button, a, img, canvas, .taleChoices button { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.goPanel, .taleText, .mapPanel, .taleChoices:not(.feelOn) { touch-action: pan-y; overscroll-behavior: contain; }
 body { height: 100%; font-family: "Chakra Petch", "Segoe UI", system-ui, sans-serif; color: var(--ink); -webkit-tap-highlight-color: transparent; }
 canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; touch-action: none; cursor: grab; }
 canvas:active { cursor: grabbing; }
@@ -132,10 +137,13 @@ body.uiHidden .burger { opacity: 0; pointer-events: none; }
 .row.more::after { content: "\203a"; font-size: 22px; line-height: 1; color: var(--ink-dim); }
 .row.on::before { content: "\2713"; color: var(--accent); font-weight: 700; }
 /* the on-screen gamepad */
-.pad { position: fixed; left: 0; right: 0; bottom: calc(40px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: space-between; padding: 0 calc(18px + env(safe-area-inset-right, 0px)) 0 calc(18px + env(safe-area-inset-left, 0px)); pointer-events: none; z-index: 5; }
+.pad { position: fixed; left: 0; right: 0; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: space-between; padding: 0 calc(18px + env(safe-area-inset-right, 0px)) 0 calc(18px + env(safe-area-inset-left, 0px)); pointer-events: none; z-index: 5; }
 .pad[hidden] { display: none; }
-.stick { position: relative; width: 132px; height: 132px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.22); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); pointer-events: auto; touch-action: none; }
-.stick .knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: rgba(255,255,255,0.22); border: 1.5px solid rgba(255,255,255,0.45); transition: transform .12s ease-out; }
+.pad .stick { opacity: 0.55; transition: opacity .6s; }
+.pad.idle .stick { opacity: 0.28; }
+.pad .stick.active { opacity: 0.9; transition: none; }
+.stick { position: relative; width: 104px; height: 104px; border-radius: 50%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.16); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); pointer-events: auto; touch-action: none; }
+.stick .knob { position: absolute; left: 50%; top: 50%; width: 42px; height: 42px; margin: -21px 0 0 -21px; border-radius: 50%; background: rgba(255,255,255,0.22); border: 1.5px solid rgba(255,255,255,0.45); transition: transform .12s ease-out; }
 .stick.active .knob { transition: none; background: rgba(255,255,255,0.32); }
 .stick .sl { position: absolute; left: 0; right: 0; bottom: -20px; text-align: center; font-size: 12px; color: var(--ink-dim); text-shadow: 0 1px 4px rgba(0,0,0,.7); }
 .intro { position: fixed; inset: 0; z-index: 8; pointer-events: none; }
@@ -194,8 +202,8 @@ body.introOn .burger, body.introOn .ui, body.introOn .pad, body.introOn .tale { 
   </div>
 </div>
 <div class="pad" id="pad" hidden aria-label="On-screen gamepad">
-  <div class="stick" id="stickL" role="group" aria-label="Left stick: up and down to climb and descend, left and right to turn"><div class="knob"></div><span class="sl">Climb &middot; turn</span></div>
-  <div class="stick" id="stickR" role="group" aria-label="Right stick: up and down for speed, left and right to slide sideways"><div class="knob"></div><span class="sl">Speed &middot; slide</span></div>
+  <div class="stick" id="stickL" role="group" aria-label="Left stick: up and down to climb and descend, left and right to slide sideways"><div class="knob"></div><span class="sl">Climb &middot; slide</span></div>
+  <div class="stick" id="stickR" role="group" aria-label="Right stick: up to speed up, down to stop, left and right to turn"><div class="knob"></div><span class="sl">Go &middot; turn</span></div>
 </div>
 <div class="climb" id="climb" role="group" aria-label="Climb and descend" hidden><button id="bUp" type="button" aria-label="Climb (hold)">&#9650;</button><button id="bDn" type="button" aria-label="Descend (hold)">&#9660;</button></div>
 <button class="burger" id="bMenu" type="button" aria-label="Open the menu" aria-controls="goPanel">&#9776;</button>
@@ -10465,8 +10473,8 @@ function feelSwitch() {
   const l = document.createElement("label"), i = document.createElement("input");
   i.type = "checkbox"; i.setAttribute("switch", ""); i.tabIndex = -1;
   l.setAttribute("aria-hidden", "true");
-  l.style.cssText = "position:fixed;left:-40px;top:0;width:1px;height:1px;opacity:0.01;overflow:hidden;pointer-events:none";
-  l.appendChild(i); document.body.appendChild(l);
+  l.style.cssText = "position:absolute;left:0;top:0;width:1px;height:1px;opacity:0.01;overflow:hidden;pointer-events:none";
+  l.appendChild(i); (document.getElementById("tale") || document.body).appendChild(l);
   FEEL.sw = i; FEEL.swLabel = l;
   return l;
 }
@@ -10477,7 +10485,7 @@ function feelTick(ms) {
 }
 function feelBuzz() {
   if (navigator.vibrate) navigator.vibrate(38);
-  else { feelTick(); setTimeout(feelTick, 28); setTimeout(feelTick, 56); }
+  else feelTick();
   if (!AU.ready) return;
   const c = AU.ctx, t = c.currentTime;
   const o = c.createOscillator(); o.type = "sawtooth"; o.frequency.value = 92;
@@ -10502,11 +10510,24 @@ function feelTone(k) {
   }
   g.connect(AU.bus.cue); src.start(t); src.stop(t + 0.1);
 }
-// the texture under the thumb: a group of ticks, a gap, again, until the thumb moves on
+// iOS plays the switch's tick only in answer to the touch itself, so a timed rhythm never reaches the hand there.
+// Instead each choice is a surface with ridges: a tick every so many pixels the thumb moves across it (smooth,
+// fine, coarse, paired), played from the move event.
+const FEEL_RIDGE = [0, 9, 22, 30];
+function feelRidges(k, x, y) {
+  const s = FEEL.slide;
+  if (!s || k < 0 || navigator.vibrate) return;
+  const gap = FEEL_RIDGE[k % 4];
+  s.run = (s.run || 0) + Math.hypot(x - (s.lx ?? x), y - (s.ly ?? y));
+  s.lx = x; s.ly = y;
+  if (gap && s.run >= gap) { s.run = 0; feelTick(); feelTone(k); if (k % 4 === 3) setTimeout(() => feelTone(k), 40); }
+}
+// the texture under the thumb: a group of ticks, a gap, again, until the thumb moves on (where vibration exists)
 function feelRun(k) {
   clearTimeout(FEEL.timer);
   FEEL.idx = k;
   if (k < 0) return;
+  if (!navigator.vibrate) { feelTone(k); return; }
   const [gap, n, inner, ms] = FEEL_TEX[k % 4];
   let i = 0;
   const step = () => {
@@ -10554,6 +10575,7 @@ function feelInit() {
     if (!FEEL.on || e.pointerType !== "touch") return;
     const k = feelButtonAt(e.clientX, e.clientY);
     FEEL.slide = { id: e.pointerId, x: e.clientX, y: e.clientY, cx: e.clientX, cy: e.clientY, t: performance.now(), moved: false };
+    if (!navigator.vibrate && k >= 0) feelTick();
     requestAnimationFrame(feelEdge);
     try { ch.setPointerCapture(e.pointerId); } catch (err) {}
     feelMark(k); feelRun(k);
@@ -10565,6 +10587,7 @@ function feelInit() {
     s.cx = e.clientX; s.cy = e.clientY;
     const k = feelButtonAt(e.clientX, e.clientY);
     if (k !== FEEL.idx) { if (k >= 0 && FEEL.idx >= 0) feelBuzz(); feelMark(k); feelRun(k); }
+    else feelRidges(k, e.clientX, e.clientY);
   });
   const end = (e, take) => {
     const s = FEEL.slide;
@@ -11158,12 +11181,22 @@ function directorStep(dt) {
   }
   else { DIR.pos = dirAhead(90, 220); DIR.len = 12 + Math.random() * 13; audioThunk(DIR.pos); }
 }
+// The page is a game surface: no pinch or double-tap zoom, no rubber-band scrolling, no text selection or long-press
+// menu (iOS Safari ignores user-scalable=no, so its gesture events are stopped here too). Only the panels that
+// scroll (menu, story text, map) let a finger pan them.
+for (const ev of ["gesturestart", "gesturechange", "gestureend", "dblclick", "contextmenu", "selectstart", "dragstart"]) {
+  addEventListener(ev, (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+}
+addEventListener("touchmove", (e) => {
+  const t = e.target, scroller = t && t.closest ? t.closest(".goPanel, .taleText, .mapPanel, .taleChoices:not(.feelOn)") : null;
+  if ((e.touches && e.touches.length > 1) || !scroller) { if (e.cancelable) e.preventDefault(); }
+}, { passive: false });
 let wheelAcc = 0;
 const touches = new Map();
 let pinchD = 0;
 let climbBtn = 0;
-// the on-screen gamepad, laid out like a drone's ("mode 2"): left stick up/down climbs and descends, left/right turns;
-// right stick up/down speeds up or slows, left/right slides sideways. All axes: -1..1, up and right positive.
+// the on-screen gamepad: the right thumb alone flies the city (up to speed up, centre to cruise, down to stop and
+// hover; left and right to turn); the left stick climbs and descends and slides sideways. Axes -1..1, up and right +.
 const PAD = { lx: 0, ly: 0, rx: 0, ry: 0, on: false };
 function padShow(on) {
   PAD.on = on;
@@ -11194,6 +11227,9 @@ function padWire() {
   let saved = null;
   try { saved = localStorage.getItem("drift.pad"); } catch (e) {}
   padShow(saved === "1");
+  // the sticks fade back when not touched for a few seconds
+  const pd = document.getElementById("pad");
+  if (pd && pd.classList) setInterval(() => pd.classList.toggle("idle", clock - lastUiTouch > 3 && !PAD.lx && !PAD.ly && !PAD.rx && !PAD.ry), 500);
 }
 function climbInput() {
   let c = climbBtn + PAD.ly;
@@ -11202,7 +11238,7 @@ function climbInput() {
   return clampv(c, -1, 1);
 }
 function spaceInput(dt) {
-  const inp = { dx: PAD.lx + PAD.rx * 0.6, dy: -PAD.ry * 0.8, zoom: 0, climb: climbInput() };
+  const inp = { dx: PAD.rx + PAD.lx * 0.6, dy: -PAD.ry * 0.8, zoom: 0, climb: climbInput() };
   // in a story place both sticks just look around
   if (NAV.mode === "visit") { inp.dx = PAD.lx + PAD.rx; inp.dy = -(PAD.ly + PAD.ry) * 0.8; inp.climb = 0; }
   if (inp.climb !== 0) lastInput = clock;
@@ -11243,9 +11279,13 @@ function update(dt) {
   if (keys.has("a") || keys.has("arrowleft")) kx -= 1;
   if (keys.has("d") || keys.has("arrowright")) kx += 1;
   ky += climbBtn + PAD.ly;
-  kx += PAD.lx;
-  // right stick forward flies faster, back slower
-  if (Math.abs(PAD.ry) > 0.05) st.speedMul = clampv(st.speedMul + PAD.ry * dt * 1.2, 0.2, 3);
+  kx += PAD.rx;
+  // right stick: up flies faster (to three times), down slows to a stop; let go and it eases back to cruising
+  if (PAD.ry !== 0 || st.padSpeed) {
+    const want = PAD.ry >= 0 ? 1 + 2 * PAD.ry : 1 + PAD.ry;
+    st.speedMul += (want - st.speedMul) * Math.min(1, dt * (PAD.ry !== 0 ? 4 : 0.8));
+    st.padSpeed = PAD.ry !== 0 || Math.abs(st.speedMul - 1) > 0.02;
+  }
   if (keys.has("e") || keys.has(" ")) ky += 1;
   if (keys.has("q") || keys.has("shift")) ky -= 1;
   if (keys.has("w") || keys.has("arrowup")) st.speedMul = Math.min(3, st.speedMul + dt * 0.8);
@@ -11423,7 +11463,7 @@ function update(dt) {
   st.vy += ay * dt;
   st.x += st.vx * dt; st.y += st.vy * dt; st.z += st.vz * dt;
   // right stick left/right slides sideways
-  if (PAD.rx) { st.x += -Math.sin(st.yaw) * PAD.rx * 14 * dt; st.z += Math.cos(st.yaw) * PAD.rx * 14 * dt; }
+  if (PAD.lx) { st.x += -Math.sin(st.yaw) * PAD.lx * 14 * dt; st.z += Math.cos(st.yaw) * PAD.lx * 14 * dt; }
   const here = heightAt(st.x, st.z, st.y) + 2;
   if (st.y < here) { st.y += (here - st.y) * Math.min(1, dt * 8); st.vy = Math.max(st.vy, 0); }
 

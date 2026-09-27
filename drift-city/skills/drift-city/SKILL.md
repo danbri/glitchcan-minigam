@@ -187,6 +187,14 @@ takes it. A quick tap is left to the button's own click (and the click after a s
 chosen twice). The list scrolls while the thumb rests near its top or bottom edge; on a phone the default panel
 shows only one or two choices at a time. Menu > Story > "Feel the choices" switches it off (`drift.feel`).
 
+- iOS plays the switch's haptic only in answer to the touch itself, so a timed rhythm never reaches the hand
+  there. On iOS each choice is a surface with ridges instead (`feelRidges`: a tick every 9, 22 or 30 px of thumb
+  travel, none on the first), ticked from the move event; Android keeps the timed rhythm. Tested headless with the
+  vibration API removed: switch toggles counted, not felt. The page also blocks pinch and double-tap zoom, rubber-band
+  scrolling, text selection and the long-press menu (CSS in head.html, gesture guards at the top of main.js); only
+  `.goPanel`, `.taleText`, `.mapPanel` and a non-sliding choice list may be panned.
+- The on-screen gamepad: the right thumb alone flies (up faster, centre cruise, down stop; left/right turn); the
+  left stick climbs and slides. Smaller, fainter, and fading when idle.
 - Android has `navigator.vibrate`; iOS Safari does not. On iOS each tick is the system haptic of a hidden
   `<input type="checkbox" switch>` being toggled (`feelSwitch`), which iOS 18 Safari plays; older iPhones get
   only the tones. NOT verified on a device from this container.

@@ -14,8 +14,8 @@ function feelSwitch() {
   const l = document.createElement("label"), i = document.createElement("input");
   i.type = "checkbox"; i.setAttribute("switch", ""); i.tabIndex = -1;
   l.setAttribute("aria-hidden", "true");
-  l.style.cssText = "position:fixed;left:-40px;top:0;width:1px;height:1px;opacity:0.01;overflow:hidden;pointer-events:none";
-  l.appendChild(i); document.body.appendChild(l);
+  l.style.cssText = "position:absolute;left:0;top:0;width:1px;height:1px;opacity:0.01;overflow:hidden;pointer-events:none";
+  l.appendChild(i); (document.getElementById("tale") || document.body).appendChild(l);
   FEEL.sw = i; FEEL.swLabel = l;
   return l;
 }
@@ -26,7 +26,7 @@ function feelTick(ms) {
 }
 function feelBuzz() {
   if (navigator.vibrate) navigator.vibrate(38);
-  else { feelTick(); setTimeout(feelTick, 28); setTimeout(feelTick, 56); }
+  else feelTick();
   if (!AU.ready) return;
   const c = AU.ctx, t = c.currentTime;
   const o = c.createOscillator(); o.type = "sawtooth"; o.frequency.value = 92;
@@ -51,11 +51,24 @@ function feelTone(k) {
   }
   g.connect(AU.bus.cue); src.start(t); src.stop(t + 0.1);
 }
-// the texture under the thumb: a group of ticks, a gap, again, until the thumb moves on
+// iOS plays the switch's tick only in answer to the touch itself, so a timed rhythm never reaches the hand there.
+// Instead each choice is a surface with ridges: a tick every so many pixels the thumb moves across it (smooth,
+// fine, coarse, paired), played from the move event.
+const FEEL_RIDGE = [0, 9, 22, 30];
+function feelRidges(k, x, y) {
+  const s = FEEL.slide;
+  if (!s || k < 0 || navigator.vibrate) return;
+  const gap = FEEL_RIDGE[k % 4];
+  s.run = (s.run || 0) + Math.hypot(x - (s.lx ?? x), y - (s.ly ?? y));
+  s.lx = x; s.ly = y;
+  if (gap && s.run >= gap) { s.run = 0; feelTick(); feelTone(k); if (k % 4 === 3) setTimeout(() => feelTone(k), 40); }
+}
+// the texture under the thumb: a group of ticks, a gap, again, until the thumb moves on (where vibration exists)
 function feelRun(k) {
   clearTimeout(FEEL.timer);
   FEEL.idx = k;
   if (k < 0) return;
+  if (!navigator.vibrate) { feelTone(k); return; }
   const [gap, n, inner, ms] = FEEL_TEX[k % 4];
   let i = 0;
   const step = () => {
@@ -103,6 +116,7 @@ function feelInit() {
     if (!FEEL.on || e.pointerType !== "touch") return;
     const k = feelButtonAt(e.clientX, e.clientY);
     FEEL.slide = { id: e.pointerId, x: e.clientX, y: e.clientY, cx: e.clientX, cy: e.clientY, t: performance.now(), moved: false };
+    if (!navigator.vibrate && k >= 0) feelTick();
     requestAnimationFrame(feelEdge);
     try { ch.setPointerCapture(e.pointerId); } catch (err) {}
     feelMark(k); feelRun(k);
@@ -114,6 +128,7 @@ function feelInit() {
     s.cx = e.clientX; s.cy = e.clientY;
     const k = feelButtonAt(e.clientX, e.clientY);
     if (k !== FEEL.idx) { if (k >= 0 && FEEL.idx >= 0) feelBuzz(); feelMark(k); feelRun(k); }
+    else feelRidges(k, e.clientX, e.clientY);
   });
   const end = (e, take) => {
     const s = FEEL.slide;
