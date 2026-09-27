@@ -11,6 +11,7 @@ function mapMarks() {
   return [
     ["The Hive", HIVE_C[0], HIVE_C[1], "hive"],
     ["Pod fab and power beam", FAB_C[0], FAB_C[1], "fab"],
+    ["The Warmhouse bubble", BUB_C[0], BUB_C[2], "warmhouse"],
     ["Assembly Hall", 3.5 * BIG, -3.5 * BIG, "hall_steps"],
     ["The ringed spire", (SPIRE_BLOCK[0] + 0.5) * BIG, (SPIRE_BLOCK[1] + 0.5) * BIG, "giant_0"],
     ["Lumen pyramid", (PYRAMID_CELL[0] + 0.5) * C, (PYRAMID_CELL[1] + 0.5) * C, "pyramid"],

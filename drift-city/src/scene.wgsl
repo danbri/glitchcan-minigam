@@ -459,26 +459,90 @@ fn historic(p: vec3f, c: Cell) -> vec2f {
     if (dd < d) { m = 7.0; }
     d = min(d, dd);
   } else if (c.v < 0.78) {
-    let hb = h * 0.75;
-    d = sdBox(p - vec3f(0.0, hb * 0.5, 0.0), vec3f(w.x, hb * 0.5, w.y));
-    let rh = w.y * 0.7;
-    let kk = rh / w.y;
-    let pl = ((p.y - hb - rh) + kk * abs(p.z)) / sqrt(1.0 + kk * kk);
-    let roofd = max(max(pl, hb - 0.05 - p.y), abs(p.x) - w.x);
-    if (roofd < d) { m = 11.0; }
-    d = min(d, roofd);
-    let tw = min(w.x, w.y) * 0.42;
-    let tp = p - vec3f(w.x - tw, 0.0, 0.0);
-    let th = h * 1.4;
-    let tower = sdBox(tp - vec3f(0.0, th * 0.5, 0.0), vec3f(tw, th * 0.5, tw));
-    if (tower < d) { m = 2.0; }
-    d = min(d, tower);
-    let sh = h * 0.8;
-    let yy = tp.y - th;
-    let sp = (max(abs(tp.x), abs(tp.z)) - tw * (1.0 - yy / sh)) * sh / sqrt(sh * sh + tw * tw);
-    let spire = max(max(sp, -yy), yy - sh);
-    if (spire < d) { m = 7.0; }
-    d = min(d, spire);
+    // houses of worship, four ways (by the cell's second seed): a mosque, a twin-towered cathedral, an Orthodox
+    // church with an apse and onion domes, and the plain nave-and-steeple church
+    let kind = i32(floor(c.s * 4.0));
+    if (kind == 0) {
+      // a mosque: a low prayer hall, a drum and a great dome with a finial, two half domes, and two minarets at
+      // opposite corners with a balcony and a pointed cap
+      let hb = h * 0.55;
+      let r = min(w.x, w.y) * 0.6;
+      d = sdBox(p - vec3f(0.0, hb * 0.5, 0.0), vec3f(w.x * 0.9, hb * 0.5, w.y * 0.9));
+      let drum = max(length(p.xz) - r, abs(p.y - (hb + 0.9)) - 0.9);
+      d = min(d, drum);
+      let dome = max(length(p - vec3f(0.0, hb + 1.8, 0.0)) - r, hb + 1.8 - p.y);
+      let fin = sdSeg(p, vec3f(0.0, hb + 1.8 + r, 0.0), vec3f(0.0, hb + 1.8 + r + 2.2, 0.0)) - 0.12;
+      let semi = max(length(vec3f(abs(p.x) - w.x * 0.55, p.y - hb, p.z)) - r * 0.55, hb - p.y);
+      let dd = min(min(dome, fin), semi);
+      if (dd < d) { m = 7.0; }
+      d = min(d, dd);
+      let mq = vec3f(abs(p.x + p.z) * 0.7071, p.y, (p.x - p.z) * 0.7071);
+      let mc = vec3f(mq.x - length(w) * 0.9, p.y, mq.z);
+      let hm = h * 1.95;
+      var mn = max(length(mc.xz) - 0.75, max(-p.y, p.y - hm));
+      mn = min(mn, max(length(mc.xz) - 1.25, abs(p.y - hm * 0.78) - 0.28));
+      let cap = max((length(mc.xz) - 0.8 * (1.0 - (p.y - hm) / 3.2)) * 0.95, max(hm - p.y, p.y - hm - 3.2));
+      if (min(mn, cap) < d) { m = select(2.0, 7.0, cap < mn); }
+      d = min(d, min(mn, cap));
+    } else if (kind == 1) {
+      // a cathedral: a tall nave under a steep roof, and a west front of twin towers with pointed spires
+      let hb = h * 0.8;
+      d = sdBox(p - vec3f(0.0, hb * 0.5, 0.0), vec3f(w.x, hb * 0.5, w.y * 0.8));
+      let rh = w.y * 1.1;
+      let kk = rh / (w.y * 0.8);
+      let pl = ((p.y - hb - rh) + kk * abs(p.z)) / sqrt(1.0 + kk * kk);
+      let roofd = max(max(pl, hb - 0.05 - p.y), abs(p.x) - w.x);
+      if (roofd < d) { m = 11.0; }
+      d = min(d, roofd);
+      let tw = min(w.x, w.y) * 0.3;
+      let tp = vec3f(p.x - (w.x - tw), p.y, abs(p.z) - (w.y - tw));
+      let th = h * 1.25;
+      let tower = sdBox(tp - vec3f(0.0, th * 0.5, 0.0), vec3f(tw, th * 0.5, tw));
+      if (tower < d) { m = 2.0; }
+      d = min(d, tower);
+      let sh = h * 0.9;
+      let yy = tp.y - th;
+      let sp = (max(abs(tp.x), abs(tp.z)) - tw * (1.0 - yy / sh)) * sh / sqrt(sh * sh + tw * tw);
+      let spire = max(max(sp, -yy), yy - sh);
+      if (spire < d) { m = 7.0; }
+      d = min(d, spire);
+    } else if (kind == 2) {
+      // an Orthodox church: a nave with a round apse, a drum and an onion dome over the crossing, and four small
+      // onions at the corners
+      let hb = h * 0.65;
+      d = sdBox(p - vec3f(0.0, hb * 0.5, 0.0), vec3f(w.x * 0.75, hb * 0.5, w.y * 0.7));
+      d = min(d, max(length(vec2f(p.x + w.x * 0.75, p.z)) - w.y * 0.55, max(-p.y, p.y - hb * 0.85)));
+      let r = min(w.x, w.y) * 0.4;
+      d = min(d, max(length(p.xz) - r * 0.8, max(hb - 0.5 - p.y, p.y - (hb + 2.5))));
+      let oc = vec3f(p.x, p.y - (hb + 2.5 + r * 0.9), p.z);
+      let onion = smin(length(oc) - r, max(length(oc.xz) - r * 0.55 * (1.0 - (oc.y - r * 0.4) / (r * 1.6)), max(r * 0.4 - oc.y, oc.y - r * 2.0)), r * 0.35);
+      var dd = onion;
+      let sc = vec3f(abs(p.x) - w.x * 0.55, p.y - (hb + r * 0.45), abs(p.z) - w.y * 0.5);
+      dd = min(dd, smin(length(sc) - r * 0.4, max(length(sc.xz) - r * 0.2 * (1.0 - sc.y / (r * 0.9)), max(-sc.y, sc.y - r * 0.9)), r * 0.15));
+      if (dd < d) { m = 7.0; }
+      d = min(d, dd);
+    } else {
+      let hb = h * 0.75;
+      d = sdBox(p - vec3f(0.0, hb * 0.5, 0.0), vec3f(w.x, hb * 0.5, w.y));
+      let rh = w.y * 0.7;
+      let kk = rh / w.y;
+      let pl = ((p.y - hb - rh) + kk * abs(p.z)) / sqrt(1.0 + kk * kk);
+      let roofd = max(max(pl, hb - 0.05 - p.y), abs(p.x) - w.x);
+      if (roofd < d) { m = 11.0; }
+      d = min(d, roofd);
+      let tw = min(w.x, w.y) * 0.42;
+      let tp = p - vec3f(w.x - tw, 0.0, 0.0);
+      let th = h * 1.4;
+      let tower = sdBox(tp - vec3f(0.0, th * 0.5, 0.0), vec3f(tw, th * 0.5, tw));
+      if (tower < d) { m = 2.0; }
+      d = min(d, tower);
+      let sh = h * 0.8;
+      let yy = tp.y - th;
+      let sp = (max(abs(tp.x), abs(tp.z)) - tw * (1.0 - yy / sh)) * sh / sqrt(sh * sh + tw * tw);
+      let spire = max(max(sp, -yy), yy - sh);
+      if (spire < d) { m = 7.0; }
+      d = min(d, spire);
+    }
   } else {
     d = sdBox(p - vec3f(0.0, h * 0.5, -1.2), vec3f(w.x, h * 0.5, w.y - 1.2));
     d = min(d, sdBox(p - vec3f(0.0, 0.3, 0.0), vec3f(w.x + 0.4, 0.3, w.y + 0.3)));
@@ -3239,6 +3303,8 @@ fn tracePrimary(ro: vec3f, rd: vec3f, tProxy: f32) -> Hit {
   }
   let tbl = traceBlimp(ro, rd, tEnd);
   if (tbl >= 0.0) { best.t = tbl; best.m = 29.0; best.kind = 4; best.c = vec2i(0); tEnd = tbl; }
+  let tbw = traceBubble(ro, rd, tEnd);
+  if (tbw.x >= 0.0) { best.t = tbw.x; best.m = tbw.y; best.kind = 8; best.c = vec2i(0); tEnd = tbw.x; }
   let tts = tubeStructTrace(ro, rd, tEnd);
   if (tts.x >= 0.0) { best.t = tts.x; best.m = tts.y; best.kind = 7; best.c = vec2i(floor((ro.xz + rd.xz * tts.x) / CS)); tEnd = tts.x; }
   let tsh = traceShips(ro, rd, tEnd);
@@ -3279,6 +3345,7 @@ fn sdfFor(p: vec3f, kind: i32, c: vec2i, cell: Cell) -> f32 {
   if (kind == 3) { return giantSDF(p, c).x; }
   if (kind == 4) { if (c.x > 0) { return shipSDF(p, c.x - 1).x; } return blimpSDF(p); }
   if (kind == 7) { return tubeStructSDF(p).x; }
+  if (kind == 8) { return bubbleSDF(p).x; }
   return cellSDF(p, c, cell).x;
 }
 
@@ -3596,7 +3663,13 @@ fn traceBalloons(ro: vec3f, rd: vec3f, tEnd: f32) -> f32 {
   return best;
 }
 
-fn fogApply(col: vec3f, ro: vec3f, rd: vec3f, t: f32) -> vec3f {
+fn fogApply(col: vec3f, ro: vec3f, rd: vec3f, tIn: f32) -> vec3f {
+  // the Warmhouse holds clear Earth air: the part of the ray inside it adds no haze
+  let bq = ro - bubbleC();
+  let bb = dot(bq, rd);
+  let bh = bb * bb - (dot(bq, bq) - BUB_R * BUB_R);
+  var t = tIn;
+  if (bh > 0.0) { t = tIn - max(min(-bb + sqrt(bh), tIn) - max(-bb - sqrt(bh), 0.0), 0.0); }
   let b = 0.012;
   let k = rd.y * b;
   let tt = max(t - 35.0, 0.0) / (1.0 + max(t - 2000.0, 0.0) / 9000.0);
@@ -3920,6 +3993,99 @@ fn blimpSDF(p: vec3f) -> f32 {
   let finH = max(max(abs(q.y) - 0.012, abs(q.x) - 0.45), max(-(q.z + 1.0), q.z + 0.7));
   let gond = sdBox(q - vec3f(0.0, -0.31, 0.08), vec3f(0.05, 0.035, 0.13)) - 0.01;
   return min(min(body, gond), min(finV, finH)) * K.w;
+}
+
+// ---------- the Warmhouse: a bubble of Earth air ----------
+// A membrane 340 m across, full of warm air at Earth's density (1.8 kg/m^3 against Titan's 5.3, so each cubic
+// metre lifts about 4.8 N), floating over the west edge of the city on four tethers. Inside, on a deck, a warm little
+// town: stucco houses with open windows, a jazz club under a dome, Earth-green trees, strings of lights. It bobs and
+// sways a little. BUB_C in world.js; bubbleC() here must match it.
+const BUB_R: f32 = 170.0;
+fn bubbleC() -> vec3f { return vec3f(-1650.0 + 9.0 * sin(u.time * 0.031), 300.0 + 5.0 * sin(u.time * 0.047), 520.0 + 7.0 * cos(u.time * 0.027)); }
+// the contents (and the tethers): distance, and material 71 deck, 72 houses, 73 trees, 74 cables, 75 lights
+fn bubbleSDF(p: vec3f) -> vec2f {
+  let c = bubbleC();
+  let q = p - c;
+  let deckY = -95.0;
+  var r = vec2f(max(length(q.xz) - 138.0, abs(q.y - deckY) - 2.5), 71.0);
+  // houses: a ring of small blocks round a square, and a domed club in the middle
+  let a = atan2(q.z, q.x);
+  let sect = round(a / 0.3927) * 0.3927;
+  let hq = vec3f(dot(q.xz, vec2f(cos(sect), sin(sect))) - 80.0, q.y - deckY - 2.5, dot(q.xz, vec2f(-sin(sect), cos(sect))));
+  let hh = 9.0 + 7.0 * hsh(i32(round(a / 0.3927)), 3, 710);
+  let house = sdBox(hq - vec3f(0.0, hh * 0.5, 0.0), vec3f(9.0, hh * 0.5, 11.0)) - 0.4;
+  if (house < r.x) { r = vec2f(house, 72.0); }
+  let club = max(length(q - vec3f(0.0, deckY + 2.5, 0.0)) - 26.0, deckY + 2.5 - q.y);
+  if (club < r.x) { r = vec2f(club, 72.0); }
+  // trees between the houses and the square
+  // trees between the houses and the square: a trunk and a lumpy crown each
+  let ta = round(a / 0.2618 + 0.5) - 0.5;
+  let tq = q - vec3f(cos(ta * 0.2618) * 55.0, deckY + 2.5, sin(ta * 0.2618) * 55.0);
+  let trunk = sdSeg(tq, vec3f(0.0), vec3f(0.0, 5.5, 0.0)) - 0.35;
+  if (trunk < r.x) { r = vec2f(trunk, 74.0); }
+  let cq = tq - vec3f(0.0, 8.0, 0.0);
+  let crown = length(cq * vec3f(1.0, 1.25, 1.0)) - 3.6 + 0.5 * sin(cq.x * 1.7) * sin(cq.y * 1.9) * sin(cq.z * 1.3);
+  if (crown < r.x) { r = vec2f(crown * 0.8, 73.0); }
+  // lights strung round the square: bulbs on a sagging wire, 64 to the ring
+  let la = a / 0.09817;
+  let lf = fract(la) - 0.5;
+  let sag = deckY + 14.0 - 1.2 * (1.0 - 4.0 * lf * lf);
+  let lr = length(q.xz) - 40.0;
+  let wire = length(vec2f(lr, q.y - sag)) - 0.04;
+  if (wire < r.x) { r = vec2f(wire, 74.0); }
+  let bulb = length(vec3f(lr, q.y - (sag - 0.25), lf * 0.09817 * 40.0)) - 0.16;
+  if (bulb < r.x) { r = vec2f(bulb, 75.0); }
+  // four tethers from the membrane's equator to anchors on the ground
+  for (var k = 0; k < 4; k++) {
+    let ang = 0.785 + f32(k) * 1.5708;
+    let top = c + vec3f(cos(ang), 0.0, sin(ang)) * BUB_R * 0.98;
+    let foot = vec3f(c.x + cos(ang) * BUB_R * 1.35, 0.0, c.z + sin(ang) * BUB_R * 1.35);
+    let cab = sdSeg(p, top, foot) - 0.45;
+    if (cab < r.x) { r = vec2f(cab, 74.0); }
+  }
+  return r;
+}
+// the contents and tethers along a ray, inside a bound round the bubble and its anchors
+fn traceBubble(ro: vec3f, rd: vec3f, tEnd: f32) -> vec2f {
+  let c = bubbleC() - vec3f(0.0, 90.0, 0.0);
+  let R = BUB_R * 1.75;
+  let oc = ro - c;
+  let b = dot(oc, rd);
+  let h = b * b - (dot(oc, oc) - R * R);
+  if (h < 0.0) { return vec2f(-1.0, 0.0); }
+  let sq = sqrt(h);
+  var t = max(-b - sq, 0.0);
+  let t1 = min(-b + sq, tEnd);
+  for (var k = 0; k < 96; k++) {
+    if (t > t1) { break; }
+    let d = bubbleSDF(ro + rd * t);
+    if (d.x < 0.002 * t + 0.02) { return vec2f(t, d.y); }
+    t += max(d.x * 0.9, 0.05);
+  }
+  return vec2f(-1.0, 0.0);
+}
+// the membrane itself: thin and clear, a warm cast on what is seen through it, the sky caught at a glancing angle,
+// and an oily rainbow sheen that drifts
+fn bubbleFx(ro: vec3f, rd: vec3f, tEnd: f32, colIn: vec3f) -> vec3f {
+  var col = colIn;
+  let c = bubbleC();
+  let oc = ro - c;
+  let b = dot(oc, rd);
+  let h = b * b - (dot(oc, oc) - BUB_R * BUB_R);
+  if (h < 0.0) { return col; }
+  let sq = sqrt(h);
+  let inside = dot(oc, oc) < BUB_R * BUB_R;
+  // the far wall first, then the near one
+  for (var e = 1; e >= 0; e--) {
+    let t = -b + select(-sq, sq, e == 1);
+    if (t <= 0.0 || t >= tEnd) { continue; }
+    let pn = normalize(ro + rd * t - c);
+    let cosi = abs(dot(rd, pn));
+    let fr = 0.02 + 0.5 * pow(1.0 - cosi, 5.0);
+    let film = hue3(fract(dot(pn, vec3f(0.3, 0.8, 0.5)) * 2.0 + u.time * 0.02 + (1.0 - cosi) * 1.5));
+    col = col * mix(vec3f(1.0), vec3f(1.05, 0.97, 0.9), select(0.5, 0.0, inside)) * (1.0 - fr) + skyCol(reflect(rd, pn)) * fr * 0.9 + film * 0.07 * (1.0 - cosi) * (0.4 + u.windows);
+  }
+  return col;
 }
 
 // ---------- skyboats ----------
@@ -4757,6 +4923,26 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       }
       if (!police && abs(cq.z) < 0.5) { s.emi += vec3f(0.1, 0.8, 1.0) * 0.6; }
     }
+    case 71: {
+      // the Warmhouse deck: a paved square round the club, a ring of lawn under the trees, timber boards outside that
+      let rr = length(p.xz - bubbleC().xz);
+      let board = mix(vec3f(0.55, 0.42, 0.28), vec3f(0.62, 0.48, 0.3), step(0.5, fract(p.x * 0.5)));
+      let paving = vec3f(0.5, 0.47, 0.42) * (0.85 + 0.3 * hsh(i32(floor(p.x * 0.8)), i32(floor(p.z * 0.8)), 713));
+      let lawn = vec3f(0.16, 0.36, 0.1) * (0.8 + 0.4 * vnoise(p.xz * 1.3, 714));
+      s.alb = select(select(board, lawn, rr < 66.0), paving, rr < 44.0);
+      s.spec = select(0.3, 0.1, rr < 66.0 && rr > 44.0);
+    }
+    case 72: {
+      // warm stucco, open windows lit gold, balconies
+      let fu = select(p.x, p.z, abs(n.x) > abs(n.z));
+      let win = step(0.55, fract(fu / 3.0)) * step(0.4, fract(p.y / 3.2)) * step(abs(n.y), 0.5);
+      s.alb = mix(vec3f(0.85, 0.66, 0.5), vec3f(0.95, 0.85, 0.7), hsh(i32(floor(fu / 20.0)), i32(floor(p.y / 30.0)), 711));
+      s.emi = vec3f(1.0, 0.78, 0.45) * win * (0.3 + 1.4 * u.windows);
+      s.spec = 0.2;
+    }
+    case 73: { s.alb = vec3f(0.12, 0.42, 0.1) * (0.8 + 0.4 * vnoise(p.xz * 0.8, 712)); s.trans = 0.4; }
+    case 74: { s.alb = vec3f(0.3, 0.3, 0.32); s.spec = 0.8; }
+    case 75: { s.alb = vec3f(0.2); s.emi = mix(vec3f(1.0, 0.72, 0.38), hue3(fract(floor(atan2(p.z - bubbleC().z, p.x - bubbleC().x) / 0.09817) * 0.37)), 0.35) * 3.0; }
     case 64: {
       // the tube structure: bronze-green paint in the old style, a brass band under each drum, rivets, rust at the base
       s.alb = mix(vec3f(0.16, 0.26, 0.22), vec3f(0.3, 0.2, 0.12), 0.5 * smoothstep(3.0, 0.0, p.y) * vnoise(p.xz * 3.0 + vec2f(p.y), 580));
@@ -5616,6 +5802,7 @@ fn rnd3(fc: vec2f, k: i32) -> vec3f {
   col = tubesFx(ro, rd, tOut, col);
   col = holoFx(ro, rd, tEv, col);
   col = beamFx(ro, rd, tEv, col);
+  col = bubbleFx(ro, rd, tEv, col);
   col = flockFx(ro, rd, tOut, col);
   col = propsFx(ro, rd, tOut, col);
   // a power cut: everything in the area goes dark (with a flicker as it fails and comes back)

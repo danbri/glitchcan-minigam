@@ -173,10 +173,45 @@ description of the surroundings that `audioWorld` in `main.js` builds twice a se
 - **Footfalls by kind**, at rates in proportion to the walker mix: `auClank` (exoskeleton), `auServo` (android),
   `auBoots` (weighted boots), `auCape` (glider), `auBuzz` (pet drone). The skaters' cables and the dorms are looping
   sources; `audioWorld` finds the real cables with the same hash as `pedPulley`, and the nearest dorm block (zone 6).
+- **Voice casting** (owner direction, September 2026): almost all voices are variations on English accents:
+  English regional and plenty of Multicultural London English, Scottish, Welsh, Irish, and European-accented English;
+  some Australian and New Zealand, Canadian, and US.
 - **Check offline:** `tests/audiotest2.mjs` renders 36 seconds with node-web-audio-api and reports loudness, peak and
   which events fired per scene. It needs `setTimeout` mapped to the offline clock, or every syllable scheduled with
   `setTimeout` fires in real time and the render misses it (September 2026: added to the harness). Compare loudness
   against the previous `audio.js` before and after a change; the radio chain first made the street 3.7 dB louder.
+
+## Sound and lift in two airs (the Warmhouse, September 2026)
+
+Figures for writing and sound design. Titan surface air: nitrogen with about 5% methane, 94 K, 1.47 bar.
+
+| | Titan air | Warmhouse air (Earth mix, 293 K, 1.47 bar) | Earth, sea level |
+|---|---|---|---|
+| density | 5.3 kg/m³ | 1.75 kg/m³ | 1.2 kg/m³ |
+| speed of sound | about 194 m/s (Huygens measured) | 343 m/s | 343 m/s |
+| impedance ρc | about 1030 rayl | about 600 rayl | 413 rayl |
+
+- **Lift is heat.** The bubble floats because its air is warm: (5.3 - 1.75) kg/m³ at g 1.352 is 4.8 N per cubic
+  metre, and the 170 m sphere (2.1 x 10⁷ m³) carries about 73,000 tonnes. The same Earth air at 94 K would weigh
+  5.45 kg/m³ and sink. If the heating fails, the Warmhouse comes down. The pressure must match the outside (a
+  membrane that size holds almost no overpressure), so the inside is Earth air at 1.47 bar: oxygen at about 0.31 bar,
+  higher than at home but safe.
+- **Inside, music is Earth-normal.** Speed of sound 343 m/s: pipes, voices and rooms sound as they do at home. This
+  is the only place in the city where people hear each other without radios.
+- **Outside, bass is cheaper.** Air-column resonances scale with the speed of sound, 194/343 = 0.57, about 10
+  semitones down: the same saxophone or organ pipe plays nearly a seventh lower, a 16-foot organ pipe (32.7 Hz on
+  Earth) gives 18.5 Hz, under the limit of hearing. A bass-reflex port tunes 0.57 times as low. A small loudspeaker
+  radiates in proportion to ρ/c at low frequency, 7.8 times Earth's: about 9 dB more bass for the same cone movement.
+  The sealed-box air spring (γP) is 1.45 times as stiff, which raises a closed box's resonance about 20%. Treble
+  beams: a driver becomes directional where its size equals a wavelength, and wavelengths are 0.57 times as long.
+  String pitch does not change (tension and mass set it); a guitar's body resonance drops by 0.57, and heavier air
+  loads a drumhead and lowers it a little.
+- **Nobody outside has bare ears.** Outdoors everyone is in a suit with Earth air in the helmet, so a voice sounds
+  normal to its speaker and reaches others over radio (see "Sound"). Titan-air acoustics are for instruments and
+  speakers standing in the open, the exos' own noises, and what comes through a wall.
+- **Through the membrane, bass passes and treble stops.** Impedance alone reflects (1030 - 600)/(1030 + 600) = 0.26
+  of the pressure, 7% of the energy. The membrane's mass does the rest: at 2 kg/m² it barely stops 100 Hz and cuts
+  1 kHz by roughly 18 dB (the mass law). From the ground the jazz club is a bass line and a kick drum.
 
 ## Long-press to go (`src/pick.js`)
 
@@ -289,6 +324,19 @@ now laid out by hand. Everything below is in `world.js` unless named; the shape 
   `BEAM_DIR`), its lit patch in the cloud deck at 1.5 km, and the station's glint where the beam meets the sky. Place
   "fab" looks down on it from the Hive's battlements. Big block (3, 3) had a stale megatower in `giantHasW` after
   world.js dropped it; world.js and scene.wgsl must list the same giants.
+- **Places of worship** (`historic()` in scene.wgsl, the branch `c.v < 0.78`): a quarter each, by `c.s`, of mosques
+  (hall, drum and dome, semi-domes, two minarets at diagonal corners, 1.95 times the hall height, with a balcony and a
+  cone cap), cathedrals (steep nave, twin towers with spires), Orthodox churches (round apse, onion domes made as a
+  smooth union of a sphere and a cone) and the old nave-and-spire church. The mosque and the cathedral are checked in
+  a render; the Orthodox form had not been seen in one as of September 2026.
+- **The Warmhouse** (`BUB_C`, `bubbleAt` in world.js; `bubbleC`, `bubbleSDF`, `traceBubble`, `bubbleFx`, materials
+  71-75 in scene.wgsl; hit kind 8): a 170 m bubble of warm Earth air over the city's west edge, centre about
+  (-1650, 300, 520), drifting a few metres, on four tethers. Inside, a deck at 95 m under the centre: timber boards,
+  a lawn ring with trees, a paved square with bulbs on a wire, a ring of stucco houses and the club dome in the middle.
+  `bubbleFx` draws the membrane (Fresnel sky reflection, an oily film, a warm tint seen from outside); `fogApply`
+  takes the part of the ray inside the sphere out of the haze. `bubbleAt` and `bubbleC` must drift the same, or the
+  pick (a ray-sphere test in `pickAt`) misses. Places "warmhouse" (the square) and "warmhouse_below" (from the land to
+  the west). Why it floats: see "Sound and lift in two airs" below.
 - **Tube structure** (`tubeStructTrace`, `tubeStructSDF`, materials 64-66): a junction drum on a column at every
   crossing of two street lines, and at some crossings (`tubeStation`) a station with a glazed drum, a TUBE sign and a
   glass lift shaft. Traced analytically along the x street lines (every crossing lies on one), not marched, so it

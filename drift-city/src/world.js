@@ -236,6 +236,11 @@ function hiveTopAt(lx, lz) {
 const FAB_C = [5.5 * BIG, 5.5 * BIG], FAB_H = 110;
 // the beam comes down from the station along this direction (unit vector, pointing up the beam)
 const BEAM_DIR = (() => { const v = [-0.35, 1, 0.25], l = Math.hypot(...v); return v.map((x) => x / l); })();
+// The Warmhouse: a 170 m bubble of warm Earth air that floats over the west edge of the city, tethered at four points.
+// Mirrored as bubbleC / bubbleSDF / bubbleFx in scene.wgsl (keep the drift the same). Why it floats: the skill, "Warmhouse".
+const BUB_R = 170;
+function bubbleAt(t) { return [-1650 + 9 * Math.sin(t * 0.031), 300 + 5 * Math.sin(t * 0.047), 520 + 7 * Math.cos(t * 0.027)]; }
+const BUB_C = bubbleAt(0);
 function fabHas(bx, bz) { return !!REG.city && wrapN(bx, 96) === 5 && wrapN(bz, 96) === 5; }
 function fabTopAt(lx, lz) { return Math.abs(lx) < 14 && Math.abs(lz) < 14 ? FAB_H : 26; }
 // Hillside letters spelling DRIFT CITY on the first hill north of the city, facing it.

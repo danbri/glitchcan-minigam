@@ -41,6 +41,16 @@ function pickAt(px, py) {
       best = { name: "A " + (SHIP_NAMES[kind] || "skyboat"), x: c[0], z: c[2], y0: c[1] - s * 0.3, r: s, h: s * 0.6, ship: i, blurb: "Riding the thick air over the city." };
     }
   }
+  // the Warmhouse bubble: a sphere in the air, so test it like a skyboat
+  {
+    const c = bubbleAt(clock), oc = [o[0] - c[0], o[1] - c[1], o[2] - c[2]];
+    const b = dot3(oc, d), h = b * b - (dot3(oc, oc) - BUB_R * BUB_R);
+    const tb = h > 0 ? (-b - Math.sqrt(h) > 0 ? -b - Math.sqrt(h) : -b + Math.sqrt(h)) : -1;
+    if (tb > 0 && tb < bt) {
+      bt = tb;
+      best = { name: "The Warmhouse", x: c[0], z: c[2], y0: c[1] - BUB_R, r: BUB_R, h: BUB_R * 2, blurb: "A bubble of warm Earth air, 340 m across, that floats because it is lighter than Titan's air. Inside: houses, trees, bars and a jazz club." };
+    }
+  }
   // the city and the land: march the ray against their heights
   let hit = null;
   for (let t = 2; t < 4500;) {
