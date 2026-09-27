@@ -277,6 +277,20 @@ Figures for writing and sound design. Titan surface air: nitrogen with about 5% 
   of the pressure, 7% of the energy. The membrane's mass does the rest: at 2 kg/m² it barely stops 100 Hz and cuts
   1 kHz by roughly 18 dB (the mass law). From the ground the jazz club is a bass line and a kick drum.
 
+## Conway's Life in the round towers (`src/life.js`)
+
+- One 64 x 40 board (64 round, wrapping; 40 floors from the top, dead edges) stepped four times a second on the
+  CPU, reseeded every two to four minutes or when it dies or settles: a Gosper gun firing down the tower, a pulsar,
+  a pentadecathlon, an acorn, an R-pentomino, glider and spaceship fleets, and small blinkers and gliders all round
+  the top rows (most towers are short and show only the top few floors, from one side).
+- Uploaded packed 16 cells to a float at byte 848 of the event buffer (`ev.life`, read by `lifeAt`).
+- Shown on half the organic round towers (type 8, material 15: the banded ones; the window band cut into 64 cells)
+  and two in five rounded modern towers (material 1, `v` 0.4 to 0.72). Each tower turns the board by its own
+  number of columns.
+- Check it with a known still life: `LIFESTRIPE=1` in the scratch runner stamps every other row full (stable in
+  Life), so a Life tower must show every other floor lit. The first attempt put Life on material 1 only; the
+  visible round towers are type 8, and nothing showed.
+
 ## The ship's computer (`src/guide.js`, ElevenLabs voice)
 
 Owner direction (September 2026): use recorded ElevenLabs speech for a "ship's computer" role in the interface,
@@ -446,10 +460,12 @@ now laid out by hand. Everything below is in `world.js` unless named; the shape 
   once sat in `main.js`; the GPU buffer came out too small for the grown `struct TB` and nothing drew.) The letters
   are square capitals in the style of a ZX81 screen, drawn for this project, and `neonText` draws each cell as a solid
   square so strokes join (it used to be a dot matrix). Glyph ids: A0 B1 C2 D3 E4 F5 H6 I7 L8 M9 N10 O11 P12 R13 S14
-  T15 U16 V17 W18 X19, digits 20-29, katakana 30-36, G37 Y38 J39 ?40 K42. Words are referred to by index in
+  T15 U16 V17 W18 X19, digits 20-29, katakana 30-36, G37 Y38 J39 ?40 K42, katakana for toki pona 44-60 (ラ is 31, テ is 35); 64 slots. Words are referred to by index in
   `scene.wgsl`, so append new ones only, and grow `struct TB`'s `word` array to the count the tool prints.
 - **Posters**: `posterLine(kind, line)` gives up to four words per line; kinds 0, 1, 7, 8, 9 are the government's
-  emigration campaign, 2 and 3 the cult, 4-6 the tokes trade, 10 the Org's sign-off jobs, 11 exo hire. `posterPick`
+  emigration campaign, 2 and 3 the cult, 4-6 the tokes trade, 10 the Org's sign-off jobs, 11 exo hire, 12 the
+  Asters in toki pona written in katakana (オ タワ ムン, o tawa mun, go to the stars; コン セリ, kon seli, warm air;
+  トキ ポナ), silver on black under a cracked star. `posterPick`
   sets the mix (emigration half the time) for megatower screens and the 60% of billboards that show a poster;
   `posterLook` is the shared style for each kind (government blue with a red band and a small Earth; a pale screen
   with a grey chequered border for the Org). The blimp and the strip hologram run the emigration lines; an Earth
