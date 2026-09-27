@@ -151,43 +151,48 @@ function buildPlaces() {
 function placeById(id) { if (!PLACES) buildPlaces(); return PLACES.find((p) => p.id === id); }
 
 // ---------- the story panel: Ink from a FINK file, compiled in the page ----------
-// The stories are in story/ (TALES below; one plays at a time, chosen in Menu > Story or with ?tale=<id>). Their ink is captured with the repo's frozen backticks kernel
+// The stories are in story/. Their ink is captured with the repo's frozen backticks kernel
 // (packages/backticks), inside a throwaway sandboxed iframe, the same way the Finkosphere story runner does it:
 // the .fink.js runs in the box and only the captured strings come back. The ink runtime is the repo's vendored copy
 // (third_party/ink), with jsDelivr as a fallback. Paths are relative to dist/city.html.
 // The story keeps its place when the panel is closed, and across reloads (browser storage). The panel floats over the
 // world: drag its header to move it, its corner to resize it, minimise it to a slim bar.
-const TALES = [
-  { id: "lamplighter", title: "The Lamplighter's Last Round", url: "../story/lamplighter.fink.js", key: "drift.tale.v1" },
-  { id: "peraspera", title: "Per Aspera", url: "../story/peraspera.fink.js", key: "drift.tale.peraspera.v1" },
-];
+// Stories link to each other the FINK way, by tags in the story, never by a list in the page: "# FINK: <file>" leaves
+// this story for that one; with "# LINKREL: peer" the story you leave keeps its place, to come back to. Each file keeps
+// its own save. The front door, story/episodes.fink.js, lists the episodes (Menu > Story > Episodes). The same files
+// play in the FINK player, which reads the same tags. Why: the drift-city skill, "Stories".
+const TALE_DIR = "../story/", TALE_FIRST = "lamplighter.fink.js", TALE_DOOR = "episodes.fink.js";
 const BACKTICKS_URL = "../../packages/backticks/src/index.js";
 const INK_URLS = ["../../third_party/ink/ink-full.js", "https://cdn.jsdelivr.net/npm/inkjs@2.4.0/dist/ink-full.js"];
 const TALE_GEOM_KEY = "drift.taleGeom.v1";
-const TALE = { cur: "lamplighter", textClues: taleFetch("drift.textClues") === true, story: null, on: false, scene: null, place: null, paras: [], hot: [], dwell: 0, dwellOn: null, loading: false, min: false };
+const TALE = { file: TALE_FIRST, title: "", link: null, textClues: taleFetch("drift.textClues") === true, story: null, on: false, scene: null, place: null, paras: [], hot: [], dwell: 0, dwellOn: null, loading: false, min: false };
 if (typeof PLACES_BAKED !== "undefined") PLACES = PLACES_BAKED;
+// a story file named in a tag or the address: a bare file name in story/, nothing else
+function taleFileOk(f) { return typeof f === "string" && /^[a-z0-9_-]+\.fink\.js$/i.test(f); }
 {
   let want = null;
   try { want = new URLSearchParams(location.search).get("tale"); } catch (e) {}
-  want = want || taleFetch("drift.taleCur");
-  if (TALES.find((t) => t.id === want)) TALE.cur = want;
+  if (want && !want.endsWith(".fink.js")) want += ".fink.js";
+  want = taleFileOk(want) ? want : taleFetch("drift.taleFile");
+  if (taleFileOk(want)) TALE.file = want;
 }
-function taleDef() { return TALES.find((t) => t.id === TALE.cur) || TALES[0]; }
-function taleKey() { return taleDef().key; }
-// put the playing story away (it keeps its saved place) and open another
-function taleSwitch(id) {
-  if (!TALES.find((t) => t.id === id) || TALE.loading) return;
-  if (id === TALE.cur) { if (!TALE.on) taleOpen(); return; }
+// the save for a story file: the front door keeps none (it is a menu); the first story keeps its old key
+function taleKey(f = TALE.file) { return f === TALE_DOOR ? null : f === TALE_FIRST ? "drift.tale.v1" : "drift.tale:" + f; }
+// follow a "# FINK:" link: put this story away (it keeps its place) and open that one where it was left
+function taleLink(file) {
+  const f = String(file || "").replace(/^\.\//, "");
+  if (!taleFileOk(f) || TALE.loading) return;
   taleSave();
-  TALE.cur = id; taleStore("drift.taleCur", id);
-  TALE.story = null; TALE.scene = null; TALE.place = null; TALE.hot = []; TALE.paras = []; TALE.props = [];
+  TALE.file = f;
+  if (f !== TALE_DOOR) taleStore("drift.taleFile", f);
+  TALE.story = null; TALE.title = ""; TALE.scene = null; TALE.place = null; TALE.hot = []; TALE.paras = []; TALE.props = [];
   taleOpen();
 }
 
 function taleStore(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
-function taleFetch(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
-function taleSave() { if (TALE.story) taleStore(taleKey(), { state: TALE.story.state.toJson(), paras: TALE.paras, scene: TALE.scene, place: TALE.place, hot: TALE.hot, props: TALE.props }); }
-function taleForget() { taleStore(taleKey(), null); }
+function taleFetch(k) { if (!k) return null; try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+function taleSave() { if (TALE.story && taleKey()) taleStore(taleKey(), { state: TALE.story.state.toJson(), paras: TALE.paras, scene: TALE.scene, place: TALE.place, hot: TALE.hot, props: TALE.props }); }
+function taleForget() { if (taleKey()) taleStore(taleKey(), null); }
 
 function loadScript(url) {
   return new Promise((resolve, reject) => {
@@ -240,10 +245,10 @@ function extractInBox(src, installSource) {
   });
 }
 async function loadTaleInk() {
-  const [res, kernel] = await Promise.all([fetch(taleDef().url), import(new URL(BACKTICKS_URL, location.href).href), loadInkRuntime()]);
+  const [res, kernel] = await Promise.all([fetch(TALE_DIR + TALE.file), import(new URL(BACKTICKS_URL, location.href).href), loadInkRuntime()]);
   if (!res.ok) throw new Error("the story file could not be fetched (" + res.status + ")");
   const ink = await extractInBox(await res.text(), kernel.INSTALL_CAPTURE_SOURCE);
-  if (!ink) throw new Error("no ink found in " + taleDef().url);
+  if (!ink) throw new Error("no ink found in " + TALE.file);
   return ink;
 }
 function taleToggle() { if (TALE.on) taleClose(); else taleOpen(); }
@@ -266,10 +271,14 @@ function taleOpen() {
     TALE.loading = false;
     try {
       TALE.story = new inkjs.Compiler(src).Compile();
+      // the story's name: a "# title:" tag at the top of the file (a global tag, read through the story API)
+      for (const t of TALE.story.globalTags || []) if (/^title\s*:/i.test(t)) TALE.title = t.slice(t.indexOf(":") + 1).trim();
       const saved = taleFetch(taleKey());
       if (saved && saved.state) {
         try {
           TALE.story.state.LoadJson(saved.state);
+          // left at an end (a replacing link has nothing after it): start this one again
+          if (!TALE.story.canContinue && !TALE.story.currentChoices.length) throw new Error("ended");
           TALE.paras = saved.paras || []; TALE.scene = saved.scene; TALE.hot = saved.hot || []; TALE.props = saved.props || [];
           taleSay(TALE.paras, TALE.story.currentChoices);
           if (saved.place) taleGo(saved.place);
@@ -302,16 +311,28 @@ function taleAdvance() {
   const s = TALE.story;
   taleSetVar("in_world", !TALE.textClues); // after every reset too: text routes to clues only without the city, or on request
   const paras = [];
+  let cut = -1;
+  TALE.link = null;
   while (s.canContinue) {
     const t = s.Continue();
     taleTags(s.currentTags, t);
     if (t.trim()) paras.push(t.trim());
+    if (TALE.link && cut < 0) cut = paras.length;
+  }
+  if (TALE.link) {
+    // a "# FINK:" link: show the lines up to the link and a way through; what came after it (a peer link diverts back
+    // to a knot with choices) is what this story shows when you come back
+    const L = TALE.link;
+    TALE.paras = paras.slice(cut);
+    taleSave();
+    taleSay(paras.slice(0, cut), [{ text: "Go on" }], () => taleLink(L.file));
+    return;
   }
   TALE.paras = paras;
   taleSay(paras, s.currentChoices);
   taleSave();
 }
-function taleSay(paras, choices) {
+function taleSay(paras, choices, onPick) {
   const tx = document.getElementById("taleText"), ch = document.getElementById("taleChoices");
   tx.innerHTML = "";
   for (const p of paras) { const e = document.createElement("p"); e.textContent = p; tx.appendChild(e); }
@@ -319,7 +340,7 @@ function taleSay(paras, choices) {
   choices.forEach((c, i) => {
     const b = document.createElement("button");
     b.type = "button"; b.textContent = c.text;
-    b.addEventListener("click", (e) => { e.stopPropagation(); taleChoose(i); });
+    b.addEventListener("click", (e) => { e.stopPropagation(); if (onPick) onPick(i); else taleChoose(i); });
     ch.appendChild(b);
   });
   tx.scrollTop = 0;
@@ -369,6 +390,9 @@ function taleTags(tags, line) {
         taleAddProp("item @ " + f[2] + " @ " + dist.toFixed(2) + " @ 0 @ " + (hsh(f[0].length * 31 + f[0].charCodeAt(0), 7, 930)).toFixed(3) + " @ 0", f[0]);
       }
     } else if (k === "fly") { taleClose(); goTo(v); }
+    // "# FINK: <file>" (with "# LINKREL: peer" or none): leave for another story once this passage has been shown
+    else if (k === "FINK") { TALE.link = { file: v, rel: TALE.linkRel || "" }; TALE.linkRel = ""; }
+    else if (k === "LINKREL") { if (TALE.link) TALE.link.rel = v; else TALE.linkRel = v; }
     else if (k === "restart") { TALE.story.ResetState(); TALE.scene = null; TALE.place = null; setTimeout(taleAdvance, 0); }
   }
 }

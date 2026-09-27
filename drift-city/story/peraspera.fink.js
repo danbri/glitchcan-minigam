@@ -2,6 +2,7 @@ oooOO`
 // Per Aspera: a night crawl through Drift city's dive bars to the jazz club in the Warmhouse.
 // The same tags as The Lamplighter's Last Round (see that file's header): scene, place, time, weather, prop,
 // hotspot, fly, voice. Speakers: mags, dex, oskar, nuala, pell, ruth, you.
+# title: Per Aspera
 VAR here = ""
 VAR hour = ""
 VAR snowing = false
@@ -42,6 +43,8 @@ VAR nuala = ""
 {street == 1:
     Night on Ferry Street. Snow drifts through the neon, and your bass case bumps against your suit leg. You play upright bass: an old instrument with a spruce body, built for Titan air, where its body booms lower and louder than it ever did at home.
     At midnight you play the Warmhouse, the only room under the open sky where people take their helmets off and hear music with their own ears. Nuala Fenn leads the band. Nuala Fenn has not been seen since noon.
+    The street is nearly empty. There is no work to go to: the machines do the heavy work, and the Org's sign-off jobs take an hour a week. Most people stay in under headsets. Overhead, the Hindenburg 1632 drifts toward the pads with its running lights on.
+    The first settlers named every airship Hindenburg, as a joke: with no oxygen in the air, nothing here can burn. They laughed at everything, the first settlers. The count has reached 1632, and nobody laughs at it now.
     The megatower screens run the emigration campaign: LEAVE TITAN. GO HOME. PASSAGE PAID. Under the screen, someone has sprayed three words in silver: AD ASTRA PER ASPERA.
 - else:
     Ferry Street, the snow still falling. {clues() > 0: In your case pocket: {voucher: a torn passage voucher;} {setlist: a setlist on a napkin;} {reed: a cracked reed;} {patch: an Aster patch;} {tape: a tape from the Warmhouse.}}
@@ -67,6 +70,14 @@ You stand in a doorway out of the snow and think.
 {(voucher or know_gate) and not found_nuala: Gate 3. Boarding at dawn.}
 {heard_mags: The set is at midnight, in the Warmhouse.}
 + [Back into the snow] -> street
++ [Meanwhile, in the Chinatown market] -> elsewhere
+
+=== elsewhere ===
+// a light peer link: another story in the same city, with its own narrator; this one keeps its place
+# FINK: lamplighter.fink.js
+# LINKREL: peer
+In the Chinatown night market tonight a tea-stall keeper has sent an old drone into the snow after the last lamplighter. That is someone else's night. Yours will wait here.
+-> street
 
 === mags ===
 # scene: mags
@@ -75,11 +86,13 @@ The Cold Tap is a dive bar behind an airlock: nine stools, a heater that ticks, 
 "Nuala was in at noon," Mags says, and wipes the bar. "Sat where you're sitting. Drank one whisky, very slow, and didnae say a word." # voice: mags
 "Then an Org clerk came in with a tablet and she signed something. Folk are saying she's taken a seat home. Passage paid." # voice: mags
 She puts a glass in front of you. "The set's still on. Midnight, in the bubble. Ruth says it goes ahead with or without her." # voice: mags
+"And the Assembly votes on the lamps at dawn, so the whole street's in a mood." # voice: mags
 + [Ask what the Asters will say] -> mags_asters
 + [Thank her and go] -> street
 
 === mags_asters ===
-"The Asters?" Mags laughs. "Half of them think Nuala hung the stars. Ask at the Low Orbit. Dex will tell you the whole creed, whether you want it or no." # voice: mags
+"The Asters?" Mags laughs. "Half of them think Nuala hung the stars. They're up at five doing press-ups, they teach their own weans at home, and they've more kids than anybody. Folk say they've a store of oxygen and printer plastic under the Low Orbit. Dex says that's rubbish." # voice: mags
+"Ask at the Low Orbit. Dex will tell you the whole creed, whether you want it or no." # voice: mags
 + [Back to the street] -> street
 
 === low_orbit ===
@@ -105,6 +118,8 @@ She puts a glass in front of you. "The set's still on. Midnight, in the bubble. 
 ~ heard_dex = true
 "Ad astra per aspera," Dex says. "To the stars, through hardship. Old words. We took them." # voice: dex
 "The Org wants everybody gone home. Posters on every tower, seats paid, Earth tax credit. Earth's the past, innit. We're not going back. We're going out: the long ships, the next moon, the next star. The hard way." # voice: dex
+"So we train. Every morning, before the pads open. The kids learn at home: orbital mechanics, hydroponics, welding, cooking for forty. One of you works the pads, one of you keeps the house, and you have kids. Lots. You don't fill a star system with two-point-one." # voice: dex
+"The oxygen? People like a story." He doesn't say no. # voice: dex
 "Nuala played our first night, in the Warmhouse. She taught us the rooftop thing: every launch, lamps up on the roofs so the crews can see them go." # voice: dex
 + [Ask where Nuala is] -> dex_where
 + [Back to Ferry Street] -> street

@@ -144,6 +144,21 @@ so nothing has weight or inertia or can be pushed. The physics pass gives a firs
 - Most people stay home under headsets. They live in the dorms (zone 6, `ZONE_NAMES` "Dorms"): residential slabs of
   capsule homes, two to a floor, each with one round window lit by a flickering headset screen at any hour.
 
+### Culture (owner, September 2026)
+
+- **The first settlers had a very dark sense of humour.** They named every airship Hindenburg: Hindenburg 2, 3 and
+  so on. The joke is that with no free oxygen in Titan's air, nothing burns, so airships here are safe. The count is
+  at Hindenburg 1632, with no explosions. (`HINDENBURG_NO` in `pick.js` names the airships on a long press; the
+  newest is 1632.)
+- **The present population has lost the humour.** Apathy, not jokes: there are no jobs to do, so most people stay
+  in under headsets.
+- **The exception is the Ad Astra movement** ("the Asters", from "ad astra per aspera", to the stars through
+  hardship). They refuse the emigration campaign's "go home to Earth" and want humanity to spread outward to other
+  star systems. They train every day, school their children at home, keep traditional roles (one works, one keeps
+  the house) in a space-homesteading style, and have large families on purpose. They are rumoured to hoard oxygen
+  and printable plastics. Write them straight, without mockery or endorsement: they are the only people in the city
+  with a plan. Their mark is a cracked star; their bar is the Low Orbit by the pads (story "Per Aspera").
+
 ## Sound
 
 `src/audio.js` synthesises everything live and places it with HRTF panners; `audioStep` runs the mix from a
@@ -181,16 +196,30 @@ description of the surroundings that `audioWorld` in `main.js` builds twice a se
   `setTimeout` fires in real time and the render misses it (September 2026: added to the harness). Compare loudness
   against the previous `audio.js` before and after a change; the radio chain first made the street 3.7 dB louder.
 
-## Stories
+## Stories: episodes linked the FINK way
 
-Two stories, one playing at a time: "The Lamplighter's Last Round" (`story/lamplighter.fink.js`) and "Per Aspera"
-(`story/peraspera.fink.js`: the dive bars, the Asters, the jazz club in the Warmhouse). `TALES` in `tales.js` lists
-them with their save keys; Menu > Story offers the others, and `?tale=<id>` picks one. Each keeps its own save.
-To add a story: add the file to `TALES` and to `STORY_FILES` in `tools/story.mjs` (so `tests/inkwalk.mjs` and
-`tools/bakeplaces.mjs` check it), give each new speaker an `AU_VOICES` entry in `audio.js` (a speaker without one
-is silent), and add it to `inklet/toc.fink.js`. Every place a story names must be one of the 50 in `buildPlaces`,
-and `inkwalk` fails a story with fewer than four endings reached by random play. `node inklet/tools/fink-check.mjs`
-catches a knot that runs out of content (a `# restart` knot still needs `-> END`).
+Owner rule (September 2026): "The story switch MUST be done Fink style. This is a multiverse of stories and
+episodes." So there is no list of stories in the page. Stories link to each other with tags, and the page follows
+the tags, as the FINK player does:
+
+- `story/episodes.fink.js` is the front door (Menu > Story > Episodes, and the "Drift City" entry in
+  `inklet/toc.fink.js`): one bare `# FINK: <file>` link per episode.
+- Each episode has a light peer link to the other, in its "Think it over" knot: `# FINK: <file>` plus
+  `# LINKREL: peer`, a lead-in line, then a divert back to the hub knot. Tag first, lead-in second: a tag binds to
+  the line that follows it. The episodes share the city, not a narrator: the Lamplighter's "you" keeps a tea stall;
+  Per Aspera's "you" plays bass.
+- In the page (`taleTags`, `taleAdvance`, `taleLink` in `tales.js`): a FINK tag shows the passage up to the link
+  and a "Go on" button; what came after the link is saved as what this story shows when you come back. Each file
+  has its own save (`taleKey`: the front door none, the Lamplighter its old key `drift.tale.v1`). A save left at an
+  end (a replacing link has nothing after it) starts that story again. A link may name only a bare file in
+  `story/`. The name in Menu > Story is the story's `# title:` global tag. `?tale=peraspera` opens one directly.
+- In the page, peer and replace both switch the panel (one story is shown at a time); in the FINK player a peer
+  opens beside. The same files serve both.
+- To add an episode: write the file with a `# title:` tag, link it from `episodes.fink.js`, add it to
+  `STORY_FILES` in `tools/story.mjs` (so `tests/inkwalk.mjs` and `tools/bakeplaces.mjs` check it), and give each
+  new speaker an `AU_VOICES` entry in `audio.js` (a speaker without one is silent). Every place a story names must
+  be one of the 50 in `buildPlaces`; `inkwalk` fails a story with fewer than four endings in random play;
+  `node inklet/tools/fink-check.mjs` catches a knot that runs out of content (a `# restart` knot needs `-> END`).
 
 ## Sound and lift in two airs (the Warmhouse, September 2026)
 

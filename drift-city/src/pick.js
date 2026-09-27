@@ -20,6 +20,9 @@ function pickLandmarks() {
   ];
 }
 const SHIP_NAMES = ["cargo zeppelin", "skyboat", "balloon glider", "ad dirigible", "hover barge"];
+// every airship is a Hindenburg (the first settlers' joke: with no oxygen in the air, nothing here burns); the newest
+// is the 1632nd. One number per ship slot; gliders and barges are not airships and keep plain names.
+const HINDENBURG_NO = [1632, 1417, 1598, 1203, 1611, 988, 1520, 1630];
 
 // the ray under a point of the screen, from the camera as it was last drawn
 function pickRay(px, py) {
@@ -38,7 +41,9 @@ function pickAt(px, py) {
     if (h > 0 && -b - Math.sqrt(h) > 0 && -b - Math.sqrt(h) < bt) {
       bt = -b - Math.sqrt(h);
       const kind = Math.round(EVN[179 + i * 4]);
-      best = { name: "A " + (SHIP_NAMES[kind] || "skyboat"), x: c[0], z: c[2], y0: c[1] - s * 0.3, r: s, h: s * 0.6, ship: i, blurb: "Riding the thick air over the city." };
+      const airship = kind === 0 || kind === 1 || kind === 3;
+      best = { name: airship ? "The Hindenburg " + HINDENBURG_NO[i] + ", a " + (SHIP_NAMES[kind] || "skyboat") : "A " + (SHIP_NAMES[kind] || "skyboat"), x: c[0], z: c[2], y0: c[1] - s * 0.3, r: s, h: s * 0.6, ship: i,
+        blurb: airship ? "The first settlers named every airship Hindenburg, as a joke: with no oxygen in the air, nothing here can burn." : "Riding the thick air over the city." };
     }
   }
   // the Warmhouse bubble: a sphere in the air, so test it like a skyboat
