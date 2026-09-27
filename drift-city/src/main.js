@@ -1562,6 +1562,7 @@ async function init() {
     computeEvents(tod, dt);
     computeExtras(tod, dt);
     EVN[208] = WX.cover || 0; // settled snow (after computeEvents clears the array)
+    EVN[209] = morseKey(clock); // the masts' Morse (morse.js)
     device.queue.writeBuffer(evBuf, 0, EVN);
     { const lg = lifeUpdate(dtS); if (lg) device.queue.writeBuffer(evBuf, 848, lg); }
     const pyr = !inSpace && ffStep(frameNo < 2 ? 1 : 3);

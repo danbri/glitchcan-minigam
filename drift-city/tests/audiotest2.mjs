@@ -9,6 +9,10 @@ const off = new OfflineAudioContext(2, sr * secs, sr);
 globalThis.AudioContext = function () { return off; };
 globalThis.addEventListener = () => {};
 globalThis.localStorage = { getItem: () => null, setItem: () => {} };
+// main.js globals that audio.js reads (the walkers' footfalls, the Morse key)
+globalThis.FEET = { list: [] };
+globalThis.MORSE = { key: 0 };
+setInterval && 0;
 const clampv = (v, a, b) => Math.min(b, Math.max(a, v));
 const A = new Function('clampv', fs.readFileSync(process.env.AUDIO || new URL('../src/audio.js', import.meta.url), 'utf8') + '; return { AU, audioInit, audioStep, audioListener, audioBang, audioChime, audioCity, voice: typeof audioVoice === "function" ? audioVoice : null };')(clampv);
 A.audioInit();
