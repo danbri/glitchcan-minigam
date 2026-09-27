@@ -1457,7 +1457,8 @@ async function init() {
       } else goodTime = 0;
     }
     // the world's clock runs in every mode: story scenes, trips, space and free flight included
-    clock += dtS;
+    // a long-press flight runs the city's clock fast (pick.js)
+    clock += dtS * pickWarp();
     if (!INTRO.started && frameNo > 4) { INTRO.started = true; if (!globalThis.__noIntro) gateShow(); }
     if (INTRO.on) introCaptions();
     const modeWas = NAV.mode;
@@ -1539,7 +1540,10 @@ async function init() {
     U[47] = wind.cx; U[51] = wind.cz; U[55] = inSpace ? 0 : WX.rain; U[59] = WX.wet;
     U.set([REG.ox, REG.oz, 0, REG.city, REG.cx, REG.cz, 0, 0], 60);
     // the lens: on the story's scene when there is one in view, otherwise (0) on the centre of the view
-    const ft = inSpace ? 0 : focusTarget([U[4], U[5], U[6]], cam.f);
+    CAMNOW.p = [U[4], U[5], U[6]]; CAMNOW.f = cam.f; CAMNOW.r = cam.r; CAMNOW.up = cam.up;
+    let ft = inSpace ? 0 : focusTarget([U[4], U[5], U[6]], cam.f);
+    // arriving at something picked: the lens on it
+    if (!ft && NAV.mode === "visit" && NAV.visit && NAV.visit.subject && NAV.visit.t > NAV.visit.T * 0.8) ft = NAV.visit.subject.dist;
     FOCUS.d = ft > 0 ? (FOCUS.d > 0 ? FOCUS.d + (ft - FOCUS.d) * Math.min(1, dt * 3) : ft) : 0;
     // shallow focus is for story moments; in flight the lens goes deep, so you can judge where you are going
     const fs = !FOCUS.on || inSpace ? 0 : NAV.mode === "visit" || FOCUS.d > 0 ? 1 : NAV.mode === "surface" ? 0.3 * clampv(1 - (AUW.speed || 0) / 25, 0, 1) : 0;
@@ -1750,6 +1754,7 @@ const release = (e) => {
   pointer.down = false;
 };
 canvas.addEventListener("pointerup", release);
+pickInit(canvas);
 canvas.addEventListener("pointercancel", release);
 canvas.addEventListener("pointerleave", () => { pointer.hoverT = -100; });
 document.getElementById("bTime").addEventListener("click", nextTod);
@@ -1777,7 +1782,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { WX, FEEL, FEET, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { WX, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

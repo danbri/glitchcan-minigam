@@ -79,6 +79,11 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 .taleChoices.feelOn { touch-action: none; }
 .mapPanel { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: max-content; max-width: 96vw; box-sizing: border-box; z-index: 40; pointer-events: auto; background: var(--glass); border: 1px solid var(--edge); border-radius: 16px; padding: 8px 10px 10px; backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2); max-height: 94vh; overflow-y: auto; color: var(--ink); }
 .mapPanel[hidden] { display: none; }
+.pickRing { position: fixed; z-index: 30; pointer-events: none; transform: translate(-50%, -50%); opacity: 0; }
+.pickRing .pr { display: block; width: 46px; height: 46px; border-radius: 50%; border: 2px solid #e8b979; box-shadow: 0 0 12px rgba(232,185,121,.8); margin: 0 auto; }
+.pickRing .pl { display: block; margin-top: 8px; white-space: nowrap; font-size: 14px; color: var(--ink); text-shadow: 0 1px 6px rgba(0,0,0,.9); text-align: center; }
+.pickRing.go { animation: pickGo 2.4s ease-out forwards; }
+@keyframes pickGo { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } }
 .mapHead { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin: 0 2px 6px; }
 .mapClose { font: inherit; font-size: 18px; color: var(--ink); background: rgba(255,255,255,.06); border: 1px solid var(--edge); border-radius: 10px; width: 40px; height: 36px; cursor: pointer; }
 .mapPanel canvas { position: static; inset: auto; display: block; border-radius: 10px; cursor: pointer; touch-action: manipulation; }

@@ -617,6 +617,7 @@ function initGL(reason) {
     if (W.step(frameNoGL < 2 ? 1 : 4)) upPyramid();
     upRows();
     const tod = currentTod(), cam = cameraVectors();
+    CAMNOW.p = [st.x, st.y, st.z]; CAMNOW.f = cam.f; CAMNOW.r = cam.r; CAMNOW.up = cam.up;
     updateWeather(dt);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniform3f(U.camPos, st.x, st.y, st.z);
