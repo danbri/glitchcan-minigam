@@ -164,7 +164,7 @@ function placeById(id) { if (!PLACES) buildPlaces(); return PLACES.find((p) => p
 const TALE_DIR = "../story/", TALE_FIRST = "lamplighter.fink.js", TALE_DOOR = "episodes.fink.js";
 const BACKTICKS_URL = "../../packages/backticks/src/index.js";
 const INK_URLS = ["../../third_party/ink/ink-full.js", "https://cdn.jsdelivr.net/npm/inkjs@2.4.0/dist/ink-full.js"];
-const TALE_GEOM_KEY = "drift.taleGeom.v1";
+const TALE_GEOM_KEY = "drift.taleGeom.v2"; // v2: a taller default on phones (v1 showed one choice at 400 x 800)
 const TALE = { file: TALE_FIRST, title: "", link: null, textClues: taleFetch("drift.textClues") === true, story: null, on: false, scene: null, place: null, paras: [], hot: [], dwell: 0, dwellOn: null, loading: false, min: false };
 if (typeof PLACES_BAKED !== "undefined") PLACES = PLACES_BAKED;
 // a story file named in a tag or the address: a bare file name in story/, nothing else
@@ -273,6 +273,8 @@ function taleOpen() {
       TALE.story = new inkjs.Compiler(src).Compile();
       // the story's name: a "# title:" tag at the top of the file (a global tag, read through the story API)
       for (const t of TALE.story.globalTags || []) if (/^title\s*:/i.test(t)) TALE.title = t.slice(t.indexOf(":") + 1).trim();
+      const tt = document.querySelector(".taleTitle");
+      if (tt && TALE.title) tt.textContent = TALE.title;
       const saved = taleFetch(taleKey());
       if (saved && saved.state) {
         try {
@@ -498,7 +500,7 @@ function taleFound(h) {
 // ---------- the panel's place and size: move by the header, resize by the corner, minimise to a bar ----------
 function taleDefaultGeom() {
   const W = innerWidth, H = innerHeight, narrow = W < 640;
-  if (narrow) { const hh = Math.round(H * 0.36); return { x: 8, y: H - hh - 44, w: W - 16, h: hh, min: false }; }
+  if (narrow) { const hh = Math.round(Math.max(H * 0.5, Math.min(300, H - 120))); return { x: 8, y: H - hh - 44, w: W - 16, h: hh, min: false }; }
   return { x: W - 356, y: 64, w: 340, h: Math.round(Math.min(H * 0.46, 420)), min: false };
 }
 function taleGeom() { return TALE.geom || (TALE.geom = taleFetch(TALE_GEOM_KEY) || taleDefaultGeom()); }
