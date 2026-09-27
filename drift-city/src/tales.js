@@ -407,13 +407,14 @@ function taleSpeech(file) {
 function taleSpeechNext() {
   const S = TALE.speech;
   if (!S) return;
-  if (!S.q.length) { S.busy = false; return; }
+  if (!S.q.length) { S.busy = false; if (typeof headDone === "function") headDone(); return; }
   S.busy = true;
   S.el.src = S.q.shift();
+  if (typeof headSay === "function") headSay(S.el.src, S.el); // the speaker's face on the comms feed (heads.js)
   const p = S.el.play();
   if (p && p.catch) p.catch(() => taleSpeechNext());
 }
-function taleSpeechStop() { const S = TALE.speech; if (S) { S.q = []; S.el.pause(); S.busy = false; } }
+function taleSpeechStop() { const S = TALE.speech; if (S) { S.q = []; S.el.pause(); S.busy = false; } if (typeof headHide === "function") headHide(); }
 function taleChoose(i) {
   taleSpeechStop();
   TALE.story.ChooseChoiceIndex(i);
