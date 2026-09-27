@@ -139,15 +139,27 @@ function pickRing(px, py, text) {
   r.classList.remove("go"); void r.offsetWidth; r.classList.add("go");
 }
 // A long press names the thing under the finger and offers the flight; it never starts one by itself (a finger
-// resting on the screen used to send the view off). `now` skips the offer (tests, the map).
+// resting on the screen used to send the view off). `now` skips the offer (tests, the map); now = "walk" walks.
 function pickGo(px, py, now) {
   if (NAV.mode === "space" || NAV.mode === "trip" || NAV.spaceMix > 0.05) return;
+  // standing in a scene: a room offers only a walk across its floor; outside, a near thing offers a walk as well
+  const V = NAV.mode === "visit" && NAV.visit && NAV.visit.t >= NAV.visit.T ? NAV.visit : null;
+  const R = V && roomOf(V.to);
+  if (R) {
+    const o = CAMNOW.p, d = pickRay(px, py), fy = V.to.y - 1.7;
+    if (d[1] > -0.02) { pickRing(px, py, "Press on the floor to walk there"); return; }
+    const t = (fy - o[1]) / d[1];
+    const S = { name: "Walk across the room", x: o[0] + d[0] * t, z: o[2] + d[2] * t, y0: fy, walkOnly: true };
+    if (now) { visitWalkTo(V, S.x, S.z); return; }
+    pickOffer(S, px, py); return;
+  }
   const S = pickAt(px, py);
+  if (S && V && Math.hypot(S.x - st.x, S.z - st.z) < 450 && S.ship === undefined && S.name !== "The Warmhouse") S.walk = true;
   if (!S) { pickRing(px, py, "Nothing there"); return; }
   if (S.y0 === undefined) S.y0 = 0;
   // the simpler (WebGL) city has no visits: name it, but stay
   if (!GPUREF.device) { pickRing(px, py, S.name); return; }
-  if (now) { pickLaunch(S); return; }
+  if (now) { if (S.walk && now === "walk") visitWalkTo(V, S.x, S.z); else pickLaunch(S); return; }
   pickOffer(S, px, py);
 }
 function pickLaunch(S, quiet) {
@@ -168,13 +180,21 @@ function pickOffer(S, px, py) {
   let c = PICK.card;
   if (!c) {
     c = document.createElement("div"); c.className = "pickCard"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Picked");
-    c.innerHTML = '<span class="pn"></span><span class="pb"><button type="button" class="pgo">Fly there</button><button type="button" class="px" aria-label="Close">\u00d7</button></span>';
+    c.innerHTML = '<span class="pn"></span><span class="pb"><button type="button" class="pwk">Walk there</button><button type="button" class="pgo">Fly there</button><button type="button" class="px" aria-label="Close">\u00d7</button></span>';
     document.body.appendChild(c); PICK.card = c;
     c.querySelector(".pgo").addEventListener("click", (e) => { e.stopPropagation(); if (PICK.offer) pickLaunch(PICK.offer); });
+    c.querySelector(".pwk").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const S = PICK.offer, V = NAV.visit;
+      pickOfferClose();
+      if (S && V && NAV.mode === "visit" && !visitWalkTo(V, S.x, S.z)) showHint("You are there.", 1500);
+    });
     c.querySelector(".px").addEventListener("click", (e) => { e.stopPropagation(); pickOfferClose(); });
   }
   PICK.offer = S;
   c.querySelector(".pn").textContent = S.name;
+  c.querySelector(".pwk").hidden = !(S.walk || S.walkOnly);
+  c.querySelector(".pgo").hidden = !!S.walkOnly;
   c.hidden = false;
   const w = Math.min(300, innerWidth - 32);
   c.style.left = clampv(px - w / 2, 16, innerWidth - 16 - w) + "px";

@@ -363,16 +363,69 @@ The WebGL fallback only names things (it has no visits). Test: `PICK=x,y PICKF=1
   at a street place can read the roof height across the street), and the push-out moved the drone to the roof in a
   few frames. `st.soft` limits that push to 5 m/s for 15 s after the handover.
 
-## Walking into a scene (`visitMove` in tales.js)
+## Walking into a scene (`visitMove`, `visitWalkTo` in tales.js)
 
 In a story place or a picked view (`NAV.mode === "visit"`) the left stick looks and the right stick moves: up
 walks (eye level, under 6 m above the ground: 2.6 m/s, the ground followed, a slow bob) or flies along the view
 (10 m/s); left and right turn; W and S do the same. The move is an offset (`V.off`) on the visit, so the place's
-props and hotspots stay where they are; a new visit starts at its place again. A step is refused when the height
-map rises ahead compared with where you stand (street places stand inside the coarse boxes, so an absolute test
-refuses everything), and you stay within 150 m. The pad's labels follow the mode ("Look" / "Walk · turn").
-Test: `PADRY=1` in the scratch runner holds the right stick forward; from street_1 the walk stops at the facade
-6.6 m ahead.
+props and hotspots stay where they are; a new visit starts at its place again.
+
+- There is no distance limit (owner, September 2026: "walking is needlessly capped... we should be able to navigate
+  anywhere"). Until then you stayed within 150 m of the place and a step into a wall stopped you dead; from
+  street_1 that was 6.6 m. Now a blocked step tries its two axis parts and takes whichever is free, so you slide
+  along a facade. The test is still relative (the height map ahead against the height where you stand), because
+  street places stand inside the flight code's coarse building boxes and an absolute test refuses every step.
+- During the flight to a place the sticks used to do nothing (flights take up to 14 s). Now a stick, W or S pushed
+  mid-flight ends the flight where the view is and hands it over (`visitStep`); a drag on the screen does not.
+- **Walk there**: a long press in a scene offers "Walk there" as well as "Fly there" (for things under 450 m away;
+  not skyboats or the bubble). `visitWalkTo` plans it to be easy to follow: the view turns to the goal first (the
+  first 18% of the time), the move eases in and out, it stops 2.5 m short of a wall, and if buildings stand in the
+  way at eye level the view rises over them in a crane move (4 m above the highest thing in the way, looking down at
+  the goal) and comes down on the far side. Any stick or key input takes over at once. Test: `PICK=x,y PICKF=12
+  PICKWALK=1` in the scratch Dawn runner logs the walk's progress and lift every 5 frames.
+
+## Rooms: the venues' interiors (`ROOMS` in tales.js, `roomRender` in scene.wgsl)
+
+Owner, September 2026: "the music venues: when we fly to them we see only street scenes. No interiors." The city is
+a height-field raymarch with coarse building boxes; it has no insides to walk into. So a venue is a separate small
+scene: four room places (`cold_tap`, `low_orbit_bar`, `lantern_cellar`, `warmhouse_club`) stand at their street
+(or, for the club, the Warmhouse square) beyond the fifty generated places. When you arrive at one (`roomNow()`:
+the visit at 92% or more), `EVN[210]` carries its kind and `EVN[212..215]` its origin and heading, and the scene
+pass returns `roomRender` at once: its own SDF (`rmMap`), four lamps (`rmLight`, the first with a soft shadow),
+AO, haze, and the story's props lit by the room (`propsFx` checks `ev.wx.z`). The snow overlay is off (`U[55]`)
+and the street's sound drops behind the walls (see Music).
+
+- Room axes: x forward along the place's heading, z to the right, y up from the floor; the camera starts at x = 0.
+  `ROOMS` holds each room's walking bounds (x0, x1, half width, and a circle for the club); `rmMap` holds the walls.
+  Keep the two in step. Walking, "Walk there" and the story's props and clues are all kept inside the bounds
+  (`roomClamp`), and a clue's glint is re-aimed at where the clamp put it.
+- The ev block grew by one vec4 (`room`) before the Life board: `EVN` is 216 floats, the Life board is written at
+  byte 864, and the buffer is 864 + 1024 bytes. Change all three together.
+- The WebGL fallback has no rooms: it shows the street.
+- Seen in Dawn renders (September 2026): the Cold Tap (counter, stools, lit bottles, heater, airlock ring, price
+  list), the Low Orbit (window on the pads with a blinking launch light, cracked star on the ceiling, bar across
+  the far end), the Lantern Cellar (brick barrel vault, paper lanterns, the stand with a kit and a bass), the club
+  (dome with strings of bulbs, tables with lamps in two rings, the stand with a curtain, piano, kit and bass). The
+  first cellar render had a lantern hanging 1 m in front of the camera; the lantern grid starts at x = 2.8.
+
+## Music in the venues (`src/venue.js`)
+
+Each room has its own band, synthesised live with Web Audio (no samples, no recordings) and scheduled 0.25 s ahead
+from a chord list and simple rules per player: the Cold Tap has a jukebox (12-bar blues shuffle, organ, guitar
+lead, through a small-speaker filter); the Low Orbit has lounge (electric piano, bossa rim and bass, vibes); the
+Lantern Cellar has the late jam (132 bpm swing: ride, hat on 2 and 4, snare comping, walking bass with a chromatic
+approach into each bar, piano stabs on 1 and the "and" of 2, a tenor improvising in phrases with rests); the club
+has a piano trio ballad with brushes. The lead moves to the nearest note of the chord's scale, chord tones on the
+strong beats, inside its range, in phrases of 4 to 12 beats. In a room, `AU.outside` (the whole street mix)
+drops to 22% and the muffle filter to 420 Hz, so the city is a murmur through the walls; the band goes straight to
+the master.
+
+- Offline check: render each band in Chromium's `OfflineAudioContext` (a scratch `render.mjs` that evals venue.js
+  with a stub `AU`). September 2026: 40 s each, peaks 0.36 to 0.76, RMS 0.10 to 0.16, no clipping before the master
+  limiter. Nobody has listened to it inside this pipeline; judge it by ear before building on it.
+- To add a style: an entry in `VENUE_STYLES` (tempo, swing ratio, key as a MIDI note, chord list as [semitones from
+  the key, quality], the four parts, the lead's range and how often it plays) and, if needed, a new instrument
+  function beside `vSax`.
 
 ## Feeling the choices (`src/feel.js`)
 
