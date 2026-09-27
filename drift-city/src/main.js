@@ -17,7 +17,7 @@ function fail(msg, detail) {
 }
 
 const presets = [
-  { name: "Amber day", sun: [0.62, 0.3, 0.42], sunCol: [2.7, 1.65, 0.7], skyTop: [0.22, 0.11, 0.045], skyHor: [0.82, 0.47, 0.18], fog: [0.5, 0.29, 0.11], den: 0.0019, win: 0.35, stars: 0.0 },
+  { name: "Amber day", sun: [0.62, 0.3, 0.42], sunCol: [2.7, 1.75, 0.88], skyTop: [0.22, 0.11, 0.045], skyHor: [0.82, 0.47, 0.18], fog: [0.5, 0.29, 0.11], den: 0.0019, win: 0.35, stars: 0.0 },
   { name: "Saturnshine", sun: [0.55, 0.08, -0.6], sunCol: [1.05, 0.58, 0.27], skyTop: [0.1, 0.05, 0.05], skyHor: [0.42, 0.22, 0.13], fog: [0.28, 0.16, 0.1], den: 0.003, win: 0.95, stars: 0.25 },
   { name: "Moonglow night", sun: [-0.3, 0.55, 0.45], sunCol: [0.2, 0.42, 0.45], skyTop: [0.008, 0.02, 0.035], skyHor: [0.05, 0.065, 0.08], fog: [0.045, 0.06, 0.07], den: 0.0034, win: 1.35, stars: 0.8 },
   { name: "Methane snow", sun: [-0.5, 0.35, 0.6], sunCol: [1.5, 1.15, 0.72], skyTop: [0.46, 0.33, 0.2], skyHor: [0.68, 0.53, 0.37], fog: [0.58, 0.45, 0.3], den: 0.0042, win: 0.4, stars: 0.0 },
@@ -295,7 +295,7 @@ function walkersNear(x0, z0, rad, t) {
 }
 // footfalls, each from the foot that lands, when it lands: a walking kind's foot comes down at every half cycle of
 // its gait; a cape glider lands once per hop; a skater pushes off at every half cycle
-const FEET = { last: new Map(), list: [], t: 0, count: 0 };
+const FEET = { last: new Map(), list: [], t: 0, count: 0, falls: [], fi: 0 };
 function audioFeet(dt) {
   if (NAV.spaceMix > 0.5 || AUW.alt > 120) { FEET.list = []; return; }
   const l = AU.ready ? AU.lpos : [st.x, st.y, st.z], play = AU.ready && AU.on;
@@ -311,6 +311,8 @@ function audioFeet(dt) {
     seen.set(w.id, step);
     if (prev === undefined || step === prev || made >= 4) continue;
     made++; FEET.count++;
+    // for the physics: a foot came down here (a cape glider's landing, an exoskeleton's heavy tread flick more)
+    FEET.falls[FEET.fi++ % 8] = { x: w.x, z: w.z, t: clock, s: w.kind === 0 ? 1.4 : w.kind === 3 ? 1.2 : w.kind === 1 ? 0.6 : 1 };
     if (!play) continue;
     const at = [w.x, 0.05, w.z], g = 0.35 + 0.25 * hsh(w.id, step, 7);
     if (w.kind === 0) auClank(at, g);
@@ -750,7 +752,8 @@ function update(dt) {
   st.aL += (ax_ * -hz + az_ * hx - st.aL) * lp;
   st.vyS += (st.vy - st.vyS) * lp;
   const pitchT = Math.atan2(st.vyS, spd2) * 0.45 - st.aF / 9.81 * 0.25 + (low ? 0.03 : -0.13) + uy * 0.12 + fbm1(clock * 0.8, 96) * 0.008 * gust;
-  const rollT = clampv(st.aL / 9.81 * 1.1, -0.35, 0.35) + fbm1(clock * 0.7, 99) * 0.012 * gust;
+  // the assist lets the horizon settle when you are cruising (a bank while turning, level again after)
+  const rollT = (clampv(st.aL / 9.81 * 1.1, -0.35, 0.35) + fbm1(clock * 0.7, 99) * 0.012 * gust) * (1 - 0.6 * ASSIST.level);
   // critically damped springs: the view eases in and out instead of snapping
   const wp = 2.0, wr = 2.4;
   st.pv += (wp * wp * (pitchT - st.pitch) - 2 * wp * st.pv) * dt; st.pitch += st.pv * dt;
@@ -762,8 +765,10 @@ function update(dt) {
 }
 
 function cameraVectors() {
-  const cp = Math.cos(st.pitch);
-  const f = [Math.cos(st.yaw) * cp, Math.sin(st.pitch), Math.sin(st.yaw) * cp];
+  // the camera assist (assist.js) turns the view, never the drone
+  const yaw = st.yaw + ASSIST.ay, pitch = st.pitch + ASSIST.ap;
+  const cp = Math.cos(pitch);
+  const f = [Math.cos(yaw) * cp, Math.sin(pitch), Math.sin(yaw) * cp];
   const r = norm3([-f[2], 0, f[0]]);
   const up = norm3([r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]]);
   const c = Math.cos(st.roll), s = Math.sin(st.roll);
@@ -1258,8 +1263,8 @@ async function init() {
   const evBuf = device.createBuffer({ size: 864 + 1024, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   if (PHYS) {
     PHYS.buf = device.createBuffer({ size: PHYS.n * 48, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
-    PHYS.ubuf = device.createBuffer({ size: 64, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-    PHYS.u = new Float32Array(16);
+    PHYS.ubuf = device.createBuffer({ size: 224, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    PHYS.u = new Float32Array(56);
     PHYS.bg = device.createBindGroup({ layout: PHYS.phBGL, entries: [{ binding: 0, resource: { buffer: ubuf } }, { binding: 1, resource: cellTex.createView() },
       { binding: 23, resource: { buffer: PHYS.buf } }, { binding: 24, resource: { buffer: PHYS.ubuf } }] });
   }
@@ -1496,6 +1501,7 @@ async function init() {
     }
     if (!inSpace) syncCells();
     const tod = currentTod();
+    assistStep(dtS, clock - lastInput < 1.5);
     let cam = cameraVectors();
     if (inSpace) cam = { f: NAV.cam.F, r: NAV.cam.R, up: NAV.cam.Up };
     taleHotspots(dtS, cam, 0.72);
@@ -1561,9 +1567,12 @@ async function init() {
     let ft = inSpace ? 0 : focusTarget([U[4], U[5], U[6]], cam.f);
     // arriving at something picked: the lens on it
     if (!ft && NAV.mode === "visit" && NAV.visit && NAV.visit.subject && NAV.visit.t > NAV.visit.T * 0.8) ft = NAV.visit.subject.dist;
+    // in flight, the assist's subject when it is near the middle of the view (the lens stays deep)
+    const assistFocus = !ft && NAV.mode === "surface" && ASSIST.focus > 0;
+    if (assistFocus) ft = ASSIST.focus;
     FOCUS.d = ft > 0 ? (FOCUS.d > 0 ? FOCUS.d + (ft - FOCUS.d) * Math.min(1, dt * 3) : ft) : 0;
     // shallow focus is for story moments; in flight the lens goes deep, so you can judge where you are going
-    const fs = !FOCUS.on || inSpace ? 0 : NAV.mode === "visit" || FOCUS.d > 0 ? 1 : NAV.mode === "surface" ? 0.3 * clampv(1 - (AUW.speed || 0) / 25, 0, 1) : 0;
+    const fs = !FOCUS.on || inSpace ? 0 : NAV.mode === "visit" || (FOCUS.d > 0 && !assistFocus) ? 1 : NAV.mode === "surface" ? 0.3 * clampv(1 - (AUW.speed || 0) / 25, 0, 1) : 0;
     FOCUS.s += (fs - FOCUS.s) * Math.min(1, dt * 2);
     U[66] = FOCUS.d; U[67] = FOCUS.s;
     device.queue.writeBuffer(ubuf, 0, U);
@@ -1627,6 +1636,13 @@ async function init() {
         wind.x * 0.6, 0, wind.z * 0.6, wind.gust,
         U[4], U[6], 38, WX.cover || 0,
         Math.min(dt, 1 / 30), 2, PHYS.n, WX.rain || 0]);
+      // the drone's body (behind the view when it follows the drone; at the camera otherwise), and its velocity
+      const bodyR = NAV.mode === "space" || NAV.mode === "free" ? 0 : 0.42;
+      const bv = PHYS.lastBody ? [(st.x - PHYS.lastBody[0]) / Math.max(dt, 1e-3), (st.y - PHYS.lastBody[1]) / Math.max(dt, 1e-3), (st.z - PHYS.lastBody[2]) / Math.max(dt, 1e-3)] : [0, 0, 0];
+      PHYS.lastBody = [st.x, st.y, st.z];
+      PHYS.u.set([st.x, st.y - 0.45, st.z, bodyR, clampv(bv[0], -40, 40), clampv(bv[1], -40, 40), clampv(bv[2], -40, 40), 0], 16);
+      // the walkers' last footfalls (audioFeet records them)
+      for (let i = 0; i < 8; i++) { const F = FEET.falls[i]; PHYS.u.set(F ? [F.x, F.z, clock - F.t, F.s] : [0, 0, 99, 0], 24 + i * 4); }
       device.queue.writeBuffer(PHYS.ubuf, 0, PHYS.u);
       const c = enc.beginComputePass({ timestampWrites: tsw(9, measure) });
       c.setPipeline(PHYS.step); c.setBindGroup(0, PHYS.bg); c.dispatchWorkgroups(PHYS.n / 64); c.end(); ran[9] = 1;
@@ -1653,6 +1669,7 @@ async function init() {
     }
     device.queue.submit([enc.finish()]);
     if (frameNo === 0) showControlsHint();
+    benchTick(dt, ema, hasTS ? gpuMs : null, scale, T.w, T.h);
     if (carry) { carry.destroy(); carry = null; carryBG = null; }
     if (measure) {
       const ranSnap = ran.slice();
@@ -1710,6 +1727,46 @@ function syncLabels() {
   document.getElementById("bRoute").setAttribute("aria-label", "Route: " + routeNames[r] + ". Activate to switch between automatic, streets and rooftops.");
 }
 let uiHidden = false, hintTimer = 0;
+// ---------- ?bench: a speed test to run on a phone ----------
+// Open the page with ?bench and it runs four fixed 10-second stages (a crowded market with walkers and loose things,
+// a street corner, a rooftop view, then flying on), measures the frame time and, where the browser allows, the GPU
+// time of each pass, and shows the numbers with a Copy button. Nothing is sent anywhere.
+const BENCH = { on: typeof location !== "undefined" && /[?&]bench\b/.test(location.search || ""), stage: -1, t: 0, rows: [], acc: null };
+const BENCH_STAGES = [["market_3", "Night market, walkers and loose things"], ["street_1", "Street corner"], ["roof_0", "Rooftop view"], ["fly", "Flying on over the city"]];
+function benchTick(dt, frameMs, gpu, scale, w, h) {
+  if (!BENCH.on || BENCH.stage >= BENCH_STAGES.length) return;
+  BENCH.t -= dt;
+  if (BENCH.stage >= 0 && BENCH.t < 7) {
+    const a = BENCH.acc;
+    a.n++; a.f += frameMs; a.worst = Math.max(a.worst, frameMs);
+    if (gpu) { a.g += gpu[0] + gpu[1] + gpu[2] + gpu[3] + gpu[4] + gpu[5] + gpu[6] + gpu[7]; a.scene += gpu[3]; a.phys += gpu[9] || 0; a.gn++; }
+    a.scale = scale; a.res = w + "x" + h;
+  }
+  if (BENCH.t > 0) return;
+  if (BENCH.stage >= 0) {
+    const a = BENCH.acc;
+    BENCH.rows.push(BENCH_STAGES[BENCH.stage][1] + ": frame " + (a.f / Math.max(a.n, 1)).toFixed(1) + " ms (worst " + a.worst.toFixed(0) + "), render " + a.res + " (" + Math.round(a.scale * 100) + "%)" +
+      (a.gn ? ", GPU " + (a.g / a.gn).toFixed(1) + " ms (scene " + (a.scene / a.gn).toFixed(1) + ", physics " + (a.phys / a.gn).toFixed(2) + ")" : ", GPU timing not exposed"));
+  }
+  BENCH.stage++;
+  if (BENCH.stage >= BENCH_STAGES.length) { benchReport(); return; }
+  BENCH.t = 10; BENCH.acc = { n: 0, f: 0, worst: 0, g: 0, scene: 0, phys: 0, gn: 0, scale: 1, res: "" };
+  const id = BENCH_STAGES[BENCH.stage][0];
+  if (id === "fly") flyOn(); else hopPlace(id);
+  showHint("Speed test " + (BENCH.stage + 1) + " of " + BENCH_STAGES.length + ": " + BENCH_STAGES[BENCH.stage][1], 3000);
+}
+function benchReport() {
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const text = "Drift city speed test\n" + BENCH.rows.join("\n") + "\n" + (GPUREF.device ? "WebGPU, physics " + (PHYS_ON ? "on" : "off") : "WebGL fallback (no walkers, rooms or physics)") + ". " + ua;
+  console.log(text);
+  if (!document.body || !document.body.appendChild || !document.createElement("div").querySelector) return;
+  const c = document.createElement("div"); c.className = "benchCard"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Speed test result");
+  c.innerHTML = '<pre></pre><span><button type="button" class="bcopy">Copy</button><button type="button" class="bclose">Close</button></span>';
+  c.querySelector("pre").textContent = text;
+  c.querySelector(".bcopy").addEventListener("click", () => { try { navigator.clipboard.writeText(text); showHint("Copied.", 1500); } catch (e) {} });
+  c.querySelector(".bclose").addEventListener("click", () => c.remove());
+  document.body.appendChild(c);
+}
 function showHint(text, ms) {
   hint.textContent = text;
   hint.classList.remove("hidden");
@@ -1801,7 +1858,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { WX, EVN, LIFE, MORSE, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { WX, EVN, LIFE, MORSE, ASSIST, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

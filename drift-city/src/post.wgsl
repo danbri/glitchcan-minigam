@@ -161,8 +161,23 @@ fn snowLayer(ro: vec3f, rd: vec3f, dep: f32, s: f32, tMax: f32, r: f32, dens: f3
   return tr;
 }
 
+// Heat shimmer: warm air rising off lamps, lit windows, stalls, vents and the Warmhouse bends the light above them.
+// The bloom texture says where the warm light is; a pixel is displaced by a rising noise in proportion to the warm
+// light just below it on the screen (heat rises), and only for things within a few hundred metres (by the depth).
+fn heatShift(uv0: vec2f) -> vec2f {
+  let below = textureSampleLevel(bloomTex, samp, uv0 + vec2f(0.0, 0.03), 0.0).rgb;
+  let warm = max(below.r - below.b * 0.8, 0.0);
+  let d0 = textureSampleLevel(srcTex, samp, uv0, 0.0).a;
+  let near = 1.0 - smoothstep(60.0, 450.0, d0);
+  let k = clamp(warm * 1.6, 0.0, 1.0) * near;
+  if (k < 0.02) { return vec2f(0.0); }
+  let q = uv0 * vec2f(u.outRes.x / u.outRes.y, 1.0) * vec2f(70.0, 34.0) + vec2f(0.0, u.time * 3.2);
+  let w = vec2f(pnoise(q, 131) - 0.5, pnoise(q * 1.3 + vec2f(7.1, 3.3), 132) - 0.5);
+  return w * k * 0.0045;
+}
+
 @fragment fn comp(@builtin(position) fc: vec4f) -> @location(0) vec4f {
-  let uv = fc.xy / u.outRes;
+  let uv = fc.xy / u.outRes + heatShift(fc.xy / u.outRes);
   let ts = 1.0 / u.res;
   var c = textureSampleLevel(srcTex, samp, uv, 0.0).rgb;
   let n0 = textureSampleLevel(srcTex, samp, uv + vec2f(ts.x, 0.0), 0.0).rgb;
@@ -204,6 +219,14 @@ fn snowLayer(ro: vec3f, rd: vec3f, dep: f32, s: f32, tMax: f32, r: f32, dens: f3
   }
   // warm halation around lights
   c += textureSampleLevel(bloomTex, samp, uv, 0.0).rgb * vec3f(0.36, 0.3, 0.24);
+  // by day, depth planes: near things keep their local colour and contrast, far ones sink into the haze (the fog does
+  // the far part; this lifts the near part, the day grade used to flatten both into one honey-brown range)
+  let dayK = clamp(1.0 - (u.windows - 0.35) / 0.6, 0.0, 1.0);
+  let nearK = (1.0 - smoothstep(40.0, 700.0, dep)) * dayK;
+  let farK = smoothstep(400.0, 1100.0, dep) * step(dep, 1190.0) * dayK;
+  let lc = luma(c);
+  c = max(mix(vec3f(lc), c, 1.0 + 0.55 * nearK - 0.35 * farK), vec3f(0.0));
+  c = max(c * (1.0 + 0.3 * nearK) - vec3f(lc * 0.24 * nearK), vec3f(0.0));
   c = aces(c * 1.05);
   c = pow(c, vec3f(1.0 / 2.2));
   c = mix(c, c * c * (3.0 - 2.0 * c), 0.28);

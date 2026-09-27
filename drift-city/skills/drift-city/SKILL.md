@@ -125,8 +125,26 @@ so nothing has weight or inertia or can be pushed. The physics pass gives a firs
   ice outward. `tests/physics.html` drops the same things side by side under Earth and Titan values with the same
   equations: a person falls 12 m in 1.57 s on Earth and 4.33 s on Titan, and the same jump push reaches 0.45 m and
   3.18 m.
-- **Next**: physical parts for the walkers (torso and head on springs, swinging packs, cloth capes, feet on the
-  real ground), the drone as a collider, and a phone measurement of the cost.
+- **Second phase (September 2026):**
+  - The drone's body is a sphere (0.42 m, centred 0.45 m under the eye; none in space or flying by hand) that loose
+    things are pushed out of and carried along by, at the drone's own velocity (`PhysU.body`, `bodyV`).
+  - Footfalls kick: `audioFeet` records each walker's footfall (`FEET.falls`, the last 8), and for a tenth of a
+    second anything loose on the floor within 0.55 m is flicked up and away (`PhysU.feet`; an exoskeleton's tread
+    1.4 times, a glider's landing 1.2, an android's 0.6).
+  - The PhysU block grew from 64 to 224 bytes (`PHYS.u` is 56 floats). Change both together.
+  - Walkers (in `pedFigure`, analytic, since a walker has no stored state): the loper's upper body sits on the hips
+    like a mass on a spring (a nod forward at each landing, back a quarter-period later: `lean = 0.1 + 0.04 sin(2 ph
+    - 1.2)`), its pack hangs from the top strap and swings later still; the glider's cape is cloth hung from the
+    shoulders at an angle from vertical set by the hop (0.12 rad on the ground, 1.15 in the air), bellying away from
+    the back with ripples running down to the hem. That fixed "at touchdown the cape stands up as a flat sheet".
+    Seen in `tests/walkers.html` at t = 2.0, 3.4 and 4.8.
+  - Not done: the drone and the walkers' bodies are not colliders for each other; the drone collider is not yet
+    seen working in a render (it compiles, and the city runs with it without GPU errors).
+- **Speed test on a phone**: open `dist/city.html?bench`. It skips the opening, runs four 10-second stages (the
+  market with walkers, a street corner, a rooftop, flying on), and shows the mean and worst frame time, the render
+  size and, where the browser exposes it, GPU time per stage, with a Copy button (`benchTick`, `benchReport` in
+  main.js; the WebGL fallback runs it too). Headless Chromium on the WebGL fallback here: 40 to 69 ms a frame at
+  25% render size. No phone number yet: that needs the owner's phone.
 
 ## Titan design brief
 
@@ -646,10 +664,41 @@ rarity, spatial organisation, material consistency, weather interaction and auth
     radio, the pagoda, the tea stall and the fliers pass; a generic banded tower does not.
 15. **Labels**: give a place name you could tell someone ("Amber Walk, Chinatown"), not drone state.
 
-Open work the reviews name, not done yet: districts told apart by form, not only by building mix (market tight and
-steamy, civic centre axial, Lumen severe, forest edge overgrown, dish district sparse and windy); a map in the menu; the tube network's structure (supports, junctions, stations); snow settling on ledges and melting
-round warm things (heat as a visual language); clouds as weather masses rather than floating props; day-light tonal
-separation; a weak composition assist (candidate subjects ahead, gentle bias of pitch and focus, never a lock-on).
+Done since the reviews: districts by form, the map, the tube structure, settling snow, the camera assist, daylight
+depth planes, accretion and street clutter, heat shimmer (sections below). Still open: clouds as weather masses
+rather than floating props; restraint with Saturn in the sky.
+
+### Camera assist (`src/assist.js`, September 2026)
+
+In free flight over the city a quiet cinematographer picks a subject ahead every half second (landmarks, megatowers,
+the tallest Life tower; within 70 to 1600 m, within about 37 degrees of the heading, in clear sight by `pickClear`,
+scored by apparent size, with a 1.6 bonus for keeping the current one) and turns the VIEW, never the drone: at most
+0.15 rad of yaw toward putting it on a third, 0.12 rad of pitch toward its upper part, eased over about 1.5 s, a
+third as much while you steer. It levels the horizon while cruising (roll target times 1 - 0.6 level) and puts the
+lens on the subject while it is near the middle, with the lens kept deep (flight strength), not the story's
+shallow focus. Menu > View > "Camera assist in flight" (`drift.assist`). Checked in the Dawn runner (`LOGEXPR`):
+it took the Lumen pyramid, eased to 0.02 rad of yaw and -0.08 of pitch, and let go when the pyramid left clear sight.
+
+### Daylight depth planes (September 2026)
+
+Owner: "better contrast in daylight, which is mostly one honey-brown now". Two changes, both scaled by a day factor
+from `u.windows`: a cool fill light in the shade (`lightSurf`: lit faces warm, shaded faces cooler), and in the
+composite pass near things (40 to 700 m) keep more colour and contrast while far things (400 to 1100 m, not the
+sky) lose some colour into the haze. The Amber day sun is a little less orange. Compared in Dawn renders at
+civic_axis and roof_0 before and after: the near towers keep their gold and the windows their cyan; the far city
+greys into the haze. A first, weaker version changed almost nothing visible.
+
+### Accretion and heat (September 2026)
+
+- `accrete` (scene.wgsl) on plain box buildings: a doorway cut in, a canvas awning with a valance, two wall units, a
+  drain pipe on the corner (all on one face chosen by the cell's hash), and on one tower in eight a floor gutted to
+  its core with corner columns. All inside the proxy box (footprint + 0.6 m), so the proxy pass and the flight
+  heights stay right. Materials 76, 77, 78. In the shading, one glass tower in three has a band of floors rebuilt in
+  concrete with small windows, and one pane in sixteen is a mismatched replacement. Seen close up in a Dawn render:
+  the doorway and wall units show clearly; the awning is a thin band from eye level.
+- Heat shimmer (`heatShift`, post.wgsl): pixels are displaced by a rising noise in proportion to the warm light just
+  below them on screen (from the bloom texture), for things within about 450 m. Compiles; not yet judged in a
+  render (the runner's night switch does not finish while the clock is frozen).
 
 ## Size and the lite variant
 

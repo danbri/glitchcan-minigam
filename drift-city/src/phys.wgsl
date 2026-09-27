@@ -7,9 +7,11 @@
 @group(0) @binding(24) var<uniform> ph: PhysU;
 // the same buffer, read-only, for drawing (a vertex shader may not bind read-write storage)
 @group(0) @binding(25) var<storage, read> partsR: array<vec4f>;
-struct PhysU { drone: vec4f, wind: vec4f, anchor: vec4f, step: vec4f };
+struct PhysU { drone: vec4f, wind: vec4f, anchor: vec4f, step: vec4f, body: vec4f, bodyV: vec4f, feet: array<vec4f, 8> };
 // drone: position, downdraft strength 0..1; wind: air velocity (x, y, z), gust; anchor: centre of the live area
-// (x, z), its radius, snow cover; step: dt, substeps, particle count, snowfall
+// (x, z), its radius, snow cover; step: dt, substeps, particle count, snowfall; body: the drone's own body as a
+// sphere (centre, radius; radius 0 when there is none), bodyV its velocity; feet: the walkers' last footfalls near
+// the camera (x, z, seconds since, strength)
 
 const NC: i32 = 96;
 const CS: f32 = 26.0;
@@ -110,12 +112,34 @@ fn spawn(i: u32, gen: f32) {
     }
     let rel = v - air;
     var acc = vec3f(0.0, -G, 0.0) - K_DRAG[kind] * length(rel) * rel;
+    // a foot coming down near a loose thing on the floor flicks it up and away (for a tenth of a second)
+    if (p.y < 0.35) {
+      for (var f = 0; f < 8; f++) {
+        let F = ph.feet[f];
+        if (F.w <= 0.0 || F.z > 0.12) { continue; }
+        let fd = p.xz - F.xy;
+        let fr = length(fd);
+        if (fr < 0.55) { acc += (vec3f(fd.x, 0.0, fd.y) / max(fr, 0.05) * 7.0 + vec3f(0.0, 9.0, 0.0)) * (1.0 - fr / 0.55) * F.w; }
+      }
+    }
     // litter flutters: its drag turns part of the fall sideways, and flips with its tumble
     if (kind == 2) { acc += vec3f(sin(u.time * 3.1 + A.y * 40.0), 0.0, cos(u.time * 2.3 + A.y * 30.0)) * 0.9 * min(length(rel), 1.0); }
     v += acc * dt;
     p += v * dt;
     // touching the world: out along the normal, the inward speed turned round (a little) and the sliding speed
     // reduced by friction in proportion to how hard it hit
+    // the drone's body: a thing it runs into is pushed out of it and carried along at its speed
+    if (ph.body.w > 0.0) {
+      let bq = p - ph.body.xyz;
+      let bl = length(bq);
+      if (bl < ph.body.w + P.w) {
+        let bn = bq / max(bl, 1e-4);
+        p = ph.body.xyz + bn * (ph.body.w + P.w);
+        let vr = v - ph.bodyV.xyz;
+        let vn = dot(vr, bn);
+        if (vn < 0.0) { v = ph.bodyV.xyz + vr - bn * vn * 1.4; }
+      }
+    }
     let d = world(p) - P.w;
     if (d < 0.0) {
       let nn = worldN(p);

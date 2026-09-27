@@ -642,6 +642,7 @@ function initGL(reason) {
       statusEl.innerHTML = "<b>" + (autoOn ? "Autopilot" : "Steering by hand") + "</b><span>" + placeName() + "</span><span>" + st.y.toFixed(0) + " m</span>";
       if (statsOn) statsEl.textContent = "WebGL fallback (" + reason + "). Frame " + ema.toFixed(1) + " ms, render " + canvas.width + " × " + canvas.height + " (" + Math.round(scale * 100) + "%), shadows " + (shadows ? "on" : "off") + ", world data " + Math.round(100 * (W.tNext + W.bNext) / (W.NT + W.NWF)) + "%";
     }
+    if (typeof benchTick === "function") benchTick(dt, ema, null, scale, canvas.width, canvas.height);
     requestAnimationFrame(frame);
   }
   let frameNoGL = 0;

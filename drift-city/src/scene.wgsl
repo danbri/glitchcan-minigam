@@ -1506,14 +1506,21 @@ fn pedFigure(q: vec3f, kind: i32, ph: f32, key: i32) -> f32 {
     let h = gaitBob(ph, gaitSf(2), 0.12) - 0.05;
     let ql = q - vec3f(0.0, h, 0.0);
     var hp: HP;
-    hp.ph = ph; hp.stride = gaitS(2); hp.fl = 0.12; hp.arm = 0.22; hp.bulk = 1.3; hp.lean = 0.1; hp.spread = 0.0; hp.trail = 0.0; hp.armOut = 0.15; hp.reach = 0.0;
+    // the upper body sits on the hips like a mass on a spring: each landing (two a cycle) nods it forward, and it
+    // swings back a quarter-period later (a damped response to the footfall, not a sway on the clock)
+    let lean = 0.1 + 0.04 * sin(2.0 * ph - 1.2);
+    hp.ph = ph; hp.stride = gaitS(2); hp.fl = 0.12; hp.arm = 0.22; hp.bulk = 1.3; hp.lean = lean; hp.spread = 0.0; hp.trail = 0.0; hp.armOut = 0.15; hp.reach = 0.0;
     hp.sf = gaitSf(2); hp.bob = h; hp.roll = 0.05; hp.lag = 0.6;
     dd = min(dd, pedHuman(ql, hp));
-    let ub = pedUpper(ql, 0.1);
+    let ub = pedUpper(ql, lean);
     dd = min(dd, pp(length(ub - vec3f(0.0, 1.64, 0.02)) - 0.165, 3));
     dd = min(dd, pp(length(vec2f(length(ub.xz - vec2f(0.0, 0.0)) - 0.13, ub.y - 1.49)) - 0.035, 4));
-    dd = min(dd, pp(sdBox(ub - vec3f(0.0, 1.27, -0.2), vec3f(0.13, 0.17, 0.06)) - 0.04, 4));
-    dd = min(dd, pp(sdSeg(ub, vec3f(0.08, 1.4, -0.2), vec3f(0.1, 1.5, -0.07)) - 0.018, 2));
+    // the life-support pack hangs from its top strap and swings behind the bob, later still
+    let pv = vec3f(0.0, 1.44, -0.16);
+    let pr = rot2((ub - pv).yz, 0.16 * sin(2.0 * ph - 1.9));
+    let pk = vec3f(ub.x, pr.x, pr.y) + pv;
+    dd = min(dd, pp(sdBox(pk - vec3f(0.0, 1.27, -0.2), vec3f(0.13, 0.17, 0.06)) - 0.04, 4));
+    dd = min(dd, pp(sdSeg(ub, vec3f(0.08, 1.4, -0.19), vec3f(0.1, 1.5, -0.07)) - 0.018, 2));
     dd = min(dd, pp(sdBox(ub - vec3f(0.0, 1.3, 0.14), vec3f(0.05, 0.02, 0.01)), 6));
     for (var lg = 0; lg < 2; lg++) {
       let foot = pedFoot(hp, lg);
@@ -1541,13 +1548,21 @@ fn pedFigure(q: vec3f, kind: i32, ph: f32, key: i32) -> f32 {
     let ub = pedUpper(ql, lean);
     dd = min(dd, pp(sdEll(ub - vec3f(0.0, 1.63, -0.02), vec3f(0.1, 0.115, 0.14)), 1));
     dd = min(dd, pp(sdEll(ub - vec3f(0.0, 1.62, 0.045), vec3f(0.085, 0.06, 0.07)), 3));
-    // the cape: from the wrists down to the ankles, billowing behind, scalloped along its hem
-    let fl = 0.08 * sin(ph * 1.7);
-    let g = ub;
-    let hem = 0.3 + 0.07 * abs(sin(g.x * 9.0));
-    let span = 0.3 + 0.42 * clamp((g.y - 0.3) / 1.0, 0.0, 1.0);
-    let bil = 0.1 + 0.18 * (1.0 - clamp((g.y - 0.3) / 1.0, 0.0, 1.0)) + 0.2 * g.x * g.x;
-    dd = min(dd, pp(max(max(abs(g.z + bil) - 0.012, abs(g.x) - span), max(hem - g.y, g.y - 1.36 - fl * abs(g.x))), 5));
+    // the cape, as cloth in thick air: hung from the shoulders, it drops nearly straight down at touchdown and
+    // streams out behind in the hop, at an angle set by the speed through the air; it bellies away from the back,
+    // ripples run down it toward the hem, and it spreads to the wrists as the arms open
+    let th = mix(0.12, 1.15, fly) + 0.06 * sin(ph * 1.7);
+    let T = pedUnlean(vec3f(0.0, 1.36, -0.13), lean);
+    let cd = vec3f(0.0, -cos(th), -sin(th));
+    let cn = vec3f(0.0, -sin(th), cos(th));
+    let rel = ql - T;
+    let cs = dot(rel, cd);
+    let cL = 1.0 + 0.07 * abs(sin(rel.x * 9.0));
+    let cu = clamp(cs / cL, 0.0, 1.0);
+    let belly = 0.09 * sin(3.14159 * cu) * (0.5 + fly) + 0.035 * sin(cs * 7.0 - u.time * 6.0 + rel.x * 3.0) * (0.25 + fly) * cu;
+    let cspan = 0.22 + (0.2 + 0.32 * fly) * cu;
+    let cape = max(max(abs(dot(rel, cn) + belly) - 0.012, abs(rel.x) - cspan), max(-cs, cs - cL));
+    dd = min(dd, pp(cape * 0.8, 5));
   } else {
     // a skater towed along by a tether from the cable overhead, leaning into it, pushing off side to side
     var hp: HP;
@@ -2490,14 +2505,71 @@ fn treeBk(p: vec3f) -> vec4f {
   return r;
 }
 
+// ---------- accretion: a city that was added to, patched and neglected, not generated in one pass ----------
+// On plain box buildings (modern stepped slabs, historic blocks): at street level an awning over a door, air
+// units and a vent box on the wall, a drain pipe down a corner, a recessed doorway; on some towers a floor gutted
+// to its core and columns. Everything stays inside the building's proxy box (footprint + 0.6 m, below the top), so
+// the proxy pass and the flight code's heights stay right. Materials 76 (awning), 77 (metal), 78 (bare concrete).
+fn accrete(p: vec3f, c: Cell, rIn: vec2f, gutted: bool) -> vec2f {
+  var r = rIn;
+  let w = c.w;
+  let hs = c.seed;
+  // a floor gutted to its core, on one tower in eight
+  if (gutted && c.h > 30.0 && hsh(hs, 21, 814) < 0.125) {
+    let y0 = 4.0 * floor(4.0 + hsh(hs, 22, 815) * min(c.h * 0.6, 60.0) / 4.0);
+    let band = sdBox(p - vec3f(0.0, y0 + 1.8, 0.0), vec3f(w.x + 1.0, 1.55, w.y + 1.0));
+    let core = sdBox(p, vec3f(w.x - 2.2, 1e3, w.y - 2.2));
+    let cq = vec2f(abs(p.x) - (w.x - 0.6), abs(p.z) - (w.y - 0.6));
+    let cols = length(max(cq, vec2f(0.0))) + min(max(cq.x, cq.y), 0.0) - 0.45;
+    let carve = max(max(band, -core), -cols);
+    if (-carve > r.x) { r = vec2f(-carve, 78.0); }
+  }
+  if (p.y > 12.0) { return r; }
+  // which face carries the street things: +x, -x, +z or -z
+  let side = i32(hsh(hs, 23, 816) * 4.0);
+  var q = p;
+  var hw = w;
+  if (side == 1) { q = vec3f(-p.x, p.y, -p.z); }
+  if (side == 2) { q = vec3f(p.z, p.y, -p.x); hw = w.yx; }
+  if (side == 3) { q = vec3f(-p.z, p.y, p.x); hw = w.yx; }
+  // q.x is out from the face at q.x = hw.x; q.z runs along it
+  let fx = q.x - hw.x;
+  if (fx > 1.2) { return r; }
+  let along = (hsh(hs, 24, 817) - 0.5) * max(hw.y * 2.0 - 5.0, 0.0);
+  // the doorway, cut 0.3 m in, and the awning over it, sloping down and out
+  let door = sdBox(vec3f(fx + 0.1, q.y - 1.25, q.z - along), vec3f(0.4, 1.25, 0.7));
+  let nd = max(r.x, -door);
+  if (nd > r.x) { r = vec2f(nd, 78.0); }
+  if (hsh(hs, 25, 818) < 0.7) {
+    // a canvas awning out to 0.55 m, sloping down, with a valance hanging along its front edge
+    let az0 = q.z - along;
+    var aw = sdBox(vec3f(fx - 0.27, q.y - 2.95 + fx * 0.45, az0), vec3f(0.28, 0.035, 1.35));
+    aw = min(aw, sdBox(vec3f(fx - 0.53, q.y - 2.62, az0), vec3f(0.018, 0.13, 1.35)));
+    if (aw < r.x) { r = vec2f(aw, 76.0); }
+  }
+  // air units and a vent box on the wall
+  for (var k = 0; k < 2; k++) {
+    let az = along + select(-2.6, 2.4, k == 1) + (hsh(hs, 26 + k, 819) - 0.5);
+    let ay = 4.6 + f32(k) * 1.7 + hsh(hs, 28 + k, 820) * 1.5;
+    if (abs(az) < hw.y - 0.5) {
+      let ac = sdBox(vec3f(fx - 0.22, q.y - ay, q.z - az), vec3f(0.22, 0.28, 0.42)) - 0.02;
+      if (ac < r.x) { r = vec2f(ac, 77.0); }
+    }
+  }
+  // a drain pipe down the corner
+  let pipe = length(vec2f(fx - 0.12, q.z - (hw.y - 0.25))) - 0.07;
+  if (pipe < r.x) { r = vec2f(pipe, 77.0); }
+  return r;
+}
+
 // ---------- cell SDF ----------
 fn cellSDF(p: vec3f, c: vec2i, cell: Cell) -> vec2f {
   let lq = p.xz - (vec2f(c) + 0.5) * CS;
   let lp = vec3f(lq.x - cell.off.x, p.y, lq.y - cell.off.y);
   var r = vec2f(1e5, -1.0);
   switch cell.typ {
-    case 1: { r = modern(lp, cell); }
-    case 2: { r = historic(lp, cell); }
+    case 1: { r = modern(lp, cell); if (cell.v < 0.4) { r = accrete(lp, cell, r, true); } }
+    case 2: { r = historic(lp, cell); if (cell.v < 0.45) { r = accrete(lp, cell, r, false); } }
     case 3: {
       var d = cluster(lp, cell.h, 3.4 + 2.0 * cell.s, 3 + i32(cell.v * 2.99), 2.0, 0.16, min(cell.h * 0.6, 18.0), cell.seed, (cell.v - 0.5) * 0.02, false);
       d = smin(d, (length(lp / vec3f(7.5, 4.0, 7.5)) - 1.0) * 4.0, 3.0);
@@ -4572,6 +4644,24 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
           s.emi = vec3f(0.62, 1.0, 0.78) * mix(0.08, lit, detail) * (0.3 + 1.1 * u.windows);
         }
         s.refl = (0.05 + 0.85 * pow(1.0 - ndv, 4.0)) * (1.0 - opaque * 0.75) * (1.0 - lit * 0.8);
+        // rebuilt, not generated: on one tower in three a band of floors was redone in concrete with small windows;
+        // elsewhere a pane in sixteen was replaced with glass that does not quite match
+        if (!lifeT && !mega) {
+          let b0 = floor(hsh(cseed, 9, 811) * max(cfz.h / 3.6, 1.0) * 0.7);
+          let bn = 2.0 + floor(hsh(cseed, 10, 812) * 5.0);
+          if (hsh(cseed, 11, 813) < 0.33 && fy >= b0 && fy < b0 + bn) {
+            let small = step(0.3, gx) * step(gx, 0.7) * step(0.35, gy) * step(gy, 0.72);
+            s.alb = mix(vec3f(0.3, 0.27, 0.24) * (0.8 + 0.3 * vnoise(vec2f(facU * 0.7, p.y * 0.5), 824)), glass, small);
+            s.emi *= small;
+            s.refl *= small;
+            s.spec = mix(0.15, 1.0, small);
+            s.rough = mix(0.3, 0.012, small);
+          } else if (hsh(i32(floor(fx)) + cseed, i32(floor(fy)), 825) < 0.0625) {
+            s.alb += vec3f(0.03, 0.035, 0.018);
+            s.tint = vec3f(0.88, 1.0, 0.82);
+            s.rough = 0.05;
+          }
+        }
         if (mega) {
           // the dorms, where the people are: capsule homes two to a floor, one round window each, pastel bands of
           // panelling, and nearly everyone in, lit blue and violet by their headsets at any hour
@@ -4968,6 +5058,24 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         s.emi = select(vec3f(0.1, 0.3, 1.0), vec3f(1.0, 0.08, 0.06), (cq.z < 0.0) != (fract(u.time * 3.2) > 0.5)) * 3.5;
       }
       if (!police && abs(cq.z) < 0.5) { s.emi += vec3f(0.1, 0.8, 1.0) * 0.6; }
+    }
+    // accretion (see accrete): a striped awning, grey wall metal, bare concrete where a floor was gutted
+    case 76: {
+      let hc = hsh(cseed, 25, 821);
+      let base = select(select(vec3f(0.55, 0.12, 0.1), vec3f(0.1, 0.32, 0.3), hc > 0.4), vec3f(0.6, 0.45, 0.12), hc > 0.75);
+      s.alb = mix(base, vec3f(0.75, 0.72, 0.64), step(0.5, fract(facU * 2.2)));
+      s.spec = 0.1;
+      s.trans = 0.35;
+    }
+    case 77: {
+      s.alb = vec3f(0.27, 0.28, 0.29) * (0.8 + 0.3 * vnoise(p.xz * 3.0 + vec2f(p.y), 822));
+      s.spec = 0.5;
+      s.rough = 0.2;
+      s.refl = 0.06;
+    }
+    case 78: {
+      s.alb = vec3f(0.16, 0.155, 0.15) * (0.75 + 0.4 * vnoise(vec2f(facU, p.y) * 1.3, 823));
+      s.spec = 0.05;
     }
     case 71: {
       // the Warmhouse deck: a paved square round the club, a ring of lawn under the trees, timber boards outside that
@@ -5637,7 +5745,11 @@ fn lightSurf(n: vec3f, rd: vec3f, sf: Surf, sha: f32, occ: f32) -> vec3f {
   let dif = wrap * sha;
   let hal = normalize(L - rd);
   let spe = pow(max(dot(n, hal), 0.0), 80.0) * sf.spec * max(ndl, 0.0) * sha;
-  let amb = mix(u.fogCol * 0.16 + u.skyHor * 0.08, u.skyTop * 1.1, 0.5 + 0.5 * n.y) * occ;
+  var amb = mix(u.fogCol * 0.16 + u.skyHor * 0.08, u.skyTop * 1.1, 0.5 + 0.5 * n.y) * occ;
+  // by day a cool fill in the shade (the orange sky alone put everything in one honey-brown range): lit faces warm,
+  // shaded faces cooler, so form and depth read
+  let dayK = clamp(1.0 - (u.windows - 0.35) / 0.6, 0.0, 1.0);
+  amb += vec3f(0.05, 0.085, 0.13) * dayK * (0.55 + 0.45 * n.y) * occ * (1.0 - 0.75 * sha);
   let bounce = u.sunCol * 0.03 * clamp(0.5 - 0.5 * n.y, 0.0, 1.0) * occ;
   let moonL = (vec3f(0.16, 0.5, 0.45) * max(dot(n, ev.moonA.xyz), 0.0) + vec3f(0.5, 0.18, 0.3) * max(dot(n, ev.moonB.xyz), 0.0)) * (0.08 + 0.3 * u.stars) * occ;
   var col = sf.alb * (u.sunCol * dif + amb + bounce + moonL);

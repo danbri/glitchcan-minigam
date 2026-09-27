@@ -91,6 +91,9 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 .pickCard button[hidden] { display: none; }
 .guideCap { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(150px + env(safe-area-inset-bottom, 0px)); z-index: 12; width: min(560px, calc(100vw - 32px)); box-sizing: border-box; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: var(--glass); border: 1px solid var(--edge); border-radius: 14px; color: var(--ink); font-size: 14px; line-height: 1.4; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); pointer-events: none; }
 .guideCap[hidden] { display: none; }
+.benchCard { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 40; width: min(560px, calc(100vw - 32px)); box-sizing: border-box; padding: 12px; background: var(--glass); border: 1px solid var(--edge); border-radius: 14px; color: var(--ink); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.benchCard pre { white-space: pre-wrap; font-size: 12.5px; margin: 0 0 10px; user-select: text; -webkit-user-select: text; }
+.benchCard button { font: inherit; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid var(--edge); border-radius: 10px; min-height: 44px; padding: 6px 14px; margin-right: 8px; cursor: pointer; }
 .guideCap .guideText { flex: 1; }
 .pickRing.go { animation: pickGo 2.4s ease-out forwards; }
 @keyframes pickGo { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } }
@@ -1799,14 +1802,21 @@ fn pedFigure(q: vec3f, kind: i32, ph: f32, key: i32) -> f32 {
     let h = gaitBob(ph, gaitSf(2), 0.12) - 0.05;
     let ql = q - vec3f(0.0, h, 0.0);
     var hp: HP;
-    hp.ph = ph; hp.stride = gaitS(2); hp.fl = 0.12; hp.arm = 0.22; hp.bulk = 1.3; hp.lean = 0.1; hp.spread = 0.0; hp.trail = 0.0; hp.armOut = 0.15; hp.reach = 0.0;
+    // the upper body sits on the hips like a mass on a spring: each landing (two a cycle) nods it forward, and it
+    // swings back a quarter-period later (a damped response to the footfall, not a sway on the clock)
+    let lean = 0.1 + 0.04 * sin(2.0 * ph - 1.2);
+    hp.ph = ph; hp.stride = gaitS(2); hp.fl = 0.12; hp.arm = 0.22; hp.bulk = 1.3; hp.lean = lean; hp.spread = 0.0; hp.trail = 0.0; hp.armOut = 0.15; hp.reach = 0.0;
     hp.sf = gaitSf(2); hp.bob = h; hp.roll = 0.05; hp.lag = 0.6;
     dd = min(dd, pedHuman(ql, hp));
-    let ub = pedUpper(ql, 0.1);
+    let ub = pedUpper(ql, lean);
     dd = min(dd, pp(length(ub - vec3f(0.0, 1.64, 0.02)) - 0.165, 3));
     dd = min(dd, pp(length(vec2f(length(ub.xz - vec2f(0.0, 0.0)) - 0.13, ub.y - 1.49)) - 0.035, 4));
-    dd = min(dd, pp(sdBox(ub - vec3f(0.0, 1.27, -0.2), vec3f(0.13, 0.17, 0.06)) - 0.04, 4));
-    dd = min(dd, pp(sdSeg(ub, vec3f(0.08, 1.4, -0.2), vec3f(0.1, 1.5, -0.07)) - 0.018, 2));
+    // the life-support pack hangs from its top strap and swings behind the bob, later still
+    let pv = vec3f(0.0, 1.44, -0.16);
+    let pr = rot2((ub - pv).yz, 0.16 * sin(2.0 * ph - 1.9));
+    let pk = vec3f(ub.x, pr.x, pr.y) + pv;
+    dd = min(dd, pp(sdBox(pk - vec3f(0.0, 1.27, -0.2), vec3f(0.13, 0.17, 0.06)) - 0.04, 4));
+    dd = min(dd, pp(sdSeg(ub, vec3f(0.08, 1.4, -0.19), vec3f(0.1, 1.5, -0.07)) - 0.018, 2));
     dd = min(dd, pp(sdBox(ub - vec3f(0.0, 1.3, 0.14), vec3f(0.05, 0.02, 0.01)), 6));
     for (var lg = 0; lg < 2; lg++) {
       let foot = pedFoot(hp, lg);
@@ -1834,13 +1844,21 @@ fn pedFigure(q: vec3f, kind: i32, ph: f32, key: i32) -> f32 {
     let ub = pedUpper(ql, lean);
     dd = min(dd, pp(sdEll(ub - vec3f(0.0, 1.63, -0.02), vec3f(0.1, 0.115, 0.14)), 1));
     dd = min(dd, pp(sdEll(ub - vec3f(0.0, 1.62, 0.045), vec3f(0.085, 0.06, 0.07)), 3));
-    // the cape: from the wrists down to the ankles, billowing behind, scalloped along its hem
-    let fl = 0.08 * sin(ph * 1.7);
-    let g = ub;
-    let hem = 0.3 + 0.07 * abs(sin(g.x * 9.0));
-    let span = 0.3 + 0.42 * clamp((g.y - 0.3) / 1.0, 0.0, 1.0);
-    let bil = 0.1 + 0.18 * (1.0 - clamp((g.y - 0.3) / 1.0, 0.0, 1.0)) + 0.2 * g.x * g.x;
-    dd = min(dd, pp(max(max(abs(g.z + bil) - 0.012, abs(g.x) - span), max(hem - g.y, g.y - 1.36 - fl * abs(g.x))), 5));
+    // the cape, as cloth in thick air: hung from the shoulders, it drops nearly straight down at touchdown and
+    // streams out behind in the hop, at an angle set by the speed through the air; it bellies away from the back,
+    // ripples run down it toward the hem, and it spreads to the wrists as the arms open
+    let th = mix(0.12, 1.15, fly) + 0.06 * sin(ph * 1.7);
+    let T = pedUnlean(vec3f(0.0, 1.36, -0.13), lean);
+    let cd = vec3f(0.0, -cos(th), -sin(th));
+    let cn = vec3f(0.0, -sin(th), cos(th));
+    let rel = ql - T;
+    let cs = dot(rel, cd);
+    let cL = 1.0 + 0.07 * abs(sin(rel.x * 9.0));
+    let cu = clamp(cs / cL, 0.0, 1.0);
+    let belly = 0.09 * sin(3.14159 * cu) * (0.5 + fly) + 0.035 * sin(cs * 7.0 - u.time * 6.0 + rel.x * 3.0) * (0.25 + fly) * cu;
+    let cspan = 0.22 + (0.2 + 0.32 * fly) * cu;
+    let cape = max(max(abs(dot(rel, cn) + belly) - 0.012, abs(rel.x) - cspan), max(-cs, cs - cL));
+    dd = min(dd, pp(cape * 0.8, 5));
   } else {
     // a skater towed along by a tether from the cable overhead, leaning into it, pushing off side to side
     var hp: HP;
@@ -2783,14 +2801,71 @@ fn treeBk(p: vec3f) -> vec4f {
   return r;
 }
 
+// ---------- accretion: a city that was added to, patched and neglected, not generated in one pass ----------
+// On plain box buildings (modern stepped slabs, historic blocks): at street level an awning over a door, air
+// units and a vent box on the wall, a drain pipe down a corner, a recessed doorway; on some towers a floor gutted
+// to its core and columns. Everything stays inside the building's proxy box (footprint + 0.6 m, below the top), so
+// the proxy pass and the flight code's heights stay right. Materials 76 (awning), 77 (metal), 78 (bare concrete).
+fn accrete(p: vec3f, c: Cell, rIn: vec2f, gutted: bool) -> vec2f {
+  var r = rIn;
+  let w = c.w;
+  let hs = c.seed;
+  // a floor gutted to its core, on one tower in eight
+  if (gutted && c.h > 30.0 && hsh(hs, 21, 814) < 0.125) {
+    let y0 = 4.0 * floor(4.0 + hsh(hs, 22, 815) * min(c.h * 0.6, 60.0) / 4.0);
+    let band = sdBox(p - vec3f(0.0, y0 + 1.8, 0.0), vec3f(w.x + 1.0, 1.55, w.y + 1.0));
+    let core = sdBox(p, vec3f(w.x - 2.2, 1e3, w.y - 2.2));
+    let cq = vec2f(abs(p.x) - (w.x - 0.6), abs(p.z) - (w.y - 0.6));
+    let cols = length(max(cq, vec2f(0.0))) + min(max(cq.x, cq.y), 0.0) - 0.45;
+    let carve = max(max(band, -core), -cols);
+    if (-carve > r.x) { r = vec2f(-carve, 78.0); }
+  }
+  if (p.y > 12.0) { return r; }
+  // which face carries the street things: +x, -x, +z or -z
+  let side = i32(hsh(hs, 23, 816) * 4.0);
+  var q = p;
+  var hw = w;
+  if (side == 1) { q = vec3f(-p.x, p.y, -p.z); }
+  if (side == 2) { q = vec3f(p.z, p.y, -p.x); hw = w.yx; }
+  if (side == 3) { q = vec3f(-p.z, p.y, p.x); hw = w.yx; }
+  // q.x is out from the face at q.x = hw.x; q.z runs along it
+  let fx = q.x - hw.x;
+  if (fx > 1.2) { return r; }
+  let along = (hsh(hs, 24, 817) - 0.5) * max(hw.y * 2.0 - 5.0, 0.0);
+  // the doorway, cut 0.3 m in, and the awning over it, sloping down and out
+  let door = sdBox(vec3f(fx + 0.1, q.y - 1.25, q.z - along), vec3f(0.4, 1.25, 0.7));
+  let nd = max(r.x, -door);
+  if (nd > r.x) { r = vec2f(nd, 78.0); }
+  if (hsh(hs, 25, 818) < 0.7) {
+    // a canvas awning out to 0.55 m, sloping down, with a valance hanging along its front edge
+    let az0 = q.z - along;
+    var aw = sdBox(vec3f(fx - 0.27, q.y - 2.95 + fx * 0.45, az0), vec3f(0.28, 0.035, 1.35));
+    aw = min(aw, sdBox(vec3f(fx - 0.53, q.y - 2.62, az0), vec3f(0.018, 0.13, 1.35)));
+    if (aw < r.x) { r = vec2f(aw, 76.0); }
+  }
+  // air units and a vent box on the wall
+  for (var k = 0; k < 2; k++) {
+    let az = along + select(-2.6, 2.4, k == 1) + (hsh(hs, 26 + k, 819) - 0.5);
+    let ay = 4.6 + f32(k) * 1.7 + hsh(hs, 28 + k, 820) * 1.5;
+    if (abs(az) < hw.y - 0.5) {
+      let ac = sdBox(vec3f(fx - 0.22, q.y - ay, q.z - az), vec3f(0.22, 0.28, 0.42)) - 0.02;
+      if (ac < r.x) { r = vec2f(ac, 77.0); }
+    }
+  }
+  // a drain pipe down the corner
+  let pipe = length(vec2f(fx - 0.12, q.z - (hw.y - 0.25))) - 0.07;
+  if (pipe < r.x) { r = vec2f(pipe, 77.0); }
+  return r;
+}
+
 // ---------- cell SDF ----------
 fn cellSDF(p: vec3f, c: vec2i, cell: Cell) -> vec2f {
   let lq = p.xz - (vec2f(c) + 0.5) * CS;
   let lp = vec3f(lq.x - cell.off.x, p.y, lq.y - cell.off.y);
   var r = vec2f(1e5, -1.0);
   switch cell.typ {
-    case 1: { r = modern(lp, cell); }
-    case 2: { r = historic(lp, cell); }
+    case 1: { r = modern(lp, cell); if (cell.v < 0.4) { r = accrete(lp, cell, r, true); } }
+    case 2: { r = historic(lp, cell); if (cell.v < 0.45) { r = accrete(lp, cell, r, false); } }
     case 3: {
       var d = cluster(lp, cell.h, 3.4 + 2.0 * cell.s, 3 + i32(cell.v * 2.99), 2.0, 0.16, min(cell.h * 0.6, 18.0), cell.seed, (cell.v - 0.5) * 0.02, false);
       d = smin(d, (length(lp / vec3f(7.5, 4.0, 7.5)) - 1.0) * 4.0, 3.0);
@@ -4865,6 +4940,24 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
           s.emi = vec3f(0.62, 1.0, 0.78) * mix(0.08, lit, detail) * (0.3 + 1.1 * u.windows);
         }
         s.refl = (0.05 + 0.85 * pow(1.0 - ndv, 4.0)) * (1.0 - opaque * 0.75) * (1.0 - lit * 0.8);
+        // rebuilt, not generated: on one tower in three a band of floors was redone in concrete with small windows;
+        // elsewhere a pane in sixteen was replaced with glass that does not quite match
+        if (!lifeT && !mega) {
+          let b0 = floor(hsh(cseed, 9, 811) * max(cfz.h / 3.6, 1.0) * 0.7);
+          let bn = 2.0 + floor(hsh(cseed, 10, 812) * 5.0);
+          if (hsh(cseed, 11, 813) < 0.33 && fy >= b0 && fy < b0 + bn) {
+            let small = step(0.3, gx) * step(gx, 0.7) * step(0.35, gy) * step(gy, 0.72);
+            s.alb = mix(vec3f(0.3, 0.27, 0.24) * (0.8 + 0.3 * vnoise(vec2f(facU * 0.7, p.y * 0.5), 824)), glass, small);
+            s.emi *= small;
+            s.refl *= small;
+            s.spec = mix(0.15, 1.0, small);
+            s.rough = mix(0.3, 0.012, small);
+          } else if (hsh(i32(floor(fx)) + cseed, i32(floor(fy)), 825) < 0.0625) {
+            s.alb += vec3f(0.03, 0.035, 0.018);
+            s.tint = vec3f(0.88, 1.0, 0.82);
+            s.rough = 0.05;
+          }
+        }
         if (mega) {
           // the dorms, where the people are: capsule homes two to a floor, one round window each, pastel bands of
           // panelling, and nearly everyone in, lit blue and violet by their headsets at any hour
@@ -5261,6 +5354,24 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         s.emi = select(vec3f(0.1, 0.3, 1.0), vec3f(1.0, 0.08, 0.06), (cq.z < 0.0) != (fract(u.time * 3.2) > 0.5)) * 3.5;
       }
       if (!police && abs(cq.z) < 0.5) { s.emi += vec3f(0.1, 0.8, 1.0) * 0.6; }
+    }
+    // accretion (see accrete): a striped awning, grey wall metal, bare concrete where a floor was gutted
+    case 76: {
+      let hc = hsh(cseed, 25, 821);
+      let base = select(select(vec3f(0.55, 0.12, 0.1), vec3f(0.1, 0.32, 0.3), hc > 0.4), vec3f(0.6, 0.45, 0.12), hc > 0.75);
+      s.alb = mix(base, vec3f(0.75, 0.72, 0.64), step(0.5, fract(facU * 2.2)));
+      s.spec = 0.1;
+      s.trans = 0.35;
+    }
+    case 77: {
+      s.alb = vec3f(0.27, 0.28, 0.29) * (0.8 + 0.3 * vnoise(p.xz * 3.0 + vec2f(p.y), 822));
+      s.spec = 0.5;
+      s.rough = 0.2;
+      s.refl = 0.06;
+    }
+    case 78: {
+      s.alb = vec3f(0.16, 0.155, 0.15) * (0.75 + 0.4 * vnoise(vec2f(facU, p.y) * 1.3, 823));
+      s.spec = 0.05;
     }
     case 71: {
       // the Warmhouse deck: a paved square round the club, a ring of lawn under the trees, timber boards outside that
@@ -5930,7 +6041,11 @@ fn lightSurf(n: vec3f, rd: vec3f, sf: Surf, sha: f32, occ: f32) -> vec3f {
   let dif = wrap * sha;
   let hal = normalize(L - rd);
   let spe = pow(max(dot(n, hal), 0.0), 80.0) * sf.spec * max(ndl, 0.0) * sha;
-  let amb = mix(u.fogCol * 0.16 + u.skyHor * 0.08, u.skyTop * 1.1, 0.5 + 0.5 * n.y) * occ;
+  var amb = mix(u.fogCol * 0.16 + u.skyHor * 0.08, u.skyTop * 1.1, 0.5 + 0.5 * n.y) * occ;
+  // by day a cool fill in the shade (the orange sky alone put everything in one honey-brown range): lit faces warm,
+  // shaded faces cooler, so form and depth read
+  let dayK = clamp(1.0 - (u.windows - 0.35) / 0.6, 0.0, 1.0);
+  amb += vec3f(0.05, 0.085, 0.13) * dayK * (0.55 + 0.45 * n.y) * occ * (1.0 - 0.75 * sha);
   let bounce = u.sunCol * 0.03 * clamp(0.5 - 0.5 * n.y, 0.0, 1.0) * occ;
   let moonL = (vec3f(0.16, 0.5, 0.45) * max(dot(n, ev.moonA.xyz), 0.0) + vec3f(0.5, 0.18, 0.3) * max(dot(n, ev.moonB.xyz), 0.0)) * (0.08 + 0.3 * u.stars) * occ;
   var col = sf.alb * (u.sunCol * dif + amb + bounce + moonL);
@@ -7368,8 +7483,23 @@ fn snowLayer(ro: vec3f, rd: vec3f, dep: f32, s: f32, tMax: f32, r: f32, dens: f3
   return tr;
 }
 
+// Heat shimmer: warm air rising off lamps, lit windows, stalls, vents and the Warmhouse bends the light above them.
+// The bloom texture says where the warm light is; a pixel is displaced by a rising noise in proportion to the warm
+// light just below it on the screen (heat rises), and only for things within a few hundred metres (by the depth).
+fn heatShift(uv0: vec2f) -> vec2f {
+  let below = textureSampleLevel(bloomTex, samp, uv0 + vec2f(0.0, 0.03), 0.0).rgb;
+  let warm = max(below.r - below.b * 0.8, 0.0);
+  let d0 = textureSampleLevel(srcTex, samp, uv0, 0.0).a;
+  let near = 1.0 - smoothstep(60.0, 450.0, d0);
+  let k = clamp(warm * 1.6, 0.0, 1.0) * near;
+  if (k < 0.02) { return vec2f(0.0); }
+  let q = uv0 * vec2f(u.outRes.x / u.outRes.y, 1.0) * vec2f(70.0, 34.0) + vec2f(0.0, u.time * 3.2);
+  let w = vec2f(pnoise(q, 131) - 0.5, pnoise(q * 1.3 + vec2f(7.1, 3.3), 132) - 0.5);
+  return w * k * 0.0045;
+}
+
 @fragment fn comp(@builtin(position) fc: vec4f) -> @location(0) vec4f {
-  let uv = fc.xy / u.outRes;
+  let uv = fc.xy / u.outRes + heatShift(fc.xy / u.outRes);
   let ts = 1.0 / u.res;
   var c = textureSampleLevel(srcTex, samp, uv, 0.0).rgb;
   let n0 = textureSampleLevel(srcTex, samp, uv + vec2f(ts.x, 0.0), 0.0).rgb;
@@ -7411,6 +7541,14 @@ fn snowLayer(ro: vec3f, rd: vec3f, dep: f32, s: f32, tMax: f32, r: f32, dens: f3
   }
   // warm halation around lights
   c += textureSampleLevel(bloomTex, samp, uv, 0.0).rgb * vec3f(0.36, 0.3, 0.24);
+  // by day, depth planes: near things keep their local colour and contrast, far ones sink into the haze (the fog does
+  // the far part; this lifts the near part, the day grade used to flatten both into one honey-brown range)
+  let dayK = clamp(1.0 - (u.windows - 0.35) / 0.6, 0.0, 1.0);
+  let nearK = (1.0 - smoothstep(40.0, 700.0, dep)) * dayK;
+  let farK = smoothstep(400.0, 1100.0, dep) * step(dep, 1190.0) * dayK;
+  let lc = luma(c);
+  c = max(mix(vec3f(lc), c, 1.0 + 0.55 * nearK - 0.35 * farK), vec3f(0.0));
+  c = max(c * (1.0 + 0.3 * nearK) - vec3f(lc * 0.24 * nearK), vec3f(0.0));
   c = aces(c * 1.05);
   c = pow(c, vec3f(1.0 / 2.2));
   c = mix(c, c * c * (3.0 - 2.0 * c), 0.28);
@@ -7457,9 +7595,11 @@ fn snowLayer(ro: vec3f, rd: vec3f, dep: f32, s: f32, tMax: f32, r: f32, dens: f3
 @group(0) @binding(24) var<uniform> ph: PhysU;
 // the same buffer, read-only, for drawing (a vertex shader may not bind read-write storage)
 @group(0) @binding(25) var<storage, read> partsR: array<vec4f>;
-struct PhysU { drone: vec4f, wind: vec4f, anchor: vec4f, step: vec4f };
+struct PhysU { drone: vec4f, wind: vec4f, anchor: vec4f, step: vec4f, body: vec4f, bodyV: vec4f, feet: array<vec4f, 8> };
 // drone: position, downdraft strength 0..1; wind: air velocity (x, y, z), gust; anchor: centre of the live area
-// (x, z), its radius, snow cover; step: dt, substeps, particle count, snowfall
+// (x, z), its radius, snow cover; step: dt, substeps, particle count, snowfall; body: the drone's own body as a
+// sphere (centre, radius; radius 0 when there is none), bodyV its velocity; feet: the walkers' last footfalls near
+// the camera (x, z, seconds since, strength)
 
 const NC: i32 = 96;
 const CS: f32 = 26.0;
@@ -7560,12 +7700,34 @@ fn spawn(i: u32, gen: f32) {
     }
     let rel = v - air;
     var acc = vec3f(0.0, -G, 0.0) - K_DRAG[kind] * length(rel) * rel;
+    // a foot coming down near a loose thing on the floor flicks it up and away (for a tenth of a second)
+    if (p.y < 0.35) {
+      for (var f = 0; f < 8; f++) {
+        let F = ph.feet[f];
+        if (F.w <= 0.0 || F.z > 0.12) { continue; }
+        let fd = p.xz - F.xy;
+        let fr = length(fd);
+        if (fr < 0.55) { acc += (vec3f(fd.x, 0.0, fd.y) / max(fr, 0.05) * 7.0 + vec3f(0.0, 9.0, 0.0)) * (1.0 - fr / 0.55) * F.w; }
+      }
+    }
     // litter flutters: its drag turns part of the fall sideways, and flips with its tumble
     if (kind == 2) { acc += vec3f(sin(u.time * 3.1 + A.y * 40.0), 0.0, cos(u.time * 2.3 + A.y * 30.0)) * 0.9 * min(length(rel), 1.0); }
     v += acc * dt;
     p += v * dt;
     // touching the world: out along the normal, the inward speed turned round (a little) and the sliding speed
     // reduced by friction in proportion to how hard it hit
+    // the drone's body: a thing it runs into is pushed out of it and carried along at its speed
+    if (ph.body.w > 0.0) {
+      let bq = p - ph.body.xyz;
+      let bl = length(bq);
+      if (bl < ph.body.w + P.w) {
+        let bn = bq / max(bl, 1e-4);
+        p = ph.body.xyz + bn * (ph.body.w + P.w);
+        let vr = v - ph.bodyV.xyz;
+        let vn = dot(vr, bn);
+        if (vn < 0.0) { v = ph.bodyV.xyz + vr - bn * vn * 1.4; }
+      }
+    }
     let d = world(p) - P.w;
     if (d < 0.0) {
       let nn = worldN(p);
@@ -8922,6 +9084,7 @@ function initGL(reason) {
       statusEl.innerHTML = "<b>" + (autoOn ? "Autopilot" : "Steering by hand") + "</b><span>" + placeName() + "</span><span>" + st.y.toFixed(0) + " m</span>";
       if (statsOn) statsEl.textContent = "WebGL fallback (" + reason + "). Frame " + ema.toFixed(1) + " ms, render " + canvas.width + " × " + canvas.height + " (" + Math.round(scale * 100) + "%), shadows " + (shadows ? "on" : "off") + ", world data " + Math.round(100 * (W.tNext + W.bNext) / (W.NT + W.NWF)) + "%";
     }
+    if (typeof benchTick === "function") benchTick(dt, ema, null, scale, canvas.width, canvas.height);
     requestAnimationFrame(frame);
   }
   let frameNoGL = 0;
@@ -9630,6 +9793,7 @@ function menuRoot() {
         ...[["Route: automatic", null], ["Route: street level", "low"], ["Route: over the rooftops", "high"]].map(([n, v]) => ({ label: n, check: st.forced === v, act: () => { st.forced = v; if (v === null) st.modeT = 20; st.realign = true; syncLabels(); renderMenu(); } })),
         { label: "Opening sequence when the page loads", check: introEnabled(), act: () => { try { localStorage.setItem("drift.intro", introEnabled() ? "0" : "1"); } catch (e) {} renderMenu(); } },
         { label: "Loose things with Titan physics (grit, litter, snow)", check: PHYS_ON, act: () => { PHYS_ON = !PHYS_ON; try { localStorage.setItem("drift.phys", PHYS_ON ? "1" : "0"); } catch (e) {} renderMenu(); } },
+        { label: "Camera assist in flight (frames what is ahead)", check: ASSIST.on, act: () => { ASSIST.on = !ASSIST.on; taleStore("drift.assist", ASSIST.on); renderMenu(); } },
         { label: "Focus on what matters (depth of field)", check: FOCUS.on, act: () => { FOCUS.on = !FOCUS.on; try { localStorage.setItem("drift.focus", FOCUS.on ? "1" : "0"); } catch (e) {} renderMenu(); } },
         { label: "Follow the drone (see yourself)", check: FOLLOW, act: () => { FOLLOW = !FOLLOW; try { localStorage.setItem("drift.follow", FOLLOW ? "1" : "0"); } catch (e) {} renderMenu(); } },
         { label: "On-screen gamepad", check: PAD.on, act: () => { padShow(!PAD.on); renderMenu(); } },
@@ -9755,6 +9919,7 @@ function fillSpaceData(cam, sunT, sunCol, alpha, fov, time) {
 const INTRO = { on: false, path: null };
 function introEnabled() {
   if (globalThis.__noIntro) return false;
+  if (typeof location !== "undefined" && /[?&]bench\b/.test(location.search || "")) return false;
   try { return localStorage.getItem("drift.intro") !== "0"; } catch (e) { return true; }
 }
 // the opening page: backstory and a button, over Titan from orbit; its tap is the gesture that lets sound start
@@ -12149,6 +12314,71 @@ function pickInit(canvas) {
   canvas.addEventListener("pointercancel", cancel);
 }
 
+// ---------- a light camera assist in free flight ----------
+// While you fly over the city (NAV.mode "surface") a quiet cinematographer looks ahead for something worth framing (a
+// landmark, a megatower, a Life tower), and turns the VIEW a little so it sits on a third of the frame, with its
+// upper part in shot, the horizon settling level and the lens on it. It never steers the drone and never locks on:
+// at most 0.15 rad of yaw and 0.12 of pitch, eased over seconds, and a third of that while you are steering. Menu >
+// View > "Camera assist" switches it off. Why and how it was tuned: the drift-city skill, "Camera assist".
+const ASSIST = { on: taleFetch("drift.assist") !== false, subj: null, score: 0, t: 0, ay: 0, ap: 0, level: 0, cands: null, focus: 0 };
+// things worth framing, found once: the placed landmarks, the megatowers, the tallest Life tower
+function assistCandidates() {
+  if (ASSIST.cands) return ASSIST.cands;
+  const c = pickLandmarks().map((L) => ({ name: L.name, x: L.x, z: L.z, y0: 0, h: L.h, r: L.r }));
+  for (let bz = -12; bz <= 12; bz++) for (let bx = -12; bx <= 12; bx++) {
+    if (!giantHas(bx, bz)) continue;
+    const x = (bx + 0.5) * BIG, z = (bz + 0.5) * BIG;
+    if (c.some((o) => Math.hypot(o.x - x, o.z - z) < 60)) continue;
+    c.push({ name: "megatower", x, z, y0: 0, h: giantH(bx, bz), r: 40 });
+  }
+  if (typeof guideLifeTower === "function") { const L = guideLifeTower(); if (L) c.push({ ...L }); }
+  for (const o of c) o.y0 = Math.max(terrSurfAt(o.x, o.z), 0);
+  return (ASSIST.cands = c);
+}
+// the best subject ahead: big in the view, near the heading, in clear sight
+function assistPick() {
+  const hx = Math.cos(st.yaw), hz = Math.sin(st.yaw);
+  let best = null, bs = 0;
+  for (const o of assistCandidates()) {
+    const dx = o.x - st.x, dz = o.z - st.z, d = Math.hypot(dx, dz);
+    if (d < 70 || d > 1600) continue;
+    const ahead = (dx * hx + dz * hz) / d;
+    if (ahead < 0.8) continue;
+    const size = Math.max(o.h, o.r * 2) / d;
+    let s = size * (ahead - 0.8) * 5;
+    if (o === ASSIST.subj) s *= 1.6;
+    if (s > bs) { bs = s; best = o; }
+  }
+  if (best && typeof pickClear === "function") {
+    const aim = [best.x, best.y0 + best.h * 0.55, best.z];
+    if (!pickClear([st.x, st.y, st.z], aim, Math.max(best.r, 20))) { best = null; bs = 0; }
+  }
+  ASSIST.subj = bs > 0.02 ? best : null; ASSIST.score = bs;
+}
+// each frame: ease the view offsets toward the composition, or back to zero
+function assistStep(dt, steering) {
+  const flying = ASSIST.on && NAV.mode === "surface" && NAV.spaceMix < 0.01;
+  ASSIST.t -= dt;
+  if (flying && ASSIST.t <= 0) { ASSIST.t = 0.5; assistPick(); }
+  let ty = 0, tp = 0, lv = 0, fd = 0;
+  const S = flying ? ASSIST.subj : null;
+  if (S) {
+    const w = steering ? 0.35 : 1;
+    const dx = S.x - st.x, dz = S.z - st.z, d = Math.hypot(dx, dz);
+    let rel = Math.atan2(dz, dx) - st.yaw; rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+    // on the third of the frame on the side it is already on
+    const third = Math.atan(0.72 * (innerWidth / innerHeight) / 3);
+    ty = clampv((rel - Math.sign(rel || 1) * third) * 0.35, -0.15, 0.15) * w;
+    const aimY = S.y0 + S.h * 0.55;
+    tp = clampv((Math.atan2(aimY - st.y, d) - st.pitch) * 0.3, -0.12, 0.12) * w;
+    lv = 0.6 * w;
+    if (Math.abs(rel - ty) < 0.3) fd = Math.hypot(d, aimY - st.y);
+  }
+  const k = Math.min(1, dt * (flying ? 0.7 : 3));
+  ASSIST.ay += (ty - ASSIST.ay) * k; ASSIST.ap += (tp - ASSIST.ap) * k; ASSIST.level += (lv - ASSIST.level) * Math.min(1, dt);
+  ASSIST.focus = fd;
+}
+
 // ---------- the ship's computer: guided flights with narration ----------
 // Menu > Guided flight (seven stops) or Full tour (fifteen, into four of the bars). The computer flies you over the
 // city and says what you are looking at: recorded lines (audio/computer/NN.mp3; how they were made and how to add
@@ -12543,7 +12773,7 @@ function fail(msg, detail) {
 }
 
 const presets = [
-  { name: "Amber day", sun: [0.62, 0.3, 0.42], sunCol: [2.7, 1.65, 0.7], skyTop: [0.22, 0.11, 0.045], skyHor: [0.82, 0.47, 0.18], fog: [0.5, 0.29, 0.11], den: 0.0019, win: 0.35, stars: 0.0 },
+  { name: "Amber day", sun: [0.62, 0.3, 0.42], sunCol: [2.7, 1.75, 0.88], skyTop: [0.22, 0.11, 0.045], skyHor: [0.82, 0.47, 0.18], fog: [0.5, 0.29, 0.11], den: 0.0019, win: 0.35, stars: 0.0 },
   { name: "Saturnshine", sun: [0.55, 0.08, -0.6], sunCol: [1.05, 0.58, 0.27], skyTop: [0.1, 0.05, 0.05], skyHor: [0.42, 0.22, 0.13], fog: [0.28, 0.16, 0.1], den: 0.003, win: 0.95, stars: 0.25 },
   { name: "Moonglow night", sun: [-0.3, 0.55, 0.45], sunCol: [0.2, 0.42, 0.45], skyTop: [0.008, 0.02, 0.035], skyHor: [0.05, 0.065, 0.08], fog: [0.045, 0.06, 0.07], den: 0.0034, win: 1.35, stars: 0.8 },
   { name: "Methane snow", sun: [-0.5, 0.35, 0.6], sunCol: [1.5, 1.15, 0.72], skyTop: [0.46, 0.33, 0.2], skyHor: [0.68, 0.53, 0.37], fog: [0.58, 0.45, 0.3], den: 0.0042, win: 0.4, stars: 0.0 },
@@ -12821,7 +13051,7 @@ function walkersNear(x0, z0, rad, t) {
 }
 // footfalls, each from the foot that lands, when it lands: a walking kind's foot comes down at every half cycle of
 // its gait; a cape glider lands once per hop; a skater pushes off at every half cycle
-const FEET = { last: new Map(), list: [], t: 0, count: 0 };
+const FEET = { last: new Map(), list: [], t: 0, count: 0, falls: [], fi: 0 };
 function audioFeet(dt) {
   if (NAV.spaceMix > 0.5 || AUW.alt > 120) { FEET.list = []; return; }
   const l = AU.ready ? AU.lpos : [st.x, st.y, st.z], play = AU.ready && AU.on;
@@ -12837,6 +13067,8 @@ function audioFeet(dt) {
     seen.set(w.id, step);
     if (prev === undefined || step === prev || made >= 4) continue;
     made++; FEET.count++;
+    // for the physics: a foot came down here (a cape glider's landing, an exoskeleton's heavy tread flick more)
+    FEET.falls[FEET.fi++ % 8] = { x: w.x, z: w.z, t: clock, s: w.kind === 0 ? 1.4 : w.kind === 3 ? 1.2 : w.kind === 1 ? 0.6 : 1 };
     if (!play) continue;
     const at = [w.x, 0.05, w.z], g = 0.35 + 0.25 * hsh(w.id, step, 7);
     if (w.kind === 0) auClank(at, g);
@@ -13276,7 +13508,8 @@ function update(dt) {
   st.aL += (ax_ * -hz + az_ * hx - st.aL) * lp;
   st.vyS += (st.vy - st.vyS) * lp;
   const pitchT = Math.atan2(st.vyS, spd2) * 0.45 - st.aF / 9.81 * 0.25 + (low ? 0.03 : -0.13) + uy * 0.12 + fbm1(clock * 0.8, 96) * 0.008 * gust;
-  const rollT = clampv(st.aL / 9.81 * 1.1, -0.35, 0.35) + fbm1(clock * 0.7, 99) * 0.012 * gust;
+  // the assist lets the horizon settle when you are cruising (a bank while turning, level again after)
+  const rollT = (clampv(st.aL / 9.81 * 1.1, -0.35, 0.35) + fbm1(clock * 0.7, 99) * 0.012 * gust) * (1 - 0.6 * ASSIST.level);
   // critically damped springs: the view eases in and out instead of snapping
   const wp = 2.0, wr = 2.4;
   st.pv += (wp * wp * (pitchT - st.pitch) - 2 * wp * st.pv) * dt; st.pitch += st.pv * dt;
@@ -13288,8 +13521,10 @@ function update(dt) {
 }
 
 function cameraVectors() {
-  const cp = Math.cos(st.pitch);
-  const f = [Math.cos(st.yaw) * cp, Math.sin(st.pitch), Math.sin(st.yaw) * cp];
+  // the camera assist (assist.js) turns the view, never the drone
+  const yaw = st.yaw + ASSIST.ay, pitch = st.pitch + ASSIST.ap;
+  const cp = Math.cos(pitch);
+  const f = [Math.cos(yaw) * cp, Math.sin(pitch), Math.sin(yaw) * cp];
   const r = norm3([-f[2], 0, f[0]]);
   const up = norm3([r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]]);
   const c = Math.cos(st.roll), s = Math.sin(st.roll);
@@ -13784,8 +14019,8 @@ async function init() {
   const evBuf = device.createBuffer({ size: 864 + 1024, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   if (PHYS) {
     PHYS.buf = device.createBuffer({ size: PHYS.n * 48, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
-    PHYS.ubuf = device.createBuffer({ size: 64, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-    PHYS.u = new Float32Array(16);
+    PHYS.ubuf = device.createBuffer({ size: 224, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    PHYS.u = new Float32Array(56);
     PHYS.bg = device.createBindGroup({ layout: PHYS.phBGL, entries: [{ binding: 0, resource: { buffer: ubuf } }, { binding: 1, resource: cellTex.createView() },
       { binding: 23, resource: { buffer: PHYS.buf } }, { binding: 24, resource: { buffer: PHYS.ubuf } }] });
   }
@@ -14022,6 +14257,7 @@ async function init() {
     }
     if (!inSpace) syncCells();
     const tod = currentTod();
+    assistStep(dtS, clock - lastInput < 1.5);
     let cam = cameraVectors();
     if (inSpace) cam = { f: NAV.cam.F, r: NAV.cam.R, up: NAV.cam.Up };
     taleHotspots(dtS, cam, 0.72);
@@ -14087,9 +14323,12 @@ async function init() {
     let ft = inSpace ? 0 : focusTarget([U[4], U[5], U[6]], cam.f);
     // arriving at something picked: the lens on it
     if (!ft && NAV.mode === "visit" && NAV.visit && NAV.visit.subject && NAV.visit.t > NAV.visit.T * 0.8) ft = NAV.visit.subject.dist;
+    // in flight, the assist's subject when it is near the middle of the view (the lens stays deep)
+    const assistFocus = !ft && NAV.mode === "surface" && ASSIST.focus > 0;
+    if (assistFocus) ft = ASSIST.focus;
     FOCUS.d = ft > 0 ? (FOCUS.d > 0 ? FOCUS.d + (ft - FOCUS.d) * Math.min(1, dt * 3) : ft) : 0;
     // shallow focus is for story moments; in flight the lens goes deep, so you can judge where you are going
-    const fs = !FOCUS.on || inSpace ? 0 : NAV.mode === "visit" || FOCUS.d > 0 ? 1 : NAV.mode === "surface" ? 0.3 * clampv(1 - (AUW.speed || 0) / 25, 0, 1) : 0;
+    const fs = !FOCUS.on || inSpace ? 0 : NAV.mode === "visit" || (FOCUS.d > 0 && !assistFocus) ? 1 : NAV.mode === "surface" ? 0.3 * clampv(1 - (AUW.speed || 0) / 25, 0, 1) : 0;
     FOCUS.s += (fs - FOCUS.s) * Math.min(1, dt * 2);
     U[66] = FOCUS.d; U[67] = FOCUS.s;
     device.queue.writeBuffer(ubuf, 0, U);
@@ -14153,6 +14392,13 @@ async function init() {
         wind.x * 0.6, 0, wind.z * 0.6, wind.gust,
         U[4], U[6], 38, WX.cover || 0,
         Math.min(dt, 1 / 30), 2, PHYS.n, WX.rain || 0]);
+      // the drone's body (behind the view when it follows the drone; at the camera otherwise), and its velocity
+      const bodyR = NAV.mode === "space" || NAV.mode === "free" ? 0 : 0.42;
+      const bv = PHYS.lastBody ? [(st.x - PHYS.lastBody[0]) / Math.max(dt, 1e-3), (st.y - PHYS.lastBody[1]) / Math.max(dt, 1e-3), (st.z - PHYS.lastBody[2]) / Math.max(dt, 1e-3)] : [0, 0, 0];
+      PHYS.lastBody = [st.x, st.y, st.z];
+      PHYS.u.set([st.x, st.y - 0.45, st.z, bodyR, clampv(bv[0], -40, 40), clampv(bv[1], -40, 40), clampv(bv[2], -40, 40), 0], 16);
+      // the walkers' last footfalls (audioFeet records them)
+      for (let i = 0; i < 8; i++) { const F = FEET.falls[i]; PHYS.u.set(F ? [F.x, F.z, clock - F.t, F.s] : [0, 0, 99, 0], 24 + i * 4); }
       device.queue.writeBuffer(PHYS.ubuf, 0, PHYS.u);
       const c = enc.beginComputePass({ timestampWrites: tsw(9, measure) });
       c.setPipeline(PHYS.step); c.setBindGroup(0, PHYS.bg); c.dispatchWorkgroups(PHYS.n / 64); c.end(); ran[9] = 1;
@@ -14179,6 +14425,7 @@ async function init() {
     }
     device.queue.submit([enc.finish()]);
     if (frameNo === 0) showControlsHint();
+    benchTick(dt, ema, hasTS ? gpuMs : null, scale, T.w, T.h);
     if (carry) { carry.destroy(); carry = null; carryBG = null; }
     if (measure) {
       const ranSnap = ran.slice();
@@ -14236,6 +14483,46 @@ function syncLabels() {
   document.getElementById("bRoute").setAttribute("aria-label", "Route: " + routeNames[r] + ". Activate to switch between automatic, streets and rooftops.");
 }
 let uiHidden = false, hintTimer = 0;
+// ---------- ?bench: a speed test to run on a phone ----------
+// Open the page with ?bench and it runs four fixed 10-second stages (a crowded market with walkers and loose things,
+// a street corner, a rooftop view, then flying on), measures the frame time and, where the browser allows, the GPU
+// time of each pass, and shows the numbers with a Copy button. Nothing is sent anywhere.
+const BENCH = { on: typeof location !== "undefined" && /[?&]bench\b/.test(location.search || ""), stage: -1, t: 0, rows: [], acc: null };
+const BENCH_STAGES = [["market_3", "Night market, walkers and loose things"], ["street_1", "Street corner"], ["roof_0", "Rooftop view"], ["fly", "Flying on over the city"]];
+function benchTick(dt, frameMs, gpu, scale, w, h) {
+  if (!BENCH.on || BENCH.stage >= BENCH_STAGES.length) return;
+  BENCH.t -= dt;
+  if (BENCH.stage >= 0 && BENCH.t < 7) {
+    const a = BENCH.acc;
+    a.n++; a.f += frameMs; a.worst = Math.max(a.worst, frameMs);
+    if (gpu) { a.g += gpu[0] + gpu[1] + gpu[2] + gpu[3] + gpu[4] + gpu[5] + gpu[6] + gpu[7]; a.scene += gpu[3]; a.phys += gpu[9] || 0; a.gn++; }
+    a.scale = scale; a.res = w + "x" + h;
+  }
+  if (BENCH.t > 0) return;
+  if (BENCH.stage >= 0) {
+    const a = BENCH.acc;
+    BENCH.rows.push(BENCH_STAGES[BENCH.stage][1] + ": frame " + (a.f / Math.max(a.n, 1)).toFixed(1) + " ms (worst " + a.worst.toFixed(0) + "), render " + a.res + " (" + Math.round(a.scale * 100) + "%)" +
+      (a.gn ? ", GPU " + (a.g / a.gn).toFixed(1) + " ms (scene " + (a.scene / a.gn).toFixed(1) + ", physics " + (a.phys / a.gn).toFixed(2) + ")" : ", GPU timing not exposed"));
+  }
+  BENCH.stage++;
+  if (BENCH.stage >= BENCH_STAGES.length) { benchReport(); return; }
+  BENCH.t = 10; BENCH.acc = { n: 0, f: 0, worst: 0, g: 0, scene: 0, phys: 0, gn: 0, scale: 1, res: "" };
+  const id = BENCH_STAGES[BENCH.stage][0];
+  if (id === "fly") flyOn(); else hopPlace(id);
+  showHint("Speed test " + (BENCH.stage + 1) + " of " + BENCH_STAGES.length + ": " + BENCH_STAGES[BENCH.stage][1], 3000);
+}
+function benchReport() {
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const text = "Drift city speed test\n" + BENCH.rows.join("\n") + "\n" + (GPUREF.device ? "WebGPU, physics " + (PHYS_ON ? "on" : "off") : "WebGL fallback (no walkers, rooms or physics)") + ". " + ua;
+  console.log(text);
+  if (!document.body || !document.body.appendChild || !document.createElement("div").querySelector) return;
+  const c = document.createElement("div"); c.className = "benchCard"; c.setAttribute("role", "dialog"); c.setAttribute("aria-label", "Speed test result");
+  c.innerHTML = '<pre></pre><span><button type="button" class="bcopy">Copy</button><button type="button" class="bclose">Close</button></span>';
+  c.querySelector("pre").textContent = text;
+  c.querySelector(".bcopy").addEventListener("click", () => { try { navigator.clipboard.writeText(text); showHint("Copied.", 1500); } catch (e) {} });
+  c.querySelector(".bclose").addEventListener("click", () => c.remove());
+  document.body.appendChild(c);
+}
 function showHint(text, ms) {
   hint.textContent = text;
   hint.classList.remove("hidden");
@@ -14327,7 +14614,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { WX, EVN, LIFE, MORSE, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { WX, EVN, LIFE, MORSE, ASSIST, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 
