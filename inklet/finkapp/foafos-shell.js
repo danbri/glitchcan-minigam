@@ -721,6 +721,7 @@ bus.subscribe('app.close', (e) => {
     if (closed.includes(runnerId)) { storyWorlds.delete(runnerId); continue; }
     if (!w.nodeId || !closed.includes(w.nodeId)) continue;
     storyWorlds.delete(runnerId);
+    w.frame.closest?.('.foafos-window')?.classList.remove('foafos-with-world');
     try {
       w.frame.contentWindow?.postMessage({ type: 'story.event', event: 'world.closed', detail: { world: w.game } }, '*');
     } catch (err) { /* the runner is gone too */ }
@@ -2620,6 +2621,7 @@ function buildUI() {
               // it is a world and not a game with a story of its own.
               window.FinkMinigames?.startMinigame?.(chk.game, hostArgs.mode || 'normal',
                 hostArgs.controls || null, { ...appArgs, world: '1' });
+              win.classList.add('foafos-with-world');   // phone: the world gets the top half
               bus.publish('story.world', {
                 summary: `${app.name} opened ${chk.entry.name || chk.game} as the world beside its story`,
                 appId: app.id, world: chk.game,
@@ -2643,6 +2645,7 @@ function buildUI() {
               reply({ ok: true, op, sent });
             } else if (op === 'close') {
               storyWorlds.delete(runnerNodeId);
+              win.classList.remove('foafos-with-world');
               if (world.nodeId && apps.get(world.nodeId)) apps.close(world.nodeId);
               reply({ ok: true, op });
             } else {

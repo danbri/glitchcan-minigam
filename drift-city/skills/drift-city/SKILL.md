@@ -761,7 +761,9 @@ works too: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/story/peraspera.
   now also runs in the WebGL fallback's frame loop, which never called it. `want_time` and `want_weather` arrive
   through `onVariableChanged` (`worldVar`). Clue finding is off: the glint needs the page's own panel open, and a
   world may not move the story, so the story's text routes offer the clues. In foafos (world or game) the menu has
-  no Sound item: the shell's volume and mute reach the city through `hostGain`.
+  no Sound item: the shell's volume and mute reach the city through `hostGain`. On a phone the story window
+  takes the bottom half and the city shows above it (the shell's `foafos-with-world`); the city's own controls
+  at the bottom of its frame are then under the story.
   Not done: controls. The city keeps its own on-screen sticks; the foafos input service has one digital stick and
   four directions, and the city needs two analog sticks (an owner decision).
 - **`src/host.js`** (built in before `main.js`) answers the shell when the page is in a frame with the SDK
@@ -794,8 +796,8 @@ works too: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/story/peraspera.
   Loading a head (5 MB, 20,000 splats) and its first poses block the page's thread: measured round trips of
   288, 450 and 577 ms against 4 to 9 ms otherwise, and a close then kept nothing (two test runs in three).
   Not fixed; the shell's rule is that a window that will not shut is worse than a lost save.
-- Tests: `inklet/finkapp/test/e2e-drift.mjs` (26 checks; the world ones are §15-23: the story in the runner, the
-  city beside it under the dream session, the first step's tags, variables both ways through the shell, a choice
+- Tests: `inklet/finkapp/test/e2e-drift.mjs` (27 checks; the world ones are §15-23: the story in the runner, the
+  city beside it under the dream session, the phone layout, the first step's tags, variables both ways through the shell, a choice
   moving the city and its recorded line, the menu, closing the city, and a restore that reopens the world at the
   last scene. Before them, the game path: the argument filter; the city on Per Aspera as a node
   with its args; the Task Manager row; pause; master volume; a story save kept in memory, snapshotted, kept on

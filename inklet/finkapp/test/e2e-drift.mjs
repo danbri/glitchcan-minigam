@@ -266,6 +266,15 @@ try {
     wn && wn.parent === 'story' && wn.caps === 'audio,vars:read,vars:write' && !wn.yielded
       ? pass('the city opens beside the story, not over it: a node under the dream session holding audio and vars, and the story window stays on screen')
       : fail(`world node: ${JSON.stringify(wn)}`);
+    // on a phone the story window is full-bleed; with a world it leaves the top half to the city
+    await wpage.setViewportSize({ width: 390, height: 844 });
+    await wait(400);
+    const phoneTop = await wpage.evaluate(() => Math.round(document.querySelector('.foafos-window iframe[src*="storyrunner"]')
+      ?.closest('.foafos-window')?.getBoundingClientRect().top ?? -1));
+    await wpage.setViewportSize({ width: 1000, height: 760 });
+    Math.abs(phoneTop - 422) <= 2
+      ? pass(`on a phone the story window leaves the top half to the city (its top at ${phoneTop} of 844 px)`)
+      : fail(`phone layout with a world: story window top ${phoneTop}, expected 422`);
 
     // 17. the story's first step drives the city, which has no story of its own
     const c1 = await wcity.evaluate(() => ({ world: __drift.host().world, scene: __drift.TALE.scene, place: __drift.TALE.place,
@@ -310,9 +319,11 @@ try {
     await wpage.evaluate((id) => FoafOS.apps.close(id), wid);
     const told = await wr.waitForFunction(() => window.__storyrunner.state.world === null, null, { timeout: 15000 }).then(() => true, () => false);
     const still = await choices(wr);
-    told && still.length > 0
-      ? pass('closing the city tells the story (world.closed); the story goes on as text, with its choices')
-      : fail(`after closing the city: ${JSON.stringify({ told, still })}`);
+    const fullAgain = await wpage.evaluate(() => !document.querySelector('.foafos-window iframe[src*="storyrunner"]')
+      ?.closest('.foafos-window')?.classList.contains('foafos-with-world'));
+    told && still.length > 0 && fullAgain
+      ? pass('closing the city tells the story (world.closed); the story goes on as text, with its choices, and has the whole phone screen again')
+      : fail(`after closing the city: ${JSON.stringify({ told, still, fullAgain })}`);
     werrs.length === 0 ? pass('world: no page errors') : fail(`world page errors: ${werrs.slice(0, 3).join(' · ')}`);
     await wpage.close();
   }
