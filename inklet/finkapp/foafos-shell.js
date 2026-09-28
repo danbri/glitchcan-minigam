@@ -1136,7 +1136,7 @@ function buildUI() {
       <h4>APPS</h4>
       <div class="foafos-row">
         <button type="button" id="foafos-home-btn" title="All apps (Alt+H)">⊞ Apps</button>
-        <button type="button" id="foafos-switch-btn" title="Running apps (Alt+Tab)">⧉ Running</button>
+        <button type="button" id="foafos-switch-btn" title="Task Manager: what is running (Alt+Tab)">⧉ Task Manager</button>
       </div>
     </section>
     <section id="foafos-caps-wrap">
@@ -1282,7 +1282,7 @@ function buildUI() {
   // The token contract, read from the live document AFTER the skin is set.
   // getComputedStyle is the only honest source: a skin may define a token
   // in any of several rules, and only the cascade knows which won.
-  const SKIN_TOKENS = ['--sk-bg', '--sk-bg-figure', '--sk-ink', '--sk-dim',
+  const SKIN_TOKENS = ['--sk-bg', '--sk-bg-figure', '--sk-ink', '--sk-ink-dim',
     '--sk-accent', '--sk-accent-ink', '--sk-line', '--sk-font-ui',
     '--sk-font-body', '--sk-size', '--sk-radius', '--sk-choice-bg',
     '--sk-choice-ink', '--sk-choice-line', '--sk-shadow'];
@@ -3011,225 +3011,621 @@ function buildUI() {
     }).observe(document.body, { childList: true });
   }
 
-  // ── SWITCHER: recents ─────────────────────────────────────────────
-  // Alt-Tab on a desktop, the square button on Android, a double-tap of
-  // Home on a phone, the source list on a TV. One list of what is
-  // running, one keypress to move between them.
-  function openSwitcher() {
-    const old = document.getElementById('foafos-switcher');
-    if (old) { old.remove(); return null; }
-    const running = collectRunning();
-    const sw = document.createElement('div');
-    sw.id = 'foafos-switcher';
-    sw.className = 'foafos-overlay';
-    sw.setAttribute('role', 'dialog');
-    sw.setAttribute('aria-modal', 'true');
-    sw.setAttribute('aria-label', 'Running apps');
-    // Count furniture separately. Chrome apps really are running apps and
-    // belong in this list, but "Running 4" when the player has one story
-    // open and three status bars is a true number that reads as a wrong
-    // one.
-    // The root row and the WMBling rack are structure, not workload —
-    // neither counts as "running an app".
-    const rackId = FoafOS.wmblingNode?.id;
-    const chromeCount = running.filter(r =>
-      r.node?.surface === 'chrome' && r.node.id !== rackId).length;
-    const appCount = running.filter(r =>
-      r.node?.id !== FoafOS.rootNode?.id && r.node?.id !== rackId
-      && r.node?.surface !== 'chrome').length;
-    const tally = chromeCount ? `${appCount} + ${chromeCount} chrome` : String(appCount);
-    sw.innerHTML = `<div class="foafos-overlay-head">
-        <h2>Running <span class="hint">${tally}</span></h2>
-        <button type="button" class="foafos-overlay-close" aria-label="Close switcher">✕</button>
-      </div><div class="foafos-switch-cards" role="list"></div>`;
-    const cards = sw.querySelector('.foafos-switch-cards');
-    if (!running.length) {
-      cards.innerHTML = '<p class="hint">Nothing else is running. Open something from Apps.</p>';
-    }
-    // Rows are the TREE, indented — because "5 running" meaning five
-    // unrelated things is a different fact from five things where four
-    // were opened by the first, and only one of those is true.
-    //
-    // WALLS between the subtrees directly under the root: each of those
-    // and its descendants share one sandbox lineage; the next one is the
-    // other side of a partition. The brick row IS the security diagram —
-    // everything between two walls can only talk through the shell.
-    // Chrome furniture needs no clustering hack any more: it is ONE
-    // subtree under the WMBling rack, so it gets one wall structurally.
-    let firstGroup = true;
-    for (const r of running) {
-      if ((r.depth || 0) === 1) {
-        if (!firstGroup) {
-          const wall = document.createElement('div');
-          wall.className = 'foafos-switch-wall';
-          wall.setAttribute('role', 'separator');
-          wall.setAttribute('aria-label', 'sandbox partition');
-          wall.innerHTML = '<span aria-hidden="true">🧱🧱🧱🧱🧱🧱🧱🧱🧱🧱🧱🧱</span>';
-          cards.appendChild(wall);
-        }
-        firstGroup = false;
-      }
-      const row = document.createElement('div');
-      row.className = 'foafos-switch-row';
-      row.setAttribute('role', 'listitem');
-      row.style.setProperty('--depth', String(r.depth || 0));
+  // ── TASK MANAGER (the switcher) ───────────────────────────────────
+  // What is running, what opened it, and what it may do. The format is the
+  // one people know from Windows' Task Manager, macOS's Activity Monitor and
+  // Chrome's task manager: a table, one row per running thing, sortable
+  // columns, a filter, and the verbs a person reaches for (switch to, pause,
+  // close, details). The rows are also the app TREE: a child sits under the
+  // node that opened it, so "close" taking three things is visible before it
+  // is pressed, and sorting reorders siblings only. Alt+Tab and the drawer's
+  // button open it; the element id and FoafOS.openSwitcher() are unchanged.
+  const TM_KIND = {
+    root: 'Installation', story: 'Story', window: 'Window', stage: 'Game stage',
+    chrome: 'Chrome', panel: 'Shell panel',
+  };
+  // Quick filters for the questions people ask: what is paused, and what may
+  // keep data, hold a credential, or change the story's variables.
+  const TM_ONLY = [['paused', 'Paused'], ['storage', 'Storage'], ['secrets', 'Secrets'],
+                   ['vars:write', 'Writes variables']];
+  const TM_COLS = [['name', 'Name'], ['kind', 'Kind'], ['state', 'State'],
+                   ['powers', 'Powers'], ['place', 'On close']];
+  // The view survives closing and reopening. Showing chrome also survives a
+  // reload, per device: it is a developer's preference, not a reader's.
+  const tm = { sort: null, dir: 1, query: '', only: new Set(), collapsed: new Set(),
+               details: new Set(), chrome: false };
+  try { tm.chrome = localStorage.getItem('foafos.tm.chrome') === '1'; } catch (e) { /* no storage */ }
 
-      const c = document.createElement('button');
-      c.type = 'button';
-      c.className = 'foafos-switch-card';
-      c.innerHTML = `<span class="ico" aria-hidden="true">${r.icon}</span>
-        <span class="ttl"></span><span class="sub"></span>`;
-      c.querySelector('.ttl').textContent = r.label;
-      c.querySelector('.sub').textContent = r.detail || '';
-      const held = r.node ? [...r.node.capabilities] : [];
-      c.setAttribute('aria-label',
-        `${r.label}${r.detail ? `, ${r.detail}` : ''}${held.length ? ` (${held.join(', ')})` : ''}`
-        + `${r.depth ? `, opened by ${r.parentLabel}` : ''}`);
-      if (held.length) c.title = `Holds: ${held.join(', ')}`;
-      c.addEventListener('click', () => { r.focus(); sw.remove(); });
-      row.appendChild(c);
-
-      if (r.node) {
-        const isRoot = r.node.id === FoafOS.rootNode?.id;
-        const kin = FoafOS.apps.descendants(r.node.id).length;
-        const withKin = kin ? ` and ${kin} beneath it` : '';
-
-        // ⓘ — provenance and capabilities, on demand
-        const info = document.createElement('button');
-        info.type = 'button';
-        info.className = 'foafos-switch-act foafos-switch-info';
-        info.textContent = 'ⓘ';
-        info.setAttribute('aria-expanded', 'false');
-        info.setAttribute('aria-label', `Details for ${r.label}: origin and capabilities`);
-        info.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const open = row.nextElementSibling?.classList?.contains('foafos-app-info');
-          if (open) { row.nextElementSibling.remove(); info.setAttribute('aria-expanded', 'false'); return; }
-          const panel = buildAppInfo(r.node, r.label);
-          row.after(panel);
-          info.setAttribute('aria-expanded', 'true');
-        });
-
-        // PAUSE is a tristate: running → the app alone → the app with
-        // its whole tree → running. Each press does the next thing; the
-        // label always says exactly what that is.
-        const kids = FoafOS.apps.descendants(r.node.id);
-        const kidsAllSusp = kids.length > 0 && kids.every(k => k.suspended);
-        const sus = document.createElement('button');
-        sus.type = 'button';
-        sus.className = 'foafos-switch-act';
-        let glyph, act, label;
-        if (!r.node.suspended) {
-          glyph = '⏸'; act = () => setNodeSuspended(r.node.id, true);
-          label = `Pause ${r.label}${kin ? ' (press again to pause its tree too)' : ''}`;
-        } else if (kin && !kidsAllSusp) {
-          glyph = '⏸⧉'; act = () => setSubtreeSuspended(r.node.id, true);
-          label = `Pause ${r.label}${withKin}`;
-        } else {
-          glyph = '▶'; act = () => setSubtreeSuspended(r.node.id, false);
-          label = `Resume ${r.label}${withKin}`;
-        }
-        sus.textContent = glyph;
-        sus.setAttribute('aria-label', label);
-        sus.addEventListener('click', (e) => {
-          e.stopPropagation(); act(); sw.remove(); openSwitcher();
-        });
-
-        const kill = document.createElement('button');
-        kill.type = 'button';
-        // 'foafos-danger', not 'danger': the player stylesheet has a global
-        // .danger::before { content: '⚠ ' } which bolted a warning triangle
-        // onto every close button in the switcher (field screenshot,
-        // 2026-07-29). Scoped name, no shared decoration.
-        kill.className = 'foafos-switch-act foafos-danger';
-        kill.textContent = '✕';
-        const loss = r.node.surface === 'stage'
-          ? (snapshotNote() === 'keeps its place' ? ', its place is kept' : ', its state is lost')
-          : '';
-        kill.setAttribute('aria-label', `Close ${r.label}${withKin}${loss}`);
-        kill.addEventListener('click', (e) => {
-          e.stopPropagation();
-          FoafOS.apps.close(r.node.id);
-          sw.remove(); openSwitcher();
-        });
-        // The root gets ⓘ only. Pausing or closing the shell from
-        // inside the shell is a rug-pull, not a control.
-        if (isRoot) row.append(info);
-        else row.append(info, sus, kill);
-      }
-      cards.appendChild(row);
-    }
-    sw.querySelector('.foafos-overlay-close').addEventListener('click', () => sw.remove());
-    sw.addEventListener('keydown', (e) => { if (e.key === 'Escape') sw.remove(); });
-    document.body.appendChild(sw);
-    cards.querySelector('button')?.focus();
-    bus.publish('ui.switcher', { summary: `Switcher: ${running.length} running` });
-    return sw;
-  }
-  FoafOS.openSwitcher = openSwitcher;
-
-  // Everything running, AS THE TREE. This used to poll every subsystem
-  // that had its own idea of a window — the story, the minigame host's
-  // instance map, the DOM's floating windows — and flatten the answers
-  // into a list. The tree is now the truth, so this reads it instead;
-  // the per-surface knowledge that survives is only about how to FOCUS
-  // a thing, which really is presentation.
-  // What a node HOLDS, shown in its row, from the live capability list
-  // every broker asks. A COUNT, because the full list wrapped a phone row
-  // to eight lines; the names are in the card's accessible name and title,
-  // and ⓘ shows them with scopes, aims and the sandbox.
   const powersNote = (n) => {
     const k = n.capabilities.length;
     return k ? `holds ${k} power${k === 1 ? '' : 's'}` : 'holds nothing';
   };
-  function collectRunning() {
-    const out = [];
-    const walk = (node, depth, parentLabel) => {
-      // Furniture last. Chrome spawns at boot so it is oldest, and the
-      // tree keeps spawn order — which would put three status bars above
-      // the story the player is actually in. Ordering is presentation,
-      // and this is the presentation layer.
-      const kids = [...FoafOS.apps.children(node.id)].sort(
-        (a, b) => (a.surface === 'chrome' ? 1 : 0) - (b.surface === 'chrome' ? 1 : 0));
-      for (const child of kids) {
-        const app = appById(child.appId);
-        out.push({
-          node: child, depth, parentLabel,
-          icon: app?.icon || (child.surface === 'story' ? '📖' : '🪟'),
-          label: child.label,
-          detail: [
-            child.surface,
-            child.suspended ? 'suspended' : '',
-            child.surface === 'stage' ? (window.FinkWM?.mode || '') : '',
-            // Say, BEFORE the ✕ is pressed, whether pressing it throws
-            // the game away. The shell cannot serialise an opaque
-            // origin, so this is not a promise it can make on the
-            // guest's behalf — only a report of whether the guest
-            // agreed to the snapshot contract.
-            child.surface === 'stage' ? snapshotNote() : '',
-            child.surface === 'story' && window.FinkInkEngine?.storyStack?.length
-              ? `dream depth ${FinkInkEngine.storyStack.length}` : '',
-            powersNote(child),
-          ].filter(Boolean).join(' · '),
-          focus: () => focusNode(child),
-        });
-        walk(child, depth + 1, child.label);
-      }
+
+  // The tree as row models, siblings in the chosen order.
+  function taskModel() {
+    const by = {
+      name: (a, b) => a.label.localeCompare(b.label),
+      kind: (a, b) => a.kind.localeCompare(b.kind),
+      state: (a, b) => Number(a.paused) - Number(b.paused),
+      powers: (a, b) => a.powers.length - b.powers.length,
+      place: (a, b) => a.place.localeCompare(b.place),
+    }[tm.sort];
+    const build = (node, depth, parent) => {
+      const app = appById(node.appId);
+      const isRoot = node.id === FoafOS.rootNode?.id;
+      const r = {
+        node, depth, parent, id: node.id, appId: node.appId, label: node.label, isRoot,
+        icon: isRoot ? (FoafOS.root?.icon || '🏠')
+          : (app?.icon || (node.surface === 'story' ? '📖' : '🪟')),
+        kind: TM_KIND[isRoot ? 'root' : node.surface] || 'App',
+        paused: !!node.suspended,
+        powers: [...node.capabilities],
+        // Said BEFORE ✕ is pressed: does closing throw the game away? A report
+        // of whether the guest agreed to the snapshot contract; the shell
+        // cannot serialise an opaque origin itself.
+        place: node.surface === 'stage' ? snapshotNote() : '',
+        extra: [
+          node.surface === 'stage' ? (window.FinkWM?.mode || '') : '',
+          node.surface === 'story' && window.FinkInkEngine?.storyStack?.length
+            ? `dream depth ${FinkInkEngine.storyStack.length}` : '',
+        ].filter(Boolean),
+        chrome: node.surface === 'chrome',
+      };
+      r.children = FoafOS.apps.children(node.id).map((k) => build(k, depth + 1, r));
+      // Unsorted means spawn order with chrome last: chrome spawns at boot,
+      // so it is oldest, and would otherwise sit above the story being read.
+      r.children.sort(by
+        ? (a, b) => (by(a, b) * tm.dir) || a.label.localeCompare(b.label)
+        : (a, b) => Number(a.chrome) - Number(b.chrome));
+      return r;
     };
-    // The root is SHOWN, at depth 0 — the shell used to hide its own row,
-    // which left the one hierarchy fact everything shares (⊂ root)
-    // invisible until ⓘ was opened. Everything else hangs beneath it.
-    if (FoafOS.rootNode) {
-      out.push({
-        node: FoafOS.rootNode, depth: 0, parentLabel: null,
-        icon: FoafOS.root?.icon || '🏠',
-        label: FoafOS.rootNode.label, detail: 'root',
-        focus: () => {},
-      });
-      walk(FoafOS.rootNode, 1, FoafOS.root?.label || 'root');
-    }
-    return out;
+    return FoafOS.rootNode ? build(FoafOS.rootNode, 0, null) : null;
   }
+
+  // Which rows show. A row shows if it matches, or if something beneath it
+  // does; then it is context, drawn dimmed, so a match never floats free of
+  // the app that opened it. Folding is honoured only while no filter is on.
+  function taskRows(root) {
+    const q = tm.query.trim().toLowerCase();
+    const filtering = !!q || tm.only.size > 0;
+    const hit = (r) => (!q || [r.label, r.appId, r.kind, r.paused ? 'paused' : 'running',
+      r.place, ...r.extra, ...r.powers].join(' ').toLowerCase().includes(q))
+      && [...tm.only].every((f) => (f === 'paused' ? r.paused : r.powers.includes(f)));
+    const keep = new Map();
+    let available = 0;
+    const mark = (r) => {
+      if (r.chrome && !tm.chrome) return false;
+      available++;
+      let below = false;
+      for (const k of r.children) if (mark(k)) below = true;
+      const self = hit(r);
+      if (self || below) keep.set(r.id, self ? 'match' : 'context');
+      return self || below;
+    };
+    if (root) mark(root);
+    const rows = [];
+    const flat = (r) => {
+      if (!keep.has(r.id)) return;
+      r.status = keep.get(r.id);
+      r.kids = r.children.filter((k) => keep.has(k.id));
+      r.open = r.isRoot || filtering || !tm.collapsed.has(r.id);
+      rows.push(r);
+      if (r.open) r.kids.forEach(flat);
+    };
+    if (root) flat(root);
+    return { rows, q, filtering, available };
+  }
+
+  // Put `text` into `el`, with every match of `q` marked.
+  function tmMark(el, text, q) {
+    el.textContent = '';
+    const low = text.toLowerCase();
+    let i = 0;
+    for (let j = q ? low.indexOf(q) : -1; j !== -1; j = low.indexOf(q, i)) {
+      if (j > i) el.append(text.slice(i, j));
+      const m = document.createElement('mark');
+      m.textContent = text.slice(j, j + q.length);
+      el.append(m);
+      i = j + q.length;
+    }
+    if (i < text.length) el.append(text.slice(i));
+  }
+
+  function openSwitcher() {
+    const old = document.getElementById('foafos-switcher');
+    if (old) { old.remove(); return null; }
+    const sw = document.createElement('div');
+    sw.id = 'foafos-switcher';
+    sw.className = 'foafos-overlay foafos-tm';
+    sw.setAttribute('role', 'dialog');
+    sw.setAttribute('aria-modal', 'true');
+    sw.setAttribute('aria-labelledby', 'foafos-tm-title');
+    sw.innerHTML = `<div class="foafos-overlay-head">
+        <h2 id="foafos-tm-title">Task Manager <span class="hint"></span></h2>
+        <button type="button" class="foafos-overlay-close" aria-label="Close Task Manager">✕</button>
+      </div>
+      <div class="foafos-tm-body">
+        <div class="foafos-tm-tools">
+          <input type="search" class="foafos-tm-filter" autocomplete="off" spellcheck="false"
+                 placeholder="Filter by name, kind or power" aria-label="Filter by name, kind or power">
+          <div class="foafos-tm-chips">
+            <button type="button" class="foafos-tm-btn" data-focus="tools:chrome" aria-pressed="false"></button>
+            <button type="button" class="foafos-tm-btn" data-focus="tools:fold"></button>
+          </div>
+        </div>
+        <p class="foafos-tm-status" role="status"></p>
+        <div class="foafos-tm-scroll">
+          <table class="foafos-tm-table">
+            <caption class="sr-only">Running apps. Each app is listed under the app that opened it.</caption>
+            <colgroup><col class="c-name"><col class="c-kind"><col class="c-state"><col class="c-powers"><col class="c-place"><col class="c-act"></colgroup>
+            <thead><tr></tr></thead>
+            <tbody></tbody>
+          </table>
+          <details class="foafos-tm-limits">
+            <summary><span aria-hidden="true">🧱</span> The sandbox and its limits</summary>
+            <div class="foafos-tm-limits-body">
+              <p>Each app runs in its own sandboxed frame. It cannot read another app's page or
+                storage, and it reaches the shell and other apps only through messages, with the
+                powers in its row.</p>
+              <p>A brick row marks where one family of apps ends: nothing below it was opened by
+                anything above it, or holds powers from it.</p>
+              <p>The sandbox does not stop:</p>
+              <ul>
+                <li>data leaving: an app can send what it holds to any server;</li>
+                <li>heavy use: an app can use much CPU, memory or battery, and in some browsers
+                  that slows the shell too;</li>
+                <li>timing side channels between apps in one browser.</li>
+                <li class="foafos-tm-ambient" hidden></li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </div>`;
+    const $$ = (s) => sw.querySelector(s);
+    const tbody = $$('tbody');
+    const filter = $$('.foafos-tm-filter');
+    filter.value = tm.query;
+    const say = (text) => { $$('.foafos-tm-status').textContent = text; };
+    const button = (cls, focus, text, label) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = cls;
+      b.dataset.focus = focus;
+      if (text) b.textContent = text;
+      if (label) b.setAttribute('aria-label', label);
+      return b;
+    };
+    const ICON = {
+      pause: '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">'
+        + '<rect x="3" y="2.5" width="3.5" height="11" rx="1"/><rect x="9.5" y="2.5" width="3.5" height="11" rx="1"/></svg>',
+      play: '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4.5 2.5v11l9-5.5z"/></svg>',
+    };
+    const cell = (cls, text) => {
+      const td = document.createElement('td');
+      td.className = cls;
+      if (text != null) td.textContent = text;
+      return td;
+    };
+
+    // Column headers are sort buttons. First press: A to Z (Powers: most
+    // first); second press: the reverse; third: back to tree order.
+    for (const [key, text] of TM_COLS) {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      th.className = `c-${key}`;
+      const b = button('', `sort:${key}`);
+      b.innerHTML = '<span class="lbl"></span><span class="dir" aria-hidden="true"></span>';
+      b.querySelector('.lbl').textContent = text;
+      b.addEventListener('click', () => {
+        const first = key === 'powers' ? -1 : 1;
+        if (tm.sort !== key) { tm.sort = key; tm.dir = first; }
+        else if (tm.dir === first) tm.dir = -first;
+        else tm.sort = null;
+        render();
+      });
+      th.appendChild(b);
+      $$('thead tr').appendChild(th);
+    }
+    const thAct = document.createElement('th');
+    thAct.scope = 'col';
+    thAct.className = 'c-act';
+    thAct.innerHTML = '<span class="sr-only">Actions</span>';
+    $$('thead tr').appendChild(thAct);
+
+    // Quick filters, first in the chip row. Each name contains its visible
+    // text, so speech input ("click Storage") finds it.
+    const chips = $$('.foafos-tm-chips');
+    for (const [key, text] of TM_ONLY) {
+      const b = button('foafos-tm-btn', `only:${key}`, text, `Show only: ${text}`);
+      b.addEventListener('click', () => {
+        if (tm.only.has(key)) tm.only.delete(key); else tm.only.add(key);
+        render();
+      });
+      chips.insertBefore(b, $$('[data-focus="tools:chrome"]'));
+    }
+    $$('[data-focus="tools:chrome"]').addEventListener('click', () => {
+      tm.chrome = !tm.chrome;
+      try { localStorage.setItem('foafos.tm.chrome', tm.chrome ? '1' : '0'); } catch (e) { /* no storage */ }
+      render();
+    });
+    const foldable = (root) => {
+      const ids = [];
+      const walk = (r) => {
+        if (r.children.length && !r.isRoot && (tm.chrome || !r.chrome)) ids.push(r.id);
+        r.children.forEach(walk);
+      };
+      if (root) walk(root);
+      return ids;
+    };
+    $$('[data-focus="tools:fold"]').addEventListener('click', () => {
+      const ids = foldable(taskModel());
+      const anyOpen = ids.some((id) => !tm.collapsed.has(id));
+      tm.collapsed = new Set(anyOpen ? ids : []);
+      render();
+    });
+    filter.addEventListener('input', () => { tm.query = filter.value; render(); });
+
+    // The brick row between two families of apps. Its meaning, and its
+    // limits, are in the note under the table.
+    const wallEl = () => {
+      const tr = document.createElement('tr');
+      tr.className = 'foafos-tm-wall';
+      const td = document.createElement('td');
+      td.colSpan = TM_COLS.length + 1;
+      td.innerHTML = '<span class="bricks" aria-hidden="true"></span><span class="sr-only">Sandbox partition</span>';
+      td.querySelector('.bricks').textContent = '🧱'.repeat(16);
+      td.title = 'Sandbox partition: nothing below was opened by anything above';
+      tr.appendChild(td);
+      return tr;
+    };
+
+    const rowEl = (r, q, filtering) => {
+      const tr = document.createElement('tr');
+      tr.className = 'foafos-switch-row' + (r.status === 'context' ? ' context' : '')
+        + (r.paused ? ' paused' : '');
+      tr.dataset.id = r.id;
+      tr.style.setProperty('--depth', String(r.depth));
+      const beneath = FoafOS.apps.descendants(r.id);
+      const kin = beneath.length;
+      const withKin = kin ? ` and ${kin} beneath it` : '';
+
+      // NAME: fold control, then the switch-to button
+      const nameTd = cell('c-name');
+      const nm = document.createElement('div');
+      nm.className = 'nm';
+      if (r.kids.length && !r.isRoot) {
+        const tw = button('foafos-tm-twisty', `${r.id}:twisty`, '',
+          `${r.open ? 'Collapse' : 'Expand'} ${r.label}, ${kin} beneath it`);
+        tw.setAttribute('aria-expanded', String(r.open));
+        tw.disabled = filtering;          // a filter already shows every match
+        tw.addEventListener('click', () => {
+          if (tm.collapsed.has(r.id)) tm.collapsed.delete(r.id); else tm.collapsed.add(r.id);
+          render();
+        });
+        nm.appendChild(tw);
+      } else {
+        const gap = document.createElement('span');
+        gap.className = 'foafos-tm-twisty-gap';
+        gap.setAttribute('aria-hidden', 'true');
+        nm.appendChild(gap);
+      }
+      // The root cannot be switched to: it IS the shell. Its name is text.
+      const card = r.isRoot ? document.createElement('span') : button('', `${r.id}:card`);
+      card.classList.add('foafos-switch-card');
+      card.innerHTML = '<span class="ico" aria-hidden="true"></span>'
+        + '<span class="txt"><span class="ttl"></span><span class="sub"></span></span>';
+      card.querySelector('.ico').textContent = r.icon;
+      tmMark(card.querySelector('.ttl'), r.label, q);
+      const sub = card.querySelector('.sub');
+      sub.id = `foafos-tm-sub-${r.id}`;
+      // a context row is dimmed for the eye; the description says it for
+      // everyone else, and on a phone, where this line is shown
+      sub.textContent = [r.status === 'context' ? 'Shown for context' : '', r.kind,
+        r.paused ? 'paused' : '', r.place, ...r.extra, powersNote(r.node)]
+        .filter(Boolean).join(' · ');
+      if (!r.isRoot) {
+        card.setAttribute('aria-label', `Switch to ${r.label}`);
+        card.setAttribute('aria-describedby', sub.id);
+        card.addEventListener('click', () => { focusNode(r.node); sw.remove(); });
+      }
+      nm.appendChild(card);
+      nameTd.appendChild(nm);
+      tr.appendChild(nameTd);
+
+      tr.appendChild(cell('c-kind', r.kind));
+      const st = cell('c-state', r.paused ? 'Paused' : 'Running');
+      if (r.extra.length) {
+        const x = document.createElement('span');
+        x.className = 'x';
+        x.textContent = ` · ${r.extra.join(' · ')}`;
+        st.appendChild(x);
+      }
+      tr.appendChild(st);
+
+      const pw = cell('c-powers');
+      const count = document.createElement('span');
+      count.className = 'pw-n';
+      count.textContent = String(r.powers.length);
+      const names = document.createElement('span');
+      names.className = 'pw-list';
+      tmMark(names, r.powers.join(', ') || 'none', q);
+      const pwBox = document.createElement('div');
+      pwBox.className = 'pw';
+      pwBox.append(count, names);
+      pw.appendChild(pwBox);
+      pw.title = r.powers.length ? `Holds: ${r.powers.join(', ')}` : 'Holds nothing';
+      tr.appendChild(pw);
+
+      tr.appendChild(cell('c-place', r.place === 'keeps its place' ? 'Keeps its place'
+        : r.place === 'closing loses it' ? 'Loses its state' : '—'));
+
+      // ACTIONS: details for every row; pause and close for all but the
+      // root, because pausing or closing the shell from inside the shell is
+      // a rug-pull, not a control.
+      const act = cell('c-act');
+      const acts = document.createElement('div');
+      acts.className = 'acts';
+      const info = button('foafos-switch-act foafos-switch-info', `${r.id}:info`, 'ⓘ',
+        `Details for ${r.label}: origin and powers`);
+      info.title = `Details for ${r.label}`;
+      info.setAttribute('aria-expanded', String(tm.details.has(r.id)));
+      info.addEventListener('click', () => {
+        if (tm.details.has(r.id)) tm.details.delete(r.id); else tm.details.add(r.id);
+        render();
+      });
+      acts.appendChild(info);
+      if (!r.isRoot) {
+        // PAUSE is a tristate: running → this app alone → with its whole tree
+        // → running. Each press does the next thing, and its name says which.
+        const allPaused = kin > 0 && beneath.every((k) => k.suspended);
+        let icon, label, run;
+        if (!r.paused) {
+          icon = ICON.pause; run = () => setNodeSuspended(r.id, true);
+          label = `Pause ${r.label}${kin ? ' (press again to pause its tree too)' : ''}`;
+        } else if (kin && !allPaused) {
+          icon = ICON.pause; run = () => setSubtreeSuspended(r.id, true);
+          label = `Pause ${r.label}${withKin}`;
+        } else {
+          icon = ICON.play; run = () => setSubtreeSuspended(r.id, false);
+          label = `Resume ${r.label}${withKin}`;
+        }
+        const pause = button('foafos-switch-act', `${r.id}:pause`, '', label);
+        pause.innerHTML = icon;
+        pause.title = label;
+        pause.addEventListener('click', () => { run(); render(); });
+        // 'foafos-danger', not 'danger': the player stylesheet has a global
+        // .danger::before that bolted a warning triangle onto every close.
+        const loss = r.node.surface === 'stage'
+          ? (r.place === 'keeps its place' ? ', its place is kept' : ', its state is lost') : '';
+        const close = button('foafos-switch-act foafos-danger', `${r.id}:close`, '✕',
+          `Close ${r.label}${withKin}${loss}`);
+        close.title = close.getAttribute('aria-label');
+        close.addEventListener('click', () => {
+          FoafOS.apps.close(r.id);
+          render(r.parent && !r.parent.isRoot ? `${r.parent.id}:card` : null);
+        });
+        acts.append(pause, close);
+      }
+      act.appendChild(acts);
+      tr.appendChild(act);
+      return tr;
+    };
+
+    // The details row: provenance and every power in force (buildAppInfo),
+    // plus a developer's handles on it: ids, the record as JSON, the log.
+    const detailsEl = (r) => {
+      const tr = document.createElement('tr');
+      tr.className = 'foafos-tm-details';
+      tr.dataset.for = r.id;
+      tr.style.setProperty('--depth', String(r.depth));
+      const td = document.createElement('td');
+      td.colSpan = TM_COLS.length + 1;
+      const panel = buildAppInfo(r.node, r.label);
+      const dev = document.createElement('div');
+      dev.className = 'fi-row foafos-tm-dev';
+      dev.innerHTML = '<span class="fi-k">ids</span><span class="fi-v"><code></code></span>';
+      dev.querySelector('code').textContent = `${r.id} · ${r.appId}`;
+      const copy = button('foafos-tm-btn', `${r.id}:copy`, 'Copy as JSON',
+        `Copy the details of ${r.label} as JSON`);
+      copy.addEventListener('click', async () => {
+        const frame = document.querySelector(`.foafos-window[data-instance="${r.id}"] iframe`);
+        const json = JSON.stringify({
+          id: r.id, appId: r.appId, label: r.label, surface: r.node.surface,
+          parentId: r.node.parentId, suspended: r.paused, capabilities: r.powers,
+          requested: appById(r.appId)?.capabilities || [], used: FoafOS.capUse(r.appId),
+          scopes: r.node.scopes, sandbox: frame?.getAttribute('sandbox') ?? null,
+        }, null, 2);
+        try {
+          await navigator.clipboard.writeText(json);
+          say(`Copied the details of ${r.label}`);
+        } catch (e) {
+          // no clipboard here (an insecure origin, a refused permission):
+          // show the JSON, selectable, instead of failing quietly
+          const pre = document.createElement('pre');
+          pre.className = 'foafos-tm-json';
+          pre.tabIndex = 0;
+          pre.setAttribute('aria-label', `Details of ${r.label} as JSON`);
+          pre.textContent = json;
+          panel.appendChild(pre);
+          pre.focus();
+          say('The clipboard is not available here, so the JSON is shown in the details');
+        }
+      });
+      const log = button('foafos-tm-btn', `${r.id}:log`, 'Show in Logger',
+        `Open the Logger, filtered to ${r.appId}`);
+      log.addEventListener('click', () => { sw.remove(); openLogger({ filter: r.appId }); });
+      dev.querySelector('.fi-v').append(copy, log);
+      panel.appendChild(dev);
+      td.appendChild(panel);
+      tr.appendChild(td);
+      return tr;
+    };
+
+    // Draw everything, then put focus back on the same control.
+    function render(focusKey = null) {
+      const a = document.activeElement;
+      const keyNow = focusKey || (a && a !== filter && sw.contains(a) ? a.dataset.focus : null);
+      const root = taskModel();
+      const { rows, q, filtering, available } = taskRows(root);
+
+      // "3 apps + 6 chrome": the root and the chrome rack are structure, not
+      // workload, and three status bars are not three things a person opened
+      let apps = 0, chrome = 0;
+      const tally = (r) => {
+        if (!r.isRoot && r.id !== FoafOS.wmblingNode?.id) { if (r.chrome) chrome++; else apps++; }
+        r.children.forEach(tally);
+      };
+      if (root) tally(root);
+      $$('.hint').textContent = `${apps} app${apps === 1 ? '' : 's'}${chrome ? ` + ${chrome} chrome` : ''}`;
+
+      for (const th of sw.querySelectorAll('thead th[class^="c-"]')) {
+        const key = th.className.slice(2);
+        if (key === 'act') continue;
+        th.setAttribute('aria-sort', tm.sort === key ? (tm.dir > 0 ? 'ascending' : 'descending') : 'none');
+      }
+      for (const b of sw.querySelectorAll('[data-focus^="only:"]')) {
+        b.setAttribute('aria-pressed', String(tm.only.has(b.dataset.focus.slice(5))));
+      }
+      const chromeBtn = $$('[data-focus="tools:chrome"]');
+      chromeBtn.setAttribute('aria-pressed', String(tm.chrome));
+      chromeBtn.textContent = `Chrome (${chrome})`;
+      const ids = foldable(root);
+      const foldBtn = $$('[data-focus="tools:fold"]');
+      const anyOpen = ids.some((id) => !tm.collapsed.has(id));
+      foldBtn.textContent = anyOpen ? 'Collapse all' : 'Expand all';
+      foldBtn.disabled = filtering || !ids.length;
+
+      tbody.textContent = '';
+      let tops = 0;
+      for (const r of rows) {
+        // a new app directly under the root starts a new family: bricks
+        if (r.depth === 1 && tops++ > 0) tbody.appendChild(wallEl());
+        tbody.appendChild(rowEl(r, q, filtering));
+        if (tm.details.has(r.id)) tbody.appendChild(detailsEl(r));
+      }
+      // An app in the shell's own origin is on no side of any wall; say so
+      // while one runs (the registry's goal is that none ever does).
+      const ambient = [];
+      const findAmbient = (r) => {
+        if (!r.isRoot && r.powers.includes('same-origin')) ambient.push(r.label);
+        r.children.forEach(findAmbient);
+      };
+      if (root) findAmbient(root);
+      const amb = $$('.foafos-tm-ambient');
+      amb.hidden = !ambient.length;
+      amb.textContent = ambient.length ? `and nothing at all for ${ambient.join(', ')}: `
+        + `${ambient.length === 1 ? 'it runs' : 'they run'} in the shell's own origin (same-origin), `
+        + 'where no wall holds.' : '';
+      if (!rows.length) {
+        const tr = document.createElement('tr');
+        const td = cell('foafos-tm-empty', 'Nothing running matches this filter. ');
+        td.colSpan = TM_COLS.length + 1;
+        const clear = button('foafos-tm-btn', 'tools:clear', 'Clear the filter');
+        clear.addEventListener('click', () => {
+          tm.query = ''; tm.only.clear(); filter.value = '';
+          render(); filter.focus();
+        });
+        td.appendChild(clear);
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      }
+
+      const col = TM_COLS.find(([k]) => k === tm.sort)?.[1];
+      const order = !col ? '' : tm.sort === 'powers'
+        ? `, sorted by ${col}, ${tm.dir < 0 ? 'most first' : 'fewest first'}`
+        : `, sorted by ${col}, ${tm.dir > 0 ? 'A to Z' : 'Z to A'}`;
+      const matches = rows.filter((r) => r.status === 'match').length;
+      say(filtering
+        ? `${matches} of ${available} match${rows.length > matches
+          ? `; ${rows.length - matches} more shown for context` : ''}${order}`
+        : `${rows.length} of ${available} shown${order}`);
+
+      if (keyNow) {
+        const el = [...sw.querySelectorAll('[data-focus]')].find((x) => x.dataset.focus === keyNow);
+        (el && !el.disabled ? el : filter).focus();
+      }
+    }
+
+    // Keyboard, for a list people drive without a mouse: arrows move between
+    // rows (keeping the column), Home/End jump, Left/Right fold and unfold
+    // (and, as in a tree view, Right on an open row goes to its first child,
+    // Left on a folded row or a leaf goes to the parent), and typing anywhere
+    // in the list goes to the filter.
+    tbody.addEventListener('keydown', (e) => {
+      const tr = e.target.closest('tr.foafos-switch-row');
+      if (!tr) return;
+      if (e.key.length === 1 && e.key !== ' ' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        filter.focus();
+        filter.value += e.key;
+        tm.query = filter.value;
+        render();
+        return;
+      }
+      const all = [...tbody.querySelectorAll('tr.foafos-switch-row')];
+      const i = all.indexOf(tr);
+      const part = (e.target.dataset.focus || '').split(':')[1] || 'card';
+      const go = (j) => {
+        const row = all[Math.max(0, Math.min(all.length - 1, j))];
+        const want = [part, 'card', 'info'].map((p) => row?.querySelector(`[data-focus="${row.dataset.id}:${p}"]`));
+        want.find((b) => b && !b.disabled)?.focus();
+      };
+      if (e.key === 'ArrowDown') { e.preventDefault(); go(i + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); go(i - 1); }
+      else if (e.key === 'Home') { e.preventDefault(); go(0); }
+      else if (e.key === 'End') { e.preventDefault(); go(all.length - 1); }
+      else if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && (part === 'card' || part === 'twisty')) {
+        e.preventDefault();
+        const tw = tr.querySelector('.foafos-tm-twisty');
+        const open = tw?.getAttribute('aria-expanded') === 'true';
+        if (tw && !tw.disabled && (e.key === 'ArrowRight') !== open) { tw.click(); return; }
+        if (e.key === 'ArrowRight') {
+          // an open row: to its first child, which is always the next row
+          if (all[i + 1] && FoafOS.apps.get(all[i + 1].dataset.id)?.parentId === tr.dataset.id) go(i + 1);
+        } else {
+          const pid = FoafOS.apps.get(tr.dataset.id)?.parentId;
+          const up = all.find((x) => x.dataset.id === pid);
+          (up?.querySelector(`[data-focus="${pid}:card"]`) || up?.querySelector('button'))?.focus();
+        }
+      }
+    });
+
+    sw.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      // Escape empties the filter first, then closes
+      if (document.activeElement === filter && filter.value) {
+        e.stopPropagation();
+        filter.value = ''; tm.query = ''; render();
+        return;
+      }
+      sw.remove();
+    });
+    $$('.foafos-overlay-close').addEventListener('click', () => sw.remove());
+
+    // Live: the list follows the tree while it is open, so a game that ends
+    // or an app that opens does not leave a stale row to press.
+    let pending = 0;
+    const later = () => {
+      if (!pending) pending = setTimeout(() => { pending = 0; if (sw.isConnected) render(); }, 60);
+    };
+    const offs = ['app.spawn', 'app.close', 'app.suspend', 'app.resume', 'app.scope', 'wm.mode']
+      .map((t) => bus.subscribe(t, later));
+    new MutationObserver((_, obs) => {
+      if (sw.isConnected) return;
+      offs.forEach((off) => off());
+      clearTimeout(pending);
+      obs.disconnect();
+    }).observe(document.body, { childList: true });
+
+    document.body.appendChild(sw);
+    render();
+    (tbody.querySelector('button.foafos-switch-card') || filter).focus();
+    bus.publish('ui.switcher', {
+      summary: `Task Manager: ${FoafOS.apps.nodes.size} running`,
+    });
+    return sw;
+  }
+  FoafOS.openSwitcher = openSwitcher;
 
   // Does the game currently on the stage speak `snapshot`? An inline
   // game has no guest frame to ask, so it answers no — accurately, since
@@ -3557,8 +3953,17 @@ function buildUI() {
     }
   }
 
-  function openLogger() {
-    if (document.getElementById('foafos-logger')) return null;
+  function openLogger(opts = {}) {
+    // `opts` may be a click event when this is wired straight to a button
+    const want = typeof opts?.filter === 'string' ? opts.filter : null;
+    const open = document.getElementById('foafos-logger');
+    if (open) {
+      if (want !== null) {
+        open.querySelector('#foafos-log-filter').value = want;
+        logFilter = want; renderLog();
+      }
+      return null;
+    }
     const win = makeWindow('📜 Logger', 460, 420);
     win.id = 'foafos-logger';
     // Shell-native panels sit ABOVE app windows. An app's iframe is
@@ -3581,6 +3986,7 @@ function buildUI() {
     body.querySelector('#foafos-log-filter').addEventListener('input', (e) => {
       logFilter = e.target.value.trim(); renderLog();
     });
+    if (want !== null) { body.querySelector('#foafos-log-filter').value = want; logFilter = want; }
     const pause = body.querySelector('#foafos-log-pause');
     pause.addEventListener('click', () => {
       logPaused = !logPaused;

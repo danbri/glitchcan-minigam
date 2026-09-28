@@ -224,7 +224,7 @@ try {
     const runnerRow = [...document.querySelectorAll('.foafos-switch-row')]
       .find((r) => r.querySelector('.ttl')?.textContent === 'Finkosphere');
     const runner = { sub: runnerRow?.querySelector('.sub')?.textContent || '',
-                     name: runnerRow?.querySelector('.foafos-switch-card')?.getAttribute('aria-label') || '',
+                     name: runnerRow?.querySelector('.c-powers')?.title || '',
                      h: Math.round(runnerRow?.getBoundingClientRect().height || 0) };
     row?.querySelector('.foafos-switch-info')?.click();
     await new Promise((r) => setTimeout(r, 200));
@@ -238,7 +238,7 @@ try {
     : fail(`switcher row: ${JSON.stringify(shown.sub)}`);
   /holds 8 powers/.test(shown.runner.sub) && shown.runner.name.includes('story:launch') && shown.runner.h < 160
     ? pass(`a row gives the COUNT (${shown.runner.sub.split(' · ').pop()}, ${shown.runner.h}px tall at phone width); `
-      + 'its accessible name lists them')
+      + 'its Powers cell names them')
     : fail(`story runner row: ${JSON.stringify(shown.runner)}`);
   (shown.rows.bus || '').includes('guest.cellar.*') && (shown.rows.sandbox || '').includes('allow-scripts')
     && (shown.rows.variables || '').includes('no vars:write')
