@@ -10740,6 +10740,7 @@ function menuRoot() {
         { label: "Frame stats", check: statsOn, act: () => { statsOn = !statsOn; statsEl.hidden = !statsOn; renderMenu(); } },
         { label: "Flocks", check: FLOCKS_ON, act: () => { FLOCKS_ON = !FLOCKS_ON; renderMenu(); } },
         { label: "Home, instantly", act: () => hop(HOME_DEST) },
+        { label: "Character and room sheets (new tab)", act: () => open("../bible/", "_blank", "noopener") },
         { label: "Forget the saved story", act: () => { taleForget(); showHint("Saved story cleared.", 2500); } }] }) },
     ],
   };

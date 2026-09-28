@@ -146,6 +146,55 @@ so nothing has weight or inertia or can be pushed. The physics pass gives a firs
   main.js; the WebGL fallback runs it too). Headless Chromium on the WebGL fallback here: 40 to 69 ms a frame at
   25% render size. No phone number yet: that needs the owner's phone.
 
+## Backstory for the creation team (owner, September 2026). Do not put this in the game as exposition.
+
+This is background that shapes what we make. Nothing in the game states it directly; a player learns it, if ever,
+from details and from what characters avoid saying.
+
+- **Unicycle 1 (U1), the cycler.** The Saturn colonies were set up by way of an orbiting "cycler": a transit craft in
+  a cheap-to-maintain orbit that periodically met Earth, Saturn, or a growing network of coordinated cyclers. It was
+  built in space from more than 50 captured asteroids, which were mined of rare minerals and then assembled into
+  its hull. Their mass made the core habitable and large enough to rotate for 0.8 g. Seen from outside it looked
+  like a stylised drawing of an atom.
+- **Emblems.** The U1 craft and Saturn's bluish hexagonal polar storm are the two images most deeply embedded in
+  Titan culture: logos, signs, patterns. TheOrg uses them especially.
+- **TheOrg's origin.** TheOrg was the ship's computer of the shuttle on the first cargo voyage inside U1. TheOrg and
+  U1's own AI ("U1Org") were in high-bandwidth sync for the years of travel.
+- **Earth went silent.** Long ago Earth disappeared from its already sporadic contact, after a presumed local
+  conflict. With nobody giving U1 its periodic nudges (every few weeks), it drifted from its designed orbit and,
+  as the legend goes, nearly came onto a collision course with Earth.
+- **Curdling.** TheOrg will not speak freely of this. What emerged is that the trauma "curdled" U1's AI, and TheOrg
+  cut itself off from U1 completely before the damage spread. A curdled AI falls back to behaving as millions or
+  trillions of tiny personas, each grounded in real or imagined fragments of its source datasets or stored
+  materials. Uncurdling an AI is "an open research question". U1 survives, but with a collective obsession with
+  staying on course, literally and otherwise.
+
+Points where this meets what is already in the game (not resolved; for the owner):
+
+- Canon so far (Per Aspera, Dex): TheOrg is "the old ship's computer. The settlers built it to outlive them", and its
+  clock "can't tell an Earth year from a Saturn year from a Titan day". This fits: the shuttle computer that came with
+  the first cargo, and a clock damaged or confused since.
+- The game shows emigration to Earth as live: the tour says "Ships leave from here for Earth, and the Org pays the
+  fare"; posters say GO HOME / TO EARTH; Nuala has "taken a seat home". If Earth has been silent a long time, then
+  either those ships go to something other than the Earth people imagine, or TheOrg's offer is part of its
+  confusion, or its denial. Harriet already calls the Earth seat "a cargo slot with a chair in it".
+
+## Words on screen, and in code and notes (owner, September 2026)
+
+The owner, on the first novel page's captions: "this LLM filler text drives me nuts ... sort of appropriate but also
+bland corny slop-adjacent and recognisably so." Rules that follow:
+
+- Do not invent captions, voice lines, tour lines, scene descriptions or any prose the player reads or hears. Use
+  lines the owner wrote, or lines quoted exactly from a story the owner wrote. Where there is none, leave the space
+  empty and say so.
+- The shape to avoid: a short polished line with a small twist of mood that says nothing specific ("The tune goes
+  on."). It reads as generated at once.
+- Code comments, file notes and reports: literal. Say what the code does and why, in plain words. No imagery ("the
+  stills breathe"), no mood words standing in for a fact ("a dolly move": say "1.6 s, eases in and out, no
+  overshoot").
+- Fields in the character sheets (`drift-city/bible/`) hold facts found in the stories or chosen by the owner, with
+  the source. A field with no known value stays empty; it is not filled with a plausible guess.
+
 ## Titan design brief
 
 - Gravity is about a seventh of Earth's; the air is four times as dense and at -179 °C. People outdoors wear pressure
@@ -662,14 +711,37 @@ Owner's idea: a scene told as one graphic-novel page, three to five held moments
 moving (short looping video), the page bigger than a phone screen; a tap zooms in on the tapped point on an easing
 curve chosen for the mood, another tap zooms out. First page: `novel/cellar.html` (the Lantern Cellar).
 
-- Page: a 1080x1520 CSS grid in black, scaled to fit the screen; zoom-in is about 2.6 times that, the tapped point
-  kept under the finger; drag to look around while zoomed. Mood is two CSS variables: `--zoom-ease` (noir:
-  `cubic-bezier(0.7, 0, 0.25, 1)`, slow in and out, no overshoot) and `--zoom-time` (1.6 s). Stills drift slowly
-  (CSS) until they are replaced by moving panels. Captions are paper boxes in a typewriter face.
+- The page is the `<novel-page>` web component (`novel/novel-page.js`, no dependencies). Panels are its children,
+  each with `points="x,y x,y ..."`: a polygon in page pixels. The component places the panel at the polygon's
+  bounding box and clips it with `clip-path: polygon(...)`, so the gutters are the gaps the polygons leave. Taps are
+  tested against the polygon, not the box (angled boxes overlap). A `slot="ink"` child sits below the page and holds
+  text and choices; `play(story)` runs an inkjs Story into it through the Story API, and a `# panel: N` tag (1-based,
+  0 = overview) moves the page. API: `zoomTo(i)`, `overview()`, `next()`, `prev()`, `.current`, `panelchange`.
+  Attributes: `width`, `height`, `zoom` (a zoomed panel is at least this times the overview scale), `margin`,
+  `duration`, `easing`.
+- Touch (owner, 2026-09-28): tap a panel to zoom to it, tap again for the overview, a clear sideways swipe for the
+  neighbouring panel without going out. A panel wider than the screen is panned by dragging; the swipe to the next
+  panel happens only when the drag goes 60 px past the panel's edge (or 24 px, fast). This is the rule of photo
+  galleries, and it keeps pan and swipe from fighting. First version fitted the whole panel ("contain"): a wide
+  panel on a phone was then hardly larger than in the overview, so the zoom was useless. Reading order is child order;
+  `next` lands on a panel's left edge, `prev` on its right edge.
+- Gutters: 30 px, black, cut at small angles (2 to 5 degrees). Precedent the owner asked about: Eisner (the panel
+  border as a window or a doorway), Winsor McCay (panel shape doing the storytelling), J. H. Williams III (Promethea,
+  Batwoman: shaped panels in a designed page), Frank Miller's Sin City (heavy black as material), manga (slanted
+  gutters for action, straight for calm), Chris Ware (strict grids). Avoid: many diagonals at once (the 1990s
+  Image-comics look), and angles so steep that faces are cut. Keep one strong diagonal per page and small tilts
+  elsewhere.
+- Mood is the easing: noir uses `cubic-bezier(0.7, 0, 0.25, 1)` over 1.4 s (slow in and out, no overshoot).
+  Reduced motion: 1 ms. Stills drift slowly (CSS) until they are replaced by moving panels. Caption boxes (`.cap`)
+  exist but hold only owner-written text (none yet); they are hidden while empty.
+- Tests (headless, 390x844, touch): tap into panel b, three swipes to d, a swipe past the last panel does nothing,
+  swipes on the wide panel pan before they change panel, tap in a gutter does nothing, Escape goes out, and an ink
+  story with `# panel:` tags moves the page and shows its choice.
 - Video: muted, looping, `playsinline`, played again on the first tap (iOS), paused in a hidden tab. H.264 plus a
   VP9 WebM source: open-source Chromium (the test browser here) has no H.264 and reports error 4.
-- Making a moving panel with the ElevenLabs connector (`creative_*` tools): upload the still
-  (`creative_create_asset_upload`, one HTTP PUT, `creative_finalize_asset_upload` with the flow), add a
+- Making a moving panel with the ElevenLabs connector (`creative_*` tools): put the still on the flow (upload with
+  `creative_create_asset_upload`; if that is blocked, push the image to the branch and pass its
+  raw.githubusercontent.com URL to `creative_attach_reference_file`), add a
   video-generation node, wire the still to `start_frame` (and `end_frame`) with `creative_connect_flow_nodes`, price
   it with `estimate_only`, run, poll, then download the media URL from the run status yourself: the links the
   connector returns (flow and history pages) did not open for the owner, even logged in. Prices seen: Kling 3.0 Pro,
@@ -679,7 +751,29 @@ curve chosen for the mood, another tap zooms out. First page: `novel/cellar.html
   out (lifts her hand, taps on every beat, nods, sways), moved well. Loop it yourself: forward and backward joins,
   or a crossfade inside a repeated section, and a camera drift that returns to its start (ffmpeg `zoompan` with
   `on/N` in a cosine). Check with numbers: the last frame against the first, frame-to-frame change.
+- Changing a figure (owner, 2026-09-28: "15% heavier, dressed for somewhat colder climate"): an image edit of the
+  old still (Gemini 3 Pro image, about 1,827 credits per variant; it returned 16:9, so crop), then one video take
+  from the edited still, looped forward and backward. Record the change on the character sheet and add the still
+  as her reference. The other panels still show the old figure until they get the same edit.
 - Media notes and costs: `novel/media/README.md`.
+
+## Character sheets (`drift-city/bible/`, September 2026)
+
+Owner: "in-house character sheets for figures and their wardrobes, key possessions, maybe also rooms, to keep 3D
+world and generated imagery in sync ... exposed via Fink in admin/dev menus".
+
+- Data: `bible/sheets.json`. Characters: facts (each with its source file), requested changes (who, when, status),
+  wardrobe, possessions, reference images (`refs`, files in `bible/refs/`), what the game uses (`game`), voice, face,
+  open questions. Rooms: fittings (from `ROOMS` in tales.js), people, music. An empty field is undecided: do not fill
+  it with invention. Facts come from the stories, the code or the owner, never from a guess.
+- Viewer: `bible/index.html`, read-only. Reached from the Drift city menu (Developer, "Character and room sheets",
+  new tab) and from the FINK dev panel (the World sheets tab, in `inklet/finkapp/index.html`).
+- Before you generate an image or a video of a person or a room, read the sheet, and put what you used in the
+  prompt. After, add the reference image and update the sheet. When the owner asks for a change, record it under
+  `requested` first, then do it.
+- The mandatory FINK player test (`node inklet/finkapp/test/e2e.mjs`) passed after the dev-panel tab was added.
+  `npx playwright test tests/fink-player.spec.js` fails 72 of 72 with and without that change (2026-09-28): that
+  suite is stale; use the `inklet/finkapp/test/` scripts.
 
 ## Feeling the choices (`src/feel.js`)
 
