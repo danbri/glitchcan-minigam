@@ -31,7 +31,7 @@ window.FinkMinigames = {
     },
 
     // Known iframe-based minigames
-    iframeMinigames: ['mudslider', 'battleboids', 'gridluck', 'chess', 'robbin', 'waterworld', 'skydock'],
+    iframeMinigames: ['mudslider', 'battleboids', 'gridluck', 'chess', 'robbin', 'waterworld', 'skydock', 'cellar'],
 
     // Minigame metadata for splash screens and controls
     // controls: 'dpad' (full d-pad + A/B), 'lite' (simplified), 'none' (tap only)
@@ -54,7 +54,8 @@ window.FinkMinigames = {
         chess: { icon: '♟️', title: 'Chess', subtitle: 'Classic strategy game', controls: 'none', silent: true },
         robbin: { icon: '🐦', title: 'Robbin', subtitle: 'Grow the flock across the Underground', controls: 'dpad' },
         waterworld: { icon: '🫧', title: 'Waterworld', subtitle: 'Submarine salvage in the drowned dock', controls: 'dpad' },
-        skydock: { icon: '🛰️', title: 'Skydock Scuttlebutt', subtitle: 'Gemstones and gossip on the night shift', controls: 'none' }
+        skydock: { icon: '🛰️', title: 'Skydock Scuttlebutt', subtitle: 'Gemstones and gossip on the night shift', controls: 'none' },
+        cellar: { icon: '🔴', title: 'The Lantern Cellar', subtitle: 'A visual novel from Drift City', controls: 'none' }
     },
 
     // Active inline minigames (keyed by container ID)
