@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Lantern Cellar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+/* A graphic-novel page for Drift city: a few held moments of one scene, some of them moving (looping video), on one
+   page bigger than a phone screen. A tap zooms in on the point you tapped, on a slow curve chosen for the page's mood;
+   another tap zooms back out. While zoomed in, drag to look around. How it is built: drift-city skill, "Novel pages". */
+:root {
+  --gutter: 18px;
+  --ink: #0a0908;
+  --paper: #efe4c8;
+  --caption: #1a1510;
+  /* the page's mood: noir is slow and deliberate, a dolly move, no bounce */
+  --zoom-ease: cubic-bezier(0.7, 0, 0.25, 1);
+  --zoom-time: 1.6s;
+}
+@media (prefers-reduced-motion: reduce) { :root { --zoom-time: 0.01s; } }
+html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; touch-action: none; }
+body { font-family: "Special Elite", "Courier New", monospace; color: var(--caption); }
+#view { position: fixed; inset: 0; overflow: hidden; }
+#page {
+  position: absolute; left: 0; top: 0; width: 1080px; height: 1520px;
+  transform-origin: 0 0; will-change: transform;
+  background: var(--ink); box-sizing: border-box; padding: var(--gutter);
+  display: grid; gap: var(--gutter);
+  grid-template-columns: 640px 1fr;
+  grid-template-rows: 470px 660px 1fr;
+  grid-template-areas: "a a" "b c" "d d";
+}
+#page.easing { transition: transform var(--zoom-time) var(--zoom-ease); }
+.panel { position: relative; overflow: hidden; background: #000; }
+.panel > img, .panel > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+/* stills breathe a little until they are replaced by moving panels */
+.panel > img { animation: drift 22s ease-in-out infinite alternate; }
+.panel:nth-child(odd) > img { animation-duration: 27s; animation-direction: alternate-reverse; }
+@keyframes drift { from { transform: scale(1.02) translate(0, 0); } to { transform: scale(1.09) translate(-1.5%, 1%); } }
+@media (prefers-reduced-motion: reduce) { .panel > img { animation: none; } }
+.a { grid-area: a; } .b { grid-area: b; } .c { grid-area: c; } .d { grid-area: d; }
+.a > img { object-position: 50% 34%; }
+.c > img { object-position: 42% 50%; }
+.d > img { object-position: 50% 38%; }
+.cap {
+  position: absolute; z-index: 2; max-width: 62%; padding: 10px 14px 9px;
+  background: var(--paper); color: var(--caption); border: 3px solid var(--ink);
+  font-size: 24px; line-height: 1.25; letter-spacing: 0.01em;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.55);
+}
+.cap.tl { left: 0; top: 0; border-top: 0; border-left: 0; }
+.cap.br { right: 0; bottom: 0; border-bottom: 0; border-right: 0; }
+.cap.bl { left: 0; bottom: 0; border-bottom: 0; border-left: 0; }
+#hint {
+  position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  font: 13px/1.2 system-ui, sans-serif; color: rgba(239, 228, 200, 0.75); background: rgba(0, 0, 0, 0.55);
+  padding: 6px 12px; border-radius: 999px; pointer-events: none; transition: opacity 1.2s;
+}
+#hint.gone { opacity: 0; }
+</style>
+</head>
+<body>
+<div id="view">
+  <main id="page" aria-label="The Lantern Cellar: a page of four panels">
+    <section class="panel a" aria-label="A man in a long coat stands in a brick cellar hung with red lanterns, looking toward a small stage.">
+      <img src="media/cellar-arrival.jpg" alt="">
+      <p class="cap tl">Forty steps down, under Chinatown.</p>
+    </section>
+    <section class="panel b" aria-label="On the stage, a woman in a green dress keeps time with her hand under a red paper lantern.">
+      <video poster="media/cellar-lantern-poster.jpg" autoplay muted loop playsinline preload="auto"><source src="media/cellar-lantern-loop.mp4" type="video/mp4"><source src="media/cellar-lantern-loop.webm" type="video/webm"></video>
+      <p class="cap br">She keeps time for a band that hasn't come in yet.</p>
+    </section>
+    <section class="panel c" aria-label="The same woman, seen from the side, seated by a microphone in the haze.">
+      <img src="media/cellar-singer-horn.jpg" alt="">
+    </section>
+    <section class="panel d" aria-label="Outside at night: snow falls on a park where three people in long coats walk apart.">
+      <img src="media/street-snow.jpg" alt="">
+      <p class="cap bl">The late jam never stops. Players come and go. The tune goes on.</p>
+    </section>
+  </main>
+</div>
+<div id="hint">Tap to look closer</div>
+<script>
+(() => {
+  "use strict";
+  const view = document.getElementById("view"), page = document.getElementById("page"), hint = document.getElementById("hint");
+  const PW = 1080, PH = 1520;
+  // zoom: out shows the whole page; in is about two and a half times closer, centred on the tapped point
+  let s = 1, x = 0, y = 0, zoomed = false;
+  const fit = () => Math.min(innerWidth / PW, innerHeight / PH);
+  const clampPos = () => {
+    const w = PW * s, h = PH * s;
+    x = w <= innerWidth ? (innerWidth - w) / 2 : Math.min(0, Math.max(innerWidth - w, x));
+    y = h <= innerHeight ? (innerHeight - h) / 2 : Math.min(0, Math.max(innerHeight - h, y));
+  };
+  const apply = () => { page.style.transform = `translate(${x}px, ${y}px) scale(${s})`; };
+  const out = () => { zoomed = false; s = fit(); clampPos(); };
+  const into = (cx, cy) => {
+    const s0 = s, s1 = Math.max(fit() * 2.6, Math.min(innerWidth / 460, 1.6));
+    const px = (cx - x) / s0, py = (cy - y) / s0; // the page point under the finger stays under it
+    s = s1; x = cx - px * s1; y = cy - py * s1; zoomed = true; clampPos();
+  };
+  const ease = (on) => page.classList.toggle("easing", on);
+  out(); apply();
+  addEventListener("resize", () => { ease(false); if (zoomed) clampPos(); else out(); apply(); });
+  // a tap toggles; a drag while zoomed looks around (no easing, it follows the finger)
+  let down = null;
+  view.addEventListener("pointerdown", (e) => { down = { x: e.clientX, y: e.clientY, x0: x, y0: y, moved: false, id: e.pointerId }; });
+  view.addEventListener("pointermove", (e) => {
+    if (!down || e.pointerId !== down.id) return;
+    const dx = e.clientX - down.x, dy = e.clientY - down.y;
+    if (!down.moved && Math.hypot(dx, dy) > 8) { down.moved = true; ease(false); }
+    if (down.moved && zoomed) { x = down.x0 + dx; y = down.y0 + dy; clampPos(); apply(); }
+  });
+  view.addEventListener("pointerup", (e) => {
+    if (!down || e.pointerId !== down.id) return;
+    const tap = !down.moved; down = null;
+    if (!tap) return;
+    ease(true);
+    if (zoomed) out(); else into(e.clientX, e.clientY);
+    apply();
+    hint.classList.add("gone");
+  });
+  view.addEventListener("pointercancel", () => { down = null; });
+  setTimeout(() => hint.classList.add("gone"), 4500);
+  // iOS can refuse autoplay until a gesture; try again on the first touch
+  const vids = [...document.querySelectorAll("video")];
+  const play = () => vids.forEach((v) => { const p = v.play(); if (p && p.catch) p.catch(() => {}); });
+  play(); addEventListener("pointerup", play, { once: true });
+  // a hidden tab plays nothing
+  document.addEventListener("visibilitychange", () => vids.forEach((v) => (document.hidden ? v.pause() : play())));
+})();
+</script>
+</body>
+</html>
