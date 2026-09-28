@@ -719,12 +719,26 @@ curve chosen for the mood, another tap zooms out. First page: `novel/cellar.html
   0 = overview) moves the page. API: `zoomTo(i)`, `overview()`, `next()`, `prev()`, `.current`, `panelchange`.
   Attributes: `width`, `height`, `zoom` (a zoomed panel is at least this times the overview scale), `margin`,
   `duration`, `easing`.
-- Touch (owner, 2026-09-28): tap a panel to zoom to it, tap again for the overview, a clear sideways swipe for the
-  neighbouring panel without going out. A panel wider than the screen is panned by dragging; the swipe to the next
-  panel happens only when the drag goes 60 px past the panel's edge (or 24 px, fast). This is the rule of photo
-  galleries, and it keeps pan and swipe from fighting. First version fitted the whole panel ("contain"): a wide
-  panel on a phone was then hardly larger than in the overview, so the zoom was useless. Reading order is child order;
-  `next` lands on a panel's left edge, `prev` on its right edge.
+- Touch, revision 2 (owner, 2026-09-28): tap a panel and it zooms to it, CENTRED (revision 1 centred on the tapped
+  point, which the owner found "not quite right"); a tap in a gutter picks the nearest panel within 40 page px.
+  Zoomed in, any tap goes back to the overview. A drag moves the page one to one, with no wall at the panel edge; on
+  release the velocity of the last 100 ms is projected 0.22 s ahead, the path is walked, and the first other panel it
+  enters by at least 12% of that panel's extent becomes the new panel; otherwise it springs back. So swipes work in
+  every direction (up from panel c goes to d, below it). The motion is a damped spring (omega 9, damping ratio 0.78:
+  a small overshoot) that starts with the finger's velocity. Taps use a tween on the page's easing curve. A move the
+  story asks for is a "flight": the scale dips out in the middle in proportion to the distance (log-space scale minus
+  a sine bump, after van Wijk and Nuij's smooth zooming and panning), so a jump across the page reads as travel.
+- Frost: every panel is blurred (up to 6 screen px), desaturated, brightened a little and faded (to 40%) by its
+  distance from the view centre, times how far the view is zoomed in. It is computed every frame, so a neighbour
+  un-frosts as it is dragged into the centre. Quantised to 1/40 steps so the filter is not rewritten every frame.
+- Lesson: the ink window's height changed with each knot (one choice or three), which resized the view; the
+  ResizeObserver then stopped the running animation and clamped the camera, so a tapped panel was not centred. The
+  resize handler now re-aims a running move, and the page gives the ink window a stable height.
+- Ink in step with the view, both ways: `# panel: <knot>` in the story moves the view (source "story"); a tap, swipe
+  or key diverts the story to the panel's `knot` attribute with `ChoosePathString` (the page's `knot` for the
+  overview). One knot per panel. Every still leads to the moving panel, which holds the three choices.
+  `novel/cellar.ink` has only two lines of prose, exact quotes from Per Aspera's cellar knot; its other choice
+  labels are plain navigation, to be replaced by owner-written lines.
 - Gutters: 30 px, black, cut at small angles (2 to 5 degrees). Precedent the owner asked about: Eisner (the panel
   border as a window or a doorway), Winsor McCay (panel shape doing the storytelling), J. H. Williams III (Promethea,
   Batwoman: shaped panels in a designed page), Frank Miller's Sin City (heavy black as material), manga (slanted
@@ -734,9 +748,9 @@ curve chosen for the mood, another tap zooms out. First page: `novel/cellar.html
 - Mood is the easing: noir uses `cubic-bezier(0.7, 0, 0.25, 1)` over 1.4 s (slow in and out, no overshoot).
   Reduced motion: 1 ms. Stills drift slowly (CSS) until they are replaced by moving panels. Caption boxes (`.cap`)
   exist but hold only owner-written text (none yet); they are hidden while empty.
-- Tests (headless, 390x844, touch): tap into panel b, three swipes to d, a swipe past the last panel does nothing,
-  swipes on the wide panel pan before they change panel, tap in a gutter does nothing, Escape goes out, and an ink
-  story with `# panel:` tags moves the page and shows its choice.
+- Tests (headless, 390x844, touch, pointer events with real timing): tap into b is centred and frosts a, c, d; a
+  slow 40 px drag stays; a 150 px throw in 90 ms crosses to c; a throw up crosses to d; a tap goes out and the ink
+  shows the page knot; ink choices fly the view to door, then stage, with the dip visible mid-way.
 - Video: muted, looping, `playsinline`, played again on the first tap (iOS), paused in a hidden tab. H.264 plus a
   VP9 WebM source: open-source Chromium (the test browser here) has no H.264 and reports error 4.
 - Making a moving panel with the ElevenLabs connector (`creative_*` tools): put the still on the flow (upload with

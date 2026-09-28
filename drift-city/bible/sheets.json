@@ -491,14 +491,14 @@
       "wardrobe": [
         "revision 2 (2026-09-28): long dark-green velvet dress; cropped green velvet jacket with a wide brown fur collar; dark sheer tights; black heeled ankle boots",
         "hair in a low updo; drop earrings; red lipstick",
-        "revision 1 (panels a and c still show it): the same dress, no jacket, long sleeves, high collar, sheer panel at the chest"
+        "revision 1 (in git history only): the same dress, no jacket, long sleeves, high collar, sheer panel at the chest"
       ],
       "requested": [
         {
           "text": "About 15% heavier; dressed for a colder climate while still elegant.",
           "by": "owner",
           "date": "2026-09-28",
-          "status": "done in the video panel (b); panels a and c not yet"
+          "status": "done in panels a, b and c of novel/cellar.html"
         }
       ],
       "possessions": [],
