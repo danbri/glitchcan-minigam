@@ -1248,7 +1248,15 @@ async function inkFor(url) {
   const hit = _inkCache.get(key);
   if (hit) { state.cacheHits += 1; state.boxedCompile = true; return hit; }
   state.fetches += 1;
-  const src = await (await fetch(key)).text();
+  const res = await fetch(key);
+  // A missing file is not an empty story: say so, and keep the error page out
+  // of the compile box.
+  if (!res.ok) {
+    let where = key;
+    try { where = new URL(key).pathname; } catch { /* keep the key as given */ }
+    throw new Error(`HTTP ${res.status}${res.status === 404 ? ' (not found)' : ''}: ${where}`);
+  }
+  const src = await res.text();
   // Extract ink in a NESTED sandbox — the story's JS never touches this
   // runner. Boxes within boxes: shell → runner → compile box.
   const { ink } = await extractInBox(src);

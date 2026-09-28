@@ -1743,6 +1743,14 @@ check what the author remembered.**
   `FinkInkEngine.compiledCount >= 1`.
 - Local servers die on worker restarts — always curl-check and restart
   with `(setsid nohup python3 -m http.server ... &)`.
+- **A live-site report about new work: first check the work is on master.**
+  Pages deploys from master only. September 2026: a story URL from an
+  unmerged branch was a 404 on the live site, and the boxed runner said "no
+  ink content found", because it gave the Pages 404 page to the compile box.
+  The runner now checks the response and says `could not load story: HTTP 404
+  (not found): <path>` (e2e-storyrunner §14). Check with
+  `curl -s -o /dev/null -w '%{http_code}' https://danbri.github.io/glitchcan-minigam/<path>`
+  and `git merge-base --is-ancestor <commit> origin/master`.
 
 ## Audio (current state)
 
