@@ -99,3 +99,99 @@ test('report gives roots with their subtrees', () => {
   assert.equal(rep.total, 3);
   assert.equal(rep.roots[0].children[0].children[0].appId, 'kid');
 });
+
+// ── the tree is the one source of truth, so nothing it hands out can change it ──
+
+test('a node view cannot be written, and neither can its capabilities', () => {
+  const tree = new AppTree();
+  const r = root(tree, ['storage']);
+  const kid = tree.spawn({ appId: 'kid', parentId: r.id, capabilities: ['storage'] });
+  assert.throws(() => { kid.capabilities.push('secrets'); }, TypeError);
+  assert.throws(() => { kid.suspended = true; }, TypeError);
+  assert.throws(() => { kid.parentId = null; }, TypeError);
+  assert.equal(tree.can(kid.id, 'secrets'), false);
+  assert.equal(tree.get(kid.id).parentId, r.id);
+});
+
+test('nodes is a read-only Map view: it reads like a Map and cannot be edited', () => {
+  const tree = new AppTree();
+  const r = root(tree, ['a']);
+  const kid = tree.spawn({ appId: 'kid', parentId: r.id, capabilities: ['a'] });
+  assert.equal(tree.nodes.size, 2);
+  assert.equal(tree.nodes.get(kid.id), kid, 'same view as spawn returned');
+  assert.deepEqual([...tree.nodes.values()].map(n => n.appId), ['shell', 'kid']);
+  assert.equal(typeof tree.nodes.set, 'undefined');
+  assert.equal(typeof tree.nodes.delete, 'undefined');
+  assert.equal(typeof tree.nodes.clear, 'undefined');
+  assert.throws(() => { tree.nodes = new Map(); }, TypeError);
+});
+
+test('a view has a stable identity and reads live state', () => {
+  const tree = new AppTree();
+  const r = root(tree, ['a']);
+  const kid = tree.spawn({ appId: 'kid', parentId: r.id, capabilities: ['a'] });
+  assert.equal(tree.get(kid.id), kid);
+  assert.equal(tree.children(r.id)[0], kid);
+  tree.setSuspended(kid.id, true);
+  assert.equal(kid.suspended, true, 'the view held since spawn sees the change');
+});
+
+test('can() answers for LIVE nodes only: closing a node revokes everything it held', () => {
+  const tree = new AppTree();
+  const r = root(tree, ['storage', 'audio']);
+  const mid = tree.spawn({ appId: 'mid', parentId: r.id, capabilities: ['storage'] });
+  const kid = tree.spawn({ appId: 'kid', parentId: mid.id, capabilities: ['storage'] });
+  assert.equal(tree.can(kid.id, 'storage'), true);
+  assert.equal(tree.can(kid.id, 'audio'), false, 'not held, even though the root holds it');
+  assert.deepEqual(tree.holders('storage').map(n => n.appId), ['shell', 'mid', 'kid']);
+  tree.close(mid.id);
+  assert.equal(tree.can(kid.id, 'storage'), false, 'the cascade revoked the child too');
+  assert.equal(tree.can('app999', 'storage'), false);
+  assert.deepEqual(tree.holders('storage').map(n => n.appId), ['shell']);
+});
+
+test('setOnClose replaces the closer, and null means close takes nothing down', () => {
+  const tree = new AppTree();
+  const r = root(tree, []);
+  let ran = 0;
+  const kid = tree.spawn({ appId: 'kid', parentId: r.id, capabilities: [], onClose: () => { ran++; } });
+  assert.equal(tree.setOnClose(kid.id, null), true);
+  tree.close(kid.id);
+  assert.equal(ran, 0);
+  assert.equal(tree.setOnClose(kid.id, () => {}), false, 'a closed node has nothing to set');
+});
+
+test('scopes are frozen copies, shown on the view and in the report', () => {
+  const bus = mkBus();
+  const tree = new AppTree({ bus });
+  const r = root(tree, ['a']);
+  const kid = tree.spawn({ appId: 'kid', parentId: r.id, capabilities: ['a'] });
+  const grants = { publish: ['guest.kid.*'], subscribe: ['wm.mode'] };
+  const held = tree.setScope(kid.id, 'bus', grants);
+  grants.publish.push('*');
+  assert.deepEqual(held.publish, ['guest.kid.*'], 'a later edit of the input changes nothing');
+  assert.equal(kid.scopes.bus, held);
+  assert.throws(() => { kid.scopes.bus.publish.push('*'); }, TypeError);
+  assert.deepEqual(tree.report().roots[0].children[0].scopes.bus.publish, ['guest.kid.*']);
+  assert.ok(bus.seen.some(e => e.t === 'app.scope' && e.name === 'bus'));
+  assert.equal(tree.setScope('app999', 'bus', {}), null);
+});
+
+test('dreamOf and peerOf are set at spawn, not written afterwards', () => {
+  const tree = new AppTree();
+  const r = root(tree, ['a']);
+  const outer = tree.spawn({ appId: 'story-session', parentId: r.id, capabilities: ['a'] });
+  const dream = tree.spawn({ appId: 'story-session', parentId: r.id, capabilities: ['a'], dreamOf: outer.id });
+  const peer = tree.spawn({ appId: 'story-session', parentId: r.id, capabilities: ['a'], peerOf: outer.id });
+  assert.equal(dream.dreamOf, outer.id);
+  assert.equal(peer.peerOf, outer.id);
+  assert.equal(outer.dreamOf, null);
+});
+
+test('the report is a plain copy: editing it changes nothing', () => {
+  const tree = new AppTree();
+  const r = root(tree, ['a']);
+  const rep = tree.report();
+  rep.roots[0].capabilities.push('same-origin');
+  assert.equal(tree.can(r.id, 'same-origin'), false);
+});

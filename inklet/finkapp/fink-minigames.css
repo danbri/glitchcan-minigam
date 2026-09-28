@@ -975,7 +975,7 @@ body[data-wm-mode="split"] #minigame-view.state-split {
     display: none;                       /* only shown when panes are shared */
     padding: 0.15em 0.6em 0.2em;
     background: var(--sk-bg-figure, rgba(0, 0, 0, 0.8));
-    color: var(--sk-dim, #9fb3d0);
+    color: var(--sk-ink-dim, #9fb3d0);
     border-right: 1px solid var(--sk-line, #2b3d5c);
     border-bottom: 1px solid var(--sk-line, #2b3d5c);
     border-bottom-right-radius: 8px;

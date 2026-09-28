@@ -681,7 +681,7 @@ foafos-feed { display: block; --foaf-accent: var(--zx-mag); }
     letter-spacing: .1em;
     text-transform: uppercase;
 }
-.foafos-overlay-head .hint { color: var(--sk-dim, #8fa3c0); font-weight: normal; }
+.foafos-overlay-head .hint { color: var(--sk-ink-dim, #8fa3c0); font-weight: normal; }
 .foafos-overlay-close {
     min-width: 44px;
     min-height: 44px;
@@ -692,8 +692,7 @@ foafos-feed { display: block; --foaf-accent: var(--zx-mag); }
     font-size: 1rem;
     cursor: pointer;
 }
-.foafos-home-body,
-.foafos-switch-cards {
+.foafos-home-body {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -701,29 +700,15 @@ foafos-feed { display: block; --foaf-accent: var(--zx-mag); }
 }
 .foafos-home-body section { margin-bottom: 1.5rem; }
 
-/* The wall: a full-width brick course between top-level app subtrees.
-   Everything between two walls is one sandbox lineage; the bricks are
-   the partition drawn where it actually is. */
-.foafos-switch-wall {
-    overflow: hidden;
-    white-space: nowrap;
-    text-align: center;
-    font-size: 0.8rem;
-    line-height: 1;
-    opacity: 0.55;
-    margin: 0.55rem -1rem;
-    user-select: none;
-    pointer-events: none;
-}
 
 /* ⓘ panel: provenance + the three capability ledgers */
 .foafos-app-info {
     margin: 0 0 0.5rem calc(0.6rem + var(--depth, 0) * 1.1rem);
     padding: 0.55rem 0.7rem;
-    border: 1px solid rgba(0, 192, 192, 0.3);
-    border-left-width: 3px;
+    border: 1px solid var(--sk-line, #2b3d5c);
+    border-left: 3px solid var(--sk-accent, #6cf);
     border-radius: 8px;
-    background: rgba(0, 24, 30, 0.5);
+    background: rgba(127, 127, 127, 0.07);
     font-size: 0.78rem;
     display: flex;
     flex-direction: column;
@@ -732,7 +717,7 @@ foafos-feed { display: block; --foaf-accent: var(--zx-mag); }
 .foafos-app-info .fi-row { display: flex; gap: 0.6rem; align-items: baseline; }
 .foafos-app-info .fi-k {
     flex: 0 0 6.2em;
-    opacity: 0.65;
+    color: var(--sk-ink-dim, #8fa3c0);
     text-transform: uppercase;
     font-size: 0.68rem;
     letter-spacing: 0.06em;
@@ -742,16 +727,12 @@ foafos-feed { display: block; --foaf-accent: var(--zx-mag); }
 .foafos-app-info .fi-cap {
     padding: 0.15em 0.55em;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    opacity: 0.6;
+    border: 1px solid var(--sk-line, #2b3d5c);
+    color: var(--sk-ink-dim, #8fa3c0);
     font-size: 0.72rem;
 }
-.foafos-app-info .fi-cap.granted { opacity: 0.9; border-color: rgba(0, 192, 192, 0.55); }
-.foafos-app-info .fi-cap.used {
-    border-color: var(--zx-green, #5f5);
-    color: var(--zx-green, #5f5);
-    opacity: 1;
-}
+.foafos-app-info .fi-cap.granted { color: inherit; border-color: var(--sk-accent, #6cf); }
+.foafos-app-info .fi-cap.used { border-width: 2px; font-weight: 600; }
 .foafos-app-info .fi-cap.refused { border-style: dashed; text-decoration: line-through; }
 
 /* the story-overlay tree, living in the tabs now */
@@ -779,7 +760,7 @@ foafos-feed { display: block; --foaf-accent: var(--zx-mag); }
     font-size: .8rem;
     letter-spacing: .12em;
     text-transform: uppercase;
-    color: var(--sk-dim, #8fa3c0);
+    color: var(--sk-ink-dim, #8fa3c0);
 }
 
 /* auto-fit: four across on a desktop, two on a phone, no media query */
@@ -811,29 +792,336 @@ foafos-feed { display: block; --foaf-accent: var(--zx-mag); }
     outline-offset: 2px;
 }
 
-/* Recents as cards, one row each — readable at a glance and reachable
-   with one thumb, which a grid of thumbnails is not. */
-.foafos-switch-card {
-    display: grid;
-    grid-template-columns: 2.2rem 1fr;
-    grid-template-rows: auto auto;
-    align-items: center;
-    gap: 0 .7rem;
+
+/* ── Task Manager (the switcher) ─────────────────────────────────────────
+   A table, in the format people know from Windows' Task Manager and macOS's
+   Activity Monitor: one row per running thing, sortable columns, a filter.
+   The rows are the app TREE, so the name column indents a child under the
+   app that opened it. On a phone, Kind, State and On close move into a line
+   under the name, and Powers shows its count only. */
+.foafos-tm-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
     width: 100%;
-    min-height: 56px;
-    margin-bottom: .5rem;
-    padding: .6rem .8rem;
-    background: var(--sk-bg, #12172480);
+    max-width: 72rem;
+    margin: 0 auto;
+}
+.foafos-tm-tools {
+    flex: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    padding: .75rem 1rem .25rem;
+}
+.foafos-tm-filter {
+    flex: 1 1 16rem;
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 .75rem;
     border: 1px solid var(--sk-line, #2b3d5c);
-    border-radius: 12px;
+    border-radius: 8px;
+    background: var(--sk-bg, #0a0a12);
     color: inherit;
     font: inherit;
+    font-size: 1rem;             /* 16px: iOS does not zoom into the field */
+}
+.foafos-tm-chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+.foafos-tm-btn {
+    min-height: 32px;
+    padding: 0 .75rem;
+    border: 1px solid var(--sk-line, #2b3d5c);
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: .8rem;
     cursor: pointer;
+}
+.foafos-tm-btn:hover:not(:disabled) { border-color: var(--sk-accent, #6cf); }
+.foafos-tm-btn[aria-pressed="true"] {
+    background: var(--sk-accent, #6cf);
+    border-color: var(--sk-accent, #6cf);
+    color: var(--sk-accent-ink, #000);
+}
+.foafos-tm-btn:disabled { opacity: .45; cursor: default; }
+.foafos-tm-status {
+    flex: none;
+    margin: 0;
+    padding: .25rem 1rem .5rem;
+    font-size: .75rem;
+    color: var(--sk-ink-dim, #8fa3c0);
+}
+.foafos-tm-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 0 1rem 1rem;
+}
+.foafos-tm-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .875rem;
+}
+.foafos-tm-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 0;
+    /* opaque, so rows do not show through the header while scrolling */
+    background-color: var(--sk-bg, #0a0a12);
+    border-bottom: 1px solid var(--sk-line, #2b3d5c);
+    text-align: left;
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--sk-ink-dim, #8fa3c0);
+    white-space: nowrap;
+}
+.foafos-tm-table th button {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    width: 100%;
+    min-height: 40px;
+    padding: 0 .5rem;
+    background: none;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
+}
+.foafos-tm-table th button:hover,
+.foafos-tm-table th[aria-sort="ascending"],
+.foafos-tm-table th[aria-sort="descending"] { color: var(--sk-ink, #e8ecf4); }
+.foafos-tm-table th[aria-sort="ascending"] .dir::after { content: "▲"; font-size: .65rem; }
+.foafos-tm-table th[aria-sort="descending"] .dir::after { content: "▼"; font-size: .65rem; }
+.foafos-tm-table td {
+    padding: .25rem .5rem;
+    border-bottom: 1px solid var(--sk-line, #2b3d5c);
+    vertical-align: middle;
+}
+.foafos-switch-row:hover > td { background: rgba(127, 127, 127, .08); }
+/* shown only because something beneath it matches the filter: dim ink,
+   not opacity, which took the text under 4.5:1 on every skin */
+.foafos-switch-row.context > td { color: var(--sk-ink-dim, #8fa3c0); }
+.foafos-switch-row.context .ico { opacity: .55; }
+/* the brick row: where one family of apps ends */
+.foafos-tm-wall > td {
+    padding: .3rem 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-align: center;
+    font-size: .75rem;
+    line-height: 1;
+    user-select: none;
+}
+.foafos-tm-wall .bricks { opacity: .6; letter-spacing: .15em; }
+.foafos-switch-row.paused .c-state { color: var(--sk-accent, #6cf); font-weight: 600; }
+.foafos-switch-row .nm {
+    display: flex;
+    align-items: center;
+    gap: .15rem;
+    min-width: 0;
+    padding-left: calc(var(--depth, 0) * 1rem);
+}
+.foafos-tm-twisty,
+.foafos-tm-twisty-gap { flex: none; width: 28px; height: 28px; }
+.foafos-tm-twisty {
+    display: grid;
+    place-items: center;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    color: inherit;
+    cursor: pointer;
+}
+.foafos-tm-twisty::before {
+    content: "";
+    width: .45rem;
+    height: .45rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);          /* points right: folded */
+    transition: transform .15s;
+}
+.foafos-tm-twisty[aria-expanded="true"]::before { transform: rotate(45deg); }   /* points down */
+.foafos-tm-twisty:disabled { opacity: .35; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .foafos-tm-twisty::before { transition: none; } }
+.foafos-switch-card {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    flex: 1;
+    min-width: 0;
+    min-height: 40px;
+    padding: .25rem .4rem;
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    color: inherit;
+    font: inherit;
     text-align: left;
 }
-.foafos-switch-card .ico { grid-row: 1 / 3; font-size: 1.5rem; }
-.foafos-switch-card .ttl { font-size: .95rem; }
-.foafos-switch-card .sub { font-size: .75rem; color: var(--sk-dim, #8fa3c0); }
+button.foafos-switch-card { cursor: pointer; }
+button.foafos-switch-card:hover .ttl { text-decoration: underline; }
+.foafos-switch-card .ico { flex: none; width: 1.6rem; font-size: 1.2rem; text-align: center; }
+.foafos-switch-card .txt { display: flex; flex-direction: column; min-width: 0; }
+.foafos-switch-card .ttl {
+    font-size: .95rem;
+    /* may wrap between words: a name that cannot sets the table's least
+       width. Not `anywhere`, which sizes the column below one word. */
+    overflow-wrap: break-word;
+}
+.foafos-switch-card .sub { font-size: .75rem; color: var(--sk-ink-dim, #8fa3c0); }
+.foafos-tm mark {
+    background: var(--sk-accent, #6cf);
+    color: var(--sk-accent-ink, #000);
+    border-radius: 2px;
+}
+.foafos-tm-table .c-state .x { color: var(--sk-ink-dim, #8fa3c0); }
+.foafos-tm-table .pw { display: flex; align-items: center; gap: .45em; min-width: 0; max-width: 20rem; }
+.foafos-tm-table .pw-n {
+    flex: none;
+    min-width: 1.7em;
+    padding: 0 .35em;
+    border: 1px solid var(--sk-line, #2b3d5c);
+    border-radius: 999px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.foafos-tm-table .pw-list {
+    font-size: .78rem;
+    color: var(--sk-ink-dim, #8fa3c0);
+    white-space: normal;
+    /* two lines at most; the whole list is in the cell's title and in ⓘ */
+    flex: 1;
+    min-width: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+}
+.foafos-tm-table .c-kind,
+.foafos-tm-table .c-state,
+.foafos-tm-table .c-place { white-space: nowrap; }
+/* left-aligned, so the details button sits in one column on every row,
+   the root's included */
+.foafos-tm-table .c-act { width: 1%; white-space: nowrap; text-align: left; }
+.foafos-switch-act svg { width: 14px; height: 14px; fill: currentColor; vertical-align: middle; }
+.foafos-tm-table .acts { display: inline-flex; gap: .25rem; }
+.foafos-switch-act {
+    min-width: 40px;
+    min-height: 40px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--sk-ink, #eee);
+    font-family: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+}
+.foafos-switch-act:hover { border-color: var(--sk-accent, #6cf); }
+.foafos-switch-act[aria-expanded="true"] { border-color: var(--sk-accent, #6cf); color: var(--sk-accent, #6cf); }
+.foafos-switch-act.foafos-danger:hover { border-color: #f66; color: #f66; }
+.foafos-tm button:focus-visible,
+.foafos-tm-limits > summary:focus-visible,
+.foafos-tm-filter:focus-visible,
+.foafos-tm-json:focus-visible {
+    outline: 3px solid var(--sk-accent, #6cf);
+    outline-offset: 1px;
+}
+.foafos-tm-details > td { padding: 0 .5rem .75rem; }
+.foafos-tm-details .foafos-app-info { margin: 0 0 0 calc(var(--depth, 0) * 1rem + 2.2rem); }
+.foafos-tm-dev .fi-v { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.foafos-tm-dev code { font-family: ui-monospace, monospace; }
+.foafos-tm-json {
+    max-height: 16rem;
+    overflow: auto;
+    margin: .25rem 0 0;
+    padding: .5rem;
+    border: 1px solid var(--sk-line, #2b3d5c);
+    border-radius: 6px;
+    font-size: .72rem;
+    white-space: pre;
+}
+.foafos-tm-empty { padding: 1.5rem .5rem; text-align: center; color: var(--sk-ink-dim, #8fa3c0); }
+.foafos-tm-limits { margin: 1rem .25rem .5rem; font-size: .85rem; }
+.foafos-tm-limits > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    min-height: 32px;
+    padding: .2rem .75rem;
+    border: 1px solid var(--sk-line, #2b3d5c);
+    border-radius: 999px;
+    cursor: pointer;
+    list-style: none;
+}
+.foafos-tm-limits > summary::-webkit-details-marker { display: none; }
+.foafos-tm-limits > summary::after {
+    content: "";
+    width: .4rem;
+    height: .4rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);          /* points right: closed */
+    transition: transform .15s;
+}
+.foafos-tm-limits[open] > summary::after { transform: rotate(45deg); }   /* points down */
+@media (prefers-reduced-motion: reduce) { .foafos-tm-limits > summary::after { transition: none; } }
+.foafos-tm-limits-body { max-width: 44rem; margin: .5rem .25rem 0; line-height: 1.45; }
+.foafos-tm-limits-body p,
+.foafos-tm-limits-body ul { margin: .35rem 0; }
+.foafos-tm-limits-body ul { padding-left: 1.2rem; }
+.foafos-tm-empty .foafos-tm-btn { margin-left: .5rem; }
+/* Three widths (fink skill, Task Manager). Wide (64rem up): six columns,
+   and the line under the name goes. Mid (45rem to 64rem, a tablet): Kind
+   and On close go, and the line under the name says them. Narrow: the line
+   says everything, and only the name and the actions stay. */
+@media (min-width: 64rem) {
+    .foafos-switch-card .sub { display: none; }
+}
+@media (min-width: 45rem) and (max-width: 63.99rem) {
+    .foafos-tm-table :is(th, td):is(.c-kind, .c-place) { display: none; }
+    .foafos-switch-card .sub-b { display: none; }
+}
+@media (max-width: 44.99rem) {
+    /* two columns: the name (with its line) and the actions, whose width is
+       fixed so the buttons can never be pushed off the edge */
+    .foafos-tm-table { table-layout: fixed; }
+    .foafos-tm-table :is(th, td):is(.c-kind, .c-state, .c-powers, .c-place) { display: none; }
+    /* With those four cells gone, the action cell is each row's SECOND
+       cell, so it sits in the second column: size the columns by position.
+       A details row still spans all six, so the other four are zero wide,
+       or they take a share of the row from the name. */
+    .foafos-tm-table col { width: 0; }
+    .foafos-tm-table col:first-child { width: auto; }
+    .foafos-tm-table col:nth-child(2) { width: 8.5rem; }
+    .foafos-tm-table td.c-act { padding: .25rem; }
+    .foafos-switch-row .nm { padding-left: calc(var(--depth, 0) * .6rem); }
+    /* icon and name on one line, the line under them the width of both */
+    .foafos-switch-card { flex-wrap: wrap; row-gap: .1rem; }
+    .foafos-switch-card .txt { display: contents; }
+    .foafos-switch-card .ttl { flex: 1; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+    .foafos-switch-card .sub { flex-basis: 100%; }
+    .foafos-tm-details .foafos-app-info { margin-left: 0; }
+    .foafos-tm-tools { padding: .6rem .75rem .25rem; }
+    .foafos-tm-scroll { padding: 0 .5rem 1rem; }
+    .foafos-tm .foafos-overlay-head .hint {
+        display: block;
+        margin-top: .15rem;
+        font-size: .75rem;
+        letter-spacing: .02em;
+        text-transform: none;
+    }
+}
 
 /* Sound */
 #foafos-audio-wrap #foafos-vol { flex: 1; min-width: 6rem; }
@@ -879,37 +1167,6 @@ foafos-feed { display: block; --foaf-accent: var(--zx-mag); }
     .foafos-chrome-flash { animation: none; }
 }
 
-/* Switcher rows are the app TREE, indented. A child sits under the thing
-   that opened it, so "close" taking three windows is visible before you
-   press it rather than a surprise afterwards. */
-.foafos-switch-row {
-    display: flex;
-    align-items: stretch;
-    gap: 6px;
-    margin-left: calc(var(--depth, 0) * 22px);
-}
-.foafos-switch-row .foafos-switch-card { flex: 1; }
-/* the branch line, so depth reads as lineage and not as a stray margin */
-.foafos-switch-row[style*="--depth: 1"] .foafos-switch-card,
-.foafos-switch-row:not([style*="--depth: 0"]) .foafos-switch-card {
-    border-left: 3px solid var(--zx-cyan);
-}
-/* Skin tokens, not dark-theme constants: on the light Broadsheet
-   overlay the old #eee glyphs were near-invisible (field screenshot,
-   2026-07-29). */
-.foafos-switch-act {
-    min-width: 44px;
-    min-height: 44px;
-    border: 1px solid var(--sk-line, #555);
-    border-radius: 6px;
-    background: transparent;
-    color: var(--sk-ink, #eee);
-    font-family: inherit;
-    font-size: 1rem;
-    cursor: pointer;
-}
-.foafos-switch-act:hover { border-color: var(--sk-accent, #6cf); }
-.foafos-switch-act.foafos-danger:hover { border-color: #f66; color: #f66; }
 /* a suspended window says so at a glance rather than looking merely idle */
 .foafos-window.suspended { filter: grayscale(0.7) brightness(0.7); }
 .foafos-window.suspended::after {

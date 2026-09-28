@@ -30,31 +30,83 @@ window.FinkMinigames = {
         maximized: false
     },
 
-    // Known iframe-based minigames
-    iframeMinigames: ['mudslider', 'battleboids', 'gridluck', 'chess', 'robbin', 'waterworld', 'skydock'],
-
-    // Minigame metadata for splash screens and controls
+    // WHICH GAMES EXIST is not this module's business. The one registry
+    // (foafos-apps.js) owns every sandboxed game: its name, icon, controls
+    // and where its page lives. The shell hands the stage rows over at boot
+    // (useRegistry). This module kept its own two lists until September
+    // 2026, and a game registered in only one of them either ran unlisted
+    // (Skydock) or, if the name was unknown here, silently became Gem Hunt
+    // (canarywharf, from the table of contents).
+    //
+    // Only the HOST-RENDERED games are described here, because they are
+    // host code rather than apps. `mega` is a gems mode with its own title.
+    //
     // controls: 'dpad' (full d-pad + A/B), 'lite' (simplified), 'none' (tap only)
     // `silent: true` means "this guest makes no sound" and is the ONLY
     // way to stay out of the volume control's "cannot be turned down"
     // list without answering the audio probe. The default is deliberately
     // the pessimistic one — a guest we know nothing about is assumed to
-    // make noise we cannot reach, because over-reporting what mute misses
-    // is safer than promising a silence we cannot deliver. But a SILENT
-    // game listed there is a lie in the other direction, and it dilutes
-    // the honest entries until nobody reads them. Verified July 2026:
-    // gridluck opens an AudioContext and never connects anything to it;
-    // chess has no audio code at all.
-    minigameInfo: {
+    // make noise we cannot reach.
+    hostGames: {
         gems: { icon: '💎', title: 'Gem Hunt', subtitle: 'Collect sparkling gems!', controls: 'none', silent: true },
-        mega: { icon: '👑', title: 'Mega Gems', subtitle: 'Legendary treasures await!', controls: 'none', silent: true },
-        mudslider: { icon: '⛏️', title: 'Mudslider', subtitle: 'Boulder Dash-style puzzle', controls: 'lite' },
-        battleboids: { icon: '🧙', title: 'BoidWars', subtitle: 'Command your wizard flock', controls: 'none' },
-        gridluck: { icon: '👻', title: 'GridLuck', subtitle: 'Pac-Man style maze chase', controls: 'none', silent: true },
-        chess: { icon: '♟️', title: 'Chess', subtitle: 'Classic strategy game', controls: 'none', silent: true },
-        robbin: { icon: '🐦', title: 'Robbin', subtitle: 'Grow the flock across the Underground', controls: 'dpad' },
-        waterworld: { icon: '🫧', title: 'Waterworld', subtitle: 'Submarine salvage in the drowned dock', controls: 'dpad' },
-        skydock: { icon: '🛰️', title: 'Skydock Scuttlebutt', subtitle: 'Gemstones and gossip on the night shift', controls: 'none' }
+        mega: { icon: '👑', title: 'Mega Gems', subtitle: 'Legendary treasures await!', controls: 'none', silent: true }
+    },
+    _registry: [],
+
+    /** The shell's stage rows from foafos-apps.js. */
+    useRegistry(stageApps) {
+        this._registry = Array.isArray(stageApps) ? stageApps.slice() : [];
+    },
+
+    /** The registry row for a game name (or one of its aliases), or null. */
+    _stageApp(type) {
+        return this._registry.find(a => (a.game || a.id) === type || (a.aliases || []).includes(type)) || null;
+    },
+
+    /** Games that run as sandboxed guests: every stage row not rendered by the host. */
+    get iframeMinigames() {
+        return this._registry.filter(a => !a.inline).map(a => a.game || a.id);
+    },
+
+    /** Splash/controls info: the host games, then every registered stage app. */
+    get minigameInfo() {
+        const info = { ...this.hostGames };
+        for (const a of this._registry) {
+            info[a.game || a.id] = {
+                icon: a.icon, title: a.name, subtitle: a.desc || '',
+                controls: a.controls || 'none', silent: !!a.silent,
+            };
+        }
+        return info;
+    },
+
+    /** Is this a game anyone may start? Registered, or rendered by the host. */
+    isKnownGame(type) {
+        return !!this._stageApp(type) || Object.prototype.hasOwnProperty.call(this.hostGames, type);
+    },
+
+    /**
+     * Where a sandboxed game's page and manifest live. A registry row with
+     * `url` names its own page (relative to this page, like a window app);
+     * its manifest is `manifest` if it names one, else the row's own
+     * `variables`. A row without `url` keeps the old package convention.
+     */
+    _guestSource(type) {
+        const app = this._stageApp(type);
+        if (app?.url) {
+            return {
+                src: app.url,
+                manifest: app.manifest
+                    ? fetch(app.manifest).then(r => r.ok ? r.json() : null).catch(() => null)
+                    : Promise.resolve({ variables: app.variables || { read: [], write: [] },
+                                        features: app.features || [] }),
+            };
+        }
+        return {
+            src: `../minigames/${type}/index.html`,
+            manifest: fetch(`../minigames/${type}/manifest.json`)
+                .then(r => r.ok ? r.json() : null).catch(() => null),
+        };
     },
 
     // Active inline minigames (keyed by container ID)
@@ -566,7 +618,12 @@ window.FinkMinigames = {
     },
 
     // Toggle pause state
-    togglePause() {
+    togglePause(want) {
+        // The shell's suspend says WHICH state it wants, and gets exactly
+        // that; a bare call (the ⏸ button) toggles. Toggling on the shell's
+        // behalf let a game paused by its own button resume when the
+        // switcher suspended it, while the tree said it was suspended.
+        if (typeof want === 'boolean' && want === this.windowState.paused) return;
         this.windowState.paused = !this.windowState.paused;
         this._updateWindowState();
 
@@ -808,6 +865,19 @@ window.FinkMinigames = {
     // Start a minigame by type
     // controls: 'dpad' (full), 'lite' (simple), 'none' (tap) - or null to use default
     startMinigame(type = 'gems', mode = 'normal', controls = null) {
+        if (!this.isKnownGame(type)) {
+            // Refused out loud, and the story carries on without the game.
+            // The shell refuses a boxed story's request before it gets here;
+            // this is the host player's path.
+            this.log(`Refused unregistered minigame: ${type}`);
+            window.FoafOS?.bus.publish('minigame.refused', {
+                summary: `${type} is not a registered game`, type, reason: 'unregistered',
+            });
+            if (window.FinkInkEngine && FinkInkEngine.continueStory) {
+                setTimeout(() => FinkInkEngine.continueStory(), 0);
+            }
+            return false;
+        }
         // Determine controls from parameter or default from minigameInfo
         const info = this.minigameInfo[type] || {};
         const effectiveControls = controls || info.controls || 'none';
@@ -840,7 +910,7 @@ window.FinkMinigames = {
             return;
         }
 
-        // Start appropriate inline minigame
+        // Start appropriate inline minigame (known names only: see the top)
         switch (type) {
             case 'chess':
                 this.startChess();
@@ -927,10 +997,8 @@ window.FinkMinigames = {
             // 'variables' becomes the guest's write capability — see
             // _setStoryVariable; before this was wired the manifest was
             // decorative and any guest could set any story variable.
-            fetch(`../minigames/${type}/manifest.json`)
-                .then(r => r.ok ? r.json() : null)
-                .catch(() => null)
-                .then(manifest => {
+            const source = this._guestSource(type);
+            source.manifest.then(manifest => {
                     const feats = manifest?.features || [];
                     if (feats.length) {
                         iframe.allow = feats.map(f => `${f} 'src'`).join('; ');
@@ -938,7 +1006,7 @@ window.FinkMinigames = {
                     }
                     inst.grants = this._normalizeGrants(manifest, type);
                     this.currentGrants = inst.grants;
-                    iframe.src = `../minigames/${type}/index.html`;
+                    iframe.src = source.src;
                 });
 
             this.elements.iframeContainer.appendChild(iframe);
@@ -2067,13 +2135,11 @@ window.FinkMinigames = {
         // Inline widgets are guests too, and get the same manifest
         // capability as full-window ones (src is set only once grants
         // are known, so a fast guest cannot beat the check).
-        fetch(`../minigames/${type}/manifest.json`)
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null)
-            .then(manifest => {
+        const source = this._guestSource(type);
+        source.manifest.then(manifest => {
                 inst.grants = this._normalizeGrants(manifest, type);
                 entry.grants = inst.grants;
-                iframe.src = `../minigames/${type}/index.html`;
+                iframe.src = source.src;
             });
 
         // Send init when loaded

@@ -20,7 +20,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import vm from 'node:vm';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -152,26 +152,28 @@ async function build() {
   }
 
   // Widgets: is this name actually registered, and how is it delivered?
-  // The registry is read by EXECUTING fink-minigames.js against a stub
-  // window (it assigns window.FinkMinigames) — no parsing of source.
-  let registry = { info: {}, iframe: [] };
+  // The ONE registry is inklet/finkapp/foafos-apps.js (plain data, so it is
+  // imported, not parsed). A stage row's `game` and `aliases` are the names
+  // a `# MINIGAME:` tag may use; `inline` rows are drawn by the host; a row
+  // with `url` names its own page, relative to finkapp/.
+  let registry = { byName: new Map() };
   try {
-    const src = await fs.readFile(path.join(ROOT, 'inklet/finkapp/fink-minigames.js'), 'utf8');
-    const box = { window: {}, document: { getElementById: () => null, addEventListener() {} } };
-    box.window.document = box.document;
-    vm.createContext(box);
-    vm.runInContext(src, box, { timeout: 5000 });
-    const fm = box.window.FinkMinigames || {};
-    registry = { info: fm.minigameInfo || {}, iframe: fm.iframeMinigames || [] };
+    const { APPS } = await import(pathToFileURL(path.join(ROOT, 'inklet/finkapp/foafos-apps.js')).href);
+    for (const a of APPS.filter((x) => x.surface === 'stage')) {
+      for (const name of [a.game || a.id, ...(a.aliases || [])]) registry.byName.set(name, a);
+    }
   } catch { /* registry unreadable — leave widgets unannotated */ }
 
   for (const n of nodes.values()) {
     if (n.kind !== 'widget') continue;
     const name = n.title;
-    n.registered = Object.prototype.hasOwnProperty.call(registry.info, name);
-    n.delivery = registry.iframe.includes(name) ? 'iframe' : n.registered ? 'inline' : 'unknown';
-    n.packaged = await fs.access(path.join(ROOT, 'inklet/minigames', name, 'index.html'))
-      .then(() => true).catch(() => false);
+    const row = registry.byName.get(name) || null;
+    n.registered = !!row;
+    n.delivery = !row ? 'unknown' : row.inline ? 'inline' : 'iframe';
+    const page = row?.url
+      ? path.join(ROOT, 'inklet/finkapp', row.url.split(/[?#]/)[0])
+      : path.join(ROOT, 'inklet/minigames', name, 'index.html');
+    n.packaged = await fs.access(page).then(() => true).catch(() => false);
     // a name no story can actually launch is the real defect
     if (!n.registered) n.error = 'not in the minigame registry';
     else if (n.delivery === 'iframe' && !n.packaged) n.error = 'registered as iframe but no package on disk';

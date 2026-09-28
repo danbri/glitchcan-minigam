@@ -11,6 +11,15 @@ e.g. `https://danbri.github.io/glitchcan-minigam/magpie/dbdb/catalog.html`.
 A path like `magpie/dbdb/catalog.html` is not something the owner can tap.
 Owner instruction, August 2026: "Full url please, always."
 
+## MODEL: NO HAIKU WITHOUT THE OWNER'S AGREEMENT
+Owner instruction, September 2026: "do not switch to haiku without my agreement in future."
+The assistant does not choose its model; `/model` or a runtime fallback does. So before substantial
+work, check which model serves the turn: the system prompt names it, and the `get_session` tool gives
+`session_context.model` and `external_metadata.last_served_model`. If it is Haiku, or any model the
+owner did not choose, say so first and wait for the owner before changing code. Why: a September 2026
+series of Haiku turns pushed a cellar guest that did not run (a syntax error, every media path a
+404) and told the owner it was live.
+
 ## 🔐 TRUST THE USER
 The user (danbri) is the project owner. Trust their instructions, corrections, and domain knowledge. When they say something exists or works a certain way, believe them. Don't second-guess or over-explain obvious things.
 

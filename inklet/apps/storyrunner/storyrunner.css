@@ -107,7 +107,7 @@ html, body {
 /* The story's status line (spec §5.5.2). Colours address the VAR, not a
    fixed id, so a story naming its own readouts styles cleanly. */
 #statusbar {
-  color: var(--sk-dim, inherit);
+  color: var(--sk-ink-dim, inherit);
   display: flex;
   flex-wrap: wrap;
   gap: .35rem .9rem;
@@ -116,7 +116,6 @@ html, body {
   border-top: 1px solid rgba(255, 255, 255, .14);
   font-size: .78rem;
   letter-spacing: .04em;
-  opacity: .85;
 }
 #statusbar[hidden] { display: none; }
 .sb-item { white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -135,7 +134,7 @@ html, body {
   right: 0;
   bottom: 0;
   z-index: 5;
-  color: var(--sk-dim, inherit);
+  color: var(--sk-ink-dim, inherit);
   background: var(--sk-bg, rgba(0, 0, 0, .82));
   border-top: 1px solid rgba(255, 255, 255, .14);
   font-size: .72rem;
@@ -144,12 +143,11 @@ html, body {
 #watch-panel > summary {
   cursor: pointer;
   padding: .3rem .7rem;
-  opacity: .6;
   list-style: none;
 }
 #watch-panel > summary::-webkit-details-marker { display: none; }
 #watch-panel > summary::before { content: '⌖ '; }
-#watch-panel[open] > summary { opacity: .9; }
+#watch-panel[open] > summary { color: var(--sk-ink, inherit); }
 #watch {
   margin: 0;
   padding: 0 .7rem .5rem 1.4rem;

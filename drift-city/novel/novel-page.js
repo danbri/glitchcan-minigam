@@ -17,6 +17,8 @@
 // Keys: Enter on a focused panel, arrows (reading order), Escape.
 //
 // API: zoomTo(i), overview(), next(), prev(), .current (-1 = overview), .panels, play(story).
+// Lifecycle (for a host such as the foafos minigame SDK): pause(), resume(), .paused, captureState(),
+// restoreState(state). A captured state is plain data: camera, panel, ink state, and the lines on screen.
 // Event "panelchange", detail {index, previous, source: "tap" | "swipe" | "key" | "api" | "story"}.
 //
 // Ink: play(story) runs an inkjs Story (Story API only) into the ink slot. The view and the story stay in step both
@@ -84,7 +86,7 @@ class NovelPage extends HTMLElement {
       else if (!this._down) this._settle(this._cur, "keep");
       else this._apply();
     });
-    this._vis = () => this._videos().forEach((v) => (document.hidden ? v.pause() : this._playVideo(v)));
+    this._vis = () => this._videos().forEach((v) => (document.hidden || this._paused ? v.pause() : this._playVideo(v)));
     this._tick = (t) => this._frame(t);
   }
 
@@ -138,8 +140,7 @@ class NovelPage extends HTMLElement {
   _step() {
     const story = this._story;
     if (!story) return;
-    const box = this._inkBox();
-    box.textContent = "";
+    const lines = [];
     let want = null;
     while (story.canContinue) {
       const line = story.Continue();
@@ -147,16 +148,26 @@ class NovelPage extends HTMLElement {
         const i = tag.indexOf(":");
         if (i > 0 && tag.slice(0, i).trim().toLowerCase() === "panel") want = this._panelByName(tag.slice(i + 1));
       }
-      if (line.trim()) { const p = document.createElement("p"); p.textContent = line.trim(); box.appendChild(p); }
+      if (line.trim()) lines.push(line.trim());
     }
+    this._render(lines);
+    if (want !== null && want >= -1 && want < this._panels.length && want !== this._cur) this._goto(want, "story");
+  }
+
+  // Show these lines, then the story's open choices, in the ink window. The lines are kept for captureState():
+  // ink's saved state holds the reader's position, not the text already on screen.
+  _render(lines) {
+    const story = this._story, box = this._inkBox();
+    this._lines = lines.slice();
+    box.textContent = "";
+    for (const line of lines) { const p = document.createElement("p"); p.textContent = line; box.appendChild(p); }
     story.currentChoices.forEach((c, k) => {
       const b = document.createElement("button");
       b.type = "button"; b.className = "choice"; b.textContent = c.text;
-      b.addEventListener("click", () => { story.ChooseChoiceIndex(k); this._step(); });
+      b.addEventListener("click", () => { if (this._paused) return; story.ChooseChoiceIndex(k); this._step(); });
       box.appendChild(b);
     });
     box.scrollTop = 0;
-    if (want !== null && want >= -1 && want < this._panels.length && want !== this._cur) this._goto(want, "story");
   }
 
   // The reader moved the view: take the story to that panel's knot, if it has one.
@@ -359,7 +370,7 @@ class NovelPage extends HTMLElement {
   // ---- input ----
 
   _onDown(e) {
-    if (this._down) return;
+    if (this._paused || this._down) return;
     this._stop(); // a finger catches a moving page
     this._down = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), moved: false,
       cam: { ...this._cam }, samples: [[performance.now(), e.clientX, e.clientY]] };
@@ -425,6 +436,7 @@ class NovelPage extends HTMLElement {
   }
 
   _onKey(e) {
+    if (this._paused) return;
     const i = this._panels.findIndex((p) => p.el === document.activeElement || p.el.contains(document.activeElement));
     if (e.key === "Escape" && this._cur >= 0) { this.overview("key"); e.preventDefault(); }
     else if ((e.key === "Enter" || e.key === " ") && i >= 0 && e.target === this._panels[i].el) {
@@ -438,7 +450,62 @@ class NovelPage extends HTMLElement {
   _videos() { return [...this.querySelectorAll("video")]; }
   _playVideo(v) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
   // iOS can refuse autoplay until a gesture, so every tap tries again
-  _playVideos() { if (!document.hidden) this._videos().forEach((v) => v.paused && this._playVideo(v)); }
+  _playVideos() { if (!document.hidden && !this._paused) this._videos().forEach((v) => v.paused && this._playVideo(v)); }
+
+  // ---- pause, snapshot, restore ----
+
+  get paused() { return !!this._paused; }
+
+  /** Where the reader is, as plain data a host can clone and keep. */
+  captureState() {
+    return {
+      v: 1,
+      cam: { ...this._cam },
+      current: this._cur,
+      storyJson: this._story ? this._story.state.ToJson() : null,
+      lines: (this._lines || []).slice(),
+    };
+  }
+
+  /** Put the reader back where captureState() found them, without a flight. Returns false if it cannot. */
+  restoreState(state) {
+    if (!state || state.v !== 1) return false;
+    this._stop();
+    if (this._story && state.storyJson) {
+      try { this._story.state.LoadJson(state.storyJson); }
+      catch (e) { console.error("[novel-page] saved story state did not load:", e); return false; }
+      this._render(Array.isArray(state.lines) ? state.lines.map(String) : []);
+    }
+    const i = Number.isInteger(state.current) && state.current < this._panels.length ? state.current : -1;
+    this._cur = i;
+    this._panels.forEach((p, k) => p.el.toggleAttribute("data-current", k === i));
+    const cam = state.cam || {};
+    if ([cam.cx, cam.cy, cam.s].every(Number.isFinite)) Object.assign(this._cam, { cx: cam.cx, cy: cam.cy, s: cam.s });
+    // the nearest rest to the saved camera: the view may not be the size it was when the state was captured
+    this._settle(i, "keep");
+    return true;
+  }
+
+  /** Freeze everything that moves: the camera, the videos, and every animation in and under the page. The
+   *  panels' own CSS animations must be paused one by one: animation-play-state does not inherit. */
+  pause() {
+    if (this._paused) return;
+    this._paused = true;
+    this._down = null;
+    this._stop();
+    this._videos().forEach((v) => v.pause());
+    const all = [...this.getAnimations({ subtree: true }), ...(this.shadowRoot.getAnimations?.() || [])];
+    this._held = all.filter((a) => a.playState === "running");
+    this._held.forEach((a) => a.pause());
+  }
+
+  resume() {
+    if (!this._paused) return;
+    this._paused = false;
+    (this._held || []).forEach((a) => a.play());
+    this._held = null;
+    this._playVideos();
+  }
 }
 
 customElements.define("novel-page", NovelPage);

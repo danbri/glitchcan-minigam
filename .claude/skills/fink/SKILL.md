@@ -88,14 +88,20 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   appears. The injected knot also contains a story link
   (world-between-worlds) — a known content leak.
 - Other known leaks: `fink-config.js` (DEFAULT_FINK_FILE, LOCAL_FINKS,
-  absolute /glitchcan-minigam/ paths), minigame registry + splash copy in
-  `fink-minigames.js:26-37`, chess's `../../thumbwar/minichess.html`.
+  absolute /glitchcan-minigam/ paths), host-game splash copy (`hostGames`,
+  gems and mega only) in `fink-minigames.js`, chess's
+  `../../thumbwar/minichess.html`.
 
 ## Minigame SDK
 
-- Two systems: the LIVE path is `fink-minigames.js` (ad-hoc, hardcoded
-  registry `iframeMinigames`, loads `../minigames/<type>/index.html` into
-  a sandboxed iframe). The DESIGNED path is `inklet/minigames/`
+- Two systems: the LIVE path is `fink-minigames.js`, the stage host. It
+  keeps NO list of games (since September 2026): the shell hands it the
+  `surface: 'stage'` rows of `foafos-apps.js` at boot (`useRegistry`), and
+  `iframeMinigames` / `minigameInfo` are getters over them. A row loads
+  its `url`, else `../minigames/<type>/index.html`, into a sandboxed
+  iframe. An unregistered name is refused (`minigame.refused`); it used to
+  start gems, which is what the table of contents' canarywharf link did.
+  The DESIGNED path is `inklet/minigames/`
   (`MinigameHost` + guest `minigame-sdk.js` + per-game manifest.json with
   variables.read/write allowlists) — loaded but not yet routed.
 - **THE INIT RACE, and it bites every new guest.** A guest that posts
@@ -403,6 +409,22 @@ flip-storm test in `e2e-wm.mjs` (now 23 assertions).
   `focus()` or you measure focus styles), and translucent surfaces must
   be composited as a STACK (page → scene → choice), not treated as
   opaque backdrops.
+- **A token that no skin defines fails silently.** `--sk-ink/-dim` above
+  means `--sk-ink-dim`. Six rules, and the shell's `SKIN_TOKENS` list
+  (the values a boxed story is handed), said `--sk-dim`, which no skin
+  defines. Each rule took its fallback on every skin and nothing reported
+  it. Measured (September 2026): the split-screen pane labels, a fixed
+  `#9fb3d0`, were 2.0–2.1:1 on Broadsheet, Paper and Calm, and the story
+  runner never received a dim colour. Before you use a `var()` name, find
+  its definition: `git grep -n -- '--sk-name:' inklet/finkapp/fink-skins.css`.
+- **Opacity on top of a token undoes the skin's calibration.**
+  `--sk-ink-dim` is chosen per skin to pass 4.5:1 on `--sk-bg` (4.94:1 at
+  the lowest, Calm). At 50% opacity the Task Manager's context rows fell
+  to 2.0–3.6:1; the runner's status line (85%) and watch summary (60%)
+  would have failed too once they read the real token. Dim text with the
+  dim token, not with opacity; keep opacity for icons and disabled
+  controls. The runner's watch summary shows its open state with
+  `--sk-ink` instead.
 
 ### Story typography: four dead rules and an inverted hierarchy (July 2026)
 
@@ -449,8 +471,9 @@ reading the CSS: every one of these was invisible in source.
   for its in/out links). `--print` for a text dump.
 - Edges: `fink` (typed by `LINKREL`, goDeeper drawn purple), `minigame`
   (dashed, to widget diamonds). Widgets are classified against the REAL
-  registry (fink-minigames.js executed in a vm, not parsed): registered?
-  iframe vs inline? packaged on disk? Anything unlaunchable is flagged.
+  registry (`foafos-apps.js`, imported: it is plain data): registered?
+  iframe vs inline? packaged on disk (its `url`, else the minigames
+  folder)? Anything unlaunchable is flagged.
 - Older `inklet/tools/fink-graph.mjs` + `docs/fink-ring-viz.html` cover
   story→story links only, and their report predates widgets.
 - Gotcha it exposed: **`#` mid-line is a TAG in ink**, so prose like
@@ -588,11 +611,11 @@ widgets are Apps." The tree half was already true (game nodes spawn under
   it went to FinkAudio.play(), which fetched a "synth:" URL and failed
   silently. Demo: `inklet/demos/audio-demo.fink.js`.
 
-## Home and switcher (spec §5.6)
+## Home and Task Manager (spec §5.6)
 
 - `FoafOS.openHome()` (Alt+H) — grouped app grid; `FoafOS.openSwitcher()`
-  (Alt+Tab) — what is running, gathered from story + WM game + inline
-  instances + shell windows; Alt+M toggles mute. Shortcuts skip
+  (Alt+Tab) — the Task Manager: the app tree as a table (see "alpha1
+  surfaces" below); Alt+M toggles mute. Shortcuts skip
   INPUT/TEXTAREA/SELECT/contenteditable.
 - The installed set is CONTENT: `inklet/finkapp/foafos-apps.js`, never
   `packages/foafos`. `kind` ∈ window | game | story | panel decides how
@@ -663,9 +686,10 @@ widgets are Apps." The tree half was already true (game nodes spawn under
   deferred teardown cannot reach a game that started meanwhile.
 - Guests may answer `null` to decline. Chess does, mid-animation: a
   half-slid piece would restore to a board that disagrees with itself.
-- **Disclosure is part of the feature.** The switcher says *keeps its
-  place* / *closing loses it* before ✕ is pressed, on the row and in the
-  close button's `aria-label`. GridLuck predates the SDK and is reported
+- **Disclosure is part of the feature.** The Task Manager says *keeps its
+  place* / *closing loses it* before ✕ is pressed: in the row's
+  description, in its On close column, and in the close button's
+  `aria-label`. GridLuck predates the SDK and is reported
   honestly rather than losing the player's game quietly.
 - E2E: `node inklet/finkapp/test/e2e-snapshot.mjs` — two unrelated
   adopters (mudslider, chess), the disclosure, a real close (container
@@ -783,8 +807,8 @@ before writing another harness; these traps each cost a wrong conclusion.
   (inline minigames are part of the story surface, so they don't).
   Locked by `e2e-audio-leak.mjs`.
 - The shell registers an `uncontrollable` placeholder for every guest so
-  mute over-reports rather than over-promises — but `silent: true` in
-  `minigameInfo` suppresses it. A SILENT game in the "cannot be turned
+  mute over-reports rather than over-promises — but `silent: true` on the
+  app's registry row (`foafos-apps.js`) suppresses it. A SILENT game in the "cannot be turned
   down" list is a lie in the other direction and dilutes the real
   entries. gridluck opens an AudioContext and connects nothing; chess has
   no audio code at all.
@@ -897,6 +921,29 @@ back to the default and say `fellBack` on `root.ready`.
   (asserted). An explicit `?story=` still wins over the manifest.
 - `AppTree` (`packages/foafos/src/apptree.mjs`) holds running instances as
   a tree. `FoafOS.apps`, root node at `FoafOS.rootNode`.
+- **The tree is the one source of truth for powers** (September 2026).
+  Records are private (`#nodes`); callers get one frozen view per node
+  (stable identity, live reads, writes throw) and `nodes` is a read-only
+  Map view. Change a node only through the tree: `setOnClose(id, fn)`,
+  `setScope(id, name, value)` (bus topics etc., frozen, and the scoped bus
+  is BUILT from the recorded copy), `dreamOf`/`peerOf` as spawn options.
+  `can(id, cap)` answers for LIVE nodes only, so a close revokes
+  everywhere at once. Every broker path asks it: a window app's story
+  verbs, storage, secrets and verbs check the asking node
+  (`governAppFrame`); a stage guest's vars need `vars:read`/`vars:write`
+  on its node before the manifest list counts (`FoafVars.authority`); the
+  store/secrets grant tables follow the tree (`syncBrokerGrants`: granted
+  while a live node of the app holds the capability, revoked with the
+  last one). Measured before: closing Data left its storage grant, and a
+  picker launch of a stage app made two nodes, one a ghost row. In the
+  Task Manager the Powers column gives the count and the names (clamped
+  to two lines; the cell's title has them all). At phone width that
+  column is hidden and the row's description gives a COUNT only ("holds
+  8 powers"): the full list, tried first, wrapped a phone row to eight
+  lines (226px, measured and seen in a 390px screenshot). ⓘ shows every
+  power with the bus scope, the manifest variables, verb aims and the
+  frame's sandbox, each read from what enforces it. Locked by
+  `e2e-powers.mjs`, including the row height at phone width.
 - **ATTENUATION is the point:** `grant(child) ⊆ grant(parent)`, enforced in
   `spawn()`, refusal published on `app.spawn.refused` with the excess
   named. Root is everyone's ancestor, so trimming a manifest's
@@ -930,9 +977,11 @@ back to the default and say `fellBack` on `root.ready`.
   - Launching a chrome app TOGGLES it; the picker renders those tiles with
     `aria-pressed` and an on/off marker, because a toggle that looks like
     a launcher is a small lie.
-  - The switcher counts them separately ("Running 1 + N chrome") and sorts
-    them last: they are genuinely running apps, but "Running 4" for one
-    story and three status bars is a true number that reads as a wrong one.
+  - The Task Manager counts them separately ("1 app + 6 chrome"), hides
+    their rows until its Chrome toggle is pressed (kept per device in
+    `localStorage['foafos.tm.chrome']`), and sorts them last when shown:
+    they are running apps, but "4 running" for one story and three status
+    bars is a true number that reads as a wrong one.
   - **CONVERT THE FURNITURE, NOT THREE PIECES OF IT.** The first pass did
     breadcrumb + status line + load meter and stopped, leaving the radial ☰
     hard-coded in `index.html` — so Web TV and Tellyclub, with no story
@@ -968,19 +1017,112 @@ back to the default and say `fellBack` on `root.ready`.
   the guest running while the tree reports it gone. (Caught here by
   checking; `FinkWM.close?.() ?? FinkMinigames.closeMinigame?.()` in older
   tests only ever worked because of the `??`.)
-- Locked by `e2e-root.mjs` (16) + `apptree.test.js` (8 unit).
+- Locked by `e2e-root.mjs` (16) + `apptree.test.js` (16 unit) +
+  `e2e-powers.mjs`.
 
-## alpha1 surfaces: picker, switcher, suspension, logger
+## alpha1 surfaces: picker, Task Manager, suspension, logger
 
 - **Picker** (`openHome`) lists only what the ROOT offers (`rootOffers`).
   It used to list the whole registry, so an office install showed games it
   would then refuse to launch — an icon you can press that does nothing is
   worse than no icon.
-- **Switcher** (`openSwitcher`) renders the APP TREE, indented, built by
-  walking `FoafOS.apps` rather than polling each subsystem's idea of a
-  window. Per-row ⏸ and ✕ act on the SUBTREE and say so in their
-  aria-label ("and 1 beneath it") — a grouped-window UI that takes three
-  things by surprise is the classic failure.
+- **Task Manager** (`openSwitcher`, Alt+Tab, drawer "⧉ Task Manager";
+  September 2026) renders the APP TREE, built by walking `FoafOS.apps`
+  rather than polling each subsystem's idea of a window. The owner asked
+  for "a modern accessible usable recognisable format with sortable
+  columns, open/close widget affordances, filter/highlight" and for a
+  name; "Task Manager" is the name people already know for this job. It
+  is one string in three places (the `h2`, the drawer button, the close
+  button's label). The element id `foafos-switcher`, `openSwitcher()` and
+  the `foafos-switch-*` classes were kept, so the suites that read the
+  old switcher did not change.
+  - **Layout**: a modal dialog; a `table` with an sr-only caption.
+    Columns Name (indented tree, fold twisty), Kind, State, Powers, On
+    close, then actions (ⓘ details, pause, ✕). The root row has ⓘ only:
+    pausing or closing the shell from inside the shell is not a control.
+  - **The brick row** (🧱, `tr.foafos-tm-wall`, sr-only "Sandbox
+    partition") sits between two families of apps, the subtrees directly
+    under the root. The first rebuild replaced it with a 2px line and the
+    owner asked where it went: it is the security diagram, so it stays
+    recognisable. A disclosure under the table, "The sandbox and its
+    limits", says what a wall means and what the sandbox does not stop.
+    See "Limits of the sandbox partition" below, and keep the note true
+    to it.
+  - **Sort**: header buttons, `aria-sort` on the `th`. First press A to Z
+    (Powers: most first), second the reverse, third back to tree order.
+    Sorting reorders SIBLINGS only; a child always stays under the app
+    that opened it.
+  - **Filter**: text matches name, app id, kind, state, place and power
+    names; matches are wrapped in `<mark>`; the ancestors of a match stay
+    as dimmed context rows, so a match never floats free of what opened
+    it. Dimming is for the eye only, so a context row's description
+    starts "Shown for context", and the status line counts matches
+    ("1 of 5 match; 3 more shown for context"). "4 of 4 shown" while
+    filtering was true and said nothing. Quick filters (Paused, Storage, Secrets, Writes variables) are
+    `aria-pressed` toggles whose names contain their visible text (speech
+    input). An empty result says so and offers "Clear the filter".
+    Folding is off while a filter is on.
+  - **Fold**: twisty with `aria-expanded` and an "N beneath it" name;
+    Collapse all / Expand all. The view (sort, filter, folds, open
+    details) survives closing and reopening in the page.
+  - **Keyboard**, as the WAI-ARIA tree view: Up/Down move between rows
+    and keep the column; Home/End; Right unfolds, or on an open row goes
+    to its first child; Left folds, or on a folded row or a leaf goes to
+    the parent; a printable key goes to the filter; Escape empties the
+    filter first, then closes.
+  - **Developer tasks** in the ⓘ details row: `appN · appId`, "Copy as
+    JSON" (the node, requested and granted powers, scopes, sandbox; when
+    the clipboard is refused it shows a selectable `<pre>` rather than
+    failing quietly), and "Show in Logger" (`openLogger({ filter })`).
+  - **Live**: re-renders on `app.spawn`, `app.close`, `app.suspend`,
+    `app.resume`, `app.scope` and `wm.mode` (60 ms debounce), and
+    unsubscribes when the dialog leaves the DOM. A closed app's row goes
+    while the dialog is open; a stale row to press is a lie.
+  - Per-row ⏸ and ✕ act on the SUBTREE and say so in their aria-label
+    ("and 1 beneath it") — a grouped-window UI that takes three things by
+    surprise is the classic failure. Pause is a tristate (this app → its
+    tree too → resume) and its name says which press does what.
+  - **Three widths.** Wide (64rem up): six columns. Mid (45rem to 64rem,
+    a tablet): Kind and On close hide, and a line under the name
+    (`.sub-a`) says them. Narrow (under 45rem): `table-layout: fixed` plus
+    a `<colgroup>`; only Name and the actions stay, and the line under the
+    name (`.sub-a` + `.sub-b`) says the rest. A details or brick row spans
+    only the columns on screen (`shownCols()`, re-rendered on a media
+    change: a tablet turned).
+    - **`nowrap` sets an auto-layout table's least width.** With nowrap
+      names, kinds and states, the six-column table needed ~1016px: from
+      640px to 900px (every iPad in portrait) it scrolled sideways with 16
+      action buttons off the edge. `qa-journey` had reported it for weeks
+      as a non-failing "off-screen but still focusable" finding at tablet
+      width, for the old switcher too. Read the findings list, not only
+      the exit code.
+    - **`overflow-wrap: anywhere` changes the least width, not only the
+      wrapping.** It let the table size the Name column below one word, so
+      names broke mid-word ("Finkosphe re"). `break-word` keeps words
+      whole. The Powers cell is capped at 20rem, or its long list takes the
+      Name column's share of the spare width.
+    - Measured at 390px during the work: the action buttons ran off the
+      right edge, and opening a details row squeezed the name column until
+      it read "NAMI". **TWO TRAPS at phone width:** (1) a rule such
+      as `.c-kind { display: none }` also matches `<col class="c-kind">`, and
+      a hidden `col` drops out of the column model, so the fixed layout
+      gives the widths to the wrong columns. Scope the rule to cells,
+      `:is(th, td):is(.c-kind, …)`. (2) A cell with `display: none` leaves
+      no hole: the cells after it move left, so the action cell becomes
+      each row's SECOND cell and sits in the SECOND column. Size the
+      columns by position (`col:nth-child(2)`), not by class. Sized by
+      class, the action cells were 0px wide; their buttons overflowed into
+      an empty sixth column and the row lines stopped at the name. The
+      four unused columns need `width: 0`, or they take a share of the row
+      from the name.
+  - **Skin tokens**: secondary text and context rows use `--sk-ink-dim`,
+    never opacity. `--sk-dim` is defined by no skin; see "Skins" above
+    for what that cost and how it was measured.
+  - Tests: `e2e-taskmanager.mjs` (23 checks: dialog, the brick row and
+    its note, sorts, filter and marks, quick filters, folding, keyboard,
+    chrome toggle, details and the developer handles, live removal, pause
+    from the row, and the layout at 1024, 820 and 390px). `e2e-powers`, `e2e-root`, `e2e-snapshot`, `e2e-chrome`,
+    `e2e-desktop`, `qa-journey` and `aria-audit` also read it.
 - **Suspension**: `FoafOS.setSubtreeSuspended(id, bool)` sets the tree
   flag AND reaches the things in it (guest pause, `app.suspend` postMessage
   to window apps, a `.suspended` class). A flag nobody acts on is the same
@@ -999,6 +1141,85 @@ back to the default and say `fellBack` on `root.ready`.
   the broker), so its prefs do not persist here, and the registry says so.
   Content cannot be verified headlessly in this environment:
   `net::ERR_ABORTED`, no browser egress.
+
+## Limits of the sandbox partition (September 2026; partly a TODO)
+
+Owner, September 2026, on the brick row: *"The brick served to indicate
+some degree of (sometimes reciprocated?) sandboxing / firewalling between
+apps. We should be clear on limits of this, eg snooping, resource hogging,
+exfiltration are not always easy to guarantee against. Exfil via dns for
+example may be difficult/impossible to block for non-Chrome browsers, and
+even then require some HTTP headers to be appropriately set. (Detail
+unclear / from memory, add to Skill as a todo)"*
+
+**What the brick row means** (read from the code, September 2026):
+- Every app frame, on either side of a wall, has `sandbox="allow-scripts"`
+  (windows also get forms and modals: `sandboxFor()`), so every app has
+  its own opaque origin: no `parent.document`, no storage of its own, no
+  reach into a sibling frame. That holds INSIDE a family too: the story
+  runner and the cellar it opened are two separate opaque origins.
+- What a wall adds is the grant chain: nothing below it was opened by
+  anything above it, or holds powers from it. Inside a family, values pass
+  only through the shell and only as powers allow: a game reads the
+  story's variables with `vars:read` and changes them with `vars:write`.
+  So the flow inside a family can be two-way, one-way or none, and the
+  Powers column says which. That is the answer to "sometimes
+  reciprocated?". Across a wall, the only shared channel is the shell-wide
+  bus topics that both sides may hear (ⓘ → bus).
+- The shell (level 0) sees everything it brokers. The partition is between
+  apps, not between an app and the shell.
+- `same-origin` puts an app in the shell's own origin, where no wall
+  holds. No app holds it in September 2026 (`ambientApps()` is empty); the
+  Task Manager's note names any running holder.
+
+**Measured**, Chromium 141 headless on Linux, with
+`node inklet/finkapp/test/sandbox-limits.mjs` (a measurement, not a
+pass/fail suite; it takes `firefox` or `webkit` where those exist):
+
+| route out of the frame | no policy | `<meta>` CSP `default-src 'none'` in the guest page | iframe `csp` attribute |
+|---|---|---|---|
+| fetch (no-cors), image, `sendBeacon` | reach any server | blocked | the frame does not load |
+| WebRTC STUN, UDP to a host:port the guest chooses | reaches it | **still reaches it** | the frame does not load |
+| busy loop of 1.5 s in the guest | host timer gap ~20 ms | ~20 ms | (no guest ran) |
+
+- In this Chromium a busy guest did not stop the shell: the sandboxed
+  frame runs in another process. Do not generalise that to other browsers.
+- A page CSP does not stop WebRTC. The iframe `csp` attribute (CSP
+  Embedded Enforcement) blocks the frame completely unless the response
+  sends `Allow-CSP-From`, and GitHub Pages cannot send custom headers.
+- **Testing trap:** serve probe pages from a real server. With
+  `page.route` + `route.fulfill`, fetch, image and beacon did not reach a
+  loopback sink at all, so the probe under-reported exfiltration. Probable
+  cause: Chromium's local-network access rules for a page with no address
+  (not verified).
+
+**TODO, unverified** (the owner's memory and general knowledge; measure
+before relying on any of it, and update the Task Manager note to match):
+- **DNS exfiltration.** A host name the guest chooses (a STUN URL, a
+  `<link rel="dns-prefetch">`, any resource URL) may be looked up before
+  CSP applies, or where CSP has no say. Owner: possibly impossible to block
+  outside Chrome, and in Chrome it needs headers. To check per browser:
+  `X-DNS-Prefetch-Control`, the CSP `webrtc` directive, CSP on prefetch.
+  Needs a DNS observer; not measured here.
+- **Headers.** GitHub Pages sets none, so a policy can only come from a
+  `<meta>` in each guest page, which the guest's author controls; a
+  third-party guest will not carry ours. Decide whether first-party guests
+  carry a `<meta>` CSP, and what it costs them (their own fetches need
+  `connect-src`/`img-src` allowances). Some directives do not work in
+  `<meta>` at all.
+- **Resource hogging elsewhere.** WebKit/Safari (iOS above all) and Chrome
+  on Android may keep a same-site sandboxed frame in the shell's process;
+  then a busy or memory-hungry guest freezes or kills the shell. Run the
+  tool with `firefox` / `webkit`; for iOS, use a device and Web Inspector.
+  Mitigations to consider: a watchdog on the conformance probe, and
+  removing a frame that stops answering (which works only while the
+  shell's own thread still runs).
+- **Snooping.** Timing and Spectre-class inference is out of scope in
+  `docs/fink-story-sandbox-threatmodel-20260728.md` §2. List what else a
+  guest observes (URL parameters it is given, bus topics, the referrer?)
+  and check each.
+- **Availability** beyond the store's `quotas` and the threat model's bus
+  flood item (§1.5): memory, audio, wake locks.
 
 ## Secrets are not storage (July 2026)
 
