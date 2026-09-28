@@ -684,8 +684,27 @@ this (option 1 of 3) over splat heads on SDF bodies in the scene; holographic cr
   itself: "synthetic face · LAM, Apache-2.0".
 - Loading: nothing until the first line. Then `import()` of `magpie/splatweb/lib/{splat-renderer,lam-splats,
   lam-visemes}.js` (relative to dist/city.html), the shared 3.6 MB `lam-sample/skin.glb` once, 1.3 MB per face.
-- Drawing: the WebGL2 `SplatRenderer` on the feed's own canvas (not the city's WebGPU device: no second device on a
-  phone), posed on the CPU (20,000 splats) at about 30 frames a second, only while the feed is open.
+- Drawing (owner, September 2026: "The splat talking heads are supposed to be gpu esp webgpu"). With WebGPU, the
+  pose runs in a WGSL compute pass (`magpie/splatweb/lib/gpu-skinned-avatar.js`) and a `GpuSplatScene` draws it
+  every frame, on the city's own device (`HEADS.device`, set at the end of `init()` in `main.js`), so a phone still
+  holds one device. The feed page has no other device and asks for one. Without WebGPU, or with no adapter (plain
+  headless Chromium has `navigator.gpu` and no adapter), it falls back to the CPU pose (20,000 splats of
+  JavaScript) and the WebGL2 `SplatRenderer`, about 30 frames a second. A canvas that once gave a WebGPU context
+  cannot give WebGL2, so the fallback swaps in a new canvas (`headNewCanvas`). Only while the feed is open.
+  - **The GPU path does not sort the splats inside a face.** `GpuSplatScene` orders objects; a drawable's
+    `orderBuf` is the identity. Drawn in file order, Mags's face came out washed out, the eyes glassy and the blue
+    collar showing through the cheeks (compared side by side with the CPU path, which sorts every frame). The
+    feed's camera is fixed and the head turns about 0.1 radian, so `headDraw` orders the splats once, back to
+    front from the camera (`presortOrder`, written into `orderBuf`): the image then matched the CPU one. A camera
+    that moves around a head would need a per-frame sort on the GPU, which the library does not have yet.
+  - **The GPU pose bakes only the channels it is given.** The library's default is 17 (visemes and blinks), which
+    would drop every mood and brow flash. `headMorphNames` adds the moods and what speech drives: 43 channels,
+    154 floats per splat, 12.3 MB of rest buffer per face. The last three faces keep their GPU buffers; older ones
+    are freed (`destroy`).
+  - Measured here (Chromium, Dawn's SwiftShader adapter, in the sandboxed feed frame): the WebGPU path runs, 3 to
+    8 frames in the first seconds in software; `e2e-drift.mjs` checks both paths. Not measured: a head inside the
+    city on the city's own device (the city's WebGPU start-up does not finish on SwiftShader in a test's time), and
+    frame rates on a phone.
 - Mouth: the ARKit viseme bursts from `lam-visemes.js`, scaled by the clip's loudness, plus `jawOpen` from the
   loudness. The loudness is a 60 Hz RMS envelope from a second fetch of the same mp3 (served from cache), so the
   line still plays through its own `<audio>` element, untouched. Blinks and a slow head sway.

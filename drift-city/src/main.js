@@ -1249,6 +1249,7 @@ async function init() {
     GPUREF.phys = PHYS; GPUREF.device = device;
   } catch (e) { console.warn("physics off:", e && e.message); }
   globalThis.__driftGPU = { gpuInfo, lite: PL.lite };
+  HEADS.device = device; // the talking heads draw on the city's device (heads.js), not a second one
 
   const TU = GPUTextureUsage;
   const cellTex = device.createTexture({ size: [NC * 3, NC], format: "rgba32float", usage: TU.TEXTURE_BINDING | TU.COPY_DST });

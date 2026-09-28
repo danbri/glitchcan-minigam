@@ -210,9 +210,10 @@ try {
   const head = await feed.waitForFunction(() => __feed.HEADS.who === 'mags' && __feed.HEADS.av && __feed.HEADS.r, null, { timeout: 15000 })
     .then(() => true, () => false);
   const hs = head ? null : await feed.evaluate(() => ({ who: __feed.HEADS.who, av: !!__feed.HEADS.av, r: !!__feed.HEADS.r, fail: __feed.HEADS.fail })).catch(() => 'gone');
-  head
-    ? pass('Mags\'s rigged splat head (LAM) loads in the sandboxed frame and draws')
-    : fail(`the head: ${JSON.stringify(hs)}`);
+  const kind = head ? await feed.evaluate(() => __feed.HEADS.r.kind).catch(() => 'gone') : null;
+  head && kind === 'webgl2'
+    ? pass('Mags\'s rigged splat head (LAM) loads in the sandboxed frame and draws; with no WebGPU adapter here, on the CPU and WebGL2')
+    : fail(`the head: ${JSON.stringify({ hs, kind })}`);
 
   // 13. the line ends, control comes back, the story goes on to the next line
   // (its own talking head) and then to its choice
@@ -225,6 +226,28 @@ try {
     : fail(`after the lines: ${JSON.stringify({ second: !!second, after })}`);
 
   errs.length === 0 ? pass('no page errors') : fail(`page errors: ${errs.slice(0, 3).join(' · ')}`);
+
+  // 14. with WebGPU (Dawn's SwiftShader adapter, software): the head is posed
+  // in a WGSL compute pass and drawn with WebGPU, in the same sandboxed frame
+  const gpuBrowser = await chromium.launch({ headless: true, executablePath: EXE,
+    args: ['--no-sandbox', '--enable-unsafe-webgpu', '--use-webgpu-adapter=swiftshader', '--enable-features=Vulkan',
+      '--use-vulkan=swiftshader', '--enable-unsafe-swiftshader', '--use-gl=angle', '--use-angle=swiftshader'] });
+  try {
+    const gpage = await gpuBrowser.newPage({ viewport: { width: 900, height: 700 } });
+    const gerrs = [];
+    gpage.on('pageerror', (e) => gerrs.push(String(e).slice(0, 200)));
+    await gpage.goto(`${BASE}/inklet/finkapp/?story=/${repoName}/drift-city/foafos-entry.fink.js`);
+    const grunner = await runnerOf(gpage);
+    await grunner.waitForFunction(() => window.__storyrunner?.ready?.() && window.__storyrunner.state.choices.length > 0, null, { timeout: 30000 });
+    await chooseText(grunner, 'Go into the Cold Tap and ask Mags');
+    const gfeed = await frameMatching(gpage, /drift-city\/feed\/index\.html\?line=mags-1$/);
+    const g = gfeed && await gfeed.waitForFunction(() => window.__feed?.HEADS.r?.kind && window.__feed.HEADS.frames >= 3, null, { timeout: 30000 })
+      .then(() => gfeed.evaluate(() => ({ kind: __feed.HEADS.r.kind, frames: __feed.HEADS.frames, fail: __feed.HEADS.fail })), () => null);
+    g?.kind === 'webgpu' && !g.fail && gerrs.length === 0
+      ? pass(`with WebGPU, the head is posed in a compute pass and drawn with WebGPU inside the sandboxed frame (${g.frames} frames on a software adapter)`)
+      : fail(`WebGPU head: ${JSON.stringify({ g, gerrs: gerrs.slice(0, 2) })}`);
+  } finally { await gpuBrowser.close(); }
+
   console.log(process.exitCode ? '\nDRIFT APPS E2E: FAIL' : '\nDRIFT APPS E2E: PASS');
 } catch (e) {
   fail(`fatal: ${String(e).slice(0, 400)}`);

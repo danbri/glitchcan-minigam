@@ -18,7 +18,7 @@ import { SplatComputePass } from './gpu-splat-compute.js';
 // per-splat GPU buffers would be ~8MB/avatar for channels nothing in
 // this project ever drives; this 17-name subset is ~2MB/avatar and
 // covers everything sampleTalkBurst()/idle blink actually produce.
-const MORPH_NAMES = [
+export const MORPH_NAMES = [
   'jawOpen', 'mouthFunnel', 'mouthPucker', 'mouthStretchLeft', 'mouthStretchRight',
   'mouthSmileLeft', 'mouthSmileRight', 'mouthLowerDownLeft', 'mouthLowerDownRight',
   'mouthRollUpper', 'mouthClose', 'mouthPressLeft', 'mouthPressRight',
@@ -102,7 +102,12 @@ function noise3JS(x, y, z) {
   return y0 + (y1 - y0) * uz;
 }
 
-const WGSL_TRANSFORM = /* wgsl */`
+// The compute shader's text, for a given number of morph channels. The
+// default (MORPH_NAMES, 17) gives exactly the text every caller had before
+// the count became a parameter; a caller that drives more ARKit shapes
+// (drift-city's talking heads: brows, eyes, cheeks) passes its own list to
+// createGpuSkinnedAvatar and gets a matching stride and shader.
+const transformWGSL = (N_MORPHS, REST_STRIDE = 24 + N_MORPHS * 3 + 1) => /* wgsl */`
 fn quatMul(a: vec4<f32>, b: vec4<f32>) -> vec4<f32> {
   return vec4<f32>(
     a.w*b.x + a.x*b.w + a.y*b.z - a.z*b.y,
@@ -461,16 +466,47 @@ fn transform(i: u32) -> array<f32, 14> {
 }
 `;
 
+// GpuSplatScene sorts objects, not the splats inside one: a drawable's
+// orderBuf (createGpuDrawable) is the identity (gpu-splat-compute.js,
+// "Depth ordering"), and a face drawn in file order blends wrongly (the
+// drift-city skill, "Talking heads"). A caller whose camera stays in one place relative to
+// the avatar (a talking head in a fixed frame, turning a few degrees) can
+// order the splats once, back to front as seen from that point, with the
+// same placement the shader uses (centre, scale, yaw, at), and write the
+// result into the drawable's orderBuf:
+//   device.queue.writeBuffer(drawable.orderBuf, 0, presortOrder(avatar, cam, { yaw }))
+// Rest positions, not posed ones: the order holds while the pose stays near
+// rest.
+export function presortOrder(avatar, from, { at = [0, 0, 0], yaw = 0 } = {}) {
+  const { count, pos, ply, centre, scale } = avatar;
+  const cy = Math.cos(yaw), sy = Math.sin(yaw);
+  const d = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    const i3 = i * 3;
+    const lx = (pos[i3] + ply.off[i3] - centre[0]) * scale;
+    const ly = (pos[i3 + 1] + ply.off[i3 + 1] - centre[1]) * scale;
+    const lz = (pos[i3 + 2] + ply.off[i3 + 2] - centre[2]) * scale;
+    const wx = at[0] + lx * cy + lz * sy, wy = at[1] + ly, wz = at[2] - lx * sy + lz * cy;
+    d[i] = (wx - from[0]) ** 2 + (wy - from[1]) ** 2 + (wz - from[2]) ** 2;
+  }
+  const order = new Uint32Array(count);
+  for (let i = 0; i < count; i++) order[i] = i;
+  order.sort((x, y) => d[y] - d[x]); // farthest first
+  return order;
+}
+
 // Builds the static (upload-once) REST buffer straight from the already-
 // loaded avatar's own public fields — parseLamPly/loadLamAvatar in
 // lam-splats.js are untouched and do all the actual asset parsing.
-function buildRestBuffer(avatar) {
+// morphNames: which ARKit channels to bake (default MORPH_NAMES).
+function buildRestBuffer(avatar, morphNames = MORPH_NAMES) {
   const { count, pos, ply, jidx, jw, scale, maxScale, maxAspect, morphs } = avatar;
+  const N_MORPHS = morphNames.length, REST_STRIDE = 24 + N_MORPHS * 3 + 1;
   // Missing-morph arrays (an avatar without every ARKit target — shouldn't
   // happen for LAM assets, but defensive) contribute a zero delta rather
   // than throwing.
   const ZERO3 = new Float32Array(count * 3);
-  const morphArrays = MORPH_NAMES.map((nm) => morphs[nm] || ZERO3);
+  const morphArrays = morphNames.map((nm) => morphs[nm] || ZERO3);
   const rest = new Float32Array(count * REST_STRIDE);
   for (let i = 0; i < count; i++) {
     const i3 = i * 3, i4 = i * 4, o = i * REST_STRIDE;
@@ -508,13 +544,17 @@ function buildRestBuffer(avatar) {
 // device: from requestComputeDevice(). avatar: a loaded LamHeadAvatar
 // (loadLamAvatar() from lam-splats.js — unmodified). outBuffer: the GPU
 // storage buffer to write into (pass a GpuSplatScene drawable's outBuf).
-export function createGpuSkinnedAvatar(device, avatar, outBuffer) {
+// opts.morphNames (optional): the ARKit channels update() may drive; omitted,
+// MORPH_NAMES and everything exactly as before.
+export function createGpuSkinnedAvatar(device, avatar, outBuffer, opts = {}) {
+  const { morphNames = MORPH_NAMES } = opts;
+  const N_MORPHS = morphNames.length, REST_STRIDE = 24 + N_MORPHS * 3 + 1;
   const N = avatar.nodes.N;
   const MORPH_OBJ_BASE = 25;
   const JOINT_OBJ_BASE = MORPH_OBJ_BASE + N_MORPHS;
   const objFloats = JOINT_OBJ_BASE + N * 12;
-  const pass = new SplatComputePass(device, { restStride: REST_STRIDE, wgslTransform: WGSL_TRANSFORM, maxObjFloats: objFloats });
-  const rest = buildRestBuffer(avatar);
+  const pass = new SplatComputePass(device, { restStride: REST_STRIDE, wgslTransform: transformWGSL(N_MORPHS), maxObjFloats: objFloats });
+  const rest = buildRestBuffer(avatar, morphNames);
   pass.setData(rest, avatar.count, outBuffer);
   const obj = new Float32Array(objFloats);
 
@@ -564,11 +604,14 @@ export function createGpuSkinnedAvatar(device, avatar, outBuffer) {
       obj[21] = spin ? spin.from : 0; obj[22] = spin ? spin.to : 0;
       obj[23] = spin ? spin.start : -999; obj[24] = spin ? spin.dur : 1;
       const morph = params.morph || {};
-      for (let m = 0; m < N_MORPHS; m++) obj[MORPH_OBJ_BASE + m] = morph[MORPH_NAMES[m]] || 0;
+      for (let m = 0; m < N_MORPHS; m++) obj[MORPH_OBJ_BASE + m] = morph[morphNames[m]] || 0;
       obj.set(avatar.J.subarray(0, N * 12), JOINT_OBJ_BASE);
       pass.updateObj(obj);
     },
     encode(encoder) { pass.encode(encoder); },
+    // frees this avatar's GPU buffers (the rest template is the large one:
+    // count x stride floats); the caller frees the drawable's own buffers
+    destroy() { pass.restBuf?.destroy(); pass.objBuf?.destroy(); pass.countBuf?.destroy(); },
     dispatch(time, params = {}) {
       this.update(time, params);
       const encoder = device.createCommandEncoder();
