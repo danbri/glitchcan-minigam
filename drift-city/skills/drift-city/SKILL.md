@@ -759,8 +759,10 @@ works too: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/story/peraspera.
   against the story's address (`TALE.base`); a replayed beat (after a restore) skips `voice` and `speech`.
   `taleSync` sends `here`, `hour` and `snowing` with `setVariable`, only when a value changes (`TALE.wsent`), and it
   now also runs in the WebGL fallback's frame loop, which never called it. `want_time` and `want_weather` arrive
-  through `onVariableChanged` (`worldVar`). Clue finding is off: the glint needs the page's own panel open, and a
-  world may not move the story, so the story's text routes offer the clues. In foafos (world or game) the menu has
+  through `onVariableChanged` (`worldVar`). Clues glint as in the page's own story: `taleFound` sets the clue in the
+  story (`setVariable`; the row lists the clue names in `DRIFT_CLUES`, `foafos-apps.js`, so a new clue must be added
+  there) and asks the story to re-enter the scene (`worldReenter`, SDK `reenterScene`); a `# live` scene does the same
+  when you move. The story's text routes still offer the clues too. In foafos (world or game) the menu has
   no Sound item: the shell's volume and mute reach the city through `hostGain`. On a phone the story window
   takes the bottom half and the city shows above it (the shell's `foafos-with-world`); the city's own controls
   at the bottom of its frame are then under the story.

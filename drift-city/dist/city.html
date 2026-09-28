@@ -12603,7 +12603,11 @@ function taleSync(dt) {
   const was = TALE.here;
   TALE.here = here;
   const hour = ["day", "dusk", "night", "snow"][todIdx], snowing = WX.rain > 0.3;
-  if (world) { worldSet("here", here); worldSet("hour", hour); worldSet("snowing", snowing); return; }
+  if (world) {
+    worldSet("here", here); worldSet("hour", hour); worldSet("snowing", snowing);
+    if (was !== here && TALE.live && TALE.scene) worldReenter(TALE.scene);
+    return;
+  }
   taleSetVar("here", here);
   taleSetVar("hour", hour);
   taleSetVar("snowing", snowing);
@@ -12612,12 +12616,14 @@ function taleSync(dt) {
 
 // something noticed while looking around: tell the story, and re-enter the scene so its text and choices refresh
 function taleFound(h) {
-  TALE.story.variablesState[h.v] = true;
+  const world = worldOn();
+  if (world) { TALE.wvars[h.v] = true; worldSet(h.v, true); } else TALE.story.variablesState[h.v] = true;
   TALE.hot = TALE.hot.filter((x) => x !== h);
   TALE.props = (TALE.props || []).filter((p) => p.clue !== h.v);
   audioChime();
   showHint("You notice " + h.label + ".", 5000);
-  if (TALE.scene) { TALE.story.ChoosePathString(TALE.scene); taleAdvance(); }
+  if (!TALE.scene) return;
+  if (world) worldReenter(TALE.scene); else { TALE.story.ChoosePathString(TALE.scene); taleAdvance(); }
 }
 
 // ---------- the world beside a story in foafos (`# WORLD: drift`) ----------
@@ -12625,9 +12631,10 @@ function taleFound(h) {
 // page with world=1). After each step the runner sends the lines whose tags it does not handle itself; they drive the
 // city as the tags do in the panel's story (taleTags). Where you are, the hour and the snow go back to the story
 // (setVariable; the registry row allows those three), and want_time and want_weather come in (onVariableChanged).
-// There is no story panel and no Story menu. A clue in the world is not found here: a world may not move the story
-// (spec section 5), so the story offers its clues as choices (in_world stays false). The model is in the
-// story-game-sync skill.
+// There is no story panel and no Story menu. A clue found here sets its VAR in the story and asks the story to
+// re-enter the scene (worldReenter: the world holds story:steer, and the story allows only the scene its last
+// # scene: tag named); a # live scene does the same when you move. in_world stays false, so the story still offers
+// its clues as choices too. The model is in the story-game-sync skill.
 function worldOn() { return hostOn() && hostState().world === true; }
 function worldStart() { INTRO.started = true; NAV.gate = false; audioSetOn(true); hop(HOME_DEST); }
 function worldBeat(lines, meta) {
@@ -12646,6 +12653,7 @@ function worldVar(name, v) {
   if (name === "want_time") taleWantTime(v);
   else if (name === "want_weather") taleWantWeather(v);
 }
+function worldReenter(scene) { const sdk = hostState().sdk; if (sdk && sdk.reenterScene) sdk.reenterScene(scene); }
 // only a change goes to the story
 function worldSet(name, v) {
   if (TALE.wsent[name] === v) return;
@@ -12857,7 +12865,7 @@ function visitWalkStep(V, dt) {
 function taleHotspots(dt, cam, fov) {
   const g = document.getElementById("glint");
   if (!g) return;
-  if (NAV.mode !== "visit" || !TALE.on || !TALE.hot.length || NAV.visit.t < NAV.visit.T) { g.hidden = true; TALE.dwell = 0; return; }
+  if (NAV.mode !== "visit" || (!TALE.on && !worldOn()) || !TALE.hot.length || NAV.visit.t < NAV.visit.T) { g.hidden = true; TALE.dwell = 0; return; }
   const p = NAV.visit.to, W = innerWidth, H = innerHeight;
   let best = null, bestA = 9;
   for (const h of TALE.hot) {

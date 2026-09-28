@@ -244,7 +244,7 @@ Guest games run in `<iframe sandbox="allow-scripts">` (opaque origin).
   beside a story, `story-beat {lines, base, replay}` (§5.8).
 - Games cannot divert the story. They mutate declared variables; the
   host resumes Ink on completion. Reactions follow §3.2. A world (§5.8)
-  cannot divert it either.
+  may ask for one thing only: to re-enter the scene the reader is in.
 - Packaging: `inklet/minigames/<name>/` with `manifest.json`
   (variables.read/write allowlists, modes, ui, and `features` — browser
   permissions such as `geolocation` that the host grants onto the
@@ -816,10 +816,19 @@ stories in the foafos runner instead of an Ink engine of its own.
 - The runner's snapshot (§5.5.4) carries `world: {tag, lines}`: the last 60
   lines sent. A restore opens the world again and sends those lines as a
   `replay` beat, which rebuilds places and props and does not speak again.
-- A world may not move the story. A story that uses one keeps a text route
-  for anything found only in the world (the story-game-sync skill,
-  Fallbacks). Letting a world re-enter the current scene would change this
-  rule; that is the owner's decision.
+- A world may move the story in one way only (owner's decision, September
+  2026): it may ask the story to re-enter the scene the reader is in, after
+  something in the world changed it (a clue found, the reader moved to a
+  `# live` scene). Guest SDK `reenterScene(scene)` sends `story-reenter`.
+  The shell passes it on only from a world instance whose node holds
+  `story:steer` (the runner and the root hold it to confer it), as
+  `story.event world.reenter {scene}`. The runner accepts only the knot that
+  the story's last `# scene:` tag named, only while the story is ready and
+  no game plays, and then does `ChoosePathString(scene)` and continues. A
+  variable the world sets first (`set-variable`) arrives before the
+  re-entry, so the scene reads it. A story that uses a world still keeps a
+  text route for anything found in the world (the story-game-sync skill,
+  Fallbacks).
 
 ## 6. Links, navigation, identity
 

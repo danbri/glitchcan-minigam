@@ -94,7 +94,7 @@ try {
     file: __drift.TALE.file, origin: String(self.origin) }));
   const dnode = await nodeOf(page, 'drift');
   inCity.on && inCity.args?.tale === 'peraspera' && inCity.file === 'peraspera.fink.js' && inCity.origin === 'null'
-    && dnode && JSON.stringify(dnode.args) === '{"tale":"peraspera"}' && dnode.caps.join() === 'audio,vars:read,vars:write'
+    && dnode && JSON.stringify(dnode.args) === '{"tale":"peraspera"}' && dnode.caps.join() === 'audio,vars:read,vars:write,story:steer'
     ? pass(`story.launch drift tale=peraspera (what "# MINIGAME: drift tale=peraspera" sends) opens the city on Per Aspera, in a sandboxed frame, as a node holding audio and vars with args tale=peraspera`)
     : fail(`city: ${JSON.stringify({ inCity, dnode })}`);
 
@@ -263,7 +263,7 @@ try {
       return n && { parent: FoafOS.apps.get(n.parentId)?.surface, caps: [...n.capabilities].join(),
         yielded: !!win?.classList.contains('foafos-yielded') };
     });
-    wn && wn.parent === 'story' && wn.caps === 'audio,vars:read,vars:write' && !wn.yielded
+    wn && wn.parent === 'story' && wn.caps === 'audio,vars:read,vars:write,story:steer' && !wn.yielded
       ? pass('the city opens beside the story, not over it: a node under the dream session holding audio and vars, and the story window stays on screen')
       : fail(`world node: ${JSON.stringify(wn)}`);
     // on a phone the story window is full-bleed; with a world it leaves the top half to the city
@@ -285,10 +285,38 @@ try {
       ? pass('the first step\'s tags drive the city (scene street, place street_1); no story panel, no opening page; it has the story\'s want_time and want_weather')
       : fail(`city in world mode: ${JSON.stringify(c1)}`);
 
+    // 17b. a world may re-enter ONLY the scene the story's last # scene: named
+    await wpage.evaluate(() => { window.__rw = []; FoafOS.bus.subscribe('app.storyrunner.world', (e) => window.__rw.push(e.data)); });
+    const beforeWrong = await choices(wr);
+    await wcity.evaluate(() => __drift.host().sdk.reenterScene('mags'));
+    await wpage.waitForFunction(() => window.__rw.some((x) => x.reenter === 'mags'), null, { timeout: 15000 }).catch(() => {});
+    const wrong = await wpage.evaluate(() => window.__rw.find((x) => x.reenter === 'mags') || null);
+    const afterWrong = await choices(wr);
+    wrong && wrong.ok === false && JSON.stringify(afterWrong) === JSON.stringify(beforeWrong)
+      ? pass('the city asks to enter "mags" while the reader is on the street: refused by the runner, the story unchanged')
+      : fail(`wrong scene: ${JSON.stringify({ wrong, beforeWrong, afterWrong })}`);
+
+    // 17c. a clue found in the city: its VAR goes to the story, and the story re-enters the scene
+    const clue = await wcity.evaluate(() => {
+      const h = __drift.TALE.hot.find((x) => x.v === 'voucher');
+      if (!h) return null;
+      __drift.taleFound(h);
+      return h.v;
+    });
+    const found = clue && await wr.waitForFunction(() => window.__storyrunner.varOf('voucher') === true
+      && window.__storyrunner.state.choices.includes('Go to the emigration gate'), null, { timeout: 30000 })
+      .then(() => wr.evaluate(() => ({ choices: window.__storyrunner.state.choices,
+        told: window.__storyrunner.state.prose.some((p) => /The voucher is the Org's/.test(p.text || p)) })), () => null);
+    const hotAfter = await wcity.waitForFunction(() => !__drift.TALE.hot.some((x) => x.v === 'voucher'), null, { timeout: 15000 })
+      .then(() => true, () => false);
+    found && !found.choices.includes('Look around') && found.told && hotAfter
+      ? pass('a clue found in the city (the voucher) sets its VAR in the story, which re-enters the street: the voucher text, no "Look around", the way to the gate; the city does not offer it again')
+      : fail(`found in the city: ${JSON.stringify({ clue, found, hotAfter })}`);
+
     // 18. variables both ways, through the shell
     await wr.waitForFunction(() => !!window.__storyrunner.varOf('hour'), null, { timeout: 30000 }).catch(() => {});
     const h0 = await wr.evaluate(() => window.__storyrunner.varOf('hour'));
-    const sent = await wr.evaluate(() => window.foaf.storyRequest('story.world', { op: 'vars', values: { want_time: 'dusk', voucher: true } }));
+    const sent = await wr.evaluate(() => window.foaf.storyRequest('story.world', { op: 'vars', values: { want_time: 'dusk', heard_mags: true } }));
     const h1 = await wr.waitForFunction(() => window.__storyrunner.varOf('hour') === 'dusk', null, { timeout: 30000 })
       .then(() => 'dusk', () => wr.evaluate(() => window.__storyrunner.varOf('hour')));
     h0 && sent?.sent === 1 && h1 === 'dusk'

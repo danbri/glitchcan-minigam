@@ -246,6 +246,18 @@ class MinigameSDK {
     }
 
     /**
+     * As a world: ask the story to enter the scene the reader is in again,
+     * because something in the world changed it (a clue found, the reader
+     * moved). The story allows only the scene its last `# scene:` tag named,
+     * and the world's node must hold `story:steer`. Set any variable first
+     * (setVariable); the story sees it before it re-enters.
+     * @param {string} scene - the knot the story's `# scene:` tag named
+     */
+    reenterScene(scene) {
+        this._sendMessage({ type: 'story-reenter', scene: String(scene || '') });
+    }
+
+    /**
      * Set an INK variable (must be in manifest's write allowlist)
      * @param {string} name - Variable name
      * @param {*} value - Variable value

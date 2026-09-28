@@ -850,6 +850,24 @@ FoafOS.worldWrite = (instId, name, value) => {
   } catch (err) { return false; }
   return true;
 };
+// Called by the stage host when a world asks the story to enter the reader's
+// scene again (SDK reenterScene). The power is the node's: `story:steer`,
+// which the world holds only if the session that opened it does. WHICH scene
+// is the runner's check: only the one the story's last `# scene:` named.
+FoafOS.worldReenter = (instId, scene) => {
+  const w = worldOfInstance(instId);
+  if (!w || !w.nodeId) return false;
+  if (!apps.can(w.nodeId, 'story:steer')) {
+    bus.publish('story.world.denied', {
+      summary: `${w.game} may not move the story: it holds no story:steer`, world: w.game, scene,
+    });
+    return false;
+  }
+  try {
+    w.frame.contentWindow?.postMessage({ type: 'story.event', event: 'world.reenter', detail: { scene } }, '*');
+  } catch (err) { return false; }
+  return true;
+};
 const worldSend = (w, msg) => (w.instId ? !!window.FinkMinigames?.sendToInstance?.(w.instId, msg)
   : ((w.held || (w.held = [])).push(msg), true));
 // A BOXED STORY MUST YIELD THE SCREEN TO THE GAME IT LAUNCHED.

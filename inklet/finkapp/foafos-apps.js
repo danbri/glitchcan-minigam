@@ -68,6 +68,12 @@ export const APP_FAMILIES = [
   { id: 'chrome', label: 'Chrome', icon: '🧩' },
 ];
 
+// Drift City's clues: the VARs its stories name in `# hotspot:` tags
+// (drift-city/story/*.fink.js). A new clue in a story needs its name here, or
+// the city cannot report finding it (the broker refuses an unlisted write).
+const DRIFT_CLUES = ['card', 'ledger', 'minutes', 'oilcan', 'patch', 'reed', 'scale',
+  'setlist', 'stone', 'tape', 'tenpo', 'ticket', 'voucher'];
+
 export const APPS = [
   // ── Office ────────────────────────────────────────────────────────
   // ALL FOUR are off the escape hatch as of July 2026. Each hit a
@@ -177,13 +183,19 @@ export const APPS = [
   // controls, so no host pad.
   // As a WORLD (`# WORLD: drift`, the story in the runner) it reads the
   // story's want_time and want_weather, and writes where you are, the hour
-  // and the snow back to it. Autoplay: the reader taps the story, not the
-  // city, so the city's sound must start without a tap in its own frame.
+  // and the snow back to it. The clues are the story's VARs named by its
+  // `# hotspot:` tags: read so a found one is not offered again, written
+  // when the city finds one, and then the city re-enters the reader's scene
+  // (story:steer). Autoplay: the reader taps the story, not the city, so the
+  // city's sound must start without a tap in its own frame.
   { id: 'drift', family: 'play', icon: '🪐', name: 'Drift City',
     surface: 'stage', game: 'drift', url: '../../drift-city/dist/city.html',
     desc: 'The city on Titan and its stories', controls: 'none',
-    args: ['tale'], capabilities: ['audio', 'vars:read', 'vars:write'],
-    variables: { read: ['want_time', 'want_weather'], write: ['here', 'hour', 'snowing'] },
+    args: ['tale'], capabilities: ['audio', 'vars:read', 'vars:write', 'story:steer'],
+    variables: {
+      read: ['want_time', 'want_weather', ...DRIFT_CLUES],
+      write: ['here', 'hour', 'snowing', ...DRIFT_CLUES],
+    },
     features: ['autoplay'] },
   // One Drift City cast member on the helmet comms feed, speaking a recorded
   // line: `# MINIGAME: talkinghead line=mags-3 [mood=wry]`. A rigged
@@ -236,8 +248,10 @@ export const APPS = [
     // observability point for the story subtree beneath it. It is a separate
     // capability from playing, so a runner that should only play can be handed
     // a list without it and the shell will refuse the verb.
+    // `story:steer` it holds only to confer: a world it opens (`# WORLD:`) may
+    // ask the story to re-enter the reader's scene (spec §5.8).
     capabilities: ['story:launch', 'story:link', 'story:navigate', 'story:observe',
-                   'audio', 'input', 'vars:read', 'vars:write'],
+                   'story:steer', 'audio', 'input', 'vars:read', 'vars:write'],
     bus: { publish: ['app.storyrunner.*'], subscribe: ['wm.mode', 'audio.volume', 'ui.skin'] } },
   // MIGRATED (July 2026) — and it was the LAST `same-origin` holder, so the
   // whole registry is now sandboxed. Found because the ROBBAMP tile was DEAD

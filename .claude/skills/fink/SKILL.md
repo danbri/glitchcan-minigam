@@ -244,6 +244,14 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   `foafos-with-world` and starts at 50dvh, as Drift's own panel did. The
   stage keeps its size (FinkWM owns it). Drift City is the first world (the
   drift-city skill); e2e-drift §15-23.
+  - **A world may re-enter the reader's scene, and nothing else** (owner's
+    decision, September 2026): SDK `reenterScene`, `story:steer` on the
+    world's node, and the runner allows only the knot the story's last
+    `# scene:` named (`_worldScene`, `worldReenter`). Adding `story:steer`
+    to the runner's row refused the RUNNER itself at first: the root
+    (`foafos-root.js`) must hold every power an app it offers asks for. A
+    new capability goes in three places: the root, the runner (to confer),
+    and the app.
 - Sandboxed iframes have an OPAQUE ORIGIN: guest ES-module imports and
   fetches need CORS. GitHub Pages sends `Access-Control-Allow-Origin: *`;
   plain `python3 -m http.server` does NOT — local harnesses need a

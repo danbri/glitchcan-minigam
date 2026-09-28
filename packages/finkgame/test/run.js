@@ -140,6 +140,14 @@ ok('onStoryBeat declares the world contract and receives lines, base and replay'
   assert.deepEqual(got[2], { lines: [], meta: { base: null, replay: false } }, 'a bare beat is an empty one');
 });
 
+ok('reenterScene posts the story-reenter wire shape', () => {
+  const { win, sdk } = boot();
+  sdk.reenterScene('street');
+  sdk.reenterScene();
+  const sent = win.sent.filter((m) => m.type === 'story-reenter');
+  assert.deepEqual(sent, [{ type: 'story-reenter', scene: 'street' }, { type: 'story-reenter', scene: '' }]);
+});
+
 ok('variable-changed updates the mirror and calls onVariableChanged', () => {
   const { win, sdk } = boot();
   const seen = [];
