@@ -3,13 +3,16 @@
 | file | what | made by |
 |---|---|---|
 | cellar-arrival.jpg, cellar-singer-horn.jpg, street-snow.jpg | stills | tiles cut from an image the owner made with ChatGPT from a Drift city screenshot (September 2026), at their own size (about 365 px), JPEG quality 80, progressive |
-| cellar-lantern-loop.webm / .mp4 | the moving panel, 540x540, 34.5 s loop, no sound: VP9 281 KB, H.264 465 KB | two Kling 3.0 Pro image-to-video takes (ElevenLabs connector) from another tile of that image, joined with ffmpeg |
+| cellar-lantern-loop.webm / .mp4 | the moving panel, 540x540, 16.1 s loop, no sound: VP9 154 KB, H.264 256 KB | one Kling 3.0 Pro image-to-video take (ElevenLabs connector) from `../../bible/refs/woman-in-green-v2.jpg`, looped with ffmpeg |
 | cellar-lantern-poster.jpg | the loop's first frame | ffmpeg |
 
-- The loop: take 1 (start and end frame the same still; she barely moves), then take 2 (start frame only; she taps
-  time, nods, sways) forward, back to its tapping part, forward again, then backward to the start. Every join meets
-  at matching frames. A slow zoom and drift (7.5% at most) spans the whole loop and returns to its start. Cost:
-  about 10,860 ElevenLabs credits for the two takes.
+- Revision 2 (2026-09-28, owner: "make her 15% heavier, dressed for somewhat colder climate while still elegant").
+  The start still is a Gemini 3 Pro image edit of the old tile (about 3,654 credits for two variants), cropped square;
+  it is the reference image on her character sheet. The video is one 8 s take from that still (5,430 credits). The
+  loop is the first 193 frames forward, then the same frames backward, so it ends where it starts. A slow zoom
+  (5% to 8.5%) and drift follow a cosine over the whole loop and return to the start.
+- Revision 1 (two takes joined, 34.5 s, about 10,860 credits) is in git history.
+- Panels a and c are still revision 1 of the figure. They need the same edit before this page is consistent.
 - The people in these images are generated, not real people.
 - H.264 for Safari and most browsers; VP9 WebM as a second source for browsers without H.264 (open-source Chromium).
 - Sized for phones (September 2026, owner: "compress it down for efficient mobile use"): the page weighs about

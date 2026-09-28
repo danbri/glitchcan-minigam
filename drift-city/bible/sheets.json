@@ -1,0 +1,597 @@
+{
+  "about": "Drift city character and room sheets. Facts only, each with its source; empty fields are undecided. See the drift-city skill, 'Character sheets'.",
+  "updated": "2026-09-28",
+  "characters": [
+    {
+      "id": "you-bass",
+      "name": "You (Per Aspera)",
+      "stories": [
+        "peraspera"
+      ],
+      "role": "Bass player in the band that plays the Warmhouse at midnight.",
+      "facts": [
+        {
+          "text": "Plays upright bass: \"an old instrument with a spruce body, built for Titan air\".",
+          "src": "story/peraspera.fink.js (opening)"
+        },
+        {
+          "text": "Carries a bass case that bumps against the suit leg.",
+          "src": "story/peraspera.fink.js (opening)"
+        }
+      ],
+      "game": {},
+      "voice": null,
+      "face": null,
+      "wardrobe": [],
+      "possessions": [
+        "upright bass (spruce body)",
+        "bass case",
+        "a pocket for clues: voucher, setlist, reed, patch, tape, card"
+      ],
+      "open": [
+        "name",
+        "age",
+        "look"
+      ]
+    },
+    {
+      "id": "mags",
+      "name": "Mags",
+      "stories": [
+        "peraspera"
+      ],
+      "role": "Runs the bar at the Cold Tap, Ferry Street.",
+      "facts": [
+        {
+          "text": "\"Mags at the Cold Tap hears everything said in this street.\"",
+          "src": "story/peraspera.fink.js:95"
+        },
+        {
+          "text": "Wipes the bar while she talks; puts a glass in front of you.",
+          "src": "story/peraspera.fink.js:120-122"
+        },
+        {
+          "text": "Scots speech (\"didnae\", \"weans\").",
+          "src": "story/peraspera.fink.js:120,128"
+        }
+      ],
+      "game": {
+        "face": "tpdne-40",
+        "resting_mood": "wry"
+      },
+      "voice": {
+        "elevenlabs": "Isla Skye (TVmbglAk3F1GkiCoOq47)",
+        "accent": "Scottish (Edinburgh)",
+        "files": "audio/cast/mags-*.mp3"
+      },
+      "wardrobe": [],
+      "possessions": [],
+      "open": [
+        "age",
+        "look",
+        "wardrobe"
+      ]
+    },
+    {
+      "id": "dex",
+      "name": "Dex",
+      "stories": [
+        "peraspera"
+      ],
+      "role": "Runs the Low Orbit bar by the spaceport.",
+      "facts": [
+        {
+          "text": "\"Dex runs the bar.\" The Asters sit along its window.",
+          "src": "story/peraspera.fink.js:141"
+        },
+        {
+          "text": "Says the Asters' words: \"Ad astra per aspera\"; \"We took them.\"",
+          "src": "story/peraspera.fink.js:158"
+        },
+        {
+          "text": "Leans on the bar; speaks quietly about Nuala.",
+          "src": "story/peraspera.fink.js:168,176"
+        },
+        {
+          "text": "Harriet: \"Tell Dex to stop being coy about\" the oxygen.",
+          "src": "story/peraspera.fink.js:373"
+        }
+      ],
+      "game": {
+        "face": "tpdne-21",
+        "resting_mood": "sly"
+      },
+      "voice": {
+        "elevenlabs": "Ali (dqdOhmL2BvMSx2KtSAtN), eleven_v3",
+        "accent": "London",
+        "files": "audio/cast/dex-*.mp3"
+      },
+      "wardrobe": [],
+      "possessions": [],
+      "open": [
+        "age",
+        "look",
+        "wardrobe",
+        "is Dex an Aster?"
+      ]
+    },
+    {
+      "id": "oskar",
+      "name": "Oskar",
+      "stories": [
+        "peraspera"
+      ],
+      "role": "Drummer; plays the late jam in the Lantern Cellar.",
+      "facts": [
+        {
+          "text": "\"Oskar is on the drums, as always, brushes on a snare, eyes shut.\"",
+          "src": "story/peraspera.fink.js:188"
+        },
+        {
+          "text": "Explains why a bass is louder in Titan air.",
+          "src": "story/peraspera.fink.js:205"
+        },
+        {
+          "text": "Kept Nuala's split reed.",
+          "src": "story/peraspera.fink.js:294"
+        }
+      ],
+      "game": {
+        "face": "tpdne-28",
+        "resting_mood": "neutral",
+        "room_band": "Lantern Cellar drummer (venue.js ROOM_BAND)"
+      },
+      "voice": {
+        "elevenlabs": "Daniel (ITKWdRFSAfKP94RzApqP)",
+        "accent": "German-accented English",
+        "files": "audio/cast/oskar-*.mp3"
+      },
+      "wardrobe": [],
+      "possessions": [
+        "drum brushes",
+        "Nuala's split reed"
+      ],
+      "open": [
+        "age",
+        "look",
+        "wardrobe"
+      ]
+    },
+    {
+      "id": "nuala",
+      "name": "Nuala Fenn",
+      "stories": [
+        "peraspera"
+      ],
+      "role": "Leads the band; missing since noon at the start.",
+      "facts": [
+        {
+          "text": "\"Nuala Fenn leads the band.\"",
+          "src": "story/peraspera.fink.js:67"
+        },
+        {
+          "text": "\"Nuala built a horn for Titan air. A bellows that breathes the outside air and blows it through the pipe.\"",
+          "src": "story/peraspera.fink.js:206"
+        },
+        {
+          "text": "\"Twenty years in a suit\"; \"My sister has a garden.\"",
+          "src": "story/peraspera.fink.js:273"
+        },
+        {
+          "text": "Taught the Asters \"the rooftop thing: every launch, lamps up on the roofs\".",
+          "src": "story/peraspera.fink.js:162"
+        },
+        {
+          "text": "Sits at gate 3 with her horn case across her knees and a torn voucher.",
+          "src": "story/peraspera.fink.js:256"
+        }
+      ],
+      "game": {
+        "face": "tpdne-24",
+        "resting_mood": "worried"
+      },
+      "voice": {
+        "elevenlabs": "Colleen (1OYA2kgM85gF2eGN8HEp)",
+        "accent": "southern Irish",
+        "files": "audio/cast/nuala-*.mp3"
+      },
+      "wardrobe": [],
+      "possessions": [
+        "the Titan-air horn (bellows)",
+        "horn case",
+        "torn passage voucher",
+        "reeds"
+      ],
+      "open": [
+        "age",
+        "look",
+        "wardrobe"
+      ]
+    },
+    {
+      "id": "pell",
+      "name": "Clerk Pell",
+      "stories": [
+        "peraspera"
+      ],
+      "role": "Org clerk behind the glass at gate 3.",
+      "facts": [
+        {
+          "text": "\"Form 11-C ... Cancellation of passage, voluntary. It needs to be signed off.\"",
+          "src": "story/peraspera.fink.js:258"
+        },
+        {
+          "text": "Stamps and signs off forms.",
+          "src": "story/peraspera.fink.js:317,432"
+        }
+      ],
+      "game": {
+        "face": "tpdne-20",
+        "resting_mood": "stern"
+      },
+      "voice": {
+        "elevenlabs": "Matthew Paul (m3ERpbBFjTAqD5PJozID)",
+        "accent": "Scouse",
+        "files": "audio/cast/pell-*.mp3"
+      },
+      "wardrobe": [],
+      "possessions": [
+        "stamp",
+        "forms"
+      ],
+      "open": [
+        "age",
+        "look",
+        "uniform"
+      ]
+    },
+    {
+      "id": "ruth",
+      "name": "Ruth",
+      "stories": [
+        "peraspera"
+      ],
+      "role": "Runs the Warmhouse club.",
+      "facts": [
+        {
+          "text": "\"Ruth runs the club\"; waits at the bottom with the tether car's door open.",
+          "src": "story/peraspera.fink.js:395"
+        },
+        {
+          "text": "Her tape of a first night, labelled in her handwriting: NUALA, FIRST NIGHT.",
+          "src": "story/peraspera.fink.js:400"
+        }
+      ],
+      "game": {
+        "face": "tpdne-35",
+        "resting_mood": "warm"
+      },
+      "voice": {
+        "elevenlabs": "Millie (Nk0iUG137ZABNEQYgAMl)",
+        "accent": "Geordie",
+        "files": "audio/cast/ruth-*.mp3"
+      },
+      "wardrobe": [],
+      "possessions": [
+        "the first-night tape"
+      ],
+      "open": [
+        "age",
+        "look",
+        "wardrobe"
+      ]
+    },
+    {
+      "id": "harriet",
+      "name": "Elder Harriet",
+      "stories": [
+        "peraspera"
+      ],
+      "role": "A founder, heard through the Org; with the clock set back she speaks as herself.",
+      "facts": [
+        {
+          "text": "Speaks through the Org's screen; snorts; \"Tell them I was funnier than this.\"",
+          "src": "story/peraspera.fink.js:357-384"
+        },
+        {
+          "text": "Put the oxygen under the Low Orbit, \"with the printer stock\".",
+          "src": "story/peraspera.fink.js:373"
+        }
+      ],
+      "game": {
+        "face": "tpdne-04",
+        "resting_mood": "wry"
+      },
+      "voice": {
+        "elevenlabs": "Harriet - Mature British Actress (aAsWcN5jdLdiYG7Hq0YL)",
+        "files": "audio/org/elder-*.mp3"
+      },
+      "wardrobe": [],
+      "possessions": [],
+      "open": [
+        "how she appears on screen"
+      ]
+    },
+    {
+      "id": "org",
+      "name": "TheOrg",
+      "stories": [
+        "peraspera",
+        "lamplighter"
+      ],
+      "role": "The city's AI; the first cargo shuttle's computer (backstory, drift-city skill).",
+      "facts": [
+        {
+          "text": "\"The old ship's computer. The settlers built it to outlive them.\"",
+          "src": "story/peraspera.fink.js:168"
+        },
+        {
+          "text": "Its clock \"can't tell an Earth year from a Saturn year from a Titan day\".",
+          "src": "story/peraspera.fink.js:170"
+        }
+      ],
+      "game": {
+        "feed": "a ring of light, no face (heads.js)"
+      },
+      "voice": {
+        "elevenlabs": "Bella - Professional, Bright, Warm (dsigZNN9uZvzbZVKvb6a)",
+        "files": "audio/org/org-*.mp3"
+      },
+      "wardrobe": [],
+      "possessions": [],
+      "open": [
+        "visual identity: U1 and hexagon emblems (backstory)"
+      ]
+    },
+    {
+      "id": "wren",
+      "name": "Wren",
+      "stories": [
+        "lamplighter"
+      ],
+      "role": "The last flame-keeper.",
+      "facts": [
+        {
+          "text": "\"Old Wren, the last flame-keeper, hasn't come for her ginger tea.\"",
+          "src": "story/lamplighter.fink.js:72"
+        },
+        {
+          "text": "Came by at dusk \"with her pole and flask\".",
+          "src": "story/lamplighter.fink.js:117"
+        },
+        {
+          "text": "Her ladder leans by the pagoda door; her lamp pole is gone.",
+          "src": "story/lamplighter.fink.js:132"
+        }
+      ],
+      "game": {},
+      "voice": null,
+      "face": null,
+      "wardrobe": [],
+      "possessions": [
+        "lamp pole",
+        "ladder",
+        "flask",
+        "knitting"
+      ],
+      "open": [
+        "age",
+        "look",
+        "wardrobe"
+      ]
+    },
+    {
+      "id": "pip",
+      "name": "Pip",
+      "stories": [
+        "lamplighter"
+      ],
+      "role": "The player's old delivery drone.",
+      "facts": [
+        {
+          "text": "\"Pip, your old delivery drone ... its eye is yours, its speaker your voice.\"",
+          "src": "story/lamplighter.fink.js:73"
+        }
+      ],
+      "game": {},
+      "voice": null,
+      "wardrobe": [],
+      "possessions": [],
+      "open": [
+        "look"
+      ]
+    },
+    {
+      "id": "tam",
+      "name": "Brother Tam",
+      "stories": [
+        "lamplighter"
+      ],
+      "role": "Keeps a radio at the pagoda.",
+      "facts": [
+        {
+          "text": "Sits by \"a wardrobe-sized cabinet with an amber dial, listening to static\".",
+          "src": "story/lamplighter.fink.js:132"
+        }
+      ],
+      "game": {},
+      "voice": null,
+      "wardrobe": [],
+      "possessions": [
+        "the radio cabinet"
+      ],
+      "open": [
+        "age",
+        "look",
+        "wardrobe"
+      ]
+    },
+    {
+      "id": "obi",
+      "name": "Obi",
+      "stories": [
+        "lamplighter"
+      ],
+      "role": "At the Assembly rostrum before the vote.",
+      "facts": [
+        {
+          "text": "\"Obi gathers papers at the rostrum, exhausted.\"",
+          "src": "story/lamplighter.fink.js:187"
+        }
+      ],
+      "game": {},
+      "voice": null,
+      "wardrobe": [],
+      "possessions": [],
+      "open": [
+        "role in the Assembly",
+        "look"
+      ]
+    },
+    {
+      "id": "castellane",
+      "name": "Castellane",
+      "stories": [
+        "lamplighter"
+      ],
+      "role": "From Lumen.",
+      "facts": [
+        {
+          "text": "\"Castellane from Lumen was asking after her.\"",
+          "src": "story/lamplighter.fink.js:118"
+        },
+        {
+          "text": "Signature and a note about \"off-world buyers\".",
+          "src": "story/lamplighter.fink.js:191"
+        }
+      ],
+      "game": {},
+      "voice": null,
+      "wardrobe": [],
+      "possessions": [],
+      "open": [
+        "look",
+        "wardrobe"
+      ]
+    },
+    {
+      "id": "woman-in-green",
+      "name": "The woman in green (unassigned)",
+      "stories": [],
+      "role": "Subject of the first novel page (novel/cellar.html); not yet anyone in a story.",
+      "facts": [
+        {
+          "text": "Seated on the cellar stage under a red lantern; keeps time with her hand (video panel b).",
+          "src": "novel/media/README.md"
+        }
+      ],
+      "game": {},
+      "voice": null,
+      "face": null,
+      "wardrobe": [
+        "revision 2 (2026-09-28): long dark-green velvet dress; cropped green velvet jacket with a wide brown fur collar; dark sheer tights; black heeled ankle boots",
+        "hair in a low updo; drop earrings; red lipstick",
+        "revision 1 (panels a and c still show it): the same dress, no jacket, long sleeves, high collar, sheer panel at the chest"
+      ],
+      "requested": [
+        {
+          "text": "About 15% heavier; dressed for a colder climate while still elegant.",
+          "by": "owner",
+          "date": "2026-09-28",
+          "status": "done in the video panel (b); panels a and c not yet"
+        }
+      ],
+      "possessions": [],
+      "open": [
+        "who she is: a story character, or someone new?",
+        "name"
+      ],
+      "refs": [
+        {
+          "file": "refs/woman-in-green-v2.jpg",
+          "what": "revision 2 reference still; start frame of the cellar video panel",
+          "made": "Gemini 3 Pro image edit (ElevenLabs connector) of the revision 1 tile, 2026-09-28"
+        }
+      ]
+    }
+  ],
+  "rooms": [
+    {
+      "id": "cold_tap",
+      "name": "The Cold Tap, Ferry Street",
+      "story_blurb_src": "src/tales.js ROOMS",
+      "fittings_src": "src/scene.wgsl rmColdTap",
+      "fittings": [
+        "bar with slatted front, brass bullnose and foot rail",
+        "beer taps",
+        "back-bar shelves of lit bottles and a mirror",
+        "stools",
+        "booths with leather benches",
+        "photographs, a chalkboard price list, a neon beer-glass sign",
+        "a heater",
+        "a jukebox",
+        "riveted airlock with a porthole",
+        "a ceiling fan under a lamp in a round ceiling well"
+      ],
+      "people": [
+        "mags"
+      ],
+      "music": "jukebox: slow soul-blues shuffle (venue.js style 1)"
+    },
+    {
+      "id": "low_orbit_bar",
+      "name": "The Low Orbit, by the spaceport",
+      "story_blurb_src": "src/tales.js ROOMS",
+      "fittings_src": "src/scene.wgsl rmLowOrbit",
+      "fittings": [
+        "ribbed wall frames",
+        "duct and cable tray",
+        "steel tables, benches, mugs",
+        "bar with a padded edge",
+        "departures screen",
+        "window on the pads with mullions",
+        "caged lamps"
+      ],
+      "people": [
+        "dex"
+      ],
+      "music": "lounge: electric piano, bossa pulse (style 2)"
+    },
+    {
+      "id": "lantern_cellar",
+      "name": "The Lantern Cellar, Chinatown",
+      "story_blurb_src": "src/tales.js ROOMS",
+      "fittings_src": "src/scene.wgsl rmCellar",
+      "fittings": [
+        "brick barrel vault",
+        "stand with a rug",
+        "drum kit, upright bass, amp, microphone",
+        "tables with checked cloths, candles in bottles",
+        "paper lanterns",
+        "gig posters"
+      ],
+      "people": [
+        "oskar"
+      ],
+      "music": "late jam: swing ride, walking bass, piano comping, tenor (style 3)"
+    },
+    {
+      "id": "warmhouse_club",
+      "name": "The Warmhouse club",
+      "story_blurb_src": "src/tales.js ROOMS",
+      "fittings_src": "src/scene.wgsl rmClub",
+      "fittings": [
+        "dome with gilt ribs and stars",
+        "stand with footlights and a curtain",
+        "upright piano, drum kit, upright bass, microphone",
+        "tables in two rings, white cloths, small red-shaded lamps",
+        "glitterball"
+      ],
+      "people": [
+        "ruth",
+        "nuala"
+      ],
+      "music": "piano trio ballad (style 4)"
+    }
+  ]
+}

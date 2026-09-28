@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drift city sheets</title>
+<style>
+/* A read-only view of sheets.json: characters and rooms, each fact with its source. Empty fields are undecided. */
+:root { --bg: #111214; --card: #1b1d21; --ink: #e8e6e1; --dim: #9a978f; --line: #2c2f35; --accent: #e0b36a; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, sans-serif; }
+header { padding: 16px; border-bottom: 1px solid var(--line); }
+h1 { margin: 0 0 4px; font-size: 20px; }
+header p { margin: 0; color: var(--dim); font-size: 13px; }
+nav { display: flex; gap: 8px; padding: 10px 16px; flex-wrap: wrap; }
+nav button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font: inherit; }
+nav button.on { border-color: var(--accent); color: var(--accent); }
+main { padding: 0 16px 32px; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.card h2 { margin: 0 0 2px; font-size: 17px; }
+.role { color: var(--dim); margin: 0 0 8px; font-size: 13px; }
+.k { color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; margin: 10px 0 2px; }
+ul { margin: 0; padding-left: 18px; }
+li { margin: 2px 0; }
+.src { color: var(--dim); font-size: 11px; font-family: ui-monospace, monospace; }
+.open { color: #d48a7a; }
+.none { color: var(--dim); font-style: italic; }
+.ref { margin: 8px 0 0; }
+.ref img { width: 100%; max-width: 280px; display: block; border-radius: 6px; }
+.ref figcaption { color: var(--dim); font-size: 12px; margin-top: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Drift city sheets</h1>
+  <p id="about">Loading sheets.json</p>
+</header>
+<nav><button data-v="characters" class="on">Characters</button><button data-v="rooms">Rooms</button></nav>
+<main id="list"></main>
+<script>
+(async () => {
+  "use strict";
+  const doc = await (await fetch("sheets.json")).json();
+  document.getElementById("about").textContent = doc.about + " Updated " + doc.updated + ".";
+  const el = (t, cls, txt) => { const e = document.createElement(t); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const list = (key, items, fmt) => {
+    const frag = document.createDocumentFragment();
+    frag.appendChild(el("div", "k", key));
+    if (!items || !items.length) { frag.appendChild(el("div", "none", "undecided")); return frag; }
+    const ul = el("ul"); items.forEach((it) => ul.appendChild(fmt(it))); frag.appendChild(ul); return frag;
+  };
+  const plain = (s) => el("li", "", s);
+  const fact = (f) => { const li = el("li", "", f.text + " "); li.appendChild(el("span", "src", f.src || f.by || "")); return li; };
+  const kv = (o) => Object.entries(o || {}).map(([k, v]) => k + ": " + v);
+  const show = (v) => {
+    const main = document.getElementById("list"); main.innerHTML = "";
+    for (const it of doc[v]) {
+      const c = el("section", "card");
+      c.appendChild(el("h2", "", it.name));
+      if (it.role) c.appendChild(el("p", "role", it.role));
+      if (v === "characters") {
+        c.appendChild(list("Facts", it.facts, fact));
+        if (it.requested) c.appendChild(list("Requested changes", it.requested, (r) => fact({ text: r.text + (r.status ? " Status: " + r.status + "." : ""), src: r.by + ", " + r.date })));
+        c.appendChild(list("Wardrobe", it.wardrobe, plain));
+        for (const r of it.refs || []) {
+          const f = el("figure", "ref"), img = el("img");
+          img.src = r.file; img.alt = "Reference image: " + it.name; img.loading = "lazy";
+          f.appendChild(img); f.appendChild(el("figcaption", "", r.what + ". " + r.made)); c.appendChild(f);
+        }
+        c.appendChild(list("Possessions", it.possessions, plain));
+        c.appendChild(list("In the game", kv(it.game), plain));
+        c.appendChild(list("Voice", kv(it.voice), plain));
+        const o = list("Open questions", it.open, (s) => el("li", "open", s)); c.appendChild(o);
+      } else {
+        c.appendChild(list("Fittings", it.fittings, plain));
+        c.appendChild(el("div", "src", "from " + it.fittings_src));
+        c.appendChild(list("People", it.people, plain));
+        c.appendChild(list("Music", it.music ? [it.music] : [], plain));
+      }
+      main.appendChild(c);
+    }
+  };
+  document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("nav button").forEach((x) => x.classList.toggle("on", x === b)); show(b.dataset.v);
+  }));
+  show("characters");
+})();
+</script>
+</body>
+</html>
