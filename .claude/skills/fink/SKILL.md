@@ -919,9 +919,12 @@ back to the default and say `fellBack` on `root.ready`.
   while a live node of the app holds the capability, revoked with the
   last one). Measured before: closing Data left its storage grant, and a
   picker launch of a stage app made two nodes, one a ghost row. The
-  switcher row says what each node holds; ⓘ shows the bus scope, the
-  manifest variables, verb aims and the frame's sandbox, each read from
-  what enforces it. Locked by `e2e-powers.mjs`.
+  switcher row gives a COUNT ("holds 8 powers"): the full list, tried
+  first, wrapped a phone row to eight lines (226px, measured and seen in
+  a 390px screenshot). The card's accessible name and title list the
+  names; ⓘ shows them with the bus scope, the manifest variables, verb
+  aims and the frame's sandbox, each read from what enforces it. Locked
+  by `e2e-powers.mjs`, including the row height at phone width.
 - **ATTENUATION is the point:** `grant(child) ⊆ grant(parent)`, enforced in
   `spawn()`, refusal published on `app.spawn.refused` with the excess
   named. Root is everyone's ancestor, so trimming a manifest's

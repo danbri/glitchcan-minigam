@@ -221,16 +221,25 @@ try {
     const row = [...document.querySelectorAll('.foafos-switch-row')]
       .find((r) => r.querySelector('.ttl')?.textContent === 'The Lantern Cellar');
     const sub = row?.querySelector('.sub')?.textContent || '';
+    const runnerRow = [...document.querySelectorAll('.foafos-switch-row')]
+      .find((r) => r.querySelector('.ttl')?.textContent === 'Finkosphere');
+    const runner = { sub: runnerRow?.querySelector('.sub')?.textContent || '',
+                     name: runnerRow?.querySelector('.foafos-switch-card')?.getAttribute('aria-label') || '',
+                     h: Math.round(runnerRow?.getBoundingClientRect().height || 0) };
     row?.querySelector('.foafos-switch-info')?.click();
     await new Promise((r) => setTimeout(r, 200));
     const rows = Object.fromEntries([...document.querySelectorAll('.foafos-app-info .fi-row')]
       .map((d) => [d.querySelector('.fi-k')?.textContent, d.querySelector('.fi-v')?.textContent]));
     document.querySelector('.foafos-overlay-close')?.click();
-    return { sub, rows };
+    return { sub, rows, runner };
   }, node?.id);
   shown.sub.includes('holds nothing')
     ? pass(`the switcher row says what the node holds ("${shown.sub}")`)
     : fail(`switcher row: ${JSON.stringify(shown.sub)}`);
+  /holds 8 powers/.test(shown.runner.sub) && shown.runner.name.includes('story:launch') && shown.runner.h < 160
+    ? pass(`a row gives the COUNT (${shown.runner.sub.split(' · ').pop()}, ${shown.runner.h}px tall at phone width); `
+      + 'its accessible name lists them')
+    : fail(`story runner row: ${JSON.stringify(shown.runner)}`);
   (shown.rows.bus || '').includes('guest.cellar.*') && (shown.rows.sandbox || '').includes('allow-scripts')
     && (shown.rows.variables || '').includes('no vars:write')
     ? pass('ⓘ shows the bus scope, the frame sandbox and the variables the node may not touch')

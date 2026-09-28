@@ -3081,8 +3081,11 @@ function buildUI() {
         <span class="ttl"></span><span class="sub"></span>`;
       c.querySelector('.ttl').textContent = r.label;
       c.querySelector('.sub').textContent = r.detail || '';
+      const held = r.node ? [...r.node.capabilities] : [];
       c.setAttribute('aria-label',
-        `${r.label}${r.detail ? `, ${r.detail}` : ''}${r.depth ? `, opened by ${r.parentLabel}` : ''}`);
+        `${r.label}${r.detail ? `, ${r.detail}` : ''}${held.length ? ` (${held.join(', ')})` : ''}`
+        + `${r.depth ? `, opened by ${r.parentLabel}` : ''}`);
+      if (held.length) c.title = `Holds: ${held.join(', ')}`;
       c.addEventListener('click', () => { r.focus(); sw.remove(); });
       row.appendChild(c);
 
@@ -3171,9 +3174,14 @@ function buildUI() {
   // into a list. The tree is now the truth, so this reads it instead;
   // the per-surface knowledge that survives is only about how to FOCUS
   // a thing, which really is presentation.
-  // What a node HOLDS, shown in its row: the live capability list that
-  // every broker asks. Scopes, aims and the sandbox are in its ⓘ panel.
-  const powersNote = (n) => (n.capabilities.length ? `holds ${n.capabilities.join(', ')}` : 'holds nothing');
+  // What a node HOLDS, shown in its row, from the live capability list
+  // every broker asks. A COUNT, because the full list wrapped a phone row
+  // to eight lines; the names are in the card's accessible name and title,
+  // and ⓘ shows them with scopes, aims and the sandbox.
+  const powersNote = (n) => {
+    const k = n.capabilities.length;
+    return k ? `holds ${k} power${k === 1 ? '' : 's'}` : 'holds nothing';
+  };
   function collectRunning() {
     const out = [];
     const walk = (node, depth, parentLabel) => {
