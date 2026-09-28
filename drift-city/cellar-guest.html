@@ -16,15 +16,15 @@
   <script src="../../inklet/apps/app-sdk.js"></script>
   <script src="../../packages/finkgame/src/minigame-sdk.js"></script>
 
+  <!-- Load inkjs first -->
+  <script src="../../third_party/ink/ink-full.js"></script>
+
   <!-- Novel page component and story runner -->
   <script src="novel-page.js" type="module"></script>
   <script type="module">
-    import { MinigameSDK } from '../../packages/finkgame/src/minigame-sdk.js';
-
     const host = document.getElementById('host');
     let page = null;
     let sdk = null;
-    let pausedState = null;
 
     // Initialize minigame SDK
     sdk = new MinigameSDK();
@@ -49,7 +49,7 @@
       panelA.setAttribute('knot', 'door');
       panelA.setAttribute('points', '26,26 1054,26 1054,448 26,490');
       panelA.setAttribute('aria-label', 'A man in a long coat stands in a brick cellar hung with red lanterns, looking toward a small stage.');
-      panelA.innerHTML = `<img src="media/cellar-arrival.jpg" alt=""><p class="cap tl"></p>`;
+      panelA.innerHTML = '<img src="media/cellar-arrival.jpg" alt=""><p class="cap tl"></p>';
       page.appendChild(panelA);
 
       const panelB = document.createElement('section');
@@ -57,7 +57,7 @@
       panelB.setAttribute('knot', 'stage');
       panelB.setAttribute('points', '26,520 662,494 603,1161 26,1135');
       panelB.setAttribute('aria-label', 'On the stage, a woman in a green dress and fur-collared jacket plays a small drum kit with brushes under a red paper lantern.');
-      panelB.innerHTML = `<video poster="media/cellar-lantern-poster.jpg" autoplay muted loop playsinline preload="auto"><source src="media/cellar-lantern-loop.webm" type='video/webm; codecs="vp9"'><source src="media/cellar-lantern-loop.mp4" type="video/mp4"></video><p class="cap br"></p>`;
+      panelB.innerHTML = '<video poster="media/cellar-lantern-poster.jpg" autoplay muted loop playsinline preload="auto"><source src="media/cellar-lantern-loop.webm" type="video/webm; codecs=vp9"><source src="media/cellar-lantern-loop.mp4" type="video/mp4"></video><p class="cap br"></p>';
       page.appendChild(panelB);
 
       const panelC = document.createElement('section');
@@ -65,7 +65,7 @@
       panelC.setAttribute('knot', 'side');
       panelC.setAttribute('points', '692,493 1054,478 1054,1181 633,1162');
       panelC.setAttribute('aria-label', 'The same woman, seen from the side, seated by a microphone in the haze.');
-      panelC.innerHTML = `<img src="media/cellar-singer-horn.jpg" alt="">`;
+      panelC.innerHTML = '<img src="media/cellar-singer-horn.jpg" alt="">';
       page.appendChild(panelC);
 
       const panelD = document.createElement('section');
@@ -73,7 +73,7 @@
       panelD.setAttribute('knot', 'street');
       panelD.setAttribute('points', '26,1165 1054,1211 1054,1494 26,1494');
       panelD.setAttribute('aria-label', 'Outside at night on Titan: methane snow falls on an icy street under a glass traffic tube; three people in coat-cut pressure suits and bubble helmets walk apart.');
-      panelD.innerHTML = `<img src="media/street-snow.jpg" alt=""><p class="cap bl"></p>`;
+      panelD.innerHTML = '<img src="media/street-snow.jpg" alt=""><p class="cap bl"></p>';
       page.appendChild(panelD);
 
       // Ink window
@@ -85,100 +85,52 @@
       host.appendChild(page);
 
       // Load and play the story
-      const loadStory = async () => {
+      (async () => {
         try {
           const src = await (await fetch('cellar.ink')).text();
           const compiler = new window.inkjs.Compiler(src);
           const compiledStory = compiler.Compile();
           const json = compiledStory.ToJson();
           const story = new window.inkjs.Story(json);
-
-          // Restore from snapshot if available
-          if (pausedState?.inkJson) {
-            story.state.LoadJson(pausedState.inkJson);
-          }
-
           page.play(story);
-
-          // If we have view state from pause, restore it
-          if (pausedState?.viewState) {
-            page._viewState = pausedState.viewState;
-            page._updateView();
-          }
         } catch (e) {
           console.error('[cellar-guest] story load failed:', e);
         }
-      };
-
-      loadStory();
+      })();
     });
 
     sdk.onPause(() => {
       console.log('[cellar-guest] pause');
       if (page) {
-        // Capture ink state
-        const story = page._story;
-        const inkJson = story?.state?.ToJson?.() || null;
-
-        // Capture view state (pan, zoom, etc)
-        const viewState = {
-          scrollX: page._scrollX || 0,
-          scrollY: page._scrollY || 0,
-          scale: page._scale || 1,
-          currentKnot: story?.state?.currentPathString || null,
-        };
-
-        pausedState = { inkJson, viewState };
-        console.log('[cellar-guest] paused with state:', pausedState);
+        page.pause();
       }
     });
 
     sdk.onResume(() => {
       console.log('[cellar-guest] resume');
-      if (page && pausedState) {
-        const story = page._story;
-        // Restore ink state
-        if (pausedState.inkJson) {
-          story.state.LoadJson(pausedState.inkJson);
-        }
-        // Restore view state
-        if (pausedState.viewState) {
-          page._scrollX = pausedState.viewState.scrollX;
-          page._scrollY = pausedState.viewState.scrollY;
-          page._scale = pausedState.viewState.scale;
-          page._updateView?.();
-        }
+      if (page) {
+        page.resume();
       }
     });
 
     sdk.onSnapshot(() => {
       console.log('[cellar-guest] snapshot');
       if (page) {
-        const story = page._story;
-        const inkJson = story?.state?.ToJson?.() || null;
-        const viewState = {
-          scrollX: page._scrollX || 0,
-          scrollY: page._scrollY || 0,
-          scale: page._scale || 1,
-          currentKnot: story?.state?.currentPathString || null,
-        };
-        return { inkJson, viewState };
+        return page.captureState();
       }
       return null;
     });
 
     sdk.onRestore((state) => {
       console.log('[cellar-guest] restore', state);
-      pausedState = state;
+      if (page) {
+        page.restoreState(state);
+      }
     });
 
     sdk.onTerminate((reason) => {
       console.log('[cellar-guest] terminate:', reason);
-      // Cleanup if needed
     });
   </script>
-
-  <!-- Load inkjs first -->
-  <script src="../../third_party/ink/ink-full.js"></script>
 </body>
 </html>

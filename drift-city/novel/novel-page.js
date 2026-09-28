@@ -439,6 +439,84 @@ class NovelPage extends HTMLElement {
   _playVideo(v) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
   // iOS can refuse autoplay until a gesture, so every tap tries again
   _playVideos() { if (!document.hidden) this._videos().forEach((v) => v.paused && this._playVideo(v)); }
+
+  // ---- pause/resume ----
+
+  /**
+   * Capture full state for pause/snapshot. Returns serializable object with:
+   * - cam: {cx, cy, s} camera position and scale
+   * - storyJson: story.state.ToJson() for ink position
+   * - current: current panel index
+   * - vel: {cx, cy, ls} momentum for spring restore (optional)
+   */
+  captureState() {
+    const state = {
+      cam: { ...this._cam },
+      current: this._cur,
+      storyJson: this._story?.state?.ToJson?.() || null,
+      vel: { ...this._vel },
+    };
+    return state;
+  }
+
+  /**
+   * Restore full state from pause/snapshot. Stops animations, restores camera,
+   * story position, and current panel. Videos remain paused until user resumes.
+   */
+  restoreState(state) {
+    if (!state) return;
+    // Stop any running animation
+    this._stop();
+    // Restore camera
+    if (state.cam) Object.assign(this._cam, state.cam);
+    // Restore story position
+    if (this._story && state.storyJson) {
+      try {
+        this._story.state.LoadJson(state.storyJson);
+        this._step();
+      } catch (e) {
+        console.error("[novel-page] restore story state failed:", e);
+      }
+    }
+    // Restore current panel and view state (but don't animate—jump there)
+    if (state.current !== undefined && state.current !== this._cur) {
+      this._cur = state.current;
+      this._view.classList.toggle("zoomed", state.current >= 0);
+      if (state.current >= 0) {
+        this._panels.forEach((p, k) => p.el.toggleAttribute("data-current", k === state.current));
+      }
+    }
+    this._apply();
+  }
+
+  /**
+   * Pause the component: stop animations, pause videos, capture state.
+   * Returns the captured state for snapshot storage.
+   */
+  pause() {
+    // Stop animation
+    this._stop();
+    // Pause all videos
+    this._videos().forEach((v) => v.pause());
+    // Pause CSS animations by adding a class
+    this._page.style.animationPlayState = "paused";
+    // Return capturable state
+    return this.captureState();
+  }
+
+  /**
+   * Resume the component: continue animations and videos.
+   * Optionally restore from a saved state first.
+   */
+  resume(state) {
+    if (state) this.restoreState(state);
+    // Resume CSS animations
+    this._page.style.animationPlayState = "running";
+    // Resume videos
+    this._playVideos();
+    // Resume animation loop if needed (apply will re-render)
+    this._apply();
+  }
 }
 
 customElements.define("novel-page", NovelPage);
