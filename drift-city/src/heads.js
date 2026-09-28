@@ -63,6 +63,16 @@ function headPanel() {
   HEADS.el = el; HEADS.cv = el.querySelector("canvas");
   return el;
 }
+// where the feed sits: inside the story's text as an inset on the right, the words wrapping round it, while the story
+// panel is open (taleSay rebuilds the text on every step, so this is checked every frame); in the corner otherwise
+function headPlace() {
+  const el = HEADS.el, tx = typeof document !== "undefined" && document.getElementById ? document.getElementById("taleText") : null;
+  if (!el) return;
+  const inTale = !!(tx && tx.offsetParent !== null && tx.clientHeight > 60);
+  if (inTale && el.parentNode !== tx) { tx.insertBefore(el, tx.firstChild); el.classList.add("inTale"); }
+  else if (!inTale && el.parentNode !== document.body) { document.body.appendChild(el); el.classList.remove("inTale"); }
+  else if (inTale && tx.firstChild !== el) tx.insertBefore(el, tx.firstChild);
+}
 // a line starts: open the feed for its speaker (or close it for anyone else)
 function headSay(url, audioEl) {
   const who = headSpeaker(url);
@@ -92,6 +102,7 @@ function headFrame(now) {
   if (!HEADS.who) return;
   if (HEADS.hideAt && now > HEADS.hideAt) { headHide(); return; }
   HEADS.raf = requestAnimationFrame(headFrame);
+  headPlace();
   const A = HEADS.audio, t = A ? A.currentTime : 0, playing = A && !A.paused;
   const E = HEADS.envNow, lvl = E && playing ? E[Math.min(E.length - 1, Math.floor(t * 60))] : 0;
   if (HEADS.el) HEADS.el.style.setProperty("--lvl", lvl.toFixed(2));
@@ -106,9 +117,12 @@ function headFrame(now) {
   }
   const s = now / 1000;
   const talk = playing ? L.sampleTalkBurst(t, { seed: HEADS.who.length * 17, durationSec: (A.duration || 4) + 1 }) : {};
+  // the library's visemes are built to be unmissable in a demo (about 1.4 times full strength); at that size a LAM
+  // mouth gapes and shows its empty inside (there are no teeth or tongue in these heads), so: half strength, and the
+  // jaw never more than 0.35 open (owner, on a phone: "very toothy or just wrong")
   const morph = {};
-  for (const k in talk) morph[k] = talk[k] * Math.min(1, lvl * 1.6);
-  morph.jawOpen = Math.max(morph.jawOpen || 0, lvl * 0.55);
+  for (const k in talk) morph[k] = talk[k] * 0.5 * Math.min(1, lvl * 1.4);
+  morph.jawOpen = Math.min(0.35, Math.max(morph.jawOpen || 0, lvl * 0.3));
   const bp = (s % 3.7) / 3.7, blink = bp < 0.05 ? Math.sin(bp / 0.05 * Math.PI) : 0;
   morph.eyeBlinkLeft = blink; morph.eyeBlinkRight = blink;
   const yaw = Math.sin(s / 2.9) * 0.1 + lvl * 0.04 * Math.sin(s * 5.0), pitch = Math.sin(s / 3.7) * 0.04 - lvl * 0.05;
