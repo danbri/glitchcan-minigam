@@ -907,6 +907,9 @@ function reportPosition(push = false) {
 async function honourDeepLink() {
   const res = await storyRequest('story.navigate', { op: 'resolve' });
   if (!res.ok || !res.parsed) return false;
+  // A link to where the reader already is, is no move. The address may hold
+  // this runner's own first position report (the fink skill, "deep link").
+  if (_knotHashes.get(res.parsed.knotHash) === currentKnot()) return false;
   return gotoKnotHash(res.parsed.knotHash);
 }
 

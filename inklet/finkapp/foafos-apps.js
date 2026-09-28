@@ -190,7 +190,7 @@ export const APPS = [
   // city's sound must start without a tap in its own frame.
   { id: 'drift', family: 'play', icon: '🪐', name: 'Drift City',
     surface: 'stage', game: 'drift', url: '../../drift-city/dist/city.html',
-    desc: 'The city on Titan and its stories', controls: 'none',
+    desc: 'The city on Titan and its stories', controls: 'sticks',
     args: ['tale'], capabilities: ['audio', 'vars:read', 'vars:write', 'story:steer'],
     variables: {
       read: ['want_time', 'want_weather', ...DRIFT_CLUES],

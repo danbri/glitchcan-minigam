@@ -140,6 +140,18 @@ ok('onStoryBeat declares the world contract and receives lines, base and replay'
   assert.deepEqual(got[2], { lines: [], meta: { base: null, replay: false } }, 'a bare beat is an empty one');
 });
 
+ok('onSticks declares the sticks contract and receives both pairs', () => {
+  const { win, sdk } = boot();
+  const got = [];
+  sdk.onSticks((s) => got.push(s));
+  win.deliver({ type: 'init', config: {}, variables: {} });
+  const conf = win.sent.filter((m) => m.type === 'conformance').pop();
+  assert.ok(conf.contracts.includes('sticks'), 'sticks contract declared');
+  win.deliver({ type: 'sticks', l: [0.5, -1], r: [0, 0.25] });
+  win.deliver({ type: 'sticks' });
+  assert.deepEqual(got, [{ l: [0.5, -1], r: [0, 0.25] }, { l: [0, 0], r: [0, 0] }]);
+});
+
 ok('reenterScene posts the story-reenter wire shape', () => {
   const { win, sdk } = boot();
   sdk.reenterScene('street');

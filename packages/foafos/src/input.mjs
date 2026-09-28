@@ -55,6 +55,9 @@ export class FoafInput {
     this.held = new Map();        // action → { timer, source }
     this.gamepadIndex = null;
     this._padState = new Map();   // action → bool (edge detection)
+    // Analog sticks (see "sticks" below): x right +, y up +, each -1..1.
+    this.sticks = { l: [0, 0], r: [0, 0] };
+    this.stickSinks = new Set();
     this._raf = null;
     this._keyHandlers = null;
   }
@@ -193,6 +196,72 @@ export class FoafInput {
     return this;
   }
 
+  // ── sticks: two analog pairs, for guests that steer ─────────────────
+  // The seven actions cannot say "a little to the left", and a guest that
+  // walks or flies in 3D needs that. Such a guest asks for STICKS (SDK
+  // onSticks); the service then reports both sticks as values, from the
+  // on-screen sticks (bindStick) and from a gamepad's two sticks. Level, not
+  // events: a sink gets the new pair of values on every change, a release
+  // sends zeros, and the guest keeps the last values between messages.
+  // Convention: x right +, y up + (the Gamepad API's y is down +), each
+  // -1..1 inside the unit circle, 0 inside a dead zone of `stickDead`.
+  addStickSink(sink) { this.stickSinks.add(sink); return () => this.stickSinks.delete(sink); }
+
+  setStick(side, x, y, source = 'touch') {
+    if (side !== 'l' && side !== 'r') return;
+    let nx = Number(x) || 0, ny = Number(y) || 0;
+    const m = Math.hypot(nx, ny);
+    if (m > 1) { nx /= m; ny /= m; }
+    const dead = this.stickDead ?? 0.12;
+    const mag = Math.min(1, m);
+    const k = mag <= dead ? 0 : (mag - dead) / (1 - dead) / (mag || 1);
+    nx *= k; ny *= k;
+    const cur = this.sticks[side];
+    if (Math.abs(cur[0] - nx) < 0.004 && Math.abs(cur[1] - ny) < 0.004) return;
+    this.sticks[side] = [nx, ny];
+    const evt = { l: [...this.sticks.l], r: [...this.sticks.r], source };
+    for (const s of [...this.stickSinks]) {
+      try { s(evt); } catch (e) { console.error('[FoafInput] stick sink failed:', e); }
+    }
+  }
+
+  // An on-screen stick: the thumb's offset from the centre, as a value.
+  // A child `.knob` follows the thumb.
+  bindStick(el, side) {
+    if (!el) return this;
+    el.style.touchAction = 'none';
+    const knob = el.querySelector?.('.knob') || null;
+    let active = null;
+    const steer = (e) => {
+      const r = el.getBoundingClientRect();
+      const R = r.width * 0.42;
+      const x = (e.clientX - (r.left + r.width / 2)) / R;
+      const y = (e.clientY - (r.top + r.height / 2)) / R;
+      const m = Math.max(1, Math.hypot(x, y));
+      if (knob) knob.style.transform = `translate(${(x / m) * R}px, ${(y / m) * R}px)`;
+      this.setStick(side, x, -y, 'touch');
+    };
+    el.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      active = e.pointerId;
+      try { el.setPointerCapture?.(e.pointerId); } catch { /* uncaptured pointer */ }
+      el.classList.add('active');
+      steer(e);
+    });
+    el.addEventListener('pointermove', (e) => { if (active === e.pointerId) steer(e); });
+    const end = (e) => {
+      if (active !== e.pointerId) return;
+      active = null;
+      el.classList.remove('active');
+      if (knob) knob.style.transform = '';
+      this.setStick(side, 0, 0, 'touch');
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('contextmenu', (e) => e.preventDefault());
+    return this;
+  }
+
   // ── gamepad ──────────────────────────────────────────────────────────
   attachGamepads() {
     if (typeof window === 'undefined' || !navigator.getGamepads) return this;
@@ -206,6 +275,8 @@ export class FoafInput {
       this.gamepadIndex = null;
       this._stopPolling();
       this.releaseAll();
+      this.setStick('l', 0, 0, 'gamepad');   // a stick left pushed must not stay pushed
+      this.setStick('r', 0, 0, 'gamepad');
       this.bus?.publish('input.gamepad', { connected: false, summary: 'gamepad disconnected' }, { retain: true });
     });
     return this;
@@ -247,6 +318,11 @@ export class FoafInput {
       else if (!is && was) this.release(action, 'gamepad');
     }
     this._padState = now;
+    // both sticks as values, for guests that asked for them
+    if (this.stickSinks.size) {
+      this.setStick('l', pad.axes[0] ?? 0, -(pad.axes[1] ?? 0), 'gamepad');
+      this.setStick('r', pad.axes[2] ?? 0, -(pad.axes[3] ?? 0), 'gamepad');
+    }
   }
 
   destroy() {
@@ -260,5 +336,6 @@ export class FoafInput {
       this._keyHandlers = null;
     }
     this.sinks.clear();
+    this.stickSinks.clear();
   }
 }

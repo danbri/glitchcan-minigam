@@ -62,6 +62,49 @@ export async function run() {
     assert.ok(ACTION_KEYS[a]?.key && ACTION_KEYS[a]?.code, `no key mapping for ${a}`);
   }
 
+  // sticks: values with a dead zone, clamped to the unit circle, only on change
+  {
+    const input = new FoafInput();
+    const seen = [];
+    input.addStickSink(e => seen.push(e));
+    input.setStick('r', 0, 0.05);                       // inside the dead zone: no change
+    assert.equal(seen.length, 0);
+    input.setStick('r', 0, 1);
+    assert.deepEqual(seen.at(-1).r, [0, 1]);
+    input.setStick('l', 3, 4);                          // outside the circle: clamped
+    const [lx, ly] = seen.at(-1).l;
+    assert.ok(Math.abs(Math.hypot(lx, ly) - 1) < 1e-9 && lx > 0 && ly > 0);
+    const n = seen.length;
+    input.setStick('l', 3, 4);                          // same value: no event
+    assert.equal(seen.length, n);
+    input.setStick('x', 1, 1);                          // no third stick
+    assert.equal(seen.length, n);
+    input.setStick('r', 0, 0);
+    assert.deepEqual(seen.at(-1).r, [0, 0]);
+    input.destroy();
+  }
+
+  // a gamepad's two sticks, y turned so that up is +
+  {
+    const input = new FoafInput();
+    const seen = [];
+    input.addStickSink(e => seen.push(e));
+    const pad = { index: 0, buttons: [], axes: [0.5, -1, 0, 0.8] };
+    const saved = globalThis.navigator;
+    Object.defineProperty(globalThis, 'navigator', { value: { getGamepads: () => [pad] }, configurable: true });
+    try {
+      input.gamepadIndex = 0;
+      input._pollOnce();
+    } finally {
+      Object.defineProperty(globalThis, 'navigator', { value: saved, configurable: true });
+    }
+    const last = seen.at(-1);
+    assert.ok(last.l[0] > 0 && last.l[1] > 0, 'left stick: right and up');
+    assert.ok(last.r[0] === 0 && last.r[1] < 0, 'right stick: down');
+    assert.equal(last.source, 'gamepad');
+    input.destroy();
+  }
+
   // sink errors are contained
   {
     const input = new FoafInput({ repeatMs: 1000 });

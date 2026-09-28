@@ -153,6 +153,16 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
 - **`repeat` rides along.** A held button autorepeats in the service;
   games read `e.repeat` to tell a hold from a fresh tap (robbin's jumpTap
   and its Konami reader both do), so it must survive the postMessage.
+- **Sticks** (`controls: 'sticks'`, SDK `onSticks`, spec §5.1.1; September
+  2026, for Drift City): the pad shows two analog sticks (`bindStick`), a
+  gamepad's two sticks are read as values (`setStick`, y turned so up is +),
+  and the guest gets `sticks {l, r}` on every change, posted directly like
+  `key` (not through `_sendToIframe`, whose bus tap would drown). Two traps:
+  a gamepad's stick ALSO makes digital directions, so the key sink skips
+  gamepad directions for a sticks guest or it moves twice; and an unplugged
+  gamepad must send zeros, or a stick left pushed keeps the guest moving.
+  With a world open on a phone the pad moves up over the world
+  (`body.foafos-world-on`), since the story window covers the bottom half.
 - Careful reading the pad's absence: `controls: "none"` in the manifest
   (gridluck, battleboids — they swipe the canvas) means never offered,
   which is NOT the same as retracted by the conformance probe. Check
@@ -252,6 +262,14 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
     (`foafos-root.js`) must hold every power an app it offers asks for. A
     new capability goes in three places: the root, the runner (to confer),
     and the app.
+  - **A deep link to where the reader already is, is no move.** Opened
+    directly (`?story=...`), every story showed its SECOND-visit text: the
+    runner reports its position after the first step, the shell writes the
+    knot's hash into the address (after an async digest), and the boot's
+    `honourDeepLink` then resolved that hash and entered the opening knot
+    again (3 runs in 3, before and after the world work). `honourDeepLink`
+    now skips a link to `currentKnot()`. e2e-drift checks Per Aspera's
+    opening text.
 - Sandboxed iframes have an OPAQUE ORIGIN: guest ES-module imports and
   fetches need CORS. GitHub Pages sends `Access-Control-Allow-Origin: *`;
   plain `python3 -m http.server` does NOT — local harnesses need a

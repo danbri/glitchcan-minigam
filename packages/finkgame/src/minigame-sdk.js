@@ -24,6 +24,7 @@ class MinigameSDK {
             terminate: null,
             variableChanged: null,
             storyBeat: null,
+            sticks: null,
             controls: null,
             audio: null
         };
@@ -231,6 +232,19 @@ class MinigameSDK {
     }
 
     /**
+     * Take both analog sticks from the host's input service (its on-screen
+     * sticks, and a gamepad's). Registering declares the `sticks` contract;
+     * the host then stops sending direction keys, so input does not arrive
+     * twice. x right +, y up +, each -1..1; a release sends zeros.
+     * @param {Function} callback - ({l: [x, y], r: [x, y]}) => void
+     */
+    onSticks(callback) {
+        this._callbacks.sticks = callback;
+        this._declare('sticks');
+        return this;
+    }
+
+    /**
      * Be the WORLD beside a story (`# WORLD: <name>`): after each step the
      * story sends the lines that carry tags it does not handle itself.
      * Registering declares the `world` contract.
@@ -419,6 +433,13 @@ class MinigameSDK {
                 this._variables[data.name] = data.value;
                 if (this._callbacks.variableChanged) {
                     this._callbacks.variableChanged(data.name, data.value);
+                }
+                break;
+
+            case 'sticks':
+                if (this._callbacks.sticks) {
+                    const pair = (v) => (Array.isArray(v) ? [Number(v[0]) || 0, Number(v[1]) || 0] : [0, 0]);
+                    this._callbacks.sticks({ l: pair(data.l), r: pair(data.r) });
                 }
                 break;
 

@@ -334,6 +334,20 @@ Directional input belongs to the shell, not to each guest:
   autorepeats a held button; games use `e.repeat` to tell a hold from a
   fresh tap, so the flag MUST survive the trip to the guest.
 - Window geometry MUST use the visible viewport (`100dvh`), not `100vh`.
+- **Sticks (September 2026).** A guest that steers in 3D needs values, not
+  four directions. Its registry row says `controls: 'sticks'`, and the
+  guest registers SDK `onSticks`, which declares the `sticks` contract. The
+  host's pad then shows two analog sticks in place of the d-pad and the
+  buttons, and the guest receives `{ type: 'sticks', l: [x, y], r: [x, y] }`
+  whenever a value changes: from the on-screen sticks, and from a
+  gamepad's two sticks (axes 0-1 and 2-3). x is right +, y is up + (the
+  Gamepad API's y is down +, and is turned), each -1..1 inside the unit
+  circle, 0 inside a dead zone of 0.12. Level, not events: the guest keeps
+  the last values; a release and a gamepad unplugged send zeros. The host
+  does not also send a gamepad's directions as keys to such a guest (they
+  would move it twice); the keyboard's directions and the buttons still
+  go as keys. With a world open on a phone, the pad sits above the story
+  window, over the world (§5.8).
 
 Verified end-to-end in `inklet/finkapp/test/e2e-input.mjs`, which plays
 the Konami code once per controller — keyboard with the guest focused,

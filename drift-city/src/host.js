@@ -49,6 +49,14 @@ if (typeof window !== "undefined" && window.parent !== window && typeof Minigame
   sdk.onPause(hostPause);
   sdk.onResume(hostResume);
   sdk.onAudio((a) => hostSetLevel(a && a.level !== undefined ? a.level : 1));
+  // Controls from the foafos input service: its two sticks (on-screen, or a gamepad's) write the same PAD values the
+  // city's own sticks write, so the city hides its own. A gamepad's directions do not also come as keys (the shell
+  // skips them); the keyboard's still do.
+  sdk.onControls((c) => { if (c && c.provider === "host" && c.scheme === "sticks") { H.sticks = true; padShow(false); } });
+  sdk.onSticks((s) => {
+    PAD.lx = s.l[0]; PAD.ly = s.l[1]; PAD.rx = s.r[0]; PAD.ry = s.r[1];
+    lastInput = clock; lastUiTouch = clock;
+  });
   sdk.onSnapshot(() => { taleSave(); return { v: 1, saves: { ...taleMem() } }; });
   sdk.onRestore((state) => { if (state && state.v === 1 && state.saves) Object.assign(taleMem(), state.saves); });
   // As the WORLD beside a story (`# WORLD: drift`; the shell adds world=1): the story runs in the foafos runner and

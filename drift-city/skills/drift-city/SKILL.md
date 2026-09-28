@@ -748,8 +748,8 @@ links to each story as a dream, and each story's own `# WORLD: drift` opens the 
 works too: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/story/peraspera.fink.js`.
 
 - **`drift`**: `dist/city.html` in a sandboxed frame. `# MINIGAME: drift tale=peraspera` arrives as `?tale=`,
-  which `tales.js` already read, so the page needed no argument code. Holds `audio`, `vars:read` and `vars:write`;
-  its own controls, so no host pad (`controls: 'none'`). The row's `variables` let it read `want_time` and
+  which `tales.js` already read, so the page needed no argument code. Holds `audio`, `vars:read`, `vars:write`
+  and `story:steer`; the foafos sticks (`controls: 'sticks'`). The row's `variables` let it read `want_time` and
   `want_weather` and write `here`, `hour` and `snowing`; `features: ['autoplay']`, because the reader taps the
   story's window, not the city.
 - **World mode** (`?world=1`, which the shell adds for `# WORLD: drift`; "the world beside a story in foafos" in
@@ -765,9 +765,11 @@ works too: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/story/peraspera.
   when you move. The story's text routes still offer the clues too. In foafos (world or game) the menu has
   no Sound item: the shell's volume and mute reach the city through `hostGain`. On a phone the story window
   takes the bottom half and the city shows above it (the shell's `foafos-with-world`); the city's own controls
-  at the bottom of its frame are then under the story.
-  Not done: controls. The city keeps its own on-screen sticks; the foafos input service has one digital stick and
-  four directions, and the city needs two analog sticks (an owner decision).
+  at the bottom of its frame are then under the story, and the foafos pad sits above the story instead.
+  Controls come from foafos too (owner's decision, September 2026): the row says `controls: 'sticks'`, `host.js`
+  registers `onControls` and `onSticks`, the foafos sticks (on screen, or a gamepad's) write the same `PAD` values
+  the city's own sticks write, and the city hides its own sticks and the menu's "On-screen gamepad" switch
+  (`hostState().sticks`). The keyboard still works when the city has focus.
 - **`src/host.js`** (built in before `main.js`) answers the shell when the page is in a frame with the SDK
   (`packages/finkgame/src/minigame-sdk.js`, a script tag in `head.html`):
   - pause: `hostPaused()` makes the frame loops in `main.js` and `fallback.js` skip (they keep asking for frames;
@@ -798,8 +800,9 @@ works too: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/story/peraspera.
   Loading a head (5 MB, 20,000 splats) and its first poses block the page's thread: measured round trips of
   288, 450 and 577 ms against 4 to 9 ms otherwise, and a close then kept nothing (two test runs in three).
   Not fixed; the shell's rule is that a window that will not shut is worse than a lost save.
-- Tests: `inklet/finkapp/test/e2e-drift.mjs` (27 checks; the world ones are §15-23: the story in the runner, the
-  city beside it under the dream session, the phone layout, the first step's tags, variables both ways through the shell, a choice
+- Tests: `inklet/finkapp/test/e2e-drift.mjs` (34 checks; the world ones are §15-27: the story in the runner, the
+  city beside it under the dream session, the phone layout, the first step's tags, a re-entry refused and a clue
+  found in the city, the foafos sticks on a phone and from a gamepad, Per Aspera's opening text when opened directly, variables both ways through the shell, a choice
   moving the city and its recorded line, the menu, closing the city, and a restore that reopens the world at the
   last scene. Before them, the game path: the argument filter; the city on Per Aspera as a node
   with its args; the Task Manager row; pause; master volume; a story save kept in memory, snapshotted, kept on

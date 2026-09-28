@@ -718,10 +718,15 @@ bus.subscribe('app.close', (e) => {
 bus.subscribe('app.close', (e) => {
   const closed = e.data?.closed || [];
   for (const [runnerId, w] of storyWorlds) {
-    if (closed.includes(runnerId)) { storyWorlds.delete(runnerId); continue; }
+    if (closed.includes(runnerId)) {
+      storyWorlds.delete(runnerId);
+      document.body.classList.toggle('foafos-world-on', storyWorlds.size > 0);
+      continue;
+    }
     if (!w.nodeId || !closed.includes(w.nodeId)) continue;
     storyWorlds.delete(runnerId);
     w.frame.closest?.('.foafos-window')?.classList.remove('foafos-with-world');
+    document.body.classList.toggle('foafos-world-on', storyWorlds.size > 0);
     try {
       w.frame.contentWindow?.postMessage({ type: 'story.event', event: 'world.closed', detail: { world: w.game } }, '*');
     } catch (err) { /* the runner is gone too */ }
@@ -1105,7 +1110,12 @@ FoafOS.input = input;
 
 input.addSink((e) => {
   const mg = window.FinkMinigames;
-  if (mg?.active && mg.iframeMinigame) {
+  // A guest that takes sticks gets a gamepad's directions as values (stick
+  // sink, below), not as keys too: that would move it twice. Keyboard
+  // directions still go as keys.
+  const sticksGuest = !!mg?.windowInstance?.contracts?.has('sticks');
+  const direction = e.action === 'up' || e.action === 'down' || e.action === 'left' || e.action === 'right';
+  if (mg?.active && mg.iframeMinigame && !(sticksGuest && direction && e.source === 'gamepad')) {
     const map = ACTION_KEYS[e.action];
     if (map) {
       mg.iframeMinigame.contentWindow?.postMessage({
@@ -1120,6 +1130,16 @@ input.addSink((e) => {
   }
   // widgets and any other listener can use the normalized form
   if (!e.repeat) bus.publish('input.action', { action: e.action, phase: e.phase, source: e.source });
+});
+
+// Both sticks as values, to the stage guest that asked for them (SDK
+// onSticks). Posted directly, like keys: a stick moves many times a second,
+// and the SDK tap on the bus would drown in it.
+input.addStickSink((s) => {
+  const mg = window.FinkMinigames;
+  const inst = mg?.windowInstance;
+  if (!mg?.active || !inst?.contracts?.has('sticks')) return;
+  try { inst.iframe?.contentWindow?.postMessage({ type: 'sticks', l: s.l, r: s.r }, '*'); } catch (err) { /* gone */ }
 });
 
 function buildPad() {
@@ -1139,10 +1159,14 @@ function buildPad() {
     <div class="foaf-pad-act">
       <button type="button" data-action="a" aria-label="Action">A</button>
       <button type="button" data-action="b" aria-label="Back">B</button>
-    </div>`;
+    </div>
+    <div class="foaf-stick foaf-stick-l" role="application" aria-label="Left stick: drag"><span class="knob"></span></div>
+    <div class="foaf-stick foaf-stick-r" role="application" aria-label="Right stick: drag"><span class="knob"></span></div>`;
   document.body.appendChild(pad);
   input.bindSurface(pad)
     .bindJoystick(pad.querySelector('.foaf-pad-dir'))
+    .bindStick(pad.querySelector('.foaf-stick-l'), 'l')
+    .bindStick(pad.querySelector('.foaf-stick-r'), 'r')
     .attachKeyboard().attachGamepads();
 
   // A real gamepad retires the on-screen pad (and brings it back).
@@ -1170,6 +1194,9 @@ function refreshPad() {
   if (!show) input.releaseAll();
   pad.hidden = !show;
   pad.classList.toggle('act-hidden', mg?.currentControls === 'lite');
+  // `controls: 'sticks'` (a guest that steers in 3D): two analog sticks
+  // in place of the d-pad and the buttons
+  pad.classList.toggle('sticks', mg?.currentControls === 'sticks');
   // the dock lives in the same corner as the action buttons — get out
   // of the player's way while the pad is up
   document.body.classList.toggle('foaf-pad-on', show);
@@ -2640,6 +2667,7 @@ function buildUI() {
               window.FinkMinigames?.startMinigame?.(chk.game, hostArgs.mode || 'normal',
                 hostArgs.controls || null, { ...appArgs, world: '1' });
               win.classList.add('foafos-with-world');   // phone: the world gets the top half
+              document.body.classList.add('foafos-world-on');
               bus.publish('story.world', {
                 summary: `${app.name} opened ${chk.entry.name || chk.game} as the world beside its story`,
                 appId: app.id, world: chk.game,
@@ -2664,6 +2692,7 @@ function buildUI() {
             } else if (op === 'close') {
               storyWorlds.delete(runnerNodeId);
               win.classList.remove('foafos-with-world');
+              document.body.classList.toggle('foafos-world-on', storyWorlds.size > 0);
               if (world.nodeId && apps.get(world.nodeId)) apps.close(world.nodeId);
               reply({ ok: true, op });
             } else {
