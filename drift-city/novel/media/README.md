@@ -3,7 +3,7 @@
 | file | what | made by |
 |---|---|---|
 | cellar-arrival.jpg (960x536), cellar-singer-horn.jpg (460x768) | stills, revision 2 of the woman in green | Gemini 3 Pro image edits (ElevenLabs connector, 2026-09-28) of the revision 1 tiles, with the revision 2 still as a second reference; 2,436 credits each. The model returned 16:9 and widened panel a's scene (more diners at the side tables); panel c is cropped around her from the 16:9 result |
-| street-snow.jpg | still | a tile cut from an image the owner made with ChatGPT from a Drift city screenshot (September 2026), at their own size (about 365 px), JPEG quality 80, progressive |
+| street-snow.jpg (1100x614) | still, revision 2: a Titan street | Gemini 3 Pro image edit (ElevenLabs connector, 2026-09-28; two variants, 3,654 credits) of the first tile, after the owner found it "too earthlike". Brief from the drift-city skill: methane ice and snow, orange-brown haze, a sealed glass traffic tube about 11 m up with a teardrop car, domes and round-window slabs, coat-cut pressure suits with bubble helmets, faces hard to place. Take B kept the original composition |
 | cellar-lantern-loop.webm / .mp4 | the moving panel, revision 3: 540x540, 10.2 s forward loop, no sound: VP9 192 KB, H.264 229 KB | a 12 s Kling 3.0 Pro take from `../../bible/refs/woman-in-green-v3.jpg` (8,145 credits) plus a 3 s Kling 3.0 Pro bridge clip (2,036 credits); see below |
 | cellar-lantern-poster.jpg | the loop's first frame | ffmpeg |
 
