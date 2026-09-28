@@ -800,15 +800,18 @@ function loadAppSnapshot(appId) {
     return raw ? JSON.parse(raw) : undefined;
   } catch { return undefined; }
 }
+// Returns { ok } or { ok: false, reason }: 'declined' for a null state, or
+// the store's own refusal ('quota', 'denied'). A refused write is not a kept
+// place, and the close must not say it is.
 function saveAppSnapshot(appId, state) {
   try {
     if (state === null || state === undefined) {
       store.remove(FoafOS.snapshotNs, appSnapKey(appId));
-      return false;
+      return { ok: false, reason: 'declined' };
     }
-    store.set(FoafOS.snapshotNs, appSnapKey(appId), JSON.stringify(state));
-    return true;
-  } catch { return false; }
+    const res = store.set(FoafOS.snapshotNs, appSnapKey(appId), JSON.stringify(state));
+    return res?.ok ? { ok: true } : { ok: false, reason: res?.reason || 'refused' };
+  } catch (err) { return { ok: false, reason: 'error' }; }
 }
 FoafOS.forgetAppSnapshot = (appId) => saveAppSnapshot(appId, null);
 
@@ -2238,12 +2241,16 @@ function buildUI() {
           const ask = frame.__foafSnapshot;
           win.style.pointerEvents = 'none';
           if (!ask) { win.remove(); return; }
-          ask().then((state) => {
+          ask().then(({ state, late }) => {
             if (state !== undefined) {
-              const kept = saveAppSnapshot(app.id, state);
+              const res = saveAppSnapshot(app.id, state);
               bus.publish('app.snapshot', {
-                summary: kept ? `${app.name} kept its place` : `${app.name} declined to save`,
-                id: app.id, kept,
+                summary: res.ok
+                  ? `${app.name} kept its place${late ? ' (its last step: it did not answer in time)' : ''}`
+                  : res.reason === 'declined' ? `${app.name} declined to save`
+                  : `${app.name} could not keep its place (${res.reason})`,
+                id: app.id, kept: res.ok, ...(late ? { late: true } : {}),
+                ...(res.ok || res.reason === 'declined' ? {} : { reason: res.reason }),
               });
             }
             win.remove();
@@ -2953,6 +2960,13 @@ function buildUI() {
         if (waiter) { _snapWaiters.delete(app.id); waiter(d.state ?? null); }
         return;
       }
+      // The same state, sent unasked each time it changes (`keepSnapshot`).
+      // Held in memory only; it is written on close, and only when the ask
+      // gets no answer in time (the fink skill, "Snapshot and restore").
+      if (d.type === 'app.snapshot-keep') {
+        if (appContracts.has('snapshot')) keptSnapshot = { state: d.state ?? null };
+        return;
+      }
 
       if (d.type !== 'conformance') return;
       if ((d.contracts || []).includes('snapshot')) {
@@ -2981,6 +2995,7 @@ function buildUI() {
     // reported as such.
     // Contracts this app has declared, and the state waiting for it.
     const appContracts = new Set();
+    let keptSnapshot = null;         // the last state the app sent unasked
     const saved = loadAppSnapshot(app.id);
     let restoreSent = false;
     const maybeRestore = () => {
@@ -2994,12 +3009,14 @@ function buildUI() {
     };
     // Ask on the way out. Bounded, because a guest that never answers must
     // not hold the close: the window goes now, only the ASK waits.
+    // No answer in time: use the state the app last sent unasked, if any.
     frame.__foafSnapshot = () => new Promise((resolve) => {
-      if (!appContracts.has('snapshot')) { resolve(undefined); return; }
-      const t = setTimeout(() => { _snapWaiters.delete(app.id); resolve(undefined); }, 400);
-      _snapWaiters.set(app.id, (state) => { clearTimeout(t); resolve(state); });
+      if (!appContracts.has('snapshot')) { resolve({ state: undefined }); return; }
+      const late = () => resolve(keptSnapshot ? { state: keptSnapshot.state, late: true } : { state: undefined });
+      const t = setTimeout(() => { _snapWaiters.delete(app.id); late(); }, 400);
+      _snapWaiters.set(app.id, (state) => { clearTimeout(t); resolve({ state }); });
       try { frame.contentWindow?.postMessage({ type: 'app.snapshot', rid: 's' }, '*'); }
-      catch (err) { clearTimeout(t); _snapWaiters.delete(app.id); resolve(undefined); }
+      catch (err) { clearTimeout(t); _snapWaiters.delete(app.id); late(); }
     });
     frame.__foafAppId = app.id;
 

@@ -602,6 +602,17 @@ here.
 - The wait is **bounded** (400ms). A guest that declared the contract and
   then goes silent MUST NOT be able to hold a window open: losing state
   is bad, a window that will not shut is worse.
+- A window app MAY also send its state **unasked**, each time it changes:
+  `{ type: 'app.snapshot-keep', state }` (`keepSnapshot` in the app SDK),
+  where `null` declines as above. The shell holds only the latest one, in
+  memory. When the close gets no answer within the bound, the shell writes
+  that state instead and marks the close `late`. Reason (measured, September
+  2026): a frame can share a thread with another one. A story runner and the
+  game it launched stopped together for up to 1.15s, so a close in that time
+  lost the reader's place. A kept state is written only on close; it does not
+  change what survives a reload.
+- A write that the store refuses (for example over quota) MUST NOT be
+  reported as kept.
 - The shell MUST NOT destroy the frame before the answer can arrive.
   This is the whole difficulty of the feature: a request posted in the
   same tick as the teardown looks correct, runs without error, and

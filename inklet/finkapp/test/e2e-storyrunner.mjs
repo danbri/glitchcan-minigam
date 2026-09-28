@@ -635,6 +635,57 @@ try {
     }
   }
 
+  // ── 9b. A BUSY RUNNER STILL KEEPS ITS PLACE ──────────────────────────
+  // Measured (September 2026): the runner can share a thread with the game it
+  // launched, and a game can hold that thread for over a second, so the close
+  // got no answer in its 400ms and the reader's place was lost — section 9
+  // failed about one run in five. The runner now SENDS its place whenever the
+  // reader stops at a new one, and the shell keeps the last one. Proof: move
+  // the place, block the runner's thread, close; the NEW place must be kept,
+  // and marked late.
+  {
+    const ns = await page.evaluate(() => FoafOS.snapshotNs);
+    const storedNow = () => page.evaluate((n) => (FoafOS.store.snapshot(n) || {})['app:storyrunner'] || null, ns);
+    let rb = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+    const before = await storedNow();
+    const moved = rb && await rb.evaluate(() => {
+      const c = window.__storyrunner.state.choices;
+      if (c.length !== 1) return { ok: false, choices: c };
+      window.__storyrunner.choose(0);
+      return { ok: true, took: c[0], ended: window.__storyrunner.state.choices.length === 0 };
+    });
+    await page.waitForTimeout(300);
+    await page.evaluate(() => {
+      window.__snapEv = [];
+      FoafOS.bus.subscribe('app.snapshot', (e) => window.__snapEv.push(e.data));
+    });
+    // Hold the runner's thread for 1.5s, starting as soon as this returns.
+    await rb?.evaluate(() => { setTimeout(() => { const t = Date.now(); while (Date.now() - t < 1500) { /* busy */ } }, 0); });
+    await page.evaluate(() => document.querySelector('.foafos-window iframe[src*="storyrunner"]')
+      ?.closest('.foafos-window')?.querySelector('.foafos-window-close')?.click());
+    await page.waitForTimeout(2200);
+    const after = await storedNow();
+    const ev = await page.evaluate(() => window.__snapEv.slice());
+    const lateKept = ev.some((x) => x.kept && x.late);
+    moved?.ok && moved.ended && lateKept && after && after !== before
+      ? pass(`a runner too busy to answer still kept its place: its last step ("${moved.took}", then the end), marked late`)
+      : fail(`the busy runner's place was lost: ${JSON.stringify({ moved, ev, changed: after !== before, kept: !!after })}`);
+
+    // Reopen: the reader is at the NEW place (the end), not the old choice.
+    await page.evaluate(() => FoafOS.launchApp('storyrunner'));
+    rb = null;
+    for (let i = 0; i < 40 && !rb; i++) {
+      rb = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+      if (!rb) await page.waitForTimeout(300);
+    }
+    const back = rb && await rb.waitForFunction(() => window.__storyrunner?.ready?.() && window.__storyrunner.state.resumedFromSave,
+      null, { timeout: 20000 }).then(() => rb.evaluate(() => ({ choices: window.__storyrunner.state.choices.length,
+        url: (window.__storyrunner.state.storyUrl || '').split('/').pop() })), () => null);
+    back && back.url === 'peer.fink.js' && back.choices === 0
+      ? pass('reopening resumed at the place the busy runner sent (the end of peer.fink.js)')
+      : fail(`reopening did not resume the sent place: ${JSON.stringify(back)}`);
+  }
+
   // ── 10. PARITY ON A BUNDLED STORY (#779) ────────────────────────────
   // The fixtures prove mechanisms; a bundled story is the bar. Hampstead is
   // the mandatory journey, and it must play IN THE BOX with its real art,
