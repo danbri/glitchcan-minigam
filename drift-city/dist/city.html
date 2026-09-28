@@ -94,6 +94,9 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 /* talking heads (heads.js): a helmet comms feed, top left under the story bar */
 .headFeed { position: fixed; left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(84px + env(safe-area-inset-top, 0px)); z-index: 13; width: 128px; height: 168px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(160, 220, 255, 0.45); box-shadow: 0 0 calc(6px + 14px * var(--lvl, 0)) rgba(120, 200, 255, 0.35); background: #05080b; pointer-events: none; animation: headIn 0.3s ease-out, headFlick 7s steps(1) infinite; }
 .headFeed[hidden] { display: none; }
+.headFeed.inTale { position: relative; left: auto; top: auto; float: right; width: 104px; height: 136px; margin: 4px 0 6px 10px; }
+.headFeed.inTale .headName { font-size: 9px; bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.headFeed.inTale .headCredit { font-size: 6px; left: 4px; right: 2px; bottom: 3px; letter-spacing: -0.02em; }
 .headFeed.closing { animation: headOut 0.35s ease-in forwards; }
 .headFeed canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: default; touch-action: auto; filter: saturate(0.8) contrast(1.08); }
 .headScan { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px), linear-gradient(180deg, rgba(120, 200, 255, 0.08), transparent 40%, rgba(0, 0, 0, 0.35)); mix-blend-mode: multiply; }
@@ -12875,6 +12878,16 @@ function headPanel() {
   HEADS.el = el; HEADS.cv = el.querySelector("canvas");
   return el;
 }
+// where the feed sits: inside the story's text as an inset on the right, the words wrapping round it, while the story
+// panel is open (taleSay rebuilds the text on every step, so this is checked every frame); in the corner otherwise
+function headPlace() {
+  const el = HEADS.el, tx = typeof document !== "undefined" && document.getElementById ? document.getElementById("taleText") : null;
+  if (!el) return;
+  const inTale = !!(tx && tx.offsetParent !== null && tx.clientHeight > 60);
+  if (inTale && el.parentNode !== tx) { tx.insertBefore(el, tx.firstChild); el.classList.add("inTale"); }
+  else if (!inTale && el.parentNode !== document.body) { document.body.appendChild(el); el.classList.remove("inTale"); }
+  else if (inTale && tx.firstChild !== el) tx.insertBefore(el, tx.firstChild);
+}
 // a line starts: open the feed for its speaker (or close it for anyone else)
 function headSay(url, audioEl) {
   const who = headSpeaker(url);
@@ -12904,6 +12917,7 @@ function headFrame(now) {
   if (!HEADS.who) return;
   if (HEADS.hideAt && now > HEADS.hideAt) { headHide(); return; }
   HEADS.raf = requestAnimationFrame(headFrame);
+  headPlace();
   const A = HEADS.audio, t = A ? A.currentTime : 0, playing = A && !A.paused;
   const E = HEADS.envNow, lvl = E && playing ? E[Math.min(E.length - 1, Math.floor(t * 60))] : 0;
   if (HEADS.el) HEADS.el.style.setProperty("--lvl", lvl.toFixed(2));
@@ -12918,9 +12932,12 @@ function headFrame(now) {
   }
   const s = now / 1000;
   const talk = playing ? L.sampleTalkBurst(t, { seed: HEADS.who.length * 17, durationSec: (A.duration || 4) + 1 }) : {};
+  // the library's visemes are built to be unmissable in a demo (about 1.4 times full strength); at that size a LAM
+  // mouth gapes and shows its empty inside (there are no teeth or tongue in these heads), so: half strength, and the
+  // jaw never more than 0.35 open (owner, on a phone: "very toothy or just wrong")
   const morph = {};
-  for (const k in talk) morph[k] = talk[k] * Math.min(1, lvl * 1.6);
-  morph.jawOpen = Math.max(morph.jawOpen || 0, lvl * 0.55);
+  for (const k in talk) morph[k] = talk[k] * 0.5 * Math.min(1, lvl * 1.4);
+  morph.jawOpen = Math.min(0.35, Math.max(morph.jawOpen || 0, lvl * 0.3));
   const bp = (s % 3.7) / 3.7, blink = bp < 0.05 ? Math.sin(bp / 0.05 * Math.PI) : 0;
   morph.eyeBlinkLeft = blink; morph.eyeBlinkRight = blink;
   const yaw = Math.sin(s / 2.9) * 0.1 + lvl * 0.04 * Math.sin(s * 5.0), pitch = Math.sin(s / 3.7) * 0.04 - lvl * 0.05;

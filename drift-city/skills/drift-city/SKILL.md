@@ -637,6 +637,11 @@ this (option 1 of 3) over splat heads on SDF bodies in the scene; holographic cr
 - Mistakes: the first contact sheet showed blurred blobs: the camera was behind the heads (LAM heads have no back;
   with `yaw: Math.PI` the camera goes on the -z side). The first feed filled the screen: the page styles every
   `canvas` as a fixed full-screen layer, so the feed's canvas needs `position: absolute; inset: 0`.
+- Owner, on a phone (first version): one mouth was "very toothy or just wrong", and the feed covered the story
+  text. The library's visemes are built about 1.4 times full strength for demos; at that size a LAM mouth gapes and
+  shows an empty grey inside (no teeth or tongue in these heads). Now half strength, `jawOpen` capped at 0.35. While
+  the story panel is open, the feed is an inset floated right inside `#taleText` (re-inserted each frame, because
+  `taleSay` rebuilds the text); in the corner otherwise. Moving the canvas in the DOM keeps its WebGL context.
 - Test: headless Chromium (WebGL on SwiftShader) with `--autoplay-policy=no-user-gesture-required`, calling
   `__drift.headSay(audio.src, audio)` on a playing clip; `__drift.HEADS` shows the state. Not yet tested on a phone
   for speed.
