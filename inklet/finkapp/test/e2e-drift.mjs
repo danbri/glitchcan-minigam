@@ -423,11 +423,13 @@ try {
       return { hidden: p.hidden, sticks: p.classList.contains('sticks'),
         dir: getComputedStyle(p.querySelector('.foaf-pad-dir')).display,
         stickW: Math.round(p.querySelector('.foaf-stick-r').getBoundingClientRect().width),
-        padBottom: Math.round(p.getBoundingClientRect().bottom), storyTop: Math.round(w.getBoundingClientRect().top) };
+        padBottom: Math.round(p.getBoundingClientRect().bottom), storyTop: Math.round(w.getBoundingClientRect().top),
+        dockGap: Math.round(innerHeight - (document.getElementById('foafos-dock')?.getBoundingClientRect().bottom ?? 0)) };
     });
     const own = await tc.evaluate(() => ({ on: __drift.PAD.on, hidden: document.getElementById('pad')?.hidden !== false }));
     !pad.hidden && pad.sticks && pad.dir === 'none' && pad.stickW > 60 && pad.padBottom <= pad.storyTop && !own.on && own.hidden
-      ? pass(`on a phone the foafos pad shows two sticks over the city, above the story (pad bottom ${pad.padBottom}, story top ${pad.storyTop}); the city's own sticks are hidden`)
+      && pad.dockGap <= 24
+      ? pass(`on a phone the foafos pad shows two sticks over the city, above the story (pad bottom ${pad.padBottom}, story top ${pad.storyTop}); the city's own sticks are hidden; the dock stays in its corner`)
       : fail(`foafos sticks: ${JSON.stringify({ pad, own })}`);
 
     // 25. a thumb on the right stick moves the city; lifting it stops it

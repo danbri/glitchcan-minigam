@@ -354,6 +354,9 @@ body.foaf-pad-on #foafos-dock {
    the pad sits just above it, over the world. */
 @media (max-width: 700px) {
     body.foafos-world-on #foaf-pad { bottom: calc(50dvh + 8px); }
+    /* the pad has left the bottom corner, so the dock need not step aside
+       (raised, it covered the story's choices) */
+    body.foafos-world-on.foaf-pad-on #foafos-dock { bottom: calc(8px + env(safe-area-inset-bottom)); }
 }
 
 /* floating widget windows (sandboxed guests) */
