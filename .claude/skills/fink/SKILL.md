@@ -216,9 +216,17 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   and walks into the runner frame. It used to audit `?player=legacy` only and
   reported 0 errors about a surface the reading had left; if you move the
   reading again, move the audit with it.
-- Tag grammar: `# MINIGAME: <name> [mode=x] [controls=dpad|lite|none]`
-  parsed at `fink-ink-engine.js:314-333`; the Continue loop BREAKS on
-  MINIGAME/FINK tags.
+- Tag grammar: `# MINIGAME: <name> [mode=x] [controls=dpad|lite|none]
+  [key=value ...]`. The boxed runner splits the tag value (`gameTag`) and
+  sends `{game, args}` with `story.launch`; the shell's `launchArgs` keeps
+  mode and controls for the stage host and only the keys the registry row
+  lists in `args`, with plain-token values, and reports the rest on
+  `app.launch.args.dropped`; the guest gets them in its page address and
+  `init.config.args`, and the node records them (`scopes.args`). Until
+  September 2026 the runner kept the first word only, so mode never reached
+  a game in production. The legacy engine parses mode and controls at
+  `fink-ink-engine.js:314-333`. The Continue loop BREAKS on MINIGAME/FINK
+  tags. Details: the story-game-sync skill.
 - Sandboxed iframes have an OPAQUE ORIGIN: guest ES-module imports and
   fetches need CORS. GitHub Pages sends `Access-Control-Allow-Origin: *`;
   plain `python3 -m http.server` does NOT — local harnesses need a

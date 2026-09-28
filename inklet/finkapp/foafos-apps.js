@@ -169,6 +169,25 @@ export const APPS = [
     surface: 'stage', game: 'cellar', url: '../../drift-city/novel/cellar.html',
     desc: 'A graphic-novel page from Drift City', controls: 'none',
     capabilities: [], silent: true },
+  // Drift City itself: the raymarched city on Titan (WebGPU, with a WebGL
+  // fallback) and its stories. `# MINIGAME: drift tale=peraspera` opens it on
+  // that story; `args` lists the only keys a story may pass. It obeys pause
+  // and the master volume (audio), keeps its story saves as a snapshot, and
+  // at a story's end offers the way back (drift-city/src/host.js). Its own
+  // controls, so no host pad.
+  { id: 'drift', family: 'play', icon: '🪐', name: 'Drift City',
+    surface: 'stage', game: 'drift', url: '../../drift-city/dist/city.html',
+    desc: 'The city on Titan and its stories', controls: 'none',
+    args: ['tale'], capabilities: ['audio'] },
+  // One Drift City cast member on the helmet comms feed, speaking a recorded
+  // line: `# MINIGAME: talkinghead line=mags-3 [mood=wry]`. A rigged
+  // Gaussian-splat head (LAM, synthetic faces only), mouth moved by the clip.
+  // It plays without a tap in its frame, so it needs autoplay; it hands
+  // control back when the line ends (drift-city/feed/index.html).
+  { id: 'talkinghead', family: 'play', icon: '🗣️', name: 'Talking head',
+    surface: 'stage', game: 'talkinghead', url: '../../drift-city/feed/index.html',
+    desc: 'A Drift City face speaking a recorded line', controls: 'none',
+    args: ['line', 'mood'], capabilities: ['audio'], features: ['autoplay'] },
   { id: 'waterworld', family: 'play', icon: '🫧', name: 'Waterworld', surface: 'stage', game: 'waterworld',
     desc: 'Submarine salvage in the drowned dock', controls: 'dpad',
     capabilities: ['input', 'vars:read', 'vars:write', 'audio'],

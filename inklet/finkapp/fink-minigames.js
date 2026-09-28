@@ -143,6 +143,7 @@ window.FinkMinigames = {
         window.FoafOS?.bus.publish('minigame.instance', {
             summary: `${inst.type} instance ${id} opened (${this.instances.size} running)`,
             id, type: inst.type, kind: inst.kind, count: this.instances.size,
+            args: inst.args || {},
         });
         return inst;
     },
@@ -864,7 +865,10 @@ window.FinkMinigames = {
 
     // Start a minigame by type
     // controls: 'dpad' (full), 'lite' (simple), 'none' (tap) - or null to use default
-    startMinigame(type = 'gems', mode = 'normal', controls = null) {
+    // args: the story's `# MINIGAME:` arguments that the shell let through
+    // (only keys the app's registry row declares); a guest gets them in its
+    // page address and in init.config.args
+    startMinigame(type = 'gems', mode = 'normal', controls = null, args = null) {
         if (!this.isKnownGame(type)) {
             // Refused out loud, and the story carries on without the game.
             // The shell refuses a boxed story's request before it gets here;
@@ -906,7 +910,7 @@ window.FinkMinigames = {
 
         // Check if this is an iframe-based minigame
         if (this.iframeMinigames.includes(type)) {
-            this.startIframeMinigame(type, mode);
+            this.startIframeMinigame(type, mode, args);
             return;
         }
 
@@ -924,7 +928,7 @@ window.FinkMinigames = {
     },
 
     // Start an iframe-sandboxed minigame
-    startIframeMinigame(type, mode = 'full') {
+    startIframeMinigame(type, mode = 'full', args = null) {
         this.log(`Starting iframe minigame: ${type} (${mode})`);
 
         // Delta-based sync baseline; it lives on the instance record so
@@ -953,7 +957,7 @@ window.FinkMinigames = {
             iframe.id = `minigame-iframe-${type}`;
 
             const inst = this._registerInstance({
-                type, kind: 'window', iframe, mode,
+                type, kind: 'window', iframe, mode, args: { ...(args || {}) },
                 lastSync: { gameGems: 0, storyDiamonds: currentDiamonds },
             });
             this.windowInstance = inst;
@@ -1006,7 +1010,8 @@ window.FinkMinigames = {
                     }
                     inst.grants = this._normalizeGrants(manifest, type);
                     this.currentGrants = inst.grants;
-                    iframe.src = source.src;
+                    const query = new URLSearchParams(inst.args).toString();
+                    iframe.src = query ? `${source.src}${source.src.includes('?') ? '&' : '?'}${query}` : source.src;
                 });
 
             this.elements.iframeContainer.appendChild(iframe);
@@ -1038,6 +1043,8 @@ window.FinkMinigames = {
     _buildInitConfig(inst) {
         return {
                     mode: inst.mode,
+                    // the story's arguments, as the shell let them through
+                    args: { ...(inst.args || {}) },
                     // Input is an OS service: the host owns the on-screen
                     // pad (it alone sees the real viewport + safe areas).
                     // SAFETY RULE: only claim the input when we will

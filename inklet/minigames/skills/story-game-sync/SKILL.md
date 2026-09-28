@@ -46,13 +46,6 @@ What this model does NOT do, today:
 - **A game cannot move the story.** Spec §5: "Games cannot divert the story."
   No verb re-enters a knot or chooses a path. Reactions live behind a choice in
   the return knot (spec §3.2).
-- **The boxed runner drops tag arguments.** It keeps only the first word of the
-  tag value, and the shell calls `startMinigame(game)` with the name only. So
-  `mode=` and `controls=` work in the legacy player (`?player=legacy`) and not
-  in production. `# MINIGAME: robbin mode=hampstead` arrives as mode normal.
-  It is also why one registered app cannot yet show a page, scene or rig that
-  the story names: a shared novel viewer, SDF world or talking rig needs these
-  arguments, delivered in `init.config`.
 - **`init` variables come from the legacy engine.** `_getStoryVariables` reads
   `FinkInkEngine.story`, not the boxed runner's story or `FoafOS.storyVars`.
   Under the boxed runner, check what a guest actually receives before relying
@@ -60,13 +53,33 @@ What this model does NOT do, today:
 - `# MINIGAME_MODE:` and `# MINIGAME_CONFIG:` (in `inklet/minigames/README.md`)
   are not parsed anywhere.
 
+**Tag arguments (September 2026).** `# MINIGAME: <name> key=value ...`. The
+boxed runner sends the name and the pairs (`gameTag` in `storyrunner.js`; it
+splits the tag value the ink runtime produced and reads no story source). The
+shell's `launchArgs` keeps `mode` and `controls` (dpad, lite, none) for the
+stage host, and any other key only if the app's registry row lists it in
+`args`. A value must be a plain token, `[A-Za-z0-9][A-Za-z0-9._:-]{0,79}`, and
+at most 12 pairs are read. Everything else is dropped and reported on
+`app.launch.args.dropped`. The guest gets its keys in its page address
+(`?tale=peraspera`), so a page that already reads its address needs no change,
+and in `init.config.args`. The node records them (`scopes.args`), and the Task
+Manager shows them in the State column. Until September 2026 the runner kept
+only the first word, so `# MINIGAME: robbin mode=hampstead` arrived as mode
+normal in production; it now reaches the game. The legacy player passes `mode`
+and `controls` as before and no other keys.
+
 Good fit: a self-contained episode inside a story — a heist, a battle, a
 puzzle — whose result the story reads afterwards. It also carries a narrative
 moment: `cellar` (Drift city's novel page, `drift-city/novel/cellar.html`) is
 a stage app with no capabilities. Pause freezes it, a close keeps its place
 (snapshot), a reopen restores it, and its own story's exit completes it, so
 the outer story resumes after the tag (`drift-city/novel/cellar-entry.fink.js`;
-the drift-city skill, Novel pages, has the lessons). Examples:
+the drift-city skill, Novel pages, has the lessons). The city itself is the
+stage app `drift` (`# MINIGAME: drift tale=peraspera` opens it on that story)
+and a cast member speaking a recorded line is `talkinghead`
+(`# MINIGAME: talkinghead line=mags-3 [mood=wry]`); both are played by
+`drift-city/foafos-entry.fink.js` (the drift-city skill, "Drift City as a
+foafos app"). Examples:
 `inklet/hampstead.fink.js` (robbin, reads `robbin_birds` after),
 `inklet/skydock.fink.js` (debrief branches on `skydock_trades`, replay loop
 `+ + [Clock on again] -> shift`), `inklet/apps/storyrunner/peer.fink.js`
@@ -164,7 +177,10 @@ Rules:
    `inklet/finkapp/`, and puts `variables` in the row (or a `manifest` URL).
 2. ONE row in `inklet/finkapp/foafos-apps.js`: `surface: 'stage',
    game: '<type>'`, capabilities, `desc`, `controls`, `silent` if it makes no
-   sound. That row is the only list of games: the stage host reads it at boot.
+   sound, `args` for the tag keys a story may pass, and `features` for the
+   frame's permissions policy (`autoplay` for a guest that must play sound
+   without a tap in its own frame, as `talkinghead` does). That row is the only
+   list of games: the stage host reads it at boot.
    An unregistered name is refused (`minigame.refused`; a boxed story's
    `story.launch` gets `unregistered`). Before September 2026 there were two
    lists, and a name missing from the host's list started gems.
@@ -176,7 +192,8 @@ Rules:
 
 Fixed September 2026: `canarywharf` (TOC entry `# MINIGAME: canarywharf
 mode=firstlight`) had a guest folder and no registration, so it played gems. It
-has a registry row now; `mode=` still does not reach it under the boxed runner.
+has a registry row now, and since the tag arguments work, `mode=firstlight`
+reaches it.
 
 ## Verify
 
@@ -185,6 +202,7 @@ node drift-city/tests/inkwalk.mjs                         # both modes, all endi
 node inklet/tools/fink-check.mjs drift-city/story/lamplighter.fink.js
 node inklet/finkapp/test/e2e-storyrunner.mjs              # pause on MINIGAME, resume with variables
 node inklet/finkapp/test/e2e-powers.mjs                   # one node per stage app, the cellar end to end
+node inklet/finkapp/test/e2e-drift.mjs                    # tag arguments; the city and the talking head end to end
 ```
 
 To check what a guest receives under the boxed runner, log `init` inside the

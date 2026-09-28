@@ -43,7 +43,7 @@ function headMoodOf(text, tag, base) {
   if (/\b(leans|whispers?|winks?|coy)\b/.test(t)) return "sly";
   return base || "neutral";
 }
-const HEADS = { lib: null, libP: null, avatars: {}, env: {}, el: null, cv: null, r: null, who: null, audio: null, buf: null, raf: 0, hideAt: 0, fail: false };
+const HEADS = { lib: null, libP: null, avatars: {}, env: {}, el: null, cv: null, r: null, who: null, audio: null, buf: null, raf: 0, hideAt: 0, fail: false, paused: false };
 function headSpeaker(url) {
   const m = /\/([a-z]+)-[^/]*\.mp3(?:$|\?)/.exec(url || "");
   return m && HEAD_CAST[m[1]] ? m[1] : null;
@@ -130,6 +130,8 @@ function headHide() {
 function headFrame(now) {
   HEADS.raf = 0;
   if (!HEADS.who) return;
+  // paused by the page's host (the foafos shell): no posing and no drawing, the face stays as it is
+  if (HEADS.paused) { HEADS.raf = requestAnimationFrame(headFrame); return; }
   if (HEADS.hideAt && now > HEADS.hideAt) { headHide(); return; }
   HEADS.raf = requestAnimationFrame(headFrame);
   headPlace();

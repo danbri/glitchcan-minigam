@@ -105,7 +105,7 @@ function guideSay(n) {
   if (typeof AU !== "undefined" && AU.on && typeof Audio !== "undefined") {
     const a = GUIDE.audio || (GUIDE.audio = new Audio());
     a.src = GUIDE_AUDIO + String(n).padStart(2, "0") + ".mp3";
-    a.volume = 0.9;
+    a.volume = 0.9 * hostGain();
     const p = a.play();
     if (p && p.catch) p.catch(() => {});
   }

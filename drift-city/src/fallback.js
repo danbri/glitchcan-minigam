@@ -601,6 +601,7 @@ function initGL(reason) {
   resize();
   addEventListener("resize", resize);
   function frame(now) {
+    if (hostPaused()) { last = now; requestAnimationFrame(frame); return; } // paused by the foafos shell (host.js)
     let dt = (now - last) / 1000; last = now;
     if (dt > 0.1) dt = 0.1;
     ema = ema * 0.93 + dt * 1000 * 0.07;
