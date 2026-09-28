@@ -783,6 +783,13 @@ curve chosen for the mood, another tap zooms out. First page: `novel/cellar.html
   - Give the hands a job with contact and a physical rhythm (drumming: sticks or brushes strike a drum head) rather
     than a vague gesture (tapping a table), and say "normal human hands, natural proportions" in the prompt.
   - Look at the hands in close crops at several times before anything goes on a page; a full-frame glance misses it.
+  - The forward loop, as done for revision 3: measure first. Compare normalised head-and-hands crops for every
+    frame pair at least 4 s apart; if the best pair is worse than frames one second apart (it was), a cut will jump.
+    Then generate a short bridge clip (Kling 3.0 Pro, 3 s, 2,036 credits) with the frame where the loop ends as its
+    start frame and the frame where it begins as its end frame, and blend 4 frames at the far join. Measure every
+    step of the result (typical 0.76, largest 1.57, wrap 0.95 on a 0 to 255 grey scale at 128 px).
+  - A mistake to avoid: I first read a pose difference between two frames as camera drift. Tracking the lantern
+    (position and width) showed the camera held still within 1% from 1.5 s to 9.5 s. Measure before you blame.
 - Media notes and costs: `novel/media/README.md`.
 
 ## Character sheets (`drift-city/bible/`, September 2026)
