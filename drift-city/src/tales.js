@@ -394,13 +394,13 @@ function taleVoiceAt(who) {
   return [q.x, q.y + 1.55, q.z];
 }
 // recorded lines (# speech): one element, a queue; a new choice cuts off what is still waiting
-function taleSpeech(file) {
+function taleSpeech(file, info) {
   if (typeof AU !== "undefined" && !AU.on) return;
   if (typeof Audio === "undefined") return;
   let url;
   try { url = new URL(file, new URL(TALE_DIR + TALE.file, location.href)).href; } catch (e) { return; }
   const S = TALE.speech || (TALE.speech = { el: new Audio(), q: [] });
-  S.q.push(url);
+  S.q.push({ url, info });
   if (!S.wired) { S.wired = true; S.el.addEventListener("ended", () => taleSpeechNext()); S.el.addEventListener("error", () => taleSpeechNext()); }
   if (!S.busy) taleSpeechNext();
 }
@@ -409,8 +409,9 @@ function taleSpeechNext() {
   if (!S) return;
   if (!S.q.length) { S.busy = false; if (typeof headDone === "function") headDone(); return; }
   S.busy = true;
-  S.el.src = S.q.shift();
-  if (typeof headSay === "function") headSay(S.el.src, S.el); // the speaker's face on the comms feed (heads.js)
+  const it = S.q.shift();
+  S.el.src = it.url;
+  if (typeof headSay === "function") headSay(S.el.src, S.el, it.info); // the speaker's face on the comms feed (heads.js)
   const p = S.el.play();
   if (p && p.catch) p.catch(() => taleSpeechNext());
 }
@@ -422,6 +423,9 @@ function taleChoose(i) {
 }
 // tags from the story drive the world
 function taleTags(tags, line) {
+  // "# mood: <name>" belongs to the line's recorded speech (heads.js), wherever it sits among the line's tags
+  const moodTag = tags.find((t) => t.split(":")[0].trim() === "mood");
+  const mood = moodTag ? moodTag.slice(moodTag.indexOf(":") + 1).trim() : "";
   for (const tag of tags) {
     const k = tag.split(":")[0].trim(), v = tag.slice(tag.indexOf(":") + 1).trim();
     if (k === "scene") { TALE.scene = v; TALE.hot = []; TALE.live = false; TALE.props = (TALE.props || []).filter((p) => !p.clue); }
@@ -451,7 +455,7 @@ function taleTags(tags, line) {
     else if (k === "FINK") { TALE.link = { file: v, rel: TALE.linkRel || "" }; TALE.linkRel = ""; }
     else if (k === "LINKREL") { if (TALE.link) TALE.link.rel = v; else TALE.linkRel = v; }
     // "# speech: <mp3>": a recorded line, relative to the story file, played once, after any line before it
-    else if (k === "speech") taleSpeech(v);
+    else if (k === "speech") taleSpeech(v, { text: line || "", mood });
     // "# morse: <text>": the masts and the radio key the story's message; empty goes back to the usual ones
     else if (k === "morse") { if (typeof MORSE !== "undefined") MORSE.override = v ? v.toUpperCase() : null; }
     else if (k === "restart") { TALE.story.ResetState(); TALE.scene = null; TALE.place = null; setTimeout(taleAdvance, 0); }

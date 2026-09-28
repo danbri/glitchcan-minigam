@@ -158,7 +158,7 @@ She puts a glass in front of you. "The set's still on. Midnight, in the bubble. 
 "Ad astra per aspera," Dex says. "To the stars, through hardship. Old words. We took them." # speech: ../audio/cast/dex-1.mp3
 "The Org wants everybody gone home. Posters on every tower, seats paid, Earth tax credit. Earth's the past. We're not going back. We're going out: the long ships, the next moon, the next star. The hard way." # speech: ../audio/cast/dex-2.mp3
 "So we train. Every morning, before the pads open. The kids learn at home: orbital mechanics, hydroponics, welding, cooking for forty. One of you works the pads, one of you keeps the house, and you have kids. Lots. You don't fill a star system with two-point-one." # speech: ../audio/cast/dex-3.mp3
-"The oxygen? People like a story." He doesn't say no. # speech: ../audio/cast/dex-4.mp3
+"The oxygen? People like a story." He doesn't say no. # speech: ../audio/cast/dex-4.mp3 # mood: sly
 "Nuala played our first night, in the Warmhouse. She taught us the rooftop thing: every launch, lamps up on the roofs so the crews can see them go." # speech: ../audio/cast/dex-5.mp3
 + [Ask where Nuala is] -> dex_where
 + [Back to Ferry Street] -> street
@@ -209,7 +209,7 @@ You unpack the bass and sit in for one tune. Oskar opens his eyes at the first n
 
 === oskar_ask ===
 {nuala == "gone":
-    "Without Nuala?" Oskar shakes his head. "No. I play the jam. The jam doesn't leave." # speech: ../audio/cast/oskar-3.mp3
+    "Without Nuala?" Oskar shakes his head. "No. I play the jam. The jam doesn't leave." # speech: ../audio/cast/oskar-3.mp3 # mood: stern
 - else:
     ~ oskar_in = true
     "Midnight," Oskar says, and packs his brushes. "I'll be there. If she comes, she comes." # speech: ../audio/cast/oskar-4.mp3

@@ -642,6 +642,16 @@ this (option 1 of 3) over splat heads on SDF bodies in the scene; holographic cr
   shows an empty grey inside (no teeth or tongue in these heads). Now half strength, `jawOpen` capped at 0.35. While
   the story panel is open, the feed is an inset floated right inside `#taleText` (re-inserted each frame, because
   `taleSay` rebuilds the text); in the corner otherwise. Moving the canvas in the DOM keeps its WebGL context.
+- Expressions beyond the mouth (owner: "we do want expressions beyond the mouth too"). Three layers, eased:
+  a resting mood per character (`base` in `HEAD_CAST`: Mags wry, Dex sly, Oskar neutral, Nuala worried, Pell stern,
+  Ruth warm, Elder Harriet wry); a mood per line, from an optional `# mood: <name>` tag on the line (tales.js hands
+  the line's text and mood to the speech queue), else read from the line's words (laughs, snorts, quietly, tired,
+  thank you, leans...), else the resting one; and speech itself: brow flashes and a head dip on stressed syllables
+  (onsets in the loudness, stronger when the line has "!"), brows rising through the last part of a question, small
+  eye jumps every one to three seconds, a blink at the end of most phrases. Ten moods in `HEAD_MOODS`, written as
+  ARKit weights at their true size and applied at 2.5 times: these heads answer weakly to the brow, eye and cheek
+  shapes (at 1 times the ten moods were hard to tell apart in a render; at 2.5 all ten read, without artefacts).
+  The mouth shapes stay at half strength (they gape). All 51 ARKit shapes are in the rig (checked).
 - Test: headless Chromium (WebGL on SwiftShader) with `--autoplay-policy=no-user-gesture-required`, calling
   `__drift.headSay(audio.src, audio)` on a playing clip; `__drift.HEADS` shows the state. Not yet tested on a phone
   for speed.
