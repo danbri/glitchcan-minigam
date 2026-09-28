@@ -671,13 +671,14 @@ function menuRoot() {
     items: () => [
       ...menuNow(),
       { label: "Return to opening", act: () => { closeGoPanel(); if (TALE.on) taleClose(); introStart(); } },
-      { label: "Story", detail: story, sub: () => ({ title: TALE.title ? "Story: " + TALE.title : "Story", items: () => [
+      // as the world beside a story in foafos, the story is the runner's: no Story menu here
+      ...(worldOn() ? [] : [{ label: "Story", detail: story, sub: () => ({ title: TALE.title ? "Story: " + TALE.title : "Story", items: () => [
         { label: TALE.on ? "Close the story" : TALE.story || taleFetch(taleKey()) ? "Resume the story" : "Play the story", act: () => { closeGoPanel(); taleToggle(); } },
         { label: "Start again", act: () => { closeGoPanel(); taleRestart(); } },
         { label: "Clues as choices (for reading without the view)", check: TALE.textClues, act: () => { TALE.textClues = !TALE.textClues; taleStore("drift.textClues", TALE.textClues); if (TALE.story && TALE.scene) { TALE.story.ChoosePathString(TALE.scene); taleAdvance(); } renderMenu(); } },
         { label: "Feel the choices: slide a thumb over them, lift to choose", check: FEEL.on, act: () => { FEEL.on = !FEEL.on; taleStore("drift.feel", FEEL.on); feelArm(); renderMenu(); } },
         { label: "Put the story panel back in its usual place", act: () => { taleResetGeom(); closeGoPanel(); } },
-        { label: "Episodes: every story in this city", act: () => { closeGoPanel(); taleLink(TALE_DOOR); } }] }) },
+        { label: "Episodes: every story in this city", act: () => { closeGoPanel(); taleLink(TALE_DOOR); } }] }) }]),
       { label: "Travel", detail: NAV.mode === "trip" ? "on the way" : "", sub: () => ({ ...destPages((d) => goTo(d.id), "Travel"), items: () => [...destPages((d) => goTo(d.id), "Travel").items(), { label: "Grand tour", check: !!NAV.tour, act: () => goTo("tour") }, ...(NAV.tourHeld ? [{ label: "Carry on the Grand tour", act: () => { closeGoPanel(); tourResume(); } }] : [])] }) },
       { label: "City map", act: () => { closeGoPanel(); mapOpen(); } },
       ...(GUIDE.on ? [] : [
@@ -689,7 +690,8 @@ function menuRoot() {
         { label: "Weather: its own cycle", check: WX.forced === null || WX.forced === undefined, act: () => { WX.forced = null; renderMenu(); } },
         { label: "Weather: snowing", check: WX.forced > 0, act: () => { WX.forced = 0.75; renderMenu(); } },
         { label: "Weather: clear", check: WX.forced === 0, act: () => { WX.forced = 0; renderMenu(); } }] }) },
-      { label: "Sound", check: AU.on, act: () => { audioSetOn(!AU.on); renderMenu(); } },
+      // in foafos the shell's volume and mute are the sound control (hostGain)
+      ...(hostOn() ? [] : [{ label: "Sound", check: AU.on, act: () => { audioSetOn(!AU.on); renderMenu(); } }]),
       { label: "View", sub: () => ({ title: "View", items: () => [
         ...[["Route: automatic", null], ["Route: street level", "low"], ["Route: over the rooftops", "high"]].map(([n, v]) => ({ label: n, check: st.forced === v, act: () => { st.forced = v; if (v === null) st.modeT = 20; st.realign = true; syncLabels(); renderMenu(); } })),
         { label: "Opening sequence when the page loads", check: introEnabled(), act: () => { try { localStorage.setItem("drift.intro", introEnabled() ? "0" : "1"); } catch (e) {} renderMenu(); } },

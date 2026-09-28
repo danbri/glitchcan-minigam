@@ -175,10 +175,16 @@ export const APPS = [
   // and the master volume (audio), keeps its story saves as a snapshot, and
   // at a story's end offers the way back (drift-city/src/host.js). Its own
   // controls, so no host pad.
+  // As a WORLD (`# WORLD: drift`, the story in the runner) it reads the
+  // story's want_time and want_weather, and writes where you are, the hour
+  // and the snow back to it. Autoplay: the reader taps the story, not the
+  // city, so the city's sound must start without a tap in its own frame.
   { id: 'drift', family: 'play', icon: '🪐', name: 'Drift City',
     surface: 'stage', game: 'drift', url: '../../drift-city/dist/city.html',
     desc: 'The city on Titan and its stories', controls: 'none',
-    args: ['tale'], capabilities: ['audio'] },
+    args: ['tale'], capabilities: ['audio', 'vars:read', 'vars:write'],
+    variables: { read: ['want_time', 'want_weather'], write: ['here', 'hour', 'snowing'] },
+    features: ['autoplay'] },
   // One Drift City cast member on the helmet comms feed, speaking a recorded
   // line: `# MINIGAME: talkinghead line=mags-3 [mood=wry]`. A rigged
   // Gaussian-splat head (LAM, synthetic faces only), mouth moved by the clip.

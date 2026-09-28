@@ -1317,9 +1317,31 @@ window.FinkMinigames = {
 
     // A guest that answers LATE still gets the service back: better a
     // brief flicker than a game with no controls at all.
+    // A WORLD (`# WORLD:`) hears the story only once it says it can. Its
+    // page may take seconds to load, and a message posted before its
+    // onStoryBeat is registered is lost, so messages wait here until the
+    // guest declares the `world` contract, then go in order.
+    sendToInstance(id, msg) {
+        const inst = this.instances.get(id);
+        if (!inst) return false;
+        if (!inst.contracts.has('world')) {
+            const q = inst.worldQueue || (inst.worldQueue = []);
+            q.push(msg);
+            if (q.length > 200) q.shift();      // a guest that never says `world`
+            return true;
+        }
+        this._sendToIframe(msg, inst);
+        return true;
+    },
+
     _acceptConformance(inst, contracts) {
         const hadAudio = inst.contracts.has('audio');
         for (const c of contracts || []) inst.contracts.add(c);
+        if (inst.contracts.has('world') && inst.worldQueue) {
+            const held = inst.worldQueue;
+            inst.worldQueue = null;
+            held.forEach((m) => this._sendToIframe(m, inst));
+        }
         // A guest that speaks `audio` becomes a sink of the master
         // volume; one that does not is registered as UNGOVERNABLE, so
         // the mute button can say what it cannot reach.
@@ -1547,6 +1569,18 @@ window.FinkMinigames = {
         // runner wrote into the idle TOC's variables. Provenance decides —
         // the shell claims the economy for the story that launched the
         // game, and only that claim routes a write to the mirror.
+        // A WORLD (`# WORLD:`) writes to the story that opened it, live: the
+        // same broker decides, and the shell passes an accepted write on to
+        // that story's runner. Not to the economy mirror, and never to the
+        // host engine's idle story.
+        const worldInst = actor?.instance ? this.instances.get(actor.instance) : null;
+        if (worldInst?.world) {
+            const broker = window.FoafOS?.vars;
+            if (!broker) return false;
+            return broker.write(actor, name, value,
+                (n, v) => { window.FoafOS.worldWrite?.(worldInst.id, n, v); });
+        }
+
         const store = window.FoafOS?.storyVars || null;
         const boxed = !!store?.owner;
         const story = boxed ? null : (window.FinkInkEngine?.story || null);

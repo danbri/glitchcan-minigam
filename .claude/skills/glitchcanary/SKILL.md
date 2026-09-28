@@ -114,3 +114,16 @@ platform grows a slot and the content fills it.
    (with any conditionals) evaluates before the game runs. INK-GOTCHAS §8.
 7. Worked example: hampstead_tube/tube_return in hampstead.fink.js;
    full-loop test: node inklet/finkapp/test/e2e-robbin.mjs.
+8. **A WORLD IS NOT A MINIGAME.** When the game is the place where the
+   story happens and should follow it as you read, put
+   `# WORLD: <name>` near the top of the story (after `# title:`), not a
+   `# MINIGAME:` in a knot. The story does not pause; after every step the
+   foafos runner sends the world the tags it does not handle itself
+   (`scene`, `place`, `time`, `voice`, `speech`...). The world writes back only
+   the VARs its registry row lists, so declare them (`VAR here = ""`), and
+   keep a text route for anything found only in the world
+   (`{not in_world and not voucher} [Look around]`): a world may not move
+   the story. Spec §5.8; the story-game-sync skill, model C; example
+   `drift-city/story/peraspera.fink.js`, opened from the hub as a dream
+   (`# FINK: story/peraspera.fink.js # LINKREL: goDeeper`) so its end comes
+   back to the hub.

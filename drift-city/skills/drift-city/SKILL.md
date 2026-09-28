@@ -741,9 +741,31 @@ no SDF talking head exists (searched lucid/, yeti/, magpie/, drift-city/). Both 
 arguments"). Try them: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/foafos-entry.fink.js`, a hub whose
 every line is quoted from `story/episodes.fink.js`, `story/peraspera.fink.js` and the cellar entry.
 
+Then the owner, the same month: "The issue seems to be that it still uses Drift's bakes in Fink/Ink client,
+instead of the foafos framework (ditto audio, gamepad etc.)". So inside foafos the city is now the WORLD beside a
+story that the foafos runner plays (`# WORLD: drift`; spec §5.8; the story-game-sync skill, model C). The hub
+links to each story as a dream, and each story's own `# WORLD: drift` opens the city. Per Aspera opened directly
+works too: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/story/peraspera.fink.js`.
+
 - **`drift`**: `dist/city.html` in a sandboxed frame. `# MINIGAME: drift tale=peraspera` arrives as `?tale=`,
-  which `tales.js` already read, so the page needed no argument code. Holds `audio`; its own controls, so no host
-  pad (`controls: 'none'`).
+  which `tales.js` already read, so the page needed no argument code. Holds `audio`, `vars:read` and `vars:write`;
+  its own controls, so no host pad (`controls: 'none'`). The row's `variables` let it read `want_time` and
+  `want_weather` and write `here`, `hour` and `snowing`; `features: ['autoplay']`, because the reader taps the
+  story's window, not the city.
+- **World mode** (`?world=1`, which the shell adds for `# WORLD: drift`; "the world beside a story in foafos" in
+  `tales.js`, `worldOn`). No story panel, no Story menu, no opening page or intro: `worldStart` starts the sound and
+  hops to the home place, and the story's first `# place:` flies on from there. Each step's lines arrive through
+  `onStoryBeat` and go through `taleTags`, so every tag works as in the page's own story; `# speech:` resolves
+  against the story's address (`TALE.base`); a replayed beat (after a restore) skips `voice` and `speech`.
+  `taleSync` sends `here`, `hour` and `snowing` with `setVariable`, only when a value changes (`TALE.wsent`), and it
+  now also runs in the WebGL fallback's frame loop, which never called it. `want_time` and `want_weather` arrive
+  through `onVariableChanged` (`worldVar`). Clue finding is off: the glint needs the page's own panel open, and a
+  world may not move the story, so the story's text routes offer the clues. In foafos (world or game) the menu has
+  no Sound item: the shell's volume and mute reach the city through `hostGain`. On a phone the story window
+  takes the bottom half and the city shows above it (the shell's `foafos-with-world`); the city's own controls
+  at the bottom of its frame are then under the story.
+  Not done: controls. The city keeps its own on-screen sticks; the foafos input service has one digital stick and
+  four directions, and the city needs two analog sticks (an owner decision).
 - **`src/host.js`** (built in before `main.js`) answers the shell when the page is in a frame with the SDK
   (`packages/finkgame/src/minigame-sdk.js`, a script tag in `head.html`):
   - pause: `hostPaused()` makes the frame loops in `main.js` and `fallback.js` skip (they keep asking for frames;
@@ -774,7 +796,10 @@ every line is quoted from `story/episodes.fink.js`, `story/peraspera.fink.js` an
   Loading a head (5 MB, 20,000 splats) and its first poses block the page's thread: measured round trips of
   288, 450 and 577 ms against 4 to 9 ms otherwise, and a close then kept nothing (two test runs in three).
   Not fixed; the shell's rule is that a window that will not shut is worse than a lost save.
-- Tests: `inklet/finkapp/test/e2e-drift.mjs` (14 checks: the argument filter; the city on Per Aspera as a node
+- Tests: `inklet/finkapp/test/e2e-drift.mjs` (27 checks; the world ones are §15-23: the story in the runner, the
+  city beside it under the dream session, the phone layout, the first step's tags, variables both ways through the shell, a choice
+  moving the city and its recorded line, the menu, closing the city, and a restore that reopens the world at the
+  last scene. Before them, the game path: the argument filter; the city on Per Aspera as a node
   with its args; the Task Manager row; pause; master volume; a story save kept in memory, snapshotted, kept on
   close and restored on reopen; the head's autoplay, pause, load and draw; two lines handing control back in
   turn). Plain headless Chromium, so the city runs its WebGL fallback on SwiftShader, slowly: the checks are about

@@ -1,6 +1,7 @@
 // ---------- in foafos: the city as a stage app ----------
 // In a frame with the minigame SDK, this page is the foafos stage app "drift" (inklet/finkapp/foafos-apps.js), opened
-// by a story's `# MINIGAME: drift [tale=<story>]` (the tale arrives as ?tale=, which tales.js already reads). It
+// by a story's `# MINIGAME: drift [tale=<story>]` (the tale arrives as ?tale=, which tales.js already reads), or by
+// `# WORLD: drift` as the world beside a story that the foafos runner plays (world=1; see the end of this file). It
 // answers the shell: pause stops the frames (main.js and fallback.js check hostPaused), the Web Audio graph, a running
 // tour, a recorded line and the comms feed (heads.js); resume restarts only what pause stopped; the master volume sets the level of all three
 // sound paths (hostGain); the snapshot is the story saves, which a sandboxed frame cannot keep in localStorage
@@ -50,4 +51,11 @@ if (typeof window !== "undefined" && window.parent !== window && typeof Minigame
   sdk.onAudio((a) => hostSetLevel(a && a.level !== undefined ? a.level : 1));
   sdk.onSnapshot(() => { taleSave(); return { v: 1, saves: { ...taleMem() } }; });
   sdk.onRestore((state) => { if (state && state.v === 1 && state.saves) Object.assign(taleMem(), state.saves); });
+  // As the WORLD beside a story (`# WORLD: drift`; the shell adds world=1): the story runs in the foafos runner and
+  // its tags arrive after every step (tales.js, "the world beside a story in foafos").
+  if (/[?&]world=1(&|$)/.test(location.search)) {
+    H.world = true;
+    sdk.onStoryBeat((lines, meta) => worldBeat(lines, meta));
+    sdk.onVariableChanged((name, value) => worldVar(name, value));
+  }
 }

@@ -124,6 +124,32 @@ ok('setVariable mirrors locally and proposes to the host', () => {
   assert.ok(win.sent.some((m) => /variable/i.test(m.type)), 'and a proposal went out');
 });
 
+// ── the world beside a story (# WORLD:) ───────────────────────────────
+ok('onStoryBeat declares the world contract and receives lines, base and replay', () => {
+  const { win, sdk } = boot();
+  const got = [];
+  sdk.onStoryBeat((lines, meta) => got.push({ lines, meta }));
+  win.deliver({ type: 'init', config: {}, variables: {} });
+  const conf = win.sent.filter((m) => m.type === 'conformance').pop();
+  assert.ok(conf.contracts.includes('world'), 'world contract declared');
+  win.deliver({ type: 'story-beat', lines: [{ tags: ['place: dish'], text: 'You arrive.' }], base: 'https://x/story/a.fink.js' });
+  win.deliver({ type: 'story-beat', lines: [{ tags: ['scene: roof'], text: '' }], base: null, replay: true });
+  win.deliver({ type: 'story-beat' });
+  assert.deepEqual(got[0], { lines: [{ tags: ['place: dish'], text: 'You arrive.' }], meta: { base: 'https://x/story/a.fink.js', replay: false } });
+  assert.equal(got[1].meta.replay, true);
+  assert.deepEqual(got[2], { lines: [], meta: { base: null, replay: false } }, 'a bare beat is an empty one');
+});
+
+ok('variable-changed updates the mirror and calls onVariableChanged', () => {
+  const { win, sdk } = boot();
+  const seen = [];
+  sdk.onVariableChanged((n, v) => seen.push([n, v]));
+  win.deliver({ type: 'init', config: {}, variables: {} });
+  win.deliver({ type: 'variable-changed', name: 'want_time', value: 'dusk' });
+  assert.deepEqual(seen, [['want_time', 'dusk']]);
+  assert.equal(sdk.getVariable('want_time'), 'dusk');
+});
+
 // ── the bus surface ────────────────────────────────────────────────────
 // A stage guest is a full foafos app: sdk.bus is its scoped view of the
 // shell bus. The HOST enforces grants; the SDK's duties are the wire

@@ -36,6 +36,7 @@ const state = {
   sources: [], merges: [], mergedInk: 0,
   basehref: null, mediaBase: null, status: [], foley: null,
   resumedFromSave: false, knot: null, link: null, knots: 0, skin: null,
+  world: null,                    // the app named by # WORLD:, while it is open
 };
 let story = null;
 
@@ -183,6 +184,12 @@ function handleTag(tag) {
       // `resumeAfterGame()` continues from exactly here. The whole value
       // goes on: `# MINIGAME: <name> [key=value ...]` (gameTag, below).
       _pendingGame = value.trim();
+      break;
+    case 'WORLD':
+      // `# WORLD: <app> [key=value ...]`: open a stage app beside the story,
+      // which shows what the story's other tags say. It does NOT break the
+      // beat or pause the story (see openWorld).
+      _pendingWorldTag = value.trim();
       break;
     case 'FINK':
       // A link to another story. Resolve it against THIS story's location,
@@ -520,12 +527,17 @@ function stepStory() {
   // annotation belongs to the link it travels with. Same for ENTRY.
   _pendingRel = undefined;
   _pendingEntry = undefined;
+  _pendingWorldTag = undefined;
+  const worldLines = [];                  // lines with tags for the world
   sampleKnot();                           // valid BEFORE the first Continue
   while (story.canContinue) {
     const text = story.Continue();
     sampleKnot();                         // and again while there is a path
-    (story.currentTags || []).forEach(handleTag);
+    const tags = story.currentTags || [];
+    tags.forEach(handleTag);
     const trimmed = text.trim();
+    const forWorld = tags.filter(isWorldTag);
+    if (forWorld.length) worldLines.push({ tags: forWorld, text: trimmed });
     if (trimmed) {
       if (_pendingEcho !== undefined) {
         const echo = _pendingEcho; _pendingEcho = undefined;
@@ -539,6 +551,8 @@ function stepStory() {
     // engine, which breaks its loop on exactly these two tags.
     if (_pendingLink !== undefined || _pendingGame !== undefined) break;
   }
+  if (_pendingWorldTag !== undefined) openWorld(_pendingWorldTag);
+  if (worldLines.length) worldBeat(worldLines);
   if (_beatMedia !== undefined) renderMedia(_beatMedia);
   // Values change as the story runs, so the bar is re-read every beat —
   // the tags DECLARE the items, the ink holds the numbers.
@@ -626,6 +640,7 @@ function focusTheReading() {
 // arrives when the game ends. While paused there are NO choices — the
 // story is genuinely suspended, not merely quiet.
 let _pendingGame;                       // undefined = no game this beat
+let _pendingWorldTag;                   // undefined = no # WORLD: this beat
 let _awaitingGame = null;
 
 // `# MINIGAME: <name> [key=value ...]`: the app's name, then its arguments.
@@ -641,6 +656,85 @@ function gameTag(value) {
     if (eq > 0) args[tok.slice(0, eq)] = tok.slice(eq + 1);
   }
   return { name, args };
+}
+
+// THE WORLD BESIDE THE STORY (`# WORLD: <app> [key=value ...]`). The shell
+// opens a registered stage app beside this story (verb story.world) and the
+// story goes on: no pause, the screen is not taken from it. After every step,
+// the lines with tags this runner does not handle go to the world, which shows
+// what they say. The world writes back only what its registry row allows, and
+// those writes land in this story's VARs at once (world.var); it hears the
+// VARs its row reads when they change. The last lines sent are kept, so a
+// restore can rebuild the world (sent again as a replay, not spoken again).
+const RUNNER_TAGS = new Set(['BG', 'CLASS', 'BASEHREF', 'STATUS', 'MINIGAME', 'WORLD', 'FINK',
+  'LINKREL', 'ENTRY', 'IMAGE', 'VIDEO', 'AUDIO', 'STOP_AUDIO']);
+function isWorldTag(tag) {
+  const at = tag.indexOf(':');
+  return !RUNNER_TAGS.has((at < 0 ? tag : tag.slice(0, at)).trim().toUpperCase());
+}
+const WORLD_KEEP = 60;
+let _world = null;                      // { app, tag, reads } while one is open
+let _worldLines = [];                   // the last WORLD_KEEP lines sent
+let _worldChain = Promise.resolve();    // world requests go in order
+let _worldWatched = null;               // the Story object whose VARs are observed
+
+// Quiet on purpose: a beat goes every step, so it is not logged in
+// state.requests or on the bus, and a world the reader closed is not an error.
+function worldRequest(detail) {
+  const foaf = window.foaf;
+  if (!foaf?.storyRequest) return Promise.resolve({ ok: false, reason: 'standalone' });
+  if (state.sessionId && detail.session === undefined) detail = { ...detail, session: state.sessionId };
+  return foaf.storyRequest('story.world', detail).catch(() => ({ ok: false, reason: 'failed' }));
+}
+
+function openWorld(tag, replay = null) {
+  const { name, args } = gameTag(tag);
+  // A peer session plays as text: its mediator does not pass story.world.
+  if (!name || IS_PEER) return;
+  const w = { app: name, tag, reads: [] };
+  _world = w;
+  state.world = name;
+  _worldChain = _worldChain.then(() => worldRequest({ op: 'open', app: name, args })).then((res) => {
+    if (!res.ok) {
+      if (_world === w) { _world = null; state.world = null; }
+      setStatus(`${name} refused: ${res.reason}`);
+      return null;
+    }
+    w.reads = Array.isArray(res.reads) ? res.reads : [];
+    window.foaf?.bus?.publish('app.storyrunner.world', {
+      summary: `${name} is the world beside this story${res.reused ? ' (already open)' : ''}`, world: name,
+    });
+    watchWorldReads();
+    return replay && replay.length
+      ? worldRequest({ op: 'beat', lines: replay, base: state.storyUrl, replay: true }) : null;
+  });
+}
+
+function worldBeat(lines) {
+  if (!_world) return;
+  _worldLines = _worldLines.concat(lines).slice(-WORLD_KEEP);
+  const base = state.storyUrl;
+  _worldChain = _worldChain.then(() => (_world ? worldRequest({ op: 'beat', lines, base }) : null));
+}
+
+// The VARs the world reads: their values now, then each change. Again after
+// every compile or merge, because observers belong to one Story object.
+function watchWorldReads() {
+  if (!_world || !story) return;
+  const values = {};
+  const observe = _worldWatched !== story;   // once per Story, or each change goes twice
+  for (const name of _world.reads) {
+    try {
+      const v = story.variablesState[name];
+      if (v === undefined) continue;
+      values[name] = v;
+      if (observe) story.ObserveVariable(name, (n, nv) => {
+        if (_world) _worldChain = _worldChain.then(() => worldRequest({ op: 'vars', values: { [n]: nv } }));
+      });
+    } catch { /* the story does not declare it */ }
+  }
+  if (observe && _world.reads.length) _worldWatched = story;
+  if (Object.keys(values).length) _worldChain = _worldChain.then(() => worldRequest({ op: 'vars', values }));
 }
 
 async function launchAndWait(tag) {
@@ -1001,6 +1095,7 @@ async function mergeStory(absUrl, entry = '') {
   }
 
   story = merged;
+  watchWorldReads();
   state.sources = sources;
   state.merges.push({ url, ok: true });
   state.mergedInk = sources.reduce((n, s) => n + s.ink.length, 0);
@@ -1323,6 +1418,7 @@ async function loadStory(url, restore = null, rel = 'replace') {
   }
   state.ready = true;
   setStatus('');
+  watchWorldReads();
   _statusItems = [];              // a new work brings its own status line
   renderStatusBar();
   // THIS PLAYTHROUGH IS A THING (level 2 of the layer model). We cannot make
@@ -1403,6 +1499,12 @@ window.addEventListener('message', (e) => {
   const d = e.data;
   if (!d || d.type !== 'story.event') return;
   if (d.event === 'minigame.complete' && _awaitingGame) resumeAfterGame(d.detail);
+  // The world wrote a VAR its registry row allows; the broker accepted it.
+  // A name this story does not declare is refused by ink, and dropped here.
+  if (d.event === 'world.var' && story) {
+    try { story.variablesState[String(d.detail?.name)] = d.detail?.value; } catch { /* undeclared */ }
+  }
+  if (d.event === 'world.closed') { _world = null; _worldLines = []; state.world = null; }
   // Back/forward: the shell heard the history event and says where the URL
   // now points. Suppress our own re-report, or going back would immediately
   // rewrite the address bar to where we just came from.
@@ -1493,6 +1595,7 @@ function snapshotPlaythrough() {
       frames: _frames.map((f) => ({ url: f.url, state: f.state })),
       basehref: state.basehref,
       status: _statusItems,
+      world: _world ? { tag: _world.tag, lines: _worldLines } : null,
     };
   } catch { return null; }
 }
@@ -1512,6 +1615,11 @@ async function restorePlaythrough(snap) {
   _frames.length = 0;
   for (const f of (snap.frames || [])) _frames.push(f);
   state.depth = _frames.length;
+  // The world first, so the steps loadStory takes land after the replay.
+  if (snap.world?.tag) {
+    _worldLines = Array.isArray(snap.world.lines) ? snap.world.lines.slice(-WORLD_KEEP) : [];
+    openWorld(snap.world.tag, _worldLines.slice());
+  }
   // loadStory applies the ink state after compiling and seeding, which is
   // the same path surfacing from a dream uses.
   await loadStory(snap.storyUrl, snap.ink);

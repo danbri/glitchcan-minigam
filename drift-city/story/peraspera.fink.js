@@ -6,6 +6,8 @@ oooOO`
 // Speakers: mags, dex, oskar, nuala, pell, ruth, org, elder, you.
 // The Org and its Elders: canon in drift-city/skills/drift-city/SKILL.md, "The Org, the Elders and the calendar bug".
 # title: Per Aspera
+// In the foafos story runner this opens the city beside the story; the city's own player ignores it.
+# WORLD: drift
 VAR here = ""
 VAR hour = ""
 VAR snowing = false

@@ -424,6 +424,13 @@ body.foaf-pad-on #foafos-dock {
   .foafos-window[data-app-id="storyrunner"] .foafos-window-max {
     display: none;
   }
+  /* A story with a WORLD beside it (# WORLD:, spec §5.8) leaves the top
+     half of the screen to the world, as Drift City's own story panel does
+     on a phone. The stage keeps its size: FinkWM owns its geometry. */
+  .foafos-window[data-app-id="storyrunner"].foafos-with-world,
+  .foafos-window[data-app-id="storyrunner"].foafos-with-world.maximized {
+    top: 50dvh !important;
+  }
 }
 
 /* ── CAROUSEL ──────────────────────────────────────────────────────────

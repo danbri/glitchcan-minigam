@@ -227,6 +227,23 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   a game in production. The legacy engine parses mode and controls at
   `fink-ink-engine.js:314-333`. The Continue loop BREAKS on MINIGAME/FINK
   tags. Details: the story-game-sync skill.
+- `# WORLD: <name> [key=value ...]` (boxed runner only, September 2026; spec
+  §5.8): a stage app BESIDE the story, not a pause. Verb `story.world`
+  (`open`, `beat`, `vars`, `close`; authority `story:launch`), same launch
+  checks as a game (`stageLaunchCheck` in the shell), no screen yield, no
+  `_storyLauncher`. After every step the runner sends the lines whose tags
+  it does not handle (`RUNNER_TAGS`); the guest's accepted writes come back
+  as `world.var`. Traps met building it: a world page loads for seconds, so
+  the stage host holds its messages until the guest declares the `world`
+  contract (`sendToInstance`); ink observers belong to one Story object, so
+  they are set again after every compile and merge (`watchWorldReads`); a
+  world's writes must not reach the economy mirror or the host engine's idle
+  TOC (`inst.world` routes them in `_setStoryVariable`). On a phone the
+  story window is full-bleed ("THE READING IS NOT A WINDOW"), which hid the
+  world completely; while a world is open the window carries
+  `foafos-with-world` and starts at 50dvh, as Drift's own panel did. The
+  stage keeps its size (FinkWM owns it). Drift City is the first world (the
+  drift-city skill); e2e-drift §15-23.
 - Sandboxed iframes have an OPAQUE ORIGIN: guest ES-module imports and
   fetches need CORS. GitHub Pages sends `Access-Control-Allow-Origin: *`;
   plain `python3 -m http.server` does NOT — local harnesses need a

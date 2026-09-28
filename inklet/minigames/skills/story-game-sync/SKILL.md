@@ -1,6 +1,6 @@
 ---
 name: story-game-sync
-description: How an Ink story and a game engine share one playthrough in this repo ("gamgam", the dual game engines idea) — the platform's pause/play/resume model for `# MINIGAME:` guests, the live two-way model Drift city runs in its own page (tags drive the world, the world writes VARs, a discovery re-enters the scene), what each can and cannot do today, and the fallback rule that every world-only affordance needs a text route for readers with no GPU or no sight. Use this when designing a story that depends on an attached game, wiring a game to read or write story variables, deciding where the Ink runtime should live, adding a text or screen-reader route to game-only content, or when a story "works in the game but gets stuck in the FINK player".
+description: How an Ink story and a game engine share one playthrough in this repo ("gamgam", the dual game engines idea) — the platform's pause/play/resume model for `# MINIGAME:` guests, the world beside a story (`# WORLD:`: the story in the foafos runner, the game showing its tags, variables both ways), the live two-way model Drift city runs in its own page (tags drive the world, the world writes VARs, a discovery re-enters the scene), what each can and cannot do today, and the fallback rule that every world-only affordance needs a text route for readers with no GPU or no sight. Use this when designing a story that depends on an attached game, wiring a game to read or write story variables, deciding where the Ink runtime should live, adding a text or screen-reader route to game-only content, or when a story "works in the game but gets stuck in the FINK player".
 ---
 
 # Story and game in sync
@@ -41,8 +41,9 @@ A story in the FINK player (production: the boxed runner,
 What this model does NOT do, today:
 
 - **No live push from story to game.** The SDK handles `variable-changed`
-  (`packages/finkgame/src/minigame-sdk.js`), but no host code sends it. A game
-  sees story state once, at `init`.
+  (`packages/finkgame/src/minigame-sdk.js`), and since September 2026 the
+  host sends it, but only to a WORLD (model C). A game sees story state once,
+  at `init`.
 - **A game cannot move the story.** Spec §5: "Games cannot divert the story."
   No verb re-enters a knot or chooses a path. Reactions live behind a choice in
   the return knot (spec §3.2).
@@ -106,16 +107,54 @@ announcer). The story file is still a normal `.fink.js`
 `packages/backticks` capture in a sandboxed frame, and the TOC also links it
 into the FINK player — so the same file must play in both places.
 
+### C. A world beside the story, under the platform (September 2026)
+
+Owner, September 2026, of the city in the shell: "The issue seems to be that it
+still uses Drift's bakes in Fink/Ink client, instead of the foafos framework
+(ditto audio, gamepad etc.)"
+So the story now plays in the foafos runner, and the game is its WORLD: a
+stage app beside the story, opened by `# WORLD: <name> [key=value ...]` (spec
+§5.8). The story does not pause, keeps its window on screen, and the world
+never completes.
+
+| direction | mechanism |
+|---|---|
+| story to world, per step | the runner sends the lines whose tags it does not handle itself (`isWorldTag`, `RUNNER_TAGS` in `storyrunner.js`), with the story file's address; the guest gets `story-beat` (SDK `onStoryBeat`) |
+| story to world, on change | the runner observes the VARs in the world's registry row `variables.read` and sends them; the guest gets `variable-changed` |
+| world to story | the guest's `setVariable` goes through the broker (row `variables.write`, `vars:write` on its node); an accepted write reaches the runner as `world.var` and is assigned at once |
+| always | `in_world` is NOT set: the story keeps its text routes for clues |
+
+The pieces, and why each is where it is:
+
+- **The host holds a world's messages until it says `world`** (`sendToInstance`
+  in `fink-minigames.js`). The city takes seconds to load; a beat posted
+  before its `onStoryBeat` is registered is lost.
+- **The world is a child of the session that opened it**, so a replacing link
+  or the end of a dream closes it with the session. The drift hub
+  (`drift-city/foafos-entry.fink.js`) links to each story as a dream
+  (`# LINKREL: goDeeper`): the story's own `# WORLD: drift` opens the city, and
+  the story's end brings the reader back to the hub without it.
+- **Restore rebuilds the world**: the runner's snapshot keeps the last 60
+  lines sent; a reopened story opens its world again and replays them with
+  `replay: true`, and the world must not speak a replayed line again.
+- **A peer session (`# LINKREL: peer`) cannot open a world**: the mediator's
+  verb allow-list does not include `story.world`, so a peer plays as text.
+
+What C cannot do yet: a discovery in the world, and a `# live` scene
+re-entered when you move. Both need the world to move the story. Drift's
+world mode therefore turns clue finding off (its glint needs its own panel
+open) and the story offers the clues as choices.
+
 ### Choosing
 
 - The game is an episode with a result: model A.
-- The game is the place where the story happens, and discoveries, position or
-  time should change the text as you play: model B today. To bring it under the
-  platform, the missing pieces are a live story-to-guest push (send
-  `variable-changed`, or a `story.vars` bus topic), and a governed verb that
-  lets a guest ask the story to re-enter the current scene. The second one
-  changes spec §5's "games cannot divert"; that is the owner's decision, not an
-  implementation detail.
+- The game is the place where the story happens: model C inside foafos
+  (the story in the runner, the game as its world), model B in the game's
+  own page. Drift's stories are the same files in both.
+- For C to do what B does, one piece is missing: a governed verb that lets a
+  world ask the story to re-enter the current scene (discoveries, `# live`).
+  It changes spec §5's "games cannot divert"; that is the owner's decision,
+  not an implementation detail.
 
 ## Fallbacks: every world-only affordance needs a text route
 

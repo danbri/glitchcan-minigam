@@ -23,6 +23,7 @@ class MinigameSDK {
             resume: null,
             terminate: null,
             variableChanged: null,
+            storyBeat: null,
             controls: null,
             audio: null
         };
@@ -230,6 +231,21 @@ class MinigameSDK {
     }
 
     /**
+     * Be the WORLD beside a story (`# WORLD: <name>`): after each step the
+     * story sends the lines that carry tags it does not handle itself.
+     * Registering declares the `world` contract.
+     * @param {Function} callback - (lines, {base, replay}) => void, where
+     *   lines = [{tags: [...], text}], base = the story file's address (for
+     *   paths in tags), replay = true when the lines are resent to rebuild
+     *   the world after a restore (do not speak them again)
+     */
+    onStoryBeat(callback) {
+        this._callbacks.storyBeat = callback;
+        this._declare('world');
+        return this;
+    }
+
+    /**
      * Set an INK variable (must be in manifest's write allowlist)
      * @param {string} name - Variable name
      * @param {*} value - Variable value
@@ -391,6 +407,13 @@ class MinigameSDK {
                 this._variables[data.name] = data.value;
                 if (this._callbacks.variableChanged) {
                     this._callbacks.variableChanged(data.name, data.value);
+                }
+                break;
+
+            case 'story-beat':
+                if (this._callbacks.storyBeat) {
+                    this._callbacks.storyBeat(Array.isArray(data.lines) ? data.lines : [],
+                        { base: data.base || null, replay: !!data.replay });
                 }
                 break;
 

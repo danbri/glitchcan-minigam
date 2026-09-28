@@ -1485,7 +1485,7 @@ async function init() {
     // the world's clock runs in every mode: story scenes, trips, space and free flight included
     // a long-press flight runs the city's clock fast (pick.js)
     clock += dtS * pickWarp();
-    if (!INTRO.started && frameNo > 4) { INTRO.started = true; if (!globalThis.__noIntro) gateShow(); }
+    if (!INTRO.started && frameNo > 4) { INTRO.started = true; if (worldOn()) worldStart(); else if (!globalThis.__noIntro) gateShow(); }
     if (INTRO.on) introCaptions();
     const modeWas = NAV.mode;
     if (navStep(dtS, spaceInput(dt))) {

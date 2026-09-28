@@ -2,7 +2,8 @@
 // Drift City's stage apps in the shell: "drift" (the city) and "talkinghead"
 // (a cast member's face speaking a recorded line), opened by the entry story
 // drift-city/foafos-entry.fink.js, and the # MINIGAME: arguments that choose
-// what they show.
+// what they show. Then the city as the WORLD beside a story (# WORLD: drift):
+// the story plays in the foafos runner and its tags drive the city.
 //
 //   node inklet/finkapp/test/e2e-drift.mjs
 //
@@ -82,7 +83,10 @@ try {
   // 2. the story opens the city on one of its stories
   let runner = await runnerOf(page);
   await runner.waitForFunction(() => window.__storyrunner?.ready?.() && window.__storyrunner.state.choices.length > 0, null, { timeout: 30000 });
-  await chooseText(runner, 'Per Aspera');
+  // The hub now opens the stories as a world (sections 15 on). The city as a GAME with its own story is still a path:
+  // the verb that "# MINIGAME: drift tale=peraspera" sends.
+  const launchDrift = () => runner.evaluate(() => window.foaf.storyRequest('story.launch', { game: 'drift', args: { tale: 'peraspera' } }));
+  await launchDrift();
   const city = await frameMatching(page, /drift-city\/dist\/city\.html\?tale=peraspera$/);
   if (!city) throw new Error('the city frame never opened with ?tale=peraspera');
   await city.waitForFunction(() => window.__drift?.host?.().sdk?._config, null, { timeout: 60000 });
@@ -90,8 +94,8 @@ try {
     file: __drift.TALE.file, origin: String(self.origin) }));
   const dnode = await nodeOf(page, 'drift');
   inCity.on && inCity.args?.tale === 'peraspera' && inCity.file === 'peraspera.fink.js' && inCity.origin === 'null'
-    && dnode && JSON.stringify(dnode.args) === '{"tale":"peraspera"}' && dnode.caps.join() === 'audio'
-    ? pass(`"# MINIGAME: drift tale=peraspera" opens the city on Per Aspera, in a sandboxed frame, as a node holding audio with args tale=peraspera`)
+    && dnode && JSON.stringify(dnode.args) === '{"tale":"peraspera"}' && dnode.caps.join() === 'audio,vars:read,vars:write'
+    ? pass(`story.launch drift tale=peraspera (what "# MINIGAME: drift tale=peraspera" sends) opens the city on Per Aspera, in a sandboxed frame, as a node holding audio and vars with args tale=peraspera`)
     : fail(`city: ${JSON.stringify({ inCity, dnode })}`);
 
   // 3. the Task Manager shows what the story asked for
@@ -168,7 +172,7 @@ try {
     : fail(`close: ${JSON.stringify({ kept, back, events: await page.evaluate(() => window.__mgEv) })}`);
 
   // 9. reopened, the city gets the snapshot back: Per Aspera is where it was
-  await chooseText(runner, 'Per Aspera');
+  await launchDrift();
   const again = await frameMatching(page, /drift-city\/dist\/city\.html\?tale=peraspera$/);
   const restored = again && await again.waitForFunction(() => !!window.__drift?.taleMem?.()['drift.tale:peraspera.fink.js'], null, { timeout: 60000 })
     .then(() => true, () => false);
@@ -226,6 +230,145 @@ try {
     : fail(`after the lines: ${JSON.stringify({ second: !!second, after })}`);
 
   errs.length === 0 ? pass('no page errors') : fail(`page errors: ${errs.slice(0, 3).join(' · ')}`);
+
+  // ── THE WORLD BESIDE A STORY (# WORLD: drift) ──────────────────────────
+  // The owner, September 2026: inside foafos the city "still uses Drift's
+  // baked-in Fink/Ink client, instead of the foafos framework". Now the hub
+  // links to Per Aspera as a dream, the foafos runner plays it, and the
+  // story's own # WORLD: drift opens the city beside it.
+  {
+    const wpage = await browser.newPage({ viewport: { width: 1000, height: 760 } });
+    const werrs = [];
+    wpage.on('pageerror', (e) => werrs.push(String(e).slice(0, 200)));
+    await wpage.goto(`${BASE}/inklet/finkapp/?story=/${repoName}/drift-city/foafos-entry.fink.js`);
+    const wr = await runnerOf(wpage);
+    await wr.waitForFunction(() => window.__storyrunner?.ready?.() && window.__storyrunner.state.choices.length > 0, null, { timeout: 30000 });
+    await chooseText(wr, 'Per Aspera');
+    await wr.waitForFunction(() => /peraspera/.test(window.__storyrunner.state.storyUrl || '')
+      && window.__storyrunner.state.choices.length > 0, null, { timeout: 60000 });
+    const st = await wr.evaluate(() => ({ file: window.__storyrunner.state.storyUrl.split('/').pop(),
+      depth: window.__storyrunner.depth(), world: window.__storyrunner.state.world, choices: window.__storyrunner.state.choices }));
+    // 15. the story is the runner's
+    st.file === 'peraspera.fink.js' && st.depth === 1 && st.world === 'drift' && st.choices.includes('Look around')
+      ? pass('the hub links to Per Aspera as a dream: the foafos runner plays it, its # WORLD: drift names the city, and clues come as choices ("Look around")')
+      : fail(`runner: ${JSON.stringify(st)}`);
+
+    // 16. the city opens beside the story
+    const wcity = await frameMatching(wpage, /drift-city\/dist\/city\.html\?world=1$/);
+    if (!wcity) throw new Error('the city never opened with ?world=1');
+    await wcity.waitForFunction(() => (window.__drift?.TALE?.worldBeats || 0) > 0, null, { timeout: 90000 });
+    const wn = await wpage.evaluate(() => {
+      const n = [...FoafOS.apps.nodes.values()].find((x) => x.appId === 'drift');
+      const win = document.querySelector('.foafos-window iframe[src*="storyrunner"]')?.closest('.foafos-window');
+      return n && { parent: FoafOS.apps.get(n.parentId)?.surface, caps: [...n.capabilities].join(),
+        yielded: !!win?.classList.contains('foafos-yielded') };
+    });
+    wn && wn.parent === 'story' && wn.caps === 'audio,vars:read,vars:write' && !wn.yielded
+      ? pass('the city opens beside the story, not over it: a node under the dream session holding audio and vars, and the story window stays on screen')
+      : fail(`world node: ${JSON.stringify(wn)}`);
+    // on a phone the story window is full-bleed; with a world it leaves the top half to the city
+    await wpage.setViewportSize({ width: 390, height: 844 });
+    await wait(400);
+    const phoneTop = await wpage.evaluate(() => Math.round(document.querySelector('.foafos-window iframe[src*="storyrunner"]')
+      ?.closest('.foafos-window')?.getBoundingClientRect().top ?? -1));
+    await wpage.setViewportSize({ width: 1000, height: 760 });
+    Math.abs(phoneTop - 422) <= 2
+      ? pass(`on a phone the story window leaves the top half to the city (its top at ${phoneTop} of 844 px)`)
+      : fail(`phone layout with a world: story window top ${phoneTop}, expected 422`);
+
+    // 17. the story's first step drives the city, which has no story of its own
+    const c1 = await wcity.evaluate(() => ({ world: __drift.host().world, scene: __drift.TALE.scene, place: __drift.TALE.place,
+      on: __drift.TALE.on, panelHidden: document.getElementById('tale').hidden,
+      gateHidden: document.getElementById('gate')?.hidden !== false, base: __drift.TALE.base || '', wvars: { ...__drift.TALE.wvars } }));
+    c1.world && c1.scene === 'street' && c1.place === 'street_1' && !c1.on && c1.panelHidden && c1.gateHidden
+      && /drift-city\/story\/peraspera\.fink\.js$/.test(c1.base) && 'want_time' in c1.wvars && 'want_weather' in c1.wvars
+      ? pass('the first step\'s tags drive the city (scene street, place street_1); no story panel, no opening page; it has the story\'s want_time and want_weather')
+      : fail(`city in world mode: ${JSON.stringify(c1)}`);
+
+    // 18. variables both ways, through the shell
+    await wr.waitForFunction(() => !!window.__storyrunner.varOf('hour'), null, { timeout: 30000 }).catch(() => {});
+    const h0 = await wr.evaluate(() => window.__storyrunner.varOf('hour'));
+    const sent = await wr.evaluate(() => window.foaf.storyRequest('story.world', { op: 'vars', values: { want_time: 'dusk', voucher: true } }));
+    const h1 = await wr.waitForFunction(() => window.__storyrunner.varOf('hour') === 'dusk', null, { timeout: 30000 })
+      .then(() => 'dusk', () => wr.evaluate(() => window.__storyrunner.varOf('hour')));
+    h0 && sent?.sent === 1 && h1 === 'dusk'
+      ? pass(`the city writes hour into the story ("${h0}"); want_time=dusk reaches the city (the shell sends only the row's read list: 1 of 2), and the city answers hour=dusk`)
+      : fail(`variables: ${JSON.stringify({ h0, sent, h1 })}`);
+
+    // 19. a choice moves the city; a recorded line resolves against the story's own address
+    await chooseText(wr, 'Go into the Cold Tap and ask Mags');
+    const c2 = await wcity.waitForFunction(() => __drift.TALE.scene === 'mags', null, { timeout: 30000 })
+      .then(() => wcity.evaluate(() => ({ place: __drift.TALE.place, speech: __drift.TALE.speech?.el?.src || '' })), () => null);
+    c2 && c2.place === 'cold_tap' && /drift-city\/audio\/cast\/mags-\d\.mp3$/.test(c2.speech)
+      ? pass(`a choice in the story moves the city to the Cold Tap, and Mags's recorded line plays in the city from the story's path (${c2.speech.split('/').slice(-3).join('/')})`)
+      : fail(`after the choice: ${JSON.stringify(c2)}`);
+
+    // 20. the city's menu leaves the story and the sound to foafos
+    const labels = await wcity.evaluate(() => {
+      document.getElementById('bMenu').click();
+      const l = [...document.querySelectorAll('#goPanel .rows .rl')].map((e) => e.textContent);
+      document.getElementById('bMenu').click();
+      return l;
+    });
+    labels.length > 3 && !labels.includes('Story') && !labels.includes('Sound')
+      ? pass(`the city's menu has no Story and no Sound: the story is the runner's and the volume is the shell's (${labels.length} items)`)
+      : fail(`city menu: ${JSON.stringify(labels)}`);
+
+    // 21. closing the city tells the story, which goes on as text
+    const wid = await wpage.evaluate(() => [...FoafOS.apps.nodes.values()].find((x) => x.appId === 'drift')?.id);
+    await wpage.evaluate((id) => FoafOS.apps.close(id), wid);
+    const told = await wr.waitForFunction(() => window.__storyrunner.state.world === null, null, { timeout: 15000 }).then(() => true, () => false);
+    const still = await choices(wr);
+    const fullAgain = await wpage.evaluate(() => !document.querySelector('.foafos-window iframe[src*="storyrunner"]')
+      ?.closest('.foafos-window')?.classList.contains('foafos-with-world'));
+    told && still.length > 0 && fullAgain
+      ? pass('closing the city tells the story (world.closed); the story goes on as text, with its choices, and has the whole phone screen again')
+      : fail(`after closing the city: ${JSON.stringify({ told, still, fullAgain })}`);
+    werrs.length === 0 ? pass('world: no page errors') : fail(`world page errors: ${werrs.slice(0, 3).join(' · ')}`);
+    await wpage.close();
+  }
+
+  // 22-23. the world comes back with the story: Per Aspera opened directly
+  // (the save wins only when the address names the same story file)
+  {
+    const rpage = await browser.newPage({ viewport: { width: 1000, height: 760 } });
+    const rerrs = [];
+    rpage.on('pageerror', (e) => rerrs.push(String(e).slice(0, 200)));
+    await rpage.goto(`${BASE}/inklet/finkapp/?story=/${repoName}/drift-city/story/peraspera.fink.js`);
+    const r1 = await runnerOf(rpage);
+    await r1.waitForFunction(() => window.__storyrunner?.ready?.() && window.__storyrunner.state.choices.length > 0, null, { timeout: 30000 });
+    const rc1 = await frameMatching(rpage, /drift-city\/dist\/city\.html\?world=1$/);
+    if (!rc1) throw new Error('Per Aspera opened directly did not open its world');
+    await rc1.waitForFunction(() => (window.__drift?.TALE?.worldBeats || 0) > 0, null, { timeout: 90000 });
+    await chooseText(r1, 'Go down to the Lantern Cellar, Chinatown');
+    await rc1.waitForFunction(() => __drift.TALE.scene === 'cellar', null, { timeout: 30000 }).catch(() => {});
+    await wait(500);
+    await rpage.evaluate(() => document.querySelector('.foafos-window iframe[src*="storyrunner"]')
+      ?.closest('.foafos-window')?.querySelector('.foafos-window-close')?.click());
+    await rpage.waitForFunction(() => ![...FoafOS.apps.nodes.values()].some((n) => n.appId === 'drift'), null, { timeout: 15000 }).catch(() => {});
+    await wait(1500);
+    const saved = await rpage.evaluate(() => {
+      const raw = (FoafOS.store.snapshot(FoafOS.snapshotNs) || {})['app:storyrunner'];
+      try { return JSON.parse(raw); } catch { return null; }
+    });
+    const cityGone = await rpage.evaluate(() => ![...FoafOS.apps.nodes.values()].some((n) => n.appId === 'drift'));
+    saved?.world?.tag === 'drift' && cityGone
+      && (saved.world.lines || []).some((l) => (l.tags || []).some((t) => /^scene:\s*cellar/.test(t)))
+      ? pass('closing the story window closes its city too, and the kept place holds the world: its tag and the lines sent, up to the cellar scene')
+      : fail(`kept world: ${JSON.stringify({ world: saved?.world ? { tag: saved.world.tag, lines: saved.world.lines?.length } : null, cityGone })}`);
+
+    await rpage.evaluate(() => FoafOS.launchApp('storyrunner'));
+    const r2 = await runnerOf(rpage);
+    const resumed = r2 && await r2.waitForFunction(() => window.__storyrunner?.state?.resumedFromSave, null, { timeout: 30000 }).then(() => true, () => false);
+    const rc2 = await frameMatching(rpage, /drift-city\/dist\/city\.html\?world=1$/);
+    const back = rc2 && await rc2.waitForFunction(() => window.__drift?.TALE?.scene === 'cellar', null, { timeout: 90000 })
+      .then(() => rc2.evaluate(() => ({ scene: __drift.TALE.scene, place: __drift.TALE.place })), () => null);
+    resumed && back?.scene === 'cellar' && back.place === 'lantern_cellar'
+      ? pass('reopening the story resumes it and reopens its world; the replay puts the city back at the cellar')
+      : fail(`restore: ${JSON.stringify({ resumed, back })}`);
+    rerrs.length === 0 ? pass('restore: no page errors') : fail(`restore page errors: ${rerrs.slice(0, 3).join(' · ')}`);
+    await rpage.close();
+  }
 
   // 14. with WebGPU (Dawn's SwiftShader adapter, software): the head is posed
   // in a WGSL compute pass and drawn with WebGPU, in the same sandboxed frame

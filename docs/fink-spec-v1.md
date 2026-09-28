@@ -79,7 +79,8 @@ parser; values keep their case. Implemented tags:
 | `# IMAGE:` / `# VIDEO:` | media, resolved via §3.2 |
 | `# BASEHREF:` | story/knot media base |
 | `# FINK:` | load another FINK document (breaks the continue loop) |
-| `# MINIGAME: name [mode=m] [controls=dpad\|lite\|none]` | §5 |
+| `# MINIGAME: name [mode=m] [controls=dpad\|lite\|none] [key=value …]` | a game; the story pauses until it completes (§5). Other keys reach the game only if its registry row lists them in `args` |
+| `# WORLD: name [key=value …]` | a stage app beside the story that shows what the story's tags say; the story does not pause (§5.8) |
 | `# AUDIO:` / `# FOLEY:` / `# STOP_AUDIO` | audio (§7) |
 | `# PUBLIC:` | cold-entry respawn knots (links spec) |
 | `#BG:` `#CLASS:` | presentation styling |
@@ -239,8 +240,11 @@ Guest games run in `<iframe sandbox="allow-scripts">` (opaque origin).
   `pause`, `resume`, `terminate`, `key`; guest→host: `ready
   {capabilities}`, `progress {data}`, `set-variable {name, value}`,
   `complete {result:{success, score, variables}}`, `error`, `log`.
+- Host→guest also: `variable-changed {name, value}` and, for a world
+  beside a story, `story-beat {lines, base, replay}` (§5.8).
 - Games cannot divert the story. They mutate declared variables; the
-  host resumes Ink on completion. Reactions follow §3.2.
+  host resumes Ink on completion. Reactions follow §3.2. A world (§5.8)
+  cannot divert it either.
 - Packaging: `inklet/minigames/<name>/` with `manifest.json`
   (variables.read/write allowlists, modes, ui, and `features` — browser
   permissions such as `geolocation` that the host grants onto the
@@ -775,6 +779,47 @@ the same citizenship. One wire protocol serves all three guest kinds
 E2E: `inklet/finkapp/test/e2e-bus.mjs` — posts its attacks from inside
 real guest frames. SDK wire shapes pinned offline in
 `packages/finkgame/test/run.js`.
+
+### 5.8 The world beside a story (`# WORLD:`) — normative
+
+A story may name a stage app that shows the world the story happens in:
+`# WORLD: <name> [key=value …]`. Unlike `# MINIGAME:` it does not break the
+beat or pause the story, does not take the screen from the story window,
+and never completes. Added September 2026, so that Drift City plays its
+stories in the foafos runner instead of an Ink engine of its own.
+
+- The runner asks with the verb `story.world` (authority `story:launch`).
+  `open {app, args}` passes the same checks as a game: a registered stage
+  app, parented under the session that asked, holding nothing its parent
+  does not. The shell starts it with `world=1` added to its arguments, and
+  replies `{ok, reads}`, where `reads` is the registry row's
+  `variables.read`. One world per runner; opening the one already open
+  replies `reused`.
+- After every step the runner sends `beat {lines, base}`: each line with
+  tags the runner does not handle itself, as `{tags, text}`, and the
+  story file's address, for paths in tags. The guest receives
+  `{type: 'story-beat', lines, base, replay}` (SDK `onStoryBeat`, which
+  declares the `world` contract). The host holds these messages until the
+  guest declares that contract, because a world's page may still be
+  loading when the first step is sent.
+- Story to world: the runner observes the variables in `reads` and sends
+  their values at open and each change, as `vars {values}`. The shell
+  passes on only names in `reads`, as `variable-changed`.
+- World to story: the guest's `set-variable` goes through the variable
+  broker (§5.3), with the row's `variables.write` and `vars:write` on the
+  world's node. An accepted write goes to the runner as
+  `story.event world.var {name, value}`, and the runner assigns it at once;
+  a name the story does not declare is dropped.
+- When the world's node closes, the runner gets `story.event world.closed`
+  and plays on as text. The world is a child of the session that opened
+  it, so a replacing link or the end of a dream closes it too.
+- The runner's snapshot (§5.5.4) carries `world: {tag, lines}`: the last 60
+  lines sent. A restore opens the world again and sends those lines as a
+  `replay` beat, which rebuilds places and props and does not speak again.
+- A world may not move the story. A story that uses one keeps a text route
+  for anything found only in the world (the story-game-sync skill,
+  Fallbacks). Letting a world re-enter the current scene would change this
+  rule; that is the owner's decision.
 
 ## 6. Links, navigation, identity
 
