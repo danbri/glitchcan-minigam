@@ -179,6 +179,12 @@ Points where this meets what is already in the game (not resolved; for the owner
   either those ships go to something other than the Earth people imagine, or TheOrg's offer is part of its
   confusion, or its denial. Harriet already calls the Earth seat "a cargo slot with a chair in it".
 
+## People's appearance (owner, 2026-09-28)
+
+Assume every Earth ethnicity has blurred over the centuries: everyone in Drift city should be hard to place by 2026
+expectations. Say so in every prompt that makes a person (image, video, LAM face), and check the result. This is a
+fact about the world, not a style: it applies to the game's figures, the novel pages and the talking heads alike.
+
 ## Words on screen, and in code and notes (owner, September 2026)
 
 The owner, on the first novel page's captions: "this LLM filler text drives me nuts ... sort of appropriate but also
@@ -769,6 +775,21 @@ curve chosen for the mood, another tap zooms out. First page: `novel/cellar.html
   old still (Gemini 3 Pro image, about 1,827 credits per variant; it returned 16:9, so crop), then one video take
   from the edited still, looped forward and backward. Record the change on the character sheet and add the still
   as her reference. The other panels still show the old figure until they get the same edit.
+- Lesson (owner, 2026-09-28: "something super creepy about her hand movement ... floaty (and i guess also run
+  backwards) plus oversized and stretched so werewolfy"). Revision 2's take had her hand hover over a table and stroke
+  it, fingers too long, and the forward-then-backward loop played every gesture in reverse half the time. Rules now:
+  - Never loop human movement by playing it backwards. Loop forward only: find two frames far apart that match
+    (pose and all), cut there, and hide the join with a short crossfade. Check the join frame by frame.
+  - Give the hands a job with contact and a physical rhythm (drumming: sticks or brushes strike a drum head) rather
+    than a vague gesture (tapping a table), and say "normal human hands, natural proportions" in the prompt.
+  - Look at the hands in close crops at several times before anything goes on a page; a full-frame glance misses it.
+  - The forward loop, as done for revision 3: measure first. Compare normalised head-and-hands crops for every
+    frame pair at least 4 s apart; if the best pair is worse than frames one second apart (it was), a cut will jump.
+    Then generate a short bridge clip (Kling 3.0 Pro, 3 s, 2,036 credits) with the frame where the loop ends as its
+    start frame and the frame where it begins as its end frame, and blend 4 frames at the far join. Measure every
+    step of the result (typical 0.76, largest 1.57, wrap 0.95 on a 0 to 255 grey scale at 128 px).
+  - A mistake to avoid: I first read a pose difference between two frames as camera drift. Tracking the lantern
+    (position and width) showed the camera held still within 1% from 1.5 s to 9.5 s. Measure before you blame.
 - Media notes and costs: `novel/media/README.md`.
 
 ## Character sheets (`drift-city/bible/`, September 2026)

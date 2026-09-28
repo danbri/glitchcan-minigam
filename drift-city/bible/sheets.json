@@ -481,7 +481,7 @@
       "role": "Subject of the first novel page (novel/cellar.html); not yet anyone in a story.",
       "facts": [
         {
-          "text": "Seated on the cellar stage under a red lantern; keeps time with her hand (video panel b).",
+          "text": "Seated on the cellar stage under a red lantern; plays a small drum kit with brushes (video panel b).",
           "src": "novel/media/README.md"
         }
       ],
@@ -489,7 +489,7 @@
       "voice": null,
       "face": null,
       "wardrobe": [
-        "revision 2 (2026-09-28): long dark-green velvet dress; cropped green velvet jacket with a wide brown fur collar; dark sheer tights; black heeled ankle boots",
+        "revisions 2 and 3 (2026-09-28): long dark-green velvet dress; cropped green velvet jacket with a wide brown fur collar; dark sheer tights; black heeled ankle boots",
         "hair in a low updo; drop earrings; red lipstick",
         "revision 1 (in git history only): the same dress, no jacket, long sleeves, high collar, sheer panel at the chest"
       ],
@@ -499,9 +499,24 @@
           "by": "owner",
           "date": "2026-09-28",
           "status": "done in panels a, b and c of novel/cellar.html"
+        },
+        {
+          "text": "Redo the drumming panel: replace the table with a minimal drum kit, her drumming efficiently and effortlessly; no floaty, backwards or oversized hand movement.",
+          "by": "owner",
+          "date": "2026-09-28",
+          "status": "done in panel b (revision 3); waiting for the owner's check"
+        },
+        {
+          "text": "Face hard to place (the world rule on appearance).",
+          "by": "owner",
+          "date": "2026-09-28",
+          "status": "done in panel b; panels a and c not yet"
         }
       ],
-      "possessions": [],
+      "possessions": [
+        "a minimal drum kit on the cellar stage: snare, hi-hat, floor tom, dark lacquer and brass (revision 3)",
+        "a pair of wire brushes"
+      ],
       "open": [
         "who she is: a story character, or someone new?",
         "name"
@@ -511,6 +526,11 @@
           "file": "refs/woman-in-green-v2.jpg",
           "what": "revision 2 reference still; start frame of the cellar video panel",
           "made": "Gemini 3 Pro image edit (ElevenLabs connector) of the revision 1 tile, 2026-09-28"
+        },
+        {
+          "file": "refs/woman-in-green-v3.jpg",
+          "what": "revision 3 reference still: at the drum kit; start frame of the cellar video panel",
+          "made": "Gemini 3 Pro image edit (ElevenLabs connector) of revision 2, 2026-09-28"
         }
       ]
     }
@@ -592,6 +612,13 @@
         "nuala"
       ],
       "music": "piano trio ballad (style 4)"
+    }
+  ],
+  "world": [
+    {
+      "text": "Assume every Earth ethnicity has blurred over the centuries: everyone should be hard to place by 2026 expectations.",
+      "by": "owner",
+      "date": "2026-09-28"
     }
   ]
 }
