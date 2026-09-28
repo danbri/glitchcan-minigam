@@ -8,15 +8,41 @@ const HEAD_LIB = "../../magpie/splatweb/lib/";
 const HEAD_ART = "../../magpie/splatweb/third_party/";
 // synthetic faces only (the lam-face-pipeline skill): cast by age, sex and character from a contact sheet
 const HEAD_CAST = {
-  mags: { face: "tpdne-40", name: "Mags", where: "the Cold Tap" },
-  dex: { face: "tpdne-21", name: "Dex", where: "the Low Orbit" },
-  oskar: { face: "tpdne-28", name: "Oskar", where: "the Lantern Cellar" },
-  nuala: { face: "tpdne-24", name: "Nuala Fenn", where: "" },
-  pell: { face: "tpdne-20", name: "Clerk Pell", where: "gate three" },
-  ruth: { face: "tpdne-35", name: "Ruth", where: "the Warmhouse" },
-  elder: { face: "tpdne-04", name: "Elder Harriet", where: "" },
+  mags: { face: "tpdne-40", name: "Mags", where: "the Cold Tap", base: "wry" },
+  dex: { face: "tpdne-21", name: "Dex", where: "the Low Orbit", base: "sly" },
+  oskar: { face: "tpdne-28", name: "Oskar", where: "the Lantern Cellar", base: "neutral" },
+  nuala: { face: "tpdne-24", name: "Nuala Fenn", where: "", base: "worried" },
+  pell: { face: "tpdne-20", name: "Clerk Pell", where: "gate three", base: "stern" },
+  ruth: { face: "tpdne-35", name: "Ruth", where: "the Warmhouse", base: "warm" },
+  elder: { face: "tpdne-04", name: "Elder Harriet", where: "", base: "wry" },
   org: { face: null, name: "The Org", where: "" },
 };
+// expressions beyond the mouth, as ARKit shapes: each is a target the face eases toward. A character has a resting
+// expression (`base` above); a line may set its own with "# mood: <name>" in the story, and otherwise the words of the
+// line are read for a cue (laughs, sighs, quietly, snorts...); failing that, the resting one
+const HEAD_MOODS = {
+  neutral: {},
+  warm: { mouthSmileLeft: 0.3, mouthSmileRight: 0.3, cheekSquintLeft: 0.2, cheekSquintRight: 0.2, eyeSquintLeft: 0.12, eyeSquintRight: 0.12 },
+  wry: { mouthSmileLeft: 0.3, mouthSmileRight: 0.06, browOuterUpLeft: 0.28, eyeSquintRight: 0.15, mouthDimpleLeft: 0.2 },
+  amused: { mouthSmileLeft: 0.55, mouthSmileRight: 0.55, cheekSquintLeft: 0.4, cheekSquintRight: 0.4, eyeSquintLeft: 0.35, eyeSquintRight: 0.35, browInnerUp: 0.1 },
+  stern: { browDownLeft: 0.45, browDownRight: 0.45, mouthPressLeft: 0.3, mouthPressRight: 0.3, eyeSquintLeft: 0.15, eyeSquintRight: 0.15 },
+  sad: { browInnerUp: 0.55, mouthFrownLeft: 0.35, mouthFrownRight: 0.35, eyeLookDownLeft: 0.2, eyeLookDownRight: 0.2, eyeSquintLeft: 0.1, eyeSquintRight: 0.1 },
+  surprised: { browInnerUp: 0.5, browOuterUpLeft: 0.5, browOuterUpRight: 0.5, eyeWideLeft: 0.45, eyeWideRight: 0.45 },
+  sly: { eyeSquintLeft: 0.3, eyeSquintRight: 0.3, mouthSmileLeft: 0.25, mouthLeft: 0.12, browDownRight: 0.2 },
+  worried: { browInnerUp: 0.45, mouthStretchLeft: 0.12, mouthStretchRight: 0.12, mouthPressLeft: 0.1, mouthPressRight: 0.1 },
+  scornful: { noseSneerLeft: 0.3, noseSneerRight: 0.15, browDownLeft: 0.3, mouthRight: 0.12, mouthSmileRight: 0.15 },
+};
+function headMoodOf(text, tag, base) {
+  if (tag && HEAD_MOODS[tag]) return tag;
+  const t = (text || "").toLowerCase();
+  if (/\b(laughs?|laughing|grins?|chuckles?|smiles?)\b/.test(t)) return "amused";
+  if (/\b(snorts?|scoffs?|sneers?)\b/.test(t)) return "scornful";
+  if (/\b(sighs?|quietly|softly|tired|crying|a long breath)\b/.test(t)) return "sad";
+  if (/\b(thank you|thanks|means it)\b/.test(t)) return "warm";
+  if (/\b(snaps?|frowns?|glares?|rubbish)\b/.test(t)) return "stern";
+  if (/\b(leans|whispers?|winks?|coy)\b/.test(t)) return "sly";
+  return base || "neutral";
+}
 const HEADS = { lib: null, libP: null, avatars: {}, env: {}, el: null, cv: null, r: null, who: null, audio: null, buf: null, raf: 0, hideAt: 0, fail: false };
 function headSpeaker(url) {
   const m = /\/([a-z]+)-[^/]*\.mp3(?:$|\?)/.exec(url || "");
@@ -74,7 +100,7 @@ function headPlace() {
   else if (inTale && tx.firstChild !== el) tx.insertBefore(el, tx.firstChild);
 }
 // a line starts: open the feed for its speaker (or close it for anyone else)
-function headSay(url, audioEl) {
+function headSay(url, audioEl, info) {
   const who = headSpeaker(url);
   if (!who || HEADS.fail) { headHide(); return; }
   const el = headPanel();
@@ -84,6 +110,10 @@ function headSay(url, audioEl) {
   el.classList.toggle("org", !c.face);
   el.hidden = false; el.classList.remove("closing");
   HEADS.who = who; HEADS.audio = audioEl; HEADS.url = url; HEADS.hideAt = 0;
+  const text = info && info.text || "";
+  HEADS.mood = headMoodOf(text, info && info.mood, c.base);
+  HEADS.ask = /\?["'”’]?\s*$/.test(text.trim()) || /\?"/.test(text);
+  HEADS.exclaim = /!/.test(text);
   HEADS.envNow = null; headEnvelope(url).then((e) => { if (HEADS.url === url) HEADS.envNow = e; });
   if (c.face) {
     headAvatar(who).then((a) => { if (HEADS.who === who) HEADS.av = a; }).catch((e) => { HEADS.fail = true; console.warn("talking head unavailable:", e && e.message); headHide(); });
@@ -123,14 +153,37 @@ function headFrame(now) {
   const morph = {};
   for (const k in talk) morph[k] = talk[k] * 0.5 * Math.min(1, lvl * 1.4);
   morph.jawOpen = Math.min(0.35, Math.max(morph.jawOpen || 0, lvl * 0.3));
-  const bp = (s % 3.7) / 3.7, blink = bp < 0.05 ? Math.sin(bp / 0.05 * Math.PI) : 0;
-  morph.eyeBlinkLeft = blink; morph.eyeBlinkRight = blink;
-  const yaw = Math.sin(s / 2.9) * 0.1 + lvl * 0.04 * Math.sin(s * 5.0), pitch = Math.sin(s / 3.7) * 0.04 - lvl * 0.05;
+  // the expression: the line's mood eased in, plus what speech does to a face: the brows flash and the head dips on
+  // stressed syllables (onsets in the loudness), the brows rise toward the end of a question, the eyes wander in
+  // small jumps, and a blink closes most phrases
+  const X = HEADS.x || (HEADS.x = { cur: {}, flash: 0, prev: 0, lastOn: 0, gx: 0, gy: 0, nextLook: 0, blinkAt: -9, loud: 0 });
+  const dt = Math.min(0.1, (now - (X.t || now)) / 1000); X.t = now;
+  const target = HEAD_MOODS[HEADS.mood] || {};
+  const ease = 1 - Math.exp(-dt / 0.35);
+  for (const k of new Set([...Object.keys(X.cur), ...Object.keys(target)])) X.cur[k] = (X.cur[k] || 0) + ((target[k] || 0) - (X.cur[k] || 0)) * ease;
+  if (lvl - X.prev > 0.22 && s - X.lastOn > 0.35) { X.flash = HEADS.exclaim ? 1.4 : 1; X.lastOn = s; }
+  X.flash *= Math.exp(-dt / 0.25);
+  if (X.loud > 0.3 && lvl < 0.05) X.blinkAt = s;
+  X.loud = lvl > 0.05 ? Math.max(X.loud * 0.98, lvl) : X.loud * 0.9;
+  X.prev = lvl;
+  if (s > X.nextLook) { X.gx = (Math.random() - 0.5) * 0.4; X.gy = (Math.random() - 0.5) * 0.25; X.nextLook = s + 0.8 + Math.random() * 2.2; }
+  const endQ = HEADS.ask && A && A.duration ? Math.max(0, Math.min(1, (t / A.duration - 0.6) / 0.3)) : 0;
+  const add = (k, v) => { morph[k] = Math.min(1, (morph[k] || 0) + v); };
+  // these heads answer weakly to the brow, eye and cheek shapes: the moods are written at their true size and applied
+  // at 2.5 times (the mouth shapes are the exception: they gape, see above)
+  for (const k in X.cur) if (X.cur[k] > 0.005) add(k, X.cur[k] * 2.5);
+  add("browInnerUp", 0.25 * X.flash + 0.35 * endQ); add("browOuterUpLeft", 0.2 * X.flash + 0.3 * endQ); add("browOuterUpRight", 0.2 * X.flash + 0.3 * endQ);
+  if (X.gx > 0) { add("eyeLookOutLeft", X.gx); add("eyeLookInRight", X.gx); } else { add("eyeLookInLeft", -X.gx); add("eyeLookOutRight", -X.gx); }
+  if (X.gy > 0) { add("eyeLookUpLeft", X.gy); add("eyeLookUpRight", X.gy); } else { add("eyeLookDownLeft", -X.gy); add("eyeLookDownRight", -X.gy); }
+  const bp = (s % 3.7) / 3.7, pb = s - X.blinkAt;
+  const blink = Math.max(bp < 0.05 ? Math.sin(bp / 0.05 * Math.PI) : 0, pb >= 0 && pb < 0.18 ? Math.sin(pb / 0.18 * Math.PI) : 0);
+  add("eyeBlinkLeft", blink); add("eyeBlinkRight", blink);
+  const yaw = Math.sin(s / 2.9) * 0.1 + lvl * 0.04 * Math.sin(s * 5.0) + X.gx * 0.15, pitch = Math.sin(s / 3.7) * 0.04 - lvl * 0.03 - 0.06 * X.flash + 0.05 * endQ;
   const qy = [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)], qp = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
   const head = [qy[3] * qp[0], qy[1] * qp[3], -qy[1] * qp[0], qy[3] * qp[3]];
   const out = a.pose({ at: [0, 0, 0], bones: { head }, morph }, HEADS.buf, 0);
   HEADS.r.setData(out, a.lastCount);
   const h = a.heightM;
-  HEADS.r.setCamera([0, h * 0.56, -h * 1.2], [0, h * 0.52, 0], 0.7);
+  HEADS.r.setCamera([0, h * 0.5, -h * 1.3], [0, h * 0.46, 0], 0.7);
   HEADS.r.render();
 }
