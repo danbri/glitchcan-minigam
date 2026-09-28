@@ -54,7 +54,13 @@ export class FoafVars {
     this.strictDreams = true;
     this.bound = null;      // names the running work actually declares (null = unknown)
     this.scratch = new Map(); // permitted writes nothing declared — kept, not lost
+    // (actor, cap) -> boolean. A host that keeps a capability tree sets
+    // this, so a guest must HOLD vars:read / vars:write on its live node
+    // before its manifest list is even consulted. Unset: manifest only.
+    this.authority = null;
   }
+
+  _holds(actor, cap) { return !this.authority || !!this.authority(actor, cap); }
 
   isShared(name) { return this.shared.has(name); }
 
@@ -74,6 +80,8 @@ export class FoafVars {
    */
   filterReadable(actor, values) {
     if (actor?.kind !== 'guest') return { ...values };
+    // no vars:read on the node: the guest sees nothing, not even the economy
+    if (!this._holds(actor, 'vars:read')) return {};
     const grants = actor.grants || {};
     const allowed = new Set([
       ...this.shared, ...HOST_CONTEXT,
@@ -98,6 +106,9 @@ export class FoafVars {
     if (actor?.kind === 'maker') return { ok: true };
 
     if (actor?.kind === 'guest') {
+      if (!this._holds(actor, 'vars:write')) {
+        return { ok: false, reason: `${actor.id} does not hold vars:write` };
+      }
       const allowed = actor.grants?.write || [];
       if (!allowed.includes(name)) {
         return { ok: false, reason: `"${name}" is not in ${actor.id}'s manifest write list` };

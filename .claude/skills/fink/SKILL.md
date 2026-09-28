@@ -88,14 +88,20 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   appears. The injected knot also contains a story link
   (world-between-worlds) — a known content leak.
 - Other known leaks: `fink-config.js` (DEFAULT_FINK_FILE, LOCAL_FINKS,
-  absolute /glitchcan-minigam/ paths), minigame registry + splash copy in
-  `fink-minigames.js:26-37`, chess's `../../thumbwar/minichess.html`.
+  absolute /glitchcan-minigam/ paths), host-game splash copy (`hostGames`,
+  gems and mega only) in `fink-minigames.js`, chess's
+  `../../thumbwar/minichess.html`.
 
 ## Minigame SDK
 
-- Two systems: the LIVE path is `fink-minigames.js` (ad-hoc, hardcoded
-  registry `iframeMinigames`, loads `../minigames/<type>/index.html` into
-  a sandboxed iframe). The DESIGNED path is `inklet/minigames/`
+- Two systems: the LIVE path is `fink-minigames.js`, the stage host. It
+  keeps NO list of games (since September 2026): the shell hands it the
+  `surface: 'stage'` rows of `foafos-apps.js` at boot (`useRegistry`), and
+  `iframeMinigames` / `minigameInfo` are getters over them. A row loads
+  its `url`, else `../minigames/<type>/index.html`, into a sandboxed
+  iframe. An unregistered name is refused (`minigame.refused`); it used to
+  start gems, which is what the table of contents' canarywharf link did.
+  The DESIGNED path is `inklet/minigames/`
   (`MinigameHost` + guest `minigame-sdk.js` + per-game manifest.json with
   variables.read/write allowlists) — loaded but not yet routed.
 - **THE INIT RACE, and it bites every new guest.** A guest that posts
@@ -449,8 +455,9 @@ reading the CSS: every one of these was invisible in source.
   for its in/out links). `--print` for a text dump.
 - Edges: `fink` (typed by `LINKREL`, goDeeper drawn purple), `minigame`
   (dashed, to widget diamonds). Widgets are classified against the REAL
-  registry (fink-minigames.js executed in a vm, not parsed): registered?
-  iframe vs inline? packaged on disk? Anything unlaunchable is flagged.
+  registry (`foafos-apps.js`, imported: it is plain data): registered?
+  iframe vs inline? packaged on disk (its `url`, else the minigames
+  folder)? Anything unlaunchable is flagged.
 - Older `inklet/tools/fink-graph.mjs` + `docs/fink-ring-viz.html` cover
   story→story links only, and their report predates widgets.
 - Gotcha it exposed: **`#` mid-line is a TAG in ink**, so prose like
@@ -783,8 +790,8 @@ before writing another harness; these traps each cost a wrong conclusion.
   (inline minigames are part of the story surface, so they don't).
   Locked by `e2e-audio-leak.mjs`.
 - The shell registers an `uncontrollable` placeholder for every guest so
-  mute over-reports rather than over-promises — but `silent: true` in
-  `minigameInfo` suppresses it. A SILENT game in the "cannot be turned
+  mute over-reports rather than over-promises — but `silent: true` on the
+  app's registry row (`foafos-apps.js`) suppresses it. A SILENT game in the "cannot be turned
   down" list is a lie in the other direction and dilutes the real
   entries. gridluck opens an AudioContext and connects nothing; chess has
   no audio code at all.
@@ -897,6 +904,24 @@ back to the default and say `fellBack` on `root.ready`.
   (asserted). An explicit `?story=` still wins over the manifest.
 - `AppTree` (`packages/foafos/src/apptree.mjs`) holds running instances as
   a tree. `FoafOS.apps`, root node at `FoafOS.rootNode`.
+- **The tree is the one source of truth for powers** (September 2026).
+  Records are private (`#nodes`); callers get one frozen view per node
+  (stable identity, live reads, writes throw) and `nodes` is a read-only
+  Map view. Change a node only through the tree: `setOnClose(id, fn)`,
+  `setScope(id, name, value)` (bus topics etc., frozen, and the scoped bus
+  is BUILT from the recorded copy), `dreamOf`/`peerOf` as spawn options.
+  `can(id, cap)` answers for LIVE nodes only, so a close revokes
+  everywhere at once. Every broker path asks it: a window app's story
+  verbs, storage, secrets and verbs check the asking node
+  (`governAppFrame`); a stage guest's vars need `vars:read`/`vars:write`
+  on its node before the manifest list counts (`FoafVars.authority`); the
+  store/secrets grant tables follow the tree (`syncBrokerGrants`: granted
+  while a live node of the app holds the capability, revoked with the
+  last one). Measured before: closing Data left its storage grant, and a
+  picker launch of a stage app made two nodes, one a ghost row. The
+  switcher row says what each node holds; ⓘ shows the bus scope, the
+  manifest variables, verb aims and the frame's sandbox, each read from
+  what enforces it. Locked by `e2e-powers.mjs`.
 - **ATTENUATION is the point:** `grant(child) ⊆ grant(parent)`, enforced in
   `spawn()`, refusal published on `app.spawn.refused` with the excess
   named. Root is everyone's ancestor, so trimming a manifest's
@@ -968,7 +993,8 @@ back to the default and say `fellBack` on `root.ready`.
   the guest running while the tree reports it gone. (Caught here by
   checking; `FinkWM.close?.() ?? FinkMinigames.closeMinigame?.()` in older
   tests only ever worked because of the `??`.)
-- Locked by `e2e-root.mjs` (16) + `apptree.test.js` (8 unit).
+- Locked by `e2e-root.mjs` (16) + `apptree.test.js` (16 unit) +
+  `e2e-powers.mjs`.
 
 ## alpha1 surfaces: picker, switcher, suspension, logger
 

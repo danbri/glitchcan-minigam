@@ -762,6 +762,18 @@ curve chosen for the mood, another tap zooms out. First page: `novel/cellar.html
   shows the page knot; ink choices fly the view to door, then stage, with the dip visible mid-way.
 - Video: muted, looping, `playsinline`, played again on the first tap (iOS), paused in a hidden tab. H.264 plus a
   VP9 WebM source: open-source Chromium (the test browser here) has no H.264 and reports error 4.
+- As a foafos app (September 2026): `novel/cellar.html` is also the stage app `cellar` (a row in
+  `inklet/finkapp/foafos-apps.js` whose `url` is this page, no capabilities). A story opens it with
+  `# MINIGAME: cellar`; the entry story is `novel/cellar-entry.fink.js`, owner lines only. One file serves both
+  uses: the page speaks the minigame SDK only when it is in a frame. Lifecycle API: `pause()`, `resume()`,
+  `.paused`, `captureState()`, `restoreState(state)`. Lessons: `animation-play-state` does not inherit, so setting
+  it on the shadow `.page` left the slotted stills drifting; `pause()` pauses each animation from
+  `getAnimations({ subtree: true })`, and while paused it ignores input and does not replay the video on a tap.
+  Ink's saved state holds the position, not the text on screen, so a restore without the shown lines displayed
+  only the choices; `captureState()` keeps the lines. The way out is the story's own: the guest completes when
+  the STORY moves the view to the street ("Back to Ferry Street"), not when the reader taps the street panel. A
+  relative path in a sandboxed frame loaded by `src` resolves normally; an earlier `<base href>` workaround for it
+  was wrong. Test: `node inklet/finkapp/test/e2e-powers.mjs`.
 - Making a moving panel with the ElevenLabs connector (`creative_*` tools): put the still on the flow (upload with
   `creative_create_asset_upload`; if that is blocked, push the image to the branch and pass its
   raw.githubusercontent.com URL to `creative_attach_reference_file`), add a

@@ -68,15 +68,41 @@ novel-page > section:nth-of-type(odd) > img { animation-duration: 27s; animation
 </novel-page>
 <div id="hint">Tap a panel. Drag or throw to move. Tap again to see the page.</div>
 <script src="../../third_party/ink/ink-full.js"></script>
+<script src="../../packages/finkgame/src/minigame-sdk.js"></script>
 <script type="module">
 import "./novel-page.js";
 const page = document.getElementById("page"), hint = document.getElementById("hint");
 page.addEventListener("panelchange", () => hint.classList.add("gone"));
 setTimeout(() => hint.classList.add("gone"), 5000);
+
+// In a frame, this page is the foafos stage app "cellar" (inklet/finkapp/foafos-apps.js), launched by
+// `# MINIGAME: cellar`. It speaks the minigame SDK: the shell may pause it, keep a snapshot when it is closed,
+// and restore it next time. The way out is the story's own: when the STORY takes the reader to the street
+// (the "Back to Ferry Street" choice), the page hands control back. A tap on the street panel only looks.
+let story = null, pendingRestore = null;
+if (window.parent !== window && typeof MinigameSDK === "function") {
+  const sdk = new MinigameSDK();
+  sdk.onPause(() => page.pause());
+  sdk.onResume(() => page.resume());
+  sdk.onSnapshot(() => (story ? page.captureState() : null));
+  sdk.onRestore((state) => { if (story) page.restoreState(state); else pendingRestore = state; });
+  let leaving = 0;
+  page.addEventListener("panelchange", (e) => {
+    clearTimeout(leaving);
+    const { index, source } = e.detail;
+    if (source !== "story" || page.panels[index]?.getAttribute("knot") !== "street") return;
+    const flight = parseFloat(page.getAttribute("duration")) || 1400;   // let the flight land first
+    leaving = setTimeout(() => sdk.complete({ success: true }), flight + 1200);
+  });
+}
+
 // the story for this page: one knot per panel (cellar.ink), compiled here by the real ink compiler
 try {
-  const src = await (await fetch("cellar.ink")).text();
-  page.play(new inkjs.Story(new inkjs.Compiler(src).Compile().ToJson()));
+  const r = await fetch("cellar.ink");
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  story = new inkjs.Story(new inkjs.Compiler(await r.text()).Compile().ToJson());
+  page.play(story);
+  if (pendingRestore) page.restoreState(pendingRestore);
 } catch (e) { console.error("cellar.ink:", e); }
 </script>
 </body>

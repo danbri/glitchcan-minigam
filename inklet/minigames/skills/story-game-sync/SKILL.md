@@ -31,8 +31,9 @@ A story in the FINK player (production: the boxed runner,
    `fink-minigames.js`), the last story paragraphs (`story.recent`), controls,
    and bus grants.
 4. While it plays, the guest may write: `set-variable`, `progress`. Writes go
-   through the `FoafVars` broker (manifest read/write lists; shared economy
-   `diamonds mega_diamonds keys score minigame_played`).
+   through the `FoafVars` broker: the guest's tree node must hold `vars:write`
+   (reads need `vars:read`), and then the manifest read/write lists apply
+   (shared economy `diamonds mega_diamonds keys score minigame_played`).
 5. On `complete`, the shell sends `story.event minigame.complete` with the
    variables that changed; the runner's `resumeAfterGame()` writes them into
    its ink and calls `advance()` from where the tag broke.
@@ -49,6 +50,9 @@ What this model does NOT do, today:
   tag value, and the shell calls `startMinigame(game)` with the name only. So
   `mode=` and `controls=` work in the legacy player (`?player=legacy`) and not
   in production. `# MINIGAME: robbin mode=hampstead` arrives as mode normal.
+  It is also why one registered app cannot yet show a page, scene or rig that
+  the story names: a shared novel viewer, SDF world or talking rig needs these
+  arguments, delivered in `init.config`.
 - **`init` variables come from the legacy engine.** `_getStoryVariables` reads
   `FinkInkEngine.story`, not the boxed runner's story or `FoafOS.storyVars`.
   Under the boxed runner, check what a guest actually receives before relying
@@ -57,7 +61,12 @@ What this model does NOT do, today:
   are not parsed anywhere.
 
 Good fit: a self-contained episode inside a story — a heist, a battle, a
-puzzle — whose result the story reads afterwards. Examples:
+puzzle — whose result the story reads afterwards. It also carries a narrative
+moment: `cellar` (Drift city's novel page, `drift-city/novel/cellar.html`) is
+a stage app with no capabilities. Pause freezes it, a close keeps its place
+(snapshot), a reopen restores it, and its own story's exit completes it, so
+the outer story resumes after the tag (`drift-city/novel/cellar-entry.fink.js`;
+the drift-city skill, Novel pages, has the lessons). Examples:
 `inklet/hampstead.fink.js` (robbin, reads `robbin_birds` after),
 `inklet/skydock.fink.js` (debrief branches on `skydock_trades`, replay loop
 `+ + [Clock on again] -> shift`), `inklet/apps/storyrunner/peer.fink.js`
@@ -146,23 +155,28 @@ Rules:
 
 ## Wiring a platform guest (model A) — checklist
 
-1. `inklet/minigames/<type>/index.html` and `manifest.json` (variables
-   read/write, controls, features). Self-contained guests include
+1. The page: `inklet/minigames/<type>/index.html` and `manifest.json`
+   (variables read/write, features). Self-contained guests include
    `../guest-a11y.js`, `../debug-clock.js` and
    `../../../packages/finkgame/src/minigame-sdk.js`; nested wrappers also
-   `host-keys.js`.
-2. Add the type to `iframeMinigames` in `inklet/finkapp/fink-minigames.js`.
-   A type missing from that list falls through to `default:` and starts gems.
-3. Add a `surface: 'stage', game: '<type>'` entry in
-   `inklet/finkapp/foafos-apps.js`. Skydock ran unregistered until one was
-   added.
+   `host-keys.js`. A guest that lives beside its own content (the cellar)
+   names its page with `url` in its registry row instead, relative to
+   `inklet/finkapp/`, and puts `variables` in the row (or a `manifest` URL).
+2. ONE row in `inklet/finkapp/foafos-apps.js`: `surface: 'stage',
+   game: '<type>'`, capabilities, `desc`, `controls`, `silent` if it makes no
+   sound. That row is the only list of games: the stage host reads it at boot.
+   An unregistered name is refused (`minigame.refused`; a boxed story's
+   `story.launch` gets `unregistered`). Before September 2026 there were two
+   lists, and a name missing from the host's list started gems.
+3. Capabilities are what the node HOLDS: a guest without `vars:write` writes
+   nothing, whatever its manifest lists.
 4. In the story: tag inline on a text line, `-> return_knot`, reactions behind
    a choice (see the `glitchcanary` skill).
 5. A text route for anything the story needs from the game (above).
 
-Known broken as of September 2026: `canarywharf` has a guest folder and a TOC
-entry (`inklet/toc.fink.js`, `# MINIGAME: canarywharf mode=firstlight`) but is
-in neither `iframeMinigames` nor `foafos-apps.js`.
+Fixed September 2026: `canarywharf` (TOC entry `# MINIGAME: canarywharf
+mode=firstlight`) had a guest folder and no registration, so it played gems. It
+has a registry row now; `mode=` still does not reach it under the boxed runner.
 
 ## Verify
 
@@ -170,6 +184,7 @@ in neither `iframeMinigames` nor `foafos-apps.js`.
 node drift-city/tests/inkwalk.mjs                         # both modes, all endings
 node inklet/tools/fink-check.mjs drift-city/story/lamplighter.fink.js
 node inklet/finkapp/test/e2e-storyrunner.mjs              # pause on MINIGAME, resume with variables
+node inklet/finkapp/test/e2e-powers.mjs                   # one node per stage app, the cellar end to end
 ```
 
 To check what a guest receives under the boxed runner, log `init` inside the

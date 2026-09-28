@@ -400,6 +400,31 @@ FoafOS.wmblingNode = wmblingNode;
 // treats that as "nothing saved" — which is exactly true.
 FoafOS.snapshotNs = 'shell:game-snapshots';
 if (ROOT.capabilities.includes('storage')) store.grant(FoafOS.snapshotNs, ['storage']);
+
+// Broker grant tables FOLLOW the tree. An app holds `storage` or `secrets`
+// in a broker exactly while a live node of it holds that capability; the
+// last close revokes it. Every request is also checked against the asking
+// node itself (see governAppFrame), so a closing window holds nothing.
+// The shell's own snapshot namespace is not an app and is left alone.
+const BROKER_CAPS = [[store, 'storage'], [secrets, 'secrets']];
+function syncBrokerGrants() {
+  for (const [broker, cap] of BROKER_CAPS) {
+    const live = new Map();
+    for (const n of apps.holders(cap)) {
+      if (n.surface === 'root') continue;
+      const held = live.get(n.appId) || new Set();
+      for (const c of n.capabilities) held.add(c);
+      live.set(n.appId, held);
+    }
+    for (const appId of [...broker.grants.keys()]) {
+      if (!live.has(appId) && appId !== FoafOS.snapshotNs) broker.revoke(appId);
+    }
+    for (const [appId, caps] of live) broker.grant(appId, [...caps]);
+  }
+}
+FoafOS.syncBrokerGrants = syncBrokerGrants;
+bus.subscribe('app.spawn', syncBrokerGrants);
+bus.subscribe('app.close', syncBrokerGrants);
 // An installation with no stories should not wear story chrome. The flag
 // stays because it is a true statement about the installation and skins
 // may want it — but it is no longer what REMOVES the narrative
@@ -451,7 +476,7 @@ function mountChrome(app) {
     capabilities: app.capabilities || [], label: app.name, surface: 'chrome',
   });
   if (node.refused) { parkChrome(app); return null; }
-  node.onClose = () => { chromeMounted.delete(app.id); parkChrome(app); };
+  apps.setOnClose(node.id, () => { chromeMounted.delete(app.id); parkChrome(app); });
   chromeMounted.set(app.id, { node });
   // The breadcrumb caches its elements at init and skips entirely if the
   // container is missing. If it initialised while we had it parked, give
@@ -537,6 +562,18 @@ const busGrantsFor = (type, app) => app?.bus || {
   subscribe: ['wm.mode', 'audio.volume', 'story.state'],
 };
 const gameNodes = new Map();       // minigame instance id -> tree node id
+// "Which stage app is this game name?" — answered by the one registry.
+const stageApp = (name) => APPS.find((a) => a.surface === 'stage'
+  && ((a.game || a.id) === name || (a.aliases || []).includes(name))) || null;
+FoafOS.stageApp = stageApp;
+// A guest's vars power is its NODE's. FoafVars asks here before it looks
+// at the manifest list, so a closed or unregistered guest holds nothing.
+vars.authority = (actor, cap) => {
+  const nodeId = actor?.node || gameNodes.get(actor?.instance);
+  return !!nodeId && apps.can(nodeId, cap);
+};
+// The stage host keeps no list of games of its own: it reads this one.
+window.FinkMinigames?.useRegistry?.(APPS.filter((a) => a.surface === 'stage'));
 // One-shot hint set by a boxed runner's story.launch: "the next minigame
 // of this type was instantiated by this app node." Read+cleared by the
 // minigame.instance handler so the game parents under its real launcher.
@@ -857,10 +894,10 @@ bus.subscribe('minigame.instance', (e) => {
     const nodeId = gameNodes.get(id);
     gameNodes.delete(id);
     // The guest is already gone; drop the node without re-closing it.
-    if (nodeId && apps.get(nodeId)) { apps.get(nodeId).onClose = null; apps.close(nodeId); }
+    if (nodeId && apps.get(nodeId)) { apps.setOnClose(nodeId, null); apps.close(nodeId); }
     return;
   }
-  const app = appById(type);
+  const app = stageApp(type) || appById(type);
   // The instantiation border, made real: if a boxed runner launched this
   // game (story.launch recorded which node asked), parent it under THAT
   // runner — not the global story/root node. Then the tree reflects the
@@ -882,7 +919,9 @@ bus.subscribe('minigame.instance', (e) => {
   });
   if (!node.refused) {
     gameNodes.set(id, node.id);
-    const grants = busGrantsFor(type, app);
+    // Recorded on the node first, and the scoped bus is built from that
+    // record: what the switcher shows is exactly what is enforced.
+    const grants = apps.setScope(node.id, 'bus', busGrantsFor(type, app));
     // name feeds scopeBus's source stamp: `guest:<type>#<instance>` —
     // two copies of one game are two distinct voices
     window.FinkMinigames?.attachBus?.(
@@ -2049,6 +2088,50 @@ function buildUI() {
     // the parent does not itself hold. This is what makes handing out
     // `launch` safe: an app cannot mint a more powerful app than itself.
     const parentId = opts.parentId || FoafOS.rootNode?.id || null;
+    // A STAGE app's node is made once, by the game handler, when its guest
+    // registers (minigame.instance). Spawning here as well gave every
+    // picker launch two rows, and the second one outlived the game as a
+    // ghost. So: check attenuation here, name the parent, start the guest.
+    // A host-rendered game (gems) registers no guest, so its node is made
+    // here and closed when the game reports completion.
+    if (app.surface === 'stage') {
+      const parentNode = apps.get(parentId);
+      const excess = parentNode ? caps.filter((c) => !parentNode.capabilities.includes(c)) : [];
+      if (excess.length) {
+        bus.publish('app.launch.refused', {
+          summary: `${app.name} refused: ${parentNode.label} does not hold ${excess.join(', ')}`,
+          id, reason: 'attenuation', excess,
+        });
+        return null;
+      }
+      const game = app.game || app.id;
+      bus.publish('app.launch', {
+        summary: `Opening ${app.name}`, id, surface: app.surface, capabilities: caps, parentId,
+      });
+      if (app.inline) {
+        // Closing from the switcher ends the game, and the game then reports
+        // completion: stop listening first, so that report cannot close this
+        // node a second time while its first close is still running.
+        let off = null;
+        const hostNode = apps.spawn({
+          appId: app.id, parentId, capabilities: caps, label: app.name, surface: 'stage',
+          onClose: () => {
+            off?.();
+            try { window.FinkMinigames?.endMinigame?.(); } catch (err) { /* gone */ }
+          },
+        });
+        if (hostNode.refused) return null;
+        off = bus.subscribe('minigame.complete', (e) => {
+          if (e.data?.type !== game) return;
+          off();
+          if (apps.get(hostNode.id)) { apps.setOnClose(hostNode.id, null); apps.close(hostNode.id); }
+        });
+      } else {
+        _pendingGameParent = { type: game, parentNodeId: parentId };
+      }
+      window.FinkMinigames?.startMinigame(game, 'normal');
+      return null;
+    }
     const node = apps.spawn({
       appId: app.id, parentId, capabilities: caps,
       label: app.name, surface: app.surface,
@@ -2064,12 +2147,10 @@ function buildUI() {
       summary: `Opening ${app.name}`, id, surface: app.surface,
       capabilities: node.capabilities, instance: node.id, parentId,
     });
-    // Every app gets a storage namespace it cannot name its way out of.
-    // Granting is per-app and explicit: no capability, no snapshot.
-    store.grant(app.id, caps);
-    // …and a secrets namespace, on a SEPARATE capability, so an app that
-    // may keep preferences does not thereby get to keep credentials.
-    secrets.grant(app.id, caps);
+    // Storage and secrets grants follow the tree (syncBrokerGrants): this
+    // node's spawn granted them and the close of the app's last node
+    // revokes them. They stay SEPARATE capabilities, so an app that may
+    // keep preferences does not thereby get to keep credentials.
     // Verb grants are TWO conditions, both required. The app tree must have
     // granted the capability (so attenuation still bounds it — a child
     // cannot be aimed at a repo its parent may not write), AND a scope must
@@ -2079,9 +2160,6 @@ function buildUI() {
     aimVerbsFor(app.id, node.capabilities || caps);
 
     switch (app.surface) {
-      case 'stage':
-        window.FinkMinigames?.startMinigame(app.game, 'normal');
-        return null;
       case 'story':
         window.FinkPlayer?.loadFinkStory?.(app.url);
         return null;
@@ -2123,7 +2201,7 @@ function buildUI() {
         frame.src = app.url;
         win.appendChild(frame);
         document.body.appendChild(win);
-        governAppFrame(frame, app, win);
+        governAppFrame(frame, app, win, node);
         // Closing the node takes the window with it — and because close
         // cascades, closing whatever spawned this closes it too.
         // Ask for the playthrough before the frame goes. The window closes
@@ -2132,7 +2210,7 @@ function buildUI() {
         // way round posts into a destroyed browsing context and every
         // round-trip comes back empty, which is exactly how the minigame
         // snapshot shipped broken the first time (spec §5.5.4).
-        node.onClose = () => {
+        apps.setOnClose(node.id, () => {
           const ask = frame.__foafSnapshot;
           win.style.pointerEvents = 'none';
           if (!ask) { win.remove(); return; }
@@ -2146,7 +2224,7 @@ function buildUI() {
             }
             win.remove();
           }).catch(() => win.remove());
-        };
+        });
         win.dataset.instance = node.id;
         return win;
       }
@@ -2206,9 +2284,21 @@ function buildUI() {
     capUse.set(appId, u);
   }
 
-  function governAppFrame(frame, app, win) {
+  function governAppFrame(frame, app, win, node) {
     const sinkId = `app:${app.id}:${win.dataset.wid}`;
     const caps = app.capabilities || [];
+    // AUTHORITY IS THE NODE'S, asked at the moment of use. The registry row
+    // says what the app REQUESTS; only the live node says what it HOLDS. A
+    // closing window may still answer its snapshot request, and it holds
+    // nothing while it does.
+    const nodeId = node?.id || null;
+    const holds = (cap) => !!nodeId && apps.can(nodeId, cap);
+    const refuseAtNode = (topic, cap, op, extra = {}) => {
+      bus.publish(`${topic}.denied`, {
+        summary: `${app.name} holds no ${cap} (${op})`, appId: app.id, op, node: nodeId, ...extra,
+      });
+      return { ok: false, reason: 'denied' };
+    };
     // Only apps that make noise get a coverage placeholder. Listing
     // silent ones would drown the disclosure in spreadsheets.
     if (!app.silent) audio.register(sinkId, () => {}, { label: app.name, kind: 'uncontrollable' });
@@ -2217,10 +2307,11 @@ function buildUI() {
     // protocol as stage guests and <foafos-guest> widgets. A TV widget
     // is an app; it speaks in its own namespace and hears the shell
     // surfaces that shape it.
-    const busGrants = app.bus || {
+    // Recorded on the node, and the scoped bus is built from that record.
+    const busGrants = apps.setScope(nodeId, 'bus', app.bus || {
       publish: [`app.${app.id}.*`],
       subscribe: ['wm.mode', 'audio.volume', 'ui.skin'],
-    };
+    }) || { publish: [], subscribe: [] };
     const busName = `${app.id}#${win.dataset.wid}`;
     const scoped = scopeBus(bus, { name: busName, ...busGrants });
     scoped.subscribe('*', (e) => {
@@ -2239,10 +2330,11 @@ function buildUI() {
       // its capabilities and its whole stored keyspace, so its
       // synchronous localStorage shim is warm before its first line runs.
       if (d.type === 'app.hello') {
-        const snapshot = store.snapshot(app.id);
+        const snapshot = holds('storage') ? store.snapshot(app.id)
+          : (refuseAtNode('store', 'storage', 'snapshot'), null);
         try {
           frame.contentWindow?.postMessage({
-            type: 'app.init', appId: app.id, capabilities: caps,
+            type: 'app.init', appId: app.id, capabilities: [...(apps.get(nodeId)?.capabilities || [])],
             store: snapshot || {},
             config: {
               surface: app.surface, name: app.name, bus: busGrants,
@@ -2313,7 +2405,7 @@ function buildUI() {
           summary: `${app.name}: ${verb}`, appId: app.id, verb, detail: d.detail,
         });
         if (!need) { reply({ ok: false, reason: 'unknown-verb' }); return; }
-        if (!caps.includes(need)) { reply({ ok: false, reason: 'denied' }); return; }
+        if (!holds(need)) { reply({ ok: false, reason: 'denied' }); return; }
         // Keep the Running ⓘ "utilized" ledger truthful: a boxed runner's
         // narrative effects are a broker path like storage/secrets/verb/
         // audio, and must tally the same way (parked-work note, 2026-07-28).
@@ -2322,6 +2414,17 @@ function buildUI() {
           if (verb === 'story.launch') {
             const game = String(d.detail?.game || '').toLowerCase();
             if (!game) { reply({ ok: false, reason: 'bad-params' }); return; }
+            // Only a REGISTERED stage app may be launched. An unknown name used
+            // to reach the stage host and play Gem Hunt in its place.
+            const entry = stageApp(game);
+            if (!entry) {
+              bus.publish('app.launch.refused', {
+                summary: `${app.name} asked for "${game}", which is not a registered stage app`,
+                reason: 'unregistered', appId: app.id, game,
+              });
+              reply({ ok: false, reason: 'unregistered' });
+              return;
+            }
             // ATTENUATION IS CHECKED BEFORE THE GUEST STARTS.
             //
             // It used to be checked after: startMinigame() ran, the game
@@ -2350,7 +2453,7 @@ function buildUI() {
             const parentNodeId = (named && ownSessions.includes(named) ? named : null)
               || currentSession(runnerNodeId)?.id || runnerNodeId;
             const parentNode = parentNodeId ? apps.get(parentNodeId) : null;
-            const wantCaps = appById(game)?.capabilities || [];
+            const wantCaps = entry.capabilities || [];
             const excess = parentNode
               ? wantCaps.filter(c => !parentNode.capabilities.includes(c))
               : [];
@@ -2441,10 +2544,10 @@ function buildUI() {
               appId: 'story-session', parentId: runnerNode.id,
               capabilities: runnerNode.capabilities,
               label: sessionLabel(d.detail?.url), surface: 'story',
+              dreamOf: rel === 'godeeper' && outer ? outer.id : null,
+              peerOf: rel === 'peer' && outer ? outer.id : null,
             });
             if (node.refused) { reply({ ok: false, reason: node.reason || 'refused' }); return; }
-            if (rel === 'godeeper' && outer) node.dreamOf = outer.id;
-            if (rel === 'peer' && outer) node.peerOf = outer.id;
             stack.push(node.id);
             bus.publish('story.session', {
               summary: `story session "${node.label}" started`
@@ -2709,7 +2812,8 @@ function buildUI() {
       // silently diverging.
       if (d.type === 'store.set' || d.type === 'store.remove' || d.type === 'store.clear') {
         tallyCap(app.id, 'storage');
-        const r = d.type === 'store.set' ? store.set(app.id, d.key, d.value)
+        const r = !holds('storage') ? refuseAtNode('store', 'storage', d.type, { key: d.key })
+                : d.type === 'store.set' ? store.set(app.id, d.key, d.value)
                 : d.type === 'store.remove' ? store.remove(app.id, d.key)
                 : store.clear(app.id);
         if (!r.ok) {
@@ -2728,6 +2832,16 @@ function buildUI() {
         const reply = (payload) => {
           try { frame.contentWindow?.postMessage(payload, '*'); } catch (err) { /* closed */ }
         };
+        if (!holds('secrets')) {
+          refuseAtNode('secrets', 'secrets', d.type, { name: d.name });
+          if (d.type === 'secrets.names') {
+            reply({ type: 'secrets.names.result', rid: d.rid, names: null });
+          } else {
+            reply({ type: 'secrets.result', rid: d.rid, op: d.type, name: d.name,
+                    ok: false, reason: 'denied', sealed: secrets.sealed });
+          }
+          return;
+        }
         if (d.type === 'secrets.names') {
           reply({ type: 'secrets.names.result', rid: d.rid, names: secrets.names(app.id) });
           return;
@@ -2747,6 +2861,15 @@ function buildUI() {
       // is refused with a reason.
       if (d.type === 'verb') {
         tallyCap(app.id, d.verb?.startsWith('git.') ? 'git:write' : 'ops');
+        const need = ops.list().find((o) => o.verb === d.verb)?.capability;
+        if (need && !holds(need)) {
+          refuseAtNode('ops', need, d.verb);
+          try {
+            frame.contentWindow?.postMessage({ type: 'verb.result', rid: d.rid, verb: d.verb,
+              ok: false, reason: 'denied' }, '*');
+          } catch (err) { /* closed */ }
+          return;
+        }
         ops.invoke(app.id, d.verb, d.detail || {}).then((r) => {
           try {
             frame.contentWindow?.postMessage({ type: 'verb.result', rid: d.rid, verb: d.verb, ...r }, '*');
@@ -2760,7 +2883,7 @@ function buildUI() {
             type: 'verbs.result', rid: d.rid,
             // Only what this app may actually call, and its destination —
             // an app has no business enumerating another's grants.
-            verbs: ops.list().filter(o => ops.can(app.id, o.verb)).map(o => ({
+            verbs: ops.list().filter(o => holds(o.capability) && ops.can(app.id, o.verb)).map(o => ({
               verb: o.verb, capability: o.capability, secret: o.secret, note: o.note,
             })),
           }, '*');
@@ -2912,7 +3035,7 @@ function buildUI() {
     const chromeCount = running.filter(r =>
       r.node?.surface === 'chrome' && r.node.id !== rackId).length;
     const appCount = running.filter(r =>
-      r.node !== FoafOS.rootNode && r.node?.id !== rackId
+      r.node?.id !== FoafOS.rootNode?.id && r.node?.id !== rackId
       && r.node?.surface !== 'chrome').length;
     const tally = chromeCount ? `${appCount} + ${chromeCount} chrome` : String(appCount);
     sw.innerHTML = `<div class="foafos-overlay-head">
@@ -2964,7 +3087,7 @@ function buildUI() {
       row.appendChild(c);
 
       if (r.node) {
-        const isRoot = r.node === FoafOS.rootNode;
+        const isRoot = r.node.id === FoafOS.rootNode?.id;
         const kin = FoafOS.apps.descendants(r.node.id).length;
         const withKin = kin ? ` and ${kin} beneath it` : '';
 
@@ -3048,6 +3171,9 @@ function buildUI() {
   // into a list. The tree is now the truth, so this reads it instead;
   // the per-surface knowledge that survives is only about how to FOCUS
   // a thing, which really is presentation.
+  // What a node HOLDS, shown in its row: the live capability list that
+  // every broker asks. Scopes, aims and the sandbox are in its ⓘ panel.
+  const powersNote = (n) => (n.capabilities.length ? `holds ${n.capabilities.join(', ')}` : 'holds nothing');
   function collectRunning() {
     const out = [];
     const walk = (node, depth, parentLabel) => {
@@ -3075,6 +3201,7 @@ function buildUI() {
             child.surface === 'stage' ? snapshotNote() : '',
             child.surface === 'story' && window.FinkInkEngine?.storyStack?.length
               ? `dream depth ${FinkInkEngine.storyStack.length}` : '',
+            powersNote(child),
           ].filter(Boolean).join(' · '),
           focus: () => focusNode(child),
         });
@@ -3263,6 +3390,34 @@ function buildUI() {
       capWrap.appendChild(chip);
     }
     row('capabilities', capWrap);
+
+    // POWERS IN FORCE, each read from the thing that enforces it, never a
+    // copy. bus: the node's recorded scope, which its scoped bus was built
+    // from. variables: the manifest lists the vars broker is handed for
+    // this guest, behind the node's own vars caps. verbs: where each held
+    // verb points. sandbox: the live frame's own attributes.
+    const list = (a) => (a && a.length ? a.join(', ') : 'nothing');
+    const scopes = node.scopes || {};
+    if (scopes.bus) row('bus', `publishes ${list(scopes.bus.publish)} · hears ${list(scopes.bus.subscribe)}`);
+    const mgId = [...gameNodes].find(([, nid]) => nid === node.id)?.[0];
+    const inst = mgId ? window.FinkMinigames?.instances?.get(mgId) : null;
+    if (inst) {
+      const caps = node.capabilities || [];
+      row('variables', `reads ${caps.includes('vars:read')
+          ? list(['the shared economy', ...(inst.grants?.read || [])]) : 'nothing (no vars:read)'}`
+        + ` · writes ${caps.includes('vars:write') ? list(inst.grants?.write) : 'nothing (no vars:write)'}`);
+    }
+    const aims = ops.list().filter((o) => (node.capabilities || []).includes(o.capability)).map((o) => {
+      const sc = ops.scopeFor(node.appId, o.capability);
+      return `${o.verb} → ${sc ? (sc.repo || sc.bucket || sc.base) : 'not aimed, so refused'}`;
+    });
+    if (aims.length) row('verbs', aims.join(' · '));
+    const liveFrame = document.querySelector(`.foafos-window[data-instance="${node.id}"] iframe`)
+      || inst?.iframe || null;
+    if (liveFrame) {
+      row('sandbox', `${liveFrame.getAttribute('sandbox') || 'none'}`
+        + `${liveFrame.allow ? ` · allow ${liveFrame.allow}` : ''}`);
+    }
 
     // the story-overlay tree lives HERE now (owner's call: in the tabs,
     // not floating over the prose)
@@ -3542,6 +3697,13 @@ function buildUI() {
     const candidates = APPS.filter(a =>
       rootOffers(ROOT, a.id)
       && (a.capabilities || []).some(c => verbCaps.includes(c) && ROOT.capabilities.includes(c)));
+    // The PERSON acts here, for an app that may not be running. The panel
+    // borrows the app's secrets grant for one call; then the grant table
+    // goes back to following the tree.
+    const asOperator = (app, fn) => {
+      secrets.grant(app.id, app.capabilities || []);
+      try { return fn(); } finally { syncBrokerGrants(); }
+    };
 
     const draw = () => {
       if (!win.isConnected) return;
@@ -3558,7 +3720,8 @@ function buildUI() {
         for (const op of ops.list()) {
           if (!(app.capabilities || []).includes(op.capability)) continue;
           const scope = ops.scopeFor(app.id, op.capability);
-          const held = (secrets.names(app.id) || []).includes(op.secret);
+          // Whether a key is held does not depend on the app running.
+          const held = secrets.has(app.id, op.secret);
 
           const card = document.createElement('section');
           card.style.cssText = 'border:1px solid #345;padding:8px;display:flex;'
@@ -3625,13 +3788,12 @@ function buildUI() {
               if (!v) return;
               // Straight into the broker. Not stored here, not echoed back,
               // and the field is cleared so it does not sit in the DOM.
-              secrets.grant(app.id, app.capabilities || []);
-              const r = secrets.put(app.id, op.secret, v);
+              const r = asOperator(app, () => secrets.put(app.id, op.secret, v));
               key.value = '';
               if (r.ok) secrets.flush();
               draw();
             });
-            if (held) mk('FORGET KEY', () => { secrets.forget(app.id, op.secret); draw(); });
+            if (held) mk('FORGET KEY', () => { asOperator(app, () => secrets.forget(app.id, op.secret)); draw(); });
             if (scope) mk('UNAIM', () => { FoafOS.unaimOp(app.id); draw(); });
             card.appendChild(buttons);
 

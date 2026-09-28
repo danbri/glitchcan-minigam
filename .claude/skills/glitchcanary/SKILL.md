@@ -78,9 +78,12 @@ platform grows a slot and the content fills it.
 ## Wiring a minigame into a story (current live path)
 
 1. Package under `inklet/minigames/<name>/` with `index.html` (+
-   `manifest.json` for the designed SDK path).
-2. Register: add name to `iframeMinigames` and `minigameInfo` in
-   `inklet/finkapp/fink-minigames.js` (until MinigameHost routing lands).
+   `manifest.json`: variables read/write, features). A guest that lives
+   beside its own content instead names its page with `url` in step 2.
+2. Register: ONE row in `inklet/finkapp/foafos-apps.js`,
+   `surface: 'stage', game: '<name>'`, with capabilities, `desc`,
+   `controls`, and `silent` if it makes no sound. The stage host reads
+   that row; there is no second list. An unregistered name is refused.
 3. Invoke from Ink: `# MINIGAME: <name> mode=<m> controls=<dpad|lite|none>`
    then divert to a return knot; read the variables the game wrote.
 4. Remember: guest iframes have opaque origins — ES modules/fetches need

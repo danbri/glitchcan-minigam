@@ -11,7 +11,14 @@
 // What differs is
 //
 //   `surface`      — where it is drawn. Presentation only, no authority.
-//                    stage   the window manager's game window (full/split/pip)
+//                    stage   the window manager's game window (full/split/pip).
+//                            `game` is the name a `# MINIGAME:` tag uses
+//                            (`aliases` adds more). `url` names the page,
+//                            relative to finkapp/ like a window app's; with
+//                            no `url` the page is minigames/<game>/index.html
+//                            and its manifest.json. `inline: true` means the
+//                            host draws it (gems), so no frame. This row is
+//                            the ONLY list of games: the stage host reads it.
 //                    window  a floating shell window
 //                    story   loaded into the story engine (not a frame)
 //                    panel   shell-native UI (not a frame, no boundary)
@@ -119,16 +126,23 @@ export const APPS = [
   // Already isolated, and staying that way. `game` is the id the
   // minigame host knows this app by.
   { id: 'robbin', family: 'play', icon: '🐦', name: 'Robbin', surface: 'stage', game: 'robbin',
+    desc: 'Grow the flock across the Underground', controls: 'dpad',
     capabilities: ['input', 'vars:read', 'vars:write', 'audio'] },
   { id: 'gridluck', family: 'play', icon: '👻', name: 'GridLuck', surface: 'stage', game: 'gridluck',
+    desc: 'Pac-Man style maze chase', controls: 'none',
     capabilities: ['vars:read', 'vars:write'], silent: true },
   { id: 'mudslider', family: 'play', icon: '⛏️', name: 'Mudslider', surface: 'stage', game: 'mudslider',
+    desc: 'Boulder Dash-style puzzle', controls: 'lite',
     capabilities: ['input', 'vars:read', 'vars:write', 'audio'] },
   { id: 'battleboids', family: 'play', icon: '🧙', name: 'Boidwars', surface: 'stage', game: 'battleboids',
+    desc: 'Command your wizard flock', controls: 'none',
     capabilities: ['vars:read', 'vars:write', 'audio'] },
   { id: 'chess', family: 'play', icon: '♟️', name: 'Chess', surface: 'stage', game: 'chess',
+    desc: 'Classic strategy game', controls: 'none',
     capabilities: ['vars:read', 'vars:write'], silent: true },
+  // Drawn by the host, not a frame: `inline`. `mega` is its gems mode.
   { id: 'gems', family: 'play', icon: '💎', name: 'Gem Hunt', surface: 'stage', game: 'gems',
+    desc: 'Collect sparkling gems!', controls: 'none', inline: true, aliases: ['mega'],
     capabilities: ['vars:read', 'vars:write'], silent: true },
   // Skydock ran unregistered: the switcher showed it as a bare lowercase
   // "skydock" with a window glyph and CAPABILITIES none, because
@@ -137,8 +151,26 @@ export const APPS = [
   // shape the tree exists to make visible rather than convenient.
   { id: 'skydock', family: 'play', icon: '🛰️', name: 'Skydock Scuttlebutt',
     surface: 'stage', game: 'skydock',
+    desc: 'Gemstones and gossip on the night shift', controls: 'none',
     capabilities: ['input', 'vars:read', 'vars:write', 'audio'] },
+  // The table of contents links it (`# MINIGAME: canarywharf`), but it was in
+  // neither of the stage host's lists, so that link played Gem Hunt. Its
+  // page (magpie/dbdb) writes the wharf variables and makes sound, and it
+  // answers neither the audio nor the controls probe, so it holds neither.
+  { id: 'canarywharf', family: 'play', icon: '🐤', name: 'Canary Wharf',
+    surface: 'stage', game: 'canarywharf',
+    desc: 'One small bird, one big skyline', controls: 'none',
+    capabilities: ['vars:read', 'vars:write'] },
+  // Drift city's graphic-novel page, played as a stage app: a sandboxed
+  // guest with its own ink, launched by `# MINIGAME: cellar`. It lives
+  // beside its content, so it names its page with `url`. It reads and
+  // writes no story variable and its video is muted, so it holds nothing.
+  { id: 'cellar', family: 'play', icon: '🏮', name: 'The Lantern Cellar',
+    surface: 'stage', game: 'cellar', url: '../../drift-city/novel/cellar.html',
+    desc: 'A graphic-novel page from Drift City', controls: 'none',
+    capabilities: [], silent: true },
   { id: 'waterworld', family: 'play', icon: '🫧', name: 'Waterworld', surface: 'stage', game: 'waterworld',
+    desc: 'Submarine salvage in the drowned dock', controls: 'dpad',
     capabilities: ['input', 'vars:read', 'vars:write', 'audio'],
     // its scoped bus view: speak in its own namespace, hear the shell
     // surfaces that shape it (this is also the stage default, spelled out)

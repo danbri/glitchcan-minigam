@@ -111,4 +111,25 @@ export async function run() {
   {
     assert.ok(SHARED_DEFAULT.includes('minigame_played'));
   }
+
+  // With a capability tree behind it, a guest must HOLD vars:write on its
+  // live node before its manifest list counts — and vars:read to see
+  // anything at all. A closed node holds neither.
+  {
+    const v = new FoafVars();
+    const held = new Map([['live', new Set(['vars:read', 'vars:write'])], ['readonly', new Set(['vars:read'])]]);
+    v.authority = (actor, cap) => !!held.get(actor.node)?.has(cap);
+    const g = (node) => ({ kind: 'guest', id: 'gems', node, grants: { read: [], write: ['diamonds'] } });
+    const w = {};
+    const apply = (n, x) => { w[n] = x; };
+    assert.equal(v.write(g('live'), 'diamonds', 3, apply), true);
+    assert.equal(v.write(g('readonly'), 'diamonds', 4, apply), false, 'manifest alone is not enough');
+    assert.match(v.log.at(-1).reason, /does not hold vars:write/);
+    assert.equal(v.write(g('closed'), 'diamonds', 5, apply), false, 'a closed node writes nothing');
+    assert.equal(w.diamonds, 3);
+    assert.deepEqual(v.filterReadable(g('readonly'), { diamonds: 3, secret: 1 }), { diamonds: 3 });
+    assert.deepEqual(v.filterReadable(g('closed'), { diamonds: 3 }), {}, 'no vars:read, nothing seen');
+    // hosts and stories are not guests, and are not asked
+    assert.equal(v.write({ kind: 'story', id: 'runner' }, 'diamonds', 6, apply), true);
+  }
 }
