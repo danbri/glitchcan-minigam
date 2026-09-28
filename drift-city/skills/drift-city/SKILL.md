@@ -656,6 +656,31 @@ this (option 1 of 3) over splat heads on SDF bodies in the scene; holographic cr
   `__drift.headSay(audio.src, audio)` on a playing clip; `__drift.HEADS` shows the state. Not yet tested on a phone
   for speed.
 
+## Novel pages (`drift-city/novel/`, September 2026)
+
+Owner's idea: a scene told as one graphic-novel page, three to five held moments with thick black gutters, some panels
+moving (short looping video), the page bigger than a phone screen; a tap zooms in on the tapped point on an easing
+curve chosen for the mood, another tap zooms out. First page: `novel/cellar.html` (the Lantern Cellar).
+
+- Page: a 1080x1520 CSS grid in black, scaled to fit the screen; zoom-in is about 2.6 times that, the tapped point
+  kept under the finger; drag to look around while zoomed. Mood is two CSS variables: `--zoom-ease` (noir:
+  `cubic-bezier(0.7, 0, 0.25, 1)`, slow in and out, no overshoot) and `--zoom-time` (1.6 s). Stills drift slowly
+  (CSS) until they are replaced by moving panels. Captions are paper boxes in a typewriter face.
+- Video: muted, looping, `playsinline`, played again on the first tap (iOS), paused in a hidden tab. H.264 plus a
+  VP9 WebM source: open-source Chromium (the test browser here) has no H.264 and reports error 4.
+- Making a moving panel with the ElevenLabs connector (`creative_*` tools): upload the still
+  (`creative_create_asset_upload`, one HTTP PUT, `creative_finalize_asset_upload` with the flow), add a
+  video-generation node, wire the still to `start_frame` (and `end_frame`) with `creative_connect_flow_nodes`, price
+  it with `estimate_only`, run, poll, then download the media URL from the run status yourself: the links the
+  connector returns (flow and history pages) did not open for the owner, even logged in. Prices seen: Kling 3.0 Pro,
+  8 s, 1080p square, about 5,430 credits; Seedance 2.0 about 33,000 at 1080p and 14,700 at 720p.
+- Lesson: the same image as start and end frame, with "locked-off camera" and "the final frame matches the first",
+  gave an almost still clip (mean frame-to-frame change under 1 in 255). Start frame only, with the action spelled
+  out (lifts her hand, taps on every beat, nods, sways), moved well. Loop it yourself: forward and backward joins,
+  or a crossfade inside a repeated section, and a camera drift that returns to its start (ffmpeg `zoompan` with
+  `on/N` in a cosine). Check with numbers: the last frame against the first, frame-to-frame change.
+- Media notes and costs: `novel/media/README.md`.
+
 ## Feeling the choices (`src/feel.js`)
 
 A thumb slid over the story's choices feels which one it is on, so a player can choose while watching the city:
