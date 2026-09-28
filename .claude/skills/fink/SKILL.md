@@ -1082,29 +1082,46 @@ back to the default and say `fellBack` on `root.ready`.
     ("and 1 beneath it") — a grouped-window UI that takes three things by
     surprise is the classic failure. Pause is a tristate (this app → its
     tree too → resume) and its name says which press does what.
-  - **Phone** (under 40rem): `table-layout: fixed` plus a `<colgroup>`;
-    Kind, State, Powers and On close are hidden and the row's description
-    line carries them. Measured before the fix at 390px: the action
-    buttons ran off the right edge, and opening a details row squeezed
-    the name column until it read "NAMI". **TWO TRAPS:** (1) a rule such
-    as `.c-kind { display: none }` also matches `<col class="c-kind">`, and
-    a hidden `col` drops out of the column model, so the fixed layout
-    gives the widths to the wrong columns. Scope the rule to cells,
-    `:is(th, td):is(.c-kind, …)`. (2) A cell with `display: none` leaves
-    no hole: the cells after it move left, so the action cell becomes
-    each row's SECOND cell and sits in the SECOND column. Size the
-    columns by position (`col:nth-child(2)`), not by class. Sized by
-    class, the action cells were 0px wide; their buttons overflowed into
-    an empty sixth column and the row lines stopped at the name. The
-    details row spans all six, so the four unused columns need
-    `width: 0`, or they take a share of the row from the name.
+  - **Three widths.** Wide (64rem up): six columns. Mid (45rem to 64rem,
+    a tablet): Kind and On close hide, and a line under the name
+    (`.sub-a`) says them. Narrow (under 45rem): `table-layout: fixed` plus
+    a `<colgroup>`; only Name and the actions stay, and the line under the
+    name (`.sub-a` + `.sub-b`) says the rest. A details or brick row spans
+    only the columns on screen (`shownCols()`, re-rendered on a media
+    change: a tablet turned).
+    - **`nowrap` sets an auto-layout table's least width.** With nowrap
+      names, kinds and states, the six-column table needed ~1016px: from
+      640px to 900px (every iPad in portrait) it scrolled sideways with 16
+      action buttons off the edge. `qa-journey` had reported it for weeks
+      as a non-failing "off-screen but still focusable" finding at tablet
+      width, for the old switcher too. Read the findings list, not only
+      the exit code.
+    - **`overflow-wrap: anywhere` changes the least width, not only the
+      wrapping.** It let the table size the Name column below one word, so
+      names broke mid-word ("Finkosphe re"). `break-word` keeps words
+      whole. The Powers cell is capped at 20rem, or its long list takes the
+      Name column's share of the spare width.
+    - Measured at 390px during the work: the action buttons ran off the
+      right edge, and opening a details row squeezed the name column until
+      it read "NAMI". **TWO TRAPS at phone width:** (1) a rule such
+      as `.c-kind { display: none }` also matches `<col class="c-kind">`, and
+      a hidden `col` drops out of the column model, so the fixed layout
+      gives the widths to the wrong columns. Scope the rule to cells,
+      `:is(th, td):is(.c-kind, …)`. (2) A cell with `display: none` leaves
+      no hole: the cells after it move left, so the action cell becomes
+      each row's SECOND cell and sits in the SECOND column. Size the
+      columns by position (`col:nth-child(2)`), not by class. Sized by
+      class, the action cells were 0px wide; their buttons overflowed into
+      an empty sixth column and the row lines stopped at the name. The
+      four unused columns need `width: 0`, or they take a share of the row
+      from the name.
   - **Skin tokens**: secondary text and context rows use `--sk-ink-dim`,
     never opacity. `--sk-dim` is defined by no skin; see "Skins" above
     for what that cost and how it was measured.
-  - Tests: `e2e-taskmanager.mjs` (21 checks: dialog, the brick row and
+  - Tests: `e2e-taskmanager.mjs` (23 checks: dialog, the brick row and
     its note, sorts, filter and marks, quick filters, folding, keyboard,
     chrome toggle, details and the developer handles, live removal, pause
-    from the row, the phone layout). `e2e-powers`, `e2e-root`, `e2e-snapshot`, `e2e-chrome`,
+    from the row, and the layout at 1024, 820 and 390px). `e2e-powers`, `e2e-root`, `e2e-snapshot`, `e2e-chrome`,
     `e2e-desktop`, `qa-journey` and `aria-audit` also read it.
 - **Suspension**: `FoafOS.setSubtreeSuspended(id, bool)` sets the tree
   flag AND reaches the things in it (guest pause, `app.suspend` postMessage

@@ -297,34 +297,54 @@ try {
     : fail(`pause: ${JSON.stringify(paused)}`);
   await page.evaluate(() => document.getElementById('foafos-switcher')?.remove());
 
-  // 11. phone width: two columns, nothing past the edge, details full width
-  // (Data again, so a brick row is there to overflow if it can)
-  await page.evaluate(() => FoafOS.launchApp('sheets'));
-  await page.waitForFunction(() => [...FoafOS.apps.nodes.values()].some((n) => n.appId === 'sheets'));
+  // 11. three widths, three layouts, and at each one nothing past the edge
+  // (fink skill: "Three widths"). Data and the soundtrack, the longest
+  // name, run too: two brick rows.
+  await page.evaluate(() => { FoafOS.launchApp('sheets'); FoafOS.launchApp('channels'); });
+  await page.waitForFunction(() => ['sheets', 'channels']
+    .every((a) => [...FoafOS.apps.nodes.values()].some((n) => n.appId === a)));
   await page.evaluate(() => FoafOS.openSwitcher());
-  await page.setViewportSize({ width: 390, height: 844 });
-  await wait(300);
-  const narrow = await page.evaluate(async () => {
-    const sw = document.getElementById('foafos-switcher');
-    const scroll = sw.querySelector('.foafos-tm-scroll');
-    const acts = [...sw.querySelectorAll('.foafos-switch-act')].filter((b) => b.getBoundingClientRect().width);
-    const hiddenCols = ['c-kind', 'c-state', 'c-powers', 'c-place']
-      .every((c) => getComputedStyle(sw.querySelector(`th.${c}`)).display === 'none');
-    const nameW = sw.querySelector('th.c-name').getBoundingClientRect().width;
-    // the action cells are their buttons' width, not a 0px column they overflow
-    const actW = Math.min(...[...sw.querySelectorAll('tr.foafos-switch-row td.c-act')]
-      .map((td) => td.getBoundingClientRect().width));
-    sw.querySelector('tr.foafos-switch-row .foafos-switch-info').click();
-    await new Promise((r) => setTimeout(r, 150));
-    return { overflow: scroll.scrollWidth - scroll.clientWidth,
-             actsInView: acts.every((b) => b.getBoundingClientRect().right <= innerWidth),
-             hiddenCols, nameW, actW, walls: sw.querySelectorAll('tr.foafos-tm-wall').length,
-             nameWWithDetails: sw.querySelector('th.c-name').getBoundingClientRect().width };
-  });
-  narrow.overflow === 0 && narrow.actsInView && narrow.hiddenCols && narrow.actW >= 120 && narrow.walls === 1
-    && Math.abs(narrow.nameWWithDetails - narrow.nameW) < 2
-    ? pass(`at 390px: two columns, no sideways scroll, every button on screen; a details row keeps the name column (${Math.round(narrow.nameW)}px)`)
-    : fail(`phone layout: ${JSON.stringify(narrow)}`);
+  const LAYOUTS = [
+    { w: 1024, h: 800, cols: ['name', 'kind', 'state', 'powers', 'place', 'act'] },
+    { w: 820, h: 1180, cols: ['name', 'state', 'powers', 'act'] },
+    { w: 390, h: 844, cols: ['name', 'act'] },
+  ];
+  for (const L of LAYOUTS) {
+    await page.setViewportSize({ width: L.w, height: L.h });
+    await wait(300);
+    const m = await page.evaluate(async () => {
+      const sw = document.getElementById('foafos-switcher');
+      const shown = (el) => el && getComputedStyle(el).display !== 'none';
+      const scroll = sw.querySelector('.foafos-tm-scroll');
+      const acts = [...sw.querySelectorAll('.foafos-switch-act')].filter((b) => b.getBoundingClientRect().width);
+      const cols = [...sw.querySelectorAll('thead th')].filter(shown).map((th) => th.className.slice(2));
+      const nameW = sw.querySelector('th.c-name').getBoundingClientRect().width;
+      // the action cells are their buttons' width, not a 0px column they overflow
+      const actW = Math.min(...[...sw.querySelectorAll('tr.foafos-switch-row td.c-act')]
+        .map((td) => td.getBoundingClientRect().width));
+      const card = sw.querySelector('tr.foafos-switch-row .foafos-switch-card');
+      const line = { a: shown(card.querySelector('.sub')) && shown(card.querySelector('.sub-a')),
+                     b: shown(card.querySelector('.sub')) && shown(card.querySelector('.sub-b')) };
+      sw.querySelector('tr.foafos-switch-row .foafos-switch-info').click();
+      await new Promise((r) => setTimeout(r, 150));
+      const span = document.querySelector('#foafos-switcher tr.foafos-tm-details > td')?.colSpan;
+      const out = { overflow: scroll.scrollWidth - scroll.clientWidth,
+        actsInView: acts.every((b) => b.getBoundingClientRect().right <= innerWidth),
+        cols, nameW: Math.round(nameW), actW: Math.round(actW), line, span,
+        walls: sw.querySelectorAll('tr.foafos-tm-wall').length,
+        nameWWithDetails: Math.round(document.querySelector('#foafos-switcher th.c-name').getBoundingClientRect().width) };
+      document.querySelector('#foafos-switcher tr.foafos-switch-row .foafos-switch-info').click();   // close it again
+      await new Promise((r) => setTimeout(r, 100));
+      return out;
+    });
+    const lineOk = L.w >= 1024 ? !m.line.a && !m.line.b : L.w >= 720 ? m.line.a && !m.line.b : m.line.a && m.line.b;
+    m.overflow === 0 && m.actsInView && m.cols.join() === L.cols.join() && m.span === L.cols.length
+      // the flexible layouts move a column a few px when a details row opens;
+      // the fault this guards against squeezed the name to four letters
+      && m.walls === 2 && lineOk && m.nameWWithDetails >= 0.9 * m.nameW && m.actW >= 120
+      ? pass(`at ${L.w}px: ${L.cols.length} columns (${L.cols.join(', ')}), no sideways scroll, every button on screen; a details row spans them and keeps the name column (${m.nameW}px)`)
+      : fail(`layout at ${L.w}px: ${JSON.stringify(m)}`);
+  }
 
   errs.length === 0 ? pass('no page errors') : fail(`page errors: ${errs.slice(0, 3).join(' · ')}`);
   console.log(process.exitCode ? '\nTASK MANAGER E2E: FAIL' : '\nTASK MANAGER E2E: PASS');

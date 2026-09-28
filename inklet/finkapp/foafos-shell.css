@@ -975,9 +975,9 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 .foafos-switch-card .txt { display: flex; flex-direction: column; min-width: 0; }
 .foafos-switch-card .ttl {
     font-size: .95rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    /* may wrap between words: a name that cannot sets the table's least
+       width. Not `anywhere`, which sizes the column below one word. */
+    overflow-wrap: break-word;
 }
 .foafos-switch-card .sub { font-size: .75rem; color: var(--sk-ink-dim, #8fa3c0); }
 .foafos-tm mark {
@@ -986,7 +986,7 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
     border-radius: 2px;
 }
 .foafos-tm-table .c-state .x { color: var(--sk-ink-dim, #8fa3c0); }
-.foafos-tm-table .pw { display: flex; align-items: center; gap: .45em; min-width: 0; }
+.foafos-tm-table .pw { display: flex; align-items: center; gap: .45em; min-width: 0; max-width: 20rem; }
 .foafos-tm-table .pw-n {
     flex: none;
     min-width: 1.7em;
@@ -1081,12 +1081,18 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 .foafos-tm-limits-body ul { margin: .35rem 0; }
 .foafos-tm-limits-body ul { padding-left: 1.2rem; }
 .foafos-tm-empty .foafos-tm-btn { margin-left: .5rem; }
-/* Wide: the columns say it, so the line under the name goes. Narrow: the
-   line under the name says it, so three columns and the powers' names go. */
-@media (min-width: 40rem) {
+/* Three widths (fink skill, Task Manager). Wide (64rem up): six columns,
+   and the line under the name goes. Mid (45rem to 64rem, a tablet): Kind
+   and On close go, and the line under the name says them. Narrow: the line
+   says everything, and only the name and the actions stay. */
+@media (min-width: 64rem) {
     .foafos-switch-card .sub { display: none; }
 }
-@media (max-width: 39.99rem) {
+@media (min-width: 45rem) and (max-width: 63.99rem) {
+    .foafos-tm-table :is(th, td):is(.c-kind, .c-place) { display: none; }
+    .foafos-switch-card .sub-b { display: none; }
+}
+@media (max-width: 44.99rem) {
     /* two columns: the name (with its line) and the actions, whose width is
        fixed so the buttons can never be pushed off the edge */
     .foafos-tm-table { table-layout: fixed; }

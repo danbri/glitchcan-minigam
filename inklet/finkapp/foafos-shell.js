@@ -3183,6 +3183,10 @@ function buildUI() {
       </div>`;
     const $$ = (s) => sw.querySelector(s);
     const tbody = $$('tbody');
+    // How many columns are on screen: fewer at mid and phone widths, where
+    // a row spanning all six would give the hidden ones a share of the row.
+    const shownCols = () => [...sw.querySelectorAll('thead th')]
+      .filter((th) => getComputedStyle(th).display !== 'none').length || TM_COLS.length + 1;
     const filter = $$('.foafos-tm-filter');
     filter.value = tm.query;
     const say = (text) => { $$('.foafos-tm-status').textContent = text; };
@@ -3271,7 +3275,7 @@ function buildUI() {
       const tr = document.createElement('tr');
       tr.className = 'foafos-tm-wall';
       const td = document.createElement('td');
-      td.colSpan = TM_COLS.length + 1;
+      td.colSpan = shownCols();
       td.innerHTML = '<span class="bricks" aria-hidden="true"></span><span class="sr-only">Sandbox partition</span>';
       td.querySelector('.bricks').textContent = '🧱'.repeat(16);
       td.title = 'Sandbox partition: nothing below was opened by anything above';
@@ -3320,9 +3324,13 @@ function buildUI() {
       sub.id = `foafos-tm-sub-${r.id}`;
       // a context row is dimmed for the eye; the description says it for
       // everyone else, and on a phone, where this line is shown
-      sub.textContent = [r.status === 'context' ? 'Shown for context' : '', r.kind,
-        r.paused ? 'paused' : '', r.place, ...r.extra, powersNote(r.node)]
+      // In two parts, so a mid-width layout can show only the first: the
+      // columns it hides (kind, on close). A phone shows both.
+      sub.innerHTML = '<span class="sub-a"></span><span class="sub-b"></span>';
+      sub.firstChild.textContent = [r.status === 'context' ? 'Shown for context' : '', r.kind, r.place]
         .filter(Boolean).join(' · ');
+      const rest = [r.paused ? 'paused' : '', ...r.extra, powersNote(r.node)].filter(Boolean).join(' · ');
+      sub.lastChild.textContent = rest ? ` · ${rest}` : '';
       if (!r.isRoot) {
         card.setAttribute('aria-label', `Switch to ${r.label}`);
         card.setAttribute('aria-describedby', sub.id);
@@ -3419,7 +3427,7 @@ function buildUI() {
       tr.dataset.for = r.id;
       tr.style.setProperty('--depth', String(r.depth));
       const td = document.createElement('td');
-      td.colSpan = TM_COLS.length + 1;
+      td.colSpan = shownCols();
       const panel = buildAppInfo(r.node, r.label);
       const dev = document.createElement('div');
       dev.className = 'fi-row foafos-tm-dev';
@@ -3519,7 +3527,7 @@ function buildUI() {
       if (!rows.length) {
         const tr = document.createElement('tr');
         const td = cell('foafos-tm-empty', 'Nothing running matches this filter. ');
-        td.colSpan = TM_COLS.length + 1;
+        td.colSpan = shownCols();
         const clear = button('foafos-tm-btn', 'tools:clear', 'Clear the filter');
         clear.addEventListener('click', () => {
           tm.query = ''; tm.only.clear(); filter.value = '';
@@ -3610,6 +3618,13 @@ function buildUI() {
     };
     const offs = ['app.spawn', 'app.close', 'app.suspend', 'app.resume', 'app.scope', 'wm.mode']
       .map((t) => bus.subscribe(t, later));
+    // and when the layout changes: a tablet turned, a window resized
+    for (const q of ['(max-width: 44.99rem)', '(max-width: 63.99rem)']) {
+      const mq = window.matchMedia?.(q);
+      if (!mq?.addEventListener) continue;
+      mq.addEventListener('change', later);
+      offs.push(() => mq.removeEventListener('change', later));
+    }
     new MutationObserver((_, obs) => {
       if (sw.isConnected) return;
       offs.forEach((off) => off());
