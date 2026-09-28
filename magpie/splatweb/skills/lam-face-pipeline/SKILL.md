@@ -130,6 +130,22 @@ existing three shapes: `lam-sample/` self-contained, `lam-synth-faces/
 `resolveFace(PERSONAS[i].faceId)` call pick up a new id automatically —
 no other file needs touching for the id to become choosable.
 
+## Posing on the GPU (September 2026)
+
+`lib/gpu-skinned-avatar.js` poses a loaded `LamHeadAvatar` in a WGSL compute pass; a `GpuSplatScene`
+(`lib/gpu-splat-compute.js`) draws it. Two things a caller must know, both found wiring Drift City's talking heads
+(`drift-city/src/heads.js`; the drift-city skill, "Talking heads", has the measurements):
+
+- **Channels.** Only the ARKit channels in `opts.morphNames` are baked (default `MORPH_NAMES`, 17: visemes and
+  blinks). A face that should show moods (brows, eye squints, cheeks, eye direction) must pass them; each channel
+  adds 3 floats per splat to the rest buffer.
+- **Order.** The scene does not sort the splats inside one drawable, and a face drawn in file order blends wrongly.
+  For a fixed camera, order once: `device.queue.writeBuffer(drawable.orderBuf, 0, presortOrder(avatar, cameraPos,
+  { yaw }))`. A moving camera needs a per-frame sort, which the library does not have.
+- `rig.destroy()` frees the avatar's own GPU buffers; the drawable's `outBuf` and `orderBuf` are the caller's.
+- Everything is optional: callers that pass none of this (the pentagram, compositor and GPU-splats demos) get the
+  same shader and buffers as before.
+
 ## 6. Attribution — same commit, not a follow-up
 
 `third_party/ATTRIBUTION.md` has a working template row for both source

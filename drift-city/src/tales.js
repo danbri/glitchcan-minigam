@@ -215,8 +215,18 @@ function taleLink(file) {
   taleOpen();
 }
 
-function taleStore(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
-function taleFetch(k) { if (!k) return null; try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+// saves go to localStorage and to taleMem; a page with no storage of its own (a sandboxed frame: the foafos stage app,
+// host.js) reads them back from taleMem, and host.js hands taleMem to the shell as its snapshot
+function taleMem() { return taleMem.m || (taleMem.m = {}); }
+function taleStore(k, v) {
+  if (v === null) delete taleMem()[k]; else taleMem()[k] = JSON.stringify(v);
+  try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+}
+function taleFetch(k) {
+  if (!k) return null;
+  try { const s = localStorage.getItem(k); if (s !== null) return JSON.parse(s); } catch (e) {}
+  try { return JSON.parse(taleMem()[k] || "null"); } catch (e) { return null; }
+}
 function taleSave() { if (TALE.story && taleKey()) taleStore(taleKey(), { state: TALE.story.state.toJson(), paras: TALE.paras, scene: TALE.scene, place: TALE.place, hot: TALE.hot, props: TALE.props }); }
 function taleForget() { if (taleKey()) taleStore(taleKey(), null); }
 
@@ -357,7 +367,9 @@ function taleAdvance() {
     return;
   }
   TALE.paras = paras;
-  taleSay(paras, s.currentChoices);
+  // at an end, inside foafos (host.js): the way back to the story that opened the city
+  const back = !s.currentChoices.length && hostOn();
+  taleSay(paras, back ? [{ text: "Back to the story" }] : s.currentChoices, back ? () => hostComplete() : undefined);
   taleSave();
 }
 function taleSay(paras, choices, onPick) {
@@ -400,6 +412,7 @@ function taleSpeech(file, info) {
   let url;
   try { url = new URL(file, new URL(TALE_DIR + TALE.file, location.href)).href; } catch (e) { return; }
   const S = TALE.speech || (TALE.speech = { el: new Audio(), q: [] });
+  S.el.volume = hostGain();
   S.q.push({ url, info });
   if (!S.wired) { S.wired = true; S.el.addEventListener("ended", () => taleSpeechNext()); S.el.addEventListener("error", () => taleSpeechNext()); }
   if (!S.busy) taleSpeechNext();

@@ -3,6 +3,7 @@
 // framed feed opens in the corner with that person's face: a rigged Gaussian-splat head (LAM, from magpie/splatweb,
 // synthetic faces only), its mouth moved by the loudness of the clip. On Titan everyone wears a helmet, so a face
 // reaching you on the visor's comms feed, flickering, is part of the world. Nothing loads until someone speaks.
+// Posed and drawn on the GPU with WebGPU where the browser has it (headRenderer); on the CPU and WebGL2 where not.
 // How it is built, the casting and the rules: the drift-city skill, "Talking heads".
 const HEAD_LIB = "../../magpie/splatweb/lib/";
 const HEAD_ART = "../../magpie/splatweb/third_party/";
@@ -43,17 +44,78 @@ function headMoodOf(text, tag, base) {
   if (/\b(leans|whispers?|winks?|coy)\b/.test(t)) return "sly";
   return base || "neutral";
 }
-const HEADS = { lib: null, libP: null, avatars: {}, env: {}, el: null, cv: null, r: null, who: null, audio: null, buf: null, raf: 0, hideAt: 0, fail: false };
+const HEADS = { lib: null, libP: null, avatars: {}, env: {}, el: null, cv: null, r: null, who: null, audio: null, buf: null, raf: 0, hideAt: 0, fail: false, paused: false, device: null, noGpu: false, rP: null };
 function headSpeaker(url) {
   const m = /\/([a-z]+)-[^/]*\.mp3(?:$|\?)/.exec(url || "");
   return m && HEAD_CAST[m[1]] ? m[1] : null;
 }
 function headLib() {
   if (!HEADS.libP) {
-    HEADS.libP = Promise.all([import(HEAD_LIB + "splat-renderer.js"), import(HEAD_LIB + "lam-splats.js"), import(HEAD_LIB + "lam-visemes.js")])
-      .then(([sr, ls, lv]) => { HEADS.lib = { SplatRenderer: sr.SplatRenderer, F: sr.FLOATS_PER_SPLAT, loadLamAvatar: ls.loadLamAvatar, sampleTalkBurst: lv.sampleTalkBurst }; return HEADS.lib; });
+    const gpu = typeof navigator !== "undefined" && navigator.gpu
+      ? Promise.all([import(HEAD_LIB + "gpu-splat-compute.js"), import(HEAD_LIB + "gpu-skinned-avatar.js")]).catch(() => null)
+      : Promise.resolve(null);
+    HEADS.libP = Promise.all([import(HEAD_LIB + "splat-renderer.js"), import(HEAD_LIB + "lam-splats.js"), import(HEAD_LIB + "lam-visemes.js"), gpu])
+      .then(([sr, ls, lv, g]) => {
+        HEADS.lib = { SplatRenderer: sr.SplatRenderer, F: sr.FLOATS_PER_SPLAT, loadLamAvatar: ls.loadLamAvatar, sampleTalkBurst: lv.sampleTalkBurst,
+          gpu: g ? { requestComputeDevice: g[0].requestComputeDevice, GpuSplatScene: g[0].GpuSplatScene, createGpuSkinnedAvatar: g[1].createGpuSkinnedAvatar,
+            presortOrder: g[1].presortOrder, MORPH_NAMES: g[1].MORPH_NAMES } : null };
+        return HEADS.lib;
+      });
   }
   return HEADS.libP;
+}
+// every ARKit channel a head is driven with: the visemes and blinks (MORPH_NAMES), the moods (HEAD_MOODS) and what
+// speech adds in headFrame (brow flashes, the eyes' small jumps). The GPU pose bakes only the channels it is given.
+const HEAD_SPEECH_SHAPES = ["jawOpen", "browInnerUp", "browOuterUpLeft", "browOuterUpRight", "eyeLookOutLeft", "eyeLookOutRight",
+  "eyeLookInLeft", "eyeLookInRight", "eyeLookUpLeft", "eyeLookUpRight", "eyeLookDownLeft", "eyeLookDownRight", "eyeBlinkLeft", "eyeBlinkRight"];
+function headMorphNames(base) { return [...new Set([...base, ...HEAD_SPEECH_SHAPES, ...Object.values(HEAD_MOODS).flatMap((m) => Object.keys(m))])]; }
+// The drawing. With WebGPU: the pose in a WGSL compute pass (gpu-skinned-avatar.js) and the draw in a GpuSplatScene,
+// on the page's own device when it has one (HEADS.device, set by the city's main.js: a phone should not hold two).
+// Without it: the CPU pose, 20,000 splats of JavaScript, and the WebGL2 SplatRenderer.
+async function headRenderer(L) {
+  if (L.gpu && !HEADS.noGpu) {
+    try {
+      const device = HEADS.device || await L.gpu.requestComputeDevice();
+      const scene = new L.gpu.GpuSplatScene(device, HEADS.cv, { background: [0.02, 0.03, 0.04] });
+      if (device !== HEADS.device) device.lost.then(() => headGpuLost());
+      return { kind: "webgpu", device, scene, rigs: new Map() };
+    } catch (e) { console.warn("talking head: no WebGPU, drawing with WebGL2:", e && e.message); headNewCanvas(); }
+  }
+  return { kind: "webgl2", r: new L.SplatRenderer(HEADS.cv, { background: [0.02, 0.03, 0.04] }), buf: new Float32Array(20200 * L.F) };
+}
+// a canvas that once gave a WebGPU context cannot give WebGL2: swap in a fresh one
+function headNewCanvas() {
+  const old = HEADS.cv, cv = document.createElement("canvas");
+  if (old && old.parentNode) old.parentNode.replaceChild(cv, old);
+  HEADS.cv = cv;
+}
+function headGpuLost() { HEADS.noGpu = true; HEADS.r = null; HEADS.rP = null; headNewCanvas(); }
+// one face on the feed, posed and drawn: its GPU rig is made once per face, its splats ordered once back to front
+// from the feed's fixed camera (presortOrder: a scene sorts objects, not the splats inside one); the last three faces
+// are kept, the rest freed
+function headDraw(a, head, morph, s) {
+  const R = HEADS.r, h = a.heightM, eye = [0, h * 0.5, -h * 1.3], look = [0, h * 0.46, 0];
+  HEADS.frames = (HEADS.frames || 0) + 1;
+  if (R.kind === "webgpu") {
+    const G = HEADS.lib.gpu;
+    let rig = R.rigs.get(a);
+    if (!rig) {
+      const obj = R.scene.addObject(a.count, [0, 0, 0]);
+      R.device.queue.writeBuffer(obj.orderBuf, 0, G.presortOrder(a, eye, { yaw: a.yaw }));
+      rig = { obj, gpu: G.createGpuSkinnedAvatar(R.device, a, obj.outBuf, { morphNames: headMorphNames(G.MORPH_NAMES) }) };
+      R.rigs.set(a, rig);
+      for (const [k, old] of [...R.rigs].slice(0, -3)) { old.gpu.destroy(); old.obj.outBuf.destroy(); old.obj.orderBuf.destroy(); R.rigs.delete(k); }
+    }
+    R.scene.objects = [rig.obj];
+    rig.gpu.update(s, { at: [0, 0, 0], yaw: a.yaw, bones: { head }, morph });
+    R.scene.setCamera(eye, look, 0.7);
+    R.scene.render((enc) => rig.gpu.encode(enc));
+    return;
+  }
+  const out = a.pose({ at: [0, 0, 0], bones: { head }, morph }, R.buf, 0);
+  R.r.setData(out, a.lastCount);
+  R.r.setCamera(eye, look, 0.7);
+  R.r.render();
 }
 function headAvatar(who) {
   const c = HEAD_CAST[who];
@@ -130,6 +192,8 @@ function headHide() {
 function headFrame(now) {
   HEADS.raf = 0;
   if (!HEADS.who) return;
+  // paused by the page's host (the foafos shell): no posing and no drawing, the face stays as it is
+  if (HEADS.paused) { HEADS.raf = requestAnimationFrame(headFrame); return; }
   if (HEADS.hideAt && now > HEADS.hideAt) { headHide(); return; }
   HEADS.raf = requestAnimationFrame(headFrame);
   headPlace();
@@ -138,13 +202,12 @@ function headFrame(now) {
   if (HEADS.el) HEADS.el.style.setProperty("--lvl", lvl.toFixed(2));
   const a = HEADS.av, L = HEADS.lib;
   if (!a || !L || !HEADS.cv) return;
-  // draw at about 30 frames a second: the pose is computed on the CPU for 20,000 splats
-  if (HEADS.last && now - HEADS.last < 30) return;
-  HEADS.last = now;
   if (!HEADS.r) {
-    try { HEADS.r = new L.SplatRenderer(HEADS.cv, { background: [0.02, 0.03, 0.04] }); } catch (e) { HEADS.fail = true; headHide(); return; }
-    HEADS.buf = new Float32Array(20200 * L.F);
+    if (!HEADS.rP) HEADS.rP = headRenderer(L).then((r) => { HEADS.r = r; }).catch((e) => { HEADS.fail = true; console.warn("talking head unavailable:", e && e.message); headHide(); });
+    return;
   }
+  // on the CPU the pose is 20,000 splats of JavaScript, so about 30 frames a second; the GPU path draws every frame
+  if (HEADS.r.kind === "webgl2") { if (HEADS.last && now - HEADS.last < 30) return; HEADS.last = now; }
   const s = now / 1000;
   const talk = playing ? L.sampleTalkBurst(t, { seed: HEADS.who.length * 17, durationSec: (A.duration || 4) + 1 }) : {};
   // the library's visemes are built to be unmissable in a demo (about 1.4 times full strength); at that size a LAM
@@ -181,9 +244,5 @@ function headFrame(now) {
   const yaw = Math.sin(s / 2.9) * 0.1 + lvl * 0.04 * Math.sin(s * 5.0) + X.gx * 0.15, pitch = Math.sin(s / 3.7) * 0.04 - lvl * 0.03 - 0.06 * X.flash + 0.05 * endQ;
   const qy = [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)], qp = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
   const head = [qy[3] * qp[0], qy[1] * qp[3], -qy[1] * qp[0], qy[3] * qp[3]];
-  const out = a.pose({ at: [0, 0, 0], bones: { head }, morph }, HEADS.buf, 0);
-  HEADS.r.setData(out, a.lastCount);
-  const h = a.heightM;
-  HEADS.r.setCamera([0, h * 0.5, -h * 1.3], [0, h * 0.46, 0], 0.7);
-  HEADS.r.render();
+  headDraw(a, head, morph, s);
 }

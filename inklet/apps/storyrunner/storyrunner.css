@@ -41,7 +41,7 @@ html, body {
 #choices button:focus-visible { outline: 2px solid #ffec27; outline-offset: 2px; }
 #choices button:hover { background: var(--sk-accent, rgba(41,173,255,0.22));
   color: var(--sk-accent-ink, inherit); }
-#status { font-size: 0.8em; opacity: 0.6; }
+#status { font-size: 0.8em; opacity: 0.6; overflow-wrap: break-word; }
 /* In the accessibility tree, absent from the picture. The reading surface is
    deliberately untitled to LOOK at, and a screen-reader user still needs a
    landmark to jump to — those are not in conflict. */

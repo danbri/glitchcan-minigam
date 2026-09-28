@@ -1213,6 +1213,28 @@ try {
     await mp.close();
   }
 
+  // ── 14. A MISSING STORY FILE says so ────────────────────────────────
+  // Field report, September 2026: a story URL from an unmerged branch was a
+  // 404 on the live site, and the reader saw "no ink content found".
+  {
+    const np = await browser.newPage({ viewport: { width: 430, height: 860 } });
+    const nerr = [];
+    np.on('pageerror', (e) => nerr.push(String(e).slice(0, 200)));
+    await np.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?story=/${repoName}/drift-city/no-such-story.fink.js`);
+    let run = null;
+    for (let i = 0; i < 50 && !run; i++) {
+      run = np.frames().find((f) => f.url().includes('apps/storyrunner'));
+      if (!run) await np.waitForTimeout(400);
+    }
+    const said = run && await run.waitForFunction(() => /HTTP|content/.test(document.getElementById('status')?.textContent || ''),
+      null, { timeout: 30000 }).then(() => run.evaluate(() => document.getElementById('status').textContent), () => '');
+    /HTTP 404 \(not found\)/.test(said || '') && (said || '').includes('no-such-story.fink.js')
+      ? pass(`a missing story file is named as missing ("${said}")`)
+      : fail(`a missing story file gave: "${said}"`);
+    nerr.length === 0 ? pass('missing file: no page errors') : fail(`missing file errors: ${nerr[0]}`);
+    await np.close();
+  }
+
   if (pageErrors.length) fail('page errors: ' + pageErrors.join(' | '));
   else pass('zero page errors');
 } catch (e) {

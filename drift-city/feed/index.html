@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Talking head: Drift City comms feed</title>
+<!--
+  One cast member's face on the helmet comms feed, speaking one recorded line: the talking heads of the city page
+  (src/heads.js, loaded here as it is) on their own page. In a frame it is the foafos stage app "talkinghead"
+  (inklet/finkapp/foafos-apps.js), opened by a story's `# MINIGAME: talkinghead line=<clip> [mood=<mood>]`:
+  line= names a clip in ../audio/cast/ (mags-3 is mags-3.mp3, and the name before the dash is the speaker), mood= is
+  one of HEAD_MOODS. When the line ends it hands control back. Standalone: index.html?line=mags-3.
+  The drift-city skill, "Talking heads", has how the head is built and the rules (synthetic faces only).
+-->
+<style>
+  html, body { margin: 0; height: 100%; background: #05080b; color: #cfe9ff; overflow: hidden; }
+  /* the feed fills the frame, square in the middle, instead of the city's 128px inset */
+  .headFeed { position: fixed; inset: 0; margin: auto; width: min(100vw, 100dvh * 0.8); height: min(100dvh, 125vw);
+    overflow: hidden; background: #05080b; box-shadow: 0 0 calc(8px + 30px * var(--lvl, 0)) rgba(120, 200, 255, 0.3) inset;
+    animation: headIn 0.3s ease-out, headFlick 7s steps(1) infinite; }
+  .headFeed[hidden] { display: none; }
+  .headFeed.closing { animation: headOut 0.35s ease-in forwards; }
+  .headFeed canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; filter: saturate(0.8) contrast(1.08); }
+  .headScan { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px), linear-gradient(180deg, rgba(120, 200, 255, 0.08), transparent 40%, rgba(0, 0, 0, 0.35)); mix-blend-mode: multiply; }
+  .headName { position: absolute; left: 16px; right: 16px; bottom: 34px; font: 600 1.1rem/1.2 system-ui, sans-serif; text-shadow: 0 1px 2px #000; }
+  .headCredit { position: absolute; left: 16px; right: 16px; bottom: 12px; font: 0.75rem/1 system-ui, sans-serif; color: rgba(200, 225, 240, 0.75); }
+  .headFeed.org .headCredit { display: none; }
+  .headOrg { display: none; position: absolute; inset: 30% 18%; border-radius: 50%; border: 2px solid rgba(255, 200, 120, calc(0.35 + 0.65 * var(--lvl, 0))); box-shadow: 0 0 calc(4px + 40px * var(--lvl, 0)) rgba(255, 190, 110, 0.6); }
+  .headFeed.org .headOrg { display: block; }
+  .headFeed.org canvas { visibility: hidden; }
+  @keyframes headIn { from { opacity: 0; transform: scaleY(0.05); } to { opacity: 1; transform: none; } }
+  @keyframes headOut { to { opacity: 0; transform: scaleY(0.05); } }
+  @keyframes headFlick { 0%, 100% { opacity: 1; } 43% { opacity: 0.82; } 43.6% { opacity: 1; } 71% { opacity: 0.9; } 71.4% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .headFeed, .headFeed.closing { animation: none; } }
+  /* when the browser will not start sound without a tap in this frame */
+  #play { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 2;
+    min-height: 44px; padding: 0 20px; border-radius: 22px; border: 1px solid rgba(160, 220, 255, 0.6);
+    background: rgba(5, 8, 11, 0.85); color: #cfe9ff; font: 600 1rem system-ui, sans-serif; }
+  #play[hidden] { display: none; }
+  #play:focus-visible { outline: 3px solid #cfe9ff; outline-offset: 3px; }
+</style>
+<script src="../../packages/finkgame/src/minigame-sdk.js"></script>
+</head>
+<body>
+<button id="play" type="button" hidden>Play the line</button>
+<!-- crossorigin: in a sandboxed frame (an opaque origin) a script fetched without CORS is cross-origin, and its
+     import() then resolves "../../magpie/..." against about:blank. With CORS it resolves against the script's own
+     address, which is two levels below the site root, as dist/city.html is. -->
+<script src="../src/heads.js" crossorigin="anonymous"></script>
+<script>
+"use strict";
+(() => {
+  const q = new URLSearchParams(location.search);
+  const line = q.get("line") || "", mood = q.get("mood") || "";
+  // a clip name, nothing else: speaker-number, as the files in ../audio/cast/ are named
+  const clip = /^[a-z]+-[a-z0-9-]{1,40}$/.test(line) ? new URL(`../audio/cast/${line}.mp3`, location.href).href : null;
+  const audio = new Audio();
+  audio.preload = "auto";
+  const play = document.getElementById("play");
+  const sdk = window.parent !== window && typeof MinigameSDK === "function" ? new MinigameSDK() : null;
+  let ended = false, held = false;
+  const finish = (ok) => {
+    if (ended) return;
+    ended = true;
+    headDone();
+    setTimeout(() => sdk && sdk.complete({ success: ok }), ok ? 1500 : 0);   // let the face close first
+  };
+  function start() {
+    play.hidden = true;
+    audio.play().then(() => headSay(clip, audio, { text: "", mood }))
+      .catch(() => { play.hidden = false; play.focus(); });   // no sound without a tap here: ask for one
+  }
+  if (sdk) {
+    sdk.onPause(() => { HEADS.paused = true; if (!audio.paused) { audio.pause(); held = true; } });
+    sdk.onResume(() => { HEADS.paused = false; if (held) { held = false; audio.play().catch(() => {}); } });
+    sdk.onAudio((a) => { audio.volume = Math.max(0, Math.min(1, a && a.level !== undefined ? Number(a.level) || 0 : 1)); });
+  }
+  play.addEventListener("click", start);
+  audio.addEventListener("ended", () => finish(true));
+  audio.addEventListener("error", () => { console.warn("feed: no clip at", clip); finish(false); });
+  if (!clip) { console.warn("feed: line= must name a clip, for example mags-3"); finish(false); return; }
+  audio.src = clip;
+  start();
+  window.__feed = { HEADS, audio, clip, done: () => ended };   // for tests
+})();
+</script>
+</body>
+</html>

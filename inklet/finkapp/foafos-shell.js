@@ -566,6 +566,28 @@ const gameNodes = new Map();       // minigame instance id -> tree node id
 const stageApp = (name) => APPS.find((a) => a.surface === 'stage'
   && ((a.game || a.id) === name || (a.aliases || []).includes(name))) || null;
 FoafOS.stageApp = stageApp;
+// A story's `# MINIGAME: <name> key=value ...` arguments. `mode` and
+// `controls` are the stage host's own; any other key must be one that the
+// app's registry row declares (`args: [...]`), with a plain-token value.
+// Everything else is dropped and reported, never passed on: a story can
+// choose what an app shows, not hand it anything the app did not ask for.
+const ARG_VALUE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$/;
+const HOST_CONTROLS = ['dpad', 'lite', 'none'];
+function launchArgs(entry, raw) {
+  const host = {}, app = {}, dropped = [];
+  const declared = new Set(entry?.args || []);
+  const pairs = raw && typeof raw === 'object' ? Object.entries(raw) : [];
+  pairs.forEach(([k, v], i) => {
+    const key = String(k), val = String(v);
+    if (i >= 12 || !ARG_VALUE.test(val)) dropped.push(key);
+    else if (key === 'mode') host.mode = val;
+    else if (key === 'controls' && HOST_CONTROLS.includes(val)) host.controls = val;
+    else if (declared.has(key)) app[key] = val;
+    else dropped.push(key);
+  });
+  return { host, app, dropped };
+}
+FoafOS.launchArgs = launchArgs;
 // A guest's vars power is its NODE's. FoafVars asks here before it looks
 // at the manifest list, so a closed or unregistered guest holds nothing.
 vars.authority = (actor, cap) => {
@@ -888,7 +910,7 @@ bus.subscribe('minigame.complete', (e) => {
 });
 bus.subscribe('minigame.instance', (e) => {
   if (e.source !== 'local') return;
-  const { id, type, closed } = e.data || {};
+  const { id, type, closed, args } = e.data || {};
   if (!id) return;
   if (closed) {
     const nodeId = gameNodes.get(id);
@@ -922,6 +944,8 @@ bus.subscribe('minigame.instance', (e) => {
     // Recorded on the node first, and the scoped bus is built from that
     // record: what the switcher shows is exactly what is enforced.
     const grants = apps.setScope(node.id, 'bus', busGrantsFor(type, app));
+    // what the story asked it to show (# MINIGAME: arguments), on the record
+    if (args && Object.keys(args).length) apps.setScope(node.id, 'args', args);
     // name feeds scopeBus's source stamp: `guest:<type>#<instance>` —
     // two copies of one game are two distinct voices
     window.FinkMinigames?.attachBus?.(
@@ -2485,7 +2509,15 @@ function buildUI() {
             // Claim the economy for the duration: every write this game
             // makes belongs to the boxed story that launched it.
             FoafOS.storyVars._own(app.id);
-            window.FinkMinigames?.startMinigame?.(game);
+            const { host: hostArgs, app: appArgs, dropped } = launchArgs(entry, d.detail?.args);
+            if (dropped.length) {
+              bus.publish('app.launch.args.dropped', {
+                summary: `${app.name} gave ${game} ${dropped.join(', ')}, which ${game} does not take: dropped`,
+                appId: app.id, game, dropped,
+              });
+            }
+            window.FinkMinigames?.startMinigame?.(game, hostArgs.mode || 'normal',
+              hostArgs.controls || null, appArgs);
             // The runner asked for a game; the game needs the glass.
             yieldScreenTo(win);
             reply({ ok: true, launched: game, awaiting: 'minigame.complete' });
@@ -3066,6 +3098,7 @@ function buildUI() {
         place: node.surface === 'stage' ? snapshotNote() : '',
         extra: [
           node.surface === 'stage' ? (window.FinkWM?.mode || '') : '',
+          ...Object.entries(node.scopes?.args || {}).map(([k, v]) => `${k}=${v}`),
           node.surface === 'story' && window.FinkInkEngine?.storyStack?.length
             ? `dream depth ${FinkInkEngine.storyStack.length}` : '',
         ].filter(Boolean),

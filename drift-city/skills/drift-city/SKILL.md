@@ -684,8 +684,27 @@ this (option 1 of 3) over splat heads on SDF bodies in the scene; holographic cr
   itself: "synthetic face · LAM, Apache-2.0".
 - Loading: nothing until the first line. Then `import()` of `magpie/splatweb/lib/{splat-renderer,lam-splats,
   lam-visemes}.js` (relative to dist/city.html), the shared 3.6 MB `lam-sample/skin.glb` once, 1.3 MB per face.
-- Drawing: the WebGL2 `SplatRenderer` on the feed's own canvas (not the city's WebGPU device: no second device on a
-  phone), posed on the CPU (20,000 splats) at about 30 frames a second, only while the feed is open.
+- Drawing (owner, September 2026: "The splat talking heads are supposed to be gpu esp webgpu"). With WebGPU, the
+  pose runs in a WGSL compute pass (`magpie/splatweb/lib/gpu-skinned-avatar.js`) and a `GpuSplatScene` draws it
+  every frame, on the city's own device (`HEADS.device`, set at the end of `init()` in `main.js`), so a phone still
+  holds one device. The feed page has no other device and asks for one. Without WebGPU, or with no adapter (plain
+  headless Chromium has `navigator.gpu` and no adapter), it falls back to the CPU pose (20,000 splats of
+  JavaScript) and the WebGL2 `SplatRenderer`, about 30 frames a second. A canvas that once gave a WebGPU context
+  cannot give WebGL2, so the fallback swaps in a new canvas (`headNewCanvas`). Only while the feed is open.
+  - **The GPU path does not sort the splats inside a face.** `GpuSplatScene` orders objects; a drawable's
+    `orderBuf` is the identity. Drawn in file order, Mags's face came out washed out, the eyes glassy and the blue
+    collar showing through the cheeks (compared side by side with the CPU path, which sorts every frame). The
+    feed's camera is fixed and the head turns about 0.1 radian, so `headDraw` orders the splats once, back to
+    front from the camera (`presortOrder`, written into `orderBuf`): the image then matched the CPU one. A camera
+    that moves around a head would need a per-frame sort on the GPU, which the library does not have yet.
+  - **The GPU pose bakes only the channels it is given.** The library's default is 17 (visemes and blinks), which
+    would drop every mood and brow flash. `headMorphNames` adds the moods and what speech drives: 43 channels,
+    154 floats per splat, 12.3 MB of rest buffer per face. The last three faces keep their GPU buffers; older ones
+    are freed (`destroy`).
+  - Measured here (Chromium, Dawn's SwiftShader adapter, in the sandboxed feed frame): the WebGPU path runs, 3 to
+    8 frames in the first seconds in software; `e2e-drift.mjs` checks both paths. Not measured: a head inside the
+    city on the city's own device (the city's WebGPU start-up does not finish on SwiftShader in a test's time), and
+    frame rates on a phone.
 - Mouth: the ARKit viseme bursts from `lam-visemes.js`, scaled by the clip's loudness, plus `jawOpen` from the
   loudness. The loudness is a 60 Hz RMS envelope from a second fetch of the same mp3 (served from cache), so the
   line still plays through its own `<audio>` element, untouched. Blinks and a slow head sway.
@@ -710,6 +729,56 @@ this (option 1 of 3) over splat heads on SDF bodies in the scene; holographic cr
 - Test: headless Chromium (WebGL on SwiftShader) with `--autoplay-policy=no-user-gesture-required`, calling
   `__drift.headSay(audio.src, audio)` on a playing clip; `__drift.HEADS` shows the state. Not yet tested on a phone
   for speed.
+- `HEADS.paused` (September 2026) stops posing and drawing; the page's host sets it (see "Drift City as a foafos
+  app"). The same file also runs on its own page, `feed/index.html`, as the stage app `talkinghead`.
+
+## Drift City as a foafos app (September 2026)
+
+Owner, after the Lantern Cellar worked in the shell: "Can we do the sdf world drift display too? And sdf rigged
+talking heads?" The talking heads in this repo are rigged Gaussian-splat heads (LAM, `magpie/splatweb`), not SDF;
+no SDF talking head exists (searched lucid/, yeti/, magpie/, drift-city/). Both are now foafos stage apps, rows in
+`inklet/finkapp/foafos-apps.js`, opened by `# MINIGAME:` with arguments (the story-game-sync skill, "Tag
+arguments"). Try them: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/foafos-entry.fink.js`, a hub whose
+every line is quoted from `story/episodes.fink.js`, `story/peraspera.fink.js` and the cellar entry.
+
+- **`drift`**: `dist/city.html` in a sandboxed frame. `# MINIGAME: drift tale=peraspera` arrives as `?tale=`,
+  which `tales.js` already read, so the page needed no argument code. Holds `audio`; its own controls, so no host
+  pad (`controls: 'none'`).
+- **`src/host.js`** (built in before `main.js`) answers the shell when the page is in a frame with the SDK
+  (`packages/finkgame/src/minigame-sdk.js`, a script tag in `head.html`):
+  - pause: `hostPaused()` makes the frame loops in `main.js` and `fallback.js` skip (they keep asking for frames;
+    the time step is capped at 0.1 s, so resuming does not jump); the AudioContext is suspended; a running tour
+    and a recorded line are held; `HEADS.paused` stops the comms feed. Resume restarts only what pause stopped.
+  - master volume: `hostGain()` scales `AU.master` (0.5 at full), the tour's `<audio>` (0.9) and the recorded
+    lines' `<audio>`.
+  - snapshot: the story saves. A sandboxed frame has no localStorage (every call already sat in try/catch and
+    failed quietly), so `taleStore` also writes to `taleMem()` and `taleFetch` falls back to it; the snapshot is
+    `{ v: 1, saves: taleMem() }` and a restore fills it, so a closed and reopened city resumes its story.
+  - at a story's end the panel offers "Back to the story" (`hostComplete`), and the outer story resumes.
+  - The state lives on a hoisted function (`hostState`), not a `const`: the modules before `host.js` in the build
+    call `hostGain()` and `hostPaused()`, and a `const` there would be in its temporal dead zone.
+- **WebGPU works in a sandboxed frame** (measured, Chromium 141 with the SwiftShader adapter): origin `null`,
+  `isSecureContext` true, adapter and device granted. Other browsers: not measured.
+- **`talkinghead`**: `feed/index.html?line=mags-3[&mood=wry]`, one cast member on the comms feed speaking one clip
+  from `audio/cast/`, full frame; it hands control back 1.5 s after the clip ends. It loads `src/heads.js` as it
+  is (one copy of the rig code; its city dependencies, `AU` and `#taleText`, were already guarded). Holds `audio`;
+  `features: ['autoplay']` puts `allow="autoplay 'src'"` on the frame, and the clip then plays with no tap in the
+  frame (measured). If a browser still refuses, a "Play the line" button appears.
+- **Lesson: `import()` in a classic script loaded into an opaque-origin frame.** `heads.js` imports
+  `../../magpie/splatweb/lib/*.js`. Inlined in `city.html`, the import resolves against the page. Loaded by
+  `<script src>` into the sandboxed feed page it failed: "The base URL is about:blank because import() is called
+  from a CORS-cross-origin script". The script is cross-origin to an opaque origin. `crossorigin="anonymous"` on
+  the tag fixes it (CORS fetch; GitHub Pages sends `Access-Control-Allow-Origin: *`); the import then resolves
+  against the script's own address, which is two levels below the site root, as `dist/city.html` is.
+- **Lesson: a close can lose the snapshot while a head loads.** The shell waits 400 ms for a snapshot answer.
+  Loading a head (5 MB, 20,000 splats) and its first poses block the page's thread: measured round trips of
+  288, 450 and 577 ms against 4 to 9 ms otherwise, and a close then kept nothing (two test runs in three).
+  Not fixed; the shell's rule is that a window that will not shut is worse than a lost save.
+- Tests: `inklet/finkapp/test/e2e-drift.mjs` (14 checks: the argument filter; the city on Per Aspera as a node
+  with its args; the Task Manager row; pause; master volume; a story save kept in memory, snapshotted, kept on
+  close and restored on reopen; the head's autoplay, pause, load and draw; two lines handing control back in
+  turn). Plain headless Chromium, so the city runs its WebGL fallback on SwiftShader, slowly: the checks are about
+  the protocol, not frames.
 
 ## Novel pages (`drift-city/novel/`, September 2026)
 

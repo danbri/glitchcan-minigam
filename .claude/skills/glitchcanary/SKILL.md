@@ -85,7 +85,14 @@ platform grows a slot and the content fills it.
    `controls`, and `silent` if it makes no sound. The stage host reads
    that row; there is no second list. An unregistered name is refused.
 3. Invoke from Ink: `# MINIGAME: <name> mode=<m> controls=<dpad|lite|none>`
-   then divert to a return knot; read the variables the game wrote.
+   then divert to a return knot; read the variables the game wrote. An app
+   may take more keys, listed in its registry row's `args`:
+   `# MINIGAME: drift tale=peraspera` (Drift City on that story),
+   `# MINIGAME: talkinghead line=mags-3 mood=wry` (a recorded line spoken by
+   that cast member's face). Values are plain tokens (letters, digits,
+   `. _ : -`); an unlisted key is dropped and reported, not passed on. The
+   story-game-sync skill has the rules; `drift-city/foafos-entry.fink.js` is
+   an example quoting only the owner's lines.
 4. Remember: guest iframes have opaque origins — ES modules/fetches need
    CORS (fine on GitHub Pages, needs a CORS server locally), and
    localStorage THROWS there — shim it (robbin.html head shows how).

@@ -75,13 +75,13 @@ function audioInit() {
   const bsend = c.createGain(); bsend.gain.value = 1.6; AU.brassG.connect(bsend); bsend.connect(AU.verbIn);
   AU.brass = [];
   for (let i = 0; i < 6; i++) { const o = c.createOscillator(); o.type = "sawtooth"; o.detune.value = (i % 2 ? 7 : -7) + i; const g = c.createGain(); g.gain.value = 0.12; o.connect(g); g.connect(AU.brassF); o.start(); AU.brass.push(o); }
-  AU.master.gain.setTargetAtTime(0.5, c.currentTime, 1.5);
+  AU.master.gain.setTargetAtTime(0.5 * hostGain(), c.currentTime, 1.5);
   AU.ready = true;
 }
 function audioSetOn(on) {
   AU.on = on;
   try { localStorage.setItem("drift.sound", on ? "1" : "0"); } catch (e) {}
-  if (on) { if (!AU.ctx) audioInit(); else AU.ctx.resume(); if (AU.ready) AU.master.gain.setTargetAtTime(0.5, AU.ctx.currentTime, 0.5); }
+  if (on) { if (!AU.ctx) audioInit(); else AU.ctx.resume(); if (AU.ready) AU.master.gain.setTargetAtTime(0.5 * hostGain(), AU.ctx.currentTime, 0.5); }
   else if (AU.ready) AU.master.gain.setTargetAtTime(0, AU.ctx.currentTime, 0.2);
 }
 // iOS counts only some events as a user gesture that may start or resume audio (a touch's pointerup and touchend,

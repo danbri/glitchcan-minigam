@@ -180,8 +180,9 @@ function handleTag(tag) {
       // that says "play, then use what you won" ran the "then" while the
       // game was still on screen — and every chess/gems/waterworld
       // ending was unreachable. The shell hands the result back and
-      // `resumeAfterGame()` continues from exactly here.
-      _pendingGame = value.split(/\s+/)[0];
+      // `resumeAfterGame()` continues from exactly here. The whole value
+      // goes on: `# MINIGAME: <name> [key=value ...]` (gameTag, below).
+      _pendingGame = value.trim();
       break;
     case 'FINK':
       // A link to another story. Resolve it against THIS story's location,
@@ -617,8 +618,24 @@ function focusTheReading() {
 let _pendingGame;                       // undefined = no game this beat
 let _awaitingGame = null;
 
-async function launchAndWait(game) {
-  const res = await storyRequest('story.launch', { game });
+// `# MINIGAME: <name> [key=value ...]`: the app's name, then its arguments.
+// They are sent as they are; the shell keeps only the keys the app's registry
+// row declares (plus the stage host's own mode= and controls=) and drops the
+// rest out loud. This split is of the tag's value, which the ink runtime has
+// already produced; it reads no story source.
+function gameTag(value) {
+  const [name = '', ...rest] = String(value).trim().split(/\s+/);
+  const args = {};
+  for (const tok of rest) {
+    const eq = tok.indexOf('=');
+    if (eq > 0) args[tok.slice(0, eq)] = tok.slice(eq + 1);
+  }
+  return { name, args };
+}
+
+async function launchAndWait(tag) {
+  const { name: game, args } = gameTag(tag);
+  const res = await storyRequest('story.launch', { game, args });
   if (!res.ok) {
     // A refused launch must not strand the reader in a story with no
     // choices. Say so and carry on — the beat continues without the game.
@@ -1231,7 +1248,15 @@ async function inkFor(url) {
   const hit = _inkCache.get(key);
   if (hit) { state.cacheHits += 1; state.boxedCompile = true; return hit; }
   state.fetches += 1;
-  const src = await (await fetch(key)).text();
+  const res = await fetch(key);
+  // A missing file is not an empty story: say so, and keep the error page out
+  // of the compile box.
+  if (!res.ok) {
+    let where = key;
+    try { where = new URL(key).pathname; } catch { /* keep the key as given */ }
+    throw new Error(`HTTP ${res.status}${res.status === 404 ? ' (not found)' : ''}: ${where}`);
+  }
+  const src = await res.text();
   // Extract ink in a NESTED sandbox — the story's JS never touches this
   // runner. Boxes within boxes: shell → runner → compile box.
   const { ink } = await extractInBox(src);

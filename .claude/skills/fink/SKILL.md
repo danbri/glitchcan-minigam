@@ -216,9 +216,17 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   and walks into the runner frame. It used to audit `?player=legacy` only and
   reported 0 errors about a surface the reading had left; if you move the
   reading again, move the audit with it.
-- Tag grammar: `# MINIGAME: <name> [mode=x] [controls=dpad|lite|none]`
-  parsed at `fink-ink-engine.js:314-333`; the Continue loop BREAKS on
-  MINIGAME/FINK tags.
+- Tag grammar: `# MINIGAME: <name> [mode=x] [controls=dpad|lite|none]
+  [key=value ...]`. The boxed runner splits the tag value (`gameTag`) and
+  sends `{game, args}` with `story.launch`; the shell's `launchArgs` keeps
+  mode and controls for the stage host and only the keys the registry row
+  lists in `args`, with plain-token values, and reports the rest on
+  `app.launch.args.dropped`; the guest gets them in its page address and
+  `init.config.args`, and the node records them (`scopes.args`). Until
+  September 2026 the runner kept the first word only, so mode never reached
+  a game in production. The legacy engine parses mode and controls at
+  `fink-ink-engine.js:314-333`. The Continue loop BREAKS on MINIGAME/FINK
+  tags. Details: the story-game-sync skill.
 - Sandboxed iframes have an OPAQUE ORIGIN: guest ES-module imports and
   fetches need CORS. GitHub Pages sends `Access-Control-Allow-Origin: *`;
   plain `python3 -m http.server` does NOT — local harnesses need a
@@ -684,6 +692,24 @@ widgets are Apps." The tree half was already true (game nodes spawn under
   player's point of view — pointers cleared, container hidden, story
   resumed. Only the frame's removal is deferred, instance-scoped so a
   deferred teardown cannot reach a game that started meanwhile.
+- **400ms is too short when frames share a thread (measured, September
+  2026; not fixed).** In headless Chromium the story runner and the game it
+  launched share one thread: heartbeats in both frames stopped at the same
+  moments, every run. So a game that blocks its thread blocks the runner too.
+  Waterworld under software GL blocks for up to 1.15s (the long block comes
+  about 2s after it starts; shorter ones of 0.15-0.45s come later). A close inside such a block misses the budget for BOTH saves, the
+  game's and the runner's, and the reader's place is lost with no message.
+  That is why `e2e-storyrunner` §9 fails about one run in five with "nothing
+  kept on close". In passing runs the game answers in 47-175ms and the
+  runner's save lands 77-217ms after the ✕. Options: a longer bounded wait
+  with the window hidden at once, or the runner pushing its state after each
+  beat so a close needs no round trip. Related: `saveAppSnapshot` and
+  `_persistSnapshot` ignore `store.set()` returning `{ok:false,
+  reason:'quota'}`, so a save the quota refused is reported as kept. How it
+  was measured: `page.addInitScript` with a 25ms `setInterval` that logs any
+  gap over 150ms, and a capturing `message` listener that logs arrival
+  times, in every frame; console lines from child frames reach
+  `page.on('console')`.
 - Guests may answer `null` to decline. Chess does, mid-animation: a
   half-slid piece would restore to a board that disagrees with itself.
 - **Disclosure is part of the feature.** The Task Manager says *keeps its
@@ -1735,6 +1761,14 @@ check what the author remembered.**
   `FinkInkEngine.compiledCount >= 1`.
 - Local servers die on worker restarts — always curl-check and restart
   with `(setsid nohup python3 -m http.server ... &)`.
+- **A live-site report about new work: first check the work is on master.**
+  Pages deploys from master only. September 2026: a story URL from an
+  unmerged branch was a 404 on the live site, and the boxed runner said "no
+  ink content found", because it gave the Pages 404 page to the compile box.
+  The runner now checks the response and says `could not load story: HTTP 404
+  (not found): <path>` (e2e-storyrunner §14). Check with
+  `curl -s -o /dev/null -w '%{http_code}' https://danbri.github.io/glitchcan-minigam/<path>`
+  and `git merge-base --is-ancestor <commit> origin/master`.
 
 ## Audio (current state)
 

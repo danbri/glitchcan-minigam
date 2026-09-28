@@ -1249,6 +1249,7 @@ async function init() {
     GPUREF.phys = PHYS; GPUREF.device = device;
   } catch (e) { console.warn("physics off:", e && e.message); }
   globalThis.__driftGPU = { gpuInfo, lite: PL.lite };
+  HEADS.device = device; // the talking heads draw on the city's device (heads.js), not a second one
 
   const TU = GPUTextureUsage;
   const cellTex = device.createTexture({ size: [NC * 3, NC], format: "rgba32float", usage: TU.TEXTURE_BINDING | TU.COPY_DST });
@@ -1451,6 +1452,7 @@ async function init() {
     p.setPipeline(pipeline); p.setBindGroup(0, bg); p.draw(3); p.end();
   }
   function frame(now) {
+    if (hostPaused()) { last = now; requestAnimationFrame(frame); return; } // paused by the foafos shell (host.js)
     let dt = (now - last) / 1000; last = now;
     if (dt > 0.1) dt = 0.1;
     ema = ema * 0.95 + dt * 1000 * 0.05;
@@ -1860,7 +1862,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFE_PATTERNS, lifeStamp, lifeStep, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFE_PATTERNS, lifeStamp, lifeStep, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 
