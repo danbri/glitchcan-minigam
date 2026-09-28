@@ -793,6 +793,10 @@ curve chosen for the mood, another tap zooms out. First page: `novel/cellar.html
     step of the result (typical 0.76, largest 1.57, wrap 0.95 on a 0 to 255 grey scale at 128 px).
   - A mistake to avoid: I first read a pose difference between two frames as camera drift. Tracking the lantern
     (position and width) showed the camera held still within 1% from 1.5 s to 9.5 s. Measure before you blame.
+- Every generated picture is of Titan, not Earth (owner, 2026-09-28: the street panel was "too earthlike, make it fit
+  our larger vision of Titan as icy space colony"). Outdoors: no trees, grass or open sky; methane ice and snow,
+  orange-brown haze, sealed glass traffic tubes on pylons, domes, people in pressure suits and bubble helmets. Put the
+  Titan design brief into the prompt; do not trust a source image to carry it.
 - Media notes and costs: `novel/media/README.md`.
 
 ## Character sheets (`drift-city/bible/`, September 2026)
