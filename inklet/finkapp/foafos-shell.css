@@ -985,7 +985,9 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
     color: var(--sk-accent-ink, #000);
     border-radius: 2px;
 }
-.foafos-tm-table .c-state .x { color: var(--sk-ink-dim, #8fa3c0); }
+/* the mode and the story's arguments may wrap under "Running": a long
+   tale=... must not take the Name column's width */
+.foafos-tm-table .c-state .x { color: var(--sk-ink-dim, #8fa3c0); white-space: normal; }
 .foafos-tm-table .pw { display: flex; align-items: center; gap: .45em; min-width: 0; max-width: 20rem; }
 .foafos-tm-table .pw-n {
     flex: none;
