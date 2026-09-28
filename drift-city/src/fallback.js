@@ -612,8 +612,10 @@ function initGL(reason) {
       else if (ema < 22 && scale < 0.8) { slowT += dt; if (slowT > 3) { scale = Math.min(0.8, scale * 1.1); lastChange = now; slowT = 0; resize(); } }
     }
     clock += dtS;
+    if (!INTRO.started && frameNoGL > 4 && worldOn()) worldStart();   // the world beside a story in foafos (tales.js)
     update(dtS);
     recentre();
+    taleSync(dtS);
     worldShift = null;
     if (W.step(frameNoGL < 2 ? 1 : 4)) upPyramid();
     upRows();

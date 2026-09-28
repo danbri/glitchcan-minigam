@@ -191,7 +191,8 @@ const TALE_DIR = "../story/", TALE_FIRST = "lamplighter.fink.js", TALE_DOOR = "e
 const BACKTICKS_URL = "../../packages/backticks/src/index.js";
 const INK_URLS = ["../../third_party/ink/ink-full.js", "https://cdn.jsdelivr.net/npm/inkjs@2.4.0/dist/ink-full.js"];
 const TALE_GEOM_KEY = "drift.taleGeom.v2"; // v2: a taller default on phones (v1 showed one choice at 400 x 800)
-const TALE = { file: TALE_FIRST, title: "", link: null, textClues: taleFetch("drift.textClues") === true, story: null, on: false, scene: null, place: null, paras: [], hot: [], dwell: 0, dwellOn: null, loading: false, min: false };
+const TALE = { file: TALE_FIRST, title: "", link: null, textClues: taleFetch("drift.textClues") === true, story: null, on: false, scene: null, place: null, paras: [], hot: [], dwell: 0, dwellOn: null, loading: false, min: false,
+  base: null, wvars: {}, wsent: {} }; // world mode (foafos # WORLD:): the story's address, the variables read and sent
 if (typeof PLACES_BAKED !== "undefined") PLACES = PLACES_BAKED;
 // a story file named in a tag or the address: a bare file name in story/, nothing else
 function taleFileOk(f) { return typeof f === "string" && /^[a-z0-9_-]+\.fink\.js$/i.test(f); }
@@ -410,7 +411,7 @@ function taleSpeech(file, info) {
   if (typeof AU !== "undefined" && !AU.on) return;
   if (typeof Audio === "undefined") return;
   let url;
-  try { url = new URL(file, new URL(TALE_DIR + TALE.file, location.href)).href; } catch (e) { return; }
+  try { url = new URL(file, TALE.base || new URL(TALE_DIR + TALE.file, location.href)).href; } catch (e) { return; }
   const S = TALE.speech || (TALE.speech = { el: new Audio(), q: [] });
   S.el.volume = hostGain();
   S.q.push({ url, info });
@@ -451,7 +452,7 @@ function taleTags(tags, line) {
     else if (k === "weather") { WX.forced = v === "snow" ? 0.75 : v === "clear" ? 0 : null; }
     else if (k === "hotspot") {
       const f = v.split("@").map((x) => x.trim());
-      if (f.length >= 4 && !TALE.story.variablesState[f[0]]) {
+      if (f.length >= 4 && !(TALE.story ? TALE.story.variablesState[f[0]] : TALE.wvars[f[0]])) {
         TALE.hot.push({ v: f[0], label: f[1], bearing: +f[2] * DEG, elev: +f[3] * DEG });
         // the clue itself lies on the ground where you would look for it
         const dist = clampv(1.7 / Math.tan(Math.max(-(+f[3]) * DEG, 0.05)), 1.4, 14);
@@ -471,7 +472,7 @@ function taleTags(tags, line) {
     else if (k === "speech") taleSpeech(v, { text: line || "", mood });
     // "# morse: <text>": the masts and the radio key the story's message; empty goes back to the usual ones
     else if (k === "morse") { if (typeof MORSE !== "undefined") MORSE.override = v ? v.toUpperCase() : null; }
-    else if (k === "restart") { TALE.story.ResetState(); TALE.scene = null; TALE.place = null; setTimeout(taleAdvance, 0); }
+    else if (k === "restart") { TALE.scene = null; TALE.place = null; if (TALE.story) { TALE.story.ResetState(); setTimeout(taleAdvance, 0); } }
   }
 }
 // ---------- props: people and objects placed in a scene by the story ----------
@@ -517,29 +518,35 @@ function taleSetVar(name, v) {
   try { if (vs.GetVariableWithName ? vs.GetVariableWithName(name) !== null : vs[name] !== undefined) { if (vs[name] !== v) vs[name] = v; return true; } } catch (e) {}
   return false;
 }
+function taleWantTime(v) { const idx = { day: 0, dusk: 1, night: 2, snow: 3 }[v]; if (idx !== undefined && idx !== todIdx) { todFrom = currentTod(); todIdx = idx; todT = 0; todAuto = 0; NAV.sunOverride = null; syncLabels(); } }
+function taleWantWeather(v) { WX.forced = v === "snow" ? 0.75 : v === "clear" ? 0 : null; }
 function taleSync(dt) {
-  if (!TALE.story) return;
+  const world = worldOn();
+  if (!TALE.story && !world) return;
   taleSyncT += dt;
   if (taleSyncT < 0.5) return;
   taleSyncT = 0;
-  if (!TALE.observed) {
+  if (!world && !TALE.observed) {
     TALE.observed = true;
     const s = TALE.story;
     try {
-      s.ObserveVariable("want_time", (n, v) => { const idx = { day: 0, dusk: 1, night: 2, snow: 3 }[v]; if (idx !== undefined && idx !== todIdx) { todFrom = currentTod(); todIdx = idx; todT = 0; todAuto = 0; NAV.sunOverride = null; syncLabels(); } });
-      s.ObserveVariable("want_weather", (n, v) => { WX.forced = v === "snow" ? 0.75 : v === "clear" ? 0 : null; });
+      s.ObserveVariable("want_time", (n, v) => taleWantTime(v));
+      s.ObserveVariable("want_weather", (n, v) => taleWantWeather(v));
     } catch (e) { /* the story does not declare them */ }
   }
   let here = "";
   if (NAV.mode === "surface" || NAV.mode === "visit") {
     let best = 60;
+    if (!PLACES) buildPlaces();
     for (const p of PLACES) { const d = Math.hypot(p.x - st.x, p.z - st.z) + Math.abs(p.y - st.y) * 0.5; if (d < best) { best = d; here = p.id; } }
   }
   const was = TALE.here;
   TALE.here = here;
+  const hour = ["day", "dusk", "night", "snow"][todIdx], snowing = WX.rain > 0.3;
+  if (world) { worldSet("here", here); worldSet("hour", hour); worldSet("snowing", snowing); return; }
   taleSetVar("here", here);
-  taleSetVar("hour", ["day", "dusk", "night", "snow"][todIdx]);
-  taleSetVar("snowing", WX.rain > 0.3);
+  taleSetVar("hour", hour);
+  taleSetVar("snowing", snowing);
   if (was !== here && TALE.live && TALE.scene && TALE.on) { TALE.story.ChoosePathString(TALE.scene); taleAdvance(); }
 }
 
@@ -551,6 +558,40 @@ function taleFound(h) {
   audioChime();
   showHint("You notice " + h.label + ".", 5000);
   if (TALE.scene) { TALE.story.ChoosePathString(TALE.scene); taleAdvance(); }
+}
+
+// ---------- the world beside a story in foafos (`# WORLD: drift`) ----------
+// The story runs in the foafos story runner, and this page is its world (host.js sets it up when the shell opens the
+// page with world=1). After each step the runner sends the lines whose tags it does not handle itself; they drive the
+// city as the tags do in the panel's story (taleTags). Where you are, the hour and the snow go back to the story
+// (setVariable; the registry row allows those three), and want_time and want_weather come in (onVariableChanged).
+// There is no story panel and no Story menu. A clue in the world is not found here: a world may not move the story
+// (spec section 5), so the story offers its clues as choices (in_world stays false). The model is in the
+// story-game-sync skill.
+function worldOn() { return hostOn() && hostState().world === true; }
+function worldStart() { INTRO.started = true; NAV.gate = false; audioSetOn(true); hop(HOME_DEST); }
+function worldBeat(lines, meta) {
+  const replay = !!(meta && meta.replay);
+  if (meta && meta.base) TALE.base = meta.base;
+  TALE.worldBeats = (TALE.worldBeats || 0) + 1;
+  for (const l of Array.isArray(lines) ? lines : []) {
+    let tags = (l && Array.isArray(l.tags) ? l.tags : []).map(String);
+    // a replay rebuilds the world after a restore: the places and props again, not the voices
+    if (replay) tags = tags.filter((t) => !/^\s*(voice|speech)\s*(:|$)/i.test(t));
+    taleTags(tags, String((l && l.text) || ""));
+  }
+}
+function worldVar(name, v) {
+  TALE.wvars[name] = v;
+  if (name === "want_time") taleWantTime(v);
+  else if (name === "want_weather") taleWantWeather(v);
+}
+// only a change goes to the story
+function worldSet(name, v) {
+  if (TALE.wsent[name] === v) return;
+  TALE.wsent[name] = v;
+  const sdk = hostState().sdk;
+  if (sdk) sdk.setVariable(name, v);
 }
 
 // ---------- the panel's place and size: move by the header, resize by the corner, minimise to a bar ----------

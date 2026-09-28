@@ -715,6 +715,17 @@ bus.subscribe('app.close', (e) => {
     tellWatcher(w, 'close', { ids: mine, count: mine.length });
   }
 });
+bus.subscribe('app.close', (e) => {
+  const closed = e.data?.closed || [];
+  for (const [runnerId, w] of storyWorlds) {
+    if (closed.includes(runnerId)) { storyWorlds.delete(runnerId); continue; }
+    if (!w.nodeId || !closed.includes(w.nodeId)) continue;
+    storyWorlds.delete(runnerId);
+    try {
+      w.frame.contentWindow?.postMessage({ type: 'story.event', event: 'world.closed', detail: { world: w.game } }, '*');
+    } catch (err) { /* the runner is gone too */ }
+  }
+});
 bus.subscribe('story.session', (e) => {
   for (const w of storyWatch.values()) {
     if (e.data?.appId !== w.appId) continue;
@@ -760,6 +771,86 @@ bus.subscribe('minigame.complete', (e) => {
 // the result across. Frame-scoped so one runner's game cannot resume a
 // different runner's story.
 let _storyLauncher = null;
+
+// The checks every stage launch a story asks for passes, a game or a world:
+// a REGISTERED stage app, parented under the session that asked, holding
+// nothing its parent does not. Refusals are published here; the caller
+// replies with the reason.
+function stageLaunchCheck(app, win, gameName, sessionName) {
+  const game = String(gameName || '').toLowerCase();
+  if (!game) return { ok: false, reason: 'bad-params' };
+  // Only a REGISTERED stage app may be launched. An unknown name used
+  // to reach the stage host and play Gem Hunt in its place.
+  const entry = stageApp(game);
+  if (!entry) {
+    bus.publish('app.launch.refused', {
+      summary: `${app.name} asked for "${game}", which is not a registered stage app`,
+      reason: 'unregistered', appId: app.id, game,
+    });
+    return { ok: false, reason: 'unregistered' };
+  }
+  // ATTENUATION IS CHECKED BEFORE THE GUEST STARTS.
+  //
+  // It used to be checked after: startMinigame() ran, the game
+  // announced itself, and only THEN did the tree try to spawn a
+  // node — which it refused, out loud, while the game carried on
+  // playing. The refusal was book-keeping, not enforcement, and
+  // the result was worse than a peer: a guest running with no
+  // node at all, so the Running panel could not show it, pause
+  // it, or close it (verified 2026-07-29, and the reason this
+  // check moved). A border you announce but do not hold is
+  // decoration.
+  // The game parents under the SESSION that launched it, not under
+  // the engine that happens to be running it (level 3 under level
+  // 2). The runner node is the fallback for a runner that never
+  // announced a session — a standalone frame, or an older build.
+  //
+  // With PEERS there is more than one live session, and only the
+  // runner knows which of them asked. So it may NAME one — and the
+  // shell checks the name is one of that runner's own sessions. That
+  // check is the whole of the trust here: a runner naming its own
+  // sessions is choosing among nodes that all hold its own grant, so
+  // it can gain nothing; naming anything else is refused.
+  const runnerNodeId = win.dataset.instance || null;
+  const ownSessions = storySessions.get(runnerNodeId) || [];
+  const named = sessionName ? String(sessionName) : null;
+  const parentNodeId = (named && ownSessions.includes(named) ? named : null)
+    || currentSession(runnerNodeId)?.id || runnerNodeId;
+  const parentNode = parentNodeId ? apps.get(parentNodeId) : null;
+  const wantCaps = entry.capabilities || [];
+  const excess = parentNode
+    ? wantCaps.filter(c => !parentNode.capabilities.includes(c))
+    : [];
+  if (excess.length) {
+    bus.publish('app.spawn.refused', {
+      summary: `${app.name} may not grant ${excess.join(', ')} to ${game} — it does not hold ${excess.length > 1 ? 'them' : 'it'}`,
+      reason: 'attenuation', excess, appId: app.id, game,
+    });
+    return { ok: false, reason: 'attenuation', excess };
+  }
+  return { ok: true, game, entry, parentNodeId, runnerNodeId };
+}
+
+// THE WORLD BESIDE A STORY (`# WORLD: <app>`, verb story.world). A stage app
+// that shows what the story's tags say while the story goes on. Unlike a
+// game it does not pause the story, does not take the screen from it, and is
+// never "complete". One per runner. The runner sends each step's lines with
+// the tags it does not handle itself; the world's accepted variable writes go
+// back to the runner, live.
+const storyWorlds = new Map();   // runner node id -> { frame, appId, game, nodeId, instId, reads }
+let _pendingWorld = null;        // { type, runnerNodeId } until the stage registers it
+const worldOfInstance = (instId) => [...storyWorlds.values()].find((w) => w.instId === instId) || null;
+// Called by the stage host after the broker accepted a world's write.
+FoafOS.worldWrite = (instId, name, value) => {
+  const w = worldOfInstance(instId);
+  if (!w) return false;
+  try {
+    w.frame.contentWindow?.postMessage({ type: 'story.event', event: 'world.var', detail: { name, value } }, '*');
+  } catch (err) { return false; }
+  return true;
+};
+const worldSend = (w, msg) => (w.instId ? !!window.FinkMinigames?.sendToInstance?.(w.instId, msg)
+  : ((w.held || (w.held = [])).push(msg), true));
 // A BOXED STORY MUST YIELD THE SCREEN TO THE GAME IT LAUNCHED.
 //
 // Field report, twice: "Clock on" and then a blank white page, then the
@@ -942,6 +1033,20 @@ bus.subscribe('minigame.instance', (e) => {
     // that left the guest running while the tree said it was gone.
     onClose: () => { try { window.FinkMinigames?.endMinigame?.(); } catch (err) { /* already gone */ } },
   });
+  const wantWorld = _pendingWorld;
+  _pendingWorld = null;
+  if (!node.refused && wantWorld && wantWorld.type === type) {
+    const w = storyWorlds.get(wantWorld.runnerNodeId);
+    const inst = window.FinkMinigames?.instances?.get(id);
+    if (w && inst) {
+      w.nodeId = node.id;
+      w.instId = id;
+      inst.world = true;          // its variable writes go to the story, live
+      const held = w.held || [];
+      w.held = null;
+      held.forEach((m) => window.FinkMinigames.sendToInstance(id, m));
+    }
+  }
   if (!node.refused) {
     gameNodes.set(id, node.id);
     // Recorded on the node first, and the scoped bus is built from that
@@ -2424,7 +2529,8 @@ function buildUI() {
         // it are different authorities, so they map to different caps.
         const need = verb === 'story.vars'
           ? (d.detail?.op === 'write' ? 'vars:write' : 'vars:read')
-          : { 'story.launch': 'story:launch', 'story.link': 'story:link',
+          : { 'story.launch': 'story:launch', 'story.world': 'story:launch',
+              'story.link': 'story:link',
               // A session IS the runner's composition of one or more finks,
               // so it answers to the composition authority.
               'story.session': 'story:link',
@@ -2443,59 +2549,12 @@ function buildUI() {
         tallyCap(app.id, need);
         try {
           if (verb === 'story.launch') {
-            const game = String(d.detail?.game || '').toLowerCase();
-            if (!game) { reply({ ok: false, reason: 'bad-params' }); return; }
-            // Only a REGISTERED stage app may be launched. An unknown name used
-            // to reach the stage host and play Gem Hunt in its place.
-            const entry = stageApp(game);
-            if (!entry) {
-              bus.publish('app.launch.refused', {
-                summary: `${app.name} asked for "${game}", which is not a registered stage app`,
-                reason: 'unregistered', appId: app.id, game,
-              });
-              reply({ ok: false, reason: 'unregistered' });
+            const chk = stageLaunchCheck(app, win, d.detail?.game, d.detail?.session);
+            if (!chk.ok) {
+              reply({ ok: false, reason: chk.reason, ...(chk.excess ? { excess: chk.excess } : {}) });
               return;
             }
-            // ATTENUATION IS CHECKED BEFORE THE GUEST STARTS.
-            //
-            // It used to be checked after: startMinigame() ran, the game
-            // announced itself, and only THEN did the tree try to spawn a
-            // node — which it refused, out loud, while the game carried on
-            // playing. The refusal was book-keeping, not enforcement, and
-            // the result was worse than a peer: a guest running with no
-            // node at all, so the Running panel could not show it, pause
-            // it, or close it (verified 2026-07-29, and the reason this
-            // check moved). A border you announce but do not hold is
-            // decoration.
-            // The game parents under the SESSION that launched it, not under
-            // the engine that happens to be running it (level 3 under level
-            // 2). The runner node is the fallback for a runner that never
-            // announced a session — a standalone frame, or an older build.
-            //
-            // With PEERS there is more than one live session, and only the
-            // runner knows which of them asked. So it may NAME one — and the
-            // shell checks the name is one of that runner's own sessions. That
-            // check is the whole of the trust here: a runner naming its own
-            // sessions is choosing among nodes that all hold its own grant, so
-            // it can gain nothing; naming anything else is refused.
-            const runnerNodeId = win.dataset.instance || null;
-            const ownSessions = storySessions.get(runnerNodeId) || [];
-            const named = d.detail?.session ? String(d.detail.session) : null;
-            const parentNodeId = (named && ownSessions.includes(named) ? named : null)
-              || currentSession(runnerNodeId)?.id || runnerNodeId;
-            const parentNode = parentNodeId ? apps.get(parentNodeId) : null;
-            const wantCaps = entry.capabilities || [];
-            const excess = parentNode
-              ? wantCaps.filter(c => !parentNode.capabilities.includes(c))
-              : [];
-            if (excess.length) {
-              bus.publish('app.spawn.refused', {
-                summary: `${app.name} may not grant ${excess.join(', ')} to ${game} — it does not hold ${excess.length > 1 ? 'them' : 'it'}`,
-                reason: 'attenuation', excess, appId: app.id, game,
-              });
-              reply({ ok: false, reason: 'attenuation', excess });
-              return;
-            }
+            const { game, entry, parentNodeId } = chk;
             // Record the real instantiator so the game parents under THIS
             // runner's node, reflecting the true control/instantiation/
             // capability border in the tree.
@@ -2528,6 +2587,67 @@ function buildUI() {
             // The runner asked for a game; the game needs the glass.
             yieldScreenTo(win);
             reply({ ok: true, launched: game, awaiting: 'minigame.complete' });
+          } else if (verb === 'story.world') {
+            // `# WORLD: <app>`: the same checks as a game, none of the pause.
+            const runnerNodeId = win.dataset.instance || null;
+            const op = String(d.detail?.op || '');
+            const world = runnerNodeId ? storyWorlds.get(runnerNodeId) : null;
+            if (op === 'open') {
+              const chk = stageLaunchCheck(app, win, d.detail?.app, d.detail?.session);
+              if (!chk.ok) {
+                reply({ ok: false, reason: chk.reason, ...(chk.excess ? { excess: chk.excess } : {}) });
+                return;
+              }
+              const reads = chk.entry.variables?.read || [];
+              const alive = world && (!world.nodeId || apps.get(world.nodeId));
+              if (alive && world.game === chk.game) {
+                reply({ ok: true, op, world: chk.game, reused: true, reads });
+                return;
+              }
+              if (alive && world.nodeId) apps.close(world.nodeId);
+              const { host: hostArgs, app: appArgs, dropped } = launchArgs(chk.entry, d.detail?.args);
+              if (dropped.length) {
+                bus.publish('app.launch.args.dropped', {
+                  summary: `${app.name} gave ${chk.game} ${dropped.join(', ')}, which ${chk.game} does not take: dropped`,
+                  appId: app.id, game: chk.game, dropped,
+                });
+              }
+              storyWorlds.set(runnerNodeId, { frame, appId: app.id, game: chk.game,
+                                              nodeId: null, instId: null, reads });
+              _pendingGameParent = { type: chk.game, parentNodeId: chk.parentNodeId };
+              _pendingWorld = { type: chk.game, runnerNodeId };
+              // `world=1` is the host's word, not the story's: the page learns
+              // it is a world and not a game with a story of its own.
+              window.FinkMinigames?.startMinigame?.(chk.game, hostArgs.mode || 'normal',
+                hostArgs.controls || null, { ...appArgs, world: '1' });
+              bus.publish('story.world', {
+                summary: `${app.name} opened ${chk.entry.name || chk.game} as the world beside its story`,
+                appId: app.id, world: chk.game,
+              });
+              reply({ ok: true, op, world: chk.game, reads });
+              return;
+            }
+            if (!world) { reply({ ok: false, reason: 'no-world' }); return; }
+            if (op === 'beat') {
+              const lines = Array.isArray(d.detail?.lines) ? d.detail.lines.slice(0, 200) : [];
+              const ok = worldSend(world, { type: 'story-beat', lines,
+                base: d.detail?.base ? String(d.detail.base) : null, replay: !!d.detail?.replay });
+              reply({ ok, op, lines: lines.length });
+            } else if (op === 'vars') {
+              // Only what the world's registry row says it reads.
+              let sent = 0;
+              for (const [name, value] of Object.entries(d.detail?.values || {})) {
+                if (!world.reads.includes(name)) continue;
+                if (worldSend(world, { type: 'variable-changed', name, value })) sent += 1;
+              }
+              reply({ ok: true, op, sent });
+            } else if (op === 'close') {
+              storyWorlds.delete(runnerNodeId);
+              if (world.nodeId && apps.get(world.nodeId)) apps.close(world.nodeId);
+              reply({ ok: true, op });
+            } else {
+              reply({ ok: false, reason: 'bad-params' });
+            }
           } else if (verb === 'story.session') {
             // A PLAYTHROUGH ANNOUNCES ITSELF and the shell gives it a node
             // (level 2). The runner holds no authority to make one; it asks,

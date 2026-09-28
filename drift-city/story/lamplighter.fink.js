@@ -11,6 +11,8 @@ oooOO`
 //   # voice: <who>         the line is spoken over that person's suit radio (who: bo, tam, obi, castellane, mei, sato, wren, you)
 // Shared with the world: the page writes here, hour and snowing; the story may set want_time and want_weather.
 # title: The Lamplighter's Last Round
+// In the foafos story runner this opens the city beside the story; the city's own player ignores it.
+# WORLD: drift
 VAR here = ""
 VAR hour = ""
 VAR snowing = false
