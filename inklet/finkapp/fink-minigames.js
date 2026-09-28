@@ -1137,11 +1137,16 @@ window.FinkMinigames = {
         });
     },
 
+    /** Write through to the shell's store. True only if the store took it:
+     *  a write refused for quota returns false, it does not throw. */
     _persistSnapshot(type, state) {
         const ns = window.FoafOS?.snapshotNs;
-        if (!ns || !window.FoafOS?.store) return;
-        try { window.FoafOS.store.set(ns, type, JSON.stringify(state)); }
-        catch (e) { this.log(`snapshot not persisted: ${e.message}`); }
+        if (!ns || !window.FoafOS?.store) return false;
+        try {
+            const res = window.FoafOS.store.set(ns, type, JSON.stringify(state));
+            if (!res?.ok) this.log(`snapshot not persisted: ${res?.reason || 'refused'}`);
+            return !!res?.ok;
+        } catch (e) { this.log(`snapshot not persisted: ${e.message}`); return false; }
     },
 
     /** Ask a guest for its state. Resolves null if it cannot or will not. */
@@ -1669,9 +1674,11 @@ window.FinkMinigames = {
             this._requestSnapshot(dying).then((state) => {
                 if (state !== null && state !== undefined) {
                     this._snapshots[type] = state;
-                    this._persistSnapshot(type, state);
+                    const stored = this._persistSnapshot(type, state);
                     window.FoafOS?.bus.publish('minigame.snapshot', {
-                        summary: `${type} saved its state on the way out`, type,
+                        summary: stored ? `${type} saved its state on the way out`
+                            : `${type} kept its state for this visit only (not stored)`,
+                        type, stored,
                     });
                 }
                 this._sendToIframe({ type: 'terminate', reason: 'user_exit' }, dying);

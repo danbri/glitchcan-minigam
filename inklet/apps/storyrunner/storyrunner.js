@@ -502,8 +502,17 @@ function resolveMedia(path) {
   try { return new URL(p, mediaBase).href; } catch { return mediaBase + p; }
 }
 
+// A step that ends where the reader waits (choices, or the end) sends the
+// place to the shell (keepPlace), so a close still keeps it when this frame is
+// too busy to answer in time. A step that hands off (a link, a game, a dream
+// surfacing) sends nothing: the place is in transit, so the last one stands.
 function advance() {
-  if (!story) return;
+  if (stepStory()) keepPlace();
+}
+
+// True when the step ends where the reader waits.
+function stepStory() {
+  if (!story) return false;
   _beatMedia = undefined;                 // undefined ⇒ keep previous (sticky)
   _pendingLink = undefined;
   _pendingGame = undefined;
@@ -537,12 +546,12 @@ function advance() {
   if (_pendingLink !== undefined) {
     const url = _pendingLink; _pendingLink = undefined;
     followLink(url);
-    return;                                  // the linked story replaces this one
+    return false;                            // the linked story replaces this one
   }
   if (_pendingGame !== undefined) {
     const game = _pendingGame; _pendingGame = undefined;
     launchAndWait(game);
-    return;                                  // paused: no choices until it ends
+    return false;                            // paused: no choices until it ends
   }
   renderChoices();
   sampleKnot();                           // choices know their own container
@@ -560,7 +569,7 @@ function advance() {
         depth: _frames.length - 1,
       });
       surface();
-      return;
+      return false;
     }
     state.ended = true;
     // A PEER'S END IS NOT THE END — it is the way back, and the only one the
@@ -570,11 +579,12 @@ function advance() {
     if (IS_PEER) {
       state.ended = false;
       try { parent.postMessage({ type: 'session.done' }, '*'); } catch { /* no mediator */ }
-      return;
+      return true;
     }
     setStatus('— THE END —');
     window.foaf?.bus?.publish('app.storyrunner.ended', { summary: 'story ended' });
   }
+  return true;
 }
 
 function choose(i) {
@@ -642,9 +652,11 @@ async function launchAndWait(tag) {
     setStatus(`${game} refused: ${res.reason}`);
     state.pausedFor = null;
     renderChoices();
+    keepPlace();                        // the beat goes on without the game
     return;
   }
   _awaitingGame = game;
+  keepPlace();                          // declines while the game plays
   state.pausedFor = game;
   setStatus(`playing ${game}…`);
   renderChoices();                      // clears them: paused means paused
@@ -1483,6 +1495,16 @@ function snapshotPlaythrough() {
       status: _statusItems,
     };
   } catch { return null; }
+}
+
+// The shell ASKS for the place on close (onSnapshot), with a short wait. This
+// frame can share a thread with the game it launched, and a game can hold that
+// thread for over a second (measured), so the place is also SENT whenever the
+// reader stops at a new one, and the shell keeps the last one sent when the
+// answer is late.
+function keepPlace() {
+  if (!story || !state.ready) return;   // mid-load: the last place sent stands
+  window.foaf?.keepSnapshot?.(snapshotPlaythrough());
 }
 
 async function restorePlaythrough(snap) {

@@ -240,6 +240,16 @@
       }
       return foaf;
     },
+    /**
+     * Send the state to keep NOW, without being asked; `null` declines, as
+     * from onSnapshot. The shell still asks on close, but it waits only a
+     * short time, and a frame can share a thread with a busy one. When the
+     * answer is late, the shell keeps the last state sent here instead.
+     */
+    keepSnapshot: (state) => {
+      post({ type: 'app.snapshot-keep', state: state ?? null });
+      return foaf;
+    },
     onSuspend: (fn) => { listeners.suspend.push(fn); return foaf; },
     onResume: (fn) => { listeners.resume.push(fn); return foaf; },
     onTerminate: (fn) => { listeners.terminate.push(fn); return foaf; },

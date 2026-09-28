@@ -693,23 +693,44 @@ widgets are Apps." The tree half was already true (game nodes spawn under
   resumed. Only the frame's removal is deferred, instance-scoped so a
   deferred teardown cannot reach a game that started meanwhile.
 - **400ms is too short when frames share a thread (measured, September
-  2026; not fixed).** In headless Chromium the story runner and the game it
-  launched share one thread: heartbeats in both frames stopped at the same
-  moments, every run. So a game that blocks its thread blocks the runner too.
-  Waterworld under software GL blocks for up to 1.15s (the long block comes
-  about 2s after it starts; shorter ones of 0.15-0.45s come later). A close inside such a block misses the budget for BOTH saves, the
-  game's and the runner's, and the reader's place is lost with no message.
-  That is why `e2e-storyrunner` §9 fails about one run in five with "nothing
-  kept on close". In passing runs the game answers in 47-175ms and the
-  runner's save lands 77-217ms after the ✕. Options: a longer bounded wait
-  with the window hidden at once, or the runner pushing its state after each
-  beat so a close needs no round trip. Related: `saveAppSnapshot` and
-  `_persistSnapshot` ignore `store.set()` returning `{ok:false,
-  reason:'quota'}`, so a save the quota refused is reported as kept. How it
-  was measured: `page.addInitScript` with a 25ms `setInterval` that logs any
-  gap over 150ms, and a capturing `message` listener that logs arrival
-  times, in every frame; console lines from child frames reach
-  `page.on('console')`.
+  2026).** In headless Chromium the story runner and the game it launched
+  share one thread: heartbeats in both frames stopped at the same moments,
+  every run. Waterworld under software GL blocks that thread for up to 1.15s
+  (the long block comes about 2s after it starts; shorter ones of 0.15-0.45s
+  come later). A close inside a block got no answer in time, and the
+  reader's place was lost with no message: `e2e-storyrunner` §9 failed 4
+  runs in 21 with "nothing kept on close". In passing runs the game answers
+  in 47-175ms and the runner's save lands 77-217ms after the ✕.
+  - **The fix: the app SENDS its place, the close only asks.** A window app
+    may call `foaf.keepSnapshot(state)` (message `app.snapshot-keep`) each
+    time its state changes; the shell holds the latest in memory, and when
+    the close's ask times out it writes that one and publishes the close
+    with `late: true` ("kept its place (its last step…)"). The story runner
+    sends when a step ends where the reader waits (choices, or the end), and
+    sends `null` while it waits for a game, which is what its `onSnapshot`
+    answers then. A step that hands off (a link, a game launch, a dream
+    surfacing) sends nothing, because the place is in transit: `surface()`
+    pops the frame stack before the outer story loads, so a place taken then
+    would not match the stack. During a load (`story` is null) the last place
+    sent stands. `e2e-storyrunner` §9b proves it without a game: it moves the
+    place, holds the runner's thread for 1.5s with a busy loop, presses ✕,
+    and checks that the NEW place was kept and that the reopened runner is
+    there. With the code from before the fix, both §9b checks fail
+    (measured).
+  - Not changed: the stage host still gives a GAME 400ms, and a game has no
+    `keepSnapshot`. In the failing runs waterworld's own save was lost too.
+    The same fix fits (the guest SDK in `packages/finkgame` sends,
+    `fink-minigames.js` keeps), but every game would have to call it.
+  - A write the store refuses is no longer reported as kept:
+    `saveAppSnapshot` returns `{ok, reason}` and the close says "could not
+    keep its place (quota)"; `_persistSnapshot` returns false and the game's
+    message says "for this visit only (not stored)". Before, both ignored
+    `store.set()` returning `{ok:false, reason:'quota'}`.
+  - How it was measured: `page.addInitScript` with a 25ms `setInterval`
+    that logs any gap over 150ms, and a capturing `message` listener that
+    logs arrival times, in every frame; console lines from child frames
+    reach `page.on('console')`. Probe calls made just BEFORE the ✕ hid the
+    race (8 of 8 runs passed), so record from the start instead.
 - Guests may answer `null` to decline. Chess does, mid-animation: a
   half-slid piece would restore to a board that disagrees with itself.
 - **Disclosure is part of the feature.** The Task Manager says *keeps its
