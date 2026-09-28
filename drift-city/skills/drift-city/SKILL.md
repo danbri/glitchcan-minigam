@@ -745,6 +745,9 @@ curve chosen for the mood, another tap zooms out. First page: `novel/cellar.html
   overview). One knot per panel. Every still leads to the moving panel, which holds the three choices.
   `novel/cellar.ink` has only two lines of prose, exact quotes from Per Aspera's cellar knot; its other choice
   labels are plain navigation, to be replaced by owner-written lines.
+  Lesson (owner, 2026-09-28): the label "Look at her from the side" was "creepy"; the owner replaced it with "Take a
+  minute to think". A choice that only moves the camera onto a person reads as watching her. Name what the reader
+  does or feels, not where the camera points at someone.
 - Gutters: 30 px, black, cut at small angles (2 to 5 degrees). Precedent the owner asked about: Eisner (the panel
   border as a window or a doorway), Winsor McCay (panel shape doing the storytelling), J. H. Williams III (Promethea,
   Batwoman: shaped panels in a designed page), Frank Miller's Sin City (heavy black as material), manga (slanted
