@@ -499,6 +499,18 @@
           "by": "owner",
           "date": "2026-09-28",
           "status": "done in panels a, b and c of novel/cellar.html"
+        },
+        {
+          "text": "Redo the drumming panel: replace the table with a minimal drum kit, her drumming efficiently and effortlessly; no floaty, backwards or oversized hand movement.",
+          "by": "owner",
+          "date": "2026-09-28",
+          "status": "in progress"
+        },
+        {
+          "text": "Face hard to place (the world rule on appearance).",
+          "by": "owner",
+          "date": "2026-09-28",
+          "status": "in progress"
         }
       ],
       "possessions": [],
@@ -592,6 +604,13 @@
         "nuala"
       ],
       "music": "piano trio ballad (style 4)"
+    }
+  ],
+  "world": [
+    {
+      "text": "Assume every Earth ethnicity has blurred over the centuries: everyone should be hard to place by 2026 expectations.",
+      "by": "owner",
+      "date": "2026-09-28"
     }
   ]
 }

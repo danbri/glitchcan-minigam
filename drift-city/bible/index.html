@@ -34,7 +34,7 @@ li { margin: 2px 0; }
   <h1>Drift city sheets</h1>
   <p id="about">Loading sheets.json</p>
 </header>
-<nav><button data-v="characters" class="on">Characters</button><button data-v="rooms">Rooms</button></nav>
+<nav><button data-v="characters" class="on">Characters</button><button data-v="rooms">Rooms</button><button data-v="world">World rules</button></nav>
 <main id="list"></main>
 <script>
 (async () => {
@@ -53,6 +53,10 @@ li { margin: 2px 0; }
   const kv = (o) => Object.entries(o || {}).map(([k, v]) => k + ": " + v);
   const show = (v) => {
     const main = document.getElementById("list"); main.innerHTML = "";
+    if (v === "world") {
+      const c = el("section", "card"); c.appendChild(el("h2", "", "World rules"));
+      c.appendChild(list("Rules for every figure and room", doc.world, fact)); main.appendChild(c); return;
+    }
     for (const it of doc[v]) {
       const c = el("section", "card");
       c.appendChild(el("h2", "", it.name));
