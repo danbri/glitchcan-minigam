@@ -734,6 +734,70 @@ this (option 1 of 3) over splat heads on SDF bodies in the scene; holographic cr
 
 ## Drift City as a foafos app (September 2026)
 
+**Nothing of the city's own over its view in foafos** (owner, September
+2026: "other bits of random ui on screen"; "Promote them into foafos"):
+- `#ui` (the readout and the bottom bar) is hidden; the readout goes to
+  the shell (`hostStatus`: `statusParts` in main.js, the same parts in
+  fallback.js, plus where the camera is on Titan).
+- Hints (`showHint`) become lines in the shell's activity stream, from
+  "Drift City"; a "wait…" hint (ends in an ellipsis) is dropped.
+- A talking head renders off screen (`.headFeed.hostOff`); `headSay`
+  posts the line as a live activity item, `hostHeadFrame` sends 15 frames
+  a second as transferred ImageBitmaps (copied right after the draw: a
+  WebGL canvas keeps no picture after the frame), `headHide` ends it and
+  the shell keeps the last frame as the still. `# voice:` lines post text.
+- A short tap picks (standalone it shows or hides the controls); a long
+  press still picks too. The pick becomes a selection (spec §5.11):
+  `pickEntity` gives an id (`building:<cx>,<cz>` by wrapped cell,
+  `person:<walker id>`, `ship:<n>`, `place:<name>`), its kind, its
+  distance, its Titan position, and Fly there / Walk there (in a scene,
+  within 450 m) / On the map. `.pickMark` is a ring that follows it
+  (`pickMarkFrame`, projected with the inverse of `pickRay`; a person is
+  followed with `walkerAt`). People are picked where the ray reaches
+  body height, the nearest walker within 2.5 m, if nothing nearer is hit.
+
+## Coordinates (September 2026)
+
+Owner: "We need a coordinate system for the planet including view vectors
+for cameras; use anything from nasa/esa that makes sense."
+
+- Reported positions use **IAU_2015:60600**, "Titan (2015) - Sphere /
+  Ocentric" (IAU WGCCRE 2015, as registered for OGC use; checked on
+  spatialreference.org): sphere radius 2 575 000 m, planetocentric
+  latitude north-positive, longitude **east**-positive from the reference
+  meridian, which faces Saturn.
+- Our Titan frame (titan.js) is the same body-fixed frame with other axis
+  names: +Y is the north pole, +X points at 0°N 0°, longitudes are west
+  as on the Cassini-era maps. So IAU_TITAN body-fixed axes (X to 0°N 0°E,
+  Y to 0°N 90°E, Z north) are `[our X, our Z, our Y]`, and lon east =
+  -lon west. `HOME_DEST` 58°N 318°W is 58°N 42°E.
+- `titanPoint(x, y, z, fLocal?)` (a city point in local metres, y above
+  the datum) and `titanWhere()` (the camera, in every mode; trip, space
+  and free flight use `NAV.cam` in km) return `{crs, lat, lon, lonW, alt,
+  iau: [km], view?: {az, el, enu, iau}}`. Azimuth is clockwise from north,
+  elevation above the local horizon; `enu` is the view in local
+  east-north-up, `iau` in the body-fixed axes.
+- Local frame reminder: x east, y up, z SOUTH, and yaw 0 looks east.
+- Checked (e2e-drift 20c): the origin is 58°N 42°E; 5 km north is 5.000 km
+  of latitude; 5 km east at 58°N is 0.210° of longitude.
+- The local tangent frame is used for directions over the whole city
+  (20 km is 0.44° of arc); positions use `geoN`, which follows the sphere.
+
+## Conway Corner (September 2026)
+
+`conway_corner`, "Conway Corner, financial district": the street corner
+at cell (-16, -11), 70 m up, facing 228° of yaw (north-west), with six
+Life towers in view, in the tallest group of them. Found by a search, not
+by eye: every corner in ±30 cells, every 6° of heading, heights 28, 45 and
+70 m; Life towers by the shader's own rule (organic towers, typ 8, the
+`hsh(cseed,5,781) < (h >= 50.4 ? 0.9 : 0.3)` test); 45-330 m away (the
+boards are sharp within 350 m); a line of sight marched against
+`heightAt` that stops 16 m short of the tower (its own cell counts as an
+obstacle otherwise, and every view scored zero); score = h × 9 / d. Street
+trees make `heightAt` 19 m on almost every corner, so a street-level eye
+fails every test. Rendered and looked at with Node Dawn (daylight): six
+round towers in frame.
+
 **The city's menu is the shell's inside foafos** (spec §5.9). `host.js`
 hides `#bMenu` and walks `menuRoot()` into shell actions once a second
 (`hostMenuPublish`; sent only when the JSON changes): a row with `sub`

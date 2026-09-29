@@ -1207,10 +1207,14 @@ window.FinkMinigames = {
             inst._snapshotResolve = null;
             return;
         }
-        this.log(`[${inst.id}/${inst.type}] ${data.type}`);
-        window.FoafOS?.bus.publish('sys.sdk.rx',
-            { summary: `← ${data.type} (${inst.id})`, msg: data.type, from: inst.id, detail: data },
-            { source: 'sdk' });
+        // A face's frames come 15 a second and carry a bitmap: not logged, and
+        // not on the bus (which is mirrored to other tabs), like `key` on tx.
+        if (data.type !== 'activity-frame') {
+            this.log(`[${inst.id}/${inst.type}] ${data.type}`);
+            window.FoafOS?.bus.publish('sys.sdk.rx',
+                { summary: `← ${data.type} (${inst.id})`, msg: data.type, from: inst.id, detail: data },
+                { source: 'sdk' });
+        }
 
         switch (data.type) {
             case 'ready':
@@ -1269,6 +1273,10 @@ window.FinkMinigames = {
                 // who said or did what (spec §5.10): the shell's stream
                 window.FoafOS?.postActivity?.(inst.type, data.item,
                     this.minigameInfo?.[inst.type]?.title || inst.type);
+                break;
+
+            case 'activity-frame':
+                window.FoafOS?.activityFrame?.(inst.type, data.bitmap, !!data.end);
                 break;
 
             case 'status': {

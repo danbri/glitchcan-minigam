@@ -1429,10 +1429,15 @@ FoafOS.postActivity = (appId, item, appName = null) => {
   if (!text && !item.image) return null;
   const img = typeof item.image === 'string' && /^data:image\/(png|jpeg|webp);base64,/.test(item.image)
     && item.image.length <= ACTIVITY_IMAGE_MAX ? item.image : null;
-  const data = { summary: `${who}: ${text}`, who, text, app: appName || appId, image: img,
+  const live = !!item.live && !img;
+  const data = { summary: `${who}: ${text}`, who, text, app: appName || appId, image: img, live,
                  verb: item.verb ? String(item.verb).slice(0, 30) : null };
-  bus.publish(`activity.${appId}`, data);
+  // A live item (a face that speaks) reaches the feed when it ENDS, with its
+  // last frame as the still; until then only the card on screen shows it.
+  if (live) endLive(appId);
+  else bus.publish(`activity.${appId}`, data);
   const card = widgets.materialize({ topic: `activity.${appId}`, data, ts: Date.now() });
+  if (live) card.setAttribute('live', '');
   const box = document.createElement('button');
   box.type = 'button';
   box.className = 'foafos-activity-item';
@@ -1444,10 +1449,42 @@ FoafOS.postActivity = (appId, item, appName = null) => {
   });
   placeActivity();
   activityStrip.prepend(box);
-  while (activityStrip.children.length > 2) activityStrip.lastChild.remove();
-  setTimeout(() => box.classList.add('fading'), 7000);
-  setTimeout(() => box.remove(), 7600);
+  // a short pane has room for one card and the selection, not two
+  const paneH = window.FinkWM?.active ? document.getElementById('minigame-view')?.getBoundingClientRect().height || 0 : window.innerHeight;
+  const keep = paneH < 460 ? 1 : 2;
+  while (activityStrip.children.length > keep) activityStrip.lastChild.remove();
+  if (live) {
+    liveItems.set(appId, { data, box, canvas: card.liveCanvas, frames: 0,
+      timer: setTimeout(() => endLive(appId), 30000) });          // a line that never says it ended
+  } else fadeActivity(box, 7000);
   return data;
+};
+const liveItems = new Map();                   // appId → the live item on screen
+function fadeActivity(box, ms) {
+  setTimeout(() => box.classList.add('fading'), ms);
+  setTimeout(() => box.remove(), ms + 600);
+}
+function endLive(appId) {
+  const L = liveItems.get(appId);
+  if (!L) return;
+  liveItems.delete(appId);
+  clearTimeout(L.timer);
+  let still = null;
+  try { if (L.frames && L.canvas) still = L.canvas.toDataURL('image/jpeg', 0.82); } catch (e) { /* tainted or gone */ }
+  bus.publish(`activity.${appId}`, { ...L.data, live: false, image: still && still.length <= ACTIVITY_IMAGE_MAX ? still : null });
+  fadeActivity(L.box, 4000);
+}
+// A frame for the app's live item: drawn into its card, cover-cropped.
+FoafOS.activityFrame = (appId, bitmap, end) => {
+  if (end) { endLive(appId); return; }
+  const L = liveItems.get(appId);
+  if (!L || !L.canvas || !bitmap || typeof bitmap.width !== 'number') { try { bitmap?.close?.(); } catch (e) { /* not a bitmap */ } return; }
+  const c = L.canvas, ctx = c.getContext('2d');
+  const s = Math.max(c.width / bitmap.width, c.height / bitmap.height);
+  const w = bitmap.width * s, h = bitmap.height * s;
+  ctx.drawImage(bitmap, (c.width - w) / 2, (c.height - h) / 2, w, h);
+  bitmap.close?.();
+  L.frames++;
 };
 
 // An app's own readout (spec §5.10): what the city printed along the bottom

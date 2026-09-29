@@ -958,6 +958,56 @@ Not done yet: window apps (office, players) have no actions; the menu does
 not tell the app that it opened (Drift's own menu paused a guided tour
 while open); the pad's "B" still sends Escape to the app.
 
+### 5.10 The activity stream and the app's readout — normative
+
+Owner, September 2026: talking heads were "icons within world view.
+Promote them into foafos, maybe a generic Activity Stream like Facebook
+/Friendfeed had? Same with the text/info at bottom of world view showing
+stats."
+
+**Activity** (SDK `post({who, text, image?, verb?, live?})`). The shell
+publishes `activity.<app>` on the bus; its feed (the ⊞ drawer) draws each
+as a `foaf-activity` card: a face or an initial, who, the app, the time,
+the text. The newest one or two show over the app's pane for a few
+seconds (one when the pane is short); a tap opens the history.
+
+- `image`: a `data:image/(png|jpeg|webp)` URL of at most 120 kB.
+- `live: true` (a face that speaks): the app then sends frames with
+  `postFrame(ImageBitmap)` (transferred, about 15 a second) and
+  `endLive()` when the line ends. The card draws the frames; the item
+  reaches the feed at the end, with the last frame as its still. A live
+  item that never ends is closed after 30 s.
+- Frames are not logged and not put on the bus: the bus is mirrored to
+  other tabs, and a bitmap 15 times a second does not belong there.
+
+**Readout** (SDK `setStatus(items)`, `[{id, label?, value, icon?}]`, at
+most 6). Published retained as `app.<id>.status` (the menubar reads it)
+and shown under the title of the window menu (§5.9).
+
+### 5.11 The selection — normative
+
+Owner, September 2026: "an object picker so clicking in the world gives
+us a building, person or entity to feed into other lookups/actions or
+visually highlight … something for fly to vs walk to".
+
+The app decides what was picked and marks it in its own view; the shell
+shows it and publishes it. SDK `select({id, kind, name, detail?, where?,
+actions?})`, or `select(null)`:
+
+- `kind`: building, person, place, vehicle, room, thing (an icon each).
+- `id` says what it is in the app's own terms (Drift: `building:<cx>,<cz>`,
+  `person:<slot>`, `ship:<n>`, `place:<name>`).
+- `where`: a position the app can state; Drift gives IAU_2015:60600 (see
+  the drift-city skill, "Coordinates").
+- `actions` (≤ 6, `{id, label}`): drawn as buttons on the shell's
+  selection card; a chosen id comes back to `onAction` like a menu action,
+  and only an offered id is sent. ✕ clears it and the app hears
+  `onDeselect`.
+- Published retained as `app.<id>.selection` `{entity}`, so another app
+  granted the topic can look the thing up.
+
+Locked by `e2e-drift.mjs` 20a-20c.
+
 ## 6. Links, navigation, identity
 
 Incorporates `docs/fink-linking-spec.md`: two-part SHA-256 hash links

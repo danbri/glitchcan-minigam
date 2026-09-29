@@ -389,6 +389,41 @@ try {
       ? pass(`the city has no ☰ of its own in foafos; its menu is the shell's (${acts.length} rows: ${acts.slice(0, 4).join(' · ')} …), and Time and weather › Night chosen there sets the city's night`)
       : fail(`city menu as actions: ${JSON.stringify({ cityBurger, acts, before, ran, after, forged })}`);
 
+    // 20c. NOTHING OF THE CITY'S OWN OVER ITS VIEW (owner, September 2026: "other bits of random ui on screen";
+    // "Promote them into foafos"). Its readout is the shell's, with where the camera is on Titan (IAU_2015:60600);
+    // a pick is a selection the shell shows with its actions; a hint is a line in the shell's activity stream.
+    const hostUi = await wcity.evaluate(() => ({ ui: getComputedStyle(document.getElementById('ui')).display,
+      where: __drift.titanWhere(), p0: __drift.titanPoint(0, 0, 0), pN: __drift.titanPoint(0, 0, -5000) }));
+    const status = await wpage.waitForFunction(() => (FoafOS.bus.retained('app.drift.status')[0]?.data?.items || []).length > 1,
+      null, { timeout: 15000 }).then(() => wpage.evaluate(() => FoafOS.bus.retained('app.drift.status')[0].data.items), () => null);
+    const northKm = (hostUi.pN.lat - hostUi.p0.lat) * Math.PI / 180 * 2575;
+    hostUi.ui === 'none' && status?.some((it) => it.id === 'at' && /°[NS] .*°[EW]$/.test(it.value))
+      && hostUi.where.crs === 'IAU_2015:60600' && hostUi.p0.lat === 58 && hostUi.p0.lon === 42 && Math.abs(northKm - 5) < 0.01
+      && typeof hostUi.where.view?.az === 'number'
+      ? pass(`the city's readout is the shell's (${status.map((it) => it.value).join(' · ')}); positions in IAU_2015:60600: the city at 58°N 42°E (318°W), 5 km north is ${northKm.toFixed(3)} km of latitude, the camera looks at azimuth ${hostUi.where.view.az}°`)
+      : fail(`readout and coordinates: ${JSON.stringify({ ui: hostUi.ui, status, where: hostUi.where, northKm })}`);
+    await wcity.evaluate(() => __drift.pickGo(innerWidth / 2, innerHeight * 0.62, false));
+    const sel = await wpage.waitForFunction(() => FoafOS.bus.retained('app.drift.selection')[0]?.data?.entity, null, { timeout: 10000 })
+      .then(() => wpage.evaluate(() => ({ e: FoafOS.bus.retained('app.drift.selection')[0].data.entity,
+        card: !document.getElementById('foafos-selection').hidden,
+        buttons: [...document.querySelectorAll('#foafos-selection .sel-actions button')].map((b) => b.textContent) })), () => null);
+    const flew = sel ? await wpage.evaluate(() => { document.querySelector('#foafos-selection [data-action="pick:fly"]')?.click(); return true; }) : false;
+    const visiting = flew && await wcity.waitForFunction(() => __drift.NAV.mode === 'visit' && __drift.NAV.visit?.look, null, { timeout: 10000 }).then(() => true, () => false);
+    sel?.card && /^(building|place|person|vehicle):/.test(sel.e.id) && sel.e.where?.crs === 'IAU_2015:60600'
+      && sel.buttons.includes('Fly there') && visiting
+      ? pass(`a pick is a selection in the shell: ${sel.e.kind} "${sel.e.name}" (${sel.e.id}, ${sel.e.where.lat.toFixed(4)}°N ${sel.e.where.lon.toFixed(4)}°E), with ${sel.buttons.join(' / ')}; Fly there flies`)
+      : fail(`selection: ${JSON.stringify({ sel, visiting })}`);
+    // the talking head's line (section 19) went to the shell's activity stream, and its face with it
+    // the feed has it once the line has ended; while it plays it is the live card on screen
+    const stream = await wpage.evaluate(() => [...document.querySelectorAll('#foafos-feed-wrap foaf-activity, #foafos-activity foaf-activity')]
+      .map((c) => ({ label: c.getAttribute('aria-label'), img: !!c.shadowRoot?.querySelector('.face img, .face canvas') })));
+    const mags = stream.find((c) => /^Mags/.test(c.label || ''));
+    const headOff = await wcity.evaluate(() => !document.querySelector('.headFeed') || document.querySelector('.headFeed').classList.contains('hostOff')
+      || document.querySelector('.headFeed').hidden);
+    mags && headOff
+      ? pass(`the talking head speaks in the shell's activity stream ("${mags.label.slice(0, 60)}…"${mags.img ? ', with a still of the face' : ''}), not over the view`)
+      : fail(`activity stream: ${JSON.stringify({ stream: stream.slice(0, 4), headOff })}`);
+
     // 20b. the city never plays its own story beside a foafos one. Field report, September 2026: "The tea stall
     // story ink ui seems to use its builtin ink engine": the opening flight's end, the Story button and the t key
     // all opened the city's own story panel, over the runner's story.
@@ -502,13 +537,14 @@ try {
         stage: [Math.round(document.getElementById('minigame-view').getBoundingClientRect().top), Math.round(document.getElementById('minigame-view').getBoundingClientRect().bottom)],
         story: [Math.round(w.getBoundingClientRect().top), Math.round(w.getBoundingClientRect().bottom)],
         dock: [Math.round(document.getElementById('foafos-dock').getBoundingClientRect().top), Math.round(document.getElementById('foafos-dock').getBoundingClientRect().bottom)],
+        dockHidden: getComputedStyle(document.getElementById('foafos-dock')).display === 'none',
         mode: document.body.dataset.stageMode };
     });
     const own = await tc.evaluate(() => ({ on: __drift.PAD.on, hidden: document.getElementById('pad')?.hidden !== false }));
     const within = (x, box) => x[0] >= box[0] - 1 && x[1] <= box[1] + 1;
     !pad.hidden && pad.sticks && pad.dir === 'none' && pad.stickW > 60 && pad.mode === 'split' && within(pad.pad, pad.stage)
-      && !own.on && own.hidden && within(pad.dock, pad.stage)
-      ? pass(`on a phone a world opens split; the foafos pad shows two sticks over the city (pad ${pad.pad.join('-')}, city ${pad.stage.join('-')}, story ${pad.story.join('-')}); the city's own sticks are hidden; the dock is over the city, not the story`)
+      && !own.on && own.hidden && pad.dockHidden
+      ? pass(`on a phone a world opens split; the foafos pad shows two sticks over the city (pad ${pad.pad.join('-')}, city ${pad.stage.join('-')}, story ${pad.story.join('-')}); the city's own sticks are hidden; the ⊞ dock steps aside while the window menu is there`)
       : fail(`foafos sticks: ${JSON.stringify({ pad, own })}`);
 
     // 25. a thumb on the right stick moves the city; lifting it stops it

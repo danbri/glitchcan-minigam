@@ -146,18 +146,27 @@ export function defineActivityCard() {
                     display: grid; place-items: center; background: #223; color: #cde;
                     font-weight: bold; border: 1px solid rgba(255,255,255,0.25); }
             .face img { width: 100%; height: 100%; object-fit: cover; }
+            :host([live]) .face { width: 4.2em; height: 4.2em; border-radius: 12px; }
             .body { min-width: 0; font-size: 0.88em; line-height: 1.35; }
             .who { font-weight: bold; }
             .meta { opacity: 0.6; font-size: 0.85em; margin-left: 0.35em; font-weight: normal; }
             .text { word-break: break-word; }
           </style>
           <div class="row"><div class="face" aria-hidden="true"></div>
-            <div class="body"><div class="who"></div><div class="text"></div></div></div>`;
+            <div class="body"><div class="who"></div><div class="text" part="text"></div></div></div>`;
       }
       const $ = (s) => this.shadowRoot.querySelector(s);
       const face = $('.face');
       face.textContent = '';
-      if (typeof d.image === 'string' && d.image.startsWith('data:image/')) {
+      this.liveCanvas = null;
+      if (d.live && !d.image) {
+        // a live face: the shell draws the app's frames here (liveCanvas)
+        const cv = document.createElement('canvas');
+        cv.width = 96; cv.height = 96;
+        cv.style.width = '100%'; cv.style.height = '100%';
+        face.appendChild(cv);
+        this.liveCanvas = cv;
+      } else if (typeof d.image === 'string' && d.image.startsWith('data:image/')) {
         const img = document.createElement('img');
         img.alt = '';
         img.src = d.image;

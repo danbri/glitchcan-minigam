@@ -34,6 +34,7 @@ canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh;
 canvas:active { cursor: grabbing; }
 .ui { position: fixed; left: 0; right: 0; bottom: 0; padding: 0 12px calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; transition: opacity .35s, transform .35s; }
 .ui.hidden { opacity: 0; transform: translateY(12px); }
+.ui[hidden] { display: none; }
 .ui.hidden .bar, .ui.hidden .status { pointer-events: none; }
 .status { display: flex; gap: 14px; font: inherit; font-size: 13px; letter-spacing: .02em; color: var(--ink-dim); text-shadow: 0 1px 8px rgba(0,0,0,.7); background: none; border: 0; padding: 4px 8px; border-radius: 8px; cursor: pointer; pointer-events: auto; }
 .status:focus-visible { outline: 2px solid var(--accent); }
@@ -95,6 +96,7 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 /* talking heads (heads.js): a helmet comms feed, top left under the story bar */
 .headFeed { position: fixed; left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(84px + env(safe-area-inset-top, 0px)); z-index: 13; width: 128px; height: 168px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(160, 220, 255, 0.45); box-shadow: 0 0 calc(6px + 14px * var(--lvl, 0)) rgba(120, 200, 255, 0.35); background: #05080b; pointer-events: none; animation: headIn 0.3s ease-out, headFlick 7s steps(1) infinite; }
 .headFeed[hidden] { display: none; }
+.headFeed.hostOff { left: -10000px !important; top: 0 !important; }
 .headFeed.inTale { position: relative; left: auto; top: auto; float: right; width: 104px; height: 136px; margin: 4px 0 6px 10px; }
 .headFeed.inTale .headName { font-size: 9px; bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .headFeed.inTale .headCredit { font-size: 6px; left: 4px; right: 2px; bottom: 3px; letter-spacing: -0.02em; }
@@ -116,6 +118,9 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 .benchCard button { font: inherit; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid var(--edge); border-radius: 10px; min-height: 44px; padding: 6px 14px; margin-right: 8px; cursor: pointer; }
 .guideCap .guideText { flex: 1; }
 .pickRing.go { animation: pickGo 2.4s ease-out forwards; }
+/* the selection, followed in the view (pickMarkFrame): a ring on the picked thing until it is cleared */
+.pickMark { position: fixed; z-index: 12; pointer-events: none; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid #7fe3ff; box-shadow: 0 0 10px rgba(127, 227, 255, .8), inset 0 0 10px rgba(127, 227, 255, .5); }
+.pickMark[hidden] { display: none; }
 @keyframes pickGo { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } }
 .mapHead { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin: 0 2px 6px; }
 .mapClose { font: inherit; font-size: 18px; color: var(--ink); background: rgba(255,255,255,.06); border: 1px solid var(--edge); border-radius: 10px; width: 40px; height: 36px; cursor: pointer; }
@@ -10018,10 +10023,13 @@ function initGL(reason) {
     if (hud > 0.25) {
       hud = 0;
       const autoOn = clock - lastInput > 4.5;
-      statusEl.innerHTML = "<b>" + (autoOn ? "Autopilot" : "Steering by hand") + "</b><span>" + placeName() + "</span><span>" + st.y.toFixed(0) + " m</span>";
+      const parts = [autoOn ? "Autopilot" : "Steering by hand", placeName(), st.y.toFixed(0) + " m"];
+      if (hostOn()) hostStatus(parts);                 // in foafos the readout is the shell's (host.js)
+      else statusEl.innerHTML = "<b>" + parts[0] + "</b><span>" + parts[1] + "</span><span>" + parts[2] + "</span>";
       if (statsOn) statsEl.textContent = "WebGL fallback (" + reason + "). Frame " + ema.toFixed(1) + " ms, render " + canvas.width + " × " + canvas.height + " (" + Math.round(scale * 100) + "%), shadows " + (shadows ? "on" : "off") + ", world data " + Math.round(100 * (W.tNext + W.bNext) / (W.NT + W.NWF)) + "%";
     }
     if (typeof benchTick === "function") benchTick(dt, ema, null, scale, canvas.width, canvas.height);
+    pickMarkFrame();
     requestAnimationFrame(frame);
   }
   let frameNoGL = 0;
@@ -10967,6 +10975,54 @@ function introEnd() {
   taleOpen();
 }
 function introSkip() { if (INTRO.on) { NAV.trip = null; NAV.space = null; introEnd(); } }
+
+// ---------- coordinates on Titan, for anything outside this page (the drift-city skill, "Coordinates") ----------
+// Owner, September 2026: "We need a coordinate system for the planet including view vectors for cameras; use
+// anything from nasa/esa that makes sense". Positions are reported in IAU_2015:60600, "Titan (2015) - Sphere /
+// Ocentric" (IAU WGCCRE 2015, as registered for OGC use): a sphere of radius 2575 km, planetocentric latitude
+// north-positive, longitude EAST-positive from the reference meridian, which faces Saturn. Our own frame is the same
+// body-fixed frame with the axes named differently (Y north, longitudes west, as on the Cassini-era maps), so:
+//   IAU_TITAN body-fixed (X to 0°N 0°E, Y to 0°N 90°E, Z to the north pole) = [our X, our Z, our Y]
+//   longitude east = -(longitude west), in [-180, 180)
+// A view is a unit vector: azimuth clockwise from north and elevation above the local horizon, the same vector in
+// local east-north-up, and in IAU_TITAN body-fixed axes. Altitude is metres above the 2575 km sphere.
+const TITAN_CRS = "IAU_2015:60600";
+function iauOf(v) { return [v[0], v[2], v[1]]; }
+function wrap180(d) { return ((d + 180) % 360 + 360) % 360 - 180; }
+function geoOfDir(d) {
+  const lat = Math.asin(Math.max(-1, Math.min(1, d[1]))) / DEG;
+  const lonE = wrap180(Math.atan2(d[2], d[0]) / DEG);
+  return { lat, lon: lonE, lonW: ((-lonE % 360) + 360) % 360 };
+}
+function viewOf(F, frame) {
+  const e = dot3(F, frame.E), n = dot3(F, frame.N), u = dot3(F, frame.U);
+  return { az: ((Math.atan2(e, n) / DEG) + 360) % 360, el: Math.asin(Math.max(-1, Math.min(1, u))) / DEG,
+           enu: [e, n, u], iau: iauOf(F) };
+}
+const r6 = (v) => Math.round(v * 1e6) / 1e6;
+function titanReport(dir, altM, view) {
+  const g = geoOfDir(dir);
+  const out = { crs: TITAN_CRS, lat: r6(g.lat), lon: r6(g.lon), lonW: r6(g.lonW), alt: Math.round(altM * 10) / 10,
+    iau: iauOf(dir).map((c) => r6(c * (TR + altM / 1000))) };
+  if (view) out.view = { az: Math.round(view.az * 100) / 100, el: Math.round(view.el * 100) / 100,
+    enu: view.enu.map(r6), iau: view.iau.map(r6) };
+  return out;
+}
+// A point of the city (local metres; y above the datum) and, optionally, a local direction from it.
+function titanPoint(x, y, z, fLocal) {
+  const dir = geoN(repX(x) + REG.ox, repZ(z) + REG.oz);
+  const fr = frameAt(dir);
+  return titanReport(dir, y, fLocal ? viewOf(toTitan(fr, fLocal), fr) : null);
+}
+// Where the camera is and where it looks, in every mode.
+function titanWhere() {
+  if (NAV.cam && NAV.cam.P) {                       // trip, space, free flight: the Titan frame, km
+    const P = NAV.cam.P, r = Math.hypot(P[0], P[1], P[2]);
+    const dir = [P[0] / r, P[1] / r, P[2] / r];
+    return { mode: NAV.mode, ...titanReport(dir, (r - TR) * 1000, viewOf(NAV.cam.F, frameAt(dir))) };
+  }
+  return { mode: NAV.mode, ...titanPoint(st.x, st.y, st.z, cameraVectors().f) };
+}
 
 // ---------- sound: synthesised live with Web Audio, and placed in the world ----------
 // Every source has a position in the local frame (metres); the listener follows the camera, and with headphones the
@@ -12058,7 +12114,7 @@ function venueStep() {
   while (VENUE.cNext < now + 0.3) { crowdGrain(VENUE.cNext, C.lvl * (inGap ? 1.3 : C.play)); VENUE.cNext += rr(0.25, 0.4); }
 }
 
-const PLACES_BAKED = [{"id":"hall_floor","name":"Assembly Hall, the floor","blurb":"Under the great glass dome, where the city's assembly meets: tier on tier of seats around the rostrum. Light falls through the ribs in long amber bars.","x":720,"y":2.8,"z":-725,"yaw":2.8416,"pitch":0.28},{"id":"hall_steps","name":"Assembly Hall, the steps","blurb":"The broad stone steps below the arcade, a place to wait, to argue, to be seen.","x":644,"y":4.4,"z":-728,"yaw":0,"pitch":0.2},{"id":"civic_axis","name":"The Assembly Hall avenue, old town","blurb":"The long reflecting pools up the avenue, between two walls of stone, to the dome of the Assembly Hall.","x":728,"y":3.2,"z":-175,"yaw":-1.5708,"pitch":0.1},{"id":"hive","name":"Facing the Hive, Lumen roofs","blurb":"Across the gap, the pod block fills the sky: patched walls, a million little windows, and the boards telling everyone inside to sleep more.","x":741,"y":124.01,"z":741,"yaw":1.5964,"pitch":0.08},{"id":"fab","name":"Hive battlements, over the pod fab","blurb":"Below, the fab that makes the Hive's capsule homes, fed by a beam from the power station in orbit: a white line through the clouds, day and night.","x":983,"y":252,"z":1098,"yaw":0.2783,"pitch":-0.42},{"id":"warmhouse","name":"The Warmhouse, the square","blurb":"Inside the bubble the air is warm and thin, and smells of Earth: grass, bread, beer. Lights are strung round the square; the club's dome glows in the middle.","x":-1621.82,"y":209.2,"z":537.29,"yaw":0.85,"pitch":0.2},{"id":"warmhouse_below","name":"Under the Warmhouse","blurb":"A bubble of warm air, 340 m across, hangs over the west edge of the city ahead on four cables. It floats because it is lighter than the cold, dense air around it.","x":-2270,"y":16.7,"z":687,"yaw":-0.2526,"pitch":0.42},{"id":"pagoda_3","name":"Pagoda, Chinatown","blurb":"Tiers of curved roofs on Orchid Street; incense and methane frost on the eaves.","x":-880.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.18},{"id":"street_0","name":"Ferry Row, financial district","blurb":"A street corner in the financial district: tube traffic humming past, windows stacked up into the haze.","x":-39,"y":1.7,"z":-100.4,"yaw":-1.5708,"pitch":0.18},{"id":"giant_0","name":"Below a megatower, financial district","blurb":"Over the park at its foot, a tower that vanishes into the haze above Halo Row.","x":5.01,"y":26,"z":-5.01,"yaw":-0.7854,"pitch":0.38},{"id":"street_1","name":"Ferry Street, neon quarter","blurb":"A street corner in the neon quarter: tube traffic humming past, windows stacked up into the haze.","x":-143,"y":1.7,"z":81.6,"yaw":-1.5708,"pitch":0.18},{"id":"roof_0","name":"Rooftop above the financial district","blurb":"A rooftop high over Ferry Lane, the financial district spread out below.","x":-117,"y":138.28,"z":-65,"yaw":6.8068,"pitch":-0.12},{"id":"pyramid","name":"Corporate pyramid, financial district","blurb":"A stepped pyramid of glass and stone on Ferry Lane; security drones idle at its apex.","x":-143,"y":1.7,"z":-81.6,"yaw":1.5708,"pitch":0.18},{"id":"roof_1","name":"Rooftop above the neon quarter","blurb":"A rooftop high over Dune Passage, the neon quarter spread out below.","x":-169,"y":67.5,"z":91,"yaw":5.8905,"pitch":-0.12},{"id":"market_1","name":"Night market, neon quarter","blurb":"Stalls under strings of light on Orchid Walk: noodles, cold-weather gear, spare parts, rumours.","x":-221,"y":1.7,"z":48.4,"yaw":1.5708,"pitch":0.18},{"id":"roof_oddity","name":"A rooftop garden","blurb":"Someone keeps a garden up here, with a view across the neon quarter.","x":-299,"y":38.9,"z":13,"yaw":3.1416,"pitch":-0.12},{"id":"tower_0","name":"Signal tower, financial district","blurb":"A lattice tower on Halo Wynd, blinking out to the ships.","x":-377,"y":1.7,"z":-263.6,"yaw":1.5708,"pitch":0.18},{"id":"street_6","name":"Haze Row, dorms","blurb":"A street corner in the dorms: tube traffic humming past, windows stacked up into the haze.","x":429,"y":1.7,"z":341.6,"yaw":-1.5708,"pitch":0.18},{"id":"roof_6","name":"Rooftop above the dorms","blurb":"A rooftop high over Haze Row, the dorms spread out below.","x":429,"y":67.88,"z":325,"yaw":3.8092,"pitch":-0.12},{"id":"street_3","name":"Glass Walk, Chinatown","blurb":"A street corner in the Chinatown: tube traffic humming past, windows stacked up into the haze.","x":-282.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.18},{"id":"roof_3","name":"Rooftop above Chinatown","blurb":"A rooftop high over Glass Walk, Chinatown spread out below.","x":-299,"y":36.77,"z":429,"yaw":5.38,"pitch":-0.12},{"id":"market_3","name":"Night market, Chinatown","blurb":"Stalls under strings of light on Huygens Passage: noodles, cold-weather gear, spare parts, rumours.","x":-523.6,"y":1.7,"z":-117,"yaw":0,"pitch":0.18},{"id":"street_7","name":"Saturnlight Lane, crystal quarter","blurb":"A street corner in the crystal quarter: tube traffic humming past, windows stacked up into the haze.","x":-464.4,"y":1.7,"z":-221,"yaw":3.1416,"pitch":0.18},{"id":"roof_7","name":"Rooftop above the crystal quarter","blurb":"A rooftop high over Methane Row, the crystal quarter spread out below.","x":-403,"y":68.87,"z":-351,"yaw":6.9938,"pitch":-0.12},{"id":"street_2","name":"Cryo Street, old town","blurb":"A street corner in the old town: tube traffic humming past, windows stacked up into the haze.","x":100.4,"y":1.7,"z":-637,"yaw":0,"pitch":0.18},{"id":"roof_2","name":"Rooftop above the old town","blurb":"A rooftop high over Kraken Lane, the old town spread out below.","x":247,"y":67.71,"z":-793,"yaw":8.124,"pitch":-0.12},{"id":"works_4","name":"The works, industrial belt","blurb":"Pipes, stacks and pressure domes on Huygens Parade: the city's heat and air are made here.","x":871,"y":1.7,"z":-1244.4,"yaw":-1.5708,"pitch":0.18},{"id":"street_4","name":"Cryo Row, industrial belt","blurb":"A street corner in the industrial belt: tube traffic humming past, windows stacked up into the haze.","x":897,"y":1.7,"z":-1277.6,"yaw":1.5708,"pitch":0.18},{"id":"spaceport_apron","name":"Spaceport apron","blurb":"Landing pads and fuel lines off Orchid Wynd, under the long light of Saturn.","x":2353,"y":1.7,"z":-2421.6,"yaw":1.5708,"pitch":0.18},{"id":"street_5","name":"Dune Wynd, spaceport","blurb":"A street corner in the spaceport: tube traffic humming past, windows stacked up into the haze.","x":2509,"y":1.7,"z":-2265.6,"yaw":1.5708,"pitch":0.18},{"id":"sign","name":"Below the hillside letters","blurb":"The letters DRIFT CITY stand on the hill above, each taller than a house.","x":52,"y":8.71,"z":-2479,"yaw":-1.5708,"pitch":0.0798},{"id":"stones","name":"The stone circle","blurb":"Standing stones on a rise, older than the city, nobody agrees whose.","x":1157,"y":54.48,"z":-3228.16,"yaw":1.5708,"pitch":0.12},{"id":"treehouse","name":"The treehouse","blurb":"A cabin in the crown of a great tree, reached by a swaying ladder.","x":1443,"y":12,"z":-3982.16,"yaw":1.5708,"pitch":0.12},{"id":"cabin","name":"The mountain cabin","blurb":"A cabin high on the slopes, smoke from its heat vent.","x":4242.16,"y":86.24,"z":1469,"yaw":3.1416,"pitch":0.12},{"id":"dish","name":"The radio dish","blurb":"A dish in the hills, listening for Earth.","x":6435,"y":89.19,"z":-1824.16,"yaw":1.5708,"pitch":0.12},{"id":"lander","name":"The lander","blurb":"An old probe, its parachute collapsed beside it on the pebbles.","x":-5213,"y":70.84,"z":-6712.16,"yaw":1.5708,"pitch":0.12},{"id":"riverbank","name":"A river bank","blurb":"A methane river slides past, silent and dark, between low banks.","x":-3177.04,"y":21.02,"z":-7068.87,"yaw":5.8608,"pitch":0.05},{"id":"lakeshore","name":"The lake shore","blurb":"The edge of a methane lake; tiny waves, and the city's glow far off across it.","x":2471.14,"y":1.7,"z":6549.31,"yaw":2.7808,"pitch":0.05},{"id":"glade","name":"A forest glade","blurb":"A clearing in the dark forest; the fronds glow faintly after dark.","x":7000,"y":31.84,"z":0,"yaw":1.5708,"pitch":0.05},{"id":"summit","name":"A summit","blurb":"A bare summit of ice rock above the haze layer, the city a smudge of light below.","x":-4283.64,"y":504.32,"z":-5724.77,"yaw":5.6408,"pitch":0.05},{"id":"dunes","name":"Among the dunes","blurb":"Dark dunes of organic sand, rippled by the wind.","x":-6137.73,"y":20.43,"z":3365.76,"yaw":4.2108,"pitch":0.05},{"id":"corner_-8_-5","name":"Cassini Parade, financial district","blurb":"A corner on Cassini Parade: steam from a vent, the tubes' glass humming with traffic.","x":-211.6,"y":1.7,"z":-117,"yaw":0,"pitch":0.18},{"id":"corner_0_-10","name":"Amber Walk, financial district","blurb":"A corner on Amber Walk: steam from a vent, the tubes' glass humming with traffic.","x":13,"y":1.7,"z":-230.4,"yaw":-1.5708,"pitch":0.18},{"id":"corner_-9_5","name":"Saturnlight Wynd, financial district","blurb":"A corner on Saturnlight Wynd: steam from a vent, the tubes' glass humming with traffic.","x":-237.6,"y":1.7,"z":143,"yaw":0,"pitch":0.18},{"id":"corner_-21_-12","name":"Tholin Street, crystal quarter","blurb":"A corner on Tholin Street: steam from a vent, the tubes' glass humming with traffic.","x":-516.4,"y":1.7,"z":-299,"yaw":3.1416,"pitch":0.18},{"id":"corner_21_12","name":"Dune Walk, dorms","blurb":"A corner on Dune Walk: steam from a vent, the tubes' glass humming with traffic.","x":542.4,"y":1.7,"z":325,"yaw":0,"pitch":0.18},{"id":"corner_14_-28","name":"Lantern Parade, old town","blurb":"A corner on Lantern Parade: steam from a vent, the tubes' glass humming with traffic.","x":360.4,"y":1.7,"z":-715,"yaw":0,"pitch":0.18},{"id":"corner_17_26","name":"Tholin Street, dorms","blurb":"A corner on Tholin Street: steam from a vent, the tubes' glass humming with traffic.","x":471.6,"y":1.7,"z":689,"yaw":3.1416,"pitch":0.18},{"id":"corner_-14_28","name":"Dune Arcade, dorms","blurb":"A corner on Dune Arcade: steam from a vent, the tubes' glass humming with traffic.","x":-334.4,"y":1.7,"z":741,"yaw":3.1416,"pitch":0.18},{"id":"corner_-31_2","name":"Halo Arcade, neon quarter","blurb":"A corner on Halo Arcade: steam from a vent, the tubes' glass humming with traffic.","x":-793,"y":1.7,"z":48.4,"yaw":1.5708,"pitch":0.18},{"id":"cold_tap","name":"The Cold Tap, Ferry Street","blurb":"A dive bar behind an airlock: nine stools, a heater that ticks, bottles lit from below, and a price list older than the dome.","x":-143,"y":1.7,"z":81.6,"yaw":-1.5708,"pitch":0.02,"room":1},{"id":"low_orbit_bar","name":"The Low Orbit, by the spaceport","blurb":"A long bar for ship crews, with a window on the pads and a cracked star painted on the ceiling.","x":2509,"y":1.7,"z":-2265.6,"yaw":1.5708,"pitch":0.02,"room":2},{"id":"lantern_cellar","name":"The Lantern Cellar, Chinatown","blurb":"Forty steps down: a brick vault full of paper lanterns and smoke, and a late jam that never stops.","x":-282.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.02,"room":3},{"id":"warmhouse_club","name":"The Warmhouse club","blurb":"The jazz club under the dome in the middle of the Warmhouse: tables in rings, lamps on every table, the stand at the far side.","x":-1621.82,"y":209.2,"z":537.29,"yaw":0.85,"pitch":0.02,"room":4}];
+const PLACES_BAKED = [{"id":"hall_floor","name":"Assembly Hall, the floor","blurb":"Under the great glass dome, where the city's assembly meets: tier on tier of seats around the rostrum. Light falls through the ribs in long amber bars.","x":720,"y":2.8,"z":-725,"yaw":2.8416,"pitch":0.28},{"id":"hall_steps","name":"Assembly Hall, the steps","blurb":"The broad stone steps below the arcade, a place to wait, to argue, to be seen.","x":644,"y":4.4,"z":-728,"yaw":0,"pitch":0.2},{"id":"civic_axis","name":"The Assembly Hall avenue, old town","blurb":"The long reflecting pools up the avenue, between two walls of stone, to the dome of the Assembly Hall.","x":728,"y":3.2,"z":-175,"yaw":-1.5708,"pitch":0.1},{"id":"conway_corner","name":"Conway Corner, financial district","blurb":"A crossing high over the financial district where six of the round towers stand in view at once, their windows running Conway's Game of Life: gliders crawl round them, colonies bloom and die, and each board starts again when it goes still.","x":-416,"y":70,"z":-286,"yaw":3.979,"pitch":-0.118},{"id":"hive","name":"Facing the Hive, Lumen roofs","blurb":"Across the gap, the pod block fills the sky: patched walls, a million little windows, and the boards telling everyone inside to sleep more.","x":741,"y":124.01,"z":741,"yaw":1.5964,"pitch":0.08},{"id":"fab","name":"Hive battlements, over the pod fab","blurb":"Below, the fab that makes the Hive's capsule homes, fed by a beam from the power station in orbit: a white line through the clouds, day and night.","x":983,"y":252,"z":1098,"yaw":0.2783,"pitch":-0.42},{"id":"warmhouse","name":"The Warmhouse, the square","blurb":"Inside the bubble the air is warm and thin, and smells of Earth: grass, bread, beer. Lights are strung round the square; the club's dome glows in the middle.","x":-1621.82,"y":209.2,"z":537.29,"yaw":0.85,"pitch":0.2},{"id":"warmhouse_below","name":"Under the Warmhouse","blurb":"A bubble of warm air, 340 m across, hangs over the west edge of the city ahead on four cables. It floats because it is lighter than the cold, dense air around it.","x":-2270,"y":16.7,"z":687,"yaw":-0.2526,"pitch":0.42},{"id":"pagoda_3","name":"Pagoda, Chinatown","blurb":"Tiers of curved roofs on Orchid Street; incense and methane frost on the eaves.","x":-880.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.18},{"id":"street_0","name":"Ferry Row, financial district","blurb":"A street corner in the financial district: tube traffic humming past, windows stacked up into the haze.","x":-39,"y":1.7,"z":-100.4,"yaw":-1.5708,"pitch":0.18},{"id":"giant_0","name":"Below a megatower, financial district","blurb":"Over the park at its foot, a tower that vanishes into the haze above Halo Row.","x":5.01,"y":26,"z":-5.01,"yaw":-0.7854,"pitch":0.38},{"id":"street_1","name":"Ferry Street, neon quarter","blurb":"A street corner in the neon quarter: tube traffic humming past, windows stacked up into the haze.","x":-143,"y":1.7,"z":81.6,"yaw":-1.5708,"pitch":0.18},{"id":"roof_0","name":"Rooftop above the financial district","blurb":"A rooftop high over Ferry Lane, the financial district spread out below.","x":-117,"y":138.28,"z":-65,"yaw":6.8068,"pitch":-0.12},{"id":"pyramid","name":"Corporate pyramid, financial district","blurb":"A stepped pyramid of glass and stone on Ferry Lane; security drones idle at its apex.","x":-143,"y":1.7,"z":-81.6,"yaw":1.5708,"pitch":0.18},{"id":"roof_1","name":"Rooftop above the neon quarter","blurb":"A rooftop high over Dune Passage, the neon quarter spread out below.","x":-169,"y":67.5,"z":91,"yaw":5.8905,"pitch":-0.12},{"id":"market_1","name":"Night market, neon quarter","blurb":"Stalls under strings of light on Orchid Walk: noodles, cold-weather gear, spare parts, rumours.","x":-221,"y":1.7,"z":48.4,"yaw":1.5708,"pitch":0.18},{"id":"roof_oddity","name":"A rooftop garden","blurb":"Someone keeps a garden up here, with a view across the neon quarter.","x":-299,"y":38.9,"z":13,"yaw":3.1416,"pitch":-0.12},{"id":"tower_0","name":"Signal tower, financial district","blurb":"A lattice tower on Halo Wynd, blinking out to the ships.","x":-377,"y":1.7,"z":-263.6,"yaw":1.5708,"pitch":0.18},{"id":"street_6","name":"Haze Row, dorms","blurb":"A street corner in the dorms: tube traffic humming past, windows stacked up into the haze.","x":429,"y":1.7,"z":341.6,"yaw":-1.5708,"pitch":0.18},{"id":"roof_6","name":"Rooftop above the dorms","blurb":"A rooftop high over Haze Row, the dorms spread out below.","x":429,"y":67.88,"z":325,"yaw":3.8092,"pitch":-0.12},{"id":"street_3","name":"Glass Walk, Chinatown","blurb":"A street corner in the Chinatown: tube traffic humming past, windows stacked up into the haze.","x":-282.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.18},{"id":"roof_3","name":"Rooftop above Chinatown","blurb":"A rooftop high over Glass Walk, Chinatown spread out below.","x":-299,"y":36.77,"z":429,"yaw":5.38,"pitch":-0.12},{"id":"market_3","name":"Night market, Chinatown","blurb":"Stalls under strings of light on Huygens Passage: noodles, cold-weather gear, spare parts, rumours.","x":-523.6,"y":1.7,"z":-117,"yaw":0,"pitch":0.18},{"id":"street_7","name":"Saturnlight Lane, crystal quarter","blurb":"A street corner in the crystal quarter: tube traffic humming past, windows stacked up into the haze.","x":-464.4,"y":1.7,"z":-221,"yaw":3.1416,"pitch":0.18},{"id":"roof_7","name":"Rooftop above the crystal quarter","blurb":"A rooftop high over Methane Row, the crystal quarter spread out below.","x":-403,"y":68.87,"z":-351,"yaw":6.9938,"pitch":-0.12},{"id":"street_2","name":"Cryo Street, old town","blurb":"A street corner in the old town: tube traffic humming past, windows stacked up into the haze.","x":100.4,"y":1.7,"z":-637,"yaw":0,"pitch":0.18},{"id":"roof_2","name":"Rooftop above the old town","blurb":"A rooftop high over Kraken Lane, the old town spread out below.","x":247,"y":67.71,"z":-793,"yaw":8.124,"pitch":-0.12},{"id":"works_4","name":"The works, industrial belt","blurb":"Pipes, stacks and pressure domes on Huygens Parade: the city's heat and air are made here.","x":871,"y":1.7,"z":-1244.4,"yaw":-1.5708,"pitch":0.18},{"id":"street_4","name":"Cryo Row, industrial belt","blurb":"A street corner in the industrial belt: tube traffic humming past, windows stacked up into the haze.","x":897,"y":1.7,"z":-1277.6,"yaw":1.5708,"pitch":0.18},{"id":"spaceport_apron","name":"Spaceport apron","blurb":"Landing pads and fuel lines off Orchid Wynd, under the long light of Saturn.","x":2353,"y":1.7,"z":-2421.6,"yaw":1.5708,"pitch":0.18},{"id":"street_5","name":"Dune Wynd, spaceport","blurb":"A street corner in the spaceport: tube traffic humming past, windows stacked up into the haze.","x":2509,"y":1.7,"z":-2265.6,"yaw":1.5708,"pitch":0.18},{"id":"sign","name":"Below the hillside letters","blurb":"The letters DRIFT CITY stand on the hill above, each taller than a house.","x":52,"y":8.71,"z":-2479,"yaw":-1.5708,"pitch":0.0798},{"id":"stones","name":"The stone circle","blurb":"Standing stones on a rise, older than the city, nobody agrees whose.","x":1157,"y":54.48,"z":-3228.16,"yaw":1.5708,"pitch":0.12},{"id":"treehouse","name":"The treehouse","blurb":"A cabin in the crown of a great tree, reached by a swaying ladder.","x":1443,"y":12,"z":-3982.16,"yaw":1.5708,"pitch":0.12},{"id":"cabin","name":"The mountain cabin","blurb":"A cabin high on the slopes, smoke from its heat vent.","x":4242.16,"y":86.24,"z":1469,"yaw":3.1416,"pitch":0.12},{"id":"dish","name":"The radio dish","blurb":"A dish in the hills, listening for Earth.","x":6435,"y":89.19,"z":-1824.16,"yaw":1.5708,"pitch":0.12},{"id":"lander","name":"The lander","blurb":"An old probe, its parachute collapsed beside it on the pebbles.","x":-5213,"y":70.84,"z":-6712.16,"yaw":1.5708,"pitch":0.12},{"id":"riverbank","name":"A river bank","blurb":"A methane river slides past, silent and dark, between low banks.","x":-3177.04,"y":21.02,"z":-7068.87,"yaw":5.8608,"pitch":0.05},{"id":"lakeshore","name":"The lake shore","blurb":"The edge of a methane lake; tiny waves, and the city's glow far off across it.","x":2471.14,"y":1.7,"z":6549.31,"yaw":2.7808,"pitch":0.05},{"id":"glade","name":"A forest glade","blurb":"A clearing in the dark forest; the fronds glow faintly after dark.","x":7000,"y":31.84,"z":0,"yaw":1.5708,"pitch":0.05},{"id":"summit","name":"A summit","blurb":"A bare summit of ice rock above the haze layer, the city a smudge of light below.","x":-4283.64,"y":504.32,"z":-5724.77,"yaw":5.6408,"pitch":0.05},{"id":"dunes","name":"Among the dunes","blurb":"Dark dunes of organic sand, rippled by the wind.","x":-6137.73,"y":20.43,"z":3365.76,"yaw":4.2108,"pitch":0.05},{"id":"corner_-8_-5","name":"Cassini Parade, financial district","blurb":"A corner on Cassini Parade: steam from a vent, the tubes' glass humming with traffic.","x":-211.6,"y":1.7,"z":-117,"yaw":0,"pitch":0.18},{"id":"corner_0_-10","name":"Amber Walk, financial district","blurb":"A corner on Amber Walk: steam from a vent, the tubes' glass humming with traffic.","x":13,"y":1.7,"z":-230.4,"yaw":-1.5708,"pitch":0.18},{"id":"corner_-9_5","name":"Saturnlight Wynd, financial district","blurb":"A corner on Saturnlight Wynd: steam from a vent, the tubes' glass humming with traffic.","x":-237.6,"y":1.7,"z":143,"yaw":0,"pitch":0.18},{"id":"corner_-21_-12","name":"Tholin Street, crystal quarter","blurb":"A corner on Tholin Street: steam from a vent, the tubes' glass humming with traffic.","x":-516.4,"y":1.7,"z":-299,"yaw":3.1416,"pitch":0.18},{"id":"corner_21_12","name":"Dune Walk, dorms","blurb":"A corner on Dune Walk: steam from a vent, the tubes' glass humming with traffic.","x":542.4,"y":1.7,"z":325,"yaw":0,"pitch":0.18},{"id":"corner_14_-28","name":"Lantern Parade, old town","blurb":"A corner on Lantern Parade: steam from a vent, the tubes' glass humming with traffic.","x":360.4,"y":1.7,"z":-715,"yaw":0,"pitch":0.18},{"id":"corner_17_26","name":"Tholin Street, dorms","blurb":"A corner on Tholin Street: steam from a vent, the tubes' glass humming with traffic.","x":471.6,"y":1.7,"z":689,"yaw":3.1416,"pitch":0.18},{"id":"corner_-14_28","name":"Dune Arcade, dorms","blurb":"A corner on Dune Arcade: steam from a vent, the tubes' glass humming with traffic.","x":-334.4,"y":1.7,"z":741,"yaw":3.1416,"pitch":0.18},{"id":"cold_tap","name":"The Cold Tap, Ferry Street","blurb":"A dive bar behind an airlock: nine stools, a heater that ticks, bottles lit from below, and a price list older than the dome.","x":-143,"y":1.7,"z":81.6,"yaw":-1.5708,"pitch":0.02,"room":1},{"id":"low_orbit_bar","name":"The Low Orbit, by the spaceport","blurb":"A long bar for ship crews, with a window on the pads and a cracked star painted on the ceiling.","x":2509,"y":1.7,"z":-2265.6,"yaw":1.5708,"pitch":0.02,"room":2},{"id":"lantern_cellar","name":"The Lantern Cellar, Chinatown","blurb":"Forty steps down: a brick vault full of paper lanterns and smoke, and a late jam that never stops.","x":-282.4,"y":1.7,"z":429,"yaw":3.1416,"pitch":0.02,"room":3},{"id":"warmhouse_club","name":"The Warmhouse club","blurb":"The jazz club under the dome in the middle of the Warmhouse: tables in rings, lamps on every table, the stand at the far side.","x":-1621.82,"y":209.2,"z":537.29,"yaw":0.85,"pitch":0.02,"room":4}];
 // ---------- Tales: 50 room-scale places in and around Drift city, and an Ink story that moves between them ----------
 // Places are picked from the generated city itself (so each is really there), in a fixed order, so a story can refer
 // to them by id. Each has a camera at eye height (or on a roof), a heading and a pitch.
@@ -12112,6 +12168,13 @@ function buildPlaces() {
   add("hall_floor", "Assembly Hall, the floor", "Under the great glass dome, where the city's assembly meets: tier on tier of seats around the rostrum. Light falls through the ribs in long amber bars.", { x: hx - 8, y: 2.8, z: hz + 3, yaw: Math.PI - 0.3, pitch: 0.28 });
   add("hall_steps", "Assembly Hall, the steps", "The broad stone steps below the arcade, a place to wait, to argue, to be seen.", { x: hx - 84, y: 1.7 + 2.7, z: hz, yaw: 0, pitch: 0.2 });
   add("civic_axis", "The Assembly Hall avenue, old town", "The long reflecting pools up the avenue, between two walls of stone, to the dome of the Assembly Hall.", { x: 728, y: 3.2, z: -175, yaw: -Math.PI / 2, pitch: 0.1 });
+  // Conway Corner (owner, September 2026: "somewhere we see Life game optimally from"): the street corner, 70 m up,
+  // with the most Life boards in one view. Found by a search over every corner in ±30 cells, every heading in 6°
+  // steps and three heights: the Life towers by the shader's own rule (organic towers, scene.wgsl), 45-330 m away
+  // (the boards are sharp within 350 m), a clear line of sight, score = board area over distance. It sees six,
+  // in the tallest group of Life towers. How to run the search again: the drift-city skill, "Conway Corner".
+  add("conway_corner", "Conway Corner, financial district", "A crossing high over the financial district where six of the round towers stand in view at once, their windows running Conway's Game of Life: gliders crawl round them, colonies bloom and die, and each board starts again when it goes still.",
+    { x: -416, y: 70, z: -286, yaw: 3.979, pitch: -0.118 });
   // scan the city in rings outward from the centre, collecting one of each kind per district
   const seen = new Set();
   const want = (key) => { if (seen.has(key)) return false; seen.add(key); return true; };
@@ -12514,7 +12577,11 @@ function taleTags(tags, line) {
     else if (k === "prop") taleAddProp(v);
     else if (k === "live") TALE.live = true;
     // "# voice: <who>": the line is spoken, over the speaker's radio, from the nearest person in the scene
-    else if (k === "voice") audioVoice(v, (line || "").split(/\s+/).length, () => taleVoiceAt(v));
+    else if (k === "voice") {
+      audioVoice(v, (line || "").split(/\s+/).length, () => taleVoiceAt(v));
+      // over the radio, no face: in foafos the line still goes to the shell's activity stream
+      if (typeof hostOn === "function" && hostOn() && line) hostPost(v.charAt(0).toUpperCase() + v.slice(1), line, false);
+    }
     else if (k === "place") taleGo(v);
     else if (k === "time") { const idx = { day: 0, dusk: 1, dawn: 1, night: 2, snow: 3 }[v]; if (idx !== undefined && idx !== todIdx) { todFrom = currentTod(); todIdx = idx; todT = 0; todAuto = 0; NAV.sunOverride = null; syncLabels(); } }
     else if (k === "weather") { WX.forced = v === "snow" ? 0.75 : v === "clear" ? 0 : null; }
@@ -13100,6 +13167,11 @@ function headSay(url, audioEl, info) {
   el.querySelector(".headName").textContent = c.name + (c.where ? " · " + c.where : "");
   el.classList.toggle("org", !c.face);
   el.hidden = false; el.classList.remove("closing");
+  // Inside foafos the face is not drawn over the view: it renders off screen, and the shell's activity stream shows
+  // the line with the face, live (hostHeadFrame), then as a still (spec §5.10).
+  const host = typeof hostOn === "function" && hostOn();
+  el.classList.toggle("hostOff", host);
+  if (host) hostPost(c.name + (c.where ? " · " + c.where : ""), (info && info.text) || "", !!c.face);
   HEADS.who = who; HEADS.audio = audioEl; HEADS.url = url; HEADS.hideAt = 0;
   const text = info && info.text || "";
   HEADS.mood = headMoodOf(text, info && info.mood, c.base);
@@ -13115,6 +13187,7 @@ function headSay(url, audioEl, info) {
 // the line ended: hold the face a moment, then close
 function headDone() { if (HEADS.who) HEADS.hideAt = performance.now() + 900; }
 function headHide() {
+  if (HEADS.who && typeof hostOn === "function" && hostOn()) hostEndLive();
   HEADS.who = null; HEADS.av = null;
   if (HEADS.el && !HEADS.el.hidden) { HEADS.el.classList.add("closing"); setTimeout(() => { if (!HEADS.who && HEADS.el) HEADS.el.hidden = true; }, 350); }
 }
@@ -13174,6 +13247,7 @@ function headFrame(now) {
   const qy = [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)], qp = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
   const head = [qy[3] * qp[0], qy[1] * qp[3], -qy[1] * qp[0], qy[3] * qp[3]];
   headDraw(a, head, morph, s);
+  if (typeof hostOn === "function" && hostOn()) hostHeadFrame(HEADS.cv, now);
 }
 
 // ---------- choices you can feel ----------
@@ -13465,7 +13539,7 @@ function mapClose() { if (MAP.el) MAP.el.hidden = true; clearInterval(MAP.timer)
 // thing it meets is named (a skyboat, a landmark, a building, the land), and the camera flies there on a high arc
 // while the city's clock runs fast, then settles into a composed view of it: lit from the side, seen low, set on a
 // third of the frame, in focus. See the drift-city skill, "Long-press to go".
-const PICK = { timer: 0, x: 0, y: 0, warp: 1, subject: null, ring: null };
+const PICK = { timer: 0, x: 0, y: 0, warp: 1, subject: null, ring: null, sel: null, mark: null };
 const CAMNOW = { p: [0, 0, 0], f: [0, 0, -1], r: [1, 0, 0], up: [0, 1, 0] };
 
 // the landmarks, with a centre, a radius for picking and framing, and a height
@@ -13615,14 +13689,77 @@ function pickGo(px, py, now) {
     if (now) { visitWalkTo(V, S.x, S.z); return; }
     pickOffer(S, px, py); return;
   }
-  const S = pickAt(px, py);
+  let S = pickAt(px, py);
+  // a person under the finger, if nothing nearer stands in front
+  const who = pickPerson(px, py, S ? Math.hypot(S.x - CAMNOW.p[0], S.z - CAMNOW.p[2]) : 1e9);
+  if (who) S = who;
   if (S && V && Math.hypot(S.x - st.x, S.z - st.z) < 450 && S.ship === undefined && S.name !== "The Warmhouse") S.walk = true;
-  if (!S) { pickRing(px, py, "Nothing there"); return; }
+  if (!S) { pickRing(px, py, "Nothing there"); if (hostOn()) hostSelect(null); return; }
   if (S.y0 === undefined) S.y0 = 0;
+  // in foafos the shell shows the pick with its actions (spec §5.11); the page marks it in the view
+  if (hostOn() && !now) { pickRing(px, py, S.name); hostSelect(S); return; }
   // the simpler (WebGL) city has no visits: name it, but stay
   if (!GPUREF.device) { pickRing(px, py, S.name); return; }
   if (now) { if (S.walk && now === "walk") visitWalkTo(V, S.x, S.z); else pickLaunch(S); return; }
   pickOffer(S, px, py);
+}
+
+// ---------- the selection: a pick as a thing other apps can use (foafos, spec §5.11) ----------
+// Owner, September 2026: "an object picker so clicking in the world gives us a building, person or entity to feed
+// into other lookups/actions or visually highlight … something for fly to vs walk to". A pick becomes an entity with
+// an id that says what it is (a building by its cell, a person by their slot, a landmark or skyboat by name), where
+// it is on Titan (titanPoint, IAU_2015:60600), and the actions that make sense for it. A ring follows it in the view
+// (pickMarkFrame) until it is cleared.
+const PERSON_KINDS = ["A rider in an exoskeleton", "An android", "A loper in weighted boots", "A cape glider", "A skater on a cable"];
+function pickPerson(px, py, before) {
+  const o = CAMNOW.p, d = pickRay(px, py);
+  if (d[1] > -0.01 || !REG.city) return null;
+  const t = (1.3 - o[1]) / d[1];                       // where the ray is at body height
+  if (!(t > 0) || t > 260 || t > before + 6) return null;
+  const x = o[0] + d[0] * t, z = o[2] + d[2] * t;
+  let best = null, bd = 2.5;
+  for (const w of walkersNear(x, z, 14, clock)) { const dd = Math.hypot(w.x - x, w.z - z); if (dd < bd) { bd = dd; best = w; } }
+  if (!best) return null;
+  return { name: PERSON_KINDS[best.kind] || "Someone", x: best.x, z: best.z, y0: 0, r: 4, h: 2.2, person: best,
+    blurb: "One of the people on the street, on their way somewhere." };
+}
+function pickEntity(S) {
+  const cx = Math.floor(S.x / C), cz = Math.floor(S.z / C);
+  const kind = S.person ? "person" : S.ship !== undefined ? "vehicle" : S.walkOnly ? "room"
+    : pickLandmarks().some((l) => l.name === S.name) || S.name === "The Warmhouse" ? "place"
+    : S.h > 6 ? "building" : "place";
+  const id = S.person ? "person:" + S.person.id : S.ship !== undefined ? "ship:" + S.ship
+    : kind === "building" ? "building:" + wrapS(cx) + "," + wrapS(cz) : "place:" + S.name;
+  const dist = Math.hypot(S.x - st.x, S.z - st.z);
+  const actions = [];
+  if (!S.walkOnly) actions.push({ id: "pick:fly", label: "Fly there" });
+  if (S.walk || S.walkOnly) actions.push({ id: "pick:walk", label: S.walkOnly ? "Walk across" : "Walk there" });
+  actions.push({ id: "pick:map", label: "On the map" });
+  return { id, kind, name: S.name, detail: dist < 1000 ? Math.round(dist) + " m away" : (dist / 1000).toFixed(1) + " km away",
+    where: titanPoint(S.x, (S.y0 || 0) + (S.h || 0) * 0.5, S.z), actions };
+}
+// the ring in the view, on the picked thing, every frame (a person moves: their slot is followed)
+function pickMarkFrame() {
+  const S = PICK.sel, m = PICK.mark;
+  if (!S || !m) return;
+  if (S.person) { const w = walkerAt(S.person.cx, S.person.cz, S.person.ln, S.person.ki, clock, S.person.dens); if (w) { S.x = w.x; S.z = w.z; } }
+  const c = CAMNOW, v = [S.x - c.p[0], (S.y0 || 0) + (S.h || 0) * 0.5 - c.p[1], S.z - c.p[2]];
+  const zf = dot3(v, c.f);
+  if (zf <= 0.5) { m.hidden = true; return; }
+  const H = innerHeight, W = innerWidth, ux = dot3(v, c.r) / zf / 0.72, uy = dot3(v, c.up) / zf / 0.72;
+  m.hidden = false;
+  m.style.left = (ux * H + W) / 2 + "px";
+  m.style.top = (H - uy * H) / 2 + "px";
+  const px = Math.max(26, Math.min(160, (S.r || 10) / zf / 0.72 * H));
+  m.style.width = m.style.height = px + "px";
+}
+function pickMarkSet(S) {
+  PICK.sel = S;
+  if (!PICK.mark && document.body && document.body.appendChild) {
+    const m = document.createElement("div"); m.className = "pickMark"; m.setAttribute("aria-hidden", "true"); m.hidden = true;
+    document.body.appendChild(m); PICK.mark = m;
+  }
+  if (PICK.mark && !S) PICK.mark.hidden = true;
 }
 function pickLaunch(S, quiet) {
   pickOfferClose();
@@ -14242,7 +14379,12 @@ if (typeof window !== "undefined" && window.parent !== window && typeof Minigame
   // same rows go to the shell as actions, and the shell's one window menu draws them (hostMenuPublish below).
   const burger = document.getElementById("bMenu");
   if (burger) burger.hidden = true;
-  sdk.onAction((id) => hostMenuRun(id));
+  // Nothing of the city's own over its view in foafos: the readout goes to the shell (hostStatus), the talking
+  // heads to its activity stream (headSay in heads.js), a pick to its selection (pick.js).
+  const ui = document.getElementById("ui");
+  if (ui) ui.hidden = true;
+  sdk.onAction((id) => (String(id).startsWith("pick:") ? hostPickAction(id) : hostMenuRun(id)));
+  sdk.onDeselect(() => pickMarkSet(null));
   setInterval(hostMenuPublish, 1000);
   if (/[?&]world=1(&|$)/.test(location.search)) {
     H.world = true;
@@ -14292,6 +14434,60 @@ function hostMenuRun(id) {
   if (act) { try { act(); } catch (e) { /* a row whose state moved on */ } }
   HOST_MENU.sent = "";
   setTimeout(hostMenuPublish, 60);        // checks and labels follow at once
+}
+
+// ---------- the readout and the activity stream, in the shell (spec §5.10) ----------
+// The readout the page draws along the bottom of its view goes to the shell instead: its parts, and where the
+// camera is on Titan (IAU_2015:60600, titanWhere in titan.js) to about 100 m. Sent only when it changes.
+const HOST_STATUS = { sent: "" };
+function hostStatus(parts) {
+  const H = hostState();
+  if (!H.sdk || !H.sdk.setStatus) return;
+  const w = titanWhere();
+  const at = Math.abs(w.lat).toFixed(3) + "°" + (w.lat >= 0 ? "N" : "S") + " " + Math.abs(w.lon).toFixed(3) + "°" + (w.lon >= 0 ? "E" : "W");
+  const items = [];
+  if (parts[0]) items.push({ id: "mode", value: parts[0] });
+  if (parts[1]) items.push({ id: "where", value: parts[1] });
+  if (parts[2]) items.push({ id: "far", value: parts[2] });
+  items.push({ id: "at", label: "Titan", value: at });
+  const json = JSON.stringify(items);
+  if (json === HOST_STATUS.sent) return;
+  HOST_STATUS.sent = json;
+  H.sdk.setStatus(items);
+}
+// Who speaks, for the shell's activity stream: the cast member's name and the line, and, for a face, its frames.
+function hostPost(who, text, live) {
+  const H = hostState();
+  if (H.on && H.sdk && H.sdk.post) H.sdk.post({ who, text, verb: "says", live: !!live });
+  H.liveAt = 0;
+}
+// A frame of the talking head, copied from its canvas right after it is drawn (a WebGL canvas keeps no picture after
+// the frame) and transferred, not copied again, to the shell: about 15 a second.
+function hostHeadFrame(cv, now) {
+  const H = hostState();
+  if (!H.sdk || !H.sdk.postFrame || !cv || !cv.width || typeof createImageBitmap !== "function") return;
+  if (H.liveAt && now - H.liveAt < 66) return;
+  H.liveAt = now;
+  createImageBitmap(cv, { resizeWidth: 96, resizeHeight: Math.round(96 * cv.height / cv.width), resizeQuality: "medium" })
+    .then((b) => H.sdk.postFrame(b)).catch(() => {});
+}
+function hostEndLive() { const H = hostState(); if (H.sdk && H.sdk.endLive) H.sdk.endLive(); }
+
+// ---------- the selection, in the shell (spec §5.11) ----------
+function hostSelect(S) {
+  const H = hostState();
+  if (!H.sdk || !H.sdk.select) return;
+  pickMarkSet(S || null);
+  H.sdk.select(S ? pickEntity(S) : null);
+}
+function hostPickAction(id) {
+  const S = PICK.sel;
+  if (!S) return;
+  if (id === "pick:fly") pickLaunch(S, true);
+  else if (id === "pick:walk") {
+    const V = NAV.mode === "visit" && NAV.visit ? NAV.visit : null;
+    if (V && !visitWalkTo(V, S.x, S.z)) showHint("You are there.", 1500);
+  } else if (id === "pick:map") mapOpen();
 }
 
 const canvas = document.getElementById("c");
@@ -14361,14 +14557,20 @@ function clampv(v, a, b) { return v < a ? a : v > b ? b : v; }
 
 function wrapPJ(v) { return v - LW * Math.round(v / LW); }
 function fmtAlt(km) { return km < 10 ? (km * 1000).toFixed(0) + " m" : km < 10000 ? Math.round(km).toLocaleString("en-GB") + " km" : (km / 1000).toFixed(km < 1e5 ? 1 : 0).replace(/\.0$/, "") + " thousand km"; }
-function statusHTML(autoOn) {
-  if (NAV.mode === "trip") { const a = len3(NAV.cam.P) - TR; return "<b>" + (NAV.tour ? "Grand tour" : "Autopilot") + "</b><span>To " + NAV.trip.dest.name + "</span><span>" + fmtAlt(a) + "</span>"; }
-  if (NAV.mode === "free") { const a = len3(NAV.free.P) - TR; return "<b>Flying by hand</b><span>" + regionAt(norm3(NAV.free.P)).name + "</span><span>" + fmtAlt(a) + "</span>"; }
-  if (NAV.mode === "space") { const k = NAV.space.kind; return "<b>" + (clock - lastInput > 4.5 ? "Drifting" : "Steering by hand") + "</b><span>" + spaceName() + "</span><span>" + (k === 1 ? fmtAlt(NAV.spaceAlt) + " up" : k === 3 ? fmtAlt(len3(sub3(NAV.cam.P, MOONS[NAV.space.moon].pos)) - MOONS[NAV.space.moon].r) + " up" : k === 4 ? fmtAlt(NAV.space.h) + " above the ring plane" : k === 5 ? fmtAlt(NAV.space.alt) + " above the clouds" : fmtAlt(len3(sub3(NAV.cam.P, SAT_POS))) + " from Saturn") + "</span>"; }
+// The readout's parts: [lead (bold, may be empty), what or where, how high or far (may be absent)]. Drawn along the
+// bottom of the view (statusHTML), or, inside foafos, sent to the shell instead (hostStatus in host.js).
+function statusParts(autoOn) {
+  if (NAV.mode === "trip") { const a = len3(NAV.cam.P) - TR; return [NAV.tour ? "Grand tour" : "Autopilot", "To " + NAV.trip.dest.name, fmtAlt(a)]; }
+  if (NAV.mode === "free") { const a = len3(NAV.free.P) - TR; return ["Flying by hand", regionAt(norm3(NAV.free.P)).name, fmtAlt(a)]; }
+  if (NAV.mode === "space") { const k = NAV.space.kind; return [clock - lastInput > 4.5 ? "Drifting" : "Steering by hand", spaceName(), k === 1 ? fmtAlt(NAV.spaceAlt) + " up" : k === 3 ? fmtAlt(len3(sub3(NAV.cam.P, MOONS[NAV.space.moon].pos)) - MOONS[NAV.space.moon].r) + " up" : k === 4 ? fmtAlt(NAV.space.h) + " above the ring plane" : k === 5 ? fmtAlt(NAV.space.alt) + " above the clouds" : fmtAlt(len3(sub3(NAV.cam.P, SAT_POS))) + " from Saturn"]; }
   const lead = NAV.tour ? (autoOn ? "Grand tour" : "Tour paused") : autoOn ? "Autopilot" : "Steering by hand";
   // in the city, a place name you could give someone, not the drone's state
-  if (!NAV.tour) return (autoOn ? "" : "<b>By hand</b>") + "<span>" + placeLabel() + "</span>";
-  return "<b>" + lead + "</b><span>" + placeLabel() + "</span>";
+  if (!NAV.tour) return [autoOn ? "" : "By hand", placeLabel()];
+  return [lead, placeLabel()];
+}
+function statusHTML(autoOn) {
+  const [lead, what, far] = statusParts(autoOn);
+  return (lead ? "<b>" + lead + "</b>" : "") + "<span>" + what + "</span>" + (far ? "<span>" + far + "</span>" : "");
 }
 // ---------- flocks of manta-like fliers (boids): cohesion, alignment, separation, a wandering goal near the camera ----------
 const FLOCK_N = 96;
@@ -15992,7 +16194,7 @@ async function init() {
     if (hudTick > 0.25) {
       hudTick = 0;
       const autoOn = clock - lastInput > 4.5;
-      statusEl.innerHTML = statusHTML(autoOn);
+      if (hostOn()) hostStatus(statusParts(autoOn)); else statusEl.innerHTML = statusHTML(autoOn);
       syncGoLabel();
       // the Story button says what it will do
       const vt = document.getElementById("vTale");
@@ -16013,6 +16215,7 @@ async function init() {
         }
       }
     }
+    pickMarkFrame();                         // the selection ring follows its thing
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -16068,6 +16271,13 @@ function benchReport() {
   document.body.appendChild(c);
 }
 function showHint(text, ms) {
+  // in foafos nothing of the page's own is drawn over the view: a hint is a line in the shell's activity stream,
+  // and a "wait…" message (the text ends in an ellipsis) is not worth one
+  if (hostOn()) {
+    hint.classList.add("hidden");
+    if (!/…$/.test(String(text))) hostPost("Drift City", String(text), false);
+    return;
+  }
   hint.textContent = text;
   hint.classList.remove("hidden");
   clearTimeout(hintTimer);
@@ -16127,7 +16337,11 @@ canvas.addEventListener("pointermove", (e) => {
 const release = (e) => {
   if (e && e.pointerId !== undefined) touches.delete(e.pointerId);
   if (touches.size > 0) return;
-  if (pointer.down && e && e.type === "pointerup" && performance.now() - downAt < 300 && Math.hypot(pointer.x - pointer.sx, pointer.y - pointer.sy) < 10) setUiHidden(!uiHidden);
+  // a short tap: in foafos it picks what is under it (the page draws no controls of its own to show or hide there);
+  // on its own page it shows or hides the controls
+  if (pointer.down && e && e.type === "pointerup" && performance.now() - downAt < 300 && Math.hypot(pointer.x - pointer.sx, pointer.y - pointer.sy) < 10) {
+    if (hostOn()) pickGo(pointer.x, pointer.y, false); else setUiHidden(!uiHidden);
+  }
   pointer.down = false;
 };
 canvas.addEventListener("pointerup", release);
@@ -16158,7 +16372,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFE_PATTERNS, lifeStamp, lifeStep, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { titanWhere, titanPoint, host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFE_PATTERNS, lifeStamp, lifeStep, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

@@ -1349,3 +1349,10 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 #foafos-selection .sel-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.45rem; }
 #foafos-selection .sel-actions button { flex: 1 1 auto; padding: 0 0.8rem; }
 #foafos-selection button:focus-visible { outline: 2px solid var(--zx-yellow, #ff0); }
+/* on screen, three lines of the text; the history keeps it whole */
+.foafos-activity-item foaf-activity::part(text) {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

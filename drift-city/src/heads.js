@@ -171,6 +171,11 @@ function headSay(url, audioEl, info) {
   el.querySelector(".headName").textContent = c.name + (c.where ? " · " + c.where : "");
   el.classList.toggle("org", !c.face);
   el.hidden = false; el.classList.remove("closing");
+  // Inside foafos the face is not drawn over the view: it renders off screen, and the shell's activity stream shows
+  // the line with the face, live (hostHeadFrame), then as a still (spec §5.10).
+  const host = typeof hostOn === "function" && hostOn();
+  el.classList.toggle("hostOff", host);
+  if (host) hostPost(c.name + (c.where ? " · " + c.where : ""), (info && info.text) || "", !!c.face);
   HEADS.who = who; HEADS.audio = audioEl; HEADS.url = url; HEADS.hideAt = 0;
   const text = info && info.text || "";
   HEADS.mood = headMoodOf(text, info && info.mood, c.base);
@@ -186,6 +191,7 @@ function headSay(url, audioEl, info) {
 // the line ended: hold the face a moment, then close
 function headDone() { if (HEADS.who) HEADS.hideAt = performance.now() + 900; }
 function headHide() {
+  if (HEADS.who && typeof hostOn === "function" && hostOn()) hostEndLive();
   HEADS.who = null; HEADS.av = null;
   if (HEADS.el && !HEADS.el.hidden) { HEADS.el.classList.add("closing"); setTimeout(() => { if (!HEADS.who && HEADS.el) HEADS.el.hidden = true; }, 350); }
 }
@@ -245,4 +251,5 @@ function headFrame(now) {
   const qy = [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)], qp = [Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2)];
   const head = [qy[3] * qp[0], qy[1] * qp[3], -qy[1] * qp[0], qy[3] * qp[3]];
   headDraw(a, head, morph, s);
+  if (typeof hostOn === "function" && hostOn()) hostHeadFrame(HEADS.cv, now);
 }

@@ -295,6 +295,24 @@ class MinigameSDK {
     }
 
     /**
+     * A live picture for the last item posted with `live: true` (a face
+     * that speaks). The bitmap is transferred, not copied: do not use it
+     * after. About 15 a second is enough; the shell draws the latest.
+     * @param {ImageBitmap} bitmap
+     */
+    postFrame(bitmap) {
+        if (window.parent === window || !bitmap) return this;
+        window.parent.postMessage({ type: 'activity-frame', bitmap }, '*', [bitmap]);
+        return this;
+    }
+
+    /** The live item ended (the line finished): the shell keeps its last frame as a still. */
+    endLive() {
+        this._sendMessage({ type: 'activity-frame', end: true });
+        return this;
+    }
+
+    /**
      * This app's readout, shown by the shell instead of over the view
      * (spec §5.10). A string, or [{id, label?, value, icon?}] (≤ 6).
      * Send again when it changes; the shell keeps the last one.

@@ -931,3 +931,51 @@ function introEnd() {
   taleOpen();
 }
 function introSkip() { if (INTRO.on) { NAV.trip = null; NAV.space = null; introEnd(); } }
+
+// ---------- coordinates on Titan, for anything outside this page (the drift-city skill, "Coordinates") ----------
+// Owner, September 2026: "We need a coordinate system for the planet including view vectors for cameras; use
+// anything from nasa/esa that makes sense". Positions are reported in IAU_2015:60600, "Titan (2015) - Sphere /
+// Ocentric" (IAU WGCCRE 2015, as registered for OGC use): a sphere of radius 2575 km, planetocentric latitude
+// north-positive, longitude EAST-positive from the reference meridian, which faces Saturn. Our own frame is the same
+// body-fixed frame with the axes named differently (Y north, longitudes west, as on the Cassini-era maps), so:
+//   IAU_TITAN body-fixed (X to 0°N 0°E, Y to 0°N 90°E, Z to the north pole) = [our X, our Z, our Y]
+//   longitude east = -(longitude west), in [-180, 180)
+// A view is a unit vector: azimuth clockwise from north and elevation above the local horizon, the same vector in
+// local east-north-up, and in IAU_TITAN body-fixed axes. Altitude is metres above the 2575 km sphere.
+const TITAN_CRS = "IAU_2015:60600";
+function iauOf(v) { return [v[0], v[2], v[1]]; }
+function wrap180(d) { return ((d + 180) % 360 + 360) % 360 - 180; }
+function geoOfDir(d) {
+  const lat = Math.asin(Math.max(-1, Math.min(1, d[1]))) / DEG;
+  const lonE = wrap180(Math.atan2(d[2], d[0]) / DEG);
+  return { lat, lon: lonE, lonW: ((-lonE % 360) + 360) % 360 };
+}
+function viewOf(F, frame) {
+  const e = dot3(F, frame.E), n = dot3(F, frame.N), u = dot3(F, frame.U);
+  return { az: ((Math.atan2(e, n) / DEG) + 360) % 360, el: Math.asin(Math.max(-1, Math.min(1, u))) / DEG,
+           enu: [e, n, u], iau: iauOf(F) };
+}
+const r6 = (v) => Math.round(v * 1e6) / 1e6;
+function titanReport(dir, altM, view) {
+  const g = geoOfDir(dir);
+  const out = { crs: TITAN_CRS, lat: r6(g.lat), lon: r6(g.lon), lonW: r6(g.lonW), alt: Math.round(altM * 10) / 10,
+    iau: iauOf(dir).map((c) => r6(c * (TR + altM / 1000))) };
+  if (view) out.view = { az: Math.round(view.az * 100) / 100, el: Math.round(view.el * 100) / 100,
+    enu: view.enu.map(r6), iau: view.iau.map(r6) };
+  return out;
+}
+// A point of the city (local metres; y above the datum) and, optionally, a local direction from it.
+function titanPoint(x, y, z, fLocal) {
+  const dir = geoN(repX(x) + REG.ox, repZ(z) + REG.oz);
+  const fr = frameAt(dir);
+  return titanReport(dir, y, fLocal ? viewOf(toTitan(fr, fLocal), fr) : null);
+}
+// Where the camera is and where it looks, in every mode.
+function titanWhere() {
+  if (NAV.cam && NAV.cam.P) {                       // trip, space, free flight: the Titan frame, km
+    const P = NAV.cam.P, r = Math.hypot(P[0], P[1], P[2]);
+    const dir = [P[0] / r, P[1] / r, P[2] / r];
+    return { mode: NAV.mode, ...titanReport(dir, (r - TR) * 1000, viewOf(NAV.cam.F, frameAt(dir))) };
+  }
+  return { mode: NAV.mode, ...titanPoint(st.x, st.y, st.z, cameraVectors().f) };
+}

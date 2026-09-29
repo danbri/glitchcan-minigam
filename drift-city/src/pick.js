@@ -3,7 +3,7 @@
 // thing it meets is named (a skyboat, a landmark, a building, the land), and the camera flies there on a high arc
 // while the city's clock runs fast, then settles into a composed view of it: lit from the side, seen low, set on a
 // third of the frame, in focus. See the drift-city skill, "Long-press to go".
-const PICK = { timer: 0, x: 0, y: 0, warp: 1, subject: null, ring: null };
+const PICK = { timer: 0, x: 0, y: 0, warp: 1, subject: null, ring: null, sel: null, mark: null };
 const CAMNOW = { p: [0, 0, 0], f: [0, 0, -1], r: [1, 0, 0], up: [0, 1, 0] };
 
 // the landmarks, with a centre, a radius for picking and framing, and a height
@@ -153,14 +153,77 @@ function pickGo(px, py, now) {
     if (now) { visitWalkTo(V, S.x, S.z); return; }
     pickOffer(S, px, py); return;
   }
-  const S = pickAt(px, py);
+  let S = pickAt(px, py);
+  // a person under the finger, if nothing nearer stands in front
+  const who = pickPerson(px, py, S ? Math.hypot(S.x - CAMNOW.p[0], S.z - CAMNOW.p[2]) : 1e9);
+  if (who) S = who;
   if (S && V && Math.hypot(S.x - st.x, S.z - st.z) < 450 && S.ship === undefined && S.name !== "The Warmhouse") S.walk = true;
-  if (!S) { pickRing(px, py, "Nothing there"); return; }
+  if (!S) { pickRing(px, py, "Nothing there"); if (hostOn()) hostSelect(null); return; }
   if (S.y0 === undefined) S.y0 = 0;
+  // in foafos the shell shows the pick with its actions (spec §5.11); the page marks it in the view
+  if (hostOn() && !now) { pickRing(px, py, S.name); hostSelect(S); return; }
   // the simpler (WebGL) city has no visits: name it, but stay
   if (!GPUREF.device) { pickRing(px, py, S.name); return; }
   if (now) { if (S.walk && now === "walk") visitWalkTo(V, S.x, S.z); else pickLaunch(S); return; }
   pickOffer(S, px, py);
+}
+
+// ---------- the selection: a pick as a thing other apps can use (foafos, spec §5.11) ----------
+// Owner, September 2026: "an object picker so clicking in the world gives us a building, person or entity to feed
+// into other lookups/actions or visually highlight … something for fly to vs walk to". A pick becomes an entity with
+// an id that says what it is (a building by its cell, a person by their slot, a landmark or skyboat by name), where
+// it is on Titan (titanPoint, IAU_2015:60600), and the actions that make sense for it. A ring follows it in the view
+// (pickMarkFrame) until it is cleared.
+const PERSON_KINDS = ["A rider in an exoskeleton", "An android", "A loper in weighted boots", "A cape glider", "A skater on a cable"];
+function pickPerson(px, py, before) {
+  const o = CAMNOW.p, d = pickRay(px, py);
+  if (d[1] > -0.01 || !REG.city) return null;
+  const t = (1.3 - o[1]) / d[1];                       // where the ray is at body height
+  if (!(t > 0) || t > 260 || t > before + 6) return null;
+  const x = o[0] + d[0] * t, z = o[2] + d[2] * t;
+  let best = null, bd = 2.5;
+  for (const w of walkersNear(x, z, 14, clock)) { const dd = Math.hypot(w.x - x, w.z - z); if (dd < bd) { bd = dd; best = w; } }
+  if (!best) return null;
+  return { name: PERSON_KINDS[best.kind] || "Someone", x: best.x, z: best.z, y0: 0, r: 4, h: 2.2, person: best,
+    blurb: "One of the people on the street, on their way somewhere." };
+}
+function pickEntity(S) {
+  const cx = Math.floor(S.x / C), cz = Math.floor(S.z / C);
+  const kind = S.person ? "person" : S.ship !== undefined ? "vehicle" : S.walkOnly ? "room"
+    : pickLandmarks().some((l) => l.name === S.name) || S.name === "The Warmhouse" ? "place"
+    : S.h > 6 ? "building" : "place";
+  const id = S.person ? "person:" + S.person.id : S.ship !== undefined ? "ship:" + S.ship
+    : kind === "building" ? "building:" + wrapS(cx) + "," + wrapS(cz) : "place:" + S.name;
+  const dist = Math.hypot(S.x - st.x, S.z - st.z);
+  const actions = [];
+  if (!S.walkOnly) actions.push({ id: "pick:fly", label: "Fly there" });
+  if (S.walk || S.walkOnly) actions.push({ id: "pick:walk", label: S.walkOnly ? "Walk across" : "Walk there" });
+  actions.push({ id: "pick:map", label: "On the map" });
+  return { id, kind, name: S.name, detail: dist < 1000 ? Math.round(dist) + " m away" : (dist / 1000).toFixed(1) + " km away",
+    where: titanPoint(S.x, (S.y0 || 0) + (S.h || 0) * 0.5, S.z), actions };
+}
+// the ring in the view, on the picked thing, every frame (a person moves: their slot is followed)
+function pickMarkFrame() {
+  const S = PICK.sel, m = PICK.mark;
+  if (!S || !m) return;
+  if (S.person) { const w = walkerAt(S.person.cx, S.person.cz, S.person.ln, S.person.ki, clock, S.person.dens); if (w) { S.x = w.x; S.z = w.z; } }
+  const c = CAMNOW, v = [S.x - c.p[0], (S.y0 || 0) + (S.h || 0) * 0.5 - c.p[1], S.z - c.p[2]];
+  const zf = dot3(v, c.f);
+  if (zf <= 0.5) { m.hidden = true; return; }
+  const H = innerHeight, W = innerWidth, ux = dot3(v, c.r) / zf / 0.72, uy = dot3(v, c.up) / zf / 0.72;
+  m.hidden = false;
+  m.style.left = (ux * H + W) / 2 + "px";
+  m.style.top = (H - uy * H) / 2 + "px";
+  const px = Math.max(26, Math.min(160, (S.r || 10) / zf / 0.72 * H));
+  m.style.width = m.style.height = px + "px";
+}
+function pickMarkSet(S) {
+  PICK.sel = S;
+  if (!PICK.mark && document.body && document.body.appendChild) {
+    const m = document.createElement("div"); m.className = "pickMark"; m.setAttribute("aria-hidden", "true"); m.hidden = true;
+    document.body.appendChild(m); PICK.mark = m;
+  }
+  if (PICK.mark && !S) PICK.mark.hidden = true;
 }
 function pickLaunch(S, quiet) {
   pickOfferClose();
