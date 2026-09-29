@@ -1075,6 +1075,13 @@ body.fink-wm-dragging iframe { pointer-events: none; }
     white-space: nowrap;
 }
 #wm-chrome.wm-has-target:not(.collapsed) #wm-target { display: inline-block; }
+/* A narrow phone has room for the six buttons, not for the name as well:
+   anchored at the right, the toolbar pushed its own handle off the left
+   edge (390px, split). The name stays in the toolbar's aria-label. */
+@media (max-width: 440px) {
+    #wm-chrome.wm-has-target:not(.collapsed) #wm-target { display: none; }
+}
+#wm-chrome { max-width: calc(100vw - 16px); }
 
 /* 3. and the governed pane gets an edge while the toolbar is touched.
       A permanent glow round half the screen would just be noise. */

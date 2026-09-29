@@ -196,7 +196,11 @@ export const APPS = [
       read: ['want_time', 'want_weather', ...DRIFT_CLUES],
       write: ['here', 'hour', 'snowing', ...DRIFT_CLUES],
     },
-    features: ['autoplay'] },
+    features: ['autoplay'],
+    // From the launcher it opens the story runner on the Drift hub, whose
+    // stories open the city as their world (`# WORLD: drift`): the story is
+    // foafos's, not the city's own ink client.
+    opens: 'storyrunner', story: '/glitchcan-minigam/drift-city/foafos-entry.fink.js' },
   // One Drift City cast member on the helmet comms feed, speaking a recorded
   // line: `# MINIGAME: talkinghead line=mags-3 [mood=wry]`. A rigged
   // Gaussian-splat head (LAM, synthetic faces only), mouth moved by the clip.

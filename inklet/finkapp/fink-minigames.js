@@ -1069,13 +1069,9 @@ window.FinkMinigames = {
                     // The recent story thread, so a guest can ECHO the
                     // narrative it interrupted (Skydock's in-world PET
                     // terminals scroll it while the shift runs).
-                    story: (() => { try {
-                        const out = document.getElementById('story-output');
-                        if (!out) return null;
-                        const ps = [...out.querySelectorAll('p')]
-                            .map(p => p.textContent.trim()).filter(Boolean);
-                        return ps.length ? { recent: ps.slice(-8) } : null;
-                    } catch (e) { return null; } })(),
+                    // (the runner sends its last lines with story.launch).
+                    story: this.storyRecent && this.storyRecent.length
+                        ? { recent: this.storyRecent.slice(-8) } : null,
         };
     },
 

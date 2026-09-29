@@ -42,6 +42,28 @@ let story = null;
 
 function setStatus(msg) { $('status').textContent = msg; }
 
+// A story at fault says so, in the reader's view and on the bus, instead of
+// stopping with no choices and no word. Warnings go to the console: inkjs
+// throws on a warning too when no handler is set.
+function storyFault(msg) {
+  const text = String(msg || 'unknown error');
+  setStatus('the story stopped: ' + text);
+  window.foaf?.bus?.publish('app.storyrunner.fault', { summary: `story error: ${text.slice(0, 160)}`, error: text });
+}
+function armStory(s) {
+  if (!s) return s;
+  s.onError = (message, type) => {
+    if (type === inkjs.ErrorType?.Warning) { console.warn('[ink warning]', message); return; }
+    storyFault(message);
+  };
+  return s;
+}
+// A compile failure names its first real error, not "Compilation failed."
+function compileError(compiler, e) {
+  const errs = compiler?.errors || [];
+  return errs.length ? String(errs[0]) : (e && e.message) || String(e);
+}
+
 // Extract the ink from a .fink.js by RUNNING it in a nested sandboxed
 // iframe (opaque origin), not in this frame. Returns { ink, blocks }.
 function extractInBox(src) {
@@ -86,10 +108,26 @@ function extractInBox(src) {
 }
 
 // Prose is added as TEXT, never innerHTML — contained AND xss-proof.
+// `**bold**` and `*italic*` in a line of story OUTPUT become <strong> and
+// <em> nodes (the deleted host engine did the same with innerHTML). This
+// reads the text ink produced, not the story's source.
+function appendInline(el, text) {
+  // the marked text must start and end with a non-space: `a * b * c` stays text
+  const re = /\*\*(?=[^\s*])(.+?)(?<=[^\s*])\*\*|\*(?=[^\s*])(.+?)(?<=[^\s*])\*/g;
+  let at = 0, m;
+  while ((m = re.exec(text))) {
+    if (m.index > at) el.appendChild(document.createTextNode(text.slice(at, m.index)));
+    const node = document.createElement(m[1] !== undefined ? 'strong' : 'em');
+    node.textContent = m[1] !== undefined ? m[1] : m[2];
+    el.appendChild(node);
+    at = re.lastIndex;
+  }
+  if (at < text.length) el.appendChild(document.createTextNode(text.slice(at)));
+}
 function addProse(text, cls) {
   const p = document.createElement('p');
   if (cls) p.className = cls;
-  p.textContent = text;
+  appendInline(p, text);
   $('prose').appendChild(p);
   state.prose.push({ text, cls: cls || '' });
   $('stage').scrollTop = $('stage').scrollHeight;
@@ -157,7 +195,10 @@ function handleTag(tag) {
       if (value) { document.body.style.background = value; state.bg = value; }
       break;
     case 'CLASS':
-      if (value) document.body.classList.add(value);
+      // Styles the paragraph of this line (success, danger, info, code,
+      // mega: storyrunner.css), as the host engine did. It used to go on
+      // <body> and stay there, so classes piled up for the whole story.
+      for (const c of value.split(/\s+/)) if (/^[\w-]+$/.test(c)) _lineClasses.push(c);
       break;
     case 'BASEHREF':
       // The story's own media layer. Set before any IMAGE/VIDEO resolves,
@@ -225,7 +266,9 @@ function handleTag(tag) {
       playAudio(value);
       break;
     case 'STOP_AUDIO':
+      // all of the story's sound: its own element and the shell's foley
       stopAudio();
+      storyRequest('story.audio', { action: 'stop-foley' });
       break;
     // `# FOLEY: water(...)` is procedural sound, made by the shell's
     // FinkFoley under its master volume (the same host service as
@@ -315,6 +358,7 @@ function applyAudioLevel({ level }) {
 //   accent  → X-MEDIA-ACCENT   text leads; media is a small, tappable thumb
 const MEDIA_ROLES = { hero: 'X-MEDIA-HERO', feature: 'X-MEDIA-FEATURE', accent: 'X-MEDIA-ACCENT' };
 let _beatMedia;   // undefined = no media tag this beat (keep previous, sticky)
+let _lineClasses = [];   // # CLASS: of the line being read
 let _pendingLink; // undefined = no FINK link this beat
 // ── the status line is the STORY'S (spec §5.5.2) ──────────────────────
 //
@@ -329,11 +373,27 @@ let _pendingLink; // undefined = no FINK link this beat
 // live player. Cleared on compile, or one story's HUD follows the reader
 // into the next.
 let _statusItems = [];   // the story's readouts, in declaration order
+// A story that declares no status line but keeps the shared economy gets
+// its readouts, as the host engine gave it (diamonds, mega, score, each
+// hidden while zero). Taken from the story's own declared VARs.
+const DEFAULT_STATUS = [
+  { id: 'diamonds', icon: '💎', label: 'diamonds' },
+  { id: 'mega_diamonds', icon: '👑', label: 'mega diamonds' },
+  { id: 'score', icon: '⭐', label: 'score' },
+];
+let _statusDefault = [];
+let _statusNone = false;   // `# STATUS: none`: no bar, not even the default
+function statusItemsShown() { return _statusItems.length ? _statusItems : (_statusNone ? [] : _statusDefault); }
+function setDefaultStatus() {
+  const declared = new Set(declaredNames() || []);
+  _statusDefault = DEFAULT_STATUS.filter((d) => declared.has(d.id))
+    .map((d) => ({ ...d, format: 'number', max: null, always: false }));
+}
 
 function declareStatus(value) {
   const v = (value || '').trim();
   if (!v) return;
-  if (/^none$/i.test(v)) { _statusItems = []; renderStatusBar(); return; }
+  if (/^none$/i.test(v)) { _statusItems = []; _statusNone = true; renderStatusBar(); return; }
   const parts = v.split(/\s+/);
   const first = parts[0];
   // A phrase with no key=value pairs and no plausible var name is plain
@@ -364,8 +424,14 @@ function statusValue(item) {
   try { raw = story?.variablesState?.[item.id]; } catch { raw = undefined; }
   if (raw === undefined || raw === null) return item.always ? '—' : null;
   const n = Number(raw);
+  // Zero is not news: a readout shows once it has something to say, unless
+  // the story asked for it `always` (the host engine's rule).
+  if (!item.always && item.format !== 'text' && !(Number.isFinite(n) && n !== 0)) return null;
   switch (item.format) {
-    case 'percent': return `${Math.round((Number.isFinite(n) ? n : 0))}%`;
+    case 'percent': {
+      const max = item.max || 100;
+      return `${Math.round(((Number.isFinite(n) ? n : 0) / max) * 100)}%`;
+    }
     case 'time': {
       const s = Math.max(0, Math.floor(Number.isFinite(n) ? n : 0));
       return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -384,7 +450,7 @@ function renderStatusBar() {
   const bar = $('statusbar');
   if (bar) {
     bar.textContent = '';
-    for (const item of _statusItems) {
+    for (const item of statusItemsShown()) {
       const v = statusValue(item);
       if (v === null) continue;                 // undeclared and not `always`
       const span = document.createElement('span');
@@ -399,10 +465,10 @@ function renderStatusBar() {
   // the tree). Small, and in our own namespace — the sandbox allows
   // app.storyrunner.*; the menubar (shell furniture) aggregates it.
   window.foaf?.bus?.publish('app.storyrunner.status', {
-    items: _statusItems.map((i) => ({ id: i.id,
+    items: statusItemsShown().map((i) => ({ id: i.id,
       label: `${i.icon ? i.icon + ' ' : ''}${i.label}: ${statusValue(i) ?? '—'}` })),
   });
-  state.status = _statusItems.map((i) => ({ id: i.id, value: statusValue(i) }));
+  state.status = statusItemsShown().map((i) => ({ id: i.id, value: statusValue(i) }));
 }
 
 function parseMedia(kind, value) {
@@ -438,7 +504,10 @@ function renderMedia(m) {
     el.src = resolveMedia(m.src); el.controls = true; el.playsInline = true;
   } else {
     el = document.createElement('img');
-    el.src = resolveMedia(m.src); el.alt = '';
+    el.src = resolveMedia(m.src);
+    // The file's name, as words, is the best description the story gives
+    // ("hampstead_heath.jpg" → "hampstead heath"), as the host engine did.
+    el.alt = (m.src.split('/').pop() || '').replace(/\.[a-z0-9]+$/i, '').replace(/[_-]+/g, ' ').trim();
   }
   el.className = 'media-el';
   box.appendChild(el);
@@ -507,6 +576,12 @@ function resolveMedia(path) {
   }
   let href = state.basehref || 'media/';
   if (!href.endsWith('/')) href += '/';
+  // A path that already starts with the BASEHREF ("media/x.mp4" under
+  // "# BASEHREF: media/") was written relative to the story: do not add the
+  // base twice (Hampstead's video 404'd at media/media/).
+  if (!/^https?:\/\//i.test(href) && !href.startsWith('/') && p.startsWith(href)) {
+    try { return new URL(p, base).href; } catch { /* fall through */ }
+  }
   let mediaBase;
   try {
     mediaBase = /^https?:\/\//i.test(href) ? href
@@ -524,6 +599,34 @@ function advance() {
   if (stepStory()) keepPlace();
 }
 
+// Start this story again from its beginning (the host engine's ↺). The
+// shared economy is the shell's, so it is read back in, not reset.
+async function restartStory() {
+  if (!story || _awaitingGame) return false;
+  story.ResetState();
+  $('prose').textContent = '';
+  state.prose = [];
+  state.ended = false;
+  setStatus('');
+  renderMedia(null);
+  window.foaf?.bus?.publish('app.storyrunner.restart', { summary: 'story restarted' });
+  await seedEconomy();
+  advance();
+  return true;
+}
+function offerRestart() {
+  const ul = $('choices');
+  if (!ul || ul.querySelector('.restart')) return;
+  const li = document.createElement('li');
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'restart';
+  btn.textContent = '↺ Start again';
+  btn.addEventListener('click', () => restartStory());
+  li.appendChild(btn);
+  ul.appendChild(li);
+}
+
 // True when the step ends where the reader waits.
 function stepStory() {
   if (!story) return false;
@@ -538,9 +641,12 @@ function stepStory() {
   const worldLines = [];                  // lines with tags for the world
   sampleKnot();                           // valid BEFORE the first Continue
   while (story.canContinue) {
-    const text = story.Continue();
+    let text;
+    try { text = story.Continue(); }
+    catch (e) { storyFault(e && e.message ? e.message : String(e)); break; }
     sampleKnot();                         // and again while there is a path
     const tags = story.currentTags || [];
+    _lineClasses = [];
     tags.forEach(handleTag);
     const trimmed = text.trim();
     const forWorld = tags.filter(isWorldTag);
@@ -554,7 +660,7 @@ function stepStory() {
         const norm = (x) => x.replace(/\s+/g, ' ').trim().toLowerCase();
         if (!norm(trimmed).startsWith(norm(echo))) addProse(echo, 'player');
       }
-      addProse(trimmed);
+      addProse(trimmed, _lineClasses.join(' '));
     }
     // A FINK link or a MINIGAME ends the beat — matching the host
     // engine, which breaks its loop on exactly these two tags.
@@ -605,6 +711,7 @@ function stepStory() {
       return true;
     }
     setStatus('— THE END —');
+    offerRestart();
     window.foaf?.bus?.publish('app.storyrunner.ended', { summary: 'story ended' });
   }
   return true;
@@ -779,7 +886,11 @@ function watchWorldReads() {
 
 async function launchAndWait(tag) {
   const { name: game, args } = gameTag(tag);
-  const res = await storyRequest('story.launch', { game, args });
+  // The last lines read go with the request, so a game can echo the story it
+  // interrupted (Skydock's PET terminals do); the host engine gave games the
+  // same from its page.
+  const recent = state.prose.slice(-8).map((l) => l.text);
+  const res = await storyRequest('story.launch', { game, args, recent });
   if (!res.ok) {
     // A refused launch must not strand the reader in a story with no
     // choices. Say so and carry on — the beat continues without the game.
@@ -1146,7 +1257,7 @@ async function mergeStory(absUrl, entry = '') {
   // line of the next and the failure would look like an authoring mistake.
   const compiler = new inkjs.Compiler(sources.map((s) => s.ink).join('\n'));
   try {
-    merged = compiler.Compile();
+    merged = armStory(compiler.Compile());
   } catch (e) {
     // The compiler's OWN words, because it is the only thing here that
     // understands ink. A duplicate `VAR` or a duplicate knot name lands here.
@@ -1471,6 +1582,7 @@ async function loadStory(url, restore = null, rel = 'replace') {
   $('choices').textContent = '';
   renderMedia(null);
   stopAudio();
+  if (rel !== 'merge') window.foaf?.storyRequest?.('story.audio', { action: 'stop-foley' }).catch?.(() => {});
   state.prose = []; state.choices = []; story = null;
   state.loads += 1;
   // THE SESSION'S CACHE (the layer model's "inkjs reality" note). A dream
@@ -1494,16 +1606,21 @@ async function loadStory(url, restore = null, rel = 'replace') {
   // grows its own set. (A dream surfacing reloads the outer story, so its
   // merges are lost with it — recorded in the doc, not pretended away.)
   state.sources = [{ url: bare(url), ink }];
-  try {
-    story = new inkjs.Compiler(ink).Compile();
-  } catch (e) {
-    setStatus('compile error: ' + e.message);
-    return;
+  {
+    const compiler = new inkjs.Compiler(ink);
+    try {
+      story = armStory(compiler.Compile());
+    } catch (e) {
+      storyFault('it does not compile: ' + compileError(compiler, e));
+      return;
+    }
   }
   state.ready = true;
   setStatus('');
   watchWorldReads();
   _statusItems = [];              // a new work brings its own status line
+  _statusNone = false;
+  setDefaultStatus();
   renderStatusBar();
   // THIS PLAYTHROUGH IS A THING (level 2 of the layer model). We cannot make
   // a node — we ask the shell for one and keep the token it hands back.
@@ -1691,6 +1808,7 @@ function snapshotPlaythrough() {
       frames: _frames.map((f) => ({ url: f.url, state: f.state })),
       basehref: state.basehref,
       status: _statusItems,
+      prose: state.prose.slice(-12),
       world: _world ? { tag: _world.tag, lines: _worldLines } : null,
     };
   } catch { return null; }
@@ -1718,9 +1836,15 @@ async function restorePlaythrough(snap) {
   }
   // loadStory applies the ink state after compiling and seeding, which is
   // the same path surfacing from a dream uses.
+  if (snap.basehref) state.basehref = snap.basehref;
   await loadStory(snap.storyUrl, snap.ink);
   for (const l of _worldLines) _worldScene = sceneOf(l.tags || []) || _worldScene;
   if (snap.basehref) state.basehref = snap.basehref;
+  // What the reader last read: a restored place with only its choices on
+  // screen reads as a story that lost its text.
+  if (Array.isArray(snap.prose) && !state.prose.length) {
+    for (const l of snap.prose) if (l && l.text) addProse(String(l.text), l.cls || '');
+  }
   if (Array.isArray(snap.status) && snap.status.length) {
     _statusItems = snap.status;
     renderStatusBar();

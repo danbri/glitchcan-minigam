@@ -148,6 +148,30 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   pointer events while it lasts.** Pointer capture on the toolbar handle
   did not hold when the pointer crossed the (now visible) story frame in
   split: the moves went to the frame and the dock test failed.
+- **What moved from the deleted engine into the runner (September 2026),
+  after a feature-by-feature diff** (owner: "Ofc migrate any unique useful
+  stuff"): the fault display (`storyFault`; `story.onError` is set, or
+  inkjs throws even on a warning and the reader is left with no choices;
+  a compile failure shows the compiler's first error, not "Compilation
+  failed."); `**bold**` / `*italic*` in OUTPUT text as DOM nodes (markers
+  must hug non-space, non-`*` text, so `a * b * c` and `*** X ***` stay
+  literal); `# CLASS:` on its paragraph (was on <body>, piling up) with
+  the success/danger/info/code/mega styles; the default status line for a
+  story that keeps the shared economy but declares no `# STATUS:`, zero
+  hidden unless `always`, `percent` of `max`; STOP_AUDIO and a new story
+  also stop the shell's foley; a media path that already starts with the
+  BASEHREF is not given it twice (Hampstead's video 404'd); ↺ Start again
+  at the end (`restartStory`); image alt text from the file name; the
+  dream-depth look (`body[data-depth]`); the last prose in the snapshot,
+  shown again on restore; the story's last lines to a launched game
+  (`story.launch` `recent` → `init.config.story.recent`); and the address
+  carries the story as well as the knot (`?story=` + `#hash`), so a link
+  copied inside a linked story opens that story (a reload still restores
+  the save: the runner restores when the named story is the saved one).
+  NOT moved, on purpose: the beat pager and "more below" hint, the text
+  and page animations, ambient light from artwork, per-knot Back/Forward
+  history, the dev panel's swimlanes and quick-load, and parts that never
+  worked (bookmarks with no UI, share-with-state creation, MENU).
 - Story↔minigame linkage that ALREADY exists (use before building new):
   init carries diamonds/mega_diamonds/keys/score/player_level/difficulty
   (`_getStoryVariables`); guests spend live via `set-variable`; robbin

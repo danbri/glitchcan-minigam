@@ -7,8 +7,7 @@ html, body {
      contract, with the runner's original values as fallbacks so it
      still looks right standalone, where no shell hands tokens over. */
   background: var(--sk-bg, #06122e); color: var(--sk-ink, #fff1e8);
-  font-family: var(--sk-font-body, inherit);
-  font-family: ui-rounded, -apple-system, 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--sk-font-body, ui-rounded, -apple-system, 'Segoe UI', system-ui, sans-serif);
   -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
 }
 #stage {
@@ -184,4 +183,42 @@ html, body {
   flex: 1 1 auto;
   width: 100%;
   border: 0;
+}
+
+/* # CLASS: on a line styles its paragraph (the host engine's set). */
+#prose p.success { color: var(--sk-accent, #29adff); }
+#prose p.success::before { content: '✓ '; }
+#prose p.danger { color: #f90; }
+#prose p.danger::before { content: '⚠ '; }
+#prose p.info { color: var(--sk-accent, #29adff); }
+#prose p.code {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  padding: 0.5em;
+  border: 1px solid var(--sk-line, #29adff);
+  border-radius: var(--sk-radius, 4px);
+}
+#prose p.mega { color: #ffec27; font-size: 1.2em; font-weight: bold; }
+
+/* ↺ at the end of a story */
+#choices button.restart { opacity: 0.8; }
+
+/* DREAM DEPTH: the reading surface degrades as you descend (the host
+   engine's look; body[data-depth] is the runner's dream depth). */
+body[data-depth="1"] #stage { filter: saturate(1.25) contrast(1.04) hue-rotate(-4deg); }
+body[data-depth="2"] #stage {
+  filter: saturate(1.5) contrast(1.1) hue-rotate(-10deg);
+  animation: dreamWobble 9s ease-in-out infinite;
+}
+body[data-depth="3"] #stage, body[data-depth="4"] #stage, body[data-depth="5"] #stage,
+body[data-depth="6"] #stage, body[data-depth="7"] #stage, body[data-depth="8"] #stage {
+  filter: saturate(1.9) contrast(1.2) hue-rotate(-22deg) blur(0.3px);
+  animation: dreamWobble 5s ease-in-out infinite;
+}
+@keyframes dreamWobble {
+  0%, 100% { transform: skewX(0deg); }
+  50% { transform: skewX(0.4deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-depth] #stage { animation: none; }
 }

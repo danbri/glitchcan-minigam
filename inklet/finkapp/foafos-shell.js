@@ -2731,6 +2731,11 @@ function buildUI() {
               reply({ ok: false, reason: chk.reason, ...(chk.excess ? { excess: chk.excess } : {}) });
               return;
             }
+            // The story's last lines, for the game's init (config.story.recent).
+            const recent = Array.isArray(d.detail?.recent) ? d.detail.recent : [];
+            if (window.FinkMinigames) {
+              window.FinkMinigames.storyRecent = recent.slice(-8).map((t) => String(t).slice(0, 500)).filter(Boolean);
+            }
             const { game, entry, parentNodeId } = chk;
             // Record the real instantiator so the game parents under THIS
             // runner's node, reflecting the true control/instantiation/
@@ -2967,7 +2972,18 @@ function buildUI() {
                   // replaceState, not a hash assignment: a beat is not a
                   // history entry, or Back would walk the reader backwards
                   // one sentence at a time. Explicit `push` asks for one.
-                  const to = `${location.pathname}${location.search}#${linkId}`;
+                  // The link carries its STORY too: a reader who followed
+                  // `# FINK:` out of the table of contents is in another
+                  // story, and a link with only the knot hash reopened the
+                  // boot story and missed (the host engine kept a hash→url
+                  // index instead). Same-origin paths only.
+                  const q = new URLSearchParams(location.search);
+                  try {
+                    const su = new URL(storyUrl, location.href);
+                    if (su.origin === location.origin) q.set('story', su.pathname);
+                  } catch (e) { /* keep the address's own story */ }
+                  const qs = q.toString().replace(/%2F/gi, '/');   // a path reads as one
+                  const to = `${location.pathname}${qs ? `?${qs}` : ''}#${linkId}`;
                   if (d.detail?.push) history.pushState({ fink: linkId }, '', to);
                   else history.replaceState({ fink: linkId }, '', to);
                 } catch (e) { /* crypto unavailable — the story still plays */ }
