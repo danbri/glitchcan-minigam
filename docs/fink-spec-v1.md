@@ -868,6 +868,15 @@ Incorporates `docs/fink-linking-spec.md`: two-part SHA-256 hash links
 fallback), public knots (not `_`-prefixed), `?d=` encoded variable
 state, `?story=`/`#story=` direct loads.
 
+
+**Where the world goes — normative.** The world's place on screen is the
+reader's choice, made with the window manager (FinkWM: full, split, pip).
+The shell follows the mode: in split the story window takes the part of
+the screen the stage leaves; in full the story stands aside; in pip the
+stage floats above the story. The mode control MUST stay reachable above
+the story window. A shell MAY choose the first mode (split on a narrow
+screen); it MUST NOT fix a placement the reader cannot change.
+
 ### 6.3 Known v1 leaks (scheduled for v2)
 
 Content in platform files, tracked for removal: `fink-config.js`

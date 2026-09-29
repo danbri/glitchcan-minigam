@@ -763,9 +763,9 @@ works too: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/story/peraspera.
   story (`setVariable`; the row lists the clue names in `DRIFT_CLUES`, `foafos-apps.js`, so a new clue must be added
   there) and asks the story to re-enter the scene (`worldReenter`, SDK `reenterScene`); a `# live` scene does the same
   when you move. The story's text routes still offer the clues too. In foafos (world or game) the menu has
-  no Sound item: the shell's volume and mute reach the city through `hostGain`. On a phone the story window
-  takes the bottom half and the city shows above it (the shell's `foafos-with-world`); the city's own controls
-  at the bottom of its frame are then under the story, and the foafos pad sits above the story instead.
+  no Sound item: the shell's volume and mute reach the city through `hostGain`. Where the city goes on screen is the
+  reader's choice in the foafos window manager (full, split, pip; the fink skill); on a phone a world opens
+  split, and the foafos pad sits over the city.
   Controls come from foafos too (owner's decision, September 2026): the row says `controls: 'sticks'`, `host.js`
   registers `onControls` and `onSticks`, the foafos sticks (on screen, or a gamepad's) write the same `PAD` values
   the city's own sticks write, and the city hides its own sticks and the menu's "On-screen gamepad" switch
@@ -777,9 +777,9 @@ works too: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/story/peraspera.
   in `tales.js` looks like the part of an `<audio>` element that the queue and `heads.js` use, and takes its
   time from the shell's `speech-state`. The city's synthesised music and street sound still start only on a
   tap in the city. A second fault hid the same heads: in world mode `TALE.base` is a path, and
-  `new URL(file, path)` throws, so every line was dropped; it is now resolved against the page first. On a
-  phone the stage is only the top half beside a story (`body.foafos-world-on #minigame-view`), so the city
-  draws half the pixels it drew when the story covered the rest.
+  `new URL(file, path)` throws, so every line was dropped; it is now resolved against the page first. In
+  split the city's frame is only its share of the screen, so it draws fewer pixels than when the story
+  covered part of a full-screen frame (which is what the phone layout did before split).
 - **`src/host.js`** (built in before `main.js`) answers the shell when the page is in a frame with the SDK
   (`packages/finkgame/src/minigame-sdk.js`, a script tag in `head.html`):
   - pause: `hostPaused()` makes the frame loops in `main.js` and `fallback.js` skip (they keep asking for frames;

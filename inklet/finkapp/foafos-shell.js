@@ -715,18 +715,45 @@ bus.subscribe('app.close', (e) => {
     tellWatcher(w, 'close', { ids: mine, count: mine.length });
   }
 });
+// WHERE A WORLD GOES is the reader's choice, made in the window manager's
+// toolbar (FinkWM: full, split, pip; owner's decision, September 2026).
+// The shell only follows it: body[data-world-mode] names the mode, and in
+// split the story window takes the larger band the stage leaves, measured
+// here in pixels (FinkWM measures split the same way, for the same reason).
+function layoutWorld() {
+  const wm = window.FinkWM, body = document.body, root = document.documentElement.style;
+  const on = storyWorlds.size > 0 && !!wm?.active;
+  if (!on) {
+    delete body.dataset.worldMode;
+    body.classList.remove('foafos-world-stage-top');
+    return;
+  }
+  body.dataset.worldMode = wm.mode || 'full';
+  const view = document.getElementById('minigame-view');
+  if (wm.mode !== 'split' || !view) { body.classList.remove('foafos-world-stage-top'); return; }
+  const r = view.getBoundingClientRect(), H = window.innerHeight;
+  const top = r.top >= H - r.bottom;            // more room above the stage than below
+  body.classList.toggle('foafos-world-stage-top', !top);
+  root.setProperty('--foaf-story-top', `${top ? 0 : Math.round(r.bottom)}px`);
+  root.setProperty('--foaf-story-bottom', `${top ? Math.round(H - r.top) : 0}px`);
+  root.setProperty('--foaf-stage-gap', `${Math.max(0, Math.round(H - r.bottom))}px`);
+}
+for (const t of ['wm.mode', 'wm.settled', 'wm.close', 'story.world']) bus.subscribe(t, () => layoutWorld());
+window.addEventListener('resize', () => layoutWorld());
 bus.subscribe('app.close', (e) => {
   const closed = e.data?.closed || [];
   for (const [runnerId, w] of storyWorlds) {
     if (closed.includes(runnerId)) {
       storyWorlds.delete(runnerId);
       document.body.classList.toggle('foafos-world-on', storyWorlds.size > 0);
+      layoutWorld();
       continue;
     }
     if (!w.nodeId || !closed.includes(w.nodeId)) continue;
     storyWorlds.delete(runnerId);
     w.frame.closest?.('.foafos-window')?.classList.remove('foafos-with-world');
     document.body.classList.toggle('foafos-world-on', storyWorlds.size > 0);
+    layoutWorld();
     try {
       w.frame.contentWindow?.postMessage({ type: 'story.event', event: 'world.closed', detail: { world: w.game } }, '*');
     } catch (err) { /* the runner is gone too */ }
@@ -2779,8 +2806,12 @@ function buildUI() {
               // it is a world and not a game with a story of its own.
               window.FinkMinigames?.startMinigame?.(chk.game, hostArgs.mode || 'normal',
                 hostArgs.controls || null, { ...appArgs, world: '1' });
-              win.classList.add('foafos-with-world');   // phone: the world gets the top half
+              win.classList.add('foafos-with-world');
               document.body.classList.add('foafos-world-on');
+              // The stage opens full. On a phone the reader then could not
+              // see the story, so a world starts split there; after that
+              // the mode is the reader's (the FinkWM toolbar).
+              if (window.matchMedia?.('(max-width: 700px)').matches) window.FinkWM?.setMode?.('split');
               bus.publish('story.world', {
                 summary: `${app.name} opened ${chk.entry.name || chk.game} as the world beside its story`,
                 appId: app.id, world: chk.game,
