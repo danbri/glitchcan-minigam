@@ -873,6 +873,119 @@ FoafOS.worldReenter = (instId, scene) => {
   } catch (err) { return false; }
   return true;
 };
+// SPOKEN LINES AS A SHELL SERVICE (guest SDK speak / message `speech`).
+// iOS starts sound only in a document that has had a tap, and a new sandboxed
+// frame has had none: beside a story, the taps go to the runner (choices) and
+// to this page (the pad, the dock), never to the world. So a stage guest does
+// not play its recorded lines; it asks, and this page plays them under the
+// master volume. The guest gets the play time back (`speech-state`) to move a
+// face's lips. One line at a time, for one guest: a new line cuts the last.
+// Where this page has had no tap either, the line waits behind a "Tap for
+// sound" button. The power is the node's: `audio`.
+const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+const speech = { el: null, owner: null, id: null, send: null, timer: 0, waiting: false, primed: false, level: 1, chip: null };
+audio.register('shell.speech', (level) => { speech.level = level; if (speech.el) speech.el.volume = level; },
+  { label: 'spoken lines' });
+function speechTell(extra) {
+  const el = speech.el;
+  try { speech.send?.({ type: 'speech-state', id: speech.id, t: el ? el.currentTime : 0, ...extra }); } catch (err) { /* guest gone */ }
+}
+function speechChip(show) {
+  if (!show) { if (speech.chip) speech.chip.hidden = true; return; }
+  if (!speech.chip) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.id = 'foafos-sound-chip'; b.textContent = '🔈 Tap for sound';
+    b.addEventListener('click', () => { speechChip(false); if (speech.waiting) speechStart(); });
+    document.body.appendChild(b);
+    speech.chip = b;
+  }
+  speech.chip.hidden = false;
+}
+function speechEl() {
+  if (speech.el) return speech.el;
+  const el = new Audio();
+  el.preload = 'auto';
+  el.addEventListener('ended', () => {
+    if (el.src === SILENT_WAV || !speech.owner) return;
+    clearInterval(speech.timer); speechTell({ playing: false, ended: true }); speech.owner = null;
+  });
+  el.addEventListener('error', () => {
+    if (el.src === SILENT_WAV || !speech.owner) return;
+    clearInterval(speech.timer); speechTell({ playing: false, ended: true, error: 'failed' }); speech.owner = null;
+  });
+  speech.el = el;
+  return el;
+}
+function speechStart() {
+  const el = speechEl(), id = speech.id;
+  el.volume = speech.level;
+  speech.waiting = false;
+  const p = el.play();
+  Promise.resolve(p).then(() => {
+    if (speech.id !== id || !speech.owner) return;
+    speech.primed = true;
+    speechChip(false);
+    speechTell({ playing: true });
+    clearInterval(speech.timer);
+    speech.timer = setInterval(() => { if (!el.paused) speechTell({ playing: true }); }, 50);
+  }).catch((err) => {
+    if (speech.id !== id || !speech.owner) return;
+    if (err && err.name === 'NotAllowedError') {
+      speech.waiting = true; speechChip(true); speechTell({ playing: false, waiting: true });
+    } else {
+      speechTell({ playing: false, ended: true, error: 'failed' }); speech.owner = null;
+    }
+  });
+}
+function speechStop(instId = null) {
+  if (instId && speech.owner !== instId) return;
+  clearInterval(speech.timer);
+  if (speech.el) speech.el.pause();
+  speech.owner = null; speech.waiting = false;
+  speechChip(false);
+}
+// Any tap on this page may start sound: a waiting line starts; else a silent
+// sound is played once, so later lines play without a tap of their own.
+for (const ev of ['pointerup', 'touchend', 'click', 'keydown']) {
+  document.addEventListener(ev, (e) => {
+    if (e.target && e.target.id === 'foafos-sound-chip') return;
+    if (speech.waiting) { speechChip(false); speechStart(); return; }
+    if (speech.primed || speech.owner) return;
+    const el = speechEl();
+    el.src = SILENT_WAV;
+    Promise.resolve(el.play()).then(() => { speech.primed = true; }).catch(() => {});
+  }, { passive: true, capture: true });
+}
+// Called by the stage host for a guest's `speech` message. `base` is the
+// guest page's address: a line must come from the same origin.
+FoafOS.guestSpeech = (instId, base, msg, send) => {
+  const action = msg && msg.action;
+  if (action === 'stop') { speechStop(instId); return true; }
+  if (action !== 'play') return false;
+  const id = msg.id ?? null;
+  const refuse = (reason) => { try { send({ type: 'speech-state', id, playing: false, ended: true, error: reason }); } catch (err) { /* gone */ } };
+  const nodeId = gameNodes.get(instId);
+  if (!nodeId || !apps.can(nodeId, 'audio')) {
+    bus.publish('audio.denied', { summary: `a spoken line from ${instId} refused: it holds no audio`, instance: instId });
+    refuse('no-audio-power');
+    return false;
+  }
+  let target;
+  try { const b = new URL(base); target = new URL(String(msg.url || ''), b); if (target.origin !== b.origin) throw new Error('origin'); }
+  catch (err) { refuse('bad-url'); return false; }
+  if (speech.owner && (speech.owner !== instId || speech.id !== id)) {
+    const was = speech.send, wasId = speech.id;
+    clearInterval(speech.timer);
+    try { was?.({ type: 'speech-state', id: wasId, playing: false, ended: true, cut: true }); } catch (err) { /* gone */ }
+  }
+  const el = speechEl();
+  el.pause();
+  speech.owner = instId; speech.id = id; speech.send = send;
+  el.src = target.href;
+  speechStart();
+  return true;
+};
+bus.subscribe('minigame.instance', (e) => { if (e.source === 'local' && e.data?.closed) speechStop(e.data.id); });
 const worldSend = (w, msg) => (w.instId ? !!window.FinkMinigames?.sendToInstance?.(w.instId, msg)
   : ((w.held || (w.held = [])).push(msg), true));
 // A BOXED STORY MUST YIELD THE SCREEN TO THE GAME IT LAUNCHED.

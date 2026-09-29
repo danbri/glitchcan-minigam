@@ -331,6 +331,16 @@ try {
       ? pass(`a choice in the story moves the city to the Cold Tap, and Mags's recorded line plays in the city from the story's path (${c2.speech.split('/').slice(-3).join('/')})`)
       : fail(`after the choice: ${JSON.stringify(c2)}`);
 
+    // 19b. the shell plays the line, not the city's frame (a new frame has had no tap on iOS),
+    // and sends the play time back: the talking head is open and its clock runs
+    const sp = await wcity.waitForFunction(() => {
+      const el = __drift.TALE.speech?.el;
+      return el && !(el instanceof HTMLMediaElement) && !el.paused && el.currentTime > 0.3 && __drift.HEADS.who;
+    }, null, { timeout: 30000 }).then(() => wcity.evaluate(() => ({ t: +__drift.TALE.speech.el.currentTime.toFixed(2), who: __drift.HEADS.who })), () => null);
+    sp && sp.who === 'mags'
+      ? pass(`the shell plays Mags's line and sends its play time back (${sp.t}s): the city has no audio element of its own for it, and her head shows`)
+      : fail(`shell speech: ${JSON.stringify({ sp, s: await wcity.evaluate(() => ({ src: __drift.TALE.speech?.el?.src, paused: __drift.TALE.speech?.el?.paused, who: __drift.HEADS.who })) })}`);
+
     // 20. the city's menu leaves the story and the sound to foafos
     const labels = await wcity.evaluate(() => {
       document.getElementById('bMenu').click();

@@ -521,6 +521,23 @@ quietly lies (`FoafAudio.coverage().uncovered`). Registries SHOULD mark
 which apps make sound (`audio: true`) so the disclosure lists noisy
 silent-by-nature apps, not every open spreadsheet.
 
+**Spoken lines are played by the shell — normative.** iOS starts sound
+only in a document that has had a tap, and a new sandboxed frame has had
+none (beside a story the taps go to the runner and to the shell page). A
+stage guest SHOULD therefore not play a recorded line itself. It sends
+`{type:'speech', action:'play', url, id}` (SDK `speak(url, id)`), and the
+shell plays the file from its own page under the master volume. The shell
+MUST refuse a guest whose node does not hold `audio`, and a file from
+another origin than the guest page. It answers with
+`{type:'speech-state', id, t, playing, ended, waiting, error, cut}`, about
+20 times a second while the line plays, so a guest can move a face's lips
+from `t`. One line plays at a time; a new line cuts the last (`cut:
+true`). Where the shell page has had no tap either, the line waits
+(`waiting: true`) behind a "Tap for sound" button that the shell shows.
+`{type:'speech', action:'stop'}` (`stopSpeech()`) stops it. A guest's own
+synthesised sound (its AudioContext) is not covered: it still needs a tap
+in the guest's own frame.
+
 ### 5.5.1 Apps, surfaces and capabilities — normative
 
 There is **one class of runnable thing: an app.** A story widget, a maze,

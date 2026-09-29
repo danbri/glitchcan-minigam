@@ -6,7 +6,7 @@
 // a guest said something meaningful" from ordinary page chatter.
 const GUEST_MESSAGE_TYPES = new Set([
     'ready', 'progress', 'set-variable', 'complete', 'error', 'log', 'log-batch',
-    'announce', 'conformance', 'snapshot-data', 'bus-publish', 'story-reenter',
+    'announce', 'conformance', 'snapshot-data', 'bus-publish', 'story-reenter', 'speech',
 ]);
 
 // How long a guest gets to answer the conformance probe before the shell
@@ -1244,6 +1244,13 @@ window.FinkMinigames = {
                 // (story:steer) and the runner checks the scene.
                 if (inst.world) window.FoafOS?.worldReenter?.(inst.id, String(data.scene || ''));
                 else this.log(`story-reenter from ${inst.id} ignored: not a world`);
+                break;
+
+            case 'speech':
+                // A recorded line: the shell plays it (a new frame has had
+                // no tap, so on iOS it may not play sound itself).
+                window.FoafOS?.guestSpeech?.(inst.id, inst.iframe?.src || '', data,
+                    (m) => this._sendToIframe(m, inst));
                 break;
 
             case 'bus-publish':

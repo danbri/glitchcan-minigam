@@ -406,6 +406,16 @@ flip-storm test in `e2e-wm.mjs` (now 23 assertions).
   separately — a stale cross-tab state event must not clobber an
   in-flight claim. Playwright: BroadcastChannel needs pages in the SAME
   context (`browser.newContext()` then `context.newPage()` twice).
+- **A stage guest's recorded lines are the SHELL's to play** (spec §5.5,
+  SDK `speak` / `onSpeech`, `FoafOS.guestSpeech`). Owner, September 2026:
+  audio "needed to be a shell service cos new iframe apps weren't trusted
+  quickly enough". Beside a story no tap ever lands in the world's frame,
+  so iOS lets it start no sound. The shell page gets the pad and dock taps,
+  and by the HTML rules a tap in a child frame also activates it; where
+  neither happened, the line waits behind the shell's "Tap for sound"
+  button. Headless Chromium allows autoplay, so a test of the button must
+  make `play()` reject with `NotAllowedError` itself. Not tested on iPhone
+  Safari.
 - OS-cases analysis + scorecard: `docs/foafos-os-cases.md` (edot office
   suite, foaf.tv/tvp, zero-trust).
 - `<foafos-guest>` + `scopeBus` (src/guest.mjs): sandboxed widget

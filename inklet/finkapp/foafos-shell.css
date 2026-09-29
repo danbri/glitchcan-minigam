@@ -357,7 +357,29 @@ body.foaf-pad-on #foafos-dock {
     /* the pad has left the bottom corner, so the dock need not step aside
        (raised, it covered the story's choices) */
     body.foafos-world-on.foaf-pad-on #foafos-dock { bottom: calc(8px + env(safe-area-inset-bottom)); }
+    /* the world draws only the half it shows: full screen, half its
+       pixels were under the story */
+    body.foafos-world-on #minigame-view.state-full { bottom: auto; height: 50dvh !important; }
 }
+
+/* a spoken line waits for a tap on this page (the shell's speech service) */
+#foafos-sound-chip {
+    position: fixed;
+    top: calc(12px + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3000;
+    min-height: 44px;
+    padding: 0 1.1rem;
+    border: 1px solid var(--sk-accent, #6cf);
+    border-radius: 22px;
+    background: var(--sk-bg, #0a0a12);
+    color: var(--sk-ink, #e8ecf4);
+    font: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+}
+#foafos-sound-chip[hidden] { display: none; }
 
 /* floating widget windows (sandboxed guests) */
 .foafos-window {

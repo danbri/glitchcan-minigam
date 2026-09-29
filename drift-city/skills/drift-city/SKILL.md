@@ -770,6 +770,16 @@ works too: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/story/peraspera.
   registers `onControls` and `onSticks`, the foafos sticks (on screen, or a gamepad's) write the same `PAD` values
   the city's own sticks write, and the city hides its own sticks and the menu's "On-screen gamepad" switch
   (`hostState().sticks`). The keyboard still works when the city has focus.
+  Recorded lines (`# speech:`) are played by the SHELL when the city is hosted (spec §5.5, owner's rule: "it
+  needed to be a shell service cos new iframe apps weren't trusted quickly enough"). On a phone beside a story
+  the city's frame gets no taps (choices are in the runner, the sticks in the shell), so a line played in the
+  frame failed on iOS, and the head closed with it: that is how the talking heads "vanished". `shellAudio(sdk)`
+  in `tales.js` looks like the part of an `<audio>` element that the queue and `heads.js` use, and takes its
+  time from the shell's `speech-state`. The city's synthesised music and street sound still start only on a
+  tap in the city. A second fault hid the same heads: in world mode `TALE.base` is a path, and
+  `new URL(file, path)` throws, so every line was dropped; it is now resolved against the page first. On a
+  phone the stage is only the top half beside a story (`body.foafos-world-on #minigame-view`), so the city
+  draws half the pixels it drew when the story covered the rest.
 - **`src/host.js`** (built in before `main.js`) answers the shell when the page is in a frame with the SDK
   (`packages/finkgame/src/minigame-sdk.js`, a script tag in `head.html`):
   - pause: `hostPaused()` makes the frame loops in `main.js` and `fallback.js` skip (they keep asking for frames;
@@ -800,10 +810,10 @@ works too: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/story/peraspera.
   Loading a head (5 MB, 20,000 splats) and its first poses block the page's thread: measured round trips of
   288, 450 and 577 ms against 4 to 9 ms otherwise, and a close then kept nothing (two test runs in three).
   Not fixed; the shell's rule is that a window that will not shut is worse than a lost save.
-- Tests: `inklet/finkapp/test/e2e-drift.mjs` (34 checks; the world ones are §15-27: the story in the runner, the
+- Tests: `inklet/finkapp/test/e2e-drift.mjs` (35 checks; the world ones are §15-27: the story in the runner, the
   city beside it under the dream session, the phone layout, the first step's tags, a re-entry refused and a clue
   found in the city, the foafos sticks on a phone and from a gamepad, Per Aspera's opening text when opened directly, variables both ways through the shell, a choice
-  moving the city and its recorded line, the menu, closing the city, and a restore that reopens the world at the
+  moving the city and its recorded line played by the shell with the head open, the menu, closing the city, and a restore that reopens the world at the
   last scene. Before them, the game path: the argument filter; the city on Per Aspera as a node
   with its args; the Task Manager row; pause; master volume; a story save kept in memory, snapshotted, kept on
   close and restored on reopen; the head's autoplay, pause, load and draw; two lines handing control back in
