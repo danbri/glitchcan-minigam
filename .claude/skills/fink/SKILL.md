@@ -30,6 +30,15 @@ splash copy: none of it belongs in platform code (destined for NPM). If a
 change needs a story fact, it goes through config, a manifest, or a typed
 content block.
 
+**September 2026: the host-page story engine is gone.** `fink-ink-engine.js`,
+`fink-ui.js`, `fink-player.js`, `fink-navigation.js`, `fink-sandbox.js`,
+`fink-utils.js`, the dev panel, `MinigameHost`, `FoafOS.storyNode`,
+`inklet/app/` and `?player=legacy` were deleted (owner: "nuke the cruft,
+keep it clean"). The story runner is the only story engine; `foafos-boot.js`
+boots it and `fink-links.js` holds the link format. Notes further down that
+name those files are history: they explain why the code is as it is, not
+where to change it.
+
 ## The file format (load-bearing facts)
 
 - `.fink.js` files are **JavaScript, not text**. Content is captured by
@@ -70,23 +79,25 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
 
 ## Sandbox rules (SECURITY-CRITICAL — CLAUDE.md)
 
-- Do not casually modify `fink-sandbox.js`. `'\n'` vs `'\\n'` broke story
-  loading once (silent "Loading..." hang). After ANY sandbox/player change
-  run the mandatory test: TOC loads → Episodes → Hampstead plays, no
-  console errors.
-- Loader flow: fetch text in parent → execute in throwaway
+- The host-page `fink-sandbox.js` was deleted with the host engine
+  (September 2026). The story runner's capture frame
+  (`inklet/apps/storyrunner/storyrunner.js`, the srcdoc near the top) is
+  the sandbox now, and the same rule holds: `'\n'` vs `'\\n'` broke story
+  loading once (silent "Loading..." hang). After ANY runner change run the
+  mandatory test: TOC loads → Episodes → Hampstead plays, no console
+  errors (e2e.mjs does it through the runner).
+- Loader flow: the runner fetches the text → executes it in a throwaway
   `<iframe sandbox="allow-scripts">` srcdoc defining `oooOO` → postMessage
-  back → currently uses data[0] (first block only).
+  back.
 
 ## Platform contract warts (v1 reality, documented for v2 cleanup)
 
-- `fink-ink-engine.js:100` unconditionally appends a private
-  `=== _inventory ===` knot (declaring diamonds/mega_diamonds/keys/score
-  if absent) to EVERY story. Stories divert to it
-  (world-between-worlds.fink.js), so standalone validators must stub it:
-  append `\n=== _inventory ===\nstub.\n-> END\n` when `-> _inventory`
-  appears. The injected knot also contains a story link
-  (world-between-worlds) — a known content leak.
+- Nothing is injected into a story any more. The deleted host engine
+  appended an `=== _inventory ===` knot and the VARs diamonds,
+  mega_diamonds, keys and score to every story; the runner never did, so a
+  story that relied on them failed only in the runner. The one that did,
+  world-between-worlds.fink.js, now carries the knot itself, and
+  fink-check and the finkcore corpus test compile stories as they are.
 - Other known leaks: `fink-config.js` (DEFAULT_FINK_FILE, LOCAL_FINKS,
   absolute /glitchcan-minigam/ paths), host-game splash copy (`hostGames`,
   gems and mega only) in `fink-minigames.js`, chess's
@@ -101,9 +112,8 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   its `url`, else `../minigames/<type>/index.html`, into a sandboxed
   iframe. An unregistered name is refused (`minigame.refused`); it used to
   start gems, which is what the table of contents' canarywharf link did.
-  The DESIGNED path is `inklet/minigames/`
-  (`MinigameHost` + guest `minigame-sdk.js` + per-game manifest.json with
-  variables.read/write allowlists) — loaded but not yet routed.
+  (`inklet/minigames/minigame-host.js`, a second host that was loaded and
+  never called, was deleted in September 2026.)
 - **THE INIT RACE, and it bites every new guest.** A guest that posts
   `ready` at PARSE time — top-level, before its own async setup — can
   beat the host's iframe `load` handler to the punch, and its `init`
@@ -119,8 +129,8 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
 - postMessage protocol (both): host→guest `init {config,variables}`,
   `pause`, `resume`, `terminate`, `key`; guest→host `ready`, `progress`,
   `set-variable`, `complete {result}`, `error`. Minigames cannot divert
-  Ink; they mutate variables and the host resumes via
-  `FinkInkEngine.continueStory()`.
+  Ink; they mutate variables, and the runner resumes when the game
+  completes (`minigame.complete`).
 - Story↔minigame linkage that ALREADY exists (use before building new):
   init carries diamonds/mega_diamonds/keys/score/player_level/difficulty
   (`_getStoryVariables`); guests spend live via `set-variable`; robbin
@@ -234,9 +244,8 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   `app.launch.args.dropped`; the guest gets them in its page address and
   `init.config.args`, and the node records them (`scopes.args`). Until
   September 2026 the runner kept the first word only, so mode never reached
-  a game in production. The legacy engine parses mode and controls at
-  `fink-ink-engine.js:314-333`. The Continue loop BREAKS on MINIGAME/FINK
-  tags. Details: the story-game-sync skill.
+  a game in production. The runner's Continue loop stops on MINIGAME and
+  FINK tags. Details: the story-game-sync skill.
 - `# WORLD: <name> [key=value ...]` (boxed runner only, September 2026; spec
   §5.8): a stage app BESIDE the story, not a pause. Verb `story.world`
   (`open`, `beat`, `vars`, `close`; authority `story:launch`), same launch
@@ -1536,7 +1545,14 @@ failing over.
 - Office root now holds **no `same-origin` at all**: every app it offers is
   migrated, so by attenuation nothing it opens can have one either.
 
-## Stories are privileged over apps — know this
+## Stories are privileged over apps — know this (HISTORY: fixed by deletion)
+
+September 2026: this section describes the deleted host-page engine. A
+story now runs only in the runner's opaque-origin frame and reaches the
+shell only through capability-checked `story:*` verbs; no registry row has
+`surface: 'story'` any more, and `unenforcedApps()` lists no story. Kept
+because it records why the runner exists.
+
 
 Asked directly ("does foafos privilege stories over office docs?") and
 the answer is yes, enormously. The story is not an app; it is part of the
@@ -1860,9 +1876,9 @@ check what the author remembered.**
   `../../inklet/apps/app-sdk.js` clamped to `/inklet/…` and 404'd — two
   unexplained console errors in that suite for who knows how long. Root the
   server at the repo root and put the path in the URL instead.
-  Boot check: all of FinkPlayer/FinkInkEngine/FinkSandbox/FinkNavigation/
-  FinkMinigames/FinkAudio/FinkFoley/MinigameHost on window, and
-  `FinkInkEngine.compiledCount >= 1`.
+  Boot check: FinkMinigames/FinkAudio/FinkFoley/FinkWM/FinkLinks on the
+  shell page, NO FinkInkEngine/FinkPlayer/inkjs there, and a runner frame
+  whose `__storyrunner.ready()` is true with choices.
 - Local servers die on worker restarts — always curl-check and restart
   with `(setsid nohup python3 -m http.server ... &)`.
 - **A live-site report about new work: first check the work is on master.**
