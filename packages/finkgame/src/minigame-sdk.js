@@ -272,6 +272,36 @@ class MinigameSDK {
     }
 
     /**
+     * Play a recorded line through the SHELL, not in this frame. On iOS a
+     * new sandboxed frame has had no tap and may not start sound; the shell
+     * page has. The line must come from this page's origin, and the app must
+     * hold `audio`. Progress comes back to onSpeech with this id.
+     * @param {string} url - the sound file, relative to this page
+     * @param {*} id - any value; `speech-state` messages carry it back
+     */
+    speak(url, id) {
+        this._sendMessage({ type: 'speech', action: 'play', url: String(url || ''), id: id ?? null });
+    }
+
+    /** Stop the line the shell plays for this app. */
+    stopSpeech() {
+        this._sendMessage({ type: 'speech', action: 'stop' });
+    }
+
+    /**
+     * The play state of a line sent with speak(): {id, t, playing, ended,
+     * waiting, error, cut}. `t` is the play time in seconds; while a line
+     * plays it comes about 20 times a second. `waiting` means the shell
+     * waits for a tap. Registering declares the `speech` contract.
+     * @param {Function} callback - (state) => void
+     */
+    onSpeech(callback) {
+        this._callbacks.speech = callback;
+        this._declare('speech');
+        return this;
+    }
+
+    /**
      * Set an INK variable (must be in manifest's write allowlist)
      * @param {string} name - Variable name
      * @param {*} value - Variable value
@@ -448,6 +478,10 @@ class MinigameSDK {
                     this._callbacks.storyBeat(Array.isArray(data.lines) ? data.lines : [],
                         { base: data.base || null, replay: !!data.replay });
                 }
+                break;
+
+            case 'speech-state':
+                if (this._callbacks.speech) this._callbacks.speech(data);
                 break;
 
             case 'key':

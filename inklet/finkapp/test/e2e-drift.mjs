@@ -266,15 +266,31 @@ try {
     wn && wn.parent === 'story' && wn.caps === 'audio,vars:read,vars:write,story:steer' && !wn.yielded
       ? pass('the city opens beside the story, not over it: a node under the dream session holding audio and vars, and the story window stays on screen')
       : fail(`world node: ${JSON.stringify(wn)}`);
-    // on a phone the story window is full-bleed; with a world it leaves the top half to the city
+    // on a phone the world's place is the reader's, in the window manager's toolbar: split, full or pip
     await wpage.setViewportSize({ width: 390, height: 844 });
-    await wait(400);
-    const phoneTop = await wpage.evaluate(() => Math.round(document.querySelector('.foafos-window iframe[src*="storyrunner"]')
-      ?.closest('.foafos-window')?.getBoundingClientRect().top ?? -1));
+    const lay = [];
+    for (const mode of ['split', 'full', 'pip']) {
+      await wpage.evaluate((m) => window.FinkWM.setMode(m), mode);
+      await wait(600);
+      lay.push(await wpage.evaluate(() => {
+        const R = (el) => { const r = el.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; };
+        const win = document.querySelector('.foafos-window iframe[src*="storyrunner"]').closest('.foafos-window');
+        const chrome = document.getElementById('wm-chrome');
+        return { mode: document.body.dataset.worldMode, stage: R(document.getElementById('minigame-view')), story: R(win),
+          shown: getComputedStyle(win).visibility === 'visible',
+          stageOver: +getComputedStyle(document.getElementById('minigame-view')).zIndex > +getComputedStyle(win).zIndex,
+          toolbar: +getComputedStyle(chrome).zIndex > +getComputedStyle(win).zIndex };
+      }));
+    }
+    await wpage.evaluate(() => window.FinkWM.setMode('full'));
     await wpage.setViewportSize({ width: 1000, height: 760 });
-    Math.abs(phoneTop - 422) <= 2
-      ? pass(`on a phone the story window leaves the top half to the city (its top at ${phoneTop} of 844 px)`)
-      : fail(`phone layout with a world: story window top ${phoneTop}, expected 422`);
+    const [sl, fu, pp] = lay;
+    const apart = sl.story[1] <= sl.stage[0] + 1 || sl.stage[1] <= sl.story[0] + 1;
+    const filled = Math.min(sl.story[0], sl.stage[0]) <= 1 && Math.max(sl.story[1], sl.stage[1]) >= 843;
+    sl.mode === 'split' && sl.shown && apart && filled && sl.toolbar && fu.mode === 'full' && !fu.shown
+      && pp.mode === 'pip' && pp.shown && pp.stageOver
+      ? pass(`on a phone the window manager places the world: split gives the story ${sl.story.join("-")} and the city ${sl.stage.join("-")}, full hides the story, pip floats the city over it; its toolbar stays on top`)
+      : fail(`world layout by mode: ${JSON.stringify(lay)}`);
 
     // 17. the story's first step drives the city, which has no story of its own
     const c1 = await wcity.evaluate(() => ({ world: __drift.host().world, scene: __drift.TALE.scene, place: __drift.TALE.place,
@@ -331,6 +347,16 @@ try {
       ? pass(`a choice in the story moves the city to the Cold Tap, and Mags's recorded line plays in the city from the story's path (${c2.speech.split('/').slice(-3).join('/')})`)
       : fail(`after the choice: ${JSON.stringify(c2)}`);
 
+    // 19b. the shell plays the line, not the city's frame (a new frame has had no tap on iOS),
+    // and sends the play time back: the talking head is open and its clock runs
+    const sp = await wcity.waitForFunction(() => {
+      const el = __drift.TALE.speech?.el;
+      return el && !(el instanceof HTMLMediaElement) && !el.paused && el.currentTime > 0.3 && __drift.HEADS.who;
+    }, null, { timeout: 30000 }).then(() => wcity.evaluate(() => ({ t: +__drift.TALE.speech.el.currentTime.toFixed(2), who: __drift.HEADS.who })), () => null);
+    sp && sp.who === 'mags'
+      ? pass(`the shell plays Mags's line and sends its play time back (${sp.t}s): the city has no audio element of its own for it, and her head shows`)
+      : fail(`shell speech: ${JSON.stringify({ sp, s: await wcity.evaluate(() => ({ src: __drift.TALE.speech?.el?.src, paused: __drift.TALE.speech?.el?.paused, who: __drift.HEADS.who })) })}`);
+
     // 20. the city's menu leaves the story and the sound to foafos
     const labels = await wcity.evaluate(() => {
       document.getElementById('bMenu').click();
@@ -350,7 +376,7 @@ try {
     const fullAgain = await wpage.evaluate(() => !document.querySelector('.foafos-window iframe[src*="storyrunner"]')
       ?.closest('.foafos-window')?.classList.contains('foafos-with-world'));
     told && still.length > 0 && fullAgain
-      ? pass('closing the city tells the story (world.closed); the story goes on as text, with its choices, and has the whole phone screen again')
+      ? pass('closing the city tells the story (world.closed); the story goes on as text, with its choices, and has the whole screen again')
       : fail(`after closing the city: ${JSON.stringify({ told, still, fullAgain })}`);
     werrs.length === 0 ? pass('world: no page errors') : fail(`world page errors: ${werrs.slice(0, 3).join(' · ')}`);
     await wpage.close();
@@ -423,13 +449,17 @@ try {
       return { hidden: p.hidden, sticks: p.classList.contains('sticks'),
         dir: getComputedStyle(p.querySelector('.foaf-pad-dir')).display,
         stickW: Math.round(p.querySelector('.foaf-stick-r').getBoundingClientRect().width),
-        padBottom: Math.round(p.getBoundingClientRect().bottom), storyTop: Math.round(w.getBoundingClientRect().top),
-        dockGap: Math.round(innerHeight - (document.getElementById('foafos-dock')?.getBoundingClientRect().bottom ?? 0)) };
+        pad: [Math.round(p.getBoundingClientRect().top), Math.round(p.getBoundingClientRect().bottom)],
+        stage: [Math.round(document.getElementById('minigame-view').getBoundingClientRect().top), Math.round(document.getElementById('minigame-view').getBoundingClientRect().bottom)],
+        story: [Math.round(w.getBoundingClientRect().top), Math.round(w.getBoundingClientRect().bottom)],
+        dock: [Math.round(document.getElementById('foafos-dock').getBoundingClientRect().top), Math.round(document.getElementById('foafos-dock').getBoundingClientRect().bottom)],
+        mode: document.body.dataset.worldMode };
     });
     const own = await tc.evaluate(() => ({ on: __drift.PAD.on, hidden: document.getElementById('pad')?.hidden !== false }));
-    !pad.hidden && pad.sticks && pad.dir === 'none' && pad.stickW > 60 && pad.padBottom <= pad.storyTop && !own.on && own.hidden
-      && pad.dockGap <= 24
-      ? pass(`on a phone the foafos pad shows two sticks over the city, above the story (pad bottom ${pad.padBottom}, story top ${pad.storyTop}); the city's own sticks are hidden; the dock stays in its corner`)
+    const within = (x, box) => x[0] >= box[0] - 1 && x[1] <= box[1] + 1;
+    !pad.hidden && pad.sticks && pad.dir === 'none' && pad.stickW > 60 && pad.mode === 'split' && within(pad.pad, pad.stage)
+      && !own.on && own.hidden && within(pad.dock, pad.stage)
+      ? pass(`on a phone a world opens split; the foafos pad shows two sticks over the city (pad ${pad.pad.join('-')}, city ${pad.stage.join('-')}, story ${pad.story.join('-')}); the city's own sticks are hidden; the dock is over the city, not the story`)
       : fail(`foafos sticks: ${JSON.stringify({ pad, own })}`);
 
     // 25. a thumb on the right stick moves the city; lifting it stops it

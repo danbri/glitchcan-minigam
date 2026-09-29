@@ -105,6 +105,39 @@ try {
     ? pass('split panes tile exactly (no overlap, nothing clipped)')
     : fail(`split does not tile: gap=${tile.gap} overshoot=${tile.overshoot}`);
 
+  // 3a. the reader sizes the split and chooses the order: a grip on the
+  // seam (drag, or arrow keys) and, while it is held, a Swap button.
+  // Pointer events are dispatched: the guest keeps the page busy enough
+  // that real mouse moves arrive late.
+  const seam = await page.evaluate(async () => {
+    const g = document.querySelector('.wm-split-grip');
+    const R = () => { const n = document.getElementById('narrative-view').getBoundingClientRect(), v = document.getElementById('minigame-view').getBoundingClientRect();
+      return { game: Math.round(v.height), gameTop: Math.round(v.top), storyTop: Math.round(n.top) }; };
+    const before = R();
+    const r = g.getBoundingClientRect(), y = r.top + 10;
+    const ev = (t, yy) => g.dispatchEvent(new PointerEvent(t, { pointerId: 9, clientX: 100, clientY: yy, bubbles: true, cancelable: true }));
+    ev('pointerdown', y);
+    const swapShown = !document.querySelector('.wm-split-swap').hidden;
+    for (let i = 1; i <= 5; i++) ev('pointermove', y - 20 * i);
+    ev('pointerup', y - 100);
+    const dragged = R();
+    document.querySelector('.wm-split-swap').click();
+    const swapped = R();
+    g.focus();
+    g.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    const keyed = R();
+    const saved = JSON.parse(localStorage.getItem('fink.wm.split') || 'null');
+    document.querySelector('.wm-split-swap').click();
+    FinkWM.split.ratio = 0.52; FinkWM._saveSplit(); FinkWM._layoutSplit();
+    localStorage.removeItem('fink.wm.split');
+    return { role: g.getAttribute('role'), swapShown, before, dragged, swapped, keyed, saved, after: R() };
+  });
+  seam.role === 'separator' && seam.swapShown && seam.dragged.game >= seam.before.game + 90
+    && seam.swapped.gameTop < seam.swapped.storyTop && seam.keyed.game < seam.swapped.game
+    && seam.saved && seam.saved.swap === true && Math.abs(seam.after.game - seam.before.game) <= 2
+    ? pass(`split grip: dragging the seam up 100px grows the game ${seam.before.game}→${seam.dragged.game}px; Swap puts it above the story; ArrowUp shrinks it (${seam.keyed.game}px); the choice is kept per device`)
+    : fail(`split grip: ${JSON.stringify(seam)}`);
+
   // 3b. WHOSE CONTROLS ARE THESE? In split there are two panes and a
   // floating toolbar claims neither. Reported from the field: "when
   // splitscreen it can be v confusing which part of screen the window

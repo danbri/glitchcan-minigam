@@ -24,6 +24,10 @@ window.FinkWM = {
     _drag: null,          // in-progress chrome drag
     _pipDrag: null,       // in-progress pip drag
     DOCK_KEY: 'fink.wm.dock',
+    SPLIT_KEY: 'fink.wm.split',
+    // split: the game's share of the column, and whether it sits above the
+    // story. The reader's, set with the grip on the seam; kept per device.
+    split: { ratio: 0.52, swap: false },
 
     init() {
         this.elements = {
@@ -50,6 +54,8 @@ window.FinkWM = {
 
         this._initChromeDrag();
         this._initPipGestures();
+        this.split = { ...this.split, ...(this._loadSplit() || {}) };
+        this._initSplitGrip();
         this._applyDock(this._loadDock());
         window.addEventListener('resize', () => { this._applyDock(this._loadDock()); this._layoutSplit(); });
         // THE VISIBLE HEIGHT, FROM THE ONLY THING THAT KNOWS IT.
@@ -200,9 +206,107 @@ window.FinkWM = {
             return;
         }
         const total = main.clientHeight;
-        const gameH = Math.max(180, Math.round(total * 0.52));
+        const gameH = Math.max(180, Math.round(total * this.split.ratio));
         view.style.height = `${gameH}px`;
         narrative.style.height = `${Math.max(0, total - gameH)}px`;
+        view.classList.toggle('wm-swapped', !!this.split.swap);
+        const grip = this.elements.grip;
+        if (grip) {
+            grip.setAttribute('aria-valuenow', String(Math.round(this.split.ratio * 100)));
+            grip.setAttribute('aria-valuetext', `game ${Math.round(this.split.ratio * 100)}%, ${this.split.swap ? 'above' : 'below'} the story`);
+        }
+        // others that share the column (the foafos shell's story window)
+        // follow the seam as it moves, not only when it settles
+        window.dispatchEvent(new CustomEvent('fink-wm-layout', { detail: { mode: this.mode } }));
+    },
+
+    // ── split grip: resize the split, and swap the panes ────────────────
+    // A seam you can drag, as in any tiling window manager. Holding it
+    // (or focusing it) shows a Swap button: the game above the story, or
+    // below. Arrow keys resize, for readers without a pointer.
+    _initSplitGrip() {
+        const view = this.elements.view;
+        const grip = document.createElement('div');
+        grip.className = 'wm-split-grip';
+        grip.tabIndex = 0;
+        grip.setAttribute('role', 'separator');
+        grip.setAttribute('aria-orientation', 'horizontal');
+        grip.setAttribute('aria-valuemin', '20');
+        grip.setAttribute('aria-valuemax', '80');
+        grip.setAttribute('aria-label', 'Split between the story and the game: drag, or use the arrow keys');
+        grip.innerHTML = '<span class="wm-split-pill" aria-hidden="true"></span>';
+        const swap = document.createElement('button');
+        swap.type = 'button';
+        swap.className = 'wm-split-swap';
+        swap.textContent = '⇅ Swap';
+        swap.setAttribute('aria-label', 'Swap the story and the game');
+        swap.hidden = true;
+        grip.appendChild(swap);
+        view.appendChild(grip);
+        this.elements.grip = grip;
+        this.elements.swap = swap;
+
+        let hideTimer = null;
+        const showSwap = () => { clearTimeout(hideTimer); swap.hidden = false; };
+        const hideSwapSoon = () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => { if (!grip.contains(document.activeElement)) swap.hidden = true; }, 3000); };
+        const set = (ratio) => {
+            this.split.ratio = Math.min(0.8, Math.max(0.2, ratio));
+            this._layoutSplit();
+        };
+        swap.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.split.swap = !this.split.swap;
+            this._saveSplit();
+            this._layoutSplit();
+            this._scheduleSettle();
+            showSwap(); hideSwapSoon();
+        });
+        let drag = null;
+        grip.addEventListener('pointerdown', (e) => {
+            showSwap();
+            if (e.target === swap) return;
+            const main = view.parentElement;
+            if (!main) return;
+            // follow the finger's movement from where it touched, so the
+            // seam does not jump to the finger on the first move
+            drag = { id: e.pointerId, main, y0: e.clientY, ratio0: this.split.ratio };
+            try { grip.setPointerCapture(e.pointerId); } catch { /* untracked pointer */ }
+            e.preventDefault();
+        });
+        grip.addEventListener('pointermove', (e) => {
+            if (!drag || e.pointerId !== drag.id) return;
+            const total = drag.main.getBoundingClientRect().height || 1;
+            const dy = (e.clientY - drag.y0) / total;
+            set(drag.ratio0 + (this.split.swap ? dy : -dy));
+        });
+        const end = (e) => {
+            if (!drag || e.pointerId !== drag.id) return;
+            drag = null;
+            this._saveSplit();
+            this._scheduleSettle();
+            hideSwapSoon();
+        };
+        grip.addEventListener('pointerup', end);
+        grip.addEventListener('pointercancel', end);
+        grip.addEventListener('focusin', showSwap);
+        grip.addEventListener('focusout', hideSwapSoon);
+        grip.addEventListener('keydown', (e) => {
+            if (e.target === swap) return;
+            // up moves the seam up: the lower pane grows
+            const d = e.key === 'ArrowUp' ? 0.05 : e.key === 'ArrowDown' ? -0.05 : 0;
+            if (!d) return;
+            e.preventDefault();
+            set(this.split.ratio + (this.split.swap ? -d : d));
+            this._saveSplit();
+            this._scheduleSettle();
+        });
+    },
+
+    _loadSplit() {
+        try { return JSON.parse(localStorage.getItem(this.SPLIT_KEY)); } catch { return null; }
+    },
+    _saveSplit() {
+        try { localStorage.setItem(this.SPLIT_KEY, JSON.stringify(this.split)); } catch { /* private mode */ }
     },
 
     // ── chrome: collapse + drag-dock ─────────────────────────────────────

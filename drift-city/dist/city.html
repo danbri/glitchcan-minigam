@@ -12472,8 +12472,10 @@ function taleSpeech(file, info) {
   if (typeof AU !== "undefined" && !AU.on) return;
   if (typeof Audio === "undefined") return;
   let url;
-  try { url = new URL(file, TALE.base || new URL(TALE_DIR + TALE.file, location.href)).href; } catch (e) { return; }
-  const S = TALE.speech || (TALE.speech = { el: new Audio(), q: [] });
+  // TALE.base may be a path (a world gets the story's path from the runner): resolve it against this page first
+  try { url = new URL(file, TALE.base ? new URL(TALE.base, location.href) : new URL(TALE_DIR + TALE.file, location.href)).href; } catch (e) { return; }
+  const sdk = hostOn() ? hostState().sdk : null;
+  const S = TALE.speech || (TALE.speech = { el: sdk && sdk.speak ? shellAudio(sdk) : new Audio(), q: [] });
   S.el.volume = hostGain();
   S.q.push({ url, info });
   if (!S.wired) { S.wired = true; S.el.addEventListener("ended", () => taleSpeechNext()); S.el.addEventListener("error", () => taleSpeechNext()); }
@@ -12653,6 +12655,39 @@ function worldVar(name, v) {
   TALE.wvars[name] = v;
   if (name === "want_time") taleWantTime(v);
   else if (name === "want_weather") taleWantWeather(v);
+}
+// A line played by the foafos shell (SDK speak), dressed as the part of an <audio> element that the queue and the
+// talking head use: src, play(), pause(), paused, currentTime, and the ended and error events. The shell sends the
+// play time about 20 times a second; between two reports the time runs on from the last one.
+function shellAudio(sdk) {
+  let n = 0;
+  const L = { ended: [], error: [] };
+  const A = {
+    src: "", volume: 1, paused: true, _t: 0, _at: 0, _id: 0, _ok: null, _no: null,
+    get currentTime() { return A.paused ? A._t : A._t + (performance.now() - A._at) / 1000; },
+    set currentTime(v) {},
+    addEventListener(k, f) { (L[k] || (L[k] = [])).push(f); },
+    play() {
+      A._id = ++n; A._t = 0; A.paused = true;
+      const p = new Promise((ok, no) => { A._ok = ok; A._no = no; });
+      sdk.speak(A.src, A._id);
+      return p;
+    },
+    pause() { if (!A.paused || A._ok) sdk.stopSpeech(); A.paused = true; A._ok = A._no = null; },
+  };
+  sdk.onSpeech((st) => {
+    if (!st || st.id !== A._id) return;
+    if (typeof st.t === "number") { A._t = st.t; A._at = performance.now(); }
+    if (st.error) {
+      A.paused = true;
+      const no = A._no; A._ok = A._no = null;
+      if (no) no(new Error(st.error)); else L.error.forEach((f) => f());
+      return;
+    }
+    if (st.ended) { A.paused = true; A._ok = A._no = null; if (!st.cut) L.ended.forEach((f) => f()); return; }
+    if (st.playing) { A.paused = false; if (A._ok) { A._ok(); A._ok = A._no = null; } }
+  });
+  return A;
 }
 function worldReenter(scene) { const sdk = hostState().sdk; if (sdk && sdk.reenterScene) sdk.reenterScene(scene); }
 // only a change goes to the story

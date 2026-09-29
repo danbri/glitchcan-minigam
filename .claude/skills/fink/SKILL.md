@@ -161,8 +161,8 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   a gamepad's stick ALSO makes digital directions, so the key sink skips
   gamepad directions for a sticks guest or it moves twice; and an unplugged
   gamepad must send zeros, or a stick left pushed keeps the guest moving.
-  With a world open on a phone the pad moves up over the world
-  (`body.foafos-world-on`), since the story window covers the bottom half.
+  With a world open on a phone in split, the pad stays over the world
+  (`--foaf-stage-gap` when the stage is above the story).
 - Careful reading the pad's absence: `controls: "none"` in the manifest
   (gridluck, battleboids — they swipe the canvas) means never offered,
   which is NOT the same as retracted by the conformance probe. Check
@@ -250,10 +250,29 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   world's writes must not reach the economy mirror or the host engine's idle
   TOC (`inst.world` routes them in `_setStoryVariable`). On a phone the
   story window is full-bleed ("THE READING IS NOT A WINDOW"), which hid the
-  world completely; while a world is open the window carries
-  `foafos-with-world` and starts at 50dvh, as Drift's own panel did. The
-  stage keeps its size (FinkWM owns it). Drift City is the first world (the
-  drift-city skill); e2e-drift §15-23.
+  world completely. **Where the world goes is the reader's choice** (owner,
+  September 2026: "Top vs bottom is an app layout control for user, not our
+  business"; then "Use the window manager"). FinkWM's toolbar sets full,
+  split or pip; `layoutWorld()` in the shell follows it. In split the story
+  window (`foafos-with-world`) takes the band the stage leaves, measured in
+  pixels into `--foaf-story-top/-bottom`; in full it stands aside; in pip
+  the stage floats over it (z 2700), and the toolbar stays above the story
+  window in every mode (z 2710; at its old 2600 it was under the story and
+  the reader could not reach the mode). A world opens split on a phone,
+  full on a desktop; after that the mode is the reader's. A fixed "city on
+  top, story below" rule came first and was taken out: do not bring back a
+  placement the reader cannot change. **Split is the reader's too**
+  (owner: "A grippy for resizing split or offering a swap option while
+  gripped"): FinkWM puts a grip (`role=separator`, arrow keys) on the seam;
+  holding or focusing it shows Swap (game above or below the story);
+  `fink.wm.split` keeps `{ratio, swap}` per device. The drag follows the
+  finger's movement from where it touched: the first version set the seam
+  to the finger and jumped on grab (found by e2e-wm). The grip sits INSIDE
+  the stage: half over the story it was under the story window, and
+  raising the stage above the windows would cover every other app. **Other
+  apps may be open** (owner): the world layout moves only the story
+  window that owns the world, never the rest. Drift City is the first
+  world (the drift-city skill); e2e-drift §15-24, e2e-wm "split grip".
   - **A world may re-enter the reader's scene, and nothing else** (owner's
     decision, September 2026): SDK `reenterScene`, `story:steer` on the
     world's node, and the runner allows only the knot the story's last
@@ -406,6 +425,16 @@ flip-storm test in `e2e-wm.mjs` (now 23 assertions).
   separately — a stale cross-tab state event must not clobber an
   in-flight claim. Playwright: BroadcastChannel needs pages in the SAME
   context (`browser.newContext()` then `context.newPage()` twice).
+- **A stage guest's recorded lines are the SHELL's to play** (spec §5.5,
+  SDK `speak` / `onSpeech`, `FoafOS.guestSpeech`). Owner, September 2026:
+  audio "needed to be a shell service cos new iframe apps weren't trusted
+  quickly enough". Beside a story no tap ever lands in the world's frame,
+  so iOS lets it start no sound. The shell page gets the pad and dock taps,
+  and by the HTML rules a tap in a child frame also activates it; where
+  neither happened, the line waits behind the shell's "Tap for sound"
+  button. Headless Chromium allows autoplay, so a test of the button must
+  make `play()` reject with `NotAllowedError` itself. Not tested on iPhone
+  Safari.
 - OS-cases analysis + scorecard: `docs/foafos-os-cases.md` (edot office
   suite, foaf.tv/tvp, zero-trust).
 - `<foafos-guest>` + `scopeBus` (src/guest.mjs): sandboxed widget

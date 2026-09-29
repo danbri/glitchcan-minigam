@@ -160,6 +160,19 @@ ok('reenterScene posts the story-reenter wire shape', () => {
   assert.deepEqual(sent, [{ type: 'story-reenter', scene: 'street' }, { type: 'story-reenter', scene: '' }]);
 });
 
+ok('speak and stopSpeech post the speech wire shape; speech-state reaches onSpeech', () => {
+  const { win, sdk } = boot();
+  const seen = [];
+  sdk.onSpeech((s) => seen.push(s));
+  sdk.speak('voice/a.mp3', 3);
+  sdk.stopSpeech();
+  const sent = win.sent.filter((m) => m.type === 'speech');
+  assert.deepEqual(sent, [{ type: 'speech', action: 'play', url: 'voice/a.mp3', id: 3 }, { type: 'speech', action: 'stop' }]);
+  win.deliver({ type: 'speech-state', id: 3, t: 0.5, playing: true });
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].t, 0.5);
+});
+
 ok('variable-changed updates the mirror and calls onVariableChanged', () => {
   const { win, sdk } = boot();
   const seen = [];
