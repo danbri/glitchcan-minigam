@@ -235,14 +235,14 @@ try {
   await page.evaluate(() => FoafOS.openSwitcher());
   const hidden = (await rows(page)).some((r) => /Breadcrumb|WMBling/.test(r));
   await click(page, '#foafos-switcher [data-focus="tools:chrome"]');
-  // The chrome rows: WMBling and the two chrome apps under it. (The status
-  // line was the third until the host engine's chrome went, Sept 2026.)
+  // The chrome rows: WMBling and the chrome apps mounted under it: the
+  // menubar (the breadcrumb starts off since September 2026, root chromeOff).
   const shown = (await rows(page)).filter((r) => /Breadcrumb|WMBling|Menubar/.test(r)).length;
   const saved = await page.evaluate(() => localStorage.getItem('foafos.tm.chrome'));
   await page.evaluate(() => { FoafOS.openSwitcher(); FoafOS.openSwitcher(); });   // close, reopen
-  const kept = (await rows(page)).some((r) => /Breadcrumb/.test(r));
+  const kept = (await rows(page)).some((r) => /Menubar/.test(r));
   await click(page, '#foafos-switcher [data-focus="tools:chrome"]');
-  !hidden && shown >= 3 && saved === '1' && kept
+  !hidden && shown >= 2 && saved === '1' && kept
     ? pass(`chrome is hidden by default, one press shows it (${shown} rows), and the choice is kept`)
     : fail(`chrome toggle: ${JSON.stringify({ hidden, shown, saved, kept })}`);
 
