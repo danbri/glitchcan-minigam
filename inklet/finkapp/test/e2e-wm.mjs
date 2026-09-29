@@ -126,7 +126,7 @@ try {
   const seam = await page.evaluate(async () => {
     const g = document.querySelector('.wm-split-grip');
     const R = () => { const n = document.getElementById('narrative-view').getBoundingClientRect(), v = document.getElementById('minigame-view').getBoundingClientRect();
-      return { game: Math.round(v.height), gameTop: Math.round(v.top), storyTop: Math.round(n.top) }; };
+      return { game: Math.round(v.height), story: Math.round(n.height), gameTop: Math.round(v.top), storyTop: Math.round(n.top) }; };
     const before = R();
     const r = g.getBoundingClientRect(), y = r.top + 10;
     const ev = (t, yy) => g.dispatchEvent(new PointerEvent(t, { pointerId: 9, clientX: 100, clientY: yy, bubbles: true, cancelable: true }));
@@ -147,9 +147,10 @@ try {
     return { role: g.getAttribute('role'), swapShown, before, dragged, swapped, keyed, saved, after: R() };
   });
   seam.role === 'separator' && seam.swapShown && seam.dragged.game >= seam.before.game + 90
-    && seam.swapped.gameTop < seam.swapped.storyTop && seam.keyed.game < seam.swapped.game
+    && seam.swapped.gameTop < seam.swapped.storyTop && Math.abs(seam.swapped.game - seam.dragged.story) <= 2
+    && seam.keyed.game < seam.swapped.game
     && seam.saved && seam.saved.swap === true && Math.abs(seam.after.game - seam.before.game) <= 2
-    ? pass(`split grip: dragging the seam up 100px grows the game ${seam.before.game}→${seam.dragged.game}px; Swap puts it above the story; ArrowUp shrinks it (${seam.keyed.game}px); the choice is kept per device`)
+    ? pass(`split grip: dragging the seam up 100px grows the game ${seam.before.game}→${seam.dragged.game}px; Swap puts it above the story and the top pane keeps its size (${seam.dragged.story}→${seam.swapped.game}px: the contents change, not the panes); ArrowUp shrinks it (${seam.keyed.game}px); the choice is kept per device`)
     : fail(`split grip: ${JSON.stringify(seam)}`);
 
   // 3b. WHOSE CONTROLS ARE THESE? In split there are two panes and a

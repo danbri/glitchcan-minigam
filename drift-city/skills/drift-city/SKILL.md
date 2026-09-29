@@ -753,7 +753,9 @@ works too: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/story/peraspera.
   `want_weather` and write `here`, `hour` and `snowing`; `features: ['autoplay']`, because the reader taps the
   story's window, not the city.
 - **World mode** (`?world=1`, which the shell adds for `# WORLD: drift`; "the world beside a story in foafos" in
-  `tales.js`, `worldOn`). No story panel, no Story menu, no opening page or intro: `worldStart` starts the sound and
+  `tales.js`, `worldOn`). No story panel, no Story menu, no Story button, no opening page or intro (`taleOpen`,
+  `taleLink` and `taleRestart` return at once in world mode: "Return to opening", the Story button and the `t` key
+  reached `taleOpen` and opened the city's own ink over the runner's story, September 2026): `worldStart` starts the sound and
   hops to the home place, and the story's first `# place:` flies on from there. Each step's lines arrive through
   `onStoryBeat` and go through `taleTags`, so every tag works as in the page's own story; `# speech:` resolves
   against the story's address (`TALE.base`); a replayed beat (after a restore) skips `voice` and `speech`.

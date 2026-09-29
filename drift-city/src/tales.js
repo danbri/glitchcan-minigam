@@ -207,6 +207,7 @@ function taleFileOk(f) { return typeof f === "string" && /^[a-z0-9_-]+\.fink\.js
 function taleKey(f = TALE.file) { return f === TALE_DOOR ? null : f === TALE_FIRST ? "drift.tale.v1" : "drift.tale:" + f; }
 // follow a "# FINK:" link: put this story away (it keeps its place) and open that one where it was left
 function taleLink(file) {
+  if (worldOn()) return;
   const f = String(file || "").replace(/^\.\//, "");
   if (!taleFileOk(f) || TALE.loading) return;
   taleSave();
@@ -290,6 +291,9 @@ async function loadTaleInk() {
 }
 function taleToggle() { if (TALE.on) taleClose(); else taleOpen(); }
 function taleOpen() {
+  // As a world beside a foafos story, the story is the runner's: this page never plays one of its own. The opening
+  // flight (introEnd), the Story button and the t key all come here.
+  if (worldOn()) return;
   TALE.on = true;
   const el = document.getElementById("tale");
   el.hidden = false;
@@ -341,6 +345,7 @@ function taleClose() {
   taleSave();
 }
 function taleRestart() {
+  if (worldOn()) return;
   if (!TALE.story) { taleForget(); taleOpen(); return; }
   TALE.story.ResetState(); TALE.scene = null; TALE.place = null; TALE.hot = []; TALE.paras = [];
   if (!TALE.on) taleOpen();

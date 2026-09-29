@@ -368,6 +368,21 @@ try {
       ? pass(`the city's menu has no Story and no Sound: the story is the runner's and the volume is the shell's (${labels.length} items)`)
       : fail(`city menu: ${JSON.stringify(labels)}`);
 
+    // 20b. the city never plays its own story beside a foafos one. Field report, September 2026: "The tea stall
+    // story ink ui seems to use its builtin ink engine": the opening flight's end, the Story button and the t key
+    // all opened the city's own story panel, over the runner's story.
+    const own = await wcity.evaluate(() => {
+      const b = document.getElementById('bTale');
+      const btnHidden = !!b && (b.hidden || getComputedStyle(b).display === 'none');
+      __drift.taleOpen();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 't', bubbles: true }));
+      __drift.taleLink('lamplighter.fink.js');
+      return { btnHidden, on: __drift.TALE.on, panelHidden: document.getElementById('tale').hidden, story: !!__drift.TALE.story };
+    });
+    own.btnHidden && !own.on && own.panelHidden && !own.story
+      ? pass('as a world the city has no Story button, and its own story player does not open (taleOpen, the t key, a link)')
+      : fail(`city's own story in world mode: ${JSON.stringify(own)}`);
+
     // 21. closing the city tells the story, which goes on as text
     const wid = await wpage.evaluate(() => [...FoafOS.apps.nodes.values()].find((x) => x.appId === 'drift')?.id);
     await wpage.evaluate((id) => FoafOS.apps.close(id), wid);
@@ -378,6 +393,19 @@ try {
     told && still.length > 0 && fullAgain
       ? pass('closing the city tells the story (world.closed); the story goes on as text, with its choices, and has the whole screen again')
       : fail(`after closing the city: ${JSON.stringify({ told, still, fullAgain })}`);
+
+    // 21b. and the reader can have it back. Field report, September 2026: "After closing World pane, i cant get it
+    // back." The runner offers it again; the city is rebuilt from the lines it was last sent.
+    const offer = await wr.evaluate(() => { const b = document.getElementById('world-open'); return b && !b.hidden ? b.getAttribute('aria-label') : null; });
+    await wr.evaluate(() => document.getElementById('world-open')?.click());
+    const back = await wr.waitForFunction(() => window.__storyrunner.state.world === 'drift', null, { timeout: 15000 }).then(() => true, () => false);
+    const wcity2 = back ? await frameMatching(wpage, /drift-city\/dist\/city\.html\?world=1$/) : null;
+    const rebuilt = wcity2 && await wcity2.waitForFunction(() => (window.__drift?.TALE?.worldBeats || 0) > 0 && !!window.__drift.TALE.scene,
+      null, { timeout: 90000 }).then(() => wcity2.evaluate(() => __drift.TALE.scene), () => null);
+    const hiddenAgain = await wr.evaluate(() => document.getElementById('world-open').hidden);
+    offer && back && rebuilt && hiddenAgain
+      ? pass(`a closed world can be opened again from the story ("${offer}"); the city comes back in the scene ${rebuilt}`)
+      : fail(`reopen the world: ${JSON.stringify({ offer, back, rebuilt, hiddenAgain })}`);
     werrs.length === 0 ? pass('world: no page errors') : fail(`world page errors: ${werrs.slice(0, 3).join(' · ')}`);
     await wpage.close();
   }

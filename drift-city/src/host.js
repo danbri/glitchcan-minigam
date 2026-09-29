@@ -63,6 +63,8 @@ if (typeof window !== "undefined" && window.parent !== window && typeof Minigame
   // its tags arrive after every step (tales.js, "the world beside a story in foafos").
   if (/[?&]world=1(&|$)/.test(location.search)) {
     H.world = true;
+    const bTale = document.getElementById("bTale");   // the story is the runner's: no Story button here
+    if (bTale) bTale.hidden = true;
     sdk.onStoryBeat((lines, meta) => worldBeat(lines, meta));
     sdk.onVariableChanged((name, value) => worldVar(name, value));
   }
