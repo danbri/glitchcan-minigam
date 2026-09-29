@@ -168,4 +168,34 @@ You close your eyes in the World Between Worlds.
 When you open them again, where will you be?
 
 + [Open your eyes] -> world_between_worlds
+
+// The inventory. The old host-page engine injected this knot and its
+// variables into every story; the story runner does not, so the one story
+// that uses it carries it.
+VAR diamonds = 0
+VAR mega_diamonds = 0
+VAR keys = 0
+VAR score = 0
+
+=== _inventory ===
+#BG:#113
+— INVENTORY —
+
+{diamonds > 0:
+    💎 Diamonds: {diamonds}
+}
+{mega_diamonds > 0:
+    💠 Mega Diamonds: {mega_diamonds}
+}
+{keys > 0:
+    🔑 Keys: {keys}
+}
+{score > 0:
+    ⭐ Score: {score}
+}
+{diamonds == 0 && mega_diamonds == 0 && keys == 0 && score == 0:
+    Your pockets are empty. Adventures await!
+}
+
++ [World Between Worlds] -> world_between_worlds
 `

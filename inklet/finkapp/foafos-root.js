@@ -1,10 +1,9 @@
 // Root manifests — what this installation IS on boot.
 //
-// The shell used to boot a story or nothing: `fink-config.js` named a
-// DEFAULT_FINK_FILE and `fink-player.js` auto-loaded it, so the entry
-// point was a story-player URL that had grown a shell around it. That
-// made "foafos with only an office wrapper at root" impossible without a
-// fork, which is a poor showing for something claiming apps are apps.
+// The shell used to boot a story or nothing, so the entry point was a
+// story-player URL that had grown a shell around it. That made "foafos
+// with only an office wrapper at root" impossible without a fork, which is
+// a poor showing for something claiming apps are apps.
 //
 // A manifest says three things:
 //
@@ -17,7 +16,7 @@
 //                 or nothing at all.
 //   apps          which app ids this installation offers. `null` means
 //                 all of them. This includes the CHROME apps — the
-//                 breadcrumb, the status line, the load meter — because
+//                 breadcrumb and the menubar — because
 //                 "what furniture does this installation have" is the
 //                 same question as "what apps does it have", and used to
 //                 be answered by a CSS rule painting over them instead.
@@ -47,25 +46,8 @@ export const ROOTS = {
                    'story:launch', 'story:link', 'story:navigate', 'story:observe',
                    // for a world beside a story to re-enter the reader's scene (spec §5.8)
                    'story:steer'],
+    // The story plays in the story runner (inklet/apps/storyrunner).
     boot: { story: null },        // null = fall back to FinkConfig.DEFAULT_FINK_FILE
-    // The boxed runner (inklet/apps/storyrunner) is the story surface, and the
-    // host-page player is pending delete (see fink-player.js / issue #779).
-    //
-    // FLIPPED, 2026-07-30. Parity was reached first, then the fixtures were
-    // migrated: every suite whose subject IS the host-page player now says
-    // `?player=legacy` in its URL, and the ones that drive the runner
-    // themselves say `?player=none`. A URL that names its player is the
-    // whole trick — the fixtures had been reading "a story compiled in the
-    // host page" as the definition of a working boot, so the flip looked
-    // like twenty regressions when it was one changed truth.
-    //
-    // What this line now means: an ordinary visit boots the story INSIDE the
-    // box (level 1 of the layer model), and level 0 compiles no ink at all.
-    // `?player=legacy` is the way back, without a deploy, if the box
-    // misbehaves in the field. `?player=none` opens the shell with nothing
-    // playing. See docs/foafos-story-layering-20260730.md and issue #779.
-    storyPlayer: { default: 'boxed', autoBoot: 'boxed', supersedes: 'legacy',
-                   parityReached: '2026-07-30', flipped: '2026-07-30', issue: 779 },
     apps: null,                   // all of them
   },
 

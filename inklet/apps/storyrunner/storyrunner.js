@@ -1525,6 +1525,17 @@ window.__storyrunner = {
   knotHashes: () => [..._knotHashes.entries()],
   // read a story VAR (for the parity tests — the economy is the point)
   varOf: (name) => { try { return story?.variablesState?.[name]; } catch { return undefined; } },
+  // TEST HOOKS. The page is a test's only way into a sandboxed frame, and
+  // they replace the old habit of reaching into the host page's engine.
+  // A story cannot call them: they live on this frame's window, which no
+  // story script can reach (stories are ink, not JavaScript).
+  goto: (knot) => {
+    if (!story || _awaitingGame) return false;
+    try { story.ChoosePathString(String(knot)); } catch { return false; }
+    advance();
+    return true;
+  },
+  setVar: (name, value) => { try { story.variablesState[String(name)] = value; return true; } catch { return false; } },
   spend: (name, value) => storyRequest('story.vars', { op: 'write', name, value }),
 };
 

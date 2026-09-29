@@ -1,7 +1,9 @@
 // FINK Breadcrumb Widget - Tracks and displays knot navigation path
-// Integrated with FinkNavigation for deep link generation
+// Deep links come from FinkLinks; going to a knot goes through the story runner
 // Tracks HIERARCHICAL nesting across FINK file transitions
 // Each FINK is a "level" - supports nested multipart stories
+const breadcrumbLog = (msg) => { if (window.FinkConfig?.DEBUG) console.debug(msg); };
+
 window.FinkBreadcrumb = {
     // Configuration
     maxVisibleKnots: 6,
@@ -50,12 +52,12 @@ window.FinkBreadcrumb = {
         };
 
         if (!this.elements.container) {
-            FinkUtils.debugLog('Breadcrumb: No container found, skipping init');
+            breadcrumbLog('Breadcrumb: No container found, skipping init');
             return;
         }
 
         this.setupEventListeners();
-        FinkUtils.debugLog('Breadcrumb: Initialized');
+        breadcrumbLog('Breadcrumb: Initialized');
     },
 
     // Set up event listeners
@@ -109,13 +111,13 @@ window.FinkBreadcrumb = {
     // Record a new FINK file being loaded
     // HIERARCHICAL: Pushes a new level onto the finkStack
     setFinkUrl(url) {
-        FinkUtils.debugLog('Breadcrumb setFinkUrl called with: ' + url);
-        FinkUtils.debugLog('Breadcrumb current stack: [' + this.finkStack.map(l => this.formatUrl(l.url)).join(', ') + ']');
+        breadcrumbLog('Breadcrumb setFinkUrl called with: ' + url);
+        breadcrumbLog('Breadcrumb current stack: [' + this.finkStack.map(l => this.formatUrl(l.url)).join(', ') + ']');
 
         // Check if this URL is already the current level (avoid duplicates)
         const currentLevel = this.finkStack[this.finkStack.length - 1];
         if (currentLevel && currentLevel.url === url) {
-            FinkUtils.debugLog('Breadcrumb: URL already current level, skipping: ' + url);
+            breadcrumbLog('Breadcrumb: URL already current level, skipping: ' + url);
             return;
         }
 
@@ -126,8 +128,8 @@ window.FinkBreadcrumb = {
             timestamp: Date.now()
         });
 
-        FinkUtils.debugLog('Breadcrumb: New FINK level ' + (this.finkStack.length - 1) + ': ' + this.formatUrl(url));
-        FinkUtils.debugLog('Breadcrumb: Stack is now: [' + this.finkStack.map(l => this.formatUrl(l.url)).join(', ') + ']');
+        breadcrumbLog('Breadcrumb: New FINK level ' + (this.finkStack.length - 1) + ': ' + this.formatUrl(url));
+        breadcrumbLog('Breadcrumb: Stack is now: [' + this.finkStack.map(l => this.formatUrl(l.url)).join(', ') + ']');
 
         // Observability: the story-overlay tree is shell state, not a
         // private widget diary. Publishing it puts every FINK-enters-FINK
@@ -143,7 +145,7 @@ window.FinkBreadcrumb = {
         // Limit stack depth to prevent unbounded growth (10 levels deep should be plenty)
         if (this.finkStack.length > 10) {
             this.finkStack.shift();
-            FinkUtils.debugLog('Breadcrumb: Trimmed oldest level to maintain max depth');
+            breadcrumbLog('Breadcrumb: Trimmed oldest level to maintain max depth');
         }
 
         this.render();
@@ -155,7 +157,7 @@ window.FinkBreadcrumb = {
 
         // Ensure we have a current level
         if (this.finkStack.length === 0) {
-            FinkUtils.debugLog('Breadcrumb: No current level to record knot: ' + knotName);
+            breadcrumbLog('Breadcrumb: No current level to record knot: ' + knotName);
             return;
         }
 
@@ -175,7 +177,7 @@ window.FinkBreadcrumb = {
             currentLevel.knots.shift();
         }
 
-        FinkUtils.debugLog('Breadcrumb: Recorded knot at level ' + (this.finkStack.length - 1) + ': ' + knotName);
+        breadcrumbLog('Breadcrumb: Recorded knot at level ' + (this.finkStack.length - 1) + ': ' + knotName);
         window.FoafOS?.bus.publish('nav.knot', {
             summary: `→ ${knotName}`,
             knot: knotName, depth: this.finkStack.length,
@@ -195,7 +197,7 @@ window.FinkBreadcrumb = {
     // Clear entire stack (used when returning to main menu)
     clearHistory() {
         this.finkStack = [];
-        FinkUtils.debugLog('Breadcrumb: Stack cleared');
+        breadcrumbLog('Breadcrumb: Stack cleared');
         // The emptied stack is a nav fact too — without it the bus-fed
         // load meter would keep showing the old depth after a return to
         // the main menu.
@@ -204,48 +206,6 @@ window.FinkBreadcrumb = {
             url: null, depth: 0, stack: [],
         }, { retain: true });
         this.render();
-    },
-
-    // Navigate back to a previous FINK level in the hierarchy
-    // levelIndex is the index in the finkStack (0 = root, 1 = first child, etc.)
-    async navigateBackToFink(levelIndex) {
-        if (levelIndex < 0 || levelIndex >= this.finkStack.length) return;
-
-        const target = this.finkStack[levelIndex];
-        FinkUtils.debugLog('Breadcrumb: Navigating back to level ' + levelIndex + ': ' + target.url);
-
-        // Get the last knot from that level for restoration
-        const lastKnot = target.knots.length > 0 ? target.knots[target.knots.length - 1].name : null;
-
-        // Pop all levels above the target (keep target and below)
-        this.finkStack = this.finkStack.slice(0, levelIndex + 1);
-
-        // Clear sandbox duplicate load prevention to allow reload
-        if (window.FinkSandbox) {
-            FinkSandbox.clearLoadRecord(target.url);
-        }
-
-        // Load the target FINK file
-        if (window.FinkPlayer) {
-            await FinkPlayer.loadFinkStory(target.url);
-
-            // After loading, try to navigate to the last knot
-            if (lastKnot && window.FinkInkEngine && FinkInkEngine.story) {
-                setTimeout(() => {
-                    try {
-                        FinkInkEngine.story.ChoosePathString(lastKnot);
-                        FinkUI.clearStory();
-                        FinkUI.clearChoices();
-                        FinkInkEngine.continueStory();
-                        FinkUtils.debugLog('Breadcrumb: Restored to knot: ' + lastKnot);
-                    } catch (e) {
-                        FinkUtils.debugLog('Breadcrumb: Could not restore knot: ' + e.message);
-                    }
-                }, 100);
-            }
-        }
-
-        this.collapse();
     },
 
     // Generate abbreviated URL display
@@ -261,7 +221,7 @@ window.FinkBreadcrumb = {
             filename = filename.replace(/\.fink\.js$/, '').replace(/\.js$/, '');
 
             // Debug: Log what we're transforming
-            FinkUtils.debugLog(`formatUrl: "${url}" → pathname="${urlObj.pathname}" → filename="${filename}"`);
+            breadcrumbLog(`formatUrl: "${url}" → pathname="${urlObj.pathname}" → filename="${filename}"`);
 
             // Truncate if too long
             if (filename.length > this.maxUrlLength) {
@@ -278,85 +238,39 @@ window.FinkBreadcrumb = {
         }
     },
 
-    // Generate deep link URL for a knot using FinkNavigation
+    // Deep link to a knot of the current story (docs/fink-linking-spec).
     async generateKnotUrl(knotName) {
-        // Use FinkNavigation's two-part hash format (preferred)
-        if (window.FinkNavigation) {
-            // Ensure FinkNavigation has the current FINK URI
-            if (!FinkNavigation.currentFinkUri && this.currentFinkUrl) {
-                FinkUtils.debugLog('Breadcrumb: FinkNavigation.currentFinkUri not set, using breadcrumb URL');
-            }
-
-            const shareLink = await FinkNavigation.generateShareLink(knotName, false);
-            if (shareLink) {
-                FinkUtils.debugLog('Breadcrumb: Generated share link: ' + shareLink);
-                return shareLink;
-            } else {
-                FinkUtils.debugLog('Breadcrumb: generateShareLink returned null');
-            }
-        }
-
-        // Fallback: generate two-part hash manually if we have the FINK URL
-        if (this.currentFinkUrl && window.FinkNavigation) {
+        if (this.currentFinkUrl && window.FinkLinks) {
             try {
-                const urlHash = await FinkNavigation.generateUrlHash(this.currentFinkUrl);
-                const knotHash = await FinkNavigation.generateKnotHash(knotName);
-                const baseUrl = new URL(window.location.href);
-                baseUrl.hash = `${urlHash}-${knotHash}`;
-                baseUrl.search = '';  // Clear any query params
-                FinkUtils.debugLog('Breadcrumb: Fallback link: ' + baseUrl.toString());
-                return baseUrl.toString();
+                const url = new URL(window.location.href);
+                url.hash = await FinkLinks.generateFinkLinkId(this.currentFinkUrl, knotName);
+                url.search = '';
+                return url.toString();
             } catch (e) {
-                FinkUtils.debugLog('Breadcrumb: Fallback hash generation failed: ' + e.message);
+                breadcrumbLog('Breadcrumb: link generation failed: ' + e.message);
             }
         }
-
-        // Last resort: just return current page URL (link won't deep link properly)
-        FinkUtils.debugLog('Breadcrumb: Using current URL as fallback (no deep linking)');
         return window.location.href;
     },
 
-    // Navigate to a specific knot in the current level
-    navigateToKnot(knotName) {
-        if (!window.FinkInkEngine || !FinkInkEngine.story) {
-            FinkUtils.debugLog('Breadcrumb: Cannot navigate - no story loaded');
-            return;
+    // Go to a knot of the current story: the story runner plays it, so the
+    // shell hands the knot's link hash to the runner (FoafOS.navigateStory).
+    async navigateToKnot(knotName) {
+        if (!window.FinkLinks || !window.FoafOS?.navigateStory) return;
+        const knotHash = await FinkLinks.generateKnotHash(knotName);
+        FoafOS.navigateStory({ knotHash });
+        if (this.finkStack.length > 0) {
+            const currentLevel = this.finkStack[this.finkStack.length - 1];
+            const knotIndex = currentLevel.knots.findIndex(k => k.name === knotName);
+            if (knotIndex >= 0) currentLevel.knots = currentLevel.knots.slice(0, knotIndex + 1);
         }
-
-        try {
-            FinkUtils.debugLog('Breadcrumb: Navigating to knot: ' + knotName);
-            FinkInkEngine.story.ChoosePathString(knotName);
-
-            if (window.FinkUI) {
-                FinkUI.clearStory();
-                FinkUI.clearChoices();
-            }
-
-            FinkInkEngine.continueStory();
-
-            // Update path to this point in current level
-            if (this.finkStack.length > 0) {
-                const currentLevel = this.finkStack[this.finkStack.length - 1];
-                const knotIndex = currentLevel.knots.findIndex(k => k.name === knotName);
-                if (knotIndex >= 0) {
-                    // Trim path to the clicked knot
-                    currentLevel.knots = currentLevel.knots.slice(0, knotIndex + 1);
-                }
-            }
-
-            this.collapse();
-        } catch (error) {
-            FinkUtils.debugLog('Breadcrumb: Navigation error: ' + error.message);
-            if (window.FinkUI) {
-                FinkUI.showStatus('Cannot navigate to ' + knotName);
-            }
-        }
+        this.collapse();
     },
 
     // Copy knot URL to clipboard
     async copyKnotUrl(knotName) {
         const url = await this.generateKnotUrl(knotName);
-        FinkUtils.debugLog('Breadcrumb: Copying URL: ' + url);
+        breadcrumbLog('Breadcrumb: Copying URL: ' + url);
 
         // Try modern clipboard API first
         if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -365,7 +279,7 @@ window.FinkBreadcrumb = {
                 this.showToast('🔗 Link copied!');
                 return;
             } catch (err) {
-                FinkUtils.debugLog('Breadcrumb: Clipboard API failed: ' + err.message);
+                breadcrumbLog('Breadcrumb: Clipboard API failed: ' + err.message);
                 // Fall through to fallback
             }
         }
@@ -387,7 +301,7 @@ window.FinkBreadcrumb = {
                 throw new Error('execCommand failed');
             }
         } catch (err) {
-            FinkUtils.debugLog('Breadcrumb: Copy fallback failed: ' + err.message);
+            breadcrumbLog('Breadcrumb: Copy fallback failed: ' + err.message);
             // Last resort: show URL for manual copy
             this.showToast('Copy manually: ' + url.slice(-30));
         }
@@ -530,26 +444,9 @@ window.FinkBreadcrumb = {
             finkName.className = 'breadcrumb-fink-name' + (isCurrentLevel ? ' breadcrumb-fink-current' : '');
             const formattedName = this.formatUrl(level.url);
             finkName.textContent = (isCurrentLevel ? '📖 ' : '📁 ') + formattedName;
-            finkName.title = isCurrentLevel ? 'Current story: ' + level.url : `Return to ${formattedName}`;
-            FinkUtils.debugLog(`Breadcrumb renderKnots: Level ${levelIndex} - URL: ${level.url} → Display: "${formattedName}" (current: ${isCurrentLevel})`);
+            finkName.title = (isCurrentLevel ? 'Current story: ' : 'Earlier story: ') + level.url;
+            breadcrumbLog(`Breadcrumb renderKnots: Level ${levelIndex} - URL: ${level.url} → Display: "${formattedName}" (current: ${isCurrentLevel})`);
 
-            // Make parent levels clickable
-            if (!isCurrentLevel) {
-                // Capture URL at render time for comparison
-                const urlAtRenderTime = level.url;
-                finkName.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const urlAtClickTime = this.finkStack[levelIndex]?.url;
-                    FinkUtils.debugLog(`Breadcrumb CLICK: levelIndex=${levelIndex}`);
-                    FinkUtils.debugLog(`Breadcrumb CLICK: URL at render time: ${urlAtRenderTime}`);
-                    FinkUtils.debugLog(`Breadcrumb CLICK: URL at click time: ${urlAtClickTime}`);
-                    FinkUtils.debugLog(`Breadcrumb CLICK: Current stack: [${this.finkStack.map(l => this.formatUrl(l.url)).join(', ')}]`);
-                    if (urlAtRenderTime !== urlAtClickTime) {
-                        FinkUtils.debugLog(`Breadcrumb CLICK: ⚠️ URL MISMATCH! Stack changed since render.`);
-                    }
-                    this.navigateBackToFink(levelIndex);
-                });
-            }
             finkRow.appendChild(finkName);
             levelDiv.appendChild(finkRow);
 

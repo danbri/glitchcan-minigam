@@ -578,11 +578,7 @@ window.FinkWM = {
     },
 
     log(msg) {
-        if (window.FinkDevPanel) {
-            FinkDevPanel.log(`WM: ${msg}`, 'game');
-        } else {
-            console.log(`[FinkWM] ${msg}`);
-        }
+        console.log(`[FinkWM] ${msg}`);
     }
 };
 

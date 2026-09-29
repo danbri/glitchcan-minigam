@@ -49,32 +49,11 @@ const MAX_PATHS = flag('paths', 1500);   // distinct choice sequences explored
 const MAX_DEPTH = flag('depth', 120);    // choices taken in one sequence
 const files = argv.filter(a => !a.startsWith('--') && !/^\d+$/.test(a));
 
-// The player injects an inventory knot and four variables into every
-// story before compiling (fink-ink-engine.js getPrivateInventoryInk).
-// A story that diverts to `_inventory` — world-between-worlds does —
-// therefore compiles in the player and not on its own. Stand in for it
-// with the smallest thing that satisfies the reference: this tool checks
-// STORIES, and should not fail one for depending on shell furniture, nor
-// drift when that furniture changes.
-const SHELL_STUB = `
-// === injected by fink-check, standing in for the player's own ===
-VAR __check_diamonds = 0
-=== _inventory ===
-— INVENTORY —
--> DONE
-`;
-const NEEDS = (src, name) => !new RegExp(`VAR\\s+${name}\\s*=`).test(src);
-function withShell(ink) {
-  let pre = '';
-  for (const v of ['diamonds', 'mega_diamonds', 'keys', 'score']) {
-    if (NEEDS(ink, v)) pre += `VAR ${v} = 0\n`;
-  }
-  return pre + ink + SHELL_STUB;
-}
-
+// A story compiles as it is: the story runner adds nothing to it, so
+// neither does this check.
 /** Compile, or return the compiler's own error list. */
 function compile(ink) {
-  const c = new inkjs.Compiler(withShell(ink));
+  const c = new inkjs.Compiler(ink);
   try {
     const story = c.Compile();
     return { story, errors: c.errors || [], warnings: c.warnings || [] };

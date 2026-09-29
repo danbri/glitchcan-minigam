@@ -224,12 +224,9 @@ export const APPS = [
     capabilities: ['storage', 'audio'] },
   // The narrative runtime, BOXED — a story compiled and played entirely in
   // an opaque-origin frame, reaching the shell only through story:* verbs
-  // (spec §5.7, threat model 2026-07-28). Parallel to the live host-side
-  // player while it reaches parity; this proves "sandboxed all the way up."
+  // (spec §5.7, threat model 2026-07-28). It is the only story engine.
   // NO same-origin: it is a real box. story:launch lets a # MINIGAME: tag
   // ask the shell to open a (separately boxed) guest — up AND down.
-  // The DEFAULT story surface (see foafos-root storyPlayer). Runs a FINK
-  // story sandboxed; supersedes the host-page player (pending delete, #779).
   // FINKOSPHERE — the boxed story engine (owner's name, July 2026). The id
   // stays `storyrunner`: it is in `?app=` links, the snapshot key
   // (`app:storyrunner`), the capUse ledger and the e2e suites. A label is
@@ -294,31 +291,13 @@ export const APPS = [
     capabilities: ['audio'], external: true, persists: false },
 
   // ── Make ──────────────────────────────────────────────────────────
-  // HONESTY NOTE, and it is not a small one. `surface: 'story'` is NOT
-  // sandboxed. The narrative runtime (FinkInkEngine / FinkPlayer /
-  // FinkUI) are host-page globals, so a story runs IN the shell's own
-  // document, and its tags reach FinkAudio, FinkFoley, FinkMinigames,
-  // FinkNavigation, FinkBreadcrumb and FoafOS directly. Nothing checks
-  // these capability lists for stories — grep the engine for
-  // "capabilit" and you get nothing.
-  //
-  // These lists therefore DESCRIBE what a story can do; they do not
-  // constrain it. They previously said `[]`, which read as "less
-  // privileged than a spreadsheet" when the truth is the opposite: a
-  // story can launch apps, navigate the whole shell, restyle the host
-  // document and be snapshotted, none of which any app can do.
-  //
-  // This matters beyond tidiness because the Finkiverse links out to
-  // FINK documents we did not write. Gating these tags — so an untrusted
-  // story can be denied `launch` and `navigate` — is the open work.
-  { id: 'toc', family: 'make', icon: '📖', name: 'Stories', surface: 'story',
-    url: '/glitchcan-minigam/inklet/toc.fink.js', desc: 'The table of contents',
-    capabilities: ['audio', 'launch', 'navigate', 'chrome', 'vars:read', 'vars:write'],
-    enforced: false, silent: true },
-  { id: 'audiodemo', family: 'make', icon: '🔊', name: 'Audio demo', surface: 'story',
-    url: '/glitchcan-minigam/inklet/demos/audio-demo.fink.js', desc: 'mp3 beds + foley',
-    capabilities: ['audio', 'launch', 'navigate', 'chrome', 'vars:read', 'vars:write'],
-    enforced: false },
+  // Stories open in the story runner (`opens`), each in its own window.
+  { id: 'toc', family: 'make', icon: '📖', name: 'Stories', surface: 'window', opens: 'storyrunner',
+    story: '/glitchcan-minigam/inklet/toc.fink.js', desc: 'The table of contents',
+    capabilities: [], silent: true },
+  { id: 'audiodemo', family: 'make', icon: '🔊', name: 'Audio demo', surface: 'window', opens: 'storyrunner',
+    story: '/glitchcan-minigam/inklet/demos/audio-demo.fink.js', desc: 'mp3 beds + foley',
+    capabilities: [] },
   // Shell-native: drawn by the shell itself, so there is no frame and no
   // capability boundary. Listed here so there is ONE registry — but do
   // not read this row as "sandboxed with no capabilities".
@@ -360,38 +339,8 @@ export const APPS = [
   { id: 'breadcrumb', family: 'chrome', icon: '🧭', name: 'Breadcrumb', surface: 'chrome',
     mount: 'breadcrumb-container', desc: 'The trail of knots you came through',
     capabilities: ['shell'], silent: true },
-  { id: 'statusline', family: 'chrome', icon: '💎', name: 'Status line', surface: 'chrome',
-    mount: 'stats-bar', desc: 'Whatever the story declared with # STATUS:',
-    capabilities: ['shell', 'vars:read'], silent: true },
-  { id: 'loadmeter', family: 'chrome', icon: '📜', name: 'Load meter', surface: 'chrome',
-    mount: 'scroll-status-bar', desc: 'FINKs encountered, loaded, compiled',
-    capabilities: ['shell'], silent: true },
   { id: 'menubar', family: 'chrome', icon: '📊', name: 'Menubar', surface: 'chrome',
     mount: 'foaf-menubar', desc: 'A clock and app dashboard widgets, grouped by the app tree',
-    capabilities: ['shell'], silent: true },
-  // THE ONE I MISSED (reported from a phone, July 2026). Converting the
-  // breadcrumb, the status line and the load meter and stopping there left
-  // a fourth piece of story furniture hard-coded in index.html — so a Web
-  // TV or Tellyclub installation, with no story engine running at all,
-  // still showed a bottom-left ☰ offering NavPath, Reload story, the
-  // player's Settings, the story's Home, and a link labelled "FINK App"
-  // that was an absolute URL with no `?root=` on it: not merely useless
-  // furniture but a one-tap exit from the installation you chose.
-  //
-  // The measurement that would have caught it, and now does (e2e-chrome):
-  // assert on the FURNITURE, not on the three ids I happened to convert.
-  { id: 'storymenu', family: 'chrome', icon: '☰', name: 'Story menu', surface: 'chrome',
-    mount: 'radial-menu', desc: 'NavPath, reload, settings — all story-player controls',
-    capabilities: ['shell'], silent: true },
-  // …and what that menu's ⚙️ Settings item OPENED. Measured on webtv: the
-  // dev panel was `display:none` rather than showing, so it was never the
-  // visible fault — but the only reachable route to it was the ☰ above, and
-  // an installation with no story engine has nothing to inspect with an ink
-  // swimlane view. Registered for the same reason as the others: absent
-  // beats painted over, and one door closing is not the same as the room
-  // not being there.
-  { id: 'devpanel', family: 'chrome', icon: '🔧', name: 'Dev panel', surface: 'chrome',
-    mount: 'dev-panel', desc: 'Logs, swimlanes, config, FINK files, audio',
     capabilities: ['shell'], silent: true },
 ];
 

@@ -26,12 +26,8 @@ export async function run() {
   const failures = [];
   for (const file of files) {
     const short = file.slice(root.length);
-    let ink = extractFinkFromJsSource(readFileSync(file, 'utf8'));
+    const ink = extractFinkFromJsSource(readFileSync(file, 'utf8'));
     if (!ink.trim()) { failures.push(`${short}: extraction empty`); continue; }
-    // platform contract: the player injects a private _inventory knot
-    // into every story (fink-ink-engine.js:100). Stories may divert to
-    // it, so standalone compilation mirrors the contract with a stub.
-    if (/->\s*_inventory/.test(ink)) ink += '\n=== _inventory ===\nstub.\n-> END\n';
     const r = compileInk(ink, { compilerImpl: impl });
     if (!r.ok && !KNOWN_BROKEN.has(short)) failures.push(`${short}: ${String(r.error).slice(0, 100)}`);
   }

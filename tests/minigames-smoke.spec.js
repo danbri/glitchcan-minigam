@@ -191,7 +191,7 @@ test.describe('Asset Loading', () => {
   });
 
   test('external fonts should load (if used)', async ({ page }) => {
-    await page.goto('/inklet/app/index.html');
+    await page.goto('/inklet/finkapp/');
 
     // Wait for fonts to load
     await page.waitForTimeout(2000);
