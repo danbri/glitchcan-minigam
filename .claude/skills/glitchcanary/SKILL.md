@@ -122,8 +122,11 @@ platform grows a slot and the content fills it.
    (`scene`, `place`, `time`, `voice`, `speech`...). The world writes back only
    the VARs its registry row lists, so declare them (`VAR here = ""`), and
    keep a text route for anything found only in the world
-   (`{not in_world and not voucher} [Look around]`): a world may not move
-   the story. Spec §5.8; the story-game-sync skill, model C; example
+   (`{not in_world and not voucher} [Look around]`). The world may move the
+   story in one way: after setting a clue VAR it may ask the story to
+   re-enter the scene your last `# scene: <knot>` named, so give each scene
+   knot its `# scene:` tag with the knot's own name. Spec §5.8; the
+   story-game-sync skill, model C; example
    `drift-city/story/peraspera.fink.js`, opened from the hub as a dream
    (`# FINK: story/peraspera.fink.js # LINKREL: goDeeper`) so its end comes
    back to the hub.

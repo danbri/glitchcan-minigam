@@ -322,6 +322,43 @@ body.foaf-pad-on #foafos-dock {
     transform: scale(0.94);
 }
 
+/* `controls: 'sticks'`: two analog sticks instead of the d-pad and buttons */
+.foaf-stick { display: none; }
+#foaf-pad.sticks .foaf-pad-dir,
+#foaf-pad.sticks .foaf-pad-act { display: none; }
+#foaf-pad.sticks .foaf-stick {
+    display: block;
+    pointer-events: auto;
+    touch-action: none;
+    position: relative;
+    width: clamp(104px, 30vw, 150px);
+    height: clamp(104px, 30vw, 150px);
+    border-radius: 50%;
+    border: 2px solid rgba(242, 236, 221, 0.5);
+    background: rgba(38, 34, 30, 0.26);
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+.foaf-stick .knob {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 38%; height: 38%;
+    margin: -19% 0 0 -19%;
+    border-radius: 50%;
+    background: rgba(242, 236, 221, 0.55);
+    pointer-events: none;
+}
+.foaf-stick.active .knob { background: #7dffb2; box-shadow: 0 0 10px rgba(46, 255, 150, 0.8); }
+/* A world beside a story on a phone: the story takes the bottom half, so
+   the pad sits just above it, over the world. */
+@media (max-width: 700px) {
+    body.foafos-world-on #foaf-pad { bottom: calc(50dvh + 8px); }
+    /* the pad has left the bottom corner, so the dock need not step aside
+       (raised, it covered the story's choices) */
+    body.foafos-world-on.foaf-pad-on #foafos-dock { bottom: calc(8px + env(safe-area-inset-bottom)); }
+}
+
 /* floating widget windows (sandboxed guests) */
 .foafos-window {
     position: fixed;
@@ -1102,17 +1139,15 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
     .foafos-switch-card .sub-b { display: none; }
 }
 @media (max-width: 44.99rem) {
-    /* two columns: the name (with its line) and the actions, whose width is
-       fixed so the buttons can never be pushed off the edge */
-    .foafos-tm-table { table-layout: fixed; }
+    /* two columns: the name (with its line) and the actions, whose buttons
+       never wrap, so they are never pushed off the edge */
     .foafos-tm-table :is(th, td):is(.c-kind, .c-state, .c-powers, .c-place) { display: none; }
-    /* With those four cells gone, the action cell is each row's SECOND
-       cell, so it sits in the second column: size the columns by position.
-       A details row still spans all six, so the other four are zero wide,
-       or they take a share of the row from the name. */
-    .foafos-tm-table col { width: 0; }
-    .foafos-tm-table col:first-child { width: auto; }
-    .foafos-tm-table col:nth-child(2) { width: 8.5rem; }
+    /* Automatic layout: the name takes the width the actions leave. An
+       earlier fixed layout sized the columns through <col> widths, and
+       iPhone Safari gave the name one letter of width (field report,
+       September 2026). */
+    .foafos-tm-table :is(th, td).c-name { width: 100%; }
+    .foafos-tm-table :is(th, td).c-act { width: 1%; }
     .foafos-tm-table td.c-act { padding: .25rem; }
     .foafos-switch-row .nm { padding-left: calc(var(--depth, 0) * .6rem); }
     /* icon and name on one line, the line under them the width of both */

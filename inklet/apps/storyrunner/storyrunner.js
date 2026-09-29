@@ -538,6 +538,8 @@ function stepStory() {
     const trimmed = text.trim();
     const forWorld = tags.filter(isWorldTag);
     if (forWorld.length) worldLines.push({ tags: forWorld, text: trimmed });
+    const scene = sceneOf(forWorld);
+    if (scene) _worldScene = scene;
     if (trimmed) {
       if (_pendingEcho !== undefined) {
         const echo = _pendingEcho; _pendingEcho = undefined;
@@ -677,6 +679,7 @@ let _world = null;                      // { app, tag, reads } while one is open
 let _worldLines = [];                   // the last WORLD_KEEP lines sent
 let _worldChain = Promise.resolve();    // world requests go in order
 let _worldWatched = null;               // the Story object whose VARs are observed
+let _worldScene = null;                 // the knot the story's last # scene: named
 
 // Quiet on purpose: a beat goes every step, so it is not logged in
 // state.requests or on the bus, and a world the reader closed is not an error.
@@ -708,6 +711,36 @@ function openWorld(tag, replay = null) {
     return replay && replay.length
       ? worldRequest({ op: 'beat', lines: replay, base: state.storyUrl, replay: true }) : null;
   });
+}
+
+// `# scene: <knot>` is how a story tells its world which scene the reader is
+// in, and so the one knot the world may ask to re-enter.
+function sceneOf(tags) {
+  let scene = null;
+  for (const t of tags) {
+    const at = t.indexOf(':');
+    if (at > 0 && t.slice(0, at).trim().toLowerCase() === 'scene') scene = t.slice(at + 1).trim() || null;
+  }
+  return scene;
+}
+
+// The world asks to go back into the reader's scene: a clue found in it, or a
+// `# live` scene when the reader moved. The shell has checked its power
+// (story:steer); this checks WHICH scene. Only the one the story's last
+// `# scene:` tag named, only while the story is ready and no game plays.
+// Set variables arrive first (world.var), so the scene reads them.
+function worldReenter(scene) {
+  const ok = !!(scene && _world && story && state.ready && !_awaitingGame && scene === _worldScene);
+  let entered = false;
+  if (ok) {
+    try { story.ChoosePathString(scene); entered = true; } catch { /* not a knot in this story */ }
+  }
+  window.foaf?.bus?.publish('app.storyrunner.world', {
+    summary: entered ? `the world re-entered the scene ${scene}` : `refused a re-entry into ${scene || '(no scene)'}`,
+    reenter: scene, ok: entered,
+  });
+  if (entered) advance();
+  return entered;
 }
 
 function worldBeat(lines) {
@@ -874,6 +907,9 @@ function reportPosition(push = false) {
 async function honourDeepLink() {
   const res = await storyRequest('story.navigate', { op: 'resolve' });
   if (!res.ok || !res.parsed) return false;
+  // A link to where the reader already is, is no move. The address may hold
+  // this runner's own first position report (the fink skill, "deep link").
+  if (_knotHashes.get(res.parsed.knotHash) === currentKnot()) return false;
   return gotoKnotHash(res.parsed.knotHash);
 }
 
@@ -1382,6 +1418,7 @@ async function inkFor(url) {
 // with the session announcement rather than being guessed from the depth.
 async function loadStory(url, restore = null, rel = 'replace') {
   state.storyUrl = url;
+  _worldScene = null;                   // a scene belongs to its story
   setStatus('loading…');
   $('prose').textContent = '';
   $('choices').textContent = '';
@@ -1505,6 +1542,7 @@ window.addEventListener('message', (e) => {
     try { story.variablesState[String(d.detail?.name)] = d.detail?.value; } catch { /* undeclared */ }
   }
   if (d.event === 'world.closed') { _world = null; _worldLines = []; state.world = null; }
+  if (d.event === 'world.reenter') worldReenter(String(d.detail?.scene || ''));
   // Back/forward: the shell heard the history event and says where the URL
   // now points. Suppress our own re-report, or going back would immediately
   // rewrite the address bar to where we just came from.
@@ -1623,6 +1661,7 @@ async function restorePlaythrough(snap) {
   // loadStory applies the ink state after compiling and seeding, which is
   // the same path surfacing from a dream uses.
   await loadStory(snap.storyUrl, snap.ink);
+  for (const l of _worldLines) _worldScene = sceneOf(l.tags || []) || _worldScene;
   if (snap.basehref) state.basehref = snap.basehref;
   if (Array.isArray(snap.status) && snap.status.length) {
     _statusItems = snap.status;

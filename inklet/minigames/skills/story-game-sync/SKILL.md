@@ -122,6 +122,7 @@ never completes.
 | story to world, per step | the runner sends the lines whose tags it does not handle itself (`isWorldTag`, `RUNNER_TAGS` in `storyrunner.js`), with the story file's address; the guest gets `story-beat` (SDK `onStoryBeat`) |
 | story to world, on change | the runner observes the VARs in the world's registry row `variables.read` and sends them; the guest gets `variable-changed` |
 | world to story | the guest's `setVariable` goes through the broker (row `variables.write`, `vars:write` on its node); an accepted write reaches the runner as `world.var` and is assigned at once |
+| world moves the story | only one way: SDK `reenterScene(scene)`, with `story:steer` on the world's node, for the knot the story's last `# scene:` named (spec §5.8); a clue VAR set first arrives first |
 | always | `in_world` is NOT set: the story keeps its text routes for clues |
 
 The pieces, and why each is where it is:
@@ -140,10 +141,11 @@ The pieces, and why each is where it is:
 - **A peer session (`# LINKREL: peer`) cannot open a world**: the mediator's
   verb allow-list does not include `story.world`, so a peer plays as text.
 
-What C cannot do yet: a discovery in the world, and a `# live` scene
-re-entered when you move. Both need the world to move the story. Drift's
-world mode therefore turns clue finding off (its glint needs its own panel
-open) and the story offers the clues as choices.
+Discoveries and `# live` scenes work in C since the owner allowed a world to
+re-enter the reader's scene (September 2026). Nothing else about the story is
+the world's to change: it cannot choose, divert elsewhere, or read what it was
+not given. Both routes stay open: a clue can be found in the city or taken as
+a choice ("Look around"), because `in_world` stays false.
 
 ### Choosing
 
@@ -151,10 +153,10 @@ open) and the story offers the clues as choices.
 - The game is the place where the story happens: model C inside foafos
   (the story in the runner, the game as its world), model B in the game's
   own page. Drift's stories are the same files in both.
-- For C to do what B does, one piece is missing: a governed verb that lets a
-  world ask the story to re-enter the current scene (discoveries, `# live`).
-  It changes spec §5's "games cannot divert"; that is the owner's decision,
-  not an implementation detail.
+- C now does what B does for Drift's stories: tags drive the world, the world
+  writes VARs, a discovery or a `# live` move re-enters the scene. The
+  re-entry is the one exception to spec §5's "games cannot divert"; the
+  owner chose it, September 2026.
 
 ## Fallbacks: every world-only affordance needs a text route
 

@@ -223,9 +223,12 @@ try {
     const sub = row?.querySelector('.sub')?.textContent || '';
     const runnerRow = [...document.querySelectorAll('.foafos-switch-row')]
       .find((r) => r.querySelector('.ttl')?.textContent === 'Finkosphere');
+    // the count the row should give, from the node itself (a new power must
+    // not break a check about how the row shows powers)
+    const held = [...FoafOS.apps.nodes.values()].find((n) => n.appId === 'storyrunner')?.capabilities.length ?? -1;
     const runner = { sub: runnerRow?.querySelector('.sub')?.textContent || '',
                      name: runnerRow?.querySelector('.c-powers')?.title || '',
-                     h: Math.round(runnerRow?.getBoundingClientRect().height || 0) };
+                     h: Math.round(runnerRow?.getBoundingClientRect().height || 0), held };
     row?.querySelector('.foafos-switch-info')?.click();
     await new Promise((r) => setTimeout(r, 200));
     const rows = Object.fromEntries([...document.querySelectorAll('.foafos-app-info .fi-row')]
@@ -236,7 +239,8 @@ try {
   shown.sub.includes('holds nothing')
     ? pass(`the switcher row says what the node holds ("${shown.sub}")`)
     : fail(`switcher row: ${JSON.stringify(shown.sub)}`);
-  /holds 8 powers/.test(shown.runner.sub) && shown.runner.name.includes('story:launch') && shown.runner.h < 160
+  shown.runner.held > 1 && shown.runner.sub.includes(`holds ${shown.runner.held} powers`)
+    && shown.runner.name.includes('story:launch') && shown.runner.h < 160
     ? pass(`a row gives the COUNT (${shown.runner.sub.split(' · ').pop()}, ${shown.runner.h}px tall at phone width); `
       + 'its Powers cell names them')
     : fail(`story runner row: ${JSON.stringify(shown.runner)}`);

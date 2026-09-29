@@ -24,6 +24,7 @@ class MinigameSDK {
             terminate: null,
             variableChanged: null,
             storyBeat: null,
+            sticks: null,
             controls: null,
             audio: null
         };
@@ -231,6 +232,19 @@ class MinigameSDK {
     }
 
     /**
+     * Take both analog sticks from the host's input service (its on-screen
+     * sticks, and a gamepad's). Registering declares the `sticks` contract;
+     * the host then stops sending direction keys, so input does not arrive
+     * twice. x right +, y up +, each -1..1; a release sends zeros.
+     * @param {Function} callback - ({l: [x, y], r: [x, y]}) => void
+     */
+    onSticks(callback) {
+        this._callbacks.sticks = callback;
+        this._declare('sticks');
+        return this;
+    }
+
+    /**
      * Be the WORLD beside a story (`# WORLD: <name>`): after each step the
      * story sends the lines that carry tags it does not handle itself.
      * Registering declares the `world` contract.
@@ -243,6 +257,18 @@ class MinigameSDK {
         this._callbacks.storyBeat = callback;
         this._declare('world');
         return this;
+    }
+
+    /**
+     * As a world: ask the story to enter the scene the reader is in again,
+     * because something in the world changed it (a clue found, the reader
+     * moved). The story allows only the scene its last `# scene:` tag named,
+     * and the world's node must hold `story:steer`. Set any variable first
+     * (setVariable); the story sees it before it re-enters.
+     * @param {string} scene - the knot the story's `# scene:` tag named
+     */
+    reenterScene(scene) {
+        this._sendMessage({ type: 'story-reenter', scene: String(scene || '') });
     }
 
     /**
@@ -407,6 +433,13 @@ class MinigameSDK {
                 this._variables[data.name] = data.value;
                 if (this._callbacks.variableChanged) {
                     this._callbacks.variableChanged(data.name, data.value);
+                }
+                break;
+
+            case 'sticks':
+                if (this._callbacks.sticks) {
+                    const pair = (v) => (Array.isArray(v) ? [Number(v[0]) || 0, Number(v[1]) || 0] : [0, 0]);
+                    this._callbacks.sticks({ l: pair(data.l), r: pair(data.r) });
                 }
                 break;
 

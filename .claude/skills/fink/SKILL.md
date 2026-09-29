@@ -153,6 +153,16 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
 - **`repeat` rides along.** A held button autorepeats in the service;
   games read `e.repeat` to tell a hold from a fresh tap (robbin's jumpTap
   and its Konami reader both do), so it must survive the postMessage.
+- **Sticks** (`controls: 'sticks'`, SDK `onSticks`, spec §5.1.1; September
+  2026, for Drift City): the pad shows two analog sticks (`bindStick`), a
+  gamepad's two sticks are read as values (`setStick`, y turned so up is +),
+  and the guest gets `sticks {l, r}` on every change, posted directly like
+  `key` (not through `_sendToIframe`, whose bus tap would drown). Two traps:
+  a gamepad's stick ALSO makes digital directions, so the key sink skips
+  gamepad directions for a sticks guest or it moves twice; and an unplugged
+  gamepad must send zeros, or a stick left pushed keeps the guest moving.
+  With a world open on a phone the pad moves up over the world
+  (`body.foafos-world-on`), since the story window covers the bottom half.
 - Careful reading the pad's absence: `controls: "none"` in the manifest
   (gridluck, battleboids — they swipe the canvas) means never offered,
   which is NOT the same as retracted by the conformance probe. Check
@@ -244,6 +254,22 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   `foafos-with-world` and starts at 50dvh, as Drift's own panel did. The
   stage keeps its size (FinkWM owns it). Drift City is the first world (the
   drift-city skill); e2e-drift §15-23.
+  - **A world may re-enter the reader's scene, and nothing else** (owner's
+    decision, September 2026): SDK `reenterScene`, `story:steer` on the
+    world's node, and the runner allows only the knot the story's last
+    `# scene:` named (`_worldScene`, `worldReenter`). Adding `story:steer`
+    to the runner's row refused the RUNNER itself at first: the root
+    (`foafos-root.js`) must hold every power an app it offers asks for. A
+    new capability goes in three places: the root, the runner (to confer),
+    and the app.
+  - **A deep link to where the reader already is, is no move.** Opened
+    directly (`?story=...`), every story showed its SECOND-visit text: the
+    runner reports its position after the first step, the shell writes the
+    knot's hash into the address (after an async digest), and the boot's
+    `honourDeepLink` then resolved that hash and entered the opening knot
+    again (3 runs in 3, before and after the world work). `honourDeepLink`
+    now skips a link to `currentKnot()`. e2e-drift checks Per Aspera's
+    opening text.
 - Sandboxed iframes have an OPAQUE ORIGIN: guest ES-module imports and
   fetches need CORS. GitHub Pages sends `Access-Control-Allow-Origin: *`;
   plain `python3 -m http.server` does NOT — local harnesses need a
@@ -1148,11 +1174,22 @@ back to the default and say `fellBack` on `root.ready`.
     tree too → resume) and its name says which press does what.
   - **Three widths.** Wide (64rem up): six columns. Mid (45rem to 64rem,
     a tablet): Kind and On close hide, and a line under the name
-    (`.sub-a`) says them. Narrow (under 45rem): `table-layout: fixed` plus
-    a `<colgroup>`; only Name and the actions stay, and the line under the
+    (`.sub-a`) says them. Narrow (under 45rem): automatic layout, Name
+    `width: 100%` and the actions `width: 1%`; only Name and the actions
+    stay, and the line under the
     name (`.sub-a` + `.sub-b`) says the rest. A details or brick row spans
     only the columns on screen (`shownCols()`, re-rendered on a media
     change: a tablet turned).
+    - **Do not size the narrow columns with `<col>` widths.** The narrow
+      table was `table-layout: fixed` with `<col>` widths by position
+      (the hidden cells gone, the action cell is the second cell). Chromium
+      drew it correctly. iPhone Safari gave the Name column one letter of
+      width and the table half the screen (owner's screenshot, September
+      2026). Headless Chromium cannot show this; there is no WebKit in this
+      container. Cell widths in automatic layout replaced it. Inside that
+      layout `overflow-wrap: anywhere` is safe for the name, because the
+      name cell takes all the width the actions leave; at 320px long names
+      still break inside a word.
     - **`nowrap` sets an auto-layout table's least width.** With nowrap
       names, kinds and states, the six-column table needed ~1016px: from
       640px to 900px (every iPad in portrait) it scrolled sideways with 16

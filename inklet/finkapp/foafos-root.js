@@ -44,7 +44,9 @@ export const ROOTS = {
     // called openLogger() directly and so never noticed.
     capabilities: ['storage', 'secrets', 'vars:read', 'vars:write', 'audio', 'input',
                    'launch', 'navigate', 'chrome', 'shell', 'git:write', 'same-origin',
-                   'story:launch', 'story:link', 'story:navigate', 'story:observe'],
+                   'story:launch', 'story:link', 'story:navigate', 'story:observe',
+                   // for a world beside a story to re-enter the reader's scene (spec §5.8)
+                   'story:steer'],
     boot: { story: null },        // null = fall back to FinkConfig.DEFAULT_FINK_FILE
     // The boxed runner (inklet/apps/storyrunner) is the story surface, and the
     // host-page player is pending delete (see fink-player.js / issue #779).

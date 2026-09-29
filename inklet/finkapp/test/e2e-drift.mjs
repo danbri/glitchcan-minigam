@@ -94,7 +94,7 @@ try {
     file: __drift.TALE.file, origin: String(self.origin) }));
   const dnode = await nodeOf(page, 'drift');
   inCity.on && inCity.args?.tale === 'peraspera' && inCity.file === 'peraspera.fink.js' && inCity.origin === 'null'
-    && dnode && JSON.stringify(dnode.args) === '{"tale":"peraspera"}' && dnode.caps.join() === 'audio,vars:read,vars:write'
+    && dnode && JSON.stringify(dnode.args) === '{"tale":"peraspera"}' && dnode.caps.join() === 'audio,vars:read,vars:write,story:steer'
     ? pass(`story.launch drift tale=peraspera (what "# MINIGAME: drift tale=peraspera" sends) opens the city on Per Aspera, in a sandboxed frame, as a node holding audio and vars with args tale=peraspera`)
     : fail(`city: ${JSON.stringify({ inCity, dnode })}`);
 
@@ -263,7 +263,7 @@ try {
       return n && { parent: FoafOS.apps.get(n.parentId)?.surface, caps: [...n.capabilities].join(),
         yielded: !!win?.classList.contains('foafos-yielded') };
     });
-    wn && wn.parent === 'story' && wn.caps === 'audio,vars:read,vars:write' && !wn.yielded
+    wn && wn.parent === 'story' && wn.caps === 'audio,vars:read,vars:write,story:steer' && !wn.yielded
       ? pass('the city opens beside the story, not over it: a node under the dream session holding audio and vars, and the story window stays on screen')
       : fail(`world node: ${JSON.stringify(wn)}`);
     // on a phone the story window is full-bleed; with a world it leaves the top half to the city
@@ -285,10 +285,38 @@ try {
       ? pass('the first step\'s tags drive the city (scene street, place street_1); no story panel, no opening page; it has the story\'s want_time and want_weather')
       : fail(`city in world mode: ${JSON.stringify(c1)}`);
 
+    // 17b. a world may re-enter ONLY the scene the story's last # scene: named
+    await wpage.evaluate(() => { window.__rw = []; FoafOS.bus.subscribe('app.storyrunner.world', (e) => window.__rw.push(e.data)); });
+    const beforeWrong = await choices(wr);
+    await wcity.evaluate(() => __drift.host().sdk.reenterScene('mags'));
+    await wpage.waitForFunction(() => window.__rw.some((x) => x.reenter === 'mags'), null, { timeout: 15000 }).catch(() => {});
+    const wrong = await wpage.evaluate(() => window.__rw.find((x) => x.reenter === 'mags') || null);
+    const afterWrong = await choices(wr);
+    wrong && wrong.ok === false && JSON.stringify(afterWrong) === JSON.stringify(beforeWrong)
+      ? pass('the city asks to enter "mags" while the reader is on the street: refused by the runner, the story unchanged')
+      : fail(`wrong scene: ${JSON.stringify({ wrong, beforeWrong, afterWrong })}`);
+
+    // 17c. a clue found in the city: its VAR goes to the story, and the story re-enters the scene
+    const clue = await wcity.evaluate(() => {
+      const h = __drift.TALE.hot.find((x) => x.v === 'voucher');
+      if (!h) return null;
+      __drift.taleFound(h);
+      return h.v;
+    });
+    const found = clue && await wr.waitForFunction(() => window.__storyrunner.varOf('voucher') === true
+      && window.__storyrunner.state.choices.includes('Go to the emigration gate'), null, { timeout: 30000 })
+      .then(() => wr.evaluate(() => ({ choices: window.__storyrunner.state.choices,
+        told: window.__storyrunner.state.prose.some((p) => /The voucher is the Org's/.test(p.text || p)) })), () => null);
+    const hotAfter = await wcity.waitForFunction(() => !__drift.TALE.hot.some((x) => x.v === 'voucher'), null, { timeout: 15000 })
+      .then(() => true, () => false);
+    found && !found.choices.includes('Look around') && found.told && hotAfter
+      ? pass('a clue found in the city (the voucher) sets its VAR in the story, which re-enters the street: the voucher text, no "Look around", the way to the gate; the city does not offer it again')
+      : fail(`found in the city: ${JSON.stringify({ clue, found, hotAfter })}`);
+
     // 18. variables both ways, through the shell
     await wr.waitForFunction(() => !!window.__storyrunner.varOf('hour'), null, { timeout: 30000 }).catch(() => {});
     const h0 = await wr.evaluate(() => window.__storyrunner.varOf('hour'));
-    const sent = await wr.evaluate(() => window.foaf.storyRequest('story.world', { op: 'vars', values: { want_time: 'dusk', voucher: true } }));
+    const sent = await wr.evaluate(() => window.foaf.storyRequest('story.world', { op: 'vars', values: { want_time: 'dusk', heard_mags: true } }));
     const h1 = await wr.waitForFunction(() => window.__storyrunner.varOf('hour') === 'dusk', null, { timeout: 30000 })
       .then(() => 'dusk', () => wr.evaluate(() => window.__storyrunner.varOf('hour')));
     h0 && sent?.sent === 1 && h1 === 'dusk'
@@ -337,6 +365,12 @@ try {
     await rpage.goto(`${BASE}/inklet/finkapp/?story=/${repoName}/drift-city/story/peraspera.fink.js`);
     const r1 = await runnerOf(rpage);
     await r1.waitForFunction(() => window.__storyrunner?.ready?.() && window.__storyrunner.state.choices.length > 0, null, { timeout: 30000 });
+    // opened directly, the story starts at its opening: the runner used to follow its own first position report as
+    // a deep link and enter the opening knot twice, so the reader saw the second-visit text
+    const opening = await r1.evaluate(() => (window.__storyrunner.state.prose[0]?.text || '').slice(0, 40));
+    /^Night on Ferry Street/.test(opening)
+      ? pass('Per Aspera opened directly starts with its opening text, not its second-visit text')
+      : fail(`opening text: "${opening}"`);
     const rc1 = await frameMatching(rpage, /drift-city\/dist\/city\.html\?world=1$/);
     if (!rc1) throw new Error('Per Aspera opened directly did not open its world');
     await rc1.waitForFunction(() => (window.__drift?.TALE?.worldBeats || 0) > 0, null, { timeout: 90000 });
@@ -368,6 +402,80 @@ try {
       : fail(`restore: ${JSON.stringify({ resumed, back })}`);
     rerrs.length === 0 ? pass('restore: no page errors') : fail(`restore page errors: ${rerrs.slice(0, 3).join(' · ')}`);
     await rpage.close();
+  }
+
+  // 24-27. controls from foafos: two analog sticks on a touch phone, and a gamepad
+  {
+    const tpage = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const terrs = [];
+    tpage.on('pageerror', (e) => terrs.push(String(e).slice(0, 200)));
+    await tpage.goto(`${BASE}/inklet/finkapp/?story=/${repoName}/drift-city/story/peraspera.fink.js`);
+    const tr = await runnerOf(tpage);
+    await tr.waitForFunction(() => window.__storyrunner?.ready?.() && window.__storyrunner.state.choices.length > 0, null, { timeout: 30000 });
+    const tc = await frameMatching(tpage, /drift-city\/dist\/city\.html\?world=1$/);
+    if (!tc) throw new Error('no city on the phone page');
+    await tc.waitForFunction(() => window.__drift?.host?.().sticks === true, null, { timeout: 90000 });
+    await wait(500);
+    // 24. the foafos pad shows two sticks, over the city and above the story; the city hides its own
+    const pad = await tpage.evaluate(() => {
+      const p = document.getElementById('foaf-pad');
+      const w = document.querySelector('.foafos-window iframe[src*="storyrunner"]')?.closest('.foafos-window');
+      return { hidden: p.hidden, sticks: p.classList.contains('sticks'),
+        dir: getComputedStyle(p.querySelector('.foaf-pad-dir')).display,
+        stickW: Math.round(p.querySelector('.foaf-stick-r').getBoundingClientRect().width),
+        padBottom: Math.round(p.getBoundingClientRect().bottom), storyTop: Math.round(w.getBoundingClientRect().top),
+        dockGap: Math.round(innerHeight - (document.getElementById('foafos-dock')?.getBoundingClientRect().bottom ?? 0)) };
+    });
+    const own = await tc.evaluate(() => ({ on: __drift.PAD.on, hidden: document.getElementById('pad')?.hidden !== false }));
+    !pad.hidden && pad.sticks && pad.dir === 'none' && pad.stickW > 60 && pad.padBottom <= pad.storyTop && !own.on && own.hidden
+      && pad.dockGap <= 24
+      ? pass(`on a phone the foafos pad shows two sticks over the city, above the story (pad bottom ${pad.padBottom}, story top ${pad.storyTop}); the city's own sticks are hidden; the dock stays in its corner`)
+      : fail(`foafos sticks: ${JSON.stringify({ pad, own })}`);
+
+    // 25. a thumb on the right stick moves the city; lifting it stops it
+    const box = await tpage.evaluate(() => {
+      const r = document.querySelector('#foaf-pad .foaf-stick-r').getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2, h: r.height };
+    });
+    await tpage.mouse.move(box.x, box.y);
+    await tpage.mouse.down();
+    await tpage.mouse.move(box.x, box.y - box.h * 0.45, { steps: 4 });
+    const ry = await tc.waitForFunction(() => __drift.PAD.ry > 0.5, null, { timeout: 10000 })
+      .then(() => tc.evaluate(() => __drift.PAD.ry), () => tc.evaluate(() => __drift.PAD.ry));
+    await tpage.mouse.up();
+    const stopped = await tc.waitForFunction(() => __drift.PAD.ry === 0 && __drift.PAD.rx === 0, null, { timeout: 10000 })
+      .then(() => true, () => false);
+    ry > 0.5 && stopped
+      ? pass(`the right stick pushed up reaches the city as a value (ry ${ry.toFixed(2)}), and lifting the thumb sends zeros`)
+      : fail(`stick drag: ${JSON.stringify({ ry, stopped })}`);
+
+    // 26. a gamepad: both sticks as values (y turned so up is +), and the on-screen pad retires
+    await tpage.evaluate(() => {
+      const gp = { index: 0, id: 'Test Pad (Standard)', connected: true, mapping: 'standard',
+        buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })), axes: [0.6, 0, 0, -0.9] };
+      window.__fakePad = gp;
+      navigator.getGamepads = () => [gp];
+      const ev = new Event('gamepadconnected');
+      ev.gamepad = gp;
+      window.dispatchEvent(ev);
+    });
+    const g = await tc.waitForFunction(() => __drift.PAD.lx > 0.4 && __drift.PAD.ry > 0.8, null, { timeout: 10000 })
+      .then(() => tc.evaluate(() => ({ lx: __drift.PAD.lx, ry: __drift.PAD.ry })), () => tc.evaluate(() => ({ lx: __drift.PAD.lx, ry: __drift.PAD.ry })));
+    const retired = await tpage.evaluate(() => document.getElementById('foaf-pad').hidden);
+    g.lx > 0.4 && g.ry > 0.8 && retired
+      ? pass(`a gamepad's two sticks reach the city (lx ${g.lx.toFixed(2)}, ry ${g.ry.toFixed(2)}: its up is +), and the on-screen pad retires`)
+      : fail(`gamepad sticks: ${JSON.stringify({ g, retired })}`);
+
+    // 27. unplugged, the sticks go back to zero: a stick left pushed must not keep the city moving
+    await tpage.evaluate(() => { navigator.getGamepads = () => []; window.dispatchEvent(new Event('gamepaddisconnected')); });
+    const zeroed = await tc.waitForFunction(() => !__drift.PAD.lx && !__drift.PAD.ly && !__drift.PAD.rx && !__drift.PAD.ry, null, { timeout: 10000 })
+      .then(() => true, () => false);
+    const padBack = await tpage.waitForFunction(() => !document.getElementById('foaf-pad').hidden, null, { timeout: 5000 })
+      .then(() => true, () => false);
+    zeroed && padBack && terrs.length === 0
+      ? pass('unplugging the gamepad sends zeros, and the on-screen pad comes back; no page errors')
+      : fail(`unplugged: ${JSON.stringify({ zeroed, padBack, terrs: terrs.slice(0, 2) })}`);
+    await tpage.close();
   }
 
   // 14. with WebGPU (Dawn's SwiftShader adapter, software): the head is posed

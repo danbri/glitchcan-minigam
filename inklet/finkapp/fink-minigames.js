@@ -6,7 +6,7 @@
 // a guest said something meaningful" from ordinary page chatter.
 const GUEST_MESSAGE_TYPES = new Set([
     'ready', 'progress', 'set-variable', 'complete', 'error', 'log', 'log-batch',
-    'announce', 'conformance', 'snapshot-data', 'bus-publish',
+    'announce', 'conformance', 'snapshot-data', 'bus-publish', 'story-reenter',
 ]);
 
 // How long a guest gets to answer the conformance probe before the shell
@@ -1237,6 +1237,13 @@ window.FinkMinigames = {
 
             case 'announce':
                 this._announce(inst, data.text);
+                break;
+
+            case 'story-reenter':
+                // Only a WORLD may ask; the shell checks its power
+                // (story:steer) and the runner checks the scene.
+                if (inst.world) window.FoafOS?.worldReenter?.(inst.id, String(data.scene || ''));
+                else this.log(`story-reenter from ${inst.id} ignored: not a world`);
                 break;
 
             case 'bus-publish':

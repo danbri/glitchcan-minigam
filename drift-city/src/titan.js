@@ -699,10 +699,11 @@ function menuRoot() {
         { label: "Camera assist in flight (frames what is ahead)", check: ASSIST.on, act: () => { ASSIST.on = !ASSIST.on; taleStore("drift.assist", ASSIST.on); renderMenu(); } },
         { label: "Focus on what matters (depth of field)", check: FOCUS.on, act: () => { FOCUS.on = !FOCUS.on; try { localStorage.setItem("drift.focus", FOCUS.on ? "1" : "0"); } catch (e) {} renderMenu(); } },
         { label: "Follow the drone (see yourself)", check: FOLLOW, act: () => { FOLLOW = !FOLLOW; try { localStorage.setItem("drift.follow", FOLLOW ? "1" : "0"); } catch (e) {} renderMenu(); } },
-        { label: "On-screen gamepad", check: PAD.on, act: () => { padShow(!PAD.on); renderMenu(); } },
+        // with the foafos sticks (host.js) the city's own are hidden, and so is this switch
+        ...(hostState().sticks ? [] : [{ label: "On-screen gamepad", check: PAD.on, act: () => { padShow(!PAD.on); renderMenu(); } }]),
         { label: "Hide the controls (tap the scene to bring them back)", act: () => { closeGoPanel(); setUiHidden(true); } }] }) },
       { label: "Fly by hand", sub: () => ({ title: "Fly by hand", items: () => [
-        { label: "Take the controls here", act: () => { closeGoPanel(); padShow(true); startFree(NAV.cam || flatCamTitan()); } },
+        { label: "Take the controls here", act: () => { closeGoPanel(); if (!hostState().sticks) padShow(true); startFree(NAV.cam || flatCamTitan()); } },
         { label: "Carry on flying from a place", act: () => { closeGoPanel(); flyOn(); } }] }) },
       { label: "Developer", sub: () => ({ title: "Developer", items: () => [
         { label: "Quick hops", sub: () => destPages(hop, "Quick hops (instant)") },
