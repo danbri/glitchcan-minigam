@@ -794,6 +794,28 @@ let _worldLines = [];                   // the last WORLD_KEEP lines sent
 let _worldChain = Promise.resolve();    // world requests go in order
 let _worldWatched = null;               // the Story object whose VARs are observed
 let _worldScene = null;                 // the knot the story's last # scene: named
+let _worldClosed = null;                // { tag, lines, url }: the world the reader closed
+
+// A world the reader closed can be opened again, from the lines it was last
+// sent, while the story that opened it is still the one being read.
+function offerWorld() {
+  const b = $('world-open');
+  if (!b) return;
+  const on = !!(_worldClosed && !_world && _worldClosed.url === state.storyUrl);
+  b.hidden = !on;
+  if (on) {
+    const name = gameTag(_worldClosed.tag).name;
+    b.textContent = 'Show the world again';
+    b.setAttribute('aria-label', `Show the world again: ${name}`);
+  }
+}
+function reopenWorld() {
+  const c = _worldClosed;
+  if (!c || _world) return;
+  _worldLines = c.lines.slice(-WORLD_KEEP);
+  openWorld(c.tag, _worldLines.slice());
+}
+$('world-open')?.addEventListener('click', reopenWorld);
 
 // Quiet on purpose: a beat goes every step, so it is not logged in
 // state.requests or on the bus, and a world the reader closed is not an error.
@@ -811,6 +833,8 @@ function openWorld(tag, replay = null) {
   const w = { app: name, tag, reads: [] };
   _world = w;
   state.world = name;
+  _worldClosed = null;
+  offerWorld();
   _worldChain = _worldChain.then(() => worldRequest({ op: 'open', app: name, args })).then((res) => {
     if (!res.ok) {
       if (_world === w) { _world = null; state.world = null; }
@@ -1581,6 +1605,7 @@ async function inkFor(url) {
 async function loadStory(url, restore = null, rel = 'replace') {
   state.storyUrl = url;
   _worldScene = null;                   // a scene belongs to its story
+  offerWorld();                         // and so does a world the reader closed
   setStatus('loading…');
   $('prose').textContent = '';
   $('choices').textContent = '';
@@ -1720,7 +1745,11 @@ window.addEventListener('message', (e) => {
   if (d.event === 'world.var' && story) {
     try { story.variablesState[String(d.detail?.name)] = d.detail?.value; } catch { /* undeclared */ }
   }
-  if (d.event === 'world.closed') { _world = null; _worldLines = []; state.world = null; }
+  if (d.event === 'world.closed') {
+    if (_world) _worldClosed = { tag: _world.tag, lines: _worldLines.slice(), url: state.storyUrl };
+    _world = null; _worldLines = []; state.world = null;
+    offerWorld();
+  }
   if (d.event === 'world.reenter') worldReenter(String(d.detail?.scene || ''));
   // Back/forward: the shell heard the history event and says where the URL
   // now points. Suppress our own re-report, or going back would immediately

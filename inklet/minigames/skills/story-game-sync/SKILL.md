@@ -137,6 +137,17 @@ The pieces, and why each is where it is:
 - **Restore rebuilds the world**: the runner's snapshot keeps the last 60
   lines sent; a reopened story opens its world again and replays them with
   `replay: true`, and the world must not speak a replayed line again.
+- **A world the reader closed can come back** (owner, September 2026: "After
+  closing World pane, i cant get it back"). On `world.closed` the runner keeps
+  the tag and the lines sent (`_worldClosed`) and shows "Show the world
+  again" (`#world-open`) while the same story is read; it reopens the world
+  with a replay, as a restore does. A new story takes the offer away.
+- **A world never plays its own story.** A game that can also run the story
+  itself (Drift's page) must shut that player off in world mode at the ONE
+  place it opens, not at each menu item: Drift hid its Story menu, but the
+  opening flight's end, the Story button and the `t` key still called
+  `taleOpen`, and the reader saw the city's ink panel over the runner's
+  story. `taleOpen`, `taleLink` and `taleRestart` now return in world mode.
 - **A peer session (`# LINKREL: peer`) cannot open a world**: the mediator's
   verb allow-list does not include `story.world`, so a peer plays as text.
 

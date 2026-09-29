@@ -222,8 +222,9 @@ window.FinkWM = {
 
     // ── split grip: resize the split, and swap the panes ────────────────
     // A seam you can drag, as in any tiling window manager. Holding it
-    // (or focusing it) shows a Swap button: the game above the story, or
-    // below. Arrow keys resize, for readers without a pointer.
+    // (or focusing it) shows a Swap button: the story and the game change
+    // panes, and the panes keep their sizes. Arrow keys resize, for readers
+    // without a pointer.
     _initSplitGrip() {
         const view = this.elements.view;
         const grip = document.createElement('div');
@@ -255,7 +256,11 @@ window.FinkWM = {
         };
         swap.addEventListener('click', (e) => {
             e.stopPropagation();
+            // Swap the CONTENTS, not the panes (owner, September 2026):
+            // the seam stays where it is, so the top pane keeps its size
+            // and the story and the game change places inside them.
             this.split.swap = !this.split.swap;
+            this.split.ratio = 1 - this.split.ratio;
             this._saveSplit();
             this._layoutSplit();
             this._scheduleSettle();

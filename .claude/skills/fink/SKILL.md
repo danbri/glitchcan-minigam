@@ -340,8 +340,11 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   placement the reader cannot change. **Split is the reader's too**
   (owner: "A grippy for resizing split or offering a swap option while
   gripped"): FinkWM puts a grip (`role=separator`, arrow keys) on the seam;
-  holding or focusing it shows Swap (game above or below the story);
-  `fink.wm.split` keeps `{ratio, swap}` per device. The drag follows the
+  holding or focusing it shows Swap; `fink.wm.split` keeps `{ratio, swap}`
+  per device. **Swap exchanges the CONTENTS, not the panes** (owner,
+  September 2026: "Swap should swap pane contents not positions"): the seam
+  stays put and the ratio becomes `1 - ratio`, so the top pane keeps its
+  size. The first Swap moved the game with its size, and the seam jumped. The drag follows the
   finger's movement from where it touched: the first version set the seam
   to the finger and jumped on grab (found by e2e-wm). The grip sits INSIDE
   the stage: half over the story it was under the story window, and
