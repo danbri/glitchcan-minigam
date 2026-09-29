@@ -42,15 +42,23 @@ window.FinkWM = {
                 split: document.getElementById('wm-split'),
                 pip: document.getElementById('wm-pip'),
             },
+            swapRow: document.getElementById('wm-swap'),
+            padSect: document.getElementById('wm-pad-sect'),
+            appSect: document.getElementById('wm-app-sect'),
         };
         if (!this.elements.chrome || !this.elements.view) {
             this.log('chrome elements missing — window manager idle');
             return;
         }
 
+        // A row that does something closes the menu; a row that sets
+        // something (pause, the pad, an app's check) leaves it open.
         for (const [mode, btn] of Object.entries(this.elements.modeBtns)) {
-            btn?.addEventListener('click', () => this.setMode(mode));
+            btn?.addEventListener('click', () => { this.setMode(mode); this._setCollapsed(true); });
         }
+        this.elements.swapRow?.addEventListener('click', () => { this.swapPanes(); this._setCollapsed(true); });
+        document.getElementById('returnToStory')?.addEventListener('click', () => this._setCollapsed(true));
+        this._initMenuDismiss();
 
         this._initChromeDrag();
         this._initPipGestures();
@@ -78,11 +86,11 @@ window.FinkWM = {
     open(mode = 'full') {
         this.active = true;
         this.elements.chrome.classList.remove('wm-hidden');
-        // Open EXPANDED: a lone ▦ grip reads as "this game has no window
-        // controls" (reported from the field). Show the toolbar, then let
-        // the usual idle timer tuck it away.
-        this._setCollapsed(false);
-        this._scheduleCollapse();
+        // Opens CLOSED, as one ☰. The old toolbar opened expanded because a
+        // lone ▦ grip read as "this game has no window controls"; ☰ reads
+        // as a menu, so it can start closed and cover less of the game.
+        this._setCollapsed(true);
+        this.setAppActions(null);
         this._bindOwnershipCues();
         this.setMode(mode, { animate: false });
         window.FoafOS?.bus.publish('wm.open', { summary: 'game window opened' });
@@ -95,6 +103,7 @@ window.FinkWM = {
         const { chrome, view } = this.elements;
         chrome.classList.add('wm-hidden');
         this._setCollapsed(true);
+        this.setAppActions(null);
         view.classList.remove('state-full', 'state-split', 'state-pip', 'wm-transitioning');
         view.style.left = view.style.top = view.style.right = view.style.bottom = '';
         view.style.height = '';
@@ -137,7 +146,7 @@ window.FinkWM = {
             btn?.classList.toggle('active', m === mode);
             btn?.setAttribute('aria-pressed', String(m === mode));
         }
-        this.elements.handle.textContent = { full: '▣', split: '◫', pip: '◰' }[mode] || '▦';
+        if (this.elements.swapRow) this.elements.swapRow.hidden = mode !== 'split';
 
         this._paintOwnership();
         this._layoutSplit();
@@ -203,10 +212,13 @@ window.FinkWM = {
         if (this.mode !== 'split') {
             narrative.style.height = '';
             view.style.height = '';
+            this._placeChrome(null);
             return;
         }
         const total = main.clientHeight;
         const gameH = Math.max(180, Math.round(total * this.split.ratio));
+        const mainTop = main.getBoundingClientRect().top;
+        this._placeChrome(this.split.swap ? mainTop : mainTop + total - gameH);
         view.style.height = `${gameH}px`;
         narrative.style.height = `${Math.max(0, total - gameH)}px`;
         view.classList.toggle('wm-swapped', !!this.split.swap);
@@ -256,14 +268,7 @@ window.FinkWM = {
         };
         swap.addEventListener('click', (e) => {
             e.stopPropagation();
-            // Swap the CONTENTS, not the panes (owner, September 2026):
-            // the seam stays where it is, so the top pane keeps its size
-            // and the story and the game change places inside them.
-            this.split.swap = !this.split.swap;
-            this.split.ratio = 1 - this.split.ratio;
-            this._saveSplit();
-            this._layoutSplit();
-            this._scheduleSettle();
+            this.swapPanes();
             showSwap(); hideSwapSoon();
         });
         let drag = null;
@@ -309,6 +314,153 @@ window.FinkWM = {
         });
     },
 
+    // Swap the CONTENTS, not the panes (owner, September 2026): the seam
+    // stays where it is, so the top pane keeps its size and the story and
+    // the game change places inside them. From the grip and from the menu.
+    swapPanes() {
+        this.split.swap = !this.split.swap;
+        this.split.ratio = 1 - this.split.ratio;
+        this._saveSplit();
+        this._layoutSplit();
+        this._paintOwnership();
+        this._scheduleSettle();
+    },
+
+    // ── the menu: open, close, and the two sections that are not fixed ──
+
+    // Escape, and a tap anywhere outside, close the menu. Keyboard users
+    // open it with Enter or Space on ☰. The pointer path is pointerup (in
+    // _initChromeDrag), and a tap ALSO fires a click afterwards — with
+    // detail 0 on some touch paths, so detail cannot tell it from a key.
+    // A click right after a pointer toggle is that same tap; skip it.
+    _initMenuDismiss() {
+        const { chrome, handle } = this.elements;
+        handle.addEventListener('click', () => {
+            if (performance.now() - (this._pointerToggledAt || 0) < 600) return;
+            this._setCollapsed(!chrome.classList.contains('collapsed'));
+        });
+        chrome.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape' || chrome.classList.contains('collapsed')) return;
+            e.stopPropagation();
+            this._setCollapsed(true);
+            handle.focus();
+        });
+        document.addEventListener('pointerdown', (e) => {
+            if (!chrome.classList.contains('collapsed') && !chrome.contains(e.target)) this._setCollapsed(true);
+        }, true);
+        // a tap in a frame (the game, the story) never reaches this page as
+        // a pointerdown; the page losing focus to it is the signal instead
+        window.addEventListener('blur', () => {
+            if (!chrome.classList.contains('collapsed')) this._setCollapsed(true);
+        });
+    },
+
+    // The on-screen controls: shown, faint until touched, hidden until
+    // touched, or off. The pad is the shell's (FoafOS.pad); the menu only
+    // offers the choice while the pad applies to this game.
+    PAD_MODES: [['show', 'Always shown'], ['faint', 'Faint until touched'],
+                ['hidden', 'Hidden until touched'], ['off', 'Off']],
+    _renderPadSection() {
+        const sect = this.elements.padSect;
+        const pad = window.FoafOS?.pad;
+        if (!sect) return;
+        const applies = !!pad?.applies?.();
+        sect.hidden = !applies;
+        if (!applies) return;
+        const now = pad.mode();
+        sect.textContent = '';
+        const h = document.createElement('span');
+        h.className = 'wm-sect-title';
+        h.textContent = 'On-screen controls';
+        h.setAttribute('aria-hidden', 'true');
+        sect.appendChild(h);
+        for (const [m, label] of this.PAD_MODES) {
+            const b = this._row(m === now ? '●' : '○', label);
+            b.dataset.padMode = m;
+            b.setAttribute('aria-pressed', String(m === now));
+            b.addEventListener('click', () => { pad.setMode(m); this._renderPadSection(); });
+            sect.appendChild(b);
+        }
+    },
+
+    // THE APP'S OWN ACTIONS (spec §5.9). The guest declares them as data
+    // (id, label, checked, nested items); the shell draws them here, in
+    // the one menu, and sends the chosen id back. A check leaves the menu
+    // open; a plain action closes it; a group opens its items in place.
+    setAppActions(items, title = null) {
+        this._appActions = Array.isArray(items) && items.length ? items : null;
+        if (title !== null) this._appTitle = title;
+        if (!this._appActions) this._appPath = [];
+        this._renderAppSection();
+    },
+    _renderAppSection() {
+        const sect = this.elements.appSect;
+        if (!sect) return;
+        sect.textContent = '';
+        if (!this._appActions) { sect.hidden = true; return; }
+        sect.hidden = false;
+        // walk down the open groups; a group that vanished closes back up
+        let list = this._appActions, titles = [];
+        const path = [];
+        for (const id of this._appPath || []) {
+            const g = list.find((x) => x.id === id && Array.isArray(x.items));
+            if (!g) break;
+            path.push(id); titles.push(g.label); list = g.items;
+        }
+        this._appPath = path;
+        const name = titles.length ? titles[titles.length - 1] : (this._appTitle || 'This game');
+        sect.setAttribute('aria-label', name);
+        const h = document.createElement('span');
+        h.className = 'wm-sect-title';
+        h.textContent = name;
+        h.setAttribute('aria-hidden', 'true');
+        sect.appendChild(h);
+        if (path.length) {
+            const back = this._row('‹', titles.length > 1 ? titles[titles.length - 2] : (this._appTitle || 'Back'));
+            back.setAttribute('aria-label', `Back to ${back.textContent.slice(1)}`);
+            back.classList.add('wm-back');
+            back.addEventListener('click', () => { this._appPath.pop(); this._renderAppSection(); this._focusFirstApp(); });
+            sect.appendChild(back);
+        }
+        for (const it of list) {
+            const group = Array.isArray(it.items);
+            const check = typeof it.checked === 'boolean';
+            const b = this._row(group ? '›' : check ? (it.checked ? '✓' : '') : '•', it.label, it.detail);
+            b.dataset.action = it.id;
+            if (check) b.setAttribute('aria-pressed', String(it.checked));
+            if (group) b.setAttribute('aria-expanded', 'false');
+            if (it.disabled) b.disabled = true;
+            b.addEventListener('click', () => {
+                if (group) { this._appPath.push(it.id); this._renderAppSection(); this._focusFirstApp(); return; }
+                window.FinkMinigames?.runAction?.(it.id);
+                if (!check) this._setCollapsed(true);
+            });
+            sect.appendChild(b);
+        }
+    },
+    _focusFirstApp() {
+        this.elements.appSect?.querySelector('button')?.focus();
+    },
+    _row(icon, label, detail) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        const i = document.createElement('span');
+        i.className = 'wm-ico';
+        i.setAttribute('aria-hidden', 'true');
+        i.textContent = icon;
+        const l = document.createElement('span');
+        l.className = 'wm-label';
+        l.textContent = label;
+        b.append(i, l);
+        if (detail) {
+            const d = document.createElement('span');
+            d.className = 'wm-detail';
+            d.textContent = detail;
+            b.appendChild(d);
+        }
+        return b;
+    },
+
     // While a drag of the toolbar or the seam is on, frames take no pointer
     // events. Pointer capture on the handle did not hold when the pointer
     // crossed a sandboxed frame (the story window, measured headless): the
@@ -338,6 +490,34 @@ window.FinkWM = {
         chrome.classList.toggle('collapsed', collapsed);
         handle.setAttribute('aria-expanded', String(!collapsed));
         if (collapsed) clearTimeout(this._collapseTimer);
+        else {
+            // what the menu offers depends on now: the pad, the app's actions
+            this._renderPadSection();
+            this._renderAppSection();
+            this._fitMenu();
+        }
+    },
+
+    // In split, ☰ sits at the top of the GAME's pane: at the screen top it
+    // was over the story window's own buttons, and it said nothing about
+    // which pane it serves. A reader's drag-dock still wins.
+    _placeChrome(paneTop) {
+        const { chrome } = this.elements;
+        if (!chrome || this._loadDock()) return;
+        chrome.style.top = paneTop === null ? '' : `${Math.round(paneTop + 8)}px`;
+    },
+
+    // The panel never runs off the bottom of the visible screen: it
+    // scrolls inside the space below its top edge.
+    _fitMenu() {
+        const { chrome, buttons } = this.elements;
+        if (!buttons) return;
+        const r = chrome.getBoundingClientRect();
+        const vh = window.visualViewport?.height || window.innerHeight;
+        const below = vh - r.bottom - 12, above = r.top - 12;
+        const up = above > below * 1.3 && below < 360;
+        chrome.classList.toggle('menu-up', up);
+        buttons.style.maxHeight = `${Math.max(160, Math.round(up ? above : below))}px`;
     },
 
     // ── Who owns what ────────────────────────────────────────────────
@@ -377,13 +557,14 @@ window.FinkWM = {
         narrative?.classList.toggle('wm-labelled', twoPanes);
         if (twoPanes) this._flashLabels();
 
-        // 2. the chip
-        if (target) target.textContent = twoPanes ? `${icon} ${name}` : '';
+        // 2. the menu's title names the game, and in split its pane
+        const where = this.split.swap ? 'upper' : 'lower';
+        if (target) target.textContent = twoPanes ? `${icon} ${name} · ${where} pane` : `${icon} ${name}`;
         chrome?.classList.toggle('wm-has-target', twoPanes);
 
         // 3. and say it to assistive tech, which cannot see an accent edge
         chrome?.setAttribute('aria-label',
-            twoPanes ? `Controls for the ${name} pane (lower half)` : `${name} window controls`);
+            twoPanes ? `Controls for the ${name} pane (${where} half)` : `${name} window controls`);
     },
 
     // Show the pane names for a beat. Reduced-motion users get the same
@@ -494,7 +675,8 @@ window.FinkWM = {
                 this._saveDock(dock);
                 this._haptic();
             } else {
-                // A tap on the grip toggles the toolbar.
+                // A tap on ☰ opens or closes the menu.
+                this._pointerToggledAt = performance.now();
                 this._setCollapsed(!chrome.classList.contains('collapsed'));
                 if (!chrome.classList.contains('collapsed')) this._scheduleCollapse();
             }

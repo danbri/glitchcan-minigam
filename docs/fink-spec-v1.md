@@ -897,6 +897,67 @@ stories in the foafos runner instead of an Ink engine of its own.
   text route for anything found in the world (the story-game-sync skill,
   Fallbacks).
 
+### 5.9 One window menu, and the app's own actions — normative
+
+Owner, September 2026: "The settings we had in a hamburger menu should be
+formalised via foafos menuing … possibly via actions registry. Similarly
+the window manager buttons should all be hidden behind a single
+os-mediated structure which might show as hamburger menu."
+
+**One menu per game window, drawn by the shell.** Over a stage app the
+shell draws exactly one control: ☰ ("Window menu"). It opens a panel of
+labelled rows, in this order:
+
+1. the title: the app's name, and in split which pane it serves;
+2. the window: Full screen, Split with story, Picture-in-picture, Swap the
+   panes (in split), Pause / Resume;
+3. On-screen controls (only while the shell's pad applies to this app):
+   Always shown, Faint until touched (the default), Hidden until touched,
+   Off. Per device. Hidden still takes touches where the controls sit;
+   Off removes them (keyboard, gamepad, or the app's own touch remain);
+4. the app's own actions (below), under the app's name;
+5. Exit the game.
+
+A row that DOES something (a mode, swap, a command, exit) closes the
+menu; a row that SETS something (pause, the pad, a check) leaves it
+open. Escape, a tap outside, and focus moving into a frame close it.
+Enter or Space on ☰ opens it. It is a disclosure (a button and a panel
+of buttons), not an ARIA menu, so every row is an ordinary button.
+
+**The app's actions are data** (SDK):
+
+```js
+sdk.setActions([
+  { id: 'time', label: 'Time and weather', items: [
+      { id: 'time/night', label: 'Night', checked: true },
+      { id: 'time/day',   label: 'Day',   checked: false } ] },
+  { id: 'map', label: 'City map' },          // a command
+]);
+sdk.onAction((id) => run(id));              // declares the `actions` contract
+```
+
+- `checked` (true or false) makes a setting; `items` makes a group that
+  opens in place (depth ≤ 4); anything else is a command. `detail` is a
+  short note on the right. Labels ≤ 80 characters.
+- The list replaces the last one; send it again when a label or a check
+  changes. The shell keeps it per instance and draws the playing one's.
+- The shell sends back only an id the app offered
+  (`FinkMinigames.runAction`); a forged id is dropped.
+- Ids should come from the row's place in the app's own menu (Drift uses
+  the path of labels), so that a changed menu makes an old id find
+  nothing, not the wrong row.
+- Standalone, an app draws its own menu as before. Inside foafos it hides
+  its own ☰ and offers the same rows as actions: one menu on the screen.
+
+Reference: `inklet/finkapp/fink-wm.js` (the menu), `foafos-shell.js`
+(`FoafOS.pad`), `packages/finkgame/src/minigame-sdk.js` (`setActions`,
+`onAction`), `drift-city/src/host.js` (the first app to use it). Locked by
+`e2e-wm.mjs` 1-3, `e2e-input.mjs` 0b and `e2e-drift.mjs` 20a.
+
+Not done yet: window apps (office, players) have no actions; the menu does
+not tell the app that it opened (Drift's own menu paused a guided tour
+while open); the pad's "B" still sends Escape to the app.
+
 ## 6. Links, navigation, identity
 
 Incorporates `docs/fink-linking-spec.md`: two-part SHA-256 hash links

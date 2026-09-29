@@ -60,27 +60,51 @@ try {
     return r ? { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) } : null;
   }, sel);
 
-  // 1. chrome: opens EXPANDED so the controls are discoverable (a lone
-  // grip was reported in the field as "this game has no OS controls")
-  const chromeOpen = await box('#wm-chrome');
-  const openExpanded = await page.evaluate(() =>
-    !document.getElementById('wm-chrome').classList.contains('collapsed'));
-  openExpanded && chromeOpen.w > 200
-    ? pass(`chrome opens expanded (${chromeOpen.w}px, all controls visible)`)
-    : fail(`chrome not discoverable on open: w=${chromeOpen?.w} expanded=${openExpanded}`);
-  await page.evaluate(() => FinkWM._setCollapsed(true));
+  // 1. ONE window menu (owner, September 2026: "the window manager buttons
+  // should all be hidden behind a single os-mediated structure which might
+  // show as hamburger menu"). It opens closed: one ☰, named as a menu.
   const chrome = await box('#wm-chrome');
-  chrome.w < 90 ? pass(`collapses to a grip (${chrome.w}px)`) : fail(`grip too wide: ${chrome.w}`);
+  const closedMenu = await page.evaluate(() => ({
+    collapsed: document.getElementById('wm-chrome').classList.contains('collapsed'),
+    glyph: document.getElementById('wm-handle').textContent.trim(),
+    name: document.getElementById('wm-handle').getAttribute('aria-label'),
+  }));
+  closedMenu.collapsed && chrome.w <= 50 && closedMenu.glyph === '☰' && /menu/i.test(closedMenu.name)
+    ? pass(`the game window has one ☰ "${closedMenu.name}" (${chrome.w}px) and nothing else over the game`)
+    : fail(`window menu on open: ${JSON.stringify({ ...closedMenu, w: chrome.w })}`);
 
-  // 2. grip tap expands the toolbar
+  // 2. a tap on ☰ opens it: labelled rows, not glyphs
   await page.click('#wm-handle');
-  const expanded = await page.evaluate(() =>
-    !document.getElementById('wm-chrome').classList.contains('collapsed') &&
-    getComputedStyle(document.getElementById('wm-buttons')).display !== 'none');
-  expanded ? pass('grip tap expands the toolbar') : fail('toolbar did not expand');
+  const expanded = await page.evaluate(() => ({
+    open: !document.getElementById('wm-chrome').classList.contains('collapsed')
+      && getComputedStyle(document.getElementById('wm-buttons')).display !== 'none',
+    rows: [...document.querySelectorAll('#wm-buttons button')].filter((b) => b.offsetParent)
+      .map((b) => b.querySelector('.wm-label')?.textContent || ''),
+    handleBox: (() => { const r = document.getElementById('wm-handle').getBoundingClientRect(); return [r.x, r.y].map(Math.round); })(),
+  }));
+  expanded.open && ['Full screen', 'Split with story', 'Picture-in-picture', 'Pause', 'Exit the game']
+    .every((l) => expanded.rows.includes(l))
+    ? pass(`a tap on ☰ opens the menu: ${expanded.rows.join(' · ')}`)
+    : fail(`menu did not open with its rows: ${JSON.stringify(expanded)}`);
+  // the keyboard opens it too (Enter on ☰), and Escape closes it
+  await page.evaluate(() => FinkWM._setCollapsed(true));
+  await page.waitForTimeout(700);       // a click just after a tap is that tap's own click
+  await page.focus('#wm-handle');
+  await page.keyboard.press('Enter');
+  const byKey = await page.evaluate(() => !document.getElementById('wm-chrome').classList.contains('collapsed'));
+  await page.keyboard.press('Escape');
+  const escClosed = await page.evaluate(() => document.getElementById('wm-chrome').classList.contains('collapsed')
+    && document.activeElement?.id === 'wm-handle');
+  byKey && escClosed
+    ? pass('Enter on ☰ opens the menu and Escape closes it, focus back on ☰')
+    : fail(`keyboard: opened=${byKey} escClosed=${escClosed}`);
+  await page.evaluate(() => FinkWM._setCollapsed(false));
 
-  // 3. SPLIT: story and game genuinely share the screen
+  // 3. SPLIT: story and game genuinely share the screen. A mode row is a
+  // command, so the menu closes after it.
   await page.click('#wm-split');
+  const closedAfter = await page.evaluate(() => document.getElementById('wm-chrome').classList.contains('collapsed'));
+  closedAfter ? pass('choosing a window mode closes the menu') : fail('the menu stayed open after a mode');
   await page.waitForTimeout(500);
   const split = await page.evaluate(() => ({
     mode: FinkWM.mode,
@@ -159,6 +183,7 @@ try {
   // manager controls". Both panes must be named, the names must meet at
   // the seam (clear of the draggable toolbar at the screen top), the
   // toolbar must name its target, and touching it must mark the pane.
+  await page.evaluate(() => FinkWM._setCollapsed(false));
   const own = await page.evaluate(() => {
     const labels = [...document.querySelectorAll('.wm-pane-label')].map(e => {
       const r = e.getBoundingClientRect();
@@ -170,6 +195,8 @@ try {
       labels,
       seam: Math.round(document.getElementById('minigame-view').getBoundingClientRect().top),
       chromeBottom: Math.round(chrome.getBoundingClientRect().bottom),
+      chromeRect: (() => { const r = document.getElementById('wm-handle').getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; })(),
+      labelRects: [...document.querySelectorAll('.wm-pane-label')].map((e) => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; }),
       chip: document.getElementById('wm-target')?.textContent?.trim(),
       chipShown: getComputedStyle(document.getElementById('wm-target')).display !== 'none',
       aria: chrome.getAttribute('aria-label'),
@@ -183,9 +210,12 @@ try {
   Math.abs(story.bottom - own.seam) <= 3 && Math.abs(gameLbl.y - own.seam) <= 3
     ? pass(`names meet at the seam (${own.seam}px)`)
     : fail(`labels not at the seam ${own.seam}: story ends ${story.bottom}, game starts ${gameLbl.y}`);
-  story.y > own.chromeBottom
-    ? pass('story label clears the toolbar (it used to sit underneath it)')
-    : fail(`story label under the chrome: label ${story.y} vs chrome bottom ${own.chromeBottom}`);
+  // ☰ sits at the top of the game's pane in split; neither pane's name may
+  // be under it (the story's name used to sit under the old toolbar)
+  const hit = (a, b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
+  !own.labelRects.some((lr) => hit(lr, own.chromeRect)) && own.chromeRect.t >= own.seam
+    ? pass(`in split ☰ sits in the game's pane (top ${Math.round(own.chromeRect.t)} ≥ seam ${own.seam}) and covers neither pane's name`)
+    : fail(`☰ placement in split: ${JSON.stringify({ chrome: own.chromeRect, seam: own.seam, labels: own.labelRects })}`);
   own.chipShown && own.chip && /pane/i.test(own.aria || '')
     ? pass(`toolbar names its target: chip "${own.chip}", label "${own.aria}"`)
     : fail(`toolbar does not say what it controls: ${JSON.stringify(own)}`);
@@ -224,6 +254,7 @@ try {
   await page.evaluate(() => FinkWM._flashLabels());
 
   // 4. PIP: small, then a tap restores — no one-way doors
+  await page.evaluate(() => FinkWM._setCollapsed(false));
   await page.click('#wm-pip');
   await page.waitForTimeout(500);
   const pip = await box('#minigame-view');

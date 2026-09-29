@@ -368,6 +368,27 @@ try {
       ? pass(`the city's menu has no Story and no Sound: the story is the runner's and the volume is the shell's (${labels.length} items)`)
       : fail(`city menu: ${JSON.stringify(labels)}`);
 
+    // 20a. THE CITY'S MENU IS THE SHELL'S (spec §5.9; owner, September 2026: "The settings we had in a hamburger menu
+    // should be formalised via foafos menuing"). Inside foafos the city draws no ☰ of its own; its rows arrive as
+    // actions, the shell's one window menu draws them, and a choice there runs the city's row.
+    const acts = await wpage.waitForFunction(() => (window.FinkWM?._appActions || []).length > 3, null, { timeout: 15000 })
+      .then(() => wpage.evaluate(() => FinkWM._appActions.map((a) => a.label)), () => []);
+    const cityBurger = await wcity.evaluate(() => document.getElementById('bMenu').hidden);
+    const night = () => wpage.evaluate(() => {
+      const tw = (FinkWM._appActions || []).find((a) => a.label === 'Time and weather');
+      return tw?.items?.find((a) => a.label === 'Night') || null;
+    });
+    const before = await night();
+    const ran = before ? await wpage.evaluate((id) => FinkMinigames.runAction(id), before.id) : false;
+    const after = await wpage.waitForFunction(() => {
+      const tw = (window.FinkWM?._appActions || []).find((a) => a.label === 'Time and weather');
+      return tw?.items?.find((a) => a.label === 'Night')?.checked === true;
+    }, null, { timeout: 10000 }).then(() => true, () => false);
+    const forged = await wpage.evaluate(() => FinkMinigames.runAction('menu/Developer/Forget the saved story (not offered)'));
+    cityBurger && acts.includes('Time and weather') && acts.includes('Travel') && before && ran && after && !forged
+      ? pass(`the city has no ☰ of its own in foafos; its menu is the shell's (${acts.length} rows: ${acts.slice(0, 4).join(' · ')} …), and Time and weather › Night chosen there sets the city's night`)
+      : fail(`city menu as actions: ${JSON.stringify({ cityBurger, acts, before, ran, after, forged })}`);
+
     // 20b. the city never plays its own story beside a foafos one. Field report, September 2026: "The tea stall
     // story ink ui seems to use its builtin ink engine": the opening flight's end, the Story button and the t key
     // all opened the city's own story panel, over the runner's story.

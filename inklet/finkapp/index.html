@@ -55,21 +55,32 @@
          window; this empty pane is what FinkWM sizes against the game in split. -->
     <div id="narrative-view" class="view active" aria-hidden="true"></div>
 
-    <!-- FinkWM chrome: the game window's controls. Lives at body level so it
-         survives every window mode; draggable by its grip, docks to a screen
-         edge, collapses to the grip alone. -->
-    <div id="wm-chrome" class="wm-hidden collapsed" role="toolbar" aria-label="Game window controls">
-        <button type="button" id="wm-handle" aria-label="Window controls" aria-expanded="false">▦</button>
-        <!-- Which pane do these buttons act on? In split there are two,
-             and a floating toolbar answers that for nobody. The chip
-             names its target; the pane it governs gets an accent edge. -->
-        <span id="wm-target" aria-hidden="true"></span>
-        <div id="wm-buttons">
-            <button type="button" id="wm-full" title="Full screen" aria-label="Full screen" aria-pressed="false">▣</button>
-            <button type="button" id="wm-split" title="Split with story" aria-label="Split with story" aria-pressed="false">◫</button>
-            <button type="button" id="wm-pip" title="Picture-in-picture" aria-label="Picture-in-picture" aria-pressed="false">◰</button>
-            <button type="button" id="minigame-pause" title="Pause" aria-label="Pause game" aria-pressed="false">⏸</button>
-            <button type="button" id="returnToStory" title="Exit minigame" aria-label="Exit minigame">✕</button>
+    <!-- FinkWM chrome: ONE window menu for the game window (owner,
+         September 2026: "the window manager buttons should all be hidden
+         behind a single os-mediated structure which might show as hamburger
+         menu"). The ☰ button opens a panel of labelled rows: how the window
+         sits, pause, the on-screen controls, the app's own actions (its
+         actions registry, spec §5.9), and exit. Draggable by the ☰, docks
+         to a screen edge. A disclosure (button + panel of buttons), not an
+         ARIA menu: every row is an ordinary button, reachable by Tab. -->
+    <div id="wm-chrome" class="wm-hidden collapsed" role="group" aria-label="Game window">
+        <button type="button" id="wm-handle" aria-label="Window menu" aria-expanded="false" aria-controls="wm-buttons">☰</button>
+        <div id="wm-buttons" role="group" aria-label="Window menu">
+            <!-- Which pane does this menu act on? In split there are two;
+                 the title names it, and the pane it governs gets an edge. -->
+            <span id="wm-target" aria-hidden="true"></span>
+            <div class="wm-sect" role="group" aria-label="Window">
+                <button type="button" id="wm-full" aria-pressed="false"><span class="wm-ico" aria-hidden="true">▣</span><span class="wm-label">Full screen</span></button>
+                <button type="button" id="wm-split" aria-pressed="false"><span class="wm-ico" aria-hidden="true">◫</span><span class="wm-label">Split with story</span></button>
+                <button type="button" id="wm-pip" aria-pressed="false"><span class="wm-ico" aria-hidden="true">◰</span><span class="wm-label">Picture-in-picture</span></button>
+                <button type="button" id="wm-swap" hidden><span class="wm-ico" aria-hidden="true">⇅</span><span class="wm-label">Swap the panes</span></button>
+                <button type="button" id="minigame-pause" aria-pressed="false"><span class="wm-ico" aria-hidden="true">⏸</span><span class="wm-label">Pause</span></button>
+            </div>
+            <div class="wm-sect" id="wm-pad-sect" role="group" aria-label="On-screen controls" hidden></div>
+            <div class="wm-sect" id="wm-app-sect" role="group" hidden></div>
+            <div class="wm-sect">
+                <button type="button" id="returnToStory"><span class="wm-ico" aria-hidden="true">✕</span><span class="wm-label">Exit the game</span></button>
+            </div>
         </div>
     </div>
 

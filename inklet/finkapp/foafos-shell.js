@@ -1319,6 +1319,20 @@ function buildPad() {
     .bindStick(pad.querySelector('.foaf-stick-r'), 'r')
     .attachKeyboard().attachGamepads();
 
+  // Faint or hidden until touched: a touch brings the pad up at once, and
+  // it goes back 2.5 s after the last finger lifts.
+  let idleTimer = null;
+  pad.addEventListener('pointerdown', () => {
+    clearTimeout(idleTimer);
+    pad.classList.add('touched');
+  });
+  const lift = () => {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => pad.classList.remove('touched'), 2500);
+  };
+  window.addEventListener('pointerup', lift);
+  window.addEventListener('pointercancel', lift);
+
   // A real gamepad retires the on-screen pad (and brings it back).
   bus.subscribe('input.gamepad', () => refreshPad());
   bus.subscribe('minigame.start', () => refreshPad());
@@ -1328,21 +1342,53 @@ function buildPad() {
   return pad;
 }
 
-function refreshPad() {
-  const pad = document.getElementById('foaf-pad');
-  if (!pad) return;
+// The reader's choice for the on-screen pad, per device (owner, September
+// 2026: "gamepads … more translucent when unused and … disable-able or
+// made hidden unless used"). Chosen in the window menu (fink-wm.js).
+//   show    always at full strength
+//   faint   faint until touched (the default)
+//   hidden  invisible until touched; it still takes touches where it sits
+//   off     not there at all: keyboard, gamepad or the game's own touch
+const PAD_KEY = 'foafos.pad.mode';
+const PAD_MODES = ['show', 'faint', 'hidden', 'off'];
+function padMode() {
+  try { const m = localStorage.getItem(PAD_KEY); if (PAD_MODES.includes(m)) return m; } catch (e) { /* private mode */ }
+  return 'faint';
+}
+// Does the on-screen pad apply to what is playing now, whatever its mode?
+function padApplies() {
   const mg = window.FinkMinigames;
   // A guest that never answered the conformance probe (spec §5.1.2) has
   // had the input service retracted: it is doing its own thing, and a
   // second pad on top of its own is the bug we are avoiding.
   const retracted = !!mg?.windowInstance?.inputRetracted;
   const wantsPad = mg?.active && mg.currentControls && mg.currentControls !== 'none' && !retracted;
-  const fullOrSplit = !window.FinkWM?.mode || window.FinkWM.mode !== 'pip';
   const hasGamepad = bus.retained('input.gamepad')[0]?.data?.connected === true;
   const coarse = window.matchMedia?.('(pointer: coarse)').matches;
-  const show = !!(wantsPad && fullOrSplit && !hasGamepad && coarse);
+  return !!(wantsPad && !hasGamepad && coarse);
+}
+FoafOS.pad = {
+  mode: () => FoafOS.pad._session || padMode(),
+  applies: padApplies,
+  setMode(m) {
+    if (!PAD_MODES.includes(m)) return;
+    try { localStorage.setItem(PAD_KEY, m); } catch (e) { /* private mode: this page only */ }
+    FoafOS.pad._session = m;
+    refreshPad();
+    bus.publish('input.pad', { mode: m, summary: `on-screen controls: ${m}` }, { retain: true });
+  },
+};
+
+function refreshPad() {
+  const pad = document.getElementById('foaf-pad');
+  if (!pad) return;
+  const mg = window.FinkMinigames;
+  const fullOrSplit = !window.FinkWM?.mode || window.FinkWM.mode !== 'pip';
+  const mode = FoafOS.pad._session || padMode();
+  const show = !!(padApplies() && fullOrSplit && mode !== 'off');
   if (!show) input.releaseAll();
   pad.hidden = !show;
+  pad.dataset.mode = mode;
   pad.classList.toggle('act-hidden', mg?.currentControls === 'lite');
   // `controls: 'sticks'` (a guest that steers in 3D): two analog sticks
   // in place of the d-pad and the buttons

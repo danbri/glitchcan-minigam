@@ -249,6 +249,12 @@ body.foaf-pad-on #foafos-dock {
     pointer-events: none;   /* only the buttons take input */
 }
 #foaf-pad[hidden] { display: none; }
+/* Faint or hidden until touched (the window menu sets data-mode). Only the
+   look changes: the controls still sit where they are and take touches. */
+#foaf-pad > * { transition: opacity 0.35s ease; }
+#foaf-pad[data-mode="faint"]:not(.touched) > * { opacity: 0.28; }
+#foaf-pad[data-mode="hidden"]:not(.touched) > * { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { #foaf-pad > * { transition: none; } }
 
 /* One joystick surface with painted arrows — thumb position steers,
    diagonals included, and sliding re-aims without lifting off. */

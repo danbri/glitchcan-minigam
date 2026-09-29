@@ -375,6 +375,26 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
 
 ## Window manager (FinkWM)
 
+**September 2026: the toolbar is ONE ☰ window menu** (spec §5.9). The old
+round-button toolbar (▣ ◫ ◰ ⏸ ✕, opening expanded, auto-collapsing) is
+now a ☰ that opens a panel of labelled rows: window modes, swap, pause,
+the pad's mode (`FoafOS.pad`: show / faint / hidden / off, per device),
+the app's own actions (SDK `setActions` / `onAction`), exit. The button
+ids are unchanged (`#wm-full`, `#minigame-pause`, `#returnToStory`…), so
+handlers and tests kept working; `_setCollapsed(false)` now means "menu
+open". Traps found building it:
+- **A tap fires a click after pointerup, with `detail` 0 on some touch
+  paths**, so `detail === 0` cannot mean "keyboard". The keyboard path is
+  a click with no pointer toggle in the last 600 ms (`_pointerToggledAt`).
+  The first version opened on the tap and closed on its own click.
+- **A skin's `button` rule painted some rows white.** The rows need
+  `#wm-chrome #wm-buttons button` (two ids) to hold their look.
+- **In split, ☰ goes to the top of the GAME's pane** (`_placeChrome`), not
+  the screen top, where it covered the story window's ⧉ ✕. Then it sat on
+  the game pane's name label, so that label moved left (`right: 60px`).
+- The panel is `position:absolute` under ☰ and opens upward when there is
+  much more room above (`menu-up`), so ☰ never moves when it opens.
+
 - `fink-wm.js` is the single owner of game-window geometry (spec §5.1):
   modes full/split/pip, pause orthogonal. The chrome (`#wm-chrome`) is
   draggable, edge-docking (persisted at `fink.wm.dock`), collapsible to
