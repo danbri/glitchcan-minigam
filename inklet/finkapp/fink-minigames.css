@@ -158,6 +158,49 @@ body[data-wm-mode="split"] #minigame-view.state-split {
     min-height: 0;
 }
 
+/* The split grip (FinkWM._initSplitGrip): the seam between the story and
+   the game. Drag to resize; hold or focus it for Swap. It sits INSIDE the
+   stage, on the edge that meets the story: half over the story it was
+   under the foafos story window, and raising the stage above the windows
+   would cover every other open app. */
+.wm-split-grip { display: none; }
+#minigame-view.state-split .wm-split-grip {
+    display: flex;
+    position: absolute;
+    left: 0; right: 0;
+    top: 0;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    gap: .75rem;
+    z-index: 5;
+    touch-action: none;
+    cursor: row-resize;
+}
+#minigame-view.state-split.wm-swapped { order: -1; }
+#minigame-view.state-split.wm-swapped .wm-split-grip { top: auto; bottom: 0; }
+.wm-split-pill {
+    width: 64px;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--zx-cyan, #6cf);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, .6);
+}
+.wm-split-grip:focus-visible { outline: none; }
+.wm-split-grip:focus-visible .wm-split-pill { box-shadow: 0 0 0 3px #fff; }
+.wm-split-swap {
+    min-height: 32px;
+    padding: 0 .9rem;
+    border: 1px solid var(--zx-cyan, #6cf);
+    border-radius: 16px;
+    background: #0a0a12;
+    color: #e8ecf4;
+    font: inherit;
+    font-size: .85rem;
+    cursor: pointer;
+}
+.wm-split-swap[hidden] { display: none; }
+
 /* Pip: a live viewport in the corner, not a control surface — input is
    suspended (tap restores, drag moves). */
 #minigame-view.state-pip {

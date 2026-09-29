@@ -740,6 +740,7 @@ function layoutWorld() {
 }
 for (const t of ['wm.mode', 'wm.settled', 'wm.close', 'story.world']) bus.subscribe(t, () => layoutWorld());
 window.addEventListener('resize', () => layoutWorld());
+window.addEventListener('fink-wm-layout', () => layoutWorld());
 bus.subscribe('app.close', (e) => {
   const closed = e.data?.closed || [];
   for (const [runnerId, w] of storyWorlds) {

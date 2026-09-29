@@ -261,8 +261,18 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   the reader could not reach the mode). A world opens split on a phone,
   full on a desktop; after that the mode is the reader's. A fixed "city on
   top, story below" rule came first and was taken out: do not bring back a
-  placement the reader cannot change. Drift City is the first world (the
-  drift-city skill); e2e-drift §15-24.
+  placement the reader cannot change. **Split is the reader's too**
+  (owner: "A grippy for resizing split or offering a swap option while
+  gripped"): FinkWM puts a grip (`role=separator`, arrow keys) on the seam;
+  holding or focusing it shows Swap (game above or below the story);
+  `fink.wm.split` keeps `{ratio, swap}` per device. The drag follows the
+  finger's movement from where it touched: the first version set the seam
+  to the finger and jumped on grab (found by e2e-wm). The grip sits INSIDE
+  the stage: half over the story it was under the story window, and
+  raising the stage above the windows would cover every other app. **Other
+  apps may be open** (owner): the world layout moves only the story
+  window that owns the world, never the rest. Drift City is the first
+  world (the drift-city skill); e2e-drift §15-24, e2e-wm "split grip".
   - **A world may re-enter the reader's scene, and nothing else** (owner's
     decision, September 2026): SDK `reenterScene`, `story:steer` on the
     world's node, and the runner allows only the knot the story's last

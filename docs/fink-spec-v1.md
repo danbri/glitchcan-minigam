@@ -875,7 +875,10 @@ The shell follows the mode: in split the story window takes the part of
 the screen the stage leaves; in full the story stands aside; in pip the
 stage floats above the story. The mode control MUST stay reachable above
 the story window. A shell MAY choose the first mode (split on a narrow
-screen); it MUST NOT fix a placement the reader cannot change.
+screen); it MUST NOT fix a placement the reader cannot change. In split
+the reader sets the share with a grip on the seam and may swap the order
+(the window manager keeps both per device). The layout moves only the
+story window that owns the world: other open apps keep their places.
 
 ### 6.3 Known v1 leaks (scheduled for v2)
 
