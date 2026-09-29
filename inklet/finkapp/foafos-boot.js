@@ -19,6 +19,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const params = new URLSearchParams(window.location.search);
     const story = window.FinkLinks?.storyFromLocation() || null;
+    // REDIRECT to the one canonical address: `?story=<path>` (plus the knot
+    // link in the hash, once the reader moves). `#story=…` and `#x.fink.js`
+    // are old forms; after this the address always says what is being read.
+    if (story && !params.get('story')) {
+        params.set('story', story);
+        const qs = params.toString().replace(/%2F/gi, '/');
+        history.replaceState(history.state, '', `${location.pathname}?${qs}`);
+    }
     const rootBoot = window.FoafOS?.root?.boot;
     if (!story && rootBoot && rootBoot.story === false) {
         setTimeout(() => { for (const id of (rootBoot.apps || [])) window.FoafOS.launchApp(id); }, 100);

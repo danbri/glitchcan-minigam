@@ -839,6 +839,54 @@ try {
     }
   }
 
+  // ── 11b. BACK AND FORWARD across stories ─────────────────────────────
+  // Owner, September 2026: "consider browser history api for meaningful use
+  // of back button". Each knot reached is a history entry; the entry names
+  // its story, so Back from Hampstead returns to the table of contents, and
+  // Forward goes to Hampstead again. The places the runner passes on the way
+  // must not push entries, or Forward has nowhere to go.
+  {
+    const rf = () => page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
+    const at = async () => {
+      const f = rf();
+      return f ? f.evaluate(() => ({
+        file: (window.__storyrunner.state.storyUrl || '').split('/').pop(),
+        knot: window.__storyrunner.state.knot,
+      })).catch(() => null) : null;
+    };
+    const until = async (file, knot) => {
+      for (let i = 0; i < 40; i++) {
+        const w = await at();
+        if (w && w.file === file && (!knot || w.knot === knot)) return w;
+        await page.waitForTimeout(250);
+      }
+      return at();
+    };
+    const start = await at();
+    if (!start || start.file !== 'hampstead.fink.js') fail(`history: journey did not end in Hampstead (${JSON.stringify(start)})`);
+    else {
+      const link = await page.evaluate(() => location.search + location.hash);
+      await page.goBack();
+      const b1 = await until('toc.fink.js', 'episodes_menu');
+      await page.goBack();
+      const b2 = await until('toc.fink.js', 'main_menu');
+      await page.goForward();
+      const f1 = await until('toc.fink.js', 'episodes_menu');
+      await page.goForward();
+      const f2 = await until('hampstead.fink.js');
+      const link2 = await page.evaluate(() => location.search + location.hash);
+      b1?.knot === 'episodes_menu' && b2?.knot === 'main_menu'
+        ? pass('Back walks the knots, out of Hampstead into the table of contents')
+        : fail(`Back went to ${JSON.stringify(b1)} then ${JSON.stringify(b2)}`);
+      f1?.knot === 'episodes_menu' && f2?.file === 'hampstead.fink.js'
+        ? pass('Forward returns to Hampstead: no entry was cut off')
+        : fail(`Forward went to ${JSON.stringify(f1)} then ${JSON.stringify(f2)}`);
+      link2 === link
+        ? pass('the link to a place is the same after Back and Forward')
+        : fail(`link changed: ${link} then ${link2}`);
+    }
+  }
+
   // ── 12. PEERING: two sibling sessions, both live ────────────────────
   // Its own page, because reaching the peer branch means leaving the spine
   // walk that every leg above rides on.

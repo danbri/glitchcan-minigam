@@ -1047,6 +1047,10 @@ function sampleKnot() {
 function currentKnot() { return _beatKnot; }
 
 let _lastReported = '';
+// True while a Back/Forward navigate is carried out: the places reached on
+// the way (a story's first knot, then the knot the entry names) replace the
+// current history entry, or they would cut off the Forward entries.
+let _navigating = false;
 function reportPosition(push = false) {
   if (!story || !state.storyUrl) return;
   const knot = currentKnot();
@@ -1054,7 +1058,7 @@ function reportPosition(push = false) {
   if (key === _lastReported) return;          // one report per real move
   _lastReported = key;
   state.knot = knot;
-  storyRequest('story.navigate', { op: 'position', url: state.storyUrl, knot, push })
+  storyRequest('story.navigate', { op: 'position', url: state.storyUrl, knot, push, replace: _navigating })
     .then((res) => { if (res.ok) state.link = res.link || null; });
 }
 
@@ -1723,7 +1727,29 @@ window.addEventListener('message', (e) => {
   // rewrite the address bar to where we just came from.
   if (d.event === 'navigate') {
     const hash = d.detail?.parsed?.knotHash;
-    if (hash) { _lastReported = 'suppressed'; gotoKnotHash(hash); }
+    // Back or Forward to a place in ANOTHER story (the shell wrote the entry
+    // and checked its origin). The story the reader dreamed from is surfaced
+    // into, with its saved place; any other story is opened as a link would.
+    // Compared as absolute URLs; loaded in the form the shell sent (a path),
+    // because the link hash is made from the story URL as a string.
+    const abs = (u) => { try { return bare(new URL(String(u), location.href).href); } catch { return null; } };
+    const named = d.detail?.story ? String(d.detail.story) : null;
+    const want = named ? abs(named) : null;
+    if (want && story && want !== abs(state.storyUrl) && !_awaitingGame && !IS_PEER) {
+      _lastReported = 'suppressed';
+      _navigating = true;
+      const top = _frames[_frames.length - 1];
+      const go = top && abs(top.url) === want
+        ? surface()
+        : (() => { _frames.length = 0; state.depth = 0; document.body.dataset.depth = '0'; return loadStory(named, null, 'replace'); })();
+      Promise.resolve(go)
+        .then(() => { if (hash) gotoKnotHash(hash); })
+        .finally(() => { _navigating = false; });
+    } else if (hash) {
+      _lastReported = 'suppressed';
+      _navigating = true;
+      try { gotoKnotHash(hash); } finally { _navigating = false; }
+    }
   }
   if (d.event === 'observe') noteObservation(d.detail);
 });

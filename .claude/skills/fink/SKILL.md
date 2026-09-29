@@ -169,9 +169,29 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   copied inside a linked story opens that story (a reload still restores
   the save: the runner restores when the named story is the saved one).
   NOT moved, on purpose: the beat pager and "more below" hint, the text
-  and page animations, ambient light from artwork, per-knot Back/Forward
-  history, the dev panel's swimlanes and quick-load, and parts that never
-  worked (bookmarks with no UI, share-with-state creation, MENU).
+  and page animations, ambient light from artwork, the dev panel's
+  swimlanes and quick-load, and parts that never worked (bookmarks with no
+  UI, share-with-state creation, MENU).
+- **The address and the Back button** (owner, September 2026: "Better to
+  use a redirect / Also consider browser history api for meaningful use of
+  back button"):
+  - The boot REDIRECTS: `#story=x` or `#x.fink.js` becomes `?story=x` by
+    `history.replaceState` (`foafos-boot.js`), so there is one form of the
+    address. Only the boot launch reads it (`takeBootStory`); a later
+    runner launch never does.
+  - Each knot the reader reaches is a history entry (`pushState`); more
+    beats in the same knot replace it. The entry names its story as a
+    same-origin PATH, and the url hash is made from that path too: the
+    hash is made from the URL as a string, so the runner's relative or
+    absolute form gave a second link to one place (1309d18b vs 9e2b19f9).
+  - popstate → `navigateStory(parsed, hash, story)` → the runner's
+    `navigate`: the same story goes to the knot; another story is surfaced
+    (the dream it came from) or loaded, then goes to the knot.
+  - **The trap:** the places the runner passes while it carries out Back
+    or Forward (a story's first knot, then the named knot) were reported
+    as moves and PUSHED — which cuts off every Forward entry. The runner
+    sends `replace: true` while `_navigating`; the shell then replaces.
+  - e2e-storyrunner §11b: Back twice, Forward twice, same link after.
 - Story↔minigame linkage that ALREADY exists (use before building new):
   init carries diamonds/mega_diamonds/keys/score/player_level/difficulty
   (`_getStoryVariables`); guests spend live via `set-variable`; robbin

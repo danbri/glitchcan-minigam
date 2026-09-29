@@ -1112,12 +1112,12 @@ const changedSince = (before, after) => Object.fromEntries(
 // history is global, so a hash change is not scoped to one runner.
 // Send the story runners a place to go (a link's parsed hashes). The
 // breadcrumb uses it to go to a knot; history uses it below.
-const navigateStory = (parsed, hash = null) => {
+const navigateStory = (parsed, hash = null, story = null) => {
   for (const f of document.querySelectorAll('.foafos-window iframe')) {
     if (!/apps\/storyrunner/.test(f.src || '')) continue;
     try {
       f.contentWindow?.postMessage({ type: 'story.event', event: 'navigate',
-        detail: { hash, parsed } }, '*');
+        detail: { hash, parsed, story } }, '*');
     } catch (err) { /* closed */ }
   }
 };
@@ -1127,7 +1127,16 @@ window.addEventListener('popstate', () => {
   if (_navSuppress) return;
   const frag = (location.hash || '').slice(1);
   const parsed = window.FinkLinks?.parseFinkLinkId?.(frag) || null;
-  navigateStory(parsed, frag || null);
+  // The entry may be in another story: the runner opens it, at the knot.
+  let story = null;
+  try {
+    const named = new URLSearchParams(location.search).get('story');
+    if (named) {
+      const u = new URL(named, location.href);
+      if (u.origin === location.origin) story = u.pathname;   // the form the link hash was made from
+    }
+  } catch (e) { /* no story named */ }
+  navigateStory(parsed, frag || null, story);
   bus.publish('nav.link', {
     summary: frag ? `back/forward → ${frag}` : 'back/forward → start',
     icon: '⏪', title: 'Back/Forward', detail: frag || '(start)',
@@ -2970,8 +2979,17 @@ function buildUI() {
               (async () => {
                 let linkId = null;
                 try {
-                  linkId = knot ? await nav.generateFinkLinkId(storyUrl, knot)
-                                : await nav.generateUrlHash(storyUrl);
+                  // The url hash is made from the story URL as a string, so
+                  // one story must always be named the same way: a
+                  // same-origin story by its path, whatever form the runner
+                  // loaded it by. Else Forward to a place gives a new link.
+                  let named = storyUrl;
+                  try {
+                    const su = new URL(storyUrl, location.href);
+                    if (su.origin === location.origin) named = su.pathname;
+                  } catch (e) { /* hash the string as sent */ }
+                  linkId = knot ? await nav.generateFinkLinkId(named, knot)
+                                : await nav.generateUrlHash(named);
                   // replaceState, not a hash assignment: a beat is not a
                   // history entry, or Back would walk the reader backwards
                   // one sentence at a time. Explicit `push` asks for one.
@@ -2987,8 +3005,16 @@ function buildUI() {
                   } catch (e) { /* keep the address's own story */ }
                   const qs = q.toString().replace(/%2F/gi, '/');   // a path reads as one
                   const to = `${location.pathname}${qs ? `?${qs}` : ''}#${linkId}`;
-                  if (d.detail?.push) history.pushState({ fink: linkId }, '', to);
-                  else history.replaceState({ fink: linkId }, '', to);
+                  // BACK MEANS SOMETHING: each knot the reader reaches is a
+                  // history entry; more beats in the same knot replace it.
+                  // While the runner carries out Back or Forward it sends
+                  // `replace`: the places it passes on the way must not
+                  // push, or the Forward entries would be cut off.
+                  const here = (location.hash || '').slice(1);
+                  const move = !d.detail?.replace && (d.detail?.push || (here && here !== linkId));
+                  const entry = { fink: linkId, story: q.get('story') || null };
+                  if (move) history.pushState(entry, '', to);
+                  else history.replaceState(entry, '', to);
                 } catch (e) { /* crypto unavailable — the story still plays */ }
                 // The breadcrumb is shell furniture and reads nav.* facts;
                 // the runner may not publish those topics, so translate.
