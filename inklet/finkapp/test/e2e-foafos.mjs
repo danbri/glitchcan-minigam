@@ -85,8 +85,13 @@ try {
     ? pass(`bus carried ${topics.length} events incl. story.request(story.launch robbin)/minigame.start/wm.*`)
     : fail(`missing platform events: ${JSON.stringify({ launchReq, topics })}`);
 
-  // 3. drawer: feed rendered cards, shelf lists the game window
-  await page.click('#foafos-dock');
+  // 3. drawer: feed rendered cards, shelf lists the game window. With a game
+  // open the ⊞ dock steps aside and the window menu is the way in (spec §5.9).
+  const dockGone = await page.evaluate(() => getComputedStyle(document.getElementById('foafos-dock')).display === 'none');
+  dockGone ? pass('with a game open the ⊞ dock steps aside for the window menu')
+           : fail('the ⊞ dock is still on screen over a game');
+  await page.evaluate(() => FinkWM._setCollapsed(false));
+  await page.click('#wm-sys-shell');
   await page.waitForTimeout(400);
   const drawer = await page.evaluate(() => ({
     open: document.getElementById('foafos-drawer').classList.contains('open'),

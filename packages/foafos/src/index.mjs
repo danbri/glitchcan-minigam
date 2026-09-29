@@ -15,7 +15,7 @@ export {
   createSession, sealSession, openSession,
   saveSealed, loadSealed, clearSealed, SESSION_KEY,
 } from './session.mjs';
-export { WidgetRegistry, widgets, defineBaseCards } from './widgets.mjs';
+export { WidgetRegistry, widgets, defineBaseCards, defineActivityCard } from './widgets.mjs';
 export { defineFeed } from './feed.mjs';
 export { SseTransport, WebSocketTransport, FeedPoller } from './transports.mjs';
 export { FoafCluster } from './cluster.mjs';

@@ -34,6 +34,7 @@ canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh;
 canvas:active { cursor: grabbing; }
 .ui { position: fixed; left: 0; right: 0; bottom: 0; padding: 0 12px calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; transition: opacity .35s, transform .35s; }
 .ui.hidden { opacity: 0; transform: translateY(12px); }
+.ui[hidden] { display: none; }
 .ui.hidden .bar, .ui.hidden .status { pointer-events: none; }
 .status { display: flex; gap: 14px; font: inherit; font-size: 13px; letter-spacing: .02em; color: var(--ink-dim); text-shadow: 0 1px 8px rgba(0,0,0,.7); background: none; border: 0; padding: 4px 8px; border-radius: 8px; cursor: pointer; pointer-events: auto; }
 .status:focus-visible { outline: 2px solid var(--accent); }
@@ -95,6 +96,7 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 /* talking heads (heads.js): a helmet comms feed, top left under the story bar */
 .headFeed { position: fixed; left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(84px + env(safe-area-inset-top, 0px)); z-index: 13; width: 128px; height: 168px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(160, 220, 255, 0.45); box-shadow: 0 0 calc(6px + 14px * var(--lvl, 0)) rgba(120, 200, 255, 0.35); background: #05080b; pointer-events: none; animation: headIn 0.3s ease-out, headFlick 7s steps(1) infinite; }
 .headFeed[hidden] { display: none; }
+.headFeed.hostOff { left: -10000px !important; top: 0 !important; }
 .headFeed.inTale { position: relative; left: auto; top: auto; float: right; width: 104px; height: 136px; margin: 4px 0 6px 10px; }
 .headFeed.inTale .headName { font-size: 9px; bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .headFeed.inTale .headCredit { font-size: 6px; left: 4px; right: 2px; bottom: 3px; letter-spacing: -0.02em; }
@@ -116,6 +118,9 @@ body.uiHidden .climb, .climb[hidden] { opacity: 0; pointer-events: none; }
 .benchCard button { font: inherit; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid var(--edge); border-radius: 10px; min-height: 44px; padding: 6px 14px; margin-right: 8px; cursor: pointer; }
 .guideCap .guideText { flex: 1; }
 .pickRing.go { animation: pickGo 2.4s ease-out forwards; }
+/* the selection, followed in the view (pickMarkFrame): a ring on the picked thing until it is cleared */
+.pickMark { position: fixed; z-index: 12; pointer-events: none; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid #7fe3ff; box-shadow: 0 0 10px rgba(127, 227, 255, .8), inset 0 0 10px rgba(127, 227, 255, .5); }
+.pickMark[hidden] { display: none; }
 @keyframes pickGo { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } }
 .mapHead { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin: 0 2px 6px; }
 .mapClose { font: inherit; font-size: 18px; color: var(--ink); background: rgba(255,255,255,.06); border: 1px solid var(--edge); border-radius: 10px; width: 40px; height: 36px; cursor: pointer; }

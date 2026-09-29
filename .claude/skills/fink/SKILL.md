@@ -375,6 +375,15 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
 
 ## Window manager (FinkWM)
 
+**September 2026: activity stream, readout and selection** (spec §5.10,
+§5.11): SDK `post` / `postFrame` / `endLive`, `setStatus`, `select` /
+`onDeselect`; shell `FoafOS.postActivity`, `activityFrame`, `appStatus`,
+`showSelection`. While a game window is open the ⊞ dock steps aside
+(`body[data-wm-mode] #foafos-dock`) and the window menu carries All
+apps, Task Manager, All windows and the drawer. On phones the story
+window has no ⧉ ✕ chip. The breadcrumb is offered but starts off
+(`chromeOff` in the root).
+
 **September 2026: the toolbar is ONE ☰ window menu** (spec §5.9). The old
 round-button toolbar (▣ ◫ ◰ ⏸ ✕, opening expanded, auto-collapsing) is
 now a ☰ that opens a panel of labelled rows: window modes, swap, pause,

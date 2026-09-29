@@ -11,7 +11,7 @@ import {
   FoafBus,
   createSession, sealSession, openSession,
   saveSealed, loadSealed, clearSealed,
-  widgets, defineBaseCards, defineFeed,
+  widgets, defineBaseCards, defineActivityCard, defineFeed,
   SseTransport, WebSocketTransport, FeedPoller,
   FoafCluster, defineGuest, defineTable, defineTree,
   FoafInput, ACTION_KEYS, FoafVars, FoafAudio, FoafStore, FoafSecrets, localBackend, AppTree,
@@ -22,6 +22,7 @@ import { resolveRoot, rootOffers, ROOTS } from './foafos-root.js';
 window.__foafAppRegistry = APPS;   // the service inventory counts holders from this
 
 defineBaseCards();
+defineActivityCard();
 defineFeed();
 defineGuest();
 defineTable();
@@ -495,8 +496,9 @@ function unmountChrome(id) {
 
 /** Boot the furniture this installation asked for; park the rest. */
 function initChrome() {
+  const off = new Set(ROOT.chromeOff || []);
   for (const app of chromeApps()) {
-    if (rootOffers(ROOT, app.id)) mountChrome(app);
+    if (rootOffers(ROOT, app.id) && !off.has(app.id)) mountChrome(app);
     else parkChrome(app);
   }
 }
@@ -1399,6 +1401,183 @@ function refreshPad() {
 }
 FoafOS.refreshPad = refreshPad;
 
+// ── the activity stream (spec §5.10) ─────────────────────────────────────
+// Owner, September 2026: talking heads were "icons within world view.
+// Promote them into foafos, maybe a generic Activity Stream like
+// Facebook / FriendFeed had". An app posts who said or did what; the shell
+// publishes it as `activity.<app>` (the drawer's feed keeps the history,
+// as foaf-activity cards) and shows the newest two over the app's pane for
+// a few seconds. A tap on one opens the history.
+const ACTIVITY_IMAGE_MAX = 120000;            // a data: URL, a small face
+const activityStrip = document.createElement('div');
+activityStrip.id = 'foafos-activity';
+activityStrip.setAttribute('role', 'log');
+activityStrip.setAttribute('aria-live', 'polite');
+activityStrip.setAttribute('aria-label', 'Activity');
+document.body.appendChild(activityStrip);
+function placeActivity() {
+  const view = document.getElementById('minigame-view');
+  const r = window.FinkWM?.active && view ? view.getBoundingClientRect() : null;
+  activityStrip.style.top = `${Math.round((r ? r.top : 0) + 8)}px`;
+  activityStrip.style.left = `${Math.round((r ? r.left : 0) + 8)}px`;
+}
+for (const t of ['wm.mode', 'wm.settled', 'wm.close']) bus.subscribe(t, placeActivity);
+FoafOS.postActivity = (appId, item, appName = null) => {
+  if (!item || typeof item !== 'object') return null;
+  const who = String(item.who || appName || appId).slice(0, 60);
+  const text = String(item.text || '').slice(0, 400);
+  if (!text && !item.image) return null;
+  const img = typeof item.image === 'string' && /^data:image\/(png|jpeg|webp);base64,/.test(item.image)
+    && item.image.length <= ACTIVITY_IMAGE_MAX ? item.image : null;
+  const live = !!item.live && !img;
+  const data = { summary: `${who}: ${text}`, who, text, app: appName || appId, image: img, live,
+                 verb: item.verb ? String(item.verb).slice(0, 30) : null };
+  // A live item (a face that speaks) reaches the feed when it ENDS, with its
+  // last frame as the still; until then only the card on screen shows it.
+  if (live) endLive(appId);
+  else bus.publish(`activity.${appId}`, data);
+  const card = widgets.materialize({ topic: `activity.${appId}`, data, ts: Date.now() });
+  if (live) card.setAttribute('live', '');
+  const box = document.createElement('button');
+  box.type = 'button';
+  box.className = 'foafos-activity-item';
+  box.setAttribute('aria-label', `${who}: ${text}. Open the activity history`);
+  box.appendChild(card);
+  box.addEventListener('click', () => {
+    FoafOS.openDrawer?.(true);
+    document.getElementById('foafos-feed-wrap')?.scrollIntoView({ block: 'start' });
+  });
+  placeActivity();
+  activityStrip.prepend(box);
+  // a short pane has room for one card and the selection, not two
+  const paneH = window.FinkWM?.active ? document.getElementById('minigame-view')?.getBoundingClientRect().height || 0 : window.innerHeight;
+  const keep = paneH < 460 ? 1 : 2;
+  while (activityStrip.children.length > keep) activityStrip.lastChild.remove();
+  if (live) {
+    liveItems.set(appId, { data, box, canvas: card.liveCanvas, frames: 0,
+      timer: setTimeout(() => endLive(appId), 30000) });          // a line that never says it ended
+  } else fadeActivity(box, 7000);
+  return data;
+};
+const liveItems = new Map();                   // appId → the live item on screen
+function fadeActivity(box, ms) {
+  setTimeout(() => box.classList.add('fading'), ms);
+  setTimeout(() => box.remove(), ms + 600);
+}
+function endLive(appId) {
+  const L = liveItems.get(appId);
+  if (!L) return;
+  liveItems.delete(appId);
+  clearTimeout(L.timer);
+  let still = null;
+  try { if (L.frames && L.canvas) still = L.canvas.toDataURL('image/jpeg', 0.82); } catch (e) { /* tainted or gone */ }
+  bus.publish(`activity.${appId}`, { ...L.data, live: false, image: still && still.length <= ACTIVITY_IMAGE_MAX ? still : null });
+  fadeActivity(L.box, 4000);
+}
+// A frame for the app's live item: drawn into its card, cover-cropped.
+FoafOS.activityFrame = (appId, bitmap, end) => {
+  if (end) { endLive(appId); return; }
+  const L = liveItems.get(appId);
+  if (!L || !L.canvas || !bitmap || typeof bitmap.width !== 'number') { try { bitmap?.close?.(); } catch (e) { /* not a bitmap */ } return; }
+  const c = L.canvas, ctx = c.getContext('2d');
+  const s = Math.max(c.width / bitmap.width, c.height / bitmap.height);
+  const w = bitmap.width * s, h = bitmap.height * s;
+  ctx.drawImage(bitmap, (c.width - w) / 2, (c.height - h) / 2, w, h);
+  bitmap.close?.();
+  L.frames++;
+};
+
+// An app's own readout (spec §5.10): what the city printed along the bottom
+// of its view ("Autopilot · Neon strip · 115 m"). Published where the
+// menubar already reads app readouts, `app.<id>.status` {items}, and shown
+// under the title of the window menu.
+FoafOS.appStatus = (appId, items) => {
+  const list = (Array.isArray(items) ? items : [{ id: 'status', value: String(items ?? '') }])
+    .slice(0, 6).map((it, i) => ({ id: String(it?.id ?? i), label: it?.label ? String(it.label).slice(0, 30) : '',
+      value: String(it?.value ?? '').slice(0, 60), icon: it?.icon ? String(it.icon).slice(0, 4) : '' }))
+    .filter((it) => it.value);
+  bus.publish(`app.${appId}.status`, { summary: list.map((it) => it.value).join(' · '), items: list }, { retain: true });
+  return list;
+};
+
+// ── the selection (spec §5.11) ───────────────────────────────────────────
+// Owner, September 2026: "an object picker so clicking in the world gives
+// us a building, person or entity to feed into other lookups/actions or
+// visually highlight … something for fly to vs walk to". The app decides
+// what was picked and draws its own highlight; the shell shows the pick
+// with the app's actions for it, and publishes it (`app.<id>.selection`,
+// retained) so any other app with the topic can look it up.
+const KIND_ICON = { building: '🏢', person: '🧍', place: '📍', vehicle: '🚡', thing: '✦', room: '🚪' };
+const selectionCard = document.createElement('div');
+selectionCard.id = 'foafos-selection';
+selectionCard.setAttribute('role', 'region');
+selectionCard.setAttribute('aria-label', 'Selected');
+selectionCard.hidden = true;
+document.body.appendChild(selectionCard);
+function placeSelection() {
+  const view = document.getElementById('minigame-view');
+  const r = window.FinkWM?.active && view ? view.getBoundingClientRect() : null;
+  const padUp = document.body.classList.contains('foaf-pad-on');
+  const bottom = r ? Math.max(0, window.innerHeight - r.bottom) : 0;
+  selectionCard.style.bottom = `${Math.round(bottom + (padUp ? 150 : 12))}px`;
+}
+for (const t of ['wm.mode', 'wm.settled', 'wm.close']) bus.subscribe(t, placeSelection);
+bus.subscribe('wm.close', () => { selectionCard.hidden = true; });   // the app that picked it is gone
+FoafOS.showSelection = (appId, entity, run) => {
+  selectionCard.textContent = '';
+  if (!entity) {
+    selectionCard.hidden = true;
+    bus.publish(`app.${appId}.selection`, { summary: 'nothing selected', entity: null }, { retain: true });
+    return null;
+  }
+  const e = {
+    id: String(entity.id || '').slice(0, 120), kind: String(entity.kind || 'thing').slice(0, 20),
+    name: String(entity.name || '').slice(0, 80), detail: entity.detail ? String(entity.detail).slice(0, 80) : '',
+    where: entity.where && typeof entity.where === 'object' ? JSON.parse(JSON.stringify(entity.where)) : null,
+    actions: (Array.isArray(entity.actions) ? entity.actions : []).slice(0, 6)
+      .map((a) => ({ id: String(a?.id || ''), label: String(a?.label || '').slice(0, 30) })).filter((a) => a.id && a.label),
+  };
+  if (!e.id || !e.name) return null;
+  const head = document.createElement('div');
+  head.className = 'sel-head';
+  const icon = document.createElement('span');
+  icon.className = 'sel-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = KIND_ICON[e.kind] || KIND_ICON.thing;
+  const txt = document.createElement('div');
+  txt.className = 'sel-text';
+  const nm = document.createElement('div');
+  nm.className = 'sel-name';
+  nm.textContent = e.name;
+  const dt = document.createElement('div');
+  dt.className = 'sel-detail';
+  dt.textContent = [e.kind, e.detail].filter(Boolean).join(' · ');
+  txt.append(nm, dt);
+  const x = document.createElement('button');
+  x.type = 'button';
+  x.className = 'sel-close';
+  x.textContent = '✕';
+  x.setAttribute('aria-label', `Clear the selection: ${e.name}`);
+  x.addEventListener('click', () => run('deselect'));
+  head.append(icon, txt, x);
+  const acts = document.createElement('div');
+  acts.className = 'sel-actions';
+  for (const a of e.actions) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = a.label;
+    b.dataset.action = a.id;
+    b.addEventListener('click', () => run('action', a.id));
+    acts.appendChild(b);
+  }
+  selectionCard.append(head, acts);
+  selectionCard.setAttribute('aria-label', `Selected ${e.kind}: ${e.name}`);
+  placeSelection();
+  selectionCard.hidden = false;
+  bus.publish(`app.${appId}.selection`, { summary: `selected ${e.kind} ${e.name}`, entity: e }, { retain: true });
+  return e;
+};
+
 // ── shell UI: dock + drawer ──────────────────────────────────────────────
 
 // ── the announcer: platform EVENTS reach assistive tech ─────────────
@@ -1511,6 +1690,7 @@ function buildUI() {
       <div class="foafos-row">
         <button type="button" id="foafos-home-btn" title="All apps (Alt+H)">⊞ Apps</button>
         <button type="button" id="foafos-switch-btn" title="Task Manager: what is running (Alt+Tab)">⧉ Task Manager</button>
+        <button type="button" id="foafos-windows-btn">▭ All windows</button>
       </div>
     </section>
     <section id="foafos-caps-wrap">
@@ -1535,7 +1715,7 @@ function buildUI() {
   // sys.cluster.* and would flood the feed with plumbing. sys.guest.*
   // stays visible (denials are security-relevant).
   feed.setAttribute('topics',
-    'story.*,minigame.*,wm.*,session.*,audio.*,widget.*,net.*,sys.guest.*,nav.*');
+    'activity.*,story.*,minigame.*,wm.*,session.*,audio.*,widget.*,net.*,sys.guest.*,nav.*');
   drawer.querySelector('#foafos-feed-wrap').appendChild(feed);
 
   const setDrawer = (open) => {
@@ -1551,6 +1731,7 @@ function buildUI() {
     drawer.setAttribute('aria-hidden', String(!open));
   };
   setDrawer(false);        // start withdrawn, not merely translated away
+  FoafOS.openDrawer = (open = true) => { setDrawer(open); if (open) drawer.querySelector('#foafos-close')?.focus(); };
   dock.addEventListener('click', () => setDrawer(!drawer.classList.contains('open')));
   drawer.querySelector('#foafos-close').addEventListener('click', () => setDrawer(false));
   drawer.addEventListener('keydown', (e) => { if (e.key === 'Escape') { setDrawer(false); dock.focus(); } });
@@ -1820,6 +2001,7 @@ function buildUI() {
 
   $('#foafos-home-btn').addEventListener('click', () => { openHome(); setDrawer(false); });
   $('#foafos-switch-btn').addEventListener('click', () => { openSwitcher(); setDrawer(false); });
+  $('#foafos-windows-btn').addEventListener('click', () => { setDrawer(false); FoafOS.enterOverview?.(); });
 
   bus.subscribe('wm.*', renderShelf);
   bus.subscribe('minigame.*', renderShelf);

@@ -69,6 +69,7 @@
             <!-- Which pane does this menu act on? In split there are two;
                  the title names it, and the pane it governs gets an edge. -->
             <span id="wm-target" aria-hidden="true"></span>
+            <span id="wm-status" role="status" hidden></span>
             <div class="wm-sect" role="group" aria-label="Window">
                 <button type="button" id="wm-full" aria-pressed="false"><span class="wm-ico" aria-hidden="true">▣</span><span class="wm-label">Full screen</span></button>
                 <button type="button" id="wm-split" aria-pressed="false"><span class="wm-ico" aria-hidden="true">◫</span><span class="wm-label">Split with story</span></button>
@@ -78,6 +79,15 @@
             </div>
             <div class="wm-sect" id="wm-pad-sect" role="group" aria-label="On-screen controls" hidden></div>
             <div class="wm-sect" id="wm-app-sect" role="group" hidden></div>
+            <!-- The system's own rows. While a game is open the ⊞ dock steps
+                 aside (owner: "other bits of random ui on screen"), so this
+                 menu is the one way to the rest of foafos. -->
+            <div class="wm-sect" id="wm-sys-sect" role="group" aria-label="foafos">
+                <button type="button" id="wm-sys-apps"><span class="wm-ico" aria-hidden="true">⊞</span><span class="wm-label">All apps</span></button>
+                <button type="button" id="wm-sys-tasks"><span class="wm-ico" aria-hidden="true">⧉</span><span class="wm-label">Task Manager</span></button>
+                <button type="button" id="wm-sys-windows"><span class="wm-ico" aria-hidden="true">▭</span><span class="wm-label">All windows</span></button>
+                <button type="button" id="wm-sys-shell"><span class="wm-ico" aria-hidden="true">⚙</span><span class="wm-label">Sound, look and session</span></button>
+            </div>
             <div class="wm-sect">
                 <button type="button" id="returnToStory"><span class="wm-ico" aria-hidden="true">✕</span><span class="wm-label">Exit the game</span></button>
             </div>

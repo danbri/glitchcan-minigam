@@ -65,7 +65,12 @@ if (typeof window !== "undefined" && window.parent !== window && typeof Minigame
   // same rows go to the shell as actions, and the shell's one window menu draws them (hostMenuPublish below).
   const burger = document.getElementById("bMenu");
   if (burger) burger.hidden = true;
-  sdk.onAction((id) => hostMenuRun(id));
+  // Nothing of the city's own over its view in foafos: the readout goes to the shell (hostStatus), the talking
+  // heads to its activity stream (headSay in heads.js), a pick to its selection (pick.js).
+  const ui = document.getElementById("ui");
+  if (ui) ui.hidden = true;
+  sdk.onAction((id) => (String(id).startsWith("pick:") ? hostPickAction(id) : hostMenuRun(id)));
+  sdk.onDeselect(() => pickMarkSet(null));
   setInterval(hostMenuPublish, 1000);
   if (/[?&]world=1(&|$)/.test(location.search)) {
     H.world = true;
@@ -115,4 +120,58 @@ function hostMenuRun(id) {
   if (act) { try { act(); } catch (e) { /* a row whose state moved on */ } }
   HOST_MENU.sent = "";
   setTimeout(hostMenuPublish, 60);        // checks and labels follow at once
+}
+
+// ---------- the readout and the activity stream, in the shell (spec §5.10) ----------
+// The readout the page draws along the bottom of its view goes to the shell instead: its parts, and where the
+// camera is on Titan (IAU_2015:60600, titanWhere in titan.js) to about 100 m. Sent only when it changes.
+const HOST_STATUS = { sent: "" };
+function hostStatus(parts) {
+  const H = hostState();
+  if (!H.sdk || !H.sdk.setStatus) return;
+  const w = titanWhere();
+  const at = Math.abs(w.lat).toFixed(3) + "°" + (w.lat >= 0 ? "N" : "S") + " " + Math.abs(w.lon).toFixed(3) + "°" + (w.lon >= 0 ? "E" : "W");
+  const items = [];
+  if (parts[0]) items.push({ id: "mode", value: parts[0] });
+  if (parts[1]) items.push({ id: "where", value: parts[1] });
+  if (parts[2]) items.push({ id: "far", value: parts[2] });
+  items.push({ id: "at", label: "Titan", value: at });
+  const json = JSON.stringify(items);
+  if (json === HOST_STATUS.sent) return;
+  HOST_STATUS.sent = json;
+  H.sdk.setStatus(items);
+}
+// Who speaks, for the shell's activity stream: the cast member's name and the line, and, for a face, its frames.
+function hostPost(who, text, live) {
+  const H = hostState();
+  if (H.on && H.sdk && H.sdk.post) H.sdk.post({ who, text, verb: "says", live: !!live });
+  H.liveAt = 0;
+}
+// A frame of the talking head, copied from its canvas right after it is drawn (a WebGL canvas keeps no picture after
+// the frame) and transferred, not copied again, to the shell: about 15 a second.
+function hostHeadFrame(cv, now) {
+  const H = hostState();
+  if (!H.sdk || !H.sdk.postFrame || !cv || !cv.width || typeof createImageBitmap !== "function") return;
+  if (H.liveAt && now - H.liveAt < 66) return;
+  H.liveAt = now;
+  createImageBitmap(cv, { resizeWidth: 96, resizeHeight: Math.round(96 * cv.height / cv.width), resizeQuality: "medium" })
+    .then((b) => H.sdk.postFrame(b)).catch(() => {});
+}
+function hostEndLive() { const H = hostState(); if (H.sdk && H.sdk.endLive) H.sdk.endLive(); }
+
+// ---------- the selection, in the shell (spec §5.11) ----------
+function hostSelect(S) {
+  const H = hostState();
+  if (!H.sdk || !H.sdk.select) return;
+  pickMarkSet(S || null);
+  H.sdk.select(S ? pickEntity(S) : null);
+}
+function hostPickAction(id) {
+  const S = PICK.sel;
+  if (!S) return;
+  if (id === "pick:fly") pickLaunch(S, true);
+  else if (id === "pick:walk") {
+    const V = NAV.mode === "visit" && NAV.visit ? NAV.visit : null;
+    if (V && !visitWalkTo(V, S.x, S.z)) showHint("You are there.", 1500);
+  } else if (id === "pick:map") mapOpen();
 }

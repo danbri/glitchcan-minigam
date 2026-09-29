@@ -283,6 +283,67 @@ class MinigameSDK {
     }
 
     /**
+     * Post to the shell's activity stream (spec §5.10): who said or did
+     * what. The shell shows the newest over this app's pane for a few
+     * seconds and keeps the history in its feed.
+     * @param {{who: string, text: string, image?: string, verb?: string}} item
+     *   image: a small data:image/(png|jpeg|webp) URL, ≤ 120 kB (a face)
+     */
+    post(item) {
+        this._sendMessage({ type: 'activity', item: item || {} });
+        return this;
+    }
+
+    /**
+     * A live picture for the last item posted with `live: true` (a face
+     * that speaks). The bitmap is transferred, not copied: do not use it
+     * after. About 15 a second is enough; the shell draws the latest.
+     * @param {ImageBitmap} bitmap
+     */
+    postFrame(bitmap) {
+        if (window.parent === window || !bitmap) return this;
+        window.parent.postMessage({ type: 'activity-frame', bitmap }, '*', [bitmap]);
+        return this;
+    }
+
+    /** The live item ended (the line finished): the shell keeps its last frame as a still. */
+    endLive() {
+        this._sendMessage({ type: 'activity-frame', end: true });
+        return this;
+    }
+
+    /**
+     * This app's readout, shown by the shell instead of over the view
+     * (spec §5.10). A string, or [{id, label?, value, icon?}] (≤ 6).
+     * Send again when it changes; the shell keeps the last one.
+     */
+    setStatus(items) {
+        this._sendMessage({ type: 'status', items });
+        return this;
+    }
+
+    /**
+     * What the reader picked in this app's view (spec §5.11): a building,
+     * a person, a place, a thing. The shell shows it with its actions,
+     * and publishes it so other apps can look it up. null clears it.
+     * @param {{id: string, kind: string, name: string, detail?: string,
+     *   where?: object, actions?: Array<{id: string, label: string}>}|null} entity
+     */
+    select(entity) {
+        this._sendMessage({ type: 'selection', entity: entity || null });
+        return this;
+    }
+
+    /**
+     * The reader dismissed the selection in the shell.
+     * @param {Function} callback - () => void
+     */
+    onDeselect(callback) {
+        this._callbacks.deselect = callback;
+        return this;
+    }
+
+    /**
      * Hear which of the offered actions the reader chose.
      * Registering declares the `actions` contract.
      * @param {Function} callback - (id) => void
@@ -520,6 +581,10 @@ class MinigameSDK {
 
             case 'action':
                 if (this._callbacks.action) this._callbacks.action(String(data.id ?? ''));
+                break;
+
+            case 'deselect':
+                if (this._callbacks.deselect) this._callbacks.deselect();
                 break;
 
             case 'key':

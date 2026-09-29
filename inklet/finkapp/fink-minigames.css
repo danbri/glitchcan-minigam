@@ -99,6 +99,14 @@ body[data-wm-mode="full"] #wm-chrome { top: 84px; }
     white-space: nowrap;
 }
 
+#wm-status {
+    display: block;
+    padding: 0 0.55rem 0.35rem;
+    color: #cde;
+    font-size: 0.8rem;
+}
+#wm-status[hidden] { display: none; }
+
 .wm-sect {
     display: flex;
     flex-direction: column;

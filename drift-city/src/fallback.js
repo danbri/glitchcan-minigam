@@ -642,10 +642,13 @@ function initGL(reason) {
     if (hud > 0.25) {
       hud = 0;
       const autoOn = clock - lastInput > 4.5;
-      statusEl.innerHTML = "<b>" + (autoOn ? "Autopilot" : "Steering by hand") + "</b><span>" + placeName() + "</span><span>" + st.y.toFixed(0) + " m</span>";
+      const parts = [autoOn ? "Autopilot" : "Steering by hand", placeName(), st.y.toFixed(0) + " m"];
+      if (hostOn()) hostStatus(parts);                 // in foafos the readout is the shell's (host.js)
+      else statusEl.innerHTML = "<b>" + parts[0] + "</b><span>" + parts[1] + "</span><span>" + parts[2] + "</span>";
       if (statsOn) statsEl.textContent = "WebGL fallback (" + reason + "). Frame " + ema.toFixed(1) + " ms, render " + canvas.width + " × " + canvas.height + " (" + Math.round(scale * 100) + "%), shadows " + (shadows ? "on" : "off") + ", world data " + Math.round(100 * (W.tNext + W.bNext) / (W.NT + W.NWF)) + "%";
     }
     if (typeof benchTick === "function") benchTick(dt, ema, null, scale, canvas.width, canvas.height);
+    pickMarkFrame();
     requestAnimationFrame(frame);
   }
   let frameNoGL = 0;

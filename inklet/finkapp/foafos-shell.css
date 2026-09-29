@@ -23,6 +23,10 @@
 
 /* The action buttons claim the bottom-right corner while playing; the
    dock steps aside rather than sitting under the player's thumb. */
+/* While a game window is open its ☰ window menu is the one OS control:
+   it carries All apps, Task Manager, All windows and the drawer. */
+body[data-wm-mode] #foafos-dock { display: none; }
+
 body.foaf-pad-on #foafos-dock {
     bottom: calc(200px + env(safe-area-inset-bottom));
     opacity: 0.5;
@@ -496,17 +500,12 @@ body[data-stage-mode] #wm-chrome { z-index: 2710; }
     border-radius: 0;
     resize: none;
   }
+  /* No window bar at all on a phone (owner, September 2026: "other bits
+     of random ui on screen"). Its two buttons live in the OS structures:
+     All windows and each window's close are in the ⊞ drawer, and, while
+     a game is open, in its ☰ window menu. */
   .foafos-window[data-app-id="storyrunner"] > .foafos-window-bar {
-    position: absolute;
-    top: 0; right: 0; left: auto;
-    z-index: 2;
-    background: rgba(4, 10, 20, 0.62);
-    border: 0;
-    border-radius: 0 0 0 10px;
-    padding: 0.2em 0.4em;
-  }
-  .foafos-window[data-app-id="storyrunner"] > .foafos-window-bar > span:first-child {
-    display: none;                    /* the story names itself in its prose */
+    display: none;
   }
   .foafos-window[data-app-id="storyrunner"] .foafos-window-min,
   .foafos-window[data-app-id="storyrunner"] .foafos-window-max {
@@ -1288,3 +1287,72 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
 .foafos-log-row.bad .lt { color: #f77; }
 .foafos-log-row.bad .ls { color: #fbb; }
 #foafos-log-filter { flex: 1; min-width: 0; }
+
+/* The activity stream on screen (spec §5.10): the newest two, over the
+   app's pane, fading after a few seconds. The history is in the drawer. */
+#foafos-activity {
+  position: fixed;
+  top: 8px; left: 8px;
+  z-index: 2615;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: min(22rem, calc(100vw - 80px));
+  pointer-events: none;
+}
+.foafos-activity-item {
+  pointer-events: auto;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: rgba(6, 10, 18, 0.82);
+  border-radius: 12px;
+  color: #eef;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: opacity 0.6s ease;
+}
+.foafos-activity-item.fading { opacity: 0; }
+.foafos-activity-item:focus-visible { outline: 2px solid var(--zx-yellow, #ff0); }
+@media (prefers-reduced-motion: reduce) { .foafos-activity-item { transition: none; } }
+
+/* The selection (spec §5.11): what the reader picked in an app's view,
+   with the app's actions for it. Bottom centre of the app's pane. */
+#foafos-selection {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 12px;
+  z-index: 2616;
+  width: min(24rem, calc(100vw - 24px));
+  padding: 0.55rem 0.6rem;
+  background: rgba(6, 10, 18, 0.9);
+  border: 1px solid var(--zx-cyan, #0ff);
+  border-radius: 12px;
+  color: #eef;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+}
+#foafos-selection[hidden] { display: none; }
+#foafos-selection .sel-head { display: flex; align-items: center; gap: 0.55rem; }
+#foafos-selection .sel-icon { font-size: 1.4em; }
+#foafos-selection .sel-text { flex: 1; min-width: 0; }
+#foafos-selection .sel-name { font-weight: bold; }
+#foafos-selection .sel-detail { font-size: 0.82em; opacity: 0.75; }
+#foafos-selection button {
+  min-height: 40px; min-width: 40px;
+  font: inherit; color: inherit; cursor: pointer;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+}
+#foafos-selection .sel-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.45rem; }
+#foafos-selection .sel-actions button { flex: 1 1 auto; padding: 0 0.8rem; }
+#foafos-selection button:focus-visible { outline: 2px solid var(--zx-yellow, #ff0); }
+/* on screen, three lines of the text; the history keeps it whole */
+.foafos-activity-item foaf-activity::part(text) {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

@@ -65,14 +65,20 @@ function clampv(v, a, b) { return v < a ? a : v > b ? b : v; }
 
 function wrapPJ(v) { return v - LW * Math.round(v / LW); }
 function fmtAlt(km) { return km < 10 ? (km * 1000).toFixed(0) + " m" : km < 10000 ? Math.round(km).toLocaleString("en-GB") + " km" : (km / 1000).toFixed(km < 1e5 ? 1 : 0).replace(/\.0$/, "") + " thousand km"; }
-function statusHTML(autoOn) {
-  if (NAV.mode === "trip") { const a = len3(NAV.cam.P) - TR; return "<b>" + (NAV.tour ? "Grand tour" : "Autopilot") + "</b><span>To " + NAV.trip.dest.name + "</span><span>" + fmtAlt(a) + "</span>"; }
-  if (NAV.mode === "free") { const a = len3(NAV.free.P) - TR; return "<b>Flying by hand</b><span>" + regionAt(norm3(NAV.free.P)).name + "</span><span>" + fmtAlt(a) + "</span>"; }
-  if (NAV.mode === "space") { const k = NAV.space.kind; return "<b>" + (clock - lastInput > 4.5 ? "Drifting" : "Steering by hand") + "</b><span>" + spaceName() + "</span><span>" + (k === 1 ? fmtAlt(NAV.spaceAlt) + " up" : k === 3 ? fmtAlt(len3(sub3(NAV.cam.P, MOONS[NAV.space.moon].pos)) - MOONS[NAV.space.moon].r) + " up" : k === 4 ? fmtAlt(NAV.space.h) + " above the ring plane" : k === 5 ? fmtAlt(NAV.space.alt) + " above the clouds" : fmtAlt(len3(sub3(NAV.cam.P, SAT_POS))) + " from Saturn") + "</span>"; }
+// The readout's parts: [lead (bold, may be empty), what or where, how high or far (may be absent)]. Drawn along the
+// bottom of the view (statusHTML), or, inside foafos, sent to the shell instead (hostStatus in host.js).
+function statusParts(autoOn) {
+  if (NAV.mode === "trip") { const a = len3(NAV.cam.P) - TR; return [NAV.tour ? "Grand tour" : "Autopilot", "To " + NAV.trip.dest.name, fmtAlt(a)]; }
+  if (NAV.mode === "free") { const a = len3(NAV.free.P) - TR; return ["Flying by hand", regionAt(norm3(NAV.free.P)).name, fmtAlt(a)]; }
+  if (NAV.mode === "space") { const k = NAV.space.kind; return [clock - lastInput > 4.5 ? "Drifting" : "Steering by hand", spaceName(), k === 1 ? fmtAlt(NAV.spaceAlt) + " up" : k === 3 ? fmtAlt(len3(sub3(NAV.cam.P, MOONS[NAV.space.moon].pos)) - MOONS[NAV.space.moon].r) + " up" : k === 4 ? fmtAlt(NAV.space.h) + " above the ring plane" : k === 5 ? fmtAlt(NAV.space.alt) + " above the clouds" : fmtAlt(len3(sub3(NAV.cam.P, SAT_POS))) + " from Saturn"]; }
   const lead = NAV.tour ? (autoOn ? "Grand tour" : "Tour paused") : autoOn ? "Autopilot" : "Steering by hand";
   // in the city, a place name you could give someone, not the drone's state
-  if (!NAV.tour) return (autoOn ? "" : "<b>By hand</b>") + "<span>" + placeLabel() + "</span>";
-  return "<b>" + lead + "</b><span>" + placeLabel() + "</span>";
+  if (!NAV.tour) return [autoOn ? "" : "By hand", placeLabel()];
+  return [lead, placeLabel()];
+}
+function statusHTML(autoOn) {
+  const [lead, what, far] = statusParts(autoOn);
+  return (lead ? "<b>" + lead + "</b>" : "") + "<span>" + what + "</span>" + (far ? "<span>" + far + "</span>" : "");
 }
 // ---------- flocks of manta-like fliers (boids): cohesion, alignment, separation, a wandering goal near the camera ----------
 const FLOCK_N = 96;
@@ -1696,7 +1702,7 @@ async function init() {
     if (hudTick > 0.25) {
       hudTick = 0;
       const autoOn = clock - lastInput > 4.5;
-      statusEl.innerHTML = statusHTML(autoOn);
+      if (hostOn()) hostStatus(statusParts(autoOn)); else statusEl.innerHTML = statusHTML(autoOn);
       syncGoLabel();
       // the Story button says what it will do
       const vt = document.getElementById("vTale");
@@ -1717,6 +1723,7 @@ async function init() {
         }
       }
     }
+    pickMarkFrame();                         // the selection ring follows its thing
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -1772,6 +1779,13 @@ function benchReport() {
   document.body.appendChild(c);
 }
 function showHint(text, ms) {
+  // in foafos nothing of the page's own is drawn over the view: a hint is a line in the shell's activity stream,
+  // and a "wait…" message (the text ends in an ellipsis) is not worth one
+  if (hostOn()) {
+    hint.classList.add("hidden");
+    if (!/…$/.test(String(text))) hostPost("Drift City", String(text), false);
+    return;
+  }
   hint.textContent = text;
   hint.classList.remove("hidden");
   clearTimeout(hintTimer);
@@ -1831,7 +1845,11 @@ canvas.addEventListener("pointermove", (e) => {
 const release = (e) => {
   if (e && e.pointerId !== undefined) touches.delete(e.pointerId);
   if (touches.size > 0) return;
-  if (pointer.down && e && e.type === "pointerup" && performance.now() - downAt < 300 && Math.hypot(pointer.x - pointer.sx, pointer.y - pointer.sy) < 10) setUiHidden(!uiHidden);
+  // a short tap: in foafos it picks what is under it (the page draws no controls of its own to show or hide there);
+  // on its own page it shows or hides the controls
+  if (pointer.down && e && e.type === "pointerup" && performance.now() - downAt < 300 && Math.hypot(pointer.x - pointer.sx, pointer.y - pointer.sy) < 10) {
+    if (hostOn()) pickGo(pointer.x, pointer.y, false); else setUiHidden(!uiHidden);
+  }
   pointer.down = false;
 };
 canvas.addEventListener("pointerup", release);
@@ -1862,7 +1880,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFE_PATTERNS, lifeStamp, lifeStep, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { titanWhere, titanPoint, host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFE_PATTERNS, lifeStamp, lifeStep, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 
