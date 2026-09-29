@@ -1174,11 +1174,22 @@ back to the default and say `fellBack` on `root.ready`.
     tree too → resume) and its name says which press does what.
   - **Three widths.** Wide (64rem up): six columns. Mid (45rem to 64rem,
     a tablet): Kind and On close hide, and a line under the name
-    (`.sub-a`) says them. Narrow (under 45rem): `table-layout: fixed` plus
-    a `<colgroup>`; only Name and the actions stay, and the line under the
+    (`.sub-a`) says them. Narrow (under 45rem): automatic layout, Name
+    `width: 100%` and the actions `width: 1%`; only Name and the actions
+    stay, and the line under the
     name (`.sub-a` + `.sub-b`) says the rest. A details or brick row spans
     only the columns on screen (`shownCols()`, re-rendered on a media
     change: a tablet turned).
+    - **Do not size the narrow columns with `<col>` widths.** The narrow
+      table was `table-layout: fixed` with `<col>` widths by position
+      (the hidden cells gone, the action cell is the second cell). Chromium
+      drew it correctly. iPhone Safari gave the Name column one letter of
+      width and the table half the screen (owner's screenshot, September
+      2026). Headless Chromium cannot show this; there is no WebKit in this
+      container. Cell widths in automatic layout replaced it. Inside that
+      layout `overflow-wrap: anywhere` is safe for the name, because the
+      name cell takes all the width the actions leave; at 320px long names
+      still break inside a word.
     - **`nowrap` sets an auto-layout table's least width.** With nowrap
       names, kinds and states, the six-column table needed ~1016px: from
       640px to 900px (every iPad in portrait) it scrolled sideways with 16

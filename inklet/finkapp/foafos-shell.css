@@ -1139,17 +1139,15 @@ button.foafos-switch-card:hover .ttl { text-decoration: underline; }
     .foafos-switch-card .sub-b { display: none; }
 }
 @media (max-width: 44.99rem) {
-    /* two columns: the name (with its line) and the actions, whose width is
-       fixed so the buttons can never be pushed off the edge */
-    .foafos-tm-table { table-layout: fixed; }
+    /* two columns: the name (with its line) and the actions, whose buttons
+       never wrap, so they are never pushed off the edge */
     .foafos-tm-table :is(th, td):is(.c-kind, .c-state, .c-powers, .c-place) { display: none; }
-    /* With those four cells gone, the action cell is each row's SECOND
-       cell, so it sits in the second column: size the columns by position.
-       A details row still spans all six, so the other four are zero wide,
-       or they take a share of the row from the name. */
-    .foafos-tm-table col { width: 0; }
-    .foafos-tm-table col:first-child { width: auto; }
-    .foafos-tm-table col:nth-child(2) { width: 8.5rem; }
+    /* Automatic layout: the name takes the width the actions leave. An
+       earlier fixed layout sized the columns through <col> widths, and
+       iPhone Safari gave the name one letter of width (field report,
+       September 2026). */
+    .foafos-tm-table :is(th, td).c-name { width: 100%; }
+    .foafos-tm-table :is(th, td).c-act { width: 1%; }
     .foafos-tm-table td.c-act { padding: .25rem; }
     .foafos-switch-row .nm { padding-left: calc(var(--depth, 0) * .6rem); }
     /* icon and name on one line, the line under them the width of both */
