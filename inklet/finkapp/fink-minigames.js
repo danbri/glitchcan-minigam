@@ -63,6 +63,23 @@ window.FinkMinigames = {
         return this._registry.find(a => (a.game || a.id) === type || (a.aliases || []).includes(type)) || null;
     },
 
+    /**
+     * A browser feature is delegated to a guest frame only when the app's
+     * registry row holds the capability behind it, as for window apps
+     * (foafos-shell.js sandboxFor/allow). A feature with no capability
+     * behind it is refused: a manifest is a request, not a grant.
+     */
+    FEATURE_CAPS: { autoplay: 'audio', geolocation: 'geolocation' },
+    _featuresFor(type, features) {
+        const caps = this._stageApp(type)?.capabilities || [];
+        const granted = [], refused = [];
+        for (const f of features) {
+            const cap = this.FEATURE_CAPS[f];
+            (cap && caps.includes(cap) ? granted : refused).push(f);
+        }
+        return { granted, refused };
+    },
+
     /** Games that run as sandboxed guests: every stage row not rendered by the host. */
     get iframeMinigames() {
         return this._registry.filter(a => !a.inline).map(a => a.game || a.id);
@@ -628,16 +645,19 @@ window.FinkMinigames = {
         this.windowState.paused = !this.windowState.paused;
         this._updateWindowState();
 
-        if (this.windowState.paused) {
-            this.pauseMinigame();
-            this.elements.pauseBtn?.classList.add('active');
-            if (this.elements.pauseBtn) this.elements.pauseBtn.textContent = '▶';
-        } else {
-            this.resumeMinigame();
-            this.elements.pauseBtn?.classList.remove('active');
-            if (this.elements.pauseBtn) this.elements.pauseBtn.textContent = '⏸';
+        if (this.windowState.paused) this.pauseMinigame();
+        else this.resumeMinigame();
+        // One row in the window menu: its icon and its words both say what
+        // it does now (the name used to stay "Pause game" under a ▶).
+        const btn = this.elements.pauseBtn;
+        if (btn) {
+            btn.classList.toggle('active', this.windowState.paused);
+            const ico = btn.querySelector('.wm-ico'), lbl = btn.querySelector('.wm-label');
+            if (ico) ico.textContent = this.windowState.paused ? '▶' : '⏸';
+            if (lbl) lbl.textContent = this.windowState.paused ? 'Resume' : 'Pause';
+            if (!ico && !lbl) btn.textContent = this.windowState.paused ? '▶' : '⏸';
+            btn.setAttribute('aria-pressed', String(this.windowState.paused));
         }
-        this.elements.pauseBtn?.setAttribute('aria-pressed', String(this.windowState.paused));
 
         this.log(`Minigame ${this.windowState.paused ? 'paused' : 'resumed'}`);
     },
@@ -845,8 +865,15 @@ window.FinkMinigames = {
         }
 
         // Reset button states and icons
-        this.elements.pauseBtn?.classList.remove('active');
-        if (this.elements.pauseBtn) this.elements.pauseBtn.textContent = '⏸';
+        const pb = this.elements.pauseBtn;
+        if (pb) {
+            pb.classList.remove('active');
+            pb.setAttribute('aria-pressed', 'false');
+            const ico = pb.querySelector('.wm-ico'), lbl = pb.querySelector('.wm-label');
+            if (ico) ico.textContent = '⏸';
+            if (lbl) lbl.textContent = 'Pause';
+            if (!ico && !lbl) pb.textContent = '⏸';
+        }
 
         this.elements.pinBtn?.classList.remove('active');
 
@@ -1000,10 +1027,16 @@ window.FinkMinigames = {
             // decorative and any guest could set any story variable.
             const source = this._guestSource(type);
             source.manifest.then(manifest => {
-                    const feats = manifest?.features || [];
-                    if (feats.length) {
-                        iframe.allow = feats.map(f => `${f} 'src'`).join('; ');
-                        this.log(`Manifest features granted: ${feats.join(', ')}`);
+                    const { granted, refused } = this._featuresFor(type, manifest?.features || []);
+                    if (granted.length) {
+                        iframe.allow = granted.map(f => `${f} 'src'`).join('; ');
+                        this.log(`Manifest features granted: ${granted.join(', ')}`);
+                    }
+                    if (refused.length) {
+                        window.FoafOS?.bus?.publish('sys.guest.denied', {
+                            summary: `${type}: features refused (${refused.join(', ')}): its row does not hold the capability`,
+                            guest: type, features: refused,
+                        });
                     }
                     inst.grants = this._normalizeGrants(manifest, type);
                     this.currentGrants = inst.grants;
@@ -1232,6 +1265,16 @@ window.FinkMinigames = {
                 this._announce(inst, data.text);
                 break;
 
+            case 'actions':
+                // The game's own commands and settings (spec §5.9). Kept per
+                // instance; the window menu shows the playing one's.
+                inst.actions = Array.isArray(data.items) ? data.items : null;
+                if (inst === this.windowInstance) {
+                    const info = this.minigameInfo?.[inst.type] || {};
+                    window.FinkWM?.setAppActions?.(inst.actions, info.title || inst.type);
+                }
+                break;
+
             case 'story-reenter':
                 // Only a WORLD may ask; the shell checks its power
                 // (story:steer) and the runner checks the scene.
@@ -1417,6 +1460,16 @@ window.FinkMinigames = {
 
     // Send message to a guest. Defaults to the window-mode game; pass an
     // instance to address an inline widget.
+    /** The reader chose one of the playing game's actions in the window menu. */
+    runAction(id) {
+        const inst = this.windowInstance;
+        if (!inst) return false;
+        const known = (list) => (list || []).some((it) => it.id === id || known(it.items));
+        if (!known(inst.actions)) return false;     // only what it offered
+        this._sendToIframe({ type: 'action', id: String(id) }, inst);
+        return true;
+    },
+
     _sendToIframe(data, inst = null) {
         const target = inst ? inst.iframe : this.iframeMinigame;
         if (target && target.contentWindow) {

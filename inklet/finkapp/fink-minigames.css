@@ -15,95 +15,136 @@
     display: flex;
 }
 
-/* --- FinkWM chrome ---
-   One compact toolbar for the game window. Docked to a screen edge,
-   draggable by its grip, collapsible to the grip alone. */
+/* --- FinkWM chrome: ONE window menu ---
+   A round ☰ button, docked to a screen edge and draggable. It opens a
+   panel of labelled rows (the window's mode, pause, the on-screen
+   controls, the app's own actions, exit). Closed, it is the only thing
+   the shell draws over a game. */
 #wm-chrome {
     position: fixed;
     top: 8px;
     right: 8px;
     z-index: 2600;
     display: flex;
-    align-items: center;
-    gap: 0.25em;
-    padding: 0.2em;
-    background: rgba(0, 0, 0, 0.85);
-    border: 1px solid var(--zx-cyan);
-    border-radius: 999px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
     touch-action: none;
 }
 
 #wm-chrome.wm-hidden { display: none; }
 
-/* Fullscreen game: drop the grip below the game's own header band.
+/* Fullscreen game: drop the button below the game's own header band.
    At top:8px it sat exactly on Robbin's canvas-drawn QUIT chip and goal
    HUD (y≈58-75) — the shell's window control eating the game's exit
    control. Dragging still wins: the drag-dock writes inline styles. */
 body[data-wm-mode="full"] #wm-chrome { top: 84px; }
 
-/* Docked left: grip stays on the screen-edge side */
-#wm-chrome.dock-left { flex-direction: row-reverse; }
+/* Docked left: the panel opens from the left edge */
+#wm-chrome.dock-left { align-items: flex-start; }
+#wm-chrome.dock-left #wm-buttons { right: auto; left: 0; }
+/* More room above than below (split, game pane low on the screen): the
+   panel opens upward, and ☰ stays where the reader's thumb is. */
+#wm-chrome.menu-up #wm-buttons { top: auto; bottom: calc(100% + 6px); }
 
-#wm-buttons { display: flex; gap: 0.25em; }
-#wm-chrome.dock-left #wm-buttons { flex-direction: row-reverse; }
-
-/* Collapsed: just the grip */
-#wm-chrome.collapsed #wm-buttons { display: none; }
-#wm-chrome.collapsed { opacity: 0.75; }
-#wm-chrome.collapsed:hover { opacity: 1; }
-
-#wm-chrome button {
-    width: 40px;
-    height: 40px;
-    min-width: var(--touch-target-min);
-    min-height: var(--touch-target-min);
+#wm-handle {
+    width: 44px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #222;
-    border: 1px solid #555;
+    background: rgba(0, 0, 0, 0.72);
+    border: 1px solid var(--zx-cyan);
     border-radius: 50%;
-    color: #fff;
-    font-size: 1em;
-    cursor: pointer;
-    transition: background var(--transition-fast), border-color var(--transition-fast);
-}
-
-#wm-chrome button:hover {
-    background: #444;
-    border-color: var(--zx-cyan);
-}
-
-#wm-chrome button.active {
-    background: var(--zx-cyan);
-    border-color: var(--zx-cyan);
-    color: #000;
-}
-
-#wm-handle {
+    color: var(--zx-cyan);
+    font-size: 1.2em;
+    line-height: 1;
     cursor: grab;
-    background: transparent !important;
-    border-color: transparent !important;
-    color: var(--zx-cyan) !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
 #wm-handle:active { cursor: grabbing; }
+#wm-chrome.collapsed #wm-handle { opacity: 0.7; }
+#wm-chrome.collapsed #wm-handle:hover,
+#wm-chrome.collapsed #wm-handle:focus-visible { opacity: 1; }
+#wm-handle:focus-visible { outline: 2px solid var(--zx-yellow); outline-offset: 2px; }
 
-/* Pause shows as an amber latch when engaged */
-#minigame-pause.active {
-    background: var(--zx-yellow) !important;
-    border-color: var(--zx-yellow) !important;
-    color: #000 !important;
+/* The panel. Out of the flow, so ☰ never moves when it opens. */
+#wm-buttons {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 13.5rem;
+    max-width: min(20rem, calc(100vw - 16px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.35rem;
+    background: rgba(8, 10, 16, 0.94);
+    border: 1px solid var(--zx-cyan);
+    border-radius: 12px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+    touch-action: pan-y;
+}
+#wm-chrome.collapsed #wm-buttons { display: none; }
+
+#wm-target {
+    display: block;
+    padding: 0.2rem 0.55rem 0.35rem;
+    color: var(--sk-accent, #4fd);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-#returnToStory {
-    background: rgba(80, 20, 20, 0.9) !important;
-    border-color: #f55 !important;
+.wm-sect {
+    display: flex;
+    flex-direction: column;
+    padding: 0.2rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
-#returnToStory:hover {
-    background: #733 !important;
-    border-color: #f88 !important;
+.wm-sect[hidden] { display: none; }
+.wm-sect-title {
+    padding: 0.35rem 0.55rem 0.15rem;
+    color: #9ab;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
 }
+
+#wm-chrome #wm-buttons button {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    min-height: var(--touch-target-min, 44px);
+    padding: 0 0.55rem;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    color: #fff;
+    font: inherit;
+    font-size: 0.95rem;
+    text-align: left;
+    cursor: pointer;
+}
+#wm-chrome #wm-buttons button[hidden] { display: none; }
+#wm-chrome #wm-buttons button:hover { background: rgba(255, 255, 255, 0.08); }
+#wm-chrome #wm-buttons button:focus-visible { outline: 2px solid var(--zx-yellow); outline-offset: -2px; }
+#wm-chrome #wm-buttons button:disabled { opacity: 0.45; cursor: default; }
+#wm-chrome #wm-buttons button.active,
+#wm-chrome #wm-buttons button[aria-pressed="true"] { color: var(--zx-cyan); }
+#wm-buttons .wm-ico { width: 1.3em; text-align: center; flex: none; }
+#wm-buttons .wm-label { flex: 1; min-width: 0; }
+#wm-buttons .wm-detail { color: #9ab; font-size: 0.8rem; flex: none; }
+#wm-buttons .wm-back { color: #9ab; }
+
+/* Paused: the row reads "Resume", in amber */
+#wm-chrome #wm-buttons #minigame-pause.active { color: var(--zx-yellow); }
+/* Exit reads as the way out */
+#wm-chrome #wm-buttons #returnToStory { color: #f99; }
 
 /* --- Window modes --- */
 #minigame-view.state-full {
@@ -1055,33 +1096,15 @@ body.fink-wm-dragging iframe { pointer-events: none; }
    guest's own readout does not. */
 #minigame-view > .wm-pane-label {
     left: auto;
-    right: 0;
+    right: 60px;   /* ☰ sits at the pane's top right, in split (fink-wm _placeChrome) */
     color: var(--sk-accent, #4fd);
     border-right: 0;
     border-left: 1px solid var(--sk-line, #2b3d5c);
-    border-radius: 0 0 0 8px;
+    border-right: 1px solid var(--sk-line, #2b3d5c);
+    border-radius: 0 0 8px 8px;
 }
 
-/* 2. the toolbar's chip: "these buttons are for THAT" */
-#wm-target {
-    display: none;
-    max-width: 8em;
-    overflow: hidden;
-    padding: 0 0.4em;
-    color: var(--sk-accent, #4fd);
-    font-size: 0.7rem;
-    letter-spacing: 0.04em;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-#wm-chrome.wm-has-target:not(.collapsed) #wm-target { display: inline-block; }
-/* A narrow phone has room for the six buttons, not for the name as well:
-   anchored at the right, the toolbar pushed its own handle off the left
-   edge (390px, split). The name stays in the toolbar's aria-label. */
-@media (max-width: 400px) {
-    #wm-chrome.wm-has-target:not(.collapsed) #wm-target { display: none; }
-}
-#wm-chrome { max-width: calc(100vw - 16px); }
+
 
 /* 3. and the governed pane gets an edge while the toolbar is touched.
       A permanent glow round half the screen would just be noise. */

@@ -69,18 +69,19 @@ try {
 
   // 1. OS controls exist and are discoverable, even for a guest that
   // declares controls:'none' (that means "no d-pad", not "no shell")
+  // Since September 2026 they are ONE ☰ "Window menu" (spec §5.9): shown
+  // closed, and its rows are there when it opens.
   const chrome = await page.evaluate(() => {
     const el = document.getElementById('wm-chrome');
-    const r = el.getBoundingClientRect();
-    return {
-      hidden: el.classList.contains('wm-hidden'),
-      collapsed: el.classList.contains('collapsed'),
-      w: Math.round(r.width),
-      buttons: [...el.querySelectorAll('button')].filter(b => b.offsetParent !== null).length,
-    };
+    const handle = document.getElementById('wm-handle');
+    const shown = !el.classList.contains('wm-hidden') && handle.offsetParent !== null;
+    FinkWM._setCollapsed(false);
+    const buttons = [...el.querySelectorAll('#wm-buttons button')].filter(b => b.offsetParent !== null).length;
+    FinkWM._setCollapsed(true);
+    return { shown, name: handle.getAttribute('aria-label'), buttons };
   });
-  !chrome.hidden && !chrome.collapsed && chrome.buttons >= 4
-    ? pass(`OS controls present: ${chrome.buttons} visible buttons, ${chrome.w}px chrome`)
+  chrome.shown && /menu/i.test(chrome.name || '') && chrome.buttons >= 4
+    ? pass(`OS controls present: one ☰ "${chrome.name}", ${chrome.buttons} rows when open`)
     : fail(`no usable OS controls: ${JSON.stringify(chrome)}`);
 
   // 2. the bridge: the game must leave its splash and start playing.

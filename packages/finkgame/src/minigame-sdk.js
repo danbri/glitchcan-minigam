@@ -260,6 +260,40 @@ class MinigameSDK {
     }
 
     /**
+     * Offer this game's own commands and settings to the shell (spec §5.9).
+     * Inside foafos the shell draws them in its one window menu, so the game
+     * needs no menu of its own there; standalone, nothing changes. Call again
+     * whenever a label or a check changes: the list replaces the last one.
+     * @param {Array} items - [{id, label, detail?, checked?, disabled?,
+     *   items?: [...]}]. `checked` (true/false) makes a setting that stays
+     *   in the menu; `items` makes a group that opens in place; anything
+     *   else is a command, and the menu closes after it.
+     */
+    setActions(items) {
+        const clean = (list, depth) => (Array.isArray(list) ? list : []).slice(0, 200).map((it) => {
+            const out = { id: String(it?.id ?? ''), label: String(it?.label ?? '').slice(0, 80) };
+            if (it?.detail != null) out.detail = String(it.detail).slice(0, 40);
+            if (typeof it?.checked === 'boolean') out.checked = it.checked;
+            if (it?.disabled) out.disabled = true;
+            if (Array.isArray(it?.items) && depth < 4) out.items = clean(it.items, depth + 1);
+            return out;
+        }).filter((it) => it.id && it.label);
+        this._sendMessage({ type: 'actions', items: clean(items, 0) });
+        return this;
+    }
+
+    /**
+     * Hear which of the offered actions the reader chose.
+     * Registering declares the `actions` contract.
+     * @param {Function} callback - (id) => void
+     */
+    onAction(callback) {
+        this._callbacks.action = callback;
+        this._declare('actions');
+        return this;
+    }
+
+    /**
      * As a world: ask the story to enter the scene the reader is in again,
      * because something in the world changed it (a clue found, the reader
      * moved). The story allows only the scene its last `# scene:` tag named,
@@ -482,6 +516,10 @@ class MinigameSDK {
 
             case 'speech-state':
                 if (this._callbacks.speech) this._callbacks.speech(data);
+                break;
+
+            case 'action':
+                if (this._callbacks.action) this._callbacks.action(String(data.id ?? ''));
                 break;
 
             case 'key':

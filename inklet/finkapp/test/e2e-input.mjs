@@ -109,6 +109,42 @@ try {
     ? pass('one pad on screen: the shell provides, the guest stands down')
     : fail(`pad confusion: ${JSON.stringify(pads)} guest own pad display=${ownPad}`);
 
+  // ── 0b. the pad's modes (owner, September 2026: "more translucent when
+  // unused and … disable-able or made hidden unless used"). The window
+  // menu sets them; the look changes, the controls stay where they are.
+  const padLook = () => page.evaluate(() => {
+    const p = document.getElementById('foaf-pad');
+    const kid = p.querySelector('.foaf-pad-dir');
+    return { hidden: p.hidden, mode: p.dataset.mode, touched: p.classList.contains('touched'),
+             opacity: Number(getComputedStyle(kid).opacity) };
+  });
+  const modes = {};
+  for (const m of ['faint', 'hidden', 'off', 'show']) {
+    await page.evaluate((x) => { document.getElementById('foaf-pad').classList.remove('touched'); FoafOS.pad.setMode(x); }, m);
+    await page.waitForTimeout(450);                 // past the fade
+    modes[m] = await padLook();
+  }
+  // touching a hidden pad brings it up at once
+  await page.evaluate(() => FoafOS.pad.setMode('hidden'));
+  await page.waitForTimeout(450);
+  const dirBox = await (await page.$('#foaf-pad .foaf-pad-dir')).boundingBox();
+  await page.mouse.move(dirBox.x + dirBox.width / 2, dirBox.y + dirBox.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(450);
+  const touchedLook = await padLook();
+  await page.mouse.up();
+  await page.evaluate(() => FoafOS.pad.setMode('faint'));
+  const menuRows = await page.evaluate(() => { FinkWM._setCollapsed(false);
+    const r = [...document.querySelectorAll('#wm-pad-sect button')].map((b) => b.textContent.trim());
+    FinkWM._setCollapsed(true); return r; });
+  modes.faint.opacity < 0.5 && modes.faint.opacity > 0 && !modes.faint.hidden
+    && modes.hidden.opacity === 0 && !modes.hidden.hidden
+    && modes.off.hidden && modes.show.opacity === 1
+    && touchedLook.touched && touchedLook.opacity === 1
+    && menuRows.some((t) => /Faint until touched/.test(t)) && menuRows.some((t) => /Off/.test(t))
+    ? pass(`pad modes from the window menu: faint ${modes.faint.opacity}, hidden 0 but touchable (a touch shows it), off gone, shown 1 (menu: ${menuRows.length} rows)`)
+    : fail(`pad modes: ${JSON.stringify({ modes, touchedLook, menuRows })}`);
+
   // ── 1. A is GO ─────────────────────────────────────────────────────
   // On the tube map robbin relabels its JUMP button GO, and both are the
   // same verb: handleJump(). So "does A work as go" is answerable exactly.

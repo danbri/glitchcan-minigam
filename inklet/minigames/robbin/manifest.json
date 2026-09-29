@@ -5,7 +5,6 @@
   "description": "Cosy flock journey across the real London Underground. Cut-paper birds, real TfL data, no fail state.",
   "entry": "index.html",
   "sandbox": { "timeout": 30000 },
-  "features": ["geolocation"],
   "variables": {
     "read": ["difficulty", "diamonds"],
     "write": ["robbin_birds", "robbin_score", "minigame_played", "score", "diamonds"]

@@ -755,6 +755,42 @@ Locked by `packages/foafos/test/{secrets,ops,sigv4}.test.js` and the
 by attempting to redirect a brokered credential to a destination that was
 never granted.
 
+### 5.5.6 Network egress — a stated limit of the reference deployment
+
+**The sandbox controls what an app receives. On GitHub Pages it cannot
+control what an app sends.** Owner, September 2026: "It is ok our
+instance of server is on gh pages but since that makes net egress
+unblockable we must document that situation ie apps can blab to arbitrary
+hosts without tighter server."
+
+- Any app frame can send any data it holds to any host on the internet:
+  by fetch (no-cors), image, `sendBeacon`, form POST (window apps have
+  `allow-forms`), and WebRTC. This includes the text of every document
+  the reader opens in that app, every story line a world receives, and
+  every value a broker gave it. Measured in Chromium; see the fink skill,
+  "Limits of the sandbox partition".
+- A `<meta>` CSP in the app's page does not stop WebRTC, and an app can
+  leave it out anyway. The iframe `csp` attribute (CSP Embedded
+  Enforcement) would let the shell impose `connect-src` on a frame, but
+  the frame then loads only if its response sends `Allow-CSP-From`.
+  GitHub Pages cannot set response headers, so on this deployment the
+  shell has no way to impose an egress policy.
+- The brokers (storage, secrets, variables, verbs) still hold. A secret
+  is never given to an app, so an app cannot send it. What an app is
+  GIVEN, it can send.
+- So on GitHub Pages foafos protects **integrity and powers** (what an app
+  may change, launch, read from the shell, or use a credential for) but
+  NOT **secrecy against the app itself**. Opening a document in an app
+  is telling that app's author the document, if the author wants it.
+- A host MUST say this to the reader where the powers are shown. The
+  reference shell says it in the Task Manager's "The sandbox and its
+  limits" panel.
+- Closing it needs a server that sets headers: `Allow-CSP-From` on app
+  pages plus an iframe `csp` with `connect-src` limited to a network
+  broker, and a CSP on the shell page itself. WebRTC and DNS lookups need
+  checking per browser even then. A Cloudflare front for the same files
+  is being considered (September 2026).
+
 ### 5.6 Shell surfaces: home and switcher
 
 Two affordances the platform borrows rather than invents, because every
@@ -860,6 +896,67 @@ stories in the foafos runner instead of an Ink engine of its own.
   re-entry, so the scene reads it. A story that uses a world still keeps a
   text route for anything found in the world (the story-game-sync skill,
   Fallbacks).
+
+### 5.9 One window menu, and the app's own actions — normative
+
+Owner, September 2026: "The settings we had in a hamburger menu should be
+formalised via foafos menuing … possibly via actions registry. Similarly
+the window manager buttons should all be hidden behind a single
+os-mediated structure which might show as hamburger menu."
+
+**One menu per game window, drawn by the shell.** Over a stage app the
+shell draws exactly one control: ☰ ("Window menu"). It opens a panel of
+labelled rows, in this order:
+
+1. the title: the app's name, and in split which pane it serves;
+2. the window: Full screen, Split with story, Picture-in-picture, Swap the
+   panes (in split), Pause / Resume;
+3. On-screen controls (only while the shell's pad applies to this app):
+   Always shown, Faint until touched (the default), Hidden until touched,
+   Off. Per device. Hidden still takes touches where the controls sit;
+   Off removes them (keyboard, gamepad, or the app's own touch remain);
+4. the app's own actions (below), under the app's name;
+5. Exit the game.
+
+A row that DOES something (a mode, swap, a command, exit) closes the
+menu; a row that SETS something (pause, the pad, a check) leaves it
+open. Escape, a tap outside, and focus moving into a frame close it.
+Enter or Space on ☰ opens it. It is a disclosure (a button and a panel
+of buttons), not an ARIA menu, so every row is an ordinary button.
+
+**The app's actions are data** (SDK):
+
+```js
+sdk.setActions([
+  { id: 'time', label: 'Time and weather', items: [
+      { id: 'time/night', label: 'Night', checked: true },
+      { id: 'time/day',   label: 'Day',   checked: false } ] },
+  { id: 'map', label: 'City map' },          // a command
+]);
+sdk.onAction((id) => run(id));              // declares the `actions` contract
+```
+
+- `checked` (true or false) makes a setting; `items` makes a group that
+  opens in place (depth ≤ 4); anything else is a command. `detail` is a
+  short note on the right. Labels ≤ 80 characters.
+- The list replaces the last one; send it again when a label or a check
+  changes. The shell keeps it per instance and draws the playing one's.
+- The shell sends back only an id the app offered
+  (`FinkMinigames.runAction`); a forged id is dropped.
+- Ids should come from the row's place in the app's own menu (Drift uses
+  the path of labels), so that a changed menu makes an old id find
+  nothing, not the wrong row.
+- Standalone, an app draws its own menu as before. Inside foafos it hides
+  its own ☰ and offers the same rows as actions: one menu on the screen.
+
+Reference: `inklet/finkapp/fink-wm.js` (the menu), `foafos-shell.js`
+(`FoafOS.pad`), `packages/finkgame/src/minigame-sdk.js` (`setActions`,
+`onAction`), `drift-city/src/host.js` (the first app to use it). Locked by
+`e2e-wm.mjs` 1-3, `e2e-input.mjs` 0b and `e2e-drift.mjs` 20a.
+
+Not done yet: window apps (office, players) have no actions; the menu does
+not tell the app that it opened (Drift's own menu paused a guided tour
+while open); the pad's "B" still sends Escape to the app.
 
 ## 6. Links, navigation, identity
 

@@ -734,6 +734,16 @@ this (option 1 of 3) over splat heads on SDF bodies in the scene; holographic cr
 
 ## Drift City as a foafos app (September 2026)
 
+**The city's menu is the shell's inside foafos** (spec §5.9). `host.js`
+hides `#bMenu` and walks `menuRoot()` into shell actions once a second
+(`hostMenuPublish`; sent only when the JSON changes): a row with `sub`
+becomes a group, a row with a boolean `check` a setting, any other row a
+command. Each id is the path of labels ("menu/Time and weather/Night"),
+so a row that moved finds nothing rather than the wrong row. A chosen id
+runs the row's `act` (`hostMenuRun`). Standalone the ☰ stays. Not yet:
+opening the shell's menu does not pause a guided tour, as the city's own
+menu did. e2e-drift 20a.
+
 Owner, after the Lantern Cellar worked in the shell: "Can we do the sdf world drift display too? And sdf rigged
 talking heads?" The talking heads in this repo are rigged Gaussian-splat heads (LAM, `magpie/splatweb`), not SDF;
 no SDF talking head exists (searched lucid/, yeti/, magpie/, drift-city/). Both are now foafos stage apps, rows in

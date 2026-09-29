@@ -14238,6 +14238,12 @@ if (typeof window !== "undefined" && window.parent !== window && typeof Minigame
   sdk.onRestore((state) => { if (state && state.v === 1 && state.saves) Object.assign(taleMem(), state.saves); });
   // As the WORLD beside a story (`# WORLD: drift`; the shell adds world=1): the story runs in the foafos runner and
   // its tags arrive after every step (tales.js, "the world beside a story in foafos").
+  // The city's menu is the shell's (spec §5.9): inside foafos there is no ☰ of the city's own over the view. The
+  // same rows go to the shell as actions, and the shell's one window menu draws them (hostMenuPublish below).
+  const burger = document.getElementById("bMenu");
+  if (burger) burger.hidden = true;
+  sdk.onAction((id) => hostMenuRun(id));
+  setInterval(hostMenuPublish, 1000);
   if (/[?&]world=1(&|$)/.test(location.search)) {
     H.world = true;
     const bTale = document.getElementById("bTale");   // the story is the runner's: no Story button here
@@ -14245,6 +14251,47 @@ if (typeof window !== "undefined" && window.parent !== window && typeof Minigame
     sdk.onStoryBeat((lines, meta) => worldBeat(lines, meta));
     sdk.onVariableChanged((name, value) => worldVar(name, value));
   }
+}
+
+// ---------- the city's menu, as the shell's actions (spec §5.9) ----------
+// The owner, September 2026: "The settings we had in a hamburger menu should be formalised via foafos menuing". The
+// rows of menuRoot (titan.js) are walked into data: a row with `sub` becomes a group, a row with `check` a setting
+// that stays in the menu, any other row a command. Each id is the path of labels to the row, so when the menu
+// changes (the tour's rows come and go) an old id finds nothing rather than the wrong row. Sent again when it
+// changes, checked once a second; the shell keeps the last list.
+const HOST_MENU = { acts: new Map(), sent: "" };
+function hostMenuTree() {
+  const acts = new Map();
+  const walk = (rows, path, depth) => (rows || []).map((r) => {
+    const id = path + "/" + r.label;
+    const out = { id, label: r.label };
+    if (r.detail !== undefined && r.detail !== "") out.detail = String(r.detail);
+    if (typeof r.check === "boolean") out.checked = r.check;
+    if (r.sub && depth < 4) {
+      const page = r.sub();
+      out.items = walk(typeof page.items === "function" ? page.items() : page.items, id, depth + 1);
+    } else if (r.act) acts.set(id, r.act);
+    return out;
+  });
+  const items = walk(menuRoot().items(), "menu", 0);
+  return { items, acts };
+}
+function hostMenuPublish() {
+  const H = hostState();
+  if (!H.on || !H.sdk || !H.sdk.setActions) return;
+  let tree;
+  try { tree = hostMenuTree(); } catch (e) { return; }   // before the city has its places
+  HOST_MENU.acts = tree.acts;
+  const json = JSON.stringify(tree.items);
+  if (json === HOST_MENU.sent) return;
+  HOST_MENU.sent = json;
+  H.sdk.setActions(tree.items);
+}
+function hostMenuRun(id) {
+  const act = HOST_MENU.acts.get(id);
+  if (act) { try { act(); } catch (e) { /* a row whose state moved on */ } }
+  HOST_MENU.sent = "";
+  setTimeout(hostMenuPublish, 60);        // checks and labels follow at once
 }
 
 const canvas = document.getElementById("c");

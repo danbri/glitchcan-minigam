@@ -79,6 +79,17 @@ export class FoafVars {
    * story's private plot state.
    */
   filterReadable(actor, values) {
+    // A story reads the shared economy and the host context, and nothing
+    // else. The mirror also holds names a GAME wrote (chess_won,
+    // has_red_key…) for the story that launched it; that story gets them
+    // in the game's `complete`, so no other story may read them here.
+    if (actor?.kind === 'story') {
+      const out = {};
+      for (const [k, v] of Object.entries(values || {})) {
+        if (this.shared.has(k) || HOST_CONTEXT.includes(k)) out[k] = v;
+      }
+      return out;
+    }
     if (actor?.kind !== 'guest') return { ...values };
     // no vars:read on the node: the guest sees nothing, not even the economy
     if (!this._holds(actor, 'vars:read')) return {};
