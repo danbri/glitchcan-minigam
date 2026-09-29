@@ -14,6 +14,7 @@ import { spawn } from 'node:child_process';
 import { chromium } from '@playwright/test';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { openStory } from './lib/story.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -41,8 +42,9 @@ try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(String(e).slice(0, 160)));
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
-  await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
+  // A story installation with a story playing — in the runner, the only
+  // story engine — so every leg below runs against a live shell.
+  await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/hampstead.fink.js');
   await page.waitForTimeout(1200);
 
   // 1. one registry, one vocabulary
@@ -178,25 +180,38 @@ try {
     ? pass('the drawer admits which device services have no broker')
     : fail(`unimplemented services not disclosed: "${noteText}"`);
 
-  // 8. a declared capability list that constrains NOTHING must say so.
-  // Stories run in the host page (FinkInkEngine/FinkPlayer/FinkUI are
-  // globals), so their lists describe rather than limit. The failure this
-  // guards against is a list that reads like a boundary and is not one.
-  const unenf = await page.evaluate(async () => {
+  // 8. a declared capability list that constrains NOTHING must say so —
+  // and now there must be none. Stories used to run in the host page (the
+  // FinkInkEngine/FinkPlayer/FinkUI globals), so the 'story' surface rows
+  // carried `enforced: false` and the drawer said their lists were "a
+  // description, not a limit". That engine is gone: a story plays only in the
+  // runner, a sandboxed window app whose capabilities the shell checks on
+  // every story:* verb. So the honest state is: no unenforced app, no
+  // 'story' surface, the Stories rows OPEN the runner, and the drawer no
+  // longer claims stories run in the shell.
+  const storyRows = await page.evaluate(async () => {
     const m = await import('./foafos-apps.js');
-    return m.unenforcedApps().map(a => ({ id: a.id, surface: a.surface, caps: a.capabilities }));
+    const runner = m.APPS.find(a => a.id === 'storyrunner');
+    return {
+      unenforced: m.unenforcedApps().map(a => a.id),
+      storySurface: m.APPS.filter(a => a.surface === 'story').map(a => a.id),
+      opensRunner: m.APPS.filter(a => a.opens === 'storyrunner').map(a => a.id),
+      runnerSandbox: runner ? window.FoafOS.sandboxFor(runner) : null,
+      runnerCaps: runner?.capabilities || [],
+    };
   });
-  const storiesAllUnenforced = await page.evaluate(async () => {
-    const m = await import('./foafos-apps.js');
-    return m.APPS.filter(a => a.surface === 'story').every(a => a.enforced === false);
-  });
-  unenf.length > 0 && storiesAllUnenforced && unenf.every(a => a.caps.length > 0)
-    ? pass(`unenforced lists are flagged: ${unenf.map(a => a.id).join(', ')} (story surface runs in the host page)`)
-    : fail(`story privilege not declared honestly: ${JSON.stringify(unenf)}`);
+  storyRows.unenforced.length === 0 && storyRows.storySurface.length === 0
+    ? pass('no app carries an unenforced capability list; no story runs in the host page')
+    : fail(`an unenforced/host-page story surface remains: ${JSON.stringify(storyRows)}`);
+  ['toc', 'audiodemo'].every(id => storyRows.opensRunner.includes(id))
+    && storyRows.runnerSandbox && !storyRows.runnerSandbox.includes('allow-same-origin')
+    && storyRows.runnerCaps.includes('story:launch') && !storyRows.runnerCaps.includes('same-origin')
+    ? pass(`Stories and Audio demo open the runner, which is opaque-origin and holds only story:* grants (${storyRows.runnerCaps.length} capabilities)`)
+    : fail(`story rows do not go through the sandboxed runner: ${JSON.stringify(storyRows)}`);
   const note2 = await page.evaluate(() => document.getElementById('foafos-caps-note')?.textContent || '');
-  /description, not a limit/.test(note2)
-    ? pass('the drawer says the story lists do not constrain')
-    : fail(`story privilege not disclosed: "${note2.slice(-90)}"`);
+  !/description, not a limit|Stories run in the shell/.test(note2)
+    ? pass('the drawer no longer says stories run in the shell')
+    : fail(`the drawer still claims a host-page story: "${note2.slice(-120)}"`);
 
   // 9. a MIGRATED Office app: no same-origin, real work, data survives.
   // Channels proved the shim on an app that barely stored anything.

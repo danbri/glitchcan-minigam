@@ -350,32 +350,40 @@ body.foaf-pad-on #foafos-dock {
     pointer-events: none;
 }
 .foaf-stick.active .knob { background: #7dffb2; box-shadow: 0 0 10px rgba(46, 255, 150, 0.8); }
-/* A world beside a story (# WORLD:, spec §5.8). Where the world goes is
-   the reader's choice in the window manager's toolbar (FinkWM: full,
-   split, pip), not ours. The story window takes the band of the screen
-   the stage leaves; layoutWorld() in the shell measures it. */
+/* A story beside what it put on the stage: its world (# WORLD:, spec §5.8)
+   or its game. Where the stage goes is the reader's choice in the window
+   manager's toolbar (FinkWM: full, split, pip), not ours. The shell's
+   layoutStage() marks the story window .foafos-beside-stage, names the mode
+   on the body, and measures the band of the screen the stage leaves. */
 @media (max-width: 700px) {
-    body[data-world-mode="split"] .foafos-window[data-app-id="storyrunner"].foafos-with-world,
-    body[data-world-mode="split"] .foafos-window[data-app-id="storyrunner"].foafos-with-world.maximized {
+    body[data-stage-mode="split"] .foafos-window.foafos-beside-stage,
+    body[data-stage-mode="split"] .foafos-window.foafos-beside-stage.maximized {
         top: var(--foaf-story-top, 0px) !important;
         bottom: var(--foaf-story-bottom, 0px) !important;
         height: auto !important;
     }
-    /* the pad goes over the world: when the stage is above the story it
-       sits at the stage's foot, and the dock need not step aside for it */
-    body[data-world-mode="split"].foafos-world-stage-top #foaf-pad { bottom: calc(var(--foaf-stage-gap, 0px) + 8px); }
-    body[data-world-mode="split"].foafos-world-stage-top.foaf-pad-on #foafos-dock { bottom: calc(8px + env(safe-area-inset-bottom)); }
+    /* the pad goes over the stage: when the stage is above the story it sits
+       at the stage's foot, and the dock need not step aside for it */
+    body[data-stage-mode="split"].foafos-stage-top #foaf-pad { bottom: calc(var(--foaf-stage-gap, 0px) + 8px); }
+    body[data-stage-mode="split"].foafos-stage-top.foaf-pad-on #foafos-dock { bottom: calc(8px + env(safe-area-inset-bottom)); }
+    /* full, on a phone: the stage has the screen and the full-bleed story
+       stands aside (on a desktop the story window floats and stays) */
+    body[data-stage-mode="full"] .foafos-window.foafos-beside-stage {
+        visibility: hidden;
+        pointer-events: none;
+    }
 }
-/* full: the world has the screen; the story stands aside as for a game */
-body[data-world-mode="full"] .foafos-window[data-app-id="storyrunner"].foafos-with-world {
-    visibility: hidden;
-    pointer-events: none;
-}
-/* pip: the world floats over the story, whose window is above the stage */
-body[data-world-mode="pip"] #minigame-view.state-pip { z-index: 2700; }
+/* full, with a game: the game has the glass (a story's game already yields
+   its story; a game from the launcher goes over the open windows) */
+body.foafos-stage-game[data-stage-mode="full"] #minigame-view.state-full { z-index: 2635; }
+/* the pad is the game's controller: above the stage (windows 2620/2630,
+   the stage 2635, panels 2640, the dock 2650) */
+body.foafos-stage-game[data-stage-mode="full"] #foaf-pad { z-index: 2636; }
+/* pip: the stage floats over the story, whose window is above the stage */
+body[data-stage-mode="pip"] #minigame-view.state-pip { z-index: 2700; }
 /* the toolbar that sets the mode must stay above the story window, or the
    reader cannot reach it */
-body[data-world-mode] #wm-chrome { z-index: 2710; }
+body[data-stage-mode] #wm-chrome { z-index: 2710; }
 
 /* a spoken line waits for a tap on this page (the shell's speech service) */
 #foafos-sound-chip {

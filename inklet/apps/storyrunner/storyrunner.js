@@ -227,6 +227,13 @@ function handleTag(tag) {
     case 'STOP_AUDIO':
       stopAudio();
       break;
+    // `# FOLEY: water(...)` is procedural sound, made by the shell's
+    // FinkFoley under its master volume (the same host service as
+    // `# AUDIO: synth:<layer>`). The runner never handled it: until the
+    // host-page engine was deleted, only that engine did.
+    case 'FOLEY':
+      if (value) storyRequest('story.audio', { action: 'foley', layer: value });
+      break;
   }
 }
 
@@ -669,7 +676,7 @@ function gameTag(value) {
 // VARs its row reads when they change. The last lines sent are kept, so a
 // restore can rebuild the world (sent again as a replay, not spoken again).
 const RUNNER_TAGS = new Set(['BG', 'CLASS', 'BASEHREF', 'STATUS', 'MINIGAME', 'WORLD', 'FINK',
-  'LINKREL', 'ENTRY', 'IMAGE', 'VIDEO', 'AUDIO', 'STOP_AUDIO']);
+  'LINKREL', 'ENTRY', 'IMAGE', 'VIDEO', 'AUDIO', 'STOP_AUDIO', 'FOLEY']);
 function isWorldTag(tag) {
   const at = tag.indexOf(':');
   return !RUNNER_TAGS.has((at < 0 ? tag : tag.slice(0, at)).trim().toUpperCase());
@@ -803,6 +810,7 @@ function resumeAfterGame(detail) {
   state.pausedFor = null;
   const applied = [], missed = [];
   for (const [name, value] of Object.entries(detail?.variables || {})) {
+    _econSeen[name] = value;              // the shell's value: no need to send it back
     try { story.variablesState[name] = value; applied.push(name); }
     catch { missed.push(name); }
   }
@@ -822,14 +830,53 @@ function resumeAfterGame(detail) {
 // own VARs agree with the shell's canonical copy.
 async function seedEconomy() {
   const declared = declaredNames();
-  if (declared) await storyRequest('story.vars', { op: 'declares', names: declared });
+  if (declared) {
+    const dec = await storyRequest('story.vars', { op: 'declares', names: declared });
+    if (Array.isArray(dec.shared)) _econNames = dec.shared.map(String);
+  }
   const res = await storyRequest('story.vars', { op: 'read' });
   if (!res.ok || !res.values) return;
+  _econSeen = { ...res.values };
   for (const [name, value] of Object.entries(res.values)) {
     if (value === undefined) continue;
     try { story.variablesState[name] = value; } catch { /* not declared here */ }
   }
   state.economy = res.values;
+  // A shared VAR the shell has no value for yet: the story's own starting
+  // value is the economy, so the shell's mirror (what a game reads) gets it.
+  const mine = new Set(declared || []);
+  for (const name of _econNames) {
+    if (mine.has(name) && res.values[name] === undefined) econWrite(name, story.variablesState[name]);
+  }
+  watchEconomy();
+}
+
+// THE SHARED ECONOMY, BOTH WAYS. The shell's mirror is what a game reads at
+// its start. When the story itself changes a shared VAR (`~ diamonds = 0`),
+// the mirror must hear it too, or a game started later reads an old value and
+// its result writes over the story's change. The write goes through the
+// broker like any other (inside a dream it is refused: read-only), and it is
+// quiet: a background sync is not something the reader asked for.
+let _econNames = [];
+let _econSeen = {};
+let _econWatched = null;
+function econWrite(name, value) {
+  if (_econSeen[name] === value) return;
+  _econSeen[name] = value;
+  const foaf = window.foaf;
+  if (!foaf?.storyRequest) return;
+  const detail = { op: 'write', name, value };
+  if (state.sessionId) detail.session = state.sessionId;
+  foaf.storyRequest('story.vars', detail).catch(() => {});
+}
+function watchEconomy() {
+  if (!story || _econWatched === story) return;
+  _econWatched = story;
+  const declared = new Set(declaredNames() || []);
+  for (const name of _econNames) {
+    if (!declared.has(name)) continue;
+    try { story.ObserveVariable(name, (n, v) => econWrite(n, v)); } catch { /* not declared */ }
+  }
 }
 
 // Read the names from the COMPILED story, never from its source text.
@@ -845,9 +892,8 @@ function declaredNames() {
 // A boxed story cannot touch `location` — that is the containment working.
 // So after every beat the runner reports where the reader is and the shell
 // mints the two-part link, updates the address bar and feeds the
-// breadcrumb. The hashes are FinkNavigation's, so a link minted from the
-// box is byte-identical to one minted by the host player and just as
-// shareable.
+// breadcrumb. The hashes are the shell's FinkLinks format, so a link minted
+// here and one minted by the shell are byte-identical.
 //
 // The KNOT is read from the compiled story's own path string, never
 // guessed from prose: `currentPathString` is the ink runtime's answer.
@@ -928,8 +974,8 @@ async function buildKnotHashes() {
 }
 
 // SHA-256 with the linking spec's salt and lengths (docs/fink-linking-spec).
-// Kept in step with FinkNavigation deliberately: the same string must come
-// out of both, or a link shared from the box would not open in the player.
+// Kept in step with the shell's fink-links.js deliberately: the same string
+// must come out of both, or a shared link would not open.
 const LINK_SALT = 'glitchcan-fink-v2';
 async function knotHash(name) {
   try {
@@ -1132,6 +1178,7 @@ async function mergeStory(absUrl, entry = '') {
 
   story = merged;
   watchWorldReads();
+  watchEconomy();
   state.sources = sources;
   state.merges.push({ url, ok: true });
   state.mergedInk = sources.reduce((n, s) => n + s.ink.length, 0);

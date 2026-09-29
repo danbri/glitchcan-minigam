@@ -12,6 +12,7 @@ import { spawn } from 'node:child_process';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { openStory, goto, runnerFrame } from './lib/story.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -46,9 +47,9 @@ try {
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(String(e).slice(0, 200)));
 
-  const URL = `http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`;
-  await page.goto(URL);
-  await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
+  // The story plays in the boxed runner (the shell has no story engine).
+  const URL = `http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?story=/${repoName}/inklet/hampstead.fink.js`;
+  let r = await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/hampstead.fink.js');
   await page.waitForTimeout(1500);
 
   // 1. shell boots: FoafOS global, dock button, ephemeral session
@@ -62,20 +63,27 @@ try {
     ? pass('shell booted: bus, dock, ephemeral session')
     : fail(`shell boot wrong: ${JSON.stringify(boot)}`);
 
-  // 2. platform events land on the bus as the game opens
+  // 2. platform events land on the bus as the game opens. The story's
+  // # MINIGAME: reaches the shell as a governed story.request (verb
+  // story.launch) from the runner — the host engine's story.beat is gone.
   await page.evaluate(() => {
     window.__events = [];
-    FoafOS.bus.subscribe('*', (e) => window.__events.push(e.topic));
-    FinkInkEngine.story.ChoosePathString('hampstead_tube');
-    FinkInkEngine.continueStory();
+    window.__launchReq = null;
+    FoafOS.bus.subscribe('*', (e) => {
+      window.__events.push(e.topic);
+      if (e.topic === 'story.request' && e.data?.verb === 'story.launch') window.__launchReq = e.data.detail;
+    });
   });
+  await goto(r, 'hampstead_tube');
   await page.waitForSelector('#minigame-iframe-robbin', { timeout: 15000 });
   await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 5000 });
   await page.waitForTimeout(1000);
   const topics = await page.evaluate(() => window.__events);
-  ['story.beat', 'minigame.start', 'wm.mode', 'wm.open'].every(t => topics.includes(t))
-    ? pass(`bus carried ${topics.length} events incl. story.beat/minigame.start/wm.*`)
-    : fail(`missing platform events: ${JSON.stringify(topics)}`);
+  const launchReq = await page.evaluate(() => window.__launchReq);
+  ['story.request', 'minigame.start', 'wm.mode', 'wm.open'].every(t => topics.includes(t))
+    && launchReq?.game === 'robbin'
+    ? pass(`bus carried ${topics.length} events incl. story.request(story.launch robbin)/minigame.start/wm.*`)
+    : fail(`missing platform events: ${JSON.stringify({ launchReq, topics })}`);
 
   // 3. drawer: feed rendered cards, shelf lists the game window
   await page.click('#foafos-dock');
@@ -147,7 +155,9 @@ try {
     const sr = document.querySelector('#foafos-shelf foaf-tree').shadowRoot;
     return [...sr.querySelectorAll('[role=treeitem] > .row .label')].map(x => x.textContent);
   });
-  chips.length === 5 && chips[0] === 'Story' && chips.filter(c => c.includes('Tally')).length === 2
+  // (the host engine's "Story" row is gone: the story is the runner window)
+  chips.length === 5 && chips.some(c => /Finkosphere/.test(c)) && chips.some(c => /Robbin/.test(c))
+    && chips.filter(c => c.includes('Tally')).length === 2
     ? pass(`shelf tree lists all windows: ${chips.join(' | ')}`)
     : fail(`shelf tree wrong: ${JSON.stringify(chips)}`);
   await page.evaluate(() => document.getElementById('foafos-dock').click());
@@ -260,13 +270,18 @@ try {
     ? pass(`share opened in standard table explorer ("${tableView.caption}")`)
     : fail(`foaf-table wrong: ${JSON.stringify(tableView)}`);
 
-  // 8. the Maker window: variables x-ray + SDK tap
-  await page.evaluate(() => {
-    FinkInkEngine.story.variablesState['diamonds'] = 7;
-    FoafOS.openMaker();
-  });
+  // 8. the Maker window: variables x-ray + SDK tap. The story's variables
+  // live in the runner's frame; Maker lists the shell's mirror of the
+  // shared economy (FoafOS.storyVars), which the story writes through the
+  // broker (story.vars) — so write it that way, as the story would.
+  // The reload in leg 5 replaced the page, and with it the runner frame.
+  r = await runnerFrame(page);
+  await r.waitForFunction(() => window.__storyrunner?.ready?.(), null, { timeout: 60000 });
+  const w7 = await r.evaluate(() => window.__storyrunner.spend('diamonds', 7));
+  w7?.ok || fail(`story could not write diamonds through the broker: ${JSON.stringify(w7)}`);
+  await page.evaluate(() => FoafOS.openMaker());
   await page.waitForTimeout(600);
-  const maker = await page.evaluate(() => {
+  const readMaker = () => page.evaluate(() => {
     const w = document.getElementById('foafos-maker');
     const t = w?.querySelector('foaf-table');
     const rows = t ? [...t.shadowRoot.querySelectorAll('tbody tr')].map(r => r.textContent) : [];
@@ -276,18 +291,19 @@ try {
       sdkCards: w?.querySelectorAll('foafos-feed foaf-card').length ?? 0,
     };
   });
-  /story: (end|play)/.test(maker.state) && /diamonds7/.test((maker.diamondsRow || '').replace(/\s/g, ''))
+  const maker = await readMaker();
+  /^story: .+ · depth 0/.test(maker.state) && /diamonds7/.test((maker.diamondsRow || '').replace(/\s/g, ''))
     ? pass(`maker: state line + live variables (${maker.diamondsRow?.trim()})`)
     : fail(`maker wrong: ${JSON.stringify(maker)}`);
-  // SET writes into the running story
-  await page.evaluate(() => {
-    const w = document.getElementById('foafos-maker');
-    w.querySelector('#maker-var').value = 'diamonds';
-    w.querySelector('#maker-val').value = '42';
-    w.querySelector('#maker-set').click();
-  });
-  const setback = await page.evaluate(() => FinkInkEngine.story.variablesState['diamonds']);
-  setback === 42 ? pass('maker SET wrote a live story variable') : fail(`maker set failed: ${setback}`);
+  // The table follows a governed write while it is open (it refreshes on
+  // vars.*). This replaces the old SET control, which wrote straight into
+  // the host-page engine and was removed with it.
+  const w42 = await r.evaluate(() => window.__storyrunner.spend('diamonds', 42));
+  await page.waitForTimeout(400);
+  const live = await readMaker();
+  w42?.ok && /diamonds42/.test((live.diamondsRow || '').replace(/\s/g, ''))
+    ? pass('maker follows a live story write (diamonds 7 → 42)')
+    : fail(`maker did not follow the write: ${JSON.stringify({ w42, row: live.diamondsRow })}`);
 
   // The drawer's session controls, driven through real clicks. They had
   // never been touched by a test — which is how the passphrase field came to

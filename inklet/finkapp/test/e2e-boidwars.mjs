@@ -23,6 +23,7 @@ import { spawn } from 'node:child_process';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { openStory } from './lib/story.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -56,12 +57,13 @@ try {
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push((e.stack || String(e)).slice(0, 600)));
 
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
-  await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
+  const runner = await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/hampstead.fink.js');
   await page.waitForTimeout(1200);
 
-  // Launch boidwars the way the story does
-  await page.evaluate(() => FinkMinigames.startMinigame('battleboids', 'normal'));
+  // Launch boidwars the way the story does: the runner's story.launch
+  // verb, which is what `# MINIGAME: battleboids` sends
+  const launched = await runner.evaluate(() => window.foaf.storyRequest('story.launch', { game: 'battleboids' }));
+  if (!launched?.ok) throw new Error('story.launch battleboids refused: ' + JSON.stringify(launched));
   await page.waitForSelector('#minigame-iframe-battleboids', { timeout: 15000 });
   await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 6000 });
 

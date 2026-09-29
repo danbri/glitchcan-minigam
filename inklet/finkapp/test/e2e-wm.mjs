@@ -15,6 +15,7 @@ import { spawn } from 'node:child_process';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { openStory, goto } from './lib/story.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -48,13 +49,9 @@ try {
   page.on('pageerror', e => pageErrors.push(String(e).slice(0, 200)));
 
   // Boot straight into the widget loop (same path e2e-robbin locks)
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
-  await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
+  const runner = await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/hampstead.fink.js');
   await page.waitForTimeout(1500);
-  await page.evaluate(() => {
-    FinkInkEngine.story.ChoosePathString('hampstead_tube');
-    FinkInkEngine.continueStory();
-  });
+  if (!(await goto(runner, 'hampstead_tube'))) throw new Error('runner refused goto hampstead_tube');
   await page.waitForSelector('#minigame-iframe-robbin', { timeout: 15000 });
   await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 5000 });
 
@@ -92,8 +89,25 @@ try {
       document.getElementById('narrative-view').getBoundingClientRect().height,
   }));
   split.mode === 'split' && split.game > 250 && split.narrative > 150
-    ? pass(`split: game ${Math.round(split.game)}px + story ${Math.round(split.narrative)}px (no sliver)`)
+    ? pass(`split: game ${Math.round(split.game)}px + story pane ${Math.round(split.narrative)}px (no sliver)`)
     : fail(`split broken: ${JSON.stringify(split)}`);
+  // #narrative-view is only the pane FinkWM sizes; the story itself plays in
+  // the runner's window. So the story must actually be ON SCREEN in that
+  // pane: the runner window visible, above the seam, and none of it hidden
+  // behind the game (its prose scrolls to the bottom of its own box).
+  const storyWin = await page.evaluate(() => {
+    const f = [...document.querySelectorAll('iframe')].find(x => /apps\/storyrunner\//.test(x.src));
+    const w = f?.closest('.foafos-window') || f;
+    if (!w) return null;
+    const r = w.getBoundingClientRect(), g = document.getElementById('minigame-view').getBoundingClientRect();
+    const cs = getComputedStyle(w);
+    return { visible: cs.visibility !== 'hidden' && cs.display !== 'none' && r.height > 0,
+      yielded: w.classList.contains('foafos-yielded'),
+      top: Math.round(r.top), bottom: Math.round(r.bottom), gameTop: Math.round(g.top) };
+  });
+  storyWin?.visible && storyWin.bottom <= storyWin.gameTop + 1 && storyWin.bottom - storyWin.top > 150
+    ? pass(`split: the story runner shows in the story pane (${storyWin.top}–${storyWin.bottom}px, game from ${storyWin.gameTop}px)`)
+    : fail(`split: the story pane does not show the story — runner window ${JSON.stringify(storyWin)}`);
   // and the two panes must TILE: no clipped game bottom, no story text
   // hidden behind it (padding-bottom:50vh made this fail invisibly)
   const tile = await page.evaluate(() => {
@@ -288,7 +302,7 @@ try {
   const tiles = storm.mode === 'split' && storm.gameH > 100 &&
     Math.abs(storm.gameTop + storm.gameH - storm.vh) <= 2 &&
     storm.narrBottom <= storm.gameTop + 2;
-  tiles ? pass(`10 fast flips: panes still tile (story→${storm.narrBottom}, game ${storm.gameTop}+${storm.gameH}=${storm.vh})`)
+  tiles ? pass(`10 fast flips: panes still tile (story pane→${storm.narrBottom}, game ${storm.gameTop}+${storm.gameH}=${storm.vh})`)
         : fail(`flip storm broke the tiling: ${JSON.stringify(storm)}`);
   guest.sh === guest.ih
     ? pass(`guest fits its frame after the storm (${guest.sh}px in ${guest.ih}px)`)
@@ -317,15 +331,22 @@ try {
     t.quitTap(r.quit.x + r.quit.w / 2, r.quit.y + r.quit.h / 2);
   });
   await page.waitForTimeout(800);
-  const closed = await page.evaluate(() => ({
-    wmActive: FinkWM.active,
-    chromeHidden: document.getElementById('wm-chrome').classList.contains('wm-hidden'),
-    narrative: document.getElementById('narrative-view').classList.contains('active'),
-    gameGone: !document.getElementById('minigame-view').classList.contains('active'),
-  }));
-  !closed.wmActive && closed.chromeHidden && closed.narrative && closed.gameGone
-    ? pass('exit: window closed, chrome hidden, story restored')
-    : fail(`exit incomplete: ${JSON.stringify(closed)}`);
+  const closed = await page.evaluate(() => {
+    const f = [...document.querySelectorAll('iframe')].find(x => /apps\/storyrunner\//.test(x.src));
+    const w = f?.closest('.foafos-window') || f;
+    return {
+      wmActive: FinkWM.active,
+      chromeHidden: document.getElementById('wm-chrome').classList.contains('wm-hidden'),
+      storyShown: !!w && getComputedStyle(w).visibility !== 'hidden' && w.getBoundingClientRect().height > 150,
+      gameGone: !document.getElementById('minigame-view').classList.contains('active'),
+    };
+  });
+  // "story restored" now means the runner's window is back on screen and
+  // the story is no longer paused waiting for its game
+  const storyResumed = await runner.evaluate(() => !window.__storyrunner.paused()).catch(() => false);
+  !closed.wmActive && closed.chromeHidden && closed.storyShown && storyResumed && closed.gameGone
+    ? pass('exit: window closed, chrome hidden, story restored (runner visible and resumed)')
+    : fail(`exit incomplete: ${JSON.stringify({ ...closed, storyResumed })}`);
 
   await page.evaluate(() => FinkWM.setMode('full'));
   await page.waitForTimeout(300);
@@ -360,8 +381,12 @@ try {
   });
 
   // the suite exited the game above, so bring one back — a hidden toolbar
-  // has no handle to tap and would fail these for the wrong reason
-  await page.evaluate(() => window.FinkMinigames.startMinigame('mudslider', 'normal'));
+  // has no handle to tap and would fail these for the wrong reason. Launch
+  // it the way a story does (the runner's story.launch verb, what
+  // `# MINIGAME: mudslider` sends), so the story's window yields the screen
+  // to it exactly as in play.
+  const relaunch = await runner.evaluate(() => window.foaf.storyRequest('story.launch', { game: 'mudslider' }));
+  if (!relaunch?.ok) throw new Error('story.launch mudslider refused: ' + JSON.stringify(relaunch));
   await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 15000 });
   await page.waitForTimeout(800);
   await page.evaluate(() => FinkWM.setMode('split'));

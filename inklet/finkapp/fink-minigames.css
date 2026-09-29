@@ -200,6 +200,7 @@ body[data-wm-mode="split"] #minigame-view.state-split {
     cursor: pointer;
 }
 .wm-split-swap[hidden] { display: none; }
+body.fink-wm-dragging iframe { pointer-events: none; }
 
 /* Pip: a live viewport in the corner, not a control surface — input is
    suspended (tap restores, drag moves). */

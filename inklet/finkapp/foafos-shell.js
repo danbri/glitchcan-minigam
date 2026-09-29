@@ -685,46 +685,68 @@ bus.subscribe('app.close', (e) => {
     tellWatcher(w, 'close', { ids: mine, count: mine.length });
   }
 });
-// WHERE A WORLD GOES is the reader's choice, made in the window manager's
+// WHERE THE STAGE GOES is the reader's choice, made in the window manager's
 // toolbar (FinkWM: full, split, pip; owner's decision, September 2026).
-// The shell only follows it: body[data-world-mode] names the mode, and in
-// split the story window takes the larger band the stage leaves, measured
-// here in pixels (FinkWM measures split the same way, for the same reason).
-function layoutWorld() {
+// The shell only follows it for the story window that owns what is on the
+// stage: the runner whose world it is, or whose game. body[data-stage-mode]
+// names the mode, that window carries .foafos-beside-stage, and in split it
+// takes the larger band the stage leaves, measured here in pixels (FinkWM
+// measures split the same way, for the same reason). Other open windows are
+// not moved.
+function stageOwner() {
+  for (const w of storyWorlds.values()) {
+    const win = w.frame?.closest?.('.foafos-window');
+    if (win) return { win, kind: 'world' };
+  }
+  return _yieldedWin ? { win: _yieldedWin, kind: 'game' } : null;
+}
+function layoutStage() {
   const wm = window.FinkWM, body = document.body, root = document.documentElement.style;
-  const on = storyWorlds.size > 0 && !!wm?.active;
-  if (!on) {
-    delete body.dataset.worldMode;
-    body.classList.remove('foafos-world-stage-top');
+  const own = wm?.active ? stageOwner() : null;
+  // A GAME on the stage has the glass in full, whoever opened it; a game from
+  // the launcher has no story to yield, so the stage itself goes over the
+  // windows. A world does not: on a desktop its story floats above it.
+  body.classList.toggle('foafos-stage-game', !!wm?.active && own?.kind !== 'world');
+  if (wm?.active && !own) body.dataset.stageMode = wm.mode || 'full';
+  for (const w of document.querySelectorAll('.foafos-beside-stage')) {
+    if (w !== own?.win) w.classList.remove('foafos-beside-stage');
+  }
+  if (!own) {
+    if (!wm?.active) delete body.dataset.stageMode;
+    body.classList.remove('foafos-stage-top');
     return;
   }
-  body.dataset.worldMode = wm.mode || 'full';
+  const mode = wm.mode || 'full';
+  own.win.classList.add('foafos-beside-stage');
+  body.dataset.stageMode = mode;
+  // A game has the glass in full; in split or pip its story shows again.
+  if (own.kind === 'game') own.win.classList.toggle('foafos-yielded', mode === 'full');
   const view = document.getElementById('minigame-view');
-  if (wm.mode !== 'split' || !view) { body.classList.remove('foafos-world-stage-top'); return; }
+  if (mode !== 'split' || !view) { body.classList.remove('foafos-stage-top'); return; }
   const r = view.getBoundingClientRect(), H = window.innerHeight;
   const top = r.top >= H - r.bottom;            // more room above the stage than below
-  body.classList.toggle('foafos-world-stage-top', !top);
+  body.classList.toggle('foafos-stage-top', !top);
   root.setProperty('--foaf-story-top', `${top ? 0 : Math.round(r.bottom)}px`);
   root.setProperty('--foaf-story-bottom', `${top ? Math.round(H - r.top) : 0}px`);
   root.setProperty('--foaf-stage-gap', `${Math.max(0, Math.round(H - r.bottom))}px`);
 }
-for (const t of ['wm.mode', 'wm.settled', 'wm.close', 'story.world']) bus.subscribe(t, () => layoutWorld());
-window.addEventListener('resize', () => layoutWorld());
-window.addEventListener('fink-wm-layout', () => layoutWorld());
+for (const t of ['wm.mode', 'wm.settled', 'wm.close', 'story.world']) bus.subscribe(t, () => layoutStage());
+window.addEventListener('resize', () => layoutStage());
+window.addEventListener('fink-wm-layout', () => layoutStage());
 bus.subscribe('app.close', (e) => {
   const closed = e.data?.closed || [];
   for (const [runnerId, w] of storyWorlds) {
     if (closed.includes(runnerId)) {
       storyWorlds.delete(runnerId);
       document.body.classList.toggle('foafos-world-on', storyWorlds.size > 0);
-      layoutWorld();
+      layoutStage();
       continue;
     }
     if (!w.nodeId || !closed.includes(w.nodeId)) continue;
     storyWorlds.delete(runnerId);
     w.frame.closest?.('.foafos-window')?.classList.remove('foafos-with-world');
     document.body.classList.toggle('foafos-world-on', storyWorlds.size > 0);
-    layoutWorld();
+    layoutStage();
     try {
       w.frame.contentWindow?.postMessage({ type: 'story.event', event: 'world.closed', detail: { world: w.game } }, '*');
     } catch (err) { /* the runner is gone too */ }
@@ -1005,11 +1027,13 @@ function yieldScreenTo(win) {
   restoreYieldedScreen();
   win.classList.add('foafos-yielded');
   _yieldedWin = win;
+  layoutStage();
 }
 function restoreYieldedScreen() {
   if (!_yieldedWin) return;
   _yieldedWin.classList.remove('foafos-yielded');
   _yieldedWin = null;
+  layoutStage();
 }
 
 // Window-app snapshots (spec §5.5.4). The bytes live in the SHELL's own
@@ -1050,8 +1074,8 @@ const storyDepth = new Map();
 // stack of one story repeated.
 const _navSeen = new Map();
 
-// The story the BOOT path wants the boxed engine to open, consumed once.
-// fink-player sets it just before launching the runner as the boot surface.
+// The story the BOOT path wants the runner to open, consumed once.
+// foafos-boot.js sets it just before launching the runner.
 let _bootStory = null;
 FoafOS.setBootStory = (url) => { _bootStory = url || null; };
 const takeBootStory = () => { const u = _bootStory; _bootStory = null; return u; };
@@ -2869,6 +2893,16 @@ function buildUI() {
             });
             if (node.refused) { reply({ ok: false, reason: node.reason || 'refused' }); return; }
             stack.push(node.id);
+            // The goDeeper link was asked by the OUTER session, so the story.link
+            // handler counted it there. The dream is this new session: move the
+            // depth to it, and give the outer one its own depth back. Without
+            // this the dream read depth 0 (its spends were allowed) and the
+            // waking story stayed at depth 1 after surfacing (locked out).
+            if (rel === 'godeeper' && outer) {
+              const d = storyDepth.get(outer.id) || 0;
+              storyDepth.set(node.id, d);
+              storyDepth.set(outer.id, Math.max(0, d - 1));
+            }
             bus.publish('story.session', {
               summary: `story session "${node.label}" started`
                 + (node.dreamOf ? ` inside "${outer.label}"` : '')
@@ -2974,7 +3008,9 @@ function buildUI() {
             if (op === 'declares') {
               const names = Array.isArray(d.detail?.names) ? d.detail.names.map(String) : null;
               vars.setBound(names);
-              reply({ ok: true, bound: names ? names.length : null });
+              // which names are the shared economy: the runner keeps the
+              // mirror up to date for those, both ways
+              reply({ ok: true, bound: names ? names.length : null, shared: SHARED_ECONOMY });
             } else if (op === 'read') {
               // Only the shared economy crosses the boundary. A story's
               // private variables are its own business and stay in the box.

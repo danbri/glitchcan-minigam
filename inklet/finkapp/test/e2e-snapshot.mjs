@@ -20,6 +20,7 @@
 // could be a coincidence of the spawn point, 42/2 cannot be.
 import { spawn } from 'node:child_process';
 import { chromium } from '@playwright/test';
+import { openStory, runnerFrame } from './lib/story.mjs';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -42,8 +43,12 @@ await new Promise(r => setTimeout(r, 900));
 
 const fail = (m) => { console.error('✖', m); process.exitCode = 1; };
 const pass = (m) => console.log('✔', m);
-const base = `http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/`;
-const story = `?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`;
+// The shell boots the story in the boxed runner (no host-page engine).
+const storyReady = async (page) => {
+  const r = await runnerFrame(page);
+  await r.waitForFunction(() => window.__storyrunner?.ready?.()
+    && (window.__storyrunner.state.choices.length > 0 || window.__storyrunner.state.ended), null, { timeout: 60000 });
+};
 
 let browser;
 try {
@@ -52,8 +57,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 430, height: 860 }, hasTouch: true });
   const errs = [];
   page.on('pageerror', e => errs.push(String(e).split('\n')[0].slice(0, 140)));
-  await page.goto(base + story);
-  await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 30000 });
+  await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/hampstead.fink.js');
   await page.waitForTimeout(1200);
 
   // Boot mudslider and get past its own "Ready?" gate. The game lives in
@@ -210,7 +214,7 @@ try {
   // player's game the moment they refreshed.
   {
     await page.reload();
-    await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 30000 });
+    await storyReady(page);
     await page.waitForTimeout(1500);
     await page.evaluate(() => FinkMinigames.hasSnapshot('mudslider'))
       ? pass('snapshot survived a page reload (written through to FoafStore)')

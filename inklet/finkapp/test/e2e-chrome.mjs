@@ -1,6 +1,7 @@
 // Shell chrome as apps.
 //
-// The breadcrumb, the story status line and the FINK load meter were
+// The breadcrumb, the menubar (and, until September 2026, the story status
+// line and the FINK load meter) were
 // markup in index.html, and a storyless installation dealt with them by
 // stylesheet: `display: none !important`. They still existed, still held
 // ids the story engine wrote into, and still sat in the document and the
@@ -59,9 +60,19 @@ const CHROME_MOUNTS = (await import('../foafos-apps.js')).chromeApps().map(a => 
 // never registered as an app at all, so no manifest can decline it. Ids live
 // HERE on purpose — adding narrative chrome to index.html without giving it
 // a registry entry should fail this, loudly, rather than ship.
+//
+// September 2026: the host story engine went, and with it the stats bar,
+// the scroll status bar, the radial ☰, the dev panel, the status line, the
+// load meter and the story menu. The furniture left is the breadcrumb and
+// the menubar (both registered chrome apps).
 const STORY_FURNITURE = [
-  'breadcrumb-container', 'breadcrumb-toggle', 'stats-bar',
-  'scroll-status-bar', 'radial-menu', 'dev-panel',
+  'breadcrumb-container', 'breadcrumb-toggle', 'breadcrumb-content', 'foaf-menubar',
+];
+// Furniture of the deleted host engine. It must not come back on ANY root:
+// the runner draws its own status line inside its frame.
+const DELETED_FURNITURE = [
+  'stats-bar', 'scroll-status-bar', 'radial-menu', 'dev-panel', 'status-overlay',
+  'story-output', 'choices', 'image-container', 'homeBtn',
 ];
 
 let browser;
@@ -144,6 +155,11 @@ try {
       ? pass(`switcher separates furniture from work ("${tally.trim()}")`)
       : fail(`switcher tally unhelpful: ${tally}`);
 
+    const ghosts = await page.evaluate((ids) => ids.filter(id => document.getElementById(id)), DELETED_FURNITURE);
+    ghosts.length === 0
+      ? pass(`none of the ${DELETED_FURNITURE.length} pieces of deleted host-engine furniture is in the document`)
+      : fail(`deleted host-engine furniture is back: ${ghosts.join(', ')}`);
+
     errs.length === 0 ? pass('story root: no page errors') : fail(`errors: ${errs[0]}`);
     await page.close();
   }
@@ -156,9 +172,9 @@ try {
       dom: furniture.filter(id => document.getElementById(id)),
       // a refused launch, not a hidden one
       refused: (() => { const n = FoafOS.launchApp('breadcrumb'); return n === null; })(),
-    }), STORY_FURNITURE);
+    }), [...STORY_FURNITURE, ...DELETED_FURNITURE]);
     st.offered.length === 0 && st.dom.length === 0
-      ? pass(`office root carries none of the ${STORY_FURNITURE.length} pieces of story furniture — absent, not hidden`)
+      ? pass(`office root carries none of the ${STORY_FURNITURE.length} pieces of story furniture (nor the ${DELETED_FURNITURE.length} deleted ones) — absent, not hidden`)
       : fail(`office still carries chrome: ${JSON.stringify(st)}`);
     st.refused
       ? pass('and cannot be talked into mounting one')

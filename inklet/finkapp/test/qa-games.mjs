@@ -121,8 +121,14 @@ try {
     const page = await ctx.newPage();
     const errs = [];
     page.on('pageerror', e => errs.push(String(e).split('\n')[0].slice(0, 90)));
-    await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
-    await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
+    // A bare shell (no story). The game is started straight from the shell,
+    // not by a story, and with a story open its runner window lies OVER the
+    // stage at phone width: the pointer lands on the runner and a screenshot
+    // of #minigame-view shows the story. That measured the window, not the
+    // game. (The host story here used to be Hampstead in the deleted host
+    // engine, which the stage replaced.)
+    await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=none`);
+    await page.waitForFunction(() => !!window.FinkMinigames && !!window.FoafOS?.launchApp, null, { timeout: 25000 });
     await page.waitForTimeout(1000);
 
     const row = { id: g.id, method: '-', idle: '-', driven: '-', verdict: '?', audio: '-', note: '' };

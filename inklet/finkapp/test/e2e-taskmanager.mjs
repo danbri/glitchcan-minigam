@@ -235,7 +235,9 @@ try {
   await page.evaluate(() => FoafOS.openSwitcher());
   const hidden = (await rows(page)).some((r) => /Breadcrumb|WMBling/.test(r));
   await click(page, '#foafos-switcher [data-focus="tools:chrome"]');
-  const shown = (await rows(page)).filter((r) => /Breadcrumb|WMBling|Status line/.test(r)).length;
+  // The chrome rows: WMBling and the two chrome apps under it. (The status
+  // line was the third until the host engine's chrome went, Sept 2026.)
+  const shown = (await rows(page)).filter((r) => /Breadcrumb|WMBling|Menubar/.test(r)).length;
   const saved = await page.evaluate(() => localStorage.getItem('foafos.tm.chrome'));
   await page.evaluate(() => { FoafOS.openSwitcher(); FoafOS.openSwitcher(); });   // close, reopen
   const kept = (await rows(page)).some((r) => /Breadcrumb/.test(r));

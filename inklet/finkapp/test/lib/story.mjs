@@ -17,7 +17,7 @@ export async function runnerFrame(page, ms = 60000) {
 }
 
 // Open the shell on a story and wait until the runner has played its first
-// step. `base` is http://host:port/<repo>; `story` a path from the repo root.
+// step. `base` is http://host:port (no repo); `story` a path from the repo root.
 export async function openStory(page, base, repoName, story, extra = '') {
   await page.goto(`${base}/${repoName}/inklet/finkapp/?story=/${repoName}/${story}${extra}`);
   const r = await runnerFrame(page);

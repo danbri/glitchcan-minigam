@@ -131,6 +131,23 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   `set-variable`, `complete {result}`, `error`. Minigames cannot divert
   Ink; they mutate variables, and the runner resumes when the game
   completes (`minigame.complete`).
+- **The shared economy crosses both ways (September 2026).** A game reads
+  its start values from the shell's mirror (`FoafOS.storyVars`). The runner
+  now writes the story's own values there: at start (a shared VAR the
+  mirror has no value for) and on every change the ink makes
+  (`ObserveVariable`, quiet, through the broker, so a dream's change is
+  refused). Before, `~ diamonds = 0` never reached the mirror, a game read
+  an old value, and its result wrote over the story's change. The shell's
+  reply to `story.vars declares` names the shared set (`shared`).
+- **`# FOLEY:` plays in the runner too** (`story.audio`, action `foley`,
+  the shell's FinkFoley). Only the deleted host engine handled it; since
+  the runner became the only engine, riverbend's water and wind were
+  silent until e2e-audio-leak caught it. When deleting an engine, diff the
+  tag switch of the old one against the new one.
+- **A window-manager drag sets `body.fink-wm-dragging`, and frames take no
+  pointer events while it lasts.** Pointer capture on the toolbar handle
+  did not hold when the pointer crossed the (now visible) story frame in
+  split: the moves went to the frame and the dock test failed.
 - Story↔minigame linkage that ALREADY exists (use before building new):
   init carries diamonds/mega_diamonds/keys/score/player_level/difficulty
   (`_getStoryVariables`); guests spend live via `set-variable`; robbin
@@ -262,13 +279,19 @@ The ink compiler treats `//` as a comment even inside `# TAG: value`:
   world completely. **Where the world goes is the reader's choice** (owner,
   September 2026: "Top vs bottom is an app layout control for user, not our
   business"; then "Use the window manager"). FinkWM's toolbar sets full,
-  split or pip; `layoutWorld()` in the shell follows it. In split the story
-  window (`foafos-with-world`) takes the band the stage leaves, measured in
-  pixels into `--foaf-story-top/-bottom`; in full it stands aside; in pip
-  the stage floats over it (z 2700), and the toolbar stays above the story
-  window in every mode (z 2710; at its old 2600 it was under the story and
-  the reader could not reach the mode). A world opens split on a phone,
-  full on a desktop; after that the mode is the reader's. A fixed "city on
+  split or pip; `layoutStage()` in the shell follows it for the story
+  window that owns what is on the stage, a world OR a game
+  (`.foafos-beside-stage`, `body[data-stage-mode]`). In split that window
+  takes the band the stage leaves, measured in pixels into
+  `--foaf-story-top/-bottom`; in full it stands aside (a game's always; a
+  world's only on a phone, where the story is full-bleed: on a desktop the
+  story window floats over the world and must stay); in pip the stage
+  floats over it (z 2700), and the toolbar stays above the story window in
+  every mode (z 2710; at its old 2600 it was under the story and the reader
+  could not reach the mode). A world opens split on a phone, full on a
+  desktop; after that the mode is the reader's. Games were covered only
+  after the host engine went: in split the runner stayed yielded and the
+  story half of the screen was an empty pane (found by e2e-wm). A fixed "city on
   top, story below" rule came first and was taken out: do not bring back a
   placement the reader cannot change. **Split is the reader's too**
   (owner: "A grippy for resizing split or offering a swap option while

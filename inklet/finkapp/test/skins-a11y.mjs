@@ -4,19 +4,22 @@
 //
 //   node inklet/finkapp/test/skins-a11y.mjs
 //
-// Checks, per skin, on a real rendered story:
+// Checks, per skin, on a real rendered story — measured on the READING
+// SURFACE, the story runner's frame (stories play nowhere else):
+//   · the skin reaches the runner at all (its root carries data-skin)
 //   · body text vs its background            ≥ 4.5:1 (WCAG AA)
 //   · choice text vs choice background       ≥ 4.5:1
 //   · choice text vs HOVER background        ≥ 4.5:1  (hover must not
 //     become the unreadable state — a classic skin regression)
 //   · focus ring is visible and not colour-only
 //   · every choice is a 44px+ hit target
-//   · no horizontal overflow at phone width
+//   · no horizontal overflow at phone width (shell page and runner)
 
 import { spawn } from 'node:child_process';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { openStory } from './lib/story.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -26,7 +29,19 @@ const PORT = 8172;
 const EXE = process.env.PW_CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const SKINS = ['spectrum', 'paper', 'terminal', 'aurora', 'broadsheet', 'calm'];
 
-const server = spawn('python3', ['-m', 'http.server', String(PORT), '--directory', serveRoot], { stdio: 'ignore' });
+// CORS on: the runner's frame has an opaque origin, so every fetch it
+// makes (the story, its media) is cross-origin to this server.
+const CORS = `
+import http.server, functools
+class H(http.server.SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        super().end_headers()
+    def log_message(self, *a): pass
+http.server.ThreadingHTTPServer(('127.0.0.1', ${PORT}),
+    functools.partial(H, directory='${serveRoot}')).serve_forever()
+`;
+const server = spawn('python3', ['-c', CORS], { stdio: 'ignore' });
 await new Promise(r => setTimeout(r, 900));
 
 let fail = 0;
@@ -72,19 +87,21 @@ try {
     const page = await ctx.newPage();
     const errs = [];
     page.on('pageerror', e => errs.push(String(e).slice(0, 120)));
-    await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&skin=${skin}&story=/${repoName}/inklet/demos/foafos-tour.fink.js`);
-    await page.waitForFunction(() => document.querySelectorAll('#choices .choice-btn').length > 0, null, { timeout: 25000 });
+    const rf = await openStory(page, `http://127.0.0.1:${PORT}`, repoName,
+      'inklet/demos/foafos-tour.fink.js', `&skin=${skin}`);
+    await rf.waitForFunction(() => document.querySelectorAll('#choices button').length > 0, null, { timeout: 25000 });
     await page.waitForTimeout(700);
+    const shellOver = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 
-    const r = await page.evaluate(`(() => {
+    const r = await rf.evaluate(`(() => {
       ${CONTRAST}
       const pageBg = getComputedStyle(document.body).backgroundColor;
-      const text = document.querySelector('#story-output p') || document.querySelector('#story-output');
+      const text = document.querySelector('#prose p') || document.querySelector('#prose');
       const tcs = getComputedStyle(text);
-      const scene = text.closest('.story-section') || document.body;
+      const scene = document.getElementById('stage') || document.body;
       const sceneBg = getComputedStyle(scene).backgroundColor;
 
-      const btn = document.querySelector('#choices .choice-btn');
+      const btn = document.querySelector('#choices button');
       // getComputedStyle is LIVE: snapshot the resting state before we
       // focus the button, or we measure the focus styles by accident.
       const bcs = getComputedStyle(btn);
@@ -97,8 +114,10 @@ try {
       for (const sheet of document.styleSheets) {
         let rules; try { rules = sheet.cssRules; } catch { continue; }
         for (const rule of rules || []) {
-          if (rule.selectorText && /\\.choice-btn:hover/.test(rule.selectorText)) {
-            hoverBg = rule.style.backgroundColor || hoverBg;
+          if (rule.selectorText && /#choices button:hover/.test(rule.selectorText)) {
+            // A var() inside the background shorthand leaves every
+            // longhand empty (pending substitution); read the shorthand.
+            hoverBg = rule.style.backgroundColor || rule.style.getPropertyValue('background') || hoverBg;
             hoverInk = rule.style.color || hoverInk;
           }
         }
@@ -126,13 +145,31 @@ try {
       };
     })()`);
 
+    // The runner's stylesheet is cross-origin to its opaque-origin frame,
+    // so cssRules cannot be read there and the rule scan above finds
+    // nothing. Hover the button for real and read the computed state.
+    if (r.hoverRatio == null) {
+      await page.mouse.move(0, 0);
+      await rf.hover('#choices button', { timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(250);
+      r.hoverRatio = await rf.evaluate(`(() => {
+        ${CONTRAST}
+        const btn = document.querySelector('#choices button');
+        if (!btn || !btn.matches(':hover')) return null;
+        const cs = getComputedStyle(btn);
+        const pageBg = getComputedStyle(document.body).backgroundColor;
+        const sceneBg = getComputedStyle(document.getElementById('stage') || document.body).backgroundColor;
+        return contrastOn(cs.color, stack([pageBg, sceneBg, cs.backgroundColor]));
+      })()`).catch(() => null);
+    }
     const two = (n) => n == null ? 'n/a' : n.toFixed(2);
+    ok(`${skin}: skin reaches the reading surface`, r.skin === skin, `runner data-skin=${r.skin}`);
     ok(`${skin}: body text contrast`, r.bodyRatio >= 4.5, `${two(r.bodyRatio)}:1 · ${r.font}`);
     ok(`${skin}: choice contrast`, r.choiceRatio >= 4.5, `${two(r.choiceRatio)}:1`);
     ok(`${skin}: hover contrast`, r.hoverRatio == null || r.hoverRatio >= 4.5, `${two(r.hoverRatio)}:1`);
     ok(`${skin}: visible focus ring`, r.focusWidth >= 2 && r.focusStyle !== 'none', `${r.focusWidth}px ${r.focusStyle}`);
     ok(`${skin}: 44px+ hit target`, r.hit >= 44, `${r.hit}px`);
-    ok(`${skin}: no sideways overflow`, r.hOver <= 0, `${r.hOver}px`);
+    ok(`${skin}: no sideways overflow`, r.hOver <= 0 && shellOver <= 0, `runner ${r.hOver}px · shell ${shellOver}px`);
     ok(`${skin}: no page errors`, errs.length === 0, errs.slice(0, 1).join(''));
     await page.close();
   }

@@ -276,7 +276,7 @@ try {
         const R = (el) => { const r = el.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; };
         const win = document.querySelector('.foafos-window iframe[src*="storyrunner"]').closest('.foafos-window');
         const chrome = document.getElementById('wm-chrome');
-        return { mode: document.body.dataset.worldMode, stage: R(document.getElementById('minigame-view')), story: R(win),
+        return { mode: document.body.dataset.stageMode, stage: R(document.getElementById('minigame-view')), story: R(win),
           shown: getComputedStyle(win).visibility === 'visible',
           stageOver: +getComputedStyle(document.getElementById('minigame-view')).zIndex > +getComputedStyle(win).zIndex,
           toolbar: +getComputedStyle(chrome).zIndex > +getComputedStyle(win).zIndex };
@@ -453,7 +453,7 @@ try {
         stage: [Math.round(document.getElementById('minigame-view').getBoundingClientRect().top), Math.round(document.getElementById('minigame-view').getBoundingClientRect().bottom)],
         story: [Math.round(w.getBoundingClientRect().top), Math.round(w.getBoundingClientRect().bottom)],
         dock: [Math.round(document.getElementById('foafos-dock').getBoundingClientRect().top), Math.round(document.getElementById('foafos-dock').getBoundingClientRect().bottom)],
-        mode: document.body.dataset.worldMode };
+        mode: document.body.dataset.stageMode };
     });
     const own = await tc.evaluate(() => ({ on: __drift.PAD.on, hidden: document.getElementById('pad')?.hidden !== false }));
     const within = (x, box) => x[0] >= box[0] - 1 && x[1] <= box[1] + 1;

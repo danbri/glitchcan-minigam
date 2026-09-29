@@ -4,7 +4,7 @@
 // Proves the story+runtime containment the live host-side player lacks:
 //   · the runner compiles and PLAYS a real ink story entirely inside its
 //     own opaque-origin frame (prose + a choice tree)
-//   · it has NO host reach: parent.FoafOS / parent.FinkInkEngine throw
+//   · it has NO host reach: parent.FoafOS / parent.document throw
 //     (opaque origin — the SecurityError IS the boundary working)
 //   · a story's # BG: colours the RUNNER's frame, never the host body
 //   · a # MINIGAME: tag does NOT launch anything directly — it surfaces as
@@ -126,7 +126,6 @@ try {
     const probe = (fn) => { try { return fn() ? 'reached' : 'absent'; } catch (e) { return 'blocked:' + e.name; } };
     return {
       foafos: probe(() => window.parent.FoafOS),
-      engine: probe(() => window.parent.FinkInkEngine),
       doc: probe(() => window.parent.document.body),
     };
   });
@@ -563,16 +562,20 @@ try {
     pass('an unknown narrative verb is refused with a named reason');
   } else fail('deny path wrong: ' + JSON.stringify(refusal));
 
-  // ── 7. the DEFAULT is switched to boxed; the host player is flagged ──
+  // ── 7. the box is the ONLY story surface: the host engine is gone ──
+  // (Until September 2026 this read the root's `storyPlayer` declaration
+  // and the host player's pending-delete flag. Both went with the host
+  // engine; what remains to hold is that nothing of it came back.)
   const direction = await page.evaluate(() => ({
-    declaredDefault: FoafOS.root?.storyPlayer?.default,
-    autoBoot: FoafOS.root?.storyPlayer?.autoBoot,
-    legacyPending: window.FinkPlayer?.PENDING_DELETE === true,
-    legacyIssue: window.FinkPlayer?.trackingIssue,
+    hostEngine: ['FinkInkEngine', 'FinkPlayer', 'FinkUI', 'FinkNavigation', 'FinkSandbox', 'FinkUtils']
+      .filter((g) => g in window),
+    inkCompiler: typeof window.inkjs !== 'undefined',
+    storyPlayer: FoafOS.root?.storyPlayer ?? null,
+    links: typeof window.FinkLinks?.generateKnotHash === 'function',
   }));
-  if (direction.declaredDefault === 'boxed' && direction.legacyPending && direction.legacyIssue === 779) {
-    pass(`default surface = boxed; host player flagged pending-delete (auto-boot ${direction.autoBoot} until #${direction.legacyIssue})`);
-  } else fail('default switch / pending-delete flag wrong: ' + JSON.stringify(direction));
+  if (!direction.hostEngine.length && !direction.inkCompiler && direction.storyPlayer === null && direction.links) {
+    pass('the shell carries no story engine and no ink compiler; stories play only in the box');
+  } else fail('host-engine remains on the shell page: ' + JSON.stringify(direction));
 
   // ── 8. CONTROL border (LAST — it detaches the runner frame): closing the
   // runner subtree tears down its child game. Real control, real cascade.
@@ -692,7 +695,7 @@ try {
   // real knots, a deep link that names the knot, and the shell's skin.
   {
     const url = `http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/`
-      + `?player=boxed&story=/${repoName}/inklet/hampstead.fink.js`;
+      + `?story=/${repoName}/inklet/hampstead.fink.js`;
     await page.goto(url);
     await page.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
     let hf = null;
@@ -720,12 +723,15 @@ try {
       h.url === 'hampstead.fink.js' && h.knots > 30 && h.prose >= 1 && h.choices >= 1
         ? pass(`a BUNDLED story plays in the box (${h.url}, ${h.knots} knots, ${h.choices} choice)`)
         : fail(`bundled story did not play boxed: ${JSON.stringify(h)}`);
-      // `?story=` used to force the legacy player; asking for the box now
-      // means the box, for any story.
-      const legacy = await page.evaluate(() => !!window.FinkInkEngine?.story);
-      !legacy
-        ? pass('?story= went to the BOX, not the host-page player')
-        : fail('the host player compiled the story instead of the box');
+      // `?story=` used to force the legacy player; it now means the box,
+      // and the box alone: one runner, and no engine on the shell page.
+      const surfaces = await page.evaluate(() => ({
+        runners: document.querySelectorAll('iframe[src*="apps/storyrunner"]').length,
+        host: typeof window.inkjs !== 'undefined' || 'FinkInkEngine' in window,
+      }));
+      surfaces.runners === 1 && !surfaces.host
+        ? pass('?story= went to the BOX, and only the box')
+        : fail(`?story= did not open exactly one box: ${JSON.stringify(surfaces)}`);
       h.skin
         ? pass(`the box wears the shell's skin from first paint (${h.skin}, ${h.bg})`)
         : fail(`skin tokens never reached the box: ${JSON.stringify(h)}`);
@@ -741,15 +747,12 @@ try {
         ? pass(`the deep link names the beat (${link}, knot "${at}")`)
         : fail(`no two-part deep link while reading: "${link}" knot=${at}`);
 
-      // And the shell's own generator agrees, so the link is shareable
-      // into the host player — same salt, same lengths, same string.
-      const same = await page.evaluate(async (knot) => {
-        const f = document.querySelector('iframe[src*="storyrunner"]');
-        const storyUrl = await f.contentWindow ? null : null;
-        return FinkNavigation.generateKnotHash(knot);
-      }, at);
+      // And the shell's own generator (FinkLinks — the breadcrumb and the
+      // history handler read links with it) agrees: same salt, same
+      // lengths, same string.
+      const same = await page.evaluate((knot) => FinkLinks.generateKnotHash(knot), at);
       link.endsWith(same)
-        ? pass('the boxed link is byte-identical to a host-player link')
+        ? pass('the boxed link is byte-identical to the shell\'s FinkLinks hash')
         : fail(`hash disagreement: link=${link} shell=${same}`);
     }
   }
@@ -762,7 +765,7 @@ try {
   // (toc → episodes list is in-story, then a real cross-file link).
   {
     const url = `http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/`
-      + `?player=boxed&story=/${repoName}/inklet/toc.fink.js`;
+      + `?story=/${repoName}/inklet/toc.fink.js`;
     await page.goto(url);
     await page.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
     let tf = null;

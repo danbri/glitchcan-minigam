@@ -11,6 +11,7 @@ import { spawn } from 'node:child_process';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { openStory, goto, setVar, varOf, waitVar } from './lib/story.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -49,19 +50,18 @@ try {
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(String(e).slice(0, 200)));
 
-  // 1. boot the shell straight into the hub story
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/world-between-worlds.fink.js`);
-  await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
-  await page.waitForTimeout(1500);
-  pass('world-between-worlds compiled');
+  // 1. boot the shell straight into the hub story, in the story runner
+  const r = await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/world-between-worlds.fink.js');
+  pass('world-between-worlds compiled (runner ready)');
 
   // 2. jump to the arcade knot that fires the MINIGAME tag (seed the
-  // purse so init carries live economy into the guest)
-  await page.evaluate(() => {
-    FinkInkEngine.story.variablesState['diamonds'] = 3;
-    FinkInkEngine.story.ChoosePathString('play_waterworld');
-    FinkInkEngine.continueStory();
-  });
+  // purse so init carries live economy into the guest). The purse is the
+  // shell's shared economy — a guest's init reads that mirror — so it is
+  // brokered in (story.vars write) and the runner's VAR set to agree.
+  const spent = await r.evaluate(() => window.__storyrunner.spend('diamonds', 3));
+  if (!spent?.ok) fail('story.vars write diamonds refused: ' + JSON.stringify(spent));
+  await setVar(r, 'diamonds', 3);
+  if (!(await goto(r, 'play_waterworld'))) fail('runner refused goto play_waterworld');
 
   // 3. the guest frame boots the real game (post-redirect) and conforms
   await page.waitForFunction(() => {
@@ -123,23 +123,23 @@ try {
   // story must resume. The frame DETACHES on complete — read the verdict
   // from the host, never the frame.
   await frame.evaluate(() => window.__waterworld.win());
-  await page.waitForFunction(() =>
-    FinkInkEngine.story.variablesState['waterworld_won'] === true, null, { timeout: 15000 });
-  pass('waterworld_won written back into Ink');
-  const vars = await page.evaluate(() => ({
-    treasure: FinkInkEngine.story.variablesState['waterworld_treasure'],
-    diamonds: FinkInkEngine.story.variablesState['diamonds'],
-    score: FinkInkEngine.story.variablesState['score'],
-  }));
+  const won = await waitVar(r, 'waterworld_won', (v) => v === true, 15000);
+  if (won === true) pass('waterworld_won written back into Ink (runner story)');
+  else fail('waterworld_won not written: ' + JSON.stringify(won));
+  const vars = {
+    treasure: await varOf(r, 'waterworld_treasure'),
+    diamonds: await varOf(r, 'diamonds'),
+    score: await varOf(r, 'score'),
+  };
   if (vars.treasure > 0) pass(`treasure banked: ${vars.treasure}`);
   else fail('waterworld_treasure not written: ' + JSON.stringify(vars));
   if (vars.diamonds > 3) pass(`diamonds grew from 3 to ${vars.diamonds}`);
   else fail(`diamonds did not grow (${vars.diamonds})`);
 
   // story resumed on arcade_return with the trophy choice unlocked
-  await page.waitForTimeout(1500);
-  const choices = await page.evaluate(() =>
-    [...document.querySelectorAll('#choices button, .choice-btn')].map(b => b.textContent.trim()));
+  await r.waitForFunction(() => !window.__storyrunner.paused()
+    && window.__storyrunner.state.choices.length > 0, null, { timeout: 15000 }).catch(() => {});
+  const choices = await r.evaluate(() => window.__storyrunner.state.choices);
   if (choices.some(c => /dripping chest/i.test(c))) pass('trophy choice unlocked in arcade_return');
   else fail('trophy choice missing; choices: ' + JSON.stringify(choices));
 
