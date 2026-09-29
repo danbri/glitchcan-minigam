@@ -100,17 +100,27 @@ try {
         return FoafOS.apps.children(n.id).flatMap(c => [c.appId, ...walk(c)]);
       })(FoafOS.rootNode),
     }), [CHROME_IDS, CHROME_MOUNTS]);
-    CHROME_IDS.every(id => st.mounted.includes(id))
-      ? pass(`story root mounts all ${CHROME_IDS.length} chrome apps (${st.mounted.join(', ')})`)
-      : fail(`chrome not mounted: ${JSON.stringify(st)}`);
-    Object.values(st.dom).every(Boolean)
-      ? pass('their elements are in the document')
-      : fail(`elements missing: ${JSON.stringify(st.dom)}`);
-    CHROME_IDS.every(id => st.inTree.includes(id))
+    // The breadcrumb is offered but starts OFF (root chromeOff, September
+    // 2026: its ▶ at the top left was "random ui on screen"); the menubar
+    // starts on. All apps turns either on or off.
+    const startOn = CHROME_IDS.filter(id => id !== 'breadcrumb');
+    startOn.every(id => st.mounted.includes(id)) && !st.mounted.includes('breadcrumb')
+      && st.offered.includes('breadcrumb') && !st.dom['breadcrumb-container']
+      ? pass(`story root mounts ${startOn.join(', ')}; the breadcrumb is offered but starts off`)
+      : fail(`chrome at boot: ${JSON.stringify(st)}`);
+    startOn.every(id => st.inTree.includes(id))
       ? pass('and they are nodes in the app tree, not special cases')
       : fail(`not in the tree: ${JSON.stringify(st.inTree)}`);
 
     // ── 3. toggling, and the breadcrumb surviving it ────────────────
+    const first = await page.evaluate(() => {
+      FoafOS.launchApp('breadcrumb');
+      return { mounted: FoafOS.chrome.isMounted('breadcrumb'),
+               inDom: !!document.getElementById('breadcrumb-container') };
+    });
+    first.mounted && first.inDom
+      ? pass('All apps turns the breadcrumb on')
+      : fail(`breadcrumb did not come on: ${JSON.stringify(first)}`);
     const off = await page.evaluate(() => {
       FoafOS.launchApp('breadcrumb');
       return { mounted: FoafOS.chrome.isMounted('breadcrumb'),

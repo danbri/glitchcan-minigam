@@ -58,6 +58,13 @@ window.FinkWM = {
         }
         this.elements.swapRow?.addEventListener('click', () => { this.swapPanes(); this._setCollapsed(true); });
         document.getElementById('returnToStory')?.addEventListener('click', () => this._setCollapsed(true));
+        const sys = { 'wm-sys-apps': () => window.FoafOS?.openHome?.(),
+                      'wm-sys-tasks': () => window.FoafOS?.openSwitcher?.(),
+                      'wm-sys-windows': () => window.FoafOS?.enterOverview?.(),
+                      'wm-sys-shell': () => window.FoafOS?.openDrawer?.(true) };
+        for (const [id, go] of Object.entries(sys)) {
+            document.getElementById(id)?.addEventListener('click', () => { this._setCollapsed(true); go(); });
+        }
         this._initMenuDismiss();
 
         this._initChromeDrag();
@@ -91,6 +98,7 @@ window.FinkWM = {
         // as a menu, so it can start closed and cover less of the game.
         this._setCollapsed(true);
         this.setAppActions(null);
+        this.setAppStatus('');
         this._bindOwnershipCues();
         this.setMode(mode, { animate: false });
         window.FoafOS?.bus.publish('wm.open', { summary: 'game window opened' });
@@ -387,6 +395,14 @@ window.FinkWM = {
     // (id, label, checked, nested items); the shell draws them here, in
     // the one menu, and sends the chosen id back. A check leaves the menu
     // open; a plain action closes it; a group opens its items in place.
+    // The app's readout (spec §5.10), under the menu's title.
+    setAppStatus(text) {
+        const el = document.getElementById('wm-status');
+        if (!el) return;
+        el.textContent = text || '';
+        el.hidden = !text;
+    },
+
     setAppActions(items, title = null) {
         this._appActions = Array.isArray(items) && items.length ? items : null;
         if (title !== null) this._appTitle = title;

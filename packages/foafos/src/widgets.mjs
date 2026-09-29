@@ -111,3 +111,70 @@ export function defineBaseCards() {
 
   customElements.define('foaf-card', FoafCard);
 }
+
+// The activity card: one thing someone said or did, as a social stream
+// shows it (owner, September 2026: "a generic Activity Stream like
+// Facebook / FriendFeed had"). Renders `activity.<app>` events:
+//   { who, text, image?, app?, verb? }
+// `image` is a data: URL the shell has already checked (a face, a still);
+// without one the card shows the speaker's initial. Registered for
+// `activity.*`, so any feed that subscribes to it shows people, not topics.
+export function defineActivityCard() {
+  if (typeof customElements === 'undefined' || customElements.get('foaf-activity')) return;
+
+  class FoafActivity extends HTMLElement {
+    set item(ev) { this._item = ev; this._render(); }
+    get item() { return this._item; }
+
+    _render() {
+      const ev = this._item;
+      if (!ev) return;
+      const d = ev.data || {};
+      const who = String(d.who || d.app || 'Someone');
+      const text = String(d.text || d.summary || '');
+      this.setAttribute('role', 'article');
+      this.setAttribute('aria-label', `${who}${d.app && d.app !== who ? ` (${d.app})` : ''}: ${text}`);
+      if (!this.shadowRoot) {
+        this.attachShadow({ mode: 'open' });
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host { display: block; }
+            .row { display: flex; gap: 0.55em; align-items: flex-start; margin: 0.35em 0;
+                   padding: 0.45em 0.55em; border-radius: 10px;
+                   background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); }
+            .face { flex: none; width: 2.6em; height: 2.6em; border-radius: 50%; overflow: hidden;
+                    display: grid; place-items: center; background: #223; color: #cde;
+                    font-weight: bold; border: 1px solid rgba(255,255,255,0.25); }
+            .face img { width: 100%; height: 100%; object-fit: cover; }
+            .body { min-width: 0; font-size: 0.88em; line-height: 1.35; }
+            .who { font-weight: bold; }
+            .meta { opacity: 0.6; font-size: 0.85em; margin-left: 0.35em; font-weight: normal; }
+            .text { word-break: break-word; }
+          </style>
+          <div class="row"><div class="face" aria-hidden="true"></div>
+            <div class="body"><div class="who"></div><div class="text"></div></div></div>`;
+      }
+      const $ = (s) => this.shadowRoot.querySelector(s);
+      const face = $('.face');
+      face.textContent = '';
+      if (typeof d.image === 'string' && d.image.startsWith('data:image/')) {
+        const img = document.createElement('img');
+        img.alt = '';
+        img.src = d.image;
+        face.appendChild(img);
+      } else {
+        face.textContent = who.trim().charAt(0).toUpperCase() || '•';
+      }
+      const whoEl = $('.who');
+      whoEl.textContent = who;
+      const meta = document.createElement('span');
+      meta.className = 'meta';
+      meta.textContent = `${d.app && d.app !== who ? `${d.app} · ` : ''}${new Date(ev.ts || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      whoEl.appendChild(meta);
+      $('.text').textContent = text;
+    }
+  }
+
+  customElements.define('foaf-activity', FoafActivity);
+  widgets.register('activity.*', 'foaf-activity');
+}

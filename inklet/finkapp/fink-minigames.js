@@ -1265,6 +1265,33 @@ window.FinkMinigames = {
                 this._announce(inst, data.text);
                 break;
 
+            case 'activity':
+                // who said or did what (spec §5.10): the shell's stream
+                window.FoafOS?.postActivity?.(inst.type, data.item,
+                    this.minigameInfo?.[inst.type]?.title || inst.type);
+                break;
+
+            case 'status': {
+                // the app's own readout, out of its view and into the shell
+                const list = window.FoafOS?.appStatus?.(inst.type, data.items) || [];
+                inst.status = list;
+                if (inst === this.windowInstance) window.FinkWM?.setAppStatus?.(list.map((it) => it.value).join(' · '));
+                break;
+            }
+
+            case 'selection': {
+                // What the reader picked in the app's view (spec §5.11).
+                const run = (what, id) => {
+                    if (what === 'deselect') {
+                        inst.selection = null;
+                        window.FoafOS?.showSelection?.(inst.type, null);
+                        this._sendToIframe({ type: 'deselect' }, inst);
+                    } else this._sendToIframe({ type: 'action', id: String(id) }, inst);
+                };
+                inst.selection = window.FoafOS?.showSelection?.(inst.type, data.entity, run) || null;
+                break;
+            }
+
             case 'actions':
                 // The game's own commands and settings (spec §5.9). Kept per
                 // instance; the window menu shows the playing one's.
@@ -1465,7 +1492,7 @@ window.FinkMinigames = {
         const inst = this.windowInstance;
         if (!inst) return false;
         const known = (list) => (list || []).some((it) => it.id === id || known(it.items));
-        if (!known(inst.actions)) return false;     // only what it offered
+        if (!known(inst.actions) && !known(inst.selection?.actions)) return false;   // only what it offered
         this._sendToIframe({ type: 'action', id: String(id) }, inst);
         return true;
     },

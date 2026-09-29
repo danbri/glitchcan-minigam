@@ -52,6 +52,11 @@ export const ROOTS = {
     // The story plays in the story runner (inklet/apps/storyrunner).
     boot: { story: null },        // null = fall back to FinkConfig.DEFAULT_FINK_FILE
     apps: null,                   // all of them
+    // Offered, but not on screen until the reader turns it on in All apps
+    // (owner, September 2026: the breadcrumb's ▶ at the top left was one of
+    // the "other bits of random ui on screen"; the address and Back now do
+    // its job).
+    chromeOff: ['breadcrumb'],
   },
 
   // The office wrapper alone. No story engine involvement at all: FINK is
