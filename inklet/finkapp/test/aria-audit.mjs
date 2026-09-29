@@ -279,7 +279,7 @@ try {
     await bp.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
     let rf = null;
     for (let i = 0; i < 50 && !rf; i++) {
-      rf = bp.frames().find((f) => f.url().includes('apps/storyrunner'));
+      rf = bp.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
       if (!rf) await bp.waitForTimeout(300);
     }
     if (!rf) note('error', 'the reading surface never appeared to audit');

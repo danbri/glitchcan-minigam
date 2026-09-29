@@ -51,7 +51,7 @@ try {
   });
 
   // ── ?app=storyrunner: the runner opens, and no second one behind it ──
-  const runners = (page) => page.frames().filter((f) => /apps\/storyrunner\//.test(f.url())).length;
+  const runners = (page) => page.frames().filter((f) => /apps\/storyrunner\/index\.html/.test(f.url())).length;
   {
     const page = await browser.newPage({ viewport: { width: 430, height: 860 } });
     await page.goto(base + '?app=storyrunner');

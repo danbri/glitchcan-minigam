@@ -2657,9 +2657,9 @@ function buildUI() {
               surface: app.surface, name: app.name, bus: busGrants,
               // WHICH story, in precedence order:
               //   the launch's own story (a launcher row that `opens` the
-              //   runner) → registry override → the page's `?story=` (for an
-              //   app that holds story:link) → the BOOT story, but only when
-              //   this launch IS the boot story surface.
+              //   runner) → registry override → the BOOT story (the page's
+              //   `?story=`, else the root's; for an app that holds
+              //   story:link), but only when this launch IS the boot surface.
               // The last clause is one-shot and deliberate. Reading
               // DEFAULT_FINK_FILE unconditionally made every direct launch
               // of the runner open the table of contents instead of its own
@@ -2669,7 +2669,10 @@ function buildUI() {
               // installation's.
               story: win.dataset.story || app.story
                 || ((app.capabilities || []).includes('story:link')
-                    ? (new URLSearchParams(location.search).get('story') || takeBootStory())
+                    // the page's `?story=` reached foafos-boot.js, which made it
+                    // the boot story; the address is not read again here, because
+                    // it now follows the reading (it names the story being read)
+                    ? takeBootStory()
                     : null)
                 || null,
               // The GLOBAL media base — outermost layer of the layered chain

@@ -49,7 +49,7 @@ async function frameMatching(page, re, tries = 120) {
   }
   return null;
 }
-const runnerOf = (page) => frameMatching(page, /apps\/storyrunner/);
+const runnerOf = (page) => frameMatching(page, /apps\/storyrunner\/index\.html/);
 const choices = (runner) => runner.evaluate(() => [...window.__storyrunner.state.choices]);
 async function chooseText(runner, text) {
   await runner.waitForFunction((t) => window.__storyrunner?.state.choices.includes(t), text, { timeout: 30000 });

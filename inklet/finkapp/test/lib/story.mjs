@@ -9,7 +9,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 // The runner frame on this page, once it exists.
 export async function runnerFrame(page, ms = 60000) {
   for (let t = 0; t < ms; t += 250) {
-    const f = page.frames().find((x) => /apps\/storyrunner\//.test(x.url()));
+    const f = page.frames().find((x) => /apps\/storyrunner\/index\.html/.test(x.url()));
     if (f) return f;
     await wait(250);
   }

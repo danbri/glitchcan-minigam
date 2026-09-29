@@ -58,7 +58,7 @@ async function scene(context, viewport) {
   page.on('pageerror', (e) => errs.push(String(e).slice(0, 200)));
   await page.goto(`${BASE}/inklet/finkapp/?story=/${repoName}/drift-city/novel/cellar-entry.fink.js`);
   await page.waitForFunction(() => window.FoafOS?.apps, null, { timeout: 20000 });
-  const runner = await frameMatching(page, /apps\/storyrunner/);
+  const runner = await frameMatching(page, /apps\/storyrunner\/index\.html/);
   if (!runner) throw new Error('no story runner frame');
   await runner.waitForFunction(() => window.__storyrunner?.ready?.()
     && window.__storyrunner.state.choices.length > 0, null, { timeout: 25000 });

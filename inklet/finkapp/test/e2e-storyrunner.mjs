@@ -75,7 +75,7 @@ try {
   await page.evaluate(() => FoafOS.launchApp('storyrunner'));
   let frame = null;
   for (let i = 0; i < 40 && !frame; i++) {
-    frame = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+    frame = page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
     if (!frame) await page.waitForTimeout(400);
   }
   if (!frame) throw new Error('storyrunner frame never appeared');
@@ -619,7 +619,7 @@ try {
     await page.evaluate(() => FoafOS.launchApp('storyrunner'));
     let re = null;
     for (let i = 0; i < 40 && !re; i++) {
-      re = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+      re = page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
       if (!re) await page.waitForTimeout(300);
     }
     if (!re) fail('runner did not reopen');
@@ -649,7 +649,7 @@ try {
   {
     const ns = await page.evaluate(() => FoafOS.snapshotNs);
     const storedNow = () => page.evaluate((n) => (FoafOS.store.snapshot(n) || {})['app:storyrunner'] || null, ns);
-    let rb = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+    let rb = page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
     const before = await storedNow();
     const moved = rb && await rb.evaluate(() => {
       const c = window.__storyrunner.state.choices;
@@ -678,7 +678,7 @@ try {
     await page.evaluate(() => FoafOS.launchApp('storyrunner'));
     rb = null;
     for (let i = 0; i < 40 && !rb; i++) {
-      rb = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+      rb = page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
       if (!rb) await page.waitForTimeout(300);
     }
     const back = rb && await rb.waitForFunction(() => window.__storyrunner?.ready?.() && window.__storyrunner.state.resumedFromSave,
@@ -700,7 +700,7 @@ try {
     await page.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
     let hf = null;
     for (let i = 0; i < 50 && !hf; i++) {
-      hf = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+      hf = page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
       if (!hf) await page.waitForTimeout(300);
     }
     if (!hf) fail('the box never opened for a bundled story');
@@ -770,7 +770,7 @@ try {
     await page.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
     let tf = null;
     for (let i = 0; i < 50 && !tf; i++) {
-      tf = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+      tf = page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
       if (!tf) await page.waitForTimeout(300);
     }
     if (!tf) fail('the box never opened for the TOC');
@@ -797,7 +797,7 @@ try {
       // the test holds can be replaced a moment after it first plays. A retry
       // absorbs that; a genuinely broken journey still fails both attempts and
       // reports the same diagnosis.
-      const runnerFrame = () => page.frames().find((f) => f.url().includes('apps/storyrunner'));
+      const runnerFrame = () => page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
       const attempt = async (frag, want) => {
         const f = runnerFrame() || tf;
         await f.waitForFunction(
@@ -1277,7 +1277,7 @@ try {
     await np.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?story=/${repoName}/drift-city/no-such-story.fink.js`);
     let run = null;
     for (let i = 0; i < 50 && !run; i++) {
-      run = np.frames().find((f) => f.url().includes('apps/storyrunner'));
+      run = np.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
       if (!run) await np.waitForTimeout(400);
     }
     const said = run && await run.waitForFunction(() => /HTTP|content/.test(document.getElementById('status')?.textContent || ''),
