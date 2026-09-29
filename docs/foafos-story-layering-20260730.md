@@ -462,11 +462,9 @@ against the file named.
 
 **Not built.**
 
-- **The host-page engine is still in the page.** It no longer plays by default,
-  but `inklet/finkapp/index.html` still loads it so `?player=legacy` works. The
-  file set is superseded and pending delete (issue #779). Deleting it is a
-  separate job from flipping the default, and the suites pinned to
-  `?player=legacy` are the list of what has to move first.
+- ~~**The host-page engine is still in the page.**~~ Deleted, September 2026,
+  with `?player=legacy` and every suite pinned to it moved onto the runner.
+  The shell page no longer loads the ink compiler.
 - **A peer keeps nothing.** It gets no store, and its session is not
   snapshotted, so closing the window loses the peer while restoring the primary.
   Whether a peer should come back is a design question, not an oversight.
@@ -578,7 +576,7 @@ The order matters: each step makes the next one smaller.
    front-end rather than the regex strawman — see the merge section above.
 8. **The reality broker**, still a proposal, and it wants an owner decision
    before code: it changes what an app is told about the world.
-9. **Delete the host-page engine**, which is what all of this was for.
+9. ~~**Delete the host-page engine**, which is what all of this was for.~~ Done, September 2026.
 
 **Still open beneath merge.** A dream that surfaces reloads its outer story, so
 merges made before descending are lost with it — recorded, not pretended away.

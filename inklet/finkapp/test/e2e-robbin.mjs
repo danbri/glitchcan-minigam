@@ -14,6 +14,7 @@ import { spawn } from 'node:child_process';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { openStory, goto, setVar, waitVar } from './lib/story.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -46,19 +47,21 @@ try {
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(String(e).slice(0, 200)));
 
-  // 1. load Hampstead directly as the first story
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
-  await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
-  await page.waitForTimeout(2000);
-  pass('hampstead compiled as first story');
+  // 1. load Hampstead directly as the first story, in the story runner
+  const r = await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/hampstead.fink.js');
+  pass('hampstead compiled as first story (runner ready)');
 
   // 2. jump the story to the tube knot — the MINIGAME tag must fire
   // (with diamonds in the purse: init must carry them into the game)
-  await page.evaluate(() => {
-    FinkInkEngine.story.variablesState['diamonds'] = 5;
-    FinkInkEngine.story.ChoosePathString('hampstead_tube');
-    FinkInkEngine.continueStory();
-  });
+  // The purse is the shell's shared economy (FoafOS.storyVars): a game's
+  // init comes from that mirror, not from the runner's ink. So the purse is
+  // filled the way a story brokers a shared VAR (story.vars write, the
+  // runner's `spend` hook) and the runner's own VAR is set to agree.
+  const spent = await r.evaluate(() => window.__storyrunner.spend('diamonds', 5));
+  spent?.ok ? pass('diamonds=5 brokered into the shell economy')
+    : fail(`story.vars write diamonds refused: ${JSON.stringify(spent)}`);
+  await setVar(r, 'diamonds', 5);
+  (await goto(r, 'hampstead_tube')) || fail('runner refused goto hampstead_tube');
   await page.waitForSelector('#minigame-iframe-robbin', { timeout: 15000 });
   pass('# MINIGAME: robbin raised the iframe');
 
@@ -96,22 +99,21 @@ try {
     g.tube.score = 1200;
     g.embedComplete(true);
   });
-  await page.waitForFunction(() =>
-    (FinkInkEngine?.story?.variablesState?.['robbin_birds'] ?? 0) === 3, null, { timeout: 10000 });
-  pass('complete wrote robbin_birds=3 into Ink');
+  const birds = await waitVar(r, 'robbin_birds', (v) => v === 3, 10000);
+  birds === 3 ? pass('complete wrote robbin_birds=3 into Ink (runner story)')
+    : fail(`robbin_birds after complete: ${birds}`);
 
   // 5. the story resumed on tube_return; taking the exit choice reacts
   // to the flock (the reaction lives BEHIND a choice so Ink evaluates
   // it after completion — tag/lookahead semantics, see INK-GOTCHAS)
-  await page.waitForFunction(() =>
-    document.body.textContent.includes('hauls you back'), null, { timeout: 10000 });
-  await page.waitForTimeout(800);
-  await page.evaluate(() => {
-    [...document.querySelectorAll('button, .choice')]
-      .find(b => /out into the rain/i.test(b.textContent))?.click();
-  });
-  await page.waitForFunction(() =>
-    document.body.textContent.includes('surface blinking'), null, { timeout: 10000 });
+  await r.waitForFunction(() => !window.__storyrunner.paused()
+    && window.__storyrunner.state.prose.some((p) => p.text.includes('hauls you back')), null, { timeout: 10000 });
+  const exitIdx = await r.evaluate(() => window.__storyrunner.state.choices.findIndex((c) => /out into the rain/i.test(c)));
+  if (exitIdx < 0) throw new Error('exit choice "out into the rain" missing: '
+    + JSON.stringify(await r.evaluate(() => window.__storyrunner.state.choices)));
+  await r.evaluate((i) => window.__storyrunner.choose(i), exitIdx);
+  await r.waitForFunction(() =>
+    window.__storyrunner.state.prose.some((p) => p.text.includes('surface blinking')), null, { timeout: 10000 });
   pass('story resumed: the flock is acknowledged after the exit choice');
 
   pageErrors.length === 0 ? pass('no page errors')

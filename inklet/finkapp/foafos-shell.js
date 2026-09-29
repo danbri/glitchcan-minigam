@@ -114,8 +114,7 @@ FoafOS.vars = vars;
 // minigame_played) needs a canonical copy the shell owns: the runner
 // mirrors it in at compile and asks the shell to write it, and a guest
 // that earns treasure writes here too. Private story variables never
-// leave the box — strictly better isolation than the host-page player,
-// where every variable was ambient.
+// leave the box.
 //
 // This is a mirror, not a second authority: every write still goes
 // through FoafVars.write, so the manifest check, the dream read-only
@@ -124,12 +123,8 @@ FoafOS.vars = vars;
 const storyVars = new Map();
 let storyVarsOwner = null;   // appId of the boxed story whose game is playing
 FoafOS.storyVars = {
-  // WHOSE economy a guest's write belongs to is a question of PROVENANCE,
-  // not of whether a host story happens to exist. Under the default boot
-  // the legacy player holds a compiled TOC *and* a boxed runner can be
-  // running: "no host story" therefore picked the wrong target, and a
-  // guest launched by the boxed runner wrote its treasure into the idle
-  // TOC's variables instead. Set while a boxed story's game plays.
+  // WHOSE economy a guest's write belongs to is a question of PROVENANCE:
+  // the story that launched the game. Set while that story's game plays.
   get owner() { return storyVarsOwner; },
   _own: (appId) => { storyVarsOwner = appId; },
   _disown: () => { storyVarsOwner = null; },
@@ -519,33 +514,8 @@ bus.publish('root.ready', {
 }, { retain: true });
 
 // ── the tree gets its branches ─────────────────────────────────────────
-// A tree whose every node hangs off root is a list wearing a tree's
-// clothes, and the grouping it was built for has nothing to group. So:
-// the loaded story becomes a node under root, and the games it opens
-// become children of THAT — which is what makes "close the story and
-// everything it opened" mean something.
-//
-// Done by observing lifecycle events that already exist rather than
-// teaching FinkMinigames about the tree. The engine and the minigame host
-// stay unaware; if this were wrong, it would be wrong in one file.
-//
-// Note the capability list: a story's powers DESCRIBE rather than
-// constrain (the narrative runtime is the host page — see foafos-apps.js),
-// so the node carries the root's own set. When the runtime finally moves
-// into a frame, this is the line that starts telling the truth.
-let storyNode = null;
-bus.subscribe('story.state', (e) => {
-  if (e.source !== 'local') return;
-  const phase = e.data?.phase;
-  if (phase !== 'play' || storyNode) return;
-  storyNode = apps.spawn({
-    appId: 'story', parentId: FoafOS.rootNode?.id || null,
-    capabilities: FoafOS.rootNode?.capabilities || [],
-    label: 'Story', surface: 'story',
-  });
-  if (storyNode.refused) storyNode = null;
-  FoafOS.storyNode = storyNode;
-});
+// A story is a session under the runner that plays it (story.session);
+// the games and worlds it opens are children of that session.
 
 // Games open UNDER the story that opened them. The shell mirrors the
 // minigame host's own instance events; onClose routes back through the
@@ -715,46 +685,68 @@ bus.subscribe('app.close', (e) => {
     tellWatcher(w, 'close', { ids: mine, count: mine.length });
   }
 });
-// WHERE A WORLD GOES is the reader's choice, made in the window manager's
+// WHERE THE STAGE GOES is the reader's choice, made in the window manager's
 // toolbar (FinkWM: full, split, pip; owner's decision, September 2026).
-// The shell only follows it: body[data-world-mode] names the mode, and in
-// split the story window takes the larger band the stage leaves, measured
-// here in pixels (FinkWM measures split the same way, for the same reason).
-function layoutWorld() {
+// The shell only follows it for the story window that owns what is on the
+// stage: the runner whose world it is, or whose game. body[data-stage-mode]
+// names the mode, that window carries .foafos-beside-stage, and in split it
+// takes the larger band the stage leaves, measured here in pixels (FinkWM
+// measures split the same way, for the same reason). Other open windows are
+// not moved.
+function stageOwner() {
+  for (const w of storyWorlds.values()) {
+    const win = w.frame?.closest?.('.foafos-window');
+    if (win) return { win, kind: 'world' };
+  }
+  return _yieldedWin ? { win: _yieldedWin, kind: 'game' } : null;
+}
+function layoutStage() {
   const wm = window.FinkWM, body = document.body, root = document.documentElement.style;
-  const on = storyWorlds.size > 0 && !!wm?.active;
-  if (!on) {
-    delete body.dataset.worldMode;
-    body.classList.remove('foafos-world-stage-top');
+  const own = wm?.active ? stageOwner() : null;
+  // A GAME on the stage has the glass in full, whoever opened it; a game from
+  // the launcher has no story to yield, so the stage itself goes over the
+  // windows. A world does not: on a desktop its story floats above it.
+  body.classList.toggle('foafos-stage-game', !!wm?.active && own?.kind !== 'world');
+  if (wm?.active && !own) body.dataset.stageMode = wm.mode || 'full';
+  for (const w of document.querySelectorAll('.foafos-beside-stage')) {
+    if (w !== own?.win) w.classList.remove('foafos-beside-stage');
+  }
+  if (!own) {
+    if (!wm?.active) delete body.dataset.stageMode;
+    body.classList.remove('foafos-stage-top');
     return;
   }
-  body.dataset.worldMode = wm.mode || 'full';
+  const mode = wm.mode || 'full';
+  own.win.classList.add('foafos-beside-stage');
+  body.dataset.stageMode = mode;
+  // A game has the glass in full; in split or pip its story shows again.
+  if (own.kind === 'game') own.win.classList.toggle('foafos-yielded', mode === 'full');
   const view = document.getElementById('minigame-view');
-  if (wm.mode !== 'split' || !view) { body.classList.remove('foafos-world-stage-top'); return; }
+  if (mode !== 'split' || !view) { body.classList.remove('foafos-stage-top'); return; }
   const r = view.getBoundingClientRect(), H = window.innerHeight;
   const top = r.top >= H - r.bottom;            // more room above the stage than below
-  body.classList.toggle('foafos-world-stage-top', !top);
+  body.classList.toggle('foafos-stage-top', !top);
   root.setProperty('--foaf-story-top', `${top ? 0 : Math.round(r.bottom)}px`);
   root.setProperty('--foaf-story-bottom', `${top ? Math.round(H - r.top) : 0}px`);
   root.setProperty('--foaf-stage-gap', `${Math.max(0, Math.round(H - r.bottom))}px`);
 }
-for (const t of ['wm.mode', 'wm.settled', 'wm.close', 'story.world']) bus.subscribe(t, () => layoutWorld());
-window.addEventListener('resize', () => layoutWorld());
-window.addEventListener('fink-wm-layout', () => layoutWorld());
+for (const t of ['wm.mode', 'wm.settled', 'wm.close', 'story.world']) bus.subscribe(t, () => layoutStage());
+window.addEventListener('resize', () => layoutStage());
+window.addEventListener('fink-wm-layout', () => layoutStage());
 bus.subscribe('app.close', (e) => {
   const closed = e.data?.closed || [];
   for (const [runnerId, w] of storyWorlds) {
     if (closed.includes(runnerId)) {
       storyWorlds.delete(runnerId);
       document.body.classList.toggle('foafos-world-on', storyWorlds.size > 0);
-      layoutWorld();
+      layoutStage();
       continue;
     }
     if (!w.nodeId || !closed.includes(w.nodeId)) continue;
     storyWorlds.delete(runnerId);
     w.frame.closest?.('.foafos-window')?.classList.remove('foafos-with-world');
     document.body.classList.toggle('foafos-world-on', storyWorlds.size > 0);
-    layoutWorld();
+    layoutStage();
     try {
       w.frame.contentWindow?.postMessage({ type: 'story.event', event: 'world.closed', detail: { world: w.game } }, '*');
     } catch (err) { /* the runner is gone too */ }
@@ -1035,11 +1027,13 @@ function yieldScreenTo(win) {
   restoreYieldedScreen();
   win.classList.add('foafos-yielded');
   _yieldedWin = win;
+  layoutStage();
 }
 function restoreYieldedScreen() {
   if (!_yieldedWin) return;
   _yieldedWin.classList.remove('foafos-yielded');
   _yieldedWin = null;
+  layoutStage();
 }
 
 // Window-app snapshots (spec §5.5.4). The bytes live in the SHELL's own
@@ -1080,8 +1074,8 @@ const storyDepth = new Map();
 // stack of one story repeated.
 const _navSeen = new Map();
 
-// The story the BOOT path wants the boxed engine to open, consumed once.
-// fink-player sets it just before launching the runner as the boot surface.
+// The story the BOOT path wants the runner to open, consumed once.
+// foafos-boot.js sets it just before launching the runner.
 let _bootStory = null;
 FoafOS.setBootStory = (url) => { _bootStory = url || null; };
 const takeBootStory = () => { const u = _bootStory; _bootStory = null; return u; };
@@ -1116,18 +1110,33 @@ const changedSince = (before, after) => Object.fromEntries(
 //
 // Registered once, and it addresses whichever boxed story frames exist:
 // history is global, so a hash change is not scoped to one runner.
-let _navSuppress = false;
-window.addEventListener('popstate', () => {
-  if (_navSuppress) return;
-  const frag = (location.hash || '').slice(1);
-  const parsed = window.FinkNavigation?.parseFinkLinkId?.(frag) || null;
+// Send the story runners a place to go (a link's parsed hashes). The
+// breadcrumb uses it to go to a knot; history uses it below.
+const navigateStory = (parsed, hash = null, story = null) => {
   for (const f of document.querySelectorAll('.foafos-window iframe')) {
     if (!/apps\/storyrunner/.test(f.src || '')) continue;
     try {
       f.contentWindow?.postMessage({ type: 'story.event', event: 'navigate',
-        detail: { hash: frag || null, parsed } }, '*');
+        detail: { hash, parsed, story } }, '*');
     } catch (err) { /* closed */ }
   }
+};
+FoafOS.navigateStory = (parsed) => navigateStory(parsed);
+let _navSuppress = false;
+window.addEventListener('popstate', () => {
+  if (_navSuppress) return;
+  const frag = (location.hash || '').slice(1);
+  const parsed = window.FinkLinks?.parseFinkLinkId?.(frag) || null;
+  // The entry may be in another story: the runner opens it, at the knot.
+  let story = null;
+  try {
+    const named = new URLSearchParams(location.search).get('story');
+    if (named) {
+      const u = new URL(named, location.href);
+      if (u.origin === location.origin) story = u.pathname;   // the form the link hash was made from
+    }
+  } catch (e) { /* no story named */ }
+  navigateStory(parsed, frag || null, story);
   bus.publish('nav.link', {
     summary: frag ? `back/forward → ${frag}` : 'back/forward → start',
     icon: '⏪', title: 'Back/Forward', detail: frag || '(start)',
@@ -1185,7 +1194,7 @@ bus.subscribe('minigame.instance', (e) => {
   // truth the menubar renders: who instantiated whom, whose close cascades
   // to it, and whose capability grant bounds it (attenuation). The hint is
   // one-shot and only trusted if the recorded parent is still alive.
-  let parentId = (storyNode || FoafOS.rootNode)?.id || null;
+  let parentId = FoafOS.rootNode?.id || null;
   const hint = _pendingGameParent;
   _pendingGameParent = null;
   if (hint && hint.type === type && apps.get(hint.parentNodeId)) parentId = hint.parentNodeId;
@@ -1652,9 +1661,7 @@ function buildUI() {
   shelf.appendChild(shelfTree);
 
   const renderShelf = () => {
-    const depth = window.FinkInkEngine?.storyStack?.length || 0;
-    const nodes = [{ id: 'story', icon: '📖', label: 'Story',
-      badge: depth ? `DREAM ${depth}` : undefined }];
+    const nodes = [];
 
     const mg = window.FinkMinigames;
     if (mg?.active && mg.currentType) {
@@ -1704,12 +1711,7 @@ function buildUI() {
   const winById = (id) => document.querySelector(`.foafos-window[data-wid="${id.slice(4)}"]`);
   shelfTree.addEventListener('tree-select', (e) => {
     const id = e.detail.id;
-    if (id === 'story') {
-      const wm = window.FinkWM;
-      if (wm?.active && wm.mode === 'full') wm.setMode('split');
-      setDrawer(false);
-      document.getElementById('narrative-view')?.focus?.();
-    } else if (id === 'game') {
+    if (id === 'game') {
       const wm = window.FinkWM;
       if (wm) wm.setMode(wm.mode === 'pip' ? wm.lastNonPipMode : 'full');
       setDrawer(false);
@@ -1740,7 +1742,7 @@ function buildUI() {
     if (id.startsWith('win:')) winById(id)?.remove();
     else if (id.startsWith('inst:')) {
       const inst = window.FinkMinigames?.instances?.get(id.slice(5));
-      if (inst) window.FinkMinigames._closeInlineMinigame(inst.containerId, false);
+      if (inst) window.FinkMinigames._closeInlineMinigame(inst.containerId);
     }
   });
   // ── sound + apps controls ────────────────────────────────────────
@@ -2402,6 +2404,9 @@ function buildUI() {
       });
       return null;
     }
+    // A launcher row that OPENS another app on given content (the Stories
+    // row is the story runner on the table of contents).
+    if (app.opens) return launchApp(app.opens, { ...opts, story: app.story });
     // ATTENUATION. The node is created under its parent (root unless a
     // spawning app said otherwise), and the tree refuses any capability
     // the parent does not itself hold. This is what makes handing out
@@ -2479,9 +2484,6 @@ function buildUI() {
     aimVerbsFor(app.id, node.capabilities || caps);
 
     switch (app.surface) {
-      case 'story':
-        window.FinkPlayer?.loadFinkStory?.(app.url);
-        return null;
       case 'panel':
         // Shell-native: drawn by the shell, so there is no frame and no
         // boundary. Kept in one registry for discovery, not for security.
@@ -2501,6 +2503,7 @@ function buildUI() {
         const appH = Math.min(680, Math.max(460, Math.round(window.innerHeight * 0.72)));
         const win = makeWindow(`${app.icon} ${app.name}`, appW, appH);
         win.dataset.appId = app.id;   // lets CSS treat the story window as a place, not a window
+        if (opts.story) win.dataset.story = opts.story;   // app.hello hands it to the runner
         const frame = document.createElement('iframe');
         frame.title = app.name;
         frame.setAttribute('sandbox', sandboxFor(app));
@@ -2661,15 +2664,11 @@ function buildUI() {
             store: snapshot || {},
             config: {
               surface: app.surface, name: app.name, bus: busGrants,
-              // WHICH story to open. A registry override wins; otherwise the
-              // HOST page's `?story=` passes through to any app that plays
-              // stories, so `?player=boxed&story=…` opens an arbitrary FINK
-              // in the box exactly as `?story=` does for the host player.
-              // Without this the boxed runner could only play its own demo,
-              // which is not parity by any reading (#779).
               // WHICH story, in precedence order:
-              //   registry override → host `?story=` → the BOOT story, but
-              //   only when this launch IS the boot story surface.
+              //   the launch's own story (a launcher row that `opens` the
+              //   runner) → registry override → the BOOT story (the page's
+              //   `?story=`, else the root's; for an app that holds
+              //   story:link), but only when this launch IS the boot surface.
               // The last clause is one-shot and deliberate. Reading
               // DEFAULT_FINK_FILE unconditionally made every direct launch
               // of the runner open the table of contents instead of its own
@@ -2677,9 +2676,12 @@ function buildUI() {
               // broke its `# BG:`/`# AUDIO:` legs. An app launched on its
               // own keeps its own default; only the boot path imposes the
               // installation's.
-              story: app.story
+              story: win.dataset.story || app.story
                 || ((app.capabilities || []).includes('story:link')
-                    ? (new URLSearchParams(location.search).get('story') || takeBootStory())
+                    // the page's `?story=` reached foafos-boot.js, which made it
+                    // the boot story; the address is not read again here, because
+                    // it now follows the reading (it names the story being read)
+                    ? takeBootStory()
                     : null)
                 || null,
               // The GLOBAL media base — outermost layer of the layered chain
@@ -2740,6 +2742,11 @@ function buildUI() {
             if (!chk.ok) {
               reply({ ok: false, reason: chk.reason, ...(chk.excess ? { excess: chk.excess } : {}) });
               return;
+            }
+            // The story's last lines, for the game's init (config.story.recent).
+            const recent = Array.isArray(d.detail?.recent) ? d.detail.recent : [];
+            if (window.FinkMinigames) {
+              window.FinkMinigames.storyRecent = recent.slice(-8).map((t) => String(t).slice(0, 500)).filter(Boolean);
             }
             const { game, entry, parentNodeId } = chk;
             // Record the real instantiator so the game parents under THIS
@@ -2903,6 +2910,16 @@ function buildUI() {
             });
             if (node.refused) { reply({ ok: false, reason: node.reason || 'refused' }); return; }
             stack.push(node.id);
+            // The goDeeper link was asked by the OUTER session, so the story.link
+            // handler counted it there. The dream is this new session: move the
+            // depth to it, and give the outer one its own depth back. Without
+            // this the dream read depth 0 (its spends were allowed) and the
+            // waking story stayed at depth 1 after surfacing (locked out).
+            if (rel === 'godeeper' && outer) {
+              const d = storyDepth.get(outer.id) || 0;
+              storyDepth.set(node.id, d);
+              storyDepth.set(outer.id, Math.max(0, d - 1));
+            }
             bus.publish('story.session', {
               summary: `story session "${node.label}" started`
                 + (node.dreamOf ? ` inside "${outer.label}"` : '')
@@ -2950,10 +2967,9 @@ function buildUI() {
             //                  put it in the address bar, feed the breadcrumb
             //   op:'resolve'   what does the URL currently ask for?
             //
-            // Hashes come from FinkNavigation so a link minted here is
-            // byte-identical to one minted by the host player: same salt,
-            // same lengths, same shareable string (docs/fink-linking-spec).
-            const nav = window.FinkNavigation;
+            // Hashes come from FinkLinks, the one definition of the link
+            // format (docs/fink-linking-spec); the runner mints the same.
+            const nav = window.FinkLinks;
             if (!nav) { reply({ ok: false, reason: 'no-navigator' }); return; }
             const op = d.detail?.op || 'position';
             if (op === 'position') {
@@ -2963,14 +2979,42 @@ function buildUI() {
               (async () => {
                 let linkId = null;
                 try {
-                  linkId = knot ? await nav.generateFinkLinkId(storyUrl, knot)
-                                : await nav.generateUrlHash(storyUrl);
+                  // The url hash is made from the story URL as a string, so
+                  // one story must always be named the same way: a
+                  // same-origin story by its path, whatever form the runner
+                  // loaded it by. Else Forward to a place gives a new link.
+                  let named = storyUrl;
+                  try {
+                    const su = new URL(storyUrl, location.href);
+                    if (su.origin === location.origin) named = su.pathname;
+                  } catch (e) { /* hash the string as sent */ }
+                  linkId = knot ? await nav.generateFinkLinkId(named, knot)
+                                : await nav.generateUrlHash(named);
                   // replaceState, not a hash assignment: a beat is not a
                   // history entry, or Back would walk the reader backwards
                   // one sentence at a time. Explicit `push` asks for one.
-                  const to = `${location.pathname}${location.search}#${linkId}`;
-                  if (d.detail?.push) history.pushState({ fink: linkId }, '', to);
-                  else history.replaceState({ fink: linkId }, '', to);
+                  // The link carries its STORY too: a reader who followed
+                  // `# FINK:` out of the table of contents is in another
+                  // story, and a link with only the knot hash reopened the
+                  // boot story and missed (the host engine kept a hash→url
+                  // index instead). Same-origin paths only.
+                  const q = new URLSearchParams(location.search);
+                  try {
+                    const su = new URL(storyUrl, location.href);
+                    if (su.origin === location.origin) q.set('story', su.pathname);
+                  } catch (e) { /* keep the address's own story */ }
+                  const qs = q.toString().replace(/%2F/gi, '/');   // a path reads as one
+                  const to = `${location.pathname}${qs ? `?${qs}` : ''}#${linkId}`;
+                  // BACK MEANS SOMETHING: each knot the reader reaches is a
+                  // history entry; more beats in the same knot replace it.
+                  // While the runner carries out Back or Forward it sends
+                  // `replace`: the places it passes on the way must not
+                  // push, or the Forward entries would be cut off.
+                  const here = (location.hash || '').slice(1);
+                  const move = !d.detail?.replace && (d.detail?.push || (here && here !== linkId));
+                  const entry = { fink: linkId, story: q.get('story') || null };
+                  if (move) history.pushState(entry, '', to);
+                  else history.replaceState(entry, '', to);
                 } catch (e) { /* crypto unavailable — the story still plays */ }
                 // The breadcrumb is shell furniture and reads nav.* facts;
                 // the runner may not publish those topics, so translate.
@@ -3009,7 +3053,9 @@ function buildUI() {
             if (op === 'declares') {
               const names = Array.isArray(d.detail?.names) ? d.detail.names.map(String) : null;
               vars.setBound(names);
-              reply({ ok: true, bound: names ? names.length : null });
+              // which names are the shared economy: the runner keeps the
+              // mirror up to date for those, both ways
+              reply({ ok: true, bound: names ? names.length : null, shared: SHARED_ECONOMY });
             } else if (op === 'read') {
               // Only the shared economy crosses the boundary. A story's
               // private variables are its own business and stay in the box.
@@ -3431,8 +3477,6 @@ function buildUI() {
         extra: [
           node.surface === 'stage' ? (window.FinkWM?.mode || '') : '',
           ...Object.entries(node.scopes?.args || {}).map(([k, v]) => `${k}=${v}`),
-          node.surface === 'story' && window.FinkInkEngine?.storyStack?.length
-            ? `dream depth ${FinkInkEngine.storyStack.length}` : '',
         ].filter(Boolean),
         chrome: node.surface === 'chrome',
       };
@@ -4018,9 +4062,7 @@ function buildUI() {
   }
 
   // Which runner window owns this story SESSION, if any. storySessions is
-  // keyed by runner node id, so the answer is a search, not a field — and
-  // a session with no entry is a legacy host-side story, which is the
-  // distinction the caller needs.
+  // keyed by runner node id, so the answer is a search, not a field.
   function boxedSessionWindow(sessionId) {
     for (const [runnerNodeId, sessions] of storySessions) {
       if (!sessions.includes(sessionId)) continue;
@@ -4042,8 +4084,8 @@ function buildUI() {
       return;
     }
     if (node.surface === 'story') {
-      // A BOXED session is not in the legacy narrative pane — it lives in
-      // its runner's window, which yieldScreenTo() hid when the story
+      // A story session lives in its runner's window, which
+      // yieldScreenTo() hid when the story
       // launched a game. Splitting here gave a phone half a screen of
       // EMPTY host surface (field report: switcher read "stage · split"
       // over a story nobody could see). Revealing a boxed story means
@@ -4134,20 +4176,6 @@ function buildUI() {
     }
     row('origin', origin);
 
-    // the story's trusted source + its deep-link hash
-    if (node.surface === 'story' && window.FinkPlayer?.currentStoryUrl) {
-      const src = FinkPlayer.currentStoryUrl;
-      const v = document.createElement('span');
-      v.textContent = src.split('/').slice(-2).join('/');
-      v.title = src;
-      row('trusted fink', v);
-      const hashRow = row('link hash', '…');
-      window.FinkNavigation?.generateUrlHash?.(src).then(h => {
-        hashRow.querySelector('.fi-v').textContent = h;
-      }).catch(() => { hashRow.querySelector('.fi-v').textContent = 'n/a'; });
-      if (FinkPlayer.mediaBasePath) row('media base', FinkPlayer.mediaBasePath);
-    }
-
     // grant chain: who handed these capabilities down
     const chain = [];
     let p = node.parentId ? FoafOS.apps.get(node.parentId) : null;
@@ -4203,31 +4231,6 @@ function buildUI() {
         + `${liveFrame.allow ? ` · allow ${liveFrame.allow}` : ''}`);
     }
 
-    // the story-overlay tree lives HERE now (owner's call: in the tabs,
-    // not floating over the prose)
-    if (node.surface === 'story' && window.FinkBreadcrumb?.finkStack?.length) {
-      const tree = document.createElement('div');
-      tree.className = 'fi-tree';
-      window.FinkBreadcrumb.finkStack.forEach((level, i, stack) => {
-        const isCur = i === stack.length - 1;
-        const line = document.createElement('button');
-        line.type = 'button';
-        line.className = 'fi-tree-level' + (isCur ? ' current' : '');
-        line.style.setProperty('--fi-depth', String(i));
-        const knots = level.knots.slice(-3).map(k => k.name).join(' › ');
-        line.textContent = `${isCur ? '📖' : '📁'} ${window.FinkBreadcrumb.formatUrl(level.url)}` +
-          (knots ? `  ›  ${knots}` : '') +
-          (level.knots.length > 3 ? `  (+${level.knots.length - 3})` : '');
-        if (!isCur) {
-          line.title = 'Return to this story';
-          line.addEventListener('click', () => window.FinkBreadcrumb.navigateBackToFink(i));
-        } else {
-          line.disabled = true;
-        }
-        tree.appendChild(line);
-      });
-      row('story tree', tree, 'fi-row-tree');
-    }
     return panel;
   }
 
@@ -4253,13 +4256,10 @@ function buildUI() {
   makerBtn.addEventListener('click', () => { openMaker(); setDrawer(false); });
   launcher.appendChild(makerBtn);
 
+  // The shell's mirror of the story's variables (the story itself runs in
+  // the runner's frame): what games have read and written through the broker.
   function storyVarRows() {
-    const vs = window.FinkInkEngine?.story?.variablesState;
-    if (!vs) return [];
-    let names = [];
-    try { names = [...vs._globalVariables.keys()]; }
-    catch { names = ['diamonds', 'mega_diamonds', 'keys', 'score']; }
-    return names.map(n => [n, String(vs[n])]);
+    return Object.entries(FoafOS.storyVars.all()).map(([n, v]) => [n, String(v)]);
   }
 
   // The governance ledger: the guest's declared capability, then the
@@ -4401,11 +4401,7 @@ function buildUI() {
         <button type="button" data-scale="0" aria-label="Freeze the game">⏸ freeze</button>
         <button type="button" id="maker-step" aria-label="Advance one frame">⏭ step</button>
       </div>
-      <div>
-        <input id="maker-var" placeholder="variable" aria-label="Variable name" style="width:38%">
-        <input id="maker-val" placeholder="value" aria-label="Variable value" style="width:30%">
-        <button type="button" id="maker-set">SET</button>
-      </div>`;
+`;
     win.appendChild(body);
 
     const vars = document.createElement('foaf-table');
@@ -4422,12 +4418,10 @@ function buildUI() {
     const refresh = () => {
       if (!win.isConnected) return;
       const st = bus.retained('story.state')[0]?.data;
-      const stack = window.FinkInkEngine?.storyStack || [];
       const scale = window.FinkMinigames?.debug?.timeScale ?? 1;
       win.querySelector('#maker-state').textContent =
         `story: ${st?.phase || '—'} · depth ${st?.depth ?? 0}` +
-        (scale !== 1 ? ` · clock ${scale === 0 ? 'frozen' : `${(1 / scale).toFixed(0)}× slow`}` : '') +
-        (stack.length ? ` · stack: ${stack.map(f => f.url.split('/').pop()).join(' ▸ ')}` : '');
+        (scale !== 1 ? ` · clock ${scale === 0 ? 'frozen' : `${(1 / scale).toFixed(0)}× slow`}` : '');
       vars.data = { title: 'story variables', columns: ['name', 'value'], rows: storyVarRows() };
       gov.data = { title: 'variable governance', columns: ['actor', 'variable', 'verdict'], rows: govRows() };
     };
@@ -4435,16 +4429,6 @@ function buildUI() {
       .map(t => bus.subscribe(t, refresh));
     new MutationObserver(() => { if (!win.isConnected) unsubs.forEach(u => u()); })
       .observe(document.body, { childList: true });
-
-    win.querySelector('#maker-set').addEventListener('click', () => {
-      const name = win.querySelector('#maker-var').value.trim();
-      const raw = win.querySelector('#maker-val').value.trim();
-      if (!name || !window.FinkInkEngine?.story) return;
-      const num = Number(raw);
-      window.FinkInkEngine.story.variablesState[name] = Number.isNaN(num) ? raw : num;
-      bus.publish('sys.sdk.tx', { summary: `maker set ${name}=${raw}`, msg: 'maker-set' }, { source: 'maker' });
-      refresh();
-    });
 
     win.querySelector('#maker-clock').addEventListener('click', (e) => {
       const btn = e.target.closest('button');

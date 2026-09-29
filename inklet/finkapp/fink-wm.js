@@ -271,6 +271,7 @@ window.FinkWM = {
             // seam does not jump to the finger on the first move
             drag = { id: e.pointerId, main, y0: e.clientY, ratio0: this.split.ratio };
             try { grip.setPointerCapture(e.pointerId); } catch { /* untracked pointer */ }
+            this._framesAside(true);
             e.preventDefault();
         });
         grip.addEventListener('pointermove', (e) => {
@@ -282,6 +283,7 @@ window.FinkWM = {
         const end = (e) => {
             if (!drag || e.pointerId !== drag.id) return;
             drag = null;
+            this._framesAside(false);
             this._saveSplit();
             this._scheduleSettle();
             hideSwapSoon();
@@ -300,6 +302,14 @@ window.FinkWM = {
             this._saveSplit();
             this._scheduleSettle();
         });
+    },
+
+    // While a drag of the toolbar or the seam is on, frames take no pointer
+    // events. Pointer capture on the handle did not hold when the pointer
+    // crossed a sandboxed frame (the story window, measured headless): the
+    // moves went to the frame and the drag stopped under the finger.
+    _framesAside(on) {
+        document.body.classList.toggle('fink-wm-dragging', !!on);
     },
 
     _loadSplit() {
@@ -453,6 +463,7 @@ window.FinkWM = {
             handle.setPointerCapture(e.pointerId);
             const rect = chrome.getBoundingClientRect();
             this._drag = { x: e.clientX, y: e.clientY, left: rect.left, top: rect.top, moved: false };
+            this._framesAside(true);
         });
         handle.addEventListener('pointermove', (e) => {
             if (!this._drag) return;
@@ -467,6 +478,7 @@ window.FinkWM = {
             if (!this._drag) return;
             const wasDrag = this._drag.moved;
             this._drag = null;
+            this._framesAside(false);
             if (wasDrag) {
                 // Dock: snap to the nearer screen edge, clamp vertically.
                 const rect = chrome.getBoundingClientRect();
@@ -578,11 +590,7 @@ window.FinkWM = {
     },
 
     log(msg) {
-        if (window.FinkDevPanel) {
-            FinkDevPanel.log(`WM: ${msg}`, 'game');
-        } else {
-            console.log(`[FinkWM] ${msg}`);
-        }
+        console.log(`[FinkWM] ${msg}`);
     }
 };
 

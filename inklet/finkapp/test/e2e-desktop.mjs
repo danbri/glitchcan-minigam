@@ -17,6 +17,7 @@ import { spawn } from 'node:child_process';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { openStory } from './lib/story.mjs';
 
 const SHOTS = process.argv.includes('--shots');
 const here = dirname(fileURLToPath(import.meta.url));
@@ -50,8 +51,8 @@ try {
   const errs = [];
   page.on('pageerror', e => errs.push(String(e).split('\n')[0].slice(0, 160)));
 
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
-  await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
+  // The story plays in the runner, the only story engine.
+  await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/hampstead.fink.js');
   await page.waitForTimeout(1200);
 
   // ---- 1. one launcher lists all three families ------------------------
@@ -80,8 +81,12 @@ try {
     game: window.FinkMinigames?.currentType || null,
     frames: [...document.querySelectorAll('.foafos-window iframe')].map(f => f.getAttribute('src')),
   }));
-  alive.windows.length === 2 && alive.game === 'robbin'
-    ? pass(`three running at once: ${alive.windows.join(', ')} + game "${alive.game}"`)
+  // The story is a window too now (the runner), so the office and TV
+  // windows sit beside it: count by what each window IS, not by how many.
+  const src = (re) => alive.frames.filter(f => re.test(f || '')).length;
+  alive.windows.length === 3 && src(/apps\/storyrunner\//) === 1 && src(/edot\/data\//) === 1
+    && src(/apps\/tv\//) === 1 && alive.game === 'robbin'
+    ? pass(`three running at once beside the story: ${alive.windows.join(', ')} + game "${alive.game}"`)
     : fail(`not all three up: ${JSON.stringify(alive)}`);
 
   const officeUp = page.frames().some(f => f.url().includes('/edot/data/'));
@@ -106,15 +111,20 @@ try {
   // card text, so renaming Channels to "Glitchcan Original Soundtrack" broke
   // a test that has nothing to do with names — a display string is not an
   // identity, and a suite that treats it as one fails on every rename.
+  // The story is the runner's window plus the story-session beneath it
+  // (labelled with the story's name), so both must be listed.
   const view = await page.evaluate(async () => {
     const { appById } = await import('./foafos-apps.js');
+    const nodes = [...window.FoafOS.apps.nodes.values()];
     return {
       cards: [...document.querySelectorAll('.foafos-switch-card .ttl')].map(t => t.textContent),
-      running: [...window.FoafOS.apps.nodes.values()].map(n => n.appId),
+      running: nodes.map(n => n.appId),
       expect: ['sheets', 'channels'].map(id => appById(id)?.name),
+      story: [appById('storyrunner')?.name, nodes.find(n => n.appId === 'story-session')?.label],
     };
   });
-  const hasStory = view.cards.some(c => /story/i.test(c));
+  const hasStory = view.running.includes('storyrunner') && view.running.includes('story-session')
+    && view.story.every(n => n && view.cards.includes(n));
   const hasGame = view.cards.some(c => /robbin/i.test(c));
   const idsUp = ['sheets', 'channels'].every(id => view.running.includes(id));
   const labelsShown = view.expect.every(n => n && view.cards.includes(n));

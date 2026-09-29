@@ -18,6 +18,7 @@
 // plays, the controller is genuinely wired.
 import { spawn } from 'node:child_process';
 import { chromium } from '@playwright/test';
+import { openStory, goto } from './lib/story.mjs';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -50,13 +51,9 @@ try {
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(String(e).slice(0, 200)));
 
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
-  await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
+  const runner = await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/hampstead.fink.js');
   await page.waitForTimeout(1200);
-  await page.evaluate(() => {
-    FinkInkEngine.story.ChoosePathString('hampstead_tube');
-    FinkInkEngine.continueStory();
-  });
+  if (!(await goto(runner, 'hampstead_tube'))) throw new Error('runner refused goto hampstead_tube');
   await page.waitForSelector('#minigame-iframe-robbin', { timeout: 15000 });
   await page.waitForTimeout(2500);
   const guest = page.frames().find(f => f.url().includes('magpie/robbin/robbin.html'));

@@ -17,6 +17,7 @@ import { spawn } from 'node:child_process';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { openStory, goto } from './lib/story.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -46,26 +47,28 @@ try {
   browser = await chromium.launch({ headless: true, executablePath: EXE, args: ['--no-sandbox'] });
   const ctx = await browser.newContext({ viewport: { width: 430, height: 860 }, hasTouch: true });
   const page = await ctx.newPage();
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/demos/foafos-tour.fink.js`);
-  await page.waitForFunction(() => document.querySelectorAll('#choices .choice-btn').length > 0, null, { timeout: 25000 });
+  // The story plays in the runner's sandboxed frame; the shell page holds
+  // no story text of its own.
+  const r = await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/demos/foafos-tour.fink.js');
   await page.waitForTimeout(800);
 
   // FIRST, while the story owns the screen: does a new beat announce?
   // (with a game running there are no choices to click)
-  // EVENTS: do dynamic changes get announced? Drive the app and watch
-  // for live-region content, not just its presence.
-  const announced = await page.evaluate(async () => {
+  // EVENTS: do dynamic changes get announced? Drive the READER'S surface —
+  // the runner frame — and watch for live-region content, not just its
+  // presence.
+  const announced = await r.evaluate(async () => {
     const seen = [];
     const live = [...document.querySelectorAll('[aria-live], [role="status"], [role="alert"], [role="log"]')];
     const obs = new MutationObserver(muts => {
       for (const m of muts) {
-        const host = m.target.closest?.('[aria-live], [role="status"], [role="alert"], [role="log"]');
+        const host = m.target.closest?.('[aria-live]:not([aria-live="off"]), [role="status"], [role="alert"], [role="log"]');
         if (host) seen.push((host.textContent || '').trim().slice(0, 40));
       }
     });
     for (const l of live) obs.observe(l, { childList: true, subtree: true, characterData: true });
-    // advance the story: a new beat is the most important announcement
-    document.querySelector('#choices .choice-btn')?.click();
+    // advance the story as a reader does: a new beat is the most important announcement
+    document.querySelector('#choices button')?.click();
     await new Promise(r => setTimeout(r, 1200));
     obs.disconnect();
     return { liveRegions: live.length, changes: seen.length, sample: seen.slice(0, 2) };
@@ -76,11 +79,10 @@ try {
 
 
   // open every surface so the audit sees the whole platform: a running
-  // game (WM chrome + pad + guest), a widget window, and the drawer
-  await page.evaluate(() => {
-    FinkInkEngine.story.ChoosePathString('game');
-    FinkInkEngine.continueStory();
-  });
+  // game (WM chrome + pad + guest), a widget window, and the drawer.
+  // The tour's `game` knot carries `# MINIGAME: robbin`; the runner asks
+  // the shell to start it.
+  await goto(r, 'game');
   await page.waitForSelector('#minigame-iframe-robbin', { timeout: 20000 });
   await page.waitForTimeout(3500);
   await page.evaluate(() => {
@@ -122,15 +124,9 @@ try {
       if (ti && Number(ti) > 0) out.push({ sev: 'warn', msg: `positive tabindex on ${el.id || el.tagName}` });
     }
 
-    // 2. landmarks + the story region
+    // 2. landmarks. (The story region — its name, its live prose — is in
+    // the runner frame, and §11 below checks it there.)
     if (!document.querySelector('main, [role="main"]')) out.push({ sev: 'error', msg: 'no main landmark' });
-    const story = document.getElementById('story-output');
-    if (story) {
-      const region = story.closest('[role="region"], [role="log"], main, article, section');
-      if (!region) out.push({ sev: 'warn', msg: 'story output is not inside a labelled region' });
-      const live = story.getAttribute('aria-live') || story.closest('[aria-live]')?.getAttribute('aria-live');
-      if (!live) out.push({ sev: 'error', msg: 'story text is NOT in a live region — new prose is never announced' });
-    }
 
     // 3. status/loading announcements
     const status = document.getElementById('status');
@@ -270,19 +266,20 @@ try {
 
   // ── 11. THE READING SURFACE, WHERE THE READING ACTUALLY HAPPENS ─────────
   //
-  // Everything above walks the top document of a `?player=legacy` page. When
-  // the story moved into the box that walk started finding an EMPTY ROOM and
+  // Everything above walks the top document of the shell. When the story
+  // moved into the box that walk started finding an EMPTY ROOM and
   // reporting zero errors — the worst kind of green, and it lasted until the
   // accessibility tree was dumped by hand. So the boxed surface gets its own
   // visit, and it is checked harder than a widget: it is the one surface a
   // non-visual reader spends all their time in.
   {
     const bp = await ctx.newPage();
-    await bp.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=boxed`);
+    // A plain visit: the shell boots the runner on the table of contents.
+    await bp.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/`);
     await bp.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
     let rf = null;
     for (let i = 0; i < 50 && !rf; i++) {
-      rf = bp.frames().find((f) => f.url().includes('apps/storyrunner'));
+      rf = bp.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
       if (!rf) await bp.waitForTimeout(300);
     }
     if (!rf) note('error', 'the reading surface never appeared to audit');

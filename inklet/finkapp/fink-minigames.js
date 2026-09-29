@@ -871,15 +871,12 @@ window.FinkMinigames = {
     startMinigame(type = 'gems', mode = 'normal', controls = null, args = null) {
         if (!this.isKnownGame(type)) {
             // Refused out loud, and the story carries on without the game.
-            // The shell refuses a boxed story's request before it gets here;
-            // this is the host player's path.
+            // The shell refuses a story's request before it gets here; this
+            // catches a direct call.
             this.log(`Refused unregistered minigame: ${type}`);
             window.FoafOS?.bus.publish('minigame.refused', {
                 summary: `${type} is not a registered game`, type, reason: 'unregistered',
             });
-            if (window.FinkInkEngine && FinkInkEngine.continueStory) {
-                setTimeout(() => FinkInkEngine.continueStory(), 0);
-            }
             return false;
         }
         // Determine controls from parameter or default from minigameInfo
@@ -933,7 +930,7 @@ window.FinkMinigames = {
 
         // Delta-based sync baseline; it lives on the instance record so
         // parallel widgets cannot measure their gems against each other's.
-        const currentDiamonds = window.FinkInkEngine?.story?.variablesState?.['diamonds'] || 0;
+        const currentDiamonds = this._storyVar('diamonds');
         this.log(`Starting sync: diamonds=${currentDiamonds}`);
 
         // Hide other containers
@@ -1072,13 +1069,9 @@ window.FinkMinigames = {
                     // The recent story thread, so a guest can ECHO the
                     // narrative it interrupted (Skydock's in-world PET
                     // terminals scroll it while the shift runs).
-                    story: (() => { try {
-                        const out = document.getElementById('story-output');
-                        if (!out) return null;
-                        const ps = [...out.querySelectorAll('p')]
-                            .map(p => p.textContent.trim()).filter(Boolean);
-                        return ps.length ? { recent: ps.slice(-8) } : null;
-                    } catch (e) { return null; } })(),
+                    // (the runner sends its last lines with story.launch).
+                    story: this.storyRecent && this.storyRecent.length
+                        ? { recent: this.storyRecent.slice(-8) } : null,
         };
     },
 
@@ -1265,19 +1258,11 @@ window.FinkMinigames = {
                 break;
 
             case 'log':
-                // Route minigame log to dev panel
-                if (window.FinkDevPanel) {
-                    FinkDevPanel.log(`[Minigame] ${data.message}`, data.level === 'error' ? 'error' : 'game');
-                }
+                this.log(`[${inst.type}] ${data.message}`);
                 break;
 
             case 'log-batch':
-                // Route batched minigame logs to dev panel
-                if (window.FinkDevPanel && data.logs) {
-                    data.logs.forEach(log => {
-                        FinkDevPanel.log(`[Minigame] ${log.message}`, log.level === 'error' ? 'error' : 'game');
-                    });
-                }
+                (data.logs || []).forEach(l => this.log(`[${inst.type}] ${l.message}`));
                 break;
         }
     },
@@ -1415,7 +1400,7 @@ window.FinkMinigames = {
     // the other's last total and the story's diamonds walked randomly.
     _applyGemDelta(inst, currentGems) {
         const gameDelta = currentGems - inst.lastSync.gameGems;
-        const storyDiamonds = FinkInkEngine?.story?.variablesState?.['diamonds'] || 0;
+        const storyDiamonds = this._storyVar('diamonds');
         const newDiamonds = storyDiamonds + gameDelta;
         // A 'progress' report is the guest asking for a write. It goes
         // through the broker like any other, so a game that never
@@ -1544,10 +1529,8 @@ window.FinkMinigames = {
     // Get story variables for minigame. `actor` filters what a guest may
     // SEE — a chess game has no business reading a story's private state.
     _getStoryVariables(actor = null) {
-        if (!window.FinkInkEngine || !FinkInkEngine.story) return {};
-
+        const all = window.FoafOS?.storyVars?.all?.() || {};
         const vars = {};
-        const story = FinkInkEngine.story;
 
         // The shared economy plus the conventional host-provided context.
         // A guest additionally sees whatever its manifest declares.
@@ -1556,9 +1539,7 @@ window.FinkMinigames = {
             ...(actor?.grants?.read || []), ...(actor?.grants?.write || []),
         ]);
         names.forEach(name => {
-            if (story.variablesState[name] !== undefined) {
-                vars[name] = story.variablesState[name];
-            }
+            if (all[name] !== undefined) vars[name] = all[name];
         });
 
         // The broker has the last word on what a guest may see.
@@ -1595,23 +1576,14 @@ window.FinkMinigames = {
                 (n, v) => { window.FoafOS.worldWrite?.(worldInst.id, n, v); });
         }
 
+        // A game's write belongs to the story that launched it: the shell
+        // claims the economy for that story while its game plays.
         const store = window.FoafOS?.storyVars || null;
-        const boxed = !!store?.owner;
-        const story = boxed ? null : (window.FinkInkEngine?.story || null);
-        if (!boxed && !story) return false;
-
-        const apply = boxed
-            ? (n, v) => {
-                store._apply(n, v);
-                this.log(`Set variable ${n} = ${v} (boxed story ${store.owner})`);
-            }
-            : (n, v) => {
-                story.variablesState[n] = v;
-                this.log(`Set variable ${n} = ${v}`);
-                if (window.FinkUI && FinkUI.updateStatsDisplay) {
-                    FinkUI.updateStatsDisplay();
-                }
-            };
+        if (!store?.owner) return false;
+        const apply = (n, v) => {
+            store._apply(n, v);
+            this.log(`Set variable ${n} = ${v} (story ${store.owner})`);
+        };
 
         const broker = window.FoafOS?.vars;
         try {
@@ -1794,9 +1766,6 @@ window.FinkMinigames = {
             this.elements.iframeContainer.style.display = 'none';
         }
 
-        // Update story variables if available
-        this.updateStoryVariables(result);
-
         // Switch back to narrative view - removes 'active' class from minigame
         this.switchView('narrative');
 
@@ -1814,74 +1783,6 @@ window.FinkMinigames = {
             // Clear any inline styles that might override CSS
             this.elements.minigameView.style.cssText = '';
             this.log('Minigame view: all classes and styles cleared');
-        }
-
-        // Reset UI state to ensure choices work
-        if (window.FinkUI) {
-            FinkUI.animationInProgress = false;
-            FinkUI.hideStatus();
-            this.log(`FinkUI.animationInProgress set to false`);
-        }
-
-        // Continue story after a brief delay to ensure DOM updates
-        setTimeout(() => {
-            this.log('Timeout fired - calling continueStory');
-            if (window.FinkInkEngine && FinkInkEngine.continueStory) {
-                FinkInkEngine.continueStory();
-            }
-        }, 100);
-    },
-
-    // Update story variables based on minigame results
-    updateStoryVariables(result) {
-        if (!result || !window.FinkInkEngine || !FinkInkEngine.story) return;
-
-        const story = FinkInkEngine.story;
-
-        try {
-            if (result.type === 'chess') {
-                // Chess variables - support both 'won' (legacy) and 'success' (iframe SDK)
-                const chessWon = result.won !== undefined ? result.won : result.success;
-                if (story.variablesState['chess_won'] !== undefined) {
-                    story.variablesState['chess_won'] = chessWon;
-                }
-                if (story.variablesState['chess_game_completed'] !== undefined) {
-                    story.variablesState['chess_game_completed'] = true;
-                }
-                this.log(`Chess result: won=${chessWon}`);
-            } else if (result.type === 'mudslider') {
-                // Mudslider: add collected gems to diamonds (same pattern as gems minigame)
-                if (result.score !== undefined && result.score > 0) {
-                    const oldDiamonds = story.variablesState['diamonds'] || 0;
-                    story.variablesState['diamonds'] = oldDiamonds + result.score;
-                    this.log(`Updated diamonds: ${oldDiamonds} + ${result.score} = ${story.variablesState['diamonds']}`);
-                }
-                if (story.variablesState['minigame_played'] !== undefined) {
-                    story.variablesState['minigame_played'] = true;
-                }
-            } else {
-                // Gems variables
-                if (result.isMega) {
-                    const oldMega = story.variablesState['mega_diamonds'] || 0;
-                    story.variablesState['mega_diamonds'] = oldMega + result.collected;
-                    this.log(`Updated mega_diamonds: ${oldMega} -> ${story.variablesState['mega_diamonds']}`);
-                } else if (result.collected !== undefined) {
-                    const oldDiamonds = story.variablesState['diamonds'] || 0;
-                    story.variablesState['diamonds'] = oldDiamonds + result.collected;
-                    this.log(`Updated diamonds: ${oldDiamonds} -> ${story.variablesState['diamonds']}`);
-                }
-
-                if (story.variablesState['minigame_played'] !== undefined) {
-                    story.variablesState['minigame_played'] = true;
-                }
-            }
-
-            // Update stats display if available
-            if (window.FinkUI && FinkUI.updateStatsDisplay) {
-                FinkUI.updateStatsDisplay();
-            }
-        } catch (e) {
-            this.log(`Error updating variables: ${e.message}`);
         }
     },
 
@@ -1907,11 +1808,12 @@ window.FinkMinigames = {
     },
 
     log(msg) {
-        if (window.FinkDevPanel) {
-            FinkDevPanel.log(`Minigames: ${msg}`, 'game');
-        } else {
-            console.log(`[FinkMinigames] ${msg}`);
-        }
+        console.log(`[FinkMinigames] ${msg}`);
+    },
+
+    // A story variable as the shell last saw it (FoafOS.storyVars).
+    _storyVar(name) {
+        return window.FoafOS?.storyVars?.get?.(name) || 0;
     },
 
     // ========== INLINE MINIGAME SYSTEM ==========
@@ -2128,7 +2030,7 @@ window.FinkMinigames = {
             state.scoreEl.textContent = state.collected;
 
             // Update story diamonds
-            this._setStoryVariable('diamonds', (FinkInkEngine?.story?.variablesState?.['diamonds'] || 0) + 1);
+            this._setStoryVariable('diamonds', (this._storyVar('diamonds')) + 1);
 
             // Play sound
             this._playGemSound();
@@ -2172,7 +2074,7 @@ window.FinkMinigames = {
         if (!entry) return;
 
         // Delta-based sync baseline (kept on the instance record)
-        const currentDiamonds = window.FinkInkEngine?.story?.variablesState?.['diamonds'] || 0;
+        const currentDiamonds = this._storyVar('diamonds');
 
         // Create sandboxed iframe
         const iframe = document.createElement('iframe');
@@ -2268,7 +2170,7 @@ window.FinkMinigames = {
         this.log(`Expanding ${containerId} to fullscreen`);
 
         // Close inline version
-        this._closeInlineMinigame(containerId, false);
+        this._closeInlineMinigame(containerId);
 
         // Start fullscreen version
         this.startMinigame(type, 'normal');
@@ -2277,7 +2179,7 @@ window.FinkMinigames = {
     /**
      * Close an inline minigame
      */
-    _closeInlineMinigame(containerId, continueStory = true) {
+    _closeInlineMinigame(containerId) {
         const entry = this.inlineMinigames[containerId];
         if (!entry) return;
 
@@ -2290,10 +2192,5 @@ window.FinkMinigames = {
 
         // Remove from tracking
         delete this.inlineMinigames[containerId];
-
-        // Continue story if requested
-        if (continueStory && window.FinkInkEngine) {
-            FinkInkEngine.continueStory();
-        }
     }
 };

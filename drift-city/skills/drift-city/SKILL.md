@@ -770,6 +770,11 @@ works too: `inklet/finkapp/?story=/glitchcan-minigam/drift-city/story/peraspera.
   registers `onControls` and `onSticks`, the foafos sticks (on screen, or a gamepad's) write the same `PAD` values
   the city's own sticks write, and the city hides its own sticks and the menu's "On-screen gamepad" switch
   (`hostState().sticks`). The keyboard still works when the city has focus.
+  From the foafos app list, Drift City opens the story runner on the Drift hub
+  (`drift-city/foafos-entry.fink.js`; the registry row's `opens`), so the
+  city runs as a story's world there too. The city's own ink client remains
+  for the standalone page and for a story that still says `# MINIGAME: drift`
+  (none in the repo, September 2026).
   Recorded lines (`# speech:`) are played by the SHELL when the city is hosted (spec §5.5, owner's rule: "it
   needed to be a shell service cos new iframe apps weren't trusted quickly enough"). On a phone beside a story
   the city's frame gets no taps (choices are in the runner, the sticks in the shell), so a line played in the

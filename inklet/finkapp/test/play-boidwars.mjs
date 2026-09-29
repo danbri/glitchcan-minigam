@@ -21,6 +21,7 @@ import { spawn } from 'node:child_process';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { openStory } from './lib/story.mjs';
 
 const args = process.argv.slice(2);
 const argOf = (n, d) => { const i = args.indexOf(n); return i >= 0 ? Number(args[i + 1]) : d; };
@@ -58,10 +59,12 @@ try {
   const errors = [];
   page.on('pageerror', e => errors.push((e.stack || String(e)).split('\n').slice(0, 2).join(' | ')));
 
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
-  await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
+  const runner = await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/hampstead.fink.js');
   await page.waitForTimeout(1200);
-  await page.evaluate(() => FinkMinigames.startMinigame('battleboids', 'normal'));
+  // launch it the way `# MINIGAME: battleboids` does: the runner's
+  // story.launch verb, so the shell's economy belongs to this story
+  const launched = await runner.evaluate(() => window.foaf.storyRequest('story.launch', { game: 'battleboids' }));
+  if (!launched?.ok) throw new Error('story.launch battleboids refused: ' + JSON.stringify(launched));
 
   let game = null;
   for (let i = 0; i < 60 && !game; i++) {
@@ -99,12 +102,18 @@ try {
 
   // What the shell saw, once the guest is gone: the SDK result is the
   // only record left of who won.
-  const hostVerdict = () => page.evaluate(() => ({
-    stillRunning: !!document.querySelector('#minigame-iframe-battleboids'),
-    won: FinkInkEngine?.story?.variablesState?.['battleboids_won'],
-    scratch: window.FoafOS?.vars ? Object.fromEntries(FoafOS.vars.scratch) : null,
-    denied: window.FoafOS?.vars?.log.filter(e => !e.ok).map(e => `${e.name}: ${e.reason}`) || [],
-  })).catch(() => null);
+  // The shell's mirror (FoafOS.storyVars) is what the game wrote; the
+  // runner's own VAR is what the story took back on resume.
+  const hostVerdict = async () => {
+    const v = await page.evaluate(() => ({
+      stillRunning: !!document.querySelector('#minigame-iframe-battleboids'),
+      won: window.FoafOS?.storyVars?.get?.('battleboids_won'),
+      scratch: window.FoafOS?.vars ? Object.fromEntries(FoafOS.vars.scratch) : null,
+      denied: window.FoafOS?.vars?.log.filter(e => !e.ok).map(e => `${e.name}: ${e.reason}`) || [],
+    })).catch(() => null);
+    if (v) v.inStory = await runner.evaluate(() => window.__storyrunner.varOf('battleboids_won')).catch(() => undefined);
+    return v;
+  };
 
   // wall-clock budget scales with the debug clock, or a slowed run times
   // out before the game has done anything
@@ -189,7 +198,7 @@ try {
   if (end.state === 'closed') {
     const v = await hostVerdict();
     log('state:  BATTLE OVER — the guest completed and the shell closed the window');
-    log(`result: battleboids_won = ${v?.won}` +
+    log(`result: battleboids_won = ${v?.won} (shell mirror) · ${v?.inStory} (story)` +
         (v?.scratch && 'battleboids_won' in v.scratch
           ? '  (held in the broker\'s scratch: no story declares this VAR)' : ''));
     if (v?.denied?.length) log(`denied: ${v.denied.slice(0, 3).join(' · ')}`);

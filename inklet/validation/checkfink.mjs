@@ -8,7 +8,7 @@
  *
  * • .ink files  → Direct compilation with ink-full.js
  * • .json files → Load pre-compiled story and test
- * • .fink.js files → Puppeteer-based validation via browser execution
+ * • .fink.js files → sigil capture in a sandbox (finkcore), then compilation
  */
 
 import fs from 'node:fs/promises';
@@ -22,71 +22,44 @@ const ink  = await import(
 );
 const { Compiler, Story } = ink;
 
-// ── FINK validation via Puppeteer ─────────────────────────────────────
-// Full `puppeteer` (bundled browser) when present; otherwise
-// `puppeteer-core` with a browser named via PUPPETEER_EXECUTABLE_PATH.
-const puppeteer = await import('puppeteer')
-  .catch(() => import('puppeteer-core'))
-  .then(m => m.default);
-
-let browserInstance = null;
-
-async function getBrowser() {
-  if (!browserInstance) {
-    browserInstance = await puppeteer.launch({
-      headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-      args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-web-security', '--allow-file-access-from-files']
-    });
-  }
-  return browserInstance;
-}
+// ── FINK validation ───────────────────────────────────────────────────
+// A .fink.js is JavaScript: finkcore runs it in a sandbox (node:vm) and
+// captures its ink sigils, then the real compiler compiles the result. This
+// is the story runner's own load path; the browser page it used before ran
+// the old host-page engine, which is gone.
+const { extractFinkFromJsSource } = await import(
+  pathToFileURL(path.join(here, '../../packages/finkcore/src/lib/finkExtract.js')).href
+);
 
 async function validateFinkFile(filePath) {
-  const browser = await getBrowser();
-  const page = await browser.newPage();
-  
+  let inkSrc = '';
   try {
-    await page.setRequestInterception(true);
-    page.on('request', (request) => {
-      const url = request.url();
-      if (url.startsWith('file://') || url.startsWith('data:')) {
-        request.continue();
-      } else {
-        request.abort();
-      }
-    });
-    
-    const finkContent = await fs.readFile(filePath, 'utf8');
-    const validationHtmlPath = pathToFileURL(path.join(here, 'validate-fink.html')).href;
-    
-    await page.goto(validationHtmlPath);
-    await page.waitForFunction(() => window.validatorReady === true, { timeout: 10000 });
-    
-    const result = await page.evaluate(async (content, fileName) => {
-      return await window.validateFinkContent(content, fileName);
-    }, finkContent, path.basename(filePath));
-    
-    if (result.success) {
-      console.log(`✓ PASS  ${filePath}`);
-      console.log(`   ↳ Extracted ${result.extractedInkLength} chars of INK content`);
-      if (result.compilationOutput) {
-        const preview = result.compilationOutput.substring(0, 100);
-        console.log(`   ↳ Output: ${JSON.stringify(preview)}${result.compilationOutput.length > 100 ? '...' : ''}`);
-      }
-    } else {
-      console.error(`✗ FAIL  ${filePath}`);
-      if (result.errors && result.errors.length > 0) {
-        result.errors.forEach(error => {
-          console.error(`   ↳ ${error}`);
-        });
-      }
+    inkSrc = extractFinkFromJsSource(await fs.readFile(filePath, 'utf8'));
+  } catch (e) {
+    console.error(`✗ FAIL  ${filePath}`);
+    console.error(`   ↳ extraction: ${e.message}`);
+    return false;
+  }
+  if (!inkSrc.trim()) {
+    console.error(`✗ FAIL  ${filePath}`);
+    console.error('   ↳ no ink content extracted');
+    return false;
+  }
+  const compiler = new Compiler(inkSrc);
+  try {
+    const story = compiler.Compile();
+    let out = '';
+    while (story.canContinue && out.length < 200) out += story.Continue();
+    console.log(`✓ PASS  ${filePath}`);
+    console.log(`   ↳ Extracted ${inkSrc.length} chars of INK content`);
+    if (out) console.log(`   ↳ Output: ${JSON.stringify(out.slice(0, 100))}${out.length > 100 ? '...' : ''}`);
+    return true;
+  } catch (e) {
+    console.error(`✗ FAIL  ${filePath}`);
+    for (const err of (compiler.errors && compiler.errors.length ? compiler.errors : [e.message])) {
+      console.error(`   ↳ ${err}`);
     }
-    
-    return result.success;
-    
-  } finally {
-    await page.close();
+    return false;
   }
 }
 
@@ -254,7 +227,5 @@ try {
     process.exit(failed > 0 ? 1 : 0);
   }
 } finally {
-  if (browserInstance) {
-    await browserInstance.close();
-  }
+  /* nothing to close */
 }

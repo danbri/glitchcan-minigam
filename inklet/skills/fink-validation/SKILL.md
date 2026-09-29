@@ -3,8 +3,8 @@ name: fink-validation
 description: >-
   Validate .fink.js story files from the command line — in THIS repo or any
   other (isle_of_glitch was the proving ground). Covers the three-tier
-  validation ladder (pure Node with finkcore+inkjs and NO browser; Puppeteer
-  checkfink; the real player headless), the answer to "does the npm code work
+  validation ladder (pure Node with finkcore+inkjs and NO browser;
+  checkfink --scan over .ink/.json/.fink.js; the story runner headless), the answer to "does the npm code work
   browserless" (yes — a JS interpreter is exactly what a .fink.js needs), the
   four defect classes that broke an entire 24-story corpus and their
   mechanical fixes, and the raw-capture rule that makes a rendered backtick
@@ -39,8 +39,8 @@ resolution, and anything visual.
 | tier | command | proves |
 |---|---|---|
 | 1 · pure Node | `npm run fink:check` — or point it anywhere: `node inklet/tools/fink-check.mjs /path/to/*.fink.js` | extraction, real compile, BFS playthrough of the choice tree, leaked-emphasis lint |
-| 2 · Puppeteer | `node inklet/validation/checkfink.mjs --scan` (no `--report` flag exists) | browser load path |
-| 3 · the player | headless Playwright against `inklet/finkapp/?story=…` | what a player actually sees: tags act, images render (`naturalWidth > 0`), choices present |
+| 2 · scan | `node inklet/validation/checkfink.mjs --scan` (no `--report` flag exists) | every .ink/.json/.fink.js in the repo compiles (a .fink.js is captured in Node by finkcore; until September 2026 it ran in a browser page that loaded the deleted host engine) |
+| 3 · the story runner | headless Playwright against `inklet/finkapp/?story=…` (the story plays in the runner frame; `inklet/finkapp/test/lib/story.mjs`) | what a player actually sees: tags act, images render (`naturalWidth > 0`), choices present |
 
 Tier 1 first, always. It found every content bug in the isle corpus;
 tier 3 was only needed to prove the art rendered.

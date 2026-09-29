@@ -17,6 +17,7 @@ import { spawn } from 'node:child_process';
 import { chromium } from '@playwright/test';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { openStory, goto } from './lib/story.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -59,22 +60,24 @@ try {
   // page's ink engine — as the proof that a story installation boots a
   // story. That made "level 0 runs ink" the definition of working. Under the
   // layer model the shell must NOT compile ink: the story surface is the
-  // boxed runner (level 1). So the assertion is now: a story surface opens,
-  // and the host engine compiled NOTHING.
+  // boxed runner (level 1). The host engine is now deleted, so the
+  // assertion is: a story surface opens, and the shell page has no ink
+  // engine or compiler at all (a count read off a missing global would be 0
+  // whatever happened, which proves nothing).
   {
     const { page, errs } = await open('');
     const st = await page.evaluate(() => ({
       root: FoafOS.root.id,
-      hostCompiled: window.FinkInkEngine?.compiledCount || 0,
+      hostEngine: ['FinkInkEngine', 'FinkPlayer', 'FinkUI', 'inkjs'].filter(m => m in window),
       boxed: [...document.querySelectorAll('iframe')].some(f => /apps\/storyrunner\//.test(f.src)),
       rootCaps: FoafOS.rootNode.capabilities.length,
     }));
     st.root === 'glitchcanary' && st.boxed
       ? pass(`default root boots its story in the box (${st.root}, ${st.rootCaps} root capabilities)`)
       : fail(`default root did not open the boxed story surface: ${JSON.stringify(st)}`);
-    st.hostCompiled === 0
-      ? pass('level 0 compiled no ink — the shell is not a story player')
-      : fail(`the host page compiled ${st.hostCompiled} story(ies): ink is still running at level 0`);
+    st.hostEngine.length === 0
+      ? pass('level 0 has no ink engine or compiler — the shell is not a story player')
+      : fail(`the host page still carries a story engine: ${st.hostEngine.join(', ')}`);
     errs.length === 0 ? pass('default root: no page errors') : fail(`default root errors: ${errs[0]}`);
     await page.close();
   }
@@ -84,12 +87,13 @@ try {
     const { page, errs } = await open('?root=office');
     const st = await page.evaluate(() => ({
       root: FoafOS.root.id,
-      compiled: window.FinkInkEngine?.compiledCount || 0,
+      compiled: ['FinkInkEngine', 'inkjs'].filter(m => m in window).length
+        + [...document.querySelectorAll('iframe')].filter(f => /apps\/storyrunner\//.test(f.src)).length,
       windows: document.querySelectorAll('.foafos-window').length,
       tree: FoafOS.apps.report(),
     }));
     st.root === 'office' && st.compiled === 0
-      ? pass('office root boots with NO story compiled — the shell is not a story player')
+      ? pass('office root boots with NO story engine and no story runner — the shell is not a story player')
       : fail(`office root still ran the story engine: ${JSON.stringify({ root: st.root, compiled: st.compiled })}`);
     st.windows >= 1 && st.tree.total >= 2
       ? pass(`office root opened its app instead (${st.windows} window, ${st.tree.total} nodes in the tree)`)
@@ -171,44 +175,69 @@ try {
     await page.close();
   }
 
+  // A story playing in the runner, and a game THE STORY launched. The story
+  // is a `story-session` node under the runner's window node (there is no
+  // host "Story" node any more: the host engine is gone), and a game its
+  // `# MINIGAME:` asks for is spawned beneath that session. The TOC's
+  // GridLuck knot is the launch: `+ [Play GridLuck] # MINIGAME: gridluck`.
+  const storyWithGame = async () => {
+    const page = await browser.newPage({ viewport: { width: 900, height: 820 }, hasTouch: true });
+    const errs = [];
+    page.on('pageerror', e => errs.push(String(e).split('\n')[0].slice(0, 140)));
+    const r = await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/toc.fink.js');
+    await page.waitForFunction(() => [...FoafOS.apps.nodes.values()].some(n => n.appId === 'story-session'),
+      null, { timeout: 15000 }).catch(() => {});
+    const sessionBefore = await page.evaluate(() => {
+      const t = FoafOS.apps;
+      const s = [...t.nodes.values()].find(n => n.appId === 'story-session');
+      const runner = s ? t.get(s.parentId) : null;
+      return s ? { id: s.id, label: s.label, depth: t.depth(s.id), parent: runner?.appId,
+                   runnerParent: runner ? t.get(runner.parentId)?.id === FoafOS.rootNode.id : false } : null;
+    });
+    await goto(r, 'gridluck_selected');
+    await r.waitForFunction(() => window.__storyrunner.state.choices.some(c => /Play GridLuck/.test(c)),
+      null, { timeout: 15000 });
+    await r.evaluate(() => window.__storyrunner.choose(
+      window.__storyrunner.state.choices.findIndex(c => /Play GridLuck/.test(c))));
+    await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 15000 });
+    await page.waitForTimeout(2500);
+    return { page, errs, r, sessionBefore };
+  };
+  const sessionNode = () => {
+    const s = [...FoafOS.apps.nodes.values()].find(n => n.appId === 'story-session');
+    return s ? s.id : null;
+  };
+
   // ── 5. the tree has BRANCHES: a game opened by a story is its child ─
   // A tree whose every node hangs off root is a list in tree clothing,
   // and the grouping it exists for has nothing to group.
   {
-    const page = (await browser.newPage({ viewport: { width: 900, height: 800 }, hasTouch: true }));
-    const errs = [];
-    page.on('pageerror', e => errs.push(String(e).split('\n')[0].slice(0, 140)));
-    await page.goto(base + `?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
-    await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
-    await page.waitForTimeout(1500);
+    const { page, errs, r, sessionBefore } = await storyWithGame();
+    sessionBefore && sessionBefore.parent === 'storyrunner' && sessionBefore.runnerParent && sessionBefore.depth === 2
+      ? pass(`the loaded story is a session node under the runner, under root ("${sessionBefore.label}" at depth 2)`)
+      : fail(`no story-session under the runner: ${JSON.stringify(sessionBefore)}`);
+    (await r.evaluate(() => window.__storyrunner.paused()))
+      ? pass('the story paused on its # MINIGAME: beat')
+      : fail('the story did not pause for the game it launched');
 
-    const hasStory = await page.evaluate(() => !!FoafOS.storyNode);
-    hasStory ? pass('the loaded story is a node under root')
-             : fail('no story node was created');
-
-    await page.evaluate(() => FinkMinigames.startMinigame('gridluck', 'normal'));
-    await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 15000 });
-    await page.waitForTimeout(2500);
-
-    const shape = await page.evaluate(() => {
+    const shape = await page.evaluate((sid) => {
       const t = FoafOS.apps;
-      const story = FoafOS.storyNode;
-      const kids = t.children(story.id);
+      const kids = t.children(sid);
       return {
-        storyId: story.id,
+        storyId: sid,
         childLabels: kids.map(k => k.label),
         depths: kids.map(k => t.depth(k.id)),
         total: t.report().total,
       };
-    });
-    shape.childLabels.length === 1 && shape.depths[0] === 2
-      ? pass(`the game is a CHILD of the story, not a sibling (${shape.childLabels[0]} at depth 2 of ${shape.total} nodes)`)
+    }, await page.evaluate(sessionNode));
+    shape.childLabels.length === 1 && shape.childLabels[0] === 'GridLuck' && shape.depths[0] === 3
+      ? pass(`the game is a CHILD of the story, not a sibling (${shape.childLabels[0]} at depth 3 of ${shape.total} nodes)`)
       : fail(`tree is still flat: ${JSON.stringify(shape)}`);
 
     // and closing the story takes the game with it, for real
-    const after = await page.evaluate(async () => {
+    const after = await page.evaluate(async (sid) => {
       const t = FoafOS.apps;
-      const closed = t.close(FoafOS.storyNode.id);
+      const closed = t.close(sid);
       await new Promise(r => setTimeout(r, 1200));
       return {
         closed: closed.length,
@@ -216,7 +245,7 @@ try {
         guestGone: !document.querySelector('#minigame-iframe-gridluck'),
         remaining: t.report().total,
       };
-    });
+    }, await page.evaluate(sessionNode));
     after.closed === 2 && after.wmActive === false && after.guestGone
       ? pass('closing the story really tore down the game beneath it (guest frame gone, WM inactive)')
       : fail(`cascade did not reach the guest: ${JSON.stringify(after)}`);
@@ -226,15 +255,12 @@ try {
 
   // ── 6. the switcher IS the tree, and its verbs act on subtrees ─────
   {
-    const page = await browser.newPage({ viewport: { width: 900, height: 820 }, hasTouch: true });
-    const errs = [];
-    page.on('pageerror', e => errs.push(String(e).split('\n')[0].slice(0, 140)));
-    await page.goto(base + `?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
-    await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
-    await page.waitForTimeout(1500);
-    await page.evaluate(() => FinkMinigames.startMinigame('gridluck', 'normal'));
-    await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 15000 });
-    await page.waitForTimeout(2500);
+    const { page, errs } = await storyWithGame();
+    const sid = await page.evaluate(sessionNode);
+    const labels = await page.evaluate(async (id) => {
+      const { appById } = await import('./foafos-apps.js');
+      return { runner: appById('storyrunner')?.name, session: FoafOS.apps.get(id)?.label };
+    }, sid);
 
     const rows = await page.evaluate(() => {
       FoafOS.openSwitcher();
@@ -244,12 +270,13 @@ try {
         acts: [...r.querySelectorAll('.foafos-switch-act')].map(b => b.getAttribute('aria-label')),
       }));
     });
-    const story = rows.find(r => r.title === 'Story');
+    const runner = rows.find(r => r.title === labels.runner);
+    const story = rows.find(r => r.title === labels.session);
     const game = rows.find(r => r.title === 'GridLuck');
     // The root row is SHOWN at depth 0; app subtrees start at depth 1.
     const rootRow = rows.find(r => r.depth === '0');
-    rootRow && story?.depth === '1' && game?.depth === '2'
-      ? pass(`switcher shows lineage: root "${rootRow.title}" at 0, Story at 1, GridLuck beneath it`)
+    rootRow && runner?.depth === '1' && story?.depth === '2' && game?.depth === '3'
+      ? pass(`switcher shows lineage: root "${rootRow.title}" at 0, ${labels.runner} at 1, story "${labels.session}" at 2, GridLuck beneath it`)
       : fail(`switcher lineage wrong: ${JSON.stringify(rows)}`);
     rootRow && rootRow.acts.length === 1
       ? pass('the root row offers ⓘ only — no pause/close on the shell itself')
@@ -260,16 +287,17 @@ try {
       : fail(`subtree verbs do not disclose scope: ${JSON.stringify(story?.acts)}`);
 
     // suspending the story suspends the game under it, for real
-    const susp = await page.evaluate(async () => {
+    const susp = await page.evaluate(async (id) => {
       const t = FoafOS.apps;
-      const story = FoafOS.storyNode;
-      const kid = t.children(story.id)[0];
-      FoafOS.setSubtreeSuspended(story.id, true);
+      const story = t.get(id);
+      const kid = t.children(id)[0];
+      FoafOS.setSubtreeSuspended(id, true);
       await new Promise(r => setTimeout(r, 400));
-      return { story: t.get(story.id).suspended, kid: t.get(kid.id).suspended,
+      return { story: t.get(id).suspended, kid: t.get(kid.id).suspended,
+               runner: t.get(story.parentId).suspended,
                root: t.get(FoafOS.rootNode.id).suspended };
-    });
-    susp.story && susp.kid && !susp.root
+    }, sid);
+    susp.story && susp.kid && !susp.runner && !susp.root
       ? pass('suspending a subtree reaches its children and stops at its parent')
       : fail(`subtree suspend wrong: ${JSON.stringify(susp)}`);
     errs.length === 0 ? pass('switcher: no page errors') : fail(`switcher errors: ${errs[0]}`);

@@ -27,6 +27,7 @@ import { chromium } from '@playwright/test';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { runnerFrame, goto } from './lib/story.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -181,9 +182,16 @@ const AUDIT = () => {
 // ── the journey ─────────────────────────────────────────────────────────
 // Each step is [name, fn]. Steps that do not apply to a viewport return
 // the string 'skip' and are recorded as skipped, not as passing.
-const journey = (page, W) => [
+// The story is Hampstead, playing in the story runner's window (stories
+// play nowhere else). `run.frame` is that runner's frame once booted.
+const storyBooted = async (page, run) => {
+  run.frame = await runnerFrame(page);
+  await run.frame.waitForFunction(() => window.__storyrunner?.ready?.()
+    && window.__storyrunner.state.choices.length > 0, null, { timeout: 60000 });
+};
+const journey = (page, W, run) => [
   ['boot', async () => {
-    await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
+    await storyBooted(page, run);
     await page.waitForTimeout(1200);
   }],
   ['open drawer', async () => {
@@ -238,13 +246,17 @@ const journey = (page, W) => [
     await page.waitForTimeout(700);
   }],
   ['close app windows', async () => {
+    // The office and TV windows; the story's own window stays open.
     await page.evaluate(() => {
-      document.querySelectorAll('.foafos-window .foafos-window-close').forEach(b => b.click());
+      document.querySelectorAll('.foafos-window:not([data-app-id="storyrunner"]) .foafos-window-close')
+        .forEach(b => b.click());
     });
     await page.waitForTimeout(600);
   }],
   ['start a game', async () => {
-    await page.evaluate(() => FinkMinigames.startMinigame('robbin', 'normal'));
+    // As a reader meets it: the story reaches Hampstead tube, whose
+    // `# MINIGAME: robbin` pauses the runner and starts the game.
+    await goto(run.frame, 'hampstead_tube');
     await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 15000 });
     await page.waitForTimeout(4000);
   }],
@@ -282,11 +294,19 @@ const journey = (page, W) => [
     await page.waitForTimeout(600);
   }],
   ['quit the game', async () => {
-    await page.evaluate(() => FinkWM.close?.() ?? FinkMinigames.closeMinigame?.());
+    // The exit button, as a reader presses it. Robbin owns its exit (the
+    // first press asks the game; a second press within 10s ends it
+    // anyway). FinkWM.close() alone only hid the window: the game stayed
+    // active and the story in the runner stayed paused for it.
+    await page.evaluate(() => { FinkWM._setCollapsed(false); document.getElementById('returnToStory')?.click(); });
+    await page.waitForTimeout(600);
+    await page.evaluate(() => { if (FinkMinigames.active) document.getElementById('returnToStory')?.click(); });
     await page.waitForTimeout(900);
   }],
   ['story again', async () => {
-    await page.evaluate(() => document.getElementById('narrative-view')?.scrollTo(0, 0));
+    // The game has ended: the runner resumes, and the reader scrolls back up.
+    await run.frame.waitForFunction(() => !window.__storyrunner.paused(), null, { timeout: 10000 });
+    await run.frame.evaluate(() => document.getElementById('stage')?.scrollTo(0, 0));
     await page.waitForTimeout(400);
   }],
   ['skin: aurora', async () => {
@@ -355,17 +375,18 @@ try {
       if (/favicon|ERR_CONNECTION_RESET|Failed to load resource/i.test(t)) return;
       consoleErrors.push(t.slice(0, 150));
     });
-    await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
+    await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?story=/${repoName}/inklet/hampstead.fink.js`);
+    const run = { frame: null };
 
     console.log(`\n━━ ${vp.name} ${vp.width}×${vp.height} ${vp.touch ? '(touch)' : '(mouse)'} ━━`);
-    await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
+    await storyBooted(page, run);
     const missed = await selfTest(page);
     missed.length
       ? (console.log(`  ‼ AUDIT IS BLIND to: ${missed.join(', ')} — findings below are not trustworthy`),
          process.exitCode = 1)
       : console.log('  · audit self-test: catches planted overflow/offscreen/unnamed/tiny/dialog');
 
-    const steps = journey(page, vp.width);
+    const steps = journey(page, vp.width, run);
     for (const [i, [name, fn]] of steps.entries()) {
       let skipped = false, threw = null;
       try { skipped = (await fn()) === 'skip'; }

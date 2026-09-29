@@ -14,6 +14,7 @@ import { spawn } from 'node:child_process';
 import { chromium } from '@playwright/test';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { openStory } from './lib/story.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -38,47 +39,76 @@ let browser;
 try {
   browser = await chromium.launch({ headless: true, executablePath: EXE,
     args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
-  const page = await browser.newPage({ viewport: { width: 430, height: 860 }, hasTouch: true });
-  const pageErrors = [];
-  page.on('pageerror', e => pageErrors.push(String(e).slice(0, 160)));
+  const layersOf = (page) => page.evaluate(() => Object.keys(window.FinkFoley?.layers || {}));
+  const newPage = async () => {
+    const page = await browser.newPage({ viewport: { width: 430, height: 860 }, hasTouch: true });
+    const errs = [];
+    page.on('pageerror', e => errs.push(String(e).slice(0, 160)));
+    return { page, errs };
+  };
 
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/riverbend.fink.js`);
-  await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
-  await page.waitForTimeout(2000);
+  // ── 1. riverbend's own `# FOLEY:` tags, in the runner ──────────────
+  // The field report's story. Its first knot says `# FOLEY: water(...)` and
+  // `# FOLEY: wind(...)`; the old host engine sent those to FinkFoley. The
+  // runner is now the only engine, so the bed must still reach the shell's
+  // FinkFoley from the box.
+  {
+    const { page, errs } = await newPage();
+    await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/riverbend.fink.js');
+    await page.waitForFunction(() => Object.keys(window.FinkFoley?.layers || {}).length > 0, null, { timeout: 8000 })
+      .catch(() => {});
+    const started = await layersOf(page);
+    started.length
+      ? pass(`riverbend laid down its # FOLEY: ambience from the runner (${started.join(', ')})`)
+      : fail('riverbend: its # FOLEY: tags reached no foley layer — the runner does not act on # FOLEY:');
+    errs.length === 0 ? pass('riverbend: no page errors') : fail(`riverbend page errors: ${errs.slice(0, 2).join(' · ')}`);
+    await page.close();
+  }
 
-  const layers = () => page.evaluate(() => Object.keys(window.FinkFoley?.layers || {}));
-  const started = await layers();
-  started.length
-    ? pass(`riverbend laid down its ambience (${started.join(', ')})`)
-    : fail('no foley layers — this test cannot prove anything without them');
+  // ── 2. the leak itself, on ambience the runner DOES start ───────────
+  // world-between-worlds opens with `# AUDIO: synth:wind`, which the runner
+  // brokers to the shell's FinkFoley (story.audio, action 'foley'). That is a
+  // looping bed started from a story, so the leak property is testable on it.
+  {
+    const { page, errs } = await newPage();
+    await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/world-between-worlds.fink.js');
+    await page.waitForFunction(() => Object.keys(window.FinkFoley?.layers || {}).length > 0, null, { timeout: 8000 })
+      .catch(() => {});
+    await page.waitForTimeout(1000);
+    const started = await layersOf(page);
+    started.length
+      ? pass(`the story laid down its ambience through the runner (${started.join(', ')})`)
+      : fail('no foley layers — this test cannot prove anything without them');
 
-  // mute is a LEVEL, not a stop: the bed must still be running
-  await page.evaluate(() => FoafOS.audio.setMuted(true));
-  await page.waitForTimeout(300);
-  const muted = await layers();
-  muted.length === started.length
-    ? pass('mute silences without stopping (a level, not a stop)')
-    : fail(`mute stopped layers: ${started.length} → ${muted.length}`);
+    // mute is a LEVEL, not a stop: the bed must still be running
+    await page.evaluate(() => FoafOS.audio.setMuted(true));
+    await page.waitForTimeout(300);
+    const muted = await layersOf(page);
+    muted.length === started.length && started.length > 0
+      ? pass('mute silences without stopping (a level, not a stop)')
+      : fail(`mute stopped layers: ${started.length} → ${muted.length}`);
 
-  // now leave the story for a game — the river must not come with us
-  await page.evaluate(() => FinkMinigames.startMinigame('gridluck', 'normal'));
-  await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 15000 });
-  await page.waitForTimeout(2500);
-  const inGame = await layers();
-  inGame.length === 0
-    ? pass('opening a game window stops the story ambience')
-    : fail(`story foley leaked into the game: ${inGame.join(', ')}`);
+    // now leave the story for a game — the ambience must not come with us
+    await page.evaluate(() => FinkMinigames.startMinigame('gridluck', 'normal'));
+    await page.waitForFunction(() => window.FinkWM?.active === true, null, { timeout: 15000 });
+    await page.waitForTimeout(2500);
+    const inGame = await layersOf(page);
+    inGame.length === 0 && started.length > 0
+      ? pass('opening a game window stops the story ambience')
+      : fail(`story foley leaked into the game (or never started): ${inGame.join(', ')}`);
 
-  // the actual symptom: unmute inside the game and hear the last story
-  await page.evaluate(() => FoafOS.audio.setMuted(false));
-  await page.waitForTimeout(400);
-  const afterUnmute = await layers();
-  afterUnmute.length === 0
-    ? pass('unmuting inside the game is silent — no river under the maze')
-    : fail(`unmute revealed leaked ambience: ${afterUnmute.join(', ')}`);
+    // the actual symptom: unmute inside the game and hear the last story
+    await page.evaluate(() => FoafOS.audio.setMuted(false));
+    await page.waitForTimeout(400);
+    const afterUnmute = await layersOf(page);
+    afterUnmute.length === 0 && started.length > 0
+      ? pass('unmuting inside the game is silent — no wind under the maze')
+      : fail(`unmute revealed leaked ambience: ${afterUnmute.join(', ')}`);
 
-  pageErrors.length === 0 ? pass('no page errors')
-    : fail(`page errors: ${pageErrors.slice(0, 2).join(' · ')}`);
+    errs.length === 0 ? pass('no page errors')
+      : fail(`page errors: ${errs.slice(0, 2).join(' · ')}`);
+    await page.close();
+  }
   console.log(process.exitCode ? '\nAUDIO LEAK E2E: FAIL' : '\nAUDIO LEAK E2E: PASS');
 } catch (e) {
   fail(`fatal: ${String(e).slice(0, 250)}`);

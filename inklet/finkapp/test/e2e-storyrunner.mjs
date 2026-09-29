@@ -4,7 +4,7 @@
 // Proves the story+runtime containment the live host-side player lacks:
 //   · the runner compiles and PLAYS a real ink story entirely inside its
 //     own opaque-origin frame (prose + a choice tree)
-//   · it has NO host reach: parent.FoafOS / parent.FinkInkEngine throw
+//   · it has NO host reach: parent.FoafOS / parent.document throw
 //     (opaque origin — the SecurityError IS the boundary working)
 //   · a story's # BG: colours the RUNNER's frame, never the host body
 //   · a # MINIGAME: tag does NOT launch anything directly — it surfaces as
@@ -75,7 +75,7 @@ try {
   await page.evaluate(() => FoafOS.launchApp('storyrunner'));
   let frame = null;
   for (let i = 0; i < 40 && !frame; i++) {
-    frame = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+    frame = page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
     if (!frame) await page.waitForTimeout(400);
   }
   if (!frame) throw new Error('storyrunner frame never appeared');
@@ -126,7 +126,6 @@ try {
     const probe = (fn) => { try { return fn() ? 'reached' : 'absent'; } catch (e) { return 'blocked:' + e.name; } };
     return {
       foafos: probe(() => window.parent.FoafOS),
-      engine: probe(() => window.parent.FinkInkEngine),
       doc: probe(() => window.parent.document.body),
     };
   });
@@ -563,16 +562,20 @@ try {
     pass('an unknown narrative verb is refused with a named reason');
   } else fail('deny path wrong: ' + JSON.stringify(refusal));
 
-  // ── 7. the DEFAULT is switched to boxed; the host player is flagged ──
+  // ── 7. the box is the ONLY story surface: the host engine is gone ──
+  // (Until September 2026 this read the root's `storyPlayer` declaration
+  // and the host player's pending-delete flag. Both went with the host
+  // engine; what remains to hold is that nothing of it came back.)
   const direction = await page.evaluate(() => ({
-    declaredDefault: FoafOS.root?.storyPlayer?.default,
-    autoBoot: FoafOS.root?.storyPlayer?.autoBoot,
-    legacyPending: window.FinkPlayer?.PENDING_DELETE === true,
-    legacyIssue: window.FinkPlayer?.trackingIssue,
+    hostEngine: ['FinkInkEngine', 'FinkPlayer', 'FinkUI', 'FinkNavigation', 'FinkSandbox', 'FinkUtils']
+      .filter((g) => g in window),
+    inkCompiler: typeof window.inkjs !== 'undefined',
+    storyPlayer: FoafOS.root?.storyPlayer ?? null,
+    links: typeof window.FinkLinks?.generateKnotHash === 'function',
   }));
-  if (direction.declaredDefault === 'boxed' && direction.legacyPending && direction.legacyIssue === 779) {
-    pass(`default surface = boxed; host player flagged pending-delete (auto-boot ${direction.autoBoot} until #${direction.legacyIssue})`);
-  } else fail('default switch / pending-delete flag wrong: ' + JSON.stringify(direction));
+  if (!direction.hostEngine.length && !direction.inkCompiler && direction.storyPlayer === null && direction.links) {
+    pass('the shell carries no story engine and no ink compiler; stories play only in the box');
+  } else fail('host-engine remains on the shell page: ' + JSON.stringify(direction));
 
   // ── 8. CONTROL border (LAST — it detaches the runner frame): closing the
   // runner subtree tears down its child game. Real control, real cascade.
@@ -616,7 +619,7 @@ try {
     await page.evaluate(() => FoafOS.launchApp('storyrunner'));
     let re = null;
     for (let i = 0; i < 40 && !re; i++) {
-      re = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+      re = page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
       if (!re) await page.waitForTimeout(300);
     }
     if (!re) fail('runner did not reopen');
@@ -646,7 +649,7 @@ try {
   {
     const ns = await page.evaluate(() => FoafOS.snapshotNs);
     const storedNow = () => page.evaluate((n) => (FoafOS.store.snapshot(n) || {})['app:storyrunner'] || null, ns);
-    let rb = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+    let rb = page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
     const before = await storedNow();
     const moved = rb && await rb.evaluate(() => {
       const c = window.__storyrunner.state.choices;
@@ -675,7 +678,7 @@ try {
     await page.evaluate(() => FoafOS.launchApp('storyrunner'));
     rb = null;
     for (let i = 0; i < 40 && !rb; i++) {
-      rb = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+      rb = page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
       if (!rb) await page.waitForTimeout(300);
     }
     const back = rb && await rb.waitForFunction(() => window.__storyrunner?.ready?.() && window.__storyrunner.state.resumedFromSave,
@@ -692,12 +695,12 @@ try {
   // real knots, a deep link that names the knot, and the shell's skin.
   {
     const url = `http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/`
-      + `?player=boxed&story=/${repoName}/inklet/hampstead.fink.js`;
+      + `?story=/${repoName}/inklet/hampstead.fink.js`;
     await page.goto(url);
     await page.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
     let hf = null;
     for (let i = 0; i < 50 && !hf; i++) {
-      hf = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+      hf = page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
       if (!hf) await page.waitForTimeout(300);
     }
     if (!hf) fail('the box never opened for a bundled story');
@@ -720,12 +723,15 @@ try {
       h.url === 'hampstead.fink.js' && h.knots > 30 && h.prose >= 1 && h.choices >= 1
         ? pass(`a BUNDLED story plays in the box (${h.url}, ${h.knots} knots, ${h.choices} choice)`)
         : fail(`bundled story did not play boxed: ${JSON.stringify(h)}`);
-      // `?story=` used to force the legacy player; asking for the box now
-      // means the box, for any story.
-      const legacy = await page.evaluate(() => !!window.FinkInkEngine?.story);
-      !legacy
-        ? pass('?story= went to the BOX, not the host-page player')
-        : fail('the host player compiled the story instead of the box');
+      // `?story=` used to force the legacy player; it now means the box,
+      // and the box alone: one runner, and no engine on the shell page.
+      const surfaces = await page.evaluate(() => ({
+        runners: document.querySelectorAll('iframe[src*="apps/storyrunner"]').length,
+        host: typeof window.inkjs !== 'undefined' || 'FinkInkEngine' in window,
+      }));
+      surfaces.runners === 1 && !surfaces.host
+        ? pass('?story= went to the BOX, and only the box')
+        : fail(`?story= did not open exactly one box: ${JSON.stringify(surfaces)}`);
       h.skin
         ? pass(`the box wears the shell's skin from first paint (${h.skin}, ${h.bg})`)
         : fail(`skin tokens never reached the box: ${JSON.stringify(h)}`);
@@ -741,15 +747,12 @@ try {
         ? pass(`the deep link names the beat (${link}, knot "${at}")`)
         : fail(`no two-part deep link while reading: "${link}" knot=${at}`);
 
-      // And the shell's own generator agrees, so the link is shareable
-      // into the host player — same salt, same lengths, same string.
-      const same = await page.evaluate(async (knot) => {
-        const f = document.querySelector('iframe[src*="storyrunner"]');
-        const storyUrl = await f.contentWindow ? null : null;
-        return FinkNavigation.generateKnotHash(knot);
-      }, at);
+      // And the shell's own generator (FinkLinks — the breadcrumb and the
+      // history handler read links with it) agrees: same salt, same
+      // lengths, same string.
+      const same = await page.evaluate((knot) => FinkLinks.generateKnotHash(knot), at);
       link.endsWith(same)
-        ? pass('the boxed link is byte-identical to a host-player link')
+        ? pass('the boxed link is byte-identical to the shell\'s FinkLinks hash')
         : fail(`hash disagreement: link=${link} shell=${same}`);
     }
   }
@@ -762,12 +765,12 @@ try {
   // (toc → episodes list is in-story, then a real cross-file link).
   {
     const url = `http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/`
-      + `?player=boxed&story=/${repoName}/inklet/toc.fink.js`;
+      + `?story=/${repoName}/inklet/toc.fink.js`;
     await page.goto(url);
     await page.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
     let tf = null;
     for (let i = 0; i < 50 && !tf; i++) {
-      tf = page.frames().find((f) => f.url().includes('apps/storyrunner'));
+      tf = page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
       if (!tf) await page.waitForTimeout(300);
     }
     if (!tf) fail('the box never opened for the TOC');
@@ -794,7 +797,7 @@ try {
       // the test holds can be replaced a moment after it first plays. A retry
       // absorbs that; a genuinely broken journey still fails both attempts and
       // reports the same diagnosis.
-      const runnerFrame = () => page.frames().find((f) => f.url().includes('apps/storyrunner'));
+      const runnerFrame = () => page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
       const attempt = async (frag, want) => {
         const f = runnerFrame() || tf;
         await f.waitForFunction(
@@ -833,6 +836,54 @@ try {
       ep.ok && hp.ok && landed.url === 'hampstead.fink.js' && landed.choices > 0
         ? pass('MANDATORY JOURNEY boxed: TOC → Episodes → Hampstead plays')
         : fail(`journey broke: ep=${JSON.stringify(ep)} hp=${JSON.stringify(hp)} at=${JSON.stringify(landed)}`);
+    }
+  }
+
+  // ── 11b. BACK AND FORWARD across stories ─────────────────────────────
+  // Owner, September 2026: "consider browser history api for meaningful use
+  // of back button". Each knot reached is a history entry; the entry names
+  // its story, so Back from Hampstead returns to the table of contents, and
+  // Forward goes to Hampstead again. The places the runner passes on the way
+  // must not push entries, or Forward has nowhere to go.
+  {
+    const rf = () => page.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
+    const at = async () => {
+      const f = rf();
+      return f ? f.evaluate(() => ({
+        file: (window.__storyrunner.state.storyUrl || '').split('/').pop(),
+        knot: window.__storyrunner.state.knot,
+      })).catch(() => null) : null;
+    };
+    const until = async (file, knot) => {
+      for (let i = 0; i < 40; i++) {
+        const w = await at();
+        if (w && w.file === file && (!knot || w.knot === knot)) return w;
+        await page.waitForTimeout(250);
+      }
+      return at();
+    };
+    const start = await at();
+    if (!start || start.file !== 'hampstead.fink.js') fail(`history: journey did not end in Hampstead (${JSON.stringify(start)})`);
+    else {
+      const link = await page.evaluate(() => location.search + location.hash);
+      await page.goBack();
+      const b1 = await until('toc.fink.js', 'episodes_menu');
+      await page.goBack();
+      const b2 = await until('toc.fink.js', 'main_menu');
+      await page.goForward();
+      const f1 = await until('toc.fink.js', 'episodes_menu');
+      await page.goForward();
+      const f2 = await until('hampstead.fink.js');
+      const link2 = await page.evaluate(() => location.search + location.hash);
+      b1?.knot === 'episodes_menu' && b2?.knot === 'main_menu'
+        ? pass('Back walks the knots, out of Hampstead into the table of contents')
+        : fail(`Back went to ${JSON.stringify(b1)} then ${JSON.stringify(b2)}`);
+      f1?.knot === 'episodes_menu' && f2?.file === 'hampstead.fink.js'
+        ? pass('Forward returns to Hampstead: no entry was cut off')
+        : fail(`Forward went to ${JSON.stringify(f1)} then ${JSON.stringify(f2)}`);
+      link2 === link
+        ? pass('the link to a place is the same after Back and Forward')
+        : fail(`link changed: ${link} then ${link2}`);
     }
   }
 
@@ -1274,7 +1325,7 @@ try {
     await np.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?story=/${repoName}/drift-city/no-such-story.fink.js`);
     let run = null;
     for (let i = 0; i < 50 && !run; i++) {
-      run = np.frames().find((f) => f.url().includes('apps/storyrunner'));
+      run = np.frames().find((f) => f.url().includes('apps/storyrunner/index.html'));
       if (!run) await np.waitForTimeout(400);
     }
     const said = run && await run.waitForFunction(() => /HTTP|content/.test(document.getElementById('status')?.textContent || ''),

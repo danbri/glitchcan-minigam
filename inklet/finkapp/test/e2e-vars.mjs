@@ -20,6 +20,7 @@ import { spawn } from 'node:child_process';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { openStory, goto, varOf as runnerVar } from './lib/story.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -52,12 +53,15 @@ try {
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(String(e).slice(0, 200)));
 
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
-  await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
-  await page.waitForTimeout(1200);
+  // The story plays in the boxed runner; its ink variables live in that
+  // frame. The shell holds the shared-economy mirror (FoafOS.storyVars) that
+  // a guest's governed writes land in while the story that launched it owns it.
+  const r = await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/hampstead.fink.js');
+  await page.waitForTimeout(800);
 
-  // 0. the broker knows what the story declares (read from the compiled
-  // story, so an unbound write can be told apart from a denied one)
+  // 0. the broker knows what the story declares (the runner reads the names
+  // from the compiled story and tells the shell, so an unbound write can be
+  // told apart from a denied one)
   const bound = await page.evaluate(() => {
     const b = window.FoafOS?.vars?.bound;
     return b ? { size: b.size, hasPrivate: b.has('giro_cashed'), hasShared: b.has('diamonds') } : null;
@@ -66,14 +70,20 @@ try {
     ? pass(`broker bound to the story's ${bound.size} declared variables`)
     : fail(`broker not bound to the compiled story: ${JSON.stringify(bound)}`);
 
-  await page.evaluate(() => {
-    FinkInkEngine.story.ChoosePathString('hampstead_tube');
-    FinkInkEngine.continueStory();
-  });
-  await page.waitForSelector('#minigame-iframe-robbin', { timeout: 15000 });
+  // Put treasure in the shell's economy the way a story does — a governed
+  // story.vars write from the runner — so the guest's read in leg 7 has
+  // something to see. (The mirror holds only what has been written through
+  // the broker; a story's own VAR defaults are not pushed into it.)
+  const seeded = await r.evaluate(() => window.__storyrunner.spend('diamonds', 3));
+  seeded?.ok && await page.evaluate(() => FoafOS.storyVars.get('diamonds')) === 3
+    ? pass('the story wrote its shared economy through the broker (diamonds = 3)')
+    : fail(`story could not write its own shared economy: ${JSON.stringify(seeded)}`);
+
+  // The runner meets `# MINIGAME: robbin` and asks the shell (story.launch).
+  await goto(r, 'hampstead_tube');
   // the wrapper redirects, so the real game frame appears a beat later
   let gameFrame = null;
-  for (let i = 0; i < 60 && !gameFrame; i++) {
+  for (let i = 0; i < 80 && !gameFrame; i++) {
     gameFrame = page.frames().find(f => f.url().includes('magpie/robbin/robbin.html'));
     if (!gameFrame) await page.waitForTimeout(250);
   }
@@ -81,6 +91,9 @@ try {
   await gameFrame.waitForFunction(() => !!window.__robbin, null, { timeout: 20000 });
   await page.waitForFunction(() => Array.isArray(window.FinkMinigames?.currentGrants?.write)
     && FinkMinigames.currentGrants.write.length > 0, null, { timeout: 8000 });
+  const owner = await page.evaluate(() => FoafOS.storyVars.owner);
+  owner ? pass(`the launching story owns the economy while its game plays (${owner})`)
+        : fail('no story owns the economy while robbin plays: guest writes would go nowhere');
 
   // 1. the manifest arrived as a capability
   const grants = await page.evaluate(() => FinkMinigames.currentGrants);
@@ -91,22 +104,25 @@ try {
 
   // helper: post a message to the host as the guest would
   const asGuest = (msg) => gameFrame.evaluate((m) => parent.postMessage(m, '*'), msg);
-  const varOf = (n) => page.evaluate((k) => FinkInkEngine.story.variablesState[k], n);
+  // what the shell holds for the playing story (a governed write lands here)
+  const varOf = (n) => page.evaluate((k) => FoafOS.storyVars.get(k), n);
   const denialsFor = (n) => page.evaluate((k) =>
     FoafOS.vars.log.filter(e => !e.ok && e.name === k).length, n);
 
   // 2. THE ATTACK: reach into the story's private state
-  const giroBefore = await varOf('giro_cashed');
+  const giroBefore = await runnerVar(r, 'giro_cashed');
   await asGuest({ type: 'set-variable', name: 'giro_cashed', value: true });
   await page.waitForTimeout(300);
-  const giroAfter = await varOf('giro_cashed');
-  giroAfter === giroBefore && await denialsFor('giro_cashed') === 1
+  const giroAfter = await runnerVar(r, 'giro_cashed');
+  giroAfter === giroBefore && await varOf('giro_cashed') === undefined
+    && await denialsFor('giro_cashed') === 1
     ? pass('undeclared write to the story\'s private state DENIED and audited')
     : fail(`guest reached story innards: ${giroBefore} → ${giroAfter}`);
 
   // 3. THE OTHER ATTACK: mint currency it never declared… robbin DOES
   // declare diamonds, so use the name it does not: mega_diamonds
   const megaBefore = await varOf('mega_diamonds');
+  const megaRunnerBefore = await runnerVar(r, 'mega_diamonds');
   await asGuest({ type: 'set-variable', name: 'mega_diamonds', value: 999999 });
   await page.waitForTimeout(300);
   await varOf('mega_diamonds') === megaBefore && await denialsFor('mega_diamonds') === 1
@@ -116,7 +132,7 @@ try {
   // 4. and an absurd value for a name it DID declare
   await asGuest({ type: 'set-variable', name: 'diamonds', value: 1e12 });
   await page.waitForTimeout(300);
-  await denialsFor('diamonds') >= 1 && await varOf('diamonds') < 1e6
+  await denialsFor('diamonds') >= 1 && await varOf('diamonds') === 3
     ? pass('declared-but-absurd value rejected by platform limits')
     : fail(`no value ceiling: diamonds = ${await varOf('diamonds')}`);
 
@@ -197,6 +213,21 @@ try {
   state.type === 'robbin' && state.vars && state.vars.denied >= 3 && state.grants
     ? pass(`__finkDebug.state(): ${state.vars.written} writes, ${state.vars.denied} denied`)
     : fail(`devtools state incomplete: ${JSON.stringify(state).slice(0, 240)}`);
+
+  // 11. the accepted writes, and only those, reach the story's own ink.
+  // A guest writes the shell's mirror; completion hands the runner what the
+  // game changed. The denied private write must not ride along.
+  await page.evaluate(() => FinkMinigames.handleMinigameComplete({ type: 'robbin', success: true, score: 0 }));
+  await r.waitForFunction(() => !window.__storyrunner.paused(), null, { timeout: 10000 }).catch(() => {});
+  const back = await r.evaluate(() => ({
+    paused: window.__storyrunner.paused(),
+    birds: window.__storyrunner.varOf('robbin_birds'),
+    giro: window.__storyrunner.varOf('giro_cashed'),
+    mega: window.__storyrunner.varOf('mega_diamonds'),
+  }));
+  !back.paused && back.birds === 7 && back.giro === giroBefore && back.mega === megaRunnerBefore
+    ? pass(`completion wrote the accepted writes into the story's ink (robbin_birds = 7), nothing denied`)
+    : fail(`writeback wrong: ${JSON.stringify(back)} (giro before ${giroBefore}, mega before ${megaRunnerBefore})`);
 
   pageErrors.length === 0 ? pass('no page errors')
     : fail(`page errors: ${pageErrors.slice(0, 3).join(' · ')}`);

@@ -50,7 +50,7 @@ The user (danbri) is the project owner. Trust their instructions, corrections, a
 **VIOLATION COST:** Real money wasted, development time lost, 2am debugging sessions
 **ENFORCEMENT:** Any hackparsing implementation must be immediately deleted and rebuilt with real INK engine
 **EXCEPTION:** Only if User explicitly demands hackparsing for specific use case
-**SCOPE NOTE (verified June 2026):** This rule is about INK *story structure*. Narrow regex extraction of FINK tags (e.g. the BASEHREF fallback in `fink-ink-engine.js` / `fink-ui.js` / `fink-navigation.js`) is an existing documented exception — do not extend it.
+**SCOPE NOTE (verified June 2026):** This rule is about INK *story structure*. Narrow regex extraction of FINK tags was a documented exception in the host-page engine; that engine was deleted in September 2026 (see FINK Player below) — do not bring the exception back.
 **REMINDER:** We spent an entire evening until 2am purging hackparsing - NEVER AGAIN
 
 ## 🚨 CRITICAL RULE: DO NOT CASUALLY MODIFY SANDBOX CODE 🚨
@@ -58,7 +58,7 @@ The user (danbri) is the project owner. Trust their instructions, corrections, a
 
 **INCIDENT REPORT (January 2026):**
 Bagend2 loading got stuck at "Loading..." because sandbox code was "casually" modified:
-- **The bug:** `fink-sandbox.js` line ~49: `uniqueData.join('\\n')` instead of `uniqueData.join('\n')`
+- **The bug:** `fink-sandbox.js` line ~49: `uniqueData.join('\\n')` instead of `uniqueData.join('\n')` (that file was deleted with the host-page engine in September 2026; the story runner's capture frame and its `join('\n')` in `inklet/apps/storyrunner/storyrunner.js` carry the same rule)
 - **The effect:** INK content blocks joined with literal "\n" text instead of newlines, breaking INK syntax structure
 - **The symptom:** Stories stuck on "Loading..." - silent failure, no error message
 
@@ -154,29 +154,31 @@ none: it reads as authoritative.
 
 **New model? Start here:** `docs/fable-audit/fable-notes-handoff-20260706.md` — a handoff written for models continuing this collaboration: how danbri works, the engineering norms, the edot architecture + current frontier, hard-won honesty/verification lessons, and a ranked roadmap. Read it once before your first change.
 
-## FINK Player — Current Production Reality (player flipped 2026-07-30)
-**The production PAGE is `inklet/finkapp/index.html`. The production STORY
-ENGINE is no longer on that page — it is the boxed runner at
-`inklet/apps/storyrunner/` ("Finkosphere"), and an ordinary visit boots it.**
+## FINK Player — Current Production Reality (host engine deleted September 2026)
+**The production PAGE is `inklet/finkapp/index.html`. The ONLY story engine
+is the boxed runner at `inklet/apps/storyrunner/` ("Finkosphere"), and an
+ordinary visit boots it.**
 
 That is the layer model in `docs/foafos-story-layering-20260730.md`: the shell
-is level 0 and plays nothing; the story runs at level 1, in a frame at an
-opaque origin, reaching the shell only through capability-checked `story:*`
-verbs. The host-page engine (`fink-ink-engine.js`, `fink-ui.js`,
-`fink-player.js` and the modules around them) is **superseded and pending
-delete** (issue #779). It still loads, and `?player=legacy` still boots it —
-that escape hatch is deliberate, so a field problem with the box does not need
-a deploy. `?player=none` opens the shell with no story at all.
+is level 0 and plays nothing (it does not even load the ink compiler); the
+story runs at level 1, in a frame at an opaque origin, reaching the shell only
+through capability-checked `story:*` verbs. The host-page engine
+(`fink-ink-engine.js`, `fink-ui.js`, `fink-player.js`, `fink-navigation.js`,
+`fink-sandbox.js`, `fink-utils.js`, the dev panel) and `?player=legacy` were
+**deleted** (owner, September 2026: "Wtf do we want a legacy mode for? This
+thing has never worked and we have zero userbase :) nuke the cruft, keep it
+clean"). So was the frozen second copy in `inklet/app/` and `inklet6.html`.
+Do not bring a second story engine back.
 
-**Working on the story engine? Work on the boxed runner.** Change the host
-player only to keep the escape hatch alive, or to delete part of it.
-
-- `inklet/app/` is the **older parallel implementation** (8 modules) — kept for reference; finkapp is the canonical page. Do not mirror changes into app/ unless asked.
-- `inklet5.html` does not exist and never shipped under that name. `inklet6.html` is a 118-byte redirect to `app/`. Historic references to `toc-simple.fink.js`, `hampstead1.fink.js`, `bagend1.fink.js`, `jungle2.fink.js` are phantoms — the real files are the unsuffixed versions.
-- INK runtime `onError` IS wired in `finkapp/fink-ink-engine.js`.
-- Layered media path resolution (global base → story BASEHREF → file-relative fallback) is implemented in FinkUtils; config via `fink-config.js` only (no form fields).
-- Save/load: partial (localStorage bookmarks in `fink-player.js`, nav cache in `fink-navigation.js`). `inklet/demos/fink-namespace-preprocessor.js` exists but is NOT wired into the player.
-- Known-broken content (re-verified 2026-07-26, headless through the PLAYER, not just compile): the Ukrainian story and Maple Hollow are **fixed** — both load and present choices, Maple Hollow via the TOC route too. Still true: Shane Manor compiles and links chess but full gameplay has never been played through (`shane_todo.md`).
+- Boot: `inklet/finkapp/foafos-boot.js`. `?story=` names the story; `?player=none` opens the shell with no story; `?app=<id>` opens one app; a root with `boot.story: false` opens its apps.
+- Links: `inklet/finkapp/fink-links.js` (`FinkLinks`) is the link-hash format for the shell; the runner keeps a byte-identical copy.
+- Story rows in the launcher (`toc`, `audiodemo`) open a runner window on their story (`opens: 'storyrunner'` in `foafos-apps.js`).
+- Tests drive a story through the runner frame's `window.__storyrunner` hooks; `inklet/finkapp/test/lib/story.mjs` wraps them (`openStory`, `goto`, `setVar`, `varOf`).
+- A story must declare every VAR it uses and every knot it diverts to: nothing is injected any more (the old engine added `diamonds`, `mega_diamonds`, `keys`, `score` and an `_inventory` knot; `world-between-worlds.fink.js` now carries its own).
+- `inklet5.html` never existed. Historic references to `toc-simple.fink.js`, `hampstead1.fink.js`, `bagend1.fink.js`, `jungle2.fink.js` are phantoms — the real files are the unsuffixed versions.
+- Layered media path resolution (global base → story BASEHREF → file-relative fallback) is `resolveMedia` in the runner; the global base comes from `fink-config.js` through the shell.
+- `inklet/demos/fink-namespace-preprocessor.js` exists but is NOT wired into the runner.
+- Known-broken content (re-verified 2026-07-26): the Ukrainian story and Maple Hollow are **fixed**. Still true: Shane Manor compiles and links chess but full gameplay has never been played through (`shane_todo.md`).
 - Worknotes: a six-review January 2026 campaign (`worknotes/`) is the best statement of open UX/a11y defects (breadcrumb visibility, loading progress, CSP, ARIA). Largely unaddressed.
 
 ### FINK engine architecture (DO NOT BREAK)
@@ -189,8 +191,8 @@ player only to keep the escape hatch alive, or to delete part of it.
 
 ### FINK validation
 - `npm run fink:check` (`inklet/tools/fink-check.mjs`) — offline story checker, no browser: real inkjs compile plus a breadth-first playthrough of the choice tree. Found (July 2026) that Hampstead's victory screen rendered NO text and a phantom choice, because `*** HAMPSTEAD ACHIEVED ***` at column 0 is three ink choices, not emphasis. Escape prose asterisks with `\*`.
-- `inklet/validation/checkfink.mjs` — unified validator (.ink/.json/.fink.js), Puppeteer-based, `--scan` flag, CI exit codes. There is NO `--report` flag.
-- Supporting: `validate-fink-puppeteer.mjs`, `validate-fink.html`, `unreachable_knots_tester.html`, `play-fink-cli.mjs`.
+- `inklet/validation/checkfink.mjs` — unified validator (.ink/.json/.fink.js), `--scan` flag, CI exit codes. There is NO `--report` flag. A `.fink.js` is captured in Node by finkcore and compiled; its old browser page ran the deleted host engine.
+- Supporting: `unreachable_knots_tester.html`, `play-fink-cli.mjs`.
 - The "fink-audit dashboard" (fink-audit/ folder, GitHub Action, rich metrics) was planned but **never built**. Treat it as an open proposal, not work-in-progress.
 - Legacy problem: some FINK files contain AI-generated "Pseudo-Ink" that doesn't compile with real ink-full.js. Validate before trusting any story file.
 - Finkiverse map: `docs/fink-ring-viz.html` is a working prototype fed by `inklet/tools/fink-graph.mjs` → `docs/fink-crawl-report.json`; linked from the generated crawl report.

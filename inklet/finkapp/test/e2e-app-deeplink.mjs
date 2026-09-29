@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 // ?app=<id> is a one-tap deep link that makes THAT app the surface. The
-// shell launches it. The legacy host player must NOT also auto-boot the
-// bundled story behind it — "behind the demo window the general fink stuff
-// is running" was exactly that: the boxed runner on top, the default story
-// loaded underneath it.
+// shell launches it. The boot must NOT also open the bundled story behind
+// it — "behind the demo window the general fink stuff is running" was
+// exactly that: the app on top, the default story loaded underneath it.
 //
-// Asserts: with ?app=storyrunner, the runner frame appears AND the legacy
-// story engine idled (no currentStoryUrl, no compiled story). And a control:
-// without ?app=, the default story DOES boot (so the gate is not too wide).
+// Stories play only in the story runner now, so "a story behind the app"
+// means a SECOND runner window. Asserts: with ?app=storyrunner, exactly one
+// runner frame opens (the app itself); with ?app=calendar, no runner frame
+// opens at all. And a control: without ?app=, the default story DOES boot
+// in the runner (so the gate is not too wide).
 //
 //   node inklet/finkapp/test/e2e-app-deeplink.mjs
 
@@ -49,26 +50,33 @@ try {
       '--enable-unsafe-swiftshader'],
   });
 
-  // ── ?app=storyrunner: runner opens, legacy story engine idles ────────
+  // ── ?app=storyrunner: the runner opens, and no second one behind it ──
+  const runners = (page) => page.frames().filter((f) => /apps\/storyrunner\/index\.html/.test(f.url())).length;
   {
     const page = await browser.newPage({ viewport: { width: 430, height: 860 } });
     await page.goto(base + '?app=storyrunner');
     await page.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
-    // give the shell's deep-link launch (300ms) and any legacy auto-boot
-    // (100ms) time to run, then some
+    // give the shell's deep-link launch (300ms) and the boot story's launch
+    // (150ms) time to run, then some
     await page.waitForTimeout(2500);
 
-    const frame = page.frames().find((f) => f.url().includes('apps/storyrunner'));
-    if (frame) pass('?app=storyrunner opened the runner frame');
+    const n = runners(page);
+    if (n >= 1) pass('?app=storyrunner opened the runner frame');
     else fail('?app=storyrunner did not open the runner');
+    if (n <= 1) pass('no second runner — no general fink story running behind the app');
+    else fail(`background story booted behind the app: ${n} runner frames`);
+    await page.close();
+  }
 
-    const legacy = await page.evaluate(() => ({
-      url: window.FinkPlayer?.currentStoryUrl || null,
-      story: !!window.FinkInkEngine?.story,
-    }));
-    if (!legacy.url && !legacy.story) {
-      pass('legacy story engine idled — no general fink story running behind the app');
-    } else fail(`background story booted behind the app: ${JSON.stringify(legacy)}`);
+  // ── ?app=<not a story>: no runner at all ─────────────────────────────
+  {
+    const page = await browser.newPage({ viewport: { width: 430, height: 860 } });
+    await page.goto(base + '?app=calendar');
+    await page.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
+    await page.waitForTimeout(2500);
+    const n = runners(page);
+    if (n === 0) pass('?app=calendar: no story runner opened behind the app');
+    else fail(`?app=calendar: ${n} story runner frame(s) opened behind the app`);
     await page.close();
   }
 
@@ -77,24 +85,14 @@ try {
     const page = await browser.newPage({ viewport: { width: 430, height: 860 } });
     await page.goto(base);
     await page.waitForFunction(() => !!window.FoafOS?.launchApp, null, { timeout: 25000 });
-    // PLAYER-AGNOSTIC on purpose. The gate under test is "?app= means that
-    // app, and nothing else", so the control has to be "a plain boot DOES
-    // open a story surface" — without naming which player provides it. The
-    // earlier version read the host engine only, so it would have failed the
-    // day the boxed runner became the default and told us the gate was too
-    // wide, which would have been the wrong diagnosis.
+    // The control: a plain boot DOES open a story surface — the runner.
     await page.waitForFunction(
-      () => !!window.FinkInkEngine?.story || !!window.FinkPlayer?.currentStoryUrl
-        || [...document.querySelectorAll('iframe')].some(f => /apps\/storyrunner\//.test(f.src)),
+      () => [...document.querySelectorAll('iframe')].some(f => /apps\/storyrunner\//.test(f.src)),
       null, { timeout: 20000 }).catch(() => {});
-    const booted = await page.evaluate(() => ({
-      url: window.FinkPlayer?.currentStoryUrl || null,
-      story: !!window.FinkInkEngine?.story,
-      boxed: [...document.querySelectorAll('iframe')].some(f => /apps\/storyrunner\//.test(f.src)),
-    }));
-    if (booted.url || booted.story || booted.boxed) {
-      pass(`control: plain boot still opens a story surface (${booted.boxed ? 'boxed runner' : booted.url || 'compiled in host'})`);
-    } else fail('control: no story surface boots at all — gate is too wide');
+    const boxed = await page.evaluate(() =>
+      [...document.querySelectorAll('iframe')].some(f => /apps\/storyrunner\//.test(f.src)));
+    if (boxed) pass('control: plain boot still opens a story surface (the runner)');
+    else fail('control: no story surface boots at all — gate is too wide');
     await page.close();
   }
 } catch (e) {

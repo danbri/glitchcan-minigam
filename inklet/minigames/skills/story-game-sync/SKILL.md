@@ -47,10 +47,10 @@ What this model does NOT do, today:
 - **A game cannot move the story.** Spec §5: "Games cannot divert the story."
   No verb re-enters a knot or chooses a path. Reactions live behind a choice in
   the return knot (spec §3.2).
-- **`init` variables come from the legacy engine.** `_getStoryVariables` reads
-  `FinkInkEngine.story`, not the boxed runner's story or `FoafOS.storyVars`.
-  Under the boxed runner, check what a guest actually receives before relying
-  on it.
+- **`init` variables come from the shell's mirror.** `_getStoryVariables`
+  reads `FoafOS.storyVars`: the shared economy as the story last wrote it
+  through the broker, filtered by what the guest may read. A private story
+  variable the story never wrote there does not reach the game.
 - `# MINIGAME_MODE:` and `# MINIGAME_CONFIG:` (in `inklet/minigames/README.md`)
   are not parsed anywhere.
 
@@ -66,8 +66,7 @@ at most 12 pairs are read. Everything else is dropped and reported on
 and in `init.config.args`. The node records them (`scopes.args`), and the Task
 Manager shows them in the State column. Until September 2026 the runner kept
 only the first word, so `# MINIGAME: robbin mode=hampstead` arrived as mode
-normal in production; it now reaches the game. The legacy player passes `mode`
-and `controls` as before and no other keys.
+normal in production; it now reaches the game.
 
 Good fit: a self-contained episode inside a story — a heist, a battle, a
 puzzle — whose result the story reads afterwards. It also carries a narrative

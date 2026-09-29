@@ -20,6 +20,7 @@ import { spawn } from 'node:child_process';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { openStory, goto } from './lib/story.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -56,9 +57,9 @@ try {
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(String(e).slice(0, 200)));
 
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/world-between-worlds.fink.js`);
-  await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
-  await page.waitForTimeout(1200);
+  // the story plays in the boxed runner; its # MINIGAME: asks the shell
+  const r = await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/world-between-worlds.fink.js');
+  await page.waitForTimeout(800);
 
   // record everything relevant BEFORE the guest exists
   await page.evaluate(() => {
@@ -70,10 +71,7 @@ try {
     });
   });
 
-  await page.evaluate(() => {
-    FinkInkEngine.story.ChoosePathString('play_waterworld');
-    FinkInkEngine.continueStory();
-  });
+  (await goto(r, 'play_waterworld')) || fail('the runner could not go to play_waterworld');
   let frame = null;
   for (let i = 0; i < 40 && !frame; i++) {
     frame = page.frames().find(f => f.url().includes('magpie/waterworld'));
@@ -136,6 +134,9 @@ try {
 
   // ── 6. a WINDOW app speaks the same protocol under its own grants ────
   await page.waitForTimeout(1000);
+  // Frames that exist before the launch (the story runner is one of them,
+  // and it lives under inklet/apps too) are not the window app.
+  const framesBefore = new Set(page.frames());
   const appId = await page.evaluate(() => {
     const candidates = ['channels', 'soundtrack', 'data', 'calendar'];
     for (const id of candidates) {
@@ -147,7 +148,7 @@ try {
   else {
     let appFrame = null;
     for (let i = 0; i < 20 && !appFrame; i++) {
-      appFrame = page.frames().find(f => f !== frame && /inklet\/apps|magpie/.test(f.url()) && f.url() !== 'about:blank');
+      appFrame = page.frames().find(f => !framesBefore.has(f) && /inklet\/apps|magpie/.test(f.url()) && f.url() !== 'about:blank');
       if (!appFrame) await page.waitForTimeout(400);
     }
     if (!appFrame) fail(`window app ${appId} frame never appeared`);

@@ -25,6 +25,7 @@ import { spawn } from 'node:child_process';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { openStory, varOf as runnerVar } from './lib/story.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -57,9 +58,9 @@ try {
   const pageErrors = [];
   page.on('pageerror', e => pageErrors.push(String(e).slice(0, 200)));
 
-  await page.goto(`http://127.0.0.1:${PORT}/${repoName}/inklet/finkapp/?player=legacy&story=/${repoName}/inklet/hampstead.fink.js`);
-  await page.waitForFunction(() => window.FinkInkEngine?.compiledCount >= 1, null, { timeout: 25000 });
-  await page.waitForTimeout(1200);
+  // the story plays in the boxed runner; its variables live in that frame
+  const r = await openStory(page, `http://127.0.0.1:${PORT}`, repoName, 'inklet/hampstead.fink.js');
+  await page.waitForTimeout(800);
 
   // Two copies of the SAME widget, side by side, plus one of another
   // type — the shape the field report described.
@@ -118,8 +119,11 @@ try {
   // 2. THE SPOOF TEST. A frame that is not a registered guest speaks the
   // SDK vocabulary. It must be ignored AND announced — an honest bug and
   // an attack look identical from here, so neither may be silent.
-  const giroBefore = await page.evaluate(() => FinkInkEngine.story.variablesState['giro_cashed']);
+  const giroBefore = await runnerVar(r, 'giro_cashed');
+  const diamondsBefore = await runnerVar(r, 'diamonds');
   await page.evaluate(async () => {
+    window.__unrouted = [];
+    FoafOS.bus.subscribe('sys.guest.unrouted', (e) => window.__unrouted.push(e.data?.msg));
     const rogue = document.createElement('iframe');
     rogue.title = 'rogue frame (test)';
     rogue.sandbox = 'allow-scripts';
@@ -133,10 +137,22 @@ try {
     rogue.remove();
     return true;
   });
-  const giroAfter = await page.evaluate(() => FinkInkEngine.story.variablesState['giro_cashed']);
-  giroAfter === giroBefore
+  // Checked in the story's own ink (the runner) AND in the shell's economy
+  // mirror, where a guest's accepted writes land.
+  await page.waitForTimeout(600);
+  const spoof = {
+    giro: await runnerVar(r, 'giro_cashed'),
+    diamonds: await runnerVar(r, 'diamonds'),
+    mirror: await page.evaluate(() => FoafOS.storyVars.all()),
+    unrouted: await page.evaluate(() => window.__unrouted),
+  };
+  spoof.giro === giroBefore && spoof.diamonds === diamondsBefore
+    && spoof.mirror.giro_cashed === undefined && spoof.mirror.diamonds !== 999999
     ? pass('a frame that is not a running guest cannot write story variables')
-    : fail(`SPOOF SUCCEEDED: giro_cashed ${giroBefore} → ${giroAfter}`);
+    : fail(`SPOOF SUCCEEDED: ${JSON.stringify({ giroBefore, diamondsBefore, ...spoof })}`);
+  ['set-variable', 'progress', 'complete'].every((t) => spoof.unrouted.includes(t))
+    ? pass(`and each spoofed message was ignored in the open (sys.guest.unrouted: ${spoof.unrouted.join(', ')})`)
+    : fail(`spoof not announced: ${JSON.stringify(spoof.unrouted)}`);
 
   // still three, and none of them killed by the rogue's `complete`
   const stillRunning = await page.evaluate(() => FinkMinigames.instances.size);
