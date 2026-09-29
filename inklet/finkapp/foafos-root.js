@@ -41,8 +41,11 @@ export const ROOTS = {
     // Apps picker was a no-op for as long as that tile existed, because
     // launchApp went through attenuation and the drawer's own button
     // called openLogger() directly and so never noticed.
+    // NO `same-origin` (September 2026), as for the office and TV roots: no
+    // app this root offers declares it, and holding it here meant a future
+    // row that asked for it would get ambient authority by default.
     capabilities: ['storage', 'secrets', 'vars:read', 'vars:write', 'audio', 'input',
-                   'launch', 'navigate', 'chrome', 'shell', 'git:write', 'same-origin',
+                   'launch', 'navigate', 'chrome', 'shell', 'git:write',
                    'story:launch', 'story:link', 'story:navigate', 'story:observe',
                    // for a world beside a story to re-enter the reader's scene (spec §5.8)
                    'story:steer'],

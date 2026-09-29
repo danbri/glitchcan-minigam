@@ -89,6 +89,17 @@ export async function run() {
     assert.equal(Object.keys(v.filterReadable({ kind: 'host' }, { a: 1, b: 2 })).length, 2);
   }
 
+  // a STORY reads only the shared economy and the host context: a game's
+  // own names in the mirror belong to the story that launched that game
+  {
+    const v = new FoafVars();
+    const seen = v.filterReadable({ kind: 'story', id: 'storyrunner' }, {
+      diamonds: 7, score: 3, difficulty: 2, chess_won: true, has_red_key: true,
+    });
+    assert.deepEqual(Object.keys(seen).sort(), ['diamonds', 'difficulty', 'score']);
+    assert.equal(seen.chess_won, undefined, 'another story\'s game result is not readable');
+  }
+
   // a permitted write to a name nothing declares is kept and reported,
   // not lost in the assignment's try/catch
   {

@@ -63,6 +63,23 @@ window.FinkMinigames = {
         return this._registry.find(a => (a.game || a.id) === type || (a.aliases || []).includes(type)) || null;
     },
 
+    /**
+     * A browser feature is delegated to a guest frame only when the app's
+     * registry row holds the capability behind it, as for window apps
+     * (foafos-shell.js sandboxFor/allow). A feature with no capability
+     * behind it is refused: a manifest is a request, not a grant.
+     */
+    FEATURE_CAPS: { autoplay: 'audio', geolocation: 'geolocation' },
+    _featuresFor(type, features) {
+        const caps = this._stageApp(type)?.capabilities || [];
+        const granted = [], refused = [];
+        for (const f of features) {
+            const cap = this.FEATURE_CAPS[f];
+            (cap && caps.includes(cap) ? granted : refused).push(f);
+        }
+        return { granted, refused };
+    },
+
     /** Games that run as sandboxed guests: every stage row not rendered by the host. */
     get iframeMinigames() {
         return this._registry.filter(a => !a.inline).map(a => a.game || a.id);
@@ -1000,10 +1017,16 @@ window.FinkMinigames = {
             // decorative and any guest could set any story variable.
             const source = this._guestSource(type);
             source.manifest.then(manifest => {
-                    const feats = manifest?.features || [];
-                    if (feats.length) {
-                        iframe.allow = feats.map(f => `${f} 'src'`).join('; ');
-                        this.log(`Manifest features granted: ${feats.join(', ')}`);
+                    const { granted, refused } = this._featuresFor(type, manifest?.features || []);
+                    if (granted.length) {
+                        iframe.allow = granted.map(f => `${f} 'src'`).join('; ');
+                        this.log(`Manifest features granted: ${granted.join(', ')}`);
+                    }
+                    if (refused.length) {
+                        window.FoafOS?.bus?.publish('sys.guest.denied', {
+                            summary: `${type}: features refused (${refused.join(', ')}): its row does not hold the capability`,
+                            guest: type, features: refused,
+                        });
                     }
                     inst.grants = this._normalizeGrants(manifest, type);
                     this.currentGrants = inst.grants;

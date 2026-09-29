@@ -787,6 +787,38 @@ try {
     ? pass('ambient-authority holders: ZERO — the whole registry is sandboxed')
     : fail(`still holding same-origin: ${stillAmbient.join(', ')}`);
 
+  // 15. three leaks closed, September 2026 (docs/fink-spec-v1.md §5.5.6 has the one left open)
+  const leaks = await page.evaluate(async () => {
+    const r = await import('./foafos-root.js');
+    const roots = Object.values(r.ROOTS || {}).filter((x) => x && x.capabilities);
+    const fm = window.FinkMinigames;
+    return {
+      // a root that holds same-origin would hand it to any row that asked
+      rootsWithSameOrigin: roots.filter((x) => x.capabilities.includes('same-origin')).map((x) => x.id),
+      // a manifest feature is a request: robbin holds no geolocation, drift holds audio
+      robbinGeo: fm._featuresFor('robbin', ['geolocation']),
+      driftAutoplay: fm._featuresFor('drift', ['autoplay']),
+      unknown: fm._featuresFor('drift', ['camera']),
+      // a story reads the shared economy, not a game's own names
+      storyRead: Object.keys(window.FoafOS.vars.filterReadable({ kind: 'story', id: 'storyrunner' },
+        { diamonds: 1, chess_won: true, has_red_key: true })),
+      limitsText: (window.FoafOS.openSwitcher(), document.querySelector('.foafos-tm-limits')?.textContent || ''),
+    };
+  });
+  leaks.rootsWithSameOrigin.length === 0
+    ? pass('no root holds same-origin, so no future row gets ambient authority by default')
+    : fail(`roots holding same-origin: ${leaks.rootsWithSameOrigin.join(', ')}`);
+  leaks.robbinGeo.refused.includes('geolocation') && leaks.driftAutoplay.granted.includes('autoplay')
+    && leaks.unknown.refused.includes('camera')
+    ? pass('a stage manifest feature is delegated only with its capability (robbin: no geolocation; drift: autoplay with audio; camera: refused)')
+    : fail(`stage features: ${JSON.stringify(leaks)}`);
+  JSON.stringify(leaks.storyRead) === '["diamonds"]'
+    ? pass('a story reads only the shared economy from the mirror, not another story\'s game results')
+    : fail(`story read: ${JSON.stringify(leaks.storyRead)}`);
+  /GitHub Pages/.test(leaks.limitsText) && /any document you open/.test(leaks.limitsText)
+    ? pass('the Task Manager says that apps can send what they hold to any host on GitHub Pages')
+    : fail('the limits panel does not state the open egress');
+
   pageErrors.length === 0 ? pass('no page errors')
     : fail(`page errors: ${pageErrors.slice(0, 2).join(' · ')}`);
   console.log(process.exitCode ? '\nCAPS E2E: FAIL' : '\nCAPS E2E: PASS');

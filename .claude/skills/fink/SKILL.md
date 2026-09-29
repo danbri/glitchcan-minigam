@@ -1396,6 +1396,13 @@ pass/fail suite; it takes `firefox` or `webkit` where those exist):
 - A page CSP does not stop WebRTC. The iframe `csp` attribute (CSP
   Embedded Enforcement) blocks the frame completely unless the response
   sends `Allow-CSP-From`, and GitHub Pages cannot send custom headers.
+- **Owner's decision, September 2026:** the site stays on GitHub Pages
+  for now, so egress is open, and that is stated, not hidden: spec
+  §5.5.6, the threat model §8, and the Task Manager's limits panel say
+  that any app can send what it holds (documents included) to any host.
+  Do not write or say that the sandbox keeps a document secret from the
+  app it is opened in. Cloudflare in front of the same files is being
+  looked at as the route to closing it.
 - **Testing trap:** serve probe pages from a real server. With
   `page.route` + `route.fulfill`, fetch, image and beacon did not reach a
   loopback sink at all, so the probe under-reported exfiltration. Probable

@@ -3066,8 +3066,10 @@ function buildUI() {
               // name on an object is exactly the type error a broad catch
               // hides. Found here and in #787 independently, which is a
               // reason to narrow that catch rather than keep re-finding it.
-              // A `kind:'story'` actor reads the whole mirror, which is
-              // right: the shell only ever puts the shared economy in it.
+              // A `kind:'story'` actor reads only the shared economy and
+              // the host context: games also write their own names into
+              // the mirror, and those belong to the story that launched
+              // the game (it gets them in the game's `complete`).
               reply({ ok: true, values: vars.filterReadable(actor, FoafOS.storyVars.all()) });
             } else if (op === 'write') {
               // WHOSE DEPTH? The broker holds one number, and the read-only
@@ -3580,7 +3582,10 @@ function buildUI() {
                 anything above it, or holds powers from it.</p>
               <p>The sandbox does not stop:</p>
               <ul>
-                <li>data leaving: an app can send what it holds to any server;</li>
+                <li>data leaving: an app can send what it holds to any server on the
+                  internet, including the text of any document you open in it. This site
+                  is served by GitHub Pages, which cannot set the response headers that
+                  would stop this. Open a secret document only in an app you trust;</li>
                 <li>heavy use: an app can use much CPU, memory or battery, and in some browsers
                   that slows the shell too;</li>
                 <li>timing side channels between apps in one browser.</li>

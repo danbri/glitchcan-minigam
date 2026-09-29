@@ -421,6 +421,13 @@ and still ship, because containment contains its mistakes.
 ## 8. Explicit non-goals for v1
 
 - Not defending against browser sandbox-escape bugs or Spectre.
+- Not stopping a story, world or app from sending what it holds to other
+  hosts, while the platform is served from GitHub Pages (owner, September
+  2026). Pages cannot set the response headers (`Allow-CSP-From`, CSP)
+  that an egress policy needs. This deployment protects integrity and
+  powers, not secrecy against the code a reader runs. See spec §5.5.6;
+  a header-capable host (Cloudflare is being considered) is the route to
+  closing it.
 - Not making `untrusted` stories *featureful* — restricted is the point.
 - Not moving the compile sandbox (C14) — it already holds.
 - Not shipping a cryptographic author-identity / signing scheme in the

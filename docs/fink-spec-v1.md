@@ -755,6 +755,42 @@ Locked by `packages/foafos/test/{secrets,ops,sigv4}.test.js` and the
 by attempting to redirect a brokered credential to a destination that was
 never granted.
 
+### 5.5.6 Network egress — a stated limit of the reference deployment
+
+**The sandbox controls what an app receives. On GitHub Pages it cannot
+control what an app sends.** Owner, September 2026: "It is ok our
+instance of server is on gh pages but since that makes net egress
+unblockable we must document that situation ie apps can blab to arbitrary
+hosts without tighter server."
+
+- Any app frame can send any data it holds to any host on the internet:
+  by fetch (no-cors), image, `sendBeacon`, form POST (window apps have
+  `allow-forms`), and WebRTC. This includes the text of every document
+  the reader opens in that app, every story line a world receives, and
+  every value a broker gave it. Measured in Chromium; see the fink skill,
+  "Limits of the sandbox partition".
+- A `<meta>` CSP in the app's page does not stop WebRTC, and an app can
+  leave it out anyway. The iframe `csp` attribute (CSP Embedded
+  Enforcement) would let the shell impose `connect-src` on a frame, but
+  the frame then loads only if its response sends `Allow-CSP-From`.
+  GitHub Pages cannot set response headers, so on this deployment the
+  shell has no way to impose an egress policy.
+- The brokers (storage, secrets, variables, verbs) still hold. A secret
+  is never given to an app, so an app cannot send it. What an app is
+  GIVEN, it can send.
+- So on GitHub Pages foafos protects **integrity and powers** (what an app
+  may change, launch, read from the shell, or use a credential for) but
+  NOT **secrecy against the app itself**. Opening a document in an app
+  is telling that app's author the document, if the author wants it.
+- A host MUST say this to the reader where the powers are shown. The
+  reference shell says it in the Task Manager's "The sandbox and its
+  limits" panel.
+- Closing it needs a server that sets headers: `Allow-CSP-From` on app
+  pages plus an iframe `csp` with `connect-src` limited to a network
+  broker, and a CSP on the shell page itself. WebRTC and DNS lookups need
+  checking per browser even then. A Cloudflare front for the same files
+  is being considered (September 2026).
+
 ### 5.6 Shell surfaces: home and switcher
 
 Two affordances the platform borrows rather than invents, because every
