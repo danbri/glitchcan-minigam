@@ -354,7 +354,7 @@ const TN: i32 = 384;
 struct EV { beamPos: array<vec4f, 4>, beamDir: array<vec4f, 4>, smoke: array<vec4f, 4>, koi: vec4f, koiDir: vec4f, blimp: vec4f, blimpDir: vec4f, bo: vec4f,
   sky: vec4f, meteorA: vec4f, meteorB: vec4f, fw: array<vec4f, 3>, fwCol: array<vec4f, 3>, launch: vec4f, balloon: array<vec4f, 3>,
   sat: vec4f, ringN: vec4f, moonA: vec4f, moonB: vec4f,
-  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, life: array<vec4f, 64> };
+  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, life: array<vec4f, 80> };
 // Conway's Life (life.js): 64 columns by 40 rows from the top, 16 cells to a float
 fn lifeAt(col: i32, row: i32) -> f32 {
   if (row < 0 || row >= 40) { return 0.0; }
@@ -362,15 +362,24 @@ fn lifeAt(col: i32, row: i32) -> f32 {
   let f = ev.life[i >> 6u][(i >> 4u) & 3u];
   return f32((u32(f) >> (i & 15u)) & 1u);
 }
+// the round towers' board (life.js LIFER): 32 columns once round the tower by 80 rows, after the first board
+fn lifeAtR(col: i32, row: i32) -> f32 {
+  if (row < 0 || row >= 80) { return 0.0; }
+  let i = u32(2560 + row * 32 + ((col % 32) + 32) % 32);
+  let f = ev.life[i >> 6u][(i >> 4u) & 3u];
+  return f32((u32(f) >> (i & 15u)) & 1u);
+}
+fn lifeCell(r: bool, col: i32, row: i32) -> f32 { return select(lifeAt(col, row), lifeAtR(col, row), r); }
 // a cell's colour by how many live neighbours it has, which is also its fate: one or none (it dies of loneliness)
 // amber, two green, three blue, four or more (it dies of crowding) magenta; an empty cell with three (born next
 // generation) glows faintly blue
-fn lifeCol(col: i32, row: i32) -> vec3f {
-  let a = lifeAt(col, row);
+fn lifeCol(col: i32, row: i32) -> vec3f { return lifeColB(false, col, row); }
+fn lifeColB(r: bool, col: i32, row: i32) -> vec3f {
+  let a = lifeCell(r, col, row);
   var n = 0.0;
   for (var dy = -1; dy <= 1; dy++) {
     for (var dx = -1; dx <= 1; dx++) {
-      if (dx != 0 || dy != 0) { n += lifeAt(col + dx, row + dy); }
+      if (dx != 0 || dy != 0) { n += lifeCell(r, col + dx, row + dy); }
     }
   }
   if (a < 0.5) { return vec3f(0.2, 0.55, 1.0) * 0.14 * step(abs(n - 3.0), 0.1); }
@@ -917,12 +926,12 @@ fn ruin(p: vec3f, c: Cell) -> vec2f {
 }
 
 // Life on the organic towers: which towers run it (tall ones mostly), and the board, a screen round the top of the
-// tower: a window of LIFE_WIN of the board's 64 columns round the tower, square cells, 40 rows down from just under
-// the cap. The window starts at the tower's own column, so neighbouring towers show different parts of the board.
-const LIFE_WIN: f32 = 24.0;
+// tower: the round board's 32 columns once round (no seam), square cells, 80 rows down from just under the cap.
+// Not turned per tower: column c faces the same way on every tower, so the gun (life.js) faces Conway Corner.
+const LIFE_WIN: f32 = 32.0;
 fn organicLife(c: Cell) -> bool { return hsh(c.seed, 5, 781) < select(0.3, 0.9, c.h >= 12.0 * 4.2); }
 fn lifeCellH(c: Cell) -> f32 { return 6.2831853 * (3.8 + 1.4 * c.v) / LIFE_WIN; }
-fn lifeBoardFoot(c: Cell) -> f32 { return c.h - 1.5 - 40.0 * lifeCellH(c); }
+fn lifeBoardFoot(c: Cell) -> f32 { return c.h - 1.5 - 80.0 * lifeCellH(c); }
 fn organic(p: vec3f, c: Cell) -> vec2f {
   let h = c.h;
   let ph = c.s * 6.2831;
@@ -5327,7 +5336,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       let cfo = cellFull(ci);
       let cH = lifeCellH(cfo);
       let rowF = (cfo.h - 1.5 - p.y) / cH;
-      if (organicLife(cfo) && rowF >= 0.0 && rowF < 40.0) {
+      if (organicLife(cfo) && rowF >= 0.0 && rowF < 80.0) {
         let ph = cfo.s * 6.2831;
         let q = lc - cfo.off - vec2f(sin(p.y * 0.045 + ph), cos(p.y * 0.038 + ph * 1.3)) * (1.0 + cfo.v) * smoothstep(0.0, 30.0, p.y);
         let fxL = fract(atan2(q.y, q.x) / 6.2831853 + 1.0) * LIFE_WIN;
@@ -5336,7 +5345,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         // a pale grid between the cells, so the board reads as a board even when most of it is dead
         let grid = (1.0 - smoothstep(0.015, 0.045, min(min(gx, 1.0 - gx), min(gy, 1.0 - gy)))) * detail;
         let lifeD = 1.0 - smoothstep(350.0, 900.0, t);
-        let lcol = lifeCol(i32(floor(fxL)) + (cseed & 63), i32(floor(rowF)));
+        let lcol = lifeColB(true, i32(floor(fxL)), i32(floor(rowF)));
         s.alb = mix(vec3f(0.012, 0.018, 0.022), vec3f(0.16, 0.16, 0.15), grid);
         s.spec = mix(1.0, 0.3, grid);
         s.refl = (1.0 - grid) * (0.04 + 0.4 * pow(1.0 - ndv, 4.0)) * (1.0 - min(1.0, dot(lcol, vec3f(1.0))));
@@ -14154,14 +14163,19 @@ if (typeof document !== "undefined" && document.addEventListener) {
   });
 }
 
-// ---------- Conway's Life in the windows of the round towers ----------
-// One board, 64 columns round the tower (it wraps, as a cylinder should) by 40 floors from the top down (the top and
-// the bottom are dead edges). Stepped here a few times a second, sent to the GPU packed 16 cells to a float (floats
-// hold whole numbers exactly up to 2^24) after the event block, and read by material 1 in scene.wgsl (`lifeAt`) on
-// about two in five round towers, each turned by its own number of columns. Patterns are reseeded every couple of
-// minutes, or when the board dies or stops changing.
-const LIFE_W = 64, LIFE_H = 40;
-const LIFE = { a: new Uint8Array(LIFE_W * LIFE_H), b: new Uint8Array(LIFE_W * LIFE_H), gpu: new Float32Array(256), t: 0, gen: 0, seedAt: -1e9, hist: [], pat: "" };
+// ---------- Conway's Life in the windows of the towers ----------
+// Two boards, stepped here a few times a second and sent to the GPU packed 16 cells to a float (floats hold whole
+// numbers exactly up to 2^24) after the event block:
+// - LIFE, 64 columns (they wrap) by 40 rows from the top down (the top and the bottom are dead edges): the stepped
+//   towers' flat faces and the rounded modern towers (`lifeAt` in scene.wgsl). Reseeded every couple of minutes, or
+//   when the board dies or stops changing.
+// - LIFER, 32 columns by 80 rows: the organic round towers (`lifeAtR`). 32 columns go once round the tower, so the
+//   board wraps as a cylinder does, with no seam. It always runs one glider gun at the top, turned on its side, and its
+//   gliders go down and round the tower. The bottom two rows are a sink (cleared each step), so the gliders leave
+//   there and nothing builds up to reach the gun. Two guns on one board destroy each other's streams (simulated).
+const LIFE_W = 64, LIFE_H = 40, LIFER_W = 32, LIFER_H = 80;
+const LIFE = { a: new Uint8Array(LIFE_W * LIFE_H), b: new Uint8Array(LIFE_W * LIFE_H), gpu: new Float32Array(320), t: 0, gen: 0, seedAt: -1e9, hist: [], pat: "" };
+const LIFER = { a: new Uint8Array(LIFER_W * LIFER_H), b: new Uint8Array(LIFER_W * LIFER_H), gen: 0, seedAt: -1e9, pat: "" };
 // patterns as rows of text, "#" alive; [name, rows, weight]
 const LIFE_PATTERNS = [
   ["Gosper glider gun", [
@@ -14173,7 +14187,7 @@ const LIFE_PATTERNS = [
     "##........#...#.##....#.#...........",
     "..........#.....#.......#...........",
     "...........#...#....................",
-    "............##......................"], 5],
+    "............##......................"], 10],
   // Michael Simkin's gun (2015): one glider every 120 generations, from two blocks, a pair of eaters and a small
   // reaction between them
   ["Simkin glider gun", [
@@ -14197,7 +14211,7 @@ const LIFE_PATTERNS = [
     "....................##...........",
     "....................#............",
     ".....................###.........",
-    ".......................#........."], 3],
+    ".......................#........."], 5],
   ["pulsar", [
     "..###...###..",
     ".............",
@@ -14261,14 +14275,44 @@ function lifeSeed() {
     const small = [LIFE_PATTERNS[3], LIFE_PATTERNS[7], LIFE_PATTERNS[5], ["blinker", ["###"]]][Math.floor(Math.random() * 4)];
     lifeStamp(small[1], Math.floor(k * LIFE_W / 6 + Math.random() * 5), Math.floor(Math.random() * 5), Math.random() < 0.5);
   }
-  // random soup in patches all over the board: what Life looks like to most people, growth, collapse, blinkers
-  // and blocks left behind, and a glider now and then. Each tower shows only 24 of the 64 columns, so without it
-  // most of the board in view was empty (owner, September 2026: "not obviously life")
-  for (let k = 0; k < 7; k++) {
-    const x0 = Math.floor(k * LIFE_W / 7 + Math.random() * 4), y0 = 2 + Math.floor(Math.random() * (LIFE_H - 12));
+  // random soup in patches over the board: what Life looks like to most people, growth, collapse, blinkers and
+  // blocks left behind, and a glider now and then. Without it most of a face in view was empty (owner, September
+  // 2026: "not obviously life"). Below a gun's rows only, and fewer, so the gun's gliders have something to hit
+  const gun = main[0].endsWith("glider gun");
+  for (let k = 0; k < (gun ? 4 : 7); k++) {
+    const x0 = Math.floor(k * LIFE_W / (gun ? 4 : 7) + Math.random() * 4), y0 = (gun ? 16 : 2) + Math.floor(Math.random() * (LIFE_H - (gun ? 24 : 12)));
     for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++) if (Math.random() < 0.38) LIFE.a[(y0 + j) * LIFE_W + (x0 + i) % LIFE_W] = 1;
   }
   LIFE.seedAt = LIFE.t;
+}
+// the round towers' board: one gun, turned on its side (rows become columns), in one of the two turns of it that fire
+// down the board (simulated: the others fire up into the dead top edge and wreck themselves)
+function lifeSeedR() {
+  const B = LIFER; B.a.fill(0); B.gen = 0;
+  const simkin = Math.random() < 0.3, rows = LIFE_PATTERNS[simkin ? 1 : 0][1], mirror = Math.random() < 0.5;
+  // every round tower shows this board unturned, so column c faces the same way on all of them; the gun is centred
+  // on column 26, the side that faces Conway Corner (its camera looks along yaw 1.94; tales.js)
+  const x0 = 26 - Math.floor(rows.length / 2) + LIFER_W;
+  rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] === "#") {
+    const x = mirror ? rows.length - 1 - j : j, y = simkin ? row.length - 1 - i : i;
+    B.a[(y + 1) * LIFER_W + (x + x0) % LIFER_W] = 1;
+  } });
+  B.pat = simkin ? "Simkin glider gun" : "Gosper glider gun";
+  B.seedAt = LIFE.t;
+}
+function lifeStepR() {
+  const W = LIFER_W, H = LIFER_H, a = LIFER.a, b = LIFER.b;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (y >= H - 2) { b[y * W + x] = 0; continue; }
+    let n = 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      const yy = y + dy;
+      if (yy < 0) continue;
+      for (let dx = -1; dx <= 1; dx++) if (dx || dy) n += a[yy * W + (x + dx + W) % W];
+    }
+    b[y * W + x] = n === 3 || (n === 2 && a[y * W + x]) ? 1 : 0;
+  }
+  LIFER.a = b; LIFER.b = a; LIFER.gen++;
 }
 function lifeStep() {
   const a = LIFE.a, b = LIFE.b;
@@ -14293,16 +14337,22 @@ function lifeStep() {
 function lifePack() {
   const g = LIFE.gpu; g.fill(0);
   for (let i = 0; i < LIFE.a.length; i++) if (LIFE.a[i]) g[i >> 4] += 1 << (i & 15);
+  // the round board after it, at float 160 (scene.wgsl `lifeAtR` reads cell 2560 on)
+  for (let i = 0; i < LIFER.a.length; i++) if (LIFER.a[i]) g[160 + (i >> 4)] += 1 << (i & 15);
   return g;
 }
 // advance the board by real time; returns the packed board for the GPU
 function lifeUpdate(dt) {
   LIFE.t += dt;
   if (LIFE.seedAt < -1e8) lifeSeed();
+  if (LIFER.seedAt < -1e8) lifeSeedR();
   LIFE.acc = (LIFE.acc || 0) + dt;
   if (LIFE.acc < 0.25) return null;
   LIFE.acc = 0;
   const r = lifeStep();
+  lifeStepR();
+  // a gun fires for ever; a new one (the other kind, or the other way round) every four minutes
+  if (LIFE.t - LIFER.seedAt > 240) lifeSeedR();
   // the gun runs longer; everything else gets a couple of minutes, less if it dies or settles
   const limit = LIFE.pat.endsWith("glider gun") ? 240 : 120;
   if (r.pop < 4 || (r.stale && LIFE.gen > 40) || LIFE.t - LIFE.seedAt > limit) lifeSeed();
@@ -15801,7 +15851,7 @@ async function init() {
   const rectData = new Int32Array(64 * 12);
   const propBuf = device.createBuffer({ size: PROP_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const flockBuf = device.createBuffer({ size: FLOCK_DATA.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-  const evBuf = device.createBuffer({ size: 864 + 1024, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const evBuf = device.createBuffer({ size: 864 + 1280, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   if (PHYS) {
     PHYS.buf = device.createBuffer({ size: PHYS.n * 48, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
     PHYS.ubuf = device.createBuffer({ size: 224, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
@@ -16413,7 +16463,7 @@ document.getElementById("bHide").addEventListener("click", () => setUiHidden(tru
 statusEl.addEventListener("click", () => { statsOn = !statsOn; statsEl.hidden = !statsOn; statusEl.setAttribute("aria-pressed", statsOn ? "true" : "false"); });
 syncLabels();
 feelInit();
-globalThis.__drift = { titanWhere, titanPoint, places: () => PLACES.map((p) => ({ id: p.id, name: p.name })), host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFE_PATTERNS, lifeStamp, lifeStep, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
+globalThis.__drift = { titanWhere, titanPoint, places: () => PLACES.map((p) => ({ id: p.id, name: p.name })), host: hostState, taleMem, AU, VENUE, CROWD_BUF, HEADS, headSay, headDone, WX, EVN, LIFE, LIFER, LIFE_PATTERNS, lifeStamp, lifeStep, lifeStepR, MORSE, ASSIST, DIR, taleAddProp, FOCUS, taleLink, guideStart, guideStop, guidePause, guideResume, guideLifeTower, guideSignalTower, pickLaunch, visitWalkTo, GUIDE, flyOn, pickOffer, FEEL, FEET, pickGo, pickAt, PICK, CAMNOW, PHYS: () => GPUREF.phys, device: () => GPUREF.device, mapOpen, walkersNear, now: () => clock, goTo, NAV, st, SPACE_DATA, startFree, flatCamTitan, REG, TALE, taleOpen, taleChoose, taleFound, taleAdvance, taleClose, hop, hopPlace, destById, toggleGoPanel, MENU, renderMenu, PAD, padShow, setFollow: (v) => { FOLLOW = v; }, setPhys: (v) => { PHYS_ON = v; }, INTRO, gateEnter, NAVG: () => NAV.gate };
 function showControlsHint() { showHint(touchUI ? "Drag to steer the drone. Tap the screen to show or hide controls." : "Drag, or move the mouse off centre, to steer. W/S speed, A/D turn, E/Q height. T time of day, M route, H controls.", 9000); }
 showHint("Landing on Titan\u2026", 600000);
 

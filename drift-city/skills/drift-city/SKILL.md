@@ -415,27 +415,39 @@ Figures for writing and sound design. Titan surface air: nitrogen with about 5% 
   `D.LIFE.acc = 1` after changing the board (`D.lifeStamp`, `D.lifeStep` and `D.LIFE_PATTERNS` are on `__drift`).
   Use `CAM=-490,95,-229,-2.729,-0.02 CAMF=4` with `HOP=place:roof_0` to look at the tour's Life tower.
 - Uploaded packed 16 cells to a float at byte 848 of the event buffer (`ev.life`, read by `lifeAt`).
-- Shown on the organic round towers (type 8, material 15) by `organicLife()`, and two in five rounded modern
-  towers (material 1, `v` 0.4 to 0.72, still one row a 3.6 m floor and 64 columns round). Each tower turns the
-  board by its own number of columns.
-- **Organic towers: a screen of square cells, not the window band (September 2026).** Owner, with phone
+- Shown on the organic round towers (type 8, material 15, their own board: below) by `organicLife()`; on the
+  stepped towers' flat faces (Conway Corner, below); and on two in five rounded modern towers (material 1, `v` 0.4
+  to 0.72, still one row a 3.6 m floor and 64 columns round). Each of these turns its board by its own number of
+  columns; the organic towers do not (below).
+- **Organic towers: their own board, a glider gun, gliders round the tower (September 2026).** Owner, with phone
   screenshots from Conway Corner: "not obviously life". The old mapping put 64 columns round a tower about 4.5 m
   in radius and one row a floor, lit only in the window band: cells about 0.44 m wide and 2.3 m tall, split by
-  the gold floor rings. From 50 m and more they read as thin coloured stripes (Dawn render, confirmed). Now:
-  - a window of `LIFE_WIN` = 24 of the 64 columns goes round the tower, so a cell is about 1.2 m wide (at 150 m,
-    about 4 pixels on a phone at the 66% render scale);
-  - rows are the same height as a cell is wide (`lifeCellH`), 40 of them down from 1.5 m under the cap, about
-    48 m of screen; a shorter tower shows the rows it has;
+  the gold floor rings. From 50 m and more they read as thin coloured stripes (Dawn render, confirmed). A first fix
+  showed a 24-column window of the shared board in square cells; the owner: "still doesn't feel iconically Life.
+  Maybe just need more glider guns, perhaps wrapping around the curvy towers?" Now:
+  - the organic towers read a second board, `LIFER` in life.js, 32 x 80 (`lifeAtR`, cell 2560 on in `ev.life`,
+    which grew to 80 vec4s; the event buffer to 864 + 1280 bytes). 32 columns go once round the tower: no seam;
+  - it always runs one glider gun at the top, turned on its side (Gosper, or Simkin three times in ten, either
+    way round), so the gliders go down and round the tower in a helix. Only two of the four turns of each gun fire
+    down the board; the other two fire into the dead top edge and wreck themselves (simulated, 1200 generations).
+    Two guns on one 32-column board destroy each other's streams (simulated), so there is one;
+  - the bottom two rows are a sink, cleared every step, so the gliders leave there and no debris grows back
+    towards the gun. Checked: 40 random seeds, all with a glider stream below row 40 after 300 generations;
+  - the round board is not turned per tower, so a column faces the same way on every tower, and the gun is
+    centred on column 26: the side facing Conway Corner's camera (yaw 1.94). With a turn per tower the gun (9 of
+    32 columns) was on the far side of about half the towers, and a view showed one glider and no gun. If Conway
+    Corner moves, move the gun's column with it (`lifeSeedR`);
+  - cells are square, `lifeCellH` = 2 pi r0 / 32 (about 0.9 m), 80 rows down from 1.5 m under the cap;
   - `organic()` leaves out the floor rings over the board (`lifeBoardFoot`), because the rings hid it;
   - the angle is taken round the tower's leaning axis, as `organic()` bends it, so the columns stay upright;
-  - dead cells are dark glass with a thin grey grid between cells. A pale grid lit by the amber sky made the
-    tower read as a gold lattice, not a board.
-  The window has a seam where column 24 meets column 1, at the tower's own angle 0. Each tower shows a different
-  part of the board.
-- **Seeding for a 24-column window.** Guns and fleets at random columns often missed a tower's window. Seven 8 x 8
-  patches of random soup (38% alive) now go all over the board as well. Measured offline (`life.js` in `node:vm`,
-  ten minutes of steps, eight windows): the emptiest window had a median of 31 live cells, 21 before; the mean did
-  not change (about 54 of 960).
+  - dead cells are dark glass with a thin grey grid. A pale grid lit by the amber sky read as a gold lattice.
+- **The shared board (stepped and rounded modern towers).** Guns are now the main seed about seven times in ten
+  (weights 10 and 5 against 6 for the rest). Random soup in 8 x 8 patches (38% alive) goes over the board too:
+  seven patches, or four below row 16 when there is a gun, so the gun's gliders have something to hit.
+  Measured offline before the gun change (`life.js` in `node:vm`, ten minutes, eight 24-column windows): the
+  emptiest window had a median of 31 live cells, 21 without soup.
+- Seeing gliders in a headless render: `LIFEGEN=300` in dawn-run.mjs runs both boards 300 generations before the
+  frame (the runner's clock hardly moves, so the page steps them only a few times itself).
 - Check it with a known still life: `LIFESTRIPE=1` in the scratch runner stamps every other row full (stable in
   Life), so a Life tower must show every other floor lit. The first attempt put Life on material 1 only; the
   visible round towers are type 8, and nothing showed.

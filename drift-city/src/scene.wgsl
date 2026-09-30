@@ -33,7 +33,7 @@ const TN: i32 = 384;
 struct EV { beamPos: array<vec4f, 4>, beamDir: array<vec4f, 4>, smoke: array<vec4f, 4>, koi: vec4f, koiDir: vec4f, blimp: vec4f, blimpDir: vec4f, bo: vec4f,
   sky: vec4f, meteorA: vec4f, meteorB: vec4f, fw: array<vec4f, 3>, fwCol: array<vec4f, 3>, launch: vec4f, balloon: array<vec4f, 3>,
   sat: vec4f, ringN: vec4f, moonA: vec4f, moonB: vec4f,
-  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, life: array<vec4f, 64> };
+  blk: vec4f, steam: vec4f, ship: array<vec4f, 8>, shipDir: array<vec4f, 8>, wx: vec4f, room: vec4f, life: array<vec4f, 80> };
 // Conway's Life (life.js): 64 columns by 40 rows from the top, 16 cells to a float
 fn lifeAt(col: i32, row: i32) -> f32 {
   if (row < 0 || row >= 40) { return 0.0; }
@@ -41,15 +41,24 @@ fn lifeAt(col: i32, row: i32) -> f32 {
   let f = ev.life[i >> 6u][(i >> 4u) & 3u];
   return f32((u32(f) >> (i & 15u)) & 1u);
 }
+// the round towers' board (life.js LIFER): 32 columns once round the tower by 80 rows, after the first board
+fn lifeAtR(col: i32, row: i32) -> f32 {
+  if (row < 0 || row >= 80) { return 0.0; }
+  let i = u32(2560 + row * 32 + ((col % 32) + 32) % 32);
+  let f = ev.life[i >> 6u][(i >> 4u) & 3u];
+  return f32((u32(f) >> (i & 15u)) & 1u);
+}
+fn lifeCell(r: bool, col: i32, row: i32) -> f32 { return select(lifeAt(col, row), lifeAtR(col, row), r); }
 // a cell's colour by how many live neighbours it has, which is also its fate: one or none (it dies of loneliness)
 // amber, two green, three blue, four or more (it dies of crowding) magenta; an empty cell with three (born next
 // generation) glows faintly blue
-fn lifeCol(col: i32, row: i32) -> vec3f {
-  let a = lifeAt(col, row);
+fn lifeCol(col: i32, row: i32) -> vec3f { return lifeColB(false, col, row); }
+fn lifeColB(r: bool, col: i32, row: i32) -> vec3f {
+  let a = lifeCell(r, col, row);
   var n = 0.0;
   for (var dy = -1; dy <= 1; dy++) {
     for (var dx = -1; dx <= 1; dx++) {
-      if (dx != 0 || dy != 0) { n += lifeAt(col + dx, row + dy); }
+      if (dx != 0 || dy != 0) { n += lifeCell(r, col + dx, row + dy); }
     }
   }
   if (a < 0.5) { return vec3f(0.2, 0.55, 1.0) * 0.14 * step(abs(n - 3.0), 0.1); }
@@ -596,12 +605,12 @@ fn ruin(p: vec3f, c: Cell) -> vec2f {
 }
 
 // Life on the organic towers: which towers run it (tall ones mostly), and the board, a screen round the top of the
-// tower: a window of LIFE_WIN of the board's 64 columns round the tower, square cells, 40 rows down from just under
-// the cap. The window starts at the tower's own column, so neighbouring towers show different parts of the board.
-const LIFE_WIN: f32 = 24.0;
+// tower: the round board's 32 columns once round (no seam), square cells, 80 rows down from just under the cap.
+// Not turned per tower: column c faces the same way on every tower, so the gun (life.js) faces Conway Corner.
+const LIFE_WIN: f32 = 32.0;
 fn organicLife(c: Cell) -> bool { return hsh(c.seed, 5, 781) < select(0.3, 0.9, c.h >= 12.0 * 4.2); }
 fn lifeCellH(c: Cell) -> f32 { return 6.2831853 * (3.8 + 1.4 * c.v) / LIFE_WIN; }
-fn lifeBoardFoot(c: Cell) -> f32 { return c.h - 1.5 - 40.0 * lifeCellH(c); }
+fn lifeBoardFoot(c: Cell) -> f32 { return c.h - 1.5 - 80.0 * lifeCellH(c); }
 fn organic(p: vec3f, c: Cell) -> vec2f {
   let h = c.h;
   let ph = c.s * 6.2831;
@@ -5006,7 +5015,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
       let cfo = cellFull(ci);
       let cH = lifeCellH(cfo);
       let rowF = (cfo.h - 1.5 - p.y) / cH;
-      if (organicLife(cfo) && rowF >= 0.0 && rowF < 40.0) {
+      if (organicLife(cfo) && rowF >= 0.0 && rowF < 80.0) {
         let ph = cfo.s * 6.2831;
         let q = lc - cfo.off - vec2f(sin(p.y * 0.045 + ph), cos(p.y * 0.038 + ph * 1.3)) * (1.0 + cfo.v) * smoothstep(0.0, 30.0, p.y);
         let fxL = fract(atan2(q.y, q.x) / 6.2831853 + 1.0) * LIFE_WIN;
@@ -5015,7 +5024,7 @@ fn surface(p: vec3f, n: vec3f, m: f32, rd: vec3f, t: f32) -> Surf {
         // a pale grid between the cells, so the board reads as a board even when most of it is dead
         let grid = (1.0 - smoothstep(0.015, 0.045, min(min(gx, 1.0 - gx), min(gy, 1.0 - gy)))) * detail;
         let lifeD = 1.0 - smoothstep(350.0, 900.0, t);
-        let lcol = lifeCol(i32(floor(fxL)) + (cseed & 63), i32(floor(rowF)));
+        let lcol = lifeColB(true, i32(floor(fxL)), i32(floor(rowF)));
         s.alb = mix(vec3f(0.012, 0.018, 0.022), vec3f(0.16, 0.16, 0.15), grid);
         s.spec = mix(1.0, 0.3, grid);
         s.refl = (1.0 - grid) * (0.04 + 0.4 * pow(1.0 - ndv, 4.0)) * (1.0 - min(1.0, dot(lcol, vec3f(1.0))));

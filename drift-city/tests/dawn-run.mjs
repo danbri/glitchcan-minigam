@@ -93,6 +93,9 @@ for (let f = 0; f < N; f++) {
     M.stack.length = 1; open('Places in the city'); M.stack.length = 1; open('Developer');
     D.padShow(true); D.PAD.lx = 0.6; D.PAD.ry = 0.8; console.log('PAD on', D.PAD.on);
   }
+  // LIFEGEN=n: run both Life boards n generations before the render, so a gun's gliders are out (the runner's clock
+  // barely moves, so the page itself steps them only a few times)
+  if (process.env.LIFEGEN && f === 2) { const D = globalThis.__drift; for (let i = 0; i < +process.env.LIFEGEN; i++) { D.lifeStep(); D.lifeStepR(); } D.LIFE.acc = 1; }
   if (process.env.HOP && f === 3) { const D = globalThis.__drift; if (process.env.HOP.startsWith('place:')) D.hopPlace(process.env.HOP.slice(6)); else D.hop(D.destById(process.env.HOP)); }
   // CAM=x,y,z,yaw,pitch: after a HOP, look from there instead
   if (process.env.CAM && f === 3) { const D = globalThis.__drift, [x, y, z, yaw, pitch] = process.env.CAM.split(',').map(Number), c = { ...D.NAV.visit.to, x, y, z, yaw, pitch }; D.NAV.visit.from = c; D.NAV.visit.to = c; }
